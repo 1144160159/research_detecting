@@ -1,0 +1,914 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026 365
+
+ An Efficient Website Fingerprinting for New
+ Websites Emerging Based on Incremental Learning
+ Zhengge Yi , Tengyao Li , Meng Zhang, Xiaoyun Yuan , Shaoyong Du , and Xiangyang Luo
+
+ Abstract—Website fingerprinting attacks leverage encrypted thereby significantly enhancing privacy security. However,
+traffic features to identify specific services accessed by users this high level of anonymity remains vulnerable to certain
+within anonymity networks such as Tor. Although existing WF advanced traffic analysis techniques [2], [3], such as Website
+methods achieve high accuracy on static datasets using deep
+learning techniques, they struggle in dynamic environments Fingerprinting (WF) attacks [4], [5].
+where anonymous Websites continually evolve. These methods Websites display distinctive traffic characteristics due to
+typically require full retraining on composite datasets, resulting variations in their structure, content, and interaction patterns,
+in substantial computational and storage burdens, and are partic- collectively termed the fingerprints of websites. The WF methularly vulnerable to classification bias caused by data imbalance ods rely on classification models, where attackers collect traffic
+and concept drift. To address these challenges, we propose EIL-
+WF, a dynamic WF framework based on incremental learning from target websites to train models and extract fingerprints,
+that enables efficient adaptation to newly emerging websites thus constructing a set of monitored websites. As shown in
+without the need for full retraining. EIL-WF incrementally Figure 1, during the deployment phase, attackers only need to
+trains lightweight, independent classifiers for new website classes analyze the traffic characteristics of users accessing the Tor
+and integrates them through classifier normalization and energy network to identify the websites they visit.
+alignment strategies grounded in energy-based model theory,
+thereby constructing a unified and robust classification model. In recent years, DL-based WF methods have demon-
+Comprehensive experiments on two public Tor traffic datasets strated remarkable effectiveness in static data classification
+demonstrate that EIL-WF outperforms existing incremental tasks [6], [7], [8], [9], [10], [11], [12], [13]. State-of-thelearning methods by 6.2%–20.2% in identifying new websites art benchmark models like DF [6], TikTok [7], VarCNN [8],
+and reduces catastrophic forgetting by 5.4%–20%. Notably, EIL- WF-Transformer [10] and ARES [12], achieve classification
+WF exhibits strong resilience against data imbalance and concept
+drift, maintaining stable classification performance across evolv- accuracy rates of 98%–99% on both AWF [14] and DF [6]
+ing distributions. Furthermore, EIL-WF decreases training time datasets. However, these static classification paradigms strugduring model updates by 2–3 orders of magnitude, demon- gle to maintain performance in dynamic network environments
+strating substantial advantages over conventional full retraining where new website categories continuously emerge. When new
+paradigms. website categories are introduced, as illustrated in Figure 1,
+ Index Terms—Website fingerprinting, Tor anonymous network, the model must be retrained on both old and new data and
+traffic analysis, incremental learning. subsequently deployed. This retraining paradigm incurs significant computational costs and introduces memory challenges
+ from storing large historical datasets, particularly for devices
+ I. I NTRODUCTION with constrained storage capacity.
+ NONYMOUS communication networks, particularly the Class Incremental Learning (CIL) [15], originally developed
+A Tor network, are widely valued for their strong privacy
+protection features [1]. Through its distinctive onion routin the field of computer vision, has recently gained substantial
+ attention as a promising paradigm for addressing the challenge
+ing and multi-hop encryption mechanisms, the Tor network of dynamically expanding monitored datasets. This approach
+effectively obscures the traceability of user communications, focuses on building deep learning models with the capability
+ for continual learning, enabling them to incrementally acquire
+ Received 14 February 2025; revised 29 June 2025; accepted 26 knowledge of new classes from sequential data streams while
+October 2025. Date of publication 30 October 2025; date of current
+version 29 December 2025. This work is supported by the National maintaining recognition performance on previously encoun-
+Natural Science Foundation of China (No.62402523, No.U23A20305, tered classes [16], [17]. The concept of CIL offers valuable
+No.62172435), Innovatior Scientists and Technicians Troop Construction insights for WF, where the set of monitored websites evolves
+Proiects of Henan Province(No.254000510007), National Key R&D Program
+of China (No.2022YFB3102900), Key Research and Development Project over time. However, the Tor network’s distinctive multiof Henan Province (No.252102211087, No.221111321200), and Natural hop encrypted routing mechanism enhances the anonymity
+Science Foundation of Henan (Grant No.232300421098). The associate editor and resistance to traffic analysis, introducing fundamental
+coordinating the review of this article and approving it for publication was
+Q. Yan. (Corresponding author: Xiangyang Luo.) differences in the feature space between WF and conventional
+ The authors are with the Henan Province Key Laboratory of Cyberspace visual domains. Consequently, directly transferring existing
+Situation Awareness, People’s Liberation Army Information Engineering CIL techniques to WF scenarios often results in suboptimal
+University, Zhengzhou 450001, China (e-mail: yzhengge@163.com;
+litengyao@aliyun.com; zhangmeng_ieu@sina.com; yuanxyzz@outlook.com; performance.
+shaoyong.du.cs@gmail.com; luoxy_ieu@sina.com). Moreover, applying continual learning to WF in
+ Digital Object Identifier 10.1109/TNSM.2025.3627441 dynamic network environments introduces two challenges:
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+366 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ distribution of classifiers from each phase. By reducing the
+ mutual information between data and non-target classifiers and
+ constraining excessively high energy values of classifiers, we
+ ensure that the energy output levels remain consistent across
+ different stages. In addition, we propose an energy alignment
+ strategy which improves the performance of classifiers trained
+ on low-sample data without introducing additional parameter
+ calculations.
+ The specific contributions are as follows:
+ • We propose EIL-WF, an incremental learning framework
+ for website fingerprinting, which trains multiple independent lightweight classifiers. This design enables efficient
+Fig. 1. The illustration of WF deployments, during the update of the model updates without requiring access to previously colmonitored set, the saved data of old websites and the data of new websites are lected data from old websites. Additionally, we introduce
+combined to retrain the WF classification model, which is then redeployed.
+ a free energy-based confidence metric to quantify the
+ reliability of each classifier.
+ • We develop a classifier normalization training strategy,
+1) Imbalanced training samples: In many stages, training data incorporating two dedicated regularization loss functions.
+are collected under favorable conditions, with popular websites This strategy ensures both the independence of classifiers
+and relaxed security policies providing abundant samples. and consistently high confidence levels for in-distribution
+In contrast, strict privacy protections, limited monitoring data, effectively improving model stability during increaccess, or narrow data collection windows at some stages mental updates.
+result in scarce data. This imbalance can cause the model • We design an energy alignment strategy that mitigates
+to favor well-represented websites, introducing bias in its the negative impacts of data imbalance and distribution
+predictions. 2) Traffic feature drift: Over time, updates to shifts. By aligning the energy outputs of classifiers trained
+network protocols, changes in webpage content structures, on datasets with varying scales, this approach enhances
+and adjustments in server response behaviors can all lead to model robustness in dynamic environments.
+shifts in the traffic feature distribution of a given website. • We conduct comprehensive experiments on two widely-
+These shifts may lead to inter-class feature space drift, making used public WF datasets, DF and AWF. The results
+it difficult for conventional CIL methods to maintain stable demonstrate that EIL-WF significantly outperforms existrecognition performance across different stages. ing incremental learning methods in terms of both
+ To address the aforementioned challenges, this paper pro- accuracy and resistance to catastrophic forgetting.
+poses the EIL-WF framework, a lightweight solution that Furthermore, we thoroughly evaluate the generalization
+dynamically updates the monitoring set via stage-specific clas- ability and practical effectiveness of EIL-WF in dynamic
+sifiers, eliminating the need to cache historical data. Initially, website fingerprinting scenarios.
+a fixed backbone network is trained to extract general traffic
+features. For each new batch of websites, only the corre- II. R ELATED W ORK
+sponding lightweight classifier is trained, while parameters
+ In this section, we first introduce website fingerprinting,
+from earlier stages remain frozen. This architectural separation
+ which has been significantly enhanced on static data through
+ensures parameter independence across classifiers. As a result,
+ the use of deep learning in recent years. We then discuss class
+classifiers trained on low-sample data are shielded from
+ incremental learning, a technique that has gained considerable
+the influence of high-sample distributions, thereby mitigating
+ attention in the field of computer vision.
+model bias caused by data imbalance. At the same time,
+allocating frequently updated website traffic to dedicated classifiers enables targeted local optimization, thereby reducing A. Website Fingerprinting Attack
+interference with traditionally stable categories and isolating WF attack is a technique that identifies specific websites
+their feature spaces from contamination. visited by users through the analysis of patterns in network
+ To support effective classifier selection during inference traffic. It leverages information such as packet size, timing
+in a unified model, we introduce free energy scores as the intervals, and traffic direction to identify visited websites,
+confidence metric, inspired by energy-based modeling theory. effectively bypassing the protections offered by anonymity
+This metric provides a more robust and flexible alternative networks such as Tor [18]. As network environments become
+to conventional confidence estimators, especially under the increasingly complex and as Tor’s defensive measures are
+backward-compatible constraints of incremental learning. By implemented, WF methods continuously evolve and improve.
+assigning lower energy to in-distribution data and higher Earlier WF methods primarily relied on manually configenergy to out-of-distribution data, it enables more accurate and ured feature extraction techniques and traditional classifier [3],
+dynamic routing of samples across classifiers. Furthermore, to [19], [20], [21], [22], such as Support Vector Machines [21]
+improve the fairness inference of classifiers, we design two and k-Nearest Neighbors [22]. However, the effectiveness of
+normalization loss functions that normalize the energy output these methods is constrained by feature selection processes and
+YI et al.: AN EFFICIENT WEBSITE FINGERPRINTING FOR NEW WEBSITES EMERGING 367
+
+classifier designs [23]. Their performance often degrades in the methods based on few-shot learning models often entail high
+presence of dynamic traffic patterns and adversarial defenses spatial complexity (e.g., TF with a complexity of O(n!)),
+deployed in realistic, large-scale network environments. making them less suitable for large-scale data processing.
+ With the rise of deep learning, WF leveraging deep Furthermore, although methods such as NetCLR can maintain
+learning have become a focal point of research. The Deep accuracy over time, they still struggle with rapidly changing
+Fingerprinting (DF) [6] method utilizes one-dimensional websites, whose evolving feature space requires retraining on
+(1D) convolutional neural networks to automatically learn complete datasets.
+and extract traffic features. Notably, it achieves high clas- In summary, although current WF methods have attained
+sification accuracy by solely relying on packet direction notable advancements, several critical challenges persist. Most
+features. Subsequent advancements have further enhanced the existing website fingerprinting approaches assume a static
+performance and robustness of WF attacks by incorporating monitored set and lack systematic investigation into the
+novel deep learning techniques [7], [8], [9], [10], [24]. For dynamic expansion of monitored websites, limiting their
+instance, such as VarCNN [8] and WF-Transformer [10], adaptability to real-world scenarios where website categories
+enhance classification performance further by incorporat- evolve continuously. Additionally, challenges such as model
+ing architectures like ResNet, dilated convolutions, and bias due to imbalanced sample distributions and local fea-
+Transformer models. These additions allow the models to ture drift in frequently updated websites remain inadequately
+handle high-dimensional and complex network traffic more addressed.
+effectively. TikTok [7] and RF [9] models further exploit
+packet temporal dynamics to generate more robust traffic
+representations, underscoring the distinctive role of tempo- B. Class Incremental Learning
+ral features in WF attacks, particularly when dealing with When a deep learning model is trained on new tasks
+defensive data, where they exhibit enhanced performance. The or data, it tends to over-adapt to the new data, resulting
+Holmes [24] method leverages temporal and spatial traffic in poor performance on previously learned knowledge. This
+patterns to identify websites early in transmission, enhancing phenomenon is known as catastrophic forgetting. To address
+attack efficiency and reliability. this issue, researchers have focused on developing efficient
+ To address the identification challenges arising from algorithms that enable models to continuously learn new
+traffic mixing during multi-tab browsing in the Tor categories from dynamically evolving data streams. These
+network, [25], [26], [27] proposed a traffic conversion algorithms allow models to incrementally absorb and adapt
+technique based on segmentation point extraction, which to new information without requiring complete retraining,
+segregates multi-tab flows into distinct single-label streams to thereby significantly reducing computational and storage costs.
+facilitate classification. However, its classification performance This emerging learning paradigm is widely referred to as Class
+deteriorates markedly as the number of open pages increases. Incremental Learning (CIL) [31], [32].
+Subsequently, BAPM [28] introduced an attention mecha- Class incremental learning has made notable strides in
+nism that substantially enhances the model’s capacity to the field of computer vision. Depending on the nature of
+represent multi-label data, thereby improving identification the problem and the applied strategies, current CIL methods
+accuracy. TMWF [11] tackles multi-label WF identification can be broadly classified into two categories: data-based
+as an ordered set prediction problem, introducing an end-to- methods [15], [33] and parameter-based methods [34], [35].
+end multi-label WF model capable of accurately classifying Data-based CIL methods focus on preserving knowledge of
+multi-label network traffic. ARES [12] reframes the problem previous categories by storing portions of data or generating
+as a multi-classifier task based on local traffic patterns and representative samples, with the aim of mitigating the forincorporates an improved Transformer model (Trans-WF), getting of old categories when new ones are learned [34].
+achieving high recognition accuracy even under unknown label These methods, especially replay-based algorithms, have been
+counts and adversarial defense conditions. widely adopted in image classification tasks due to their
+ Faced with the common issue of limited training sam- simplicity and practicality. However, they typically rely on
+ples in real-world network environments, researchers have relatively small sample sets for rehearsal, often much smaller
+proposed various few-shot learning-based fingerprinting meth- than the size of the training set in each incremental learning
+ods. These approaches maintain high recognition accuracy phase, potentially causing data imbalance problems. Moreover,
+despite limited training data, effectively reducing depen- the requirement to replay old category samples increases
+dence on large-scale labeled datasets. For instance, Triplet storage overhead and risks that these samples may no longer
+Fingerprinting (TF) [29] employs a triplet network to accurately represent their features over time. This problem is
+achieve N-shot learning, enhancing the model’s generaliza- particularly pronounced in network traffic scenarios, where the
+tion capability. Contrastive Fingerprinting (CF) [30] adopts a dynamic nature of data can cause past samples to become
+contrastive learning framework combined with data augmen- misaligned with current conditions.
+tation strategies, demonstrating good accuracy and robustness Parameter-based class incremental learning, on the contrary,
+under data-scarce conditions. NetCLR [13] integrates semi- focuses on adjusting and optimizing model parameters to
+supervised and self-supervised learning to enhance traffic retain knowledge of old categories while integrating new ones.
+representation, maintaining strong classification performance One commonly used approach is parameter regularization,
+even in previously unseen network conditions. However, WF which evaluates the importance of model parameters and
+368 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+constrains their updates to preserve knowledge of previous
+categories [36]. However, due to the inherent ambiguity
+and imbalance in network traffic, maintaining the consistent importance of the parameters across different learning
+stages becomes challenging, complicating the training and
+deployment of such models in real-world scenarios. Another
+approach involves dynamically modifying the model structure
+by expanding or pruning it to incorporate new category knowledge [16], [37], [38]. Zhou et al. proposed EASE [16], which
+introduces an expandable subspace ensemble, generating task- Fig. 2. Illustration of the softmax and free energy scores of sample across
+specific subspaces via adapters and synthesizing historical target and non-target classifiers.
+class features through semantic-guided prototype completion
+without exemplars. Subspace recombination enables incremental learning in high-dimensional decision space, offering out-of-distribution relative to fθi . For a given input x, the
+a novel methodological perspective for CIL. Although this classifier fθi such that x ∈ Di is referred to as the target
+method effectively adapts to new categories, it also needs
+ classifier, and the remaining classifiers fθj for which x ∈ / Dj
+to address potential interference between models at different
+ are considered non-target classifiers. The central challenge lies
+learning stages.
+ in correctly identifying the target classifier for each test sample
+ and effectively distinguishing in-distribution samples from out-
+ III. P RELIMINARIES of-distribution samples, particularly in the presence of limited
+ Although early research achieved significant success in WF training data and evolving decision boundaries.
+within static classification tasks, dynamically updating website
+classification models has remained a persistent challenge. In
+this section, we first define a novel WF learning paradigm B. Energy-Based Model Theory
+based on incremental learning. Furthermore, we introduce the
+ In this method, we use free energy as a confidence scoring
+energy model theory, which serves as an effective classification
+ criterion to replace the commonly adopted softmax function
+confidence evaluation metric for the proposed incremental
+ in WF tasks. Although softmax is computationally efficient,
+learning framework.
+ its strong reliance on posterior probabilities often leads to
+ overconfidence when the model encounters out-of-distribution
+A. CIL Problem Definition of WF samples [39]. As shown in Figure 2, softmax tends to produce
+ Both class incremental learning-based WF and traditional scores close to 1 across multiple classifiers, resulting in a lack
+WF fundamentally train a classification model to recognize of clear separation and reduced effectiveness in selecting the
+websites in the monitored set. The difference lies in the appropriate target classifier during inference. In contrast, the
+updating of the monitored set: traditional methods require energy-based scoring function does not depend on a shared
+saving all historical data and retraining the model by replaying class probability structure and supports task-wise independent
+this data to ensure that the model can recognize all historical modeling. This property is particularly advantageous for dissamples [31]. In contrast, the CIL method only necessitates criminative selection in multi-classifier settings. Free energy
+the use of the latest sample data for training, allowing the provides a meaningful measure of the compatibility between
+model to gradually learn new classes or samples without the the input and each sub-classifier, enabling dynamic selection
+need to retain all historical data. Below is a brief definition of and effective inter-class discrimination. Such a mechanism
+incremental learning in WF. offers greater robustness and discriminative power in incre-
+ Incremental learning for WF constructs an initial deep mental scenarios characterized by ambiguous class boundaries
+learning-based classification model M0 . At each subsequent and sparse samples.Below, we provide a brief overview of the
+learning stage t ∈ τ = {0, 1, . . . , t}, the model is updated fundamental principles of energy models.
+using only the current monitored subset Dt = {(xi , yi )}K t
+ i=1 , The foundational concept of the energy model, as proposed
+where Kt denotes the number of website classes at stage t and by LeCun et al. [40], involves the creation of a function that
+(x , y) ∼ PD t represents the data distribution at this stage. The translates the model’s output values into an energy scalar,
+  Mt is expected to preserve knowledge of prior
+updated model which indicates the interdependence between the data and the
+websites ti=0 Di while minimizing catastrophic forgetting model parameters. This energy scalar, through the application
+across stages. of the Gibbs distribution, can be converted into probabil-
+ In the multi-classifier framework considered in this study, ity density, thereby enabling a more flexible classification
+each classifier fθi , where i ∈ τ and θ represent the parameters of approach for the model.
+the classifier, is trained on the data from a specific incremental Firstly, the classifier of a deep learning model can be
+stage Di . During inference, for an input sample x, we define abstracted as a function f with a value domain in RK , where
+it as in-distribution with respect to classifier fθi if x ∈ Di , K denotes the total number of classes. For a given input data
+meaning the sample conforms to the distribution seen during point x, after passing through the neural network, it yields
+ / Di , it is considered
+training of that classifier. Conversely, if x ∈ a logits vector. For class yi ∈ RK , the energy score is
+YI et al.: AN EFFICIENT WEBSITE FINGERPRINTING FOR NEW WEBSITES EMERGING 369
+
+Fig. 3. The illustration of the training phase of EIL-WF. The system incrementally learns from a continuously evolving stream of website traffic data. In
+the initial stage, a pre-trained and frozen feature extractor is used to train the first classifier for the initial set of monitored websites. In each new stage, a
+classifier is independently trained for newly added websites, while the backbone and previous classifiers remain fixed to preserve past knowledge. The final
+model consists of the shared feature extractor and all stage-specific classifiers, each handling data from its respective training stage.
+
+defined as: existing WF methods to have continuous learning capability.
+ The proposed EIL-WF is an incremental learning method
+ E (x , yi ) = −f (x )[yi ]. (1)
+ that employs the dynamic network structure strategy, and
+Here, f(x) provides the logits vector, and −f (x )[yi ] represents its network structure consists of two main components: the
+the logit for class yi . backbone network and the classifier. To simplify the design
+ Through Gibbs distribution, the energy values can be trans- and effectively extract raw traffic features, we select the wellformed into probability densities [40]: established DFnet as the backbone network for extracting
+ network traffic features. The classifier is composed of fully
+ e −E (x ,yi )/T
+ p(y i |x ) =   , (2) connected layers using linear activations. Our proposed solue −E (x ,y )/T tion is also suitable for other WF models, such as VarCNN,
+ y  ∈RK
+ WF-Transformer, and others.
+where T is the temperature parameter controlling the smooth- The training phase of the proposed EIL-WF involves a
+ness of the distribution; specifically, as T → 1 , the Gibbs continuous process of appending classifiers. As illustrated in
+distribution approximates the softmax activation values. The Figure 3, the proposed EIL-WF trains an isolated classifier
+denominator serves as the normalization constant, known as for the newly added websites of each stage, updating the
+the partition function. The negative logarithm of the partition monitored set while completing the model update. In the
+function defines the Helmholtz free energy F (x , fθ ), which is initial stage, a pre-trained backbone network fη is provided,
+expressed as: which is frozen for subsequent stages. The initial model
+ 
+ F (x ; f ) = −T log e f (x ,y)/T . (3) M0 consists of {fη |fθ0 }, where fθ0 denotes the classifier of
+ stage 0. η and θ represent the parameters of the backbone
+ y∈RK
+ and classifier, respectively. Subsequently, for each incremental
+Unlike softmax confidence scores, which are prone to over- stage i , i ∈ τ , we train a specific classifier fθi to learn the
+confidence issues, energy scores are theoretically aligned with website traffic knowledge PD i of that stage. Upon completing
+the input’s probability density. A classifier typically assigns t learning stages, the updated model Mt is represented as
+lower energy scores to data observed within the training set, {fη |fθ0 , fθ1 , . . . , fθt }.
+while higher energy scores are associated with unseen out-of- In the testing phase, traffic first passes through the backbone
+distribution data. Additionally, under the same parameters, the network for feature extraction, and then the extracted features
+energy output of the target classifier should be lower than that are fed into each classifier. The system selects the classifier
+of non-target classifiers. with the highest confidence for the test data (Eq. (4)), and
+ the classification result of that classifier is taken as the final
+ IV. D ESIGN OF EIL-WF prediction result (Eq. (5)).
+ In this section, we first present an overview of the proposed i ∗ = arg max H i (x ), (4)
+EIL-WF. Subsequently, we detail the optimization procedure i∈τ
+ ∗
+of our method. y ∗ = arg max fθi (y | x ). (5)
+ y∈Y ∗
+A. Solution Overview As shown above, a fair confidence function is essential to
+ In this work, we propose a general incremental learn- ensure that the data is predicted in the correct classifier. The
+ing framework free of rehearsal for WF, aiming to enable energy score, which is theoretically consistent with probability
+370 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+density and less susceptible to overconfidence, demonstrates constraint mechanism that limits outputs with excessively low
+an effective ability to distinguish between in-distribution and energy values. This ensures that classifiers from different
+out-of-distribution data [34], [39]. However, when applied to stages maintain a reasonable distribution of energy values
+website fingerprinting, the inherent homogeneity and ambi- within the energy space when processing data from both target
+guity in the traffic of certain websites compromise the and non-target websites. Since the free energy is a negative
+capability of the aforementioned approach to mitigate inter- value, we use its square as a loss function to penalize the low
+stage interference. Furthermore, it is prone to the influence free energy values during output. The energy constraining loss
+of website sample imbalance, resulting in an inability to function can be calculated by Eq. (8).
+effectively standardize output levels across different classifiers       2 
+trained on dynamic website data streams. LtF = Ex ∼P t I F x ; fθt < ζ · F x ; fθt , (8)
+ D
+ To unify the energy output levels across different stages of where ζ represents the threshold value for the triggering free
+WF classifiers, we design two regularization loss functions: energy constraining, and I denotes the discriminant function,
+energy constraining and parameter distancing. These func- the output of which is a boolean value. When F (x ; fθt ) is
+tions are employed to normalize the training of classifiers, less than the energy threshold ζ, the value is set to 1, thereby
+thereby mitigating overfitting issues and inter-stage classifier triggering the constraining to avoid over-sharp distributions.
+interference. The details of the classifier normalization training Conversely, if F (x ; fθt ) is equal to or exceeds ζ, the value is
+are elaborated in Section IV-B. In response to the challenge set to 0, indicating that the constraining is not triggered.
+of website sample imbalance during WF model training, we Moreover, the training process of a neural network can
+introduce energy scalars for their corresponding classifiers. be understood as optimizing the mutual information between
+This alignment of energy scores with classifiers trained on data and model parameters. As free energy decreases, this
+high-sample website datasets aims to prevent model bias, as mutual information increases, reflecting the model’s improved
+further described in Section IV-C. During the testing phase, a capacity to capture data structure. However, classifiers trained
+fair confidence function is designed to ensure that test traffic at the current stage may still output high confidence scores for
+is accurately classified by the corresponding classifiers, with data from earlier stages, leading to false activations on out-ofthe specifics outlined in Section IV-D. distribution samples. This occurs because the current classifier
+ θt may inadvertently encode feature patterns from historical
+B. Classifier Normalization Training data Dt  , resulting in logit overlap, where predicted scores for
+ Similar to traditional classifier training, the multi-classifiers target and non-target classes become indistinguishably close.
+trained by the proposed EIL-WF need to maintain high As a consequence, the mutual information I (Dt  ; θt ) becomes
+classification confidence for the websites at their respective undesirably high.
+stages. To this end, we first employ softmax cross-entropy to To mitigate this, we aim to reduce the current classifier’s
+optimize the model parameters: ability to encode features from previous stages. Since the EIL-
+ (t) WF framework avoids retaining historical data, we cannot
+ LCE = E (t) [− log p(y|x )]. (6) explicitly correct this behavior through data replay. Instead, we
+ (x ,y)∼PD
+Combining Eq. (2) and Eq. (3) reveals that cross-entropy reduce mutual information indirectly by encouraging parameoptimization inherently minimizes free energy F (x ; fθt ) = ter distancing: the current classifier θt is encouraged to stay
+   distant from historical classifiers {θ1 , . . . , θt−1 } in parameter
+− log y  e fθt (x ,y ) , as shown in Eq. (6) and Eq. (7). From an
+ space, thereby minimizing latent representational overlap. We
+information-theoretic perspective, cross-entropy loss directly
+ implement this through the Parameter Distancing Mechanism,
+bounds mutual information between data x and labels y
+ which seeks to reduce I (Dt  ; θt ) for t  = t. The corresponding
+through:
+ loss function term is:
+ (t)
+ I (x ; y) ≥ log K − LCE , (7) 
+ t−1
+ (t)
+ Ldis = θt − θi 2 . (9)
+where K is the number of categories. Maximizing I(x;y)
+ i=1
+ensures classifier θt focuses on current-stage features.
+ Unlike traditional approaches, our approach also requires This encourages the model to decouple from obsolete repreeach classifier to exhibit low classification confidence for data sentations, reduces interference across stages, and promotes
+from non-target stages. The energy model theory requires specialization on current tasks without relying on stored
+Fin-distribution  Fout-of-distribution . However, the emerging historical data.
+of new websites data causes distribution non-stationarity The unified loss function combines these objectives:
+and class boundary blurring, leading to two critical issues: (t) (t) (t) (t)
+ Ltotal = LCE + λLenergy + γLdis , (10)
+1) Excessive sharpness in prediction distributions leads to
+suboptimal energy minimization, eroding prior classifier capa- where λ and γ balance the dual requirements of confident
+bilities; 2) Non-target classifiers generate spurious low energy in-distribution classification and energy-space separation from
+responses to current-stage data, violating distribution separa- non-target classifiers. When new stage data arrives, EIL-WF
+ (t)
+tion requirements. initializes a classifier and optimizes θt using Ltotal , then
+ To prevent the overall energy of certain classifiers from freezes and aggregates θt with prior classifiers. This process
+being lower than that of non-target, we design an energy is visualized in Algorithm 1 and the upper part of Figure 4.
+YI et al.: AN EFFICIENT WEBSITE FINGERPRINTING FOR NEW WEBSITES EMERGING 371
+
+Fig. 4. Overall framework of the proposed EIL-WF. The upper part illustrates the process of classifier normalized training for the latest stage of the training
+phase, and the lower part depicts the classifier selecting process of multi-classifier aggregation during the testing phase. To aid comprehension, we provide
+schematic diagrams of two types of normalized training loss functions: energy constraining and parameter distancing.
+
+C. Energy Alignment Algorithm 1 Classifier Normalization Training
+ Within the EIL-WF framework, classifiers operate indepen- Given components: Pre-trained backbone fη , fixed stage
+ t−1
+dently, minimizing interference and isolating the model bias classifier fθi i=0 , latest stage identification t, temperainduced by imbalanced data. Furthermore, classifier normal- ture T, learning rate ;
+ization training constrains excessive energy outputs, ensuring Input: Training data Dt ;
+minimal interference between model parameters. However, Output: The t-th classifier parameters θt ;
+despite these advantages, EIL-WF encounters challenges in 1: for x in Dt do
+enhancing the performance of classifiers trained on low-sample 2: Initialize classifier fθt for the stage t;
+data. 3:  fη (x
+ Extract the traffic feature  );
+ This limitation stems from practical constraints imposed 4: Generate the logits fθt fη (x ) ;
+by real-world network environments and security policies, 5: Calculate the cross-entropy loss Ltce by Eq. (6);
+which restrict the availability of low-sample data from certain 6: Calculate the free energy F x ; fθt by Eq. (3);
+websites. As a result, classifiers trained on limited or noisy 7: if F (x ; fθt ) < ζ then
+  2
+data continue to exhibit suboptimal accuracy. This is partic- 8: Calculate LtF = F x ; fθt ;
+ularly evident in the energy output space, where classifiers 9: // Energy constraining loss
+trained on low-sample data display significantly higher energy 10: end if
+ 
+ t−1
+values compared to others. This discrepancy is illustrated 11: Calculate Ltθ = 1t ||θt − θi ||2 ;
+in Figure 5(a), where the classifiers from stages 1 and 3, i=0
+trained on low-sample data, exhibit notably higher energy 12: // Parameters distancing loss
+outputs than those trained on Sufficient data. Consequently, 13: Calculate the total loss by Lttotal = Ltce +λLtF +γLtθ ;
+classifiers trained on low-sample data may incorrectly classify 14: Update θt by θt ← θt −  · Ltotal ;
+test samples, as their disproportionately high energy values 15: end for
+dominate the decision-making process despite the presence of 16: Return: θt .
+more reliable classifiers.
+ To address this issue and ensure that classifiers trained
+on varying data qualities maintain comparable effectiveness imbalanced datasets, especially those with severely limited
+during inference, we introduce the Energy Alignment (EA) training samples.
+strategy. EA is a lightweight and practical mechanism designed Rather than aligning the absolute energy values across clasto harmonize the energy outputs of classifiers trained on sifiers, EA focuses on preserving a relative energy advantage
+372 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ Algorithm 2 Classifier Selecting
+ Given components: The fixed backbone fη , stage classifiers, fθi i∈τ , energy scalars Δ(i ), i ∈ τ ;
+ Input: Test traffic sample x;
+ Output: The classification result y ∗ ;
+ 1: Extract traffic feature fη (x );
+ 2: for i = 1, . . . , t do  
+ 3: Generate the i-th logits fθs fη (x ) ;
+ 4: Calculate the free energy F x ; fθi ;  
+ 5: Calculate the classification confidence H x , fθi
+Fig. 5. Energy level of in-distribution data for stage classifiers with (b) and 6: by Eq. (12);
+without (a) using EA where the 1st and 3rd classifiers are trained on lowsample data. The Y-axis represents the average energy output of the stage 7: end for
+classifiers, and the X-axis represents the stage index of the classifiers. 8: Selecting correct classifier identification i ∗ by Eq. (13);
+ ∗
+ 9: Classify x in i ∗ -th subset by y ∗ = arg max fθi (y | x );
+ y∈Y ∗
+ 10: Return: y ∗ .
+for the target classifier. Specifically, the energy output of the
+classifier trained on low-sample data is adjusted by an additive
+scalar Δ, such that its total energy remains consistently
+lower than the energy output of non-target classifiers, with a D. Classifier Selecting
+safe margin defined by a tunable threshold . Formally, the In previous studies [39], researchers show that data within
+condition is enforced as: the distribution generally have lower free energy compared to data outside the distribution, i.e., F (xi ; fθi ) >
+ EL + Δ < Enon-target − , (11) j j
+ F (xj ; fθi ), F (xj ; fθ ) > F (xi ; fθ ), where xi represents
+ in-distribution data of i-th stage, while j denotes out-ofwhere EL is the original energy output of the target classifier distribution data of j-th stage.
+trained on low-sample data, Enon-target denotes the energy During the training phase, we normalize the Helmholtz
+values of all non-target classifiers for the same input, and  free energy outputs of each classifier, ensuring consistent
+is a small positive constant that prevents ambiguous overlaps comparability of the energy scale between classifiers at differdue to numerical instability or noise. ent stages. When training classifiers on low-sample datasets,
+ This formulation ensures that, even in the presence of we align their energy outputs with those trained on highlimited training data, the classifier corresponding to the tar- sample datasets by adding a shift scalar. These two strategies
+get label remains energetically favorable compared to its ensure that the energy outputs of classifiers at different stages
+non-target counterparts. As illustrated in Figure 5(b), the remain consistent for in-distribution data, i.e., F (xi ; fθi ) ≈
+application of this adjustment results in energy outputs for low- F (xj ; fθj ), i = j . Consequently, utilizing Helmholtz energy
+sample classifiers that are not only more comparable to those values during testing to select the most appropriate classifier
+from high-sample classifiers but also strategically prioritized for handling data represents a fair and reliable approach.
+during inference. The EA strategy, therefore, establishes a Specifically, the confidence score is defined as the negative
+simple yet effective decision boundary in the energy space, value of the Helmholtz free energy. For a given sample x, the
+mitigating the adverse impact of low data availability while classification confidence value of H (x , fθi ) can be defined as:
+enhancing prediction reliability.    i
+ To further enhance the performance of classifiers trained H (x , fi ) = −F x ; fθi = T log e fθ (x ,y)/T − Δ(i ),
+on low-sample data, we employ four data augmentation y∈Y i
+strategies: random insertion, random deletion, random split- (12)
+ting, and random merging. These techniques are designed to
+enrich the model’s ability to capture the diverse features of where Δ(i ) represents the energy shift scalar of the i-th
+website traffic. The random insertion and deletion strategies classifier output. If the classifier is trained on low-sample data,
+simulate fluctuations in packet size due to dynamic con- Δ(i ) assumes a negative value; if it is trained on high-sample
+tent changes [30], while the random merging and splitting data, Δ(i ) = 0.
+strategies account for variations in burst size, resulting from Then, the classifier with the lowest energy value is selected
+differences in link bandwidths [13]. as the output result classifier (Eq. (13)).
+ The EA strategy requires no modifications to the model’s ⎛ ⎞
+learning paradigm or the introduction of additional parameters.  i
+ i ∗ = arg max ⎝T log e fθ (x ,y)/T − Δ(i )⎠. (13)
+Instead, it applies a scalar adjustment during inference to i∈τ
+ y∈Y i
+improve the performance of classifiers trained on low-sample
+data. By aligning the energy outputs, we mitigate the negative Finally, the output result of the selected classifier is taken
+effects of low-sample data and ensure that all classifiers, as the traffic classification category by Eq. (5). The classifier
+regardless of their training data scale, maintain similar energy selecting process is introduced in Algorithm 2 and presented
+levels, resulting in more accurate and robust predictions. in the lower part of Figure 4.
+YI et al.: AN EFFICIENT WEBSITE FINGERPRINTING FOR NEW WEBSITES EMERGING 373
+
+ V. E XPERIMENTAL E VALUATION the DF95 dataset, which contains 1,000 samples, 800 samples
+ In this section, we conduct a series of experiments to com- are allocated for training, while both the validation and test
+prehensively evaluate the performance of the proposed EIL sets comprise 100 samples per website.
+WF method. We first outline the experimental setup, including 2) Evaluation Metrics: Considering that the primary objecdataset construction, evaluation metrics, model architecture, tive of website fingerprinting is to accurately identify websites
+and training details in Section V-A. and avoid mis-classification, average accuracy (AAC) is des-
+ We then assess the incremental learning capabilities of EIL ignated as a crucial evaluation metric. The purpose of
+WF by adapting several state-of-the-art incremental learning incremental learning is to reduce the forgetting rate of old
+algorithms to the website fingerprinting scenario and com- categories while continuously incorporating new categories.
+paring their classification accuracy and forgetting rates with Final forgetting rate (FF) serves as a measure to assess the
+those of EIL WF (Section V-B). Section V-C examines the incremental capability of EIL-WF, which quantifies the degree
+adaptability of EIL WF across different backbone networks of performance degradation of old tasks or categories after the
+and compares its consistency and robustness with other high- introduction of new tasks or categories. Given that the classifiperforming WF methods under multi-model structures. In cation accuracy within the classifier relies on the performance
+Section V-D, we compare free energy based scoring and of the selected backbone network, the classification accuracy
+Softmax based scoring to evaluate their effectiveness in of EIL-WF is principally influenced by the ability to classify
+incremental identification tasks. We further examine real- the samples accurately within the correct classifier. We employ
+world scenarios in Section V-E and Section V-F, focusing average recall (AR) to demonstrate the capability of EIL-WF
+on performance under imbalanced dataset and concept drift in selecting the appropriate classifier for test data. AAC , AR,
+dataset. Finally, Section V-G presents ablation studies to and FF can be computed as follows:
+ t
+analyze the contribution of each loss function to overall Ni · AC Ci
+incremental performance. In addition, the experimental envi- AAC = i=1
+ Ntotal
+ronment of this work is based on a 4060 GPU with 12GB t
+ Ni · Recal li
+memory and PyTorch 2.1.1. AR = i=1
+ Ntotal
+ FF = AAC old UB − AAC new ,
+ old
+ (14)
+A. Experimental Setup
+ 1) Dataset: To comprehensively verify the performance of where ACCi and Recalli denote the accuracy and recall rate
+EIL-WF, we conduct experiments on two classic public WF of each classifier for in-distribution data, Ni represents the
+datasets, namely the DF95 dataset and the AWF100 dataset. sample size of the i-th classifier, and Ntotal indicates the total
+ DF95: This dataset originates from [6], where Sirinam et al. sample size of all current websites. AAC old UB is the upper
+collected 95 monitored websites using the TBB 7.X version. bound average accuracy of the old data (the accuracy of the
+These websites are selected from the top 100 most popular model trained with the complete old data), while AAC old new
+sites listed by Alexa, with each website having 1000 traces. reflects the average accuracy of the old data following the
+The sequence length of each sample is 5000. model update.
+ AWF100: This dataset is sourced from [14], collected by 3) Parameter Setting: The temperature T is set to 0.4, and
+Rimmer et al. using TBB V6.X. All websites are from the the regularization coefficients for the energy constraining loss
+top of Alexa. In this paper, we use AWF100, which includes λ = 0.25 and the parameter distancing loss γ = 0.08 are deter-
+100 monitored websites with non-intersecting URLs, each with mined. EIL-WF uses DFnet as the default backbone network
+2500 traces, and each trace has a sequence length of 5000. structure for benchmark testing and maintains consistency with
+ Drift dataset: To study the effect of distributional drift over its network hyperparameters.
+time in the context of website fingerprinting, we introduce a
+series of temporally-shifted datasets derived from the original B. Comparison With CIL Methods in WF
+AWF100, which were also collected by Rimmer et al. These In this part, we compare the incremental learning capacity
+datasets, denoted as AWF3d, AWF10d, AWF2W, AWF4W, and of EIL-WF with existing CIL methods in the WF scenario.
+AWF6W, correspond to traffic collected approximately 3 days, To enhance clarity, we adapt and apply classic CIL frame-
+10 days, 2 weeks, 4 weeks, and 6 weeks after the original works iCarl [15], Co2L [33], L2P [35], EASE [16], APER [38]
+AWF100 collection period, respectively. Each class contains and ESN [34] to WF and conduct a comparison. iCarl and
+100 samples, and each sample has a trace length of 5000. Co2L represent incremental learning methods that require the
+ Incremental data setting: In the initial phase of the incre- retention of 50 samples per historical category for model
+mental learning model, the number of categories comprises training. L2P, EASE, APER and ESN are incremental learning
+approximately half of the total categories in the dataset, with methods that do not require caching old data.
+ten new website categories added in each subsequent incre- iCarl [15]: learns new classes incrementally by jointly
+mental stage. In the DF95 dataset (comprising 95 categories), learning representations and classifiers while maintaining a
+the initial phase includes 45 categories; in the AWF100 dataset small memory buffer.
+(comprising 100 categories), the initial phase includes 50 web- Co2L [33]: employs contrastive learning and selfsite categories. The dataset is divided into training, validation, supervised distillation to improve representation robustness
+and test sets in an 8:1:1 ratio. For example, for each website in and transferability.
+374 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE I
+ C OMPARATIVE A NALYSIS OF AVERAGE ACCURACY (↑) AND F INAL F ORGETTING (↓) B ETWEEN EIL-WF AND E XISTING I NCREMENTAL L EARNING
+M ETHODS ON DF95 AND AWF100 DATASETS . B UFFER S IZE R EPRESENTS THE N UMBER OF S AMPLES C ACHED FOR E ACH O LD W EBSITE , T D ENOTES
+ THE L ATEST S TAGE N UMBER . A LL N UMBERS A RE %, AND W E D O N OT S HOW S TANDARD D EVIATIONS L ESS T HAN 0.5%
+
+ L2P [35]: L2Puses prompt-based tuning of pre-trained On the DF95 dataset, the final AAC of EIL-WF reaches
+models, storing prompts as reusable memory for future tasks. 95.3%, which is 2.8% lower than the UB and 20.1% higher
+ EASE [16]: EASE builds a scalable subspace via than the best method among those relying on data replay in
+lightweight adapters on frozen pre-trained models, leveraging incremental learning approaches. EIL-WF also outperforms
+intra-class similarity in a collaborative space to synthesize Co2L in AAC at all stages. Compared to methods that do
+classifiers for old classes without accessing past data. not require caching, the final AAC of EIL-WF is 6.9% higher
+ APER [38]: APER balances generalization and adaptability than the best method, ESN. Although it is slightly lower
+by efficiently fine-tuning pre-trained models and combining than ESN at stage t = 1, EIL-WF consistently performs
+their features with adapter outputs. better than ESN in subsequent incremental stages, and its
+ ESN [34]: ESN expands its classifier set dynamically and advantage becomes more pronounced as the number of stages
+aligns their outputs via energy-based self-normalization and increases. Due to the isolation between classifiers at each
+ensemble inference. stage in EIL-WF, the interference between new and old data
+ The comparison results are presented in Table I. To facilitate remains minimal, resulting in a lower forgetting rate for old
+a more effective comparison, this study introduces the concept data. Compared to other methods, EIL-WF achieves the best
+of an upper bound (UB) at each stage, representing the or similar performance. On the AWF100 dataset, the final
+accuracy of training the model with the complete dataset at forgetting rate of EIL-WF is 1.7%, which is 20% lower than
+each stage. The results demonstrate that EIL-WF, which does iCarl, 11.4% lower than Co2L, 16.4% lower than L2P, and
+not require caching historical data on the same traffic feature 5.4% lower than ESN. On the DF95 dataset, the final forgetting
+extraction network, achieves superior performance in most rate of EIL-WF is 2.1%, which is 5.7% lower than the best
+cases. method, ESN, and 20.4% lower than the average of the four
+ Over the AWF100 dataset, the final AAC of EIL-WF compared methods. This indicates that the method proposed
+reaches 96.6%, which is only 2.7% lower than the UB.
+ in this paper provides continuous learning capabilities for WF
+Compared to the best method among those relying on data
+ models, meeting the needs of long-term dynamic updates to
+replay, the AAC improves by 19.8%, and EIL-WF outper- the monitored set.
+forms Co2L in AAC at all stages. In comparison to methods
+that do not require caching, the final AAC of EIL-WF is 6.2%
+higher than the best method, ESN. Although the performance C. Comparison With Existing WF Methods Under CIL
+remains similar in the initial incremental stage and is slightly Setting
+lower than ESN at the second stage, as the number of stages The EIL-WF is a general incremental learning frameincreases, the classification interference between stages in work designed for website fingerprinting, aiming to equip
+ESN intensifies, leading to a rapid decline in its performance. the majority of WF models with the capability for con-
+After the number of stages t exceeds 2, EIL-WF consistently tinuous learning. To assess the effectiveness of EIL-WF
+achieves the best results. in enhancing incremental learning performance for website
+YI et al.: AN EFFICIENT WEBSITE FINGERPRINTING FOR NEW WEBSITES EMERGING 375
+
+Fig. 6. Comparison of classification accuracy across different WF models using EIL-WF and finetune strategies over five incremental learning stages.The
+metrics includes average accuracy over all classes (AAC_all), average accuracy over old classes learned in previous stages (AAC_old), and average accuracy
+over newly introduced classes in the current stage (AAC_new).
+
+fingerprinting tasks, we design a controlled comparative evaluation metrics, demonstrating both robustness and adaptexperiment. Specifically, eight representative WF models are ability in incremental learning scenarios. After completing five
+selected as fixed backbone architectures: DF [6], TikTok [7], incremental learning stages, EIL-WF maintains high overall
+VarCNN [8], RF [9], WF-Transformer [10], BAPM [28], accuracy across all tested architectures: DF, TikTok, VarCNN,
+TMWF [11], and ARES [12]. Among these, BAPM, TMWF RF, WF-Transformer, BAPM, TMWF, and ARES were 95.3%,
+and ARES are multi-tab WF methods. For consistency, we 95.2%, 95.2%, 96.4%, 96.1%, 93.9%, 95.1%, and 95.8%,
+configure all models with a single tab during experimentation. respectively. This consistency underscores the framework’s
+We establish a baseline method for comparison: a standard ability to mitigate the negative effects of distributional shifts
+fine-tuning-based incremental learning strategy, in which the and class expansion.
+backbone network remains frozen during training, and a In stark contrast, traditional fine-tuning approaches show
+dynamically decaying learning rate is applied to alleviate a marked decline in overall performance, particularly in
+catastrophic forgetting. Furthermore, to highlight the efficiency AAC_all, as the learning progresses through incremental
+of EIL-WF, we also compare its computational and time costs stages. At stage five, DF, TikTok, VarCNN, RF, WFwith those incurred by a full retraining strategy, where the Transformer, BAPM, TMWF, and ARES dropped to 35.7%,
+model is retrained from scratch on the entire accumulated 32.4%, 36.6%, 81.2%, 43.3%, 21.6%, 84%, and 46.4%,
+dataset at each incremental stage. respectively—highlighting their vulnerability to catastrophic
+ To evaluate the incremental learning performance of forgetting. This sharp performance drop is primarily due
+each method, we adopt three metrics: average accu- to the erosion of learned representations for earlier tasks,
+racy over all classes (AAC_all), average accuracy over which are not adequately preserved during subsequent updates.
+old classes (AAC_old), and average accuracy over new Notably, while fine-tuned models may demonstrate reasonable
+classes (AAC_new). These metrics are computed for each performance on newly introduced classes (reflected in initially
+approach across five incremental stages, from t = 1 to elevated AAC_new scores), they fail to retain recognition
+t = 5. All experiments are conducted on the DF95 capabilities for previously learned classes, as evidenced by
+dataset. rapidly declining AAC_old scores. In contrast, EIL-WF suc-
+ The experimental results, illustrated in Figure 6, provide cessfully balances plasticity and stability, allowing models
+strong empirical evidence for the effectiveness of EIL- to acquire new knowledge while maintaining competence on
+WF across diverse WF backbone models. The framework earlier tasks. This capability is particularly critical for realconsistently achieves high classification accuracy across all world deployment of WF systems, where continuous updates
+376 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE II
+ T IME OVERHEAD OF WF M ODELS FOR M ODEL U PDATING W ITH AND this approach with the conventional Softmax-based confidence
+ W ITHOUT EIL-WF F RAMEWORK , M EASURED IN S ECONDS ( S ) measure, which serves as the baseline. To visualize how
+ well each method performs in classifier selection, we conduct
+ experiments on the DF95 dataset and test at every incremental
+ stage from t = 1 to t = 5. Figure 7 presents confusion matrices
+ that illustrate classifier assignment performance. Diagonal elements represent correctly routed samples, while off-diagonal
+ elements indicate misrouted samples, revealing inter-classifier
+ interference.
+ The results clearly demonstrate that the free energy-based
+ scoring strategy significantly outperforms the conventional
+ Softmax-based approach in selecting the correct classifier
+ during incremental inference. Under the free energy strategy,
+ the confusion matrices exhibit strong diagonal dominance,
+are necessary without compromising historical classification indicating accurate sample-to-classifier routing and minimal
+integrity. interference between classifiers. In contrast, the Softmax
+ In the incremental learning phase, EIL-WF utilizes only method leads to increased off-diagonal errors and substantial
+the data from the current stage to train the classifier, thereby cross-classifier confusion, which intensifies with each increfacilitating rapid model updates. This approach proves par- mental stage. At stage t = 5, the Softmax-based approach
+ticularly advantageous for WF scenarios characterized by shows a notable decline in recall, with average per-classifier
+limited storage and computational resources. Table II presents recall dropping to 47.9%, 86.0%, 85.1%, 92.3%, 92.5%, and
+a comparison of computational time costs between traditional 88.1%, respectively.
+methods and EIL-WF during model updates. The results By contrast, the free energy-based method consistently
+demonstrate that the training time of EIL-WF significantly maintains high recall, successfully directing the majority of
+reduces in comparison to traditional methods, with a decrease test samples to their appropriate classifiers. At the same stage
+of 2 ∼ 3 orders of magnitude. This advantage arises from the (t = 5), the average recall across classifiers remains robust
+necessity of traditional methods to employ the entire dataset at 99.0%, 97.7%, 97.4%, 96.8%, and 96.1%. These findings
+for training the model from scratch, which results in gradually confirm that the proposed energy-based scoring mechanism
+increasing time costs. In contrast, EIL-WF maintains stability not only improves routing accuracy and overall classificaand reduces training time consumption throughout the process tion performance but also effectively suppresses classifier
+by utilizing only the current data for training. interference in dynamic, multi-stage incremental learning
+ Furthermore, EIL-WF training eliminates the need for scenarios.
+caching historical data, significantly reducing the storage space
+required for model training. As the number of incremental E. Performance on Imbalanced Dataset
+stages increases, traditional methods demand the continuous
+retention of an expanding volume of original website category In this part, we evaluate the performance of EIL-WF
+data, leading to a substantial rise in storage costs. For instance, on imbalanced datasets. Since existing WF methods are
+when starting with 45 website categories and adding 10 new not designed to address class imbalance issues and fewcategories at each incremental stage, EIL-WF retains only the shot methods typically exhibit high spatial complexity, we
+data relevant to the current classifier’s training, which can employ the original DF model as the baseline for comparative
+be deleted after training. This process ensures that, at any analysis with the EIL-WF method on imbalanced datasets.
+given stage, the model stores data for up to 10 website cate- Specifically, EIL-WF is categorized into two settings: one with
+gories, thereby maintaining low overall storage consumption. energy alignment (EA) and the other without, to illustrate the
+In contrast, traditional methods must store all data, resulting applicability of EIL-WF in addressing imbalanced datasets and
+in escalating storage costs over time. The efficiency of EIL- to assess the effect of energy alignment. We randomly select 20
+WF in utilizing computational and storage resources provides categories from the DF95 and AWF100 datasets as low-sample
+it with a distinct advantage in long-term tasks. website categories, which contain fewer samples N ∼ (2 , 20 ),
+ to simulate dataset imbalance. We use L-ACC to represent the
+ average accuracy of low-sample websites during testing.
+D. Comparison With Softmax-Based Classifier Selecting The experimental results, as shown in Figure 8, demonstrate
+ This section evaluates the effectiveness of the proposed the comparative outcomes under varying degrees of data
+free energy-based scoring mechanism as a confidence measure imbalance. It is observed that EIL-WF with energy alignment
+for classifier selection during inference. As the number of outperforms the baseline method when the number of samples
+classifiers increases across incremental stages, this mechanism for poorly performing websites is fewer than 20. In the case
+helps route each test sample to the most suitable classifier, of N = 2, the initial method’s recognition AAC for these
+thereby maximizing classification accuracy. It plays a critical websites is 0, indicating that it is challenging to learn about
+role in the EIL-WF framework by preventing catastrophic these websites due to model training bias. However, EILforgetting and supporting continual learning. We compare WF (with EA) achieves a recognition AAC of 78.2% on the
+YI et al.: AN EFFICIENT WEBSITE FINGERPRINTING FOR NEW WEBSITES EMERGING 377
+
+Fig. 7. Confusion matrices comparing classifier selection performance using free energy-based versus Softmax-based scoring mechanisms across incremental
+stages (t = 1 to t = 5) on the DF95 dataset.
+
+DF95 dataset and over 70% on the AWF100 dataset for these
+websites. Notably, EIL-WF without EA also recognizes these
+poorly performing websites to some extent.
+ When the number of low-sample website examples N = 20
+increases, the model bias issue of traditional methods is
+somewhat mitigated, with recognition AAC reaching approximately 71.7% on the DF95 dataset and 77.5% on the AWF100
+dataset for these websites, which remains below the ideal level.
+In contrast, EIL-WF (with EA) significantly improves recognition performance, with AAC reaching 92.4% on the DF95
+dataset and 92.1% on the AWF100 dataset, demonstrating its
+strong ability to recognize websites with low-sample samples
+in the presence of data imbalance.
+ To improve the principled and practical determination of the
+energy scalar Δ in automated or large-scale deployments, we
+conducted an in-depth analysis of its calculation. The primary
+objective is to ensure that the majority of traffic from lowsample websites can be correctly classified. As discussed in
+Section IV-C, this requires that during inference, the energy Fig. 8. Average accuracy performance on imbalanced data, with the X-axis
+output of the target classifier remains consistently lower than representing the sample numbers of 20 low-sample data site categories.
+ (a) shows the results on the DF95 dataset, and (b) shows the results on the
+that of the non-target classifiers, with a sufficient margin AWF100 dataset.
+defined by the threshold . The choice of  therefore directly
+determines the extent to which the target classifier’s energy
+must be reduced. Specifically, we compute the average energy aggressive, it introduces excessive interference to other clasoutputs for low-sample website data across both the target sifiers, resulting in a noticeable decline in overall system
+and non-target classifiers, introduce an additive scalar to align accuracy. To adopt a conservative approach and minimize
+these outputs, and then determine an appropriate  to maintain potential negative impact on other stages, we ultimately set
+the target classifier’s relative advantage.  = −0.5 as the default configuration for this experiment.
+ To systematically analyze the impact of different  values
+on classification performance, we explored a range of 
+values within [−2, 0] and observed that when  lies within F. Performance on Concept Drifted Dataset
+the interval [−0.8, −0.4], the overall classification accuracy This section evaluates the performance of EIL-WF in
+remains relatively stable across various sample size settings. handling concept drift in dynamic environments. Concept drift
+As the absolute value of  increases (i.e., becomes more refers to changes in data distributions over time that lead to
+negative), the classification accuracy for low-sample websites model performance degradation. Traditional models trained on
+steadily improves. However, if the energy adjustment is too static datasets often fail to adapt to such changes. Common
+378 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 9. Impact of concept drift on WF classification accuracy over time. The model is initially trained on the AWF100 dataset and evaluated on multiple
+temporally drifted datasets (AWF3d, AWF10d, AWF2w, AWF4w, and AWF6w).
+
+ classifier architecture allows each classifier to operate independently. Updating one does not interfere with the others, which
+ enables precise incremental learning. In contrast, fine tuning
+ improves recognition for selected categories but often causes
+ forgetting of stable ones. This problem is especially severe
+ under class imbalance, where accuracy for untrained classes
+ may degrade significantly and compromise system robustness.
+ We trained the DFnet model on AWF100 and then selected
+ the 15 most high drift categories from AWF6w. Each website
+ provided 80 training samples and 10 validation samples. Final
+Fig. 10. Comparison of classification accuracy between EIL-WF and finetuning methods on the top 15 severely drifted website categories, showing testing was conducted on the complete AWF6w dataset. In
+both current task accuracy for updated categories and overall accuracy. the fine tuning experiments, we froze convolutional layers and
+ lowered the learning rate to limit gradient changes. In EIL-WF,
+ the selected categories were assigned to a separate classifier
+ that was trained independently while the remaining classifiers
+strategies for addressing this issue rely on full data recollection remained unchanged.
+and model retraining at regular intervals. These approaches are Figure 10 presents the final results. Fine tuning raised the
+rarely feasible in real-world deployment due to high demands AAC of selected categories to 99.1% but caused a drop in
+on storage, communication, and computation. overall performance. After 30 epochs of training, overall AAC
+ To evaluate the impact of concept drift on model decreased to 87.8%. EIL-WF, on the other hand, improved
+performance, we train an initial model based on DFnet using AAC for the 15 selected categories to 98.2% while maintaining
+the AWF100 dataset, and test it on several drifted versions stable performance for the rest. Overall AAC reached 95.2%.
+of the dataset: AWF3d, AWF10d, AWF2w, AWF4w, and These results show that EIL-WF not only improves recognition
+AWF6w. As shown in Figure 9, the model’s classification for high drift categories but also avoids disrupting stable ones.
+accuracy is significantly affected by concept drift, dropping
+from an initial 99.1% to 88.7% after six weeks. However, it
+is worth noting that this performance degradation does not G. Impact of Loss Function Configurations
+occur uniformly across all classes. On the AWF6w dataset, To analyze the specific impact of the two loss functions
+only 15 website classes exhibit classification accuracy below in classifier normalization training on the performance of the
+90%, while the majority of classes maintain relatively stable enhanced learning method, we conduct ablation experiments.
+performance. This suggests that in practice, concept drift tends These experiments evaluate the effect of each loss function
+to be non homogeneous and affects only a subset of high individually or in combination on the final performance of the
+dynamic websites within a given time window. model.
+ A more practical and cost effective solution involves peri- As shown in Table III, when the model is trained solely
+odically sampling small data subsets and selectively updating with cross-entropy loss, the overall performance remains
+classifiers for high drift categories. This approach preserves suboptimal, with AAC rates of 88.1% and 89.2% on the DF95
+system adaptability without requiring full model retraining. and AWF100 datasets, respectively. This is accompanied by
+EIL-WF performs well under this strategy. Its modular multi elevated forgetting rates, reaching 8.9% and 9.1%. The error in
+YI et al.: AN EFFICIENT WEBSITE FINGERPRINTING FOR NEW WEBSITES EMERGING 379
+
+ TABLE III
+ I MPACT OF E ACH L OSS F UNCTION ON AAC AND AR, stages accumulate, the number of classifiers may grow to
+ A LL N UMBERS A RE % dozens or even hundreds, resulting in a significant increase
+ in the total number of parameters and placing a considerable
+ burden on resource-constrained edge devices. To address this,
+ future work may explore model compression strategies such
+ as model distillation, which merges stage-wise classifiers into
+ a unified model, or structured pruning to eliminate redundant
+ parameters. These techniques can help control model size
+ without compromising performance, enhancing deployability.
+ We also introduce an energy alignment (EA) strategy
+ to calibrate output energies across classifiers trained with
+ imbalanced data. This effectively reduces performance disselecting data for classifiers is also considerable, with average
+ crepancies caused by varying training sample sizes across
+recall rates of only 89.1% and 89.7% for each classifier. This
+ stages. Experimental results confirm that EA significantly
+indicates that in the absence of additional loss functions, as
+ improves performance in few-shot stages and offers a clear
+the number of learning stages increases, the model’s stages
+ and efficient solution to data imbalance in incremental WF
+become more susceptible to interference during classification,
+ learning. However, the current EA approach focuses on interleading to a more pronounced catastrophic forgetting problem.
+ stage imbalance and does not fully account for intra-stage
+In other words, the acquisition of new knowledge significantly
+ distribution disparities. In reality, variations in sample quantity
+undermines the retention of prior knowledge.
+ within a single stage may also introduce training bias and
+ Further analysis reveals that the introduction of the energy
+ affect fine-grained classification. Future research could incorconstraining loss effectively alleviates this issue. Without this
+ porate sample-level energy scaling or integrate established
+loss function, the average recall rate for each classifier on
+ techniques such as focal loss or class reweighting to better
+the two datasets is 92.2% and 92.6%, respectively, indicating
+ address intra-stage imbalance.
+a significant decline compared to EIL-WF. This results in a
+ From an architectural perspective, the proposed multireduction in AAC rates by 3.7% and 4.5%, respectively. This
+ classifier design supports localized updates, allowing targeted
+demonstrates the important role of the energy constraining loss
+ optimization for specific domains without affecting other
+in reducing interference between classifiers at different stages
+ components. This capability offers a practical solution for
+and maintaining long-term memory.
+ addressing concept drift in WF attacks. When website struc-
+ Additionally, the results show that the parameter distance
+ tures evolve over time, lightweight classifiers can be trained
+loss contributes to improving the model’s incremental learning
+ and deployed for affected sites, preserving adaptability and
+ability. By encouraging the model parameters to maintain a
+ monitoring accuracy. Compared to full retraining, localized
+distance from the parameters of specific classifiers, it reduces
+ updates require fewer resources and offer faster responsivethe incorrect responses of non-target classifiers to new data.
+ ness. A promising future direction is the development of
+The model without this loss has final AAC rates of 93.3% and
+ feature drift detection mechanisms. For instance, designing
+94.2%, which are 2.3% and 2.4% lower than those obtained
+ lightweight drift-aware models that detect subtle structural or
+with the complete loss setting, indicating its positive role in
+ behavioral changes could guide classifier updates and support
+optimizing model generalization and preventing overfitting.
+ more precise and dynamic incremental learning.
+
+H. Discussion
+ VI. C ONCLUSION
+ This study proposes an incremental learning approach for
+website fingerprinting attacks based on a multi-classifier archi- This paper presents an incremental learning approach named
+tecture. The method enables traditional WF attack models to EIL-WF, enabling website fingerprinting models to evolve
+learn continuously, overcoming their reliance on the assump- continuously as new websites emerge. By training lightweight
+tion of static website categories. It provides structural support classifiers to learn new knowledge and incorporating classifierfor adapting WF models to dynamic network environments normalized training with a free energy-based selection
+and shows strong scalability and flexibility, particularly when mechanism, the framework effectively integrates multi-stage
+facing frequent category changes or rapid content updates. classifiers while preventing forgetting of previously learned
+ Within the incremental learning framework, we introduce information. In addition, parameter-isolated training alleviates
+mechanisms such as classifier-normalized training to align bias caused by data imbalance and supports localized adaptathe confidence output distributions of newly added classi- tion under concept drift. Experimental results demonstrate that
+fiers across stages. This mitigates unfair inference caused EIL-WF achieves strong accuracy, adaptability, and efficiency
+by distribution shifts between stages and reduces bias when in dynamic environments, making it well-suited for deployaggregating outputs from multiple classifiers. The design ment in real-world continual learning scenarios.
+improves overall model stability and generalization. However,
+although each newly added classifier is designed to be R EFERENCES
+lightweight and accounts for approximately 1.6% of the
+ [1] C. Wang, J. Luo, Z. Ling, L. Luo, and X. Fu, “A comprehensive and
+parameters of the backbone network, the model still faces long-term evaluation of Tor V3 onion services,” in Proc. IEEE Conf.
+scalability challenges in practical deployment. As incremental Comput. Commun., 2023, pp. 1–10.
+380 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ [2] W. Feng, X. Luo, T. Li, and C. Yang, “IP-Pealing: A robust network flow [25] W. Cui, T. Chen, C. Fields, J. Chen, A. Sierra, and E. Chan-Tin,
+ watermarking method based on IP packet sequence,” Chin. J. Electron., “Revisiting assumptions for Website fingerprinting attacks,” in Proc.
+ vol. 33, no. 3, pp. 694–707, 2024. Asia Conf. Comput. Commun. Security, 2019, pp. 328–339.
+ [3] D. Herrmann, R. Wendolsky, and H. Federrath, “Website fingerprinting: [26] X. Gu, M. Yang, and J. Luo, “A novel Website fingerprinting attack
+ attacking popular privacy enhancing technologies with the multino- against multi-tab browsing behavior,” in Proc. 19th Int. Conf. Comput.
+ mial Na´’ıve-bayes classifier,” in Proc. ACM Workshop Cloud Comput. Supported Cooperative Work Design, CSCWD, 2015, pp. 234–239.
+ Security, 2009, pp. 31–42. [27] G. Cherubin, R. Jansen, and C. Troncoso, “Online Website fingerprint-
+ [4] X. Yuan, T. Li, L. Li, R. Li, Z. Wang, and X. Luo, “HSWF: Enhancing ing: Evaluating Website fingerprinting attacks on Tor in the real world,”
+ Website fingerprinting attacks on Tor to address real world distribution in Proc. 31st USENIX Security Symp., 2022, pp. 753–770.
+ mismatch,” Comput. Netw., vol. 241, Mar. 2024, Art. no. 110217. [28] Z. Guan, G. Xiong, G. Gou, Z. Li, M. Cui, and C. Liu, “BAPM-block
+ [5] B. Gao, W. Liu, G. Liu, and F. Nie, “Resource knowledge-driven attention profiling model for multi-tab Website fingerprinting attacks on
+ heterogeneous graph learning for Website fingerprinting,” IEEE Trans. Tor,” in Proc. Annu. Comput. Security Appl. Conf., 2021, pp. 248–259.
+ Cogn. Commun. Netw., vol. 10, no. 3, pp. 968–981, Jun. 2024. [29] P. Sirinam, N. Mathews, M. S. Rahman, and M. Wright, “Triplet
+ [6] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fingerprint- fingerprinting: More practical and portable Website fingerprinting with
+ ing: Undermining Website fingerprinting defenses with deep learning,” N-shot learning,” in Proc. ACM SIGSAC Conf. Comput. Commun.
+ in Proc. ACM SIGSAC Conf. Comput. Commun. Security, 2018, Security, 2019, pp. 1131–1148.
+ pp. 1928–1943. [30] Y. Xie et al., “Contrastive fingerprinting: A novel Website fingerprinting attack over few-shot traces,” in Proc. ACM Web Conf., 2024,
+ [7] M. S. Rahman, P. Sirinam, N. Mathews, K. G. Gangadhara, and
+ pp. 1203–1214.
+ M. Wright, “Tik-Tok: The utility of packet timing in Website finger-
+ [31] X. Li et al., “Let model keep evolving: Incremental learning for
+ printing attacks,” in Proc. Privacy Enhanc. Technol., 2020, pp. 5–24.
+ encrypted traffic classification,” Comput. Security, vol. 137, Feb. 2024,
+ [8] S. Bhat, D. Lu, A. Kwon, and S. Devadas, “VAR-CNN: A data-efficient Art. no. 103624.
+ Website fingerprinting attack based on deep learning,” in Proc. Privacy [32] C. Zhang, N. Song, G. Lin, Y. Zheng, P. Pan, and Y. Xu,
+ Enhanc. Technol., 2019, pp. 292–310. “Few-shot incremental learning with continually evolved classifiers,”
+ [9] M. Shen, K. Ji, Z. Gao, Q. Li, L. Zhu, and K. Xu, “Subverting Website in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2021,
+ fingerprinting defenses with robust traffic representation,” in Proc. 32nd pp. 12455–12464.
+ USENIX Security Symp. (USENIX Security), 2023, pp. 607–624. [33] H. Cha, J. Lee, and J. Shin, “CO2L: Contrastive continual learning,” in
+[10] Q. Zhou, L. Wang, H. Zhu, T. Lu, and V. S. Sheng, “WF-transformer: Proc. IEEE/CVF Int. Conf. Comput. Vis., 2021, pp. 9516–9525.
+ Learning temporal features for accurate anonymous traffic identification [34] Y. Wang, Z. Ma, Z. Huang, Y. Wang, Z. Su, and X. Hong, “Isolation
+ by using transformer networks,” IEEE Trans. Inf. Forensics Security, and impartial aggregation: A paradigm of incremental learning without
+ vol. 19, pp. 30–43, 2024. interference,” in Proc. AAAI Conf. Artif. Intell., vol. 37, no. 8, 2023,
+[11] Z. Jin, T. Lu, S. Luo, and J. Shang, “Transformer-based model for multi- pp. 10209–10217.
+ tab Website fingerprinting attack,” in Proc. ACM SIGSAC Conf. Comput. [35] Z. Wang et al., “Learning to prompt for continual learning,” in Proc.
+ Commun. Security, 2023, pp. 1050–1064. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2022, pp. 139–149.
+[12] X. Deng et al., “Robust multi-tab Website fingerprinting attacks in the [36] J. Kirkpatrick et al., “Overcoming catastrophic forgetting in neural
+ wild,” in Proc. IEEE Symp. Security Privacy (SP), 2023, pp. 1005–1022. networks,” Proc. Nat. Acad. Sci., vol. 114, no. 13, pp. 3521–3526, 2017.
+[13] A. Bahramali, A. Bozorgi, and A. Houmansadr, “Realistic Website [37] S. Yan, J. Xie, and X. He, “DER: Dynamically expandable representation
+ fingerprinting by augmenting network traces,” in Proc. ACM SIGSAC for class incremental learning,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ Conf. Comput. Commun. Security, 2023, pp. 1035–1049. Pattern Recognit., 2021, pp. 3014–3023.
+[14] V. Rimmer, D. Preuveneers, M. Juarez, T. Van Goethem, and W. Joosen, [38] D.-W. Zhou, Z.-W. Cai, H.-J. Ye, D.-C. Zhan, and Z. Liu, “Revisiting
+ “Automated Website fingerprinting through deep learning,” in Proc. 25th class-incremental learning with pre-trained models: Generalizability and
+ Annu. Netw. Distrib. Syst. Security Symp., 2018, pp. 1–15. adaptivity are all you need,” Int. J. Comput. Vis., vol. 133, no. 3,
+[15] S.-A. Rebuffi, A. Kolesnikov, G. Sperl, and C. H. Lampert, “ICaRL: pp. 1012–1032, 2025.
+ Incremental classifier and representation learning,” in Proc. IEEE Conf. [39] W. Liu, X. Wang, J. Owens, and Y. Li, “Energy-based out-of-distribution
+ Comput. Vis. Pattern Recognit., 2017, pp. 2001–2010. detection,” in Proc. Adv. Neural Inf. Process. Syst., vol. 33, 2020,
+ pp. 21464–21475.
+[16] D.-W. Zhou, H.-L. Sun, H.-J. Ye, and D.-C. Zhan, “Expandable
+ [40] Y. LeCun, S. Chopra, R. Hadsell, M. Ranzato, and F. J. Huang, “A
+ subspace ensemble for pre-trained model-based class-incremental learntutorial on energy-based learning,” in Predicting Structured Data, vol. 1.
+ ing,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2024,
+ Cambridge, MA, USA: MIT Press, 2006, pp. 1–59.
+ pp. 23554–23564.
+[17] G. Bovenzi et al., “Benchmarking class incremental learning in deep
+ learning traffic classification,” IEEE Trans. Netw. Service Manag.,
+ vol. 21, no. 1, pp. 51–69, Feb. 2024.
+[18] J. Dai, X. Xu, H. Gao, X. Wang, and F. Xiao, “Shape: A simultaneous Zhengge Yi received the B.S. and M.S. degrees
+ header and payload encoding model for encrypted traffic classification,” in information security from the Engineering
+ IEEE Trans. Netw. Service Manag., vol. 20, no. 2, pp. 1993–2012, Jun. University of PAP, Xi’an, China, in 2020 and
+ 2023. 2022, respectively. He is currently pursuing the
+[19] X. Cai, X. C. Zhang, B. Joshi, and R. Johnson, “Touching from a doctorate degree with the Henan Key Laboratory
+ distance: Website fingerprinting attacks and defenses,” in Proc. ACM of Cyberspace Situation Awareness, Zhengzhou,
+ Conf. Comput. Commun. Security, 2012, pp. 605–616. Henan, China. His current research interests include
+[20] T. Wang and I. Goldberg, “Improved Website fingerprinting on anonymous network security and anonymous com-
+ Tor,” in Proc. 12th ACM Workshop Privacy Electron. Society, 2013, munications analysis.
+ pp. 201–212.
+[21] A. Panchenko et al., “Website fingerprinting at Internet scale,” in Proc.
+ 23rd Internet Society (ISOC) Netw. Distrib. Syst. Security Symp. (NDSS),
+ 2016, pp. 1–15.
+[22] J. Hayes and G. Danezis, “k-fingerprinting: A robust scalable Website Tengyao Li received the B.S. and M.S. degrees
+ fingerprinting technique,” in Proc. 25th USENIX Security Symp., 2016, in computer science and technology and the Ph.D.
+ pp. 1187–1203. degree in cyberspace security from Air Force
+[23] Z. Chen, G. Cheng, Z. Wei, D. Niu, and N. Fu, “Classify traffic Engineering University, Xi’an, Shaanxi, China in
+ rather than flow: Versatile multi-flow encrypted traffic classification with 2014, 2016, and 2020, respectively. He is curflow clustering,” IEEE Trans. Netw. Service Manag., vol. 21, no. 2, rently a Lecturer with the Henan Key Laboratory
+ pp. 1446–1466, Apr. 2024. of Cyberspace Situation Awareness, Zhengzhou,
+[24] X. Deng, Q. Li, and K. Xu, “Robust and reliable early-stage Website Henan, China. His current research has focused on
+ fingerprinting attacks via spatial-temporal distribution analysis,” in Proc. active defense against uncertain attacks in large scale
+ ACM SIGSAC Conf. Comput. Commun. Security, 2024, pp. 1997–2011. network systems.
+YI et al.: AN EFFICIENT WEBSITE FINGERPRINTING FOR NEW WEBSITES EMERGING 381
+
+ Meng Zhang is currently pursuing the Ph.D. degree Shaoyong Du received the B.E. degree in softwith the State Key Laboratory of Mathematical ware engineering from Zhengzhou University, in
+ Engineering and Advanced Computing. Her main 2012, and the Ph.D. degree in computer science
+ research interests include network security, data and technology from Nanjing University, in 2019.
+ mining, and social network analysis. He is currently an Associate Professor with the
+ Henan Key Laboratory of Cyberspace Situation
+ Awareness, Zhengzhou, Henan, China. His current
+ research focuses on security and privacy in mobile
+ computing.
+
+ Xiaoyun Yuan received the B.S. and M.S. degrees Xiangyang Luo received the B.S., M.S., and
+ in computer science and technology from the Ph.D. degrees from the Henan Key Laboratory
+ University of Science and Technology, Nanjing, of Cyberspace Situation Awareness, Zhengzhou,
+ China, in 2008 and 2015, respectively. She is cur- Henan, China, in 2001, 2004, and 2010, respectively,
+ rently pursuing the doctorate degree with the Henan where he is currently a Professor. He is the author
+ Key Laboratory of Cyberspace Situation Awareness, or co-author of more than 150 refereed international
+ Zhengzhou, Henan, China. Her current research has journal and conference manuscripts. His research
+ focused on privacy enhancing technologies such as interests are image steganography and steganalysis
+ anonymous communications, and network security. technique.

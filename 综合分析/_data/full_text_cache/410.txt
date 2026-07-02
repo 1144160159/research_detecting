@@ -1,0 +1,871 @@
+6398 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Efficient Intrusion Detection for In-Vehicle
+ Networks Using Knowledge Distillation From
+ BERT to CNN-BiLSTM
+ Sifan Li , Yue Cao , Senior Member, IEEE, Guojun Peng , Meng Li , Senior Member, IEEE, Wei Sun,
+ and Luan Chen , Member, IEEE
+
+ Abstract—Under the development of intelligent transportation I. I NTRODUCTION
+systems, In-Vehicle Networks (IVNs) serve as a critical channel
+for both internal and external communications. However, the
+inherent complexity and diversity of data traffic present significant challenges for the detection of IVN anomalous flows.
+Meanwhile, the introduction of various novel technologies has
+introduced new security vulnerabilities to IVNs. These vul-
+ W ITH the rapid development of intelligent transportation
+ systems, In-Vehicle Networks (IVNs) are becoming
+ increasingly crucial in smart vehicles, enabling communinerabilities significantly impact the security of IVNs and the cation between Electronic Control Units (ECUs) and with
+accuracy of in-vehicle Intrusion Detection Systems (IDS). To external infrastructure like traffic lights and roadside units
+address these issues, this paper proposes a lightweight and
+ [1]. IVNs primarily consist of automotive Ethernet, Controller
+efficient anomaly detection method based on knowledge distillation technology, termed Knowledge Distillation from BERT Area Network (CAN), and Time-Sensitive Networking (TSN).
+to CNN-BiLSTM (KDBC). Specifically, the KDBC distills the Automotive Ethernet, with high bandwidth and low latency,
+deep semantic knowledge from the BERT model into a more is used in systems like Advanced Driver-Assistance Systems
+lightweight CNN-BiLSTM architecture, significantly reducing (ADAS) and infotainment. Conversely, CAN networks remain
+computational overhead and storage requirements without sub- the mainstream choice for in-vehicle control communication
+stantially compromising detection performance. Experimental
+results demonstrate that the KDBC model enhances both secu- due to their reliability and low cost [2]. TSN meets the
+rity and versatility, achieving superior detection accuracy in real-time demands of applications by providing deterministic
+identifying abnormal attacks across diverse IVN data, including transmission capabilities, such as autonomous driving and
+automotive Ethernet and CAN networks. Moreover, the KDBC vehicle control systems.
+model has been validated for its effectiveness and robustness in Despite significant advancements in functionality and peractual in-vehicle gateway environments, achieving an accuracy formance, IVNs face new security challenges due to their
+of over 0.98 and an F1 score greater than 0.98.
+ complexity and diversity [3]. The high interconnectivity of
+ Index Terms—Ethernet, CAN, knowledge distillation, BERT, these networks makes them more susceptible to attacks. For
+CNN-BiLSTM. instance, frame injection attacks in autonomous driving sys-
+ Received 2 December 2024; revised 4 May 2025 and 9 June 2025; tems can lead to vehicles executing erroneous commands,
+accepted 10 June 2025. Date of publication 18 June 2025; date of endangering passenger safety. The broadcast nature of CAN
+current version 27 June 2025. This work was supported in part by networks makes them vulnerable to Denial-of-Service (DoS)
+Hubei Province Major Science and Technology Innovation Program under
+Grant 2024BAA011, in part by Horizon Europe (EU) HORIZON-TMAand replay attacks, which can incapacitate critical vehicle
+Marie Skłodowska-Curie Actions (MSCA)-Staff Exchange (SE) Project functions [4], [5]. Additionally, time synchronization attacks
+TRACE-V2X under Grant 101131204, in part by Wuhan Industrial Base in TSN can disrupt network time synchronization mechanism,
+Innovation Program under Grant 2023010402010783, in part by the National leading to system failures. As new technologies continue
+Natural Science Foundation of China (NSFC) under Grant 62372149 and
+Grant U23A20303, in part by China Scholarship Council (CSC), and in part to emerge, these security threats become more pronounced,
+by the Key Laboratory of Knowledge Engineering with Big Data (the Ministry raising the demands for robust protection of IVNs [6].
+of Education of China) under Grant BigKEOpen2025-04. The associate editor In response to the growing security threats in IVNs,
+coordinating the review of this article and approving it for publication was
+Prof. Guan Gui. (Corresponding author: Yue Cao.) various detection methods have been proposed to address
+ Sifan Li, Yue Cao, and Guojun Peng are with the School of Cyber these challenges. For instance, several studies have employed
+Science and Engineering, Wuhan University, Wuhan 430000, China (e-mail: ensemble learning methods, such as decision trees and Supsifan.li@whu.edu.cn; yue.cao@whu.edu.cn; guojpeng@whu.edu.cn).
+ Meng Li is with the Key Laboratory of Knowledge Engineering with Big port Vector Machines (SVM), to detect anomalous traffic
+Data, Ministry of Education, the School of Computer Science and Infor- in CAN bus networks [7]. Other research has utilized deep
+mation Engineering, and the Intelligent Interconnected Systems Laboratory learning techniques, including Convolutional Neural Networks
+of Anhui Province, Hefei University of Technology, Hefei 230002, China,
+and also with HIT Center, University of Padua, 35121 Padua, Italy (e-mail:
+ (CNN), Bidirectional Encoder Representations from Transmengli@hfut.edu.cn). formers (BERT) and Generative Adversarial Networks (GAN),
+ Wei Sun is with the Research and Development Institute, Dongfeng Motor for intrusion detection within CAN bus networks [8], [9],
+Corporation Ltd., Wuhan 430000, China (e-mail: sunw@dfmc.com.cn). [10]. Furthermore, a number of studies have explored hybrid
+ Luan Chen is with ETIS UMR 8051, ENSEA, CNRS, CY Cergy Paris
+University, 95000 Cergy, France (e-mail: luan.chen@ensea.fr). models, combining CNNs with Long Short-Term Memory
+ Digital Object Identifier 10.1109/TIFS.2025.3581117 (LSTM) networks to enhance detection accuracy [11], [12].
+ 1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+LI et al.: EFFICIENT INTRUSION DETECTION FOR IN-VEHICLE NETWORKS USING KNOWLEDGE DISTILLATION 6399
+
+ However, the architecture of modern IVNs has evolved • Through knowledge distillation, the KDBC achieves a
+significantly, incorporating a heterogeneous mix of CAN lightweight design while preserving the deep semantic
+bus, automotive Ethernet, and TSN technologies to meet the analysis capabilities of BERT model, thereby ensuring
+growing demands for high bandwidth and low-latency com- both efficiency and detection performance.
+munication. This multi-protocol integration introduces new • This study employs the TOW-IDS [6] and can-train-andand complex security challenges. Each protocol comes with test [14] datasets for training and testing, and deploys
+distinct data formats, transmission patterns, and potential the model on an in-vehicle gateway for practical evaluaattack surfaces [13]. Consequently, IDSs that are designed to tion. In both scenarios, KDBC demonstrates outstanding
+operate within a single-protocol context, such as CAN-only performance, striking a balance between lightweight
+or Ethernet-only solutions, are no longer sufficient. They are design and efficiency, making it well-suited for resourceincapable of handling the cross-domain traffic that modern constrained in-vehicle environments.
+centralized gateways must monitor and protect. Therefore, The remainder of this paper is structured as follows:
+research efforts limited to single or dual network types fall Section II outlines the current research in the field of intrusion
+short in addressing the comprehensive security demands of detection for IVNs. Section III provides relevant background
+today’s in-vehicle communication systems. information on IVNs and threat models. Section IV presents
+ Although many existing IDSs perform well in isolated a detailed description of the proposed KDBC framework
+environments, they lack generalizability and robustness when and its components. Section V demonstrates the experimental
+applied to real-world scenarios involving mixed-protocol traf- evaluation of KDBC. Finally, section VI summarizes and
+fic. For example, a model trained exclusively on CAN traffic concludes the paper.
+is unable to detect threats embedded in automotive Ethernet or
+TSN data streams. Meanwhile, most current approaches rely
+ II. R ELATED W ORK
+on complex model architectures, such as deep learning models
+like Transformer or BERT. These models inherently have This section reviews related work, categorized into three
+high computational overhead and storage requirements, which parts based on the intrusion detection scenarios: intrusion
+significantly hinder their deployment in resource-constrained detection research for CAN bus networks, automotive Ethernet
+in-vehicle environments. In addition, many existing studies and TSN.
+lack real-world testing, remaining theoretical or using nonrepresentative environments. Those that test in real-world A. Intrusion Detection Research for Can Bus Networks
+conditions often have limited IVN realization, hindering
+comprehensive evaluation. To fill these gaps, this paper Intrusion detection research for in-vehicle CAN bus netconducts tests in a real in-vehicle gateway environment, works is currently one of the most prominent areas in IVN
+crucial for the practical deployment of the proposed KDBC studies, attracting increasing attention from industry profesmodel. sionals in recent years. Machine learning-based models for
+ Even if the BERT model demonstrates exceptional under- intrusion detection have become a mainstream approach, with
+standing and versatility capabilities for complex IVN traffic a number of studies combining CNN and LSTM models for
+data, capturing deep semantic features, its large model size detection [11], [12]. Other research has leveraged the advanlimits its direct application in resource-constrained in-vehicle tages of the BERT model from Natural Language Processing
+environments. On the other hand, while the CNN-BiLSTM (NLP) for extracting deep semantic features in intrusion
+model offers a smaller model size and faster runtime, its detection [15], [16]. Additionally, Du et al. [17] introduced
+versatility ability is weaker when handling diverse IVN attack CLUSTER, a novel approach for CAN bus intrusion detection.
+data. Therefore, by combining BERT with CNN-BiLSTM It utilizes the distance from known class inputs to cluster
+through knowledge distillation, the superior performance of centroids as the training loss, aligning with the threshold
+BERT can be effectively transferred to the CNN-BiLSTM for open set recognition. Beyond the aforementioned open
+model. This paper addresses the challenges of transferring set recognition techniques, transforming CAN bus data into
+the rich contextual embeddings from BERT while preserving directed graphs is also a viable option. Islam et al. [18]
+both spatial and sequential information, and optimizes the proposed a novel graph-based Gaussian Naive Bayes (GGNB)
+distillation process to align BERT’s complex representations intrusion detection algorithm, which utilizes graph properties
+with the simpler feature extraction process of CNN-BiLSTM. and PageRank-related features to achieve high detection accu-
+By carefully tuning the distillation loss function, the approach racy. Furthermore, Zhang et al. [1] developed a CAN bus
+ensures minimal information loss during the transfer. As a anomaly detection system based on Graph Neural Networks
+result, the detection accuracy of CNN-BiLSTM is signifi- (GNN). It can detect various attacks, including message injeccantly enhanced, while maintaining its lightweight advantages, tion, suspension, and falsification, in just 3 milliseconds.
+making it suitable for the real-time and resource-constrained
+requirements of in-vehicle systems. The main contributions of B. Intrusion Detection Research for Automotive Ethernet
+this paper are summarized as follows: Compared to intrusion detection research for in-vehicle
+ • To the best of our knowledge, the KDBC model is the first CAN bus networks, the study of intrusion detection in automoto integrate the detection of abnormal traffic across CAN tive Ethernet has garnered relatively less attention. However,
+ networks, automotive Ethernet, and TSN into a single in recent years, the importance of automotive Ethernet have
+ framework. increasingly become evident due to the introduction of
+6400 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE I
+ C OMPARISON OF R ELATED W ORK
+
+Advanced Driver-Assistance Systems (ADAS). Han et al. [6]
+proposed a method for detecting abnormalities in automotive
+Ethernet using wavelet transform and deep CNNs, effectively
+addressing inherent attack vectors and vulnerabilities. Based
+on the dataset introduced in [6], two studies [19], [20] were
+conducted. First, da Luz et al. [19] proposed a novel multistage deep learning-based Intrusion Detection System (IDS)
+for automotive Ethernet networks, which combines a Random
+Forest (RF) with a pruned CNN for classifying attack types.
+Second, Jeong et al. [20] introduced the Automotive Ethernet
+Real-time Observer (AERO), an unsupervised network IDS
+designed to protect IVNs by analyzing automotive Ethernet
+traffic and detecting anomalies.
+
+C. Intrusion Detection Research for TSN
+ Given that in-vehicle TSN primarily employs the IEEE Fig. 1. The scenario of IVN.
+802.1 series of standards, this section highlights relevant intrusion detection research. Ergenç et al. [21] presented TSNZeek,
+the first open-source security monitoring and intrusion detec- environments. Those that test in real-world conditions often
+tion mechanism for IEEE 802.1 TSN protocols, addressing have limited IVN realization, hindering comprehensive evalthe lack of inherent security measures within these standards. uation. To fill these gaps, this paper conducts tests in a
+Meyer et al. [22] introduced a framework for detecting anoma- real in-vehicle gateway environment, crucial for the practical
+lous traffic through ingress control in TSN, utilizing stringent deployment of the proposed KDBC model.
+TSN traffic descriptors to reduce false positives. They implemented Software-Defined Networking (SDN) technologies to III. S YSTEM M ODEL
+gather and assess ingress anomaly reports, thereby identifying A. Background
+and blocking generating flows from the network.
+ As illustrated in Fig. 1, the in-vehicle central gateway, where
+ the IDS model is deployed, primarily connects the CAN bus,
+D. Motivation automotive Ethernet, TSN, and Telematics BOX (T-BOX). The
+ Table I summarizes and compares related studies. Most T-BOX is mainly used for collecting vehicle data, which is
+focus on either the CAN bus or TSN, with a few address- then transmitted to the cloud via networks such as Wi-Fi or
+ing both automotive Ethernet and TSN. However, the IVN 5G [23]. Next, this section primarily introduces three typical
+architecture in modern vehicles varies, integrating CAN bus, IVNs: automotive Ethernet, CAN bus networks, and TSN.
+automotive Ethernet, and TSN to achieve higher data rates and TSN is considered an extension of automotive Ethernet, and
+lower latency. Thus, research limited to single or dual IVN it is discussed separately due to its susceptibility to attacks,
+scenarios fails to address the full security needs of modern such as time synchronization attacks.
+IVNs. 1) Automotive Ethernet: Automotive Ethernet is a high-
+ Additionally, many existing studies lack real-world test- bandwidth, low-latency network technology developed to meet
+ing, remaining theoretical or using non-representative the communication needs of modern vehicles, making it ideal
+LI et al.: EFFICIENT INTRUSION DETECTION FOR IN-VEHICLE NETWORKS USING KNOWLEDGE DISTILLATION 6401
+
+for ADAS, infotainment, and large-scale data transmission safety. In CAN bus attacks, sending numerous high-priority
+[24]. Using single-pair UTP cabling, it reduces space, weight, messages blocks the bus, delaying critical control commands
+and costs, while supporting real-time data transfer from high- and jeopardizing driving safety [30]. This attack can lead
+resolution cameras and sensors for autonomous driving. Its to system failures or performance degradation, resulting in
+adoption simplifies IVN architecture, reduces system complex- critical control commands being delayed and jeopardizing
+ity and wiring costs, and is becoming the standard for efficient driving safety.
+in-vehicle communication in future intelligent vehicles [25].
+ 2) Controller Area Network (CAN): CAN, developed by 4) Replay Attack: Attackers resend intercepted valid data
+Bosch in the late 1980s, is a widely used protocol in IVNs, packets to deceive the system into repeating operations, causvalued for its reliability, real-time performance, and low cost ing state confusion or unpredictable behavior. The attack can
+[26]. It uses a multi-master, message-oriented protocol to confuse the state machine of vehicle, leading to erroneous
+facilitate communication between ECUs, with a simple frame actions, such as repeating an earlier maneuver or applying an
+structure and robust error detection to ensure data accuracy outdated control input.
+and stability [27]. Despite bandwidth limitations as vehicle 5) Fuzzy Attack: A fuzzy attack exploits uncertainties
+systems grow more complex, enhanced protocols like CAN- in sensor or control system data by injecting random or
+FD maintain CAN’s vital role in modern vehicles, ensuring ambiguous inputs, causing confusion in decision-making and
+safety and reliability [28]. potentially compromising vehicle security. This could degrade
+ 3) Time-Sensitive Networking (TSN): TSN is a set of vehicle safety by misinterpreting sensor data, leading to incor-
+Ethernet-based standards developed under IEEE 802.1 to pro- rect navigation decisions or unsafe vehicle operations.
+vide deterministic data transmission and time synchronization,
+ideal for applications requiring low latency and jitter [29]. It 6) Gear Spoof Attack: Attackers manipulate sensor or ECU
+uses sub-standards like Time-Aware Shaping, Frame Preemp- data to falsely report the vehicle’s gear position, misleading the
+tion, and Precision Time Protocol to manage network traffic, driver or vehicle system into misinterpreting the current gear
+ensuring reliable communication for critical applications in status. This attack can cause incorrect gear shifting, leading
+IVNs, such as autonomous driving and ADAS. By reducing to unsafe vehicle operation, such as unintended acceleration,
+latency and packet loss, TSN enhances vehicle safety and stalling, or even vehicle collisions due to inaccurate speed or
+performance, supporting the development of intelligent, con- power delivery information. It can severely compromise driver
+nected vehicles in complex environments. safety, particularly in automated or semi-automated systems
+ where gear shifts are handled autonomously.
+B. Threat Model
+ 7) RPM Spoof Attack: Attackers can manipulate sensor
+ As shown in Fig. 1, attacks on automotive Ethernet are or ECU data to transmit false tachometer readings, misleadprimarily categorized into frame injection attacks, switch MAC ing engine speed information. This attack can distort the
+flooding attacks, and DoS attacks. In contrast, attacks on driver’s perception of engine performance, potentially leading
+the CAN bus are mainly classified as DoS attacks, replay to unsafe driving decisions, such as over-revving the engine
+attacks, fuzzy attacks, gear spoof attacks, and RPM spoof or failing to recognize an engine failure. By manipulating
+attacks. Attacks targeting TSN predominantly involve time engine speed readings, the attacker can disrupt the operasynchronization attacks. tional efficiency of vehicle, increasing the risk of accidents
+ 1) Frame Injection Attack: An adversary sends forged or mechanical damage.
+data frames to disrupt communication, potentially altering
+or losing critical control information and causing incorrect 8) Time Synchronization Attack: The attacker disrupts time
+vehicle system responses. This attack targets the integrity synchronization mechanisms, such as the Precision Time Proof data in transit, possibly causing discrepancies in-vehicle tocol (PTP), causing discrepancies in time-stamped data used
+control functions, which may lead to unpredictable behavior by autonomous or driver-assist systems. Time synchronization
+or system failures. It is particularly dangerous in real-time is critical for systems that rely on time-sensitive data, such
+systems, where timing and accuracy of communication are as collision avoidance, navigation, or autonomous driving.
+paramount for safety. Disrupting time synchronization can lead to misalignment
+ 2) Switch MAC Flooding Attack: An adversary overwhelms of sensor data, causing delays in decision-making or faulty
+a switch’s forwarding table with forged MAC addresses, system responses, which can directly endanger vehicle safety
+preventing it from properly forwarding legitimate packets. The by impairing the accuracy and timing of control actions.
+goal of this attack is to disrupt the network’s ability to forward To identify threat models across multiple IVNs, the KDBC
+data correctly, leading to network congestion, delayed packet model needs to have strong versatility, capable of recognizing
+delivery, or a complete failure to transmit data. This attack can different attacks in various IVN environments. To achieve this,
+degrade network performance, causing disruptions in vehicle the KDBC model adopts a binary classification design, where
+communications, such as sensor or control message delays, the output is classified as either normal or abnormal based on
+which can compromise vehicle operation. traffic analysis. Additionally, during the initial training phase,
+ 3) DoS Attack: DoS attacks can target either automotive the KDBC model is trained using various publicly available
+Ethernet or the CAN bus, with Ethernet attacks involving IVN datasets. Once the model achieves stable performance, it
+the transmission of invalid data frames that consume band- is then deployed in a real-world in-vehicle gateway environwidth and disrupt legitimate communication, affecting vehicle ment for practical testing.
+6402 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Fig. 2. The framework of KDBC.
+
+ IV. P ROPOSED KDBC F RAMEWORK ensures that the student model maintains high detection performance while significantly reducing computational and memory
+A. Overview
+ costs, making it ideal for real-world IVN deployment.
+ The proposed KDBC primarily aims to address the intrusion
+detection challenges associated with diverse network data
+in IVNs. Therefore, its optimal deployment location is at B. Data Preprocessing
+the in-vehicle central gateway. As illustrated in Fig. 2, the Data preprocessing is a critical step to ensure model perfor-
+KDBC framework consists of three main components: data mance and detection accuracy. Given the complex and variable
+processing, the teacher model (BERT-based binary classifier), nature of IVN environments, the collected data often suffer
+and the student model (CNN-BiLSTM-based binary classifier), from issues such as missing values, varying lengths, and
+along with the knowledge distillation process. feature redundancy. Consequently, a series of preprocessing
+ Initially, the KDBC reads traffic files (.pcap) collected from techniques are necessary to optimize data quality. This section
+the in-vehicle gateway and converts them into decimal text will provide a detailed overview of four core preprocessdata. Subsequently, data preprocessing is conducted, which ing strategies: feature selection, Z-Score Normalization, zero
+includes feature selection, padding, and masking. The pro- padding, and masked language data augmentation.
+cessed data is then simultaneously fed into both the teacher 1) Feature Selection: Feature selection is an indispensable
+and student models for training and testing. Finally, the KDBC component of data preprocessing, aiming to identify the most
+computes the distillation loss based on the logits from the representative subset of features from the raw data. It can
+teacher and student models, and outputs the results once the also mitigate the impact of redundant information on model
+distillation loss meets the desired threshold. performance. In IVN data, the number of features is often large
+ In the proposed KDBC architecture, each component plays and complex, encompassing many that are irrelevant or weakly
+a distinct yet collaborative role to enable efficient and accurate related to intrusion detection. In addition, feature selection can
+intrusion detection in IVNs. The BERT-based teacher model effectively reduce the complexity of subsequent tasks such as
+serves as a powerful semantic feature extractor, leveraging padding and masking, making it easier to unify data length
+its deep bidirectional transformer layers to capture complex through padding.
+contextual relationships in the input data. Meanwhile, the The KDBC framework utilizes mutual information-based
+student model, composed of a CNN for local feature extraction feature selection. Specifically, mutual information quantifies
+and a BiLSTM for capturing temporal dependencies, provides the degree to which knowing one variable reduces the uncera lightweight and deployable solution suitable for resource- tainty of another variable [31]. By calculating the mutual
+constrained environments like in-vehicle gateways. During information between features and the target variable (traffic
+training, both models receive the same preprocessed input data. labels), the KDBC can assess the contribution of each feature
+The knowledge distillation mechanism bridges these models to the target variable, thereby selecting the most relevant
+by transferring the knowledge from the teacher to the student: features. For each variable A and the target variable B, the
+it computes the distillation loss between the soft output logits mutual information I(A; B) is defined as:
+of the teacher and student models, allowing the student to  
+ XX d(a, b)
+learn not only from the ground truth but also from the richer I(A; B) = d(a, b) log (1)
+representations learned by the teacher. This architecture a∈A
+ d(a)d(b)
+ b∈B
+LI et al.: EFFICIENT INTRUSION DETECTION FOR IN-VEHICLE NETWORKS USING KNOWLEDGE DISTILLATION 6403
+
+ padding operation fills these gaps with zero values, effectively
+ restoring data integrity while ensuring that all samples have the
+ same length for subsequent processing, which facilitates batch
+ processing and model training. Additionally, zero padding can
+ mitigate noise interference arising from length discrepancies,
+ thereby enhancing the versatility capability of model.
+ After the feature selection process, the data length from
+ both automotive Ethernet and TSN networks was unified to
+ 42 bytes. Therefore, the data length from the CAN bus needs
+ to be extended to 42 bytes using zero padding, while retaining
+ the original 16-byte content. Zero padding is instrumental
+ Fig. 3. Feature distribution by label. in enabling intrusion detection models to process data from
+ multiple IVN protocols by standardizing input length, thereby
+ ensuring compatibility across heterogeneous data formats such
+ as CAN, Ethernet, and TSN. This alignment facilitates the
+ ability of model to recognize cross-protocol anomalies without
+ structural inconsistencies, enhancing the versatility and robustness of the KDBC across diverse network traffic.
+ 3) Z-Score Normalization: Z-score normalization, also
+ known as standard deviation normalization, is a method that
+ transforms data into a standard normal distribution through
+ mathematical conversion [33]. Its primary purpose is to convert
+ data of varying magnitudes into a unified scale of Z-score values, enhancing data comparability and reducing interpretability
+ bias. In this study, to mitigate the impact of varying data
+ ranges across different protocols, this study applies Z-score
+ normalization to the data, as defined by the following formula:
+ S −µ
+ S core = (2)
+ SD
+ where S core represents the standardized Z-score, a dimensionless value. S represents an individual observation, i.e., a data
+ Fig. 4. Feature correlation heatmap.
+ point in the original dataset. µ denotes the mean of the entire
+ dataset. S D represents the standard deviation of the dataset.
+ 4) Masked Language Data Augmentation: The masking
+ data augmentation technique is an innovative method inspired
+Here, d(a, b) represents the joint probability distribution of A by NLP, aimed at enhancing the robustness and versatility
+and B, while d(a) and d(b) denote the marginal probability capability of model by randomly masking certain data features.
+distributions of A and B, respectively. The mutual information In the context of IVN data, the KDBC can consider continuous
+between each feature and the target variable in the dataset or discrete features (such as network traffic) as “vocabulary”,
+is computed using Equation 1. The features are ranked in and simulate real-world noise/anomalies by randomly selecting
+descending order according to their mutual information values and masking these “vocabularies”. This approach compels the
+with the target variable to assess their relative importance. model to learn and make predictions with partial information,
+Finally, 42 features with mutual information values greater thereby stimulating its ability to explore additional latent
+than 0.1 are selected for inclusion based on this ranking. features and correlations.
+ After feature selection, Fig. 3 illustrates the distribution of Masking data augmentation not only improves the capacity
+different label data values for the top 9 selected features. For of model to recognize unknown attacks but also mitigates
+instance, regarding the first feature, it is observed that a portion overfitting to extent, enhancing the versatility performance of
+of the malicious traffic falls within the range of 0. This is model. As shown in Algorithm 1, in the KDBC framework, the
+attributed to the presence of certain DoS attacks on the CAN mask probability is set to 10%. An empty list, masked data,
+bus within the malicious traffic. Fig. 4 displays the heatmap is initialized, and 10% of the traffic is randomly sampled from
+of the 42 selected features, with values ranging from [−1, 1]. the overall data (lines 1-5). Among the selected traffic, 70%
+Values closer to −1 or 1 indicate a strong negative or positive will randomly replace one token with [mask] (lines 7-9), 20%
+correlation between two features, while values near 0 suggest will randomly replace one token with another random token
+a weak correlation. (lines 10-11), and 10% will remain unchanged (lines 12-13).
+ 2) Zero Padding: Zero padding is primarily employed to
+address missing values and achieve uniformity in data length
+[32]. In IVN data, issues such as device failures, commu- C. Teacher Model
+nication interruptions, or inconsistent sampling frequencies The choice of BERT model as the teacher model among
+often result in missing data (value is NULL). The zero- numerous deep learning models is based on several key
+6404 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Algorithm 1 Masked Language Data Augmentation Algorithm
+Input: text corpus (a collection of text documents)
+Output: modi f ied corpus (text documents with tokens
+ masked or replaced)
+ 1: Initialize modi f ied corpus as an empty list
+ 2: for each text in text corpus do
+ 3: Generate a random number r between 0 and 1
+ 4: if r < 0.1 then
+ 5: Append text to modi f ied corpus
+ 6: Generate another random number p between 0 and
+ 1
+ 7: if p < 0.7 then
+ Fig. 5. The structure of BERT model.
+ 8: Randomly select a token from the text
+ 9: Replace the selected token with [mask]
+10: else if p < 0.9 then 2) Transformer Encoders: As shown in Fig. 5, the core of
+11: Randomly select a token from the text BERT model is the encoder part of the Transformer, which
+12: Replace the selected token with another random consists of multiple Transformer layers. Each Transformer
+ token from the vocabulary layer primarily comprises a multi-head self-attention mech-
+13: else anism and a Feedforward Neural Network (FFNN).
+14: Keep the text unchanged Multi-Head Self-Attention Mechanism: The self-attention
+15: end if mechanism allows the model to consider all other features in
+16: else the input sequence while processing each individual feature.
+17: Append the unchanged text to modi f ied corpus The multi-head self-attention mechanism operates by running
+18: end if multiple self-attention heads in parallel and concatenating
+19: end for their outputs, headi , to capture information from different
+20: return: modi f ied corpus subspaces. The computation formula is as follows:
+ QK T
+  
+ Attention(Q, K, V) = σ √ V (3)
+ dk
+ MultiHead(Q, K, V)
+reasons. First, unlike traditional feature engineering-based
+ = Concat(head1 , head2 , . . . , headh ) · W O (4)
+intrusion detection methods, BERT can automatically extract
+useful features from network traffic data without the need headi = Attention(QWiQ , KWiK , VWiV ) (5)
+for complex feature extraction rules [34]. It can significantly where σ represents the softmax function, and Q, K, and V
+enhance the efficiency and accuracy of intrusion detection. denote the query, key, and value matrices, respectively. dk is
+Second, the pre-training of BERT on a large corpus endows the dimension of the key vectors. Additionally, T denotes the
+it with strong cross-domain adaptability. In the context of transposed matrix. The variable h represents the number of
+IVN traffic intrusion detection, BERT can quickly adapt to heads, while WiQ , WiK , WiV , and W O are learnable parameter
+and handle various types of network traffic data, including matrices.
+encrypted traffic [35]. Finally, the BERT model supports fine- FFNN: The FFNN is employed to perform further transtuning, allowing for further training and optimization tailored formations on the vectors at each position. It consists of two
+to specific tasks. In the realm of IVN traffic intrusion detection, linear transformations followed by a ReLU activation function,
+fine-tuning the BERT model can improve detection accuracy which can be expressed mathematically as:
+and efficiency by adapting to different network environments.
+ The BERT model is a pre-trained deep neural network that FFNN(z) = max(0, z · W1 + b1 ) · W2 + b2 (6)
+centers around the bidirectional encoder of the Transformer
+ where z represents the input of FFNN layer. W1 and b1 are
+architecture. This model generates high-quality language repthe weight matrix and bias vector of the first Fully Connected
+resentations through unsupervised pre-training on large-scale
+ (FC) layer, while W2 and b2 are the weight matrix and bias
+corpora, followed by fine-tuning for specific tasks.
+ vector of the second FC layer.
+ 1) Input Embedding: The input embedding of BERT model 3) Output Layer: The output layer of BERT model varies
+for IVN traffic consists of three processes: token embedding, depending on the specific task. In the BERT pre-training phase
+segment embedding, and position embedding. The input traffic of KDBC, the output layer is utilized to compute the loss for
+is initially segmented into tokens using a tokenizer, with the Masked Language Model (MLM).
+each token mapped to a high-dimensional space to create X
+ L MLM = −
+ 
+token embedding. Segment embedding adds an additional log P xt | X\M (7)
+embedding for each token to indicate its association with a t∈M
+specific traffic stream. Position embedding provides a unique where M is the set of masked positions, and X\M is the input
+embedding vector for each position, which are learned during with masked tokens. xt represents the true value of the masked
+the training process. word at index t.
+LI et al.: EFFICIENT INTRUSION DETECTION FOR IN-VEHICLE NETWORKS USING KNOWLEDGE DISTILLATION 6405
+
+ As illustrated in Fig. 6, the processed IVN data is first
+ fed into a series of meticulously designed CNN layers, which
+ extract local features from the raw data through convolution
+ operations. Each CNN layer is immediately followed by a
+ Batch Normalization (BN) layer, which normalizes the output
+ to accelerate the training process and improve model stability.
+ Subsequently, a ReLU activation function is applied to the
+ normalized data, introducing non-linearity that allows the
+ model to learn more complex feature representations. After
+ Fig. 6. The structure of CNN-BiLSTM. two rounds of processing with CNN, BN, and ReLU, the data
+ is passed to the Dropout layer to mitigate the risk of overfitting.
+ Next, the processed data is sent to the Bi-LSTM layer.
+ Following the pre-training phase is the fine-tuning stage, Bi-LSTM effectively captures long-term dependencies in
+where the BERT fine-tuning process adjusts the pre-trained sequence data by considering both forward and backward
+model for specific tasks, enabling it to better adapt to and sequential information. This layer transforms the spatial feaaddress particular challenges. The fine-tuning process primar- tures extracted by the convolutional layers into high-level
+ily involves the following steps: representations over time.
+ • Adding Task-Specific Layers: For the binary classification Finally, the output from the Bi-LSTM layer is passed to a
+ task aimed at IVNs outlined in this paper, the fine- FC layer, which maps the features to the final output space
+ tuning of KDBC model involves modifying the activation through a weight matrix transformation. The output of the
+ function of FC layer in the final output stage to sigmoid. FC layer is then processed by a sigmoid activation function,
+ • Parameter Setting: After adding the task-specific lay- compressing the values into the (0, 1) range, representing the
+ ers, fine-tuning typically does not require training from predicted probabilities for the binary classification task. This
+ scratch. Instead, it initializes using the parameters of the entire process leverages the advantages of CNN in feature
+ pre-trained model, which accelerates the training process extraction, BN+ReLU in enhancing non-linearity and stability,
+ and enhances model performance. and Bi-LSTM’s capability in handling sequential data, collec-
+ • Fine-Tuning Training: Supervised learning is conducted tively forming a robust model architecture.
+ using labeled training data, during which the model
+ parameters are fine-tuned. Subsequently, the loss between E. Knowledge Distillation
+ the true labels and the predicted labels is calculated using
+ In our work, the knowledge distillation process transthe cross-entropy loss function, as follows:
+ fers BERT’s deep semantic understanding and contextual
+ 1 X dependencies into a lightweight CNN-BiLSTM model. This
+ L= Li
+ N i is crucial for capturing subtle temporal and structural pat-
+ 1 X  terns in IVN traffic. The most critical transferred knowledge
+ =
+ 
+ − yi · log (pi ) + (1 − yi ) · log (1 − pi ) (8) includes high-efficiency learning capability in few-shot sce-
+ N i
+ narios, context-aware feature representations and sequential
+ where yi represents the label for sample i, with positive semantic understanding, which enhance the student model’s
+ class denoted as 1 and negative class as 0. pi indicates ability to detect anomalies beyond static field analysis.
+ the probability that sample i is predicted as the positive In knowledge distillation, response-based knowledge distilclass. The model parameters are subsequently updated lation is one of the significant methods. On one hand, it is
+ through back-propagation and an optimization algorithm relatively straightforward to implement, as it focuses solely
+ to minimize the loss. The teacher model adjusts its on the differences in responses between the teacher model
+ parameters based on the loss to achieve better training and the student model at the output layer [37]. On the other
+ outcomes. Finally, the logits corresponding to the optimal hand, it possesses strong versatility capabilities. By imitating
+ results are transferred to the student model. the predictions of the teacher model, the student model can
+ effectively learn and adopt the teacher model’s versatility
+ capabilities. Consequently, the distillation process in KDBC
+D. Student Model employs response-based knowledge to compute the final loss.
+ Considering the limited resource environment of automotive The core idea of response-based knowledge distillation is to
+systems, the KDBC framework demands the student model enable the student model to directly imitate the final prediction
+to maintain high performance while achieving low computa- results of the teacher model. By minimizing the difference in
+tional complexity and a smaller model size. Therefore, for responses between the student model and the teacher model at
+IVN traffic characterized by temporal and spatial features, the output layer, the student model can absorb the versatility
+the KDBC ultimately selects the CNN-BiLSTM model. By capabilities and knowledge of the teacher model.
+combining the strengths of CNN and BiLSTM, this model can Algorithm 2 illustrates how to utilize knowledge distilextract local features from network traffic and capture long- lation techniques to transfer knowledge from the teacher
+term dependencies within the data, thereby enabling accurate model to the student model, thereby enhancing the perforrepresentation of complex IVN traffic and enhancing intrusion mance of the student model. Initially, the inputs include the
+detection accuracy [36]. training data loader (train dataloader), the teacher model
+6406 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Algorithm 2 The Process of Knowledge Distillation where DKL (PkQ) represents the KL divergence from distri-
+Input: train dataloader, teacher model, student model bution P to distribution Q. It is a non-negative value used
+Output: epoch loss to measure the extent to which distribution Q deviates from
+ 1: epoch loss ← 0 distribution P. P(o) denotes the probability of the o th event in
+ 2: α ← 0.5 the target or true distribution under discrete conditions. Q(o)
+ 3: for epoch in epochs do denotes the probability of the o th event in the approximate
+ 4: total loss ← 0 or predicted distribution under discrete conditions.
+ 5: for step, x train, y train in Next, the total knowledge distillation loss (KDBC loss)
+ enumerate(train dataloader) do is computed by combining the soft label loss and the hard
+ 6: teacher logits = teacher model(x train, y train) label loss, adjusting the weights of the two losses using α
+ 7: student output, student logits = (line 12). The total loss undergoes backpropagation (line 13),
+ student model(x train, y train) and the parameters of the student model are updated using the
+ 8: pt = sigmoid teacher logits Adam optimizer, with the learning rate and weight decay set
+ temp
+   to prevent overfitting (line 14). The current batch loss is added
+ 9: qt = sigmoid student
+ temp
+ logits
+ to the total loss (line 15), and the total loss is normalized by
+10: so f t loss = temp2 × KLDivLoss(pt , qt ) the number of batches to yield the average loss for each epoch
+11: hard loss = BinaryCrossEntropy(student output, (epoch loss) (lines 16-17). Finally, the average loss for each
+ y train) epoch (epoch loss) is returned (lines 18-19).
+12: KDBC loss = α × hard loss + (1 − α) × so f t loss
+13: KDBC loss.backward() V. E XPERIMENTAL E VALUATION
+14: Adam(student model.parameters(), lr=2 × 10−4 , In this study, the KDBC model is evaluated within specific
+ weight decay = 10−5 ).step() hardware and software environments. Considering the resource
+15: total loss = total loss + KDBC loss limitations of actual in-vehicle environments, the knowledge
+16: end for distillation process of KDBC model is conducted offline on a
+17: total loss
+ epoch loss ← len(train server, after which the trained student model is loaded onto
+ dataloader)
+18: end for the in-vehicle gateway for real-time online testing.
+19: return: epoch loss This study utilized the Nvidia RTX 4090 GPU for its exceptional computational power and memory capacity, supporting
+ the training and inference of the teacher model. The CPU,
+ an AMD Ryzen Threadripper PRO 5995WX with 64 cores
+(teacher model), and the student model (student model), and 128 threads, ensured efficient multitasking for data loadwhile the output is the average loss for each epoch ing, preprocessing, and model training. The KDBC model
+(epoch loss). The epoch loss is initialized to 0, and the was developed using JupyterLab 3.4.4, which facilitates code
+weight (α) for the distillation loss is set to 0.5 (lines 1-2). writing, debugging, documentation, and data visualization. The
+ Upon entering the training loop, each epoch is traversed, implementation was done in Python 3.10.6, with libraries such
+and the total loss for that epoch (total loss) is initialized to 0 as PyTorch for neural network training, NumPy for numerical
+(lines 3-4). For each batch of training data (x train, y train), computations, Pandas for data processing, and Matplotlib and
+the current step is obtained (line 5). Predictions in the form of Seaborn for visualization.
+logits are generated using the teacher model (teacher logits)
+(line 6), and predictions and logits are produced using the A. Datasets
+student model (student output and student logits) (line 7).
+ By transferring the deep semantic knowledge from a large
+Subsequently, the soft label probabilities (pt and qt ) are
+ pre-trained BERT model (teacher) to a lightweight CNNcomputed using the logits from both models through the
+ BiLSTM model (student), the KDBC are able to retain high
+sigmoid function (lines 8-9). The soft label loss (so f t loss)
+ detection performance while significantly reducing model
+is calculated using the Kullback-Leibler (KL) divergence loss
+ complexity and training data requirements. This approach
+function (KLDivLoss), incorporating a temperature coefficient
+ effectively leverages the representation power learned from
+(temp) (line 10), while the hard label loss (hard loss) is
+ large-scale pre-training, thereby enhancing generalization on
+computed using BinaryCrossEntropy function (line 11). The
+ limited-domain data. While the model still has a certain level
+calculation formula for the BinaryCrossEntropy function can
+ of dependency on data, we mitigate this by employing two
+be referred to as Equation 8.
+ diverse and complementary datasets and real vehicle test for
+ The aforementioned KLDivLoss function is an asymmetric
+ training and evaluation.
+measure used to quantify the difference between two prob-
+ This study evaluates the datasets used for the IDS model,
+ability distributions. It is commonly employed in the fields
+ which include the CAN bus representative dataset, can-trainof information theory and machine learning to compare the
+ and-test [14], and the automotive Ethernet representative
+predicted distribution with the true distribution. The definition
+ dataset, TOW-IDS [6]. Since the TOW-IDS dataset [6] conof the KLDivLoss function is as follows:
+ tains normal/attack data for the gPTP protocol, and there is
+ currently no publicly available data on in-vehicle TSN attacks,
+ X P(o)
+ DKL (PkQ) = P(o) log (9) this study utilizes TOW-IDS [6] to represent both automotive
+ o
+ Q(o) Ethernet and TSN datasets.
+LI et al.: EFFICIENT INTRUSION DETECTION FOR IN-VEHICLE NETWORKS USING KNOWLEDGE DISTILLATION 6407
+
+ The can-train-and-test dataset [14] was collected from real these two datasets. Specifically, this study first compares the
+road data involving four different vehicles and six drivers, original BERT model, the baseline CNN-BiLSTM model,
+aiming to create a diverse CAN dataset for machine learning the KDBC model, and other models under two scenarios.
+purposes. The dataset accesses CAN traffic data through These two scenarios include using the TOW-IDS dataset [6]
+the OBD-II port of each vehicle, connecting via a Korlan alone and using a combination of the TOW-IDS [6] and can-
+USB2CAN cable to convert the raw OBD-II data into USB train-and-test [14] datasets, with a training-testing split of
+data, thereby enabling communication through the SocketCAN 70%:30%. Meanwhile, the study focuses on analyzing the
+subsystem and can-utils tools in Linux. For this study, sub- accuracy, F1-Score, and other key performance indicators of
+dataset 3 has been selected as the representative dataset for each model across different datasets. This section also includes
+the CAN bus. a comparative analysis with the optimal solutions from existing
+ The TOW-IDS dataset [6] was released by the HCRL1 and research focused on the TOW-IDS dataset [6]. Moreover,
+is specifically designed for the development and evaluation relevant approaches were replicated using both two datasets
+of IDSs in automotive Ethernet environments. This dataset to facilitate comparison with the KDBC model.
+includes both normal and abnormal data from various real
+driving scenarios, covering AVTP, gPTP, and UDP protocols. 1) Experimental Results Under TOW-IDS Dataset: This
+The abnormal dataset consists of five types of attack: frame study conducted comprehensive testing on the TOW-IDS
+injection, PTP synchronization, switch MAC flooding, CAN dataset [6], with detailed results presented in Fig. 7 and 8.
+DoS, and CAN replay attacks. The data was extracted through Specifically, Fig. 7 visually depicts the confusion matrices
+port mirroring on a 100BASE-T1 switch and is accompanied of three different models on this dataset, clearly illustrating
+by detailed annotations, thereby facilitating researchers in the classification performance of each model. Fig. 8 further
+developing and validating IDSs for IVNs. compares the key performance indicators of the three models,
+ with the teacher model (BERT) showing exceptional results,
+ achieving an accuracy of 0.9980 and an impressive F1-Score
+B. Evaluation Metrics of 0.9971.
+ In evaluating the performance of KDBC model, this study In contrast, the proposed KDBC model follows closely,
+employs a set of key metrics, as indicated by the following demonstrating strong performance with an accuracy of 0.9966,
+formulas: slightly below that of the BERT model, while achieving a
+ T RP + T RN high F1-Score of 0.9935. Notably, the original CNN-BiLSTM
+ Accuracy = (10) model, which was not optimized through knowledge distilla-
+ T RP + T RN + FAP + FAN
+ T RP tion, exhibited relatively weaker detection performance among
+ Precision = (11) the three models, with an accuracy of 0.9600 and an F1-Score
+ T RP + FAP
+ T RP of 0.9401.
+ Recall = (12) The comparative analysis reveals that the KDBC model,
+ T RP + FAN
+ 2 · Precision · Recall enhanced by knowledge distillation, not only exhibits per-
+ F1 − S core = (13) formance that is nearly indistinguishable from the teacher
+ Precision + Recall
+ model BERT, but also shows significant improvement over
+where TRP indicates the number of normal traffic samples the original CNN-BiLSTM model. Specifically, its accuracy
+that are correctly classified as normal traffic. FAN indicates increased by 3.66 percentage points, and its F1-Score rose by
+the number of normal traffic samples that are misclassified as 0.0534, effectively validating the efficacy and superiority of
+intrusion traffic. FAP indicates the number of intrusion traffic KDBC model.
+samples that are misclassified as normal traffic. TRN indicates
+the number of intrusion traffic samples that are correctly 2) Experimental Results Under TOW-IDS + Can-Train-andclassified as intrusion traffic. Test Dataset: To further validate the performance of model,
+ Accuracy measures the proportion of correct predictions, this study integrated the TOW-IDS [6] and can-train-and-test
+serving as a key performance metric. The F1-Score, the har- [14] datasets, conducting tests on this combined dataset. The
+monic mean of precision and recall, is useful for imbalanced results are illustrated in Fig. 9 and 10. Fig. 9 comprehensively
+datasets, offering a comprehensive evaluation. The confusion presents the confusion matrices for the three models on the
+matrix shows the distribution of true versus predicted labels, mixed dataset, providing a clear reflection of classification
+providing an intuitive performance overview across classes. accuracy. Fig. 10 systematically compares the key performance
+ indicators of the three models, with the teacher model (BERT)
+C. Experimental Results maintaining its leading position, achieving an accuracy of
+ 0.9999 and an exceptionally high F1-Score of 0.9999.
+ This study evaluates the performance of KDBC model using
+ Following the BERT model is the proposed KDBC model,
+two datasets: the TOW-IDS [6] for automotive Ethernet and the
+ which is an optimized CNN-BiLSTM model enhanced through
+can-train-and-test [14] for in-vehicle CAN. The experimental
+ knowledge distillation. The KDBC model demonstrates outdesign aims to validate the advantages of KDBC model in
+ standing performance on the mixed dataset, achieving an
+enhancing the efficiency and accuracy of IDSs. It accomplishes
+ accuracy of 0.9996 and an F1-Score of 0.9997, showing only
+this by comparing the performance of different models across
+ a slight gap from the teacher model. In contrast, the original
+ 1 Hacking and Countermeasure Research Lab (HCRL): https:// CNN-BiLSTM model, which was not subjected to knowledge
+ocslab.hksecurity.net/welcome distillation, exhibited relatively weaker performance among
+6408 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Fig. 7. The confusion matrix of three models on TOW-IDS.
+
+ TABLE II
+ T HE C OST OF T HREE M ODELS ON TOW-IDS + CAN-T RAIN - AND -T EST
+
+ TABLE III
+ T HE C OMPARISON OF KDBC AND OTHER L ITERATURE
+ U NDER TOW-IDS DATASET
+
+ Fig. 8. The comparison of three models on TOW-IDS.
+
+the three models, with an accuracy of 0.9658 and an F1-Score
+of 0.9696.
+ Through comparative analysis, it is evident that the KDBC
+model not only approaches the performance of the teacher
+model BERT, but also achieves a significant improvement
+compared to the original CNN-BiLSTM model. Specifically, 3) The Cost of KDBC: Given the limited computational
+the accuracy of the KDBC model increased by 3.38 percentage resources available in vehicles, there is a stringent requirement
+points, and the F1-Score also rose by 0.0301. for lightweight detection models. Therefore, this study not
+ In comparison to the tests conducted solely on the only focuses on the performance of the models, but also
+TOW-IDS dataset [6], the results from the combined dataset analyzes the sizes and parameter counts of the three models.
+show a general slight improvement across all performance It is evident from Table II that while the BERT teacher model
+metrics. This is primarily attributed to the higher discerni- excels across all performance metrics, it is significantly large,
+bility of CAN bus data features compared to Ethernet data with a size of 417.64 MB and a staggering parameter count
+features, providing the model with richer and more learnable of 100 million. In contrast, both the CNN-BiLSTM and the
+information. Further observation of the two result figures KDBC models are notably more streamlined, with sizes of
+clearly demonstrates that the KDBC model exhibits excellent only 2.35 MB and 1.01 MB, respectively, and parameter counts
+performance on both datasets, evidenced by high accuracy and limited to 614,913 and 264,833.
+F1-Scores among other key metrics. Meanwhile, the KDBC In the context of pursuing lightweight models, the KDBC
+achieved 0.9700 detection accuracy with only 30% of the model demonstrates significant advantages. It not only mainoriginal training data, demonstrating that augmentation and tains high levels of detection accuracy and F1-Score among
+knowledge distillation synergistically address data scarcity key metrics, but also successfully minimizes computational
+while ensuring efficiency. This remarkable performance is overhead through structural optimization.
+largely due to the response-based knowledge distillation strat- 4) The Comparison With Existing Research Methods: To
+egy employed by the KDBC model. Through this strategy, the demonstrate the advancements of KDBC model, this study
+KDBC model effectively mimics the final prediction results of compares it with models proposed in other literature. The
+the BERT model, thereby learning the strong versatility capa- performance metrics (accuracy, F1-score and model size) of
+bility and deep knowledge of BERT. This not only enhances the KDBC model are obtained by training and testing our
+the performance of the KDBC model, but also ensures stable model directly on the original, unmodified TOW-IDS and
+predictive accuracy when confronted with complex datasets. can-train-and-test datasets. For the baseline schemes listed
+LI et al.: EFFICIENT INTRUSION DETECTION FOR IN-VEHICLE NETWORKS USING KNOWLEDGE DISTILLATION 6409
+
+ Fig. 9. The confusion matrix of three models on TOW-IDS + can-train-and-test.
+
+ TABLE V
+ T HE C OMPARISON OF KDBC AND OTHER L ITERATURE U NDER
+ TOW-IDS + CAN-T RAIN - AND -T EST DATASET
+
+ Transform) [6] and Multi-stage IDS [19]. However, the size
+ of KDBC model is only one-tenth that of TOW-IDS (with
+Fig. 10. The comparison of three models on TOW-IDS + can-train-and-test. Wavelet Transform) [6], clearly showcasing its advantages in
+ terms of lightweight design.
+ TABLE IV For the can-train-and-test dataset [14], we compared several
+ T HE C OMPARISON OF KDBC AND OTHER L ITERATURE
+ baseline methods, including Gaussian Naive Bayes (GNB)
+ U NDER CAN-T RAIN - AND -T EST DATASET [14], Logistic Regression (LR) [14], Support Vector Machine
+ (SVM) [14], and Multi-Layer Perceptron (MLP) [14]. As
+ shown in the Table IV, although LR has the smallest model
+ size at only 0.044 KB, its detection performance is relatively
+ poor. The SVM achieved a high accuracy of 0.9976, but
+ its F1-score was extremely low at just 0.0018. The best
+ overall performance was achieved by the proposed KDBC
+ model, which significantly outperformed the other methods
+ in both detection accuracy and F1-score, while maintaining a
+in Tables III and IV, the reported results are primarily reasonable model size of 17.7 KB.
+extracted from their respective original papers, in which the For the hybrid dataset of TOW-IDS [6] and can-train-andsame datasets are used under comparable conditions. We test [14], this study reproduced the ECF-IDS [15], CC-IDPS
+carefully select the results that used the original dataset [39], CNN-LSTM [11] and CNN-LSTM (with attention) [11]
+splits without alterations to ensure fairness and consistency. models to compare with the KDBC model. The comparison
+Regarding the selection of comparison methods, we focused results are presented in Table V. It is clear that CC-IDPS [39]
+on well-established and widely cited schemes in the field achieved the best performance, with an accuracy of 0.9998
+of IVN intrusion detection. These include models that either and an F1-Score of 0.9999. Meanwhile, the ECF-IDS [15],
+(1) utilized the TOW-IDS [6] or can-train-and-test datasets CC-IDPS [39], and KDBC models all maintained high
+in their original form, or (2) adopted deep learning-based detection accuracy and F1-scores, outperforming both the
+architectures, such as CNN-LSTM and BERT variants, which CNN-LSTM [11] and CNN-LSTM (with attention) [11] modare directly comparable to our proposed approach. els. Notably, the model size of KDBC is less than 1% of that
+ For the TOW-IDS dataset [6], the comparison includes of ECF-IDS [15] and CC-IDPS [39], making it significantly
+TOW-IDS (with Wavelet Transform) [6], ResNet50 [6], Effi- more lightweight while still delivering superior performance.
+cientNetB0 [6], Multi-stage IDS [19], and a semi-supervised
+model [38], alongside the KDBC model. As shwn in Table III,
+it is evident that the KDBC model achieves the high- D. Real Scenarios Test
+est accuracy, with its F1-Score also remaining at a high The practical applicability of the KDBC model was evallevel, slightly lower than that of TOW-IDS (with Wavelet uated in two phases. In the initial stage, the model was
+6410 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE VI
+ T HE C OMPOSITION OF I N -V EHICLE G ATEWAY T EST DATASET
+
+ Fig. 11. Test of real scenarios and data.
+
+trained and tested in a laboratory environment by connecting
+it to an InchTek A1000Plus in-vehicle security gateway.2 The TABLE VII
+A1000Plus is an in-vehicle security gateway product that sup- T HE C OMPARISON OF KDBC AND OTHER L ITERATURE
+ports automotive-grade Ethernet and CAN hybrid networks. It U NDER R EAL S CENARIOS
+integrates a high-performance automotive-grade gateway chip
+and a security system foundation chip. Its software is based on
+the AUTOSAR architecture, offering high reliability and meeting functional safety requirements. Once the model achieved
+stable performance, we proceeded to the second stage, where
+it was deployed and validated in a real vehicle environment3
+(DongFeng Mengshi 817). Normal traffic was collected from
+the real vehicle under various operating conditions, such as
+ignition, driving, braking, and idling.
+ As shown in Fig. 11, the deployed system monitored mul- manipulate network traffic, thereby disrupting normal comtiple in-vehicle communication channels, including Ethernet, munication patterns. Scanning attacks are carried out with
+TSN, and CAN bus data, to verify the effectiveness of the Nmap, Wireshark, and Burp Suite, including port scanning,
+model in real-world conditions. At the same time, we injected protocol/service fingerprinting, CAN ID probing, and TSN
+relevant attack data and collected data from the in-vehicle QoS analysis to identify active nodes, services, and time-
+CAN bus and automotive Ethernet using a laptop. sensitive communication paths within the IVN.
+ For the CAN bus tests, we used a laptop connected to the Unlike the TOW-IDS [6] and can-train-test [14] datasets,
+vehicle’s OBD-II interface via CANalyst-II. We then injected the actual test data (as shown in Table VI) included novel
+DoS, spoof, replay, and fuzzy attack data into the in-vehicle network attacks that were not present in the training dataset
+CAN bus. The specific details of each attack were as follows: (e.g., sniffing and scanning attacks). As a result, the testing
+ • DoS attack: Inject 60274 blank messages with both CAN difficulty increased due to the need to identify these new attack
+ ID and DATA set to 0 every 0.1 milliseconds. types. Therefore, as shown in Fig. 12, the performance metrics
+ • Gear/RPM Spoof attack: Intercept CAN messages con- of the KDBC model in real scenarios are lower compared to
+ taining engine RPM or gear information, modify the those in the TOW-IDS dataset [6]. Nevertheless, the KDBC
+ engine RPM or gear data fields in the message, and resend model still maintains a high level of detection performance,
+ it to the CAN bus. achieving an accuracy of 0.9842, precision of 0.9715, recall
+ • Replay attack: Replay the data packets captured in the of 0.9874, and an F1 score of 0.9816.
+ previous 10 seconds every 20 seconds. The comparative test results of the ECF-IDS [15], CC-IDPS
+ • Fuzzy attack: Inject messages of totally random CAN [39], CNN-LSTM [11], CNN-LSTM (with attention) [11] and
+ ID and DATA values every 0.1 milliseconds. KDBC models in real scenarios are shown in Table VII.
+ For the automotive Ethernet tests, we used a laptop con- Compared to the results in Table V, the performance of all five
+nected to the in-vehicle gateway through an automotive models declined in real testing scenarios, with the CNN-LSTM
+Ethernet media converter. Using tools like hping3, Macof, [11] model showing the most significant drop in accuracy by
+LinuxPTP, and nmap on Kali Linux, we injected DoS, frame 0.0440. The accuracy of both the ECF-IDS [15], CC-IDPS
+injection, switch MAC flooding, PTP synchronization, sniffing, [39] and KDBC models decreased by 0.0148, 0.0146 and
+and scanning attacks into the automotive Ethernet. 0.0154 respectively. Although the performance of the KDBC
+ Specifically, active sniffing attacks are conducted using model slightly lags behind the ECF-IDS [15] model, the size
+Ettercap and Scapy, involving techniques such as ARP spoof- of the KDBC model is significantly smaller than that of the
+ing, MAC flooding, and DNS poisoning to intercept and ECF-IDS [15].
+ 2 The in-vehicle gateway and related technologies used in this experiment
+ During the real scenarios testing process, the KDBC model
+were provided by Beijing Inchtek Technology Co., Ltd.
+ displayed a certain level of versatility in detecting anomalies
+ 3 The real test vehicle and related technologies used in this experiment were associated with novel attacks, which can be attributed to
+provided by DongFeng Motor Group Co., Ltd. the high-quality text representations provided by the BERT
+LI et al.: EFFICIENT INTRUSION DETECTION FOR IN-VEHICLE NETWORKS USING KNOWLEDGE DISTILLATION 6411
+
+ Fig. 12. The confusion matrix of three models on real vehicle test.
+
+teacher model. These representations helped the student model [9] H. M. Song, J. Woo, and H. K. Kim, “In-vehicle network intrusion
+(CNN-BiLSTM) enhance its understanding and processing of detection using deep convolutional neural network,” Veh. Commun.,
+ vol. 21, Jan. 2020, Art. no. 100198.
+input data, enabling it to learn more comprehensive features [10] E. Seo, H. M. Song, and H. K. Kim, “GIDS: GAN based intrusion
+and patterns for accurate anomaly detection. detection system for in-vehicle network,” in Proc. 16th Annu. Conf.
+ Privacy, Secur. Trust (PST), Aug. 2018, pp. 1–6.
+ VI. C ONCLUSION [11] H. Sun, M. Chen, J. Weng, Z. Liu, and G. Geng, “Anomaly detection for
+ in-vehicle network using CNN-LSTM with attention mechanism,” IEEE
+ This paper addresses security challenges in IVNs within Trans. Veh. Technol., vol. 70, no. 10, pp. 10880–10893, Oct. 2021.
+intelligent transportation systems, particularly regarding new [12] W. Lo, H. Alqahtani, K. Thakur, A. Almadhor, S. Chander, and
+technologies and complex network scenarios. It introduces G. Kumar, “A hybrid deep learning based intrusion detection system
+ using spatial–temporal representation of in-vehicle network traffic,” in
+a lightweight and efficient anomaly traffic detection method Proc. Veh. Commun. (VEH COMMUN), vol. 35, Mar. 2022, p. 100076.
+named KDBC. The KDBC leverages knowledge distillation [13] X. Zhang, L. Hao, G. Gui, Y. Wang, B. Adebisi, and H. Sari,
+to transfer the deep semantic knowledge of BERT into a “An automatic and efficient malware traffic classification method for
+more efficient CNN-BiLSTM model, reducing computational secure Internet of Things,” IEEE Internet Things J., vol. 11, no. 5,
+ pp. 8448–8458, Mar. 2024.
+and storage costs without compromising performance. Exper- [14] B. Lampe and W. Meng, “Can-train-and-test: A curated CAN dataset for
+imental results show KDBC’s strong versatility and superior automotive intrusion detection,” Comput. Secur., vol. 140, May 2024,
+performance in detecting anomalies across Ethernet and CAN Art. no. 103777.
+network data, validated in a real in-vehicle gateway environ- [15] S. Li, Y. Cao, H. J. Hadi, F. Hao, F. B. Hussain, and L. Chen, “ECF-
+ IDS: An enhanced cuckoo filter-based intrusion detection system for
+ment, offering a practical solution for IVNs security. Future in-vehicle network,” IEEE Trans. Netw. Service Manage., vol. 21, no. 4,
+work will refine KDBC by exploring advanced distillation pp. 3846–3860, Aug. 2024.
+techniques to enhance its real-time detection accuracy and [16] E. Nwafor and H. Olufowobi, “CANBERT: A language-based intrusion
+efficiency. detection model for in-vehicle networks,” in Proc. 21st IEEE Int. Conf.
+ Mach. Learn. Appl. (ICMLA), Dec. 2022, pp. 294–299.
+ [17] L. Du, Z. Gu, Y. Wang, and C. Gao, “Open world intrusion detection:
+ R EFERENCES An open set recognition method for CAN bus in intelligent connected
+[1] H. Zhang, K. Zeng, and S. Lin, “Federated graph neural network for vehicles,” IEEE Netw., vol. 38, no. 3, pp. 76–82, May 2024.
+ fast anomaly detection in controller area networks,” IEEE Trans. Inf. [18] R. Islam, M. K. Devnath, M. D. Samad, and S. M. J. Al Kadry, “GGNB:
+ Forensics Security, vol. 18, pp. 1566–1579, 2023. Graph-based Gaussian naive Bayes intrusion detection system for CAN
+[2] E. Levy, A. Shabtai, B. Groza, P.-S. Murvay, and Y. Elovici, “CAN-LOC: bus,” Veh. Commun., vol. 33, Jan. 2022, Art. no. 100442.
+ Spoofing detection and physical intrusion localization on an in-vehicle [19] L. F. M. da Luz, P. F. D. Araujo-Filho, and D. R. Campelo, “Multi-stage
+ CAN bus based on deep features of voltage signals,” IEEE Trans. Inf. deep learning-based intrusion detection system for automotive Ethernet
+ Forensics Security, vol. 18, pp. 4800–4814, 2023. networks,” Ad Hoc Netw., vol. 162, Sep. 2024, Art. no. 103548.
+[3] W. Wu et al., “A survey of intrusion detection for in-vehicle networks,” [20] S. Jeong, H. K. Kim, M. L. Han, and B. I. Kwak, “AERO: Auto-
+ IEEE Trans. Intell. Transp. Syst., vol. 21, no. 3, pp. 919–933, Mar. 2020. motive Ethernet real-time observer for anomaly detection in in-vehicle
+[4] Z. Niu, J. Xue, Y. Wang, T. Lei, W. Han, and X. Gao, “QARF: A networks,” IEEE Trans. Ind. Informat., vol. 20, no. 3, pp. 4651–4662,
+ novel malicious traffic detection approach via online active learning for Mar. 2024.
+ evolving traffic streams,” Chin. J. Electron., vol. 33, no. 3, pp. 645–656, [21] D. Ergenç, R. Schenderlein, and M. Fischer, “TSNZeek: An open-source
+ May 2024. intrusion detection system for IEEE 802.1 time-sensitive networking,”
+[5] Z. Deng, J. Liu, Y. Xun, and J. Qin, “IdentifierIDS: A practical voltage- in Proc. IFIP Netw. Conf. (IFIP Netw.), Jun. 2023, pp. 1–6.
+ based intrusion detection system for real in-vehicle networks,” IEEE [22] P. Meyer, T. Häckel, F. Korf, and T. C. Schmidt, “Network anomaly
+ Trans. Inf. Forensics Security, vol. 19, pp. 661–676, 2024. detection in cars based on time-sensitive ingress control,” in Proc. IEEE
+[6] M. L. Han, B. I. Kwak, and H. K. Kim, “TOW-IDS: Intrusion detection 92nd Veh. Technol. Conf. (VTC-Fall), Nov. 2020, pp. 1–5.
+ system based on three overlapped wavelets for automotive Ethernet,” [23] Z. Chen et al., “Digital forensics for automotive intelligent net-
+ IEEE Trans. Inf. Forensics Security, vol. 18, pp. 411–422, 2023. worked terminal devices,” IEEE Trans. Veh. Technol., vol. 73, no. 4,
+[7] M. H. Khan, A. R. Javed, Z. Iqbal, M. Asim, and A. I. Awad, “DivaCAN: pp. 5128–5138, Apr. 2024.
+ Detecting in-vehicle intrusion attacks on a controller area network
+ using ensemble learning,” Comput. Secur., vol. 139, Apr. 2024, Art. no. [24] M. De Vincenzi et al., “A systematic review on security attacks
+ 103712. and countermeasures in automotive Ethernet,” ACM Comput. Surveys,
+[8] M. D. Hossain, H. Inoue, H. Ochiai, D. Fall, and Y. Kadobayashi, vol. 56, no. 6, pp. 1–38, Jun. 2024.
+ “An effective in-vehicle CAN bus intrusion detection system using [25] H. Kim, W. Yoo, S. Ha, and J.-M. Chung, “In-vehicle network average
+ CNN deep learning approach,” in Proc. IEEE Global Commun. Conf. response time analysis for CAN-FD and automotive Ethernet,” IEEE
+ (GLOBECOM), Dec. 2020, pp. 1–6. Trans. Veh. Technol., vol. 72, no. 6, pp. 6916–6932, Jun. 2023.
+6412 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+[26] Z. King, “Investigating and securing communications in the controller Guojun Peng received the Ph.D. degree from
+ area network (CAN),” in Proc. Int. Conf. Comput., Netw. Commun. Wuhan University, Wuhan, China, in 2008. He is
+ (ICNC), Jan. 2017, pp. 814–818. currently a Professor with the School of Cyber
+[27] S. Gao, L. Zhang, L. He, X. Deng, H. Yin, and H. Zhang, Science and Engineering, Wuhan University. His
+ “Attack detection for intelligent vehicles via CAN-bus: A lightweight research interests inlcude system security and trust
+ image network approach,” IEEE Trans. Veh. Technol., vol. 72, no. 12, computing. He is a member of CCF and CSAC.
+ pp. 16624–16636, Dec. 2023.
+[28] M. H. Shahriar, Y. Xiao, P. M. Salazar, W. Lou, and T. Y. Hou,
+ “CANShield: Deep learning-based intrusion detection framework for
+ controller area networks at the signal-level,” IEEE Internet Things
+ J. (IoTJ), vol. 9, no. 6, pp. 4528–4539, Jan. 2022.
+[29] A. Morato, E. Ferrari, S. Vitturi, F. Tramarin, C. Zunino, and
+ M. Cheminod, “A TSN-based approach to combine real-time CAN Meng Li (Senior Member, IEEE) received the Ph.D.
+ network with in-vehicle Ethernet,” in Proc. IEEE Int. Workshop Metrol. degree in computer science and technology from the
+ Automot. (MetroAutomotive), Jun. 2024, pp. 12–17. School of Computer Science and Technology, Bei-
+[30] J. Zhou, S. Li, Y. Cao, H. J. Hadi, and H. Lin, “Robust intrusion detection jing Institute of Technology (BIT), China, in 2019.
+ system in CAN bus through multi-scale feature fusion,” in Proc. IEEE He is currently an Associate Professor and the Dean
+ Int. Conf. Commun. (ICC), Jun. 2024, pp. 1316–1321. Assistant of the School of Computer Science and
+[31] W. Su et al., “Towards All-in-one pre-training via maximizing multi- Information Engineering, Hefei University of Techmodal mutual information,” Proc. IEEE/CVF Conf. Comput. Vis. Pattern nology (HFUT), China. He is also a Post-Doctoral
+ Recognit. (CVPR), vol. 2023, pp. 15888–15899, Jan. 2022. Researcher with the Department of Mathematics and
+[32] M. A. Islam, M. Kowal, S. Jia, K. G. Derpanis, and N. D. B. Bruce, the HIT Center, University of Padua, Italy, where
+ “Position, padding and predictions: A deeper look at position informa- he is with the Security and PRIvacy Through Zeal
+ tion in CNNs,” Int. J. Comput. Vis., vol. 132, no. 9, pp. 1–22, Sep. 2024. (SPRITZ) Research Group led by Prof. Mauro Conti (IEEE Fellow). He was
+[33] N. Fei, Y. Gao, Z. Lu, and T. Xiang, “Z-score normalization, hubness, sponsored by the ERCIM “Alain Bensoussan” Fellowship Program to conduct
+ and few-shot learning,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. post-doctoral research supervised by Prof. Fabio Martinelli at CNR, Italy,
+ (ICCV), Oct. 2021, pp. 142–151. from October 2020 to March 2021. He was sponsored by China Scholarship
+[34] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training Council (CSC) for the joint Ph.D. study supervised by Prof. Xiaodong
+ of deep bidirectional transformers for language understanding,” in Proc. Lin (IEEE Fellow) with the Broadband Communications Research (BBCR)
+ naacL-HLT, Jan. 2018, p. 2. Laboratory, University of Waterloo, and Wilfrid Laurier University, Canada,
+[35] Z. Zhang et al., “Semantics-aware BERT for language understanding,” from November 2017 to August 2018. His research interests include security,
+ in Proc. AAAI Conf. Artif. Intell., vol. 34, no. 5, 2020, pp. 9628–9635. privacy, applied cryptography, blockchain, TEE, and the Internet of Vehicles.
+[36] J. Sinha and M. Manollas, “Efficient deep CNN-BiLSTM model for In this area, he has published 80 papers in international peer-reviewed
+ network intrusion detection,” in Proc. 3rd Int. Conf. Artif. Intell. Pattern journals and conferences, including IEEE T RANSACTIONS ON I NFORMATION
+ Recognit. (AIPR), Jun. 2020, pp. 223–231. F ORENSICS AND S ECURITY, IEEE T RANSACTIONS ON D EPENDABLE AND
+[37] J. H. Cho and B. Hariharan, “On the efficacy of knowledge distillation,” S ECURE C OMPUTING, IEEE/ACM T RANSACTIONS ON N ETWORKING,
+ in Proc. ICCV, Oct. 2019, pp. 4794–4802. IEEE T RANSACTIONS ON M OBILE C OMPUTING, IEEE T RANSACTIONS
+[38] K. H. Shibly, M. D. Hossain, H. Inoue, Y. Taenaka, and Y. Kadobayashi, ON K NOWLEDGE AND DATA E NGINEERING , TODS, IEEE T RANSACTIONS
+ “A feature-aware semi-supervised learning approach for automotive ON S ERVICES C OMPUTING , COMST, ISSTA, MobiCom, ACISP, ICICS,
+ Ethernet,” in Proc. IEEE Int. Conf. Cyber Secur. Resilience (CSR), Jul. SecureComm, TrustCom, ICC, and IPCCC. He is a Senior Member of
+ 2023, pp. 426–431. CIE, CIC, and CCF. He is an Associate Editor of IEEE T RANSACTIONS
+[39] S. Li, Y. Cao, Y. Zhang, T. Liao, F. Yan, and H. Lin, “A cloud ON I NFORMATION F ORENSICS AND S ECURITY , IEEE T RANSACTIONS ON
+ collaborative-based intrusion detection and prevention system for IVN,” N ETWORK AND S ERVICE M ANAGEMENT, and IEEE I NTERNET OF T HINGS
+ IEEE Trans. Cognit. Commun. Netw., vol. 6, no. 4, p. 1, Nov. 2025. J OURNAL.
+
+ Wei Sun received the degree from the Department
+ Sifan Li received the B.S. degree from Nanchang
+ of Systems Engineering and Applied Mathematics,
+ University in 2021 and the M.S. degree from Wuhan
+ Chongqing University. He is currently working at
+ University in 2024. He is currently pursuing the
+ the Research and Development Institute, Dongfeng
+ Ph.D. degree with the School of Cyber Science
+ Motor Group Corporation Ltd., as the Chief Digand Engineering, Wuhan University. His research
+ ital Engineer. For many years, he has been in
+ interests include in-vehicle network security, the
+ charge of informatization and digital planning in the
+ IoT intrusion detection, and aerospace-sky-earth
+ research and development field, the implementation
+ cybersecurity.
+ of research and development information system
+ projects, and connected vehicle cybersecurity work.
+ He has rich experience in informatization and digitalization in the research and development field as well as in the cybersecurity
+ of connected vehicles.
+
+ Yue Cao (Senior Member, IEEE) received the
+ Ph.D. degree from the Institute for Communication
+ Systems (ICS) formerly known as the Centre for Luan Chen (Member, IEEE) received the Ph.D.
+ Communication Systems Research, University of degree from the Conservatoire National des Arts
+ Surrey, Guildford, U.K., in 2013. Further to his et Métiers (CNAM-Paris) in 2020. He is cur-
+ Ph.D. study, he had conducted a Research Fellow rently an Associate Professor with the Information,
+ with the University of Surrey and academic fac- Communications, and Imaging (ICI) Group, ETIS
+ ulty with Northumbria University, U.K., Lancaster Laboratory (UMR 8051), a joint research labora-
+ University, U.K., and Beihang University, Beijing, tory of CY Cergy Paris University, ENSEA, and
+ China. He is currently a Professor with the School of CNRS, France. His research interests include wire-
+ Cyber Science and Engineering, Wuhan University, less indoor localization/sensing, statistical signal
+Wuhan, China. His research interests include intelligent transport systems, processing (RF/biomedical), mobile computing for
+including e-mobility, V2X, and edge computing. IoT, and machine learning technologies.

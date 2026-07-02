@@ -1,0 +1,755 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026 3105
+
+ BPF-GNN: A Multi-Granularity Feature Extraction
+ Model Using Graph Neural Networks for
+ Encrypted Traffic Classification
+ Guolong Li , Yuan Gao , Jiongjiong Ren , and Shaozhen Chen
+
+ Abstract—Encrypted traffic classification is crucial for critical To address these challenges, researchers have proposed a
+network management tasks such as traffic type identification, variety of methods based on machine learning (ML) and deep
+resource allocation, and risk mitigation, especially given that learning (DL) [5], [6], [7], [8], [9]. Early machine learning
+encrypted traffic has become the dominant form of modern
+network communication. However, existing classification methods methods relied on manually designed statistical features, which
+are typically confined to single-level feature extraction, failing to achieved some success to a certain extent. However, these
+capture the multi-granularity information inherent in traffic and methods required manual feature engineering, and their accuthus limiting their ability to characterize complex encrypted traf- racy largely depended on the quality of the feature engineering.
+fic patterns. To address this issue, this paper proposes BPF-GNN, In recent years, the rise of deep learning technology has
+a hierarchical graph feature extraction model for encrypted
+traffic classification. The model enables multi-granularity feature provided new solutions for encrypted traffic classification.
+learning by constructing a three-tier graph structure (Byte-, Deep learning models can automatically extract features from
+Packet-, and Flow-level). It sequentially extracts discriminative raw traffic data, avoiding cumbersome feature engineering, and
+information inherent in each granularity level and accumulates demonstrating strong learning capabilities and generalization
+multi-dimensional traffic characteristics, significantly improving performance. However, a critical limitation persists: most deep
+the classification accuracy of encrypted traffic. Experiments
+on the ISCX-VPN2016, ISCX-Tor2016, USTC-TFC2016, and learning frameworks based on traditional neural networks
+MIRAGE-2024 datasets demonstrate that BPF-GNN outperforms such as Convolutional Neural Network (CNN) and Recurrent
+existing methods, validating the effectiveness and superiority of Neural Network (RNN) process traffic data in Euclidean space,
+the proposed hierarchical multi-granularity feature extraction neglecting the inherent non-Euclidean nature of network trafapproach. fic. This oversight may lead to the loss of valuable information
+ Index Terms—Encrypted traffic classification, deep learning, [10].
+graph neural networks, multi-granularity feature extraction. Graph Neural Networks (GNNs), designed for non-
+ Euclidean data, provide a natural solution for modeling
+ I. I NTRODUCTION
+ complex traffic relationships. As a result, researchers are
+
+N ETWORK traffic classification is a fundamental and
+ critical task in network research, which is essential for
+Quality of Service (QoS), malware detection, and intrusion
+ increasingly interested in GNNs for encrypted traffic classification. However, most current GNN-based methods [10], [11],
+ [12], [13], [14] focus only on feature extraction at a single
+detection [1]. In recent years, with the widespread use of level of the graph (network traffic can be divided into three
+encryption technology, the privacy and anonymity of net- levels from low to high: byte, packet, and flow), neglecting the
+work traffic have been significantly enhanced. However, the fact that there is unique potential available information at each
+prevalence of encryption technology has also brought new granularity level. Additionally, in deep learning methods that
+challenges to network traffic analysis. Traditional traffic clas- use raw bytes as input, headers and payloads are often treated
+sification methods, such as port-based techniques and Deep as a single learning entity without distinguishing their different
+Packet Inspection (DPI) [2], [3], [4], have seen a marked representations and functions, which may lead to some degree
+decrease in effectiveness when dealing with encrypted traf- of semantic confusion [15].
+fic. Port-based methods have become ineffective due to the In response to the aforementioned issues, this paper proextensive use of dynamic ports, and DPI not only has high poses BPF-GNN, a hierarchical graph feature extraction model
+computational overhead when processing encrypted traffic but that constructs byte-, packet-, and flow-level graphs for multialso struggles to extract valid information. granularity feature extraction. The model consists of three
+ Received 12 June 2025; revised 8 January 2026 and 2 March 2026;
+ main parts, as shown in Fig. 1: byte-level graph construction
+accepted 3 March 2026. Date of publication 6 March 2026; date of current and packet-level representation learning, packet-level graph
+version 16 March 2026. This work was supported by the National Natural construction and flow-level representation learning, flow-level
+Science Foundation of China under Grants No. 62206312. The associate editor graph construction and classification. First, at the byte level,
+coordinating the review of this article and approving it for publication was F.
+Musumeci. (Corresponding author: Yuan Gao.) we employ a dual embedding layer to separately construct byte
+ The authors are with the Information Engineering University, Zhengzhou correlation graphs for packet headers and payloads, mining
+450001, China (e-mail: liguolongx@163.com; yuanmiao202311@163.com;
+jiongjiong fun@163.com; chenshaozhen@vip.sina.com).
+ the potential correlations between bytes in packet headers
+ Digital Object Identifier 10.1109/TNSM.2026.3671203 and payloads. A feature extractor composed of multi-layer
+ 1932-4537 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+3106 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 1. BPF-GNN model architecture.
+
+GNNs performs graph representation learning to obtain the complementary information present in the header and
+representation vectors of headers and payloads, respectively. payload.
+These two types of graph representation vectors are then fused 3) To evaluate the performance of BPF-GNN, we compare
+via a Gated Multimodal Unit (GMU) to generate a joint rep- it with several existing methods on four public datasets.
+resentation. Second, at the packet level, we construct a Traffic The results demonstrate that BPF-GNN significantly
+Interaction Graph (TIG) [13] using the joint representations outperforms these existing methods. This remarkable
+as node features to extract interaction information between performance can be attributed to the effectiveness of the
+packets. Similarly, we use multi-layer GNNs to conduct graph multi-granularity feature extraction approach.
+representation learning and derive the overall representation
+vector for each flow. Finally, at the flow level, we select the II. C ONSIDERED S CENARIO
+Top-k most similar flows for each flow and establish connections between flow nodes, thereby supplementing similarity A. Application Scenario
+information among flows and enriching the flow-level feature Encrypted traffic classification serves as a pivotal techrepresentations for classification. nical support for modern network operation and security
+ Experiments on the ISCX-VPN2016, ISCX-Tor2016, governance, with its application scenarios covering enter-
+USTC-TFC2016, and MIRAGE-2024 datasets demonstrate prise intranets, campus networks, cloud computing platforms,
+that BPF-GNN effectively distinguishes fine-grained cate- and public network access gateways. These scenarios are
+gories of encrypted traffic, achieving significantly higher characterized by diverse network architectures (including
+classification accuracy than baselines. The contributions of our wired/wireless integrated networks, LANs, and WANs) and
+work are threefold: heterogeneous user groups (such as enterprise employees
+ engaged in remote office, campus users with mixed service
+ demands, and individual consumers accessing public services),
+ 1) We propose a method BPF-GNN for hierarchically resulting in complex and variable encrypted traffic patterns.
+ extracting features at three different levels, rather than The core application objectives in these scenarios include
+ only focusing on feature extraction at a single level. This the following two dimensions: first, refined network resource
+ allows us to extract the potential information contained management, which requires distinguishing fine-grained appliat the byte, packet, and flow levels, thereby enriching cation types (e.g., chat, email, file transfer, streaming media)
+ the representation of the flow-level features used for in encrypted traffic to optimize bandwidth allocation and QoS
+ classification. guarantee strategies; second, targeted security risk prevention,
+ 2) We start feature extraction from the basic level (byte- which involves identifying abnormal encrypted traffic (such
+ level) of traffic to learn deeper feature representations as malicious traffic disguised by encryption) to block hidden
+ and handle the header and payload bytes of each attack channels and comply with network security managepacket separately to avoid semantic confusion. Further- ment regulations.
+ more, after the GNN layer, we use GMU to obtain In practical deployment, the classification system is required
+ the joint representation of the packet header and pay- to operate in a passive and non-intrusive mode. It only collects
+ load. This approach enables the model to leverage the and analyzes traffic data, without decrypting payloads or mod-
+LI et al.: BPF-GNN: A MULTI-GRANULARITY FEATURE EXTRACTION MODEL USING GNNs 3107
+
+ifying packet structures. This design ensures compliance with and confirmed the critical role of feature engineering and
+data privacy protection specifications and avoids interference enhanced features in improving classification performance.
+with normal network communication. Zaki et al. [17] proposed GRAIN, which realizes three-level
+ granular multi-label classification of encrypted traffic based
+B. Task Description on statistical features of packet payload lengths and cascaded
+ Encrypted traffic classification is defined as a supervised Random Forest classifiers. Mohanty et al. [18] proposed a
+learning task that maps encrypted network flow samples to stacking ensemble model and an autoencoder-based defense
+predefined category labels based on their inherent features. mechanism to solve the problems of high False Positive
+This task focuses on two levels of classification objectives Rate and vulnerability to adversarial attacks in darknet traffic
+aligned with practical application demands: classification.
+ Another line of research directly takes raw bit/byte streams
+ 1) Fine-grained application type classification: Distinguishas input to machine learning models. Yun et al. [19] proposed
+ ing specific service types within encrypted traffic, such
+ Securitas, a protocol identification system that leverages the
+ as chat, email, file transfer, peer-to-peer (P2P), streaming
+ skewed frequency-rank distribution of protocol trace n-grams,
+ media (audio/video), and voice over IP (VoIP). This level
+ extracts statistical message formats by clustering semantically
+ of classification provides a basis for refined network
+ identical n-grams, and identifies protocols from raw network
+ resource optimization and legitimate service managetraces without prior protocol knowledge. Wang et al. [20]
+ ment, enabling targeted allocation of network bandwidth
+ proposed ProHacker, a nonparametric approach that extracts
+ and QoS guarantees.
+ protocol keywords via a Bayesian statistical model and classi-
+ 2) Normal/abnormal traffic discrimination: Identifying
+ fies protocol traces using semi-supervised learning. Xiao et al.
+ whether encrypted traffic belongs to legitimate user
+ [21] proposed the Dynamic Multiple Traffic Classification
+ behavior or malicious activities (e.g., botnet com-
+ System (DMTCS), which incorporates time-based protocol
+ munication, malware propagation, unauthorized data
+ information distribution and applies topic models to cluster
+ exfiltration). This objective is crucial for network secupackets, enabling dynamic network stream classification withrity defense, helping to detect hidden threats and
+ out prior application knowledge. Tang et al. [22] proposed
+ maintain the security and compliance of network oper-
+ MGrC based on granular computing, which defines traffic flow
+ ations.
+ granules, explores inter-granule correlations, and establishes
+ Formally, let X = {x1 , x2 , . . ., xN } denote a dataset con- structural granules to capture inherent packet relationships.
+sisting of N encrypted traffic samples, where each sample However, the main drawback of these methods lies in the
+xi corresponds to a bidirectional network flow defined by generally shallow structure of machine learning models, which
+a 5-tuple (source IP, destination IP, source port, destination makes it difficult to capture the complex correlation features
+port, transport layer protocol). Each flow sample is composed in encrypted traffic and results in insufficient adaptability to
+of a sequence of packets, including header metadata and high-dimensional traffic data with variable patterns [23].
+encrypted payloads. Let Y = {y1 , y2 , . . ., yN } represent the
+corresponding label set, where yi ∈ {1, 2, . . ., C} (C is the B. Deep Learning-Based Methods
+number of target categories).
+ Thanks to the rapid development of deep learning technol-
+ The core challenge of this task lies in overcoming the
+ ogy, researchers have begun to apply deep learning techniques
+semantic obscurity caused by encryption. The model must
+ to the field of network traffic classification. The earliest
+mine discriminative information from multi-granularity traffic
+ methods to emerge were based on traditional neural networks.
+representations. The ultimate goal is to learn a mapping
+ Wang et al. [8] transformed traffic into images and profunction f : X → Y that achieves high accuracy, precision,
+ posed a CNN-based method for encrypted traffic classification.
+recall, and F1-score on diverse encrypted traffic scenarios.
+ Bu et al. [24] proposed a model with deep and parallel
+ network-in-network (NIN) structures, which enhances local
+ III. R ELATED W ORK
+ modeling via micro-networks after convolution layers and
+A. Machine Learning-Based Methods reduces parameters with global average pooling. Liu et al.
+ In recent years, machine learning-based methods have [25] proposed FS-Net based on RNN, which leverages a
+achieved promising results in the field of traffic classification. multi-layer encoder-decoder structure to mine flow sequential
+These methods combine discriminative features extracted from characteristics and a reconstruction mechanism to enhance
+encrypted traffic with machine learning algorithms. They first feature effectiveness. Ren et al. [26] proposed Tree-RNN,
+extract feature information from the traffic and then input these which divides large classification tasks into small ones via
+features into machine learning models for classification. tree structure and deploys specific classifiers for each sub-task,
+ A large number of studies focus on mining statistical realizing end-to-end feature learning. These methods avoid
+features inherent in traffic to build classification models. tedious feature engineering in traditional machine learning,
+Finamore et al. [16] proposed KISS, which extracts payload yet rely on traditional neural networks such as CNN and RNN
+statistical features via the Chi-Square test and combines geo- to process Euclidean space data. They only efficiently handle
+metric distance or Support Vector Machines to address the regular 1D or 2D data, ignore the intrinsic non-Euclidean traits
+classification needs brought by the growth of UDP traffic. of network traffic, and lead to the loss of valuable information
+Anderson et al. [6] compared six machine learning models, [10].
+3108 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ In recent years, GNNs have become a hot topic in the field
+of deep learning. These networks can integrate deep learning
+with graph structures, making up for the shortcomings of the
+aforementioned traditional neural network-based classification
+methods.
+ Researchers have attempted to combine deep learning-based
+methods with graph-based methods to improve the effectiveness of traffic classification. Zheng et al. [11] proposed a graph
+construction method that combines traffic trace graph with
+statistical features, which can achieve certain performance
+improvements under low labeling rates, but its accuracy is
+relatively low. Sun et al. [12] constructed a graph structure
+ Fig. 2. The overall process of our method.
+based on the K-Nearest Neighbors (KNN) method and used a
+fusion neural network of graph convolution and autoencoder to
+extract graph features. Shen et al. [13], leveraging the slightly process of our method is shown in Fig. 2, which is divided into
+different characteristics of traffic in terms of bursts, proposed five stages: data preprocessing, byte-level graph construction
+TIG, which achieved good classification results on Decen- and packet-level representation learning, packet-level graph
+tralized Applications (DApps). Huoh et al. [10] construct a construction and flow-level representation learning, flow-level
+graph structure using the raw bytes of packets, the sequen- representation enrichment and classification.
+tial relationships between packets, and packet metadata. The
+raw byte information is utilized as node features, and edges
+were generated according to the chronological order of each A. Data Preprocessing
+packet’s timestamp. Additionally, five common meta-features Assuming that the raw traffic data we obtain is in the
+are included as global features of the graph. They design a PCAP format, due to the varying lengths of the raw traffic
+GNN to learn representations for nodes, edges, and global data and the presence of interfering information, we need to
+features. Diao et al. [14] proposed EC-GCN based on multi- preprocess the data to transform it into uniformly formatted
+scale graph convolutional neural networks, which encodes input data. The data preprocessing consists of five steps: traffic
+traffic flows into graph representations via a lightweight layer splitting, flow filtering, anonymization, and extraction of raw
+relying only on metadata and extracts multi-graph represen- traffic bytes from packet header/payload.
+tations through a graph pooling and structure learning layer. 1) Traffic Splitting: First, we need to split the continuous
+Yang et al. [27] proposed MTSecurity, which integrates Trans- traffic into multiple discrete units. The most commonly used
+former and GNN technologies, constructs the Malicious Traffic method in current research is to divide the raw traffic data into
+Interaction Graph (MTIG) based on client-server interactions, bidirectional flows. A flow refers to all packets that share the
+and fuses raw byte features with graph-based interaction fea- same five-tuple information (source IP, source port, destination
+tures. Shi et al. [28] proposed BPF-DAG, which constructed a IP, destination port, and transport layer protocol). Following
+global IP-level communication graph and adopted Transformer this step, the raw traffic data is segmented into a set of flows
+and a customized DiESAGE to extract packet-level temporal F = {f1 , . . . , fN }, where N represents the size of F .
+features and flow-level topological features, respectively. 2) Flow Filtering: We filter out flows in which all of
+ A common issue with the aforementioned methods is that packets have no payload. This is because these flows do
+they focus only on feature extraction at one level of the graph, not contain any actual transmission content or data, and thus
+neglecting the fact that there is unique potential available infor- cannot be used to construct the corresponding graph structure.
+mation at each granularity level. For example, the methods Furthermore, we also filter out flows with an excessively
+of Zheng et al. and Sun et al. both focus only on feature large number of packets. Specifically, flows with more than
+extraction at the flow level, while the methods of Shen et al. 10,000 packets are defined as “excessively large flows” and
+and Huoh et al. focus only on feature extraction at the packet filtered out. This is because such flows are mostly caused by
+level. Furthermore, the model proposed by Shi et al. only poor network conditions or other underlying factors, which
+focuses on the temporal relations at the packet level and the introduce massive noise via bad and retransmitted packets
+topological relations at the flow level, without considering the that may interfere with subsequent graph construction and
+relational information among bytes within a packet, nor does feature learning. Therefore, such flows are typically regarded
+it achieve real feature modeling at the byte level. as abnormal samples and are removed. After this step, the
+ Therefore, based on the above observations, we propose a 0
+ flow set F is filtered into set F 0 = {f10 , . . . , fM }, where M
+hierarchical feature extraction model BPF-GNN that constructs 0
+ represents the size of F and M ≤ N .
+byte-, packet-, and flow-level graph structures for multi- 3) Anonymization: The five-tuple information of each
+granularity feature extraction. packet in each flow fi0 is directly removed, as this information
+ may interfere with the classification results of encrypted traffic.
+ IV. M ETHODOLOGY 4) Extraction of Raw Traffic Bytes: For each flow fi0 , select
+ In this section, we provide a detailed description of our the first K packets and extract the first m bytes of the packet
+method as well as the overall model architecture. The overall header and the first n bytes of the payload as the raw byte
+LI et al.: BPF-GNN: A MULTI-GRANULARITY FEATURE EXTRACTION MODEL USING GNNs 3109
+
+Fig. 3. An example of sliding window with window size of 3.
+
+sequences for header/payload. Byte streams longer than m/n Fig. 4. Structure of GNN for packet-level representation learning.
+bytes are truncated, while those shorter than m/n bytes are
+padded with 0xF F at the end to reach the required length.
+If the number of packets in flow fi0 is less than K, the flow Next, we count the frequency of each byte appearing in
+is padded with several m/n-length byte sequences filled with various windows and record the number of times byte pairs co-
+0xF F . occur within the same window. This statistical information will
+ Consequently, the packet header/payload information of be used to calculate the strength of association between bytes.
+each flow fi0 is transformed into a byte matrix Hi ∈ To quantify this strength of association, we use Pointwise
+RK×m /Pi ∈ RK×n to represent it. Mutual Information (PMI) [31] as a measure. The formula
+ for calculating PMI is as follows:
+B. Byte-Level Graph Construction and Packet-Level p(x, y)
+Representation Learning P M I(x; y) = log .
+ p(x)p(y)
+ In this section, we introduce the process of constructing
+ PMI measures the probability of two bytes co-occurring in a
+byte-level graph and packet-level representation learning. To
+ window relative to the probability of their independent occuravoid confusion in meaning, we perform representation learnrences. If the PMI value is positive, it indicates that the two
+ing for packet header and payload independently [15], [29],
+ bytes have a strong association in context, and thus an edge
+[30]. Next, we present a detailed description.
+ connection is established between the nodes corresponding
+ 1) Byte-Level Graph Construction: In this section, our goal
+ to these two bytes; if the PMI value is negative or zero, it
+is to transform each row of the packet header/payload matrices
+ is considered that there is no significant association between
+obtained in Section IV-A into a byte-level graph Gbyte =
+ them.
+{Vbyte , Ebyte } to serve as input data for the graph neural
+ 2) Packet-Level Representation Learning: Following the
+network, where Vbyte and Ebyte are the sets of vertices and
+ methodology established in Section IV-B.1, we generate byteedges. The graph construction method refers to the approach
+ level graphs for both packet headers and payloads. To perform
+proposed in Reference [15]. Below, we use the first row r1 of
+ feature extraction on these graphs, we implement a fourthe packet header byte matrix H1 for flow f10 as an example to
+ layer GraphSAGE architecture [15], as detailed in Fig. 4.
+illustrate the process of constructing the corresponding byte-
+ GraphSAGE [32] is an GNN framework that learns node
+level graph.
+ embeddings by sampling and aggregating features of local
+ Here, we assume that
+ neighbor nodes. This framework possesses a strong capability
+ r1 = {a1 , . . . , am } , ai ∈ [0, 255], i = 1, . . . , m. to capture local structural correlations and can effectively mine
+ the local relevance between bytes in byte-level graphs. The
+Each element in Vbyte represents a byte of r1 . Note that all
+ core process of GraphSAGE consists of two sequential steps:
+bytes with the same value share the same node, so the number
+ neighbor feature aggregation and node embedding update. For
+of nodes in Gbyte does not exceed 256, which ensures that the
+ each node v, the neighbor aggregation operation is defined as:
+size of the byte-level graph remains relatively small.
+ To construct the edge set Ebyte , we first process the input
+byte sequence r1 using a sliding window (as shown in Fig. 3). AGGREGATE ({qu | u ∈ N (v)}) ,
+This step is designed to capture local contextual correlations where we adopt mean aggregation to achieve stable and
+between bytes, which is a key property for distinguishing reliable feature learning. The updated node embedding is then
+encrypted traffic patterns. Semantic associations in packet calculated by the following formula:
+headers and payloads are typically concentrated in adjacent  
+or short-range byte sequences, making these local correlations qv0 = σ W (l) · CONCAT (qv , AGGREGATE(·)) ,
+particularly valuable for classification. Specifically, we set a
+window of fixed size (e.g., 3 bytes in Fig. 3) and slide it across which concatenates the node’s own features with the aggrer1 with a step size of 1: each window defines a local context, gated neighbor information, thereby preserving both local
+and bytes within the same window are treated as co-occurring details and contextual associations simultaneously.
+elements. This approach avoids the over-dense graph structure Formally, for each node v ∈ Vbyte in the graph Gbyte , the
+that would result from connecting all bytes chronologically, feature aggregation process can be described as follows. Let
+ (l−1)
+while focusing on meaningful short-range byte relationships. qv denote the feature vector of node v at layer l − 1, and
+3110 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ 3) Representation Fusion: Having derived packet-level representation vectors for both headers and payloads, we integrate
+ these representations into a unified vector through a streamlined GMU [36]. This mapping operation projects the header
+ and payload features into a joint latent space, enabling subsequent packet-level graph construction. The GMU architecture
+ is detailed in Fig. 5.
+ Let gh and gp represent the packet-level representation
+ vectors extracted from the traffic header graphs and traffic
+ payload graphs, respectively. The GMU computes a gating
+Fig. 5. The simplified version of GMU.
+ vector to control the information between header and payload
+ representation vectors.
+N (v) represent the set of neighboring nodes of v. The message First, we transform the header and payload representation
+from the neighbors is computed as: vectors using hyperbolic tangent (tanh) activation functions:
+
+ 1 X hh = tanh (Wh · gh ) ,
+ p(l) = qu(l−1) ,
+ |N (v)| hp = tanh (Wp · gp ) ,
+ u∈N (v)
+
+where |N (v)| is the cardinality of the neighbor set. The where Wh and Wp are the learnable weight matrices for the
+updated feature vector for node v at layer l is then obtained header and payload modalities, respectively. The tanh function
+by concatenating its current feature vector with the aggregated ensures that the transformed representation vectors are within
+neighbor message, followed by a non-linear transformation: the range [−1, 1].
+    Next, we compute the gating vector z using a sigmoid
+ qv(l) = σ W (l) · CONCAT qv(l−1) , p(l) . activation function:
+
+Here, W (l) ∈ Rdl−1 ×dl is the learnable weight matrix at layer z = σ (Wz · CONCAT(gh , gp )) ,
+l, CONCAT(·) denotes the concatenation operation, and σ(·)
+is the activation function. We utilize the Parametric ReLU where Wz is the learnable weight matrix for the gating mech-
+(PReLU) [33] as the activation function, defined as: anism, and σ(·) denotes the sigmoid activation function. The
+ ( gating vector z determines the contribution of each modality
+ x if x > 0, to the final representation.
+ σ(x) = The final fused representation hfinal is obtained by combinax if x ≤ 0,
+ ing the gated vectors from header and payload representation
+where a is a learnable parameter that introduces channel-wise vectors:
+attention by scaling negative values differently. To enhance hfinal = z hh ⊕ (1 − z) hp ,
+the stability and performance of the model, we apply Batch
+Normalization (BN) [34] to the updated feature vectors: where denotes the element-wise multiplication operation,
+   and ⊕ represents element-wise addition. This formulation
+ qv(l) = BN qv(l) . allows the GMU to adaptively weigh the contributions of the
+ header and payload feature vectors.
+ To address the over-smoothing issue and capture multi- By incorporating this simplified GMU, we provide an effiscale structural information, we adopt a strategy inspired by cient and effective framework for fusing header and payload
+Jumping Knowledge Networks (JKN) [35]. Specifically, we representation vectors. This approach enables the model to
+concatenate the feature vectors from the first four layers to leverage the complementary information present in header and
+form the final feature representation for each node v: payload.
+  
+ qv = CONCAT qv(1) , qv(2) , qv(3) , qv(4) .
+ C. Packet-Level Graph Construction and Flow-Level
+ Subsequently, we compute the global feature vector gpacket Representation Learning
+by applying mean pooling over all node feature vectors:
+ Having acquired the overall representation vector for each
+ 1 X
+ packet, which is the packet-level representation vector, we
+ gpacket = qv ,
+ |Vbyte | proceed to construct graph structures at the packet level to
+ v∈Vbyte
+ uncover potential useful information that is implicit at the
+where |Vbyte | denotes the number of nodes in the graph. packet level, such as interaction feature information between
+This global feature vector gpacket encapsulates the structural packets. It is also important to note that our primary focus in
+characteristics of the entire graph. this paper is on the flow-level classification task. Therefore,
+ So far, we have been able to obtain packet-level represen- we also need to extract the global features of each packet-level
+tation vectors for both the header and payload of each packet. graph, which is the learning of flow-level representations.
+LI et al.: BPF-GNN: A MULTI-GRANULARITY FEATURE EXTRACTION MODEL USING GNNs 3111
+
+Algorithm 1 Packet-Level Graph Edge Set Construction this time we stack two layers. Since this paper focuses on
+Input: Vertex set V . flow-level classification tasks, we still need to extract global
+Output: The packet-level graph edge set E. features to obtain flow-level representations. Specifically, we
+ Initialize: E = φ. concatenate the vectors from the first two layers to form the
+ 1: Split V into bursts B = (b1 , . . . , bS ) based on packet final representation vectors for each node v:
+ direction  
+ 2: for each burst bi ∈ B do lv = CONCAT lv(1) , lv(2) .
+ 3: if bi has more than one packet then
+ 4: for each pair of consecutive packets (vj , vj+1 ) in bi Subsequently, we compute the global feature vector gf low
+ do by applying mean pooling over all node feature vectors:
+ 5: Add bidirectional edges between vj and vj+1 to 1 X
+ gf low = lv .
+ E K
+ v∈Vpacket
+ 6: end for
+ 7: end if The learned flow-level representations gf low then contain
+ 8: end for two types of information:
+ 9: for each pair of consecutive bursts (bi , bi+1 ) do 1) Packet-level representations learned from byte-level
+10: if both bi and bi+1 have only one packet then graphs. Since the node features in the packet-level
+11: Add bidirectional edges between the packets in bi graph use global packet features extracted from the byteand bi+1 to E level, the extracted flow-level features include potential
+12: else relationship information between bytes;
+13: Add bidirectional edges between the first packets of 2) Interaction information unique to the packet level.
+ bi and bi+1 to E As mentioned before, the interaction pattern information
+14: Add bidirectional edges between the last packets of of packets is unique and is not affected by whether
+ bi and bi+1 to E the traffic itself is encrypted or not. After representa-
+15: end if tion learning, the extracted flow-level representations
+16: end for currently include this important information to better
+17: return E perform subsequent classification tasks.
+
+ D. Flow-Level Representation Enrichment and Classification
+ 1) Packet-Level Graph Construction: Generally speaking,
+the interaction patterns between the two parties in network After completing the two-step representation learning protraffic communication are unique and remain unchanged cess described in Sections IV-B and IV-C, we have obtained
+regardless of whether the traffic itself is encrypted and pro- flow-level representations. However, we believe that additional
+tected by protocols. Therefore, at the packet level, we opt to flow-level similarity information can be incorporated to further
+construct the TIG [13] to learn this unique information. enhance the representation of flows. To achieve this, we
+ Our goal is to construct the corresponding packet-level propose constructing the flow-level graph where the flow-level
+graph Gpacket = {Vpacket , Epacket } for each flow, where the representations obtained in Section IV-C are used as node
+number of nodes in each graph is K, and the node features features.
+of each node are the vectors hfinal extracted as described Let X = {x1 , x2 , . . . , xM } represent the set of flow-level
+in Section IV-B. It should be specially noted that the node representations extracted as described in Section IV-C, where
+features of the Traffic Interaction Graph (TIG) in [13] are xi ∈ Rd is the representation vector of the i-th flow, and
+packet lengths. To adapt to our model, we replace the node M is the total number of flows. These representation vectors
+features in the original TIG method with the extracted packet- are derived from the previous steps and capture the essential
+level representation vectors. characteristics of each flow. It should be specifically noted that,
+ The method for constructing the edge set Epacket in the in order to keep the size of the flow-level graph relatively
+traffic interaction graph is shown in Algorithm 1, where a burst small, we construct a graph every BatchSize (BS) flows,
+is defined as a sequence of consecutive packets transmitted in instead of constructing a large graph using all M flows. This
+the same direction within a short time interval [37]. Lines choice avoids excessive computational and memory overhead
+2-8 of the algorithm are for adding intra-burst edges, which caused by a single large-scale graph when M is large, ensuring
+are the connections between vertices within the same burst. the model’s scalability to large datasets while maintaining the
+Lines 9-16 are for adding inter-burst edges, which establish local similarity structure within each batch.
+connections between two adjacent bursts. More specifically, To establish connections between flows, we use the
+the first and last vertices in each burst are connected to the Euclidean distance as the similarity metric. The Euclidean
+corresponding first and last vertices in the next burst. distance between two flow representation vectors xi and xj is
+ 2) Flow-Level Representation Learning: After constructing defined as:
+the packet-level traffic graph, we need to perform represenv
+ u d
+tation learning for the graph features. Here, we still use
+ uX
+ d(x , x ) = kx − x k = t (x − x )2 ,
+ i j i j 2 ik jk
+the GraphSAGE layer as mentioned in Section IV-B.2, only k=1
+3112 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+where xik and xjk are the k-th components of the represen- A. Dataset
+tation vectors xi and xj , respectively. In our experiments, we utilize four well-known datasets:
+ For each flow xi , we select the Top-k most similar flows ISCX-VPN2016 [38], ISCX-Tor2016 [39], USTC-TFC2016
+based on the Euclidean distance. Specifically, we compute the [9], and MIRAGE-2024 [40].
+distances between xi and all other flows xj (where j 6= i), The ISCX-VPN2016 dataset is specifically designed for the
+and then select the k flows with the smallest distances. These analysis of Virtual Private Network (VPN) traffic and nonk flows are considered the most similar neighbors of xi . VPN traffic. It contains network traffic from both VPN and
+ Using the Top-k similarity information, we construct a flow- non-VPN connections, making it suitable for researching and
+level graph Gf low = (Vf low , Ef low ), where: comparing the characteristics and behaviors of these two types
+ • Vf low = {v1 , v2 , . . . , vBS } is the set of nodes, each of traffic. The dataset defines six categories, namely Chat,
+ representing a flow. Email, File Transfer, P2P, Streaming and VoIP.
+ • Ef low is the set of edges, where an edge (vi , vj ) exists The ISCX-Tor2016 dataset focuses on traffic anonymized
+ if xj is one of the Top-k most similar neighbors of xi . through The Onion Router (Tor) network. It contains ISCX-
+ To enrich the flow-level representations, we apply two layers Tor and ISCX-nonTor datasets. The dataset defines eight
+of GraphSAGE on the constructed graph. By applying two categories, namely Browsing, Email, Chat, Audio-streaming,
+layers of GraphSAGE, each node can aggregate information Video-streaming, File Transfer, VoIP, and P2P.
+from its Top-k most similar neighbors, thereby enhancing the The USTC-TFC2016 dataset is specifically designed for the
+flow-level representations. analysis of normal and abnormal network traffic. It contains
+ This graph construction approach creates more connections two primary categories of traffic: normal traffic and abnormal
+between flows of the same application type, which allows traffic, making it suitable for researching and distinguishing
+each node to aggregate information from more neighbors of the characteristics between legitimate and malicious network
+similar types. This enhances the flow-level representations and behaviors. The normal traffic in this dataset covers ten subimproves the accuracy of the classification task. categories (e.g., MySQL, Weibo), while the abnormal traffic
+ Finally, we use a fully connected layer to perform the ulti- also includes ten sub-categories (e.g., Htbot, Zeus).
+mate classification task. The output of the second GraphSAGE The MIRAGE-2024 dataset is specifically designed for the
+layer is passed through the fully connected layer, which is analysis of mobile application traffic in real-world scenarios.
+defined as: It contains fine-grained bidirectional flows collected from
+   Android devices, covering a diverse set of popular apps
+ (2)
+ yi = softmax Wc · hi + bc , such as ClashRoyale, Discord, WhatsApp, Zoom, and many
+ others, making it suitable for researching encrypted traffic
+ classification and mobile app fingerprinting.
+where:
+ (2)
+ • hi is the feature representation of node vi after the
+ second GraphSAGE layer. B. Experimental Setting
+ • Wc and bc are the learnable weight matrix and bias 1) Evaluation Metrics: To quantify the performance of the
+ vector of the fully connected layer, respectively. classification model comprehensively, four key metrics are
+ • yi is the predicted probability distribution over the classes employed: accuracy, precision, recall, and F1 score. Each
+ for node vi . metric captures distinct aspects of the model’s behavior, as
+ To optimize the model parameters, we utilize the cross- defined below:
+entropy loss function to measure the discrepancy between the a) Accuracy: The percentage of correct predictions out
+predicted probabilities and ground-truth labels. The loss is of the total samples.
+computed as: TP + TN
+ Accuracy =
+ C
+ X TP + FP + FN + TN
+ true
+ L=− yi,c log yi,c , b) Precision: The probability that a sample is actually
+ c=1 positive among all those predicted to be positive.
+where: TP
+ Precision =
+ • C denotes the number of classes. TP + FP
+ true
+ • yi,c is the ground-truth one-hot label for node vi . c) Recall: The probability that a sample is predicted to
+ • yi,c corresponds to the predicted probability. be positive among all those that are actually positive.
+ TP
+ Recall =
+ TP + FN
+ V. E XPERIMENT
+ d) F1 score: The F1 score is used to provide a com-
+ In this section, we detail the full configuration of our prehensive evaluation of Precision and Recall, and it is the
+experiments and the corresponding results obtained. These harmonic mean of both precision and recall.
+experiments are designed to comprehensively evaluate the Precision · Recall
+performance of our proposed model against existing methods. F1 = 2 ·
+ Precision + Recall
+LI et al.: BPF-GNN: A MULTI-GRANULARITY FEATURE EXTRACTION MODEL USING GNNs 3113
+
+ TABLE I 1) Impact of the Maximum Number of Packets Per Flow
+ H YPERPARAMETER S ELECTION OF BPF-GNN V IA G RID S EARCH (K): The number of packets per flow directly determines both
+ the count of byte-level graphs and the number of nodes in the
+ packet-level graphs. As shown in Fig. 6a, as K increases,
+ the model’s accuracy and F1-score first show a upward trend
+ and then enter a state of fluctuation: when K = 15, accuracy
+ and F1-score hit their highest values; once K exceeds 15, the
+ metrics only fluctuate slightly without any notable improvement. This indicates that 15 packets already contain enough
+ information to enable effective learning, while extra packets
+ merely add redundant data.
+ 2) Impact of the Maximum Length of Packet Header Bytes
+ (m): The packet header contains critical control information,
+ While accuracy provides a global view, precision and recall and its effective extraction is essential for distinguishing
+focus on type I and type II errors, respectively. The F1 score encrypted traffic patterns. The sensitivity analysis results are
+integrates both to mitigate biases caused by class imbalance. presented in Fig. 6b. As shown in the figure: When the header
+ 2) Experimental Environment: We employ DGL as the byte length m is set to 30, the F1-score remains at a relatively
+graph neural network framework for our model and the low level, as the truncated header bytes lose key information.
+baseline models, and each experiment was independently run As m increases to 50, both the F1-score and accuracy reach
+five times with the average value taken as the experimental their optimal levels. This length fully covers the core control
+evaluation result. All of the models presented in this paper fields while avoiding redundant noise from irrelevant header
+are solved by DGL running on a PC with Intel R CoreTM fields. When m exceeds 50, the F1-score does not improve
+i9-10850K CPU 3.60 GHz and NVIDIA RTX 3080 GPU. further and only fluctuates slightly. This result indicates that
+ 3) Model Parameter Selection: In this section, we elabo- excessive header bytes do not enhance feature representation;
+rate on the hyperparameter configuration for our model. To instead, they may introduce redundant information and cause
+ensure the model achieves optimal performance, we adopt a minor performance fluctuations.
+grid search strategy to exhaustively evaluate the performance 3) Impact of the Maximum Length of Payload Bytes (n):
+of different hyperparameter combinations within reasonable The payload carries the core data of encrypted traffic, and
+ranges. its byte length directly impacts the richness of semantic
+ Specifically, we predefine candidate value ranges for core information for packet-level representation learning. As shown
+hyperparameters (e.g., training epochs from 20 to 60, batch in Fig. 6c, with the increase of n, the model’s performance first
+size from 32 to 128, learning rate from 0.0001 to 0.01). rises to a peak and then gradually declines: when n = 200,
+For each combination, we conduct independent training and both accuracy and F1-score reach their maximum values. This
+validation on the dataset, and select the optimal configuration length balances the need for effective semantic information
+by comprehensively balancing classification accuracy, training acquisition and noise control, enabling the model to effectively
+efficiency, and model generalization. capture relationships between bytes in the encrypted pay-
+ For the optimization strategy, we compare the performance load. When n exceeds 200, accuracy and F1-score gradually
+of Adam and SGD optimizers via grid search and ultimately decrease. This is because encrypted payloads contain a large
+select Adam for its superior stability in gradient descent. We number of redundant encrypted bits; excessive byte truncation
+also introduce a warm-up stage (scaled to 0.1 of total training introduces irrelevant noise, interfering with the PMI-based
+steps) to mitigate the impact of large initial learning rates, byte correlation calculation and subsequent graph represenpaired with a cosine annealing scheduler to gradually reduce tation learning.
+the learning rate to a minimum of 1e-4. Additionally, dropout 4) Impact of k Value in Top-k for Flow-Level Graph Conlayers (set to 0.2) are incorporated to prevent overfitting. The struction: The k value determines the number of similar flow
+final hyperparameter settings (shown in Table I) are confirmed neighbors connected to each flow node in the flow-level graph,
+via repeated grid search validation and cross-validation on the directly affecting the richness of flow-level feature fusion.
+dataset. As shown in Fig. 6d, with the increase of k, the model’s
+ F1-score first increases and then decreases significantly. When
+ k = 1, the F1-score is relatively low because of the sparse edge
+C. Model Sensitivity Analysis structure of the flow-level graph. Each flow can only aggregate
+ We conduct sensitivity analysis on four key hyperparameters limited similar neighbor information and cannot fully leverage
+that directly affect model performance: the maximum number inter-flow similarity for feature enhancement. When k = 3,
+of packets per flow (K), the maximum length of packet header the F1-score reaches its peak. This configuration balances the
+bytes (m), the maximum length of payload bytes (n), and the density of the flow-level graph and the relevance of neighbor
+k value in Top-k for flow-level graph construction. We select information, enabling each flow to aggregate features from the
+accuracy and F1-score as evaluation metrics to quantitatively three most similar flows while avoiding the dilution of disassess the impact of parameter variations on classification criminative features caused by excessive irrelevant neighbors.
+performance. When k exceeds 3, the F1-score decreases significantly. This
+3114 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 6. Sensitivity analysis of key hyperparameters on model performance based on the ISCX-VPN dataset: (a) Maximum number of packets per flow K;
+(b) Maximum header byte length per packet m; (c) Maximum payload byte length per packet n; (d) k value of Top-k in flow-level graph construction.
+
+is because an overly large k leads to over-connection in the • EC-GCN [14]: Designs a multi-subgraph classification
+flow-level graph, introducing dissimilar flow information that framework that only uses metadata information, combincontaminates the original flow representation. ing CNN and GNN to extract multi-scale spatiotemporal
+ features for encrypted traffic classification.
+D. Comparison Experiments 2) Experimental Results: The comparative experimen-
+ 1) Comparison Models: To evaluate the proposed model’s tal results on the ISCX-VPN2016, ISCX-Tor2016, USTCefficacy, five baselines are selected for benchmarking. Each TFC2016, and MIRAGE-2024 datasets are shown in Tables II
+method is meticulously optimized for peak performance on the and III. Based on the results, we can draw the following
+evaluation dataset to ensure fairness. The baseline approaches conclusions:
+are summarized as follows: 1) Our model BPF-GNN performs the best compared
+ • CNN [9]: Translates the first 784 bytes of each bidi- to multiple baselines on the ISCX-VPN2016, ISCXrectional flow into grayscale images and use a CNN Tor2016, USTC-TFC2016, and MIRAGE-2024 datasets,
+ architecture similar to LeNet-5 [41] for feature learning. which confirms the effectiveness of our approach;
+ • KNN-GNN [12]: Constructs graph representations via 2) BPF-GNN outperforms the CNN model across all
+ K-Nearest Neighbors and integrates graph convolution datasets, and this performance gap essentially stems
+ with an autoencoder for feature extraction. from the difference in their adaptability to the inher-
+ • GraphDApp [13]: Constructs graph structure using ent structure of traffic data: the CNN model converts
+ packet length sequence and interaction information traffic data into grid structures in Euclidean space for
+ between packets, with a three-layer GraphSAGE stack processing, while network traffic inherently exhibits
+ used as the neural network model. non-Euclidean interaction characteristics. This limits the
+ • ACID [42]: Leverages lightweight neural model-learned CNN’s ability to extract effective features. In contrast,
+ low-dimensional embeddings, combined with multiple by constructing a three-level graph structure, BPF-GNN
+ kernel networks, to adaptively cluster and classify mali- naturally aligns with the non-Euclidean nature of traffic
+ cious traffic. data, enabling accurate modeling of key information
+LI et al.: BPF-GNN: A MULTI-GRANULARITY FEATURE EXTRACTION MODEL USING GNNs 3115
+
+ TABLE II
+ C OMPARISON OF C LASSIFICATION P ERFORMANCE ON THE ISCX-VPN2016, ISCX-T OR 2016 AND USTC-TFC2016 DATASETS
+
+ such as byte semantic correlations, packet interaction TABLE III
+ patterns, and inter-flow similarity; C OMPARISON OF C LASSIFICATION P ERFORMANCE
+ 3) Additionally, it is worth noting that our model is superior ON THE MIRAGE-2024 DATASET
+
+ to GraphDApp, for which feature extraction only stays at
+ the packet level and does not utilize the raw byte information of the traffic as node features, instead choosing
+ to use packet length information. This precisely confirms
+ the superiority of hierarchical feature extraction;
+ 4) BPF-GNN demonstrates superior generalization capability in cross-scenario tasks across multiple datasets.
+ Experimental results indicate that BPF-GNN maintains
+ consistent and leading classification performance across The results of the ablation experiments on the
+ four datasets with distinctly different characteristics. ISCX-VPN2016 dataset are shown in Table IV. The
+ This advantage originates from its multi-granularity fea- experimental results indicate that the four components
+ ture extraction mechanism, which can effectively capture aforementioned of BPF-GNN contribute positively to
+ both commonalities and scenario-specific features under improving the model performance. Among them, the negative
+ various encrypted traffic scenarios. impact of not using the byte-level graph on the model
+ performance is the most significant, with the F1 score
+ dropping by approximately 12% on the ISCX-VPN dataset.
+E. Ablation Experiments This illustrates the necessity of starting feature learning from
+ In this paper, we conducted a series of ablation experiments the byte-level. Additionally, we can also observe that not
+aimed at evaluating the impact of each component of the using the packet-level or flow-level graphs also has a certain
+model. Ablation experiments are an important research method negative impact on the model performance. Specifically, the
+that determines the contribution of each part to the final results flow-level graph enriches the feature representation of each
+by systematically removing or replacing various components flow by incorporating information from similar flows, thus
+of the model. In this experiment, we particularly focused on enhancing the feature representation of the flow, which is
+the impact of byte-level graph, packet-level graph, flow-level confirmed in this section.
+graph, and the choice of activation functions on the model.
+Below is an explanation of each experiment: F. Model Complexity Analysis
+ • w/o Byte-level graph: Instead of constructing byte-level To fully evaluate the balance between performance and
+ graphs, the raw bytes of the traffic data are directly used computational overhead, we report the floating-point operas node vectors in the packet-level graph. ations (FLOPs) and parameter counts of the proposed
+ • w/o Packet-level graph: Instead of constructing packet- BPF-GNN model and baseline methods in Table V.
+ level graphs, the packet-level features output from the Combining the comparisons between Table V and perforbyte-level graph feature extraction are simply concate- mance results, it can be concluded that BPF-GNN achieves
+ nated to serve as the node vectors of the flow-level graph. competitive performance on the target dataset while maintain-
+ • w/o Flow-level graph: Instead of constructing flow- ing moderate model complexity. Compared with lightweight
+ level graphs, the output from the packet-level graph models such as CNN, GraphDApp and ACID, BPF-GNN has
+ feature extraction is directly input into a fully connected relatively higher floating-point operations. This computational
+ classifier. overhead stems from two core design choices:
+ • w/o PReLU & BatchNorm: Instead of using the PReLU • Hierarchical raw byte input: BPF-GNN takes raw
+ activation function and normalization, the ReLU activa- byte sequences as input while leveraging the hierarchition function is used. cal structure of network traffic. This design enhances
+3116 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ TABLE IV
+ A BLATION E XPERIMENTS ON THE ISCX-VPN2016 DATASET
+
+ TABLE V [2] T. Nelms, R. Perdisci, and M. Ahamad, “ExecScent: Mining for
+ M ODEL FLOP S AND PARAMETERS new C&C domains in live networks with adaptive control protocol
+ templates,” in Proc. 22nd USENIX Secur. Symp. (USENIX Secur.), 2013,
+ pp. 589–604.
+ [3] W. Melo, P. Lopes, R. Antonello, S. Fernandes, and D. Sadok, “On the
+ performance of DPI signature matching with dynamic priority,” in Proc.
+ IEEE Symp. Comput. Commun. (ISCC), Jun. 2014, pp. 1–6.
+ [4] J. Su, S. Chen, B. Han, C. Xu, and X. Wang, “A 60Gbps DPI prototype
+ based on memory-centric FPGA,” in Proc. ACM SIGCOMM Conf., Aug.
+ 2016, pp. 627–628.
+ [5] A. B. Mohd and S. bin Mohd Nor, “Towards a flow-based internet traffic
+ classification for bandwidth optimization,” Int. J. Comput. Sci. Secur.,
+ vol. 3, no. 2, pp. 146–153, 2009.
+ [6] B. Anderson and D. McGrew, “Machine learning for encrypted malware
+ traffic classification: Accounting for noisy labels and non-stationarity,”
+ feature representation capability but also increases com- in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+ putational overhead. However, by adjusting the number Aug. 2017, pp. 1723–1732.
+ [7] B. Xu, S. Chen, H. Zhang, and T. Wu, “Incremental k-NN SVM method
+ of bytes used per flow, the floating-point operations can in intrusion detection,” in Proc. 8th IEEE Int. Conf. Softw. Eng. Service
+ be reduced with acceptable accuracy loss. Sci. (ICSESS), Nov. 2017, pp. 712–717.
+ • Separate processing of packet header and pay- [8] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+ encrypted traffic classification with one-dimensional convolution neural
+ load: BPF-GNN processes packet headers and payloads networks,” in Proc. IEEE Int. Conf. Intell. Secur. Informat. (ISI), Jul.
+ via independent neural network branches. This design 2017, pp. 43–48.
+ strengthens feature learning for encrypted traffic but [9] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+ classification using convolutional neural network for representation
+ doubles the computational load. This overhead, though, learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2017, pp. 712–717.
+ can be mitigated through parallel processing. [10] T.-L. Huoh, Y. Luo, P. Li, and T. Zhang, “Flow-based encrypted network
+ traffic classification with graph neural networks,” IEEE Trans. Netw.
+ Service Manage., vol. 20, no. 2, pp. 1224–1237, Jun. 2023.
+ VI. C ONCLUSION [11] J. Zheng and D. Li, “GCN-TC: Combining trace graph with statistical
+ features for network traffic classification,” in Proc. IEEE Int. Conf.
+ In this paper, we propose BPF-GNN, a hierarchical graph Commun. (ICC), May 2019, pp. 1–6.
+ [12] B. Sun, W. Yang, M. Yan, D. Wu, Y. Zhu, and Z. Bai, “An encrypted
+neural network model designed for encrypted traffic clas- traffic classification method combining graph convolutional network and
+sification through multi-granularity feature extraction across autoencoder,” in Proc. IEEE 39th Int. Perform. Comput. Commun. Conf.
+byte-, packet-, and flow-level graphs. This allows us to capture (IPCCC), Nov. 2020, pp. 1–8.
+ [13] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decenthe discriminative information contained at the byte, packet, tralized application identification via encrypted traffic analysis using
+and flow levels, thereby enriching the representation of the graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+flow-level features used for classification and improving the pp. 2367–2380, 2021.
+ [14] Z. Diao et al., “EC-GCN: A encrypted traffic classification framework
+accuracy of encrypted traffic classification tasks. Experimental based on multi-scale graph convolution networks,” Comput. Netw.,
+results on the public datasets demonstrate that our method vol. 224, Apr. 2023, Art. no. 109614.
+achieves significant classification performance. This remark- [15] H. Zhang et al., “TFE-GNN: A temporal fusion encoder using graph
+ neural networks for fine-grained encrypted traffic classification,” in Proc.
+able performance can be attributed to the effectiveness of the ACM Web Conf., Apr. 2023, pp. 2066–2075.
+multi-granularity feature extraction approach. In future work, [16] A. Finamore, M. Mellia, M. Meo, and D. Rossi, “KISS: Stochastic
+we will continue to explore the impact of replacing different packet inspection classifier for UDP traffic,” IEEE/ACM Trans. Netw.,
+graph construction methods at each granularity level on the vol. 18, no. 5, pp. 1505–1515, Oct. 2010.
+ [17] F. Zaki, F. Afifi, S. A. Razak, A. Gani, and N. B. Anuar, “GRAIN: Granfinal classification results. ular multi-label encrypted traffic classification using classifier chain,”
+ Comput. Netw., vol. 213, Aug. 2022, Art. no. 109084.
+ [18] H. Mohanty, A. H. Roudsari, and A. H. Lashkari, “Robust stacking
+ R EFERENCES ensemble model for darknet traffic classification under adversarial
+ settings,” Comput. Secur., vol. 120, Sep. 2022, Art. no. 102830.
+[1] S. Rezaei and X. Liu, “Deep learning for encrypted traffic classification: [19] X. Yun, Y. Wang, Y. Zhang, and Y. Zhou, “A semantics-aware approach
+ An overview,” IEEE Commun. Mag., vol. 57, no. 5, pp. 76–81, May to the automated network protocol identification,” IEEE/ACM Trans.
+ 2019. Netw., vol. 24, no. 1, pp. 583–595, Feb. 2016.
+LI et al.: BPF-GNN: A MULTI-GRANULARITY FEATURE EXTRACTION MODEL USING GNNs 3117
+
+[20] Y. Wang, X. Yun, and Y. Zhang, “Rethinking robust and accurate [41] Y. LeCun et al., “Learning algorithms for classification: A comparison
+ application protocol identification: A nonparametric approach,” in Proc. on handwritten digit recognition,” Neural Netw., Stat. Mech. Perspective,
+ IEEE 23rd Int. Conf. Netw. Protocols (ICNP), Nov. 2015, pp. 134–144. vol. 56, no. 3, pp. 261–276, 1995.
+[21] X. Xiao, R. Li, H.-T. Zheng, R. Ye, A. KumarSangaiah, and S. Xia, [42] A. F. Diallo and P. Patras, “Adaptive clustering-based malicious traffic
+ “Novel dynamic multiple classification system for network traffic,” Inf. classification at the network edge,” in Proc. IEEE INFOCOM Conf.
+ Sci., vol. 479, pp. 526–541, Apr. 2019. Comput. Commun., May 2021, pp. 1–10.
+[22] P. Tang, Y. Dong, and S. Mao, “Online traffic classification using
+ granules,” in Proc. IEEE INFOCOM Conf. Comput. Commun. Workshops (INFOCOM WKSHPS), Jul. 2020, pp. 1135–1140.
+[23] A. L’Heureux, K. Grolinger, H. F. Elyamany, and M. A. M. Capretz,
+ “Machine learning with big data: Challenges and approaches,” IEEE
+ Access, vol. 5, pp. 7776–7797, 2017. Guolong Li is currently pursuing the Ph.D.
+[24] Z. Bu, B. Zhou, P. Cheng, K. Zhang, and Z.-H. Ling, “Encrypted degree with Information Engineering University. His
+ network traffic classification using deep and parallel network-in-network research interests include encrypted traffic analysis.
+ models,” IEEE Access, vol. 8, pp. 132950–132959, 2020.
+[25] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow sequence
+ network for encrypted traffic classification,” in Proc. IEEE INFOCOM
+ Conf. Comput. Commun., Apr. 2019, pp. 1171–1179.
+[26] X. Ren, H. Gu, and W. Wei, “Tree-RNN: Tree structural recurrent neural
+ network for network traffic classification,” Expert Syst. Appl., vol. 167,
+ Apr. 2021, Art. no. 114363.
+[27] J. Yang, X. Jiang, Y. Lei, W. Liang, Z. Ma, and S. Li, “MTSecurity:
+ Privacy-preserving malicious traffic classification using graph neural
+ network and transformer,” IEEE Trans. Netw. Service Manage., vol. 21,
+ no. 3, pp. 3583–3597, Jun. 2024.
+[28] Y. Shi, G. Li, and J. Wu, “BPF-DAG: Byte-packet-flow fatures fusion
+ via dynamic attributed graph for reliable encrypted traffic classification,” Yuan Gao received the Ph.D. degree from Shan-
+ IEEE Trans. Inf. Forensics Security, vol. 21, pp. 197–211, 2025. dong University. She is currently a Lecturer with
+[29] X. Xiao, W. Xiao, R. Li, X. Luo, H.-T. Zheng, and S. Xia, “EBSNN: Information Engineering University. Her research
+ Extended byte segment neural network for network traffic classification,” interests include cryptography and encrypted traffic
+ IEEE Trans. Depend. Sec. Comput., vol. 19, no. 5, pp. 3521–3538, Aug. detection.
+ 2021.
+[30] X. Xiao et al., “RBLJAN: Robust byte-label joint attention network for
+ network traffic classification,” IEEE Trans. Depend. Secure Comput.,
+ vol. 22, no. 3, pp. 2161–2178, May 2025.
+[31] L. Yao, C. Mao, and Y. Luo, “Graph convolutional networks for text
+ classification,” in Proc. AAAI Conf. Artif. Intell., 2019, vol. 33, no. 1,
+ pp. 7370–7377.
+[32] W. L. Hamilton, R. Ying, and J. Leskovec, “Inductive representation
+ learning on large graphs,” in Proc. Adv. Neural Inf. Process. Syst.,
+ vol. 30, 2017, pp. 1024–1034.
+[33] K. He, X. Zhang, S. Ren, and J. Sun, “Delving deep into rectifiers:
+ Jiongjiong Ren received the Ph.D. degree from
+ Surpassing human-level performance on ImageNet classification,” in Information Engineering University. He is currently
+ Proc. IEEE Int. Conf. Comput. Vis. (ICCV), Dec. 2015, pp. 1026–1034. an Associate Professor with Information Engi-
+[34] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating deep neering University. His research interests include
+ network training by reducing internal covariate shift,” in Proc. Int. Conf. cryptography and its applications.
+ Mach. Learn., 2015, pp. 448–456.
+[35] K. Xu, C. Li, Y. Tian, T. Sonobe, K. Kawarabayashi, and S. Jegelka,
+ “Representation learning on graphs with jumping knowledge networks,”
+ in Proc. Int. Conf. Mach. Learn., 2018, pp. 5453–5462.
+[36] J. Arevalo, T. Solorio, M. Montes-y-Gómez, and F. A. González, “Gated
+ multimodal units for information fusion,” 2017, arXiv:1702.01992.
+[37] K. Al-Naami et al., “Adaptive encrypted traffic fingerprinting with bidirectional dependence,” in Proc. 32nd Annu. Conf. Comput. Secur.
+ Appl., Dec. 2016, pp. 177–188.
+[38] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani, “Characterization of encrypted and VPN traffic using time-related
+ features,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, 2016, Shaozhen Chen received the Ph.D. degree from
+ pp. 407–414. Shandong University. She is currently a Profes-
+[39] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani, sor with Information Engineering University. Her
+ “Characterization of Tor traffic using time based features,” in Proc. 3rd research interests include cryptography and informa-
+ Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), Porto, Portugal, Feb. 2017, tion security.
+ pp. 253–262.
+[40] I. Guarino, D. Ciuonzo, A. Montieri, and A. Pescapè, “Mirage-
+ App×Act-2024: A novel dataset for mobile app and activity traffic
+ analysis,” in Proc. 20th Int. Conf. Wireless Mobile Comput., Netw.
+ Commun. (WiMob), Oct. 2024, pp. 663–666.

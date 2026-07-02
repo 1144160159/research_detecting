@@ -1,0 +1,149 @@
+1970                                                                   IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+
+
+
+        Toward Context-Aware Anomaly Detection for
+          AIOps in Microservices Using Dynamic
+                    Knowledge Graphs
+         Pieter Moens , Bram Steenwinckel , Femke Ongenae , Bruno Volckaert , Senior Member, IEEE,
+                                           and Sofie Van Hoecke
+
+
+   Abstract—Microservice applications are omnipresent due to                                          I. I NTRODUCTION
+their advantages, such as scalability, flexibility and consequen-
+                                                                                    N THE digital landscape that has characterized the last
+tially resource cost efficiency. The loosely-coupled microservices
+can be easily added, replicated, updated and/or removed to
+address the changing workload. However, the distributed and
+                                                                                I   decade, businesses ranging from e-commerce to finance up
+                                                                                to healthcare rely on software systems to deliver seamless
+dynamic nature of microservice architectures introduces a com-                  experiences to their end-users. For instance, an online retail
+plexity with regard to monitoring and observability, which is                   platform handles thousands, or even millions, of transac-
+paramount to ensure reliability, especially in critical domains.
+Anomaly detection has become an important tool to automate
+                                                                                tions daily [1], while eHeatlh platforms are processing a
+microservice monitoring and detect system failures. Nevertheless,               large amount of (temporal) data from a plethora of mon-
+state-of-the-art solutions assume the topology of the monitored                 itoring equipment that requires rapid and accurate analysis
+application to remain static over time and fail to account for                  and interpretation [2]. To ensure smooth operations and
+the dynamic changes the application, and the infrastructure it is               meet stakeholder demands, many companies have transitioned
+deployed on, undergoes. This paper tackles these shortcomings
+by introducing a context-aware anomaly detection methodology
+                                                                                from a traditional monolithic architecture to a Microservice
+using dynamic knowledge graphs to capture contextual features                   Architecture (MSA) [3]. Instead of one large, unwieldy appli-
+which describe the evolving state of the monitored system.                      cation handling everything, e.g., from inventory management
+Our methodology leverages resource and network monitoring                       to payment processing in e-commerce or patient monitoring
+to capture dependencies between microservices, and the infras-                  and prescription handling in eHealth, the system is decoupled
+tructure they are running on. In addition to the methodology
+for anomaly detection, this paper presents an open-source
+                                                                                into smaller microservices. Each microservice focuses on a
+benchmark framework for context-aware anomaly detection that                    specific task, such as managing product listings, ingesting
+includes monitoring, fault injection and data collection. The                   patient monitoring data or processing payments, and com-
+evaluation on this benchmark shows that our methodology                         municates over the network with other dependent services
+consistently outperforms the non-contextual baselines. These                    through well-defined Application Programming Interfaces
+results underscore the importance of contextual awareness for
+robust anomaly detection in complex, topology-driven systems.
+                                                                                (APIs). These loosely coupled, fine-grained microservices can
+Beyond these achieved improvements, our benchmark establishes                   be individually developed and deployed across distributed
+a reproducible and extensible foundation for future research,                   machines. This improves scalability and maintenance, but also
+facilitating the experimentation with broader ranges of mod-                    allows for more frequent and granular updates, introducing
+els and a continued advancement in context-aware anomaly                        new versions and features without disrupting the entire system.
+detection.
+                                                                                For example, during peak shopping seasons, the payment
+  Index Terms—Anomaly detection, microservices, knowledge                       processing microservice can be scaled independently to handle
+graph, dynamic graphs, knowledge graph embedding, AIOps,                        increased traffic without affecting other parts of the system.
+context.
+                                                                                Similarly, the microservices for ingestion and processing of
+                                                                                real-time monitoring data in an eHeatlh system can be scaled
+                                                                                individually depending on the number of hospital rooms
+                                                                                currently occupied. This avoids horizontal scaling of the entire
+                                                                                application, and thus minimizes the operational cost while
+   Received 23 September 2024; revised 1 April 2025, 10 October 2025,           ensuring availability of the overall system.
+and 17 December 2025; accepted 4 January 2026. Date of publication                 However, these scalability and resource efficiency benefits
+12 January 2026; date of current version 16 January 2026. This research
+was funded by the FWO Junior Research project HEROI2C (G085920N)                obtained through adoption of the MSA come at a cost
+that investigates hybrid machine learning for improved infection manage-        of increased operational complexity in terms of monitoring
+ment in critically ill patients. The associate editor coordinating the review   and observability [4]. As each microservice encapsulates a
+of this article and approving it for publication was D. G. Berbecaru.
+(Corresponding author: Bram Steenwinckel.)                                      single business functionality, a request to the application often
+   The authors are with the IDLab, Ghent University–imec, 9052                  traverses across multiple interconnected components before
+Gent, Belgium (e-mail: Pieter.Moens@ugent.be; Bram.Steenwinckel@                serving the end-user. A fault occurring in one component
+ugent.be;       Femke.Ongenae@ugent.be;            Bruno.Volckaert@ugent.be;
+Sofie.VanHoecke@ugent.be).                                                      can therefore propagate throughout the system. For example,
+   Digital Object Identifier 10.1109/TNSM.2026.3652304                          the checkout microservice for a customer of an e-commerce
+                              
+                              c 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+                                         For more information, see https://creativecommons.org/licenses/by/4.0/
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES                                                                 1971
+
+
+
+platform or a patient being discharged in an eHealth platform       paramount for detecting anomalies stemming from node-
+could rely on the payment and e-mail microservices. A fault in      level faults, e.g., node unavailability and resource shortage.
+one of these services, e.g., network latency, can affect in these   Furthermore, integration of log-based and distributed tracing
+cases the response time of the checkout service, which in turn      in MSA is intrusive and requires changes to the application
+could lead to a violation of timeouts toleration, resulting in an   itself [12]. Developers are tasked with implementing descrip-
+invalid request observed at the front-end of the application.       tive and informative logging at critical points in the code.
+   System faults observed in microservice applications include,     The resulting AD solutions are therefore strongly dependent
+but are not limited to, network latency, anomalous resource         on the quality and uniformity of these logs. In addition to
+consumption and unavailability of system components [5].            this, a commonly observed shortcoming in related work is that
+These faults can cause inaccurate autoscaling of services, vio-     the overall topology or dependency graph is considered to be
+lation of Service Level Agreements (SLAs) or even temporary         static over time, meaning that the dependencies between com-
+outage of the application. This in turn can result in increased     ponents remains the same throughout the entire dataset. The
+operational costs, costs associated with downtime, or even          dynamicity of the monitored system can lead to temporal drift
+more drastic effects due to delayed patient care in eHealth         and affect the performance of the deployed AD models over
+applications.                                                       time. Accurately capturing these types of dynamic changes in
+   Classic monitoring solutions, e.g., using Prometheus [6]         benchmark datasets is paramount to evaluate the applicability
+and Grafana, or using the ElasticSearch, Logstash and Kibana        of the proposed solutions to real-world scenarios.
+(ELK) stack [7], are capable of notifying IT and DevOps engi-          We define concrete requirements for the AD solution
+neers in case of failures in the system through threshold-based     proposed in this paper based on the these aforementioned open
+alerting. These solutions are based on fine-grained alerting        challenges:
+and require multi-faceted thresholds for Key Performance              R1 It should take into account both the application layer as
+Indicators (KPIs) in different layers of the application [8].              well as the infrastructure layer, and therefore be able to
+Determining and updating these thresholds, as well as deriving             detect faults in both.
+the root cause of a fault that propagated through the system          R2 It should be non-invasive and introduce no overhead for
+based on numerous alerts, is a complex and tedious task for                the developers.
+IT and DevOps engineers.                                              R3 It should be able to accurately detect system faults under
+   Artificial Intelligence for IT Operations (AIOps) [9] aims to           dynamic conditions. Temporal changes in the topology
+move from monitoring towards observability and address this                or state of the monitored system should have minimal
+issue through Machine Learning (ML). Instead of monitoring                 impact on the AD model.
+microservices using static thresholds, ML-based solutions,            R4 It should be deployable for real-time detection of system
+such as Dynatrace [10], adopt Anomaly Detection (AD)                       faults.
+and Root Cause Analysis (RCA) techniques to automate the               This work makes two main complementary contributions
+prediction and detection of faults. It thus allows engineers        addressing the identified requirements. First, we introduce
+to respond promptly to potential failures by improving both         a benchmark dataset that captures the multi-layer and non-
+failure management as well as resource provisioning (e.g.,          invasive aspects of microservice environments (R1, R2).
+resource consolidation, service composition, and workload           Second, we propose an anomaly detection approach leveraging
+estimation).                                                        heterogeneous knowledge graphs to model system dynamics
+   The biggest challenge that arises when applying state-           and support real-time fault detection (R3, R4).
+of-the-art AD techniques to microservice-based applications,           The presented research can be subdivided in four
+however, is their inherent dynamic behavior. To optimize            (sub)contributions in chronological order of the paper:
+resource consumption and minimize operational costs while             C1 An open, reproducible deployment bundle that integrates
+ensuring maximum reliability of the overall system when                    non-intrusive, production-grade monitoring and fault-
+handling varying workload, its components are continu-                     injection tooling to produce literal-enriched, multi-layer
+ously added, updated or removed through autoscaling and                    evaluations for microservice anomaly detection.
+rescheduling of resources. While AD for microservice-based            C2 A schema or ontology to construct these Knowledge
+applications has received increased attention in literature over           Graphs (KGs) and express the dependencies between
+recent years, this paper highlights shortcomings and open                  heterogeneous components in both the application and
+challenges when focusing on the temporal characteristics of                infrastructure layers of a MSA.
+the monitored system.                                                 C3 A benchmark dataset for AD in microservices containing
+   Most related work infers the application topology. It does              both data features and contextual features to capture the
+this by using Control Flow Graphs (CFG) extracted from                     dynamic state of the system over time.
+logs or distributed traces to capture how microservices depend        C4 A novel methodology for real-time context-aware AD in
+on each other [11]. The relations that can be obtained from                microservices based on KGs.
+these distributed traces are, however, often limited to the            The remainder of this paper is structured as follows. First,
+dependencies between different microservices, and do not            Section II summarizes related work in the domain of anomaly
+include their relation with the infrastructure they are running     detection in microservices, and the benchmark datasets used
+on, for example, the specific hardware node the microservice        for evaluation. It also highlights the contributions of this
+is deployed on. Taking into account these relations can be          work with respect to this related work. Before diving into the
+1972                                                         IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+
+
+specifics of our methodology, we first describe the microser-        from normal behavior data and detect anomalies based on
+vice environment (C1), the designed schema used to construct         deviations from these patterns. In addition, they construct
+the KGs (C2) and the resulting benchmark dataset (C3) in             CFGs from these system logs for diagnosis and RCA of the
+Sections III and IV respectively, which provide the neces-           detected anomalies. DeepLog focuses on cybersecurity threats
+sary context for understanding our approach. Section V then          and captures anomalies such as Denial of Service (DoS) and
+introduces the proposed methodology towards dynamic KG-              detected port scans. The dataset considered stems from the
+based c

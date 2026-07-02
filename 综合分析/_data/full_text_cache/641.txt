@@ -1,0 +1,633 @@
+Decompose to Understand, Fuse to Detect:
+ Frequency-Decoupled Anomaly Detection for
+ Encrypted Network Traffic
+ Xinglin Lian† , Chengtai Cao‡ , Ting Zhong† , Yong Wang§ , Kai Chen§ , Fan Zhou†¶∗
+ † School of Information and Software Engineering, University of Electronic Science and Technology of China
+ ‡ Department of Computer Science, City University of Hong Kong
+ § Department of Computer Science and Engineering, Hong Kong University of Science and Technology
+ ¶ Key Laboratory of Intelligent Digital Media Technology of Sichuan Province
+ ∗ Corresponding Author: fan.zhou@uestc.edu.cn
+arXiv:2605.02970v1 [cs.CR] 3 May 2026
+
+ Abstract—Network traffic anomaly detection represents a While essential for protecting sensitive information, encryption
+ critical cybersecurity task, yet widespread encryption makes obscures packet payload features that are crucial for distinthis task increasingly challenging. In response, image-based guishing between normal and malicious traffic. Consequently,
+ methods that model traffic as visual patterns have emerged
+ as the dominant approach. However, this work pioneers the traditional detection methods, such as those reliant on charidentification of a pervasive “full-frequency” characteristic and acter matching algorithms, are largely rendered ineffective in
+ an associated limitation termed “spectral mismatch” within this modern encrypted environments [10].
+ paradigm. Specifically, while encrypted traffic exhibits prominent Deep learning approaches, especially those based on a zerohigh-frequency components, mainstream reconstruction methods positive learning paradigm, have emerged as a dominant soludemonstrate an inherent bias toward learning low-frequency
+ information. This fundamental mismatch results in incomplete tion for network traffic anomaly detection [11]. These methods
+ representations that consequently degrade anomaly detection operate on the principle of exclusively learning normal traffic
+ performance. To address this challenge, we propose FreeUp, distributions and flagging significant deviations as anomalies.
+ a novel frequency-decoupled framework designed explicitly for In practice, a widely adopted strategy is to transform raw
+ encrypted traffic analysis. FreeUp decomposes traffic data into network traffic into 2D image representations, which preserves
+ distinct low- and high-frequency bands, processing them through
+ separate, dedicated branches along with a customized training payload information and enables the application of powerful
+ strategy that ensures stable and independent frequency-specific computer vision techniques [12]–[14]. Inspired by successes in
+ learning. Furthermore, recognizing that simple reconstruction image analysis, most of these approaches are reconstructionerror proves inadequate for evaluating dual-branch architectures, based [14]–[16]. During training, a model learns to recreate
+ we introduce an uncertainty-inspired fusion scoring mechanism. images of normal traffic with high fidelity. In the inference
+ This mechanism quantifies the reconstruction uncertainty of the
+ frequency-specific branches and dynamically integrates their out- phase, anomaly scores are derived from reconstruction errors:
+ puts, yielding a more comprehensive and reliable anomaly score. low errors indicate normalcy, while high ones imply potential
+ Extensive experiments across multiple benchmarks demonstrate threats. As a result, reconstruction quality becomes the critical
+ that FreeUp consistently outperforms state-of-the-art baselines. factor in anomaly detection [17].
+ The code is available at https://github.com/ikun0124/FreeUp. Despite notable progress, a fundamental limitation persists,
+ Index Terms—network traffic anomaly detection, frequency
+ decoupling, uncertainty quantification, dynamic fusion stemming from the unique characteristics of traffic images.
+ Unlike natural images that are rich in semantic content, traffic
+ images often contain limited textual or semantic informa-
+ I. I NTRODUCTION
+ tion due to encryption [17], [18], as illustrated in Fig. 1.
+ Network traffic anomaly detection is a cornerstone of Our investigation reveals this distinction extends to the fremodern cybersecurity, tasked with identifying unauthorized, quency domain. Fourier Transform analysis confirms a key
+ malicious, or otherwise covert traffic patterns that threaten spectral distinction: while natural images are dominated by
+ network integrity [1]. Its effective implementation not only low-frequency components, encrypted traffic images exhibit
+ safeguards sensitive data assets [2]–[4] but also ensures com- a unique full-frequency phenomenon, preserving significant
+ munication service quality for end users [5]–[7]. However, high-frequency components. This is where the core problem
+ this task is becoming increasingly complex. The exponential arises. Reconstruction models have an inherent spectral bias;
+ growth in traffic volume and the continuous evolution of they excel at learning low-frequency features but consistently
+ sophisticated attack techniques pose significant challenges for struggle to capture high-frequency variations [19], [20]. This
+ precise anomaly detection [8]. Compounding these difficulties, creates a fundamental spectral mismatch: the models’ lowthe widespread adoption of encryption, driven by escalating frequency preference is well-suited for reconstructing natural
+ concerns over user privacy, introduces a new obstacle [9]. images; however, it is fundamentally at odds with the fullfrequency nature of traffic image data. Consequently, while Face Industry Traffic
+
+these models reconstruct natural images with high fidelity [21],
+they produce poor reconstructions for traffic images. The
+incomplete pattern understanding impedes their ability to
+discriminate between normal and anomalous traffic, leading
+to unreliable identification. This spectral mismatch, therefore,
+poses the core challenge for accurate anomaly detection in
+full-frequency encrypted traffic data.
+ Motivated by the above insights, we propose FreeUp, a
+novel Frequency-decoupled framework, which aims to free
+ Fig. 1. Illustration of the full-frequency phenomenon via frequency distribuup frequency components in encrypted traffic by mitigating tion statistics across natural and traffic images.
+spectral mismatch in representation learning. Our FreeUp
+decomposes each traffic image into complementary low- and
+high-frequency bands and processes them via independent model to adaptively capture uncertainty across both low- and
+branches. Each frequency-constrained autoencoder specializes high-frequency views. As a result, the uncertainty derived
+in modeling its assigned frequency spectrum. A key aspect of from this adaptively fused distribution serves as the final
+our design is the final reconstruction step: the output of one anomaly indicator, enabling a more comprehensive and accufrequency branch is integrated with the original input of its rate anomaly score. We validated our framework on multiple
+complementary band. This design, combined with frequency real-world encrypted traffic datasets, where the experimental
+decoupling, offers two significant advantages. (i) Focused results consistently demonstrate significant improvements over
+Learning: By tasking each branch with modeling only its state-of-the-art baseline methods.
+assigned frequency component, we significantly alleviate the In summary, our key contributions are fourfold:
+complexity of modeling full-frequency patterns in one pass; • We are the first to systematically identify and charac-
+(ii) Enhanced Reconstruction Stability: The unique integra- terize the spectral mismatch challenge between the fulltion strategy provides a stable learning signal for each branch. frequency nature of encrypted traffic and the inherent
+For instance, the low-frequency branch’s reconstruction quality low-frequency bias of reconstruction-based models.
+is assessed against a “perfect” high-frequency ground truth • We propose FreeUp, a novel frequency-decoupled frame-
+(the original input), making its training stable. This ensures work designed explicitly to address this fundamental
+that the model’s ability to learn one set of patterns is not challenge by enabling dedicated representation learning
+compromised by difficulties in learning the other. The two for each frequency band.
+advantages jointly alleviate the spectral bias issue common • We design an uncertainty-inspired dynamic fusion mechin traditional models, which prefer low-frequency content but anism that adaptively integrates multi-view frequency
+neglect high-frequency information. uncertainty, yielding comprehensive anomaly evaluation.
+ Having established the FreeUp framework for high-fidelity • Through extensive experiments on multiple benchmark
+reconstruction, the next critical step is translating recon- datasets, we demonstrate that FreeUp significantly outstruction quality into a sensitive anomaly score. Traditional performs state-of-the-art methods.
+methods often rely on scalar reconstruction errors to quantify anomaly degree, which overlook valuable distributional II. M OTIVATION
+information. To overcome this, we adopt a more nuanced
+approach: a lightweight evidential learning method is em- A. Full Frequency Phenomenon
+ployed to independently model the reconstruction uncer- The central premise of our work is that encrypted traffic
+tainty distribution associated with each frequency branch. images exhibit spectral properties distinct from the natural im-
+This aligns perfectly with our decoupled design, allowing ages commonly studied in anomaly detection. To empirically
+us to pinpoint anomalies that may only manifest in a spe- ground this motivation, we conduct a systematic, comparative
+cific frequency band. Anomalous samples, deviating from the analysis of their frequency-domain characteristics.
+learned normal distribution, will thus yield higher uncertainty Our investigation compares encrypted traffic images with
+scores in their respective branches [11]. However, relying two representative natural image categories often found in
+solely on independent scores is insufficient, as some com- anomaly detection: the face spoofing dataset CelebA [22] and
+plex anomalies reveal themselves through subtle deviations in the industrial defects dataset MVTec [23]. For fair comparison,
+multiple frequencies. Therefore, we propose an uncertainty- we randomly sampled 1,000 images from each category and
+inspired dynamic fusion strategy to create a holistic final resized them to match the resolution of traffic images. We then
+judgment. This strategy integrates the detection results by applied a 2D Fourier Transform to each image to compute its
+combining evidential distribution parameters from multiple power spectra. As shown in Fig. 1, the averaged power spectra
+branches/views into a joint distribution. Guided by a multi- reveal a clear distinction across categories.
+task training objective, the fused distribution dynamically Low-Frequency Dominance in Natural Images: Our invesassigns weights to each branch’s contribution, enabling the tigation of natural images, including both facial photographs
+and industrial items, reveals a consistent spectral pattern: their Spectral
+ Spatial
+energy is overwhelmingly concentrated in the low-frequency
+domain, with a sharp drop-off in the high-frequency range.
+This is a well-established principle in computer vision, where Recon
+ Natural
+dominant low-frequency components correspond to an image’s
+ Spectral
+semantic structures and outlines, such as object backgrounds Spatial
+and shapes [20]. Conversely, high-frequency components encode fine details, textures, and edges, serving a complementary
+role in refining the base structures [24]. Given this abun- Recon
+ Traffic
+dance of low-frequency content and scarcity of high-frequency
+information, we term this characteristic the “low-frequency Fig. 2. Spectral mismatch in traffic images: limitations of the full-frequency
+dominance” phenomenon. This spectral composition results in phenomenon caused by the “spectral bias” issue.
+a spatial pattern that is coherent and semantically interpretable,
+a hallmark of real-world imagery.
+ subtle deviations. We formulate this representational learning
+Full-Frequency Nature of Encrypted Traffic: The encrypconflict as “spectral mismatch”.
+tion process fundamentally alters traffic data, disrupting the
+ Empirical Validation: To empirically validate this conflict,
+original byte-level semantics and creating a visually disorwe train a state-of-the-art network traffic anomaly detection
+dered, noise-like appearance when converted into images [13],
+ model, MFR [14], on two datasets: face spoofing dataset
+[14]. This spatial randomness has a distinct and revealing
+ CelebA [22] and encrypted traffic dataset DoHBrw2020 [26].
+signature in the frequency domain. As shown in Fig. 1, our
+ Fig. 2 clearly illustrates the impact of “spectral mismatch”.
+spectral analysis reveals that the high-frequency components
+ Due to their “low-frequency dominance” nature, face spoofing
+of traffic images are exceptionally prominent, often exhibiting
+ images are reconstructed with high spatial fidelity, and their
+magnitudes equivalent to their low-frequency counterparts.
+ spectral distributions remain largely intact. In sharp contrast,
+This abundance of high-frequency power corresponds to the
+ the reconstructed traffic images experience substantial quality
+abrupt, pixel-to-pixel variations inherent in the encrypted
+ degradation, preserving only coarse-grained brightness prodata. As a result, any potential low-frequency structures are
+ files. The corresponding power spectra confirm the cause:
+effectively overwhelmed, obscuring coherent and interpretable
+ the model fails to retain high-frequency information, severely
+traffic pattern information. While some works have partially
+ disrupting the original spectral distribution between low- and
+noted these spatial characteristics [14], [25], their underlying
+ high-frequency components. This experiment offers empirical
+spectral properties and conflict with model biases remain
+ evidence of the spectral mismatch and directly motivates the
+underexplored. We, therefore, present the first formal charneed to overcome this fundamental limitation.
+acterization of this phenomenon. Specifically, we define this
+ Motivation: The systemic failure in reconstruction poses a
+unique spectral distribution as “full-frequency”: a state where
+ critical consequence for anomaly detection. When a model
+both low- and high-frequency components are highly active
+ produces similarly low-quality reconstructions for both normal
+and coexist with comparable intensity, posing a significant
+ and anomalous traffic, the resulting anomaly scores become
+challenge for effective representation learning.
+ indistinguishable. This renders the detector unreliable, especially in challenging zero-positive scenarios [11]. Motivated
+B. Motivation: The Inherent Conflict by this challenge, we propose a new paradigm: decoupling
+Spectral Mismatch Limitation: A well-documented phe- the learning process by decomposing the “full-frequency”
+nomenon in deep learning is “spectral bias”, where models, signal into multi-view, i.e., low- and high-frequency bands.
+particularly autoencoders, tend to favor low-frequency patterns In this framework, each branch is dedicated to modeling only
+while struggling to capture high-frequency details [19], [20]. its assigned portion of the spectrum. This targeted strategy
+For natural image analysis, this bias is often harmless or even directly counters spectral bias by preventing the model from
+advantageous, because the primary semantic content (e.g., ob- defaulting to the easily learned low-frequency patterns. By
+ject shapes) is concentrated in low frequencies, allowing mod- facilitating a better full-spectrum understanding of traffic data,
+els to perform well despite ignoring some fine textures [21]. our method constructs a more complete representation of
+However, this bias becomes a critical vulnerability in the normal patterns, enhancing the distinguishability of anomalous
+context of “full-frequency” traffic images. When a standard samples with distributional deviations.
+reconstruction model is trained on such images, its inherent
+ III. P RELIMINARIES
+bias leads the model to capture the low-frequency components
+effectively while largely ignoring the equally important high- This work investigates the zero-positive anomaly detecfrequency ones. This results in an incomplete and distorted tion problem in the context of network traffic analysis. Let
+understanding of the normal data distribution. Consequently, X = {x1 , x2 , ..., xN } denote a set of N normal samples;
+the reliability of anomaly scoring is severely compromised, as the objective of detection models is to learn the distributional
+the model lacks the high-frequency fidelity needed to detect patterns of normal samples during training. For inference,
+ IFT FT
+ 𝑁𝑁𝑁𝑁𝑁𝑁(𝑥𝑥�𝑙𝑙 , 𝜈𝜈𝑙𝑙 , 𝛼𝛼𝑙𝑙 , 𝛽𝛽𝑙𝑙 )
+ 𝑥𝑥�𝑙𝑙
+
+ …
+ 𝜈𝜈𝑙𝑙
+ Recon-side =
+ Input-side Auto-encoder Recon-side Input-side 𝛼𝛼𝑙𝑙 +
+ : Low Branch 𝛽𝛽𝑙𝑙
+
+ …
+ LPF : Low Frequency Constraint + Fusion View
+Traffic Sample
+ Low Frequency View 𝑁𝑁𝑁𝑁𝑁𝑁(𝑥𝑥�𝑓𝑓 , 𝜈𝜈𝑓𝑓 , 𝛼𝛼𝑓𝑓 , 𝛽𝛽𝑓𝑓 )
+ FT 𝑥𝑥
+
+ …
+ 𝑥𝑥 𝜈𝜈𝑓𝑓 𝛼𝛼𝑓𝑓 𝛽𝛽𝑓𝑓
+ High Frequency View
+ …
+
+ Input-side
+ : High Frequency Constraint = + +
+ HPF : High Branch 𝑁𝑁𝑁𝑁𝑁𝑁(𝑥𝑥�ℎ , 𝜈𝜈ℎ , 𝛼𝛼ℎ , 𝛽𝛽ℎ )
+ 𝜈𝜈ℎ
+ IFT FT =
+ 𝑥𝑥�ℎ 𝛼𝛼ℎ +
+
+ …
+ 𝛽𝛽ℎ
+
+ …
+ Input-side Auto-encoder Recon-side Input-side +
+ Recon-side
+ Frequency-decoupled Reconstruction Uncertainty-inspired Fusion
+ FT: Fourier Transform IFT: Inverse Fourier Transform LPF: Low Pass Filter Branch HPF: High Pass Filter Branch
+
+Fig. 3. The overall framework of FreeUp. (1) The model first decouples the input into low- and high-frequency bands, which are reconstructed by separate
+networks to mitigate spectral bias. (2) An uncertainty-inspired fusion pipeline then adaptively integrates evidential uncertainty from multi-view branches.
+
+the model assigns an anomaly score to each test sample frequency branch can achieve a more accurate reconstruction
+xtest ∈ Xtest . Higher scores indicate higher anomaly likelihood. and complete information representation.
+ Following established methods [11], [14], we convert raw As shown in Fig. 3, we first apply the Fourier Transform
+traffic data into an image-like format. Each traffic flow, xi , F(·) to convert traffic sample x into frequency domain:
+is treated as a sequence of packets. The bytes of each packet H−1 −1
+are reshaped into an H × W image, and these images are then XW
+ x(:, h, w)e−j2π( H + W ) ,
+ X uh vw
+ F(:, u, v) = (1)
+concatenated chronologically. This process yields a final tensor h=0 w=0
+for each sample, xi ∈ RP ×H×W , where P is the number of
+packets, and H and W are spatial dimensions. where j denotes the imaginary unit, and (h, w) and (u, v)
+ represent spatial and frequency indices, respectively.
+ IV. M ETHODOLOGY To decompose different spectral components, we apply
+ This section presents FreeUp, which frees up network Gaussian low- and high-pass filters in the frequency domain:
+ ′
+traffic anomaly detection from “spectral mismatch”. As shown Flpf (:, u, v) = F(:, u, v) · Hlpf (D), (2)
+in Fig. 3, our framework comprises two main components: ′
+frequency-decoupled reconstruction and uncertainty-inspired Fhpf (:, u, v) = F(:, u, v) · Hhpf (D), (3)
+fusion. First, to mitigate the “spectral mismatch”, we dewhere Hlpf (D) and Hhpf (D) are standard Gaussian filters
+compose the input into low- and high-frequency bands and
+ with cutoff threshold D, effectively controlling the separation
+train specialized reconstruction networks. This enables more ′
+ of low- and high-frequency bands. In addition, F (·) denotes
+complete learning of the normal patterns. Second, we employ
+ the filtered spectrum.
+a parameterized evidential learning to quantify reconstruction
+uncertainty in a multi-view manner. Anomalous samples, Next, we transform the filtered spectra back into the spatial
+which are reconstructed poorly, will yield higher uncertainty. domain using the inverse Fourier Transform F −1 (·):
+ ′ ′
+Finally, these multi-view frequency-specific uncertainties are xlpf = F −1 (Flpf (:, u, v)), xhpf = F −1 (Fhpf (:, u, v)), (4)
+dynamically fused to generate a unified anomaly score.
+ H−1
+ XW −1
+ ′
+ F (:, u, v)ej2π( H + W ) .
+ X uh vw
+A. Frequency-decoupled Reconstruction F −1 (:, h, w) = (5)
+ u=0 v=0
+Frequency Decoupling: As discussed in Section II, the inherent “full-frequency” characteristics of traffic images conflict This frequency decomposition yields two spatial-domain
+with the low-frequency bias of standard reconstruction models. representations: the low-frequency branch xlpf and the high-
+This conflict triggers a “spectral mismatch”, which limits frequency branch xhpf . These decoupled views are subsethe model’s capacity to learn a complete representation. To quently used for frequency-specific modeling.
+mitigate this, we introduce an explicit frequency decoupling Frequency-constrained Auto-encoder: The decomposed trafmechanism in the learning process. We decompose the input fic image xlpf and xhpf are then independently fed into two
+traffic image into two distinct views: a low-frequency image autoencoder models for frequency-specific learning. Each aucontaining the general structure and a high-frequency image toencoder is dedicated to reconstructing its frequency-specific,
+capturing the fine-grained details. This separation forces the without interference from the other component. This explicit
+model to learn from dedicated branches, each branch spe- separation naturally enforces the model to focus on frequencycializing in a frequency-specific range. By decomposing the specific distributions and effectively mitigates the reconstruclearning tasks, we mitigate frequency crosstalk and reduce tion bias toward low-frequency content. To achieve this, we
+the “full-frequency” modeling complexity. Consequently, each employ an autoencoder architecture enhanced with channelspatial attention [14]. This mechanism helps the model em- ing, typically yield low confidence (i.e., high uncertainty). This
+phasize the most informative spatial and channel-wise regions discrepancy in uncertainty distribution provides a natural metin the feature maps. Hence, it enhances the frequency-specific ric for anomaly detection. Unlike traditional reconstructionrepresentation quality. To ensure computational efficiency, we based approaches, our method directly leverages distributional
+adopt a concise encoder–decoder architecture for each branch. deviations in uncertainty to evaluate anomalies, offering a
+ As illustrated in the left part of Fig. 3, we further intro- more principled detection mechanism [11].
+duce a frequency-complement integration mechanism. In this To achieve this, we use an evidential learning framework
+design, each reconstruction-side frequency branch integrates to efficiently quantify uncertainty through higher-order prethe complementary frequency component from the input-side diction distributions. We first consider traffic data x that
+as auxiliary information. This integration provides a more follows a Gaussian distribution, which is frequently defined
+complete frequency basis and helps stabilize the reconstruction during standard analysis scenarios [11], [29]. Assuming the
+process. The complementary frequency serves as a reliable reconstruct x e h are trained well and similar x, and let
+ e l and x
+prior, helping the model avoid degradation in cases of difficult its distribution be modeled using the Normal Inverse-Gamma
+reconstruction. By cross-branch integration, we obtain two (NIG) distribution, parameterized by (µ, σ 2 ) ∼ NIG(v, α, β).
+view frequency-specific representations: low- x e l and high- This allows estimation of both the mean µ and variance σ 2
+frequency x e h , respectively. This process is: of the reconstruction. The reconstruction uncertainty (used as
+ el = F −1 (F(AE(xlpf )) + F (xhpf )),
+ x (6) the anomaly score) is quantified as the variance of the mean:
+ −1 β
+ eh = F
+ x (F(AE(xhpf )) + F (xlpf )). (7) Var[µ] = . (9)
+ v(α − 1)
+During the reconstruction phase, our objective is to accu-
+ This evidential learning process is optimized by minimizing
+rately reconstruct the multi-view frequency-specific branches.
+ the Negative Log Likelihood (LNLL ) of the marginal likeli-
+Existing works commonly rely on a spatial-domain Mean
+ hood associated with x e. Additionally, a regularization term
+Squared Error (MSE) to realize reconstruction [10], [14], [27].
+ (LPEN ) is used to penalize overconfidence when evidence is
+However, this only captures the spatial nature but cannot
+ weak. The detailed derivations can be found in [11], [30]. Fordirectly address the unique “full-frequency” nature of traffic
+ mally, the two loss terms are: (1) LNLL , encouraging accurate
+data. Considering this, we propose a frequency-constrained
+ modeling of reconstruction uncertainty; (2) LPEN , penalizing
+strategy that enforces frequency consistency during reconexcessive evidence for poorly reconstructed samples.
+struction. Inspired by prior work on spectral supervision [28], !
+our proposed mechanism aims to: (1) Suppress frequency 1 π Γ(α)
+leakage by minimizing the presence of high-frequency content LNLL = log − α log(ω) + log
+ Γ α + 12
+ 
+ 2 v
+in low-frequency reconstructions, and vice versa. (2) Enhance   (10)
+spectral fidelity by applying an MSE loss in the frequency 1 2
+ 
+ + α+ log (x − x e) v + ω ,
+domain, computed on the Fourier-transformed output. Thus, 2
+we compute reconstruction losses in both spatial and frequency e| · (2v + α),
+ LPEN = |x − x (11)
+domains. The total reconstruction loss is:
+ ′ ′
+ where ω = 2β(1 + v) and Γ(·) is the gamma function. x e
+ LREC = e ∥1
+ ∥x − x + ∥Fx (u, v) − Fxe (u, v)∥1 ·λF . denotes both xe l and xe h multi-view branches. Notably, the
+ | {z } | {z }
+ Spatial Reconstruction Frequency Reconstruction higher-order parameters NIG(v, α, β) are directly predicted by
+ (8) a Linear layer on xe (As shown in the right part of Fig. 3).
+Here, for clarity, we use x e to denote both x e l and x eh, Uncertainty Dynamic Fusion: While the low- x e l and high-
+ ′
+representing the two branches, and F (·) denotes the filtered frequency xe h multi-view branches individually capture distinct
+spectrum in Equations 2 and 3. λF is a hyperparameter to anomaly patterns, relying solely on a single frequency perspeccontrol the contribution of the frequency-constrained loss. tive for anomaly detection may lead to biased or incomplete
+B. Uncertainty-inspired Fusion results. Traditional approaches often employ score averaging
+Uncertainty-based Anomaly Quantification: Traditional or static weighting to combine information from multiple
+anomaly detection methods rely on scalar reconstruction errors views [14]. However, such methods fail to adaptively account
+to quantify anomaly degree, which does not directly exploit the for varying levels of confidence across multi-view frequencies.
+intrinsic distributional differences. Inspired by the inter-sample To overcome this limitation, we propose a dynamic fusion
+difference between normal and anomalous data, we introduce strategy that adaptively combines the evidential confidence of
+an effective and lightweight uncertainty quantification strategy two frequency branches. Specifically, given the two frequencyto serve as the basis for anomaly scoring [11]. Epistemic decoupled branches, we obtain two Normal Inverse-Gamma
+uncertainty represents the model’s confidence in its reconstruc- (NIG) distributions that represent the reconstruction uncertion output. During training, the model is exposed only to tainty: NIG(e xh , vh , αh , βh ). We adopt
+ xl , vl , αl , βl ) and NIG(e
+normal samples, leading to high confidence (i.e., low uncer- the NIG summation mechanism proposed in [31], which
+tainty). In contrast, anomalous samples, unseen during train- enables approximate aggregation of multiple evidential distrixf , vf , αf , βf ):
+butions to obtain fuse-view distribution NIG(e specific branches to form an integrated evidential representation NIG(e xf , vf , αf , βf ). This fused distribution effectively
+ xf , vf , αf , βf ) : = NIG(e
+ NIG(e xl , vl , αl , βl )
+ (12) captures multi-view anomaly cues and adaptively reflects the
+ ⊕ NIG(e
+ xh , vh , αh , βh ), combined confidence and uncertainty across different frewhere : e f = (vl + vh )−1 (vl x
+ x e l + vh x
+ e h ), (13) quency components. To this end, we utilize the variance of
+ the mean (i.e., epistemic uncertainty) from the fused NIG
+ 1 distribution as the anomaly score. This choice enables both
+ vf = vl + vh , αf = αl + αh + , (14)
+ 2 effective and efficient anomaly detection. A higher variance
+ 1 1 indicates greater uncertainty in the model’s output, suggesting
+ βf = βl + βh + vl (e xl − xe f )2 + vh (exh − x e f )2 . (15)
+ 2 2 that the input deviates more significantly from the learned
+This approach dynamically fuses the two branches into a single normal patterns. This probabilistic formulation provides a
+unified NIG distribution. As shown in Equation 13, the final principled anomaly score suitable for network traffic detection
+reconstructed value xe is computed as a confidence-weighted tasks. The anomaly score is computed as:
+summation of the multi-view reconstructions x e l and x e h . The βf
+view with greater confidence (i.e., vl or vh ) contributes more Anomaly Score = Var[µ] = . (18)
+ vf (αf − 1)
+heavily to the fused distribution. And the overall uncertainty
+is jointly determined by: (1) The individual uncertainty of V. E XPERIMENTS
+each frequency view (from its respective NIG parameters). A. Experimental Setups
+(2) The inter-view discrepancy, i.e., the deviation between
+reconstructions from the low- and high-frequency branches. Dataset. We evaluate our approach using three publicly avail-
+By dynamically summing the two evidential distributions, we able encrypted traffic datasets representing diverse anomaly
+obtain a new, fused NIG distribution that reflects the integrated scenarios. (1) CIC-IoT2023 [32] is a encrypted intrusion
+uncertainty across both frequency perspectives. detection dataset specifically designed for Internet of Things
+ (IoT) network environments. (2) DoHBrw2020 [26] focuses
+C. Training on detecting malicious traffic within HTTPS communications.
+ In the training of FreeUp, accurate reconstruction of x el (3) ISCX-Tor2016 [33] contains anonymous network traffic
+and xe h is a crucial basis for reliable uncertainty estimation. commonly employed to conceal malicious activities, making
+Poor reconstructions can collapse the estimation of marginal it particularly suitable for evaluating detection capabilities
+likelihood and lead to incorrect uncertainty quantification. against stealthy anomalies [17], [34]. Following established
+Our frequency-decoupled modeling mitigates this concern by experimental protocols [11], we construct our training set by
+decomposing frequency components. Particularly, a LREC randomly sampling 10,000 instances of normal traffic. For
+loss, both from spatial and frequency constraints, is jointly evaluation, we create a balanced test set comprising 5,000
+used to confirm accurate reconstruction. With reconstruction normal and 5,000 anomalous traffic instances.
+loss, our frequency-decoupled framework further enhances the Evaluation Metrics. Following established practices in netreliability of evidential modeling. For each frequency branch, work anomaly detection [11], [14], we employ three standard
+x
+e l and x e h , our loss function consists of two components, metrics to evaluate detection performance: AUROC (AUC),
+reconstruction and uncertainty estimation, and is defined as: Accuracy (ACC), F1-Score (F1).
+ Baselines. To comprehensively evaluate the effectiveness of
+ L = LREC + LNLL · λNLL + LPEN · λPEN , (16)
+ | {z } | {z } FreeUp, we conduct comparative experiments against nine
+ Reconstruct Uncertainty Estimate state-of-the-art baselines spanning two categories: (1) Network
+where λNLL and λPEN are hyperparameters controlling the traffic anomaly detection: DAGMM [35], GANomaly [16],
+contributions of LNLL and LPEN , respectively. ARCADE [15], MFR [14], and UnDiff [11]. (2) Time se-
+ To further support dynamic fusion, we adopt a multi- ries anomaly detection: NeuTral [36], MCM [37], Anomaly
+task optimization strategy. The total loss includes not only Transformer [38], and TSLANet [39].
+frequency-specific objectives but also the fused loss. All Implementation Details. All experiments are conducted on
+components are jointly backpropagated, enabling the model an NVIDIA GeForce RTX 4090 GPU. We use the Adam
+to learn both frequency-specific and integrated representations optimizer with a 1 × 10−3 learning rate and a batch size of
+effectively. The overall training objective is defined as: 128. The maximum training epoch is 60, with early stopping
+ to prevent overfitting. Following [11], we set the uncertainty
+ Ltotal = Ll + Lh + Lf , (17) loss coefficients as λNLL = 1 × 10−2 and λPEN = 1 × 10−4
+ l h f
+where the losses L , L and L are each individually calcu- across all three datasets. We also fix λF = 1×10−2 to promote
+lated using Equation 16 for the three branches. effective frequency-domain learning. For hyperparameters, we
+ set the number of packets P in a traffic sample to 8, and the
+D. Inference Gaussian filter cutoff frequency D is 5. To ensure statistical
+ During inference, we fuse the Normal Inverse-Gamma robustness, we report the mean results over five independent
+(NIG) distribution parameters from the multi-view frequency- runs with different random seeds.
+ TABLE I
+ Anomaly detection performance comparison on three public datasets. The best results are shown in bold, and the second-best are underlined.
+
+ CIC-IoT2023 DoHBrw2020 ISCX-Tor2016
+ Methods
+ AUC(%) ACC(%) F1(%) AUC(%) ACC(%) F1(%) AUC(%) ACC(%) F1(%)
+ DAGMM 66.40 61.38 67.22 77.41 75.18 75.07 73.28 74.30 73.82
+ GANomaly 67.43 65.74 72.02 79.34 79.87 79.83 92.42 89.64 89.77
+ ARCADE 72.09 77.32 74.94 76.79 79.91 80.07 92.35 90.15 90.50
+ MFR 82.68 83.03 81.56 70.51 70.23 73.44 93.68 91.74 91.94
+ UnDiff 83.25 82.69 81.93 81.92 79.93 80.10 94.01 91.86 91.61
+ NeuTral 81.12 80.49 81.15 72.44 70.98 76.55 92.06 90.82 90.70
+ MCM 68.99 71.77 73.38 80.86 82.55 81.87 93.01 91.11 91.26
+ Anomaly Transformer 64.63 67.15 71.86 78.86 78.55 78.87 92.27 90.19 90.52
+ TSLANet 81.64 76.62 80.04 77.04 68.93 73.10 93.63 90.97 90.71
+ FreeUp 86.68 84.67 85.55 85.44 84.96 84.32 95.53 93.26 93.22
+
+ Input w/o Decouple Our-LPF Our-HPF Input wo/ frequency loss w/ frequency loss
+
+ CIC-
+ IoT2023 Spatial
+
+ DoHBrw
+ 2020
+ Spectral
+ ISCX-
+ Tor2016
+
+Fig. 4. Reconstruction comparisons before and after frequency decoupling. Fig. 5. Spatial–spectral comparison under the frequency-constrained loss.
+
+ TABLE II
+B. Main Results Ablation study on frequency decoupling using AUC metric.
+
+ Table I compares FreeUp and baselines. Based on these Variant CIC-IoT2023 DoHBrw2020 ISCX-Tor2016
+results, we make the following observations: w/o HB 77.09 83.62 95.10
+(O1): Our FreeUp consistently outperforms all baselines w/o LB 68.73 82.73 94.37
+across various datasets and evaluation metrics by substantial w/o FD 82.10 81.26 92.80
+margins. Specifically, FreeUp achieves AUC improvements of w/o FC 85.57 83.85 94.62
+over 3% on the CIC-IoT2023 and DoHBrw2020 datasets and
+up to 95% AUC performance in ISCX-Tor2016. These results FreeUp 86.68 85.44 95.53
+validate the effectiveness of the frequency-decoupled framework. The frequency-decoupled manner not only facilitates
+complete pattern understanding for “full-frequency” traffic the low-pass filters. However, they discard the role of highimage but also provides the multi-view evidence modeling for frequency information entirely and use incomplete information
+uncertainty-inspired evidential learning. Based on the multi- to carve out anomalies, causing unreliable detection results.
+view anomaly criteria, our evidential learning fusion method (O3): Time-series-based methods, like Anomaly Transformer
+further adaptively integrates the anomaly evaluations from and TSLANet, mainly emphasize the transformer model’s
+different frequency perspectives, leading to a more compre- ability to capture the trends and fluctuations anomalies in
+hensive and accurate anomaly detection. sequential data. MCM captures intrinsic correlations between
+(O2): Majority of network traffic anomaly detection methods feature data. NeuTral is a contrastive learning-based spatial
+are based on an image-format process manner. However, transformation method for tabular data. However, due to
+the “full-frequency” traffic images are deeply disturbed by encryption, network traffic often loses these original sequential
+“spectral mismatch” issue in neural networks, which cannot and tabular characteristics, negatively impacting the effectiveeffectively construct the profile of normal traffic during the ness of these time-series-based methods’ anomaly criteria.
+training (as shown by our analytical and experimental proofs in
+Section II). It further limits the reliable distinction of anoma- C. Frequency Decoupling Study
+lous traffic during testing. GANomaly and ARCADE methods Ablation Experiments: We conduct ablation studies to evaldo not produce promising results across three datasets. MFR uate the effectiveness of frequency decoupling, as shown in
+and UnDiff methods focus only on low-frequency texture Table II. Variants include removing the low-frequency branch
+features in traffic images to alleviate this problem by imposing (w/o LB), high-frequency branch (w/o HB), the frequency-
+ Fig. 6. Dynamic fusion of anomaly scores (density distribution) after multi-task learning across three datasets.
+
+decoupled framework (w/o FD), and the frequency-constrained TABLE III
+loss (w/o FC). The single-branch training leads to a noticeable Ablation study on dynamic fusion using AUC metric.
+drop in detection performance. This suggests the incomplete Variant CIC-IoT2023 DoHBrw2020 ISCX-Tor2016
+frequency modeling introduces biased anomaly evaluation,
+ Low-Branch 75.57 77.53 92.33
+especially in the absence of the low-frequency branch (w/o
+ High-Branch 57.24 67.30 78.27
+LB). Removing the frequency-decoupled framework (w/o FD)
+ Product-Fuse 74.76 75.39 90.47
+results in the most significant degradation, highlighting its
+ Sum-Fuse 75.56 77.29 92.34
+critical role in FreeUp. This degradation is attributed to the
+“full-frequency” phenomenon, which impairs traffic image FreeUp 86.68 85.44 95.53
+reconstruction and subsequent uncertainty modeling. Moreover, excluding the frequency-constraint loss (w/o FC) also
+reduces performance, verifying its effectiveness in guiding cases, and even lead to performance degradation. This is
+each branch’s frequency-specific learning. primarily due to their reliance on static weighting strategies,
+Qualitative Experiments: To further verify the benefits of which cannot adaptively account for the varying contributions
+frequency decoupling, we visualize reconstruction results, as of each branch. In contrast, our dynamic uncertainty fusion
+shown in Fig. 4. Due to the “full-frequency” nature of network method inherently leverages the distributional parameters from
+traffic, models without frequency decoupling (w/o Decou- multiple frequency branches, enabling a more flexible and
+ple) consistently exhibit poor reconstruction, like the same comprehensive integration of anomaly signals.
+empirical validation in Section II. This further supports the Qualitative Experiments: Fig. 6 reveals our fusion process
+presence of a “spectral mismatch” issue, wherein inadequate from multiple frequency perspectives across the three datasets.
+modeling results in limited pattern understanding. In contrast, Although the jointly trained multi-view branches in Table III
+FreeUp, which explicitly decouples and processes frequency shows slight performance degradation compared to individcomponents via dedicated branches, achieves more faithful ually trained branches in Table II, our method still enables
+reconstructions and thus more accurate pattern modeling. This dynamic fusion of anomaly score (i.e., uncertainty distribuimprovement arises from the model’s ability to focus on local- tion) and adaptively integrates jointly trained multi-branch
+ized frequency bands, freeing up the burden of full-spectrum information. Like the anomaly score distribution of highrepresentation. Furthermore, the complementary integration frequency branch (H-Bran) in Fig. 6, they exhibit the most
+of low- and high-frequency branches enhances reconstruction confused anomaly score distributions (overlapping the blue
+stability and enables richer, multi-view anomaly quantification. and yellow distribution). However, through dynamic fusion,
+Overall, frequency decoupling alleviates the model’s spec- these branches still contribute proper complementary signals
+tral bias and facilitates a more complete representation of that are integrated with those from the low-frequency branch
+traffic distributions. The spatial and spectral visualization of (L-Bran), ultimately producing a more distinguishable fusion
+frequency loss in Fig. 5 further supports the effectiveness anomaly score. These results validate both the effectiveness
+of stable frequency learning and demonstrates the benefits of our multi-task training strategy and the success of the
+introduced by the frequency-constrained loss. proposed adaptive fusion mechanism in capturing nuanced
+ multi-frequency anomaly patterns.
+D. Dynamic Fusion Study E. Hyperparameter Study
+Ablation Experiments: To evaluate the effectiveness of our Fig. 7 presents the sensitivity analysis of two key hyperpadynamic uncertainty fusion strategy, we compare it with com- rameters in FreeUp. The observations are as follows:
+mon anomaly score fusion schemes, score product (Product- (O1): The small number of packet instances P may lead to
+Fuse) and weighted summation (Sum-Fuse) [14], based on insufficient contextual information for reliable anomaly scorthe jointly trained multi-branch architecture (Low-Branch and ing, whereas an excessively large P introduces noise and may
+High-Branch). As shown in Table III, conventional fusion obscure critical patterns. Empirically, setting P = 8 achieves
+methods consistently fail to improve performance in some the best trade-off, consistent with previous findings [14].
+ and leverages statistical properties for anomaly detection. To
+ enhance representation learning, ARCADE [15] incorporate
+ adversarial training mechanisms to improve the fitting of normal data distributions. More recently, UnDiff [11] reveals the
+ intra-sample “identical shortcut” limitation in disordered traffic
+ images and proposes an inter-sample comparison framework
+ that utilizes filtered distributional differences for anomaly
+ Fig. 7. Sensitivity analysis of key hyperparameters across three datasets. quantification. While these methods acknowledge the spatial
+ domain difficulties posed by “full-frequency” traffic data, most
+ TABLE IV do not explicitly address how to model frequency-specific
+ Overhead comparison for inference. patterns. In fact, the bias toward low-frequency features in
+ full-spectrum modeling often hinders effective representation
+ Methods #MACs (G) #Paras (M)
+ learning and anomaly identification.
+ ARCADE 0.82 6.70 Since network traffic can also be represented as time series
+ MFR 1.01 11.18 data [40], [41], we also consider time-series-based anomaly
+ UnDiff 0.25 2.55 detection approaches, particularly Transformer-based architec-
+ NeuTral 1.45 139.57 tures, for comprehensive evaluation. These methods typically
+ MCM 0.84 822.53 model sequential dependencies, such as periodic trends and
+ TSLANet 6.45 179.19 temporal fluctuations. For instance, Anomaly Transformer [38]
+ FreeUp 0.73 6.46 introduces an anomaly-attention mechanism to capture both
+ prior associations and series-wise dependencies within temporal sequences. TimesNet [42] addresses period variation
+(O2): The parameter D governs the bandwidth radius of the challenges by employing stack inception blocks to unify multi-
+Gaussian filters used to decouple low- and high-frequency scale temporal patterns. TSLANet [39] integrates the Fourier
+components. It determines the extent of separation between Transform with self-supervised learning techniques to model
+frequency branches, which is crucial for frequency-sensitive periodic dependencies. NeuTral [36] transforms semantic
+uncertainty modeling and effective multi-view anomaly detec- space to comparative learning spaces for anomaly assessment,
+tion. The results indicate that D = 5 provides the most suitable while MCM [37] employs a masking strategy to learn intrinsic
+frequency decoupling extent. correlations. Despite the demonstrated effectiveness of these
+ models on clean time-series datasets, their applicability to
+F. Overhead Analysis network traffic anomaly detection remains problematic. The
+ Table IV summarizes the overhead comparison of the most “full-frequency” phenomenon observed in traffic images also
+competitive approaches in terms of multiply-accumulate op- exists in sequential formats. The high-frequency component
+erations per second (#MACs) and the number of model pa- can obscure underlying trends and fluctuations in sequential
+rameters (#Paras). Overall, our method, FreeUp, demonstrates data, similar to how it suppresses texture features in images.
+promising efficiency compared to detection approaches such This significantly degrades the core temporal dependencies
+as MFR and ARCADE. This is attributed to our concise necessary for effective anomaly detection.
+autoencoder design and lightweight evidential learning framework. Transformer-based models like TSLANet incur high VII. C ONCLUSION
+computational costs due to attention operations, while NeuTral
+ In this paper, we are the first to identify the pervasive
+and MCM require multiple models integration, increasing
+ “full-frequency” phenomenon in network traffic data, which
+parameter overhead. Although FreeUp’s dual-branch design
+ poses a significant “spectral mismatch” challenge for network
+results in roughly three times the overhead of UnDiff, this cost
+ traffic analysis. To address this, we propose FreeUp, a novel
+is offset by superior detection performance. Moreover, thanks
+ frequency-decoupled framework that effectively decomposes
+to our lightweight structure, the dual branches can be deployed
+ complex “full-frequency” information for improved underin parallel with minimal memory usage, further improving
+ standing and generates complementary multi-view representapractical runtime efficiency.
+ tions. We further design a parameterized dynamic uncertainty
+ VI. R ELATED W ORK fusion mechanism to adaptively integrate multi-view frequency
+ anomaly cues. Extensive quantitative and qualitative experi-
+ Many studies transform raw traffic data into image-like repments consistently demonstrate the effectiveness of FreeUp
+resentations and employ feature extraction techniques to imon multiple real-world traffic datasets.
+prove effectiveness. MFAD [17] and MFR [14] first observed
+the non-textured and irregular spatial characteristics of traffic
+ ACKNOWLEDGMENT
+images. They applied low-pass filtering to emphasize lowfrequency texture-level information. Similarly, unFlowS [27] This work was supported by National Natural Science Founmaps complex traffic data into a simplified spectral space dation of China (Grant No. 62572097 and No. 62176043).
+ R EFERENCES [21] Hang Yao, Ming Liu, Zhicun Yin, Zifei Yan, Xiaopeng Hong, and
+ Wangmeng Zuo. GLAD: towards better reconstruction with global and
+ [1] Qingli Zeng and Farid Naı̈t-Abdesselam. Leveraging human-in-the-loop local adaptive diffusion models for unsupervised anomaly detection. In
+ machine learning and gan-synthesized data for intrusion detection in ECCV, volume 15129, pages 1–17, 2024.
+ unmanned aerial vehicle networks. In ICC, pages 1557–1562, 2024. [22] Ziwei Liu, Ping Luo, Xiaogang Wang, and Xiaoou Tang. Deep learning
+ [2] Shaoyu Li, Shanghao Shi, Yang Xiao, Chaoyu Zhang, Y Thomas face attributes in the wild. In ICCV, pages 3730–3738, 2015.
+ Hou, and Wenjing Lou. Bijack: Breaking bitcoin network with tcp [23] Paul Bergmann, Michael Fauser, David Sattlegger, and Carsten Steger.
+ vulnerabilities. In ESORICS, pages 306–326, 2023. MVTec AD - A comprehensive real-world dataset for unsupervised
+ [3] Yu Zheng, Zhangxuan Dang, Xinglin Lian, Chunlei Peng, and Xinbo anomaly detection. In CVPR, pages 9592–9600, 2019.
+ Gao. Multi-view multi-label network traffic classification based on mlp- [24] Bing Tu, Xianchang Yang, Wei He, Jun Li, and Antonio Plaza. Hymixer neural network. Computer Networks, 253:110746, 2024. perspectral anomaly detection using reconstruction fusion of quaternion
+ [4] Qingli Zeng and Farid Naı̈t-Abdesselam. Enhancing UAV network frequency domain analysis. IEEE Transactions on Neural Networks and
+ security: A human-in-the-loop and gan-based approach to intrusion Learning Systems, 35(6):8358–8372, 2024.
+ detection. IEEE Internet of Things Journal, 12(12):20870–20884, 2025. [25] Yasir Ali Farrukh, Syed Wali, Irfan Khan, and Nathaniel D. Bastian.
+ SeNet-I: An approach for detecting network intrusions through seri-
+ [5] Xinchen Zhang, Running Zhao, Zhihan Jiang, Handi Chen, Yulong Ding,
+ alized network traffic images. Engineering Applications of Artificial
+ Edith C. H. Ngai, and Shuang-Hua Yang. Continual learning with
+ Intelligence, 126(Part D):107169, 2023.
+ strategic selection and forgetting for network intrusion detection. In
+ [26] Mohammadreza MontazeriShatoori, Logan Davidson, Gurdip Kaur,
+ INFOCOM, pages 1–10, 2025.
+ and Arash Habibi Lashkari. Detection of doh tunnels us-
+ [6] Xueying Han, Song Liu, Junrong Liu, Bo Jiang, Zhigang Lu, and Baoxu
+ ing time-series classification of encrypted traffic. In IEEE
+ Liu. ECNet: Robust malicious network traffic detection with multi-view
+ DASC/PiCom/CBDCom/CyberSciTech, pages 63–70, 2020.
+ feature and confidence mechanism. IEEE Transactions on Information
+ [27] Luming Yang, Yongjun Wang, Lin Liu, Junjie Huang, Jiangyong Shi,
+ Forensics and Security, 19:6871–6885, 2024.
+ Shaojing Fu, and Shize Guo. unFlowS: An unsupervised construction
+ [7] Qingli Zeng, Semire Olatunde-Salawu, and Farid Naı̈t-Abdesselam. scheme of flow spectrum for network traffic detection. IEEE Transac-
+ FGA-IDS: A federated learning and gan-augmented intrusion detection tions on Information Forensics and Security, 20:3330–3345, 2025.
+ system for UAV networks. In CIC, pages 50–59, 2024. [28] Xinmiao Lin, Yikang Li, Jenhao Hsiao, Chiuman Ho, and Yu Kong.
+ [8] Meihui Zhong, Mingwei Lin, and Zhu He. Dynamic multi-scale Catch missing details: Image reconstruction with frequency augmented
+ topological representation for enhancing network intrusion detection. variational autoencoder. In CVPR, pages 1736–1745, 2023.
+ Computers & Security, 135:103516, 2023. [29] Chuanpu Fu, Qi Li, Ke Xu, and Jianping Wu. Point cloud analysis
+ [9] Meihui Zhong, Ting Zhong, Yong Wang, Kai Chen, and Fan Zhou. Noise for ml-based malicious traffic detection: Reducing majorities of false
+ resistant encrypted malicious traffic detection through kernel-enhanced positive alarms. In CCS, pages 1005–1019, 2023.
+ contrastive view alignment. IEEE Transactions on Networking, pages [30] Alexander Amini, Wilko Schwarting, Ava Soleimany, and Daniela Rus.
+ 1–13, 2025. Deep evidential regression. In NeurIPS, pages 14927–14937, 2020.
+[10] Xinchen Zhang, Running Zhao, Zhihan Jiang, Zhicong Sun, Yulong [31] Hang Qian. Big data bayesian linear regression and variable selection
+ Ding, Edith C. H. Ngai, and Shuang-Hua Yang. AOC-IDS: autonomous by normal-inverse-gamma summation. Bayesian Analysis, 13(4):1011–
+ online framework with contrastive learning for intrusion detection. In 1035, 2018.
+ INFOCOM, pages 581–590, 2024. [32] Euclides Carlos Pinto Neto, Sajjad Dadkhah, Raphael Ferreira, Alireza
+[11] Xinglin Lian, Chengtai Cao, Yan Liu, Xovee Xu, Yu Zheng, and Fan Zohourian, Rongxing Lu, and Ali A. Ghorbani. CICIoT2023: A real-
+ Zhou. Facing Anomalies Head-On: Network traffic anomaly detection time dataset and benchmark for large-scale attacks in iot environment.
+ via uncertainty-inspired inter-sample differences. In WWW, pages 3908– Sensors, 23(13):5941, 2023.
+ 3917, 2025. [33] Arash Habibi Lashkari, Gerard Draper-Gil, Mohammad Saiful Islam
+[12] Ruijie Zhao, Mingwei Zhan, Xianwen Deng, Fangqi Li, Yanhao Wang, Mamun, and Ali A. Ghorbani. Characterization of tor traffic using time
+ Yijun Wang, Guan Gui, and Zhi Xue. A novel self-supervised framework based features. In ICISSP, pages 253–262. SciTePress, 2017.
+ based on masked autoencoder for traffic classification. IEEE/ACM [34] Ziqi Yuan, Haoyi Zhou, Tianyu Chen, and Jianxin Li. PhoGAD: Graph-
+ Transactions on Networking, 32(3):2012–2025, 2024. based anomaly behavior detection with persistent homology optimiza-
+[13] Ya Liu, Xiao Wang, Bo Qu, and Fengyu Zhao. ATVITSC: A novel tion. In WSDM, pages 920–929, 2024.
+ encrypted traffic classification method based on deep learning. IEEE [35] Bo Zong, Qi Song, Martin Renqiang Min, Wei Cheng, Cristian
+ Transactions on Information Forensics and Security, 19:9374–9389, Lumezanu, Dae-ki Cho, and Haifeng Chen. Deep autoencoding gaussian
+ 2024. mixture model for unsupervised anomaly detection. In ICLR, 2018.
+[14] Xinglin Lian, Yu Zheng, Zhangxuan Dang, Chunlei Peng, and Xinbo [36] Chen Qiu, Timo Pfrommer, Marius Kloft, Stephan Mandt, and Maja
+ Gao. Semi-supervised anomaly traffic detection via multi-frequency Rudolph. Neural transformation learning for deep anomaly detection
+ reconstruction. Pattern Recognition, 161:111215, 2025. beyond images. In ICML, pages 8703–8714, 2021.
+[15] Willian Tessaro Lunardi, Martin Andreoni Lopez, and Jean Pierre Gi- [37] Jiaxin Yin, Yuanyuan Qiao, Zitang Zhou, Xiangchao Wang, and Jie
+ acalone. ARCADE: adversarially regularized convolutional autoencoder Yang. MCM: masked cell modeling for anomaly detection in tabular
+ for network anomaly detection. IEEE Transactions on Network and data. In ICLR, 2024.
+ Service Management, 20(2):1305–1318, 2023. [38] Jiehui Xu, Haixu Wu, Jianmin Wang, and Mingsheng Long. Anomaly
+[16] Samet Akcay, Amir Atapour Abarghouei, and Toby P. Breckon. Transformer: Time series anomaly detection with association discrep-
+ GANomaly: Semi-supervised anomaly detection via adversarial training. ancy. In ICLR, 2022.
+ In ACCV, pages 622–637, 2018. [39] Emadeldeen Eldele, Mohamed Ragab, Zhenghua Chen, Min Wu, and
+[17] Yu Zheng, Xinglin Lian, Zhangxuan Dang, Chunlei Peng, Chao Yang, Xiaoli Li. TSLANet: Rethinking transformers for time series represenand Jianfeng Ma. A semi-supervised anomaly network traffic detection tation learning. In ICML, pages 12409–12428, 2024.
+ framework via multimodal traffic information fusion. In CIKM, pages [40] Xinglin Lian, Yang Liu, Shanfeng Wang, and Yu Zheng. Payload
+ 4455–4459, 2023. level anomaly network traffic detection via semi-supervised contrastive
+[18] Xinjie Lin, Gang Xiong, Gaopeng Gou, Zhen Li, Junzheng Shi, and learning. In TrustCom, pages 2559–2566, 2024.
+ Jing Yu. ET-BERT: A contextualized datagram representation with pre- [41] Zhangxuan Dang, Yu Zheng, Xinglin Lian, Chunlei Peng, Qiuyu Chen,
+ training transformers for encrypted traffic classification. In WWW, pages and Xinbo Gao. Semi-supervised learning for anomaly traffic detection
+ 633–642, 2022. via bidirectional normalizing flows. IEEE Transactions on Network and
+[19] Sara Fridovich-Keil, Raphael Gontijo Lopes, and Rebecca Roelofs. Service Management, 22(5):5106–5117, 2025.
+ Spectral bias in practice: The role of function frequency in general- [42] Haixu Wu, Tengge Hu, Yong Liu, Hang Zhou, Jianmin Wang, and
+ ization. In NeurIPS, 2022. Mingsheng Long. TimesNet: Temporal 2d-variation modeling for
+[20] Linwei Chen, Ying Fu, Lin Gu, Chenggang Yan, Tatsuya Harada, and general time series analysis. In ICLR, 2023.
+ Gao Huang. Frequency-aware feature fusion for dense image prediction. IEEE Transactions on Pattern Analysis and Machine Intelligence,
+ 46(12):10763–10780, 2024.

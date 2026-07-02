@@ -1,0 +1,154 @@
+           IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 10, OCTOBER 2024                                                      12125
+
+
+
+
+        An Anomaly-Free Representation Learning
+          Approach for Efficient Railway Foreign
+                    Object Detection
+               Tiange Wang , Zijun Zhang , Senior Member, IEEE, and Min Xie , Fellow, IEEE
+
+
+   Abstract—Applying machine vision to facilitate railway                   particularly foreign objects on rail tracks. Manual inspection
+anomaly detections faces a grand challenge in that anoma-                   often falls short in meeting the demands of high precision and ef-
+lous samples for model training are insufficient due to their               ficiency necessitated by advancements in industrial intelligence.
+infrequent occurrence and wide diversity. An anomaly-free
+representation learning approach (ARLA) is developed in                     Recent attention has been directed toward anomaly detection in
+this article to realize a machine vision-powered railway for-               computer vision using machine/deep learning models. Various
+eign object detection (RFOD) that does not rely on anoma-                   methodologies aim to classify normal and anomalous images
+lous samples. The ARLA consists of two components, a                        within railway settings. Despite these efforts, challenges persist
+memory-suppress diffusion network module and a con-
+                                                                            in achieving reliable and effective foreign object detection
+trastive dissimilarity network. The former network module
+well considers the diversity of normal patterns and re-                     due to the specific characteristics of railway anomalies. The
+constructs high-fidelity normal images. The latter network                  following discussion delves into these challenges in detail.
+module enables image-level and pixelwise foreign object                         1) Limited accessibility of field data: The accumulation and
+detections based on well-defined dissimilarity scores and                          retention of extensive data hold the potential for enhanc-
+distance maps. The ARLA realizes an efficient RFOD, which
+                                                                                   ing analysis and facilitating immediate insights using
+leverages only normal images in training and does not com-
+promise the detection performance at the inference stage.                          progressive data-driven methods. However, the lack of
+Improvements offered by ARLA in terms of pixelwise detec-                          publicly accessible field data presents a significant barrier.
+tion performance and model complexity against two groups                           Concerns on data privacy, intellectual property rights, and
+of benchmarks have been consistently observed based on                             logistical challenges of managing and sharing valuable
+computational studies using the railway dataset.
+                                                                                   resources often lead to the nondisclosure of datasets.
+  Index Terms—Anomaly-free, contrastive learning, diffu-                           Consequently, gaining access to authentic anomalous data
+sion models, image analytics, railway scenes.                                      becomes a serious impediment, hindering the develop-
+                                                                                   ment of effective anomaly detection techniques.
+                         I. INTRODUCTION
+                                                                                2) Limited availability of anomalous images: Anomalies in
+    N RAILWAY contexts, ensuring safety and operational
+I   efficiency heavily relies on the detection of anomalies,
+                                                                                   industrial environments are often sporadic and infrequent,
+                                                                                   resulting in a scarcity of anomalous images for training
+                                                                                   and evaluation purposes. Although a subset of defective
+   Manuscript received 29 June 2023; revised 27 September 2023,                    images can be obtained, the inherent imbalance between
+10 February 2024, and 17 May 2024; accepted 4 June 2024. Date                      anomalous and normal instances poses a significant chal-
+of publication 4 July 2024; date of current version 7 October 2024.
+This work was supported in part by Shenzhen-Hong Kong-Macau Sci-                   lenge. Such scarcity underscores the importance of inno-
+ence & Technology Category C Project (SGDX20220530111205037),                      vative approaches that can effectively utilize limited data
+in part by the National Natural Science Foundation of China (72371215              resources and address class imbalance issues.
+and 72032005), in part by the Research Grant Council of Hong Kong
+(11200621 and 11201023), and in part by the Hong Kong Innovation                3) Imprecise outcomes of anomaly detection: Precise
+and Technology Commission (InnoHK Project CIMDA) and Hong Kong                     anomaly detection requires distinguishing between nor-
+Institute of Data Science under Project 9360163. Paper no. TII-23-2378.            mal and anomalous instances at both image and pixel
+(Corresponding authors: Zijun Zhang; Min Xie)
+   Tiange Wang is with the Institute of Rail Transit, National Ma-                 levels. However, obtaining pixelwise annotations for
+glev Transportation Engineering Research and Development Center,                   anomaly detection presents formidable challenges. The
+Tongji University, Shanghai 201804, China (e-mail: wangtiange@tongji.              manual annotation process is labor-intensive, time-
+edu.cn).
+   Zijun Zhang is with the School of Data Science, City University of              consuming, and prone to human errors, introducing biases
+Hong Kong Hong Kong SAR, China (e-mail: zijzhang@cityu.edu.hk).                    and inaccuracies in the labeling process. Such imprecision
+   Min Xie is with the Department of Advanced Design and Sys-                      undermines the reliability and effectiveness of anomaly
+tems Engineering, City University of Hong Kong, Hong Kong SAR,
+China, and also with the City University of Hong Kong Shenzhen                     detection systems in real-world applications, where accu-
+Research Institute, Shenzhen 518057, China (e-mail: minxie@cityu.                  rate anomaly localization is critical for timely interven-
+edu.hk).                                                                           tion and decision-making.
+   Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TII.2024.3413965.                                      This study focuses on the field of railway foreign object
+   Digital Object Identifier 10.1109/TII.2024.3413965                       detection (RFOD) and introduces a novel approach called
+                  1551-3203 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                See https://www.ieee.org/publications/rights/index.html for more information.
+12126                                                      IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 10, OCTOBER 2024
+
+
+
+                                                                                           II. RELATED WORK
+                                                                        In the field of RFOD, extensive research has been conducted
+                                                                     on the task of classifying and segmenting anomalous instances
+                                                                     within images. This section provides a comprehensive review of
+                                                                     the approaches developed specifically for image-level anomaly
+                                                                     detection in railway infrastructure. Additionally, we explore the
+                                                                     methods that have been generalized to handle pixelwise anomaly
+                                                                     detection on widely recognized public datasets. By examining
+                                                                     both specialized techniques for railway infrastructure and more
+Fig. 1. Motivation of ARLA. (a) Normal rail image is well recon-     general methods, we gain valuable insights into ensuring the
+structed by memory-suppress diffusion. (b) Anomalous rail image is   safety and reliability of intricate railway systems.
+reconstructed with the normal patterns recorded in memory-suppress
+diffusion.
+                                                                     A. Anomaly Detection in Railway Infrastructure
+                                                                        Due to the complexity and numerous subcomponents within
+the anomaly-free representation learning approach (ARLA).            railway infrastructure, there exists a broad spectrum of research
+It addresses the aforementioned challenges by incorporating          areas dedicated to anomaly detection in this domain. Existing
+anomaly rejection mechanisms into the learning process. One          methods primarily focus on identifying anomalous scenes re-
+of the key advantages of ARLA is that its training is free of        lated to rail tracks, rolling stock, and catenary systems [1].
+anomalous samples at the representation learning stage. The          Maintenance tasks for railway infrastructure can be broadly clas-
+anomaly rejection mechanism in ARLA ensures that the learned         sified into two main categories, surface defect detection (such as
+representations predominantly capture normal or nonanomalous         cracks and corrugations on rails [2], [3] and defects on fasteners
+patterns. This approach effectively minimizes the influence of       [4]) and anomaly inspection (such as broken/missing parts [5],
+outliers or noises in the training data, resulting in more robust,   [6], foreign objects/obstacles [7], and anomalies in components
+and reliable representations. Moreover, during the testing phase,    [8], [9]). The image data employed in these research endeavors
+ARLA offers versatility by providing both image-level and            are often acquired through custom systems and meticulously
+pixelwise detection results. Such a capability enables ARLA to       hand-labeled, thus limiting their public availability.
+offer comprehensive insights into the presence and location of          Considering the scale and availability of the image data, some
+anomalies contained in railway images. Image-level detection         studies leverage the third-party data to pretrain the model and
+results provide an overall assessment of anomaly presence,           adopt transfer learning approaches [2], [10]. Pretrained models
+whereas pixelwise detection results offer finer-grained infor-       serve as the initial learning point, preserving computational
+mation, pinpointing the exact locations of anomalies within          resources and enhancing overall detection performance.
+the image. This comprehensive detection capability enhances             During the inference stage, many studies focus on image-level
+the utility of ARLA in real-world applications, where precise        anomaly detection in railway infrastructure while neglecting the
+anomaly localization is crucial for effective decision-making and    localization of anomalies. To address this limitation, segmenta-
+intervention. Fig. 1 provides a visual depiction of our motivation   tion tasks aim to precisely assign pixels within input images
+in the context of anomalous railway scenes.                          to anomalous regions [4], [11]. The output is a segmentation
+   Our main contributions are summarized as follows.                 map with the same size as the input image, which facilitates
+    1) We present a pioneering attempt for formulating RFOD as       subsequent diagnosis and maintenance. Nevertheless, the seg-
+       an anomaly-free representation learning process, which        mentation of anomalies is usually implemented in a supervised
+       aims to address the challenge of limited anomalous data       manner, calling for more advanced data-driven solutions to
+       in railway contexts.                                          perform pixelwise anomaly detection when limited anomalous
+    2) A novel memory-suppress diffusion process that captures       image data is available.
+       the prototypical patterns of normal data in ARLA is
+       introduced. By quantizing code memories, we enhance
+       the reconstruction of images and prevent excessive model      B. Anomaly Detection via Deep Generative Models
+       generalization, thereby improving the accuracy of RFOD.         As a typical type of method for anomaly detection, deep
+    3) A novel dissimilarity loss function is proposed to de-        generative models strive to compress and reconstruct the nor-
+       velop the contrastive dissimilarity network in ARLA. It       mal images and detect potential anomalies by evaluating the
+       ensures the discriminative power between the input and its    pixel differences between the inputs and their reconstructions.
+       reconstruction, enabling both image-level and pixelwise       Autoencoder-based (AE-based) [12] methods and generative ad-
+       detection results.                                            versarial network-based (GAN-based) methods [13], [14] have
+    4) The ARLA offers a new state-of-the-art performance for        been widely employed in industrial image analysis, exhibiting
+       RFOD, which is verified via computational experiments         promising results in anomaly localization. Typically, the learn-
+       conducted on a collected real dataset. Ablation studies are   ing process of these methods follows a semisupervised manner,
+       also conducted to justify the effectiveness and superiority   assuming that only normal image representations are learned.
+       of each component in ARLA.                                    During testing, the models struggle to reconstruct anomalous
+WANG et al.: ANOMALY-FREE REPRESENTATION LEARNING APPROACH FOR EFFICIENT RAILWAY FOREIGN OBJECT DETECTION                          12127
+
+
+
+images as accurately as normal ones, providing an opportunity                                      TABLE I
+                                                                                              TABLE OF NOTATIONS
+for anomaly detection. In addition to commonly used distance
+metrics [13], [15], reconstruction probability [12] and likelihood
+score [16] are defined as supplementary anomaly measures.
+   AE-based methods possess a strong theoretical foundation,
+but designing an effective loss function remains challenging,
+resulting in suboptimal reconstructions. GAN-based methods
+perform well in various applications, yet they face issues such
+as training difficulties, vanishing gradients, model collapse, and
+limited diversity in generated outputs. In summary, generating
+high-quality images for comparisons is a daunting task, as recon-
+structing sharp edges and complex texture characteristics often
+proves challenging, leading to a high number of false abnormal
+alarms [17].
+   Denoising diffusion probabilistic models (DDPMs) [18],
+originating from probabilistic likelihood estimation methods,         rather than focusing on capturing every detail of training sa

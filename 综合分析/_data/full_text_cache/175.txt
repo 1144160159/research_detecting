@@ -1,0 +1,787 @@
+7454 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+ Anomaly Detection for In-Vehicle Network Using
+ Self-Supervised Learning With Vehicle-Cloud
+ Collaboration Update
+ Jinhui Cao , Student Member, IEEE, Xiaoqiang Di , Member, IEEE, Xu Liu, Jinqing Li , Zhi Li ,
+ Liang Zhao , Member, IEEE, Ammar Hawbani, and Mohsen Guizani , Fellow, IEEE
+
+ Abstract— With the increasing communications between the hacking dataset, resulting to an F1-score average and average
+In-Vehicle Networks (IVNs) and external networks, security has false positive rates of IVNSL being 2.282% higher and 1.595%
+become a stringent problem. In addition, the controller area lower than the best baseline method. The average detection speed
+network bus in IVN lacks security mechanisms by design, which of each message is as fast as 0.1075 ms.
+is vulnerable to various attacks. Thus, it is important to detect
+IVN anomalies for complete vehicular security. However, current Index Terms— In-vehicle network, controller area netstudies are constrained by either requiring labeled data or failing work, anomaly detection, self-supervised learning, transformers,
+to accurately detect message-level anomalies without labeled data. vehicle-cloud collaboration.
+In addition, the concept drift of existing methods has become a
+challenge over time. To address these problems, this paper pro-
+ I. I NTRODUCTION
+poses an IVN anomaly detection method based on Self-supervised
+Learning (IVNSL), which is capable of detecting message-level
+anomalies without labels. The essential idea of IVNSL is to
+make the message prediction model learn the distribution of
+ I N RECENT years, there have been tremendous advances in
+ automotive technology [1]. Intelligent Connected Vehicles
+ (ICVs) can not only connect to infrastructures such as cloud
+normal messages in sequences using message sequences with
+noise. Furthermore, to accurately detect anomalies, a Message platforms and Road Side Units (RSUs) through Vehicle-to-
+Prediction Model based on Hierarchical transformers (MPMHit) Infrastructure (V2I) technologies but also share information
+is proposed, which captures the spatial features of the message with passing vehicles through Vehicle-to-Vehicle (V2V) techand the dependencies between messages. Meanwhile, to solve the nologies [2]. Despite improving the driving experience with
+concept drift over time, this paper proposes an online update
+ Vehicle-to-Everything (V2X) technologies, the attacked surmechanism for MPMHit based on vehicle-cloud collaboration.
+We conduct an extensive experimental evaluation on the car face of the In-Vehicle Network (IVN) in ICVs is increasing,
+ resulting in IVN being more prone to anomalies and even
+ Manuscript received 24 March 2023; revised 8 October 2023; accepted imperiling the life safety of drivers [3], [4], [5], [6]. In addi-
+2 January 2024. Date of publication 27 March 2024; date of current version
+2 July 2024. This work was supported in part by the Jilin Science and
+ tion, Electronic Control Units (ECUs) in an IVN perform
+Technology Development Plan Project of China under Grant 20230508096RC, different specific functions in the control system, such as
+in part by the Jilin Education Department Project of China under Grant controlling speed and steering, which communicate through
+JJKH20220773KJ, in part by the Chongqing Municipal Bureau of Science
+and Technology Project of China under Grant CSTB2022NSCQ-MSX1434,
+ the Controller Area Network (CAN) bus protocol. However,
+in part by the National Natural Science Foundation of China under Grant the security of the CAN bus was not considered in the
+62372310, in part by the Liaoning Province Applied Basic Research Program design [7], [8], [9]. Hence, it is vulnerable for the CAN in
+under Grant 2023JH2/101300194, and in part by the Liaoning Revitalization
+Talents Program under Grant XLYC2203151. The Associate Editor for this IVNs to be attacked [10]. For example, in 2015, Charlie Miller
+article was S. Garg. (Corresponding author: Xiaoqiang Di.) and Chris Valasek exploited a vulnerability of the Uconnect
+ Jinhui Cao, Xu Liu, Jinqing Li, and Zhi Li are with the School of Computer system in the Chrysler automobile [11]. They remotely sent
+Science and Technology, Changchun University of Science and Technology,
+Changchun 130022, China, and also with the Jilin Province Key Laboratory messages to the CAN bus and started a dangerous event of
+of Network and Information Security, Changchun University of Science various functions on the vehicle, leading Chrysler to recall
+and Technology, Changchun 130022, China (e-mail: cjh@mails.cust.edu.cn; more than 1.4 million vehicles for an upgrade. Anomaly
+liuxu@cust.edu.cn; lijinqing@cust.edu.cn; 2021101099@mails.cust.edu.cn).
+ Xiaoqiang Di is with the School of Computer Science and Technology, detection can proactively help detect and predict anomalies
+Changchun University of Science and Technology, Changchun 130022, China, in advance, thus it has become one of the essential tools for
+also with the Jilin Province Key Laboratory of Network and Information securing IVNs [12].
+Security, Changchun University of Science and Technology, Changchun
+130022, China, and also with the Information Center, Changchun University There are a number of available methods that have the
+of Science and Technology, Changchun 130022, China (e-mail: dixiaoqiang@ ability to detect anomalies for IVNs, including traditional and
+cust.edu.cn). deep learning-based methods [13]. Traditional methods usually
+ Liang Zhao and Ammar Hawbani are with the School of Computer
+Science, Shenyang Aerospace University, Shenyang 110136, China (e-mail: use IVN characteristics for anomaly detection, such as system
+lzhao@sau.edu.cn; anmande@mail.ustc.edu.cn). specification of the IVN [14], [15], physical attributes of the
+ Mohsen Guizani is with the Department of Machine Learning, Mohamed ECU [16], [17], parameters of the IVN [18], [19], and the
+bin Zayed University of Artificial Intelligence (MBZUAI), Abu Dhabi, United
+Arab Emirates (e-mail: mguizani@ieee.org). information entropy of the network traffic [20], [21]. Nev-
+ Digital Object Identifier 10.1109/TITS.2024.3351438 ertheless, these traditional methods need manually to extract
+ 1558-0016 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+CAO et al.: ANOMALY DETECTION FOR IVN USING SELF-SUPERVISED LEARNING 7455
+
+the IVN features and ignore the internal information of the self-supervised mode. The proposed method does not
+CAN messages, resulting in the inability to detect message require labeling massive CAN data and can detect
+tampering attacks and the low accuracy of detection [12]. message-level anomalies.
+To address such limitations, deep learning techniques have • Further, we propose a message prediction model based
+been introduced into IVN anomaly detection in recent years. on hierarchical transformers, which is used to learn the
+These methods focus on training deep detection models, distribution of normal messages in sequences. Since the
+including supervised and unsupervised. The IVN anomaly proposed model fuses the spatial features of the ID and
+detection methods based on supervised deep learning demand payload of the message and captures the dependencies
+the labeling of a large number of CAN data [22], [23], between messages, it can accurately predict normal mes-
+[24]. However, it is difficult to attain sufficient labeled data sages and improves the accuracy of detecting anomalies.
+because of the private security and support from experts. • To adapt to the distribution of normal messages in the
+Moreover, these methods need to update themselves to cope sequence over time, an online update mechanism of
+with new anomalies by collecting new labeled data. Despite the message prediction model based on vehicle-cloud
+avoiding labeling massive amounts of CAN data, most of collaboration is proposed. We conduct an extensive
+the available methods based on unsupervised deep learning experimental evaluation on the car hacking dataset.
+can only detect whether a time window is anomalous or Experiments show that the average F1-score and average
+only consider the partial features, resulting in low accuracy false positive rate of our anomaly detection method are
+in detecting message-level anomalies [25], [26], [27], [28]. 2.282% higher and 1.595% lower than those of the best
+Additionally, the phenomenon of concept drift, defined as the baseline method, respectively. The detection of every
+unpredictable changes over time in the distribution of data message can be accomplished in 0.1075 milliseconds.
+learning by the model or features of the target predicted by The rest of this paper is organized as follows. Section II
+the model, precipitates a decline in detection performance in reviews the work related to IVN anomaly detection. Section III
+the future. Therefore, this research aims to develop a scheme presents the knowledge about the CAN bus. Section IV gives
+capable of accurately detecting IVN message-level anomalies the specific design details of our detection approach, and
+without labels and an online updating mechanism that can Section V introduces the online update mechanism of the
+address concept drift without affecting the running of the model. Section VI gives the performance evaluation. Finally,
+detection method. Section VII draws our conclusions.
+ To overcome the above problems, we propose an IVN
+anomaly detection method based on Self-supervised Learning (IVNSL) so that the method can detect message-level II. R ELATED W ORK
+anomalies without labeling data. IVNSL models anomaly Currently, IVN anomaly detection methods mainly contain
+detection as a message prediction task, that is, a message traditional and deep learning-based methods [13].
+that is correctly predicted according to its context is normal, Traditional methods usually use characteristics of IVN for
+otherwise it is abnormal. Furthermore, to accurately detect anomaly detection. According to the characteristics used,
+abnormalities, we propose a Message Prediction Model based these methods can be broadly divided into specification-based,
+on Hierarchical transformers (MPMHit), which captures the fingerprint-based, parameter monitoring-based, and informaspatial features of each message and the dependencies between tion theory-based [12]. The main purpose of methods based
+messages by using two layers of transformer block encoders on specification is to detect abnormal behaviors that do not
+to encode the physical signal sequence of messages and the match system specifications such as protocol and frame formessage sequence, respectively. Meanwhile, to avoid MPMHit mat [15]. Muter et al. [14] detect attacks by checking the
+concept drift degrading the performance of IVNSL, we design behavior specifications of sensors. Olufowobi et al. [15] proan online update mechanism for MPMHit, which uses new posed SAIDuCANT, which is a real-time specification-based
+data to retrain the old model on the cloud and replace the intrusion detection system. However, since these methods
+old model with the new one on the vehicle. The vehicle depend on the specification, they are not able to identify the
+also judges whether the MPMHit occurs concept drift based attack that an attacker sends the well-modified CAN message
+on information entropy of the probability distribution of the following the system specification. Because different ECUs
+MPMHit output. If the information entropy exceeds the given in IVN usually have unique hardware fingerprint information,
+threshold, the vehicle will request the cloud to update the methods based on fingerprint use the fingerprint information
+model, which makes the model always match the distribution of ECUs to discover anomalies. Cho and Shin [16] proposed a
+of data. We conduct an extensive evaluation of IVNSL on the clock-based intrusion detection system, which analyzed ECUs
+car hacking dataset, which confirms the effectiveness of our using the deviation between real and reference clock frequenanomaly detection method. cies. Choi et al. [17] used the electrical signal characteristics
+ In summary, the main contributions of this paper can be of each ECU as the fingerprint to perform anomaly detection.
+listed as follows: However, these methods require that all ECUs of the vehicle
+ • Since the appearance of the CAN message depends on its must be profiled beforehand, and the ECU and CAN ID affilcontext, an IVN anomaly detection method is proposed, iation information is not publicly available, resulting in poor
+ which models anomaly detection as a message predic- generalizability of the detection. Methods based on parameter
+ tion task and trains the prediction message model in a monitoring can identify anomalies by comparing parameters
+7456 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+such as data transmission frequency, message transmission
+period, and time interval of IVN. Young et al. [18] proposed a frequency-based intrusion detection system using the
+frequency characteristics of CAN messages. Lee et al. [19] Fig. 1. The structure of the CAN bus data frame.
+proposed an intrusion detection method based on the offset rate
+between request and response messages in the CAN and time
+intervals. Intrusion detection systems based on information accuracy of the model rapidly decline in the future. Thus,
+theory can determine anomalous according to network fluctua- to detect message-level anomalies and avoid labeling massive
+tion. Müter and Asaj [20] identified attacks through the entropy data, this paper proposes an IVN anomaly detection method
+of the collected network traffic compared to the entropy using self-supervised learning, which makes MPMHit learn
+of historical traffic. Marchetti et al. [21] also proposed an the distribution of normal messages in sequences using mesentropy-based anomaly detection scheme. Nevertheless, these sage sequences with noise. Moreover, to solve concept drift,
+traditional methods need to manually extract IVN features we propose an online update mechanism of MPMHit based
+and ignore the internal information of the message, leading on vehicle-cloud collaboration.
+to the failure to detect message tampering attacks and poor Compared with existing work about IVN anomaly detection,
+accuracy of detection. Therefore, in this paper, to improve the performance advantages of our proposed scheme are as
+the detection accuracy, the spatial features of the message follows: 1) It is based on self-supervised learning and does not
+and the interdependencies of messages in the sequence are require labeled data. 2) It can detect message-level anomalies.
+automatically extracted using hierarchical transformers. 3) It takes into account the spatial features of the message and
+ Given that deep neural networks have the capacity to auto- the dependencies between messages and can detect anomalies
+matically extract features, deep learning has been introduced more accurately. 4) It can be updated online to avoid concept
+into IVN anomaly detection in recent years. These methods drift.
+based on deep learning can roughly consist of supervised and
+unsupervised according to the learning paradigm. Supervised III. P RELIMINARIES
+methods usually use labeled CAN message data to train the The CAN that has high stability and efficiency solves the
+deep detection model, and use the trained model for online problems of increased wiring costs, complexity, and weight
+anomaly detection. Javed et al. [22] proposed a CAN bus caused by the increasing number of electronic devices in a
+intrusion detection approach using the combination of the vehicle [29]. It has become the factual standard for commuconvolutional neural network and attention-base gate recurrent nication systems in modern vehicles [30]. The CAN controls
+unit. Flora et al. [23] used data feature vectors and labels of the transmission of various information between ECU nodes.
+CAN messages to train neural networks and the multi-layer Each node sends messages to the bus in the predefined frame
+perceptron of the CAN bus attack detection in a super- format using the priority-based arbitration mechanism [31].
+vised manner. Hoang and Kim [24] combined convolutional Each node can read any data packet from the bus.
+autoencoder and generative adversarial networks to detect IVN The CAN bus standard is divided into two versions accordintrusion. However, these supervised learning methods require ing to the number of bits occupied by the arbitration field [32],
+a lot of expert time and effort to label the data. To avoid mas- [33], [34]. The CAN bus 2.0A defines the standard frame
+sive labeling data, Longari et al. [25] detected anomalies by format with an arbitration field of 11 bits, while the CAN
+measuring the difference between the reconstructed sequences bus 2.0B not only defines an extended frame format with
+and the corresponding original sequences using the Long an arbitration field of 29 bits arbitration field but also is
+Short-Term Memory (LSTM) autoencoder. Nam et al. [26] compatible with standard frames. The structure of the CAN
+proposed a model containing two bi-directionally connected data frame is shown in Fig. 1. The start of frame (SOF) field
+GPT networks for IVN anomaly detection according to marks the start of the CAN message, with a length of 1 bit.
+the negative log-likelihood value of the CAN ID sequence. The ID field is the unique identifier of the message, with a
+Zhu et al. [27] compared the information of the next CAN length of 11 bits (29 bits for expansion mode). In addition,
+message predicted by LSTM with the information of the the ID field also represents the frame priority of arbitration,
+actual next CAN message to determine normal or abnormal, and the lowest value represents the highest priority. The data
+but the method ignores the possible data correlation between length code (DLC) indicates the length of the actual data. The
+CAN IDs, which affects the accuracy of detection. Song length of this field is 4 bits, ranging from 0 to 8, and is
+and Kim [28] proposed a self-supervised anomaly detection in bytes. The data field carries the communication payload
+method for IVN based on noisy pseudo-normal data, but this between ECUs, which can be 0 to 64 bits. In this field,
+method cannot accurately generate pseudo-normal message the actual semantics of the payload depends on the vehicle
+data, resulting in low detection accuracy. To sum up, these manufacturer, which is different from vehicle to vehicle and
+unsupervised IVN anomaly detection methods focus only is not disclosed. The Cyclic Redundancy Code (CRC) field
+on the message ID or data domain, and most of them can with 16 bits contains a checksum, which is used to detect
+only detect sequence-level anomalies and can not determine errors in CAN messages. The acknowledgment (ACK) field
+whether each message in a sequence is anomalous. In addition, with 2 bits is used to confirm whether the message is received
+the detection models of these deep learning methods will correctly. The end of frame (EOF) marks the end of the frame,
+occur concept drift over time, which makes the detection with a length of 7 bits.
+CAO et al.: ANOMALY DETECTION FOR IVN USING SELF-SUPERVISED LEARNING 7457
+
+Fig. 2. The overview of the proposed IVN anomaly detection method.
+
+ IV. A NOMALY D ETECTION M ETHOD
+ Fig. 3. The architecture of the message prediction model based on
+ To accurately detect message-level anomalies without using hierarchical transformers.
+labels, this paper proposes an IVN anomaly detection method
+named IVNSL. The overview of IVNSL is shown in Fig. 2,
+ the message sequence to obtain a noisy message sequence,
+with three main modules:
+ that is, select a message from the sequence and replace it
+ (1) Masking: The original message sequence is constructed
+ with a special message M AS K . For example, the original
+as the message sequence with noise by masking the message
+ message sequence is M = {M1 , M2 , M3 }, and the masked
+in the sequence.
+ message sequences are {M AS K , M2 , M3 }, {M1 , M AS K , M3 },
+ (2) Predicting: The masked messages are predicted using the
+ {M1 , M2 , M AS K }. This paper sets the ID of the M AS K
+message prediction model based on hierarchical transformers.
+ message to 0 and the data field to 0. The masked message
+ (3) Anomaly detecting: If the masked message is correctly
+ sequence is used as the input of the Predicting module, and
+predicted, it is a normal message; otherwise, it is an abnormal
+ the masked message is used as the prediction target.
+message.
+ The intuition behind IVNSL is message appears dependent
+on its context. Specifically, first, we benefit from the masking B. Predicting
+language model and generate message sequences with noise In this paper, we propose a message prediction model
+by masking the message of a normal sequence. Afterward, based on hierarchical transformers (MPMHit), which is a
+in the training phase, message sequences with noise are used self-supervised model, including the training phase and the
+as the input of the message prediction model, and original prediction phase. In the training phase, masked message
+normal message sequences are used as the labels for the sequences are used as the input and original message
+self-supervised training of the message prediction model. sequences are used as labels. The model parameters are
+In the online detection phase, IVNSL uses the trained message adjusted by backpropagation to reduce the loss value, while
+prediction model to predict the masked message and judge the optimal hyper-parameters are selected. In the prediction
+whether the message is abnormal according to the prediction phase, the message sequences are predicted by model forward
+confidence, that is, if the prediction probability exceeds the propagation to predict the masked messages. Fig. 3 depicts
+threshold, the message is normal, otherwise abnormal. the complete architecture of MPMHit, where |T | represents
+ the number of types of all messages. First, MPMHit uses a
+ message position encoder based on the relative position and a
+A. Masking message content encoder based on the transformer to extract
+ The intuition behind the detection method proposed in this the spatial features of the position and content of the message,
+paper is that anomalous messages affect the digital vector respectively and fuses them to obtain the embedding of each
+representation of the entire message sequence. Therefore, message. Then, MPMHit uses a message predictor based on
+we use the sliding window method to construct a fixed the transformer to capture the dependencies between messages
+length message sequence M = {M1 , M2 , . . . , Mn }, where Mi in the sequence and predict the masked message.
+denotes the i-th message in the sequence, and n represents the 1) Position Encoder: Considering the relative positions of
+length of the message sequence, i.e. the size of the window. messages in the sequence, this paper designs a message posi-
+Then, the masking language model [35] is used to mask tion encoder based on sine and cosine functions to calculate
+7458 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+the vector M P i ∈ R d for the relative position of each message
+in the sequence,
+ i
+ 
+  sin(
+ 
+  j
+ ), i f j%2 = 0
+ M Pi = 10000 d
+ i . (1)
+  cos(
+ 
+  j
+ ), i f j%2 = 1
+ 10000 d
+ Here, i = 1, 2, . . . , n is the position index of each message
+in the sequence, j = 0, 1, . . . , d − 1 is the index of the
+elements in the vector M P i . In addition, the sine and cosine
+functions can be used interchangeably, and these two functions
+have an approximately linear dependence on the position
+parameter i.
+ 2) Content Encoder: Since the CAN ID is the unique
+identifier of the message and indicates the frame priority
+of arbitration, and the CAN data field represents the actual
+payload data carrying the physical signals of the vehicle, this
+paper proposes a CAN message content encoder based on
+the transformer, which fuses the spatial features of the ID
+and data fields, as shown in Fig. 3. The module consists of
+three components: a physical signal extractor based on bit-flip,
+a physical signal sequence encoder based on the transformer,
+and a fusion of the spatial features of the ID and payload. Fig. 4. Physical signals sequence encoder based on the transformer.
+ a) Physical signal extractor based on bit-flip: Considering that the signals of physical functions of actual vehicles
+are encapsulated in the payload data and that encoding the signal intercepted according to the extracted boundary, and
+payload data directly causes a large amount of computational m represents the number of physical signals in each message.
+consumption, the bit flip rate method [36] is used to extract b) Physical signals sequence encoder based on transthe boundaries of the physical signals in messages. This former: In this paper, we use the transformer [37] to capture
+method has the ability to fragment payload data into several the dependencies between physical signals in a sequence S
+physical signals, the quantity of which is significantly less and convert the sequence S into a fixed dimensional vector
+than the payload’s length. By using these physical signals as SV ∈ R d , as shown in Fig. 4.
+inputs for the deep anomaly detection method, computational First, the relative position vector S P ∈ R d of each physical
+consumption can be substantially reduced. Specifically, in a signal in the sequence S is computed using the position
+sequence of consecutive messages with the same CAN ID, encoder in Section IV-B.1, and we use one-hot [38] to encode
+the bit-flip rate array B ∈ R l is calculated by Eq.(2), and l is the content of each physical signal as vectors SCone ∈ R |K | ,
+determined by the payload length DLC of a given message. where |K | is the total number of categories of physical signals,
+ bit Fli p_num i and use SCone to find the representation vector SC in the
+ Bi = . (2) learnable weight matrix W SC ∈ R |K |×d , i.e.
+ #all_mun
+ Here, i = 1, 2, . . . , 8 × DLC is the position index of the SC = SC one × W SC . (4)
+element in the array B, bit Fli p_num i indicates the number
+ Here, d is the dimension of the physical signal content
+of bit flips occurred at the i-th position of the data field,
+ representation vector SC, |K | ≫ d.
+#all_mun represents the total number of messages in the
+ The two vectors can be added as S X = S P + SC to
+sequence of consecutive messages with the same CAN ID.
+ represent the embedding of each physical signal. Thus, the
+ We use Eq.(3) to calculate the magnitude array M A ∈ R l ,
+ physical signal sequence S = {s1 , s2 , . . . , sm } is converted into
+whose each element represents the magnitude of the bit-flip
+ a matrix S X ′ of dimension m × d,
+rate of the corresponding bit in the data field.
+ S X ′ = {S X 1 , S X 2 , . . . , S X m }. (5)
+ M Ai = ⌈log10 (Bi )⌉. (3)
+ Then, we input S X ′ into N stacked transformer encoder
+ Here, Mi and Bi are the i-th element of the magnitude array blocks, where each transformer encoder block includes two
+and the bit-flip array, respectively. sub-layers: the attention layer and the feedforward layer.
+ Then, we scan the magnitude array for the successive bit In the attention layer, we use a multi-headed self-attention
+couples where the bit-flip magnitude of the first bit is higher mechanism, and the self-attention of each head is calculated
+than the bit-flip magnitude of the second bit. Whenever a as follows.
+similar pair occurs, a boundary is set between the two bits.
+ Q l × K lT
+Finally, the physical signals sequence S = {s1 , s2 , . . . , sm } Z l = Attention(Q l , K l , Vl ) = so f tmax( √ )Vl . (6)
+for each message is generated, where si is the physical ω
+CAO et al.: ANOMALY DETECTION FOR IVN USING SELF-SUPERVISED LEARNING 7459
+
+ Here, l ∈ 1, 2, . . . , L denotes the number of attention heads, Then the spatial features of the ID and payload are fused
+ω is an integer satisfying ω × L = d, and the parameters using the linear layer to obtain the vector embedding MC ∈
+Q l , K l , and Vl are the query matrix, key matrix, and value R d of the message content as follows:
+matrix, respectively, which are obtained by multiplying S X ′ by
+three learnable weights W Q , W K , WV ∈ R d×ω , respectively, MC = (SV + I V ) × W MC + b MC . (14)
+as follows:
+ Here, W MC is a matrix of dimension d × d, and b MC is a
+ Q l = S X ′ × W Q , K l = S X ′ × W K , Vl = S X ′ × WV . (7) vector of dimension d.
+ √ 3) Message Predictor: In this paper, the position vector and
+ Dividing by ω stabilizes the gradient during the training
+process. content vector of each message in the message sequence M are
+ These attention heads are concatenated and then multiplied summed to obtain the message vector embedding M X ∈ R d ,
+by an additional weight matrix W O to obtain a multi-headed as follows,
+self-attention matrix Z ∈ R m×d ,
+ M X = M P i + MC. (15)
+ Z = Multi Attention(S X ′ ) = concat (Z 1 , . . . , Z L ) × W O .
+ (8) Thus, the message sequence M is transformed into a matrix
+ with dimensions n × d:
+ Here, W O is a matrix of dimension d × d.
+ The residual connection is added to the layer and layer M X ′ = {M X 1 , M X 2 , . . . , M X n }. (16)
+normalization is performed as follows:
+ The dependencies between messages in the sequence M are
+ Z ′ = layer nor m(Z + S X ′ ). (9) captured using the stacked N layer transformer to obtain the
+ After that, the output of the self-attention layer is fed to the multi-headed self-attention matrix M X ′ ∈ R m×d :
+feedforward layer. The feedforward layer consists of a linear
+layer with a non-linear activation function and a normal linear M S M = Multi Attention(M X ′ ). (17)
+layer to generate a matrix of size m × d as follows:
+ Then, the vector embedding M X ′′ ∈ R d of the message
+ Z = G E LU (Z × W1 + b1 ) × W2 + b2 .
+ ′′ ′
+ (10) sequence M is obtained using average pooling, as follows,
+ Here, W1 and W2 are matrices of dimensions d × 4d and 1 X
+ m
+4d × d, respectively, b1 and b2 are matrices of dimensions M X i′′ = M S M j,i . (18)
+ m
+m ×4d and m ×d, respectively, and G E LU (·) is the Gaussian j=0
+error linear unit activation function [39].
+ Then the matrix Z ′′ is added to the residual connection and Here, i denotes the position of the element of vector M X i′′
+layer normalized to generate a matrix of size m × d, denoted and M S M j,i denotes the value of the j-th row and the i-th
+as, column of the matrix M S M.
+ Finally, the probability distribution vector P ∈ R |T | of the
+ Z ′′′ = layer nor m(Z ′′ + Z ′ ). (11) messages is obtained using the linear and softmax layer:
+ Finally, the output of the N -th transformer encoder block is
+ P = so f tmax(M X ′′ × W M S ) + b M S . (19)
+fed to the average pooling layer, which converts the physical
+signal sequence matrix into a fixed-dimensional vector, each Here, W M S is a matrix of size d × |T |, b M S is a vector of
+element of which is calculated as follows: size |T |.
+ m
+ 1 X ′′′ During training, the predicted messages are used as labels
+ SVi = Z j,i . (12) for self-supervised learning.
+ m
+ j=0
+
+ Here, i denotes the position of the element of vector SV
+and Z ′′′
+ j,i denotes the value of the j-th row, and the i-th column
+ C. Anomaly Detecting
+of matrix Z ′′′ . After MPMHit is trained, anomaly detection is performed
+ c) Fusion of the spatial features of the ID and payload: online. Therefore, we feed a sequence of CAN messages into
+In this paper, we input the message ID X ′I ∈ {0, 1}r into MPMHit and configure the masking module in such a way that
+the feedforward layer to extract the spatial features of ID and each message is masked successively, one at a time. We meagenerate the ID embedding vector I V with size d, as shown sure the ability of MPMHit for predicting each message to
+below: determine whether the message is abnormal. A high confidence
+ I V = G E LU (X ′I × W1I + b1I ) × W2I + b2I . (13) in the prediction of a message indicates normal, while a low
+ confidence is interpreted as an anomaly. More specifically,
+ Here, r is the bit length of the CAN ID, W1I and W2I are we use the following procedure. If the prediction of a message
+matrices of dimensions r × 4d and 4d × d, respectively, and lies in the first ε predictions, we consider it a normal message,
+b1I and b2I are vectors of dimensions 4d and d, respectively. otherwise, it is considered an abnormal message.
+7460 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+ frequently false negative. The event-triggered strategy triggers
+ model updates based on whether a model concept drift event
+ has occurred. Since this approach can detect the exact moment
+ of occurrence of the model concept drift and trigger the model
+ update timely, it is better in practice. In addition, given a
+ sequence of masked messages, the output of MPMHit is a
+ probability distribution of all kinds of messages. The information entropy of the probability distribution of the MPMHit
+ output also increases significantly when the model concept
+ drift causes the anomaly detection performance to deteriorate.
+ Therefore, an event-triggering strategy based on information
+ entropy is proposed in this paper.
+ From Section IV-A, the sampled message sequence M =
+ {M1 , M2 , . . . , Mn } can generate n masked message sequences.
+ Therefore, the average information entropy q̄ can be calculated
+Fig. 5. Online update mechanism. by the following equation:
+ n
+ 1X
+ V. O NLINE U PDATE M ECHANISM q̄ = qi . (20)
+ n
+ i=0
+ The distribution of normal messages in the current and
+historical sequences deviates over time, which leads to the Here, qi denotes the information entropy of the probability
+concept drift of MPMHit. The concept drift may cause the distribution of the output of MPMHit whose input is the i-th
+most normal messages to be falsely detected. Thus, it is masked message sequence generated by M. qi is calculated as
+essential to update the proposed message prediction model follows:
+so that it always conforms to the distribution of time-varying T
+ X
+data. However, in the existing IVN anomaly detection methods qi = − P j × ln P j . (21)
+based on deep learning, once the trained deep model has been j=0
+installed on the vehicle, it cannot be adaptively retrained due
+to the limitations of the computing power of the vehicle. The Here, P j is the j-th element of the probability distribution
+vehicle-cloud collaborative mechanism addresses this issue by vector P ∈ R T and 0 < qi < ln T .
+retraining the deep model on the cloud with powerful comput- We first calculate the average information entropy q̄ using
+ing power and installing the retrained model on the vehicle, Eq.(20) and Eq.(21). A threshold δ is set for q̄ to measure
+which greatly liberates the computing resources of the vehicle whether the model undergoes concept drift. If q̄ is greater than
+and makes the model updating workable. Therefore, this paper the threshold δ, the local model controller triggers a model
+proposes an online update mechanism for MPMHit based on update request.
+vehicle-cloud collaboration, as shown in Fig. 5, which consists
+of two parts: the cloud side and the vehicle side. The cloud VI. P ERFORMANCE E VALUATION
+side retrains the model and the vehicle side deploys the new
+model. Specifically, when the model occurs concept drift, the A. Experimental Datasets
+local model controller requests the cloud model controller to We use the car hacking dataset [40]. This dataset consists
+update the model. Then, the cloud model controller activates of a normal CAN traffic file and four attacked CAN traffic
+the model update, which retrains the current model using the files. The four attacked traffic files correspond to four types of
+new data to obtain the new model and sets the copied new attacks, namely Denial-of-service (DoS) attack, fuzzy attack,
+model as the current model on the cloud. The vehicle side spoofing the drive gear attacks, and spoofing the engine RPM.
+downloads the new model locally. Finally, the local model DoS attack is executed by inserting a message with the CAN
+controller activates the new model and hangs the current model ID ‘0 × 00’ into the CAN bus. Fuzzy attacks are executed
+simultaneously. The new model is set as the current model and by inserting messages with random CAN IDs. Spoofing the
+the old model is deleted. drive gear attack and spoofing the engine RPM are executed
+ The local controller on the vehicle side should provide by injecting messages with CAN IDs related to engine speed
+a triggering strategy for MPMHit updates. The commonly and transmission, respectively. Thus, each attacked dataset
+used triggering update strategies are time-triggering and event- contains normal messages and attacked messages injected by
+triggering. Timed strategies usually update the model at a the attacked node.
+given fixed time interval. In practice, the moment of model In this paper, the messages in the normal CAN traffic file
+concept drift is often uncertain. Therefore, it is arduous for and the normal messages in the 4 attacked CAN traffic files
+time-triggered strategies to determine the exact moment of are used as the training set to train the model. we extract
+occurrence of the model concept drift. If the time interval is set 10000 consecutive CAN messages from each of the four
+too small, the model is frequently updated leading to a waste of attacked CAN communication files as a test set to evaluate
+resources, and conversely, the detection model on the vehicle is the effectiveness of IVNSL.
+CAO et al.: ANOMALY DETECTION FOR IVN USING SELF-SUPERVISED LEARNING 7461
+
+B. Evaluation Metrics and Experimental Environment
+ Since anomalies usually occur by chance, resulting in a
+possible imbalance between normal and anomalous messages,
+we use Precision, Recall, and F1-score [41] to evaluate the
+performance of IVNSL. In addition, the False Negative Rate
+(FNR) is very important in IVN anomaly detection, which
+can affect the user experience if a high false negative rate is
+generated [42]. These metrics are calculated as:
+ TP
+ Pr ecision = (22)
+ T P + FP
+ TP
+ Recall = (23)
+ T P + FN
+ 2 × Pr ecision × Recall
+ F1 − scor e = (24)
+ Pr ecision + Recall
+ FN
+ FNR = . (25)
+ T P + FN
+ Fig. 6. IVNSL compared with other baseline methods in terms of precision.
+ Here, True positive (TP) indicates the number of actual
+abnormal messages correctly detected as abnormal messages,
+False positive (FP) indicates the number of actual normal
+messages incorrectly detected as abnormal messages, and system specification, and Self-Supervision cannot accurately
+False negative (FN) indicates the number of actual abnormal model the distribution of attacked messages when generating
+messages incorrectly detected as normal messages. pseudo-normal message data, the Precision of our method
+ The Area Under the Curve (AUC) value, which can deter- is slightly better than SAIDuCANT and Self-Supervision,
+mine the sensitivity of detection methods to the threshold, respectively. The detection Precision of our method for fuzzy
+is calculated by standardizing the area below the Receiver attacks is 100%, which is 34%, 13.61%, and 5.54% higher than
+Operating Characteristic (ROC) curve. ROC curve is con- MT-LSTM, SAIDuCANT, and Self-Supervision respectively
+structed by plotting the False Positive Rate (FPR) and True because our method can capture the spatial features of message
+Positive Rate (TPR) values corresponding to each threshold on ID and payload, while MT-LSTM ignores the spatial features
+the horizontal and vertical axes of the two-dimensional graph of subsequent messages, SAIDuCANT ignores the content
+respectively, where T P R = Recall and F P R is calculated spatial features of messages, and Self-Supervision ignores
+as: the payload of messages and can only detect sequence-level
+ FP anomalies. Although the results of the Precision of our method
+ FPR = . (26) and Supervision are similar on the fuzzy attack dataset, Super-
+ FP + T N
+ vision needs label data. In addition, if Supervision has concept
+ In addition, we conducted all experimental evaluations on
+ drift, its detection performance will deteriorate sharply, which
+Ubuntu 18.04.5 LTS, which has Intel (R) Xeon (R) W-2123
+ needs to train the model with new label data. Labeling massive
+3.60GHZ CPU, NVIDIA TITAN Xp GPU, and 64 GB RAM.
+ CAN messages will waste a lot of time and experience of
+For developing the method, we used Pytorch for the deep
+ experts. On the contrary, in our scheme, if the vehicle detects
+learning model.
+ a concept drift, the local model controller in the vehicle
+ immediately requests the cloud to update the model, which
+C. Experimental Results does not need to label the data. The detection Precision of
+ In this subsection, we compare IVNSL with two available our method for spoofing gear and RPM attacks is 97.73%
+traditional methods: OTIDS [19], SAIDuCANT [15], one and 100%, respectively. The Precision of IVNSL on the
+supervised method Supervision [23], one unsupervised method two spoofing attack datasets is significantly better than that
+MT-LSTM [27], and one self-supervised method Supervi- of SAIDuCANT, MT-LSTM, and Self-Supervision, with an
+sion [28] using the performance metrics in Section VI-B. average of 17.55%, 32.8%, and 1.39% higher, respectively.
+ Fig. 6 shows IVNSL compared with other baseline methods This is because our method can capture both the spatial
+in terms of Precision. The detection Precision of our method features of the message and the dependencies of messages in
+for DoS attacks is 100%, which is 47%, 8.7%, 2.5%, and the sequence. Although OTIDS and Supervision are slightly
+2.29% higher than MT-LSTM, Supervision, Self-Supervision, more accurate than IVNSL on the two spoofing attack datasets,
+and SAIDuCANT respectively. Since MT-LSTM and Supervi- our method does not require label data to detect spoofing
+sion ignore the temporal features of the messages, while our attacks of the message level.
+method focuses on the dependencies of the messages in the Fig. 7 shows IVNSL compared with other baseline methods
+sequence and extracts the temporal features, our method is in terms of Recall. IVN has a 100% Recall for detecting DoS
+significantly better Precision of our method than MT-LSTM attacks. Our method is slightly better than Self-Supervision,
+and Supervision. Since SAIDuCANT cannot detect sending close to SAIDuCANT, and significantly better than OTIDS,
+a large number of attack messages that conform to the MT-LSTM, and Supervision by 26.2%, 41.87%, and 11.4%,
+7462 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+ Fig. 8. IVNSL compared with other baseline methods in terms of F1-score.
+Fig. 7. IVNSL compared with other baseline methods in terms of recall.
+
+respectively, because our method can learn the dependencies packets, i.e. time features, and improves the F1-score for
+between messages and extract the temporal features of mes- detecting Dos attacks. Thus, IVNSL detects DoS attacks with
+sages, while the interval-based OTIDS tends to incorrectly an F1-score of 100% and our method significantly outperforms
+detect a large number of attack messages that match the OTIDS, MT-LSTM, and Supervision by 15.12%, 42.44%, and
+time interval as normal messages, MT-LSTM ignores the 11.2%, respectively, and slightly outperforms SAIDuCANT
+time information of following messages, and Supervision does and Self-Supervision by 1.16% and 1.67%, respectively. Fuzzy
+not focus on the temporal features of messages. Our method attacks are performed by inserting messages with random
+detects 100% Recall for fuzzy attacks, and IVNSL slightly out- CAN IDs and payloads. Our method can extract the spatial
+performs SAIDuCANT and Supervision. In addition, IVNSL’s features of the CAN ID and the payload of the message,
+Recall is significantly better than OTIDS, MT-LSTM, and thus accurately detecting fuzzy attacks. Therefore, IVNSL
+Self-Supervision, by 29.79%, 14.87%, and 16.55%, respec- detects fuzzy attacks with a detection F1-score of 100% and
+tively, because our method can capture the spatial features our method significantly outperforms OTIDS, SAIDuCANT,
+of the messages and the dependencies between messages, MT-LSTM, and Self-Supervision by 17.8%, 7.48%, 25.64%,
+while OTIDS and Self-Supervision ignore the internal spatial and 11.39%, respectively, and slightly outperforms Supervifeatures of the payload in the CAN message, MT-LSTM sion by 0.7%. Spoofing the drive gear attack and spoofing the
+ignores the spatial features of subsequent messages. Moreover, engine RPM are executed by injecting messages with CAN
+Self-Supervision can only detect sequence-level anomalies. IDs related to engine speed and transmission, respectively.
+Due to the fact that spoofing attacks are executed by inject- Our method fuses the spatial features of the ID and paying messages related to vehicle functionality, the attack is load of the message and captures the dependencies between
+related to the spatiotemporal features of the messages. OTIDS messages, improving the F1-score for detecting spoofing
+and SAIDeCANT can only capture the temporal features, attacks. Thereby, IVNSL significantly outperforms OTIDS,
+ignoring the content spatial features of messages. MT-LSTM SAIDuCANT, MT-LSTM, and Self-Supervision, on average,
+ignores the spatial features of the subsequent messages, Self- by 15.82%, 10.93%, 24.83%, and 3.69%, respectively, for
+Supervision ignores the spatial features of the payload of the two spoofing attack datasets. Although the F1-score of
+messages. Our method can learn the spatiotemporal features IVNSL and Supervision is similar, our method does not require
+of the messages simultaneously. Thus, The detection Recall of labeled data. In addition, the average F1-score of our method
+our method for spoofing gear and RPM attacks is 99.34% and on the four attacked test datasets is 2.82% higher than the best
+100%, respectively, which significantly outperforms OTIDS, baseline method.
+SAIDuCANT, MT-LSTM, and Self-Supervision on average An excellent IVN anomaly detection method should have
+with a higher Recall of 28%, 2.98%,14.32%, and 5.74%. a low FNR for anomalies at the message level. Fig. 9 shows
+Although the IVNSL and Supervision Recall results are sim- IVNSL compared with other baseline methods in terms of
+ilar, our method does not require labeled data. box-plot of FNR and line chart of average FNR. It can be
+ The anomaly detection F1-score can balance the detected observed that OTIDS has the highest FNR at the median and
+Precision and Recall. Fig. 8 shows IVNSL compared with mean values, while IVNSL has the lowest FNR at the median
+other baseline methods in terms of F1-score. DoS attacks and mean values. Although most baseline methods achieve an
+typically prevent normal communication between ECUs by FNR of below 20% for a given attack dataset, when applied to
+injecting a large number of CAN messages in a short period. all given attacks, they differ significantly. IVNSL outperforms
+Our method can extract the dependency relationship between all other baseline methods in terms of FNR with a minimum
+CAO et al.: ANOMALY DETECTION FOR IVN USING SELF-SUPERVISED LEARNING 7463
+
+ Fig. 11. The testing of average time cost on the sequence and the message.
+
+Fig. 9. IVNSL compared with other baseline methods in terms of FNR.
+ proposed MPMHit fuses the spatial features of the ID and
+ payload of the message and captures the dependencies between
+ messages, it can accurately predict normal messages. In other
+ words, if the message is normal, the probability of being
+ predicted is high, while if the message is abnormal, the
+ probability of being predicted is low. Therefore, IVNSL is
+ not sensitive to the selection of the threshold ε.
+
+ D. Efficiency Evaluation
+ Since IVN is a time-critical network, the detection latency is
+ a key indicator for evaluating detection methods. The detection
+ delay is defined as the time from the appearance of an anomaly
+ message to the detection of an anomaly message, as shown in
+ the following equation:
+ tl = td − ta (tcs ≤ ta ≤ tce ). (27)
+ Here, td indicates the moment when the anomaly is detected,
+Fig. 10. The AUC of IVNSL.
+ and ta represents the moment when the anomaly occurred. tcs
+ and tce are the start and end moments of the collected sequence
+ of input messages. In addition, td is the sum of tce , tdp and ti ,
+value of 0%, a median value of 0%, and a mean value of
+ where ti represents the inference time of the proposed message
+0.00165%, where the mean value is 1.595% lower than the best
+ prediction model, and tdp represents the generation time delay
+method. Our method has the best FNR for detecting anomalies
+ of the masked message sequence. Therefore, the detection
+at the message level due to the following reasons. First, our
+ latency tl is also calculated as follows:
+method utilizes a self-supervised approach for message prediction, which can detect message-level anomalies. Second, our tl = tce + tdp + ti − ta (ti + tdp ≤ tl ≤ △t + ti + tdp ).
+message prediction model captures both the spatial features of (28)
+the message and the dependencies between messages.
+ Since the closer the AUC value is to 1, the less sensitive Here, △t = tce − tcs . Obviously, given tcs = ta or tce =
+the detection method is to the selection of the threshold, AUC ta , detection latency gets the maximum or minimum values.
+is used to visually demonstrate the sensitivity of IVNSL to For the purpose of real-time detection, all latencies should be
+the threshold ε for anomaly detection, where the threshold minimized. Since n masked message sequences generated by
+ε is selected in the interval [1, |T |]. As shown in Fig. 10, message sequences with length n are input into MPMHit as a
+the AUC values of IVNSL for Dos, fuzzy, gear spoofing, and batch, data collection time △t and the processing time tdp +
+RPM spoofing attacks are 0.9923, 0.9999, 0.9961, and 0.9999, ti depend on the length of the message sequence. Therefore,
+respectively. This indicates that IVNSL has low sensitivity to we give the test time of different message sequence lengths,
+the threshold. IVNSL judges anomalies based on the accuracy as shown in Fig. 11.
+of the message by predicted, i.e. if the prediction of a message For detecting the whole message sequence, a significant
+lies in the first ε predictions, we consider it a normal message, trend is that the time cost increases with the increase in
+otherwise, it is considered an abnormal message. Since the message length. Undoubtedly, this is due to the comprehensive
+7464 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+factors of masked message sequence construction and mes- to solve the concept drift over time. Experimental results show
+sage prediction. Since this model predicts that each masked that IVNSL has high Precision, high Recall, high F1-score, and
+message is equivalent to detecting each message, it also low False Negative Rate in DoS attacks, fuzzy attacks, and
+reports the average time cost result of a single message. spoof attacks. In future work, we will consider compressing
+However, it shows the contrary trend to the time cost of the the message prediction model to reduce system resource
+whole message sequence, which can be attributed to redundant consumption for lightweight deployment and the practical
+message processing and continual detection inference. There- application of the online model update mechanism based on
+fore, an eclectic solution should be selected (for example, vehicle-cloud collaboration.
+the message sequence length is 40) to reduce the anomaly
+detection delay. We can observe that when the length of the R EFERENCES
+message sequence is 40, the time cost of the proposed method [1] K. Agrawal, T. Alladi, A. Agrawal, V. Chamola, and A. Benslimane,
+to detect the whole message sequence and the average time “NovelADS: A novel anomaly detection system for intra-vehicular
+cost of each message are 4.3 ms and 0.1075 ms, respectively. networks,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 11,
+ pp. 22596–22606, Nov. 2022.
+This means that this method can infer 9302 messages per
+ [2] M. L. Han, B. I. Kwak, and H. K. Kim, “Event-triggered intervalsecond. Since the CAN bus of real vehicles transmits about based anomaly detection and attack identification methods for an
+2000 messages per second, the proposed method has sufficient in-vehicle network,” IEEE Trans. Inf. Forensics Security, vol. 16,
+capacity for real-time detection. pp. 2941–2956, 2021.
+ [3] U. E. Larson, D. K. Nilsson, and E. Jonsson, “An approach to
+ specification-based attack detection for in-vehicle networks,” in Proc.
+ IEEE Intell. Vehicles Symp., Jun. 2008, pp. 220–225.
+E. Discussion
+ [4] J. Ashraf, A. D. Bakhshi, N. Moustafa, H. Khurshid, A. Javed,
+ The vehicle generates approximately 2000 CAN messages and A. Beheshti, “Novel deep learning-enabled LSTM autoencoder
+per second, that is, a CAN message is generated every 0.5 ms architecture for discovering anomalous events from intelligent transportation systems,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7,
+in IVN [40]. In addition, since the upload speed of 5G pp. 4507–4518, Jul. 2021.
+is 100 Mbps [43], and the size of each message is 105 bits, the [5] X. Duan, H. Yan, D. Tian, J. Zhou, J. Su, and W. Hao, “In-vehicle CAN
+average transmission delay for each message is 0.00105 ms, bus tampering attacks detection for connected and autonomous vehicles
+ using an improved isolation forest method,” IEEE Trans. Intell. Transp.
+which is less than 0.5 ms. Therefore, real-time transmission of Syst., vol. 24, no. 2, pp. 2122–2134, Feb. 2023.
+messages to the cloud is possible, and the online model update [6] H. Qin, M. Yan, and H. Ji, “Application of controller area network
+mechanism based on vehicle-cloud collaboration is feasible (CAN) bus anomaly detection based on time series prediction,” Veh.
+ Commun., vol. 27, Jan. 2021, Art. no. 100291. [Online]. Available:
+in practice. The delay of retraining models on the cloud is https://www.sciencedirect.com/science/article/pii/S2214209620300620
+related to the computing power and number of CAN messages. [7] H. M. Song, H. R. Kim, and H. K. Kim, “Intrusion detection system
+Assuming that Ubuntu 18.04.5 LTS in Section VI-B represents based on the analysis of time intervals of CAN messages for in-vehicle
+ network,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2016, pp. 63–68.
+the cloud, the average training time for one message per
+ [8] J. Ning, J. Wang, J. Liu, and N. Kato, “Attacker identification and intruround is 1.575 ms, resulting in the message throughput rate of sion detection for in-vehicle networks,” IEEE Commun. Lett., vol. 23,
+approximately 5.67 million messages per hour for the training no. 11, pp. 1927–1930, Nov. 2019.
+model. Thus, although there may be some delays in training [9] B. Groza and P.-S. Murvay, “Efficient intrusion detection with Bloom
+ filtering in controller area networks,” IEEE Trans. Inf. Forensics Security,
+on the cloud, the average training time for one message per vol. 14, no. 4, pp. 1037–1051, Apr. 2019.
+round is only 1.075 ms longer than the average generating [10] L. B. Othmane, L. Dhulipala, M. Abdelkhalek, N. Multari, and
+time for one message in IVN, which is still at the millisecond M. Govindarasu, “On the performance of detecting injection of fabricated messages into the CAN bus,” IEEE Trans. Dependable Secure
+level and within an acceptable range. Moreover, the frequency Comput., vol. 19, no. 1, pp. 468–481, Jan. 2022.
+of updating MPMHit is related to the information entropy of [11] C. V. C. Mille. Hackers Remotely Kill a Jeep on the Highway—
+the distribution of normal messages in message sequences of With Me in it. Accessed: Jul. 21, 2015. [Online]. Available:
+ https://www.wired.com/2015/07/hackers-remotely-kill-jeep-highway/
+the actual IVN. We will study the practical application of the
+ [12] W. Wu et al., “A survey of intrusion detection for in-vehicle networks,”
+model updating mechanism in the future. IEEE Trans. Intell. Transp. Syst., vol. 21, no. 3, pp. 919–933, Mar. 2020.
+ [13] A. Zhou, Z. Li, and Y. Shen, “Anomaly detection of CAN bus
+ messages using a deep neural network for autonomous vehicles,”
+ VII. C ONCLUSION AND F UTURE W ORK Appl. Sci., vol. 9, no. 15, p. 3174, Aug. 2019. [Online]. Available:
+ The increase in the attacked surface of ICVs and the lack https://www.mdpi.com/2076-3417/9/15/3174
+ [14] M. Müter, A. Groll, and F. C. Freiling, “A structured approach to
+of security mechanisms in the CAN protocol make IVNs anomaly detection for in-vehicle networks,” in Proc. 6th Int. Conf. Inf.
+vulnerable to security attacks. This work provides a robust Assurance Secur., Aug. 2010, pp. 92–98.
+solution to this problem. We propose a new IVN anomaly [15] H. Olufowobi, C. Young, J. Zambreno, and G. Bloom, “SAIDuCANT:
+ Specification-based automotive intrusion detection using controller area
+detection method, IVNSL. A significant advantage of our network (CAN) timing,” IEEE Trans. Veh. Technol., vol. 69, no. 2,
+work over others is that the proposed method can accurately pp. 1484–1494, Feb. 2020.
+detect message-level anomalies without labels. IVNSL makes [16] K.-T. Cho and K. G. Shin, “Fingerprinting electronic control units
+the message prediction model learn the distribution of nor- for vehicle intrusion detection,” in Proc. 25th USENIX Conf. Secur.
+ Symp., T. Holz and S. Savage, Eds. Austin, TX, USA, Aug. 2016,
+mal messages in sequences in a self-supervised manner. Our pp. 911–927. [Online]. Available: https://www.usenix.org/conference/
+proposed message prediction model, MPMHit, can capture usenixsecurity16/technical-sessions/presentation/cho
+both the spatial features of the message and the dependencies [17] W. Choi, K. Joo, H. J. Jo, M. C. Park, and D. H. Lee, “VoltageIDS:
+ Low-level communication characteristics for automotive intrusion detecbetween messages. Meanwhile, we propose an online update tion system,” IEEE Trans. Inf. Forensics Security, vol. 13, no. 8,
+mechanism for MPMHit based on vehicle-cloud collaboration pp. 2114–2129, Aug. 2018.
+CAO et al.: ANOMALY DETECTION FOR IVN USING SELF-SUPERVISED LEARNING 7465
+
+[18] C. Young, H. Olufowobi, G. Bloom, and J. Zambreno, “Automotive [39] D. Hendrycks and K. Gimpel, “Gaussian error linear units (GELUs),”
+ intrusion detection based on constant CAN message frequencies across 2016, arXiv:1606.08415.
+ vehicle driving modes,” in Proc. ACM Workshop Automot. Cyberse- [40] H. M. Song, J. Woo, and H. K. Kim, “In-vehicle network
+ curity. New York, NY, USA: Association for Computing Machinery, intrusion detection using deep convolutional neural network,” Veh.
+ Mar. 2019, p. 9, doi: 10.1145/3309171.3309179. Commun., vol. 21, Jan. 2020, Art. no. 100198. [Online]. Available:
+[19] H. Lee, S. H. Jeong, and H. K. Kim, “OTIDS: A novel intrusion https://www.sciencedirect.com/science/article/pii/S2214209619302451
+ detection system for in-vehicle network by using remote frame,” in Proc. [41] T. Limbasiya, K. Z. Teng, S. Chattopadhyay, and J. Zhou,
+ 15th Annu. Conf. Privacy, Secur. Trust (PST), 2017, pp. 57–5709. “A systematic survey of attack detection and prevention in connected
+[20] M. Müter and N. Asaj, “Entropy-based anomaly detection for in- and autonomous vehicles,” Veh. Commun., vol. 37, Oct. 2022,
+ vehicle networks,” in Proc. IEEE Intell. Vehicles Symp. (IV), Jun. 2011, Art. no. 100515. [Online]. Available: https://www.sciencedirect.
+ pp. 1110–1115. com/science/article/pii/S2214209622000626
+[21] M. Marchetti, D. Stabili, A. Guido, and M. Colajanni, “Evaluation [42] P. Cheng, M. Han, A. Li, and F. Zhang, “STC-IDS: Spatial–temporal corof anomaly detection for in-vehicle networks through information- relation feature analyzing based intrusion detection system for intelligent
+ theoretic algorithms,” in Proc. IEEE 2nd Int. Forum Res. Tech- connected vehicles,” Int. J. Intell. Syst., vol. 37, no. 11, pp. 9532–9561,
+ nol. Soc. Ind. Leveraging Better Tomorrow (RTSI), Sep. 2016, Nov. 2022. [Online]. Available: https://onlinelibrary.wiley.com/doi/abs/
+ pp. 1–6. 10.1002/int.23012
+ [43] Y. Zikria, S. Kim, M. Afzal, H. Wang, and M. Rehmani, “5G
+[22] A. R. Javed, S. U. Rehman, M. U. Khan, M. Alazab, and T. Reddy,
+ mobile services and scenarios: Challenges and solutions,” Sustain-
+ “CANintelliIDS: Detecting in-vehicle intrusion attacks on a controller
+ ability, vol. 10, no. 10, p. 3626, Oct. 2018. [Online]. Available:
+ area network using CNN and attention-based GRU,” IEEE Trans. Netw.
+ https://www.mdpi.com/2071-1050/10/10/3626
+ Sci. Eng., vol. 8, no. 2, pp. 1456–1466, Apr. 2021.
+[23] F. Amato, L. Coppolino, F. Mercaldo, F. Moscato, R. Nardone,
+ and A. Santone, “CAN-bus attack detection with deep learning,”
+ IEEE Trans. Intell. Transp. Syst., vol. 22, no. 8, pp. 5081–5090,
+ Aug. 2021. Jinhui Cao (Student Member, IEEE) received
+[24] T.-N. Hoang and D. Kim, “Detecting in-vehicle intrusion via semi- the B.S. degree in network engineering from the
+ supervised learning-based convolutional adversarial autoencoders,” Veh. Changchun University of Science and Technology,
+ Commun., vol. 38, Dec. 2022, Art. no. 100520. [Online]. Available: China, in 2019, where he is currently pursuing the
+ https://www.sciencedirect.com/science/article/pii/S2214209622000675 Ph.D. degree in computer science and technology.
+ His research interests include log mining, network
+[25] S. Longari, D. H. Nova Valcarcel, M. Zago, M. Carminati, and
+ security, anomaly detection, intrusion detection, and
+ S. Zanero, “CANnolo: An anomaly detection system based on LSTM
+ artificial intelligence.
+ autoencoders for controller area network,” IEEE Trans. Netw. Service
+ Manage., vol. 18, no. 2, pp. 1913–1924, Jun. 2021.
+[26] M. Nam, S. Park, and D. S. Kim, “Intrusion detection method using bidirectional GPT for in-vehicle controller area networks,” IEEE Access,
+ vol. 9, pp. 124931–124944, 2021.
+[27] K. Zhu, Z. Chen, Y. Peng, and L. Zhang, “Mobile edge assisted
+ literal multi-dimensional anomaly detection of in-vehicle network using Xiaoqiang Di (Member, IEEE) received the B.S.
+ LSTM,” IEEE Trans. Veh. Technol., vol. 68, no. 5, pp. 4275–4284, degree in computer science and technology and
+ May 2019. the M.S. and Ph.D. degrees in communication and
+ information systems from the Changchun Univer-
+[28] H. M. Song and H. K. Kim, “Self-supervised anomaly detection for
+ sity of Science and Technology, Changchun, China,
+ in-vehicle network using noised pseudo normal data,” IEEE Trans. Veh.
+ in 2002, 2007, and 2014, respectively. From August
+ Technol., vol. 70, no. 2, pp. 1098–1108, Feb. 2021.
+ 2012 to August 2013, he was a Visiting Scholar with
+[29] A. U. Jadhav and N. M. Wagdarikar, “A review: Control area network the Norwegian University of Science and Technol-
+ (CAN) based intelligent vehicle system for driver assistance using ogy, Norway. He is currently a Professor and a Ph.D.
+ advanced RISC machines (ARM),” in Proc. Int. Conf. Pervasive Comput. Supervisor with the Changchun University of Sci-
+ (ICPC), Jan. 2015, pp. 1–3. ence and Technology. His major research interests
+[30] E. Seo, H. M. Song, and H. K. Kim, “GIDS: GAN based intrusion include network information security and integrated networks.
+ detection system for in-vehicle network,” in Proc. 16th Annu. Conf.
+ Privacy, Secur. Trust (PST), Aug. 2018, pp. 1–6.
+[31] R. Li, C. Liu, and F. Luo, “A design for automotive CAN bus monitoring
+ system,” in Proc. IEEE Vehicle Power Propuls. Conf., Sep. 2008, Xu Liu received the B.E. degree in network engipp. 1–5. neering from Qingdao University, China, in 2013,
+[32] S. C. Hpl, “Introduction to the controller area network (CAN),” and the M.E. degree in computer software theory
+ Texas Instrum. Incorporated, Dallas, TX, USA, Tech. Rep., SLOA101, from the Changchun University of Science and
+ pp. 1–17, 2002. Technology, China, where she is currently pursuing
+[33] Bosch GmbH Robert. (1991). Can Specification 2.0. [Online]. Available: the Ph.D. degree in computer science and technolhttp://esd.cs.ucr.edu/webres/can20.pdf ogy. Her research interests include network security,
+[34] P. Cheng, M. Han, and G. Liu, “Des.-IDS: Towards an efficient real- information security, anomaly detection, artificial
+ time automotive intrusion detection system based on deep evolving intelligence, big data, game theory, and cloud comstream clustering,” Future Gener. Comput. Syst., vol. 140, pp. 266–281, puting.
+ Mar. 2023. [Online]. Available: https://www.sciencedirect.com/science/
+ article/pii/S0167739X22003351
+[35] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training
+ of deep bidirectional transformers for language understanding,” 2018,
+ arXiv:1810.04805. Jinqing Li received the B.S. degree from the
+[36] M. Marchetti and D. Stabili, “READ: Reverse engineering of automotive Changchun University of Technology, Changchun,
+ data frames,” IEEE Trans. Inf. Forensics Security, vol. 14, no. 4, China, in 2002, and the M.S. and Ph.D. degrees from
+ pp. 1083–1097, Apr. 2019. the Changchun University of Science and Technol-
+[37] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Int. Conf. ogy, Changchun, in 2007 and 2014, respectively. She
+ Neural Inf. Process. Syst. Red Hook, NY, USA: Curran Associates, 2017, is currently an Associate Professor and a Master’s
+ pp. 6000–6010. Student Supervisor with the Changchun University
+ of Science and Technology. Her research interests
+[38] J. T. Hancock and T. M. Khoshgoftaar, “Survey on categorical data for include network security, information security, and
+ neural networks,” J. Big Data, vol. 7, no. 1, pp. 1–41, Dec. 2020, doi:
+ image encryption.
+ 10.1186/s40537-020-00305-w.
+7466 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 7, JULY 2024
+
+ Zhi Li received the B.S. degree in computer science Ammar Hawbani received the B.S., M.S., and
+ and technology from the Shandong University of Ph.D. degrees in computer software and theory from
+ Finance and Economics in 2021. He is currently the University of Science and Technology of China
+ pursuing the master’s degree in electronic informa- (USTC), Hefei, China, in 2009, 2012, and 2016,
+ tion with the Changchun University of Science and respectively. He is currently an Associate Professor
+ Technology. His research interests include intelligent with Shenyang Aerospace University, China. His
+ connected vehicle security, anomaly detection, intru- research interests include WSN and WBAN.
+ sion detection, and artificial intelligence.
+
+ Mohsen Guizani (Fellow, IEEE) received the B.S.
+ (Hons.), M.S., and Ph.D. degrees in electrical
+ and computer engineering from Syracuse University, Syracuse, NY, USA, in 1985, 1987, and
+ 1990, respectively. He is currently a Professor
+ Liang Zhao (Member, IEEE) received the Ph.D. in machine learning and an Associate Provost at
+ degree from the School of Computing, Edinburgh the Mohamed bin Zayed University of Artificial
+ Napier University, in 2011. He is currently a Pro- Intelligence (MBZUAI), Abu Dhabi, United Arab
+ fessor with Shenyang Aerospace University, China. Emirates. Previously, he worked in different institu-
+ Before joining Shenyang Aerospace University, tions in USA. He is the author of ten books and more
+ he was an Associate Senior Researcher with Hitachi than 800 publications. His research interests include
+ (China) Research and Development Corporation applied machine learning and artificial intelligence, the Internet of Things
+ from 2012 to 2014. He was also a JSPS invitational (IoT), intelligent autonomous systems, smart cities, and cybersecurity. He was
+ Fellow in 2023. He was listed as the Top 2% of listed as a Clarivate Analytics Highly Cited Researcher in Computer Science
+ scientists in the world by Stanford University in in 2019, 2020, and 2021. He has won several research awards, including
+ 2022. His research interests include ITS, VANET, the “2015 IEEE Communications Society Best Survey Paper Award,” the
+WMN, and SDN. He has published more than 150 articles. He was a Best ComSoc Journal Paper Award in 2021, and five best paper awards from
+recipient of the Best/Outstanding Paper Awards from the 2015 IEEE IUCC, ICC and GLOBECOM Conferences. He was a recipient of the 2017 IEEE
+2020 IEEE ISPA, 2022 IEEE EUC, and 2013 ACM MoMM. He served as Communications Society Wireless Technical Committee (WTC) Recognition
+the Chair of several international conferences and workshops, including the Award, the 2018 AdHoc Technical Committee Recognition Award, and
+Steering Co-Chair for the 2022 IEEE BigDataSE, the Program Co-Chair for the 2019 IEEE Communications and Information Security Technical Recognithe 2021 IEEE TrustCom, the Program Co-Chair for the 2019 IEEE IUCC, and tion (CISTC) Award. He served as the Editor-in-Chief of IEEE Network and is
+the Founder of NGDN Workshop (2018–2022). He is an Associate Editor of currently serving on the editorial boards of many IEEE T RANSACTIONS and
+Frontiers in Communications and Networking and Journal of Circuits Systems magazines. He was the Chair of the IEEE Communications Society Wireless
+and Computers. He is/has been a Guest Editor of IEEE T RANSACTIONS Technical Committee and the Chair of the TAOS Technical Committee.
+ON N ETWORK S CIENCE AND E NGINEERING and Journal of Computing He served as the IEEE Computer Society Distinguished Speaker and is
+(Springer). currently the IEEE ComSoc Distinguished Lecturer.

@@ -1,0 +1,150 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024                                                                          7091
+
+
+
+
+           MPAF: Encrypted Traffic Classification With
+               Multi-Phase Attribute Fingerprint
+                                        Yige Chen         and Yipeng Wang , Senior Member, IEEE
+
+
+
+    Abstract— The widespread use of cryptographic protocols                     a large proportion of mobile network traffic is now encrypted
+such as Transport Layer Security (TLS) has necessitated the                     using TLS.
+development of effective methods for encrypted traffic clas-                       Accurate encrypted traffic classification is essential for
+sification. The existing methods relying on a single feature
+source face challenges in achieving high accuracy and efficiency                a range of networking and security services, including
+simultaneously. Additionally, there is a decrease in accuracy in                policy-based network traffic management, application Quality-
+complex scenarios, posing significant challenges for networks and               of-Service (QoS), and application-level firewalls [5]. For
+security services based on application-level traffic classification.            instance, an enterprise network administrator may prioritize
+In this paper, we propose Multi-Phase Attribute Fingerprint                     certain specific applications for the quality of critical ser-
+(MPAF), an encrypted traffic classification system that overcomes
+these limitations. MPAF leverages three phases to separately                    vices and assign a lower network communication priority
+leverage attributes that emerge at different time periods of                    to applications that do not adhere to the network pol-
+encrypted traffic communication. Additionally, we transform                     icy. Existing approaches for encrypted traffic classification
+discrete attributes into computable vectors through embedding                   involve mobile application identification [6], [7], IoT behavior
+and design a classifier for the multi-phase mechanism based on a                identification [8], [9], [10], protocol identification [11], etc.
+leaf node masking tree. The experimental results show that MPAF
+achieves a classification accuracy ranging from 96.33% to 99.42%                However, existing approaches for encrypted traffic classifica-
+and an average waiting time (AWT) ranging from 0.18s to 0.45s.                  tion overlook the average waiting time required to capture a
+MPAF outperforms other approaches in scenarios with high                        sufficient number of packets for classification. Furthermore,
+robustness requirements, including small-scale training datasets,               these approaches lack the robustness to classify traffic in
+cross-dataset classification, and unknown application recognition.              complex scenarios accurately. In this paper, we propose a novel
+  Index Terms— Encrypted traffic classification, multi-phase,                   fingerprinting approach to address the shortcomings of existing
+TLS messages, network management.                                               approaches.
+
+                          I. I NTRODUCTION
+A. Motivation and Problem Statement                                             B. Our Insights and Proposed Approach
+                                                                                   1) Key Observation to Encrypted TLS Traffic: In this paper,
+T    HIS paper presents a novel approach to address the
+     challenge of encrypted traffic classification for mobile
+applications. As the number of mobile applications in the
+                                                                                we propose MPAF, Multi-Phase Attribute Fingerprint for
+                                                                                encrypted TLS traffic classification. MPAF aims to enhance the
+application market continues to grow, identifying the appli-                    classification efficiency of encrypted TLS traffic by performing
+cation to which network traffic belongs becomes increasingly                    multi-phase traffic classification, while still ensuring high
+important for network management. To ensure secure mobile                       classification accuracy. The general encrypted communication
+application communications, major application markets such                      process between a client and a server consists of three phases.
+as App Store [1] and Google Play [2] have adopted Transport                     In the first phase, the client application initiates a domain name
+Layer Security (TLS) [3], [4] encryption standards. As a result,                query against the destination application server, thus obtaining
+                                                                                the IP address of that server. Then, in the second phase, based
+   Manuscript received 2 January 2024; revised 3 June 2024; accepted 30 June    on the obtained IP address, the client application conducts a
+2024. Date of publication 15 July 2024; date of current version 25 July 2024.   handshake process with the destination server regarding the
+This work was supported in part by the Fundamental Scientific Research
+Project of Wenzhou City under Grant G2023005 and in part by the General         exchange of some metadata (including the negotiated encryp-
+Scientific Research Project of the Education Department of Zhejiang Province    tion suite, server-side certificate information, etc.). Finally, the
+under Grant Y202248893. The associate editor coordinating the review of         third phase involves the exchange of encrypted application
+this article and approving it for publication was Prof. Husrev Taha Sencar.
+(Corresponding author: Yipeng Wang.)                                            content between the client and the server. It’s worth noting
+   Yige Chen is with the College of Computer Science and Artificial Intelli-    that in some situations, due to caching mechanisms, the first
+gence, Wenzhou University, Wenzhou 325000, China, and also with Wenzhou         and second phases of this process may not be necessary.
+Key Laboratory for Intelligent Networking, Wenzhou 325000, China (e-mail:
+ygchen@wzu.edu.cn).                                                                2) Key Insights Into Our System: In this paper, MPAF
+   Yipeng Wang is with the College of Computer Science, Beijing Univer-         builds on our key insight that the three phases of encrypted
+sity of Technology, Beijing 100124, China, and also with the Engineering        traffic communication between a client and a server occur at
+Research Center of Intelligent Perception and Autonomous Control, Ministry
+of Education, Beijing 100124, China (e-mail: yipeng.wang1@gmail.com).           distinct time periods: the first phase precedes the second, and
+   Digital Object Identifier 10.1109/TIFS.2024.3428839                          the second precedes the third. If we can classify a majority of
+                       1556-6021 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+7092                                                         IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+
+
+the encrypted flows accurately during the first two phases, the          including small-scale training datasets, cross-dataset clas-
+overall classification efficiency can be significantly enhanced.         sification, and unknown application recognition.
+Specifically, during encrypted traffic communication, more            The remaining sections of this paper are structured as
+than half of encrypted flows can be accurately classified solely   follows. In Section II, we present an overview of prior works.
+based on their associated domain names. A large portion            In Section III, we present the design of MPAF, offering
+of other encrypted flows can be accurately classified solely       insights into the system’s architecture and providing detailed
+through the metadata in the handshake process. The remainder       information on each phase. In Section IV, we elaborate on the
+can be accurately classified using the message sequence of         details of our dataset collection and provide an overview of the
+each TLS flow.                                                     datasets used in this study. Section V presents the experimental
+   3) Brief Introduction to Our Approach: MPAF aims to             settings and provides an in-depth analysis of the evaluation
+reduce the observation waiting time for encrypted flows            results. Section VI outlines a comparison of our proposed
+to be classified while ensuring high classification accuracy.      approach with state-of-the-art methods. Finally, in Section VII,
+As shown in Figure 1, MPAF consists of three classification        we conclude our study and discuss potential avenues for future
+phases, namely, domain name phase, handshake metadata              research.
+phase, and message sequence phase.
+  1) Phase 1: Domain Name Phase. This is the first phase                                II. R ELATED W ORK
+     of our proposed scheme. In this phase, MPAF attempts             In this section, we introduce the relevant and recent
+     to classify a significant portion of the encrypted flows      encrypted traffic classification methods. The literature on
+     at an early phase, relying solely on their associated         traffic classification techniques can be categorized into
+     domain names. Any flows not classified in this phase are      three groups: (1) machine learning-based methods, (2) deep
+     forwarded to the subsequent phases for further analysis.      learning-based methods, and (3) dataset and benchmarking.
+  2) Phase 2: Handshake Metadata Phase. MPAF classifies            In Table I, we give a summary for each related work.
+     encrypted flows that cannot be classified during the
+     domain name phase. The classification in this phase
+     relies solely on the raw bytes in the TLS handshake           A. Machine Learning-Based Methods
+     messages. Encrypted flows that remain unclassified are           In 2014, Korczyński and Duda [12] proposed the concept
+     then forwarded to the message sequence phase.                 of Markov chain fingerprinting using first-order homogeneous
+  3) Phase 3: Message Sequence Phase. MPAF processes               Markov chains to model the probability of message type
+     the encrypted flows that remained unclassified after the      sequences. In 2017, Shen et al. [13] extended this concept
+     first two phases. The objective here is to classify all       by incorporating second-order message type Markov chains
+     these flows accurately based on the message sequence          with the lengths of the Certificate and first Application
+     of each flow.                                                 Data in the session. They proposed second-order Markov
+   Through these three phases, MPAF can classify encrypted         chain fingerprints with application attribute bigrams (SOB)
+flows accurately and more efficiently.                             to capture distinctive characteristics of applications. In 2020,
+                                                                   Montieri et al. [14] proposed a novel traffic classification
+                                                                   method for network traffic generated by anonymity tools
+C. Key Contributions                                               through a general hierarchical classification framework. The
+                                                                   proposed method uses per-flow statistical features for clas-
+  We briefly summarize our main contributions as follows:          sification. Additionally, to promote analysis of anonymity
+  • We propose an encrypted traffic classification system          tools’ traffic at different levels of granularity, Montieri et al.
+    called Multi-Phase Attribute Fingerprint (MPAF). MPAF          conducted experiments at three levels: (1) anonymous network
+    employs three phases to utilize distinct attributes that       level, (2) traffic type level, and (3) application level. Also in
+    emerge at different time periods within encrypted traffic      2020, Van Ede et al. [15] proposed a semi-supervised approach
+    communication, thereby enhancing classification effi-          for the mobile application fingerprint named FlowPrint. Flow-
+    ciency while maintaining high classification accuracy.         Print uses destination-related features to deal with unseen apps
+  • We utilize an embedding mechanism to transform discrete        without requiring prior knowledge. In 2021, Aceto et al. [16]
+    attributes into calculable vectors and use the message         proposed machine learning-based methods for modeling the
+    length sequence as a supplementary fallback attribute.         network traffic of mobile applications. The proposed method
+    Additionally, we design a leaf-node masking tree-based         introduced a novel heuristic to reconstruct application-layer
+    classifier to facilitate the multi-phase mechanism.            messages in the common case of encrypted traffic. They
+  • We compare the effectiveness and robustness of MPAF            designed and evaluated per-app modeling and prediction using
+    with state-of-the-art approaches on two real-world col-        Hidden Markov Models and high-order Markov Chains at
+    lected datasets and two public datasets. Experimental          both the packet level and message level. Also in 2021,
+    results demonstrate that MPAF achieves a remarkable            Ma et al. [17] proposed a context-aware website fingerprinting
+    classification accuracy ranging from 96.33% to 99.42%.         system for encrypted traffic. The system uses built-in spatial-
+    Besides, it exhibits a low Average Waiting Time (AWT)          temporal flow correlation for packet sizes to understand flow
+    ranging from 0.18s to 0.45s. Notably, MPAF outperforms         sequential patterns. In 2022, Xu et al. [18] proposed a creative
+    other approaches in scenarios demanding robustness,            path signature-based method named ETC-PS. ETC-PS adopts
+CHEN AND WANG: MPAF: ENCRYPTED TRAFFIC CLASSIFICATION WITH MULTI-PHASE ATTRIBUTE FINGERPRINT                                        7093
+
+
+
+                                                             TABLE I
+                                                    S UMMARY OF R ELATED W ORK
+
+
+
+
+session packet length sequences as the path signature and           same year, Lotfollahi et al. [24] proposed a convolution neural
+performs path transformations to exhibit its structure and          network-based approach named Deep Packet. Deep Packet
+obtain different information. In 2023, Piet et al. [19] proposed    takes the IP header and the first 1480 bytes of packets as
+GGFAST, a unified, automated framework designed to build            input and classifies them through the convolution and max
+powerful classifiers for specific network traffic analysis tasks.   pooling operations of the neural network. Also in 2020,
+GGFAST aims to automatically identify sets of patterns in           Zhang et al. [25] proposed an autonomous model update
+packet length sequences, which are critical characteristics of      scheme to achieve data filtering and dataset construction
+each category of traffic.                                           for unseen applications, and then update traffic classifiers
+                                                                    via transfer learning. In 20

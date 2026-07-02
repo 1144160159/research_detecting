@@ -1,0 +1,142 @@
+1422                                                                        IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+
+
+
+       Multimodal Anomaly Detection for Microservice
+          Systems via Grassmann Manifolds-Based
+                       Graph Fusion
+  Shiming He , Keyao Feng, Kaixuan Meng, Kun Xie , Member, IEEE, and Xibin Zhao , Senior Member, IEEE
+
+
+    Abstract—Microservice architecture decomposes complex appli-                   detection method, AnoFusion, MGFusion achieves an improvement
+cations into multiple small, independent services, enabling indepen-               in the F1 score ranging from 11.1% to 15.3%.
+dent deployment and scaling. However, microservice systems intro-
+duce complex and dynamic interactions between service instances.                      Index Terms—Anomaly detection, multimodal data, graph
+When a service instance fails, it can significantly degrade the per-               structure learning, graph fusion, grassmann manifolds.
+formance of the entire system, harm the user experience, and cause
+substantial economic losses. Therefore, effective anomaly detection
+for service instances is crucial to ensure system reliability. Metrics,                                        I. INTRODUCTION
+logs, and traces provide complementary insights into microservice
+                                                                                            ICROSERVICE architecture has emerged as the domi-
+operations, and recent approaches have attempted to jointly exploit
+these modalities for anomaly detection. However, the varying data
+volumes per interval and heterogeneous data types across modali-
+                                                                                   M        nant paradigm in modern software system design due to
+                                                                                   its modularity, scalability, and ease of maintenance. By decom-
+ties, combined with the complex and elusive relationships between                  posing complex applications into small, independently deploy-
+them, make effective representation and learning challenging. To                   able services, the microservice architecture enhances system
+address these limitations, we propose MGFusion, an unsupervised,                   flexibility and maintainability. Instances (e.g., virtual machines
+end-to-end multimodal anomaly detection method for microservice                    or containers) serve as operational entities of these services.
+systems using Grassmann manifolds-based graph fusion. MGFu-                           Microservice systems involve intricate and dynamic interac-
+sion employs a robust method to unify metrics, logs, and traces
+into time series, enabling consistent processing across modalities.
+                                                                                   tions among instances, including service invocations and re-
+It leverages multiple graph structure learning (GSL) techniques to                 source competition [1], [2]. Anomalies in instances significantly
+explore multi-view relationships between the modalities. To miti-                  degrade system performance, adversely impacting user experi-
+gate the impact of data noise, we further introduce prior knowledge                ence, and causing potential economic losses. Instance anomaly
+based on the Adamic-Adar Index (AAI) and employ a Grass-                           detection, which identifies Anomalies or abnormal behaviors of
+mann manifolds-based graph fusion method to combine multiple                       microservice instances by analyzing monitoring data, is essential
+basic graph structures. Finally, anomaly detection is achieved us-                 to ensure service reliability [3].
+ing Diffusion Convolutional Recurrent Neural Network (DCRNN)                          Microservice systems collect three primary types of status
+predictors and anomaly score calculation. Extensive experiments                    data [4]: metrics, logs, and traces, as illustrated in Fig. 1. Metrics
+on a public dataset demonstrate that MGFusion effectively fuses                    are quantitative measures of system performance, typically pre-
+multimodal data and captures complex relationships, significantly
+improving the accuracy and efficiency of anomaly detection. Com-
+                                                                                   sented as time series. Logs are semi-structured data generated
+pared to the state-of-the-art unsupervised multimodal anomaly                      by “printf” statements or logging frameworks, recording key
+                                                                                   system events [5]. Traces capture complete invocation chains
+                                                                                   between services, with each invocation represented as a “span”
+                                                                                   [6].
+   Received 30 June 2025; revised 11 December 2025; accepted 11 February              Fig. 1 shows an example of these data types. Metrics include
+2026. Date of publication 16 February 2026; date of current version 10 April
+2026. This work was supported in part by the National Natural Science Founda-      CPU usage rate, memory usage, and throughput, etc. Logs
+tion of China under Grant 62025201, Grant 62272062, and Grant 62321166652,         contain timestamped entries with levels (e.g., ERROR) and
+in part by the Science and Technology Innovation Program of Hunan Province         messages (e.g., “Try to get service’s inst, retry for 1 time... ”).
+under Grant 2023RC3139, in part by the Natural Science Foundation of Hunan         Traces include service caller, callee, timestamp, response time
+Province under Grant 2025JJ50373 and Grant 2024JJ3014, and in part by the
+Research Foundation of Education Bureau of Hunan Province under Grant
+                                                                                   (RT), and status codes. For instance, at timestamp 1625104624
+25A0188. (Corresponding author: Kun Xie.)                                          (2021-07-01 09:57:04), the RT from service S3 to S4 is 10
+   Shiming He, Keyao Feng, and Kaixuan Meng are with the School of Com-            seconds, with a status code of 200 (success). At timestamp
+puter Science and Technology, Hunan Provincial Key Laboratory of Intelligent       1625104625, the RT from S2 to S4 is 15 seconds, but the
+Processing of Big Data on Transportation, Changsha University of Science           status code is 500 (server error). These multimodal data offer
+and Technology, Changsha 410114, China (e-mail: smhe_cs@csust.edu.cn;
+kyfeng@stu.csust.edu.cn; kaixuan@stu.csust.edu.cn).                                complementary insights into the system’s status, making them
+   Kun Xie is with the College of Computer Science and Electronics Engineering,    invaluable for anomaly detection.
+Ministry of Education Key Laboratory of “Fusion Computing of Supercomput-             While single-modal anomaly detection methods [7], [8],
+ing and Artificial Intelligence”, Hunan University, Changsha 410082, China         [9], [10] have achieved some success, they are inherently
+(e-mail: xiekun@hnu.edu.cn).
+   Xibin Zhao is with the School of Software, Tsinghua University, Beijing
+                                                                                   limited. Anomalies often manifest differently across modalities,
+100084, China (e-mail: zxb@tsinghua.edu.cn).                                       as shown in Table I. For example, CPU contention is detectable
+   Digital Object Identifier 10.1109/TSC.2026.3665382                              via metrics but not logs or traces. Conversely, code logic errors
+
+      1939-1374 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+HE et al.: MULTIMODAL ANOMALY DETECTION FOR MICROSERVICE SYSTEMS VIA GRASSMANN MANIFOLDS-BASED GRAPH FUSION                                     1423
+
+
+
+                                                                TABLE I
+                     MULTIMODAL DATA ABNORMAL MODES FOR DIFFERENT ANOMALIES (‘−’ INDICATES NO DETECTABLE ABNORMALITY)
+
+
+
+
+                                                                                   using Graph Neural Networks (GNNs). However, early fusion
+                                                                                   faces several challenges:
+                                                                                      r Inconsistent Data Volume and Type in Time Series Conver-
+                                                                                        sion: Conversion should align multimodal data to a unified
+                                                                                        time interval. Multiple records may appear in a single
+                                                                                        interval, and the data volume per interval and data type
+                                                                                        often varies across modalities. While continuous data can
+                                                                                        be averaged, event-based data (e.g., logs or traces) require
+                                                                                        more nuanced handling to preserve semantic integrity.
+                                                                                        Naive averaging of discrete data, such as status codes, can
+                                                                                        lead to meaningless results. For example, for spans T1 and
+                                                                                        T2 in the same interval (such as one minute), a status code
+                                                                                        average of 350 (redirection) from 200 (success) and 500
+                                                                                        (server error) is meaningless. Some works [19], [20] ignore
+Fig. 1. Multimodal status data. The metrics fail to capture anomalous behav-
+                                                                                        them directly, and some works [18] retain only the value of
+iors in this case because the example represents a configuration error, as shown        the first span, discarding critical information (500 server
+in Table I. Such anomalies are exclusively reflected in logs and traces, rather         error).
+than in metrics.                                                                      r Noise in Raw Data Adversely Affects Relationship Learn-
+                                                                                        ing: Accurate modeling of inter-time series dependen-
+                                                                                        cies forms the foundation of graph-based anomaly detec-
+                                                                                        tion. Current approaches typically mine these relationships
+                                                                                        guided by raw data. Noise in raw data, which includes
+                                                                                        errors, interference, or loss that may occur during the
+                                                                                        processes of data collection, transmission, and storage, can
+                                                                                        mislead relationship learning and degrade the performance
+                                                                                        of graph-based anomaly detection models.
+                                                                                      r Limitations of Existing Relationship Learning Methods:
+                                                                                        Current methods often fail to capture complex, multi-
+Fig. 2. Key processes of early fusion-based multimodal anomaly detection,
+with the unified conversion into time series as an example.
+                                                                                        view dependencies across modalities. For example, mu-
+                                                                                        tual information-based methods [18] can handle linear
+                                                                                        correlations but struggle with nonlinear or hierarchical
+are reflected in logs and traces but not metrics. No single-modal                       dependencies. Graph structure learning (GSL) in single-
+data can cover all anomaly types. Thus, multimodal analysis is                          modal anomaly detection learns relationships among ho-
+essential for comprehensive and accurate anomaly detection.                             mogeneous nodes (e.g., metrics) but cannot generalize to
+   Data fusion is at the core of multimodal anomaly detection.                          heterogeneous node types (e.g., cross-modal interactions)
+Based on the fusion stage, existing methods fall into three cate-                       directly.
+gories: late fusion, early fusion, and intermediate fusion [11].                      To address these challenges, we propose MGFusion, a multi-
+Late fusion [12], [13], [14] combines independent detection                        modal anomaly detection framework for microservice systems
+results from each modality using voting or weighting. Early                        based on Grassmann manifolds and graph structure learning.
+fusion [15], [16], [17], [18], [19], [20] converts multimodal                      The key innovations of MGFusion include:
+data into a unified format, while intermediate fusion [21], [22],
+                                                                                      r Robust Time Series Conversion: MGFusion statistically
+[23], [24] extracts features independently for each modality and                        aggregates continuous data, and employs frequency en-
+combines them.                                                                          coding to convert discrete data while preserving critical
+   Early fusion has gained prominence due to its ability to                             information, addressing inconsistencies in data type.
+capture inter-modal interactions early in the processing pipeline.
+                                                                                      r Noise-Resilient Relationship Learning: MGFusion lever-
+The core steps in early fusion-based multimodal anomaly detec-                          ages the Adamic-Adar Index similarity metric [25] to
+tion consist of unified modality conversion, relationship learn-                        guide relationship learning, reducing the impact of noise
+ing, and graph-based anomaly detection. To illustrate this pro-                         by emphasizing meaningful node similarities.
+cess, we take the conversion of data into a unified time series
+                                                                                      r Grassmann Manifolds-Based Graph Fusion: MGFusion
+format as an example, as illustrated in Fig. 2. In this approach,                       learns multiple basic graph structures u

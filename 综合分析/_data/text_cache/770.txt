@@ -1,0 +1,141 @@
+4122                                                                       IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+
+
+
+             On Graph Design for GNN-Based Network
+                       Anomaly Detection
+       Killian Cressant , Federico Larroca , Stefano Secci , and Pedro Braconnot Velloso , Member, IEEE
+
+
+
+   Abstract—Graph Neural Networks (GNNs) have gained sig-                       the high scales of 5G (and beyond) infrastructures, proactive
+nificant attention for multivariate time series analysis in recent              detection helps maintaining low latency, high availability, and
+years. However, applying them to real-world networking data                     efficient resource utilization.
+introduces several key challenges, particularly in designing mean-
+ingful and effective graph structures. In this paper, we propose                   Nevertheless, one of the main challenges in detecting
+a novel method for constructing initial graphs tailored for time                anomalies in such systems is how to cope with a significant
+series anomaly detection in complex network environments. Our                   amount of data composed of a large number of time series
+approach, called COSI (COrrelation SImilarity), leverages two                   originating from different network/system components across
+fundamental properties of real-world data: feature name seman-                  diverse locations, often exhibiting complex spatial and tem-
+tics and statistical correlation. By combining natural language
+processing (NLP) with correlation analysis, COSI produces graph                 poral correlations [3]. In this context, traditional detection
+structures that significantly enhance GNN model performance                     methods, typically based on rule-based logic or statistical
+for anomaly detection tasks, outperforming conventional graph                   models, usually fall short in handling the scale, diversity, and
+construction methods in almost all evaluation scores across                     dynamism of today’s networks. They struggle to detect subtle
+all datasets. We extensively evaluate COSI on three datasets,                   or evolving anomalies and often rely on assumptions imprac-
+including two real-world networking datasets and one widely
+used benchmark dataset, and we open source the implementation                   tical for real-time applications [4]. Hence, in this paper we
+to encourage reproducibility, further research, and practical                   focus on realistic networking anomalies that usually concern
+adoption by the community.                                                      multiple time series simultaneously.
+  Index Terms—Time series, networks, anomaly detection, GNN,                       Consequently, there is a growing demand for more adaptive,
+graph structure.                                                                scalable, and intelligent approaches to anomaly detection in
+                                                                                network management [5]. A number of machine learning-
+                       I. I NTRODUCTION                                         based methods have been proposed to address these limitations
+
+T     HE increasing complexity of modern networked systems,
+      especially 5G and next-generation cellular infrastruc-
+tures, poses significant challenges for effective network
+                                                                                [6], [7]. More recently, Graph Neural Networks (GNNs) [8],
+                                                                                [9] have emerged as a promising solution for capturing the
+                                                                                intricate spatial and temporal dependencies across large sets
+management [1]. These environments are characterized by                         of time series — dependencies that traditional models such as
+high data volume, complex topologies, heterogeneous archi-                      Long Short-Term Memory (LSTM) and AutoEncoders often
+tectures, and diverse service demands. As a result, ensuring                    fail to detect effectively [3].
+high levels of reliability, performance, and security becomes                      Graph Neural Networks (GNNs) are a powerful paradigm
+increasingly difficult. Among the critical challenges is the                    for learning from graph-structured data and appear particularly
+timely detection and mitigation of anomalies, which may                         well-suited for modeling networked systems, which inher-
+arise from faults, intrusions, misconfigurations, or unexpected                 ently exhibit relational structures among their components.
+traffic behaviors [2]. Therefore, automating anomaly detection                  By capturing both the interactions and contextual relationships
+(AD) becomes essential in complex network environments for                      between entities, GNNs provide a robust framework for learn-
+ensuring service reliability and security, as it enables early                  ing complex behavior patterns in networks. However, a key
+identification of unusual patterns that may indicate cyberat-                   issue in applying GNNs lies in constructing an appropriate
+tacks, faults, or performance degradation. In addition, with                    graph structure that accurately models the underlying relation-
+   Received 21 September 2025; revised 20 March 2026; accepted 13 April         ships within the system data [10]. One basic approach involves
+2026. Date of publication 17 April 2026; date of current version 23 April       manually defining the graph based on domain knowledge or
+2026. This work was funded by CHIST-ERA Graphs4Sec (ANR-23-                     predefined metrics. Alternatively, graph learning techniques
+CHR4-0010), France 2030 INFLUENCE (DOS0192883) and IPCEI ME/CT
+(DOS0239248) projects. The associate editor coordinating the review of this     aim to infer automatically the graph structure from data; the
+article and approving it for publication was D. M. Manias. (Corresponding       main challenge in this context is identifying a sparse adjacency
+author: Killian Cressant.)                                                      matrix that best captures the real dependencies among the
+   Killian Cressant, Stefano Secci, and Pedro Braconnot Velloso are with the
+CEDRIC Laboratory, Conservatoire National des Arts et Métiers (CNAM),          components, while maintaining computational efficiency [11].
+75003 Paris, France (e-mail: killian.cressant@cnam.fr; stefano.secci@cnam.fr;      In this work, we propose COSI (COrrelation & SImi-
+pedro.velloso@cnam.fr).                                                         larity), a method to construct a graph adapted for GNNs
+   Federico Larroca is with the Universidad de la República, Montevideo
+11300, Uruguay (e-mail: flarroca@fing.edu.uy).                                  and specifically designed for anomaly detection in modern
+   Digital Object Identifier 10.1109/TNSM.2026.3684653                          networks with a high number of time series. Network data
+             1932-4537 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+CRESSANT et al.: ON GRAPH DESIGN FOR GNN-BASED NETWORK ANOMALY DETECTION                                                          4123
+
+
+
+often lack interpretable graph topology, or provide topology            In earlier approaches, AD was often addressed using semi-
+that is too noisy to be directly useful for GNN training. In         supervised learning. Such methods tend to train models
+such cases, GNNs can be initialized with a randomized struc-         primarily on data assumed to represent normal behavior,
+ture and subsequently refined using domain-specific insights         while evaluation is conducted on datasets that include both
+when available [8]. We introduce a general-purpose framework         normal and anomalous samples in a balanced manner, as
+designed to support the learning process of GNNs in network          in [14]. Traditional techniques rely on distance measures or
+anomaly detection across varied network environments with            density estimation to identify outliers. Anomaly detection has
+a novel graph construction methodology. The key idea is to           also been extensively studied in the context of time series.
+leverage both the semantic information embedded in feature           In the following, we focus on this type of data, which is
+names derived from the operating system and applications, and        particularly common in monitoring environments, such as
+the statistical correlations in the system data to construct the     network anomaly detection. With the rise of deep learning,
+graph structure. This approach is particularly well-suited to        new methods emerged for modeling time series, such as
+networking scenarios, where feature names are often intrinsi-        LSTM, Gated Recurrent Units (GRU), and other types of
+cally meaningful and tend to exhibit strong correlations with        Recurrent Neural Networks (RNNs). For anomaly detection,
+other features, that share similar naming conventions or are         these models are typically used to forecast future values, and
+linked by protocols stack interactions. In a previous version        anomalies are identified by measuring the discrepancy between
+of this work, we presented preliminary results using a single        predicted and observed values. This is commonly referred to
+dataset, comparing our approach to various graph structures          as the prediction-based approach [15], [16].
+and an LSTM-based solution [12]. In this paper, we enhance              Another common technique uses autoencoders in combina-
+our graph construction methodology to achieve the same               tion with models like LSTM. In this case, the system tries to
+results twice as fast. We further extend our evaluation to three     reconstruct the original time series from a compressed internal
+datasets. On the widely used SWaT benchmark, the proposed            representation. When the reconstruction fails to match the
+approach consistently surpasses conventional graph construc-         actual data, the deviation is flagged as an anomaly. This is
+tion methods, yielding up to a 4% improvement in a composite         known as the reconstruction-based approach [17], [18].
+score (defined as the product of standard machine learning              All of these approaches are built on the same principle:
+metrics) when employed with a vanilla GNN model, and up              modeling normal behavior and applying a scoring mechanism
+to 7.5% when combined with modern GNN-based anomaly                  to estimate the likelihood of an anomaly. However, in some
+detection algorithm GDN [8]. We also compare our framework           scenarios, such as with network traffic data, unusual data load
+with other state-of-the-art GNN models and analyze additional        is not necessarily an anomaly, as for instance a peak in data
+performance metrics. The main results demonstrate that using         traffic can be related to a legitimate situation, like a public
+the edge selection provided by COSI, which retains only              demonstration that concentrates a great number of users in a
+the most important edges, consistently improves efficiency           specific region of a city. As shown in [19], the reconstruction
+and outperforms other graph structures and models across all         error in such cases may not be sufficient to distinguish
+datasets for most of the evaluated metrics.                          anomalies, and simple thresholding becomes ineffective. A
+   The remainder is organized as follows. Section II describes       further limitation of these methods is their struggle to capture
+basic information on AD techniques. In Section III, we present       long-term dependencies in data [20].
+the related work focusing on GNN models applied to AD.                  A graph structure can be described by G = (V, E), a set
+Section IV defines our main design goals. To understand the          of Vertices V, a set of Edges E and, given an order on the
+requirements, we summarize the main characteristics of used          vertex, an adjacency matrix A representation of the graph. In
+datasets in Section V. We explain in detail the COSI graph           time series analysis, the initial graph structure often assumes a
+construction in Section VI. Section VII analyses main results.       fixed number of nodes N , each representing a vertex, and each
+Finally, we draw our conclusions and present the future work         vertex can be associated to a 1-D time series. In such cases,
+in Section VIII.                                                     for all i ∈ [0, N ], we have xi that is an observed window of
+                                                                     T observations. Hence, a fundamental problem is determining
+                      II. BACKGROUND                                 the set of edges E, or the adjacency matrix A, a task commonly
+   An anomaly is characterized by a value or a group of              referred to as association network inference. In the absence of
+values that significantly deviates from what is considered           explicit topological information, most approaches for inferring
+normal or expected behavior. From a statistical perspective,         E rely on constructing a similarity function S : V × V → R,
+detecting an anomaly involves finding a data projection in           such that S(i, j) = si,j . This similarity measure S can be
+which atypical patterns are more easily distinguished from           based on correlation (total or partial) [3], [21], distances [9],
+normal behavior. In high-dimensional spaces, however, this           or spectral properties such as eigenvalues [22]. Then, we can
+task becomes more complex and often requires machine learn-          use a threshold to create a simple binary graph structure, such
+ing models to effectively identify relevant projections. Since       that: S = 1 if s > T , otherwise 0. Alternatively, we can keep
+anomalies are rare events, collecting a sufficient amount of         the variation on S above the cut T . This function S, used
+labeled data for supervised learning is difficult. Additionally,     for each pair of nodes gives us the adjacency matrix A of G,
+in many real-world situations, it is challenging to clearly define   according to the order of vertex used.
+what qualifies as an anomaly, which makes labeling even more            When applying graph structures to Graph Neural Network
+difficult and inconsistent [13].                                     (GNN) models, specific properties of the adjacency matrix
+4124                                                             IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+
+
+are often preferred. Common desirable properties include              play a central role. In network environments, however, a
+sparsity, smoothness, and low-rank structure [23]. For instance,      fundamental challenge arises: unlike citation or road networks,
+favoring a sparse adjacency matrix can improve computational          no reliable ground-truth topology is typically available. As a
+efficiency and, in some cases, enhance model performance              result, graph construction becomes a critical design decision
+[24], [25]. On the other hand, smoothness and low-rank                that

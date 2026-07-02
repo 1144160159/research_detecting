@@ -1,0 +1,149 @@
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024                                                              5053
+
+
+
+
+             Contrastive Time-Series Anomaly Detection
+                     HyunGi Kim , Siwon Kim , Seonwoo Min , and Byunghan Lee , Member, IEEE
+
+
+   Abstract—In addition to its success in representation learning,                failure. Advances in deep learning methods for anomaly detec-
+contrastive learning is effective in image anomaly detection. Al-                 tion have enabled accurate detections of anomalies in multivari-
+though contrastive learning depends significantly on data aug-                    ate time-series [4], [5], [6], [7]. Moreover, deep-learning-based
+mentation methods, time-series data augmentation for time-series
+anomaly detection is not investigated sufficiently. Additionally,                 anomaly detection has shown remarkable adaptability across
+although time-series data share a temporal context, the existing                  various practical scenarios, including medical diagnosis [8],
+contrastive loss contrasts temporally related samples, in which                   gesture recognition [9], visitation prediction [10], and other
+deteriorated anomaly detection performance is observed on time-                   applications [11], [12]. Nonetheless, a more accurate, fast, and
+series data. Herein, we propose contrastive multivariate time-series              robust multivariate time-series anomaly detection framework
+anomaly detection (CTAD), a multivariate time-series anomaly
+detection framework that addresses these challenges by incorpo-                   that is applicable to real-world scenarios is necessitated.
+rating a one-class learning scheme into the contrastive loss based on                Contrastive learning has received attention owing to its
+meticulously designed time-series data augmentations. Specifically,               anomaly detection performance in the field of computer vi-
+we propose seven types of general time-series data augmentations                  sion [13], [14], [15]. For an encoder trained using contrastive
+to be applied variable- and point-wise, and provide guidance on                   learning, unseen anomalies or out-of-distribution samples are
+data augmentation methods for contrastive time-series anomaly
+detection. The superiority of the one-class contrastive loss and the              assumed to be encoded at a distance from the normal samples
+appropriate selection of time-series data augmentation allow CTAD                 in the embedding space. Thus, the anomaly score for an unseen
+to achieve outstanding performance in multiple datasets, even                     sample is defined based on the distance between the unseen
+using a simple long short-term memory network. Furthermore,                       sample and training samples, which are normal or in-distribution
+CTAD is robust to noise as it trains a noise-invariant network.
+                                                                                  samples. Existing contrastive learning-based anomaly detection
+This enables up to 47× faster and 20× more memory-efficient
+anomaly detection performance compared with existing methods                      methods in the image domain rely on instance discrimination by
+while affording robustness, which are essential considerations in                 exploiting contrastive loss.
+real-world applications.                                                             Owing to the successful incorporation of data augmentation
+ Index Terms—Anomaly detection, contrastive                         learning,     into contrastive learning frameworks, data augmentation has
+multivariate time-series, one-class classification.                               become the core component of contrastive learning frameworks.
+                                                                                  Existing approaches are typically based on instance discrim-
+                                                                                  ination [16], where representations from different instances
+                            I. INTRODUCTION                                       are discriminated in the embedding space. However, instance
+      NOMALY detection aims to detect anomalous behaviors                         discrimination can degrade the representation quality because
+A     that deviate from normal behaviors. As cyber-physical sys-
+tems (CPS) become more complex, more sensors and actuators
+                                                                                  semantically related samples (e.g., multiple dog images) in a
+                                                                                  mini-batch or queue can be regarded as negatives [17], [18].
+are used to operate the system [1], [2], [3]. This complexity                        In this study, we focus on some challenges in applying an
+renders anomaly detection in CPS more challenging, and unex-                      instance discrimination-based contrastive learning framework to
+pected behaviors can result in monetary damage or total system                    unsupervised multivariate time-series anomaly detection. First,
+                                                                                  for multivariate time-series data, one continuous signal is seg-
+                                                                                  mented with a sliding window, and each segment serves as
+   Manuscript received 21 December 2021; revised 31 January 2023; accepted 10
+November 2023. Date of publication 22 November 2023; date of current version
+                                                                                  an instance. Therefore, a temporal correlation exists between
+4 October 2024. This work was supported in part by the National Research Foun-    different instances, and treating them as negatives separates the
+dation of Korea (NRF) funded by the Ministry of Science and ICT under Grant       representations of related instances. Second, suitable data aug-
+NRF-2022R1C1C1006511, in part by the Information Technology Research
+Center (ITRC) support program under Grant IITP-2023-RS-2022-00156295, in
+                                                                                  mentation for contrastive time-series anomaly detection must be
+part by the BK21 FOUR program of the Education and Research Program for           investigated. Although data augmentations in image contrastive
+Future ICT Pioneers , Seoul National University in 2023, and in part by Hyundai   learning (e.g., cropping, color jittering, and rotation) have been
+Motor Company. Recommended for acceptance by X. Zhu. (Corresponding
+author: Byunghan Lee.)
+                                                                                  investigated [13], [19], these spatial or image-specific augmen-
+   HyunGi Kim and Siwon Kim are with the Department of Electrical and             tations are not applicable to time-series data. Because the appro-
+Computer Engineering, Seoul National University, Seoul 08826, South Korea         priate data augmentation method is vital to anomaly detection
+(e-mail: rlagusrl0128@snu.ac.kr; tuslkkk@snu.ac.kr).
+   Seonwoo Min is with the LG AI Research, Seoul 07796, South Korea (e-mail:
+                                                                                  performance [19], [20], extensive research for determining the
+seonwoo.min@gmail.com).                                                           optimal composition is indispensable.
+   Byunghan Lee is with the Department of Electronic Engineering, Seoul              A contrastive learning framework for multivariate time series
+National University of Science and Technology, Seoul 01811, South Korea
+(e-mail: bhlee@seoultech.ac.kr).
+                                                                                  anomaly detection, called contrastive multivariate time-series
+   Digital Object Identifier 10.1109/TKDE.2023.3335317                            anomaly detection (CTAD), is proposed herein. CTAD differs
+
+                         1041-4347 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+5054                                                 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024
+
+
+
+from previous contrastive methods for anomaly detection in that        B. Contrastive Learning for Time-Series
+the contrastive learning loss is based on one-class discrimination
+                                                                          Owing to the superior performance of contrastive learning in
+instead of instance discrimination. The proposed one-class dis-        image representation learning across many downstream tasks
+crimination considers all instances within the training distribu-
+                                                                       and multiple domains [24], [25], researchers have leveraged the
+tion as positives, whereas the negatives are sampled solely from
+                                                                       contrastive learning framework for time-series representation
+the augmented out-of-distribution. To contrast the negatives,          learning. SeqCLR [26] proposed channel recombination prepro-
+CTAD generates synthetic anomalies through negative data
+                                                                       cessing and time-series data augmentations for the contrastive
+augmentation, which intentionally generates out-of-distribution
+                                                                       representation learning of electroencephalogram (EEG) signals.
+data and has been effectively leveraged in the image domain [13],      However, this approach is only meaningful for bio-signals, such
+[15], [21]. We categorize time-series data augmentations into
+                                                                       as EEG signals, and data augmentation is particularly suitable
+three types: scale perturbation, temporality perturbation, and         for EEG signals. CLOCS [27] learns a patient-specific repre-
+noise interference. We empirically show that scale-perturbing          sentation of electrocardiogram (ECG) signals via contrastive
+augmentations are effective as negative data augmentation for
+                                                                       learning. In this regard, a data augmentation method that con-
+contrastive time-series anomaly detection.                             siders domain-specific knowledge of ECG signals is designed.
+   CTAD exhibits remarkable performance even with a simple             The transformed ECG segments originating from the same
+encoder architecture. With one layer LSTM [22], followed
+                                                                       patient are regarded as a positive pair. GATE [28] proposed a
+by projection layers consisting of two multi-layer perceptron          self-supervised learning method to classify neuro-disease using
+(MLP) layers with batch normalization, CTAD outperforms                functional magnetic resonance imaging (fMRI). To extract in-
+other alternatives that adopt complex architectures. Its simple
+                                                                       formative features from fMRI, GATE uses a domain-specific
+network enables fast and memory-efficient inferences. Our main         augmentation strategy to effectively augment the population
+contributions are summarized as follows:
+   r To the best of our knowledge, this is the first study to adopt    graph, which is an input to the graph convolutional network.
+                                                                       Similar to the image domain, appropriately designed data aug-
+      one-class learning to a contrastive learning framework for
+                                                                       mentation is crucial to the contrastive learning of time-series
+      multivariate time-series anomaly detection. We propose a
+                                                                       data. However, existing data augmentation strategies typically
+      one-class contrastive learning loss scheme that combines
+                                                                       require data-specific knowledge [26], [27], [28], rendering them
+      contrastive learning loss and a one-class learning scheme.
+   r We propose a time-series data augmentation strategy for           incompatible with other time-series data. Therefore, we aim
+                                                                       to identify the general time-series data augmentation methods
+      contrastive time-series anomaly detection that is generaliz-
+                                                                       for contrastive learning that do not require domain-specific
+      able, generates various samples by increasing randomness,
+                                                                       background knowledge. Moreover, we focus on effective data
+      and generates hard-negative samples.
+   r We inspect seven general time-series data augmentation            augmentations for time-series anomaly detection instead of rep-
+                                                                       resentation learning.
+      methods and provide a guideline for selecting the appro-
+      priate data augmentation method in contrastive time-series
+      anomaly detection, based on experiments and ablation
+      studies.                                                         C. Contrastive Learning for Anomaly Detection
+   r We empirically demonstrate the validity of our proposed              Contrastive learning demonstrates high representation quality
+      framework using multiple real-world datasets and show            that is applicable to many downstream tasks and transfer learn-
+      that it outperforms the compared methods even with a             ing [29]; recently, it has been shown to be effective in detecting
+      simple LSTM-based architecture.                                  out-of-distribution data in the image domain [13], [14], [15].
+                                                                          CSI [13] exploits undesirable augmentations for standard con-
+                       II. RELATED WORK                                trastive representation learning (e.g., rotations). It additionally
+                                                                       generates instances from those augmentations and trains the
+A. Contrastive Learning
+                                                                       encoder with existing instance discrimination-based contrastive
+   Contrastive learning is a self-supervised representation learn-     loss and an auxiliary classifier to predict data augmentation.
+ing framework that encodes the semantic information of data            SSD [14] proposed an anomaly score based on the cluster-
+without hand-labeled supervision. It causes the representation         conditioned Mahalanobis distance in the embedding space; how-
+of semantically related samples (i.e., positives) to be attracted      ever, the encoder network was trained with the existing instance
+while being repelled from the others (i.e., negatives). Recent         discrimination-based contrastive loss. In another study [15], a
+works define a positive sample as an augmented view from the           one-class classifier was trained on a learned representation in a
+same instance (e.g., image) and define a negative sample as an       

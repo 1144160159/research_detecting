@@ -1,0 +1,150 @@
+2220                                                                    IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+
+
+
+             MT-DEGCL: Multi-Task Encrypted Traffic
+             Classification With Dual Embedding and
+                    Graph Contrastive Learning
+                     Xiaolan Zhu , Junfeng Wang , Member, IEEE, Wenhan Ge , and Xinbo Han
+
+   Abstract—Although encryption offers strong anonymity, it                    employed to secure and anonymize network traffic [1]. While
+also facilitates the concealment of malicious activities, allowing             providing strong anonymity, they also enable malicious actors
+adversaries to evade detection, and posing a great challenge                   to hide their identities and engage in illicit activities, com-
+to cybersecurity surveillance. Many existing encrypted traffic
+classification methods struggle to integrate flow- and packet-                 plicating traffic classification and source tracing. According
+level tasks effectively, as they are trained independently, which              to Zscaler, threat actors are increasingly exploiting encrypted
+is redundancy. Additionally, packet header and payload are                     channels to deliver malware and conceal malicious activities,
+treated equally, leading to the rich information in raw bytes                  with 32.1 billion threats hidden in encrypted traffic, accounting
+remains fully unexplored, particularly in the abundant payload                 for 87.2% of total threats in 2024 [2]. How to effectively
+data. Moreover, they neglect the semantic invariance and com-
+mon features between data samples, which ultimately results                    represent encrypted traffic for accurate identification of
+in suboptimal performance. To address these challenges, we                     potential security threats, while preserving privacy pro-
+propose an effective Multi-Task model using Dual Embedding                     tection principles, has become a significant challenge.
+and Graph Contrastive Learning (MT-DEGCL). Based on the                           Many approaches have been put forward to enhance the per-
+byte-packet-flow structure of network traffic, a parallel dual                 formance of encrypted traffic classification. Earlier methods,
+embedding embeds the header and payload separately, followed
+by a cross-gated feature fusion strategy to capture the strong                 such as port-based classification and Deep Packet Inspection
+local packet-level representation. Then, we construct the traffic              (DPI) [3], [4], [5], have become less effective due to the
+interaction graph and further utilize graph contrastive learning               increasing use of dynamic ports and the substantial compu-
+to extract the robust global flow-level representation. Finally,               tational overhead [6]. Subsequently, statistical feature-based
+a multi-task model is trained for joint flow- and packet-level                 methods extract traffic features, such as packet lengths and
+classification, leveraging the complementary learning between
+tasks to enhance overall performance. The experimental results                 inter-arrival times, to enhance classification performance [7],
+on four real datasets highlight the effectiveness of MT-DEGCL,                 [8], [9], [10], [11]. However, they face challenges from
+demonstrating superior performance in both tasks. Specifically,                advanced traffic obfuscation mechanisms, and the limitations
+on the ISCX-Tor dataset, MT-DEGCL achieves F1 scores of                        of hand-crafted features may lead to failure due to unreliable
+98.63% for flow-level classification and 98.10% at the packet                  flow statistical information in some cases [12]. Additionally,
+level, surpassing the state-of-the-art (i.e., DE-GNN) by 2.03%
+and 83.21%, respectively. Furthermore, MT-DEGCL maximizes                      these methods usually rely on observing the entire flow, which
+the rich information in raw payload bytes, significantly reducing              makes it difficult to perform accurate classification in the early
+or even nearly eliminating classification loss when using only                 stages of the flow.
+payload data.                                                                     The widespread use of deep learning has greatly improved
+  Index Terms—Encrypted traffic classification, multi-task                     the performance of encrypted traffic classification [13], [14],
+model, dual embedding, graph contrastive learning.                             [15], [16], [17]. By using raw packet bytes, these methods
+                                                                               can automatically learn and uncover hidden traffic patterns.
+                         I. I NTRODUCTION                                      Recently, several methods based on Graph Neural Networks
+                                                                               have been proposed [18], [20], [21], [22], [23], which can
+T      O PROTECT user privacy, privacy-enhancing tools
+       such as Virtual Private Networks (VPNs) and Tor are                     uncover underlying relationships and dependencies within the
+                                                                               traffic, enabling more accurate modeling of complex behaviors.
+   Received 21 April 2025; revised 15 December 2025; accepted 3 Febru-         While effective, most of them directly use raw bytes, resulting
+ary 2026. Date of publication 12 February 2026; date of current version        in the underutilization of the rich information in raw bytes,
+20 February 2026. This work was supported in part by the National Natural
+Science Foundation of China under Grant U24B20147; and in part by the          especially for the abundant payload data. The meaning of two
+Major Science and Technology Special Project of Sichuan Province under         bytes with identical values in the header and payload of a
+Grant 2025ZDZX0059, Grant 2026YFHZ0121, Grant 2024ZDZX0044, and
+Grant 2024ZHCG0195. The associate editor coordinating the review of this
+                                                                               packet may be completely different [21]. Besides, they often
+article and approving it for publication was Prof. Kun Sun. (Corresponding     neglect the semantic invariance and common features across
+author: Junfeng Wang.)                                                         data samples. By effectively mining these invariant common
+   Xiaolan Zhu is with the National Key Laboratory of Fundamental Science      characteristics, the model can become more resilient to varia-
+on Synthetic Vision, Sichuan University, Chengdu 610065, China.
+   Junfeng Wang and Wenhan Ge are with the College of Computer Science,        tions in network conditions, ensuring consistent and accurate
+Sichuan University, Chengdu 610065, China (e-mail: wangjf@scu.edu.cn).         classification even under unstable or fluctuating network envi-
+   Xinbo Han is with the Institute of Information Engineering, Chinese
+Academy of Sciences, Beijing 100085, China.
+                                                                               ronments. Moreover, they train packet-level and flow-level
+   Digital Object Identifier 10.1109/TIFS.2026.3664007                         classification tasks independently, leading to redundancy and
+             1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+ZHU et al.: MULTI-TASK ENCRYPTED TRAFFIC CLASSIFICATION WITH DUAL EMBEDDING LEARNING                                              2221
+
+
+
+inadequate exploration of their interrelationships. Therefore,     A. Graph Neural Networks
+how to effectively integrate the complementary strengths of           Graph Neural Networks (GNNs) are a series of neural
+flow- and packet-level tasks into a single model for robust        networks designed to process graph-structured data by prop-
+classification at both levels remains a key challenge.             agating and aggregating information between nodes for tasks
+   In this paper, we propose an effective Multi-Task               like node and graph classification. The core process consists
+model using Dual Embedding and Graph Contrastive                   of two steps: message passing and aggregation. During the
+Learning (MT-DEGCL) for encrypted traffic classification.          message passing phase, nodes exchange information with their
+From the perspective of the byte-packet-flow structure of          neighbors to gather features, and the formula is given by:
+network traffic, MT-DEGCL is composed of four modules:                                     X
+packet-level representation, traffic interaction graph construc-                     v =
+                                                                                   m(k)          MP(k) (h(k−1)
+                                                                                                         u     , euv )        (1)
+tion, flow-level representation and multi-task classification.                              u∈N (v)
+Specifically, the packet-level representation module extracts
+                                                                   where m(k)                                              (k−1)
+                                                                          v is the message received by node v at layer k, hu
+local contextual semantic features using a parallel dual embed-
+                                                                   denotes the feature of neighboring node u at the previous layer,
+ding sub-module, followed by cross-gated feature fusion
+                                                                   N (v) is the set of neighbors of node v, euv represents the
+strategy to form strong packet-level representation. The traffic
+                                                                   edge feature between nodes u and v, and MP(k) (·) refers to the
+interaction graph construction module is designed to uncover
+                                                                   message passing function at layer k.
+global traffic patterns and dependencies from an unstruc-
+                                                                      In the aggregation phase, nodes combine the collected
+tured graph, which is constructed using the learned packet
+                                                                   features using aggregation operations to update their repre-
+representations along with their directions. The flow-level
+                                                                   sentations, as depicted by:
+representation module employs graph contrastive learning
+                                                                            v =σ W
+                                                                           h(k)        (k)
+                                                                                           · AGG {m(k)                 (k)
+                                                                                                                          
+[24] to identify the invariant common features across data                                         u : u ∈ N (v)} + b           (2)
+samples and capture the global interaction patterns between
+packets. In the multi-task classification module, we train a       where AGG(·) is the aggregation function, W (k) and b(k) refer
+joint flow- and packet-level multi-task model to fully leverage    to the weight matrix and bias term at layer k.
+the complementary advantages of both tasks. This unified
+model not only effectively captures fine-grained packet-level      B. Contrastive Learning
+details but also broader flow-level patterns, thereby enhanc-        Contrastive Learning is a self-supervised learning approach
+ing overall classification performance. Consequently, a series     designed to learn effective feature representations by compar-
+of experiments validate the effectiveness and superiority of       ing the similarities between samples. Its objective is to bring
+MT-DEGCL, demonstrating its robust classification perfor-          positive samples closer together in the embedding space while
+mance across different scenarios.                                  pushing negative samples farther apart. To achieve this, various
+   To sum up, the main contributions of this paper include:        data augmentation techniques are applied to each data sample,
+   1) We propose MT-DEGCL, a multi-task model that can             generating distinct views for comparison. The model is trained
+       simultaneously perform flow- and packet-level classi-       to maximize the similarity between positive samples while
+       fication tasks with almost no additional parameters.        minimizing the similarity between negative samples through
+       By optimizing both tasks collaboratively, the model’s       the contrastive loss function, which is formulated as:
+       generalization capability is enhanced.                                                exp(sim(zi , z j )/τ)
+   2) We utilize a parallel dual embedding module with                            L = − log PN                                    (3)
+       CNN-LSTM and attention mechanisms to independently                                    k=1 exp(sim(zi , zk )/τ)
+       encode packet header and payload, capturing key spa-        where zi and z j are the embeddings of augmented views of
+       tiotemporal features, which are then fused using a          the same instance, which form a positive sample pair, and
+       cross-gated strategy to generate a strong local packet-     sim(zi , z j ) quantifies their similarity. The temperature parame-
+       level representation.                                       ter τ controls the sharpness of the similarity distribution, and
+   3) We construct a traffic interaction graph based on packet     N is the total number of samples in the batch.
+       representations and directions to better uncover hidden
+       relationships and interaction patterns within the dynamic                        III. R ELATED W ORK
+       network traffic. Further, graph augmentation and con-
+                                                                      Research on encrypted traffic classification mainly includes
+       trastive learning techniques are employed to capture the
+                                                                   statistical feature-based, deep learning-based, and graph neural
+       robust global interaction patterns at the flow level.
+                                                                   network-based approaches.
+   The rest of the paper is organized as follows: Section II
+introduces the background, Section III reviews related work,
+and Section IV details the MT-DEGCL method. Section V              A. Statistical Features-Based Methods
+presents the experimental setup and results, and we provide           Statistical feature-based methods usually use features like
+the discussion and conclusion in Sections VI and VII.              packet sizes, inter-arrival times, and flow durations, under the
+                                                                   assumption that different applications exhibit distinct traffic
+                      II. BACKGROUND                               patterns. These features are then utilized to train machine
+  In this section, we provide a 

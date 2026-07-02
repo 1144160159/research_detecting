@@ -1,0 +1,159 @@
+                                    IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026                                         945
+
+
+
+
+           SD-RetinaNet: Topologically Constrained
+            Semi-Supervised Retinal Lesion and
+                Layer Segmentation in OCT
+       Botond Fazekas , Guilherme Aresta , Philipp Seeböck , Julia Mai , Ursula Schmidt-Erfurth ,
+                                       and Hrvoje Bogunović
+
+
+
+
+   Abstract— Optical coherence tomography (OCT) is                          current state-of-the-art in both lesion and layer segmen-
+widely used for diagnosing and monitoring retinal dis-                      tation, while demonstrating the ability to generalize layer
+eases, such as age-related macular degeneration (AMD).                      segmentation to pathological cases using partially anno-
+The segmentation of biomarkers such as layers and lesions                   tated training data. Our results demonstrate the potential
+is essential for patient diagnosis and follow-up. Recently,                 of using anatomical constraints in semi-supervised learn-
+semi-supervised learning has shown promise in improv-                       ing for accurate, robust, and trustworthy retinal biomarker
+ing retinal segmentation performance. However, existing                     segmentation.
+methods often produce anatomically implausible segmen-
+tations, fail to effectively model layer-lesion interactions,                 Index Terms— OCT, disentangled representation,
+and lack guarantees on topological correctness. To address                  anatomical priors, retinal biomarker segmentation.
+these limitations, we propose a novel semi-supervised
+model that introduces a fully differentiable biomarker topol-                                      I. I NTRODUCTION
+ogy engine to enforce anatomically correct segmentation
+of lesions and layers. This enables joint learning with bidi-
+rectional influence between layers and lesions, leveraging
+                                                                            O      PTICAL Coherence Tomography (OCT) is the gold
+                                                                                   standard imaging modality for the monitoring of retinal
+                                                                            pathologies and the management of patients with eye dis-
+unlabeled and diverse partially labeled datasets. Our model
+learns a disentangled representation, separating spatial                    eases. OCT provides clinicians with a detailed cross-sectional
+and style factors. This approach enables more realistic                     depiction of the retina, facilitating the assessment of diverse
+layer segmentations and improves lesion segmentation,                       imaging biomarkers, notably the thickness of the retinal layers
+while strictly enforcing lesion location in their anatomi-                  and volumes of retinal fluid compartment. These are crucial
+cally plausible positions relative to the segmented layers.                 indicators for identifying and monitoring retinal diseases and
+We evaluate the proposed model on public and internal
+datasets of OCT scans and show that it outperforms the                      guiding the treatment of pathologies such as diabetic macular
+                                                                            edema (DME) and age-related macular degeneration (AMD),
+                                                                            both prominent causes of global vision impairment [1]. In
+   Received 18 August 2025; accepted 23 September 2025. Date of
+publication 1 October 2025; date of current version 4 March 2026. This      particular, the manifestations of AMD in the eye include,
+work was supported in part by the Christian Doppler Research Asso-          among others, intraretinal cystoid fluid (IRF), subretinal fluid
+ciation, in part by Austrian Federal Ministry of Economy, Energy and        (SRF), subretinal hyperreflective material (SHRM), and pig-
+Tourism, in part by the National Foundation for Research, Technology
+and Development, and in part by Heidelberg Engineering. Recom-              ment epithelial detachment (PED) [2], [3].
+mended by Associate Editor Y. Zhao. (Corresponding author: Botond              Large amount of data accrued during routine clinical prac-
+Fazekas.)                                                                   tice, in conjunction with the demanding clinical workflow,
+   Botond Fazekas, Guilherme Aresta, and Hrvoje Bogunović are
+with the Christian Doppler Laboratory for Artificial Intelligence in        makes manual quantification of retinal biomarkers unfeasi-
+Retina, Institute of Artificial Intelligence, Center for Medical Data       ble in clinical practice. To combat this, automated retinal
+Science, Medical University of Vienna, 1090 Vienna, Austria,                biomarker segmentation techniques have been developed,
+and also with the Comprehensive Center for AI in Medicine,
+Medical University of Vienna, 1090 Vienna, Austria (e-mail:                 along with the commercialization and widespread adoption of
+botond.fazekas@meduniwien.ac.at;              guilherme.moreiraaresta@      OCT technology [4]. At the same time, the large variability
+meduniwien.ac.at; hrvoje.bogunovic@meduniwien.ac.at).                       of pathological manifestations, their effect on the signal, as
+   Philipp Seeböck is with the Medical Anomaly Detection (MANO)
+Group, Computational Imaging Research (CIR), Department of Biomed-          well as the nature of OCT imaging, characterized by factors
+ical Imaging and Image-Guided Therapy, Medical University of Vienna,        such as speckle noise, intensity fluctuations, and shadowing
+1090 Vienna, Austria, and also with the Comprehensive Center for AI         induced by biological tissues, presents a challenging task for
+in Medicine, Medical University of Vienna, 1090 Vienna, Austria (e-mail:
+philipp.seeboeck@meduniwien.ac.at).                                         the segmentation of retinal layers.
+   Julia Mai and Ursula Schmidt-Erfurth are with the Department of Oph-        Recent advancements in retinal biomarker segmentation
+thalmology and Optometry, Medical University of Vienna, 1090 Vienna,        algorithms frequently rely on supervised deep learning
+Austria (e-mail: julia.mai@meduniwien.ac.at; ursula.schmidt-erfurth@
+meduniwien.ac.at).                                                          methodologies, necessitating extensive training datasets anno-
+   Digital Object Identifier 10.1109/TMI.2025.3615240                       tated with meticulous precision [5]. However, the acqui-
+
+            1558-254X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                 and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                  See https://www.ieee.org/publications/rights/index.html for more information.
+946                                                                IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026
+
+
+
+
+sition of high-fidelity manual annotations for pathological        of retinal layer and fluid segmentation was already realized
+scenarios entails a multifaceted, labor-intensive, and resource-   in [21] and a joint segmentation method for these tasks was
+demanding process. Therefore, automated solutions must             proposed, based on a dynamic programming algorithm.
+leverage prior anatomical knowledge. Specifically, while reti-        However, these retinal biomarker segmentation methods rely
+nal layers maintain a consistent relative position and lesions     heavily on hand-crafted image features, leading to a potentially
+appear in well-defined locations, the presence of lesions          degraded performance in the presence of noise, imaging arti-
+critically distorts layer morphology. This creates a complex       facts or severe pathologies. As a hybrid approach, a machine
+bidirectional influence: layer anatomy constrains plausible        learning-based method was proposed in [6], which combined
+lesion locations, while lesions, in turn, deform the layers.       unsupervised feature representation and heterogeneous spatial
+Accurately modeling this intricate relationship, especially        context with a graph-theoretic surface segmentation, which
+while ensuring topological consistency, is a major challenge       allowed a joint segmentation of layers and lesions.
+not fully addressed by methods treating these segmentations           With the rise of deep learning, several convolutional neural
+independently or sequentially [5], [6], [7], [8], [9], [10].       network (CNN)-based retinal biomarker segmentation methods
+   This challenge is compounded by the nature of available         have been introduced. These were predominantly built on
+data. Due to labor costs and specialized expertise, simultane-     U-Net [22] and its variants. ReLayNet [23] predicts the pixel-
+ously annotating both layers and lesions across large datasets     wise locations of nine retinal layers and potential fluid-filled
+is rare. Consequently, many public and clinical datasets are       pockets. This was later extended to 3D and various types
+partially annotated, with some containing only layer anno-         of fluids in [5]. In the 2017 MICCAI Retinal OCT Fluid
+tations, and others only lesion annotations. A prominent,          Challenge (RETOUCH) [24], all participants employed CNN-
+unsolved challenge is, therefore, how to effectively train a       based methods, primarily based on the U-Net architecture.
+single, robust model that leverages these diverse, partially       Subsequently, the self-configuring nnU-Net [25] established a
+annotated sources while respecting the complex anatomical          new state-of-the-art performance on this data.1 In [9] a dual-
+relationships described above.                                     branch multitask model was introduced, with the first branch
+   In this study, we propose a novel segmentation framework        outputting boundary labels while the second branch outputs
+for retinal OCT designed specifically to address these dual        region segmentation labels. The two outputs are fused together,
+challenges. Our approach’s core innovation is a differentiable     providing constraints from region segmentation to layer sur-
+biomarker topology engine, which, for the first time, enables      faces, but not explicitly modeling the influence of layers on
+joint learning with true bidirectional influence between layers    lesions or the constraints imposed by lesion locations.
+and lesions under strict anatomical constraints. To apply this        Convolutional operators inherently possess local proper-
+framework in a realistic data environment, we build upon a         ties and inductive biases, and thus have a limited field of
+disentangled representation [11], [12]. This supporting archi-     view. Consequently, transformers are increasingly adopted
+tecture is essential for our semi-supervised strategy, allowing    as an alternative to CNN-based methods for medical image
+the model to effectively integrate and learn from diverse          segmentation, due to their global self-attention mechanism
+sources of unlabeled and, crucially, partially annotated data.     [26]. Vision Transformers [26] have demonstrated state-of-
+The proposed approach was extensively evaluated on multiple        the-art performance on various benchmarks, though they
+public and internal datasets, demonstrating state-of-the-art       require a large volume of training data and substantial
+performance and showing its unique ability to generalize layer     computational resources. SwinUNETR [27] addressed these
+segmentation to pathological cases by synergistically learning     limitations in medical image segmentation by introducing
+from disparate data sources.                                       a hierarchical vision transformer, utilizing a hybrid CNN-
+                                                                   transformer architecture, achieving both higher accuracy and
+                                                                   improved computational efficiency. U-Mamba [28], which
+A. Related Works
+  .
+
+
+
+
+                                                                   inherits the self-configuring capability of nnU-Net, employs
+   1) Retinal Biomarker Segmentation: Early retinal layer          Mamba blocks in conjunction with CNNs instead of trans-
+segmentation algorithms typically involved extracting hand-        formers, thereby efficiently enhancing the global attention
+crafted features from B-scans (cross-sectional images of the       mechanism of the models.
+retina) and using graph-based techniques to infer the positions       Building on the latest developments in hybrid CNN-
+of retinal surfaces. For instance, the Iowa Reference Algo-        transformer based methodologies, TCCT [29] introduces a
+rithms [13], [14] transformed OCT data into a graph structure,     retinal layer segmentation model with a lightweight trans-
+using graph-search algorithms to identify surface positions        former module with cross-convolutional integration to increase
+while maintaining topological accuracy, layer thickness con-       the receptive field of the CNN backbone. The model yields
+straints, and smoothness. Subsequent enhancements to these         pixel-level segmentation of an OCT scan with an optional sub-
+graph-based techniques were made in [15], [16], [17], and          sequent edge-detection-like step converting the segmentation
+[18].                                                              into layer boundaries, thereby partially transforming the task
+   Similarly, traditional lesion segmentation models also relied   into a regression problem. However, this boundary conversion
+on hand-crafted image features. In [19], they proposed an          cannot be used effectively when fluids are present [29], high-
+anomaly detection model based on retinal texture for lesion
+segmentation. Later, in [20], they proposed a 3D voxel classifi-
+cation model with a graph-cut approach. The interdependence          1 https://retouch.grand-challenge.org/Results/
+FAZEKAS et al.: SD-RetinaNet: TOPOLOGICALLY CONSTRAINED SEMI-SUPERVISED RETINAL LESION                                             947
+
+
+
+
+lighting the difficulty of layer-only methods in pathological       explicit anatomical topology constraints specific to retinal
+regions.                                                            structures.
+   The aforementioned methods still allow anatomically                 Contrastive learning approaches learn discriminative repre-
+implausible segmentations, such as multiple locations for           sentations by contrasting features from similar and dissimilar
+a layer boundary position in an A-scan (a column of a               regions. Methods like Pixel Contrast [37] and Cross-Patch
+B-scan). He et al. [8] proposed to improve the coherence of         Dense Contrastive Learning [38], as well as state-of-the-art
+retinal layer segmentation by predicting the positions of the       frameworks such as ACTION++ [39] which uses adaptive
+shallowest surface and then iteratively rectifying all deeper       contrast to handle class imbalance, have proven effective.
+surfaces to ensure that they have greater or equal depth. These     However, these methods generally focus on feature discrim-
+surfaces are obtained from a softmax mapping that encodes           ination rather than enforcing the global anatomical structure
+the most probable location of the layer boundary. In a multi-       and spatial relationships required for accurate and plausible
+task setting, the system also predicts an ind

@@ -1,0 +1,1402 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [387] Contrastive Multi-Knowledge Graph Learning for Fake News Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：387
+题名：Contrastive Multi-Knowledge Graph Learning for Fake News Detection
+年份：2025
+DOI：10.1109/tnse.2025.3567296
+来源：IEEE Transactions on Network Science and Engineering
+PDF：paper/10.1109_TNSE.2025.3567296.pdf
+已有粗分类：图学习、知识图谱与威胁情报
+二级关联：其他AI安全与跨域异常检测
+相关性：弱相关，分数 4
+已有代码状态：已下载；Congrat -> source\Congrat
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\387.txt
+- 原始字符数：75580
+- 本次发送字符数：75580
+- 是否截断：False
+
+代码包：
+- 仓库：Congrat
+  - URL：https://github.com/KG4FD/Congrat
+  - 状态：downloaded
+  - 本地目录：source\Congrat
+  - 顶层结构：data/、figs/、readme.md、requirements.txt、src/
+  - 主要语言：Python:3
+  - README 标题：
+  - README 运行线索：sh connections between them. We define three types of edges in the HG:；Python Dependencies </h2>；Python 3.7 and major libraries include:；python src/main.py；sh connections between them. We define three types of edges in the HG:；Python Dependencies </h2>；Python 3.7 and major libraries include:；python src/main.py
+  - 关键文件：{"依赖环境": ["requirements.txt"], "推理/演示入口": ["src/main.py"], "模型定义": ["src/model.py"]}
+  - 数据集线索：cert、tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+3948
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 5, SEPTEMBER/OCTOBER 2025
+
+Contrastive Multi-Knowledge Graph Learning
+for Fake News Detection
+Bingbing Xie , Xiaoxiao Ma , Shan Xue , Jian Yang , Member, IEEE, Jia Wu , Senior Member, IEEE,
+and Hao Fan
+
+Abstract—The widespread dissemination of fake news on social
+media platforms has significantly disrupted people’s daily lives,
+causing substantial inconvenience and loss. Although fake news
+detection has captivated great research effort, most of the existing
+works either overlook the complementary ground knowledge, formulated in individual knowledge graphs (KGs) or ignore multiple
+aspects of knowledge in different knowledge graphs. In this paper,
+we propose a novel contrastive learning framework for investigating the complementary knowledge in different knowledge graphs,
+which achieves superior fake news detection performance. We first
+model three components within news articles (i.e., news content, entities, and topics) as a heterogeneous graph (HG). Subsequently, we
+leverage the valuable factual evidence among real-world entities,
+which is enclosed in two open-source knowledge graphs (Wikidata
+and DBpedia), and augment the heterogeneous graph into three
+augmented graphs. We then fuse knowledge-enhanced high-level
+news representations from each augmented graph and extract
+a unified news representation through our proposed contrastive
+multi-knowledge graph learning framework, which is ultimately
+utilized to identify fake news. We conduct extensive experiments
+on four public fake news datasets and demonstrate the superiority
+of our method over nine state-of-the-art baselines regarding five
+widely-used evaluation metrics (i.e., accuracy, precision, recall,
+F1-score, and ROC).
+Index Terms—Fake news detection, anomaly detection,
+knowledge graph, graph neural networks (GNNs), contrastive
+learning.
+
+I. INTRODUCTION
+
+T
+
+HE popularity of social media, like Twitter, Instagram,
+Weibo, etc., has significantly stimulated and accelerated
+
+Received 14 April 2024; revised 28 March 2025; accepted 28 March 2025.
+Date of publication 6 May 2025; date of current version 25 August 2025. This
+work was supported in part by Chinese National Natural Science Foundation
+under Project 72474160 and Project 72374161, in part by Australian Research
+Council under Project DP230100899, and in part by Macquarie University Data
+Horizons Research Centre and Applied Artificial Intelligence Centre supported
+this work. Recommended for acceptance by Dr. Dusit Niyato. (Bingbing Xie
+and Xiaoxiao Ma contributed equally to this work.) (Corresponding authors:
+Jia Wu; Hao Fan.)
+Bingbing Xie is with the School of Information Management, Wuhan
+University, Wuhan 430072, China, and also with the School of Computing, Macquarie University, Sydney, NSW 2113, Australia (e-mail: bingbing.
+xie@hdr.mq.edu.au, xbbice@outlook.com).
+Xiaoxiao Ma, Shan Xue, Jian Yang, and Jia Wu are with the School of
+Computing, Macquarie University, Sydney, NSW 2113, Australia (e-mail:
+xiaoxiao.ma2@hdr.mq.edu.au; emma.xue@mq.edu.au; jian.yang@mq.edu.au;
+jia.wu@mq.edu.au).
+Hao Fan is with the School of Information Management, Wuhan University,
+Wuhan 430072, China (e-mail: hfan@whu.edu.cn).
+Digital Object Identifier 10.1109/TNSE.2025.3567296
+
+the online intercommunication of people all over the globe. As is
+well-known, advanced communication techniques undoubtedly
+bring people closer together but come with the exponential
+growth of fake news produced on social media platforms. The
+rapid spread of fake news not only has an undesirable impact
+on individuals, such as damage to reputation, influence on
+decision-making, and erosion of trust but also causes serious
+consequences to society, like economic degradation, social division, and even public panic [1], [2]. Meanwhile, it is extremely
+challenging for individuals or organizations lacking prior knowledge to avoid being affected by fake news due to its complex
+content, underscoring the urgency of fake news detection [3],
+[4], [5].
+To effectively identify fake news, recent efforts could be
+divided into two categories, i.e., natural language processing
+(NLP)-based methods and graph neural networks (GNNs)-based
+methods. The former methods investigate fake news detection as a text classification task, where NLP techniques (e.g.,
+long short-term memory neural networks (LSTM), recurrent
+neural networks (RNNs) [6], convolutional neural networks
+(CNNs) [7], etc.) are applied to detect fake news from semantic
+features of news articles. However, approaches in this line fail to
+explore the news structural features, such as the relations among
+entities, topics, and news. Therefore, the latter methods model
+structural and textual information of news articles as graphs
+and employ GNNs for fake news detection [8]. The overall
+framework of GNN-based approaches can be summarized as:
+1) First, the content and structure of news are extracted to construct informative graphs. 2) Second, the designed graph neural
+networks are used to generate efficient news representations.
+3) Eventually, the news is classified as fake or real based on
+the representations. These works concentrate on modeling news
+articles and designing effective graph neural networks but ignore
+exploring the rich ground-truth knowledge in various knowledge
+graphs (KGs) for fake news detection.
+The factual knowledge in KGs, such as Wikidata [9], DBpedia [10], and YAGO [11], has been widely used in the industrial
+community to determine investment opportunities, analyze the
+quality of products, etc. [12] The affluent knowledge in KGs
+can naturally serve as a factual basis for detecting fake news.
+However, previous works rarely focus on combining KGs and
+GNNs for fake news detection. Although CompareNet [13]
+attempts to use external knowledge for a simple extension of
+news embeddings, its straightforward approach cannot comprehensively explore KGs and leads to compromised performance.
+
+2327-4697 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+XIE et al.: CONTRASTIVE MULTI-KNOWLEDGE GRAPH LEARNING FOR FAKE NEWS DETECTION
+
+Fig. 1. The Construction of HG. HG is constructed in light of entities and
+related topics extracted from news content.
+
+Additionally, the complementary role among multiple KGs
+has not been probed. Fake news on social media frequently
+spans various fields, making it challenging to rely solely on
+a single KG for comprehensive factual evidence in fake news
+detection. To be concrete, different KGs have their knowledge
+tendencies, which may limit their ability to address the diverse
+range of fake news circulating online. For example, a certain
+KG is abundant in medical knowledge, while another excels in
+financial knowledge [14], [15]. A single KG is insufficient for
+detecting fake news, as social media news often spans multiple
+domains. Thus, complementary knowledge from different KGs
+offers more comprehensive factual information for detecting
+fake news.
+Existing studies (e.g., CompareNet [13]) combining a single
+KG with GNNs for fake news detection overlook the value
+of complementary knowledge from multiple KGs, limiting
+performance improvements. Therefore, we propose a novel
+Contrastive Multi-Knowledge Graph Learning for Fake News
+Detection (Congrat), to provide fine-grained and multi-faceted
+ground-truth knowledge for enhancing detection performance,
+where multi-knowledge is the complementary factual evidence
+from different KGs. To be specific, we first model news content
+and structure as a heterogeneous graph (HG) with three types
+of nodes (i.e., news, topics, and entities), as shown in Fig. 1.
+Our approach thoroughly investigates the relationships among
+these nodes to obtain high-level news representations. To capture
+factual evidence for fake news detection, we then utilize the entities in two KGs to incorporate various factual information from
+different KGs into multi-view heterogeneous graphs and thereby
+enhance the integral graph content through graph augmentations. Then, we employ graph contrastive learning to assimilate
+the information of the constructed HG and two ground-truth
+KGs for learning news embeddings. The graph contrastive learning module possesses the capability to thoroughly absorb the
+complementary knowledge from multiple KGs, thereby offering
+substantial tangible evidence to detect fake news. After the
+learning process, we acquire valuable representations of news
+articles that encapsulate abundant information regarding both
+news content and KGs. These representations are subsequently
+utilized to accurately classify fake news from extensive news
+
+3949
+
+data. Moreover, we conduct additional investigations to explore
+the impact of elements in the HG and KGs on our task. The main
+contributions of this research can be summarized as follows:
+r To the best of our knowledge, we are the first to explore
+multiple aspects of knowledge encapsulated in different
+KGs for fake news detection. Factual knowledge in different KGs provides complementary information about the
+ground truth and is capable of serving as the factual basis
+for fake news detection.
+r Our innovative Congrat framework introduces an adaptive
+capacity to digest ample textual and structural information
+from news articles. Simultaneously, it harnesses graph
+contrastive learning to effectively absorb complementary
+knowledge from two distinct KGs. Specifically, we incorporate complementary knowledge from two KGs to
+enhance our built HG through three different graph per1 ). Then, we employ graph
+spectives, as detailed in Fig. 2(
+contrastive learning to comprehensively compare factual
+information across these three graph perspectives. This
+allows us to investigate the impact of integrating knowledge from multiple KGs on fake news detection. Through
+extensive experiments, we shed light on the remarkable
+role of complementary knowledge from multiple KGs in
+improving the performance of fake news detection.
+r We conduct comprehensive experiments1 on four realworld datasets to verify the effectiveness of our proposed
+Congrat. The results demonstrate its superior performance
+compared with nine cutting-edge baselines on the evaluation metrics of accuracy, precision, recall, F1-score,
+and ROC. Simultaneously, the ablation study confirms the
+role of complementary knowledge from multiple KGs for
+enhancing fake news detection performance.
+II. RELATED WORK
+In this section, we summarize previous research in the following three fields: knowledge graph embedding, graph neural
+networks, and fake news detection.
+A. Knowledge Graph Embedding
+Knowledge graph embedding (KGE) target mapping triplets
+of KGs into a low-dimensional, dense, and interpretable space,
+thereby preserving as much knowledge as possible for downstream tasks like link prediction [16], anomaly detection [17],
+[18], [19], fake news detection [20], [21], [22], etc. KGE approaches can be categorized into three distinct groups: translation, semantic matching, and neural network models. The
+translation models attempted to interpret the relationships as
+a translational distance between head and tail entities, where
+the scoring function evaluates triplet plausibility by inversely
+correlating it with the magnitude of this distance [23], [24], [25].
+The semantic matching models, e.g., RESCAL [26], QuatE [27],
+and ComplEx [28], aimed to qualify the semantic compatibility
+between entities and relations by employing scoring functions,
+which compute the similarity of their latent representations
+1 https://github.com/KG4FD/Congrat
+
+3950
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 5, SEPTEMBER/OCTOBER 2025
+
+Fig. 2. The Framework of Congrat. Firstly, a heterogeneous graph HG with three types of nodes (i.e. news, entities, and topics) is constructed according to news
+content. Then, two open-source knowledge graphs are leveraged to add ground-truth knowledge into the HG for generating three augmented graph views (I, II,
+III), as shown in 
+2 . Next, three views are input to attention-based GNNs for encoding news embeddings, detailed in 2. Afterward, the generated hj , hi and hk
+are used for learning the contrastive loss. Finally, we concatenate news embeddings by three views to predict news with label y  .
+
+through dot product or tensor factorizations. The neural network
+models aspired to compute plausibility scores by jointly processing the head entities, relations, and tail entities through a neural
+architecture, which learns non-linear interactions to evaluate the
+semantic validity of KG triplets [29], [30], [31], [32].
+B. Graph Neural Networks
+In recent years, graph neural networks have emerged as
+a dominant paradigm for modeling topologically structured
+data, achieving exceptional performance by iteratively aggregating neighborhood information to capture structural and relational dependencies [33], [34], [35]. GNNs are compatible with
+data across numerous domains, which can be roughly categorized into graph convolutional networks, graph autoencoders,
+graph attention networks, graph generative networks, and graph
+spatial-temporal networks [36], [37], [38]. To date, a large number of scholars and organizations have attempted to use GNNs
+for various tasks (e.g., clustering [39], anomaly detection [40],
+multi-task learning [41], fake news detection [42], etc.), which
+achieved commendable results [43], [44]. In addition, the recent
+advent of graph contrastive learning (GCL) has significantly
+advanced the capabilities of GNNs. By extending the idea of
+contrastive learning, originally prevalent in visual representation tasks, to graph neural networks, GCL enables more generalizable, transferrable, and robust representation learning on
+graph structure data [45], [46], [47]. However, as an emerging
+methodology, GCL remains underexplored in diverse application contexts, particularly in the realm of fake news detection.
+C. Fake News Detection
+Recently, fake news detection techniques can be broadly
+divided into NLP-based and graph-based methods.
+
+NLP-based approaches leverage traditional machine learning
+or deep learning techniques to analyze linguistic patterns and
+semantic cues from news articles’ textual content, probably
+augmented by external knowledge bases, e.g., decision trees,
+support vector machines (SVM), RNNs, bidirectional LSTMs,
+CNNs, and other techniques [21], [48], [49], [50], [51]. Although
+these methods have a strong impression of enhancing detection
+performance, they do suffer from the drawback of neglecting
+news structures (e.g., the relations between news and topics [52],
+[53]). Such a limitation may constrain further advancements
+in detecting fake news. However, incorporating the structural
+elements of news articles into the detection workflow could
+be vital for achieving even higher levels of effectiveness in
+identifying fake news.
+Therefore, graph-based approaches are introduced to consider
+the spatial structures of news articles in fake news detection. The
+methods of this line can be classified into social context-based
+and content-based approaches. The former aimed to represent
+the available auxiliary information on social networks (e.g., user
+comments, user profiles, user behaviors, etc. [54], [55], [56],
+[57]) as graphs to learn news embeddings for classifying whether
+the news is fake. However, accessing social media user information and profiles is usually challenging due to privacy concerns. In this research, we focus on content-based approaches,
+which targeted leveraging textual and structural features of news
+content (e.g., topics, entities, etc. [13]) to construct graphs for
+training GNNs to detect fake news. For example, Yao et al. [8]
+introduced TextGCN, a graph convolutional network that constructs a co-occurrence graph from textual features (e.g., worddocument relationships) for text classification like fake news
+detection. Afterward, Karnyoto et al. [58] adapted TextGCN for
+fake news detection by integrating text augmentation, enhancing
+its robustness to linguistic variations in news content. In addition,
+HGAT and CompareNet, proposed by Hu et al. [13], [53], trained
+
+XIE et al.: CONTRASTIVE MULTI-KNOWLEDGE GRAPH LEARNING FOR FAKE NEWS DETECTION
+
+GNNs on complex heterogeneous graphs to enhance detection
+capabilities, with CompareNet specifically incorporating KGs
+for the task. However, CompareNet simply concatenated news
+embeddings and KG embeddings, which resulted in the underutilization of the valuable information present in the KG
+knowledge.
+Up to now, none of the former studies have integrated graphs
+and KGs into the learning process of GCL and investigated the
+impact of complementary knowledge from multiple KGs on
+fake news detection. Therefore, our work aims to bridge these
+research gaps by exploring news articles and diverse KGs with
+the specially designed Congrat framework.
+III. PRELIMINARIES
+A. Definition
+1) Definition 1: (Heterogeneous Graph): A heterogeneous
+graph is defined as HG = {N , E, A, V, R}, where N =
+{ni }m
+i=1 denotes the set of nodes, xij ∈ E depicts an edge
+between node ni and node nj , A = {ai }m
+i=1 is the set of node
+attribute vectors, V and R represent the set of node types and
+edge types. A key condition for a heterogeneous graph is that
+|V| + |R| > 2, ensuring diversity in node and edge types.
+2) Definition 2: (Knowledge Graph): A knowledge graph
+KG contains numerous triplets, each of which can be uniformly
+depicted as KG = {< s, r, t >}, where s, t, and r are head
+entities, tail entities, and their relations, respectively.
+B. Problem Statement
+In this article, we define fake news as news articles on traditional and social media that contain factual inaccuracies or
+distortions. Therefore, graph-based fake news detection aims to
+detect anomalous/untrustworthy news with maximum accuracy
+performance. Given a heterogeneous graph HG, each node ni
+is a piece of news with an assigned label yi ∈ {0, 1}, where 1
+represents that the news is fake. When detecting, only a subset of
+node labels is known. After the detection procedure, the unseen
+fake news can be detected. In this paper, we attempt to use a
+HG defined in Section III-A1 and multiple KGs depicted in
+Section III-A2 to detect fake news with high accuracy.
+IV. METHODOLOGY
+In this part, we introduce our proposed Contrastive MultiKnowledge Graph Learning for Fake News Detection (Congrat). Section IV-A summarizes the general procedure of how
+our proposed model, Congrat, works superiorly. Sections IV-B
+to IV-E delve into the intricate details of the constituent elements
+within Congrat, specifically tailored to achieve outstanding fake
+news detection. Section IV-F provides a detailed explanation of
+the algorithm complexity associated with Congrat.
+A. The Overview of Framework
+To enhance fake news detection, we incorporate multiple
+ingredients into Congrat, i.e., three types of nodes in our built
+HG, and the complementary knowledge from two KGs. The
+
+3951
+
+overview of Congrat is shown in Fig. 2, which comprises four
+modules, i.e., data modeling, knowledge preserving news embedding, multi-source knowledge enhancement via contrastive
+learning, and fake news detector. Initially, we construct a heterogeneous graph HG for news articles and then use graph
+1 ) to enhance the
+augmentation techniques, as shown in Fig. 2(
+factual information in the HG with two KGs, Wikidata5M [59]
+and DBpedia [10]. Next, we input the knowledge-augmented
+graphs into the three designed graph attention networks (GAT)
+encoders to learn aggregated news embeddings by multi-edges in
+2 ). Afterward, we employ contrastive
+the HG, detailed in Fig. 2(
+learning to compute the pairwise loss of the three knowledgeaugmented graphs and subsequently use cross-entropy to cal3 ).
+culate the overall classification loss, as shown in Fig. 2(
+In this manner, Congrat can detect fake news with superior
+performance.
+B. Data Modelling
+1) Heterogeneous Graph Contruction: Social media platforms categorize the vast volume of published news articles
+based on their respective topics for efficient management.
+Hence, topics play a pivotal role as one of the primary properties
+defining real-world news. Furthermore, it is widely recognized
+that news articles typically encompass various entities that incorporate compelling and trending information to captivate the
+readers’ interests. Thus, entities within news articles represent
+another essential property that contributes to the definition and
+understanding of news. Since topics and entities play significant roles in expressing the content of news articles, these two
+properties also offer valuable insights for fake news detection.
+In this research, we build a HG with three types of nodes
+(i.e., news, entities, and topics) according to previous work [53],
+where V = {n, t, e} and R = {xn,t , xn,e , xe,e }. n, t and e
+denote news nodes, topic nodes, and entity nodes in the HG
+respectively. xn,t , xn,e and xe,e represent news-topic edges,
+news-entity edges, and entity-entity edges, detailed in Fig. 1.
+We propose a series of steps designed to effectively construct
+the heterogeneous graph including node-level extraction, multiedge connection, and feature initialization.
+— Node-Level Extraction: In our built HG, each news article
+is created as a news node with labels. For entity nodes, we
+leverage TAGME,2 the entity link tool, to obtain various
+entities in news content. For topic nodes, we utilize the
+Latent Dirichlet Allocation (LDA) model to extract the
+topics of each news article. We set a threshold α = 50 as
+the total number of topics for the LDA model and select
+the top K relevant topics (detailed in Section V-F) for each
+news article.
+— Multi-Edge Connection: After creating nodes for HG, the
+next step involves establishing connections for each pair
+of nodes. We build three types of edges in the HG. The
+news-topic edge xn,t is connected when the news article is
+related to the topic. Each news node has K news-topic
+edges, detailed in Section V-F. The news-entity edge
+2 https://sobigdata.d4science.org/group/tagme/
+
+3952
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 5, SEPTEMBER/OCTOBER 2025
+
+xn,e is constructed when the news article contains the
+entity, while each news node potentially has numerous
+news-entity edges. The entity-entity xe,e is linked when
+the cosine similarity score surpasses a threshold β = 0.5.
+— Feature Initialization: We employ natural language techniques (i.e., Doc2vec, term frequency-inverse document
+frequency (TF-IDF), and one-hot encoding) to obtain initial feature vectors for nodes in the HG. For news nodes,
+TF-IDF and Doc2vec are leveraged to encode the content
+of each news article. In addition, TF-IDF and one-hot are
+applied to initialize the feature vectors for entity nodes
+and topic nodes. These methods are capable of capturing
+abundant features encapsulated in three types of HG nodes.
+2) Knowledge Graph Embeddings: A knowledge graph KG
+encompasses valuable real-world knowledge that can provide
+factual information for fake news detection. Such knowledge is
+encapsulated in KG triplets consisting of head entities, relations,
+and tail entities. Nevertheless, it is noteworthy that the knowledge within a single KG might not cover all aspects of the world.
+Therefore, incorporating complementary knowledge from multiple KGs can provide more comprehensive and sufficient factual
+evidence for our task.
+In this study, we employ HG entities to match relevant
+knowledge entities from two open-source KGs, ensuring that
+knowledge entities do not overlap with news nodes in HG.
+Notably, we use Wikidata and DBpedia as factual knowledge
+for three reasons: 1) Both are founded on Wikipedia, a trusted
+and authoritative repository of factual knowledge. 2) Both are
+RDF-based KGs that can be readily queried with SPARQL [60].
+3) Both provide ample factual evidence to detect fake news,
+covering a broad spectrum of knowledge. 4) DBpedia extracts
+structured data from Wikipedia’s infoboxes, whereas Wikidata
+offers secondary or tertiary data sourced from Wikipedia. Therefore, the knowledge within the two KGs strengthens each other
+in a mutually beneficial manner. After obtaining multiple KG
+knowledge entities, we expect to achieve excellent detection
+performance by exploring knowledge entity features. Various
+approaches that represent knowledge features in previous works
+(e.g., QuatE [27], TransE [23], etc.) have been proven effective in preserving valuable KG information while generating
+low-dimensional representations of knowledge entities, which
+can be efficiently utilized for downstream tasks. Our proposed
+framework, Congrat, can seamlessly integrate and collaborate
+with different KG embedding methods. Owing to the simplicity
+of TransE, we utilize the same embedding criterion and learn
+KG entity representations as the factual basis.
+hs + h r ≈ ht
+
+(1)
+
+where s is the head entity, t represents the tail entity, and r
+denotes the relation between them. After training, each KG entity
+will be allocated a vector hkg which is generated by moving s
+and the t closer to each other along the direction of r. we leverage
+hkg of two KGs as factual evidence to implement heterogeneous
+graph augmentation.
+3) Graph Augmentation: The techniques of graph augmentation can be generally split into feature-level, node-level, edgelevel, and subgraph-level, graph-level approaches. In this study,
+we explore novel methods within the scope of node interpolation
+
+and edge rewiring to augment our built HG. This involves
+utilizing entities from two KGs to link news nodes and HG
+entity nodes, thereby altering the internal structure of the HG
+for augmentation purposes. Specifically, we incorporate factual
+background knowledge to expand the HG into three distinct
+1 . The augmentation
+augmentation views, detailed in Fig. 2(
+operations can be summarized: 1) View I is enhanced by connecting the entities from KGI (i.e., Wikidata) with news nodes
+and entity nodes in the HG, i.e., xn,kgi , and xe,kgi . 2) View II
+serves as the anchor of subsequent contrastive learning, which
+requires background knowledge from both KGs. Hence, it is
+augmented by linking the entities from two KGs with news and
+entities nodes in the built HG, i.e., xn,kgi , xe,kgi , xn,kgii and
+xe,kgii . 3) View III, similarly, is strengthened by building edges
+for the KGII (i.e., DBpedia) entities, news and entity nodes in
+the modeled heterogeneous graph, i.e., xn,kgii and xe,kgii .
+C. Knowledge Preserving News Embedding
+After the acquisition of a content-based heterogeneous graph
+and two open-source knowledge graphs, features of the HG and
+KGs need to be encoded to acquire valuable news representations
+for promoting further fake news detection. In our proposed
+framework, we leverage the commonly used GAT to generate
+high-level news embeddings for the aforementioned augmented
+graph views. Specifically, we employ multiple attention schemes
+to learn news embeddings by aggregating neighboring information through the four-type relations surrounding news nodes in
+the three augmented graphs (i.e., xn,e , xn,t , xn,kgi , xn,kgii ),
+2 ). After getting news representations of
+detailed in Fig. 2(
+different graph views, the contrastive module is introduced to
+distinguish positive samples from negative samples in highdimensional spaces for training GNNs to generate the ultimate
+news embeddings for deep fake news detection.
+1) Node-Level Representation Generation: There are three
+kinds of nodes in our built HG (i.e., news, entities, and topics).
+Congrat develops the graph attention encoder, as shown in
+2 ), which targets generating high-level embeddings for
+Fig. 2(
+nodes according to their relations and factual knowledge. For
+three types of nodes in HG, the attention mechanism measures
+the impact of their neighbors based on the surrounding relations
+when projecting them into a latent space.
+— Graph View I Embedding Generation: Particularly, for
+nodes in graphs, Congrat introduces distinct attention layers tailored to news, entities, and topics for aggregating
+neighboring information of nodes.
+a) Topic node embeddings: Our approach leverages an attention neural network layer to generate their embeddings because
+the type of topic nodes’ neighbors is only one (i.e., news nodes).
+Therefore, the attention layer follows news-topic relation xn,t
+to propagate node information via:
+
+x
+x
+x
+x
+x
+h t,in,t = ai,in,t ht,in,t +
+ai,jn,t ht,jn,t ,
+(2)
+j∈S xn,t (i)
+x
+
+where h t,in,t is the learned embedding of topic node i according
+x
+x
+to news-topic relation xn,t . ht,in,t and ht,jn,t represent the input
+feature vectors of topic i and its neighboring news node j
+respectively. S xn,t (i) denotes a set of surrounding news nodes
+
+XIE et al.: CONTRASTIVE MULTI-KNOWLEDGE GRAPH LEARNING FOR FAKE NEWS DETECTION
+
+x
+
+x
+
+of topic i. ai,in,t and ai,jn,t depict the self-attention parameter of
+topic i and the attention coefficient between topic i and news
+node j respectively, which can be calculated as follows:
+ 
+
+exp bτ σ[hτnode,i  hτnode,j ]
+ 
+ , (3)
+aτi,j = 
+τ
+τ σ[hτ
+k∈S τ (i)∪{i} exp b
+node,i  hnode,k ]
+where σ(·) represents an activation function like Tanh,
+LeakyReLU, etc. hτnode,i and hτnode,j express the feature representations of node i and its adjacent node j according to a
+specific relation τ . b denotes trainable variables and  represents
+the “concatenate” operation for multiple matrices.
+b) Entity node embeddings: Congrat designs three attention
+layers to digest the neighboring information for entity nodes
+according to three relations. According to a specific relation τ ,
+the attention layer learns entity embeddings by:
+
+τ
+aτi,j hτe,j ; τ ∈ {xe,e , xn,e , xe,kgi },
+h e,i = aτi,i hτe,i +
+j∈S τ (i)
+
+(4)
+where h τe,i represents the output representation of entity i according to a specific relation τ , S τ (i) is a set of surrounding
+nodes of entity i according to the relation τ . aτi,i and aτi,j denote
+the self-attention of entity i and the attention between i and its
+adjacent nodes according to τ , which are quantized in the same
+way as (5).
+c) News node embeddings: Congrat leverages three attention
+layers to generate news node embeddings according to the
+neighboring relations (i.e., news-topic, news-entity, news-kgi),
+and the method to obtain representations is measured as:
+ 
+
+exp bτ σ[hτn,i  hτn,i ]
+τ
+ 
+ hτn,i
+h n,i = 
+τ σ[hτ  hτ ]
+
+exp
+b
+n,i
+k∈S τ (i)∪{i}
+n,k
+ 
+
+exp bτ σ[hτn,i  hτn,j ]
+
+ 
+ hτn,j ,
++
+
+τ
+τ
+τ
+
+σ[hn,i  hn,k ]
+j∈S τ (i)
+k∈S τ (i)∪{i} exp b
+(5)
+where h τn,i is the learned representations of news nodes, S τ (i)
+
+is a set of neighboring nodes of news node i under a specific
+relation τ . Notably, τ ∈ {xn,e , xn,t , xn,kgi }.
+— Graph View II Embedding Generation: Congrat generates
+the representations of topic nodes, and entity nodes according to (2) and (4), whereas the entity relations will
+be τ ∈ {xe,e , xn,e , xe,kgi , xe,kgii }. The news embeddings
+are generated by (5) but the relation set will be τ ∈
+{xn,e , xn,t , xn,kgi , xn,kgii }.
+— Graph View III Embedding Generation: Our model obtains topic embeddings and entity embeddings through
+(2) and (4), while the relation set of entity nodes will
+be τ ∈ {xe,e , xn,e , xe,kgii }. Similarly, the news representations are computed by (5) and the relations will be
+τ ∈ {xn,e , xn,t , xn,kgii }.
+2) News Representation Aggregation: For the three augmented graph views, Congrat learns news embeddings through
+prior steps that comprise affluent and valuable information from
+
+3953
+
+topics, entities, and two KGs. To generate unified news representations, we aggregate the news embeddings learned from the
+augmented graph views by the following equation:
+h i = Aggr(h n,i ),
+τ
+
+(6)
+
+where Aggr(·) denotes an aggregation function. To avoid information loss, we utilize the “sum” operation to accumulate the
+obtained news representations h τn,i as h i . For the three different
+graph views, τ will be distinguishable but belong to subsets of
+{xn,e , xn,t , xn,kgi , xn,kgii }.
+D. Multi-Source Knowledge Enhancement Via Contrastive
+Learning
+In this section, we introduce a graph contrastive loss to
+improve the performance of fake news detection. Generally,
+the news embeddings generated by GAT encoders only explore
+the internal information propagation in each graph view but
+fail to investigate the effect of complementary knowledge from
+multiple KGs on our task. To achieve this target, graph contrastive learning is a potent approach that can mine external
+complementary information between varying augmented graph
+views. Therefore, we design a contrastive module to further
+explore how complementary knowledge from KGs influences
+fake news detection.
+Specifically, we generate three graph views to augment factual information for the original HG by capturing ground-truth
+knowledge from two open-source KGs. Then, we acquire news
+representations of each graph view through our devised GAT
+encoders. Next, we employ contrastive learning to enforce the
+embeddings of news nodes representing the same news article in
+the three graph views to agree with each other and be different
+from other news nodes. For any news node i, its embedding
+in view II, hi is treated as the anchor. The two embeddings of
+this news node i generated in the other graph views, hj and
+hk are treated as positive samples. The embeddings hq of the
+news nodes other than i in the three graph views are regarded as
+negative samples. Formally, we compute the contrastive loss of
+positive pairs by:
+
+
+exp(θ(hi , hj )/Ω) + exp(θ(hi , hk )/Ω)
+
+ 
+
+,
+ /Ω)
+exp(θ
+h
+,
+h
+q
+i
+q∈Δ(i)
+i∈Φ
+(7)
+where θ is the cosine function to compute the similarity of two
+nodes. Ω denotes a temperature parameter. Φ = {1, 2, . . . , 3m}
+represents all news nodes generated by three graph views, each
+of which is m. Δ(i) = Φ \ i denotes all negative samples.
+Since View I and View III are employed to commence contrastive learning with View II, we have two positive samples and
+3m − 3 negative samples for each news node. In addition, we
+can comprehensively investigate the impact of complementary
+knowledge from two KGs on the final detection performance by
+comparing three graph views.
+Lcontras = −
+
+log
+
+E. Fake News Detector
+The three graph attention encoders generate high-quality news
+embeddings by affecting each other via contrastive learning. For
+
+3954
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 5, SEPTEMBER/OCTOBER 2025
+
+fake news detection, Congrat concatenates each news representation learned by three graph views as the final news embeddings
+hi,f inal and feeds it to a multi-layer perceptron (MLP) for
+learning a deep fake news detector. The detector predicts the
+label of news i via:
+yi = Γ(ρ(hi,f inal ; π)),
+
+Algorithm 1: Congrat Framework.
+
+(8)
+
+where ρ(·) denotes an activation function that outputs a twodimensional vector with probabilities of news i’s label. Γ(·)
+selects the label with the maximum probability to assign to
+news i. π depicts trainable variables in MLP layers. The fake
+news classification loss function is defined as cross-entropy.
+Therefore, the overall loss of Congrat is measured as follows:
+Loverall = λLcontras + CrossEntropy(yi , yi ),
+
+(9)
+
+where yi is the actual label of news i and yi is the predicted
+label. λ is the hyperparameter to control the contribution of the
+contrastive module. By minimizing the overall loss Loverall ,
+Congrat will predict news labels with high accuracy.
+Notably, Congrat outputs the representations of all news
+nodes in HG and trains the detector by labels ytrain of Ntrain .
+When new data is input, our model extracts relevant entities
+and topics, integrating them into the existing graph for learning.
+Since the model’s weights are not dependent on the size of HG,
+we incrementally train the model with incoming data from the
+previous checkpoints, like training settings of large language
+models, demonstrating the real-world usability and adaptability
+of our model.
+
+TABLE I
+STATISTICS OF THE DATASETS
+
+F. Algorithm Complexity
+Algorithm 1 shows the details of Congrat. Apart from applying TransE for extracting knowledge entities’ features, the
+multiple GAT layers and contrastive learning module introduce the most computational costs to Congrat. Specifically, the
+complexity of each GAT layer employed for generating news
+embeddings is approximately O(mDD + |E|D ), where m is
+the total number of nodes in our constructed HG, |E| is the total
+number of edges, |D| is the input dimension and D is the embedding dimension. The contrastive learning algorithm complexity
+is O(2m2 D ) and the overall computational cost of Congrat
+will be O(mDD + |E|D + 2m2 D ) ≈ O(|E|D + m2 D ) ≈
+O(m2 D ) since D < m and |E| ≤ m2 .
+V. EXPERIMENTS
+In this section, we perform extensive experiments to address
+the following research questions:
+r RQ1: How does the performance of Congrat compare to
+that of other state-of-the-art (SOTA) baselines for fake
+news detection?
+r RQ2: How does complementary knowledge involved in
+KGs help improve performance?
+r RQ3: How does the contrastive learning (CL) module
+benefit overall achievement?
+r RQ4: How does Congrat perform when using different
+hyperparameters?
+
+r RQ5: How does the number of topics for each news article
+influence the detection performance?
+
+r RQ6: How computationally efficient is Congrat compared
+with baselines?
+A. Experimental Setup
+1) Datasets: To verify the performance of our proposed
+model, we utilize four widely used datasets to conduct experiments consisting of COVID-19, FakeNewsNet, PAN2020,
+and Liar. COVID-19 [61] contains news articles related to the
+2019 coronavirus pandemic collected from diverse social media platforms, e.g., Twitter, Facebook, etc. FakeNewsNet [62]
+comprises news content and associated posts, encompassing
+political news and entertainment news that have been factchecked by reputable sources such as Politifact and Gossipcop.
+PAN2020 [63] is a fake news dataset labeled by authentic
+platforms such as PolitiFact or Snopes. Liar [64] is a fake
+news dataset that collects concise statements with labels from
+PolitFact. The statistical information of the datasets we used in
+this research is shown in Table I.
+
+XIE et al.: CONTRASTIVE MULTI-KNOWLEDGE GRAPH LEARNING FOR FAKE NEWS DETECTION
+
+TABLE II
+COMPARISON OF CONGRAT AND BASELINES
+
+2) Baselines: We conduct comparative experiments in comparison to nine SOTA baseline methods to demonstrate the
+superiority of our proposed Congrat. These baselines can be
+divided into text-based approaches, graph-based approaches,
+and KG-based approaches, and their detailed information is
+discussed as follows:
+1) Text-based approaches
+r BiLSTM [65]: The model utilizes bi-directional neural
+networks to represent the textual content of news and then
+detects fake news via obtained news representations.
+r RNN [6]: The method identifies fake news from the real
+by employing recurrent neural networks to embed news
+articles.
+r TextCNN [66]: The approach embeds news content by applying a 1D-convolutional network for fake news detection.
+r Electra [67]: The technique employs a large language
+model, ELECTRA, to represent news articles for detecting
+fake news.
+2) Graph-based approaches
+r TextGCN [8]: The model constructs a simple graph for
+news textual and semantic content and then employs graph
+convolutional neural networks (GCNs) to classify fake
+news.
+r AugTextGCN [58]: The approach uses text augmentation
+techniques for news data and detects fake news by training
+GCN models.
+r HGAT [53]: The method models short texts as a heterogeneous graph and then utilizes their designed GCNs to
+classify these short texts.
+3) KG-based approaches
+r KGinformedFD [21]: The approach applies language models to embed news articles and simply combines them with
+entity embeddings from a KG for fake news detection.
+r ComparNet [13]: The technique generates news embeddings by concatenating KG entity representations and news
+representations learned by GCNs. Next, it utilizes the generated news embeddings for fake news detection.
+Table II shows the differences between our proposed approach
+and the baselines discussed in this article. Notably, there are
+some semi-supervised methods like positive-unlabeled learning [57] widely used in the detection of fake news to address
+the scarcity of labels. However, our work prioritizes a supervised framework for the integration of high-quality KGs and
+graph contrastive learning. Supervised training ensures precise
+
+3955
+
+alignment of news content with KG entities, which is crucial
+for modeling complex entity-news dependencies. In contrast,
+semi-supervised approaches risk introducing noise or mislinked
+entities, compromising detection robustness. Furthermore, our
+contrastive learning framework relies on label-guided subgraph
+comparisons to distinguish fake/real news, requiring reliable
+supervision to avoid adversarial confusion. For fairness, we
+exclude comparisons with semi-supervised learning methods in
+our experiments.
+3) Experimental Settings and Implementation: Our proposed Congrat framework employs a layered structure consisting of two sets of GAT layers aiming to acquire news
+high-quality news embeddings for different augmented graph
+views according to distinct types of relations accompanying
+news nodes, topic nodes, and entity nodes of the HG. eLU and
+LeakyReLU are chosen as the activation functions for graph
+attention networks and contrastive learning. Meanwhile, Adam
+is used as the optimizer with the learning rate, lr = 0.001, and
+weight decay, wc = 5e − 4 when backpropagating messages
+and minimizing overall loss. We split each dataset into 80%,
+10%, and 10% as a training set, a test set, and a validation
+set. The maximum of the training epoch is set as 300 with an
+early stop when Loverall converges. Unless explicitly specified,
+the parameter settings for all baselines are identical to those
+employed in our model. We use accuracy, precision, recall,
+F1-score, and ROC as evaluation metrics for experimental
+results and set the same hyper-parameters of metrics for all
+approaches. All experiments are carried out on the Linux server
+with 60G RAM and an NVIDIA Tesla V100 GPU.
+B. Model Comparison (RQ1)
+Overall Performance: We compare our model with nine SOTA
+baselines to detect fake news on four datasets. From the experimental results in Table III and Fig. 3, we make observations as
+follows:
+r In terms of accuracy, precision, recall, and F1-score, Congrat demonstrates its superiority over the majority of baselines on COVID-19, FakeNewsNet, and PAN2020 (except
+for precision on COVID-19). On Liar, although BiLSTM
+and TextCNN achieve remarkable accuracy and precision,
+Congrat outperforms the baseline models in overall performance.
+r Regarding the receiver operating characteristic (ROC)
+curve, Congrat demonstrates a significantly superior area
+under the ROC curve (AUC) compared to nine baselines
+on four datasets, as illustrated in Fig. 3.
+Comparison with Text-based Approaches (G1): These four
+methods achieve decent performance on certain datasets (e.g.,
+over 85% accuracy on COVID-19), yet they also exhibit subpar
+results (e.g., below 50% recall on Liar). Given the results, the
+baselines achieve commendable performance on COVID-19,
+particularly Electra. However, their results still lag behind that
+of Congrat on COVID-19 (approximately 1%–10%) across all
+metrics. On FakeNewsNet, all these approaches achieve acceptable accuracy and precision, whereas Electra’s performance is
+second only to Congrat across all metrics. On PAN2020, the
+
+3956
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 5, SEPTEMBER/OCTOBER 2025
+
+TABLE III
+EXPERIMENTAL RESULTS (IN PERCENTAGE) OF CONGRAT IN COMPARISON WITH NINE EXCELLENT BASELINES ON FOUR DATASETS (MEAN ± STDV, BEST IN
+BOLD, SECOND BEST IN UNDERLINE)
+
+Fig. 3. The ROC Curves of Congrat and Baselines. To further verify the superiority of our model, the ROC curves on four datasets are provided to compare with
+the SOTA baselines, demonstrating Congrat’s excellent performance.
+
+four methods exhibit subpar performance except for the 80.36%
+recall of BiLSTM which ranks second only to Congrat. This
+is attributed to BiLSTM’s ability to accurately predict true
+positive samples. On Liar, BiLSTM and TextCNN attain the
+best accuracy and precision but remain far below Congrat across
+other metrics. Besides, RNN performs worse than the other
+three models. In summary, Congrat significantly outperforms
+text-based methods, emerging as the leader in this category
+across most metrics.
+Comparison with Graph-based Approaches (G2): These
+models do not exhibit notable performance on the four datasets
+regarding all metrics. Specifically, on COVID-19, TextGCN and
+AugTextGCN perform satisfactorily but lag behind Congrat,
+while HGAT performs well across all metrics but still falls
+short. On FakeNewsNet, the three methods achieve excellent
+accuracy, while other metrics are far lower than Congrat (except
+HGAT). On PAN2020, TextGCN and AugTextGCN exhibit
+subpar precision, recall, and F1-score despite attaining reasonable accuracy. However, HGAT achieves the second-highest
+accuracy (63.70%). On Liar, the models achieve acceptable
+accuracy but have unsatisfactory precision, recall, and F1-score.
+Notably, TextGCN and AugTextGCN perform unstably on different datasets. In addition, the significant variance in Liar’s
+results is due to its inherent attributes, such as diverse topics and
+multiple sources, which may cause fluctuations in performance
+across different methods. Overall, our approach outperforms this
+group of methods significantly across all metrics.
+
+Comparison with KG-based Approaches (G3): KGInformedFD and CompareNet leverage KGs to enhance fake news
+detection, improving their reliability in distinguishing fake news.
+On COVID-19, both approaches perform acceptably across all
+metrics, achieving scores above 80%. On FakeNewsNet, KGInformedFD underperforms (below 60% for all metrics), while
+CompareNet shows strong performance. On PAN2020, both
+approaches achieve acceptable results across four metrics, with
+CompareNet’s precision and F1-score ranking second highest
+among all models. On Liar, KGInformedFD obtains subpar results while CompareNet performs commendably (nearly above
+50% for all metrics), indicating that KGs can indeed enhance
+fake news detection. In conclusion, both methods exhibit decent performance on four datasets, while Congrat’s detection
+capability still surpasses theirs.
+Analysis of HG’s Structure: From the experimental statistics,
+Congrat’s performance varies across different datasets. As we
+can see, COVID-19 is the top-performing dataset, followed by
+FakeNewsNet, PAN2020, and Liar. The main reason is the
+coverage of entities in news nodes within KGs. Each news
+node is linked to at least three entity nodes, which can be
+associated with KG entities. Longer news texts contain more entities, strengthening their connection to KGs and providing more
+factual evidence. However, the shorter texts in the Liar dataset
+extract fewer entities, resulting in weaker associations with KGs.
+Case Study: To qualitatively evaluate the detection results
+of our model, we provide four representative cases in Fig. 4,
+
+XIE et al.: CONTRASTIVE MULTI-KNOWLEDGE GRAPH LEARNING FOR FAKE NEWS DETECTION
+
+3957
+
+TABLE IV
+ABLATION TEST ON FOUR DATASETS (MEAN ± STDV, BEST IN BOLD)
+
+Fig. 4. Examples of specific news article detection results. The four possible
+outcomes (i.e., FP, FN, TP, and TN) of the fake news detection task are provided
+for visual illustration.
+
+enrich news information for detecting fake news. Such knowledge provides factual evidence for news articles and the performance could improve with an increased amount of ground-truth
+knowledge provided.
+C. Ablation Study (RQ2)
+
+including false positive (FP), false negative (FN), true positive
+(TP), and true negative (TN). FP/FN cases often arise from
+politicized language, KG staleness, or misleading structural
+patterns in the contrastive graph. For example, during graph
+contrastive training, Congrat learns to distinguish ‘fake’ and
+‘true’ by maximizing agreement between semantically similar
+nodes. However, structurally similar but semantically distinct
+cases (e.g., factual reports about political figures) may be pushed
+closer to the ‘fake’ cluster if KGs lack nuanced relational edges
+(e.g., ‘Sir Keir Starmer’ → ‘COVID-19 isolation guidelines’ →
+‘public health protocols’). Fortunately, Congrat demonstrates
+strong detection performance across multiple datasets (i.e., TP
+and TN). This success can be attributed to the solid factual
+foundation provided by the complementary knowledge of KGs
+and the comprehensive training enabled by graph contrastive
+learning.
+Generally speaking, our model exhibits apparent advantages
+in comparison to the other nine competing methods. The primary
+reasons for the superiority are as follows: 1) Congrat leverages
+different strategies to learn node embeddings in HG (e.g., LDA
+model, Doc2vec, etc.) and aggregate the information for the
+final generation of high-quality news representations according
+to multiple relations. 2) Meanwhile, GAT-based encoders are
+employed to adaptively learn the node representations of three
+augmented graphs, which can extract valuable information for
+the final news embeddings. 3) Congrat introduces contrastive
+learning to absorb complementary knowledge from different
+KGs to detect fake news. Multiple KGs are digested by our
+model, which can provide comprehensive factual knowledge to
+
+As shown in Table IV, we conduct an ablation study to
+explore how the performance of Congrat changes when different
+components (topics, entities, KGI, KGII, and the CL module)
+are removed. In the table, ‘Congrat-M6’ refers to a version where
+only the initial news embeddings without any element mentioned
+above are used for fake news detection. ‘Congrat-M5’ uses the
+representations of both topic nodes and news nodes to train
+GNNs for detecting fake news. ‘Congrat-M4’ only leverages
+the embeddings of entity, topic, and news nodes for detection.
+‘Congrat-M3’, ‘Congrat-M2’, and ‘Congrat-M1’ successively
+incorporate KGI, KGII, and both KGs into the model, but
+without the CL module. Finally, ‘Congrat’ represents the full
+model with the CL module used to detect fake news.
+According to ablation experiments, ‘Congrat-M6’ attains
+subpar performance (e.g., 27.80% precision on FakeNewsNet)
+except 92.20% precision on COVID-19 when only considering
+the initial news feature vectors. When topics are incorporated
+into our model, the performance of ‘Congrat-M5’ is significantly
+improved by approximately 2%–29% on COVID-19, 7%–50%
+on FakeNewsNet, 3%–15% on PAN2020 and 32%–48% on Liar,
+indicating that topics have the potential to enhance detection
+performance. When considering news, topics, and entities in
+our model for fake news detection, ‘Congrat-M4’ achieves
+high precision (79.17%) on FakeNewsNet and further improves
+performance on all four datasets. This implies that entities
+exert a substantial influence on the overall performance of the
+model. When we integrate knowledge graphs into our model,
+‘Congrat-M3’, ‘Congrat-M2’, and ‘Congrat-M1’ perform better
+than the models without KGs (i.e., ‘Congrat-M6’, ‘Congrat-M5’
+
+3958
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 5, SEPTEMBER/OCTOBER 2025
+
+Fig. 5. Results of λ and Parameter Sensitivity. To explicitly compare the performance of our model, the hyperparameter λ test of models on four datasets is
+provided on the left side. To investigate parameter sensitivity, the 3D figure is presented on the right part, where the x-axis depicts embedding sizes and the y-axis
+denotes training epochs, detailed in Section V-E.
+
+and ‘Congrat-M4’), which means that KGs indeed have a significant impact on fake news detection. Meanwhile, ‘Congrat-M3’
+and ‘Congrat-M2’ exhibit similar performance across the four
+datasets, which indicates that mere substitution of a knowledge
+graph can not promote detection performance. When multiple
+KGs are considered to identify fake news, the model’s performance experiences a slight enhancement, indicating that only
+augmenting the quantity of knowledge graphs does not have
+a substantial influence on the model’s performance. When the
+contrastive learning module is added to our model, the complete
+model achieves the highest scores for almost all metrics on four
+datasets. This indicates that the CL module plays an important
+role in our model to digest knowledge from multiple KGs.
+The CL module facilitates the identification and absorption of
+complementary information across distinct KGs through comparison and then generates news representations encompassing
+comprehensive semantic, structural, and factual information.
+In summary, news, topics, entities, KGI, KGII, and the CL
+module have a profound effect on the performance of fake news
+detection through ablation study. Notably, incorporating KGs
+into GNNs for training is significantly beneficial for performance improvement, and the CL module is extremely important
+to digest complementary knowledge from multiple KGs for fake
+news detection.
+
+tends to be stable and optimal when λ = 0.2. On PAN2020,
+Congrat achieves the best performance when we set λ as 0.1.
+Obviously, λ = 0.3 is the optimal parameter for Liar, and our
+model showcases the highest level of discriminative power
+regarding accuracy, precision, recall, and F1-score. Based on
+the aforementioned observations, it is apparent that the value
+of λ must be adjusted according to the specific dataset. This
+adjustment allows for better control over the influence of the
+contrastive learning module on the overall model, thereby optimizing the model’s effectiveness.
+E. Parameter Sensitivity (RQ4)
+To assess the sensitivity of parameters, we conduct an evaluation of Congrat using various embedding sizes and training
+epochs in GNNs. For illustration purposes, we specifically examine the performance using PAN2020, considering 25 different
+combinations of epochs and embedding sizes. The embedding
+dimension and epoch are denoted as x and y, respectively,
+detailed in Fig. 5(b). The results demonstrate that the model’s
+performance exhibits improvement as the parameters increase,
+peaking at x = 128 and y = 300. Notably, our model consistently maintains satisfactory results across different parameter
+combinations.
+F. Analysis of Topic Quantity (RQ5)
+
+D. Contrastive Learning Module Analysis (RQ3)
+In this part, we observe the impact of different λ on the
+overall classification performance. λ is the significant parameter
+to control the contribution of the contrastive loss to Congrat’s
+performance, detailed in Fig. 5(a). As shown in the figure, for
+different evaluation metrics, the values of λ present diverse
+trends across different datasets. On COVID-19, the performance
+of our model is optimal when λ = 0.2 in terms of the balance
+of all metrics. On FakeNewsNet, our model exhibits significant
+performance fluctuations according to different λ but Congrat
+
+To observe the effect of the number of topics per news article
+on the model, we conduct experiments to analyze the fluctuating
+trend of Congrat’s performance under varying topic numbers,
+detailed in Fig. 6. In typical news articles, the number of topics generally remains below ten, otherwise, the news becomes
+overly scattered and devoid of coherence. Therefore, we set the
+number of topics per news article from 1 to 10. In the radar
+map, the outermost values denote the number of topics, while the
+radar scale represents the percentage corresponding to accuracy,
+precision, recall, and F1-score. As a metric extends outward, the
+
+XIE et al.: CONTRASTIVE MULTI-KNOWLEDGE GRAPH LEARNING FOR FAKE NEWS DETECTION
+
+3959
+
+VI. CONCLUSION AND FUTURE WORKS
+
+Fig. 6. Analysis of the number of topics per news article. To further demonstrate how the topic quantity influences our model, Radar maps on four datasets
+are provided to investigate Congrat’s performance when the number of topics
+per news article changes.
+
+TABLE V
+RUNNING TIME & GPU MEMORY COST
+
+performance of the metric improves. According to the results on
+four datasets, it is apparent that the model is in optimal condition
+with a balance of all metrics when the number of topics per news
+article is set as 2. Therefore, during the construction of the HG,
+we set K = 2 as the top relevant topics of each news node.
+G. Computational Cost (RQ6)
+We compare the computational efficiency of Congrat with
+baselines in terms of both time and memory consumption, as
+detailed in Table V. We choose COVID-19 and FakeNewsNet
+as the representative datasets. From the table, it is evident
+that Congrat not only demonstrates an advantage in terms of
+computational cost but also delivers superior performance in
+a balanced manner. Specifically, Congrat achieves an optimal
+trade-off between moderate running time and memory usage,
+outperforming the baseline models that typically exhibit either
+higher computational costs or less efficient performance.
+
+In this paper, we develop a novel contrastive multi-knowledge
+graph learning, namely Congrat to explore how complementary
+knowledge from different knowledge graphs influences fake
+news detection. To be concrete, we first construct a heterogeneous graph with three types of nodes (i.e., news, entities, and
+topics) based on news content. Then, we extract ground-truth
+knowledge entities from two different knowledge graphs to
+enhance the factual information for the HG into three augmented
+graph views. Next, we employ contrastive learning for the three
+graph views, which involves positioning positive samples in
+close proximity to each other within a high-dimensional space.
+Simultaneously, we ensure that positive and negative samples
+are placed far apart from each other within this space. Finally,
+we concatenate news embeddings learned from the three graph
+views and feed them to an MLP-based classifier for predicting
+news labels. Comprehensive experiments on real-world datasets
+are conducted to demonstrate the superiority of Congrat by
+comparing it with nine baselines, and the further ablation study
+verifies the efficacy of each part of our framework.
+Discussion and Limitations: Our work focuses on fake news
+detection combining KGs and graph contrastive learning, with
+broader implications for combating fake news. The ‘truth sandwich’ strategy is to frame misinformation with accurate information before and after its presentation to mitigate false claims.
+Although our model doesn’t explicitly implement this structure,
+its use of KG-derived factual context aligns with the principle.
+By grounding predictions in verified entities and relationships
+(e.g., authoritative sources, temporal/logical consistency), our
+framework inherently prioritizes truth, similar to the ‘bread’ of
+a truth sandwich that surrounds misleading claims. We will explore integrating explicit ‘truth sandwich’ mechanisms into fake
+news detection in follow-up work. In addition, the computational
+complexity of integrating multiple knowledge graphs increases
+the resource requirements, which needs to find strategies for
+efficiency improvement.
+Future Works: This work also identifies several underexplored areas for future research. These include exploring
+techniques to achieve improved performance when detecting
+short news articles within fake news datasets, determining which
+fake news topics should receive greater attention, such as those in
+the health or sports fields, and investigating advanced methods to
+capture more semantic features for detecting fake news in textheavy news article data, etc. Furthermore, we will investigate
+alternative news data modeling approaches, such as weighted
+graphs, bi-directed graphs, and other explainable models.
+REFERENCES
+[1] J. Roozenbeek and S. Van der Linden, “Fake news game confers psychological resistance against online misinformation,” Palgrave Commun.,
+vol. 5, no. 1, pp. 1–10, 2019.
+[2] S. Qian, J. Hu, Q. Fang, and C. Xu, “Knowledge-aware multi-modal
+adaptive graph convolutional networks for fake news detection,” ACM
+Trans. Multimedia Comput., Commun., Appl., vol. 17, no. 3, pp. 1–23,
+2021.
+[3] L. Cheng, R. Guo, K. Shu, and H. Liu, “Causal understanding of fake
+news dissemination on social media,” in Proc. 27th ACM SIGKDD Conf.
+Knowl. Discov. Data Mining, 2021, pp. 148–157.
+
+3960
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 5, SEPTEMBER/OCTOBER 2025
+
+[4] K. Sharma, F. Qian, H. Jiang, N. Ruchansky, M. Zhang, and Y. Liu, “Combating fake news: A survey on identification and mitigation techniques,”
+Trans. Intell. Syst. Technol., vol. 10, no. 3, pp. 1–42, 2019.
+[5] S. Qian, J. Wang, J. Hu, Q. Fang, and C. Xu, “Hierarchical multi-modal
+contextual attention network for fake news detection,” in Proc. 44th Int.
+ACM SIGIR Conf. Res. Develop. Inf. Retrieval, 2021, pp. 153–162.
+[6] J. Ma et al., “Detecting rumors from microblogs with recurrent neural
+networks,” in Proc. Int. Joint Conf. Artif. Intell., 2016, pp. 3818–3824.
+[7] X. Zhou, J. Wu, and R. Zafarani, “SAFE: Similarity-aware multi-modal
+fake news detection,” in Proc. PAKDD, 2020, pp. 354–367.
+[8] L. Yao, C. Mao, and Y. Luo, “Graph convolutional networks for text
+classification,” in Proc. AAAI Conf. Artif. Intell., 2019, pp. 7370–7377.
+[9] D. Vrandečić and M. Krötzsch, “Wikidata: A free collaborative knowledgebase,” Commun. ACM, vol. 57, no. 10, pp. 78–85, 2014.
+[10] S. Auer, C. Bizer, G. Kobilarov, J. Lehmann, R. Cyganiak, and Z. Ives,
+“DBpedia: A nucleus for a web of open data,” in Proc. ISWC ASWC, 2007,
+pp. 722–735.
+[11] F. M. Suchanek, G. Kasneci, and G. Weikum, “Yago: A core of semantic knowledge,” in Proc. 16th Int. Conf. World Wide Web, 2007,
+pp. 697–706.
+[12] X. Zou, “A survey on application of knowledge graph,” in Proc. J. Phys.:
+Conf. Ser., IOP Publishing, 2020, vol. 1487, no. 1, Paper 012016.
+[13] L. Hu et al., “Compare to the knowledge: Graph neural fake news detection
+with external knowledge,” in Proc. Assoc. Comput. Linguistics Int. Joint
+Conf. Natural Lang. Process., 2021, pp. 754–763.
+[14] X. Wu, J. Duan, Y. Pan, and M. Li, “Medical knowledge graph: Data
+sources, construction, reasoning, and applications,” Big Data Mining
+Analytics, vol. 6, no. 2, pp. 201–217, 2023.
+[15] Z. Chen, Y. Wang, B. Zhao, J. Cheng, X. Zhao, and Z. Duan, “Knowledge
+graph completion: A review,” IEEE Access, vol. 8, pp. 192435–192456,
+2020.
+[16] Y. Dai, S. Wang, N. N. Xiong, and W. Guo, “A survey on knowledge graph embedding: Approaches, applications and benchmarks,”
+Electronics, vol. 9, no. 5, 2020, Art. no. 750.
+[17] N. Vaska, K. Leahy, and V. Helus, “Context-dependent anomaly detection
+with knowledge graph embedding models,” in Proc. IEEE 18th Int Conf.
+Automat. Sci. Eng., 2022, pp. 2020–2027.
+[18] X. Ma, F. Liu, J. Wu, J. Yang, S. Xue, and Q. Z. Sheng, “Rethinking
+unsupervised graph anomaly detection with deep learning: Residuals and
+objectives,” IEEE Trans. Knowl. Data Eng., vol. 37, no. 2, pp. 881–895,
+Feb. 2025.
+[19] X. Ma, R. Li, F. Liu, K. Ding, J. Yang, and J. Wu, “Graph anomaly detection
+with few labels: A data-centric approach,” in Proc. 30th ACM SIGKDD
+Conf. Knowl. Discov. Data Mining, 2024, pp. 2153–2164.
+[20] B. Xie et al., “Multiknowledge and LLM-inspired heterogeneous graph
+neural network for fake news detection,” IEEE Trans. Comput. Social
+Syst., vol. 12, no. 2, pp. 682–694, Apr. 2025.
+[21] B. Koloski, T. S. Perdih, M. Robnik-Šikonja, S. Pollak, and B. Škrlj,
+“Knowledge graph informed fake news classification via heterogeneous representation ensembles,” Neurocomputing, vol. 496, pp. 208–226,
+2022.
+[22] B. Xie, X. Ma, J. Wu, J. Yang, and H. Fan, “Knowledge graph enhanced
+heterogeneous graph neural network for fake news detection,” IEEE Trans.
+Consum. Electron., vol. 70, no. 1, pp. 2826–2837, Feb. 2024.
+[23] A. Bordes, N. Usunier, A. Garcia-Duran, J. Weston, and O. Yakhnenko,
+“Translating embeddings for modeling multi-relational data,” NeuralPS,
+vol. 26, pp. 1–9, 2013.
+[24] Z. Wang, J. Zhang, J. Feng, and Z. Chen, “Knowledge graph embedding
+by translating on hyperplanes,” in Proc. AAAI Conf. Artif. Intell., vol. 28,
+no. 1, 2014, pp. 1112–1119.
+[25] Y. Lin, Z. Liu, M. Sun, Y. Liu, and X. Zhu, “Learning entity and relation
+embeddings for knowledge graph completion,” in Proc. AAAI Conf. Artif.
+Intell., vol. 29, no. 1, 2015, pp. 2181–2187.
+[26] M. Nickel, V. Tresp, and H.-P. Kriegel, “A three-way model for collective
+learning on multi-relational data,” in Proc. Int. Conf. Mach. Learn., 2011,
+vol. 11, no. 10.5555, pp. 3104482–3104584.
+[27] S. Zhang, Y. Tay, L. Yao, and Q. Liu, “Quaternion knowledge graph
+embeddings,” NeuralPS, vol. 32, pp. 1–11, 2019.
+[28] T. Trouillon, J. Welbl, S. Riedel, É. Gaussier, and G. Bouchard, “Complex
+embeddings for simple link prediction,” in Proc. Int. Conf. Mach. Learn.,
+2016, pp. 2071–2080.
+[29] A. Bordes, X. Glorot, J. Weston, and Y. Bengio, “A semantic matching energy function for learning with multi-relational data: Application
+to word-sense disambiguation,” Mach. Learn., vol. 94, pp. 233–259,
+2014.
+
+[30] L. Cai and W. Y. Wang, “KBGAN: Adversarial learning for knowledge
+graph embeddings,” in Proc. North Amer. Chapter Assoc. Comput. Linguistics, Hum. Lang. Technol., 2018, pp. 1470–1480.
+[31] T. D. N. Dai Quoc Nguyen, D. Q. Nguyen, and D. Phung, “A novel
+embedding model for knowledge base completion based on convolutional
+neural network,” in Proc. North Amer. Chapter Assoc. Comput. Linguistics,
+Hum. Lang. Technol., 2018, pp. 327–333.
+[32] Z. Li, H. Liu, Z. Zhang, T. Liu, and N. N. Xiong, “Learning knowledge graph embedding with heterogeneous relation attention networks,”
+IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 8, pp. 3961–3973,
+Aug. 2022.
+[33] J. Zhou et al., “Graph neural networks: A review of methods and applications,” AI Open, vol. 1, pp. 57–81, 2020.
+[34] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and P. S. Yu, “A comprehensive
+survey on graph neural networks,” IEEE Trans. Neural Netw. Learn. Syst.,
+vol. 32, no. 1, pp. 4–24, Jan. 2021.
+[35] G. Corso, H. Stark, S. Jegelka, T. Jaakkola, and R. Barzilay, “Graph neural
+networks,” Nature Rev. Methods Primers, vol. 4, no. 1, pp. 1–13, 2024.
+[36] M. Defferrard, X. Bresson, and P. Vandergheynst, “Convolutional neural networks on graphs with fast localized spectral filtering,” NueralPS,
+vol. 29, pp. 1–9, 2016.
+[37] T. N. Kipf and M. Welling, “Variational graph auto-encoders,” 2016,
+arXiv:1611.07308.
+[38] X. Li, J. Wang, and Z. Yan, “Can graph neural networks be adequately
+explained? A survey,” ACM Comput. Surv., vol. 57, no. 5, pp. 1–36, 2025.
+[39] T. H. Chan, G. Yin, K. Bae, and L. Yu, “Multi-task heterogeneous graph
+learning on electronic health records,” Neural Netw., vol. 180, 2024,
+Art. no. 106644.
+[40] X. Luo et al., “ComGA: Community-aware attributed graph anomaly
+detection,” in Proc. 15th ACM Int. Conf. Web Search Data Mining, 2022,
+pp. 657–665.
+[41] Y. Wang, X. Yao, P. Zhu, W. Li, M. Cao, and Q. Hu, “Integrated heterogeneous graph attention network for incomplete multi-modal clustering,”
+Int. J. Comput. Vis., vol. 132, no. 9, pp. 3847–3866, 2024.
+[42] X. Su, J. Yang, J. Wu, and Y. Zhang, “Mining user-aware multi-relations
+for fake news detection in large scale online social networks,” in Proc.
+16th ACM Int. Conf. Web Search Data Mining, 2023, pp. 51–59.
+[43] S. Motie and B. Raahemi, “Financial fraud detection using graph neural
+networks: A systematic review,” Expert Syst. With Appl., vol. 240, 2024,
+Art. no. 122156.
+[44] J. Zhang et al., “Linear-time graph neural networks for scalable recommendations,” in Proc. ACM Web Conf., 2024, pp. 3533–3544.
+[45] Y. You, T. Chen, Y. Sui, T. Chen, Z. Wang, and Y. Shen, “Graph contrastive
+learning with augmentations,” in Proc. Adv. Neural Inf. Process. Syst.,
+2020, vol. 33, pp. 5812–5823.
+[46] Y. Zhu, Y. Xu, F. Yu, Q. Liu, S. Wu, and L. Wang, “Graph contrastive learning with adaptive augmentation,” in Proc. Web Conf., 2021,
+pp. 2069–2080.
+[47] D. Xu, W. Cheng, D. Luo, H. Chen, and X. Zhang, “Infogcl: Informationaware graph contrastive learning,” NeuralPS, vol. 34, pp. 30414–30425,
+2021.
+[48] R. K. Kaliyar, A. Goswami, and P. Narang, “FakeBERT: Fake news
+detection in social media with a BERT-based deep learning approach,”
+Multimedia Tools Appl., vol. 80, no. 8, pp. 11765–11788, 2021.
+[49] J. Z. Pan, S. Pavlova, C. Li, N. Li, Y. Li, and J. Liu, “Content based fake
+news detection using knowledge graphs,” in Proc. 16th Int. Symp. Wireless
+Commun. Syst., 2018, pp. 669–683.
+[50] Y. Zhu et al., “Memory-guided multi-view multi-domain fake news detection,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 7, pp. 7178–7191,
+Jul. 2022.
+[51] L. Wu, Y. Rao, C. Zhang, Y. Zhao, and A. Nazir, “Category-controlled
+encoder-decoder for fake news detection,” IEEE Trans. Knowl. Data Eng.,
+vol. 35, no. 2, pp. 1242–1257, Feb. 2023.
+[52] B. Xie, X. Ma, J. Wu, J. Yang, S. Xue, and H. Fan, “Heterogeneous graph
+neural network via knowledge relations for fake news detection,” in Proc.
+35th Int. Conf. Sci. Stat. Database Manage., 2023, pp. 1–11.
+[53] H. Linmei, T. Yang, C. Shi, H. Ji, and X. Li, “Heterogeneous graph
+attention networks for semi-supervised short text classification,” in Proc.
+Conf. Empirical Methods Natural Lang. Process.-Int. Joint Conf. Natural
+Lang. Process., 2019, pp. 4821–4830.
+[54] Y. Jin et al., “Towards fine-grained reasoning for fake news detection,” in
+Proc. AAAI Conf. Artif. Intell., 2022, vol. 36, no. 5, pp. 5746–5754.
+[55] Y.-J. Lu and C.-T. Li, “GCAN: Graph-aware co-attention networks for
+explainable fake news detection on social media,” in Proc. Assoc. Comput.
+Linguistics, 2020, pp. 505–514.
+
+XIE et al.: CONTRASTIVE MULTI-KNOWLEDGE GRAPH LEARNING FOR FAKE NEWS DETECTION
+
+[56] N. Ruchansky, S. Seo, and Y. Liu, “CSI: A hybrid deep model for fake
+news detection,” in Proc. ACM Int. Conf. Inf. Knowl. Manage., 2017,
+pp. 797–806.
+[57] M. C. de Souza, B. M. Nogueira, R. G. Rossi, R. M. Marcacini,
+B. N. Dos Santos, and S. O. Rezende, “A network-based positive and
+unlabeled learning approach for fake news detection,” Mach. Learn.,
+vol. 111, no. 10, pp. 3549–3592, 2022.
+[58] A. S. Karnyoto, C. Sun, B. Liu, and X. Wang, “Augmentation and heterogeneous graph neural network for AAAI2021-COVID-19 fake news
+detection,” Int. J. Mach. Learn. Cybern., vol. 13, no. 7, pp. 2033–2043,
+2022.
+[59] X. Wang et al., “KEPLER: A unified model for knowledge embedding and
+pre-trained language representation,” Trans. Assoc. Comput. Linguistics,
+vol. 9, pp. 176–194, 2021.
+[60] O. Hartig, C. Bizer, and J.-C. Freytag, “Executing SPARQL queries over
+the web of linked data,” in Proc. Semantic Web-ISWC 2009: 8th Int.
+Semantic Web Conf., Springer, Chantilly, VA, USA, 2009, pp. 293–309.
+[61] P. Patwa et al., “Fighting an infodemic: COVID-19 fake news dataset,” in
+Proc. Assoc. Comput. Linguistics Constraint., 2021, pp. 21–29.
+[62] K. Shu, D. Mahudeswaran, S. Wang, D. Lee, and H. Liu, “FakeNewsNet:
+A data repository with news content, social context, and spatiotemporal
+information for studying fake news on social media,” Big Data, vol. 8,
+no. 3, pp. 171–188, 2020.
+[63] F. Rangel, A. Giachanou, B. H. H. Ghanem, and P. Rosso, “Overview of
+the 8th author profiling task at pan 2020: Profiling fake news spreaders on
+twitter,” in Proc. CEUR-WS.org, vol. 2696, 2020, pp. 1–18.
+[64] W. Y. Wang, “‘Liar, liar pants on fire’: A new benchmark dataset for fake
+news detection,” in Proc. Assoc. Comput. Linguistics, 2017, pp. 422–426.
+[65] M.-Y. Chen, Y.-W. Lai, and J.-W. Lian, “Using deep learning models to
+detect fake news about COVID-19,” ACM Trans. Internet Technol., vol. 23,
+no. 2, 1–23, 2022.
+[66] Y. Kim, “Convolutional neural networks for sentence classification,” in
+Proc. Conf. Empirical Methods Natural Lang., 2014, pp. 1746–1751.
+[67] A. Praseed, J. Rodrigues, and P. S. Thilagam, “Hindi fake news detection
+using transformer ensembles,” Eng. Appl. Artif. Intell., vol. 119, 2023,
+Art. no. 105731.
+
+Bingbing Xie received the Master’s degree from
+Central China Normal University, Wuhan, China.
+He is currently working toward the Ph.D. degree
+with the School of Information Management, Wuhan
+University, Wuhan, and the School of Computing,
+Macquarie University, Sydney, NSW, Australia. He
+has authored or coauthored articles in different journals and conferences, such as IEEE TRANSACTIONS,
+SSDBM, and NPJ Digital Medicine. His research
+interests include data mining, machine learning, deep
+learning, and medical AI.
+
+Xiaoxiao Ma received the Master’s degree from The
+University of Melbourne, Melbourne, VIC, Australia.
+He is currently working toward the Ph.D. degree
+with the School of Computing, Macquarie University,
+Sydney, NSW, Australia. He has authored or coauthored papers on top data mining journals and conferences, such as IEEE TRANSACTIONS ON KNOWLEDGE
+AND DATA ENGINEERING, KDD, WWW, EMNLP,
+SSDBM, and ICDM. His research interests mainly include data mining, deep learning, anomaly detection,
+and machine learning for health and social networks.
+
+3961
+
+Shan Xue received the Ph.D. degree in information management from the School of Management,
+Shanghai University, Shanghai, China, in 2018, and
+the second Ph.D. degree in computer science from the
+Center for Artificial Intelligence, University of Technology Sydney, Ultimo, NSW, Australia, in 2019.
+She is currently a Lecturer with the School of Computing, Macquarie University, Sydney, NSW. Her
+main research interests include artificial intelligence,
+machine learning, and knowledge mining.
+
+Jian Yang (Member, IEEE) received the Ph.D. degree in data integration from The Australian National
+University, Canberra, ACT, Australia, in 1995. She is
+currently a Full Professor with the School of Computing, Macquarie University, Sydney, NSW, Australia.
+She has authored or coauthored more than 200 journal
+and conference papers in international journals and
+conferences, such as IEEE/ACM TRANSACTIONS, INFORMATION SYSTEMS, DATA AND KNOWLEDGE ENGINEERING, VLDB, ICDE, ICDM, and CIKM. Her
+main research interests include business process management, data science, and social networks. She is currently an Executive
+Committee Member of the Computing Research and Education Association
+of Australasia.
+
+Jia Wu (Senior Member, IEEE) received the Ph.D.
+degree in computer science from the University of
+Technology Sydney, Ultimo, NSW, Australia. He is
+currently an Associate Professor and the Research
+Director with the Applied AI Centre, School of Computing, Macquarie University, Sydney, NSW. Since
+2009, he has authored or coauthored more than 200
+refereed journal and conference papers, such as IEEE
+TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, KDD, CIKM, WWW, IJCAI, AAAI, and
+NeurIPS. His current research interests include data
+mining and machine learning.
+
+Hao Fan received the Doctorate degree in computer
+and information systems from Birkbeck College, University of London, London, U.K., in 2005. He is currently a Full Professor with the School of Information
+Management, Wuhan University, Wuhan, China. His
+research interests include information content analysis, intelligence mining, text semantic understanding,
+knowledge organization, knowledge service, data intelligence, and big data analysis. He is a Doctoral
+Supervisor and a Member of the Communist Party of
+China.
+PAPER_TEXT

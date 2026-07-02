@@ -1,0 +1,1624 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [412] Empirical Study of Hierarchical Intrusion Detection Systems for Unknown Attacks
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：412
+题名：Empirical Study of Hierarchical Intrusion Detection Systems for Unknown Attacks
+年份：2025
+DOI：10.1109/tnsm.2025.3600378
+来源：IEEE Transactions on Network and Service Management
+PDF：paper/10.1109_TNSM.2025.3600378.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：恶意流量、暗网与攻击检测、IoT、车联网、工业互联网与边缘安全
+相关性：强相关，分数 13
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\412.txt
+- 原始字符数：73472
+- 本次发送字符数：73472
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+5564
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Empirical Study of Hierarchical Intrusion Detection
+Systems for Unknown Attacks
+Menaka Pushpa Arthur, Ganesan Ramachandran, Keshav Sood , Senior Member, IEEE,
+Pavan Kaarthik, Srivarshinee Sridhar, and Morshed Chowdhury
+
+Abstract—The attack detection models of the traditional
+Intrusion Detection Systems (IDSs) are trained on closed-set
+problems which reduces the classifiers’ performance on detecting
+unknown attacks in the open-set problem space. Mostly adapted,
+one-short learning in the classifier does not allow the traditional
+IDS to be an open-set recognizer. The alternate continuous
+learning-based IDS in unknown attack detection claims ongoing
+suggestions from experts to retrain the model with newly
+identified samples. Hence, using the multi-layer hierarchical IDS
+(HIDS) with optimized classifier models, the unknown attacks
+can be classified by comparing their patterns with benign and
+known attacks. However, we have identified many challenges in
+the existing HIDS system on various datasets though it provides
+a solid foundation in this design category for unknown attack
+identification. As a result, in this paper, we designed an enhanced
+multi-tier IDS for zero-day attack detection with optimized
+heterogeneous classifiers in its major two phases like basic
+framework demands. We have examined the enhanced proposed
+hierarchical IDS on various benchmark Intrusion Detection
+Systems datasets such as WUSTL, CIC_IDS_2017, 5G and
+UNR to analyze the efficiency in unknown attacks classification.
+When compare to existing multi-tier IDS, the proposed IDS
+achieved highest detection 96.2%, 87%, 96.8% and 100% in
+5G, WUSTL, UNR and CIC_IDS_2017 datasets for unknown
+attacks. The optimized model in the proposed IDS reduces the
+time complexity into 50% than the existing. Implementation
+results show the proposed enhanced IDS performs better than
+the existing hierarchical IDS with a high true positive rate for
+benign, known and unknown attack labels on various datasets.
+Index Terms—Intrusion detection system, zero-day attack,
+open set problems, machine learning.
+
+I. I NTRODUCTION
+
+T
+
+HE SCOPE of zero-day attacks in the latest networks
+such as Internet of Things (IoT), Industrial-IoT (IIoT) and
+
+Received 6 June 2025; accepted 7 August 2025. Date of publication
+19 August 2025; date of current version 5 December 2025. This research is
+supported by the Department of Science and Technology (DST), India, under
+the Fund for Improvement of S&T Infrastructure in Universities and Higher
+Educational Institutions (FIST) Program [Grant No. SR/FST/ET-I/2022/1079],
+and a matching grant from VIT University, Chennai. The associate editor
+coordinating the review of this article and approving it for publication was
+D. G. Berbecaru. (Corresponding author: Menaka Pushpa Arthur.)
+Menaka Pushpa Arthur, Ganesan Ramachandran, Pavan Kaarthik, and
+Srivarshinee Sridhar are with the School of Computer Science and
+Engineering, Vellore Institute of Technology, Chennai 600127, India (e-mail:
+menakapushpa.a@vit.ac.in).
+Keshav Sood is with the School of Information Technology, Deakin
+University, Geelong, VIC 3220, Australia.
+Morshed Chowdhury is with the School of Engineering and Information
+Technology, Melbourne Institute of Technology, Melbourne, VIC 3000,
+Australia.
+Digital Object Identifier 10.1109/TNSM.2025.3600378
+
+5G is very high due to their diversified connected devices, vast
+coverage, large network scalability, and restricted computation
+resources in the connected devices. Due to advanced intelligent
+technology [1], openly accessible high-end resources, and the
+motivations from terrorists, attackers trigger more attacking
+strategies than before. The zero-day attacks can be predicted
+only after a while from the attack initiation to create an explicit
+impact on the network performances. Meanwhile, its impact
+on the network is substantial. In this situation, the conventional signature-based IDSs make them unable to protect the
+networks from unknown attacks with zero knowledge about
+the new coming attacking strategy. The traditional IDSs have
+been built by learning the patterns of benign and known attack
+instances. With limited data sets, fewer minority samples
+and traffic do not contain modern networks’ footprints, the
+conventional IDSs struggle to identify new attacks and new
+benign traffic [2]. Also, the unknown attack classification gets
+complicated and produces high false positive rates in such
+IDSs because of real-world open-set problems [3].
+Traditional Artificial Intelligence-enabled IDSs are mostly
+designed as a closed-set recognition approach where all class
+samples are used in the training phase and those class labels
+alone are expected to occur during testing for prediction [3],
+[4], [5]. The Open Set Recognition (OSR) approach facilitates
+the classifier to detect zero-day attack instances in an adaptive
+and proactive manner [3]. To address the open-set problem,
+IDS should be designed to classify the newly arrived class test
+samples that are not seen or used to train the classification
+model [4]. Further, one-shot training is not sufficient for
+an intrusion detection model to learn the pattern of the
+zero-day attacks. The IDS framework with OSR [6], [7]
+continuously evolves the learning even after training to detect
+unknown attacks. Unsupervised machine learning algorithms
+such as clustering and outlier analysis can identify the samples
+that are deviated from benign patterns. This methodology
+in the existing works [8], [9] can solve the zero-day attack
+identification at a baseline level.
+To further validate our observations, in this paper, we
+systematically evaluated the performance of multistage, hierarchical IDS which is proposed by Verkerken et al. [10]
+against unknown attacks. In their work, the IDS has given
+96% balanced accuracy in the overall classification and 87%
+zero-day attack classification for CIC_IDS_2017 dataset. This
+multi-tier hierarchical IDS has been designed with supervised and semi-supervised algorithms in two tiers and the
+results are well-tuned with the set of calculated thresholds
+
+c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+1932-4537 
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+and hyper-parameter optimization algorithm, i.e., TPE (Treestructured Parzen Estimator) in the classification model. We
+have analyzed the general solution capacity of this IDS over
+unknown attacks on other IDS datasets such as UNR [11],
+5G_IDD [12], and WUSTL [13]. Interestingly, this system
+does not produce impressive results in other datasets. In small
+datasets like UNR and 5G, the classification accuracy for
+unknown attacks is notable, yet the misclassification rate for
+known attacks is still quite high. Known attacks are misclassified as unknown attacks. Whereas this system achieves
+nearly 80% classification accuracy for unknown attacks in
+large datasets like CIC_IDS_2017 and WUSTL.
+Motivated from this, we extended the framework of [10]
+with various alternative supervised, unsupervised and semisupervised machine learning and deep learning algorithms
+in its two stages and evaluated the outcome under permutation and combination of such algorithms. The proposed
+OSR classifier is also optimized by Gaussian Process-based
+Bayesian optimisation (BOGP) technique. The implementation
+results are extensively analyzed to find the best algorithms
+for anomaly detection (stage1), multi-class known attack
+detection, and unknown attack (combined stage) detection
+in the multitier IDS architecture. Our work observed that
+the optimization algorithm BOGP performs better than TPE
+and produces very similar high classification accuracy for
+benign samples like in state-of-the-art [10]. The known attacks
+are classified by the proposed enhanced OCR IDS with
+the highest accuracy than in existing IDS. Interestingly this
+enhanced multi-tier IDS can classify unknown attacks better
+for CIC_IDS_2017 and UNR datasets. By considering the
+overall classification accuracy including all labels; benign,
+known, and unknown attacks, the proposed enhanced multitier IDS gives similar or better values in four datasets.
+Our contributions are as follows:
+1) In our empirical study, we have reproduced the work
+done by Verkerken et al. [10] in which the authors have
+proposed a multi-stage IDS against unknown attacks.
+After our rigorous evaluation of their work, we have
+investigated that the performance of the model is limited
+to certain data types and overall, not effective to detect
+unknown attacks.
+2) To bridge this identified gap, we have proposed a
+multitier hierarchical IDS framework with various alternative supervised, unsupervised and semi-supervised
+machine learning and deep learning algorithms, in its
+two stages. We have also used BOGP technique to
+optimize the classification model. These enhancements
+produce impressive results in the classification rate
+of unknown, known, and benign attacks. This is a
+significant contribution in the design of the proposed
+hierarchical and hybrid intrusion detection system for
+open set problem that consists of unknown or zero-day
+attacks.
+3) Finally, we have further evaluated and compared the
+performance of the existing and proposed enhanced
+multi-tier hierarchical IDS on different network datasets.
+This gives us insights about a) the important role
+of hyper-parameter optimization algorithm in the
+
+5565
+
+classification model and b) the way to use the appropriate machine learning, deep learning, deep reinforcement
+learning, and federated learning algorithms for the
+design of OCR IDS for a zero-day attack detection.
+The remainder of this paper is organized as follows: In the
+next section, existing works in the intrusion detection system
+designed for unknown or zero-day attacks are discussed.
+Section III describes the benchmark network intrusion datasets
+used in this empirical study. Section IV presents various methods and algorithms adapted in the design of an unknown attack
+detection system. The experimental results and comparison of
+the performance of various techniques in the hierarchical IDS
+are presented in Section V. Finally, Section VI concludes the
+paper.
+II. R ELATED W ORK
+The misclassification rate of unknown attacks in conventional single-layer intrusion detection systems is in the
+unavoidable range that leads to severe data breaches and
+network instability. In recent years, many initiatives have
+been taken against unknown or zero-day attacks to design
+adaptive intrusion detection systems that automatically tune
+when faced with new patterns in network traffic [8], [9]. Based
+on this requirement, existing work designed the hierarchical
+IDS to classify unknown attacks from known attacks and
+benign traffic. The multilevel, hybrid IDS has been designed
+with anomaly and signature-based techniques to separate
+the learning process as benign and adversarial traffic. In
+the state-of-the-art work [4], [8], [10], [14], [15], benign
+network activities are learned well by the semi-supervised or
+unsupervised algorithms, whereas known attacks are learned
+by the supervised learners. The taxonomy of the existing IDSs
+for unknown attacks is given in Fig. 1 and summary of such
+works is presented in Table I.
+Zero-day attacks in the Internet of Vehicles (IoV) caused
+by vehicles and external networks connected to vehicles have
+been detected by Yang et al. [14] multilevel hybrid (MTH)
+intrusion detection system. The normal and known traffic
+patterns are learned by the signature-based IDS. The unknown
+attack traffic samples are grouped using anomaly-based IDS.
+They evaluated the efficiency of the designed MTH using the
+CAN and CIC_IDS_2017 datasets. The limitation of this work
+is the less F1 score, i.e., 0.8 obtained for the CIC_IDS_2017
+data set. A set of appropriate preprocessing steps has been
+identified to improve the quality of the data set before training.
+k-means clustering for data sampling, SMOTE-based balanced
+dataset, label encoding, and z-score normalization algorithm
+are in the first phase of the MTH-IDS for preprocessing.
+For training, only optimal features are selected using IG
+(Information Gain), FCBF (Fast Correlation Based Feature
+Selection), and KPCA (Kernel Principal Component Analysis)
+techniques. Signature-based IDS is implemented by supervised
+algorithms such as Decision Tree, Random Forest, Extra
+Tree, and XGBoost for known attacks detection. CL-k mean
+classifier used to implement anomaly-based IDS to label zeroday attacks. Bayesian Optimization-Tree of Parzen Estimator
+(BO-TPE) [16], [17], [18] and Bayesian optimization based
+
+5566
+
+Fig. 1.
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Taxonomy of Zero-Day Attack IDS.
+
+on Gaussian processes used to optimize the supervised and
+unsupervised learning algorithms in this MTH.
+The model retraining phase is enhanced with Proportional
+Progressive Pseudo-Labeling (PPPL) technique [19] by
+excluding uncertain samples in the beginning stages of the
+training loops. Using the reinforcement learning method [20],
+[21] or experts labeling, the new class labels are named
+for the unknown samples and models will be retrained by
+including those new samples in the original dataset. The
+performance of IDS on zero-day attacks also improved by
+the model’s hyper-parameters optimization techniques like
+Bayesian Optimization and Tree-structured Parzen estimator [16]. Also, the zero-day attack signature extraction is very
+difficult if it overlaps the known attacks or normal traffic
+samples [22].
+In the state-of-the-art work, very limited papers have been
+published on adaptive IDS to detect zero-day attacks in
+the open set problem space. The clustering-based open-set
+recognition models such as DOC (Deep Open Classification),
+OpenMax, and AutoSVM are initially introduced for zeroday attack detection in the IDS by Soltani et al. [8]. In
+two ways, the open-set IDS have been designed in stateof-the-work; (i) setting appropriate threshold in the baseline
+models [10], [23] and (ii) Unsupervised or semi-supervised
+anomaly detection in the multi-tier IDS framework to filter
+unknown attacks prior to supervised classification model for
+known attacks [3], [8], [10].
+Soltani et al. [8] designed an adaptable deep learning-based
+IDS in this category with four phases; (i) Open set recognition
+used AutoSVM to classify known and unknown attack samples,
+(ii) unknown attack samples are grouped using a clustering
+algorithm with deep model in its last layer, (iii) supervised
+labeling used experts to label clusters of the unknown samples
+
+into a new benign, unknown attack, temporary anomaly and
+(iv) retrain the model with newly labeled samples to classify
+zero-day attacks. Another work in this category, proposed by
+Wu et al. [9] explored deep Q-network (DQN) to design an
+IDS under active against unknown attacks in the network.
+Active DQN consists of three phases; (i) NIDS classifier
+to generate belief vector for benign and malicious samples,
+(ii) sample selection phase selects valuable samples based on
+the belief vector and confidence score and (iii) annotator labels
+the new group samples and added in the existing dataset to
+retrain the model. With the help of deep learning techniques
+such as Evaluation Net and Target Net, the deep-Q network
+reinforcement learning process is enhanced.
+Nguyen and Le [15] designed a reliable unknown
+DoS/DDoS attack detection system for IoT networks using the
+combination of supervised and unsupervised hybrid IDS. The
+soft-ordering CNN model is trained by the benign network
+traffic patterns. The unsupervised algorithms Local Outlier
+Factor (LOF) and isolated-based Nearest Neighbor Ensemble
+(iNNE) identified the abnormal traffic patterns in the IoT
+network. The sequentially deployed SOCNN (Soft Ordering
+CNN), LOF, and iNNE models detect the test samples as
+normal or abnormal and forward the abnormal samples to the
+admin to handle the unknown attacks.
+Recently, Fog and Edge Computing Architecture in the IoT
+network requires edge-device-oriented federated learning to
+detect zero-day botnet attacks [24]. Further, Popoola et al. [25]
+applied a Deep Neural Network to create the local and global
+classification model in different places of the network. The
+federated learning algorithm aggregates local model updates,
+and via polling the global model is updated to learn the new
+samples in the network. Verma et al. [3] designed a zeroday guardian against IIoT in the 5G network using federated
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+5567
+
+TABLE I
+D ISCUSSION OF E XISTING IDS FOR U NKNOWN ATTACKS
+
+learning IDS. Dual synchronized Autoencoders have been
+used to train the normal and attack samples in this FLbased IDS. Kim et al. [26] used an autoencoder to implement
+the reliable profiling-based approach to automatically detect
+zero-day malware. In the training phases, the autoencoder
+generates the latent representation Z for the training samples,
+and then Z is passed as an input for the one-class classifier
+to learn the benign software and malware. One-class learner
+reads latent representations of the training samples rather than
+the actual training dataset. The same technique was adopted
+by Li et al. [27] to design the MS-ZeroWall, a multistep
+
+attack detection system for smart homes. The Variational
+Autoencoder and Hidden Markov Model are used to learn the
+known and unknown attack samples. The latent space is very
+close to the normal Gaussian distribution for known attacks
+rather than unknown attacks.
+Interestingly, Mbona and Eloff [28] and Zoppi et al. [29]
+used only the semi-supervised machine learning algorithms
+for zero-day attack detection in the IoT network. Gaussian
+Mixture Model and the One-Class SVM semi-supervised
+algorithms have been adapted to design the IDS. In addition to
+the primary target of detecting zero-day attacks, the IDS is also
+
+5568
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+designed to optimize its performance in detection accuracy.
+High-biased and low-variance issues in the prediction of
+unknown attacks in the model have been reduced by [4]
+concatenating the results of auto-encoder, CNN, and LSTM in
+the ensemble Intrusion Detection Systems for IoT and wired
+networks. The overfitting problem in the training process of
+unknown attacks IDS was solved by Hairab et al. [30] using
+CNN along with regularization techniques L1 and L2.
+Remarks: The existing works in the open-set IDS design for
+the unknown or zero-day attack detection are very limited [3],
+[4], [5], [8], [10]. Also, the IDSs in the state-of-the-art
+have been designed for a particular network like 5G, IIoT,
+and IoT. The datasets used in such works are related to
+specific networks. There is no such general Open-Set IDS for
+unknown attack classification for different types of networks.
+In our work, we analyze the performance of out-performed
+multi-tier hierarchical IDS on unknown attacks that registered
+on CIC_IDS_2017 dataset against various IDS datasets of
+different networks. The poor results obtained in our empirical
+study drive us to enhance the existing hierarchical IDS for
+zero-day attack classification.
+III. DATASETS D ESCRIPTION
+We have used 4 datasets in our comparative study. The
+description of the data sets are given below.
+CIC_IDS_2017: This dataset is generated by the Canadian
+Institute of Cybersecurity (CIC) in 2017 [31]. This data
+set is intended to evaluate the performance of IDS and
+IPS. This dataset consists of 53,92,441 samples including
+benign and various attacks such as DDoS, Port Scan, Brute
+Force, Web-Attack, Botnet, Infiltration, and Heartbleed. For
+the implementation of the purpose of the empirical study, infiltration and heartbleed samples have been considered unknown
+attacks due to the smaller number of samples in the entire
+dataset.
+UNR-IDD: University of Nevada - Reno Intrusion
+Detection Dataset (UNR-IDD) [11] is an NIDS dataset with
+additional special feature network port statistics collected from
+switch or route.
+5G-NIDD: This Network Intrusion Detection dataset is
+generated over 5G wireless networks testbed by the University
+of Oulu, Finland [12]. The data is collected from the base
+station that is connected with normal and attacker user nodes.
+This dataset consists of DoS and port scan attack samples.
+WUSTL-IIoT 2021: The cybersecurity attacks in Industrial
+IoT have been collected emulated and collected from the
+testbed. This dataset [13] consists of nearly 93% samples from
+normal traffic in the total dataset whereas the remaining 7%
+is occupied by Reconnaissance, command injection, DoS, and
+backdoor attacks. Using Argus tool, the best 41 network flowrelated features are identified.
+IV. P RELIMINARIES
+In this section, we discussed the methodologies used in
+the state-of-the-art of multi-tier IDS against unknown attacks
+detection.
+
+A. Unsupervised Machine Learning
+1) AutoEncoder: The zero-day attack detection system in
+the state-of-the-art utilized Autoencoder as an unsupervised
+machine learning algorithm to learn the patterns in normal
+network traffic to classify them from abnormal traffic. As
+mentioned in [10], [32], for known samples, the latent domain
+in the autoencoder is closer to the normal Gaussian distribution
+N(0,1) than in the unknown samples. The design of a Zeroday attack Intrusion Detection System used Autoencoder in
+the following ways;
+1) Single Autoencoder to classify the normal data using a
+One-Class classifier [26]
+2) A Single Autoencoder for benign data and its encoder
+hidden layers are built by CNN [27]
+3) Dual synchronized Autoencoder for normal and attack
+data [3]
+The encoder of the AE is connected with the classifier
+using the latent representation zi of the input data xi using an
+activation function Ae of the encoder
+ 
+
+
+(1)
+Qp x i = Ae Wx i + b
+with W and b represent the weight and bias values. The encode
+Ae maps x i into a latent representation or bottleneck z i .
+2) iForest [33]: iForest uses a partition-based anomaly
+isolation method other than other methods such as densitybased and distance-based to build the model for normal or
+anomaly samples. The tree is constructed with two child nodes,
+i.e., binary tree to profiling the normal instances, the deviation
+is identified as an anomaly. The analytical model of the iForest
+uses the height of the isolation tree h(x) for the instance x to
+isolate the anomaly instances from the normal. If the path of
+the leaf node x from the root is more, then it is classified as
+normal otherwise anomaly.
+x
+
+
+Edge + +
+
+(2)
+
+c(n) = 2H (n − 1) − (2(n − 1)/n)
+
+(3)
+
+Edge = 0; h(x ) =
+
+i=root
+E (h(x )
+− c(n)
+
+s(x , n) = 2
+⎧
+if s(x , n) > 0.8
+⎨ Anomaly;
+if s(x , n) < 0.5
+A(x , n) = Normal ;
+⎩
+NoAbnormality; if s(x , n) ≈ 0.5
+
+(4)
+(5)
+
+3) iNNE [34], [35]: The unknown DoS/DDoS attacks were
+detected using isolation using the nearest neighbor ensemble
+model, [15]. iNNE is a distance-based method to build
+the ensemble model for anomaly isolation. The axis-parallel
+clustering in iForest induces an anomaly masking problem
+that reduces the anomaly detection accuracy. This problem
+is resolved in iNNE by forming hyperspheres for selected
+subsamples with size ψ. Each instance x in the subsample
+S is covered by hypersphere H(x) centered with x and
+calculated radius r(x). The instance x with long radius H(x)
+is more isolated from its neighbors. If H(x) intersects other
+hyperspheres, then x is very close to neighborhoods. The dense
+hypersphere contains normal instances whereas there is more
+chance for the sparse hypersphere formed by anomalies. In
+this way, the isolation score is calculated between 0 and 1 for
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+the x t h instance in S. For the subsample S with n number
+of instances, the anomaly score A for the training dataset is
+calculated by the average of isolation score I of each instance;
+A=
+
+n
+
+Ii
+i=1
+
+(6)
+
+n
+
+The test sample t is classified as anomaly or normal by
+calculating the average isolation score of t sample from n
+number of hyperspheres H(x) generated for x instances in the
+subsample with ψ size;
+n
+I (t, H (xi ))
+(7)
+A(t) = i=1
+n
+An anomaly score A(t) of test sample t is more than the
+threshold value then it’s classified as an anomaly;
+t=
+
+Anomaly, if A(t) > threshold
+Normal , otherwise
+
+(8)
+
+4) LOF [36]: This mechanism learns outlier patterns rather
+than normal patterns in the input samples. The parameter
+Local Outlier Factor gives the degree of isolation for the
+outlier objects. This outlier factor depends on the outlierness of the object against its k-neighborhood. The LOF of
+an object is calculated via the sequence of calculations such
+as k-distance of an object (k-dis), reachability distance of
+an object (r_dis), reachability density (r_den) and outlier
+factor (f). The LOF is calculated by the following combined
+formula;
+
+
+
+LOF (p) =
+
+o∈NM inPts(p)
+
+ o∈NM inPts(p)
+
+Reach _Dist(p,o)
+
+algorithms. The multi-tired IDS [14] has been designed to
+detect unknown cyberattacks on the Internet of Vehicles.
+In the Four-tired IDS, the first and second layers were
+implemented using multiclass supervised learning algorithms
+with hyper-parameters optimization to detect known attacks.
+Four tree-based learners with Tree Parzen Estimator Bayesian
+optimization algorithm have been stacked in the first two
+layers of the IDS. The Decision Tree, Random Forest, Extra
+Tree, and Extreme Gradient Boosting are the base learners in
+the ensemble model whereas high accuracy learner from this
+set is used as the meta classifier. The base models RF, ET
+and XGBoost are ensemble models of multiple decision trees.
+The Random Forest Supervised machine learning algorithms
+such as AdaBoost, Logistic Regression and Naive Bayes are
+adopted for the zero-day attack detection IDS for the IoT
+networks [30].
+2) Deep Learning: Deep Learning model framework has
+been designed [8] with the help of DOC and OpenMax to
+classify known and unknown samples in the repeated training
+along with labeling via clustering technique.
+Deep Open Classification [37]: Instead of, training the
+model in the closed environment, the learning process is
+done in a dynamic and open environment in the DOC, an
+extension of Open-class SVM. DOC should identify the new
+class samples that are not used in the model learning phase is
+called an open classification problem. DOC generates M(i+1)
+one-vs-rest models for i number of seen class labels li in the
+training dataset D and additional label for rejection class that
+represents unseen samples.
+
+
+
+o  ∈NM inPts(o) Reach _Dist(o ,o)
+
+|NM inPts(p)|
+
+(9)
+Reach _Dist(p, o) = max (kd ist(o), d(p, o)).p, o ∈ D
+
+(10)
+
+LOF finds outliers using local analysis rather than global
+analysis from k-nearest neighbors of an object. MinPts represents the nearest neighbors of an object.
+B. Semi-Supervised Machine Learning
+1) One-Class Learner(OC-SVM): In the hierarchy intrusion detection system for an unknown attack [10], [28], the
+anomaly samples are classified from benign traffic in the first
+phase. The labeled benign samples train the model to learn
+the one-class pattern in the dataset. Gaussian kernel form
+the hypersphere around similar samples in the feature space
+instead of forming hyperplanes in default SVM. The complex,
+non-linear boundary builds for hyper_sphere in the OCSVM.
+In these works, the hyperparameters of OCSVM are optimized
+to induce the best AOC for anomaly detection. The one-class
+RBF of OCSVM is given as follows:
+2
+
+K xi , xj = exp−||Xi −Xj || /2σ
+
+2
+
+(11)
+
+C. Supervised Learning Algorithm
+1) Machine Learning Algorithm: One of the layers in
+the hybrid Intrusion Detection System included [10], [14],
+[30] to detect known attacks in networks that classify
+unknown attacks from them using the multiclass classifier
+
+5569
+
+ŷ =
+
+Reject,
+if Sigmoid(di ) < ti , ∀i ∈ li
+(12)
+max (Sigmoid(di )), ∀i ∈ li otherwise
+
+The Open Space risk of Sigmoid function is reduced by
+adjusting the threshold value ti equivalent to 0.5.
+OpenMax [5], [23]: The penultimate layer of the Softmax
+layer gives the score for an input that is not specific to any
+known classes. This score is called the activation vector, which
+is considered as the main information for OpenMax. Using the
+Meta-Recognition technique, OpenMax finds the distance of
+input from known classes. If the input is far away from known
+data, then it is classified as unseen sample. The Softmax layer
+computes the probability of detection under class label j for
+an input x;
+e vj (x )
+(13)
+P (y = j |x ) = N
+vi (x )
+i=1 e
+y ∗ = argmaxj P (y = j |x )
+(14)
+∗
+∗
+Reject, if y == 0(or)P (y = y |x )<
+ŷ =
+(15)
+otherwise
+y ∗,
+CNN: The Convolutional Neural Networks [3], [25] and
+LSTM are ensembled with Auto Encoder to detect unknown,
+known and benign classes, [4]. The ensemble model considered threshold-based design to deal the open-set problems.
+The CNN architecture with L1 and L2 regularizations is used
+in the IDS [30]. By reducing the over-fitting problem, the
+detection of a zero-day attack has been improvised by L1
+and L2 regularization techniques. L2 performs better when
+
+5570
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+compared to L1 since L2 uses the square value of magnitude
+rather than absolute value in L1. The regularizers integrate the
+additional term, that is, penalty, with the cost function of CNN
+model;
+λ 
+||wi ||
+2m
+
+(16)
+
+λ 
+||wi ||2
+L2 = Loss(ŷ, y) +
+2m
+
+(17)
+
+m
+
+L1 = Loss(ŷ, y) +
+
+i=1
+m
+
+E. Hyper-Parameter Optimization [39] (HPO)
+
+i=1
+
+The L2 considers all features to tune the parameters by
+calculating the square of magnitude that makes the less
+coefficient features nearer to 0 rather than 0. At the same time,
+the L1 method directly removes the less important features that
+have 0 value from the model construction process. Hence, L1
+fits for outlier analysis, whereas L2 fits for complex network
+traffic with uncertain features to design an IDS against zeroday attacks.
+Soft Ordering CNN: The traditional CNN architecture is
+modified in SOCNN by including the feature expansion
+layer before to feature extraction and classification layer to
+classify unknown DoS/DDoS attack detection system for IoT
+networks [15]. The fully connected layer is added first in the
+SOCNN architecture to extend the input vector x into an output
+matrix in nxm size where n is the existing features and m
+is the soft ordering feature set. The intention of SOCNN is
+re-ordering the features to find an optimal order with high
+detection rate of unknown attacks.
+FCout = g(Wx + B )
+
+where, Rcorrect = +1, Rwrong = −1 and Rmodify = 0 represent the action for correct, wrong classification and expert’s
+request for class labeling for an input sample x. yˆx and
+yx means the predicted and actual class value. The LSTMbased Evaluation and Target Net models of this framework are
+used to calculate the Q value using Q(current_state,a), ∀a ∈
+actions pace and updated Q value after the reward has been
+calculated.
+
+(18)
+
+where, FCout is the output matrix of fully connected layer
+with nxm size. g() is the activation function and B is the bias
+value. W is the m matrix in nxn size.
+LSTM [4] and BiLSTM [9]: The LSTM-based Evaluation
+and Target Net models of the ADQN NIDS [9] framework are
+used to calculate the Q value using Q(current_state,a), ∀a ∈
+actions pace and updated Q value after the reward has been
+calculated. ADQN NIDS is designed to learn spatial, temporal
+and spatio-temporal features in the input samples by integrating BiLSTM, CNN and fusion of these two architectures
+connected via fully connected layer.
+D. Reinforcement Learning
+Deep Q Network combined with BiLSTM [9] selects the
+zero-day attack samples for annotation along with the probability distribution before classifying them using the ADQN
+algorithm. Using DQN [38], the dynamic active learning
+process is featured in IDS to retrain the model with newly
+annotated unknown attack samples that will improve the
+overall performance of the detection. The reward function
+of ADQN is defined as follows with two different action
+spaces Ak , ∀k - class labels in the dataset and AE - expert’s
+requisition for label annotation for unknown sample;
+⎧
+/ AE and yˆx ≡ yx
+⎨ Rcorrect , if ax ∈
+/ AE and yˆx = yx
+rx = Rwrong , if ax ∈
+(19)
+⎩
+Rmodify , if ax ∈ AE
+
+The hyperparameters of the model are improved by two
+different variations of Bayesian Optimization algorithms; Treestructured Parzen Estimator [16] and Gaussian process [40]. In
+the [10] research work, TPE is used as a sampling algorithm.
+The k-value in the k-means unsupervised clustering algorithm
+is tuned using the GP-BO method in the work [14]. The
+Gaussian distribution in GP-BO method predicts the class label
+y for an input x in the hyper-parameter space D with mean μ
+and covariance σ.
+
+
+(20)
+p(y|x , D = N y|μ̂, σ̂ 2
+The prediction of next hyper-parameter value in TPE is
+calculated using two density functions l(x) and g(x) with the
+predefined threshold y*. These two functions are defined for
+good region and poor region which is adjusted by l(x)/g(x) to
+obtain optimal values for hyper-parameters.
+p(x |y, D) =
+
+l (x ), if y < y∗
+g(x ), if y > y∗
+
+(21)
+
+V. I MPLEMENTATION M ECHANISM
+In this section, we discuss the proposed enhanced IDS
+to detect unknown attacks and compare it with the existing multi-tier hierarchical IDS [10]. We have considered
+Verkerken et al. [10] IDS for an empirical study over different
+networks based IDS datasets. This IDS is a three-tier, multistage framework to detect benign, known, and unknown attack
+samples using anomaly-based and signature-based approaches.
+Totally three stages namely anomaly detection, known attack
+detection and unknown attack detection are used to build this
+hierarchical IDS. To improve the unknown attacks classification accuracy, anomaly scores generated in stage1 and stage2
+for the test samples are compared with the corresponding
+phase revised thresholds τB , τM and τV of the unsupervised and supervised classification algorithms rather than
+their default threshold values. The anomaly detector model’s
+threshold τB is calculated from the maximum f-score in the
+F1 to F9 scores of the classification algorithm. In the second
+stage, F1 score of the multi-class classification algorithm is
+set as threshold τM . This work compared and identified One
+Class Support Vector System algorithm performs better than
+Auto Encoder for an unsupervised algorithm to classify benign
+samples in the anomaly detection stage. Whereas, Random
+Forest performs better than Neural Networks for a supervised
+algorithm to classify the known attacks in the multiclass
+classification stage. The performance of the stage1 and stage2
+classification models is improved by the optimization of the
+hyper-parameters using the TPE method. The CIC_IDS_2017
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+Fig. 2.
+
+5571
+
+The Proposed Enhanced Multi-tier Hierarchical IDS Architecture with various Implementation Techniques.
+
+dataset has been considered to evaluate the IDS performance.
+The major drawbacks we have identified in the existing
+work are (i) the efficiency of this system has not compared
+with other multi-tier zero-day attack detection systems. This
+system is compared only with simple open-set IDS which
+tunned the RF baseline threshold (ii) other intrusion detection
+benchmark datasets have not been considered to analyze the
+IDS performance under different characteristics of various
+networks and (iii) it can’t achieve the high classification
+accuracy for zero-day attacks.
+We initiated our work by considering this setback in
+Verkerken et al. [10] work and the notable technologies in
+other zero-day attack detection systems which are discussed
+in Sections II and III. In our work, we adapted the basic
+structure of Verkerken et al. [10] IDS with an adjustable
+threshold since the framework with clustering and classification is the best one for unknown attack detection in
+open-set problems. The novelty in our work is the multi-stage
+hierarchical IDS is designed against zero-day attacks with
+different algorithms mentioned in the state-of-the-work. The
+proposed framework shown in Fig. 2 is designed with three
+stages such as anomaly detection, known attack detection,
+and unknown attack confirmation which is similar to existing
+hierarchical IDS. The enhancement is introduced via two
+ways; (i) find the best combination from the permutation of
+clustering and classification algorithms to design the open-set
+IDS to provide a general solution and (ii) BOGP optimized
+
+models. The anomaly detector model is trained using the
+alternative methods LOF, iNNE, iForest, k-means clustering,
+PAE, and CNN with AE to classify the samples as benign
+or not. In stage2, the multi-class classification model is build
+using various algorithms and ensemble techniques to classify
+known attacks. The sample which is with less anomaly score
+scored in stage2 than the stage2 threshold value τM then
+it forwards to stage3 otherwise this is classified as known
+attack by the stage2. In the final stage, the anomaly score
+of unclassified samples is compared with stage1 and stage3
+threshold values. If the anomaly score generated in stage2 for
+unclassified samples is less than stage3 threshold τV then it
+is classified as an unknown attack. The BOGP is applied to
+tune the hyper-parameters of the models in both stages.
+The existing and enhanced IDS (represented as “Alternative”
+in Fig. 2) performance is analyzed using various intrusion
+detection benchmark datasets such as CIC_IDS_2017, 5G,
+UNR and WUSTL. To introduce an unknown attack in the
+dataset for implementation, a known attack class with less
+occurrence is considered for that purpose which is mentioned
+in Table II.
+VI. R ESULTS AND D ISCUSSION
+A. Implementation Environment and Performance Metrics
+We used high end GPU platform, NVIDIA H100 80GB
+PCIe 5.0 x 16 for the implementation of hybrid, multi-tier
+
+5572
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+TABLE II
+D ETAILS OF U NKNOWN ATTACK S AMPLES IN THE I MPLEMENTATION OF THE P ROPOSED E NHANCED M ULTI -T IER IDS
+
+IDS with optimized parameters. It is the most powerful GPU
+chip on the market and is designed specifically for artificial
+intelligence (AI) applications. The configuration details of
+H100 is with the processors in 2 x 24-core (48 cores), memory
+in 1TB, OS storage in 1 x 1.9TB NVMe PCIe, file storage in
+3 x 14TB SATA 6Gb/s 7.2K and NVIDIA NVLink Bridge.
+The four datasets CIC_IDS_2017, WUSTL, 5G and UNR IDD
+intrusion detection benchmark datasets of different networks
+are stored in the server and executed using the python code
+with appropriate packages such as PyTorch and TensorFlow
+etc. The metrics such as accuracy, precision, recall, balanced
+accuracy, and F-score have been measured to analayze the
+performances of the hierarchical intrusion detection system.
+Out of that, the formula for balanced accuracy and F-score are
+given below:
+Balanced accuracy: This is one of the vital metrics for
+highly imbalanced datasets by considering the accuracy of
+both positive and negative cases. The datasets used in our
+experiments are highly imbalanced. We have not adapted any
+techniques to balance the actual dataset since they reduce the
+quality of the dataset. Hence, balanced accuracy is the perfect
+measure to analyze the system under this case.
+Sensitivity + Specificity
+(22)
+2
+F score: It combines Precision and Recall to analyze the
+performance of the algorithm.
+
+
+Precision . Recall
+Fβ = 1 + β 2
+(23)
+2
+(β . Precision) + Recall
+Balanced Accuracy =
+
+where, β various from 1 to 9 for calculating F1 score to
+F9 score.
+B. Performance Evaluation and Results Analysis
+The existing multi-tier hierarchical IDS [10] is implemented
+and evaluated its’ performance using various benchmark intrusion datasets such as UNR, 5G and WUSTL. In three stages of
+the IDS architecture, the performance of the machine learning
+algorithm is observed for an evaluation of binary and multiclassification models to detect normal, known and unknown
+attacks. Using various benchmark datasets, the pros and cons
+of the existing hybrid IDS design are well analyzed. The
+metrics such as training time, test time, accuracy, balanced
+accuracy, precision, recall and F scores are identified as
+appropriate to evaluate the performance of the design of an
+
+TABLE III
+G ENERATED T HRESHOLDS BY THE E XISTING IDS [10]
+
+IDS to detect unknown attacks along with benign and known
+attacks.
+The implementation in our work has been carried out for
+three major observations:
+1) Existing multi-tier IDS vs other networking benchmark
+IDS datasets: These results evaluate the efficiency of the
+existing multi-tier IDS using different IDS datasets
+2) The Proposed Enhanced multi-tier IDS: The techniques
+used in the state-of-the-art of zero-day attack detection
+system are applied in anomaly detection and multi-class
+attack detection stages in the Existing multi-tier IDS
+3) BOGP vs TPE Optimization techniques: The Proposed
+Enhanced multi-tier IDS is evaluated with a different
+optimization technique BOGP than the proposed one
+TPE to tune the hyper-parameters of the anomaly detection and classification models
+We present the implementation results in the following
+sections to discuss the efficiency of the proposed enhanced
+IDS along with TPE and BOGP optimization techniques and
+the limitations of the existing work on various datasets.
+C. Existing Multi-Tier IDS vs Various Benchmark IDS
+Datasets
+In this section, the limitations of the existing multi-tier
+IDS [10] are discussed in stage-wise detail with the help of
+various IDS datasets. The limitations outlined here emphasize
+the significance of the general open-set approach-based IDS
+framework against unknown attacks regardless of the features
+specific to the datasets. Primarily, we focused on the execution time and classification performances to analyze the
+performance of the IDS on various datasets and presented
+these results in Table III to Table V, and Fig. 3–Fig. 6.
+1) Execution Time of the IDS: The training time of stage1
+and stage2 and the testing time of all three stages of the
+existing system are shown in Table V. The stage1 training
+time of WUSTL is recorded as high, i.e., 1min 39s ± 924 ms
+and CIC_IDS_2017 is observed as low 0.771 s ± 21 ms
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+5573
+
+TABLE IV
+P ERFORMANCE M ETRICS OF E XISTING M ULTI -T IER H IERARCHICAL IDS
+
+Fig. 3.
+
+Confusion Matrix of Stage1 and Stage2 of Existing IDS for 5G Dataset.
+
+TABLE V
+T IME C OMPLEXITY OF P ROPOSED IDS VS E XISTING IDS [10]
+
+out of 4 considered datasets. The WUSTL dataset contains
+11,07,448 benign samples to train the OC_SVM model which
+is higher than UNR and 5G datasets that induce the high
+training time for WUSTL. Interestingly, the test time is high
+for CIC_IDS_2017 with 8.117 s ± 277 ms and UNR secures
+low with 122.6 ms ± 20.75 ms due to how complex the
+model converges to find the solution. The known attacks
+detected in 1.813 s ± 8.387 ms for 5G dataset that is the
+high value observed in the 4 datasets. Similarly, the unknown
+classification takes more time in 5G and CIC_IDS_2017
+
+datasets such as 5.65 s ± 43.49 ms and 8.043 s ± 65 ms
+respectively. It shows how complex these two datasets are to
+derive the unknown attacks.
+2) Anomaly Detection Phase: The unsupervised and
+semisupervised algorithms correspondingly AE and OCSVM
+are used in the anomaly detection model of the existing system
+and identified OCSVM outperforms AE. The classification
+model is optimized by TPE technique. Hence, we implemented
+the first stage of the existing system using OCSVM and AE
+and then observed the high value generated by these two
+methods. The confusion matrix generated in stage1 for the
+datasets 5G, WUSTL and UNR are presented in Fig. 3, Fig. 4
+and Fig. 5 correspondingly. From Fig. 3, the accuracy of
+anomaly detection in stage1 for the 5G dataset is observed
+very less, i.e., 75% than for other two datasets WUSTL and
+UNR which are shown in Fig. 4 and Fig. 5. For that two
+datasets, anomaly labels are classified with more than 92%.
+Table VI shows the other performance metrics such as
+recall, precision and F1-score in stage1 for all four datasets.
+Correspondingly, the Recall value of the attack class shown
+in Table VI reached 79% for the 5G dataset which is lower
+than in other datasets whereas the precision is comparatively lesser than others. The anomaly samples are wrongly
+classified as benign which reduces the recall of attack
+and precision of benign samples for UNR and WUSTL.
+Another interesting observation noticed in the stage1 results
+is the dataset CIC_IDS_2017 secured less accuracy 68.7%
+
+5574
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 4.
+
+Confusion Matrix of Stage1 and Stage2 of Existing IDS for WUSTL Dataset.
+
+Fig. 5.
+
+Confusion Matrix of Stage1 and Stage2 of Existing IDS for UNR Dataset.
+
+for benign sample prediction. Correspondingly, the recall of
+benign samples and precision of attack samples are observed
+as less than the other datasets. The reason behind this is more
+number of benign samples in the CIC_IDS_2017 dataset are
+wrongly classified as attacks. That reduces the recall of benign
+and the precision of attack classes. In general, OCSVM in
+stage1 performs better for UNR and WUSTL datasets than
+5G and CIC_IDS_2017 datasets for attack and benign sample
+detection.
+3) Multiclass Known Attack Detection Phase: The major
+design intention of stage2 is to classify known attacks with
+high accuracy. The multiclassification algorithm, Random
+Forest used to train the Stage2 classifier. The threshold tau_m
+in this stage is calculated from the high score registered in
+the range F1 to F9 scores. Refer Table III for the threshold
+obtained in stage2 for different datasets. The confusion matrix
+of 5G, WUSTL and UNR are shown in Fig. 3, Fig. 4 and Fig. 5
+respectively. The low accuracy 80.93% registered for known
+attacks in UNR dataset due to its small size dataset than other
+datasets. Simultaneously, UNR registered less recall 81% for
+
+known attacks since more known attack samples are wrongly
+classified into other classes like benign. More negative cases
+are wrongly classified as known attacks in 5G dataset which
+causes low precision 0.55 for this dataset.
+4) Unknown Attack Detection Phase/Extension Stage: This
+stage finalizes the unknown attacks. The known attack is
+classified from benign by stage1 and then stage2 confirms it.
+Table VI shows the overall performance of the existing multitier IDS. The classification accuracy for unknown attacks
+for CIC_IDS_2017 and WUSTL datasets are registered less
+values 87% and 83%. More benign and known attack samples
+are wrongly classified as unknown attacks in CIC_IDS_2017,
+UNR and WUSTL datasets which reduces the precision to
+less than 0.5. At the same time, more unknown attack samples
+are wrongly classified which reduces the recall value near
+to 0.8. Fig. 6 shows the confusion matrix of the complete
+system of UNR, WUSTL and 5G datasets. Table III shows the
+threshold values of each stage. The threshold value tau_b is
+calculated from F-scores obtained from stage1 prediction algorithm. Tau_b is observed as low 0.00047 in CIC_IDS_2017
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+Fig. 6.
+
+Confusion Matrix of the Complete System in the Existing IDS for(a) UNR (b) WUSTL and (c) 5G.
+
+Fig. 7.
+
+The Proposed Enhanced Multi-tier IDS for 5G with TPE.
+
+and high 0.2068 in 5G dataset to classify the attacks from
+benign.
+D. Performance Analysis of the Proposed Enhanced
+Multi-Tier Hierarchical IDS
+This section applies different techniques from state-ofthe-art for anomaly detection and multi-class classification
+under deep learning and machine learning. For stage1 of
+multi-stage IDS, anomaly detection is implemented using
+unsupervised algorithms such as LOF, iForest, iNNE, CNN
+with AE, k-means, one-class SVM under two different model
+optimization techniques TPE and BOGP. The implementation
+results are shown in Table VI. The top 5 algorithms are chosen
+from Table VI to implement stage1 in the multi-stage IDS. For
+UNR and WUSTL datasets, LOF_TPE, LOF_GP, iForest_GP,
+and OC-SVM_GP are best algorithms for anomaly detection
+to classify benign and non-benign samples. The algorithm
+iForest_TPE is an additional one for WUSTL dataset whereas
+iNNE_GP is in the top list of UNR. The top 5 performers
+of 5G dataset are LOF_TPE, LOF_GP, CNN_GP, iNNE_GP
+and OC-SVM_GP and for CIC_IDS_2017 dataset, CNN_TPE,
+CNN_GP, iNNE_GP, and OC-SVM_GP.
+In the second stage, known attacks are classified using the
+following supervised algorithms from deep learning CNN, Soft
+CNN, LSTM, GRU and all types of multi-class classification
+
+5575
+
+algorithms from machine learning. The ensemble machine
+learning models like AdaBoost, XGBoost etc and customized
+ensemble model from deep learning and machine learning
+under bagging are also used to implement the stage2 of multistage IDS. The results of complete IDS for 5G, UNR, WUSTL
+and CIC_IDS_2017 datasets are shown in Fig. 7 to Fig. 12
+along with different optimization algorithms TPE and BOGP.
+For UNR dataset that shown in Fig. 9 and Fig. 10, under
+BOGP optimization algorithm nearly 75% overall accuracy
+scored by the J48G machine learning algorithm in stage2
+for known attacks classification and LOF_TPE as well as
+iForest_GP algorithms in stage1 for benign samples detection.
+The unknown attacks are identified in 99.94% but benign
+and known attacks samples are classified with only 50%.
+Hence, we considered the next low-level top performers GRU,
+MLP and XGB with LOF_TPE or LOF_GP secured 82%
+known and benign samples classification accuracy. In this set
+of algorithms, XGB and MLP provides nearly 30% detection
+accuracy for unknown attacks with LOF_TPE and LOF_GP
+algorithms in stage1 correspondingly. For the UNR dataset
+shown in Fig. 9 with TPE model optimization algorithm, the
+stage2 algorithms such as MLP, CNN and XGB provide high
+benign and known attacks accuracy in the final detection result
+like 99.97% and 68% correspondingly. The algorithms such
+as LOF_TPE, LOF_GP, iForest_GP are best combination in
+stage1 along with a set of selected stage2 algorithms. Finally,
+
+5576
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+TABLE VI
+S TAGE 1 P ERFORMANCES IN THE E XISTING IDS AND THE P ROPOSED E NHANCED IDS
+
+the XGB and MLP are identified as a best stage2 algorithms
+for entire IDS with iForest_GP in stage1. They secured
+100%:58%:38% and 100%:68%:32% for benign, known and
+unknown attacks in the complete multi-stage IDS.
+
+The same kind of analysis we have applied for other
+datasets CIC_IDS_2017, 5G and WUSTL to find the best
+combination of algorithms in stage1 and stage2 along with
+model optimization technique. For the WUSTL dataset with TPE
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+Fig. 8.
+
+The Proposed Enhanced Multi-tier IDS for 5G with BOGP.
+
+Fig. 9.
+
+The Proposed Enhanced Multi-tier IDS for UNR with TPE.
+
+Fig. 10.
+
+The Proposed Enhanced Multi-tier IDS for UNR with BOGP.
+
+model optimization technique shown in Fig. 11, MLP and Extra
+Tree are identified as best algorithm at stage2 and iForest_GP
+in stage1. The algorithms MLP and ET secured 98%:65%:32%
+and 98%:58%:38% detection accuracy in the final stage of
+the multi-stage IDS for benign, known attacks and unknown
+attack samples. For BOGP model optimization algorithm for
+WUSTL dataset shown in Fig. 12, the MLP and Extra Tree
+stage2 algorithms secure high detection accuracy in the final
+stage with LOF_TPE and LOF_GP algorithms in stage1. These
+algorithms provide 99.97%:68%:29% detection accuracy in the
+final stage for benign, known attacks and unknown attacks.
+For 5G dataset, Extra Tree algorithm in stage2 and
+CNN_GP in stage1 provides best detection accuracy for
+benign, known attacks and unknown attacks with 99.4%,
+74.8% and 76.8% respectively. This result is shown in
+
+5577
+
+Fig. 7 under TPE model optimization technique. For BOGP
+optimization technique in the model for 5G dataset shown
+in Fig. 8, MLP classifier in stage2 secures high detection accuracy 97.9%:81.8%:73.5% for benign, known attacks
+and unknown attacks. The best combination algorithm in
+stage1 is CNN_GP for MLP (Multi Layer Perceptron) in
+stage2 to obtain this best results. For CIC_IDS_2017 dataset,
+Verkerken et al. [10] system provides high accuracy than other
+alternative algorithms in stage1 and stage2.
+E. Existing Multi-Tier IDS vs the Proposed Enhanced
+Multi-Tier IDS
+The existing multi-tier hierarchical IDS proposed by
+Verkerken et al. [10] performance over the various benchmark
+
+5578
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 11.
+
+The Proposed Enhanced Multi-tier IDS for WUSTL with TPE.
+
+Fig. 12.
+
+The Proposed Enhanced Multi-tier IDS for WUSTL with BOGP.
+
+better than existing IDS. However, the unknown attack samples
+classification rate is impressive in the enhanced IDS but that
+are not upto the level of existing IDS. In general, the overall
+classification rate is high in the proposed enhanced multi-tier
+IDS with less computation complexity than the existing multitier IDS.
+F. Discussions and Implications
+Fig. 13.
+BOGP.
+
+The Proposed Enhanced Multi-tier IDS for CIC_IDS_2017 with
+
+network IDS datasets is compared with our enhanced multi-tier
+IDS and presented in Fig. 14. The best combination of stage1
+and stage2 algorithms is identified in all four datasets under
+TPE and BOGP optimization algorithms for this comparison.
+For the 5G dataset, CNN with GP in stage1, Extra Tree with
+BOGP in stage2 is the best combination for the proposed
+enhanced IDS. For the WUSTL dataset, LOF with GP in
+stage1, the deep learning technique GRU with BOGP in stage2
+is the best combination for enhanced IDS. For the UNR
+dataset, LOF with GP in stage1, Extra Tree with TPE in
+stage2 is the best combination for the proposed enhanced IDS.
+For the CIC_IDS_2017 dataset, CNN or OCSVM with GP in
+stage1, AdaBoost with BOGP in stage2 is the best combination
+for enhanced IDS. The benign samples are generally well
+classified in all the datasets by the existing and our enhanced
+IDS. Known attack samples in the enhanced IDS are classified
+
+The following points are observed from the meticulous
+analysis in the results generated from our implementation:
+1) Overall, the machine learning algorithms such as MLP,
+Extra Tree and XGB are the best performers in the
+stage2 of the proposed enhanced multi-tier, hierarchical
+IDS
+2) For stage1, iForest_GP, LOF_GP, LOF_TPE and
+CNN_GP are identified as the best algorithms to achieve
+high results in the final stage of our enhanced multi-tier,
+hierarchical IDS
+3) BOGP model optimization technique performs well to
+detect benign, known attacks and unknown attacks for
+all 4 datasets than the TPE
+4) From the overall observation, MLP and iForest perform
+better in stage2 and stage1 of our enhanced multi-tier
+IDS for multi-class known attacks classification and
+benign samples detection
+5) For 5G and UNR datasets, the benign, known
+and unknown attack samples are detected in high
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+Fig. 14.
+
+5579
+
+The Proposed Enhanced Multitier IDS vs Existing Multitier IDS.
+
+percentage which is more than 85% than other datasets
+CIC_IDS_2017, UNR and WUSTL
+6) For stage1, the Gaussian-based optimization algorithm
+produces better results than TPE
+7) For stage1, the unsupervised and semi-supervised algorithms such as LOF, OCSVM, and the deep learning
+technique CNN give the best results for anomaly detection
+8) For stage2, GRU, Ada Boosta and Extra Tree perform better for multiclass classification in known
+attacks
+VII. C ONCLUSION
+The traditional, single-level intrusion detection system does
+not perform well against zero-day attacks due to its closed-set
+recognition nature. Hence, the hierarchical, and hybrid nature
+intrusion detection systems is implemented and well-analyzed
+in this empirical study with different alternative techniques
+from the state-of-art works. The alternative techniques for
+stage1’s unsupervised or semi-supervised learning and stage2’s
+supervised learning are identified and observed performance
+metrics of the proposed IDS. We adopted different hyperparameter optimization algorithms such as Tree-structured
+Parzen estimator and Bayesian optimization with Gaussian
+processes for model fine tunning. These techniques improve
+the detection accuracy of unknown attacks especially along
+with threshold optimization at baseline classifier. In this
+empirical study, the efficiency of the proposed enhanced multitier IDS is evaluated using various IDS datasets such as
+CIC_IDS_2017, UNR, WUSTL and 5G. From this detailed
+study, we identified the best algorithms for each layer of the
+multi-tier IDS with suitable model optimization algorithms.
+The advantages of our proposed work are the design of the
+best unknown attack IDS over more datasets, better detection
+accuracy, and less computation complexity in training and
+inference time. The combination of suitable hybrid algorithms
+at multi-levels, an adjustable threshold in the classifier, hyperparameter optimized models, zero human/expert intervention,
+one-shot learning, and the fusion of DL and ML techniques
+makes the proposed IDS to perform well on unknown-attacks.
+Three major drawbacks are in line for future work: (i) improve
+the overall detection accuracy better than the achieved one with
+advanced feature learning method and (ii) confront the realtime traffic in open-set recognition problem with less positive
+rate and inference time.
+
+A PPENDIX
+N OMENCLATURE
+IDSs
+HIDS
+IoT
+IIoT
+OSR
+TPE
+BOGP
+IoV
+MTH
+IG
+FCBF
+KPCA
+BO-TPE
+PPPL
+FL
+AE
+DL
+ML
+FGSM
+CW
+DoS/DDoS
+DVAE
+DQN
+LOF
+iNNE
+SOCNN
+CIC
+UNR-IDD
+OC-SVM
+HPO
+GP
+MLP
+
+Intrusion Detection Systems
+Hierarchical IDS
+Internet of Things
+Industrial-IoT
+Open Set Recognition
+Tree-structured Parzen Estimator
+Gaussian
+Process-based
+Bayesian
+optimisation
+Internet of Vehicles
+multilevel hybrid
+Information Gain
+Fast Correlation Based Feature Selection
+Kernel Principal Component Analysis
+Bayesian Optimization-Tree of Parzen
+Estimator
+Proportional Progressive Pseudo-Labeling
+Federated Learning
+Autoencoder
+Deep Learning
+Machine Learning
+fast gradient sign method
+Carlini Wagner
+Denial of Service/ Distributed DoS
+VAE-based dual-domain defense
+deep Q-network
+Local Outlier Factor
+isolated-based Nearest Neighbor Ensemble
+Soft Ordering CNN
+Canadian Institute of Cybersecurity
+University of Nevada - Reno Intrusion
+Detection Dataset
+One-Class Support Vector Machine
+Hyper-parameter Optimization
+Gaussian Process
+Multi Layer Perceptron
+
+ACKNOWLEDGMENT
+This research is supported by the Department of
+Science and Technology (DST), India, under the Fund
+for Improvement of S&T Infrastructure in Universities and
+Higher Educational Institutions (FIST) Program [Grant No.
+
+5580
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+SR/FST/ET-I/2022/1079], and a matching grant from VIT
+University. The authors are grateful to DST-FIST and VIT
+management for their financial support and the resources
+provided for this work.
+R EFERENCES
+[1] U. Sabeel, S. S. Heydari, K. El-Khatib, and K. Elgazzar, “Unknown,
+atypical and polymorphic network intrusion detection: A systematic survey,” IEEE Trans. Netw. Service Manag., vol. 21, no. 1, pp. 1190–1212,
+Feb. 2024.
+[2] O. Urečková, M. Jureček, M. Stamp, F. Di Troia, and R Lórencz,
+“Classification and online clustering of zero-day malware,” J. Comput.
+Virol. Hacking Tech., vol. 20, pp. 579–592, Feb. 2024.
+[3] P. Verma, N. Bharot, J. G. Breslin, D. O’Shea, A. Vidyarthi, and
+D. Gupta, “Zero-day guardian: A dual model enabled federated learning
+framework for handling zero-day attacks in 5G enabled IIoT,” IEEE
+Trans. Consum. Electron., vol. 70, no. 1, pp. 3856–3866, Feb. 2024.
+[4] R. Ahmad, I. Alsmadi, W. Alhamdani, and L. Tawalbeh, “A deep
+learning ensemble approach to detecting unknown network attacks,” J.
+Inf. Secur. Appl., vol. 67, Jun. 2022, Art. no. 103196.
+[5] R. Yoshihashi, W. Shao, R. Kawakami, S. You, M. Iida, and T. Naemura,
+“Classification-reconstruction learning for open-set recognition,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), 2019,
+pp. 4011–4020.
+[6] A. A. Korba, A. Boualouache, and Y. Ghamri-Doudane, “Zero-X: A
+blockchain-enabled open-set federated learning framework for zero-day
+attack detection in IoV,” IEEE Trans. Veh. Technol., vol. 73, no. 9,
+pp. 12399–12414, Sep. 2024.
+[7] C. S. Shieh, F. A. Ho, M. F. Horng, T. T. Nguyen, and P. Chakrabarti,
+“Open-set recognition in unknown DDoS attacks detection with reciprocal points learning,” IEEE Access, vol. 12, pp. 56461–56476, 2024.
+[8] M. Soltani, B. Ousat, M. J. Siavoshani, and A. H. Jahangir, “An
+adaptable deep learning-based intrusion detection system to zero-day
+attacks,” J. Inf. Secur. Appl., vol. 76, Aug. 2023, Art. no. 103516.
+[9] Y. Wu, Y. Hu, J. Wang, M. Feng, A. Dong, and Y. Yang, “An
+active learning framework using deep Q-network for zero-day attack
+detection,” Comput. Secur., vol. 139, Apr. 2024, Art. no. 103713.
+[10] M. Verkerken et al., “A novel multi-stage approach for hierarchical
+intrusion detection,” IEEE Trans. Netw. Service Manag., vol. 20, no. 3,
+pp. 3915–3929, Sep. 2023.
+[11] T. Das, O. A. Hamdan, R. M. Shukla, S. Sengupta, and E. Arslan, “UNRIDD: Intrusion detection dataset using network port statistics,” in Proc.
+IEEE 20th Consum. Commun. Netw. Conf. (CCNC), 2023, pp. 497–500.
+[12] S. Samarakoon et al., 2022, “5G-NIDD: A comprehensive network
+intrusion detection dataset generated over 5G wireless network,” Dataset,
+IEEE Dataport.
+[13] M. Zolanvari, M. A. Teixeira, L. Gupta, K. M. Khan, and R. Jain,
+(Washington Univ. St. Louis, St. Louis, MO, USA). WUSTL-IIOT-2021
+Dataset for IIoT Cybersecurity Research. (2021). [Online]. Available:
+http://www.cse.wustl.edu/ jain/iiot2/index.html.
+[14] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered
+hybrid intrusion detection system for Internet of Vehicles,” IEEE Internet
+Things J., vol. 9, no. 1, pp. 616–632, Jan. 2022.
+[15] X.-H. Nguyen and K.-H. Le, “Robust detection of unknown DoS/DDoS
+attacks in IoT networks using a hybrid learning model,” Internet Things,
+vol. 23, Oct. 2023, Art. no. 100851.
+[16] S. Watanabe, “Tree-structured Parzen estimator: Understanding its algorithm components and their roles for better empirical performance,”
+2023, arXiv:2304.11127.
+[17] R. Garnett, Bayesian Optimization. Cambridge, U.K.: Cambridge Univ.
+Press, 2023.
+[18] S. Theodoridis, Machine Learning: A Bayesian and Optimization
+Perspective. Cambridge, MA, USA: Academic, 2015.
+[19] M. J. Hashemi, E. Keller, and S. Tizpaz-Niari, “Detecting unseen
+anomalies in network systems by leveraging neural networks,” IEEE
+Trans. Netw. Service Manag., vol. 20, no. 3, pp. 2515–2528, Sep. 2023.
+[20] A. H. Celdrán et al., “RL and fingerprinting to select moving target
+defense mechanisms for zero-day attacks in IoT,” IEEE Trans. Inf.
+Forensics Security, vol. 19, pp. 5520–5529, 2024.
+[21] Y. Cao, K. Liu, Y. Lin, L. Wang, and Y. Xia, “Deep-reinforcementlearning-based self-evolving moving target defense approach against
+unknown attacks,” IEEE Internet Things J., vol. 11, no. 20,
+pp. 33027–33039, Oct. 2024.
+[22] A. Touré, Y. Imine, A. Semnont, T. Delot, and A. Gallais, “A framework
+for detecting zero-day exploits in network flows,” Comput. Netw.,
+vol. 248, Jun. 2024, Art. no. 110476.
+
+[23] A. Bendale and T. E. Boult, “Towards open set deep networks,” in
+Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), 2016,
+pp. 1563–1572.
+[24] U. Zukaib, X. Cui, C. Zheng, D. Liang, and S. U. Din, “Meta-fed IDS:
+Meta-learning and federated learning based fog-cloud approach to detect
+known and zero-day cyber attacks in IoMT networks,” J. Parallel Distrib.
+Comput., vol. 192, Oct. 2024, Art. no. 104934.
+[25] S. I. Popoola, R. Ande, B. Adebisi, G. Gui, M. Hammoudeh, and
+O. Jogunola, “Federated deep learning for zero-day botnet attack
+detection in IoT-edge devices,” IEEE Internet Things J., vol. 9, no. 5,
+pp. 3930–3944, Mar. 2022.
+[26] C. Kim, S.-Y. Chang, J. Kim, D. Lee, and J. Kim, “Automated, reliable
+zero-day malware detection based on autoencoding architecture,” IEEE
+Trans. Netw. Service Manag., vol. 20, no. 3, pp. 3900–3914, Sep. 2023.
+[27] T. Li, Z. Hong, W. Feng, L. Yu, and Z. Wen, “MS-ZeroWall: Detecting
+zero-day multi-step attack in smart home using VAE and HMM,” IEEE
+Trans. Veh. Technol., vol. 73, no. 9, pp. 13278–13291, Sep. 2024.
+[28] I. Mbona and J. H. P. Eloff, “Detecting zero-day intrusion attacks using
+semi-supervised machine learning approaches,” IEEE Access, vol. 10,
+pp. 69822–69838, 2022.
+[29] T. Zoppi, A. Ceccarelli, and A. Bondavalli, “Unsupervised algorithms to
+detect zero-day attacks: strategy and application,” IEEE Access, vol. 9,
+pp. 90603–90615, 2021.
+[30] B. I. Hairab, M. S. Elsayed, A. D. Jurcut, and M. A. Azer, “Anomaly
+detection based on CNN and Regularization techniques against zero-day
+attacks in IoT networks,” IEEE Access, vol. 10, pp. 98427–98440, 2022.
+[31] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+a new intrusion detection dataset and intrusion traffic characterization,” in Proc. 4th Int. Conf. Inf. Syst. Security Privacy (ICISSP), 2018,
+pp. 108–116.
+[32] V. Böhm and U. Seljak, “Probabilistic autoencoder,” 2022,
+arXiv:2006.05479.
+[33] F. T. Liu, K. M. Ting, and Z. H. Zhou, “Isolation forest,” in Proc. 8th
+IEEE Int. Conf. Data Min., 2008, pp. 413–422.
+[34] T. R. Bandaragoda, K. M. Ting, D. Albrecht, F. T. Liu, Y. Zhu, and
+J. R. Wells, “Isolation-based anomaly detection using nearest-neighbor
+ensembles,” Comput. Intell., vol. 34, pp. 968–998, Nov. 2018.
+[35] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation-based anomaly
+detection,” ACM Trans. Knowl. Disc. Data, vol. 6, no. 1, p. 3, 2012.
+[36] M. M. Breunig, H. P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+density-based local outliers,” ACM SIGMOD Rec., vol. 29, no. 2,
+pp. 93–104, 2000.
+[37] L. Shu, H. Xu, and B. Liu, “DOC: Deep open classification of text
+documents,” in Proc. 2017 Conf. Empir. Methods Nat. Lang. Process.,
+2017, pp. 2911–2916.
+[38] S. Shen, C. Cai, Z. Li, Y. Shen, G. Wu, and S. Yu, “Deep Q-networkbased heuristic intrusion detection against edge-based SIoT zero-day
+attacks,” Appl. Soft Comput., vol. 150, Jan. 2024, Art. no. 111080.
+[39] T. Akiba, S. Sano, T. Yanase, T. Ohta, and M. Koyama, “Optuna: A nextgeneration hyperparameter optimization framework,” in Proc. 25th ACM
+SIGKDD Int. Conf. Knowl. Discov. Data Min., 2019, pp. 2623–2631.
+[40] C. K. Williams and C. E. Rasmussen, Gaussian Processes for Machine
+Learning. Cambridge, MA, USA: MIT Press, 2006.
+
+Menaka Pushpa Arthur received the Bachelor of
+Engineering degree in computer science and engineering from Madurai Kamaraj University in 2002,
+the Master of Engineering degree in computer science and engineering from Anna University in 2004,
+and the Ph.D. degree from the Faculty of Information
+and Communication Engineering, Anna University.
+She is an Associate Professor with the School of
+Computer Science and Engineering, Vellore Institute
+of Technology (Chennai). She has nearly 15 years
+of teaching and research experience. She has published numerous research articles in international journals and prestigious
+conferences. She has also secured research funding for projects related to IoT
+product development, large language models, and cyber security. Her research
+focuses on mobile and wireless networks, multicast communication, routing
+security, intrusion detection systems, UAV networks machine learning, and
+deep learning. She has received two Best Paper Awards in the International
+and National level Conferences organized by MIT and Anna University. She
+actively serves as a reviewer and an editorial board member for high-impact
+journals.
+
+ARTHUR et al.: EMPIRICAL STUDY OF HIERARCHICAL IDSs FOR UNKNOWN ATTACKS
+
+Ganesan Ramachandran received the Doctor
+of Philosophy degree in computer science from
+Bharathiar University, Coimbatore, India, in 2011.
+He is a Professor and the former Dean of the
+School of Computer Science and Engineering,
+Vellore Institute of Technology (Chennai), where
+he has been serving as the Deputy Director of the
+Career Development Centre since August 2025. He
+served as the Assistant Director of the Office of
+International Relations from 2018 to 2021 and the
+assistant director for outreach programs from 2018
+to 2019. He was the Program Chair for B.Tech. Computer Science and
+Engineering from 2013 to 2017. Earlier, he was an Associate Professor and
+the Head of the Department of Computer Science Department, PSG College
+of Arts and Science, Coimbatore, from 1998 to 2012. He is having more than
+24 years of teaching experience. His area of research work is information
+security and network security. Under his supervision, eight research scholars
+have successfully completed their Ph.D. degree in computer science and
+one research scholar is pursuing the Ph.D. degree. He has published several
+research papers in the peer reviewed national and international level journals
+and had delivered various guest lectures in the field of information security.
+He is a reviewer for various national and international journals. Also, he was
+a certified ISO Internal Auditor by TUV Rheinland (India) Pvt. Ltd. in 2007.
+
+Keshav Sood (Senior Member, IEEE) received
+the Bachelor of Technology degree (Hons., with
+Distinction) in electronics and communications engineering and the Master of Technology degree
+in optical fiber engineering in 2007 and 2012,
+respectively, and the Ph.D. degree in information
+technology (software-defined networking security)
+from Deakin University, Melbourne, in 2018, under
+the supervision of Prof. S. Yu. He was a trainee
+with the Terminal Ballistic Research Laboratory
+(TBRL, DRDO, Ministry of Defense), Chandigarh,
+India. He was the recipient of the Professor of IT Award given by the
+School of IT for his outstanding academic achievements during his Ph.D.
+degree. He was a Postdoctoral Fellow with The University of Newcastle,
+New South Wales, Australia. He is currently working as a Senior Lecturer of
+Cyber Security with the School of IT, Deakin University. His work in cyber
+security for next generation networks has been published in top-notch security and networking venues, i.e., IEEE T RANSACTIONS ON I NFORMATION
+F ORENSICS AND S ECURITY, IEEE T RANSACTIONS ON D EPENDABLE AND
+S ECURE C OMPUTING, IEEE/ACM T RANSACTIONS ON N ETWORKING,
+IEEE T RANSACTIONS ON N ETWORK AND S ERVICE M ANAGEMENT, and
+IEEE Network Magazine.
+
+5581
+
+Pavan Kaarthik received the B.Tech. degree in
+computer science and engineering from the Vellore
+Institute of Technology (Chennai). He currently
+works as a Software Engineer with HSBC, where
+he enables data ETL and migration for downstream
+consumption and analytics. His current research
+interests are in machine learning and deep learning,
+specifically in the field of cyber security.
+
+Srivarshinee Sridhar is currently pursuing the
+B.Tech. degree in computer science with the Vellore
+Institute of Technology (Chennai), with a passion for
+pushing the boundaries of cutting-edge AI research.
+Her academic and research pursuits span natural
+language processing, machine learning, mechanistic
+interpretability, and network security with a particular emphasis on building trustworthy and transparent
+machine learning systems. She is deeply motivated
+to bridge the gap between theoretical foundations
+and real-world impact, aiming to develop AI models
+that are not only powerful but also explainable, reliable, and aligned with
+human values.
+
+Morshed Chowdhury received the Ph.D. degree
+from Monash University, Australia, in 1999. He
+is currently an Academic Staff Member with the
+School of Engineering and Information Technology,
+Melbourne Institute of Technology (MIT). He also
+serves as the Course Coordinator of Graduate
+Diploma in Networking and the Master of
+Networking. Prior to joining MIT, he has served with
+the School of IT, Deakin University with various
+academic position from 1999 to 2021. He produced
+23 Ph.D. as a principal/associate supervisor. Some
+of his Ph.D. graduates are computing well established in various institutes
+in Australia and overseas. He was invited as a guest speaker with the
+Institute of Kyoto institute of Technology, Kyoto, and Kyushu University,
+Fukuoka, Japan. He published more than 168 Journal and conference papers
+in the reputed Journals and international conferences. He assessed more
+than 22 Ph.D. theses in Australia and India. He has been reviewing journal
+papers of several reputed journals, such as IEEE/ACM T RANSACTION
+ON N ETWORKING , Computer Network (Elsevier), IEEE T RANSACTION
+ON I NDUSTRY A PPLICATION , Artificial Intelligence in Medicine (Elsevier),
+Measurement (Elsevier), Sustainable Computing (Elsevier), IEEE I NTERNET
+OF T HINGS J OURNAL , Applied Energy (Elsevier), and International Journal
+of Intelligent Systems (Wiley).
+PAPER_TEXT

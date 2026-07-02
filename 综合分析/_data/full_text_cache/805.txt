@@ -1,0 +1,1039 @@
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026 7547
+
+ Silent-App-Aware Federated Machine Unlearning for
+ Encrypted Network Traffic Classification
+ Zeyi Li , Graduate Student Member, IEEE, Yuna Jiang , Member, IEEE, Tianshun Wang , Member, IEEE,
+ Pan Wang , Member, IEEE, and Yimu Ji
+
+ Abstract—In recent years, federated learning-based network I. INTRODUCTION
+traffic classification has emerged as a promising Artificial Intel-
+ S AN important tool for network management and seculigence (AI) approach for encrypted traffic identification, enabling
+accurate classification while preserving data privacy. To meet the
+rising demand for the right to be forgotten, Federated Machine
+ A rity, Network Traffic Classification (NTC) has received
+ significant attention from both academia and industry since
+Unlearning (FMU) has been introduced as an AI-driven forgetting the late 1990 s. It has been widely applied in areas such as
+paradigm. However, conventional FMU methods overlook silent QoS/QoE management, network resource optimization, conapplications removed due to guideline violations, resulting in re- gestion control, and intrusion detection [1]. With the rapid
+duced classifier stability and limited aggregation scalability. To development of next-generation communication technologies
+address these challenges, this paper proposes FedUnSilApp, short such as B5G/6G [2], [3], network technologies are evolving
+for FMU for silent applications, a novel FMU framework that towards a highly autonomous direction of ‘zero touch’ [4], [5],
+integrates a learning module, a forgetting module, and a scalable
+aggregation strategy. In particular, the forgetting module prunes
+ [6]. As one of the decision-making tools for network services and
+neurons associated with silent applications in the classifier, mini- security management, NTC plays a crucial role [7]. However, the
+mizing their residual influence. The scalable aggregation strategy rise of HTTPS encryption has rendered traditional Deep Packet
+separately processes discriminative layers of clients requesting for- Inspection (DPI) [8] methods ineffective for capturing user
+getting and those of other clients, thereby enhancing both stability behavior patterns [9]. In response, Deep Learning (DL)-based
+and scalability of the global model. In addition, FedUnSilApp is NTC has emerged as a promising solution [10], [11], [12], as it
+applied to the real-world scenario of encrypted network traffic can accurately identify user preferences without being restricted
+classification, enabling compliance with deletion requests while by encryption, drawing increasing attention from researchers.
+maintaining robust classification performance. The effectiveness of Traditional DL-based NTC methods usually collect traffic
+FedUnSilApp is validated through experiments, which show that interaction data from multiple edge devices. This data is aggre-
+FedUnSilApp outperforms state-of-the-art methods, improving accuracy by over 6% on the NJUPT dataset.
+ gated to train a unified model in the cloud, which is subsequently
+ deployed back to each edge device for inference [13]. How-
+ Index Terms—Machine unlearning, federated learning, ever, as data privacy concerns continue to intensify, centralized
+federated machine unlearning, network traffic classification, machine learning approaches that require access to all training
+encrypted network traffic. data are becoming increasingly infeasible [14]. To address these
+ issues, Federated Learning (FL) is envisioned as a promising
+ approach with enhanced privacy [15], [16], [17], [18], [19].
+ Received 18 December 2025; revised 27 January 2026; accepted 3 March
+2026. Date of publication 10 March 2026; date of current version 24 March 2026. Specifically, FL allows model training without exposing user
+This work was supported in part by the National Natural Science Foundation data, effectively alleviating privacy leakage issues for particiof China under Grant 62401283, in part by the State Key Laboratory for Novel pants, and thus has become a focus of research in the field of
+Software Technology at Nanjing University under Grant KFKT2025B69, in part NTC [20].
+by the Suzhou High Performance Programmable Switching Chip Innovation
+Consortium under Grant LHT202326, and in part by the Development of an
+ In recent years, with the rapid development of AI technol-
+Ultra-large-scale Ubiquitous Network Quality Monitoring System Based on ogy [21], the rights of the data subject1 have also garnered
+Trusted Edge Intelligence under Grant SYG202311. Recommended for accep- increasing attention from society. The General Data Protection
+tance by Dr. Yuan Wu. (Corresponding author: Pan Wang.) Regulation (GDPR) of the European Union [22] and the Cal-
+ Zeyi Li is with the School of Computer Science, Nanjing Univer- ifornia Consumer Privacy Act (CCPA) [23] have introduced
+sity of Posts and Telecommunications, Nanjing 210003, China (e-mail:
+2022040506@njupt.edu.cn). relevant provisions that grant participants in FL the ‘right to
+ Yuna Jiang and Tianshun Wang are with the School of Communi- be forgotten’, meaning that participants have the right to request
+cations and Information Engineering, Nanjing University of Posts and companies to delete their personal data and contributions. Since
+Telecommunications, Nanjing 210003, China (e-mail: yunajiang@njupt.edu.cn; traditional FL-based NTC cannot ensure that participants can
+tswang@njupt.edu.cn).
+ Pan Wang is with the School of Modern Posts, Nanjing University of Posts and
+ withdraw their data contributions [24], [25], researchers have
+Telecommunications, Nanjing 210003, China (e-mail: wangpan@njupt.edu.cn). begun to focus on Federated Machine Unlearning (FMU).
+ Yimu Ji is with the School of Computer Science, Nanjing University of Currently, FMU methods can be categorized into three main
+Posts and Telecommunications, Nanjing 210003, China, also with the Institute approaches. One common FMU approach is retraining or fineof High Performance Computing and Bigdata, Nanjing University of Posts tuning the model with remaining data [26], [27]. Another
+and Telecommunications, Nanjing 210003, China, and also with Jiangsu HPC
+and Intelligent Processing Engineer Research Center, Nanjing 210003, China method uses gradient ascent to reduce the influence of forgotten
+(e-mail: jiym@njupt.edu.cn).
+ Data and Code: https://github.com/sailorlee97/FedUnSilApps
+ Digital Object Identifier 10.1109/TNSE.2026.3672152 1 https://gdpr-info.eu/art-17-gdpr/
+
+ 2327-4697 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+7548 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ 3) To tackle the scalability challenge, a scalable aggregation
+ strategy is proposed, whereby the feature extractor is aggregated across all clients to retain global generalisation.
+ Meanwhile, classifier layers are aggregated separately for
+ clients that forget and those that do not, enabling fast
+ recovery when silent applications become active again.
+ 4) Experiments on four datasets demonstrate substantial performance gains, with FedUnSilApp reaching 88.16% accuracy on NJUPT, outperforming state-of-the-art baselines (74.17%–81.7%) while maintaining efficiency.
+ The paper is structured as follows: Section II reviews the
+Fig. 1. Clientk0 issues a forgetting request facing two obstacles: (i) classifier evolution and progression of NTC methodologies. Section III
+instability and (ii) inflexible aggregation operations. introduces the necessary preliminaries for the proposed method.
+ Section IV provides a comprehensive description of the FedUnSilApp framework. Section V presents an overview of the
+data [28], while a third approach involves pruning neurons experiments and evaluations, along with a discussion of the
+closely linked to the data to be forgotten [29]. However, these results. Finally, Section VI concludes the paper and outlines
+methods overlook two important requirements in the field of directions for future work.
+NTC: stability and scalability. Particularly, stability refers to
+the ability to maintain the model’s original performance after
+ II. RELATED WORKS
+unlearning, and scalability refers to the framework’s ability to
+quickly adapt to both application forgetting and application Encrypted traffic has rendered traditional NTC methods inre-activation. The corresponding challenges are as follows (see effective. In particular, with the advent of TLS 1.2 and TLS
+Fig. 1): 1.3, these protocols establish security parameters and negotiate
+ 1) Classifier Instability under Silent Applications: Google cryptographic keys during the Handshake stage, and employ
+ removes approximately 25,100 applications from the Play symmetric encryption to protect application data during the
+ Store every quarter, and these applications naturally be- Record Layer stage. Consequently, traditional classification apcome silent applications in NTC scenarios [30]. When proaches based on port features, header features, and payload
+ silent applications remain in the classifier space, models features have become largely obsolete. However, the emergence
+ tend to misclassify traffic belonging to active classes into of AI has brought new perspectives and opportunities for NTC.
+ silent ones, leading to degraded stability. As illustrated in Fig. 2, this section presents the three major
+ 2) Inflexible Aggregation in FL: Unlike classical FL aggre- evolutionary waves of AI-driven NTC: Machine Learning (ML)-
+ gation where the entire model is uniformly averaged, reg- based, DL-based, and FL-based approaches.
+ ulatory differences cause some clients to discard certain
+ applications while others continue to classify them. When
+ these applications are re-activated, the model is required A. Ml-Based Ntc
+ to quickly regain its classification capability. Existing With the rise of ML, researchers began to move beyond
+ FL-NTC methods lack scalable aggregation mechanisms, traditional port-based, header-based, and payload-based traffic
+ making this adaptation slow and unstable. classification and instead learn discriminative patterns directly
+ Therefore, a natural question is: could the framework achieve from statistical features of flows. Early work showed that superstability and scalability at the same time? To address the chal- vised ML algorithms can effectively classify application traffic
+lenges outlined above, this paper proposes a scalable class dis- without relying on well-known ports or payload inspection,
+criminative pruning-based FMU framework for NTC, called Fe- which are increasingly unreliable due to encryption and dynamic
+dUnSilApp. The framework allows specific clients to request the port usage [31].
+removal of contributions from certain data categories, thereby Subsequent studies applied ML methods to more challenging
+achieving selective data forgetting. FedUnSilApp also processes encrypted traffic environments. The research [32] has shown
+these requests by isolating and aggregating the discriminative that, despite traffic encryption, dynamic port changes, and invislayer parameters of clients that require forgetting separately ibility of payloads, classical supervised learning models can still
+from those of other clients. This selective aggregation dynami- effectively perform classification tasks. The work [33] proposes
+cally updates the global model, ensuring that it adapts to chang- a second-order Markov chain–based encrypted traffic classifier
+ing data requirements without compromising performance. This enhanced with application attribute bigrams to improve discrimpaper systematically addresses these challenges and makes the ination among applications with similar TLS fingerprints. The
+following contributions: research [34] applies multinomial Naïve Bayes to normalized
+ 1) We point out this problem related to the stability and packet-size frequency distributions for system-agnostic webscalability of FL-based NTC caused by silent applications, site fingerprinting, achieving very high identification accuracy.
+ which has been overlooked by previous researchers. To The work [35] proposes a constrained clustering approach that
+ address this, we propose a framework called FedUnSilApp leverages TCP/IP–inferred equivalence constraints to enhance
+ for NTC, which effectively mitigates the impact of silent the accuracy and convergence of unsupervised Internet traffic
+ applications. classification.
+ 2) To tackle the stability challenge, a forgetting mecha- ML-based NTC serves as a transitional paradigm between
+ nism is developed that freezes the feature extractor and rule-based detection and AI-driven approaches. While it reduces
+ prunes silent-app neurons in the classifier, ensuring stable reliance on manual protocol signatures and improves adaptabilpredictions when application categories disappear. ity to encrypted traffic, it still depends heavily on handcrafted
+LI et al.: SILENT-APP-AWARE FEDERATED MACHINE UNLEARNING FOR ENCRYPTED NETWORK TRAFFIC CLASSIFICATION 7549
+
+Fig. 2. Evolution of NTC methods from unencrypted to encrypted traffic, illustrating the transition from port/header/payload-based approaches to ML-, DL-,
+and FL-based NTC under increasing encryption (TLS).
+
+features, limiting scalability and representation capability. Con- methods can effectively identify sub-classes of popular applicasequently, ML-based methods are increasingly supplanted by tions such as Skype, WhatsApp, Facebook, and YouTube. For
+DL approaches that offer more effective automatic feature learn- online and interpretable learning, the research [51] introduces
+ing for large-scale and complex traffic data. a packet-level self-attention network enabling real-time classification and interpretability by visualizing attention weights.
+ To improve scalability in large-scale multi-class settings, the
+B. Dl-Based Ntc study [52] proposes a hierarchical recurrent neural network that
+ After the initial exploration of ML–based approaches, DL– decomposes classification tasks into smaller subtasks using a
+based methods for NTC have gradually emerged [36], [37]. tree-structured multi-classifier design, improving both accuracy
+Particularly, when dealing with encrypted traffic, complex data and convergence speed.
+structures, and highly temporal flow patterns, DL has demon- Beyond performance improvements, several works examine
+strated its distinctive advantages in automatic feature extraction robustness and generalization. Sadeghzadeh et al. [53] introand robust representation learning [38], [39]. duce Adversarial Network Traffic (ANT), a Universal Adver-
+ Among the representative studies, TRCLA [40] introduces sarial Perturbation (UAP)–based framework for evaluating the
+a transfer-learning algorithm based on Cellular Learning Au- resilience of DL-based NTC models against crafted perturbatomata (CLA) that employs two novel decision criteria—merit tions. Collectively, these studies reflect the evolution of DLand attitude parameters—to alleviate negative transfer and im- based NTC from early CNN/RNN-driven architectures toward
+prove classification accuracy in transductive settings. ABL- more advanced paradigms incorporating attention mechanisms,
+TC [41] proposes an attention-based LSTM architecture with meta-learning strategies, hierarchical modeling, and adversarial
+lightweight preprocessing to balance efficiency and accuracy, robustness, marking a significant milestone in the second wave
+while Yao et al. [42] enhance recurrent neural networks with of AI-driven traffic classification and paving the way for the
+attention-aided LSTM and Hierarchical Attention Network upcoming FL–based NTC era.
+(HAN) modules to capture temporal dependencies and achieve
+higher accuracy on the ISCX VPN–NonVPN dataset. To further
+ C. Fl-Based Ntc
+address data imbalance and generalization, Zheng et al. [43]
+present the Flow-Based Relation Network (RBRN), an end-to- With the increasing emphasis on data privacy and secuend meta-learning framework that learns flow-level representa- rity, traditional centralized model training approaches in NTC
+tions directly from raw data and introduces a hallucinator module have faced growing challenges such as data silos and privacy
+to generate balanced training samples. leakage [54]. To address these issues, FL has emerged as a
+ A parallel research line explores CNN-based end-to-end mod- promising paradigm that enables collaborative model training
+eling. FlowPic [44] transforms raw flow data into image-like without requiring the exchange of raw data [55], [56], [57]. In an
+representations and applies Convolutional Neural Networks FL-based framework, participating entities locally train models
+(CNNs) for automatic classification, achieving up to 99.7 % ac- on their respective datasets and share only model parameters
+curacy even on VPN and Tor traffic. Wang et al. [45] further pro- or gradients, thereby preserving user privacy while enabling
+pose an end-to-end 1D-CNN model that unifies feature extrac- cross-domain collaboration [58], [59].
+tion and classification, while deep packet [46] combines stacked This decentralized learning strategy not only mitigates privacy
+autoencoders and CNNs into a single architecture, achieving risks but also leverages diverse and geographically distributed
+state-of-the-art performance on VPN and non-VPN traffic. Dong traffic data to improve generalization and robustness. FL-based
+et al. [47] present CETAnalytics, a neural network–based frame- NTC represents the third technological wave following deep
+work that jointly analyzes payload content and statistical fea- learning, marking a new stage in the evolution of AI-driven
+tures to attain both high precision and strong generalization. network intelligence and security research [60].
+For encrypted protocols, Tong et al. [48] design a CNN-based Recent studies have explored various FL architectures and
+QUIC traffic classifier that integrates feature extraction and optimization strategies for NTC. The study [61] proposes an
+classification to reach a 99.24% F1-score on Google services. Automated Separate Guided Attention Federated Graph Neural
+ In addition, the work [49] employs a multi-layer encoder– Network, which integrates a hybrid Vision Transformer with
+decoder recurrent architecture to deeply mine sequential depen- bidirectional LSTM for multi-scale feature extraction and emdencies of encrypted flows and enhance feature representation ploys federated graph learning for distributed intrusion detecthrough a reconstruction mechanism, achieving 99.14% TPR tion. The model achieves over 99% accuracy across multiple
+and outperforming prior models. Al-Obaidy et al. [50] focus cybersecurity datasets, demonstrating the efficiency of attentionon social-media encrypted traffic, demonstrating that ML-based enhanced federated architectures. Similarly, the research [62]
+7550 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+introduces a federated analytics framework to mitigate data called ViFLa to address the efficiency and adaptability required
+heterogeneity and non-IID distributions. To further enhance in IoT traffic anomaly detection. ViFLa introduces the concept
+model reliability, the work [63] proposes WCL, a client se- of virtual FL, where training data is grouped based on their likelection strategy that combines model weight divergence with lihood of needing to be unlearned. Additionally, scholars have
+local training loss to achieve balanced aggregation and faster conducted extensive research on FMU [77]. The research [72]
+convergence. Experiments on QUIC and ISCX datasets verify focuses on overcoming the limitations of existing FMU methods,
+that WCL outperforms conventional approaches under both low which often require time-consuming re-training and lack the
+and high heterogeneity. In the IoT domain, He et al. [64] intro- ability to handle diverse unlearning tasks. FedAU incorporates
+duce FedeEDI, a federated edge device identification framework a lightweight auxiliary unlearning module that allows for quick
+leveraging network traffic features for IoT security. Compared and targeted unlearning through a simple linear operation. This
+with centralized learning, FedeEDI provides faster training, method supports unlearning at multiple levels—individual samdecentralized deployment, and stronger data protection. ples, specific classes, or entire clients—providing broad unlearn-
+ Beyond classification, FL has also been extended to network ing capabilities. The research [29] focuses on the class-level
+optimization tasks. Huang et al. [65] propose a QoS-aware fed- ‘forgetting’ problem in FL scenarios and proposes a method
+erated caching framework in fog-enabled IoT networks, incor- that enables selective information removal for specific classes
+porating a distributed cluster-based preference estimation algo- in a trained CNN classification model. This approach achieves
+rithm to mitigate non-IID data effects and improve cache hit rate, the selective information removal without direct access to global
+convergence, and learning stability. Similarly, Jiang et al. [66] training data and without requiring complete retraining. Utilizdesign FedSL-LSTM, a federated split learning framework ing TF-IDF-guided channel pruning techniques, this method acfor sequential data analysis in satellite–terrestrial integrated complishes an efficient and accurate ‘forgetting’ process. Expernetworks. By combining FL, split learning, and LSTM-based imental results demonstrate significant advantages in improving
+modeling, FedSL-LSTM achieves competitive accuracy while forgetting speed and maintaining model accuracy. The study [73]
+maintaining communication efficiency and privacy preservation. introduces a new FedRecovery algorithm that employs differ-
+ Furthermore, other recent works have extended the use of ential privacy techniques to implement unlearning tasks in FL
+FL for anomaly detection and privacy-sensitive traffic analysis. frameworks. It can eliminate the influence of client data without
+Studies such as [67] address the challenge of detecting anomalies retraining the model. This method is especially suitable for
+in multi-time series data across distributed network devices, complex models and dynamic FL environments. Although it
+emphasizing the complexity of aggregating non-IID data while provides strong privacy protection and theoretical guarantees,
+maintaining strict privacy guarantees. Likewise, Bakopoulou it may still face challenges such as performance impact from
+et al. [20] highlight the challenges of training traffic classifiers noise and computational overhead in certain applications. The
+on mobile packet data containing sensitive information such as authors in [28] proposed and evaluated two data deletion methpersonally identifiable information and advertising metadata, ods for deep neural networks, namely, Unlearning and Amnesiac
+proposing privacy-preserving FL-based solutions. Unlearning, to meet the GDPR’s ‘right to be forgotten’ compli-
+ In a related contribution, Zhang et al. [68] propose an adaptive ance requirements. These methods efficiently remove sensitive
+label normalization mechanism that transforms noisy labels to data while preserving model performance, effectively defending
+better align with clean data distributions, improving robustness against model inversion and membership inference attacks. Deand accuracy in FL settings. Finally, Pekar et al. [69] explore spite limitations in applicability, sample-level deletion, model
+incremental federated training, where the model evolves con- complexity, and rapid response, they offer important references
+tinuously over successive rounds by incorporating new data for the development of data privacy protection technologies. The
+from participating clients. This incremental strategy enhances work [78] presents an efficient FMU algorithm called FFMU,
+model adaptability and efficiency in dynamic environments, which combines nonlinear functional analysis and the Nemytskii
+demonstrating the growing maturity of FL as a viable solution operator. This approach not only enhances FMU efficiency but
+for privacy-preserving and continuously learning NTC systems. also preserves model performance during the data deletion process, meeting FL’s privacy protection requirements. The FFMU
+ method avoids redundant training steps found in traditional
+D. Federated Machine Unlearning FMU approaches and ensures efficient collaboration between
+ With the increasing emphasis on the ‘right to be forgotten’ local and global models. However, sample-level ‘forgetting’ and
+[74] within FL, FMU has emerged as a natural extension of applications in more complex models remain important topics
+privacy-preserving collaborative learning [75]. While traditional for future research. The research [79] explores methods to re-
+FL primarily focuses on preventing data leakage through de- move backdoor attacks in FL and proposes an effective federated
+centralized training, it does not inherently provide mechanisms unlearning method. This approach eliminates the impact of idento remove previously learned information once a client or data tified attackers by subtracting their historical parameter updates
+sample requests deletion. Addressing this limitation, FMU aims from the global model and utilizes knowledge distillation to
+to enable selective, efficient, and verifiable removal of data restore model performance, ensuring that, once attackers are
+contributions from global models—thereby advancing FL from identified, their backdoor contributions are thoroughly removed
+passive privacy protection to active data controllability. In this while preserving model accuracy and efficiency. The study [80]
+context, FMU is driving a new wave of innovation in FL offers a new solution for defending against backdoor attacks in
+ecosystems, fostering a new research frontier that bridges data FL by removing historical updates from attackers and combining
+privacy, model accountability, and compliance with global data knowledge distillation to effectively restore model performance,
+regulations. avoiding reliance on clients. It has high computational efficiency
+ This study [76] is the first to apply unlearning in network and low energy consumption, making it highly promising for
+traffic data. It presents a novel machine unlearning framework real-world applications. However, the method still encounters
+LI et al.: SILENT-APP-AWARE FEDERATED MACHINE UNLEARNING FOR ENCRYPTED NETWORK TRAFFIC CLASSIFICATION 7551
+
+ TABLE I
+ COMPARISON OF REPRESENTATIVE RESEARCH WORKS ACROSS ML-BASED, DL-BASED, AND FL-BASED NETWORK TRAFFIC CLASSIFICATION
+
+some performance degradation and depends on the quality of the Building upon FL, FMU has recently emerged to support the
+original global model, and its adaptability to unknown attacks ‘right to be forgotten’, allowing efficient removal of specific
+may require further investigation. This paper [81] proposes an data or clients while preserving model utility. Motivated by
+innovative unlearning method that combines Momentum Decay these advances, FedUnSilApp integrates encrypted traffic clas-
+(MoDe) and memory-guided strategies to efficiently unlearn sification, privacy preservation, and unlearning into a unified
+specific data in FL environments. Through a two-step decom- federated framework tailored to the challenges posed by silent
+position including knowledge erasure and memory guidance, applications.
+this method not only addresses performance degradation in unlearning but also significantly enhances execution efficiency, enabling rapid response to data removal requests. Compared with III. PRELIMINARIES
+traditional retraining methods, this approach greatly improves A. Federated Learning
+computational efficiency while preserving model performance,
+making it especially suitable for handling complex unlearning FL is a distributed machine learning approach that allows
+tasks. Additionally, this method can effectively counter data multiple clients (e.g., mobile devices, edge servers) to collabpoisoning attacks, further enhancing the security of FL. oratively train a global model while keeping their local data
+ decentralized [82]. This method is especially useful for privacysensitive applications, as it enables clients to contribute to the
+E. Comparative Summary model without sharing raw data. Instead, only model updates are
+ communicated to a central server for aggregation [83].
+ Table I systematically compares the evolutionary trajectory In a typical FL setup, we assume there are K clients, each
+of NTC technologies, tracing their development from traditional with its own local dataset Dk , where k ∈ {1, 2, . . . , K}. The
+rule-based and ML-based methods to DL-based, FL-based, and objective of FL is to minimize a global loss function F (w) across
+FMU-based paradigms. all clients. This objective can be formulated as:
+ The rapid growth of encrypted traffic has rendered traditional
+port-based identification and DPI increasingly ineffective. ML- K
+based NTC methods introduce statistical learning to improve  nk
+ F (w) = fk (w), (1)
+encrypted traffic recognition but still rely heavily on handcrafted n
+ k=1
+features, limiting scalability and their ability to capture complex
+feature correlations. With the emergence of DL, end-to-end where w represents the global model parameters, nk = |Dk | is
+models achieve substantial performance gains by learning repre- 
+sentations directly from raw traffic. However, their reliance on the number of data samples held by clientk , n = K k=1 nk is
+centralised training raises serious concerns regarding privacy the total number of data samples across all clients, fk (w) is the
+and data sovereignty. local objective function (i.e., loss function) of clientk , defined
+ FL addresses these limitations by enabling privacy-preserving as:
+collaborative training without sharing raw data. Recent FL- 1 
+based NTC approaches demonstrate strong scalability and ro- fk (w) = (w; xi , yi ), (2)
+bustness across heterogeneous and large-scale environments. nk
+ (xi ,yi )∈Dk
+7552 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+where (w; xi , yi ) is the loss for a data sample (xi , yi ) in TABLE II
+ LIST OF ABBREVIATIONS
+clientk ’s dataset, based on the model parameters w.
+ One of the most common algorithms for FL is Federated
+Averaging (FedAvg), which operates in iterative communication
+rounds. In each round:
+ 1) The server sends the current global model parameters wt
+ to a set of clients.
+ 2) Each selected clientk performs local training by minimizing fk (w) on its dataset Dk and computes updated model
+ (t+1)
+ parameters wk after multiple local epochs.
+ 3) The server aggregates the updated model parameters from
+ all participating clients to obtain a new global model wt+1 .
+ This aggregation can be expressed as:
+ K
+  nk (t+1)
+ wt+1 = wk , (3)
+ n
+ k=1
+
+ This weighted averaging ensures that clients with larger
+datasets contribute more to the global model update. The FedAvg
+algorithm enables the global model to gradually improve by
+learning from decentralized data while maintaining data privacy.
+
+B. Machine Unlearning
+ Machine Unlearning refers to the process of selectively removing the influence of certain data points from a trained
+machine learning model [84], [85]. This technique is particularly
+useful in privacy-sensitive applications, where users may request
+their data to be forgotten, or when erroneous data needs to be These features are computed at the edge and divided into packetremoved to improve model accuracy. The goal of unlearning level, flow-level, and statistical features. After feature scaling,
+is to modify the model so that it no longer retains any knowl- F F is transformed into sF F , which serves as the model’s
+edge derived from the specific data points in question, without fundamental input, represented as x.
+requiring a full retraining from scratch. A list of abbreviations is presented in Table II to facilitate
+ Suppose we have a machine learning model trained on a understanding of the notations adopted in what follows.
+dataset D = {(xi , yi )}Ni=1 , where w represents the model parameters, xi are the input features, and yi are the target labels. IV. METHODOLOGY
+The model is trained by minimizing a loss function L over the
+dataset: A. Overview of FedUnSilApp
+ N
+ 1  As illustrated in Fig. 3, FedUnSilApp introduces an FMU
+ min L(w, D) = (w; xi , yi ), (4) framework specifically designed to mitigate the impact of silent
+ w N i=1 applications. Each client maintains a local model consisting
+where (w; xi , yi ) is the loss for a single data point (xi , yi ). of a feature extraction module P T and a classifier W , which
+ In the context of machine unlearning, let Du ⊂ D represent are trained on locally collected and labeled traffic data. Under
+the subset of data to be ‘forgotten’ by the model, and let normal conditions, clients follow the standard FL workflow:
+Dr = D \ Du be the remaining data. The objective of machine local models are trained independently, and the corresponding
+unlearning is to modify the model such that it closely approx- parameters are periodically uploaded to the server for aggregaimates a model trained only on Dr , i.e., the model that would tion, resulting in a global feature extractor and classifier.
+have been obtained if Du had never been included in the training To support selective unlearning, FedUnSilApp augments the
+data. conventional learning pipeline with an auxiliary forgetting module W α . When a client requests the removal of data associated
+ with silent applications, a distillation-based forgetting process is
+C. Problem Formulation
+ triggered locally to suppress the classifier components correlated
+ This paper focuses on addressing the impact of the silent with silent applications, producing the forgetting module W α .
+application in the field of NTC. In order to provide a clear and This mechanism enables targeted unlearning without retraining
+comprehensible explanation, the following definitions are given: the model from scratch or disrupting representations learned
+ The packet set is formed by extracting TCP and UDP packets from active applications.
+from application traffic. The packets are grouped into flows using At the server side, FedUnSilApp adopts a scalable and modquintuple features, recorded in a hash table with flow durations ular aggregation strategy. Feature extraction parameters P T
+capped at 120 seconds. Session characteristics, including the from all clients are aggregated into a unified global represensource-destination IPs, are used to define flow direction. Flow tation, preserving shared traffic semantics. In contrast, classifier
+features are extracted bi-directionally from forward and back- parameters are aggregated in a decoupled manner: parameters
+ward flows Se, with F F representing flow statistical features. from regular clients (W l ) and those from clients performing
+LI et al.: SILENT-APP-AWARE FEDERATED MACHINE UNLEARNING FOR ENCRYPTED NETWORK TRAFFIC CLASSIFICATION 7553
+
+Fig. 3. Overview of the FedUnSilApp framework. During the learning stage, clients locally train models and share feature extractors for aggregation. When
+forgetting is requested, the unlearning module prunes silent-app neurons and retrains on remaining data before scalable aggregation merges both P T and W on
+the server.
+
+unlearning (W α ) are treated separately. By jointly aggregating
+P T , W l , and W α , the server constructs global models that
+flexibly adapt to heterogeneous client states.
+ In our FedUnSilApp, a horizontal FL scenario is applied. We
+assume that a total of K clients conduct collaborative training
+to build a federated model ω = (P T, W ) (P T is used to extract
+latent network traffic features, W is the classifier), which can be
+formulated as follows:
+ nk
+ K 
+  (FP T,W (xk,i ), yk,i )
+ min , (5)
+ ω n1 + · · · + nK
+ k=1 i=1
+
+where  represents the loss function (e.g., cross-entropy loss).
+Dk = {(xk,i , yk,i )}ni=1
+ k
+ is the dataset owned by clientk , with
+size nk . When applying forgetting, client k0 requests to remove the influence of its data from the federated model, i.e.,
+a client-level forgetting request, aiming to exclude client k0 ’s Fig. 4. The workflow of clientk . After model training on traffic data, a
+contribution from the learned parameters. If multiple clients forgetting request triggers neuron pruning for silent applications on the client
+ side, followed by feature extractor aggregation on the server to form the final
+submit forgetting requests simultaneously, we denote the set of global model for inference.
+requesting clients as Kforget .
+
+B. Fedunsilapp
+ applications, thereby mitigating its negative impact on model
+ This paper focuses on how FMU addresses the issue of silent stability. During global aggregation, all clients upload their
+applications. Accordingly, we emphasise the workflow for a feature extraction parameters P T , which are jointly aggregated
+client requesting unlearning, as illustrated in Fig. 4. From the to form a shared representation. Meanwhile, the classifier paperspective of clientk , clientk initially collects labeled traffic rameters of clients requesting unlearning (W α ) are decoupled
+data in its local environment and extracts flow-level features to from those of regular clients (W l ) and aggregated separately.
+initialize and train its local model, as in conventional federated This modular aggregation strategy enables FedUnSilApp to
+learning. When clientk encounters a requirement to remove adapt to heterogeneous unlearning demands while preserving
+data associated with silent applications, it issues an unlearning stability and scalability under dynamic application behaviors.
+request, upon which the local forgetting module is activated In the following, we will respectively introduce the details of
+to selectively prune classifier neurons correlated with silent the modules and the training strategies.
+7554 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ n, B = A − S. The mapping g(x) is given by
+
+ g(x) = x − |{s ∈ S|s < x}|, (7)
+
+ where g(x) ∈ B gives the latest label index. |{s ∈ S|s < x}|
+ represents the number of removed elements in the original
+ sequence that are smaller than x. The resulting dataset is  Dkr0 =
+ r
+ {(xk0 ,i , yi )|yi ∈ B}. Specifically, g(x) defines a label remapping function that eliminates the class indices in the deletion set
+ S and compresses the remaining labels into a continuous index
+ space. This operation allows the classifier neurons associated
+ with retained classes to be reassigned new indices, ensuring that
+ valid class activations are preserved while outputs corresponding
+ to forgotten classes are removed.
+Fig. 5. Comparison of model structure before and after forgetting. The initial Retrieve the well-trained model parameters P T, W l . The
+n-class classifier is pruned to (n − j) classes after forgetting, with the feature
+extractor frozen and only the classifier layer updated.
+ parameters of the frozen model layer P T do not update during
+ training, and their weights remain constant. The equation for the
+ ∂
+ frozen parameter is ∂θ = 0, where  represents the loss function,
+ and θ is the frozen parameter.
+ 1) Client NTC Learning Module: In each client’s learning Based on the remapped label space, we then define the optimodule, we use a neural network to perform the supervised NTC mization objective for the forgetting model. The model Wkα0 is
+task. From the perspective of the global NTC model, its loss specifically trained, and its objective function is as follows:
+function is defined as follows:
+ K
+   (FP T,W (xk,i ), yk,i )  (FP T,wkα (xk0 ,i ), yk0 ,i )
+ P T, W = arg min , Wkα0 = arg min 0
+ ,
+ P T,W n1 + · · · + nK W |
+ Dkr0 |
+ k=1 (xk,i ,yk,i )∈Dk
+ (xk0 ,i ,yk0 ,i )∈r
+ Dk
+ 0
+ (6)
+ (8)
+The model’s design is presented in Fig. 5. We connect multiple
+ where Wkα0 represents Auxiliary forgetting model for client
+convolutional layers before adding an application classifier layer
+ k0 targeting its data. This model is optimized for a specific
+that maps features to labels. For outputting predicted probabilities, we utilize a fully connected layer (FC) as the classifier layer dataset Dkr0 to fulfill the forgetting request from client k0 .
+in this paper. The convolutional neural network serves as the (FP T,W (x), y) represents the cross-entropy loss.
+foundation of our model, and it utilizes convolutional operations By minimizing the loss over the remaining classes, the model
+to capture local features in a systematic manner. Moreover, the suppresses the influence of forgotten classes while preserving
+convolutional layer can perform a dot product of each feature in discriminative knowledge for active applications.  Dkr0 is the
+the input data with a convolutional kernel [86]. dataset designed for client k0 , used for auxiliary learning on
+ 2) Client NTC Forgetting Module: In the FL forgetting the forgetting model. The optimization objective is to minimize
+mechanism, when a client k0 requests to delete its data, the
+ the loss of  Dkr0 , where the loss is normalized by the average
+system introduces a forgetting module Wα for retraining on the
+ size. The final optimized model parameters are P T, Wkα0 . The
+remaining data, ensuring that the model no longer relies on the
+ parameters of the front half of the neural network are frozen. The
+forgotten data. This approach ensures the transparency of the ∂
+ unfreezing mechanism is controlled by: θ ← θ − ηω ∂θ , where
+model and the privacy rights of users. Suppose the client k0
+ ω ∈ [0, 1] controls the degree of parameter unfreezing, and η
+wants to forget all the data of a certain class. Let Dk0 be the
+ is the learning rate. When ω = 1, it is fully unfrozen; When
+original dataset of the client, Dku0 be the data of the client that
+ ω = 0, the parameter is completely frozen. Finally, the labels
+needs to be forgotten, Dku0 = {(xuk0 ,i , yi ), yi ∈ C}. Dkr0 be the are remapped to the original domain using the inverse mapping
+data that remains for the client, i.e., Dkr0 = Dk0 − Dku0 , Dkr0 = function ŷ = g −1 (FP T,Wkα (xk0 ,i )) and ŷ ∈ A. During the un-
+{(xrk0 ,i , yi ), yi ∈
+ / C}. 0
+ learning stage, P T is frozen and only the classifier parameters
+ To ensure a consistent output space after class-level forget- are updated using the retained dataset.
+ting, we first redefine the label space by removing the indices 3) Scalable Aggregation Module: Assuming there are K
+corresponding to the forgotten classes. Design a dataset  Dkr0 clients, we classify the clients into two sets: the non-forgetting
+for client k0 , which is generated by modifying the labels of client set K non-forget and the forgetting client set Kforget , with
+Dkr0 . This involves creating a mapping relationship between |K non-forget | + |Kforget | = K. Each client model k consists of
+the initial dataset and the relabeled dataset. The mapping is two parts of parameters: feature layer parameters P Tk and FC
+expressed as g : A → B. The given equation represents a labeled layer parameters Wk . Our goal is to aggregate the feature layer
+mapping function, where A is the definition domain and B is the parameters from all clients, separately aggregate the FC layer paaccompanying domain. For each element x in A, there is a unique rameters from non-forgetting clients and forgetting clients, and
+corresponding element y in B, determined by the function g. A combine these aggregation results to form two global models.
+given mapping indicates the correspondence between elements, Aggregation of feature layers from all clients: The feature
+where A = [0, 1, 2, 3, . . . , n], S represents the set of deleted parameters from all clients are aggregated to obtain a global
+class labels, S = {s1 , s2 , . . . , sj }, 0 ≤ s1 < s2 < · · · < sj ≤ average of feature parameters Favg . The specific formula is as
+LI et al.: SILENT-APP-AWARE FEDERATED MACHINE UNLEARNING FOR ENCRYPTED NETWORK TRAFFIC CLASSIFICATION 7555
+
+follows: Algorithm 1: Unlearning Silent Apps in FL(Learning Mod-
+ K
+  ule, Unlearning Module and Scalable Aggregation Module).
+ 1
+ Favg = P Tk , (9) 1: Input: Communication rounds T , Client number K,
+ K
+ k=1 Dataset Dk , Forgetting clients Kf orget ;
+In this step, we iterate over each client k = 1, . . . , K, and 2: Initialize: Network traffic features extractor P T ,
+perform a summation for each client’s feature layer parameter learning model W l , forgetting model W α ;
+P Tk , then divide the aggregated result by the total number of 3: for client k in {1, 2, . . . , K} do
+clients K to obtain the average value. This operation ensures 4: Clients perform:
+that the aggregated feature parameter Favg is the average of the 5: for t = 1, 2, . . . , T do
+feature parameters from all clients, regardless of whether they 6: Set P Tk = P T , Wkl = W l
+are forgetting clients or non-forgetting clients. 7: Calculate the loss: ˆ = (Dk ; P Tk , Wkl )
+ Aggregation of FC layers from non-forgetting clients: Only 8: Wkl ← Wkl − η∇Wkl ˆ
+the FC parameters from the non-forgetting clients are aggregated 9: P Tk ← P Tk − η∇P Tk ˆ
+to obtain the average FC parameter Wfc, non-forget . The specific 10: end for
+formula is as follows: 11: if k ∈ Kf orget then
+ 1  12: for t = 1, 2, . . . , T do
+ Wfc, non-forget = Wk , (10)
+ |K non-forget | 13: Set Dkr = Dk − Dku = {x | x ∈ Dk ∧ x ∈ / Dku }
+ k∈K non-forget
+ 14: Set D = g(D )
+ r r
+ k k
+In this step, we iterate over each client k from the non-forgetting 15: Set Wkα = W α
+client set K non-forget , perform a summation for each FC parameter 16: Freeze P Tk
+Wk , then divide the aggregated result by the total number of 17: Calculate the loss: ˆ = (D r ; W α )
+ k k
+non-forgetting clients |K non-forget | to obtain the average value. α α αˆ
+ 18: Wk ← Wk − η∇Wk 
+This operation ensures that Wfc, non-forget is the average of the
+ 19: end for
+FC parameters from all non-forgetting clients, and that the FC
+ 20: end if
+layers of forgetting clients are not involved in the aggregation.
+ 21: end for
+ Aggregation of FC layers from forgetting clients: Only the FC
+ 22: Upload Wkα , Wkl , and P Tk to the server
+parameters from the forgetting clients are aggregated to obtain
+ 23: Server aggregates:
+the average FC parameter Wfc, forget . The specific formula is as 1
+ K
+ 24: P T = K k=1 P Tk
+follows:
+ 1
+  l
+ 1  25: Wfc, non-forget = |K non-forget | k∈K non-forget Wk
+ Wfc, forget = Wk , (11) 1
+  α
+ |Kforget | 26: Wfc, forget = |Kforget | k∈Kforget Wk
+ k∈Kforget
+ 27: return P T, Wfc, non-forget , Wfc, forget
+In this step, we iterate over each client k from the forgetting
+client set Kforget , perform a summation for each FC parameter
+Wk , then divide the aggregated result by the total number of of each communication round, all clients participate in the learnforgetting clients |Kforget | to obtain the average value. This ing process. Each client locally trains its model using private
+ensures that Wfc, forget is the average of the FC parameters from traffic data to update both the feature extractor and classifier
+all forgetting clients, and the FC layers of non-forgetting clients parameters. After local optimization, the updated local models
+are not involved in the aggregation. P Tk and Wkl are uploaded to the server.
+ Finally, we combine the previously calculated average feature When silent applications are detected, only clients requiring
+parameter Favg with different FC layer aggregation results to forgetting enter the unlearning module. These clients remove
+form two global models. Model w non-forget is composed of the the data samples corresponding to silent applications and perfeature parameter Favg obtained from all clients and the FC layer form neuron pruning on the classifier while freezing the feature
+aggregation result Wfc, non-forget from non-forgetting clients, i.e., extractor to preserve previously learned general representations.
+ w non-forget = (Favg , Wfc, non-forget ), (12) The forgetting model Wkα is then fine-tuned on the remaining
+ data, ensuring that the contribution of silent applications is
+Model wforget is composed of the feature parameter Favg obtained erased from the decision layer while minimizing performance
+from all clients and the FC layer aggregation result Wfc, forget degradation on active applications.
+from forgetting clients, i.e., Next, the scalable aggregation module updates the global
+ wforget = (Favg , Wfc, forget ), (13) model by aggregating uploaded parameters. Unlike classical
+ FL aggregation, FedUnSilApp aggregates the feature extraction
+w non-forget and wforget serve different purposes, depending on layers from all clients to maintain global generalization, while
+whether the information from forgetting clients is included. This the discriminative layers are aggregated separately for forgetting
+scalable dual-path aggregation mechanism enables the global clients and non-forgetting clients. Finally, the server distributes
+model to adapt to dynamic application states and supports model the updated global feature extractor and discriminative heads
+expansion when silent applications become active again. to all clients, forming the next round of communication. This
+ 4) Training and Unlearning Procedure: Algorithm 1 sum- process continues until convergence.
+marizes the overall workflow of FedUnSilApp, consisting of 5) Theoretical Analysis: In the entire forgetting process, we
+three modules: the learning module, the unlearning (forgetting) need to meet two requirements: The first requirement is that the
+module, and the scalable aggregation module. At the beginning forgetting operation should not affect the model’s accuracy on
+7556 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+the retained data. Specifically, the logit vector of model W α on
+the retained data should be consistent with the original model
+W , i.e.,
+ g −1 (i)
+ argmaxi FPi T,W l (x) = arg max
+ −1
+ FP T,W α (x̂),
+ g (i)
+
+ r ,
+ x ∈ Dr , x̂ ∈ D (14)
+where FP T,W (x) represents the logit vector of the well-trained
+model W for input x, i.e., [o0 , o1 , . . . , on ]. FPi T,W (x) represents
+the i-th logit value. FP T,W α (x) represents the logit vector of
+the well-trained model W α for input x̂, i.e., [o0 , o1 , . . . , on−j ].
+FPi T,W α (x) represents the i-th logit value. Here, j represents
+the number of categories of silent applications. As shown in
+Fig. 5, we calculate the loss between the active applications in
+the previous model and the new model. The loss is calculated as
+follows:
+ eo k
+ pk = n−j , (15)
+ ot
+ t=0 e Fig. 6. The design process of the experiment.
+where ok denotes the k − th logit in FP T,W α (x̂) (restricted to
+the remaining n − j classes).
+  
+ eo k labelled EXP1, EXP2, and EXP3, each of which aims at a distinct
+ log pk = log n−j , (16)
+ ot aspect of the proposed method. Specifically, EXP1 focuses on
+ t=0 e
+ classification accuracy and robustness; EXP2 evaluates the effi-
+ BS n−j
+ 1  ciency and training time; and EXP3 investigates the contribution
+ =− yik log pik , (17) of individual components through ablation studies.
+ BS i=1 1) EXP1: Performance Comparison. Our focus is on comk=0
+
+Here, pik is the predicted probability of class k for sample i, and paring the performance of FedUnSilApp with that of
+yik denotes the (possibly soft) target label distribution. BS is representative State-Of-The-Art (SOTA) FMU methods,
+the number of samples trained in a batch. including FedRecovery, FedAU and Amnesiac. The objec-
+ The second requirement is that the model after forgetting tive is to demonstrate the effectiveness of FedUnSilApp in
+should exhibit incorrect classification behavior on the forgotten classification tasks under unlearning scenarios. In addition
+data Du , as described by [Chen et al. 87]. Specifically, the logit to evaluating overall accuracy, we assess the stability of the
+output of model W α should differ from the original label of the proposed method across different application categories.
+forgotten data Du , i.e., To examine scalability further, we evaluate the capability
+ of FedUnSilApp to rapidly restore accurate recognition afg −1 (i)
+ arg max FP T,W α (x) = y, x ∈ Du . (18) ter unlearning by simulating scenarios in which previously
+ silent applications are reactivated. This analysis enables
+where y is the true label. In other words, this requirement ensures us to verify whether the model can efficiently adapt to
+that the model after forgetting should not retain information dynamic transitions in the application state without comabout the forgotten data Du . In the next section, we will validate promising classification performance.
+our approach through experiments. 2) EXP2: Efficiency and Training Time Analysis. EXP2 evaluates the efficiency of different State-Of-The-Art (SOTA)
+ V. EVALUATIONS methods by measuring their unlearning-related training
+ time. For FedUnSilApp, we reported the per-client train-
+A. Experiment Goal ing time and unlearning time separately, as practical feder-
+ Fig. 6 illustrates the comprehensive experimental workflow ated deployments require unlearning updates to be propdesigned to validate the effectiveness of FedUnSilApp. This agated and applied to clients promptly. The aim of this
+workflow comprises a data preparation phase and three primary experiment is to assess whether FedUnSilApp can achieve
+experimental stages. Evaluations were conducted across four rapid adaptation while maintaining high performance,
+datasets: NJUPT, MIRAGE, CIC-IoT 2022 and USTC-TFC making it suitable for large-scale real-world deployments.
+2016. Each dataset was preprocessed and partitioned into train- 3) EXP3: Ablation Studies. We conducted an ablation study
+ing and testing sets. All experiments were conducted from the to isolate and quantify the contribution of the unlearnperspective of a client initiating learn-to-request operations. To ing mechanism within FedUnSilApp. In the first stage,
+simulate real-world deployment scenarios, we assumed that two multiple clients trained local models independently using
+specific applications were missing from each dataset. Conse- their respective datasets. These locally trained models
+quently, the test sets were deliberately designed to exclude these were then combined to create a global model. We then
+applications, ensuring that the model evaluations would reflect evaluated the performance of this global model and each
+situations in which certain applications were unavailable or inac- client model using a predefined test set to determine the
+tive. The experimental evaluation comprises three experiments baseline behaviour. The aim was to verify that the global
+LI et al.: SILENT-APP-AWARE FEDERATED MACHINE UNLEARNING FOR ENCRYPTED NETWORK TRAFFIC CLASSIFICATION 7557
+
+ TABLE III of our FMU framework under heterogeneous encrypted traffic
+ THE NUMBER OF CATEGORIES IN THE DATASET IS PRESENTED scenarios.
+ r MIRAGE: This dataset primarily features applications from
+ categories such as social networking, travel, weather, and
+ basic utilities, including prominent platforms like Facebook, Twitter, Pinterest, AccuWeather, and Tripadvisor.
+ The prevalence of these frequently used daily-life applications indicates that MIRAGE focuses on capturing
+ typical user behavior patterns during routine activities.
+ The sample size per application in MIRAGE is relatively
+ uniform, mostly ranging between 1,000 and 5,000. In our
+ experiments, we employed the SMOTE data augmentation technique to expand each major application class
+ to 11,000 samples for subsequent training and testing
+ phases.
+ r NJUPT: This dataset contains a higher proportion of modern entertainment and media consumption platforms, such
+ as QQ Music, Bilibili, Weibo, TikTok, iQIYI, Huya, and
+ Tencent Video, with a predominant focus on video, music,
+ and gaming applications. Notably, NJUPT includes a substantial volume of traffic samples related to background
+ processes (e.g., the Background category contains 62,228
+ model’s classification was accurate. In the second stage, samples), highlighting the dataset’s emphasis on capturing
+ we simulated a realistic ‘forgetting’ scenario in which patterns of background operations alongside active user inclient2 requested the deletion of data relating to the silent teractions. The sample size distribution in NJUPT exhibits
+ application. By comparing the model with and without the marked disparities, with certain categories (e.g., Backforgetting module, we tested the model’s accuracy directly ground, VR, and TFT) significantly outnumbering others.
+ and used the confusion matrix to observe changes in its This characteristic makes NJUPT particularly suitable for
+ performance specifically. Thus, we verified the effective- analyzing application usage intensity and user preferences
+ ness of the FedUnSilApp framework. under imbalanced data conditions.
+ Finally, all experimental outcomes are evaluated using a r CIC IoT Dataset 2022: This publicly available dataset, deunified set of performance metrics, including training time, veloped and released by the Canadian Institute for Cyberseaccuracy, recall, F1-score, and precision. This multifaceted eval- curity, is specifically tailored for IoT security research. Coluation framework ensures a thorough assessment of FedUnSi- lected within a controlled laboratory environment, it conlApp’s performance and advantages across various dimensions. tains authentic network traffic generated by various modern
+ smart home devices, including smart lights, smart plugs,
+ surveillance cameras, doorbells, and voice assistants. The
+B. Datasets dataset provides rich network traffic metadata alongside
+ In this experiment, we selected four datasets: MIRAGE, raw packet capture files, with all data meticulously labeled
+NJUPT, CIC IoT Dataset 2022, and USTC-TFC 2016. The to indicate whether the traffic is benign or belongs to a
+MIRAGE dataset [88] is specifically designed for mobile traffic specific attack category.
+analysis and contains real-world data associated with mobile r USTC-TFC 2016: This dataset, curated by the University
+applications. It encompasses multiple domains, including social of Science and Technology of China (USTC), is widely
+media, video, music, gaming, and news. Each traffic packet used in encrypted traffic classification and intrusion detecwithin the dataset is annotated with comprehensive information tion research. It contains real-world traffic traces collected
+such as timestamps, source and destination addresses, proto- from a diverse range of mainstream applications, covering
+cols, and packet lengths. Complementing this public dataset, categories such as chat, email, streaming media, and file
+the private NJUPT dataset used in this study was collected transfer.
+within a campus network environment and comprises traffic
+from 19 popular applications. As detailed in Table III, these
+applications cover diverse categories, including video stream- C. Experimental Settings
+ing, music, gaming, and social media platforms. The NJUPT Our experimental code runs on our server. In this paper,
+dataset includes 91 distinct features per sample. To evaluate the Python3 is the main programming language. The baseline engeneralization capability of our approach across heterogeneous vironment specifications of our server include CPU, Graphics
+network environments, we additionally incorporated the CIC Card, Python, CUDA, System, and PyTorch information; Spe-
+IoT Dataset 2022 [89] and USTC-TFC 2016 [90]. For these cific parameters are shown in Table IV.
+two datasets, we selected the top ten categories with the largest Since this experiment focuses on the impact of accuracy
+number of instances to train and validate our method. All traffic and consumption from the perspective of silent applications,
+samples across the four datasets are uniformly labeled according we do not consider other hardware indicators. We evaluated
+to application type, providing clear ground truth for supervised the selected classifiers using four key performance metrics—
+learning. By integrating these diverse datasets into our exper- Precision, Accuracy, Recall, and F1 Score—to offer a thorough
+iments, we aim to validate the effectiveness and robustness perspective on their effectiveness in classification tasks.
+7558 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE IV TABLE V
+ EXPERIMENTAL EQUIPMENT CLASSIFICATION RESULTS ON THE MIRAGE DATASET
+
+D. Baseline Methods
+ Amnesiac [28] addresses the machine unlearning problem under the GDPR ‘Right to be Forgotten’ requirement. It focuses on TABLE VI
+removing the influence of specific training data from deep neural CLASSIFICATION RESULTS ON THE NJUPT DATASET
+networks to mitigate model inversion and membership inference
+attacks. By introducing unlearning and amnesiac unlearning
+strategy, it enables model owners to erase sensitive information
+while preserving model utility, ensuring compliance with data
+deletion requests.
+ FedRecovery [73] is designed to achieve efficient FMU without relying on retraining. It removes a client’s influence by
+subtracting weighted gradient residuals from the global model,
+and incorporates differential privacy with Gaussian noise to
+ensure that the unlearned model remains difficult to distinguish
+from a retrained one. The method operates without convexity
+assumptions and effectively supports neural network training
+scenarios.
+ FedAU [72] proposes a lightweight federated unlearning
+framework that introduces an auxiliary unlearning module into
+the training pipeline. It performs data removal through a simple linear operation, avoiding expensive post-processing steps
+and supporting multi-client and multi-granularity unlearning,
+including sample-level, class-level, and client-level removal.
+Experiments on MNIST, CIFAR-10 and CIFAR-100 show effective unlearning with minimal accuracy degradation.
+
+E. EXP1: Performance Comparison
+ 1) Analysis of Scalability and Stability: To assess the stability of FedUnSilApp, we analyze the per-class classification
+performance of active applications on the NJUPT and MI-
+ Fig. 7. Scalability performance of the proposed model across four datasets.
+RAGE datasets after applying the proposed unlearning procedure to remove the influence of silent applications. As shown
+in Table VI, the overall accuracy on active classes reaches
+0.8878, indicating that the proposed model maintains relatively at satisfactory levels, a small number of misclassifications and
+consistent performance in different applications without sig- missed detections are still observed, suggesting residual internificant class-level performance degradation. Notably, Bilibili class similarity in traffic patterns. To validate the scalability of
+and Peacekeeper achieve particularly strong results in terms our model, we further performed new experiments by assuming
+of precision and recall, demonstrating a robust discriminative that the silent applications in the original datasets become accapability. In contrast, the model exhibits comparatively weaker tive. Based on this scenario, we evaluate the performance of
+performance on the Background and TikTok categories, with a FedUnSilApp and observe its scalability under the silent-tolower recall observed for TikTok. This can be attributed to the active transition. Fig. 7 presents the scalability evaluation when
+fact that TikTok traffic contains a large volume of short-form silent applications transition to active states. The model retains
+video media flows whose traffic patterns are highly dynamic and stable Precision, Recall, F1 and Accuracy across all datasets,
+less distinctive, increasing the likelihood of missed detections. demonstrating that it can scale effectively without significant
+For the MIRAGE dataset, Table V shows that the Joelapenna performance degradation under application-state changes. As
+category achieves consistently high precision and recall, in- shown in Fig. 8, the model maintains consistent Precision, Recall
+dicating accurate and comprehensive recognition of samples and F1 across different traffic sources, including QQ Music and
+within this class. Similarly, the Motain category demonstrates Garena in NJUPT, Dropbox and Duolingo in MIRAGE, Camera
+near-ideal classification performance. For the Iconology and amcrest and Camera arloqcam in CIC-IoT 2022, and BitTorrent
+Pinterest categories, although both precision and recall remain and Gmail in USTC-TFC 2016.
+LI et al.: SILENT-APP-AWARE FEDERATED MACHINE UNLEARNING FOR ENCRYPTED NETWORK TRAFFIC CLASSIFICATION 7559
+
+ TABLE IX
+ PERFORMANCE COMPARISON OF DIFFERENT FMU METHODS ACROSS
+ DATASETS
+
+Fig. 8. Scalability performance of the proposed model across four datasets.
+
+ TABLE VII
+ SCALABILITY EVALUATION OF THE PROPOSED MODEL DURING THE
+ TRANSITION FROM SILENT TO ACTIVE APPLICATIONS ACROSS MULTIPLE
+ DATASETS
+
+ 2022 dataset, for the previously deactivated Camera arloqcam
+ application, the model achieves a precision of 0.9699, a recall of
+ 0.9990, and an F1-score of 0.9842 after re-activation, indicating
+ that FedUnSilApp can rapidly restore high-quality recognition
+ when such applications return to the system. In contrast, for the
+ TABLE VIII
+ Camera amcrest application, the recall remains relatively high
+FINE-GRAINED SCALABILITY EVALUATION OF THE PROPOSED MODEL UNDER (0.9569), but the precision is lower (0.6940), leading to a reduced
+ THE SILENT-TO-ACTIVE TRANSITION SCENARIO F1-score. This is likely because Amcrest camera traffic exhibits
+ strong intra-class diversity, where background operations (e.g.,
+ keep-alive, cloud synchronization, and event-triggered transmissions) coexist with media streaming flows. The resulting
+ variability weakens the discriminability of the class and encourages the classifier to produce more positive predictions for
+ Amcrest-like patterns, which manifests as a higher false-positive
+ rate and thus lower precision. Overall, these results indicate that
+ FedUnSilApp can efficiently adapt to localized activation without noticeable performance degradation, demonstrating strong
+ scalability when applications shift from silent to active status.
+ 2) Overall Accuracy Comparison With SOTA Methods: As
+ Table VII evaluates the overall performance of FedUnSilApp shown in Table IX, different methods exhibit substantial difin detecting scenarios where silent applications are rapidly re- ferences in classification accuracy across datasets. In the field
+activated as active applications across four datasets. Specifically, of FMU, a common paradigm is to restore model utility by
+the reported results correspond to the aggregated performance retraining or fine-tuning the model using the remaining data.
+over ten applications. As shown in Table VII, the proposed model FedRecovery follows this retraining-based approach and dimaintains stable performance under application state transitions, rectly fine-tunes the model on retained data. While this strategy
+achieving F1 scores of 0.8802 and 0.8493 on NJUPT and enables fast adaptation, it results in relatively limited classi-
+MIRAGE, respectively, while reaching 0.9334 and 0.9731 on fication performance. Specifically, FedRecovery achieves only
+CIC-IoT 2022 and USTC-TFC 2016. Notably, the consistently about 76% accuracy on NJUPT, approximately 63% on CIC-IoT
+high performance on CIC-IoT 2022 and USTC-TFC 2016 (with 2022, and 57% on MIRAGE, which is significantly lower than
+F1 ≥ 0.93 and Accuracy ≥ 0.93) indicates that FedUnSilApp FedAU and FedUnSilApp. Amnesiac, which adopts gradient
+exhibits strong scalability and robustness when applications un- ascent for unlearning, shows even weaker performance on cerdergo rapid state transitions from silent to active. This suggests tain datasets. On MIRAGE, its accuracy drops below 50%, the
+that the proposed unlearning mechanism does not compromise lowest among all evaluated methods, indicating that aggressive
+the model’s ability to adapt to evolving application behaviors. gradient removal leads to severe degradation of discriminative
+ Table VIII further provides a fine-grained scalability analysis capability. On USTC-TFC 2016, Amnesiac achieves moderate
+at the application level by examining the re-activation accuracy performance, but still falls short of the utility level required for
+of individual applications. For each dataset, two silent applica- high-fidelity encrypted traffic classification.
+tions are re-activated to simulate local state transition scenarios. FedAU improves upon Amnesiac by enabling broader un-
+On the MIRAGE, NJUPT, and USTC-TFC 2016 datasets, both learning capabilities and achieving higher accuracy across
+re-activated applications achieve stable and consistent accuracy, datasets. It attains approximately 82% accuracy on NJUPT,
+demonstrating reliable recovery performance. On the CIC-IoT around 70% on MIRAGE, and nearly 88% on CIC-IoT 2022,
+7560 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE X
+ TRAINING TIME COMPARISON OF DIFFERENT FMU METHODS ACROSS
+ DATASETS
+
+ Fig. 9. The training time of each client. (Client No.2 is the client that initiated
+ the forgetting request, and the red part in the bar chart represents the model’s
+ranking second only to FedUnSilApp on CIC-IoT. However, forgetting time).
+FedAU does not explicitly address the misclassification of retained data as silent applications, which limits its robustness
+under application state transitions.
+ In contrast, FedUnSilApp consistently delivers the best over- during the initial federated learning stage. When unlearning is
+all performance across datasets. On the NJUPT dataset, it triggered, the P T is frozen, and only the F C is updated by
+achieves the highest accuracy of approximately 88%, accompa- pruning and fine-tuning neurons associated with silent applicanied by strong precision and recall values of 0.8605 and 0.8566, tions. Consequently, regular FL clients continue participating
+respectively. On MIRAGE, FedUnSilApp reaches an accuracy in global aggregation without interruption, while unlearning
+of around 86%, significantly outperforming all competing meth- clients perform localized updates independently. This design
+ods. On CIC-IoT 2022, it attains the highest accuracy of 91%, significantly reduces retraining overhead and improves overall
+demonstrating superior robustness under diverse application system efficiency and parallelism.
+behaviors. On USTC-TFC 2016, FedUnSilApp and FedAU Although FedAU slightly outperforms other methods in terms
+both achieve near-perfect performance, whereas FedRecovery of raw accuracy on USTC-TFC 2016, FedUnSilApp achieves
+and Amnesiac exhibit noticeable degradation, highlighting the nearly identical detection performance while dramatically reeffectiveness of FedUnSilApp in preserving model utility. ducing training cost (44.10 s vs. 245.05 s).
+ In addition, we measured the time (in seconds) required for
+F. EXP2: Efficiency and Training Time Analysis each client (numbered 0–9) on the NJUPT dataset to complete
+ model training and, where applicable, the unlearning operation,
+ As shown in Table X, the evaluated methods exhibit clear as shown in Fig. 9. From the “Train Time (s)” row, we observe
+trade-offs between training cost and model utility. FedRecovery that all clients require between 102.10 and 102.80 seconds for
+achieves the shortest training time across all datasets, requiring initial training—an average of approximately 102.26 seconds
+only 33–34 seconds, as it directly fine-tunes the model using the with a standard deviation of only 0.22 seconds—indicating
+remaining data without additional unlearning constraints. How- that the workload is evenly distributed. It is worth noting that
+ever, this efficiency comes at the cost of substantially reduced FedUnSilApp achieves efficient unlearning due to its decoupled
+accuracy. architecture. The P T contains the majority of the parameters
+ Amnesiac incurs significantly longer training times due to its and is trained only once during the initial learning stage. When
+gradient ascent-based unlearning process, which first removes a client initiates an unlearning request, FedUnSilApp freezes the
+learned representations and then aggregates updated models. P T and updates only the lightweight classifier layer by pruning
+This design introduces additional overhead, particularly for neurons associated with silent applications. As a result, only a
+clients that did not initiate unlearning requests. As a result, small portion of the model is retrained. For example, client2
+Amnesiac’s training time approaches 3.5 minutes, while its completed unlearning in 13.76 seconds—merely 11.85% of its
+accuracy remains relatively low. FedAU reduces unlearning full training time—demonstrating that our approach maintains
+time compared to Amnesiac but still requires a complex train- accuracy while significantly reducing computation overhead
+ing process, including an initialization phase, multiple training during unlearning.
+rounds, and collaborative training of an auxiliary unlearning
+module by unlearning clients. These factors collectively lead to
+ G. EXP3: Ablation Studies
+the longest training time among all methods, reaching nearly
+4.5 minutes on NJUPT and approximately 275 seconds on As described in Experiment Goal, we assume that two classes
+MIRAGE. FedUnSilApp achieves a favorable balance between of data have been removed from the dataset, and we evaluate our
+efficiency and performance. On NJUPT, it completes training model on a test set that excludes those classes. This allows us to
+in about 116 seconds while delivering the highest accuracy. analyze the impact on model performance when the ‘forgetting
+On MIRAGE, its training time is approximately 68 seconds, module’ is enabled versus when it is not.
+which is nearly four times shorter than that of Amnesiac and Firstly, we first verify the effectiveness of layer P T after
+FedAU. On CIC-IoT 2022, FedUnSilApp again significantly aggregation, which can make the classifier more accurate. As
+reduces training time (116 seconds) compared to FedAU, while shown in Fig. 10(a), the classification accuracy of each client
+achieving higher accuracy. on the MIRAGE dataset varies significantly. The client with
+ This efficiency advantage stems from FedUnSilApp’s scal- the lowest accuracy is client0 , with an accuracy of 0.72, while
+able aggregation design, which separates the model into a P T client2 and client7 achieve the highest client accuracies, at 0.81
+and a lightweight classifier head (F C). The P T , containing the and 0.82, respectively. Overall, most clients have an accuracy
+majority of model parameters, is trained and aggregated only ranging between 0.76 and 0.82, showing a certain degree of
+LI et al.: SILENT-APP-AWARE FEDERATED MACHINE UNLEARNING FOR ENCRYPTED NETWORK TRAFFIC CLASSIFICATION 7561
+
+Fig. 10. Client and global model accuracy during federated learning on different datasets.
+
+Fig. 11. Comparison of confusion matrices before and after applying the unlearning strategy on the MIRAGE and NJUPT datasets. The left two confusion
+matrices correspond to the conventional model evaluated on the two datasets without unlearning, whereas the right two matrices report the results obtained after
+applying the proposed unlearning strategy.
+
+stability. Furthermore, the global model obtained through FL of the client model ranged from 0.66 (client2 ) to 0.82 (client4 ),
+aggregation achieves the highest accuracy at 0.86, which is reflecting significant differences in data distribution and training.
+notably higher than the accuracy of any individual client. The Some clients, such as client3 and client4 , perform close to
+results of this experiment show that the global model outper- the global model, suggesting high data quality or well-trained,
+forms all client models with an accuracy of 0.89, indicating that while the lower accuracy of client2 and client5 (0.66 and 0.67,
+the aggregate knowledge of each client through FL can improve respectively) indicates possible bias, noise, or poorly trained
+the overall performance. As shown in Fig. 10(b), the accuracy data. Overall, the high performance of the global model validates
+7562 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+the effectiveness of the FL framework, which can improve a significant research direction. Finally, evaluating the frameprediction accuracy by aggregating multiple sources of data work’s performance in real-world FL scenarios, where clients
+without accessing local data. are heterogeneous and network conditions vary, is crucial for
+ Furthermore, we verify the effectiveness of the weight matrix validating its robustness and efficiency in practical applications.
+W α after performing neurons unlearning operation. As shown
+in Fig. 11, confusion matrices on the left show the classifi-
+ REFERENCES
+cation results of the original model, which has no unlearning
+mechanism. Confusion matrices on the right show the results [1] G. Bovenzi, G. Aceto, D. Ciuonzo, V. Persico, and A. Pescapé, “A
+after a subset of neurons associated with silent applications was Big Data-enabled hierarchical framework for traffic classification,” IEEE
+ Trans. Netw. Sci. Eng., vol. 7, no. 4, pp. 2608–2619, Oct.–Dec. 2020.
+deleted, which improved the overall classification accuracy. On [2] J. Lee, F. Solat, T. Y. Kim, and H. V. Poor, “Federated learning-empowered
+the NJUPT dataset, the original model misclassifies a substantial mobile network management for 5G and beyond networks: From access
+amount of active application traffic as silent application classes. to core,” IEEE Commun. Surv. Tut., vol. 26, no. 3, pp. 2176–2212, 3rd
+Specifically, it misclassifies 95 background-flow samples, 25 Quart., 2024.
+Peacekeeper samples and 35 TikTok samples as QQmusic sam- [3] J. He, S. Guo, M. Li, and Y. Zhu, “AceFL: Federated learning accelerating
+ in 6 G-enabled mobile edge computing networks,” IEEE Trans. Netw. Sci.
+ples. Additionally, 110 Peacekeeper samples and 31 TikTok Eng., vol. 10, no. 3, pp. 1364–1375, May/Jun. 2023.
+samples are misclassified as Garena. These errors suggest that [4] C. Benzaid and T. Taleb, “AI-driven zero touch network and service
+the model learns redundant or entangled features shared between management in 5G and beyond: Challenges and research directions,” IEEE
+background traffic and certain active applications. Introducing Netw., vol. 34, no. 2, pp. 186–194, Mar./Apr. 2020.
+ [5] M. Liyanage et al., “A survey on zero touch network and service manneuron-level unlearning weakens such redundant feature repre- agement (ZSM) for 5G and beyond networks,” J. Netw. Comput. Appl.,
+sentations, effectively suppressing these erroneous predictions. vol. 203, 2022, Art. no. 103362.
+Consequently, classification accuracy increases from 87.37% [6] M. El Rajab, L. Yang, and A. Shami, “Zero-touch networks: Towards
+to 88.78%, corresponding to an absolute improvement of ap- next-generation network automation,” Comput. Netw., vol. 243, 2024,
+proximately 1.4 percentage points. A similar phenomenon is Art. no. 110294.
+ [7] G. Hu, X. Xiao, M. Shen, B. Zhang, X. Yan, and Y. Liu, “TCGNN: Packetobserved on the MIRAGE dataset when the unlearning strategy grained network traffic classification via graph neural networks,” Eng.
+is disabled: a large number of active application samples are Appl. Artif. Intell., vol. 123, 2023, Art. no. 106531.
+misclassified as silent applications. Notably, 38 Scott.ly samples [8] R. Antonello et al., “Deep packet inspection tools and techniques in
+and 29 Pinterest samples were incorrectly predicted as Drop- commodity platforms: Challenges and trends,” J. Netw. Comput. Appl.,
+ vol. 35, no. 6, pp. 1863–1878, 2012.
+box, and 32 Groupon samples and 32 Scott.ly samples were [9] R. Gudla, S. Vollala, K. Srinivasa, and R. Amin, “A novel approach for
+misclassified as Duolingo. After enabling the neural unlearning classification of tor and non-tor traffic using efficient feature selection
+mechanism, however, these misclassifications are substantially methods,” Expert Syst. Appl., vol. 249, 2024, Art. no. 123544.
+reduced. Consequently, classification accuracy improves from [10] S. Dong, “Multi class SVM algorithm with active learning for network
+84.56% to 85.66%, an absolute gain of approximately 1.10 traffic classification,” Expert Syst. Appl., vol. 176, 2021, Art. no. 114885.
+ [Online]. Available: https://www.sciencedirect.com/science/article/pii/
+percentage points. S0957417421003262
+ Fig. 11 clearly demonstrates that without activating the client- [11] J. Dai, X. Xu, H. Gao, and F. Xiao, “CMFTC: Cross modality fusion
+side unlearning module, active application traffic can be er- efficient multitask encrypt traffic classification in IIoT environment,” IEEE
+roneously misclassified as silent or background classes. Such Trans. Netw. Sci. Eng., vol. 10, no. 6, pp. 3989–4009, Nov./Dec. 2023.
+ [12] H. Lu, Y. Dong, Z. Wu, H.-L. Wei, and G. Lu, “New class detection in
+misclassification can fragment the decision boundaries learned network traffic classification using confidence information embedded casby the classifier, ultimately degrading downstream network cade structure,” IEEE Trans. Netw. Sci. Eng., vol. 12, no. 3, pp. 1692–1706,
+functions, including traffic management and resource allocation. May/Jun. 2025.
+In contrast, the proposed neuron-level unlearning strategy ef- [13] Z. Li, P. Wang, and Z. Wang, “FlowGANAnomaly: Flow-based anomaly
+fectively mitigates this issue by disentangling silent application network intrusion detection with adversarial learning,” Chin. J. Electron.,
+ vol. 33, no. 1, pp. 1–14, 2024.
+features from active traffic representations. [14] Y.-J. Liu et al., “A survey of integrating generative artificial intelligence
+ and 6G mobile services: Architectures, solutions, technologies and outlooks,” IEEE Trans. Cogn. Commun. Netw., vol. 11, no. 3, pp. 1334–1356,
+ Jun. 2025.
+ VI. CONCLUSION [15] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. y Arcas,
+ “Communication-efficient learning of deep networks from decentralized
+ In this paper, we presented FedUnSilApp, a novel frame- data,” in Proc. 20th Int. Conf. Artif. Intell. Statist., vol. 54, 2017, pp. 1273–
+work for FMU specifically designed to address the challenges 1282.
+posed by silent applications in NTC. Our approach combines [16] Q. Yang, Y. Liu, T. Chen, and Y. Tong, “Federated machine learning:
+the learning module, the unlearning module, and a scalable Concept and applications,” ACM Trans. Intell. Syst. Technol., vol. 10, no. 2,
+aggregation mechanism to ensure the stability and scalability pp. 1–19, 2019.
+ [17] W. Y. B. Lim et al., “Federated learning in mobile edge networks:
+of the model in dynamic data environments. FedUnSilApp ef- A comprehensive survey,” IEEE Commun. Surv. Tut., vol. 22, no. 3,
+fectively eliminates redundant or outdated information in the pp. 2031–2063, 3rd Quart., 2020.
+model through a selective neuron pruning mechanism guided [18] Y.-J. Liu et al., “Trusted clustering based federated learning in edge
+by specific category features, while maintaining its performance. networks,” IEEE Trans. Mobile Comput., vol. 24, no. 10, pp. 9726–9742,
+ Oct. 2025.
+Such NTC require the ability to forget data on demand without [19] Y. Liu, J. J. Q. Yu, J. Kang, D. Niyato, and S. Zhang, “Privacy-preserving
+compromising model stability. Through scalable aggregation, traffic flow prediction: A federated learning approach,” IEEE Internet
+the framework enables quick recovery when previously silent Things J., vol. 7, no. 8, pp. 7751–7763, Aug. 2020.
+applications become active again and need to be recognized. [20] E. Bakopoulou, B. Tillman, and A. Markopoulou, “FedPacket: A federated
+ Although FedUnSilApp addresses several key challenges in learning approach to mobile packet classification,” IEEE Trans. Mobile
+ Comput., vol. 21, no. 10, pp. 3609–3628, Oct. 2022.
+FL, there are still areas for future exploration. As FL increasingly [21] Z. Zhu et al., “MFABA: A more faithful and accelerated boundary-based
+integrates complex models, optimizing the scalability of FedUn- attribution method for deep neural networks,” in Proc. AAAI Conf. Artif.
+SilApp and its compatibility with these architectures remains Intell., 2024, vol. 38, no. 15, pp. 17228–17236.
+LI et al.: SILENT-APP-AWARE FEDERATED MACHINE UNLEARNING FOR ENCRYPTED NETWORK TRAFFIC CLASSIFICATION 7563
+
+[22] A. Mantelero, “The EU proposal for a general data protection regulation [44] T. Shapira and Y. Shavitt, “FlowPic: Encrypted internet traffic classificaand the roots of the ‘right to be forgotten,” Comput. Law Secur. Rev., tion is as easy as image recognition,” in Proc. IEEE INFOCOM 2019-IEEE
+ vol. 29, no. 3, pp. 229–235, 2013. Conf. Comput. Commun. Workshops, 2019, pp. 680–687.
+[23] E. L. Harding, J. J. Vanto, R. Clark, L. H. Ji, and S. C. Ainsworth, [45] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+ “Understanding the scope and impact of the california consumer encrypted traffic classification with one-dimensional convolution neuprivacy act of 2018,” J. Data Protection Privacy, vol. 2, no. 3, ral networks,” in Proc. IEEE Int. Conf. Intell. Secur. Inform., 2017,
+ pp. 234–253, 2019. pp. 43–48.
+[24] Z. Wang, Z. Li, M. Fu, Y. Ye, and P. Wang, “Network traffic classification [46] M. Lotfollahi, M. Jafari, R. Siavoshani S. H. Zade, and M. Saberian,
+ based on federated semi-supervised learning,” J. Syst. Archit., vol. 149, “Deep packet: A novel approach for encrypted traffic classification
+ 2024, Art. no. 103091. [Online]. Available: https://www.sciencedirect. using deep learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012,
+ com/science/article/pii/S1383762124000286 2020.
+[25] W. Zixuan, M. Cheng, X. Yuhua, L. Zeyi, S. Zhixin, and W. Pan, [47] C. Dong, C. Zhang, Z. Lu, B. Liu, and B. Jiang, “CETAnalytics: Com-
+ “Trusted encrypted traffic intrusion detection method based on federated prehensive effective traffic information analytics for encrypted traffic
+ learning and autoencoder,” China Commun., vol. 21, no. 8, pp. 211–235, classification,” Comput. Netw., vol. 176, 2020, Art. no. 107258.
+ 2024. [48] V. Tong, H. A. Tran, S. Souihi, and A. Mellouk, “A novel quic traffic
+[26] Y. Liu, L. Xu, X. Yuan, C. Wang, and B. Li, “The right to be forgotten classifier based on convolutional neural networks,” in Proc. IEEE Glob.
+ in federated learning: An efficient realization with rapid retraining,” in Commun. Conf., 2018, pp. 1–6.
+ Proc. IEEE INFOCOM 2022-IEEE Conf. Computer Commun., 2022, [49] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow sequence
+ pp. 1749–1758. network for encrypted traffic classification,” in Proc. IEEE INFOCOM
+[27] N. Su and B. Li, “Asynchronous federated unlearning,” in Proc. IEEE 2019-IEEE Conf. Comput. Commun., 2019, pp. 1171–1179.
+ INFOCOM 2023-IEEE Conf. Comput. Commun., 2023, pp. 1–10. [50] F. Al-Obaidy, S. Momtahen, M. F. Hossain, and F. Mohammadi, “En-
+[28] L. Graves, V. Nagisetty, and V. Ganesh, “Amnesiac machine learning,” in crypted traffic classification based ML for identifying different social
+ Proc. AAAI Conf. Artif. Intell., 2021, vol. 35, no. 13, pp. 11516–11524. media applications,” in Proc. IEEE Can. Conf. Elect. Comput. Eng., 2019,
+[29] J. Wang, S. Guo, X. Xie, and H. Qi, “Federated unlearning via class- pp. 1–5.
+ discriminative pruning,” in Proc. ACM Web Conf., 2022, pp. 622–632. [51] G. Xie, Q. Li, and Y. Jiang, “Self-attentive deep learning method for online
+[30] Z. Li et al., “Multi-ARCL: Multimodal adaptive relay-based distributed traffic classification and its interpretability,” Comput. Netw., vol. 196, 2021,
+ continual learning for encrypted traffic classification,” J. Parallel Distrib. Art. no. 108267.
+ Comput., vol. 201, 2025, Art. no. 105083. [Online]. Available: https:// [52] X. Ren, H. Gu, and W. Wei, “Tree-RNN: Tree structural recurrent neural
+ www.sciencedirect.com/science/article/pii/S0743731525000504 network for network traffic classification,” Expert Syst. with Appl., vol. 167,
+[31] S. Fathi-Kazerooni and R. Rojas-Cessa, “Countering machine-learning 2021, Art. no. 114363.
+ classification of applications by equalizing network traffic statis- [53] A. M. Sadeghzadeh, S. Shiravi, and R. Jalili, “Adversarial network traftics,” IEEE Trans. Netw. Sci. Eng., vol. 8, no. 4, pp. 3392–3403, fic: Towards evaluating the robustness of deep-learning-based network
+ Oct.–Dec. 2021. traffic classification,” IEEE Trans. Netw. Service Manag., vol. 18, no. 2,
+[32] K. Trang and A. H. Nguyen, “A comparative study of machine learning- pp. 1962–1976, Jun. 2021.
+ based approach for network traffic classification.,” Knowl. Eng. Data Sci., [54] S. Agrawal et al., “Federated learning for intrusion detection system:
+ vol. 4, no. 2, pp. 128–137, 2021. Concepts, challenges and future directions,” Comput. Commun., vol. 195,
+[33] M. Shen, M. Wei, L. Zhu, and M. Wang, “Classification of encrypted pp. 346–361, 2022.
+ traffic with second-order Markov chains and application attribute bi- [55] Y.-J. Liu, S. Qin, Y. Sun, and G. Feng, “Resource consumption for
+ grams,” IEEE Trans. Inf. Forensics Secur., vol. 12, no. 8, pp. 1830–1843, supporting federated learning in wireless networks,” IEEE Trans. Wireless
+ Aug. 2017. Commun., vol. 21, no. 11, pp. 9974–9989, Nov. 2022.
+[34] D. Herrmann, R. Wendolsky, and H. Federrath, “Website fingerprinting: [56] A. Ariffin, F. Afifi, F. Zaki, H. Hanif, and N. B. Anuar, “Federated learning
+ Attacking popular privacy enhancing technologies with the multinomial in network traffic classification: Taxonomy of implementation, application,
+ naıve-bayes classifier,” in Proc. ACM Workshop Cloud Comput. Secur., and impact on sixth-generation wireless networks,” Eng. Appl. Artif. Intell.,
+ 2009, pp. 31–42. vol. 158, 2025, Art. no. 111471.
+[35] Y. Wang, Y. Xiang, J. Zhang, W. Zhou, G. Wei, and L. T. [57] X. He, H. Huang, C. Wang, F. Hu, T. Cai, and Z. Zheng, “A
+ Yang, “Internet traffic classification using constrained clustering,” fairness-guaranteed framework for semi-asynchronous federated learn-
+ IEEE Trans. Parallel Distrib. Syst., vol. 25, no. 11, pp. 2932–2943, ing,” IEEE Trans. Netw. Sci. Eng., vol. 12, no. 6, pp. 4462–4479,
+ Nov. 2014. Nov./Dec. 2025.
+[36] Z. Wang et al., “DFE: Deep flow embedding for robust network traffic [58] O. Alnajar and A. Barnawi, “Tactile internet of federated things: Toward
+ classification,” IEEE Trans. Netw. Sci. Eng., vol. 12, no. 3, pp. 1597–1612, fine-grained design of FL-based architecture to meet TIoT demands,”
+ May/Jun. 2025. Comput. Netw., vol. 231, 2023, Art. no. 109712.
+[37] V. G. d. S. Ruffo, L. F. Carvalho, J. Lloret, and M.L. P. Jr, [59] Y.-J. Liu et al., “Ensemble distillation based adaptive quantization for
+ “f-AnoGAN for unsupervised attack detection in SDN environ- supporting federated learning in wireless networks,” IEEE Trans. Wireless
+ ment,” IEEE Trans. Netw. Sci. Eng., vol. 12, no. 4, pp. 3271–3285, Commun., vol. 22, no. 6, pp. 4013–4027, Jun. 2023.
+ Jul./Aug. 2025. [60] N. Wang, X. Li, Z. Guan, and S. Yuan, “FedStream: A federated learning
+[38] W. Dong, J. Yu, X. Lin, G. Gou, and G. Xiong, “Deep learning and pre- framework on heterogeneous streaming data for next-generation traffic
+ training technology for encrypted traffic classification: A comprehensive analysis,” IEEE Trans. Netw. Sci. Eng., vol. 11, no. 3, pp. 2485–2496,
+ review,” Neurocomputing, vol. 617, 2025, Art. no. 128444. May/Jun. 2024.
+[39] X. Wang, Y. Han, V. C. Leung, D. Niyato, X. Yan, and X. Chen, [61] S. Ghosh, “Network traffic analysis based on cybersecurity intrusion
+ “Convergence of edge computing and deep learning: A comprehensive detection through an effective automated separate guided attention fedsurvey,” IEEE Commun. Surv. Tut., vol. 22, no. 2, pp. 869–904, 2nd Quart., erated graph neural network,” Appl. Soft Comput., vol. 169, 2025,
+ 2020. Art. no. 112603.
+[40] S. A. H. Minoofam, A. Bastanfard, and M. R. Keyvanpour, “TRCLA: [62] Y. Guo and D. Wang, “FEAT: A federated approach for privacy-preserving
+ A transfer learning approach to reduce negative transfer for cellular network traffic classification in heterogeneous environments,” IEEE Interlearning automata,” IEEE Trans. Neural Netw. Learn. Syst., vol. 34, no. 5, net Things J., vol. 10, no. 2, pp. 1274–1285, Jan. 2023.
+ pp. 2480–2489, May 2023. [63] Y. Guo, K. Huang, and J. Chen, “WCL: Client selection in federated
+[41] W. Wei, H. Gu, W. Deng, Z. Xiao, and X. Ren, “ABL-TC: A lightweight learning with a combination of model weight divergence and client training
+ design for network traffic classification empowered by deep learning,” loss for internet traffic classification,” Wireless Commun. Mobile Comput.,
+ Neurocomputing, vol. 489, pp. 333–344, 2022. vol. 2021, no. 1, 2021, Art. no. 3381998.
+[42] H. Yao, C. Liu, P. Zhang, S. Wu, C. Jiang, and S. Yu, “Identification [64] Z. He et al., “Edge device identification based on federated learning and
+ of encrypted traffic through attention mechanism based long short term network traffic feature engineering,” IEEE Trans. Cogn. Commun. Netw.,
+ memory,” IEEE Trans. Big Data, vol. 8, no. 1, pp. 241–252, Feb. 2022. vol. 8, no. 4, pp. 1898–1909, Dec. 2022.
+[43] W. Zheng, C. Gou, L. Yan, and S. Mo, “Learning to classify: A flow-based [65] X. Huang, Z. Chen, Q. Chen, and J. Zhang, “Federated learning based
+ relation network for encrypted traffic classification,” in Proc. Web Conf. QoS-aware caching decisions in fog-enabled Internet of Things networks,”
+ 2020, pp. 13–22. Digit. Commun. Netw., vol. 9, no. 2, pp. 580–589, 2023.
+7564 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+[66] W. Jiang, H. Han, Y. Zhang, and J. Mu, “Federated split learning for Zeyi Li (Graduate Student Member, IEEE) received
+ sequential data in satellite–terrestrial integrated networks,” Inf. Fusion, the B.S. degree in mathematics from the Suzhou
+ vol. 103, 2024, Art. no. 102141. University of Technology, Soochow, China, in 2019,
+[67] M. J. Idrissi et al., “Fed-ANIDS: Federated learning for anomaly-based and the M.S. degree in computer science in 2022
+ network intrusion detection systems,” Expert Syst. Appl., vol. 234, 2023, from the Nanjing University of Posts and Telecom-
+ Art. no. 121000. [Online]. Available: https://www.sciencedirect.com/ munications, Nanjing, China, where he is currently
+ science/article/pii/S0957417423015026 working toward the Ph.D. degree in cyberspace secu-
+[68] S. Shi, Y. Guo, D. Wang, Y. Zhu, and Z. Han, “Distributionally robust rity. His research interests include network security,
+ federated learning for network traffic classification with noisy labels,” communication network security, anomaly detection
+ IEEE Trans. Mobile Comput., vol. 23, no. 5, pp. 6212–6226, May 2024. and analysis, deep packet inspection, and graph neural
+[69] A. Pekar, L. A. Makara, and G. Biczok, “Incremental federated learning for networks.
+ traffic flow classification in heterogeneous data scenarios,” Neural Comput.
+ Appl., vol. 36, no. 32, pp. 20401–20424, 2024.
+[70] A. Bremler-Barr, Y. Harchol, D. Hay, and Y. Koral, “Deep packet inspec- Yuna Jiang (Member, IEEE) received the Ph.D.
+ tion as a service,” in Proc. 10th ACM Int. Conf. Emerg. Netw. Experiments degree from the Huazhong University of Science
+ Technol., 2014, pp. 271–282. and Technology, Wuhan, China, in 2023. She
+[71] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapé, “Distiller: En- was a Visiting Ph.D. Student with the School
+ crypted traffic classification via multimodal multitask deep learning,” of Computer Science and Engineering, Nanyang
+ J. Netw. Comput. Appl., vol. 183, no. 184, 2021, Art. no. 102985. Technological University, Singapore. She is cur-
+ [Online]. Available: https://www.sciencedirect.com/science/article/pii/ rently an Associate Professor with the School
+ S1084804521000126 of Communications and Information Engineering,
+[72] H. Gu et al., “Unlearning during learning: An efficient federated machine Nanjing University of Posts and Telecommuniunlearning method,” in Proc. 33rd Int. Joint Conf. Artif. Intell., 2024, cations, Nanjing, China. Her research interests
+ pp. 1439–1444, doi: 10.24963/ijcai.2024/446. include immersive communication and wireless
+[73] L. Zhang, T. Zhu, H. Zhang, P. Xiong, and W. Zhou, “FedRecov- resource allocation.
+ ery: Differentially private machine unlearning for federated learning
+ frameworks,” IEEE Trans. Inf. Forensics Secur., vol. 18, pp. 4732–4746,
+ 2023.
+[74] T. T. Nguyen et al., “A survey of machine unlearning,” ACM Trans. Intell. Tianshun Wang (Member, IEEE) received the B.Sc.
+ Syst. Technol., vol. 16, no. 5, pp. 1–46, 2025. degree in communication engineering from Jilin Uni-
+[75] Z. Pan et al., “Feature-based machine unlearning for vertical federated versity, Changchun, China, in 2020, and the Ph.D.
+ learning in IoT networks,” IEEE Trans. Mobile Comput. vol. 24, no. 6, degree in computer science from the University of
+ pp. 5031–5044, Jun. 2025. Macau, Macau, China, in 2023. He is currently an As-
+[76] J. Fan, K. Wu, Y. Zhou, Z. Zhao, and S. Huang, “Fast model update for iot sistant Professor with the School of Communication
+ traffic anomaly detection with machine unlearning,” IEEE Internet Things and Information Engineering, Nanjing University of
+ J., vol. 10, no. 10, pp. 8590–8602, May 2023. Posts and Telecommunications, Nanjing, China. His
+[77] Z. Liu et al., “A survey on federated unlearning: Challenges, methods, and research interests include mobile edge computing,
+ future directions,” ACM Comput. Surv., vol. 57, no. 1, pp. 1–38, 2024. federated learning, and multimodal learning.
+[78] T. Che et al., “Fast federated machine unlearning with nonlinear functional
+ theory,” in Proc. Int. Conf. Mach. Learn., 2023, pp. 4241–4268.
+[79] L. Wu, S. Guo, J. Wang, Z. Hong, J. Zhang, and Y. Ding, “Federated Pan Wang (Member, IEEE) received the B.S. degree
+ unlearning: Guarantee the right of clients to forget,” IEEE Netw., vol. 36, in communication engineering and the Ph.D. degree
+ no. 5, pp. 129–135, Sep./Oct. 2022. in electrical and computer engineering from the Nan-
+[80] C. Wu, S. Zhu, P. Mitra, and W. Wang, “Unlearning backdoor attacks in jing University of Posts and Telecommunications,
+ federated learning,” in Proc. IEEE Conf. Commun. Netw. Secur., 2024, Nanjing, China, in 2001 and 2013, respectively. From
+ pp. 1–9. 2017 to 2018, he was a Visiting Scholar with the
+[81] Y. Zhao, P. Wang, H. Qi, J. Huang, Z. Wei, and Q. Zhang, “Federated Department of Electrical and Computer Engineerunlearning with momentum degradation,” IEEE Internet Things J., vol. 11, ing, University of Dayton, Dayton, OH, USA. He
+ no. 5, pp. 8860–8870, Mar. 2024. is currently a Professor with the School of Modern
+[82] H. A. Tran, H. T. T. Binh, and A. Mellouk, “Federated learning for network Posts, Nanjing University of Posts and Telecommunitraffic classification: A knowledge consolidation approach,” IEEE Trans. cations. His research interests include cyber security
+ Netw. Sci. Eng., vol. 13, pp. 797–814, 2026. and communication network security, network measurements, quality of service,
+[83] X. Yin, Y. Zhu, and J. Hu, “A comprehensive survey of privacy-preserving deep packet inspection, software-defined networking, Big Data analytics and
+ federated learning: A taxonomy, review, and future directions,” ACM applications.
+ Comput. Surv., vol. 54, no. 6, pp. 1–36, 2021.
+[84] J. Xu, Z. Wu, C. Wang, and X. Jia, “Machine unlearning: Solutions and
+ challenges,” IEEE Trans. Emerg. Topics Comput. Intell., vol. 8, no. 3,
+ pp. 2150–2168, Jun. 2024. Yimu Ji was born in 1978. He received the Ph.D.
+[85] S. Liu et al., “Rethinking machine unlearning for large language models,” degree from the Nanjing University of Posts and
+ Nature Mach. Intell., vol. 7, pp. 181–194, 2025. Telecommunications (NJUPT), Nanjing, China, in
+[86] Z. Li, Z. Zhang, M. Fu, and P. Wang, “A novel network flow feature scaling 2007. From September 2012 to December 2012, he
+ method based on cloud-edge collaboration,” in Proc. IEEE 22nd Int. Conf. was sent to the University of Virginia for a UVA
+ Trust, Secur. Privacy Comput. Commun., 2023, pp. 1947–1953. study visit, and from June 2016 to December 2016,
+[87] W. Wang, S. Jian, Y. Tan, Q. Wu, and C. Huang, “Representation learning- he was sent to Purdue University for a study visit by
+ based network intrusion detection system by capturing explicit and implicit the Jiangsu Provincial Government. He is currently
+ feature interactions,” Comput. Secur., vol. 112, 2022, Art. no. 102537. a Professor with the School of Computer Science,
+[88] G. Aceto, D. Ciuonzo, A. Montieri, V. Persico, and A. Pescapé, “Mirage: NJUPT. He presided more than and participated in
+ Mobile-app traffic capture and ground-truth creation,” in Proc. 4th Int. many national, provincial and ministerial projects,
+ Conf. Comput., Commun. Secur., 2019, pp. 1–8. obtained 7 provincial and municipal science and technology progress awards,
+[89] S. Dadkhah, H. Mahdikhani, P. K. Danso, A. Zohourian, K. A. Truong, and published and employed more than 20 SCI papers, and obtained 4 authorized
+ A. A. Ghorbani, “Towards the development of a realistic multidimensional invention patents and 3 software copyrights. His research interests include
+ iot profiling dataset,” in Proc. 19th Annu. Int. Conf. Privacy, Secur. and security and applications in cloud computing, BigData, IoT, and AI. From 2009
+ Trust, 2022, pp. 1–11. to 2011, he was a temporary Deputy Director of the Administrative Committee
+[90] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end encrypted of Wujin National High tech Zone in Jiangsu Province (assisting in the work
+ traffic classification with one-dimensional convolution neural networks,” of scientific and technological talents, and won the title of preferred communist
+ in Proc. IEEE Int. Conf. Intell. Secur. Inform., 2017, pp. 43–48. party member during this period).

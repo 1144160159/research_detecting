@@ -1,0 +1,1600 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [810] SRViT: A Robust Online Encrypted Traffic Classification Based on Vision Transformer
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：810
+题名：SRViT: A Robust Online Encrypted Traffic Classification Based on Vision Transformer
+年份：2026
+DOI：10.1109/ton.2026.3699540
+来源：IEEE Transactions on Networking
+PDF：paper/10.1109_TON.2026.3699540.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：其他AI安全与跨域异常检测
+相关性：强相关，分数 16
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\810.txt
+- 原始字符数：83511
+- 本次发送字符数：83511
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+5486
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+SRViT: A Robust Online Encrypted Traffic
+Classification Based on Vision Transformer
+Chang Liu , Graduate Student Member, IEEE, Lei Han , Zulong Diao, Zheng Wu , Xin He , Member, IEEE,
+Weibei Fan , Member, IEEE, and Fu Xiao , Senior Member, IEEE
+
+Abstract—The dramatic rise in encrypted traffic brings huge
+challenges to traditional traffic classification methods. Deep
+learning-based traffic classification methods have been demonstrated to significantly improve performance. However, the
+following limitations remain: i) It is challenging to concurrently
+focus on both global and local information in traffic flows,
+resulting in the absence of important information. ii) The
+existing methods relying on temporal information suffer from
+low robustness in case of packet disordering or loss. iii) The use
+of multi-layer encryption and random routing in Tor technology
+poses more challenges for traffic identification. In this paper, we
+propose a novel ViT-based model for more accurate encrypted
+traffic classification, called SRViT to overcome the above challenges. Firstly, SRViT proposes a novel mechanism of multi-size
+patch division to learn comprehensive hidden knowledge and
+dependencies between packets. Secondly, we propose a selfattention operation with a relative position bias to learn the
+relative position relationship. After that, an incremental update
+mechanism is proposed to adapt to dynamic changes in the
+real traffic environment. At last, the comprehensive experiments
+on 5 real-world encrypted traffic datasets are carried out. The
+experimental results indicate that SRViT outperforms the stateof-the-art methods with an average accuracy improvement of
+24.62% while keeping higher robustness and execution efficiency.
+Index Terms—Encrypted traffic classification, vision transformer, Tor traffic.
+
+N
+
+I. I NTRODUCTION
+ETWORK traffic classification is an important task of
+applications or Web services identifying in network
+
+Received 4 September 2024; revised 29 May 2025 and 22 September 2025;
+accepted 28 May 2026; approved by IEEE T RANSACTIONS ON N ETWORK ING Editor D. Pei. Date of publication 3 June 2026; date of current version
+9 June 2026. This work was supported in part by the National Major Science
+and Technology Program of China under Grant 2026ZD1307700; in part by
+the Major Scientific Instruments and Equipment Development Project of the
+National Natural Science Foundation of China under Grant 62427809; in part
+by the National Natural Science Foundation of China under Grant 62572187,
+Grant 62472168, Grant 62402234, Grant 62202237, and Grant NY223168;
+in part by the Key Program of Natural Science Foundation of Jiangsu
+Province under Grant BK20243053; in part by the Research Foundation of
+Education Bureau of Hunan Province, China, under Grant 25B0452; in part
+by the Open Project of State Key Laboratory of Internet Architecture under
+Grant HLW2025MS24; and in part by the State Key Lab of Processors,
+Institute of Computing Technology, Chinese Academy of Sciences, under
+Grant CLQ202506. (Corresponding author: Fu Xiao.)
+Chang Liu, Lei Han, Zheng Wu, Xin He, Weibei Fan, and Fu
+Xiao are with the College of Computer, Nanjing University of
+Posts and Telecommunications, Nanjing 210003, China (e-mail:
+2023040503@njupt.edu.cn;
+hanlei@njupt.edu.cn;
+zwu@njupt.edu.cn;
+xhe@njupt.edu.cn; wbfan@njupt.edu.cn; xiaof@njupt.edu.cn).
+Zulong Diao is with the School of Computer Science and Engineering,
+Hunan University of Science and Technology, Xiangtan 411201, China
+(e-mail: diaozulong@hnust.edu.cn).
+Digital Object Identifier 10.1109/TON.2026.3699540
+
+management and cyberspace security. In network management,
+traffic priority classification can help ensure the differentiated
+Service-Level Agreement (SLA) requirements [1], [2], [3], [4].
+In cyberspace security, accurate traffic identification can prevent the spreading of a significant variety of malicious attacks
+[5], [6], [7], [8], [9]. Nowadays, with the widespread adoption
+of encryption for privacy protection, encrypted traffic has risen
+dramatically and occupies a large share of network traffic [10],
+[11], [12]. Therefore, encrypted flow classification has become
+a topical issue and has attracted extensive attention from both
+industry and academia. How to capture the robust patterns
+implied in diverse encrypted traffic and support accurate and
+generalized traffic classification is crucial for achieving high
+network security and effective network management.
+However, malware traffic and cybercriminals can consequently evade monitoring systems through privacy-enhancing
+encryption techniques such as Tor, VPN, etc., which lead
+to the ineffectiveness of traditional rule/DPI-based classification approaches due to the randomized communication
+contents [13]. Some studies [14], [15], [16], [17], [18] combine
+machine learning algorithms with statistical features manually
+extracted from raw traffic to handle encrypted traffic. And,
+Lichy et al. [19] demonstrated that, in some cases, classical
+machine learning models (e.g., random forests) perform better
+in malware traffic classification tasks. However, these methods
+are highly dependent on expert-designed features and have
+limited generalization capabilities. Recently, deep learning
+methods automatically learn complex patterns from raw traffic and achieve significant performance improvements. Some
+methods [20], [21], [22], [23] extract information, such as
+packet size or packet intervals sequence, from a temporal perspective. However, these approaches may suffer from a drastic
+drop in performance under packet disorder and packet loss.
+Some researchers [24], [25], [26] take the encrypted traffic
+classification as a computer vision task through transforming
+encrypted traffic flows to images. These methods focus on
+local information extraction of each traffic flow while ignoring
+the global and contextual information understanding. However,
+fixed convolution kernels can’t adapt to dynamic changes in
+encrypted traffic patterns.
+Unlike CNNs, a Transformer [27] based on the self-attention
+mechanism can take into account both local interactions
+and long-distance dependencies through the dynamic computation of attention scores with appropriate generalization
+biases according to different task goals. ET-BERT [28] introduces a Transformer-based large model into encrypted traffic
+
+2998-4157 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+LIU et al.: SRViT: ROBUST ONLINE ENCRYPTED TRAFFIC CLASSIFICATION BASED ON ViT
+
+Fig. 1. Tor system structure.
+
+Fig. 2. The visualization results of Tor-encrypted traffic compared to nonTor-encrypted traffic.
+
+classification tasks for performance improvement. NetGPT
+[29] proposes a generative pre-trained transformer for network
+traffic. YaTC [30] introduces a masked autoencoder (MAE)
+based traffic transformer with multi-level flow representation
+for traffic classification. However, most of these methods
+inevitably incur high computational complexity in the flow
+representations learning, pre-training, and fine-tuning process.
+With increasing traffic arrival rates, excessive computational complexity would impede the deployment of traffic
+identification methods. In this paper, we aim to propose
+a transformer-based traffic classification method to utilize
+both temporal and 2-dimensional spatial information while
+requiring substantially fewer computational resources. ViT
+(Vision Transformer) [31] is a natural choice. It applies a pure
+transformer directly to sequences of image patches and attains
+excellent classifying results [32].
+However, there exist some compatibility problems when
+directly introducing ViT into traffic classification tasks, especially for Tor traffic identification [7]. The Tor [33] system’s
+architecture is shown in Fig. 1. The user randomly selects three
+onion routes and establishes a circuit with these nodes. Mutiplexing multiple circuits per connection. The client encrypts
+the packets in three layers and decrypts them sequentially
+by each relay node. The path randomization and multi-layer
+encryption mechanisms may result in different numbers of
+encryption layers in received packets of varying traffic flows or
+applications for an onion router. Fig. 2 shows the visualization
+results of Tor-encrypted traffic compared to non-Tor-encrypted
+traffic. The figure clearly shows that there is an obvious
+difference in the visualization of traffic between the different types of traffic. However, the difference between traffic
+encrypted with Tor seems to be much weaker than the traffic
+without using Tor encryption. These characteristics of multilayer encryption, highly obfuscated payloads, random routing,
+and traffic pattern uncertainty impair the effectiveness of fixed
+patch-wise interaction learning in ViT.
+To address the above challenges, we propose SRViT (multisize relative ViT), a novel ViT-based model for more accurate
+
+5487
+
+encrypted traffic classification. To be specific, we introduce
+a multi-size patch overlapping division mechanism to enable
+the model to more comprehensively learn the characteristics of
+encrypted traffic. In addition, we add relative position bias to
+the self-attention mechanism in the encoding layer to learn the
+relative position relationship of encrypted traffic. Finally, we
+also incorporate an incremental update mechanism to enable
+the model to adapt the dynamically changing traffic quickly.
+Compared with methods, our paper makes the following
+contributions:
+• We introduce ViT into encrypted traffic classification
+tasks and propose a novel end-to-end identification model,
+which transforms traffic flows into image patches and
+dynamically learns the local/global dependencies between
+packets.
+• We propose a novel multi-size patch mechanism to further
+comprehensively learn the hidden features and resolve
+the multi-layer encryption, highly obfuscated payloads,
+random routing, and traffic pattern uncertainty problems.
+In addition, we propose a self-attention operation with
+a novel relative position bias, which can dynamically
+adjust the attention scores and learn the relative position
+relationship.
+• We design a novel incremental update to adapt to the
+dynamically changed traffic by only updating a small proportion of parameters when a sharp drop in identification
+accuracy occurs.
+• We conduct a series of experiments over 5 real-world
+encrypted traffic datasets. Compared with the state-ofthe-art methods, SRViT achieves the highest classification
+accuracy, with an average improvement of 25.04% in
+accuracy, while keeping higher robustness and execution
+efficiency.
+The rest of the paper is organized as follows. We
+first summarize the related work of traffic classification in
+Section II and introduce the preliminary work in Section III.
+We then present the technical details of our novel SRViT
+framework in Section IV. After that, we evaluate the performance of our proposed model by conducting experiments on
+real-world datasets in Section V. Finally, we present a detailed
+discussion of SRViT in Section VI and conclude this paper in
+Section VII.
+II. R ELATED W ORK
+In this section, we briefly introduce these related works and
+classify them according to conventional traffic classification,
+machine learning-based methods, and deep learning-based
+methods as follows.
+A. Conventional Traffic Classification
+Traffic classification primarily involves port-based methods
+and deep packet inspection (DPI)-based methods. The portbased approach [34] is used to identify the application type
+by a given list of ports provided by the Internet Assigned
+Numbers Authority (IANA). However, this method fails in
+cases of dynamic port allocation and the use of generic
+communication protocol ports [35]. The port allocation and
+
+5488
+
+port masquerading make it no longer applicable in traffic
+classification.
+The payload-based approaches exploit the specific signature
+in the payload for matching. Roughan et al. [36] used statistical signatures to classify P2P application traffic. Meanwhile,
+Keralapura et al. [37] provided a self-learning traffic classifier for identifying P2P traffic in high-speed networks with
+application payload signatures.
+However, due to the emergence of traffic encryption and
+encapsulation, and the concern of privacy protection in recent
+years, most payload methods become inapplicable anymore.
+Thus the advent of encrypted traffic makes network traffic
+classification more challenging.
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+knowledge from traffic sequences for the first time. Specifically, it uses the sequence of message type to construct a
+first-order Markov model with MGP (maximum generation
+probability). Building on this work, Shen et al. improve the
+classification performance under the second-order Markov
+model [41], [42]. In addition, FU et al. [43] extract packet
+length and time delay sequences to construct a Hidden Markov
+Model. Due to inefficiency in capturing long-term relationships for lower-order Markov models and high computing
+complexity for higher models, these methods are likely to
+be unsuitable for complex networks such as those with high
+throughput. These methods are incapable of capturing longterm relationships and at the same time segmenting the feature
+learning and classification process.
+
+B. Encrypted Traffic Classification With Machine Learning
+Different from the packet inspection method under plain text
+traffic, which fails when the traffic is encrypted, some research
+suggests using unencrypted protocol field information. For
+example, FlowPrint [15] extracts the device, certificate, size,
+and temporal features from the header field of each packet
+to make the representation of each flow and then constructs
+a fingerprint database. Finally, through the techniques of
+clustering and cross-correlating, the identification of each type
+of flow is achieved. However, these fingerprints are more
+likely susceptible to the noise from the network environment,
+leading to the loss of useful knowledge especially in virtual
+communication networks.
+With the advent of machine learning techniques, recent
+research has employed machine learning techniques to deal
+with encrypted traffic classification. Researchers have mainly
+worked on the extraction of effective and stable information
+from the packet header. Namely, considering how to construct
+enough valid features rather than extracting signatures from
+packet payload. There are two types of features commonly
+used in encrypted traffic classification: statistical features and
+sequential features.
+Statistical Features: Combining with various traditional
+machine learning algorithms, most encrypted traffic classification problems are addressed using statistical features.
+Examples include logistic regression, random forest, and support vector machine. For instance, AppScanner [38] extracts
+statistical features based on packet length and uses a random
+forest classifier. Through the analysis of encrypted network
+traffic, it proposes a robust method for identifying smartphone
+applications with the concept of burst and traffic statistics
+features. STM-DT [18] is a method for classifying network
+attacking traffic based on the decision tree. HyperVision [6]
+is a machine learning-based method for detecting unknown
+patterns in encrypted malicious traffic using an in-memory
+graph. NetBeacon [39] deploys machine learning models in
+the Intelligent Data Plane (IDP) for malicious traffic detection.
+However, these methods often rely on much expertise and specialized knowledge, resulting in the difficulty in generalizing to
+the flows from constantly emerging applications and the traffic
+in complex network environments such as packet disorder and
+packet loss.
+Sequential Features: The work [40] proposes to use
+the Markov transformation matrices to learn the temporal
+
+C. Encrypted Traffic Classification Based on Deep Learning
+Deep learning has been well used in the fields of image
+processing and natural language processing, and researchers
+have made multiple attempts to apply them in encrypted traffic.
+The use of supervised deep learning for encrypted traffic
+classification has become a popular approach. Beauty [44] and
+DF [24] are based on convolutional neural networks (CNNs).
+An autonomous model updating framework [26] is proposed
+to perform accurate traffic classification using improved CNN
+classifiers. FS-Net [20] uses recurrent neural networks (RNNs)
+to automatically extract representations from the raw data
+packets of encrypted traffic. Deeppacket [25] employs stacked
+autoencoder and 1D convolutional neural networks to achieve
+end-to-end traffic classification. GraphDApp [45] introduces
+Traffic Interaction Graphs (TIGs) to represent each individual
+encrypted flow, serving as a method for DApp fingerprinting
+using graph neural networks (GNNs). ET-BERT [28] proposes
+a pre-training framework where the downstream task uses
+a transformer model for encrypted traffic classification. In
+addition, the work [46] proposes Mini-FlowPic, using augmentations for few sample traffic classification, which utilizes
+CNN and comparative learning techniques to achieve efficient
+and accurate cryptographic traffic classification with limited
+labeled data. EC-GCN [47] classifies encrypted traffic flows
+based on multi-scale graph convolutional neural networks.
+DMSTG [48] employs a dynamic learning module to timely
+estimate the graph Laplacian for GCN and a self-attention
+module to adaptively weight traffic data, enabling the effective fusion of multi-view spatio-temporal features to capture
+dynamic changes in traffic patterns. RBLJAN [49] proposes
+Robust Byte-Labeled Joint Attention Network, which is an
+efficient and robust deep learning-based framework for both
+packet-level and flow-level encrypted network traffic classification. RBLJAN shows superior performance in terms of
+detection speed and robustness.
+Our approach mainly differs from existing ones in the
+following aspects: Firstly, we introduce ViT into encrypted
+traffic classification tasks and an overlapping multi-size patch
+division mechanism that allows the model to learn the features
+of encrypted traffic more comprehensively and improves the
+efficiency of Tor-encrypted traffic classification. In addition,
+we add relative position bias to the self-attention mechanism
+in the encoding layer to adjust the self-attention score and
+
+LIU et al.: SRViT: ROBUST ONLINE ENCRYPTED TRAFFIC CLASSIFICATION BASED ON ViT
+
+learn the relative position relationship of encrypted traffic
+dynamically to enhance the robustness of the model. Finally,
+we incorporate an incremental update mechanism that updates
+only a small number of parameters when the model’s recognition accuracy suffers a large degradation, allowing the model to
+quickly adapt to dynamically changing traffic reaching online
+classification.
+III. P RELIMINARIES
+A. Tor and Traffic Analysis
+Tor [33], also known as The Onion Router, is an
+open-source network designed to facilitate anonymous communication over the Internet. Its primary goal is to obscure
+the user’s real IP address and the content of their communication by routing and encrypting the user’s data over the
+Internet. Tor system consists of users, onion proxies, onion
+routers, directory servers, and target application servers. The
+architecture is shown in Fig. 1.
+The Tor network includes thousands of relay nodes (onion
+router, OR) operated by volunteers worldwide, using a multihop proxy mechanism for user communication privacy. The
+client runs an Onion Proxy to randomly select onion routers
+from the directory server and establish a path that we call
+a circuit. Typically, this circuit consists of three ORs: Entry
+Node (or Guard Node), Middle Node, and Exit Node, and then
+the user establishes a circuit with these nodes hop by hop.
+During data transmission, OP encrypts user data in multiple
+layers and decrypts it sequentially by each relay node. Onion
+router uses public keys to establish TCP connections secured
+by TLS, multiplexing multiple circuits per connection. When
+a client accesses different target servers, a new circuit is built
+in real-time. In addition, the client OP re-selects a new circuit
+every 10 minutes. Therefore, the same node may appear in
+different locations on multiple circuits simultaneously and the
+packets through it may vary in the number of encrypted layers.
+Through providing sender privacy for internet services to its
+users, Tor has become a popular and low-latency anonymity
+network. The characteristics in the Tor network can be summarized into the following three aspects:
+• Multi-layer Encryption (Onion-like encryption): Each
+OR decrypts only one layer of encryption corresponding
+to it to reveal the next relay node in the path and forwards
+the remaining encrypted data to it.
+• Fixed-size Cells: Tor divides data into fixed-sized onionencrypted units called cells (typically 512 bytes) before
+transmission. This standardization helps to obfuscate the
+actual size and structure of the data, making it harder to
+analyze and correlate by size alone.
+• Random Routing: The circuit through which data travels
+is randomly selected for each session, and it changes periodically. This dynamic and unpredictable routing makes
+it difficult for adversaries to track users’ activities or
+correlate traffic between relays.
+Although encryption makes the payload look cluttered and
+unsemantic, Sengupta et al. [50] exploit the randomness
+difference between different ciphertexts to distinguish different applications, which suggests that the encrypted traffic
+
+5489
+
+is not perfectly random and implicit patterns exist. Therefore, deep learning methods can be used to extract the
+implicit deep information in raw traffic. Even in encrypted
+and anonymized environments like Tor, deep learning models,
+especially those designed for sequence analysis like Transformer, can learn to extract and identify correlations in these
+subtle packet sequences that are not immediately apparent to
+human analysts, and identify traffic when traditional methods
+fail.
+B. Vision Transformer
+Transformer based on self-attention mechanism has made a
+great success in the field of NLP. Although the Transformer
+structure has become a standard in the NLP, its application
+in the computer vision field is still very limited. ViT (vision
+transformer) is a model that directly applies the Transformer
+to image classification and achieves good performance.
+Transformer consists of multi-head self-attention layers and
+feed-forward neural network layers. The self-attention layer
+is used to encode the sequence and the feed-forward neural
+network layer is used to process the features at each position
+in the sequence. The self-attention mechanism calculates the
+attention scores between each pair of tokens in the input data,
+thus enabling the model to capture complex dependencies
+regardless of their distance in the sequence. Transformer
+uses the self-attention mechanism for greater parallelism and
+computational efficiency when dealing with long sequences
+and large-scale data. Multi-head attention splits the input
+into multiple subsets and computes the attention scores for
+each subset independently, which allows the model to learn
+information in multiple subspaces and enhances the model’s
+sensitivity to different locations, thus enabling the model to
+capture different types of relationships and patterns in the data
+simultaneously.
+ViT divides the input image into a sequence of nonoverlapping patches, and then the sequence of patches is
+treated as tokens, which can be fed into the original Transformer to accomplish the classification task. Since the latent
+feature extraction of encrypted traffic packets is more suitable as a CV task [30]. ViT can utilize both temporal and
+2-dimensional spatial information, the model is simple, effective and highly scalable. Therefore, this paper makes ViT the
+backbone network but devises a dedicated ViT structure to
+make it more suitable for Tor-encrypted traffic classification.
+First, we design an overlapping multi-size patch mechanism
+to learn the features of Tor encrypted traffic flows more
+comprehensively. Second, we propose a relative position bias
+in the multi-headed self-attention mechanism to dynamically
+adjust the attention score and learn the relative position
+relationship in each encrypted traffic flow. As detailed in
+Section IV.
+IV. P ROBLEM D ESCRIPTION AND M ODEL
+In this section, we introduce the encrypted traffic classification problem and the basic framework of our proposed model.
+After that, we describe our flow representation and classifier
+structure in detail.
+
+5490
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+TABLE I
+L IST OF N OTATIONS
+
+A. Problem Definition
+Our paper focuses on building an end-to-end encrypted
+traffic identification model to accurately categorize malicious
+encrypted traffic by taking each traffic flow as input. To
+maintain consistency in input length, we only select the first n
+bytes of each flow and formulate it as (x1 , x2 , . . . , x p ) after
+patch splitting, where p is the number of patches and xi
+denotes the ith patch token. The output is a vector Y ∈ RZ ,
+where Z denotes the number of categories. If a traffic flow
+belongs to the jth class, then Y j = 1, otherwise Y j = 0. The
+notations used in this paper are shown in Table I.
+
+• Q2: How to maintain the high robustness of Tor traffic flow classification when facing disorders and packet
+losses in the network?
+• Q3: How to keep the high identification accuracy under
+dynamic changes in network traffic data?
+Considering the above problems, we convert the problem
+of encrypted traffic identification into an image recognition
+problem in computer vision and propose our novel framework
+SRViT, as illustrated in Fig. 3. Our framework mainly consists
+of a preprocessing module, an embedding layer with a multisize patch mechanism, an encoding layer containing a Bias
+Unit, and an output layer. To address the first problem, we
+design an overlapping multi-size patch mechanism in the
+embedding layer to learn the features of encrypted traffic flows
+more comprehensively. By analyzing patches of multiple sizes,
+the multi-size patch mechanism ensures that both features at
+different granularity levels, including fine details and overarching patterns, are captured simultaneously, thus providing richer
+feature sets for the model to improve classification accuracy
+and robustness. In addition, to solve the problem of Tor’s
+random routing or packet disorder when the network condition
+is poor, we propose a novel self-attention operation in the
+encoding layer to dynamically adjust the attention score and
+learn the relative position relationship in each encrypted traffic
+flow. Finally, we design an incremental update mechanism to
+quickly adapt our framework to the dynamic network environment by updating only a small proportion of parameters when
+the framework suffers from a large degradation in classification
+accuracy.
+
+B. Overview of The Model
+
+C. Preprocessing Module
+
+Encryption typically makes traffic appear more random and
+less predictable. Multi-layer encryption aggravates this effect,
+with each encryption layer changing the statistical properties of the traffic, and patterns recognizable in single-layer
+encrypted traffic are further obscured in multi-layer encrypted
+traffic. Because of the characteristics of multi-layer encryption,
+highly obfuscated payloads, and random routing, the similarity
+between the same category of Tor traffic flows is nearly weak
+and the difference between different categories is not obvious,
+which makes traditional encrypted traffic identification algorithms have not performed optimally in Tor encrypted traffic
+identification.
+Furthermore, with the explosive growth of massive Internet traffic, the number of packets required to be analyzed
+is constantly increasing. As a result, the performance of
+traditional identification algorithms on large scale training
+samples and features is far from satisfactory. Although the
+model based on Transformer has achieved great improvement
+in Tor traffic identification accuracy, its high computational
+complexity incurred during traffic representation learning, pretraining, and fine-tuning impedes the practical deployment and
+application of the model. This poses more problems for the
+encrypted traffic identification task.
+• Q1: How to design a mechanism to help the model
+automatically extract long-term stable features for Tor
+traffic flows encrypted at multiple layers while reducing
+the required computational resources?
+
+This module is mainly responsible for transforming the realtime traffic in the format of pcap into the input data that meets
+requirements. We intercept the information from the raw flow
+data to form a two-dimensional matrix, which is processed
+as an image and categorized by the vision transformer algorithm. Different layers of encryption may affect the traffic
+differently, creating complex multi-dimensional challenges for
+feature extraction and analysis. The reason for representing the
+flow as a two-dimensional matrix rather than one-dimensional
+is to utilize the second dimension to depict the multilevel
+information of the Tor flow [30]. Encrypted network traffic
+often exhibits temporal patterns. ViT can capture these patterns
+and correlate them with spatial patterns in images.
+For encrypted traffic data, a lot of useful information is
+lost if only the packet size sequence is utilized. Especially
+for the Tor encrypted traffic, the characteristic of fixed-size
+cells impairs the effectiveness of the methods that use only
+packet sizes. During TLS communication, the client and server
+exchange handshake plaintext data to negotiate the parameters
+used in subsequent encrypted connections, such as version,
+cipher suite, extensions, and certificates. Previous research
+has shown that this information is very effective in encrypted
+traffic recognition [51]. We convert the bytes of the encrypted
+network flows into images, with one byte corresponding
+to one pixel of the image. Although encryption makes the
+payload more randomized, most of the original information in
+the network traffic can be retained since the image features
+
+LIU et al.: SRViT: ROBUST ONLINE ENCRYPTED TRAFFIC CLASSIFICATION BASED ON ViT
+
+5491
+
+Fig. 3. Overview of our method SRViT.
+
+are extracted from the raw data of the encrypted traffic.
+As a result, the image features have received widespread
+attention and utilization in encrypted traffic identification
+research.
+However, encryption would introduce noise in the image
+converted by the traffic, so choosing an appropriate image size
+is particularly important in the feature extraction process of the
+image. If the size chosen is too small, the image will not be
+able to fully describe the information of the encrypted traffic
+and if the size chosen is too large, the information redundancy
+will affect the accuracy and efficiency of the identification
+model. In order to keep the information of the encrypted traffic
+completely and also ensure high accuracy and efficiency, we
+select the first 784 bytes of the original encrypted traffic to
+be converted into a grayscale image for identification after
+sufficient experiments [52].
+We recognize packets with the same IP address, port number, and protocol type as the same flow and only keep the first
+n bytes of each flow. Then, we format the byte sequence into
+an image of size H × W × C through a reshaping operation,
+where H, W, C denote the height, width, and number of
+channels of the image, respectively. In this paper, n is taken
+as 784, and the intercepted encrypted traffic flow is converted
+to a grayscale map with a size of 28 × 28 × 1. Fig. 2 displays
+some visual results of preprocessed network flows belonging
+to different types. From the visualizations, we conclude that
+the different classes of traffic are obviously discriminated from
+each other and have a high consistency across each class,
+so it is reasonable to assume that good performance can be
+obtained with our approach. At the same time, the differences
+between the traffic with Tor encryption seem to be much
+smaller compared to the traffic without Tor encryption, which
+impairs the effectiveness of directly using computer vision
+algorithms such as CNN, ViT, etc.
+
+D. Multi-Size Patch Division
+Multiple encryption layers obscure traffic patterns, making
+it difficult to analyze or classify traffic based on traditional
+feature extraction methods. Vision Transformer (ViT) processes input images by dividing them into a spatially regular
+grid of equal-size patches without overlapping. It hinders the
+application of ViT in network traffic identification and may
+lead to some information loss in feature extraction, especially
+for encrypted Tor traffic. Thus we propose a novel patch
+dividing mechanism by multi-size division with overlapping
+to complement the extracted features of the flow.
+Image features are discrete, while network traffic features
+are continuous. This makes it possible that the direct application of ViT may miss key features of the traffic, especially
+for Tor traffic flows encrypted at multiple layers, potentially
+leading to decreased recognition accuracy. To solve the above
+problem, we design a simple multi-size patch mechanism that
+can well capture the features of Tor traffic, characterized by
+multi-layer encryption, highly obfuscated payload, and random
+routing. Multi-layer encryption can impact traffic features
+at various scales. Smaller patches in the multi-size patch
+mechanism might capture fine-grained, localized details that
+larger patches might miss, while larger patches can capture
+broader, more global patterns.
+As shown in Fig. 4, the input image x ∈ RH×W is first
+split into overlapping 2D patches of size P × P with a total
+number of p. We use two layers with two different patch
+sizes P1 , P2 along with two different stride lengths S 1 , S 2
+to extract different feature information from the input data.
+These features are represented as X00 = [x1p1 ; x2p1 ; . . . ; xNp1 ], X01 =
+[x1p2 ; x2p2 ; . . . ; x M
+p2 ]. The numbers of patches generated by each
+of the two layers are denoted as N = HW/S 12 , M = HW/S 22 ,
+2
+2
+and patches are represented as x p1 ∈ RN×P1 , x p2 ∈ R M×P2 . The
+
+5492
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+with each other based on the relevance of different heads
+Concat(head1 , . . . , headh ), and each head is computed by the
+attention function:
+
+
+Q · KT
+MS AB = so f tmax
++ BRPB · V,
+√
+d
+Q = xl W Q , K = xl W K , V = xl W V ,
+(2)
+
+Fig. 4. The schematic illustration of multi-size patch division.
+
+patches are then mapped to d-dimensional vectors by a linear
+layer as patch embeddings.
+The patch size and stride length need to be set reasonably. If
+they are too large, they cannot capture the local information of
+the multi-layer encryption of Tor traffic effectively; if they are
+too small, they cannot learn the global information effectively,
+and this will lead to excessively long model training times.
+According to the characteristics of Tor traffic, we experimented
+with several sets of parameters, setting P1 , S 1 , P2 , S 2 to 3, 2, 7,
+and 4 respectively. This configuration allows our model to
+capture the multi-layer encryption information of Tor traffic
+while maintaining short classification times.
+Meanwhile, since traffic data transmission is highly related
+to sequential order, the position embeddings are added to the
+patch embeddings as the input to the traffic encoder to maintain the crucial position information. With fixed localization
+of packets, coupled with position embedding, our approach
+transcends location limitations to capture long-term stable
+dependencies in traffic. Additionally, similar to the [class]
+token in BERT, a learnable embedding also needs to be
+prepended to the sequence of embedded patches (X00 = xclass ).
+The equation for this step is shown in Eq. (1):
+N+M
+E] + E pos . (1)
+X0 = [xclass ; x1p1 E; . . . ; xNp1 E; xN+1
+p2 E; . . . ; x p2
+
+E. RPB Attention Module
+Traffic data is highly related to order, especially since Torencrypted traffic is characterized by random routing, so the
+order between packets is particularly important. ViT only adds
+positional embeddings to the embedding layer to represent
+absolute positions, which is insufficient in many cases for Torencrypted traffic. In encrypted traffic, especially in the case
+of disorder and packet loss, the relative distances between
+different packet patches are obviously different. Thus position
+information with different relative distance values also needs
+to be assigned to different patches. Therefore, we propose to
+add a relative position bias to solve this problem.
+However, if the relative position embedding is added
+directly to the embedding layer, after a series of matrix
+operations in self-attention, the relative position information is
+still lost and only the absolute position information remains.
+A natural idea is to add the relative position information back
+into the attention bias computation. Therefore, we introduce
+a relative position bias unit BRPB in the multi-headed selfattention mechanism, in which patches can effectively interact
+
+where Q, K, V stand for Query, Key, and Value, respectively,
+and they are all matrices. W Q , W K , W V ∈ Rd×d are learnable
+parameters. d is the embedding dimension, which is used for
+normalization. Note that the bias unit is a trainable parameter.
+BRPB needs to be calculated according to Equation Eq. (5) in
+the next section. It can be seen that BRPB serves to add a value
+to each element of Q· K T , the essence of which is that it wants
+self-attention to be further biased. The relative position does
+not completely model the position information of each input,
+but the relative distance between the current position and the
+position that is being attended is considered when counting
+attention score, which can be used to adjust the scores of the
+attention between the different positions in the self-attention
+computation and make the model learn the relative position
+relationship.
+Finally, the encoding layer consists of the RPB self-attention
+module and MLP block stacked in L layers. The mathematical
+format is shown in Eq. (3) and Eq. (4). To enhance the
+robustness and convergence speed of the model, layer normalization (LN) is applied before every block, and residual
+connections are applied after every block. The MLP Block
+includes the Fully Connected Layer and the GELU Activation
+Function.
+Xl0 = MS AB (LN(xl−1 )) + xl−1 ,
+
+l = 1 . . . L,
+
+(3)
+
+Xl = MLP(LN(xl0 )) + xl0 ,
+
+l = 1 . . . L.
+
+(4)
+
+F. RPB Unit
+To address the challenge of traffic identification posed by
+the random routing characteristics of Tor traffic, we add
+relative position bias to the self-attention mechanism. Relative
+position bias makes it possible to discriminate the relative
+positions between different tokens by fine-tuning the selfattention arithmetic process. The aim is to make the position
+vectors of the same dimension at different positions contain
+the relative position information between them, which can
+be realized by the periodicity of the function. Therefore,
+trigonometric functions can be utilized to represent the relative
+position information, which is essentially the use of sine/cosine
+formulas with different frequencies for different dimensions
+thus generating high-dimensional position vectors for different
+locations. It is calculated by the following equation Eq. (5):
+(
+sin(ωk pos), i = 2k
+(i)
+PE pos =
+cos(ωk pos), i = 2k + 1
+1
+,
+(5)
+ωk =
+100002k/dmodel
+where the resulting PE is computed as a 2-dimensional
+matrix with pos corresponding to each input position and i
+representing the ith position of each position vector. dmodel is
+
+LIU et al.: SRViT: ROBUST ONLINE ENCRYPTED TRAFFIC CLASSIFICATION BASED ON ViT
+
+the vector dimension such that each position has an encoding
+that matches the dmodel dimension. Note that in this paper the
+position vectors are summed with the results of the previous
+vectors and therefore the value is taken as the length of the
+sequence. The equation shows that different dimensions use
+sine/cosine functions with different frequencies to generate
+high-dimensional position vectors for different positions that
+express relative position information. The advantage of using
+trigonometric design in this way is that: firstly, the positional
+encoding at position i can be linearly represented by the
+positional encoding at position i + k, reflecting the relative
+positional relationship between the two positions. Secondly,
+the inner product of the positional encoding at positions i
+and i + k decreases as the relative position increases, thus
+characterizing the relative distance of the positions. Finally, it
+ensures that the position encoding of each token is unique and
+regular, with small differences between neighboring positions
+and larger differences between positions that are farther away.
+Moreover, it ensures that the relative positions are bounded
+and located in a continuous space.
+Algorithm 1 Soft Relative Vision Transformer (SRViT)
+1: Input: Image X with dimensions H × W × C
+2: Output: Class predictions Y
+3: Initialization:
+4: Embedding dimension d, Number of attention heads h,
+Number of transformer layers L, Patch size p1 , p2 .
+5: Multi-size Patch Division:
+6: Divide the image into overlapping patches, linearly project
+patch vectors to d-dimensional space and add positional
+encoding and class token as section IV-D.
+N+M
+N+1
+E] + E pos
+7: X0 = [xclass ; x1p1 E; . . . ; xN
+p1 E; x p2 E; . . . ; x p2
+8: RPB Attention Module:
+9:
+RPB Unit:
+pos 
+10:
+PE (2k) = sin 10000
+2k/d
+pos 
+11:
+PE (2k+1) = cos 10000
+2k/d
+12: for l = 1 to L do
+13:
+for i = 1 to h do
+ T
+
+√ + BRPB · V
+14:
+MS ABi = softmax Q·K
+d
+15:
+end for
+16:
+Xi0 = LN(Xi−1 )Xi−1
+17:
+Xi = MLP(LN(Xi0 )) + Xi0
+18: end for
+19: Output Layer:
+20:
+return Y = LN(XL0 )
+G. Output Layer
+Since the task of this paper is to classify the encrypted
+traffic, the role of this module is to extract the corresponding [class] token to output classification results. The shape
+of the output tensor after passing through the Transformer
+Encoder remains the same as the input tensor. The output
+layer in Vision Transformer is composed of a fully connected layer and GELU activation and a fully connected
+layer. The detailed calculated formulation is as follows
+(Eq. (6)),
+Y = LN(XL0 ).
+(6)
+
+5493
+
+Fig. 5. The schematic diagram of the Incremental Update Mechanism.
+
+H. The Incremental Update
+Since Tor traffic is characterized by uncertain traffic patterns
+and the nature of Internet traffic flow is dynamic over time,
+therefore we design the process of an incremental update to
+adapt to the changing characteristics. When a significant drop
+in the accuracy of traffic recognition is monitored, our model
+determines that there is an obvious change in flow representations, indicating the current model parameters are no longer
+applicable. However, retraining the model is expensive, the
+incremental update mechanism updates the specific parameters
+of the model to achieve accurate online traffic classification
+without retraining the whole model.
+Layers closer to the bottom encode generic reusable features, whereas encoding layers closer to the top may focus
+additionally on task-specific context and semantics, so the
+top layers capture more abstract features and encode more
+specialized features that are better adapted to the specific task.
+Updating these specialized features is more useful. Specifically
+speaking, we freeze most of the parameters of the model and
+update only the parameters of the MLP layer for each Transformer encoder layer. As illustrated in Fig. 5, the other parts of
+the model (depicted as blue blocks in Fig. 5) are loaded with
+weights from the original model, and the parameters are kept
+frozen. The MLP layer parameters (depicted as red blocks
+in Fig. 5) are updated on a new task-specific data domain
+containing task-specific losses.
+In this paper, we detect the output probability distribution
+when the model classifies the current traffic, which usually
+reflects the model’s confidence that the traffic is classified into
+the current category. We set the threshold of the maximum
+output probability to 0.9, which means that the incremental update mechanism is triggered when the average of the
+model’s maximum classification probability for the current
+batch of data is detected to be below 0.9. A decrease in the
+output probability when the model classifies may suggest a
+decrease in the model’s confidence in classifying the current
+traffic data, so we train the original model with incremental
+updates using newly arrived traffic.
+V. E XPERIMENTS
+In this section, we perform four encrypted flow classification
+tasks to demonstrate the effectiveness of the SRViT model
+
+5494
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+TABLE II
+DATASETS
+
+in solving different encryption scenarios and data distribution imbalance problems. In addition, we perform ablation
+experiments to verify the effects of our key designs in SRViT.
+We also compare our model with the state-of-the-art models
+in terms of robustness, online classification performance and
+execution effectiveness.
+A. Experiment Setup
+1) Datasets and Classification Tasks: To assess the effectiveness and generalization of SRViT, we conducted experiments on encrypted traffic classification tasks using five
+different types of public datasets. The corresponding datasets
+are presented in Table II.
+Dataset 1: The USTC-TFC dataset [53] comprises encrypted
+traffic samples consisting of both malicious software and
+benign applications. It is utilized for the task of encrypted
+malicious traffic classification, consisting of a total of
+20 categories, including 10 benign and 10 malignant traffic
+types. The size of the USTC-TFC dataset is 3.71 GB.
+Dataset 2: The ISCX-VPN dataset [54] is composed of
+6 communication applications in both VPN and non-VPN
+scenarios captured by the Canadian Institute for Cybersecurity.
+It is designated to classify encrypted traffic that uses Virtual
+Private Networks (VPNs) for network communication. The
+dataset contains 14 types of raw traffic data, consisting of
+7 types of non-VPN and VPN traffic respectively.
+Dataset 3: The ISCX-Tor dataset [55] is a labeled dataset
+of Tor traffic published by the University of New Brunswick
+(UNB). It aims to classify encrypted traffic that uses an
+Onion Router (Tor) to enhance communication privacy. The
+dataset contains 16 traffic classes, 8 categories of Tor traffic,
+and 8 categories of non-Tor traffic. This traffic obfuscates
+the communication between senders and receivers through a
+distributed routing network, further obscuring the behavior
+of the traffic, and thus enhancing the difficulty of traffic
+classification.
+Dataset 4: The CIC-IoT2022 dataset [56] is a multi-purpose
+academic IoT dataset for profiling, behavioral analysis, and
+vulnerability testing of different IoT devices. We selected realistic traffic flows captured in interaction experiments, including
+4 different interaction methods for 28 devices. Categorizing by
+device type generates the dataset containing 4 different device
+types.
+Dataset 5: The VNAT dataset [57] is a VPN/non-VPN
+network application traffic dataset provided by MIT Lincoln Laboratory, which primarily contains labeled PCAP data
+files covering encrypted and non-encrypted traffic data for
+
+10 applications across 5 traffic categories. The dataset is
+divided into 10 categories, containing 5 categories of VPN
+and 5 categories of non-VPN traffic data.
+Dataset 6: The Gotham2025 dataset [58] is a large-scale IoT
+network traffic dataset based on the Gotham testing platform.
+It contains traffic generated by 78 simulated IoT devices,
+covering protocols such as MQTT, CoAP, and RTSP. The
+dataset includes 1 category of benign and five distinct types
+of malicious traffic.
+2) Data Pre-Processing: In this paper, the data preprocessing is carried out according to Section IV-C to convert
+flows into grayscale images. The datasets are split by the
+five-fold cross-validation to guarantee the credibility of the
+experimental results.
+3) Evaluation Metrics: Generally four evaluation metrics:
+accuracy, precision, recall, and F1 are used to evaluate and
+compare the performance of the models. Accuracy is used to
+evaluate the overall performance of the classifiers. In the case
+of class imbalance, precision and recall need to be considered,
+while the F1 score balances the relationship between precision
+and recall, therefore making it more robust compared to
+accuracy. T P represents the number of correctly classified
+positive samples, T N represents the number of correctly classified negative samples, FP represents the number of instances
+incorrectly classified positive samples, and FN represents the
+number of instances incorrectly classified negative samples.
+The formulas are as follows:
+TP + TN
+,
+T P + FP + FN + T N
+TP
+Precision =
+,
+T P + FP
+TP
+Recall =
+,
+T P + FN
+Precision × Recall
+F1 = 2 ·
+.
+Precision + Recall
+Accuracy =
+
+(7)
+(8)
+(9)
+(10)
+
+4) Implementation Details: For the training phase, we use
+the Adam optimizer for 100 epochs with the base learning rate
+set to 1 × 10−3 and a batch size of 32. The batch size is 64 for
+testing. We implemented the proposed method using PyTorch
+2.1.1 and trained it on the GPU environment of NVIDIA
+GeForce GTX3090.
+In time performance experiments, we compare and analyze
+the time performance of the ET-BERT algorithm and our
+algorithm respectively in a GPU environment, which is an
+NVIDIA GeForce GTX3090.
+B. 7 State-of-the-Art Models
+We compare SRViT with 7 various state-of-the-art models,
+including:
+• ET-BERT [28] treats traffic representation extraction as an
+NLP task for pre-training and then fine-tunes the classifier
+with limited labeled data. It’s important to note that the
+ET-BERT model requires pre-training. In reproducing the
+experiments, we directly downloaded the pre-training files
+provided by the original authors and trained only in the
+fine-tuning phase.
+
+LIU et al.: SRViT: ROBUST ONLINE ENCRYPTED TRAFFIC CLASSIFICATION BASED ON ViT
+
+Fig. 6. The results of accuracy comparison.
+
+Fig. 7. Performance comparison on 6 datasets.
+
+• FS-Net [20], Deep Fingerprinting (DF) [24], GraphDApp
+[45], Beauty [44], and 2D-CNN [52] are DL-based traffic
+analysis methods, which is training by the supervised way
+using raw packet information.
+C. Accuracy Comparison
+The experimental results of accuracy performance are
+shown in Fig. 6 and Fig. 7.
+Encrypted malicious traffic: The results for USTC-TFC
+indicate that our model outperforms all other methods on four
+metrics, with our model achieving an accuracy of 99.99%.
+The malicious traffic in this dataset contains application-layer
+unencrypted data, which makes it easier for other models to
+utilize such plaintexts for classification.
+VPN encrypted traffic classification: The VPN encrypted
+traffic classification contains two datasets. On the ISCX-VPN
+dataset, our method outperforms other models for all metrics,
+and we achieve the best performance on F1, which can
+reach 98.61%. In addition, this dataset poses the challenge of
+data imbalance to classification algorithms. The experimental
+results suggest that our model exhibits better performances
+in identifying obfuscated traffic even in the presence of data
+imbalance. Meanwhile, the accuracy of our algorithm can still
+reach 99.74% on the VNAT dataset. As can be seen from the
+figure, our algorithm has the best results on all metrics.
+Tor encrypted traffic classification: The results on ISCXTor show that our algorithm results in a 45.17% accuracy
+improvement over the ET-BERT model, which holds the best
+performance among the models we compared. Our method can
+achieve 99.96% accuracy, 99.89% recall, 99.91% precision,
+99.90% F1. Moreover, on this dataset, our method achieves an
+average improvement of 22.31% accuracy, 63.89% precision,
+67.91% recall, and 68.33% F1 over the previous algorithms,
+
+5495
+
+respectively. Furthermore, we observe that DL-based methods
+perform poorly, whether using sequence features or payloads
+as inputs. The reason is more likely that the initial traffic in
+Tor is not only encrypted with multiple layers, but also carried
+out antagonistic obfuscation, making it difficult to analyze the
+payload directly, and the sequence features hardly work on
+limited captured packets. Meanwhile, Tor traffic is characterized by variable packet lengths the use of intercepting raw
+bytes does not help discriminate each type of traffic encrypted
+with Tor and cannot differentiate the traffic information, while
+our multi-size patch mechanism can solve this problem by
+extracting features in multiple layers.
+IoT traffic classification: As shown in the results, our
+method outperforms all previous models in all metrics, including ET-BERT. ET-BERT achieves similarly excellent results to
+our model on the first three datasets. This is because ET-BERT
+needs to be pre-trained with a large amount of data, and the
+traffic of the first three datasets is included in the pre-training
+of the ET-BERT model. However, the traffic of this dataset is
+not included in the pre-training, so ET-BERT does not have
+the related knowledge of the IoT traffic. Our model does not
+need the pre-training process and still obtains 99.63% accuracy
+on the CIC-IoT2022 dataset and 99.62% on the Gotham2025
+dataset.
+D. Robustness Study
+In real deployments, the data acquisition end often has the
+situation of out-of-order and packet loss, which will affect
+the identification method of encrypted traffic negatively. In
+this experiment, we randomly modified some of the traffic
+packets to explore the robustness of the algorithms in harsh and
+high-noise conditions. We conducted two sets of experiments:
+(1) packet disordering: randomly selected part of the packets
+to disrupt the order, and (2) packet loss: randomly selected
+part of the packets to be discarded. We set the ratio range of
+noise labeling from 0.2 to 0.8.
+Both FS-Net and CNN are classical DL-based traffic classification algorithms, CNN leverages the spatial features of
+the traffic while FS-Net uses RNN which can focus on the
+temporal features of the traffic, therefore we select these two
+methods as the representatives and compare our approach with
+them. We demonstrate the results obtained by our method, the
+CNN model, and FS-Net on the Tor dataset in the presence of
+noise, and similar results are obtained on other datasets.
+In Fig. 8, the first and last four plots show the experimental
+results of packet disordering and packet loss, respectively.
+The experimental results indicate that each model shows a
+different degree of degradation in the robustness experiments.
+Compared with the previous traffic classification model, our
+model is more fault-tolerant with an average improvement of
+13.68% in accuracy, 54.83% in precision, 56.91% in recall,
+and 55.83% in F1 at a noise ratio of 0.8 in the case of packet
+disordering. Even when the noise rate reaches 0.8, SRViT still
+has strong classification capability.
+We can observe that the performance of our model decreases
+the least in the case of equal noise. It is because at first, the
+mechanism of multiple layers of patches with different sizes
+is used to minimize the impact by dividing the packets into
+
+5496
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Fig. 8. Performances on robustness.
+
+Fig. 9. Performance of ablation experiments and incremental update.
+
+the same patch even when they are disordered. Secondly, we
+introduce the relative position bias into the model, making
+the classification performance more stable, while the absolute
+position instead brings about adverse impacts in case of
+disorder or packet loss.
+E. Ablation Study
+To verify the contribution of the multi-size patch mechanism
+and relative position bias in solving the problems of multilayer encryption, highly obfuscated payloads, random routing,
+and traffic pattern uncertainty for Tor-encrypted traffic, we
+show the results of the ablation experiments in Fig. 9(a).
+ViT denotes the algorithm that utilizes the Vision Transformer
+model directly. SViT refers to the algorithm that incorporates multi-size overlapping patches on top of the Vision
+Transformer model. Then, RViT denotes the algorithm that
+introduces relative position bias to the Vision Transformer
+model. Furthermore, SRViT (embedding) combines multi-size
+overlapping patches and directly includes a relative position
+embedding in the Vision Transformer model. Lastly, SRViT
+(Bias) adds multi-size overlapping patches and includes a
+relative position bias in the Vision Transformer model.
+We observe that the highest performance of the model is
+achieved after combining the two mechanisms introduced.
+First, the accuracy of our model increases to 97.52% after
+
+the introduction of the multi-size patch mechanism. Second,
+from the results, we can see that the accuracy of SRViT
+(embedding) is the same as that of SViT, which can also prove
+that by adding relative position embedding directly, the relative
+position information is still lost in the calculation of attention
+scores, and thus the performance is not significantly improved.
+However, the performance of the classifier improves when
+relative position bias is introduced. In conclusion, the two
+mechanisms we introduce can extract deeper long-term stable
+features of encrypted traffic as well as inter-packet position
+information to improve the classification performance of the
+model.
+F. Online Classification Performance
+In this section, the results of the incremental updating
+experiments are shown to verify the effectiveness of our online
+performances. We first train the SRViT model using the VPN
+dataset with 100 epochs and test it, and then test it using
+the other datasets to simulate the long-term change of traffic.
+Through the proposed mechanism of incremental update, our
+model could adapt to these dynamic changes and keep a stable
+performance, compared with other methods. Fig. 9(b) shows
+the results of the last 10 tests and the results of 5 tests after
+using the incremental update. During online classification, we
+test the output probability of the model. In our experiments,
+we use labeled datasets and show the accuracy as a comparison. As can be seen from Fig. 9(b), the output maximum
+probability of the model suffers a large drop when traffic
+arrives from a new dataset, and the accuracy rate drops dramatically at that time. Therefore, we may determine whether
+the model needs to be an incremental update by detecting
+the maximum output probability. After this, the incremental
+update can quickly recover the model’s classification accuracy,
+and the output probability also gradually recovers in the
+same trend as the accuracy. Similar results were found on
+other datasets. Furthermore, to validate the robustness of the
+
+LIU et al.: SRViT: ROBUST ONLINE ENCRYPTED TRAFFIC CLASSIFICATION BASED ON ViT
+
+5497
+
+TABLE V
+TABLE III
+N UMBER OF PARAMETERS & FLOP S OF THE T WO M ETHODS
+
+T RAINING T IME ON GPU
+
+TABLE IV
+
+T ESTING T IME ON GPU
+
+TABLE VI
+T HE GPU E NERGY C ONSUMPTION
+
+confidence-based update mechanism, we conducted experiments following the robustness test setup described in
+Section V-C. Results demonstrate that even under packet
+loss or out-of-order conditions, our method maintains high
+confidence above the trigger threshold.
+G. Time Consumption Comparison
+The goal of this paper is to propose a transformer-based
+traffic classification method to maintain the model classification performance while substantially reducing the required
+computational resources. Therefore, we compare the time
+performance energy consumption with the transformer-based
+model ET-BERT. In this section, we display the results of the
+time performance on the ISCX-VPN dataset, and the same
+results are obtained on the other datasets.
+1) The Number of Parameters: FLOPs is the number of
+floating point operations, a measure of the computational
+complexity of a model/algorithm. The larger the FLOPs, the
+higher the computational complexity of the model. Therefore,
+we compared the number of training parameters and FLOPs
+of our model and ET-BERT. Our model has a total parameter
+count of 1.16 × 106 , with all of them being trainable, while
+the total number of parameters and the number of trainable
+parameters of the ET-BERT model is 1.32×108 . Moreover, our
+model has FLOPs of 3G, while ET-BERT has FLOPs of 348G,
+indicating that our model is more lightweight and convenient
+to deploy. Comparison results are shown in the Table III.
+Although FLOPs is a commonly used evaluation metric for
+measuring algorithms today, FLOPs does not take into account
+MAC (Memory Access Cost) and parallelism, etc., so it may
+not fully represent the model speed and energy consumption.
+We also conducted the following experiments.
+2) The GPU Energy Consumption: We compare the energy
+consumption of the two models deployed on the same GPU.
+The experimental results in the Table IV demonstrate that our
+results outperform ET-BERT in all metrics, where the average
+GPU power, SRViT, is 30.59% lower than ET-BERT, and the
+average GPU memory is 79.85% lower. This indicates that our
+algorithm can reduce the resource consumption more while
+maintaining a higher performance.
+3) Training Time: The total training time of the model
+refers to the total time spent from feeding data into the model
+
+Fig. 10. Influence of number of bytes, patch size and stride length.
+
+until after completing model convergence, and the time per
+epoch is the average of the time it takes for the model to train
+one epoch.
+In the ET-BERT experiments, the total training time does
+not include the time spent in the pre-training phase, but only
+the time spent in the fine-tuning phase using the transformer
+model to classify the encrypted traffic. The experimental
+results are shown in Table V, which indicates that the training
+time of our model is much shorter than that of ET-BERT if
+pre-training is included. The last column in the table represents
+the percentage reduction in time.
+4) Testing Time: The testing time means the time it takes
+to output the classification results of the encrypted flows on
+the test set. We divide the total time by the number of flows
+contained in the test set to get the time to classify each flow.
+As can be seen from Table VI, the classification time of
+ET-BERT is approximately twice as slow as that of our
+method.
+H. Influence of First n Bytes
+To select the appropriate number of the first n bytes, we
+have chosen different n for the experiments. Fig. 10(a) shows
+the experimental results on the Tor dataset.
+We randomly selected half of the traffic in the Tor encrypted
+traffic dataset for our experiments. From the Fig. 10(a), we
+can observe that the accuracy can achieve 98.44% when n is
+taken 784. Moreover, optimal results are achieved on the other
+three metrics, with average improvements of 5.42% on recall,
+7.26% on precision, and 7.47% on F1 compared to taking
+other byte numbers. According to the experimental results,
+with n set at 784, each metric reaches or closely approaches
+its optimal value, and a balance can be achieved among
+the metrics. We achieve similar comparison results on other
+
+5498
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+3 datasets. Therefore, we can confirm that setting n to 784 is
+suitable to reach optimal values of metrics while maintaining
+high efficiency.
+I. Influence of Patch Size and Stride Length
+In order to select the appropriate patch size and stride
+length, we perform comparative experiments by selecting
+different groups of patch sizes and stride lengths, respectively.
+The stride length varies with the patch size. Fig. 10(b) shows
+the experimental results on the VPN dataset.
+The Fig. 10(b) illustrates that when P1 , S 1 , P2 , S 2 take the
+values of 3, 2, 7, and 4, better results can be achieved for all
+the metrics. Among them, the accuracy can reach 98.21%. We
+obtained similar results on other datasets. This is because the
+convolution can extract more local features and improve the
+identification accuracy when the value of patch size is taken
+smaller. Therefore, we confirm that setting P1 , S 1 , P2 , S 2 to
+3, 2, 7, and 4 respectively is appropriate to achieve the optimal
+values for each metric.
+
+addition, we propose a self-attention operation with a novel
+relative position bias, which can dynamically adjust the attention scores and learn the relative position relationship. After
+that, we design a novel incremental update to adapt quickly to
+the dynamically changed traffic. At last, the comprehensive
+experiments on 5 real-world encrypted traffic datasets are
+carried out. The experimental results indicate that our SRViT
+outperforms the state-of-the-art methods with an average accuracy improvement of 24.62% while keeping higher robustness
+and execution efficiency. Furthermore, the effectiveness of
+our proposed key designs for classifying encrypted traffic is
+demonstrated in ablation experiments.
+However, there are still some issues to be further investigated in this work, such as the deployment of SRViT and
+security performance, adaptive parameter selection, and more
+robust training techniques. In future work, we will further
+investigate the ability of SRViT to resist attacks, as well as
+few-shot learning or unsupervised learning methods.
+R EFERENCES
+
+VI. D ISCUSSION
+In this section, we discuss the limitations of this work, as
+well as further research efforts in this area. We convert the
+problem of encrypted traffic flow recognition into an image
+recognition problem in computer vision and propose a novel
+end-to-end recognition model SRViT. We propose a novel
+multi-size patch division mechanism, a relative position bias
+and an incremental update mechanism. However, there are still
+some issues to be further investigated in this work. Firstly,
+since different classes of encrypted traffic have different types
+of packets, the more appropriate byte number, patch size,
+and stride length still need to be further investigated. One
+future work is to explore an adaptive or data-driven selection
+of these parameters. For example, different types of traffic
+or different applications might benefit from different image
+sizes (larger image for flows that carry more data, or smaller
+for flows with less data). Secondly, while SRViT has good
+robustness in various encrypted traffic scenarios, it relies on
+clean pre-training data. The attacker can intentionally add
+low-frequency mislabeled traffic data to carry out a poisoning
+attack against the model, and the decision boundaries of the
+model will be modified, thus spoofing the model used for a
+specific classification task and leading to a degradation of
+the accuracy. In addition, newly arriving traffic data in the
+incremental update mechanism may also cause the model to
+have odd shifts or catastrophic forgetting, thus we need to
+focus further on more robust training techniques.
+VII. C ONCLUSION
+We introduce ViT into the encrypted traffic classification
+task and propose SRViT, a novel end-to-end identification
+model that transforms traffic flows into image patches and
+dynamically learns local/global dependencies between packets.
+We propose a novel multi-size patch division mechanism
+to further comprehensively learn the hidden features and
+resolve the multi-layer encryption, highly obfuscated payloads,
+random routing, and traffic pattern uncertainty problems. In
+
+[1]
+
+E. Papadogiannaki and S. Ioannidis, “A survey on encrypted network
+traffic analysis applications, techniques, and countermeasures,” ACM
+Comput. Surveys, vol. 54, no. 6, pp. 1–35, Jul. 2021.
+[2] R. Zhao, X. Deng, Z. Yan, J. Ma, Z. Xue, and Y. Wang, “MTFlowFormer: A semi-supervised flow transformer for encrypted traffic
+classification,” in Proc. 28th ACM SIGKDD Conf. Knowl. Discovery
+Data Mining, 2022, pp. 2576–2584.
+[3] K. Xie, X. Ruotian, X. Wang, G. Xie, D. Zhang, and J. Wen, “NMMFstream: A fast and accurate stream-processing scheme for network
+monitoring data recovery,” in Proc. IEEE Conf. Comput. Commun., May
+2022, pp. 2218–2227.
+[4] J. Fan, C. Guan, K. Ren, and C. Qiao, “Middlebox-based packetlevel redundancy elimination over encrypted network traffic,” IEEE/ACM
+Trans. Netw., vol. 26, no. 4, pp. 1742–1753, Aug. 2018.
+[5] C. Fu, Q. Li, M. Shen, and K. Xu, “Frequency domain feature based
+robust malicious traffic detection,” IEEE/ACM Trans. Netw., vol. 31,
+no. 1, pp. 452–467, Feb. 2023.
+[6] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted malicious traffic
+in real time via flow interaction graph analysis,” in Proc. Netw. Distrib.
+Syst. Secur. Symp., 2023, pp. 1–18.
+[7] P. Dodia, M. AlSabah, O. Alrawi, and T. Wang, “Exposing the rat in the
+tunnel: Using traffic analysis for tor-based malware detection,” in Proc.
+ACM SIGSAC Conf. Comput. Commun. Secur., Nov. 2022, pp. 875–889.
+[8] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered hybrid
+intrusion detection system for Internet of Vehicles,” IEEE Internet
+Things J., vol. 9, no. 1, pp. 616–632, Jan. 2022.
+[9] C. Duan et al., “IoTa: Fine-grained traffic monitoring for IoT devices via
+fully packet-level models,” IEEE Trans. Dependable Secure Comput.,
+vol. 21, no. 4, pp. 1–17, Jul. 2024.
+[10] J. Liu, Y. Fu, J. Ming, Y. Ren, L. Sun, and H. Xiong, “Effective and
+real-time in-app activity analysis in encrypted internet traffic streams,”
+in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+2017, pp. 335–344.
+[11] X. Yun, Y. Wang, Y. Zhang, C. Zhao, and Z. Zhao, “Encrypted
+TLS traffic classification on cloud platforms,” IEEE/ACM Trans. Netw.,
+vol. 31, no. 1, pp. 164–177, Feb. 2023.
+[12] P. Lin, K. Ye, Y. Hu, Y. Lin, and C.-Z. Xu, “A novel multimodal
+deep learning framework for encrypted traffic classification,” IEEE/ACM
+Trans. Netw., vol. 31, no. 3, pp. 1369–1384, Jun. 2023.
+[13] M. Shen et al., “Machine learning-powered encrypted network traffic
+analysis: A comprehensive survey,” IEEE Commun. Surveys Tuts.,
+vol. 25, no. 1, pp. 791–824, 1st Quart., 2023.
+[14] A. Panchenko et al., “Website fingerprinting at internet scale,” in
+Proc. 23rd Annu. Netw. Distrib. Syst. Secur. Symp. (NDSS), Feb. 2016,
+pp. 1–15.
+[15] T. V. Ede et al., “FlowPrint: Semi-supervised mobile-app fingerprinting
+on encrypted network traffic,” in Proc. Netw. Distrib. Syst. Secur. Symp.
+(NDSS), 2020.
+
+LIU et al.: SRViT: ROBUST ONLINE ENCRYPTED TRAFFIC CLASSIFICATION BASED ON ViT
+
+[16] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust
+smartphone app identification via encrypted network traffic analysis,”
+IEEE Trans. Inf. Forensics Security, vol. 13, no. 1, pp. 63–78,
+Jan. 2018.
+[17] B. Anderson and D. McGrew, “Machine learning for encrypted malware
+traffic classification: Accounting for noisy labels and non-stationarity,”
+in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+Aug. 2017, pp. 1723–1732.
+[18] Y. Hou, S. G. Teo, Z. Chen, M. Wu, C.-K. Kwoh, and T. Truong-Huu,
+“Handling labeled data insufficiency: Semi-supervised learning with
+self-training mixup decision tree for classification of network attacking
+traffic,” IEEE Trans. Dependable Secure Comput., early access, Aug. 1,
+2022, doi: 10.1109/TDSC.2022.3195534.
+[19] A. Lichy, O. Bader, R. Dubin, A. Dvir, and C. Hajaj, “When a RF
+beats a CNN and GRU, together—A comparison of deep learning and
+classical machine learning approaches for encrypted malware traffic
+classification,” Comput. Secur., vol. 124, Jan. 2023.
+[20] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow sequence
+network for encrypted traffic classification,” in Proc. IEEE Conf. Comput. Commun., Apr. 2019, pp. 1171–1179.
+[21] K. Lin, X. Xu, and H. Gao, “TSCRNN: A novel classification scheme
+of encrypted traffic based on flow spatiotemporal features for efficient
+management of IIoT,” Comput. Netw., vol. 190, May 2021, Art. no.
+107974.
+[22] X. Xiao, W. Xiao, R. Li, X. Luo, H. Zheng, and S. Xia,
+“EBSNN: Extended byte segment neural network for network traffic
+classification,” IEEE Trans. Dependable Secure Comput., vol. 19, no. 5,
+pp. 3521–3538, Sep. 2022.
+[23] Z. Song et al., “I2 RNN: An incremental and interpretable recurrent neural network for encrypted traffic classification,” IEEE Trans.
+Dependable Secure Comput., early access, Feb. 28, 2023, doi: 10.1109/
+TDSC.2023.3245411.
+[24] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fingerprinting:
+Undermining website fingerprinting defenses with deep learning,” in
+Proc. ACM SIGSAC Conf. Comput. Commun. Secur. (CCS), Toronto,
+ON, Canada, Oct. 2018, pp. 1928–1943.
+[25] M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, and
+M. Saberian, “Deep packet: A novel approach for encrypted traffic classification using deep learning,” Soft Comput., vol. 24, no. 3,
+pp. 1999–2012, Feb. 2020.
+[26] J. Zhang, F. Li, F. Ye, and H. Wu, “Autonomous unknown-application
+filtering and labeling for DL-based traffic classifier update,” in Proc.
+IEEE Conf. Comput. Commun., Jul. 2020, pp. 397–405.
+[27] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+Process. Syst., vol. 30, 2017, pp. 5998–6008.
+[28] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+contextualized datagram representation with pre-training transformers
+for encrypted traffic classification,” in Proc. 3rd Int. Conf. Inf. Syst.
+Secur. Privacy, Apr. 2022, pp. 633–642.
+[29] X. Meng, C. Lin, Y. Wang, and Y. Zhang, “NetGPT: Generative
+pretrained transformer for network traffic,” 2023, arXiv:2304.09513.
+[30] R. Zhao et al., “A novel self-supervised framework based on masked
+autoencoder for traffic classification,” IEEE/ACM Trans. Netw., vol. 32,
+no. 3, pp. 1–14, Jun. 2024.
+[31] A. Dosovitskiy et al., “An image is worth 16x16 words: Transformers
+for image recognition at scale,” in Proc. Int. Conf. Learn. Represent.
+(ICLR), 2021.
+[32] M. Caron et al., “Emerging properties in self-supervised vision
+transformers,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct.
+2021, pp. 9630–9640.
+[33] R. Dingledine, N. Mathewson, and P. Syverson, “Tor: The secondgeneration onion router,” in Proc. 13th USENIX Secur. Symp. (SSYM),
+Aug. 2004, pp. 303–320.
+[34] Y. Qi, L. Xu, B. Yang, Y. Xue, and J. Li, “Packet classification
+algorithms: From theory to practice,” in Proc. IEEE INFOCOM, Apr.
+2009, pp. 648–656.
+[35] J. Erman, A. Mahanti, M. Arlitt, and C. Williamson, “Identifying and
+discriminating between Web and peer-to-peer traffic in the network
+core,” in Proc. 16th Int. Conf. World Wide Web, 2007, pp. 883–892.
+[36] M. Roughan, S. Sen, O. Spatscheck, and N. Duffield, “Class-of-service
+mapping for QoS: A statistical signature-based approach to IP traffic
+classification,” in Proc. 4th ACM SIGCOMM Conf. Internet Meas., 2004,
+pp. 135–148.
+[37] R. Keralapura, A. Nucci, and C.-N. Chuah, “Self-learning peer-to-peer
+traffic classifier,” in Proc. 18th Int. Conf. Comput. Commun. Netw.,
+Aug. 2009, pp. 1–8.
+
+5499
+
+[38] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “AppScanner:
+Automatic fingerprinting of smartphone apps from encrypted network traffic,” in Proc. IEEE Eur. Symp. Secur. Privacy, Mar. 2016,
+pp. 439–454.
+[39] G. Zhou, Z. Liu, C. Fu, Q. Li, and K. Xu, “An efficient design of
+intelligent network data plane,” in Proc. 32nd USENIX Secur. Symp.,
+2023, pp. 6203–6220.
+[40] M. Korczynski and A. Duda, “Markov chain fingerprinting to classify
+encrypted traffic,” in Proc. IEEE INFOCOM - IEEE Conf. Comput.
+Commun., Apr. 2014, pp. 781–789.
+[41] M. Shen, M. Wei, L. Zhu, and M. Wang, “Classification of
+encrypted traffic with second-order Markov chains and application
+attribute bigrams,” IEEE Trans. Inf. Forensics Security, vol. 12, no. 8,
+pp. 1830–1843, Aug. 2017.
+[42] M. Shen, M. Wei, L. Zhu, M. Wang, and F. Li, “Certificate-aware
+encrypted traffic classification using second-order Markov chain,” in
+Proc. IEEE/ACM 24th Int. Symp. Quality Service (IWQoS), Jun. 2016,
+pp. 1–10.
+[43] Y. Fu, H. Xiong, X. Lu, J. Yang, and C. Chen, “Service usage
+classification with encrypted internet traffic in mobile messaging
+apps,” IEEE Trans. Mobile Comput., vol. 15, no. 11, pp. 2851–2864,
+Nov. 2016.
+[44] R. Schuster, V. Shmatikov, and E. Tromer, “Beauty and the
+burst: Remote identification of encrypted video streams,” in Proc.
+26th USENIX Secur. Symp. (USENIX Secur. 17), Aug. 2017,
+pp. 1357–1374.
+[45] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized application identification via encrypted traffic analysis using
+graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+pp. 2367–2380, 2021.
+[46] E. Horowicz, T. Shapira, and Y. Shavitt, “A few shots traffic classification with mini-FlowPic augmentations,” in Proc. 22nd ACM Internet
+Meas. Conf., 2022, pp. 647–654.
+[47] Z. Diao et al., “EC-GCN: A encrypted traffic classification framework
+based on multi-scale graph convolution networks,” Comput. Netw.,
+vol. 224, Apr. 2023, Art. no. 109614.
+[48] Z. Diao et al., “DMSTG: Dynamic multiview spatio-temporal networks
+for traffic forecasting,” IEEE Trans. Mobile Comput., vol. 23, no. 6,
+pp. 6865–6880, Jun. 2024.
+[49] X. Xiao et al., “RBLJAN: Robust byte-label joint attention network for
+network traffic classification,” IEEE Trans. Dependable Secure Comput.,
+vol. 22, no. 3, pp. 1–18, May 2025.
+[50] S. Sengupta, N. Ganguly, P. De, and S. Chakraborty, “Exploiting
+diversity in Android TLS implementations for mobile app traffic classification,” in Proc. World Wide Web Conf., May 2019,
+pp. 1657–1668.
+[51] Y. Hong, Q. Li, Y. Yang, and M. Shen, “Graph based encrypted
+malicious traffic detection with hybrid analysis of multi-view features,”
+Inf. Sci., vol. 644, Oct. 2023, Art. no. 119229.
+[52] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+encrypted traffic classification with one-dimensional convolution neural
+networks,” in Proc. IEEE Int. Conf. Intell. Secur. Inform. (ISI), Jul. 2017,
+pp. 43–48.
+[53] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+classification using convolutional neural network for representation
+learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Da Nang, Vietnam,
+Jan. 2017, pp. 712–717.
+[54] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani, “Characterization of encrypted and VPN traffic using time-related
+features,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, 2016,
+pp. 407–414.
+[55] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani, “Characterization of Tor traffic using time based features,” in
+Proc. 3rd Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), Feb. 2017,
+pp. 253–262.
+[56] S. Dadkhah, H. Mahdikhani, P. K. Danso, A. Zohourian, K. A. Truong,
+and A. A. Ghorbani, “Towards the development of a realistic multidimensional IoT profiling dataset,” in Proc. 19th Annu. Int. Conf. Privacy,
+Secur. Trust (PST), Aug. 2022, pp. 1–11.
+[57] S. Jorgensen et al., “Extensible machine learning for
+encrypted network traffic application labeling via uncertainty
+quantification,” IEEE Trans. Artif. Intell., vol. 5, no. 1, pp. 420–433,
+Jan. 2024.
+[58] O. Belarbi, T. Spyridopoulos, E. Anthi, O. Rana, P. Carnelli, and
+A. Khan, “Gotham dataset 2025: A reproducible large-scale IoT network dataset for intrusion detection and security research,” 2025,
+arxiv:2502.03134.
+
+5500
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Chang Liu (Graduate Student Member, IEEE)
+received the B.E. degree from Nanjing University
+of Posts and Telecommunications, Nanjing, China,
+in 2022, where she is currently pursuing the Ph.D.
+degree with the School of Computer. Her research
+interests include machine learning, network security,
+and traffic analysis.
+
+Lei Han is currently a Professor at the School
+of Computer, Nanjing University of Posts and
+Telecommunications. He has created patents which
+are authorized by China, U.S., U.K., Japan, South
+Korea, and Germany. He has authored papers
+in research related international conferences and
+journals, such as IEEE T RANSACTIONS ON PARAL LEL AND D ISTRIBUTED S YSTEMS , GLOBECOM,
+MOBISYS, and ICCN. His research interests include
+computer networks and datacenter systems.
+
+Zulong Diao received the Ph.D. degree in software engineering from Hunan University, Changsha,
+China, in 2019. He is currently an Associate Professor at the School of Computer Science and
+Engineering, Hunan University of Science and Technology, Xiangtan, China. His research interests
+include machine learning, traffic analysis, and network measurement.
+
+Zheng Wu received the Ph.D. degree from Nanjing University of Posts and Telecommunications
+(NUPT). He is currently a Lecturer with the College
+of Computer, NUPT. Prior to that, he worked as a
+Post-Doctoral Researcher at the Computer Network
+Information Center, Chinese Academy of Sciences.
+His research interests include routing security, network traffic identification, and anomaly detection.
+
+Xin He (Member, IEEE) received the Ph.D. degree
+from the Department of Computer Science and
+Technology, Nanjing University, China, in 2021.
+He is currently a Lecturer at the School of Computer Science, Nanjing University of Posts and
+Telecommunications, China. His research papers
+have been published in many prestigious conferences and journals, such as IEEE INFOCOM, IEEE
+ICDCS, IEEE ICWS, IEEE/ACM T RANSACTIONS
+ON N ETWORKING , IEEE T RANSACTIONS ON PAR ALLEL AND D ISTRIBUTED S YSTEMS , and IEEE
+T RANSACTIONS ON C OMMUNICATIONS. His research interests are in the
+areas of data center networks, SDN, and edge computing. He is a member of
+ACM.
+
+Weibei Fan (Member, IEEE) received the Ph.D.
+degree in computer science from Soochow University in 2019. He is currently an Associate
+Professor at the School of Computer, Nanjing University of Posts and Telecommunications. He has
+authored papers in research related international
+journals and conferences, such as IEEE T RANSAC TIONS ON C OMPUTERS , IEEE T RANSACTIONS ON
+D EPENDABLE AND S ECURE C OMPUTING, IEEE
+T RANSACTIONS ON PARALLEL AND D ISTRIBUTED
+S YSTEMS, IEEE T RANSACTIONS ON R ELIABIL ITY , IEEE T RANSACTIONS ON N ETWORK S CIENCE AND E NGINEERING ,
+IEEE T RANSACTIONS ON N ETWORK AND S ERVICE M ANAGEMENT, IEEE
+T RANSACTIONS ON E MERGING T OPICS IN C OMPUTATIONAL I NTELLI GENCE, IEEE Communications Magazine, JPDC, and IEEE ISPA, FUZZIEEE, ICPADS, PDCAT. His research interests include data center networks,
+parallel and distributed systems, and interconnection architectures. He is a
+member of the IEEE Computer Society and the Association for Computing
+Machinery.
+
+Fu Xiao (Senior Member, IEEE) received the
+Ph.D. degree in computer science and technology
+from Nanjing University of Science and Technology, Nanjing, China, in 2007. He is currently a
+Professor and a Ph.D. Supervisor with the School
+of Computer, Nanjing University of Posts and
+Telecommunications. He has authored papers in
+research related international conferences, including
+INFOCOM, ICC, and IPCCC. He has authored
+IEEE/ACM T RANSACTIONS ON N ETWORKING,
+IEEE J OURNAL ON S ELECTED A REAS IN C OM MUNICATIONS , IEEE T RANSACTIONS ON M OBILE C OMPUTING , ACM
+Transactions on Embedded Computing Systems, and IEEE T RANSACTIONS
+ON V EHICULAR T ECHNOLOGY . His main research interests include computer
+networks. He is a member of the IEEE Computer Society and the Association
+for Computing Machinery.
+PAPER_TEXT

@@ -1,0 +1,157 @@
+4252                                                         IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 5, MAY 2025
+
+
+
+
+        Self-Supervised and Interpretable Anomaly
+          Detection Using Network Transformers
+              Daniel L. Marino , Member, IEEE, Chathurika S. Wickramasinghe , Member, IEEE,
+                     Craig Rieger , Senior Member, IEEE, and Milos Manic , Fellow, IEEE
+
+
+   Abstract—Machine learning and deep neural networks                        building effective and resilient critical infrastructures is a pri-
+(DNNs) have been proposed as a tool to identify anomalies                    mary concern for many entities, including government, industry,
+in computer network communications. However, due the                         academia, and the research community [3], [4].
+obfuscated nature of off-the-shelf machine learning mod-
+els, their output often does not provide enough information                     The integration of information and communication technolo-
+to isolate the source of the anomaly to take corrective mea-                 gies (ICTs) into industrial control systems (ICSs) has been
+sures. In this article, we introduce the network transformer                 driven by the desire for increased efficiency and connectivity [5].
+(NeT), a DNN model for anomaly detection that incorpo-                       ICTs are essential for ensuring the effective operation of critical
+rates the graph structure of the communication network in
+                                                                             infrastructure systems. However, their adoption also introduces
+order to improve interpretability. The presented approach
+has the following advantages: first, enhanced interpretabil-                 vulnerabilities that can be exploited by cyber-criminals, jeop-
+ity by incorporating the graph structure of computer net-                    ardizing security, and resilience [6]. In critical infrastructure
+works; second, provides a hierarchical set of features that                  environments, sensitive information and data flow continuously
+enables analysis at different levels of granularity; second,                 through various subsystems, necessitating robust protection
+self-supervised training that does not require labeled data.                 against unauthorized and malicious access. Ensuring the security
+The NeT model was evaluated on a set of anomalous sce-
+narios executed in a real industrial control system. The pre-                of these networks is crucial to prevent potential threats and
+sented approach successfully identified the anomalies, the                   maintain the integrity of critical operations.
+devices affected, and the specific connections causing the                      Network traffic monitoring is fundamental for ensuring the
+anomalies, providing a data-driven hierarchical approach to                  security and reliability of critical infrastructures. This technol-
+analyze the behavior of a cyber network.                                     ogy is crucial for protecting systems that depend on ICTs. A key
+  Index Terms—Anomaly detection, cybersecurity, inter-                       aspect of resilient network traffic monitoring involves the timely
+pretable machine learning, self-supervised learning, trans-                  identification of abnormal behaviors, which enables engineers
+formers.                                                                     to take preventative measures and avert potential catastrophic
+                          I. INTRODUCTION                                    failures [7]. Over the past decade, machine learning (ML) has
+                                                                             emerged as a prominent approach for anomaly detection in
+      RITICAL infrastructures, such as critical manufacturing,
+C     transportation systems, healthcare and public health sys-
+tems, defense systems, and financial systems, play a vital role
+                                                                             critical infrastructure environments [7], [8]. By leveraging ML
+                                                                             algorithms, organizations can enhance their ability to detect and
+                                                                             respond to irregularities in network traffic, thereby strengthening
+in the United States. Failures, delays, or incapacitation of these           the overall security and operational stability of their critical
+infrastructures can have debilitating effects on various areas,              systems.
+including national health, public safety and security, stable                   This article presents a novel network anomaly detection
+energy supply, and economic stability [1], [2]. Consequently,                approach—the network transformer (NeT)—an ML model that
+                                                                             uses graph representations to improve the interpretability of
+   Received 30 August 2024; revised 13 November 2024; accepted 9             anomaly detection in network traffic monitoring. The presented
+January 2025. Date of publication 27 February 2025; date of current          model allows the identification of anomalies in the network at
+version 21 April 2025. This work was supported in part by the Depart-
+ment of Energy through the U.S. DOE Idaho Operations Office under
+                                                                             the global level. It also generates a series of hierarchical features
+Contract DE-AC07-05ID14517, in part by the Resilient Control and In-         (device-level and connection-level) that allow the identification
+strumentation Systems (ReCIS) Program of Idaho National Laboratory,          of devices affected by the anomalies and the connections re-
+and in part by the Commonwealth Cyber Initiative, an investment in
+the advancement of cyber R&D, innovation and workforce development.
+                                                                             sponsible for the anomalies. The interpretable component uses
+Paper no. TII-24-4368. (Corresponding author: Daniel L. Marino.)             these device-level and device-level features to help with local-
+   Daniel L. Marino, Chathurika S. Wickramasinghe, and Milos Manic are       izing impacted devices and connections during a system attack,
+with the Virginia Commonwealth University, Richmond, VA 23284 USA
+(e-mail: marinodl@vcu.edu; brahmanacsw@vcu.edu; misko@ieee.org).
+                                                                             providing a better understanding of the detected anomaly at a
+   Craig Rieger, retired, was with the Idaho National Laboratory, Idaho      global level. The approach leverages self-supervised learning to
+Falls, ID 83415 USA. He resides in Pocatello, ID 83201 USA (e-mail:          train the model using unlabeled data. A multiprocessing pipeline
+crieger@ieee.org).
+   For more information about CCI, visit cyberinitiative.org.
+                                                                             is presented as a prototype for scalability to large datasets.
+   Digital Object Identifier 10.1109/TII.2025.3534443                           Contributions of this article are as follows.
+
+
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+   Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+                                                                 for more information.
+MARINO et al.: SELF-SUPERVISED AND INTERPRETABLE ANOMALY DETECTION USING NETWORK TRANSFORMERS                                      4253
+
+
+
+    1) Graph packet dissection method for extracting hierarchi-         In this study, our approach uses transformer neural networks
+       cal features (global level, device level, and connection      (TNNs) as the backbone for our model. The choice of TNNs
+       level).                                                       is motivated by their advanced capabilities in sequence mod-
+    2) Self-supervised NeT model for detecting network anoma-        eling tasks. TNNs are currently regarded as state-of-the-art ML
+       lies at the global level.                                     models for sequence, language, and image processing [22], [23],
+    3) Interpretable components that use device level and con-       [24], [25]. They offer significant advantages over traditional neu-
+       nection level features for providing a better understanding   ral networks, particularly in terms of efficiency and scalability,
+       of the detected anomalies.                                    due to their ability to process input data in parallel [26]. TNNs
+   The rest of this article is organized as follows. Section II      excel in capturing complex temporal and spatial dependencies,
+presents the background and related work. Section III describes      which enhances their capability to extract features representing
+the proposed NeT approach. Section IV presents the experimen-        normal system behavior, a critical aspect for effective anomaly
+tal evaluation. Finally, Section V concludes this article.           detection.
+                                                                        This article considers three unsupervised ML model base-
+                                                                     lines for anomaly detection: one-class support vector machines
+           II. BACKGROUND AND RELATED WORK                           (OCSVMs), local outlier factors (LOFs), and autoencoders
+   Anomaly detection involves identifying patterns in data that      (AEs). These models are chosen due to their widespread use
+deviate from the expected behavior of a system [9]. It can           in unsupervised anomaly detection [27]. Our intention is to
+be approached in various ways, including out-of-distribution         demonstrate how the presented NeT approach can be effec-
+detection, outlier detection, and novelty detection [10], [11].      tively integrated with existing anomaly detection techniques,
+While many existing ML approaches effectively detect abnor-          improving performance and interpretability beyond that of the
+mal behaviors in cyber-physical systems [12], [13], they often       original algorithms. The use of other supervised anomaly detec-
+suffer from a lack of interpretability. These approaches typically   tion algorithms, such as variants of SVM, XGBoost, decision
+only indicate the presence of an anomaly without providing           trees, and convolutional neural networks [8], [28], which require
+additional information about its source or cause. This limitation    labeled data, is beyond the scope of this work. The necessity
+is particularly problematic in monitoring applications, where        for extensive labeling demands domain expertise, and it is
+understanding the root of the problem is crucial for effective re-   often a time-consuming and expensive task. This is especially
+sponse and corrective measures. Many off-the-shelf ML models         relevant in industrial applications of anomaly detection, where
+used for anomaly detection are designed as obfuscated, making        anomalous data is scarce and difficult to collect [29], [30], [31].
+their internal workings opaque to users [14].                        The scarcity of abnormal labeled data underscores the value of
+   To address the obfuscated nature of ML models, researchers        self-supervised and unsupervised methods, which are the focus
+have explored the field of explainable AI (XAI) [15]. XAI aims       of our article.
+to make the decision-making processes of ML models more                 In addition, this study employs t-distributed stochastic neigh-
+transparent and understandable [16]. Techniques such as local        bor embedding (t-SNE) to visualize deviations between abnor-
+interpretable model-agnostic explanations (LIME) and SHapley         mal and normal system behaviors. t-SNE [32] is a dimension-
+Additive exPlanations (SHAP) [17], [18] are commonly used to         ality reduction technique that maps high-dimensional data to
+provide local explanations for individual predictions made by        a lower dimensional space while preserving local similarities.
+complex models like transformers. In addition, incorporating         By converting high-dimensional distances into probabilities,
+domain knowledge into the inductive bias of ML algorithms can        t-SNE excels in capturing nonlinear relationships, surpassing
+also enhance interpretability by guiding the model’s learning        traditional methods such as principal component analysis and
+process in a way that aligns with known principles in the specific   multidimensional scaling [33], [34]. Its effectiveness in visu-
+application domain [19].                                             alizing neural network embeddings and clustering results has
+   Despite these advancements, many approaches still struggle        been well-documented, making it a valuable tool in ML appli-
+with the challenge of effectively incorporating and utilizing        cations [35].
+data structure, which can obscure exploratory analysis and limit
+interpretability. To address this issue, designing methods that
+not only detect anomalies but also support exploratory analysis             III. INTERPRETABLE ANOMALY DETECTION: NET
+is crucial. Preserving the graph structure of the problem can sig-      In order to create an interpretable model for anomaly detec-
+nificantly improve interpretability and diagnosis by providing a     tion, we design an approach that leverages the graph structure
+clearer representation of the relationships between entities [15].   of computer networks. As shown in Fig. 1, the idea is to have
+Graph-based approaches offer several advantages over tradi-          an abstract model of the problem that is shared by the human
+tional methods, as they enable computation over discrete entities    and the ML model. The abstract model in this case is the graph
+and their relationships, which is essential for understanding        representation of the computer network being monitored. By
+complex systems and diagnosing issues effectively. Graph neural      embedding this abstract model into the ML approach, we are
+networks have emerged as a promising tool in this context,           able to leverage our understanding of the system as a graph in
+offering a flexible way to embed relational inductive bias into      order to extract useful information about the anomalies detected
+ML models. Recent research highlights their application in           in the system.
+learning the structure of relationships in time-series sensor data      Fig. 2 shows the overview of the presented NeT approach.
+and identifying anomalous edges in dynamic graphs [20], [21].        The approach consists of the following:
+4254                                                                   IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 5, MAY 2025
+
+
+
+                                                                                                      TABLE I
+                                                                                     PACKET FEATURES WHEN USING TCP DISSECTION
+
+
+
+
+Fig. 1.   Graph models as abstract representations for interpretable ML.
+
+
+
+
+    1) a packet dissector that groups packages by their respective                                     TABLE II
+                                                                                        PACKET FEATURES WHEN USING RAW BYTES
+       source and destination addresses;
+    2) an embedded representation obtained using a TNN;
+    3) an aggregator 

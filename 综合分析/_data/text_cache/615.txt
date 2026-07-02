@@ -1,0 +1,157 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026                                                                                4647
+
+
+
+
+        Balancing Timeliness and Accuracy: A Hybrid
+        Data-Control Plane Framework for Volumetric
+                   DDoS Defense in IoT
+     Jiahang Pu , Hongyu Ye, Jing Cheng, Feng Shan , Member, IEEE, and Runqun Xiong , Member, IEEE
+
+
+
+    Abstract—Resource-constrained IoT devices in Industrial                    traditionally closed Operational Technology (OT) networks
+Internet environments are highly vulnerable to DDoS attacks due                and open Information Technology (IT) networks, enabling
+to infrequent security updates and insufficient built-in protection            applications like smart manufacturing, remote monitoring,
+mechanisms. Existing defense solutions primarily rely on external
+filtering servers or programmable switches, but these approaches               and fine-grained management. The number of connected
+fail to simultaneously meet the stringent real-time performance                IoT devices reached 16.6 billion by the end of 2023,
+and high accuracy requirements of industrial applications. To                  a 15% increase from 2022 [1]. However, their inherent
+address these limitations, we propose a novel cross-plane defense              characteristics—low performance, infrequent updates, and lack
+framework that exploits the temporal invariance characteristics                of self-protection measures—make them the weakest link in
+of attack traffic patterns. In the data plane, an adaptive variance
+threshold mechanism immediately mitigates high-volume, low-                    Industrial Internet security and a primary target for attackers.
+variance traffic flows, while a bidirectional dual-hash table                  Distributed Denial of Service (DDoS) attacks represent the
+captures low-collision flow features for efficient export to the               most significant network threat in this domain [2]. The low
+control plane. The control plane constructs temporally-enhanced                attack tolerance of these devices, combined with the high
+flow sequences that enable deep learning models to perform                     stability requirements of production control, imposes strict
+accurate attack detection, subsequently directing the data plane
+to block identified malicious sources. We implemented and                      demands on the real-time performance and accuracy of any
+evaluated a prototype of this framework on a software switch                   defense system.
+platform using both real-world attack datasets and custom-                        To achieve high detection accuracy, many works employ
+generated traffic patterns. Experimental results demonstrate                   server-based machine learning approaches, training models
+that our framework successfully mitigates 86% of attack traffic                on large-scale datasets [3], [4], [5], [6], [7], [8], [9], [10].
+within milliseconds and achieves complete source blocking within
+52 seconds. Compared to baseline methods, our framework                        While these methods can leverage prior knowledge, they are
+can effectively counter both DoS and DDoS attacks without                      detached from the packet processing pipeline. The process of
+generating false positives on benign traffic.                                  packet uploading for feature extraction and model inference
+  Index Terms—Distributed denial-of-service attack, attack                     introduces significant latency, rendering them incapable of
+detection, attack defense, P4, deep learning.                                  meeting the real-time demands of the Industrial Internet,
+                                                                               where the resulting delay is sufficient to paralyze resource-
+                      I. I NTRODUCTION                                         constrained IoT devices.
+                                                                                  To meet the high-speed, low-latency processing require-
+T     HE rapid development of the Industrial Internet has led
+      to the widespread adoption of IoT devices in indus-
+trial settings. These devices act as a critical bridge between
+                                                                               ments, many recent studies have utilized programmable
+                                                                               switches to build defense systems [11], [12], [13], [14], [15],
+                                                                               [16], [17], [18], [19], [20], [21]. These devices support the
+   Received 7 December 2025; revised 26 March 2026; accepted 10 May            P4 language, enabling efficient, line-rate packet processing
+2026. Date of publication 14 May 2026; date of current version 20 May
+2026. This work is supported by the National Key R&D Program of
+                                                                               and making them well-suited for high-speed, low-power traf-
+China with Grant number 2021YFB2900100; National Natural Science               fic analysis and defense. However, a key limitation is their
+Foundation of China under grants 62572115 and 62232004; Shenzhen’s             reliance on small on-chip memories (tens of MBs), which
+Industrial Application Research on “Key Technologies and Systems for           restricts the complexity of real-time data processing. Exist-
+Intelligent Cloud-Edge Collaboration in the Industrial Internet” (Grant No.
+CJGJZD20230724092759006) funded by Shenzhen Municipal Science and              ing P4-based works have focused on optimizing detection
+Technology Innovation Commission; Jiangsu Provincial Key Laboratory of         mechanisms [15], [16] or embedding simplified ML models
+Network and Information Security under grant BM2003201; Key Laboratory
+of Computer Network and Information Integration of the Ministry of Educa-
+                                                                               [17], [18], [19], [20], [21]. The former often require tens
+tion of China under grant 93K-9; and the Collaborative Innovation Center       of seconds to analyze traffic distribution patterns, failing to
+of Novel Software Technology and Industrialization. The associate editor       provide a timely response to bursty attacks, while the latter
+coordinating the review of this article and approving it for publication was   must compress models to fit into Match-Action tables, thereby
+E. E. Tsiropoulou. (Corresponding author: Runqun Xiong.)
+   The authors are with the School of Computer Science and Engineer-           sacrificing accuracy.
+ing, Southeast University, Nanjing 211189, China (e-mail: j.pu@seu.edu.cn;        Furthermore, the Industrial Internet is highly heterogeneous,
+hy.ye@seu.edu.cn; chengjing@seu.edu.cn; shanfeng@seu.edu.cn; rxiong@
+seu.edu.cn).
+                                                                               utilizing diverse traffic forms and specialized protocols. While
+   Digital Object Identifier 10.1109/TNSM.2026.3693266                         current AI-driven defenses achieve high accuracy in detecting
+             1932-4537 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+4648                                                             IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+
+
+threats within specific protocols [22], deploying these models                                    TABLE I
+across the entire industrial protocol stack is computationally                           A NALYZED T RAFFIC DATASET
+prohibitive. Such protocol-specific approaches fail to provide
+comprehensive coverage and cannot meet the strict low-latency
+constraints of resource-constrained IoT devices.
+   To address these challenges, our work is based on a key
+insight derived from analyzing public DDoS and benign traffic
+datasets: attack and benign traffic exhibit a high degree of
+                                                                      functions, resulting in limited software, hardware, and resource
+discrimination in both the magnitude and temporal patterns
+                                                                      capabilities, which gives them a low tolerance for high-
+of their packet-level and flow-level features. While previous
+                                                                      volume attacks. The goal for these victim devices is to prevent
+work often used simple data plane thresholds or sampled
+                                                                      service disruption and subsequent losses from such attacks.
+statistics, we posit that leveraging the high-frequency, low-
+                                                                      The defense posture assumes that all traffic within the topology
+variance temporal patterns of attack traffic can reduce initial
+                                                                      passes through a device where the defense framework is
+detection latency without compromising accuracy. Further-
+                                                                      deployed, and that both the victim and the framework have
+more, using sequences of time-windowed statistics provides
+                                                                      no prior knowledge of the attack’s source, type, or scale.
+a more comprehensive foundation for detection models.
+                                                                         Attackers are assumed to have access to the network
+   Based on this insight, we propose a cross-plane collab-
+                                                                      topology containing these IoT devices. They can leverage
+orative framework that combines real-time primary defense
+                                                                      a controlled botnet to send high-speed, high-volume DDoS
+and feature extraction in the data plane with flow sequence
+                                                                      traffic aimed at exhausting the victim’s bandwidth or com-
+detection in the control plane. Specifically, our framework
+                                                                      putational resources. The attacker may employ various DDoS
+utilizes three modules to address the following challenges:
+                                                                      attacks, including UDP, DNS, and NTP floods, and can use
+   • Lightweight Primary Defense: To provide a timely                 multiple hosts to send a massive number of packets to a single
+      response to high-volume attacks and mitigate their              target.
+      impact, we propose a lightweight primary defense mech-
+      anism. By tracking traffic frequency and feature variance,
+                                                                      B. Key Observation
+      it immediately rate-limits high-speed, low-variance flows,
+      achieving real-time mitigation with minimal overhead.              1) Feature Selection: To identify the most effective features
+   • Low-Collision Feature Extraction: To ensure complete             for distinguishing between normal and attack traffic, and to
+      statistical records for suspicious traffic, we design a low-    better align with the multi-source nature of DDoS attacks,
+      collision feature extraction mechanism. It uses a dual-         datasets with a large number of source IPs—a real-world DNS
+      hash table to maintain statistics for bidirectional flows and   attack dataset [23] and a simulated benign background traffic
+      employs a time-windowed storage and collection policy           dataset [24]—were used to analyze feature distribution and
+      to guarantee low-collision recording.                           temporal variation. The selected datasets are shown in Table I.
+   • Temporal Sequence-Based Detection: To guarantee                     Since the framework focuses on a binary classification prob-
+      detection accuracy on attack sources, we employ a CNN-          lem with multiple continuous features, Analysis of Variance
+      GRU-Attention model to analyze the temporal evolution           (ANOVA) is used to select highly discriminating features by
+      of traffic data using constructed temporal flow sequences.      checking for significant differences between the means of
+      It accurately identifies attack sources by detecting the        normal and attack traffic. To visually represent the feature
+      high-volume, low-variance characteristics of attack flows.      differences, the test set was formatted for binary classification,
+                                                                      and ANOVA was used to select top 10 key features for
+   We implemented a software switch-based prototype of the
+                                                                      simplified analysis. These features were then standardized
+framework and evaluated its performance using real-world
+                                                                      using Eq. 1, where x̄ is the sample mean, S is the sample
+attack traffic and custom attack scripts. The results show that
+                                                                      standard deviation, and z is the standardized value.
+the primary defense stage detects over 99% of attack packets,
+reducing attack traffic by approximately 86% within 25ms.                                             x − x̄
+                                                                                                  z=                                 (1)
+Subsequently, the temporal model, with a PR-AUC exceeding                                               S
+99%, detects and completely blocks the attack sources within             As depicted in Figure 1, there are clear differences in the
+approximately 50 seconds. Compared to baseline methods,               network characteristics of normal and DDoS traffic. Features
+our framework effectively covers both DoS and DDoS attacks            such as packet transmission rate, byte rate, packet length,
+while ensuring that benign traffic is not falsely classified.         and packet interval are particularly suitable for distinguishing
+                                                                      malicious traffic. This analysis provides a guiding reference
+            II. BACKGROUND AND M OTIVATION                            for designing the data plane thresholds, selecting the types of
+                                                                      features to extract, and designing the temporal model.
+A. Problem Scope                                                         2) Magnitude Difference: An analysis of the two datasets
+  This paper focuses on DDoS network attacks targeting                was conducted by selecting three features: flow bytes per
+IoT devices. The network topology may include multiple                second, flow packets per second, and average packet size,
+IoT devices, such as cameras and sensors, that send packets           shown in Figure 2.
+to a controller or gateway either periodically or based on               At a macroscopic level, attack traffic is characterized by
+specific trigger conditions. These devices often have simple          large and high-speed packet transmissions, as the attacker’s
+PU et al.: BALANCING TIMELINESS AND AC

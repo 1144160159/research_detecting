@@ -1,0 +1,146 @@
+1070                                                    IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 2, MARCH/APRIL 2025
+
+
+
+
+       Detecting Smart Home Device Activities Using
+       Packet-Level Signatures From Encrypted Traffic
+                Mohammad Shamim Ahsan , Md. Shariful Islam , Md. Shohrab Hossain, Member, IEEE,
+                                  and Anupam Das , Senior Member, IEEE
+
+
+   Abstract—Despite the significant benefits of the widespread                   However, the related meta-data (e.g., packet lengths, traffic rate)
+adoption of smart home Internet of Things (IoT) devices, these                   of the network traffic still leaks some information about the
+devices are known to be vulnerable to active and passive attacks.                messages exchanged [38]. Existing works in this domain have
+Existing literature has demonstrated the ability to infer the activi-
+ties of these devices by analyzing their network traffic. In this study,         looked at extracting statistical features from traffic metadata to
+we introduce a packet-based signature generation and detection                   detect device events [1], [10], [11], [37], but such approaches are
+system that can identify specific events associated with IoT devices             prone to background traffic noise and thus harder to generalize
+by extracting simple features from raw encrypted network traffic.                across varying settings [4]. Moreover, most existing passive
+Unlike existing techniques that depend on specific time windows,                 inference techniques can only identify the device type and
+our approach automatically determines the optimal number of
+packets to generate unique signatures, making it more resilient                  whether there is device activity (i.e., an event), but not the exact
+to network jitters. We evaluate the effectiveness, uniqueness, and               type of event or command [2], [3], [22], [23], [24], [25]. The
+correctness of our signatures by training and testing our system                 state-of-the-art work on packet-level signatures for IoT devices
+using four public datasets and an emulated dataset with varying                  is PINGPONG [28], which relies on the packet arrival time win-
+network delays, verifying known signatures and discovering new                   dow to detect device activities. This time-window dependency
+ones. Our system achieved an average recall and precision of 98-
+99% and 98-100%, respectively, demonstrating the effectiveness                   can result in inaccurate detection whenever the traffic rate signif-
+and feasibility of using packet-level signatures to detect IoT device            icantly changes; because the number of packets considered in a
+activities.                                                                      specific time interval for matching signatures will be drastically
+   Index Terms—Network traffic analysis, packet-based signature.
+                                                                                 more or less than that considered during training. Also, such
+                                                                                 time delays can vary significantly depending on the underlying
+                                                                                 internet connection. Furthermore, for IoT devices that have more
+                           I. INTRODUCTION                                       than two forms of device status (e.g., STANDBY, ACTIVE,
+       HE use of Internet of Things (IoT) devices (e.g., light sen-              QUICKRUN, STOP), PINGPONG considers separate events as
+T      sors, cameras, door locks, thermostats, etc.) has increased
+rapidly in recent years. IoT provides a flexible and scalable plat-
+                                                                                 binary type and trains them independently, rather than training
+                                                                                 all the events of the device at a time, resulting in additional
+form that can support various applications within a home setting,                overhead.
+e.g., enhance security, enable eldercare or childcare, save energy,                 Our work aims to address the existing limitations of state-of-
+and automate appliances [35]. However, IoT devices also create                   the-art techniques to determine user activities on IoT devices
+new attack vectors. For example, simply knowing what devices                     solely using encrypted network traffic. In particular, we seek
+reside inside a household can pose both security and privacy                     to answer the following questions: RQ1: Can we develop an
+risks. Knowing that there is a smart lock can enable an adversary                activity detection system that is independent of time-window?
+to launch targeted attacks, e.g., exploit unpatched vulnerabilities.             We develop a methodology where we depend on a threshold
+Similarly, knowing that there is a sleep monitoring device inside                of packets rather than time-window for detecting events in any
+the home can reveal the sleeping patterns of residents.                          network traffic. RQ2: How can we generate packet-level signa-
+   While most IoT devices encrypt traffic using standard pro-                    tures for devices with multi-type events without prior knowledge
+tocols such as WPA2, such encryption only hides the payload,                     about a device’s behavior? We analyze how to automatically
+that is, the contents of the exchanged messages or commands.                     construct signatures from devices with multi-type events using
+                                                                                 different features extracted from the network traffic. RQ3: How
+                                                                                 well do the generated signature(s) of a specific device maintain
+   Manuscript received 1 August 2023; revised 28 June 2024; accepted 1 July
+2024. Date of publication 11 July 2024; date of current version 14 March 2025.
+                                                                                 uniqueness and correctness across independent datasets? We
+(Corresponding author: Anupam Das.)                                              evaluate to what extent the signatures of a device are unique and
+   Mohammad Shamim Ahsan, Md. Shariful Islam, and Md. Shohrab Hossain            generalizable across various datasets collected from different
+are with the Department of Computer Science and Engineering, Bangladesh
+University of Engineering and Technology (BUET), Dhaka 1000, Bangladesh
+                                                                                 locations and under different settings.
+(e-mail: shamim19119@gmail.com; sharifulislam08031998@gmail.com; ms                 In summary, we introduce a packet-based signature gener-
+hohrabhossain@cse.buet.ac.bd).                                                   ation and detection system that does not consider a temporal
+   Anupam Das is with the Department of Computer Science, North Carolina
+State University, Raleigh, NC 27695 USA (e-mail: anupam.das@ncsu.edu).
+                                                                                 threshold and can efficiently handle both binary and multi-
+   Digital Object Identifier 10.1109/TDSC.2024.3424299                           type events. Our system overcomes these limitations as we
+
+                         1545-5971 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+AHSAN et al.: DETECTING SMART HOME DEVICE ACTIVITIES USING PACKET-LEVEL SIGNATURES FROM ENCRYPTED TRAFFIC                               1071
+
+
+
+experiment with a diverse range of smart home devices and              directly communicate with the cloud (i.e., Device ↔ Cloud).
+use only the packet length and direction for a specific number         Second, the companion mobile app can exchange information
+of packets, simplifying the detection technique and achieving          with the IoT device directly (i.e., Phone ↔ Device). Lastly, the
+higher recall and precision rates. We make the following contri-       companion mobile app can communicate with the cloud (i.e.,
+butions:                                                               Phone ↔ Cloud). IoT manufacturers typically create compan-
+   r To generate and detect packet-level signatures, we establish      ion mobile apps to configure, control, and interface with their
+     a threshold on the number of packets instead of relying           corresponding devices. Therefore, data from the IoT device can
+     on time windows. Time window-based methods are less               also reach the IoT cloud via the companion app installed on a
+     effective across different datasets as they can be easily         smartphone [36].
+     impacted by traffic rate changes. Our approach is more
+     resilient to temporal fluctuations caused by network jit-
+     ters, as demonstrated through experiments on real-world           C. Related Works
+     datasets.                                                            There is a large body of work in the network measurement
+   r To the best of our knowledge, we have obtained the highest        community that uses traffic analysis to fingerprint applica-
+     average recall and precision of 98−99% and 98−100%, re-           tions [5], [9], [12], identify anomalies [13], [21], attacks [32], or
+     spectively, for any packet-level signature detection system       malware [31]. In recent years, there have been multiple studies
+     to date. We have also open-sourced our codebase.1                 to characterize traffic from IoT devices and develop techniques
+   r Our automated process captures new signatures from ex-            to fingerprint their activities.
+     isting datasets, verified through cross-data validations.            Hafeez et al. propose IoTGUARD [10], a self-adaptive semi-
+     This method systematically generates signatures for both          supervised learning-based classification scheme for real-time
+     binary-type and multi-type events without prior knowledge         activity detection of IoT devices in edge networks. It predicts
+     of the device’s behavior.                                         malicious traffic based on the network activity of the device
+                                                                       generating the traffic. Peek-a-Boo [1] introduces a multi-stage
+            II. BACKGROUND AND RELATED WORK                            privacy attack utilizing machine-learning approaches for detect-
+                                                                       ing and identifying the types of IoT devices, their states, and
+A. Key Components of IoT-Based System
+                                                                       ongoing user activities by only passively sniffing the network
+   A typical IoT system has four key components that work              traffic. IOT-KEEPER [11] detects malicious IoT network activity
+together to provide the desired functionalities. An essential          using a combination of fuzzy k-means clustering and a fuzzy
+component of an IoT system is sensors or end devices that              interpolation scheme for online traffic analysis at the edge gate-
+observe and capture environmental and physical changes. All            ways. HomeSnitch [37] classifies IoT device semantic behavior
+the collected data can be used in various domains and might            such as heartbeat, firmware check, and motion detection using
+have various degrees of complexity. The second key compo-              statistics derived from the entire client-server dialog. PING-
+nent of IoT is connectivity. The collected data needs to be            PONG [28] explores the sequential and directional “ping/pong”
+sent to a cloud-based infrastructure so that it can be processed       behavioral patterns in IoT data communication. Interestingly,
+and analyzed. Based on the scale of the implementations, IoT           the most important feature used in HomeSnitch is the average
+components can be connected over LANs, MANs, or WANs.                  number of bytes sent from the IoT device to the server per
+It can also be connected through Wi-Fi, Bluetooth, telephone           turn, whereas PINGPONG uses packet lengths and directions
+networks like LTE (popularly known as 4 G Network), or                 of individual requests (and replies) to uniquely identify device
+light-based technologies like Li-Fi (where light is used as a          events.
+mode of communication to maintain interconnections) [7]. The              A recent paper by Ren et al. [15] presents a large-scale and
+gathered data from sensors are transmitted over the internet           multidimensional analysis of information exposure from IoT
+using one of these technologies. The analytic component starts         devices and reveals how these devices operate differently due to
+functioning once the data is collected and delivered to the cloud.     different privacy regulations in the US and U.K.. The paper also
+IoT analytics are utilized here to get a sense of the gathered         presents a classifier to infer event types spanning many device
+data and to prevent it from getting corrupted. Last but not least,     categories. Researchers have also used DNS queries to infer
+the main internal key component of IoT is the user interface           IoT devices [23], [30]. They also model traffic characteristics
+which allows humans to interact with IoT devices and systems.          to infer device-level activities. Sivanathan et al. [2], [3] also
+The collected information from the previous components can be          leverage network traffic and uniquely build a multi-layer model
+made available to users either in report format or in the form of      to fingerprint IoT devices. Ahmed et al. [4] present the largest
+some actions like triggering an alarm, notifying them through          to-date study of IoT device fingerprinting in which they consider
+emails or texts, etc.                                                  multiple factors such as fingerprinting across time, region, and
+                                                                       different datasets and under different constraints. Others have
+B. Data Communication Model for IoT                                    utilized data from different layers of the system stack to identify
+  There are three different methods of communication between           IoT devices [18], [34].
+an IoT device and the backend cloud. First, an IoT device can             Limitations of Existing Works: Most event inference tech-
+                                                                       niques rely on machine learning [1], [2], [3], [10], [17] or
+  1 https://github.com/MdShamim097/Packet-based-IoT-Event-Detection/   statistical analysis of traffic time series [6], [11], [15], [37].
+1072                                              IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 2, MARCH/APRIL 2025
+
+
+
+                                                                TABLE I
+                                               COMPARISON WITH RELATED WORK ON IOT DEVICES
+
+
+
+
+These techniques have different limitations as they use different        Moreover, we discover some new signatures that are not only
+approaches. IoTGUARD [10] cannot detect the event of a device;           different from the existing ones but also smaller in size, indicat-
+rather, it can only tell whether an attack is going on or n

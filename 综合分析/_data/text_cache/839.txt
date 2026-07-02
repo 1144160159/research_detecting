@@ -1,0 +1,148 @@
+                      This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS                                                                                                                        1
+
+
+
+
+         Unsupervised Textless Prompt With LLMs for
+         Multivariate Time Series Anomaly Detection
+        Guoxiang Zhong , Jie Liu , Fagui Liu , Member, IEEE, Jun Jiang , Member, IEEE, Bin Wang ,
+                           Fan Zhang , and C. L. Philip Chen , Life Fellow, IEEE
+
+
+   Abstract—Prompting the pre-trained large language models                                                          I. INTRODUCTION
+(LLMs) presents a novel implement to detect multivariate time
+series anomalies, which demonstrates strong potentiality. How-
+ever, adding a textual string or embedding to numerical sequence
+for modeling the prompt has remained elusive due to lacking
+                                                                                       M        ULTIVARIATE time series anomaly detection, one of
+                                                                                                the typical research-intensive points in time series analy-
+                                                                                       sis [1], [2], [3], [4], has been widely applied in various domains,
+of exact word descriptions and prior information about initial                         such as data-center operation [5], space exploration [6], indus-
+time series input. In this article, we design an unsupervised
+textless prompt to fine-tune the LLMs and further propose the                          trial control systems [7], [8], and so on. Traditional deep small
+LLM-based anomaly detector (LLM-AD). The prompt approach                               models, including recurrent neural networks [9], convolution
+renovates the time-stamp masked operation to variate masked                            neural networks [10], graph neural networks [11], [12], and
+operation based on the observation that the root causes vari-                          Transformers [13], [14], reach the performance bottleneck due
+ates about anomalies destroy the normal variates imputation                            to parameter size, although they had sequentially achieved the
+procedure. The unmasked and masked variates are respectively
+confirmed as prompt input and prompt answer, which gets rid                            SOTA results in the past few years. Since ChatGPT1 was first
+of the text-driven prompt template. Minimizing the divergence                          released to the public, we have witnessed the great develop-
+between predicted and actual prompt answers fine-tunes the                             ment of pre-trained large language models (LLMs) in natural
+LLMs which only the feedforward and normalization layers are                           language processing (NLP) [15], [16], [17]. As a result, some
+activated. During the next testing stage, an anomaly alert will                        people suggest that LLMs can also create a brand new land for
+be triggered if the output answer is made far enough away from
+actual masked variates. Extensive experiments compared with                            the time series field in the foreseeable future [18], [19], [20],
+the nine baseline algorithms reveal that our LLM-AD achieves                           [21], [22] because both modeling text and time series data rely
+competitive detection results, boosting the averaged f1-score of                       on considering the contextual dependency relationship.
+four benchmark datasets from 85.28% to 91.62%.                                            The LLMs are pre-trained mainly on the pretext textual
+  Index Terms—Anomaly detection, large language models                                 datasets and then predict the downstream task through fine-
+(LLMs), multivariate time series, prompt learning.                                     tuning with prompt [23]. Fig. 1(a) presents how to attain the
+                                                                                       classification label about initial input data through prompt
+                                                                                       learning. For the case of sentiment analysis in Fig. 1(b), the
+                                                                                       expert searches the prompt template “[ ] because it is [ ].”
+                                                                                       through comprehending the initial input sentence “I like this
+                                                                                       car.”. The prompt input appears as “I like this car because it
+                                                                                       is [ ].”. The pre-trained LLMs answer the empty prompt slot
+                                                                                       (“good”) which can be mapped as the goal label (“++”). The
+                                                                                       reason why this approach is practical is that acquiring semantic
+   Received 6 November 2024; revised 18 August 2025; accepted 25 Decem-
+ber 2025. This work was supported in part by the Major Key Project of PCL              information about text input comes naturally to most humans.
+under Grant PCL2024A05 and Grant PCL2025A11, and Grant PCL2025A13,                     The additional textual string in the prompt template aligns
+in part by the National Natural Science Foundation of China under Grant                with the initial input sentence. However, the numerical input
+U24B20151, in part by Guangdong Major Project of Basic and Applied Basic
+Research under Grant 2019B030302002, and in part by China Postdoctoral                 source data remains a significant impediment, while we can take
+Science Foundation under Grant 2025M771700. (Guoxiang Zhong and Jie                    advantage of LLMs and adapt these models for detecting time
+Liu contributed equally to this work.) (Corresponding authors: Fagui Liu;              series anomalies. The text component of the prompt template
+Jun Jiang.)
+   Guoxiang Zhong, Jun Jiang, Bin Wang, and Fan Zhang are with the                     always relies on the word descriptions about time series. Unlike
+Department of New Networks, Pengcheng Laboratory, Shenzhen 518000,                     the text, time series cannot be directly conveyed by words from
+China (e-mail: zhonggx01@pcl.ac.cn; zhangf@pcl.ac.cn; junjiang@ieee.org;               the semantic view, as shown in Fig. 1(c). Moreover, anomaly
+wangb02@pcl.ac.cn).
+   Jie Liu and C. L. Philip Chen are with the School of Computer Science               detection is always in an unsupervised setting, which eradi-
+and Engineering, South China University of Technology, Guangzhou 510006,               cates the operations with prior knowledge about breaking this
+China (e-mail: seliujie@scut.edu.cn; philip.chen@ieee.org).                            dilemma.
+   Fagui Liu is with the School of Computer Science and Engineering, South
+China University of Technology, Guangzhou 510006, China, and also with                    In this article, we develop the unsupervised textless prompt
+the Department of New Networks, Pengcheng Laboratory, Shenzhen 518000,                 to eliminate these obstacles and then propose LLM-based
+China (e-mail: fgliu@scut.edu.cn).
+   Digital Object Identifier 10.1109/TCSS.2025.3649202                                    1 https://openai.com/blog/chatgpt/
+
+
+
+   2329-924X © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                    This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+2                                                                                                     IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS
+
+
+
+
+Fig. 1.   Constructing the prompt: (a) for fine-tuning the text-based; (b) time-series-based; and (c) downstream tasks.
+
+multivariate time series anomaly detection (LLM-AD). More                              an extra prompt template to form the prompt input. The
+specifically, the masked operation without unsupervised in-                            pre-trained LLMs yield the prompt answer which can be
+formation is renovated to compose the prompt. We mask the                              mapped as the task-specific label [23]. Subsequently, some CV-
+variates rather than time stamp samples, which is referred to                          based tasks also explore prompt learning, which takes a similar
+as the variate-level prompt. The unmasked variates act as the                          operation as NLP and demonstrates its effectiveness. Being
+prefix component, which corresponds to the text-based prefix                           inspired by these empirical researches, the LLMs-driven time
+prompt template. The LLMs fill the masked variates or empty                            series tasks add the prior textual information into numerical
+slots through fine-tuning. Notably, GPT-2, the popular variant                         sequence so as to construct the prompt. On the one hand, the
+of LLMs, is absorbed into our LLM-AD. Only the multihead                               manual discrete prompt purely wraps word sentences into time
+self-attention block has been frozen. The activated feedforward                        series. PromptCast [20] deploys the textual task background,
+and normalization layers lighten the training burden and retain                        which absorbs the past numerical time series as a natural lan-
+acceptable detection accuracy. We annotate the testing time                            guage sentence for forecasting future time stamps. LSTPrompt
+series according to the discrepancy between their answered                             [26] follows the Chain-of-Thought [27] prompt strategy and
+and actual variates. Extensive experiments are conducted on                            adds textual sequence to describe the characteristics of two
+four benchmark datasets. Our LLM-AD acquires an over 6%                                decomposed time series forecasting subtasks. On the other
+improvement of the averaged f1-score.                                                  hand, the automated prompt inclines towards the word em-
+   The main contributions of our LLM-AD algorithm are sum-                             bedding, rather than the explicit and bare word. TEST [28]
+marized as follows.                                                                    optimizes the objective loss function between task actual and
+   1) We introduce an LLM-based anomaly detector, which                                LLMs’ predicted labels to formulate the task-specific embed-
+       further accelerates the application of LLMs for more                            ding space, which aligns the time series token embedding and
+       anomaly detection tasks.                                                        text embedding to construct the learnable prompt. TEMPO [21]
+   2) We design the specialized prompt variety for multivari-                          introduces the prompt pool [29] which is equipped with the
+       ate time series anomaly detection, which facilitates the                        word embedding key-value pairs. The combination of input
+       development of prompt learning theory architecture.                             time series embedding and its top-k values from the prompt
+   3) Our method achieves competitive or superior results                              pool is fed into the LLMs. These two kinds of approaches
+       when compared with the existing state-of-the-art base-                          are not contradicted but complementary to each other. The
+       lines. The Python-based code of LLM-AD will be open-                            word in the discrete prompt emphasizes the prior expert knowl-
+       source at GitHub later.                                                         edge, while the automated prompt requires the network train-
+                                                                                       ing process to acquire the word embedding. Some published
+                          II. RELATED WORK                                             works present a better compromise between both of them.
+                                                                                       For example, Time-LLM [22] denotes the Prompt-as-Prefix
+   Our LLM-AD is mainly concerned with two parts of back-
+                                                                                       encompassing patch reprogramming and dataset description.
+ground work: prompt learning for time series and time series
+                                                                                       The former employs multihead attention to integrate time se-
+anomaly detection. We systematically discuss them to speed up
+                                                                                       ries patch embedding and text prototype, which come from
+the understanding.
+                                                                                       pre-trained word embedding. The latter, with dataset context,
+                                                                                       task instruction, and input statistics, is another part of the in-
+A. Prompt Learning for Time Series                                                     put for the body pre-trained LLMs. GPT4MTS [30] utilizes
+  The early prompt learning in the NLP area is one of the                              the LLMs to collect the prior textual input, which concate-
+most robust tools to bring LLMs into the downstream tasks                              nates the time series embedding after the BERT embedding
+[24], [25]. Specifically, the raw textual input cooperates with                        layer [31].
+                 This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+ZHONG et al.: UNSUPERVISED TEXTLESS PROMPT WITH LLMS FOR MULTIVARIATE TIME SERIES ANOMALY DETECTION                                                                   3
+
+
+
+  Distinct from these prompt-based approaches, our LLM-AD                                                      III. METHODOLOGY
+actually proposes the textless prompt which does not carry any
+                                                                                    We first formulate the under-addressed problem and then
+word information to LLMs.
+                                                                                  develop the corresponding solution. The model structure with
+                                                                                  the proposed solution is revealed at last.
+B. Time Series Anomaly Detection
+   The anomaly detection is a critical but challenging task for                   A. Problem Formulation
+time series analysis. The deep encoder-decoder-based algo-
+rithms using reconstruction theory have become mainstream                            The multivariate time series X has been given. From time
+in the past decade. In detail, the encoder transforms the ini-                    stamp 1 to t, this X 

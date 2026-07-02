@@ -1,0 +1,536 @@
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 2, FEBRUARY 2024 2263
+
+ TMANomaly: Time-Series Mutual Adversarial
+ Networks for Industrial Anomaly Detection
+ Lianming Zhang , Wenji Bai , Xiaowei Xie , Liying Chen , and Pingping Dong
+
+ Abstract—Large-scale sewage treatment plants are one huge amounts of high-dimensional and complex data on a daily
+of the typical Industrial Internet of Things systems, where basis, but they also have to bear some risk [1]. It has become
+the presence of a large number of sensors generates mas- particularly important to secure the critical infrastructure of such
+sive dynamic time series data, and such multivariate time
+series data are usually time-dependent and random. There- IIoT systems against attacks. However, with the large increase
+fore, there is a certain risk when fitting the potential anoma- in data dimensions, it is difficult for monitors to immediately
+lies of real-world data, which will bring great challenges to detect anomalies, which leads to an increased need for automated
+anomaly detection. In this article, we propose a time-series anomaly detection methods.
+mutual adversarial network (TMAN), a novel reconstruction Therefore, anomaly detection of industrial time series data is
+model for anomaly detection on multivariate time series. It
+is based on the idea of adversarial learning and consists gradually becoming a hot issue in the field of IIoT. Anomalies
+of two identical subnetworks. During the training process, generally refer to values or behaviors that do not conform to
+two subnetworks can independently complete the learning the expected pattern. Anomaly detection is the identification of
+of the time distribution of normal samples of industrial anomalies, that is, the detection of anomalous samples that differ
+time series data for mutual adversarial. In the process of significantly from other observations [2]. Anomaly detection is
+detecting, we obtain the residual values of TMAN reconstructed for different time series samples to discriminate usually an unsupervised machine learning task due to the lack of
+anomalies. We combine TMAN and anomaly determination inherently labeled data. Most existing unsupervised methods are
+mechanisms to build a new industrial time series anomaly mostly based on linear approaches [3], and there is less modeling
+detection framework named TMANomaly. In addition, we of nonlinear time series data.
+select the dataset features with a grey correlation algorithm In recent years, with the development of deep learning techto achieve very high performance with a small number
+of features. Experimental results show that our proposed nology, time series anomaly detection methods have made im-
+TMANomaly outperforms five popular anomaly detection provements. In general, existing methods can be roughly divided
+methods and effectively improves the accuracy of industrial into two categories: forecasting-based methods [4], [5], where
+multivariate time series anomaly detection. researchers usually predict future normal conditions based on
+ Index Terms—Anomaly detection, generative adversarial historical data, then calculate the residuals between the acnetworks (GANs), mutlivariate time series, mutual adversar- tual and predicted data, and determine anomalies based on
+ial networks. the relative magnitude of the residuals. Reconstruction-based
+ methods [6], [7], [8], as [7], are classical reconstruction-based
+ I. INTRODUCTION anomaly detection methods, which determine the presence of
+ anomalies by autoencoder (AE) reconstruction errors. Such
+ ITH the vigorous development of the Industrial Internet
+W of Things (IIoT), many industrial systems and data
+centers have installed a large number of sensors to get a large
+ methods aim to learn the low-dimensional feature representation
+ space of a sample and be able to better reconstruct a particular
+ data sample on that space. Reconstruction methods in anomaly
+amount of monitoring data. For such systems with a large detection usually minimize reconstruction errors by forcing the
+number of interconnected sensors, as in water treatment plants, feature representation to learn the significant laws of the data.
+power grids, etc., not only are they under pressure to handle Anomalous samples are difficult to reconstruct anomalies from
+ the resulting laws and therefore have large reconstruction errors.
+ Manuscript received 2 January 2023; revised 20 May 2023; accepted
+13 June 2023. Date of publication 27 June 2023; date of current version With the further optimization and iteration of the deep learn-
+19 January 2024. This work was supported in part by the Hunan Provin- ing model framework, Goodfellow et al. [9] proposed the genercial Natural Science Foundation of China under Grant 2022JJ30398, ative adversarial network (GAN), which was originally used to
+Grant 2022JJ40277, and Grant 2021JJ30455 and in part by the Scientific Research Fund of Hunan Provincial Education Department under generate image data by gaming the generator and discriminator
+Grant 22A0056 and Grant 22B0102. Paper no. TII-23-0015. (Corre- against each other to learn the features of the training image
+sponding author: Pingping Dong.) to generate samples similar to the training image. GAN is
+ The authors are with the College of Information Science and
+Engineering, Hunan Normal University, Changsha 410081, China one of the most promising deep learning models today and is
+(e-mail: zlm@hunnu.edu.cn; oreoB1024@hunnu.edu.cn; xiexiaowei@ widely used in different fields. The application of GAN in the
+hunnu.edu.cn; lychen@hunnu.edu.cn; ppdong@hunnu.edu.cn). direction of anomaly detection [10], [11]. These works have
+ Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TII.2023.3288226. proved that GAN has good performance in the detection of point
+ Digital Object Identifier 10.1109/TII.2023.3288226 anomalies, but there are still few works on GAN applied to
+
+ 1551-3203 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+2264 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 2, FEBRUARY 2024
+
+multidimensional and dynamic time series. Moreover, these detection methods are able to deal with multiple time dependent
+methods do not explain clearly the highly nonlinear time depen- variables simultaneously. Nowadays, most research involves
+dence and complex interactions between variables, nor do they univariate models, and in the traditional anomaly detection
+efficiently extract temporal information from industrial time framework, anomaly detection is divided into an estimation
+series data, and they still have room for improvement. Also, as phase, where a specific method is used to predict the value of
+labeling data in an automated industrial production environment a time-stamped variable, and then this value is compared to a
+requires a degree of labor cost, it is significant how a small threshold value to detect anomalies. Such as the autoregressive
+amount of data are used to improve model performance. integrated moving average (ARIMA) model [12] was to cap-
+ To address the abovementioned challenges, we propose a new ture the linear relationship between future and historical values
+multivariate time series anomaly detection strategy framework to model the time series for its anomaly detection. However,
+named TMANomaly, and model the complex multivariate cor- ARIMA was only for the processing of univariate and relatively
+relations between large-scale sensor data streams to achieve smooth time series data and cannot handle complex time series
+effective extraction of industrial time series data information data.
+and subsequently complete the anomaly detection of IIoT data. As deep learning has developed, various neural networks have
+In TMANomaly, we use a time series mutual adversarial network been applied to time series anomaly detection. DeepAnT [13]
+(TMAN) to detect anomalies based on reconstructing industrial used a convolutional neural network to model time series pretime series. TMAN extracts industrial time series information diction to improve prediction performance for periodic and
+by constructing two identical subnetworks composed of long seasonal time series, and defines anomalies for their detection
+short-term memory (LSTM). Furthermore, unlike the traditional using the square root of the error between the predicted and
+GAN method with fixed subnetwork role, the roles of the two true values. LSTM networks are also widely used for timesubnetworks of TMAN can be swapped with each other as series-based anomaly detection, such as the LSTM-VAE [14]
+each other’s reconstructors or discriminators, which allows the used LSTM networks to reconstruct industrial time series data
+subnetworks to obtain better learning capability and thus obtain in a reconstructed manner by fusing signals and reconstructing
+better anomaly detection performance than that of the traditional their expected distributions for anomaly detection. However,
+GAN-based methods. these methods often fail to perform well when faced with the
+ In this article, we use TMAN to learn the distribution of indus- processing of high-dimensional and complex dynamic industrial
+trial high-dimensional dynamic time series data while detecting time series data, which indicates that their work in IIoT has
+anomalies based on reconstruction and recognition losses. The certain defects.
+main contributions of this article are as follows. In the IIoT environment, most of the inputs are multivariate
+ 1) We propose a novel mutual adversarial multivariate time series with some correlation, and these IIoT data need to
+ time series anomaly detection strategy framework named be continuously processed for statistical analysis and anomaly
+ TMANomaly, which can model complex multivariate detection. For multivariate time series, many studies begin to
+ correlations between multidimensional industrial time learn the correlation between multiple variables to enhance the
+ series data streams. performance of anomaly detection methods. Hundman et al. [5]
+ 2) In TMANomaly, we propose a TMAN, which consists used a dynamic unsupervised method to detect anomalies in
+ of two identical subnetworks that can exchange roles telemetry data returned by spacecraft, the method predicts only
+ as reconstructors or discriminators, performing mutual one step backwards and only one dimension, while collecting the
+ adversarial training to obtain better reconstructive capa- errors at each step to form an error vector and doing exponential
+ bilities than traditional methods. smoothing of the error vector to obtain a threshold value based on
+ 3) Through performance evaluations of the proposed the smoothed data. Wu et al. [4] used LSTM networks to detect
+ TMANomaly, this work shows that the scheme can suc- anomalies in industrial data by getting prediction errors from
+ cessfully perform reliable and robust learning to process Gaussian Bayesian models. These abovementioned methods are
+ IIoT time series data and perform anomaly detection. able to accomplish the detection of anomalies in industrial data,
+ The rest of this article is organized as follows. In Section II, but there is still need for improvement in terms of performance,
+we give the related review on anomaly detection. Section III such as [5] has failed to solve the correlation, dependency
+describes our proposed TMANomaly framework and anomaly problems inherent in telemetry.
+evaluation function. Section IV describes SWaT, WADI, and
+experimental setup, and evaluates the detection performance of
+TMANomaly. Finally, Section V concludes this article. B. Anomaly Detection in GAN
+ As an unsupervised learning algorithm, GAN has a good
+ II. RELATED WORK performance in anomaly detection. Schlegl et al. [15] proposed AnoGAN, which was the first attempt to use GAN for
+A. Time Series Anomaly Detection
+ anomaly detection. AnoGAN used DCGAN to unsupervisedly
+ Time series anomaly detection is generally divided into learn to train distributions from normal samples. The test samunivariate time series anomaly detection and multivariate ples was then feed in and the loss function is defined for
+time series anomaly detection. Univariate detection methods multiple backpropagation iterations to obtain mapping results
+consider just a single time dependent variable, while multivariate from the image to the potential space using residual losses.
+ZHANG et al.: TMANOMALY: TIME-SERIES MUTUAL ADVERSARIAL NETWORKS FOR INDUSTRIAL ANOMALY DETECTION 2265
+
+However, it also suffers from a time efficiency assessment. capability of the decoder in GAN-based frameworks for anomaly
+Therefore, f-AnoGAN [16] was proposed based on AnoGAN, detection, these methods typically do not impose any constraints
+which was optimized to improve the performance of anomaly on the distribution of the encoded latent variables used to generdetection by learning the representation of training data through ate reconstructed samples. Consequently, the resulting models
+WGAN [17]. Zenati et al. [18] proposed a bidirectional GAN- lack the ability to generate new samples that conform to the
+based adversarial learning anomaly detection method, also used distribution of the training data, and the reconstruction loss often
+reconstruction loss error to determine whether data samples are dominates the overall loss function. Furthermore, the end-to-end
+anomalous, and the method adds potential space to the image adversarial training strategy employed in these models may not
+space based on AnoGAN, allowing the network to update faster. be optimal for fitting the underlying data distribution, as it does
+GANomaly [19] modified the GAN network structure and loss not explicitly account for the distributional properties of the data.
+function to constrain the potential space. These methods are Therefore, we propose a TMAN with two identical subnetall anomaly detection for point anomalies, but are deficient for works that can balance the performance of the subnetworks.
+temporal anomaly detection and cannot effectively learn the Each subnetwork can act as a reconstruction subnetwork and a
+distribution of temporal data. discriminator subnetwork. The subnetworks can swap their roles
+ during training, which can alleviate the problem of underperformance due to imbalanced subnetworks in traditional adversarial
+C. Time Series Anomaly Detection in GAN learning. We apply TMAN to the proposed time series anomaly
+ In recent years, researchers have been trying to combine GAN detection framework TMANonaly.
+with multivariate time series and anomaly detection to achieve
+a crossover of multistream. At the earliest, Li et al. [8] proposed III. PROPOSED TMANOMALY
+MAD-GAN, which is the first attempt of GAN for time series
+anomaly detection. In the training module, detection module, A. Problem Definition
+the underlying framework of GAN consists of LSTM-RNN In this work, we focus on multivariate time series anomaly
+to achieve capturing the temporal correlation of time series detection. Due to the effect of the high imbalance in industrial
+distribution for the determination of anomalies. time series data, our training data are derived from true normal
+ After this, many studies have been done based on [8], such samples (without anomalies) for S sensors with brakes and
+as FID-GAN [20], TAnoGAN [21], TadGAN [22], and they anomaly detection is performed by reconstructing the error on
+were all unsupervised anomaly detection methods based on test data with anomalous data. The time granularity of these
+GAN. The data are modeled as multivariate time series, and data is Ttrain . We define the values of these datasets as Dtrain =
+ (1) (T ) (t)
+LSTM-RNN is used as a generator and discriminator to capture [Dtrain , . . . , Dtraintrain ], where Dtrain ∈ Rs denotes the timing data
+the correlation of the time series for anomaly score determination at a timestamp of Ttrain , and S represents the quantity value of
+in a reconstructed manner. The difference is that FID-GAN was different sensors, i.e., the feature number. The test data come
+combined with fog computing to train encoders that accelerate from same S sensors with a time scale of Ttest . The test data
+ (1) (T ) (t)
+the reconstruction loss computation to make it better, TAnoGAN are represented as Dtest = [Dtest , . . . , Dtesttest ], where Dtest ∈ Rs ,
+used a different structure to achieve processing of smaller and it has a specific window size w.
+datasets, and TadGAN does not use the original loss function. Our goal is to detect anomalies in industrial time series data,
+Yoon et al. [23] proposed TimeGAN, combines unsupervised so given a multivariate sequence of consecutive w time steps, our
+GAN algorithms with regression principles for joint training to output is based on a reconstructed output vector, i.e., ŷ ∈ Rn ,
+generate time series that retain time dynamics. Kong et al. [11] where y (t) ∈ {0, 1}, which indicates the presence or absence of
+proposed an AMBi-GAN based on bidirectional LSTM and anomalies at timestamp t. That is, we obtain the final anomaly
+attention mechanism, which uses a bidirectional LSTM network result by selecting different thresholds for the anomaly scores at
+with attention mechanism as its generator and discriminator for each timestamp returned.
+anomaly detection by reconstruction loss and generation loss For better understanding, we also provide some basic related
+reconstruction error. concepts as follows.
+ All these methods have good performance in time series 1) GAN: The original GAN is based on the ideas of game
+anomaly detection. However, the performance of the discrim- theory and is an unsupervised approach. It uses a generator G
+inator and generator of traditional GAN is difficult to balance and a discriminator D for adversarial training. The generator G
+during training, which leads to the GAN remaining difficult to is used to generate fake data, i.e., it receives an input of a random
+train. In training reconstructed neural networks using traditional vector z, which follows a particular distribution Pz (z), such as
+adversarial training methods, the imbalance of the subnetworks a Gaussian distribution, and subsequently outputs a generated
+may cause the model to enter a local optimum solution, which sample to the discriminator, which classifies it in this way and
+results in the combination of GAN and LSTM subnetworks ends when it reaches convergence, and its optimization objective
+not working optimally. Especially, when the input is high- function can be expressed as
+dimensional, dynamic and complex IIoT data, these methods are
+more difficult to handle the extraction of temporal information, min max V (DG) = Ex∼pdt (x) [log D(x)]
+ G D
+limiting the performance of the model. Although existing works
+have utilized adversarial training to enhance the reconstruction + Ez∼pz (z) [log(1 − D(G(z))). (1)
+2266 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 2, FEBRUARY 2024
+
+ timestamp t we set the active window in such a way that it is
+ neighbor-fetching and does not overlap, so we define the input
+ model as follows:
+  
+ x(t) = x(t−w) , x(t−w+1) , . . . , x(t−1) (2)
+
+ where, w is the active window size.
+ The LSTM network is used to allow both subnetworks to learn
+ the distribution of multivariate time series. From the abovementioned explanatory note on the LSTM model, it is clear that after
+ the LSTM receives the input x(t) , the output ω at timestamp
+ t is obtained through the processing of the input gate Ft , the
+ forgetting gate It and the output gate Ot and the storage unit S̄t .
+ The process is formulated as follows:
+  
+Fig. 1. Overview of the framework of TMANomaly. ω = h x(t) ; κe (3)
+
+ where, h(∗) represents the encoding function of the LSTM
+ 2) LSTM: LSTM is a special form of RNN that can solve network (Ft , It , Ot, , S̄t ) and κe represents the different sets of
+the gradient vanishing problem that RNNs may face, and is a parameters.
+widely used method in various fields. It consists of input gate Ft , To allow TRecAE to perform adversarial training while obforgetting gate It and output gate Ot as well as the storage unit taining our reconstruction error, we plugged in a fully connected
+S̄t to protect and control the information. In a traditional LSTM layer after the LSTM, which received the output value ω from
+network, the input gate is used to update the information and the LSTM processing and fed it to two other fully connected
+additionally to pass the hidden information from the previous (FC) layers, which is mapped and then fed into the other two
+ 
+layer to the tanh function, the output gate is used to determine (t)
+ FC layers to obtain our reconstruction error xi . The process is
+the value of the next hidden state, and the forgetting gate is expressed as follows:
+used to control how many input values the cell state has after 
+ (t)
+moment t. xi = T rec1 (ω) . (4)
+ Likewise, the other two FC layers receive w and are able to
+B. TMANomaly Framework 
+ output our discriminant score c (t) , the process is formulated as
+ The proposed TMANomaly framework consists of data pre- follows:
+processing, reconstruction network, and anomaly determination 
+ c (t) = T rec2 (ω) . (5)
+mechanism, as shown in Fig. 1. First, the original dataset is
+preprocessed and normal samples are extracted as training data, Equations (2)–(5) previously form the entire TRecAE subnetafter which the training data are modeled using the reconstruc- work. Similar to (1), our reconstruction network is constructed
+tion network. Then, the test data are input into the reconstruction with TRecAE1 to obtain the reconstructed input. In the classic
+network and the reconstruction loss of the samples is obtained GAN, there is also a discriminant network to discriminate the
+after reconstruction. Finally, anomalies are determined from data input by the generator, so we set TRecAE2 as the discrimreconstruction losses by the anomaly determination mechanism. inant network.
+ 1) TMAN: In IIoT environments, data from sensors and Throughout the training process, the reconstruction network
+brakes often interact with each other, and each sensor can be and the discriminator network play a max-minimization game,
+treated as a specific feature whose anomalies are then predicted i.e., the GR1 reconstruction network and the DR2 discriminator
+by training on the features. We design TMAN to enable two network fight each other’s game, one discriminates and the
+identical subnetworks capable of automatically learning distri- other generates reconstruction data, and stops after reaching
+butions of multivariate time-series data to fight each other, thus maximum balance. First, we train the discriminative network
+allowing both to reach equilibrium. DR2 , set the loss function to cross-entropy loss function, and
+ The proposed TMAN is an anomaly detection method based finally obtain the loss LtD as shown in the following:
+on reconstruction, i.e., the industrial multivariate time series data
+ 1   
+ m
+ (t)
+are captured by a subnetwork TRecAE consisting of an LSTM, LtD = log DR2 xi
+and TMAN then outputs a new reconstruction sequence based on m i
+the variability of the sequence from the input sequence at each    
+ (t)
+step length to obtain the reconstruction error, after which the + log 1 − DR2 GR1 xi (6)
+anomaly or normality of the step length data in the sequence is (t)
+determined. Fig. 2 further details the overall model architecture. where, m is the sample size of minibatch training data xi , and
+ (t)
+ As shown in Fig. 2, first, TRecAE is given the input data GR1 (xi ) denotes the reconstructed data obtained.
+ s
+x(t) ∈ Dtrain . In order to obtain the distribution of the multivari- After updating the parameters, we keep the network parameter
+ate time series data, our subnetwork consists of an LSTM, so at values fixed and train the reconstructed network GR1 . At this
+ZHANG et al.: TMANOMALY: TIME-SERIES MUTUAL ADVERSARIAL NETWORKS FOR INDUSTRIAL ANOMALY DETECTION 2267
+
+Fig. 2. Outline of TMAN.
+
+stage, we still use the cross-entropy loss function, which also
+gives us the loss value Ltg for this part of the training
+
+ 1     
+ m
+ (t)
+ LtG = log 1 − DR2 GR1 xi . (7)
+ m i
+
+After training these two subnetworks, the reconstructed network
+can obtain reconstruction capability, but it is still some distance
+away from the goal we aim to achieve. Our proposed TMAN,
+which uses the TRecAE as the reconstruction model, takes the
+input real multivariate time series data x(t) as input instead of
+the random vector z. Usually, we discriminate the reconstruction data x(t) based on the input data x(t) . However, in the
+abovementioned training process, we only considered the aspect
+that the output is real/fake, and did not consider other details,
+which made our model not achieve the best results in anomaly
+detection, so we use x(t) and x(t) feature matching loss Ltrec
+and LtG for joint training GR1 reconstructs the network. Ltrec is
+defined as follows:
+ 1   (t)  2
+ m
+ t (t)
+ Lrec = xi − GR1 xi . (8)
+ m i
+
+Finally, we use the weights shown in (9) and Lttotal to set the total
+loss for backpropagation to update GR1
+ Fig. 3. Training process of TMAN. (a) Model architecture: TRecAE1 as
+ Lttotal = β1 Ltrec + β2 LtG (9) the reconstruction network, TRecAE2 as the discriminant network. (b)
+ Model architecture: TRecAE2 as the reconstruction network, TRecAE1
+where, β1 , β2 are the two loss weighting parameters, respec- as the discriminant network.
+tively.
+ The abovementioned process of performing one iteration for
+two subnetworks is only a part of the whole adversarial learning model gets not just a local optimum, but a better reconstruction
+process. In the whole adversarial learning process, there may capability.
+be an imbalance situation where the discriminator is weak and 2) Mechanism for Determining Abnormal Scores: During
+the generator is strong, and how to balance the two has been the testing process, in order to obtain the anomaly scores for
+the direction of many scholars’ efforts. We choose the mutual each time scale, we have obtained two subnetworks that can
+adversarial approach to alleviate this imbalance. As shown in reconstruct the data independently through time series mutual
+Fig. 2, TRecAE is designed to have a reconstruction output, adversarial training. During the testing process, we use the reand a discriminative category output. In the training process, constructed output of TRecAE for anomaly detection. Therefore,
+two TRecAEs can form a mutual adversarial model, and both we compose the reconstructed outputs of the two subnetworks
+subnetworks can act as each other’s reconstruction network or as the final output xj , as shown in the following:
+discriminative network, as shown in Fig. 3. If there is unbalance,
+the roles of our two subnetworks are switched so that the whole xj = αTRecAE1 (xj ) + (1 − α)TRecAE2 (xj ) (10)
+2268 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 2, FEBRUARY 2024
+
+ Algorithm 1: TMANomaly.
+Input: training set, test set.
+Output: The anomaly sample xj .
+ 1: for each epoch do
+ 2: Initialization: Set TRecAE1 as G, TRecAE2 as D.
+ 3: for minibatch data from training set do
+ (t)
+ 4: Sampling {xi }m i=1 from minibatch data.
+ 5: Get the reconstruction sample from G:
+ (t) (t)
+ xi = G(xi ).
+ 6: Use (6) to update discriminator D.
+ 7: Use (9) to update reconstructor G.
+ 8: Swap the roles of TRecAE1 and TRecAE2 .
+ 9: Execute Lines 5 − 7 again.
+ 10: end for Fig. 4. Grey correlation degree of sensors on WADI.
+ 11: end for
+ (t)
+ 12: Sampling {xj }nj=1 from test set.
+ dataset was run for 11 days (seven days in normal operation and
+ 13: Get the final output xj of TMAN by (10).
+ four consecutive days in attack) and collected all values obtained
+ 14: Calculate the anomaly scores A(xj ) by (11).
+ from 51 sensors and actuators, labeling the data according to
+ 15: for j = 1, 2, . . ., n do
+ normal and abnormal behavior.
+ 16: if sj > threshold then
+ 2) WADI: WADI [25] is also a safe water treatment dataset,
+ 17: xj is abnormal sample.
+ but it is an extension of the SWAT dataset, which consists
+ 18: end if
+ of three processes—water treatment, storage, and distribution
+ 19: end for
+ network—to form a complete, realistic water treatment process.
+ 20: return xj
+ The dataset was run continuously for 16 days (14 days in normal
+ operation and two days under attack) and data from 123 sensors
+ and actuators were collected.
+where, α ⊆ [0, 1], is the weight parameter that regulates the con-
+ 3) Data Preprocessing: During data preprocessing, we
+tribution of the outputs of the two reconstructed self-encoders
+ transform each record’s label by replacing it with a [0,1] numeric
+to the final output data, and xj is the data at a certain timestamp
+ label, while having some features encoded using one-hot and
+t in the Dtest .
+ mapping other numeric features between [0,1] by using normal-
+ Then, similar to the loss objective, we calculate the residual
+ ization.
+value between xj and xj using the loss function L1 and calculate
+the deviation level score as the anomaly score for the data at
+timestamp t. A(xj ) is defined as follows: B. Feature Selection
+
+ A(xj ) = |xj − xj |. (11) Feature selection is a key part of the machine learning task.
+ Feature selection allows selecting features that are important
+Finally, we use the obtained anomaly scores normalized to get to the model and can reduce the dimensionality of the training
+the final output vector ŷ, and if ŷ exceeds a fixed threshold, we data and speed up the training of the model, while also reducmark the timestamp t as an anomaly. ing model complexity and avoiding overfitting. Grey relation
+ The entire training and detection process of TMANomaly is analysis (GRA) [26] is a multifactor statistical analysis method
+shown in Algorithm 1. for feature extraction of interacting factors in a system. In this
+ article, features are selected for SWaT and WADI, which are
+ IV. EXPERIMENTAL RESULTS AND ANALYSIS derived from real-world water treatment plants and feature correlated and interacting sensor and brake values. Therefore, the
+A. Datasets and Preprocessing
+ GRA algorithm is chosen for feature selection of our industrial
+ To evaluate our proposed TMANomaly, we chose two differ- time series dataset to select the features with the highest impact
+ent datasets to train and detect industrial time series anomalies, on the whole system, in order to achieve optimal experimental
+including SWaT, WADI. Prior to the experiments, we prepro- results with a small set of features. For SWaT, we apply the GRA
+cessed the datasets. algorithm to obtain its 30 features with the highest correlation,
+ 1) SWaT: SWaT [24], from the Water Treatment Testbed as shown in Fig. 4. These 30 features were chosen as the new
+coordinated by the Singapore Public Utilities Board, is a real- features for the dataset. For WADI, after the same process, we
+world sensor dataset from a water treatment physical testbed obtain 35 features with the highest correlation, as shown in
+system that records real anomalies, which integrates digital, Fig. 5. We chose 36 features as the new features for the dataset.
+physical in order to serve as a control and monitoring system, and A summary table of statistical information from our processing
+many large-scale plants have applications for such systems. The of the two datasets in Table I.
+ZHANG et al.: TMANOMALY: TIME-SERIES MUTUAL ADVERSARIAL NETWORKS FOR INDUSTRIAL ANOMALY DETECTION 2269
+
+ TABLE II
+ EXPERIMENTAL RESULTS ON SWAT AND WADI
+
+Fig. 5. Grey correlation degree of sensors on SWaT.
+
+ TABLE I
+ STATISTICAL SUMMARY OF DATASETS: SWAT AND WADI
+
+C. Baseline
+ To evaluate the performance of TMANomaly, we compare the
+performance of it with that of five different anomaly detection
+methods as follows. 2) Experimental Settings: We perform all experiments on
+ 1) LSTM-VAE [14]: It replaces feedforward networks with a computer equipped with an 11th Gen Intel (R) Core (TM)
+ self-encoders using LSTM, while using anomaly scores i7-11800H and 16 G RAM. The development framework was
+ to obtain reconstruction errors. Pytorch 1.7 with CUDA 11.6, and an NVIDIA GTX3060 GPU
+ 2) MAD-GAN [8]: Anomaly scores are calculated based was used for training acceleration, where the learning rate was
+ on a reconstruction approach using GAN networks and set to 0.000005, the batch size was set to 64, and the loss
+ the temporal correlation of the time series distribution is value of the network, such as β1 = 50, β2 = 1. The neural
+ captured using LSTM-RNN. network parameters were initialized in training and testing using
+ 3) THOC [27]: It is a model for anomaly detection with one- a random seed 777. We trained the model for up to 1000 periods,
+ class model of time series, using an expansive recurrent while setting the sliding window size w to 30 for both WADI
+ neural network to capture temporal dynamics. and SWaT.
+ 4) GDN [28]: It is proposed that aims to learn relationships
+ between sensors in the form of graphs, and then recognize E. Performance Evaluation
+ and interpret the deviations of the learned patterns.
+ 5) GTA [29]: It is a combinable microconnectivity learning We obtain the best Prec scores (labeled*), F-1 (labeled**),
+ strategy combined with information propagation convo- and Rec scores (labeled***), and show this and compare all
+ lution that automatically learns the graph structure of baselines separately across the board. The results are shown in
+ relationships between sensors. Table II.
+ In Figs. 6 and 7, TMANomaly largely outperforms the
+ baseline on both SWaT and WADI, and both have high Prec
+D. Indicators and Experimental Settings
+ of 99.75% and 95.60%, respectively. In terms of F-1 scores,
+ 1) Evaluation Indicators: We use precision (Prec), recall TMANomaly outperforms the best baseline by 14.28% on
+(Rec), and F1-scores (F1) to evaluate the performance of WADI and is on par with the best baseline (GTA) on SWaT. For
+TMANomaly and baseline model. Prec = TP+FP TP
+ , Rec = TP+FN
+ TP
+ , recall, TMAN is on par with the best baseline on WADI, while
+F 1 = Precision+Recall , and TP, TN, FP, FN are the numbers of
+ 2×Precision×Recall
+ on SWaT the recall is only 0.05% worse than the best baseline.
+true positives, true negatives, false positives, and false negatives. WADI is more unbalanced than SWaT. For Prec, TMANomaly
+Given that datasets are extremely unbalanced, we chose these un- also performs well on SWaT, while TMANomaly performs
+balanced indicators so that we could rationalize their selection. well for recall, F-1 scores and achieves a balanced effect while
+2270 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 2, FEBRUARY 2024
+
+ TABLE IV
+ RESULTS OF ABLATION FEATURE SELECTING EXPERIMENTS
+ ON WADI AND SWAT
+
+ original features of the dataset intact, and then perform anomaly
+ detection, Also, we compare our proposed TMAN as a baseline
+ model. The results are shown in Table IV.
+ From the abovementioned ablation experiments, we note the
+ following observations.
+Fig. 6. Performance of the models on WADI. 1) There is a gap between TMAN and time-series methods
+ that do not use mutual adversarial networks, which plays
+ an important role in our mutual adversarial network timeseries modeling in dealing with high-dimensional timeseries anomaly detection.
+ 2) The feature selection method allows us to optimize the
+ performance of TMANomaly, and with fewer features
+ than other baseline methods, we can effectively reduce
+ the cost of manually labeling data.
+ These findings show that each component of TMANomaly is
+ important and makes the framework play an important role in
+ time series anomaly detection.
+
+ V. CONCLUSION
+Fig. 7. Performance of the models on SWaT.
+ In this article, we propose TMANomaly, a mutual adversar-
+ TABLE III ial network-based anomaly detection framework for industrial
+ RESULTS OF ABLATION MUTUAL ADVERSARIAL EXPERIMENTS time series, which uses LSTM as a subnetwork in the mu-
+ ON WADI AND SWAT
+ tual adversarial network to learn the distribution correlation
+ of time series data, and the subnetwork can independently
+ obtain reconstruction errors to compute reconstruction losses
+ for anomaly determination of industrial time series. We also
+ apply the GRA algorithm to the feature selection of SWaT and
+ WADI, which can capture the anomalies of industrial time series
+ensuring very high accuracy, which is important in practical with fewer features. Experiments on two IIoT datasets, such
+applications and can represent a strong effectiveness even in as WADI, SWaT, show that TMANomaly outperforms other
+unbalanced and high-dimensional attack scenarios. advanced studies in terms of accuracy, F-1 score, and recall rate.
+ Next, we plan to optimize the model structure of the proposed
+F. Ablation Experiment TMANomaly to further improve the performance of industrial
+ anomaly detection.
+ In order to evaluate the necessity of our proposed
+TMANomaly, we will perform ablation experiments on
+ REFERENCES
+TMANomaly.
+ 1) Ablation of Mutual Adversarial Training: In TMAN, we [1] Y. Zhang, Z. Dong, W. Kong, and K. Meng, “A composite anomaly
+ detection system for data-driven power plant condition monitoring,” IEEE
+use two TRecAEs to perform mutual adversaries to reach Trans. Ind. Informat., vol. 16, no. 7, pp. 4390–4402, Jul. 2020.
+the final balance. To evaluate the necessity of these components, [2] M. Ahmed, A. N. Mahmood, and M. R. Islam, “A survey of anomaly
+we will exclude them. We remove the adversarial component of detection techniques infinancial domain,” Future Gener. Comput. Syst.,
+ vol. 55, pp. 278–288, 2016, doi: 10.1016/j.future.2015.01.001.
+the mutual adversarial and change the original two TRecAEs [3] S. Li and J. Wen, “A model-based fault detection and diagnostic methodinto a single TRecAE. Also, we compare our proposed TMAN ology based on PCA method and wavelet transform,” Energy Buildings,
+(i.e., the case of using two TRecAEs) as a baseline model. The vol. 68, pp. 63–71, Jan. 2014.
+ [4] D. Wu, Z. Jiang, X. Xie, X. Wei, W. Yu, and R. Li, “LSTM learning
+results are shown in Table III. with Bayesian and Gaussian processing for anomaly detection in industrial
+ 2) Ablation of Selecting Features: In TMANomaly, we per- IoT,” IEEE Trans. Ind. Informat., vol. 16, no. 8, pp. 5244–5253, Aug. 2020.
+form feature selection. To evaluate it, we perform ablation [5] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Soderstrom,
+ “Detecting spacecraft anomalies using LSTMs and nonparametric dyexperiments on SWaT and WADI for the feature selection part namic thresholding,” in Proc. Int. Conf. Knowl. Discov. Data Mining,
+as well. We remove the feature selection part, leaving all the London, U.K., 2018, pp. 387–395.
+ZHANG et al.: TMANOMALY: TIME-SERIES MUTUAL ADVERSARIAL NETWORKS FOR INDUSTRIAL ANOMALY DETECTION 2271
+
+ [6] L. Zhang, X. Xie, K. Xiao, W. Bai, K. Liu, and P. Dong, “MANomaly: Lianming Zhang received the B.S. in physical
+ Mutual adversarial networks for semi-supervised anomaly detection,” Inf. education and M.S. degree in curriculum and
+ Sci., vol. 611, pp. 65–80, Sep. 2022. instruction in physics from Hunan Normal Uni-
+ [7] C. C. Aggarwal, “An introduction to outlier analysis,” in Outlier Analysis. versity, Changsha, China, in 1997 and 2000,
+ New York, NY, USA: Springer, 2013, pp. 1–34. respectively, and the Ph.D. degree in computer
+ [8] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, and S. K. Ng, “MAD-GAN: Multi- applied technology from Central South Univervariate anomaly detection for time series data with generative adversarial sity, Changsha, China, in 2006.
+ networks,” in Proc. Int. Conf. Artif. Neural Netw., Munich, Germany, 2019, He is currently a Professor with Hunan Norpp. 703–716. mal University. His research interests include In-
+ [9] I. Goodfellow et al., “Generative adversarial networks,” Commun. ACM., ternet of Things, intelligent network, edge comvol. 63, no. 11, pp. 139–144, Oct. 2020. puting, and machine learning.
+[10] Z. Xiong, Z. Cai, Q. Han, A. Alrawais, and W. Li, “ADGAN: Protect your
+ location privacy in camera data of auto-driving vehicles,” IEEE Trans. Ind.
+ Informat., vol. 17, no. 9, pp. 6200–6210, Sep. 2021.
+[11] F. Kong, J. Li, B. Jiang, H. Wang, and H. Song, “Integrated generative
+ model for industrial anomaly detection via bidirectional LSTM and attention mechanism,” IEEE Trans. Ind. Informat., vol. 19, no. 1, pp. 541–550, Wenji Bai received the B.S. degree in com-
+ Jan. 2023. puter science and technology from the Col-
+[12] G. P. Zhang, “Time series forecasting using a hybrid ARIMA and neural lege of Big Data and Intelligent Engineernetwork model,” Neurocomputing, vol. 50. pp. 159–175, Jan. 2003. ing, Yangtze Normal University, Chongqing,
+[13] M. Munir, S. A. Siddiqui, A. Dengel, and S. Ahmed, “DeepAnT: A deep China, in 2020. She is currently working tolearning approach for unsupervised anomaly detection in time series,” ward the M.S. degree in computer science
+ IEEE Access, vol. 7, pp. 1991–2005, 2019. and technology with the College of Information
+[14] D. Park, Y. Hoshi, and C. C. Kemp, “A multimodal anomaly detector Science and Engineering, Hunan Normal Unifor robot-assisted feeding using an LSTM-based variational autoencoder,” versity, Changsha, China.
+ IEEE Robot. Autom. Lett., vol. 3, no. 3, pp. 1544–1551, Jul. 2018. Her research interests include anomaly de-
+[15] T. Schlegl, P. Seebock, and S. M. Waldstein, “Unsupervised anomaly tection and deep learning.
+ detection with generative adversarial networks to guide marker discovery,”
+ in Proc. Int. Conf. Inf. Process. Med. Imag., Boone, NC, USA, 2017,
+ pp. 146–157.
+[16] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and U. Schmidt-Erfurth,
+ “f-AnoGAN: Fast unsupervised anomaly detection with generative adversarial networks,” Med. Image Anal., vol. 54, pp. 30–44, May 2019. Xiaowei Xie received the B.S. degree in re-
+[17] M. Arjovsky, S. Chintala, and L. Bottou, “Wasserstein generative adver- source surveying engineering from the College
+ sarial networks,” in Proc. Int. Conf. Mach. Learn., 2017, pp. 214–223. of Information and Computer, Taiyuan Univer-
+[18] H. Zenati, M. Romain, C. S. Foo, B. Lecouat, and V. R. Chandrasekhar, sity of Technology, Taiyuan, China, in 2020 and
+ “Adversarially learned anomaly detection,” in Proc. IEEE Int. Conf. Data the M.S. degree in computer science and tech-
+ Mining, Singapore, 2018, pp. 727–736. nology from Hunan Normal University, Chang-
+[19] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “GANomaly: Semi- sha, China, in 2023. He is currently working
+ supervise anomaly detection via adversarial training,” in Proc. Asian Conf. toward the Ph.D. degree in computer science
+ Comput. Vis., 2018, pp. 622–637. and technology with the College of Information
+[20] P. Freitas de Araujo-Filho, G. Kaddoum, D. R. Campelo, A. G. Santos, Science and Engineering, Central South Univer-
+ D. Macêdo, and C. Zanchettin, “Intrusion detection for cyber-physical sity, Changsha, China.
+ systems using generative adversarial networks in fog environment,” IEEE His research interests include anomaly detection and deep learning.
+ Internet Things J., vol. 8, no. 8, pp. 6247–6256, Apr. 2021.
+[21] M. A. Bashar and R. Nayak, “TAnoGAN: Time series anomaly detection
+ with generative adversarial networks,” in Proc. IEEE Symp. Ser. Comput. Liying Chen received the B.S. degree in infor-
+ Intell., 2020, pp. 1778–1785. mation and computing sciences from the Col-
+[22] A. Geiger, D. Liu, S. Alnegheimish, A. Cuesta-Infante, and K. Veera- lege of Information, Shanghai Ocean University,
+ machaneni, “TadGAN: Time series anomaly detection using generative Shanghai, China, in 2022. She is currently workadversarial networks,” in Proc. IEEE Int. Conf. BigData, 2020, pp. 33–43. ing toward the M.S. degree in computer science
+[23] J. Yoon, D. Jarrett, and M. Van der Schaar, “Time-series generative and technology with the College of Information
+ adversarial networks,” in Proc. Int. Conf. Adv. Neural Inf. Process. Syst., Science and Engineering, Hunan Normal Uni-
+ 2019, pp. 5508–5518. versity, Changsha, China.
+[24] A. P. Mathur and N. O. Tippenhauer, “SWaT: A water treatment testbed Her research interests include datacenter
+ for research and training on ICS security,” in Proc. IEEE Int. Workshop transport, network performance analysis, and
+ Cyber-Phys. Syst. Smart Water Netw., 2016, pp. 31–36. protocol optimization and protocol design in
+[25] C. M. Ahmed, V. R. Palleti, and A. P. Mathur, “WADI: A water distribution RDMA.
+ testbed for research in the design of secure cyber physical systems,” in
+ Proc. Int. Workshop Cyber-Phys. Syst. Smart Water Netw., 2017, pp. 25–28.
+[26] L. Y. Zhai, L. P. Khoo, and Z. W. Zhong, “Design concept evaluation in Pingping Dong received the B.S. in commuproduct development using rough sets and grey relation analysis,” Expert nication engineering, M.S. in information and
+ Syst. Appl., vol. 36, no. 3, pp. 7072–7079, Apr. 2009. communication engineering, and Ph.D. degree
+[27] L. Shen, Z. Li, and J. Kwok, “Timeseries anomaly detection using tem- in computer technology from the School of Inforporal hierarchical one-class network,” in Proc. Int. Conf. Adv. Neural Inf. mation Science and Engineering, Central South
+ Process. Syst., 2020, vol. 33, pp. 13016–13026. University, Changsha, China, in 2008, 2011, and
+[28] A. Deng and B. Hooi, “Graph neural network-based anomaly detection 2015, respectively.
+ in multivariate time series,” in Proc. AAAI Conf. Artif. Intell., 2021, She is currently an Associate Professor with
+ pp. 4027–4035. the College of Information Science and Engi-
+[29] Z. Chen, D. Chen, X. Zhang, Z. Yuan, and X. Cheng, “Learning graph neering, Hunan Normal University, Changsha,
+ structures with transformer for multivariate time series anomaly detection China. Her research interests include protocol
+ in IoT,” IEEE Internet Things J., vol. 9, no. 12, pp. 9179–9189, Jun. optimization and protocol design in wide area networks and wireless
+ 2022. local area networks.

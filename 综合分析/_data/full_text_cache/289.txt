@@ -1,0 +1,623 @@
+Neurocomputing 592 (2024) 127797
+
+ Contents lists available at ScienceDirect
+
+ Neurocomputing
+ journal homepage: www.elsevier.com/locate/neucom
+
+Relation-aware heterogeneous graph neural network for entity alignment
+Zirui Zhang a , Yiyu Yang a , Benhui Chen a,b ,∗
+a
+ Dali University, Dali, 671000, Yunnan, China
+b
+ Lijiang Normal College, Lijiang, 674100, Yunnan, China
+
+ARTICLE INFO ABSTRACT
+
+Communicated by G. Fenza Entity alignment refers to finding equivalent entities from different knowledge graphs. Most of the existing
+ entity alignment methods are studied based on homogeneous graphs. However, the knowledge graph is a
+Keywords:
+ heterogeneous graph containing many types of nodes, such as entities, relations, and attributes. Therefore,
+Entity alignment
+Knowledge graph
+ we propose introducing a heterogeneous graph neural network to model entities and relations simultaneously
+Heterogeneous graph neural network and propose an iterative fusion method to enhance the interaction between these two semantic nodes. Since
+Relation awareness not all datasets contain relation information, this paper does not directly introduce a feature representation
+Iterative fusion of relations. The generalizability of the approach is improved by utilizing a relation-aware strategy to obtain
+ information about the relation. Specifically, the information propagation of the head and tail entities in the
+ triplet is utilized to obtain the feature representation of the relation. Experimental results show that the present
+ method performs better on three cross-lingual datasets 𝐷𝐵𝑃 15𝐾 and two large-scale datasets 𝐷𝑊 𝑌 100𝐾.
+
+1. Introduction Currently, embedding-based models are broadly classified into two
+ categories: one is based on TransE [10–13]. This approach interprets
+ In recent years, knowledge graph (KG) has become a very hot re- the relations in a relation triplet as translation vectors from head
+search direction, and research results related to knowledge graph have entity to tail entity, and the low-dimensional embedding vector space
+been launched continuously [1–3]. Entity alignment, as an essential reflects the semantic information of the entities. Another category
+step in knowledge graph construction and fusion, aims to determine is GNN-based models [14,15]. This approach treats the knowledge
+whether two entities from different knowledge graphs are equivalent. graph entities as nodes and relations as edges. It uses the edges to
+More specifically, it is to judge whether these two entities point to propagate information to obtain more expressive embeddings by fusing
+the same object in the real world. The accuracy and completeness of the entity’s neighborhood information into the entity embeddings. One
+the entity alignment results will directly affect the final constructed problem with this approach is that relations are used only as edges, igknowledge graph’s quality and indirectly determine the downstream noring the rich information in them. This may lead to poor performance
+tasks’ performance. This also indicates that the link of entity alignment on entity alignment with similar structures.
+is crucial. Entities can be aligned mainly based on the assumption that The two entities in Fig. 2 have the same structure, and the two cenentities adjacent to an aligned entity may also be aligned. As shown in tral entities, ‘‘China’’ and ‘‘Beijing’’, are aligned based on the structure
+Fig. 1, new aligned entities can be inferred in the knowledge graph if information alone. However, in reality, the two entities are entirely
+a portion of the aligned entities is known in advance. different, which is the disadvantage of relying solely on structural
+ There are two main types of traditional entity alignment meth- information. In order to solve this problem, this paper adds relation
+ods: one is based on probabilistic models [4–6], and the other is information to the entity alignment task, and the entity alignment
+based on machine learning [7,8]. However, with the increasing size after considering the relation is shown in Fig. 3. After considering
+of knowledge graphs, traditional entity alignment methods can no the relation information, although the two entities have the same surlonger effectively align entities in different knowledge graphs and are rounding structure, they do not have the same relation with the same
+thus gradually no longer used. As representation learning techniques neighboring entities. Therefore, it can be judged that the probability
+begin to be widely used in knowledge graphs, some researchers have of these two entities not matching is relatively high, thus successfully
+begun to apply representation learning to the entity alignment task and avoiding mismatching.
+have performed well. Entity alignment methods using representation This paper proposes an entity alignment method based on relationlearning to obtain entity embeddings [9] have become mainstream. aware heterogeneous graph neural networks to address the above
+
+ ∗ Corresponding author.
+ E-mail addresses: zzr@stu.dali.edu.cn (Z. Zhang), yangyiyu@dali.edu.cn (Y. Yang), bhchen@dali.edu.cn (B. Chen).
+
+https://doi.org/10.1016/j.neucom.2024.127797
+Received 14 January 2024; Received in revised form 24 April 2024; Accepted 27 April 2024
+Available online 6 May 2024
+0925-2312/© 2024 Elsevier B.V. All rights reserved.
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+ 2. Related work
+
+ Early approaches to entity alignment relied heavily on manual
+ annotation with crowdsourcing techniques [17,18]. With the continuous development of the knowledge graph scale, manual annotation
+ will consume a lot of time and human resources. Most existing entity
+ alignment methods are based on embedding, and TransE [10] is one
+ of the main techniques for entity embedding. MTransE proposed by
+ Chen et al. [19] first embeds each knowledge graph into a separate
+ low-dimensional vector space and then constructs transitions between
+ different vector spaces. TransE can only model single-hop relations
+ between entities and cannot handle complex multi-hop relations, thus
+ losing important information. Therefore, Zhu et al. [20] proposed
+ PTransE to embed entities and relations from different knowledge
+ graphs into the joint semantic space based on the seed set. Instead of
+ TransE, PTransE [21] is used to model multi-step relations. At the same
+ time, high-confidence predicted aligned entities are filtered and added
+ to the seed set to guide the subsequent entity alignment training. A
+Fig. 1. Example of alignment of two heterogeneous KGs(Circles of the same color truncated uniform negative sampling approach is designed in BootEA,
+indicate priority alignment.).
+ proposed by Sun et al. [22]. From the original random selection of
+ entities from all entities to replace the head or tail entity, it is changed
+ to selecting one of several entities with the closest cosine distance to
+ the head or tail entity. In addition, BootEA uses an iterative alignment
+ method similar to IPTransE. However, BootEA can edit new entity pairs
+ to reduce error propagation.
+ Graph Convolutional Networks (GCN) [23–25] is another major
+ technique for KG embedding that has made significant progress in
+ recent years. Wang et al. [26] proposed GCN-Align, which for the first
+ time, uses a GCN model for the entity alignment task. The structural
+ Fig. 2. An incorrect entity alignment. and entity attributes of the knowledge graph are embedded by two
+ GCN models stacked in two layers, respectively. However, GCN can
+ aggregate the neighbors’ information around an entity well but ignores
+ the relation information. RDGCN, proposed by Wu et al. [27] is a bigraph convolutional structure constructing a dyadic graph for each
+ knowledge graph. By alternating convolution operations on the original
+ graph and the dyadic graph, the relation information in the knowledge
+ graph is fully utilized to enhance the entity representation. The graph
+ attention mechanism is applied in RDGCN, and the MuGNN proposed
+ by Cao et al. [28] also applies the graph attention network. The
+ knowledge graph is first complemented using rule knowledge, reducing
+ Fig. 3. Consider entity alignment of relations.
+ heterogeneity between the two knowledge graphs. Then, two adjacency
+ matrices are generated based on the self-attention and cross-graph
+ attention channels and input into the GNN for embedding entities.
+problems. The basic idea of this method is to model both entities Finally, a pooling function aggregates the two representations for enand relations simultaneously by introducing a heterogeneous graph tity alignment. Wu et al. [29] proposed a cross-graph neighborhood
+neural network. An iterative fusion method is also utilized to obtain matching network NMN, which samples the entity neighbors to obtain
+a better entity representation. A concise version of this work has been the most informative neighbors. Their attention weights are computed
+successfully published in the IJCNN conference. See [16] for details. based on the neighbor representation. Then, cross-graph matching
+ vectors containing information about the entity and neighbor-matching
+This paper increases the generalizability of the approach compared to
+ information are generated for entity alignment. Most GNN-based apthe work at that time. Since not all datasets contain information about
+ proaches learn the embeddings of different KGs separately and ignore
+relations, this paper does not directly introduce a feature representation the useful pre-aligned links between two KGs. Xie et al. [30] proposed a
+of relations. Instead, a relation-aware strategy is used to obtain the re- new context-aligned augmented cross-graph attentional network CAEClations information, and the performance is slightly improved from the GAT for cross-lingual entity alignment tasks. This network can coexperimental results. Meanwhile, this paper also verifies the method’s learn embeddings in different KGs by propagating cross-KG information
+effectiveness from different angles through many experiments. through pre-aligned seed alignment. Also, Xie et al. [31] proposed
+ DuGa-DIT, a dual-gated graph attention network with dynamic iterative
+ The contributions of this paper can be summarized as follows:
+ training. Neighborhood and cross-KG alignment features are captured
+ (i) A relation-aware strategy is introduced to perceive the charac- using intra-KG attention layers and cross-KG attention layers, and more
+teristic representation of a relation through entity information. cross-KG information is captured through a dynamic iterative process.
+ (ii) An iterative fusion method is proposed by which the interaction Recently, the emergence of several new approaches has led to significant progress in entity alignment. Wang et al. [32] proposed PEAMA,
+between entities and relations can be better enhanced.
+ which utilizes multi-information aggregated persona entities for entity
+ (iii) The performance of the present model is shown to outper- alignment. Huang et al. [33] proposed a new framework, RpAlign,
+form the baseline model through extensive experiments on five public which enables entity alignment between different KGs by predicting the
+datasets. relation of the entities. Lu et al. [34] presented a multi-neighborhood
+
+ 2
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+sampling matching network MSM to address the challenge of struc- 3.1.2. Relation nodes
+tural heterogeneity through a new KG comparison network. Zhang To improve the generality of the method, this paper does not
+et al. [35] proposed a neighboring entity filtering rule based on entity directly introduce the feature representation of the relation. Instead, it
+names and attributes for cross-language entity alignment. Using bi- is obtained using the feature transformation of the relation’s head entity
+relational graphs as supporting evidence in case of insufficient attribute and tail entity. Specifically, the relation embedding with weights is
+information effectively promotes the close connection between enti- computed by applying a linear transformation to the entity embeddings
+ties. Li et al. [36] proposed a generative adversarial entity alignment and then calculating the relation embedding with weights. For relation
+method with stronger robustness to noisy data. An unsupervised entity 𝒓𝑘 , the feature representation of the head entity 𝒓ℎ𝑘 is computed as
+alignment algorithm can automatically align entities without training follows:
+ ( ( [ ]))
+labels. Chen et al. [37] proposed a locally inflated higher-order graph exp LeakReLU 𝒂𝑇 𝒙𝑖 𝑾 ℎ ||𝒙𝑗 𝑾 𝑡
+ 𝑘
+neural network HOLI-GNN for entity alignment. The effect of excessive 𝛼𝑖𝑗 = ∑ ∑ ( ( [ ])) (2)
+ 𝑇 𝒙 ′ 𝑾 ℎ ||𝒙 ′ 𝑾 𝑡
+smoothing due to neighborhood aggregation is mitigated by introduc- 𝑒 ′ ∈𝑟
+ 𝑖 𝑒 ′ ∈ 𝑟𝑘 exp LeakReLU 𝒂
+ 𝑗 𝑒
+ 𝑖 𝑗
+ 𝑘
+
+ing a local expansion mechanism to amplify each feature of an entity. ⎛ ∑ ∑ ⎞
+Li et al. [38] proposed a new joint unsupervised relation alignment 𝒓ℎ𝑘 = ReLU ⎜ 𝛼𝑖𝑗𝑘 𝒙𝑖 𝑾 ℎ ⎟ (3)
+ ⎜𝑒 ∈ ⎟
+model URAEA based on GCN for entity alignment. The model first ⎝ 𝑖 𝑟𝑘 𝑒𝑗 ∈𝑒𝑖 𝑟𝑘 ⎠
+adopts a novel approach to computing relation embeddings using entity 𝛼𝑖𝑗𝑘 represents the weight representation of the head entity 𝑒𝑖 of
+embeddings, and then constructs unsupervised seeded relation align- relation 𝒓𝑘 in the triplet, and 𝑟𝑘 is the set of head entities of relation
+ments from these relation embeddings. Finally, entity alignment and 𝒓𝑘 in the triplet. 𝑒𝑖 𝑟𝑘 is the set of tail entities with head entity 𝑒𝑖 and
+relation alignment are performed together. Yang et al. [39] designed relation 𝒓𝑘 . 𝒂 is a one-dimensional vector mapping a two-dimensional
+a novel entity-aligned relation mapping RMHN based on higher-order input to a scalar. 𝑾 ℎ and 𝑾 𝑡 are the linear transfer matrices for
+graph convolutional networks. By designing a novel higher-order GCN the relation’s head entity representation and tail entity representation,
+to aggregate higher-order information to obtain entity embeddings in respectively.
+bulk. By a similar process, one can compute the representation 𝒓𝑡𝑘 of the
+ Most of the existing methods for the entity alignment task are based tail entities and then add them to obtain the relation representation 𝒓𝑘 :
+on homogeneous graphs for research. However, the actual knowledge
+graph is heterogeneous, and current approaches lack the study of
+ ⎛ ∑ ∑ ⎞
+heterogeneous graph neural networks. Therefore, we hope that a better
+ 𝒓𝑡𝑘 = ReLU ⎜ 𝑘
+ 𝛼𝑗𝑖 𝒙𝑗 𝑾 𝑡 ⎟ (4)
+representation of entity alignment tasks can be obtained by applying ⎜ ⎟
+ ⎝𝑒𝑗 ∈𝑟𝑘 𝑒𝑖 ∈𝑟𝑘 𝑒𝑗 ⎠
+heterogeneous graph neural networks.
+ 𝒓𝑘 = 𝒓ℎ𝑘 + 𝒓𝑡𝑘 (5)
+3. Methodology
+ 3.2. Heterogeneous graph iterative process
+ In this section, the general framework of the entity alignment
+method based on relation-aware heterogeneous graph neural networks In this section, the construction process and iterative fusion process
+is presented in detail, and the model framework is shown in Fig. 4. It of heterogeneous graphs are described in detail.
+consists of three main parts:
+ 3.2.1. Initial construction of the heterogeneous graph
+ ∙ Node Encoding Process. Given entity names and descriptions, Two types of semantic node representations are given: entity nodes
+ the entity names or descriptions are encoded as vectors by the 𝐸 = {𝐞𝑖 }𝑁 and relation nodes 𝑅 = {𝐫𝑗 }𝑀 , where 𝑁 represents the
+ 𝑖=1 𝑗=1
+ pre-trained model BERT.1 The feature representation of the rela- number of entities, and 𝑀 represents the number of relations. The
+ tion is also perceived through the entity information using the initial construction of the heterogeneous graph 𝐺 is shown below:
+ relation-aware strategy.
+ ∙ Heterogeneous Graph Iterative Process. An iterative fusion 𝐺 = (𝐸, 𝑅) (6)
+ method is proposed to enhance the interaction of entity and
+ relation nodes in heterogeneous graph neural networks. 3.2.2. Nodes updating with iterative fusion
+ ∙ Entity Alignment Process. After obtaining the representation of When the initial construction of the heterogeneous graph is comentity nodes and relation nodes, a specific entity alignment step pleted, the relation nodes and entity nodes are updated and iteratively
+ is performed by a distance function. fused. As shown in Fig. 5, the relation nodes aggregate all the entity
+ information directly adjacent to them. The updated relation node rep-
+3.1. Node encoding process resentation is used to update the entity nodes. Thus, iterative updates
+ make the node representation more suitable for the entity alignment
+ task.
+ In this paper, two types of semantic nodes are constructed for the
+ Graph Attention Network (GAT) is used to complete the updating
+proposed heterogeneous graph: entity nodes and relation nodes.
+ of nodes for better semantic fusion between entity nodes and relation
+ nodes. In this paper, we give the updating process of relation and entity
+3.1.1. Entity nodes
+ nodes in the 𝑙th layer of the iterative process. The updating process of
+ For entity node 𝑒, this paper encodes the entity name/description
+ relation nodes in the 𝑙th layer can be represented as:
+using the BERT pre-training model. The CLS embedding of BERT is ( { } )
+then filtered by a multilayer perceptron to obtain the initial entity 𝐫̃ 𝑗𝑙+1 = 𝐆𝐀𝐓 𝐫𝑗𝑙 , 𝐞𝑙𝑖 𝑖∈ (7)
+ 𝑗
+representation 𝐶(𝑒):
+
+𝐶(𝑒) = MLP(CLS(𝑒)) (1) 𝐫𝑗𝑙+1 = 𝐫̃ 𝑗𝑙+1 ⊕ 𝐫𝑗𝑙 (8)
+
+where CLS is the overall entity semantic representation vector of the When the relation node update is completed, the updated relation
+BERT output, and MLP is the multilayer perception. node is used to update the entity node. The process of entity node
+ update in layer 𝑙 can be represented as:
+ ( { } )
+ 1
+ https://github.com/google-research/bert 𝐞̃ 𝑙+1
+ 𝑖 = 𝐆𝐀𝐓 𝐞 𝑙
+ 𝑖 , 𝐫 𝑙+1
+ 𝑗 (9)
+ 𝑗∈𝑖
+
+ 3
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+Fig. 4. Overview framework of the model. The circles in the heterogeneity diagram represent relation-type nodes, and the squares represent entity-type nodes. The entity type
+nodes in red in the entity alignment process are the potentially matching entity pairs we want to find.
+
+ 4
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+ Algorithm 1: Encoding, iteration and training processes for
+ heterogeneous graphs
+ Input: Source Knowledge Graph 𝐾𝐺1 and Target Knowledge
+ Graph 𝐾𝐺2
+ Output: Entity embedding 𝐻𝑒′ and relation embedding 𝐻𝑟′
+ 1 Initialization:
+ 2 for 𝐾𝐺 = (𝐸ℎ , 𝑅, 𝐸𝑡 ) in 𝐾𝐺1 , 𝐾𝐺2 do
+ 3 𝐻𝑒 ← 𝑀𝐿𝑃 (𝐵𝐸𝑅𝑇 (𝐸ℎ , 𝐸𝑡 )) // Entity node encoding
+ 4 𝐻𝑟 ← 𝐸𝑚𝑏𝑒𝑑𝑑𝑖𝑛𝑔(𝑅) // Relation node encoding
+ 5 end
+ 6 Construction of heterogeneous graphs 𝐺1 and 𝐺2 for 𝐾𝐺1 and
+ Fig. 5. Example of a one-round iterative fusion process. 𝐾𝐺2 respectively
+ 7 Training:
+ 8 for epo in range(epoch) do
+ 9 Iterative fusion of entity and relation:
+𝐞𝑙+1
+ 𝑖 = 𝐞̃ 𝑙+1
+ 𝑖 ⊕ 𝐞𝑙𝑖 (10) 10 Compute 𝐻𝑟′ ← 𝑓 (𝐻𝑒 , 𝐻𝑟 ) // Update relation nodes
+ 11 𝐻𝑟′ ← 𝐻𝑟 ∪ 𝐻𝑟′
+ In the updating process, this paper uses a graph attention network
+ 12 Compute 𝐻𝑒′ ← 𝑓 (𝐻𝑒 , 𝐻𝑟′ ) // Update entity nodes
+to update the representation of nodes. Take the entity node update as
+ 13 𝐻𝑒′ ← 𝐻𝑒 ∪ 𝐻𝑒′
+an example. Its specific update process is shown as follows:
+ 14 Calculate the loss:
+ [ ]
+𝑐𝑖𝑗 = 𝑊𝑐 𝑊𝑞 𝐞𝑖 ⊕ 𝑊𝑘 𝐫𝑗 (11) 15 Evaluate the loss function 𝑙𝑜𝑠𝑠𝑁 by Eq. (15)
+ // Calculating node encoding loss
+ ( )
+ exp 𝑐𝑖𝑗 16 Evaluate the loss function 𝑙𝑜𝑠𝑠𝐴 by Eq. (16)
+𝛼𝑖𝑗 = ∑ ( ) (12) // Calculating entity alignment loss
+ 𝑙∈𝑖 exp 𝑐𝑖𝑙
+ ∑ 17 𝐿 ← 𝑙𝑜𝑠𝑠𝑁 + 𝑙𝑜𝑠𝑠𝐴
+𝐞̃ 𝑖 = 𝐞𝑖 + 𝛼𝑖𝑗 𝑊𝑟 𝐫𝑗 (13) 18 L.backward() // Perform backpropagation
+ 𝑗∈𝑖 19 end
+ ′
+ 20 return 𝐻 and 𝐻
+ ′
+where ⊕ denotes the splicing between two vectors. 𝑊𝑐 , 𝑊𝑞 , 𝑊𝑘 and 𝑊𝑟 𝑒 𝑟
+are trainable weight parameters. 𝛼𝑖𝑗 is the attention weight coefficient
+between 𝐞𝑖 ∈ R𝑑ℎ and 𝐫𝑗 ∈ R𝑑ℎ . 𝐞̃ 𝑖 is the updated entity node
+representation.
+ iterative fusion. 𝑇 ′ represents the set of negative sample triples of 𝑇 .
+3.3. Entity alignment process 𝛾1 > 0 is the edge hyperparameter separating positive and negative
+ triples. 𝑇 ′ is generated by destroying 𝑇 . For example, for a triplet
+ The distance between two entities is measured as a criterion for (𝑒ℎ , 𝑟, 𝑒𝑡 ) ∈ 𝑇 , a negative triplet (𝑒′ℎ , 𝑟, 𝑒𝑡 ) is generated by replacing 𝑒ℎ ,
+entity alignment, using the final entity representation 𝑋 collected from where 𝑒′ℎ also has the same relation type 𝑟 connected to 𝑒𝑡 , and the same
+the output of the heterogeneous graph neural network. Specifically, the substitution process for 𝑒𝑡 .
+distance 𝑑(𝑒1 , 𝑒2 ) between two entities 𝑒1 ∈ 𝐺1 and 𝑒2 ∈ 𝐺2 can be
+calculated as:
+ 3.4.2. Entity alignment loss
+ ( ) ‖ ‖
+𝑑 𝑒1 , 𝑒2 = ‖𝑥𝑒1 − 𝑥𝑒2 ‖ (14) For entity alignment loss, the training objective of the model is
+ ‖ ‖2
+ to minimize the representation distance of equivalent entities on all
+where ‖𝑥𝑒1 − 𝑥𝑒2 ‖2 is the 𝐿2 distance between the aligned entity pairs
+ marker alignments, similar to [40]:
+(𝑒1 , 𝑒2 ).
+ ∑ ∑ [ ( ) ( )]
+ 𝑙𝑜𝑠𝑠𝑎𝑙𝑖𝑔𝑛 = dist 𝑒𝑖 , 𝑒𝑗 + 𝛾2 − dist 𝑒′𝑖 , 𝑒′𝑗 (16)
+ ( ) ( ) +
+3.4. Training 𝑒𝑖 ,𝑒𝑗 ∈𝑆 𝑒′ ,𝑒′ ∈𝑆 ′
+ 𝑖 𝑗
+
+ In this section, the loss function of the model and the overall where 𝑑𝑖𝑠𝑡(𝑒𝑖 , 𝑒𝑗 ) = ‖𝑒𝑖 − 𝑒𝑗 ‖2 is the 𝐿2 distance between aligned entity
+training process will be defined. The detailed encoding, iteration, and pairs (𝑒𝑖 , 𝑒𝑗 ). 𝑒𝑖 and 𝑒𝑗 are the final entity representations after iterative
+training process are shown in Algorithm 1. The model’s loss function fusion. 𝑆 ′ denotes the set of negative pairs of 𝑆 generated by nearest
+consists of two components, the node encoding loss 𝑙𝑜𝑠𝑠𝑛𝑜𝑑𝑒 and the neighbor sampling. The 𝛾2 > 0 is the edge hyperparameter. Because
+entity alignment loss 𝑙𝑜𝑠𝑠𝑎𝑙𝑖𝑔𝑛 , each of which is described in detail of the excellent performance of 𝐿2 distance in experiments, this paper
+below. uses 𝐿2 distance as a metric to search for the nearest negative samples.
+
+3.4.1. Node encoding loss
+ 3.4.3. Joint loss
+ With the help of TransE [10], given a relation triple (𝑒ℎ , 𝑟, 𝑒𝑡 ), one
+wants to make 𝑒ℎ + 𝑟 ≈ 𝑒𝑡 . Thus a scoring function 𝑓 (𝑒ℎ , 𝑟, 𝑒𝑡 ) = ‖𝑒ℎ + The loss function of this model consists of two parts: the node
+𝑟 − 𝑒𝑡 ‖2 is defined to measure the plausibility of (𝑒ℎ , 𝑟, 𝑒𝑡 ), where ‖ ⋅ ‖2 encoding loss 𝑙𝑜𝑠𝑠𝑛𝑜𝑑𝑒 and the entity alignment loss 𝑙𝑜𝑠𝑠𝑎𝑙𝑖𝑔𝑛 . The overall
+denotes the 2-parametric number. After TransE, an edge-based ranking loss function 𝑙𝑜𝑠𝑠 is calculated as follows:
+loss function is used as the training target of the model, defined as:
+ 𝑙𝑜𝑠𝑠 = 𝑙𝑜𝑠𝑠𝑛𝑜𝑑𝑒 + 𝑙𝑜𝑠𝑠𝑎𝑙𝑖𝑔𝑛 (17)
+ ∑ ∑ [ ( ) ( )]
+𝑙𝑜𝑠𝑠𝑛𝑜𝑑𝑒 = 𝑓 𝑒ℎ , 𝑟, 𝑒𝑡 + 𝛾1 − 𝑓 𝑒′ℎ , 𝑟′ , 𝑒′𝑡 + (15)
+ ( ) It is worth noting that different weights can be set for the node
+ (𝑒ℎ ,𝑟,𝑒𝑡 )∈𝑇 𝑒′ ,𝑟′ ,𝑒′𝑡 ∈𝑇 ′
+ ℎ encoding loss 𝑙𝑜𝑠𝑠𝑛𝑜𝑑𝑒 and entity alignment loss 𝑙𝑜𝑠𝑠𝑎𝑙𝑖𝑔𝑛 to achieve
+where [⋅]+ = 𝑚𝑎𝑥{0, ⋅} denotes the maximum value between 0 and balanced optimization. In this paper, considering that these two comthe input. Entities 𝑒ℎ and 𝑒𝑡 are the final entity representations after ponents are equally important, we set the same weight for them to treat
+iterative fusion. Relation 𝑟 is the final relation representation after both components equally in our experiments.
+
+ 5
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+Table 1 Table 4 reports the experimental results of the model on the large-
+𝐷𝐵𝑃 15𝐾 and 𝐷𝑊 𝑌 100𝐾 statistical information.
+ scale dataset 𝐷𝑊 𝑌 100𝐾. The experimental results show that the present
+ Datasets Entities Relations Triplets
+ model performs better on the large-scale dataset. The present model
+ Chinese 66,469 2,830 153,929 produces better results for cross-linguistic and large-scale data, com-
+ 𝐷𝐵𝑃 15𝐾𝑍𝐻−𝐸𝑁
+ English 98,125 2,317 237,674
+ bining the experimental results in Tables 2 and 4.
+ 𝐷𝐵𝑃 15𝐾 Japanese 65,744 2,043 164,373
+ 𝐷𝐵𝑃 15𝐾𝐽 𝐴−𝐸𝑁 To evaluate the efficiency of this model, this paper compares the
+ English 95,680 2,096 233,319
+ prediction time with a good baseline model on the 𝐷𝐵𝑃 15𝐾𝐹 𝑅−𝐸𝑁
+ French 66,858 1,379 192,191
+ 𝐷𝐵𝑃 15𝐾𝐹 𝑅−𝐸𝑁
+ English 105,889 2,209 278,590 dataset. From Table 5, our method produces better results in terms of
+ efficiency and performance.
+ DBpedia 100,000 330 463,294
+ 𝐷𝑊 𝑌 100𝐾𝑊 𝐷
+ Wikidata 100,000 220 448,774
+ 𝐷𝑊 𝑌 100𝐾
+ 𝐷𝑊 𝑌 100𝐾𝑌 𝐺
+ DBpedia 100,000 302 428,952 4.4. Sensitivity to previously aligned ratios
+ YAGO3 100,000 31 502,563
+
+ In this paper, we validate the method’s effectiveness by comparing
+ it with the baseline models RDGCN [27] and KECG [40] at different
+4. Experiment previously aligned ratios. The results show that the present method
+ outperforms the compared baseline models in Fig. 6. The experimental
+ This paper evaluates the method’s effectiveness on three cross- results of the present method are slightly worse than those of RDGCN
+linguistic datasets from 𝐷𝐵𝑃 15𝐾 and two large-scale datasets from when less training data is used. This is because introducing two types of
+𝐷𝑊 𝑌 100𝐾. The models are also further compared and analyzed from nodes into the present model requires a certain amount of training data
+different perspectives. to be iteratively fused to obtain better features. However, as the amount
+ of data increases, the advantages of heterogeneous graphs gradually
+4.1. Dataset appear, and their growth rate is faster through the iterative fusion of
+ entities and relations.
+ The model was evaluated by using the 𝐷𝐵𝑃 15𝐾 dataset constructed
+by Sun et al. [41]. The 𝐷𝐵𝑃 15𝐾 contains three large cross-linguistic
+datasets constructed from DBpedia. Use 𝐷𝐵𝑃 15𝐾𝑍𝐻−𝐸𝑁 for Chinese to 4.5. Ablation study
+English, 𝐷𝐵𝑃 15𝐾𝐽 𝐴−𝐸𝑁 for Japanese to English, and 𝐷𝐵𝑃 15𝐾𝐹 𝑅−𝐸𝑁
+for French to English. Each dataset contains 15,000 entity alignment This paper conducts ablation studies on the model using three crossseed pairs. linguistic datasets from 𝐷𝐵𝑃 15𝐾, validating the effectiveness of the
+ The effectiveness of the model on large-scale data was tested by main components in the model. The specific experimental results of the
+performing experiments on 𝐷𝑊 𝑌 100𝐾 created by Sun et al. [22]. ablation studies are shown in Table 3.
+𝐷𝑊 𝑌 100𝐾 contains two large-scale datasets, 𝐷𝑊 𝑌 100𝐾𝑊 𝐷 and In this paper, a total of three different combinations are performed
+𝐷𝑊 𝑌 100𝐾𝑌 𝐺 , which are extracted from DBpedia, Wikidata, and to verify the effectiveness of BERT encoding and heterogeneous graphs.
+YAGO3. 𝐷𝑊 𝑌 100𝐾𝑊 𝐷 denotes DBpedia to Wikidata, and 𝐷𝑊 𝑌 100𝐾𝑌 𝐺 These include the combination of one-hot encoding and heterogedenotes DBpedia to YAGO3. Each dataset has 100,000 entity-aligned neous graph neural network (one-hot+HGNN), the combination of
+seed pairs. Table 1 lists the details of each dataset.
+ BERT encoding and graph convolutional neural network (BERT+GCN),
+ and the combination of BERT encoding and graph attention network
+4.2. Experiment settings
+ (BERT+GAT). The experimental results show that the essential components of this paper are effective.
+ For all baseline methods, 30% of entity alignment seed pairs were
+randomly used as training data and the rest as test data. Two evaluation
+metrics are used in this task: MRR and Hits@N. MRR denotes the 4.6. Visualization of attention scores
+average inverse rank of all correct entities, and Hits@N represents the
+proportion of right entities whose rank is not greater than N. Higher In this paper, we observe the weight parameters of the edges in GAT
+values of MRR and Hits@N indicate a better entity alignment model. by visualizing the attention mechanism used in the iterative process.
+ For the parameter settings, the input dimension of Bert is set to Since the adjacency matrix generated in the construction of the graph
+768, and the output dimension is set to 300. The dimension of the is sparse, only a central entity and the entities directly connected
+GAT hidden unit is set to 300. The learning rate is set to 0.005. to it are randomly selected for display. In this paper, we take the
+The experiment results shown in this paper are after 1000 rounds of
+ 𝐷𝐵𝑃 15𝐾𝑍𝐻−𝐸𝑁 dataset as an example and select a set of Chineseiterative fusion of entities and relations.
+ English entity alignment seed pairs to display, and the visualization
+ results are shown in Fig. 7. Since the attention coefficients are relatively
+4.3. Baselines and comparison result
+ small, the visualization results are the results after the coefficients are
+ magnified ten times.
+ Table 2 reports the experimental results of the different models
+on three large cross-linguistic datasets of 𝐷𝐵𝑃 15𝐾, along with the The attention visualization is selected from the direct first-order
+means and standard deviation results of the methods. In this paper, the neighbors of each central entity. As can be seen in Fig. 7, the attention
+baseline models are classified into three categories: models based on mechanism is beneficial for aligning two central entities. The model
+TransE, models based on GCN, and models based on others. The results produces higher weighting coefficients for the common neighbors of
+show that the proposed method performs well on all three datasets, the central entities and lower weighting coefficients for their unique
+which indicates that the proposed method is effective. neighbors. For example, the ‘‘ ’’ entity in Fig. 7(a) and
+ This paper’s present model performs better when compared with the ‘‘Saint Lawrence River’’ entity in Fig. 7(b) have lower weight coefrecent work. It is worth noting that although DuGa-DIT slightly outper- ficients as their unique neighbors. This effectively alleviates the model’s
+forms the present model in some of the results on the three datasets, sensitivity to the structural differences of KG. This example clearly
+the present model significantly outperforms DuGa-DIT regarding oper- illustrates that the attention mechanism in this model can accurately
+ational efficiency. Specific experimental results are shown in Table 5. find the more relevant features in the entity pairs.
+
+ 6
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+ Table 2
+ Baseline model comparison results in dataset 𝐷𝐵𝑃 15𝐾. The method means and standard deviations are reported in this paper. ‘‘-’’ indicates not reported
+ in the original paper. Scores marked in bold indicate the best performance among all methods.
+ Method 𝐷𝐵𝑃 15𝐾
+ 𝐷𝐵𝑃 15𝐾 𝐽 𝐴−𝐸𝑁 𝐷𝐵𝑃 15𝐾 𝑍𝐻−𝐸𝑁 𝐷𝐵𝑃 15𝐾 𝐹 𝑅−𝐸𝑁
+ Hits@1 Hits@10 MRR Hits@1 Hits@10 MRR Hits@1 Hits@10 MRR
+ MTransE [11] 0.279 0.575 0.349 0.308 0.614 0.364 0.244 0.556 0.335
+ TransE
+
+ JAPE [41] 0.363 0.685 0.476 0.412 0.745 0.490 0.324 0.667 0.430
+ BootEA [22] 0.622 0.854 0.701 0.629 0.848 0.703 0.653 0.874 0.731
+ KECG [40] 0.490 0.844 0.610 0.478 0.835 0.598 0.486 0.851 0.610
+ AliNet [29] 0.549 0.831 0.645 0.539 0.826 0.628 0.552 0.852 0.657
+ RDGCN [27] 0.767 0.895 0.812 0.708 0.846 0.746 0.886 0.957 0.911
+ MRAEA [42] 0.757 0.933 0.826 0.757 0.929 0.827 0.780 0.948 0.849
+ HMAN [33] 0.557 0.860 0.674 0.562 0.851 0.670 0.550 0.876 0.666
+ GCN
+
+ MHGCN [43] 0.767 0.891 0.821 0.732 0.867 0.793 0.864 0.923 0.898
+ EVA [44] 0.762 0.913 0.817 0.761 0.907 0.814 0.793 0.942 0.847
+ AttrGNN [45] 0.783 0.921 0.834 0.796 0.929 0.845 0.918 0.977 0.910
+ SSP [46] 0.721 0.935 0.800 0.739 0.925 0.808 0.739 0.947 0.818
+ DuGa-DIT [31] 0.914 0.952 0.928 0.807 0.882 0.832 0.982 0.992 0.985
+ CAECGAT [30] 0.836 0.956 0.881 0.756 0.934 0.818 0.947 0.992 0.965
+ DRG+ESGCN [35] 0.807 0.933 0.853 0.757 0.907 0.811 0.970 0.973 0.927
+ GAEA [36] 0.846 0.925 0.846 0.774 0.875 0.813 0.914 0.957 0.902
+ PEAMA [32] 0.551 - 0.634 0.562 - 0.644 0.558 - 0.645
+ Others
+
+ RpAlign [33] 0.730 0.890 0.782 0.748 0.889 0.794 0.752 0.900 0.801
+ MSM [34] 0.788 0.919 - 0.708 0.867 - 0.906 0.973 -
+ 0.799 0.972 0.864 0.768 0.963 0.843 0.939 0.992 0.959
+ ours
+ ±0.002 ±0.005 ±0.003 ±0.004 ±0.002 ±0.004 ±0.003 ±0.006 ±0.004
+
+ Table 3
+ Comparison results of ablation studies in dataset 𝐷𝐵𝑃 15𝐾.
+ Model 𝐷𝐵𝑃 15𝐾𝐽 𝐴−𝐸𝑁 𝐷𝐵𝑃 15𝐾𝑍𝐻−𝐸𝑁 𝐷𝐵𝑃 15𝐾𝐹 𝑅−𝐸𝑁
+ Hits@1 Hits@10 MRR Hits@1 Hits@10 MRR Hits@1 Hits@10 MRR
+ ours(BERT+HGNN) 0.799 0.972 0.864 0.768 0.963 0.843 0.939 0.992 0.959
+ one-hot+HGNN 0.761 0.921 0.821 0.694 0.889 0.766 0.768 0.951 0.839
+ BERT+GCN 0.577 0.912 0.698 0.581 0.914 0.702 0.685 0.943 0.781
+ BERT+GAT 0.677 0.937 0.769 0.652 0.931 0.751 0.949 0.992 0.966
+
+ Fig. 6. Experimental results for different alignment ratios.
+
+4.7. Visualization of entity features As can be seen in Fig. 8(a), Fig. 8(c), and Fig. 8(e), the overall
+ distribution of initial entity features on the three datasets is irregular.
+ The entity characteristics of the initial and final stages were visual- As can be seen in Fig. 8(b), Fig. 8(d), and Fig. 8(f), when the entity and
+ized to verify the model’s validity. To see the changes in entity feature relation
+distribution more intuitively, this paper uses the high-dimensional are iteratively fused for 1000 rounds of training, the entity pairs
+data reduction algorithm t-distributed random neighbor embedding appear significantly aligned on all three datasets. t-SNE visualization
+(t-SNE) to map the feature distribution in two-dimensional space.
+ also indirectly proves the effectiveness of this model.
+The entity feature distribution by applying this method is shown in
+Fig. 8. Among them, Fig. 8(a), Fig. 8(c), and Fig. 8(e) show the initial
+entity feature visualization results for the datasets 𝐷𝐵𝑃 15𝐾𝑍𝐻−𝐸𝑁 , 4.8. Case study
+𝐷𝐵𝑃 15𝐾𝐽 𝐴−𝐸𝑁 , and 𝐷𝐵𝑃 15𝐾𝐹 𝑅−𝐸𝑁 , respectively. Fig. 8(b), Fig. 8(d),
+and Fig. 8(f) show the visualization results of entity features of datasets To demonstrate the effectiveness of this methodology, a case study
+𝐷𝐵𝑃 15𝐾𝑍𝐻−𝐸𝑁 , 𝐷𝐵𝑃 15𝐾𝐽 𝐴−𝐸𝑁 and 𝐷𝐵𝑃 15𝐾𝐹 𝑅−𝐸𝑁 after is presented in this section for in-depth analysis. Fig. 9 shows the results
+1000 rounds of entity and relation iterative fusion, respectively. of the case study compared to a strong baseline. The present method
+
+ 7
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+Fig. 7. The results of the attention visualization are plotted. The central entities ‘‘ ’’ and ‘‘Maine’’ are a set of entity alignment seed pairs in the 𝐷𝐵𝑃 15𝐾𝑍𝐻−𝐸𝑁 dataset.
+
+Table 4 to add helpful information. Therefore, the components of this method
+Baseline model comparison results in dataset 𝐷𝑊 𝑌 100𝐾. This paper reports the means
+ have an essential role to play.
+and standard deviations of the methods. Scores marked in bold indicate the best
+performance among all methods.
+ Method 𝐷𝑊 𝑌 100𝐾
+ 5. Conclusion
+ 𝐷𝑊 𝑌 100𝐾 𝑊 𝐷 𝐷𝑊 𝑌 100𝐾 𝑌 𝐺
+ Hits@1 Hits@10 MRR Hits@1 Hits@10 MRR
+ This paper presents an entity alignment method based on relation-
+ MTransE [11] 0.281 0.520 0.363 0.252 0.493 0.334
+ TransE
+
+ JAPE [41] 0.318 0.589 0.411 0.236 0.484 0.320 aware heterogeneous graph neural networks. The method uses het-
+ BootEA [22] 0.748 0.898 0.801 0.761 0.894 0.808 erogeneous graph neural networks to model entities and relations
+ GCN-Align [26] 0.506a 0.772a 0.600a 0.597a 0.838a 0.682a simultaneously. It uses an iterative fusion method to enhance the inter-
+ KECG [40] 0.632 0.900 0.726 0.728 0.915 0.795 action between the two types of semantic nodes. Since not all datasets
+ GCN
+
+ AliNet [29] 0.690 0.908 0.766 0.786 0.943 0.841
+ contain information about relations, this paper does not directly intro-
+ MRAEA [42] 0.794 0.930 0.856 0.819 0.951 0.875
+ SSP [46] 0.772 0.960 0.842 0.811 0.968 0.869 duce information about relations. The generalizability of the approach
+ RpAlign [33] 0.826 0.934 0.862 0.838 0.945 0.872
+ is improved by using a relation-aware strategy to obtain relations from
+ entity perception. In this paper, the method’s effectiveness is evaluated
+ 0.832 0.958 0.873 0.854 0.977 0.894
+ ours using the cross-lingual dataset 𝐷𝐵𝑃 15𝐾 and the large-scale dataset
+ ±0.003 ±0.003 ±0.002 ±0.004 ±0.002 ±0.003
+a
+ 𝐷𝑊 𝑌 100𝐾. The results show that better performance is obtained by
+ Indicates metrics not reported in the paper. The results shown in this paper are from
+Li et al. [40]. improving all metrics compared to the existing methods.
+ Attribute information is an essential class of information in knowl-
+ Table 5 edge graphs, and the advantages of this method are not apparent
+ Prediction times for different models when the data relations are more complex. In our future work, we
+ on dataset 𝐷𝐵𝑃 15𝐾𝐹 𝑅−𝐸𝑁 . will consider introducing attribute information to further improve the
+ Methods Time
+ method’s performance.
+ GM-EHD-JEA 1,474 s
+ RDGCN 45 s
+ HGCN-JE 50 s CRediT authorship contribution statement
+ NMN 84 s
+ CAECGAT 42 s
+ DuGa-DIT 44 s Zirui Zhang: Writing – original draft, Methodology, Conceptualizaours 8 s
+ tion. Yiyu Yang: Writing – review & editing. Benhui Chen: Supervi-
+ The baseline modeling experimental
+ sion.
+ results shown in this paper were
+ provided by Xie et al [31].
+
+ Declaration of competing interest
+
+achieves better results. We use the highest ranked entity as the align-
+ The authors declare that they have no known competing finanment centre entity for model prediction, and the experimental results of
+ cial interests or personal relationships that could have appeared to
+3 samples on different models are shown in Fig. 9. The present model
+ influence the work reported in this paper.
+obtained correct alignment results in these samples, again proving the
+importance of introducing relations. When the central entity has more
+neighbor nodes (as in cases 1 and 2), the relation information can Data availability
+help us distinguish different entities. When the central entity has fewer
+neighbor nodes (as in the 3rd case), the relation information can help us Data will be made available on request.
+
+ 8
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+ Fig. 8. Visual presentation of entity features in the initial and final stages.
+
+ 9
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+ Fig. 9. Case study on the dataset 𝐷𝐵𝑃 15𝐾𝑍𝐻−𝐸𝑁 . Green entities indicate correctly aligned central entities, and red entities indicate misaligned central entities.
+
+References [9] Y. Hao, Y. Zhang, S. He, K. Liu, J. Zhao, A joint embedding method for entity
+ alignment of knowledge bases, in: Knowledge Graph and Semantic Computing:
+ [1] Z. Li, H. Liu, Z. Zhang, T. Liu, N.N. Xiong, Learning knowledge graph embedding Semantic, Knowledge, and Linked Big Data: First China Conference, CCKS 2016,
+ with heterogeneous relation attention networks, IEEE Trans. Neural Netw. Learn. Beijing, China, September 19–22, 2016, Revised Selected Papers 1, Springer
+ Syst. 33 (8) (2021) 3961–3973. Singapore, 2016, pp. 3–14.
+ [2] Z. Li, H. Liu, Z. Zhang, T. Liu, J. Shu, Recalibration convolutional networks for [10] A. Bordes, N. Usunier, A. Garcia-Duran, J. Weston, O. Yakhnenko, Translating
+ learning interaction knowledge graph embedding, Neurocomputing 427 (2021) embeddings for modeling multi-relational data, Adv. Neural Inf. Process. Syst.
+ 118–130. 26 (2013).
+ [3] Z. Xue, Z. Zhang, H. Liu, S. Yang, S. Han, Learning knowledge graph embedding [11] Z. Wang, J. Zhang, J. Feng, Z. Chen, Knowledge graph embedding by translating
+ with multi-granularity relational augmentation network, Expert Syst. Appl. 233 on hyperplanes, in: Proceedings of the AAAI Conference on Artificial Intelligence,
+ (2023) 120953. Vol. 28, No. 1, 2014.
+ [4] I.P. Fellegi, A.B. Sunter, A theory for record linkage, J. Amer. Statist. Assoc. 118 [12] Y. Lin, Z. Liu, M. Sun, Y. Liu, X. Zhu, Learning entity and relation embeddings
+ (1969) 3–1210. for knowledge graph completion, in: Proceedings of the AAAI Conference on
+ [5] W.E. Winkler, Methods for Record Linkage and Bayesian Networks, Technical Artificial Intelligence, Vol. 29, No. 1, 2015.
+ Report, Statistical Research Division, US Census Bureau, Washington, DC, 2002, [13] G. Ji, S. He, L. Xu, K. Liu, J. Zhao, Knowledge graph embedding via dynamic
+ pp. 2659–2665. mapping matrix, in: Proceedings of the 53rd Annual Meeting of the Association
+ [6] M. Pershina, M. Yakout, K. Chakrabarti, Holistic entity matching across knowl- for Computational Linguistics and the 7th International Joint Conference on
+ edge graphs, in: 2015 IEEE International Conference on Big Data, Big Data, IEEE, Natural Language Processing (Volume 1: Long Papers), 2015, pp. 687–696.
+ 2015, pp. 1585–1590. [14] J. Bruna, W. Zaremba, A. Szlam, Y. LeCun, Spectral networks and locally
+ [7] M. Bilenko, R.J. Mooney, Adaptive duplicate detection using learnable string connected networks on graphs, 2013, arXiv preprint arXiv:1312.6203.
+ similarity measures, in: Proceedings of the Ninth ACM SIGKDD International [15] M. Henaff, J. Bruna, Y. LeCun, Deep convolutional networks on graph-structured
+ Conference on Knowledge Discovery and Data Mining, 2003, pp. 39–48. data, 2015, arXiv preprint arXiv:1506.05163.
+ [8] H. Zhao, S. Ram, Entity matching across heterogeneous data sources: An [16] Z. Zhang, F. Meng, Y. Meng, X. Liu, B. Chen, Iterative fusion method based on
+ approach based on constrained cascade generalization, Data Knowl. Eng. 66 (3) heterogeneous graph neural network for entity alignment, in: 2023 International
+ (2008) 368–381. Joint Conference on Neural Networks, IJCNN, IEEE, 2023, pp. 01–08.
+
+ 10
+Z. Zhang et al. Neurocomputing 592 (2024) 127797
+
+[17] J. Lehmann, R. Isele, M. Jakob, A. Jentzsch, D. Kontokostas, P.N. Mendes, et al., [35] X. Zhang, W. Zhang, H. Wang, Cross-language entity alignment based on
+ Dbpedia–a large-scale, multilingual knowledge base extracted from wikipedia, dual-relation graph and neighbor entity screening, Electronics 12 (5) (2023)
+ Semant. Web 6 (2) (2015) 167–195. 1211.
+[18] F. Mahdisoltani, J. Biega, F.M. Suchanek, Yago3: A knowledge base from [36] Y. Li, L. Chen, C. Liu, R. Zhou, J. Li, Generative adversarial network for
+ multilingual wikipedias, in: CIDR, 2013. unsupervised multi-lingual knowledge graph entity alignment, World Wide Web
+[19] M. Chen, Y. Tian, M. Yang, C. Zaniolo, Multilingual knowledge graph embeddings 26 (5) (2023) 2265–2290.
+ for cross-lingual knowledge alignment, 2016, arXiv preprint arXiv:1611.03954. [37] J. Chen, L. Yang, Z. Wang, M. Gong, Higher-order GNN with local inflation for
+[20] H. Zhu, R. Xie, Z. Liu, M. Sun, Iterative entity alignment via joint knowledge entity alignment, Knowl.-Based Syst. 293 (2024) 111634.
+ embeddings, in: IJCAI, Vol. 17, 2017, pp. 4258–4264. [38] L. Feng Ying, L. Jia Peng, D. Rong Sheng, Entity alignment with fusing relation
+[21] Y. Lin, Z. Liu, H. Luan, M. Sun, S. Rao, S. Liu, Modeling relation paths for representation, AI Commun. (2023) 1–13.
+ representation learning of knowledge bases, 2015, arXiv preprint arXiv:1506. [39] L. Yang, J. Chen, Z. Wang, F. Shang, Relation mapping based on higher-order
+ 00379. graph convolutional network for entity alignment, Eng. Appl. Artif. Intell. 133
+[22] Z. Sun, W. Hu, Q. Zhang, Y. Qu, Bootstrapping entity alignment with knowledge (2024) 108009.
+ graph embedding, in: IJCAI, Vol. 18, No. 2018, 2018. [40] C. Li, Y. Cao, L. Hou, J. Shi, J. Li, T.S. Chua, Semi-Supervised Entity Alignment
+[23] H. Liu, C. Zheng, D. Li, Z. Zhang, K. Lin, X. Shen, et al., Multi-perspective social Via Joint Knowledge Embedding Model and Cross-Graph Model, Association for
+ recommendation method with graph representation learning, Neurocomputing Computational Linguistics, 2019.
+ 468 (2022) 469–481. [41] Z. Sun, W. Hu, C. Li, Cross-lingual entity alignment via joint attribute-preserving
+[24] H. Liu, C. Zheng, D. Li, X. Shen, K. Lin, J. Wang, et al., EDMF: Efficient deep embedding, in: The Semantic Web–ISWC 2017: 16th International Semantic
+ matrix factorization with review feature learning for industrial recommender Web Conference, Vienna, Austria, October 21–25, 2017, Proceedings, Part I 16,
+ system, IEEE Trans. Ind. Inform. 18 (7) (2021) 4361–4371. Springer International Publishing, 2017, pp. 628–644.
+[25] H. Liu, T. Liu, Z. Zhang, A.K. Sangaiah, B. Yang, Y. Li, Arhpe: Asymmetric [42] X. Mao, W. Wang, H. Xu, M. Lan, Y. Wu, MRAEA: an efficient and robust
+ relation-aware representation learning for head pose estimation in indus- entity alignment approach for cross-lingual knowledge graph, in: Proceedings
+ trial human–computer interaction, IEEE Trans. Ind. Inform. 18 (10) (2022) of the 13th International Conference on Web Search and Data Mining, 2020, pp.
+ 7107–7117. 420–428.
+[26] Z. Wang, Q. Lv, X. Lan, Y. Zhang, Cross-lingual knowledge graph alignment [43] J. Gao, X. Liu, Y. Chen, F. Xiong, MHGCN: Multiview highway graph convoluvia graph convolutional networks, in: Proceedings of the 2018 Conference on tional network for cross-lingual entity alignment, Tsinghua Sci. Technol. 27 (4)
+ Empirical Methods in Natural Language Processing, 2018, pp. 349–357. (2021) 719–728.
+[27] Y. Wu, X. Liu, Y. Feng, Z. Wang, R. Yan, D. Zhao, Relation-aware entity [44] F. Liu, M. Chen, D. Roth, N. Collier, Visual pivoting for (unsupervised) entity
+ alignment for heterogeneous knowledge graphs, 2019, arXiv preprint arXiv: alignment, in: Proceedings of the AAAI Conference on Artificial Intelligence, Vol.
+ 1908.08210. 35, No. 5, 2021, pp. 4257–4266.
+[28] Y. Cao, Z. Liu, C. Li, J. Li, T.S. Chua, Multi-channel graph neural network for [45] Y. Wu, X. Liu, Y. Feng, Z. Wang, D. Zhao, Jointly learning entity and relation
+ entity alignment, 2019, arXiv preprint arXiv:1908.09898. representations for entity alignment, 2019, arXiv preprint arXiv:1909.09317.
+[29] Y. Wu, X. Liu, Y. Feng, Z. Wang, D. Zhao, Neighborhood matching network for [46] H. Nie, X. Han, L. Sun, C.M. Wong, Q. Chen, S. Wu, W. Zhang, Global structure
+ entity alignment, 2020, arXiv preprint arXiv:2005.05607. and local semantics-preserved embeddings for entity alignment, in: Proceedings
+[30] Z. Xie, R. Zhu, K. Zhao, J. Liu, G. Zhou, X. Huang, A contextual alignment of the Twenty-Ninth International Conference on International Joint Conferences
+ enhanced cross graph attention network for cross-lingual entity alignment, in: on Artificial Intelligence, 2021, pp. 3658–3664.
+ Proceedings of the 28th International Conference on Computational Linguistics,
+ 2020, pp. 5918–5928.
+[31] Z. Xie, R. Zhu, K. Zhao, J. Liu, G. Zhou, J.X. Huang, Dual gated graph attention
+ networks with dynamic iterative training for cross-lingual entity alignment, ACM Zirui Zhang is a graduate student at Dali University. Contact him at zzr@stu.dali.edu.
+ Trans. Inf. Syst. 40 (3) (2021) 1–30. cn.
+[32] H. Wang, R. Huang, J. Zhang, Person entity alignment method based on
+ multimodal information aggregation, Electronics 11 (19) (2022) 3163. Yiyu Yang is a researcher at Dali University. Contact him at yangyiyu@dali.edu.cn.
+[33] H. Huang, C. Li, X. Peng, L. He, S. Guo, H. Peng, et al., Cross-knowledge-graph
+ entity alignment via relation prediction, Knowl.-Based Syst. 240 (2022) 107813.
+[34] D. Lu, Y. Sun, Q. Dai, X. Li, D. Zhu, H. Du, et al., MSM: A method of Benhui Chen is a professor at Dali University. Contact him at bhchen@dali.edu.cn.
+ multi-neighborhood sampling matching for entity alignment, Intell. Autom. Soft
+ Comput. 32 (2) (2022) 1141–1151.
+
+ 11

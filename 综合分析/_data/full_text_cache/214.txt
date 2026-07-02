@@ -1,0 +1,1011 @@
+Computer Networks 250 (2024) 110598
+
+ Contents lists available at ScienceDirect
+
+ Computer Networks
+ journal homepage: www.elsevier.com/locate/comnet
+
+Encrypted malicious traffic detection based on natural language processing
+and deep learning
+Xiaodong Zang a,b,c ,∗, Tongliang Wang a , Xinchang Zhang b , Jian Gong c , Peng Gao a ,
+Guowei Zhang a
+a
+ School of Cyber Science and Engineering, Qufu Normal University, QuFu, China
+b Qilu University of Technology (Shandong Academy of Sciences) Shandong Computer Science Center, Shandong Provincial Key Laboratory of Computer
+
+Networks, JiNan, China
+c Key Laboratory of Computer Network and Information Integration, Ministry of Education, Southeast University, NanJing, China
+
+ARTICLE INFO ABSTRACT
+
+Keywords: The focus on privacy protection has brought much-encrypted network traffic. However, attackers always abuse
+Security and privacy traffic encryption to conceal malicious behaviors. Although researchers have proposed several enlightening
+Anomaly detection detection methods, they must enhance the generalization ability or improve detection performance. Our
+Artificial intelligence
+ inspiration is that the packet header fields, as do the underlying grammatical rules for constructing sentences,
+Malicious traffic analysis
+ have a strict order. We consider the original packet as text and devise a robust approach with natural language
+Encrypted traffic
+ processing and a deep learning model to improve the generalization ability and detection performance. We
+ capture the critical keywords as characteristic representations of the traffic and design an adaptive domain
+ generalization algorithm with a new loss function. It is robust against various datasets by generating more
+ malicious samples to augment the minority of malicious samples. Simultaneously, we design an efficient feature
+ selection algorithm, which obtains an optimal feature subset and reduces feature dimensions by 75.3%. To
+ evaluate our work, we conducted extensive experiments with open-source datasets (CICIDS 2017, CICDDoS
+ 2019, and USTC-TFC 2016), the synthetic dataset from IoT-23, and Internet backbone traffic (CERNET).
+ Experimental results demonstrate that our proposal improves detection accuracy by up to 22.8% compared
+ to others not using domain generalization algorithms and achieves an average detection latency of 0.67 s in
+ the backbone. Besides, our work applies to the Industrial Internet of Things (IIoT) environment. It can be
+ deployed at edge nodes to provide network security support for IIoT devices.
+
+1. Introduction approaches. In this context, it is imperative to devise efficient detection
+ and defense strategies under encrypted traffic. Currently, there are
+ Recently, traffic encryption technologies have been widely adopted three categories of encrypted malicious traffic detection approaches:
+to protect users’ security and privacy when they surf the Internet. As (1) decryption followed by deep packet inspection (DPI)-based methreported by the Firefox website, encrypted web pages are increased by
+ ods [5], (2) statistical analysis-based methods [6–8], and (3) machine
+80% from 2015 to 2021 [1–3]. In addition, according to statistics from
+ learning-based methods [9–12]. Decryption followed by DPI is straight-
+Google, nearly 94% network traffic applies the transport layer security
+(TLS) protocol [4] for communication. As encrypted malicious traffic is forward, and the detection results are promising. It conducts detection
+highly concealed and high-risk, attackers always abuse traffic encryp- on the plaintext data after decrypting all encrypted network traffic.
+tion to conceal their malicious behaviors, such as malware delivery, However, they cannot protect users’ privacy and perform effective
+C&C channels, and data exfiltration. Therefore, identifying encrypted real-time network monitoring.
+malicious traffic efficiently in the backbone is extremely important for Statistical analysis-based methods use statistical flow features, such
+network management and security monitoring. as average packet length and the number of incoming and outgoing
+ Due to diverse traffic patterns and the emergence of various evasion
+ bytes, to distinguish encrypted ones without decryption keys. However,
+technologies, detecting encrypted malicious traffic needs to be better
+ these methods have a high false positive rate due to the need to
+addressed by traditional methods, e.g., port-based and payload-based
+
+ ∗ Corresponding author at: School of Cyber Science and Engineering, Qufu Normal University, QuFu, China.
+ E-mail address: xdzang@qfnu.edu.cn (X. Zang).
+
+https://doi.org/10.1016/j.comnet.2024.110598
+Received 4 March 2024; Received in revised form 5 June 2024; Accepted 9 June 2024
+Available online 11 June 2024
+1389-1286/© 2024 Elsevier B.V. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+collect more long-time traffic flows to obtain higher quality charac- extensive evaluation, and with real-world deployment, we found some
+teristics [13]. Therefore, it is not suitable for deployment in realistic malicious cases that other detection approaches had not identified.
+network environments online. Machine and deep learning, a branch Organization: Section 2 surveys the related works of encrypted
+of artificial intelligence, have been widely applied in network security malicious traffic detection. Section 3 elaborates on the proposed apmonitoring. They collect enough benign and encrypted malicious traffic proach, including data preprocessing, feature extraction, selection, and
+and automatically extract features from traffic metadata [12,14] for encrypted malicious traffic classification. Section 4 details the experia prediction or classification task. Machine and deep learning-based ments with different datasets. Section 5 concludes the paper and gives
+methods have become mainstream in detecting encrypted malicious our future work.
+traffic.
+ Although machine and deep-learning-based detection schemes do 2. Related works and design goals
+not need to decrypt the encrypted traffic, they still face some challenges. Firstly, machine or deep learning-based detection schemes as- This section surveys the related works of encrypted malicious trafsume that the training and testing data are independent and identically fic detection. We broadly classify these techniques into decryption
+distributed. In practice, we find that the training data always comes followed by DPI-based (DFDPI), statistical analysis-based (SA), and
+from the open-source benchmark datasets, while the testing is of- machine learning-based methods (ML). We survey them and introduce
+ten the actual traffic, which violates the assumption. In our work, our design goals.
+we take this phenomenon as lacking domain generalization ability.
+Besides, in the natural network environment, benign samples occur
+ 2.1. Related works
+more frequently than malicious ones, which causes a data imbalance
+problem [15]. Secondly, most approaches rely on manually extracting
+ (1) Decryption followed by DPI-based methods. The deep packet
+statistical features. However, the features are designed for a specific
+ inspection (DPI) technique requires the packet payload to be plaintext
+scenario. The versatility and suitable feature selection mechanism need
+ and constantly analyzes the available information in the application
+to be guaranteed.
+ layer. However, with the increased encrypted traffic, this technique
+ This paper devised a novel framework with a natural language
+ needs to decrypt all encrypted network traffic [16]. Therefore, reprocessing and deep learning model to solve the above problems.
+ searchers have developed other solutions using DPI techniques without
+Detecting malicious traffic behaviors via packet analysis is feasible, as
+ decrypting the encrypted traffic. For example, [17] proposed a method
+the multiple-step attack patterns are stealthy in the original packets.
+ using supervised learning to automate the rules for specific proto-
+Our inspiration is that the packet header fields, as do the underlycols in PGSM. Testing the performance of packets within these rules
+ing grammatical rules for constructing sentences, have a strict order.
+ makes it possible to determine when and which signatures the tar-
+Therefore, we capture the critical keywords in the packet’s header
+ get packets should match. [18]designed an OpenFlow-enabled DPI
+and consider their field’s value as a representation of traffic traits.
+We conduct an in-depth analysis of low detection performance in data approach, which extracted the features of accessible payloads and
+processing. We over-sample the encrypted malicious traffic and design linguistic features in the unencrypted packets, extracted the packets’
+an enhanced robust algorithm to solve data imbalance distribution notable features in the encrypted packets, and used a decision tree to
+and achieve robust detection. We use the Albert model to convert detect malicious payloads.
+qualitative data in traffic packets into quantitative data and extract (2) Statistical analysis-based methods. Techniques based on sta-
+312 dimensions critical keywords with corresponding weights in the tistical analysis always use the statistical features of the flow. We
+packet’s header (e.g., TTL, Packet size). We devise an efficient feature divided these statistical features into two categories: protocol-agnostic
+selection algorithm to enhance its real-time and finally apply a 1D-CNN numerical features and protocol-specific features [12,19–22]. The formodel to identify encrypted malicious traffic. mer includes packet-based and session-based characteristics. Packet-
+ We prototype our system and deploy it in the wild. Before deploying based characteristics, such as the average packet and the number of
+it, we conducted extensive experiments with open-source datasets (CI- bytes in the packet, are always collected from the packet level. At the
+CIDS 2017, CICDoS 2019, USTC-TFC 2016) to evaluate its performance. same time, the session-based features refer to the flow duration, total
+Experimental results demonstrate that it can distinguish attacks under bytes, or total number of packets in each flow. The latter are encrypted
+different datasets with an accuracy rate of 97.3%, which is much better protocol characteristics related to a specific protocol, e.g., handshake
+than other similar alternatives. Besides, in the wild, we can detect field features in TLS,[23,24]. [13] proposed a novel system called
+encrypted malicious traffic not found by other works and achieve real- ME-Box to achieve reliable detection of malicious encrypted traffic.
+time detection with an average detection latency of 0.67 s. We also It first uses middleboxes to evaluate the trust degrees of encrypted
+used a synthetic IoT dataset to verify that our work can apply to the traffic. When the encrypted flow is suspicious, the middleboxes request
+IIoT. We compared it with similar alternatives and found our model the session keys and provide evidence for the evaluation results. [6]
+performs better. The contributions are as follows. developed a machine learning-based anomaly traffic detection frame-
+ (1) We propose a novel detection framework with natural lan- work (OADSD), which employs distributed dynamic feature extraction
+guage processing and a deep learning model under an encryption (DDFE) to extract representative features from raw traffic directly.
+scenario. Our system can achieve real-time and robust detection in (3) Machine learning-based approaches. With the development of
+high-throughput networks. computer hardware, machine learning and deep learning as a branch
+ (2) We conduct domain generalization analysis and devise an adap- of artificial intelligence have received much attention in security montive domain generalization algorithm with a new loss function. Our itoring. [25,26] proposed real-time robust malicious traffic detection
+algorithm makes the data distribution even more diverse among dif- solutions with machine learning. The former could detect unknown
+ferent traffic categories. Compared with other works without domain encrypted malicious traffic with a clustering-based method by computgeneralization, our work improves the detection accuracy by at most ing the interaction features of the flow. The proposed unsupervised
+22.8%. graph learning technique can identify abnormal patterns by analyz-
+ (3) We design an efficient additive increase-based random walk ing the connectivity and sparsity features of the graph. The latter
+feature selection algorithm (AIRW). It can reduce the feature dimension performed frequency domain feature analysis, devised an automatic
+by 75.3% and reduce detection time by 53.6%. encoding vector selection algorithm to reduce the time-consummation
+ (4) We implement and deploy our prototype system in the China of the manual parameter selection and accomplished real-time and
+Education Research Network backbone (CERNET). We conducted an robust detection. In addition to that, researchers have proposed many
+
+ 2
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ Table 1
+ Summary of related works.
+ Category OD FS Low Unknown Robust Realtime Key technology
+ Latency Attacks Detection Detection
+ Packet 𝑁 𝑁 𝑁 𝑁 𝑁 OpenFlow-enabled DPI [18]
+ DFDPI
+ Packet 𝑁 𝑁 𝑁 𝑃 𝑁 PGSM [17]
+ biFlows 𝑃 𝑁 𝑃 𝑁 𝑃 Heuristic statistical testing [19]
+ Packet 𝑁 𝑁 𝑁 𝑁 𝑁 Isolation Forest and K-means [20]
+ SA Packet 𝑌 𝑃 𝑃 𝑁 𝑁 Density peaks clustering [23]
+ Flows 𝑁 𝑁 𝑁 𝑌 𝑁 Evidence verification [13]
+ Packet 𝑌 𝑁 𝑃 𝑃 𝑁 Feature transformation [38]
+ Flows 𝑁 𝑁 𝑃 𝑌 𝑌 Machine learning [26]
+ Packet 𝑁 𝑃 𝑃 𝑁 𝑃 Deep learning [39]
+ Flows 𝑁 𝑁 𝑃 𝑌 𝑌 Adaptive Random Forests [27]
+ ML
+ Packet 𝑃 𝑃 𝑃 𝑁 𝑁 Machine learning and NLP [11]
+ Packet 𝑁 𝑁 𝑃 𝑃 𝑁 Deep learning [28]
+ IDSlogs 𝑁 𝑁 𝑃 𝑃 𝑃 Ensemble-based deep learning [31]
+ Our work Packet 𝑌 𝑌 𝑌 𝑌 𝑌 NLP and Deep learning
+
+solutions with deep learning [7,9,11,27–33]. [28] designed a multi- packet headers as text, use the ALBERT model to convert the qualitative
+level feature fusion model. The model can automatically extract byte, data into quantitative data, and capture the best-weighted feature
+timing, and other statistical features. They also devised an adaptive bal- subset. Finally, we use a 1D-CNN model to identify encrypted malicious
+anced training method to improve the data distribution and detection traffic.
+performance. [11] introduced a natural language processing method
+(TF-IDF model) to capture the traffic feature and used machine learning 3.1. Data processing
+(Gradient boosting, random forest, AdaBoost classifier) and deep learning techniques (CNN neural network)to distinguish malicious traffic. A Data Cleaning: The experimental dataset originates from a reallarge number of wireless devices connect to the network, making IoT world environment. It includes packets irrelevant to encrypted masecurity a focal point for intrusion detection [34]. There are various licious traffic detection (e.g., plaintext data on ports 80 or 21). To
+intrusion detection systems in IoT, such as hybrid, anomaly-based, enhance the relevance and purity of the dataset, we discarded these
+signature-based, and specification-based [35]. [36] uses a blockchain- irrelevant packets using Wireshark filters. First, we parsed the pcap
+based Radial Basis Function Neural Network to improve data integrity files using tools and libraries such as Scapy and Pyshark to discard
+and intelligent decision-making in various Internet of Drones environ- plaintext network traffic. To ensure data quality and avoid interference
+ments. [37] employs Markov Decision Processes and Deep Learning to with model training, we applied the dropna and duplicated functions
+address IoT task latency issues. from the Pandas library to remove incomplete, duplicate, and retrans-
+ We provide a detailed comparison of encrypted traffic detection mitted packets [19]. For the known encrypted traffic (e.g., encrypted
+in Table 1, where 𝑂𝐷 represents original data, and 𝐹 𝑆 is short for data on ports 443 or 500), we only extracted the packet header of
+feature selection. We use 𝑌 to indicate that the corresponding column encrypted traffic without decrypting the packet’s load content. We use
+meets the conditions, 𝑁 is unsatisfied, and 𝑃 is partially satisfied. The the randomness-testing library for other unknown encrypted traffic
+above surveys show that machine and deep learning-based solutions to perform randomness detection on their packet load, assessing the
+have achieved satisfactory detection tasks within the given dataset. randomness and diversity of the packet load [40]. We filter out the nonencrypted packets to ensure our final dataset contains only encrypted
+2.2. Design goals ones. As we aim to find the malicious behavior in the encrypted traffic,
+ we do not filter the DNS traffic in our dataset. Next, we transformed the
+ Our work is to devise a robust encrypted malicious traffic detection extracted packet heads into a text format that the model can process.
+system to achieve efficient detection in high throughput networks. Robust Generalization Training: After obtaining the formatted
+Notably, our system achieves the following two goals, which need to encrypted text data, we find that benign traffic occurs more frequently
+be better addressed in the previous research. than malicious traffic, which causes data imbalance. Data imbalance
+ (1) Robust accurate detection. Machine learning-based will cause unsatisfactory detection performance as the conventional
+approaches assume that the dataset is independent and identically approaches always assign equal importance to the class samples. Addidistributed. However, in the wild, it often violates the assumption. tionally, different datasets may exhibit varying data distributions. The
+Our system should be able to detect encrypted malicious traffic under training data comes from open-source benchmark datasets. In contrast,
+various datasets and can capture evasion attacks, such as the attackers the testing data is often the actual traffic. Therefore, assuming that the
+injecting noise packets in benign applications. data are independent and identically distributed can lead to overfitting
+ (2) Low detection latency in the backbone. Our detection system and poor generalization.
+should apply in high throughput networks, e.g., backbone, to conduct However, many data augmentation methods (such as SMOTE and
+high-speed traffic analysis and real-time detection. To this end, we ROS) have disadvantages. SMOTE may generate unrealistic samples
+use a natural language processing model to extract useful information at class boundaries, affecting classification performance. ROS may inand devise a lightweight feature selection approach, which reduces the troduce redundant data, increasing the risk of overfitting. Therefore,
+feature dimension to 75.3%. we devise an adaptive domain generalization algorithm based on the
+ variational autoencoder with a new loss function to tackle the above
+3. Encrypted malicious traffic modeling approach issues.
+ Variational autoencoder is one of the methods in disentanglement
+ Our detection system includes four modules: data processing, fea- representation learning (DRL) [41], which is widely applied in text genture extraction, feature selection, and encrypted malicious traffic clas- eration, style conversion, and semantic understanding. We use VAE’s
+sification, as shown in Fig. 1. We pre-process the original imbalanced encoder to convert the textual features into potential representations
+encrypted traffic packet with the enhanced domain generalization al- of the traffic to make the generated text data more diverse and fill in
+gorithm. In the feature extraction and selection stage, we consider all the differences between different data distributions. We analyze the
+
+ 3
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ Fig. 1. Methodology of Flow Diagram.
+
+gradients contributed by each feature of the IP packets. Intuitively, loss (𝑎𝑑𝑣 ), as shown in Eq. (1).
+given the trained VAE and a list of IP packets, if the reconstruction error
+changes quite a lot when a small amount varies a particular feature of  = rec + 𝜆kl kl + 𝜆adv adv (1)
+the IP packet, this feature at its current value is anomalous. We use the 𝑝′to denote oversampled encrypted traffic packets,
+ As our method involves augmenting minority malicious samples, which are encoded into a temporary variable 𝑧′ by using a probabilistic
+bias may be introduced during the data augmentation. The model may encoder 𝑞𝜙 (𝒛′ ∣ 𝒑′ ). We use a probabilistic decoder 𝑝𝜃 (𝒑′ ∣ 𝒛′ ) to
+overfit these samples with the increased proportion of augmented mali- reconstruct the original sample from 𝑧′ . rec computes the difference
+cious samples in the training data. In our work, we use Dropout during between the sample reconstructed 𝑝̂′𝑖 from the latent representation 𝑧′
+training to prevent the model’s overfitting. Considering that if the and the original input 𝑝′ , as shown in Eq. (2). The more minor the loss
+generated augmented samples are not realistic enough, the model may (𝑟𝑒𝑐 ), the closer the generated sample is to the original sample.
+learn incorrect features. We introduce adversarial losses to evaluate the [ ]
+authenticity of the generated text and prevent noise interference in the rec = −E𝑞𝜙 (𝒛′ ∣ 𝒑′ ) log 𝑝𝜃 (𝒑′ ∣ 𝒛′ ) (2)
+generation process. The introduced adversarial losses function avoids
+ Kullback–Leibler divergence loss (kl )measures the difference bebias in the generated samples. Experimental results demonstrate that
+ tween the temporary variable distribution 𝑞𝜙 (𝒛′ ∣ 𝒑′ ) and the prior
+it solves the problem of overfitting caused by oversampling and poor
+ distribution𝑝𝜃 (𝒑′ ∣ 𝒛′ ). 𝜆kl controls the weight of the KL loss function
+generalization ability in different datasets.
+ during training, where
+Algorithm 1 The pseudo-code of an enhanced domain generalization ( )
+algorithm. kl = kl 𝑞𝜙 (𝒛′ ∣ 𝒑′ )|𝑝(𝒛) (3)
+Input: We introduce adversarial loss (𝑎𝑑𝑣 ) to evaluate the authenticity of
+ { }
+ A list of oversampled encrypted traffic packets:𝑝′ = 𝑝′1 , 𝑝′2 , 𝑝′3 ...𝑝′𝑚 generated samples by adding a discriminator network 𝐷(𝒑′ ). 𝜆𝑎𝑑𝑣 is a
+Output: weight of adversarial loss, where, 𝒑′ ∼ 𝑝 data (𝒑′ ) denotes the sampled
+ { }
+ New encrypted traffic data: 𝑞 = 𝑞1 , 𝑞2 , 𝑞3 ...𝑞𝑚 real sample 𝑝′ , 𝒑̂′ 𝑔𝑒𝑛 ∼ 𝑝 data (𝒑̂′ 𝑔𝑒𝑛 ) denotes the sampled reconstructed
+ 1: function EnhancedGomainGeneralizationFunc(𝑝′ , 𝑞) sample 𝒑̂′ 𝑔𝑒𝑛 from the generated model, 𝐷(𝑝′ ) and 𝐷(𝒑̂′ 𝑔𝑒𝑛 ) are the
+ 2: 𝑝′𝑖 = real_data(𝑝′ ) ∕ ∗ Read real samples∗ ∕ discriminator’s probability of classifying real samples 𝑝′ or the recon-
+ ( )
+ 3: 𝜇, log 𝜎 2 = Encoder(𝑝′𝑖 ) ∕ ∗ Obtaining the mean and structed samples 𝒑̂′ 𝑔𝑒𝑛 as ture or false, respectively. The generative
+ standard deviation∗ ∕ model improves the realism of the generated samples by minimizing
+ ( ( ))
+ 4: 𝑧′ = 𝜇+𝜖⋅exp log 𝜎 2 ∕ ∗ Obtaining the temporary variable the adversarial loss and, in the meantime, ensures that the objective
+ ′
+ 𝑧 , where 𝜖 ∼ 𝑁(0, 1). ∗ ∕ function of the variational autoencoder is unchanged. Algorithm 1 gives
+ 5: 𝑝̂′𝑖 = Decoder(𝑧′ ) ∕ ∗ Generating reconstructed samples 𝑝̂′𝑖 its pseudo-code, which aims to minimize the loss function.
+ from 𝑧′ using Decoder()∗ ∕
+ ( ) [ ( ( ))]
+ 6: 𝑝̂′ gen = Decoder 𝑧gen adv = E𝒑′ ∼𝑝 data (𝒑′ ) [log 𝐷(𝒑′ )] + E𝒑̂′ ̂′ log 1 − 𝐷 𝒑̂′ 𝑔𝑒𝑛
+ 𝑔𝑒𝑛 ∼𝑝 data (𝒑 𝑔𝑒𝑛 )
+ 7: Calculating the loss function adv with 𝐷(𝑝′ ) and 𝐷(𝒑̂′ 𝑔𝑒𝑛 )
+ (4)
+ 8:  = rec + 𝜆kl kl + 𝜆adv adv ∕ ∗ Calculating the overall loss
+ function ∗ ∕
+ 3.2. Feature extraction
+ 9: update_parameters() ∕ ∗ Update network parameters to
+ minimize  ∗ ∕
+ The packet header fields, as do the underlying grammatical rules
+10: Using the generated training model to obtain the output data
+ for constructing sentences, have a strict order. In this section, we con-
+ 𝑞
+ sider all packet headers as text and use a natural language processing
+11: return 𝑞
+ model (ALBERT) to convert the qualitative data in traffic packets into
+ The new loss function addresses overfitting due to oversampling and quantitative data.
+poor generalization across different datasets. It combines reconstruc- ALBERT uses a transformer encoder as its core component. The
+tion loss (𝑟𝑒𝑐 ), Kullback–Leibler divergence loss (kl ), and adversarial transformer encoder comprises multiple layers with the same structure.
+
+ 4
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ zeros. Finally, the word embedding vectors are added to the corresponding position encoding vectors to form the input embedding vector
+ sequence.
+ ( )
+ 𝑝𝑜𝑠
+ 𝑃(𝑝𝑜𝑠,2𝑖) = sin (5)
+ 100002𝑖∕𝑑𝑚𝑜𝑑𝑒𝑙
+ ( )
+ 𝑝𝑜𝑠
+ 𝑃(𝑝𝑜𝑠,2𝑖+1) = cos (6)
+ 100002𝑖∕𝑑𝑚𝑜𝑑𝑒𝑙
+ After that, the Albert model extracts high-level features of the input
+ sequence by stacking multiple layers of self-attention mechanisms and
+ feed-forward neural networks. The self-attention mechanism allows
+ each word to attend to information from other words in the input
+ sequence. In contrast, the multi-head mechanism enables the model to
+ extract features from different subspaces. The input sequence is into
+ query (Q), key (K), and value (V) vector spaces, as shown in Eq. (7). The
+ attention scores are obtained by dividing the√dot product of the query
+ vector and key vector by a scaling factor ( 𝑑𝑘 ) and then converting
+ them into attention weights using the softmax function. 𝑑𝑘 represents
+ the feature dimension within the attention head. This process repeats
+ using different weight matrices multiple times, resulting in multiple
+ self-attention outputs. A linear layer transforms these outputs to obtain
+ the final multi-head self-attention output. The output of the multi-head
+ self-attention mechanism is fed into a feed-forward neural network for
+ further processing, as shown in Eq. (8). The final output is a sequence
+ in which each position corresponds to a feature in the input sequence
+ Fig. 2. Albert feature extraction process.
+ and contains contextual information about that feature.
+ ( )
+ 𝑄𝐾 𝑇
+ 𝑆𝑒𝑙𝑓 − 𝑎𝑡𝑡𝑒𝑛𝑡𝑖𝑜𝑛(𝑄, 𝐾, 𝑉 ) = sof tmax √ (7)
+Each contains a self-attention mechanism and a feed-forward neural 𝑑𝑘
+network [42–44]. The attention mechanism captures the dependencies FFN(𝑥) = ReLU(𝑊1 ⋅ 𝑥 + 𝑏1 ) ⋅ 𝑊2 + 𝑏2 (8)
+between keywords in the sequence. The feed-forward neural network
+further extracts features and performs non-linear transformations. The In Eq. (8), 𝑥 is the output of the multi-head self-attention mechatraining process and gradient propagation are stabilized by apply- nism after layer normalization. 𝑊1 and 𝑊2 are weight matrices. The
+ing residual connections and layer normalization. Finally, high-level former maps the input vector 𝑥 to a higher-dimensional intermediate
+features are extracted and integrated to generate the final feature representation, while the latter maps the non-linearly transformed
+representations. Fig. 2 shows the framework of Albert. intermediate representation back to the original dimension. 𝑏1 and 𝑏2
+ In the work, we represent each input as a list of vectors con- are the corresponding bias vectors. ReLU is a non-linear activation
+sisting of unique tokens (e.g., [CLS], [SEP]) and segment IDs. We function that applies a non-linear transformation to the result of the
+first use ALBERT to tokenize the text and convert each word into linear transformation, enabling the model to capture complex patterns
+ and features.
+its corresponding ID. We then convert the tokenized text into the
+format that ALBERT can process. Additionally, position encoding is Algorithm 2 Eigenvector extraction based on Albert.
+generated for each word segment. Thirdly, we use the embedding layer Input:
+ { }
+to convert the input word IDs into corresponding word vectors while Text datasets: 𝑡𝑒𝑥𝑡 = 𝑞1 , 𝑞2 , 𝑞3 ...𝑞𝑚
+adding position encodings. Finally, we use the transformer encoder for Output:
+ { }
+better feature representation. Algorithm 2 shows the pseudo-code of the Albert’s eigenvector: 𝑒𝑛𝑐𝑜𝑑𝑒𝑟_𝑜𝑢𝑡𝑝𝑢𝑡 = 𝑣1 , 𝑣2 , 𝑣3 ...𝑣𝑚
+feature extraction process. 1: ∕ ∗ Tokenization ∗ ∕
+ We use a five-tuple (e.g., 172.16.0.1, 192.168.10.51, 443, 40272, 2: tokens = tokenizer.tokenize(text)
+TLS) as an example to explain how to convert qualitative data into 3: ∕ ∗ Convert tokens to IDs, including segment encoding and
+quantitative data. (1) Using the tokenizer to convert the five-tuple position encoding ∗ ∕
+string into a token sequence (e.g., [‘172’, ’.’, ‘16’, ‘.’, ‘0’, ‘.’, ‘1’, ‘192’, 4: input_ids, segment_ids, position_ids =
+‘.’, ‘168’, ‘.’, ‘10’, ‘.’, ‘51’, ‘443’, ‘40272’, ‘TLS’]), and then converting (tokenizer.convert_tokens_to_ids(tokens),
+the token sequence into the corresponding ID sequence (e.g., [101, generate_segment_encoding(tokens),
+10, 102, 10, 103, 10, 101, 101, 10, 102, 10, 103, 10, 104, 105, 106, generate_position_encoding(tokens))
+107]). (2) Converting the ID sequence into a tensor format suitable 5: ∕ ∗ Embedding layer ∗ ∕
+for PyTorch or TensorFlow and adding unique tokens [CLS] and [SEP] 6: embeddings = embedding_layer(input_ids,
+at the beginning and end of the ID sequence (e.g., [CLS, 101, 10, segment_ids, position_ids)
+ 7: ∕ ∗ Transformer encoder ∗ ∕
+102, 10, 103, 10, 101, 101, 10, 102, 10, 103, 10, 104, 105, 106,
+ 8: encoder_output = transformer_encoder(embeddings)
+107, SEP]). (3) Generating the word embedding matrix, which has a
+ 9: return 𝑒𝑛𝑐𝑜𝑑𝑒𝑟_𝑜𝑢𝑡𝑝𝑢𝑡
+size of (vocabulary size, embedding dimension). (4)Generating position
+embedding vectors, which provide positional information for each
+token in the sequence. As shown in Eqs. (5) and (6), 𝑑𝑚𝑜𝑑𝑒𝑙 represents 3.3. Feature selection
+the dimension of the embedding vectors. For even-dimensional indices
+(2i), the 𝑠𝑖𝑛() computed the values of the position encodings, while for After feature extraction, we obtained 312-dimensions feature vecodd-dimensional indices (2i+1), the 𝑐𝑜𝑠() computed the values. Since tors. However, not all dimensions positively impact the detection acour input is a single text paragraph, we set segment embeddings to curacy. Therefore, feature selection is essential to obtain high-quality
+
+ 5
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+features that directly affect detection accuracy. Although filteringbased and wrapper-based methods are widely used, they either fail
+to capture the best feature subset or take a long time for model
+training [45].
+ We devise an AIRW (additive increase-based random walk feature
+selection algorithm) to capture the optimal feature subset. The feature
+selection method contains two steps. It first ensures a locally optimal
+space in our initial eigenvector (312 dimensions). Hence, we gradually
+increase exponentially to choose the subset from 16 to 256 dimensions,
+e.g., 16, 32, 64, 128, and 256. We obtained the optimal feature range
+of [64, 128] in the first step. After identifying the local optimal space,
+we further employ a random walk strategy to optimize the feature
+dimension within this local space. The specific steps are as follows.
+(1) Initialization. Setting the current dimension to 64 and record its
+performance. (2) Random Perturbation. Small random perturbations Fig. 3. 1D-CNN model.
+are made to the current dimension, such as increasing or decreasing
+by a few dimensions. (3) Performance Evaluation. Evaluating the performance of the feature subset at the new dimension. (4) Select the
+ in the model to explain which features contribute the most to the detec-
+Optimal Dimension. If the performance at the new dimension is better
+ tion result, providing an intuitive explanation of the model’s decisions.
+than the current dimension, update the current dimension to the new
+ For a given feature 𝑗, sample 𝑖, the SHAP value 𝜙𝑗𝑖 is calculated as
+dimension and record the new performance. (5) Repeat the Process.
+ follows:
+Repeating steps 2 to 4 until the performance no longer significantly
+ ∑ |𝑆|!(𝑝 − |𝑆| − 1)!
+improves or a preset number of iterations is reached. The pseudo-code 𝜙𝑗𝑖 = [𝑓 (𝑥𝑖𝑆∪𝑗 ) − 𝑓 (𝑥𝑖𝑆 )] (9)
+of it is shown in algorithm 3. 𝑆⊆{1,2,…,𝑝}⧵{𝑗}
+ 𝑝!
+
+Algorithm 3 The pseudo-code of additive increase-based random walk Where 𝑝 represents the total number of features. |𝑆| denotes the size
+feature selection algorithm. of feature set(𝑆). 𝑓 (𝑥𝑖𝑆 ) represents the model’s predicted output for
+Input: sample 𝑖 under 𝑆. 𝑓 (𝑥𝑖𝑆∪𝑗 ) represents the model’s predicted output for
+ { }
+ Albert’s eigenvector:𝑒𝑛𝑐𝑜𝑑𝑒𝑟_𝑜𝑢𝑡𝑝𝑢𝑡 = 𝑣1 , 𝑣2 , 𝑣3 ...𝑣312 sample 𝑖 after adding the value of 𝑗 to 𝑆. We randomly select 25
+Output: features from the first 77 dimensions and another 25 features from
+ { }
+ Eigenvectors of optimal subsets: 𝑏𝑒𝑠𝑡_𝑒𝑖𝑔𝑒𝑛𝑣𝑒𝑐𝑡𝑜𝑟 = 𝑣1 , 𝑣2 , 𝑣3 ...𝑣𝑚 the remaining dimensions. With the SHAP algorithm, we find that the
+ 1: for each 𝑖 ∈ {16, 32, 64, 128, 256} do features from the first part significantly impact the classification task
+ 2: 𝑟𝑒𝑠𝑢𝑙𝑡.𝑎𝑝𝑝𝑒𝑛𝑑(𝑀(𝑣𝑖 )) (e.g., Protocol Type, Packet Length, Payload Length, Packet Arrival
+ 3: end for Time, etc.). The features are also found in previous references of
+ 4: 𝑚𝑎𝑥_𝑣𝑎𝑙𝑢𝑒 = max(𝑟𝑒𝑠𝑢𝑙𝑡) ∕ ∗ Selecting the optimal dimension ∗ ∕ manual feature extraction [2,9,12]. However, the features from the
+ 5: 𝑚𝑎𝑥_𝑖𝑛𝑑𝑒𝑥 = arg max(𝑟𝑒𝑠𝑢𝑙𝑡) ∕ ∗ latter part have a minimal impact on the classification. It is proved that
+ The index of the optimal dimension ∗ ∕ our feature selection method is meaningful.
+ 6: if (𝑀(max_index − 1) − 𝑀(max_index + 1) > 0) then
+ 7: [max_index × 2−1 , max_index] ∕ ∗ 3.4. Classification
+ Selecting the optimal feature range ∗ ∕
+ 8: else CNN has been frequently employed in two-dimensional signal pro-
+ 9: [max_index, max_index × 2+1 ] cessing (e.g., image identification) [47,48]. Recently, it has shown
+10: end if outstanding performance in encrypted traffic analysis. Considering the
+11: Setting current_index as random[max_index, max_index × 2+1 ] feature vector obtained above and the one-dimensional CNN (1D-CNN)
+12: for each iteration do application in detecting network attacks (e.g., it can capture the spatial
+13: Generating a random number(𝑛𝑢𝑚) between -1 and 1 dependencies information between different bytes of packets and offer
+14: if 𝑛𝑢𝑚 >= 0 then more helpful information to identify and classify encrypted malicious
+15: current_index=current_index-1 traffic) [49], we convince that 1D-CNN is an optimal classier, and the
+16: else experimental results confirm our claim. We briefly outline the 1D-CNN
+17: current_index=current_index+1 model, which adopts four layers: convolution, pooling, flatten, and a
+18: end if fully connected layer, as shown in Fig. 3.
+19: if (current_index < start_index) or (current_index > end_index) In 1D-CNN, the convolutional layer captures local information and
+ then perceives it through a sliding window to obtain locally relevant infor-
+20: break mation. The convolutional layer uses shared weights on the convolution
+21: end if kernel, significantly reducing the number of parameters in the network
+22: 𝑏𝑒𝑠𝑡_𝑟𝑒𝑠𝑢𝑙𝑡.𝑎𝑝𝑝𝑒𝑛𝑑(𝑀(𝑣𝑐𝑢𝑟𝑟𝑒𝑛𝑡_𝑖𝑛𝑑𝑒𝑥 )) and the risk of overfitting. Assuming our optimal feature subset is 𝑋,
+23: end for the convolution kernel is 𝑊 , the bias is 𝑏, and the stride is 𝑠. After
+24: best_eigenvector = arg max(best_result) adding the ReLU activation function, the output feature calculation
+25: return 𝑏𝑒𝑠𝑡_𝑒𝑖𝑔𝑒𝑛𝑣𝑒𝑐𝑡𝑜𝑟 formula is shown in Eq. (10).
+ (𝑀−1 𝑁−1 )
+ The deep learning models work like a black box, making it dif- ∑ ∑
+ficult to understand their decision-making process. To improve the 𝑌 (𝑖, 𝑗) = ReLU 𝑋(𝑖 ⋅ 𝑠 + 𝑚, 𝑗 ⋅ 𝑠 + 𝑛) ⋅ 𝑊 (𝑚, 𝑛) + 𝑏 (10)
+interpretability of deep learning models and understand the reasoning 𝑚=0 𝑛=0
+
+behind anomaly detection, we utilize the SHAP (Shapley Additive ex- In 1D-CNNs, the convolutional layer is usually followed by a pooling
+planations) algorithm to measure the importance of each feature [46]. layer, a flatten layer, and a fully connected layer. We adopt the mean
+The SHAP algorithm is based on the concept of Shapley values from pooling method in the pooling layer. Average pooling can reduce the
+cooperative game theory. It computes the contribution of each feature feature’s mapped dimension and the model’s computational complexity
+
+ 6
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ Table 2
+ The details of the open-source datasets.
+ Open-source datasets Category Types subdivided Proportion
+ Benign traffic Benign traffic 54%
+ Brute Force FTP-Patator 2.9%
+ CIC-IDS 2017
+ SSH-Patato 2.4%
+ DoS/DDoS DoS slowloris 5.4%
+ DoS Hulk 5.4%
+ Web Attack Web Attack C XSS 8.1%
+ Web Attack C Sql 8.1%
+ Botnet Botnet ARES 10.8%
+ Port Scan Port Scan 2.9%
+ Benign traffic Benign traffic 52.8%
+ Cridex 11.1%
+ USTC-TFC 2016 Htbot 6.2%
+ Miuref 5.9%
+ Nsis-ay 6.4%
+ Malicious traffic Shifu 5.7%
+ Virut 5.5%
+ Zeus 6.4%
+ Fig. 4. The overall architecture of CERNET. Benign traffic Benign traffic 55.5%
+ TCP based attacks MSSQL 11.1%
+ CIC-DDoS 2019 SSDP 5.5%
+ TCP/UDP based attacks DNS 3.7%
+and number of parameters. It can prevent overfitting and improve the LDAP 7.4%
+model’s generalization ability. The average pooling method is shown SNMP 5.5%
+in Eq. (11). UDP based attacks NTP 3.9%
+ TFTP 7.4%
+ ′
+ 𝑘∑ ′
+ −1 𝑠∑
+ −1
+ 1 Benign traffic Benign traffic 53.4%
+𝑍𝑖,𝑗 = 𝑌 ′ (11)
+ 𝑘′ × 𝑠′ 𝑚=0 𝑛=0 𝑖,𝑗×𝑠 +𝑛 C&C C&C-FileDownload 3.9%
+ IoT-23 C&C-HeartBeat 5.5%
+where 𝑘′ denotes the size of the pooling window, 𝑠′ represents the C&C-Torii 4.6%
+ Okiru Okiru-Attack 9.8%
+pooling stride, 𝑖 represents the row index of the output tensor, and 𝑗
+ DDoS DDoS 10.2%
+represents the column index. Port Scan Port Scan 12.6%
+ The flatten layer does not introduce any new parameters and
+ Benign traffic Benign traffic 50.8%
+weights. It simply rearranges the data without modifying the content. Malware C&C 10.4%
+We use it to convert a multidimensional input 𝑋 into one-dimensional. The real traffic Web Attack Https,SQL,TLS 9.8%
+For example, for an input 𝑋 of dimension (N, C, L), the flatten Brute Force Scan 8.9%
+ Flooding Attack TCP,UDP,DNS,NTP 8.4%
+operation converts it to a one-dimensional one (N, C*L). We use the
+ Alerts Alerts,Logs 11.7%
+fully connected layer to learn the non-linear dependencies of the data.
+It connects all the neurons in the previous layer, and each connection
+has a weight. Since our encrypted malicious detection is a binary
+classification task, the calculation method after adding the Sigmoid controlled network environment for five consecutive days. They subactivation function is shown in Eq. (12). divided traffic attack scenarios into Brute Force FTP, Brute Force SSH,
+ DoS, Heartbleed, Web Attack, Infiltration, Botnet, and DDoS. Therefore,
+ the attack types are abundant. We randomly selected 2.38 GB of traffic
+𝑌𝑓 𝑐 = Sigmoid(𝑍𝑓 𝑙𝑎𝑡 ⋅ 𝑊𝑓 𝑐 + 𝑏𝑓 𝑐 ) (12)
+ for the experiment, as shown in Table 2.
+Where 𝑊𝑓 𝑐 is the weight matrix, 𝑍f lat is the input feature vector after CICDDoS 2019. The CIC-DDoS 2019 dataset contains benign and
+performing matrix multiplication in the flattened layer, and 𝑏fc de- the most up-to-date common DDoS attacks. In addition to that, it also
+notes the bias vector. With 1D-CNN, we classify the malicious network includes the detection results of CICFlowMeter-V3, which is a network
+packets using the packet-level features extracted from the Albert model. traffic tool based on labeled flows. This dataset has modern reflective
+ DDoS attacks like PortMap, NetBIOS, LDAP, MSSQL, UDP, UDP-Lag,
+4. Evaluation SYN, NTP, DNS, and SNMP. We randomly collected 1.78 GB of traffic
+ for the experiment.
+ We use open-source datasets and Internet traffic (CERNET) to ver- USTC-TFC 2016. The USTC-TFC 2016 dataset is released by the
+ify the scalability in different network environments. The experiment Cybersecurity Lab at the University of Science and Technology of
+preparation includes a description of the dataset and evaluation met- China [50]. The dataset consists of two parts. The first part includes
+rics, experimental results analysis, and a comparison of our work with malicious malware traffic (e.g., Htbot, Nsis-ay, Zeus) from 10 types of
+other state-of-the-art methods on malicious traffic detection tasks. We public websites collected by CTU researchers from 2011 to 2015 in real
+performed all the experiments on a 2-way Intel Xeon server with one network environments. The second part contains ten types of benign
+Intel(R) Xeon(R) CPU E5-2650 processor that contains eight cores at a traffic (e.g., Gmail, Bit Torrent, Bit Torrent, Ftp) collected using IXIA
+frequency of 2.00 GHz and 128 GB of memory. Tesla P40 is also used to BPS, a professional network traffic simulation device. The USTC-TFC
+accelerate the training and test phase. Experimental results demonstrate 2016 dataset is 3.71 GB, and we randomly collected 2.15 GB for the
+that our work outperforms other similar alternatives. experiment.
+ The real traffic. Our real traffic was collected at CERNET from
+4.1. Datasets and evaluation metrics 6/1/2023 to 6/7/2023 [51]. The topology of CERNET is shown in
+ Fig. 4. Our original packets are collected at the Network Behavior
+ CICIDS 2017. The University of New Brunswick published the Observation System (NBOS). NBOS monitors and manages the service
+public datasets CICIDS 2017 and CICDDoS 2019 for downstream tasks quality and security status of CERNET by analyzing the incoming data
+of encrypted traffic classification. Researchers captured the traffic in a streams. When it finds abnormal events, it sends alerts to CHAIRS.
+
+ 7
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+Table 3 process 32 samples during the feature extraction. In the 1D-CNN, the
+Model parameter settings.
+ Adam optimizer and an adaptive learning rate optimization algorithm
+ Model Parameter Value adjust learning rates to accommodate parameter changes dynamically.
+ maximum_seq_length 512 We set a small learning rate (0.0001) to ensure stable convergence
+ max_predictions_per_seq 20
+ ALBERT during training. Besides, we randomly discard a portion of neurons by
+ eval_batch_size 32
+ learning_rate 0.0001
+ setting the dropout rate to 0.15 to avoid overfitting. We show the model
+ parameters in Table 3.
+ layers 3
+ kernel_size 2
+ CNN
+ learning_rate 0.0001 4.2.1. Different classification algorithms evaluation
+ dropout_rate 0.15 We choose four classical classifiers to identify malicious traffic. They
+ are SVM, random forest (RF), CNN, and Recurrent Neural Network
+ (RNN). We analyze different kernel functions in the SVM classifier,
+ e.g., linear, sigmoid, Polynomial, and radial basis functions (RBF),
+CHAIRS fuses heterogeneous threat intelligence (e.g., suspicious IP
+ as shown in Fig. 5(a). In the RF classifier, we evaluate the impact
+flows, malicious domain names, Alerts, Audit logs, suspicious C&C
+ with different numbers of decision trees, as shown in Fig. 5(b). The
+traces) to mine the multi-step attacks and track high-risk attack paths.
+ accuracy increases are not significant with the increase of decision
+Monster I/II is an intrusion detection system that analyzes the NetFlow
+ trees. We select 60 decision trees for the following evaluation to avoid
+and identifies the suspicious ones. HYDRA system receives network
+ unnecessary computation. We then evaluate CNN and RNN classifiers
+security events from the CHAIRS system. It converts the response rules
+ with different convolution layers and hidden layer sizes, as shown in
+into flow entries in the OpenFlow switch and blocks the attack traffic
+ Figs. 5(c) and 5(d). Finally, we use the four metrics to evaluate the
+at the network boundary. We have collected 1.43 TB packets in a week.
+ four classifiers. Fig. 6 shows that our 1D-CNN model has the highest
+After processing the original traffic, we obtained 41.82 GB packets for
+ accuracy .
+the experiment.
+ Synthetic dataset. We randomly selected 2.67 GB from the loT-23
+ 4.2.2. Feature subset analysis
+dataset and 4.25 GB from the real traffic. The Stratosphere Laboratory,
+ To ensure comprehensive feature learning, we conduct 56 iterations,
+CTU University, Czech Republic, built the IoT-23 dataset. It contains
+ and the model’s weights are updated at each iteration. Finally, we have
+communication traffic from twenty-three IoT devices. Twenty devices
+ obtained the optimal feature subset (77 dimensions) with the devised
+capture malware traffic, and three devices capture benign IoT traffic.
+ feature selection algorithm. We analyzed the detection accuracy with
+We synthesized them to simulate network traffic in a real IIoT endifferent feature dimensions, as shown in Fig. 7. It demonstrates that
+vironment and used them to validate the capabilities for identifying
+ the model’s performance changes with varying feature dimensions.
+malicious traffic in IoT devices. The volume of our traffic is 4.92 GB.
+ However, it achieves the highest level of performance when choosing
+ In the experiment, we use VirusTotal [52] to cross-validate the
+ 77 dimensions, and any over or under-specific feature dimensions will
+detection results of NBOS to construct the ground truth data for training
+ cause lower detection performance.
+the model. We upload the detection result to the VirusTotal web-
+ In addition to detection accuracy, we analyze the average trainsite and collect the traffic that is regarded as malicious. We utilize
+ ing time of the CICIDS 2017, CICDDoS 2019, and USTC-TFC 2016
+𝑅𝑒𝑎𝑐𝑙𝑙, 𝑂𝑣𝑒𝑟𝑎𝑙𝑙𝐴𝑐𝑐𝑢𝑟𝑎𝑐𝑦, 𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛, and 𝐹 1 − 𝑆𝑐𝑜𝑟𝑒 as the algorithm’s
+ with complete feature combination and feature selection algorithm, as
+evaluation criteria. 𝑅𝑒𝑐𝑎𝑙𝑙 indicates the ratio of samples classified as
+ shown in Fig. 8. The factors affecting training time are determined
+malicious among those malicious samples. 𝑂𝑣𝑒𝑟𝑎𝑙𝑙𝑎𝑐𝑐𝑢𝑟𝑎𝑐𝑦 indicates
+ by the computing power of different platforms and the feature dithe ratio of correctly identified samples to the total number of sammensionality in the dataset. On the one hand, platforms with stronger
+ples. 𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 indicates the ratio of malicious samples among those
+ computing power use less average training time, which is an objective
+classified as malicious. The 𝐹 1 − 𝑆𝑐𝑜𝑟𝑒 comprehensively evaluates
+ factor. On the other hand, our additive increase-based random walk
+the model’s performance in detecting malicious samples. 𝐵𝑅𝑖 assesses
+ feature selection algorithm reduces the feature dimensions by 75.3%,
+the model’s ability to balance risk when handling different types of
+ which is the subjective factor in reducing training time. Although data
+samples, ensuring the model’s stability and robustness. In Eq. (13) to
+ distribution needs to be balanced during actual deployment, the robust
+16, we use 𝑇 𝑃 , 𝐹 𝑃 , 𝑇 𝑁, and 𝐹 𝑁 to denote the true positive, false
+ algorithm requires very little time to process the oversampled malicious
+positive, true negative, and false negative, respectively.
+ traffic.
+ 𝑇𝑃
+𝑅𝑒𝑎𝑐𝑙𝑙 = (13)
+ 𝑇𝑃 + 𝐹𝑁 4.2.3. Robustness analysis
+ 𝑇𝑃 + 𝑇𝑁 In this part, we utilize one of the datasets (CICIDS 2017) to eval-
+𝑂𝑣𝑒𝑟𝑎𝑙𝑙𝐴𝑐𝑐𝑢𝑟𝑎𝑐𝑦 = (14)
+ 𝑇𝑃 + 𝑇𝑁 + 𝐹𝑃 + 𝐹𝑁 uate the impact of 𝜆𝑘𝑙 and 𝜆𝑎𝑑𝑣 on the robustness. 𝜆𝑘𝑙 controls the
+ 𝑇𝑃 weight of the KL divergence loss function during training, and 𝜆𝑘𝑙 ∈
+𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 = (15) [0,1]. 𝜆𝑎𝑑𝑣 is a weight hyperparameter of adversarial loss, and 𝜆𝑘𝑙 ∈
+ 𝑇𝑃 + 𝐹𝑃
+ [0,1]. We introduce adversarial loss to improve the authenticity of
+ 2 ∗ 𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 ∗ 𝑅𝑒𝑐𝑎𝑙𝑙
+𝐹 1 − 𝑆𝑐𝑜𝑟𝑒 = (16) the generated samples. The smaller 𝜆𝑘𝑙 , the smaller the reconstruction
+ 𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 + 𝑅𝑒𝑐𝑎𝑙𝑙
+ error, and the better to reconstruct the input data, demonstrating the
+ 𝑎𝑡𝑡𝑎𝑐𝑘 𝑠𝑎𝑚𝑝𝑙𝑒𝑠 𝑜𝑓 𝑐𝑙𝑎𝑠𝑠 𝑖 decoder’s greater accuracy in restoring the original data. However, a
+𝐵𝑅𝑖 = (17)
+ 𝑏𝑒𝑛𝑖𝑔𝑛 𝑠𝑎𝑚𝑝𝑙𝑒𝑠 more considerable 𝜆𝑎𝑑𝑣 can enhance the impact of adversarial training
+ and emphasize the authenticity of generated samples. We analyze the
+4.2. Experimental results analysis value of 𝜆𝑘𝑙 and 𝜆𝑎𝑑𝑣 to make the generated data more authentic and
+ more robust. After continuous experiments, when 𝜆𝑘𝑙 equals 0.032 and
+ In this section, we conduct a series of experiment validations in 𝜆𝑎𝑑𝑣 equals 0.95, the CICIDS 2017 dataset becomes more balanced
+different classification algorithms evaluation, feature subset analysis, (RF = 1:1), and the algorithm is more robust. The details are shown
+robustness analysis, and system performance analysis. Considering the in Fig. 9.
+ALBERT and 1D-CNN model parameters, we specified the maximum After obtaining reasonable parameters, we verify the robustness of
+input length as 512 tokens to control the input data size and align our model with different datasets. Table 4 shows that when the model
+with model requirements. We simultaneously set the batch size (32) to chooses the same trained and test data in CICIDS 2017, CICDDoS 2019,
+
+ 8
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ Fig. 5. Accuracy of different models.
+
+ Fig. 6. Accuracy of different classification algorithms.
+ Fig. 7. Accuracy of different feature dimension.
+
+or USTC-TFC 2016, nearly all the evaluation metrics can reach 99%. 4.2.4. Performance results
+However, the detection performance could be better when the model In this section, we discuss the scalability of the mode in real-time
+selects different trained and test data with the devised robust algorithm. network environments, for it is a crucial aspect of practical application.
+When we use algorithm 1 to optimize the dataset, the evaluation Throughput. We truncate the packets to the first 200 bytes on the
+metrics can reach nearly 97%, demonstrating that our work has good physical testbed and increase the sending rates until our model reaches
+generalization ability. maximum throughput. Our model achieves the maximum throughput
+
+ 9
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ Table 4
+ Robustness analysis with 𝜆𝑘𝑙 = 0.032 and 𝜆𝑎𝑑𝑣 = 0.95.
+ Training data Testing data Accuracy Precision Recall F1-Score
+ CICIDS 2017 CICIDS 2017 0.999 0.996 0.997 0.997
+ CICDDoS 2019 CICDDoS 2019 0.993 0.986 0.997 0.991
+ USTC-TFC 2016 USTC-TFC 2016 0.995 0.982 0.991 0.986
+ Synthetic Dataset Synthetic Dataset 0.986 0.99 0.982 0.986
+ CICIDS 2017 CICDDoS 2019 0.745 0.830 0.709 0.765
+ CICIDS 2017 USTC-TFC 2016 0.845 0.843 0.839 0.841
+ CICDDoS 2019 USTC-TFC 2016 0.868 0.853 0.841 0.847
+ CICDDoS 2019 CICIDS 2017 0.887 0.914 0.867 0.890
+ CICDDoS 2019 CICIDS 2017 0.887 0.914 0.867 0.890
+ CICIDS 2017 Synthetic Dataset 0.863 0.906 0.834 0.868
+ CICIDS 2017+Algorithm 1 CICDDoS 2019 0.973 0.978 0.967 0.972
+ CICIDS 2017+Algorithm 1 USTC-TFC 2016 0.963 0.965 0.962 0.963
+ CICDDoS 2019+Algorithm 1 CICIDS 2017 0.971 0.975 0.964 0.972
+ CICDDoS 2019+Algorithm 1 USTC-TFC 2016 0.968 0.972 0.965 0.968
+ CICIDS 2017+Algorithm 1 Synthetic Dataset 0.954 0.960 0.948 0.954
+
+ Fig. 8. Training time consumption with different features.
+ Fig. 10. Max throughput evaluation.
+
+Fig. 9. Balanced data distribution plot, when using 𝜆𝑘𝑙 = 0.032 and 𝜆𝑎𝑑𝑣 = 0.95, the
+CICIDS 2017 dataset becomes more balanced (RF = 1:1), namely, the newly generated
+malicious samples and the original malicious samples equal to the benign samples. Fig. 11. Detection latency with different datasets.
+
+(92.43) with the backbone traffic datasets. We observed continuously latency of our model is between 0.63 s and 0.82 s with different
+for three months and found it achieves an average of 38.43 ∼ 45.71 datasets, which shows that it can achieve real-time detection in high
+Gb∖s throughput and the maximum throughput of 83.72∼ 92.43 Gb∖s throughput networks. We also analyze the latency in each step. We
+as shown in Fig. 10, where ‘PDF’ is the probability density function of find that 73.2% of the latency comes from the pre-training of Albert
+the average throughput for short. The throughput on July 2023 is lower (i.e., 0.46 s on average). However, in the pre-training, Albert selected
+because College students have a holiday and have low original traffic critical features for classification, enhancing the detection accuracy.
+volume. Resource Consumption. We finally evaluate the memory usage of
+ Latency. We replay the four backbone network traffic datasets to our model, as shown in Fig. 12. Our model utilizes 1.73 GB of memory
+measure their detection latency. The Cumulative Distribution Function to maintain Albert’s domain generalization and pre-training. Moreover,
+(CDF) of the overall detection latency is shown in Fig. 11. The detection the memory consumption of the learning algorithm is 0.87∼ 1.15 GB.
+
+ 10
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ Table 5
+ Accuracy comparison based on the USTC-TFC 2016.
+ Algorithms Overall Accuracy Precision Recall F1-Score
+ Ours 99.9% 99.6% 99.7% 99.7%
+ A1 98.7% 98.1% 98.2% 98.1%
+ A7 98.3% 97.8% 98.1% 97.9%
+ A5 98.1% 97.6% 97.9% 97.7%
+ A4 97.8% 96.6% 96.2% 96.4%
+ A3 96.5% 96.1% 95.8% 95.9%
+ A6 96.4% 96.3% 95.4% 95.8%
+ A2 96.2% 95.8% 95.5% 95.6%
+
+ Table 6
+ Accuracy comparison based on the CICDDoS 2019.
+ Algorithms Overall Accuracy Precision Recall F1-Score
+ Ours 99.3% 98.6% 99.7% 99.1%
+ A7 98.5% 98.3% 97.7% 98.0%
+ A5 98.3% 98.1% 97.5% 97.8%
+ A1 97.8% 97.5% 97.2% 97.3%
+ Fig. 12. Runtime memory usages.
+ A4 97.3% 97.1% 96.8% 96.9%
+ A6 97.3% 96.8% 96.7% 96.7%
+ A2 97.1% 96.9% 96.5% 96.7%
+ A3 96.8% 96.6% 96.2% 96.4%
+
+ [14] devised a flow-vector based detection scheme. A flow vector
+ comprises the information in the packet header of the original traffic.
+ They designed a word embedding method to make the semantics of
+ the field value more meaningful and took advantage of the hierarchical
+ attention mechanism to distinguish malicious traffic vectors.
+ [29] proposed a multi-session and multi-protocol-based scheme to
+ solve the lack of sessions contextual information caused by many false
+ negatives and false positives. They correlate multiple sessions together
+ within different protocols to form session sequences. Experimental
+ results demonstrate that their work has a high precision and recall rate.
+ [15] proposed regularized Wasserstein Generative Adversarial Networks to augment the minority attack samples and make a balanced
+ dataset. This work is similar to part of ours, and we compare it to prove
+ Fig. 13. Performance evaluation across various balance ratios. our work has better robust ability with nearly similar balanced data
+ distribution.
+ [22] designed a causality explainable detection system to iden-
+Our model demonstrates that it retains more traffic information than tify malicious encrypted traffic. The work increases the number of
+other similar alternatives. Thus, the Albert and Deep Learning-based noncryptographic features and eliminates noise features to improve
+traffic analysis is more efficient than other algorithms. interpretability. They finally evaluated the performance through the
+ detection balance and causal feature indexes.
+ [53] proposed data augmentation model TMG-GAN for intrusion
+4.3. Comparative experiments
+ detection. The data augmentation method is based on generative adversarial networks (GAN), which can generate different types of attack
+ We verify the superiority of our work with other studies employing data. It calculated the cosine similarity between the generated samples
+machine learning or deep learning models for encrypted traffic classi- and the original samples to improve the quality of the generated
+fication and anomaly detection. They are [11,14,15,22,29,39,53]. We samples.
+use ‘‘A1’’, ‘‘A2’’, ‘‘A3’’, ‘‘A4’’, ‘‘A5’’, ‘‘A6’’, and ‘‘A7’’ on behalf of each Firstly, we utilized different data augmentation methods to evaluate
+work for short, respectively, and give a brief introduction to make reads the data balance in the dataset. These baseline methods are Syneasy to follow. thetic Minority Oversampling Technique (SMOTE), Generative Adver-
+ [39] devised a plaintext-aware encrypted traffic detection frame- sarial Network (GAN), Wasserstein GAN with Improved Deep Analytic
+work to identify cobalt strike HTTPS traffic. It first parses handshake Regularization (WGAN-IDR) [15], Tabular Multi-Generator Generative
+payloads into semantically explicit meta-features. Then, they utilized Adversarial Network (TMG-GAN) [53], and Random Over Sampling
+a transformer encoder to model the interaction between the attackers (ROS). Fig. 13 shows that our data augmentation method is closer
+and victims and finally fused the interrelated metainformation and to [53] but outperforms others. With increased BR, F1-Score is imsequential information for prediction. proved as more generated samples are trained. The increased trend of
+ [11] proposed a natural language analysis model (TF-IDF) to iden- F1-scores demonstrates that the dataset becomes more balanced (BR =
+tify malicious traffic. TF-IDF is commonly used in text feature analysis. 1:1).
+Their work applied it to calculate the importance of keywords by Then, we evaluated the detection accuracy with others based on
+analyzing the occurrence frequency (TF) of the keywords in the traf- the defined evaluation criteria of 𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛, 𝑅𝑒𝑐𝑎𝑙𝑙, 𝑂𝑣𝑒𝑟𝑎𝑙𝑙 𝐴𝑐𝑐𝑢𝑟𝑎𝑐𝑦,
+fic. These important keywords can represent the traffic traits and and 𝐹 1 − 𝑆𝑐𝑜𝑟𝑒. In the comparison, we first use the same dataset: the
+effectively improve detection accuracy. training and test datasets are USTC-TFC 2016, CICDDoS 2019, and
+
+ 11
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+Table 7
+Accuracy comparison based on synthetic dataset.
+ Algorithms Overall Accuracy Precision Recall F1-Score
+ Ours 99.7% 99.4% 99.5% 99.4%
+ A5 98.7% 98.4% 98.2% 98.3%
+ A7 98.4% 98.2% 97.8% 98.0%
+ A4 97.5% 97.3% 97.1% 97.2%
+ A6 97.3% 97.1% 96.9% 97.0%
+ A3 97.1% 96.9% 96.7% 96.8%
+ A1 96.8% 96.9% 96.5% 96.7%
+ A2 96.6% 96.7% 96.4% 96.5%
+
+Table 8
+Robust evaluation with different dataset (Training dataset:CICIDS 2017 and Testing
+dataset:CICDDoS 2019).
+ Algorithms Overall Accuracy Precision Recall F1-Score
+ Ours 97.3% 97.8% 96.7% 97.2%
+ A7 93.2% 93.5% 92.6% 93.0%
+ A5 91.7% 92.1% 90.5% 91.3% Fig. 14. Detection accuracy of attacks by injecting benign traffic.
+ A1 85.7% 86.5% 84.1% 85.3%
+ A6 83.2% 84.1% 83.8% 83.9%
+ A3 81.6% 82.2% 82.4% 82.3%
+ A4 80.5% 79.8% 78.7% 79.2%
+ A2 74.5% 75.2% 71.8% 73.5%
+
+Table 9
+Robust evaluation with different dataset (Training dataset:CICDDoS 2019 and Testing Fig. 15. Partial payload information of 122.*.*.10.
+dataset:synthetic dataset).
+ Algorithms Overall Accuracy Precision Recall F1-Score
+ Ours 97.3% 97.8% 96.7% 97.2%
+ A7 94.3% 93.8% 93.2% 93.5%
+ A5 92.5% 92.4% 91.7% 92.0%
+ A6 87.3% 87.6% 85.4% 86.5%
+ A1 83.8% 84.6% 84.2% 84.4%
+ A3 82.1% 83.2% 82.1% 82.6%
+ A4 80.2% 79.5% 78.2% 78.8%
+ A2 75.4% 75.8% 72.3% 74.0%
+
+the synthetic dataset. Tables 5–7 evaluate the detection accuracy of
+ Fig. 16. Partial port scan statistics of 211.*.*.193.
+different approaches.
+ We evaluate the robustness of different approaches with different
+datasets: the training dataset is CICIDS 2017, the test dataset is CICD-
+DoS 2019, the training dataset is CICDDoS 2019, and the test dataset is conduct file management, Command Execute, and use the browser
+the synthetic dataset. According to the data in Tables 8 and 9, the over- to access the backdoor program to control the server. We found a
+all accuracy of our work improved by 22.8% and 21.9%, respectively. webshell upload script in the traffic. The most crucial keyword is URI
+Our approach shows excellent performance in the encrypted malicious (Full request URI: http://122.*.*.10/upload/upload/shell.php), and the
+detection task and significantly improves by at most 22.8% compared eigenvalue of it is 2.165. We analyze the original packet, as shown in
+ Fig. 15. We found that the attacker used the eval function to deliver
+to others not using domain generalization algorithms, such as ‘A2’,
+ the attack payload and used base64_decode (POST[z0]) to decode the
+‘A4’, ‘A1’, ‘A6’, and ‘A3’. Although our data augmentation method is
+ attack payload, where 𝑧0 may correspond to the received data by
+closer to [53], other indicators are superior, especially for robustness.
+ POST[z0]. We consider it a suspicious webshell upload attack with
+Besides, we can find that our work applies to the Industrial Internet of
+ characteristics similar to China Chopper.
+Things (IIoT) environment. It can be deployed at edge nodes to provide
+network security support for IIoT devices. Privilege escalation on 211.*.*.193
+ In the experiments, we assume that attackers inject benign TLS, The adversaries always use privilege escalation to gain higher-level
+HTTP traffic, and UDP video traffic into the malicious traffic to disguise permissions on a system or network. We have found a feature vector
+it for evasion. We use TLS, HTTP, and UDP video traffic because they ([Packets Size, Cookie, Bytes Size, Source Port, Destination Port]), and
+account for a high proportion of benign traffic datasets,i.e., around their eigenvalue is [1.567,1.342,1.089,0.905,0.897]. IP (61.*.*.233)
+17%, 15%, and 12%, respectively. We mix the malicious traffic in the randomly scans multiple ports on destination host-B(211.*.*.193). We
+wild and the benign with a ratio of 1:1. We compare it with other works found that multiple ports in 211.*.*.193 are accessed. The bytes are
+and observe that the attackers cannot evade our algorithm by injecting less and have the same volume, as shown in Fig. 16. We also anbenign traffic into malicious traffic, as shown in Fig. 14. However, the alyze the corresponding request and response packet for these ports
+attackers evade the detection by other approaches. We randomly select and discover a malicious attempt at the Apache Shiro component.
+three malicious traffic cases for verification. In the cookie of the request packet, the attacker assigns a random
+ value to the 𝑟𝑒𝑚𝑒𝑚𝑏𝑒𝑟𝑀𝑒 variable. However, there is a 𝑟𝑒𝑚𝑒𝑚𝑏𝑒𝑟𝑀𝑒 =
+(1) webshell upload attack 𝑑𝑒𝑙𝑒𝑡𝑒𝑀𝑒 field in the Set-Cookie value of the response packet. A base-
+ Webshell is a backdoor trojan based on web service, and ASP, PHP, 64 encoded and AES-encrypted string exists in the 𝑟𝑒𝑚𝑒𝑚𝑏𝑒𝑟𝑀𝑒 field
+JSP, or CGI always write it. After hackers invade a website, they can (e.g., 𝐺𝑂𝑉 𝑥𝑦𝐹 𝑋𝑂𝑣2𝑣0𝑛𝐸𝑀𝑠𝑇 𝐻𝑤𝑍𝑊 900𝐼𝑋1), which is the typical
+
+ 12
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ detection accuracy achieves at most 22.8% improvement compared to
+ others not using the data augmentation algorithm.
+ Briefly, there are three directions in our future work to improve
+ encrypted malicious traffic detection. First, our detection methods are
+ supervised and rely on prior knowledge, which makes detecting unknown encrypted malicious traffic patterns inefficient. Therefore, we
+ plan to design a novel unsupervised graph-learning-based detection
+ scheme to identify unknown encrypted traffic patterns in response
+ to malware evolution by analyzing the graph’s connectivity sparsity
+ features. Second, we plan to explore incremental learning and semantic
+ integration techniques to enhance the deep learning model’s inter-
+ Fig. 17. Partial attack IP statistics of UDP Flood attack on 211.*.*.21. pretability without sacrificing accuracy. Third, most studies did not
+ report time and resource utilization, which questions the applicability
+ of the proposed NLP-based NIDS in the IIoT. For securing critical
+traffic signature of the CVE-2016-4437. Therefore, we conclude that the infrastructure, analyzing the trade-off between detection performance
+attacker wants to privilege escalation by exploiting the Apache Shiro and computation performance while devising an NIDS model to achieve
+vulnerability on 211.*.*.193. maximum detection rate with a lower false alarm rate at minimum
+ (3)UDP Flood attack on 211.*.*.21 processing time and cost is another direction of our future work.
+ In a UDP Flood attack, the attacker uses many zombie hosts, and all
+attack packets are directed to the victim or aggregated near the victim, CRediT authorship contribution statement
+resulting in the servers not working. We have found that 211.*.*.21
+suffered UDP flood attacks at 10:15:22 on 3 Jun 2023, which lasted Xiaodong Zang: Writing – original draft, Methodology. Tongliang
+for five minutes. As there are 504,148 UDP packets, we adopted deep Wang: Validation. Xinchang Zhang: Formal analysis. Jian Gong: Forflow inspection and transformed them into flows for convenience. We mal analysis. Peng Gao: Writing – review & editing. Guowei Zhang:
+found that the average attack intensity was close to 610MBPS, with Writing – review & editing.
+over 1 million attack IPs. The attack host uses a random port to
+ Declaration of competing interest
+send meaningless UDP packets with the same byte (30B) to port 1025
+of 211.*.*.21. Most IPs are fake and only used for internal network
+ The authors declare that they have no known competing financommunication, such as 0.0.*.23, 0.1.*.175, and 42.247.*.98. We give
+ cial interests or personal relationships that could have appeared to
+partial statistics of the attack IPs in Fig. 17, where the ‘‘InPkts’’ and
+ influence the work reported in this paper.
+‘‘OutPkts’’ indicates the total number of packets the victim received
+and sent, and the ‘‘InBytes’’ and ‘‘OutBytes’’ means the total number
+ Data availability
+of bytes the victim received and sent.
+ Our work is robust and accurate, with low detection latency in Data will be made available on request.
+the backbone. We only use the packet header information to obtain
+weighted important keywords representing traffic characteristics. All Acknowledgments
+the feature extraction and selection processes are automatic, which is
+superior to previous works based on manual extraction. Besides, the This research is support by Key Laboratory of Computer Network
+devised adaptive domain generalization algorithm is robust against and Information Integration (Ministry of Education) , and the projects
+various datasets. It can augment the minority malicious samples to of the National Natural Science Foundation of China under Grant
+balance the dataset, which can adapt to different scenarios and be more (No. 62072252) and Shandong Provincial Key Laboratory of Computer
+suitable for deployment in the wild. Networks, China under grant (No. ZR2021QF090).
+
+5. Conclusion and future work References
+
+ [1] A. Shahraki, M. Abbasi, A. Taherkordi, A.D. Jurcut, A comparative study on
+ This work devised a novel, robust approach for detecting encrypted
+ online machine learning techniques for network traffic streams analysis, Comput.
+malicious traffic based on the Albert and Deep Learning model. Our Netw. 207 (2022) 108836, http://dx.doi.org/10.1016/j.comnet.2022.108836.
+inspiration is that the packet header fields, as do the underlying gram- [2] M. Abbasi, A. Shahraki, A. Taherkordi, Deep learning for Network Traffic
+matical rules for constructing sentences, have a strict order. We take Monitoring and Analysis (NTMA): A survey, Comput. Commun. 170 (2021)
+the packet header information and capture important keywords to 19–41, http://dx.doi.org/10.1016/j.comcom.2021.01.021.
+ [3] J. Zhao, X. Jing, Z. Yan, W. Pedrycz, Network traffic classification for data fusion:
+construct the characteristic representation of the traffic. We first devise
+ A survey, Inf. Fusion 72 (2021) 22–47, http://dx.doi.org/10.1016/j.inffus.2021.
+an adaptive domain generalization algorithm with a new loss function. 02.009.
+It can augment the minority malicious encrypted traffic to balance [4] Google, HTTPS encryption on the web, 2023, https://transparencyreport.google.
+the dataset. Besides that, it can enhance robust detection ability in com/https/overview.
+different datasets. We then consider all packet headers as text and [5] M.S. Raza, S.B.A. Kazmi, R. Ali, M.M. Naqvi, H. Fiaz, A. Akram, High performance DPI engine design for network traffic classification, metadata extraction
+use the ALBERT model to convert the qualitative data in the packets
+ and data visualization, in: 2024 5th International Conference on Advancements
+into quantitative data. By devising the feature selection algorithm, we
+ in Computational Sciences, ICACS, 2024, pp. 1–6, http://dx.doi.org/10.1109/
+obtained the best-weighted feature subset, which is more beneficial ICACS60934.2024.10473274.
+for encrypted malicious traffic detection with a 1D-CNN model. We [6] P. Zhang, F. He, H. Zhang, J. Hu, X. Huang, J. Wang, X. Yin, H. Zhu, Y. Li,
+have conducted many experiments and have deployed our system on Real-time malicious traffic detection with online isolation forest over SD-WAN,
+CERNET. Furthermore, our work applies to the Industrial Internet IEEE Trans. Inf. Forensics Secur. 18 (2023) 2076–2090, http://dx.doi.org/10.
+ 1109/TIFS.2023.3262121.
+of Things (IIoT) environment. It can be deployed at edge nodes to
+ [7] J. Holland, P. Schmitt, N. Feamster, P. Mittal, New directions in automated traffic
+provide network security support for IIoT devices. Experimental results analysis, in: Proceedings of the 2021 ACM SIGSAC Conference on Computer and
+demonstrate that our work outperforms other state-of-the-art alterna- Communications Security, CCS ’21, Association for Computing Machinery, 2021,
+tives when using domain generalization for data augmentation, and the pp. 3366–3383, http://dx.doi.org/10.1145/3460120.3484758.
+
+ 13
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ [8] Y. Hong, Q. Li, Y. Yang, M. Shen, Graph based encrypted malicious traffic [31] F. Folino, G. Folino, M. Guarascio, F. Pisani, L. Pontieri, On learning effective
+ detection with hybrid analysis of multi-view features, Inform. Sci. 644 (2023) ensembles of deep neural networks for intrusion detection, Inf. Fusion 72 (2021)
+ 119229, http://dx.doi.org/10.1016/j.ins.2023.119229. 48–69, http://dx.doi.org/10.1016/j.inffus.2021.02.007.
+ [9] Z. Wang, V.L. Thing, Feature mining for encrypted malicious traffic detection [32] Q. Yuan, C. Liu, W. Yu, Y. Zhu, G. Xiong, Y. Wang, G. Gou, BoAu: Malicious
+ with deep learning and other machine learning algorithms, Comput. Secur. 128 traffic detection with noise labels based on boundary augmentation, Comput.
+ (2023) 103143, http://dx.doi.org/10.1016/j.cose.2023.103143. Secur. 131 (2023) 103300, http://dx.doi.org/10.1016/j.cose.2023.103300.
+[10] Y. Fang, K. Li, R. Zheng, S. Liao, Y. Wang, A communication-channel-based [33] T.-L. Huoh, Y. Luo, P. Li, T. Zhang, Flow-based encrypted network traffic
+ method for detecting deeply camouflaged malicious traffic, Comput. Netw. 197 classification with graph neural networks, IEEE Trans. Netw. Serv. Manag. 20
+ (2021) 108297, http://dx.doi.org/10.1016/j.comnet.2021.108297. (2) (2023) 1224–1237, http://dx.doi.org/10.1109/TNSM.2022.3227500.
+[11] H. Yang, Q. He, Z. Liu, Q. Zhang, Malicious encryption traffic detection based [34] Z. Amiri, A. Heidari, N.J. Navimipour, M. Unal, A. Mousavi, Adventures in data
+ on NLP, Secur. Commun. Netw. 2021 (2021) 1–10. analysis: A systematic review of deep learning techniques for pattern recognition
+[12] Z. Wang, K.W. Fok, V.L. Thing, Machine learning for encrypted malicious traffic in cyber-physical-social systems, Multim. Tools Appl. 83 (2023) 22909–22973,
+ detection: Approaches, datasets and comparative study, Comput. Secur. 113 URL https://api.semanticscholar.org/CorpusID:260793874.
+ (2022) 102542, http://dx.doi.org/10.1016/j.cose.2021.102542. [35] A. Heidari, M.A.J. Jamali, Internet of Things intrusion detection systems: A com-
+[13] B. Xu, G. He, H. Zhu, ME-Box: A reliable method to detect malicious encrypted prehensive review and future directions, Cluster Comput. 26 (2022) 3753–3780,
+ traffic, J. Inform. Secur. Appl. 59 (2021) 102823, http://dx.doi.org/10.1016/j. URL https://api.semanticscholar.org/CorpusID:253026443.
+ jisa.2021.102823. [36] A. Heidari, N.J. Navimipour, M. Unal, A secure intrusion detection platform using
+[14] J. Hou, F. Liu, H. Lu, Z. Tan, X. Zhuang, Z. Tian, A novel flow-vector generation blockchain and radial basis function neural networks for internet of drones, IEEE
+ approach for malicious traffic detection, J. Parallel Distrib. Comput. 169 (2022) Internet Things J. 10 (2023) 8445–8454, URL https://api.semanticscholar.org/
+ 72–86, http://dx.doi.org/10.1016/j.jpdc.2022.06.004. CorpusID:256150756.
+[15] R. Chapaneri, S. Shah, Enhanced detection of imbalanced malicious network [37] A. Heidari, N.J. Navimipour, M.A.J. Jamali, S. Akbarpour, A green, secure, and
+ traffic with regularized generative adversarial networks, J. Netw. Comput. Appl. deep intelligent method for dynamic IoT-edge-cloud offloading scenarios, Sustain.
+ 202 (2022) 103368, http://dx.doi.org/10.1016/j.jnca.2022.103368. Comput. Inform. Syst. 38 (2023) 100859, URL https://api.semanticscholar.org/
+[16] Y. Zhao, B. Cui, J. Yang, M. Jiang, A DPI-based network traffic feature vector CorpusID:257121522.
+ optimization model, in: L. Barolli (Ed.), Advances in Internet, Data & Web [38] P. Luo, J. Chu, G. Yang, IP packet-level encrypted traffic classification using
+ Technologies, Springer Nature Switzerland, Cham, 2024, pp. 522–531. machine learning with a light weight feature engineering method, J. Inform.
+[17] H. Yan, H. Li, M. Xiao, R. Dai, X. Zheng, X. Zhao, F. Li, PGSM-DPI: Precisely Secur. Appl. 75 (2023) 103519, http://dx.doi.org/10.1016/j.jisa.2023.103519.
+ guided signature matching of deep packet inspection for traffic analysis, in: [39] X. Yang, S. Ruan, Y. Yue, B. Sun, PETNet: Plaintext-aware encrypted traffic
+ 2019 IEEE Global Communications Conference, GLOBECOM, 2019, pp. 1–6, detection network for identifying Cobalt strike HTTPS traffics, Comput. Netw.
+ http://dx.doi.org/10.1109/GLOBECOM38437.2019.9013941. 238 (2024) 110120, http://dx.doi.org/10.1016/j.comnet.2023.110120.
+[18] Q. Cheng, C. Wu, H. Zhou, D. Kong, D. Zhang, J. Xing, W. Ruan, Machine [40] A. Rukhin, J. Soto, J. Nechvatal, M. Smid, E. Barker, S. Leigh, M. Levenson,
+ learning based malicious payload identification in software-defined networking, M. Vangel, D. Banks, A. Heckert, et al., A Statistical Test Suite for Random
+ J. Netw. Comput. Appl. 192 (2021) 103186, http://dx.doi.org/10.1016/j.jnca. and Pseudorandom Number Generators for Cryptographic Applications, vol. 22,
+ 2021.103186. US Department of Commerce, Technology Administration, National Institute of,
+[19] W. Niu, Z. Zhuo, X. Zhang, X. Du, G. Yang, M. Guizani, A heuristic statistical 2001.
+ testing based approach for encrypted network traffic identification, IEEE Trans. [41] J. Wang, C. Lan, C. Liu, Y. Ouyang, T. Qin, W. Lu, Y. Chen, W. Zeng, P.S.
+ Veh. Technol. 68 (4) (2019) 3843–3853, http://dx.doi.org/10.1109/TVT.2019. Yu, Generalizing to unseen domains: A survey on domain generalization, IEEE
+ 2894290. Trans. Knowl. Data Eng. 35 (8) (2023) 8052–8072, http://dx.doi.org/10.1109/
+[20] M. Nakahara, N. Okui, Y. Kobayashi, Y. Miyake, Machine learning based Malware TKDE.2022.3178128.
+ traffic detection on IoT devices using summarized packet data, 2020, pp. 78–87, [42] Z.T. Sworna, Z. Mousavi, M.A. Babar, NLP methods in host-based intrusion
+ http://dx.doi.org/10.5220/0009345300780087. detection systems: A systematic review and future directions, J. Netw. Comput.
+[21] Y. Chen, J. Yang, S. Cui, C. Dong, B. Jiang, Y. Liu, Z. Lu, Unveiling encrypted Appl. 220 (2023) 103761, http://dx.doi.org/10.1016/j.jnca.2023.103761, URL
+ traffic types through hierarchical network characteristics, Comput. Secur. 138 https://www.sciencedirect.com/science/article/pii/S1084804523001807.
+ (2024) 103645, http://dx.doi.org/10.1016/j.cose.2023.103645. [43] X. Zhang, Y. Ma, An ALBERT-based TextCNN-Hatt hybrid model enhanced
+[22] Z. Zeng, P. Xun, W. Peng, B. Zhao, Toward identifying malicious encrypted traffic with topic knowledge for sentiment analysis of sudden-onset disasters, Eng.
+ with a causality detection system, J. Inform. Secur. Appl. 80 (2024) 103644, Appl. Artif. Intell. 123 (2023) 106136, http://dx.doi.org/10.1016/j.engappai.
+ http://dx.doi.org/10.1016/j.jisa.2023.103644. 2023.106136.
+[23] L. Chen, S. Gao, B. Liu, Z. Lu, Z. Jiang, THS-IDPC: A three-stage hierarchical [44] D. Kim, P. Kang, Cross-modal distillation with audio–text fusion for fine-grained
+ sampling method based on improved density peaks clustering algorithm for emotion classification using BERT and Wav2vec 2.0, Neurocomputing 506 (2022)
+ encrypted malicious traffic detection, J. Supercomput. 76 (2020) 7489–7518, 168–183, http://dx.doi.org/10.1016/j.neucom.2022.07.035.
+ http://dx.doi.org/10.1007/s11227-020-03372-1. [45] G. Ansari, T. Ahmad, M. Doja, Hybrid filter–wrapper feature selection method
+[24] I. Hafeez, M. Antikainen, A.Y. Ding, S. Tarkoma, IoT-KEEPER: Detecting mali- for sentiment classification, Arab. J. Sci. Eng. 44 (2019) 9191–9208, http:
+ cious IoT network activity using online traffic analysis at the edge, IEEE Trans. //dx.doi.org/10.1007/s13369-019-04064-6.
+ Netw. Serv. Manag. 17 (1) (2020) 45–59, http://dx.doi.org/10.1109/TNSM.2020. [46] X. Li, H. Xiong, X. Li, X. Wu, X. Zhang, J. Liu, J. Bian, D. Dou, Interpretable deep
+ 2966951. learning: Interpretation, interpretability, trustworthiness, and beyond, Knowl. Inf.
+[25] Z. Fu, M. Liu, Y. Qin, J. Zhang, Y. Zou, Q. Yin, Q. Li, H. Duan, Encrypted Syst. 64 (12) (2022) 3197–3234.
+ Malware traffic detection via graph-based network analysis, in: Proceedings [47] S. Kiranyaz, O. Avci, O. Abdeljaber, T. Ince, M. Gabbouj, D.J. Inman, 1D
+ of the 25th International Symposium on Research in Attacks, Intrusions and convolutional neural networks and applications: A survey, Mech. Syst. Signal
+ Defenses, RAID ’22, Association for Computing Machinery, 2022, pp. 495–509, Process. 151 (2021) 107398, http://dx.doi.org/10.1016/j.ymssp.2020.107398.
+ http://dx.doi.org/10.1145/3545948.3545983. [48] R. Abada, A.M. Abubakar, M.T. Bilal, An overview on deep leaning application
+[26] C. Fu, Q. Li, M. Shen, K. Xu, Realtime Robust Malicious Traffic Detection via of big data, Mesopotamian J. Big Data 2022 (2022) 31–35.
+ Frequency Domain Analysis, CCS ’21, Association for Computing Machinery, [49] M. Kravchik, A. Shabtai, Efficient cyber attack detection in industrial control
+ New York, NY, USA, 2021, pp. 3431–3446, http://dx.doi.org/10.1145/3460120. systems using lightweight neural networks and PCA, IEEE Trans. Dependable
+ 3484585. Secure Comput. 19 (4) (2022) 2179–2197, http://dx.doi.org/10.1109/TDSC.
+[27] Z. Niu, J. Xue, D. Qu, Y. Wang, J. Zheng, H. Zhu, A novel approach based 2021.3050101.
+ on adaptive online analysis of encrypted traffic for identifying Malware in IIoT, [50] University of New Brunswick, Open-source evaluation dataset, 2023, https://
+ Inform. Sci. 601 (2022) 162–174, http://dx.doi.org/10.1016/j.ins.2022.04.018. www.unb.ca/cic/datasets/ddos-2019.html.
+[28] K. Lin, X. Xu, F. Xiao, MFFusion: A multi-level features fusion model for [51] X. Zang, J. Gong, M. Wang, P. Gao, G. Zhang, IP traffic behavior characterization
+ malicious traffic detection based on deep learning, Comput. Netw. 202 (2022) via semantic mining, J. Netw. Comput. Appl. 213 (2023) 103603, http://dx.doi.
+ 108658, http://dx.doi.org/10.1016/j.comnet.2021.108658. org/10.1016/j.jnca.2023.103603, URL https://www.sciencedirect.com/science/
+[29] J. Liu, Q. Xiao, L. Xin, Q. Wang, Y. Yao, Z. Jiang, M3F: A novel multi-session and article/pii/S108480452300022X.
+ multi-protocol based Malware traffic fingerprinting, Comput. Netw. 227 (2023) [52] VirusTotal, Online virus detection tool, 2024, https://www.virustotal.com/gui/
+ 109723, http://dx.doi.org/10.1016/j.comnet.2023.109723. home/upload.
+[30] G. Apruzzese, M. Andreolini, M. Marchetti, A. Venturi, M. Colajanni, Deep [53] H. Ding, Y. Sun, N. Huang, Z. Shen, X. Cui, TMG-GAN: Generative adversarial
+ reinforcement adversarial learning against botnet evasion attacks, IEEE Trans. networks-based imbalanced learning for network intrusion detection, IEEE Trans.
+ Netw. Serv. Manag. 17 (4) (2020) 1975–1987, http://dx.doi.org/10.1109/TNSM. Inf. Forensics Secur. 19 (2024) 1156–1167.
+ 2020.3031843.
+
+ 14
+X. Zang et al. Computer Networks 250 (2024) 110598
+
+ Xiaodong Zang received his Ph.D. in School of Cyber Jian Gong is a professor in the School of Cyber Science
+ Science and Engineering, Southeast University, Nanjing, and Engineering, Southeast University. His research interests
+ China in 2020. He is a post doctor at the college of Elec- are network architecture, network intrusion detection, and
+ tronic Optical Engineering, Nanjing University of Posts and network management. He has received his B.S. in computer
+ Telecommunications University, Nanjing, China. Since 2020, software from Nanjing University, and his Ph.D. in computer
+ he has been a lecturer in the school of Cyber Science of science and technology from Southeast University.
+ Engineering, Qufu Normal University. His research interests
+ include computer networks and security, intrusion detection,
+ network traffic and host profiling.
+
+ Tongliang Wang received his B.S. degree in computer soft- Peng Gao received the Ph.D. degree from the Harbin
+ ware from Qufu Normal University, Qufu, China, in 2020. Institute of Technology, China, in 2020. He is currently an
+ He is currently pursuing the M.D. degree in Qufu Normal Associate Professor with the School of Cyber Science and
+ University, Qufu, China. His current research focuses on Engineering, Qufu Normal University, China. His current
+ computer networks and security, intrusion detection. research interests include signal and image processing, deep
+ learning and computer vision. He serves as a reviewer of
+ top journals such as the IEEE Transactions on Circuits and
+ Systems for Video Technology, Information Sciences, and
+ IET Image Processing.
+
+ Xinchang Zhang (Senior Member, IEEE) received the Ph.D. Guowei Zhang received the B.S. degree from the Huazhong
+ degree from the Computer Network Information Center, University of Science and Technology, Wuhan, China, in
+ Chinese Academy of Sciences, China, in 2010. He is cur- 2014, and the Ph.D. degree in communication and inforrently a Professor at the Qilu University of Technology mation systems from the University of Chinese Academy of
+ (Shandong Academy of Sciences). He has over 40 papers in Sciences, Beijing, China, in 2019. Since 2020, he has been a
+ research journals, such as IEEE Journal on Selected Areas in lecturer in the school of Cyber Science of Engineering, Qufu
+ Communications, IEEE Transactions on Services Computing, Normal University. His current research interests include
+ IEEE Transactions on Vehicular Technology,etc.. His re- the performance optimization and privacy protection in
+ search interests include network protocols and architectures, intelligent computing networks.
+ and cloud computing.
+
+ 15

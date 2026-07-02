@@ -1,0 +1,141 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 1, FEBRUARY 2024                                                             1271
+
+
+
+
+ProFi: Scalable and Efficient Website Fingerprinting
+                      Patrick Krämer , Member, IEEE, Benedikt Baier , Niklas Landerer,
+  Philip Diederich , Graduate Student Member, IEEE, Alexander Griessel , Graduate Student Member, IEEE,
+        Oliver Hohlfeld, Andreas Blenk , Martin Mieth, and Wolfgang Kellerer , Senior Member, IEEE
+
+
+
+   Abstract—Website Fingerprinting (WFP) attacks infer the                      Negotiation (ALPN) extension [6]. This poses a severe
+websites or webpages a user is visiting from encrypted traffic. To              problem to censors since encrypting every transfer forces them
+date, it remains uncertain if WFP can attack many users from                    to choose between censoring all traffic or none [7]. Censoring
+a central location in an online scenario. We close this gap with
+P RO F I, a WFP attack that detects websites based on the initial               all traffic, as done before [8], can be expensive and severe
+TLS connection from the client to the server using at most the                  ties to large portions of the Internet. In 2019, at least 10 % of
+connection’s first 30 packets. P RO F I achieves a precision and                the Alexa top 1 Million websites supported ESNI and would
+recall of 86.51 % and 85.35 % in a closed-world, and 68.90 %                    have been unavailable [7]. Thus, adversaries must rely on other
+and 78.71 % in an open-world scenario, which is competitive to                  methods to analyze users’ communication. We thus believe
+state-of-the-art (SoA) WFP attacks, while taking a fraction of the
+time of SoA attacks to classify a webpage. Further, we imple-                   that Website Fingerprinting (WFP) [9] will become relevant
+ment P RO F I as a micro service-based prototype and evaluate the               beyond anonymity networks such as the The Onion Router
+attack in an online scenario with real traffic traces. We show that             (Tor) network. WFP allows adversaries to infer visited web-
+P RO F I can monitor up to 100 websites at 10 G, corresponding                  sites from encrypted traffic using patterns in the data exchange
+to up to 424 webpages per second. We also show that P RO F I has                between client and server.
+the potential to interfere with a victim’s webpage access.
+                                                                                   However, launching WFP attacks at scale in the network
+  Index Terms—Website fingerprinting, machine learning, pri-                    is challenging. The attack is likely to occur at a location
+vacy, time series modeling, probabilistic graphical models.                     that allows the monitoring of multiple users, i.e., the attack
+                                                                                must operate live in the network at higher link rates (say
+                          I. I NTRODUCTION                                      10 Gbit/s) on a traffic aggregate. Previous attacks [9], [10],
+      NCRYPT every transfer [1] is a major step towards
+E     securing the privacy of Internet users: DNS over TLS1
+(DoT) [2], and DNS2 over HTTPS3 (DoH) [3] secure the
+                                                                                [11], [12], [13], [14], [15], [16], [17], [18], [19], [20], [21],
+                                                                                [22], [23], [24], [25], [26], [27], [28], [29], [30], [31], [32],
+                                                                                [33], [34], [35] are not applicable in this scenario. Previous
+user’s DNS queries; HTTPS with the Encrypted Server                             attacks are evaluated offline, target individual users, and use
+Name Indication (ESNI) extension [4], and its successor,                        Machine Learning (ML) models that take milliseconds to eval-
+the Encrypted Client Hello (ECH) extension [5], secure the                      uate and thus do not scale to high-volume links. Further, most
+communication between clients and remote servers. Hence,                        previous attacks use features calculated from entire page loads,
+adversaries, legitimate or not, can no longer analyze DNS                       i.e., require extracting individual page loads from the traffic
+traffic, packet payload, the Server Name Indication (SNI),                      aggregate. Extracting page loads is difficult considering that
+or the information in the TLS Application-Layer Protocol                        simply detecting the onset of one concurrent page load in a
+                                                                                single user scenario is already challenging [19], [22], [29],
+   Manuscript received 1 September 2022; revised 6 February 2023
+and 23 May 2023; accepted 13 September 2023. Date of publication                [36]. Thus, it remains unclear if WFP poses a threat beyond
+25 September 2023; date of current version 7 February 2024. This work is        the surveillance of individuals. Consequently, the goal of this
+partially funded by the German Research Foundation (DFG) as part of the         work is to design, implement and evaluate a WFP attack that
+ADVISE project (grant ID - 438892507) and the SDN APP AWARE project
+(grant ID - 316878574), and by the Germany Federal Ministry of Education        can operate live in the network to establish the potential threat
+and Research (BMBF) as a part of the SoftwareCampus initiative (grant ID        WFP poses to general Internet users.
+01IS17049) and the AI.NET PROTECT project (grant ID 16KIS1318). The                To show that WFP is a threat in a general setting, we
+associate editor coordinating the review of this article and approving it for
+publication was L. Y. Chen. (Corresponding author: Patrick Krämer.)             design, implement, realize, and evaluate P RO F I (PRObabilistic
+   Patrick Krämer, Benedikt Baier, Niklas Landerer, Philip Diederich,           FIngerprinting). In contrast to previous work, P RO F I’s design
+Alexander Griessel, and Wolfgang Kellerer are with the Chair of                 includes three aspects beyond the mere detection rate: Data
+Communication Networks, Technical University of Munich, 80333 Munich,
+Germany (e-mail: patrick.kraemer@tum.de).                                       availability during operation, inference speed, and continu-
+   Oliver Hohlfeld is with the Distributed Systems Group, University of         ous operation. P RO F I uses Probabilistic Graphical Models
+Kassel, 34127 Kassel, Germany.                                                  (PGMs) [37] to model the initial TLS connection established
+   Andreas Blenk is with the T CED INW-DE, Siemens AG, 81739 Munich,
+Germany.                                                                        during webpage retrieval based on the direction, size, and TLS
+   Martin Mieth is with the Deep Packet Inspection Development, ipoque          records among the connection’s first 30 packets, which are, as
+GmbH - A Rohde & Schwarz Company, 04109 Leipzig, Germany.                       we show in a prototypical implementation, readily obtainable
+   Digital Object Identifier 10.1109/TNSM.2023.3318508
+   1 Transport Layer Security (TLS).                                            in practice. Contrary to previous attacks, P RO F I handles traffic
+   2 Domain Name Service (DNS).                                                 aggregates without further processing because of the flow-
+   3 Hyper Text Transfer Protocol Secure (HTTPS).                               based classification. P RO F I shows competitive performance
+                       1932-4537 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+1272                                                    IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 1, FEBRUARY 2024
+
+
+
+
+Fig. 1. Classifications per second that P RO F I and state-of-the-art (SoA)
+approaches achieve in an offline setting on one Central Processing Unit (CPU)
+core. Values are obtained for models from Section IV-D on our data described
+in Section V-A.
+                                                                                Fig. 2.   P RO F I attack scenario.
+
+
+to three state-of-the-art WFP attacks, achieving precision and
+recall of 86.51 % and 85.35 % in a closed-world, and 68.90 %                                             II. ATTACK S CENARIO
+and 78.71 % in an open-world scenario. Further, the PGMs                           Fig. 2 illustrates the attack scenario of P RO F I: Multiple
+have few parameters, enabling inference within microsec-                        users share a common access point to the Internet—a typical
+onds. In contrast to previous attacks, P RO F I’s ML models                     Internet access scenario (e.g., home network or public WiFi).
+allow P RO F I to classify thousands of webpages per second,                       The user view: The users are situated behind a Network
+as Fig. 1 shows. The PGMS further simplify the continuous                       Address Translation (NAT)-capable router, as in a typical home
+operation of the attack since the PGMs readily indicate data                    or campus network, which renders a realistic attack scenario.
+drift through their log-likelihood. Other ML models require                     The users share the same public Internet Protocol (IP) address;
+more involved monitoring, e.g., by observing and evaluating                     hence, they cannot be differentiated by their IP addresses.
+samples during production [38]. Further, the PGMs enable                        Since most of today’s Web traffic is carried by large Content
+a modular microservice-based implementation amenable to                         Delivery Networks (CDNs) [40], [41], [42], we focus on a
+deployment on top of, e.g., Multi-Access Edge Computing                         scenario where users retrieve webpages from CDNs. We focus
+(MEC) [39] infrastructure. We evaluate the performance of                       on CDNs since CDNs serve many popular websites [30], and
+the resulting system in testbed measurements. We show that                      websites can use CDNs to hide from censors [43]. Since a
+P RO F I’s microservice-based implementation can handle more                    CDN server can deliver any website hosted by the CDN,
+than 400 webpage accesses per second on a 10 G link at full                     this makes the attack more challenging since the server’s IP
+rate. Overall, our contributions are as follows:                                address does not identify one website. We do not investigate
+   • Collection of an extensive dataset of traffic from 4 800                   the effect of Virtual Private Networks (VPNs) on the attack.
+      webpages of 96 websites collected over 70 days.                           More than two third of Internet users do not use a VPN [44].
+   • Implementation of a TLS dissector for feature extraction.                     The attacker view: The goal of the attacker (e.g., a censor)
+   • Design, implementation, and evaluation of P RO F I , a                     is to discern the website a user is accessing, where a web-
+      PGM-based WFP attack that is designed for the operation                   site consists of multiple webpages. The attacker is situated on
+      live in the network.                                                      the path between the NAT router and the CDN. Contrary to
+   • A microservice-based testbed implementation and evalu-                     previous WFP attacks, the attacker has no access to the private
+      ation of P RO F I.                                                        network of the users. However, the attacker still has access to
+   • We show that P RO F I can handle 100s of website accesses                  traffic in both directions. The traffic is encrypted with TLS, and
+      per second. This is the first implementation and evalua-                  the SNI and ALPN extensions in the TLS handshake are also
+      tion of a WFP attack’s potential to operate live in the                   encrypted. This prevents usage of either feature for fingerprint-
+      network and has relevance beyond WFP, i.e., extends to                    ing [8]. Further, the attacker knows only the public IP of the
+      ML-based traffic classification in general.                               NAT router for every user. Furthermore, as websites are hosted
+   • The design of a readily-implementable defense against                      on CDNs, attackers cannot fingerprint websites based on the
+      P RO F I reducing precision and recall to less than 10 %                  IP addresses of destination (cache or edge) servers. Thus, we
+      and 20 % while causing a bandwidth overhead of 150 %.                     investigate a scenario where the attacker is left with statistical
+   The remainder is organized as follows. Section II intro-                     information about the frequency, volume, and direction of data
+duces the attack scenario, Section III introduces background                    transfers within a flow.
+information and related work. Section IV presents the design                       Per-Flow Classification: Our attack classifies based on the
+of the P RO F I attack and the defense method. Section V intro-                 first TLS connection the user’s client establishes to retrieve
+duces the dataset and analyzes the training process. Section VI                 a webpage. Our attack uses observable features of the traffic,
+evaluates the classification performance of the P RO F I attack                 such as the frame size, TLS record size, and the direction
+and compares P RO F I to three baselines. Section VII presents                  of packets. The underlying assumption that we confirm in
+the microservice-based implementation of P RO F I, and evalu-                   our evaluation is that the server and client exchange unique
+ates its throughput, scalability, and labeling speed. Section VIII              information in the initial flow, which reflects in a specific pat-
+discusses ethical considerations, and Section IX concludes this                 tern of exchanged packets in the network. Thus, the attack
+paper.                                                                          can classify each flow individually, sidestepping the extraction
+KRÄMER et al.: ProFi: SCALABLE AND EFFICIENT WEBSITE FINGERPRINTING                                                                              1273
+
+
+
+of individual webpage calls from the traffic aggregates, as                     the websites a victim visits. That is, the attacker can train
+previous attacks require, which is very challenging to perform                  the attack model for every visited website—no other web-
+in practice. Previous work shows that even solely identifying                   sites are visited. This is the easiest variant of the attack. In
+the start of overlap for two overlapping webpage calls of a                     the more realistic open-world scenario, the attacker does not
+single user is difficult [19], [22], [29], [36].                                know which websites the victim access. That is, the victim also
+   Practical feasibility: Since we want to investigate whether                  visits websites that were not included in the attacker’s train-
+WFP is a threat to the general public, the attack must be                       ing data. Generally, the open-world scenario is conside

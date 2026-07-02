@@ -1,0 +1,961 @@
+Computers & Security 142 (2024) 103859
+
+ Contents lists available at ScienceDirect
+
+ Computers & Security
+ journal homepage: www.elsevier.com/locate/cose
+
+Two-stage multi-datasource machine learning for attack technique and
+lifecycle detection
+Ying-Dar Lin a , Shin-Yi Yang a , Didik Sudyana a ,∗, Fietyata Yudha a , Yuan-Cheng Lai b ,
+Ren-Hung Hwang c
+a
+ Department of Computer Science, National Yang Ming Chiao Tung University, Hsinchu, 300, Taiwan
+b Department of Information Management, National Taiwan University of Science and Technology, Taipei, 10607, Taiwan
+c College of Artificial Intelligence, National Yang Ming Chiao Tung University, Tainan, 711, Taiwan
+
+ARTICLE INFO ABSTRACT
+
+Keywords: Intrusion detection systems (IDS) have increasingly adopted machine learning (ML) techniques to enhance
+Ml-based IDS their ability to detect a wide range of attack variants. However, the traditional focus in current research
+Attack lifecycle detection primarily revolves around identifying specific attack types or techniques using a single data source. However,
+Multi-datasource IDS
+ this approach lacks a holistic perspective on attacks, which can result in missed detections. To improve the
+Two-stage lifecycle detection
+ effectiveness of responding to detected attacks, it is essential to identify them based on their lifecycles and
+ incorporate information from multiple data sources. In this study, we present three distinct approaches for
+ detecting attack lifecycles, each leveraging different ML methodologies: a single-stage ML model, a two-stage
+ ML+ML approach, and ML with sequence matching (ML+SM). Simultaneously, we explore the benefits of
+ utilizing multiple data sources, including network traffic, system logs, and host statistics, to enhance technique
+ detection capabilities. Our evaluation of these methods reveals that on lifecycle detection, the two-stage
+ ML+ML approach outperforms the others, achieving an impressive F1 score of 0.994. In contrast, the singlestage and ML+SM methods yield F1 scores of 0.887 and 0.189, respectively. Furthermore, the integration
+ of multiple data sources proves highly advantageous, with the combination of all three sources yielding the
+ highest F1 score of 0.922 on technique detection.
+
+1. Introduction datasets like DARPA Transparent Computing (TC) (Operationally Transparent Cyber Dataset, 2019) solely provide system log data. This limi-
+ As cyber threats evolve, robust cybersecurity measures are essen- tation has directed many research efforts toward concentrating exclutial (Hoque et al., 2014). Intrusion Detection Systems (IDS) are a sively on detecting attacks from these specific data sources (Zavrak
+key protective element. Traditionally, IDS relied on signature- and and İskefiyeli, 2020; Meng et al., 2019; Ham et al., 2014; Toupas
+anomaly-based methods, with limitations in detecting unknown attacks et al., 2019; Meng et al., 2018; Sun et al., 2020; Bagui et al., 2022).
+and high false positives. Integrating machine learning into IDS is crucial In this context, a data source refers to a certain type of information
+for effectively addressing a broader spectrum of attack variations and used to detect malicious activities in a system. Solely relying on one
+behaviors (Hamid et al., 2016). data source, however, might be inadequate, especially when handling
+ While machine learning-based IDS (ML-IDS) has demonstrated effec- complex data that encompasses both external and internal behaviors.
+tiveness in identifying attack variants, several challenges persist. Specif- Recognizing this challenge, a study has explored the integration of
+ically, the effectiveness of an ML model often depends on the quality various data sources, such as network traffic, system logs, and host
+and diversity of its training dataset. Currently, there is a limited number statistics, to enhance detection comprehensiveness (Lin et al., 2022).
+of publicly available datasets for intrusion detection, with most well- Another significant challenge arises when the focus is solely on
+known datasets primarily utilizing network traffic data as their main detecting the presence of an attack (Zavrak and İskefiyeli, 2020; Meng
+sources (Yang et al., 2022). For instance, CIC-IDS-2017 (Sharafaldin et al., 2019; Ham et al., 2014; Sun et al., 2020; Meng et al., 2018;
+et al., 2018) is focused on network traffic data. On the other hand, Toupas et al., 2019) or identifying specific attack techniques (Lin et al.,
+
+ ∗ Corresponding author.
+ E-mail addresses: ydlin@cs.nycu.edu.tw (Y.-D. Lin), shinyee.cs10@nycu.edu.tw (S.-Y. Yang), dsudyana@cs.nycu.edu.tw (D. Sudyana),
+fyudha@cs.nycu.edu.tw (F. Yudha), laiyc@cs.ntust.edu.tw (Y.-C. Lai), rhhwang@nycu.edu.tw (R.-H. Hwang).
+
+https://doi.org/10.1016/j.cose.2024.103859
+Received 12 February 2024; Received in revised form 29 March 2024; Accepted 17 April 2024
+Available online 26 April 2024
+0167-4048/© 2024 Elsevier Ltd. All rights reserved.
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+ Fig. 1. Mapping attacks to sequences of techniques on CREMEv2 (Yudha, 2023).
+
+2022; Bagui et al., 2022). While these methods are valuable, they host statistics (Gomes et al., 2020). Integrating these multiple sources
+may not provide a complete understanding of the attack landscape. enables effective detection of a wide range of attack techniques. In con-
+ML-IDS systems that concentrate solely on these aspects might miss trast to existing works, this research delves deeper into the synergistic
+crucial details such as the attack’s broader objectives, the assets it effects of these data sources. We explore how their integrated analysis
+targets, and its duration. In many cases, sophisticated attacks, such can significantly improve the detection of the attack lifecycles through
+as Advanced Persistent Threats (APTs), involve various infiltration analyzing the sequences of techniques.
+techniques, long-term, and discreet persistence within a system envi-
+ In this work, we propose three lifecycle detection approaches: ML,
+ronment (Alshamrani et al., 2019; Yue et al., 2024). By solely focusing
+ ML+ML, and ML+SM. The single-stage ML approach utilizes multiple
+on attack detection or technique identification, the broader context,
+ data sources to predict lifecycles through a single ML model. The
+including the attack’s goals, target assets, and duration, may remain
+elusive. ML+ML approach employs ML models to detect attack techniques from
+ Therefore, there is a need for further research to develop more various data sources and classify associated lifecycles from technique
+comprehensive and robust ML-IDS that can detect attacks from multiple sequences. The ML+SM approach combines ML models for technique
+data sources throughout the entire attack process. A typical attack is detection and the sequence matching method (Levenshtein et al., 1966)
+composed of a sequence of different attack techniques, called attack for lifecycle classification. These approaches enhance our understandlifecycle (Kaloudi and Li, 2020). Detecting lifecycles from the sequences ing of cyber attack characteristics.
+of techniques provides valuable information for security operations This work makes three key contributions to the field: (1) it addresses
+centers (SOCs). This information can be leveraged to determine effec- the challenge of detecting sophisticated cyber attacks by identifying
+tive countermeasure procedures aimed at preventing the completion of attack lifecycles from technique sequences, a novel approach in the dothese lifecycles, thus minimizing potential damage. main, (2) we introduce a novel two-stage machine learning method uti-
+ Furthermore, the insights gained from lifecycle detection can also lizing multi-datasource for detecting attack techniques and classifying
+be instrumental in the development of new IDS models. By under- attack lifecycles, (3) we assess the effectiveness of the three proposed
+standing these lifecycles, IDS can be upgraded to detect them at the
+ approaches (ML, ML+ML, ML+SM) in identifying attack lifecycles.
+earliest stages, potentially identifying threats before the entire attack
+ Furthermore, to enhance our knowledge, we also investigate the folprocess unfolds. This proactive approach is a significant advancement
+in cybersecurity and contributes to more robust and timely threat lowing issues: (1) single- vs. two-stage ML, to compare the performance
+mitigation. of the three approaches in detecting lifecycles, (2) the performance
+ The concepts of attack lifecycle and technique are defined by MITRE evaluation of learning models on lifecycle detection, (3) we com-
+ATT&CK (Strom et al., 2018) framework, which is useful for developing prehensively assess the effectiveness of three distinct methodologies:
+effective defense strategies. This framework has defined attack tactics, ML, ML+ML, and ML+SM, in identifying attack lifecycles, offering
+which refer to the specific objectives of each stage of an attack, and the groundbreaking insights into the detection and classification of cyber
+attack techniques that are used to accomplish these attack tactics. threats.
+ To solve the problems mentioned above, in this study, we detect The rest of this paper is organized as follows: in Section 2, we
+attack techniques and attack lifecycles by using multiple data sources, provide the background and related works on ML-based intrusion deincluding network traffic, system logs, and host statistics, simultane- tection. Section 3 and 4 present the problem statement and solution
+ously. Network traffic contains some information in the network flow, approaches, respectively. In Section 5, we describe the detailed imsuch as the number of packets, ports, protocol, and duration. System plementation. The experiment results are shown in Section 6. Finally,
+logs are generated by the operating system, recording the activities
+ Section 7 concludes the works and discusses future work.
+related to the operating system and the software running on a computer or network. Host statistics include the status of each process,
+such as CPU usage, memory usage, and page fault rate. Combining 2. Background and related works
+these sources yields a comprehensive perspective on network and host
+activities, facilitating holistic threat assessment.
+ Moreover, diverse attack techniques manifest in these data sources. In this section, we provide an overview of the background, including
+For example, network-based attacks often leave traces in traffic data, the MITRE ATT&CK and the attack scenarios used in this study. At the
+while malware infections show up in system logs (Beaman et al., 2021), end of the section, we present a comparison with other works that differ
+and cryptocurrency-mining is better detected through network and from our approach
+
+ 2
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+Table 1
+ML-based intrusion detection approaches.
+ Detection target Paper Data source Dataset Approach
+ Network traffic System logs Host statistics
+ Zavrak and İskefiyeli (2020) Binary – – CICIDS2017, NSLKDD AE, VAE
+ Toupas et al. (2019) Multiclass – – CICIDS2017 SMOTE, ENN, DNN
+ Meng et al. (2019) – Binary – HDFS, BGL LSTM
+ Meng et al. (2018) – Multiclass – self-collected PU learning, SVM
+ Sun et al. (2020) – Multiclass – Thunderbird, BGL SMOTE, Bi-LSTM
+ Attack level
+ Du et al. (2017) – Binary – HDFS, OpenStack LSTM
+ Ham et al. (2014) – – Binary self-collected SVM
+ Liu et al. (2022) Multicass Multicass – SCVIC-CIDS-2021 XGBoost
+ Lin et al. (2022) Binary Binary Binary CREME XGBoost
+ Hwang et al. (2023) Binary Binary Binary CREME DL
+ Technique level Bagui et al. (2022) Binary – – UWF-ZeekData22 Multiple algorithms
+ Technique and lifecycle levels Ours Multiclass Multiclass Multiclass CREMEv2 (Yudha, 2023) XGBoost, ML
+
+2.1. MITRE ATT&CK: Tactics, techniques and lifecycles 2.3. Related works
+
+ The MITRE institution has developed a framework called ATT&CK The related works can be categorized into three groups based on
+(Strom et al., 2018), which is used for understanding the techniques, their detection targets, as summarized in Table 1. The first group,
+ ‘attack level’, aims to detect either the presence of an attack or its type.
+tactics, and procedures (TTPs) employed by attackers during cyber-
+ The second group, ‘technique level’, seeks to identify the techniques
+attacks. ATT&CK matrix presents attack stages and corresponding techemployed in an attack, and lastly, ‘technique and lifecycle levels’, seek
+niques used in each stage.
+ to identify the lifecycle based on the sequence of techniques.
+ The lifecycle concept provides a comprehensive understanding of
+ Currently, most of the research focuses on attack-level detection.
+the technique sequences used in an attack. For example, advanced per- Researchers such as Zavrak and İskefiyeli (2020) and Toupas et al.
+sistent threat (APT) attacks may have a long lifecycle that includes mul- (2019) concentrated on identifying attacks in public network traffic
+tiple tactics and techniques (Singh et al., 2019). By understanding the datasets, harnessing deep learning (DL) models. In contrast, Meng et al.
+lifecycle of an attack, defenders can develop effective countermeasures (2019, 2018), Sun et al. (2020), and Du et al. (2017) handled attacks
+to detect and prevent attacks (Wang et al., 2024). in system log datasets. They processed text data and employed LSTMbased DL models. Meng et al. (2018) embraced a semi-supervised
+2.2. Attack scenarios learning approach to distinguish benign from malicious data, using
+ SVM models for classification. Ham et al. (2014) applied SVM models
+ to classify statistical data gathered from mobile devices. Toupas et al.
+ In this study, we used the CREMEv2 dataset (Yudha, 2023), fea-
+ (2019) and Sun et al. (2020) acknowledged the challenge of data
+turing five common real-world attacks: Mirai botnet, ransomware,
+ imbalance in multi-class classification tasks and employed resampling
+resource hijacking, disk wipe, and endpoint DoS. Fig. 1 maps out the methods to address this issue. Liu et al. (2022) created a new dataset
+tactics and techniques for each attack in the dataset. Rows represent the with network traffic and system logs data using the metadata from
+reproduced lifecycles, columns indicate the tactics, and blocks display the well-known public dataset (CIC-IDS-2018) and used XGBoost to
+technique details, summing up to 17 attack techniques. Each attack’s test the proposed dataset. However, this study only focuses on how to
+background and execution methods are further detailed. evaluate the proposed dataset. Notably, Lin et al. (2022) leveraged the
+ Botnet attack can be used for further attacks, such as DDoS. An XGBoost model for attack detection and explored the use of multiple
+example is the Mirai botnet. In the context of the CREMEv2 dataset, the data sources to enhance performance. However, these studies primar-
+Mirai botnet exhibits diverse lifecycles, a reflection of its multifaceted ily concentrated on proposing ML models for binary and multi-class
+nature. The dataset includes a more general representation of Mirai’s classification of attacks and paid less attention to the underlying attack
+lifecycle, starting from the creation of the Mirai botnet. The reason techniques. Even when the dataset in Lin et al. (2022) contained both
+for this diversity in lifecycles is attributed to the complexity of Mirai’s tactic and attack labels, the authors primarily focused on binary classiattack strategies (Affinito et al., 2023). It utilizes various techniques fication using the attack label for detection. Identifying the techniques
+based on the MITRE ATT&CK framework, which encompasses a wide employed by attackers provides valuable insights into their behaviors,
+array of tactics and procedures for compromising and controlling target enabling the development of more effective countermeasure strategies.
+devices. Moreover, a related study by Bagui et al. (2022) involved technique-
+ Resource hijacking involves seven techniques where attackers ex- level detection. They constructed a network traffic dataset and categorized it based on reconnaissance and discovery attack tactics, subseploit a victim’s system for personal gains. Falling under the ‘Impact’
+ quently employing various ML models to assess dataset quality. While
+tactic, a notable subtype is cryptojacking. Victims may experience
+ their work focused on attack techniques, it did not encompass the
+heightened energy use, system slowdowns, and significant costs due to
+ concept of attack lifecycles. By detecting the complete attack lifecythese attacks.
+ cle, network administrators gain the capability to comprehensively
+ Disk wipe attack involves six techniques to try to delete vital files track an attack sequence, thereby bolstering the efficacy of ML-IDS in
+or directories on targets. In some cases, it is coupled with ransomware identifying and responding to intricate attacks.
+attacks, aiming to encrypt important files and demand payment in Among the mentioned studies, Lin et al. (2022) is closely related
+exchange for the decryption key. to our work. While they used a similar dataset and demonstrated the
+ Endpoint DoS attack, encompassing seven techniques and targeting effectiveness of multiple data sources, the objectives and approaches
+specific devices, aims to exhaust their resources. Unlike broader net- differ. They conducted binary classification to detect attacks based
+work attacks, this focuses on the device itself. Overwhelming traffic or on predefined tactics, whereas we performed multiclass classification
+requests can make the device crash, leading to potential data loss or to detect lifecycles based on attack technique sequences. Their work
+service disruptions. primarily focused on generating multiple data sources through attack
+
+ 3
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+ Table 2
+ Notations.
+
+ Dataset
+
+ 𝑅⋃ 𝑃
+ Dataset 𝐷 𝐷=𝐷 𝐷
+ 𝑅 𝑅
+ Training Dataset 𝐷𝑤 𝐷𝑤 , 𝑤 = 0, 1, 2, 0: traffic flow, 1: system log, 2: host statistics
+
+ 𝐷0𝑅 = {(𝑥𝑁
+ 𝑖
+ , 𝑦𝑇𝑖 , 𝑦𝐿𝑖 )|𝑖 ∈ [1, 𝑅𝑁]}; 𝑅𝑁 ∶ size of training traffic flow dataset
+
+ 𝐷1𝑅 = {(𝑥𝐿𝑜𝑔 𝑇 𝐿
+ 𝑗 , 𝑦𝑗 , 𝑦𝑗 )|𝑗 ∈ [1, 𝑅𝐿]}; 𝑅𝐿 ∶ size of training system log dataset
+
+ 𝐷2𝑅 = {(𝑥𝑆𝑘 , 𝑦𝑇𝑘 , 𝑦𝐿𝑘 )|𝑘 ∈ [1, 𝑅𝑆]}; 𝑅𝑆 ∶ size of training host statistics dataset
+
+ Testing Dataset 𝑃
+ 𝐷𝑤 𝑃 , 𝑤 = 0, 1, 2
+ 𝐷𝑤
+
+ 𝐷0𝑃 = {(𝑥𝑁
+ 𝑖
+ , 𝑦𝑇𝑖 , 𝑦𝐿𝑖 )|𝑖 ∈ [1, 𝑃 𝑁]}; 𝑃 𝑁 ∶ size of testing traffic flow dataset
+
+ 𝐷1𝑃 = {(𝑥𝐿𝑜𝑔 𝑇 𝐿
+ 𝑗 , 𝑦𝑗 , 𝑦𝑗 )|𝑗 ∈ [1, 𝑃 𝐿]}; 𝑃 𝐿 ∶ size of testing system log dataset
+
+ 𝐷2𝑃 = {(𝑥𝑆𝑘 , 𝑦𝑇𝑘 , 𝑦𝐿𝑘 )|𝑘 ∈ [1, 𝑃 𝑆]}; 𝑃 𝑆 ∶ size of testing host statistics dataset
+ ⋃
+ Technique Sequence Dataset 𝐷𝑇 𝐷𝑇 = 𝐷𝑅𝑇 𝐷𝑃 𝑇
+
+ 𝐷𝑅𝑇 = {([𝑦𝑇0 𝑦𝑇1 𝑦𝑇2 ...], 𝑦𝐿𝑙 )|𝑙 ∈ [1, 𝑅𝑇 ]}; 𝑅𝑇 ∶ size of training technique sequence dataset
+
+ 𝐷𝑃 𝑇 = {([𝑦𝑇0 𝑦𝑇1 𝑦𝑇2 ...], 𝑦𝐿𝑙 )|𝑙 ∈ [1, 𝑃 𝑇 ]}; 𝑃 𝑇 ∶ size of testing technique sequence dataset
+
+ Data Input 𝑥 𝑥 ∶ 𝑥𝑁
+ 𝑖
+ , 𝑥𝐿𝑜𝑔 𝑆
+ 𝑗 , 𝑥𝑘
+
+ 𝑥𝑁
+ 𝑖 ∈𝑅
+ 𝑁𝑇
+ , 𝑥𝐿𝑜𝑔
+ 𝑗 ∈ 𝑅𝑁𝐿 , 𝑥𝑆𝑘 ∈ 𝑅𝑁𝑆
+
+ 𝑁𝑇 , 𝑁𝐿, 𝑁𝑆: size of traffic flow, system log, host statistics features
+
+ Technique Label 𝑦𝑇 𝑦𝑇 = {𝑦𝑇𝑖 , 𝑦𝑇𝑗 , 𝑦𝑇𝑘 |𝑦𝑇𝑖 , 𝑦𝑇𝑗 , 𝑦𝑇𝑘 ∈ [1, |𝑇 |]}, |𝑇 |: Number of predefined techniques
+
+ Lifecycle Label 𝑦 𝐿
+ 𝑦𝐿 = {𝑦𝐿𝑖 , 𝑦𝐿𝑗 , 𝑦𝐿𝑘 |𝑦𝐿𝑖 , 𝑦𝐿𝑗 , 𝑦𝐿𝑘 ∈ [1, |𝐿|]}, |𝐿|: Number of predefined lifecycles
+
+ Machine Learning
+
+ Technique Classifier 𝑀𝑤𝑇 𝑀𝑤𝑇 , 𝑤 = 0, 1, 2
+
+ Optimal Technique Classifier 𝑀𝑤𝑇 ∗ 𝑀𝑤𝑇 with highest F1 score
+
+ Lifecycle Classifier 𝑀𝐿 𝑀 𝐿 is ML model for lifecycle detection
+
+ Optimal Lifecycle Classifier 𝑀 𝐿∗ 𝑀 𝐿 with highest F1 score
+ ⋃
+ Ensemble Team 𝑀 𝐸
+ 𝑀 𝐸 |𝑀 𝐸 ∈ 𝑀 where 𝑀 = 𝑇
+ 𝑤 𝑀𝑤
+
+ Bset Ensemble Team 𝑀 𝐸∗ 𝑀 𝐸 with highest F1 score
+
+ ML Model 𝑀𝑛 𝑀𝑛 = 𝑀𝐿𝑛 (𝐷𝑅 )
+
+ ML Algorithm 𝑀𝐿𝑛 0 ≤ 𝑛 < |𝑀𝐿|, |𝑀𝐿|: Number of ML algorithms
+
+ Cyber Attack
+
+ Predefined Lifecycles 𝐿 𝐿 = {𝐿𝑚 }, 1 ≤ 𝑚 ≤ |𝐿|, where 𝐿𝑚 denotes the 𝑚-th lifecycle.
+
+replays and assessing dataset quality. In contrast, our research centers sources. In this context, 𝑤 represents the data sources: 0 denotes
+on identifying attack technique sequences and leveraging them for network traffic, 1 stands for system logs, and 2 indicates host
+lifecycle detection. statistics. Furthermore, the technique sequence dataset 𝐷𝑇 is
+ composed of sequences of 𝑦𝑇 with corresponding label 𝑦𝐿 .
+3. Problem statements • Machine Learning: To have the optimal classifiers, the best
+ models 𝑀𝑤𝑇 ∗ and 𝑀 𝐿∗ should be obtained for different tasks.
+ This section covers our discussion of the problem statement in two Ensemble teams are also included in this category, and they are
+subsections: the notation table and the problem description. We start classified into two types: ensemble teams for models from each
+by explaining the notations. Next, we describe the main problem of the data source 𝑀 𝐸 and the best ensemble teams 𝑀 𝐸∗ .
+work. • Cyber Attack: In the final section on cyber attacks, we use a total
+ of five attack lifecycles, |𝐿|, and seventeen attack techniques, |𝑇 |.
+3.1. Notations
+ 3.2. Problem statements
+ Table 2 presents the notations used in this work, classified into
+three categories: dataset (network traffic, system log, host statistics), In today’s complex cybersecurity landscape, enterprises face continmachine learning (algorithms, models, ensemble teams), and cyber uous and multifaceted threats. Attacks on these enterprises are rarely
+attack (techniques, lifecycles). The details of each category are listed straightforward; they typically initiate at the web interface, progress
+as follows: through internal systems, and ultimately target sensitive databases.
+ This multi-stage attack employs various techniques across diverse data
+ • Dataset: Datasets comprise data inputs 𝑥 as well as their cor- sources, encompassing network traffic, system logs, and host statistics.
+ responding technique labels 𝑦𝑇 and lifecycle labels 𝑦𝐿 . These To address these complex real-world challenges, we present a comdatasets are further divided into two groups: training datasets prehensive threat model. Fig. 2 visually represents this model, under-
+ 𝐷𝑤𝑅 and testing datasets 𝐷𝑃 , each containing three types of data lining its significance as a fundamental framework for comprehending
+ 𝑤
+
+ 4
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+ Fig. 3. Three lifecycle detection approaches.
+
+Fig. 2. The threat model illustrating the attacks and the challenges of technique and Fig. 4. ML on lifecycle.
+lifecycle detection in multi-datasource.
+
+ 4. Solution approaches
+and countering multifaceted threats. The threat model addresses two
+key challenges: the efficient detection of attack techniques distributed This section begins with an overview of the solutions including three
+across diverse data sources, and the intricate task of assembling these approaches to detect the attack lifecycles using multiple data sources.
+techniques to gain insight into complete attack lifecycles. Then, we look at the details of the components in these three approaches: trained ML models from each data source, ensemble method,
+ trained lifecycle detection model, and sequence matching method.
+Technique detection from multi-datasource
+ In the first problem, we detect attack techniques from multiple data 4.1. Solution overview
+sources, using an ensemble method to merge the results from each.
+ Given a training dataset from multi-datasource 𝐷𝑤 𝑅 , composed of 𝑥
+ Fig. 3 illustrates three lifecycle detection methods. The first (singleand its corresponding 𝑦𝑇 , and machine learning algorithms 𝑀𝐿𝑛 , as stage ML) directly classifies data into target lifecycles, similar to idenwell as a testing dataset 𝐷𝑤𝑃 , we need to determine the best ensemble tifying attack types but without analyzing technique sequences. The
+ 𝐸∗
+team 𝑀 . This ensemble should achieve the highest F1 score when second (two-stage ML+ML) employs ML models twice: first to identify
+evaluated using the testing dataset 𝐷𝑤𝑃 . The statement for this problem attack techniques, then to classify them into lifecycles after converting
+is formally defined as follows: them into technique sequences. The third (two-stage ML+SM) detects
+ 𝑅 which is a set of 𝑥 with 𝑦𝑇 , machine techniques using ML, forms sequences, and applies sequence matching
+ Input : Training dataset 𝐷𝑤
+ 𝑃. for detection. It is important to note that while we utilize various ML
+learning algorithms 𝑀𝐿𝑛 , testing dataset 𝐷𝑤
+ and DL models for technique and lifecycle detection, we still refer to
+ Output : Best ensemble team 𝑀 𝐸∗ . our approach as ‘ML’ since DL is a subset of ML.
+ Objective: Maximize F1 score on ensemble team 𝑀 𝐸 tested using Fig. 4 presents the traditional approach for lifecycle detection
+testing data 𝐷𝑤𝑃.
+ through multiple data sources. The process begins with dividing each
+ data source into training and testing datasets, pre-processing them,
+ and training three ML models using the training datasets. The testing
+Lifecycle detection from technique sequences
+ datasets are then used to detect lifecycles. In the end, the ensemble
+ In the second problem, we classify the attack lifecycle using a model combines the results to output the final outcome. The details
+dataset composed of technique sequences. The objective is to find the of the training process and the ensemble process are described in
+best classifier for this task. Sections 4.2 and 4.3, respectively.
+ Given training dataset 𝐷𝑅𝑇 , which contain sequences of 𝑦𝑇 with Fig. 5 outlines the ML+ML approach for lifecycle detection in two
+corresponding label 𝑦𝐿 , machine learning algorithms 𝑀𝐿𝑛 and testing stages. Initially, techniques are detected using multiple data sources.
+dataset 𝐷𝑃 𝑇 , we need to determine the best lifecycle classifier 𝑀 𝐿∗ . After splitting and pre-processing the data, three ML models are trained
+This classifier should achieve the highest F1 score when evaluated using and tested, with results consolidated via an ensemble model. The
+the testing dataset 𝐷𝑃 𝑇 . The problem statement for this problem is second stage classifies lifecycles using technique sequences derived
+formally defined as follows: from the ensemble. The sequences serve as the training dataset to train
+ and test an ML model for lifecycle detection. Details of each stage are
+ Input : Training dataset 𝐷𝑅𝑇 which contain sequences of 𝑦𝑇 with
+ provided in Sections Section 4.2, 4.4, and 4.3.
+corresponding label 𝑦𝐿 , machine learning algorithms 𝑀𝐿𝑛 , testing
+ Fig. 6 illustrates the ML+SM approach for lifecycle detection using
+dataset 𝐷𝑃 𝑇 . sequence matching. The process starts by splitting each data source into
+ Output : Best lifecycle classifier 𝑀 𝐿∗ training and testing datasets. After pre-processing, we train three ML
+ Objective: Maximize F1 score on lifecycle classifier 𝑀 𝐿 tested using models using these datasets. Techniques are detected using the testing
+testing data 𝐷𝑃 𝑇 datasets and merged via an ensemble model. Technique sequences are
+
+ 5
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+ Fig. 5. ML on technique + ML on lifecycle.
+
+ Fig. 8. Procedure of creating the ensemble team.
+
+ 4.3. Ensemble method
+
+ The rationale behind using the ensemble method is to mitigate
+ the effects of individual model weaknesses or errors from each data
+ Fig. 6. ML on technique + sequence matching on lifecycle. source (Zhang et al., 2022). Fig. 8 illustrates the procedure of creating
+ an ensemble team and assessing its performance. Inputs include the best
+ ML model for each data source from Section 4.2 and a testing dataset
+ across three data source types.
+ In this study, the diversity of the models in the ensemble is inherently enhanced by the varied nature of the data sources. Each model,
+ trained on this heterogeneous data, develops unique strengths and
+ weaknesses, contributing to a more robust ensemble. By integrating
+ these diverse models, our ensemble approach gains a comprehensive
+ perspective, increasing its robustness and accuracy in detecting and
+ classifying complex cyber threats. This method capitalizes on the diverse data characteristics to ensure a more effective and nuanced threat
+ detection system.
+ Ensemble teams are formed by combining classifiers trained with
+ different ML models and data sources. There are four possible ensemble
+ team combinations: (1) models from traffic, system log, and host statistics, (2) models from traffic and system log, (3) models from system
+ Fig. 7. Trained ML models from each data source. log and host statistics, and (4) models from traffic and host statistics.
+ Each model is evaluated using its respective data source. The predicted
+ outcomes and ground truths are subsequently synchronized according
+ to their time slots.
+then classified to their lifecycles using sequence matching. The training,
+ A voting mechanism is then employed to produce consolidated
+ensemble, and sequence matching processes are detailed in Sections
+ results for each time slot and the F1 score of the ensemble team is
+Section 4.2, 4.3, and 4.5, respectively.
+ computed for all ensemble teams. The output is the ensemble team
+ exhibiting the highest F1 score.
+4.2. Trained ML models from each data source Fig. 9 provides an illustrative example of how these results are
+ merged. For every data point in the dataset, there are three types
+ Fig. 7 shows the procedure for training and testing ML models using of data sources per time slot (e.g., 1s). Each data source is fed into
+data from three data sources. During the training phase, we utilize its corresponding pre-trained model to derive a detection result. We
+several ML algorithms, leading to the development of an array of ML then calculate the count of both the prediction result labels and the
+models. The models generated from this phase are utilized for both the actual labels for each time slot. We implement soft voting for each
+single-stage ML approach and the initial stage of the two-stage models. category which aggregates the predicted results for each class across
+ Before training, the datasets undergo preprocessing, which includes all the models, and then the class with the highest average score is
+steps such as one-hot encoding for categorical features, data cleaning, taken as the final result. Due to the typically higher prevalence of the
+removal of duplicated features, and feature scaling. In the model train- benign class (e.g., label 0), a predetermined threshold for this class is
+ing phase, each algorithm from the list 𝑀𝐿 is trained using the desig- set. If the benign class surpasses this threshold, the data is classified
+nated data source. The model’s performance is assessed on the testing as benign for that time slot. If not, it is classified under the class
+dataset, 𝐷𝑃 , and the best results are stored in Result_single. If with the highest representation between the other classes. We perform
+a model outperforms others, the Best value is updated. The process exhaustive searching to identify the optimal threshold. The searching
+iterates through all data sources and algorithms, ensuring every combi- method is not just to achieve the highest F1 score, but also to ensure
+nation is evaluated. By the end, the top-performing model is identified that, under this threshold, the detection results do not exclusively
+as 𝑀 𝑇 ∗. consist of label 0 or entirely lack label 0.
+
+ 6
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+ Fig. 11. Sequence matching method.
+
+ and the example of these sequences in Section 5.2. After preprocessing the dataset, each sequence is compared to the lifecycle patterns,
+ assigning the class with the maximum similarity. This is repeated for
+ Fig. 9. Illustration of ensemble method. all sequences, resulting in an F1 score for the method.
+ Let 𝑆1 and 𝑆2 be two attack technique sequences. Specifically,
+ 𝐸𝐷(𝑆1 , 𝑆2 ) is the edit distance of two sequences S1 and S2 proposed
+ by Levenshtein et al. (1966) and 𝑚𝑎𝑥(𝑙𝑒𝑛(𝑆1 ), 𝑙𝑒𝑛(𝑆2 )) represents the
+ longest length between 𝑆1 and 𝑆2 . The similarity metric between
+ sequences 𝑆1 and 𝑆2 can be described as
+ 𝐸𝐷(𝑆1 , 𝑆2 )
+ 𝑆𝑖𝑚(𝑆1 , 𝑆2 ) = 1 − . (1)
+ 𝑚𝑎𝑥(𝑙𝑒𝑛(𝑆1 ), 𝑙𝑒𝑛(𝑆2 ))
+ 𝑆𝑖𝑚(𝑆1 , 𝑆2 ) can be used to compute similarity between predefined
+ sequences of each lifecycle class and used to detect technique sequence,
+ and do classification based on the similarity of each class.
+
+ 5. Implementation
+
+ In this section, we present the implementation of our solution. First,
+ we summarize the open sources and tools used for the implementation.
+ Fig. 10. Trained lifecycle detection model. Second, we focus on describing the details of the implementation.
+
+ 5.1. Open sources and tools
+4.4. Trained lifecycle detection model
+ We classify open sources and tools into two categories: dataset and
+ Fig. 10 depicts the process of employing ML models to classify libraries. We describe the details of the categories as follows.
+testing data. The generated models are then used in the second stage
+of the ML+ML method. Both training and testing datasets are used as Dataset
+input, associating each technique with a lifecycle label. Prior to use, In this study, we employed CREMEv2 (Yudha, 2023) as the dataset
+these datasets undergo preprocessing. We select technique sequences to train our ML models. CREMEv2, an upgrade version of CREMEv1
+based on lifecycle timestamps and label them for training. We also (Bui et al., 2021), distinguishes itself in two ways: a broader array of
+remove consecutive duplicate techniques to prepare the sequences for attack techniques across lifecycles and multiclass labeling representmatching and training. ing both attack techniques and lifecycles, in contrast to the binary
+ For each model, it is trained with the training dataset and subse- labels of CREMEv1. This toolchain, based on ATT&CK, automates the
+quently tested with the testing dataset to calculate the F1 score. The reproduction of attack techniques and lifecycles using Metasploit as the
+F1 scores obtained from testing with each model are compiled into a tool to launch the techniques. It encompasses five attack lifecycles, 17
+list, and the model with the highest F1 score is selected. The outcome techniques, and three data types: network traffic, system logs, and host
+of this process is the classifier that achieves the highest F1 score for statistics, as explained in Section 2.
+identifying the lifecycle. The five attack scenarios in CREMEv2 encapsulate a wide spectrum
+ of behaviors, from network-level anomalies (Mirai) to system-level
+4.5. Sequence matching method disruptions (disk wipe), thereby providing a robust testing ground for
+ the ML-IDS. The feature learning and detection mechanisms of the
+ The method used from this phase are utilized for the second stage of proposed approach focus on underlying patterns and anomalies that are
+ML+SM method. Fig. 11 describes the process of evaluating a testing not strictly attack-specific, enhancing its potential to generalize across
+dataset using a similarity metric based on edit distance (Levenshtein a multitude of attack types.
+et al., 1966) and predefined lifecycle sequences. The inputs include the In CREMEv2, network traffic was captured via Tcpdump and consimilarity metric, the predefined sequences, and the testing dataset. The verted into numerical data using Argus for ML model input. System logs
+predefined sequences are derived from the order of reproduced attack were collected using Rsyslog and then parsed with the Drain tool. These
+scenarios in the CREMEv2 dataset. We provide a detailed explanation logs were subsequently transformed into log templates suitable for ML
+
+ 7
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+models capable of Natural Language Processing (NLP) through the Text Table 3
+ Summary of data labels for techniques.
+Tokenization technique. Host statistics, obtained with Atop for Linux
+ Label Data source
+system monitoring, were filtered to remove unusable features, creating
+numerical input for models. All the data sources were collected over a Network traffic Accounting Syslog
+
+duration of 3 h and 29 min. 0 50 000 59 297 2572
+ 1 50 000 3967 1955
+ CREMEv2, as the updated version of CREMEv1, adds a router 2 176 174 408
+machine and constructs a host-only network, isolating the primary 3 – 32 –
+operating system from the virtual machines to lessen the effects of 4 404 467 415
+ 5 – 32 –
+external threats. The constructed testbed includes ten virtual entities:
+ 6 46 207 264
+a controller, a data logger, four client machines, and a single machine 7 – 32 87
+that plays the roles of an attacker, a target, and a benign server. The 8 32 24 302
+intention behind this configuration is to foster a controlled setting that 9 12 96 –
+ 10 32 24 86
+is optimal for simulating various types of cyber attacks, while also 11 606 10 500 –
+ensuring comprehensive data collection and logging. 12 – 30 98
+ In terms of executing attack scenarios, CREMEv2 employs an array 13 12 647 – –
+ 14 – – 122
+of attack tools that are in line with the principles of the MITRE
+ 15 – 20 139
+ATT&CK framework. This range encompasses tools for simulating bot- 16 – 32 83
+nets, executing disk wipes, initiating ransomware, conducting resource 17 – 32 181
+hijacking, and launching endpoint DoS attacks. For instance, it uses
+a pre-compiled version of Mirai for botnet scenarios, Metasploit for
+advanced access techniques, and bespoke scripts for ransomware and 5.2. Implementation details
+resource hijacking. These tools are meticulously selected to correspond
+with distinct attack methods according to the framework, facilitating In this section, we detail the solution’s implementation as discussed
+precise replication of cyber threat behaviors. in Section 4. We first preprocessed our dataset for ML model training.
+ The procedure for generating the dataset starts with the automated This involved cleaning data, selecting appropriate features for each data
+enactment of these attack scenarios through the tools described above. source, and standardizing the data.
+Command and coordination of the attack simulations are managed by For system logs, we employed label encoding and sequenced event
+the central controller server, which oversees the interplay between all templates every second. Initially, we extracted useful information from
+participating entities. As the attacks proceed, real-time data is captured unstructured log files using the Drain tool. This process yielded a log
+from the clients, the targeted server, and the benign server, which is template for each Syslog (Lin et al., 2022). Next, each template was
+then routed to the data logger for unified logging. This centralized assigned a unique number, in a process we referred to as label encoding.
+collection system simplifies the data handling process and supports For instance, if there are three log templates (template A, template
+the creation of detailed datasets that encapsulate the complexity of B, and template C), they are labeled 1, 2, and 3, respectively. With
+each cyber attack scenario. Post data acquisition, an elaborate labeling templates converted into numbers, we then collected all log template
+process is conducted based on the breakpoint information collected numbers in sequence for every second. This sequence of log template
+during the attack stages. numbers serves as our data for training and testing.
+ The data distribution for different techniques across each data For both host statistics and network traffic data, we first applied
+source is shown in Table 3. We then used 80% of the data as train- one-hot encoding to non-numerical data. Following this step, we proceeded to standardize the features. Subsequently, any duplicated or
+ing, 10% as validation, and 10% as testing. This table highlights
+ non-varying features were eliminated. This process resulted in 38 feaa noticeable class imbalance, with some classes having significantly
+ tures for network traffic and 36 features for host statistics. After profewer instances. To rectify this and improve our models’ F1 scores,
+ cessing the datasets, we divided them into training and testing sets.
+we applied the SMOTE technique to balance the data classed within
+ The training set was balanced using the SMOTE (Chawla et al., 2002)
+each data source. It generates synthetic samples for the minority class
+ method.
+by interpolating existing minority instances, creating a more balanced
+ Furthermore, for host statistics and network traffic data, which
+dataset for machine learning model training.
+ primarily consist of numerical features, we employed standard ML
+ models. Current literature suggests that these models are highly effec-
+Hardware and software tive for such datasets, delivering robust performance with relatively
+ For our experiments, we utilized specific hardware and software low computational demands (D’hooge et al., 2020). However, for a
+ comprehensive and fair assessment, we also included Deep Neural
+configurations. The hardware specifications included an AMD Ryzen
+ Networks (DNN) as a comparative benchmark.
+7 5800-X 8-core processor and 128 GB of RAM. The operating system
+ Moreover, system logs predominantly contain textual information.
+used was Ubuntu 22.04, and no GPU was installed.
+ Analyzing sequential textual data requires models that can understand
+ In terms of software, we employed Python 3.8 as the primary
+ context and the inherent order of the sequence. Thus, we employed
+programming language. To address dataset imbalance, we utilized the
+ DL models specifically designed for such tasks, including Recurrent
+open-source library Imbalanced-learn 0.10.1, which offers resampling Neural Networks (RNN), Long Short-Term Memory (LSTM), and Gated
+techniques. For ML tasks, Scikit-learn 1.2.0 (Pedregosa et al., 2011) Recurrent Units (GRU). These models possess the capability to perform
+served as our main library, providing various algorithms such as de- intricate natural language processing techniques, making them wellcision trees and SVMs. Additionally, we utilized XGBoost 1.7.3, a suited for analyzing system logs (Sworna et al., 2023; Satilmiş et al.,
+gradient-boosting decision tree algorithm, as one of our ML models. 2024).
+ For DL tasks, we leveraged Tensorflow 2.6.5. (Abadi et al., 2015). After acquiring pre-trained ML models for each data source, the
+To visualize our results effectively, we utilized Seaborn 0.12.2 and Mat- next step involves ensemble methods. These methods combine ML
+plotlib 3.6.2. These software tools collectively facilitated the execution models from different data sources using diverse ML algorithms. Given
+of our experiments and the analysis of our results. that each data source records information at varying intervals, we
+
+ 8
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+synchronize detection results and associated ground truths by merging
+them at one-second intervals. To consolidate these results, we employ
+the soft voting technique.
+ After voting, we applied a threshold to determine whether the
+prediction result for each second belongs to class 0 or not. If the
+percentage of class 0 for each data source within one second exceeds
+the threshold, we labeled it as 0; otherwise, we selected the label with
+ Fig. 12. An Example of Sequence Matching.
+the highest percentage among the remaining labels. The percentage
+is determined by the number of occurrences of each prediction result
+divided by the total number of predictions in each second. Table 4
+ Hyperparameter settings for ML.
+ Fig. 9 provides a detailed illustration of the ensemble process.
+ Classifier Hyperparameter Value
+For example, if network traffic produces 10 detection results with
+corresponding ground truths in one second, they are merged into a Logistic Regression C 1
+
+single detection result with its corresponding ground truth. If between max depth 8
+those 10 results, label 0 appears more than 9 times, we assign label 0 Decision Tree min sample leaf 1
+ min sample split 2
+as the detection result for that second, applying the same process to the
+ SVM C 1.15
+ground truths.
+ Finally, we assessed the performance of the ensemble teams using max depth 11
+ Random Forest min sample leaf 1
+the F1 score. This F1 score has been primarily utilized as the evaluation
+ min sample split 2
+metric due to its balanced consideration of both precision and recall,
+ Bagging Ensemble max samples 2
+crucial in the context of IDS. These IDS environments demand a metric
+that equally values the correct identification of attacks (precision) and max depth 8
+ Gradient Boosting min sample leaf 1
+the system’s ability to identify as many attacks as possible (recall). min sample split 2
+Given the intricate nature of attack lifecycles and techniques, which
+ objective multi:softprob
+often involve overlapping and nuanced behaviors, the F1 score provides eval metric merror
+a more comprehensive measure of a model’s accuracy than either preci- booster gbtree
+sion or recall alone. Hence, the F1 score is an appropriate and efficient XGBoost learning rate 0.3
+indicator for assessing our model’s efficacy in detecting complex cyber gamma 0.2
+ max depth 9
+threats. We then evaluated seven different combinations of data sources
+ min child weight 3
+to determine the best-performing ensemble team.
+ Furthermore, to generate technique sequences for lifecycle detection, we fed multiple data sources into the ensemble model, and then
+sorted its detection results by seconds. Based on the start and end times- 6. Experiment results
+tamps of each attack lifecycle, we extracted the technique sequences.
+These sequences resemble a series of numbers, with each number This section begins with a description of the hyperparameter conrepresenting a predicted technique every second; ‘0’ denotes no attack figuration for all classifiers that we used. Then, the rest of this sectechnique, while other numbers correspond to specific techniques. tion shows the experiment results to address the issues introduced in
+ However, the original datasets present a challenge due to their Section 1.
+limited sequence data, covering only five lifecycles. To address this
+limitation, we enhanced the training data volume for the DL models 6.1. Experimental setup
+used in lifecycle detection by adjusting the number of ’label 0’ in a
+sequence, thereby varying the intervals between attack techniques. For We employed a range of ML and DL models for each data source,
+instance, a lifecycle sequence such as ‘10002220033’ was augmented selecting widely used options in the ML-IDS domain. We fine-tuned the
+to ‘1022200000033’. This approach primarily impacted the number of hyperparameters of network traffic and host statistics models through
+label 0 in the sequences, but we took care to retain essential features a grid search, ensuring optimal performance. The key hyperparameters
+within the lifecycles. for these models are detailed in Table 4.
+ After refining the technique sequence dataset, we removed label In addition to ML models, we incorporated several DL models.
+0 and any consecutive duplicate techniques before using the data to The DNN model was employed for both host statistics and network
+train and test the learning models for the second stage of the ML+ML traffic data sources, while the other models were used for system
+approach. Treating lifecycle detection as an NLP task, we selected logs, technique sequences data sources, and lifecycle detection. Table 5
+several DL models for evaluation. These models were trained and tested shows the architectures of those neural networks.
+using the sequence datasets, and their performance was evaluated using
+the F1 score. Finally, we chose the model with the highest F1 score to 6.2. Single- vs. Two-stage ML
+handle this task.
+ For lifecycle detection, we also utilized sequence matching. Initially, This section assesses three lifecycle detection methods (ML, ML+ML,
+we designated the original technique sequence as the pattern for each ML+SM) outlined in Section 4 to identify the most effective one.
+lifecycle class. During testing, technique sequences from the dataset In the initial ML stage, we employed XGBoost for network traffic
+were chosen and preprocessed to align with the patterns. The pro- and host statistics, LSTM for system logs, and Bi-LSTM for ML+ML’s
+cess of sequence matching is illustrated in Fig. 12. We preprocessed second stage. Fig. 13 compares F1 scores for attack lifecycle detection
+the technique sequence derived from the first stage ML model by among these approaches. The standalone ML method scored 0.887,
+eliminating occurrences of label 0 and merging consecutive identical indicating solid performance. However, it is surpassed by the twonumbers. After preprocessing, we compared the sequence with the stage ML approach (ML+ML). The single-stage method struggles with
+pattern sequences. We employed edit distance, calculated through dy- distinguishing techniques across multiple lifecycles, potentially causnamic programming, to measure similarity between the selected and ing misclassification. In contrast, the ML+ML method excels with a
+pattern sequences. The most similar lifecycle class was then chosen as 0.994 F1 score. Here, the second-stage model learns the technique
+the detection result. sequences generated by the first-stage model. Even if the first-stage
+
+ 9
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+Table 5 the context of technique sequences, the method struggled to accurately
+DL model architectures.
+ classify lifecycles. Similarly, ML+SM faced difficulties due to the simi-
+ Classifier Layer Type Output shape Activation larity between technique sequences from different lifecycles, leading to
+ function
+ misclassification.
+ 1 Dense (256) relu
+ However, the two-stage ML+ML approach effectively addressed this
+ 2 Dense (128) relu
+ DNN 3 Dense (64) relu
+ issue by using ML in the second stage. This allowed the model to
+ 4 Dense (32) relu learn and differentiate the unique sequences of techniques associated
+ 5 Dense (number of labels) softmax with each specific lifecycle. By understanding the intricate patterns
+ 1 Embedding (1950, 16) of technique sequences within each lifecycle, the two-stage ML+ML
+ RNN
+ 2 SimpleRNN (1950, 64) tanh approach achieved more accurate and reliable classification results.
+ 3 SimpleRNN (32) tanh Table 6 shows the detection times for various methods applied to
+ 4 Dense (number of labels) softmax
+ a dataset consisting of 6000 data points. These methods were assessed
+ 1 Embedding (1950, 16)
+ sequentially to evaluate their efficiency in a controlled environment.
+ 2 LSTM (1950, 64) tanh
+ LSTM
+ 3 LSTM (32) tanh
+ The detection time, measured in seconds, spans several categories:
+ 4 Dense (number of labels) softmax Host Statistics, System Log, Network Traffic, Ensemble on Lifecycles,
+ 1 Embedding (1950, 16) Ensemble on Techniques, ML on Lifecycles, and Sequence Matching,
+ 2 Bi-LSTM (1950, 128) tanh leading to the total time. The single-stage ML method recorded de-
+ Bi-LSTM
+ 3 Bi-LSTM (64) tanh tection times of 23.9, 36.2, and 30.8 s for Host Statistics, System
+ 4 Dense (number of labels) softmax Log, and Network Traffic, respectively, with a total aggregated time of
+ 1 Embedding (1950, 16) 93.95 s. The ML+ML approach, which integrates ML for both technique
+ 2 GRU (1950, 64) tanh and lifecycle detection, showed slightly higher times due to the added
+ GRU
+ 3 GRU (32) tanh
+ 4 Dense (number of labels) softmax
+ complexity, totaling 98.4 s. The ML+SM method, combining machine
+ learning with sequence matching, marked the longest detection time
+ 1 Embedding (1950, 16)
+ 2 Bi-GRU (1950, 128) tanh
+ at 101.76 s, reflective of the additional time required for sequence
+ Bi-GRU matching. Each time value presented is the mean from multiple tests,
+ 3 Bi-GRU (64) tanh
+ 4 Dense (number of labels) softmax denoted alongside their standard deviations, ensuring the reliability
+ and reproducibility of the results. This detailed detection time analysis
+ helps in understanding the efficiency and resource utilization of each
+ proposed detection method.
+ Furthermore, a direct comparison of results with previous works
+ is not feasible due to distinct methodologies and objectives. Earlier
+ studies either focused on binary detection at the technique level or
+ on identifying attacks without considering their lifecycle stages. In
+ contrast, our approach is unique with its two-stage attack detection
+ process. We initially detect individual techniques and then analyze
+ their sequences to classify attack lifecycles. This multi-class, sequential
+ analysis differs fundamentally from past works that employ binary
+ classification or a single-stage approach.
+
+ Fig. 13. Performance of three approaches. 6.3. Learning models on lifecycle detection
+
+ This experiment seeks to identify the best model for lifecycle demodels misclassify some techniques, the second-stage model incor- tection within our ML+ML approach. We utilized the dataset from the
+porates these errors as features within the technique sequences for first stage of both ML+ML and ML+SM approaches for this purpose.
+lifecycle recognition, enhancing overall performance. To overcome limited lifecycle data points, we augmented the dataset
+ Conversely, the ML+SM approach yields the lowest performance, by adjusting the number of label 0 in each sequence. This expansion
+achieving only an F1 score of 0.189. There are two primary reasons yielded 357 data points for each lifecycle.
+for the poor performance of this method. Firstly, the comparison is Fig. 15 shows the performance of various DL models in classifybased on pattern sequences, heavily relying on the ML models’ ability ing the lifecycle. Notably, bidirectional models such as Bi-LSTM and
+to correctly recognize techniques from data sources and merge them Bi-GRU outperform their unidirectional counterparts. This suggests
+accurately to form the correct sequence. Second, the similarity in se- their capacity to capture more intricate patterns in the data, with the
+quence patterns poses a challenge. As observed in Fig. 1, the initial four highest-performing model achieving an F1 score of 0.994.
+attack techniques for ransomware, resource hijacking, and disk wipe Overall, these results underscore the effectiveness of employing
+are identical, making it challenging to precisely match the identified deep learning models, specifically those based on LSTM and GRU,
+technique sequence to the correct lifecycle. for classifying attack lifecycles from technique sequences. Particularly,
+ Moreover, Fig. 14 presents the confusion matrices for these three when we enabled these models to learn contextual relations bidirecapproaches. The confusion matrix for the single-stage ML approach tionally, the performance is further enhanced.
+reveals that only benign data can be correctly classified, with a true
+positive rate of 0.98. In contrast, the true positive rates for the other 6.4. Single- vs. Multi-datasource
+lifecycle classes only reach 0.78. This confirms our earlier explanation
+that the presence of techniques shared across different attack lifecycles In this section, we assess the potential benefits of integrating multiposes challenges for accurate detection. While the single-stage ML ple data sources for detection tasks. Specifically, we aim to determine if
+approach achieves a high overall F1 score, it is evident that this method these sources, when combined, can enhance performance and whether
+struggles to precisely classify lifecycles. they complement each other.
+ Because a technique can be used in several lifecycles, it posed After obtaining the detection results from each data source, we
+challenges for single-stage ML and ML+SM. In single-stage ML, without employed ensemble techniques to integrate these results across multiple
+
+ 10
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+ Fig. 14. Confusion matrices of three approaches.
+
+ Table 6
+ Testing time (in seconds) for various methods.
+ Method Testing Time (in seconds)
+ Host System Log Network Ensemble on Ensemble on ML on Sequence Total
+ statistics traffic lifecycles techniques lifecycles matching time
+ ML 23.9 ± 0.35 36.2 ± 0.25 30.8 ± 0.44 3.05 ± 0.005 – – – 93.95
+ ML+ML 24.3 ± 0.29 35.7 ± 0.6 32 ± 0.26 – 3.06 ± 0.003 3.34 ± 0.018 – 98.4
+ ML+SM 25.7 ± 0.32 34.5 ± 0.44 36 ± 0.53 – 3.26 ± 0.01 – 2.3 ± 0.013 101.76
+
+ Table 7
+ Aggregated data label threshold.
+ Data sources Threshold
+ T 0.98
+ L 1
+ A 0.87
+ T+L 0.81
+ T+A 0.863
+ L+A 0.84
+ T+L+A 0.805
+
+ T/L/A: Traffic/System Log/Accounting
+
+ Fig. 15. Model evaluation for lifecycle.
+
+ML models and data sources. These data points were aggregated into
+one-second time slots to facilitate the ensemble process. We conducted
+an exhaustive search to determine the optimal threshold for classifying
+aggregated data as benign or indicative of attack techniques. If the
+number of data points within one second exceeded this threshold,
+the data point was classified as benign. Otherwise, it was classified
+according to the highest representation among the other technique
+classes. To ensure a fair comparison between multi-datasource and
+ Fig. 16. Evaluation for single- vs. multi-datasource.
+single-datasource approaches, we merged data points from individual
+sources in a similar manner. The optimal thresholds, presented in
+Table 7, were selected not only to achieve the highest F1 score but
+also to ensure that detection results maintain a balance between label 0 6.5. Learning models on technique detection
+and other labels. For instance, if there are 100 data points for network
+traffic within a second, they would be consolidated and classified as In this section, we analyze the performance of both ML and DL modlabel 0 if 98 of those data points are detected as label 0.
+ els in detecting techniques across different data sources. As previously
+ The results from Fig. 16 confirm that combining various data
+ explained in Section 5.2, when conducting technique detection tests for
+sources enhances the performance. Among the data sources, network
+ each data source, we merged the data points into one-second intervals.
+traffic is predominant with an F1 score of 0.877.
+ This approach was taken to simplify the comparison between various
+ The ensemble utilizing all three data types outperforms the seven
+combinations, achieving an F1 score of 0.922. Furthermore, every combinations of single and multiple data sources.
+ensemble team that includes more than one data sources outperforms We also examine the training times of these models on each data
+each individual data source within that team. This strongly supports source, which is critical for understanding the computational efficiency
+the notion that leveraging multiple data sources significantly improves of the models in addition to their detection performance. The training
+the detection performance. times, measured in minutes, are summarized in Table 8.
+
+ 11
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+Fig. 17. Model evaluation for network traffic and host statistics in technique detection.
+
+ Fig. 18. Model evaluation for system logs in technique detection.
+
+Technique detection from network traffic Table 8
+ Fig. 17 illustrates the performance of ML models in classifying Training times of models across each data source, measured in
+network traffic. It is evident that the majority of models excel, signi- minutes.
+fying their adeptness in capturing the correlation between labels and Model Data source
+features. Traffic Host System
+ Although most models exhibit strong performance, we observed statistics Logs
+a slight superiority between tree-based models. This indicates their Logistic Regression 2.22 4.76
+suitability for network traffic analysis. XGBoost emerged as the top- SGD 0.06 0.07
+ Decision Tree 0.03 0.02
+performing model among these, achieving an impressive F1 score of
+ SVM 34.07 96.98
+0.877. Random Forest 0.11 0.15 –
+ The training times for traffic data, as detailed in Table 8, reveal that Bagging Ensemble 0.02 0.14
+while SVM and Gradient Boosting models require the longest training Gradient Boosting 39.37 38.70
+ XGBoost 6.82 9.85
+periods due to their complex computations, XGBoost stands out for its
+ DNN 12.50 21.18
+high F1 score combined with reasonable training time. This balance
+ RNN 105.48
+makes XGBoost particularly appealing for applications requiring both
+ LSTM 158.67
+high accuracy and computational efficiency. Bi-LSTM – – 131.75
+ GRU 195.75
+Technique detection from host statistics Bi-GRU 146.33
+ Fig. 17 shows the ML model performance for host statistics. Notably,
+certain models such as stochastic gradient descent (SGD) and logistic
+regression exhibit a decline of at least 0.2 in their F1 scores compared The training times for system logs, detailed in Table 8, reveal
+to the remaining models, possibly due to their simpler structures failing that DL models, particularly RNN and its variants, necessitate longer
+to capture the intricate relationships between the features. Conversely, training periods. This underscores the importance of considering comtree-based classifiers, specifically bagging ensemble, gradient boosting, putational efficiency alongside model accuracy, especially in real-world
+and XGBoost, perform exceptionally well, achieving an F1 score of applications where rapid processing of logs is paramount.
+0.724. Remarkably, even a standalone decision tree reaches an F1 score
+of 0.701, underscoring the efficacy of tree-based models. Their ability 7. Conclusions and future work
+to decode complex non-linear relationships through the if-else rules,
+combined with computational efficiency, makes them an ideal choice In this study, we assessed three lifecycle detection approaches usin this scenario. ing a combination of three data sources. Results varied considerably
+ The training times for host statistics data in Table 8 highlight among the methods. The single-stage ML model achieved a respectable
+the efficiency of tree-based models, such as Decision Tree, Bagging F1 score of 0.887 but lacked insight into technique sequences. In
+Ensemble, and XGBoost, not only in their superior F1 scores but also contrast, the ML+ML approach, featuring a two-stage learning proin their relatively short training times, making them highly suitable for cess, excelled with an impressive F1 score of 0.994. However, the
+rapid model development cycles. ML+SM method, reliant on sequence matching, underperformed due
+ to sequence discrepancies, yielding an F1 score of only 0.189.
+Technique detection from system logs Furthermore, an ensemble approach that combined all the data
+ Fig. 18 shows the performance of various DL models when ap- sources yielded an F1 score of 0.922 on technique detection, emplied to system logs. Despite being used for NLP tasks, these models phasizing the value of leveraging multiple data sources for intrusion
+underperformed, with the highest F1 score being only 0.578 from detection.
+LSTM. Our findings also highlight the robust detection capabilities of ML
+ The significant factor influencing this outcome is the dataset la- and DL models for detecting attack techniques. Notably, tree-based
+beling process. After extracting data from system logs, we labeled it models, especially XGBoost, excelled in network traffic and host statisusing the attacker’s hostname in conjunction with the attack’s start tics, achieving F1 scores of 0.877 and 0.724, respectively.
+and end times. For instance, if a data point contains the attacker’s In real-world scenarios, these findings enable comprehensive inhostname and falls within the attack process timeframe, we label it an trusion detection, offering a holistic threat perspective. Employing
+attack. However, some benign log data might also include the attacker’s multiple data sources ensures thorough network monitoring, reducing
+hostname. This inclusion introduces outliers into our labeling, affect- the risk of undetected breaches, especially in complex attack scenarios.
+ing label quality. To enhance the performance, exploring alternative However, this proposed approach comes with limitations. Coormethods of labeling the data is crucial moving forward. dinating multiple data sources requires careful synchronization and
+
+ 12
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+integration. Challenges may arise concerning data privacy, storage, and Gomes, G., Dias, L., Correia, M., 2020. CryingJackpot: Network flows and performance
+real-time processing. The ensemble approach, while comprehensive, counters against cryptojacking. In: 2020 IEEE 19th International Symposium on
+ Network Computing and Applications. NCA, pp. 1–10. http://dx.doi.org/10.1109/
+demands more computational resources, impacting scalability in larger
+ NCA51143.2020.9306698.
+networks. Organizations must balance these benefits and limitations to Ham, H.-S., Kim, H.-H., Kim, M.-S., Choi, M.-J., 2014. Linear SVM-based android
+optimize method application in their specific contexts. malware detection for reliable IoT services. J. Appl. Math. 2014.
+ In future work, there are two directions that can be explored. Firstly, Hamid, Y., Sugumaran, M., Balasaraswathi, V., 2016. Ids using machine learning-current
+ state of art and future directions. Brit. J. Appl. Sci. Technol. 15 (3).
+expanding our detection capabilities to include unknown or emerging
+ Hoque, N., Bhuyan, M.H., Baishya, R.C., Bhattacharyya, D.K., Kalita, J.K., 2014.
+attack vectors, moving beyond the known lifecycles we currently focus Network attacks: Taxonomy, tools and systems. J. Netw. Comput. Appl. 40,
+on. This involves exploring new methodologies to identify novel attack 307–324.
+patterns. Secondly, investigating the resilience of our models against Hwang, R.-H., Lee, C.-L., Lin, Y.-D., Lin, P.-C., Wu, H.-K., Lai, Y.-C., Chen, C., 2023.
+adversarial attacks is crucial. Enhancing model robustness against such Host-based intrusion detection with multi-datasource and deep learning. J. Inform.
+ Secur. Appl. 78, 103625. http://dx.doi.org/10.1016/j.jisa.2023.103625.
+manipulations will ensure the reliability of intrusion detection systems Kaloudi, N., Li, J., 2020. The AI-based cyber threat landscape: A survey. ACM Comput.
+in the face of evolving cyber threats. Surv. 53 (1), http://dx.doi.org/10.1145/3372823.
+ Levenshtein, V.I., et al., 1966. Binary codes capable of correcting deletions, insertions,
+ and reversals. Sov. Phys. Doklady 10 (8), 707–710.
+CRediT authorship contribution statement
+ Lin, Y.-D., Wang, Z.-Y., Lin, P.-C., Nguyen, V.-L., Hwang, R.-H., Lai, Y.-C., 2022. Multidatasource machine learning in intrusion detection: Packet flows, system logs and
+ Ying-Dar Lin: Conceptualization, Funding acquisition, Methodol- host statistics. J. Inform. Secur. Appl. 68, 103248.
+ogy, Project administration, Supervision. Shin-Yi Yang: Writing – orig- Liu, J., Simsek, M., Kantarci, B., Bagheri, M., Djukic, P., 2022. Collaborative feature
+ maps of networks and hosts for AI-driven intrusion detection. In: GLOBECOM
+inal draft, Visualization, Validation, Software, Formal analysis, Data
+ 2022-2022 IEEE Global Communications Conference. IEEE, pp. 2662–2667.
+curation. Didik Sudyana: Validation, Resources, Methodology, Investi- Meng, W., Liu, Y., Zhang, S., Pei, D., Dong, H., Song, L., Luo, X., 2018. Devicegation, Formal analysis, Data curation, Visualization, Writing – review agnostic log anomaly classification with partial labels. In: 2018 IEEE/ACM 26th
+& editing. Fietyata Yudha: Validation, Methodology, Formal analysis, International Symposium on Quality of Service. IWQoS, IEEE, pp. 1–6.
+Data curation. Yuan-Cheng Lai: Supervision, Formal analysis, Concep- Meng, W., Liu, Y., Zhu, Y., Zhang, S., Pei, D., Liu, Y., Chen, Y., Zhang, R., Tao, S.,
+ Sun, P., et al., 2019. LogAnomaly: Unsupervised detection of sequential and
+tualization, Validation. Ren-Hung Hwang: Conceptualization, Formal quantitative anomalies in unstructured logs. In: IJCAI, vol. 19, (no. 7), pp.
+analysis, Methodology, Supervision, Validation. 4739–4745.
+ Operationally Transparent Cyber Dataset, 2019. DARPA. [Online]. Available: https:
+Declaration of competing interest //github.com/FiveDirections/OpTC-data.
+ Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O.,
+ Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J., Passos, A.,
+ The authors declare that they have no known competing finan- Cournapeau, D., Brucher, M., Perrot, M., Duchesnay, E., 2011. Scikit-learn: Machine
+cial interests or personal relationships that could have appeared to learning in Python. J. Mach. Learn. Res. 12, 2825–2830.
+influence the work reported in this paper. Satilmiş, H., Akleylek, S., Tok, Z.Y., 2024. A systematic literature review on host-based
+ intrusion detection systems. IEEE Access 12, 27237–27266.
+ Sharafaldin, I., Lashkari, A.H., Ghorbani, A.A., 2018. Toward generating a new intrusion
+Data availability detection dataset and intrusion traffic characterization. In: International Conference
+ on Information Systems Security and Privacy. [Online]. Available: https://api.
+ semanticscholar.org/CorpusID:4707749.
+ No data was used for the research described in the article.
+ Singh, S., Sharma, P.K., Moon, S.Y., Moon, D., Park, J.H., 2019. A comprehensive study
+ on APT attacks and countermeasures for future networks and communications:
+References Challenges and solutions. J. Supercomput. 75, 4543–4574.
+ Strom, B.E., Applebaum, A., Miller, D.P., Nickels, K.C., Pennington, A.G., Thomas, C.B.,
+Abadi, M., Agarwal, A., Barham, P., Brevdo, E., Chen, Z., Citro, C., Corrado, G.S., 2018. Mitre ATT&CK: Design and Philosophy. Technical Report, The MITRE
+ Davis, A., Dean, J., Devin, M., Ghemawat, S., Goodfellow, I., Harp, A., Irving, G., Corporation.
+ Isard, M., Jia, Y., Jozefowicz, R., Kaiser, L., Kudlur, M., Levenberg, J., Mané, D., Sun, P., Yuepeng, E., Li, T., Wu, Y., Ge, J., You, J., Wu, B., 2020. Context-aware learning
+ Monga, R., Moore, S., Murray, D., Olah, C., Schuster, M., Shlens, J., Steiner, B., for anomaly detection with imbalanced log data. In: 2020 IEEE 22nd International
+ Sutskever, I., Talwar, K., Tucker, P., Vanhoucke, V., Vasudevan, V., Viégas, F., Conference on High Performance Computing and Communications; IEEE 18th
+ Vinyals, O., Warden, P., Wattenberg, M., Wicke, M., Yu, Y., Zheng, X., 2015. International Conference on Smart City; IEEE 6th International Conference on Data
+ TensorFlow: Large-scale machine learning on heterogeneous systems. [Online]. Science and Systems. HPCC/SmartCity/DSS, IEEE, pp. 449–456.
+ Available: https://www.tensorflow.org/, Software available from tensorflow.org. Sworna, Z.T., Mousavi, Z., Babar, M.A., 2023. NLP methods in host-based intrusion
+Affinito, A., Zinno, S., Stanco, G., Botta, A., Ventre, G., 2023. The evolution of Mirai detection systems: A systematic review and future directions. J. Netw. Comput.
+ botnet scans over a six-year period. J. Inform. Secur. Appl. 79, 103629. Appl. 220, 103761. http://dx.doi.org/10.1016/j.jnca.2023.103761.
+ Toupas, P., Chamou, D., Giannoutakis, K.M., Drosou, A., Tzovaras, D., 2019. An
+Alshamrani, A., Myneni, S., Chowdhary, A., Huang, D., 2019. A survey on advanced
+ intrusion detection system for multi-class classification based on deep neural
+ persistent threats: Techniques, solutions, challenges, and research opportunities.
+ networks. In: 2019 18th IEEE International Conference on Machine Learning and
+ IEEE Commun. Surv. Tutor. 21 (2), 1851–1877.
+ Applications. ICMLA, IEEE, pp. 1253–1258.
+Bagui, S., Mink, D., Bagui, S., Ghosh, T., McElroy, T., Paredes, E., Khasnavis, N.,
+ Wang, W., Yi, P., Jiang, J., Zhang, P., Chen, X., 2024. Transformer-based framework
+ Plenkers, R., 2022. Detecting reconnaissance and discovery tactics from the MITRE
+ for alert aggregation and attack prediction in a multi-stage attack. Comput. Secur.
+ ATT&CK framework in Zeek Conn logs using Spark’s machine learning in the big
+ 136, 103533.
+ data framework. Sensors 22 (20), 7999.
+ Yang, Z., Liu, X., Li, T., Wu, D., Wang, J., Zhao, Y., Han, H., 2022. A systematic
+Beaman, C., Barkworth, A., Akande, T.D., Hakak, S., Khan, M.K., 2021. Ransomware:
+ literature review of methods and datasets for anomaly-based network intrusion
+ Recent advances, analysis, challenges and future research directions. Comput.
+ detection. Comput. Secur. 116, 102675.
+ Secur. 111, 102490.
+ Yudha, F., 2023. CREMEv2: A toolchain of automatic dataset collection for machine
+Bui, H.-K., Lin, Y.-D., Hwang, R.-H., Lin, P.-C., Nguyen, V.-L., Lai, Y.-C., 2021. CREME:
+ learning in intrusion detection based on MITRE ATT&CK. [Online]. Available:
+ A toolchain of automatic dataset collection for machine learning in intrusion
+ https://github.com/masjohncook/CREMEv2.
+ detection. J. Netw. Comput. Appl. 193, 103212.
+ Yue, H., Li, T., Wu, D., Zhang, R., Yang, Z., 2024. Detecting APT attacks using an
+Chawla, N.V., Bowyer, K.W., Hall, L.O., Kegelmeyer, W.P., 2002. SMOTE: Synthetic
+ attack intent-driven and sequence-based learning approach. Comput. Secur. 140,
+ minority over-sampling technique. J. Artif. Intell. Res. 16, 321–357.
+ 103748.
+D’hooge, L., Wauters, T., Volckaert, B., De Turck, F., 2020. Inter-dataset generalization
+ Zavrak, S., İskefiyeli, M., 2020. Anomaly-based intrusion detection from network flow
+ strength of supervised machine learning methods for intrusion detection. J. Inform.
+ features using variational autoencoder. IEEE Access 8, 108346–108358.
+ Secur. Appl. 54.
+ Zhang, C., Jia, D., Wang, L., Wang, W., Liu, F., Yang, A., 2022. Comparative research
+Du, M., Li, F., Zheng, G., Srikumar, V., 2017. DeepLog: Anomaly detection and on network intrusion detection methods based on machine learning. Comput. Secur.
+ diagnosis from system logs through deep learning. In: Proceedings of the 2017 121, 102861.
+ ACM SIGSAC Conference on Computer and Communications Security. CCS ’17,
+ Association for Computing Machinery, New York, NY, USA, pp. 1285–1298. http:
+ //dx.doi.org/10.1145/3133956.3134015.
+
+ 13
+Y.-D. Lin et al. Computers & Security 142 (2024) 103859
+
+ Ying-Dar Lin is a Chair Professor of computer science Fietyata Yudha received an M.S. degree with a digital
+ at National Yang Ming Chiao Tung University (NYCU), forensics specialization from Universitas Islam Indonesia
+ Taiwan. He received his Ph.D. in computer science from the (UII) in 2013. He is a lecturer and researcher at Universitas
+ University of California at Los Angeles (UCLA) in 1993. He Islam Indonesia and a member of the Center for Digital
+ was a visiting scholar at Cisco Systems in San Jose during Forensic Studies. He is currently pursuing a Ph.D. degree in
+ 2007–2008, CEO at Telecom Technology Center, Taiwan, Electrical Engineering and Computer Science(EECS) Internaduring 2010–2011, and Vice President of National Applied tional Graduate Program at National Yang Ming Chiao Tung
+ Research Labs (NARLabs), Taiwan, during 2017–2018. He University (NYCU), Taiwan. His research interests include
+ cofounded L7 Networks Inc. in 2002 and O’Prueba Inc. cybersecurity, machine learning, and digital forensics.
+ in 2018. His research interests include cybersecurity, wireless communications, network softwarization, and machine
+ learning forcommunications. He is an IEEE Fellow (class of
+ 2013). He has served or is serving on the editorial boards
+ of several IEEE journals and magazines, including Editorin-Chief of IEEE Communications Surveys and Tutorials Yuan-Cheng Lai received his Ph.D. degree in the Depart-
+ (COMST, 2017–2020). ment of Computer and Information Science from National
+ Chiao Tung University in 1997. He joined the faculty of
+ the Department of Information Management at National
+ Shin-Yi Yang received his M.S. degree at Institute of Taiwan University of Science and Technology in August
+ Network Engineering of National Yang Ming Chiao Tung 2001 and has been a distinguished professor since June
+ University (NYCU) in 2023. He was an associate re- 2012. His research interests include performance analysis,
+ searcher at High Speed Network Lab, NYCU, in 2021–2023. software-defined networking, wireless networks, and IoT
+ His research interests include cybersecurity and machine security.
+ learning.
+
+ Ren-Hung Hwang is the Dean of the College of Artificial
+ Intelligence, National Yang Ming Chiao Tung University
+ Didik Sudyana is a PhD candidate at Electrical Engineering (NYCU), Taiwan. He received his Ph.D. degree in computer
+ and Computer Science (EECS) International Graduate Pro- science from the University of Massachusetts, Amherst.
+ gram of National Yang Ming Chiao Tung University (NYCU), Before joining NYCU, he was with National Chung Cheng
+ Taiwan. He received his M.S. degree in Informatics from University, Taiwan, from 1993 to 2022. He has published
+ Universitas Islam Indonesia (UII), Indonesia, in 2016. He is more than 250 international journal and conference papers.
+ a lecturer in Informatics at Universitas Sains & Teknologi He served as the Dean of the College of Engineering during
+ Indonesia (USTI), Indonesia. His research interests include 2014–2017. He received the IEEE Best Paper Award from
+ cybersecurity, machine learning, and network design and IEEE UbiMedia 2018, IEEE SC2 2017, and IEEE IUCC 2014.
+ optimization. His current research interest is in Deep Learning, Wireless
+ Communications, Network Security, and Cloud/Edge/Fog
+ Computing.
+
+ 14

@@ -1,0 +1,137 @@
+                     This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+                                                content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3696319
+
+JOURNAL OF LATEX CLASS FILES, VOL. 10, NO. 8, SEPTEMBER 2023                                                                                                                                    1
+
+
+
+
+ MAD-MulW: A Multi-Window Anomaly Detection
+     Framework for BGP Security Events
+              Songtao Peng, Yiping Chen, Xincheng Shu, Wu Shuai, Shenhao Fang, Zhongyuan Ruan, and
+                                          Qi Xuan, Senior Member, IEEE
+
+
+
+   Abstract—In recent years, various international security events                                 (a)                                                  (b)
+have occurred frequently and interacted between real society
+and cyberspace. Traditional traffic monitoring mainly focuses on
+the local anomalous status of events due to a large amount of
+data. BGP-based event monitoring makes it possible to perform
+differential analysis of international events. For many existing
+traffic anomaly detection methods, we have observed that the
+window-based noise reduction strategy effectively improves the
+                                                                                                   (c)
+success rate of time series anomaly detection. Motivated by this,                                                     𝒔𝒍𝒊𝒅𝒊𝒏𝒈 𝒘𝒊𝒏𝒅𝒐𝒘 (𝒘 = 𝟏𝟓)
+we propose an unsupervised anomaly detection model, MAD-
+MulW, which introduces a multi-window serial framework. The
+W-GAT module adaptively updates sample weights within the
+window to reduce noise, while the W-LAE module captures tem-
+poral trends through predictive reconstruction, enhancing inter-
+class separation. Our model has been experimentally validated
+on multiple BGP anomalous events with an average F1 score
+of over 90%, which demonstrates the significant improvement
+effect of the stage windows and adaptive strategy on the efficiency                                              …                                …                                …
+and stability of the timing model. The source code is available
+at://github.com/2024ChenYP/MAD-MulW.
+ Index Terms—Anomaly Detection, Time Series, Unsupervised
+Model, Multi-Window
+                                                                                                  Fig. 1. (a) Illustration of different BGP anomaly events in the router network.
+                                                                                                  (b) IBGP (internal) and EBGP (external) protocols both operate on port 179
+                            I. I NTRODUCTION                                                      for data exchange. (c) Time-series visualization of features under different
+                                                                                                  processing methods: original, interval, and sliding window.
+
+T     ODAY, the rapid development of the Internet has pro-
+      vided quality services in business, education, and enter-
+tainment. With society’s increasing dependence on the Inter-                                      network reachability information. BGP anomalies are usually
+net, its reliability and security have become critical concerns.                                  reflected in a surge of update messages when communication
+Researchers have long focused on threats such as distributed                                      links are disrupted (Figure 1 (a)). By parsing and analyzing
+denial-of-service attacks, network worms, and IP hijacking.                                       update packets from port 179 (Figure 1 (b)), one can derive
+Meanwhile, international conflicts (e.g., the Russia-Ukraine                                      time series suitable for anomaly detection. In this work,
+war) and natural disasters (e.g., earthquakes, hurricanes) can                                    the investigated problem is defined as detecting abnormal
+also trigger cascading network failures, causing incalculable                                     timestamps from BGP update-derived multivariate time series
+losses. For instance, Hurricane Fiona struck Puerto Rico in                                       under an unsupervised setting. The key challenge is that
+2022, damaging optical fiber and wireless networks and dis-                                       BGP security events disturb routing behaviors in different
+rupting communication between Autonomous Systems (ASes).                                          forms and intensities, while reliable anomaly labels are usually
+Although emergency services such as CISA and FEMA de-                                             unavailable before detection. Therefore, the model is expected
+ployed mobile facilities, the disruption still had a significant                                  to learn normal BGP communication patterns and identify
+impact. These examples highlight the necessity of accurate                                        abnormal routing fluctuations through anomaly scores.
+anomaly detection and warning to ensure network security.                                            In terms of data, Semenoglou et al. [1] summarized the ex-
+   In large-scale anomalous events, interface-level traffic mon-                                  isting data enhancement methods and showed that the sliding
+itoring is limited to a narrow view. As the most widely used                                      window strategy is useful for most data analysis. Dimoudis
+inter-domain routing protocol, the Border Gateway Protocol                                        et al. [2] proposed an anomaly detection algorithm for rolling
+(BGP) makes it possible to detect anomalies by managing                                           median with an adaptive sliding window to detect anomalous
+   S. Peng, Y. Chen, X. Shu, W. Shuai, S. Fang, Z. Ruan, and Q. Xuan are                          data points in time series. These data enhancement strategies
+with the Institute of Cyberspace Security, Zhejiang University of Technology,                     can smooth out the data noise and facilitate the task of
+Hangzhou 310023, China. (Corresponding author: Zhongyuan Ruan, e-mail:                            classification, prediction, and detection. In terms of models,
+zyruan@zjut.edu.cn.)
+   S. Peng, Z. Ruan, and Q. Xuan are also with Binjiang Institute of Artificial                   the field of time series provides many proven theories and tech-
+Intelligence, ZJUT, Hangzhou 310056, China.                                                       niques. The existing unsupervised methods are mostly based
+
+
+                     © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                        but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                  This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+                                             content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3696319
+
+JOURNAL OF LATEX CLASS FILES, VOL. 10, NO. 8, SEPTEMBER 2023                                                                                                                                 2
+
+
+
+on three categories: Long Short Term Memory (LSTM)-used                                             parameter changes and limited training samples.
+temporal models include LSTM-AD [3] and LSTM-GSVM                                                Subsequently, Section II focuses on the related work to
+[4], which specifically focus on the temporal attributes present                               anomaly detection. Section III presents a detailed explanation
+in the samples. Additionally, sequence models structured with                                  of our model. Section IV contains an introduction to the
+Autoencoders (AE) like TCN-AE [5] and LSTM-AE [6] create                                       datasets, comparative models, and evaluation metrics. Section
+sequence mappings by encoding and decoding. Moreover,                                          V evaluates the model and analyzes the experimental results.
+Generative Adversarial Network (GAN) models such as MTS-                                       Finally, a summary of our work is presented in Section VI.
+DCGAN [7] and MAD-GAN [8] play a role in generalizing
+the distribution of data. These methods have demonstrated                                                                      II. R ELATED W ORK
+excellent performance in a wide range of fields, including the
+Internet, industry, and medicine.                                                                 In this section, we describe the BGP anomaly detection
+   Sliding windows are widely used for data enhancement                                        work and extend it to the development of anomaly detection
+and model design (Figure 1 (c)), aiming to weaken noise                                        techniques for time series in recent years.
+through averaging or feature expansion. However, two major
+limitations remain: (1) no fixed optimal window size exists                                    A. BGP Anomaly Detection Techniques
+for different data distributions, and (2) window expansion                                        BGP is the Internet’s default inter-domain routing protocol
+increases computational cost. Moreover, when combined with                                     used to manage the connectivity between ASes. Over the past
+LSTM-based models, it is difficult to provide interpretable                                    20 years, many BGP events have been captured that threaten
+and precise utilization of temporal properties. Therefore, it                                  the stability of the Internet.
+is worthwhile to explore generalizable and stable multi-stage                                     Supervised learning-based BGP anomaly detection has
+window methods that can adapt to different anomaly scenarios.                                  been extensively studied, and some of these methods affect
+   Based on the above findings and ideas, we propose a stage-                                  anomaly detection performance mainly by improving the
+two window for feature remodeling and sequence prediction,                                     quantity or quality of features. Urbina Cazenave et al. [9]
+respectively. Using anomalous event traffic data as input, we                                  showed that Support Vector Machines (SVM), Decision Trees,
+group them through a stage-one window and reshape the                                          and Naive Bayesian methods are evaluated for BGP event
+features using the Graph Attention Networks (GAT) module to                                    classification. Arai et al. [10] and Xu et al. [11] extracted
+reflect the state after noise reduction with the tail samples of                               features by an importance assessment algorithm to enhance the
+the window; we use the LSTM-AutoEncoder (LAE) module to                                        model efficiency. Innovatively, Sanchez et al. [12] introduced
+internally predict and externally reconstruct the data through                                 graph features to detect BGP anomalies, which are more robust
+window grouping in the second stage to achieve stable inter-                                   than traditional features. Another class of methods focused on
+class differences. The overall purpose is to generalize the                                    sample temporal relationships. The stacked-LSTM [13] and
+strong similarity of feature fluctuation trends of normal sam-                                 the MSLSTM [14] both achieved significant improvement in
+ples. We take this similarity as a major basis for unsupervised                                anomaly detection performance by mining temporal informa-
+anomaly detection, and the difference in anomalous samples                                     tion. Peng et al. [15] went further by introducing a multi-
+will be expressed as high scores. We validate our model                                        dimensional attention mechanism to improve performance.
+on several Internet traffic anomalies, and its performance is                                  The supervised approach requires the labeling of the dataset,
+outstanding compared to many superior methods. In summary,                                     so its applicability is limited to specific instances.
+the contributions of our study are mainly in the following:                                       Unsupervised learning-based work is more sparse. Earlier
+   • Domain-focused perspective: Unlike generic time-series                                    statistical-based methods used probabilistic models to detect
+      anomaly detection, our work specifically addresses                                       changes in the data, such as Principal Component Analysis
+      anomalous events in BGP communications, covering                                         (PCA) [16], Generalized Likelihood Ratio Test [17] and t-
+      routing dynamics, prefix updates, and inter-domain fluc-                                 test [18]. In recent years, Andrian et al. [19] implemented
+      tuations in real-world routing data. We formulate this                                   DenStream, an anomaly detection engine based on clustering
+      problem in an unsupervised setting, where the absence of                                 techniques, and applied it to a large testbed consisting of
+      ground truth increases the challenge of learning abnormal                                dozens of routers. Tal et al. [20] proposed the AP2Vec method,
+      patterns from unseen events.                                                             which embeds both ASes and IP address prefixes into feature
+   • Efficient multi-window design: We propose Multivari-                                      vectors for BGP hijacking detection. BGP anomaly detection
+      ate time-series Anomaly Detection with Multi-Window                                      still has a lot of room for research in unsupervised anomaly
+      (MAD-MulW), which integrates W-GAT and W-LAE                                             detection techniques.
+      modules. W-GAT achieves adaptive noise reduction
+      within windows, while W-LAE enhances detection by
+      predictive reconstruction.                                                               B. Time Series Unsupervised Anomaly Detection
+   • Stable and robust performance: The proposed method                                           Network traffic anomalous events can be viewed as anomaly
+      achieves consistently superior detection performance                                     detection problems under multivariate time series, and the
+      across various anomalous events, improving the average                                   design of unsupervised methods for this problem is highly
+      F1 score by at least 20% compared to baseline models.                                    challenging and has been widely studied in many fields.
+      Moreover, adaptive windowing contributes up to an 8%                                        Classical unsupervised methods are widely used

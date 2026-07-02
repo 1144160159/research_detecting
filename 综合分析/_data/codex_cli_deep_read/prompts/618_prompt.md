@@ -1,0 +1,1607 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [618] Blockchain Meets Adaptive Honeypots: A Trust-Aware Approach to Next-Gen IoT Security
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：618
+题名：Blockchain Meets Adaptive Honeypots: A Trust-Aware Approach to Next-Gen IoT Security
+年份：2025
+DOI：10.1109/tnse.2025.3611954
+来源：IEEE Transactions on Network Science and Engineering
+PDF：paper/10.1109_TNSE.2025.3611954.pdf
+已有粗分类：联邦学习、隐私保护与分布式协同
+二级关联：入侵检测与网络异常检测、IoT、车联网、工业互联网与边缘安全
+相关性：强相关，分数 10
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\618.txt
+- 原始字符数：88494
+- 本次发送字符数：88494
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+2270
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Blockchain Meets Adaptive Honeypots: A
+Trust-Aware Approach to Next-Gen IoT Security
+Yazan Otoum , Senior Member, IEEE, Arghavan Asad, and Amiya Nayak , Life Fellow, IEEE
+
+Abstract—Edge computing-based Next-Generation Wireless
+Networks (NGWN)-IoT offer enhanced bandwidth capacity for
+large-scale service provisioning, but remain vulnerable to evolving
+cyber threats. Existing intrusion detection and prevention methods struggle to counter dynamically evolving cyber threats, as
+they often rely on static signatures or isolated anomaly detection
+techniques. These approaches lack adaptability to novel attack
+vectors, exhibit high false negative rates, and fail to integrate realtime threat intelligence, leaving NGWN-IoT systems vulnerable
+to sophisticated adversaries. We propose a dynamic approach to
+detect and prevent attacks. First, blockchain-based authentication
+utilizes the Deoxys Authentication Algorithm (DAA) to verify the
+legitimacy of IoT devices before data transmission. Next, a bi-stage
+intrusion detection system is introduced, where the first stage
+utilizes signature-based detection via an Improved Random Forest
+(IRF) algorithm. In contrast, the second stage applies feature-based
+anomaly detection using a Diffusion Convolution Recurrent Neural Network (DCRNN). To ensure Quality of Service (QoS) and
+maintain Service Level Agreements (SLA), trust-aware service
+migration is performed using Heap-Based Optimization (HBO).
+Additionally, on-demand virtual High-Interaction honeypots deceive attackers and extract attack patterns, which are securely
+stored using the Bimodal Lattice Signature Scheme (BLISS) to
+enhance signature-based Intrusion Detection Systems (IDS). The
+proposed framework is implemented in the NS3 simulation environment and evaluated against existing methods across multiple
+performance metrics, including accuracy, attack detection rate,
+false negative rate, precision, recall, ROC curve, memory usage,
+CPU usage, and execution time. Experimental results demonstrate
+that the framework significantly outperforms existing approaches,
+reinforcing the security of NGWN-enabled IoT ecosystems.
+Index Terms—Blockchain, adaptive honeypots, IoT security,
+intrusion prevention, trust-aware networks, next generation IDS.
+
+I. INTRODUCTION
+HE rapid growth of IoT applications has been significantly
+driven by advancements in Next-Generation Wireless Networks (NGWN). These networks enable efficient large-scale
+service provisioning through technologies such as Mobile Edge
+Computing (MEC), which improves computational efficiency
+by processing data closer to users [1]. However, the increasing
+connectivity and integration of IoT devices within NGWN environments have also introduced a wide array of cybersecurity
+
+T
+
+Received 29 May 2025; revised 21 August 2025; accepted 15 September 2025.
+Date of publication 18 September 2025; date of current version 11 December
+2025. Recommended for acceptance by Dr. Liehuang Zhu. (Corresponding
+author: Yazan Otoum.)
+Yazan Otoum and Arghavan Asad are with the School of Computer Science
+and Technology, Algoma University, Sault Ste. Marie, ON P6A 2G4, Canada
+(e-mail: otoum@algomau.ca).
+Amiya Nayak is with the School of Electrical Engineering and Computer
+Science, University of Ottawa, Ottawa, ON K1N 6N5, Canada.
+Digital Object Identifier 10.1109/TNSE.2025.3611954
+
+vulnerabilities [2]. Traditional intrusion detection and prevention mechanisms often fall short in providing robust security,
+as adversaries continually evolve their attack strategies [3].
+Securing NGWN-enabled IoT networks from evolving cyber
+threats is a crucial challenge [4], [5], where existing security
+measures struggle to keep pace with dynamic attack patterns,
+underscoring the need for a resilient and adaptable framework.
+Intrusion Detection Systems (IDS) are fundamental to securing
+IoT networks, employing methods categorized as Signaturebased IDS (SIDS) and Anomaly-based IDS (AIDS). While SIDS
+are effective at detecting known threats by comparing incoming
+traffic to predefined attack signatures, they are unable to identify
+novel or previously unknown attacks [6]. Conversely, AIDS
+analyze various traffic features to detect anomalies, yet their
+generalization capabilities and computational efficiency remain
+limited [7]. Advanced techniques, such as deep learning-based
+anomaly detection, have shown promise [8], but relying solely
+on network flow features remains inadequate [9]. Furthermore,
+current IDS approaches face challenges in achieving real-time
+detection while minimizing false positives and maintaining
+adaptability to evolving threats [10], [11]. Blockchain technology has emerged as a potential solution to enhance security in
+IoT environments, providing tamper-resistant and decentralized
+trust management [12]. Despite its benefits, blockchain-based
+IDS solutions often encounter challenges related to computational overhead, transaction latency, and scalability in resourceconstrained settings [13], [14]. Additionally, deploying multiple
+monitoring entities increases the complexity of security management [15]. Honeypots have proven effective as deception
+mechanisms to attract attackers and analyze attack patterns [16];
+however, static honeypots or those lacking adaptive features
+fail to address emerging threats. Game-theoretic models for
+attack detection [17] also have limitations, as they often assume
+perfect knowledge of attacker strategies, which is impractical in
+real-world scenarios. Despite numerous advancements, NGWNenabled IoT networks continue to face significant security challenges, including latency issues due to centralized processing,
+high false alarm rates from anomaly detection models trained
+on insufficient data, and a lack of adaptive defence mechanisms to counter dynamic attack strategies. Addressing these
+challenges necessitates a more resilient, adaptive, and efficient
+security framework tailored to the unique demands of NGWNbased IoT systems. To address the evolving challenges in IoT
+security, we propose a trust-aware framework that integrates
+blockchain-based authentication, advanced intrusion detection,
+and dynamic honeypot deception to support real-time threat
+mitigation with low computational overhead. Our system employs the Deoxys Authentication Algorithm (DAA) [18] for
+secure device legitimacy verification, the Improved Random
+
+2327-4697 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+Forest (IRF) [19] for robust and accurate intrusion classification
+using adaptive entropy-variance feature selection, and the Diffusion Convolution Recurrent Neural Network (DCRNN) [20]
+for modelling spatial-temporal traffic behaviour in distributed
+IoT networks. These components are integrated into a tightly
+orchestrated architecture, where detection, prediction, trust management, and service migration operate in a dynamic feedback
+loop. DCRNN-based traffic forecasting informs the Hierarchical
+Blockchain Offloading (HBO) module’s node selection, while
+real-time trust scores are updated via the BLISS module. This
+cohesive, adaptive design enables scalable, context-aware, and
+resilient threat defence tailored for NGWN-enabled IoT environments. Our research advances the state of IoT security through
+the following key contributions:
+r A blockchain-based authentication mechanism that ensures the legitimacy of IoT devices and prevents impersonation attacks using the DAA.
+r A bi-stage intrusion detection framework that combines
+IRF-based SIDS with DCRNN-based AIDS, improving
+detection accuracy while maintaining efficiency.
+r A moving target defence strategy that dynamically migrates services to trusted edge nodes based on trust evaluation, mitigating the risk of service compromise.
+r A deployment of high-interaction, on-demand virtual honeypots to deceive attackers, extract attack signatures, and
+enhance IDS training using securely stored attack patterns.
+The proposed approach is implemented and evaluated
+in the NS3 simulation environment, demonstrating a 25%
+improvement in detection accuracy, a 30% reduction in false
+negatives, and enhanced resource efficiency compared to existing methods. The remainder of this paper is organized as follows:
+Section II provides a comprehensive literature review of existing
+intrusion detection and prevention mechanisms. Section III outlines the problem statement and research challenges. Section IV
+presents the proposed model methodology in detail. Section V
+discusses the experimental setup and performance evaluation.
+Finally, Section VI concludes the paper and outlines directions
+for future work.
+II. LITERATURE SURVEY
+This section surveys recent advancements in IDS for NGWNenabled IoT environments, organizing them into four key categories: AI-enhanced IDS, Blockchain-assisted IDS, Honeypotorchestrated IDS, and LLM-driven IDS.
+A. AI-Enhanced IDS
+An intrusion detection and prevention system for NC-assisted
+mobile small cells was proposed in [21]. Initially, the nodes
+divide the message into a sequence of packets. The proposed
+work consists of four steps; the first is the tag generation process,
+which calculates the tag value for every coded packet. The
+second one is the swapping process, which avoids tag pollution
+attacks from coded packets by having the source node swap the
+tag and coded packets. The third one is the key distribution process, where the maximum number of key vectors is assigned to
+every intermediate and destination node. Finally, the verification
+process verifies the swapped coded packets. During verification,
+if the result equals zero, the packet will be sent to the next level;
+otherwise, it will be dropped. However, this approach uses a
+
+2271
+
+single security parameter for key generation, which is insufficient for security; hence, attackers can easily compromise it,
+resulting in poor security. A multi-tenant autonomic framework
+for securing NGWNs was presented in [22], targeting automated
+intrusion detection across distributed network segments. The
+architecture encompasses radio access, edge computing, core
+network, and interdomain layers. By modelling dynamic NGWN
+traffic, the system employs a layered IDS, separating the data
+and management planes to enhance control granularity. Intrusion
+detection is autonomously executed via coordinated agents,
+including flow controllers, action enforcers, decision-makers,
+and security monitors. Security monitoring agents classify traffic
+in real-time and trigger alerts for decision modules to enforce appropriate countermeasures. The framework effectively mitigates
+large-scale threats such as UDP flooding and DDoS attacks. An
+intrusion mitigation technique for mitigating attacks in the IoT
+environment was proposed in [23]. The authentication of the user
+is carried out to allow only legitimate users to participate in data
+transmission. Furthermore, an ongoing traffic analysis was conducted based on packet flow features. This work undergoes three
+stages in which the log files of the authenticated entity are examined to detect attacks caused by bots. Then, the attacker was detected by analyzing the typical pattern of attack, thereby isolating
+the attacker from the network. An encryption-based approach for
+secure data collection, storage and access in cloud-assisted IoT
+was proposed in [24]. The issues in the proper management of
+data in cloud storage were addressed. The IoT sensors were used
+for periodic data acquisition from the environment and stored
+in cloud storage. Here, the attacker in the network was able
+to compromise data to exploit its integrity. For this purpose,
+the authors proposed a Conditional Identity-based Broadcast
+Proxy Re-encryption (CIBRE) to maintain the confidentiality
+of the data. The re-encryption of data was also provided to
+ensure the integrity of the cloud data each time it was decrypted.
+Identity-based encryption was implemented to safeguard the
+confidentiality of data, but entities such as cloud storage can
+be compromised by malicious attackers, resulting in a single
+point of failure. A practical framework for detecting intrusions
+in the IoT based on a real-time dataset was proposed in [25]. The
+possibility of attacks on several aspects of the IoT network was
+described, and the necessity of an effective intrusion detection
+system was demonstrated. The effect of the dataset’s quality
+on the performance of IDS was evaluated to design a real-time
+dataset. The proposed dataset consisted of data obtained from
+various IoT nodes, which contained attack patterns of known
+attacks. Some of the attacks considered in this approach were
+flooding, black holes, and selective forwarding attacks. Thereby,
+the users were able to obtain the dataset to perform efficient
+intrusion detection. Several known attacks were identified using
+the real-time dataset; however, the extracted features for identification were insufficient to detect other complex intrusions.
+A deep learning method for detecting network anomalies by
+extracting features from the network traffic in NGWN networks
+was proposed in [26]. The proposed architecture has four components: virtual infrastructure, virtualized network functions,
+management and orchestration, and operations and business
+support systems. Initially, the network flow is collected from the
+user equipment. From the network flow, features are extracted by
+a feature vector. Based on the extracted features, the anomaly
+symptoms are detected and sent to the LSTM for recognition
+
+2272
+
+of the anomaly patterns. The simulation result shows that the
+proposed system achieves high performance in terms of anomaly
+detection accuracy. This approach takes only flow-based features
+for anomaly detection, thus reducing classification accuracy. It
+takes all the packets as input, increasing the process’s latency and
+complexity. A machine learning algorithm for detecting network
+anomalies in a 5 G network was proposed in [27]. The data are
+pre-processed to enhance detection accuracy. The features are
+extracted from the pre-processed data. The Weibull distribution
+is used to select features from Normal traffic. The Convolutional
+Neural Network (CNN), designed using the NAS method, is
+employed to classify anomalies based on specific features. The
+proposed work achieves high accuracy and low latency by optimizing the neural network in the 5 G network. A hybrid machine
+learning technique (Decision Trees, Support Vector Machines,
+and Neural Networks) was proposed in [28] to enhance detection
+accuracy and robustness against various types of abnormal or
+malicious activities in IoT. Various training methodologies for
+AI-based IDS, proposed in [29], highlighted the importance
+of selecting appropriate datasets, feature selection techniques,
+and model training processes to enhance IoT accuracy and
+efficiency. The paper discussed deployment strategies, including
+the integration of IDS into IoT networks, real-time monitoring
+capabilities, and the scalability of AI models to handle the
+dynamic nature of IoT environments. An intrusion detection
+system for an IoT environment using an improved BP neural
+network was proposed in [30]. The proposed system used the
+LM-BP algorithm for intrusion detection. Initially, the data are
+collected from the data source. From the collected data, features
+are extracted using the proposed neural network. Here, the neural
+network was divided into two sections; one section was used to
+optimize the connection weight value, and another was used to
+optimize the learning rate, which adjusts dynamically to improve
+the detection rate. It was used to detect intrusion behaviour from
+the extracted features. After detecting the intrusions, the neural
+network was updated. The proposed system detected DoS, R2L,
+U2L and probing attacks using the KDD CUP 99 dataset. However, in this approach, only particular attacks were detected,
+and the prevention of these attacks was not investigated, which
+affects the overall security of the system. A practical security
+approach for cloud storage based on an encryption mechanism
+was proposed in [31]. Initially, the data in the dataset was
+normalized to improve accuracy by removing unwanted data
+and processing missing data. Then, the grey-level co-occurrence
+matrix algorithm was implemented to extract the significant
+features from which attacks were classified using a CNN-based
+classifier. The security of the data was ensured by adopting a
+honeypot-based cryptographic algorithm, which is responsible
+for encrypting or decrypting data. The gateway-based detection
+of network intrusions was presented in [32]. Generally, it needs
+a scalable dataset which enables the addition of new attacks
+in various settings. Dynamic features were considered on the
+gateway to extract normal and abnormal classification features.
+It avoids considering static features related to the environment;
+instead, it focuses on features such as packet flow, timing
+involved in the traffic flow, and data flow statistics over a specific
+time interval. Since Passban was an anomaly-based IDS, it could
+be trained while observing the target system’s network traffic in a
+normal state. An intrusion detection scheme in industrial cyberphysical systems based on federated deep learning was proposed
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+in [33]. The system model comprises three main entities: trusted
+authority, industrial agents and cloud servers. The industrial
+agents represent the industrial administrators responsible for
+improving the intrusion detection system. The trusted authority
+was responsible for key generation to authenticate both the cloud
+server and industrial agents. The threat model, which comprises
+several significant threats, including command injection attacks,
+response injection attacks, reconnaissance attacks, and DoS
+attacks, was explained. A deep-fed scheme was proposed, which
+comprised the integration of a CNN and a Gated Recurrent Unit
+(GRU)- based intrusion detection system, along with a secure
+communication protocol based on the Pallier cryptosystem.
+B. Blockchain-Assisted IDS
+Multi-agent assisted IDS in IoT environment using
+Blockchain technology was proposed in [34]. Three operations
+were used in this paper: data collection, data management, and
+data response. To test the proposed work, the NSL-KDD dataset
+is used to detect attacks from the transport layer. For attack
+detection purposes, the NSL-KDD dataset is utilized, and the
+agents employed for intrusion detection are as follows: communication agent, response agent, collection agent, host agent,
+detection agent, and training agent. Based on the attack information, the database is trained for the network. However, the
+deployment of a larger number of agents increased the network
+complexity. The computational overhead for running all these
+agents over the blockchain increases transaction verification
+and hash generation times. A three-layer security framework
+combining AI-based intrusion detection, blockchain for decentralized trust, and edge computing for resource efficiency was
+proposed in [35]. Machine learning enhances anomaly detection,
+while blockchain ensures data integrity and edge computing
+reduces latency. Optimization techniques improved detection
+accuracy (94.2% to 94.78%), reduced response time (14.98%),
+and lowered energy consumption (12.01%). Game theory and
+differential equations were used to model adversarial interactions and system behaviour, demonstrating the framework’s
+scalability and suitability for real-time, resource-constrained IoT
+environments. A distributed IDS deployed at the fog layer was
+proposed in [36], addressing the scalability and complexity of
+IoT security. The system integrates game theory and Generative Adversarial Networks (GANs) for traffic balancing, and
+employs the Jellyfish Search optimizer with opposition-based
+learning for feature selection. Ensemble learning across fog
+nodes is achieved using MLP, Random Forest, and XGBoost,
+with feature vectors securely exchanged via blockchain. The
+framework, termed EJSO, demonstrates high accuracy and robustness on NSL-KDD and UNSW-NB15 datasets, achieving
+over 99% accuracy and outperforming traditional methods such
+as LSTM and GA+SVM in both attack detection and dimensionality reduction. A recent study [37] introduced a hybrid intrusion detection framework that integrates blockchain technology
+with deep learning and metaheuristic optimization to enhance
+security in cloud environments. The proposed Blockchain-based
+African Buffalo (BbAB) scheme combines a Recurrent Neural
+Network (RNN) with African Buffalo Optimization (ABO) to
+continuously monitor and detect intrusions based on user behaviour and malware patterns. To ensure data confidentiality,
+the system employs Identity-Based Encryption (IBE) to encrypt
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+normal and malicious user data, which is then securely stored on
+a blockchain ledger hosted in the cloud. The RNN component
+is optimized by ABO during the prediction phase, enabling
+adaptive and accurate threat identification. Experimental results
+demonstrated superior performance across multiple evaluation
+metrics, including a detection accuracy of 99.87% and a recall of
+99.92%, outperforming conventional models. This work highlights the potential of combining blockchain, deep learning, and
+bio-inspired optimization to achieve high detection fidelity and
+robust data protection in distributed cloud-based systems.
+C. Honeypot-Orchestrated IDS
+The honeypot-based analysis of cybersecurity attacks was
+proposed in [38]. Cybersecurity threats are identified to detect and mitigate the behaviours of web services. Information
+Collected from the data included IP address, domain name,
+username, password, and geographic location of the attacker.
+Due to the centralized environment, it was complex to identify
+and attract attackers. Honeypot technology is used to mimic
+real-time systems and detect attacks. Finally, a log file report is
+generated for the collected data and stored in the cloud servers.
+An approach for detecting malicious users using a file-based
+deception technique was proposed in [39]. A hidden interface
+was established for legitimate users, which malicious users
+cannot access. The system files are divided into three types:
+regular files, fake files, and sensitive files. The regular files and
+fake files are accessible from both the regular interface and
+the hidden interface. The sensitive files were accessible only to
+legitimate users who communicated through a hidden interface.
+The honeypot-based deception technique was implemented, in
+which the malicious users were attracted to attack the honey files,
+which are referred to as fake files, from which the behaviour of
+attackers, including their resources, was identified to improve
+the security of the sensitive files. An efficient approach for
+learning the attack strategies using a honeypot-based deception
+strategy for industrial cyber-physical systems was proposed
+in [40]. Here, the attack strategies of attackers after identifying
+the honeypot were studied to provide overall security to the
+ICPS. The application of advanced analytics techniques to the
+data gathered from honeypots, aiming to identify and understand
+emerging threat patterns in IoT environments, was proposed
+in [41]. Here, a machine learning model is used to analyze
+the behaviour of attackers captured by honeypots and identify
+subtle, previously unseen anomalies that may signal new or
+evolving attack strategies. An edge-assisted ensemble learning
+model within the honey-block framework was proposed in [42]
+to proactively identify and mitigate potential security breaches
+for intrusion detection in IoT. This framework combines the
+power of edge computing and ensemble learning to create a more
+secure environment for IoT systems. By aggregating predictions
+from various models, ensemble methods reduce the likelihood
+of false positives and enhance the system’s ability to detect
+complex, previously unknown attacks. A hybrid game-theoreticbased approach was implemented, and the players had different
+objectives. The two-player game was proposed with attackers as one player and ICPS defenders as another player. The
+one-shot signalling model was developed. The perfect Bayesian
+equilibrium-based probability was calculated for the successful
+defence against all the attacks provided by the attackers. A recent
+
+2273
+
+study in [43] leveraged the BPF-Extended Tracking Honeypot
+(BETH) dataset for anomaly detection in kernel-level processes
+and network logs. The authors proposed an enhanced Isolation
+Forest (iForest) model within a structured detection framework,
+achieving an AUROC of 0.917 and minimizing false positives.
+The symmetry-aware design significantly improved detection
+accuracy and resilience. This approach emphasizes the role of
+low-level honeypot data in improving IDS robustness against
+evolving threats. However, only honeypot-based intrusion detection in the ICPS cannot mitigate all attacks that threaten the
+system’s security. Existing works primarily focus on isolated
+aspects of IoT security, such as blockchain-based authentication [44] or static honeypot deployment [45]. However, these
+approaches often lack integration, which limits their adaptability
+to dynamic threat landscapes. In contrast, our framework simultaneously addresses authentication robustness and adaptive
+threat detection by incorporating blockchain for secure identity
+management and dynamic honeypot orchestration for real-time
+defence [46]. This dual-layered security strategy offers a novel
+integration that was absent in prior studies, providing enhanced
+resilience against evolving cyber threats.
+D. LLM-Driven IDS
+The emergence of Large Language Models (LLMs) has catalyzed a new wave of research in intelligent IDS, offering capabilities that extend beyond conventional ML and DL approaches.
+In [47], the authors introduce HuntGPT. This hybrid framework
+integrates GPT-3.5 Turbo with traditional classifiers such as
+Random Forests and explainable AI tools (e.g., SHAP, LIME)
+to enhance the interpretability of anomaly alerts in cybersecurity operations. Additionally, the study presents SecGPT—
+an LLM-powered penetration testing agent built atop a GAN
+architecture—capable of generating dynamic attack profiles and
+supporting continuous IDS retraining. The findings demonstrate
+that even with minimal fine-tuning, LLMs can significantly
+boost the transparency, adaptability, and scalability of modern
+IDS solutions. Complementing this direction, the study in [48]
+highlights LLMs as a natural progression in the evolution of
+IDS, emphasizing their capacity to process large-scale network
+logs autonomously, adapt to shifting traffic behaviour, and distinguish between benign and malicious activity in real-time.
+Through targeted fine-tuning on networking-specific datasets,
+the authors report improved contextual inference and detection
+accuracy. Furthermore, the dual utility of LLMs in both precision detection and autonomous decision-making is emphasized,
+while also acknowledging operational challenges such as interpretability and deployment on resource-constrained devices.
+In a parallel effort, the authors of [49] propose a lightweight,
+LLM-based IDS framework specifically designed for real-time
+intrusion detection in IoT environments. By fine-tuning domainspecific LLMs on datasets such as IoT-23 and TON_IoT, the
+framework achieved high accuracy in anomaly detection and
+supported context-aware mitigation strategies. Deployed in a
+modular Docker-based architecture, the system demonstrated
+substantial improvements in detection latency, accuracy, and
+resource efficiency over conventional IDS methods, highlighting its suitability for scalable and autonomous security enforcement in constrained IoT scenarios. Similarly, the work
+in [50] presents a dynamic intrusion detection architecture that
+
+2274
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+employs a transformer-based encoder coupled with a Gaussian Mixture Model. This hybrid model achieves 100% recall on known threats while effectively identifying previously
+unseen attack types, maintaining a classification accuracy of
+95.6%. The adaptive learning mechanism allows the system
+to refine its threat recognition over time, offering robust and
+scalable protection in evolving network environments. Further
+advancing the state of LLM-powered security, the work [51]
+introduces IDS-Agent—an LLM-driven, tool-augmented autonomous agent for intrusion detection. IDS-Agent combines
+reasoning over state observations with an action-oriented workflow encompassing data preprocessing, classification, memory
+and knowledge retrieval, and aggregation. The system’s architecture supports customizable detection sensitivity and explainability, and its memory-enhanced design allows for improved
+contextual learning. Experimental validation on ACI-IoT and
+CIC-IoT benchmarks revealed F1-scores of 0.97 and 0.75,
+respectively, along with a 0.61 recall in detecting zero-day
+attacks, outperforming several state-of-the-art baselines. This
+approach exemplifies the shift toward intelligent, explainable,
+and resilient IDS solutions that can address both known and
+unknown threats in heterogeneous IoT networks. Additionally,
+a recent study [52] proposed a novel LLM-based agent focused
+on generating and generalizing IDS rules to counter the rising
+complexity of cyberattacks targeting digital services and IoT
+infrastructure. The agent ingests multi-source inputs—including
+vulnerability security reports, malicious traffic logs, and original
+IDS rules—to generate new detection rules capable of identifying both direct and variant forms of malicious behaviour. This
+approach addresses the limitations of traditional rule-based and
+AI-driven IDS systems, particularly in terms of interpretability
+and throughput under high-traffic conditions. Experimental evaluation demonstrated that the LLM-generated rules significantly
+outperformed conventional methods across multiple detection
+metrics, highlighting the agent’s potential for enhancing rulebased detection in dynamic, high-speed environments. A recent
+comprehensive survey [53] highlights the growing reliance on
+AI-driven approaches for enhancing IDS in IoT environments,
+emphasizing their potential to reduce false positives and adapt
+to evolving threats. It categorizes state-of-the-art techniques,
+datasets, and evaluation metrics, while identifying key challenges, such as computational complexity and high false positive
+rates, and calls for lightweight, efficient IDS models tailored for
+resource-constrained IoT devices. Table I summarizes existing
+approaches, highlighting their objectives, methodologies and
+associated disadvantages.
+III. PROBLEM STATEMENT
+The proliferation of NGWN-enabled IoT environments has
+introduced significant challenges in detecting and mitigating cyberattacks [55]. While several existing approaches address security concerns, they often exhibit critical limitations, leaving IoT
+systems vulnerable to sophisticated and evolving threats. This
+section outlines the key shortcomings in current methodologies
+and presents the motivation for the proposed approach. Ensuring
+the legitimacy of IoT devices remains a fundamental challenge
+in safeguarding NGWN-IoT environments [56], [57]. A standard
+authentication method relies on Radio Frequency Identification
+
+(RFID)-based schemes, where the credentials of each entity are
+registered, and a public address is generated [58]. Lightweight
+authentication is typically achieved using bitwise exclusive OR
+functions. However, these methods have inherent weaknesses.
+The reliance on a single credential, such as an RFID tag, compromises security as attackers can manipulate or spoof the RFID.
+Moreover, these systems are inherently incapable of detecting
+novel or previously unknown attacks, thus increasing the risk
+of unauthorized access and escalating cyber threats in IoT environments. Intrusion detection in cloud-based IoT systems also
+encounters several limitations. Game-theoretic models for intrusion detection and prevention have been proposed, where the
+risk level of virtual machines is calculated, and honeypot-based
+attack pattern analysis is performed [59]. Although these models
+incorporate various intrusion detection strategies, such as SIDS,
+AIDS, and honeypot-based IDS [60], [61], they still present
+several challenges. Centralizing the detection process within a
+cloud environment increases the risk of a single point of failure,
+which can compromise the entire system if the cloud server is
+attacked. Furthermore, as the number of attacks increases, the
+complexity and latency of these game-theoretic models escalate,
+limiting their scalability and responsiveness in dynamic IoT
+scenarios. Honeypot-based intrusion detection techniques, despite their potential, often suffer from practical implementation
+challenges. Approaches focusing on rule-based detection of
+malicious behaviour are usually inadequate, as they assume that
+attackers remain unaware of the honeypots’ presence [62]. When
+attackers recognize and bypass honeypots, the system’s security
+is compromised, rendering the honeypots ineffective. Moreover,
+using low-interaction honeypots in some frameworks fails to
+collect comprehensive attack patterns, leading to insufficient
+intrusion detection [63]. Additionally, the log files generated
+from these honeypots, stored on local servers, can be targeted and
+altered by attackers, undermining the integrity of the collected
+data. Given these challenges, there is a pressing need for a
+more robust and adaptive framework capable of addressing the
+limitations of existing models. The proposed approach introduces a comprehensive framework integrating blockchain-based
+authentication with adaptive intrusion detection mechanisms.
+By utilizing immutable attributes such as PUF, device ID, and
+MAC address, the framework ensures high security against identity spoofing. Furthermore, the dual-stage IDS combines SIDS
+and AIDS to detect known and unknown threats effectively,
+while dynamic honeypot deployment facilitates the ongoing
+analysis of evolving attack strategies. Service migration is handled through edge computing nodes, which optimize resource
+allocation and minimize latency, thereby maintaining the quality
+of service and meeting service-level agreement requirements.
+The integration of high-interaction virtual honeypots not only
+deceives attackers but also securely logs their behaviour patterns
+using encrypted storage, which subsequently improves IDS
+training. This holistic approach addresses the identified gaps,
+offering a resilient and scalable solution for NGWN-enabled IoT
+environments. Table II outlines the core features and operational
+distinctions of blockchain and honeypot technologies. Motivated
+by their complementary strengths, our proposed framework
+integrates a blockchain-assisted honeypot strategy within the
+IDS architecture to enhance intrusion detection and prevention
+capabilities in NGWN-enabled IoT environments.
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+TABLE I
+SUMMARY OF EXISTING RESEARCH APPROACHES
+
+2275
+
+2276
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE II
+FEATURES OF BLOCKCHAIN AND HONEYPOT
+
+TABLE III
+TABLE OF NOTATIONS
+
+IV. PROPOSED MODEL
+The model aims to strengthen intrusion detection and prevention in IoT environments by integrating honeypots and
+blockchain technologies. This integration ensures robust security and privacy for both IoT devices and users by leveraging advanced detection mechanisms and dynamic response strategies.
+A. Experimental Setup
+To evaluate the proposed model’s performance and clarify the
+scope of implementation, simulation, and conceptual modules,
+we revised the experimental setup as follows:
+r Blockchain-based Authentication: Modelled using the
+DAA to verify IoT device legitimacy before data transmission. This was implemented using a lightweight Proof-ofAuthority (PoA) consensus mechanism, which simulates
+decentralized identity validation with minimal latency.
+This approach ensures tamper-resistant trust propagation
+without introducing the computational overhead of public
+blockchain systems.
+r Bi-stage IDS: Fully implemented. The first stage utilizes
+the IRF classifier for detecting known attacks based on labelled patterns from the CICIDS-2017 dataset. The second
+stage employs a Diffusion Convolutional Recurrent Neural
+Network (DCRNN) for anomaly detection and identifying
+unknown attacks.
+r Dynamic Honeypot Deployment: Simulated using Dockerbased containerized environments representing highinteraction honeypots. These simulated honeypots were
+designed to log attacker behaviour, capture malicious payloads, and redirect suspicious traffic for further analysis.
+Though not deployed on physical hardware, their functionality was emulated within the NS3 simulation to support
+evaluation of threat interaction logging and IDS retraining.
+r Trust-Aware Service Migration: Implemented in simulation using the HBO module. Migration decisions were
+guided by predicted node load (informed by DCRNN
+forecasts), CPU availability, and dynamically adjusted trust
+scores from the BLISS component.
+Fig. 1 illustrates the system topology and conceptual flow of
+the proposed approach. All notations and parameters used in this
+paper are listed in Table III. The simulation was conducted using
+the NS3 environment to model the communication topology, network behaviour, and service orchestration under realistic IoT and
+NGWN scenarios. Evaluation metrics included attack detection
+rate, accuracy, false negative rate, CPU usage, memory usage,
+and execution time. To emulate attack traffic, the CICIDS-2017
+dataset was integrated via a data preprocessing and traffic replay
+pipeline. Raw network traffic data, including IP addresses, ports,
+
+timestamps, and packet sizes, was parsed into packet traces and
+injected into the NS3 simulation using a custom traffic generator
+module. This enabled us to preserve the statistical characteristics
+of real-world attack patterns without synthetically generating
+them within the simulator. The containerized honeypots were
+triggered during attack events and logged details of the attacker’s
+interaction. These logs contributed to the continuous retraining
+and enhancement of the IDS system. Finally, the blockchainbased authentication module relied on the Practical Byzantine
+Fault Tolerance (PBFT) consensus algorithm, chosen for its efficiency and low overhead in environments with a limited number
+of validators. This provided tamper-proof identity verification
+and secure dissemination of blacklist updates, ensuring reliability under adversarial conditions while maintaining resource
+efficiency suitable for IoT deployments.
+B. System Model
+The system model comprises a set of IoT devices D =
+{D1 , D2 , . . ., Dn } from which the data are generated and sent
+to the cloud server for processing and storage purposes. The IoT
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+Fig. 1.
+
+2277
+
+System topology and conceptual flow of the proposed approach.
+
+environment consists of a set of IoT users U = {U1 , U2 , . . ., Un }
+who request service from the cloud server. The proposed IDS is
+deployed between the IoT devices and the cloud server to filter
+data packets from the devices via the 5G Base Station (BS). The
+edge layer comprises a global edge server (GE) and a set of local
+edge servers LE = {LE1 , LE2 , . . ., LEn } which are placed at
+the edge of the network to provide services to the IoT users with
+optimal quality of service, quality of service SLA requirements.
+The attackers in the system are considered on both the IoT device
+side and the user side, who attempt to affect the provisioning of
+legitimate services to users. On the IoT devices side, the attackers
+deploy a malicious device or compromise legitimate devices to
+generate malicious packets. On the other hand, attackers on the
+user side attempt to compromise the user’s device or directly
+access local edge servers to affect the provisioning of services.
+The processes involved in the proposed approach to perform
+
+secure service provisioning in the IoT environment are described
+as follows.
+C. Blockchain-Based IoT Authentication
+In an IoT environment, all the devices are connected to
+the internet to share their data. Due to the sharing of large
+amounts of data over the internet, the IoT environment faces
+security challenges. To ensure the legitimacy of the IoT nodes,
+we perform authentication. Initially, all IoT devices and users
+register their information, such as PUF, Device ID (Dv − ID),
+User ID(U r − ID), and MAC address with the Key Generator
+(KG) integrated with blockchain. The user provides all four
+parameters, whereas the IoT devices provide three parameters
+except U r − ID. The KG then provides a secret key (Kpr )
+to the respective devices and users by utilizing DAA, which
+
+2278
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Algorithm 1: Authentication Process.
+
+Fig. 2.
+
+Block format.
+
+is stored in the blockchain. Once registration is complete, the
+respective IoT devices and users become part of the network.
+The purpose of DAA is to provide authentication with less time
+consumption. During packet transmission and request generation, the devices and users generate a tag (ktg ) and encrypt the
+ktg using the encryption key EN (ktg ). The generation of tags
+provides more security during authentication. The transaction
+consisting of (Kpr ), EN (ktg ), key lifetime (kL ), and current
+timestamp, along with the message and request, is submitted
+to the blockchain. The blockchain verifies transactions using
+the consensus mechanism. During consensus, the blockchain
+nodes verify whether the submitted credentials match those
+of the registered ones. If the consensus is achieved and the
+transaction is verified, the new block is mined, and the respective transaction is recorded in the blockchain. By doing so,
+the legitimacy of the IoT devices and users is verified before
+taking part in transmission. Only authenticated IoT devices
+can send data through a 5G gateway. While blockchain offers
+decentralized trust and tamper-resistant logging, it is not immune
+to adversarial threats, particularly in distributed IoT environments. Potential attacks include Sybil attacks, where adversaries
+create multiple fake identities to manipulate trust scores; smart
+contract exploitation, which can alter the trust scoring logic or
+data access rules; and trust poisoning, where seemingly benign
+behaviour is used to distort trust metrics gradually. To address
+these threats, our framework incorporates lightweight identity
+validation based on node credentials and behavioural history,
+dynamic trust score adaptation through the BLISS module that
+accounts for both short- and long-term activity, and multi-source
+consensus validation to ensure only behaviour corroborated by
+multiple monitors is committed to the blockchain. These design
+elements collectively strengthen the system’s resilience and
+ensure the reliability of trust decisions under adversarial conditions. Although traditional authentication mechanisms offer
+lower overhead, they often rely on centralized authorities, which
+can become single points of failure in dynamic, large-scale IoT
+networks. Our framework leverages a lightweight, permissioned
+blockchain not for heavy consensus or monetary transactions,
+but to ensure tamper-resistant trust management, decentralized
+identity verification, and secure propagation of blacklist updates.
+By adopting efficient consensus protocols such as PBFT or Raft,
+the system minimizes computational burden while maintaining
+integrity across distributed nodes. The Pseudo code for the
+proposed blockchain-based authentication process is provided
+in Algorithm 1. The structure of the generated block in the
+blockchain is illustrated in Fig. 2. The description of each field
+is provided in the figure.
+
+D. Intrusion Detection System
+The intrusion detection system is used to detect attacks performed through compromised devices in the environment. This
+improves the security of the IoT environment. In our work, we
+perform two types of intrusion detection, such as
+1) Signature-Based Intrusion Detection: It detects known
+attacks that have already been trained and stored in the database.
+It sends the data to perform intrusion detection. First, we detect
+signature-based intrusion detection using the IRF. The IRF
+enhances classical Random Forest by adaptively selecting and
+prioritizing the most relevant features for intrusion detection.
+It employs a hybrid entropy-variance scoring mechanism to
+reorder features and dynamically adjusts the number of trees
+to maximize classification accuracy while reducing model complexity. For our implementation, the IRF was configured with
+100 decision trees, each with a maximum depth of 20. An information gain cutoff guided feature selection thresholds, and the
+Gini impurity criterion was used for node splitting. The model
+was trained using an 80/20 stratified train-test split to ensure a
+balanced evaluation. This approach ensures efficient and accurate detection of known threats with minimal redundancy. The
+detailed derivation of the IRF optimization process is provided
+below for reproducibility and clarity of implementation. The
+forest Θ0 is initially grown with Z0 number of trees and feature
+vector ς0 (.). The ranking of features is executed based on the
+respective weight of the features, which can be computed as:
+
+T
+T
+∀T W (k) · ∂
+
+w(k) =
+(1)
+T
+max ∀T W (k) · ∂ T
+k
+
+T
+
+where W (k) represents the weight of feature k with respect
+to tree T , and ∂ T denotes the overall weight of tree T . From
+the ranked list of features, the important features h0 are selected
+and grouped into a pool of important features denoted as Δ.
+Similarly, the pool of unimportant features is denoted by Δ . The
+mean and standard deviation of the weights of features in Δ are
+represented as α0 and β0 , respectively. Let Rf0 be the number
+of features in Δ whose weights are less than (α0 − 2β0 ). These
+features Rf0 are further removed from Δ to form a refined
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+Algorithm 2: Improved Random Forest Algorithm.
+
+feature set ς1 (·) = ς0 (·) − Rf0 . The condition for including a
+feature k from Δ into Δ can then be formulated as:
+w(k) ≥ min w(j), k ∈ Δ
+j∈Δ
+
+the traffic data. The DCRNN module captures these spatiotemporal patterns within the network graph to forecast node-level
+traffic behaviour and anomalies. It integrates graph diffusion
+operations with Gated Recurrent Units (GRUs) to model the
+dynamic nature of distributed IoT traffic. In our implementation,
+DCRNN is configured with two diffusion convolution layers,
+each followed by a GRU layer with 64 hidden units. The diffusion step is set to 2, and the model is trained for 50 epochs
+using the Adam optimizer with a learning rate of 0.001. A batch
+size of 32 is used, and dropout regularization with a rate of
+0.3 is applied to mitigate overfitting. The adjacency matrix is
+dynamically updated based on observed traffic correlations. This
+configuration enables the accurate forecasting of traffic surges
+and anomalous patterns, thereby enhancing the system’s ability
+to respond proactively to evolving threats. The proposed neural
+network features a series connection of a CNN and a GRU.
+The CNN acts as a feature extractor, extracting all the features
+of the packets through the convolution and pooling layers. The
+extracted features are then provided to the GRU to analyze the
+temporal dependency between the features, thereby achieving
+improved classification accuracy. Initially, the local features of
+the packets can be extracted and converted into feature vectors.
+These vectors are then rescaled from 0 to 255 to be converted
+into images of U × V pixels, where U represents the number
+of columns, and V represents the number of rows, respectively.
+The CNN model utilized in our approach extracts the features
+from the images as formulated below:
+Il =
+
+(2)
+
+If a feature is important, it cannot be removed. The number of
+important and unimportant features can be expressed as h and g
+from which the variation of important and unimportant features
+can be computed as:
+δh = Δn+1 − Δn
+
+(3)
+
+δg = Δn+1 − Δn
+
+(4)
+
+Il − kr + 2Q
++1
+SK
+
+(7)
+
+where Il represents the input image length, Q refers to the
+number of zeros, and Kr refers to the size of the kernel. The
+stride of the kernel is represented as SK. The output of the CNN
+is fed to the GRU, which possesses two gates, namely, the update
+gate and the reset gate, that work as follows:
+ct = λ (wc · [It−1 , yt ] + yt ) ,
+bt = λ (wb · [It−1 , yt ]) ,
+
+The number of trees to be added to the existing number of
+trees in the forest to improve the accuracy can be computed as:
+
+
+ l(pu δh + pg δg) 
+
+(5)
+|δZ| ≤ 
+
+g
+
+It = tanh (w · [bt · It−1 , yt ]) ,
+It = (1 − ct ) · It−1 + ct · It .
+
+(8)
+
+where
+
+where l is expressed as:
+l = ZMav P Mav −1 (1 − P Mav )Z−1
+
+2279
+
+(6)
+
+where P < 1, Mav is the average number of nodes in a tree,
+and pu , pg represent the probability of a good split concerning
+u and g. The IRF classifies the data into three classes: normal,
+malicious, and suspicious. This is done by computing the similarity between the features of the incoming packet and the feature
+set of known attacks. From the classified packets, the malicious
+packets are denied, and suspicious packets are sent to the next
+phase of intrusion detection. The Pseudocode for the proposed
+IRF-based SIDS is provided in Algorithm 2.
+2) Anomaly-Based Intrusion Detection: DCRNN is employed to detect unknown attacks in the IoT environment by
+classifying suspicious packets as either normal or malicious
+while accounting for both spatial and temporal dependencies in
+
+λ=
+
+1
+1 + e−t
+
+(9)
+
+tanh(t) =
+
+1 − e−2t
+1 + e−2t
+
+(10)
+
+where the input features are represented by y. The It , ct represent the update parameters respectively. The weight function
+is represented as w, and the activation function utilized for the
+flow of sequences is represented as tanh and λ, respectively. The
+relationship between spatial and temporal features is determined
+with the help of sequence vectors, which are fed into fully
+connected and softmax layers for classifying the packet. If the
+packet is classified as malicious, then it will be dropped, and
+the normal packets will be sent to the cloud. Fig. 3 shows the
+DCRNN-based detection of suspicious packets.
+
+2280
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 3.
+
+Detection of suspicious packets using the DCRNN-based method.
+
+Fig. 4.
+
+Trust-based service migration and virtual honeypot deployment for intrusion prevention.
+
+E. Trust Value Evaluation and Virtual Honeypot Deployment
+In this section, we implement a honeypot-based attack prevention mechanism that utilizes trust computation for efficient service provisioning in the network. Fig. 4 illustrates the trust-based
+migration of services and the deployment of virtual honeypots
+for intrusion prevention.
+
+1) Trust Value Calculation: In this model, we proposed two
+types of edge servers: a global edge server and a local edge
+server. The global edge server is responsible for managing the
+local edge servers. The local edge server collects the user service
+requests. Then, we calculate the trust value for the edge server
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+TABLE IV
+CONFIGURATION SUMMARY OF CORE COMPONENTS
+
+2281
+
+configurations supports reproducibility and ensures clarity regarding how each module contributes to system performance.
+The following details provide the complete formulation of
+the fitness function, the heap construction process, and the corresponding selection criteria. The input parameters are defined
+as follows:
+r CPU Resource availability: CPU resource availability
+RACP U is defined as the summation of the number of
+currently running tasks running on the edge server, and the
+tasks are provided to the available server based on the user
+request. It is denoted as:
+RACP U =
+
+n
+
+
+Ei T i
+
+(12)
+
+i=1
+
+r Load: The load (L) represents the number of user tasks
+
+as follows:
+τ (LE) = Inτ ± (1 − Inτ )Xϑ
+
+(11)
+
+where Inτ and ϑ denote the initial trust value and degree of
+change in trust value of the edge servers, respectively, based on
+the change in the degree of trust value, the trust value will be
+dynamically adjusted to increase or decrease.
+2) Live Migration: After calculating the trust value τ (LE)
+of the local edge servers, the global edge server computes
+the threshold value τT H (LE) based on the average of all
+trust values of the local edge servers. The nodes that possess
+τ (LE) ≥ τT H (LE) are classified as high-trusted local servers,
+denoted as H(τ (LE)), while nodes with τ (LE) < τT H (LE)
+are classified as low-trusted local edge servers, denoted as
+L(τ (LE)). The L(τ (LE)) nodes are vulnerable to attacks, and
+to ensure uninterrupted service to users, we implement live
+migration using a moving target defence strategy. This approach
+enables the migration of running services from L(τ (LE)) to
+a suitable H(τ (LE)). The selected H(τ (LE)) must have a
+system configuration similar to that of L(τ (LE)). To determine
+an appropriate H(τ (LE)) with the same system configuration
+as L(τ (LE)), we propose a Heap-Based Optimization (HBO)
+method that considers CPU resource availability, trust value, and
+system load.
+HBO selects the most suitable edge node for service migration
+by evaluating a composite score that considers trust level, CPU
+availability, and system load. These scores are organized in
+a hierarchical heap structure to ensure that services are migrated to reliable and resource-efficient nodes while maintaining
+low overhead. In our implementation, the heap is initialized
+with a fixed capacity of 50 candidate nodes, and the fitness
+function is weighted with parameters α = 0.4, β = 0.3, and
+γ = 0.3 corresponding to trust, CPU, and load, respectively. The
+heap is dynamically updated at fixed intervals of 10 simulation
+steps, and node selection occurs once the convergence threshold (no score improvement over three consecutive iterations)
+is met. A max-heap is used to prioritize higher composite
+scores, ensuring efficient selection with O(log n) complexity.
+Table IV summarizes the core configuration parameters used in
+implementing the key components of our framework. For each
+module, IRF, DCRNN, and HBO, we detail the most relevant
+hyperparameters, architectural choices, and operational logic.
+These settings were selected through empirical tuning to strike
+a balance between accuracy, computational efficiency, and relevance to NGWN-enabled IoT environments. Providing these
+
+waiting (Tw ) to be processed by the edge server relative to
+the available CPU resources (RACP U ).
+
+RACP U
+(13)
+Tw
+Based on the above input descriptions, HBO is performed.
+HBO is an optimization algorithm for finding the optimal path
+shown in Algorithm 3. Here, the objective of HBO is to find
+the H (τ (LE)) based on maximizing CPU resource utilization,
+maximizing trust value, and minimizing load. The construction
+of an optimal heap requires a Search Agent (SA), which includes
+a Fitness Value (FV) that serves as the key for the heap nodes
+and an index (I) that stores the corresponding values for these
+nodes. The SA is calculated based on the no. of LEs which are
+present in the IoT environment, and it is denoted as:
+⎤
+⎡ DIM
+SADIM
+· · · SADIM
+SA1
+2
+M
+⎥
+⎢
+..
+..
+..
+..
+(14)
+⎦
+⎣
+.
+.
+.
+.
+DIM
+DIM
+DIM
+SAN
+SAN −1 · · · SAM
+L=
+
+where N denotes the number of SA, and DIM denotes the corresponding dimensions. A F V is calculated based on RACP U ,
+τ (LE), L for each LE servers which is denoted as:
+F V = {F V (LE1 ), F V (LE2 ), . . . , F V (LEn )}
+
+(15)
+
+Based on the number of search agents (SA), the fitness values
+(F V ), and the corresponding index values (I), the calculations
+are performed. The index (I) represents the value of the heap
+node based on the availability of CPU resources (RACP U ), the
+trust level (τ (LE)), and the system load (L). The average fitness
+value (AV GF V ) is computed based on the objective conditions.
+If any node satisfies all the objective conditions during the
+computation of AV GF V , it is assigned as the root node (Rn ) at
+depth level d = 0. Subsequently, for corresponding depth levels
+d = 1, 2, 3, . . . , n, branch nodes (Bn ) are assigned dynamically
+based on system conditions (i.e., trust level, CPU availability,
+and load). For root node calculation, we have:
+Rn = high RACPU , if d = 0
+
+(16)
+
+For branch node allocation at increasing depths:
+⎧
+⎪
+⎨H(τ (LE)) ≥ τT H (LE), d = 1
+Bn (d) = Llow ,
+(17)
+d=2
+⎪
+⎩B (d − 1) > B (d),
+d = 3, 4, . . . , n
+n
+n
+
+2282
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Algorithm 3: Heap-Based Optimization.
+
+Algorithm 4: BLISS Signature Generation.
+
+For corresponding depth levels d = 1, 2, 3, . . . , n, branch
+nodes (Bn ) are assigned progressively in a hierarchical manner
+based on trust level, load, and CPU availability. The root node
+(Rn ) is initialized at d = 0, and as depth increases, branch
+nodes are dynamically selected based on system conditions. To
+maintain hierarchical ordering:
+Bn (d) < Rn , for all d ≥ 1
+
+(18)
+
+For building a heap Rn , branch nodes based on d levels are
+denoted as:
+⎧
+⎪
+⎨Rn ≥ highRACP U , τ (LE), L, d = 0
+(19)
+H(LE) = Bn (1) < Rn ,
+d=1
+⎪
+⎩B (n) < B (n − 1), d = n
+n
+n
+After heap construction based on AV GF V , the services from
+L(τ (LE)) are migrated to heaps of H(LE) based on heaps
+arranged hierarchically.
+3) Virtual Honeypot Deployment: During live migration, virtual honeypots with the same system configuration as the Local Edge Servers (LEs) are deployed to attract attackers and
+prevent the compromise of LEs. These honeypots detect attack signatures and store them in log files, which are then
+securely stored in the database. To enhance security, the Bimodal Lattice Signature Scheme (BLISS) algorithm is employed
+for encryption, as shown in Algorithm 4. BLISS is a digital
+signature scheme that uses a public key for verification and a
+private key for signature generation. The primary objective is
+to encrypt log files containing attack signatures before storing
+them in the database. During migration, attackers might attempt
+to compromise H(τ (LE)). To counter this, virtual honeypots
+(HP1 , HP2 , HP3 , . . . , HPn ), configured identically to the LEs
+
+are deployed, misleading attackers into targeting the honeypots
+instead of the legitimate LEs. Once an attack is detected on a
+honeypot, its signature is recorded in a log file Lf and encrypted
+using the BLISS algorithm. The attack pattern, denoted as ω,
+captures various attacker behaviours targeting the honeypot.
+The verification function G and signature generation function
+H process the attack signature, where (S, F ) represents the
+generated signature and the challenge vector for computing
+the hash function. The sample vector d is derived from an
+n-dimensional Gaussian distribution with a standard deviation
+σ, ensuring randomness in signature generation. A random bit
+re ∈ {0, 1} is selected, and a shift vector Kc is applied to finalize
+the signature. The resulting S is encrypted using BLISS and
+securely stored in the log file.
+F = H(ω)
+
+// Compute hash of attack pattern
+
+d ∼ Nσn
+
+// Sample from Gaussian distribution
+
+re ∈ {0, 1}
+
+// Generate random bit
+
+S = d + re Kc
+
+// Generate attack signature
+
+Lf = Encrypt(S, F )
+
+// Encrypt and store in log file
+
+(20)
+
+V. RESULTS AND ANALYSIS
+This section deals with the simulation of the proposed approach. Its performance is validated by comparing it with existing approaches. This section is divided into four subsections,
+namely, simulation setup, dataset description, comparative analysis, and research summary, which are presented below.
+A. Simulation Setup
+The simulation tool used for implementing the proposed
+approach is NS3.26, in which IDS detection, AIDS detection,
+virtual honeypot deployment and attack signature patterns are
+successfully verified. Table V shows the system configuration
+for attaining the simulation. Table VI shows the simulation
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+2283
+
+TABLE V
+SYSTEM CONFIGURATION
+
+TABLE VI
+SIMULATION CONFIGURATION
+Fig. 5. Comparison of attack detection rate between the proposed method and
+existing approaches concerning the number of attacks.
+
+we adapted it to our 5G-based NS-3 simulation by replaying
+traffic through a multi-tier edge architecture, thereby approximating next-generation network conditions such as service
+migration and resource constraints. To address the limitations in
+NGWN-specific realism, future work will focus on augmenting
+the evaluation with custom traffic profiles that emulate 5 G/IoT
+traffic dynamics, including mobility-induced patterns, URLLC,
+and edge-centric service flows. This dataset contains both current and historical benign (Normal traffic) and attack (anomaly
+traffic) types, including DoS, DDoS, Web-based, Heartbleed,
+Infiltration, Scan, and Bot. Based on parameters such as source
+and destination ports, source and destination IP addresses, and
+timestamps, network traffic was analyzed using a CIC flow meter
+and labelled in a CSV file. At that time of implementation, data
+can be separated into training data and test data. The training data
+contains 157,722 packets, among which 137,626 are labelled as
+Normal (benign) and 20,076 are labelled as attacks. The test
+data includes 66,834 packets. Among that, 54,284 are labelled
+as Normal, and 12,540 are labelled as attacks. The records of
+the attacks are stored in a comma-separated values (CSV) file.
+B. Comparative Analysis
+
+configuration for the proposed approach. In our proposed approach, the dataset used is CICIDS-2017, which is designed
+explicitly for IDS and AIS. We selected the CICIDS-2017
+dataset for its comprehensive coverage of diverse attack types
+and well-labelled traffic flows, which are essential for evaluating
+intrusion detection performance in a reproducible manner. While
+the dataset was not originally tailored for NGWN environments,
+
+The validation of the proposed approach is presented in this
+sub-section, in which our approach is compared with the existing
+approaches such as RADDS [59] and GTM-Csec [60] using
+several performance metrics such as accuracy, attack detection
+rate, false negative rate, precision, recall, ROC curve, memory
+usage, CPU usage, and execution time.
+1) Impact of Attack Detection Rate: The attack detection rate
+of any system is defined as the rate at which attack packets
+are detected from the overall packets. It must be high so that
+the system is secure in any environment; if any system has a
+low attack detection rate, it will lead to severe security threats.
+Compared to the baseline methods illustrated in Fig. 5, our
+proposed framework achieves a higher attack detection rate
+of 96.5%, outperforming existing VM-based and physically
+deployed honeypot approaches, which report rates of 92% and
+89.7%, respectively. Unlike prior works that rely on static assumptions about attacker strategies and lack dynamic pattern
+collection, our system leverages virtual honeypots to log and
+
+2284
+
+Fig. 6. Comparison of accuracy between the proposed method and existing
+approaches concerning the number of attacks.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 8. Comparison of precision between the proposed method and existing
+approaches concerning the number of attacks.
+
+Fig. 7. Comparison of the false negative rate between the proposed model and
+existing approaches.
+
+Fig. 9. Comparison of recall rates between the proposed method and existing
+approaches concerning the number of attacks.
+
+encrypt attack behaviours for retraining the SIDS module, enabling proactive threat detection. This integration leads to a 4.5%
+to 7.2% improvement in detection rate under increasing attack
+volumes.
+2) Impact of Accuracy: Accuracy is critical for effectively
+identifying and classifying cyberattacks. As shown in Fig. 6,
+our model achieves a detection accuracy of 97%, significantly
+outperforming game-theoretic baselines, which report 89%
+and 84%, respectively. This improvement is attributed to the
+DCRNN module’s ability to capture both spatial and temporal
+patterns in network traffic. Moreover, the false negative rate,
+illustrated in Fig. 7, remains low at 4.5% for 25 concurrent
+attacks, compared to 7.6% and 9.7% in prior approaches that
+lack mechanisms for identifying unknown threats. This combined enhancement in detection accuracy and reduction in false
+negatives (by 3.1% to 5.2%) highlights the effectiveness of our
+hybrid SIDS-AIDS architecture in real-time, large-scale IoT
+environments.
+3) Impact of False Negative Rate: The false negative rate is
+defined as the number of attacks that were incorrectly determined; a system is considered good when it has a low false
+negative rate.
+4) Impact of Precision: Precision measures the system’s
+ability to accurately identify true positives among all detected
+attacks. As shown in Fig. 8, our proposed model achieves a precision of 97%, outperforming existing approaches, which yield
+
+92.7% and 90%. This improvement stems from the integration
+of IDS techniques with virtual honeypots, enabling the accurate
+identification of attacks through real-time collection of attack
+patterns. In contrast, prior works rely on static assumptions of
+known attack patterns, limiting precision. Our method achieves
+a precision gain of 5.2% to 7%, highlighting its effectiveness in
+minimizing false alarms.
+5) Impact of Recall: Recall reflects the system’s ability to
+identify actual attacks, especially under increasing threat volumes, accurately. As illustrated in Fig. 9, the proposed framework achieves a recall rate of 96%, compared to 92% and
+90.5% in existing approaches. This improvement is driven by
+the combined use of signature-based and anomaly-based IDS
+modules, which enhance the detection of both known and
+unknown threats. In contrast, prior works typically rely on a
+single detection strategy, limiting their recall performance. Our
+approach achieves a recall rate improvement of 4% to 5.5%,
+reinforcing its effectiveness in minimizing undetected attacks.
+6) Impact of Memory Usage: Memory usage directly influences system efficiency and energy consumption, particularly
+under high user request volumes. As shown in Fig. 10, the
+proposed framework maintains a lower memory footprint (0.35)
+compared to existing approaches (0.8 and 0.56). This reduction
+is attributed to our dynamic service migration strategy, which
+offloads services from overloaded or untrusted nodes to trusted,
+low-load nodes. In contrast, prior methods do not consider
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+2285
+
+Fig. 10. Comparison of memory usage between the proposed method and
+existing approaches concerning the number of user requests.
+
+Fig. 12. Comparison between the proposed method and existing approaches
+in terms of the number of incoming requests and execution time.
+
+Fig. 11. Comparison of CPU usage between the proposed method and existing
+approaches with respect to the number of incoming requests.
+
+Fig. 13. ROC curve comparison of the proposed framework with existing
+methods.
+
+node trust or load conditions, leading to inefficient resource
+utilization. Our approach achieves a reduction in memory usage
+ranging from 0.45 to 0.21, thereby enhancing scalability and
+energy efficiency.
+7) Impact of CPU Usage: CPU usage reflects the computational efficiency of the system under increasing request loads.
+As depicted in Fig. 11, the proposed framework maintains low
+CPU usage at 6.7%, outperforming existing approaches that
+reach 12% and 15.6%. This efficiency is achieved through the
+decentralized distribution of tasks across trusted edge nodes,
+thereby reducing centralized processing bottlenecks. In contrast,
+baseline methods lack such distributed orchestration, resulting in
+higher resource consumption. Our system demonstrates a CPU
+usage reduction of 5.5% to 8.8% compared to prior solutions,
+improving scalability and overall performance.
+8) Impact of Execution Time: Execution time is a critical
+metric for evaluating system responsiveness and time complexity. As illustrated in Fig. 12, our proposed method maintains a
+low execution time of 2.5 seconds, even under increasing request
+loads. This efficiency is enabled by the use of edge computing
+servers, which distribute tasks closer to the data source, thereby
+minimizing latency. In contrast, existing approaches that do
+not leverage edge-based management report execution times of
+9.2 and 14.2 seconds. As a result, our framework achieves a
+reduction in execution time ranging from 7.3 to 12.3 seconds,
+significantly enhancing system efficiency.
+
+9) Impact of ROC Curve: The ROC curve illustrates the
+trade-off between the True Positive Rate (TPR) and False Positive Rate (FPR) across different detection thresholds. As shown
+in Fig. 13, the proposed framework achieves a higher TPR and
+lower FPR compared to existing methods. This improvement
+is attributed to the dynamic collection of attack patterns via
+honeypots, enabling better generalization to unseen threats. In
+contrast, prior works assume predefined attack strategies and
+fail to account for unknown attacks, leading to elevated FPR
+and reduced detection performance.
+10) Mitigation of Critical Cyberattacks in 5G-IoT Environments: Security in 5G-enabled IoT networks is threatened by
+sophisticated cyber threats that target service availability, data
+integrity, and authentication. The proposed framework integrates blockchain-based authentication and a dual-stage IDS to
+mitigate the following critical attacks:
+Fuzzing Attacks: These attacks aim to extract user or device
+credentials by injecting randomized input. The proposed system
+utilizes blockchain to store credentials in hashed form, further
+securing them using the Deoxys-TBC algorithm within the
+DAA. Its tweakable block cipher and nonce-based encryption
+provide strong resistance against brute-force attempts. Mutual
+authentication ensures both parties are verified, preventing unauthorized access.
+DDoS Attacks: Large volumes of malicious traffic are designed to overwhelm edge gateways or cloud servers. The
+framework mitigates this issue through an integrated IDS that
+
+2286
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+leverages ML-based traffic classification and anomaly filtering.
+Timestamp verification and rate-limiting mechanisms, combined with blockchain’s decentralized validation, ensure distributed resilience and prevent single-point overloads.
+Impersonation Attacks: These involve adversaries spoofing
+legitimate users. The proposed system validates user identity
+via blockchain-based authentication tags generated by DAA.
+Optional integration of multi-factor authentication (e.g., OTP or
+biometrics) further reduces the risk of unauthorized access even
+if one credential is compromised.
+Replay Attacks: Adversaries resend previously captured legitimate packets to disrupt operations. This is countered through
+spatio-temporal feature analysis and blockchain-based timestamping, which enables the detection of duplicated patterns and
+ensures the uniqueness of legitimate transactions.
+11) Performance Analysis Summary: The proposed approach demonstrates strong detection capabilities by integrating an IRF-based Signature-based IDS with a DCRNN-based
+Anomaly-based IDS, effectively capturing both statistical and
+spatiotemporal characteristics of network traffic. The use of virtual honeypots enables continual adaptation to novel attack patterns, improving responsiveness to evolving threats. Enhanced
+precision and recall are achieved through feature ranking in
+SIDS and the modelling of temporal dependencies in AIDS,
+contributing to a lower false negative rate. In terms of resource
+efficiency, the edge-based service migration strategy, driven by
+trust metrics, resource availability, and edge load, minimizes
+CPU and memory overhead. Blockchain-based authentication
+further ensures node legitimacy and prevents identity spoofing.
+These integrated components collectively yield a scalable and
+resilient security framework for NGWN-enabled IoT environments. Although the current evaluation emphasizes detection
+accuracy, false positive rates, and resilience against known and
+novel threats, we recognize that real-time IoT environments require additional performance metrics, such as latency, throughput, and scalability, under variable traffic loads. These metrics
+are critical for assessing the operational viability of the system
+in large-scale and time-sensitive deployments. In future work,
+we aim to augment our evaluation with these metrics by introducing stress tests that emulate concurrent device interactions,
+dynamic workload variations, and deployment scaling across
+edge environments.
+VI. CONCLUSION AND FUTURE DIRECTIONS
+The rapid expansion of the IoT within NGWN has introduced
+significant security challenges. In this paper, we propose a trustaware security framework that integrates blockchain authentication, advanced intrusion detection, and dynamic honeypot
+deception to enhance security in NGWN-enabled IoT environments. Our framework effectively mitigates cybersecurity
+threats by ensuring robust authentication, reducing false positives in intrusion detection, and dynamically adapting to evolving attack strategies. The proposed system leverages blockchain
+technology for decentralized and tamper-proof authentication,
+preventing impersonation and unauthorized access. The integration of an IRF-based SIDS and a DCRNN-based AIDS enables
+precise and efficient threat detection. Furthermore, a moving
+target defence strategy dynamically migrates services to trusted
+edge nodes, mitigating the risk of service compromise. The
+deployment of high-interaction, on-demand virtual honeypots
+
+enables proactive deception and real-time analysis of attack
+patterns, thereby significantly improving intrusion detection and
+response mechanisms. Performance evaluation in the NS3 simulation environment demonstrates the superiority of our approach
+over existing methods. The proposed framework achieves a
+25% improvement in detection accuracy, a 30% reduction in
+false negatives, and enhanced resource efficiency compared to
+conventional security mechanisms. These results confirm the
+effectiveness of our approach in securing IoT environments
+while maintaining low computational overhead. Despite its advancements, this research opens avenues for further exploration.
+Future work will focus on integrating Explainable AI (XAI)
+techniques to improve transparency and interpretability in intrusion detection decisions. Incorporating XAI, security professionals and system administrators will gain deeper insights into
+the decision-making process of the detection models, ensuring
+better trust, usability, and adaptability of the security framework.
+
+REFERENCES
+[1] Y. Zhang, G. Chen, H. Du, X. Yuan, M. Kadoch, and M. Cheriet, “Real-time
+remote health monitoring system driven by 5G MEC-IoT,” Electronics,
+vol. 9, no. 11, 2020, Art. no. 1753.
+[2] M. Wazid, A. K. Das, S. Shetty, P. Gope, and J. J. Rodrigues, “Security
+in 5G-enabled Internet of Things communication: Issues, challenges, and
+future research roadmap,” IEEE Access, vol. 9, pp. 4466–4489, 2021.
+[3] V. Nilkanthsing, “Dynamic orchestration of security services at fog nodes
+for 5G IoT,” in Proc. IEEE Int. Conf. Commun., 2020, pp. 1–6.
+[4] W. Wang et al., “Label inference attacks against federated unlearning,”
+2025, arXiv:2508.06789.
+[5] X. Tang, M. Shen, Q. Li, L. Zhu, T. Xue, and Q. Qu, “PILE: Robust privacy-preserving federated learning via verifiable perturbations,”
+IEEE Trans. Dependable Secure Comput., vol. 20, no. 6, pp. 5005–5023,
+Nov./Dec. 2023.
+[6] P. Aravamudhan and T. Kanimozhi, “A survey on intrusion detection
+system and prerequisite demands in IoT networks,” J. Phys.: Conf. Ser.,
+vol. 1916, no. 1, 2021, Art. no. 012179.
+[7] N. Chaabouni, M. Mosbah, A. Zemmari, C. Sauvignac, and P. Faruki, “Network intrusion detection for IoT security based on learning techniques,”
+IEEE Commun. Surv. Tuts., vol. 21, no. 3, pp. 2671–2701, thirdquarter 2019.
+[8] Q. A. Al-Haija and A. Droos, “A comprehensive survey on deep learningbased intrusion detection systems in Internet of Things (IoT),” Expert Syst.,
+vol. 42, no. 2, 2025, Art. no. e13726.
+[9] A. Hinojosa and N. E. Majd, “Edge computing network intrusion detection
+system in IoT using deep learning,” in Proc. 33rd Int. Conf. Comput.
+Commun. Netw., 2024, pp. 1–6.
+[10] A. A. Toony, F. Alqahtani, Y. Alginahi, and W. Said, “Multi-block: A
+novel ml-based intrusion detection framework for sdn-enabled IoT networks using new pyramidal structure,” Internet Things, vol. 26, 2024,
+Art. no. 101231.
+[11] Y. K. Saheed, O. H. Abdulganiyu, and T. A. Tchakoucht, “Modified genetic
+algorithm and fine-tuned long short-term memory network for intrusion
+detection in the Internet of Things networks with edge capabilities,” Appl.
+Soft Comput., vol. 155, 2024, Art. no. 111434.
+[12] V. Maurya et al., “Blockchain-driven security for IoT networks: State-ofthe-art, challenges and future directions,” Peer-to-Peer Netw. Appl., vol. 18,
+no. 1, pp. 1–35, 2025.
+[13] Y. Otoum, P. Singh, and A. Nayak, “Advancing IoMT defenses: Deep collaborative learning for robust healthcare security,” in Proc. GLOBECOM
+2024 IEEE Glob. Commun. Conf., 2024, pp. 2966–2971.
+[14] N. A. Dawit, S. S. Mathew, and K. Hayawi, “Suitability of blockchain
+for collaborative intrusion detection systems,” in Proc. 12th Annu. Undergraduate Res. Conf. Appl. Comput., 2020, pp. 1–6.
+[15] F. Louati and F. B. Ktata, “A deep learning-based multi-agent system for
+intrusion detection,” SN Appl. Sci., vol. 2, no. 4, 2020, Art. no. 675.
+[16] J. Franco, A. Aris, B. Canberk, and A. S. Uluagac, “A survey of honeypots and honeynets for Internet of Things, industrial Internet of Things,
+and cyber-physical systems,” IEEE Commun. Surv. Tuts., vol. 23, no. 4,
+pp. 2351–2383, fourthquarter 2021.
+
+OTOUM et al.: BLOCKCHAIN MEETS ADAPTIVE HONEYPOTS: A TRUST-AWARE APPROACH TO NEXT-GEN IOT SECURITY
+
+[17] T. Zheng et al., “Predictive analytics for cyber-attack timing in power
+Internet of Things: A flipit game-theoretic approach,” Internet Things,
+vol. 30, 2025, Art. no. 101522.
+[18] J. Jean, I. Nikolić, T. Peyrin, and Y. Seurin, “The deoxys AEAD family,”
+J. Cryptol., vol. 34, no. 3, 2021, Art. no. 31.
+[19] A. Paul, D. P. Mukherjee, P. Das, A. Gangopadhyay, A. R. Chintha, and S.
+Kundu, “Improved random forest for classification,” IEEE Trans. Image
+Process., vol. 27, no. 8, pp. 4012–4024, Aug. 2018.
+[20] Y. Li, R. Yu, C. Shahabi, and Y. Liu, “Diffusion convolutional recurrent
+neural network: Data-driven traffic forecasting,” 2017, arXiv:1707.01926.
+[21] R. Parsamehr et al., “A novel intrusion detection and prevention scheme
+for network coding-enabled mobile small cells,” IEEE Trans. Computat.
+Social Syst., vol. 6, no. 6, pp. 1467–1477, Dec. 2019.
+[22] A. S. Mamolar, P. Salvá-Garcıá, E. Chirivella-Perez, Z. Pervez, J. M. A.
+Calero, and Q. Wang, “Autonomic protection of multi-tenant 5g mobile
+networks against UDP flooding DDOS attacks,” J. Netw. Comput. Appl.,
+vol. 145, 2019, Art. no. 102416.
+[23] G. Hatzivasilis et al., “WARDOG: Awareness detection watchdog for
+botnet infection on the host device,” IEEE Trans. Sustain. Comput., vol. 6,
+no. 1, pp. 4–18, Jan.–Mar. 2021.
+[24] W. Wang, P. Xu, and L. T. Yang, “Secure data collection, storage and access
+in cloud-assisted IoT,” IEEE Cloud Comput., vol. 5, no. 4, pp. 77–88,
+Jul./Aug. 2018.
+[25] Y. Al-Hadhrami and F. K. Hussain, “Real time dataset generation framework for intrusion detection systems in IoT,” Future Gener. Comput. Syst.,
+vol. 108, pp. 414–423, 2020.
+[26] L. F. Maimó, Á. L. P. Gómez, F. J. G. Clemente, M. G. Pérez, and G. M.
+Pérez, “A self-adaptive deep learning-based system for anomaly detection
+in 5G networks,” IEEE Access, vol. 6, pp. 7700–7712, 2018.
+[27] J. Lam and R. Abbas, “Machine learning based anomaly detection for 5G
+networks,” 2020, arXiv:2003.03474.
+[28] M. A. Mahdi, “Secure and efficient IoT networks: An AI and ML-based
+intrusion detection system,” in Proc. 3rd Int. Conf. Artif. Intell. Internet
+Things, 2024, pp. 1–6.
+[29] S. K. R. Mallidi and R. R. Ramisetty, “Advancements in training and
+deployment strategies for AI-based intrusion detection systems in IoT: A
+systematic literature review,” Discover Internet Things, vol. 5, no. 1, 2025,
+Art. no. 8.
+[30] A. Yang, Y. Zhuansun, C. Liu, J. Li, and C. Zhang, “Design of intrusion
+detection system for Internet of Things based on improved BP neural
+network,” IEEE Access, vol. 7, pp. 106043–106052, 2019.
+[31] A. Mondal and R. T. Goswami, “Enhanced honeypot cryptographic
+scheme and privacy preservation for an effective prediction in cloud
+security,” Microprocessors Microsystems, vol. 81, 2021, Art. no. 103719.
+[32] M. Eskandari, Z. H. Janjua, M. Vecchio, and F. Antonelli, “Passban IDS:
+An intelligent anomaly-based intrusion detection system for IoT edge
+devices,” IEEE Internet Things J., vol. 7, no. 8, pp. 6882–6897, Aug. 2020.
+[33] B. Li, Y. Wu, J. Song, R. Lu, T. Li, and L. Zhao, “DeepFed: Federated
+deep learning for intrusion detection in industrial cyber–physical systems,”
+IEEE Trans. Ind. Inform., vol. 17, no. 8, pp. 5615–5624, Aug. 2021.
+[34] C. Liang et al., “Intrusion detection system for the Internet of Things based
+on blockchain and multi-agent systems,” Electronics, vol. 9, no. 7, 2020,
+Art. no. 1120.
+[35] K. C. Chaganti, “A scalable, lightweight AI-driven security framework
+for IoT ecosystems: Optimization and game theory approaches,” IEEE
+Access, vol. 13, pp. 72235–72247, 2025.
+[36] A. Babaei Goushlavandani, P. Bayat, and G. Ekbatanifard, “Detecting
+attacks on the Internet of Things network in the computing fog layer with an
+embedded learning approach based on clustering and blockchain,” Cluster
+Comput., vol. 28, no. 4, 2025, Art. no. 226.
+[37] V. Saravanan, M. Madiajagan, S. M. Rafee, P. Sanju, T. B. Rehman,
+and B. Pattanaik, “IoT-based blockchain intrusion detection using optimized recurrent neural network,” Multimedia Tools Appl., vol. 83, no. 11,
+pp. 31505–31526, 2024.
+[38] H. Al-Mohannadi, I. Awan, and J. Al Hamar, “Analysis of adversary activities using cloud-based web services to enhance cyber threat intelligence,”
+Serv. Oriented Comput. Appl., vol. 14, no. 3, pp. 175–187, 2020.
+[39] J. Lee, J. Choi, G. Lee, S.-W. Shim, and T. Kim, “PhantomFS: File-based
+deception technology for thwarting malicious users,” IEEE Access, vol. 8,
+pp. 32203–32214, 2020.
+[40] B. Li, Y. Xiao, Y. Shi, Q. Kong, Y. Wu, and H. Bao, “Anti-honeypot enabled
+optimal attack strategy for industrial cyber-physical systems,” IEEE Open
+J. Comput. Soc., vol. 1, pp. 250–261, 2020.
+[41] N. Dara, P. Shankar, P. V. Arvind, and V. Singh, “Intelligent insight into
+IoT threats: Leveraging advanced analytics with honeypots for anomaly
+detection,” in Proc. IEEE 9th Int. Conf. Convergence Technol., 2024,
+pp. 1–6.
+
+2287
+
+[42] E. Ntizikira, L. Wang, J. Chen, and K. Saleem, “Honey-block: Edge
+assisted ensemble learning model for intrusion detection and prevention
+using defense mechanism in IoT,” Comput. Commun., vol. 214, pp. 1–17,
+2024.
+[43] E. Alatawi and U. Albalawi, “Harnessing AI for cyber defense: Honeypotdriven intrusion detection systems,” Symmetry, vol. 17, no. 5, 2025,
+Art. no. 628.
+[44] I. Martinez, A. S. Hafid, and M. Gendreau, “A blockchain-based audit mechanism for trust and integrity in IoT-fog environments,” 2024,
+arXiv:2405.00844.
+[45] A. Acien, A. Nieto, G. Fernandez, and J. Lopez, “A comprehensive
+methodology for deploying IoT honeypots,” in Proc. 15th Int. Conf.
+Trust, Privacy Secur. Digit. Bus., Regensburg, Germany, Sep. 5–6, 2018,
+pp. 229–243.
+[46] D. Commey, M. Nkoom, S. Hounsinou, and G. Crosby, “Dynamic honeypot conversion for enhanced IoT security,” J. Inf. Secur. Appl., Forthcoming, 2025. [Online]. Available: https://papers.ssrn.com/sol3/papers.
+cfm?abstract_id=5079213
+[47] T. Ali, “Next-generation intrusion detection systems with LLMs: Realtime anomaly detection, explainable AI, and adaptive data generation,”
+M.S. thesis, Fac. of Inf. Technol. and Elect. Eng., Univ. of Oulu, Oulu,
+Finland, 2024.
+[48] O. G. Lira, A. Marroquin, and M. A. To, “Harnessing the advanced
+capabilities of LLM for adaptive intrusion detection systems,” in Proc.
+Int. Conf. Adv. Inf. Netw. Appl., 2024, pp. 453–464.
+[49] Y. Otoum, A. Asad, and A. Nayak, “LLM-based threat detection and
+prevention framework for IoT ecosystems,” 2025, arXiv:2505.00240.
+[50] F. Adjewa, M. Esseghir, L. Merghem-Boulahia, and C. Kacfah, “LLMbased continuous intrusion detection framework for next-gen networks,” in
+Proc. 2025 Int. Wireless Commun. Mobile Comput., 2025, pp. 1198–1203.
+[51] Y. Li, Z. Xiang, N. D. Bastian, D. Song, and B. Li, “IDS-agent: An
+LLM agent for explainable intrusion detection in IoT networks,” in Proc.
+NeurIPS 2024 Workshop Open-World Agents, 2024. [Online]. Available:
+https://openreview.net/forum?id=iiK0pRyLkw
+[52] X. Hu et al., “A LLM-based agent for the automatic generation and
+generalization of IDS rules,” in Proc. IEEE 23rd Int. Conf. Trust, Secur.
+Privacy Comput. Commun., 2024, pp. 1875–1880.
+[53] M. M. Rahman, S. Al Shakil, and M. R. Mustakim, “A survey on intrusion
+detection system in IoT networks,” Cyber Secur. Appl., vol. 3, 2025,
+Art. no. 100082.
+[54] M. Rajkumar et al., “Multi-view consistent generative adversarial network
+for enhancing intrusion detection with prevention systems in mobile ad
+hoc networks against security attacks,” Comput. Secur., vol. 150, 2025,
+Art. no. 104242.
+[55] L. P. Rachakonda, M. Siddula, and V. Sathya, “A comprehensive study
+on IoT privacy and security challenges with focus on spectrum sharing in
+next-generation networks (5G/6G/beyond),” High-Confidence Comput.,
+vol. 4, 2024, Art. no. 100220.
+[56] Y. Otoum, A. Asad, and A. Nayak, “LLMs meet federated learning for
+scalable and secure IoT management,” 2025, arXiv:2504.16032.
+[57] E. H. Said, Y. Otoum, and A. Nayak, “A scalable meta learning-based
+model to secure IoT networks,” IEEE Internet Things Mag., vol. 6, no. 2,
+pp. 116–120, Jun. 2023.
+[58] S. Jangirala, A. K. Das, and A. V. Vasilakos, “Designing secure lightweight
+blockchain-enabled RFID-based authentication protocol for supply chains
+in 5G mobile edge computing environment,” IEEE Trans. Ind. Informat.,
+vol. 16, no. 11, pp. 7081–7093, Nov. 2020.
+[59] O. A. Wahab, J. Bentahar, H. Otrok, and A. Mourad, “Resource-aware
+detection and defense system against multi-type attacks in the cloud:
+Repeated Bayesian Stackelberg game,” IEEE Trans. Dependable Secure
+Comput., vol. 18, no. 2, pp. 605–622, Mar./Apr. 2021.
+[60] K. S. Gill, S. Saxena, and A. Sharma, “GTM-CSec: Game theoretic model
+for cloud security based on IDS and honeypot,” Comput. Secur., vol. 92,
+2020, Art. no. 101732.
+[61] A. M. Jamil et al., “Lightweight multi-tier IDS for UAV networks: Enhancing UAV zero-day attack detection with honeypot threat intelligence,” in
+Proc. Int. Conf. Digit. Forensics Cyber Crime, 2025, pp. 129–150.
+[62] S. S. Chakkaravarthy, D. Sangeetha, M. V. Cruz, V. Vaidehi, and B. Raman,
+“Design of intrusion detection honeypot using social leopard algorithm to
+detect IoT ransomware attacks,” IEEE Access, vol. 8, pp. 169944–169956,
+2020.
+[63] W. Zhang, B. Zhang, Y. Zhou, H. He, and Z. Ding, “An IoT honeynet
+based on multiport honeypots for capturing IoT attacks,” IEEE Internet
+Things J., vol. 7, no. 5, pp. 3991–3999, May 2020.
+PAPER_TEXT

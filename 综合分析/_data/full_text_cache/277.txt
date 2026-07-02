@@ -1,0 +1,619 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024 3500111
+
+ Overcoming Limited Fault Data: Intermittent Fault
+ Detection in Analog Circuits via Improved GAN
+ Xiaoyu Fang , Jianfeng Qu , Bowen Liu , and Yi Chai
+
+ Abstract— Owing to the characteristics of intermittent Thus, precise measurement of IFs in analog circuits within
+faults (IFs), such as short duration and randomness in analog electronic systems is of utmost importance.
+circuits, it is difficult to collect a sufficient amount of manually An IF is a fault that reoccurs at the same location within
+labeled fault data for training detection model. To this end,
+this article explores the application of generative adversarial a short duration and is caused by the same reason [12].
+network (GAN) in the field of IF detection for analog circuits. The IFs are primarily caused by temporary interruptions in the
+proposed model consists of two networks, an autoencoder and a circuit. Examples of such interruptions include loose solder
+discriminator, which are trained by competing against each other joints, corroded or oxidized connections, and exposure to
+while working together to grasp the underlying concepts in the extreme environments [13], [14]. In the solder joint of a
+target. In addition, a spatial Fourier convolution (SFC) block
+is proposed and introduced into the discriminator to enhance circuit, poor contact leads to the formation of electrical contact
+the detection performance of the model. The training process is resistance (ECR) at the component connection [15]. The ECR
+divided into two stages, the first stage through the autoencoder intermittently manifests under the influence of vibration. IFs
+and the discriminator of the adversarial learning, so that the are cumulative, as ECRs gradually build up over time, leading
+discriminator has the initial fault detection ability. The second to eventual complete breaks and circuit shutdowns [16], [17].
+stage trains the autoencoder and the discriminator with a few
+fault samples to enhance the fault detection capability of the two Hubner-Obenland and Minuth [18] discovered that the majornetworks working cooperatively. The proposed method is applied ity of ECRs are more than two orders of magnitude higher,
+to two typical analog circuits, namely, a power amplifier circuit with durations mostly in milliseconds. According to the U.S.
+and a low-pass filter circuit. The results show that, guided by military’s standard definition, millisecond IFs for electronic
+only a small number of fault samples, the proposed method has
+ systems have a time duration not exceeding 5 ms, and the
+a great advantage over other state-of-the-art detection methods.
+ associated ECR is higher than 500  [19].
+ Index Terms— Analog circuits, generative adversarial net- In general, IF diagnosis comprises two aspects: IF detection
+work (GAN), intermittent fault (IF) detection, limited fault data,
+spatial Fourier convolution (SFC) block.
+ and IF recognition [15], [20]. Due to the short duration of
+ IFs, the acquired signals contain numerous redundant faultfree signals. Therefore, the initial step involves detecting the
+ I. I NTRODUCTION moments of appearance and disappearance of IFs using fault
+
+A NALOG circuits, being essential components of complex
+ electrical instruments, perform the main tasks of signal
+generation, arithmetic operations, signal conversion, power
+ detection methods and subsequently extracting the IF signals
+ for fault recognition purposes. To detect the appearance and
+ disappearance of IFs, the length of the detection window
+amplification, and signal filtering [1], [2], [3], [4], [5]. In elec- is typically required to be smaller than the fault signal
+tronic systems with mixed analog–digital circuits, the analog length [21]. Some scholars have conducted research related
+circuits comprise less than 20% of the total, yet they are to IF detection. Huang et al. [22] proposed a fractional-order
+responsible for approximately 80% of faults [5], [6], [7], [8]. transient chaotic system for intermittent sensor fault detection.
+Moreover, intermittent faults (IFs) in circuits tend to occur Sheng et al. [23] used the reduced-order observer to detect
+approximately 10–30 times more frequently than permanent IFs for linear discrete-time stochastic multiagent systems.
+faults (PFs) [9]. Failure to detect IFs early can result in severe Zhang et al. [24] used the lifting method and a reduced-order
+harm to the system when they progress into PFs [10], [11]. observer for the IF detection of discrete-time linear stochastic
+ systems with time delay. Nonetheless, analytical models often
+ Manuscript received 10 August 2023; revised 4 October 2023;
+accepted 26 October 2023. Date of publication 8 November 2023; date of
+ fail to fully represent the complexity of the actual system and
+current version 21 December 2023. This work was supported in part by are challenging to accurately model.
+the National Natural Science Foundation of China under Grant U2034209 Data-driven approaches for IF detection, which do not
+and in part by the Science and Technology Research Program of Chongqing
+Municipal Education Commission under Grant KJQN202301502. The Assorequire the construction of precise mathematical models,
+ciate Editor coordinating the review process was Dr. Ke Feng. (Corresponding are gaining the interest of researchers. Zhong et al. [25]
+author: Jianfeng Qu.) used the Fourier transform to detect IFs in analog circuits.
+ Xiaoyu Fang, Jianfeng Qu, and Yi Chai are with the School of
+Automation, Chongqing University, Chongqing 400044, China (e-mail:
+ Shen et al. [26] proposed a wavelet packet transform (WPT)-
+xiaoyu_fang@foxmail.com; qujianfeng@cqu.edu.cn; chaiyi@cqu.edu.cn). based denoising method for IF detection. Melani et al.’s [27]
+ Bowen Liu is with the School of Intelligent Technology and Engineering, principal component analysis (PCA) was used to IF detection.
+Chongqing University of Science and Technology, Chongqing 401331, China
+(e-mail: lbwlyr@163.com). Zhao et al. [28] proposed a moving average (MA) method
+ Digital Object Identifier 10.1109/TIM.2023.3331419 to detect IFs. Tian et al. [29] proposed a k-nearest neigh-
+ 1557-9662 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+3500111 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+bor (KNN) distance for IF detection. Nonetheless, shal- of the discriminator. However, this method is mainly aimed at
+low machine learning models typically rely on manually image anomaly detection, and the single-scale local convoludesigned signal processing and feature extraction methods, tion used makes it difficult to rapidly increase the receptive
+which may lack generalizability. Moreover, it becomes chal- field. Therefore, it is necessary to develop an effective
+lenging to identify an effective feature extraction scheme GAN-based detection method for analog circuits.
+when there is insufficient knowledge of the system’s fault A well-designed architecture should incorporate units with
+mechanism. the broadest possible receptive field at an early stage. For
+ End-to-end deep learning methods are gaining attention example, it is believed in [31] that large-scale convolutions
+in the detection field. Moreover, researchers have made are advantageous for noise suppression, while small-scale
+efforts due to the limited accessibility of fault anomaly data. convolutions are useful for capturing local details. Conse-
+González-Muñiz [30] proposed a deep variational autoen- quently, a three-branch multiscale convolution fusion module
+coder (DVAE) for fault detection. Fang et al. [31] proposed is proposed to enhance the IF detection capability in analog
+an adaptive multiscale and dual subnet convolutional autoen- circuits. Moreover, Ding et al. [37] demonstrated that using
+coder (AMDSCAE) to detect IFs of analog circuits in oversized kernel convolution is advantageous in enhancing
+noise environment. These autoencoder models solely rely on model accuracy. However, given the short duration of IFs, the
+fault-free data for training. As a result, when faulty data are detection algorithm needs to achieve high efficiency, and large
+encountered during detection, the models generate significant kernel convolutions might not be suitable for computationally
+reconstruction errors, which can be exploited for fault detec- efficient scenarios. Therefore, in this article, a spatial Fourier
+tion. However, the high capacity of deep learning also results convolution (SFC) block is proposed and introduced into the
+in improved reconstruction of certain fault signals, which, GAN’s discriminator. Different from [31], the computational
+in turn, impacts the detection performance. To solve this burden of acquiring large receptive fields can be reduced by
+problem, a prior knowledge-guided teacher–student (PKGTS) the fast algorithm, fast Fourier transform (FFT). Shi et al. [38]
+model based on self-supervised learning was proposed for and Kumawat et al. [39] employ Fourier transform block, but
+IF detection of analog circuits [32]. By introducing prior the proposed SFC block still exhibits differences. Different
+knowledge, the detection residuals of fault signals are from [38], which obtains global information solely through
+increased, and the problem of limited fault data is allevi- the FFT block, the proposed SFC block not only captures
+ated. Similarly, Wang et al. [33] employed a self-supervised global information but also supplements local information,
+signal representation learning (SSRL) approach to improve potentially resulting in a richer set of information. In [39], it is
+the model’s comprehension of the signal. In addition, they considered that low-frequency components contain most of the
+fine-tuned the model with limited fault samples. Nonethe- information, and thus, a short-term Fourier transform (STFT)
+less, both the PKGTS and SSRL models still rely on block is used to combine low-frequency components to obtain
+human intervention to design the prior signal transformation a new information representation. However, this may not
+scheme. be applicable to analog circuits, e.g., the signals in some
+ Recently, generative adversarial networks (GANs) have high-pass filtering circuits are usually high frequency. Thereoffered fresh insights in the field of anomaly and fault fore, unlike [39], our designed SFC block filters real and
+detection, addressing the challenge of detecting faults with imaginary parts through maximum pooling. We believe that
+limited data. The GAN’s discriminator attains its initial information with larger amplitudes is valuable, because noise
+detection capability by distinguishing between real data and amplitudes in circuits are usually smaller than signal amplifake data generated by the generator, and this process tudes. Furthermore, [39] is primarily designed for action
+solely relies on fault-free data. Different from DVAE [30] recognition and cannot be directly applied to the field of analog
+and AMDSCAE [31], GAN not only utilizes the gener- circuits. Developing targeted IF detection methods for analog
+ator reconstruction bias to detect faults, but also utilizes circuits is of significant importance.
+the detection capability of the discriminator, and the two In this article, a new detection framework is designed based
+work in concert to further enhance the detection capability. on the characteristics of IFs in analog circuits. The proposed
+Sabokrou et al. [34] proposed adversarially learned one-class framework contains pretraining of GAN and fine-tuning with
+classifier (ALOCC) for anomaly detection. Jiang et al. [35] a small amount of fault data. The proposed training strategy
+proposed a GAN-based anomaly detection (GBAD) approach enables enhanced collaboration between the generator and
+to solve the data imbalance problem with limited anomalous the discriminator, resulting in improved IF detection capadata. These two GAN-based detection methods collaborate bilities. Furthermore, the SFC block enables the model to
+for detection through generators and discriminators. How- achieve coverage of the signal’s receptive field at relatively
+ever, the generator goal in the detection problem is to make shallow layers through the use of the FFT. Moreover, SFC
+the fake samples as close as possible to the real normal operates in both the spatial and Fourier domains, thereby
+samples, which may cause the discriminator to confuse the enhancing the model’s noise robustness and feature capturing
+normal samples with the fake samples, thus resulting in ability.
+poor detection. Zaigham Zaheer et al. [36] proposed a old The contributions of this article are summarized as follows.
+is gold (OIG) framework, which leverages low-quality data 1) To tackle the issue of limited IF data in analog circuits,
+generated by the generator during the early training epochs as a novel detection framework is proposed that utilizes a
+pseudo-anomaly samples to enhance the detection capability small amount of fault data-guided GAN.
+FANG et al.: OVERCOMING LIMITED FAULT DATA: IF DETECTION IN ANALOG CIRCUITS 3500111
+
+Fig. 1. Proposed GAN-based detection framework. The “conv C@k × j, s” represents that the 1-D convolution kernel size is “k × j,” the number of
+channels is C, and the stride of the convolution is s. LR represents activation function LeakyReLU. BN represents batch normalization.
+
+ 2) The proposed two-stage training strategy effectively a sliding window. As outlined in [21] and [23], it is recfacilitates the collaboration between the generator and ommended that the window length be shorter than the IF
+ the discriminator during the testing phase, enhancing the duration. Therefore, the faulty sample should include part
+ model’s sensitivity to fault signals. of fault signal. In the context of this article’s investigation
+ 3) The proposed SFC block learns the local details and into millisecond IFs, the sliding window duration must be
+ global information of the signal through the spatial under 1 ms. The segmented signal contains a large number of
+ and Fourier domains, respectively, which contributes fault-free samples and a small number of faulty samples. Next,
+ to enhancing the detection performance and noise during the first stage of training, only fault-free samples are
+ robustness. utilized. The generator functions as a denoising autoencoder
+ The rest of this article is organized as follows. Section II to improve noise robustness, and its output is treated as fake
+presents the details of the proposed IF detection framework. by the discriminator. On the other hand, the discriminator
+Section III validates the proposed framework. Section IV treats clean fault-free samples as real sample. This process
+provides a summary of the entire article. provides the GAN with an initial fault detection capability,
+ demonstrated by the fact that when a faulty sample is fed
+ II. M ETHODOLOGY
+ into the generator, since the generator has not been exposed
+A. Overview GAN-Based Detection Framework to faulty samples during the initial training, the generated
+ Due to limited data on IFs and tendency to be masked by sample differs from the real fault-free samples, leading the
+noise, a two-stage training strategy is proposed to address the discriminator to identify it as a fake, indicating a fault. During
+issue of limited fault data, while the SFC block enhances the the second training stage, the generator and discriminator
+model’s detection performance and noise robustness. GANs collaborate for the fault detection task instead of undergoing
+are built upon a two-player game involving two distinct adversarial training. In this stage, only a small number of
+networks, which are trained simultaneously in an unsupervised fault-free and faulty samples are utilized to guide the training
+manner. One of the networks is called generator, which con- of the GAN. The generator only ensures accurate reconstrucsists of an encoder and a decoder to produce realistic data, tion of fault-free samples, while the discriminator strives to
+such as circuit signals. The other network functions as the differentiate between the reconstruction results of fault-free
+discriminator and aims to differentiate between the real data and faulty samples generated by the generator. This aims to
+and the fake generated data. Fig. 1 illustrates the detailed strengthen the discriminator’s ability to recognize faults by
+structure of the proposed framework. further refining the generator’s bad reconstruction of fault sam-
+ First, the voltage signals from the circuit measurement ples. Finally, a threshold is determined based on the likelihood
+point are gathered, and then, the signals are segmented using of faults in the discriminator output. Finally, detection can
+3500111 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+be accomplished by threshold comparison during the testing where OFourier ∈ RC×(L/s) is the final extracted feature of the
+stage. global branch.
+ In the spatial domain of local branch, conventional 1-D
+B. Network Architecture convolution is used to capture information about the local
+ details of the signal, which can be written as follows:
+ 1) GAN: The detailed parameters of GAN are given
+ L
+ Ospatial = σ f conv,BN X̂ , Ô ∈ RC× s
+ 
+in Fig. 1. The generator is a denoising autoencoder consisting (6)
+of 1-D convolution, batch normalization (BN), and activation
+function LeakyReLU. The 1-D convolution extracts features where f conv,BN (•) denotes 1-D convolution and BN operation
+along the time direction for voltage signals. The discriminator with kernel size k × 1 and stride s and Ospatial ∈ RC×(L/s) is
+is stacked by SFC blocks to enhance the ability to identify the final extracted feature of the local branch.
+faults. Finally, the discriminator output, i.e., the likelihood Finally, the features of the two branches are summarized,
+that the current sample is faulty, is obtained from the fully and then, a 1 × 1 convolution is used to obtain the output
+connected layer and the sigmoid activation function. features of the SFC block, which can be written as follows:
+ 
+ 2) SFC Block: The SFC block is based on FFT and 1-D OSFC = f conv Ospatial + OFourier (7)
+convolution and can obtain information about the receptive
+field covering the whole signal and local details. SFC divides where OSFC denotes the output features of the SFC block and
+the channel into two parallel branches: a global branch and f conv (•) denotes convolution with kernel size 1 × 1.
+a local branch. The local branch employs conventional convolution, while the global branch utilizes FFT to consider the C. Two-Stage Training Strategy
+global context. In addition, noise signals and circuit signals 1) Adversarial Training: The first stage of training uses
+often have different frequency bands, and the FFT transform adversarial learning to equip the GAN with initial fault
+can obtain the information of different frequency bands, which detection capabilities. The generator then deceives the disis conducive to improving the noise robustness. Assume that criminator as much as possible. Assume that the training set
+the signal with noise is denoted as X̂ ∈ RC×L , where C X = [X normal , X fault ] consists of fault-free samples X normal
+denotes the number of channels and L denotes the length. and a small number of fault samples X fault . The generator G
+The calculation process of SFC can be expressed as follows. produces a sample that is treated as a fake sample by the
+ In the global branch of the Fourier domain, the real part discriminator D, while the real circuit signal X is treated as
+X̂ real ∈ RC×(L/2) and imaginary part X̂ img ∈ RC×(L/2) of a real sample by the discriminator D. Since the generator
+the spectrum are obtained by the FFT. Because the real and G is a denoising autoencoder, we get X̂ = [ X̂ normal , X̂ fault ]
+imaginary parts exhibit redundant symmetry, we extract the after adding noise η to the training set. The corresponding
+first half sequences of the real and imaginary parts as inputs sample produced by the generator can be denoted as e X =
+to the subsequent modules, aiming to reduce the computational X normal , e
+ [e X fault ]. It should be noted that in the first training
+complexity of the subsequent computations. stage, it requires only fault-free samples to complete the
+ Since noise increases the complexity of the analysis, Fourier training. The loss function for adversarial learning can be
+domain filtering is performed using maximum pooling to expressed as follows:
+obtain the filtered real and imaginary parts
+ min max L G+D = E X normal log(1 − D(X normal ))
+   
+ L G D
+ X̂ ′real = f MaxPool,s X̂ real , X̂ ′real ∈ RC× 2s
+ 
+ (1)  
+ L
+ +E X̂ normal log D G X̂ normal (8)
+ X̂ img = f MaxPool,s X̂ img , X̂ img ∈ R
+ ′ ′ C× 2s
+ 
+ (2)
+ where E[•] denotes expectation calculation. If we let 0 denote
+where s denotes the stride. the real fault-free sample and 1 denote the fake sample, then
+ Then, the real and imaginary parts are concatenated and fed the purpose of the generative network G is to generate samples
+into the 1-D convolution, BN, and activation function as close to true samples as possible, i.e., D(G( X̂ normal )) is
+ as close to 0 as possible. At this point, L G+D becomes
+  h i L
+ Ô = σ f conv,BN X̂ ′real , X̂ ′img , Ô ∈ R2C× 2s (3)
+ smaller. The purpose of the discriminant network D is to keep
+where f conv,BN (•) denotes 1-D convolution and BN operation D(X normal ) close to 0 and D(G( X̂ normal )) close to 1, at which
+with kernel size 1 × 1 and stride 1, σ (•) is the LeakyReLU point L G+D will increase.
+activation, and [•] is concatenation operation. In addition, the generator G needs to reconstruct the noise-
+ Then, Ô is split to obtain new real and imaginary parts, less samples, thus imposing an additional loss
+written as follows: 1 2
+ L LG = X normal − X̃ normal 2 (9)
+ X̂ ′′real , X̂ ′′img = f split Ô , X̂ ′′real , X̂ ′′img ∈ RC× 2s NM
+ 
+ (4)
+ where N represents the total number of fault-free samples,
+where f split (•) denotes split operation. M represents the length of samples, and ∥ • ∥2 represents the
+ Moreover, the new real part X̂ ′′real and imaginary part X̂ ′′img calculation operation of L 2 distance.
+are transformed to the complex domain, and the final result is Therefore, the loss function for generator G can finally be
+obtained by the inverse FFT (IFFT), written as follows: expressed as follows:
+   
+ OFourier = f IFFT f complex X̂ ′′real , X̂ ′′img (5) L G total = L G + λ L G+D (10)
+FANG et al.: OVERCOMING LIMITED FAULT DATA: IF DETECTION IN ANALOG CIRCUITS 3500111
+
+where λ is used to control the relative importance of the two
+terms.
+ 2) Supervised Learning: In the second learning stage, the
+supervised learning paradigm is followed, and a limited number of labeled signals are used to train the proposed generator
+and discriminator to make them suitable for our target task.
+Moreover, the learning rate for training is halved, and a small
+number of epochs are used. The generator G only guarantees
+the reconstruction effect of the fault-free samples and ignores
+the fault samples, so the loss function of the generator remains
+as (9). The purpose of this is to have the generator G
+produce worse and more distinguishable reconstructions of
+faulty samples compared with normal samples, which helps
+the discriminator D in identifying faults. The purpose of
+the discriminant network D is to keep D(G( X̂ normal )) close Fig. 2. CUT-1: power amplifier circuit.
+to 0 and D(G( X̂ fault )) close to 1, which can be expressed as
+minimizing the following loss function:
+  
+ L D = E X̂ normal log D G X̂ normal
+ .
+  
+ + E X̂ fault log 1−D G X̂ fault (11)
+
+D. IF Detection
+ The detection threshold is determined by the discriminator output D(G( X̂ normal )). Using a kernel density estimation (KDE) method, a threshold is obtained by taking a
+confidence limit of 0.95. More details about the KDE can
+be found in [31] and [32]. During the detection task, a fault
+is deemed to have occurred when the fault probability of
+the corresponding discriminator’s output D(G( X̂ test )) within
+the sliding window surpasses a predefined threshold value;
+otherwise, it is considered fault-free. Finally, IF detection
+results are obtained by testing each sliding window.
+
+ III. E XPERIMENTAL VALIDATION
+A. Experimental Environment and Fault Setting Fig. 3. CUT-2: low-pass filter.
+ Active filter circuits and power amplifier circuits are typical
+objects in the study of analog circuit IF detection. Active filter
+circuits have important role that they play in circuit protection, signal processing, and controller modules [1], [2], [3].
+The main function of power amplifier circuits is to amplify
+low-power electrical signals to a sufficiently high power and
+is often used in communication systems, electric motors,
+radar systems, medical systems, and audio systems [40], [41].
+Accordingly, the circuit under test (CUT) consists of two
+types, namely, the power amplifier circuit and the low-pass
+filter circuit. These two circuits (CUT-1 and CUT-2) are shown
+in Figs. 2 and 3. CUT-1 is set to a tolerance of 5% by Multisim.
+CUT-2 is obtained by testing in the actual platform shown
+in Fig. 4.
+ The input excitation of the CUT-1 is composed of 20-kHz,
+0.5-V ac signal and 50-kHz, 0.5-V ac signal. The input
+excitation signal of the CUT-2 is composed of 5-kHz, 1-V ac Fig. 4. Actual circuit experiment platform.
+signal and 10-kHz, 2-V ac signal. The acquisition signals
+for both circuits are selected from the voltage signals at the
+output points. The IF injection module consists of a sliding the duration of the IF injection is controlled by pulse width
+resistor and a voltage-controlled switch connected in parallel. modulation (PWM) waves. Detailed fault settings are shown
+It is connected in series to the corresponding position, and in Table I. In CUT-1 and CUT-2, nine and eight components,
+3500111 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+respectively, are considered to be key elements corresponding
+to the measurement points. In CUT-1, Q1 − e indicates the
+emitter of the triode. Since the faulty components in the same
+series line have the same effect on the output measurement
+points, there are two fuzzy sets in CUT-1, namely, {c2, r 3}
+and {c4, r 5}. For millisecond IFs, each component is set to
+four fault levels based on different sizes of ECR.
+
+B. Model Training and Validation Strategy
+ A window length that is too large beyond the duration of
+the fault will result in an inability to accurately detect the start
+and end of the fault, and a window length that is too small
+will result in an increased computational burden. According to Fig. 5. Detection performance with different values of λ .
+the description in Section II-A, the window length needs to be
+less than 1 ms. Given the sampling interval of 0.005 ms, this
+corresponds to a window length of fewer than 200 sampling
+points. In this study, a window length of 100 is selected,
+aligning with this criterion. Thus, the length of each sample
+is 100. The number of fault-free samples used for training
+in CUT-1 and CUT-2 is 7960 and 7998, respectively. The
+number of samples in the testing set is 95 760 and 80 000,
+respectively. In the first stage of training, the learning rates
+of the generator and discriminator are 0.0001 and 0.00005,
+respectively. The reason the generator’s learning rate is higher
+than the discriminator’s is to alleviate the problem of the
+generator’s gradient vanishing due to the discriminator being
+trained too well [42]. The epoch and batch size are set to
+50 and 512, respectively. The λ in (10) is empirically taken Fig. 6. Detection performance at different epochs in training stage 1.
+as 1. In the second stage, which is a fine-tuning training,
+the learning rate of the generator and discriminator is halved
+compared with the previous. The epoch is 10. The batch size be seen that the FAR remains essentially at 5%, and the FDR
+is set to the same size for each class of IFs. In order to stays at a high level in the range [1, 2), and the FDR is
+test the performance of the model with different numbers of lowest in the interval [0.2, 1). After λ > 2, the FDR shows
+fault samples, numbers of 10, 30, and 50 are used in the a slight decline but stabilizes for the most part. Overall, the
+second training stage for each type of fault. In addition, unless performance does not show significant fluctuations.
+otherwise noted, the signal-to-noise ratio (SNR) is 10 dB to Fig. 6 shows the impact of epoch in the range {5, 10, . . . ,
+test the noise robustness of the different algorithms. All test 100} on the model’s detection performance during training
+results are averaged over five runs of the algorithm. The fault stage 1. In the experimental process, the number of epochs
+detection rate (FDR) and the false alarm rate (FAR) are utilized for training the second stage is fixed, while only the number
+to evaluate the performance of IF detection, which are defined of epochs for the first stage is changed. It can be observed
+as follows: that FDR shows a slight increasing trend, and after reaching
+ TP 50 epochs, FDR remains at around 90%, while FAR stabilizes
+ FDR = (12) at about 5%.
+ TP + FN
+ FP Fig. 7 shows the impact of epoch in the range {5, 10, . . . ,
+ FAR = (13) 100} on the model’s detection performance during training
+ FP + TN
+where TP, FP, TN, and FN denote the respective numbers of stage 2. During the experiment, the number of epochs for
+true positive, false positive, true negative, and false negative training the first stage is fixed, with only the number of epochs
+samples. A superior detection performance is indicated by a for the second stage being altered. It can be seen that, due to
+higher FDR and a lower FAR. the pretraining in the first stage, FDR achieves a high level
+ with very few epochs, and after epoch 10, FDR essentially
+ stabilizes. Therefore, only a small number of epochs are
+C. Parameter Analysis
+ needed for the second stage.
+ Using the CUT-1 as an example, this section analyzes the
+parameters λ in (10) and the epoch parameters of the two
+training stages in CUT-1. The detection performance curve D. Effectiveness of the Proposed Method
+combines FDR and FAR for all fault categories. 1) Influence Under Different Numbers of Fault Samples:
+ Fig. 5 shows the impact of the parameter λ on the model’s To investigate the impact of using a limited number of fault
+detection performance over the range {0.2, 0.4, . . . , 5}. It can samples during training on the performance of the proposed
+FANG et al.: OVERCOMING LIMITED FAULT DATA: IF DETECTION IN ANALOG CIRCUITS 3500111
+
+Fig. 7. Detection performance at different epochs in training stage 2.
+
+ Fig. 8. Detection curve for r 3 in CUT-1 at different fault levels. (a) Fault
+ TABLE I level I. (b) Fault level II. (c) Fault level III. (d) Fault level IV.
+ FAULT S ETTINGS
+
+ TABLE II
+ FDR S (%) OF THE P ROPOSED M ETHOD W ITH D IFFERENT
+ S AMPLE N UMBERS FOR E ACH FAULT T YPE IN CUT-1
+
+ TABLE III Fig. 9. Detection curve for c3 in CUT-2 under different numbers of training
+ samples. (a) Ten samples per category. (b) Thirty samples per category.
+ FDR S (%) OF THE P ROPOSED M ETHOD W ITH D IFFERENT (c) Fifty samples per category.
+ S AMPLE N UMBERS FOR E ACH FAULT T YPE IN CUT-2
+
+ TABLE IV
+ FAR S (%) W ITH D IFFERENT S AMPLE N UMBERS
+ FOR E ACH FAULT T YPE IN CUT-1
+
+model, only 10, 30, and 50 samples for each class of faults are
+used for training, and the test results are obtained accordingly.
+The test results are shown in Tables II–V. As can be seen
+from Tables IV and V, the FAR of our proposed method
+is around 5% in both CUT-1 and CUT-2. In Tables II and of training samples. Observably, with an increase in training
+III, the FDR of the proposed method is enhanced, as the samples, the fluctuation of the detection curve during fault-free
+number of fault samples used for training increases. Moreover, periods diminishes, and the amplitude of the detection curve
+while maintaining a small fluctuation of the FAR, the FDR during fault occurrences rises.
+increases, as the fault level is enhanced. This indicates that as 2) Influence Under Different SNRs: In order to test the
+the ECR increases, the output deviation to the circuit begins effect of different noise intensities on the performance of
+to increase, resulting in IFs that are easier to detect than the proposed model, the two circuits is tested at three SNRs
+before. Fig. 8 shows the detection curve for r 3 in CUT-1 at (10, 15, and 20 dB). For training, the number of fault samples
+different fault levels. The blue detection curve is above the red is fixed at 10 for each class. The test results are shown
+threshold line representing the detection of a fault. It can be in Tables VI–VIII. It can be seen that the FDR gradually
+noticed that as the fault level increases, the detection curve increases, as the SNR increases. For example, at fault level I
+gets closer to 1 at the moment of the fault. Fig. 9 shows of 15 dB, the FDR of CUT-2 is improved by 19.68% compared
+the detection curve for c3 in CUT-2 for different numbers with 10 dB, with little difference in the FAR. In two circuits,
+3500111 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+ TABLE V TABLE XI
+ FAR S (%) W ITH D IFFERENT S AMPLE N UMBERS FDR S (%) OF THE P ROPOSED M ETHOD W ITHOUT T RAINING S TAGE 2
+ FOR E ACH FAULT T YPE IN CUT-2
+
+ TABLE XII
+ FDR S (%) OF THE P ROPOSED M ETHOD W ITHOUT
+ THE SFC B LOCK IN CUT-1
+
+ TABLE VI
+FDR S (%) OF THE P ROPOSED M ETHOD W ITH D IFFERENT SNR S IN CUT-1
+
+ TABLE XIII
+ FDR S (%) OF THE P ROPOSED M ETHOD W ITHOUT
+ THE SFC B LOCK IN CUT-2
+
+ TABLE VII
+FDR S (%) OF THE P ROPOSED M ETHOD W ITH D IFFERENT SNR S IN CUT-2
+
+ proposed method, Network-1 removes the training strategy
+ of adversarial learning and retains only the second stage of
+ TABLE VIII supervised learning. Tables IV, V, IX, and X demonstrate the
+ FAR S (%) OF THE P ROPOSED M ETHOD W ITH D IFFERENT SNR S performance of Network-1. The FAR for Network-1 in CUT-1
+ is not much different from the proposed method, and there is
+ a small decrease in the FAR in CUT-2. However, compared
+ with the FDRs of the proposed methods in Tables II and III,
+ Network-1 shows a significant decrease in the FDR. This
+ TABLE IX
+ phenomenon is even more pronounced in CUT-2. For example,
+ FDR S (%) OF THE P ROPOSED M ETHOD W ITHOUT
+ the FDR of fault level I in CUT-2 under ten fault samples
+ T RAINING S TAGE 1 IN CUT-1 decreased by 40.33%. This indicates that adversarial learning
+ in training stage 1 can provide the model with initial detection
+ capabilities and helps to reduce the dependence on the number
+ of fault samples for training.
+ 4) Effectiveness of Training Stage 2 for Supervised Learning: Network-2 is used to validate the training stage 2.
+ Network-2 removes the second stage of training in the pro-
+ TABLE X posed method, which is equivalent to training without using
+ FDR S (%) OF THE P ROPOSED M ETHOD W ITHOUT any fault samples. As can be seen in Tables IV, V, and XI,
+ T RAINING S TAGE 1 IN CUT-2
+ there is a significant degradation in Network-2 performance.
+ This indicates that supervised learning with fewer samples in
+ training stage 2 is beneficial in guiding the model to detect
+ IFs and discover fault information hidden in the noise.
+ 5) Effectiveness of the SFC Block: To verify the effectiveness of the SFC block, Network-3 replaces the SFC block with
+ a 1-D convolution module. The detection results of Network-3
+the FDR is less than 80% at fault level I of 10 dB, indicating are shown in Tables IV, V, XII, and XIII. Without the help
+that the SNR of 10 dB and fault level I are the performance of the SFC block, the FARs in CUT-1 have increased, and the
+limits of the model. However, the proposed model remains robustness to noise has weakened. The FDRs for both circuits
+ahead of the state-of-the-art methods in the subsequent com- also show some decrease compared with those in Tables II and
+parative validation. III. This demonstrates that learning local and global features
+ 3) Effectiveness of Training Stage 1 for Adversarial Learn- from the spatial and Fourier domains facilitates learning local
+ing: In order to verify the effectiveness of the training stage 1, details of the signal under noise and expanding the receptive
+Network-1 is constructed in this section. Compared with the field.
+FANG et al.: OVERCOMING LIMITED FAULT DATA: IF DETECTION IN ANALOG CIRCUITS 3500111
+
+ TABLE XIV
+ FDR S (%) W ITH D IFFERENT S TATE - OF - THE -A RT D EEP L EARNING M ETHODS
+
+ TABLE XV
+ FAR S (%) W ITH D IFFERENT S TATE - OF - THE -A RT D EEP L EARNING M ETHODS
+
+ TABLE XVI
+ T RAINING AND T ESTING T IME OF N ETWORKS
+
+E. Compared With State-of-the-Art Deep Learning Methods Training, on the other hand, can be done offline, so the
+ In this section, six state-of-the-art methods of detection are computational efficiency requirements for the training stage
+used to compare the proposed methods, including SSRL [33], are not as high as for the testing stage. Using CUT-1 as
+PKGTS [32], OIG [36], GBAD [35], AMDSCAE [31], and an example, the training time represents the cumulative time
+DVAE [30]. For the problem of limited fault data, these for all samples, while the testing time denotes the average
+six approaches have made efforts from different perspectives. time spent detecting each sample. Table XVI displays the
+During the comparison, both our proposed method and the training and testing times of the proposed method and the
+SSRL method used only ten samples per fault class for comparative methods. Due to the need to train two modtraining. Moreover, the OIG method needs to replace the 2-D els in PKGTS, it took the longest training time, and the
+convolution with a 1-D convolution to accommodate the signal multibranch structure of AMDSCAE increased the complexity,
+patterns in this article. Noise is added during testing to make taking 80.996 s for training. The proposed method requires
+the SNR of 10 dB. training in two stages, and as a result, the training time is
+ The comparison results are shown in Tables XIV and XV. relatively long, totaling 78.277 s. During the testing stage, the
+It can be found that the FARs of the OIG method are slightly proposed method has a detection time second only to the OIG
+higher, and the FARs of the other methods basically remain method, with an average time of 0.080 ms per sample, which
+around 5%. In addition, the FDRs of the proposed method is sufficient for millisecond-level fault detection. Compared
+has a significant advantage. For example, compared with the with the time-consuming AMDSCAE, the detection time is
+second effective SSRL method in CUT-2, the proposed method reduced by 17.53%. The proposed method leads all compared
+exhibits improvement in FDRs by 0.24%, 7.22%, 10.37%, methods in detection accuracy while maintaining detection
+and 10.14% for different fault levels, respectively. This shows speed.
+that the proposed method has better results under the con- IV. C ONCLUSION
+dition of limited fault samples and facilitates the detection
+ This article investigates the utilization of GAN in the realm
+of IFs.
+ of IF detection for analog circuits. The proposed two-stage
+ training strategy and SFC block can effectively improve fault
+F. Computational Burden of the Networks detection. The two-stage training strategy initially prepares
+ Since IFs have a short duration, it is necessary for the model for detection without using fault data via adverthe algorithm to be highly efficient during online testing. sarial learning. Subsequently, a small amount of fault data is
+3500111 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+employed to guide the model’s perception of faults through [20] J. Qu, X. Fang, Y. Chai, Q. Tang, and J. Liu, “An intermittent fault
+supervised learning. The proposed SFC block learns the local diagnosis method of analog circuits based on variational modal decomposition and adaptive dynamic density peak clustering,” Soft Comput.,
+details and global information of the signal through the spatial vol. 26, no. 17, pp. 8603–8615, Sep. 2022.
+and Fourier domains, respectively, thus enhancing the detec- [21] Y. Niu, L. Sheng, M. Gao, and D. Zhou, “Distributed intermittent fault
+tion performance and noise robustness. The effectiveness of detection for linear stochastic systems over sensor network,” IEEE Trans.
+ Cybern., vol. 52, no. 9, pp. 9208–9218, Sep. 2022.
+the proposed method is demonstrated through studies based on
+ [22] P. Huang, F. Qi, Y. Chai, and L. Chen, “Intermittent sensor faults
+two typical circuits. In future work, we will focus on further detection based on fractional-order transient chaotic system,” IEEE
+optimizing the algorithm’s operational efficiency to meet the Trans. Instrum. Meas., vol. 71, pp. 1–10, 2022.
+demands of real-time detection scenarios. [23] L. Sheng, S. Zhang, and M. Gao, “Intermittent fault detection for linear
+ discrete-time stochastic multi-agent systems,” Appl. Math. Comput.,
+ R EFERENCES vol. 410, Dec. 2021, Art. no. 126480.
+ [24] S. Zhang, L. Sheng, M. Gao, and D. Zhou, “Intermittent fault detection
+ [1] C. Yang, “Analog circuit faulty parameter identification based on two- for discrete- time linear stochastic systems with time delay,” IET Control
+ objective evolutionary algorithm,” IEEE Trans. Instrum. Meas., vol. 70, Theory Appl., vol. 14, no. 3, pp. 511–518, Feb. 2020.
+ pp. 1–11, 2021. [25] T. Zhong, J. Qu, X. Fang, H. Li, and Z. Wang, “The intermittent fault
+ [2] Z. Jia, Z. Liu, Y. Gan, C.-M. Vong, and M. Pecht, “A deep diagnosis of analog circuits based on EEMD-DBN,” Neurocomputing,
+ forest-based fault diagnosis scheme for electronics-rich analog circuit vol. 436, pp. 74–91, May 2021.
+ systems,” IEEE Trans. Ind. Electron., vol. 68, no. 10, pp. 10087–10096,
+ [26] Q. Shen, K. Lv, G. Liu, and J. Qiu, “Dynamic performance of
+ Oct. 2021.
+ electrical connector contact resistance and intermittent fault under vibra-
+ [3] J. Yang, T. Gao, and S. Jiang, “Energy-based adversarial transfer network
+ tion,” IEEE Trans. Compon., Packag., Manuf. Technol., vol. 8, no. 2,
+ for cross-domain fault diagnosis of electro-mechanical systems,” IEEE
+ pp. 216–225, Feb. 2018.
+ Trans. Instrum. Meas., vol. 71, pp. 1–11, 2022.
+ [27] A. H. D. A. Melani, M. A. D. C. Michalski, R. F. da Silva, and
+ [4] W. He, Y. He, and B. Li, “Generative adversarial networks with
+ G. F. M. de Souza, “A framework to automate fault detection and
+ comprehensive wavelet feature for fault diagnosis of analog cirdiagnosis based on moving window principal component analysis
+ cuits,” IEEE Trans. Instrum. Meas., vol. 69, no. 9, pp. 6640–6650,
+ and Bayesian network,” Rel. Eng. Syst. Saf., vol. 215, Nov. 2021,
+ Sep. 2020.
+ Art. no. 107837.
+ [5] J. Shi, Y. Deng, Z. Wang, and Q. He, “A combined method for analog
+ [28] Y. Zhao, X. He, M. G. Pecht, J. Zhang, and D. Zhou, “Detection
+ circuit fault diagnosis based on dependence matrices and intelligent
+ and detectability of intermittent faults based on moving average T 2
+ classifiers,” IEEE Trans. Instrum. Meas., vol. 69, no. 3, pp. 782–793,
+ control charts with multiple window lengths,” J. Process Control, vol. 92,
+ Mar. 2020.
+ pp. 296–309, Aug. 2020.
+ [6] L. Ji, C. Fu, and W. Sun, “Soft fault diagnosis of analog circuits based
+ on a ResNet with circuit spectrum map,” IEEE Trans. Circuits Syst. I, [29] J. Tian, C. Morillo, M. H. Azarian, and M. Pecht, “Motor bearing
+ Reg. Papers, vol. 68, no. 7, pp. 2841–2849, Jul. 2021. fault detection using spectral kurtosis-based feature extraction coupled
+ with K-nearest neighbor distance analysis,” IEEE Trans. Ind. Electron.,
+ [7] S. Wang, Z. Liu, Z. Jia, and Z. Li, “Incipient fault diagnosis of
+ vol. 63, no. 3, pp. 1793–1803, Mar. 2016.
+ analog circuit with ensemble HKELM based on fused multi-channel
+ and multi-scale features,” Eng. Appl. Artif. Intell., vol. 117, Jan. 2023, [30] A. González-Muñiz, I. Díaz, A. A. Cuadrado, and D. García-Pérez,
+ Art. no. 105633. “Health indicator for machine condition monitoring built in the latent
+ [8] T. Gao, J. Yang, and S. Jiang, “A novel incipient fault diagnosis method space of a deep autoencoder,” Rel. Eng. Syst. Saf., vol. 224, Aug. 2022,
+ for analog circuits based on GMKL-SVM and wavelet fusion features,” Art. no. 108482.
+ IEEE Trans. Instrum. Meas., vol. 70, pp. 1–15, 2021. [31] X. Fang, J. Qu, Y. Chai, and B. Liu, “Adaptive multiscale and dual
+ [9] A. A. Ismaeel and R. Bhatnagar, “Test for detection and location of subnet convolutional auto-encoder for intermittent fault detection of
+ intermittent faults in combinational circuits,” IEEE Trans. Rel., vol. 46, analog circuits in noise environment,” ISA Trans., vol. 136, pp. 428–441,
+ no. 2, pp. 269–274, Jun. 1997. May 2023.
+[10] D. Zhou, Y. Zhao, Z. Wang, X. He, and M. Gao, “Review on diagnosis [32] X. Fang, J. Qu, and Y. Chai, “Self-supervised intermittent fault detection
+ techniques for intermittent faults in dynamic systems,” IEEE Trans. Ind. for analog circuits guided by prior knowledge,” Rel. Eng. Syst. Saf.,
+ Electron., vol. 67, no. 3, pp. 2337–2347, Mar. 2020. vol. 233, May 2023, Art. no. 109108.
+[11] R. Su, “A language-based diagnosis framework for permanent and [33] H. Wang, Z. Liu, Y. Ge, and D. Peng, “Self-supervised signal represenintermittent faults,” Automatica, vol. 154, Aug. 2023, Art. no. 111077. tation learning for machinery fault diagnosis under limited annotation
+[12] The Authoritative Dictionary of IEEE Standards Terms, Seventh Edition, data,” Knowl.-Based Syst., vol. 239, Mar. 2022, Art. no. 107978.
+ IEEE Standard 100-2000, 2000. [34] M. Sabokrou, M. Khalooei, M. Fathy, and E. Adeli, “Adversarially
+[13] H. Li, K. Lyu, Z. Yong, W. Xiaolong, J. Qiu, and G. Liu, “Multichannel learned one-class classifier for novelty detection,” in Proc. IEEE/CVF
+ parallel testing of intermittent faults and reliability assessment for Conf. Comput. Vis. Pattern Recognit., Salt Lake City, UT, USA,
+ electronic equipment,” IEEE Trans. Compon., Packag., Manuf. Technol., Jun. 2018, pp. 3379–3388.
+ vol. 10, no. 10, pp. 1636–1646, Oct. 2020. [35] W. Jiang, Y. Hong, B. Zhou, X. He, and C. Cheng, “A GAN-based
+[14] C. Huang, Z. Shen, J. Zhang, and G. Hou, “BIT-based intermittent fault anomaly detection approach for imbalanced industrial time series,” IEEE
+ diagnosis of analog circuits by improved deep forest classifier,” IEEE Access, vol. 7, pp. 143608–143619, 2019.
+ Trans. Instrum. Meas., vol. 71, pp. 1–13, 2022. [36] M. Zaigham Zaheer, J.-H. Lee, M. Astrid, and S.-I. Lee, “Old is
+[15] X. Fang, J. Qu, Q. Tang, and Y. Chai, “Intermittent fault recognition of gold: Redefining the adversarially learned one-class classifier training
+ analog circuits in the presence of outliers via density peak clustering paradigm,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+ with adaptive weighted distance,” IEEE Sensors J., vol. 23, no. 12, (CVPR), Seattle, WA, USA, Jun. 2020, pp. 14171–14181.
+ pp. 13351–13359, Jun. 2023. [37] X. Ding, X. Zhang, J. Han, and G. Ding, “Scaling up your ker-
+[16] M. Yu, Z. Wang, H. Wang, W. Jiang, and R. Zhu, “Intermittent nels to 31×31: Revisiting large kernel design in CNNs,” in Proc.
+ fault diagnosis and prognosis for steer-by-wire system using composite IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+ degradation model,” IEEE J. Emerg. Sel. Topics Circuits Syst., vol. 13, pp. 11963–11975.
+ no. 2, pp. 557–571, Jun. 2023. [38] H. Shi, G. Cao, Y. Zhang, Z. Ge, Y. Liu, and D. Yang, “F3 Net:
+[17] C. Xiao and P. Zheng, “Integrated system-level prognosis for hybrid Fast Fourier filter network for hyperspectral image classification,” IEEE
+ systems subjected to multiple intermittent faults,” Rel. Eng. Syst. Saf., Trans. Instrum. Meas., vol. 72, pp. 1–18, 2023.
+ vol. 238, Oct. 2023, Art. no. 109401. [39] S. Kumawat, M. Verma, Y. Nakashima, and S. Raman, “Depthwise
+[18] F. Hubner-Obenland and J. Minuth, “A new test equipment for high spatio-temporal STFT convolutional neural networks for human action
+ dynamic real-time measuring of contact resistances,” in Proc. 45th IEEE recognition,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 44, no. 9,
+ Holm Conf. Electr. Contacts, Oct. 1999, pp. 193–202. pp. 4839–4851, Sep. 2022.
+[19] Electronic Test Equipment, Intermittent Fault Diagnostic (Electri- [40] G. Nikandish, R. B. Staszewski, and A. Zhu, “Breaking the bandwidth
+ cal), Revision A, United States Dept. Defense, Pentagon, VA, USA, limit: A review of broadband Doherty power amplifier design for 5G,”
+ 2022. IEEE Microw. Mag., vol. 21, no. 4, pp. 57–75, Apr. 2020.
+FANG et al.: OVERCOMING LIMITED FAULT DATA: IF DETECTION IN ANALOG CIRCUITS 3500111
+
+[41] V. Camarchia, R. Quaglia, A. Piacibello, D. P. Nguyen, H. Wang, Bowen Liu received the B.E. and M.S. degrees
+ and A.-V. Pham, “A review of technologies and design techniques of in electrical engineering from Guangxi University,
+ millimeter-wave power amplifiers,” IEEE Trans. Microw. Theory Techn., Nanning, China, in 2013 and 2017, respectively, and
+ vol. 68, no. 7, pp. 2957–2983, Jul. 2020. the Ph.D. degree in control theory and control engi-
+[42] M. Arjovsky and L. Bottou, “Towards principled methods for training neering from the School of Automation, Chongqing
+ generative adversarial networks,” in Proc. Int. Conf. Learn. Represent., University, Chongqing, China, in 2022.
+ Nov. 2016, pp. 1–12. He is currently a Lecturer with the Chongqing
+ University of Science and Technology, Chongqing.
+ His research interests include fault detection and
+ diagnosis, pattern recognition, and their application
+ Xiaoyu Fang received the B.E. degree in automa- to large-scale process systems.
+ tion from the Zhengzhou University of Aeronautics,
+ Zhengzhou, China, in 2015. He is currently pursuing
+ the Ph.D. degree in control theory and control engineering with the School of Automation, Chongqing
+ University, Chongqing, China.
+ His research interests include fault detection and
+ diagnosis, signal analysis and process, and pattern
+ recognition.
+
+ Yi Chai received the B.E. degree from the Depart-
+ Jianfeng Qu received the Ph.D. degree in control
+ ment of Electronic Engineering, National University
+ theory and control engineering from Chongqing Uniof Defense Technology, Changsha, China, in 1982,
+ versity, Chongqing, China, in 2009.
+ and the M.S. and Ph.D. degrees from the Department
+ He is currently an Associate Professor with the
+ of Automation, Chongqing University, Chongqing,
+ School of Automation, Chongqing University. His
+ China, in 1994 and 2001, respectively.
+ research interests include information fusion, fault
+ He is currently a Professor with the School of
+ diagnosis, intelligent system, machine learning, con-
+ Automation, Chongqing University. His research
+ trol theory, and their applications.
+ interests include nonlinear dynamic systems, signal
+ processing, information fusion, fault detection and
+ diagnosis, and intelligence systems.

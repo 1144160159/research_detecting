@@ -1,0 +1,632 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025 5049512
+
+ IAD-GPT: Advancing Visual Knowledge
+ in Multimodal Large Language Model
+ for Industrial Anomaly Detection
+ Zewen Li , Zitong Yu , Senior Member, IEEE, Qilang Ye , Weicheng Xie , Member, IEEE, Wei Zhuo ,
+ and Linlin Shen , Senior Member, IEEE
+
+ Abstract—The robust causal capability of multimodal large to incorporate mask as expert knowledge, which enhances the
+language models (MLLMs) holds the potential of detecting defec- LLM’s perception of pixel-level anomalies. Extensive experiments
+tive objects in industrial anomaly detection (IAD). However, most on MVTec-AD and VisA datasets demonstrate our state-of-the-art
+traditional IAD methods lack the ability to provide multiturn performance on self-supervised and few-shot anomaly detection
+human–machine dialogs and detailed descriptions, such as the and segmentation tasks, such as MVTec-AD and VisA datasets.
+color of objects, the shape of an anomaly, or specific types of The codes are available at https://github.com/LiZeWen1225/IADanomalies. At the same time, methods based on large pretrained GPT
+models have not fully stimulated the ability of large models
+in anomaly detection tasks. In this article, we explore the Index Terms—Few-shot anomaly detection, multimodal large
+combination of rich text semantics with both image-level and language model (MLLM), self-supervised anomaly detection.
+pixel-level information from images and propose IAD-GPT, a
+novel paradigm based on MLLMs for IAD. We employ abnormal
+prompt generator (APG) to generate detailed anomaly prompts I. I NTRODUCTION
+for specific objects. These specific prompts from the large
+language model (LLM) are used to activate the detection and
+segmentation functions of the pretrained visual-language model
+(i.e., CLIP). To enhance the visual grounding ability of MLLMs,
+ T HE goal of industrial anomaly detection (IAD) tasks is to
+ identify defects in general objects that differ from normal
+ patterns, such as scratches on leather, damaged capsules,
+we propose text-guided enhancer (TGE), wherein image features and so on. The application of anomaly detection in industry
+interact with normal and abnormal text prompts to dynamically ensures the smooth progress of production processes and plays
+select enhancement pathways, which enables language models a crucial role in monitoring, maintaining, and optimizing
+to focus on the specific aspects of visual data, enhancing their
+ability to accurately interpret and respond to anomalies within industrial production processes.
+images. Moreover, we design a multimask fusion (MMF) module The research on IAD tasks [1], [2], [3], [4], [5], [6],
+ [7] is constantly developing and making good progress.
+ Received 13 July 2025; revised 18 September 2025; accepted 7 October Current mainstream methods [2], [3], [5], [6], [7] for
+2025. Date of publication 20 November 2025; date of current version IAD include feature embedding-based methods [2], [3], [5]
+3 December 2025. This work was supported in part by the National Natural Science Foundation of China under Grant 62276170, Grant 62306061, and reconstruction-based methods [6], [7]. However, tra-
+Grant 62576076, and Grant 82261138629; in part by the Open Fund of ditional IAD methods are currently limited to providing
+National Engineering Laboratory for Big Data System Computing Tech- anomaly detection and segmentation results for objects. These
+nology under Grant SZU-BDSC-OF2024-02; in part by Guangdong Basic
+and Applied Basic Research Foundation under Grant 2023A1515140037; approaches all rely on manually setting thresholds and lack
+in part by Guangdong–Macau Science and Technology Innovation Joint the capability to offer detailed insights into the nature and
+Foundation under Grant 2024A0505090003; in part by Guangdong Provincial specifics of detected defects. Meanwhile, image-text match-
+Key Laboratory under Grant 2023B1212060076; and in part by Shenzhen
+Science and Technology Program under Grant JCYJ20240813141807010. The ing is often used to detect anomalies in large pretrained
+Associate Editor coordinating the review process was Dr. Vincenzo Gallo. model-based approaches like WinCLIP [8], which uses a
+(Corresponding authors: Zitong Yu; Linlin Shen.) compositional prompt ensemble based on text templates using
+ Zewen Li is with the School of Computer Science and Software Engineering, Shenzhen University, Shenzhen 518060, China, and also with the School generic descriptions of normal/abnormal as text. This has
+of Computing and Information Technology, Great Bay University, Dongguan been followed by other researchers in subsequent studies
+523000, China. [2], [9], [10], but the method does not fully activate the
+ Zitong Yu is with the School of Computing and Information Technology,
+Great Bay University, Dongguan 523000, China, and also with the Guangdong capability of the large pretrained model. Filo [11], [12]
+Provincial Key Laboratory of Intelligent Information Processing and Shenzhen proposes an adaptively learned fine-grained description that
+Key Laboratory of Media Security, Shenzhen University, Shenzhen 518060, leverages domain-specific knowledge to introduce detailed
+China (e-mail: zitong.yu@ieee.org).
+ Qilang Ye is with the College of Computer Science, Nankai University, anomaly descriptions, replacing generic normal and abnormal
+Tianjin 300071, China. descriptions. Research progress on large language models
+ Weicheng Xie and Linlin Shen are with the School of Computer Science (LLMs) has been rapid recently. Due to their excellent lanand Software Engineering, Shenzhen University, Shenzhen 518060, China
+(e-mail: LLshen@szu.edu.cn). guage understanding and reasoning abilities after large-scale
+ Wei Zhuo is with the School of Artificial Intelligence, Guangdong data training, LLMs, such as ChatGPT [13] and Llama [14],
+Provincial Key Laboratory of Intelligent Information Processing, and the have proven their ability to perform translation, paraphrasing,
+National Engineering Laboratory of Big Data System Computing Technology,
+Shenzhen University, Shenzhen 518060, China. and instruction following tasks in zero sample tasks. In the
+ Digital Object Identifier 10.1109/TIM.2025.3635334 research of multimodal LLMs (MLLMs) [15], [16], [17], it
+ 1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5049512 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+is found that other modal information can be mapped to the
+feature space of LLMs through fine-tuning. LLM can also
+understand the information contained in other modalities and
+make explanations for it. AnomalyGPT [2] is the first to
+introduce LLMs into IAD and proposes the task of anomaly
+perception in MLLMs (APMLLMs). MLLMs for anomaly
+detection eliminate the problem of manually setting thresholds
+in traditional methods and make the results of IAD and localization more interpretable. However, AnomalyGPT simply
+fine-tunes image features into LLM through a linear layer,
+feeds predicted masks as expert knowledge into LLM, and
+finally allows LLM to make judgments on image anomalies.
+ In this article, we propose IAD-GPT, which is designed
+to enhance the efficiency and accuracy of anomaly detection
+in industrial quality inspection. This method not only supports multiturn human–machine dialogs, allowing operators to
+delve into potential anomalies through interactive questionand-answer (QA) sessions, but also leverages advanced LLMs
+to directly analyze anomalies within images without relying
+on preset threshold values for anomaly detection. Traditional
+anomaly detection methods typically employ fixed threshold
+standards: if the detected anomaly value exceeds a certain
+threshold, the image is flagged as containing an anomaly;
+otherwise, it is considered normal. In contrast, our approach
+offers greater flexibility and adaptability by making precise Fig. 1. Comparison between our IAD-GPT, traditional IAD methods, and
+judgments based on specific contexts and using LLMs to AnomalyGPT. (a) Traditional methods use separate models for different
+directly output intuitive results. Consequently, this method classes and provide anomaly scores only. (b) Unified methods manage to
+ accomplish anomaly detection for various classes with a unified framework.
+holds significant potential for practical application in produc- (c) AnomalyGPT, based on the settings in (b), enhances the pixel-level visual
+tion environments, providing a novel perspective and solution knowledge of MLLMs to perceive anomalies. (d) IAD-GPT provides GPTfor industrial quality inspection. generated abnormal text to improve localization capabilities and enhances
+ image-level and pixel-level visual knowledge to achieve better anomaly
+ Fig. 1 shows the difference between our IAD-GPT and recognition by MLLMs.
+previous research. To address the issue of insufficient stimulation of large pretrained model segmentation ability in the
+compositional prompt ensemble method [8], we employ APG 2) We employ APG to generate detailed anomaly prompts
+to extend and enrich the semantic content of text prompts. for specific objects. These prompts are utilized to
+These prompts are used to activate the detection and seg- activate the detection and segmentation capabilities
+mentation capabilities of a pretrained visual-language model, of pretrained visual-language models via incorporati.e., CLIP [18]. Specifically, we leverage GPT’s existing ing rich semantic information can significantly enhance
+knowledge of most objects in the text domain and use a the performance of large pretrained models in IAD
+QA format to generate possible anomaly categories for each tasks.
+object class. These generated texts will serve as one of the 3) For the task of APMLLM, we design a multiscale feature
+key factors in identifying anomalies. To enable the LLM to enhancement approach. At image level, we develop
+fully perceive image information, we designed two modules TGE to dynamically select enhancement paths for image
+at the image level and pixel level, respectively: text-guided features. At pixel level, we introduce MMF, which leverenhancer (TGE) and multimask fusion (MMF). TGE enhances ages differences in image–text features across multiple
+the LLM’s anomaly perception capability at the image level by levels to improve the LLM’s ability to perceive the
+interacting image features with normal/abnormal text prompts location of anomalies.
+to achieve dynamic path selection. Meanwhile, the MMF uses 4) We achieve the state-of-the-art performance on MVTecthe differences in image–text features across multiple levels to AD and VisA for self-supervised/few-shot anomaly
+further improve the LLM’s anomaly perception capability at detection and segmentation tasks. Compared to the basepixel level. lines, IAD-GPT shows superior performance in anomaly
+ Our contributions are summarized as follows. detection and localization on images within a selfsupervised learning setting, outperforming the few-shot
+ 1) We introduce a novel framework named IAD-GPT, setting.
+ via leveraging rich visual knowledge for IAD. Com- The remainder of this article is organized as follows. Secpared with previous IAD methods, IAD-GPT enhances tion II reviews the related works. In Section III, we describe
+ the capability to perceive anomalies beyond traditional the proposed approach in detail. Section IV presents the
+ approaches. ablation studies and comparison experiments with the state-of-
+LI et al.: IAD-GPT: ADVANCING VISUAL KNOWLEDGE IN MLLM FOR INDUSTRIAL ANOMALY DETECTION 5049512
+
+the-art methods. Finally, Section V provides the conclusions for IAD tasks. Specifically, WinCLIP calculates the similarity
+and outlines directions for future work. between multiscale image features and text features representing normal/abnormal features, thereby realizing the detection
+ II. R ELATED W ORK of abnormal areas. AnomalyGPT [2] uses ImageBind [30] to
+A. Industrial Anomaly Detection train a simple decoder to align the feature space of images
+ IAD is mainly divided into reconstruction-based methods and texts to achieve IAD. By employing generalized objectand feature embedding-based methods. agnostic text prompt templates, AnomalyCLIP [10] learns
+ Reconstruction-based methods [1], [4], [6], [7], [19], [20], embeddings for normality and abnormality, further enhanced
+[21] rely on using only normal data when training the model, by global and local context optimizations to better understand
+learning the feature distribution of normal data to reconstruct anomaly semantics. AdaCLIP [9] enhances the performance
+normal features. In the test phase, the trained model recon- of the CLIP model in zero-shot anomaly detection (ZSAD) by
+structs the query data to obtain the normal feature of the utilizing hybrid learnable prompts and emphasizes the imporquery image and then compares the difference between the tance of optimizing cues for detecting anomalies in individual
+reconstructed image features and the original query image images. FiLo [11] enhances the perception of anomalies in
+features to achieve the detection and location of anomalies. ZSAD tasks through fine-grained descriptions and high-quality
+RealNet [7] uses a diffusion model with controllable strength localization with position enhancement.
+to synthesize abnormal data and training the reconstruction Previous studies utilize the powerful capabilities of large
+network with abnormal data that are more similar to real-world pretrained models but do not fully stimulate the large preanomalies. trained models to locate anomalies at the pixel level. In this
+ Feature embedding-based [3], [5], [22], [23], [24], [25], article, based on LLM and the prior knowledge of the large
+[26], [27] methods often use networks trained on ImageNet pretrained model, we generate possible abnormal attributes
+[28] to extract features from images. The representation of for the categories that may be encountered in the unified
+abnormal areas in the image’s feature space is usually far anomaly detection process. The specific prompts fully stimaway from normal feature clusters, and anomaly detection ulate the capabilities of the large pretrained model, and we
+is achieved through the obvious distance between them in have achieved excellent results.
+the feature space. For example, PatchCore [5] constructs
+a memory bank storing representative patch features from B. Multimodal LLM
+normal images to detect anomalies in industrial settings with- With the significant progress of LLMs, such as ChatGPT
+out needing any examples of defects. It employs locally and GPT-4 [13], many studies have attempted to explore other
+aware patch features aggregated from intermediate feature modes based on LLMs, connecting pretrained visual-language
+hierarchies of a pretrained network, ensuring spatial reso- models of different modalities into end-to-end trainable modlution and generality. To manage the size of the memory els, also known as MLLMs. Due to the excellent language
+bank and maintain performance, PatchCore applies a coreset understanding and reasoning abilities of LLMs after largesubsampling mechanism that selects a subset of features for scale data training, such as Qwen [31] and Llama [14],
+efficient nearest neighbor computations. However, networks they have demonstrated their ability to perform translation,
+pretrained on general datasets often lack expertise in the field paraphrasing, and instruction following tasks in zero reference
+of IAD. Migrating general pretrained networks to specific tasks. Models, such as MiniGPT-4 [17], Llava [16], and
+IAD downstream tasks can make the model perform better. InstructBLIP [32], all employ fine-tuning techniques [33],
+In SimpleNet [3], a two-layer adapter is used to transfer the [34], [35] to construct MLLMs. MiniGPT-4 [17] uses frozen
+features extracted from the pretrained network to the domain, Qformer and image encoder for image feature extraction based
+synthesize abnormal data in the feature space, and then train on BLIP2 [36] and trains a simple linear layer to align visual
+a simple discriminator to achieve excellent anomaly detection modalities into the LLM. Llava [16] is similar in architecture
+results. to MiniGPT-4, but through more diverse data and fine-tuning
+ Previous studies on IAD have mainly focused on “one strategies at different stages, Llava is able to complete more
+model for one class,” and there is little research on unified complex reasoning. InstructBLIP [32] has conducted a comanomaly detection models. UniAD [6] is a model specifically prehensive and systematic study on the fine-tuning of visual
+used for unified anomaly detection. UniAD uses learnable language instructions. The InstructBLIP model benefits from
+query and neighbor masking attention to prevent the model adopting a balanced sampling strategy to synchronize learning
+from taking shortcuts, thereby building a more robust unified progress across datasets, enabling it to achieve excellent zero
+anomaly detection model. DiAD [29] leverages advanced sample performance on various visual language tasks. The
+diffusion models to enhance the reconstruction and localization abovementioned multimodal big language models mainly use
+of anomalies across various classes. By incorporating learnable visual encoders pretrained on roughly aligned image text pairs,
+query and neighbor masking attention mechanisms in UniAD, resulting in insufficient extraction and inference of visual
+DiAD prevents shortcut learning, thereby building a more knowledge. Therefore, more research work [15], [37], [38],
+robust model. With the powerful capabilities of pretrained [39], [40], [41] related to multimodal alignment is proposed.
+visual-language models, such as CLIP, unified IAD models To address this issue, LION [39] designed a multigranularity
+have more research potential. WinCLIP [8] uses the charac- fusion visual aggregator and used image labels as advanced
+teristics of CLIP to align images and texts and uses CLIP semantic visual information, enabling LION to have more
+5049512 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 2. Overview of IAD-GPT. APG provides category specific text prompts for decoder. TGE and MMF provide image-level visual information and pixel-level
+expert knowledge to LLMs, respectively.
+
+advanced overall and fine-grained visual perception capabil- anomaly prompts with APG to generate pixel-level anomaly
+ities. In addition to provide visual information as an input localization results. In few-shot setting, the patch-level features
+only to LLM, methods, such as LLaMA adapter [40], [42], from normal samples are stored in memory banks and the
+multimodal GPT, and Otter [15], also fuse multimodal infor- localization result can be obtained by calculating the distance
+mation with intermediate features in LLMs to achieve the between query patches and their most similar counterparts in
+understanding of multimodal information by LLMs. CAT [41], the memory bank. The localization result is subsequently trans-
+[43] designed a clue aggregator to aggregate clues related to formed into prompt embeddings Efusion ∈ RL1 ×Cemb through the
+problems in dynamic audio-visual scenes, targeting rich and MMF module, serving as a part of the LLM input. The LLM
+complex dynamic audio-visual compositions. This enriches detects anomalies and identifies their locations by leveraging
+the detailed knowledge required for learning, enabling CAT the image input Eimg , prompt embedding Efusion , and userto learn clues related to problems and directly engage in provided text, thereby generating a response for the user.
+action-based audio-visual reasoning. CAT outperforms other
+MLLMs in multimodal tasks, especially audio-visual question
+ A. Abnormal Prompt Generator
+answering tasks.
+ MLLMs are trained on large-scale general datasets, which We design abnormal prompt generator (APG) to expand
+limits their capability to specifically perceive anomalies. To anomaly prompts to achieve more powerful segmentation
+overcome this challenge, we introduce a method that utilizes capabilities. Specifically, we first prompt the LLM with the
+image-level visual information and pixel-level expert knowl- query: “describe in a paragraph what an abnormal image
+edge. By integrating these rich sources of information, our of {Co } may looks like?” with the given class Co , and we
+approach significantly enhances the ability of MLLMs to extract potential abnormal attributes ATTRa from the answer
+perceive anomalies, thereby improving their performance in generated by LLM. ATTRa = {k1 , k2 , . . . , ki } includes several
+the APMLLM task. potential abnormal keywords ki for Co . For each potential
+ abnormal keyword ki , we continue the QA session to generate
+ a class-keyword abnormal prompt T ki . T apg = {T k1 , T k2 , . . . , T ki }
+ III. M ETHODOLOGY
+ contain all potential class-keyword abnormal prompts gener-
+ Fig. 2 illustrates the architecture of IAD-GPT. Given a query ated by multiple rounds of dialog. For example, for leather
+image x ∈ RH×W×C , the visual features Fimg ∈ R1×C1 extracted objects, LLM is used to answer the relevant abnormal catby the image encoder are passed through TGE to obtain the egories, including irregular texture, tears, cracks, and so on.
+image embedding Eimg ∈ R1×Cemb , which is then fed into the Then, LLM is asked to generate corresponding text for each
+LLM. abnormal category, such as “Cracks: An abnormal leather may
+ Our method is experimentally validated in two distinct have cracks in the surface, indicating dryness, age, or poor
+settings: a self-supervised setting, where the model learns from quality.”
+data with only normal samples, and a few-shot setting, which Fig. 3 shows the process of using APG to generate spechallenges the model to generalize from a very limited number cific anomaly categories for leather and converting them
+of normal samples. In self-supervised setting, the patch-level into text prompts. We not only simply expand the anomaly
+features extracted by intermediate layers of image encoder are categories into fixed format text but also let the LLM infer
+fed into the decoder together with text features that expand the characteristics of the object based on its own and generate
+LI et al.: IAD-GPT: ADVANCING VISUAL KNOWLEDGE IN MLLM FOR INDUSTRIAL ANOMALY DETECTION 5049512
+
+ B. Text-Guided Enhancer
+ PandaGPT [44] uses a simple linear layer to align the feature
+ space of the image encoder and LLM. However, PandaGPT
+ has not been trained for data in the field of industrial
+ anomalies, resulting in PandaGPT being unable to identify
+ anomalies during IAD. Inspired by the mixture-of-experts
+ (MoE) architecture [45], we propose the text-guided enhancer
+ (TGE) module, in which a similar structure is designed to
+ enhance image-level features. However, unlike the traditional
+ MoE approach that employs a router, we dynamically control
+ feature enhancement for each individual image through the
+ interaction between Fimg and Fwin
+ We = Softmax Attn Fimg Linear (Fwin )T
+  
+ (3)
+ where Fwin is the text embedding extracted by text encoder
+ from T win . We use a linear layer to align Fwin and image-level
+ image feature Fimg . The enhanced image-level feature of Fimg
+ after self-attention is used as expert input, We is used as the
+ weight of expert aggregation, and the result Eimg ∈ R1×Cemb
+ after expert aggregation is fed to LLM as image-level feature
+Fig. 3. Example of APG for leather. We improve the stability of LLMgenerated prompts by designing an QA session and providing illustrative
+ input
+ L2
+examples. X
+ Eimg =
+ 
+ Wei × Experti Fimg (4)
+ i=0
+appropriate text prompts. WinCLIP [8] introduces a twowhere L2 indicates the number of categories of T win , and
+class design method in text prompts to help CLIP locate
+ Experti denotes the ith expert. Our experts are composed of a
+the abnormal region, which categorizes the text prompts into
+ combination of an attention block and a feed-forward neural
+normal prompts T n and abnormal prompts T a , and we define
+ network.
+text prompts similar to WinCLIP as T win = {T n , T a }. When
+training the image decoder, we use T win and T apg as our text
+prompts T text = {T win , T apg }, and we then extract the text C. Multimask Fusion
+embeddings Ftext ∈ RL2 ×C2 using the pretrained CLIP model To utilize the masks generated by the decoder as expert
+and align the patch-level image features Fpatch ∈ RH×W×C3 knowledge and maintain semantic consistency between the
+with the text embeddings Ftext through a simple linear layer. LLM and the decoder output, we introduce a MMF method,
+The anomaly score is calculated by the similarity between the which converts the localization results Mi (i = 1, 2, 3, 4) into a
+patch feature Fpatch and text embeddings Ftext . The localization prompt embedding Efusion . As shown in the left side of Fig. 2,
+result M ∈ RH×W can be obtained as follows: MMF consists of multiple convolutional neural networks and
+ 4
+ ! trainable base prompt embeddings Ebase ∈ RL3 ×Cemb . Our
+ convolutional neural network is designed to consist of multiple
+ X
+ M = Unsample l
+  T 
+ Softmax Linear Fpatch Ftext (1)
+ l=1 general convolutional layers, followed by depthwise separable
+ convolutions. We refer to this network as mask convolution
+where l represents the number of layers. Similar to Anoma- block (MCB). The MCB converts localization result Mi into
+lyGPT, we do not specifically select the image features of prompt embeddings Edeci ∈ RL1 ×C3 and then concatenates
+different layers for mask generation. The reason is that image multiple Edeci in the channel dimension to obtain an embedfeatures have different effects on anomaly extraction in shallow ding Efusion ∈ RL1 ×Cemb that fuses multilayer information.
+and deep layers. In previous studies, it has been found that Expert knowledge Eexpert = {Efusion , Ebase } ∈ R(L1 +L3 )×Cemb
+fusing shallow and deep features helps us generate masks concatenates Ebase and Efusion in the length dimension and
+more accurately. For multilayer masks, we sum them up and ultimately inputs them into the LLM
+calculate the average to obtain the final predicted mask, which
+is then achieved through upsampling. Edeci = MCB (Mi ) (5)
+ For few-shot IAD, we utilize the same image encoder to
+extract patch-level features from normal samples and store
+ ˚ 
+ 4
+ Efusion = Concat Edeci i=1 . (6)
+them in memory banks Bl ∈ RN×C3 . For patch-level features
+F lpatch ∈ RH×W×C3 , the IAD localization results under the fewshot setting can be expressed as follows: D. Data for Training
+ 4 
+ ! We use the NSA [46] method for training. The NSA method
+ advances the CutPaste [47] technique by integrating the Pois-
+ X  
+ lT
+ M = Unsample l
+ 1 − Max Fpatch · B . (2)
+ l=1
+ son image editing [48] approach to mitigate the discontinuity
+5049512 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 4. Visualization comparison of anomaly image generation results between NSA and CutPaste methods. Red box indicates abnormal area.
+
+caused by pasting image segments. In the domain of IAD,
+the CutPaste [47] is a prevalent method used for generating
+simulated anomaly images. This approach involves randomly
+cropping a block region from an image and pasting it onto
+a random location within the same or another image, thereby
+creating a simulated anomalous portion. While this method
+significantly enhances the performance of IAD models, it
+often results in noticeable discontinuities due to the abrupt
+insertion. To address these visual inconsistencies, the Poisson
+image editing method [48] seamlessly integrates an object
+from one image into another by solving Poisson partial
+differential equations, thereby reducing visible artifacts from
+direct pasting. Fig. 4 presents a visual comparison between the
+image results generated by the NSA method and the original
+CutPaste method, clearly illustrating the improvement of the
+NSA method in mitigating discontinuities.
+ In order to prevent overfitting of LLM, we use the LLM
+to enrich our target prompt before training LLM. For normal images, our response is designed as “No, there are no
+abnormalities in the image.” For abnormal images, we first
+generate different answer templates through LLM and define
+the position information of anomalies as position. Every time
+training data are generated, one of the answer templates will
+ Fig. 5. Illustration of generating abnormal prompts and a 3×3 grid of images
+be selected and the position will be filled in as the answer, such for LLM to answer abnormal locations. We first input the answer template
+as “yes, the anomaly is visible at {position}” or “yes, there is into LLM to generate diversified answers to improve the diversity and stability
+an anomaly in the image; it’s at the {position}”, and so on. of model training and then randomly select a template and fill the location
+ information of the generated abnormal image into the answer.
+For position information of anomalies position, we divide the
+image into a grid of 3×3 distinct regions to facilitate the LLM
+to answer the positions of anomalies, as shown in Fig. 5. trained with cross-entropy loss, which quantifies the difference
+ between the text sequence generated by the model and the
+E. Loss Functions target text sequence
+ n
+ To train our IAD-GPT, we primarily employed three loss X
+functions: cross-entropy loss, focal loss [49], and dice loss Lc = − yilog (pi ) (7)
+ i=1
+[50]. The latter two are primarily utilized to enhance the pixellevel localization accuracy of the decoder. We only use cross- where n is the number of tokens, yi is the true label for token
+entropy loss when not training the decoder and use all three i, and pi is the predicted probability for token i.
+losses when training the decoder. Focal Loss is an optimized loss function specifically tai-
+ Cross-entropy loss is a widely used loss function for train- lored for addressing class imbalance in classification tasks,
+ing classification models. It quantifies the difference between particularly within the realm of object detection. The loss functhe predicted probability distribution and the true distribution tion incorporates a modulating factor (γ) that tunes down the
+(often represented as one-hot encoded labels). The LLM is effect of well-classified instances on the total loss, alongside an
+LI et al.: IAD-GPT: ADVANCING VISUAL KNOWLEDGE IN MLLM FOR INDUSTRIAL ANOMALY DETECTION 5049512
+
+ IV. E XPERIMENT
+ A. Datasets
+ Our experiments are based on MVTec-AD [51] and VisA
+ [52] datasets. Both benchmarks have diverse subsets of different objects, e.g., capsules and leather. In the realm of IAD,
+ MVTec-AD stands out as a widely recognized benchmark. It
+ contains 15 distinct categories, with a total of 3629 training
+ images and 1725 testing images. The images within this
+ dataset exhibit resolutions ranging from 700 × 700 to 1024 ×
+ 1024 pixels, offering a diverse array of visual data for model
+ training. The recently introduced VisA dataset adds to the
+ resources available for IAD research. Spanning 12 categories,
+ it features 9621 normal images and 1200 anomalous images,
+ with an approximate resolution of 1500 × 1000 pixels.
+ Following previous IAD methodologies, only the normal
+ data from these two datasets are utilized during the training
+ phase. To address the limitation of insufficient anomalous
+Fig. 6. Training strategy of IAD-GPT. data and enable effective model training, synthetic anomalous
+ images are generated and incorporated into the training prooptional balancing factor (α) to further adjust for the disparity cess.
+between classes. By doing so, focal loss enhances the model’s
+recall on minority classes while maintaining precision
+ n
+ B. Evaluation Metrics
+ 1X
+ Lf = − αt (1 − pt )γ log (pt ) (8) Following traditional IAD methods, we employ the area
+ n under the receiver operating characteristic (AUROC) as our
+ i=1
+
+where n = H × W represents the total number of pixels and pt evaluation metric for both detection and localization, which
+is the probability of belonging to the true category predicted is expressed as image-level AUROC (I-AUROC) and pixelby the model. In this article, pt is the probability of being level AUROC (P-AUROC). With the deployment of LLM, the
+predicted as an anomaly. existing methods allow determining the presence of anomalies
+ Dice loss is a performance metric turned loss function without the need to manually set thresholds. We utilize imagewidely used in segmentation tasks to evaluate and optimize level accuracy to evaluate the performance of our IAD-GPT.
+the overlap between the predicted segmentation mask and the
+ground truth. It measures the similarity between two samples C. Implementation Details
+by calculating the ratio of twice the area of intersection to
+ We use ImageBind-Huge [30] as a frozen image encoder
+the sum of the areas of the two samples. The function is
+ to extract image features and Vicuna-7B [54] as LLM for
+particularly effective in scenarios with class imbalance due
+ reasoning, connect them through with TGE. Then, we initialize
+to its focus on the proportion of correctly predicted pixels
+ our IAD-GPT using pretrained parameters from PandaGPT
+relative to the total number of pixels in the target class. By
+ [44]. We layered the training into three stages, which are stage
+minimizing dice loss during training, models are encouraged
+ one to train TGE, stage two to train visual-guided decoder
+to produce segmentation outputs that have high spatial overlap
+ and MMF, and stage three to train TGE and MMF jointly. At
+with the true object boundaries, making it especially valuable
+ different training stages, we used the same 50 epochs on two
+for medical image analysis and other applications requiring
+ V100 GPUs with a learning rate of 0.0005 and a batch size
+precise boundary delineation
+ of 16.
+ 2 ni=1 pt (1 − pt )
+ P
+ Our training strategy is shown in Fig. 6. In the first stage,
+ Ld = − Pn 2 Pn 2
+ (9)
+ i=1 pt + i=1 (1 − pt )
+ we do not input the mask information generated by the
+ expert model but only train the model to better recognize the
+where pt represents the probability of being predicted as an
+ anomalous features at the image level. In the second stage, we
+anomaly
+ freeze TGE on the basis of the first stage and then train visual-
+ Ltotal = λc · Lc + λ f · L f + λd · Ld (10)
+ guided decoder and MMF, which initially aligns the pixel-level
+where λ f and λd are set to 1 in stage 2 to supervise the training anomalous features of the mask to the feature space of the
+of the decoder. In all other stages, these coefficients are set to LLM. Finally, in the third stage, we freeze the visual-guided
+0. In contrast, the cross-entropy loss is utilized throughout all decoder and jointly train TGE and MMF to achieve a better
+training stages, and accordingly, λc is set to 1 across all stages. understanding of image-level and pixel-level anomalies in the
+This staged learning strategy enables the model to focus on LLM.
+different components of the loss function at each stage, leading We initialize the image as 224 × 224 and similar to Anomato a more stable and effective training process. Further details lyGPT [2], without specifying a particular level select the
+of this training protocol are illustrated in Fig. 6. intermediate features of the 8th, 16th, 24th, and 32th layers
+5049512 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE I
+Q UANTITATIVE R ESULTS (I MAGE -L EVEL AUROC /P IXEL -L EVEL AUROC /ACCURACY ) OF S ELF -S UPERVISED A NOMALY D ETECTION TASKS ON M VTEC -
+ A D DATASET. W E U SE B OLD AND U NDERLINE IN THE AVERAGE I NDEX TO I NDICATE THE B EST AND S UBOPTIMAL R ESULTS , R ESPECTIVELY
+
+from the image encoder as input to the decoder. Linear warm- demonstrating that APG is effective in promoting large preup and a one-cycle cosine learning rate decay strategy are trained models to perceive anomalous features at the patch
+applied. For image augmentation, the NSA [46] method is level. Among multiple multicategory anomaly detection modadopted, with key parameters configured as follows: Poisson els, our anomaly detection and localization capabilities are the
+image editing is implemented in normal clone mode to achieve best, reaching 97.7% and 97.3%. In the task of APMLLM, our
+smooth edge fusion between synthetic anomalous patches and accuracy rate reaches 94.8%, representing a relative improvethe original image background; pixel values at the edges of ment of 1.5% compared to AnomalyGPT.
+patch masks are set to zero to suppress visible fusion artifacts;
+and the fusion center is defined as the geometric midpoint E. Few-Shot IAD
+of the target pasting region in the destination image, ensur- We compare our work with prior few-shot IAD methods,
+ing alignment between the anomalous patch and surrounding selecting SPADE [53], PatchCore [5], WinCLIP [8], and
+image content. We perform alternating training using both the AnomalyGPT as the baselines. The results are presented in
+pretraining data of PandaGPT and our anomaly image-text Table II. Across both datasets, our method performs competidata. Only TGE, visual-guided decoder, and MMF perform tively in the IAD and APMLLM tasks and notably outperforms
+parameter updates at the corresponding stage, while the rest AnomalyGPT in the setting of 1-shot and 2-shot and achieves
+of the parameters remain frozen. the state-of-the-art performance. Compared to AnomalyGPT,
+ our method achieves better performance on Mvtec-AD and
+D. Self-Supervised IAD VisA for most metrics. In the one-shot and two-shot set-
+ In the setting of self-supervised training with a large number ting of the Mvtec-AD, the accuracy of IAD-GPT is 89.5%
+of normal samples, given that our method trains a single model ±1.2% and 79.1% ±0.9%, which improves by 3.4% and 1.7%
+on samples from all classes within a dataset, we selected over AnomalyGPT. In other settings, IAD-GPT also achieves
+AnomalyGPT [2], which is trained under the same setup, as a competitive results. This indicates that our multiscale feature
+baseline for comparison. Additionally, we compare our model enhancement approach effectively improves the LLM’s ability
+with Draem [19], PatchCore [5], SimpleNet [3], UniAD [6], to perceive anomalies.
+and DiAD [29] using the same unified setting. The results In the few-shot in-context learning setting, the localization
+in the MVTec-AD dataset are presented in Table I. Our pro- performance of the model is slightly lower than that of the
+posed method, IAD-GPT, demonstrates superior performance self-supervised setting due to limited normal references. Our
+compared to the existing methods in most categories. We proposed use of TGE and MMF to provide multiscale anomaly
+have achieved the state-of-the-art performance across multiple perception for LLMs, which promotes the performance of
+metrics. For Image-AUROC and Pixel-AUROC, we achieve LLMs in the APMLLM task. Notably, AnomalyGPT exhibits
+improvements of 0.3% and 4.2%, respectively, compared weaker anomaly localization capabilities in a self-supervised
+to AnomalyGPT. In the task of anomaly segmentation, we setting compared to the abilities of the model in a fewdemonstrated a significant improvement over AnomalyGPT, shot learning setting without training. This indicates that
+LI et al.: IAD-GPT: ADVANCING VISUAL KNOWLEDGE IN MLLM FOR INDUSTRIAL ANOMALY DETECTION 5049512
+
+ TABLE II
+F EW-S HOT IAD R ESULTS ON M VTEC -A D AND V ISA DATASETS . R ESULTS A RE L ISTED AS THE AVERAGE OF F IVE RUNS AND THE B EST-P ERFORMING
+ M ETHOD I S IN B OLD . T HE R ESULTS FOR S PADE , PATCHCORE , AND W INCLIP A RE R EPORTED F ROM [8]
+
+Fig. 7. Qualitative evaluation of IAD-GPT on MVTec-AD. Input images from different categories (first row), corresponding ground truth annotations (second
+row), anomaly detection results predicted by IAD-GPT (third row), and prediction results using heatmaps (fourth row).
+
+AnomalyGPT does not fully leverage the capabilities of large accuracy in both detection and localization. Fig. 8 illustrates
+pretrained models. However, our proposed APG effectively the performance of our IAD-GPT in self-supervised anomaly
+compensates for this shortcoming. IAD-GPT achieves an detection. Our model can not only indicate the existence
+anomaly localization performance of 97.3% P-AUROC in the of anomalies, accurately locate their locations, and provide
+self-supervised setting, surpassing the best result of 96.2% in pixel-level localization results but also answer the specific
+the few-shot setting. categories of anomalies that may exist, which is a capability
+ that AnomalyGPT does not possess. Users can engage in
+F. Qualitative Examples multiturn conversations related to the image content, including
+ but not limited to asking IAD-GPT whether the image contains
+ The visualization results of IAD-GPT on the MVTec-AD
+ anomalies or requesting specific descriptions about the image.
+dataset can be seen in Fig. 7. It can be seen that IAD-
+GPT effectively identifies anomalies of different categories and
+has good perceptual ability in pixel-level anomaly localiza- G. Ablation Study
+tion. Regardless of the scale of the anomaly, whether it be To evaluate the effectiveness of each proposed module,
+large scratches or small pokes, IAD-GPT demonstrates high extensive ablation experiments were conducted on the MVTec-
+5049512 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE VI
+ A BLATION OF T RAIN STRATEGY
+
+ TABLE VII
+ C OMPARISON OF I MAGE AUGMENTATION M ETHODS
+
+ 1) Impact of TGE: To demonstrate the effectiveness of the
+ TGE in enhancing visual information, we train the model
+ for anomaly perception using only the TGE. As shown in
+ Table III, compared to PandaGPT, our approach achieves a
+ performance improvement of 10.1%. To further validate the
+ applicability of the TGE across different frameworks, we also
+ conducted ablation studies on AnomalyGPT. The experimental
+Fig. 8. Qualitative example of IAD-GPT on MVTec-AD. Anomaly categories results confirm that the TGE consistently improves the model’s
+are computing from the similarity between Fimg and Fapg .
+ ability to perceive anomalies at the image level, thereby
+ TABLE III enabling better performance on APMLLM task in both IAD-
+A BLATION OF TGE IN D IFFERENT FRAMEWORKS . ACC . D ENOTES ACCU - GPT and AnomalyGPT.
+ RACY (%) 2) Impact of Expert Knowledge: To demonstrate the impact
+ of the expert knowledge incorporated via APG and MMF, we
+ compare the performance of AnomalyGPT with our method
+ after integrating expert knowledge. As shown in Table IV,
+ APG consistently improves both anomaly detection and localization across different frameworks, indicating that APG is
+ effective in promoting large pretrained models to perceive
+ anomalous features at the patch level.
+ TABLE IV To enable the LLM to better comprehend and utilize the
+A BLATION S TUDY ON THE I NTEGRATION OF E XPERT K NOWLEDGE I NTO expert knowledge, we propose the MMF module. Unlike the
+ LLM prompt learner used in AnomalyGPT, MMF fully exploits
+ multilevel expert knowledge during the prompting process.
+ In Table V, we compare the efficiency of MMF and the
+ prompt learner. MMF achieves superior performance in terms
+ of throughput and parameter count, reaching 114.2 imgs/s
+ and 10.2M parameters, compared to 97.8 imgs/s and 107.4M
+ TABLE V parameters for the prompt learner. However, due to the addi-
+C OMPARISON OF P ROMPT L EARNER F ROM A NOMALY GPT AND MMF tional overhead of processing multilayer expert knowledge,
+ F ROM IAD-GPT ON T HROUGHPUT ( IMGS / S ), PARAMETERS (M), MMF incurs a higher computational cost, as reflected by
+ FLOP S (G), AND ACCURACY (%) its significantly larger FLOPs. In terms of accuracy, IAD-
+ GPT achieves 94.8%, outperforming AnomalyGPT’s 93.3%,
+ demonstrating the effectiveness of our design.
+ 3) Impact of Training Strategy: To evaluate the effectiveness of the multistage training strategy, we present its
+ impact on IAD-GPT in Table VI. Without multistage train-
+AD dataset. Our study primarily focuses on three key aspects: ing, our method still outperforms AnomalyGPT across all
+the TGE, the integration of expert knowledge, and the mul- evaluation metrics. The incorporation of multistage training
+tistage training strategy. The main results are summarized in further enhances IAD-GPT’s ability to perceive anomalies
+Tables III–VII. All analyses are based on self-supervised train- in APMLLM task, leading to improved performance in both
+ing and testing protocols applied to the MVTec-AD dataset. detection and localization.
+LI et al.: IAD-GPT: ADVANCING VISUAL KNOWLEDGE IN MLLM FOR INDUSTRIAL ANOMALY DETECTION 5049512
+
+ 4) Impact of Data Augmentation: We have supplemented [3] Z. Liu, Y. Zhou, Y. Xu, and Z. Wang, “SimpleNet: A simple network
+a more detailed comparative ablation experiment focusing for image anomaly detection and localization,” in Proc. IEEE/CVF Conf.
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2023, pp. 20402–20411.
+on data augmentation methods, specifically evaluating three [4] N.-C. Ristea et al., “Self-supervised predictive convolutional attentive
+scenarios: training with only the NSA-based augmentation, block for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis.
+training with only the CutPaste augmentation, and training Pattern Recognit. (CVPR), Jun. 2022, pp. 13576–13586.
+ [5] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+using a combination of NSA and CutPaste. All experiments “Towards total recall in industrial anomaly detection,” in Proc.
+strictly followed the experimental setup in Section IV-C. For IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+the combination scheme, we randomly selected either NSA pp. 14298–14308.
+ [6] Z. You et al., “A unified model for multi-class anomaly detection,” in
+or CutPaste to synthesize anomalous images in each training Proc. Adv. Neural Inf. Process. Syst., 2022, pp. 4571–4584.
+iteration before feeding them into the model. [7] X. Zhang, M. Xu, and X. Zhou, “RealNet: A feature selection net-
+ The experimental results in Table VII show that the NSA- work with realistic synthetic anomaly for anomaly detection,” in Proc.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2024,
+based augmentation achieves the best performance in both pp. 16699–16708.
+anomaly detection and localization tasks. We believe this is [8] J. Jeong, Y. Zou, T. Kim, D. Zhang, A. Ravichandran, and O. Dabeer,
+attributed to its ability to generate more realistic anomalous “WinCLIP: Zero-/few-shot anomaly classification and segmentation,” in
+ Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+regions with smoother edge transitions, which helps the model 2023, pp. 19606–19616.
+learn more discriminative normal–abnormal feature differ- [9] Y. Cao, J. Zhang, L. Frittoli, Y. Cheng, W. Shen, and G. Boracchi,
+ences. “AdaCLIP: Adapting CLIP with hybrid learnable prompts for zero-shot
+ anomaly detection,” in Proc. Eur. Conf. Comput. Vis., 2024, pp. 55–72.
+ [10] Q. Zhou, G. Pang, Y. Tian, S. He, and J. Chen, “AnomalyCLIP: Object-
+ V. C ONCLUSION agnostic prompt learning for zero-shot anomaly detection,” in Proc. 12th
+ Int. Conf. Learn. Represent., 2023.
+ In this study, we introduce IAD-GPT, an innovative frame- [11] Z. Gu et al., “FiLo: Zero-shot anomaly detection by fine-grained
+work for IAD. IAD-GPT leverages the advanced capabilities description and high-quality localization,” in Proc. 32nd ACM Int. Conf.
+ Multimedia, Oct. 2024, pp. 2041–2049.
+of MLLMs and integrates multiscale visual information [12] Z. Gu, B. Zhu, G. Zhu, Y. Chen, M. Tang, and J. Wang, “FiLo++:
+through TGE and MMF. TGE effectively enhances the align- Zero-/few-shot anomaly detection by fused fine-grained descriptions and
+ment between image-level visual information and LLMs and deformable localization,” 2025, arXiv:2501.10067.
+ [13] J. Achiam et al., “GPT-4 technical report,” 2023, arXiv:2303.08774.
+improves LLM’s perception of anomalies by dynamically [14] H. Touvron et al., “LLaMA: Open and efficient foundation language
+selecting enhancement paths for image features. Meanwhile, models,” 2023, arXiv:2302.13971.
+the MMF module integrates multilevel localization results as [15] B. Li et al., “MIMIC-IT: Multi-modal in-context instruction tuning,”
+ 2023, arXiv:2306.05425.
+visual expert knowledge for LLM to enhance its pixel-level [16] H. Liu, C. Li, Q. Wu, and Y. J. Lee, “Visual instruction tuning,” in Proc.
+anomaly perception. Our experiments on benchmark datasets, Adv. Neural Inf. Process. Syst., 2023.
+such as MVTec-AD and VisA, highlight the superior perfor- [17] D. Zhu, J. Chen, X. Shen, X. Li, and M. Elhoseiny, “MiniGPT-4:
+mance of IAD-GPT. IAD-GPT achieves better performance in Enhancing vision-language understanding with advanced large language
+ models,” 2023, arXiv:2304.10592.
+APMLLM task by leveraging multiscale visual information. [18] A. Radford et al., “Learning transferable visual models from natural
+Furthermore, it fully enhances the capabilities of large pre- language supervision,” in Proc. Int. Conf. Mach. Learn., vol. 139, 2021,
+trained models based on APG to detect and localize image pp. 8748–8763.
+ [19] V. Zavrtanik, M. Kristan, and D. Skočaj, “Draem—A discriminatively
+anomalies. We have improved our performance in anomaly trained reconstruction embedding for surface anomaly detection,” in
+detection and localization compared to the baseline, and due Proc. IEEE/CVF Int. Conf. Comput. Vis., Jun. 2021, pp. 8330–8339.
+to the excellent performance of APG, we have achieved [20] Y. Cao, H. Yao, W. Luo, and W. Shen, “VarAD: Lightweight highresolution image anomaly detection via visual autoregressive modeling,”
+better anomaly localization performance in the self-supervised IEEE Trans. Ind. Informat., vol. 21, no. 4, pp. 3246–3255, Apr. 2025.
+setting than in the few-shot in-context learning setting. [21] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting
+ IAD-GPT provides a more comprehensive and robust LLM- for visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021,
+ Art. no. 107706.
+based solution for industrial applications. Beyond its technical [22] Y. Liang, Z. Hu, J. Huang, D. Di, A. Su, and L. Fan, “ToCoAD: Twocontributions, this work also underscores the broader potential stage contrastive learning for industrial anomaly detection,” IEEE Trans.
+of leveraging MLLMs in industrial domains, opening new Instrum. Meas., vol. 74, pp. 1–9, 2025.
+ [23] S. Xie, X. Wu, and M. Yu Wang, “Semi-patchcore: A novel two-staged
+avenues for interactive and explainable artificial intelligence method for semi-supervised anomaly detection and localization,” IEEE
+solutions. Future work will explore the extension of IAD- Trans. Instrum. Meas., vol. 74, pp. 1–12, 2025.
+GPT to other fields, such as medical anomaly detection [24] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch distribution modeling framework for anomaly detection and localization,”
+and camouflage object detection. In addition, efforts will be in Proc. Int. Conf. Pattern Recognit., 2021, pp. 475–489.
+made to improve its adaptability to more complex industrial [25] Y. Zhai et al., “Bidirectional feature pyramid Siamese anomaly detection
+scenarios. network with cellular anomaly generation for container marking,” IEEE
+ Trans. Instrum. Meas., vol. 74, pp. 1–17, 2025.
+ [26] W. Zhang, H. Shi, J. Qiu, Z. Yu, and J. Li, “EdgeAD: Unsupervised
+ R EFERENCES learning model based on prior knowledge enhanced image anomaly
+ detection of heavy railway freight cars,” IEEE Trans. Instrum. Meas.,
+[1] D. Gong et al., “Memorizing normality to detect anomaly: Memory- vol. 74, pp. 1–12, 2025.
+ augmented deep autoencoder for unsupervised anomaly detection,” [27] Y. Zhou, Z. Huang, D. Zeng, Y. Qu, and Z. Wu, “Dual-branch knowlin Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019, edge distillation via residual features aggregation module for anomaly
+ pp. 1705–1714. segmentation,” IEEE Trans. Instrum. Meas., vol. 74, pp. 1–11, 2025.
+[2] Z. Gu, B. Zhu, G. Zhu, Y. Chen, M. Tang, and J. Wang, “AnomalyGPT: [28] J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and L. Fei-Fei, “ImageNet:
+ Detecting industrial anomalies using large vision-language models,” in A large-scale hierarchical image database,” in Proc. IEEE Conf. Comput.
+ Proc. AAAI Conf. Artif. Intell., 2024, vol. 38, no. 3, pp. 1932–1940. Vis. Pattern Recognit., Jun. 2009, pp. 248–255.
+5049512 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+[29] H. He et al., “A diffusion-based framework for multi-class anomaly [42] P. Gao et al., “LLaMA-adapter v2: Parameter-efficient visual instruction
+ detection,” in Proc. AAAI Conf. Artif. Intell., Mar. 2024, pp. 8472–8480. model,” 2023, arXiv:2304.15010.
+[30] R. Girdhar et al., “ImageBind one embedding space to bind them all,” [43] Q. Ye et al., “CAT+: Investigating and enhancing audio-visual underin Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. standing in large language models,” IEEE Trans. Pattern Anal. Mach.
+ 2023, pp. 15180–15190. Intell., vol. 47, no. 10, pp. 8674–8690, Oct. 2025.
+[31] J. Bai et al., “Qwen technical report,” 2023, arXiv:2309.16609. [44] Y. Su, T. Lan, H. Li, J. Xu, Y. Wang, and D. Cai, “PandaGPT: One
+[32] W. Dai et al., “InstructBLIP: Towards general-purpose vision-language model to instruction-follow them all,” 2023, arXiv:2305.16355.
+ models with instruction tuning,” 2023, arXiv:2305.06500. [45] R. A. Jacobs, M. I. Jordan, S. J. Nowlan, and G. E. Hinton, “Adaptive
+[33] J. E. Hu et al., “LoRA: Low-rank adaptation of large language models,” mixtures of local experts,” Neural Comput., vol. 3, no. 1, pp. 79–87,
+ in Proc. ICLR, 2021, p. 3. Mar. 1991.
+[34] R. Zhang, J. Han, C. Liu, A. Zhou, P. Lu, Y. Qiao, H. Li, and P. Gao, [46] H. M. Schlüter, J. Tan, B. Hou, and B. Kainz, “Natural synthetic
+ “LLaMA-adapter: Efficient fine-tuning of large language models with anomalies for self-supervised anomaly detection and localization,” in
+ zero-initialized attention,” in Proc. 12th Int. Conf. Learn. Represent., Proc. Eur. Conf. Comput. Vis. (ECCV), 2022, pp. 474–489.
+ 2024. [47] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Self-
+[35] R. Cai, Y. Cui, Z. Yu, X. Lin, C. Chen, and A. Kot, “Rehearsal-free and supervised learning for anomaly detection and localization,” in Proc.
+ efficient continual learning for cross-domain face anti-spoofing,” IEEE IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+ Trans. Pattern Anal. Mach. Intell., vol. 47, no. 12, pp. 11348–11365, pp. 9664–9674.
+ Dec. 2025. [48] J. M. Di Martino, G. Facciolo, and E. Meinhardt-Llopis, “Poisson image
+[36] J. Li, D. Li, S. Savarese, and S. C. H. Hoi, “BLIP-2: Bootstrap- editing,” Image Process. Line, vol. 6, pp. 300–325, Nov. 2016.
+ ping language-image pre-training with frozen image encoders and [49] T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár, “Focal loss for
+ large language models,” in Proc. Int. Conf. Mach. Learn., 2023, dense object detection,” in Proc. IEEE Int. Conf. Comput. Vis. (ICCV),
+ pp. 19730–19742. Oct. 2017, pp. 2999–3007.
+[37] X. Lin et al., “Reliable and balanced transfer learning for generalized [50] F. Milletari, N. Navab, and S.-A. Ahmadi, “V-net: Fully convolutional
+ multimodal face anti-spoofing,” IEEE Trans. Pattern Anal. Mach. Intell., neural networks for volumetric medical image segmentation,” in Proc.
+ vol. 47, no. 9, pp. 7608–7625, Sep. 2025. 4th Int. Conf. 3D Vis. (3DV), Oct. 2016, pp. 565–571.
+[38] X. Xie, Y. Cui, T. Tan, X. Zheng, and Z. Yu, “FusionMamba: Dynamic [51] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A
+ feature enhancement for multimodal image fusion with mamba,” Vis. comprehensive real-world dataset for unsupervised anomaly detection,”
+ Intell., vol. 2, no. 1, p. 37, Dec. 2024. in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+[39] G. Chen, L. Shen, R. Shao, X. Deng, and L. Nie, “Lion: Empowering 2019, pp. 9584–9592.
+ multimodal large language model with dual-level visual knowledge,” [52] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spotin Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2024, the-difference self-supervised pre-training for anomaly detection and
+ pp. 26540–26550. segmentation,” in Proc. Eur. Conf. Comput. Vis. Springer, 2022,
+[40] R. Zhang et al., “LLaMA-adapter: Efficient fine-tuning of language pp. 392–408.
+ models with zero-init attention,” 2023, arXiv:2303.16199. [53] N. Cohen and Y. Hoshen, “Sub-image anomaly detection with deep
+[41] Q. Ye, Z. Yu, R. Shao, X. Xie, P. Torr, and X. Cao, “CAT: Enhancing pyramid correspondences,” 2020, arXiv:2005.02357.
+ multimodal large language model to answer questions in dynamic [54] W.-L. Chiang et al., “Vicuna: An open-source chatbot impressing GPT-4
+ audio-visual scenarios,” in Proc. Eur. Conf. Comput. Vis., 2024, with 90% ChatGPT quality,”, vol. 2, no. 3, p. 6, 2023. Accessed: Apr.
+ pp. 146–164. 14, 2023. [Online]. Available: https://vicuna.lmsys.org

@@ -1,0 +1,136 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026                                                                             1273
+
+
+
+
+           Contextual Masking Distillation for Network
+                   Traffic Anomaly Detection
+                      Xinglin Lian , Yu Zheng , Member, IEEE, Yan Liu, Fan Zhou , Member, IEEE,
+                               Chunlei Peng , Member, IEEE, and Xinbo Gao , Fellow, IEEE
+
+
+   Abstract—Network traffic anomaly detection is critical for                     CIC-IDS2017 datasets, respectively. Our model code is available
+cybersecurity but faces challenges in accurately identifying mali-                at https://github.com/ikun0124/ConMD
+cious activities. Recent zero-positive approaches, which use only
+normal training data under the reconstruction paradigm, have                        Index Terms—Network traffic anomaly detection, knowl-
+shown progress. However, encrypted network traffic obscures                       edge distillation, contextual information awareness, multi-view
+normal–anomalous distinctions, causing confused modeling.                         anomaly awareness.
+In addition, the “identical shortcut” problem, where models
+reconstruct any input with similar fidelity, produces suboptimal
+representations and indistinguishable detection. To address these                                          I. I NTRODUCTION
+limitations, this paper introduces ConMD, a novel Contextual
+Masking Knowledge Distillation framework. ConMD features
+distillation paradigm for discriminative representations and then
+pursues two objectives: effective contextual information modeling
+                                                                                  N     ETWORK traffic anomaly detection aims to identify the
+                                                                                        potentially malicious and harmful network flows that
+                                                                                  could compromise equipment and systems on communication
+and a comprehensive anomaly metric. Specifically, we introduce                    links [1], [2], [3]. This task particularly plays a critical role
+context-aware local-global attention mechanisms for the student
+network’s backbone, which capture both intra-packet and inter-                    in bolstering cybersecurity, contributing to a more secure
+packet dependencies. Additionally, a context-enhanced masking                     cyberspace [4], [5], enhanced network reliability [6], and
+training strategy is designed to facilitate contextual interactions               robust privacy protection [7]. Traditional approaches process
+in normal flows. Given the structural characteristics of network                  network traffic data as graph, sequence, and image repre-
+traffic, we also present a new anomaly scoring with multi-                        sentations [8], [9], framing this task as a supervised binary
+view awareness, which perceive comprehensive traffic patterns.
+ConMD combines insights from both packet- and flow-level views                    classification problem [10], [11], [12]. Despite commend-
+to highlight deviations in anomalous network flows, thereby                       able performance improvements, supervised methods still face
+improving detection accuracy. Extensive experiments on three                      inherent limitations in handling anomalous traffic, such as
+real-world datasets validate the effectiveness of ConMD, yielding                 the class imbalance problem and the detection of unknown
+consistent improvements over state-of-the-art baselines, achieving                anomalies [1].
+up to 2.8% and 5.1% AUC gains on the DataCon2020 and
+                                                                                     Advanced research has shifted towards a zero-positive learn-
+                                                                                  ing setting [13], [14], [15], which only constructs normal
+   Received 11 December 2024; revised 2 September 2025 and 16 October             network traffic distribution during training. Considering the
+2025; accepted 13 January 2026. Date of publication 19 January 2026; date         high computational cost of processing graph- or sequence-
+of current version 28 January 2026. This work was supported in part by
+the New Generation Artificial Intelligence-National Science and Technology        based representations, most zero-positive approaches instead
+Major Project under Grant 2025ZD0123601; in part by the National Natural          transform traffic data into image form. They primarily employ
+Science Foundation of China under Grant 62276198, Grant U22A2035,                 a reconstruction-based modeling paradigm [16], [17], [18],
+Grant 62572097, and Grant 62176043; in part by the Natural Science Basic
+Research Program of Shaanxi under Grant 2025JC-YBMS-696; in part by the           which reconstructs normal traffic images using autoencoder
+Innovation Capability Support Plan in Shaanxi Province under Grant 2025ZC-        architectures. These methods rely on a fundamental hypoth-
+KJXX-22; and in part by the 111 Center under Grant B16037. The associate          esis that normal traffic would exhibit significantly better
+editor coordinating the review of this article and approving it for publication
+was Prof. Weizhi Meng. (Corresponding author: Yu Zheng.)                          reconstruction quality than anomalous traffic. As illustrated
+   Xinglin Lian is with the University of Electronic Science and Tech-            in the “Hypothesis” row of Fig. 1, the reconstruction gap
+nology of China, Chengdu 610054, China, and also with the School                  serves as the key criterion for anomaly scoring. In practice,
+of Cyber Engineering, Xidian University, Xi’an 710126, China (e-mail:
+kenshin.lian24@gmail.com).                                                        however, this expectation often fails. Recent studies [16]
+   Yu Zheng and Chunlei Peng are with the School of Cyber Engineering,            report that the actual reconstruction results, exemplified by
+Xidian University, Xi’an 710126, China (e-mail: yuzheng.xidian@gmail.com;         samples from the DataCon2020 dataset [19] shown in the
+clpeng@xidian.edu.cn).
+   Yan Liu is with the University of Electronic Science and Technology of         “Practice” row of Fig. 1, reveal a surprising observation. Both
+China, Chengdu 610054, China (e-mail: Yan.Liu@std.uestc.edu.cn).                  normal and anomalous traffic exhibit similar reconstruction
+   Fan Zhou is with the University of Electronic Science and Technology           quality, making them difficult to distinguish. The root cause
+of China, Chengdu 610054, China, and also with the Key Laboratory of
+Intelligent Digital Media Technology of Sichuan Province, Chengdu 610054,         lies in the intrinsically confused distributions of normal and
+China (e-mail: fan.zhou@uestc.edu.cn).                                            anomalous traffic, with widely used encryption techniques
+   Xinbo Gao is with the State Key Laboratory of Integrated Services              obscuring semantic information of traffic data [16]. Moreover,
+Networks, School of Electronic Engineering, Xidian University, Xi’an 710071,
+China (e-mail: xbgao@mail.xidian.edu.cn).                                         the “identical shortcut” phenomenon in auto-encoder archi-
+   Digital Object Identifier 10.1109/TIFS.2026.3655514                            tectures [13], [20] exacerbates this problem, as the model
+              1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+1274                                                                        IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+
+
+                                                                                   samples [23]. This makes distillation a promising solution
+                                                                                   to mitigate prediction confusion in network traffic anomaly
+                                                                                   detection.
+                                                                                       However, network traffic is typically represented at a flow-
+                                                                                   level unit (i.e., network flow), which encompasses a sequence
+                                                                                   of ordered packets in communication links, with strong contex-
+                                                                                   tual interactions between packets [9], [24]. Existing distillation
+                                                                                   techniques, primarily designed for natural images, often fal-
+                                                                                   ter when applied to the unique characteristics of network
+                                                                                   flow data. These challenges arise from two key aspects:
+Fig. 1. Limitation in existing detection methods. Ideally, a reconstruction        (1) Insufficient Contextual Awareness: Conventional dis-
+model would demonstrate a clear distinction in output quality between normal
+and anomalous network traffic. In practice, however, the reconstructions often     tillation methods struggle to capture the inherent contextual
+lack of differentiation and lead to prediction confusion.                          relationships within network flows, such as inter-packet depen-
+                                                                                   dencies, causing a suboptimal model fitting and unclear bound-
+                                                                                   aries between normal and anomalous flows. (2) Overemphasis
+                                                                                   on Local Anomalies: Current techniques tend to prioritize
+                                                                                   local anomalies, such as localized device failures or medical
+                                                                                   abnormalities [25], which are more applicable to natural
+                                                                                   image domains. However, in the context of network traffic,
+                                                                                   anomalies often manifest at both the packet-level (i.e., intra-
+                                                                                   packet patterns) and flow-level (i.e., inter-packet sequences)
+                                                                                   rather than in localized regions [11].
+                                                                                       To address these limitations, we introduce ConMD, a
+                                                                                   novel Contextual Masking Knowledge Distillation framework.
+                                                                                   Our approach targets two primary objectives: (1) effectively
+                                                                                   modeling contextual information during training, and (2) dis-
+                                                                                   cerning anomalies from a comprehensive perspective during
+Fig. 2. Paradigm discrepancy between reconstruction- and distillation-based        inference. ConMD begins with a fine-tuned teacher net-
+methods. Reconstruction-based anomaly scores rely on a “Confused-to-
+Confused” pipeline, whereas distillation-based methods use a pre-trained
+                                                                                   work that extracts differentiated features for both normal
+teacher to extract representations, confirming differentiated anomaly detection.   and anomalous traffic, facilitating subsequent zero-positive
+                                                                                   modeling and the establishment of robust anomaly metrics.
+tends to converge to shortcut parameters that produce sim-                         We then design a context-aware student network backbone
+ilar reconstructions for both normal and anomalous samples.                        equipped with local-global window attention mechanisms
+Consequently, the model suffers from prediction confusion and                      to capture both intra-packet and inter-packet dependencies
+suboptimal detection results. Although some works strengthen                       within normal network flows. Specifically, local attention
+the representation power of autoencoders to alleviate this                         mechanisms address short-range intra-packet dependencies,
+problem [20], [21], they still operate within the reconstruction                   while global attention mechanisms handle long-range inter-
+paradigm and cannot fundamentally overcome its inherent                            packet dependencies. To enhance contextual distillation, we
+flaws.                                                                             propose a novel context-enhanced packet-level masking strat-
+   Recently, knowledge distillation-based anomaly detection                        egy, which randomly masks packet information based on a
+has emerged as a promising paradigm to address this                                byte-strength rule. During training, the student network is
+issue. By leveraging the refined knowledge extracted from a                        encouraged to restore the masked packets from the unmasked
+powerful pre-trained teacher network, distillation-based meth-                     context, thereby cultivating richer inter-packet dependencies.
+ods aim to provide more discriminative representations that                        Since only normal traffic is available for training, the model
+benefit the zero-positive modeling [22], [23]. Fig. 2 illus-                       effectively learns typical contextual patterns among normal
+trates the core discrepancy between reconstruction-based and                       packets.
+distillation-based paradigms. Based on our previous analy-                             During inference, given the structural characteristics of
+sis, we formally define the reconstruction-based paradigm                          network traffic, ConMD achieves multi-view anomaly scor-
+as a “Confused-to-Confused” pipeline: the reconstruction                           ing by integrating masked and unmasked feature branches.
+model tends to generate confused output as it is driven                            The masked branch emphasizes packet-level anomalies: when
+by an inherently confused reconstruction objective. Conse-                         masked anomalous packets are restored toward a normal state,
+quently, the anomaly scores (i.e., the difference between                          the resulting deviations are amplified, making local anomalies
+input and reconstruction) remain inadequate for accurate                           more visible. In contrast, the unmasked branch, strengthened
+anomaly detection. In contrast, the distillation-based paradigm                    by context-enhanced learning during traini

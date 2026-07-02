@@ -1,0 +1,147 @@
+1290                                              IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+
+
+
+        Ultimate Encrypted Traffic Feature Engineering:
+         HTTPS Encrypted Traffic Classification Using
+            Restored Application Data Unit Length
+         Zihan Chen , Member, IEEE, Guang Cheng , Member, IEEE, Dandan Niu , Student Member, IEEE,
+          Yuyu Zhao , Member, IEEE, Yuyang Zhou , Member, IEEE, and Shanqing Jiang , Member, IEEE
+
+
+   Abstract—Over-the-top (OTT) applications mainly communi-                        According to the Google Transparency Report [2], as of Oc-
+cate through HTTPS, the most famous encryption protocol family                     tober 2023, the percentage of Chrome Web pages that are
+on the Internet. The classification of HTTPS encrypted traffic can                 encrypted has reached 98%, and almost 100% of traffic across
+effectively obtain fine-grained OTT application information for
+network management and cyber security. As the most expressive                      all Google products and services is encrypted. Despite the
+feature, the side-channel length sequence is widely used by current                fact that QUIC (Quick UDP Internet Connections, i.e. HTTP-
+research, especially the packet length sequence. However, these                    3.0) has been embraced by certain applications, HTTP-TLS-
+attempts ignored interferences from protocol piecewise decoupling                  TCP ecosystem still constitutes the mainstream at present.
+and encryption covering, leading to poor performance. Based on                     Encrypted traffic provides users and companies with data se-
+the application layer feature engineering theory, we proposed a
+new metric called Application Data Unit (ADU) length to elimi-                     curity and privacy protection [3]. However, it brings trouble
+nate the interferences. However, ADU length cannot be obtained                     to Internet Service Providers (ISPs) in network management
+directly from packets as the TLS encryption protocol covers the                    (e.g. traffic acceleration), information forensics (e.g., behavior
+entire application layer, which contains an intrusive and variable                 auditing), and cyber security (e.g., intrusion blocking), espe-
+HTTP header. Hence, we designed a Length-Correction Multiple                       cially for Over-the-top (OTT) services and applications. Traf-
+Regression Neural Network (LC-MRNN) algorithm to restore the
+real ADU length sequences accurately. Exhaustive experiments in                    fic encryption makes it difficult to use the traditional Deep
+two scenarios of the real CERNET network show that no matter the                   Packet Inspection (DPI) [4] method based on plaintext. There-
+HTTP-1.1 or HTTP-2.0 protocol, the LC-MRNN model can achieve                       fore, current research on encrypted traffic classification focuses
+significantly accurate ADU length restoration. In classification,                  on HTTPS traffic, which is also the main concern of this
+with the assistance of the LS-LSTM classifier, our method outper-                  paper.
+forms the state-of-the-art methods with about 4.2% improvement
+in F1-score (93.52%).                                                                 To tackle this problem, the academic realm has put forward
+                                                                                   encrypted traffic classification methods [5] to uphold the merits
+   Index Terms—Encrypted traffic classification, application layer                 of timeliness, large-scale processing, transparency, and privacy
+feature engineering, application data unit, length-correction
+multiple regression neural network, HTTPS.
+                                                                                   protection in traffic-side analysis. These methods make use
+                                                                                   of features that are not obscured by encryption to categorize
+                                                                                   or identify the actual kinds of Internet services, applications,
+                            I. INTRODUCTION                                        functions, and malicious intent underlying the current traffic.
+                                                                                   They are capable of offering effective intelligence support for
+     NCRYPTED traffic has become an inevitable trend, led
+E    by the HTTPS (HyperText Transfer Protocol over TLS
+(Transport Layer Security)) encryption protocol family [1].
+                                                                                   currently impaired network management and security. Nonethe-
+                                                                                   less, distinct from natural language and images, encrypted traffic
+                                                                                   is structured sequence data in a non-Euclidean space [6]. Packets
+                                                                                   serve as the fundamental transmission unit, and flows act as
+   Received 14 December 2023; revised 23 September 2025; accepted 25               the atomized service support. As a typical supervised learn-
+September 2025. Date of publication 29 September 2025; date of current version
+14 January 2026. This work was supported by the General Program of the             ing problem, when disregarding data sources, encrypted traffic
+National Natural Science Foundation of China under Grant 62172093, in part by      classification currently confronts two of the most formidable
+the Joint Funds of the National Natural Science Foundation of China under Grant    challenges: (1) In the context of ever-evolving protocols, net-
+U22B2025, in part by the Youth Fund of the National Natural Science Foundation
+of China under Grant 62402101, and in part by the Jiangsu Funding Program for      work environments, and applications, which features should be
+Excellent Postdoctoral Talent under Grant 2024ZB494. (Corresponding author:        employed for classification? (2) Which model is most appropri-
+Guang Cheng.)                                                                      ate for representing these features? At present, the research in
+   Zihan Chen, Dandan Niu, Yuyu Zhao, and Yuyang Zhou are with the School of
+Cyber Science and Engineering, Southeast University, Nanjing 211102, China.        this domain predominantly centers on feature engineering and
+   Guang Cheng and Shanqing Jiang are with the School of Cyber Science             classifier optimization.
+and Engineering, Southeast University, Nanjing 211102, China, and also with           Considering that features establish the upper bound of classifi-
+the Purple Mountain Laboratories, Nanjing 211111, China (e-mail: cheng-
+guang@seu.edu.cn).                                                                 cation performance, while models merely strive to approximate
+   Digital Object Identifier 10.1109/TDSC.2025.3615592                             it, the most critical aspect in the realm of encrypted traffic
+
+
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+CHEN et al.: ULTIMATE ENCRYPTED TRAFFIC FEATURE ENGINEERING: HTTPS ENCRYPTED TRAFFIC CLASSIFICATION                                                    1291
+
+
+
+
+Fig. 1. HTTPS encrypted traffic transmitting protocol stack and source of
+interference.                                                               Fig. 2. Procedures in encrypted traffic classification with the current research
+                                                                            focuses.
+
+analysis persists as feature engineering. Although the accuracy
+upper limit is classifier-dependent [7], the gradual improve-               in Fig. 2 from the perspective of the HTTPS network protocol
+ment of classification accuracy shows that the limit of feature             stack. Based on the Application Layer Feature Engineering
+information disclosure is also gradually increasing. In other               (ALFE) and Application Data Unit (ADU) length sequence
+words, improving classification accuracy, especially the lower              feature proposed earlier [11], we instantiate the concept of ADU
+limit of classification accuracy, requires the input features to            under HTTPS protocol and theoretically prove the superiority
+contain as much information disclosure as possible. At present,             of the ADU length sequence feature under HTTPS encrypted
+feature engineering for encrypted traffic predominantly centers             traffic classification. Furthermore, aiming at the problem that the
+around three categories of features: residual plaintext header              real ADU length is disturbed by TLS encryption and underlying
+features, inter-arrival time distribution features, and length se-          HTTP header with variable length, we study the sources of inter-
+quence features. Regarding generalization capabilities, length              ference, including systematic error and random error. Based on
+sequence features have been empirically demonstrated to exhibit             removing systematic errors, we propose the Length-Correction
+superior performance in the majority of classification scenarios            Multiple Regression Neural Networks (LC-MRNN) algo-
+associated with data behavior [8].                                          rithm for random error reduction to restore the real ADU length
+   However, the current encrypted traffic classification meth-              sequences from the TLS segment length sequences. We further
+ods predominantly utilize packets as the input unit. Only a                 instantiate LC-MRNN with the state-of-the-art LS-LSTM clas-
+limited number of studies have employed Protocol Data Units                 sifier [9] into the LC-MRNN with Application Classification
+(PDUs) of high-level protocols (e.g., TLS) as input units [9],              (LC-MRNN-AC) model in HTTPS scenarios with both the
+[10]. From the perspective of protocol engineering design,                  HTTP-1.1 and HTTP-2.0 application layer protocol. Finally, the
+higher-level protocols are more intricately associated with the             application classification of encrypted traffic with high precision
+application’s behavior, whereas lower-level protocols are more              is realized.
+closely related to the network environment. The encrypted traffic              Our main contributions are summarized as follows:
+classification methods based on the length sequence of packets                  r On the basis of previous work ALFE [11], we have broken
+or TLS segments encounter feature interference resulting from                     through the concept of BBP’s (Bit-Per-Peak) description of
+piecewise decoupling. For instance, in the case of HTTPS, the                     application transmission data under streaming media [12],
+data generated by OTT applications is successively encapsulated                   and innovatively defined the concept of ADU - a new
+and segmented by the HTTP, TLS, TCP, and IP protocols.                            metric of encrypted traffic inputs in the HTTPS scenario
+Consequently, when packets or TLS segment sequences are                           and use the ADU length sequence to classify encrypted
+used as the source for encrypted traffic feature extraction, the                  traffic. By further proposing three new evaluation criteria,
+disclosure of information regarding encrypted traffic features is                 we prove the theoretical advantages of ADU in encrypted
+restricted compared to the original data. This is mainly because                  traffic classification compared with TLS segment and TCP
+the encrypted traffic introduces two instances of segmentation                    packet.
+and one instance of encryption interference, as depicted in Fig. 1.             r We design LC-MRNN, a transformer-based ADU length
+As a result, there is inconsistency between the actual data volume                restoration algorithm, which can accurately restore the
+and the total length of the packets, which causes errors in                       ADU length sequence of HTTPS traffic (both HTTP-1.1
+classification.                                                                   and HTTP-2.0 protocols are included). The restoration of
+   In this paper, we focus on the ultimate encrypted traffic                      ADU length through decoding the application layer seg-
+feature engineering, aiming to classify encrypted traffic using                   mentation semantics becomes the key to breaking through
+the features most relevant to the data transmitted by encrypted                   the bottleneck of classification accuracy for encrypted traf-
+traffic in the protocol stack. The work we have done is shown                     fic - this is precisely the core contribution of this paper.
+1292                                       IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+
+
+                                                                 TABLE I
+                                                    ALL THE ACRONYMS USED IN THIS PAPER
+
+
+
+
+     Moreover, we further instantiate LC-MRNN with our pre-                In the single base model, the most classical CNN was pio-
+     vious work LS-LSTM classifier [9] and A3C system [13]              neered for encrypted traffic classification [15] to take advan-
+     into the LC-MRNN-AC model. It guarantees that the clas-            tage of its end-to-end learning features. And then, MLP [16],
+     sification can be realized effectively and efficiently.            RNN (LSTM) [17], Text-CNN [18], CapsNet [19] are used
+   r We have deepened the open-world scenario and proposed              in encrypted traffic classification to deal with the problem of
+     the concept of the small world and the big world. We then          poor representation of sequential data features by CNN. These
+     collect and publish real-world HTTPS data in the large-            methods use the binary or byte information of the raw packet
+     scale CERNET environment with pure real application                for classification.
+     labels and corresponding decrypted HTTP plaintext data in             However, the automatic feature extraction ability of a single
+     reassembled data form. Experiments conducted in the big            deep learning model is limited, which is manifested in the
+     and small worlds show that LC-MRNN can effectively re-             different attention to the classification accuracy of different cate-
+     store the real ADU length sequence and greatly improve the         gories [20]. Therefore, with the development of semi-supervised
+     classification effect of existing encrypted traffic classifiers.   learning and hardware computing power, some studies tend to
+     LC-MRNN-AC outperforms state-of-the-art methods.                   use multiple deep learning models to classify encrypted traffic
+   The rest of the paper is shown as follows. Section II introduces     to improve the classification effect. The most direct way is the
+the main research directions of existing encrypted traffic from         model overlay. It uses multiple models (usually models with
+two perspectives: classifier and length feature engineering. In         different structures) to make up for 

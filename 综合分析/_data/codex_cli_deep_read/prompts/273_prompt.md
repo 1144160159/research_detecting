@@ -1,0 +1,1451 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [273] One Model to Find Them All Deep Learning for Multivariate Time-Series Anomaly Detection in Mobile Network Data
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：273
+题名：One Model to Find Them All Deep Learning for Multivariate Time-Series Anomaly Detection in Mobile Network Data
+年份：2023
+DOI：10.1109/tnsm.2023.3340146
+来源：IEEE Transactions on Network and Service Management
+PDF：paper/10.1109_TNSM.2023.3340146.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：时序、日志、KPI 与云原生异常检测、入侵检测与网络异常检测
+相关性：中相关，分数 6
+已有代码状态：已下载；DC-VAE -> source\DC-VAE
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\273.txt
+- 原始字符数：74460
+- 本次发送字符数：74460
+- 是否截断：False
+
+代码包：
+- 仓库：DC-VAE
+  - URL：https://github.com/GastonGarciaGonzalez/DC-VAE
+  - 状态：downloaded
+  - 本地目录：source\DC-VAE
+  - 顶层结构：LICENSE、README.md、alpha_definition.py、dc_vae.py、evaluate.py、hyperparam_search.py、requirements.txt、settings/、test.py、train.py、utils.py
+  - 主要语言：Python:7
+  - README 标题：DC-VAE、_One Model to Find them All – Deep Learning for Multivariate Time-Series Anomaly Detection in Mobile、Abstract、Run the code、Open Anaconda Prompt to execute the following lines、Environment、Data、Settings、Training、Alpha definition
+  - README 运行线索：python code used in the experimental part of our work. We welcome any comments or suggestions that help improve the repository.；python >= 3.6；conda Prompt to execute the following lines；conda create --name <env> --file requirements.txt；pip install prts；conda activate <env>；python train.py data_train.csv settings\model_settings.txt；python alpha_definition.py data_train.csv labels_train.csv settings\model_settings.txt
+  - 关键文件：{"依赖环境": ["requirements.txt"], "训练入口": ["train.py"], "评估/测试入口": ["evaluate.py", "test.py"]}
+  - 数据集线索：dapt、ton、tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+1601
+
+One Model to Find Them All Deep Learning for
+Multivariate Time-Series Anomaly Detection
+in Mobile Network Data
+Gastón García González, Sergio Martinez Tagliafico, Alicia Fernández , Member, IEEE, Gabriel Gómez Sena ,
+José Acuña, and Pedro Casas , Member, IEEE
+
+Abstract—Network monitoring data generally consists of hundreds of counters periodically collected in the form of time-series,
+resulting in a complex-to-analyze multivariate time-series (MTS)
+process. Traditional time-series anomaly detection methods target
+univariate time-series analysis, which makes the MTS analysis
+cumbersome and prohibitively complex. We present DC-VAE
+(Dilated Convolutional - Variational Auto Encoder), a novel
+approach to anomaly detection in MTS data, leveraging convolutional neural networks (CNNs) and variational autoencoders
+(VAEs). DC-VAE detects anomalies in MTS data through a single
+model, exploiting temporal information without sacrificing computational and memory resources. In particular, instead of using
+recursive neural networks, large causal filters, or many layers,
+DC-VAE relies on Dilated Convolutions (DC) to capture long
+and short-term phenomena in the data. We evaluate DC-VAE on
+the detection of anomalies in the TELCO TELeCOmmunicationnetworks dataset, a large-scale, multi-dimensional network
+monitoring dataset collected at an operational mobile Internet
+Service Provider (ISP), where anomalous events were manually
+labeled by experts during seven months, at a five-minutes granularity. We benchmark DC-VAE against a broad set of traditional
+time-series anomaly detectors from the signal processing and
+machine learning domains. We also evaluate DC-VAE in open,
+publicly available datasets, comparing its performance against
+other multivariate anomaly detectors based on deep learning
+generative models. Results confirm the advantages of DC-VAE,
+both in terms of MTS data modeling, as well as for anomaly
+detection. For the sake of reproducibility and as an additional
+contribution, we make the TELCO dataset publicly available
+to the community and openly release the code implementing
+DC-VAE.
+Manuscript received 10 March 2023; revised 22 August 2023; accepted
+22 November 2023. Date of publication 6 December 2023; date of current
+version 15 April 2024. This work has been partially supported by the ANIIFMV project with reference FMV-1-2019-1-155850 Anomaly Detection with
+Continual and Streaming Machine Learning on Big Data Telecommunications
+Networks, by the CSIC I+D project with reference 22520220100371UD
+Anomaly Detection in Time Series: Generalization and Domain Change
+Adaptation, by Telefónica, and by the Austrian FFG ICT-of-the-Future project
+DynAISEC – Adaptive AI/ML for Dynamic Cybersecurity Systems – project
+ID 887504. Gastón García González was supported by the ANII scholarship
+POS-FMV-2020-1-1009239, as well as by CSIC, under program Movilidad
+e Intercambios Académicos 2022. The associate editor coordinating the
+review of this article and approving it for publication was N. Stakhanova.
+(Corresponding author: Pedro Casas.)
+Gastón García González, Sergio Martinez Tagliafico, Alicia Fernández,
+and Gabriel Gómez Sena are with IIE–FING, Universidad de la República,
+Montevideo 11300, Uruguay.
+José Acuña is with Telefónica Uruguay, Montevideo 11200, Uruguay,
+and also with IIE–FING, Universidad de la República, Montevideo 11300,
+Uruguay.
+Pedro Casas is with the AIT Austrian Institute of Technology, 1210 Vienna,
+Austria (e-mail: pedro.casas@ait.ac.at).
+Digital Object Identifier 10.1109/TNSM.2023.3340146
+
+Index Terms—Anomaly detection, deep learning, multivariate
+time-series, variational auto encoder, dilated convolution, TELCO
+Open Dataset.
+
+I. I NTRODUCTION
+ETWORK monitoring data often consists of hundreds
+or thousands of variables periodically measured and
+analyzed in the form of time-series, resulting in a complexto-analyze multivariate time-series (MTS) process. Real-time
+anomaly detection in such MTS processes is a key ingredient
+for network management, particularly to detect performance
+degradation and service disruption events that might strongly
+impact end customers or failures impacting the network’s
+health. There is a vast literature on the problem of anomaly
+detection in time-series using traditional statistical models [1],
+[2], [3], [4], [5]; due to the non-stationary, non-linear, and
+high-noise characteristics of network monitoring data, traditional models have difficulty predicting these time-series
+with high precision. Hence, modern approaches to timeseries anomaly detection based on deep learning technology
+have flourished in recent years [6]. Most approaches in
+the literature address the problem by either focusing on
+univariate time-series modeling and analysis – running an
+independent detector for each time-series, or by considering
+multi-dimensional input data with short-term memory analysis,
+to avoid the scalability limitations introduced by very deep
+architectures or the complexities and delays introduced by
+recurrent topologies.
+Despite the broad literature, detecting anomalies in timeseries data through machine-learning remains a highly arduous
+task [1], [6], and it has re-gained strong attention in recent
+years. Some of the ever-present challenges to deal with include
+the lack of labels and the contamination of normal operation
+data with anomalies, the high imbalance between normal
+and anomalous data, and the occurrence of so-called concept
+drifts [7], [8], [9], referring to changes in the underlying
+statistical properties of the analyzed data and prediction
+targets. By definition, anomalies are rare and sporadic-in-time
+events; thus, there is generally little information on them for
+deeper characterization and eventual future detection. This
+lack of insights into anomalies makes it generally difficult to
+employ supervised techniques fingerprinting different anomalous behaviors. On top of this, the characterization of an
+
+N
+
+c 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+1932-4537 
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+1602
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+anomaly is typically bound to a certain time-period, which
+might not necessarily represent what could happen in the
+future. These challenges have led to a rise in the application of unsupervised learning-based approaches to time-series
+anomaly detection. Unsupervised learning certainly copes
+with many flagged challenges, although purely unsupervised
+approaches tend to realize significantly high false-alarm rates.
+The availability of partially labeled anomalies can alleviate
+this problem, enabling weakly-supervised anomaly detection
+approaches [6], to the detriment of inaccurate or imprecise
+ground-truth, which introduces a further challenge for model
+generalization.
+Another challenge we deem relevant is the benchmarking
+of time-series anomaly detection approaches through open
+datasets of questionable quality. Most of the recent papers in
+the topic test on one or more of a handful of popular benchmark datasets, including Yahoo [10], Numenta [11], [12],
+NASA [13], and more. Recent studies [14] have shown
+that these datasets have flaws that make them unsuitable
+for evaluating anomaly detection algorithms, making it even
+harder to assess the goodness of recent contributions in the
+domain.
+In this paper, we conceive a novel approach for MTS
+anomaly detection, tackling many of the aforementioned
+challenges. We introduce DC-VAE, a deep-learning-based,
+unsupervised, and multivariate approach to real-time anomaly
+detection in MTS, based on popular Variational Auto-Encoders
+(VAEs) [15]. VAEs are a generative version of classical
+auto-encoders, with the advantage of producing as output
+prediction not only an expected value but also the associated
+standard deviation, corresponding to the distribution the model
+understands (i.e., has learned) generated the corresponding
+input. This automatically defines a normality region for each
+independent time-series, which can then be easily exploited
+for detecting deviations beyond this region. Using VAEs as an
+underlying approach allows the user to visualize the region of
+normal behavior in an interpretable way, enabling fine-grained,
+per univariate time-series anomaly detection.
+To exploit the temporal dependencies and characteristics
+of time-series data in a fast and efficient manner, we take
+a Dilated Convolutional (DC) Neural Network (NN) as the
+VAE’s encoder and decoder architecture. DCNNs have shown
+excellent performance for processing sequential data in a
+causal manner [16], i.e., without relying on recursive architectures, which are generally less time-efficient and more
+difficult to train (e.g., gradient exploding/vanishing problems). Compared to normal convolutions, dilated convolutions
+improve time-series modeling by increasing the receptive field
+of the neural network, reducing computational and memory
+requirements, and enabling training – and detection – on
+longer-in-the-past temporal sequences.
+The main properties and contributions of DC-VAE can be
+summarized as follows: (i) single model for MTS analysis:
+DC-VAE learns the behavior of the complete MTS process
+within a single model parametrization, avoiding per-timeseries learning and fitting, and further exploiting the richness
+of the multidimensional process; (ii) real-time operation: the
+model architecture is fully causal, and provides instantaneous
+
+predictions for each independent time-series at each new
+time-step, using a sliding window of past measurements;
+(iii) efficient temporal-memory representation: the VAE
+encoder/decoder architecture based on dilated convolutions
+permits to efficiently process temporal sequences of longer
+length, making detection more robust; (iv) self-supervised
+baseline modeling: by conception, auto-encoders are selfsupervised models, because the model trains itself to learn
+the main features of the input from the very same input
+samples, and ground-truth labels are only needed for tighter
+calibration of detection thresholds – nevertheless, in the
+absence of ground-truth, DC-VAE still estimates a normal
+operation region, indirectly providing a detection threshold;
+(v) compact deep-learning architecture: the structure and
+number of layers in DC-VAE’s architecture is defined by a
+single parameter T, representing the length of the temporal
+sliding-window of past measurements used as input; (vi)
+independent, per time-series detection: VAEs provide an
+estimation of the expected value and its associated standard
+deviation for each independent time-series, which provides
+further flexibility and detail to the monitoring process; (vii)
+detection results are visually interpretable: predictions
+provided by DC-VAE define a continual and dynamically
+adapted normality region, independently for each time-series,
+making it visually easy to interpret the occurrence of an
+anomaly.
+We apply DC-VAE to a MTS dataset arising from the monitoring of an operational mobile ISP, detecting anomalies of
+very different structural properties. Referred to as the TELCO
+dataset [17], this large-scale – about 750 thousand samples,
+long time-span – seven months’ worth of measurements
+collected at a five-minutes scale, multi-dimensional – twelve
+different metrics (time-series), network monitoring dataset
+includes ground-truth labels for anomalous events at each
+individual time-series, manually labeled by the experts of the
+network operation center (NOC) managing the mobile ISP. We
+benchmark DC-VAE against a broad set of 18 different timeseries anomaly detectors coming from the signal processing
+and machine learning domains, individually testing on each
+time-series – to keep the scope of the comparative analysis,
+15 of these traditional models are combined into a powerful
+ensemble detector. In addition, we evaluate DC-VAE in an
+open, publicly available dataset commonly used in the literature – the SWaT dataset [18], and compare its performance
+against other MTS anomaly detectors based on deep learning
+generative models, which have become very popular in recent
+years. For the sake of reproducibility and as an additional
+contribution, we make the TELCO dataset publicly available
+to the community, and openly release the DC-VAE’s code
+(https://github.com/GastonGarciaGonzalez/DC-VAE).
+We note that this work is an extension of a recently
+published study [19]; the novel contributions of current
+paper with respect to [19] are as follows: (i) a comprehensive state of the art in the problem of machine learning
+for time-series anomaly detection; (ii) a more elaborated
+presentation of the theoretical foundation behind DC-VAE;
+(iii) a more exhaustive performance benchmarking against
+a much broader set of state-of-the-art detectors, as well as
+
+GARCÍA GONZÁLEZ et al.: ONE MODEL TO FIND THEM ALL DEEP LEARNING FOR MTS
+
+against newer deep-learning-based MTS detectors leveraging
+Generative Adversarial Networks (GANs) [20], [21], [22]; (iv)
+the evaluation of DC-VAE in the open SWaT dataset; (v) a
+deeper analysis of DC-VAE’s operation through controlled
+tests; (vi) the description and release of the TELCO mobile
+ISP dataset.
+The remainder of the paper is organized as follows:
+Section II presents a comprehensive overview of the related
+work. In Section III we describe the DC-VAE model in
+detail. Section IV presents the TELCO mobile ISP dataset
+collected for evaluation, and briefly describes the SWaT
+dataset. Section V reports the results obtained with DCVAE on the detection of anomalies in TELCO, additionally
+benchmarking its performance against other approaches in
+both TELCO and SWaT. Through the testing on synthetic
+anomalies, Section VI presents a deeper analysis of DC-VAE’s
+response when confronted with different temporal and spatial
+behaviors such as concept drifts, multidimensional anomalies,
+and strong outliers. Finally, Section VII concludes the paper.
+II. R ELATED W ORK
+There are multiple surveys on general-domain anomaly
+detection techniques [1], [2], [3] as well as on network
+anomaly detection [4], [5]. The diversity of data characteristics
+and types of anomalies results in a lack of universal anomaly
+detection models. The temporal nature of a very large spectrum
+of data problems has led to a strong development of the
+particular field of time-series anomaly detection [1], [23]. It
+is common to find open libraries implementing the most
+traditional approaches in the literature – a notable example
+we use in this study is the python ADTK open library
+(https://github.com/arundo/adtk/). As noted in [1], most of the
+methods for unsupervised anomaly detection in univariate and
+multivariate time-series consist of predicting an expected value
+based on past information and finding a decision threshold to
+decide whether the prediction matches the observation. The
+automatic and adaptive computation of detection thresholds
+remains an open research problem.
+Modern approaches to time-series anomaly detection based
+on deep learning technology have flourished in recent
+years [6], [24], [25]. Due to their data-driven nature and
+achieved performance in multiple domains, generative models
+such as VAEs [15], and GANs [26] have gained relevance in
+the anomaly detection field [20], [21], [22], [27], [28], [29],
+[30]. VAEs [15], [31], [32] represent a powerful and widelyused class of models to learn complex data distributions.
+Unlike GANs, a potential limitation of VAEs is the prior
+assumption that latent sample representations are independent
+and identically distributed. While this is the most common assumption followed in the literature, there is ongoing
+research on the benefits of accounting for covariances between
+samples in time and between time-series to improve model
+performance [33], [34], [35], [36]. For example, while the
+original work [15] assumes that the prior over the parameters
+and latent variables are centered isotropic Gaussian and the
+true posteriors are approximately Gaussian with approximately
+diagonal covariance, [35] proposes an approximation capturing
+
+1603
+
+temporal correlations, by considering a Gaussian process prior
+in the latent space.
+Modeling data sequences through a combination of variational inference and deep learning architectures has been
+vastly researched in other domains in recent years, mostly
+by extending VAEs to Recurrent Neural Networks (RNNs),
+with architectures such as STORN [37], VRNN [38],
+OmniAnomaly [39], and Bi-LSTM [40] among others.
+Convolutional layers with dilation have also been incorporated into some of these approaches [41], [42], [43],
+allowing to speed up the training process based on the
+possibilities of parallelization offered by these architectures.
+Transformers [44] is another popular architecture recently
+showing great performance in sequential data processing;
+previous work on anomaly detection using transformers and
+VAEs [45] improves training speed as compared to the state of
+the art, additionally outperforming standard baseline methods.
+In particular, the paper improves over [39], considered a reference work in the area. Transformer-based anomaly detection
+in MTS data is indeed a promising research direction.
+Few papers on deep learning-based detectors have addressed
+the problem of real-time detection. In [46], authors consider
+the alert delay in detecting so-called range-anomalies – i.e.,
+contiguous anomaly segments, and evaluate their models based
+both on F 1 scores and on average alert delay. The idea of
+range-anomaly detection is appealing in practice; in real-world
+applications, the operator generally does not care about pointwise anomalies, and it is acceptable for an algorithm to trigger
+an alert for any sample in a contiguous anomaly segment, as
+far as the detection delay is bounded to a certain max-delay
+threshold. The work in [47] generalizes the classic measures
+of Recall, Precision, and F1-score for range-anomalies. We
+consider these extended performance metrics when evaluating
+DC-VAE in TELCO.
+The last topic we overview relates to evaluating and
+benchmarking model performance through in-the-wild data
+time-series, using expert domain knowledge for data labeling. Most proposals in the literature have been analyzed
+on public datasets, such as the well-known Yahoo [10],
+Numenta [11], [12], NASA [13], or others, where operating
+conditions are unrealistic, anomalies might be trivial, and
+labels are poorly assigned in the labeling process [14]. Getting
+access to datasets labeled by domain experts in an operational
+environment is irreplaceable for the realistic evaluation of
+algorithms.
+This work has its origins in our previous paper on generative
+models for network anomaly detection in MTS data [21],
+where we conceived Net-GAN, an architecture based on
+GANs and RNNs, where Long Short-Term Memory networks
+(LSTMs) were employed as both generator and discriminator
+models to capture temporal dependencies in the data.
+III. A NOMALY D ETECTION W ITH DC-VAE
+Sequential data such as time-series is generally processed
+through sliding windows, condensing the information of the
+most recent T measurements. Let us define x as a matrix
+in RM ×T , where M is the number of variables in the MTS
+
+1604
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+distribution P(x), the objective is to model or approximate the
+data’s true distribution P using a parametrized distribution pθ
+with parameters θ. Let z be a random vector jointly-distributed
+with x, representing the latent encoding of x. We can express
+pθ (x ) as:
+
+pθ (x ) =
+pθ (x , z ) d z ,
+(1)
+z
+
+Fig. 1.
+
+Variational autoencoder and the re-parameterization trick.
+
+where pθ (x , z ) represents the joint distribution under pθ of
+the observable data x and its latent representation or encoding
+z. According to the chain rule, the equation can be rewritten as:
+
+pθ (x |z )pθ (z ) d z
+(2)
+pθ (x ) =
+z
+
+Fig. 2. Example of time-series analysis through DC-VAE, for the TELCO
+dataset. The normal-operation region is defined by μx and σx .
+
+process, i.e., defines the dimension of the problem. We also
+define x (t) ∈ RM ×1 as an M-dimensional vector, representing
+the MTS at a certain time t, and xm (t), with m ∈ {1, . . . , M },
+as the value of the m-th time-series at time t.
+As depicted in Figure 1, for a given input x, the trained
+VAE model produces two different predictions, μx and σ x
+– matrices in RM ×T , corresponding to the parametrization
+of the probability distribution which better represents the
+given input. If the VAE model was trained (mainly) with data
+describing the normal behavior of the monitored system, then
+the output for a non-anomalous input would not deviate from
+the mean μx more than a specific integer α times the standard
+deviation σ x . On the contrary, if the input presents an anomaly,
+the output would not belong to the region determined by the
+predicted mean and standard deviation. For reference, Figure 2
+presents the main ideas behind the usage of VAEs for timeseries anomaly detection, in this case portraying the results
+obtained in the analysis of the TELCO dataset, which is fully
+described in Section IV. For each of the displayed time-series
+TSi – the TELCO dataset corresponds to twelve time-series
+TS1 to TS12 , its real value xi , along with the outputs of the
+VAE μxi and σxi , are reported.
+In the VAE model, observations x are assumed to depend
+on a random variable z that comes from a lower-dimensional
+latent space. The objective is to maximize P(x), the probability
+of the observations through the model. Similar to x, z will
+also be a sequence of length T, but with a smaller number
+of dimensions J < M, z ∈ RJ ×T . In formal terms, given
+an input sample x characterized by an unknown probability
+
+In the vanilla VAE, pθ (x |z ) is considered a Gaussian
+distribution, and therefore, pθ (x ) is a mixture of Gaussian
+distributions. The computation of pθ (x ) is very expensive and,
+in most cases, even intractable. To speed up training and make
+it feasible, it is necessary to introduce a further function to
+approximate the posterior distribution pθ (z |x ), in the form of
+qφ (z |x ) ≈ pθ (z |x ). In this way, the overall problem can be
+easily translated into the autoencoder domain, in which the
+conditional likelihood distribution pθ (x |z ) is performed by the
+probabilistic decoder. In contrast, the approximated posterior
+distribution qφ (z |x ) is computed by the probabilistic encoder,
+cf. Figure 1.
+As in every deep-learning problem, it is necessary to define
+a differentiable loss function to update the network weights
+through backpropagation. In VAEs, the idea is to jointly
+optimize the generative model parameters θ to reduce the
+reconstruction error between the input and the output of the
+network and the parameters φ of the approximated posterior
+distribution to have qφ (z |x ) as close as possible to the real
+posterior pθ (z |x ). The Evidence Lower Bound Loss (ELBO)
+loss function is generally considered for this task. In the case
+of VAEs, the ELBO loss function Lθ,φ can be written as
+follows:
+
+
+Lθ,φ = − log(pθ (x )) + DKL qφ (z |x )pθ (z |x )
+
+
+= −Ez ∼qφ (z |x ) [log pθ (x |z )] + DKL qφ (z |x )pθ (z )
+(3)
+where DKL is the Kullback-Leibler divergence, which here
+basically measures the information loss when using q to
+approximate p. To train the autoencoder and make the
+application of backpropagation feasible, a so-called reparameterization trick is generally introduced. The main assumption
+on the latent space is that it can be considered as a set of multivariate Gaussian distributions, and therefore, z ∼ qφ (z |x ) =
+N(μz , σz 2 ). Given a random matrix ε ∼ N(0, I ) and 
+defined as the element-wise product, the reparameterization
+trick permits to explicitly define z = g(μz , σz ) = μz +σz ε.
+Thanks to this transformation, the variational autoencoder is
+trainable. The probabilistic encoder has to learn how to map
+a compressed representation of the input into the two latent
+vectors μz and σz . At the same time, the stochasticity remains
+excluded from the updating process and is injected in the latent
+space as an external input through ε. Under the Gaussian
+
+GARCÍA GONZÁLEZ et al.: ONE MODEL TO FIND THEM ALL DEEP LEARNING FOR MTS
+
+1605
+
+Fig. 3. Using CNNs with causal filters requires large filters or many layers to
+learn from long sequences. Dilated convolutions improve time-series modeling
+by increasing the receptive field of the neural network, reducing computational
+and memory requirements, enabling training on long sequences.
+
+assumption, the ELBO loss function Lθ,φ can be explicitly
+re-written as:
+N
+
+Lθ,φ =
+
+T
+
+
+1
+2×T ×N
+n=1 t=1
+
+ M 
+2
+
+2
+
+xm (t)(n) − μxm (t)(n)
+×
++ log σxm (t)(n)
+
+2
+m=1
+
+−
+
+J
+
+
+σxm (t)(n)
+
+
+
+1 + log σzj (t)(n)
+
+2
+
+
+
+− μzj (t)(n)
+
+Fig. 4. Encoder architecture using causal dilated convolutions, implemented
+through a stack of 1D convolutional layers.
+
+2
+
+j =1
+
+
+
+− σzj (t)(n)
+
+2
+
+(4)
+
+At each iteration, the loss is calculated for a batch of size N;
+recall that m indicates the variable (time-series) in the space
+of x, and j the variable in the space of z, whereas t represents
+the specific time instant.
+To exploit the temporal dimension of the input time-series,
+we proposed an encoder/decoder architecture based on popular
+CNNs, using Dilated Convolutions (DCs) [16]. DC is a
+technique that expands the input by inserting gaps between
+its consecutive samples. In simpler terms, it is the same as
+a normal convolution, but it involves skipping samples so
+as to cover a larger area of the input. Figure 3 explains the
+basic idea behind DCs. The convolutions must be causal,
+so that detection can be implemented in real-time. Because
+such architectures do not have recurrent connections, they
+are often much faster to train than RNNs and do not suffer
+from complex-to-tame gradient exploding/vanishing problems.
+Using DCs instead of standard convolutions has several advantages for real-time analysis: (i) they increase the so-called
+receptive field, meaning that longer-in-the-past information
+can be fed into the detection; (ii) DCs are computationally
+more efficient, as they provide larger coverage at the same
+computation cost; (iii) by using DC, the pooling steps are
+omitted, thus resulting in lesser memory consumption; (iv)
+finally, for the same temporary receptive field, the resulting
+network architecture is much more compact.
+Figure 4 depicts the encoder architecture used in DC-VAE.
+The network architecture must be such that the output values
+depend on all previous input values. The length T of the sliding
+window plays a key role here, as it must ensure that the output
+
+at t depends on the input at that time and at {t − 1, t − 2,
+. . . , t − T + 1}. The simplest way to achieve this is to use
+filters of length F = 2 and DCs with dilatation factor d = F h ,
+which grow exponentially with the layer depth h ∈ [0, H − 1],
+where H is the number of layers of the network. Subsequently,
+H is the minimum value that verifies: T ≤ 2 ∗ F H −1 . In
+the example, the window length is T = 8, and the target
+is achieved by taking H = 3 layers. This direct relationship
+between T and the network architecture has a strong practical
+impact, making it easy to construct the encoder/decoder based
+on the desired temporal-depth of the analysis.
+Note that the dilation process allows doubling T with each
+added layer. Consequently, a large temporal receptive field of
+past measurements can be achieved without further deepening
+the network. The encoder and decoder are symmetric in
+architecture, both in the number of filters and applied dilations.
+In the encoder model, the idea is to reduce or maintain
+layer output dimensions with network depth. The opposite
+for the decoder is increasing or maintaining the dimension
+until reaching the observations’ dimension. In both cases, the
+sequence length T is always maintained.
+Model training is conducted on top of normal-operation data
+to capture the baseline for anomaly detection. Once trained, the
+detection process runs continually, rolling the sliding window
+of length T by a unitary-time step. At each time t, the DC-VAE
+model takes as input the matrix x ∈ RM ×T , constructed out
+of the last T samples observed in the MTS, and produces as
+output matrices μx and σx – for notation brevity, we define
+μ = μx and σ = σx . From these two output matrices,
+the anomaly detection only considers their values at time t,
+corresponding to two vectors μ(t) and σ(t). For each of the
+univariate time-series m, an anomaly is detected at time t if its
+
+1606
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+Fig. 5. Snapshots of the TELCO MTS. For each time-series, the region of normal operation is depicted, as estimated from DC-VAE predictions μx and σ x .
+
+value xm (t) falls outside the normal-operation region, defined
+by μm (t) and σm (t). More precisely, an anomaly in timeseries m is declared at time t if:
+|xm (t) − μm (t)| > αm × σm (t),
+
+(5)
+
+where α = (α1 , . . . , αm , . . . , αM ) is a vector of M detection
+sensitivity threshold, where each αm can be set independently
+for each time-series, allowing for fine-grained, per time-series
+calibration of the detection process.
+Regarding the calibration of α, and despite being DCVAE an unsupervised system, we acknowledge that these
+thresholds are set relying on annotated anomalies. Inevitably
+in any anomaly detection problem, it is necessary to set an
+operating point. This must be set by an expert operator in
+the system, who knows the behavior of the data and the
+cost of false detections, both positive and negative. In all
+sets for anomaly detection, this knowledge is in the labels
+provided by the experts. There are different techniques to
+define thresholds automatically from the data [48], but all are
+applicable for the detection of outliers (i.e., values far from
+normal behavior). In the problem we are dealing with, the
+interest is to detect anomalies which are often difficult to
+differentiate from normal behavior, so the calibration stage
+inevitably must be supervised.
+IV. T HE TELCO M OBILE ISP DATASET
+A. TELCO – A New Open Dataset Released to the
+Community
+A recent study [14] alerts on the limitations of evaluating
+anomaly detection algorithms on popular time-series datasets
+such as Yahoo, Numenta, or NASA, among others.
+In particular, these datasets are noted to suffer from
+known flaws such as trivial anomalies, unrealistic anomaly
+density, mislabeled ground truth, and run-to-failure bias.
+For this reason, we decided to evaluate DC-VAE in a
+proprietary MTS dataset, corresponding to real measurements
+collected at an operation mobile ISP – note that we
+are publicly releasing this dataset to the community
+
+(https://iie.fing.edu.uy/investigacion/grupos/anomalias/en/telcodataset-2/downloads/). The TELCO dataset [17] corresponds
+to twelve different time-series, with a temporal granularity of
+five minutes per sample, collected and manually labeled for a
+period of seven months between January 1 and July 31, 2021.
+This temporal length is seldom available in other publicly
+available datasets of this nature and is highly relevant and
+useful to allow for long-term seasonal behavior analysis.
+Each time-series corresponds to aggregated data from different sources; to keep business confidentiality, we do not
+specify the exact data type reflected by each time-series. The
+twelve time-series are typical data monitored in a mobile ISP,
+including the number and amount of prepaid data transfer fees,
+number and cost of calls, the volume of data traffic, number
+of SMS, and more.
+Figure 5 depicts daily snapshots of the complete TELCO
+MTS. For each time-series, the region of normal operation is
+depicted, as estimated from DC-VAE predictions μx and σ x .
+Different time-series expose different behaviors, e.g., some of
+them are noisier (TS3 ), others have lower dynamic ranges
+(TS11 ), and some others show a smoother evolution (TS2 ).
+To appreciate the strong seasonality component of the timeseries, Figure 6 depicts the TELCO MTS for a period of four
+days, covering weekdays and weekends.
+Table I presents the main details of the dataset. Note in
+particular, how strongly imbalanced the dataset is in terms
+of normal-operation and anomalous samples, which is the
+typical case for real network measurements in operational
+deployments. By definition, anomalies are rare events. We
+split the full dataset in three independent, time-ordered subsets, using measurements from January to March for model
+training, April for model validation, and May to July for
+testing purposes. For the sake of completeness, Table II reports
+normal-operation and anomalous samples per individual timeseries, for the training, validation, and testing sub-sets. The
+share of anomaly samples is low and significantly different
+for some of the time-series, adding richness and complexity
+to the dataset; for example, time series TS1 , TS4 , TS9 , and
+TS10 have a total share of anomaly samples above 2% or 3%.
+
+GARCÍA GONZÁLEZ et al.: ONE MODEL TO FIND THEM ALL DEEP LEARNING FOR MTS
+
+1607
+
+Fig. 6. TELCO dataset time-series, for four days, along with the corresponding DC-VAE estimations. The temporary receptive field – i.e., length of the
+rolling time-window, is T = 512 samples, spanning about two days of past measurements.
+TABLE I
+TELCO DATASET. S EVEN -M ONTHS W ORTH OF M EASUREMENTS ,
+M ANUALLY L ABELED FOR T WELVE D IFFERENT M ETRICS
+
+While the TELCO dataset used in this paper and released to
+the community has a seven-month time span, we acknowledge
+that the complete dataset we have collected has almost two
+years of duration. We have decided to work only on these
+seven months because it corresponds to the data for which
+expert operator annotated labels are available. Although DCVAE trains in a self-supervised fashion, a fair comparison
+with supervised methods as the one we do in the evaluations
+requires that all methods share the same training, validation,
+and test sets.
+Nevertheless, and for the sake of completeness, we investigated the impact on DC-VAE’s baseline modeling performance
+when training with longer time-spans, without labels. Figure 7
+reports the average log-likelihood Ez ∼qφ (z |x ) [ log pθ (x |z )] in
+the reconstruction of TELCO in the testing dataset, using
+different temporal spans for self-supervised model training.
+Interestingly, improvements are rather marginal when considering up to 18 months of training data, suggesting that
+manually labeling a longer time-span for TELCO might not
+actually provide a richer dataset. In any case, we are working
+with the expert annotators to release a newer version of
+TELCO in the near future, covering more than one year of
+labeled time-series.
+B. The SWaT Open Dataset for Cybersecurity Analysis
+While the core of the evaluations and benchmarking is
+conducted on the TELCO dataset, we also evaluate DC-VAE
+
+Fig. 7. Average log-likelihood Ez ∼q (z |x ) [ log pθ (x |z )] in the reconstrucφ
+tion of TELCO in the testing dataset, using different temporal spans (3 to
+18 months) for self-supervised model training.
+
+in the Secure Water Treatment (SWaT) dataset [18], an open,
+publicly available dataset commonly used in the literature for
+cybersecurity analysis. The SWaT dataset consists of 51 timeseries of data collected over eleven days in 2015-2016, on a
+water treatment operational test-bed, which represents a smallscale version of a large modern cyber-physical system. The
+dataset contains two sub-sets temporally split; the first week is
+anomaly free and is considered as the training dataset, whereas
+the last four days of data contain 36 attacks of different
+nature and duration (from a few minutes to an hour), and
+is meant for testing purposes. The total number of anomaly
+samples accounts for about 5.8% of the total measurements.
+As an example of the kind of patterns observed in the
+SWaT MTS, Figure 8 depicts four of the time-series under
+normal operation. Different from TELCO, which represents a
+real operational network and anomaly labels are provided by
+manual inspection on individual time-series, anomaly labels
+in SWaT correspond to temporal ranges in which the attacks
+were executed under a controlled environment.
+We acknowledge that the SWaT dataset is far from
+representing a real cyber-physical system and is not perfect
+as benchmark for anomaly detection, presenting significant
+
+1608
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+TABLE II
+D ISTRIBUTION OF A NOMALY S AMPLES IN THE TELCO DATASET, P ER T IME -S ERIES AND P ER T RAINING , VALIDATION , AND T ESTING S UB -S ETS . T HE
+S HARE OF A NOMALY S AMPLES I S L OW, AND S IGNIFICANTLY D IFFERENT FOR S OME OF THE T IME -S ERIES
+
+Fig. 8.
+
+SWaT – the four time-series represent normal operation. Anomaly labels in SWaT correspond to 36 temporal ranges when attacks were executed.
+
+trivial anomalies and unrealistic anomaly density, as well as
+some mislabeled ground truth and missed anomalies in the
+data (https://mlad.kaspersky.com/swat-testbed/). Nevertheless,
+there are two main reasons for testing DC-VAE in SWaT:
+(i) firstly, despite its deficiencies, the SWaT dataset is widely
+used in the state of the art as benchmark for multivariate
+time-series anomaly detection, and this allows us showing that
+DC-VAE provides similar, or even better performance, than
+other similar systems in a well-known dataset; (ii) secondly,
+using SWaT lets us testing the modeling capabilities of DCVAE in a dataset with a broader variety of variables – 51 time
+series in this case.
+V. DC-VAE E VALUATION AND B ENCHMARKING
+A. DC-VAE Architecture Calibration
+The first step before evaluation of DC-VAE is to calibrate
+the model. As explained in Section III, the length T of the
+sliding window plays a major role in the architecture of DCVAE. Given the usage of the dilated convolutions, T determines
+the number of encoder and decoder layers (cf. Figure 4).
+The dimension J of the latent space is the other relevant
+
+parameter to set; while it must be smaller than the MTS
+dimension M, it must also be big enough to capture the most
+relevant information of the MTS process. We test different
+values for the sequence length T to show how this affects the
+performance of the model. In particular, we test T = 1, 8, 16,
+32, 64, 128, 256, 512, 1024 samples, considering the average
+of the mean absolute error (MAE) between xm and μxm , for
+each time-series m. Sequence length T = 1 corresponds to a
+standard VAE model with only snapshot-like inputs; to avoid
+an excessively compressed model for this sequence length, we
+consider here an architecture with three fully-connected layers.
+Besides the reconstruction MAE, we also compute the socalled explained variance or variance score Varscore , which
+compares the variance of the reconstruction error and the
+variance of the input signal:
+Varscore (x (t), μx (t)) = 1 −
+
+Var(x (t) − μx (t))
+Var(x (t))
+
+(6)
+
+The value of Varscore is between [0, 1], where 1 represents
+the ideal case. Figure 9 reports the (a) MAE and (b) Varscore
+for each sequence length T and corresponding model architecture, in both cases obtained as the average value across all
+
+GARCÍA GONZÁLEZ et al.: ONE MODEL TO FIND THEM ALL DEEP LEARNING FOR MTS
+
+1609
+
+TABLE IV
+T EMPORAL C OMPLEXITY FOR A RCHITECTURE O PTIMIZATION AND
+M ODEL T RAINING (H ARDWARE R EFERENCE : GPU N VIDIA GTX 1060)
+
+Fig. 9. Calibration of DC-VAE in TELCO. T = 512 provides the smallest
+reconstruction error and the highest variance score.
+TABLE III
+G RID OF H YPERPARAMETERS U SED IN THE M ODEL C ALIBRATION
+
+in DC-VAE, as compared to traditional recurrent architectures,
+we created another architecture by replacing all layers with
+RNNs. To search for the hyperparameters, we define another
+grid that includes the previous one, adding the number of
+hidden layers: h = {2, 4}. It is worth remembering that for
+DC-VAE, defining the length of the T sequences automatically
+sets the number of layers, and thus, this value varies between
+[3, 10]. Gated Recurrent Units (GRU) were the type of layer
+used in the RNNs, as they showed the highest convergence
+stability in terms of vanilla RNN and LSTM models.
+Table IV reports the comparative times taken for hyperparameter search and model training for both architectures,
+i.e., DC-VAE and the RNN-based one. Tests are performed
+on standard GPU hardware, using a Nvidia GTX 1060 GPU.
+The fully causal architecture proposed by DC-VAE is more
+compact and can be optimized and trained much faster than
+traditional, recursive architectures. In particular, hyperparameter search takes less than half the time, and model training
+is at least 33% faster.
+B. Anomaly Detection Results in TELCO
+
+the time-series, for the TELCO validation set. Latent space
+dimensions J = 4, and J = 8 are considered in the analysis.
+The MAE varies considerably for the proposed range, with
+T = 512 providing the smallest reconstruction error, almost
+identical for both latent space dimensions. Similarly, for the
+Varscore , T = 512 results in the highest score, for both latent
+space dimensions.
+Another relevant hyperparameter is the number of filters
+f for each hidden convolutional layer, which together with
+the number of layers and the input and output dimensions
+define the size of the architecture in terms of the number
+of trainable parameters. Also, hyperparameters typical of the
+training stage, such as the learning rate γ and the mini-batch
+size m, are key to find the optimal solution. To find the
+best combination of these hyperparameters, we use the Treestructured Parzen Estimator (TPE) approach [49]. In total, 50
+attempts were tested on the grid shown in Table III, where
+the hyperparameters for which the model showed the smallest
+validation loss are reported in the last column.
+The hyperparameter search stage for a deep learning model
+is one of the most important and most expensive steps, since
+it involves training many models until the optimal values
+are found. Therefore, lowering the times of this stage is
+paramount. To evaluate the time gained by using a fully
+parallelizable compact architecture such as the one proposed
+
+We go back to Figure 6 to show DC-VAE in action, using
+a sliding-window of length T = 512 samples. DC-VAE can
+properly track different types of behavior in the time-series,
+including the strong seasonal daily component, but also the
+operation during weekdays and weekends, clearly visible in
+TS2 and TS11 , among others. In this example, time-series
+TS3 and TS9 are noisier than time-series TS5 and TS12 ,
+which justifies the need for different sensitivity thresholds
+αm to address the underlying nature of each monitored
+metric. Note in addition how different periods of time-series
+variability result in more or less tight normal-operation regions
+estimated by DC-VAE, as defined by σ(t). Figure 10 extends
+the predictions of DC-VAE to a longer time-span, considering
+two weeks of measurements, for time-series TS2 and TS11 .
+While both time-series have a strong seasonal component, with
+marked differences in behavior on weekdays and weekends,
+TS11 has a decreasing trend on the second week, which can
+be properly tracked by DC-VAE.
+To apply DC-VAE for anomaly detection, we have to
+calibrate the sensitivity thresholds α, which is usually done
+in a supervised manner, relying on the labeled anomalies
+available in the training and validation datasets. This step is the
+only one that requires a certain level of “supervision” (in the
+sense of ground-truth availability), but could also be done in a
+self-supervised manner, by labeling anomalies through outlier
+detection techniques. In our specific problem, each sensitivity
+threshold αm is calibrated on a per time-series basis, by
+maximizing the F1 score over the training and validation
+
+1610
+
+Fig. 10.
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+DC-VAE operation for time-series with stationary behavior. Weekly seasonality is identified, with variations between weekdays and weekends.
+
+Fig. 11. Examples of real anomalies present in the analyzed dataset, and
+their identification by DC-VAE.
+
+datasets, doing a grid-search of integer values from 1 to 5. In
+a nutshell, we decide how many standard deviations σm shall
+be considered as tolerance for the normal-operation variability
+of the data.
+Figure 11 reports some examples of real (i.e., labeled)
+anomalies present in the TELCO dataset, in particular for timeseries TS2 , TS4 TS6 and TS9 , along with their corresponding
+identification by DC-VAE, where sensitivity thresholds α were
+calibrated as mentioned before. DC-VAE can detect different
+types of anomalies present in the data, of a more transient
+and spiky nature in the case of TS6 and TS9 , or on a more
+structural basis in the case of TS2 and TS4 . Note also how
+some of the actual measurements fall significantly outside the
+normal-operation region – e.g., in Figure 11(c), but still these
+
+were not labeled as anomalous by the expert operator. Whether
+this is a false-positive produced by DC-VAE, or a non-labeled
+anomaly missed by the expert operator is difficult to know.
+It is important to note that anomalies in real, operational
+measurements, as labeled by the expert operator, do not always
+translate into clear outliers in the data; the contrary is also true,
+meaning that typical outliers in the data might not correspond
+to actual anomalies in the eyes of the expert operator. Manual
+data labeling by experts is prone to human error, many times
+due to a lack of conclusive information for the operator to take
+a proper decision. These observations are paramount when
+evaluating anomaly detectors with real, in-the-wild data.
+We run a quantitative performance analysis of DCVAE in the testing dataset (cf. Table I), benchmarking its
+performance against a broad set of more traditional detectors.
+As performance metrics, we consider an elaborated version of
+the traditionally used, per-sample evaluation metrics, to consider a more natural and practical approach for real anomaly
+detection applications, evaluating detection performance in
+the form of anomaly temporal-ranges. Traditional metrics
+can make sense for point anomalies where a true positive
+corresponds to a correct detection at the precise point in
+time. However, as shown for example in Figure 11(b), many
+anomalies occur in the form of multiple, consecutive point
+anomalies, defining an anomaly range. In such scenarios, it
+could be already enough to have a partial overlap between
+the real anomaly range and the predicted anomaly interval
+to consider a correct detection. Previous papers have considered these observations [11], [46], [47], defining new metrics
+which prioritize early or delayed detection, or focusing mainly
+on range anomalies. Therefore, we take the extended definitions of recall and precision as defined in [47] to generalize
+for ranges of anomalies, considering a correct detection if at
+least one of the samples between the start and the end of the
+actual anomaly is flagged by the model. We refer to these
+extended, range-based metrics as Rr , Pr , and F 1r , for recall,
+precision, and F1-score, respectively. More precisely, given a
+set of λ Real Anomaly ranges RA = RA1 . . . RAλ and a set
+of δ Predicted Anomaly ranges PA = PA1 . . . PAδ :
+λ
+j =1 Rr (RAi , PA)
+Rr (RA, PA) =
+(7)
+λ
+δ
+j =1 Pr (RA, PAi )
+Pr (RA, PA) =
+(8)
+δ
+Rr × P r
+F 1r = 2 ×
+(9)
+Rr + P r
+
+GARCÍA GONZÁLEZ et al.: ONE MODEL TO FIND THEM ALL DEEP LEARNING FOR MTS
+
+TABLE V
+S ET OF B ENCHMARK T IME -S ERIES A NOMALY D ETECTORS
+U SED IN TELCO AGAINST DC-VAE
+
+In a nutshell, an intersection between an anomaly interval
+and the whole set of predictions is enough to set Rr (RAi , PA)
+to one. Pr (RA, PAi ) is determined in its dual form. To
+consider the manual labeling uncertainty in the real anomaly
+location [50], we run a preprocessing on the real anomaly
+regions, convolving the series with a rectangular window, to
+obtain better-defined anomaly ranges.
+Table V summarizes the different anomaly detection
+approaches considered in the benchmark against DC-VAE.
+Most of these approaches correspond to univariate detection methods (except S-VAE), largely studied in the signal
+processing domain. A broad set of 15 univariate detectors
+are integrated into a single ensemble detector, referred to as
+ENS-15. The ensemble includes regression models, changepoint detectors, outliers detectors, dimensionality reduction,
+clustering, and more. The aggregation corresponds to a majority voting strategy, where each detector is independently
+calibrated in the training and validation datasets, and a voting
+threshold maximizing F1 validation scores is computed. In
+TELCO, ENS-15 detects an anomaly if at least four ensemble
+models detect it. We also consider well-established time-series
+detectors, such as Seasonal Exponential Smoothing (S-EXPS)
+and the standard Auto-Regressive Integrated Moving Average
+(ARIMA) model. These approaches base the detection on
+the prediction of μx and σx for each time instant, making
+them particularly interesting to compare against DC-VAE. To
+show the advantages of DC-VAE as compared to the usage of
+standard, vanilla VAEs for anomaly detection in time-series,
+we define the Standard-VAE (S-VAE) as a snapshot-inputbased anomaly detection model, where the encoder/decoder
+architecture is based on a standard 3-layers, fully connected
+feed-forward neural network, and the input corresponds to the
+MTS at the specific time of detection – i.e., T = 1 in S-VAE.
+The comparison against S-VAE serves to demonstrate the
+advantages of DC-VAE temporal-aware architecture, through
+the dilated convolutions. Finally, evaluations are reported
+independently for each to the twelve time-series TSm in the
+TELCO dataset.
+
+1611
+
+Table VI reports the corresponding results in the testing
+dataset, independently for each time-series, and as an average
+value. The first observation is that achieved results are in
+general rather poor, achieving F 1r scores around 60% for
+eight out of the twelve time-series, and below for the rest.
+This is highly in contrast with the high F1 scores usually
+reported in the literature, when dealing with simulated or
+flawed datasets [14]. Indeed, as we explained before, dealing
+with in-the-wild measurements and human-labeled, highlyimbalanced datasets is more complex than what the results in
+the literature usually report – real, in practice MTS anomaly
+detection is highly complex. Performance is significantly
+different for some of the time-series, which corresponds to
+the different nature and underlying behavior (cf. Figure 6)
+and the fraction of anomalies (cf. Table II). While DC-VAE’s
+performance as compared to S-VAE is outstanding, results
+show that no single approach is superior to the rest in all the
+time-series. DC-VAE’s performance is similar, on average, to
+S-EXPS and ARIMA. Still, among those already mentioned,
+the main advantage of DC-VAE remains its multivariate operation and the overall MTS modeling within a single learning
+step.
+C. Benchmarking DC-VAE in the SWaT Open Dataset
+For the sake of completeness and to provide a stronger
+and more comprehensive benchmarking, we compare DC-VAE
+against other deep-learning-based MTS anomaly detectors
+in SWaT. As discussed in the related work, GAN-based
+MTS detectors are very popular in the literature, given their
+flexibility to model a complex MTS process without making
+any assumptions on the underlying distributions. GANs are a
+powerful approach to learning the underlying distributions of
+data samples, in a purely data-driven, model-agnostic manner.
+Such models can be used in the practice to construct better
+normal-operation baselines, improving the identification of
+instances that deviate from this baseline. We, therefore, compare DC-VAE against three GAN-based detectors proposed
+in recent years, including EGAN [22], MAD-GAN [20], and
+our previous work on GAN-based MTS anomaly detection,
+referred to as NET-GAN [21].
+To train DC-VAE in SWaT, we take an architecture using
+J = 16 as the dimension of the latent space, and a sequence
+length T = 128, both parameters calibrated in the same way
+we did it in TELCO (cf. Figure 9). We train both DC-VAE and
+NET-GAN in the SWaT training dataset, using a small share of
+samples from the attacks for calibration. Regarding EGAN and
+MAD-GAN, we decided to report here the results obtained by
+the authors in [20], which would generally correspond to the
+best performance which could be achieved by these methods.
+Finally, we also include a standard Auto Encoder (AE) model
+as the simplest approach comparable to DC-VAE.
+Table VII reports the results obtained in the testing dataset
+in terms of recall, precision, and F1 scores. We fall back to
+the standard evaluation on point anomalies instead of range
+anomalies, to be consistent with the results obtained in SWaT
+as reported in the literature. We consider two variations of
+NET-GAN detectors [21], one using the generator function
+
+1612
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+TABLE VI
+A NOMALY D ETECTION P ERFORMANCE B ENCHMARKING IN TELCO, C OMPARING DC-VAE AGAINST S-EXPS, ARIMA, S-VAE, AND AN E NSEMBLE
+OF 15 T RADITIONAL D ETECTORS (ENS-15). F IRST AND S ECOND H IGHEST F 1 S CORES A RE M ARKED IN R ED AND B LUE , R ESPECTIVELY
+
+TABLE VII
+A NOMALY D ETECTION P ERFORMANCE B ENCHMARKING AGAINST
+D EEP -L EARNING G ENERATIVE M ODELS IN SWAT
+
+(NET-GAN-G), and the other one the discriminator function
+(NET-GAN-D). We also consider three different variations
+of MAD-GAN, optimized for best precision (MAD-GANP), recall (MAD-GAN-R), and F1 score (MAD-GAN-F1).
+DC-VAE results are comparable to those obtained with NETGAN-G and MAD-GAN-F1, and significantly better than
+EGAN or the AE model. In addition, absolute results are
+also significantly better than those obtained in TELCO,
+helping us demonstrate that anomaly detection in real data
+as the one in TELCO, dealing with the error-prone process of human labeling, is much more complex than what
+the literature usually reports on such benchmarks. To sumup, we can claim that DC-VAE realizes state-of-the-art
+detection performance, while again, flagging its underlying
+advantages.
+VI. T EMPORAL AND S PATIAL R ESPONSE OF DC-VAE
+The visual exploration of DC-VAE predictions and detections in TELCO revealed certain behaviors of the model
+when confronted with different temporal and/or spatial patterns
+which are worth studying. In particular, the impact of the
+sequence length T on the reaction of the model to certain
+phenomena is relevant. Next, we present different prototypical
+
+Fig. 12. A strong outlier in TS11 results in poor prediction for TS4 , with
+sequence length T = 32. This effect is mitigated with longer lengths T.
+
+examples of simulated anomalies and their impact on DC-VAE
+predictions, using S-VAE and the ARIMA models for comparison, when applicable.
+
+GARCÍA GONZÁLEZ et al.: ONE MODEL TO FIND THEM ALL DEEP LEARNING FOR MTS
+
+1613
+
+Fig. 13. S-VAE and DC-VAE response to univariate and multivariate anomalies. The simultaneous modeling of the full MTS process adds regularity and
+stability to the detection.
+
+Fig. 14. DC-VAE and ARIMA response to range and point anomalies. The lower image is always a close-up view of the upper one. Being univariate and
+with a small temporal window makes ARIMA less robust for MTS anomaly detection, and missing anomalies.
+
+1) Impact of Strong Outliers: the processing of the complete MTS simultaneously has evidenced, and in particular
+for simpler versions of the model with shorter sequence
+lengths T, that coarse outliers affecting a single time-series
+can affect the predictions for other time-series, generating
+false detections. Figure 12 shows how a major outlier in
+TS11 strongly perturbates predictions for TS4 , especially for
+sequence length below 32 in this example. This effect can be
+partially mitigated by taking longer sequences at the input. As
+a lesson learned, using longer sequences improves the filtering
+of strong outliers from the data.
+2) Multivariate Model Properties: besides being more
+scalable in production, having a single model for the analysis
+of the complete MTS also improves detection. Figure 13(a)
+shows S-VAE model predictions for two highly correlated
+time-series, TS1 and TS2 . An artificial univariate anomaly
+in TS1 , emulating a period where the time-series is constant
+(e.g., no incoming measurements), has a contained impact
+on the rest of the time-series predictions, as reflected in the
+predictions of μx and σ x for TS2 . As the S-VAE model has no
+temporal information (i.e., T = 1), predictions are influenced
+by the fact that the rest of the time-series remained unchanged.
+Nevertheless, in this example, the anomaly introduced in TS1
+would be clearly detected.
+3) Temporal Model Properties: we now apply the previous
+anomaly to all the time-series in the same period and
+verify how the VAE-based models exploit temporal correlations among time-series. Figure 13(b) shows that this time,
+the S-VAE model predictions perfectly follow the anomaly,
+
+making it go completely undetected. The result is totally different for DC-VAE; as shown in Figure 13(c), the predictions
+of a DC-VAE model with a sequence length of T = 512 tend to
+follow the past behavior, and take longer to track the anomaly
+pattern, effectively detecting it.
+Similar to DC-VAE, the ARIMA detection model enables
+the visualization of the normal-operation region. However,
+as we show in Figure 14, being univariate and with a small
+temporal window makes ARIMA less robust for MTS anomaly
+detection. In the figure, model predictions are depicted in
+green for ARIMA and in orange for DC-VAE, and red dots
+indicate real (i.e., labeled) anomalies. Figures 14(a) and 14(b)
+show that the value of σx for the ARIMA model is constant
+over time, but dynamically adapts in DC-VAE, providing a
+better, more accurate normal-operation region. This is a strong
+advantage of DC-VAE, since it adapts to the noise variations
+that these time-series generally present.
+The same happens to the estimations of μx . While the
+estimation of the signal through the ARIMA model closely follows the time-series, even in the occurrence of real anomalies
+– and thus the model misses detection, the estimation provided
+by DC-VAE maintains a normal behavior in the face of the
+anomalies, allowing to properly detect them. The bigger spatial
+(M) and temporal (T) ranges of DC-VAE add robustness to the
+anomaly detection process.
+4) Concept Drift Response: the ability to detect Concept
+Drift (CD) in time-series data is a paramount property [8].
+The CD can manifest itself as a shift in the mean, an increase
+or decrease in the variance, or both changes simultaneously,
+
+1614
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+Fig. 15. DC-VAE response to univariate concept-drift: a gradual linear fall of the values during the day without affecting night behavior. While the drift
+does not affect the predictions on the other time-series, it becomes easily detectable at the corresponding time-series.
+
+which may be imperceptible for many methods [9]. These
+CD changes may be related to important trends in the data,
+requiring proper detection. We simulate a univariate CD in
+one of the time-series, and check the outputs of DC-VAE.
+Figure 15 shows an example of CD, where a gradual change in
+the interval indicated as the CD zone is simulated in TS5 . The
+daily values of the time-series are reduced linearly, starting at
+80% (beginning of the CD zone) up to 40% (end of the CD
+zone). This change does not only affect the mean value of
+the time-series, but also its variance. Interestingly, predictions
+of the DC-VAE follow the past behavior learned as normal,
+allowing the CD event to be detected.
+VII. C ONCLUDING R EMARKS
+DC-VAE is a novel approach to anomaly detection in
+multivariate time-series, leveraging dilated convolutional neural networks and variational autoencoders. DC-VAE detects
+anomalies in multivariate time-series, exploiting temporal
+information without sacrificing computational and memory
+resources. In particular, instead of using recursive neural
+networks, large causal filters, or many layers, DC-VAE relies
+on dilated convolutions to capture long and short-term phenomena in the data, avoiding complex and less-efficient deep
+architectures, simplifying learning. Applying DC-VAE to real
+measurements collected at a mobile ISP showed that its
+underlying architecture is better than traditional, vanilla VAEs
+regarding time-series anomaly detection. The parameterization
+of DC-VAE’s architecture is defined by a single parameter,
+namely the length of the sliding window used for temporal
+analysis, and the normal operation region can be easily adapted
+on a per time-series basis by adjusting a single integer value,
+all of these important advantages in practice.
+The performance analysis shows that DC-VAE has good
+properties for its implementation in production: scalability,
+
+easy adjustment of the normal-operation region, robustness
+against anomalies in other time-series, as well as against
+concept drift, which can also be detected. The application
+of DC-VAE in the TELCO and SWaT datasets shows the
+complementarity with other detection methods and the onpar performance with state-of-the-art MTS anomaly detectors
+in the literature. The quantitative and qualitative advantages
+of DC-VAE concerning S-VAE evidenced the contribution
+of the convolutional layers in capturing a longer time
+horizon.
+The open release of the TELCO dataset offers a real,
+more representative environment to assess and benchmark
+anomaly detectors, providing a solid contribution to advance
+the domain.
+ACKNOWLEDGMENT
+The authors thank anonymous reviewers as well as associate
+editors for their constructive feedback and comments, which
+helped improving our work.
+R EFERENCES
+[1] A. Blázquez-García, A. Conde, U. Mori, and J. A. Lozano, “A review
+on outlier/anomaly detection in time series data,” ACM Comput. Surv.,
+vol. 54, no. 3, pp. 1–33, Apr. 2021. [Online]. Available: https://doi.org/
+10.1145/3444690
+[2] M. Gupta, J. Gao, C. Aggarwal, and J. Han, Outlier Detection for
+Temporal Data (Synthesis Lectures Data Mining Knowledge Discovery),
+vol. 5. Cham, Switzerland: Springer, 2014, pp. 1–129.
+[3] V. Chandola, A. Banerjee, and V. Kumar, “Anomaly detection: A survey,”
+ACM Comput. Surv., vol. 41, no. 3, pp. 1–58, Jul. 2009. [Online].
+Available: https://doi.org/10.1145/1541880.1541882
+[4] M. Ahmed, A. N. Mahmood, and J. Hu, “A survey of network anomaly
+detection techniques,” J. Netw. Comput. Appl., vol. 60, pp. 19–31,
+Jan. 2016.
+[5] W. Zhang, Q. Yang, and Y. Geng, “A survey of anomaly detection
+methods in networks,” in Proc. Int. Symp. Comput. Netw. Multimedia
+Technol., 2009, pp. 1–3.
+
+GARCÍA GONZÁLEZ et al.: ONE MODEL TO FIND THEM ALL DEEP LEARNING FOR MTS
+
+[6] G. Pang, C. Shen, L. Cao, and A. V. D. Hengel, “Deep learning
+for anomaly detection: A review,” ACM Comput. Surv., vol. 54,
+no. 2, pp. 1–38, Mar. 2021. [Online]. Available: https://doi.org/10.1145/
+3439950
+[7] T. Hoens, R. Polikar, and N. Chawla, “Learning from streaming data
+with concept drift and imbalance: An overview,” Prog. Artif. Intell.,
+2012, pp. 89–101.
+[8] J. Gama, I. Žliobaitundefined, A. Bifet, M. Pechenizkiy, and
+A. Bouchachia, “A survey on concept drift adaptation,” Assoc. Comput.
+Machinery, vol. 46, no. 4, pp. 1–37, 2014.
+[9] G. H. F. M. Oliveira, R. C. Cavalcante, G. G. Cabral, L. L. Minku, and
+A. L. I. Oliveira, “Time series forecasting in the presence of concept
+drift: A PSO-based approach,” in Proc. IEEE 29th Int. Conf. Tools Artif.
+Intell. (ICTAI), 2017, pp. 239–246.
+[10] N. Laptev, S. Amizadeh, and Y. Billawala, 2015, “S5—A labeled
+anomaly detection dataset,” Dataset, yahoo. [Online]. Available:
+https://webscope.sandbox.yahoo.com/catalog.php?datatypeWebscope |
+Yahoo Labs
+[11] A. Lavin and S. Ahmad, “Evaluating real-time anomaly detection
+algorithms–The Numenta anomaly benchmark,” in Proc. IEEE 14th Int.
+Conf. Mach. Learn. Appl. (ICMLA), 2015, pp. 38–44.
+[12] S. Ahmad, A. Lavin, S. Purdy, and Z. Agha, “Unsupervised realtime anomaly detection for streaming data,” Neurocomputing, vol. 262,
+pp. 134–147, Nov. 2017.
+[13] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and
+T. Soderstrom, “Detecting spacecraft anomalies using LSTMs and nonparametric dynamic thresholding,” in Proc. 24th ACM SIGKDD Int.
+Conf. Knowl. Discovery Data Mining, 2018, pp. 387–395.
+[14] R. Wu and E. Keogh, “Current time series anomaly detection benchmarks are flawed and are creating the illusion of progress,” IEEE Trans.
+Knowl. Data Eng., vol. 35, no. 3, pp. 2421–2429, Mar. 2023.
+[15] D. P. Kingma and M. Welling, “Auto-encoding variational
+Bayes,” 2013, arXiv:1312.6114.
+[16] A. v. d. Oord et al., “Wavenet: A generative model for raw
+audio,” 2016, arXiv:1609.03499.
+[17] G. García González, S. Martínez Tagliafico, A. Fernández, G. Gómez,
+J. Acuña, and P. Casas, 2023, “TELCO—A new multivariate timeseries dataset for anomaly detection in mobile networks,” Dataset, IEEE
+DataPort. [Online]. Available: https://dx.doi.org/10.21227/skpg-0539
+[18] A. P. Mathur and N. O. Tippenhauer, “SWaT: A water treatment testbed
+for research and training on ICS security,” in Proc. IEEE Int. Workshop
+Cyber-Physical Syst. Smart Water Netw. (CySWater), 2016, pp. 31–36.
+[19] G. G. González, S. M. Tagliafico, A. F. Iie-Fing, G. Gómez, J. Acuña,
+and P. Casas, “DC-VAE, fine-grained anomaly detection in multivariate time-series with dilated convolutions and variational auto
+encoders,” in Proc. 7th Workshop Traffic Meas. Cybersecurity (WTMC),
+2022, pp. 1–6.
+[20] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, and S.-K. Ng, “MAD-GAN:
+Multivariate anomaly detection for time series data with generative
+adversarial networks,” in Proc. Int. Conf. Artif. Neural Netw., 2019,
+pp. 703–716.
+[21] G. G. González, P. Casas, A. Fernández, and G. Gómez, “On
+the usage of generative models for network anomaly detection in
+multivariate time-series,” SIGMETRICS Perform. Eval. Rev., vol. 48,
+no. 4, pp. 49–52, May 2021. [Online]. Available: https://doi.org/10.1145/
+3466826.3466843
+[22] H. Zenati, C. S. Foo, B. Lecouat, G. Manek, and
+V. R. Chandrasekhar, “Efficient GAN-based anomaly detection,” 2018,
+arXiv:1802.06222.
+[23] M. Braei and S. Wagner, “Anomaly detection in univariate time-series:
+A survey on the state-of-the-art,” 2020, arXiv: 2004.00433.
+[24] D. Bäßler, T. Kortus, and G. Güehring, “Unsupervised anomaly detection
+in multivariate time series with online evolving spiking neural networks,”
+Mach. Learn., vol. 111, pp. 1377–1408, Mar. 2022.
+[25] K. Choi, J. Yi, C. Park, and S. Yoon, “Deep learning for anomaly
+detection in time-series data: Review, analysis, and guidelines,” IEEE
+Access, vol. 9, pp. 120043–120065, 2021.
+[26] I. Goodfellow et al., “Generative adversarial nets,” in Proc. Adv. Neural
+Inf. Process. Syst., 2014, pp. 1–9.
+[27] S. Zavrak and M. Iskefiyeli, “Anomaly-based intrusion detection from
+network flow features using variational autoencoder,” IEEE Access,
+vol. 8, pp. 108346–108358, 2020.
+[28] R.-Q. Chen, G.-H. Shi, W.-H. Zhao, and C.-H. Liang, “A joint model for
+IT operation series prediction and anomaly detection,” Neurocomputing,
+vol. 448, pp. 130–139, Aug. 2021.
+[29] J. Donahue, P. Krähenbühl, and T. Darrell, “Adversarial feature learning,” 2016, arXiv:1605.09782.
+
+1615
+
+[30] A. Geiger, D. Liu, S. Alnegheimish, A. Cuesta-Infante, and
+K. Veeramachaneni, “TadGAN: Time series anomaly detection using
+generative adversarial networks,” in Proc. IEEE Int. Conf. Big Data (Big
+Data), 2020, pp. 33–43.
+[31] C. Doersch, “Tutorial on variational autoencoders,” 2016,
+arXiv:1606.05908.
+[32] D. P. Kingma and M. Welling, “An introduction to variational autoencoders,” 2019, arXiv:1906.02691.
+[33] F. P. Casale, A. V. Dalca, L. Saglietti, J. Listgarten, and
+N. Fusi, “Gaussian process prior variational autoencoders,” in Proc. Adv.
+Neural Inf. Process. Syst., 2018, pp. 10390–10401.
+[34] L. Girin, F. Roche, T. Hueber, and S. Leglaive, “Notes on the
+use of variational autoencoders for speech and audio spectrogram
+modeling,” in Proc. 22nd Int. Conf. Digit. Audio Effects (DAFx), 2019,
+pp. 1–8.
+[35] V. Fortuin, D. Baranchuk, G. Rätsch, and S. Mandt, “GP-VAE: Deep
+probabilistic time series imputation,” in Proc. Int. Conf. Artif. Intell.
+Statist., 2020, pp. 1651–1661.
+[36] S. Ramchandran, G. Tikhonov, K. Kujanpää, M. Koskinen, and
+H. Lähdesmäki, “Longitudinal variational autoencoder,” in Proc. Int.
+Conf. Artif. Intell. Statist., 2021, pp. 3898–3906.
+[37] J. Bayer and C. Osendorfer, “Learning stochastic recurrent
+networks,” 2014, arXiv:1411.7610.
+[38] J. Chung, K. Kastner, L. Dinh, K. Goel, A. C. Courville,
+and Y. Bengio, “A recurrent latent variable model for sequential
+data,” in Proc. Adv. Neural Inf. Process. Syst., vol. 28, 2015, pp. 1-9.
+[39] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+detection for multivariate time series through stochastic recurrent neural
+network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discovery Data
+Mining, 2019, pp. 2828–2837.
+[40] S. Shabanian, D. Arpit, A. Trischler, and Y. Bengio, “Variational biLSTMs,” 2017, arXiv:1711.05717.
+[41] Z. Yang, Z. Hu, R. Salakhutdinov, and T. Berg-Kirkpatrick, “Improved
+variational autoencoders for text modeling using dilated convolutions,” in Proc. Int. Conf. Mach. Learn., 2017, pp. 3881–3890.
+[42] G. Lai, B. Li, G. Zheng, and Y. Yang, “Stochastic wavenet: A generative
+latent variable model for sequential data,” 2018, arXiv:1806.06116.
+[43] C. Meng, X. S. Jiang, X. M. Wei, and T. Wei, “A time convolutional
+network based outlier detection for multidimensional time series in
+Cyber-physical-social systems,” IEEE Access, vol. 8, pp. 74933–74942,
+2020.
+[44] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+Process. Syst., 2017, pp. 1–11.
+[45] H. Zhang, Y. Xia, T. Yan, and G. Liu, “Unsupervised anomaly detection in multivariate time series through transformer-based variational
+autoencoder,” in Proc. 33rd Chin. Control Decis. Conf. (CCDC), 2021,
+pp. 281–286.
+[46] H. Xu et al., “Unsupervised anomaly detection via variational autoencoder for seasonal KPIs in Web applications,” in Proc. 2018 World
+Wide Web Conf., 2018, pp. 187–196.
+[47] N. Tatbul, T. J. Lee, S. Zdonik, M. Alam, and J. Gottschlich, “Precision
+and recall for time series,” in Proc. 32nd Conf. Neural Inf. Process. Syst.
+(NeurIPS), 2018, pp. 1–11.
+[48] J. Beirlant, Y. Goegebeur, J. Segers, and J. Teugels, Statistics of
+Extremes: Theory and Applications, vol. 558. Hoboken, NJ, USA: Wiley,
+2004.
+[49] J. Bergstra, R. Bardenet, Y. Bengio, and B. Kégl, “Algorithms for hyperparameter optimization,” in Proc. Adv. Neural Inf. Process. Syst., 2011,
+pp. 2546–2554.
+[50] A. Shahid, G. White, J. Diuwe, A. Agapitos, and O. O’Brien, “SLMAD:
+Statistical learning-based metric anomaly detection,” in Proc. Int. Conf.
+Service-Oriented Comput., 2020, pp. 252–263.
+
+Gastón García González received the B.Sc. and
+M.Sc. degrees from the Universidad de la República,
+Uruguay, in 2018 and 2020, respectively. He is
+currently pursuing the Ph.D. degree with the Signal
+Processing Department, Electrical Engineering
+Institute, Universidad de la República, where he
+holds a position as a Teaching Assistant/Lecturer.
+His main research areas include signal processing,
+anomaly detection, and machine learning.
+
+1616
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+Sergio Martinez Tagliafico received the degree
+in electrical engineering and the Specialization
+Diploma degree in telecommunications from the
+Universidad de la República, Uruguay, in 2012
+and 2013, respectively, where he is an Assistant
+Professor with the Engineering Faculty, working on
+signal processing and data science.
+
+Alicia Fernández (Member, IEEE) is a Professor
+of Signal Processing with the Electrical Engineering
+Institute, Universidad de la República, Uruguay.
+Since 1989, she has been working with IIE, in
+telecommunication and signal processing areas. Her
+main research interests are signal processing and
+pattern recognition with focus in biomedical image
+analysis, biometric identification, anomaly detection,
+and big data analysis.
+
+Gabriel Gómez Sena received the degree in industrial engineering (speciality electronics) in December
+1987, and the M.Sc. degree in electrical engineering
+from the Universidad de la República, Uruguay, in
+2011, with a thesis concerning statistical methods
+for traffic classification, where he is an Associate
+Professor with Engineering School. His current
+research interests are related to networking protocols, software defined networking, and anomaly
+detection in telecommunication networks.
+
+José Acuña received the degree in electrical engineering in July 1994, and the Ph.D. degree in signal
+theory and communications from the Universidad de
+Vigo, Spain, in 2013, with a thesis concerning efficiency of OFDM systems on urban radio channels.
+He is an Assistant Professor with the Engineering
+Faculty, Universidad de la República, Uruguay. He
+is also a Network and IT Operations Manager with
+Telefonica Uruguay. His current research interests
+are related to telecommunication networks and
+anomaly detection.
+
+Pedro Casas (Member, IEEE) received the degree
+in electrical engineering from the Universidad de la
+República, Uruguay, in 2005, and the Ph.D. degree
+in computer science from Télécom Bretagne in
+2010. He is currently a Senior Scientist in AI/ML
+for Networking with the AIT Austrian Institute
+of Technology, Vienna. He was a Postdoctoral
+Researcher with LAAS-CNRS, Toulouse, from
+2010 to 2011 and a Senior Researcher with the
+Telecommunications Research Center Vienna from
+2011 to 2015. He has published more than 200
+networking research papers in major international conferences and journals,
+and received 17 awards for his work, including eight Best Paper Awards. His
+work focuses on machine learning-based approaches for networking, big data
+analytics and platforms, Internet network measurements, network security, and
+anomaly detection, as well as Internet QoE monitoring. He is the General
+Chair for different actions in network measurement and analysis, including
+the IEEE ComSoc ITC Special Interest Group on Network Measurements and
+Analytics.
+PAPER_TEXT

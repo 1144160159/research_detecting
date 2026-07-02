@@ -1,0 +1,143 @@
+           IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 2, FEBRUARY 2024                                                       2263
+
+
+
+
+     TMANomaly: Time-Series Mutual Adversarial
+      Networks for Industrial Anomaly Detection
+               Lianming Zhang , Wenji Bai , Xiaowei Xie , Liying Chen , and Pingping Dong
+
+
+   Abstract—Large-scale sewage treatment plants are one                      huge amounts of high-dimensional and complex data on a daily
+of the typical Industrial Internet of Things systems, where                  basis, but they also have to bear some risk [1]. It has become
+the presence of a large number of sensors generates mas-                     particularly important to secure the critical infrastructure of such
+sive dynamic time series data, and such multivariate time
+series data are usually time-dependent and random. There-                    IIoT systems against attacks. However, with the large increase
+fore, there is a certain risk when fitting the potential anoma-              in data dimensions, it is difficult for monitors to immediately
+lies of real-world data, which will bring great challenges to                detect anomalies, which leads to an increased need for automated
+anomaly detection. In this article, we propose a time-series                 anomaly detection methods.
+mutual adversarial network (TMAN), a novel reconstruction                       Therefore, anomaly detection of industrial time series data is
+model for anomaly detection on multivariate time series. It
+is based on the idea of adversarial learning and consists                    gradually becoming a hot issue in the field of IIoT. Anomalies
+of two identical subnetworks. During the training process,                   generally refer to values or behaviors that do not conform to
+two subnetworks can independently complete the learning                      the expected pattern. Anomaly detection is the identification of
+of the time distribution of normal samples of industrial                     anomalies, that is, the detection of anomalous samples that differ
+time series data for mutual adversarial. In the process of                   significantly from other observations [2]. Anomaly detection is
+detecting, we obtain the residual values of TMAN recon-
+structed for different time series samples to discriminate                   usually an unsupervised machine learning task due to the lack of
+anomalies. We combine TMAN and anomaly determination                         inherently labeled data. Most existing unsupervised methods are
+mechanisms to build a new industrial time series anomaly                     mostly based on linear approaches [3], and there is less modeling
+detection framework named TMANomaly. In addition, we                         of nonlinear time series data.
+select the dataset features with a grey correlation algorithm                   In recent years, with the development of deep learning tech-
+to achieve very high performance with a small number
+of features. Experimental results show that our proposed                     nology, time series anomaly detection methods have made im-
+TMANomaly outperforms five popular anomaly detection                         provements. In general, existing methods can be roughly divided
+methods and effectively improves the accuracy of industrial                  into two categories: forecasting-based methods [4], [5], where
+multivariate time series anomaly detection.                                  researchers usually predict future normal conditions based on
+   Index Terms—Anomaly detection, generative adversarial                     historical data, then calculate the residuals between the ac-
+networks (GANs), mutlivariate time series, mutual adversar-                  tual and predicted data, and determine anomalies based on
+ial networks.                                                                the relative magnitude of the residuals. Reconstruction-based
+                                                                             methods [6], [7], [8], as [7], are classical reconstruction-based
+                          I. INTRODUCTION                                    anomaly detection methods, which determine the presence of
+                                                                             anomalies by autoencoder (AE) reconstruction errors. Such
+        ITH the vigorous development of the Industrial Internet
+W       of Things (IIoT), many industrial systems and data
+centers have installed a large number of sensors to get a large
+                                                                             methods aim to learn the low-dimensional feature representation
+                                                                             space of a sample and be able to better reconstruct a particular
+                                                                             data sample on that space. Reconstruction methods in anomaly
+amount of monitoring data. For such systems with a large                     detection usually minimize reconstruction errors by forcing the
+number of interconnected sensors, as in water treatment plants,              feature representation to learn the significant laws of the data.
+power grids, etc., not only are they under pressure to handle                Anomalous samples are difficult to reconstruct anomalies from
+                                                                             the resulting laws and therefore have large reconstruction errors.
+    Manuscript received 2 January 2023; revised 20 May 2023; accepted
+13 June 2023. Date of publication 27 June 2023; date of current version         With the further optimization and iteration of the deep learn-
+19 January 2024. This work was supported in part by the Hunan Provin-        ing model framework, Goodfellow et al. [9] proposed the gener-
+cial Natural Science Foundation of China under Grant 2022JJ30398,            ative adversarial network (GAN), which was originally used to
+Grant 2022JJ40277, and Grant 2021JJ30455 and in part by the Scien-
+tific Research Fund of Hunan Provincial Education Department under           generate image data by gaming the generator and discriminator
+Grant 22A0056 and Grant 22B0102. Paper no. TII-23-0015. (Corre-              against each other to learn the features of the training image
+sponding author: Pingping Dong.)                                             to generate samples similar to the training image. GAN is
+    The authors are with the College of Information Science and
+Engineering, Hunan Normal University, Changsha 410081, China                 one of the most promising deep learning models today and is
+(e-mail: zlm@hunnu.edu.cn; oreoB1024@hunnu.edu.cn; xiexiaowei@               widely used in different fields. The application of GAN in the
+hunnu.edu.cn; lychen@hunnu.edu.cn; ppdong@hunnu.edu.cn).                     direction of anomaly detection [10], [11]. These works have
+    Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TII.2023.3288226.                                    proved that GAN has good performance in the detection of point
+    Digital Object Identifier 10.1109/TII.2023.3288226                       anomalies, but there are still few works on GAN applied to
+
+                  1551-3203 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                See https://www.ieee.org/publications/rights/index.html for more information.
+2264                                                        IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 2, FEBRUARY 2024
+
+
+
+multidimensional and dynamic time series. Moreover, these             detection methods are able to deal with multiple time dependent
+methods do not explain clearly the highly nonlinear time depen-       variables simultaneously. Nowadays, most research involves
+dence and complex interactions between variables, nor do they         univariate models, and in the traditional anomaly detection
+efficiently extract temporal information from industrial time         framework, anomaly detection is divided into an estimation
+series data, and they still have room for improvement. Also, as       phase, where a specific method is used to predict the value of
+labeling data in an automated industrial production environment       a time-stamped variable, and then this value is compared to a
+requires a degree of labor cost, it is significant how a small        threshold value to detect anomalies. Such as the autoregressive
+amount of data are used to improve model performance.                 integrated moving average (ARIMA) model [12] was to cap-
+   To address the abovementioned challenges, we propose a new         ture the linear relationship between future and historical values
+multivariate time series anomaly detection strategy framework         to model the time series for its anomaly detection. However,
+named TMANomaly, and model the complex multivariate cor-              ARIMA was only for the processing of univariate and relatively
+relations between large-scale sensor data streams to achieve          smooth time series data and cannot handle complex time series
+effective extraction of industrial time series data information       data.
+and subsequently complete the anomaly detection of IIoT data.            As deep learning has developed, various neural networks have
+In TMANomaly, we use a time series mutual adversarial network         been applied to time series anomaly detection. DeepAnT [13]
+(TMAN) to detect anomalies based on reconstructing industrial         used a convolutional neural network to model time series pre-
+time series. TMAN extracts industrial time series information         diction to improve prediction performance for periodic and
+by constructing two identical subnetworks composed of long            seasonal time series, and defines anomalies for their detection
+short-term memory (LSTM). Furthermore, unlike the traditional         using the square root of the error between the predicted and
+GAN method with fixed subnetwork role, the roles of the two           true values. LSTM networks are also widely used for time-
+subnetworks of TMAN can be swapped with each other as                 series-based anomaly detection, such as the LSTM-VAE [14]
+each other’s reconstructors or discriminators, which allows the       used LSTM networks to reconstruct industrial time series data
+subnetworks to obtain better learning capability and thus obtain      in a reconstructed manner by fusing signals and reconstructing
+better anomaly detection performance than that of the traditional     their expected distributions for anomaly detection. However,
+GAN-based methods.                                                    these methods often fail to perform well when faced with the
+   In this article, we use TMAN to learn the distribution of indus-   processing of high-dimensional and complex dynamic industrial
+trial high-dimensional dynamic time series data while detecting       time series data, which indicates that their work in IIoT has
+anomalies based on reconstruction and recognition losses. The         certain defects.
+main contributions of this article are as follows.                       In the IIoT environment, most of the inputs are multivariate
+    1) We propose a novel mutual adversarial multivariate             time series with some correlation, and these IIoT data need to
+        time series anomaly detection strategy framework named        be continuously processed for statistical analysis and anomaly
+        TMANomaly, which can model complex multivariate               detection. For multivariate time series, many studies begin to
+        correlations between multidimensional industrial time         learn the correlation between multiple variables to enhance the
+        series data streams.                                          performance of anomaly detection methods. Hundman et al. [5]
+    2) In TMANomaly, we propose a TMAN, which consists                used a dynamic unsupervised method to detect anomalies in
+        of two identical subnetworks that can exchange roles          telemetry data returned by spacecraft, the method predicts only
+        as reconstructors or discriminators, performing mutual        one step backwards and only one dimension, while collecting the
+        adversarial training to obtain better reconstructive capa-    errors at each step to form an error vector and doing exponential
+        bilities than traditional methods.                            smoothing of the error vector to obtain a threshold value based on
+    3) Through performance evaluations of the proposed                the smoothed data. Wu et al. [4] used LSTM networks to detect
+        TMANomaly, this work shows that the scheme can suc-           anomalies in industrial data by getting prediction errors from
+        cessfully perform reliable and robust learning to process     Gaussian Bayesian models. These abovementioned methods are
+        IIoT time series data and perform anomaly detection.          able to accomplish the detection of anomalies in industrial data,
+   The rest of this article is organized as follows. In Section II,   but there is still need for improvement in terms of performance,
+we give the related review on anomaly detection. Section III          such as [5] has failed to solve the correlation, dependency
+describes our proposed TMANomaly framework and anomaly                problems inherent in telemetry.
+evaluation function. Section IV describes SWaT, WADI, and
+experimental setup, and evaluates the detection performance of
+TMANomaly. Finally, Section V concludes this article.                 B. Anomaly Detection in GAN
+                                                                         As an unsupervised learning algorithm, GAN has a good
+                      II. RELATED WORK                                performance in anomaly detection. Schlegl et al. [15] pro-
+                                                                      posed AnoGAN, which was the first attempt to use GAN for
+A. Time Series Anomaly Detection
+                                                                      anomaly detection. AnoGAN used DCGAN to unsupervisedly
+   Time series anomaly detection is generally divided into            learn to train distributions from normal samples. The test sam-
+univariate time series anomaly detection and multivariate             ples was then feed in and the loss function is defined for
+time series anomaly detection. Univariate detection methods           multiple backpropagation iterations to obtain mapping results
+consider just a single time dependent variable, while multivariate    from the image to the potential space using residual losses.
+ZHANG et al.: TMANOMALY: TIME-SERIES MUTUAL ADVERSARIAL NETWORKS FOR INDUSTRIAL ANOMALY DETECTION                                           2265
+
+
+
+However, it also suffers from a time efficiency assessment.           capability of the decoder in GAN-based frameworks for anomaly
+Therefore, f-AnoGAN [16] was proposed based on AnoGAN,                detection, these methods typically do not impose any constraints
+which was optimized to improve the performance of anomaly             on the distribution of the encoded latent variables used to gener-
+detection by learning the representation of training data through     ate reconstructed samples. Consequently, the resulting models
+WGAN [17]. Zenati et al. [18] proposed a bidirectional GAN-           lack the ability to generate new samples that conform to the
+based adversarial learning anomaly detection method, also used        distribution of the training data, and the reconstruction loss often
+reconstruction loss error to determine 

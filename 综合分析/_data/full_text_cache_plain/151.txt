@@ -1,0 +1,2913 @@
+860
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+
+Task Allocation Under Geo-Indistinguishability
+via Group-Based Noise Addition
+Pengfei Zhang , Xiang Cheng , Sen Su , and Ning Wang
+Abstract—Locations are usually necessary for task allocation in spatial crowdsourcing, which may put individual privacy in jeopardy
+without proper protection. Although existing studies have well explored the problem of location privacy protection in task allocation under
+geo-indistinguishability, they potentially assume the workers could perform any tasks, which might not be practical in reality. Moreover,
+they usually adopt planar laplacian mechanism to achieve geo-indistinguishability, which will introduce excessive noise due to its
+randomness and boundlessness. To this end, we propose a task alloCAtioN approach via grOup-based noisE addition under Geo-I,
+referred to as CANOE. Its main idea is that each worker uploads the noisy distances between his true location and the obfuscated
+locations of his preferred tasks instead of uploading his obfuscated location. In particular, to alleviate the total noise when conducting
+grouping, we put forward an optimized global grouping with adaptive local adjustment method OGAL with convergence guarantee. To
+collect the noisy distances which are required for subsequent task allocation, we develop a utility-aware obfuscated distance collection
+method UODC with solid privacy and utility guarantees. We further theoretically analyze the privacy, utility and complexity guarantees of
+CANOE. Extensive analyses and experiments over two real-world datasets confirm the effectiveness of CANOE.
+Index Terms—Spatial crowdsourcing, task allocation, privacy protection, geo-indistinguishability
+
+Ç
+1
+
+INTRODUCTION
+
+S
+
+PATIAL crowdsourcing (SC) is a typical representative of
+
+crowdsourcing, which engages the crowds to accomplish
+spatial tasks, e.g., giving out coupons and monitoring environmental conditions, by physically moving to other locations [1]. In SC, due to the limitation of time or space, each
+worker can only be assigned to do the limited tasks initiated
+by the initiator. For example, an individual worker may only
+have time to do nearby tasks that are near the places of work
+or residence. The task that is far away from these locations
+should not be assigned to him. Thus, how to assign a certain
+worker the task that he can do objectively is a key issue. Task
+allocation [2], [3], [4], which assigns a worker to his preferred
+task under the constraint on minimizing average travel distance, is an effective way to address this issue. In particular,
+average travel distance denotes the average distance needed
+for the selected workers to perform their assigned tasks. The
+smaller, the better. For instance, in location-based services,
+such as personalized product recommendation [5], [6], the
+initiators of the spatial crowdsourcing want different workers to be responsible for product recommendation in
+
+
+
+The authors are with the State Key Laboratory of Networking and Switching Technology, Beijing University of Posts and Telecommunications
+(BUPT), Beijing 100876, China. E-mail: {zpf.bupt, chengxiang, susen,
+wangn}@bupt.edu.cn.
+
+Manuscript received 23 April 2022; revised 15 September 2022; accepted 13
+October 2022. Date of publication 19 October 2022; date of current version 13
+May 2023.
+This work was supported in part by the National Natural Science Foundation
+of China under Grants 62072052 and 61872045, and in part by the Foundation for Innovative Research Groups of the National Natural Science Foundation of China under Grant 61921003.
+(Corresponding authors: Xiang Cheng and Sen Su.)
+Recommended for acceptance by N. Cao.
+Digital Object Identifier no. 10.1109/TBDATA.2022.3215467
+
+different regions. Obviously, since each worker has different
+familiarities with different regions, to maximize the quality
+of recommendations, the problem can be modeled as the
+task allocation problem while considering preferences. However, disclosing the naturally required locations may pose a
+significant risk to the workers as the uploaded locations
+might imply living habits or other sensitive information.
+Without proper privacy protection, the workers may be
+unwilling to participate in the SC system.
+Geo-indistinguishability (Geo-I) [7] has been proposed as
+a practical standard to address location privacy protection
+problem. Unlike the spatial cloaking technique [8], which
+replaces a worker’s location with a restricted region, the protection level of Geo-I is independent of adversaries’ prior
+knowledge. Moreover, it does not assume a trusted server.
+Furthermore, it can be achieved in a simple and efficient way
+using the planar laplacian (PL) mechanism. Through PL,
+locations will be locally perturbed before being sent to the
+server. Since exact locations never leave from workers’ devices, it can protect both workers and other adversaries, such
+as the server, against damages due to potential privacy
+breaches. Recently, PL has been adopted in many famous
+applications, including LP-Guardian [9], LP-Doctor [10] and
+secure nearby-friends discovery system [11].
+In this article, we systematically study the problem of
+task allocation with preferred tasks while protecting workers’ locations under Geo-I. Specifically, each worker first
+excludes the tasks he doesn’t want to do and lets the
+remaining tasks as his preferred tasks or just chooses the
+tasks he wants to do. Then the server assigns each task to a
+worker under the constraint on minimizing average travel
+distance while guaranteeing Geo-I for each worker’s location. Although existing studies [12], [13], [14], [15], [16], [17]
+have well explored the problem of location privacy protection for task allocation, they potentially assume the workers
+
+2332-7790 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See ht_tps://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+could perform any tasks, which might not be practical in
+reality. Moreover, due to the randomness and boundlessness of PL [18], the injected noise may be excessive.
+We note that in the real world, workers prefer to select
+nearby tasks that are near the places of work or residence. It
+leads to the aggregations of tasks’ locations in the corresponding preference sets. Thus, if some tasks are close to
+each other in terms of locations, they can be represented by
+one location. This fact drives us to advocate the idea of
+group-based noise addition. It is intended to strike a balance
+between location privacy and location utility. Specifically, as
+an extreme example, when multiple locations in a certain
+worker’s preference set are the same, there is even no extra
+information loss except for the added noise in the way of
+adding noise by using a location in this preference set, and
+the noise needs to be added only once. To improve the utility of task allocation under Geo-I, we propose to add noise
+by group-based noise addition on the basis of minimizing
+the overall noise. Note that, in this way, we may need to
+split the privacy budget for multiple grouping representative locations. Although directly announcing the obfuscated
+workers’ locations with PL guarantees Geo-I and avoids the
+problem of splitting the privacy budget, the obfuscated
+locations might deviate from the true locations significantly,
+as the injected noise of adopting PL for achieving Geo-I is
+unbounded, which will lead to excessive noise of the calculated distances. In contrast, in the way of group-based noise
+addition, since each generated obfuscated location is limited
+to the range formed by the corresponding tasks’ locations in
+the same group, desirable data utility can be expected.
+Moreover, the privacy budget of each worker only needs to
+be split just a few times in practice due to the existence of
+the aggregations of the tasks’ locations in each preference
+set. As such, we believe that CANOE can provide an acceptable trade-off for real-world deployments.
+To this end, we propose a task alloCAtioN approach via
+grOup-based noisE addition under Geo-I, referred to as
+CANOE. Its main idea is that each worker uploads the noisy
+distances between his true location and the obfuscated locations of his preferred tasks instead of uploading his obfuscated location. In particular, we use one location to
+represent a group of geographically close locations. This
+indicates only one piece of noise will be added to the above
+locations in the same group.
+In CANOE, two kinds of noise are involved in obtaining
+the appropriate groupings, which are the information loss
+caused by representing multiple locations by one location
+and the injected noise for privacy protection. We group the
+locations in each worker’s preference set through the constraints deduced by minimizing the sum of the above two
+types of noise, and put forward an optimized global grouping with adaptive local adjustment method called OGAL
+based on our noise analysis. In OGAL, the server first gives
+coarse-grained global groupings and broadcasts the groupings to each worker. Then, each worker refines the received
+groupings locally. Specifically, to conduct grouping globally,
+we formulate a mixed-integer nonlinear program (MINLP)
+problem with a non-convex constraint. Due to the NP-hard
+characteristic, based on benders decomposition (BD) and
+alternating direction method of multipliers (ADMM) [19],
+we devise an alternate optimization method with
+
+861
+
+convergence guarantee. To refine groupings locally, we formalize two optimization problems to adaptively determine
+the grouping for each worker, including the number of
+groups and the number of tasks in each group.
+After obtaining the optimized grouping for each worker,
+he adds noise for each group to collect and uploads the
+required distances for subsequent task allocation. We note
+that we should make the generated representative location
+for each group be close to tasks’ locations in the same group
+and be far away from tasks’ locations in other groups. In
+addition, recall that the straight-forward adoption of PL
+may introduce excessive noise. To this end, instead of
+adopting PL, we develop a utility-aware obfuscated distance calculation method called UODC. Its main idea is to
+let each generated obfuscated location be limited to the
+range formed by tasks’ locations in the same group. We theoretically prove it guarantees Geo-I and show its utility
+superiority compared with PL. In UODC, we first formalize
+an optimization problem to generate a grouping representative location for each group by minimizing intra-group distances and maximizing inter-group distances. Then, we
+generate a noisy representative location by probability sampling with each corresponding group. Finally, each worker
+uploads the calculated noisy distances from his true location to each noisy representative location to the server.
+The key contributions of this paper are summarized as
+follows:
+
+
+We present CANOE for task allocation under Geo-I
+based on group-based noise addition. Its main idea
+is that each worker uploads the noisy distances
+between his true location and the obfuscated locations of his preferred tasks instead of uploading his
+obfuscated location.
+ To alleviate the total noise when conducting grouping, we put forward an optimized global grouping
+with adaptive local adjustment method OGAL based
+on our noise analysis. We prove its convergence
+guarantee.
+ To collect the noisy distances which are required for
+subsequent task allocation, we develop a utilityaware obfuscated distance collection method UODC.
+We formally give its privacy and utility guarantees.
+ We theoretically give the privacy, utility and complexity guarantees of CANOE. Extensive analyses
+and experiments over two real-world datasets confirm the effectiveness of CANOE.
+The rest of this paper is organized as follows. We discuss
+related work in Section 2. We give the preliminaries in Section 3. The details of CANOE are presented in Section 4. The
+experimental results are discussed and analyzed in Section 8. Finally, we summarize our work in Section 9.
+
+2
+
+RELATED WORK
+
+The related work falls into the following two aspects.
+
+2.1 Privacy-Preserving Task Allocation With
+Obfuscation
+We briefly discuss existing privacy-preserving task allocation approaches in spatial crowdsourcing while adopting
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+862
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+
+obfuscation technologies (e.g., geo-indistinguishability (GeoI) [7] or differential privacy [20]).
+Zhang et al. [21] conduct task allocation based on a
+designed differentially private geocoding method to preserve workers’ locations. To et al. [12] propose a differentially private framework for protecting the privacy of
+workers’ locations. They [13] further propose an analytical
+method to ensure the high success rate of task allocation. To
+improve task allocation utility, Wang et al. [14] integrate the
+phase of adding noise and the phase of task allocation into
+an optimization problem together while guaranteeing differential privacy. They [15] also propose a method to maximize each mobile worker’s future location coverage under a
+guaranteed location privacy protection scheme. Similar to
+[15], Qian et al. [22] focus on improving the service quality
+using task allocation for vehicle networks. In addition,
+they [23] design a similar solution for mobile edge cloud
+environment. To satisfy personalized demand for each
+worker, Wang et al. [24] provide a personalized probabilistic winner selection mechanism. However, the utility of [24]
+significantly depends on the choice of hyper parameters,
+which could not be automatically determined. For jointly
+protecting the location privacy of workers and tasks, To
+et al. [16] propose a three-phase framework which quantifies the achievable probabilities. Following [16], Tao et al.
+[17] make the first attempt at differentially private task allocation while assuring the competitive ratio. However, these
+two mainly [16], [17] focus on task allocation aiming to
+ensure all tasks are assigned, while we focus on minimize
+the expected travel distance of selected workers.
+Task allocation with obfuscation technologies has also
+been studied whiling incorporating incentive. Shen et al.
+[25] aim to optimize task acceptance rate using a leader-follower game by introducing edge nodes. Gong et al. [26]
+propose a framework to achieve high task coverage by estimating worker density. Xu et al. [27] propose a differential
+privacy-based auction mechanism in cloud and edge-cooperation systems. Zhang et al. [28] design a game-theoreticbased task allocation approach for social sensing-based
+edge computing systems. However, since they work on the
+problems that are different from ours, their approaches are
+not suitable for our problem.
+In summary, although existing studies can prevent location privacy leakage, they potentially assume the workers
+could perform any tasks. Moreover, some focus on different
+objectives or different scenarios from us. Furthermore, due
+to the randomness and boundlessness of PL, the obfuscated
+locations of the workers might deviate from the true locations significantly. In this paper, we focus on the scenario
+when workers have preferred tasks while designing a new
+noise-adding mechanism to collect the information required
+for task allocation instead of adopting PL. In particular, we
+present group-based noise addition to add noise for the preferred tasks’ locations rather than workers’ locations, which
+can provide desirable utility while keeping the same intensity of privacy protection.
+
+2.2 Location Privacy Under Geo-Indistinguishability
+Large amounts of work have been done to protect the location privacy, and many excellent surveys, such as, [29]
+
+and [30], have conducted systematic studies on the classic
+methods of location privacy protection. In particular, the
+notion of Geo-I [7] has gained wide attention.
+Bordenabe et al. [31] explore the possibility of constructing a mechanism that minimizes the service quality loss,
+using linear programming technique. Yu et al. [32] propose
+another notion to supplement Geo-I. Oya et al. [33] present
+a new method to maximize the conditional entropy utility.
+Pyrgelis et al. [34] focus on releasing aggregated location
+time-series. Chatzikokolakis et al. [35] aim to improve utility
+for continuous and discrete scenarios. ElSalamouny et al.
+[36] consider a more realistic case in which the region to be
+protected is continuous with a non-zero area. Takagi et al.
+[37] identify an extra privacy loss for road networks. Oya
+et al. [38] provide an alternative formulation of Geo-I.
+Though existing studies may provide good utility for a
+single location, they are no longer capable of obtaining reliable results under our setting. On one hand, the obfuscated
+locations could be far from the true locations. On the other
+hand, we cannot directly use PL for multiple locations as
+the privacy budget could be very small, which will inevitably result in poor performance. Besides, the performances
+of [33], [34] rely heavily on the choice of hyper parameters,
+which may result in the different results.
+
+3
+
+PRELIMINARIES
+
+3.1 Geo-Indistinguishability
+Geo-indistinguishability (Geo-I) is the de facto for protecting
+location privacy [7]. Let X and Z be the set of workers’ possible locations and possible obfuscated locations respectively. It is formally defined as follows:
+Definition 1 ("-Geo-I). Given a privacy budget ", a randomized algorithm achieves "-Geo-I, if and only if
+P ðl jl1 Þ  e"r P ðl jl2 Þ;
+where l1 and l2 are any two locations in X , and l is an
+observed obfuscated location in Z. In particular, r denotes the
+distance from true location to the observed obfuscated location.
+The way to guarantee Geo-I is adopting the planar laplacian (PL). Specifically, given the privacy budget parameter
+", the actual location l0 2 X , and any other location l 2 Z,
+we can generate a noisy location by:
+l ¼ l0 þ ðr  cos ðuÞ; r  sin ðuÞÞ:
+In particular, u is sampled from ½0; 2pÞ, and r is obtained
+by:
+
+
+
+
+1
+p1
+W1
+þ1 ;
+r¼
+"
+e
+where W1 is the Lambert function (the -1 branch) and
+p 2 ½0; 1Þ:
+To support multiple computations under Geo-I, composite properties are extensively used, including sequential
+composition property [20] and parallel composition property [39]. In particular, we have:
+
+Theorem 1(Sequential Composition). Suppose A1 ; . . . ; Ak
+are k algorithms over database D, each
+P provides "i -Geo-I. A
+sequence of algorithms Ai ðDÞ yields ð "i Þ-Geo-I.
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+863
+
+TABLE 1
+List of Frequently Used Notations
+
+Fig. 1. The research problem.
+
+3.2 Problem Statement
+Fig. 1 shows the problem investigated in this paper. Given a
+crowd of active workers in the SC system, denoted by the
+set W ¼ fw1 ; w2 ; w3 ; . . . ; wM g. There exist N (N < M) tasks
+published by the initiator to be accomplished, which is represented as T ¼ ft1 ; t2 ; t3 ; . . . ; tN g. Each task has its location
+coordinate and corresponding identifier. Each worker has
+his own location coordinate and preference set Si with the
+size of ri , in which the elements are the identifiers of the
+tasks a worker prefers to do. Additionally, we use dðwi ; tj Þ
+to denote the distance the i-th worker wi travels if he is
+selected to perform the j-th task tj , which is in his preference set.
+We assume that the size of the preference set for each
+worker is the same, denoted by r, and each worker uses the
+same privacy budget ". In addition, suppose that the true
+location of each task is publicly available. Furthermore, we
+assume that the initiator has recruited adequate workers to
+evenly prefer each task through the existing Target Coveragebased worker recruitment approaches [40], [41], [42], [43], [44],
+[45], which is beyond the scope of this paper. How to jointly
+model worker recruitment and task allocation [46], [47],
+[48], under Geo-I, is an interesting issue that will be studied
+in the future. Once the server assigns a task to a worker, the
+worker and the task are considered being unreachable. Specifically, our problem is to identify a set of tuples with form
+< w; t > , where a spatial task t is assigned to worker w,
+satisfying that t is a task in the preference set of w. It aims to
+minimize traveling distance while completing all the tasks
+with the obfuscated information provided by the workers
+under "-Geo-I.
+Table 1 summarizes the notations that will be frequently
+used in this paper.
+
+4
+
+OVERVIEW OF CANOE
+
+The intuitive scheme is that each worker adds noise using
+the planar laplacian (PL) to obfuscate his true location, and
+then calculates the distances between the corresponding
+obfuscated location and his preferred tasks’ locations. After
+that, the noisy distances are sent to the server for task allocation. Nevertheless, due to the randomness and boundlessness of PL, it may imply excessive noise to be added.
+Actually, due to the fact that workers prefer to select
+nearby tasks that are near the places of work or residence,
+
+Notation
+
+Definition
+
+W
+T
+M
+N
+wi
+tj
+Si
+r
+dðÞ
+~
+dðÞ
+m
+m0
+df
+ij
+C
+EG
+EIL
+dðwi ; tj Þ
+D
+
+The set of workers
+The set of tasks
+The total number of workers
+The total number of tasks
+The i-th worker
+The j-th task
+The preference set for wi
+The size of the preference set
+The travel distance
+The obfuscated distance
+The representative location for a group
+The representative location after adding noise
+The obfuscated distance between wi and m0j
+The grouping set of a certain preference set
+The injected noise
+The information loss
+The distance travelled by wi for performing tj
+The noisy distance matrix
+
+there exist the aggregations of tasks’ locations in each preference set. Thus, if some tasks are close to each other in
+terms of locations, they can be represented by one location.
+This fact drives us to advocate the idea of group-based noise
+addition. Based on this idea, we present CANOE, whose
+main idea is that each worker uploads the noisy distances
+between his true location and the obfuscated tasks’ locations
+in his preference set instead of uploading his obfuscated
+location directly. In particular, CANOE mainly consists of
+an optimized global grouping with adaptive local adjustment method OGAL and a utility-aware obfuscated distance
+collection method UODC. Fig. 2 depicts the workflow of
+CANOE, in which the server and the workers collaborate to
+assign the tasks in each worker’s preference set in a geoindistinguishable manner. In particular, CANOE includes
+the following phases.
+Phase 1. In this phase, the server first invokes OGAL to
+group all the tasks globally according to their publicly available locations by formulating a mixed-integer nonlinear
+program MINLP problem with a non-convex constraint,
+and then broadcasts the groupings to each worker. The
+details are given in Section 5.1.
+Phase 2. In this phase, each worker first applies the
+groupings sent by the server to initially group the locations
+in his preference set, and then invokes OGAL to adaptively
+refine his grouping based on the formalized two optimization problems, including the determination of the number
+of groups and the number of tasks in each group. The
+details are discussed in detail in Section 5.2.
+Phase 3. In this phase, after local adjustment, each worker
+already gets his optimal grouping, which may be different
+from each other. He invokes UODC to calculate the noisy
+distances that are used for task allocation, and uploads the
+noisy distances to the server. UODC is clearly elaborated in
+Section 6.
+Phase 4. In this phase, based on the uploaded noisy
+distances, the server conducts task allocation to assign
+each task to a certain worker according to the algorithm
+described in [2].
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+864
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+
+Fig. 2. Overview of CANOE.
+
+Besides, we give the privacy, utility and complexity guarantees of CANOE in Section 7.
+
+5
+
+OPTIMIZED GLOBAL GROUPING WITH ADAPTIVE
+LOCAL ADJUSTMENT
+
+Clearly, two kinds of noise are involved in obtaining the
+appropriate groupings. We denote the noise for privacy
+protection as Injected Noise, and denote the reconstruction
+error caused by representing a set of locations by one location as Information Loss. Too many groups for a certain preference set will lead to excessive Injected Noise, while too few
+groups will imply too much Information Loss.
+Thus, to strike a balance between location privacy and
+location utility, we put forward an optimized global grouping with adaptive local adjustment method OGAL to minimize the total noise. The overflow of OGAL is shown in
+Fig. 3. In OGAL, the server first gives the coarse-grained
+groupings and broadcasts the groupings to each worker.
+Then, each worker adjusts his own groupings locally.
+In what follows, we first introduce the global grouping
+method. Then, we present how to adjust groupings locally.
+
+Fig. 3. Overview of OGAL.
+
+Before giving the details of the global grouping method, we
+first quantify the total noise, which is defined by the sum of
+the Injected Noise and Information Loss.
+
+5.1 Optimized Global Grouping
+5.1.1 Total Noise Quantification
+The Injected Noise is the expectation of noise added for
+guaranteeing Geo-I.
+Definition 2 (Injected Noise) Formally, for a certain group
+Ck , the noise added to the group center is
+EG ðCk Þ ¼
+¼
+
+Z þ1 Z 2p
+0
+
+0
+
+rDðr; uÞdrdu
+
+Z þ1 Z 2p
+r
+0
+
+2
+¼ :
+"
+
+0
+
+"2 "r
+re drdu
+2p
+(1)
+
+Recall that Information Loss is the loss caused by representing all locations in a group with a location. It indicates
+the absolute value of the difference between the distance
+from a certain worker’s true location to a certain task’s
+obfuscated location and the distance from this worker’s true
+location to this task’s true location. We give the following
+example to make it be more clearer.
+Example 1 As shown in Fig. 4, let mk denote the group center
+for the k-th group and m0k denote the group center after adding
+noise. For a certain task tj and the worker wi , if we do
+not adopt group-based noise addition, the travel distance is
+dðwi ; tj Þ. After we adopt group-based noise addition, the travel
+distance is dðwi ; m0k Þ. Thus, Information Loss, which is measured by the distance variation, can be quantified by jdðwi ;
+m0k Þ  dðwi ; tj Þj.
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+865
+
+Theorem 2. The number of tasks in each group should be as near
+equal size as possible.
+Proof. Let Q represent the number of groups. Following
+Lemma 1, by the Cauchy-Buniakowsky-Schwarz inequality,
+we have:
+!
+2Q2 X
+2jC jjCk j2
+2Q2
+þ
+¼
+Ck 2C
+"
+"
+"
+2
+0
+13
+Q
+zﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄ}|ﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄ{
+
+
+26
+2 B
+C7
+þ 4 jC1 j2 þjC2 j2 þ    þCQ  @12 þ 12 þ    þ 12 A5
+"
+Fig. 4. An example to illustrate Information Loss.
+
+
+
+Definition 3 (Information Loss). Formally, for a certain
+group Ck , Information Loss is,
+X
+ 
+
+
+
+d wi ; m0  d wi ; tj :
+EIL ðCk Þ ¼
+(2)
+k
+t 2C
+j
+
+k
+
+Specifically, from Fig. 4, by triangular inequality, we
+have:
+ 
+
+
+
+
+
+d wi ; m0  d wi ; tj   d tj ; m0
+k
+k
+
+
+
+
+
+
+d mk ; m0k þ d mk ; tj  d tj ; m0k :
+(3)
+Thus, we have:
+EIL ðCk Þ ¼
+
+
+X
+X
+
+tj 2Ck
+
+ 
+
+
+
+d wi ; m0  d wi ; tj 
+k
+
+ 
+
+
+
+d mk ; m0k þ d mk ; tj
+t 2C
+j
+
+k
+
+jCk j
+X
+
+
+
+
+¼
+d mk ; tq þ jCk jd mk ; m0k :
+
+(4)
+
+  2
+2Q2 2 
+þ jC1 jþjC2 jþ    þCQ  :
+"
+"
+
+When jC1 j¼jC2 j¼    ¼jCQ j, the above inequality
+achieves the minimum value. Thus, the size of each
+group should be as evenly as possible.
+u
+t
+
+5.1.2 Global Grouping Determination
+According to Theorem 2, we should assure the uniformity
+for the size of each group. To this end, we design a balanceaware grouping method BAG by formalizing a constrained
+optimization problem. Specifically, suppose there are jCj
+groups and the number of tasks in the k-th group is jCk j.
+The number of tasks in each group is jCj
+N in the case of balance. Thus, we should minimize the following objective
+function
+
+jC j 
+X
+jC j 2
+jCk j 
+N
+k¼1
+
+q¼1
+
+¼
+
+Proof. By summing up the Injected Noise and Information
+Loss, we have:
+X
+½EG ðCk Þ þ EIL ðCk Þ
+EðtotalÞ ¼
+Ck 2C
+"
+#
+jCk j
+X
+
+
+
+
+2 X
+0
+¼
+d mk ; tq þ jCk jd mk ; mk
+" þ
+C 2C
+k
+
+jC j
+
+2
+
+X
+
+2jC j
+
+þ
+"
+
+q¼1
+
+"
+
+Ck 2C
+
+2jC j2 X
+¼
+þ
+Ck 2C
+"
+
+2jCk jðjCk j  1Þ
+"
+jC j
+
+!
+2jC jjCk j2
+:
+"
+
+2
+
+jCk j2 
+
+jC j
+2jC j X
+jC j3
+jCk j þ 2
+N k¼1
+N
+
+jCk j2 þ
+
+jC j3
+ 2jC j:
+N2
+
+k¼1
+
+We consider the sum of the Injected Noise and Information
+Loss as the total noise, which is shown in Lemma 1.
+
+Lemma 1. Let jCj denote the number of groups for a worker, the
+total noise after grouping can be quantified as follows:
+!
+2jC j2 X
+2jC jjCk j2
+þ
+:
+EðtotalÞ ¼
+Ck 2C
+"
+"
+
+jC j
+X
+
+¼
+
+jC j
+X
+k¼1
+
+(5)
+
+Since jCj and N are constants, we should minimize
+PjCj
+2
+k¼1 jCk j . Thus, we have the following optimization
+problem
+!2
+jC j
+jC j
+N X
+N
+X
+X
+X
+uik dðti ; mk Þ þ
+aik
+arg min
+u;m
+
+i¼1 k¼1
+
+k¼1
+
+i¼1
+
+8
+uik  0
+>
+>
+>
+PC
+>
+<
+u
+¼
+1; i ¼ 1; 2    N
+k¼1 ik
+(
+s:t:
+jC j :
+>
+1 k ¼ arg max uij j¼1
+>
+>
+a
+¼
+>
+ik
+:
+0
+other
+
+(6)
+
+#
+
+þ jCk j "
+
+jC j
+
+u
+t
+Actually, we should make the total noise as small as possible, and give the following theorem.
+
+In Eq. (6), the first part of the objective function aims at
+minimizing the intra-group distances, and the second part
+corresponds to balance constraint, where mik is the membership function that indicates P
+how P
+much the i-th
+PjCjsample
+2
+jCj
+2
+a
+Þ
+¼
+belongs to the k-th group, and k¼1 ð N
+i¼1 ik
+k¼1 jCk j .
+The first two constraints, denoted by Non-negative Constraint
+and Normalizing Constraint respectively, represent that the
+memberships are not negative and the sum of memberships
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+866
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+
+is 1. These two jointly indicate that each task belongs to one
+group in C. The third constraint, denoted by Boolean constraint, represents that each task belongs to only one group.
+We note that, this formulated problem is a mixed-integer
+non-linear program (MINLP) problem with a non-convex
+constraint, which is denoted by Boolean constraint with
+respect to the membership u and grouping center m. It is
+NP-hard [49]. While existing non-linear optimization techniques can only deal with convex objectives effectively.
+Thus, a specialized solution is required to solve this nonconvex MINLP [50].
+Based on Benders Decomposition [51], we devise an alternate optimization method with convergence guarantee. Our
+overall strategy is to decompose Eq. (6) into two modules.
+Each module corresponds to optimize one variable while
+fixing the other. Thus, we can iteratively solve the two modules until convergence.
+At the beginning, we need to enforce the Boolean Constraint. Motivated by the alternating direction multiplier
+method (ADMM) [19], we introduce the auxiliary matrix X,
+where an element in X is aik in Eq. (6). Thus, the objective
+function in Eq. (6) can be converted to
+jC j
+N X
+X
+
+arg min
+u;m;X
+
+uik dðti ; mk Þ þ XT X:
+
+(7)
+
+Lðu; m; Þ ¼
+
+uik dðti ; mk Þ þ XT X
+
+i¼1 k¼1
+N
+X
+
+þ
+
+i¼1
+
+i
+
+jC j
+X
+
+!
+uik
+
+e
+
+1 :
+
+k¼1
+
+Let the first-order derivative of lagrangian with respect
+to mk be 0, we can get:
+PN
+
+i¼1 uik  tk
+:
+P
+N
+i¼1 uik
+
+mk ¼
+
+(11)
+
+Let the first-order derivative of lagrangian with respect
+to uik be 0, with the Exponential constraint, we can get:
+ti  mk
+:
+uik ¼  ln PjC j
+k¼1 ðti  mk Þ
+
+(12)
+
+X-subproblem
+When fixing u and m, the objective function of X-subproblem is shown as follows:
+arg min XT X
+X
+(
+s:t:
+
+aik ¼
+
+i¼1 k¼1
+
+Thus, we alternately optimize u; m and X.
+u; m-subproblem
+When fixing X, the objective function of u; m-subproblem
+is shown as follows:
+
+jC j
+N X
+X
+
+jC j
+
+1
+
+k ¼ arg max uij j¼1
+
+0
+
+other
+
+:
+
+(13)
+
+To deal with the Boolean Constraint, we introduce an auxiliary matrix Z, and the above objective function is further
+transformed into:
+arg min XT X
+X
+
+arg min
+u;m
+
+
+
+jC j
+N X
+X
+
+s:t:
+uik dðti ; mk Þ þ X X
+T
+
+i¼1 k¼1
+
+uik  0
+:
+u
+¼
+1; i ¼ 1; 2 . . . N
+k¼1 ik
+
+s:t: PC
+
+(8)
+
+We deal with the Non-negative Constraint and the Normalizing Constraint jointly and transform them into a Exponential Constraint:
+jC j
+X
+
+euik ¼ 1; i ¼ 1; 2 . . . N:
+
+(9)
+
+k¼1
+
+u;m
+
+s:t:
+
+jC j
+N X
+X
+
+uik dðti ; mk Þ þ XT X
+
+i¼1 k¼1
+jC j
+X
+
+euik ¼ 1; i ¼ 1; 2 . . . N:
+
+(14)
+
+Based on ADMM, the above equation is transformed into
+an unconstrained optimization problem:
+
+2
+t
+1 
+T
+
+;
+(15)
+arg min Z Z þ X  Z þ U 
+2
+t F
+Z;U;t
+where t > 0 is a scaling factor and U is the lagrange
+multiplier.
+Let the first-order derivative of lagrangian with respect
+to Z be 0, we can get:
+Z ¼ ð2I þ t Þ1  ðtX þ U Þ;
+
+(16)
+
+where every element in I is 1 and I has the same scale with
+X.
+When Z, U and t are fixed, the optimal solution of X is
+equivalent to
+
+2
+
+1 
+ :
+U
+X ¼ min
+X
+
+Z
+þ
+
+t F
+
+Thus, we have
+arg min
+
+X  Z ¼ 0:
+
+(10)
+
+k¼1
+
+Obviously, such Exponential Constraint can replace the Nonnegative Constraint and the Normalizing Constraint together as
+the output of the exponential function is non-negative.
+Accordingly, we give the lagrangian of Eq. (10):
+
+Thus, we have:
+(
+Xik ¼
+
+jC j
+
+1 k ¼ arg max vij j¼1 ;
+0
+other
+
+where V ¼ Z  1t U.
+The overall procedure is shown in Algorithm 1.
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+(17)
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+Algorithm 1. Balance-Aware Grouping
+
+Thus, we have:
+
+Input: jCj: the number of groups;
+T : the set of tasks;
+t: the scaling factor;
+Output: X: the groupings;
+1: initialize u and m and U ¼ 0;
+2: initialize X according to u;
+3: while not converge do
+4: update mk using Eq. (11);
+5: update uij using Eq. (12);
+6: update Z using Eq. (16);
+7: update X using Eq. (17);
+8: set U ¼ U þ tðX  ZÞ;
+9: set t ¼ 1:1t;
+10: return X;
+
+jC j
+X
+
+2
+
+Theorem 3. By Benders Decomposition and ADMM, the
+problem in Eq. (6) can at least convergence to a local optimum.
+
+..
+.
+
+..
+
+3
+
+@2 JðZÞ
+@Z11 @ZN jC j 7
+
+..
+.
+
+.
+
+
+@2 JðZÞ
+@Z11 @Z11
+
+7
+7
+7
+5
+
+3
+
+0
+.. 7
+..
+. 5:
+.
+ 2 þ t
+
+Obviously, D2 JðZÞ > 0. Thus, Hessian Matrix is positive definite.
+This concludes the proof.
+u
+t
+
+Lemma 3. The objective function in Eq. (15) is bounded.
+Proof.
+Obviously,
+
+2
+
+t
+X  Z þ 1 U   0:
+
+2
+t F
+
+(18)
+
+As for Z T Z, it is equivalent to the following optimization problem:
+arg min
+x
+
+s:t:
+
+jC j
+X
+
+jC j
+X
+
+x2k
+
+k¼1
+
+xk ¼ N:
+
+(19)
+
+By the Cauchy-Buniakowsky-Schwarz inequality, we
+have:
+
+k¼1
+
+
+ 
+2
+x2k 12 þ    þ 12  x1 þ    þ xjC j ¼ N 2 :
+
+Proof. As for u; m-subproblem, since an arbitrary norm on
+R is convex, non-negative summation and compound
+affine mapping are convex-preserving operations, by the
+lagrange multiplier approach, the problem shown in
+Eq. (10) can at least convergence to a local optimum.
+As for X-subproblem, according to Lemmas 2 and 3,
+the problem shown in Eq. (15) can also convergence to a
+local optimum.
+u
+t
+5.2 Adaptive Local Adjustment
+Given the global groupings, we now design an adaptive
+local adjustment method ALA. The underlying idea is to
+achieve fine-grained partitions over dense groups and
+coarse-grained partitions over sparse groups to minimize
+the total noise. In this way, each worker can adaptively
+determine the optimal grouping, including the number of
+tasks in each group and the number of groups. Specifically,
+we first derive another constraint. Then, based on the new
+derived constraint, as well as the constraint in Theorem 2,
+we formalize two optimization problems to enforce these
+two constraints jointly.
+Actually, we should make the total noise of CANOE be
+less than that of adding noise to each task’s location in a
+worker’s preference set. To achieve this goal, suppose for a
+certain group, the number of tasks is jCk j. The privacy budget for each task is "0 ¼ jC" j if we add noise independently.
+k
+In this case, the Information Loss is the change of travel distance only caused by adding noise. Thus, the Information
+Loss for the k-th group is jCk j "20 . To make our group-based
+noise addition be better than the above method, we let the
+EIL ðCk Þ  jCk j "20 , and get the following theorem.
+Theorem 4. Let m and jCk j denote the group center and the
+number of tasks for the k-th group respectively. Additionally,
+let tq denote a task in the group, and the sum of the inner distance of this group should satisfy the following constraint,
+jCk j
+X
+
+ 2jCk jðjCk j  1Þ
+:
+d m; tq 
+"
+q¼1
+
+Proof. Let EIL ðCk Þ  jCk j "20 , we have:
+
+k¼1
+
+jC j
+X
+
+u
+t
+
+This concludes the proof.
+
+
+
+2þt
+6 ..
+¼4 .
+0
+
+(21)
+
+Thus, the objective function in Eq. (15) is greater than
+
+@2 JðZÞ
+@Z11 @Z11
+
+@2 JðZÞ
+@ZN jC j @Z11
+
+N2
+:
+jC j
+
+N2
+jCj .
+
+Lemma 2. The objective function in Eq. (15) is non-increasing
+while enlarging Z.
+Proof. We only need to prove that the Hessian Matrix about
+Z is positive definite. We have Hessian Matrix:
+6
+6
+D2 JðZÞ ¼ 6
+6
+4
+
+x2k 
+
+k¼1
+
+5.1.3 Convergence Analysis
+To prove the convergence of Algorithm 1, we need to
+prove that the above two subproblems are monotonically
+bounded.
+
+2
+
+867
+
+(20)
+
+j Ck j
+X
+
+ 2jCk j2
+
+
+ jCk jd m; m0k
+d m; tq 
+"
+q¼1
+
+2jCk j2
+2
+ jCk j
+"
+"
+2jCk jðjCk j  1Þ
+¼
+"
+
+¼
+
+:
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+u
+t
+
+868
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+
+For convenience, we denote the constraint in Theorem 2
+by Balance Constraint, and denote the constraint in Theorem 4 by Intra-group Constraint. We need to meet them
+jointly as much as possible. Since, obviously, the fewer elements in a group, the Intra-group Constraint can be more
+likely satisfied, and it is conducive to the realization of Balance Constraint. Therefore, our overall strategy is presented
+as follows. First, we deal with Intra-group Constraint and
+design a dynamic programming based method by minimizing the maximum sum within each group of a worker.
+Then, we design a migration-based adjustment method to
+achieve Balance Constraint through as few times as possible.
+
+5.2.1 Achieving Intra-Group Constraint
+Obviously, if the maximal sum of distance within each group
+satisfies the Intra-group Constraint, we can easily enforce the
+Intra-group Constraint for each group of a worker. To this
+end, we first formulate the following problem by determining the minimized maximal Intra-group distance.
+Problem 1. Given a non-negative structure set G. Every element
+Gi in G includes a group Ck and two attributes Gi :d1 and
+PjCk j
+Gi :d2 , where the two attributes indicate
+q¼1 dðm; tq Þ and
+2jCk jðjCk j1Þ
+respectively. Each group in G has been sorted
+"
+according to the relative distance from the true location of each
+worker. We aim to merge jGj groups into jCj non-empty continuous groups, and minimize maximal d1 .
+We give the following example to illustrate the above
+problem.
+Example 2. Suppose we have 5 groups, which form an ordered array
+½8; 2; 4; 9; 8. Thus, we have jGj ¼ 5. Suppose jCj ¼ 2. The merged
+groups are ½8; 2; 4 and ½9; 8 as the maximum sum is 17, which is
+the smallest in all cases. Note that, ½8; 2; 9 is not a valid group as
+the elements 2 and 9 in the original ordered array are not adjacent.
+To solve the above problem, we design a method to Minimize the Maximum Sum based on dynamic programming,
+called MMS. In particular, let fkr denote the maximum value
+when merging the first k groups into r groups, the state
+transfer equation is shown as follows:
+fkr ¼ max
+
+fjr1 ;
+
+k
+X
+
+!
+Gq :d1 :
+
+(22)
+
+group center is ranked second. It follows the same manner for
+the remaining group centers. In this way, the sorting can be
+completed (Line 2). Next, each worker initializes every element of f with positive infinity except for f00 ¼ 0 (Line 3).
+After that, he solves the problem in Eq. (22) and gets u (Lines
+4-8). Finally, he merges a group until d1 > d2 or d1 > u (Line
+9). It follows the same manner for the remaining workers.
+
+Algorithm 2. MMS
+Input: C: the initial grouping for a worker;
+Output: C: the adjusted grouping for a worker;
+1: split C;
+2: initialize and sort G;
+3: initialize f;
+4: for i ¼ 1 to jGj do
+5: for j ¼ 1 to jCj do
+6:
+for k ¼ 1 to k <
+n i do
+o
+P
+7:
+set fij ¼ min fij ; maxðfkj1 ; iq¼kþ1 Gq :d1 Þ ;
+jCj
+
+8: set u ¼ fjGj ;
+9: merge G to C according to u and Intra-group Constraint;
+10: return C;
+
+5.2.2 Achieving Balance Constraint
+After tackling Intra-group Constraint by MMS, we now
+enforce the Balance Constraint through determining the optimal number of tasks in each group. According to Lemma 1,
+when groupings are relatively balanced, we need to keep
+the number of groups as small as possible. Moreover, after
+MMS, there may be too many locations in some groups and
+too less locations in other groups. Thus, we migrate tasks
+among groups to adjust them, and propose a Migrationbased Grouping Adjustment method MGA.
+To reduce the cost, that is the number of migrations,
+when conducting local adjustment, we first formalize the
+following problem.
+Problem 2. Given an array Pwith non-negative integers
+jCj
+½x1 ; x2 . . . xjCj  (xi 2 Zþ and
+i¼1 xi ¼ r), where r is the
+number of elements in the preference set. We aim to find the
+minimum number of migration required to make all elements of
+the array be equal as much as possible. That is,
+
+q¼jþ1
+
+It indicates that the maximum value of the Intra-group
+distance from the first k groups (k  jGj) when merged into
+r (r  jCj) groups, is the larger of the value, when merging j
+groups (j  k) into r  1 groups and merging the j þ 1-th to
+k-th groups into only one group. Each worker traverses all k
+and r, and returns
+jC j
+u ¼ fjGj :
+
+(23)
+
+Algorithm 2 shows the main steps of MMS. In MMS, with
+the initial groupings set C, each worker first splits each group
+into two groups, where a random location is taken out. Thus,
+jGj ¼ 2jCj (Line 1). Then, he sorts G and calculates corresponding d1 and d2 . Specifically, for sorting, the group center
+that is nearest to the worker’s true location is ranked first, and
+the center of another one group who is nearest to the above
+
+arg min
+x
+
+jC j
+X
+
+jx  xi j:
+
+i¼1
+
+We then give the following theorem to tackle the above
+problem.
+
+Theorem 5. For Problem 2, the optimal solution is its median.
+Proof. Suppose x1  x2 . . .  xjCj . Let hðxÞ and x denote
+the objective function and the corresponding optimal
+solution respectively.
+If hðxÞ ¼ jx  x1 j þ jx  xjCj j; x 2 ½x1 ; xjCj , x ¼ xjCj .
+If hðxÞ ¼ jx  x2 j þ jx  xjCj1 j; x 2 ½x1 ; xjCj1 ,
+x ¼ xjCj1 .
+If hðxÞ ¼ jx  xk j þ jx  xkþ1 j; x 2 ½xk ; xkþ1 , x ¼ xkþ1 .
+According to the Mathematical Methods of Induction,
+since ½xk ; xkþ1     ½x2 ; xjCj1  ½x1 ; xjCj , the optimal
+solution is its median xkþ1 . Specifically, we have
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+
+
+
+
+x ¼
+
+fxk ; xkþ1 g jC j ¼ 2k
+:
+xkþ1
+jC j ¼ 2k þ 1
+
+This concludes the proof.
+
+(24)
+u
+t
+
+Algorithm 3. MGA
+Input: C: the grouping obtained by MMS;
+Output: C: the adjusted grouping for a worker;
+1: calculate the number of elements in a group ;
+2: calculate the median jCj ;
+3: for each group Ck in C do
+4: if jCk j < jCj then
+5:
+merge the locations from the near group or groups;
+6: return C;
+
+Algorithm 3 shows the main steps of MGA. In MGA, by
+feeding the grouping obtained by MMS, each worker first
+calculates the number of elements in a group (Line 1). Then,
+he calculates the median jCj according to Eq. (24) (Line 2).
+Next, for each group Ck in C, a worker finds the nearest one
+or more groups in which the number of elements is greater
+than jCj , and migrates elements from it or them. The
+migration stops once satisfying the Intra-group Constraint or
+the number of elements in the migrated groups is larger
+than jCj (Lines 3-4). Finally, he obtains C (Line 5).
+
+6
+
+UTILITY-AWARE OBFUSCATED DISTANCE
+COLLECTION
+
+After obtaining the optimized grouping for each worker, he
+adds noise for each group to collect and uploads the
+required distances for subsequent task allocation. Specifically, we first obtain a representative location for each
+group, and then add noise for this location. A straightforward approach is to regard the average location within each
+group as the representative location and calculate the distances from a worker’s true location to the obfuscated representative location while adopting PL. However, we note
+that each generated representative location for a certain
+group should be close to tasks’ locations in the same group
+and be far away from tasks’ locations in other groups. In
+addition, the straight-forward adoption of PL may introduce excessive noise due to the randomness and boundlessness of the laplacian distribution.
+To this end, we propose a utility-aware obfuscated distance collection method UODC with solid privacy and utility guarantees by keeping each generated representative
+location within the range formed by the tasks’ locations in
+the same group. It mainly consists of two phases. In the first
+phase, we formalize an optimization problem by minimizing intra-group distances and maximizing inter-group distances. In the second phase, we let each worker generate a
+noisy location for each representative location, and finally
+uploads the calculated noisy distance from his true location
+to each noisy representative location to the server for subsequent task allocation. We prove that UODC satisfies Geo-I
+and show its utility superiority with solid utility analysis.
+In the following, we first present the details of the two
+phases. Then, we give the privacy and utility guarantees of
+UODC.
+
+869
+
+6.1 Design of UODC
+In the first phase, to generate a representative location mk
+for the group Ck , we formalize the following optimization
+problem
+0
+12
+PjCh j
+jCk j
+jC j
+t
+X
+X
+j
+@mk  j¼1;tj 2Ch ; A :
+ðmk  ti Þ2 
+arg min
+jCh j
+mk
+i¼1;t 2C
+h¼1;h6¼k
+i
+
+k
+
+(25)
+In Eq. (25), the first part of the objective function indicates that we make mk be close to ti , which is also in the
+group Ck . The second part indicates that mk should stay as
+far away from the tasks’ locations in other groups as possible, where jCj is the number of groups for a worker. To minimize the objective function in Eq. (25), we should make the
+partial derivative be equal to 0, we have
+PjC j
+mk ¼
+
+h¼1;h6¼k
+
+PjCh j
+
+j¼1;tj 2Ch ; tj 
+
+PjCk j
+
+i¼1;ti 2Ck ti
+
+jC jjCk j1
+
+:
+
+(26)
+
+In the second phase, we note that if a location is far away
+from the true location, the probability that it is regarded as
+the obfuscated location should be decreased. Thus, we let
+the probability of sampling the obfuscated location m0k
+within Ck be negatively correlated with the distance
+between m0k and mk . Therefore, we generate m0k by Eq. (27).
+"
+0
+
+
+"  e2dðmk ;mk Þ
+:
+P m0k jmk ¼ P
+"
+2dðmk ;zÞ
+z2Ck "  e
+
+(27)
+
+Algorithm 4. UODC
+Input: Cli : the grouping for the i-th worker;
+li : the location for the i-th worker;
+M: the number of workers;
+": the privacy budget;
+Output: D: the distance matrix;
+1: while i  M do
+2: for each group Ck in Cli do
+3: computes "0 ¼ jC" j ;
+li
+// determine the representative location for
+each group
+4: generate mk by Eq. (26);
+// generate the noisy representative location
+5: sample m0k from Ck by Eq. (27) using "0 ;
+6: compute the distance between li and m0k ;
+7: record the distance in D;
+8: return D;
+
+6.2 Analysis of UODC
+6.2.1 Privacy Analysis
+Theorem 6. For any worker with privacy budget ", UODC satisfies "-Geo-I.
+Proof. By definition, to prove UODC satisfies "-Geo-I, we
+need to prove
+P ðzjxÞ
+ e"dðx;yÞ :
+P ðzjyÞ
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+870
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+"dðx;zÞ
+
+Since P ðzjxÞ ¼ P "e 2 "dðx;vÞ , by the triangular inequal"e 2
+v2V
+ity, we have
+P
+"
+2"dðy;vÞ
+P ðzjxÞ "  e2dðx;zÞ
+v2V "  e
+¼
+
+P
+"
+2"dðx;vÞ
+P ðzjyÞ "  e2dðy;zÞ
+v2V "  e
+P
+"
+"
+"  e2dðy;xÞ2dðx;vÞ
+"
+ e2ðdðy;zÞdðx;zÞÞ  v2V
+P
+2"dðx;vÞ
+v2V "  e
+"
+
+n
+X
+
+"
+
+e
+
+u
+t
+
+This concludes the proof.
+
+6.2.2 Utility Analysis
+Theorem 7. The average error and maximum error of UODC
+are both less than PL.
+Proof. We adopt E to denote the average error of UODC,
+which can be quantified by the weighted distance from
+each possible obfuscated location to the true location. The
+weight can be defined by the probability of reporting a
+possible obfuscated location according to the true location. Additionally, suppose there are n tasks in a group.
+Thus, we have:
+n
+X
+pðti jmÞ  dðm; ti Þ
+E ½dðm; tÞ ¼
+i¼1
+
+¼
+
+oe
+
+Moreover, to obtain
+ing problem.
+
+:
+
+"e2dðm;tj Þ
+ dðm; ti Þ:
+Pn
+"
+"e2dðm;tj Þ
+i¼1
+
+n
+X
+
+"d o
+0 i
+i 2
+
+i¼1
+
+ e2dðx;yÞ  e2dðx;yÞ
+"dðx;yÞ
+
+since there is no any prior information, according to the
+Maximum Entropy Theory, we assume o is sampled from a
+uniform distribution with range ð0; 1Þ. Thus, the mean and
+1
+respectively. Therefore, we have:
+variance of o are 12 and 12
+
+"
+
+j¼1
+
+(28)
+u
+t
+
+For the computational purpose, we use the constant d0 and a
+secondary variable oi to represent dðm; ti Þ, where d0 denotes
+the maximum distance between m and ti , and oi denotes the
+contribution of ti for m. Moreover, since the larger oi , the
+smaller dðm; ti Þ. Thus, we set
+dðm; ti Þ ¼ ð1  oi Þ  d0 :
+
+(29)
+
+Hence, we have:
+"
+n
+X
+ð1  oi Þe2d0 ð1oi Þ
+Pn "d0 ð1oj Þ
+2
+i¼1
+j¼1 e
+Pn
+"
+ð1  oi Þe2d0 oi
+:
+¼ d0 i¼1
+Pn "d o
+2 0 j
+j¼1 e
+
+
+"
+"
+"
+o1 e2d0 o1 þ o2 e2d0 o2 þ    þ on e2d0 on
+¼ d0 1
+"
+"
+"
+e2d0 o1 þe2d0 o2 þ    þ e2d0 on
+
+E ½dðm; tÞ ¼ d0
+
+(30)
+According to the Taylor Expansion [52], we have ex 
+x þ 1. Thus, we have
+n
+n
+X
+X
+"
+"
+oi e2d0 oi 
+d0 oi þ 1 oi
+2
+i¼1
+i¼1
+n
+n
+X
+" X
+¼ d0
+o2i þ
+oi :
+2 i¼1
+i¼1
+
+(31)
+
+PnAccording to the Law of2 Large2 Numbers [53], we have
+i¼1 xi ¼ n  EðxÞ and Eðx Þ ¼ E ðxÞ þ DðxÞ, where EðxÞ
+and DðxÞ are the mean and variance respectively. Moreover,
+
+
+
+" 1
+1
+ n  d0 þ :
+2 3
+2
+Pn
+
+i¼1 e
+
+"
+2d0 oi
+
+(32)
+
+, we formulate the follow-
+
+Uð0; 1Þ, what is the probability density
+
+Problem 3. Given o
+"
+function of e2d0 o ?
+
+"
+
+To solve Problem 3, let an auxiliary variable h ¼ e2d0 o .
+Thus, we have
+ "
+
+P ðH  hÞ ¼ P e2d0 O  h
+
+
+2 ln h
+¼P 0O
+"d0
+Z 2 ln h
+:
+"d0
+1  dO
+¼
+0
+
+2 ln h
+¼
+"d0
+Since P 0 ðH  hÞ ¼ "d2 h , we have
+0
+(
+"
+2
+1  h  e2d0
+:
+pdfðhÞ ¼ "d0 h
+0
+otherwise
+Thus, we have
+
+ "
+
+2 e2do  1
+:
+EðhÞ ¼
+"d0
+
+Therefore. we have
+
+
+
+n 6" d0 þ 12
+E ½dðm; tÞ  d0 1
+n  EðhÞ
+
+!
+"do n 6" d0 þ 12
+:
+
+¼ d0 1  "d
+2 e2 o  1
+
+
+1 "
+d0  d0
+2 6
+Since the expected error of PL is EPL ¼ 2" , in what follows, we need to compare E½dðm; tÞ with EPL . We construct
+gð"; d0 Þ ¼ E½dðm; tÞ  EPL . If gð"; d0 Þ < 0, we can claim that
+the average error of UODC is less than PL. Specifically, we
+have
+
+
+1 "
+2
+gð"; d0 Þ ¼ d0  d0 
+2 6
+"
+12 :
+(33)
+¼ d0 ð3"d0 Þ 
+"
+12
+¼ 3d0   "d20
+"
+qﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+pﬃﬃﬃ
+2
+2
+we can claim
+Since 12
+" þ "d0 > 2 12  d0 ¼ 4 3d0 ,
+gð"; d0 Þ < 0 for any " and d0 .
+As for the maximum error, the maximum error of UODC
+is d0 , which is limited while the maximum error of PL is positive infinity due to the boundlessness of the laplacian
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+distribution. Thus, the maximum error of UODC is also less
+than PL.
+
+7
+
+ANALYSIS OF CANOE
+
+In this Section, we theoretically analyze the privacy, utility
+and complexity of CANOE.
+
+7.1 Privacy Guarantee
+At beginning, we give Lemma 4 to quantify the distance
+between any two locations after adding noise based on our
+group-based noise addition.
+Lemma 4. For any two tasks’ locations with the distance less
+than r (dðl1 ; l2 Þ  r), the distance is still less than r after they
+are grouped. For notation convenience, the grouping method is
+denoted by G. That is, it holds dðGðl1 Þ; Gðl2 ÞÞ  r.
+Proof. Let x and y represent the longitude and latitude of a
+task respectively. We have
+Pm
+Pm
+
+i¼1 xi
+i¼1 yi
+Gðl1 Þ ¼
+þ r  cos u;
+þ r  sin u
+m
+m
+and
+Pn
+Gðl2 Þ ¼
+
+j¼1 xj
+
+n
+
+Pn
+þ r  cos u;
+
+j¼1 yj
+
+n
+
+
+þ r  sin u
+
+where m and n represent how many locations the two
+groups are formed from.
+Obviously, we have
+dðGðl1 Þ; Gðl2 ÞÞ
+ﬃ
+sﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+Pn
+Pn
+Pm
+2 Pm
+2
+j¼1 xj
+j¼1 yj
+i¼1 xi
+i¼1 yi
+¼
+þ
+
+
+m
+n
+m
+n
+vﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+ﬃ
+2
+u
+!
+!2 3
+2
+u
+m
+n
+m
+n
+X
+X
+X
+X
+u 1 4
+n
+xi  m
+xj þ n
+yi  m
+yj 5:
+¼t
+ðmnÞ2
+i¼1
+j¼1
+i¼1
+j¼1
+
+Therefore, we have
+dðGðl1 Þ; Gðl2 ÞÞ
+vﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+8 2
+u
+32 9
+s1
+smn
+u
+>
+zﬄﬄﬄﬄﬄﬄﬄ}|ﬄﬄﬄﬄﬄﬄﬄ{
+zﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄ}|ﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄ{
+>
+>
+u
+ >
+>
+>
+> 4x  x  þ    þ x
+u
+5 >
+>
+>
+
+x
+i1
+j1
+>
+>
+iðmnÞ
+jðmnÞ
+u
+>
+>
+>
+>
+u
+=:
+<
+u 1
+2
+3
+¼u
+2
+t1
+tmn
+uðmnÞ2 >
+>
+>
+u
+zﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄ
+ﬄ}|ﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄﬄ{ >
+>
+> 6zﬄﬄﬄﬄﬄﬄ
+ ﬄ}|ﬄﬄﬄﬄﬄﬄﬄ{
+
+>
+7 >
+u
+>
+>
+>
+>
+þ
+y
+
+y
+þ
+
+
+
+þ
+y
+
+y
+4
+5
+t
+>
+>
+i1
+j1
+iðmnÞ
+jðmnÞ
+>
+>
+;
+:
+P
+PN 2
+2
+Since ð N
+i¼1 ai Þ  N
+i¼1 ai , we have
+dðGðl1 Þ; Gðl2 ÞÞ
+sﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+
+
+
+
+1
+
+mn s21 þ t21 þ    þ s2mn þ t2mn
+2
+ðmnÞ
+:
+sﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+1
+2
+mnðmn  r Þ
+
+ðmnÞ2
+¼r
+
+This concludes the proof.
+
+871
+
+u
+t
+
+Based on Lemma 4, we give a comprehensive analysis of
+CANOE on privacy guarantee in Theorem 8.
+
+Theorem 8. For any worker with privacy budget ", CANOE
+satisfies "-Geo-I.
+Proof. By definition, to prove our CANOE satisfies "-Geo-I,
+we need to prove
+P ðGðl1 Þ ¼ l jl1 Þ
+ e"dðl1 ;l2 Þ :
+P ðGðl2 Þ ¼ l jl2 Þ
+Similar to Theorem 6, we have P ðGðl1 Þ ¼ l jlÞ ¼
+
+P
+
+ " dðGðlÞ;l Þ
+" e 2jCj
+jCj
+ " dðGðlÞ;zÞ
+" e 2jCj
+z2V jCj
+
+. Thus, we have
+
+" dðGðl Þ;Gðl ÞÞ
+P ðGðl1 Þ ¼ l jl1 Þ
+1
+2
+:
+ ejC j
+
+P ðGðl2 Þ ¼ l jl2 Þ
+
+According to Lemma 4, for each task, we have
+" dðl ;l Þ
+P ðGðl1 Þ ¼ l jl1 Þ
+ ejC j 1 2 :
+P ðGðl2 Þ ¼ l jl2 Þ
+
+According to sequential composition property in Theorem 1, for each worker, we have
+P ðGðl1 Þ ¼ l jl1 Þ
+ e"dðl1 ;l2 Þ :
+P ðGðl2 Þ ¼ l jl2 Þ
+This concludes the proof.
+
+u
+t
+
+7.2 Utility Guarantee
+In what follows, we present the utility analysis to explain
+why CANOE performs better in Theorem 9.
+Theorem 9. If a worker is eventually assigned to a task,
+CANOE makes he be more likely to be assigned to the optimal
+task, which can make the average travel distance be smaller,
+than directly adding noise to his true location.
+Proof.
+Recall that we assume that the size of the preference
+set for each worker is the same, denoted by r, and each
+worker uses the same privacy budget ". We introduce
+auxiliary variables p1 and p2 to denote the probabilities
+of being assigned to the optimal task when directly adding noise to workers’ locations and adopting the proposed CANOE respectively.
+Clearly, we have p1 ¼ r1 . For CANOE, we discuss p2 in
+two cases.
+Case 1: If there is only one group, we have p2 ¼ r1 .
+Thus, we have p2 ¼ p1 .
+Case 2: If there are more than two groups, we first
+introduce auxiliary variable a1 ; a2 . . . ai . . . ajCj , where jCj
+is the number of groups and ai is the number of elements
+in the i-th group.
+If the tasks in the preference set are evenly divided
+1
+1
+ r=jCj
+: Thus, p2 ¼ p1 .
+into jCj groups, we have p2 ¼ jCj
+If the tasks in the preference set are not evenly divided
+into jCj groups, we have
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+872
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+
+
+
+p2 ¼
+
+
+
+1
+1 1
+1 1
+1 1
+1
+1
+
+ þ
+ þ 
+  þ
+
+;
+jC j jC j a1 jC j a2
+jC j ai
+jC j ajC j
+(34)
+
+where a1 þ a2 þ ai þ ajCj ¼ r and 1  ai < r. Thus, we
+have
+1
+1
+1
+1
+þ þ   þ
+a1 a2
+ai
+aj C j
+a1 þ a2 þ ai þ ajC j a1 þ a2 þ ai þ ajC j
+þ
+¼
+a1  r
+a2  r
+a1 þ a2 þ ai þ aj C j
+a1 þ a2 þ ai þ ajC j
+ þ
+þ 
+ai  r
+aj C j  r
+
+ 
+
+
+a2 a1
+a3 a1
+jC j 1
+þ 
+þ
+þ
+¼
+þ
+þ  :
+(35)
+r
+r
+a1 a2
+a1 a3
+
+jC j2 p2 ¼
+
+pﬃﬃﬃﬃﬃﬃ
+a
+Since x þ y  2 xy for any x; y  0, we have aji þ aaji 
+2. Thus, we have
+jC j2  p2 
+
+
+jC j 2 jC j  ðjC j  1Þ
+þ 
+r
+r
+2
+jC j2
+:
+r
+
+Therefore, we have p2  r1 . Thus, p2  p1 .
+In summary, we have p2  p1 .
+
+(36)
+
+h
+i
+M  O jC j3 þ 2  jC j þ 6  OðrÞ þ ðjC j þ 1Þ  Oð1Þ :
+
+u
+t
+
+7.3 Time Complexity
+To show the efficiency of CANOE, we analyze the increased
+computational cost compared with the non-private task
+allocation approach on both the worker side and the server
+side. Generally, the time for balancing privacy and utility
+trade-off is increased while the time for striking utility and
+efficiency trade-off is reduced. The reasons lie in that, we
+have increased the extra time for conducting grouping and
+adjusting each grouping, but have reduced the time for calculating the needed distances due to the adoption of groupbased noise addition.
+Specifically, on the server side, the server participates in
+Phase 1 and Phase 4. Since the approach in [2] need to be performed both for non-private task allocation and CANOE in
+Phase 4, the operations in Phase 4 are not included. We only
+need to calculate the time consumption of invoking Algorithm 1 in Phase 1. Specifically, in Algorithm 1, the server
+first initializes u, m, U and X (Lines 1-2), leading to
+OðN  jCjÞ, OðN  jCjÞ, Oð1Þ and OðN  jCjÞ, as there are jCj
+group centers and each initialization involves N tasks.
+Moreover, initialization with 0 usually can be completed in
+Oð1Þ. Then, similarly, in each iteration, each of updates for
+mk , uij , Z, X and U also takes OðN  jCjÞ. Additionally,
+updating t takes Oð1Þ. Suppose the number of iterations is
+n, the total time complexity on the server side is
+3  OðN  jC jÞ þ Oð1Þ þ n  ½5  OðN  jC jÞ þ Oð1Þ
+¼ ð5  n þ 3Þ  OðN  jC jÞ þ ðn þ 1Þ  Oð1Þ:
+
+Then, he invokes OGAL to adaptively refine his grouping
+based on Algorithms 2 and 3. In particular, for Algorithm 2,
+a worker first splits his grouping C, initializes and sorts the
+constructed structure set G, taking Oð1Þ and OðrÞ þ
+OðjCjlogjCjÞ, as the sorting algorithm usually can be done in
+OðjCjlogjCjÞ. Then, he obtains the minimized the maximum
+sum (Lines 4-7), consuming OðjCj2  ðjCj  1ÞÞ. Finally, he
+merges G to C, using OðjCjÞ. Since log x x  1 according
+to the Taylor Expansion, the total time complexity of Algorithm 2 is OðjCj þ rÞ þ OðjCj3  jCjÞ þ Oð1Þ for each
+worker. For Algorithm 3, each worker first calculates the
+elements in a group and obtains the median, taking OðrÞ
+and OðjCjÞ respectively. Then, he merges each group, using
+jCj  Oð1Þ. Hence, the total time complexity of Algorithm 3
+is jCj  Oð1Þ þ OðjCjÞ þ OðrÞ for each worker. At last, each
+worker conducts Algorithm 4 in Phase 3. In particular, he
+first generates representative location using r locations and
+samples an obfuscated location for each group, leading to
+OðrÞ and OðjCjÞ respectively. Then, he computes and
+uploads the obfuscated distances to the server, which can
+be done in 2  OðrÞ. Hence, the total time complexity of
+Algorithm 4 is 3  OðrÞ þ OðjCjÞ for each worker. Therefore,
+the total time complexity on the worker side is
+
+(37)
+
+On the worker side, there are four parts of computations
+from Phase 2 and Phase 3. First, in Phase 2, each worker
+applies the groupings sent by the server to initially group
+the locations in his preference set, leading to OðrÞ for him.
+
+(38)
+
+From Eqs. (37) and (38), we can see that the total time
+complexity is linear w.r.t. the number of tasks N or workers
+M. Moreover, the time consumptions of each worker and
+the server largely depend on the number of groups jCj
+except for N and M. Furthermore, we have jCj < r, and we
+notice that the size of the preference set r is normally not
+unreasonably large due to crowdsourcing system overhead
+and economic budget. Besides, in practice, it is reasonable
+to assume that the server and each worker have strong computing power, and making use of distributed computing
+can further improve the runtime. As such, we believe that
+CANOE can provide an acceptable utility and efficiency
+trade-off for real-world deployments.
+
+8
+
+EXPERIMENTS
+
+In this Section, we first present the experimental setup. We
+then evaluate the performance of CANOE over two realworld datasets by varying different parameters. Finally, we
+verify the advantages of CANOE’ key building blocks.
+Datasets. In our experiments, we use two real-world datasets for evaluation, T-Drive [54] and Tokyo [55].
+
+
+
+
+T-Drive: It, TD for short, contains trajectories of more
+than 9,019 taxis and hundreds of thousands of passengers. Similar to [16], we assume that the drivers
+are SC workers and the passengers are SC tasks. We
+randomly sample 500 workers and 368 tasks.
+Tokyo: It, TKY for short, contains the locations of 325
+subway stations and 503 offices in Tokyo. There are
+about 573,708 check-ins. Similar to [24], we assume
+that the office locations of users are the locations of
+workers and the locations of subway stations are the
+locations of tasks.
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+As for the preference set, as a common practice [56], we
+choose the first r tasks closest to workers as the preferred
+tasks of each worker. Meanwhile, we ensure that each task
+is within at least one worker’s preference set.
+Evaluation Metrics. We use the average travel distance
+(ATD) [14] to evaluate the performance of CANOE. In particular, we compute the real total euclidean distance (in km)
+of the selected workers and their assigned tasks divided by
+the number of allocated tasks
+ATD ¼
+
+X
+
+
+dðw; tÞ jAj;
+
+(39)
+
+ðw;tÞ
+
+where A is the set of final task allocation (worker, task)
+pairs, and dðw; tÞ is the euclidean distance between the
+selected worker w and the assigned task t. The smaller, the
+better.
+Competitors. For the competitors, as mentioned in related
+work, existing studies are designed specifically with the
+assumption that each worker can perform any tasks rather
+than one of a set of preferred tasks. Thus, for a fair comparison, we let all workers in the following competitors can
+only be assigned to one of a limited number of tasks and
+ensure that all the tasks are assigned.
+
+
+NoPriv: To show the utility loss due to privacy protection, we include a non-private version of CANOE,
+denoted by NoPriv. Both NoPriv and CANOE adopt
+the approach in [2] for task allocation.
+ DGO [14]: It is a differential geo-obfuscation approach,
+which adds noise to each worker’s location, namely
+differential geo-obfuscation.
+ IBA [24]: It focuses on personalized privacy-preserving task allocation while adopting the laplace mechanism [20] with incentive that can allocate tasks
+effectively, namely incentive based task allocation.
+ PBA [16]: It is a probability-based algorithm to assign
+tasks by adopting the laplacian mechanism, namely
+probability-based task allocation.
+ TBA [17]: It uses a tree-based privacy mechanism to
+find the nearest reachable worker for each task,
+namely tree based task allocation.
+The benefits for task preference have well demonstrated
+by the existing non-private task allocation approaches [3],
+[4], [56] while we focus on the privacy issue under this scenario. Therefore, we do not compare CANOE against the
+previous methods without preference, which are all orthogonal to our work.
+
+8.1 Performance Comparison
+Five parameters will affect the performance of CANOE,
+which are shown in Table 2, where the values marked by
+bold font represent the corresponding default values.
+Impact of ". Figs. 5a and 5b show ATD of each competitor
+and CANOE when varying the privacy budget ". We can
+see that CANOE outperforms all the competitors in all cases,
+and the relative superiority of CANOE is more emphasized
+while " enlarges. The reasons can be explained as follows.
+On the one hand, for each group, by incorporating the tasks’
+locations in the same group to limit the range of the generated obfuscated location, it leads to a high chance of the
+
+873
+
+TABLE 2
+Parameters That will Affect CANOE
+Notation
+"
+r
+M
+N
+jCj
+
+Values
+0.1,0.3,0.5,0.8,1
+30, 40, 50, 60, 70
+100, 200, 300, 400, 500
+100, 150, 200, 250, 300
+10, 15, 20, 25,30
+
+Description
+Privacy budget
+Number of preferred tasks
+Number of workers
+Number of tasks
+Number of groups
+
+obfuscated location falling into the nearby locations with its
+true location. On the other hand, through group-based noise
+addition, a task is more likely to be assigned to the optimal
+worker, which can minimize the average travel distance
+according to Theorem 9. These two jointly make CANOE be
+less sensitive to ". In contrast, for DGO, the optimal worker
+assigned to each task may not prefer it. In such a case, the
+task can only be assigned to the nearest worker, resulting in
+larger ATD. For IBA, when the server decides which worker
+should be assigned to a task by judging the distance
+between this task and each worker, it conducts multiple
+probability comparisons for a certain worker in one iteration, which results in the calculated probability contains
+large error. Thus, it may lead to the wrong judgment, and
+unavoidably results in poor performance. For PBA, due to
+the randomness of probability approximation when postprocessing the obfuscated locations generated by PL, they
+may be far away from the true locations. For TBA, it generates obfuscated locations based on the prior locations’
+scopes, while different scopes will exhibit different results,
+which makes it fail to be effectively applied for real-world
+deployments. Moreover, the locations’ scopes may not be
+available in advance in practice.
+Impact of r. Figs. 5c and 5d show ATD when varying the
+number of preferred tasks for each worker r, which denotes
+the number of elements in the preference set. We can
+observe that, with the increment of r, all the approach gets
+better performance. This is because on the premise of a fixed
+number of tasks, a larger r provides a higher possibility for
+each task to be assigned to a well-matched worker.
+Impact of M. Figs. 5e and 5f show ATD when varying the
+number of workers M. We can observe that, with the
+increase of M, all the approaches get a better performance.
+This is because with more candidate workers, a task is more
+likely to be assigned to a proper worker, who really is close
+to this task. Thus, ATD will be smaller.
+Impact of N. Figs. 5g and 5h show ATD when varying the
+number of tasks N. Generally, ATD becomes lower with the
+increment of N. This is because with more tasks while the
+number of workers remains unchanged, there are fewer
+choices for each task.
+Impact of jCj. Figs. 5i and 5j show ATD when varying the
+number of groups jCj. In general, ATD remains stable when
+varying jCj. This is because, with local adjustment, we can
+adaptively determine the grouping for each worker, which
+makes our solution be more robust.
+
+8.2 Effectiveness of OGAL
+We do three parts of experiments to make a comprehensive
+and thorough evaluation on OGAL. We first verify the
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+874
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+
+Fig. 5. Performance comparison.
+
+effectiveness of OGAL on the whole. Then, we verify the
+effectiveness of the building blocks BAG and ALA, which
+are used to conduct globally grouping and locally fine-tune
+each grouping respectively.
+To verify the effectiveness of OGAL, we compare it with
+three baselines, which are GG, LG and GL. For GG, the
+server only groups the tasks, and each worker applies the
+grouping sent by the server to group the tasks in his preference set. For LG, each worker performs grouping locally.
+For GL, the server first groups the tasks using the existing
+KMeans clustering rather than our designed balance-aware
+clustering, and sends the grouping to each worker. Then,
+each worker conducts grouping locally using KMeans again
+instead of conducting local adjustment, with the received
+grouping from the server as the initialization.
+Figs. 6a and 6b show the results. We have the following
+observations. First, LG performs better than GG when "
+gradually enlarges. This is because the number of elements
+in the preference set is far less than the total number of
+tasks. Thus, GG will introduce too much information loss
+for a worker. Second, GL performs better than LG, which
+demonstrates the effectiveness of group-based noise addition. Third, our OGAL significantly outperforms the baselines. The reason lies in that, we have better global grouping
+
+and local grouping, which can make the total noise be
+minimized.
+To verify the effectiveness of the building block BAG, we
+design three baselines, which are NEC, NBA and NBC. For
+NEC, it let uik ¼ 0 if uik < 0 without our designed Exponential Constraint. For NBA, it feeds random values for S when
+solving S-subproblem, which aims to verify our alternative
+optimization scheme. For NBC, it conducts grouping without
+Balance Constraint, which aims to verify our noise analysis.
+Figs. 6c and 6d show the results. We have the following
+observations. First, NBA and NBC lead to poor performance.
+This is because, without Balance Constraint, it may introduce
+too much noise for NBC. In addition, the formalized optimization problem may not converge for NBA. Second, NEC
+performs better than NBA and NBC, and performs worse
+than BAG. This verifies the effectiveness of minimizing
+noise and Exponential Constraint, as without Exponential Constraint it will divide the tasks that should be originally
+divided into multiple groups into the same group, which
+will introduce too much information loss. Third, BAG performs the best, as the total noise is minimized with convergence guarantee.
+To verify the effectiveness of the building block ALA, we
+design five baselines, which are NDB, NIC, NDI, MMS, and
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+875
+
+Fig. 7. Effectiveness of UODC.
+
+Fig. 6. Effectiveness of OGAL.
+
+MGA. For NDB, it does not conduct the operations from
+Theorem 5. For NIC, it does not tackle the Intra-group Constraint in Theorem 4. For NDI, it tackles the Intra-group Constraint without dynamic programming. For MMS, it only
+conducts MGA to determine the optimal number of tasks in
+each group. For MGA, it only conducts MMS to determine
+the optimal intra-group distances.
+Figs. 6e and 6f show the results. We have the following
+observations. First, MMS performs better than MGA, and
+NDB performs better than the others except for ALA. This is
+because MMS paves the way for conducting MGA. Moreover, according to Theorem 9, the injected noise is less than
+PL. Since, the Intra-group Constraint is close related to PL, we
+can still get a better performance even without MMS to
+tackle the Intra-group Constraint. Second, MMS and MGA
+perform the worst. This demonstrates that we should tackle
+MMS and MGA jointly for local adjustment. This is because
+only performing one method cannot minimize the overall
+noise. Third, ALA performs the best. This is because by the
+dynamic programming based method MMS to get the optimal intra-group distances and the median based method
+MGA to get the optimal number of tasks in each group, we
+can minimize the total noise.
+
+8.3 Effectiveness of UODC
+To verify the effectiveness of UODC, we design five baselines.
+Recall that UODC contains two phases, which are determining the representative location for each group and generating
+the obfuscated locations respectively. We design PLO, PGO,
+PLV, PGV and PLN by changing the representative location
+
+determination method and obfuscated location generation
+method. For PLO, we get the average representative location
+in each group and adopt PL to add noise. For PGO, we get the
+average representative location in each group and adopt the
+designed noise addition method in Eq. (27) to add noise. For
+PLV, we determine the representative location only considering that it stays as far away from the tasks in other groups as
+possible, and adopt PL to add noise. For PGV, the only difference from PLV is that we adopt the noisy location generation
+method in Eq. (27) to generate obfuscated locations. For PLN,
+we adopt the representative location determination method
+in Eq. (26) and PL to determine each representative location
+and generate obfuscated locations respectively.
+Fig. 7 shows the results. We have the following observations. First, PGO and PGV perform better than the others
+except for UODC. This is because the designed obfuscated
+location generation method contributes more to the accuracy improvement. Second, PGV performs better than PGO,
+and PLN performs better than PLV, which demonstrate the
+effectiveness of the representative location determination
+method. Third, UODC performs the best. This is because
+the designed representative location determination method
+can make the information loss be minimized, and the
+designed obfuscated location generation method can make
+the injected noise be minimized.
+
+9
+
+CONCLUSION
+
+In this article, we present a geo-indistinguishable task allocation approach, called CANOE, which can provide desirable utility while still achieving rigorous Geo-I guarantee.
+We theoretically give its privacy, utility and complexity
+guarantees. In CANOE, two methods, optimized global
+grouping with adaptive local adjustment method OGAL,
+and utility-aware obfuscated distance collection method
+UODC, are proposed to reduce the negative effect of adding
+noise. Experimental results with component-wise analyses
+validate the effectiveness of CANOE.
+
+REFERENCES
+[1]
+[2]
+
+[3]
+
+Y. Tong, Z. Zhou, Y. Zeng, L. Chen, and C. Shahabi, “Spatial
+crowdsourcing: A survey,” VLDB J., vol. 29, no. 1, pp. 217–250,
+2020.
+Y. Zhao et al., “Preference-aware task assignment in spatial
+crowdsourcing,” in Proc. 33rd AAAI Conf. Artif. Intell. 31st Innov.
+Appl. Artif. Intell. Conf. 9th AAAI Symp. Educ. Adv. Artif. Intell.,
+2019, pp. 2629–2636.
+Y. Zhao, K. Zheng, H. Yin, G. Liu, J. Fang, and X. Zhou,
+“Preference-aware task assignment in spatial crowdsourcing:
+From individuals to groups,” IEEE Trans. Knowl. Data Eng.,
+vol. 34, no. 7, pp. 3461–3477, Jul. 2022.
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+876
+
+[4]
+[5]
+[6]
+[7]
+
+[8]
+[9]
+[10]
+[11]
+[12]
+[13]
+[14]
+
+[15]
+[16]
+[17]
+
+[18]
+[19]
+[20]
+[21]
+[22]
+
+[23]
+[24]
+[25]
+[26]
+[27]
+
+IEEE TRANSACTIONS ON BIG DATA, VOL. 9, NO. 3, MAY/JUNE 2023
+
+Y. Li, Y. Zhao, and K. Zheng, “Preference-aware group task assignment in spatial crowdsourcing: A mutual information-based
+approach,” in Proc. IEEE Conf. Data Mining, 2021, pp. 350–359.
+P. Cheng, L. Chen, and J. Ye, “Cooperation-aware task assignment
+in spatial crowdsourcing,” in Proc. IEEE Conf. Data Eng., 2019,
+pp. 1442–1453.
+Y. Zhao, J. Guo, X. Chen, J. Hao, X. Zhou, and K. Zheng,
+“Coalition-based task assignment in spatial crowdsourcing,” in
+Proc. IEEE Conf. Data Eng., 2021, pp. 241–252.
+M. E. Andres, N. E. Bordenabe, K. Chatzikokolakis, and C. Palamidessi, “Geo-indistinguishability: Differential privacy for location-based systems,” in Proc. ACM Conf. Comput. Commun. Secur.,
+2013, pp. 901–914.
+C. Chow, M. F. Mokbel, and X. Liu, “Spatial cloaking for anonymous location-based services in mobile peer-to-peer environments,” GeoInformatica, vol. 15, no. 2, pp. 351–380, 2011.
+K. Fawaz and K. G. Shin, “Location privacy protection for smartphone users,” in Proc. ACM Conf. Comput. Commun. Secur., 2014,
+pp. 239–250.
+K. Fawaz, H. Feng, and K. G. Shin, “Anatomization and protection
+of mobile apps’ location privacy threats,” in Proc. 24th USENIX
+Conf. Secur. Symp., 2015, pp. 753–768.
+C. Ma and C. W. Chen, “Nearby friend discovery with geo-indistinguishability to stalkers,” in Proc. Int. Conf. Future Netw. Commun., 2014, pp. 352–359.
+H. To, G. Ghinita, and C. Shahabi, “A framework for protecting
+worker location privacy in spatial crowdsourcing,” Proc. VLDB
+Endowment, vol. 7, no. 10, pp. 919–930, 2014.
+H. To, G. Ghinita, L. Fan, and C. Shahabi, “Differentially private
+location protection for worker datasets in spatial crowdsourcing,”
+IEEE Trans. Mobile Comput., vol. 16, no. 4, pp. 934–949, Apr. 2017.
+L. Wang, D. Yang, X. Han, T. Wang, D. Zhang, and X. Ma,
+“Location privacy-preserving task allocation for mobile crowdsensing with differential geo-obfuscation,” in Proc. Conf. World
+Wide Web, 2017, pp. 627–636.
+L. Wang, G. Qin, D. Yang, X. Han, and X. Ma, “Geographic differential privacy for mobile crowd coverage maximization,” in Proc.
+Conf. Assoc. Adv. Artific. Intell., 2018, pp. 200–207.
+H. To, C. Shahabi, and L. Xiong, “Privacy-preserving online task
+assignment in spatial crowdsourcing with untrusted server,” in
+Proc. IEEE Int. Conf. Data Eng., 2018, pp. 833–844.
+Q. Tao, Y. Tong, Z. Zhou, Y. Shi, L. Chen, and K. Xu,
+“Differentially private online task assignment in spatial crowdsourcing: A tree-based approach,” in Proc. IEEE Int. Conf. Data
+Eng., 2020, pp. 517–528.
+N. Wang et al., “Collecting and analyzing multidimensional data
+with local differential privacy,” in Proc. IEEE Int. Conf. Data Eng.,
+2019, pp. 638–649.
+Y. Wang, L. Wu, and S. Wang, “A fully-decentralized consensusbased ADMM approach for DC-OPF with demand response,”
+IEEE Trans. Smart Grid, vol. 8, no. 6, pp. 2637–2647, Nov. 2017.
+C. Dwork, F. McSherry, K. Nissim, and A. D. Smith, “Calibrating
+noise to sensitivity in private data analysis,” in Proc. Theory Cryptogr. Conf., 2006, pp. 265–284.
+X. Zhang, J. Ding, X. Li, T. Yang, J. Wang, and M. Pan, “Mobile
+crowdsensing task allocation optimization with differentially private location privacy,” in Proc. IEEE Conf. Commun., 2020, pp. 1–6.
+Y. Qian, Y. Ma, J. Chen, D. Wu, D. Tian, and K. Hwang, “Optimal
+location privacy preserving and service quality guaranteed task
+allocation in vehicle-based crowdsensing networks,” IEEE Trans.
+Intell. Transp. Syst., vol. 22, no. 7, pp. 4367–4375, Jul. 2021.
+Y. Qian, Y. Jiang, M. S. Hossain, L. Hu, G. Muhammad, and S. U.
+Amin, “Privacy-preserving based task allocation with mobile
+edge clouds,” Inf. Sci., vol. 507, pp. 288–297, 2020.
+Z. Wang et al., “Personalized privacy-preserving task allocation
+for mobile crowdsensing,” IEEE Trans. Mobile Comput., vol. 18,
+no. 6, pp. 1330–1341, Jun. 2019.
+H. Shen, G. Bai, Y. Hu, and T. Wang, “P2TA: Privacy-preserving task
+allocation for edge computing enhanced mobile crowdsensing,”
+J. Syst. Archit., vol. 97, pp. 130–141, 2019.
+W. Gong, B. Zhang, and C. Li, “Privacy-aware online task assignment framework for mobile crowdsensing,” in Proc. IEEE Int.
+Conf. Commun., 2019, pp. 1–6.
+Q. Xu, Z. Su, M. Dai, and S. Yu, “APIS: Privacy-preserving incentive for sensing task allocation in cloud and edge-cooperation
+mobile Internet of Things with SDN,” IEEE Internet of Things
+J., vol. 7, no. 7, pp. 5892–5905, Jul. 2020.
+
+[28] D. Zhang, Y. Ma, X. S. Hu, and D. Wang, “Toward privacy-aware
+task allocation in social sensing-based edge computing systems,”
+IEEE Internet of Things J., vol. 7, no. 12, pp. 11 384–11 400, Dec.
+2020.
+[29] S. Zakhary and A. Benslimane, “On location-privacy in opportunistic mobile networks, a survey,” J. Netw. Comput. Appl., vol. 103,
+pp. 157–170, 2018.
+[30] J. Jiang, G. Han, H. Wang, and M. Guizani, “A survey on location
+privacy protection in wireless sensor networks,” J. Netw. Comput.
+Appl., vol. 125, pp. 93–114, 2019.
+[31] N. E. Bordenabe, K. Chatzikokolakis, and C. Palamidessi, “Optimal
+geo-indistinguishable mechanisms for location privacy,” in Proc.
+ACM Conf. Comput. Commun. Secur., 2014, pp. 251–262.
+[32] L. Yu, L. Liu, and C. Pu, “Dynamic differential location privacy
+with personalized error bounds,” in Proc. Annu. Netw. Distrib.
+Syst. Secur. Symp., 2017.
+[33] S. Oya, C. Troncoso, and F. Perez-Gonzalez, “Back to the drawing
+board: Revisiting the design of optimal location privacy-preserving mechanisms,” in Proc. ACM Conf. Comput. Commun. Secur.,
+2017, pp. 1959–1972.
+[34] A. Pyrgelis, C. Troncoso, and E. D. Cristofaro, “What does the
+crowd say about you? Evaluating aggregation-based location
+privacy,” Proc. Privacy Enhancing Technol., vol. 2017, no. 4,
+pp. 156–176, 2017.
+[35] K. Chatzikokolakis, E. ElSalamouny, and C. Palamidessi,
+“Efficient utility improvement for location privacy,” Proc. Privacy
+Enhancing Technol., vol. 2017, no. 4, pp. 308–328, 2017.
+[36] E. ElSalamouny and S. Gambs, “Optimal noise functions for location privacy on continuous regions,” Int. J. Inf. Secur., vol. 17,
+no. 6, pp. 613–630, 2018.
+[37] S. Takagi, Y. Cao, Y. Asano, and M. Yoshikawa, “Geo-graph-indistinguishability: Protecting location privacy for LBS over road
+networks,” in Proc. IFIP Annu. Conf. Data Appl. Secur. Privacy,
+2019, pp. 143–163.
+[38] S. Oya, C. Troncoso, and F. Perez-Gonzalez, “Is geo-indistinguishability what you are looking for?,” in Proc. Workshop Privacy Electron. Soc., 2017, pp. 137–140.
+[39] F. McSherry, “Privacy integrated queries: An extensible platform
+for privacy-preserving data analysis,” in Proc. ACM Conf. Manage.
+Data, 2009, pp. 19–30.
+[40] Y. Yang, W. Liu, E. Wang, and J. Wu, “A prediction-based user selection framework for heterogeneous mobile CrowdSensing,” IEEE
+Trans. Mobile Comput., vol. 18, no. 11, pp. 2460–2473, Nov. 2019.
+[41] L. Pu, X. Chen, J. Xu, and X. Fu, “Crowdlet: Optimal worker
+recruitment for self-organized mobile crowdsourcing,” in Proc.
+35th Annu. IEEE Conf. Comput. Commun., 2016, pp. 1–9.
+[42] E. Wang, Y. Yang, J. Wu, W. Liu, and X. Wang, “An efficient prediction-based user recruitment for mobile crowdsensing,” IEEE
+Trans. Mobile Comput., vol. 17, no. 1, pp. 16–28, Jan. 2018.
+[43] G. Gao, J. Wu, M. Xiao, and G. Chen, “Combinatorial multi-armed
+bandit based unknown worker recruitment in heterogeneous
+crowdsensing,” in Proc. IEEE Conf. Comput. Commun., 2020,
+pp. 179–188.
+[44] W. Liu, Y. Yang, E. Wang, and J. Wu, “Dynamic user recruitment
+with truthful pricing for mobile crowdsensing,” in Proc. IEEE
+Conf. Comput. Commun., 2020, pp. 1113–1122.
+[45] G. Gao, H. Huang, M. Xiao, J. Wu, Y.-E. Sun, and Y. Du, “Budgeted
+unknown worker recruitment for heterogeneous crowdsensing using
+CMAB,” IEEE Trans. Mobile Comput., vol. 21, no. 11, pp. 3895–3911,
+Nov. 2022.
+[46] M. J. Krieger, J.-B. Billeter, and L. Keller, “Ant-like task allocation
+and recruitment in cooperative robots,” Nature, vol. 406, no. 6799,
+pp. 992–995, 2000.
+[47] B. Guo, Y. Liu, L. Wang, V. O. K. Li, J. C. K. Lam, and Z. Yu, “Task
+allocation in spatial crowdsourcing: Current state and future
+directions,” IEEE Internet of Things J., vol. 5, no. 3, pp. 1749–1764,
+Jun. 2018.
+[48] J. Wang et al., “HyTasker: Hybrid task allocation in mobile crowd
+sensing,” IEEE Trans. Mobile Comput., vol. 19, no. 3, pp. 598–611,
+Mar. 2020.
+[49] J. E. Spingarn, “Applications of the method of partial inverses to
+convex programming: Decomposition,” Math. Program., vol. 32,
+no. 2, pp. 199–223, 1985.
+[50] K. S. Srivastava and S. R. Pattanaik, “Solving nonconvex feasibility
+problem on a sphere and a closed ball by Douglas-Rachford algorithm,” Asia-Pacific J. Oper. Res., vol. 38, no. 1, pp. 2 050 042:1–
+2 050 042:20, 2021.
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG ET AL.: TASK ALLOCATION UNDER GEO-INDISTINGUISHABILITY VIA GROUP-BASED NOISE ADDITION
+
+[51] N. Parikh and S. P. Boyd, “Block splitting for distributed optimization,” Math. Program. Comput., vol. 6, no. 1, pp. 77–102, 2014.
+[52] H. Feng and S. Li, “A tracking differentiator based on Taylor
+expansion,” Appl. Math. Lett., vol. 26, no. 7, pp. 735–740, 2013.
+[53] R. Ghasemi, A. Nezakati, and M. R. Rabiei, “A strong law of large
+numbers for random sets in fuzzy banach space,” Adv. Fuzzy
+Syst., vol. 2020, pp. 8 185 061:1–8 185 061:10, 2020.
+[54] J. Yuan, Y. Zheng, X. Xie, and G. Sun, “Driving with knowledge
+from the physical world,” in Proc. ACM Conf. Knowl. Discov. Data
+Mining, 2011, pp. 316–324.
+[55] D. Yang, D. Zhang, V. W. Zheng, and Z. Yu, “Modeling user activity preference by leveraging user spatial temporal characteristics
+in LBSNs,” IEEE Trans. Syst., Man, Cybern. Syst., vol. 45, no. 1,
+pp. 129–142, Jan. 2015.
+[56] B. Zhao, P. Xu, Y. Shi, Y. Tong, Z. Zhou, and Y. Zeng, “Preferenceaware task assignment in on-demand taxi dispatching: An online
+stable matching approach,” in Proc. 33rd AAAI Conf. Artif. Intell.
+31st Innov. Appl. Artif. Intell. Conf. 9th AAAI Symp. Educ. Adv. Artif.
+Intell., 2019, pp. 2245–2252.
+Pengfei Zhang is currently working toward the
+PhD degree with the Beijing University of Posts
+and Telecommunications, China. His major is
+computer science. His current research interest
+focuses on privacy protection in mobile crowdsensing systems.
+
+877
+
+Sen Su received the PhD degree from the University of Electronic Science and Technology,
+China, in 1998. He is currently a professor with
+the Beijing University of Posts and Telecommunications. His research interests include data privacy, cloud computing, and internet services.
+
+Ning Wang is currently working toward the master’s degree with the Beijing University of Posts
+and Telecommunications, China. His major is
+computer science. His research interests include
+data mining and data privacy.
+
+" For more information on this or any other computing topic,
+please visit our Digital Library at www.computer.org/csdl.
+
+Xiang Cheng received the PhD degree in computer science from the Beijing University of Posts
+and Telecommunications, China, in 2013. He is
+currently a professor with the Beijing University of
+Posts and Telecommunications. His research
+interests include privacy-enhanced computing,
+data mining, and knowledge engineering.
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 06:46:39 UTC from IEEE Xplore. Restrictions apply.

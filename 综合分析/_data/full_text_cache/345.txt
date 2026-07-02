@@ -1,0 +1,954 @@
+740 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+ A Privacy-Preserving Graph Neural Network for
+ Network Intrusion Detection
+ Xinjun Pei , Xiaoheng Deng , Senior Member, IEEE, Shengwei Tian , Ping Jiang , Yunlong Zhao,
+ and Kaiping Xue , Senior Member, IEEE
+
+ Abstract—With the ever-growing attention on communication network intrusion attacks has prompted researchers to continusecurity, machine learning-based network intrusion detection sys- ously develop new network intrusion prevention systems (NIDS)
+tem (NIDS) is widely utilized to meet different security require- to identify the network intrusion activities.
+ments. However, most of the existing methods manually extract or
+learn features from raw traffic, which is usually expensive, com- With the rapid development of neural networks, deep learning
+plicated, and time-consuming. Moreover, this also brings unprece- (DL)-based NIDS methods have become state-of-the-art soludented challenges for preserving users’ privacy in the communica- tions. Such methods often extract traffic features manually and
+tion process, making it difficult for existing solutions to be deployed feed them into the well-designed model to obtain classification
+in practice due to the privacy requirements from legal policies. results. Existing DL-based NIDS methods extract various traffic
+This paper proposes a privacy-preserving graph neural network
+(named NIGNN) for NIDS, which can encode the local structure features (e.g., message type sequences, packet lengths, and raw
+and traffic features. To address the privacy issues pertaining to the byte sequences) as input data to feed into the classification
+application of graph representation learning, we design a privacy model. However, in the real world, network traffic data often
+message-passing mechanism with formal privacy guarantees, in exists in the form of graphs, which contain the long-term evoluwhich sensitive information potentially contained in graph vertices tion and dynamic changes of network traffic flow. Representing
+will be kept private. Specifically, we design a privacy-enhancement
+graph representation that introduces a degree-sensitive item in network traffic as a graph provides a more effective means of
+vertex-based aggregation to reduce noise. Our theoretical analysis capturing dependencies in a traffic network, thereby maximizing
+shows that NIGNN can provide a provable privacy guarantee. Ex- data integrity. Unfortunately, most existing DL-based NIDS
+tensive experiments demonstrate NIGNN’s performance in main- methods only focus on extracting and learning statistical features
+taining a sound privacy-accuracy trade-off. of network packets, while ignoring the structural information of
+ Index Terms—Network intrusion detection, privacy-preserving, the network traffic data [3], [4]. Due to the lack of utilization
+supervised learning, differential privacy, graph neural networks. of the structure and topology of network flow data, they can
+ result in the neglect of valuable information derived from packet
+ I. INTRODUCTION relationships in the flow data. As a result, these systems may fall
+ short in detecting complex network attacks. Therefore, we intro-
+ N RECENT years, network intrusion detection has attracted
+I widespread attentions from academia and industry. While
+users have greatly benefited from the convenience brought by
+ duce the concept of mapping network traffic as a non-euclidean
+ graph with packet relationships to maximize data integrity. A
+ general traffic topology graph is used to describe the traffic
+the Internet, network intrusion incidents have undoubtedly innetwork instead of the representation of euclidean space data in
+creased public concerns about security [1], [2]. The evolution of
+ traditional DL-based methods, thereby better capturing packet
+ relationships.
+ Manuscript received 28 July 2023; revised 28 March 2024; accepted 16 June
+2024. Date of publication 21 June 2024; date of current version 16 January Graph Neural Networks, as a subfield of deep learning,
+2025. This work was supported by the National Natural Science Foundation have demonstrated remarkable success across domains, such
+of China Project under Grant 62172441 and Grant 62172449, in part by the as computer vision, natural language processing, and social
+Joint Funds for Railway Fundamental Research of National Natural Science
+Foundation of China under Grant U2368201, in part by the special fund of Na- network analysis. Their adaptability to diverse non-euclidean
+tional Key Laboratory of Ni&Co Associated Minerals Resources Development graph structures makes them ideal for analyzing complex netand Comprehensive Utilization under Grant GZSYS-KY-2022-018 and Grant work traffic patterns. To leverage the topological and attribute
+GZSYS-KY-2022-024, in part by Key Project of Shenzhen City Special Fund
+for Fundamental Research under Grant JCYJ20220818103200002, and in part information of network traffic, some studies have applied graph
+by the National Natural Science Foundation of Hunan Province under Grant neural networks (GNNs) to NIDS. For instance, Zheng et al.
+2023JJ30696. (Corresponding author: Xiaoheng Deng.) [3] introduced a GCN-based method for network traffic clas-
+ Xinjun Pei, Xiaoheng Deng, Ping Jiang, and Yunlong Zhao are with the School
+of Electronic Information, Shenzhen Research Institute, Central South Univer- sification, which combines traffic trace graphs with statistical
+sity, Changsha 410083, China (e-mail: pei_xinjun@163.com; dxh@csu.edu.cn; features to achieve high classification accuracy even with very
+pjiang@csu.edu.cn; 214711102@csu.edu.cn). few labeled data. Zhu et al. [4] proposed a Darknet Graph Neural
+ Shengwei Tian is with the School of Software, Xinjiang University, Wulumuqi
+830001, China (e-mail: tianshengwei@163.com). Network (DGNN) for darknet traffic classification, which can
+ Kaiping Xue is with the Department of Electronic Engineering and Informa- effectively curb malicious darknet activities. However, many
+tion Science, University of Science and Technology of China, Hefei 230027, existing graph-based NIDS methods ignore privacy concerns.
+China (e-mail: kpxue@ustc.edu.cn).
+ Digital Object Identifier 10.1109/TDSC.2024.3417853 Traffic data are vulnerable to various privacy graph attacks. To
+
+ 1545-5971 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+PEI et al.: PRIVACY-PRESERVING GRAPH NEURAL NETWORK FOR NETWORK INTRUSION DETECTION 741
+
+overcome this challenge, we introduced a privacy-preserving coefficient perception (CCP)-based DP mechanism to enforce
+graph neural network (named NIGNN) for NIDS. We extend privacy preservation to the GNN model. To reduce the noise
+the differential privacy (DP) method in the context of NIGNN introduced by the DP mechanism, we design a degree-sensitive
+to effectively preserve data privacy. privacy-enhancement measure in the aggregation and update of
+ Existing studies employ DP algorithms [5], [6], [7], [8] to GNN, which incorporates contributions from numerous neightrain deep learning models to defend against privacy inference boring nodes to generate a more accurate representation of
+attacks, such as private inference attacks and membership in- the underlying data. In short, the proposed NIGNN ensures
+ference attacks. This is typically done by adding DP noise the practicality of the model while avoiding potential privacy
+to the gradients of the model during training, or by training leakages. To the best of our knowledge, we are the first to
+the model using a noisy loss function. For example, Pan et investigate the problem of privacy-preserving GNN model in
+al. [5] proposed a regression model based on an adaptive DP NIDS, which prevents network intrusions while preserving user
+mechanism, which dynamically allocates privacy budgets and privacy. The main contributions of this paper are summarized as
+adds noise to the objective function. Furthermore, the work in follows:
+[6] developed a private-preserving deep learning, which applies r We propose a novel graph construction method for network
+DP to a stochastic gradient descent (SGD) algorithm. They intrusion detection, which shapes the network-wide traffic
+performed a refined analysis of privacy costs by tracking pri- states into a graphical representation describing network
+vacy loss. Similarly, Jaewoo et al. [7] proposed a DP-based traffic distribution in a heterogeneous space. This gives so-
+SGD solution, which can be improved by carefully allocating phisticated feature representations using graph structures.
+privacy budgets for each iteration. Additionally, the study in This enables excellent potentials in modeling sophisticated
+[8] introduced a private LSTM language model to provide a feature representations and graph structures.
+user-level privacy guarantee. Although these methods introduce r We develop a privacy-preserving GNN to identify network
+private-preserving DL models to protect user sensitive data, they intrusions, which utilizes a CCP-based DP mechanism
+may not be suitable for many graph learning-based scenarios, to enforce privacy preservation to the GNN models. We
+such as those based on GNN models. There are still theoretical design a degree-sensitive privacy-enhancement measure to
+and practical challenges. In this paper, we extend the application exert different effects on vertices, which can reduce the
+of DP to node classification tasks with GNNs. noise introduced by the DP mechanism while effectively
+ Nonetheless, training a GNN model [9] under the constraint learning an accurate model.
+of DP is highly challenging than other privacy deep learning r Extensive experiments carried out on real-world datasets
+models due to the particularity of graphs. In GNNs, vertices are demonstrate the effectiveness of NIGNN in identifying
+interconnected through edges. The GNN model updates vertex network intrusions. The proposed NIGNN can achieve
+representations via a messaging framework, involving multiple a high detection rate while providing a rigorous privacy
+exchanges of hidden representations between adjacent vertices guarantee.
+[10]. Consequently, applying DP to GNN models may incur high The rest of the paper is structured as follows. Section II
+noise [10], potentially compromising the data utility. In addition, describes the related works. Section III briefly introduces some
+the influence of neighbors on the aggregation is not uniform, preliminaries. Section V gives the privacy-preserving NIGNN
+which limits the ability of GNNs to learn vertex representations. in details. Section VI evaluates the proposed NIGNN. Finally,
+To overcome this challenge, this paper designs a degree-sensitive we conclude the paper in Section VII.
+privacy-enhancement measure for GNN aggregation and updates, which exerts different effects on vertices by incorporating contributions from numerous neighboring vertices. This II. RELATED WORK
+approach effectively reduces the impact of DP noise, allowing In recent years, deep learning (DL) methods have been applied
+for a more precise representation of vertices. The involvement in NIDS with unprecedented detection performance. In genof more neighbors will offer significant advantages in mitigating eral, these methods follow a prevailing paradigm: the features
+the adverse effects of DP noise. In this case, the utility of the extracted from raw traffic are first mapped into dense vector
+model can be preserved without consuming too much privacy representations (e.g., word embeddings), and then concatenated
+budget. together to input into a deep learning model to extract and learn
+ Based on the above ideas, we propose a privacy-preserving high-order latent information. The work in [11] tested a variety
+NIGNN for network intrusion detection, which transforms net- of DL models and demonstrated the effectiveness of shallow
+work traffic data into graph structures wherein vertices repre- neural network architectures in detecting network intrusions.
+sent the traffic, and edges represent the IP hosts. Shaping the Moreover, Liu et al. [12] presented a traffic obfuscation framenetwork-wide traffic states as a graph can describe the network work to prevent traffic analysis attacks. Das et al. [13] proposed a
+traffic distribution in a heterogeneous spatial space. This design natural language processing to convert HTTP requests into vecprovides an intuitive description of the network-wide traffic tors. Then, the learning model is used to detect anomalous traffic.
+state, allowing graph analysis techniques to detect network Moreover, Liu et al. [14] designed a utility-optimal differentially
+intrusion activities effectively. Besides, we train the NIGNN private mechanism in cognitive radio networks, which provides
+with a privacy graph convolution layer to prevent adversaries real-time differential location privacy. Hsu et al. [15] used a deep
+from inferring sensitive information, which uses a correlation reinforcement learning model to reflect traffic behaviors, which
+742 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+has the self-updating capability. However, these methods cannot GNN for cloud environments that supports secure GNN traindirectly operate on graph structure data [10], thereby ignoring ing and inference by encrypting graph data using lightweight
+the spatial structure information of traffic network. encryption techniques. In [30], the authors extended the privacy-
+ The proliferation of network intrusions has presented un- preserving GNN in a federated learn-based recommendation
+precedented challenges in preserving users’ privacy. While In- system. They applied local differential privacy to local gradients
+ternet anonymity dissociates an individual’s identity from their to protect the privacy of user-item graphs. Another study by Miao
+network activities [16], any collection of data for NIDS may et al. [31] introduced a privacy-preserving collaborative GNN
+jeopardize the anonymity of users [17], thereby putting their for distributed graph databases, which utilizes a cluster-based
+privacy at risk. Sgaglione et al. [18] proposed a signature-based DP algorithm to reduce model degradation. Similarly, Zhang
+intrusion detection system that employs homomorphic encryp- et al. [32] proposed a distributed GCN framework that uses
+tion to enhance the security of sensitive data. However, using a subgraph sampling method to reduce communication and
+homomorphic encryption to encrypt data is computationally memory overhead. In another study, Bhaila et al. [33] studied the
+expensive, which affects the performance of the whole system. application of randomization mechanisms in high-dimensional
+To reduce the computational overhead, Mokry et al. [19] pro- feature settings, and utilized frequency estimates of graph clusposed a privacy-preserving clustering algorithm for an intrusion ters to supervise the training procedure at a sub-graph level.
+detection system. This algorithm employs lightweight crypto- Sajadmanesh et al. [34] proposed a locally private graph neural
+graphic techniques (mainly additive secret sharing) to protect the network (LPGNN). They designed a multi-bit-based local difprivacy of intrusion alert data. Additionally, Alazab et al. [20] ferential privacy method to protect node privacy. Following this
+introduced a federated learning (FL)-based intrusion detection work [34], Du et al. [35] proposed an evaluation method to charsystem that creates a global detection model without sharing acterize the trade-off between utility and privacy for LPGNN.
+private data, where each entity trains its local model using its Furthermore, Lin et al. [36] utilized the multi-bit algorithm
+private data and then shares the model updates (gradients) with [34] to perturb node features, and employed a random response
+a central server. Similarly, Jin et al. [21] proposed an evolvable algorithm to perturb the graph structure. However, introducing
+system architecture for an intrusion detection system, which too much noise can reduce data utility and compromise model
+utilizes a federated incremental learning method to aggregate the quality. Although these methods introduce privacy-preserving
+knowledge from diverse local models and incrementally update GNN models to protect user sensitive information, there are
+the FL model. However, the effectiveness of federated learning relatively few studies on privacy-preserving GNN-based NIDS.
+relies on the collaboration of a large number of devices. This There are still theoretical and practical challenges. Our work
+collaboration can introduce a lot of communication overhead. is inspired by recent advances in privacy-preserving techniques
+Although these methods introduce privacy-preserving methods and graph representation learning. In this paper, we proposed
+to protect sensitive intrusion data, they may not be suitable for a privacy-preserving GNN (named NIGNN) for NIDS. The
+GNN-based NIDS. In this paper, we extend the application of the main goal is to protect the privacy of network traffic data while
+differential privacy method to NIDS, which can not only identify leveraging the predictive power of GNNs for the identification
+network intrusion but also protect the privacy of intrusion data. of network intrusions.
+ Recent GNN is considered an emerging research area and has
+been successfully applied across various fields, such as action III. PRELIMINARIES
+recognition [22], click-through rate (CTR) prediction [23], and
+ A traffic network consists of a set of IP hosts. Each pair of IP
+few-shot learning [24]. The ability to model irregular graph data
+ hosts may communicate with each other. This paper treats the
+is crucial for the GNN models, and many variants have been
+ traffic network as a directed graph, denoted by G = (V, E, X)
+proposed, such as graph convolutional networks [10], graph
+ where V denotes the set of N vertices, and E denotes the set of
+attention networks [25], GraphSAGE [26], and so on. These
+ M edges. We consider that the network intrusion detection can
+methods recursively aggregate and transform neighborhood inbe transformed to a specific type of node classification task. We
+formation to update vertex representations. As a result, the
+ denote X ∈ R|V|×d as a feature matrix. Each vertex vi ∈ V has a
+graph structure is encoded into the neural network to improve
+ d-dimensional feature vector vi = xi = {xi1 , xi2 , ..., xid } with
+classification performance. As the deployment of these models
+ a corresponding label yi ∈ {0, 1}. Formally, a labeled example
+becomes more widespread, there are concerns about graph priis a tuple (xi , yi ) ∈ G: a d-dimensional feature vector xi with a
+vacy. However, due to the relational characteristics of graphs,
+ label yi . This task is to construct a GCN from G that enables us
+training a privacy-preserving GNN model is more challenging
+ to output the prediction ŷi for every vertex. ŷ is used to estimate
+than other privacy deep learning models. To address these chalthe probability of network intrusion appearing. Specifically, to
+lenges, researchers are turning their attention to the integration of
+ prevent traffic analysis attacks, the proposed NIGNN is trained
+privacy measures (e.g., differential privacy) into GNNs. There
+ under the constraint of differential privacy. Next, we briefly
+are a few attempts to provide privacy protection in the field
+ introduce the definitions of DP and GNN.
+of graph-based learning algorithms. Zhang et al. [27] reviewed
+various privacy attacks and privacy-preserving techniques in the
+graph domain. In [28], the authors categorized representative A. Differential Privacy
+trustworthy GNN algorithms from a computational perspective. Differential privacy is a privacy definition specifically de-
+For instance, Wang et al. [29] proposed a privacy-preserving signed for the problem of privacy-preserving data analysis. The
+PEI et al.: PRIVACY-PRESERVING GRAPH NEURAL NETWORK FOR NETWORK INTRUSION DETECTION 743
+
+Fig. 1. Details of message passing.
+
+ Fig. 2. Threat model.
+key idea behind DP [6] is that it does not permit discering of
+any individual’s record. In other words, no matter what auxiliary information is available, the adversaries cannot infer the
+sensitive informantion of training data. To protect the privacy, features can be encoded by the neighborhood aggregation operawe formally define DP as follows: tion Agg() and update operation σ(). More formally, the hidden
+ Definition 1: (-DP). A randomized algorithm A : D → R representation hlv of a vertex v can be described as follows.
+  
+with domain D and range R satisfies -DP, if for any two hlN (v) = Agg hl−1 u , ∀u ∈ N (v) , (1)
+neighboring databases D, D differing on at most one tuple,   
+and for all possible outputs O ⊆ R(A), we have: hlv (θ) = σ hl−1v ⊕ hlN (v) W l , (2)
+ Pr[A(D) ∈ O] ≤ eε Pr [A (D ) ∈ O] . where l is the number of layers, ⊕ represents the merge operation, W represents the weight matrix, and N (v) represents
+ The privacy budget , as a metric of privacy loss, controls the
+ a set of its adjacent neighbors. Specifically, the Agg() is an
+privacy-utility trade-off. A smaller value of  indicates a higher
+ aggregate function with invariant permutation, such as max,
+privacy guarantee but more reduced the data utility. Formally,
+ sum, or mean. Each layer updates all its hidden representations
+we define the l1 -sensitivity as below.
+ H l = {hlv }n0 by an activation function σ (such as Sigmoid and
+ Definition 2 (l1 -sensitivity): For any function f : X → Rd ,
+ ReLU), where n represents the number of hidden neurons. It is
+the l1 -sensitivity of f is:
+ worth mentioning that, the GCN takes X as input, i. e., h1xi (θ) =
+ Δf = max f (D) − f (D )1 . σ((xi ⊕ Agg ({xu , ∀u ∈ N (xi )}))W 1 ). Let f (xi , ω ) denote
+ D,D
+ the cost function and ω ∗ represents the optimal model parameter.
+ The Laplace noise mechanism [37] is a well-known DP The objective of the GNN is minimize the given cost function
+method, which can be described as below. f (xi , ω ) in order to find the optimal parameter ω . Then, we give
+ Theorem 1: Laplace mechanism. For any function f , the the definition of ω ∗ as follows.
+Laplace mechanism Af (D)  f (D) + Lap(0, Δf /) satisfies n
+-DP. ω ∗ = arg min f (xi , ω ) . (3)
+ ω
+ Proof: Proof of Theorem 1 can be found in [38]. i=1
+ The Laplace mechanism perturbs the private value with a
+random noise drawn from a Laplace distribution Lap(0, Δf /) IV. THREAT MODEL
+with mean zero and variance Δf /. The noise scale is calibrated A. System Architecture
+by the l1 -sensitivity Δf (divided by ).
+ In our study, we explore a typical IoT network, where IoT
+ nodes connect to the Internet via an access gateway, as depicted
+B. Graph Neural Networks in Fig. 2. We present a comprehensive network intrusion detec-
+ This subsection presents a GNN model that directly operates tion framework to defend against network intrusions and traffic
+on graph-structured data. Fig. 1 gives an example. The GNN private analysis. This framework includes the Security Gateway,
+can perform effective information propagation on the graph. Let Security Server, and Security Service.
+(A, X) be a tuple, which can be used as the input. X denotes 1) Security Gateway: It serves as a local access gateway to
+the feature matrix, and A denotes the adjacency matrix. For the Internet, allowing IoT devices to connect via Ethernet and
+every vertex in the graph, the GNN aggregates the vectors of its WiFi. Its primary function is to monitor and collect communiadjacent neighbors to learn the vertex’s hidden representation. cation data from all IoT devices. All Security Gateways upload
+This process is shown in Fig. 1. The graph structure and vertex their network traffic data to the Security Server for training a
+744 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+large-scale intrusion detection system. Another function of the C. Adversary Model and Assumptions
+Security Gateway is traffic filtering, which utilizes the predefined
+ We divide our threat model into two distinct classes of adverrules or policies to inspect, analyze and filter incoming and saries with differing visibility into the home network:
+outgoing traffic. The predefined rules can be configured to block
+ A1 - Network intrusion attacks: We consider an Adversary,
+network traffic based on various criteria, such as destination IP
+ referred to as ”Adversary 1”, who lacks knowledge of the home
+address, source IP address, protocols, and port numbers. The network topology but possesses the ability to launch attacks
+Security Gateway enforces the filtering rules to restrict malicious
+ against IoT nodes from an external network. Adversary 1 can
+traffic and reduce the risk of network attacks. Furthermore,
+ launch a variety of network traffic attacks, such as backdoors,
+it monitors IoT device communications and detects abnormal fuzzers, and DoS attacks, etc. The goal of Adversary 1 is to
+communication behaviors caused by malicious IoT devices.
+ execute network intrusion attacks that compromise as many IoT
+ 2) Security Server: We consider that Security Server has suf- nodes as possible, thereby destabilizing device functionality and
+ficient computational power to train a large-scale deep learning- potentially infecting additional devices. Fig. 2 shows our threat
+based NIDS system. It is supported by the IoT security sermodel. For example, a DoS attack can deplete the resources of
+vices provided by companies like Google and Microsoft. These one or more servers, or block specific links within a data center.
+services collect all network traffic data from security gateways Ultimately, these coordinated attacks overwhelm the targeted
+to facilitate large-scale network intrusion detection and traffic
+ servers with an excessive amount of network traffic.
+behavior analysis. A2 - Privacy inference attacks based on traffic analysis:
+ 3) Security Service: It maintains a repository of NIDS to Within the context of deep learning-based NIDS, the prosuport Security Gateway to quickly query and identify abnormal cessing of the original network traffic leads to the generation
+traffic. Security Service periodically collects network traffic data of sequences of traffic features. These sequences encompass
+to update the large-scale NIDS model provided by Security
+ various attributes, such as traffic packets, traffic bytes, traffic
+Server. Under cyber-attacks and other network anomalies, it also duration, protocol types, TCP flags, etc. To establish a robust
+can support fast response and prevent the expansion of network deep learning-based NIDS, the traffic features are typically
+attacks by blocking node communication.
+ transmitted to a Security Server for training the deep learning
+ model. However, such communication raises privacy concerns,
+ as traffic features contain a lot of important information, which
+B. System Model could reveal private information about the activities of a home’s
+ occupants. For example, traffic rates from the indoor security
+ In an IoT network, communication between IoT nodes occurs
+ camera in a smart home reveal whether the user is present at
+through the transmission of traffic, and each IoT node in the
+ home when the camera detects movement, and traffic rates from
+network has the ability of transmiting and forwarding traffic.
+ the switch reveal when the IoT device is turned on or off. For
+Note that in most cases, traffic cannot be directly routed from
+ example, a member inference attack [39] can infer whether a
+the source IP node to the destination IP node. Instead, it typdata record belongs to the training dataset of the target model.
+ically necessitates traversal through one or more forwarding
+ Suppose the training data is collected within a home network.
+devices. However, due to the inherent limitations in the com-
+ When a network observer (referred to as ”Adversary 2”) deputing resources of IoT nodes, on-device monitoring is seldom
+ termines a sub-training set using the member inference attack,
+feasible. In this context, Security Gateway switches stand out
+ Adversary 2 can reasonably infer a user’s home activities from
+as the primary forwarding devices responsible for forwarding
+ the sequence of traffic features of the sub-training set through
+or discarding traffic, which serves as a vital component for
+ traffic analysis.
+security-related measures within IoT networks to identify and
+monitor traffic patterns, detect anomalies, and enforce security
+policies. The transmission process of all traffic within an IoT D. Design Choices
+network can be mathematically expressed as follows: This paper presents a novel privacy-preserving NIGNN for
+ network intrusion detection, which shapes the network-wide
+ traffic states into a graph. This method uses graph analysis
+ SRC → (Ns1 , Rs1 ) → (Ns2 , Rs2 ) · · · (Nsn , Rsn ) → DES, method to detect network intrusion activities, effectively weak-
+ (4) ening the network intrusion attacks A1. Despite the importance
+where SRC indicates the source IP address of IP host H, of privacy in traffic analysis, few efforts have been devoted
+DES indicates the destination IP address of IP host H, Nsi to studying privacy inference attacks in this context of deep
+indicates i-th IoT node, and Rsi indicates the traffic processing learning NIDS. This paper reveals how attackers can infer user
+rules associated with the IoT node Nsi . Then, we establish privacy through traffic analysis. We trained the GNN model
+the anomaly detection components in the Security Gateway for under DP constraints to mitigate privacy inferences from traffic
+device communication monitoring and traffic capture, where feature sequences (privacy inference attack A2). By integrating
+each traffic is assigned to a specific class y ∈ {0, 1}. y = 1 privacy-preserving measures into the design and development
+indicates malicious traffic, and y = 0 indicates normal traffic. of graph mining-based NIDS systems, it is possible to achieve a
+Then, the Security Gateway extracts statistic features from the balance between effective intrusion detection and preservation
+raw network traffic to characterize the behavior of the traffic. of individual privacy. To our best knowledge, in the field of
+PEI et al.: PRIVACY-PRESERVING GRAPH NEURAL NETWORK FOR NETWORK INTRUSION DETECTION 745
+
+NIDS, it is the first attempt that graph anaysis-based NIDS is
+proposed to prevent network intrusion while preserving user
+privacy.
+
+ V. DIFFERENTIAL PRIVACY GRAPH NEURAL NETWORKS FOR
+ INTRUSION DETECTION
+ In this section, a privacy-preserving NIGNN is proposed.
+We consider that network intrusion detection can be regarded
+as a specific type of node classification task. In Section V-A,
+we transform the network traffics as graph data that describes
+the transition between network-wide traffic states at consecutive
+time steps. Section III-B describes how NIGNN encodes graph
+structure and traffic features. Section V-B describes how to
+construct a privacy graph convolution layer in NIGNN that
+perturbs the model input. Finally, we propose a degree-sensitive
+privacy-enhancement mechanism to reduce the noise in Section
+V-C.
+
+A. Graph-based Traffic Representation
+ A traffic network usually consists of a set of IP hosts. Network Fig. 3. Details of graph transformation.
+intrusion detection can be seen as a specic time series analysis
+problem, which aims at predicting future network attacks in the
+trafc network using historical data. In this study, we transform representation. We demonstrate the mapping of a network traffic
+the time series analysis into a node classication problem. Sub- flow into a graph-structured representation in which each packet
+sequently, a network-wide trafc graph is constructed to capture is assigned to a node, and packet relations are encapsulated in
+the spatial structure of the trafc data, which represents trafc ows edges with the chronological relationship serving as the edge
+as vertices and hosts as edges. Based on the link homophily [3], direction. Fig. 3(b) illustrates a general graph-structured network
+trafc ows with public IP hosts exhibit similar application trends, traffic flow representation. The details of how a network traffic
+which can be measured on the graph. For instance, in a peer-to- flow is mapped to each graph entity are presented as follows.
+peer (P2P) application, hosts frequently connect with multiple r In Fig. 3(a), the traffic γts1 and γts1 have the common host
+ 1 3
+collaborating hosts, and trafc ows between them are associated s1 . In Fig. 3(b), there exists a directed edge between γts11
+with the same application [3]. Equally, we can obtain the same and γts31 .
+conclusion in client-server applications. We then use the NIGNN r We regard the receiving and sending traffic of a host as
+to model the temporal and spatial properties of the graph. This two vertices in the graph, and use a directed connection
+relational view of network trafc treats the node classication to construct the edge between the two vertices, e.g., γts11 is
+problem as information dissemination over the network-wide linked to γts22 in Fig. 3(b).
+trafc graph. In this part, we contract a network-wide traffic graph. r We set a threshold thr that designates the maximum time
+ Fig. 3(a) illustrates a general traffic network. There are 6 interval. Temporal information is the inter-arrival time
+IP hosts labeled as s1 , s2 , ..., s6 , where each IP host has some between packets and can be calculated by tr − ts . In this
+traffic packets. For example, the IP host S1 have send two traffic scenario, s is the sender node index and r is the receiver node
+packets γts11 and γts31 and received one traffic packet γts22 . The index. When the threshold thr is set to 1, |t3 − t1 | > thr.
+packet’s timestamps are denoted as ti , where i = 1..k, and k As shown in Fig. 3(b), there is no edge between the two
+is the total number of packets or nodes. When we measure the vertices γts11 and γts32 .
+traffic data collected by sth IP host for a certain period of time, For simplicity, all traffic data can form a traffic feature matrix
+the collected data sequence can be characterized in the form of X = {x1 , x2 , . . . , xn }, where X ∈ RN ×M , and each element
+a time series, denoted by γ s = {γ1 , γ2 , . . . , γT } ∈ RT ×M . We x1 represents a traffic data γts . Let A ∈ RN ×N be the adjacency
+extract characteristics for each traffic packet. The extracted set matrix of the network-wide traffic graph. When the traffic i and
+of features can now describe each traffic packet. For the sth IP j have a common IP host, Ai,j = 1, otherwise Ai,j = 0. After
+host Si , its traffic packet γts at time t is described by several that, the network-wide traffic graph is constructed, which can be
+features, such as timestamps, inter-packet mean time, and flow represented as G = (X, A).
+duration. For simplicity, we only use directed connections to
+construct the edges of the graph. Consequently, the traffic data
+sequence is transformed into the form of a network-wide traffic B. Private Graph Convolution Layer With Correlation
+ Coefficient Perception Noise
+graph.
+ We are interested in utilizing the graph structure to analyze In our proposed NIGNN, we construct a private gaph convothe trafc . In our case, the traffic data is transformed to a graph lution (PGC) layer that perturbs the input features. Fig. 4 shows
+746 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+ Algorithm 1: Private Graph Convolution Layer With DP.
+ Input: Original traffic data X, privacy budget 
+ Output: The perturbed PGC layer P GC D (W )
+ 1: Security Gateway side:
+ 2: Δf = 2 h∈H0 d;
+ 3: for each 0 ≤ j ≤ d do
+ 4: j = βj · 1 ;
+ 5: end for
+ 6: for xi ∈ D, i ∈ [0, n] do
+ 7: for xij ∈ xi , j ∈ [0, d] do
+ 8: Perturb the vertex feature:
+ 1
+ 9: xij = P GCxi (xij ) = xij + |D| Lap(0, Δf /j );
+ 10: end for
+ 11: Obtain the perturbed vertex representation:
+Fig. 4. An overview of NIGNN architecture. 12: xi = {xi1 , xi2 , ..., xid };
+ 13: end for
+ 14: Update P GCx  to the Security Server;
+ i
+an overview of NIGNN architecture. To achieve DP, a baseline 15: Security Server side:
+approach is to insert the same magnitude of noise (selected 16: Construct the PGC layer:
+from an identical noise distribution |D| 1
+ Lap(0, Δh /1 )) to the 17: hD (W ) = x ∈D (xi · W );
+ i
+all input X. Intuitively, the baseline approach can work well. 18: P GC D (W ) = {hD (W )}h∈P GC ;
+In practice, this assumption is not valid, and the utility of the 19: return P GC D (W ).
+model may be affected as the contribution of each feature may
+vary.
+ Moreover, we propose a correlation coefficient perception
+ Intuitively, the Spearman correlation between t(p) and t(q)
+(CCP)-based DP mechanism, which relies on a weighted correis large (resp. small) when observations have a similar (resp.
+lation coefficient matrix to inject different magnitudes of noise
+ dissimilar) rank. For j-th input feature xij , we calculate the
+into the model input. Since features are dependent of each other
+ Spearman correlations between it and all other features (i.e.,
+(e.g., duration versus number of packets, flow byte rate versus
+ rj = {r(t(j) ,t(1) ) , r(t(j) ,t(2) ) , ..., r(t(j) ,t(d) ) }). As a result, we can
+flow packet rate, and minimum segment size versus minimum |r |
+inter-arrival time of packets), we adopt CCP to quantify the denote a privacy budget ratio as βj = 1 ·d j |r | . For j-th input
+ d j=0 j
+extent of statistical dependence between two variables. In CCP, feature, the privacy budget can be denoted as j = βj · .
+Spearman rank correlation coefficient is recommended for data As mentioned earlier, each traffic data xi is represented by
+with deviations or outliers [40]. In essence, rank correlation a d-dimensional vertex vector xi , where xi = {xi1 , xi2 , ..xid }.
+analysis is conducted for measuring both linear and general Here, the PGC layer perturbs each vertex feature xij of xi . For
+relationships between two variables. It determines whether one j-th input feature xij of xi , we can have:
+variable takes on a larger or smaller value concerning the
+other variable, although not necessarily in a linear manner 1
+ xij = P GCxi (xij ) = xij + Lap (0, Δf /j ) , (6)
+[40]. |D|
+ Recall that feature matrix X consists of a set of traffic data x1 , x2 , ..., xn , where each row xi contains d fea- where xij is the perturbed vertex feature. Specifically, Δf is set
+tures xi1 , xi2 , ..xid . Let t(p) = {x1p , x2p , ..., xnp } and t(q) = to 2 f d. Then, the perturbed vertex data xi can be represented
+{x1q , x2q , ..., xnq } be two column vectors. Let t(p) = by:
+{x1p , x2p , ..., xnp } and t(q) = {x1q , x2q , ..., xnq } be the per- xi = {xi1 , xi2 , ..., xid }.
+mutations of t(p) and t(q) , respectively. Spearman correlation between t(p) and t(q) can be described as = {P GCxi (xi1 ), P GCxi (xi2 ), ..., P GCxi (xid )}. (7)
+follows.
+ After that, the Security Gateway uploads the perturbed data xi
+   to the Security Server to train a privacy-preserving GNN. On the
+ cov t(p) , t(q)
+ r(t(p) ,t(q) ) = , (5) Security Server side, we construct the PGC layer P GC D (W ),
+ σt(p) σx(q)
+ and take the perturbed vertex features xi as input. The PGC layer
+ P GC D (W ) consists of a set of hidden neurons h̄D (W ) :
+where σt(p) and σt(q) denote the standard deviations of rank
+variables, and cov(t(p) , t(q) ) represents the covariance of rank 
+ h̄D (W ) = (x i · W ), (8)
+variables. Only if all n ranks are distinct integers, 
+ Spearman
+ 6 n 2 x i ∈D
+ i=1 dfi
+correlation can be computed by r(t(p) ,t(q) ) = 1 − n(n2 −1) [41]  
+where dfi = xip − xiq is the difference between the two ranks. P GC D (W ) = h̄D (W ) h∈P GC . (9)
+PEI et al.: PRIVACY-PRESERVING GRAPH NEURAL NETWORK FOR NETWORK INTRUSION DETECTION 747
+
+ As explaining in Algorithm 1, we first determine the sensitiv- Algorithm 2: Degree-Sensitive Graph Convolution Layer.
+ity Δf and the privacy budget j (lines 2–4). Then, each vertex
+ Input: The perturbed PGC layer P GC, adjacency matrix
+aggregates the information of its neighbors (lines 6–8) followed
+ A
+by a perturbation with Laplace noise (lines 9–10). Lastly, all
+ Output: The degree-sensitive graph convolution layer
+hidden neurons are updated (lines 12–14). We give the bound of
+ DGC
+the sensitivity Δf as follows.
+ 1: Obtain the degree of each vertex from the adjacency
+ Lemma 1: Let D and D be any two neighboring datasets. Let
+ matrix A:
+P GC D (W ) and P GC D (W ) be the two PGC layers on D and
+ 2: DegSet = ObtainDegree(A);
+D , respectively. We have:
+ 3: for v ∈ V, degv ∈ DegSet do
+ 4: Compute the degree item D(v, deg) for each vertex:
+ hD (W ) = xi ∈D (xi · W ) (degv )ρ , degv > thr
+ 5: d(v, deg) =
+ P GC D (W ) = {hD (W )}h∈P GC ( deg
+ 
+ v
+ )ρ , degv ≤ thr
+ 6: Obtain the vertex representation:
+ hD (W ) = x ∈D (xi · W ) 7: ĥv = D(v, deg) · hv ⊕ Agg ({hl−1 u , ∀u ∈ N (v)});
+ i 
+ P GC D (W) = hD (W ) h∈P GC 8: ĥv (W ) = σ(ĥv W );
+ 9: end for
+ 10: Construct the DGC layer:
+ Then, we have the following inequality: 11: DGC = {ĥv (W )}ĥv ∈DGC ;
+ 12: return DGC(W ).
+  
+ d  
+ Δf = xij − xij Then, we set Δh to 2 h∈H0 d, as shown in Algorithm 1. We
+ h∈P GC j=1 xi ∈D xi ∈D have
+ 1
+    
+ ≤2  d
+ j  x ∈D xij −ξ̄jh 
+ d.   j=0 exp
+ i 1
+ Pr P GC D (W ) h Δh
+ h∈P GC
+  = ⎛   ⎞
+ 
+ Pr P GC D (W )  d j   h
+  xi ∈D xij −ξ̄j 
+ j=0 exp
+ ⎝ 1⎠
+where d is the feature dimensions of xi ∈ D. h Δh
+
+ Proof: Assume that D and D differ in the last tuple. Let
+ ⎛ ⎞
+xn (xn ) be the last tuple in D(D ). We have that 
+ d  
+ j
+ ≤ exp ⎝ xij − xij ⎠
+ Δ f
+ h j=0 xi ∈D xi ∈D
+ 1
+  
+ d  
+ Δh = xij − xij 
+ d  
+ j
+ h∈P GC j=1 xi ∈D xi ∈D ≤ exp 2 max xnj 1
+ 1 Δf xn ∈D
+ h j=1
+  
+ d
+    
+ = xnj − xnj 1 
+ d
+ 2j 
+ d
+  2 · |rj |
+ ≤ exp ≤ exp · 1 d
+ h∈P GC j=1 Δf Δf j=1 |r j |
+ h j=1 h j=1 d
+  
+ d ⎛ ⎡ ⎤⎞
+ ≤ 2 max xij 1 .   d
+ |rj | ⎦⎠
+ xi ∈D
+ h∈P GC j=1
+ ≤ exp ⎝ ·2 d⎣ = exp () .
+ Δf j=1
+ d
+ j=1 |r j |
+ h
+
+Since ∀xi , j : xij ∈ [0, 1], we have that: Δh ≤2 h∈P GC d. C. Degree-Sensitive Graph Convolution Layer
+ Lemma 2: Algorithm 1 preserves -DP in the computation of
+ Recall that in the PGC layer, the DP mechanism is used
+P GC D (W ).
+ to perturb every vertex features by adding Laplace noise
+ Proof: According to the calculation of GCN, for each h ∈ 1
+P GC D , h can be re-written as follows. |D| Lap(0, Δh /j ) into xij , and the level of noise introduced by
+ each individual vertex xi is controlled by the privacy budget
+ . Hence, the presence of noise can significantly impact the
+   
+ 
+ d  1 accuracy and reliability of aggregated information. Considering
+ h̄D (W ) = xij + Lap (0, Δf /j ) W the impact of noise introduced by the PGC layer on the aggrega-
+ |D|
+ j=1 xi ∈D tion process, we propose a degree-sensitive graph convolution
+ 
+ d (named DGC) layer DGC(·), which manipulates the outputs
+ = ξ¯jh W. of DGC(·) by giving vertices with a very small number of
+ j=1 neighbors relatively higher impacts on the model learning. The
+748 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+  
+DGC(·) is designed to alleviate the impact of the DP noise ĥv (W ) = σ ĥv W , (13)
+introduced by P GC(·) and enhance the overall performance
+of the model. In the context of vertex-based aggregation, it is where hv represents the hidden representation of a vertex v, and
+naturally quite sensitive to the number of neighbors. It is worth hu represents the hidden representation of a neighbor vertex
+noting that the original GNN treats all the vertices equally. u. N (v) represents the set of its adjacent neighbors, Agg() is
+However, the influence of neighbors on the aggregation is not an aggregate function, ⊕ represents the merge operation, and
+uniform. W represents the weight matrix. For a vertex v, (11) is used
+ In order to alleviate the impact of the DP noise, each vertex v is to aggregate information from its adjacent neighbors N (v). By
+associated with a degree item d(v, deg), where deg is the degree introducing a degree item d(v, deg), (12) acts as a noise reducer
+of v. The DGC(W ) can act as a noise reducer by dynamically to alleviate the impact of noise introduced by the PGC layer.
+adjusting the update amplitude for each vertex based on its de- Following this, (13) updates the hidden representation of a node
+gree. The degree item d(v, deg) indicates the vertex importance. v. Finally, the DGC layer employs (14) to update all hidden
+Clearly, a vertex with more neighbors is more important. This representations.
+is because the involvement of more neighbors can counteract
+the adverse effects of noise during the aggregation process, (i.e., DGC(W ) = {ĥv (W )}ĥv ∈DGC , (14)
+Agg()). In other words, the collective contribution from these As a result, the DGC layer can capture and leverage relevant
+vertices counteracts the noise introduced by each individual information from the graph structure while mitigating the advertex by the PGC layer. The resulting aggregation reflects a verse effects of noise, thereby enhancing the robustness and
+more accurate representation of the underlying data. Therefore, performance of the proposed NIGNN. Our method not only
+vertices with more neighbors should assign smaller degree terms maintained the original network structure, but also strengthened
+d(v, deg), aiming to preserve the aggregation results obtained the learning with regard to the vertex-based aggregation.
+from the previous layer. This allows the model to learn with After building the DGC layer DGC(W ), we stack the graph
+reduced noise, bringing the results closer to those of a noise-free convolution layers {H 1 , H 2 , ..., H l } on the top of DGC(W ).
+model. Conversely, vertices with fewer neighbors are considered In Fig. 5, benign vertices and malicious vertices in the network
+less important and are assigned higher values of the degree term traffic graph constructed in this paper are denoted by red and
+d(v, deg). This strategy encourages more substantial updates for blue circles, respectively. This visualization serves to illustrate
+vertices with fewer neighbors, facilitating the model’s ability to the impact of the number of neighbors. The first row shows
+move away from local optima and learn more effectively. In vertices with a small number of neighbors, falling below the
+general, our method can balance the update amplitude based on threshold thr. Conversely, the second row shows vertices with
+the degree of each vertex. This ensures that both vertices with a large number of neighbors. Intuitively speaking, with the
+many or few neighbors contribute meaningfully to the learning advantage in quantity, vertices with more neighbors tend to
+process, enhancing the model’s adaptability. have clearer classification boundaries compared to those with
+ Formally, we define the degree term d(v, deg) as follows. fewer neighbors, leading to better classification results. The
+ (degv )ρ , degv > thr
+ 
+ visual analysis presented in Fig. 5 sheds light on the crucial
+ d(v, deg) = ρ (10) role played by neighbor number in the accuracy and robustness
+ 
+ degv , degv ≤ thr
+ of the classification task.
+where thr is a threshold parameter, and ρ ∈ [0, 1] is a control Fig. 5(a) and (d) focus on evaluating the effects of the raw
+parameter. network traffic graph without any additional modifications or
+ As shown in Algorithm 2, the DGC layer takes the output of enhancements, which can be served as a baseline. Fig. 5(b)
+the PGC layer as its input. When the privacy budget  is small, and (e) provide an overview of the effect of P GC(·), which
+the output of the PGC layer contains more noise. In contrast, enforces privacy preservation to the standard GNN. Fig. 5(c)
+when the privacy budget  is large, the output of the PGC layer and (f) illustrate the DGC(·), which augments P GC(·) by
+contains less noise. To accommodate different privacy scenarios, applying different impacts to vertex update process. A direct
+we incorporated the privacy budget parameter  into the (10), comparison of the results presented in Fig. 5(b) and (e) with those
+allowing the model to dynamically adjust the update amplitude in (c) and (f) allows for an assessment of the effectiveness of
+based on the level of privacy protection required. Intuitively, a DGC(·) in mitigating the adverse effects of noise and improving
+smaller privacy budget  (indicating more added noise) implies classification accuracy. By incorporating tailored vertex update
+a need for a more cautious and conservative update amplitude strategies, DGC(·) enables enhanced adaptation to the under-
+(i.e., a smaller d(v, deg)). As a result, a smaller privacy budget lying network traffic patterns, ultimately enhancing the model’s
+ should result in a smaller d(v, deg), which ensures that the ability to accurately classify benign and malicious vertices.
+update amplitude aligns with the noise level.
+ In the DGC layer DGC(·), the hidden representation hv of a D. The Correctness and Applicability of the NIGNN
+vertex v can be updated as follows. This section summarizes the key steps of our NIGNN. Algo-
+   rithm 1 presents the procedures of CCPM in the P GC layer,
+ hv = hv ⊕ Agg hl−1 u , ∀u ∈ N (v) , (11)
+ which enforces privacy preservation to the standard GNN. This
+ ĥv = d(v, deg) · hv , (12) procedure is independent of the number of training epochs. Δf
+PEI et al.: PRIVACY-PRESERVING GRAPH NEURAL NETWORK FOR NETWORK INTRUSION DETECTION 749
+
+Fig. 5. The decision boundaries for the cluster of vertices with a small number of neigbors produced by the (a) raw network traffic graph, (b) P GC(·) with
+ρ = 0.8 and thr = 10, and (c) DGC(·) with ρ = 0.8 and thr = 10. The decision boundaries for the cluster of vertices with a large number of neigbors produced
+by the (d) raw network traffic graph, (e) P GC(·) with ρ = 0.8 and thr = 10, and (f) DGC(·) with ρ = 0.8 and thr = 10.
+
+depends on the dimensions of vertex features, but do not depend TABLE I
+ FREQUENTLY USED NOTATIONS
+on the number of training epochs. According to Lemma 2, the
+P GC layer is -differentially privacy, and thus the computation
+of the DGC layer and l hidden layers {H 1 , H 2 ..., H l } above
+P GC are differentially private because there is no additional
+information from the traffic data to be accessed.
+
+ VI. PERFORMANCE EVALUATION
+ In this section, we conduct a number of experiments using
+real-world datasets to evaluate the privacy-utility performance of
+NIGNN. We are interested in network intrusion detection where
+traffics are connected via directed edges, forming a graph. The
+task is to detect network intrusions.
+
+A. Datasets and Evaluation Metrics TABLE II
+ MAIN DATASETS USED IN OUR EVALUATION STUDIES
+ 1) Datasets: In our experiment, we evaluated NIGNN on
+three benchmark datasets. The DIDarknet [42], Tor-nonTor
+[43], and UNSW-NB [44] datasets are widely used in NIDS.
+The DIDarknet dataset [42] is an open-source repository that
+includes malicious traffic from the darknet and corresponding benign traffic from various sources such as Chat, Email,
+Browsing, etc. It also reflects how network nodes act in space,
+and how each node contacts with each other within a certain
+time interval. Note that the latest trend of using protocols (like
+VPN/Non-VPN) to encrypt and disguise Internet traffic makes 2) Evaluation Metrics: In our experiments, we evaluate the
+network traffic classification an open challenge. In light of this, performance of the privacy-preserving NIGNN based on some
+we also evaluated our method on the Tor-nonTor dataset [43], in common performance evaluation metrics in machine learning,
+which each Tor traffic includes a set of time-based features. The including accuracy and ROC. The primary objective of this paper
+UNSW-NB dataset [44] mixes normal real-world network traffic is to achieve a high detection rate for network intrusion detection.
+with synthesized cyber-attack activity traffic, in which attacks Specifically, we shuffled the examples and trained on 60% of the
+have been categorized into nine types, such as Backdoors, Dos, data, validated on 20% of the data, and tested on the rest 20%
+Worms, etc. Table II provides details of these datasets. as listed in Table II.
+750 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+Fig. 6. Experimental results of different private-preserving method comparisons under varying privacy budgets .
+
+ TABLE III
+ NIGCN VERSUS PRIVATE-PRESERVING METHODS
+
+B. Comparative Classification Performance because the DPSGDGCN can only be trained in a limited
+ In this experiment, we compare NIGNN with other private- number of epochs. As the number of iterations of the model
+ increases, the privacy budget  noise and accumulate, reducing
+preserving techniques. Fig. 6 and Table III illustrate the accuracy
+of each algorithm under varying privacy budgets . These base- utility. Moreover, the baseline models (such as GaussGCN and
+line methods are introduced below: LapGCN) incur significant errors on the three datasets when the
+ r DPSGDGCN and DS-DPSGDGCN: Following the work  is small (e.g.,  = 0.01). The reason is that too much noise is
+ of [45] and [7], we re-implement a differentially private added, making it difficult for the baseline models to converge to
+ stochastic gradient descent (DPSGD)-based GCN, namely global optimization. The performance of the baseline models
+ improves as the privacy budget  increases. Importantly, we
+ DPSGDGCN. This method introduces DP in the back
+ propagation learning procedure, which provides a strong observe that NIGNN outperforms all other private-preserving
+ privacy guarantee. In addition, to verify the validity of methods in all cases. This proves the effectiveness of our approach. As shown in Fig. 6 and Table III, the performance
+ the degree sensitivity-based privacy-enhancement measure
+ proposed in this paper, we constructed a degree sensitive- of NIGNN shows almost no variations to the changes in  on
+ all benchmark dataset. This means that NIGNN allows using
+ based DPSGDGCN, namely DS-DPSGDGCN.
+ r LPGCN and DS-LPGCN:The LPGCN was originally de- smaller values of  for better privacy protection without sacrisigned by [34], which introduces a multi-bit-based privacy- ficing much of its accuracy. Fig. 7 provides the ROC results
+ of all baselines on the three datasets. In summary, NIGNN
+ preserving mechanism to protect the node data privacy.
+ can achieve the privacy-utility trade-off. Specifically, we also
+ Similar to DS-DPSGDGCN, we also built a degreesensitive LPGCN, namely DS-LPGCN. found that classification performance is further improved when
+ r GaussGCN and DS-GaussGCN: The GaussGCN uses the the degree-sensitive mechanism is employed. This is because
+ Gaussian-based DP mechanism in the input layer of the the degree sensitivity mechanism can mitigate the effect of
+ standard GCN, and injects the Gaussian noise [6], [37], noise.
+ [46] into the model inputs.
+ r LapGCN and DS-LapGCN: Similar to GaussGCN, the C. Robustness to Attribute Inference Attacks
+ LapGCN injects the Laplace noise [6], [37], [46] sampled In this experiment, we investigate the accuracy of attribute
+ from the Laplacian distribution into the model inputs. inference attacks under both non-private and privacy-preserving
+ r NIGCN and DS-NIGCN: The two models use the CCP- NIGNN frameworks. As illustrated in Table IV, the Rand atbased DP mechanism proposed in this paper to perturb the tack approach serves as the baseline method for predicting
+ model inputs. users’ sensitive attributes. It randomly assigns predictions to
+ From the results, we can find that GaussGCN and LapGCN sensitive attributes without leveraging any information from
+outperform DPSGDGCN on all benchmark datasets. This is the dataset. As expected, the Rand attack approach achieved
+PEI et al.: PRIVACY-PRESERVING GRAPH NEURAL NETWORK FOR NETWORK INTRUSION DETECTION 751
+
+Fig. 7. ROC curve of NIGNN versus private-preserving methods on three benchmark datasets.
+
+ TABLE IV TABLE V
+ ACCURACY OF ATTRIBUTE INFERENCE ATTACK UNDER NON-PRIVATE AND EFFECT OF DIFFERENT FEATURES
+ PRIVACY-PRESERVING NIGNN
+
+close to 50% accuracy on all three datasets, which is con- D. The Influence of Different Features
+sistent with random guess expectations. Following previous To show the effectiveness of the traffic-based vertex features
+work [35], we re-implemented the MB attack model to infer used in this paper, we compared the classification performance
+sensitive attributes. In the case of the MB attack, we assume of our feature extraction with some other methods. Fig. 8 and
+that the attacker possessed partial knowledge of the training Table V present the evaluation results, providing valuable indataset. We then evaluated the performance of the MB attack sights into the performance of different models. These baseline
+model under both non-private and privacy-preserving settings. methods are introduced below:
+In the non-private setting, the MB attack model achieved high r OH and DS-OH: Following the work of [34] and [9], the
+accuracies of of 85.73%, 92.56%, and 97.36% on the three OH method uses the one-hot encoding of vertex degrees.
+datasets, respectively. These results show that MB attack models A standard model of GCN originally proposed by [10]
+can effectively and accurately infer sensitive attributes in the was then used for training. Specifically, we set the feature
+absence of privacy protection mechanisms. However, under dimension equal to the originally provided traffic-based
+the privacy-preserving setting, the accuracy of the MB attack vertex features.
+model is significantly reduced. Additionally, following previous r RD and DS-RD: The RD [34] consists of a four-layer GCN,
+work [47], we re-implemented the RI-MI and FP-MA meth- which randomly initializes the input features with a Gausods, which were originally developed to reconstruct missing sian distribution. The two learning models are optimized
+attributes. The results summarized in Table IV indicate that RI- with stochastic gradient descent (SGD).
+MI performs relatively poorly, achieving similar performance Specifically, these methods can be regarded as ”fully private”
+to the Rand attack method. In contrast, FP-MA achieves bet- because they do not require any private vertex features. In Fig. 9,
+ter attack accuracy in the non-privacy setting. However, the we see that OH and RD yield inferior performance. The OH
+proposed privacy-preserving NIGNN significantly reduces the model gives similar performances to the RD model on the three
+attack accuracy of both RI-MI and FP-MA. For instance, the datasets. Our method performs considerably better than these
+attack accuracy of FP-MA is reduced by 33.7%, 69.58%, and two fully private methods, i.e., OH and RD. Experimental results
+79.7% on the three datasets, respectively. These results demon- demonstrate the effectiveness of traffic-based vertex features
+strate the effectiveness of the privacy-preserving NIGCN in used in this paper. This means that vertex features are helpful
+mitigating attribute inference attacks. In conclusion, the accu- for network intrusion detection.
+racy of attribute inference attacks differs significantly between
+non-private and privacy-preserving NIGNN frameworks. While
+non-private NIGNN is vulnerable to attribute inference attacks, E. Comparison With Graph-Less NIDS Methods
+the privacy-preserving NIGNN offers a more robust defense In this experiment, we compared the proposed graph-based
+against such attacks by leveraging techniques such as differential NIGNN with several state-of-the-art graph-less NIDS methods.
+privacy. Table VI shows the results. Notably, linear regression (LR) and
+752 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+Fig. 8. Experimental results of different feature comparisons under varying privacy budgets .
+
+Fig. 9. Experimental results of different feature comparisons.
+
+ TABLE VI tasks. To highlight the significance of the proposed NIGNN
+ EFFECT OF DIFFERENT GRAPH-LESS NIDS METHODS
+ framework, we re-implemented these baseline models in the
+ NIGNN framework. Fig. 10 and Table VII show the accuracy
+ results of each model across varying privacy budgets. From the
+ results, we find that the baseline GCN performs considerably
+ better than GAT and SGCN but are almost worse than the
+ SAGE. The accuracy gain is increased by roughly 3.5% on
+ the three datasets. It indicates that SAGE can capture useful
+ information. Specifically, TAGCN performs better than the baseline model SAGE. This is because TAGCN utilizes a set of
+support vector machine (SVM) perform the worst among the fixed-size filters to perform graph convolution without the need
+graph-less NIDS methods. This suggests that they may not be for convolution approximation, enabling efficient extraction of
+able to capture the complex and nonlinear patterns in network local features. Therefore, we recommend adopting the TAGCN
+traffic data, limiting their ability to accurately detect network model in the NIGNN framework. When  is set to 1, the
+intrusions. In contrast, neural network models including deep accuracy loss is less than 1% in the worst case, demonstratneural networks (DNN), convolutional neural networks (CNN), ing the effectiveness of our privacy-preserving method. This
+recurrent neural networks (RNN), and long short-term memory is because the aggregate function in the graph convolutional
+(LSTM) networks can better fit the data distribution, resulting layer can eliminate most of the noise in the vertex features.
+in higher detection performance. However, it is noteworthy that The results clearly show that the proposed NIGNN not only
+even though these neural network models outperform LR and preserves the power of the original NIGNN on the detection
+SVM in graph-less NIDS methods, they are still not comparable task but also provides compelling evidence on improving privacy
+to the proposed graph-based NIGNN method. This result demon- and utility.
+strates the superiority of the proposed NIGNN in detecting Directly injecting noise to the model input would incur
+network intrusions, and emphasizes the unique advantages of much noise due to the aggregation operation. To alleviate
+graph-based approaches in modeling the complex graph struc- this problem, this paper proposes a graph convolution layer
+tures and relationships within network traffic data. By leveraging based on degree sensitivity privacy-enhancement mechanism,
+the graph structure of network data, NIGNN can capture com- which manipulates the outputs of this layer by giving vertices
+plex interactions between network entities and effectively detect with very few neighbors a relatively high influence on model
+network intrusions. learning. To highlight the significance of the proposed degree
+ sensitivity-based privacy-enhancement mechanism, we introduce the degree sensitivity privacy-enhancement mechanism
+F. Comparison With Different Graph Neural Networks into these baseline models, i.e., DS-GCN, DS-GAT, DS-SAGE,
+ In our experiment, we included some state-of-the-art GNN DS-SGCN, and DS-TAGCN. Fig. 11 depicts the ROC results
+models, i.e., GCN [10], GAT [25], SAGE [26], SGCN [48], of the performance comparison. We can see that using degree
+and TAGCN [49], which are commonly used for graph-related sensitivity mechanism can effectively improve model accuracy.
+PEI et al.: PRIVACY-PRESERVING GRAPH NEURAL NETWORK FOR NETWORK INTRUSION DETECTION 753
+
+Fig. 10. Experimental results of different graph-based model comparisons under varying privacy budgets .
+
+ TABLE VII
+ NIGNN VERSUS GRAPH-BASED MODELS
+
+Fig. 11. ROC curve of NIGNN versus graph-based models on three benchmark datasets.
+
+Fig. 12. Effect of different components, wrt. privacy budget , with DP.
+
+This verifies the validity of the proposed degree sensitivity models, the performance of the proposed private-preserving
+privacy-enhancement mechanism. NIGNN is closest to that of the non-private NIGNN on all
+ three benchmark datasets. Figs. 12, 13, and Table VIII show
+G. Ablation experiment the results. We observe that the accuracy is almost identical to
+ To demonstrate the contribution of each module in the NIGNN that of non-private NIGNN, demonstrating its strong generalframework, we conducted a set of experiments. To have a fair ization ability. Our model can achieve high detection accuracy
+comparison, the non-private NIGNN adopts a standard three- while effectively protecting user privacy. Futhermore, we test
+layer GCN as a baseline model. Compared to these baseline the effects of the PGC and DGC on performance, respectively,
+754 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+Fig. 13. Ablation studies of NIGNN on three benchmark datasets.
+
+ TABLE VIII REFERENCES
+ EFFECT OF DIFFERENT COMPONENTS
+ [1] N. Neshenko, E. Bou-Harb, J. Crichigno, G. Kaddoum, and N. Ghani,
+ “Demystifying IoT security: An exhaustive survey on IoT vulnerabilities
+ and a first empirical look on internet-scale IoT exploitations,” IEEE
+ Commun. Surveys Tut., vol. 21, no. 3, pp. 2702–2733, Third Quarter 2019.
+ [2] A. L. Buczak and E. Guven, “A survey of data mining and machine learning
+ methods for cyber security intrusion detection,” IEEE Commun. Surveys
+ Tut., vol. 18, no. 2, pp. 1153–1176, Second Quarter 2016.
+ [3] J. Zheng and D. Li, “GCN-TC: Combining trace graph with statistical features for network traffic classification,” in Proc. IEEE Int. Conf. Commun.,
+ 2019, pp. 1–6.
+ [4] Y. Zhu et al., “DGNN: Accurate darknet application classification adopting
+ attention graph neural network,” IEEE Trans. Netw. Service Manag.,
+ vol. 21, no. 2, pp. 1660–1671, Apr. 2024.
+ [5] K. Pan, M. Gong, K. Feng, and K. Wang, “Differentially private regression
+i.e., NIGNN without PGC (with DGC) and NIGNN without analysis with dynamic privacy allocation,” Knowl. Based Syst., vol. 217,
+ 2021, Art. no. 106795.
+DGC (with PGC). We can see that without the PGC layer, the [6] M. Abadi et al., “Deep learning with differential privacy,” in Proc. ACM
+baseline model (NIGNN without PGC) is comparable to the SIGSAC Conf. Comput. Commun. Secur., 2016, pp. 308–318.
+non-private NIGNN and even exceeds it on the Tor-nonTor and [7] J. Lee and D. Kifer, “Concentrated differentially private gradient descent
+ with adaptive per-iteration privacy budget,” in Proc. 24th ACM SIGKDD
+UNSW-NB datasets. This is because this model only uses the Int. Conf. Knowl. Discov. Data Mining, 2018, pp. 1656–1665.
+DGC layer, which shows that the DGC layer is useful and can [8] H. B. McMahan, D. Ramage, K. Talwar, and L. Zhang, “Learning difeffectively improve model performance. Moreover, it can be ferentially private recurrent language models,” in Proc. Int. Conf. Learn.
+ Representations, pp. 1–10, 2018.
+observed that the baseline model (NIGNN without DGC) has [9] K. Xu, W. Hu, J. Leskovec, and S. Jegelka, “How powerful are graph neural
+the worst performance on all datasets. This is not surprising, networks,” in Proc. Int. Conf. Learn. Representations, 2018, pp. 1–13.
+as the PGC layer used in this model introduces a lot of DP [10] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+ convolutional networks,” in Proc. Int. Conf. Learn. Representations, 2016,
+noise into the model input, which results in degraded model pp. 1–10.
+performance. [11] D. E. Kim and M. Gofman, “Comparison of shallow and deep neural networks for network intrusion detection,” in Proc. IEEE 8th Annu. Comput.
+ Commun. Workshop Conf., 2018, pp. 204–208.
+ VII. CONCLUSION [12] J. Liu, C. Zhang, and Y. Fang, “EPIC: A differential privacy framework to
+ defend smart homes against internet traffic analysis,” IEEE Internet Things
+ The existing deep learning-based methods do not consider J., vol. 5, no. 2, pp. 1206–1217, Apr. 2018.
+the topologic structure information of network traffic graph. [13] S. Das, M. Ashrafuzzaman, F. T. Sheldon, and S. Shiva, “Network intru-
+This paper proposes a graph construction method to transform sion detection using natural language processing and ensemble machine
+ learning,” in Proc. IEEE Symp. Ser. Comput. Intell., 2020, pp. 829–835.
+network traffic data into graph structures. Then, the network [14] J. Liu, C. Zhang, B. Lorenzo, and Y. Fang, “DPavatar: A real-time location
+intrusion detection can be converted to a specific type of node protection framework for incumbent users in cognitive radio networks,”
+classification task. Moreover, we built a differential privacy- IEEE Trans. Mobile Comput., vol. 19, no. 3, pp. 552–565, Mar. 2020.
+ [15] Y.-F. Hsu and M. Matsuoka, “A deep reinforcement learning approach for
+based graph representation learning model that is trained within anomaly network intrusion detection system,” in Proc. IEEE 9th Int. Conf.
+an appropriate privacy budget . In fact, our privacy-preserving Cloud Netw., 2020, pp. 1–6.
+method can be easily generalized to other tasks. Moreover, [16] T. Elahi, G. Danezis, and I. Goldberg, “PrivEx: Private collection of traffic
+ statistics for anonymous communication networks,” in Proc. ACM SIGSAC
+we design a degree-sensitive privacy-enhancement measure to Conf. Comput. Commun. Secur., 2014, pp. 1068–1079.
+exert different effects on vertices, which can reduce the noise [17] M. Keshk, E. Sitnikova, N. Moustafa, J. Hu, and I. Khalil, “An integrated
+introduced by the DP mechanism while effectively learning an framework for privacy-preserving based anomaly detection for cyberphysical systems,” IEEE Trans. Sustain. Comput., vol. 6, no. 1, pp. 66–79,
+accurate model. We evaluated the performance of NIGNN on Jan.-Mar. 2021.
+three datasets for network intrusion detection. Experimental re- [18] L. Sgaglione, “Privacy preserving intrusion detection via homomorphic
+sults demonstrate that NIGNN can achieve a high detection rate encryption,” in Proc. Int. Conf. Enabling Technol.: Infrastructure Collaborative Enterprises, 2019, pp. 321–326.
+close to the non-privacy ones, while providing a rigorous privacy [19] L. Mokry et al., “Efficient and privacy-preserving collaborative intrusion
+guarantee. The superior performance of NIGNN highlights that detection using additive secret sharing and differential privacy,” in Proc.
+privacy-preserving GNN is a worthwhile exploration. IEEE Int. Conf. Big Data, Orlando, FL, USA, 2021, pp. 3324–3333.
+PEI et al.: PRIVACY-PRESERVING GRAPH NEURAL NETWORK FOR NETWORK INTRUSION DETECTION 755
+
+[20] A. Alazab, A. Khraisat, S. Singh, and T. Jan, “Enhancing privacy- [45] T. T. Mueller, J. C. Paetzold, C. Prabhakar, D. Usynin, D. Rueckert, and
+ preserving intrusion detection through federated learning,” Electronics, G. Kaissis, “Differentially private graph neural networks for whole-graph
+ vol. 12, no. 16, 2023, Art. no. 3382. classification,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 6,
+[21] D. Jin, S. Chen, H. He, X. Jiang, S. Cheng, and J. Yang, “Federated incre- pp. 7308–7318, Jun. 2023.
+ mental learning based evolvable intrusion detection system for zero-day [46] L. Zhao, Q. Wang, Q. Zou, Y. Zhang, and Y. Chen, “Privacy-preserving
+ attacks,” IEEE Netw., vol. 37, no. 1, pp. 125–132, Jan./Feb. 2023. collaborative deep learning with unreliable participants,” IEEE Trans. Inf.
+[22] L. Shi, Y. Zhang, J. Cheng, and H. Lu, “Skeleton-based action recognition Forensics Secur., vol. 15, pp. 1486–1500, 2020.
+ with directed graph neural networks,” in Proc. IEEE/CVF Conf. Comput. [47] I. E. Olatunji, A. Hizber, O. Sihlovec, and M. Khosla, “Does black-box
+ Vis. Pattern Recognit., 2019, pp. 7912–7921. attribute inference attacks on graph neural networks constitute privacy
+[23] Z. Li, Z. Cui, S. Wu, X. Zhang, and L. Wang, “FI-GNN: Modeling feature risk?” 2023, arXiv:2306.00578.
+ interactions via graph neural networks for CTR prediction,” in Proc. 28th [48] F. Wu, A. H. S. Jr, T. Zhang, C. Fifty, T. Yu, and K. Q. Weinberger,
+ ACM Int. Conf. Inf. Knowl. Manage., 2019, pp. 539–548. “Simplifying graph convolutional networks,” in Proc. Proc. Int. Conf.
+[24] J. Kim, T. Kim, S. Kim, and C. D. Yoo, “Edge-labeling graph neural Mach. Learn., 2019, pp. 6861–6871.
+ network for few-shot learning,” in Proc. IEEE/CVF Conf. Comput. Vis. [49] J. Du, S. Zhang, G. Wu, J. M. F. Moura, and S. Kar, “Topology adaptive
+ Pattern Recognit., 2019, pp. 11–20. graph convolutional networks,” 2017, arXiv: 1710.10370.
+[25] P. Velickovic, G. Cucurull, A. Casanova, A. Romero, P. Liò, and Y. Bengio,
+ “Graph attention networks,” in Proc. Int. Conf. Learn. Representations,
+ 2018, pp. 1–12.
+[26] W. L. Hamilton, Z. Ying, and J. Leskovec, “Inductive representation
+ learning on large graphs,” in Proc. Int. Conf. Neural Inf. Process. Syst.,
+ 2017, pp. 1024–1034.
+ Xinjun Pei is currently working toward the PhD
+[27] H. Zhang, B. Wu, X. Yuan, S. Pan, H. Tong, and J. Pei, “Trustworthy graph
+ degree with the School of Computer Science and
+ neural networks: Aspects, methods and trends,” in Proc. IEEE, vol. 112,
+ Engineering, Central South University, China. Since
+ no. 2, 2024, pp. 97–139.
+[28] Y. Zhang et al., “A survey on privacy in graph neural networks: Attacks, 2017, he has been engaged in the direction of information security. His research interests include deep
+ preservation, and applications,” 2023, arXiv:2308.16375.
+ learning, edge computing and IoT security.
+[29] S. Wang, Y. Zheng, and X. Jia, “SecGNN: Privacy-preserving graph neural
+ network training and inference as a cloud service,” IEEE Trans. Serv.
+ Comput., vol. 16, no. 4, pp. 2923–2938, Jul./Aug. 2023.
+[30] C. Wu, F. Wu, Y. Cao, Y. Huang, and X. Xie, “FedGNN: Federated graph neural network for privacy-preserving recommendation,”
+ 2021, arXiv:2102.04925.
+[31] X. Miao et al., “P 2 CG: A privacy preserving collaborative graph neural
+ network training framework,” VLDB J., vol. 32, no. 4, pp. 717–736, 2023.
+ Xiaoheng Deng (Senior Member, IEEE) received
+[32] B. Zhang, M. Luo, S. Feng, Z. Liu, J. Zhou, and Q. Zheng, “PPSGCN:
+ the PhD degree in computer science from Central
+ A privacy-preserving subgraph sampling based distributed GCN training
+ method,” 2021, arXiv:2110.12906. South University, Changsha, Hunan, China, in 2005.
+ He is currently a full professor, dean of School of
+[33] K. Bhaila, W. Huang, Y. Wu, and X. Wu, “Local differen-
+ Electronic Information, Central South University. He
+ tial privacy in graph neural networks: A reconstruction approach,”
+ is a Joint researcher of Shenzhen Research Institute,
+ 2023, arXiv:2309.08569.
+ Central South University, a senior member of CCF, a
+[34] S. Sajadmanesh and D. Gatica-Perez, “Locally private graph neural netmember of CCF Pervasive Computing Council, and a
+ works,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2021,
+ member of ACM. He has been a chair of CCF YOCpp. 2130–2145.
+[35] W. Du, X. Ma, W. Dong, D. Zhang, C. Zhang, and Q. Sun, SEF CHANGSHA from 2009 to 2010. His research
+ interests include network security, edge computing,
+ “Calibrating privacy budgets for locally private graph neural net-
+ Internet of Things, online social network analysis, data mining, and pattern
+ works,” in Proc. Int. Conf. Netw. Netw. Appl., 2021, pp. 23–29,
+ recognization.
+ doi: 10.1109/NaNA53684.2021.00012.
+[36] W. Lin, B. Li, and C. Wang, “Towards private learning on decentralized
+ graphs with local differential privacy,” IEEE Trans. Inf. Forensics Secur.,
+ vol. 17, pp. 2936–2946, 2022.
+[37] M. U. Hassan, M. H. Rehmani, and J. Chen, “Differential privacy tech- Shengwei Tian received the BS, MS, and PhD deniques for cyber physical systems: A survey,” IEEE Commun. Surveys Tut., grees from the School of Information Science and Envol. 22, no. 1, pp. 746–789, First Quarter 2020. gineering, Xinjiang University, China, in 1997, 2004
+[38] N. Li, M. Lyu, D. Su, and W. Yang, Differential Privacy: From Theory and 2010, respectively. He is currently a full professor,
+ to Practice, ser. Synthesis Lectures on Information Security, Privacy, & dean of School of Software, Xinjiang University.
+ Trust. San Rafael, CA, USA: Morgan, 2016. His research interests include artificial intelligence,
+[39] R. Shokri, M. Stronati, C. Song, and V. Shmatikov, “Membership inference natural language processing, and cyberspace security.
+ attacks against machine learning models,” in Proc. IEEE Symp. Secur.
+ Privacy, 2017, pp. 3–18.
+[40] K. H. Zou, K. Tuncali, and S. G. Silverman, “Correlation and simple linear
+ regression,” Radiology, vol. 227, no. 3, pp. 617–622, 2003.
+[41] J. C. F. de Winter, S. D. Gosling, and J. Potter, “Comparing the pearson and
+ spearman correlation coefficients across distributions and sample sizes: A
+ tutorial using simulations and empirical data,” Psychol. Methods, vol. 21,
+ no. 3, pp. 273–290, 2016. Ping Jiang received the master’s degree in computer
+[42] A. H. Lashkari, G. Kaur, and A. Rahali, “DIDarknet: A contemporary engineering from the University of Western Ontario,
+ approach to detect and characterize the darknet traffic using deep image Canada, in 2018. He is currently working toward the
+ learning,” in Proc. 10th Int. Conf. Commun. Netw. Secur., 2020, pp. 1–13. PhD degree with the Electrical and Communication
+[43] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani, “Charac- Engineering Department, Central South University,
+ terization of TOR traffic using time based features,” in Proc. 3rd Int. Conf. China. His research interests include machine learn-
+ Inf. Syst. Secur. Privacy, 2017, pp. 253–262. ing, natural language processing, computer vision,
+[44] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for and security issues in neural networks.
+ network intrusion detection systems (UNSW-NB15 network data set),” in
+ Proc. Mil. Commun. Inf. Syst. Conf., 2015, pp. 1–6.
+756 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 1, JANUARY/FEBRUARY 2025
+
+ Yunlong Zhao received the bachelor’s degree from Kaiping Xue (Senior Member, IEEE) received the
+ the School of Computer Science, Beijing University bachelor’s degree from the Department of Informaof Posts and Telecommunications, in 2020. He is cur- tion Security, University of Science and Technology
+ rently working toward the PhD degree with the School of China (USTC), in 2003, and the PhD degree from
+ of Computer Science and Engineering, Central South the Department of Electronic Engineering and Infor-
+ University, China. Since 2021, he has been engaged mation Science (EEIS), USTC, in 2007. From 2012
+ in the direction of privacy protection. His research to 2013, he was a postdoctoral researcher with the
+ interests include federated learning, edge computing, Department of Electrical and Computer Engineering,
+ and security issues in neural networks. University of Florida. Currently, he is a professor in
+ the School of Cyber Security, USTC. His research
+ interests include next-generation Internet architecture design, transmission optimization and network security. He serves on
+ the Editorial Board of several journals, including the IEEE Transactions on
+ Dependable and Secure Computing (TDSC), the IEEE Transactions on Wireless
+ Communications (TWC), and the IEEE Transactions on Network and Service
+ Management (TNSM). He has also served as a (lead) guest editor for many
+ reputed journals/magazines, including IEEE Journal on Selected Areas in Communications (JSAC), IEEE Communications Magazine, and IEEE Network. He
+ is an IET Fellow.

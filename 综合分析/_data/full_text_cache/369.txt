@@ -1,0 +1,706 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025 2647
+
+ Augmentation and Fusion: Multi-Feature
+ Fusion-Based Self-Supervised Learning
+ Approach for Traffic Tables
+ Xuan Zheng , Xiuli Ma , Lifu Xu , Yanliang Jin , and Chun Ke
+
+ Abstract—As modern networks face increasing demands traffic identification, Quality of Service provisioning, and
+for superior service and management, Encrypted Traffic so on.
+Classification (ETC) technology has become increasingly crucial. There is a lot of research on ETC methods. In the beginning,
+Considering that traffic data is easy to collect but hard to label,
+self-supervised ETC methods have attracted more and more the port-based method [1] was very effective because of the
+attention. Compared to popular methods based on traffic images simplicity of network. Since the dynamic port technology
+and text, traffic tables are simple to construct and more suitable was widely applied, the performance of this method has
+for the flow-packet structure. However, existing methods have two declined a lot. After that, Deep Packet Inspection [2] was
+problems: (1) The lack of data augmentation methods for tables put forward and once achieved great results. This method
+weakens the performance of self-supervised learning. (2) Most
+methods only focus on single feature and cannot make full use heavily relies on packet payloads, and as a result its effecof distinct features of traffic tables, such as temporal feature. To tiveness has also suffered a great decrease in a more complex
+solve these problems, we propose a multi-feature fusion method encrypted traffic environment. Hence, some research tries to
+based self-supervised learning approach for traffic tables. A use Machine Learning (ML) algorithms to do classification.
+new data augmentation method called Random Subsets Selection However, ML-based methods depend heavily on human-
+(RSS) is introduced alongside an effective fusion approach. In
+this way, temporal features can be successfully extracted and engineered features, which will limit their generalizability.
+concatenated with the latent representations of input traffic Due to the development of Deep Learning (DL) algorithms
+tables. Experimental results from two open datasets and one and their powerful feature extraction capabilities, a lot of
+self-collected dataset have shown that on imbalanced datasets, research has started applying them to the ETC problem.
+our method can effectively solve ETC problems even with a DL-based methods can be divided into two parts, data prosmall number of labeled data. Empirically, both classification
+performance and processing speed are improved. Specifically, cessing and classification algorithms. Considering that traffic
+compared to the state-of-the-art tabular self-supervised learning data is not a common datatype and cannot be directed used
+method, our method achieves the better classification results on by algorithms, data processing is necessary. Most methods
+all datasets while the processing speed increases by almost two first convert the raw traffic data into images or text, treattimes, from 1.83 tables per second to 3.76 tables per second. ing the ETC problem as an image classification problem
+ Index Terms—Encrypted traffic classification, self-supervised or text classification problem. A corresponding classification
+learning, contrastive learning, tabular data. algorithm is then applied to get expected results. Recently,
+ research has indicated that traffic tables are more suitable for
+ solving ETC problems [3]. For raw traffic data, there are two
+ I. I NTRODUCTION basic relationships: (1) multiple packets compose one flow,
+ ITH the widespread use of smartphones and computers, (2) the fields of different protocols consist of one packet. This
+W the network has expanded dramatically and become
+more sophisticated. Although it brings huge convenience to
+ structure is very similar to tabular data, and both relationships
+ can be easily obtained in one specific table. For these reasons,
+our life, it also puts forward higher demands on network raw traffic data are processed into traffic tables, whose rows
+management. As one of the network management methods, represent packets and columns represent the fields of the
+Encrypted Traffic Classification (ETC) technology has demon- packet header. A simple relationship between traffic tables and
+strated its importance in many aspects, such as malware traffic data is shown in Fig. 1.
+ Traffic tables are important since they have three advan-
+ Received 2 May 2024; revised 19 October 2024 and 6 February 2025; tages. Firstly, compared to traffic images or text, one traffic
+accepted 20 March 2025. Date of publication 28 March 2025; date of current
+version 9 June 2025. The associate editor coordinating the review of this article table can simultaneously reflect the field-packet relationship
+and approving it for publication was D. Pezaros. (Corresponding author: Xiuli (columns) and the packet-flow relationship (rows). Therefore,
+Ma.) it can best represent the characteristics of raw traffic data.
+ Xuan Zheng, Xiuli Ma, Lifu Xu, and Yanliang Jin are with the School of
+Communication and Information Engineering, Shanghai University, Shanghai Secondly, traffic tables can avoid privacy invasion since only
+200444, China (e-mail: zx19821217030@gmail.com; xlma@shu.edu.cn; the packet header is used. Finally, temporal feature can be
+xulifu@shu.edu.cn; wuhaide@shu.edu.cn). easily preserved by maintaining the order of packets. Based
+ Chun Ke is with H3C, Shanghai 200082, China (e-mail:
+ke.chun@h3c.com). on the mentioned three merits, traffic tables are chosen to be
+ Digital Object Identifier 10.1109/TNSM.2025.3554824 the research interest.
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+2648 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+ 2) An effective temporal feature extraction and fusion
+ method is proposed. It can improve the model’s
+ performance without introducing additional neural
+ network modules.
+ 3) A new pretext task for tabular-based self-supervised
+ learning is proposed, combining reconstruction and contrastive tasks together. Compared to common methods, it
+ improves both classification performance and processing
+ speed.
+Fig. 1. The relationship between traffic data and traffic tables. The rest of this article is organized as follows: Section II
+ will introduce the related work. Section III will discuss the
+ used datasets and give the problem formulation. Section IV
+ will elaborate our methodology in detail, including the data
+ Considering that it is easy to collect traffic data but hard to processing method and the network structure. Comprehensive
+label them, many studies try to leverage abundant unlabeled experiments have been conducted to evaluate the performance
+data to mitigate the dependence on labeled data. However, of the proposed method, which can be found in Section V.
+traffic tables lack data augmentation methods, which will What’s more, we do ablation study to further analyze the
+influence the performance. Besides, there are some special effectiveness of proposed strategies, presented in Section VI.
+features existing in traffic tables, such as the temporal feature. At last, in Section VII, we will summarize our work and come
+How to make full use of these feature is also an urgent to a conclusion.
+problem.
+ To solve these problems, we propose a multi-feature fusion II. R ELATED W ORK
+based self-supervised learning method for traffic tables. A ETC aims to classify traffic data according to their applinew pretext task is proposed to learn latent representations of cations or services. In this section, we will introduce the
+input traffic tables without labels, reducing the dependence on related work in detail, and the overall differences of them are
+labeled data. It contains a reconstruction part and a contrastive presented in Table I.
+part. Considering that contrastive learning requires various
+data augmentation methods to achieve great performance, A. Classification Methods Based on Statistical Features
+a new traffic tables augmentation method called Random
+Subsets Selection (RSS) is proposed to further augment traffic Most machine learning algorithms first manually extract
+tables. Specifically, input traffic tables are first divided into statistical features of traffic data, and then use these statistical
+several sub-tables, and then some of them are randomly features to do classification. Auld et al. [4] first compreselected to aggregate the latent representations. Secondly, the hensively extracted 249 statistical features of network traffic
+random selection is applied again for the rest of the sub-tables. and listed a features table. A Bayesian neural network was
+However, this time these sub-tables will be added noise and trained through these statistical features and achieved great
+used to aggregate the corrupted latent representations. After classification results [5]. Shen et al. [6] proposed to only use
+that, both latent representations are used for the reconstruction packet length information to obtain a fine-grained webpage
+and the contrast tasks. Compared to common methods, our fingerprint. Recently, Xu et al. [24] proposed to construct a
+method can effectively find the informative sub-tables and give traffic path with a session packet length sequence. It was
+them bigger weights. Moreover, an effective temporal features computed as a kind of distinct feature and then trained
+extraction and fusion method is also proposed. Specifically, regular ML models. Although machine learning methods
+after obtaining the reconstructed input, we use mean pooling have achieved great results, these methods heavily depend
+on each column and concatenate it to the latent representations. on human-engineered features. Different encrypted techniques
+ From the experimental results, our method performs the best will change these features, which will limit these models’
+on two open datasets, ISCX VPN-nonVPN and ISCX Tor- generalization performance.
+nonTor datasets, and ranks the second on the self-collected
+dataset SHU-ET. The best representations of input traffic B. Classification Methods Based on Traffic Images
+tables can be learned and clustered through pretraining. In this Since DL algorithms have powerful feature extraction capaway, great performance can be obtained with even a small bilities, they have been widely applied to research ETC.
+number of labeled samples. With addressing the mentioned Considering that there are a lot of powerful methods existing
+two problems, our method surpasses the state-of-the-art self- in Computer Vision (CV), a common strategy is constructing
+supervised tabular learning methods on both classification traffic images through traffic packets or flows. Wang et al. [7]
+performance and processing speed. firstly proposed to generate traffic images by traffic packets.
+ The main contribution can be summarized as follows: After obtaining traffic images, image classification methods
+ 1) A new tabular data augmentation method RSS is were directly used to classify them. Besides, Wang et al. [8]
+ proposed. It addresses the limitation of single data aug- also compared the 1dCNN algorithm and 2dCNN algomentation approach for traffic tables in self-supervised rithm and found that 1dCNN was better for traffic images.
+ or contrastive learning. Shapira and Shavitt [25] proposed a different way to construct
+ZHENG et al.: AUGMENTATION AND FUSION: MULTI-FEATURE FUSION 2649
+
+ TABLE I
+ S UMMARY OF R ELATED W ORK
+
+traffic images called FlowPic. It used packet lengths as values almost all these methods used encrypted payload of packets
+and arrival time as parameters. Since traffic image constructing which is greatly affected by the environment and user habits.
+strategies were similar, some people turned to figure out how As a result, their generalization performance may be also
+to apply self-supervised and semi-supervised algorithms to constrained.
+them. Lin et al. [10] proposed to generate pseudo-labeled data
+to reduce the dependency on labeled data. It contained an E. Self-Supervised Learning Methods for Tabular Data
+auxiliary network and autoencoder, which was called Sauce. Our previous work [3] proposed to construct traffic tables
+Since DCGAN was very popular in the CV field, Iliyasu and from packet headers. Traffic tables are suitable to solve ETC
+Deng [11] applied it to generate pseudo images. These pseudo problems since traffic data are very similar to tabular data.
+images helped the model learn features from unlabeled data Supervised tabular classification methods heavily depend on
+and realized semi-supervised learning. Aouedi et al. [12] the labeled data. However, for traffic data, they are easy to be
+develop a semi-supervised model by applying a stacked sparse collected by hard to be labeled. As a solution, self-supervised
+autoencoder. Zhao et al. [13] proposed to apply mean teacher tabular classification methods were studied. Yoon et al. [21]
+structure to solve semi-supervised learning problems. proposed that adding swap noise can help the model learn
+ better latent representations from abundant unlabeled data and
+C. Classification Methods Based on Traffic Vectors or Text improve the classification results. Rezaei and Liu [22] first
+ Since traffic packets are one-dimensional vectors, a lot of divided the original tabular data into subsets and then learned
+studies try to use Natural Language Processing (NLP) methods the latent representations from the subsets instead of the whole
+to solve ETC problems. Lotfollahi et al. [14] proposed Deep input tables. Fu et al. [23] proposed a contrastive learning
+Packet which directly fed traffic payloads to both SAE and approach by simply adding noise to original tables.
+1dCNN to extract comprehensive features. Also, there are a However, the lack of data augmentation methods for tabular
+lot of efforts to apply popular NLP self-supervised or semi- data influences the final performance. Besides, how to make
+supervised learning methods to traffic data. Since BERT has full use of the distinct features existing in traffic tables is also
+achieved great success in the NLP domain, Lin et al. [15] a problem. As a result, a new approach should be found to
+and He et al. [16] used the same idea and proposed ET- solve these problems.
+BERT-based and PERT-based methods, respectively. These
+methods viewed traffic data as text and constructed a special III. DATASETS AND P ROBLEM F ORMULATION
+dictionary. Then directly use BERT algorithm to pretrain a A. Datasets
+model on a large amount of unlabeled data, and fine-tune
+ To comprehensively evaluate the performance, three difit with few labeled data to fit the downstream classification
+ ferent datasets are used during experimental stage. ISCX
+task. Wei et al. [17] was a little different. It first focused on
+ VPN-nonVPN dataset is an open dataset and released by
+processing and extracting local short-term characteristics of
+ Canadian Institute for Cybersecurity. It is widely used as
+traffic data, and then also used BERT to do the other jobs.
+ the benchmark dataset in ETC field with a size of 28GB.
+ Specifically, all traffic data in it are captured by Wireshark and
+D. Classification Methods Based on Integrated Algorithms tcpdump. Meanwhile, researchers use the UDP model of the
+ Since methods with a single feature were not enough OpenVPN to generate encrypted VPN traffic data. Referred to
+to achieve better performance, some research tried to Wang’s method [7], 12 classes of traffic data are used in our
+extract multiple features from both traffic images and text. research, which consists of 6 normal traffic service types and
+Zuo et al. [18] combined CNN and LSTM to extract the their corresponding VPN encrypted version. Table II shows
+packet features from traffic images and temporal features from the specific traffic classes and contents.
+the packet payload. Lin et al. [19] also tried to extract these The other used open dataset is ISCX Tor-nonTor dataset,
+two features, but used bidirectional LSTM instead of LSTM. which is also released by Canadian Institute for Cybersecurity.
+What’s more, Zeng et al. [20] applied CNN, LSTM, and Its size is 22GB and shares some features of ISCX VPN-
+SAE to get more complicated traffic features. Although these nonVPN dataset. The main difference is that pairs of traffic
+Integrated methods can improve results to some extent, the data are simultaneously captured at the gateway and workstanetworks also become larger and more complicated. Besides, tion, instead of generating extra VPN data. The traffic data
+2650 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+ TABLE II TABLE V
+ ISCX VPN- NON VPN DATASET T HE OVERALL D IFFERENCE OF T HREE DATASETS
+
+ TABLE III
+ ISCX T OR - NON T OR DATASET
+ can be called flow-level ETC task and packet-level ETC task,
+ respectively. Our research tries to solve the flow-level ETC
+ task since traffic flows usually contain more features. What’s
+ more, if a certain flow is correctly classified, all packets in it
+ can also be identified.
+ Considering that traffic flows cannot be directly used by
+ deep learning models, data processing is necessary. Unlike
+ general methods constructing traffic images or text, we convert
+ TABLE IV
+ SHU-ET DATASET flows into traffic tables. Specifically, for a certain flow Fj ,
+ we continuously split it into a table Tk every n packets.
+ Besides, packet payloads are dropped and only packet headers
+ without IP addresses and ports information are used in order
+ to protect privacies and avoid overfitting. For each packet
+ header, m fields are used to constitute columns of traffic
+ tables. Therefore, the dataset can be described as a small
+ labeled dataset Dl = {Ti , yi }N l
+ i=1 and a large unlabeled dataset
+ Nl +Nu
+captured at the workstation are labeled as regular, while the Du = {Ti }i=1 , where Nl << Nu and Ti ∈ Rn×m . The
+other data captured at the gateway are labeled as Tor. Like the model is pretrained with large unlabeled dataset Du to learn
+ISCX VPN-nonVPN, this dataset also consists of 12 different best representations of input traffic tables. For downstream
+traffic service types. Table III shows the detail of ISCX Tor- classification task, the small labeled dataset Dl is used to
+nonTor dataset. realize accurate classification.
+ The third dataset is a self-collected dataset, which is called 1) Self-Supervised Learning: Self-supervised learning aims
+SHU-ET. We apply three different typical VPN techniques to learn useful information and best representations of input
+(ExpressVPN, SSRVPN and V2Ray) to encrypt four applica- traffic tables. Learned representations can be utilized by
+tions (Facebook, Telegram, Twitter, YouTube), which is shown downstream tasks and effectively reduce the demand for
+in Table IV. Therefore, it also contains 12 different classes labeled data. Normally, this progress is completed by setting
+and its size is 9.73 GB. Compared to the previous two open various self-supervised/pretext tasks to train a pretext model.
+datasets, there are two main differences. One is that the data Specifically, an Encoder e will code the input traffic table
+collected in SHU-ET is mobile traffic, which means they are Ti to an informative representation zi . The representation zi
+generated on mobile devices. The other is that labels of traffic will be used to solve the pretext task by minimizing the selfare changed from network services to specific applications. supervised loss lss with pseudo-label ys . For example, the
+Furthermore, three types of VPN stand for different encryption widely used pretext task is a reconstruction strategy, which
+techniques. The main purpose of using SHU-ET is to test reconstructs the input table Ti from its corrupted version. In
+the model’s the performance on classifying applications and this circumstance, ys is the original input Ts and lss is the
+encryption techniques. Accordingly, SHU-ET can be used as a squared difference between the reconstruction output X  as
+supplement to evaluate the model’s generalization capability. follows,
+ Table V shows overall differences of three datasets. minE(Ts ,ys )∼pT ,Y [lss (ys , e(Ts ))] (1)
+ where pT ,Y is the distribution used to generate pseudo-labeled
+B. Problem Formulation samples (Ts , ys ) and train model e. For downstream task,
+ In this subsection, we introduce the general formulation of the Encoder can be trained jointly with the classification
+tabular-based self-supervised ETC. It contains two tasks, one model. The pretext task is vital to final performance, thus it
+is unlabeled self-supervised learning and the other is labeled should be carefully designed. In CV and NLP domain, there
+traffic classification. Suppose we have a dataset consisting of already have massive pretext tasks benefited from the plentiful
+a set of traffic classes C. For a certain traffic Ci , it contains data augmentation methods. However, in tabular domain, the
+a number of traffic flows F. Furthermore, for a specific flow pretext task is less diverse and dominated by the mentioned
+Fj , it is made up by several traffic packets P. An ETC task reconstruction strategy. As a consequence, it is necessary to
+can be either classifying traffic flows or traffic packets, which design a new powerful pretext model.
+ZHENG et al.: AUGMENTATION AND FUSION: MULTI-FEATURE FUSION 2651
+
+Fig. 2. The framework of the training stage.
+
+ 2) Downstream Traffic Classification: For downstream 4-byte destination IP address. As a result, the used IP-header
+task, the Encoder e is trained jointly with a classification model length is 12 bytes. What’s more, considering the widespread
+c using only the small labeled dataset Dl . A predicted label ỹ adoption of dynamic port technology, we also delete 4-byte
+will be outputted and used to minimize the training loss with port fields. Thus, the used TCP-header length is 16 bytes
+the real label y. and the used UDP-header length is 8 bytes. For the sake
+ Overall, the main task is to design an effective pretext of uniform structure, UDP headers are padded with zeros to
+model, which can learn the most informative representation match the length of TCP headers. At last, the total length of
+of the input traffic tables. For downstream classification task, the used header is 28 bytes (12 bytes IP header and 16 bytes
+great results are expected to be obtained with a labeled dataset, TCP/UDP headers). Consequently, the number of columns for
+which is expected to be as small as possible. each traffic table is 28. Meanwhile, the order of packets is
+ unchanged since it represents the temporal feature of traffic
+ IV. M ETHODOLOGY data. Although the number of columns is easy to be confirmed,
+A. Traffic Tables Generation it is challengeable to decide how many packets should be
+ used to construct one traffic table. Through experimental
+ The generation of traffic tables contains 6 steps similar to
+ results, the optimal row count for one traffic table is found
+our previous work [3].
+ to be 14.
+ Step 1: Filter irrelevant packets, such as DNS, ARP, and
+SNMP packets.
+ Step 2: Exact IP headers and TCP/UDP headers. B. Network Structure
+ Step 3: Delete 4-byte source IP address and 4-byte destina- In this article, an extensible self-supervised learning method
+tion IP address in IP headers. is proposed to solve the ETC problem. It consists of a
+ Step 4: Delete 2-byte source port and 2-byte destination port reconstruction part and a contrastive learning part. The
+in TCP/UDP headers. reconstruction part is responsible for learning the latent rep-
+ Step 5: Padding UDP headers with zeros to match the length resentations of input traffic tables. The contrastive learning
+of TCP headers. part maximizes the agreement of differently augmented tables,
+ Step 6: Forming a table by sequentially selecting 14 packets which is very similar to SimCLR [26]. For the characteristics
+and converting data from hexadecimal to decimal. of traffic tables, certain improvements have been made. At
+ The packet header consists of fixed fields according to the training stage, large amounts of unlabeled data are used
+the protocol. This structure is the same as tabular data and to learn their corresponding latent representations. The framecan be directly used to generate traffic tables. Since many work is displayed in Fig. 2.
+studies have proved that IP address information will cause the 1) Reconstruction: First, a reconstruction method is
+overfitting problem, we delete 4-byte source IP address and designed to do representative learning. To obtain the
+2652 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+Fig. 3. The framework of the test stage.
+
+corresponding latent representation, the traffic table X is sent to two data augmentation methods are applied to traffic tables,
+an encoder E. In contrast to conventional methods [21], [27], and one is adding noise which is widely used. The other is
+we do not send the whole original traffic tables to the RSS algorithm, which is proposed to solve the problem that
+encoder. Instead, X will be chopped into N small sub- traffic tables lack data augmentation methods.
+tables, denoted as xi . The reason is that different fields For the noise strategy, noises are added to sub-tables instead
+are not equally informative. In other words, some fields of the input table. If directly adding noise to the whole traffic
+have a significant impact on classification while others are table, all features will be treated equally [28]. However, fields
+not. It is helpful to obtain better latent representations by are not equally informative to the classification. Therefore,
+giving sub-tables different weights. After sending each xi treating them equally will cause unintended results. As a
+to the encoder, their corresponding latent representations are solution, adding noise to sub-tables can help model find the
+obtained, denoted as hi . After attention pooling, hi will be important fields.
+given different weights, and then be used to aggregate the The RSS algorithm is proposed to do further augmeninput representation l. After that, a decoder D is used to tation. Each original traffic table X is divided into N (7
+reconstruct the original input table X from l. in our work) sub-tables. First randomly choose n1 (from 1
+ 2) Temporal Feature Extraction: One of the most distinct to N − 1) sub-tables of X. These sub-tables will be sent
+features within traffic tables is the temporal feature. In traffic to the attention pooling module and used to aggregate the
+tables, rows represent the packets and their positions indicate latent representation h. Then in the rest (N − n1 ) sub-tables,
+the order of their arrivals. As a result, we can use columns randomly choose n2 (from 1 to N − n1 ) sub-tables, and their
+to extract temporal features. Considering that the count of corresponding corrupted subsets are used to aggregate the
+columns is fixed in each traffic table, it can be viewed as a latent representation h  .
+time series. For each row (packet), we compress all columns’ It is similar to the combination of chopping and noising
+information to one dimension, which is the same as pooling. in images. Then a learnable nonlinear projection network is
+We use mean values to represent the columns’ information. used to project h and h  to z and z  , respectively. Finally, the
+The reason is that for each packet, the minimum value of contrastive loss is calculated between z and z  .
+the header fields is always 0 and the maximum value is 4) Test Stage: At the test stage, the trained encoder and
+also very close. Thus, the mean value can best represent attention pooling module are transferred to the downstream
+the differences between packets. What’s more, we extract the classification test. The network structure is displayed in Fig. 3.
+temporal features from the reconstructed X  and X  . After the The input traffic tables will be divided into subsets and then
+   
+reconstruction, we can treat X and X as the original traffic
+ sent to the trained encoder and attention pooling module. This
+ time all the N sub-tables will be used to aggregate the latent
+tables, to some extent. Since we add swap noise to the subsets,
+ representation. The encoder and attention pooling module are
+the original temporal distribution is changed, which makes the
+ frozen and the parameters will not be upgraded. After that,
+extracted temporal features a little different. However, for the
+ these representations will be used to train a classification
+same traffic table, the temporal feature should be the same and
+ network C (logistic regression network), and a test set will be
+it can be optimized by contrastive loss. In a word, we do mean
+  and X  . After the reconstruction, used to evaluate performance. Besides, both the entire labeled
+pooling on reconstructed X
+ 
+  and X to extract temporal features. In a word,
+  dataset and only a portion of it can be used to train the
+we can use X
+ network.
+the dimension of temporal features is 14*1, and then they
+are concatenated to the aggregated representations l and l  ,
+generating the fusion representations h and h  . C. Loss Function
+ 3) Contrastive Learning: The contrastive learning method There are three loss terms in this method, which are
+is very similar to SimCLR [1]. It has already been found that reconstruction loss lr , contrastive loss lc and distance loss ld .
+the combination of multiple data augmentation operations is 1) Reconstruction Loss: Given an input feature, denoted by
+crucial in defining contrastive prediction tasks. Consequently, X, we can reconstruct the entire feature X  . The reconstruction
+ZHENG et al.: AUGMENTATION AND FUSION: MULTI-FEATURE FUSION 2653
+
+loss of the original input is equal to the mean squared error evaluate the model’s reliance on labeled data, we will change
+  ) pair. Overall reconstruction loss is given below:
+using (X , X the size of labeled training data while keep the test data as the
+ same.
+ 1  (i)  (i) 2
+ N
+ lro = X ,X (2)
+ N B. Experiment Settings
+ i=1
+where N is the number of batch sizes. 1) Experimental Environment: The experiments are con-
+ Besides, since the entire feature X can also be reconstructed ducted on a server with AMD Ryzen R5-5600@3.6Ghz,
+by corrupted sub-tables, denoted by X  . The reconstruction 32GB RAM, and an NVIDIA GeForce RTX3070 GPU. The
+loss can also be calculated by (X , X  ) pair, like given below: implementation of our method is based on Python 3.7.
+ 2) Evaluation Metrics: Four common metrics are used to
+ N  2
+ 1  (i)  (i) evaluate our method, denoted Accuracy, Recall, Precision, and
+ lrc = X ,X (3)
+ N F1-Score.
+ i=1
+ TP + TN
+ At last, the total reconstruction loss is a weighted sum of Accuracy = (8)
+ TP + TN + FP + FN
+lro and lrc , which is given below:
+ TP
+ Recall = (9)
+ lr = αlro + (1 − α)lrc (4) TP + FN
+ TP
+ 2) Contrastive Loss: The contrastive loss is similar to Precision = (10)
+ TP + FP
+SimCLR. For n examples, after data augmentation, there will 2 × Recall × Precision
+be 2n data points. Given a positive pair, the other 2(n−1) F 1−Score = (11)
+ Recall + Precision
+augmented examples are treated as negative. Then the loss
+function for a positive pair of examples (i, j) is given below: where TP, FP, TN, and FN represent true Positive, False
+   Positive, True Negative, and False Negative, respectively.
+ sim(zi ,zj )
+ exp τ
+ lc = −log   (5) C. Optimal Row Count
+ 2n sim(zi ,zk )
+ 1
+ k =1 [k =i] exp τ
+ To find the best construction method for traffic tables,
+where 1[k =i] ∈ (0, 1) is an indicator function evaluating to 1 optimal row count should be taken into consideration. In this
+if k = i and τ denotes a temperature parameter. experiment, only ISCX VPN-nonVPN dataset is used. For
+ 3) Distance Loss: Mean-Squared Error (MSE) loss is used the downstream task, different labeled data proportions are
+to compute the distance loss for projections of fusion repre- used to comprehensively evaluate the influence of various row
+sentations z and z  , the overall MSE loss is given below: counts. Fig. 4 shows the relationship between the row count
+ and the classification performance. As the number of rows
+ 1 
+ N
+ 2
+ ld = z − z (6) in a single table increases, the model consistently exhibits a
+ N trend of initial improvement followed by decline. It is apparent
+ i=1
+ that either excessively high or excessively low row count will
+where N stands for the batch size.
+ weaken the model’s performance. For traffic tables with high
+ Final the total loss function ltotal is a weighted sum of lr ,
+ row count, the number of samples will be relatively small.
+lc and ld , which is given below:
+ For example, if one flow contains 56 packets and the row
+ ltotal = lr + βlc + γld (7) count for a traffic table is chosen to be 28, 2 samples can be
+ generated. However, if the row count is selected to be 56, the
+where lr is computed by equation (3), containing a weight generated sample will be only 1. Besides, the feature pattern
+parameter α. of a certain traffic table will be too complicated as well. As a
+ result, it makes encoder harder to learn latent representations.
+ V. E VALUATION However, sufficient informative features may not be included
+ In this section, we first introduce the datasets and exper- in one traffic tables with a low row count, which also causes
+imental setup and then compare our method with the a decline in performance. From Fig. 4, when we use 14 and
+state-of-the-art methods to evaluate the performance. 21 packets to construct traffic tables, the model can achieve
+ better performance. In order to obtain the best performance
+A. Dataset with a small number of labeled samples, optimal row count is
+ selected to 14 and used for all the following experiments.
+ All three datasets mentioned in Section III will be used to
+evaluate the proposed method. First, the dataset will be divided
+into the training set and the test set. The ratio of these two sets D. Performance on Three Different Datasets
+will be fixed to 4:1. Besides, the sample proportion of each The overall performance on three different datasets is given
+class is also strictly preserved. For the pretraining task, all in this subsection. During the pretraining stage, the model is
+training data without labels are used to help the model learn designed to learn best latent representations of traffic tables,
+their best representations. When dealing with the downstream which can be reflected by a great cluster performance. Thus,
+classification task, the labeled training data will be used. To we use PCA and t-SNE plots to analyze this performance on
+2654 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+Fig. 4. The relationship between different row count and the model’s performance. (a), (b), (c) and (d) show the performance trends with different labeled
+data ratios used for training the downstream classification network, which is 10%, 30%, 50% and 100%, respectively.
+
+ TABLE VI
+ T HE D ISTRIBUTION OF S AMPLES IN T HREE DATASETS
+
+the three datasets, as shown in Fig. 5. From PCA plots, it can the dataset, while the remaining 8 classes account for only
+be found that original data distributions are chaos. Through 16.78%. In the ISCX Tor-NonTor dataset, Tor-P2P samples
+pretraining, data distributions achieve a great improvement. constitute nearly 50%, vastly outnumbering Chat and Tor-
+As designed, most positive samples are pulled together and Chat. The SHU-ET dataset is relatively balanced, with the
+negative samples are pushed away, which is represented in largest sample difference being less than 50 times, and only
+t-SNE plots. Therefore, even a small number of labeled data the e-Telegram class under 1%. This imbalance stems from the
+can be used to train a great classification network. varying traffic volumes generated by different services, such
+ What’s more, we do further analysis on datasets and as Streaming versus Chat. Since real-world data distribution is
+Table VI provides a comprehensive data distribution for each unknown without labels, the imbalance is retained. As a result,
+dataset. It is evident that traffic datasets, particularly the ISCX this imbalance will lead to an overall inflated classification
+VPN-NonVPN and ISCX Tor-NonTor datasets, suffer from accuracy, which can be reflected in the confusion matrices,
+severe class imbalance. In the ISCX VPN-NonVPN dataset, as shown in Fig. 6. In this subsection we want to analyze
+VoIP samples dominate at 30.47%, followed by File-Transfer, the model’s performance on each class in a certain dataset,
+VPN-P2P, and VPN-VoIP, collectively making up 83.22% of so only 100% labeled data trained results are given. In ISCX
+ZHENG et al.: AUGMENTATION AND FUSION: MULTI-FEATURE FUSION 2655
+
+Fig. 5. PCA and t-SNE plots of three datasets. From left to right, (a), (b) and (c) represent PCA plots of ISCX VPN-nonVPN, ISCX Tor-nonTor and SHU-ET
+dataset, respectively. Figures below them are corresponding t-SNE plots and class labels. Specifically, (d), (e) and (f) are t-SNE of ISCX VPN-nonVPN, ISCX
+Tor-nonTor and SHU-ET dataset, respectively.
+
+VPN-nonVPN and Tor-nonTor datasets, accuracies of Chat and 1) 1DCNN [7] is the first one to propose constructing
+Email classes are worse than other classes. traffic images for the traffic classification problem and
+ The reason is that these two services are similar to each outperforms other CNN models such as 2dCNN. Its
+other, which mainly contains text data and generates only a input is traffic images with size of 28*28, which is
+small number of traffic, like shown in Fig. 6(b) and Fig. 6(d). constructed by cutting or padding packets to fix the
+Thus, it’s hard for the model to classify them precisely. From an uniform size.
+overall perspective, our method can perform very well on these 2) ET-bert [15] treats traffic data as a special language and
+two open datasets. In the SHU-ET dataset, e-telegram, the class uses the popular BERT [29] to solve ETC problems.
+with fewest samples, is only classified with 79% accuracies. The most important contribution is a special Datagram
+Therefore, the performance on this dataset is diminished. In a to Token method used for traffic tokenization. Its input is
+word, for ETC problems, dataset imbalance exists ubiquitously traffic text where both sequence length and embedding
+and should be taken into consideration. Sample size has positive dimension are 784.
+correlation to model’s accuracies, and as a result, separately 3) MT-FlowFormer [13] proposes an efficient classifier
+analyzing unweighted accuracies is less valuable. with an attention mechanism to extract features from
+ flow sequences while maintaining low computational
+ costs. The framework adopts a Mean-Teacher style
+E. Comparison With Other Methods semi-supervised approach and a spatiotemporal data
+ We compare the proposed method with some state-of-the- augmentation method to leverage unlabeled traffic data,
+art ETC methods, including both traffic images and traffic text which explores spatial and temporal relationships within
+based methods. Besides, self-supervised tabular classification traffic data.
+methods are also used to evaluate the effectiveness of our 4) NetMamba [30] is an efficient network traffic classifistrategies. The brief introduction of these methods are as cation model using a linear-time unidirectional Mamba
+follows: architecture for enhanced efficiency and accuracy. Its
+2656 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+Fig. 6. Accuracy Confusion Matrices and data distributions of three datasets, where (a), (b) represent ISCX VPN-nonVPN dataset, (c), (d) represent ISCX
+Tor-nonTor dataset, and (e), (f) represent SHU-ET dataset, respectively. Notably, these confusion matrices reflect the model’s average test accuracies when
+using 100% labeled data to train the downstream classification network.
+
+ traffic representation method involves splitting traffic crucial byte-level info, reducing biases. Its input is traffic
+ by 5-tuple, analyzing packets, cropping, padding, and images, which are constructed by 10 flows and 84 features.
+ connecting to form a 40 * 40 array for effective 5) Subtab [28] is a self-supervised learning method for
+ classification. Unlike traditional methods, it retains tabular data, which is the first to use subsets of input
+ZHENG et al.: AUGMENTATION AND FUSION: MULTI-FEATURE FUSION 2657
+
+ TABLE VII
+ M ODELS ’ P ERFORMANCE ON D IFFERENT DATASETS T RAINED W ITH VARIOUS P ROPORTION OF L ABELED S AMPLES
+
+ tables to improve performance. Like our method, it first For 1DCNN, ET-bert, MT-FlowFormer and NetMamba, data
+ divides the input tables into sub-tables. However, for processing methods are strictly followed by corresponding
+ each sub-table, it uses an encoder-decoder to recon- papers and code. Thus, their input datatypes are not in tabular
+ struct the original input. Besides, it can choose whether format. Subtab is a self-supervised method for tabular data,
+ calculating contrastive loss and distance loss between all so it uses the same processed traffic tables as our method.
+ subsets instead of different samples. To test the model’s sensitivity on labeled samples, which can
+2658 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+ TABLE VIII
+ T HE D IFFERENCES B ETWEEN S UBTAB AND O UR M ETHOD ON in classification performance between the two methods is
+PARAMETERS , T HE N UMBER OF C OMPUTATIONS AND P ROCESSING T IME within 5%. Another question should be answered is that why
+ NetMamba’s performance gets a great decline in ISCX VPNnonVPN and ISCX Tor-nonTor datasets. The possible reason
+ is that NetMamba is not designed to deal with the imbalanced
+ datasets. Compared to SHU-ET, two ISCX datasets suffer
+ severer imbalance problem, which has been shown in Fig. 6.
+ During the implementation of the open source code, at first
+ it will automatically delete the classes with a small number
+ of samples. For example, on ISCX VPN-nonVPN dataset, it
+also be viewed as the dependence on labeled data, the propor- only keeps seven classes. After forcing the model not to delete
+tion of labeled samples used for training will be decreased. any classes, it comes to current results. However, the SHU-ET
+Specifically, for each dataset, we train all models with 10%, dataset has not only a smaller size, but also a slight imbalance
+30%, 50%, 70% and 100% labeled samples, respectively. It is problem. Therefore, the influence is not as prominent as the
+important to emphasize that the size of test sets is maintained other two datasets.
+the same during this process, which is at 20% of the total Although the classification performance is improved by
+dataset. Besides, we repeat the train-test split 10 times to our method, this improvement is not very huge compared
+collect average values and standard deviations. Results are to Subtab. Subtab deals with each subset more carefully,
+displayed in Table VII. which can be viewed from a local perspective, while our
+ As mentioned before, traffic datasets suffer great imbalance method takes a global perspective on traffic tables. Because
+problem. Therefore, the unweighted accuracies are consis- of this, Subtab ignores other features of traffic tables and
+tently inflated, resulting in a certain degree of distortion. As cannot do multi-feature fusion, which limits the performance.
+a consequence, it is better to analyze other weighted metrics. Compared to classification performance, our method gets a
+From the table, it can be found that our method ranks the more significant improvement in the aspect of processing
+top two in most metrics across all the conditions. Specifically, speed. Table VIII shows differences between two methods in
+this method achieves the best results (bold font) in ISCX parameters, the number of computations, processing time and
+VPN-nonVPN and ISCX Tor-nonTor datasets. On ISCX VPN- processing speed. Such a significant improvement in speed is
+nonVPN dataset, by only using 10% labeled data, the model attributed to the reduction in the number of computations. In
+can obtain average 99.30% in Accuracy, 95.27% in F1-score, Subtab, for one traffic table, each subset is used to reconstruct
+94.83% in Recall and 96.32% in Precision, while on ISCX Tor- it once, so the reconstruction loss is computed 7 times. What’s
+nonTor dataset, these metrics are 99.47%, 96.81%, 95.93% and more, the contrastive and the distance losses are computed
+98.36%. These results are within 4% of those obtained from by pairs of subsets, thus for 7 subsets, they are computed
+training with 100% labeled samples, and this indicates that C72 = 21 times. Since our method only use two aggregated
+at pretraining stage, the encoder has effectively learned latent version of subsets to do reconstruction and comparison, it only
+representations of input traffic tables and achieved satisfactory needs to compute the reconstruction loss twice and other two
+clustering results. As a result, at downstream stage, even a losses once for each traffic table. By this way, the average
+small number of labeled samples is enough to train a great processing speed increases by nearly two times, from 1.83
+classification network. It can be found that most methods items per second to 3.76 items per second.
+perform better on ISCX Tor-nonTor dataset, thus it can be In summary, three conclusions can be drawn from expericoncluded that it is easier for methods to classify Tor data mental results. Firstly, traffic tables are suitable for addressing
+than VPN data. Moreover, Subtab, which is also a traffic-table ETC problems. Secondly, our method can achieve great
+based method, ranks second. These two methods significantly performance on both classifying services and applications.
+surpass other traffic-images and traffic-text based methods. Meanwhile, our method can maintain a great performance
+Therefore, this demonstrates the feasibility and rationality of when facing with imbalance dataset. Finally, compared to
+utilizing traffic tables to address ETC problem. original Subtab, our method can do multi-feature fusion to
+ On SHU-ET dataset, however, NetMamba gets the best obtain better results and improve the processing time by
+result while our method ranks second. As mentioned in reducing the number of computations.
+Section III, the model should to classify applications while the
+size of SHU-ET is also smaller. From the dataset perspective, VI. A BLATION S TUDY
+smaller size means fewer packets, and after data processing,
+ In this section, we perform an ablation study to better
+the number of traffic tables will be further compressed since
+ understand why our method can achieve great performance.
+one table needs 14 packets. In contrast, only 5 packets are
+ All the experiments are conducted on the ISCX VPN-nonVPN
+required for one image in NetMamba. As a result, samples
+ dataset, which is elaborated in Section III.
+used for training are relatively more plentiful in NetMamba
+than our method. Furthermore, we analyzed the number of
+parameters between these two methods. NetMamba has about A. Loss Function Weights
+110M learnable parameters, in contrast to our method, which As mentioned before, the loss function is made up of the
+has only 0.5M. With more parameters and samples, NetMamba reconstruction loss lr , the contrastive loss lc and the distance
+can better learn distinct features. Even so, the difference loss ld , as shown in Equation (7).
+ZHENG et al.: AUGMENTATION AND FUSION: MULTI-FEATURE FUSION 2659
+
+Fig. 7. The trend of model’s performance and β under different labeled data ratios. The left coordinate represents the labeled data ratio used to training the
+downstream classification network, and each blue trapezoid represents a specific labeled ratio. For each labeled ratio, β is increased from 0.01 to 100 with a
+step of 10, and the right coordinate represents the percentages of evaluation metrics.
+
+ Furthermore, the total reconstruction loss lr is a weighted the beginning. By observing the difference between lr and lc ,
+sum of two components: the partial subsets reconstruction loss we can adjust β to ensure that both lc and lr are of similar
+lro and the corrupted subsets reconstruction loss lrc , as shown magnitude.
+in Equation (4). Given the distinct roles of the loss functions, Then, we freeze β and γ to find the best α. Fig. 8 shows
+the various weight combinations among them will determine the trend of α and the model’s performance. With a small
+the model’s focus on different aspects of the task. Thus, α, the corrupted subsets reconstruction loss will account
+experiments are conducted to find the optimal combination of for a bigger part of the total lr . Since corrupted subsets
+α, β and γ. reconstruction task is much more difficult than just partial
+ Regarding the roles of the three loss functions, lr and ld subsets reconstruction, α reflects the difficulty of the pretext
+only serve to pull positive pairs closer, whereas lc serves task. Both too difficult pretext task or too easy pretext task
+to pull positive pairs closer and push negative pairs apart. will weaken the performance. With big α, the reconstruction
+Therefore, the weight of the contrastive loss needs to be task is too hard for model to learn the useful representations,
+first taken into consideration and we freeze α and γ to find while small α is not enough to learn the best representations.
+the best β. Specifically, α and β are fixed to 0.7 and 1, From the results, we choose a moderate 0.3 as the optimal α.
+respectively. The initial value of β is set to 0.01 and is Besides, we recommend to set this value at the first time of
+gradually increased with a step size of 10. Fig. 7 illustrates the training.
+trend between β and the model’s performance. Since traffic Since ld has the same function as lc and lr , it is not as
+dataset often suffers severe imbalanced problem as mentioned important as previous ones. It is recommended to be 1 in the
+before, we still focus on another three weighted metrics, experiment.
+which are F1-score, Recall and Precision. From Fig. 7, the
+relationship between β and the performance can be found.
+Under a specific condition (a certain labeled ratio), as β B. RSS and Temporal Feature Extraction
+increases, the majority of evaluation metrics undergo a process Since the RSS algorithm is an important strategy to solve the
+of initial decrease, followed by an increasement, and then a lack of augmentation methods for tabular data, its effectiveness
+subsequent decline. With a small β, the total loss function will is carefully researched. As mentioned before, two latent
+equal to lr , and lower lr means better reconstruction effect. representations will be used for calculating the loss functions.
+Since lc is computed by reconstructed input, lower lr can also One is aggregated from subsets without corruption, and the
+benefit lc . As a result, when β equals 0.01, the performance other is aggregated from corrupted subsets, which can be
+is great. However, as β is increased, this benefit will be denoted as l and l  , respectively. Four different scenarios are
+diminished. When lr and lc are of the same order of magnitude being designed to find the best strategy. The first scenario
+(in our experiments, β equals 10), during the backpropagation is using all subsets and their corrupted version to aggregate
+process, both can be optimized to the maximum extent simulta- two latent representations, denoted as Deterministic Certainty
+neously. Thus, another improvement is obtained. Nevertheless, (DC). In the second scenario, the previous four subsets from x1
+if lc surpasses lr too much, the performance will decrease to x4 are used to aggregate l in order, while the remaining three
+again since it’s hard for lr to benefit from lc . Considering subsets corrupted by adding noise are used to aggregate l  .
+all circumstances, we select 10 as the optimal value of β. We denote this scenario as Most Certainty (MC). In the third
+Additionally, we recommend to set a small value for lc at scenario, we still choose four subsets to aggregate l, but they
+2660 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+Fig. 8. The trend of model’s performance and α under different labeled data ratios. The left coordinate represents the labeled data ratio used to training the
+downstream classification network, and each blue trapezoid represents a specific labeled ratio. For each labeled ratio, β is increased from 0.1 to 0.9 with a
+step of 0.1, and the right coordinate represents the percentages of evaluation metrics.
+
+ TABLE IX
+ T HE R ELATIONSHIP B ETWEEN D IFFERENT S TRATEGIES AND THE M ODEL’ S P ERFORMANCE
+
+will not be in order any longer. Instead, they will be randomly perspective of one traffic table, and different combinations of
+selected from any location. Still, the remaining three subsets subsets represent various scales of the perspectives. Since both
+will be corrupted and used to aggregate l  . This scenario is subsets and their combinations are random in the NC strategy,
+denoted as Few Certainty (FC). In the fourth scenario, for each it gives model multiscale and multi-views of a certain traffic
+latent representation, the number of subsets as well as their table. Notably, MC strategy goes through a huge decrease in
+locations are all randomly selected, so we call it No Certainty performance. It shows a negative example that a fixed but
+(NC). What’s more, we take the Temporal Feature (TF) into not full scaled perspective of input will force model to learn
+consideration. Table IX shows the influences of these different the similarity of these two perspectives, which changes the
+strategies on model’s performance. purpose of task. What’s more, another key point is that two
+ Results show that the NC+TF strategy get the best results parts are not allowed to have duplicate subsets. If there have
+in most circumstances. Each subset can be viewed as a duplicate subsets, these subsets will be given bigger weights
+ZHENG et al.: AUGMENTATION AND FUSION: MULTI-FEATURE FUSION 2661
+
+during the backpropagation and decrease the performance. [8] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+In summary, RSS algorithm helps the model to learn the classification using convolutional neural network for representation
+ learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), 2017, pp. 712–717.
+most basic and informative features and to avoid overfitting [9] J. Zhang, C. Chen, Y. Xiang, W. Zhou, and A. V. Vasilakos, “An
+problem, like dropout. effective network traffic classification method with unknown flow detec-
+ Since MT-TF performs better than MT, it can be found that tion,” IEEE Trans. Netw. Service Manag., vol. 10, no. 2, pp. 133–147,
+ Jun. 2013.
+temporal features also exist in the traffic tables. Even a simple [10] K. Lin, X. Xu, and Y. Jiang, “A new semi-supervised approach for
+extraction method can further improve the performance. In a network encrypted traffic clustering and classification,” in Proc. IEEE
+word, these results prove that RSS strategy can be an effective 25th Int. Conf. Comput. Support. Cooperative Work Design (CSCWD),
+ 2022, pp. 41–46.
+data augmentation method for tabular data, and improvements [11] A. S. Iliyasu and H. Deng, “Semi-supervised encrypted traffic classifiof performance can be obtained by fusion with temporal cation with deep convolutional generative adversarial networks,” IEEE
+features. Access, vol. 8, pp. 118–126, 2020.
+ [12] O. Aouedi, K. Piamrat, and D. Bagadthey, “A semi-supervised stacked
+ autoencoder approach for network traffic classification,” in Proc. IEEE
+ VII. C ONCLUSION 28th Int. Conf. Netw. Protocols (ICNP), 2020, pp. 1–6.
+ [13] R. Zhao, X. Deng, Z. Yan, J. Ma, Z. Xue, and Y. Wang, “MT-
+ In this work, a multi-feature fusion based self-supervised FlowFormer: A semi-supervised flow transformer for encrypted traffic
+learning approach for traffic tables is proposed and imple- classification,” in Proc. 28th ACM SIGKDD Conf. Knowl. Discov. Data
+ Min., 2022, pp. 2576–2584.
+mented. A reconstruction task and contrastive task are [14] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian, “Deep
+designed to learn better latent representations of input traffic packet: A novel approach for encrypted traffic classification using deep
+tables. The contrastive task depends on data augmentation learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, Feb. 2020.
+ [15] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+methods, and the RSS algorithm is proposed to solve the contextualized datagram representation with pre-training transformers
+problem that traffic tables lack data augmentation methods. It for encrypted traffic classification,” in Proc. ACM Web Conf., 2022,
+randomly chooses some subsets to add noise while keeping pp. 633–642.
+ [16] H. Y. He, Z. G. Yang, and X. N. Chen, “PERT: Payload encoding
+the other subsets still. After that, the latent representations representation from transformer for encrypted traffic classification,” in
+are aggregated by two parts of subsets, respectively. An Proc. ITU Kaleidosc., Ind.-Driven Digit. Transform. (ITU K), 2020,
+attention-pooling module is used to learn the weights of pp. 1–8.
+ [17] W. Wei, T. Ju, H. Liao, W. Zhao, and H. Gu, “FLAG: Flow represensubsets, generating better latent representations. What’s more tation generator based on self-supervised learning for encrypted traffic
+temporal features are extracted from the reconstruction inputs classification,” in Proc. 5th Asia-Pac. Workshop Netw., 2021, pp. 14–20.
+and fused with the latent representations. Experimental results [18] Z. Zou, J. Ge, H. Zheng, Y. Wu, C. Han, and Z. Yao, “Encrypted
+ traffic classification with a convolutional long short-term memory neural
+on two open datasets and one self-collected dataset have shown network,” in Proc. IEEE 20th Int. Conf. High Perform. Comput.
+that traffic tables can effectively solve ETC problems even Commun.; IEEE 16th Int. Conf. Smart City; IEEE 4th Int. Conf. Data
+with a small number of labeled data on imbalanced datasets. Sci. Syst. (HPCC/SmartCity/DSS), 2018, pp. 329–334.
+ [19] K. Lin, X. Xu, and H. Gao, “TSCRNN: A novel classification scheme of
+Compared to the state-of-the-art tabular self-supervised learn- encrypted traffic based on flow spatiotemporal features for efficient maning method, classification performance is improved on all three agement of IIoT,” Comput. Netw., vol. 190, May 2021, Art. no. 107974.
+datasets. Furthermore, greater improvement is achieved on [20] Y. Zeng, H. Gu, W. Wei, and Y. Guo, “Deep − full − range: A
+ deep learning based network encrypted traffic classification and intrusion
+processing speed, which increases by almost two times, from detection framework,” IEEE Access, vol. 7, pp. 45182–45190, 2019.
+1.83 tables per second to 3.76 tables per second. As a part of [21] J. Yoon, Y. Zhang, J. Jordon, and M. Van der Schaar, “VIME: Extending
+our future work, we will develop a better method to extract the success of self-and semi-supervised learning to tabular domain,” in
+ Proc. 34th Adv. Neural Inf. Process. Syst., 2020, pp. 11033–11043.
+diverse features from traffic tables and put our method into [22] S. Rezaei and X. Liu, “Deep learning for encrypted traffic classification:
+practical applications. An overview,” IEEE Commun. Mag., vol. 57, no. 5, pp. 76–81, May
+ 2019.
+ [23] Y. Fu, H. Xiong, X. Lu, J. Yang, and C. Chen, “Service usage classifi-
+ R EFERENCES cation with encrypted Internet traffic in mobile messaging apps,” IEEE
+ Trans. Mobile Comput., vol. 15, no. 11, pp. 2851–2864, Nov. 2016.
+ [1] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework [24] S.-J. Xu, G.-G. Geng, X.-B. Jin, D.-J. Liu, and J. Weng, “Seeing traffic
+ for contrastive learning of visual representations,” in Proc. 37th Int. paths: Encrypted traffic classification with path signature features,” IEEE
+ Conf. Mach. Learn., 2020, pp. 1597–1607. Trans. Inf. Forensics Security, vol. 17, pp. 2166–2181, 2022.
+ [2] A. Bremler-Barr, Y. Harchol, D. Hay, and Y. Koral, “Deep packet [25] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for
+ inspection as a service,” in Proc. 10th ACM Int. Conf. Emerg. Netw. encrypted traffic classification and applications identification,” IEEE
+ Exp. Technol., 2014, pp. 271–282. Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1218–1232, Jun. 2021.
+ [3] X. Zheng, X. Ma, Y. Jin, D. Gu, and R. Wang, “Tabular-based self- [26] S.-H. Yoon, J.-W. Park, J.-S. Park, Y.-S. Oh, and M.-S. Kim, “Internet
+ supervised learning approach for encrypted traffic classification,” J. application traffic classification using fixed IP-port,” in Proc. 12th
+ Electron. Imag., vol. 32, no. 4, 2023, Art. no. 43032. Asia-Pac. Netw. Oper. Manag. Symp. Manag. Enabling Future Internet
+ [4] T. Auld, A. W. Moore, and S. F. Gull, “Bayesian neural networks for Changing Bus. New Comput. Services (APNOMS), 2009, pp. 21–30.
+ Internet traffic classification,” IEEE Trans. Neural Netw., vol. 18, no. 1, [27] D. Bahri, H. Jiang, Y. Tay, and D. Metzler, “SCARF: Selfpp. 223–239, Jan. 2007. supervised contrastive learning using random feature corruption,” 2022,
+ [5] A. W. Moore and K. Papagiannaki, “Toward the accurate identification arXiv:2106.15147.
+ of network applications,” in Proc. 6th Int. Workshop, Passive Act. Netw. [28] T. Ucar, E. Hajiramezanali, and L. Edwards, “SubTab: Subsetting
+ Meas., 2005, pp. 41–54. features of tabular data for self-supervised representation learning,” in
+ [6] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained webpage Proc. 35th Adv. Neural Inf. Process. Syst., 2021, pp. 18853–18865.
+ fingerprinting using only packet length information of encrypted traf- [29] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training
+ fic,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 2046–2059, 2021. of deep bidirectional transformers for language understanding,” 2019,
+ [7] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end arXiv:1810.04805.
+ encrypted traffic classification with one-dimensional convolution neural [30] T. Wang, X. Xie, W. Wang, C. Wang, Y. Zhao, and Y. Cui, “NetMamba:
+ networks,” in Proc. IEEE Int. Conf. Intell. Security Inform. (ISI), 2017, Efficient network traffic classification via pre-training unidirectional
+ pp. 43–48. mamba,” 2024, arXiv:2405.11449.
+2662 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+ Xuan Zheng received the B.Eng. and M.E.I. degrees Yanliang Jin received the B.S. and M.S. degrees in
+ from Shanghai University, China, in 2021 and electrical engineering from Xidian University, Xi’an,
+ 2024, respectively. He is currently working on con- China, in 1997 and 2000, respectively, and the Ph.D.
+ structing agents to improve network management degree in communication and information system
+ by combining encrypted traffic classification and from Shanghai Jiao Tong University, in 2005. He is
+ LLM together. Besides, he is also trying to find currently an Associate Professorship with the School
+ a general Symbolic Regression method for AI in of Communication and Information Engineering,
+ science, and improve the performance of Automatic Shanghai University. He has published more than
+ Speech Recognition to solve real world problems. 30 journals/conference papers. His research interests
+ His research interests include self-supervised learn- include mobile ad hoc networks, wireless sensor
+ ing, encrypted traffic analysis, and large language networks, wireless multimedia sensor networks, and
+ models. wireless broadband access.
+
+ Xiuli Ma received the Ph.D. degree from Xidian
+ University, in 2007. She is currently an Associate
+ Professorship with the School of Communication
+ and Information Engineering, Shanghai University.
+ Her research interests include big data and intelligent
+ information processing.
+
+ Lifu Xu received the B.Eng. degree from Shanghai Chun Ke received the B.S. degree in electrical engi-
+ University, China, in 2021, where he is currently pur- neering and automation from the Wuhan University
+ suing the master’s degree in electronic information. of Technology, in 2018. He is currently a Project
+ His current research focuses on encrypted traffic Manager with H3C, Shanghai, China. His research
+ analysis and few-shot classification. interests include WIFI technology and application,
+ and enterprise networking.

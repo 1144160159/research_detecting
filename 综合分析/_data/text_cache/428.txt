@@ -1,0 +1,137 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025                                                                             2529914
+
+
+
+
+       FeatDAE: Introducing Features With Denoising
+            Autoencoder for Anomaly Detection
+           Zheyuan Zhou , Student Member, IEEE, Jichun Wang , Zian Yu , Zili Wang , Member, IEEE,
+                       Xiaojian Liu , Lemiao Qiu , Member, IEEE, and Shuyou Zhang
+
+
+
+
+   Abstract— Anomaly detection (AD) is a critical task in                      construct a latent space of normal samples by minimizing the
+manufacturing inspection. Reconstructive AD methods restore                    discrepancy between the original normal instances and their
+the normal appearance of an object, ideally modifying only                     reconstructions. It can be further subdivided into the following
+the anomalous regions. However, previously commonly used
+reconstruction-based architecture always struggles with over-                  two paradigms. Generative methods [6], [7], [8] assume that
+generalization and overfitting problems, leading to poor recon-                an autoencoder will be optimized to reproduce normal patterns,
+struction performance on real defective samples. In this study,                thereby failing to accurately reconstruct anomalous regions.
+we propose a more general denoising autoencoder, by introducing                As a result, the poor reconstruction of defective areas leads to
+a feature hierarchy design to address these challenges in unsu-                significant differences between the reconstructed output and
+pervised AD. In particular, we operate feature transformation in               the input images. This discrepancy can be used to identify and
+the latent space to cope with the robustness of unseen anomalies
+in reality. Furthermore, the method enhances the discriminative                localize the anomalous regions. However, the high generaliza-
+capability of the model by focusing on multiple knowledge,                     tion capacity of autoencoders allows them to even reconstruct
+including pixel color, histogram of oriented gradient (HOG)                    anomaly fidelity, especially when similar local features are
+feature, and deep features. Additionally, a feature alignment                  presented [9], as illustrated in Fig. 1(a). This overgeneral-
+module is proposed to manage the varied sizes and morphologies                 ization violates the basic assumption of generating anomaly
+of features. Experiments conducted on both the MVTec AD
+dataset and the VisA dataset demonstrate that our FeatDAE
+                                                                               maps based solely on the reconstruction error, significantly
+significantly outperforms existing methods, achieving state-of-the-            increasing the rate of false negatives (FNs). Discriminative
+art results with high efficiency.                                              methods [1], [10], [11] train models by synthesizing anoma-
+   Index Terms— Anomaly detection (AD), denoising autoencoder,
+                                                                               lies to extend these models to recognize real defects. They
+industrial defect detection, self-supervised learning, unsupervised            simultaneously generate masks indicating the locations of
+learning.                                                                      anomalies and enhance the network’s ability to discriminate
+                                                                               and localize defects by incorporating a segmentation head.
+                       I. I NTRODUCTION                                        However, it often suffers from overfitting problems, where the
+
+A     NOMALY detection (AD) aims to identify instances that
+      contain anomalous and localized regions that deviate
+from normal object patterns, playing an essential role in
+                                                                               synthetic samples may be far from the real defects. A simple
+                                                                               classification network can achieve nearly 100% accuracy in
+                                                                               distinguishing between synthesized anomaly samples and real
+various applications such as industrial quality control [1], [2],              anomaly samples after only a few training epochs. Training
+[3]. However, the scarcity and diversity of anomalies pose                     with such a set results in an unclear discriminator that gener-
+significant challenges in collecting and labeling, resulting in                alizes poorly to real anomalies, where indistinct objects could
+the inability to construct large datasets to train a classifier or             be included in inlier feature space, causing large false-positive
+detector. In addition, the pattern differences between normal                  (FP) detections, as shown in Fig. 1(b). The discriminative
+and abnormal images are usually fine-grained, while defects                    model shows improvement but still struggles to accurately
+may occupy only a small fraction of image pixels. Therefore,                   reconstruct anomalous not covered by the simulation.
+AD based on only normal data encounters unique challenges                         To simultaneously address the above-mentioned problems,
+different from those of a typical supervised learning problem.                 we propose a new feature-level denoising autoencoder explic-
+   Many recently popular and successful unsupervised AD                        itly for surface AD, dubbed as FeatDAE, as illustrated in
+models are reconstruction-based [4], [5]. These models learn to                Fig. 2. Our FeatDAE introduces feature radial transformation
+   Received 4 January 2025; revised 17 March 2025; accepted 3 April 2025.      (FRT) and feature omnidirectional injection (FOI) in the
+Date of publication 29 April 2025; date of current version 2 June 2025. This   latent space after the encoder and incorporates a meticulously
+work was supported in part by the National Natural Science Foundation of       symmetrical decoder to seamlessly restore the latent noised
+China under Grant 52375271 and in part by the “Pioneer” and “Leading
+Goose” Research and Development Program of Zhejiang Province under
+                                                                               representation back to the reconstruction result. By concur-
+Grant 2024C01044. The Associate Editor coordinating the review process was     rently introducing distinct perturbations at both the image
+Dr. Xianqiang Yang. (Corresponding author: Xiaojian Liu.)                      and feature levels, our FeatDAE is proficient in discern-
+   The authors are with the State Key Laboratory of Fluid Power and            ing the intrinsic information and distribution of the data,
+Mechatronic Systems, Zhejiang University, Hangzhou 310058, China (e-mail:
+liuxj@zju.edu.cn).                                                             showcasing enhanced robustness when addressing a myriad
+   Digital Object Identifier 10.1109/TIM.2025.3565336                          of real-world anomalies. Second, the objects we reconstruct
+               1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+2529914                                                                        IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+
+
+                                                                                           state-of-the-art methods by a significant margin while
+                                                                                           maintaining a high inference speed of 110 FPS.
+
+                                                                                                         II. R ELATED W ORKS
+                                                                                        AD: has been the focus of extensive research in recent
+                                                                                     years, and a plethora of approaches have been proposed to
+                                                                                     tackle this challenging task in industry. These methods can be
+                                                                                     broadly categorized into two main paradigms: reconstruction-
+                                                                                     based and embedding-based.
+                                                                                        Reconstruction-based methods involve training an autoen-
+                                                                                     coder network [6], [9], [14], [15], [16], [17] or a generative
+                                                                                     model [4], [18], [19] and operate under the assumption that
+Fig. 1. Pilot study on reconstruction-based methods. (a) Generative model
+takes the original image X or the noise-added image X ′ as input, and is
+                                                                                     anomalies will be poorly reconstructed, thereby making them
+trained using the reconstruction loss L rec to reconstruct its input. The anomaly    distinguishable by their reconstruction error. However, due to
+map M is obtained by comparing the input X with the reconstruction                   the excellent generalization capabilities of the autoencoder,
+result Xb. (b) Discriminative model combines the synthesized image X ′
+                                                                                     this assumption does not always hold, causing suboptimal
+with the reconstruction result X  b, and is supervised by the corresponding
+synthesized mask M′ and the segmentation loss L seg to produce a more                performance. Some recent works [6], [20], [21] involved
+accurate localization of defects. As shown, the minor discrepancy between            masking parts of the image or adding random noise, leading to
+the input X and the reconstructed result X    b renders it difficult to accurately
+                                                                                     better robustness of the autoencoder. Some methods [1], [10],
+discern and differentiate anomalies. This highlights the challenge inherent
+in reconstruction-based methods, which stems from their limited capacity to          [11], [22], [23], [24] are inspired by supervised segmentation
+distinctly characterize real anomaly samples.                                        tasks, by synthetically generating defects during the training
+                                                                                     phase with the idea that the model can then generalize on real
+                                                                                     anomalies. However, this discriminative model often leads to
+                                                                                     overfitting the training set and does not generalize well to real
+encompass information of various granularity and types, such                         defects.
+as pixel color, hand-crafted descriptors, and deep features.                            Embedding-based methods utilize feature maps [25], [26],
+The diversity in the reconstructed targets further contributes                       [27] extracted through a pretrained network to learn normality
+to a comprehensive and precise depiction of features, thereby                        on these maps. Certain methods [28], [29], [30] operate under
+enhancing the downstream AD performance. In addition,                                the premise that the characteristics of normal data conform
+we have devised a feature alignment module to address the                            to a multivariate Gaussian distribution. Consequently, these
+varied sizes and morphologies of the reconstructed features.                         approaches leverage the normal training examples to estimate
+The aligned features are then fed into the head to handle                            the pertinent parameters and assume they will not be effective
+discrepancies in a trainable manner, alleviating the overfitting                     for anomaly data. Moreover, a variety of approaches [31], [32],
+of synthetic defects.                                                                [33], [34] based on normalizing flow have emerged, which
+   The main contributions of our paper are summarized as                             endeavor to approximate the density by projecting an arbitrary
+follows.                                                                             distribution onto a Gaussian distribution. Nevertheless, all
+   1) We introduce stochastic perturbations in both the input                        these methodologies presuppose that the distribution of normal
+      and latent space, extending and generalizing the concept                       regions will be adequately represented within the training data,
+      of the denoising autoencoder. This approach directly                           rendering them ineffective when confronted with rare normal
+      addresses the issue of overfitting to simulated defects,                       regions that remain unseen during the training phase, thereby
+      a common problem in recent discriminative methods.                             resulting in FPs while facing real anomalous samples.
+   2) We propose a multifeature reconstruction mechanism                                Denoising autoencoder [35] is an extension of the basic
+      that enables the autoencoder to learn from different types                     autoencoder and is trained to use a corrupted version of
+      of features. The aligned features demonstrably mitigate                        the input to reconstruct the original input. A variety of
+      the issue of overgeneralization and reduce the high FN                         methods [36], [37], [38], [39], [40] can be considered as
+      rate.                                                                          a generalized denoising autoencoder. Building on advance-
+   3) We introduce a novel framework, FeatDAE, specifically                          ments in natural language processing [41], [42], [43], recent
+      designed for surface AD. FeatDAE is capable of han-                            studies [44], [45], [46] have shown that modern vision
+      dling a wide variety of anomalies effectively, making it                       Transformers hold significant potential when applied to rep-
+      versatile and adaptable to different applications.                             resentation learning. The inherent disadvantage of two-stage
+   4) Extensive experiments on the challenging MVTec AD                              methods stems from their reliance on a pretrained VAE [47],
+      dataset [12] and the VisA dataset [13] demonstrate                             tasked with transforming originally continuous data into
+      the effectiveness and versatility of our method across                         intentionally discretized target visual tokens. Conversely,
+      various scenarios. Our FeatDAE sets a new state of the                         end-to-end training for masked autoencoders [48], [49] sig-

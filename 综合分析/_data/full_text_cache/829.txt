@@ -1,0 +1,845 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026 1065
+
+ TraceCluster: A Lightweight and Adaptive
+ Clustering-Based Subgraph Attention Network for
+ APT Detection in Provenance Graphs
+ Lijuan Xu , Zicheng Zhao , Dawei Zhao , Zhen Wang , Fellow, IEEE, and Chunpeng Ge
+
+ Abstract—Provenance graph-based anomaly detection, partic- Index Terms—Provenance graphs, subgraph clustering, attenularly for Advanced Persistent Threat (APT) detection, addresses tion networks, APT detection.
+the issues of large-scale graphs and data imbalance. However,
+existing methods struggle with information loss, high compu-
+ I. I NTRODUCTION
+tational complexity, and low detection accuracy. To address the
+above challenges, this paper proposes TraceCluster, a lightweight
+and adaptive clustering-based Subgraph Attention Network
+(SAN) for APT detection in provenance graph. TraceCluster mit-
+ T HE field of network security is facing increasingly complex threats, among which advanced persistent threats
+ (APTs) have become one of the most challenging due to their
+igates the neighborhood explosion problem by clustering nodes
+to partition large-scale graphs, thus reducing reliance on the stealthiness and complexity. APTs are characterized by longglobal graph while preserving local neighborhood information. term latency, sparse distribution, and hard-to-trace behaviors,
+Furthermore, the method dynamically models complex inter- which challenge traditional detection methods. Provenance
+node dependencies within subgraphs. It employs an attention graphs, crucial for APT detection, help track attack paths
+mechanism to adaptively highlight the most relevant connections. and identify anomalies by capturing the entire system exe-
+This enhances node representations and improves overall feature
+extraction. This design substantially reduces memory consump- cution [1]. They parse host events from system logs, covering
+tion and avoids the high computational complexity of global processes, files, network nodes, and their relationships, while
+graph processing. In addition, an adaptive category-weighting tracing complex dependencies [2] and hidden paths [3] of
+loss function assigns variable weights to different classes, improv- APTs. Several detection methods [1], [4], [5], [6], [7], [8]
+ing the detection of rare and anomalous behaviors. Experimental show advantages in intrusion detection using provenance
+results show that on the OpTC dataset, the currently faster
+method is 37-fold and 3-fold slower than our approach in graphs. However, the large-scale nature of these graphs, with
+terms of inference time respectively. Furthermore, in the nine numerous nodes and complex relationships, results in high
+real-world scenarios of four evaluated datasets, TraceCluster computational complexity, coarse-grained detection, and insufoutperforms state-of-the-art (SOTA) approaches in terms of ficient learning patterns, limiting the practical applicability of
+overall performance, especially in node-level APT detection tasks. existing methods [9].
+ Existing methods [10], [11], [12] use representative train-
+ Received 26 April 2025; revised 12 November 2025 and 5 January 2026;
+accepted 7 January 2026. Date of publication 12 January 2026; date of current ing data and sequence processing techniques (e.g., recurrent
+version 21 January 2026. This work was supported in part by the National Key neural networks) to model past events and predict future
+Research and Development Program of China under Grant 2023YFB3107300; ones, resulting in high time complexity. To address this issue,
+in part by the National Natural Science Foundation of China under Grant
+62172244 and Grant 62572285; in part by Shandong Provincial Natural StreamSpot [13], UNICORN [7] and KAIROS [14] build
+Science Foundation under Grant ZR2024MF050; in part by Taishan Scholars a flow graph and maintain it in memory to enable faster
+Program under Grant tsqn202211210; in part by the Key Research and querying. Additionally, MEGR-APT [15] first partitions the
+Development Program of Shandong under Grant 2025CXPT082; in part by
+the “20 New Universities” Project of Jinan City under Grant 202333023 and input graph into subgraphs, computes their embeddings, and
+Grant 202333045; and in part by the Pairing Plan Project of the School then constructs an optimized query graph for efficient matchof Computer Science and Technology, Qilu University of Technology under ing. While effective, these methods are limited to graph-level
+Grant 2024JDJH12. The associate editor coordinating the review of this article
+and approving it for publication was Dr. Fabio De Gaspari. (Corresponding APT detection, offering insufficient granularity. Consequently,
+author: Dawei Zhao.) security analysts must perform detailed node-level and edge-
+ Lijuan Xu, Zicheng Zhao, and Dawei Zhao are with the Key Labora- level inspections within flagged subgraphs to accurately trace
+tory of Computing Power Network and Information Security, Ministry of
+Education, Shandong Computer Science Center (National Supercomputer APTs.
+Center in Jinan), Qilu University of Technology (Shandong Academy of Node-level detection methods demonstrate superior capa-
+Sciences), Jinan 250353, China, and also with Shandong Provincial Key bility in addressing coarse-grained detection limitations. Two
+Laboratory of Industrial Network and Information System Security, Shandong
+Fundamental Research Center for Computer Science, Jinan 250014, China (e- representative approaches include: (1) representation learning
+mail: xulj@sdas.org; zhaozicheng1030@126.com; zhaodw@sdas.org). through fixed-size neighborhood sampling [8], and (2) com-
+ Zhen Wang is with the School of Artificial Intelligence, Optics and prehensive graph representation learning based on graph neural
+Electronics (iOPEN) and the School of Mechanical Engineering, Northwestern Polytechnical University, Xi’an, Shaanxi 710072, China (e-mail: networks (GNN) [1], [14], [16]. Sampling-based methods
+zhenwang0@gmail.com). incur information loss, which degrades detection accuracy.
+ Chunpeng Ge is with the Joint SDU-NTU Centre for Artificial Intelligence In contrast, the whole-graph representation learning approach
+Research (C-FAIR) and the School of Software, Shandong University, Jinan
+250014, China (e-mail: gechunpeng2022@126.com). constructs a node anomaly classifier and utilizes an embed-
+ Digital Object Identifier 10.1109/TIFS.2026.3653175 ded cyclic database to store node embeddings, significantly
+ 1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+1066 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ Fig. 1. The comparison of clustering-based subgraph partitioning in TraceCluster, nodes sampling in ThreaTrace, and all node aggregating method.
+
+ TABLE I
+ T IME AND S PACE C OMPLEXITY OF GCN T RAINING A LGORITHMS . L R EPRESENTS THE N UMBER OF L AYERS , N I S THE N UMBER OF N ODES , AND
+ E I S THE N UMBER OF E DGES . F IN AND F OUT A RE THE D IMENSIONS OF I NPUT AND O UTPUT F EATURES , R ESPECTIVELY. F OR S IMPLICITY, W E
+ A SSUME T HAT THE F EATURE D IMENSIONS A RE F IXED ACROSS A LL L AYERS . F OR N EIGHBOR -S AMPLING -BASED A PPROACHES S UCH AS
+ G RAPH SAGE AND FAST GCN, S I S THE N UMBER OF S AMPLED N EIGHBORS P ER N ODE AT E ACH L AYER . I N VR-GCN, S C AN B E
+ S MALLER D UE TO THE VARIANCE R EDUCTION T ECHNIQUE . F OR C LUSTER -GCN AND C LUSTER -S UBGRAPH -ATTENTION ,
+ C I S THE N UMBER OF S UBGRAPHS , Nc AND Ec A RE THE AVERAGE N UMBER OF N ODES AND E DGES P ER S UBGRAPH ,
+ R ESPECTIVELY. K R EPRESENTS THE N UMBER OF ATTENTION H EADS U SED IN ATTENTION -BASED M ETHODS
+
+reducing training time. While ensuring high detection effi- We compare our cluster-based subgraph partitioning with
+ciency and fine-grained detection, this method suffers from all nodes aggregating method and fixed-size neighborhood
+poor time efficiency during inference. Unlike ThreaTrace and sampling of ThreaTrace [8] in Figure 1. In order to illustrate
+UNICORN, the ORTHRUS [16]’s anomalous node detection the computational efficiency of our proposed approach, we
+approach results in a relatively high false negative rate. That provide Table I, which presents a comparison of time comis partly because it no longer classifies the neighbors of plexity and space complexity between our clustering-based
+anomalous nodes as anomalous, which is a critical concern subgraph attention network (SAN) and other models.
+in cybersecurity analysis. Cluster-GCN employs a clustering strategy to improve
+ To address these issues, we propose TraceCluster, a training efficiency. However, its fundamental design focuses
+lightweight and adaptive clustering-based APT detection on graph partitioning, where the entire graph is divided
+method. TraceCluster employs a clustering-based subgraph into smaller blocks for parallel computation. In particular, it
+partitioning strategy for large-scale provenance graphs, pre- does not incorporate any subgraph-level attention mechanism
+serving causal dependencies between neighboring nodes while within these partitions. In contrast, TraceCluster introduces a
+avoiding the high complexity of global graph computation. subgraph-level attention mechanism that dynamically assigns
+Additionally, it introduces a novel approach that dynamically weights to the interactions among nodes within each subgraph.
+captures complex internode relationships within subgraphs, This design enables the model to more accurately capture
+using attention mechanisms to focus on the most relevant inter-node dependencies and uncover latent anomalous patconnections, significantly reducing computational complexity terns.
+compared to traditional GCN methods. Given the data imbalance between normal and anomalous
+ Similarly to the typical provenance graph–based APT detec- nodes inherent in APT detection, TraceCluster proposes an
+tion approach [8], TraceCluster learns the role of each benign adaptive category weighted mechanism in the loss function.
+node within the data provenance graphs to identify stealthy This assigns different weights to samples of varying classes,
+anomalous behaviors without relying on previous knowledge strengthening the model’s ability to detect rare anomalies.
+of attack patterns. The training data are benign, while the This is particularly effective in addressing stealthy and covert
+validation and test datasets contain a large number of benign attacks, ensuring that anomalous samples are emphasized
+nodes and a small proportion of anomalous nodes. during training.
+XU et al.: TraceCluster: A LIGHTWEIGHT AND ADAPTIVE CLUSTERING-BASED SAN 1067
+
+ The contributions of this paper are summarised as follows: training to generate and detect anomalous log events, solving
+ • Lightweight subgraph partitions and subgraph atten- the problem of data imbalance. Although LogGAN performs
+ tion network. TraceCluster partials the large-scale origin well in detecting known attacks, it is based on training
+ graph into multi-smaller subgraphs and independently data and could not effectively identify zero-day attacks. In
+ performs graph attention operations in each subgraph. addition, it also has high resource consumption due to the
+ Graph partitioning technology not only optimizes compu- computational overhead of the adversarial training process of
+ tational efficiency, but also preserves the local structural Generative Adversarial Networks (GAN). T-Trace [27] profeatures of the APT behaviour, thereby enhancing the poses a training-free data-driven APT detection method, which
+ scalability of the model. Furthermore, by aggregation uses tensor decomposition to mine implicit relationships in
+ attention based on node adjacency relationships and original logs and pruning techniques to solve the dependency
+ edge types, TraceCluster generates highly discriminative explosion problem. This approach is suitable for dealing with
+ node feature representations, thereby enhancing node- local data structures, however, it lacks the ability to model full
+ level threat detection and significantly improving its graphs or complex graph structures.
+ capability to identify complex APT attacks. Several scholars have endeavored to tackle the issue through
+ • Adaptive category weighting mechanism. We inno- learning graph structures. UNICORN [7] extracts the structural
+ vatively propose a category weighting mechanism that features of the provenance graph using the Weissfeiler-Lehman
+ dynamically assigns weights to different node categories, (WL) graph kernel [28] to detect APT attacks through the
+ significantly enhancing the model’s ability to detect rare structural similarity of the graph. However, the graph kernel
+ and anomalous behaviours. This approach improves the approach has high computational complexity and low effidetection performance for latent and covert attacks while ciency in large-scale data processing. ThreaTrace [8] detects
+ also increasing the model’s adaptability in imbalanced and tracks threat activities in hosts through provenance graph
+ data environments. learning using a node-level feature extraction approach com-
+ • High detection performance and efficiency. TraceClus- bined with graph structure analysis. Although it uses the
+ ter demonstrates excellent detection performance. It GraphSAGE model, which assigns the same importance to
+ achieves 37-fold and 3-fold reductions in inference time all neighbour nodes, its consideration of only a fixed number
+ compared to the state-of-the-art approaches, respectively. of neighbours led to sampling issues that caused the loss of
+ Furthermore, in the nine real-world scenarios of four important information, reducing the accuracy and sensitivity
+ evaluated datasets, TraceCluster outperforms state-of-the- of anomaly detection.
+ art approaches (SOTA) in terms of overall performance. As evidenced by the aforementioned studies, excessive
+ Availability: TraceCluster is available online at https:// resource consumption constitutes a critical challenge that cangithub.com/CSNS-Lab/TraceCluster not be overlooked in provenance graph-based APT detection.
+ The paper is organized as follows: related work is presented ProvG-Searcher [29] shows high efficiency in the search for
+in Section II. Section III presents background and motivation. provenance graphs. The method is based heavily on well-
+Section IV describes the threat model. In Section V, we structured input data. This means that in practical applications,
+present the design of TraceCluster. We show the evaluation if the data structure is unclear, performance may suffer
+performance in Section VI. Section VII is a discussion of significantly, and the computational cost increases notably
+limitations. Finally, the full paper is summarised. when encountering large-scale data. Furthermore, DISTDET
+ [30], while cost-effective in a distributed architecture, faces
+ II. R ELATED W ORK challenges in the management and coordination of distributed
+ Anomaly-based APT detection methods that regard a system systems, particularly with communication delays and synas anomalous by first learning its normal behavioral patterns, chronisation issues, which could affect the effectiveness of
+and then recognizing it as anomalous when its behavior real-time detection.
+deviates from these patterns. This type of approach does not SHADEWATCHER [31] formulates provenance-based
+rely on predefined attack patterns, and thus is more flexible in threat detection as a recommendation task over system
+dealing with unknown attacks. entity interactions. It produces fine-grained, interaction-
+ DeepLog [23] and Tiresias [24] model normal behaviour level alerts and supports semi-supervised adaptation with
+and detect abnormal user behaviour through repeated neural analyst feedback. However, SHADEWATCHER still relies
+networks (RNN), which focus on sequential data, are not on GPU-heavy training, incurs non-trivial offline overhead
+sufficiently capable of capturing global relationships in graph for provenance graph construction, leaving room for lighterstructures. Therefore, they are not suitable for large-scale weight and more incrementally updatable designs.
+data structures. LogRobust [25] improves the ability to model NODLink [32] combines VAE-based node anomaly scoring
+log sequences through bidirectional long-short-term mem- with an online Steiner tree formulation to reconstruct comory (LSTM) combined with the attention mechanism, which pact attack stories from large provenance graphs. It achieves
+allows it to better capture complex contextual correlation fine-grained, node-level investigation while maintaining high
+information. However, it has high computational complexity detection accuracy and practical throughput in realistic SOC
+and weak adaptation to unbalanced data in the processing of environments. However, NODLink uses non-GNN represenlong-sequence data and complex logs. Instead of directly deal- tations, and builds on Steiner Tree Problem (STP)-based
+ing with the graph structure, LogGAN [26] uses adversarial optimization together with a graph-database–backed pipeline,
+1068 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+which increases engineering complexity and limits scalability B. Motivation Example
+to very large, highly dynamic graphs. These limitations indicate remaining space for more scalable, GNN-based designs We present an example in Figure 2, to illustrate the limitathat can better capture higher-order structural patterns while tion of state-of-the-art threat detection work and the intuition
+retaining fine-grained detection and efficiency, as pursued in of our approach. The example is generated from the DARPA
+this work. OpTC experiment.1 The dark nodes are those nodes related to
+ MEGR-APT [15] and FLASH [1] have demonstrated the intrusion campaign.
+remarkable efficacy in addressing efficiency-related challenges The attacker installs Notepad plus with a malicious upgrade
+within computational systems. MEGR-APT first partitions ability in the victim host. The Malicious process “cKfGW.exe”
+the input graph into subgraphs, computes their embed- gets “cmd” shell to run commands to find out information
+dings, and then constructs an optimized query graph for about local system, and migrates from process “cKfGW.exe”
+efficient matching. Despite its efficacy, it is limited to graph- to process “lsass.exe”, to connect to attacker’s server. To
+level APT detection, resulting in insufficient granularity. establish persistence via meterpreter, the process “cKfGW.exe”
+FLASH [1] combines the graph neural network and the is migrated to process “lwabeat”, who writes a script to
+provenance graph to improve the detection accuracy through C:\Windows\TEMP\myHbYXTpViwX.vbx and set autorun to
+Word2Vec and GNN encoders. It also optimizes computational the registry.
+efficiency using an embedded recycling database, enabling Limitations of state-of-the-art threat detection work: It
+real-time APT detection. Although FLASH maintains high remains some challenges to detect the threat presented in
+detection efficiency and achieves fine-grained detection, it the example, which leads to limitations of the state-of-the-art
+nevertheless exhibits unsatisfactory time efficiency during the threat detection work.
+inference phase.
+ KAIROS [14] applies temporal graph representation learn- • Stealthy attack behavior. Anomaly-based methods, such
+ing to model both structural and temporal dependencies in as Unicorn [7], StreamSpot [13], and ORTHRUS [16],
+audit logs, and then derives compact attack summary graphs use graph kernel algorithm or GNN to dynamically model
+to support analyst investigation, achieving strong detection the whole graph and detect abnormal graphs by clusterperformance on multiple DARPA TC and OpTC datasets. ing approaches. However, the intrusion may be stealthy,
+While effective, KAIROS incurs non-trivial computational which means that a system’s provenance graph under
+overhead for large time windows. intrusion campaign may be similar to those of benign
+ ORTHRUS [16] applies a graph neural network systems. In this example, there are hundreds of thousands
+(GNN)–based encoder-decoder to model normal behavior. of benign nodes and less than 200 anomalous nodes. The
+Detected anomalous nodes are then used to perform attack proportion of anomalous nodes is less than 0.1%, which
+path reconstruction, generating a compact subgraph that thus results in a high similarity of the attack graph and
+highlights the most relevant entities involved in the attack. benign graph. Therefore, graph-kernel-based methods are
+Unlike ThreaTrace and UNICORN, the ORTHRUS [16]’s insensitive to the small anomalous nodes.
+anomalous node detection approach results in a relatively • Exhibits low traceability. Graph-level detection methods
+high false negative rate. That is partly because it no longer [15] first partitioning the input graph into subgraphs, and
+classifies the neighbors of anomalous nodes as anomalous, then constructing an optimized query graph for efficient
+which is a critical concern in cybersecurity analysis. matching. lack the capability of tracing the location of
+ The above analysis of the research landscape reveals anomalous behavior, which is vital to trace abnormal
+that while extensive investigations have been conducted on behavior and fix the system. In this example, these methoptimising temporal efficiency, minimising resource expendi- ods can only raise alarms for the whole graph instead of
+ture, and improving detection accuracy in large-scale graph the specific attack entities (e.g.,myHbYXTpViwX.vbx).
+processing systems, node-level APT detection mechanisms • Low time efficiency. ThreaTrace requires multiple rounds
+persistently exhibit three fundamental limitations: unsustain- of testing on the model, sometimes up to more than
+able computational overhead, prohibitive inference latency, 20 times, to find the optimal test result. Obviously,
+and suboptimal operational efficiency metrics. it suffers from lower inference time. To eliminate this
+ flaw, Flash [1] optimizes computational efficiency using
+ an embedded recycling database. However, querying the
+ database also incurs a certain amount of time overhead.
+ III. BACKGROUND & M OTIVATION
+ Although MEGR-APT [15] uses a graph query database
+ to improve inference efficiency, it still runs slower
+A. Data Provence than our method. In this example, ThreaTrace, Flash
+ Data provenance is a directed acyclic graph constructed and MEGR-APT require 80 seconds, 32 seconds, and
+from audit data representing the relationship between subjects 2.4 seconds, respectively, to perform the inference steps.
+(e.g., processes) and objects (e.g., files) in a system [7], [13].
+By capturing detailed contextual relationships among system
+entities and events, data provenance has been proposed as a 1 https://drive.google.com/drive/u/0/folders/1n3kkS3KR31KUegn42yk3-
+promising source for host-based threat detection [1], [8]. e6JkZvf0Caa
+XU et al.: TraceCluster: A LIGHTWEIGHT AND ADAPTIVE CLUSTERING-BASED SAN 1069
+
+ Fig. 2. The example from mailicious upgrade scence of DARPA OpTC experiment.
+
+ IV. T HREAT M ODEL entities learned in training phase. We further discuss this
+ limitation in Section VIII.
+A. Adversary Capabilities
+ The adversary is characterized as an APT, exhibiting techniques and operational goals that are consistent with those V. P ROPOSED A PPROACH
+defined in the MITRE ATT&CK knowledge base.2 In this section, we present the design of TraceCluster. The
+ • Stealty. The adversary exploites multiple zero-day vulner- main components are shown in Figure 3. We will describe
+ abilities and combined various attack methods to launch them in further detail in the following subsections.
+ a slow infiltration attack on the target system. The attack
+ behavior pattern is similar to normal operations, and the Algorithm 1 TraceCluster: Subgraph Training and Anomaly
+ victim system is unable to detect the existence of the Detection
+ attack. Therefore, we are unable to obtain information Require: Graph G, node features X, adjacency matrix A, labels
+ about its attack pattern. Y, number of clusters K, learning rate η, threshold τ
+ • Persistence. The capability to remain covertly embedded Ensure: Trained Model, List of Abnormal Nodes
+ within a compromised system for an extended period, 1: clusters ← METIS.partition(G, K)
+ maintaining long-term presence and conducting multiple 2: model ← SAN()
+ attacks over time. 3: optimizer ← Optimizer(model.parameters(), lr = η)
+ 4: for epoch = 1tonum epochs do
+ In additions, we consider that attack patterns are embedded
+ 5: for each cluster in shuffle(clusters) do
+within the provenance graph. The adversary’s actions cause
+ 6: sub nodes ← cluster.nodes
+certain nodes in the system’s provenance graph to deviate
+ 7: sub ad j ← A[sub nodes, sub nodes]
+locally from normal behavioral patterns, thereby leaving dis-
+ 8: sub f eatures ← X[sub nodes]
+cernible traces of malicious activity within the provenance
+ 9: sub labels ← Y[sub nodes]
+data.
+ 10: output ← model(sub f eatures, sub ad j)
+ 11: loss ← WeightedLoss(output, sub labels)
+B. Assume 12: optimizer.zero grad()
+ In this paper, an entity within a running system is defined 13: loss.backward()
+as benign when it exhibits no association with malicious 14: optimizer.step()
+activities. Conversely, an entity is regarded as abnormal if 15: end for
+ 16: end for
+its behavioral patterns deviate from those of benign entities,
+ 17: abnormal nodes ← []
+which commonly results from ongoing intrusion campaigns.
+ 18: for each node, prob in enumerate(output) do
+Our analysis centers on the nodes of the provenance graph to
+identify anomalous entities at the host level. We further assume 19: if prob > τ then
+that the system’s audit logging and provenance collection 20: abnormal nodes.append(node)
+mechanisms are both comprehensive and trustworthy, and 21: end if
+ 22: end for
+cannot be tampered with or compromised by adversaries [31].
+ 23: return model, abnormal nodes
+ TraceCluster cannot detect threats which have no different
+patterns in the provenance graph compared to the benign
+ Algorithm 1 describes the implementation of TraceCluster.
+ 2 https://www.mitre.org/capabilities/cybersecurity/threat-based-defense The input to the model includes the graph G, node features X,
+1070 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 3. TraceCluster detection process includes data provenance generator, subgraph division, feature extraction, model train, and final anomaly detection.
+1. Extract data from the system log database and external tools to build a provenance graph. 2. Simplify the structure of the global graph by aggregating nodes
+and edges, and then divide the coarsened global graph into subgraphs. 3. Assign labels to nodes based their types or distributions, and construct the initial
+feature direction for each node. 4. During the training phase, the subgraphs are then structurally optimized and randomly selected as batches, and attention
+is used to aggregating the nodes and edges for training the subgraphs in turn to share global graph information. 5. The trained model is used for anomaly
+detection that combines with the threshold mechanism to classify nodes or edges, and output normal or abnormal status.
+
+adjacency matrix A, labels Y, the number of clusters K, and and constructs information flows in chronological order while
+the threshold τ used for APT detection. ensuring robust data integrity and security. During this process,
+ Initially, we adopt the METIS algorithm [33] to partition the the relationships between subjects, objects, and their associgraph into K subgraph clusters, stored in the variable clusters. ated events are clearly extracted, forming a structured data
+Each cluster is designed to be trained independently. During model.
+training, the clusters are randomly selected in each epoch to Finally, the processed data are transformed into a provemitigate bias caused by fixed sequential order. For each cluster, nance graph, which visually represents the entities in the
+the corresponding subgraph nodes, adjacency matrix, and node system and their interrelations. In a provenance graph, the
+features are extracted. nodes represent the subjects and objects, such as files, network
+ The model performs forward propagation on the subgraph, streams, or system processes, while the edges illustrate the
+producing predictions denoted as output. interactions between these entities. This visual representation
+ Once training is complete, the model outputs the probability enables analysts to quickly identify system behaviors, depenof anomalies for each node. If the predicted probability for a dencies, or anomalies, effectively trace attack paths, analyse
+node exceeds the threshold thr, the node is identified as an threat origins, and improve the accuracy and efficiency of
+anomalous node and added to the list of anomalous nodes. intrusion detection and provenance analysis.
+Finally, the trained model and the list of detected anomalous
+nodes are returned. B. Subgraph Division for Large-Scale Graphs
+ Subgraph division plays a critical role in reducing com-
+A. Provenance Graph Generator putational complexity and improving computational efficiency
+ The provenance graph generator illustrates the complete when dealing with large-scale graph tasks. We adopt a multiprocess from system log collection to provenance graph stage strategy to effectively partite large graphs while ensuring
+generation. Initially, the system collects log data from var- high partition quality. The process of subgraph division mainly
+ious sources, such as servers and endpoint devices. These includes three main steps: graph coarsening, initial partitionlogs contain information about the subjects (e.g., processes), ing, and graph expanding.
+objects (e.g., files, network streams), and the interaction events 1) Graph Coarsening: During the initial step of subgraph
+between them. All collected logs are stored in the System Log division, graph coarsening is performed to reduce the graph
+Database (System Log DB), providing a stable foundation for size. The input graph G = (V, E) is transformed by merging
+subsequent processing. nodes and creating coarse-level representations. Specifically,
+ Next, external tools such as Camflow [34] are utilized given two nodes u and v, if there exists an edge (u, v) in the
+to analyse and process stored log data. Camflow captures graph, the two nodes can be merged into a single supernode.
+XU et al.: TraceCluster: A LIGHTWEIGHT AND ADAPTIVE CLUSTERING-BASED SAN 1071
+
+The resulting coarsened graph is denoted as G0 = (V 0 , E 0 ), 3) Graph Expanding: After completing the initial partiwhere V 0 represents the set of supernodes, and |V 0 |  |V|. tioning of the coarsened graph, the expansion process begins,
+ Through this approach, the size of the graph is significantly where the coarsened graph G0 is progressively restored to its
+reduced, facilitating the subsequent partitioning process. The original size G. In this step, each supernode is decomposed
+coarsening process is typically implemented using maximum back into its original nodes, and these nodes inherit the
+matching algorithms, where nodes with relatively higher edge subgraph assignments from the coarsened graph.
+weights are prioritized for merging. The goal of coarsening is The partition results are propagated incrementally from
+to preserve the overall structure and connectivity of the graph the coarsened graph to the original graph, ensuring that the
+while minimizing the number of nodes and edges, thus laying assignments maintain consistency. At each stage, the partithe foundation for the initial partitioning phase. tioning results are refined to achieve better nodes and edges
+ 2) Graph Partitioning: After coarsening the graph, the next balance while reducing edge cuts. The process recovers the
+step is to perform the initial partitioning of the coarsened original modular structure of the graph, and the partition
+graph G0 . The goal of partitioning is to divide the graph quality achieved during the initial partitioning stage is further
+into subgraphs k, S 1 , S 2 , . . ., S k , while achieving two main enhanced.
+objectives: Local optimisation techniques are applied to further adjust
+ • Minimize partition size. This objective aims to reduce and optimize partition results. The objective of these techthe number of edges between different subgraphs as much niques are to reduce edge partitioning by selectively moving
+ as possible. nodes between subgraphs while maintaining balance among
+ • Balancing the load of the nodes. During the parti- the subgraphs.
+ tioning process, the nodes of each subgraph are kept Refinement typically uses algorithms such as
+ relatively balanced to ensure load balance for subsequent Kernighan-Lin [35] or Fiduccia-Mattheyses methods [36].
+ computations. These algorithms iteratively optimize the placement of the
+ In large-scale graph applications, such as anomaly detection, nodes by evaluating and exchanging nodes across subgraph
+minimizing the partition size is essential to improve the boundaries to minimize the cut size. Nodes that can be moved
+detection accuracy. Reducing the edge between subgraphs to a neighboring subgraph without violating the load balance
+helps reduce communication overhead and data transmis- condition are identified. If such a move leads to a significant
+sion bottlenecks, thereby enhancing computational efficiency reduction in edge cuts, the node is reassigned.
+during further refinement steps. This is particularly critical
+for complex graphs, where minimizing partition size directly C. Feature Extraction
+alleviates computational burdens. Detecting anomalous nodes in the absence of prior knowl-
+ The partition size can be mathematically defined as: edge is a significant challenge. Traditional methods rely
+ k on annotated data for training. However, such methods are
+ X X
+ partition(S 1 , S 2 , . . ., S k ) = w(u, v), (1) ineffective when faced with novel attack modes. Previous
+ i=1 u∈S i ,v∈S j approaches assumed that neighboring nodes are highly similar,
+ but this assumption does not always hold in heterogeneous
+where w(u, v) represents the weight of the edge between nodes graphs (e.g., nodes with varying types and connections).
+u and v. Therefore, it is necessary to adopt a more adaptive feature
+ Maintaining load balance in graph partitioning is essential extraction approach.
+for improving parallel computational performance and model To address this, TraceCluster combines initial label assignscalability. A balanced partition ensures that the computational ment with node feature initialisation, enabling efficient
+resources allocated to each subgraph are roughly equal, pre- anomaly detection under scenarios without prior knowledge.
+venting the computational load imbalance caused by uneven 1) Label Assignment: Initially, nodes are assigned labels
+subgraph sizes. The load imbalance can impact the training based on their types or distributions. These labels serve as
+process, as different subgraphs may contain varying distribu- auxiliary information for model learning, helping to distintions of nodes and edges, which could result in inconsistent guish nodes of different types. Assume that each node vi has
+learning outcomes. By balancing the partitioning process, the a specific type label, such as process nodes, file nodes, or
+model ensures stability during training and avoids problems network connection nodes. For each node vi , the label li is
+caused by unequal learning rates or data updates due to size defined as:
+discrepancies among subgraphs. li = type(vi ). (3)
+ The condition for load balance can be expressed as:
+ 2) Feature Initialisation: Based on the connection relation-
+ |V|
+ |S i | ≈ , ∀i ∈ {1, 2, . . ., k}, (2) ships between the nodes, the distribution of the edge types
+ k is used to construct the initial feature direction for each
+where S i represents the set of nodes in subgraph i, |V| is the node. Suppose that the input graph is G = (V, E), where
+total number of nodes, and k is the number of subgraphs. V represents the set of nodes and E represents the set of
+ By simultaneously minimising the cut size and maintaining edges. For each node vi ∈ V, its feature vector ai consists of
+the load balance, we can achieve high computational efficiency two parts: incoming feature information and outgoing feature
+while improving the accuracy and stability of the model. information.
+1072 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ where I is the set of nodes sampled from the mini-batch
+ subgraph, yi is the true label of node i, p(yi | xi ) is the predicted
+ probability of node i belonging to class yi , and wyi is the weight
+ assigned to class yi . Specifically, wyi based on class sample
+ counts, is used to address the class imbalance problem. We
+ describe wyi in V-D2.
+ By applying attention operations to a set of subgraphs, SAN
+ dynamically adjusts the importance coefficients between the
+ neighboring nodes and the central node. The attention mechanism computes the importance coefficient αi j of a neighboring
+ Fig. 4. Examples of feature extraction. node j to a central node i as follows:
+
+ exp LeakyReLU ~aT [~hi k~h j ]
+   
+
+ Assume that there are t edge types. For node vi , the αi j = P  , (6)
+ T [~ ~hk ]
+  
+dimension of its feature vector ai is 2t: the first dimensions k∈N(i) exp LeakyReLU ~
+ a h i k
+t represent the incoming edge information and the remaining
+dimensions t represent the outgoing edge information. The where ~hi and ~h j represent the feature vectors of nodes i and
+feature vector for node vi is expressed as: j, respectively, and N(i) denotes the set of neighbors for
+ (1) (2) (t) (1) (2) (t) node i. The learnable vector ~a T is employed to measure the
+ ai = [din , din , . . ., din , dout , dout , . . ., dout ], (4)
+ correlation between nodes. This vector is initialized using the
+ (t) (t) Xavier uniform distribution at the beginning of training, and
+where din and represent the number of incoming and
+ dout
+outgoing edges of type t for node vi . is subsequently updated together with other model parameters
+ As illustrated in Figure 4, if the feature vector of a node through backpropagation and an optimizer. In this way, ~a
+is ai = [1, 1, 2, 2, 1, 0], it indicates that the node has varying gradually learns a weight direction that reflects the relative
+numbers of incoming and outgoing edges of different types. importance of neighboring nodes.
+Specifically, the first three values [1, 1, 2] represent the counts Through this strategy, SAN not only improves anomaly
+of incoming edges of three types of edges, while the last detection performance within local subgraphs, but also
+three values [2, 1, 0] represent the counts of outgoing edges. improves the overall structural understanding of the heteroge-
+By combining label assignment with feature initialisation, our neous graph. This enables TraceCluster to effectively identify
+unsupervised framework enables node-level anomaly detection the multistage attack phases and intricate behaviors of APT.
+without the need for prior anomaly data. This approach also 2) Class Weight Design: Specifically, classes with fewer
+provides robust representations of foundational features, laying samples are assigned higher weights, while classes with larger
+the solid foundation for subsequent clustering or classification sample counts are assigned lower weights. The class weight
+tasks. wk is inversely proportional to the sample count for class k,
+ which is calculated as follows:
+D. Model Training and Optimization N
+ 1(yi = k)
+ X
+ Ck = (7)
+ In terms of model training and optimization, TraceCluster
+ i=1
+integrates adaptive characteristics with efficient graph par-
+ 1
+titioning methods to maximize the detection capability of wk = , (8)
+ Ck
+anomalous nodes in large-scale heterogeneous graphs. The
+training and optimization process focuses on the following where N is the total number of nodes, and 1(yi = k) is an
+aspects. indicator function that evaluates to 1 when node i belongs to
+ 1) Dynamic Subgraph Training Strategy: TraceCluster first class k, and 0 otherwise. To prevent the class weights from
+partitions the heterogeneous graph into multiple subgraphs. being excessively large or small, we normalize the weights so
+Each subgraph is treated as an independent training sample. that their sum equals 1. The normalized weight w0k is defined
+ To ensure complete learning of node features in large-scale as:
+heterogeneous graphs, TraceCluster adopts a mini-batch-like wk
+ w0k = PK . (9)
+dynamic subgraph training strategy. In each training iteration, k=1 wk
+one or more subgraphs are randomly selected for training and
+ The calculated class weights w0k are then applied to the batch
+the subgraphs are periodically replaced during the training
+ loss function during the training process. Specifically, for a
+process. This ensures that the model learns comprehensive
+ node, the loss value is weighted by its corresponding class
+information from different subgraphs. During each iteration,
+ weight, as shown in Equation 5. Through this method, SAN
+the nodes obtained from the dynamically sampled subgraphs
+ focuses more on classes with fewer samples during the training
+are used to calculate the batch loss function Lbatch .
+ process, effectively mitigating the impact of class imbalance.
+ The batch loss function is defined as:
+ X This not only improves the predictive accuracy for under-
+ Lbatch = − wyi log (p(yi | xi )) , (5) represented classes, but also enhances the overall performance
+ i∈I of the classification task.
+XU et al.: TraceCluster: A LIGHTWEIGHT AND ADAPTIVE CLUSTERING-BASED SAN 1073
+
+E. Anomaly Detection TABLE II
+ After the model training is completed, the final output is OVERVIEW OF S TREAM S POT DATASET
+the anomaly probability for each node. The model categorizes
+the nodes and generates a probability distribution indicating
+the nodes. During the testing phase, the model leverages these
+probabilities to determine if a node is potentially anomalous.
+ If the probability of an anomaly for a node exceeds a
+predefined threshold, the node is marked as anomalous, indi- TABLE III
+cating that it might be subject to an APT attack. Similar OVERVIEW OF DARPA TC # E3 AND # E5 DATASETS
+to most expert-recognized approaches [1], [8], TraceCluster
+learns baseline patterns of normal behavior from benign data,
+thus eliminating the need to incorporate labels indicating
+whether a node is malicious during the training phase. In
+the anomaly detection phase, this work first predicts the
+probability distribution of node labels. If the classification
+probability exceeds a predefined threshold of 0.5, the node is
+considered potentially malicious. Following the methodology
+in [1] and [8], the final hyperparameter values are determined
+by exhaustively searching the hyperparameter space. containing the source node ID, source node type, destination
+ This probability-based anomaly detection mechanism allows node ID, destination node type, edge type, and graph ID.
+TraceCluster to effectively identify hidden attack paths and It contains 6*100 information flow graphs derived from five
+anomalous nodes in complex APT attack scenarios. By out- benign scenes and one attack scene. Each scene runs 100 times
+putting anomaly probabilities, security analysts can further to generate 100 graphs using the Linux System Tap logging
+assess potential threats, analyze their severity, and provide system [37]. We use the same validation strategy as [8] to
+actionable insights to detect and mitigate APT attacks. randomly split the dataset into a training set with 75*5 benign
+ graphs and a testing set with 25*5 benign graphs and 25 attack
+ VI. E XPERIMENTATION AND A NALYSIS graphs.
+ In this section, we evaluate the detection and inference time 3) DARPA TC # E3: DARPA TC project’s Engagement
+performance of the proposed TraceCluster. 3 dataset4 (Table III) was produced as part of DARPA’s
+ Hardware Configuration: Our experiments are performed Transparent Computing initiative [38]. The third engagement
+on a workstation running Ubuntu 22.04.3 LTS, equipped with specifically targets the exploration and analysis of APT behavan AMD Ryzen Threadripper PRO 9955WX (16 cores), an iors at a foundational level. The # E3 dataset encompasses
+NVIDIA RTX 5090, 64GB memory, and a 1TB SSD. multiple attack scenarios, including post-compromise activ-
+ Preprocessing Costs: TraceCluster only parses the raw logs ities, spear-phishing attacks, data exfiltration, APT attacks,
+and extracts the required fields (e.g., entity identifiers, event etc. The dataset provides fine-grained data, including system
+types, timestamps) without any expensive feature engineering processes, files, network activities, and system calls, making
+or additional model-dependent computation. Therefore, the it suitable for basic anomaly detection and preliminary threat
+preprocessing overhead is negligible compared to the subse- source analysis.
+quent graph-based inference pipeline. The # E3 dataset lasted for two weeks. During the engagements, the red team performed attacks and benign background
+ activity to hosts with different systems. Three kinds of attack-
+A. Baseline Models and Datasets ers are involved in the red-team including Nation State,
+ 1) Baseline Models: Ten algorithms are chosen as base- Common Threat and Metasploit. The provenance collecting
+lines, that is, StreamSpot [13], UNICORN [7], Log2Vec [11], tools captured provenance data of the whole system from start
+DeepLog [23], LogRobust [12], LogGAN [26], ThreaTrace to end. The provenance data and ground truth are publicly
+[8], FLASH [1], KAIROS [14], and ORTHRUS [16], whose available [38]. Therefore, we use the ground truth to label the
+details have been described in Section II. We do not include abnormal nodes and evaluate TraceCluster’s performance of
+MEGR-APT [15] as a baseline for detection performance com- detecting them, which shows the ability of tracking anomaly.
+parison since it is a graph-level detection method. However, The Details of validation strategy is similar to [8]. Files that
+due to its relatively fast detection speed, we adopt it as the have no threats are used to train the models and files with
+baseline model for inference time evaluation. threats are used for evaluation.
+ 2) StreamSpot: StreamSpot3 (Table II) is an experimental 4) DARPA TC # E5: Building upon the foundation of
+dataset designed to study network anomaly detection [13]. It the # E3 dataset, the # E5 dataset5 (Table III) lasted for
+includes six scenarios: five representing normal behaviors and 9 days, is larger in scale and designed with more sophisticated
+one representing an attack behavior. The dataset is stored in
+tab-delimited file format, where each row represents an edge, 4 https://github.com/darpa-i2o/Transparent-Computing/blob/master/
+ README-E3.md
+ 3 https://github.com/sbustreamspot/sbustreamspot-data 5 https://github.com/darpa-i2o/Transparent-Computing
+1074 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE IV UNICORN perform well, TraceCluster surpasses both models
+ OVERVIEW OF DARPA O P TC DATASET across all metrics, particularly with a Recall of 0.99, indicating
+ that the model can detect nearly all positive cases.
+ 2) Comparison and Analysis of Detection Performance on
+ DARPA TC # E3 and # E5 Datasets: As shown in Table VI,
+ due to the large number of DARPA TC datasets, we chose
+ to test the dataset used on the FLASH [1], and the experiattack scenarios, including multistage attack chains, multi-host mental results are shown in the table. The rest of the results
+collaboration, data exfiltration and encryption, antiforensic were compared based on the results in ThreaTrace [8]. We
+activities, and advanced network communications. It is espe- run KAIROS [14] and ORTHRUS [16] on # E3 Cadets,
+cially valuable for analysing the behavioural patterns and # E5 Theia, and # E5 Cadets datasets, as their approaches
+defensive strategies associated with complex APT attacks. exhibit relatively high efficiency on the corresponding datasets
+ We use the same ground truth and validation strategy with reported in their original papers. Experimental results indicate
+the # E3 dataset. that TraceCluster achieves the best performance in terms
+ 5) DARPA OpTC: The DAPRA OpTC dataset6 (Table IV) of F1-score and False Positive Rate (FPR) across the six
+is an open source resource designed for network security evaluation scenarios. Although its recall is slightly lower, the
+research and attack detection, containing audit logs from precision remains satisfactory. The False Negative Rate (FNR)
+approximately 1,000 hosts. The dataset includes 7 days of is not the lowest, however, except for the results on the E5
+benign activity data and 3 days of malicious activity data, Cadets dataset, it stays within an acceptable range. On the
+with each day of malicious activity representing a different # E5 Cadets dataset, all competing methods, except KAIROS,
+type of attack. We use benign activity data for training, and exhibit unsatisfactory FNR performance. The performance
+utilize labels of malicious activity from FLASH [1]. For degradation on the # E5 Cadets dataset can be attributed
+evaluation purposes, we focus on the attack data from Day to its higher diversity and noise level, which make it more
+2 and Day 3. On day 2, the logs document an attacker who challenging for provenance-graph–based approaches to capture
+sends phishing emails with a malicious “Custom PowerShell consistent behavioral patterns.
+Empire stager”. The stager is used to escalate privileges, In the # E5 Theia scenario, TraceCluster achieves a Preexfiltrate data, and perform lateral movement on the domain cision of 0.97 and a Recall of 0.94. These results indicate
+controller. The attacker establishes persistence through WMI that the model effectively identifies positive samples while
+subscriptions and transfers data using RDP and SSH. On maintaining controlled false positives. In the Trace scenario,
+day 3, the dataset records an attacker exploiting a “malicious TraceCluster achieved nearly perfect results, with all key
+upgrade” vulnerability in the Notepad Plus software. The metrics reaching 0.99, highlighting the model’s exceptional
+attacker remotely downloads and executes a malicious pro- ability to distinguish between positive and negative samples
+gram called update.exe, gaining access to the system, while keeping the false negative rate extremely low.
+performing lateral movement, using Meterpreter to collect The superior performance of TraceCluster can be attributed
+sensitive information and establishing persistence. to the following factors. Firstly, Through the attention mech-
+ For data partitioning, we split all benign data into training anism, SAN assigns varying weights to neighboring nodes,
+and validation sets with an 8:2 ratio, and use the datasets allowing the model to focus more effectively on critical nodes.
+containing malicious nodes exclusively as the test set. Secondly, the introduction of class weight balancing plays a
+ positive role in addressing imbalanced datasets. In scenar-
+B. Comparison of Detection Performance Between ios where class imbalance exists, the weighting mechanism
+TraceCluster and Baseline Advanced Detection Models enhances the model’s ability to identify minority classes,
+ reducing the problem of minority samples being overlooked,
+ 1) Comparison and Analysis of Detection Performance on and thereby improving Recall.
+StreamSpot Dataset: In this section, we discuss the per- In terms of FPR and FNR, TraceCluster demonstrates high
+formance primarily in the StreamSpot dataset, as shown in accuracy in distinguishing between normal and attack samples.
+Table V. We adopt the same validation strategy as UNICOIN In # E3 Trace and # E3 Fivedirections datasets, its FPRs are
+[7], randomly splitting the dataset into a training set containing 0.01 and 0.0001, respectively, which are significantly lower
+75*5 benign graphs and a test set containing 25*5 benign than those of other models, indicating its higher stability and
+graphs and 25 attack graphs. The TP/FP/TN/FN values in precision. The model effectively reduces false positives and
+the table represent the average evaluation results obtained by improves the reliability of attack detection. Additionally, its
+repeating this process. The TraceCluster exhibits exceptional sensitivity in detecting attack samples is also remarkable, with
+overall capability in detection tasks, effectively maintaining a FNRs of 0.01 in the # E5 Trace datasets, which are much
+low false positive rate while achieving near-perfect positive lower than those of other models, highlighting its advantages
+coverage (extremely low false negative rate). in increasing recall and reducing false negatives.
+ Compared to other models, TraceCluster shows signifi- However, TraceCluster also has certain limitations. In the
+cant performance advantages. Even when StreamSpot and # E5 Cadets scenario, for instance, TraceCluster exhibits a
+ 6 https://drive.google.com/drive/u/0/folders/1n3kkS3KR31KUegn42yk3- relatively low Recall of 0.80, compared to the best-performing
+e6JkZvf0Caa detection model (e.g., KAIROS) at 1.00. This suggests that
+XU et al.: TraceCluster: A LIGHTWEIGHT AND ADAPTIVE CLUSTERING-BASED SAN 1075
+
+ TABLE V
+ C OMPARISON OF P ERFORMANCE M ETRICS ON S TREAM S POT DATASET
+
+ TABLE VI
+E VALUATED U NDER S IX D IFFERENT ATTACK S CENARIOS OF DARPA TC # E3 AND # E5. A LL VALUES A RE R EPORTED IN P ERCENTAGES , AND THE B EST
+ R ESULTS A RE H IGHLIGHTED IN B OLD . FPR: FALSE P OSITIVE R ATE , R EFERRING TO THE P ROPORTION OF N ORMAL S AMPLES I NCORRECTLY
+ C LASSIFIED AS ATTACK S AMPLES ; FNR: FALSE N EGATIVE R ATE , R EFERRING TO THE P ROPORTION OF ATTACK S AMPLES
+ I NCORRECTLY C LASSIFIED AS N ORMAL S AMPLES
+
+TraceCluster may miss some positive samples, failing to Nevertheless, in two evaluation scenarios, the FPR are merely
+capture all correct instances. This shortcoming might arise 0.007% and 0.008%, which are practically negligible. Hence,
+from the SAN, which is heavily based on node-specific feature the overall detection performance demonstrates a superior
+representations. trade-off between accuracy and efficiency. This indicates that
+ 3) Comparison and Analysis of Detection Performance TraceCluster is more reliable in detecting a wider range of
+on DARPA OpTC Dataset: In the OpTC dataset, we com- malicious activities, especially in large-scale or covert attacks.
+pare TraceCluster with FLASH based on the reproduction
+results achieved using the official FLASH implementation. C. Comparison of Time Consumption for Inferring on
+The experimental results are shown in Table VII. TraceCluster DARPA OpTC Dataset
+exhibits a more balanced detection capability in both attack Figure 5 presents a comparison of inference latency between
+scenarios, with significantly higher Recall, F1-scores and FNR TraceCluster and FLASH under two representative attack scethan FLASH. Compared with its relatively lower FNR, the narios in DARPA OpTC Dataset. TraceCluster enables parallel
+TraceCluster exhibits a slightly higher FPR than FLASH. inference on partitioned subgraphs, significantly reducing the
+1076 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE VII
+ C OMPARISON OF P ERFORMANCE M ETRICS B ETWEEN T RACE C LUSTER AND FLASH ON THE DARPA O P TC DATASET
+
+ these metrics show an upward trend when the number of
+ clusters reaches 8. However, for most other scenarios, when
+ the number of clusters exceeds 6, the metrics either decline or
+ remain roughly the same as those recorded when the number of
+ clusters is 6. The experimental results indicate that setting the
+ number of clusters K to 6 yields the best overall performance.
+ Partitioning is executed once per constructed traceability
+ graph snapshot and can be cached and reused if multiple
+ inference runs or queries are performed on the same snapshot, thereby allowing its cost to be amortized in practical
+ deployment settings.
+ In conclusion, a well-designed subgraph partitioning strat-
+ Fig. 5. Comparison of inference time on OpTC dataset. egy helps models better capture the structural information
+ of the data, significantly enhancing prediction accuracy and
+ generalization capability, thus providing deeper insights for
+inference time. Specifically, it achieves inference times of tasks in complex scenarios.
+0.61 s and 0.79 s in the two scenarios, which are substantially lower than FLASH’s 22.66 s and MEGR-APT’s 2.4 s,
+representing approximately 37-fold and 3-fold, respectively. E. Selection of Learning Rate for Model Training
+ We further analyze the reason behind FLASH’s slower As shown in Figure. 8, in this experiment, we select a
+inference. The main factor lies in its use of a heterogeneous learning rate of 10−2 . This learning rate iss chosen based
+two-stage inference pipeline. During deployment, FLASH on multiple experiments and comparative analysis, as it
+does not perform end-to-end inference via a GNN; instead, effectively balances model stability and convergence speed.
+it relies on node embeddings pregenerated by a trained GNN Specifically, while smaller learning rates (e.g., 10−3 or lower)
+model, which are stored in a key-value database. At runtime, are stable, they lead to slower convergence, and larger learning
+the system retrieves these embeddings, combines them with rates (e.g., 10−1 or higher) can cause training instability or
+Word2Vec representations of the input events to form feature oscillations. Through preliminary experiments, we consider
+vectors, and feeds them into an XGBoost classifier for anomaly that a learning rate of 10−2 avoids excessive oscillations and
+detection. This process introduces additional delays due to ensures performance improvement in the # E3 scenarios,
+embedding retrieval, feature composition, and external model which is why it is selected as the final learning rate setting.
+invocation, resulting in higher overall latency. In contrast,
+our TraceCluster offers a streamlined inference path and is
+therefore more suitable for timely detection tasks. F. Selection of Threshold
+ We refer to the threshold selection strategies described in
+D. Impact of Subgraph Partitioning on TraceCluster ThreaTrace [8], KAIROS [14] and FLASH [1]. All three
+ Figure 6 shows the experimental results with different works adopt a fixed-threshold approach. Therefore, we follow
+numbers of clusters on the DARPA TC # E3 and # E5 datasets. the same strategy in our implementation. In addition, we
+The results indicate that subgraph partitioning significantly employ a search strategy to determine the optimal values of
+improves model performance, although the sensitivity to the three hyperparameters, namely the learning rate, the number
+number of partitions varies between scenarios. As can be of clusters, and the threshold. We present the results of the
+observed, TraceCluster exhibits high sensitivity to the number threshold selection experiments under the optimal learning
+of clusters on the # E3 and # E5 datasets. When the number rate 10−2 and clustering settings (K= 6). From Figure. 7, we
+of clusters is less than 6, the F1-score Mean, Precision Mean, observe that setting the threshold to 0.5 yields a good tradeoff
+and Recall Mean all increase with the growing number of among Precision, Recall, and F1-score for TraceCluster on the
+clusters. In a few scenarios (e.g., # E3 Trace and # E5 Cadets), # E3 dataset.
+XU et al.: TraceCluster: A LIGHTWEIGHT AND ADAPTIVE CLUSTERING-BASED SAN 1077
+
+ Fig. 6. Experimental results with different numbers of clusters on DARPA TC # E3 dataset and # E5 dataset.
+
+ Fig. 7. Experimental results with different scene thresholds on the DARPA TC# E3 dataset.
+
+ We conducted experiments on three scenarios from the TC
+ # E3 dataset. The experimental results (Table VIII) reveal
+ significant performance differences.
+ Based on the analysis of experimental results, the SAN
+ demonstrates the most stable performance across various scenarios, excelling in handling complex graph structures and
+ fine-grained features. GraphSAGE follows closely as a strong
+ alternative, particularly benefiting from its feature aggregation
+ capability. In contrast, the performance of the GCN model
+ declines as the complexity of the scenarios increases, reflecting
+ its limitations in feature modelling. Without graph partitioning,
+ Fig. 8. Learning rate adjustment and effects in # E3 dataset. the detection performance degrades significantly, indicating
+ that subgraph clustering for feature extraction is essential.
+ Adaptive catagory weighting mechanism enables TraceCluster
+G. Ablation Study on the Key Modules to achieve superior detection performance, since the model is
+ highly sensitive to correct class recognition.
+ To study the necessity of each portion of our approach, we To validate the feature extraction method we propose, we
+replace the TraceCluster modules with other relative methods compare it with the node embedding method based on node
+to observe how the model performance degrades. types. The One-Hot encoding method [39] is employed for
+ We conduct ablation experiments as follows. First, we node embedding. It converts node types into feature vectors,
+evaluate the detection efficiency when SAN is replaced by focusing mainly on node type information while neglect-
+Cluster-GCN or GraphSAGE used in ThreaTrace. Next, we ing the interactions between the node and its neighbors.
+evaluate the detection efficiency of model variants where the The experimental results, as shown in Table VIII, demonattention mechanism or the clustering mechanism is removed. strate that our feature extraction method, by providing more
+Finally, we evaluate the necessity of a designed weighting structural information, can better capture the interactions
+function, by removing weight setting and by setting the between nodes, thereby improving the ability to detect attack
+balanced sample weights. behaviors.
+1078 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE VIII
+ T HE I MPACT OF D IFFERENT M ODULES IN T RACE C LUSTER
+
+ Fig. 9. Performance comparison of models with and without subgraph
+ partitioning.
+
+ Focal Loss performes slightly lower than SMOTE in recall,
+ it shows similar performance to the Class Weight function
+ in terms of precision and F1-score, making it a competitive
+ alternative. Overall, the Class Weight function shows superior
+ performance in terms of classification stability, making it
+ suitable for tasks requiring higher precision.
+
+ I. Resource Consumption During TraceCluster Execution
+ In this section, we primarily discuss the impact of subgraph
+ partitioning on the efficiency of the model. The evaluation
+ focuses on resource consumption, including the number of
+ nodes before and after subgraph partitioning, memory usage,
+ TABLE IX and CPU utilization during the training process. We use the
+C OMPARISON OF E XPERIMENTAL R ESULTS OF C LASS W EIGHT F UNCTION , # E3 FiveDirections dataset, and the experimental results are
+ SMOTE M ETHOD , AND F OCAL L OSS as follows. Figure 9 shows the performance comparison of
+ models with and without subgraph partitioning.
+ By applying subgraph partitioning, the average memory
+ consumption decreases from 16,500MB to 12,700MB, representing a reduction of approximately 24%. This effectively
+ alleviated memory pressure during large-scale graph computation. Without subgraph partitioning, CPU utilization exhibits
+ significant fluctuations and peaks, leading to heavier computational loads for individual tasks. However, after applying
+ subgraph partitioning, the computational tasks become more
+ distributed, significantly reducing the workload. At the same
+ time, CPU utilization becomes lower and more stable, decreasing from a peak of 5% to 3%, a reduction of 40%.
+ According to our experimental results, we consider that
+ subgraph partitioning not only effectively reduces memory
+ usage and CPU load but also significantly improves the
+ efficiency and stability of large-scale graph computations.
+ Subgraph partitioning enables a more balanced allocation of
+H. Study of Different Catagory Weighting Methods computational resources, reducing resource bottlenecks and
+ task imbalance. This provides a more efficient and scalable
+ In this experiment, we compare the performance of the Class solution for training large-scale graph neural networks.
+Weight function, SMOTE method [40], and Focal Loss [41]
+across three scenes in the # E3 dataset and two scenes in
+the OpTC dataset. As shown in Table IX, the Class Weight J. Analysis of Real-World Enterprise Logs
+function demonstrates better performance in terms of both To evaluate the effectiveness of TraceCluster in a real-world
+precision and recall across the three scenes. For example, in enterprise environment, we conduct an open-world evaluation
+the # E3 Trace scene, the Class Weight function achieves a on an anonymized cyber range. The range serves the network
+precision of 0.98 and recall of 0.95, outperforming SMOTE security lifecycle management system of a Supercomputing
+(precision 0.97, recall 0.93). Although SMOTE showes a Center. It supports the center’s requirements for network
+slight advantage in recall, the Class Weight function generally security testing, attack–defense exercises, research validation,
+yields more stable and accurate results. In addition, while and professional training.
+XU et al.: TraceCluster: A LIGHTWEIGHT AND ADAPTIVE CLUSTERING-BASED SAN 1079
+
+ The range consists of 17 servers, each running CentOS work, we plan to explore dynamic subgraph update mecha-
+7.9 with Intel Xeon Gold 5218 processors (2 × 16 cores), nisms to enhance TraceCluster’s adaptability to continuously
+512GB of memory, and over 8TB of disk space. The evaluation incoming data streams.
+spans 8 days, with the first 6 days dedicated to collecting
+normal behavior data and establishing a baseline model, while B. Interpretability and Analyst Usability
+the final 2 days involve injecting known attack scenarios,
+ Despite its strong detection performance, TraceCluster, like
+including privilege escalation by exploiting the vulnerability
+ many graph neural network–based systems, operates as a black
+CVE-2021-4034 and CVE-2021-3156, and remote command
+ box. The subgraph attention mechanism provides implicit
+execution by CVE-2017-9791, for detection and evaluation.
+ interpretability at the feature level, but it does not directly
+System logs and process behavior data are collected using
+ yield causal explanations or reconstruct complete attack
+CamFlow to build the baseline model for normal behavior.
+ chains. Enhancing interpretability, for instance, through atten-
+Approximately 150GB of relevant log data are produced per
+ tion visualization, provenance-based reasoning, or graph-level
+server per day. The model’s performance is then evaluated
+ explanation modules, would increase the practical usability of
+based on key metrics, including Precision, Recall, False Posi-
+ TraceCluster in security operations.
+tive Rate, and F1-score, providing a comprehensive assessment
+of its effectiveness.
+ Results and Analysis:We evaluate TraceCluster’s perfor- C. Assumption of Complete and Trustworthy Provenance
+mance in attack detection, and the results show an accuracy Collection
+of 68% and a recall of 50%. Although TraceCluster performs APT actors are capable of obfuscating collected log
+reasonably well in a controlled laboratory environment, its data through malicious tactics such as log tampering, event
+effectiveness in a real production environment falls short dropping, and inserting benign-looking edges into the proveof expectations. The accuracy of 68% indicates that most nance graph. In such adversarial settings, not only our
+predictions are correct; however, due to data imbalance, the proposed model but also a majority of the aforementioned
+model tends to favor normal behavior and fails to effectively state-of-the-art methods are likely to suffer from performance
+detect attack behaviors. The Recall of 50% means it misses degradation or even complete failure. Considering this gap, we
+half of the attack events, primarily due to the variability posit that strategies such as edge pruning and node aggregation
+of attack patterns across different environments, which hin- hold substantial promise for mitigating the adverse impacts of
+ders its ability to adapt to these changes. The F1-score of untrustworthy log data. Exploring the design and optimiza-
+0.576 reflects TraceCluster’s imbalance between accuracy and tion of these countermeasures will therefore constitute a key
+recall, which impacts overall performance. direction of our future research efforts.
+ The diversity of attack patterns causes the same attack to
+manifest differently across different operating systems and VIII. C ONCLUSION
+hardware, affecting the recall rate. Additionally, noise and
+ The proposed TraceCluster demonstrates significant
+interference in real environments, such as system updates
+ advancements in addressing APT attack detection on largeand network fluctuations, are often misclassified as attacks,
+ scale provenance graphs. By integrating the clustering-based
+increasing the detection difficulty. The model struggles to
+ subgraph attention network, class weighting mechanisms,
+adapt to the constantly changing attack strategies in producand graph partitioning techniques, TraceCluster significantly
+tion environments, while the complexity of normal behavior
+ improves detection efficiency and accuracy.
+and the instability of data quality further limit its detection
+ In addition, TraceCluster reduces computational overperformance and generalization ability.
+ head through subgraph partitioning, allowing large-scale data
+ processing while maintaining effective detection of attack
+ VII. D ISCUSSION AND L IMITATION behaviors. Its lightweight design yields significant efficiency
+A. Real-Time Detection Constraints gains, outperforming faster lightweight node-level detectors by
+ 37-fold and 3-fold faster inference on the OpTC dataset.
+ Although TraceCluster significantly reduces inference time Future work will focus on improving TraceCluster in three
+compared with FLASH, achieving real-time APT detection aspects. First, we plan to enhance scalability to support realin large-scale distributed systems still imposes substantial time detection in dynamic environments. Second, we will
+computational pressure. Partitioning, training, and processing improve model interpretability to provide clearer and more
+continuously evolving provenance graphs introduce addi- actionable insights for security analysts. Finally, we will
+tional overhead, which becomes particularly evident in highly investigate the problem of APT detection under the conditions
+dynamic environments with high event throughput. In this of unreliable traceability data, training data drift, and structural
+work, we have investigated incremental and streaming variants changes.
+of TraceCluster, and observed that introducing new nodes
+or edges after subgraph partitioning disrupts existing parti- R EFERENCES
+tions and the underlying pipeline assumptions, necessitating
+ [1] M. Ur Rehman, H. Ahmadi, and W. Ul Hassan, “Flash: A comprehensive
+complete repartitioning. Experimental results show that such approach to intrusion detection via provenance graph representation
+incremental subgraph partitioning and model update mech- learning,” in Proc. IEEE Symp. Secur. Privacy (SP), May 2024,
+anisms substantially degrade detection efficiency. In future pp. 3552–3570.
+1080 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+[2] D. Beyer and A. Fararooy, “A simple and effective measure for com- [21] J. Chen, J. Zhu, and L. Song, “Stochastic training of graph convolutional
+ plex low-level dependencies,” in Proc. IEEE 18th Int. Conf. Program networks with variance reduction,” in Proc. 32nd Conf. Neural Inf.
+ Comprehension, Jun. 2010, pp. 80–83. Process. Syst. (NeurIPS), 2017, pp. 1–11.
+[3] I. Stellios, P. Kotzanikolaou, M. Psarakis, C. Alcaraz, and J. Lopez, “A [22] W.-L. Chiang, X. Liu, S. Si, Y. Li, S. Bengio, and C.-J. Hsieh,
+ survey of IoT-enabled cyberattacks: Assessing attack paths to critical “Cluster-GCN: An efficient algorithm for training deep and large graph
+ infrastructures and services,” IEEE Commun. Surveys Tuts., vol. 20, convolutional networks,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl.
+ no. 4, pp. 3453–3495, 4th Quart., 2018. Discovery Data Mining, Jul. 2019, pp. 257–266.
+[4] D. Shan, X. Du, W. Wang, N. Wang, and A. Liu, “KPI-HGNN: [23] M. Du, F. Li, G. Zheng, and V. Srikumar, “DeepLog: Anomaly detection
+ Key provenance identification based on a heterogeneous graph neural and diagnosis from system logs through deep learning,” in Proc. ACM
+ network for big data access control,” Inf. Sci., vol. 659, Feb. 2024, Art. SIGSAC Conf. Comput. Commun. Secur., Oct. 2017, pp. 1285–1298.
+ no. 120059. [24] Y. Shen, E. Mariconti, P.-A. Vervier, and G. Stringhini, “Tiresias:
+[5] S. M. Milajerdi, B. Eshete, R. Gjomemo, and V. N. Venkatakrishnan, Predicting security events through deep learning,” in Proc. ACM SIGSAC
+ “POIROT: Aligning attack behavior with kernel audit records for cyber Conf. Comput. Commun. Security (CCS), 2018, pp. 592–605.
+ threat hunting,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., [25] Y. Yu, X. Si, C. Hu, and J. Zhang, “A review of recurrent neural
+ Nov. 2019, pp. 1795–1812. networks: LSTM cells and network architectures,” Neural Comput.,
+[6] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. N. Venkatakr- vol. 31, no. 7, pp. 1235–1270, Jul. 2019.
+ ishnan, “HOLMES: Real-time APT detection through correlation of [26] B. Xia, J. Yin, J. Xu, and Y. Li, “LogGAN: A sequence-based generative
+ suspicious information flows,” in Proc. IEEE Symp. Secur. Privacy (SP), adversarial network for anomaly detection based on system logs,” in Sci-
+ May 2019, pp. 1137–1152. ence of Cyber Security. Cham, Switzerland: Springer, 2019, pp. 61–76.
+[7] X. Han, T. Pasquier, A. Bates, J. Mickens, and M. Seltzer, “Unicorn: [27] T. Li, X. Liu, W. Qiao, X. Zhu, Y. Shen, and J. Ma, “T-trace:
+ Runtime provenance-based detector for advanced persistent threats,” in Constructing the APTs provenance graphs through multiple syslogs
+ Proc. Netw. Distrib. Syst. Secur. Symp., 2020, pp. 1–18. correlation,” IEEE Trans. Dependable Secure Comput., vol. 21, no. 3,
+[8] S. Wang et al., “THREATRACE: Detecting and tracing host-based pp. 1179–1195, May 2024.
+ threats in node level through provenance graph learning,” IEEE Trans. [28] M. Togninalli, E. Ghisu, F. Llinares-López, B. Rieck, and K. Borgwardt,
+ Inf. Forensics Security, vol. 17, pp. 3972–3987, 2022. “Wasserstein Weisfeiler–Lehman graph kernels,” in Proc. Adv. Neural
+[9] R. Guo, L. Cheng, J. Li, P. R. Hahn, and H. Liu, “A survey of learning Inf. Process. Syst., 2019, pp. 6439–6449.
+ causality with data: Problems and methods,” ACM Comput. Surveys, [29] J. Zhou, X. Zhang, Y. Zhao, W. Zhao, and Y. Li, “Provg-searcher: A
+ vol. 53, no. 4, pp. 1–37, Jul. 2021. graph representation learning approach for efficient provenance graph
+[10] H. Studiawan, F. Sohel, and C. Payne, “Anomaly detection in operat- search,” IEEE Trans. Knowl. Data Eng., vol. 32, no. 5, pp. 887–900,
+ ing system logs with deep learning-based sentiment analysis,” IEEE May 2020.
+ Trans. Dependable Secure Comput., vol. 18, no. 5, pp. 2136–2148, [30] F. Dong et al., “DISTDET: A cost-effective distributed cyber threat
+ Sep. 2021. detection system,” in Proc. 32nd USENIX Secur. Symp. (USENIX Secur.),
+[11] F. Liu, Y. Wen, D. Zhang, X. Jiang, X. Xing, and D. Meng, “Log2vec: 2023, pp. 6575–6592.
+ A heterogeneous graph embedding based approach for detecting cyber [31] J. Zengy et al., “SHADEWATCHER: Recommendation-guided cyber
+ threats within enterprise,” in Proc. ACM SIGSAC Conf. Comput. Com- threat analysis using system audit records,” in Proc. IEEE Symp. Secur.
+ mun. Secur., Nov. 2019, pp. 1777–1794. Privacy (SP), May 2022, pp. 489–506.
+[12] X. Zhang et al., “Robust log-based anomaly detection on unstable log [32] S. Li et al., “NODLINK: An online system for fine-grained APT attack
+ data,” in Proc. 27th ACM Joint Meeting Eur. Softw. Eng. Conf. Symp. detection and investigation,” in Proc. Netw. Distrib. Syst. Secur. Symp.,
+ Found. Softw. Eng., Aug. 2019, pp. 807–817. 2024, pp. 1–18.
+[13] E. Manzoor, S. M. Milajerdi, and L. Akoglu, “Fast memory-efficient [33] G. Karypis and V. Kumar, “Multilevel algorithms for multi-constraint
+ anomaly detection in streaming heterogeneous graphs,” in Proc. 22nd graph partitioning,” in Proc. IEEE/ACM SC98 Conf., Nov. 1998, p. 28.
+ ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, Aug. 2016, [34] T. Pasquier et al., “Practical whole-system provenance capture,” in Proc.
+ pp. 1035–1044. Symp. Cloud Comput., Sep. 2017, pp. 405–418.
+[14] Z. Cheng et al., “Kairos: Practical intrusion detection and investigation [35] B. W. Kernighan and S. Lin, “An efficient heuristic procedure for
+ using whole-system provenance,” in Proc. IEEE Symp. Secur. Privacy partitioning graphs,” Bell Syst. Tech. J., vol. 49, no. 2, pp. 291–307,
+ (SP), May 2024, pp. 3533–3551. Feb. 1970.
+[15] A. Aly, S. Iqbal, A. Youssef, and E. Mansour, “MEGR-APT: [36] L.-T. Liu, M.-T. Kuo, S.-C. Huang, and C.-K. Cheng, “A gradient
+ A memory-efficient APT hunting system based on attack repre- method on the initial partition of fiduccia-mattheyses algorithm,” in
+ sentation learning,” IEEE Trans. Inf. Forensics Security, vol. 19, Proc. IEEE Int. Conf. Comput. Aided Design (ICCAD), Nov. 1995,
+ pp. 5257–5271, 2024. pp. 229–234.
+[16] B. Jiang et al., “Orthrus: Achieving high quality of attribution in [37] B. Jacob, P. Larson, and B. H. Leitao, “Systemtap: Instrumenting the
+ provenance-based intrusion detection systems,” in Proc. Secur. Symp. Linux kernel for analyzing performance and functional problems,” IBM
+ (USENIX Secur.), 2025, pp. 7173–7192. Redpaper, Jan. 2025. [Online]. Available: http://www.redbooks.ibm.com/
+[17] T. Kipf and M. Welling, “Semi-supervised classification with graph abstracts/redp4469.html
+ convolutional networks,” in Proc. Int. Conf. Learn. Representa- [38] A. D. Keromytis. (2018). Transparent Computing Engagement 3 Data
+ tions, 2016, pp. 1–14. [Online]. Available: https://openreview.net/ Release. Accessed: Aug. 10, 2025. [Online]. Available: https://github.
+ forum?id=SJU4ayYgl com/darpa-i2o/Transparent-Computing/blob/ master/READMEE3.md
+[18] W. L. Hamilton, R. Ying, and J. Leskovec, “Inductive representation [39] Y. Bengio, R. Ducharme, P. Vincent, and C. Jauvin, “A neural probalearning on large graphs,” in Proc. 31st Int. Conf. Neural Inf. Process. bilistic language model,” J. Mach. Learn. Res., vol. 3, pp. 1137–1155,
+ Syst., 2017, pp. 1025–1035. Feb. 2003.
+[19] F. Scarselli, M. Gori, A. C. Tsoi, M. Hagenbuchner, and G. Monfardini, [40] N. V. Chawla, K. W. Bowyer, L. O. Hall, and W. P. Kegelmeyer,
+ “The graph neural network model,” IEEE Trans. Neural Netw., vol. 20, “SMOTE: Synthetic minority over-sampling technique,” J. Artif. Intell.
+ no. 1, pp. 61–80, Jan. 2008. Res., vol. 16, pp. 321–357, Jun. 2002.
+[20] J. Chen, T. Ma, and C. Xiao, “FastGCN: Fast learning with graph [41] T. Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollr, “Focal loss for
+ convolutional networks via importance sampling,” in Proc. Int. Conf. dense object detection,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 42,
+ Learn. Representations, 2018, pp. 1–15. pp. 318–327, 2020.

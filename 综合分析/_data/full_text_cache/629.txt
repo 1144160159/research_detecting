@@ -1,0 +1,808 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 75, 2026 5500214
+
+ CloudTrie: An Uncertainty-Quantified Anomaly
+ Detection Framework for Prefix Hijacking
+ With Multisource Fusion
+ Zheng Wu , Shiyu Liu , Ruixi Xie , Ming Gao , Member, IEEE, Zhan Wu , Lei Han ,
+ Xiaobai Chen , Member, IEEE, and Fu Xiao , Senior Member, IEEE
+
+ Abstract—Anomaly detection is a crucial function for Border is particularly pronounced in the domain of Border Gateway
+Gateway Protocol (BGP) security, providing the ability to trigger Protocol (BGP) AD. The BGP is the core routing protocol of
+alarms and locate where the anomalies occur. Most recently, the Internet, responsible for exchanging routing information on
+BGP prefix hijacking incidents have proliferated significantly.
+However, the existing detection methods exhibit limited accuracy, reachability between autonomous systems (ASes). However,
+primarily because the BGP routing data they operate on is BGP was not designed with security mechanisms from its
+inherently uncertain. To address this challenge, we propose inception [1], leading to frequent anomalies that are char-
+CloudTrie, an uncertainty-aware framework for online prefix acterized by rapid propagation and wide-ranging impact. In
+hijacking detection. First, we quantify data uncertainty through recent decades, as Internet infrastructure has become increasa comprehensive measurement study of three BGP-related data
+sources (BGP RIB, RPKI, and IRR), assessing incompleteness, ingly complex and network scale continues to expand, the
+temporal variability, and multiple origin AS (MOAS) conflicts. occurrence frequency of inter-domain routing anomalies has
+Building on this, we leverage cloud modeling theory to construct been significantly rising [2], leading to significant negative
+spatio-temporal prefix/origin AS (P/O) cloud drops for dynamic consequences for the global network, even causing severe
+uncertainty scoring of P/O pairs. Finally, we propose an online economic losses and social panic [3]. Among BGP anomalies,
+Trie-based framework to achieve instantaneous prefix hijack
+identification and online update. Experiments demonstrate that prefix hijacking accounts for the most significant proportion,
+CloudTrie processes 117 thousand route updates per second with at approximately 96.48%.1 Therefore, the defense of prefix
+low memory overhead (34.3MB) and detects all of the anomaly hijacking has become a critical issue for ensuring the secure
+events with less false alarms than the state-of-the-art. These and stable operation of the Internet’s infrastructure.
+results validate CloudTrie as a robust foundation for accurate, In this context, Internet service providers (ISPs) generally
+real-time BGP anomaly detection (AD).
+ deploy the monitoring instrument for detecting BGP hijacking
+ Index Terms—Border Gateway Protocol (BGP), cloud model anomalies in time [4]. The AD methods leverage passively or
+theory, prefix hijacking, Trie, uncertainty measurement. actively acquired routing data to monitor abnormal behaviors.
+ Once the anomaly occurs and is detected, network operators
+ I. I NTRODUCTION will take measures to mitigate the negative impact of anomalies. Thus, to enable operators to respond promptly, the most
+A NOMALY detection (AD) is an imperative function
+ for prolonged monitoring of complex systems containing large volumes of data. In most complex scenarios, the
+ advanced instruments for BGP AD need to accurately monitor
+ BGP behaviors in real time.
+obtained data generally contains amounts of noise, leading The existing AD methods can be classified into information
+to uncertainty in these data. This data uncertainty challenge repository-based, active probing-based, and machine learningbased approaches. The active probing-based methods detect
+ Received 1 September 2025; revised 15 December 2025; accepted connectivity between ASes through active probing instruments
+31 December 2025. Date of publication 23 January 2026; date of current
+version 9 February 2026. This work was supported in part by the Jiangsu
+ like Ping and Tracert commands [5]. However, as the BGP
+Provincial Key Research and Development Program under Grant BG2024028; topology becomes increasingly complex and large, the overin part by the National Natural Science Foundation of China under Grant head of these methods grows substantially, making real-time,
+62402234, Grant 62427809, and Grant 62102196; and in part by the Natural comprehensive monitoring of the BGP network infeasible.
+Science Research Start-up Foundation of Recruiting Talents of Nanjing
+University of Posts and Telecommunications under Grant NY223168 and Machine learning-based methods perform detection by extract-
+Grant NY224030. The Associate Editor coordinating the review process was ing temporal or spatial features to analyze patterns of abnormal
+Dr. Takuma Watanabe. (Corresponding author: Fu Xiao.)
+ Zheng Wu, Shiyu Liu, Ruixi Xie, Ming Gao, Lei Han, Xiaobai
+ behavior [6]. Although these methods possess good general-
+Chen, and Fu Xiao are with the School of Computer, Nanjing Univer- ization performance and inference capabilities, they rely on
+sity of Posts and Telecommunications, Nanjing, Jiangsu 210003, China large volumes of accurate data labels and suffer from poor
+(e-mail: zwu@njupt.edu.cn; 992317443@qq.com; 2644177897@qq.com; interpretability [7]. Information repository-based AD methods
+gaomingppm@njupt.edu.cn; hanlei@njupt.edu.cn; chenxb86@njupt.edu.cn;
+xiaof@njupt.edu.cn). depend on constructing a complete and accurate mapping
+ Zhan Wu is with the School of Computer Science and Engi- between prefixes and their origin ASes, and then performing
+neering, Southeast University, Nanjing, Jiangsu 210023, China (e-mail:
+101300254@seu.edu.cn).
+ Digital Object Identifier 10.1109/TIM.2026.3657531 1 https://bgpwatch.cgtf.net/#/
+
+ 1557-9662 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5500214 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 75, 2026
+
+detection via a lookup-and-match process. This type of method
+offers strong real-time performance and facilitates root-cause
+analysis [8]. Nevertheless, such methods heavily depend on
+the accuracy of the input data; otherwise, the reliability of
+detection cannot be ensured [9].
+ Unfortunately, obtaining accurate and complete data in the
+large-scale BGP network remains a significant challenge due
+to several inherent sources of uncertainty. First, owing to the
+distributed nature of the infrastructure and the partial view
+provided by BGP collectors, the collected routing data is often
+inadequate for comprehensive measurement. Furthermore, the
+lack of a robust route authentication renders BGP messages
+susceptible to erroneous or malicious announcements [10].
+Finally, BGP data is inherently dynamic and time-varying;
+routing information can quickly become stale, reducing the
+reliability of historical data for current detection tasks. These Fig. 1. Attack models of BGP hijacking. (a) Prefix hijacking. (b) Sub-prefix
+ hijacking.
+factors collectively introduce substantial uncertainty into the
+observed data, which in turn severely degrades the accuracy
+and robustness of existing AD methods [11]. hijacking anomalies. We conduct extensive experiments on
+ Therefore, a core challenge in achieving accurate prefix two real-world datasets, namely, closed and open datasets, to
+hijacking detection lies in extracting sufficiently accurate data evaluate CloudTrie’s performance in terms of robustness, effifrom vast, uncertain BGP routing data. It is crucial to build ciency, and accuracy. Compared to state-of-the-art baselines,
+an AD system that is robust to uncertain data and capable of CloudTrie achieves an average throughput of 117 thousand
+providing explainable results. To address this challenge, we route update messages per second while maintaining low
+propose CloudTrie, an uncertainty-aware AD instrumentation, memory consumption (under 34.3MB). Crucially, it detects all
+fusing multiple data sources designed to identify prefix hijack- of the anomaly events with less false alarms, outperforming
+ing under the uncertain BGP data robustly. the state-of-the-art methods. CloudTrie’s source code and the
+ The contributions are highlighted as follows. labeled dataset are publicly available at https://github.com/
+ 1) Comprehensive uncertainty measurement on BGP- 185399144/cloudtrie.git
+ related data: To assess the extent of uncertainty in The remaining sections of this article are organized as
+ BGP data, we conduct a comprehensive measurement follows. Section II introduces the preliminary and the problem
+ study on three key BGP-related routing datasets, focus- we research. Section III measures the uncertainty in BGPing on three primary sources of uncertainty: data related data. Section IV presents the design of our detection
+ incompleteness, temporal variability, and the multiori- system CloudTrie. In Section V, we make experiments to
+ gin AS (MOAS) phenomenon. Our results reveal that compare our method with the state-of-the-art. Section VI
+ each dataset exhibits distinct characteristics and varying reviews the related work. Section VII concludes this article
+ degrees of uncertainty, highlighting the complexity and with a summary.
+ challenges in achieving reliable BGP monitoring and
+ analysis. II. P RELIMINARY AND P ROBLEM S TATEMENT
+ 2) Real-time uncertainty assessment for BGP routes: To
+ In this section, we first introduce the attack mechanism of
+ evaluate each P/O pair, we design an online route
+ prefix hijack. Next, we introduce three BGP-related datasets,
+ credibility assessment method based on a cloud model.
+ which are used to construct CloudTrie.
+ First, this method extracts knowledge considering 3-D,
+ i.e., time, space, and data source, based on a constructed
+ observation matrix. Then, we structure a cloud model A. Prefix Hijack Model
+ to assess and filter each route in real-time to convert Based on the types of hijacked prefixes, these attacks can be
+ uncertain routing data into data quantified with a degree further classified into prefix hijacking and sub-prefix hijacking
+ of uncertainty. [12]. Prefix hijacking occurs when an attacker forges an
+ 3) Temporal-adaptive detection framework: To address the announcement for a prefix that is legitimately originated by
+ temporal variability of BGP routing data, we propose another AS. The attacker then propagates this false information
+ an update framework. Specifically, we construct two through BGP, causing other ASes on the Internet to mistakenly
+ Tries, namely, ModelTrie and DetectTrie, responsible for believe that the attacker’s path is the best route to that prefix.
+ model construction and online detection, respectively. As a result, traffic intended for the legitimate prefix can be
+ Additionally, we apply two dedicated update mech- intercepted or manipulated by the attacker, as illustrated in
+ anisms, i.e., offline and online mechanism so as to Fig. 1(a).
+ overcome the time-varying nature of BGP routing data. Sub-prefix hijacking occurs when an attacker announces a
+ Our CloudTrie system includes comprehensive instrumenta- more specific prefix than the legitimate one, thereby exploittion designed to accurately and effectively detect BGP prefix ing the longest prefix match rule in BGP routing to alter
+WU et al.: CloudTrie: UNCERTAINTY-QUANTIFIED ANOMALY DETECTION FRAMEWORK FOR PREFIX HIJACKING 5500214
+
+the direction of traffic. For sub-prefix hijack, as shown in
+Fig. 1(b), a legitimate origin, AS10, announces the IP prefix
+192.10.128.0/22, while an attacker, AS40, announces a more
+specific prefix, 192.10.128.0/24. According to the longest
+prefix match principle in the BGP route selection policy, BGP
+routers will select the path to the more specific sub-prefix.
+Consequently, traffic from AS20 and AS30 originally destined
+for AS10 is hijacked by AS40.
+
+B. BGP-Related Routing Data
+ We introduce the BGP-related data, including three data
+sources, i.e., BGP routing information base (RIB), resource
+public key infrastructure (RPKI), and Internet routing registry
+(IRR). These three data sources are described in detail as Fig. 2. Examples for comparison of the traditional method and our method.
+below. (a) Data missing. (b) Data inaccuracy. (c) Our method.
+ BGP RIB is a routing information base of BGP collectors, TABLE I
+containing BGP routing information learned from neighbors S UMMARY OF THE U SED DATASET IN M EASUREMENT
+[13]. This RIB data contains the global routing information;
+therefore, the data volume is vast. Although numerous BGP
+data collectors have been deployed worldwide, the collected
+data is incomplete and contains some misconfigured and
+malicious data [9].
+ Among the many collection points, this article selects the
+RRC00 for observation because it obtains a relatively complete collected from the BGP vantage points tends to be incomplete
+routing table from ISPs and has a large number of peering and inaccurate, which hurts the accuracy of AD.
+neighbors [14]. In Fig. 2(a), if the information repository does not contain
+ RPKI is a BGP security extension developed by the Internet the P/O pair h90.84.10.0/24, 14 713i due to the incomplete
+Engineering Task Force (IETF). This technique is based on data, the operator cannot match this item, and tends to be
+public key infrastructure (PKI) technology and includes a viewed as a potential anomaly. In Fig. 2(b), given a vicious
+cryptographic infrastructure for authenticating IP prefixes and update message, if the information repository contains an error
+ASes. A route origin authorization (ROA) record is a digital record, i.e., h90.84.10.0/24, 14 713i, operator can match this
+object issued by a prefix holder to authorize and validate the P/O pair with the information repository and thus mistakenly
+routing origin of an IP address prefix. It declares that a specific recognize it as correct, leading to a missing alarm.
+AS is the legitimate origin for its prefix, which helps prevent Thus, we make the two following efforts to overcome data
+attacks such as prefix hijacking [15]. uncertainty. To construct a relatively comprehensive informa-
+ The IRR is a system composed of a set of distributed tion repository, we attempt to collect most of the BGP-related
+databases publicly used to store routing policies, prefixes, and data, encompassing not only the BGP RIB but also the
+AS association information submitted by network operators. sources of IRR and RPKI. Besides, to determine which P/O
+The system is initially established to assist with the configu- pairs are accurate, we compute the uncertain degree for each
+ration of BGP routing policies [16]. pair, shown in Fig. 2(c). The P/O pair h90.84.10.0/24, 14713i
+ has a lower uncertain degree than h90.84.10.0/24, 12345i,
+C. Problem Statement suggesting that h90.84.10.0/24, 14713i is more credible, thus
+ In the following, we give an intuitive example for stating our method applies h90.84.10.0/24, 14713i to make a match,
+the problem of the existing methods and why our method finally obtaining the true alarm. In this way, the operator
+works. Upon receiving an update message, operators typically can not only build a more comprehensive repository, but also
+consult an information repository that functions similar to an further evaluate confidence in each detection result according
+allowlist to determine whether the message is malicious. The to the computed uncertain degree.
+method first extracts the P/O pair from the message and checks
+it against the entries in the repository. If a match is found III. U NCERTAINTY M EASUREMENT OF BGP ROUTING
+for both the prefix and the corresponding AS number (ASN), DATA
+the method recognizes the update as benign. However, if the
+ASN corresponding to the prefix does not match the one in In this section, we try to gain insight into the BGP uncerthe repository, an alarm will be triggered. Furthermore, if the tainty and measure the uncertainty of three BGP sources,
+prefix is not found in the information repository, the method i.e., BGP RIB, IRR, and RPKI. During the measurement
+cannot determine whether the message is malicious. process, we collected the data from the data sources during the
+ Therefore, the accuracy of the information repository is period between January 2024 and December 2024, as shown
+crucial for detecting prefix hijacking. However, the repository in Table I.
+5500214 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 75, 2026
+
+Fig. 3. Incomplete measurement on the BGP-related data. Fig. 4. Temporal variability of BGP prefixes.
+
+A. Data Incompleteness
+ Given the same observation period, no single data source
+fully covers all global prefixes [17], named data incompleteness in this article. The incompleteness is mainly due to the
+locally deployed infrastructure for data collection. To quantify
+the extent of this incompleteness, we first collect the P/O pair
+set of each data source and then take the union of these sets
+to form the universal set. For each source, we calculate the
+proportion of its P/O pairs relative to this universal set. As
+shown in Fig. 3, RIB data covers the largest fraction of P/O
+pairs, followed by RPKI; IRR data provides the least coverage.
+Nevertheless, none of the three sources achieves complete Fig. 5. Distribution of MOAS with the length of the prefixes.
+coverage. This inherent data incompleteness limits the ability
+of existing detection methods to learn comprehensive routing
+ TABLE II
+patterns, thereby degrading their effectiveness.
+ S UMMARY OF THE T HREE DATA S OURCES C HARACTERISTICS
+
+B. Temporal Variability
+ For a given data source, routing information changes over
+time. The global inter-domain routing system is a distributed
+network where routing policy updates from different ASes
+and changes in network topology cause P/O pair relationships
+to exhibit significant temporal variability. In this article, we
+randomly selected 200 IP prefixes from BGP route update redundancy and reliability, resulting in the same prefix having
+tables and tracked their announcement and withdrawal mes- multiple legitimate ASes. Thus, the detection method requires
+sages for one year, as shown in Fig. 4. The results suggest that identifying which MOAS is benign or not. The related research
+different prefixes exhibit distinct patterns of change. Frequent [18] shows that the frequency and duration of MOAS events
+BGP prefix announcements and withdrawals over time reflect are significantly diverse and exhibit different distributions at
+significant volatility in inter-domain routing. This temporal various prefix lengths. As shown in Fig. 5, we analyze the
+variability of P/O pairs presents a major challenge for prefix number of MOAS conflicts with the prefix length varying in
+hijacking detection. Therefore, the key lies in promptly adapt- the BGP-related routing information. The analysis revealed
+ing to dynamic routing changes and establishing a temporally that over 10% of prefixes exhibit MOAS behavior. The distristable knowledge base of P/O relationships. bution of MOAS with different prefix lengths is similar for
+ the three BGP sources. A large number of MOAS events
+ are concentrated on prefixes of length 24, and the IRR data
+C. Multiple Origin AS comprises more MOAS conflicts.
+ In the inter-domain routing network, a single prefix is Based on the measurement results above, we summarize
+sometimes associated with multiple legitimate ASes, referred the characteristics of the three data sources in Table II. It can
+to as MOAS. MOAS is typically due to multiple BGP route be observed that BGP data contains the richest information
+announcements or path selections among different ASes. For on P/O pairs, but its accuracy is limited. In contrast, RPKI
+instance, some large ISPs may share the same prefix, or data, while sparser in volume, offers significantly higher data
+an enterprise network may adopt various paths to enhance quality.
+WU et al.: CloudTrie: UNCERTAINTY-QUANTIFIED ANOMALY DETECTION FRAMEWORK FOR PREFIX HIJACKING 5500214
+
+Fig. 6. Framework of CloudTrie, which comprises three modules, i.e., data collection and preprocessing, model construction, and detection and location.
+
+ TABLE III construction and AD. The related work has demonstrated
+ R ELATED F IELD I NSERTED I NTO M ODEL T RIE that anomalous BGP data often exhibits significant temporal
+ transience and spatial locality [3]. Therefore, to the best of
+ our knowledge, we extract features of P/O pairs from the
+ perspectives of time, space, and data source in advance to
+ construct a spatial–temporal stability assessment model for
+ these pairs. We introduce the definitions of the three proposed
+ feature categories as follows.
+ Definition 1: To calculate the features of P/O pairs, we
+ define the observation matrix O ∈ Nc×d as follows:
+ IV. D ESIGN OF C LOUD T RIE 2
+ o11 · · · o1d
+ 3
+
+ To address the uncertainty in BGP routing data, this article O = 4 ... ..
+ .
+ .. 7
+ . 5 (1)
+ 6
+designs a BGP AD method for uncertain data, with the frameoc1 ··· ocd
+work illustrated in Fig. 6. We first conduct data extraction and c×d
+preprocessing. Next, we extract the features of P/O pairs from where oi j ∈ {0, 1} indicates that if observation point i observes
+three aspects, i.e., time, space, and data source. Exploiting this the target P/O pair during the jth time step, the value is 1;
+knowledge, we then construct a cloud model [19] for each otherwise, it is 0. We denote c as the number of observation
+pair to yield an uncertainty degree. Based on the uncertainty points and d as the length of the observation window. In
+degree, the data is then filtered to build a set of trusted the following, we try to characterize the certainty of P/O
+P/O mappings. Finally, the process concludes with AD and pairs from the perspectives of temporal persistence, spatial
+result evaluation. To overcome the temporal variability of consistency, and data sources.
+BGP routing data, these mappings are updated automatically, 1) Temporal Persistence: Temporal persistence represents
+ultimately enabling online detection. the duration for which an AS continuously announces a P/O
+ pair. The longer the temporal persistence, the more stable the
+ P/O pair is considered. Specifically, for a given P/O pair, the
+A. Data Collection and Preprocessing
+ calculation is performed using the temporal persistence vector
+ The collected raw data are generally compressed binary h ∈ {0, 1}1×d , which is defined as h = [h1 , h2 , . . . , hd ]. Here, the
+files. Therefore, we first need to preprocess the data, compris- element h j is calculated as: h j = max1≤i≤c oi j . This implies that
+ing data decompression parse to ensure the data is structured. h j equals 1 if at least one observation point observes the pair
+ To reduce the distracting information existing in the parsed in the jth time step, and 0 otherwise. We use a weight vector
+data, we clean up the BGP routes before model construction. wt ∈ R1×d to represent the temporal weight coefficients within
+First, the private ASNs appearing in the AS path are removed. the observation window. The detailed calculation method is as
+Second, the aggregated AS paths are decomposed into multiple follows:
+corresponding paths. Furthermore, we also remove the repet- h · wT
+ st = Pd t . (2)
+itive ASes on AS paths resulting from AS path prepending.
+ j=1 h j
+Subsequently, we extract the key information from the specific
+field, including the IP prefix, path information, timestamp, Dividing by the denominator ensures that P/O pairs exhibiting
+and data source, where their particular meanings are listed emerging stability are not assigned excessively low temporal
+in Table III. persistence scores due to the observation window size.
+ 2) Spatial Consistency: Spatial consistency represents the
+ observed number of a P/O pair by the global vantage points.
+B. Feature Extraction for P/O Pairs The higher the frequency of observation, the more spatially
+ It is crucial to extract spatio-temporally stable features stable the P/O pair is considered. For a given P/O pair,
+that are robust to scene variations for the following model the calculation is performed using the spatial consistency
+5500214 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 75, 2026
+
+vector g ∈ Rc×1 . Here g is a column vector, where the ith (Ent , Enr , Enm ), (Het , Her , Hem )). The construction process is
+element represents the total number of observations for the ith detailed below.
+observation point across the entire time window. Specifically, 1) Expectation: Expectation (Ex) is the most typical sam-
+[g1 , g2 , . . . , gc ]T , where each element
+ Pgi is the sum of the ith ple value in the quantification of a qualitative concept. For a
+row of the observation matrix: gi = dj=1 oi j . We use a spatial given set with a cloud drops, {(st1 , sr1 , sm
+ 1 ), . . . , (sa , sa , sa )}, the
+ t r m
+
+weight vector wr ∈ Rc×1 to represent the observation point estimate value of the expectation Ext is calculated as follows:
+weights across different observation points
+ p Êxt = S̄ t (5)
+ sr = gT · wr . (3)
+ where S̄ t represents the mean of st , calculated as follows:
+ 3) Data Source: For each P/O pair, we also record its a
+observed source. If one P/O pair can be followed by multiple 1X t
+ S̄ t = si . (6)
+data sources simultaneously, it indicates that the existence of a
+ i=1
+the P/O pair is more stable and confident. We equip each P/O
+pair with a data source vector k ∈ N1×3 . Here, ki ∈ {0, 1} The calculation for the spatial consistency and data source
+indicates membership in a particular dataset (where i = 1, 2, feature components, S̄ r and S̄ m , is similar to (6).
+and 3 correspond to RPKI, IRR, and BGP RIB, respectively). 2) Entropy: Entropy (En) is determined by the randomness
+If ki = 1, it denotes the specific source views the P/O pair, and fuzziness of a qualitative concept. Thus, it is used to
+while ki = 0 denotes absence. The weight vector wm ∈ R1×3 measure the degree of dispersion of all cloud drops and also
+represents the degree of data reliability. Weights are assigned reflects the range of values that the cloud drops accepted by
+using a decay function based on the data quality of each the concept can take. For the P/O pair cloud with a drops, we
+source. The feature from the data source can be estimated estimate the value of Ent as follows:
+as follows: a
+ π 1X t
+ r
+ Ênt = si − S̄ t .
+ 
+ sm = k · wTm . (4) × (7)
+ 2 a
+ i=1
+ Based on the above three considerations, a quantitative
+uncertain degree of the spatio-temporal stability of P/O pairs 3) Hyper-Entropy: Hyper-entropy (He) is used to meacan be estimated as follows. sure the uncertainty of entropy and describes the correlation
+ between fuzziness and randomness. Based on this concept, the
+ estimated hyper-entropy value for each feature component can
+C. P/O Cloud Model
+ be calculated separately. The estimated hyper-entropy for the
+ The cloud model theory [19] is a mathematical tool that temporal persistence component is
+integrates probability theory and fuzzy mathematics to assess q
+randomness and fuzziness. In this article, we model the ran- Het = B2t − En
+ ˆ ˆ 2t (8)
+domness and fuzziness in the network using the cloud model
+to compute the uncertainty degree of each P/O pair. where Bt is thePsample variance of feature component t, and
+ Let a qualitative concept C be a concept on a quantitative B2t = 1/(a − 1) ai=1 (sti − S̄ t )2 .
+universe of discourse U. If x ∈ U is a random realization of In the cloud model theory, a multidimensional cloud model
+the concept C, then the certainty degree of x with respect to is constructed based on P/O drops from three perspectives:
+C, µ(x) ∈ [0, 1], is a random number with a stable distribution: temporal persistence, spatial consistency, and data source reli-
+µ(x) : U → [0, 1] ∀x ∈ U. The distribution of x on the ability; this procedure is referred to as the cloud construction
+universe U is defined as a cloud model and x represents a process. Furthermore, the certainty degree of a P/O pair can be
+cloud drop belonging to the universe U. Deriving the core computed using the membership degree of the corresponding
+parameters from cloud drops x ∈ U constitutes the cloud cloud drop within the established cloud model. Consequently,
+construction process. Conversely, determining the certainty in this article, the uncertainty of a P/O pair is defined as
+degree of a cloud drop via the cloud model is referred to follows.
+as the cloud reasoning process. The entire cloud process Definition 3: Given the universe of discourse U = { x̄i | x̄i =
+integrates probability theory and fuzzy set theory, thereby (sti , sri , smi ), i ∈ N}, the certainty degree for a cloud drop x̄i with
+effectively characterizing the fuzziness and randomness of the respect to the feature cloud C is calculated as follows:
+concept [20]. 2 3
+ (st −Ext )2
+ − i 0 2
+ (sr −Exr )2
+ − i 0 2
+ (sm −Exm )2
+ − i 0 2
+ Definition 2: A P/O cloud is a qualitative concept for ŷi = 4e 2(Ent ) e 2(Enr ) e 2(Enm ) 5 · WT . (9)
+the stability of a P/O pair represented by a cloud model,
+and it is an extension of a 1-D normal cloud. The cloud
+model is represented by several known normal cloud drops In (9), W ∈ R1×3 is the weight vector for the three
+x̄i = (sti , sri , sm
+ i ), where the three elements of the vector dimensions. En0t represents a normally distributed random varix̄i , respectively, represent the temporal persistence, spatial able generated from a normal distribution N(Ent , He2t ), where
+consistency, and data source feature components of the cloud En0r and En0m are defined analogously. Each exponential term
+drop x̄i . effectively serves as a fuzzy membership function, mapping
+ For the P/O pair feature cloud, each cloud model com- the feature deviation to a certainty score ŷi ∈ [0, 1]. This
+prises three components, represented as C((Ext , Exr , Exm ), metric quantifies the similarity between the observation and
+WU et al.: CloudTrie: UNCERTAINTY-QUANTIFIED ANOMALY DETECTION FRAMEWORK FOR PREFIX HIJACKING 5500214
+
+ In the following description, the prefix q and origin ASN
+ ao represent a P/O pair stored in the DetectTrie, while the
+ route prefix and origin ASN from the update message are r
+ and au , respectively. In accordance with the RFC 6811 [21],
+ the following two operations are defined.
+ Cover(q, r): If the length of prefix q is less than or equal to
+ the length of route prefix r, and the prefix q and the address of
+ route prefix r are identical for all bits specified by the length of
+ prefix q, then the prefix r is said to be covered by the prefix q.
+ Match(q, r): A match occurs when route prefix r is covered
+ by prefix q, the length of route prefix r is less than or equal
+ to the maximum length specified for prefix q, and the route
+Fig. 7. Framework of AD and update mechanism. origin ASN is equal to the origin AS in the P/O pair. This
+ can be expressed by the following equation:
+
+the “normal state cloud,” encapsulating the transformation Match (q, r) = Cover (q, r) ∧ Cover (r, q) ∧ (ao == au ) . (11)
+from quantitative values to qualitative concepts.
+ Furthermore, the degree of uncertainty for P/O pair i, The online AD is carried out by the following process.
+denoted as ûi , is estimated as follows: Valid: A prefix q is considered valid if and only if it
+ conforms to the known legitimate routes (via Cover(·) and
+ ûi = 1 − ŷi . (10) Match(·) conditions). This can be expressed by the formula
+ If the calculated probability ûi for a P/O pair xi exceeds Valid (q) = Match (q, r) . (12)
+a certain threshold, thpro , it denotes that the pair is unstable.
+This P/O pair is incorrect when used in AD with a confidence Invalid: If a prefix does not conform to any legitimate
+of ûi . Therefore, we remove it and exclude it from the AD. routing rule (i.e., it is covered or mismatched), it will be
+ considered invalid and illegitimate. When route prefix r covers
+ prefix q, and prefix q covers route prefix r, but the ASN is not
+D. AD and Model Update
+ equal to ao , and the match fails, it is considered a potential
+ We use the Trie data structure to store the related data and prefix hijacking incident. This process can be expressed by the
+carry out AD. Two Tries are organized to detect anomalies formula
+and model update, i.e., ModelTrie and DetectTrie. ModelTrie
+is used to store IP prefixes as keys, and at the corresponding Hijack (q) = Cover (q, r) ∧ Cover (r, q) ∧ ¬Match (q, r) . (13)
+nodes, it also stores the origin AS, feature vector, and the
+calculated uncertain degree. DetectTrie stores P/O pairs that When prefix q covers route prefix r, meaning route prefix
+have a high degree of certainty for online detection. The two r is more specific than prefix q, and the announced ASN is
+trees have different roles in the proposed method and work not equal to the origin AS, it is considered a potential subcollaboratively to improve detection efficiency and accuracy, prefix hijacking incident. Sub-prefix hijacking is defined as a
+with the specific framework shown in Fig. 7. malicious attacker carrying out route hijacking by constructing
+ ModelTrie: This trie stores well-extracted feature vectors to the most specific BGP route message. It can be formalized as
+construct a cloud model and evaluates the uncertainty degree,
+ Sub Hijack (q) = Cover (q, r) ∧ ¬Match (q, r) . (14)
+i.e., ûi , for all prefixes. When a new P/O pair appears, the
+system evaluates its ûi in real-time within the ModelTrie based The membership degree ŷq of the P/O pair is used as the
+on the cloud model. certainty level for AD.
+ DetectTrie: We use this trie for online AD. It stores P/O Not Found: When the announced prefix is not represented
+pairs with an uncertainty degree, i.e., ûi below a certain in the current decision tree, no matching route is found. This
+threshold. DetectTrie is used to determine whether a prefix can be expressed by the formula
+corresponds to a legitimate route rapidly and to provide an
+interpretable report upon AD. NotFound (q) = ¬Cover (q, r) . (15)
+ 1) Anomaly Detection: In the detection phase, for each
+incoming route update, the system utilizes prefix covering This situation indicates that the prefix is newly emerged and
+and matching rules to evaluate the relationship between the has not appeared in any data sources (RIB table, RPKI, and
+incoming route and the legitimate prefixes stored in the IRR). Therefore, the prefix is marked as pending verification.
+DetectTrie. It verifies whether the incoming prefix is legitimate 2) Offline Update: It is used to update ModelTrie by conand determines if it matches a legitimate ASN. If a mismatch tinuously extracting features related to temporal persistence,
+is found, CloudTrie marks this update message as an anomaly spatial consistency, and data sources from streaming BGP
+and triggers further alerts, as well as generates an anomaly routing information. Update the cloud model and ModelTrie
+report. Additionally, the uncertainty degree of the P/O pair, û, according to the update frequency of routing data (IRR, RPKI,
+is used to represent the level of uncertainty in the AD. and BGP RIB).
+5500214 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 75, 2026
+
+ 3) Online Update: It is used to update DetectTrie. In TABLE IV
+dynamic network environments, the mapping relationships of D ESCRIPTIONS OF C LOSED DATASET
+P/O pairs change dynamically. To ensure the accuracy of
+P/O pairs within the DetectTrie and prevent overly frequent
+updates, we apply lazy update mechanism, and set a threshold
+thupdate designed as follows: when the number of newly added
+P/O pairs exceeds a certain threshold thupdate (i.e., |{ri | ri .y >
+thpro }| > thupdate ), the proposed method automatically updates
+the DetectTrie based on the ModelTrie.
+ Through these update mechanisms, the ModelTrie and
+DetectTrie can cooperate continuously to verify the prefix
+and update the model, thereby enhancing the real-time performance and accuracy of detection.
+
+E. Complexity Analysis
+ A. Datasets Description
+ The complexity of CloudTrie primarily consists of two
+parts: model construction and AD, which are analyzed sep- We used multisource datasets, including RPKI, IRR, and
+arately below. RIB tables, to carry out the experiment. For the RIB and
+ Model construction: Primarily involves data preprocessing, BGP Updates, we selected the representative collection point
+feature extraction, and calculating key cloud model parame- RRC00 from RIPE RIS. We employed the BGPdump tool to
+ters. For data preprocessing, the raw routing data (RIB, RPKI, parse the MRT-formatted files and extract key fields, including
+and IRR) undergoes an initial preparation phase, which has Prefix, AS-PATH, and Peer. For the IRR data, we extracted auta time complexity of O(M), where M represents the total num and route objects from the public databases of the five
+number of entries in the original dataset. Feature extraction Regional Internet Registries (RIPE, APNIC, ARIN, LACNIC,
+breaks down as follows: temporal persistence calculation takes and AFRINIC) to construct P/O pairs. For the RPKI data,
+O(1) for a single computation, leading to an overall O(M) we utilized historical archives from RPKIviews to obtain
+complexity when iterating through all M P/O pairs; spa- validated ROA objects, serving as the trusted routing baseline.
+tial consistency calculation requires traversing C observation Subsequently, the prefixes from these three data sources were
+points for each computation, resulting in an O(C) complexity unified into a binary format and inserted into trie structure
+per calculation and an overall O(M · C) for all M P/O pairs; using a sliding window mechanism. Within this structure, each
+data source calculation is constant time, O(1), per computation, AS node stores a P/O observation matrix along with data
+summing up to O(M) for all P/O pairs. Finally, for cloud source indicators. The experimental data in Sections V-E, V-F,
+model calculation (forward cloud transformation), the normal and V-G were tested using data from the second half of 2024
+cloud parameters (Ex, En, He) are computed for each of the (from July to December), totally 3.1 TB. The closed experthree feature components (temporal, spatial, and membership imental dataset in Section V-J contains 12 prefix hijacking
+degree) of every P/O pair. Each feature’s parameter calculation events, with specific details shown in Table IV. Each BGP
+has a complexity of O(M), leading to an overall complexity update message was labeled by matching the victim AS, prefix,
+of O(3M), which simplifies to O(M). and attacker AS and the matched messages were annotated
+ Anomaly detection: This process primarily involves the as anomalous. This labeled dataset amounts to 220 GB,
+operation of node insertion and searching in Trie. Insertion and comprising approximately 1.5 billion BGP update messages.
+search operations for each IP prefix have a time complexity The open dataset in Section V-K was tested using data from
+of O(L), where L is the prefix length (L ≤ 32 for IPv4). the second half of December 2024.
+Searching through either the ModelTrie or DetectTrie has a
+time complexity of O(L).
+ Update mechanism: When the dynamic update threshold B. Implementation
+is triggered, only local adjustments to the Trie structure are The method and the baselines are implemented in Python
+required, resulting in a time complexity of O(P × L), where P and run on a Linux operating system with an AMD EPYC
+denotes the number of prefixes. 7K62, 48-core processor and 64GB of RAM. To ensure
+ fairness, both the proposed method and the compared methods
+ V. E XPERIMENT AND E VALUATION use the identical setup.
+ In this section, we carry out extensive experiments to vali- In real-world network management scenarios, the number
+date our method compared with the state-of-the-art methods. of alerts and false alarm are the most concerned metrics for
+The experimental results suggest that CloudTrie can detect an operations and maintenance personnel. Thus, we choose them
+average of 117,647 route update messages per second while to evaluate the detection accuracy of each method.
+maintaining low memory usage. In addition, CloudTrie can We use the detection time, denoting the period from receivdetect all of events in the dataset, outperforming the other ing an update message to producing a detection result, as the
+methods. evaluation metric in terms of time efficiency.
+WU et al.: CloudTrie: UNCERTAINTY-QUANTIFIED ANOMALY DETECTION FRAMEWORK FOR PREFIX HIJACKING 5500214
+
+Fig. 8. Cloud model projection under any feature pairs.
+
+ TABLE V
+ D ESCRIPTION OF BASELINES
+
+ Fig. 9. Dynamic trend of cloud model parameters (2024).
+
+ TABLE VI
+ D ETAILS OF H YPERPARAMETERS BY THE G RID S EARCH
+ represents the spatio-temporal features of a P/O pair, with its
+ color intensity indicating the degree of uncertainty of that P/O
+ drop (9). Fig. 8 shows a temporal expectation (Ext ) of 0.88 and
+ a spatial expectation (Exr ) of 1.5, suggesting that most of the
+ P/O pairs exhibit high spatio-temporal stability. The temporal
+ entropy (Ent ) is 0.18, while the spatial entropy (Enr ) is 1.8.
+ This indicates lower data volatility in the temporal dimension,
+ whereas the spatial dimension shows higher dispersion due
+C. Baselines to variations in observation point distribution. Furthermore,
+ In the experiments, we compare our method with the state- Het = 0.1 and Her = 0.8 denote good certainty for both
+of-the-art methods, comprising Artemis, BEAM, BGPviewer, temporal and spatial parameters. The feature parameters across
+and BGPvector, which can be used to detect prefix hijack. these three dimensions vary, allowing the constructed cloud
+The details of the baseline methods are listed in Table V. In model to analyze the stability of P/O pairs from different
+addition, the key hyperparameters of each method have been perspectives.
+optimized using grid search to maximize performance. The
+details of these hyperparameters are listed in Table VI. F. Time Variation of CloudTrie (KQ2)
+ To validate the cloud model’s adaptability to dynamic
+D. Key Questions
+ BGP routing changes, this experiment analyzes the temporal
+ In the experiments, we will answer the following key evolution of the cloud model’s core parameters (Expectation
+questions (KQs) about our method CloudTrie. KQ1: What does Ex, Entropy En, and Hyper-entropy He). This analysis aims
+this constructed P/O cloud model look like? KQ2: How do to evaluate the model’s dynamic adaptability. The experiment
+the key parameters of CloudTrie change adaptively over time? employs a sliding time window mechanism (with a window
+KQ3: Facing vicious injection, how robust is CloudTrie? KQ4: size of 5 days), and the results are presented in Fig. 9.
+How does Cloudtrie select the threshold in real deployment? 1) Expectation (Ex): The Ex value in the temporal persis-
+KQ5: How does CloudTrie behave in real-world anomaly tence dimension remains stable throughout the observaevents? KQ6: How does CloudTrie behave in an open dataset tion period, with fluctuations significantly smaller than
+with a continuous data stream? those in traditional models. This indicates a high degree
+ of consistency in the temporal stability characteristics
+E. P/O Cloud Model (KQ1) of P/O pairs. Although the Ex value in the spatial
+ As shown in Fig. 8, we present the projection of cloud consistency dimension shows a periodic fluctuations
+model onto any two feature dimensions. Each cloud drop due to variations in observation point distribution, its
+5500214 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 75, 2026
+
+Fig. 10. Stability observation of P/O pairs. Fig. 11. CloudTrie construction and detection speed with various prefix
+ lengths.
+
+ standard deviation is still strictly maintained at a low
+ level. The results verify the multi-source data fusion
+ mechanism’s ability to suppress spatial noise.
+ 2) Entropy (En): The En value across all 3-D remained
+ stable throughout the observation period, with the
+ most prominent decrease observed in the data source
+ dimension. This trend suggests that, over time, the
+ model progressively reduced inconsistencies among data
+ sources through dynamic adjustments, thereby enhancing the robustness of deterministic judgments.
+ 3) Hyper-Entropy (He): The He values for all dimensions Fig. 12. (a) P/O pairs confidence CCDF curve in January 2024. (b) Stabilize
+ were consistently constrained to an extremely low range. the dynamic correlation between the number of P/O pairs and the uncertainty
+ threshold.
+ Over time, significant changes were observed in both
+ spatial consistency and data source dimensions.
+ Experimental results demonstrate that the proposed method data points are statistically filtered out. Consequently, the
+effectively captures the intrinsic patterns of time-varying malicious updates fail to accumulate enough weight to shift the
+routing data by continuously optimizing the statistical char- Expectation, making it extremely difficult for attackers to alter
+acteristics of the feature clouds, thereby ensuring the dynamic the model’s decision boundary. Fig. 11 shows the construction
+adaptability of CloudTrie. and search times for the DetectTrie as prefix length varies.
+ This demonstrates that the proposed method is capable of
+ performing real-time AD across different prefix lengths.
+G. Robustness Analysis (KQ3)
+ The experimental results demonstrate that the cloud model
+ To measure the robustness of the proposed method, we proposed in this article can effectively distinguish between
+observe three categories of P/O pairs (1000 samples for each legitimate and illegitimate P/O pairs. Furthermore, it remains
+category): stable valid P/O pairs, newly added valid P/O pairs, robust to the negative influence of illegitimate P/O pairs.
+and invalid P/O pairs. Fig. 10 illustrates the variation of
+the uncertainty degree ûi for these three categories during
+December 2024. It can be observed that the uncertainty degree H. Distribution of Uncertainty Degree (KQ4)
+of invalid P/O pairs consistently remains significantly higher In this section, we collect all of the P/O pairs within an
+than that of both newly added valid P/O pairs and stable P/O observation window (the window size is set to five days)
+pairs. Meanwhile, the uncertainty of newly added valid P/O and further calculate the distribution of uncertainty degree of
+pairs was slightly higher than that of stable P/O pairs initially, P/O pairs. Then, we collect the results and depict them in
+before decreasing slightly and largely remaining stable below Fig. 12. Additionally, we evaluated the cloud model within
+0.2. It indicates that invalid P/O pairs consistently maintain a a real-world network environment using a dataset of 300 k
+high degree of uncertainty, while stable pairing relationships P/O pairs, which incorporates nearly 3000 anomalous pairs
+maintain a low degree of uncertainty within their respective from the same temporal window. The evaluation outcomes are
+periods, demonstrating good stability. Notably, this distinct illustrated in Fig. 13.
+separation in uncertainty characteristics verifies the model’s Fig. 12(a) displays the complementary cumulative distribuadversarial robustness against poisoning attacks. An intelli- tion function (CCDF) of the uncertainty degree. When the
+gent adversary might attempt to manipulate the Cloud Model uncertainty degree is 0.4, the CCDF values of all curves drop
+parameters by injecting low-frequency, seemingly harmless significantly. This indicates that if an uncertainty threshold of
+BGP updates that fall between the characteristics of Invalid 0.4 is selected, 50% of the P/O pairs can be retained, and the
+and New P/O pairs. However, since the Reverse Cloud Gen- uncertainty degree of these P/O pairs is within 40%.
+erator algorithm predominantly relies on high-quality cloud Fig. 12(b) uses RPKI’s P/O pairs as a baseline to show the
+drops generated from Stable Valid P/O pairs, these adversarial ratio of P/O pairs selected by CloudTrie to those in RPKI. As
+WU et al.: CloudTrie: UNCERTAINTY-QUANTIFIED ANOMALY DETECTION FRAMEWORK FOR PREFIX HIJACKING 5500214
+
+ Fig. 14. Comparison results of different AD methods under the open
+ environment.
+
+ sources and filter out stable P/O pairs, which in turn leads
+Fig. 13. Performance of cloud model across varying threshold settings.
+ to more accurate AD results. Instead, the other methods
+ neither detect all of events. This is because these methods
+the threshold increases from 0 to 1, the number of stable P/O do not have sufficient accurate data to model their knowledge
+pairs rises, then flattens out as the threshold approaches 1. system. Specifically, the method, like Artemis, which relies
+It can be observed that the P/O pairs chosen by CloudTrie on information repositories, may generate false alarms when
+are two to ten times more numerous than RPKI’s P/O pairs. It routing information fails to match, particularly if the repository
+indicates that the selected P/O pairs can effectively supplement data is not comprehensive. Similarly, the machine learningthe RPKI data source and provide an uncertainty degree for based approaches may experience a reduction in detection
+each P/O pair. accuracy and an increase in false alarms if their training data
+ is insufficient.
+I. Sensitivity Analysis
+ The performance was assessed using false positive rate K. Performance Comparison in Open Dataset (KQ6)
+(FPR) and false negative rate (FNR), as illustrated in Fig. 13.
+The results demonstrate an inverse relationship: as the thresh- To further validate the robustness and adaptability of
+old is raised, the FPR diminishes, whereas the FNR increases. CloudTrie in a real-world scenario, we performed AD with the
+This trend suggests that a higher threshold allows for the inclu- continuous BGP routing data during the period of the latter
+sion of more legitimate P/O pairs that exhibit some uncertainty. half of December 2024. The comparative performance of our
+Notably, at an uncertainty threshold of approximately 0.4, proposed method against the baselines is presented in Fig. 14.
+almost all normal P/O pairs are added to Detecttrie. However, Fig. 14 reveals that CloudTrie exhibits a consistently low
+this relaxation also permits a small number of anomalous P/O number of alerts, with an average of 0.65 alerts per day and
+pairs to enter the system as the threshold increases further. a variance of 0.65, indicating stable performance. In contrast,
+Finally, we selected a threshold thpro of 0.4 for the experiment. BGPvector and BGPviewer had the highest and second-highest
+This setting ensures that 50% of the data is retained with a alert frequencies, respectively. BGPvector averaged 71.82
+high degree of certainty, while simultaneously maintaining low alerts per day with a variance of 399.97, while BGPviewer
+FPR and FNR. Notably, the volume of this retained data is averaged 5.88 alerts per day with a variance of 41.95.
+nearly five times larger than that of the RPKI data. In this We also record the memory and detection time for each
+field, minimizing the FNR is more crucial than reducing the update message during their online detections, as shown in
+FPR. This means that network operators can take more time in Table VIII. We can observe that CloudTrie behaves best
+further anomaly mitigation rather than filtering out anomalies in terms of detection time and takes up the second-lowest
+after detecting anomalies. memory usage. CloudTrie strategically utilizes only three
+ In the real deployment, we apply a similar mechanism to feature dimensions to construct the Cloud Model—despite the
+update the threshold when carrying out each time of online potential for superior performance with higher dimensions—to
+detection. achieve an optimal balance between effectiveness and computational overhead. This stands in stark contrast to deep learning
+ baselines, which incur massive costs by requiring the extrac-
+J. Performance Comparison in Closed Datasets (KQ5) tion of 26-D features for every sliding window. Furthermore,
+ In this section, we evaluate the accuracy of our proposed CloudTrie’s unsupervised paradigm fundamentally overcomes
+method using a closed environment, comprising 12 labeled the critical bottlenecks of supervised learning: specifically,
+real-world events. The experimental results are listed in the scarcity of labeled BGP data, significant temporal dis-
+Table VII. crepancies, and severe class imbalance. As highlighted by
+ Compared to the other methods, CloudTrie demonstrates BEAM, these data characteristics frequently drive deep models
+its superior performance by detecting all of the anomaly toward gradient collapse and training failure, necessitating
+events with the lowest number of false positives. This efficacy extensive parameter optimization; in contrast, CloudTrie comstems from its ability to integrate data from three distinct pletely circumvents such risks. Finally, unlike the opaque
+5500214 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 75, 2026
+
+ TABLE VII
+ E XPERIMENTAL R ESULTS U NDER THE C LOSED DATASET
+
+ TABLE VIII (ûi = 0.195), indicating a high level of confidence in the
+ M EMORY AND AVERAGE D ETECTION T IME IN O PEN T EST detection of this event.
+
+ VI. R ELATED W ORK
+ In recent years, researchers have extensively studied prefix
+ hijacking detection, broadly categorizing approaches into the
+ following three types.
+
+ A. Active Probing-Based Detection Methods [26], [27], [28]
+ This type of instrumentation works by injecting traffic into
+ the network and then analyzing its reception and stability to
+ determine the reachability of a specific IP address or prefix.
+ For instance, BGP Beacon [26] periodically announces and
+ withdraws special IP addresses. Beacon receivers monitor
+ these updates to gauge inter-domain network stability and
+ convergence. iSPY [27] actively sends probe traffic to target
+Fig. 15. Analysis of Myanmar prefix hijacking incident.
+ prefixes to detect their reachability and path changes. If probe
+ results do not match the expected path, it might indicate a
+ prefix hijacking or other routing anomaly. To further reduce
+“black-box” nature of deep learning models, CloudTrie FRRs, Schlamp et al. [28] utilize encrypted traffic based on
+demonstrates superior interpretability. SSL/TLS to test the reachability of anomalous IP addresses.
+ By comparing public key changes before and after an anoma-
+L. Case Study lous event, they determine if it’s a benign occurrence. In order
+ to reduce the network overhead, Trinocular [29] applies an
+ On February 5, 2021, Myanmar’s Ministry of Transport adaptive probing mechanism. Although their good ability of
+and Communications issued a notice to the country’s mobile detecting anomalies, this type of methods aggravate the burden
+network and ISPs, attempting to block Twitter and Instagram of network.
+traffic through prefix hijacking [25]. Specifically, AS136168
+(Campana MYTHIC) began announcing 104.244.42.0/24 at
+15:51 UTC on February 5, despite 104.244.42.0/24 legiti- B. Machine Learning-Based Methods [30], [31], [32]
+mately belonging to AS13414 (Twitter). Our proposed method, They use algorithms to model network traffic or routing
+CloudTrie, successfully detect this event at the corresponding data to identify anomalous patterns. For instance, Vanerio and
+time. The whole process is presented in Fig. 15. Casas [32] propose an ensemble learning-based AD frame-
+ In this event, we identify that two distinct ASes, namely work that combines supervised and unsupervised learning.
+AS136168 and AS13414, were both announcing reachabil- This framework leverages multiple trained base classifiers
+ity to the same IP prefix, 104.244.42.0/24. Concurrently, and integrates them using unsupervised learning, improving
+CloudTrie assigns a low uncertainty degree to this incident detection accuracy and robustness [33]. The advantage of
+WU et al.: CloudTrie: UNCERTAINTY-QUANTIFIED ANOMALY DETECTION FRAMEWORK FOR PREFIX HIJACKING 5500214
+
+these methods lies in their ability to learn complex network [3] J. Qiu, L. Gao, S. Ranjan, and A. Nucci, “Detecting bogus BGP
+behavior patterns automatically. However, machine learning route information: Going beyond prefix hijacking,” in Proc. 3rd Int.
+ Conf. Secur. Privacy Commun. Netw. Workshops (SecureComm), 2007,
+approaches typically require large amounts of labeled data for pp. 381–390.
+training, and model performance heavily relies on data quality [4] M. Lad, D. Massey, D. Pei, Y. Wu, B. Zhang, and L. Zhang, “PHAS: A
+and the effectiveness of feature engineering [34]. Additionally, prefix hijack alert system,” in Proc. 15th USENIX Secur. Symp., 2006,
+ pp. 1–3.
+the “black-box” nature of deep learning models makes it [5] V. Roth and R. H. Katz, “Listen and whisper: Security mechanisms for
+difficult to interpret detection results, thereby limiting their BGP,” in Proc. 1st Symp. Networked Syst. Design Implement. (NSDI),
+trustworthiness in practical applications [35]. Apr. 2004, pp. 1–14.
+ [6] Y. Zhai et al., “Bidirectional feature pyramid Siamese anomaly detection
+ network with cellular anomaly generation for container marking,” IEEE
+C. Information Repository-Based Methods [36] Trans. Instrum. Meas., vol. 74, pp. 1–17, 2025.
+ [7] J. Li, J. Cao, Z. Meng, R. Xie, and M. Xu, “RoLL: Real-time and
+ These methods analyze BGP routing information accord- accurate route leak location with AS triplet features,” in Proc. IEEE
+ing to an information repository comprising a number of Int. Conf. Commun. (ICC), May 2023, pp. 5240–5246.
+ [8] B. Xu, S. Li, A. A. Razzaqi, Y. Guo, and L. Wang, “A novel
+valid pieces of information. Artemis is widely used for measurement information anomaly detection method for cooperative
+detecting prefix hijacking. The advantage lies in its strong localization,” IEEE Trans. Instrum. Meas., vol. 70, pp. 1–18, 2021.
+interpretability, offering clear logical explanations for each [9] T. Alfroy, T. Holterbach, T. Krenc, K. C. Claffy, and C. Pelsser, “The
+ next generation of BGP data collection platforms,” in Proc. ACM
+detection decision. However, routing logic methods are highly SIGCOMM Conf., Aug. 2024, pp. 794–812.
+dependent on the reliability of the data. If the input data [10] O. Nordström and C. Dovrolis, “Beware of BGP attacks,” ACM SIGsources are inaccurate or incomplete, detection results can be COMM Comput. Commun. Rev., vol. 34, no. 2, pp. 1–8, Apr. 2004.
+ [11] G. Baltra, T. Saluja, Y. Pradkin, and J. Heidemann, “Measuring partial
+significantly affected. Especially when dealing with partially reachability in the public internet,” 2024, arXiv:2412.09711.
+missing or inconsistent data, routing logic methods are prone [12] B. Al-Musawi, P. Branch, and G. Armitage, “BGP anomaly detection
+to generating false alarms. techniques: A survey,” IEEE Commun. Surveys Tuts., vol. 19, no. 1,
+ pp. 377–396, 1st Quart., 2017.
+ Unlike other methods, this article proposes a novel BGP AD [13] R. Oliveira, D. Pei, W. Willinger, B. Zhang, and L. Zhang, “The (in)
+approach fusing multiple uncertain information sources. Our completeness of the observed Internet AS-level structure,” IEEE/ACM
+primary aim is to build a detection instrumentation system that Trans. Netw., vol. 18, no. 1, pp. 109–122, Feb. 2010.
+ [14] X. Zhao, D. Massey, M. Lad, and L. Zhang, “ON/OFF model: A
+can collect more valid data from uncertain BGP data source to new tool to understand BGP update burst,” Dept. Comput. Sci., Univ.
+achieve more accurate AD. Compared to the existing methods, Southern California, Los Angeles, CA, USA, Tech. Rep. USC/CS 04-
+CloudTrie can detect hijacking behaviors more accurately, 819, 2004.
+ [15] M. Lepinski and S. Kent, An Infrastructure to Support Secure Internet
+while also providing interpretable results. Routing, document RFC 6480, Feb. 2012. [Online]. Available: https://
+ www.rfc-editor.org/info/rfc6480
+ [16] M. Kang, W. Li, R. Van Rijswijk-Deij, T. Kwon, and T. Chung,
+ VII. C ONCLUSION “IRRedicator: Pruning IRR with RPKI-valid BGP insights,” in Proc.
+ BGP route security is crucial for global Internet connectivity Netw. Distrib. Syst. Secur. Symp., 2024.
+ [17] E. Gregori, A. Improta, L. Lenzini, L. Rossi, and L. Sani, “On the
+[37]. This article introduces CloudTrie, an efficient AD method incompleteness of the AS-level graph: A novel methodology for BGP
+that addresses the issue of uncertain information sources in route collector placement,” in Proc. Internet Meas. Conf., Nov. 2012,
+BGP prefix hijacking by integrating spatio-temporal stability pp. 253–264.
+ [18] X. Zhao et al., “An analysis of BGP multiple origin AS (MOAS)
+features and the cloud model. CloudTrie combines three BGP conflicts,” in Proc. 1st ACM SIGCOMM Workshop Internet Meas.
+related data sources—RPKI, IRR, and RIB—and leverages Workshop. New York, NY, USA: Association for Computing Machinery,
+a Trie tree for efficient storage and retrieval of prefix and 2001, pp. 31–35.
+ [19] D. Li, C. Y. Liu, and L. Y. Liu, “Study on the universality of the normal
+ASN information. It uses a cloud model to assess route cloud model,” Eng. Sci., vol. 6, no. 8, pp. 28–34, 2004.
+uncertainty degree in real time and incorporates an online [20] J. Yang et al., “Review and prospect of research on the normal cloud
+update mechanism to adapt to the time-varying nature of model,” Chin. J. Comput., vol. 41, no. 3, pp. 724–744, 2018.
+ [21] P. Mohapatra, J. Scudder, D. Ward, R. Bush, and R. Austein, BGP Prefix
+BGP networks. The proposed method effectively handles the Origin Validation, document RFC 6811, 2013.
+uncertainty in routing data and provides a more accurate and [22] P. Sermpezis et al., “ARTEMIS: Neutralizing BGP hijacking within a
+real-time AD. Experimental results demonstrate that CloudTrie minute,” IEEE/ACM Trans. Netw., vol. 26, no. 6, pp. 2471–2486, Dec.
+ 2018.
+achieves robust, adaptive, and highly accurate AD. Notably, [23] S. Peng et al., “A multi-view framework for BGP anomaly detection via
+CloudTrie provides uncertainty quantification for each gen- graph attention network,” Comput. Netw., vol. 214, Sep. 2022, Art. no.
+erated alert. Our CloudTrie can be deployed by ISPs as 109129.
+ [24] T. Shapira and Y. Shavitt, “AP2Vec: An unsupervised approach for BGP
+monitoring instruments that link with BGP collectors, enabling hijacking detection,” IEEE Trans. Netw. Service Manage., vol. 19, no. 3,
+network operators to more intelligently and quickly identify pp. 2255–2268, Sep. 2022.
+potential abnormal behaviors. We believe CloudTrie lays the [25] MANRS. (2021). Did Someone Try to Hijack Twitter? Yes. [Online].
+ Available: https://manrs.org/2021/02/did-someone-try-to-hijack-twitterfoundation for more accurate and real-time AD in the global yes/
+BGP network. [26] Z. M. Mao, R. Bush, T. G. Griffin, and M. Roughan, “BGP beacons,”
+ in Proc. ACM SIGCOMM Conf. Internet Meas. New York, NY, USA:
+ Association for Computing Machinery, 2003, pp. 1–14.
+ R EFERENCES [27] Z. Zhang, Y. Zhang, Y. C. Hu, Z. M. Mao, and R. Bush, “ISPY: Detecting
+[1] S. Murphy, BGP Security Vulnerabilities, document RFC 4272, IETF, IP prefix hijacking on my own,” IEEE/ACM Trans. Netw., vol. 18, no. 6,
+ 2006. [Online]. Available: https://www.rfc-editor.org/rfc/rfc4272.html pp. 1815–1828, Dec. 2010.
+[2] Y. Chen et al., “Learning with semantics: Towards a semantics-aware [28] J. Schlamp et al., “Investigating the nature of routing anomalies: Closing
+ routing anomaly detection system,” in Proc. 33rd USENIX Secur. Symp. in on subprefix hijacking attacks,” in Proc. 7th Int. Workshop Traffic
+ (USENIX Secur.), 2024, pp. 5143–5160. Monitor. Anal., Barcelona, Spain, Apr. 2015, pp. 173–187.
+5500214 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 75, 2026
+
+[29] L. Quan, J. Heidemann, and Y. Pradkin, “Trinocular: Understanding Zhan Wu received the M.S. degree from Southwest University, Chongqing,
+ internet reliability through adaptive probing,” ACM SIGCOMM Comput. China, in 2018, and the Ph.D. degree from Southeast University, Nanjing,
+ Commun. Rev., vol. 43, no. 4, pp. 255–266, 2013. China, in 2022, where he is currently pursuing the Ph.D. degree with the
+[30] N. Shone, T. N. Ngoc, V. D. Phai, and Q. Shi, “A deep learning approach Laboratory of Image Science and Technology, School of Computer Science
+ to network intrusion detection,” IEEE Trans. Emerg. Topics Comput. and Engineering.
+ Intell., vol. 2, no. 1, pp. 41–50, Feb. 2018. His current research interests include medical image reconstruction and
+[31] Y. Bai, J. Wang, X. Zhang, X. Miao, and Y. Lin, “CrossFuN: Multiview deep learning (DL).
+ joint cross-fusion network for time-series anomaly detection,” IEEE
+ Trans. Instrum. Meas., vol. 72, pp. 1–9, 2023.
+[32] J. Vanerio and P. Casas, “Ensemble-learning approaches for network
+ security and anomaly detection,” in Proc. Workshop Big Data Analytics
+ Mach. Learn. Data Commun. Netw., Aug. 2017, pp. 1–6.
+[33] L. Chen et al., “Frequency-domain spectrum discrepancy-based fast
+ anomaly detection for IIoT sensor time-series signals,” IEEE Trans.
+ Lei Han is currently a Professor with the School of Computer, Nanjing
+ Instrum. Meas., vol. 74, pp. 1–16, 2025.
+ University of Posts and Telecommunications, Nanjing, China. He has created
+[34] B. Yu, Z. Yang, Y. Yu, and G. Xiang, “From seen to unseen: Harnesspatents which are authorized by China, the USA, the U.K., Japan, South
+ ing temporal dependencies and graph structures for zero-sample fault
+ Korea, and Germany. He has authored papers in research related international
+ diagnosis in industrial systems,” IEEE Trans. Instrum. Meas., vol. 74,
+ conferences and journals, such as IEEE TPDS, GLOBECOM, MOBISYS,
+ pp. 1–13, 2025.
+ and ICCN. His research interests include computer networks and data center
+[35] Y. Liu, X. Gao, J. Z. Wen, and H. Luo, “Unsupervised image anomaly
+ systems.
+ detection and localization in industry based on self-updated memory and
+ center clustering,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–10, 2023.
+[36] L. Guangling, Z. Yongsheng, T. Xiaochong, L. Kai, and D. Lu,
+ “Research on automatic generation and data organization method of
+ control points,” in Proc. 10th IAPR Workshop Pattern Recognit. Remote
+ Sens. (PRRS), Aug. 2018, pp. 1–5.
+[37] K. Butler, T. R. Farley, P. McDaniel, and J. Rexford, “A survey of BGP
+ security issues and solutions,” Proc. IEEE, vol. 98, no. 1, pp. 100–122, Xiaobai Chen (Member, IEEE) received the Ph.D. degree from Sun Yat-sen
+ Jan. 2010. University–Carnegie Mellon University Joint Institute of Engineering (JIE),
+ Guangzhou, China, in 2019.
+ He is currently a Professor with Nanjing University of Posts and
+Zheng Wu received the Ph.D. degree from Nanjing University of Posts and Telecommunications, Nanjing, China. His research interests include computer
+Telecommunications (NUPT), Nanjing, China, in 2021. architecture, artificial intelligence algorithm design and optimization, machine
+ He worked as a Post-Doctoral Researcher with the Computer Network learning systems, and digital circuits design.
+Information Center, Chinese Academy of Sciences. He is currently pursuing
+a Lecturer with the College of Computer, NUPT. His research interests include
+routing security, network traffic identification, and anomaly detection.
+
+Shiyu Liu received the B.S. degree from Qufu Normal University, Rizhao,
+China, in 2025. He is currently pursuing the M.S. degree with Nanjing
+University of Posts and Telecommunications, Nanjing, China.
+ His current research interest is inter-domain routing security. Fu Xiao (Senior Member, IEEE) received the Ph.D. degree in computer
+ science and technology from Nanjing University of Science and Technology,
+ Nanjing, China, in 2007.
+Ruixi Xie received the B.S. degree from Nanjing University of Posts and He is currently a Professor and a Ph.D. Supervisor with the School of Com-
+Telecommunications, Nanjing, China, in 2025, where she is currently pursuing puter, Nanjing University of Posts and Telecommunications. He has authored
+the M.S. degree with Nanjing University of Posts and Telecommunications. papers in research-related international conferences, including UbiCOMP,
+ Her current research interest is inter-domain routing security. INFOCOM, ICNP, ICC, and IPCCC. He has authored IEEE/ACM T RANS -
+ ACTIONS ON N ETWORKING , IEEE J OURNAL ON S ELECTED A REAS IN
+Ming Gao (Member, IEEE) received the Ph.D. degree in computer science C OMMUNICATIONS, IEEE T RANSACTIONS ON C OMPUTERS, IEEE T RANS -
+and technology from Zhejiang University, Hangzhou, China, in 2024. ACTIONS ON PARALLEL AND D ISTRIBUTED S YSTEMS , IEEE T RANSAC -
+ He is currently a Professor with the School of Computer Science, Nanjing TIONS ON D EPENDABLE AND S ECURE C OMPUTING , IEEE T RANSACTIONS
+University of Posts and Telecommunications, Nanjing. His research interests ON M OBILE C OMPUTING , ACM TECS, and IEEE T RANSACTIONS ON
+include IoT security, mobile computing, and privacy protection. V EHICULAR T ECHNOLOGY. His research interests include computer net-
+ Dr. Gao was a recipient of the Best Paper Award Nomination from works, datacenters, and the Internet of Things.
+SenSys’21 and SenSys’24 and ACM SIGMOBILE Research Highlight in Dr. Xiao is a member of the IEEE Computer Society and the Association
+2022. for Computing Machinery.

@@ -1,0 +1,137 @@
+1994                                                     IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+
+
+
+   Hierarchical GNN Message Passing for Node-Level
+    Anomaly Detection in Industrial Control Systems
+                            Shuaiyi Lyu , Kai Wang , Member, IEEE, Yang Liu, and Bailing Wang
+
+
+   Abstract—Advances in Graph Neural Networks (GNNs) have                                                      I. INTRODUCTION
+prompted remarkable progress in anomaly detection for securing
+                                                                                          HE Industrial Control Systems (ICSs) are complex systems
+the Industrial Control Systems (ICSs). As the core functioning
+block of a GNN network, message passing in most of the cur-
+rent frameworks is conducted via local aggregation, in which a
+                                                                                   T      of heterogeneous devices dedicated for industrial process
+                                                                                   monitoring and control. They have been frequently targeted and
+node’s vector representation is updated with messages from its                     attacked in recent years due to their increasing connectivity to
+directly connected neighbours. However, despite its efficiency over
+numerous application scenarios, such neighbouring aggregation
+                                                                                   public networks. In order to inflict massive physical damage or
+mechanism tends to be highly biased towards a node’s locality,                     cause considerable economic loss, the majority of recent attacks
+and hence may not accurately profile the hierarchical semantics in                 aim at directly sabotaging the industrial processes supervised
+layered ICS architectures, such as the supervisory relations among                 by the ICSs. As the operational status of industrial processes
+controllers and field devices. The resulting node embeddings, in this              can be reflected in the numeric data streams of measurement
+case, may not be knowledgeable enough to instruct downstream
+tasks such as fine-grained device-wise ICS anomaly detection. To
+                                                                                   values or operational states (See Fig. 1) with respect to each
+address this issue, we introduce the Hierarchical Message Analyzer                 process-related ICS device (sensors, actuators, controllers, etc.),
+(the HMA), a new message passing scheme that explores a net-                       it is imminent to derive reliable schemes to detect anomalies in
+work’s supervisory structural features and regulates a message’s                   these streams in order to secure the industrial processes and
+transmission paths to create balanced embeddings for node-level                    avoid any potential hazards.
+ICS anomaly detection. This model comprises in its architecture
+a Preprocessor that condenses the original data flow into initial
+                                                                                       To discover malicious patterns in these streams, early methods
+node vectors, an Adjacency Parser that regulates how messages                      such as the Deterministic Finite Automata [1], [2] series and the
+are transmitted in the aggregation process, an Encoder performing                  Statechart-based Detectors [3], [4] are proposed to intuitively
+message passing in compliance with the adjacency info obtained                     detect anomalous snippets that deviate from the periodic charac-
+from the Adjacency Parser, and a Decoder for label inference. We                   teristics of industrial processes. Lightweight and simple as they
+assess the HMA’s performance over multiple evaluation metrics
+and compare it against various state-of-the-art baselines. Results
+                                                                                   are, these methods usually suffer from an undesirably high false
+on multiple datasets certify the HMA’s validity and superiority in                 positive detection rate, in that the patterns extracted are usually
+device-wise ICS anomaly detection.                                                 simple and superficial while an actual measurement value tends
+                                                                                   to fluctuate frequently even in normal operating scenarios. This
+   Index Terms—Hierarchical message passing, meta-graph data
+collection, graph neural networks, anomaly detection, industrial                   makes state machine generation difficult and therefore greatly
+control systems.                                                                   weakens the methods’ applicability to anomaly detection in
+                                                                                   dynamic ICS streams. In addition, lack of consideration of as-
+                                                                                   sociativity among numeric streams with respect to different ICS
+                                                                                   devices further undermines the methods’ detection accuracy.
+   Received 27 November 2023; revised 12 October 2025; accepted 15 October             To better exploit the complex variational semantics together
+2025. Date of publication 20 October 2025; date of current version 12 March        with the correlational features of devices’ numeric streams,
+2026. This work was supported in part by the Taishan Scholar Project of
+Shandong Province, China under Grant tsqn202408112, in part by the National        neural network (NN) based solutions are introduced in numerous
+Natural Science Foundation of China (NSFC) under Grant 62272129, and in part       literature (e.g., [5] [6] [7]). By introducing layers of parameters,
+by the Key Laboratory of Cognitive Intelligence and Content Security, Ministry     these methods conduct in-depth semantic learning over the
+of Education, China under Grant RZZN202414. (Corresponding authors: Kai
+Wang; Bailing Wang.)                                                               input streams, produce in-depth features for anomaly detection
+   Shuaiyi Lyu is with the Faculty of Computing, Harbin Institute of Technology,   and have, therefore, made decent improvements in detection
+Harbin 264209, China (e-mail: lvshuaiyi2568068@163.com).                           accuracy. However, most of these methods perform graph-level
+   Kai Wang is with the School of Computer Science and Technology, Harbin
+Institute of Technology, Weihai 264209, China, and also with the Shandong          state inference rather than conducting fine-grained device-wise
+Key Laboratory of Industrial Network Security, Weihai 264209, China (e-mail:       adversary detection. This tremendously undermines the models’
+dr.wangkai@hit.edu.cn).                                                            ability in finding which devices in the system an anomaly occurs
+   Yang Liu is with the School of Computer Science and Technology, Harbin In-
+stitute of Technology, Weihai 264209, China (e-mail: liuyang322@hit.edu.cn).       in and severely impairs their practicality in ICS protection, as
+   Bailing Wang is with the Harbin Institute of Technology (Weihai) Qingdao        promptly locating and responding to anomalies is critical in
+Research Institute, Qingdao 266109, China, and also with the Shandong Key          securing the running industrial processes and preventing catas-
+Laboratory of Industrial Network Security, Weihai 264209, China (e-mail:
+wbl@hit.edu.cn).                                                                   trophic outcomes such as physical damage and casualty [8], [9].
+   Digital Object Identifier 10.1109/TDSC.2025.3623299                             Furthermore, one cannot shut down the entire system as it may
+
+
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS                                      1995
+
+
+
+                                                                                 representations featuring compressed temporal flow properties.
+                                                                                 These vectors are fed into the model as the initial feature vectors
+                                                                                 for the encoding process. (b) An Adjacency Parser that con-
+                                                                                 structs the hierarchical architecture from the ICSs of interest and
+                                                                                 stipulates how messages flow during the aggregation process.
+                                                                                 (c) An Encoder that performs message passing based upon the
+                                                                                 new adjacency info produced by the Adjacency Parser and (d) A
+                                                                                 Decoder that maps the Encoder’s output to the respective labels,
+                                                                                 which represent states of ICS devices for any applicable moment.
+                                                                                    Our key contributions are summarized as follows:
+Fig. 1. Numeric data streams reflecting the operational status of industrial        1) Differentiated from the majority of current literature that
+processes (Red-dashed blocks: Anomalous; Green-dashed blocks: Benign).
+Each stream corresponds to a measurement or operation index for a particular
+                                                                                        conducts coarse-grained system-wise anomaly detection,
+ICS device in a specified process (e.g. a sensor’s measurement of liquid level          we present a fine-grained anomaly detection framework
+inside some tank in a water treatment process, the operational mode of a pump           producing device-wise labels that help locate the specific
+(on/off) on a pipe, etc.).
+                                                                                        devices or components with which detected anomalies are
+                                                                                        associated with. As a result, our proposed framework is
+cause considerable economic loss [10]. It will be very useful if                        much more practical than current graph-level detection
+operators can take actions over only the most relevant devices                          solutions in terms of anomaly retracing.
+when an anomaly appears.                                                            2) In order to accurately profile the core hierarchical se-
+   To timely discover the specific devices an anomaly impacts,                          mantics in typical layered ICS architectures that current
+Graph Neural Network (GNN) based approaches have been                                   neighbouring passing schemes fail to effectively capture,
+investigated. The GNNs are a powerful architecture for profiling                        we develop the HMA, a hierarchical aggregation model
+graphs of arbitrary structures [11] and dealing with tasks on                           regulating the message passing directions during the em-
+both coarse-grained graph level and fine-grained device level.                          bedding generation process, to obtain a more precise
+The fundamental principle is to produce high-quality node                               perception of how specific nodes exist in the hierarchical
+embeddings via message aggregation for subsequent feature                               context of an ICS architecture, than existing neighbouring
+differentiation. However, how to design the message aggregation                         aggregation paradigms in which embedding learning is
+scheme so that the quality of information within the embeddings                         biased towards a node’s local surroundings. The resulting
+is good enough for device-wise ICS anomaly detection is a                               perception serves as a more balanced and reliable basis
+challenging technical issue that requires in-depth exploration.                         for fine-grained (node-level) state inference.
+Much of the current literature is based on direct neighbour-                        3) We implement the HMA over multiple datasets and eval-
+hood aggregation, in which a node obtains information from                              uate its performance against numerous state-of-the-art
+its immediate neighbours, causing embedding learning to bias                            baselines. Its effectiveness in ICS anomaly detection is
+towards a node’s local surroundings. Simple as they are, when                           demonstrated with various popular metrics.
+it comes to application in layered ICS architectures built upon                     The rest of the paper is structured as follows. Section II
+heterogeneous devices, nevertheless, such aggregation schemes                    provides an overview of related work on ICS anomaly detection
+do not explicitly consider the supervisory relations among the                   and basic GNN techniques. Section III defines the problem and
+devices. As a consequence, the embeddings produced by these                      illustrates the general principles of the proposed framework.
+methods are not an accurate or comprehensive reflection of                       Section IV provides a detailed description of the model architec-
+how a node belongs to a hierarchical ICS topology. Therefore,                    ture. Section V summarizes the experiment procedures, results
+these embeddings may not be knowledgeable enough to instruct                     and analysis and Section VI concludes the paper.
+downstream device-wise ICS anomaly detection tasks.
+   To address the aforementioned issue, we introduce the Hierar-
+chical Message Analyzer (HMA). Distinguished from previous                                              II. RELATED WORK
+coarse-grained anomaly detection approaches producing graph-                        In this section, we summarize the literature in ICS anomaly
+level results, our proposed HMA yields fine-grained labels on the                detection and the Graph Neural Networks.
+node level that can be immediately utilized in tracking down the                    1) Anomaly Detection: As security issues in the ICSs have
+specific devices with which detected anomalies are associated.                   drawn substantial attention over the past decade, there has been
+In addition, the HMA is a new message passing scheme that                        numerous reviews discussing typical structures of ICS net-
+accurately profiles the hierarchical semantics in layered ICS                    works [12], as well as the security challenges they are confronted
+structures via transmission path regulation. It generates balanced               with [13], [14]. In light of the commonality of these reviews
+embeddings that reflect more precisely how specific nodes exist                  that there exists prominent consistency and periodic features in
+in the hierarchical context of an ICS architec

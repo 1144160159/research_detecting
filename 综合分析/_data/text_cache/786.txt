@@ -1,0 +1,136 @@
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026                                                                       3331
+
+
+
+
+  Retriever: A Distributed Intrusion Detection System
+              for NOS-Enabled Networks
+       Runmin Ou , Yijie Bai, Yanjiao Chen , Senior Member, IEEE, Bingchuan Tian, Ming Tang, Zhiming Ji,
+                          Ennan Zhai , Dennis Cai, and Wenyuan Xu , Fellow, IEEE
+
+
+   Abstract—Network Operating Systems (NOS) are being widely                       expose unsafe TCP/UDP ports to attackers [2] to gain control of
+deployed on edge devices by cloud service providers to perform                     the switches and perform further network intrusions [32], [47].
+fast configurations and offer high availability for new network                       Intrusion Detection Systems (IDS) detect and identify poten-
+protocols. However, NOS-enabled networks open the door to in-
+                                                                                   tial security breaches in networks, generating real-time alerts and
+truders that can stealthily corrupt less-guarded programmable
+switches to launch attacks on the entire network. Traditional cen-                 notifying administrators of the potential threat [35]. However,
+tralized intrusion detection systems may neglect anomalous events                  traditional intrusion detection systems are typically designed
+on NOS-equipped switches and fail to detect such attacks. In this                  for servers but not for switches (or NOS). Burdensome data
+paper, we make the first attempt towards intrusion detection for                   collection and computing-intensive analysis of existing IDS are
+NOS-enabled networks by designing Retriever. Retriever features                    not affordable for resource-limited switches. Other non-IDS pro-
+a lightweight local anomaly detection module on programmable                       tection methods, including firewall [45], malware detection [4],
+switches and a central anomaly assessment module on the central
+server. The local anomaly detection module selectively traces both
+                                                                                   and kernel hardening [1], have difficulties in detecting more
+system and network events on switches, based on which a prove-                     sophisticated adversary tactics and techniques like Advanced
+nance graph of events is established. Upcoming events unmatched                    Persistent Threat (APT) [8].
+by the provenance graph are aggregated to construct a suspicious                      To fill this research gap, in this paper, we present the design
+subgraph to report to the central server. The central anomaly as-                  of Retriever, the first distributed intrusion detection system
+sessment module extracts semantic representations from reported                    for NOS-enabled networks. Retriever features a local anomaly
+suspicious subgraphs and computes their anomaly scores. Large-                     detection module deployed on switches and a central anomaly
+scale experiments show that Retriever can achieve high intrusion
+detection accuracy (nearly 100%) with low overheads.                               assessment module deployed on the central server, working
+                                                                                   cooperatively to perform intrusion detection.
+   Index Terms—Provenance graph, advanced persistent threat,                          Local anomaly detection: The NOS on switches has inten-
+intrusion detection, causality analysis, anomaly detection.                        sive CPU workloads for numerous tasks, including routing
+                                                                                   table calculation, network monitoring, network management,
+                            I. INTRODUCTION                                        and even some complex data-plane functions. Therefore, the
+    N RECENT years, Network Operating Systems (NOS) have                           local anomaly detection module should not consume sizeable
+I   been widely deployed on network switches by cloud service
+providers [6], [13], [54] for more flexible network functions [40],
+                                                                                   hardware resources (e.g., CPU, RAM, and even the disk). Oth-
+                                                                                   erwise, the critical functionality of switches could be severely
+higher manageability [7], and fewer infrastructure costs [33].                     affected. To address this challenge, we design and implement a
+Although NOS greatly enhances edge intelligence, it may also                       lightweight local anomaly detection module to collect relevant
+expose new attack surfaces. For example, dockers are widely                        events and build event provenance graphs on switches without
+used in open-source NOS for both typical switch control planes                     influencing the normal NOS tasks (Section IV). The suspicious
+(e.g., routing protocols) and customized network functions (e.g.,                  subgraphs will be extracted from provenance graphs and re-
+encapsulation). Unfortunately, such container applications may                     ported to the central server upon anomaly detection.
+                                                                                      Central anomaly assessment: With a huge number of reported
+   Received 30 September 2024; revised 28 September 2025; accepted 6 Novem-
+                                                                                   suspicious subgraphs from switches, the central server may be
+ber 2025. Date of publication 21 November 2025; date of current version            overwhelmed and fail to distill key information for intrusion
+12 March 2026. This work was supported in part by the project on Software          detection. To address this challenge, we first extract informa-
+Quality and Runtime Environment Security of Cloud Platform Domain Name             tive semantic representations from suspicious subgraphs based
+Resolution, in part by the Zhejiang Key Laboratory of Electrical Technology and
+System on Renewable Energy, and in part by Alibaba Group through Alibaba           on knowledge graphs and then compute both edge-level and
+Innovative Research Program. (Corresponding authors: Yanjiao Chen; Ennan           graph-level anomaly scores to assess the anomaly degree of
+Zhai.)                                                                             reported suspicious subgraphs. The feedback from network ad-
+   Runmin Ou, Yijie Bai, Yanjiao Chen, and Wenyuan Xu are with the Col-            ministrators on alerted suspicious subgraphs with high anomaly
+lege of Electrical Engineering, Zhejiang University, Hangzhou 310027, China
+(e-mail: ourunmin@zju.edu.cn; baiyj@zju.edu.cn; chenyanjiao@zju.edu.cn;            scores is utilized to continually improve Retriever with life-long
+xuwenyuan@zju.edu.cn).                                                             learning.
+   Bingchuan Tian, Ming Tang, Zhiming Ji, Ennan Zhai, and Den-                        We implement Retriever on our large-scale production cloud
+nis Cai are with Alibaba Group, Hangzhou 311121, China (e-mail:
+bingchuan.tbc@alibaba-inc.com;         ming.tang@alibaba-inc.com;         zhim-
+                                                                                   network, and the experiment results prove that Retriever can
+ing.jzm@alibaba-inc.com; ennan.zhai@alibaba-inc.com).                              achieve accurate intrusion detection while keeping the CPU uti-
+   Digital Object Identifier 10.1109/TDSC.2025.3635127                             lization ratio under 0.5% for event tracing, memory usage under
+
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+3332                                                  IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+
+
+                                                                               Command Line Interface, CLI) or different network protocol
+                                                                               processors, such as Border Gateway Protocol (BGP), Link Layer
+                                                                               Discovery Protocol (LLDP), and telemetry. These updates are
+                                                                               stored in the in-memory database (Redis) and then synchronized
+                                                                               with the syncd container. Unlike traditional switches, users can
+                                                                               access the CLI, log in to the backend Linux system, and even
+                                                                               directly access the containers to manage customized network
+                                                                               functions, which may expose programmable switches to higher
+                                                                               security risks. Network operating systems enable cloud service
+                                                                               providers to perform fast configurations and offer high availabil-
+                                                                               ity for new network protocols and functions.
+Fig. 1. SONiC, a Linux-based open-source NOS. It uses containers that
+manage different routing and control plane functions, which are delivered to
+ASIC to manage the data plane.                                                 B. Security Concerns of NOS-Enabled Networks
+                                                                                  Traditionally, network intrusion detection systems are de-
+150 MB for the in-memory provenance graph construction, and                    ployed only at the central server but not edge switches [14], since
+network usage under 1 KB/s in each NOS.                                        the latter usually have limited programmable capabilities. With
+  We summarize our contributions as follows:                                   the rapid penetration of programmable switches equipped with
+  1) We make the first attempt to design a distributed intrusion               NOS, new attack surfaces emerge as the attackers can stealthily
+     detection system, Retriever, for NOS-enabled networks.                    corrupt the NOS at the edge to initiate attacks [30]. For example,
+     Retriever can be deployed on programmable switches with                   high-privilege containers on NOS could be compromised by
+     limited resources.                                                        attackers leveraging vulnerabilities [46], allowing for container
+  2) We design a lightweight local anomaly detection mod-                      escaping. When compromised, the programmability of ASIC
+     ule on switches to trace events and report suspicious                     may further allow attackers to transform the switch into a
+     subgraphs of provenance graphs. We develop a central                      high-performance network scanner [32], add malicious Access
+     anomaly assessment module on the central server to ex-                    Control List (ACL) rules to block traffic, and announce fake Bor-
+     tract representations from provenance graphs and perform                  der Gateway Protocol (BGP) updates to paired switches, causing
+     continuous intrusion detection with life-long learning.                   route hijacking. Specific examples are analyzed in Section VI-B.
+  3) We deploy Retriever on more than 50 switches in pro-                      We give examples of advanced persistent threats (APT) that can
+     duction environments, processing over 2 billion system                    potentially leverage NOS on programmable switches that differ
+     events. We also validate Retriever on the DARPA dataset,                  from host-based scenarios in Section VI-B.
+     and evaluation results show the superiority of Retriever
+     over baselines.
+                                                                               C. Intrusion Detection System
+                 II. BACKGROUND & MOTIVATION                                      Intrusion detection systems monitor a network for malicious
+                                                                               activities or policy violations. Intrusion detection and intru-
+   In this section, we introduce the customized network oper-
+                                                                               sion investigation are two typical functionalities of intrusion
+ating systems and discuss potential attacks exploiting network
+                                                                               detection systems. Intrusion detection aims to detect ongoing
+operating systems, highlighting the need for a new paradigm of
+                                                                               intrusions, while intrusion investigation attempts to trace the
+intrusion detection that taps into edge intelligence.
+                                                                               provenance of detected intrusions [19].
+                                                                                  Intrusion detection: Intrusion detection methods can be cate-
+A. Network Operating Systems                                                   gorized as traffic-based and behavior-based. Distributed traffic-
+   There is a trend of edge intelligence in cloud computing.                   based IDS [16], [31], [39] has been widely explored, which
+Traditionally, network switches are maintained by manufactur-                  monitors network traffic and extracts features for network at-
+ers and regarded as black-box routing devices by cloud service                 tacks. Unlike existing distributed IDS in IoT, which are pri-
+providers. To cater to the ever-increasing need for high-quality               marily traffic-based, our system is an event-based IDS that
+cloud services, cloud providers are transforming switches into                 focuses on detecting and investigating the behaviors of the
+white-box programmable devices using customized or open-                       attacker. Behavior-based intrusion detection methods analyze
+source Network Operating Systems (NOS), e.g., SONiC [53].                      potential malicious behaviors in host contexts (e.g., the system
+SONiC is a Linux-based open-source NOS initially released                      calls [15], process arguments and configurations [18]), using
+in 2016 by Microsoft, actively developed and maintained by                     statistics-based, heuristic-based or learning-based approaches.
+communities. As shown in Fig. 1, SONiC uses a containerized                    DISTDET [11] extracts statistical characteristics from a system
+architecture for customized network protocol processing while                  event tree to filter events and rank the anomaly of mismatched
+Switch Abstraction Interface (SAI) sets up and manages the                     event sets. Heuristic algorithms have been designed based on
+Application Specific Integrated Circuits (ASICs) for fast devel-               specific system events [23], [4

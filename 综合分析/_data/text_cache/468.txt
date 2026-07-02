@@ -1,0 +1,144 @@
+2858                                             IEEE TRANSACTIONS ON EMERGING TOPICS IN COMPUTATIONAL INTELLIGENCE, VOL. 9, NO. 4, AUGUST 2025
+
+
+
+
+           Image Manipulation Localization Using
+          Dual-Shallow Feature Pyramid Fusion and
+        Boundary Contextual Incoherence Enhancement
+ Yan Xiang , Xiaochen Yuan , Senior Member, IEEE, Kaiqi Zhao, Tong Liu , Graduate Student Member, IEEE,
+                 Zhiyao Xie , Guoheng Huang , and Jianqing Li , Senior Member, IEEE
+
+
+   Abstract—This paper proposes a novel end-to-end network for                                              I. INTRODUCTION
+Image Manipulation Localization (IML) comprising three mod-
+                                                                                            ITH the increasing availability of digital image editing
+ules: feature fusion, encoder, and decoder. To address the limita-
+tions of current DNN-based IML algorithms in accessing global fea-
+tures and segmenting tampered edges, we propose a Dual-shallow
+                                                                                   W        software like Adobe Photoshop, After Effects Pro, and
+                                                                                   GIMP, images can be easily and undetectably manipulated.
+Feature Pyramid Fusion (DFPF) module. The DFPF module in-                          Image retouching operations, such as blurring, contrast enhance-
+tegrates semantic and texture features through a bidirectional
+pathway, forming RGB Feature Pyramids (RGBFP) and Local
+                                                                                   ment, and smoothing, are widely used to enhance the visual
+Textual Feature Pyramids (LTFP) using dual Hybrid ResNet50s                        appeal of images without affecting their semantic representa-
+in a ’Siamese’ configuration. These feature pyramids are merged                    tion. However, content editing manipulations pose serious social
+via multi-scale fusion to enhance global pyramid features for de-                  risks, especially in finance, insurance, legal forensics, and jour-
+coding. The LTFP branch includes a Pre-processing Block, Par-                      nalism. The urgent task is to explore dependable models that can
+allel Multi-Scale Convolution (PMSC), or Channel Split High-
+frequency Convolution (CSHC) to capture local textual features
+                                                                                   effectively detect manipulated images, which are often invisible
+and subtle manipulation traces. The Encoder employs Transformer                    to human visual inspection. Identifying subtle inconsistencies
+layers for robust global representations. At the same time, the De-                in boundaries between the original and manipulated regions
+coder uses Cascaded Boundary Context Inconsistent Enhancement                      can provide invaluable forensic clues for Image Manipulation
+(BCIE) Blocks to reconstruct a coarse-to-fine binary mask, en-                     Localization (IML).
+hancing texture inconsistencies at manipulated region boundaries.
+Additionally, we introduce an automated method for generating a
+                                                                                      IML has attracted significant attention in recent decades due
+large-scale forgery dataset via Photoshop Scripting, reducing labor                to the proliferation of sophisticated forgery techniques. Histori-
+costs. Our model effectively locates tampered regions of various                   cally, passive forensic methods matched the statistical properties
+shapes and sizes, improving boundary anomaly detection. Exten-                     of forged images using manually designed features such as
+sive experimental results demonstrate that our method significantly                Overlapping Patches [1], Scale-Invariant Feature Transforms
+outperforms existing state-of-the-art models.
+                                                                                   (SIFT) [2], Speed-Up Robust Feature (SURF) [3], and Camera
+   Index Terms—Image manipulation localization (IML), dual-                        Filter Arrays (CFA) [4]. These techniques, effective against
+shallow feature pyramid fusion (DFPF), boundary contextual                         certain manipulations, are now largely inadequate for addressing
+incoherence enhancement (BCIE), parallel multi-scale convolution                   the advanced composite tampering prevalent in today’s image
+(PMSC), channel split high-frequency convolution (CSHC).
+                                                                                   forensics. Zhang et al. [5] pioneered the application of Con-
+                                                                                   volutional Neural Networks (CNNs) to forgery detection in
+                                                                                   2016. Recently, deep neural networks (DNNs) have advanced
+    Received 24 May 2024; revised 1 August 2024; accepted 7 September 2024.        significantly in computer vision (CV) tasks such as object de-
+Date of publication 29 November 2024; date of current version 24 July 2025. This
+work was supported in part by the Science and Technology Development Fund
+                                                                                   tection [6], [7] and semantic segmentation [8], [9], which bear
+of Macau SAR under Grant 0045/2022/A and in part by the Macao Polytechnic          similarities to IML goals: primarily segmenting potentially tam-
+University under Grant RP/FCA-12/2022. (Corresponding authors: Xiaochen            pered regions. This similarity has inspired the adaptation of CV
+Yuan; Jianqing Li.)
+    Yan Xiang and Jianqing Li are with the School of Computer Sci-
+                                                                                   techniques for IML, with successful implementations reported
+ence and Engineering, Faculty of Innovation Engineering, Macau Uni-                in CNN-based [10], object detection-based [11], and semantic
+versity of Science and Technology, Macau SAR 999078, China (e-mail:                segmentation-based [12] methods. The advent of the Vision
+2009853gia30006@student.must.edu.mo; jqli@must.edu.mo).
+    Xiaochen Yuan, Tong Liu, and Zhiyao Xie are with the Faculty of Applied
+                                                                                   Transformer (ViT) [13] further motivated researchers to explore
+Sciences, Macao Polytechnic University, Macau SAR 999078, China (e-mail:           its applicability to IML [14]. Despite the successes of DNNs and
+xcyuan@mpu.edu.mo; p2209360@mpu.edu.mo; p2215884@mpu.edu.mo).                      ViT in recognizing objects through contextual understanding,
+    Kaiqi Zhao is with the School of Cyber Security, Shandong University of Po-
+litical Science and Law, Jinan 250013, China (e-mail: kqzhao@sdupsl.edu.cn).
+                                                                                   their focus may diverge from IML’s unique challenges, which
+    Guoheng Huang is with the School of Computer Science and Technology,           stem from the irregular sizes and varied shapes of forged areas,
+Guangdong University of Technology, Guangzhou 510006, China (e-mail:               typically devoid of semantic content.
+kevinwong@gdut.edu.cn).
+    Recommended for acceptance by J. Wang.
+                                                                                      Addressing IML challenges involves several strategies: (1)
+    Digital Object Identifier 10.1109/TETCI.2024.3500025                           extracting shallow texture features and tampering traces using
+
+                         2471-285X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+XIANG et al.: IMAGE MANIPULATION LOCALIZATION USING DUAL-SHALLOW FEATURE PYRAMID FUSION AND BOUNDARY                                                2859
+
+
+
+                                                                                  Confronted with these challenges, we are inspired to develop
+                                                                               an efficient end-to-end network architecture for IML. Our main
+                                                                               contributions are summarized as the following four aspects:
+                                                                                  1) We propose an innovative end-to-end IML network,
+                                                                                      illustrated in Fig. 1(c), designed to accurately locate multi-
+                                                                                      scale forged regions by fusing semantic and textual fea-
+                                                                                      tures. Our network comprises three main modules: Dual-
+                                                                                      shallow Feature Pyramid Fusion (DFPF), Encoder, and
+                                                                                      Decoder. Extensive experiments across five benchmark
+                                                                                      datasets and a real-life dataset demonstrate the superior
+                                                                                      IML performance of our approach.
+                                                                                  2) To the best of our knowledge, our DFPF module is the
+                                                                                      first solution to fuse features of a dual-stream feature
+                                                                                      pyramid, overcoming the traditional limitations of DNN-
+                                                                                      based IML, which lack global feature access. The DFPF
+                                                                                      integrates the RGB Feature Pyramid (RGBFP) and Local
+                                                                                      Textual Feature Pyramid (LTFP) via a bi-directional path.
+                                                                                      To effectively capture subtle manipulated traces, we intro-
+                                                                                      duce two Pre-processing Blocks within the LTFP branch:
+                                                                                      Parallel Multi-Scale Convolution (PMSC) and Channel
+                                                                                      Split High-frequency Convolution (CSHC).
+                                                                                  3) In the Decoder module, we deploy Cascaded Boundary
+                                                                                      Contextual Incoherence Enhancement (BCIE) Blocks to
+                                                                                      enhance texture inconsistencies at the edges between the
+Fig. 1. Different encoding-decoding structures for IML. (a) Chen et al. [12]
+structure. (b) Li et al. [15] structure, and (c) Our structure.                       foreground and background. Each BCIE Block indepen-
+                                                                                      dently assesses pixel inconsistencies within a local win-
+                                                                                      dow, refining the delineation of tampered regions within
+Pre-processing Blocks [16], [17], [18]; (2) enhancing edge fea-                       high-level feature representations.
+tures of manipulated regions [14], [15], [19]; (3) implementing                   4) Additionally, we introduce an automatic strategy for
+forensic attention mechanisms to amplify tampering traces [20],                       generating large-scale synthetic datasets via Photoshop
+[21]; and (4) applying supervised contrastive learning to high-                       Scripting1 (PS-Scripting), which allows customization of
+light feature disparities between manipulated regions and the                         the number, type of tampering, and post-processing to
+background [22], [23]. [16], [17], [18], leveraging residual                          mirror real-world tampering scenarios. It ensures ample
+images processed through various pre-processing blocks, are                           and sufficient training samples without additional manual
+particularly effective for Splicing, due to the contrast between                      labeling.
+tampered regions and the background. However, these methods                       The paper is formed as follows: Section II presents the related
+show reduced sensitivity to Copy-move, where tampered regions                  work, Section III introduces our proposed method, Section IV
+from the same image blend seamlessly with the background.                      describes the strategy of generating the synthetic datasets,
+MVSS-Net [19] uses Sobel convolutions for edge discrepancy                     Section V explains the details of experimental settings, the per-
+detection, while Li et al. [15] employs adaptive edge supervision              formance evaluations, and comparisons with existing methods.
+based on morphological operations. EMT-Net [14] focuses on                     Finally, we conclude the conclusion in Section VI.
+the residual strategy to highlight edge characteristics. A common
+shortcoming of these methods is their performance in multi-                                             II. RELATED WORK
+scale edge supervision, excelling on low-dimensional, high-
+                                                                                 This section reviews the most relevant studies of DNN-based
+resolution feature maps but struggling with high-dimensional,
+                                                                               methods for IML. Then, we briefly introduce Transformer [24]
+low-resolution representations. Dense prediction tasks, includ-
+                                                                               used in CV, which is the encoder of our proposed approach.
+ing semantic segmentation, instance segmentation, and IML, fre-
+quently use an encoding-decoding framework. Chen et al. [12]
+                                                                               A. Image Manipulation Localization
+introduces an encoding-decoding network with lateral connec-
+tions between the encoder and decoder (Fig. 1(a)). However,                       Content-changed image manipulation techniques are typi-
+these connections are limited to local features from their cor-                cally classified as Copy-Move, Splicing, and Removal. Some
+responding layers and lack access to comprehensive global                      prior research focused on detecting and locating three types
+features. Inspired by salient object detection, Li et al. [15]                 of tampering manipulations.ManTraNet [25], an LSTM-based
+develop adaptive edge supervision with a bi-directional feature                network, converts manipulated traces into local anomalies but
+fusion module to merge adjacent layer features (Fig. 1(b)).
+However, using only hierarchical RGB features is less effective                  1 [Online]. Available: https://www.adobe.com/devnet/photoshop/scripti

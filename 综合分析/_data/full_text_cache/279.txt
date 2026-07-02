@@ -1,0 +1,762 @@
+4744 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 11, NO. 5, SEPTEMBER/OCTOBER 2024
+
+ Poison-Resilient Anomaly Detection: Mitigating
+ Poisoning Attacks in Semi-Supervised Encrypted
+ Traffic Anomaly Detection
+ Zhangfa Wu , Huifang Li , Yekui Qian , Yi Hua , and Hongping Gan , Member, IEEE
+
+ Abstract—Semi-supervised encrypted traffic anomaly detection [3]. To detect anomalous behaviors in encrypted communicamodels in zero-positive scenarios are susceptible to human labeling tions, researchers employ diverse anomaly detection methods
+errors or poisoning attacks, thereby compromising the stability and to identify data that exhibit significant deviations from the
+reliability of the model. However, existing methods are insufficient
+to address the challenge of reduced inter-class distance caused majority of samples. These approaches help mitigate potential
+by poisoning attacks and the inability of reconstruction error to risks and abnormal behaviors in communication networks, enserve as a reliable detection criterion. To alleviate these challenges, suring the security of communication systems and safeguarding
+a framework called Poison-Resistant Anomaly Detection (PRAD) user privacy. Given the scarcity of abnormal data in real-world
+is proposed to mitigate poisoning attacks and enhance anomaly
+ scenarios and the difficulty in obtaining labeled samples due
+detection performance. Specifically, a feature encoding module
+autoencoder-based is first designed that simultaneously leverages to their concealment by normal data points. Semi-supervised
+the Amsgrad gradient descent algorithm and the warm-up strategy learning algorithms have emerged as a promising approach,
+to enhance the feature extraction and generalization capabilities, which require only a limited amount of labeled data and reduced
+thereby alleviating the reduction of inter-class distance. Addition- labor costs, offering a solid theoretical foundation for anomaly
+ally, a feature analysis module is introduced to measure the impact
+ detection in encrypted traffic.
+of poisoning attacks on inter-class distance and the distribution
+of reconstruction errors, which provides valuable prior informa- Semi-supervised anomaly detection methods can be catetion for subsequent anomaly detection tasks. Finally, an online gorized into traditional anomaly detection methods and Deep
+clustering-based anomaly detection algorithm that utilizes the ex- Learning (DL) methods. Traditional anomaly detection methods
+tracted features and their corresponding reconstruction errors are typically begin by modeling the statistical characteristics of
+developed to address the issue of detection criteria. Experimental
+ normal data and subsequently identify anomalous data points by
+results on public benchmark datasets demonstrate that PRAD exhibits significantly superior poison-resilient capabilities compared detecting those that deviate significantly from this model. Exto other semi-supervised anomaly detection methods in anomaly amples of such methods include the density estimation method
+detection tasks under poisoning attacks. LOF [4], the clustering method OC-SVM [5], probability-
+ Index Terms—Encrypted traffic, online clustering, poisoning based estimation methods such as ECOD [6], COPOD [7],
+attack defense, semi-supervised anomaly detection. etc., as well as ensemble learning anomaly detection methods
+ such as IForest [8], SUOD [9], LSCP [10], etc. In practical
+ applications, traditional anomaly detection methods often face
+ I. INTRODUCTION challenges in capturing intricate data patterns and sample depen-
+ HE encrypted communication protocols, while safeguard- dencies, and are highly sensitive to noisy data. Consequently,
+T ing user data privacy [1], pose challenges to conventional
+anomaly detection techniques that operate on plaintext data [2],
+ researchers gradually shifted their focus to DL-based anomaly
+ detection methods, which typically employ deep neural networks to automatically learn complex feature representations of
+ data, enabling the identification of abnormal data. In comparison
+ Manuscript received 13 January 2024; revised 7 April 2024; accepted 29 April to traditional anomaly detection methods, DL-based methods
+2024. Date of publication 10 May 2024; date of current version 16 August 2024.
+This work was supported in part by the Innovation Workstation of State Key
+ excel in effectively capturing data patterns and sample features,
+Laboratory of Intelligent Gaming under Grant ZBKF-23-03, and in part by the leading to enhanced anomaly detection performance.
+Basic Research Programs of Taicang under Grant TC2022JC19. Recommended DL-based anomaly detection methods can be categorized into
+for acceptance by Dr. Y. Wu. (Corresponding author: Huifang Li.)
+ Zhangfa Wu and Huifang Li are with the School of Electronic Informatwo types based on their training approaches, i.e., Based on
+tion, Northwestern Polytechnical University, Xi’an 710129, China (e-mail: End-to-End learning (E2E) methods and based on Represenzhangfa_wu2021100697@mail.nwpu.edu.cn; Lhuifang@nwpu.edu.cn). tation Learning (RL) methods. The E2E-based methods entail
+ Yekui Qian is with People’s Liberation Army Air Force Academy, Zhengzhou
+450052, China (e-mail: qyk1129@163.com).
+ directly mapping input data to output results, bypassing inter-
+ Yi Hua is with the School of Aeronautics, Northwestern Polytechnical Uni- mediate processing stages like feature extraction and data transversity, Xi’an 710072, China (e-mail: yihua@mail.nwpu.edu.cn). formation [11]. In real-world scenarios, E2E-based methods fre-
+ Hongping Gan is with the School of Software, Northwestern Polytechnical
+University, Xi’an 710129, China (e-mail: ganhongping@nwpu.edu.cn).
+ quently face significant susceptibility to noise or contaminated
+ Digital Object Identifier 10.1109/TNSE.2024.3397719 data present in the training set. This susceptibility results in the
+
+ 2327-4697 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+WU et al.: POISON-RESILIENT ANOMALY DETECTION: MITIGATING POISONING ATTACKS 4745
+
+ r Poisoning attacks substantially reduce the inter-class distance, hindering the model’s ability to accurately learn and
+ represent normal traffic data. Consequently, this severely
+ degrades the performance of anomaly detection.
+ r Meticulously crafted poisoned samples exhibit similar distributions to normal samples, rendering the reconstruction
+ error ineffective as a classification criterion for anomaly
+ detection.
+
+ A. Motivation and Contributions
+ In this work, a framework called Poison-Resistant Anomaly
+Fig. 1. Change trends of representation features under normal training and
+poisoning attacks. (a) represents the data distribution in the original data space Detection (PRAD) is proposed to address the challenge of
+and the process of filtering and injecting poisoned samples. (b) represents the detecting anomalies in encrypted traffic, which may arise from
+change of spatial features in the hidden layer. The mathematical symbols C and poisoning attacks and lead to diminished inter-class distance and
+C  represent the class centers of the original space and the hidden layer feature
+space, respectively. The mathematical symbols E(Gn , Gm ) and Ẽ(Gn , Gm )
+ unavailable reconstruction errors. PRAD can effectively allevirepresent the inter-class distance under normal training and the inter-class ate poisoning attacks and improve anomaly detection perfordistance under poisoning attack, respectively. mance. Specifically, we first design a feature encoding module
+ based on a variant of Variational Recurrent Neural Network
+ (VRNN) to address the inherent curse of dimensionality in
+model overfitting to the training data and subsequently exhibit- high-dimensional traffic data. The Amsgrad gradient descent
+ing subpar performance on the test set. Moreover, a notable limi- algorithm and warm-up strategy are employed to further entation of these methods is their lack of interpretability. RL-based hance PRAD’s feature extraction and generalization capabilanomaly detection methods offer several advantages, including ities, thereby mitigating the reduction of inter-class distance.
+effective dimensionality reduction, efficient data storage, and Furthermore, a feature analysis module is designed to quantify
+compatibility with conventional anomaly detection algorithms. the impact of poisoning attacks on inter-class distance and
+RL-based anomaly detection methods can additionally provide reconstruction error distribution, which can provide valuable
+interpretability, rendering them valuable in real-world applica- prior information for subsequent anomaly detection tasks. Fitions. Nevertheless, the presence of human labeling errors or nally, we design an anomaly detection algorithm that employs
+data poisoning attacks significantly restricts the applicability of online clustering, which leverages the extracted features and
+RL-based semi-supervised anomaly detection algorithms [12]. their associated reconstruction errors. This proposed algorithm
+In summary, the E2E-based methods offer a direct mapping performs clustering on the extracted features using a Gaussian
+approach but are susceptible to issues like overfitting and data Mixture Model (GMM) and assigns labels to distinct clusters
+poisoning attacks. Conversely, RL-based methods provide the based on the corresponding reconstruction errors.
+advantages of dimensionality reduction and interpretability but The main contributions of this paper can be summarized as
+are also limited by the impact of human labeling errors and data follows:
+poisoning attacks in real-world scenarios. r We propose a PRAD framework for detecting encrypted
+ To address the limitations of the aforementioned methods, re- traffic anomalies in semi-supervised poisoning attack scesearchers have devised and implemented various improvements narios, which effectively leverages the interdependencies
+and techniques aimed at mitigating poisoning attacks in anomaly between labeled samples and data priors for mitigating
+detection problems. For instance, Bovenzia et al. [13] proposed poisoning attacks, leading to superior anomaly detection
+an enhanced version of KitNet to address the issue of poisoning performance.
+attacks in E2E-based learning. This enhancement aims to miti- r We introduce a feature extraction module that utilizes
+gate the impact of poisoned data on the E2E-based learning pro- VRNN-based feature encoding, and subsequently utilize
+cess. Regarding semi-supervised anomaly detection problems the Amsgrad gradient descent algorithm combined with a
+RL-based, researchers often adopt poisoning defense strategies warm-up strategy to alleviate the reduction of inter-class
+inspired by traditional anomaly detection algorithms [14], [15]. distance.
+These defense strategies employ the proportion of outliers in r We propose feature-based inter-class distance similarity
+the dataset to define the threshold of the decision function in the and intra-class reconstruction error distribution-based shift
+fitting process. However, these strategies often prove inadequate evaluation for poisoning attack impact estimation.
+when confronted with complex attack scenarios, particularly r We design an online clustering algorithm to efficiently
+when adversaries construct poisoning attack samples with high detect anomalies in encrypted traffic, which leverages the
+similarity to normal samples. Fig. 1 depicts the changes in hidden extracted features and their associated reconstruction erlayer features and reconstruction errors during normal training rors. By clustering the extracted features using a GMM
+and under poisoning attacks. In summary, researchers have made and assigning labels to different clusters based on the
+some progress to address the shortcomings of existing methods, reconstruction errors, anomalies in the encrypted traffic
+but the following challenges still remain: can be efficiently identified.
+4746 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 11, NO. 5, SEPTEMBER/OCTOBER 2024
+
+ Experimental results demonstrate that PRAD outperforms outcomes [21], [22], [23]. With respect to the construction of
+other RL-based semi-supervised anomaly detection algorithms poisoning samples, attacks can be categorized into label manipuin terms of AUCROC and AUCPR scores on both the CTU13 lation and data manipulation. Data manipulation attacks include
+and CIRA-CIC-DoHBrw-2020 datasets. optimization-based methods [24], [25] and training-based methods [26], [27], [28], [29]. The integrity and auditability require-
+B. Organization ments imposed by network protocols on encrypted traffic data
+ pose significant challenges to anomaly detection in poisoning
+ The remainder of this paper is organized as follows. Section II
+ attacks based on training, necessitating the predominant use of
+briefly reviews related work. Section III describes the threat
+ optimization-based methods. Bovenzi et al. [30] demonstrated
+model and defense capabilities. Section IV presents the details
+ the impact of poisoning attacks, specifically using label flipping,
+of the proposed PRAD framework. Section V compares the
+ on semi-supervised anomaly detection models.
+test results of the PRAD framework and ablation experiments.
+ 2) Semi-Supervised Poisoning Attack Defense: Data poison-
+Finally, Section VI concludes the paper.
+ ing defense can be broadly categorized into traditional data poisoning defense methods and DL-based data poisoning defense
+ II. RELATED WORKS methods. Traditional data poisoning defense methods emphasize
+A. Semi-Supervised Traffic Anomaly Detection Algorithm preprocessing the data before model training to identify and
+ eliminate anomalies, exemplified by data cleaning techniques
+ Given the limited availability of labeled abnormal traffic
+ employing anomaly detectors [14], [15]. In contrast, DL-based
+data, most large-scale traffic anomaly detection tasks are carried
+ data poisoning defense methods typically involve preprocessout under zero-positive settings. Traffic camouflage techniques
+ ing the dataset before training, such as leveraging knowledge
+(such as traffic shaping and link padding) and the “curse of diextracted from a small set of clean data to bolster robustmensionality” resulting from the inherently high dimensionality
+ ness [31]. Optimization-based methods enhance the model’s
+of traffic data can impede the training and prediction capabilities
+ resilience [31], [32], [33], including dynamic model training [32]
+of conventional models. DL-based anomaly detection methods
+ and loss correction using a trusted small dataset [31]. Within
+can effectively address this challenge and substantially enhance
+ the context of Android malware detection, label-based semithe performance of anomaly detection in encrypted traffic scesupervised defense, cluster-based semi-supervised defense [34],
+narios. Most E2E-based traffic anomaly detection methods leverand deep K-NN [33] defense have been proposed as effective
+age neural networks to extract local or global features from traffic
+ countermeasures to detect and eliminate poisoned samples.
+data. These features are then used in scoring mechanisms or
+ Poisoning attack defense methods are designed to mitigate
+sample reconstruction errors to evaluate test samples and identhe impact of poisoning attacks on anomaly detection algotify anomalous data [11], [16], [17]. RL-based traffic anomaly
+ rithms. However, traditional poisoning defense methods may
+detection algorithms also employ neural networks to embed
+ be insufficient in eliminating similar poisoned samples, while
+the original data into low dimensions using manifold learning
+ deep learning-based poisoning defense methods, while depentechniques. This low-dimensional feature representation is then
+ dent on affected training samples, cannot ensure the complete
+utilized in conjunction with traditional anomaly detection algoeradication of poisoned data. Existing methods also struggle
+rithms for anomaly detection tasks [6], [7], [9], [10]. For exdue to limited data availability and similarities in poisoned data
+ample, Cao et al. [12] proposed an anomaly detection algorithm
+ patterns. The proposed PRAD framework adopts feature encodthat combines deep features extracted from Autoencoders (AEs)
+ ing to enhance feature extraction and alleviate the reduction of
+with traditional one-class classification. This approach leverages
+ inter-class distance. An online clustering algorithm combined
+the powerful feature learning capabilities of DL and the concept
+ with reconstruction loss is used to effectively detect anomalies.
+of manifold learning to transform the original high-dimensional
+ PRAD demonstrates superior performance compared to other
+data into a low-dimensional space. Subsequently, anomalies are
+ methods in mitigating attacks and achieving superior anomaly
+classified using an anomaly detection algorithm without altering
+ detection performance.
+the original data distribution.
+ III. THREAT MODEL AND DEFENSE CAPABILITY
+B. Semi-Supervised Anomaly Detection Poisoning Attacks and
+Defense In this section, we present a threat model for the poisoning
+ attack and analyze the advantages it provides to defenders. The
+ 1) Semi-Supervised Poisoning Attack: Poisoning attacks, as
+ threat model includes the adversary’s goal, knowledge, and capaproposed by Barreno et al. [18], pose a threat to the training
+ bilities in manipulating training data, as detailed in Section III-A.
+phase of Machine Learning (ML) models. Adversaries aim to
+ The strategies employed by defenders to effectively prevent
+compromise the integrity and reliability of the classifier by
+ poisoning attacks are significantly influenced by the information
+poisoning the training data. Poisoning attacks employ various
+ obtained from these threat models, as discussed in Section III-B.
+techniques, such as modifying labels, injecting malicious samples, and manipulating data. These attacks can be categorized
+ A. Goal, Knowledge and Capability of Adversary
+into two types: untargeted attacks, which aim to degrade a
+model’s overall performance [19], [20], and targeted attacks, The adversary’s goal is to undermine the model’s perforwhich aim to manipulate a model’s predictions for specific mance. Their level of knowledge regarding the target ML model
+WU et al.: POISON-RESILIENT ANOMALY DETECTION: MITIGATING POISONING ATTACKS 4747
+
+can vary. In a white-box attack [35], they possess direct access IV. ARCHITECTURE OF PRAD
+to training parameters, while in a black-box attack [36], they can
+ A. Overview of PRAD
+obtain similar data through manipulation techniques. Consider
+a victim training an anomaly detection algorithm on a limited An overview of PRAD is shown in Fig. 2. The PRAD comdataset, an adversary who can upload data to the Internet can ma- prises a front-end Data Preprocessing Module (DPM) and three
+nipulate parts of the unlabeled dataset. To ensure data integrity primary back-end algorithm modules: Feature Encoding Modand auditability, adversaries may use label-flipping attacks and ule (FEM), Feature Analysis Module (FAM), and GMM-based
+optimization-based data manipulation. online clustering Anomaly Detection Module (ADM). Specif-
+ Formally, poisoning adversary A in the unlabeled dataset con- ically, FEM extracts the low-dimensional hidden layer feature
+structs a set of poisoning examples SP , the input x∗ represents representation z and the reconstruction error e from the input
+the adversary’s carefully crafted poisoning samples injected into sample x. FAM then analyzes the differences in features and
+the training set, y ∗ = c(x∗ ) represents the desired false target reconstruction losses between normal and abnormal traffic data.
+label, NP denotes the maximum number of poisoning samples Subsequently, ADM employs the GMM clustering algorithm to
+that the adversary can inject, the neural network model is denoted cluster the hidden layer features z and assigns different clusters
+by f , the training algorithm is represented by Ts and x is a based on the average reconstruction loss μeci . Therefore, PRAD
+labeled subset of the original dataset X , there we have: captures feature dependencies by combining prior knowledge
+ and clustering algorithms to efficiently detect traffic anomalies
+ in poisoning attack scenarios.
+ SP ← A (x∗ , y ∗ , NP , f, Ts , x) . (1)
+ B. Feature Encoding Module
+The adversary’s goal is to manipulate the victim’s model such The FEM is used to extract the hidden layer feature reprethat the resulting model f ← T s(SP ∪ X ) classifies the selected sentation z from the input data x to alleviate algorithmic comexample as the desired target, i.e., f (x∗ ) = y ∗ . A constraint plexity. The FEM is constructed using a variant of the VRNN
+must be imposed to ensure that the number of poisoned samples architecture [38], which comprises three primary components:
+|SP | ≤ P% × Dtrain does not surpass a specified proportion encoder, decoder, and variational lower bound. Specifically, the
+P% of the total training data size Dtrain , where Dtrain = FEM employs encoder to extract the latent representation z from
+X ∪ SP . In practice, the adversary is typically limited in the the original high-dimensional data x. Subsequently, decoder
+amount of data they can poison, often less than 30% of the entire reconstructs the original data, providing the reconstruction error
+training set [35], [36]. e and the reconstruction error residual ε. The variational lower
+ In the experiment, malicious samples exhibiting a high de- bound is employed to evaluate the convergence of the algorithm.
+gree of similarity to normal training samples were meticulously z, e, and ε jointly characterize the deviations of anomalous
+selected for poisoning attacks to evade direct elimination dur- samples from the normal data distribution. ADM trained with
+ing the data cleaning process [21], [37]. These samples were these three factors is expected to achieve enhanced generalizathen uniformly treated as normal samples through label-flipping tion capabilities on unseen data.
+attacks and incorporated into training sessions. Additionally, 1) Encoder: Given N multivariate time series data of norconsidering that the poisoned samples are malicious samples mal traffic flow, a set of observations is represented by x =
+very similar to normal data and that the amount of data limits {x(n) }Nn=1 . For each flow, x
+ (n)
+ = {xn1 , . . . , xnt , . . . , xnT } ∈
+the intensity of the poisoning attack, the poisoning proportion in R , where T represents the length of the stream. To infer the
+ T
+
+the experiment was controlled to be between 0% ∼ 20%. This current data x(n) , we employ FEM for encoding, which also
+is consistent with the poisoning proportion of less than 30% updates the hidden variable h at each time step t. Simultanereported in the literature. ously, the prior probability p(zt |x<t , z<t ) of zt is obtained.
+ We input the hidden content of the previous time step ht−1
+ into the prior network to generate the mean μpri,t and standard
+ deviation σpri,t of the data distribution. Subsequently, we apply
+B. Capability of Defender
+ this to a random sampling of the standard normal distribution to
+ The acquisition of target model knowledge and training data obtain subsequent output calculations and hidden state updates.
+by defenders depends on the threat model. Deep-kNN [33] Therefore, we have:
+assumes access to ground-truth labels, and Taheri et al. [34]
+  2
+ 
+proposed label-based semi-supervised defense and clustering- ztn ∼ N μpri,t , σpri,t ,
+based semi-supervised defense. Similar to [34], PRAD operates
+under the assumption that an adversary has access to trusted [μpri,t , σpri,t ] = ϕpri (ht−1 ) , (2)
+training data and utilizes this access to acquire the distribution
+of normal training data, thereby enabling the forging of poisoned where μpri,t and σpri,t represent the mean and standard devisamples that closely resemble legitimate data. The capabilities ation of the prior conditional probability, and ϕ represents the
+of defenders may vary under different threat models, as defense parameters obtained by the encoder. By inputting data xnt into
+may require access to corresponding resources. the encoder, we obtain our hidden layer feature representation
+4748 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 11, NO. 5, SEPTEMBER/OCTOBER 2024
+
+Fig. 2. PRAD consists of four parts, i.e., (a) Data Preprocessing Module (DPM); (b) Feature Encoding Module (FEM); (c) Feature Analysis Module (FAM); and
+(d) Anomaly Detection Module (ADM).
+
+ztn through the encoder: required reconstruction residual εi as follows:
+  2
+ 
+ ztn |xnt ∼ N μenc , σenc , εi = e i − δ e , (8)
+  2
+ 
+ μenc , σenc = ϕenc (ht−1 , ϕx (xt )) . (3) where εi is represents the difference between the reconstruction
+ error of the data set and the maximum reconstruction error
+ 2) Decoder: The decoder’s decoding process aims to recon- in the training set. Essentially, it indicates the direction of
+struct the input data xnt . Its output depends not only on ztn but the input data. To sum up, z, e, and ε characterize the input
+also on the hidden layer variable ht−1 , we have: samples. Notably, these three elements uniquely represent the
+  2
+  input samples. With the FEM module, typical anomalies with
+ xnt |ztn ∼ N μdec,t , σdec,t ,
+   large reconstruction errors can deviate significantly from normal
+ 2
+ μdec,t , σdec,t = ϕdec (ϕz (zt ) , ht−1 ) ,
+ n
+ (4) samples.
+where ϕx and ϕz are feedforward neural networks used to
+ C. Feature Analysis Module
+extract features from x(n) and z (n) , respectively. Finally, a GRU
+neural network is employed to update ht : The purpose of FAM is to analyze the impact of poisoning
+ attacks on the zero-positive training set. We analyze the impact
+ ht = ϕGRU (xt , z t , ht−1 ) . (5) of the poisoned model on the unlabeled data set Dtest from two
+ 3) Variational Lower Bound: FEM employs VRNN to en- perspectives: (1) the changes in the feature space caused by the
+ poisoned model, and (2) the changes in the distribution of the
+hance the accuracy of prior probability prediction, thereby imreconstruction error loss. This analysis also provides a foundaproving data reconstruction and obtaining the correct hidden
+layer representation z (n) . The Evidence Lower Bound (ELBO) tion for subsequent ADM anomaly identification by providing
+ a priori information. Consider a pure training set Dtrain and a
+determines its lower bound, so our loss function Lloss is the 
+ poisoned training set Dtrain . The training processes of the pure
+negative of the optimal lower bound:
+ training set and the poisoned training set can be simplified to
+ 
+ 
+ T Ts (Dtrain ) and Ts (Dtrain ), respectively. The elements of the
+Lloss=− E [log p (xt |z <t , x<t ) − KL (Nenc,t ||Npri,t )], unlabeled data set Dtest obtained by different FAM encoding
+ t=1 processes f are f (z, eT , εT ) and f (z̃, ẽT , ε̃T ), respectively.
+ (6) To quantify the impact of poisoning attacks on normal and
+which the first term is to minimize the reconstruction error abnormal data in unlabeled sample sets, we propose two metrics,
+log p(xt |z <t , x<t ), while the second term aims to make the i.e., feature-based inter-class distance similarity evaluation, and
+posterior distribution Nenc,t closely approximate the prior dis- intra-class reconstruction error distribution-based shift evaluatribution Npri,t . tion.
+ Leveraging FEM, the high-dimensional original data x is 1) Feature-Based Inter-Class Distance Similarity Evaluareconstructed into x and the hidden layer feature representation tion: The RL-based method currently employs a classificationz = {fT s (x)|z ∈ RM } (M N ). Additionally, another key based anomaly detection approach to tackle the dimensionality
+element is obtained, which is the reconstruction error ei : challenge posed by the high-dimensional nature of traffic data.
+ ei = x i − x  i , (7) However, the inter-class distance of the representation data in
+ the unlabeled data set obtained through FEM decreases due
+where · is the L2-norm, and ei also serves as an indicator to the influence of poisoning attacks on the training set. To
+of anomalous samples. Thus, the set of all reconstruction errors quantify the changes in the feature space induced by model
+is obtained: e = {e1 , · · · eN } ∈ RN . We select the maximum poisoning, we employ the ratio of the inter-class distance after
+reconstruction error δe as the threshold to calculate our final poisoning to the inter-class distance obtained through normal
+WU et al.: POISON-RESILIENT ANOMALY DETECTION: MITIGATING POISONING ATTACKS 4749
+
+encoding as a metric for measuring similarity changes. Consider data classes in the unlabeled dataset Dtest . Let e = {en , em }
+z = {z n ∈ Rn∗M , z m ∈ Rm∗M }, (n + m = NT ) as the unla- denote the unlabeled dataset Dtest reconstruction errors obbeled data set representation data obtained by pure encoding, tained by pure encoding, where n represents the number of
+where z n represents the hidden layer representation of normal normal samples in the unlabeled data set and m represents the
+samples and z m represents the hidden layer representation number of abnormal samples. Similarly, the unlabeled dataset
+of abnormal samples, and M is the dimensionality of hidden Dtest reconstruction errors obtained by poisoned encoding can
+layer features. Similarly, z̃ = {z̃ n ∈ Rn∗M , z̃ m ∈ Rm∗M } is be obtained: ẽ = {ẽn , ẽm }. The distribution of intra-class rethe unlabeled data set representation data obtained by poisoned construction errors can then be measured by calculating the mean
+encoding. {η1 , · · · ηn , ηn+1 , · · · ηn+m } positive numbers, think μ and variance σ 2 :
+of these as weights, or better yet, as “multiplication” of axes. Let
+Cn (yn ) and Cm (ym ) denote the weighted sum of the distances
+ 
+ n
+ 1
+ n
+between the positive class center yn and the positive data points μn = ei , 2
+ σn = (ei − μn )2 , (13)
+z n , and the weighted sum of the distances between the abnormal i=1
+ n i=1
+class center ym and the abnormal data points z m , respectively:
+ 
+ m
+ 1 
+ m
+
+ 
+ n 
+ n+m μm = ei , 2
+ σm = (ei − μm )2 . (14)
+ m i=1
+ Cn (yn ) = ηi di (yn ), Cm (ym ) = ηi di (ym ), (9) i=1
+ i=1 i=n+1
+
+where di (y) = y − zi represents the Euclidean distance from By comparing the reconstruction error distributions of different
+the class center y to zi . The objective is to identify a point y (or a data types in the unlabeled dataset Dtest obtained through pure
+set of points) that minimizes the specified “cost function” C(y): encoding and poisoning encoding, we can quantify the impact
+   of poisoning attacks on the reconstruction error distribution of
+ Gn (z n , ηn ) = arg min Cn (yn ) , y ∈ RM , (10) various data types in the unlabeled dataset Dtest . It is noteworthy
+   that under the influence of poisoning attacks, as the attack
+ Gm (z m , ηm ) = arg min Cm (ym ) , y ∈ RM , (11)
+ intensity increases, the average reconstruction loss distribution
+where G is referred to as the weighted geometric median [39], of abnormal data in the unlabeled dataset becomes increaswhich employ the improved Weiszfeld algorithm [40] to solve ingly similar to the average reconstruction loss distribution of
+this problem. Subsequently, the impact of the poisoning attack normal data, making the anomaly detection classification task
+on the unlabeled data set Dtest can be assessed by calculating progressively more challenging. Our subsequent classification
+the Euclidean distance E(Gn , Gm ) between the normal data hypothesis posits that the average reconstruction error distridistribution Gn and the distribution of poisoned data Gm , bution of abnormal data is higher than that of normal data.
+which is obtained using the improved Weiszfeld algorithm. This In the entire unlabeled dataset, the number of abnormal data
+allows us to compare the inter-class distance of the pure encoded samples is smaller than that of normal samples. Therefore, the
+data E(Gn , Gm ) with the inter-class distance of the poisoned bias based on the intra-class reconstruction error distributionencoded data Ẽ(Gn , Gm ), thereby quantifying the impact of based shift evaluation also provides valuable prior information
+poisoning attacks. Furthermore, to gain a clearer understanding for subsequent anomaly detection algorithms. The experimental
+of the change in inter-class distance after surface poisoning, we results are analyzed in Section V-D2, which corroborate our
+opt to measure similarity based on distance. hypothesis.
+  (Gn , Gm )
+ E
+ Sim = , (12)
+ E (Gn , Gm ) D. Abnormal Detection Module
+where “Sim” represents the feature-based inter-class distance Leveraging the a priori information provided by FAM and the
+“similarity” evaluation index. A smaller value indicates a smaller features encoded by FEM, we propose an ADM based on GMM
+class distance, making the classification task of normal and online clustering. Specifically, the ADM employs an online
+abnormal data more challenging. Section V-D1 presents the GMM clustering algorithm to cluster the encoded features z.
+experimental analysis of feature space similarity evaluation for Subsequently, it assigns different clusters based on the average
+unlabeled datasets under poisoning attacks. reconstruction loss μeci , thereby achieving anomaly detection.
+ 2) Intra-Class Reconstruction Error Distribution-Based The detailed process of the ADM module is illustrated in Fig. 3.
+Shift Evaluation: Reconstruction errors are commonly em- Consider a set of J mixed multivariate Gaussian distribuployed as indicators for anomaly detection. However, anomaly tions, indexed by the parameter set Θ = {αj , ϑj }, where ϑj =
+detection methods based on reconstruction errors become in- {μj , Σj } denote the parameters of the j-th Gaussian distrieffective when the training data is compromised by poisoning bution, where the mean vector is denoted by μj , Σj is the
+attacks. In this work, we propose a strategy based on reconstruc- covariance matrix, and αj ∈ [0, 1] is the mixing probability.
+tion error distribution shift evaluation to quantify the impact of Suppose that the encoded feature sets z ∈ RNT ∗M obtained by
+poisoning attacks on unlabeled datasets Dtest . Specifically, we applying FEM to the original data x ∈ RNT ∗T are i.i.d according
+measure the impact of training data poisoning by comparing the to the mixed probability density function. We estimate the pachanges in the reconstruction errors distribution across different rameters Θ using the maximum likelihood estimation procedure,
+4750 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 11, NO. 5, SEPTEMBER/OCTOBER 2024
+
+ 1 
+ NT
+ Σj = γij (z i − μj ) (z i − μj )T , (20)
+ Φij j=1
+
+ where Φij = N T
+ j=1 γij . E-step and M-step are calculated
+ iteratively until the condition converges according to the
+ likelihood function of the formula (16).
+ Employing the online GMM clustering algorithm, J (J =
+ 2) clusters are obtained. Subsequently, the a priori information
+ provided by the FAM is leveraged to identify the corresponding
+ reconstruction loss for the feature representation in each cluster.
+Fig. 3. The ADM consists of (a) encoded feature set; (b) reconstruction error
+set; and (c) online GMM clustering algorithm. The last (d) is the cluster result The average reconstruction loss μecj of the two clusters is then
+obtained by online GMM clustering. calculated, respectively:
+ 
+ n1 
+ n2
+ μec1 = eci , μec2 = eci , (21)
+as shown in (15), where the log-likelihood is given by (16): i=1 i=1
+
+ ⎛ ⎞ where μec1 and μec2 represent the average reconstruction loss
+    of the two clusters, respectively, and n1 and n2 represent the
+ L (Θ|z) = p (z i |ϑj ) = ⎝ αj pj (z i |μj , Σj )⎠,
+ amount of data contained in each cluster, respectively. The
+ i∈NT j∈J
+ average loss is compared with the a priori information provided
+ (15)
+ by FAM. If μec1 > μec2 , then the cluster corresponding to μec2
+ ⎛ ⎞
+   is considered a normal sample, and the cluster corresponding
+ log (Θ|z) = log ⎝ αj pj (z i |μj , Σj )⎠ , (16) to μec1 is an abnormal sample. Conversely, if μec1 < μec2 , then
+ i∈NT j∈J the cluster corresponding to μec1 is considered a normal sample,
+ and the cluster corresponding to μec2 is an abnormal sample.
+where Σj is a symmetric positive definite matrix, z i represents The pseudocode for the online clustering ADM is shown in
+the observable elements of the i-th sample, pj (z i |μj , Σj ) rep- Algorithm 1.
+resents the probability density of the j-th sample value corresponding to the j-th Gaussian component, and its mathematical E. Training Procedure
+expression is as follows:
+ A two-stage training strategy is employed to construct PRAD.
+ 1 T
+ Σj−1 (z i −μj )
+ In the first stage, pre-training is performed using only the recon-
+ P (z i |μj , Σj ) = e−1/2(zi −μj ) . struction loss to train the feature encoding network. During this
+ (2π)NT /2 |Σj |1/2
+ (17) stage, all unlabeled training samples are utilized to pre-train
+Given the structural complexity of (15), the optimal Θ cannot the FEM with the objective of obtaining the entire network for
+be obtained by setting the derivative to zero. The Expectation subsequent stages. The fundamental encoding strategy involves
+Maximization (EM) procedure [41] is a powerful method for leveraging Amsgrad stochastic gradient descent algorithm and
+maximizing the log-likelihood function (16) and finding the the warm-up strategy to train the network, thereby mitigating
+optimal parameters. The latter iteratively updates the param- the issue of shrinking inter-class distance caused by poisoning
+eters of each Gaussian distribution. Therefore, the parame- attacks. In the second stage, FAM is employed to acquire prior
+ter set of GMM consists of {αj , μj , Σj }, where 1 ≤ j ≤ J. knowledge of the data for the subsequent ADM module by utiliz-
+And the parameters are estimated under the maximum likeli- ing the extracted features and their corresponding reconstruction
+hood setting. Optimization is usually performed using the EM errors. The limited effectiveness of reconstruction error as a
+algorithm, which is divided into two steps, i.e., E-step and sole classification criterion is addressed by utilizing a GMM to
+M-step: cluster the extracted features. This approach involves assigning
+ 1) E-step: The posterior probability γij is calculated by the cluster labels based on the reconstruction error values, thereby
+ equation, according to the given value of {αj , μj , Σj }: enhancing the classification process.
+
+ αj p (z i |μj , Σj ) V. EXPERIMENTS
+ γij = J
+ . (18)
+ j=1 αj p (z i |μj , Σj ) A. Dataset Description
+ 2) M-step: A new set of {αj , μj , Σj } can be obtained by In this part of the experiments, the performance of PRAD
+ using the aforementioned γij : is assessed on two publicly available encrypted traffic anomaly
+ detection datasets, i.e., CTU13 [42] and CIRA-CIC-DoHBrw-
+ 1 
+ NT 2020 (DoH2020) [43]. Specifically, the CTU13 dataset consists
+ Φij
+ αj = , μj = γij z i , (19) of botnet traffic combined with normal and background traffic,
+ NT Φij j=1
+ encompassing 13 types of botnet traffic. The DoH2020 dataset
+WU et al.: POISON-RESILIENT ANOMALY DETECTION: MITIGATING POISONING ATTACKS 4751
+
+ were padded, followed by data normalization. Table I presents
+ Algorithm 1: Online Clustering ADM.
+ the details of the datasets, each dataset consists of a training
+ Input: Encoded feature set set and a unlabeled data set. The training set includes normal
+ z = {z 1 , z 2 , . . ., z N T } ∈ RNT ×M ; samples and carefully selected poisoned samples, while the
+ The number of clusters J; Reconstruction errors set of z: unlabeled data set comprises a specific proportion of positive
+ e ={e1 , e2 , . . ., eNT } ∈ RNT . samples and negative samples. Here, P% denotes the ratio of
+ Output: {α1 , . . ., αJ }; {(μ1 , Σ1 ), . . ., (μJ , ΣJ )}; AD. poisoned data in the training set, and η represents the proportion
+ 1. Initialize the parameters of GMM according to z. of abnormal samples in the unlabeled data set.
+ 2. Loop Body:
+ E-step: Calculate the posterior probability γij by (18)
+ M-step: Re-estimate the parameters using data samples
+ B. Performance Metrics
+ weighted by the posterior probabilities using
+ formulas (19) and (20). To gauge prediction performance, the AUCROC metric is
+ 3. Until the maximum iteration number rmax or the employed, which is particularly susceptible to poisoning attermination condition is reached. tacks. Additionally, AUCPR is utilized to account for sam-
+ 4. Output 1: The parameter sets of each GMM component ple imbalance in measuring prediction performance. AUCROC
+ {(μ1 , Σ1 ), . . ., (μJ , ΣJ )} and {α1 , . . ., αJ }. represents the area under the receiver operating characteristic
+ 5. Count the number of samples in each cluster, and find curve, while AUCPR denotes the area under the precision-recall
+ the corresponding reconstruction error in e. curve. AUCROC characterizes the relationship between the true
+ 6. Calculate the average reconstruction error of samples in positive rate and false positive rate, whereas AUCPR focuses on
+ each cluster according to formula (21), recorded as μec1 the association between precision and recall. While AUCROC
+ and μec1 , respectively. evaluates prediction performance for both normal and anomaly
+ 7. While μec1 = μec2 do categories, AUCPR emphasizes anomaly-centric performance.
+ If μec1 > μec2 then It’s worth noting that both AUCROC and AUCPR range from 0
+ c1 is an abnormal sample cluster; to 1, with higher values indicating superior performance.
+ c2 is a normal sample cluster;
+ else
+ c1 is a normal sample cluster; C. Competitive Methods and Parameter Settings for PRAD
+ c2 is an abnormal sample cluster; 1) Competitive Methods: PRAD is compared with nine
+ end while methods: ECOD [6], COPOD [7], KDE [44], OCSVM [5],
+ 8. Output 2: AD LOF [4], iForest [8], LSCP [9], INNE [45], and SUOD [10].
+ Among these methods, KDE, LOF, and IForest do not employ
+ TABLE I poisoning attack suppression strategies, while the other six meth-
+ DATASETS DETAILS ods all incorporate such strategies. All comparison algorithms
+ are implemented using Python’s PyOD library, and the default
+ parameters are utilized for all methods. Notably, OCSVM offers
+ two poisoning suppression strategies (μ = 0.1 and u = 0.5).
+ PRAD is implemented using PyTorch, and experiments are
+ conducted using the PyTorch 2.0.0 framework via PyCharm
+ 2022.2.5 (Community Edition) on computers equipped with a
+ GeForce RTX 3090 GPU and an Intel (R) Xeon (R) Silver 4216
+ CPU.
+ 2) Parameter Settings: By default, the input encoder and
+ prior encoding in PRAD’s FEM consist of two linear encodings and a layer of Batchnorm1D regularization. The decoder
+ is similar, with a GRU neural network as the middle hidden
+ layer. The activation function for the middle layer is ReLU,
+facilitates the analysis, testing, and evaluation of DoH traffic while the final output layer employs the Sigmoid function as
+in covert channels and tunnels, and can be utilized to assess its activation function. The input data dimension is 500, and
+encrypted traffic anomaly detection algorithms. In our exper- the dimensionality of the encoded data is 128. It’s worth noting
+iments, we carefully selected hundreds of thousands of data that varying the number of hidden layers in FEM (N = 4 by
+points from the two datasets for further experimentation. Prior default) can impact the performance of PRAD. The proposed
+to employing these datasets for anomaly detector evaluation, PRAD is trained for a total of 175 epochs with a batch size of
+standard preprocessing procedures were applied to each dataset. 128, warm-up is 5 epochs. Validation results obtain at the end of
+Firstly, the initial 500 bytes of each dataset’s individual data each training phase serve to assess the PRAD’s generalization
+stream payload were extracted. Subsequently, excessively long capability and aid in deciding whether to retain the trained FEM.
+data streams were truncated, and excessively short data streams The clustering parameter J is set to 2.
+4752 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 11, NO. 5, SEPTEMBER/OCTOBER 2024
+
+ set is subjected to poisoning attacks, each component of the
+ unlabeled dataset encoded by the poisoned FEM undergoes
+ changes. Specifically, the average reconstruction error distribution of abnormal samples exhibits a continuous decrease, while
+ the reconstruction error distribution of positive samples remains
+ largely unchanged. More specifically, in the unlabeled sample
+ sets of DOH2020 and CTU13, the average reconstruction error
+ distribution of normal samples remains stable at approximately
+ 0.01 and 0.02, respectively. In contrast, the average reconstruc-
+Fig. 4. Feature analysis result: (a) feature-based inter-class distance similarity tion error distribution of abnormal samples gradually decreases
+evaluation for poisoning impact estimation; (b) intra-class reconstruction error and eventually stabilizes around 0.025 and 0.06, respectively.
+distribution-based shift evaluation for poisoning attack impact estimation. Concurrently, the mean distribution of the entire unlabeled
+ sample set also exhibits a gradual decrease, ultimately settling
+ around 0.015 and 0.03, respectively. It is noteworthy that the
+ mean reconstruction error of abnormal samples consistently ex-
+D. Effect of Feature Analysis ceeds that of normal samples in both datasets, offering valuable
+ 1) Feature-Based Inter-Class Distance Similarity Evalua- prior information for the proposed ADM.
+tion: In this part, we employ feature-based inter-class distance
+similarity to assess the impact of poisoned FEM on unlabeled
+data sets when the training set data is subject to poisoning E. Experiment Results With Competitive Methods
+attacks. Specifically, the concept of similarity here quantifies In this part, we compare the proposed PRAD with other
+the impact of poisoning attacks on the distance between the competing methods. The performance of different algorithms
+center of normal samples and the centers of abnormal samples. on data without FEM is evaluated, particularly under varying
+It is important to note that lower similarity values indicate a proportions of poisoning attacks. Subsequently, the performance
+reduced distance between data points of different classes, posing of feature-encoded data using alternative comparison algorithms
+significant challenges for subsequent anomaly detection tasks. is assessed under different degrees of poisoning attacks. PRAD
+Fig. 4(a) illustrates that as the intensity of poisoning attacks in the is adopted as a baseline for anomaly detection on poisoned
+training set increases, the impact of poisoning attacks intensifies, data, addressing the semi-supervised anomaly detection problem
+leading to a continuous decrease in the center distance between trained on the poisoned data in the training set. Comparing the
+positive samples and abnormal samples in the unlabeled data set. results in Table II, it is evident that traditional anomaly detection
+The DOH2020 experiences the most significant impact, with the algorithms without RL exhibit satisfactory performance on two
+distance between the centers of positive samples and abnormal metrics when faced with data poisoning attacks. However, due
+samples reduced to only 31% of the original class distance. to the high dimensionality of data attributes, the training cost of
+Similarly, in the CTU13, the distance between normal samples these algorithms becomes prohibitively high. Conversely, when
+and abnormal samples is reduced to approximately 56% of the utilizing RL-based solutions, traditional anomaly detection aloriginal class distance. The feature-based inter-class distance gorithms struggle in the presence of data poisoning attacks.
+similarity evaluation demonstrates that the impact of poisoning As the intensity of poisoning attacks escalates, the inter-class
+attacks on the training set leads to a continuous reduction in the distance between normal and abnormal samples progressively
+class distance of positive anomaly data in the unlabeled dataset, diminishes, leading to the failure of traditional anomaly detecwhich poses significant challenges for subsequent anomaly de- tion algorithms, especially on the CTU13. The average highest
+tection tasks. AUCROC and AUCPR scores across all compared algorithms
+ 2) Intra-Class Reconstruction Error Distribution-Based on the DoH2020 and CTU13 are 0.821 and 0.533, respectively.
+Shift Evaluation: In this part, we employ shift evaluation based Undoubtedly, this poses a significant challenge for the anomaly
+on intra-class reconstruction error distribution to quantify the detection task. In comparison to previous anomaly detection
+impact of the poisoned FEM module on the reconstruction error algorithms, the proposed PRAD demonstrates superior robustdistribution of positive anomaly samples in the unlabeled data ness against poisoning attacks. Firstly, PRAD maintains excelset when the training set is compromised by poisoning attacks. lent performance levels even without data poisoning attacks.
+Fig. 4(b) presents error bar plots depicting the reconstruction Moreover, as the intensity of data poisoning attacks increases,
+errors for different components of the unlabeled samples in the PRAD exhibits remarkable resilience in the face of decreasing
+DOH2020 and CTU13. As evident from the Fig. 4(b), when inter-class distance. With the increasing proportion of poisoned
+FEM is not affected by poisoning, the reconstruction errors data, the anomaly detection indicators AUCROC and AUCPR
+for normal samples and abnormal samples in the DOH2020 scores stabilize above 0.980 and 0.986, respectively. Imporunlabeled dataset are 0.01 and 0.1, respectively, with an overall tantly, the PRAD emerges as the frontrunner in the presence of
+unlabeled dataset error of 0.025. Similarly, in the absence of various levels of data attack intensity. Additionally, the average
+poisoning attacks on FEM, the reconstruction errors in CTU13 AUCROC and AUCPR scores across the two validation datasets
+are 0.02, 0.1, and 0.04 for normal samples, abnormal samples, reach an astonishing 0.995 and 0.996, respectively. Thus, PRAD
+and the entire unlabeled dataset, respectively. When the training achieves the highest average performance among all competing
+WU et al.: POISON-RESILIENT ANOMALY DETECTION: MITIGATING POISONING ATTACKS 4753
+
+ TABLE II
+ AUCROC AND AUCPR OF PRAD AND COMPARISON ALGORITHMS UNDER POISONING INTENSITY OF 0% ∼ 20%
+
+Fig. 5. Clustering results of CTU13 and DoH2020 under different poisoning attack intensities.
+
+approaches. Fig. 5 illustrates the clustering effect of PRAD on selecting VRNN as FEM within the PRAD framework. For
+the CTU13 and DoH2020. In the absence of data poisoning comparison, we assess the performance of AE and VAE using
+attacks, the inter-class distance between positive and negative the same experimental setup as the VRNN FEM. Table III
+data consistently exhibits a clear separation. However, as the presents the experimental results of the nine comparison algointensity of data poisoning attacks gradually intensifies, the dis- rithms. When AE and VAE are employed as FEM and are not
+tance between classes gradually diminishes, causing abnormal subjected to data poisoning attacks, their subsequent anomaly
+data points to move closer to normal data points. detection performance surpasses that of traditional anomaly detection algorithms, as evident from Table III. Furthermore, their
+F. Ablative Analysis simple architecture and low computational complexity make
+ them suitable options, especially when handling low-intensity
+ 1) The Effects of Different Encoding Strategies: We use data poisoning attacks. This flexibility enables the FEM to be
+different encoding strategies to demonstrate the rationality of seamlessly integrated as a plug-and-play component. However,
+4754 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 11, NO. 5, SEPTEMBER/OCTOBER 2024
+
+ TABLE III
+ COMPARISON OF PERFORMANCE BETWEEN DIFFERENT COMPARISON ALGORITHMS
+
+as the severity of poisoning attacks intensifies, particularly when
+the poisoning rate surpasses 10%, the anomaly detection performance on the CTU13 degrades significantly when AE or
+VAE is used as the FEM. Specifically, the AUCROC scores
+undergoes a steep decline, even falling below that of certain
+comparison algorithms. Additionally, the AUCPR scores also
+drops to 0.892. Although AE and VAE still surpass traditional
+anomaly detection algorithms as the intensity of data poisoning
+attacks increases, their overall performance falls short of that
+achieved by employing VRNN as the FEM, as indicated by
+the average results. These observations validate our choice of Fig. 6. The impact of Amsgrad backpropagation algorithm on anomaly deusing VRNN as the FEM in our experiments. Despite its higher tection results.
+complexity compared to AE and VAE, VRNN exhibits superior
+experimental performance, particularly when confronted with
+the increasing intensity of data poisoning attacks.
+ 2) Effect of Amsgrad Backpropagation Algorithm on Poison- algorithm, even a moderately intensified poisoning attack results
+ing Defense: We investigate the impact of incorporating the in a significant decline in performance across the entire CTU13.
+Amsgrad backpropagation algorithm during FEM training on In contrast, on the DoH2020, as the intensity of the poisoning
+the overall experimental results. Fig. 6 presents the experimental attack escalates, its performance experiences a gradual decline
+results assessed using the AUCROC and AUCPR scores. An before eventually stabilizing. It is noteworthy that the impact
+analysis of the AUCROC scores reveals that employing the on the results for the CTU13 is markedly different. As the in-
+Amsgrad backpropagation algorithm during FEM training leads tensity of poisoning attacks increases, utilizing the conventional
+to noticeable variations in the resulting performance, partic- AdamW algorithm leads to a sharp decrease in the AUCROC
+ularly on the CTU13. When using the conventional AdamW and AUCPR scores on the CTU13, causing them to drop to
+WU et al.: POISON-RESILIENT ANOMALY DETECTION: MITIGATING POISONING ATTACKS 4755
+
+Fig. 7. The impact of poisoning attack intensity and data imbalance on anomaly detection performance: From left to right, the results of DoH2020 and CTU13
+affected by different poisoning attack intensity and different data imbalance on the two indicators of AUCROC and AUCPR.
+
+approximately 0.75. This substantial decline results in a notable TABLE IV
+ TIME COMPLEXITY ANALYSIS OF PRAD AND COMPETITIVE ALGORITHMS
+increase in false positives and false negatives. In summary, integrating the Amsgrad algorithm during FEM training effectively
+mitigates the issues caused by poisoning attacks in subsequent
+anomaly detection tasks. It demonstrates significant benefits in
+preserving performance stability and minimizing false positives
+and false negatives.
+ 3) The Joint Effect of Data Imbalance and Poisoning Attacks:
+We study the overall performance of PRAD in the context of
+data poisoning attacks and data imbalance issues. The results
+of these experiments are illustrated in Fig. 7. We investigate
+the impact of increasing data poisoning attacks and the growing
+problem of data imbalance. In the absence of data poisoning
+attacks, PRAD demonstrates robust performance in the face and 13.1 times higher compared to VAE and AE, respectively.
+of data imbalance problems. However, as the intensity of data However, the predicted Params of the proposed model is 2.12 M,
+poisoning attacks increases and the proportion of abnormal which is around 3.3 times that of VAE and AE. Similarly, the
+data decreases, PRAD’s performance on the DoH2020 dataset back end of PRAD employs a clustering ADM based on GMM.
+remains remarkably resilient. The AUCROC scores gradually The back end’s training time complexity is O(n2 ), while the
+decreases and stabilizes around 0.975. Meanwhile, the AUCPR prediction process time complexity is O(n), indicating that the
+scores only experiences a significant decrease when the poison- training of the model’s front-end feature extraction and back-end
+ing rate reaches 20%. It is important to note that the CTU13 clustering anomaly detection modules incurs the highest time
+displays distinct characteristics. The impact of data imbalance complexity.
+becomes more evident as the intensity of poisoning attacks
+deepens. Particularly, when the poisoning rate is 20%, and the
+abnormal data accounts for 1/6 of the overall test data, the VI. CONCLUSION
+effect becomes most pronounced. Similarly, the AUCPR scores In this paper, we proposed PRAD, a semi-supervised enindicator exhibits a more prominent impact of data imbalance crypted traffic anomaly detection framework under poisoning
+as the intensity of poisoning attacks intensifies. In conclusion, attack scenarios. Specifically, to solve the inter-class reduction
+when confronted with data poisoning attacks, it is crucial to problem caused by poisoning attacks, we first propose a feature
+ensure that the proportion of abnormal samples in the total encoding module based on VRNN variants, and then adopt the
+dataset is no less than 20% when utilizing PRAD for anomaly Amsgrad gradient descent algorithm and warm-up strategy to
+detection. alleviate this problem. In addition, FAM is also introduced to
+ 4) Time Complexity: In this part, we present a time complex- evaluate the impact of poisoning attacks on inter-class distances
+ity evaluation of the proposed PRAD approach. To facilitate and analyze the distribution of reconstruction errors, providing
+a comprehensive comparison, we have additionally included important prior information for subsequent anomaly detection
+the training complexity analysis of competing algorithms in tasks. Finally, an online clustering algorithm is designed to
+Table IV. In the table, n denotes the size of the input data, t repre- effectively detect anomalies in encrypted traffic, which utilizes
+sents the number of trees, and ψ represents the subspace sample the extracted features and their associated reconstruction errors
+size. We perform a time complexity analysis on each component to effectively identify anomalies in encrypted traffic. Extensive
+of the model. Notably, since the front end of the model is based experiments have verified that PRAD can cope with anomaly
+on the FEM of VRNN, we employ two indicators: Floating-point detection of encrypted traffic in poisoning attack scenarios. In
+Operations (Flops) and Parameters (Params). The training Flops future work, we will address the issue of backdoor attacks in
+and Params of the proposed model are approximately 11.9 times encrypted traffic.
+4756 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 11, NO. 5, SEPTEMBER/OCTOBER 2024
+
+ REFERENCES [25] M. Al-Hawawreh, N. Moustafa, S. Garg, and M. S. Hossain, “Deep
+ learning-enabled threat intelligence scheme in the Internet of Things
+ [1] Z. Durumeric et al., “The security impact of HTTPS interception,” in Proc. networks,” IEEE Trans. Netw. Sci. Eng., vol. 8, no. 4, pp. 2968–2981,
+ 24th Annu. Netw. Distrib. Syst. Secur. Symp., 2017, pp. 1–14. Oct.–Dec. 2021.
+ [2] G. D. L. T. Parra, P. Rad, and K.-K. R. Choo, “Implementation of deep [26] P. W. Koh, J. Steinhardt, and P. Liang, “Stronger data poisoning attacks
+ packet inspection in smart grids and industrial Internet of Things: Chal- break data sanitization defenses,” Mach. Learn., vol. 111, no. 1, pp. 1–47,
+ lenges and opportunities,” J. Netw. Comput. Appl., vol. 135, pp. 32–46, 2022.
+ 2019. [27] F. Suya, S. Mahloujifar, A. Suri, D. Evans, and Y. Tian, “Model-targeted
+ [3] J. Sherry, C. Lan, R. A. Popa, and S. Ratnasamy, “BlindBox: Deep packet poisoning attacks with provable convergence,” in Proc. Int. Conf. Mach.
+ inspection over encrypted traffic,” in Proc. ACM Conf. Special Int. Group Learn., 2021, pp. 10000–10010.
+ Data Commun., 2015, pp. 213–226. [28] C. Zhu, W. R. Huang, H. Li, G. Taylor, C. Studer, and T. Goldstein,
+ [4] H. Gao, B. Qiu, R. J. D. Barroso, W. Hussain, Y. Xu, and X. Wang, “Transferable clean-label poisoning attacks on deep neural nets,” in Proc.
+ “TSMAE: A novel anomaly detection approach for Internet of Things time Int. Conf. Mach. Learn., 2019, pp. 7614–7623.
+ series data using memory-augmented autoencoder,” IEEE Trans. Netw. Sci. [29] S. Li et al., “Hidden backdoors in human-centric language models,” in
+ Eng., vol. 10, no. 5, pp. 2978–2990, Sep./Oct. 2022. Proc. Conf. Comput. Commun. Secur., 2021, pp. 3123–3140.
+ [5] J. Ahmed, H. H. Gharakheili, C. Russell, and V. Sivaraman, “Automatic [30] G. Bovenzi, A. Foggia, S. Santella, A. Testa, V. Persico, and A. Pescapé,
+ detection of DGA-enabled malware using SDN and traffic behavioral “Data poisoning attacks against autoencoder-based anomaly detection
+ modeling,” IEEE Trans. Netw. Sci. Eng., vol. 9, no. 4, pp. 2922–2939, models: A robustness analysis,” in Proc. IEEE Int. Conf. Commun., 2022,
+ Jul./Aug. 2022. pp. 5427–5432.
+ [6] Z. Li, Y. Zhao, X. Hu, N. Botta, C. Ionescu, and G. Chen, “ECOD: Un- [31] Y. Li, J. Yang, Y. Song, L. Cao, J. Luo, and L.-J. Li, “Learning from
+ supervised outlier detection using empirical cumulative distribution func- noisy labels with distillation,” in Proc. IEEE Int. Conf. Comput. Vis., 2017,
+ tions,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12181–12193, pp. 1910–1918.
+ Dec. 2023. [32] E. Malach and S. Shalev-Shwartz, “Decoupling” when to update”
+ [7] Z. Li, Y. Zhao, N. Botta, C. Ionescu, and X. Hu, “COPOD: Copula- from” how to update”,” in Proc. Adv. Neural Inf. Process. Syst., 2017,
+ based outlier detection,” in Proc. IEEE Int. Conf. Data Mining, 2020, pp. 961–971.
+ pp. 1118–1123. [33] N. Peri et al., “Deep k-NN defense against clean-label data poisoning
+ [8] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation-based anomaly detection,” attacks,” in Proc. Eur. Conf. Comput. Vis., 2020, pp. 55–70.
+ ACM Trans. Knowl. Discov. Data, vol. 6, no. 1, pp. 1–39, 2012. [34] R. Taheri, R. Javidan, M. Shojafar, Z. Pooranian, A. Miri, and M. Conti,
+ [9] Y. Zhao, Z. Nasrullah, M. K. Hryniewicki, and Z. Li, “LSCP: Locally “On defending against label flipping attacks on malware detection sysselective combination in parallel outlier ensembles,” in Proc. SIAM Int. tems,” Neural Comput. Appl., vol. 32, pp. 14781–14800, 2020.
+ Conf. Data Mining, 2019, pp. 585–593. [35] M. Jagielski, A. Oprea, B. Biggio, C. Liu, C. Nita-Rotaru, and B. Li,
+[10] Y. Zhao et al., “SUOD: Accelerating large-scale unsupervised heteroge- “Manipulating machine learning: Poisoning attacks and countermeasures
+ neous outlier detection,” Proc. Mach. Learn. Syst., vol. 3, pp. 463–478, for regression learning,” in Proc. IEEE Symp. Secur. Privacy, 2018,
+ 2021. pp. 19–35.
+[11] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “KITSUNE: An [36] Z. Tian, L. Cui, J. Liang, and S. Yu, “A comprehensive survey on poisoning
+ ensemble of autoencoders for online network intrusion detection,” in Proc. attacks and countermeasures in machine learning,” ACM Comput. Surv.,
+ 25th Annu. Netw. Distrib. Syst. Secur. Symp., 2018, pp. 1–15. vol. 55, no. 8, pp. 1–35, 2022.
+[12] V. L. Cao, M. Nicolau, and J. McDermott, “Learning neural representations [37] J. Chen, X. Zhang, R. Zhang, C. Wang, and L. Liu, “De-Pois: An
+ for network anomaly detection,” IEEE Trans. Cybern., vol. 49, no. 8, attack-agnostic defense against data poisoning attacks,” IEEE Trans. Inf.
+ pp. 3074–3087, Aug. 2019. Forensics Secur., vol. 16, pp. 3412–3425, 2021.
+[13] G. Bovenzi, G. Aceto, D. Ciuonzo, A. Montieri, V. Persico, and A. [38] J. Chung, K. Kastner, L. Dinh, K. Goel, A. C. Courville, and Y. Bengio, “A
+ Pescapé, “Network anomaly detection methods in IoT environments via recurrent latent variable model for sequential data,” in Proc. Adv. Neural
+ deep learning: A fair comparison of performance and robustness,” Comput. Inf. Process. Syst., 2015, pp. 2980–2988.
+ Secur., vol. 128, pp. 103–167, 2023. [39] N. Megiddo and K. J. Supowit, “On the complexity of some common geo-
+[14] I. Diakonikolas, G. Kamath, D. Kane, J. Li, J. Steinhardt, and A. Stewart, metric location problems,” SIAM J. Comput., vol. 13, no. 1, pp. 182–196,
+ “Sever: A robust meta-algorithm for stochastic optimization,” in Proc. Int. 1984.
+ Conf. Mach. Learn., 2019, pp. 1596–1606. [40] K. Pillutla, S. M. Kakade, and Z. Harchaoui, “Robust aggregation for
+[15] J. Steinhardt, P. W. W. Koh, and P. S. Liang, “Certified defenses for federated learning,” IEEE Trans. Signal Process., vol. 70, pp. 1142–1154,
+ data poisoning attacks,” in Proc. Adv. Neural Inf. Process. Syst., 2017, 2022.
+ pp. 3517–3529. [41] M. Rashid and J. A. Nanzer, “Online expectation-maximization based
+[16] H. Lu, T. Wang, X. Xu, and T. Wang, “Cognitive memory-guided autoen- frequency and phase consensus in distributed phased arrays,” IEEE Trans.
+ coder for effective intrusion detection in Internet of Things,” IEEE Trans. Commun., vol. 71, no. 6, pp. 3721–3735, Jun. 2023.
+ Ind. Informat., vol. 18, no. 5, pp. 3358–3366, May 2022. [42] S. Garcia, M. Grill, J. Stiborek, and A. Zunino, “An empirical comparison
+[17] J. Ashraf, A. D. Bakhshi, N. Moustafa, H. Khurshid, A. Javed, and A. of botnet detection methods,” Comput. Secur., vol. 45, pp. 100–123, 2014.
+ Beheshti, “Novel deep learning-enabled LSTM autoencoder architecture [43] M. MontazeriShatoori, L. Davidson, G. Kaur, and A. H. Lashkari, “Detecfor discovering anomalous events from intelligent transportation systems,” tion of DoH tunnels using time-series classification of encrypted traffic,” in
+ IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7, pp. 4507–4518, Jul. 2021. Proc. IEEE Int. Conf. Dependable, Autonomic Secure Comput., Int. Conf.
+[18] M. Barreno, B. Nelson, R. Sears, A. D. Joseph, and J. D. Tygar, “Can Pervasive Intell. Comput., Int. Conf. Cloud Big Data Comput., Int. Conf.
+ machine learning be secure?,” in Proc. ACM Symp. Inf., Comput. Commun. Cyber Sci. Technol. Congr., 2020, pp. 63–70.
+ Secur., 2006, pp. 16–25. [44] W. Hu, J. Gao, B. Li, O. Wu, J. Du, and S. Maybank, “Anomaly detection
+[19] Y. Hua, F. Wan, H. Gan, Y. Zhang, and X. Qing, “Distributed estimation using local kernel density estimation and context-based regression,” IEEE
+ with cross-verification under false data-injection attacks,” IEEE Trans. Trans. Knowl. Data Eng., vol. 32, no. 2, pp. 218–233, Feb. 2020.
+ Cybern., vol. 53, no. 9, pp. 5840–5853, Sep. 2023. [45] T. R. Bandaragoda, K. M. Ting, D. Albrecht, F. T. Liu, Y. Zhu, and
+[20] M. Fang, X. Cao, J. Jia, and N. Gong, “Local model poisoning attacks J. R. Wells, “Isolation-based anomaly detection using nearest-neighbor
+ to {Byzantine-Robust} federated learning,” in Proc. 29th USENIX Secur. ensembles,” Comput. Intell., vol. 34, no. 4, pp. 968–998, 2018.
+ Symp., 2020, pp. 1605–1622.
+[21] P. Zhao et al., “Garbage in, garbage out: Poisoning attacks disguised with
+ Zhangfa Wu received the M.S. degree in electronic
+ plausible mobility in data aggregation,” IEEE Trans. Netw. Sci. Eng., vol. 8,
+ science and technology in 2020 from the School
+ no. 3, pp. 2679–2693, Jul.–Sep. 2021.
+ of Electronic Information Engineering, Northwest-
+[22] Y. Liu et al., “Trojaning attack on neural networks,” in Proc. 25th Annu.
+ ern Polytechnical University, Xi’an, China, where
+ Netw. Distrib. Syst. Secur. Symp., 2018, pp. 1–17.
+ he is currently working toward the Ph.D. degree in
+[23] A. Shafahi et al., “Poison frogs! targeted clean-label poisoning attacks
+ electronic science and technology with the School
+ on neural networks,” in Proc. Adv. Neural Inf. Process. Syst., 2018,
+ of Electronic Information Engineering. His research
+ pp. 151–178.
+ interests include anomaly detection, network security,
+[24] W. R. Huang, J. Geiping, L. Fowl, G. Taylor, and T. Goldstein, “MetaPoideep learning, signal processing, and image processson: Practical general-purpose clean-label data poisoning,” in Proc. Adv.
+ ing.
+ Neural Inf. Process. Syst., 2020, pp. 12080–12091.
+WU et al.: POISON-RESILIENT ANOMALY DETECTION: MITIGATING POISONING ATTACKS 4757
+
+ Huifang Li received the Ph.D degree from North- Yi Hua received the M.S. degree in signal and inwestern Polytechnical University, Xi’an, China, in formation processing from the School of Electronic
+ 2004. From 2010 to 2011, he was with the Univer- and Information Engineering, Southwest University,
+ sity of North Carolina, Chapel Hill, NC, USA, as a Chongqing, China, in 2020. He is currently working
+ Visiting Scholar sponsored by the China Scholarship toward the Ph.D. degree in aerospace science and
+ Council. He is currently a Professor with the School technology with the School of Aeronautics, Northof Electronic Information, Northwestern Polytechni- western Polytechnical University, Xi’an, China. From
+ cal University. His research interests include deep 2023, he is with the School of Electrical Engineering
+ learning, network security, image processing, quan- and Computer Science, The University of Queenstum information processing, intelligent information land, Brisbane, QLD, Australia, as a joint training
+ processing, multimedia information processing, and doctoral student under CSC scholarship. His research
+measurement and control technology. interests include distributed signal processing, network security, image processing, robots, path planning, and information fusion of multiple aircraft.
+
+ Hongping Gan (Member, IEEE) received the Ph.D
+ degree in communication and information engineering from the State Key Laboratory of ISN, Xidian
+ Yekui Qian was born in 1980 in Anqing, Anhui, University, Xi’an, China, in 2020. From 2018 to
+ China. He received the Ph.D. degree from People’s 2019, he was with the School of Information Tech-
+ Liberation Army University of Science and Tech- nology and Electrical Engineering, The University of
+ nology, Beijing, China. He is currently a Professor Queensland, Brisbane, QLD, Australia, as a Visiting
+ with People’s Liberation Army Air Force Academy, Scholar sponsored by the China Scholarship Council.
+ Zhengzhou, China. His research interests include net- He is currently an Associate Professor with the School
+ work measurement, vulnerability mining, deep learn- of Software, Northwestern Polytechnical University,
+ ing, and network security. Xi’an. His research interests include deep learning,
+ compressive sensing, image processing, PolSAR ship detection, and network
+ security.

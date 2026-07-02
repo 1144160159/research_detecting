@@ -1,0 +1,168 @@
+2300                                                                  IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+
+
+
+          SYNAPS: A Neuro-Symbolic Framework for
+           Proactive Security in Consumer Electronics
+                                                        Debashis Das , Member, IEEE
+
+
+
+   Abstract— Proactive security risk assessment and prediction                 for adversaries. On the other hand, defenders must grapple
+(SRAP) is essential to defend against dynamic and evolving                     with monitoring and securing a heterogeneous ecosystem of
+threats in the modern interconnected consumer electronics                      resource-constrained endpoints [4]. This rapid evolution under-
+domain. With the rapid emergence of polymorphic attacks and
+complex network behaviors, traditional systems are often insuf-                scores the need to move beyond reactive and signature-based
+ficient due to their static nature and limited adaptability. Neural            defenses toward proactive risk assessment and intelligent threat
+systems alone fail to incorporate the domain expertise necessary               prediction in consumer electronic environments.
+for identifying well-known risk indicators in high-stakes cyber-                  Traditional security mechanisms for consumer electronic
+security contexts. To address these gaps, we propose SYNAPS:                   devices typically operate reactively [5]. While these defenses
+a neuro-symbolic framework for a proactive security model that
+fuses data-driven anomaly detection with transparent symbolic                  can block well-understood malware or repeat attacks, they
+reasoning to boost risk scoring and prediction accuracy for                    struggle against novel device-specific threats, such as zero-day
+consumer device security. Our design first trains an LSTM                      firmware vulnerabilities or obfuscated payloads that do not
+autoencoder on benign device telemetry to compute continuous                   match predefined signatures [6]. To overcome these limita-
+neural anomaly scores, and a curated set of device-specific                    tions in the consumer electronics domain, machine learning
+symbolic rules generates interpretable risk scores based on
+established security indicators. These scores are then blended                 (ML) techniques have gained traction for automated threat
+into a hybrid risk estimate, which feeds into a shallow MLP for                detection and anomaly classification [7]. Meanwhile, deep
+multiclass threat classification (NS-MLP). To further strengthen               neural networks can learn from large volumes of device
+SYNAPS against device-targeted evasions, we introduce three                    telemetry ranging from sensor readings and API call sequences
+variants: Gaussian-noise augmentation to mimic polymorphic
+                                                                               to network traffic and user interaction patterns to identify
+attacks (NS-Aug), adversarial training via a lightweight Genera-
+tive Adversarial Network (GAN) to model firmware-level exploits                subtle deviations indicative of emerging threats [8]. But, recent
+(NS-Adv), and transfer learning to adapt our autoencoder to new                studies have further found that consumer devices are uniquely
+device models and firmware versions (NS-Trans). Our experi-                    vulnerable due to their resource-constrained hardware and
+ment results indicate that SYNAPS and its enhanced versions                    diverse vendor-specific firmware [9]. High-profile incidents,
+substantially outperform neural-only baselines. NS-Adv achieves
+                                                                               such as large-scale IoT botnet attacks and exploitation of inse-
+93.3% test accuracy with a 12.3% relative improvement over
+the neural-only model. Overall, the integration of data-driven                 cure smart-home hubs, highlight the urgent need for proactive
+learning and symbolic reasoning significantly boosts the accuracy              defenses [10].
+and reliability of threat detection in consumer electronics.                      To fill this gap, we introduce SYNAPS, a symbolic-neural
+   Index Terms— Consumer electronics security, neural-symbolic                 framework [11] for proactive risk scoring and threat pre-
+reasoning, symbolic risk optimization, multiclass threat classifi-             diction on consumer electronics devices. SYNAPS fuses a
+cation, transfer learning, zero-day resilience.                                single-step LSTM autoencoder trained on benign telemetry
+                                                                               (API calls, sensor readings, network flows), which generates
+                      I. I NTRODUCTION
+                                                                               continuous neural anomaly scores, with an expert-driven rule
+
+C     YBER threats in consumer electronic devices are becom-
+      ing increasingly advanced, adaptive, and stealthy [1].
+Attackers now use AI tools to probe firmware vulnerabili-
+                                                                               engine that produces symbolic risk signals. These streams
+                                                                               are combined into a hybrid risk estimate and, together with
+                                                                               select raw telemetry features, fed into a shallow MLP classifier
+ties, automate exploitation of smart-home hubs and employ                      (NS-MLP) for multiclass threat detection [12]. The standout
+zero-day exploits or compromised insider credentials to persist                advantage of SYNAPS is that it delivers high-accuracy, real-
+undetected on devices [2]. Meanwhile, the proliferation of                     time threat detection on resource-constrained devices. Overall,
+smart wearable health monitors, voice-activated assistants, and                the contributions of this paper are as follows:
+connected appliances has expanded the consumer electronics                        • We design a trustworthy neuro-symbolic framework
+attack surface [3]. Each new device and its accompanying                            that combines temporal deep learning with interpretable
+cloud or mobile companion app provides fresh entry points                           rule-based reasoning for on-device threat detection and
+  Received 27 August 2025; revised 22 October 2025; accepted 6 December             risk scoring.
+2025. Date of publication 9 December 2025; date of current version 25 March       • We develop a hybrid scoring mechanism that combines
+2026.                                                                               the reconstruction error from unsupervised LSTM autoen-
+  The author is with the Department of CS and DS, Meharry Medical College,
+Nashville, TN 37208 USA (e-mail: debashis.das@ieee.org).                            coders with symbolic scores derived from expert-crafted
+  Digital Object Identifier 10.1109/TCE.2025.3642082                                rules to ensure cross-device consistency.
+               1558-4127 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+DAS: SYNAPS: A NS FRAMEWORK FOR PROACTIVE SECURITY IN CONSUMER ELECTRONICS                                                           2301
+
+
+
+  •  We improve model robustness through three targeted               Algorithm 1 Neural Anomaly Detection
+     techniques: (i) NS-Aug: Gaussian noise injection to                  Input : Time-series dataset X ∈ RTmax ×d , window
+     enhance generalization; (ii) NS-Adv: GAN-based gener-                        length T , false-alarm rate αFA
+     ation of adversarial telemetry traces for resilient learning;        Output: Reconstruction-error threshold τ , anomaly
+     and (iii) NS-Trans: transfer learning to adapt to firmware                   scores Sanom [t] ∀t
+     environments.
+   • We present an extensive empirical evaluation of SYNAPS           1 Initialize LSTM-AE parameters θ;
+     and its variants on a multi-device telemetry dataset.            2 for epoch ← 1 to Nepochs do
+   • We analyze the latency and memory usage of all                   3      Sample minibatch of windows {xt−T +1:t } from
+     variants on Mac-based hardware for real-time resource-                  nominal X ;
+     constrained environments.                                        4      Compute reconstruction x̂t−T +1:t = f θ (xt−T +1:t );
+   The rest of this paper is organized as follows. In Section II,     5      Update θ to minimize ∥x − x̂∥2 ;
+we review prior work on anomaly detection, symbolic rea-              6 Initialize list Etrain ← [];
+soning, and neuro-symbolic security systems. Section III              7 for t ← T, . . . , Tmax do
+introduces our SYNAPS architecture in detail. In Section IV,          8      x̂t ← f θ (xt−T +1:t );
+we describe our experimental setup, datasets, and evaluation          9      et ← ∥xt − x̂t ∥22 ;
+metrics, then present and analyze performance results across         10      append et to Etrain ;
+all SYNAPS variants. Finally, Section V concludes with a
+                                                                     11 τ ← the (1 − αFA ) quantile of Etrain ;
+summary of findings and outlines future enhancements.
+                                                                     12 for t ← T, . . . , Tmax do
+                     II. R ELATED W ORKS                             13     x̂t ← f θ (xt−T +1:t );
+                                                                     14     Sanom [t] ← ∥xt − x̂t ∥22 ;
+   Recent advances in cybersecurity have sparked growing
+interest in neuro-symbolic AI, as detailed in Table I, which         15   return τ, Sanom
+seeks to integrate neural networks with the reasoning and
+interpretability of symbolic systems [13]. This approach is
+increasingly recognized as a promising solution to address the
+                                                                     detection, another study [14] presented a system that merges
+limitations of purely neural or symbolic models in complex
+                                                                     deep anomaly detection with rule-based symbolic reasoning.
+threat areas.
+                                                                     This work balances data-driven adaptability with transparent
+   To improve network intrusion detection systems (NIDS),
+                                                                     rule logic. For proactive threat modeling, Lei et al. [19] devel-
+Almadhor et al. [13] introduced a framework that fuses deep
+                                                                     oped the ADAPT framework, which integrates game-theoretic
+learning with symbolic reasoning. Their system achieved
+                                                                     reasoning with neuro-symbolic agents.
+better detection accuracy and maintained human-interpretable
+                                                                        Finally, a recent study in [23] explored the role of
+outcomes. Kalutharage et al. [14] explored the use of rein-
+                                                                     neuro-symbolic AI in incident response and analyst decision
+forcement learning in combination with symbolic reasoning
+                                                                     support. Through initial case studies, the authors demon-
+for cyber defense. Their system was designed to gener-
+                                                                     strated how symbolic knowledge can be embedded into neural
+ate timely and explainable responses to evolving threats
+                                                                     pipelines to bridge the gap between theoretical AI capabilities
+using symbolic knowledge to guide the learning pro-
+                                                                     and operational cybersecurity needs. Many existing approaches
+cess. In the domain of explainable AI for privacy and
+                                                                     focus on narrow applications such as static intrusion detection
+threat modeling, Piplai et al. [15] proposed a neuro-symbolic
+                                                                     or policy enforcement, with limited adaptability to evolving
+framework that integrates knowledge graphs with neural
+                                                                     threats and polymorphic attack patterns. These gaps motivate
+learning. Their work addresses the crucial challenge of
+                                                                     the development of our proposed system, which aims to deliver
+explainability in cybersecurity using structured domain knowl-
+                                                                     a robust approach to threat detection in consumer electronics
+edge. Similarly, Himmelhuber et al. [16] demonstrated how
+                                                                     security systems.
+sub-symbolic models could be enhanced through symbolic
+overlays. Their approach focuses on the explanation of cyber-
+attacks for a more intuitive and traceable detection process.                        III. P ROPOSED M ETHODOLOGY
+   In the context of cloud-based intrusion detection, a recent
+study [22] applied neuro-symbolic methods to enable real-time           The proposed SYNAPS is designed with a dual-pipeline
+threat detection and monitoring. The model proved effective          neuro-symbolic architecture that unifies data-driven learning
+in cloud-native environments. Bertrand Van Ouytsel et al. [17]       with expert-defined reasoning for proactive cybersecurity. The
+introduced an approach combining symbolic system call                system processes incoming device telemetry through two
+analysis with federated learning. It enables collaborative           parallel paths: (1) a neural anomaly detection pipeline, where
+malware identification without sharing raw data. However,            an LSTM autoencoder models normal behavioral patterns and
+Jagatheesaperumal et al. [18] proposed a neuro-symbolic per-         produces a continuous anomaly score, and (2) a symbolic
+ception framework to enhance situational awareness and               reasoning pipeline, where a curated set of human-defined secu-
+resilience. Deep perceptual models with formal symbolic              rity rules computes risk indicators based on policy violations.
+constraints ensure safe and reliable operation in adversarial        These two risk signals are fused into a hybrid risk score that
+environments. In efforts to support real-time cyber threat           balances contextual adaptability with explainable logic.
+2302                                                           IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+
+
+                                                                 TABLE I
+                                   C OMPARATIVE S UMMARY OF N EURO -S YMBOLIC C YBERSECURITY A PPROACHES
+
+
+
+
+                                                                       After minimizing this loss, the network learns benign oper-
+                                                                       ating patterns. The hidden state h i from the LSTM captures
+              

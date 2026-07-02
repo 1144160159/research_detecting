@@ -1,0 +1,147 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025                                                         13527
+
+
+
+
+                    Few-Shot Anomaly Detection via
+                 Category-Agnostic Registration Learning
+                      Chaoqin Huang , Haoyan Guan , Aofan Jiang, Ya Zhang , Michael Spratling ,
+                        Xinchao Wang, Senior Member, IEEE, and Yanfeng Wang , Member, IEEE
+
+
+   Abstract— Most existing anomaly detection (AD) methods                                               I. I NTRODUCTION
+require a dedicated model for each category. Such a paradigm,
+despite its promising results, is computationally expensive and
+inefficient, thereby failing to meet the requirements for real-
+world applications. Inspired by how humans detect anomalies,
+                                                                                 A     NOMALY detection (AD) has recently drawn increas-
+                                                                                       ing attention due to its wide range of applications in
+                                                                                 defect detection [1], autonomous driving [2], [3], and med-
+by comparing a query image to known normal ones, this article                    ical diagnosis [4], [5]. Recent studies have mainly pursued
+proposes a novel few-shot AD (FSAD) framework. Using a train-                    an unsupervised learning paradigm that learns with normal
+ing set of normal images from various categories, registration,                  samples only, due to the challenge to collect an exhaustive
+aiming to align normal images of the same categories, is leveraged               set of anomalous samples. A typical solution is to model the
+as the proxy task for self-supervised category-agnostic represen-
+tation learning. At test time, an image and its corresponding
+                                                                                 feature distribution of the normal samples, and images that do
+support set, consisting of a few normal images from the same                     not conform to this distribution are considered anomalous [6],
+category, are supplied, and anomalies are identified by comparing                [7], [8], [9], [10], [11], [12], [13], [14].
+the registered features of the test image to its corresponding                      Most existing AD methods follow a “one-model-per-
+support image features. Such a setup enables the model to                        category” paradigm that trains an individual model for each
+generalize to novel test categories. It is, to our best knowledge,               category, as depicted in Fig. 1(a). Such a process requires
+the first FSAD method that requires no model fine-tuning for                     hundreds or thousands of images which are often prohibitive
+novel categories: enabling a single model to be applied to all                   to obtain in real-world scenarios. To reduce this burden of data
+categories. Extensive experiments demonstrate the effectiveness                  collection, few-shot AD (FSAD) has been proposed, where
+of the proposed method. Particularly, it improves the current
+state-of-the-art (SOTA) for FSAD by 11.3% and 8.3% on the
+                                                                                 only a few normal images are available for each category
+MVTec and MPDD benchmarks, respectively. The source code is                      during the fine-tuning of a pretrained model [15], [16]. Early
+available at https://github.com/Haoyan-Guan/CAReg.                               attempts include either leveraging various transformations
+                                                                                 to augment the few-shot data [15] or introducing a lighter
+  Index Terms— Anomaly detection (AD), few-shot learning
+                                                                                 model to estimate the normal distribution [16] so as to avoid
+(FSL), registration, self-supervised learning.
+                                                                                 overfitting. However, the above approaches still follow the
+  Received 22 January 2024; revised 13 June 2024; accepted 10 September          one-model-per-category learning paradigm.
+2024. Date of publication 3 October 2024; date of current version 9 July 2025.      Inspired by how human beings detect anomalies, this article
+This work was supported in part by the National Key Research and Develop-        explores a one-model-all-category paradigm for FSAD, i.e.,
+ment Program of China under Grant 2022ZD0160702; in part by the STCSM
+under Grant 22DZ2229005; in part by the 111 Plan under Grant BP0719010;
+                                                                                 training a category-agnostic AD model. To find the anomalies
+in part by the State Key Laboratory of UHD Video and Audio Production            in an image, humans simply compare it to a normal exemplar
+and Presentation; in part by the Ministry of Education Singapore, under its      and identify any difference. This approach requires no knowl-
+Academic Research Fund Tier 2, under Award MOE-T2EP20122-0006; and in            edge of the image category because comparison is naturally
+part by the National Research Foundation, Singapore, under its AI Singapore      category-agnostic. We thus model AD as a comparison task to
+Program (AISG), under Award AISG2-RP-2021023. (Chaoqin Huang and
+Haoyan Guan contributed equally to this work.) (Corresponding authors:           make it category-agnostic. To deal with the fact that objects
+Yanfeng Wang; Ya Zhang.)                                                         may appear in different positions, orientations, or poses,
+  Chaoqin Huang was with the Cooperative Medianet Innovation Center,             the images are first transformed into one coordinate system
+Shanghai Jiao Tong University, Shanghai 200240, China, and also with the         through a form of registration [17], [18], [19] to facilitate the
+Department of Electrical and Computer Engineering, National University of
+Singapore, Singapore 119077. He is now with the College of Information           comparison.
+Communications, National University of Defense Technology, Wuhan 430030,            An overview of the proposed Category-Agnostic
+China (e-mail: huangchaoqin@nudt.edu.cn).                                        Registration (CAReg) framework for FSAD is shown in
+  Haoyan Guan and Michael Spratling are with the Department of Infor-
+matics, King’s College London, WC2R 2LS London, U.K. (e-mail: haoyan.            Fig. 1(b). A Siamese network [20] containing three spatial
+guan@kcl.ac.uk; michael.spratling@kcl.ac.uk).                                    transformer network (STN) blocks [21] is used for registration.
+  Aofan Jiang, Ya Zhang, and Yanfeng Wang are with the Cooperative               For better robustness, we perform registration at the feature
+Medianet Innovation Center, Shanghai Jiao Tong University, Shanghai 200240,
+China, and also with Shanghai Artificial Intelligence Laboratory, Shanghai
+                                                                                 level, instead of pixel-by-pixel image registration [19].
+200030, China (e-mail: stillunnamed@sjtu.edu.cn; ya_zhang@sjtu.edu.cn;           The feature-level registration loss, a relaxed version of the
+wangyanfeng622@sjtu.edu.cn).                                                     image-level pixelwise registration loss, is used to minimize
+  Xinchao Wang is with the Department of Electrical and Computer                 the cosine distance of the features from images of the
+Engineering, National University of Singapore, Singapore 119077 (e-mail:         same category. The trained model has the ability to perform
+xinchao@nus.edu.sg).
+  This article has supplementary downloadable material available at              registration across different categories and is able to be
+https://doi.org/10.1109/TNNLS.2024.3465446, provided by the authors.             used at test time directly on novel categories. Anomalies are
+  Digital Object Identifier 10.1109/TNNLS.2024.3465446                           detected by comparing the registered features of the novel
+                       2162-237X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+13528                                               IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025
+
+
+
+
+Fig. 1. (a) One-model-per-category paradigm for the vanilla AD and FSAD. (b) One-model-all-category paradigm for the proposed category-agnostic FSAD.
+
+
+test category image and its corresponding support set (a few                      registration referenced by only one single image, accu-
+normal images from the target category). The comparison                           mulated features (AFs) from each category are used as
+process first estimates the normal distribution based on the                      registration references.
+support set, which can be implemented with statistical-based                   3) A Wasserstein-distance-based method is proposed to
+normal distribution estimators [22], and then fits the test                       flexibly, and automatically, choose the most suitable
+samples to normal distribution. Samples that fall out of the                      data augmentations (DAs) during the normal distribu-
+normal distribution are considered anomalies.                                     tion estimation stage, improving the accommodation of
+   We validate the effectiveness of the proposed CAReg frame-                     different distribution characteristics among categories in
+work on two challenging benchmark datasets for industrial                         the FSAD scenario.
+defect detection, MVTec [23] and MPDD [24]. CAReg is                           4) Results of more experiments are reported both for eval-
+shown to outperform the state-of-the-art (SOTA) FSAD meth-                        uating performance and assessing the method through
+ods [15], [16] in terms of area under the receiver operating                      ablation studies.
+characteristic curve metric (AUC) on two-shot, four-shot, and                  The rest of this article is organized as follows. Section II
+eight-shot scenarios, respectively, by 9.6%, 12.4%, and 11.9%               reviews the existing works related to AD and few-shot learn-
+on MVTec and 7.1%, 9.1%, and 8.8% on MPDD. We also                          ing (FSL). Section III formulates the problem of FSAD.
+experiment with three SOTA normal distribution estimation                   Section IV describes the CAReg training used for CAReg.
+methods: PaDim [22], OrthoAD (OAD) [25], and PatchCore                      Section V describes an AD system combining CAReg with
+(PC) [26]. Our experimental results show that CAReg is able                 multiple normal distribution estimators. Section VI presents
+to improve the average AUC for all three normal distribution                the experimental results on several real-world datasets, show-
+estimation methods, by 10.9%, 15.4%, and 8.5% on MVTec,                     ing the effectiveness of our method in both FSAD and anomaly
+and by 12.1%, 4.4%, and 8.0% on MPDD, for PaDim, OAD,                       localization. Finally, conclusions are drawn in Section VII.
+and PC, respectively.
+   Below we summarize the main contributions.                                                       II. R ELATED W ORK
+   1) CAReg is the first one-model-all-category framework for
+      FSAD, requiring no abnormal images at training and no                 A. Anomaly Detection
+      parameter fine-tuning at testing.                                        AD [28] has a wide range of applications, encompassing
+   2) Feature registration is leveraged as the proxy task to                still image AD [7], [8], [9], [10] and anomalous human behav-
+      train AD models, which demonstrate increased general-                 ior detection [29], [30], [31], [32], [33], [34]. The focus of
+      izability across different categories and datasets.                   this article is on industrial defect detection [23], [24], covering
+   3) CAReg outperforms the state-of-the-art FSAD methods                   both image-level AD and pixel-level anomaly localization. The
+      on both AD and anomaly localization tasks with stan-                  main challenge of unsupervised AD, compared with super-
+      dard benchmark datasets.                                              vised approaches, lies in the absence of training annotations,
+   Compared with our previous method, RegAD, presented                      be it at the image level and pixel level. Models are expected to
+at ECCV 2022 [27] as an oral presentation, the proposed                     be trained solely with normal instances, excluding anomalies.
+approach has the following technical improvements.                          Unsupervised AD research can be broadly categorized into
+   1) CAReg is designed as a framework for FSAD, which can                  two tracks: one-class classification-based AD approaches and
+      flexibly adopt various normal distribution estimators in              self-supervised learning-based AD approaches.
+      addition to PaDim that was used in our previous work.                    One-class classification-based AD approaches are engi-
+   2) CAReg introduces a modified feature registration mod-                 neered to detect anomalies by developing a model of normal
+      ule to improve the model’s robustness. Instead of                     data instances and then assessing whether new instances align
+HUANG et al.: FEW-SHOT ANOMALY DETECTION VIA CATEGORY-AGNOSTIC REGISTRATION LEARNING                                                13529
+
+
+
+with this normative framework. These strategies presuppose             generative models to produce novel class images, thereby
+that normal data can be encapsulated by compact models [35],           bridging the few-shot gap. Optimization methods identify
+[36], [37], which anomalies do not fit. To more accurately             commonalities among different classes and use optimization
+define the distribution of normal data, conventional methods           models for novel classes based on these commonalities. In this
+implement a range of statistical techniques [13], [38], [39],          article, CAReg is based on metric learning to address the chal-
+[40], [41]. OC-SVM [13] uses a kernel function to project              lenge of FSAD. The challenge is to detect image anomalies
+features into a space where normal instances are positively            for novel categories that are unseen in the training dataset,
+valued. Deep SVDD [14], [40] adopts a similar framework                using only a few normal samples. The key point is to enable
+but integrates a deep convolutional neural network to reduce           the model to be category-agnostic, and this ability is provided
+the volume of a hypersphere encompassing normal data rep-              by the proposed registration technique, allowing generalization
+resentations.                                                          across categories. Unlike previous work on FSL, training data
+   Recent advances in one-class classification for AD increas-         and support sets contain only positive (normal) examples
+ingly rely on feature embeddings from pretrained networks,             without any negative (anomalous) samples.
+leveraging these as robust indicators of normalcy. Various
+statistical estimators of normal distributions [22], [25], [26]        C. Few-Shot Anomaly Detectio

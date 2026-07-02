@@ -1,0 +1,694 @@
+Received 24 March 2025; revised 31 August 2025; accepted 10 January 2026. Date of publication 19 January 2026; date of current version
+ 5 February 2026.
+ The associate editor coordinating the review of this article and approving it for publication was Mona Jaber.
+ Digital Object Identifier 10.1109/TMLCN.2026.3655328
+
+ Fast Real-World Classification of
+ ECH-Enabled Applications
+ 1,2
+ YIZHAK KAHANA , YAAKOV J. STEIN1 , AND OREN GLICKMAN 2
+
+ 1
+ Allot, Hod Hasharon 4501317, Israel
+ 2
+ Bar-Ilan University, Ramat Gan 5290002, Israel
+ Corresponding Author: Y. Kahana
+
+ ABSTRACT Encrypted Client Hello (ECH) reduces information leakage in encrypted packet connections,
+ thereby complicating traditional Deep Packet Inspection (DPI) methods. While various machine learning
+ approaches have been proposed for classifying ECH network connections, prior research typically requires
+ lengthy observation times and focuses on a limited set of applications in constrained environments. This
+ study demonstrates a highly accurate classification mechanism capable of identifying a large number of
+ applications in real-world traffic cwithin one secondusing only the packets observed during an interval of
+ up to 1 second. To train our models we created a novel dataset derived from operational network traffic,
+ ensuring relevance and diversity in training and evaluation. Furthermore, we propose a novel hierarchical
+ approach that leverages protocol-specific knowledge, enabling scalable and efficient classification in
+ operational settings. We further show that a lightweight Random-Forest classifier attains virtually the same
+ accuracy as deep neural network variants, indicating that complex sequence models are not needed for this
+ task. Our findings highlight the effectiveness of leveraging short Per Packet Information (PPI) sequences
+ and domain-specific features to overcome the challenges posed by ECH, achieving performance superior
+ to that of existing methods.
+ INDEX TERMS Encrypted client hello (ECH), transport layer security (TLS), encrypted traffic classification, deep packet inspection (DPI), machine learning in networking, network traffic analysis, real-time
+ systems, per packet information (PPI).
+
+I. INTRODUCTION and it is now often stated that the great majority of Internet
+
+S ERVICE Providers require visibility into network traffic for a variety of critical tasks, including security,
+Quality of Service (QoS) monitoring, policy enforcement,
+ traffic is encrypted.
+ However, this statement regarding the ubiquity of encryption actually only signifies that user content is encrypted,
+congestion management, differentiated charging, regulatory while Internet packet headers still include unencrypted
+compliance, and user sentiment analysis. Traditionally, Deep metadata. This metadata can be exploited by Deep Packet
+Packet Inspection (DPI) has been the primary method for Inspection (DPI) to identify the application being used.
+enabling these capabilities, leveraging packet contents to A notable (but far from the only) example of unencrypted
+accurately classify network traffic. fields are those in the Transport Layer Security (TLS)
+ In the Internet protocol (IP) suite, packets are crafted to handshake. The TLS handshake is used by two parties wishbe self-describing, comprising a sequence of packet headers ing to securely communicate, before they have established
+before the user content. This structure facilitates standards- their secure channel, and consists of a Client Hello (CH)
+based recursive parsing by the intended recipient, but has the message followed by a Server Hello (SH) message. The CH
+unintended consequence of revealing information about the specifies the cipher suites the client supports, various cryptopacket to potentially malicious parties observing the packet related parameters, and optionally the name of the server
+on its way from source to destination. This situation has (SNI) the client wants to reach (since there may be many
+been rectified by adding various cryptographic mechanisms, virtual servers hosted behind a single IP address!). Since
+
+ © 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+ For more information, see https://creativecommons.org/licenses/by/4.0/
+VOLUME 4, 2026 337
+the cipher suite has not yet been agreed, the CH message is The remainder of this paper is organized as follows.
+unencrypted, passing SNI and other information in the clear. Section II surveys background and related work on
+ Over the past few years Internet traffic has become more encrypted-traffic classification. Section III formalizes the
+fully encrypted, with sophisticated methods of encrypting classification problem. Section IV details the construction
+overhead fields, including encrypted Client Hello (ECH) [1]. of our real-world dataset, including collection methodology,
+ECH, as its name implies, encrypts the TLS CH message format, statistics, and availability. Section V describes the
+using a public key previously obtained. proposed approach, first presenting three baseline mod-
+ While encrypting metadata enhances privacy, it introduces els and then introducing our hierarchical classification
+significant challenges for DPI systems, impacting essential framework. Section VI outlines the experimental setup,
+functions like security, QoS monitoring, and regulatory com- covering evaluation protocol and hyper-parameter settings.
+pliance. However, encrypted traffic still exhibits observable Section VII reports and analyzes the empirical results,
+statistical patterns in packet sequences. Characteristics such while Section VIII investigates distributional drift over time
+as packet directionality (client-to-server vs. server-to-client), and its impact on model performance. Finally, Section IX
+packet sizes, and inter-packet timing may form unique concludes the paper and discusses directions for future
+signatures for different applications. For example, video research.
+streaming traffic consists of sequences of client requests
+followed by server responses consisting of many large II. BACKGROUND AND RELATED WORK
+packets interspersed with acknowledgments, while voice Recent research has demonstrated the potential of machine
+calls exhibit more symmetric behavior with intermediate learning (ML) techniques for classifying encrypted traffic.
+sized packets in both directions. Early attempts were based on the byte content of packets of
+ Beyond such behavioral cues, ECH leaves the destination the connection, such as IP addresses and SNI [2], [3], [4],
+IP visible for routing, in contrast to overlays (e.g., VPNs, [5], [6], [7], and are thus rendered ineffective in the presence
+Tor) that mask the ultimate destination behind a tunnel of ECH. Subsequent studies exploited statistical features of
+endpoint. This visibility, overlooked in prior research, offers traffic patterns, such as histograms of packet sizes and intera robust organizing signal: group flows by visible endpoints arrival times. However, these methods often require long
+and apply small per-group classifiers to reduce decision observation windows (e.g., 30 seconds or more) [8], [9], renspace and improve efficiency. dering them unsuitable for many scenarios. A recent paper
+ Previous machine learning approaches have explored clas- from Huawei France [10] achieves 90% accuracy across the
+sification using packet size and timing statistics. However, top 200 applications of a proprietary dataset by analyzing the
+they suffered from limitations: (1) high computational and Per Packet Information (PPI) of the first 100 packets in TCP
+energy costs compared to rule-based DPI systems, (2) connections or 10 packets in UDP connections. However,
+reliance on long packet sequences, making them unsuitable requiring 100 packets significantly increases classification
+for scenarios such as blocking, and (3) only classifying delay and limits real-time applicability.
+small numbers of applications (as compared to thousands Wang et al. [11] apply a hybrid Bi-LSTM/1D-CNN to
+of applications recognized by DPI systems). PPI of the first 20 packets of each flow, achieving 91%
+ This paper makes the following key contributions: accuracy on a proprietary dataset of 80 mobile applications;
+ • We introduce a novel, real-world dataset of encrypted however, they also exploit plaintext TLS C LIENT H ELLO
+ traffic captured from an operational network, ensur- bytes, rendering this method unusable for classifying ECHing diverse and representative training and evaluation enabled flows.
+ conditions. Guarino et al. [12] similarly utilize PPI of 20 packets in
+ • We develop a high-accuracy classification mechanism their Mimetic-All model, but apply it to a very small number
+ capable of distinguishing a large set of applications (9) of traffic classes. Their Mimetic-ConSeq variant additionwith only one second of real-world traffic observation. ally inputs the initial 576 bytes of payload (which includes
+ • We propose a hierarchical classification framework that the TLS C LIENT H ELLO) thus rendering it irrelevant for
+ leverages domain-specific knowledge, grouping traffic identifying flows employing ECH.
+ based on visible server IP addresses to enhance scala- DISTILLER [13] fuses the first 784 payload bytes
+ bility and efficiency under ECH constraints. with header-derived features and utilizes the legacy ISCX
+ • We demonstrate that short packet sequences (as few as VPN–nonVPN dataset, framing a multitask setup whose
+ 10 packets) can be sufficient for classification, enabling application task spans only 15 classes. Once again payload
+ fast decision-making with minimal input data. bytes are input rendering the approach irrelevant for ECH.
+ Our findings highlight the effectiveness of leveraging In fact, most prior research has focused on a small number
+packet-level behavioral features to overcome the challenges of applications (fewer than 20) [2], [3], [4], [5], [6], [12],
+posed by ECH. The proposed hierarchical model further [13], [14], [15], limiting their applicability in operational
+improves classification efficiency by assigning smaller, spe- settings.
+cialized classifiers to subsets of applications, maintaining Rezaei et al. [16] combine the first 256 bytes from the
+high accuracy while reducing computational overhead. initial six packets, training a CNN that achieves about
+338 VOLUME 4, 2026
+Kahana et al.: Fast Real-World Classification of ECH-Enabled Applications
+
+TABLE 1. Representative Encrypted-Traffic Classifiers and their Signals. Columns Indicate Whether a Method is Content-Agnostic (No
+Raw Payload or Plaintext TLS Fields), Relies on Metadata, and Whether its Observation is Time-Limited to an Early Packet Window
+(Packet-Count Limited)
+
+94% accuracy across 80 mobile apps. They conclude that just the initial packets. In contrast, short-window methods
+“Server Name Indication (SNI), is the most important field often rely on features that are not available under ECH,
+in the SSL/TLS handshake,” emphasizing the importance of motivating our payload-free design with a window of ≤ 10
+precisely the information that ECH hides. packets.
+ Fauvel et al. [17] train a CNN on the size-direction Existing datasets often lack the diversity and relevance
+sequence of the first 20 packets per flow, and report ≈ 90% needed for operational use. For instance, [21], [22], [23] are
+accuracy on a 9.7M-flow dataset covering 200 applications. already outdated, while others rely on simulated traffic [24]
+Although the model is payload-free, it still waits for 20 or advanced data augmentation techniques to compensate
+packets, and the paper gives no bound on how long that for limited data diversity [25]. Proprietary datasets further
+collection may take, so classification latency remains uncon- hinder reproducibility and fair benchmarking [10], [14].
+strained for real-time scenarios. The CESNET datasets [18], [26] are valuable sources of
+ Prior research suffers from four distinct drawbacks: 1) encrypted traffic data but also exhibit several limitations. A
+small outdated datasets, 2) limited number of application first dataset, limited to TLS/TCP traffic, was collected over
+classes, 3) relying on data that ECH encrypts, and 4) two weeks in 2021, while a QUIC-only dataset was collected
+excessive observation times. over a month in 2022. The former encompasses some 200
+ Table 1 summarizes representative methods along three applications, while the latter has far fewer due to QUIC still
+axes that are decisive under ECH: (i) whether they con- having been in nearly stages of adoption. Both include the
+sume raw bytes (payload/CH/SH, which ECH encrypts), PPI of 30 packets for each connection and label connections
+(ii) whether they operate on metadata (packet sizes, timing, based on the SNI.
+PPI, flow statistics), and (iii) whether features are computed Despite these advancements, a significant gap remains in
+beyond the first few packets, which directly drives classi- the literature. To the best of our knowledge, no prior work
+fication latency. As the table shows, methods that avoid has conducted a comprehensive, large-scale study targeting
+raw bytes typically aggregate information across more than the classification of a substantial number of applications
+
+VOLUME 4, 2026 339
+under stringent time constraints.1 Recent studies confirm Formally, given a training dataset of annotated connecthat a small number of packets suffice for accurate pre- tions Xtrain = {ci }ni=1 , Ytrain = {appi }ni=1 , the objective is
+diction, but leave key issues unresolved. FlowFormers [9] to learn a classification model f : X → Y that maps
+limits its label space to just five classes and collects packets a connection c to a predicted application Appk ∈ Apps,
+for up to 10–20 s before issuing a decision. App-Net minimizing the overall classification error.
+[11] stops after 20 packets, yet its CNN branch consumes The model performance is evaluated on a separate test
+plaintext payload bytes that will vanish under ECH. Neither dataset of connections collected over a later time span
+work demonstrates that hundreds of applications can be Xtest , Ytest to assess its generalization capacity.
+classified when both (i) only PPI features are used
+and (ii) the capture window is constrained to ≤ 10 IV. DATASET CONSTRUCTION
+packets and ≤ 1s between the first and last packet. A. DATA COLLECTION
+Our combination of real-world data, real-time applicability, The dataset for this study was derived from live network
+and hierarchical classification represents a significant step traffic captured in a large mobile network starting in Septemforward in encrypted traffic classification, overcoming the ber 2024. To capture variability in network conditions and
+limitations of existing approaches. reflect a diverse range of usage patterns, the raw traffic was
+ Specifically, our study is the first to satisfy all of the partitioned into two subsets, each spanning approximately
+following real-world constraints simultaneously: (i) it relies four days (covering both weekdays and weekends). The first
+exclusively on header-derived Per-Packet Information that subset was reserved for model training, while subsequent
+remains observable even when Encrypted Client Hello is subset, collected at later dates, served as the test set.
+fully deployed, with no use of plaintext payload bytes or Traffic data was collected by enhancing a commercial
+long-window statistical aggregates; (ii) it limits the obser- real-time DPI system from Allot Ltd.2 operating in tap
+vation window to the first ≤ 10 packets of a connection, mode on an N × 100 Gbps bidirectional line. This DPI
+guaranteeing that the wall-clock time between the arrival system is highly fine-grained and can differentiate between
+of the first and last packet never exceeds one second; and sub-applications from the same provider. For example, it
+(iii) it delivers high accuracy across 115 application classes. distinguishes between Facebook browsing, Facebook video
+By demonstrating that large-scale, sub-second, ECH-robust streaming, and Facebook video uploads as distinct appliclassification is attainable on operational traffic, our hier- cations. Such granularity ensures detailed and accurate
+archical framework moves encrypted-traffic analysis from labeling.
+controlled prototypes to deployable practice. The DPI system assigns application labels (AppID) using
+ a proprietary rule set that is updated biweekly. The system
+III. PROBLEM FORMULATION achieves approximately 95% coverage of network connec-
+The goal of this study is to classify encrypted network traffic tions (leaving only about 5% unclassified) and exhibits an
+into a predefined set of applications under strict time and extremely low misclassification rate compared to simpler
+data constraints. We limit ourselves to features observable labeling approaches, such as relying solely on Server Name
+in the presence of ECH. Indication (SNI) [14] or server IP addresses. These attributes
+ Formally, let C = (PCI, PPI) represent a single net- make it particularly well-suited for generating high-quality
+work connection comprising: Per Connection Information labeled datasets for machine learning tasks.
+PCI = (DestIP, DestPort, protocol) and a sequence of k Additionally, connections are sampled by hashing the
+packets with corresponding per packet information PPI = client IP address, enabling us to vary the sampling rate.
+hPPI1 , PPI2 , . . . , PPIk i where DestIP, DestPort are the desti- Overall, the captured data encompasses 195 hours of traffic,
+nation IP address and port number, protocol is the layer comprising 313 million raw connections (averaging 445
+4 protocol (e.g., TCP or UDP) and each PPIi includes: connections collected per second).
+(∆ti , si , di ), where ∆ti is the arrival time of the i-th packet We further filtered out the following uninformative conrelative to the first packet (in milliseconds), si is the size nections:
+of the i-th packet (in bytes) and di is the direction of the • 146 million (47%) unencrypted DNS sessions,
+i-th packet (client-to-server or server-to-client). The task is • 31 million (10%) connections insufficiently identified
+to classify a connection C into one of M application classes: by the DPI system.
+Apps = {App1 , App2 , . . . , App M }. The fact that half of the connections were DNS is to be
+ The classification task must furthermore adhere to the expected. Of the insufficiently specified connections, over
+following constraints: the number of packets per connection, half were truly unknown applications (to be expected since
+k, is limited to a predefined maximum (e.g., 50), and the the DPI coverage is on the order of 95%) and the rest
+total observation time for any connection, max(∆ti ), must were only partially identified. In any case such connections
+not exceed a specified threshold (e.g., 1 second). are uninteresting for training purposes and were removed,
+ leaving 136 million nontrivial labeled connections.
+ 1 A preliminary version of this work was presented at CSCML 2024 and
+is available as a technical report [27]. 2 https://allot.com/network-intelligence/technology/traffic-identification/
+
+340 VOLUME 4, 2026
+Kahana et al.: Fast Real-World Classification of ECH-Enabled Applications
+
+TABLE 2. Dataset Fields for Each Network Connection TABLE 4. Most Popular Applications With Their Appearance
+ Percentages
+
+ The reader will note that applications are identified by
+TABLE 3. Key Statistics of the Dataset the DPI system in an actioanable manner. For instance,
+ the most popular application, entitled GoogleServices, is
+ actually an aggregate of multiple Google-provided services
+ that are mostly transparent to the user, including push notifications, time services, website optimizations, translation,
+ etc. AppleServices includes similar miscellaneous facilities
+ related to Apple products. Analytics and advertisements are
+B. THE DATASET FORMAT
+ as their name implies from many different servers. We note
+ that these application popularities are highly dependent on
+Each network connection is represented by connection-level
+ the network being a mobile network, and fixed networks
+identifiers (the 5-tuple consisting of two IP addresses, the
+ would have different statistics. For example, Netflix accrues
+layer-4 protocol, and two TCP/UDP port numbers), an
+ only about 0.1 % in this cellular network, while it is usually
+array of up to 50 PPI entries (collected under the oneone of the more popular applications in fixed networks.
+second constraint), and an application label. To preserve user
+ Furthermore, application popularity is highly dependent on
+privacy, all IP addresses are anonymized using the prefixlocality.
+preserving CryptoPAN algorithm [28].
+ In terms of the relationship between server IP addresses
+ The following table (Table 2) summarizes the fields for
+ and applications, over the training set, ∼91% of the server IP
+each connection.
+ addresses are associated in the data to a single application,
+ The flag byte contains additional information and is
+ 6% to two applications and 1% to three. However, in terms
+treated differently based on the protocol: For TCP packets,
+ of connections, only ∼10% of the connections are to a server
+it encodes the eight TCP flags, of which only the SYN flag
+ IP which is mapped in the training set to a single application.
+is used for classification. For UDP packets, it includes the
+first byte of the UDP payload. In the case of QUIC packets, D. DATASET AVAILABILITY
+this byte holds four unencrypted bits (e.g., header format, A sample of the dataset in CSV format has been made
+fixed bit, long packet type field), but only the header format publicly available via a GitHub repository.3 The full dataset
+bit is used for classification. is available for academic purposes and can be obtained by
+ The AppID label is supplied by the commercial DPI contacting the corresponding author.
+system and is further detailed in the following subsection.
+ V. METHODOLOGY
+C. DATASET STATISTICS
+ In this study, we develop and evaluate three baseline mod-
+Table 3 summarizes key statistics of the dataset, which els — a Random Forest classifier, an LSTM neural network,
+comprises a total of 136,201,280 connections. The table and an LSTM with Attention — to classify encrypted
+details the number of connections, client IPs, and server network traffic based on PPI features. In addition, we
+IPs for both the training and test sets, collected over two propose a novel hierarchical classification model that groups
+non-overlapping periods in September 2024. connections based on server IP addresses and trains separate
+ A total of 823 applications were reported by the DPI in ML models on each group, thereby leveraging domainthe dataset. Of the 763 applications in the training set, 115 specific knowledge to improve scalability and accuracy.
+appear in over 0.05% of the connections. Applications that
+attracted at least 1% of connections are presented in Table 4. 3 https://bit.ly/40oluem
+
+VOLUME 4, 2026 341
+A. BASELINE MODELS LSTM iterates only over the real time steps; after the
+We trained two types of classifiers (a Random Forest and recurrent layers, pad_packed_sequence restores the
+a Long Short-Term Memory (LSTM) neural network) and original rectangular shape.
+employed two stratagems (hierarchical and flat). Comparing The packed sequence is then fed into a stack of four
+the resulting four architectures enables assessing the effec- LSTM layers (each with 128 hidden units), which capture
+tiveness of conventional machine learning approaches versus the temporal dynamics of the packet sequences. After prodeep learning methods, as well as the value of exploiting cessing, the sequence is unpacked and the final hidden state
+domain-specific knowledge. corresponding to the last time step (of size 128) is extracted
+ In addition, we trained an additional LSTM model aug- as a compact representation of the sequence.
+mented with an attention mechanism to explore its potential To incorporate the server’s IP address into the model,
+for enhancing sequence modeling and improving classifica- the IP is first converted into an integer representation.
+tion accuracy. The attention mechanism allows the model For compatibility with the LSTM, this numeric value is
+to focus selectively on the most relevant parts of the normalized to the range [0, 1] and then concatenated with
+input sequence, potentially improving performance for PPI other per-connection features (protocol number, destination
+sequences with complex temporal dependencies. port, and PPI length), resulting in a combined feature vector.
+ We first evaluated the models under two configurations: The combined feature vector is then passed through two
+one that excluded protocol-specific knowledge, aligning fully connected layers: first, FC Layer 1 reduces the input
+with the flat (non-hierarchical) methods typically described (of size 131, comprising 128 from the LSTM output plus
+in the literature, and another that incorporated this knowl- 3 scalar per-connection features, or 4 if the server IP
+edge by including the server’s IP address as a feature. is included) to 64 dimensions; next, a ReLU activation
+This approach enabled a comparative analysis to determine is applied to introduce non-linearity; finally, FC Layer 2
+the impact of domain-specific features on classification transforms the 64-dimensional vector into C class scores,
+performance. where C is the number of application classes.
+ Figure 1A illustrates the overall architecture of the LSTM
+1) RANDOM FOREST CLASSIFIER model.
+A Random Forest classifier was employed as a baseline
+model for classifying encrypted network traffic. Given that 3) LSTM WITH ATTENTION
+the connections are of variable number of packets, we first In addition to the basic LSTM architecture, we enhanced
+converted the PPI data into fixed-length feature vectors our model by incorporating an attention mechanism to
+by zero-padding each sequence to the maximum packet further improve exploitation of temporal dependencies in
+length we allow for training. The individual PPI compo- the packet-level data. Unlike the standard LSTM, which
+nents, namely, packet time, direction, size, and flags, were relies solely on the final hidden state to summarize the entire
+extracted and padded accordingly, and then concatenated sequence, the attention mechanism dynamically computes a
+with per-connection features (including the Layer-4 protocol weighted sum of the hidden states from all time steps. This
+number, destination port, and the PPI sequence length). context vector highlights the most informative parts of the
+ We also tested a configuration in which the server’s IP sequence, allowing the model to focus on critical patterns
+address was incorporated as an additional per-connection that may otherwise be diluted in a single, compressed
+feature. To achieve this, the server IP was transformed into representation. After the LSTM layers produce a sequence
+a numeric representation: IPv4 addresses were converted of outputs, the attention mechanism computes the context
+into their 32-bit integer equivalents, while IPv6 addresses vector (of size 128), which is then concatenated with the
+were converted into their full 128-bit integer representations. per-connection features (e.g., protocol number, destination
+This conversion allowed the Random Forest to leverage port, PPI length, and optionally the server’s IP address).
+the server IP as a meaningful numerical feature without The resulting combined feature vector is subsequently fed
+requiring further normalization, given the model’s inherent through two fully connected layers that output class scores
+scale invariance. for each application. Figure 1B illustrates the overall architecture of the LSTM with Attention model.
+2) LSTM NEURAL NETWORK
+To better capture the temporal dependencies in the packet- B. HIERARCHICAL CLASSIFICATION
+level data, we developed a deep LSTM neural network that In contrast to the standard flat classification approach, which
+processes variable-length sequences. The architecture inputs employs a single monolithic approach to classify all network
+the same per-connection and per-packet information as the connections, we propose a hierarchical classification model
+Random Forest model, but does not pad the PPI. that leverages domain-specific knowledge inherent in the
+ Initially, the PPI sequence is processed using a Pack server IP address left not encrypted even under ECH. In
+Padded Sequence operation to handle variable-length inputs. our hierarchical approach, the training data is first parti-
+ This operation removes the right-padding from a mini- tioned into groups based on server IP, and then a dedicated
+batch of sequences and stores the true lengths, so the classifier is trained for each group. This approach not only
+342 VOLUME 4, 2026
+Kahana et al.: Fast Real-World Classification of ECH-Enabled Applications
+
+ where τ is a threshold parameter (set to 0.95 in our experiments). For these servers, classification is straightforward:
+ the predicted application is simply App∗s .
+ The second layer of our hierarchy involves popular server
+ IP addresses hosting multiple applications. We partition such
+ server IP addresses into distinct groups. Once the groups are
+ defined, a separate classifier is trained for each group. Three
+ grouping strategies were considered: ASN-based grouping
+ (an Autonomous System Number (ASN) is a unique identifier
+ for an organization-operated network on the Internet, an
+ autonomous system, e.g., those belonging to Google, Apple,
+ and Amazon), application-based grouping, and application
+ distribution clustering.
+ Connections corresponding to server IP addresses not
+ identified in the first or second levels are handed off to a
+ single flat classifier trained on the entire dataset.
+ ASN-based Grouping: This method maps server IP
+ addresses to their corresponding Autonomous System Numbers (ASNs), under the assumption that servers within the
+ same AS are likely to host the same applications. For
+ instance, server IP addresses associated with Google’s ASN
+ (15169) typically host Google services (e.g., Google Search,
+ Gmail, Google Maps, or YouTube), whereas those in Meta’s
+ ASN (32934) generally host Facebook, Instagram, or WhatsApp. A drawback of this approach is that large companies
+ may subdivide their IP address resources, meaning not
+ all addresses within an ASN necessarily host the same
+ services.
+ Application-based Grouping: In this approach, servers
+ are partitioned based on the dominant application that constitutes a significant portion of their activity. All server IP
+ addresses with the same dominant application are grouped
+ together, facilitating targeted model training on a more
+ homogeneous subset of traffic.
+ Application Distribution Clustering: This method
+Fig. 1. Architecture of the LSTM. (A) without and (B) with
+Attention.
+ groups servers by analyzing the probability distribution of
+ applications they serve. For each server, the algorithm computes the distribution of application labels, and servers with
+simplifies and accelerates the training process but also similar distributions are clustered together. This approach
+reduces the impact of misclassification errors by limiting captures nuanced similarities in application usage patterns,
+them to a subset of related applications. potentially leading to more effective grouping.
+ The overall flow of our proposed hierarchical classifica- We evaluated various grouping strategies over the validation model is illustrated in Figure 2. tion set using Precision, Recall, and F1 metrics under both
+ The first level of our hierarchy identifies server IP packet-length restrictions (50 and 10 packets). Across all
+addresses that predominantly host a single application. For- back-end models, the differences were marginal (<0.4%) in
+mally, let S denote the set of all server IP addresses in the every case, with no strategy offering a statistically meaningtraining data. For each address s ∈ S , let N s be the total ful advantage. Since ASN grouping is the simplest we adopt
+number of connections associated with s and N s (App) the it as the default configuration throughout the remainder of
+number of connections labeled with application App. We the paper.
+define the dominant application for server s as In the following we report results for ASN-based grouping; we map popular server IP addresses to their ASN using
+ App∗s = arg max N s (App), publicly available information. In our training set we found
+ App
+ 11 popular ASN groups (encompassing over 45% of the
+and consider s to host essentially a single application if connections) with between 10 and 30 applications per group.
+ N s (App∗s ) As expected, ASN groups included Google, Apple, Amazon,
+ ≥ τ. Microsoft, Akamai, Cloudflare, and several CDNs.
+ Ns
+VOLUME 4, 2026 343
+Fig. 2. Hierarchical Decision Flow.
+
+VI. EXPERIMENTAL SETUP architecture consists of four stacked layers, each with 128
+A. EXPERIMENTAL CONFIGURATION AND EVALUATION hidden units. Following the LSTM layers, the extracted
+Our dataset contains over 800 distinct applications; however, features are concatenated with per-connection features and
+many of these occur so infrequently that they are not passed through two fully connected layers: the first reduces
+practical for separate classification. Therefore, we aggregate the combined feature vector from 131 to 64 dimensions
+all applications appearing in less than 0.05% of the connec- (with ReLU activation), and the second maps the 64-
+tions into a single label, Other. This aggregate label is the dimensional vector to C class scores, where C is the
+expected output for applications appearing in the test set but number of application classes. The LSTM-based models
+that were absent from the training set. were trained using the Adam optimizer with an initial
+ As detailed earlier in Sec. IV, the original DPI annotation learning rate of 10−3 and a StepLR scheduler that reduces
+comprised 823 distinct apps, 763 of which appear in the the learning rate by a factor of 0.5 every 5 epochs. Training
+training set. Applying the 0.05% threshold leaves 115 output was performed for 20 epochs with a batch size of 128,
+labels: 114 actual applications plus an aggregated Other and gradient clipping (maximum norm of 5) was applied
+class that represents the remaining 648 rare apps. Table 4 to prevent diverging gradients.
+already shows the per-class share for every app that attracts Before the final training run we performed a coarse grid
+at least 1% of connections; the long-tail apps below that search on a pilot capture collected one month earlier (distinct
+threshold collectively account for less than about 3% of the from the training and test sets in Table 3). We used a 10%
+traffic and are now captured by the single Other label. This stratified validation split and F1 as the objective. For the
+consolidation keeps the label space tractable while ensuring Random Forest, we varied n_estimators {10, 15, 25,
+that flows belonging to previously unseen or extremely 50} and max_depth {20, 25, 30, 35, None}; 15 trees with
+rare apps are still mapped to a valid output class during depth 35 yielded the best trade-off between validation F1
+evaluation. and inference speed. For the LSTM family we explored
+ We evaluate our models using standard classification hidden sizes {64, 128, 256}, stack depths {2, 4}, learning
+metrics: Precision, Recall, and F1-score. We compute these rates {1E-2, 1E-3, 5E-4}, and batch sizes {64, 128}. The
+metrics for each class individually and then combine them 4 × 128 configuration with an initial rate of 1E-3 produced
+using weighted averaging in order to account for potential the highest validation F1 score. Further random search
+class imbalance. improved F1 by less than 0.2, so the grid-selected settings
+ were adopted for all reported experiments.
+B. HYPERPARAMETER SETTINGS AND The hierarchical classification approach utilizes the same
+IMPLEMENTATION DETAILS configurations as the baseline models. However, it trains
+We utilized scikit-learn to train the Random Forest classifier separate classifiers for each server group, enabling a more
+and PyTorch for the LSTM-based models. For the Random tailored and scalable approach.
+Forest classifier, we used 15 trees with a maximum depth To comprehensively evaluate our methodology, we conof 35 and a random state of 42 to ensure reproducibility. ducted experiments under multiple configurations. For the
+The entire training dataset was utilized without a separate baseline (flat) models, each model was evaluated both with
+validation split. and without the inclusion of the server IP as an additional
+ For the LSTM models, input sequences were first per-connection feature, and under two PPI length limits: 10
+processed using the Pack Padded Sequence operation and 50 packets. In parallel, the hierarchical classification
+to accommodate variable-length PPI data. The LSTM approach employing ASN-based grouping was tested using
+
+344 VOLUME 4, 2026
+Kahana et al.: Fast Real-World Classification of ECH-Enabled Applications
+
+TABLE 5. Model Performance for Different Configurations
+
+all three underlying baseline architectures (Random Forest, data fields such as port numbers. Also, packet arrival times
+LSTM, and LSTM with Attention) under both 10 and 50 remain significant despite variability in round-trip time
+PPI length limits. This experiment design enables a detailed from connection to connection. Repeating the analysis for
+analysis of the impact of protocol-specific features and the 10-packet case yields the same overall picture: packet
+sequence length on classification performance. sizes contribute 59.56% of total importance, arrival times
+ 28.17%, and direction bits 6.63%. The destination port
+VII. RESULTS AND ANALYSIS remains of minor importance at 1.76% (rank 20), and
+Table 5 presents a comprehensive comparison of the three per-packet flag bytes account for 2.27 %. The top-ranked
+baseline models (Random Forest, LSTM, and LSTM with features are once again the early size-time ones.
+Attention) evaluated under two packet length restrictions (10 All ASN-specific group models in the hierarchical
+and 50 packets) and with two baseline configurations (with approach still rely on early packet-size (ppi-ps_k) and
+and without the inclusion of the server IP as an additional arrival time (ppi-pdt_k) cues, similar to the single model
+feature) as well as the proposed hierarchical approach. The in the flat approach. However, the fine-grained ordering
+table shows that performance, as measured by Precision, within those families varies across groups: in some, an
+Recall, and F1 Score, is highly sensitive to both the packet arrival time feature is the single most important; in others,
+restriction and the use of protocol-specific features. In a size feature leads; among size features, the top index may
+general, reducing the packet restriction hampers results, due be ppi-ps_0 in one group but ppi-ps_4 (or nearby)
+to the reduced amount of input information available for in another, and the highest-ranked ppi-pdt_k likewise
+classification. Notably, the Random Forest model benefits shifts within the first few packets. Connection-level scalars
+significantly from incorporating the server IP feature, par- remain secondary overall, yet their weight also varies by
+ticularly when using the shorter (10-packet) limit, where group: destPort ranges from < 0.1% to ≈ 3% of total
+it actually achieved the best performance overall. For the importance, and protocol/ppiLen are typically at or
+50-packet restriction no clear winner emerges among the below a few percent. Per-packet flag bytes are generally
+baseline models, suggesting that the additional input data negligible, although they become non-negligible in a minormitigates the advantages of protocol-specific features. These ity of groups. In short, different groups share the same
+findings underscore the importance of optimizing both the overall behavior, but each group model can specialize its
+feature configuration and the packet length restriction to decision cue order in a manner that is averaged out in a
+achieve accurate real-time classification of encrypted traffic. single monolithic flat model.
+
+A. FEATURE-IMPORTANCE ANALYSIS (RANDOM B. SINGLE-APP NODES IN THE HIERARCHICAL
+FOREST) CONFIGURATION
+To understand which features drive the Random-Forest’s As detailed in Section V-B, the hierarchical method desigdecisions, we computed Gini-importance scores on the full nates a server-IP group as “single-app” when its dominant
+training set and ranked all 203 inputs. For the flat approach, label accounts for at least the purity threshold τ = 0.95.
+all of the top-10 features are packet size or arrival time Flows in such nodes are labeled deterministically, so their
+entries from the first six packets. In aggregate, packet sizes Precision, Recall, and F1 are each ≥ τ. All metrics reported
+contribute 54.5% of the total importance and packet arrival in Table 5 (and in the subsequent drift tables) therefore reptimes 32.0%. Direction bits (ppi-pd_k) contribute 8.31%. resent weighted averages that combine these deterministic
+In contrast, per-connection fields contribute comparatively single-app nodes with the learned multi-app classifiers.
+little: destPort ranks 17th (1.55%), ppiLen ranks 25th
+(0.88%) and protocol 32nd (0.69%). Per-packet flag-byte C. COMPARISON WITH DEEP MODELS
+features are individually tiny (maximum 0.34%) and ≈ 2% There seems to be no significant advantage for deep learning
+in aggregate. This confirms that the classifier relies mainly models in this problem. Although there is a slight peron early size-time behavior features, rather than unencrypted formance improvement when operating on 50 packets, it
+VOLUME 4, 2026 345
+TABLE 6. State-of-the-Art Comparison
+
+remains insufficient to justify the complexity and compu- TABLE 7. Resource Footprint of Flat Vs. Hierarchical
+tational overhead of deep learning approaches—especially Approaches
+in real-time systems that would require dedicated hardware
+such as GPUs.
+ Given the prominence of Transformer architectures in
+the latest literature [29], we also evaluated a compact
+Transformer encoder on our dataset. The network (2 layers, dmodel =128, 4 heads) projects each 4-dimensional PPI present distinct key points that benefit from selective
+vector into dmodel , applies sinusoidal positional encoding, focusing.
+stacks two TransformerEncoderLayers, mean-pools
+the non-padded token representations, and concatenates D. ADVANTAGES OF THE HIERARCHICAL APPROACH
+the resulting sequence vector with the three scalar fields Our experiments further show that our proposed hierarchi-
+(protocol, destPort, ppiLen) before a 2-layer MLP. cal approach consistently outperforms the flat classification
+For the flat approach, this Transformer attains an F1 score of approach. Specifically, when using a packet restriction of 50,
+87.08% when inputting PPI from 50 packets, below the cor- the best performing model is the hierarchical model using
+responding LSTM+Att scores (89.99%). The reason for this deep LSTM model with attention achieving approximately
+lackluster behavior is conceptual: self-attention excels when 95% accuracy - a 5% improvement over the equivalent flat
+long-range token interactions matter (language or video model.
+with hundreds of steps). Our sequences contain at most The 10 packet restriction led to some performance degra-
+50 time steps, with most of the discriminatory information dation, but the impact was not substantial. We conclude that
+in the first six. Attention based models have no advantage this approach more effectively leverages domain-specific
+for such ultra-short sequences, while lighter recurrent or information than merely adding server IP address to the
+tree-based models may more efficiently capture the class input, in addition to being more scalable and maintainable.
+differences. Table 6 compares state-of-the-art studies carried out on
+ A detailed comparison reveals that while the Ran- diverse datasets, restricted to investigations with at least
+dom Forest model benefits significantly from the inclusion eighty application classes.
+of the server IP feature—especially at the 10-packet
+restriction—the LSTM-based models exhibit varying per- E. COMPUTATIONAL COMPLEXITY
+formance trade-offs. In fact, the Random Forest classifier Computational complexity of inference in the hierarchical
+outperforms the LSTM model at the shorter packet restric- approach is lower than that of the flat approach for two
+tion, likely because the LSTM’s ability to capture temporal reasons. First, some percentage of connections correspond to
+patterns is diminished when fewer packets are available. server IP addresses that uniquely determine the application,
+Additionally, incorporating an Attention layer did not yield and thus do not require further classification at all. Second,
+noticeable improvements, suggesting that the features (e.g., the models used in the hierarchical approach are smaller
+packet sizes, directions, and inter-arrival times) do not than the large flat model.
+
+346 VOLUME 4, 2026
+Kahana et al.: Fast Real-World Classification of ECH-Enabled Applications
+
+ network operator at intervals of one and two months following the initial model training period. Each drift dataset spans
+ approximately four days of network traffic, covering both
+ weekdays and weekends, to capture a representative range
+ of network conditions and user behaviors. The temporal
+ spacing of one and two months was chosen to reflect
+ potential shifts in traffic patterns due to seasonal changes,
+ application updates, and evolving user trends. These drifttesting datasets underwent the same preprocessing pipeline,
+ and were evaluated using the same metrics as the original
+ training and testing datasets, enabling consistent perfor-
+Fig. 3. Per-class confusion on the 115-label test set. Color is on
+a logarithmic scale to reveal low-frequency errors. mance comparisons.
+
+ B. RESULTS
+ Table 8 presents the F1 performance of all model con-
+ Table 7 confirms that the compact sub-models of the
+ figurations evaluated on test data collected one week (the
+hierarchical design reduce the parameter footprint by ≈
+ original test set), one month, and two months after training.
+56% and cut end-to-end CPU latency by a factor of 3 .
+ Overall, the results indicate a consistent drop in F1 score
+These empirical results substantiate our complexity claim in
+ over time. The performance drop varies with configuration,
+Section V.
+ being generally less pronounced for hierarchical approach
+F. CONFUSION MATRICES and more significant for the 10-packet PPI length restriction
+ case.
+Fig. 3 depicts the per-class confusion matrices for connec-
+ The hierarchical approach, with its protocol-specific
+tions with server in any of the ASN groups. Panel (a) depicts
+ grouping, experiences an F1 score drop of approximately
+the confusion under the hierarchical approach, while panel
+ 2% after one month. Despite this moderate degradation, it
+(b) depicts the confusion when using a single flat model.
+ maintains an F1 score above 90% even after two months,
+The colors conform to a log scale (log10 (count + 1)) in
+ showcasing its robustness. In contrast, the flat models exhibit
+order to capture low-frequency errors. With the hierarchical
+ significantly higher performance drops, particularly in the
+approach most residual errors concentrate within provider
+ second month. For example, the Random Forest model under
+ecosystems (e.g., Google, Facebook, Apple), while the flat
+ the flat configuration drops by 2.41% at one month and
+model displays substantial cross-ecosystem spillover. These
+ 8.73% at two months, compared to the hierarchical model
+patterns are consistent with the role of ASN-aware specialwhich only drops by 1.68% and 3.60%, respectively.
+ization described in Section V and with the aggregate gains
+ The inclusion of server IP information in the flat modin Table 5.
+ els does not prevent their performance from degrading
+VIII. DISTRIBUTIONAL DRIFT ANALYSIS over time. These results underscore the effectiveness of
+Due to the dynamic nature of modern applications, machine the hierarchical approach for dynamic environments, where
+learning models often experience a decline in performance distributional drift is inevitable. The ability to maintain
+when applied to data collected at later time periods. This performance well beyond the one-month mark validates the
+distributional drift arises from new application releases, hierarchical approach’s potential in long-term deployment
+modifications in communication protocols, shifts in user scenarios.
+behavior, and the adoption of emerging technologies. Con- Figure 4 shows the F1 score trends for selected
+sequently, the accuracy of models trained on historical data IP groups when using the hierarchical model with a
+is expected to decline over time. 50-packet PPI restriction and the Random Forest classifier
+ Addressing distributional drift typically requires con- applied to each group. Our analysis reveals distinct drift
+tinuous monitoring and periodic model retraining. While patterns across different groups. Stable groups—such as
+techniques like online learning, domain adaptation, and the ASN-based groups for Apple, Microsoft, and the single
+transfer learning have been proposed, they often introduce AppId group—exhibit only minor performance degradation
+additional computational overhead and complexity. To better (approximately a 2% drop in F1 score after one month)
+understand the practical impact of drift on our model’s per- and maintain F1 scores above 90% even after two months.
+formance, we conducted an experimental evaluation using In contrast, moderate shifts are observed in some groups
+test datasets collected at later time intervals. (e.g., the Google group), where the F1 score declines significantly within one month, indicating that these groups may
+A. ADDITIONAL DATASET COLLECTION AND require targeted updates. Additionally, delayed degradation
+EVALUATION is evident in groups such as Facebook and Amazon, where
+To assess the quantitative effects of distributional drift, we performance remains relatively stable after one month, but
+collected additional datasets from the same large mobile drops markedly by the two-month mark.
+VOLUME 4, 2026 347
+TABLE 8. Distributional Drift Performance Comparison
+
+ updated. By focusing retraining efforts on groups experiencing significant performance degradation, computational
+ costs can be reduced while maintaining resilience against
+ drift, thereby extending the system’s usability in real-world,
+ dynamic environments.
+
+ IX. CONCLUSION
+ In this work, we have addressed the challenge of real-time
+ classification of encrypted network traffic in the presence
+ of Encrypted Client Hello (ECH). The introduction of
+ ECH significantly impacts the effectiveness of traditional
+ Deep Packet Inspection (DPI) systems, necessitating more
+ sophisticated machine learning techniques. Unlike previous studies that mostly focus on small-scale datasets with
+ limited application diversity and long observation delays,
+ our work provides a practical, real-world solution capa-
+Fig. 4. F1 score trends for selected IP groups over time using
+the hierarchical model with a 50-packet PPI restriction and a
+ ble of identifying over 100 applications with only one
+Random Forest classifier. The figure illustrates the degradation second of observation. We furthermore proposed a novel
+in performance from one week to one month to two months, hierarchical classification approach that integrates domainhighlighting groups with stable performance, moderate shifts,
+and delayed degradation.
+ specific knowledge by leveraging server IP addresses, which
+ remain unencrypted under ECH. Compared to conventional
+ flat classification approaches, our hierarchical model offers
+ multiple advantages:
+ Further analysis shows that the number of PPIs required
+for the model to achieve optimal performance may vary • Improved Scalability: The hierarchical approach
+across different groups. In some groups, such as Apple or allows for structured classification by breaking
+Microsoft, the difference in performance between processing down the problem into smaller, more manageable
+50 and 10 packets is negligible. While in others, e.g., subproblems.
+Amazon, comparable results are achievable even with only • Higher Accuracy: By focusing on groups of appli-
+10 packets over all time periods. cations within known server IP ranges, the model
+ These findings support a selective retraining strategy, improves prediction accuracy compared to a flat claswhere only server groups that exhibit substantial drift are sification model.
+348 VOLUME 4, 2026
+Kahana et al.: Fast Real-World Classification of ECH-Enabled Applications
+
+ • Less Drift: The hierarchical approach is observed to Our findings highlight the usefulness of considered leversuffer less performance degradation over time. aging of structured domain knowledge, in contrast to blindly
+ • Reduced Computational Complexity: Compact sub- applying machine learning tools to input data. One may
+ models decrease overall model complexity, improving speculate as to the generality of this result is, and in which
+ both training efficiency and inference speed. other cases such techniques may be advisable.
+ • Enhanced Maintainability: When applications or
+ network behaviors change over time, only specific REFERENCES
+ submodels require updating. [1] E. Rescorla, K. Oku, N. Sullivan, and C. A. Wood. (Mar. 2025). Tls
+ Encrypted Client Hello. Internet Engineering Task Force. [Online]. Avail-
+ The features of specific applications are not expected able: https://datatracker.ietf.org/doc/draft-ietf-tls-esni/23/
+ [2] W. Zheng, J. Zhong, Q. Zhang, and G. Zhao, “MTT: An efficient model
+to remain stable over extremely long periods of time. for encrypted network traffic classification using multi-task transformer,”
+For example, CDNs routinely rotate server addresses, Int. J. Speech Technol., vol. 52, no. 9, pp. 10741–10756, Jul. 2022.
+many services randomize port numbers, and develop- [3] H. Y. He, Z. Guo Yang, and X. N. Chen, “PERT: Payload encoding
+ representation from transformer for encrypted traffic classification,” in
+ers upgrade service engineering parameters over time. Proc. Ind.-Driven Digit. Transformations, (ITU K), Dec. 2020, pp. 1–8.
+Despite these phenomena the hierarchical model main- [4] P. Lin, Y. Hu, Y. Lin, K. Ye, and C.-Z. Xu, “PEAN: A packet-level
+tains > 89 % F1 for at least two months after training end-to-end attentive network for encrypted traffic identification,” in Proc.
+ IEEE 23rd Int. Conf High Perform. Comput. Commun., 7th Int. Conf
+(see VIII). When the accuracy degrades, the hierarchy Data Sci. Syst., 19th Int. Conf Smart City, 7th Int. Conf Dependability
+allows selective fine-tuning of just the affected sub-models, Sensor, Cloud Big Data Syst. Appl. (HPCC/DSS/SmartCity/DependSys),
+limiting maintenance overhead while preserving real-time Dec. 2021, pp. 267–274.
+ [5] J.-T. Park, C.-Y. Shin, U.-J. Baek, and M.-S. Kim, “Fast and accurate
+performance. multi-task learning for encrypted network traffic classification,” Appl. Sci.,
+ The evaluation results demonstrate that the hierarchical vol. 14, no. 7, p. 3073, Apr. 2024.
+model consistently outperforms traditional flat classifiers, [6] J. Cui, L. Bai, X. Zhang, Z. Lin, and Q. Liu, “The attention-based
+ autoencoder for network traffic classification with interpretable feature
+particularly in handling evolving traffic patterns. Even under representation,” Symmetry, vol. 16, no. 5, p. 589, May 2024. [Online].
+significant concept drift, our model maintains robust classifi- Available: https://api.semanticscholar.org/CorpusID:269733468
+cation performance, with an F1 score remaining above 90% [7] T. Liu et al., “LAMBERT: Leveraging attention mechanisms to improve
+ the BERT fine-tuning model for encrypted traffic classification,” Matheeven after two months. Additionally, we observed that reduc- matics, vol. 12, no. 11, p. 1624, May 2024.
+ing the packet restriction negatively impacts performance, [8] T. Shapira and Y. Shavitt, “FlowPic: Encrypted Internet traffic classifithough hierarchical classification mitigates this effect better cation is as easy as image recognition,” in Proc. IEEE Conf. Comput.
+ Commun. Workshops (INFOCOM WKSHPS), Apr. 2019, pp. 680–687.
+than flat models. [9] R. Babaria, S. C. Madanapalli, H. Kumar, and V. Sivaraman,
+ One key insight from our experiments is that Random “FlowFormers: Transformer-based models for real-time network flow
+Forest models performed comparably to deep LSTM-based classification,” in Proc. 17th Int. Conf. Mobility, Sens. Netw. (MSN), Dec.
+ 2021, pp. 231–238.
+approaches while being more computationally efficient. This [10] L. Yang, A. Finamore, F. Jun, and D. Rossi, “Deep learning and zero-day
+suggests that complex sequence-based models may not traffic classification: Lessons learned from a commercial-grade dataset,”
+always be necessary for encrypted traffic classification. IEEE Trans. Netw. Service Manage., vol. 18, no. 4, pp. 4103–4118, Dec.
+ 2021.
+ Looking ahead, there are several directions still open for [11] X. Wang, S. Chen, and J. Su, “App-Net: A hybrid neural network for
+future research: encrypted mobile traffic classification,” in Proc. IEEE Conf. Comput.
+ Commun. Workshops (INFOCOM WKSHPS), Jul. 2020, pp. 424–429.
+ • Refining Hierarchical Grouping: Exploring more [12] I. Guarino, G. Aceto, D. Ciuonzo, A. Montieri, V. Persico, and
+ granular grouping methods, such as dynamically clus- A. Pescape, “Contextual counters and multimodal deep learning for
+ tering applications based on real-time traffic patterns, activity-level traffic classification of mobile communication apps during COVID-19 pandemic,” Comput. Netw., vol. 219, Dec. 2022, Art.
+ that may further improve classification accuracy and no. 109452. [Online]. Available: https://www.sciencedirect.com/science/
+ adaptability. article/pii/S1389128622004868
+ • Selective Retraining Strategies: Implementing adap- [13] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescape, “DISTILLER:
+ Encrypted traffic classification via multimodal multitask deep learning,”
+ tive learning techniques, which selectively retrain only J. Netw. Comput. Appl., vols. 183–184, Jun. 2021, Art. no. 102985.
+ the submodels experiencing drift, could reduce the [Online]. Available: https://www.sciencedirect.com/science/article/pii/
+ computational cost of model updates while maintaining S1084804521000126
+ [14] D. Shamsimukhametov, A. Kurapov, M. Liubogoshchev, and E. Khorov,
+ performance. “Early traffic classification with encrypted ClientHello: A multi-country
+ • Generalization Across Networks: Evaluating the study,” IEEE Access, vol. 12, pp. 142979–142993, 2024.
+ model’s applicability across different geographic [15] D. Shamsimukhametov, M. Liubogoshchev, E. Khorov, and I. F. Akyildiz,
+ “Youtube, Netflix, web dataset for encrypted traffic classification,” in Proc.
+ regions and network environments to ensure its robust- Int. Conf. Eng. Telecommun., 2021, pp. 1–5, doi: 10.21227/s7x7-wd58.
+ ness in diverse real-world scenarios. [16] S. Rezaei, B. Kroencke, and X. Liu, “Large-scale mobile app identification
+ • Adaptive Packet Processing: Investigate dynamic using deep learning,” IEEE Access, vol. 8, pp. 348–362, 2020.
+ [17] K. Fauvel, F. Chen, and D. Rossi, “Alightweight, efficient and explainablemodels that determine the optimal number of packets by-design convolutional neural network for internet traffic classification,”
+ for classification in real-time. By enabling early stop- in Proc. 29th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug.
+ ping after 10 packets in some cases while utilizing up 2023, pp. 4013–4023.
+ [18] J. Luxemburk, K. Hynek, T. Čejka, A. Lukačovič, and P. Šiška,
+ to 50 in others, one could optimize the tradeoff between “CESNETQUIC22: A large one-month QUIC network traffic dataset from
+ classification accuracy and inference efficiency. backbone lines,” Data Brief, vol. 46, Feb. 2023, Art. no. 108888.
+
+VOLUME 4, 2026 349
+[19] E. Akbari et al., “A critical study of few-shot learning for encrypted traffic YIZHAK KAHANA received the M.Sc. degree in computer science from
+ classification,” in Proc. 19th Int. Conf. Netw. Service Manage. (CNSM), Bar-Ilan University in 2025. He is currently with Allot. His primary
+ Oct. 2023, pp. 1–9. research interests include machine learning applications in communications
+[20] H. Huang, Y. Zhou, F. Jiang, X. Zhou, and Q. Jiang, “MFF: A multimodal and networking.
+ feature fusion approach for encrypted traffic classification,” Electronics,
+ vol. 14, no. 13, p. 2584, Jun. 2025.
+[21] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani, “Characterization of encrypted and VPN traffic using time-related
+ features,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, 2016,
+ pp. 407–414.
+[22] R. Wang, Z. Liu, Y. Cai, D. Tang, J. Yang, and Z. Yang, “Benchmark
+ data for mobile app traffic research,” in Proc. 15th EAI Int. Conf. Mobile YAAKOV J. STEIN received the B.Sc., M.Sc., and Ph.D. degrees in theo-
+ Ubiquitous Syst., Comput., Netw. Services, Nov. 2018, pp. 402–411. retical physics from The Hebrew University of Jerusalem. He is currently
+[23] W. Shbair, T. Cholez, J. Francois, and I. Chrisment. (2016). Https Websites the CTO of Allot and an Adjunct Professor of computer science with Tel
+ Dataset. [Online]. Available: http://betternet.lhs.loria.fr/datasets Aviv University. He is the author of the textbook Digital Signal Processing,
+[24] S. Ray, “Advancing packet-level traffic predictions with transformers,” a Computer Science Perspective. His research interests include network
+ M.S. thesis, ETH Zurich, 2022. security, communications protocols, and intelligent signal processing.
+[25] Y. Zion, P. Aharon, R. Dubin, A. Dvir, and C. Hajaj, “Enhancing
+ encrypted Internet traffic classification through advanced data augmentation techniques,” 2024, arXiv:2407.16539.
+[26] J. Luxemburk and T. Cejka, “Fine-grained TLS services classification with
+ reject option,” Comput. Netw., vol. 220, Jan. 2023, Art. no. 109467.
+[27] Y. Kahana, Y. Stein, and O. Glickman, “Fast real-world
+ classification of ech-enabled applications,” in Proc. 8th
+ Int. Symp. Cyber Secur. Cryptography Mach. Learn., Dec. OREN GLICKMAN received the B.Sc. degree in math and computer
+ 2024, pp. 1–5. [Online]. Available: https://www.cscml.org/ science from Hebrew University Jerusalem in 1993, the M.Sc. degree in
+ files/ugd/1ad9fa 8a1961559c3c4a93987df7925d3d3537.pdf computational linguistics from Carnegie Melon University in 1995, and the
+[28] J. Xu, J. Fan, M. Ammar, and S. B. Moon, “On the design and performance Ph.D. degree in computer science from Bar-Ilan University in 2006. He is
+ of prefix-preserving IP traffic trace anonymization,” in Proc. 1st ACM currently an Assistant Professor with the Computer Science Department,
+ SIGCOMM Workshop Internet Meas., 2001, p. 263. Bar-Ilan University, specializing in natural language processing and applied
+[29] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf. data science. He has over 20 years of industrial experience, primarily in
+ Process. Syst., vol. 30, 2025, pp. 5998–6008. leading research and data science teams.
+
+350 VOLUME 4, 2026

@@ -1,0 +1,576 @@
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 8, AUGUST 2024 9987
+
+ Generalized Out-of-Distribution Fault Diagnosis
+ (GOOFD) via Internal Contrastive Learning
+ Xingyue Wang , Hanrong Zhang , Xinlong Qiao , Ke Ma , Shuting Tao ,
+ Peng Peng , Member, IEEE, and Hongwei Wang , Member, IEEE
+
+ Abstract—Fault diagnosis is crucial in monitoring ma- technique for this task is called process monitoring, which aims
+chines within industrial processes. With the increasing to detect the abnormal during production. 2) Distinguishing
+complexity of working conditions and demand for safety bluefaults that occurred while finding their reasons. The methods
+during production, diverse diagnosis methods are required,
+and an integrated fault diagnosis system capable of han- for this task are fault detection and fault classification. In process
+dling multiple tasks is highly desired. However, the diagno- monitoring, the traditional approaches applied the multivarisis subtasks are often studied separately, and the current ate statistical method, such as principal components analysis
+methods still need improvement for such a generalized (PCA) [5], partial least squares (PLS) [6], and independent
+system. To address this issue, we propose the generalized
+ component analysis (ICA) [7], which extract features by transout-of-distribution fault diagnosis (GOOFD) framework to
+integrate diagnosis subtasks. Additionally, a unified fault forming the raw data into a lower dimension and detecting ocdiagnosis method based on internal contrastive learning curred faults simply by statistical variance. In recent years, some
+and Mahalanobis distance is put forward to underpin the new tasks have emerged to deal with more complex production
+proposed generalized framework. The method involves fea- situations, such as a novel task called open set fault diagnosis
+ture extraction through internal contrastive learning and (OSFD), which detects unseen faults that occur during industrial
+outlier recognition based on the Mahalanobis distance. Our
+proposed method can be applied to multiple fault diagno- processes. It is a relatively new task in fault diagnosis, aiming to
+sis tasks and achieve better performance than the exist- detect unknown fault samples while correctly classifying known
+ing single-task methods. Experiments are conducted on classes. Transfer learning (TL) and domain adaptation (DA)
+benchmark and practical process datasets, indicating the combined with other deep-learning methods have been widely
+effectiveness of the proposed framework. utilized in the OSFD task [8], [9]. Chen et al. [10] proposed a
+ Index Terms—Fault diagnosis, internal contrastive learn- multisource open-set DA diagnosis approach to tackle the OSFD
+ing (ICL), open-set classification, process monitoring. task. Mao et al. [11] introduced an interactive dual adversarial
+ neural network (IDANN), which uses weighted unknown classification items to distinguish the outliers. Li et al. [12] established
+ I. INTRODUCTION
+ a deep adversarial TL network (DATLN), where a classifier is
+ URING the industrial process and mechanical operation,
+D faults inevitably occur, resulting in declining industrial efficiency and severe losses. Accurate fault diagnosis has become
+ trained to learn the decision boundary and detect new faults.
+ The tasks and techniques mentioned above are often discussed
+ and tested separately. Nevertheless, since practical production
+increasingly crucial in system design and maintenance to ensure is complicated, it leads to two problems: 1) a generalized fault
+safety in machinery production [1], [2], [3], [4]. diagnostic framework for multiple tasks is still lacking; 2) the
+ Currently, the research in fault diagnosis mainly contains training on different techniques is time-consuming since they
+two tasks. 1) Determining whether the system is normal. The have different feature extraction methods and network structures.
+ Manuscript received 12 November 2023; revised 12 February 2024;
+ To address the problems, it is crucial to develop a generalized
+accepted 4 April 2024. Date of publication 30 April 2024; date of current fault diagnosis system that considers several situations with a
+version 5 August 2024. This work was supported by the National Natural unified method to deal with multiple tasks. It enables compre-
+Science Foundation of China under Grant 62276230. Paper no. TII-23-
+4488. (Xingyue Wang and Hanrong Zhang are co-first authors.) (Correhensive monitoring of a machine’s status, which facilitates the
+sponding authors: Hongwei Wang; Peng Peng.) timely detection and identification of any faults that may arise,
+ Xingyue Wang, Hanrong Zhang, Xinlong Qiao, Peng Peng, and Hong- allowing for prompt action to be taken. Moreover, the process
+wei Wang are with the Zhejiang University, Haining 314400, China, and
+also with the University of Illinois Urbana-Champaign Joint Institute,
+ monitoring and OSFD methods mentioned above still need to
+Haining 314400, China (e-mail: xinyue1.22@intl.zju.edu.cn; hanrong. be improved for the generalized framework. First, these meth-
+22@intl.zju.edu.cn; xinlong.23@intl.zju.edu.cn; pengp17@mails.tsing ods can only solve a single task. They cannot simultaneously
+hua.edu.cn; hongweiwang@intl.zju.edu.cn).
+ Ke Ma and Shuting Tao are with the College of Computer Science
+ deal with all subtasks in a generalized framework, which does
+and Technology, Zhejiang University, Hangzhou 310013, China (e-mail: not match the comprehensive approach we need. Second, the
+ke.22@intl.zju.edu.cn; shuting.17@intl.zju.edu.cn). working environment changes during the practical production
+ Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TII.2024.3390446.
+ process, and the above methods do not perform well in detecting
+ Digital Object Identifier 10.1109/TII.2024.3390446 faults under variable condition scenarios due to the lack of
+
+ 1551-3203 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+9988 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 8, AUGUST 2024
+
+a powerful feature extractor. As a result, internal contrastive detection, fault classification, and unseen fault detection, which
+learning (ICL), as an effective representation learning technique, cannot be achieved through a single task alone. A fault diagnosis
+can be consequently used in our method. system that can comprehensively solve multiple tasks is required
+ In recent years, contrastive learning has been used to ex- to diagnose faults more efficiently.
+tract features from data [13]. It is a stochastic data augmen- Currently, subtasks are discussed separately and have yet to be
+tation method in self-supervised learning, aiming to pull similar integrated to implement a comprehensive fault diagnosis system,
+samples closer while pushing different samples apart in the and specific steps in the tasks, such as feature extraction and fault
+embedding space. This method has proven effective in feature recognition, are also carried out separately. Thus, it is essential
+representation learning [14] in numerous research studies. Cur- to build a comprehensive diagnostic system. We have found that
+rently, some studies have applied contrastive learning to fault the diagnosis subtasks have some commonalities, such as all
+diagnosis methods to extract features and improve performance involving the detection of outliers, indicating that it is feasible to
+under changing working conditions. The contrastive-learning- combine these subtasks to solve them, and integrating them can
+based diagnosis methods are able to learn invariant features also improve the efficiency of model training by using a unified
+and improve performance under changing operating conditions. feature map. Therefore, we propose this integrated framework
+Zhang et al. [15] introduced a semisupervised contrastive learn- to consolidate these subtasks.
+ing method to enhance the feature mapping of limited data. Our method treats the unified problem in the proposed frame-
+Li et al. [16] used contrastive learning for the fault diagnosis work as the outlier detection task. In process monitoring, fault
+of rolling element bearings to extract interclass features. Zhang samples are defined as the outliners. In OSFD, the outliners
+et al. [17] proposed a contrastive learning-based diagnosis model are the unknown fault samples. This way, the generalized fault
+to learn domain-invariant fault features and improve perfor- diagnosis issue can be treated as the out-of-distribution detection
+mance under variable working conditions. In recent research, problem, in which the outliers vary from specific subtasks.
+Tom and Wolf [18] have utilized ICL for anomaly detection. This Therefore, we used a contrastive learning method that is more
+method uses subvectors from given samples as positive/negative suitable for outlier detection: ICL. The ICL technique generates
+pairs to generate the contrastive loss, which depends little on the positive and negative samples from the internal subvectors of
+data structure and can better detect outliers. the given sample, which focuses more on learning its charac-
+ Inspired by the above, this article proposes a novel framework, teristics and is more suitable for outlier detection problems in
+and the main contributions are summarized as follows. binary classification. By integrating ICL into our method, the
+ 1) We are the first to propose an integrated diagnostic system detection of outliers is improved, achieving better fault detection
+ called the generalized out-of-distribution fault diagno- performance.
+ sis (GOOFD) framework, including process monitoring,
+ fault classification, and OSFD tasks, which offers signif- B. Contrastive Learning
+ icant room for expansion and exploration.
+ Contrastive learning is a stochastic data augmentation method
+ 2) This article introduces a novel integrated diagnosis
+ in self-supervised learning, which is proven effective in feature
+ method ICL-OD to address the multitasks issue in the
+ representation learning [14]. For a batch of N samples, the
+ GOOFD framework and learn more distinctive features
+ model generates 2N augmented data, where each source data
+ for unknown classes based on ICL and the Mahalanobisx has two augmentations x̃i and x̃j . For each augmented data
+ distance approach.
+ x̃i , the other augmented data x̃j generated from the same source
+ 3) Extensive experiments on benchmark datasets and actual
+ data x is regarded as the positive pair. The remaining 2(N − 1)
+ mechanical datasets are conducted to indicate that our
+ augmentations x̃j (m = j) generated from other (N − 1) source
+ proposed method can be applied to different fault diagdata is deemed as the negative pair of x̃i . The model is trained to
+ nosis tasks and has a better performance compared to the
+ minimize the distance between every positive pair and maximize
+ existing single-task methods.
+ the distance between every negative pair. The contrastive loss is
+ The rest of this article is organized as follows. Section
+ defined as
+II presents the motivation and background of our proposed
+  exp(f (x̃i ) · f (x̃j )/τ )
+framework and methods. Section III introduces the integrated L=− log  (1)
+fault diagnosis framework and the proposed methods. Section i∈A m=j exp(f (x̃i ) · f (x̃m )/τ )
+IV presents the experimental results and the validation of the
+ where f (x̃k ) represents the embedding of augmented data x̃k
+proposed model. Finally, Section V concludes this article.
+ by encoder f (·). The index i ∈ A ranges from (0, 2N ).
+ II. BACKGROUND AND MOTIVATION
+ C. Internal Contrastive Learning
+A. Motivation Tom and Wolf [18] proposed an anomaly detection method
+ There are increasing numbers of new tasks and demands based on ICL. The method sliced the input vector into different
+for fault diagnosis in industrial production, and many of these dimensions. The network is trained to produce similar embedtasks have numerous subtasks that require various techniques. dings for complementary pairs and push away every subvec-
+In the production process, there are often situations where many tor pair in the input vector. Based on the internal contrastive
+different types of faults need to be diagnosed, such as fault loss, the method generates positive and negative pairs from
+WANG et al.: GENERALIZED OUT-OF-DISTRIBUTION FAULT DIAGNOSIS (GOOFD) VIA INTERNAL CONTRASTIVE LEARNING 9989
+
+Fig. 1. (a) Difference between the GOOFD framework and existing single-task methods. A single-task approach can only handle a specific task.
+However, the GOOFD framework is dedicated to integrating and solving various fault diagnosis tasks through a unified method. (b) Basic process
+of our approach addresses multitask issues.
+
+the subvectors of a sample xi with dimension D to learn the system and then describe the methodology of the ICL-OD aprepresentations of each sample. To split the vectors, here, we set proach and how it is used to tackle multiple tasks in the GOOFD
+a hyperparameter d to represent the starting index of a subvector, system.
+also called the internal dimension of the subset pairs. First,
+given the parameter d, extract consecutive l-length subvector A. Task Definition
+pdi = {xdi , . . ., xd+l−1
+ i } from xi . Then, the complementary part
+qid = {x1i , . . ., xd−1 Given a set of n normal data D0 = {x1 , . . ., xn }, categoi } with the length of D − l, is
+ d+l
+ i , x i , . . ., xD
+ 
+defined as the positive pair of pdi . For index d = d, pdi is regarded rized in the normal class X0 , and a set of known fault data
+as the negative pair of qid . The method has two encoders F and Df = {f1 , . . ., fm }, which belong to (N − 1) fault classes
+G to learn the feature map of pdi and qid , respectively. Here, we X1 , . . ., XN −1 . The embedding space for normal data D0 is
+normalized the networks and obtained the normalized networks called S0 and the embedding space for the known fault data
+F N and GN . Let D(qid , pdi ) represent the dot product between Df is called Sf . For the unknown fault Du = {u1 , . . ., uk } with
+pdi and qid , which is shown in the following: embedding space Su , the label of ui is class XN . The embedding
+ space of known data is defined as Sk . Its corresponding open
+ D(qid , pdi ) = F N (qid ) · GN (pdi ). (2) space is defined as Ok .
+ The two networks are trained to learn similar embeddings In the proposed GOOFD, the embedding space S0 , Sf , and Su
+between positive pairs F N (pdi ) and GN (qid ) while minimizing collectively form the entire embedding space. The process mon-
+ 
+the mutual information between negative pairs pdi and qid . The itor and OSFD tasks are fused by specifying different boundaries
+internal contrastive loss for sample xi in internal dimension d is for the known embedding space Sk . In process monitoring, the
+defined in the following, where k = D − l + 1 known embedding space contains only normal data D0 . Thus,
+ it is defined as Sk = S0 . Its corresponding open space O0 is
+ eD(qi ,pi )/τ
+ d d
+ Sf ∪ Su , which contains all the faults. While in OSFD, the
+ (xi , j) = −ln k . (3)
+ 
+ D(qid ,pd
+ i )/τ
+ known embedding space Sk consists of normal data D0 and
+ d =d e
+ known faults Df , and its corresponding Ok = Su .
+ In the internal contrastive loss, for a given sample xi and
+internal dimension d, the method learns to produce similar B. ICL for Outlier Detection
+embeddings qid and pdi between the matched subvectors from
+the same dimension j and separate the l-length subvectors qid The proposed ICL for outlier detection (ICL-OD) method can
+ 
+and pdi from different dimensions. Then the model can generate be divided into two steps: generate the embedding map based on
+scores S(xi ) for xi considering all the internal dimensions ICL and detect the outliers. The ICL-OD applied the ICL-based
+d = {0, . . ., k}, as shown in the following; method for fault diagnosis in [18] to extract features from the
+  input samples. Given a set of input samples X = {x1 , . . ., xn },
+ S(xi ) = d (xi , d) (4) obtain score S(xi ) as the feature space for each sample xi based
+where the final output score S(xi ) denotes the representation of on (4).
+the sample xi . After obtaining the score S(xi ), the method uses a
+ Mahalanobis-distance-based classifier to detect the outlier. The
+III. GENERALIZED OUT-OF-DISTRIBUTION FAULT DIAGNOSIS Mahalanobis distance measures the distance between a sample
+ and a distribution. Given an input sample x and a distribution
+ The framework of the proposed GOOFD system is shown in Q, the Mahalanobis distance dM (x) between them is defined in
+Fig. 1. The framework uses the ICL-OD method to learn the the following:
+boundary for outliers and then detect outliers to complete both 
+process monitoring and OSFD tasks. The following subsections −1
+first introduce the definition of the unified tasks in the GOOFD dM (x) = (x − μ) (x − μ) (5)
+9990 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 8, AUGUST 2024
+
+ 
+where μ represents the means of Q and represents the covari- find the outliers, as shown in the following:
+ance matrix of Q. Unlike Euclidean distance, the Mahalanobis 
+ 0, dS (x) ≤ θ0
+distance considers associations between correlated variables. It y= (10)
+ 1, dS (x) > θ0 .
+has been proven to be an effective graphic tool for identifying
+outliers. In our method, the Mahalanobis distance can be applied For a sample x in the test set, if the Mahalanobis distance
+to measure the distance dS (x) between sample x and the distri- dS (x) of x exceeds the threshold θ0 , the sample x is labeled as
+bution of the training set (normal data) in the score embedding 1 and rejected as the outliers. Otherwise, it will be labeled as 0
+space, as shown in the following: and classified as normal.
+  In OSFD, which is a multiclass classification task, the training
+ −1 data contain normal data and known faults, regarded as known
+ dS (x) = (S(x) − μS ) (S(x) − μS ) (6)
+ S classes. First, the method trains a classifier C to classify known
+  classes, which include the normal data class X0 and N − 1
+where S(x) denotes the output score of sample x, μS and S
+represent the means and covariance matrix of score S for training known fault class X1 , . . .XN . The input samples are regarded
+sets, respectively. In the one-classification task, the training set as the known classes in OSFD. Then, the ICL-OD method is
+contains only normal data, so the output score S can be deemed used to learn the boundary of the empirical data in Mahalanobis
+as the distribution of normal data. distance. Similar to anomaly detection, for a given sample x from
+ Given training samples, the method first implements the ICL the testing set, the method uses the Mahalanobis-distance-based
+method to obtain the output score S for training input threshold to reject the unknown, shown in the following:
+ samples 
+and calculate the means μtr and covariance matrix tr of S. −1
+Then, for every sample {xtr dS (x) = (S(x) − μk ) (S(x) − μk ) (11)
+ i |i ∈ (1, n)} in the training set, cal- k
+culate the Mahalanobis distance dtrain
+ S i )|i ∈ (1, n)} of
+ = {dS (xtr 
+each training sample to the normal distribution, as shown in the where μk and k denote the means and covariance matrix of
+following: the known training samples, respectively. The method uses the
+  k% quantile of Mahalanobis distance of training samples as
+ −1 the threshold θu to reject the unknown. Finally, the method
+ dS (xi ) = (S(xtr
+ tr
+ i ) − μtr ) i ) − μtr ).
+ (S(xtr (7) can distinguish between known and unknown, shown in the
+ tr
+ following:
+ Similarly, for every sample {xtei |i ∈ (1, m)} in the testing 
+set, calculate the Mahalanobis distance dtest S = {dS (xi )|i ∈
+ te argmax(C(x)) ∈ (1, N ), dS (x) ≤ θu
+ y= (12)
+(1, m)} of each test sample to the normal distribution. Based N + 1, dS (x) > θu .
+on the distance, the outliers can be identified, as shown in the The trained classifier C first outputs the softmax score of x
+following: and classifies them into known classes 1 ∼ N . Then, for all
+  the samples whose Mahalanobis distance is greater than the
+ inliner, dS (xte ) ≤ θ
+ y= (8) threshold θu , the method will treat these points as outliers and
+ outlier, dS (xte ) > θ
+ classify them into the unknown class (class N + 1).
+where threshold θ is used to reject outliers, and its value is equal
+ S . If dS (xi )
+ te
+to the k% quantile of Mahalanobis distance in dtrain IV. EXPERIMENT STUDY
+exceeds threshold θ, the sample xte i will be determined as the
+outlier, and vice versa, is determined as the normal. In this section, we evaluate and compare our proposed method
+ with baseline methods and set up two experiments to prove the
+ effectiveness of the proposed method. In Experiment I, we first
+C. Generalized Out-of-Distribution Detection
+ use a simulated benchmark dataset to perform a preliminary val-
+ As previously described, the GOOFD fault diagnosis task idation of the proposed method. In Experiment II, the evaluation
+contains both process monitoring and OSFD tasks for fault of our approach is further verified using two datasets generated
+diagnosis. The ICL outlier detection (ICL-OD) method proposed from the real-world process. The details of the two experiments
+in this article can be used in GOOFD fault diagnosis for process are listed below.
+monitoring and OSFD, as shown in Fig. 1. Since the process 1) Experiment I: The proposed method will be evaluated in
+monitoring task aims at detecting the fault from normal, the the Tennessee Eastman (TE) process [19] to measure the
+input data x only consist of normal data of class X0 . Then, performance in process monitoring and OSFD for fault
+the ICL-OD method helps to generate the score S for normal diagnosis. In process monitoring, the dataset uses normal
+data and reject the anomaly based on dS (x), as shown in the data as the training set and fault data as the test set. The
+following: OSFD task divides the dataset into open and closed sets
+  to test its ability to detect unseen faults.
+ −1
+ dS (x) = (S(x) − μ0 ) (S(x) − μ0 ) (9) 2) Experiment II: To further evaluate the effectiveness of
+ 0
+  our method, Experiment II implements the proposed techwhere μ0 and 0 represent the means and covariance matrix nique with a real-world dataset: multiphase flow facility
+of score S for normal samples. Then, use the k% quantile of (MFF) dataset [20]. The MFF dataset is used in process
+Mahalanobis distance of normal samples as the threshold θ0 to monitoring and OSFD tasks, respectively.
+WANG et al.: GENERALIZED OUT-OF-DISTRIBUTION FAULT DIAGNOSIS (GOOFD) VIA INTERNAL CONTRASTIVE LEARNING 9991
+
+ 2) Training Scheme: In the ICL-OD method, the model employs Adma Optimizer with a learning rate of 0.001. We set
+ the subvector’s length l = 2 and temperature τ = 0.01. The F
+ and G are fully-connected networks. The hidden layers in the F
+ network have u and 2 u units. A LeakyRelu activation and batch
+ normalization layer is applied for each hidden layer. In the G
+ network, hidden units are u/4 and u/2, with the LeakyRelu
+ activation for each layer. Unlike network F , G applied batch
+ normalization only in the first hidden layer. We set hidden unit
+ u = 200 for both F and G. The classifier C for the TE dataset
+ is a fully connected network with one hidden layer of 20 units.
+ The classifier applies Adam Optimizer and the CrossEntrophy
+ loss in the training phase. The threshold θu is set at values when
+ k% = 98% to reject the unknown samples.
+Fig. 2. Flowchart of the TE process [19]. 3) Results: In process monitoring, our proposed method
+ outperforms the baseline methods in most cases, highlighted
+ in green in Table I. “OT” in Table I refers to the cases where the
+ Baseline. In Experiment I, for the process monitoring task, we
+ event of fault detection was impossible to determine because
+compare the proposed method with the following seven baseline
+ the indicator value was already over the threshold before the
+methods: PCA [5], Kernel PCA (KPCA) [5], ICA [7], Kernel
+ fault introduction. In most cases, our model achieves the highest
+ICA (KICA) [21], dynamic PCA (DPCA) [22], structured joint
+ FDR compared to other baselines. Especially in cases of fault
+sparse canonical correlation analysis (SJCCA) [23], orthonor-
+ 3, fault 9, and fault 15, our model dramatically improves the
+mal subspace analysis (OSA) [24], and decentralized support
+ results compared to the poor performance of baseline methods.
+vector data descriptions (DSVDD) [25]. In the OSFD task, we
+ Even in the case where the FDR of our model is not the
+compare the proposed method with the following six baselines:
+ highest, our proposed method can still achieve relatively good
+SoftMax, OpenMax [26], CenterLoss [27], EOW-SoftMax [28],
+ results.
+generalized ENtropy score (GEN) [29], and positive and unla-
+ In OSFD, we repeat experiments for each method five times
+beled learning and label shift estimation (PULSE) [30]. In adto report the average F1-score and AUROC. The results in
+dition, we compare our proposed method with the ICL anomaly
+ Table II show that our proposed model outperforms the baseline
+detection approach [18] to validate the superiority of our method.
+ methods. Fig. 3 presents the detailed results where Fault 6 is seen
+Since the ICL anomaly detection approach cannot be directly
+ as the unknown. From the confusion matrix shown in Fig. 3(a),
+applied to the OSFD task, we add a classifier to the method to
+ we can see that our proposed method has a higher recognition
+complete the experiment, which we call ICL+ in the later section.
+ rate for the unknown, while the classification of the closed-set
+ Experiment II implements PCA, DPCA, PLS, enhanced dydata are still guaranteed.
+namic latent variable (EDLV) analysis [31], and global-local
+ Fig. 3(b) presents the distribution of the prediction scores to
+preserving projection based on optimal active relative entropy
+ further analyze the superiority of our method. The prediction
+(OARE-GLPP) [32] as the baseline methods in the process monscores generated by the Softmax and CenterLoss methods exitoring task. The baseline used in the OSFD task remains Softhibit significant overlap between known and unknown classes,
+Max, OpenMax, CenterLoss, EOW-Softmax, GEN, PULSE, and
+ leading to the misclassification of most unknown classes as
+ICL+.
+ known ones. The OpenMax method demonstrates a clearer
+ Metrics: In process monitoring, our experiments use the fault
+ distinction between scores of unknown and known classes, but
+detection rate (FDR) to evaluate a model’s ability to detect
+ there are still instances where the scores for unknown categories
+faults. In OSFD, we use the F1 score and AUROC to assess
+ are too high, resulting in misclassification as known categories.
+performance.
+ The EOW-SoftMax method presents a similar issue, producing
+ overly low scores for unknown data, resulting in misidentifica-
+A. Experiment I: Evaluation With TE Process tion as known classes. The GEN method has difficulty generating
+ 1) Dataset: Based on actual chemical reaction processes, predictive scores with high discrimination, and most of its nor-
+Eastman Chemical Company has developed an open and chal- mal samples (class 0) and unknown samples have similar scores,
+lenging chemical model simulation platform, the TE [19] simu- resulting in poor classification. The PULSE method has better
+lation platform 2, which generates time-varying data for testing classification results, but some unknown samples have overly
+control and diagnostic models of complex industrial processes. high confidence scores, leading to their misclassification into
+ The TE dataset contains 21 faults. In process monitoring, the known categories.
+experiment uses normal data as the training set and 21 fault data However, our method can generate prediction scores with
+as test data to evaluate the performance. In the OSFD task, the greater distinctiveness, enabling better identification of untraining set consists of normal data and known faults (fault 1, known classes. As shown in Fig. 3(b), our method has minifault 2, fault 4, and fault 5). Then, the unseen faults (faults 6, 7, mal overlap between the distribution of prediction scores for
+13, 14) are randomly picked and used as test sets to assess the unknown and known classes. In contrast, in the ICL+ method,
+model’s performance. there is still a significant overlap between the prediction scores of
+9992 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 8, AUGUST 2024
+
+ TABLE I
+ RESULTS OF PROCESS MONITORING IN TE PROCESS
+
+ TABLE II
+ RESULTS OF OSFD IN TE PROCESS
+
+unknown and known classes, resulting in a higher mislabeling TABLE III
+ DESCRIPTION OF TEST SETS OF MMF IN PROCESS MONITOR EXPERIMENT
+rate for unknown classes. Fig. 4 shows the histogram of the
+prediction scores for unknown classes in both the ICL+ method
+and our approach. Our method can generate more “extreme”
+prediction scores for unknown classes, thereby enhancing differentiation from known categories. These results indicate that,
+in contrast to other baseline methods, our approach with an effective feature extractor can generate prediction scores with greater
+distribution disparity between unknown and known categories,
+thereby achieving superior performance. represent normal operating conditions adequately. For each fault
+ Experiment I trains and validates the model with the TE case, the process data are generated under different operation
+dataset and demonstrates that our proposed model can combine conditions and used as different sets. In process monitoring, we
+the process monitoring and OSFD tasks while achieving better use the T1 and T3 set of normal data to train our method. The
+performance than baseline methods in both tasks. description of the test set is shown in Table III. All test datasets
+ are from Set 1 with changing operating conditions. In the OSFD
+ test of Experiment II, we use the T2 set of normal data and
+B. Experiment II: Evaluation With MMF Set-2 of each fault case to train and evaluate our model. We
+ 1) Datasets.: To further demonstrate the effectiveness of our randomly select normal data and three fault cases as the training
+method, Experiment II uses a real-world datasets: and MFF set.
+dataset [20] to validate the model. 2) Training Scheme: The parameter settings of the ICL-OD
+ The MMF dataset is derived from the Three-phase Flow method in Experiment II are the same as those in Experiment I.
+Facility system at Cranfield University. The data has 24 process The classifier C for the MFF dataset is a fully connected network
+variables and is acquired at the sampling rate of 1 Hz. The MFF with one hidden layer. The hidden layer has 12 units, followed by
+dataset contains normal data and six fault cases. In normal data, a ReLU activation layer. During the training phase, the classifier
+three datasets (T1, T2, T3) are captured from the system to applies Adam Optimizer and CrossEntrophy loss.
+WANG et al.: GENERALIZED OUT-OF-DISTRIBUTION FAULT DIAGNOSIS (GOOFD) VIA INTERNAL CONTRASTIVE LEARNING 9993
+
+Fig. 3. (a) Confusion matrix for the OSFD task in the TE process with Fault 6 as the unknown class. (b) We visualize the distribution of prediction
+scores generated by each method. The images in the second row are the enlarged display of the yellow region in the first-row images, providing
+a better view of details. The prediction scores of the Softmax, OpenMax, and CenterLoss methods are softmax probabilities. Scores below the
+threshold are classified as unknown. The prediction scores of the EOW-Softmax method constitute the (K+1)th-dimensional probability of its output,
+estimating open-world uncertainty. Scores surpassing the threshold are classified as unknown. The GEN method can be applied to any pretrained
+softmax-based classifier to generate the entropy-based score, and scores below a threshold are determined to be unknown. The prediction score
+of the PULSE method is the output of the discriminator. Scores below the threshold are labeled as unknown classes. The prediction score of ICL+
+and our method are the opposites of the output score. Data with prediction scores below the threshold are classified as the unknown class. The
+smaller the overlap between the prediction scores of known and unknown categories, the better the method’s performance.
+
+ TABLE IV
+ RESULTS OF PROCESS MONITORING IN MFF
+
+ in each case. Compared with the other six baseline methods,
+ our approach shows a significant improvement in the F1-score
+ and AUROC metrics for each case. Furthermore, our method
+ outperforms ICL+. With unknown faults of 2 and 4, both the
+ AUROC and F1-score of our method are significantly better than
+ those of the ICL+ method. Especially when the unknown fault
+ is 2, our method improves by 12% on the F1-score compared
+ to ICL+, which is a great classification improvement. In the
+ case of unknown faults of 3 and 5, even though AUROC is both
+ 1.0 (achieving the best result), the F1-score of our method still
+ exceeds the ICL+ method, which suggests that our method can
+ better predict the boundaries of known classes and generate more
+ accurate thresholds to reject unknown classes. The results of
+ Experiment II indicate that even in real-world data, our method
+ can achieve remarkable performance in the GOOFD task and
+Fig. 4. Histogram of prediction scores for unknown classes in ICL+ can surpass baseline methods in both tasks.
+and our methods. The prediction scores of the ICL+ and our method
+shown in Fig. 3(b) are overly dense, making it difficult to discern specific
+distributional features. Therefore, we present a clearer display of the
+distribution of the prediction scores for unknown classes. C. Ablation Study
+ In the ablation study, the experiments are conducted on the TE
+ dataset in the OSFD task. The known class consists of normal
+ 3) Results: The FDR results of the process monitor exper- data, faults 1, 2, 4, and 5. The experiments are repeated five
+iment are shown in Table IV. It can be seen that our method times to present the average F1-score and AUROC.
+outperforms all other baseline methods in the MFF dataset. 1) Threshold for Outliers: The threshold θu is used to deter-
+ For the OSFD evaluation, we ran the experiment five times, mine and reject unknown classes. Therefore, it is crucial to select
+and the average results of the MFF process are shown in Table V. an appropriate threshold, which will determine the performance
+The Known–Unknown in Table V shows the known classes for of unknown fault detection. We set different values of θu (80%,
+training and their corresponding unknown fault for evaluation 85%, 90%, 95%, 98%, and 100%) on the TE dataset in OSFD
+9994 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 8, AUGUST 2024
+
+ TABLE V
+ RESULTS OF OSFD IN MMF
+
+ TABLE VI
+ ABLATION STUDY ON DIFFERENT MEASUREMENTS OF DISTANCE
+
+ is 12.6%–22% higher compared to the rest of the distances.
+ This suggests that the Mahalanobis distance generates more discriminatory confidence scores compared to the other distances.
+ Theoretically, the Mahalanobis distance can be regarded as a
+ modification of the Euclidean distance, which corrects the problem of inconsistent and correlated dimensional scales, as shown
+ in (5). Therefore, since the Mahalanobis distance can eliminate
+ the problem of different scales between different dimensions,
+ and make dimensional corrections to the sample distribution, it
+ is more suitable for outlier detection than other distances.
+
+ V. CONCLUSION
+ In this article, we were the first to introduce the novel idea
+ of an integrated fault diagnosis framework and present the
+ GOOFD framework to integrate multiple fault diagnosis tasks.
+Fig. 5. Average F1-score of OSFD tasks in TE process when applying Compared to existing single-task fault diagnosis approaches,
+various threshold θu . our ICL-OD method can be applied to multiple tasks and can
+ also better extract features and generate prediction scores with
+ greater discriminability. Extensive experiments were conducted
+task. The results in Fig. 5 show that it can reach the best perfor- to demonstrate that our method led to better performance for
+mance when θu = 98%. When the threshold is within the range each subtask. In future work, we intend to expand GOOFD
+of 80%–98%, the F1-score shows an increasing trend, indicating to cover more diagnostic subtasks, enhancing fault detection
+that raising the threshold for rejecting unknown categories has capabilities and system robustness. This development aims to
+a positive effect on the method’s performance. However, when improve industrial safety, and machine reliability, and reduce
+the threshold exceeds 98%, the F1-score decreases, suggesting maintenance costs. Furthermore, we will work on incorporating
+that setting an overly high threshold for unknown categories interpretability within the framework to improve transparency
+may mistakenly identify them as known, leading to a decline in and user trust, which are expected to deliver significant societal
+model performance. advantages, such as safer industrial operations and economic
+ 2) Distance for Outlier Detection: In order to find a more suit- efficiencies.
+able measurement for unknown class detection, we compared
+the Mahalanobis distance with other measures of distance (city- REFERENCES
+block distance, Canberra distance, and Euclidean distance). The
+ [1] H. Momeni, N. Sadoogi, M. Farrokhifar, and H. F. Gharibeh, “Fault
+results in Table VI show that the Mahalanobis distance leads to diagnosis in photovoltaic arrays using GBSSL method and proposing
+better classification performance. Both AUROC and F1-score a fault correction system,” IEEE Trans. Ind. Inform., vol. 16, no. 8,
+are significantly better than the rest of the distances in the case pp. 5300–5308, Aug. 2020.
+ [2] L. Feng and C. Zhao, “Fault description based attribute transfer for zeroof the Mahalanobis distance. Particularly, in the case of the sample industrial fault diagnosis,” IEEE Trans. Ind. Inform., vol. 17, no. 3,
+unknown fault 13, the AUROC of the Mahalanobis distance pp. 1852–1862, Mar. 2021.
+WANG et al.: GENERALIZED OUT-OF-DISTRIBUTION FAULT DIAGNOSIS (GOOFD) VIA INTERNAL CONTRASTIVE LEARNING 9995
+
+ [3] A. Glowacz, “Thermographic fault diagnosis of shaft of BLDC motor,” [26] A. Bendale and T. E. Boult, “Towards open set deep networks,” in Proc.
+ Sensors, vol. 22, no. 21, 2022, Art. no. 8537. IEEE Conf. Comput. Vis. Pattern Recognit., 2016, pp. 1563–1572.
+ [4] A. Glowacz, “Thermographic fault diagnosis of electrical faults of com- [27] Y. Wen, K. Zhang, Z. Li, and Y. Qiao, “A discriminative feature learning
+ mutator and induction motors,” Eng. Appl. Artif. Intell., vol. 121, 2023, approach for deep face recognition,” in Proc. 14th Eur. Conf. Comput. Vis.,
+ Art. no. 105962. 2016, pp. 499–515.
+ [5] X. Deng, X. Tian, S. Chen, and C. J. Harris, “Nonlinear process fault [28] Y. Wang, B. Li, T. Che, K. Zhou, Z. Liu, and D. Li, “Energy-based
+ diagnosis based on serial principal component analysis,” IEEE Trans. open-world uncertainty modeling for confidence calibration,” in Proc.
+ Neural Netw. Learn. Syst., vol. 29, no. 3, pp. 560–572, Mar. 2018. IEEE/CVF Int. Conf. Comput. Vis., 2021, pp. 9282–9291.
+ [6] H. Abdi and L. J. Williams, “Partial least squares methods: Partial least [29] X. Liu, Y. Lochman, and Z. Christopher, “Gen: Pushing the limits of
+ squares correlation and partial least square regression,” Comput. Toxicol., softmax-based out-of-distribution detection,” in Proc. IEEE/CVF Conf.
+ vol. 2, pp. 549–579, 2013. Comput. Vis. Pattern Recognit., 2023, pp. 23946–23955.
+ [7] Z. Ge and Z. Song, “Performance-driven ensemble learning ICA model for [30] S. Garg, S. Balakrishnan, and Z. Lipton, “Domain adaptation under open
+ improved non-Gaussian process monitoring,” Chemometrics Intell. Lab. set label shift,” in Proc. Adv. Neural Inf. Process. Syst., 2022, vol. 35,
+ Syst., vol. 123, pp. 1–8, 2013. pp. 22531–22546.
+ [8] Y. Shi et al., “Domain transferability-based deep domain generalization [31] X. Wang, H. Shi, B. Song, Y. Tao, and S. Tan, “Enhanced dynamic latent
+ method towards actual fault diagnosis scenarios,” IEEE Trans. Ind. In- variable analysis for dynamic process monitoring,” J. Taiwan Inst. Chem.
+ form., vol. 19, no. 6, pp. 7355–7366, Jun. 2023. Eng., vol. 156, 2024, Art. no. 105292.
+ [9] Y. Zhou, Y. Dong, and G. Tang, “Time-varying online transfer learning for [32] B. Liu, Y. Chai, C. Huang, X. Fang, Q. Tang, and Y. Wang, “Industrial
+ intelligent bearing fault diagnosis with incomplete unlabeled target data,” process monitoring based on optimal active relative entropy components,”
+ IEEE Trans. Ind. Inform., vol. 19, no. 6, pp. 7733–7741, Jun. 2023. Measurement, vol. 197, 2022, Art. no. 111160.
+[10] Z. Chen et al., “A multi-source weighted deep transfer network for open-set
+ fault diagnosis of rotary machinery,” IEEE Trans. Cybern., vol. 53, no. 3,
+ pp. 1982–1993, Mar. 2023.
+[11] G. Mao, Y. Li, S. Jia, and K. Noman, “Interactive dual adversarial neu- Xingyue Wang received the undergraduate deral network framework: An open-set domain adaptation intelligent fault gree in digital media technology from the Beijing
+ diagnosis method of rotating machinery,” Measurement, vol. 195, 2022, University of Posts and Telecommunications,
+ Art. no. 111125. Beijing, China, in 2022. She is currently working
+[12] J. Li, R. Huang, G. He, S. Wang, G. Li, and W. Li, “A deep adversarial toward the graduation degree in electronic infortransfer learning network for machinery emerging fault detection,” IEEE mation with the Zhejiang University-University
+ Sensors J., vol. 20, no. 15, pp. 8413–8422, Aug. 2020. of Illinois at Urbana-Champaign Joint Institute,
+[13] C. Yang, J. Liu, Q. Xu, and K. Zhou, “A generalized graph contrastive Zhejiang University, Haining, China.
+ learning framework for few-shot machine fault diagnosis,” IEEE Trans. Her research interests include artificial intel-
+ Ind. Inform., vol. 20, no. 2, pp. 2692–2701, Feb. 2024. ligence, natural language processing, and fault
+[14] C. Qiu, T. Pfrommer, M. Kloft, S. Mandt, and M. Rudolph, “Neural diagnosis.
+ transformation learning for deep anomaly detection beyond images,” in
+ Proc. 38th Int. Conf. Mach. Learn., vol. 139, pp. 8703–8714, 2021.
+[15] W. Zhang, D. Chen, Y. Xiao, and H. Yin, “Semi-supervised contrast
+ learning based on multiscale attention and multitarget contrast learning Hanrong Zhang received a dual B.S. degree in
+ for bearing fault diagnosis,” IEEE Trans. Ind. Inform., vol. 19, no. 10, computer science from the University of Leeds,
+ pp. 10056–10068, Oct. 2023. Leeds, U.K., and Southwest Jiaotong Univer-
+[16] C. Li, X. Lei, Y. Huang, F. Nazeer, J. Long, and Z. Yang, “Incrementally sity, Chengdu, China, in 2022. He is currently
+ contrastive learning of homologous and interclass features for the fault working toward the master’s degree in comdiagnosis of rolling element bearings,” IEEE Trans. Ind. Inform., vol. 19, puter technology with the Zhejiang Universityno. 11, pp. 11182–11191, Nov. 2023. University of Illinois at Urbana-Champaign Joint
+[17] T. Zhang, J. Chen, S. Liu, and Z. Liu, “Domain discrepancy-guided Institute, Zhejiang University, Haining, China.
+ contrastive feature learning for few-shot industrial fault diagnosis under His current research interests include deep
+ variable working conditions,” IEEE Trans. Ind. Inform., vol. 19, no. 10, learning, fault diagnosis, and knowledge graph.
+ pp. 10277–10287, Oct. 2023.
+[18] T. Shenkar and L. Wolf, “Anomaly detection for tabular data with internal
+ contrastive learning,” in Proc. 10th Int. Conf. Learn. Representations, Apr.
+ 25–29, 2021. [Online]. Available: https://openreview.net/forum?id=%5C_
+ hszZbt46bT Xinlong Qiao received the B.E. degree in
+[19] N. Lawrence Ricker, “Decentralized control of the tennessee eastman software engineering from the Harbin Instichallenge process,” J. Process Control, vol. 6, no. 4, pp. 205–221, 1996. tute of Technology, Weihai, China, in 2023.
+[20] C. Ruiz-Cárcel, Y. Cao, D. Mba, L. Lao, and R. T. Samuel, “Statistical He is currently working toward the master’s
+ process monitoring of a multiphase flow facility,” Control Eng. Pract., degree in computer technology with the Zhevol. 42, pp. 74–88, 2015. jiang University-University of Illinois at Urbana-
+[21] Y. Zhang, “Fault detection and diagnosis of nonlinear processes using im- Champaign Joint Institute, Zhejiang University,
+ proved kernel independent component analysis (KICA) and support vector Haining, China.
+ machine (SVM),” Ind. Eng. Chem. Res., vol. 47, no. 18, pp. 6961–6971, His current research interests include deep
+ 2008. learning, named entity recognition, and fault
+[22] J. Tiago Rato and M. S. Reis, “Fault detection in the tennessee eastman diagnosis.
+ benchmark process using dynamic principal components analysis based
+ on decorrelated residuals (DPCA-DR),” Chemometrics Intell. Lab. Syst.,
+ vol. 125, pp. 101–108, 2013.
+[23] X. Xiu, Y. Yang, L. Kong, and W. Liu, “Data-driven process monitoring Ke Ma received the M.S. degree in strucusing structured joint sparse canonical correlation analysis,” IEEE Trans. tural engineering, mechanics, and materials
+ from the Department of Civil and Environmental
+ Circuits Syst. II: Exp. Briefs, vol. 68, no. 1, pp. 361–365, Jan. 2021.
+ Engineering, University of California, Berkeley,
+[24] Z. Lou, Y. Wang, Y. Si, and S. Lu, “A novel multivariate statistical pro-
+ Berkeley, CA, USA, in 2020. He is currently
+ cess monitoring algorithm: Orthonormal subspace analysis,” Automatica,
+ vol. 138, 2022, Art. no. 110148. working toward the doctoral degree in computer
+ science with Zhejiang University, Hangzhou,
+[25] J. Wang, P. Liu, S. Lu, M. Zhou, and X. Chen, “Decentralized plant-
+ China.
+ wide monitoring based on mutual information-Louvain decomposition and
+ support vector data description diagnosis,” ISA Trans., vol. 133, pp. 42–52,
+ 2023.
+9996 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 8, AUGUST 2024
+
+ Shuting Tao received the dual bachelor degree Hongwei Wang (Member, IEEE) received
+ in computer engineering from Zhejiang Univer- the B.S. degree in information technology
+ sity, Hangzhou, China and University of Illinois and instrumentation from Zhejiang University,
+ at Urbana-Champaign, Champaign, IL, USA, in Hangzhou, China, in 2004, the M.S. degree in
+ 2021. She is currently working toward the doc- control science and engineering from Tsinghua
+ toral degree in computer science and technol- University, Beijing, China, in 2007, and the Ph.D.
+ ogy with the College of Computer Science and degree in design knowledge retrieval from the
+ Technology, Zhejiang University. University of Cambridge, Cambridge, U.K., in
+ Her current research interests include ma- 2010.
+ chine learning, knowledge graph, and imbal- From 2011 to 2018, he was a Lecturer and
+ anced learning. then, a Senior Lecturer in engineering design
+ with the University of Portsmouth. He is currently a Tenured Professor with Zhejiang University and the University of Illinois at Urbana-
+ Champaign Joint Institute, Haining, China. His research in the areas
+ of his research interests has been published in over 120 peer-reviewed
+ papers in well-established journals and international conferences. His
+ research interests include knowledge engineering, industrial knowledge
+ graph, intelligent and collaborative systems, and data-driven fault diag-
+ Peng Peng (Member, IEEE) received the bach- nosis.
+ elor’s degree in control engineering and automation from the Department of Automation,
+ Northeastern University, Shenyang, China, in
+ 2017, and the Ph.D. degree in control engineering and automation from the Department of Automation, Tsinghua University, Beijing, China, in
+ 2022.
+ His research interests include process monitoring and prognostic and health management.

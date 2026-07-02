@@ -1,0 +1,1165 @@
+14610
+
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 22, 2025
+
+IIIM-SAM: Zero-Shot Texture Anomaly Detection
+Without External Prompts
+Zhe Zhang , Graduate Student Member, IEEE, Yuhang Zhou , Jiahe Yue, Runchu Zhang, and Jie Ma
+
+Abstract—Anomaly detection is a crucial aspect in ensuring
+the reliability of industrial products in smart manufacturing.
+Despite employing unsupervised anomaly detection methods to
+mitigate the challenges associated with obtaining defect data,
+there remains the challenge of adapting anomaly detectors to
+drift within normal data distributions, especially when there
+are significant intra-class variations in normal samples. Consequently, zero-shot anomaly detection techniques, which do not
+require training data and thus avoid interference from training
+data, have emerged as a new research direction. Meanwhile, the
+zero-shot segmentation capability demonstrated by the Segment
+Anything Mode (SAM) visual foundation model has further
+fueled our research enthusiasm. In this paper, we focus on texture
+images and propose a no-external prompt SAM-based method for
+zero-shot texture anomaly detection, called Image Internal Information Mining SAM (IIIM-SAM). We utilize the Image Internal
+Information Mining Prompter to mine relationships between
+internal regions of the image, identifying specific background
+and potential defect points. The two types of prompt points are
+fed into the SAM model in different stages, imparting the SAM
+with incorporating category information segmentation capability.
+Unlike current methods, our zero-shot texture anomaly detection
+method requires no external prompts or expert knowledge,
+and also avoids the uncertainty introduced by text prompts
+necessary for CLIP-based approaches. Our experimental results
+demonstrate the superiority of our zero-shot texture anomaly
+detection method compared to other approaches. Specifically, in
+the texture subset of MVTecAD/KolektorSDD2, our IIIM-SAM
+achieves 99.2%/93.6% image-level AUROC and 98.6%/92.3%
+pixel-level AUROC.
+Note to Practitioners—The motivation of this paper arises
+from a practical challenge in anomaly detection in smart flexible
+manufacturing—customized customer demands lead to significant intra-class variations and even entirely different types of
+products. Currently, most anomaly detection methods struggle
+to adapt quickly to this challenge, severely impeding production
+efficiency. This paper proposes a zero-shot texture anomaly
+detection method based on SAM, which automatically generates
+background and potential defect points through an image internal
+information mining prompter. Compared to existing zero-shot
+Received 3 July 2024; revised 26 September 2024, 21 November 2024,
+and 19 February 2025; accepted 14 April 2025. Date of publication 17 April
+2025; date of current version 2 May 2025. This article was recommended for
+publication by Associate Editor X. Li and Editor J. Li upon evaluation of the
+reviewers’ comments. This work was supported in part by the National Natural
+Science Foundation of China under Grant U1913602 and Grant 61991412 and
+in part by the Foundation of Equipment Pre-Research Area under Grant
+50911020603. (Corresponding author: Jie Ma.)
+The authors are with the National Key Laboratory of Science
+and Technology on Multispectral Information Processing, School
+of Artificial Intelligence and Automation, Huazhong University
+of Science and Technology, Wuhan 430074, China (e-mail:
+zhangzhe1997@hust.edu.cn;
+zhouyuhang@hust.edu.cn;
+yuejiahe2000@
+hust.edu.cn; runchuzhang@hust.edu.cn; majie@hust.edu.cn).
+Digital Object Identifier 10.1109/TASE.2025.3561776
+
+anomaly detection algorithms based on foundation models, our
+method’s most significant uniqueness is without any expert
+knowledge and the absence of any external text prompts. Through
+comparisons with four advanced methods on six instances using
+two evaluation metrics, the results demonstrate the outstanding
+anomaly detection capability of our approach.
+Index Terms—Smart manufacturing, texture anomaly detection, prompt engineering, foundation model, SAM.
+
+I. I NTRODUCTION
+
+I
+
+NDUSTRIAL anomaly detection aims to identify defects
+on the surface of industrial products, which holds significant importance in ensuring product quality in industrial
+production [1], [2]. In contrast to common computer vision
+tasks, data for industrial anomaly detection is highly imbalanced and acquiring anomaly data is extremely challenging.
+Even for normal (non-defective) data of the same product type,
+significant intra-class variations often occur due to changes in
+consumer demands. Furthermore, with the widespread adoption of intelligent dark factories and the implementation of
+flexible manufacturing, there is a growing demand for anomaly
+detection methods that can rapidly adapt to different types of
+products. Specifically, as shown in Fig. 1, the automatic optical
+inspection (AOI) system in flexible manufacturing requires
+inspecting multiple types of industrial products on the same
+production line without changing the algorithm of AOI.
+Therefore, adaptation to different products with trainingfree has become a significant challenge in the current field
+of anomaly detection. Specifically, there are three key points:
+1) No need for repeated training according to different
+products. 2) Effective anomaly detection capabilities across
+multiple products. 3) Inference without the need for external
+expert knowledge prompts. Clearly, both conventional supervised anomaly detection methods [3], [4] and the prevailing
+unsupervised learning methods [5], [6], [7], [8], which fit probability distributions using normal samples, cannot meet the
+requirements of the latest and challenging demands. Naturally,
+zero-shot anomaly detection has piqued our research interest.
+The cold-start characteristic of zero-shot anomaly detection
+means it can be directly applied to surface inspection without
+the need for retraining or target samples as references.
+In recent years, some foundational vision models have
+demonstrated surprising capabilities in detecting unknown
+objects and out-of-distribution data. For instance, the visuallanguage models [9], [10] have demonstrated outstanding performance in zero-shot classification tasks. Through
+
+1558-3783 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+ZHANG et al.: IIIM-SAM: ZERO-SHOT TEXTURE ANOMALY DETECTION WITHOUT EXTERNAL PROMPTS
+
+Fig. 1. Zero-shot anomaly detection samples from automatic optical inspection (AOI) system deploying Image Internal Information Mining SAM
+(IIIM-SAM).
+
+large-scale learning from millions of image-text pairs, they
+learned expressive representations capturing a wide range of
+concepts. Such models exhibit remarkable zero-shot transfer
+capabilities for downstream tasks, including image classification [11], object detection [12], and segmentation [13].
+However, it should be noted that these models require
+appropriate textual prompts including inspected categories,
+inspected status, and more detailed description templates to
+extract knowledge effectively, ensuring optimal performance
+in downstream tasks. Numerous studies have indicated that
+the performance of visual-language models varies significantly
+depending on the different text prompts. However, using
+appropriate text prompts to inject external expert knowledge
+into the model increases the skill requirements for operators in
+practical applications. It also significantly limits the methods’
+ability to quickly adapt to the surface inspection across different products. Therefore, the problem we aim to address is
+large-model-based zero-shot anomaly detection which is free
+from the constraints of external prompts.
+Segment Anything Model (SAM) is another open-source
+foundational vision model, which exhibits exceptional generalization capability to segment any object in any image
+without additional training [14]. This advancement provides
+a new research foundation for zero-shot anomaly detection.
+Nevertheless, when SAM is directly applied to anomaly detection, it exhibits two significant gaps: 1) SAM is an interactive
+framework that requires predefined prompts such as points,
+bounding boxes, or masks. This does not align with the zeroshot anomaly detection requirement in real-world scenarios,
+where no external expert knowledge is available. 2) It is
+a category-agnostic segmentation method, which prevents us
+from clearly discerning whether the segmented result represents a defect or background local structure. Specifically, we
+expect the SAM to perceive and segment the entire image as
+defect-free after receiving background prompt points. However, as illustrated in Fig. 2 (a), even when we provide accurate
+background prompt points (indicating no defect information),
+the native SAM still segments out local regions in the defectfree image, resulting in false positives. These limitations make
+SAM unsuitable for fully automatic comprehension of industrial product surface images. Additionally, we observe that
+
+14611
+
+background texture interference with distinct edges in anomaly
+detection and the lack of well-defined defect edges pose
+significant challenges to SAM’s segmentation capabilities, as
+shown in Fig. 2 (b). Overall, the performance of SAM in
+anomaly detection largely depends on the type, location, and
+number of prompts.
+In this paper, we focus on texture anomaly detection [15],
+[16] and strive to achieve the first fully automated zeroshot anomaly detection without external prompts, as shown in
+Fig. 3. To leverage SAM’s sensitive target perception ability
+in anomaly detection and make it practically valuable, it
+is necessary to investigate how to obtain accurate prompts
+without external knowledge. Secondly, we design a suitable
+anomaly detection framework based on SAM.
+The motivation for our internal image information mining
+prompt method is based on two observations regarding defect
+features compared to defect-free features of the same image:
+1) The inter-class relationship difference is greater than the
+intra-class relationship difference. 2) Defect features are fewer
+than defect-free features. We propose a prompter network for
+internal information mining, which combines the advantages
+of convolutional structures and transformer structures. By
+dividing the input image into blocks, the network explores the
+mutual relationships between blocks and judges defect-free
+regions and potential anomaly regions based on the principles
+of approximating the maximum and the strongest approximate
+relationship. Thus, two types of prompts are provided. We
+further design a two-stage mask decoder architecture based
+on the difference in confidence levels between the two types
+of prompts to achieve a more effective anomaly detection
+framework. As an example, Figure 1 illustrates our approach
+qualitative detection results for a few cases.
+To summarize, our main contributions are:
+1) Zero-Shot Anomaly Detection without External Prompts:
+To the best of our knowledge, our proposed method is
+the first large-model-based zero-shot anomaly detection
+that does not require external textual prompts. Unlike
+existing methods, our approach eliminates the reliance
+on external prompts, does not require additional training,
+and does not need defect samples as references. Therefore, our algorithm is more universal and generalizable.
+2) Prompt Points Mining Principle: We propose a principle
+for discriminating regions based on the relationships
+between internal regions of the image. By jointly considering the strength of inter-region relationships and the
+number of strong relationships, the principle determine
+whether the area is the defect-free background or the
+defective foreground. This principle allows for the mining of prompt points for downstream large models based
+solely on the inspected input image.
+3) Prompter Network Design: We design an internal
+information mining prompter network (IIIM-prompter)
+based on prompt points mining principle. IIIM-prompter
+organically combines the advantages of convolutional
+structures and transformer structures, and utilizes the
+weight information of the attention mechanism to represent the interrelationships between regions. Through
+the aforementioned design, the IIIM-prompter can more
+
+14612
+
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 22, 2025
+
+Fig. 2. The results of anomaly detection on the native SAM with manually provided point prompts for defect-free or anomalous regions, where the blue
+boundaries represent the segmented regions. (a) For defect-free images, providing prompts with defect-free information can also achieve segmentation results
+(False Positive Examples); (b) For defect images, the interference from background texture can severely impact the anomaly localization performance of the
+native SAM (Mislocalization); (c) Our method can accurately locate defects without manual intervention.
+
+Fig. 3. Characteristics comparison with different anomaly detection methods. (a) shows unsupervised anomaly detection method; (b) shows current
+zero-shot anomaly detection method; (c) shows the features and unique
+characteristics of our zero-shot method (IIIM-SAM).
+
+accurately provide the SAM model with accurate
+prompts containing category information without relying
+on external knowledge or additional dataset training,
+enabling it to be applied to specific texture defects.
+4) Optimization of SAM Architecture for Anomaly Detection: We develop a two-stage mask decoder architecture
+that processes the prompts in different stages, effectively
+utilizing the category information embedded within
+the prompts. This architecture significantly improves
+the anomaly detection amidst complex backgrounds,
+through bidirectional cross-validation of two different
+types of information (anomaly and background). Experimental results indicate that our approach demonstrates
+the state-of-the-art (SOTA) performance.
+II. R ELATED W ORK
+A. Foundation Model
+In recent years, the emergence of foundation models has
+attracted the attention of almost all artificial intelligence
+researchers. These models are trained on large amounts of data
+and exhibit impressive “emergence capabilities” across various
+scenarios, i.e. zero-shot generalization capabilities [10], [17],
+such as chat-GPT [18], GPT-4 [19], CLIP [11].
+Inspired by the tremendous success of foundation models in the field of Natural Language Processing (NLP),
+researchers have started building large-scale foundation models for computer vision and exploring the boundaries of
+zero-shot capabilities of these models. The SAM model
+[14] uniquely leverages an extensive collection of masks
+
+(11 million images, including over a billion masks) and
+demonstrates robust generalization capabilities. However, it is
+a task-agnostic segmentation model that requires interactive
+prompts, such as prior points, bounding boxes, or masks. This
+characteristic makes it less conducive to end-to-end automatic
+target segmentation. In this paper, we explore the potential
+of harnessing SAM’s general segmentation capabilities for
+detecting anomalous regions. Additionally, the proposed Image
+Internal Information Mining Prompter can be extended to other
+foundational vision models for other downstream tasks.
+B. Zero-Shot Anomaly Detection Method
+Zero-shot anomaly detection methods often rely on the
+strong generalization capabilities of models to detect unseen
+anomalies [16], [20]. Early research in zero-shot anomaly
+detection was conducted based on CLIP, such as CLIP-AD
+[21], ZOC [22]. WinCLIP [23] introduces a groundbreaking
+work, which uses a large number of manually crafted text
+prompts and involved forward passes for multiple image
+blocks. Building on WinCLIP, the first-place method of VAND
+competition [24] introduces a learnable linear projection technique to enhance the modeling of local visual semantics.
+MVFA [25] is a multi-level feature adaptation and comparison
+framework, which leverages a pre-trained vision-language
+model to achieve generalizability in zero/few-shot medical
+anomaly detection scenarios. However, these methods are
+influenced by the lack of universally embedded text prompts,
+reducing their performance in identifying anomalies related
+to various unseen object semantics. Additionally, the use
+of text prompts injects extra knowledge into the model.
+Anomaly-Clip [26] is the most advanced zero-shot anomaly
+detection method, which significantly improved the issue of
+information leakage caused by manually preset text prompts
+by introducing learnable text prompts. LTAD [27] is method
+for long-tail anomaly detection, which also improves model
+performance by learning learnable text embeddings. However,
+these methods still require the presetting of hyperparameters such as the length of the learnable text prompts and
+necessitates training the learnable part of the text prompts
+on relatively similar domain data. MuSc [28] utilizes mutual
+scoring of unlabeled images and designs an innovative zeroshot anomaly detection method. However, the drawback of
+MuSc is that the inspected images must have a substantial
+
+ZHANG et al.: IIIM-SAM: ZERO-SHOT TEXTURE ANOMALY DETECTION WITHOUT EXTERNAL PROMPTS
+
+14613
+
+Fig. 4. Overview of the Image Internal Information Mining SAM (IIIM-SAM) structure.
+
+quantity and small intra-class variation to enable effective
+mutual comparison. AnomalyGPT [29] is a parallel work
+utilizing foundation model for anomaly detection, but it is
+designed for unsupervised/few-shot anomaly detection with
+manually crafted prompts. SAA+ [30] is a zero-shot anomaly
+detection method based on the SAM foundation model, but
+unfortunately, it inevitably requires the use of highly specialized external knowledge. In summary, current zero-shot
+anomaly detection methods all necessitate the injection of
+external information.
+
+Fig. 5. Principle of internal information mining based on feature relationships.
+
+III. BACKGROUND AND C ORE P RINCIPLE
+A. Zeor-Shot Anomaly Detection Setting
+In this paper, we want to emphasize a unique zeroshot anomaly detection task setting, where the products are
+inspected without introducing any external expert knowledge. External expert knowledge includes rich predefined text
+prompt templates, anomaly appearance description, and so on.
+This task setting aligns more closely with the automation and
+rapid production transition requirements in practical applications.
+
+the anomaly detection problem can be viewed as an image
+segmentation problem to distinguish between foreground and
+background. Thus, as shown in Fig. 5 we partition the
+inspected image, calculate the similarity between regions, and
+rank them based on the degree and quantity of similarity. This
+approach allows us to identify multiple definite background
+regions and one most likely foreground region.
+IV. I MAGE I NTERNAL I NFORMATION M INING S AM
+A. Framework Overview
+
+B. Discrimination of Internal Regions Based on Feature
+Relationships
+We recognize that anomalies on the surface of industrial
+products often result from accidents during the manufacturing process or occasional events due to process instability.
+Therefore, the number of pixels in anomalous regions is
+relatively small compared to the anomaly-free regions (i.e.,
+defect-free areas). Even though there may be variations in the
+surface texture of the product, for a given detection image, the
+dissimilarity between anomalous and non-anomalous regions
+must be greater than the dissimilarity between non-anomalous
+regions from feature statistics perspective. By treating anomalies as foreground and defect-free regions as background,
+
+As shown in Fig. 4, Image Internal Information Mining
+SAM (IIIM-SAM) consists of four main parts: the image
+encoder, prompt encoder, mask decoder, and image internal
+information mining prompter. The image encoder, prompt
+encoder, and each mask decoder are components of the
+open-source SAM model. The image is processed by the
+image internal information mining prompter, which provides
+three definite background prompt points and one potential
+foreground prompt point based on the strength of region
+relationships. Considering the varying reliability of information carried by background and foreground prompt points,
+we design a two-stage mask decoder scheme to validate the
+anomaly detection results. Finally, based on the segmentation
+
+14614
+
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 22, 2025
+
+Fig. 6. The detail structure of the image internal information mining prompter. The lower-left part illustrates the internal structure of low-level feature encoder;
+the middle-bottom part shows the internal structure of global feature modeling, and the lower-right part depicts the internal structure of token-relation decoder.
+
+results of the background and foreground, the decision is made
+on whether the test image contains defects. The whole process
+can be expressed as follows:
+Fimg = fi−encoder (I),
+
+(1)
+
+Pb , P f = fIII M−prompter (I),
+
+(2)
+
+F prompter = f p−encoder (Pb , P f ),
+
+(3)
+
+Result = Det( fm−decoder (Fimg , F prompter )),
+
+(4)
+
+where I denotes the detected image, Fimg represents the image
+features encoded by SAM image encoder, Pb , P f are sets
+of prompt points mined by the IIIM-prompter. Pb represents
+the determined background points, while P f represents the
+potential foreground points. Furthermore, F prompter refers to
+the representation extracted by the prompter encoder, and Det
+refers to determining the presence of defects based on the
+segmentation information obtained from the mask decoder.
+B. Image Internal Information Mining Prompter
+In this subsection, we will provide a detailed introduction
+to the Image Internal Information Mining Prompter (IIIMprompter) constructed based on the principles of internal
+region relationships discussed in Section III. In summary, we
+first process the image by dividing it into patches and represent
+the mutual relationships between patches through attention
+weights in the network. Therefore, we choose the Transformer
+architecture as the foundation of our prompter network. However, we also recognize that the texture information contained
+in the defect carrier (non-defective background) often plays
+a crucial role in discriminating anomaly features. Neglecting
+the extraction of texture information would be a fatal flaw
+for anomaly detection. The ability to extract low-level feature
+(detailed texture information) is evidently a challenge for
+the Transformer architecture. To address this, we design a
+prompter network that combines the Convolutional Neural
+Networks (CNN) with Transformer. We first fully utilize the
+
+effectiveness of convolutional operations in extracting lowlevel features by performing feature encoding on the input
+image to form the initial tokens. As shown in the upper
+part of Fig. 6, the prompter consists of three main parts:
+Low-level Feature Encoder, Global Feature Modeling, and
+Token-Relation Decoder.
+1) Low-Level Feature Encoder: In this stage, we focus
+on the feature extraction of background texture information.
+Numerous studies have demonstrated the inherent advantage of the CNN architecture in local information extraction
+compared to the Transformer architecture [31], [32], [33].
+Additionally, the translation invariance of convolutional networks contributes to improving generalization. Therefore, we
+exclusively employ the CNN architecture in Low-level Feature
+Encoder to utilize the local information extraction capability
+and translation invariance characteristics of CNNs. To enhance
+the representation of low-level features in the encoder’s output,
+we adopt a design with residual skip connections. The specific
+structure of the low-level feature encoder is illustrated in the
+lower-left part of Fig. 6.
+2) Global Feature Modeling: As shown in the detailed
+structure in the lower part of Fig. 6, for the embedding of
+low-level features, we further enhance the embedding channel
+dimensions to increase the dimensions available for evaluating
+features and facilitate the comparison of token relationships
+in the next stage. Subsequently, the feature embedding is
+processed into feature tokens through spatial attention, complemented by two layers of Transformer layers for advanced
+semantic modeling of low-level features. It is worth noting
+that, to maintain the stability of spatial positional information,
+the generation of subsequent spatial attention weights is based
+on the tokens before the first Transformer layer. The process
+of Global Feature Modeling can be expressed as follows:
+F = Conv( f ),
+
+(5)
+
+T 1 = S OFT MAXHW (F · A s (F)) · F,
+
+(6)
+
+T T = T rans f ormer(T 1 ),
+
+(7)
+
+T
+
+ZHANG et al.: IIIM-SAM: ZERO-SHOT TEXTURE ANOMALY DETECTION WITHOUT EXTERNAL PROMPTS
+
+Fig. 7. Visualization of normalized relationships between tokens. On the left
+are segmented blocks, and on the right are pairwise relationships between
+blocks converted into tokens. Specifically, each value represents the relationship between the token in the corresponding row and the token in the
+corresponding column.
+
+T 2 = S OFT MAXHW (T T · A s (T 1 ))T · T T ,
+
+(8)
+
+T out = T rans f ormer(T 2 ),
+
+(9)
+
+where f are the features extracted from Low-level Feature
+Encoder, A s denotes the spatial attention weights. It is important to note that the sources of information for obtaining the
+spatial attention weights in the two stages are different. The
+first stage is sourced from F, while the second stage is sourced
+from T 1 .
+3) Token-Relation Decoder: After the patch of each image
+region undergoes processing in the first two stages, it is
+encoded into tokens corresponding to the number of blocks.
+These tokens are then collectively fed into the Token-Relation
+Decoder to distinguish whether each patch belongs to the
+background or foreground of the image. Specifically, we
+input the tokens into a standard self-attention layer to extract
+attention weights Ai j between tokens. After normalization, the
+final relation decoding is accomplished by sorting the relation
+weights.
+In Fig. 7, we present the visualization of normalized relationships between tokens. It is evident that there is a clear
+distinction in the strength of relationships between regions
+with and without defects, and strong mutual relationships
+exist between regions without defects. This further validates
+the correctness of the principle of distinguishing between
+defective and background (defect-free) regions, demonstrating
+the effectiveness of the image internal information mining
+prompter designed based on this principle.
+As formed as Equation 10, we assign equal importance
+to the strength of relationships and the quantity of strong
+relationships in the sorting process, aligning with the two
+distinguishing principles stated in Section III.
+!
+!
+Pn
+j Ai j · wi j
+Pn
+Relation = sort
+,
+(10)
+j wi j
+i=1,2...,n
+
+where n is the number of the tokens. The parameter wi j
+is assigned different weight values based on the strength of
+the relationship between tokens. Through the variation of this
+parameter, tokens with higher similarity in relationships are
+given greater attention.
+In the end, after calculating and sorting the relationships
+between tokens, the regions corresponding to the top three
+
+14615
+
+tokens are considered as three determined background regions.
+The token at the bottom of the ranking is considered as the
+potential foreground (defect) region.
+4) IIIM-Prompter Training: We have designed a contrastive
+learning training method that is more in line with the goals
+of internal information mining. Unlike the common practice of applying data augmentation combinations to images
+within a batch for contrastive learning, we aim to align the
+information scale during the learning process with the task
+objectives. Therefore, we propose a training approach, called
+internal region contrastive learning. We divide an image into N
+patches, p, and apply different data augmentation methods to
+these patches to obtain p0 . Specifically, we selected the color
+distortion, random rotation, and Gaussian noise as the data
+augmentation methods in the training. We then input these
+pairs (p, p0 ) into the previously mentioned IIIM-prompter.
+Finally, we obtain a 2N ×2N relationship matrix. By selecting
+the lower-left N × N matrix, we acquire the pairwise similarities between p and p0 . Each matrix’s diagonal position
+represents the similarity between p and p0 , while the others
+represent the similarity between p and N-1 negative examples.
+For each row, we apply softmax classification, utilizing
+cross-entropy loss as the loss function. Ultimately, the loss
+for internal region contrastive learning is expressed as:
+exp (sim (p, p0 ) /τ)
+,
+L p = − log PN
+i=1 exp (sim (p, pi ) /τ)
+
+(11)
+
+where τ is the temperature in the loss.
+C. Two-Stages Mask Decoder for Zero-Shot Anomaly
+Detection
+In this section, we will outline the observed segmentation
+drawbacks of applying the original SAM model to anomaly
+detection, as well as the design of a two-stage mask decoder
+structure tailored to address the identified characteristics of the
+original SAM.
+1) The Segmentation Performance Characteristics of the
+Original Sam: Firstly, we observed that SAM tends to struggle
+in capturing the global background when faced with textures
+with pronounced edges. It often gets trapped in local structural
+textures, a phenomenon we refer to as “over-segmentation”,
+as shown in Fig. 2. Therefore, when dealing with textures
+exhibiting clear and structured edges, a joint prompting of
+multiple points is required.
+Secondly, while joint prompting with multiple points effectively alleviates the “over-segmentation” issue in SAM, our
+experiments revealed that certain types of defects without
+disrupting the texture structure and only color changes, are
+easily overlooked by SAM. Hence, we design a step that we
+refer to as “retrospective checking” to mitigate instances of
+false negatives.
+2) Structural Detail: Due to the mentioned drawbacks
+exhibited by the native SAM in texture anomaly detection,
+we design a two-stage mask decoder structure, as shown in
+Fig. 4. This structure cleverly combines the uncertainty of
+background points and foreground prompting in its design.
+Specifically, since the category of the three background points
+are determined, the first-stage mask decoder only takes these
+
+14616
+
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 22, 2025
+
+Fig. 8. Qualitative comparison of anomaly detection results on different datasets. * indicates training with only one sample, and ** indicates zero-shot method
+using simple text prompts, such as, “defective.” Our method is zero-shot without any external prompt.
+
+three background point prompts as input. Subsequently, the
+second-stage mask decoder, based on the results from the first
+stage, introduces the potential foreground point prompt for a
+defect-checking phase. The purpose of retrospective checking
+is to further confirm the detection results from the first stage
+of the model, avoiding missed detection of defect region
+in the first-stage decoded mask. If the defect exists in the
+image, the lowest-ranked area based on the interrelationship
+scores within the image will definitely be a defect area. The
+missed defect will be naturally detected. In cases where the
+potential foreground point does not belong to the foreground
+(defect) area, the retrospective check will not be affected
+either. Because, the decoding process will return large and
+scattered segmentation results when the proposed point is
+from background region, which indicates that the image is
+
+indeed defect-free. Ultimately, the judgment of the existence
+of anomalies is based on the segmentation results verified by
+the second-stage mask decoder.
+
+D. Anomaly Decision and Segmentation
+We summarize the anomaly decision and segmentation
+pipeline of the proposed method with Pytorch-style pseudocode in Algorithm 1. For images without anomalies, our
+IIIM-SAM will not segment out local regions and produce
+the segmentation results without targets (the segmentation map
+will be entirely black). For images with anomalies, our method
+will segment out local regions after inputting prompts from
+IIIM-prompter, and output the segmentation maps with targets.
+
+ZHANG et al.: IIIM-SAM: ZERO-SHOT TEXTURE ANOMALY DETECTION WITHOUT EXTERNAL PROMPTS
+
+Fig. 9. The comparison of removing low-level feature encoder and global
+feature modeling. (a) is retaining the two components. (b) is removing the two
+components and token features are extracted from the SAM image encoder.
+
+Algorithm 1 Pseudo Code for IIIM-SAM
+
+V. E XPERIMENTS
+We conduct a series of comparative experiments to assess
+the zero-shot anomaly detection performance of IIIM-SAM. In
+addition, we compare the zero-shot IIIM-SAM with few-shot
+anomaly detection methods that require additional training
+and the state-of-the-art (SOTA) zero-shot anomaly detection
+methods. We also perform extensive ablation studies to validate the individual effectiveness of the proposed components.
+The detailed setups, e.g., datasets, metrics, introduction to
+the compared methods, and other implementation details, are
+given in this section.
+A. Dataset Description and Evaluation Indicators
+1) Dataset Description: We evaluate our approach in various real-world texture defect detection scenarios, including
+MVTecAD [34], the whole KolektorSDD2 [35] and DAGM
+[36] datasets. Both datasets contain high-resolution images.
+The input resolution is 1024 × 1024 for MVTec-AD and
+roughly 230 × 640 for KolektorSDD2 dataset. To ensure a
+fair comparison, we maintain the same input resolution for
+both our proposed method and the comparison methods in all
+experiments.
+
+14617
+
+a) MVTecAD Dataset: MVTecAD dataset is the most
+widely used and authoritative benchmark for anomaly detection. The dataset is divided into two major anomaly detection
+categories: texture and object. In this study, we focus on
+texture anomaly detection, consisting of sub-datasets for five
+product classes, namely Grid, Leather, Tile, Carpet, and Wood.
+The defects collected in the texture set include various sizes,
+shapes, and categories, amounting to a total of 25 defect types.
+Therefore, evaluating our IIIM-SAM and other methods on
+this dataset provides a comprehensive assessment of algorithm
+performance.
+b) KolektorSDD2 Dataset: KolektorSDD2 defect dataset
+is constructed from images of defected production items that
+were provided and annotated by Kolektor Group. KolektorSDD2 dataset consists numerous types of defects and their
+images including 356 images with defects and 2979 images
+without defect. The images in this dataset are captured by
+a visual inspection system in a controlled environment, and
+they have similar dimensions. Defects vary in shape, size, and
+color, ranging from small scratches and spots to large surface
+defects. Experiments on KolektorSDD2 dataset demonstrate
+that texture anomaly detection algorithms are not limited to
+product types similar to those showcased in MVTecAD. Users
+can capture surface images of industrial structural components
+through a professional visual inspection system, enabling the
+application of our IIIM-SAM method.
+c) DAGM Dataset: The DAGM dataset is a classic
+texture defect detection dataset widely used in the field of
+anomaly detection. It includes a variety of material surfaces
+and defect types. The defect regions are annotated using
+segmentation masks in the dataset. Each image in the dataset
+has a resolution of 512 × 512. The characteristics of the
+DAGM dataset differ significantly from the two previously
+mentioned datasets. Performance evaluation on DAGM allows
+for a more comprehensive demonstration of our algorithm’s
+generalization capability.
+2) Evaluation Indicators: We consider that image-level
+classification metrics are the primary aspect for evaluating the
+method, because it is more crucial from a practical perspective.
+After all, practitioners only need the detection system to
+accurately identify images containing anomalies for automated
+defective product removal. So, we use the area under the
+receiver operating characteristic curve (AUROC) at the image
+level as the evaluation metric following the literature [37],
+[38]. To observe potential data imbalance more clearly, we
+also employ the F1-score at the optimal threshold (F1-max)
+[39]. To more clearly and comprehensively demonstrate the
+superiority of our IIIM-SAM, we also use pixel-level AUROC
+and PRO metrics to evaluate its anomaly localization and
+segmentation capabilities.
+B. Introduction to the Compared Methods
+We selected six of the latest and representative anomaly
+detection methods for comparison with our proposed IIIMSAM, including PaDim [37] (2021), PatchCore [38] (2022),
+ACR [20] (2024), WinClip [23] (2023), WinClip+ [23] (2023),
+and Anomaly-Clip [26] (2024). Overall, PaDim, PatchCore,
+
+14618
+
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 22, 2025
+
+and ACR are non-language-guided anomaly detection methods, while WinCLIP and AnomalyCLIP are language-guided
+anomaly detection methods based on large vision-languagemodels. Specifically, PaDim and PatchCore are advanced
+few-shot anomaly detection methods learning from defect-free
+samples, but they lack zero-shot detection capabilities. ACR is
+the current state-of-the-art non-vision-language-model-based
+method for zero-shot anomaly detection. WinClip is the
+first zero-shot anomaly detection method based on large
+vision-language-model (VLM), marking a milestone in the
+field. WinCLIP+ is an improved version of WinCLIP. This
+method enhances detection capability by utilizing few-shot
+normal samples, enabling more efficient defect localization.
+Anomaly-CLIP is the latest state-of-the-art VLM-based zeroshot anomaly detection method. Therefore, the five selected
+comparison methods provide a comprehensive performance
+evaluation from different perspectives against our proposed
+method. The comparison with these five methods fully demonstrates that our IIIM-SAM not only performs zero-shot
+detection without the need for external expert knowledge, such
+as text prompts, but also achieves optimal performance in zeroshot detection.
+It is worth noting that, to compare more fairly with our
+zero-shot method without external information prompts, we
+only allow PaDim and PatchCore methods to be trained with
+one and three defect-free images, respectively (i.e., 1-shot and
+3-shot). For the zero-shot anomaly detection method WinClip,
+we restrict the method to use rich information text prompts and
+only allow WinClip to use simple and generic prompt texts,
+such as “defect” or “anomaly”. The above settings apply to
+all our experiments.
+C. Implementation Details
+We implement our models in Python 3.10 and PyTorch 1.13.
+Experiments are run on 2 Nvidia RTX 4090 GPU on Ubuntu
+18.04 Linux. For all experiments, we choose the sam-vit-h
+weights as our pre-trained SAM. IIIM-prompter is trained on
+the ImageNet dataset [40] and trained by stochastic gradient
+descent (SGD) optimizer with Nesterov momentum. We use an
+initial learning rate of 0.01, a momentum of 0.9, and a weight
+decay of 0.0001. We train for 150 epochs with the learning
+rate multiplied by 0.1 at 90 and 120 epochs. For the attention
+values greater than 0.5 in the Token-Relation Decoder, we set
+wi j to 5, 4, 3, 2, and 1, respectively.
+D. The Qualitative Anomaly Detection Results Comparison
+on Different Datasets
+We first present visualizations of anomaly detection using
+four state-of-the-art methods on different datasets. As shown
+in Fig. 8, we display detection cases for six product categories
+on two datasets. The first five rows show cases from the
+MVTecAD dataset, while the last row presents two cases from
+the KolektorSDD2 dataset.
+Qualitatively, it is evident that our zero-shot IIIM-SAM
+method exhibits excellent generalization and anomaly detection capabilities. According to some failure cases in the four
+
+TABLE I
+A REA U NDER ROC IN % FOR A NOMALY D ETECTION OF MVT EC AD
+DATASET ON I MAGE -L EVEL . † I NDICATES THE ACCURACY R EPORTED
+IN THE PAPER
+
+TABLE II
+F1-M AX IN % FOR A NOMALY D ETECTION OF MVT EC AD DATASET ON
+I MAGE -L EVEL
+
+comparative methods (Padim in Wood, Grid, Tile, KolektorSDD2; Patchcore in Grid; WinClip in KolektorSDD2), we
+demonstrate a more sensitive anomaly detection capability.
+Specifically, it can be observed that the PaDim and PatchCore methods experienced varying degrees of failure in
+anomaly localization on the wood, grid, tile, and KolektorSDD2 datasets. This is because these methods require a
+large amount of anomaly-free image samples for learning
+and do not have inherent zero-shot detection capabilities. The
+WinClip method, using a generic text prompt, showed some
+anomaly response capability in the presented examples, with
+only one case of anomaly response failure. However, it is
+evident that the anomaly heatmaps of WinClip is weak and
+diffused, making it difficult to distinguish from the background
+response. This demonstrates that zero-shot anomaly detection
+methods based on vision-language models, like WinClip, must
+rely on injecting a large amount of matching expert knowledge
+through text prompts to work effectively. In contrast, our IIIMSAM method eliminates the need for external prompts and
+leverages the strong perception capabilities of the improved
+SAM model. As a result, our method is more versatile. We
+can accurately locate defects across different products, and
+produces highly distinguishable anomaly response peaks (with
+a clear distinction from background response).
+E. The Quantitative Anomaly Detection Results
+1) Results on MVTecAD: We first presented the quantitative anomaly detection results on the MVTecAD dataset.
+Table I and Table II show the anomaly detection performance
+measured using image-level AUROC and F1-MAX metrics,
+respectively. We compared our method with other zero-shot
+and one-normal-shot anomaly detection methods. The first
+five rows represent the image-level metrics for five texture
+
+ZHANG et al.: IIIM-SAM: ZERO-SHOT TEXTURE ANOMALY DETECTION WITHOUT EXTERNAL PROMPTS
+
+TABLE III
+A REA U NDER ROC IN % FOR A NOMALY D ETECTION OF MVT EC AD
+DATASET ON P IXEL -L EVEL . † I NDICATES THE ACCURACY R EPORTED
+IN THE PAPER
+
+14619
+
+TABLE V
+A REA U NDER ROC IN % FOR A NOMALY D ETECTION OF KOLEKTOR SDD2
+DATASET ON I MAGE -L EVEL
+
+TABLE VI
+F1-M AX IN % FOR A NOMALY D ETECTION OF KOLEKTOR SDD2 DATASET
+ON I MAGE -L EVEL
+TABLE IV
+PRO IN % FOR A NOMALY D ETECTION OF MVT EC AD DATASET ON P IXEL L EVEL
+
+TABLE VII
+A REA U NDER ROC IN % FOR A NOMALY D ETECTION OF KOLEKTOR SDD2
+DATASET ON P IXEL -L EVEL
+
+subcategories, while the last row shows the average detection
+results across all categories.
+It can be observed that our IIIM-SAM method performs
+exceptionally well, achieving superior average performance
+under both evaluation metrics. Specifically, for the imagelevel AUROC metric, our method achieves detection scores
+above 98% in all five categories, while other methods show
+significant performance disadvantages in at least one category.
+In terms of average performance, our method holds a clear
+advantage, outperforming the WinClip method, which uses
+simple prompts, by 19.9%. Even compared to AnomalyCLIP, which requires an auxiliary training set to optimize
+text prompts, we achieve a 0.5% improvement. The balanced
+performance of our method is even more evident under the
+F1-MAX metric, which effectively avoids the evaluation bias
+caused by unbalanced test data. For example, other comparison
+methods show a significant performance drop in the wood
+category. This further comprehensively validates the superior
+anomaly detection performance of the IIIM-SAM method.
+Next, we used pixel-level AUROC and PRO metrics to measure the anomaly region segmentation ability of our method
+and the comparison methods. The anomaly segmentation
+results of Table III and Table IV demonstrate the advantage of
+our IIIM-SAM method for anomaly localization. Specifically,
+we surpassed four categories in pixel-level AUROC, with
+the highest lead of 3.3% compared to the next best method,
+and an overall average lead of 1.4%. In terms of the pixellevel PRO metric, we achieved comprehensive superiority.
+This reflects that once our method detects the presence of an
+anomaly, it locates the anomaly region with high precision.
+In contrast, even when other comparison methods correctly
+detect anomalies, they exhibit more erroneous responses in
+the anomaly regions. In other words, compared to other state-
+
+TABLE VIII
+PRO IN % FOR A NOMALY D ETECTION OF KOLEKTOR SDD2 DATASET ON
+P IXEL -L EVEL
+
+of-the-art methods, our approach offers higher interpretability
+and reliability in determining defective samples.
+2) Results on KolektorSDD2: The KolektorSDD2 dataset
+includes more challenging samples for anomaly detection. The
+defects in the KolektorSDD2 dataset are more complex and
+less visually distinct from the background compared to other
+datasets. This complexity makes it difficult for various methods
+to accurately identify and detect defects. From Table V and
+Table VI, we can observe severe performance degradation
+in terms of AUROC and F1-max for the five compared
+methods. Specifically, language-guided VLM-based zero-shot
+anomaly detection methods struggle to adapt and effectively
+detect anomalies because the morphology and semantics of
+defects are more abstract and diverse, making it difficult
+for text descriptions to provide effective prompts. However,
+since our IIIM-SAM does not rely on external prompts and
+includes a self-derived prompting method, our approach still
+demonstrates competitive detection performance, consistently
+maintaining evaluation results above 90%.
+As shown in the Table VII and VIII, the advantage of mining
+prompt information within the image is further reflected in
+pixel-level metrics, which indicate anomaly localization and
+segmentation capabilities. Compared to the next best zero-
+
+14620
+
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 22, 2025
+
+TABLE IX
+A REA U NDER ROC IN % FOR A NOMALY D ETECTION OF DAGM DATASET
+ON I MAGE -L EVEL
+
+TABLE XIII
+T HE I MPACT OF D IFFERENT N ETWORK S TRUCTURE C ONFIGURATIONS ON
+M INING I NTER -R EGIONAL R ELATIONSHIPS OF IIIM-P ROMPTER
+
+TABLE X
+F1-M AX IN % FOR A NOMALY D ETECTION OF DAGM DATASET ON
+I MAGE -L EVEL
+
+TABLE XI
+A REA U NDER ROC IN % FOR A NOMALY D ETECTION OF DAGM DATASET
+ON P IXEL -L EVEL
+
+TABLE XII
+PRO IN % FOR A NOMALY D ETECTION OF DAGM DATASET ON P IXEL L EVEL
+
+shot method, IIIM-SAM outperforms with a 2.4% lead in
+pixel-level AUROC and a 5.6% lead in PRO metric. The
+experimental results on the challenging KolektorSDD2 dataset
+further demonstrate the stability and generalization of our
+method, showcasing its stronger zero-shot detection capabilities.
+3) Results on DAGM: To further demonstrate that our
+method’s anomaly detection capability is independent of product categories, we also conduct experiments on the DAGM
+dataset. As shown in Table IX –XII, our method is superior
+to other SOTA methods in terms of both anomaly detection and anomaly location capabilities. Specifically, compared
+with the second-best method, our method achieves at least
+1% improvement on the anomaly classification (image-level)
+metric and more than 1.7% improvement on the anomaly
+localization (pixel-level) metric. These results further highlight
+the robustness and excellent generalization ability of our
+approach for texture anomaly detection, attributed to the image
+internal information mining mechanism without relying on
+external information learning.
+F. Ablation Studies
+1) The Impact of Removing Low-Level Feature Encoder and
+Global Feature Modeling: We excluded the Low-level Feature
+Encoder and Global Feature Modeling from IIIM-prompter,
+and instead directly used features extracted by the SAM image
+
+encoder. Taking an example with Wood images containing
+hole defects, Fig. 9 illustrates the visualization of token relationships for IIIM-prompter with retained Low-level Feature
+Encoder and Global Feature Modeling (part a) and IIIMprompter with SAM’s image encoder as a replacement (part
+b). It is evident that the IIIM-prompter with retained Lowlevel Feature Encoder and Global Feature Modeling (part a)
+shows a more pronounced difference between defective tokens
+and non-defective tokens. Specifically, the contrast degree of
+defect token is 23.11% and the range of normalized crosscorrelation is from 0.47 to 0.89. Conversely, using SAM’s
+image encoder to replace Low-level Feature Encoder and
+Global Feature Modeling in IIIM-prompter (part b) exhibits
+a less clear distinction in token relationships. Specifically, the
+contrast degree of defect token is just 10.40% and the range of
+normalized cross-correlation is from 0.82 to 0.91. Through this
+ablation study, it is shown that our IIIM-prompter combining
+Low-level Feature Encoder and Global Feature Modeling
+module has a stronger ability to mine the interrelationships
+within image regions.
+2) The Impact of Different Network Structure Configurations on Mining Inter-Regional Relationships of IIIMPrompter: To further demonstrate the advantage of the
+combined convolutional and Transformer structure on mining
+internal image relationships, we conducted the ablation experiments on the IIIM-prompter using the MVTecAD dataset.
+We compared the combined structure with networks using
+either CNN or Transformer alone. The difference in regional
+relationships was quantitatively represented by the contrast of
+inter-class (anomaly and background) similarity to intra-class
+(background and background) similarity. For the experimental
+results, a higher value indicates a more pronounced difference. The average results of the experiments are shown in
+Table XIII. Compared with the configurations of CNN or
+Transformer only, the CNN union Transformer configuration
+yields the highest value. Specifically, the configuration using
+only CNN lacks the ability to model global relationships,
+resulting in a 0.139 decrease in the similarity ratio. On
+the other hand, using only the Transformer structure clearly
+lacks the ability to extract local low-level features and spatial
+invariance, leading to a similarity ratio lower than 0.1. This
+indicates that there is almost no distinction between anomalies
+and the background. By combining the strengths of both the
+CNN and Transformer structures, our method can achieve a
+clearer resolution of the anomaly regions.
+3) The Impact of Background Prompt Point Number: We
+investigated the impact of different numbers of background
+
+ZHANG et al.: IIIM-SAM: ZERO-SHOT TEXTURE ANOMALY DETECTION WITHOUT EXTERNAL PROMPTS
+
+TABLE XIV
+T HE I MPACT OF BACKGROUND P ROMPT P OINT N UMBER ON A NOMALY
+D ETECTION R ESULTS FOR D IFFERENT DATASETS
+
+TABLE XV
+T HE I MPACT OF R EMOVING THE P OTENTIAL F OREGROUND P ROMPT
+P OINT ON A NOMALY D ETECTION R ESULTS FOR D IFFERENT DATASETS
+
+14621
+
+customer requirements. Ensuring that the nonwoven fabric is
+free of defects is crucial for guaranteeing the medical protective performance of the produced masks. During a trial run
+of the inspection line, a total of 1611 images were analyzed,
+and our method achieved an accuracy of 98.94%, a missed
+detection rate of 1.93%, and a false alarm rate of 0.84%.
+The primary cause of missed detections was that certain oil
+stains became indistinguishable from the background after
+drying. In general, the detection performance of our method
+has met the performance requirements of practical application
+in nonwoven fabric inspection.
+VI. C ONCLUSION
+
+prompt points on the final detection performance. Table XIV
+presents quantitative anomaly detection results for IIIM-SAM
+on the MVTecAD and KolektorSDD2 datasets using three,
+two, and one background prompt points. The results indicate
+that, on the MVTecAD dataset, using two background prompt
+points leads to a certain decrease in detection performance,
+while using only one background prompt point results in a
+more noticeable performance decline. The reason for this performance drop is that SAM’s segmentation performance tends
+to be limited to local structure interference of the complex
+backgrounds, and increasing the number of prompt points
+encourages SAM to have a global perception of the tested
+image. Since the KolektorSDD2 dataset’s texture background
+lacks interference from local structures, changing the number
+of background prompt points does not significantly impact the
+detection results.
+4) The Impact of Removing the Potential Foreground
+Prompt Point: Table XV shows the impact of removing
+potential foreground prompt points on the anomaly detection
+capability of IIIM-SAM. On the MVTecAD and KolektorSDD2 datasets, both AUROC and F1-max indicators exhibit
+a significant decrease in detection performance. The input
+of potential foreground prompt points corresponds to the
+second stage of the two-stage mask decoder in the IIIM-SAM
+structure. The input of potential foreground prompt points is
+designed to avoid SAM ignoring anomaly regions with complex backgrounds due to multiple background prompt points
+and serves as a verification. Therefore, removing potential
+foreground prompt points in IIIM-SAM makes it susceptible
+to missing defects, such as color similar to the background or
+light color on product surface, leading to an overall decrease
+in detection performance.
+G. Performance Evaluation in Real-World Industrial
+Scenarios
+We evaluated the performance of our method on a real
+industrial nonwoven fabric inspection line, as shown in Fig. 1.
+The factory often uses nonwoven fabric materials with different textured backgrounds for mask production based on
+
+In this paper, we introduced a zero-shot texture anomaly
+detection method using image internal information mining
+prompt. The key uniqueness of this method is without relying on any external expert knowledge to zero-shot anomaly
+detection, which effectively addresses the challenges of rapid
+product changes and iterations in industrial production. The
+convenience of our IIIM-SAM method is primarily reflected
+in its usage after deployment, eliminating the need for external
+prompts or expert intervention, thus making it more convenient
+and scalable for industrial applications in the real world.
+We began by presenting the principles of image internal
+information mining, followed by the design of the Image
+Internal Information Mining Prompter to operationalize these
+principles. In addition, we discussed the limitations of the
+native SAM model when applied to texture anomaly detection
+and overcame these challenges by using multiple background
+and foreground points for joint prompting through a two-stage
+mask decoder. The experimental results indicate that our proposed IIIM-SAM outperforms current CLIP-based zero-shot
+anomaly detection methods. Additionally, compared to SAM
+with manually input defect and background location prompts,
+there is only a localization performance difference of no more
+than 0.5% in terms of pixel-level AUROC. In the test of
+inference speed, our method achieves 2.2 FPS on the computer
+with single NVIDIA RTX 4090 GPU. In future deployment,
+depending on the actual production requirement, the faster
+SAM variants can be used to accelerate the computation speed.
+In fact, we believe that large foundation models already
+possess sufficient perceptual capabilities for the environment.
+The reason they may not be directly applicable to specific tasks
+lies in the lack of organized and inferred perceptual information for those tasks. Through the IIIM-SAM architecture, we
+aim to showcase the true zero-shot anomaly detection capabilities of large foundation models. Of course, our IIIM-SAM
+also has its limitations. Our method can only be effectively
+applied to texture anomaly detection scenarios, such as fabric
+manufacturing, wooden flooring, and steel rail inspection. The
+primary limitation stems from the fact that our method relies
+on internal relationships within the image to mine prompt
+points. However, in object anomaly detection scenarios (e.g.,
+defects in products with complex structural variations, such
+as toothbrushes, cables or others with mechanical parts), the
+method faces challenges. This is because objects often have
+diverse local structures and internal components, which can
+
+14622
+
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 22, 2025
+
+weaken the internal relationships between regions. Consequently, our method struggles to identify reliable background
+and foreground prompt points, making it difficult to guide
+SAM to accurately segment anomalous regions. The experiments on the object categories of the MVTecAD dataset also
+show that our method’s average image-level AUROC is only
+30.4%, which is 63.1% lower than the current SOTA method.
+In future work, we will further explore potential strategies to
+extend the applicability for zero-shot anomaly detection without introducing external knowledge. For example, introducing
+more image preprocessing stages to transform object anomaly
+detection into texture anomaly detection, and introducing more
+feature information to accurately mine the prompt points in
+complex object structures.
+R EFERENCES
+[1]
+
+W. Luo, H. Yao, W. Yu, and Z. Li, “AMI-net: Adaptive mask inpainting
+network for industrial anomaly detection and localization,” IEEE Trans.
+Autom. Sci. Eng., vol. 22, pp. 1591–1605, 2025.
+[2] C. Wang et al., “Real-IAD: A real-world multi-view dataset for benchmarking versatile industrial anomaly detection,” in Proc. IEEE Conf.
+Comp. Vis. Patt. Recogn., vol. 35, Jun. 2024, pp. 22883–22892.
+[3] Y. Wang, L. Gao, Y. Gao, and X. Li, “A graph guided convolutional
+neural network for surface defect recognition,” IEEE Trans. Autom. Sci.
+Eng., vol. 19, no. 3, pp. 1392–1404, Jul. 2022.
+[4] Q. Xie, D. Li, J. Xu, Z. Yu, and J. Wang, “Automatic detection
+and classification of sewer defects via hierarchical deep learning,”
+IEEE Trans. Autom. Sci. Eng., vol. 16, no. 4, pp. 1836–1847,
+Oct. 2019.
+[5] X. Dong, C. J. Taylor, and T. F. Cootes, “Defect classification and
+detection using a multitask deep one-class CNN,” IEEE Trans. Automat.
+Sci. Eng., vol. 19, no. 3, pp. 1719–1730, Jul. 2022.
+[6] H. Yao et al., “Dual-attention transformer and discriminative flow for
+industrial visual anomaly detection,” IEEE Trans. Autom. Sci. Eng.,
+vol. 21, no. 4, pp. 6126–6140, Oct. 2024.
+[7] P. Bergmann, K. Batzner, M. Fauser, D. Sattlegger, and C. Steger,
+“Beyond dents and scratches: Logical constraints in unsupervised
+anomaly detection and localization,” Int. J. Comput. Vis., vol. 130, no. 4,
+pp. 947–969, Apr. 2022.
+[8] X. Li et al., “PromptAD: Learning prompts with only normal samples
+for few-shot anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis.
+Pattern Recognit. (CVPR), Jun. 2024, pp. 16848–16858.
+[9] J.-B. Alayrac et al., “Flamingo: A visual language model for fewshot learning,” in Proc. Adv. Neural Inf. Process. Syst., vol. 35, 2022,
+pp. 23716–23736.
+[10] C. Jia et al., “Scaling up visual and vision-language representation
+learning with noisy text supervision,” in Proc. 38th Int. Conf. Mach.
+Learn., vol. 139, 2021, pp. 4904–4916.
+[11] A. Radford et al., “Learning transferable visual models from natural
+language supervision,” in Proc. Int. Conf. Mach. Learn., vol. 139, 2021,
+pp. 8748–8763.
+[12] X. Gu, T.-Y. Lin, W. Kuo, and Y. Cui, “Open-vocabulary object detection
+via vision and language knowledge distillation,” in Proc. Int. Conf.
+Learn. Represent., Jan. 2021.
+[13] M. Xu et al., “A simple baseline for open-vocabulary semantic segmentation with pre-trained vision-language model,” in Proc. 17th Eur. Conf.
+Comput. Vis., Tel Aviv, Israel, Oct. 2022, pp. 736–753.
+[14] A. Kirillov et al., “Segment anything,” in Proc. IEEE/CVF Int. Conf.
+Comput. Vis., Oct. 2023, pp. 4015–4026.
+[15] H. Yang, Y. Chen, K. Song, and Z. Yin, “Multiscale feature-clusteringbased fully convolutional autoencoder for fast accurate visual inspection
+of texture surface defects,” IEEE Trans. Autom. Sci. Eng., vol. 16, no. 3,
+pp. 1450–1467, Jul. 2019.
+[16] T. Aota, L. T. T. Tong, and T. Okatani, “Zero-shot versus many-shot:
+Unsupervised texture anomaly detection,” in Proc. IEEE/CVF Winter
+Conf. Appl. Comput. Vis. (WACV), Jan. 2023, pp. 5564–5572.
+
+[17] H. Nori, N. King, S. M. McKinney, D. Carignan, and E. Horvitz,
+“Capabilities of GPT-4 on medical challenge problems,” 2023,
+arXiv:2303.13375.
+[18] L. Ouyang et al., “Training language models to follow instructions with
+human feedback,” in Proc. Adv. Neural Inf. Process. Syst., vol. 35, 2022,
+pp. 27730–27744.
+[19] J. Achiam et al., “GPT-4 technical report,” 2023, arXiv:2303.08774.
+[20] A. Li, C. Qiu, M. Kloft, P. Smyth, M. Rudolph, and S. Mandt, “Zeroshot anomaly detection via batch normalization,” in Proc. Adv. Neural
+Inf. Process. Syst., Jan. 2023, pp. 40963–40993.
+[21] P. Liznerski, L. Ruff, R. A. Vandermeulen, B. J. Franks, K.-R. Müller,
+and M. Kloft, “Exposing outlier exposure: What can be learned from
+few, one, and zero outlier images,” 2022, arXiv:2205.11474.
+[22] S. Esmaeilpour, B. Liu, E. Robertson, and L. Shu, “Zero-shot out-ofdistribution detection based on the pre-trained model CLIP,” in Proc.
+Conf. AAAI, Jun. 2022, vol. 36, no. 6, pp. 6568–6576.
+[23] J. Jeong, Y. Zou, T. Kim, D. Zhang, A. Ravichandran, and O. Dabeer,
+“WinCLIP: Zero-/few-shot anomaly classification and segmentation,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+2023, pp. 19606–19616.
+[24] X. Chen, Y. Han, and J. Zhang, “A zero-/few-shot anomaly classification
+and segmentation method for CVPR 2023 and workshop challenge tracks
+1&2: 1st place on zero-shot ad and 4th place on few-shot ad,” 2023,
+arXiv:2305.17382.
+[25] C. Huang, A. Jiang, J. Feng, Y. Zhang, X. Wang, and Y. Wang,
+“Adapting visual-language models for generalizable anomaly detection
+in medical images,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2024, pp. 11375–11385.
+[26] Q. Zhou, G. Pang, Y. Tian, S. He, and J. Chen, “AnomalyCLIP: Objectagnostic prompt learning for zero-shot anomaly detection,” in Proc. Int.
+Conf. Learn. Represent., Jan. 2023.
+[27] C.-H. Ho, K.-C. Peng, and N. Vasconcelos, “Long-tailed anomaly
+detection with learnable class names,” in Proc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit. (CVPR), Jun. 2024, pp. 12435–12446.
+[28] X. Li, Z. Huang, F. Xue, and Y. Zhou, “MuSc: Zero-shot industrial
+anomaly classification and segmentation with mutual scoring of the
+unlabeled images,” 2024, arXiv:2401.16753.
+[29] Z. Gu, B. Zhu, G. Zhu, Y. Chen, M. Tang, and J. Wang, “AnomalyGPT:
+Detecting industrial anomalies using large vision-language models,” in
+Proc. Conf. AAAI, Mar. 2024, vol. 38, no. 3, pp. 1932–1940.
+[30] Y. Cao et al., “Segment any anomaly without training via hybrid prompt
+regularization,” 2023, arXiv:2305.10724.
+[31] Z. Dai et al., “CoAtNet: Marrying convolution and attention for all
+data sizes,” in Proc. Conf. Neural Inf. Process. Syst. (NeurIPS), 2021,
+pp. 3965–3977.
+[32] J. Guo et al., “CMT: Convolutional neural networks meet vision
+transformers,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+Jun. 2022, pp. 12175–12185.
+[33] J. Li et al., “Next-ViT: Next generation vision transformer for efficient
+deployment in realistic industrial scenarios,” 2022, arXiv:2207.05501.
+[34] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A
+comprehensive real-world dataset for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+2019, pp. 9584–9592.
+[35] J. Božič, D. Tabernik, and D. Skočaj, “Mixed supervision for surfacedefect detection: From weakly to fully supervised learning,” Comput.
+Ind., vol. 129, Aug. 2021, Art. no. 103459.
+[36] M. Wieler and T. Hahn, “Weakly supervised learning for industrial
+optical inspection,” in Proc. DAGM Symp., vol. 6, 2007, p. 11.
+[37] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch distribution modeling framework for anomaly detection and localization,”
+in Proc. Int. Conf. Pattern Recognit., Jan. 2021, pp. 475–489.
+[38] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and
+P. Gehler, “Towards total recall in industrial anomaly detection,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2022,
+pp. 14318–14328.
+[39] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spotthe-difference self-supervised pre-training for anomaly detection and
+segmentation,” in Proc. Eur. Conf. Comput. Vis., 2022, pp. 392–408.
+[40] J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and L. Fei-Fei, “ImageNet:
+A large-scale hierarchical image database,” in Proc. IEEE Conf. Comput.
+Vis. Pattern Recognit., Jun. 2009, pp. 248–255.

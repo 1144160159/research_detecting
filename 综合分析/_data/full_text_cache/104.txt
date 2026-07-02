@@ -1,0 +1,1106 @@
+Encrypted Malware Traffic Detection
+ via Graph-based Network Analysis
+ Zhuoqun Fu1 , Mingxuan Liu1 , Yue Qin2 , Jia Zhang1 , Yuan Zou1,3 , Qilei Yin1 , Qi Li1 , Haixin Duan1,4
+ 1 Institute for Network Sciences and Cyberspace, Tsinghua University, Beijing, China
+ 2 Indiana University Bloomington, Bloomington, USA
+ 3 GeekSec Security Group, Beijing, China 4 Qi An Xin Group Corp., Beijing, China
+ 1 {fzq20, liumx18}@mails.tsinghua.edu.cn, {yinqilei, qli01, duanhx}@tsinghua.edu.cn, zhangjia@cernet.edu.cn
+ 2 qinyue@iu.edu, 3 zouyuan@geeksec.com
+
+ABSTRACT Research in Attacks, Intrusions and Defenses (RAID 2022), October 26–28, 2022,
+Malicious activities on the Internet continue to grow in volume Limassol, Cyprus. ACM, New York, NY, USA, 15 pages. https://doi.org/10.
+ 1145/3545948.3545983
+and damage, posing a serious risk to society. Malware with remote
+control capabilities is considered one of the most threatening mali- 1 INTRODUCTION
+cious activities, as it can enable arbitrary types of cyber-attacks. As Malware refers to intrusive software programs developed by cybera countermeasure, many malware detection methods are proposed criminals with malicious intentions such as stealing data, corrupting
+to identify malicious behaviours based on traffic characteristics. computers, bringing down servers, and penetrating networks. The
+However, the emerging encryption and evasion techniques pose most damaging malware are those with remote control capabilsubstantial barriers to the full exploitation of network information. ities, which give attackers administrative control of the victim’s
+This significantly impairs the effectiveness of existing malware de- computer to enable arbitrary types of cyber-attacks. For example,
+tection methods relying on a singular type of characteristics. In this NOPEN used in a massive breach of top-secret data in 2017 has
+paper, we propose ST-Graph to resolve this issue. In addition to tra- such remote control capabilities [7]. The infection pattern of this
+ditional stream attributes, ST-Graph explores spatial and temporal type of malware is shown in Figure 1, where the infected host comcharacteristics of network behaviours based on a graph represen- municates with the control server to perform further malicious acts.
+tation learning algorithm and integrates all available information Due to the highly concealed and high-risk nature, the detection
+to boost the detection decision. To illustrate the effectiveness of of malware has received considerable critical attention from both
+ST-Graph, we evaluate it on two datasets. Experimental results academia [28, 69, 71] and industry [8, 9, 13].
+demonstrate that ST-Graph outperforms state-of-the-art malware Real-world malware traffic detection requires efficient detection
+detection systems and also shows good performance in efficiency, over complex network traffic data with high accuracy. However,
+generalizability, and robustness. Specifically, it achieves over 99% the emergence of encryption strategies and various evasion techprecision and recall, and its False Positive Rate is even two orders nologies of adversaries poses huge barriers to effective malware
+of magnitude lower than (nearly 0.02 times) that of baseline mod- traffic detection. More specifically, adversaries employ encryption
+els. Meanwhile, the deployment of ST-Graph in two real network protocols (i.e. TLS protocol [52]) in the process of malware comscenarios for around one year shows an outstanding efficiency munications to hide suspicious information. According to [18], in
+with only 160 seconds time cost for 5-minute traffic in 1.7 Gbps 2021, more than 46% of malware have encrypted their communicabandwidth. tions. The encryption on most traffic greatly curtails the accessible
+CCS CONCEPTS information (e.g., URL and HTTP headers in payload, ) that indicate malicious network behaviour. This impairs the accuracy and
+• Security and privacy → Intrusion detection systems.
+ consistency of traditional network-based malware detection, such
+KEYWORDS as Deep Packet Inspection (DPI) [47, 54].
+Traffic-based malware detection, encryption traffic, graph repre- Many previous works have made efforts to resolve the challenges
+sentation of encryption. For example, to enlarge the set of indicative informa-
+ACM Reference Format: tion, [3, 19] summarise the fine-grained features of TLS traffic and
+ Zhuoqun Fu1 , Mingxuan Liu1 , Yue Qin2 , Jia Zhang1 , Yuan Zou1, 3 , Qilei use machine learning methods to identify encrypted traffic gener-
+Yin1 , Qi Li1 , Haixin Duan1, 4 . 2022. Encrypted Malware Traffic Detection ated by known malicious samples. Further, [37, 42] introduce deep
+via Graph-based Network Analysis. In 25th International Symposium on learning methods to reduce the dependence on features and human
+ experience. However, such detection methods based on features of
+ singular streams cannot be generalized to unknown samples and
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation may induce a large number of false positives that cannot be interon the first page. Copyrights for components of this work owned by others than the preted. To overcome such issues, another trend of methods [34, 35]
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission attempt to reveal the essential characteristics of malware behaviour
+and/or a fee. Request permissions from permissions@acm.org. through the accessing relations between hosts and domains. How-
+RAID 2022, October 26–28, 2022, Limassol, Cyprus ever, adopting such methods in the real-world network scenario is
+© 2022 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 978-1-4503-9704-9/22/10. . . $15.00 not trivial due to efficiency concerns. More seriously, adversaries
+https://doi.org/10.1145/3545948.3545983 have developed various evasion techniques by perturbing stream
+
+ 495
+RAID 2022, October 26–28, 2022, Limassol, Cyprus Fu and Liu, et al.
+
+ Victim Attacker Information in TLS handshake. Transport Layer Security (TLS) [52]
+ is utilized to assure confidentiality and integrity between two com-
+ Malicious intrusion munication entities. For example, HTTPS is the plain text HTTP
+ Attack
+ Phase Intrusion acknowledge & Delivery malware protocol over TLS. In general, a TLS connection negotiates keys
+ via a TLS handshake and then uses secure symmetric to encrypt
+ Install malware communication payloads. Encryption of TLS could prevent any
+ Request instructions third parties from accessing plain communication payloads, which
+ Control
+ Phase Issue instructions attracts an increasing number of applications to deploy TLS. As a
+ …… coin has two sides, malicious adversaries also deploy TLS to encrypt
+ Figure 1: Infection pattern of remote control malware. their connections to evade detection by DPI systems [47, 54]. However, TLS handshake remains in plain-text in order to exchange the
+features, which further reduces the amount of usable information
+ information necessary for encryption. During a TLS handshake,
+for malware identification. So far, the issue of lacking representative
+ two communicating parties authenticate with each other, negotiinformation for encrypted malware detection has not been well reate encryption algorithms, exchange encryption keys and finally
+solved. Previous works only use a single type of characteristics such
+ agree on the encryption process based on previously exchanged
+as stream features or context information while the information
+ information. More specifically, the client initially sends a Clienloss and compression still exist.
+ tHello message, providing a list of cipher suites and a set of TLS
+ In this paper, we propose ST-Graph, a multi-stream analysis
+ extensions. The cipher suites are a set of cryptographic algorithms
+framework that explores multiple features from spatial and temporequired by TLS. The extensions are the features supported by the
+ral perspectives and integrates all available information for compre-
+ TLS client, where the Server Name Indication (SNI) extension indihensive malware traffic detection under encryption scenarios. More
+ cates the hostname of the target server to which the client is trying
+specifically, we design an attribute heterogeneous graph oriented
+ to connect. The server then responds with a ServerHello message,
+to spatio-temporal traffic behaviour, which effectively captures the
+ containing the selected algorithm and identity information. As the
+characteristics of associations between nodes in a large-scale netinformation exchanged during the handshake process is critical
+work. Equipped with a graph representation learning method, our
+ to the subsequent encrypted communication, it also provides vital
+method extends the scope of information that can be utilized for
+ information to detect malicious encrypted traffic [2].
+recognizing encrypted malicious traffic, which boosts the detection
+ Graph Representation Learning. Graph is a data structure for
+to achieve higher accuracy and robustness. In the meantime, we
+ representing complex networks and modelling abstract concepts
+carefully design our graph representation learning algorithm on
+ such as relations between entities. However, traditional graph
+the basis of random walk [49], which learns spatial and tempoconstruction algorithms (e.g. adjacency matrices [53], adjacency
+ral features for network traffic with high efficiency. The learned
+ list [10]) and graph analysis algorithms (e.g. search algorithms [59])
+host representations aggregate information from behavioural sehave difficulty in solving the increasingly complex graph topology
+quences in the network, which effectively highlights the differences
+ and can incur huge space and time overheads. At the same time,
+in traffic between compromised hosts and benign samples with
+ graph representation algorithms [24] allow for more flexible and
+little information loss.
+ efficient analysis on large-scale graphs, with the goal of optimiz-
+ Our main contributions are summarised as follows:
+ ing a set of vectors that numerically represent node information
+• We propose ST-Graph, a real-time malicious traffic detection
+ as well as graph structure. Among such methods, graph embedframework under an encryption scenario. By exploring and inteding [21] is a representative approach, which transforms nodes
+grating multiple features, ST-Graph effectively reveals malicious
+ on graphs into vectors. A graph could be approximated by several
+behaviours within an encrypted network, which enables low false
+ node lists, which is similar to the word sequences in a piece of
+alarm rate detection.
+ text. Therefore, word2vec [39], a text embedding method, could be
+• We design a heterogeneous attribute graph for encrypted traffic
+ adopted for graph embedding effectively [49]. First, a list of nodes
+and propose a novel embedding method, namely interval-inclined
+ can be regarded as a “corpus” of a graph, which can be obtained by
+random walk, for exploring and incorporating spatial and temporal
+ random walks [16]. Based on the node list, the vectorized represencharacteristics of the traffic data.
+ tations of nodes can be optimized using a skip-gram network [40],
+• We evaluate our detection system in several real network scenarby maximizing the likelihood probability of each node’s context.
+ios for up to a year and observe good results. Compared to other
+ In this paper, we extend this method to learn edge representations
+works, our detection model results in higher accuracy (nearly 10
+ from the prioritized graph topology constructed from the complex,
+times that of baselines), and significantly lower false positives with
+ real-world network traffic data.
+a tolerable time cost.
+• By real-world deployment, our detection system finds some mali- 3 PROBLEM STATEMENT
+cious cases that cannot be discovered by other systems and reveals
+ Our goal is to detect infected hosts within an organization by obsome emerging malicious traffic types.
+ serving host traffic behaviours. Generally, gateway refers to the
+2 BACKGROUND network boundary to distinguish between internal and external
+In this section, we briefly overview the available information for networks, such as campus networks and enterprise networks. Due
+malicious traffic detection under encryption and summarise the to the gateway’s global perspective of the traffic through it, we posiknowledge about graph representation learning. tion our detection system, ST-Graph, at the gateway to monitor the
+
+ 496
+Encrypted Malware Traffic Detection
+via Graph-based Network Analysis RAID 2022, October 26–28, 2022, Limassol, Cyprus
+
+ External
+ ST-Graph section, we illustrate the key observations of malware infections,
+ Detect
+ explain the design of the system, and describe the workflow of
+ Internal
+ ST-Graph.
+ 4.1 Key Observations
+
+ Malicious level
+ … Gateway
+ …
+ Figure 2: Threat model of ST-Graph. Attack
+ Control
+ Server H1 H2 H3
+whole traffic, as shown in Figure 2. Specifically, ST-Graph listens
+to encrypted network traffic generated by internal hosts accessing Figure 3: Schematic representation of host connectivity in
+external servers at the gateway and detects infected hosts with a network environment with malware infections. Colour
+suspicious communications in a real-time manner. In this work, of circle represents the maliciousness of the destination
+we only focus on the standardized TLS protocol encrypted traffic. server. For example, white circles represent normal desti-
+Since it’s the mainstream encryption protocol with the most usage nation servers, like www.google.com, grey circles represent
+rate for malware, due to its ease of deployment. To be noticed, our middle-malicious servers, like phishing websites, and black
+detection system only captures the traffic without manipulating circles represent malicious servers, like C&C servers.
+them and thus will not affect the benign forwarding traffic.
+ However, such detection demand poses huge challenges mainly Since remote control malware has the advantage of low attack
+from two perspectives: 1) curtailed available information limits cost and the capability of widespread, it has been widely taken by
+the effectiveness of the detection, and 2) the highly comprehen- adversaries in more than half of malware attacks [30]. To detect
+sive network connections hinder the efficiency of the detection. remote control malware, we first perform an empirical study to
+More specifically, the first concern results from recent encryption condense the key features. Based on previous work that found that
+and adversaries’ evasion technologies, which greatly curtail the some malware has similarities in attack targets and attack methamount of information that can be utilized for detection. In en- ods [29, 46, 57], we perform a manual analysis of remote control
+cryption scenarios, the invisibility of payloads of communication malware from two aspects: code and generated traffic. First, we
+prevents traditional detection methods, e.g. DPI methods [47, 54], randomly sample 30 malware as our ground truth and run them on
+from making accurate predictions. More seriously, adversaries have several operating systems under our control. Note that the entire
+evolved several techniques to evade existing single-stream-based experiment environment is enclosed and will not affect any third
+detection methods [17, 61, 65]. In obfuscation-based evasion, adver- parties. From the code aspect, we reverse their code and analyse
+saries change frequency of accesses from a host to command and the code logic and hard-coded content. We find that malware in the
+control (C&C) servers [26], which blurs the suspicious property same family prefers to share a similar software framework, which is
+of the host to evade detection based on packet length and time the root cause of the similar traffic behaviour. The reason for code
+interval [3, 19, 45]. In disguising-based evasion, malware takes the sharing and reuse, as we speculate, is likely to be saving costs. And
+form of benign software connections, disguises that its traffic is malware is generally not up to date and still accepts low version
+generated by benign software [17], visits benign third-party web- TLS connections. Besides, developers of malware often use default
+sites initially as a front [68], or reduces the number of websites fixed parameters, especially the time interval. For example, we find
+visited [38] to avoid context-based detection [50, 73]. The suspi- that some malware usually set the time interval to connect to the
+cious behaviours hide behind millions of legitimate requests, which control servers to 60 seconds.
+poses substantial barriers to effective detection and introduces a Further, to explore the traffic behaviour, we try to decrypt the
+high level of false positives [11, 17]. Therefore, encryption and eva- traffic generated by ground truth malware. With the master key
+sion behaviours prompt us to explore more available information extracted from controlled operating systems, we could analyse
+for effective detection. the plain communication between malware and servers. The simi-
+ As for the second concern, the detection over network inter- larity of code within the same family leads to a concentration of
+actions confronts a large scale of network throughput, resulting behavioural characteristics in their traffic behaviour. Due to a clear,
+from the increasing number of network users and the complex joint attack purpose, i.e. remote control of the infected hosts, there
+network connectivity. Meanwhile, the demand of exploring addi- exists a relatively fixed traffic pattern in remote control attack. As
+tional, multi-faceted features for effective detection also intensifies shown in Figure 1, the communication process can be summarised
+the computational complexity. Therefore, we need to design new into two main phases: the attack phase (solid lines) and the control
+detection technologies that can explore and process more network phase (dashed lines). Initially, the attack phase is to deliver malware
+features over comprehensive network interactions with tolerable to victim’s machine by spoofing websites (grey circles) or exploiting
+computational complexity. vulnerabilities to install malware, which can help adversaries gain
+ control of the host. For example, for H2 in Figure 3, the attacker
+4 SYSTEM OVERVIEW commits a fraudulent activity by sending phishing emails in the
+In this paper, we propose ST-Graph, a multi-stream analysis frame- attack phase and lures victim to click the embedded link, which
+work equipped with a novel graph embedding algorithm. In this may cause the redirection from phishing website (grey circle) to
+
+ 497
+RAID 2022, October 26–28, 2022, Limassol, Cyprus Fu and Liu, et al.
+
+ Encrypted Traffic temporal (i.e., connection order and time-related information) char-
+ 1 Spatio-Temporal Graph Representor acteristics of hosts’ network behaviour into host representations
+ Traffic Preprocessor
+ Graph Edge Host to boost the effectiveness of detection decisions. To achieve higher
+ Flow Features Construction Embedding Representation
+ 2 efficiency, we improve the algorithm of graph representation by
+ Graph Representor
+ only optimising edge representation with iterative updates, while
+3 the optimal node representations are derived from closed-form so-
+ Detector
+ Host Features lutions. This significantly reduces the computational complexity of
+ Host Server
+ Malware Infection graph representation learning.
+
+ Figure 4: Overview of ST-Graph.
+ 4.3 Workflow
+ As shown in Figure 4, our detection system consists of three commalware download site (black circle). Afterwards, in the control
+ ponents: data preprocessor, graph representor, and detector. Below
+phase, infected hosts would connect to the control server of adverwe elaborate on the functionality of each component.
+saries to receive and then execute instructions [46]. We find that
+ Traffic Preprocessor. Raw traffic is usually captured as packets in
+most malware prefers to connect to different destination servers in
+ the Pcap format. In this original data format, many communication
+different phases, which construct a connection order. We speculate
+ details are presented in a fragmented manner, making it difficult
+the reason may be to evade the detection. Interestingly, the forged
+ to be utilized for detection. Therefore, we construct a Traffic Preinnocent network connectivity test of malware is common, which
+ processor to recover the complete communication while removing
+is preparation before connecting to control servers, e.g., querying
+ the extra meta-information from the traffic data. To begin with, we
+the host’s public IPs or downloading servers’ certificates. For examapply stream reassembly to recover the entire end-to-end commuple, in Figure 3, dashed lines connected to white circles represent
+ nication. To do this, we extract a 5-tuple (i.e., <source IP, source
+the network connectivity test behaviour. Specifically, the infected
+ port, destination IP, destination port, protocol>) from each original
+hosts may actively connect to external servers, such as third-party
+ packet, and integrate the packets associated with the same 5-tuple
+servers for network inspection.
+ as a stream. Afterwards, we reserve the traffic of the TLS protocol
+ Above, we summarise the two main phases of remote control
+ with a complete TLS Handshake and extract the key information
+malware from code and traffic analysis, i.e., attack phase and control
+ for each stream. More specifically, we extract the contents of the
+phase. Besides, we find an exclusive observation, i.e., the forged
+ TLS handshake in each reserved TLS stream, including the TLS verinnocent network connection test, which gives us a unique persion and the supported cipher suites, and calculate some statistical
+spective on detection. Our observations not only extend existing
+ information such as the number of packets and the bytes within a
+understanding of malware behaviour but also deliver distinctive
+ stream. Such statistical information extracted from the data stream
+findings. Below, we summarise the common characteristics of malremains an important element of malware traffic detection and is
+ware infections from the following aspects:
+ used later in the computation of the graph representation.
+• Spatial Feature refers to the concentration property between hosts
+ Graph Representor. We build a heterogeneous graph to represent
+and target servers, especially within families. As mentioned before,
+ the end-to-end communications among hosts and servers by their
+due to framework reuse, some malware within the same family
+ temporal and spatial features. Specifically, the temporal features are
+exhibits high similarity, reflected by the destination servers they try
+ the traffic characteristics we extract from the streams, which are
+to connect with. For example in Figure 3, H2 and H3 are connected
+ embedded in the stream representations; and the spatial features
+to the same destination servers in the control phase.
+ are reflected by the graph structure. Based on this, we design a
+• Temporal Feature of the connection. The connection order of a
+ node embedding algorithm to transfer the spatio-temporal features
+host over a period of time can help us rebuild the infection process
+ into host representations, which reflect the similarity of the host’s
+of malware, which can clearly show the change with phase. Besides,
+ access behaviour. We will elaborate on this module in §5.
+due to the setting of fixed parameters, communications between
+ Detector. Given the embedding vector of each host that numeriinfected hosts and control servers are regular, especially the packet
+ cally quantifies the host’s behavioural characteristics, we apply a
+length and packet interval time [26].
+ machine learning approach to calculate the likelihood of the host
+4.2 System Design being infected. Considering the ability to resist overfitting [12]
+To achieve effectiveness and efficiency, the key point of our de- and the better performance in comparative experiments (see Aptection system, ST-Graph, is to retrieve as much information as pendix A), we finally employ the random forest (RF) regression
+possible with tolerable computation complexity. According to the algorithm [12] as our detector. It is an ensemble learning method
+observations of our empirical study (See §4.1), we summarise two that makes predictions by averaging the output of multiple decicategories of general and distinguishable features. First, spatial sion trees. With the predicted infection value of each host, the
+feature reflects the property of network connection relationships detector outputs a list of suspicious hosts along with their access
+for each host. In addition, temporal feature shows the side-channel information.
+information of communications. These two kinds of features jointly 5 ST-GRAPH: SPATIO-TEMPORAL GRAPH
+depict the network communication behaviour of hosts in a compre- In this section, we present the design details of ST-Graph, elaborate
+hensive way. on the process of graph construction and the optimization of edge
+ Based on the observed features, we design ST-Graph, which in- representation, and explain how we propagate spatial and temporal
+corporates the spatial (i.e., accesses between hosts and servers) and information in a lossless way to represent hosts for malware traffic
+
+ 498
+Encrypted Malware Traffic Detection
+via Graph-based Network Analysis RAID 2022, October 26–28, 2022, Limassol, Cyprus
+
+detection. The key of the approach is to exploit the similarities in as the number, the character ratio, and the vowel or consonant
+the network behaviour of different applications. To do this, we first letter ratio for identification. We also extract domain name length
+build a heterogeneous graph to correlate all network connections features to cope with lexicon-based DGA, which selects words from
+between hosts and servers. Based on the graph structure, we apply proprietary dictionaries for combination to reduce randomness.
+Random Walk [16] to generate a list of corresponding connections In addition, we include the side channel information as our third
+for each stream and use a probabilistic model to optimize the edge type of attributes for they provide indirect signals to our detection.
+representations. Each stream is represented by its edge representa- Although the packet length and the arrival time do not provide
+tion and traffic characteristics. Finally, we represent each host by insight into the content of the connection, they can help to infer
+its all accesses generated in a sequential order, which integrates network behaviour. For example, the large number of heartbeat
+the traffic characteristics and network structure associated with packets used to maintain a connection can result in small packets
+the host. Compared with Graph Neural Network-based methods per stream [3]. So we calculate some statistical information such
+that train thousands of parameters [72], and Knowledge Graph as the number, the length, or the time interval of packets sent and
+Embedding-based methods that jointly optimize the representation received within a stream.
+of all nodes and edges [36, 66], ST-Graph learns edge embeddings 5.2 Edge Embedding
+based on random-walk with a small number of iterations and op-
+ Edge embeddings are numerical representations of streams. In this
+timizes host embeddings with a closed-form solution. This highly
+ paper, we integrate two categories of features into edge embeddings:
+reduces the computational complexity to meet the need for real-
+ 1) stream attributes S for preserving original traffic information and
+time detection.
+ 2) spatio-temporal embeddings for reflecting comprehensive and
+5.1 Graph Construction dynamic network behaviours. We consider the network interactions
+ as the spatial features generated from graph topology, while the
+Graph Topology. We design a host-server bipartite graph G =
+ temporal features refer to the sequential order of the servers being
+(H, D, E, S, I ) to capture the interactions between internal hosts
+ visited by the host through the stream. To integrate spatial and
+and external nodes. We denote the internal hosts as a vertex set
+ temporal features, we propose an Interval-inclined Random Walk R :
+H , each represented by its IP as the unique identifier; Similarly,
+ e → r e that takes into account both network interactions and access
+the external server destinations are represented by a vertex set D,
+ orders to generate Spatio-temporal embeddings. Our model extends
+each initialized by the server’s domain name or its IP address. The
+ the traditional random walk method [49] which traverses the graph
+domain can be obtained from SNI in ClientHello, and the server’s
+ along the edges and maximizes the similarity of all edges within
+IP address is used as a substitute when the domain is not available.
+ several traverses. The main reason for this design choice is that
+We use an edge set E = {e |e = (he , de ), he ∈ H, de ∈ D} to denote
+ other graph-based models for edge representation learning, such as
+all connections (i.e., streams) between hosts and servers. If a host
+ Knowledge Graph Embedding methods [36, 66] and Graph Neural
+h has a TLS handshake with a server d, then an edge e = (h, d)
+ Networks [25, 63], suffer from high computational complexity and
+connecting these two nodes will be added to E. I = {i e |e ∈ E}
+ cannot serve our demand for efficient, real-time detection. In this
+denotes the temporal feature of each edge, where i e represents the
+ paper, we incorporate the temporal feature, i.e., the access order,
+order of e connected by its host he . S = {se |e ∈ E} denotes the
+ into the context generating process proposed by node2vec [22],
+attributes extracted from the streams as described below.
+ where the random walk strategy balances the breadth-first sampling
+Stream Attributes. The stream attributes S characterize the fea-
+ (BFS) and depth-first sampling (DFS). In general, from a starting
+tures of every single stream. To explore more detailed features, we
+ edge o, we perform random walks with at most P L steps for P N
+extend previous works [3, 55] with TLS handshake features such
+ times to collect a set of edges No . Further, we optimize the Spatioas orders of cipher suits. Specifically, we exploit stream attributes
+ temporal embedding of o by maximizing the similarity of edges in
+(details in Appendix E) from three aspects: 1) the TLS handshake
+ No . Below we elaborate on our augmented random-walk strategy,
+features extracted from internal hosts, 2) the domain name features
+ which decides the edge to take for the next step based on previous
+extracted from external nodes, and 3) the side channel statistics
+ wanderings.
+features of the stream. For an edge e, we define its neighbours as a collection of edges
+ For the first type of attributes, we observe that malware and that share the same host or the server with e, formally Ce = {u :
+C&C servers are not updated promptly, so they usually accept (hu , du )|u ∈ E, he = hu ∨ de = du }. Let w = [w 0 , w 1 , ..., w P L ] be
+lower TLS versions and maintain support capabilities for weak a certain random walk. We define the connection order distance d
+encryption algorithms. The underlying reasons are that attackers between two edges u, v as d(u, v) = |iu − iv |, where i e is the order
+are relatively less concerned about whether communications will of edge e being connected by its host he (See §5.1). Assume the
+be decrypted and that vulnerabilities in lower versions of operating random walker starts from edge o, we define the probability of
+systems are easier to exploit. According to this observation, we selecting a certain edge x ∈ Co from the neighbours of o for the
+extract features from the TLS ClientHello message, including the next walk as 1
+ d (o, x )
+TLS version, the list of offered cipher suites and extensions as Pr(w 1 = x |w 0 = o) = Í 1
+ .
+ y ∈Co d (y,o)
+TLS handshake features. Such features can provide information
+about the encryption algorithm supported by the client. For the Here, our random walker inclines to select the edge having the
+second type of attributes, our feature extraction is mainly based minimum connection order distance with the current walk as the
+on the fact that many malicious domains are computed by Domain next step. By doing this, streams that are generated in a small time
+Generation Algorithms (DGA). Hence, we extract features such interval are tended to be consecutive steps in the random walk.
+
+ 499
+RAID 2022, October 26–28, 2022, Limassol, Cyprus Fu and Liu, et al.
+
+ For the following walks, each selection is based on the two which are not informative for characterizing the host’s behaviour
+previous walks. Assume the last step is at edge u and the current step while taking a large proportion of traffic data. Hence, we rank
+takes edge v, the walker selects the next step from v’s neighbours the streams associated with the host according to the importance
+x ∈ Cv with α · 1
+ of the server visited through the stream before the information
+ u, x d (v, x )
+ Pr(w i +1 = x |w i = v, w i −1 = u) = Í , propagation. Such importance is with respect to 1) the frequency
+ t ∈Cv α u, t · d (v, t ) of the server being visited by all hosts H and 2) the order (i e : e ∈
+ 1
+
+where the value of αu,x is determined by the relation between x E, he = t ∧ de = u) of the host t visiting the server u. Intuitively, if
+ a server u is visited by most hosts, it is likely to be visited by the
+and u. When x = u, αu,x takes the value of p1 ; when x is one of the
+ target host t, too. Also, if t visits u at a very early stage, then u is an
+neighbours of u, αu,x is set as 1; otherwise αu,x = q1 . Here, p and q important access destination of t, compared with the other servers.
+are hyper-parameters. When edge x is overlapped with edge u, we Hence, we define the importance of edge e to its host t as
+use a constant p to control the probability of returning from v to the | {e ′ |e ′ ∈ E ∧ d e ′ = u } |
+ ρ(e) = ,
+starting point u. Otherwise, if there are one or more edges between i e · |E |
+edge x and edge u, we apply a constant q to control the probability where |{e ′ }| is the number of edges ending at u, |E| is the total
+of v going to a new node. If q < 1, the walker tends to visit global number of edges, and i e is the order of edge e being connected by t.
+nodes (DFS); if q > 1, the walker tends to visit local nodes (BFS), Further, we model the correlation score between host t and edge e
+which enhances the coverage of the surrounding neighbours. as a weighted sum over the importance of e to t and the similarity
+ According to this strategy, for each edge e, we generate a network between the host representation дt and edge embedding fe :
+neighbourhood Ne by P N times of random walks. The edges in Ne exp (дt · f e )
+ corr(t, e) = λρ(e) + (1 − λ) ,
+are highly correlated with edge e from both spatial and temporal Z
+ where λ is a scalar hyperparameter and Z = i ∈E exp (дt · fi ) is a
+ Í
+perspectives. Hence, to incorporate the spatial and temporal features of the graph into edge embeddings, we set up a vector r e normalization factor. Let Lt = {e |e ∈ E ∧ he = t } denote all edges
+for each edge, and optimize the vector by the proximity within proceeding from host t. The joint correlation score of all edges in
+its network neighbourhood Ne . More specifically, we model the Lt is defined as:Ö Ö  exp(дt · f e )
+ 
+plausibility that an edge n is correlated with edge u as Corr(Lt ) = corr(t, e) = λp(e) + (1 − λ) ,
+ exp(ru · r n ) Z
+ e ∈Lt e ∈Lt
+ Pr(n |u) = Í . (1)
+ v ∈E exp(r u · rv ) and its logarithmic form can be approximated by the first-order
+We assume the neighbourhood relation between different edge pairs Taylor Expansion as
+ exp(дt · f e )
+  
+is independent, and further define the neighbourhood likelihood of Õ
+ log [Corr(Lt )] = log λρ(e) + (1 − λ)
+edge u as Pr(N |u) =
+ Ö
+ Pr(n |u). e ∈Lt
+ Z
+ u (2)
+ n∈Nu
+ ξ
+ Õ   
+ log (λ[ρ(e) + ξ ]) + · f e  · дt ,
+  
+We optimize the neighbourhood likelihood of all edges to pursuing ≈ 
+the global proximity: e ∈Lt ρ(e) + ξ 
+ Ö  
+ max
+ ru
+ Pr(Nu |u) where ξ = 1−λ
+ λZ is a constant. We restrict the host representation дt
+ u ∈E
+ ξ
+  
+ as a unit vector. Let Mt = e ∈Lt fe · log (λ[ρ(e) + ξ ]) + ρ(e)+ξ .
+ Í
+ Õ Õ exp(ru · r n )
+ = max log Í
+ ru
+ u ∈E n ∈ Nu v ∈E exp(rv · r u ) (3) To maximize log[Corr(Lt )], дt should be a vector of length 1 having the same direction with Mt . Therefore, we have the optimized
+ Õ  Mt
+ 
+ host representation as дt∗ = |M
+ Õ
+ = max − | Nu | · log Zu + r r
+ 
+ ru  u · n
+ 
+  |. t
+ u ∈E  n∈Nu
+ 6 EXPERIMENTAL EVALUATION
+ 
+ 
+where Zu = v ∈E exp(rv · ru ) is a normalization factor.
+ Í
+ We use negative sampling to obtain an approximation of Zu In this section, we present experimental evaluations of our detection
+and optimize the objective function (3) using a stochastic gradient system. We evaluate ST-Graph on two tasks: malware detection and
+ascent algorithm to update the Spatio-temporal embeddings of malware family classification. The first task distinguishes hosts with
+edges. Finally, we represent edge e by concatenating its stream malicious network behaviour from benign ones, while the second
+feature se and its spatio-temporal embedding r e : fe = ϕ([se ||r e ]), task further specifies the family of malware. A malware family is a
+where ϕ(x) = |xx | is a normalization function. group of associated programs with similar attack techniques, some
+ of which have “code overlap” [15] to a large extent. Grouping them
+5.3 Host Representation as a family broadens the scope of a single piece of malware as it
+To detect infected hosts through traffic behaviours, we propagate alters over time while reserving distinct family traits.
+the information of the streams associated with each host to nu-
+ 6.1 Experimental Setup
+merically represent the hosts. Formally, for host h, we have its
+representation дh as дh = Propagate({r e |e ∈ E ∧ he = h}) to Implementation. We present the tools used in each component
+represent the host’s sequential access behaviour in a short period. of our detection system (See §4.3). For traffic preprocessor, we em-
+Below we explain the details of the information propagation from ploy TShark (version 3.2.5) [32] to parse the fragmented packets
+streams to hosts. and then recover the complete communication. To implement the
+ For a target host t, assume u is a server being visited by t through graph representor, we use NetworkX (version 2.5.1) [23] to build
+the stream e = (t, u). Among network traffics, each host may access the heterogeneous graph and initialize nodes with text represenmany public services (e.g., windows update service, etc.), some of tation by Gensim (version 4.1.2) [51]. Finally, we use scikit-learn
+
+ 500
+Encrypted Malware Traffic Detection
+via Graph-based Network Analysis RAID 2022, October 26–28, 2022, Limassol, Cyprus
+
+(version 0.23.2) [48] for both singular value decomposition in host Table 1: Malware Families
+representation and the classification algorithms. Family Name # Samples Family Name # Samples
+Baselines. We compare our ST-Graph with two state-of-the-art Minerd 5717 Unwanted 1610
+malicious traffic detection methods (ETA and FS-Net), which both Cryxos 4652 Faceliker 1564
+perform detection in stream-level detection. The computational PhishingSite 3080 Trojandownloader 1528
+complexity of Graph Neural Network-based methods [36, 66] is Wacatac 2949 Brocoiner 1482
+too heavy to meet efficient detection needs at all. Therefore, we hidelink 2860 Sality 1046
+ Kryptik 2403 Zbot 1035
+exclude these methods as our comparative methods. The details of
+ Redirector 2190 RelevantKnowledge 771
+the baselines are as follows. Generickdz 1974 Scrinject 756
+• ETA [2] adopts the random forest model to detect malware traf- Installcore 1807 Ramnit 719
+fic. Specifically, the ETA utilizes the stream features, including Iframe 1731 Others 13237
+TLS handshake metadata, DNS contextual streams linked to the encrypted stream, and the HTTP headers of HTTP contextual streams
+from the same source IP address within a 5-minute window. each malware family. Each example runs for 5 minutes on average,
+• FS-Net [37] is an end-to-end deep learning model, which takes the during which all generated traffic is recorded and saved. Since most
+multi-layer encoder-decoder structure to mine the potential sequen- of the behaviours of the samples in the sandbox can be observed in
+tial characteristics of streams. In summary, it learns representative the first two minutes [31], we consider five minutes to be a suffifeatures from raw streams and then classifies them. cient time interval to observe almost all valid behaviours. In total,
+ We set hyperparameters of baselines to either the values adopted we end up capturing 239,007 streams from 53,111 samples.
+by their authors or default values. Specifically, for FS-Net, we set the • Benign Traffic: We construct benign traffic from two data sources,
+dimension of hidden state as 128, layer number as 2 and dimension one is real traffic captured in a campus network and the other is the
+of length embedding as 16. For the other parameters involved, such traffic generated by benign samples running in the sandbox. Most
+as the parameters in random forest, we apply the default settings samples in the benign dataset are collected from a large campus
+in scikit-learn (version 0.23.2). network with nearly 10,000 active hosts. We passively monitor all
+Environment and Parameters. We conduct the methods on a inbound and outbound encrypted traffic at different time points for
+Supermicro server with two Intel Xeon E5-2690 CPUs (2× 14 cores), 5 consecutive months from January 2021 to April 2021 and save
+Centos 7.9.2009, 345G memory. For hyper-parameters, we set the the raw pcap packets. Due to the possibility of malware-infected
+dimension of the host vectors Dh as 256, the length of random walk hosts in the campus network, we cannot directly use all the traffic
+path P L as 100 and the number of paths per edge P N as 10. And as benign traffic. We chose Alexa ranking as a filtering criterion,
+we set the parameter p controlling the probability of returning as 1 keeping domains with the top 1 million traffic rankings. The reason
+and the parameter q controlling the probability of exploring new for this choice is that websites with more than 1 million rankings on
+nodes as 2 for better coverage of the surrounding neighbours. Alexa can be considered as “Long Tail”, thus this filtering guarantees
+Metrics. We use the following metrics to evaluate the detection the diversity of the sample and also ensures the traffic is benign to
+performance: (i) precision, (ii) recall and (iii) false-positive rates a certain extent. Since the crawled traffic may contain some private
+(FPR). (See Appendix B) information, we also need to anonymize the IPs. The same host is
+ treated as the same fake IP to ensure the integrity of the network
+6.2 Dataset relationship. On the other hand, in order to avoid large bias in the
+We conduct experiments on one public dataset (CICInvesAndMal- domain distribution between benign and malicious traffic due to the
+2019, as AndMal2019 [58]) and one dataset collected by ourselves different collection methods, we also collect the traffic generated by
+(EncMal2021). AndMal2019 dataset includes traffic and device logs benign samples running in the same sandbox environment. Such
+generated by 5065 benign and 426 malicious Android apps on real samples are partly collected from the top 100 of the Microsoft
+smart devices. And the malicious apps can be divided into 39 fami- Store’s top free list and partly collected from the programs flagged
+lies. Our collected dataset EncMal2021 is constructed by capturing as benign by the malware analysis site. Among all the domains
+the traffic generated by the example and the campus network traffic. of the traffic generated by the benign samples, 24% are not in the
+It contains 108,847 hosts with 5,202,093 streams, 4.5% of which are Alexa Top 1 million rankings. We believe this mitigates the bias
+marked as malicious, and the others are marked as benign. Below associated with filtering traffic while keeping the traffic benign.
+we elaborate on the data collection process of EncMal2021. Finally, we capture 4,940,593 streams in the existing network by
+Data Collection. EncMal2021 consists of malicious and benign 53,281 hosts and 22,493 streams in the sandbox using 2,455 samples.
+traffic data. Dataset statement. In EncMal2021, the malicious samples are run
+• Malicious Traffic: We use malware analysis sandboxes to col- in sandboxes, which makes the distribution of malicious traffic
+lect the data. The sandboxes, including Windows 7 and Windows not exactly consistent with the actual situation. However, we com-
+10 operating systems, allow users to submit malicious executable pensate for this by enriching the malware types and the sandbox
+examples and control the runtime based on the execution of the environment, so that the constructed dataset is comprehensive as
+executable files. Malicious samples come from malware analysis possible.
+website VirusTotal and large security companies we work with, Train-test Split. For the first task, i.e., malware detection, we perwith millions of sample updates per day. Table1 shows the names form different train-test split strategies on the two datasets, for the
+of malware families and the number of examples we sample from capacities of these datasets are different.
+
+ 501
+RAID 2022, October 26–28, 2022, Limassol, Cyprus Fu and Liu, et al.
+
+ Table 2: Detection Performance of ST-Graph and Baselines. In EncMal2021, use joint testing set as the test set.
+ Malware Detection Malware Family
+ Dataset Method Performance Time Taken Performance Time Taken
+ Precision(%) Recall(%) FPR(%) Train(s) Test(s) Precision(%) Recall(%) FPR(%) Train(s) Test(s)
+ ETA 99.1726 99.3013 0.1915 729.26 138.24 79.9473 76.5882 1.2410 306.49 76.66
+ EncMal2021 FS-Net 99.3515 92.5990 0.2565 45324.10 17741.15 73.0697 72.6062 1.5218 41048.30 1890.69
+ ST-Graph 99.9805 99.9221 0.0045 5956.45 150.31 93.3669 91.2105 0.4016 1489.41 127.14
+ ETA 77.8451 74.7129 19.0409 65.31 22.48 28.8382 27.5170 1.8134 139.05 39.19
+ AndMal2019 FS-Net 72.8997 72.5344 21.4712 23275.86 5112.93 19.4906 16.7309 2.0863 23055.60 774.21
+ ST-Graph 99.2973 99.6444 0.0170 2113.13 27.19 53.7568 53.4014 1.0180 520.36 66.85
+
+ 110 110 2.0
+ Joint testing set Joint testing set
+ 105 Disjoint testing set 105 Disjoint testing set 1.607
+ 1.5
+ 100 99.17 99.35 99.98 99.94 100 99.3 99.92
+ 97.87 97.8 98.62
+ Precision/%
+
+ Recall/%
+ Joint testing set
+
+ FPR/%
+ 95 95 1.0 Disjoint testing set
+ 92.59
+ 90 90 89.92
+ 0.5
+ 85 83.59 85 0.192 0.193 0.257
+ 80 80 0.0 0.004 0.005
+ ETA FS-Net ST-Graph ETA FS-Net ST-Graph ETA FS-Net ST-Graph
+
+ (a) Precision comparison (higher is better) (b) Recall comparison (higher is better) (c) FPR comparison (lower is better)
+
+ Figure 5: Comparison between joint testing set and disjoint testing set on EncMal2021.
+
+• For EncMal2021: We divide the collected dataset into three parts: can identify unknown malware families, i.e., generalization. Gen-
+1) training set, 2) joint testing set and 3) disjoint testing set, with a ratio eralization is to describe a model’s ability to react to new data.
+of 6:2:2. Here, the joint testing set shares the same distribution of In malicious traffic detection, it is important to know how well a
+malware families with the training set; while the malware families trained model will generalize to unseen data. We train all models
+in the disjoint testing set do not intersect with those in the training using training set and test them with joint testing set and disjoint
+set. And we allocate benign traffic randomly and keep the ratio of testing set, respectively.
+benign traffic to malicious traffic at 10:1. The results of the joint testing set are shown in Table 2 (1st row).
+• For AndMal2019: We use 60% samples for training and 40% for From the results, we observe ST-Graph approaches with high pretesting. Here, we do not further divide the testing set into a joint cision and recall over of 99.99%, and the FPR is even two orders of
+or a disjoint one since AndMal2019 only includes a limited number magnitude lower than the other two models. In terms of computaof malicious families. tion cost, compared with ETA, a simple feature engineering-based
+ As for the second task, i.e., malware family classification, we use model, ST-Graph takes more time for training and testing, while
+8:2 as the ratio of train-test split for both two datasets. The labels this is much less than the deep learning-based model FS-Net.
+for this task are the name of families in Table 1. Figures 5a, 5b and 5c show the detection results of the three
+Ethical Concerns. We also consider ethical concerns when col- models for the disjoint testing set, compared with the results on
+lecting our dataset. As aforementioned, a portion of our benign the joint testing set. In terms of precision, only our model does not
+traffic comes from border traffic on the real campus network. To degrade on unseen samples. This is due to the fact that although its
+avoid burdening normal network access, we limited our collection recall for malicious communication traffic drops a little, it avoids
+to passive listening. To protect privacy, we only saved TLS traffic more false positives. As for the recall score, each model decreases to
+when capturing traffic and anonymized the address of the commu- some extent, while our model is still the most effective one. FS-Net
+nication. In the detection stages, we focus on the destination of can detect most malware traffic, but it also introduces a high level
+the traffic (domains) and do not look into the payload of any TLS of false positives even when the distribution of benign traffic data
+traffic. Also, the traffic is stored in the physical servers to which changes slightly. This may be due to its overfitting, where small
+only privileged administrators have access. changes can lead to changes in the results of the model, making it
+6.3 Detection Performance unrealistic to be applied to security analysis in practice.
+ Malware Family Classification. We use only malicious data for
+We compare ST-Graph with other baselines on EncMal2021 and
+ multi-classification to understand ST-Graph’s effectiveness for ma-
+AndMal2019, respectively.
+6.3.1 Evaluation on EncMal2021. We use EncMal2021 to verify the licious family classification. This task is valuable because when
+model has good malware detection abilities in a large-scale dataset, malicious communications are detected, we need to analyse their
+i.e. it can achieve good binary and multi-classification results. binaries to confirm the alarm, while the family labels of the alarms
+Malware Detection. The purpose of this experiment is to evalu- offered by the detection model itself greatly reduce analysis time.
+ate the detection effectiveness of ST-Graph and to test whether it
+
+ 502
+Encrypted Malware Traffic Detection
+via Graph-based Network Analysis RAID 2022, October 26–28, 2022, Limassol, Cyprus
+
+ (a) ETA (b) ST-Graph
+
+ Figure 7: Visual distinction of features where red dots are
+ malware.
+
+ vector visualization of the ETA and ST-Graph. The figure clearly
+ shows that our approach enables a greater aggregation of malware
+Figure 6: Malware family classification result of ST-Graph. compared to ETA, which enables a better classification result.
+ Malware Family Classification. The results in Table 2 show that
+ Figure 6 shows the normalized confusion matrix of multi-class it is possible to detect malware using only network traffic, but
+classification for ST-Graph. And the results of the other two models single-stream methods are not sufficient to characterize the malshow in Appendix D. We observe that ETA model and FS-Net model ware families. Our approach makes it easier to find correlations
+can only identify a small part of malware families while having poor between malware. By combining the spatial-temporal characterperformance in the majority of them. For example, ETA performs a istics of hosts accessing the network, our detection results can be
+good classification for RelevantKnowledge. After analyzing the raw improved considerably.
+traffic data generated by all samples in RelevantKnowledge family,
+we found that all samples have the same cipher suites, signature 6.4 Generalization of ST-Graph
+algorithms and other characteristics in the TLS handshake phase. In addition to examining the model’s generalization to new infec-
+These features also differ from the traffic generated by the samples tions (§6.3.1), we also conduct ablation studies to explore the role
+in other families, forming a unique fingerprint. Beyond that, the of stream attributes and spatio-temporal embeddings.
+distinction between malware may not be obvious, and the features 6.4.1 Features. We reduce the variety of features of edges to conextracted by humans are designed to detect anomalies rather than firm that ST-Graph can detect malware in less informative and
+to distinguish between malware families. On the other hand, FS-Net more critical situations. TLS 1.3 [52] has been standardized in 2018
+prefers to group malware into large malware families because large and the adoption rate reaches 48% on major websites by January
+malware families have a greater variety of packet length sequences. 2021 [27, 33]. The main change in this version is it enhances secu-
+Hence, it is more difficult for FS-Net to distinguish between malware rity by also encrypting the handshake process, while this results in
+with similar packet length sequences. less information being available in ClientHello. And the proposed
+ Our model can achieve 93% precision in classifying malware fam- Encrypted-SNI (ESNI) extension will prevent others from fetching
+ilies. Figure 11 (in Appendix D) visualizes the results of embedding the server name [6, 14]. This directly affects the acquisition of TLS
+the traffic graphs into six of these families. It shows that malware handshake features and domain features for Spatio-temporal Graph.
+families can be distinguished based on the clustering results, and Even so, our method still works under the stringent conditions of
+each family can form a large cluster. In addition to some intuitive TLS 1.3 and remains efficient and effective. We run ST-Graph on
+TLS handshake features, our model can capture these same-family EncMal2021 without stream attributes that are blocked by TLS 1.3,
+network relationships and so achieve better classification results. and the results are shown in Table 3 (2nd row), where the stream
+However, our model still cannot classify malware families com- attributes are removed one by one from top to bottom.
+pletely correctly. On the one hand, this is because malware families According to the results, we conclude that as the feature types
+are classified by security analysis tools based on the software bi- are reduced, there is a slight weakening in the precision and a slight
+nary, and the labels themselves may not be completely accurate; increase in the FPR of our method. Without using any stream feaon the other hand, there is still a portion of malware that may tures, ST-Graph is still able to achieve satisfactory results and even
+not present complete communication in the sandbox. These two causes a lower FPR compared to baseline models using all stream
+reasons can cause our model to misclassify malware that is not attributes (See Table 2). This suggests that the spatio-temporal feawell differentiated. In general, our model can perform fine-grained tures extracted by our method play a decisive role. Therefore, our
+classification. approach is still competitive in detecting malicious traffic after the
+6.3.2 Evaluation on AndMal2019. We also test our model on a pub- full deployment of TLS 1.3.
+licly available dataset to verify that it is applicable to a wide range 6.4.2 Embedding. We modify the graph embedding algorithm in
+of data with good detection results. Graph Representor to standard techniques (such as DeepWalk [49]
+Malware Detection. We first evaluate the detection effectiveness and node2vec [22]), leaving the other modules unchanged for teston this dataset, i.e. the binary classification performance. Table ing. This experiment is also tested on EncMal2021 and the results
+2 (2nd row) illustrates the results and Figure 7 shows the feature are recorded in Table 3 (3rd row). The results show that our system
+
+ 503
+RAID 2022, October 26–28, 2022, Limassol, Cyprus Fu and Liu, et al.
+
+has good detection and generalisation capabilities and that our Table 4: Precision(%) of Real-world evaluation results.
+graph embedding algorithm does perform better in our scenario Stage ETA FS-Net ST-Graph
+compared to other graph embedding algorithms.
+ Campus-04/15/2021 8.0 4.0 86.0
+ Campus-02/25/2022 6.0 2.0 64.0
+ Table 3: Ablation study’s results of ST-Graph.
+ Enterprise-04/15/2021 1.0 0.5 80.0
+ Settings Precision(%) Recall(%) FPR(%) Enterprise-02/25/2022 0.8 0.5 68.0
+ Original model 99.9805 99.9221 0.0045
+ No domain feat. 99.9784 99.8983 0.005 performance of the model. The system is able to consistently main-
+ Features No handshake feat. 99.8522 99.5578 0.0161 tain a high detection accuracy and a low false alarm rate. For the
+ No statistical feat. 99.5848 99.0915 0.0955 parameters P N , the detection performance tends to get better and
+ DeepWalk 99.7376 99.4148 0.0184 then worse as the number of random walk paths per edge increases
+ Embedding
+ node2vec 99.8891 99.5947 0.0121 and the number of contexts per edge increases.
+
+6.5 Robustness of ST-Graph 7 REAL-WORLD EVALUATION
+We then design experiments to analyse the robustness of ST-Graph To assess the performance of ST-Graph more comprehensively,
+about noise labels and the sensitivity to parameters of ST-Graph. we deploy it in two real-world scenarios, i.e., a campus and an
+ enterprise gateway, for almost a year-long (from April 2021 to
+6.5.1 Noise Labels. We evaluate how noisy data affect the proposed April 2022) operation and evaluation. These two network scenarios
+model in this experiment. This is worth concerning for samples both have thousands of active users inside. Due to the significant
+running in a sandbox may not produce truly malicious behaviour number of users, the network throughput is large enough to prove
+in a short period of time, while such behaviours are still labelled as the efficiency of ST-Graph, reaching the traffic bandwidth of 3.6
+malicious in our dataset as long as they are generated by malware. Gbps on the campus and 1.7 Gbps in the enterprise. Due to its best
+To explore the impact of this problem, we randomly select a portion performance, we deploy the model trained in §6.3.1 in this realof benign hosts and mark them as malicious ones and investigate world evaluation and compare its performance to existing detection
+whether this changes the decision of the model. systems (ETA [2] and FS-Net [37]).
+ 7.1 Real-word Result
+ Performance in Percentage
+
+ 100
+ 80 ETA:Precision Manual Analysis of Precision. To evaluate the precision of alarms,
+ ETA:FPR we operate a manual analysis. It is impossible to manually analyse
+ 60 FS-Net:Precision
+ 40 FS-Net:FPR all alarms, with nearly tens of thousands of alerts per day from
+ ST-Graph:Precision
+ 20 ST-Graph:FPR
+ these 3 models. As such, we randomly select 50 alarms for each
+ 0 model and analyse them manually by an expert researcher, with the
+ 0.0 0.1 0.2 0.3 0.4 0.5 help of information from threat intelligence [56]. First, we judge an
+ Noise Label Ratio
+ Figure 8: Detection performance with noise labels. alert to be correct when an identifier (domain or IP address) of the
+ destination server is flagged malicious by threat intelligence. Then,
+ for alarms which threat intelligence cannot cover, we manually
+ In the experiment, the ratio of benign to malicious hosts is 10:1.
+ visit this destination server and judge with response contents. If the
+Figure 8 shows the relationship between the proportion of benign
+ response content compared to the contextual traffic information
+hosts mislabeled as malicious ones and the detection effectiveness.
+ is abnormal, e.g., response is a phishing website, we consider this
+The solid line represents the precision of the detection, while the
+ alarm is correct. To notice, if there is no correct alarm in these
+dotted line is the FPR. From the results, we observe that ST-Graph
+ 50 samples, we resample 50 alarms from unsampled data space
+and EAT show better robustness than FS-Net. More specifically,
+ until we find at least one correct alarm, and the precision rate is
+with 15% mislabelling, ST-Graph still achieves 97% precision and
+ calculated on all sampled alarms. Due to the random nature of
+lower than 1% FPR. We observe that labelling benign hosts as malisampling, we believe that our results on the sampled dataset can
+cious does not change the detection rate of truly malicious traffic.
+ be representative of the global results.
+Even if the samples do not generate malicious traffic when running
+ Results of Campus. To illustrate the variation in detection perin the sandbox and are consequently mislabeled, the impact on the
+ formance over time, we choose results for the start date and end
+model prediction is not serious by only introducing a small number
+ date to analyse and compare, which are shown in Table 4. At the
+of false positives.
+ start (April 2021), ST-Graph had the lowest average daily alarm
+6.5.2 Parameter Sensitivity. We evaluate ST-Graph under different rate of 0.237% compared to the other two detection systems (3.034%
+parameter settings. Specifically, we keep all parameters at their for ETA and 3.665% for FS-Net). From the precision of alarms by
+default values and adjust the values of three parameters Dh (i.e., manual analysis on 50 random sampled alarms in Table 4, we find
+dimension of host representation), P L (i.e., length of random walk) that the precision of ST-Graph(86%) significantly surpasses the
+and P N (i.e., times of random walk starting from each edge) in turn, other two detection systems. As a result, ST-Graph is accurate and
+respectively. The experimental results are shown in Figure 12 in meanwhile with a low false positive, which can significantly reduce
+Appendix D. The results show that changing the parameters within the cost of manual auditing. In addition, ST-Graph even can detect
+a certain range does not have a significant impact on the detection a large number of false negatives that cannot be detected by other
+
+ 504
+Encrypted Malware Traffic Detection
+via Graph-based Network Analysis RAID 2022, October 26–28, 2022, Limassol, Cyprus
+
+ Attack Phase
+ 1250 Average send length 200
+ www.s**ta.com
+ Average receive length
+ 1000
+
+ Time interval/s
+ Length/byte
+ Control Phase
+ 150
+ s0.2**n.net 750
+ lupic.cdn.b**bos.com
+ 500 100
+ ssum-sec.ca**ia.com
+ 250
+ image6.p**ic.com
+ 0 2500 5000 7500 10000 0 50 100
+ pixel.ru**ct.com Time/s Index
+ cms.qu**ve.com
+ odr.mo**1.com
+ (a) Average length per stream (b) Time interval between streams
+ ag.in**id.com
+ Figure 10: Statistical information on mining traffic.
+ (a) Ewind examples (b) Host’ access sequence
+ that most of these websites are advertising websites (blue circles),
+ Figure 9: Activities of Ewind.
+ while two websites are benign websites with promotional content
+ (white circles). Therefore, we think that the connection sequence
+two detection models. In order to evaluate the ageing issue over is the root cause for the detection of ST-Graph, which reflects
+time, we compare the results of these 3 models after nearly one the whole procedure of this malware. Apart from the anomalous
+year (February 2022). Although there is a slight degradation in the observation of the connection relationship, this malware didn’t experformance of ST-Graph over time, it is still far superior to the hibit any other malicious features. Specifically, Ewind works on the
+other two models. Android platform that uses a system interface to encrypt traffic [4].
+Results of Enterprise. As the training set for the detection model Therefore, the encryption-related information in TLS is not differcomes from the campus, the distribution is different from that of ent from benign applications, which leads to the failure of ETA, the
+the enterprise network. Affected by the inconsistent distribution of TLS-information-based detection system. Besides, in the control
+training set, the average daily alarm rate for all models is higher phases, Ewind has no subsequent interaction after TLS handshake.
+than the results on campus. However, ST-Graph still has the lowest As such, FS-Net, based on packet-based side-channel information,
+alarm rate at 0.249%, compared to 22.313% for ETA and 26.482% for has no capability to detect this malware.
+FS-Net. Similar to the results of campus, ST-Graph achieves the Miner. Malicious coin miners are an emerging attack since 2018,
+highest precision and its performance is less affected by the time whose activity is similar to ransomware [43]. By unauthorized
+ageing issue. use of victim’s device for cryptomining, it can consume valuable
+ It’s worth noting that our detection is efficient in both scenarios. computing resources, which poses new threats to the Internet.
+In enterprise, ST-Graph only costs 160 seconds for 5-minute traffic From the results of campus, we detect a host infected by a mawith 1.7 Gbps bandwidth. Even in the more complex network of licious miner. Without SNI or any other domain information, this
+campus, ST-Graph still cost less time, with 200 seconds for 5-minute host only connects one target server only with IP address while
+traffic with 3.6 Gbps bandwidth. Overall, our model is effective and with hundreds of connections. Based on the response by manually
+efficient in detecting malware-infected hosts, subject only to slight connecting to this IP address, we verify that this IP address hosts
+time ageing issues. an online mining pool. By analysis of the communication traffic
+7.2 Case Studies between this host and server, we find highly regular activities, es-
+As mentioned before, ST-Graph could detect false negatives from pecially side-channel temporal features. As shown in Figure 10, the
+other detection models, i.e., malicious behaviours that are not de- average length of streams between this host and server and the time
+tected by other models. To understand the differences in perfor- interval between each connection are regular and within a fixed
+mance of different detection models for these “unknown” malware, range. From this regular behaviour, we speculate that this infected
+we analyse two representative cases: EWind and Miner. host sends “heartbeat” messages to indicate its alive status and
+EWind. As shown in Figure 9a, Ewind is a sophisticated, long- mining results to mining pool (control server) regularly. Although
+standing class of adware [62], profiting through displaying adver- the connection sequence is not very informative, ST-Graph is still
+tisements on the victim’s device. More seriously, Ewind also in- able to detect this kind of malware based on this regular activity.
+cludes functionality such as collecting device data and forwarding From the analysis of these “unknown” malware, we have further
+SMS messages to attackers, which poses a serious security risk. proven the effectiveness of ST-Graph.
+ From the results of enterprise, we identify a host infected with 8 DISCUSSION
+malware belonging to a variant of the Ewind [70] family, without
+ In this section, we discuss the defence ability of ST-Graph against
+being detected by the other two detection models. As we cannot
+ existing attacks and the limitations of ST-Graph.
+access the source code of Ewind, we only analyse the traffic behaviour of these infected hosts. By extracting the connection list of 8.1 Defence Ability against Attacks
+this infected host, we depict the infection procedure of Ewind in Several existing works have proposed methodologies to mislead
+Figure 9b. First, it visited a free software download site, which is traffic detection systems, including disguising attacks and obfuscapeculated be the attack phase. Afterwards, we observe a series of tion attacks.1 We have already discussed in §6.4 that the extracted
+access requests to multiple websites at very short intervals (almost
+simultaneously). By manually checking these websites, we find 1 In this work, we don’t compare attacks target to learning-based models [5, 64].
+
+ 505
+RAID 2022, October 26–28, 2022, Limassol, Cyprus Fu and Liu, et al.
+
+spatio-temporal features in our approach play a decisive role in en- • Features of TLS streams utilize the information in the TLS Handhancing the model’s generalizability. On this basis, we next discuss shake process, which is the only plain-text process of TLS interacthe impact of each attack on ST-Graph. tions. Anderson et al. extract information as representative features
+Disguising Attack. Goal of this attack is to disguise malicious traf- for detection, including TLS version, the cipher suites provided by
+fic as benign applications. Frolov et al. proposed a tool to modify the client, the TLS extensions used, the server certificate, and the
+TLS information to mimic other popular TLS implementations by result of negotiation between the two parties [2, 3]. Althouse et al.
+changing the fingerprints extracted from ClientHello and Server- first stitched information from TLS handshake to compute JA3/JA3S
+Hello [17]. However, this attack only modifies the TLS-stream in- fingerprints and detect malware by matching the client/server finformation without changing the network connection relationships. gerprints [1]. However, methods with only these features will be
+Therefore, ST-Graph can still detect infected hosts even with this ineffective under TLS 1.3, with fewer plain-text available informakind of attack. tion for detection.
+Obfuscation Attack. This attack is more discreet, which tends to • Features of side-channel exploits information, such as packet
+confuse side-channel information-based detection systems. Wang length, packet interval time and packet length frequency. For examet al. [65] change the timestamp, direction and packet size of pack- ple, several works utilized packet length statistics information to
+ets to confuse detection based on packet length and time interval. detect malware at the TCP/IP layer [19, 60, 67]. Furthermore, Liao
+Similarly, even changing the side-channel information, ST-Graph et al. utilized deep learning techniques to improve the performance
+retains the connection relationships, which allows it to still effec- of the detection models based on packet length sequences.
+tively detect. Since obfuscation attacks will cause a highly dispersed Above methods usually consider a single feature, which is not
+distribution of packet lengths and time intervals, which is reflected robust and can be easily escaped by using evasion strategies.
+in higher entropy. As such, it’s simple to defend this attack, i.e., Context-based detection. Encryption results in limited available
+calculating the entropy of side-channel information. plain-text information for TCP connections, context-based detec-
+ To conclude, existing attacks have a limited impact on ST-Graph. tion methods try to use information from multiple protocols [3, 20]
+ or multi-stream connections to extend the perspective. In fact, information from DNS could help to construct the relation graph of
+8.2 Limitations multiple malware servers [35, 44, 50]. To notice, Oprea et al. detect
+Scale of network. We acknowledge that the scale of internal net- malware and APT infections within an organization [46], while
+work has an impact on ST-Graph. The increase of internal hosts their method only works on available seeds of known malware.
+will cause more nodes and edges in our graph structure. A larger Note that relations between multiple malware and hosts may
+number of edges in the graph brings a heavier time cost for the de- change over time, so capturing the dynamic changes is essential in
+tection, and therefore an infinite number of hosts cannot be handled the detection. However, previous graph-based methods are mainly
+at the gateway. However, our real-world evaluation is conducted based on static relationship graphs and usually ignore the temporal
+on two large representative networks, with bandwidth up to 3.6 characteristics, which limits the effectiveness of detection with less
+Gbps and covering over 10,000 hosts. This huge-scale experiment information. In our work, we propose ST-Graphto detect malicious
+could prove the efficiency of ST-Graph in reality. traffics based on a spatial-temporal graph.
+ In future work, we would explore more efficient traffic feature
+representation methods and ease the practical deployment limi- 10 CONCLUSION
+tations by deploying clusters or separate inspection by network In this paper, we propose ST-Graph, an encrypted malicious traffic
+segment for large enterprise network environments with high band- detection system equipped with a well-designed, novel graph reprewidth. In addition, the features we used rely on the TLS protocol. sentation learning algorithm. By exploring additional, informative
+Although the model can still achieve 99.85% precision (Table 3) after network attributes and effectively integrating multiple features, STremoving protocol-related features, it is still necessary to explore Graph achieves high detection accuracy with a significantly lower
+the detection methods for generic encrypted traffic in the future. false alarm rate and tolerable computational complexity. Experimental results on both self-collected dataset and benchmark dataset
+ demonstrate the effectiveness and the efficiency of ST-Graph, com-
+9 RELATED WORK pared with state-of-the-art malware traffic detection systems. In
+Traditional network-based malware detection methods such as addition, ST-Graph shows good performance in both generalization
+DPI [47, 54] and HTTP-based methods [41, 45], perform keyword and robustness perspectives and reveals outstanding efficiency by
+matching on the plain-text payload of each packet. However, traffic real-world deployment.
+encryption makes these methods no longer effective. Besides, limited available information under encryption makes network-based
+detection more challenging. We divide existing encrypted-network- ACKNOWLEDGMENTS
+based detection methods into single-stream-based detection and We are grateful to anonymous reviewers for their constructive
+context-based detection. comments on this work. This work is supported by National Natu-
+Single-stream-based detection. Single-stream-based detection ral Science Foundation of China (Grant No. U1836213, U19B2034
+strives to dig any available plain-text information for detection in and 62132011), the Huawei Technologies Co., Ltd under Grant No.
+encrypted traffic. Two main features are utilized by single-stream- TC20200917004.
+based detection: features of TLS stream and features of side-channel. Jia Zhang is the corresponding author (zhangjia@cernet.edu.cn).
+
+ 506
+Encrypted Malware Traffic Detection
+via Graph-based Network Analysis RAID 2022, October 26–28, 2022, Limassol, Cyprus
+
+REFERENCES Behavior in Sandboxes.. In NDSS.
+ [1] John Althouse. 2019. TLS Fingerprinting with JA3 and JA3S. https://engineering. [32] Ulf Lamping and Ed Warnicke. 2004. Wireshark user’s guide. Interface 4, 6 (2004),
+ salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967. 1.
+ [2] Blake Anderson and David McGrew. 2016. Identifying Encrypted Malware Traffic [33] Hyunwoo Lee, Doowon Kim, and Yonghwi Kwon. 2021. TLS 1.3 in Practice: How
+ with Contextual Flow Data. In AISec@CCS. 35–46. TLS 1.3 Contributes to the Internet. In Proceedings of the Web Conference 2021.
+ [3] Blake Anderson and David McGrew. 2017. Machine Learning for Encrypted 70–79.
+ Malware Traffic Classification: Accounting for Noisy Labels and Non-Stationarity. [34] Jehyun Lee and Heejo Lee. 2014. GMAD: Graph-based Malware Activity Detec-
+ In SIGKDD. 1723–1732. tion by DNS traffic analysis. Computer Communications 49 (2014), 33–47.
+ [4] AndroidDev. 2021. Developer Guides-SSLSocket. https://developer.android.com/ [35] Kai Lei, Qiuai Fu, Jiake Ni, et al. 2019. Detecting malicious domains with behavreference/javax/net/ssl/SSLSocket Accessed January 22, 2022. ioral modeling and graph embedding. In ICDCS. IEEE, 601–611.
+ [5] Aleksandar Bojchevski and Stephan Günnemann. 2019. Adversarial Attacks on [36] Yankai Lin, Zhiyuan Liu, Maosong Sun, et al. 2015. Learning entity and relation
+ Node Embeddings via Graph Poisoning. In ICML, Vol. 97. PMLR, 695–704. embeddings for knowledge graph completion. In AAAI.
+ [6] Zimo Chai, Amirhossein Ghafari, and Amir Houmansadr. 2019. On the Impor- [37] Chang Liu, Longtao He, Gang Xiong, et al. 2019. Fs-net: A flow sequence network
+ tance of Encrypted-SNI (ESNI) to Censorship Circumvention. In FOCI@USENIX for encrypted traffic classification. In INFOCOM. IEEE, 1171–1179.
+ Security Symposium. USENIX Association. [38] Dan Mcwhrter. 2014. APT1: Exposing One of China’s Cyber Espionage
+ [7] Catalin Cimpanu. 2016. NOPEN Is the Equation Group’s Backdoor for Unix Units. https://www.mandiant.com/resources/apt1-exposing-one-of-chinas-
+ Systems. https://news.softpedia.com/news/nopen-is-the-equation-group-s- cyber-espionage-units.
+ backdoor-for-unix-systems-508257.shtml Accessed March 10, 2022. [39] Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean. 2013. Efficient
+ [8] Cisco. 2018. Cisco Advanced Malware Protection Solution Overview. estimation of word representations in vector space. arXiv preprint arXiv:1301.3781
+ https://www.cisco.com/c/en/us/solutions/collateral/enterprise-networks/ (2013).
+ advanced-malware-protection/solution-overview-c22-734228.html. [40] Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg S Corrado, and Jeff Dean. 2013.
+ [9] Cloudflare. 2021. Cloudflare Gateway. https://www.cloudflare.com/products/ Distributed representations of words and phrases and their compositionality.
+ zero-trust/gateway/ Accessed March 10, 2022. Advances in neural information processing systems 26 (2013).
+[10] Thomas H Cormen, Charles E Leiserson, Ronald L Rivest, and Clifford Stein. 2022. [41] Mamoru Mimura, Yuhei Otsubo, Hidehiko Tanaka, and Hidema Tanaka. 2017. A
+ Introduction to Algorithms. MIT press. practical experiment of the HTTP-based RAT detection method in proxy server
+[11] Neustar International Security Council. 2020. NISC Survey Results. https://www. logs. In AsiaJCIS. IEEE, 31–37.
+ nisc.neustar/nisc-survey-results/ Accessed March 20, 2022. [42] Yisroel Mirsky, Tomer Doitshman, Yuval Elovici, and Asaf Shabtai. 2018. Kitsune:
+[12] Antonio Criminisi, Jamie Shotton, Ender Konukoglu, et al. 2012. Decision forests: an ensemble of autoencoders for online network intrusion detection. arXiv
+ A unified framework for classification, regression, density estimation, manifold preprint arXiv:1802.09089 (2018).
+ learning and semi-supervised learning. Foundations and trends® in computer [43] Michael Nadeau. 2021. Cryptojacking explained: How to prevent, detect,
+ graphics and vision 7, 2–3 (2012), 81–227. and recover from it. https://www.csoonline.com/article/3253572/what-is-
+[13] Azure documentation. 2022. Microsoft Antimalware for Azure Cloud Services cryptojacking-how-to-prevent-detect-and-recover-from-it.html.
+ and Virtual Machines. https://docs.microsoft.com/en-us/azure/defender-for- [44] Pejman Najafi, Andrey Sapegin, Feng Cheng, and Christoph Meinel. 2017. Guiltiot/organizations/how-to-control-what-traffic-is-monitored. by-association: detecting malicious entities via graph mining. In International
+[14] David Fifield. 2018. Anticipating a world of encrypted SNI: risks, opportunities, Conference on Security and Privacy in Communication Systems. Springer, 88–107.
+ how to win big. https://www.bamsoftware.com/sec/esni.html. [45] Terry Nelms, Roberto Perdisci, and Mustaque Ahamad. 2013. Execscent: Mining
+[15] FireEye. 2020. Definition of Malware Family. https://vision.fireeye.com/editions/ for new c&c domains in live networks with adaptive control protocol templates.
+ 06/06-m-trends-fireeye-mandiant.html. In USENIX Security Symposium. 589–604.
+[16] Francois Fouss, Alain Pirotte, Jean-Michel Renders, et al. 2007. Random-Walk [46] Alina Oprea, Zhou Li, Ting-Fang Yen, et al. 2015. Detection of early-stage
+ Computation of Similarities between Nodes of a Graph with Application to enterprise infection by mining large-scale log data. In DSN. IEEE, 45–56.
+ Collaborative Recommendation. IEEE Trans. Knowl. Data Eng. 19, 3 (2007), 355– [47] Vern Paxson. 1999. Bro: a system for detecting network intruders in real-time.
+ 369. Computer networks 31, 23-24 (1999), 2435–2463.
+[17] Sergey Frolov and Eric Wustrow. 2019. The Use of TLS in Censorship Circum- [48] Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel,
+ vention. In NDSS. The Internet Society. Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss,
+[18] Sean Gallagher. 2021. Nearly half of malware now use TLS to conceal commu- Vincent Dubourg, et al. 2011. Scikit-learn: Machine learning in Python. the
+ nications. https://news.sophos.com/en-us/2021/04/21/nearly-half-of-malware- Journal of machine Learning research 12 (2011), 2825–2830.
+ now-use-tls-to-conceal-communications/ Accessed November 20, 2021. [49] Bryan Perozzi, Rami Al-Rfou, and Steven Skiena. 2014. Deepwalk: Online learning
+[19] Ali Gezer, Gary Warner, Clifford Wilson, et al. 2019. A Flow-Based Approach of social representations. In Proceedings of the 20th ACM SIGKDD international
+ For Trickbot Banking Trojan Detection. Comput. Secur. 84 (2019), 179–192. conference on Knowledge discovery and data mining. 701–710.
+[20] Paul Giura and Wei Wang. 2012. A Context-Based Detection Framework for [50] Babak Rahbarinia, Roberto Perdisci, and Manos Antonakakis. 2015. Segugio: Effi-
+ Advanced Persistent Threats. In CyberSecurity. IEEE Computer Society, 69–74. cient behavior-based tracking of malware-control domains in large ISP networks.
+[21] Palash Goyal and Emilio Ferrara. 2018. Graph embedding techniques, applications, In DSN. IEEE, 403–414.
+ and performance: A survey. Knowl. Based Syst. 151 (2018), 78–94. [51] Radim Rehuurek, Petr Sojka, et al. 2011. Gensim—statistical semantics in python.
+[22] Aditya Grover and Jure Leskovec. 2016. node2vec: Scalable feature learning for Retrieved from genism. org (2011).
+ networks. In SIGKDD. ACM, 855–864. [52] Eric Rescorla. 2018. The Transport Layer Security (TLS) Protocol Version 1.3.
+[23] Aric Hagberg and Drew Conway. 2020. NetworkX: Network Analysis with RFC 8446. https://doi.org/10.17487/RFC8446
+ Python. URL: https://networkx.github.io (2020). [53] Ronald L Rivest and Jean Vuillemin. 1976. On recognizing graph properties from
+[24] William L Hamilton. 2020. Graph representation learning. Synthesis Lectures on adjacency matrices. Theoretical Computer Science 3, 3 (1976), 371–384.
+ Artifical Intelligence and Machine Learning 14, 3 (2020), 1–159. [54] Martin Roesch et al. 1999. Snort: Lightweight intrusion detection for networks..
+[25] William L Hamilton, Rex Ying, and Jure Leskovec. 2017. Inductive Representation In Lisa, Vol. 99. 229–238.
+ Learning on Large Graphs. In NeurIPS. 1025–1035. [55] Samuel Schüppen, Dominik Teubert, Patrick Herrmann, and Ulrike Meyer. 2018.
+[26] Cobaltstrike Helpsystem. 2021. Beacon Covert C2 Payload. https://www. FANCI: Feature-based Automated NXDomain Classification and Intelligence. In
+ cobaltstrike.com/help-beacon Accessed November 20, 2021. USENIX Security. 1165–1181.
+[27] Ralph Holz, Jens Hiller, Johanna Amann, et al. 2020. Tracking the deployment of [56] Gaurav Sood. 2021. virustotal: R Client for the virustotal API. R package version
+ TLS 1.3 on the Web: A story of experimentation and centralization. SIGCOMM 0.2.2.
+ 50, 3 (2020), 3–15. [57] Gianluca Stringhini, Christopher Kruegel, and Giovanni Vigna. 2013. Shady paths:
+[28] Dan Jiang and Kazumasa Omote. 2015. An Approach to Detect Remote Access Leveraging surfing crowds to detect malicious web pages. In CCS. 133–144.
+ Trojan in the Early Stage of Communication. In AINA. IEEE Computer Society, [58] Laya Taheri, Andi Fitriah Abdul Kadir, and Arash Habibi Lashkari. 2019. Exten-
+ 706–713. sible android malware detection and family classification using network-flows
+[29] İlker Kara and Murat Aydos. 2019. The ghost in the system: technical analysis of and API-calls. In ICCST. IEEE, 1–8.
+ remote access trojan. International Journal on Information Technologies & Security [59] Robert Tarjan. 1972. Depth-first search and linear graph algorithms. SIAM journal
+ 11, 1 (2019), 73–84. on computing 1, 2 (1972), 146–160.
+[30] Catherine Knowles. 2021. End of 2021 marks drop in cyber attacks, and increase [60] Florian Tegeler, Xiaoming Fu, Giovanni Vigna, and Christopher Kruegel. 2012.
+ in remote access malware. https://securitybrief.asia/story/end-of-2021-marks- Botfinder: Finding bots in network traffic without deep packet inspection. In
+ drop-in-cyber-attacks-and-increase-in-remote-access-malware. CoNEXT. 349–360.
+[31] Alexander Küchler, Alessandro Mantovani, Yufei Han, Leyla Bilge, and Davide [61] Michael Carl Tschantz, Sadia Afroz, Vern Paxson, et al. 2016. Sok: Towards
+ Balzarotti. 2021. Does Every Second Count? Time-based Evolution of Malware grounding censorship circumvention in empiricism. In 2016 IEEE Symposium on
+ Security and Privacy (SP). IEEE, 914–933.
+
+ 507
+RAID 2022, October 26–28, 2022, Limassol, Cyprus Fu and Liu, et al.
+
+[62] Tobias Urban, Dennis Tatang, Thorsten Holz, and Norbert Pohlmann. 2018. To- C SAMPLES FOR MANUAL ANALYSIS
+ wards understanding privacy implications of adware and potentially unwanted
+ programs. In ESORICS. Springer, 449–469. Table 6 presents information on the 30 samples analysed manually.
+[63] Petar Veličković, Guillem Cucurull, Arantxa Casanova, Adriana Romero, Pietro
+ Lio, and Yoshua Bengio. 2017. Graph attention networks. arXiv preprint Table 6: Families and Md5 of Malware Samples.
+ arXiv:1710.10903 (2017).
+[64] Binghui Wang and Neil Zhenqiang Gong. 2019. Attacking graph-based classifica- Family Related md5
+ tion via manipulating the graph structure. In CCS. 2023–2040. ab775c62c8d03b33f9d9b60e013d54f5
+[65] Junnan Wang, Liu Qixu, Wu Di, Ying Dong, and Xiang Cui. 2021. Crafting
+ 3eeace60ad9f357dc8b77981465381c3
+ Adversarial Example to Bypass Flow-&ML-based Botnet Detector via RL. In 24th
+ International Symposium on Research in Attacks, Intrusions and Defenses. 193–204. Adware 3185657ca1707f2364f34fea46afc455
+[66] Zhen Wang, Jianwen Zhang, Jianlin Feng, and Zheng Chen. 2014. Knowledge 75e3d279cc20419f2af57975f755614c
+ graph embedding by translating on hyperplanes. In AAAI, Vol. 28. 04436941856e5a8c3296b55292c47636
+[67] Nigel Williams, Sebastian Zander, and Grenville Armitage. 2006. A preliminary
+ fc92be6f976b598cf65a241c8520cfd6
+ performance comparison of five machine learning algorithms for practical IP
+ traffic flow classification. SIGCOMM 36, 5 (2006), 5–16. f18ac8264e592a4949c5fe09979234be
+[68] James Wyke. 2016. The ZeroAccess rootkit. https://nakedsecurity.sophos.com/ e8766491e8c8a9fc79e86197b1a55a76
+ zeroaccess4/ Accessed March 20, 2022. d5bea7ed4ffc27366e218a99d5709987
+[69] Zhixing Xu, Sayak Ray, Pramod Subramanyan, and Sharad Malik. 2017. Mal- Wacatac
+ fe3bea4366ecc34ddbf90291762cba88
+ ware detection using machine learning based analysis of virtual memory access
+ patterns. In DATE, 2017. IEEE, 169–174. d63d7bceed0da682db6170c24663b3b0
+[70] Simon Conant Yaron Samuel. 2017. Ewind – Adware in Applications’ Cloth- df5ed0925bfb4e141a134bfdf4b2e0ce
+ ing. https://unit42.paloaltonetworks.com/unit42-ewind-adware-applications- d32e7100988f924a0070418051de053f
+ clothing/ Accessed January 22, 2022.
+[71] Yanfang Ye, Tao Li, Donald A. Adjeroh, and S. Sitharama Iyengar. 2017. A Survey
+ d31ca0d08a4bc600c51ecd6e891551eb
+ Minerd
+ on Malware Detection Using Data Mining Techniques. ACM Comput. Surv. 50, 3 331dfc88f7d056b2667875199eb2d504
+ (2017), 41:1–41:40. 332265a774e2ad113cbf4d05189d2ee0
+[72] Si Zhang, Hanghang Tong, Jiejun Xu, and Ross Maciejewski. 2019. Graph convo- CobaltStrike 363eddcc28509a08c039833a9b6e2a04
+ lutional networks: a comprehensive review. Computational Social Networks 6, 1
+ (2019), 1–23. 79a4c854d00928024f9ce3020a041451
+[73] Futai Zou, Siyu Zhang, Weixiong Rao, and Ping Yi. 2015. Detecting malware Flystudio 67b4843d49d60e16372160cc10f80cf8
+ based on DNS graph mining. International Journal of Distributed Sensor Networks gamhak c6752ffeb1ebc6bba468a71c36e69c85
+ 11, 10 (2015), 102687.
+ 01372c76417280c2c7a524edd268d5a0
+ krypyik
+ ceb684549a97dae140df9e4cef10c308
+A MACHINE LEARNING ALGORITHMS hoax 464852e25233ece2e3ed769e727f3ef3
+We compared seven common algorithms: Logistic Regression, Sup- Rbot e90fb38bd6c50f517d6d1fc00b445f91
+port Vector Machine (SVM), Naive Bayes, Artificial Neural Network avaddoncrypt 33874816e3eb31b874e1301fcf73bb72
+(ANN), k-nearest neighbours (k-NN), Decision Tree and Random lockscreen 4cf1bf8ebf10d596f7ecbb1c24258eef
+Forest ensemble. We used an implementation of Scikit-learn for all graftor 71fb3ed4bf17e328c045a062fbf0895e
+ 19435957f4a3d1380bfcd4c087e40a93
+algorithms except ANN, which uses Keras. All also used the default csdi
+ cc07157af9a75f492748baed0d22a9fe
+hyperparameters. The experimental results are shown in Table 5.
+ NetWorm 97acceb1b93ace58c250901ebd55aadd
+ Table 5: Classification Result of 7 algorithms
+
+ Precision(%) Recall(%) FPR(%) D EVALUATION RESULTS
+ Logistic Regression 97.8118 98.0980 0.2417 Figure 11 visualizes the results of embedding the traffic graphs into
+ SVM 97.4046 93.3431 0.2740 six of these families, Figure 12 shows the experiment results of
+ Naive Bayes 92.7736 98.6101 0.8461 parameter sensitivity, and Figure 13 shows malware family classifi-
+ ANN 95.9901 98.9759 0.1653 cation results of ETA and FS-Net in EncMal2021.
+ k-NN 99.8524 98.9759 0.0161
+ Decision Tree 99.3426 99.4879 0.0725
+ Random Forest 99.9805 99.9221 0.0045 Generickdz
+ Minerd
+ RelevantKnowledge
+ Sality
+B PERFORMANCE METRICS Brocoiner
+We define True Positive (TP) as malicious connections predicted as Installcore
+malicious and False Positive (FP) as benign connections predicted
+as malicious. True Negative (TN) represents benign connections
+classified correctly and False Negative (FN) represents malicious
+connections classified incorrectly. We use the following metrics to
+evaluate the detection performance: (i) precision, (ii) recall and (iii)
+false-positive rates (FPR).
+ TP
+ P r ecision =
+ TP + FP
+ TP
+ Recall = T P R =
+ TP + FN Figure 11: Visualization of the 6 malware families.
+ FP
+ FPR =
+ FP +TN
+
+ 508
+Encrypted Malware Traffic Detection
+via Graph-based Network Analysis RAID 2022, October 26–28, 2022, Limassol, Cyprus
+
+ 0.05 0.05 0.05
+ 100.0 100.0 100.0
+ 0.04 0.04 0.04
+ Precision & Recall
+
+ Precision & Recall
+
+ Precision & Recall
+ 99.5 99.5 99.5
+ Precision 0.03 Precision 0.03 Precision 0.03
+ Recall Recall
+
+ FPR
+
+ FPR
+ Recall
+
+ FPR
+ 99.0 99.0 99.0
+ FPR 0.02 FPR 0.02 FPR 0.02
+ 98.5 0.01 98.5 0.01 98.5 0.01
+
+ 98.0 0.00 98.0 0.00 98.0 0.00
+ 100 200 300 50 100 150 5.0 7.5 10.0 12.5
+ Dimensionality Dh Path Length Pl Path Num Pn
+
+ (a) Dimensionality of host vectors D h (b) Random walk path length P L (c) Random walk path nums per edge P N
+ Figure 12: Parameter sensitivity results.
+
+ (a) Results of ETA. (b) Results of FS-Net.
+ Figure 13: Malware family classification result of ETA and FS-Net.
+
+E THE STREAM ATTRIBUTES 1
+Table 7 shows the single-stream attributes used in our model (See
+§5) and their descriptions.
+ Table 7: The Stream Attributes.
+ Attribute Type Attribute Description
+ Domain Length Total number of characters in the domain.
+ Domain Level Level of domain. Sub, second-level or top-level.
+ Domain features
+ Punctuation/Upperletter/
+ The proportion of different character types to all characters.
+ Lowerletter/Digit Ratio
+ Vowel/Consonant Ratio The proportion of vowel/consonant letters to all letters.
+ Client/Server TLS version The TLS version selected by the client and server.
+ Number of Client Ciphersuites The number of the offered cipher suites by the client.
+ Client Ciphersuite x The x th in the list of cipher suites provided (x = 1, ..., 10).
+ Server Chosen Ciphersuite The cipher suite chosen by the server during the connection.
+ Client/Server Compression Method The compression2 method selected by the client and server.
+ TLS handshake features
+ Number of Client Extensions The number of the client extensions.
+ Number of Signature Algorithms The number of the signature algorithms offered by client.
+ Signature Algorithm x The x th in the list of signature algorithms provided (x = 1, ..., 4).
+ Number of ec Point Formats The number of point formats offered by the client.
+ Number of Elliptic Curve The number of elliptic curves offered by the client.
+ TLS Packet Length x Length of the x th packet in the stream (x = 1, ..., 25).
+ TLS Time Interval x The x th time interval in the stream (x = 1, ..., 25).
+ Statistical features
+ Number of Packets The number of the total packets in the stream.
+ Max/Min/Average Packet Length The max/min/average length of total packets in the stream.
+
+ 509

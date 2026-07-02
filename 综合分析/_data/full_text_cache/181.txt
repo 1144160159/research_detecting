@@ -1,0 +1,805 @@
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 21, NO. 1, JANUARY/FEBRUARY 2024 153
+
+ Automatic Evasion of Machine Learning-Based
+ Network Intrusion Detection Systems
+ Haonan Yan , Xiaoguang Li , Wenjing Zhang , Rui Wang, Hui Li , Member, IEEE, Xingwen Zhao,
+ Fenghua Li, and Xiaodong Lin , Fellow, IEEE
+
+ Abstract—Network intrusion detection systems (IDS) are often traffics in advance to resist cyber-attacks which cause serious
+considered effective to thwart cyber attacks. Currently, state-of- issues such as equipment halt and privacy breach [1], [2]. There
+the-art (SOTA) IDSs are mainly based on machine learning (ML) are two categories of IDS, signature-based and model-based
+including deep learning (DL) models, which suffer from their own
+security issues, especially evasion attacks by using adversarial IDSs. The traditional signature-based IDSs can no longer meet
+examples. However, previous studies mostly focus on extracted the increasingly complex and ever-changing network detection
+features rather than the traffic sample itself, and/or assume that requirements. Meanwhile, the excellent performance of machine
+the adversary knows the information of the target model more learning (ML), especially deep learning (DL) on classification
+or less, which severely restricts attack feasibility in practice. In tasks allows it to be widely used as the core classifier of the IDS
+this paper, we re-investigate this problem in a more realistic labelonly black-box scenario and propose a practical evasion attack to detect new and malicious traffic for network security. Adstrategy to solve the above limitations. In this newly considered mittedly, ML-based IDS is state-of-the-art in network security
+case that the adversary morphs the traffic sample and only ob- detection [3], [4]. As a result, the ML-based IDS is considered
+tains the results accepted or rejected without other knowledge, we in this work.
+successfully leverage the model extraction and transfer attack to Despite the fact that ML models are essential for the IDS,
+evade the detection. The entire attack strategy is automated and a
+comprehensive evaluation is performed. Final results show that the they lack reliability because the malicious sample may be misproposed strategy effectively evades seven typical ML-based IDSs classified as accepted, resulting in false-negative outcomes [5].
+and one SOTA DL-based IDS with an average success rate of over This causes the attack to go undetected even though it actually
+75%. We also discuss the corresponding countermeasures against occurred. Besides, the emergence of adversarial examples also
+our attack, which finally highlight the need for effective defenses exacerbates the detection error problem [6]. Motivated adveragainst our attack.
+ saries can add trivial perturbations into the traffic sample to make
+ Index Terms—Adversarial traffic example, black-box evasion it be misclassified by the target model, leading to an evasion
+attack, model extraction attack, network intrusion detection attack, which further shows the vulnerability of the ML-based
+system, transfer attack.
+ IDS[7].
+ The evasion attack in ML models can be divided into two
+ I. INTRODUCTION
+ categories: white-box attacks and black-box attacks, depending
+ ETWORK intrusion detection systems (IDS) are utilized
+N as a common and effective measure to classify malicious
+ on the information about the target model mastered by the
+ adversary. For white-box attacks, it assumes that the adversary
+ knows all relevant information about the target IDS, such as
+ Manuscript received 4 June 2022; revised 7 February 2023; accepted 16 classification algorithms, model internals, and training dataset.
+February 2023. Date of publication 22 February 2023; date of current version
+12 January 2024. The work of Hui Li was supported in part by the National Key Some representative works [8], [9], [10] successfully implement
+Research and Development Program of China under Grant 2022YFB3103400, evasion attacks, but it is impossible for an adversary to access
+in part by Shaanxi innovation team project under Grant 2018TD-007, and in part all these information, so such an assumption is not reasonable
+by Higher Education Discipline Innovation 111 project under Grant B16037. The
+work of Haonan Yan was done when he visits the School of Computer Science in practice. For black-box attacks, knowing the classification
+at the University of Guelph. (Corresponding authors: Xiaoguang Li; Hui Li.) scores of the output results, Xu et al. [11] automatically evade the
+ Haonan Yan is with the State Key Laboratory of Integrated Services Networks, classifier by black-box accessing the target model. The adversary
+School of Cyber Engineering, Xidian University, Xi’an 710126, China, and also
+with the School of Computer Science, University of Guelph, Guelph, ON N1G in these works needs to know the information of the target model
+2W1, Canada (e-mail: yanhaonan.sec@gmail.com). more or less. However, IDS is a typical label-only black-box
+ Xiaoguang Li, Rui Wang, Hui Li, and Xingwen Zhao are with the State system, it only outputs abnormal (attack detected) or normal (no
+Key Laboratory of Integrated Services Networks, School of Cyber Engineering, Xidian University, Xi’an 710126, China (e-mail: xg_li@outlook.com; attack detected), and the confidence score is not output to the
+785340571@qq.com; lihui@mail.xidian.edu.cn; xwzhao@xidian.edu.cn). adversary. This means that the only information the adversary
+ Wenjing Zhang and Xiaodong Lin are with the School of Computer can obtain is whether the detection was successfully evaded or
+Science, University of Guelph, Guelph, ON N1G 2W1, Canada (e-mail:
+wzhang25@uoguelph.ca; xlin08@uoguelph.ca). not, without confidence scores. This practical situation makes
+ Fenghua Li is with the State Key Laboratory of Information Security, Institute existing related attacks infeasible in IDS cases. To our best
+of Information Engineering, Chinese Academic of Sciences, Beijing 100045, knowledge, (Limitation 1:) none of the existing evasion attacks
+China, and also with the School of Cyber Security, University of Chinese
+Academy of Sciences, Beijing 101408, China (e-mail: lfh@iie.ac.cn). against ML-based IDSs considers feasibility in a real-world
+ Digital Object Identifier 10.1109/TDSC.2023.3247585 label-only black-box scenario.
+
+ 1545-5971 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+154 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 21, NO. 1, JANUARY/FEBRUARY 2024
+
+Fig. 1. An illustration of our evasion attack strategy. The procedure consists of three steps, i.e., step 1: model extraction, step 2: local white-box attack, and step
+3: black-box transfer attack.
+
+ Although there are many related evasion attacks launched maliciousness and is not feasible in the traffic doaround images [12], text [13], and malicious files[14], but these main. The adversary could also formulate the attack
+works are not suitable for traffic scenarios. This is because into an optimization problem to guide the morphing
+traffic samples follow a specific protocol format, and these works direction.
+cannot ensure the functionality of traffic after modification. Most Step 3. a black-box transfer attack is performed by using adprevious related works modify the traffic feature, but in practice versarial traffic samples. Due to the transferability of
+adversaries often need to directly provide adversarial traffic sam- adversarial examples [16], malicious traffic examples
+ples, which further limits the capability of adversaries. Another can evade the detection of the target ML-based IDS
+reason is that, unlike images that inherently contain explicit with a high success rate.
+features that can be directly inputted into the model, traffic We implement the framework which automates the complete
+features are statistical and thus cannot be modified directly. attack process. Our evasion process is shown in Fig. 1. The
+Moreover, the obfuscation scheme in [15] does not explore framework improves the two limitations aforementioned. We
+adversarial traffic samples to optimize their attack effects and also experimentally evaluate the framework and the correspondcosts. Consequently, (Limitation 2:) there is still a lack of a ing defenses.
+practical adversarial traffic sample construction method. Contribution. The main contributions are summarized as fol-
+ In this work, we propose a practical automatic black-box eva- lows:
+sion attack against the network ML-based IDS. Compared with 1. Devise a practical evasion attack strategy against MLprevious works, we consider a more realistic evasion scenario, based IDS. We propose an automatic evasion strategy for
+where the adversary does not have any knowledge of the target ML-based IDS in a realistic label-only black-box scenario,
+ML-based IDS, and only the output of the target ML-based IDS combining model extraction and transfer attack, and imis available, i.e., the adversary’s ability is consistent with that of prove the extraction attack for traffic scenarios, which
+normal users. Our attack strategy is as follows: is more practical and effective than previous adversarial
+ Step 1. a model extraction attack is performed on the target attacks for network traffic.
+ ML-based IDS to obtain local substitute models, 2. Explore the generation method of evasive traffic samples.
+ which allow adversaries to apply previous adversar- We provide practical adversarial traffic example morphing
+ ial example methods with full access to the model. methods under the constraint of network protocol format,
+ For enhancing extraction efficiency, three synthetic without any knowledge about the target model’s internal
+ queries are devised in traffic scenarios to extract states. Our method guarantees the evasion effectiveness
+ the decision boundary of the target ML-based IDS. and protocol functionality of the sample. We also formu-
+ Besides, since a single model is difficult to deal with late the construction of evasive samples as an optimization
+ complex scenarios, ensemble learning is introduced problem to guide the sample morphing and reduce the
+ to train the local substitute model with lower number attack cost.
+ of queries and higher data utilization. 3. Evaluate our attack and defense. We implement and eval-
+ Step 2. a local white-box attack is performed on the extracted uate our ML-based IDS evasion framework which automodels to craft adversarial traffic examples. Consid- mates all attacks and improvements aforementioned to
+ ering statistical features of traffic, three morphing test the robustness of ML-based IDS. Experiments demonschemes for adversarial traffic examples are devised strate that our attack is effective on seven kinds of typito replace the current common scheme of adding cal ML-based models and one state-of-the-art DL-based
+ noise directly, which cannot maintain the original model. We also discuss corresponding countermeasures.
+YAN et al.: AUTOMATIC EVASION OF MACHINE LEARNING-BASED NETWORK INTRUSION DETECTION SYSTEMS 155
+
+ The final results show that they have a certain effect in de- Specifically, they perform the extraction attack and test the malifending our attacks, but each of them has great limitations, cious sample on the obtained local model. Although adversaries
+ which highlights the need for effective defense against our may not know the traffic features used in the target model,
+ attacks. changes in the traffic samples can lead to changes in the features
+ Roadmap. The rest of the paper is organized as follows: extracted by the target ML-based IDS. On the basis of this,
+Section II describes the motivating scenario and its challenges; adversaries can constantly morph the traffic sample to change its
+Section III elaborates on our attack strategy, including the pro- feature value while ensuring samples’ maliciousness, and thus
+cess of extraction and transfer attack; Section IV presents our obtaining a series of variants. These traffic variants misclassified
+measurement study and experiment results; Section V introduces by the local model are expected to evade the detection of the
+three directions of defense against our proposed attack; Section target ML-based IDS since the local model is generated from
+VI discusses the limitations of our current design and potential the ML-based IDS. As a result, the adversary can successfully
+future research; Section VII reviews related prior research and evade the detection of the IDS and current ML-based IDSs are
+Section VIII concludes the paper. under the threat of this type of new evasion attack.
+
+ C. Challenges in Black-Box Evasion
+ II. PROBLEM DESCRIPTION
+ When the constructed sample is misclassified by the local
+ In this section, we introduce the attack scenario to illustrate the
+ substitute model, adversaries expect that sample to evade the
+problem of ML-based IDS in Section II-A. Then, we present our
+ detection due to the transferability between the machine learning
+evasion idea in Section II-B and the corresponding challenges
+ models. Two important challenges emerge here.
+in Section II-C.
+ The first challenge is how to make traffic samples more
+ transferable. The transferability works better when the extracted
+A. Motivating Scenario model is high-fidelity to the original model, and two models
+ should be functionally consistent, i.e., give the same response to
+ Administrators often set up the IDS at network entrances to
+ the same request. However, with black-box access, the adversary
+detect and prevent malicious traffic timely. At present, the most
+ can only get a binary output of acceptance/rejection from the
+advanced detector usually takes a machine learning model as a
+ detector, which greatly increases the difficulty of extraction.
+core classifier, which is pre-trained by extracting features from
+ Most of the previous works contain some auxiliary information
+a collection of typical malicious traffic as learning samples.
+ more or less, such as confidence values or model algorithms.
+ Regular malicious traffic is easily and effectively detected by
+ Nevertheless, in practice, this situation does not occur often.
+the existing ML-based IDSs [17]. Therefore, adversaries try to
+ The second challenge is how to provide valid malicious traffic
+evade the detection of the target ML-based IDS by adaptively
+ samples. One malicious sample is easily morphed to pass the
+modifying the features of the malicious traffic. They can dedetection, but it is difficult to ensure that the maliciousness of the
+liberately construct traffic samples to request the detector and
+ modified packet remains. The essence of successful evasion is
+observe the binary response from the detector, which is also
+ that the adversary achieves misclassification by finding a blind
+called a label-only black-box scenario.
+ spot or ambiguous decision boundary of the target classifier,
+ However, this brings the new problem that frequent malicious
+ where malicious samples are treated as benign samples. In the
+probing with a single account or IP will cause the administrator
+ network scenario with a limited number of accesses, previous
+to be alert and take corresponding countermeasures such as
+ works [12], [13], [14] are not feasible due to the specificity of
+banning requests or updating the classification model. The work
+ the traffic sample under the specific protocol format.
+in [18] shows that it is possible to identify the purposeful queries
+for adversarial examples from the past queries. Besides, a large
+number of queries increase the risk of being detected. There- III. PROPOSED AUTO EVASION FRAMEWORK
+fore, the adversary needs to construct effective malicious traffic In this section, we propose a framework for generating mawithin a limited number of tests. There are two cases white-box licious adversarial traffic samples to automatically evade MLand black-box depending on whether the adversary knows the based IDS detection. First, we present synthetic queries used to
+internal information of the IDS. Note that the white-box scenario extract the ML-based IDS in Section III-A and the algorithm
+has limited applicability in practice for IDS. Here, we consider selection for local substitute model training in Section III-B.
+the case where the adversary relies on the least amount of Then, we devise adversarial traffic examples using this substitute
+information about the target, which is the most difficult scenario model in Section III-C. Finally, we provide an optimization
+to devise evasion strategies, i.e., the adversary has no knowledge problem to formulate the adversarial attack. The framework
+about the internal condition of the target detector, such as model automates our whole attack strategy, which is more practical
+algorithm, training datasets, or feature space. than previous works, as illustrated in Fig. 2.
+ As stated in Section II-A, the main strategy is to train local
+ substitute models for the target ML-based IDS using synthetic
+B. Evasion Idea
+ datasets in the black box scenario first. The labels come from
+ In order to construct the malicious traffic example evading the output of the target ML-based IDS. When adversarial traffic
+detection effectively, adversaries can utilize its transferability. examples are crafted using the substitute model, these examples
+156 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 21, NO. 1, JANUARY/FEBRUARY 2024
+
+ using these features. Note that our scheme is a packet-level
+ scheme, even if unseen ML-based IDS uses new or different
+ features, these features will also change with the packet change,
+ which means our scheme also works.
+ 1) Query 1: Linear Query Matrix: We build a linear feature
+ query matrix M composed of an identity matrix and a zero-row
+ vector, shown as
+ ⎡ ⎤
+ 1 0 ··· 0
+ ⎢ 0 1 ··· 0 ⎥
+ ⎢ ⎥
+ ⎢ ⎥
+ M = ⎢ ... ... . . . ... ⎥ ,
+ ⎢ ⎥
+Fig. 2. Illustration of the proposed auto evasion framework. ⎣ 0 0 ··· 1 ⎦
+ 0 0 · · · 0 (d+1)×d
+
+are expected to evade ML-based IDS detection with a high where d is the number of the common feature dimension. The
+success rate due to their transferability. The works [16], [19] also element 1 in i-th (i = 1, 2, . . . , d) row of M is used to solve
+prove the transferability of adversarial examples even among the for the i-th weight coefficient of the target linear model. The
+heterogeneous models. last row in M is used to solve the bias of the model. The linear
+ query matrix can also be denoted as
+A. Constructing Synthetic Queries  
+ M = m1 · · · m d 0 .
+ Adversaries need lots of labeled datasets to train the local
+substitute model. The reason is that machine learning models For the construction of traffic example t, it is impossible to
+with good performance always require large data for training. directly construct traffic examples with extracted feature values
+However, blind queries will increase the cost to adversaries, and of 0 or 1, but we can construct examples whose features are the
+alert administrators after sending a large number of ineffective minimize and maximize value to respectively approximate the
+malicious queries. Therefore, the most common method for 0 and 1. Once the feature dimension i is determined, we can
+adversaries currently is to synthesize queries and treat the target empirically adjust the query traffic example t in (1) to let xi
+ML-based IDS as an oracle to label these queries. With this obtain the extreme value and other feature dimensions keep the
+synthetic dataset, adversaries could train the local substitute same. For example, when we try to extract the coefficients of the
+model of the target ML-based IDS. The previous representative packet length in the target model, we can make the constructed
+data synthesis method is Jacobian-based dataset augmentation traffic example length 40 or 1480 bytes, and the feature value
+[16]. It is essentially a reference to the idea of gradient descent. after feature extraction is the minimum or maximum, which is
+By using this method, new sample points are obtained along approximately 0 or 1 in the linear query matrix.
+with the sign of the Jacobian matrix dimension based on the The principle of the linear query matrix is solving equations
+initial point, which essentially follows the principle of gradient by linear algebra. It can extract the parameters of the target model
+descent. However, this method is not suitable for traffic because with the least theoretical cost and 100% successful rate, i.e., it
+it is limited by the selection of initial points, and it is not copies the target model exactly. It can run quite fast as it only
+stable. Moreover, the relationships among traffic features are needs m+1 queries and calculations. The only weakness is that
+complex and the value of features varies greatly, which makes it only works on linear models.
+the calculation of the Jacobian matrix more difficult. 2) Query 2: Feature Space Traversal: Considering real-
+ Conversely, we propose three practical query construction world scenarios, the adversary can prejudge the value range of
+methods here. The first two kinds of queries are in the feature each feature of the traffic sample. For example, the packet length
+space, the adversary could manipulate the packet to adjust its of each flow ranges from 40 to 1480 bytes. Thus, the adversary
+feature to the query one, details are shown below. Formally, for can construct samples by traversing each feature space according
+the traffic example t to be queried, its extracted traffic feature to the arithmetic sequence, then shuffling samples in each feature
+vector is x, and thus we have column, and concatenating all feature columns into the synthetic
+ dataset finally. Formally, suppose D is the value range of one
+ x = E(t), (1) sample’s feature, and the size of the synthetic dataset is n, the
+ traversal interval ρ should be
+where E denotes the feature extraction function. Although adversaries have no knowledge of features in the target model ρ = D/(n − 1).
+under our setting and different ML-based IDSs may use different features in the training, we observe that most features in After the feature value is determined, the traffic example can
+traffic classification come from three main categories, and these be constructed by the adversary’s manipulation. Note that many
+features are highly correlated. Based on our statistics, here we features are interconnected, for example, the length of the paysummarize and select the features used frequently in previous load and the length of the packet, it is impossible to increase the
+works shown in Table II, and construct query traffic examples payload but decrease the packet’s length. Therefore, we divide
+YAN et al.: AUTOMATIC EVASION OF MACHINE LEARNING-BASED NETWORK INTRUSION DETECTION SYSTEMS 157
+
+features into three categories from three independent dimen- 2) Local Model Training: The proper choice of local training
+sions, i.e., length-related features, the number of packets, and model can improve data utilization. The basic idea to select
+time-related features, and only traverse representative features the algorithm of the substitute model is by utilizing the crossof these three dimensions in our experiments. The construction validation method. The model with the best performance is
+method of the traffic sample is the same as the one in Query 1. chosen for a later test. To further improve the consistency of the
+ The ML-based IDS’s “knowledge”, i.e., its malicious traffic local model, we introduce ensemble learning and implement it
+detection capability, is derived from the training dataset. Thus, with mature autoML technology [23]. The reason is that different
+the training dataset of one effective ML-based IDS should com- models usually have different transfer rates for the same target
+prehensively cover the value space of the feature as much as model. One single model is difficult to cope with different target
+possible. This type of query can ensure that the ML-based IDS’s models and its transfer rate is low. Besides, using synthetic
+training dataset is always a subset of the synthetic dataset so that datasets from the target model, ensemble learning makes the
+the local substitute model trained with the synthetic dataset will extracted decision boundary be more towards the target model.
+have high fidelity to the target model. The work [24] also shows that using an ensemble of local models
+ 3) Query 3: Dataset Migration: In this work, we use typ- can improve the transfer rate of adversarial examples.
+ical traffic datasets as the basement queries. The represen- In our framework, the adversary can automatically choose the
+tative dataset selection method is also applied to reduce the current best model combination, feature preprocessing steps,
+number of queries for the target model extraction. Excel- and also set their respective hyper-parameters, according to
+lent ML-based IDSs have the basic competency requirement their performance on the synthetic dataset. Local models based
+that performs well on typical attack traffic datasets (e.g., on ensemble learning yields the highest transfer rate in our
+CIC-IDS2017 [20]). The traffic features of the same kind experiment, which actively demonstrates that local ensemble can
+of network attack are basically identical, even in different steal the decision boundaries of the target model to the maximum
+datasets. Besides, the training dataset of one excellent ML- extent possible, nearly the same decision on the new input as the
+based IDS always contains many normal attack data, which oracle. We also validate the performance of ensemble models
+are similar to these typical attack datasets. Even if the target and compare the transfer rate in Section IV-B.
+model never has access to these typical datasets, these datasets
+can still help determine the decision boundary of the target
+model. C. Devising Evasive Traffic Example
+ After queries are sent to the target model, adversaries use the ML-based traffic classification schemes usually use the staaccepted or rejected feedback as labels to construct the training tistical features of traffic sessions as the classification basis. The
+dataset for the local substitute model. The adversary constructs basic unit, session, is composed of all packets in one complete
+the query dataset using the 3 synthetic query methods aforemen- connection. After statistical analysis, we found that network traftioned. These queries are generated considering simplicity and fic features mainly come from three dimensions: length, number,
+efficiency, and the adversary can flexibly adjust the proportion and time. Though adversaries do not know the features used in
+of three queries to request the target model simultaneously target ML-based IDS, malicious tampering can be performed
+depending on the scenario. during the transformation from traffic to features by modifying
+ the packet length/number and traffic duration. Furthermore, as
+ long as the adversary ensures that modified packets still conform
+B. Extracting Detection Model
+ to the original protocol standard, the functionality of modified
+ Constructing malicious examples with full knowledge of packets will not be compromised. Based on this, we provide
+the model parameters can significantly improve the adversarial three methods to modify the extracted features by morphing the
+properties of examples. Therefore, it is helpful to construct a malicious traffic sample to evade detection.
+local substitute model pertinently. Note that the ultimate goal of 1) Methods of Morphing Traffic: Network flows are first
+the model extraction is to train a substitute model approximating preprocessed into features, and then these features are used
+the decision boundary of the target model rather than a more by machine learning models to classify the traffic. Therefore,
+accurate model. malicious tampering can be performed during the transformation
+ 1) Algorithm Selection: In black-box scenarios, adversaries from network flow to features. Currently, most network features
+have no knowledge about the model algorithm of the target are extracted mainly from three directions: the length of packets,
+ML-based IDS. Nevertheless, many existing studies, such as the number of packets, and the lasting of the network connection.
+knowledge distillation [21], have shown that substitute models Based on this, we give three corresponding methods to change
+can have high fidelity for the complex structured source models. the extracted features by morphing the malicious traffic packet
+For instance, one complex deep neural network model can be to evade the detection. The structure of packet is shown in Fig. 5.
+functionally replaced by a well-structured logistic regression or • Method 1: Modifying length-related features. The payload
+decision tree model [22]. Therefore, we run several different length of the network traffic packet can be modified by adding
+machine learning algorithms, as shown in experiments. After a meaningless characters. Specifically, we choose to add the charlarge range of experiments, the final substitute models can reach acter 0xFF in this method. Similarly, an adversary can add
+more than 80% fidelity of the target model, which is enough to meaningless characters to change the length of the malicious
+perform subsequent attacks. packet. It should be noted that the length of the modified payload
+158 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 21, NO. 1, JANUARY/FEBRUARY 2024
+
+Fig. 3. Method 1: adding payload length. The length-related features are increased by injecting meaningless characters such as 0xFF into the original traffic
+packet.
+
+Fig. 4. Method 2: increasing packet numbers. The number of packets in one session can be increased by repeating the request multiple times. For example,
+adding characters 0x2a 0x32 (x2) into the request file packet, i.e., request files twice, yields twice response packets.
+
+must be less than the maximum transmission payload size in a
+single network-layer transaction (e.g., 1460 bytes for IPv4 TCP
+protocol). Our experiments show that adding up to 300 0xFF
+characters can change the length-related features of the traffic
+flow to be detected, and thus causing the flow to be misclassified
+by the classification model. Fig. 3 shows the process of method Fig. 5. The packet structure. The length-related modifications are mainly in
+1. the payload.
+ • Method 2: Increasing the number of packets. The number
+of packets contained in one complete session is often applied
+as an important feature in the field of network classification. An
+adversary can try to change this feature by splitting the requested classifiers, it is effective for the adversary to add only 0.001ms
+content into more parts or by repeating some certain content to of delay before each packet is sent. Fig. 6 shows the process of
+send, which is shown in Fig. 4. Note that the timestamp and method 3.
+sequence number of the modified packets are in accordance with Note that though the adversary does not know the feature
+the normal distribution, which will not be filtered out as the dimensions used by the target model, when the traffic example
+retransmission packet. This method is effective for classifiers is perturbed by the three methods mentioned above, the features
+that rely on features related to the number of packets. Fig. 4 extracted by the target model will also change. We also verify this
+shows the process of method 2. statement in our experiments. Meanwhile, these perturbations
+ • Method 3: Modifying time-related features. A considerable are designed in terms of the overall statistical features of the traffraction of flow features are time-related, so the adversary can fic flow rather than individual key packets of malicious traffic or
+control the duration of the entire session or the interval between fields of its payload. They are concentrated on three macroscopic
+packets to change these features, e.g., by waiting an extra time dimensions of length, time, and number, and will not affect the
+before sending packets, to evade the detection, which is shown functionality of the packet. Therefore, in the case where the
+in Fig. 6. It should be noted that a long interval will lead to a perturbations all follow the network protocol specification, the
+connection timeout. Our experiments show that for some simple original maliciousness of the modified traffic sample will not be
+YAN et al.: AUTOMATIC EVASION OF MACHINE LEARNING-BASED NETWORK INTRUSION DETECTION SYSTEMS 159
+
+Fig. 6. Method 3: Changing interval time. The time-related features are increased by adding a delay, e.g., 0.001 ms, before each packet is sent from the client.
+
+lost. Based on this principle, many features of other dimensions Therefore, we directly morph the real-world malicious traffic
+can also work after being modified, which will not be discussed packet using three methods in Section III-C1, which will not
+due to space limitations. reduce the maliciousness of the traffic.
+ 2) Analysis of Adversarial Traffic Examples: Previous re- We first present the optimization problem used to craft adsearch on malicious sample construction is mainly studied in versarial features on the local substitute model. Then we show
+two directions. The first one is beyond the knowledge of the how to get the adversarial traffic example from the adversarial
+classifier. The classification model does not use any malicious features by three methods in Section III-C1.
+sample for iterative training, resulting in the classifier being 1) Optimization Problem: Given a legitimate input x and its
+unable to determine the sample based on the “experience”, which ground truth y = foracle (x), the goal of local transfer attack is
+creates a blind spot. The second one is the classification error. to find an instance x satisfying foracle (x ) = y by morphing x
+Malicious samples are misjudged due to errors in the classifier’s with perturbation δ, i.e., x = x + δ. Formally, we train k local
+decision boundary, which can be exploited by the adversary to substitute models denoted as ki=1 αi fi (x), where αi are the
+evade detection. Essentially, both methods are expected to let the ensemble weights and ki=1 αi = 1. We can approximate the
+target model misclassify malicious traffic samples to achieve the local transfer attack to solve the following optimization problem:
+evasion attack.
+ k
+ In the transformation from traffic to features, adversaries can
+ argmin −L αi fi (x ) , y + λd(x, x ), (2)
+maliciously tamper with samples. Although trivial changes in x
+ i=1
+individual features may play a limited role, adding them together
+can cause large changes in the output of ML-based IDS. In fact, where L is to measure the distance between the prediction from
+the more accurate classifiers tend to require more features, and local models and the ground truth from the target oracle, d is a
+thus it is easier to craft samples to evade their detection. The metric to quantify the distortion between two input examples,
+methods proposed in Section III-C1 follow all three directions λ is a constant which is often set empirically. Besides, L we
+and aim to change the features of traffic by morphing packets to choose here is
+evade detection.
+ L(xi , xj ) = log(1 − xi · xj ), (3)
+ which is shown effective in many previous works [12], [24]. The
+D. Local Transfer Attack
+ distortion d between the original example and the adversarial
+ Considering that random morphing could yield some suc- example are calculated by
+cessful examples yet bring massive computation cost [25], 
+here we formulate the morphing procedure as an optimization  2
+ d (x , x) =
+ 
+ x(i) − x(i) /N , (4)
+problem to present the specific modification direction with less i
+cost. Adversaries can perform the adversarial example on the
+white-box local substitute model to find the modified traffic where x(i) denotes the i-th feature value of the original example
+which is misclassified by the target model because the trans- x, x(i) denotes the one of the adversarial example, and N
+ferability holds between the local model and the target model. denotes the number of the feature dimensionality. This is used
+However, existing adversarial example generation schemes do to measure the modification strength in adversarial examples.
+not guarantee the protocol functionality of the generated traffic In this work, adversaries aim to evade the ML-based IDS
+since the traffic packet is constrained by network protocols and detection, thus only considering the type of non-targeted attack
+cannot be modified or generated in a manner like the image. is enough in this scenario. The targeted attack can be derived
+160 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 21, NO. 1, JANUARY/FEBRUARY 2024
+
+ TABLE I TABLE II
+ TRAFFIC DATASETS THE EXTRACTED FEATURES USED FOR ML-BASED IDS TRAINING
+
+similarly by replacing the y of the loss function in (2) with target
+label y  .
+ 2) Solution: The optimization problem (2) can be solved by
+the iteration training. In the iteration procedure, the adversary
+fixes parameters of the local model and continuously adjusts the
+adversarial feature x to let the local model misclassify. The direction of adjustment keeps the same as the direction of gradient
+descent. The adjustment directly acts on x . This process can
+also directly use some existing adversarial example algorithms,
+such as PGD [26], to find the final adversarial feature. When
+reaching the maximum number of iterations set previously or
+evading the model’s detection, the x is output. Then, the Fig. 7. ROC (Receiver Operating Characteristic) curve of Logistic Regression
+ based IDS.
+adversary perturbs the traffic t to find the corresponding x ,
+which is shown as
+
+ x = E(t + p), (5) 2) Model Algorithm: Here we elaborate on the details of
+ ML-based IDS training. Seven common machine learning modwhere E denotes the feature extraction function, t is the traffic els are implemented as ML-based IDSs using the scikit-learn
+example to be morphed, and p is added perturbations. The pertur- framework, which is very mature and widely used in real-world
+bation methods in Section III-C1 change linearly. Consequently, scenarios nowadays [30]. We first show the performance of MLt = t + p is the constructed adversarial traffic sample. Note that based IDSs. We split the dataset into 70% for the training set and
+the adversary can flexibly select some or all feature dimensions 30% for the testing set. Each test is run 10 times with randomly
+of x to participate in perturbation according to the feasibility shuffled datasets and the results are averaged. For example, the
+of dimensional modification. LR model uses the BFGS algorithm for convergence and iterates
+ up to 50,000 times. As a result, the average overall accuracy
+ of the LR model is 98.10%, consuming 52.4s on average. The
+ IV. EVALUATION
+ average log loss of the LR model is 0.1070. The AUC of the LR
+ In this section, we reproduce malicious traffic identification model is 0.9810. Fig. 7 shows the ROC curve of the LR model.
+models and use our framework to evade the detection of MLbased IDSs. B. Extracting Target model
+ 1) Synthetic Queries: We reproduce three synthesis queries
+A. Building Target Model
+ in Section III-A. Let n denotes the number of samples in the
+ 1) Datasets: The malicious traffic detection model monitors target model’s training dataset, we set the budget of synthetic
+traffic to and from all devices in real-time for malicious activity query from 0.2n to 2.0n to test its performance. The budget
+or policy violations We launch a variety of attacks, such as denotes the number of training examples needed to construct
+Denial of Service attack, Man-in-the-Middle attack in LAN. the local substitute model, which is a very important metric to
+These attacks are the major network threat currently. We also evaluate the effectiveness of our proposed method. For query 3
+collect normal traffic including HTTP, FTP, chat, etc. Then, we (dataset migration), CIC-IDS-2017 datasets are used to request
+collect and classify these attack flows which are intercepted from the target model. For query 1 (linear query matrix), the adversary
+multiple collection stations during different periods, as shown constructs traffic examples whose extracted features are extreme
+in Table I. values. For example, when the payload of the constructed ex-
+ Furthermore, we reconstruct the automatic traffic filtering ample is empty, its length-related features are all minimum.
+and feature extraction algorithm. Forty representative features, We also choose the most typical linear model Logistic Rewhich are very effective and commonly used in traffic classi- gression as the target model to verify our statement in Section
+fication [27], [28], [29], are selected to form a set of feature III-A1. We divide the 40 features into 4 groups (shown in Table
+vectors for the following experiment. The details of features can II) according to their importance and use each group separately
+be found in Table II. Note that adversaries have no knowledge of to construct the linear query matrix to query the target LR model.
+these models, including model algorithms and traffic features. The results are shown in Fig. 8. Although the importance of
+YAN et al.: AUTOMATIC EVASION OF MACHINE LEARNING-BASED NETWORK INTRUSION DETECTION SYSTEMS 161
+
+ TABLE III
+ THE ACCURACY OF DIFFERENT LOCAL SUBSTITUTE MODELS EXTRACTED FROM THE TARGET ML-BASED IDS USING DIFFERENT ALGORITHMS
+
+ obvious, so we do not continue to list the results due to the space
+ limitation.
+ 2) Ensemble Learning: We let the adversary use these seven
+ algorithms respectively to retrain the model on the synthetic
+ dataset. The accuracy of local substitute models on synthetic
+ datasets is also shown in Table III.
+ The ensemble model is trained locally using autoML technology [23]. The ensemble learning is able to make full use
+ of the synthetic dataset, and generate models with the highest
+ accuracy, which actively demonstrates that the extracted model
+ fits well with the decision boundary of the target model and is
+ more conducive to transfer attack. At the same time, the random
+ forest model, one of the representatives of ensemble learning
+Fig. 8. Construct 4 kinds of linear query matrixes we proposed based on 4 in the results, works better than a single decision tree model,
+feature groups in Table II to extract target logistic regression based IDS. The
+more the number of queries, the higher the accuracy of the extracted LR model. which also shows that ensemble learning works well. The only
+ disadvantage of the ensemble model is the attack overhead and
+ complexity because an optimal combination of algorithms is
+group (d) features is the lowest, from the results we can see that needed to search, but it is still worthwhile as the transfer success
+our method is still able to use (d) to achieve good extraction rates are improved.
+results when the number of queries is sufficient, i.e., up to 40.
+ Table III summarizes the the query experiment results. All
+results are averaged over 10 runs to obtain more stable results. C. Crafting Adversarial Example
+Testing on different target models, we find query 1 is effective for The specific model combination in the local ensemble is
+the linear model and obtains the exact parameters of the target determined by the autoML default selector. Since the ensemble
+model with the minimum number of queries, which is consistent model provides a higher transfer rate against target models than
+with the effect of model extraction attack in [31]. However, query one single model, to be consistent, we use this configuration in
+1 works poorly for nonlinear models, the results obtained from its all our experiments attacking target ML-based IDSs.
+queries mainly focus on one specific category. For example, all 100 unseen traffic examples are randomly sampled from each
+the queries from query 1 are judged as Network Flooding Attack of the 4 malicious classes for 400 total examples and then are
+type by the SVM model with confidence above 0.89. Query 2 used to find adversarial examples. White-box PGD attacks are
+and query 3 both work well. When the query budget is 0.2n, the performed on the ensemble loss with 100 iterations to provide the
+accuracy of the extracted local model is basically usable. When direction of estimated gradients for the example perturbing. We
+the budget reaches 0.6n, the accuracy of most local models is choose  = 0.3 following the same setting in [26]. Finally, these
+above 0.85. Continuing to increase the budget, the effect is not examples are tested on the black-box target model to measure
+162 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 21, NO. 1, JANUARY/FEBRUARY 2024
+
+ TABLE IV
+ THE PERFORMANCE OF ADVERSARIAL MALICIOUS TRAFFIC EXAMPLES ON THE LOCAL SUBSTITUTE MODEL AND THE TARGET ML-BASED IDS
+
+the evading performance. Besides, for method 1, the maximum
+length of added characters is set to 300, and the average distortion
+is 2.3818. For method 2, the maximum number of added traffic
+packets is set to half of the packet number of one session and the
+average distortion is 2.4719. For method 3, the increase interval
+is set to 0.001ms and the average distortion is 0.9136.
+ 1) Metrics: Three metrics, success rate, transf er rate and
+evade rate, are used to evaluate the effect of crafting example.
+Let P refers to the number of examples provided by the adversary, L refers to the number of examples misclassified by the
+local substitute model, and T refers to the number of examples
+misclassified by the target model. Note P = 400. We denote
+success rate = L/P, which is used to evaluate the effect of the
+adversarial example against the local model. transf er rate =
+T /L, which is used to evaluate the effect of the adversarial
+example against the target model. evade rate = T /P, which is
+used to evaluate the performance of our framework and is our
+primary metric.
+ Table IV summarizes the evading experiment results. All
+results are averaged over 10 runs to obtain more stable results.
+From the results, the added perturbations allow the adversarial
+malicious traffic example to evade the detection of different
+target ML-based IDSs with at most 80% probability after test on
+the local substitute model. The perturbation added by method
+3 is less than others, so the performance of method 3 is low,
+but its evade rate can be improved by increasing the perturbation. In addition, the high evade rate often comes with high Fig. 9. Against the web application attack, the detection performance of
+ the SOTA network DL-based IDS. Each dot denotes one traffic sample to be
+success rate. The reason is that the better the classification detected. The test samples are input after 43min. A higher RMSE score reflects
+effect of the model, the more dependent it is on the features. High a higher anomaly, i.e., a malicious sample. The yellow and red dots indicate
+success rate indicates that the model has a poor classification the sample is detected as the web application attack traffic packages with high
+ anomalies.
+effect on the disturbed samples, so the evasion performance of
+the framework is better. Besides, the results also show the generalization ability of the proposed attack, which works for different
+types of traffic classification models. The transfer performance patterns and behaviors from 70,000 benign traffic instances.
+is also consistent with the findings in [24]. The test datasets consist of 15,000 benign examples and 15,000
+ malicious examples.
+ Kitsune outputs the root mean squared errors (RMSE) score
+D. Attacking Stronger DL-Based IDS
+ to indicate the degree of abnormality of the traffic example.
+ Previous evaluations are all based on various typical network Concretely, in this work, Kitsune is trained to fit the benign
+ML-based IDSs, to illustrate the performance of our evasion output score to log-normal distribution for a more obvious
+attack more effectively, here we reproduced the state-of-the-art distinction as the same setting in [4]. The malicious example
+(SOTA) published network IDS Kitsune [4]. Kitsune is an un- with a very low occurring probability will easily raise the alert.
+supervised DL-based IDS, using an ensemble of autoencoders The anomaly scores for each traffic sample in test datasets are
+to differentiate between normal and abnormal network traffic generated from KitNET (Kitsune’s core algorithm) and shown
+samples. We train Kitsune by its published traffic datasets and its by dots after 43min in Fig. 9 and 10. We also adjust the packet
+default parameters. In this work, Kitsune learns the normal traffic timestamp in chronological order for a better display effect.
+YAN et al.: AUTOMATIC EVASION OF MACHINE LEARNING-BASED NETWORK INTRUSION DETECTION SYSTEMS 163
+
+ TABLE V
+ FUNCTIONAL VERIFICATION OF MORPHING MALICIOUS TRAFFIC. THE
+ COMPARISON RESULTS DEMONSTRATE THE TRAFFIC MORPHED BY OUR
+ METHODS STILL RESULTS IN SUCCESSFUL ATTACKS
+
+ and made them conform to the protocol format, here we verify
+ the attack effectiveness of the morphed attack traffic compared
+ with the selected original attack traffic without morphing.
+ The results are shown in Table V. Different attacks have
+ their corresponding attack effectiveness measurements. From
+ the comparison, we can see that our methods can preserve the
+ malicious functionality of the morphed traffic. The reason for a
+ few failed cases is that the increase of feature value in the time
+ dimension leads to the reduction of attack efficiency, which is
+ also consistent with the finding in Section IV-C that method 3
+ modifies the time-related features with a lower success rate than
+ the other two methods.
+
+ V. COUNTERMEASURES
+ The attack proposed in this paper can be defended from two
+ perspectives. One is to defend against the model extraction
+ attack, and the other is to improve model robustness. There
+Fig. 10. Against the DDoS attack, the detection performance of the SOTA
+Network DL-based IDS. Each dot denotes one traffic sample to be detected. are also some other defenses such as gradient masking, which
+The test samples are input after 43min. A higher RMSE score reflects a higher prevents the adversary from getting useful gradients to construct
+anomaly, i.e., a malicious sample. The yellow and red dots indicate the sample the adversarial examples directly. However, such defenses are
+is detected as the DDoS attack traffic packages with high anomalies.
+ not effective for the black-box attack used in this work, since the
+ adversary can still obtain the gradient direction from the local
+The web application attack and DDoS attack are involved in substitute model based on the transferability of the adversarial
+this test. The results shown in Figs. 9(a) and 10(a) demonstrate examples.
+the detection effectiveness of Kitsune. The yellow and red dots
+indicate the corresponding abnormal traffic examples, with a A. Defending Against Model Extraction Attack
+high probability of being malicious samples. Transfer attacks rely on the local substitute model extracted
+ Then CIC-IDS2017 datasets are used to perform the model from the target model. Thus, the defender can protect the model
+extraction attack and ensemble learning technology is used to from being extracted. However, directly restricting the service
+train the local substitute models. We generate the adversarial of the target model will affect the benefit of the service provider.
+web application attack and DDoS examples using our proposed It is also ineffective against collusion attacks. Besides, note that
+framework and take 5,000 locally successful samples to test. model extraction attack cannot be fully defended, the defender
+The evasive effectiveness is shown in Figs. 9(b) and 10(b). For can only consider increasing the cost of model extraction or
+the DDoS attack, most of the adversarial examples generated by reducing the accuracy of the extracted model. Currently, existing
+our framework evade the detection of the DL-based IDS. For defense schemes are mainly based on perturbation and monitorthe web application attack, there are still partial samples with a ing, both of which have made good progress. The scheme in
+higher probability to be detected, as shown by the yellow dots [32] that combines the above two schemes is also worthy to be
+in Fig. 9(b). These are mainly password brute force packages. adopted by defenders. Here we do not repeat the verification of
+Due to the need to repeatedly send packages for testing, the this kind of defense.
+traffic features of modified examples are still far from the normal
+web application traffic packages, but the RMSE gap has been B. Improving Model Robustness
+significantly shortened compared with that before modification.
+ In addition to improving the model’s ability to detect adversarial example inputs, it is also feasible to improve the robustness
+E. Verifying Morphed Traffic of the model, which is also known as adversarial learning.
+ Though the attack effectiveness of evasive traffic example is This kind of method puts malicious samples into the model
+ensured in our construction methods, since our morphing meth- training dataset in advance. The model is exposed to as many
+ods have not compromised the functionality of modified packets adversarial examples as possible during the training phase to
+164 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 21, NO. 1, JANUARY/FEBRUARY 2024
+
+Fig. 11. The Evade Rate of Logistic Regression (LR) and Neural Network Fig. 12. The use Accuracy of Logistic Regression (LR) and Neural Network
+(NN) models trained on datasets containing adversarial samples. The lower the (NN) models trained on datasets containing adversarial examples. The higher the
+evade rate, the better the robustness of the model after adversarial training. accuracy, the better the model performance of the model, and the less affected
+ after adversarial training.
+
+correct the learned decision boundary. This scheme significantly
+improves the robustness of the model and effectively counteracts to find dimensions that are more susceptible to perturbation,
+adversarial sample attacks. then reduce corresponding feature weights or directly remove
+ Here we evaluate the effectiveness of adversarial training vulnerable features to prevent the evasion attack. This kind of
+against our proposed evasion strategy. First, we add adversarial method can limit the generation of adversarial examples to a
+traffic examples into the training datasets of the target model. certain extent as it is more difficult for adversaries with fewer
+Examples are generated by our strategy and used to build a robust available features and more perturbation needed to add. Howclassifier in the ML-based IDS. Then, we repeat our evasion ever, the work in [35] shows that limiting the number of features
+strategy against the robust model, comparing it with the normal that the adversary can control does not completely prevent this
+model without adversarial examples in the training dataset. Due type of attack, even if 5 random features can give adversarial
+to the space, we select two representative models LR and NN samples a 50% success rate. Besides, reducing some vulnerable
+to illustrate the robustness improvement. The results of other feature dimensions that may also work for normal examples will
+models are quite similar. result in a decrease in accuracy, which is unacceptable for tasks
+ From Fig. 11, we can see that adversarial training is effective requiring extremely high classification accuracy. Here we also
+to improve the robustness of ML-based IDSs and defense against do not repeat the verification of this kind of defense.
+our proposed evasion attack. The reason is that adversarial examples make the decision boundary of models more complicated VI. DISCUSSION
+in a robust way. For the model, more new examples increase
+the model’s “knowledge” and reduce the effective space of The experiment results demonstrate that an adversary using
+adversarial example’s features. From another angle, our work our framework has a very high probability to evade various MLcan also be used to generate adversarial traffic examples and based IDSs. The results are in line with our expectations. The
+feed them into the training dataset of the deployed IDS model black-box scenario considered throughout this work is also very
+to improve model robustness. realistic, which fully reflects the threat of this security issue. In
+ Another interesting observation is that we find adversarial addition, ML-based malicious traffic classification models are
+training changes models’ feature importance distribution, which heavily dependent on the traffic sample features, so we make
+decreases the classification accuracy of normal traffic, shown the malicious traffic samples plausible by morphing them to
+in Fig. 12. We verify this conjecture by the feature weight of change their features. Finally, the modified sample can evade
+models. The results show in Fig. 13. Models’ features after the detection of ML-based IDSs while maintaining the original
+adversarially trained are concentrated in key features, and the maliciousness.
+feature distribution of models whose training set without ad- Our work is a specific application of adversarial examples in
+versarial examples is relatively noisy. For the limited capacity the network traffic classification scenario. Almost all previous
+model like LR, adversarial training improve the robustness works focus on the domain of image classification. Unlike imagainst adversarial traffic examples at the expense of accuracy ages, which inherently contain explicit features, network traffic
+on normal examples, which is a disadvantage of the method. example follows a certain protocol format and its features are
+Another disadvantage is that when the model encounters the statistical. Therefore, these attack schemes for images, such as
+adversarial example not in the adversarial training datasets, it [16], cannot be used directly in the traffic scenario. In addition,
+still cannot perform effective defense. the current query generation schemes for images, such as [36],
+ are also ineffectual on network traffic. The reason is that network
+ traffic needs to comply with protocol standards without losing
+C. Adjust Feature Dimension of Model
+ functionality, otherwise, it will be filtered by the ML-based IDS
+ Adversarial examples are related to feature dimensions in directly. To solve the above problem, we devise a specialized
+models. Feature selection and reduction [33], [34] can be used generation scheme for synthetic queries with low cost and good
+YAN et al.: AUTOMATIC EVASION OF MACHINE LEARNING-BASED NETWORK INTRUSION DETECTION SYSTEMS 165
+
+Fig. 13. The distribution change of top 11 feature weight in normal model and robust model after adversarial training.
+
+ TABLE VI
+ THE COMPARISON RESULTS OF THE REALISTIC CONDITIONS MET OR NOT
+
+effect of training substitute model, which also improves the ef- VII. RELATED WORK
+ficiency of traffic classification model extraction. The ensemble Machine learning is widely used to solve security issues in
+learning we used in model extraction does work better than a
+ the field of network traffic. As the core component of network
+single model, which is consistent with the findings in [24]. security systems, IDSs also adopt machine learning classifica-
+ • Limitations. There are two limitations of this work. First,
+ tion models to monitor and discover malicious traffic in recent
+traditional payload-based IDSs are not considered in this work.
+ years. However, many evasion attacks [43], [44] against IDS do
+This kind of IDSs’ rules are usually provided by protocol analy- not consider ML models. As a result, this work focuses on consis and deep packet inspection (DPI). The main consideration in
+ structing adversarial traffic examples to evade ML-based IDSs.
+this paper is the ML-based solution. Second, a high false-positive
+ Some works [8], [39], [40], [45] assume that the adversary
+model or white-list model will significantly weaken the attack. knows more or less information about the target model, such as
+However, this type of model is less commonly used in reality.
+ similar training datasets, model structure, or confidence scores
+ • Future Work. In future work, we plan to achieve more ac- of the results. To be more realistic, this work strictly restricts
+curate and lower cost of model extraction and evasion detection the black-box experimental scenario, where the adversary only
+and apply the adversarial example to more problems in the field
+ obtains the label when accessing the model.
+of traffic besides the ML-based IDS. Although transfer attack is Some works do not consider the feasibility and cost of adeasy to use and effective, there are some more advanced attacks versarial traffic samples. [41] directly modify the feature of
+[37], [38], which have lower attack cost and are less likely to
+ traffic example, which is not feasible in practice. [15], [42],
+be detected, so these attacks will later be introduced into our [46] randomly modify or/and obfuscate the traffic sample to
+framework to improve the efficiency of the attack. Moreover, evade the detection, resulting in low attack efficiency and high
+the work of this paper belongs to the untargeted attack, which
+ cost. Besides, two works also adopt the transfer attack to evade
+aims at expecting malicious traffic to be considered benign the detector. Papernot et al. [16] improves the synthetic query
+by the target model and evade detection. For targeted attacks,
+ by using reservoir sampling [47] and Jacobian-based dataset
+its goal is to make the model output a specific target class,
+ augmentation techniques. Li et al. [36] uses an active learning
+rather than just misclassification. Targeted attacks have more strategy to further reduce the number of queries. However, these
+application scenarios, but their transfer loss is high, which is
+ schemes cannot be applied to this problem as neither their
+more challenging.
+ synthetic query nor adversarial example construction scheme
+166 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 21, NO. 1, JANUARY/FEBRUARY 2024
+
+is suitable for network traffic whose features are statistics. This [8] M. J. Hashemi, G. Cusack, and E. Keller, “Towards evaluation of NIDSs
+paper proposes the traffic example crafting method and performs in adversarial setting,” in Proc. 3rd ACM CoNEXT Workshop Big DAta,
+ Mach. Learn. Artif. Intell. Data Commun. Netw., 2019, pp. 14–21.
+the transfer attack to address these two limitations. We also make [9] M. Sharif, S. Bhagavatula, L. Bauer, and M. K. Reiter, “Accessorize
+a comparison of our work and previous works in Table VI, which to a crime: Real and stealthy attacks on state-of-the-art face recognishows that our work meet the most realistic conditions and is tion,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2016,
+ pp. 1528–1540.
+more practical in the real environment. [10] N. Šrndić and P. Laskov, “Practical evasion of a learning-based classifier:
+ There are also some works to improve the transferability of A case study,” in Proc. IEEE Symp. Secur. Privacy, 2014, pp. 197–211.
+adversarial samples. Liu et al. [24] propose novel ensemble- [11] W. Xu, Y. Qi, and D. Evans, “Automatically evading classifiers:
+ A case study on PDF malware classifiers,” in Proc. 23rd Annu.
+based approaches to improve the accuracy of transfer attacks. Netw. Distrib. Syst. Secur. Symp., San Diego, California, USA:
+Dong et al. [48] propose momentum-based iterative algorithms The Internet Society, Feb. 21-24, 2016. [Online]. Available:
+to boost adversarial attacks. They also propose a translation- http://wp.internetsociety.org/ndss/wpcontent/uploads/sites/25/2017/
+ 09/automatically-evadingclassifiers.pdf
+invariant attack method to generate more transferable adversarial [12] N. Carlini and D. Wagner, “Towards evaluating the robustness of neural
+examples in [49]. Xie et al. [50] improve the transferability networks,” in Proc. IEEE Symp. Secur. Privacy, 2017, pp. 39–57.
+of adversarial examples by applying random transformations [13] J. Li, S. Ji, T. Du, B. Li, and T. Wang, “Textbugger: Generating
+ adversarial text against real-world applications,” in Proc. 26th
+to inputs at each iteration. This work mainly focuses on how Annu. Netw. Distrib. Syst. Secur. Symp., San Diego, California,
+to successfully apply adversarial sample techniques into traffic USA: The Internet Society, Feb. 24-27, 2019. [Online]. Available:
+classification scenarios, these improvements can be taken into https://www.ndss-symposium.org/ndss-paper/textbuggergeneratingadversarial-text-against-real-world-applications/
+account in future work for specific traffic problems. [14] H. Dang, Y. Huang, and E.-C. Chang, “Evading classifiers by morphing in
+ the dark,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2017,
+ pp. 119–133.
+ VIII. CONCLUSION [15] I. Homoliak, M. Teknos, M. Ochoa, D. Breitenbacher, S. Hosseini,
+ In this paper, we investigate a restricted real label-only and P. Hanacek, “Improving network intrusion detection classifiers by
+ non-payload-based exploit-independent obfuscations: An adversarial apblack-box scenario for the adversary to evade the detection proach,” 2018, arXiv:1805.02684.
+of intrusion detection. The adversarial example technique is [16] N. Papernot, P. McDaniel, I. Goodfellow, S. Jha, Z. B. Celik, and A. Swami,
+introduced into the field of malicious traffic identification to “Practical black-box attacks against machine learning,” in Proc. ACM Asia
+ Conf. Comput. Commun. Secur., 2017, pp. 506–519.
+successfully implement the evasion attack. At the same time, [17] P. Mishra, V. Varadharajan, U. Tupakula, and E. S. Pilli, “A detailed investhree methods for constructing traffic query samples and three tigation and analysis of using machine learning techniques for intrusion
+methods for generating adversarial malicious traffic examples detection,” IEEE Commun. Surveys Tuts., vol. 21, no. 1, pp. 686–728, First
+ Quarter 2018.
+are given to strengthen the extraction and evasion effect. En- [18] S. Chen, N. Carlini, and D. Wagner, “Stateful detection of black-box
+semble learning is also introduced to improve the extraction adversarial attacks,” in Proc. 1st ACM Workshop Secur. Privacy Artif.
+effect. Besides, although the main evaluations are on intrusion Intell., 2020, pp. 30–39.
+ [19] C. Szegedy et al., “Intriguing properties of neural networks,”
+detection tasks, the proposed framework has wider applications 2013, arXiv:1312.6199.
+to other learning-based systems. [20] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating a
+ new intrusion detection dataset and intrusion traffic characterization,” in
+ Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018, pp. 108–116.
+ ACKNOWLEDGMENTS [21] M. W. Craven and J. W. Shavlik, “Extracting tree-structured representations of trained networks,” in Proc. Adv. Neural Inf. Process. Syst., 1996,
+ We thank the editor and all the anonymous reviewers for their pp. 24–30.
+valuable guidance and constructive feedback. [22] M. Kesarwani, B. Mukhoty, V. Arya, and S. Mehta, “Model extraction
+ warning in MLaaS paradigm,” in Proc. 34th Annu. Comput. Secur. Appl.
+ Conf., 2018, pp. 371–380.
+ REFERENCES [23] M. Feurer, K. Eggensperger, S. Falkner, M. Lindauer, and F. Hutter, “Autosklearn 2.0: The next generation,” 2020, arXiv:2007.04074.
+ [1] J.-M. Flaus and J. Georgakis, “Machine learning based intrusion detection [24] Y. Liu, X. Chen, C. Liu, and D. Song, “Delving into transferable adversarial
+ approaches for industrial IoT control systems: A review,” in Proc. Int. examples and black-box attacks,” 2016, arXiv:1611.02770.
+ Conf. Ind. Internet Things Smart Manuf., Sep. 2018. [25] W. Brendel, J. Rauber, and M. Bethge, “Decision-based adversarial
+ [2] A.-R. Sadeghi, C. Wachsmann, and M. Waidner, “Security and pri- attacks: Reliable attacks against black-box machine learning models,”
+ vacy challenges in industrial internet of things,” in Proc. 52nd 2017, arXiv:1712.04248.
+ ACM/EDAC/IEEE Des. Automat. Conf., 2015, pp. 1–6. [26] A. Madry, A. Makelov, L. Schmidt, D. Tsipras, and A. Vladu,
+ [3] S. Gulghane, V. Shingate, S. Bondgulwar, G. Awari, and P. Sagar, “Towards deep learning models resistant to adversarial attacks,”
+ “A survey on intrusion detection system using machine learning algo- 2017, arXiv:1706.06083.
+ rithms,” in Proc. Int. Conf. Innov. Data Commun. Technol. Appl., 2019, [27] H. Kim, K. C. Claffy, M. Fomenkov, D. Barman, M. Faloutsos, and K.
+ pp. 670–675. Lee, “Internet traffic classification demystified: Myths, caveats, and the
+ [4] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An best practices,” in Proc. ACM CoNEXT Conf., 2008, pp. 1–12.
+ ensemble of autoencoders for online network intrusion detection,” in [28] W. Li, M. Canini, A. W. Moore, and R. Bolla, “Efficient application iden-
+ Proc. 25th Annu. Netw. Distrib. Syst. Secur. Symp., San Diego, Califor- tification and the temporal and spatial stability of classification schema,”
+ nia, USA: The Internet Society, Feb. 18-21, 2018. [Online]. Available: Comput. Netw., vol. 53, no. 6, pp. 790–809, 2009.
+ https://dblp.org/rec/conf/ndss/MirskyDES18.bib [29] H. Yan et al., “PGSM-DPI: Precisely guided signature matching of deep
+ [5] F. Hachmi, K. Boujenfa, and M. Limam, “Enhancing the accuracy of packet inspection for traffic analysis,” in Proc. IEEE Glob. Commun. Conf.,
+ intrusion detection systems by reducing the rates of false positives and false 2019, pp. 1–6.
+ negatives through multi-objective optimization,” J. Netw. Syst. Manage., [30] F. Pacheco, E. Exposito, M. Gineste, C. Baudoin, and J. Aguilar, “Towards
+ vol. 27, no. 1, pp. 93–120, 2019. the deployment of machine learning solutions in network traffic classifi-
+ [6] L. Huang, A. D. Joseph, B. Nelson, B. I. Rubinstein, and J. D. Tygar, cation: A systematic survey,” IEEE Commun. Surveys Tuts., vol. 21, no. 2,
+ “Adversarial machine learning,” in Proc. 4th ACM Workshop Secur. Artif. pp. 1988–2014, Second Quarter 2018.
+ Intell., 2011, pp. 43–58. [31] F. Tramèr, F. Zhang, A. Juels, M. K. Reiter, and T. Ristenpart, “Stealing
+ [7] M. A. Ayub, W. A. Johnson, D. A. Talbert, and A. Siraj, “Model evasion machine learning models via prediction APIs,” in Proc. 25th USENIX
+ attack on intrusion detection systems using adversarial machine learning,” Secur. Symp., 2016, pp. 601–618.
+ in Proc. IEEE 54th Annu. Conf. Inf. Sci. Syst., 2020, pp. 1–6.
+YAN et al.: AUTOMATIC EVASION OF MACHINE LEARNING-BASED NETWORK INTRUSION DETECTION SYSTEMS 167
+
+[32] H. Yan, X. Li, H. Li, J. Li, W. Sun, and F. Li, “Monitoring-based differential Wenjing Zhang is working toward the PhD degree
+ privacy mechanism against query flooding-based model extraction attack,” with the School of Computer Science, University of
+ IEEE Trans. Dependable Secure Comput., vol. 19, no. 4, pp. 2680–2694, Guelph, Canada. Her research interests include data
+ Jul./Aug. 2022. privacy and machine learning.
+[33] I. Guyon and A. Elisseeff, “An introduction to variable and feature selection,” J. Mach. Learn. Res., vol. 3, no. Mar, pp. 1157–1182, 2003.
+[34] D. Han et al., “Evaluating and improving adversarial robustness of machine
+ learning-based network intrusion detectors,” IEEE J. Sel. Areas Commun.,
+ vol. 39, no. 8, pp. 2632–2647, Aug. 2021.
+[35] R. Sheatsley, N. Papernot, M. Weisman, G. Verma, and P. McDaniel,
+ “Adversarial examples in constrained domains,” 2020, arXiv:2011.01183.
+[36] L. Pengcheng, J. Yi, and L. Zhang, “Query-efficient black-box at- Rui Wang received the BS degree in information
+ tack by active learning,” in Proc. IEEE Int. Conf. Data Mining, 2018, security from Xidian University, in 2019. He is curpp. 1200–1205. renly working toward the master’s degree with the
+[37] C.-C. Tu et al., “AutoZOOM: Autoencoder-based zeroth order optimiza- School of Cyber Engineering, Xidian University. His
+ tion method for attacking black-box neural networks,” in Proc. AAAI Conf. research interests focus on tor and network traffic.
+ Artif. Intell., 2019, pp. 742–749.
+[38] A. Ilyas, L. Engstrom, A. Athalye, and J. Lin, “Black-box adversarial
+ attacks with limited queries and information,” in Proc. Int. Conf. Mach.
+ Learn., PMLR, 2018, pp. 2137–2146.
+[39] Z. Wang, “Deep learning-based intrusion detection with adversaries,”
+ IEEE Access, vol. 6, pp. 38367–38384, 2018.
+[40] X. Peng, W. Huang, and Z. Shi, “Adversarial attack against DoS intrusion Hui Li (Member, IEEE) received the BSc degree
+ detection: An improved boundary-based method,” in Proc. IEEE 31st Int. from Fudan University, in 1990, and the MASc and
+ Conf. Tools Artif. Intell., 2019, pp. 1288–1295. PhD degrees from Xidian University, in 1993 and
+[41] G. Apruzzese, M. Colajanni, and M. Marchetti, “Evaluating the effective- 1998, respectvely. Since June 2005, he has been a
+ ness of adversarial attacks against botnet detectors,” in Proc. IEEE 18th professor with the School of Cyber Engineering, Xi-
+ Int. Symp. Netw. Comput. Appl., 2019, pp. 1–8. dian University, Xi’an Shaanxi, China. His research
+[42] C. V. Wright, S. E. Coull, and F. Monrose, “Traffic morphing: An efficient interests are in the areas of cryptography, wireless
+ defense against statistical traffic analysis,” in Proc. Netw. Distrib. Syst. network security, information theory, and network
+ Secur. Symp., Citeseer, vol. 9, 2009. coding. He is a chair of ACM SIGSAC CHINA. He
+[43] T.-H. Cheng, Y.-D. Lin, Y.-C. Lai, and P.-C. Lin, “Evasion techniques: served as the technique committee chair or co-chair
+ Sneaking through your intrusion detection/prevention systems,” IEEE of several conferences. He has published more than
+ Commun. Surveys Tuts., vol. 14, no. 4, pp. 1011–1020, Fourth Quarter 200 international academic research papers on information security and privacy
+ 2012. preservation.
+[44] I. Corona, G. Giacinto, and F. Roli, “Adversarial attacks against intrusion detection systems: Taxonomy, solutions and open issues,” Inf. Sci., Xingwen Zhao received the BS and MS degrees from
+ vol. 239, pp. 201–225, 2013. the School of Telecommunications Engineering of
+[45] O. Ibitoye, O. Shafiq, and A. Matrawy, “Analyzing adversarial attacks Xidian University, in 1999 and 2004 respectively,
+ against deep learning for intrusion detection in IoT networks,” in Proc. and the PhD degree from the School of Information
+ IEEE Glob. Commun. Conf., 2019, pp. 1–6. Science and Technology of Sun Yat-sen University,
+[46] E. Stinson and J. C. Mitchell, “Towards systematic evaluation of the in 2011. He is now an associate professor with the
+ evadability of bot/botnet detection methods,” in Proc. 2nd Conf. USENIX School of Cyber Engineering, Xidian University. He
+ Workshop Offensive Technol., 2008, pp. 1–9. is also an editor of International Journal of Tech-
+[47] J. S. Vitter, “Random sampling with a reservoir,” ACM Trans. Math. Softw., nology in Computer Science & Engineering. His revol. 11, no. 1, pp. 37–57, 1985. search interests include machine learning (or artificial
+[48] Y. Dong et al., “Boosting adversarial attacks with momentum,” intelligent) based network security, multi-party data
+ in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2018, sharing, anonymous authentication, broadcast encryption, traitor tracing, key
+ pp. 9185–9193. agreement.
+[49] Y. Dong, T. Pang, H. Su, and J. Zhu, “Evading defenses to transferable
+ adversarial examples by translation-invariant attacks,” in Proc. IEEE/CVF Fenghua Li received the BS degree in computer
+ Conf. Comput. Vis. Pattern Recognit., 2019, pp. 4312–4321. software, and the MS and PhD degrees in computer
+[50] C. Xie et al., “Improving transferability of adversarial examples with input systems architecture from Xidian University, Xi’an,
+ diversity,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2019, China, in 1987, 1990, and 2009, respectively. He is
+ pp. 2730–2739. currently a professor and a doctoral supervisor with
+ the State Key Laboratory of Information Security, In-
+ Haonan Yan received the bachelor’s degree from stitute of Information Engineering, Chinese Academy
+ Xidian University. He is currently working toward the of Sciences, Beijing, China. He is also a doctoral
+ PhD degree with the School of Cyber Engineering, supervisor with Xidian University and the University
+ Xidian University, Xi’an, China. His current research of Science and Technology of China. His current
+ interests focus on machine learning security and net- research interests include network security, system
+ work traffic. security, privacy computing, and trusted computing.
+
+ Xiaodong Lin (Fellow, IEEE) received the PhD degree in information engineering from the Beijing
+ University of Posts and Telecommunications, China,
+ and the PhD degree (with Outstanding Achievement
+ Xiaoguang Li received the bachelor”s degree from in Graduate Studies Award) in electrical and computer
+ Xidian University. He is currently working toward engineering from the University of Waterloo, Canada.
+ PhD degree with the School of Cyber Engineering, He is currently a professor with the School of Com-
+ Xidian University, Xi’an, China. He visited the De- puter Science at the University of Guelph, Canada.
+ partment of Computer and Information Technology, His research interests include computer and network
+ Purdue University from 2019 to 2021. His current security, privacy protection, applied cryptography,
+ research interests focus on differential privacy. computer forensics, and software security.

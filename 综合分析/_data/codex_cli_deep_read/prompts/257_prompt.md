@@ -1,0 +1,1507 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [257] MCRe: A Unified Framework for Handling Malicious Traffic With Noise Labels Based on Multidimensional Constraint Representation
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：257
+题名：MCRe: A Unified Framework for Handling Malicious Traffic With Noise Labels Based on Multidimensional Constraint Representation
+年份：2023
+DOI：10.1109/tifs.2023.3318962
+来源：IEEE Transactions on Information Forensics and Security
+PDF：paper/10.1109_TIFS.2023.3318962.pdf
+已有粗分类：恶意流量、暗网与攻击检测
+二级关联：无
+相关性：强相关，分数 14
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\257.txt
+- 原始字符数：64720
+- 本次发送字符数：64720
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+133
+
+MCRe: A Unified Framework for Handling
+Malicious Traffic With Noise Labels Based on
+Multidimensional Constraint Representation
+Qingjun Yuan , Gaopeng Gou, Yanbei Zhu, Yuefei Zhu , Gang Xiong, and Yongjuan Wang
+Abstract— Due to the limitations of the existing annotation
+methods, the prevalence of label noise can be caused in realistic
+malicious traffic datasets, which has a significant impact on
+the training and evaluation of deep learning-based intrusion
+detection models. Recently, various methods have been proposed
+to deal with noise-containing labeled datasets, and they can be
+roughly divided into two categories: data cleaning and robust
+training. However, the different processing ideas lead these
+two types of methods to ignore the information in different
+components of the dataset, resulting in a cliff-like drop in
+performance under high noise conditions. To this end, this
+study proposes a unified framework for handling noise malicious
+traffic based on the multidimensional constrained representations
+named MCRe, which unifies data cleaning and robust training
+into an ideal representation function approximation. According to
+the properties of the ideal representation function, information
+integrity constraints, cluster separability constraints and core
+proximity constraints are defined to drive MCRe to approximate
+the ideal representation during iteration. These constraints
+led MCRe to learn the individual, intra-class, and global
+levels of distributed knowledge, thus avoiding irrational domain
+knowledge extraction and ensuring strong label noise robustness
+of the representation network. We validated MCRe on a dataset
+that includes 22 types of realistic malicious traffic. Experimental
+results show that MCRe can outperform the state-of-the-art
+methods in both data cleaning and robust training downstream
+tasks, achieving 85% pure sample rate and 82% classification
+accuracy even under the condition of up to 90% noise labels.
+In addition, the generalizability of MCRe was verified on several
+public datasets. Finally, MCRe was also well-extended to enhance
+other data cleaning and robust training approaches.
+Index Terms— Malicious traffic detection, noise labels, data
+cleaning, robust training, deep learning.
+
+I. I NTRODUCTION
+
+T
+
+RAINING models using realistic malicious traffic is
+considered an effective way to reduce the impact
+
+Manuscript
+received
+26
+May
+2023;
+revised
+29
+August
+2023 and 14 September 2023; accepted 18 September 2023. Date of
+publication 25 September 2023; date of current version 20 November
+2023. This work was supported in part by the National Key Research and
+Development Program of China under Grant 2021YFB3101400 and in part
+by the Blockchain System Security Key Technology Research of Henan
+Province Major Public Welfare Project under Grant 2013002102000. The
+associate editor coordinating the review of this manuscript and approving
+it for publication was Prof. Ghassan Karame. (Corresponding author:
+Yongjuan Wang.)
+Qingjun Yuan, Yanbei Zhu, Yuefei Zhu, and Yongjuan Wang are with the
+Henan Key Laboratory of Network Cryptography Technology, Zhengzhou
+450001, China (e-mail: pinkywyj@163.com).
+Gaopeng Gou and Gang Xiong are with the Institute of Information
+Engineering, Chinese Academy of Sciences, Beijing 100080, China.
+Digital Object Identifier 10.1109/TIFS.2023.3318962
+
+of data cascading [1] on deep learning-based intrusion
+detection systems (IDS). However, malicious traffic often
+uses encryption and redundancy to obfuscate itself [2],
+so annotators cannot accurately characterize the behavior
+of novel attacks (i.e., 0day attacks), making the existing
+annotation methods prone to mislabeling [3].
+However, deep learning models are highly dependent on
+large-scale, accurate-labeled data [4], [5], [6], [7]. The noisy
+labels in real traffic datasets make them difficult to be used for
+intrusion detection models [8]. To this end, various approaches
+have been proposed to handle noisy labels, and they can be
+roughly divided into two categories: data cleaning [9], [10],
+[11], [12] and robust training [13], [14], [15], [16]. These
+two categories differ in their objectives, as shown in Tab. I.
+Particularly, data cleaning aims to output a purer dataset, while
+robust training aims to output an accurate classification model
+directly.
+In the above approaches, optimization constraints consistent
+with the task objectives are usually designed to help the
+network achieve the preset goal, which could be referred to
+as task-guided training. Such task-guided training allows the
+network to ignore part of the domain knowledge in the dataset,
+resulting in locking the model potential [17]. The details are
+as follows:
+In general, in order to obtain a purer dataset, data
+cleaning focuses more on simple samples, resulting in a
+large number of hard samples being discarded, making the
+distributional properties of the cleaned dataset worse. For
+instance, INCV [9] selects simple samples to update the
+network in multiple iterations, and ULDC [12] determines
+the label confidence of hard samples based on the locations
+of simple samples, but is prone to misclassifying and
+discarding hard samples. Such discarding of hard samples
+leads to poor generalization of classifiers trained on cleaned
+datasets [12].
+In contrast, robust training focuses more on acquiring
+global domain knowledge from hard samples, resulting in a
+model with high accuracy [17]. For example, Co-teaching+
+[15] selects the hard samples with disagreement in the
+iterations to update network parameters efficiently and prevent
+performance degradation. Unicon [19], on the other hand,
+selects hard samples by the performance of simple samples
+in the iteration. However, the models obtained by the robust
+training approach are generally affected by noise labels, and
+the accuracy of classifiers is generally poor when the noise
+level is high [12].
+
+1556-6021 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+134
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+TABLE I
+C OMPARISON OF T WO WAYS TO H ANDLE N OISE L ABELS
+
+To solve the aforementioned problem, a simple idea is to
+transform the task-guided training process [9], [10], [11], [12],
+[13], [14], [15], [16] into an objective attribute-guided process,
+thus avoiding selective learning of knowledge. We refer to
+attribute-guided process, which is a method to guide the
+updating of neural network parameters by measuring the
+difference in attributes between that neural network and an
+ideal data cleaning and robust training model. During training,
+the neural network is guided to approximate the ideal model by
+narrowing the differences in attributes from the ideal target,
+making the resulting neural network suitable for both data
+cleaning and robust training tasks. We theoretically analyzed
+and summarized the attributes of ideal data cleaning and robust
+training models, and translated them into a unified attributeguided framework.
+Specifically, we propose MCRe, a unified framework
+based on Multidimensional Constraint Representation that is
+compatible with both data cleaning and robust training tasks.
+MCRe theoretically transforms the problems of data cleaning
+and robust training into a unified problem of approximating the
+ideal representation function of traffic, which can be simply
+formulated as follows.
+G → Gidl .
+
+(1)
+
+By ideal representation Gidl , we mean a function that can
+perfectly reconstruct samples in a low-dimensional decision
+space and can project samples belonging to the same class
+to similar positions on the decision space, thus achieving
+ideal data cleaning or robust classification. To enable the
+representation network G to approximate Gidl in iterations,
+three types of attribute constraints are defined, namely
+information integrity constraint, cluster separability constraint,
+and core proximity constraint, based on the nature of the
+ideal representation function. In this way, a unified and
+efficient framework for malicious traffic data cleaning and
+robust training is designed. In training, the three attribute
+constraints collaborate to guide the network parameters update,
+where the cluster separability constraint and the core proximity
+constraint focus on learning from difficult and simple samples,
+respectively, helping MCRe to maintain higher performance
+under high noise conditions.
+To the best of our knowledge, MCRe is the first framework
+that combines data cleaning and robust training. The main
+contributions are as follows:
+• We proposed a unified framework for handling the
+noise labels of malicious traffic, MCRe, consisting of a
+representation solver and two downstream tasks. MCRe
+first represented all traffic uniformly as vectors that
+are robust enough to label noise, and then designed a
+
+distance-based data cleaning and training algorithm based
+on vector distribution in the decision space.
+• We proposed a novel perspective to solve the problem of handling noise labels: attribute-guided ideal
+representation approximation. We theoretically analysed
+the attributes of the ideal function and designed three
+different levels of constraints to help the representation
+network learn individual, intra-class and global distributions simultaneously, guiding the representation network
+to approximate the ideal representation during iteration,
+thus achieving a robust representation of the traffic.
+• Numerical results showed that MCRe outperforms other
+state-of-the-art approaches in data cleaning and robust
+classification model training under high noise conditions.
+In addition, MCRe also had good generalisability and
+extensibility.
+The rest of this paper is organized as follows. In Section II,
+we discuss the current status of noisy labels in traffic
+data and summarize existing methods for handling noisy
+labels. In Section III, we analyze the attributes of the ideal
+representation function theoretically and introduce the three
+constraints we proposed. In Section IV, we detail the proposed
+MCRe. In Section V, we present the experiments and their
+results. Finally, we conclude the paper in Section VI.
+II. R ELATED W ORK
+A. Noise Labels in Traffic Datasets
+Training intrusion detection models that use realistic
+malicious traffic can ensure better model generalization and
+has become a common approach in the industry. However,
+due to the limited accuracy of existing annotation methods
+[20], the completeness of annotation strategies [21] and the
+misperception of traffic distribution by different annotators
+[22], the dataset is prone to mislabeling. In addition, frequent
+zero-day attacks pose a severe challenge to the accurate
+labeling of realistic traffic [23]. These attacks are beyond the
+knowledge of annotators and annotation systems, so traffic
+is often difficult to label correctly. Similarly, variants of
+known attacks, due to variations in certain attributes, can
+easily interfere with the judgment of rule-based or IDS-based
+automatic labeling systems.
+Mislabeling is common in traffic datasets collected from
+real networks. Models trained with such data are prone
+to performance degradation during online detection, with a
+possibility of generating a large number of false positives and
+misses, limiting the application of deep learning models to
+realistic IDS [24]. Specifically, the impacts on real systems
+can be summarized as follows:
+
+YUAN et al.: MCRe: A UNIFIED FRAMEWORK FOR HANDLING MALICIOUS TRAFFIC
+
+Model Evaluation and Selection: Evaluation of deep
+learning models requires accurately labeled traffic that has
+the same or similar distribution to the target environment
+[25]. Traffic labelled incorrectly or obtained from isolated
+environments cannot accurately assess and evaluate model
+performance, so correct feedback cannot be provided to model
+evaluators, which results in inappropriate models coming
+online. Therefore, it is crucial to clean noisy traffic dataset
+and obtain a purer dataset that can help IDS to assess and
+evaluate the models accurately.
+Domain Knowledge Extraction: Extracting domain knowledge also requires accurately labeled traffic. Inaccurately
+labeled datasets can easily drive the model to learn something
+wrong during iterations, ignoring some important features
+or knowledge and thus affecting subsequent analysis and
+predictions. However, models trained on complex and diverse
+traffic collected in real networks have superior generalization
+ability compared with models trained on closed datasets.
+Therefore, it is also an important task to train accurate and
+robust classifier models on realistic traffic data containing
+noise labels.
+B. Noisy Labels Handling
+Inaccurate ground truth and non-stationary distribution of
+traffic make it difficult for deep learning-based IDSs to identify
+malware, leading to various cyber security incidents [8].
+Therefore, it has become important for the real world to deal
+with noisy labels in traffic datasets to form cleaner datasets
+or to train robust traffic identification models. Depending on
+the objectives, the existing methods can be divided into two
+categories.
+1) Data Cleaning: Distinguishe noise and pure samples
+in the traffic dataset by identifying and evaluating instances
+and labels, and output a dataset consisting of pure samples.
+The evaluation of labels is mainly performed by measuring
+the consistency in features of the samples [26] or density
+distribution [10], [11] after the representation with the
+observed labels. Although the above approaches have been
+successful in reducing the proportion of noise labels in the
+dataset, the data cleaning process often discards a large number
+of outlier samples as well. However, the absence of these
+samples can shift the global distribution, making it difficult
+to accurately assess the generalisability of models with the
+cleaned dataset.
+2) Robust Training: Reduce the impact of untrustworthy
+labels on model parameter updating by selective learning of the
+global distribution, resulting in more accurate classifiers. The
+performance of these models is improved mainly by designing
+robust loss functions [27], [28] or network architectures
+[14], [15], [19] that prevent supervised neural networks from
+overfitting the noisy labels. However, when noise levels are
+high, these models can struggle to acquire correct domain
+knowledge, making it difficult to obtain positive feedback on
+model parameter updates.
+Due to the different objectives, there are certain differences
+in the way the above approaches deal with noise labels.
+For data cleaning, in order to improve the purity of the
+dataset, more emphasis is often put on screening individuals
+
+135
+
+and excluding samples that cannot be identified. In contrast,
+for robust training, noise samples are introduced more
+aggressively during model training to ensure the generalization
+of the model and accurate decision boundaries, and the impact
+of noise samples is mitigated by relying on the robustness of
+the model itself [29]. However, knowledge selectivity leads to
+a dramatic drop in performance when these approaches face
+high noise levels.
+To this end, we propose a unified noise processing
+framework named MCRe, which converts the problems of
+data cleaning and robust training into an ideal function
+approximation problem from an alternative perspective.
+In addition, cluster separability and core proximity constraints
+for MCRe are defined to help the representation network learn
+individual and global knowledge in iterations, respectively,
+thus maintaining good performance of MCRe under high-noise
+conditions.
+III. P ROBLEM D ESCRIPTION & ATTRIBUTE
+C ONSTRAINTS D ESIGN
+In this section, the problem of representing traffic with noisy
+labels is formulated.
+Consider a C-classes traffic dataset with noisy labels and let
+D := {(xi , ỹi )} N be a traffic dataset containing noisy labels,
+where (xi , ỹi ) is a labeled sample, xi represents the i-th sample
+and ỹi is the observed label corresponding to xi . For each xi ,
+there is one and only one latent true label denoted by yi∗ , and
+ỹi , yi∗ ∈ {1, 2, · · · , C}.
+The main goal is to derive a representation function G that
+can reconstruct traffic while creating a useful and meaningful
+latent representation. G should avoid using noisy labels and
+handle noisy labels appropriately, which helps to clean the
+labels and train powerful classifiers with noisy labels.
+First, the ideal representation under noisy labels is defined.
+Definition 1: Ideal Representation: For D, the ideal representation is a mapping Gidl (x) := Rm → Rs such that for
+all sample pairs xi , x j , there exists a constant ε > 0 that
+satisfies the following condition:
+
+d Gidl (xi ) , Gidl x j ≤ ε ⇔ yi∗ = y ∗j ,
+(2)
+where d is a function that measures the distance between two
+samples. Common distance measurement functions include l1 ,
+l2 , l p , l∞ , and cosine distance.
+Traffic belonging to the same category, with similar
+behavioral patterns, is distributed with certain a similarity in
+the feature space. Under ideal conditions, the mapping distance
+in the decision space is closer (≤ ε) for samples with the same
+true labels, but farther (> ε) for samples that do not belong
+to the same class. Furthermore, ε is used as a boundary to
+divide clusters in the decision space, thus forming an ideal
+decision boundary. Obviously, in this ideal situation, accurate
+identification of all individuals in the dataset can be achieved,
+realizing ideal data cleaning.
+Therefore, to construct a function G that is as close to
+Gidl as possible, we propose three conditional constraints from
+a mathematical perspective to help G converge towards Gidl
+during training.
+
+136
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Constraint 1 Information Integrity Constraint: For any
+xi ∈ D, there is
+G ← arg min (H (xi ) − H (G (xi ))) , xi ∈ D,
+G
+
+(3)
+
+where H (·) represents information entropy.
+We argue that a good representation function should be as
+informative as possible. Generally, however, the represented
+traffic, which has lower dimensions, prompts the neural
+network to learn the most informative features. In practice,
+the dimension of the representation is usually set manually
+as a hyperparameter. As G compresses the dimensionality of
+traffic, some information will be inevitably lost.
+Constraint 2 Cluster Separability Constraint: For any
+xi , x j , xk ∈ D, if yi∗ = y ∗j ̸ = yk∗ , then it holds that
+
+d G (xi ) , G x j ≤ d (G (xi ) , G (xk )) .
+(4)
+The cluster separability constraint is essentially a variant
+of the ideal representation. By Eq. 2, it is clear that yi∗ ̸=
+yk∗ ⇔ d (G (xi ) , G (xk )) ≥ ε. Together with yi∗ = y ∗j ⇔
+
+d G (xi ) , G x j ≤ ε, it is easy to obtain Eq. 4.
+A good representation function should be able to reconstruct
+samples belonging to the same class as individuals with
+spatial similarity in the decision space, making them far from
+the other categories, which in turn helps to construct welldistinguished decision boundaries.
+Constraint 3 Core Proximity Constraint: For every xi ∈ D,
+∗
+there exists a virtual full confidence sample x(yi ) , such that
+
+ 
+XC X
+G ← arg min
+d G (xi ) , G x(k)
+∗
+G
+
+k=1
+
+xi wher e yi =k
+
+(5)
+A full confidence sample is a sample that is credibly
+attributed to a specified class. A good representation function
+should make each sample as close as possible to the projection
+of the full confidence sample of the class, so that the samples
+are better aggregated in the decision space.
+We believe that to construct a suitable representation
+function, the above three constraints must be satisfied,
+or satisfied as far as possible.
+IV. A RCHITECTURE OF MCR E
+The architecture of MCRe is shown in Fig. 1 and consists of
+a noise traffic characterization network and two corresponding
+downstream task layers. The former is the central component
+where MCRe constructs a mapping function G that satisfies
+the multidimensional constraints. The representation network
+should have the following properties: 1) feature representations
+should retain as much input information as possible;
+2) samples with the same true labels are should be closer
+to each other while farther away from classes with different
+labels; and 3) samples with the same true labels should be
+closer to the full confidence samples within the class. In order
+to help the representation network obtain the above properties,
+we design the corresponding constraint generating networks
+to measure and adjust the current representation network, and
+optimize the parameters of the feature representation function
+by back propagation. As for the two downstream tasks of
+data cleaning and robust training, the distance-based cleaning
+
+and classification layers are connected to the representation
+network and the corresponding dataset or classification model
+is output. In this section, the details and meaning of these
+components will be explained.
+A. Deep Representation
+The goal of representation is to reconstruct traffic in a
+low-dimensional decision space, aggregating similar samples
+and separating dissimilar samples to provide a more intuitive
+view for downstream tasks, such as traffic cleaning and
+identification. In this study, a 7-layer, fully-connected encoder
+is used as the deep representation. It has a simple structure
+and strong plasticity, and is more receptive to feedback from
+the three constraints.
+The deep representation is defined as follows.
+ui = G(xi ; θG ),
+
+(6)
+
+where θG represents the parameters corresponding to G and ui
+represents the representation of xi in the decision space.
+The feedback of each of the three constraints on the network
+is determined by measuring the distribution of u in the decision
+space. In each iteration, G will update θG according to the
+integration loss generated by the three constraints, as follows.
+
+(7)
+θG ← θG − η∇L D; θG ,
+where η denotes the learning rate and L is defined by:
+L = Liic + Lcsc + Lcpc +Lcls ,
+
+(8)
+
+where Liic is given by Eq. 19, Lcsc is defined by Eq. 26, Lcpc
+is obtained by Eq. 30, and
+
+Lcls = C E ỹ, F (u) ,
+(9)
+where C E denotes the cross-entropy loss, and F is a
+fully connected classifier head. It has been shown that the
+representation network before the classification head does not
+significantly overfit to the label noise [30], [31]. Therefore,
+the use of noise labels (or even random labels [32]) can also
+have a facilitating effect on the representation network.
+B. Network of Information Integrity Constraint
+As given in Eq. 3, the information integrity constraint
+requires that the transformations have as small information
+lost as possible. To satisfy the information integrity constraint,
+we design a decoding network G −1 that is symmetric with the
+representation network, and it forms a classic self-encoder
+structure with the representation network.
+For a given G and G −1 , the information reduced by G can
+be quantified as
+H (x) − H (u) = I (x; u) − H (u |x ) ,
+
+(10)
+
+where I (x; u) denotes the mutual information between u and
+x.
+And since both x and G are deterministic, H (u |x ) = 0, so
+H (x) − H (u) = I (x; u) ,
+Further, it can be obtained that
+
+
+
+
+H (u) − H G −1 (u) = I u; G −1 (u) .
+
+(11)
+
+(12)
+
+YUAN et al.: MCRe: A UNIFIED FRAMEWORK FOR HANDLING MALICIOUS TRAFFIC
+
+Fig. 1.
+
+Architecture of MCRe.
+
+Then
+
+
+H (x) − H G
+
+−1
+
+
+
+
+(u) = I (x; u) + I u; G −1 (u) .
+
+(13)
+
+In addition, since I (·) ≥ 0, it can be written that
+
+
+
+min H (x) − H G −1 (u)
+ 
+
+= min (I (x; u)) + min I u; G −1 (u)
+ 
+
+= min (H (x) − H (u)) + min I u; G −1 (u) .
+(14)
+
+Therefore, H (x) − H G −1 (u) has a minimal value when
+and only when both H (x) − H (u) and I u; G −1 (u) have
+their minimum
+values.
+
+ Thus, it
+can be written that
+arg min
+
+G ,G −1
+
+H (x)−H G −1 (u)
+
+=arg min (H (x) − H (u)) .
+G ,G −1
+
+(15)
+In addition, since G and G −1 are symmetric, G −1 (u) can be
+considered as an estimate of the distribution of x. Therefore,
+it holds that
+ 
+
+
+arg min (H (x)−H (u))=arg min H x, G −1 (u) + H (x)
+G ,G−1
+
+G ,G −1
+
+(16)
+Again, since H (x) is necessarily >0 and for a given D, the
+value of H (x) is constant.
+ 
+
+arg min (H (x)− H (u))= arg min H x, G −1 (u) .
+G ,G −1
+
+137
+
+G ,G −1
+
+(17)
+
+In summary, the goal of the information integrity constraint
+is to minimize the value of Eq. 17, which
+ 
+
+G ← arg min H x, G −1 (u) .
+(18)
+However, for traffic vectors in a high-dimensional space,
+calculating their cross-entropy is a challenging task; therefore,
+in this study, the Binary Cross-Entropy is adopted, and the
+information integrity loss of samples in each iteration is
+calculated by
+
+Liic D; θG , θG −1
+|D|
+
+n
+
+
+1 XX
+xi j log x̂i j + 1 − xi j log 1 − x̂i j , (19)
+=
+|D|
+i=1 j=1
+
+where xi j is the j-th component of xi , and x̂ = G −1 (G (x)).
+C. Network of Cluster Separability Constraint
+According to Eq. 4, the goal of the cluster separability
+constraint is to separate the mixed samples near the cluster
+boundaries to form clear and accurate decision boundaries.
+Therefore, as shown in Fig. 2, the representation function
+should achieve two goals: (1) compress the distance between
+samples attributed to the same cluster, reducing the radius of
+the cluster; (2) expand the distance between samples attributed
+to different clusters, increasing the distance between clusters,
+First, the samples are divided into different clusters in the
+decision space based on their projection distances, which are
+denoted by {clus1 , clus2 , · · · , clusC }. Similar to FINE [11],
+
+138
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 2.
+
+Cluster separability constraint.
+
+the Euclidean distance is selected in this study to measure the
+separability. The distance between xi and x j is calculated by
+
+d xi , x j = ui − u j 2
+(20)
+Fig. 3.
+
+To achieve the first goal, the average distance of each sample
+to other samples in the same cluster is calculated. Assume that
+xi ∈ clusk ; then, the average distance from xi to the other
+samples in the cluster can be expressed as follows:
+dxini =
+
+1
+|clusk | − 1
+
+X
+
+
+d xi , x j .
+
+(21)
+
+x j ∈clusk
+
+To achieve the second goal, the closest distance of each
+sample to the other cluster boundaries is calculated. For
+computational purposes, we calculate the distance from the
+sample to the nearest sample that does not belong to the
+cluster. Then the distances to other clusters can be expressed
+as
+
+
+= min d xi , x j x j ∈
+/ clusk .
+(22)
+dxout
+i
+From a practical perspective, using absolute distances to
+measure cluster separability is not completely consistent with
+the goal of formulating an ideal representation. Therefore, the
+two goals are unified as a ratio of the difference to measure
+to the deviation of each sample from the ideal representation,
+as follows:
+δxi =
+
+− dxini
+dxout
+i
+dxout
+i
+
+(23)
+
+where δxi denotes the difference between the distance of xi
+to the other clusters and the distance to the current cluster; it
+indicates how easily xi can be correctly distinguished under
+the representation of G. In order to ensure convergence of the
+above equation, it is normalized as follows
+
+m
+δxnor
+= N or m δxi .
+(24)
+i
+Therefore, at each iteration, the cluster separability
+constraint for G can be expressed by
+
+
+1 X nor m
+G ← arg max
+δxi ; G
+(25)
+|D|
+Furthermore, the loss of cluster separability can be obtained
+by
+
+1 X nor m
+Lcsc D; θG =1 −
+δxi
+|D|
+
+(26)
+
+Core proximity constraint.
+
+D. Network of Core Proximity Constraint
+Eq. 5 shows that the core proximity constraint requires
+G to project every sample as close as possible to the full
+confident sample of the class to which the sample truly
+belongs. Therefore, the representation function should drive
+the projection of the sample close to its full confidence sample.
+The corresponding constraint is related to two following steps:
+full confidence sample selection and constraint generation.
+1) Full Confidence Sample Selection: A full confidence
+sample is a sample that is fully identified as belonging to
+a particular class. In this subsection, we identify the center
+of the simple sample as the full confidence sample for this
+class, as shown in Fig. 3. Unlike the unlabeled clustering
+centers generated in Sec. IV-C, the full confidence samples
+in this section denote the cores of the classes with observed
+labels. First, the simple samples are selected in each class
+according to their distribution in the decision space; then, the
+full confidence samples in each class are calculated according
+to the distribution of the simple samples. It has been a common
+strategy for obtaining label information to avoid the effect of
+labels on the construction of the representation function under
+high noise conditions.
+Simple samples represent samples that are far from
+boundaries, belong to a certain class with a high probability,
+and tend to have a small loss in classification tasks. Coteaching [14] and Co-teaching+ [15] select simple samples
+using supervised classifiers, and a similar idea is adopted
+in this study. Specifically, a fully-connected classifier F is
+defined in the decision space, and it is determined whether
+the sample is a simple sample based on its output as follows.
+xi ∈ Sim k , i f ỹi = arg max Fk (ui ) ,
+k
+
+(27)
+
+where Sim k is the set of simple samples labeled with k, and
+Fk (ui ) is the score classified by xi as k. That is, we consider
+a sample to be a simple sample when the original label has a
+higher score than the other labels. In fact, there could be some
+outlier samples classified in Sim k , but because their number
+is usually relatively small, they do not affect the classification
+result.
+Further, samples in Sim k are projected into a lower
+dimensional space z to reduce the computational cost of full
+confidence samples computing and improve the robustness
+
+YUAN et al.: MCRe: A UNIFIED FRAMEWORK FOR HANDLING MALICIOUS TRAFFIC
+
+of sample representations. The second projection on the
+representation layer has been a common scheme and is widely
+used in classical models such as MoCo [33]. The experimental
+results have been available to demonstrate the effectiveness.
+We use the momentum prototype of all samples in Sim k as
+the full confidence sample zk of the flow for category k, which
+is defined by
+
+
+zk ← N or m mzk + (1 − m) zi , zi ∈ Sim k ,
+(28)
+where zi is the projection of ui in the z-space. In this paper, m
+is set to 0.999. In each iteration, the full confidence samples
+are updated to the mean of weighted samples in the z-space.
+2) Constraint Generation: The main goal is to search
+for an embedding space where samples belonging to the
+same class cluster are around their full confidence samples;
+namely, samples closer to zk have lower losses when network
+parameters are updated, thus driving samples towards the full
+confidence samples.
+At each iteration, the core proximity constraint of can be
+expressed by
+
+1 X
+min zi − zk
+.
+(29)
+G ← arg min
+2
+G ,F |D|
+Then, in each iteration, the core proximity loss of G can be
+quantified as
+
+
+1 X
+min C E zi , zk
+(30)
+Lcpc =
+|D|
+E. Downstream Tasks
+In general, downstream tasks include data cleaning and
+robust training. In Tab. I, these two tasks are described in
+detail. For the two tasks, a simple data cleaning method named
+MCRe-dc and a robust training method named MCRe-cls
+are designed based on the distance metric of samples in the
+decision space constructed by MCRe.
+1) MCRe-dc: According to the distance distribution of
+samples in the decision space constructed by MCRe, the
+suspected noise samples are determined, and sample removal
+and label correction are performed. In this study, the
+confidence of labels is calculated using the difference in
+distance between the samples and the full confidence samples.
+During data cleaning, the mislabeling of samples with high
+confidence values is considered, and samples without high
+confidence attribution classes are discarded.
+Specifically, we set a fixed sample discard ratio and discard
+samples that are far from the full confidence samples (i.e.,
+samples with low label confidence). This is one of the simplest
+data cleaning methods and is widely adopted [40]. In this
+paper, we focus on whether MCRe based on multidimensional
+constrained representations has the potential to perform well in
+data cleaning, and therefore only the simplest fixed threshold
+scheme is adopted. In practice, more effective data cleaning
+schemes can be selected based on specific objectives.
+2) MCRe-Cls: MCRe-cls accesses and trains a classification
+layer on the representation layer of MCRe and then outputs
+a classification model. In this study, a simple Kmeans
+classifier is used to divide traffic into clusters. The traffic is
+identified using the Kuhn-Munkres algorithm, which matches
+the clusters to their corresponding labels.
+
+139
+
+V. E XPERIMENTAL A NALYSIS
+In this section, the effectiveness and robustness of
+MCRe were verified by comparison with other comparative
+approaches in the two downstream tasks.
+A. Datasets and Noise Settings
+1) Private Dataset: A dataset containing 22 types of
+encrypted malicious traffic named Malicious_TLS was
+constructed to evaluate the performance of MCRe. In this
+dataset, all traffic was encrypted with TLS and thus behaved
+similarly. Consequently, cleaning and identifying such TLS
+traffic would also be a more difficult task when noise labels
+were present. In addition, all malicious traffic was collected
+from real edge network devices. The traffic was captured
+over a four-year period from 2018 to 2021 and labeled with
+precise threat intelligence to ensure Ground Truth. Also, all
+benign traffic was encrypted using TLS. Note that no public
+dataset currently contained such a wide variety of realistic
+malicious encrypted traffic. Anyone can fetch the dataset by
+visiting https://github.com/gcx-Yuan/Malicious_TLS. In particular, to prevent privacy, we erased IPs, ports, timestamps,
+payloads, etc. from the traffic. Semantic, statistical and spatiotemporal features of these traffic are also extracted.
+2) Public Datasets: We also verified the effectiveness
+of MCRe on the CICIDS-2017 [36] intrusion detection
+dataset. Specifically, rather than extracting features from raw
+traffic, we use the features offered. In addition, to evaluate
+the generalizability of MCRe, we validated it on several
+public malicious traffic datasets, including NSL-KDD [34],
+UNSW-NB15 [35], LITNET-2020 [37], IOT-23 [38], and
+CICMalDroid-2020 [39].
+3) Noise Settings: Similar to ULDC [12], we set up
+two types of scenarios: asymmetric scenarios and symmetric
+scenarios, based on different traffic labeling strategies in the
+real world.
+Asymmetric noise was usually labeled by multiple independent labeling entities that determine the labels of samples
+through strategies such as voting. Different labeling strategies
+will result in different distributions of label noise. Of these,
+labeling strategies that reduce false positives [24] have been
+the most common because they maximize the availability of
+the system. In this case, a large amount of malicious traffic will
+be labeled as benign, and only a small amount of benign traffic
+will be labeled as malicious. We defined this as an asymmetric
+scenario, where only a portion of the malicious traffic labels
+was flipped to benign.
+Symmetrical noise is usually labeled by a single or few
+entities, and in that case, a large amount of malicious traffic
+will be labeled as benign, but also, a large amount of benign
+traffic will be labeled as malicious. The quality of labels
+depends entirely on the capacity of entities and results in
+different ratios of noise labels. In short, in symmetric noise
+scenarios, all traffic labels have a certain probability of
+flipping.
+In this study, the range of noise label ratios was set to
+[0.1,0.9] to explore the robustness of different approaches
+under harsh high noise conditions. Fig. 4 shows the label
+conversion matrix for the 40% noise ratio case for both
+scenarios. The horizontal axis represents observed noise labels
+
+140
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+TABLE II
+P ERCENTAGE OF P URE S AMPLES IN A SYMMETRIC S CENARIOS ON M ALICOUS _TLS
+
+Fig. 4. Label conversion matrix of 40% asymmetric (left) and symmetric
+(right) noise.
+
+and the vertical axis represents latent true labels. The first
+row and column are labeled as benign and the other rows and
+columns are labeled as certain malicious traffic. The left is the
+asymmetric noise scenario, where 40% of the samples in each
+class of malicious traffic are randomly selected and their labels
+are set to benign. The right represents the symmetric noise
+scenario, where in addition to flipping the malicious traffic
+labels as in the asymmetric noise scenario, 40% of the benign
+traffic is selected and its label is randomly set to certain kind
+of malicious traffic.
+4) Experimental Setup: We evaluated the performance of
+two typical downstream tasks on the datasets injected with
+noise. In the data cleaning task, the entire dataset was injected
+with noise and then fed to MCRe to output a dataset with
+a reduced percentage of noise. In the robust training task,
+the dataset was divided into training and validation sets
+according to the ratio of 7:3; labels of some of the sample
+labels in the training set were flipped and fed to MCRe for
+training; meanwhile, the samples in the validation set were not
+involved in training and did not contain noise labels, so they
+were used only to evaluate the performance of the output
+classifier. In all experiments, five independent experiments
+were conducted, in which the training and validation sets
+were randomly divided. Specifically, in each experiment, the
+average of the final five epochs was taken as the ultimate
+result.
+All experiments were carried out on the same platform
+equipped with an Intel 9700K@3.60GHz, 32GB RAM, and
+an NVIDA GeForce RTX 3090.
+B. Experimental Analysis of Data Cleaning
+MCRe-dc cleaned the dataset based on the projected
+distance of the traffic in the decision space. First, MCRe-dc
+
+calculated the distances of the samples from the full
+confidence sample in each class on the decision space.
+Then, based on the distance ratio, the confidence of the
+labels was calculated. Finally, a fixed threshold was set,
+and all samples with confidence below the threshold were
+removed.
+MCRe-dc was compared with the following state-of-the-art
+data cleaning methods:
+• INCV [9]: INCV trained a supervised classifier on the
+noisy dataset, and then cleared the samples which the
+classifier determined were different from their observed
+labels;
+• CL [10]: CL trained a supervised classifier on the noisy
+dataset and judged the confidence of each sample label
+based on the output of the classifier, and then removed
+the samples with low confidence;
+• FINE [11]: FINE was based on metric learning and
+removed samples suspected of having noisy labels;
+• ULDC [12]: ULDC was based on an unsupervised neural
+network that evaluated the confidence of sample labels
+and removed samples with low confidence.
+Tab. II, III, IV and V show the performance of MCRe-dc for
+cleaning datasets with different noise ratios in asymmetric and
+symmetric scenarios on Malicious_TLS and CICIDS-2017,
+respectively. Based on the results, the following conclusions
+could be drawn:
+1. Of all the approaches, MCRe-dc achieved the best noisy
+label cleaning results: Looking longitudinally at each column,
+there was a significant advantage in the percentage of pure
+data in the dataset cleaned by MCRe-dc when the noise
+level was above 20%. In particular, the percentage of pure
+data was above 85% in both scenarios when the noise level
+reached 90%, which was more than 25% higher than results
+of the other approaches. In the other comparative approaches,
+(a) INCV, CL, and FINE’s effectiveness depended on the
+performance of the supervised classifier, again was limited
+by the label quality; (b) although ULDC was based on an
+unsupervised network, its label confidence assessment process
+relied on label information. As a result, their performance
+dropped significantly at high noise levels. In contrast, MCRe
+employed a conservative label trust strategy to ensure stable
+performance.
+2. Of all the approaches, MCRe-dc exhibited the best
+robustness: Looking at each row of the table horizontally, all
+the approaches reduced the effectiveness of data cleaning as
+the percentage of noise increased. Of these, MCRe-dc showed
+
+YUAN et al.: MCRe: A UNIFIED FRAMEWORK FOR HANDLING MALICIOUS TRAFFIC
+
+141
+
+TABLE III
+P ERCENTAGE OF P URE S AMPLES IN S YMMETRIC S CENARIOS ON M ALICOUS _TLS
+
+TABLE IV
+P ERCENTAGE OF P URE S AMPLES IN A SYMMETRIC S CENARIOS ON CICIDS-2017
+
+TABLE V
+P ERCENTAGE OF P URE S AMPLES IN S YMMETRIC S CENARIOS ON CICIDS-2017
+
+the most consistent performance with only an 12% decrease,
+compared with the other approaches that showed a decrease
+of at least 40%. As the proportion of noise labels increased,
+the overly open strategy of adopting label information led to a
+stronger influence on the other related approaches, resulting in
+a significant reduction in the quality of data cleaning. MCRedc, on the other hand, reduced the dependence on labels
+through three different levels of constraints, which provided
+it with superior robustness.
+3. Of all the approaches, MCRe-dc was found to be the most
+statistically significant: We conducted a T-test on the results
+of data cleaning. T-test is frequently employed to analyzing
+the significance of differences between two statistical sets.
+Tab. VI presents the T-test results of MCRe-dc compared to all
+other methods under a 90% noise level, where a larger t and a
+smaller p indicate a more significant difference. In all cases,
+the p-value was below 0.001, demonstrating a statistically
+significant deviation of MCRe-dc from the other methods.
+Given that the mean values of MCRe are consistently higher,
+it can be inferred that MCRe is statistically superior to the
+other methods.
+
+C. Experimental Analysis of Robust Training
+In this subsection, we will identify traffic and output a
+classifier based on its projected distance in the decision
+space. MCRe-cls was compared with several traffic identification models trained by other approaches, which were as
+follows.
+• INCV, CL, FINE, and ULDC: Retrain a supervised
+classifier with the cleaned training set, and then identify
+the traffic in the validation set;
+• MentorNet [13]: Select some pure samples to train a small
+guidance network to guide classifier training;
+• Co-Teaching [14]: Train two networks with different
+initial states in parallel and make them select pure
+samples from each other;
+• Co-Teaching+ [15]: Similar to Co-Teaching, but more
+inclined to select disagreement samples for another
+network;
+• Co-Learning [16]: Train a two-headed encoder that avoids
+fitting noise labels to the network by means of consistency
+constraints on both heads.
+
+142
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+TABLE VI
+T-T EST R ESULTS FOR MCRe- DC
+
+TABLE VII
+C LASSIFICATION ACCURACY IN A SYMMETRIC S CENARIOS ON M ALICOUS _TLS
+
+TABLE VIII
+C LASSIFICATION ACCURACY IN S YMMETRIC S CENARIOS ON M ALICOUS _TLS
+
+Tab. VII, VIII, IX and X show the performance of MCRecls in asymmetric and symmetric scenarios on Malicious_TLS
+and CICIDS-2017, respectively. From the classification results,
+the following conclusions could be drawn:
+1. At low noise levels (≤asym-10% or ≤sym-20%), MCRecls was only slightly lower at most only 1.4% than that
+of the best-performing approach: The design strategy of
+MCRe’s careful acquisition of labels caused that its backbone
+acquired less information than the other supervised methods
+at low noise levels, which resulted in a slightly lower
+performance as well; this result was in line with our design
+expectations.
+
+2. At high noise levels (>asym-10% or >sym-20%), MCRecls performed significantly better than the other approaches:
+In particular, when noise levels reached 90% in both scenarios
+and datasets, MCRe-cls achieved the highest accuracy,
+which was 20% higher than the other approaches. The
+above results demonstrated the effectiveness of the multiple
+constraints designed in this study; this allowed the trained
+representation function to approximate the ideal function
+better and helped the classifier to identify malicious traffic
+under label noise conditions. We also assessed the statistical
+significance of MCRe-cls results compared to other methods
+at a noise level of 90%, as presented in Tab. XI. Similar to
+
+YUAN et al.: MCRe: A UNIFIED FRAMEWORK FOR HANDLING MALICIOUS TRAFFIC
+
+143
+
+TABLE IX
+C LASSIFICATION ACCURACY IN A SYMMETRIC S CENARIOS ON CICIDS-2017
+
+TABLE X
+C LASSIFICATION ACCURACY IN S YMMETRIC S CENARIOS ON CICIDS-2017
+
+MCRe-dc, MCRe-cls exhibited a p-value below 0.001 for all
+cases, demonstrating superior performance compared to other
+methods.
+3. MCRe-cls exhibited the best robustness to label noise:
+Looking at each row of the table horizontally, the MCRecls decreased the least as the percentage of noise increased.
+In particular, when the noise level increased to 70%, the
+accuracy of MCRe-cls decreased by 4%. When the noise level
+increased to 90%, the accuracy of MCRe-cls was reduced
+by up to 18%, which was much smaller than that of the
+best-performing comparison approach. Due to the fact that
+MCRe-cls selected an unsupervised distance-based classifier
+that relied on representation functions rather than observed
+labels to classify traffic, the impact of noisy labels on classifier
+accuracy was mitigated. In addition, full confidence samples
+were constructed based on simple samples (rather than all
+samples), which also reduced the effect of noisy labels.
+D. Ablation Analysis
+In this subsection, we will check whether the three
+constraints designed for MCRe are necessary by ablation
+analysis. Specifically, we compared the performance of MCRe
+and its variants, including (1) the complete MCRe, (2)
+the MCRe that does not satisfy the information integrity
+
+constraint, named MCRe∼iic, (3) the MCRe that does not
+satisfy the cluster separability constraint, named MCRe∼csc,
+and (4) the MCRe that does not satisfy the core proximity
+constraint, named MCRe∼cpc.
+Fig. 5 shows the performance of MCRe and its variants
+for six different scenes, including asym-0.2, asym-0.5, asym0.8, sym-0.2, sym-0.5 and sym-0.8, where each corner of the
+radar plot represents a corresponding scene, and the center
+and edge correspond to 50% and 100%, respectively. By the
+difference in the area of the four hexagons, we can easily
+compare the importance of the three constraints and analyze
+the roles they play in different scenarios and tasks. We can
+draw the following conclusions:
+1. All three constraints were beneficial for noise traffic
+representation: Of all the models, the complete MCRe
+achieved the best results in all scenarios and tasks. The
+proposed three constraints were designed to compress the
+value space of G in terms of information integrity, cluster
+separability and core proximity, driving the samples toward
+the correct cluster in the decision space, thus mitigating the
+effect of noisy labels.
+2. The core proximity constraint was the most helpful among
+all constraints for MCRe to tolerate noisy labels: As the
+proportion of noisy labels increased, the performance of all
+three MCRe variants showed significant degradation of varying
+
+144
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+TABLE XI
+T-T EST R ESULTS FOR MCRe-C LS
+
+Fig. 5.
+
+Ablation results. (a) Percentage of pure samples in data cleaning tasks. (b) Accuracy in robust training tasks.
+
+TABLE XII
+C OMPARISON OF MCRe AND I TS VARIANTS
+
+degrees. MCRe cpc had the greatest degradation among all
+variations, with a classification accuracy of only about 70%.
+The results were in line with our design expectations, as Lcpc
+was only relevant to simple samples, and a conservative
+adoption strategy was used for labels to maintain higher
+classification accuracy in high-level noise scenarios.
+To represent the effect of the three constraints on the
+directed optimization of the representation network more
+intuitively, we plotted Fig. 6 to show the process of MCRe
+approximation to the ideal representation function during
+training. In particular, in this experiment, two high-level noise
+scenarios, asym-0.8 and sym-0.8, were selected. As presented
+in Fig. 6a, the accuracy of the model increased with
+epoch, and the representation network of MCRe increasingly
+approximated the ideal representation function.
+The binary cross-entropy curves between the original input
+and the output of the decoder are shown in Fig.6b. The
+curve indicated changes in information loss during MCRe
+representation, and the lower the entropy was, the smaller the
+information loss was, but the better the information integrity
+of the representation network was. As shown in Fig. 6b,
+
+in both asym-0.8 and sym-0.8 scenarios, the information loss
+decreased with the epoch, which ensured better performance
+of MCRe (see Fig. 6a).
+Fig. 6c and Fig. 6d show the variation curves of the
+normalized mutual information (NMI) and adjusted rand index
+(ARI) of the traffic representations, respectively. The ARI
+and NMI have been commonly used as metrics for clustering
+algorithms. Their values closer to one indicate that clusters
+are more effective and can group more similar samples into
+the same clusters. In this experiment, the ARI and NMI
+were adopted to measure the cluster separability of MCRe.
+As shown in Fig. 6c and Fig. 6d, the ARI and NMI gradually
+increased with epoch, proving that the representation model of
+MCRe gradually converged and produced clusters with good
+separability.
+The results in Fig. 6e show the trend of the average distance
+of the traffic to the corresponding full confidence samples
+in the z-space. The smaller the distance was, the closer the
+samples reconstructed by MCRe were to the core of the
+class and the further they were from the decision boundary.
+In addition, as displayed in Fig. 6e, the mean distance showed
+a decreasing trend with the epoch increases, indicating that
+the projection of the traffic into the decision space was closer
+to the full confidence samples within the class, which helped
+MCRe to identify mislabeling better.
+E. Generalizability Analysis
+In this subsection, we trained classifiers on several public
+malicious traffic datasets to evaluate the generalization of
+MCRe. The results in Tab. II, III, VII, and VIII showed
+that the classification accuracy of MCRe was positively
+correlated with data cleaning, so the generalization of MCRe
+
+YUAN et al.: MCRe: A UNIFIED FRAMEWORK FOR HANDLING MALICIOUS TRAFFIC
+
+145
+
+TABLE XIII
+C LASSIFICATION ACCURACY OF MCRe-C LS ON D IFFERENT DATASETS IN A SYMMETRIC S CENARIOS
+
+TABLE XIV
+C LASSIFICATION ACCURACY OF MCRe-C LS ON D IFFERENT DATASETS IN S YMMETRIC S CENARIOS
+
+TABLE XV
+CL V S . MCRe+CL
+
+TABLE XVI
+C O -T EACHING V S . MCRe+C O -T EACHING
+
+could be evaluated based on by its classification accuracy.
+The datasets used in this subsection included: (1) traditional
+Internet traffic datasets such as NSL-KDD [34], UNSWNB15 [35], and LITNET-2020 [37]; (2) IoT traffic datasets
+such as IoT-23 [38]; and (3) mobile Internet datasets such as
+CICMalDroid-2020 [39].
+Tab. XIII and XIV show the accuracy of MCRe on different
+datasets. Due to the small variety in some of the datasets,
+the upper limits for the proportion of noise in asymmetrical
+and symmetrical scenarios were set to 80% and 50%,
+respectively. Experimental results demonstrated that MCRe
+achieved high accuracy on all datasets. In particular, MCRe
+achieved an accuracy of higher than 87% when the proportion
+of asymmetric noise was as high as 80% or the proportion of
+symmetric noise was as high as 50%. The results showed that
+MCRe had good generalisability and could identify not only
+encrypted malicious traffic, but also unencrypted and mixed
+malicious traffic.
+
+F. Extensibility Analysis
+In this subsection, we examined whether MCRe has
+excellent extensibility. That is, whether MCRe is compatible
+with other classical models, and enhances their data cleaning
+and traffic identification performance. Due to the excellent
+code integration of CL and Co-teaching, they were selected
+for validation. Specifically, the representation layer of MCRe
+was plugged into the input layers of CL and Co-teaching
+respectively, and their output results were evaluated.
+Tab. XV and XVI respectively show the results of MCRe
+for the two models in different scenarios for the corresponding
+tasks. We can conclude as follows.
+1. MCRe had good extensibility: By simply concatenating
+models, MCRe could be used in combination with other
+models, such as CL and Co-teaching, to process noise traffic.
+In fact, MCRe could be considerd as a data pre-processing
+process for other models. MCRe represented raw traffic as a
+
+146
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+training, which balances individual and global knowledge
+acquisition, resulting in a more robust performance ceiling for
+high-level label noise scenarios. Even at 90% noise labels,
+MCRe can achieve a pure sample percentage of 85% and a
+classification accuracy of 82%. In addition, MCRe is highly
+generalizable and capable of handling noise labels in various
+scenarios, including traditional and novel Internet scenarios.
+Finally, MCRe is also extensible, allowing connectivity to
+other data cleaning and robust training models and enhancing
+their performance.
+In the future, we will focus on the application of MCRe
+in specific scenarios and special conditions, such as online
+environment detection, few-shot detection, and unknown
+attack detection.
+ACKNOWLEDGMENT
+The authors would like to thank the reviewers for their
+valuable comments that helped to improve this manuscript.
+R EFERENCES
+
+Fig. 6. Variations of MCRe metrics vs epoch. (a) Classification accuracy;
+(b) Binary cross-entropy; (c) Normalized mutual information; (d) Adjusted
+rand index; (e) Mean distance to the core of the class.
+
+more robust feature vector and passed it on to other models
+for data cleaning or model training. In future work, we may
+consider encapsulating MCRe into a callable API to provide
+supports for other models more conveniently.
+2. At high noise levels, MCRe showed a significant
+enhancement to CL and Co-teaching: The MCRe enhanced
+approaches were more effective than the original when the
+noise levels exceeded 20% and 50%, respectively. In particular,
+for CL, the percentage of pure data increased by more than
+40% when the noise level was 90%; meanwhile, for Coteaching, traffic was identified with a 16% improvement
+in accuracy. The above results indicated that robust traffic
+representation could help other models handle noise labels
+better, reduce reliance on label quality, ensure stable
+performance under high noise conditions, and output cleaner
+datasets or more accurate identification models.
+VI. C ONCLUSION
+In this paper, a unified framework for data cleaning
+and robust training named MCRe is proposed for realistic
+malicious traffic. MCRe drove the representation network
+to approximate the ideal representation in iterations by
+applying information integrity constraints, cluster separability
+constraints and core proximity constraints. Compared to the
+state-of-the-art approaches, MCRe employs attribute-guided
+
+[1] N. Sambasivan, S. Kapania, and H. Highfill, “Everyone wants to do the
+model work, not the data work: Data cascades in high-stakes AI,” in
+Proc. CHI Conf. Hum. Factors Comput. Syst., 2021, pp. 1–15.
+[2] Z. Wang, K. W. Fok, and V. L. L. Thing, “Machine learning for
+encrypted malicious traffic detection: Approaches, datasets and comparative study,” Comput. Secur., vol. 113, Feb. 2022, Art. no. 102542.
+[3] J. Zhang, F. Li, and F. Ye, “Autonomous unknown-application filtering
+and labeling for dl-based traffic classifier update,” in Proc. IEEE Conf.
+Comput. Commun., Jul. 2020, pp. 397–405.
+[4] X. Lin, G. Xiong, and G. Gou, “ET-BERT: A contextualized datagram
+representation with pre-training transformers for encrypted traffic
+classification,” in Proc. ACM Web Conf., 2022, pp. 633–642.
+[5] P. Lin, K. Ye, and Y. Hu, “A novel multimodal deep learning framework
+for encrypted traffic classification,” IEEE/ACM Trans. Netw., vol. 31,
+no. 3, pp. 1369–1384, Jun. 2022.
+[6] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized
+application identification via encrypted traffic analysis using graph
+neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+pp. 2367–2380, 2021.
+[7] C. Dong, Z. Lu, Z. Cui, B. Liu, and K. Chen, “MBTree: Detecting
+encryption RATs communication using malicious behavior tree,” IEEE
+Trans. Inf. Forensics Security, vol. 16, pp. 3589–3603, 2021.
+[8] B. Anderson and D. McGrew, “Machine learning for encrypted malware
+traffic classification: Accounting for noisy labels and non-stationarity,”
+in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+2017, pp. 1723–1732.
+[9] P. Chen, B. Liao, and G. Chen, “Understanding and utilizing deep neural
+networks trained with noisy labels,” in Proc. Int. Conf. Mach. Learn.,
+2019, pp. 1062–1070.
+[10] C. Northcutt, L. Jiang, and I. Chuang, “Confident learning: Estimating uncertainty in dataset labels,” J. Artif. Intell. Res., vol. 70,
+pp. 1373–1411, Apr. 2021.
+[11] T. Kim et al., “Fine samples for learning with noisy labels,” in Proc.
+Adv. Neural Inf. Process. Syst., vol. 34, 2021, pp. 24137–24149.
+[12] Q. Yuan et al., “ULDC: Unsupervised learning-based data cleaning
+for malicious traffic with high noise,” Comput. J., Apr. 2023,
+Art. no. bxad036, doi: 10.1093/COMJNL/BXAD036.
+[13] L. Jiang et al., “MentorNet: Learning data-driven curriculum for very
+deep neural networks on corrupted labels,” in Proc. Int. Conf. Mach.
+Learn., 2018, pp. 2304–2313.
+[14] B. Han et al., “Co-teaching: Robust training of deep neural networks
+with extremely noisy labels,” in Proc. Adv. Neural Inf. Process. Syst.,
+vol. 31, 2018, pp. 8536–8546.
+[15] X. Yu et al., “How does disagreement help generalization against label
+corruption?” in Proc. Int. Conf. Mach. Learn., 2019, pp. 7164–7173.
+[16] C. Tan et al., “Co-learning: Learning from noisy labels with selfsupervision,” in Proc. 29th ACM Int. Conf. Multimedia, 2021,
+pp. 1405–1413.
+
+YUAN et al.: MCRe: A UNIFIED FRAMEWORK FOR HANDLING MALICIOUS TRAFFIC
+
+[17] H. Song et al., “Learning from noisy labels with deep neural networks:
+A survey,” IEEE Trans. Neural Netw. Learn. Syst., early access,
+Mar. 7, 2022, doi: 10.1109/TNNLS.2022.3152527.
+[18] H. Wei et al., “Open-set label noise can improve robustness against
+inherent label noise,” in Proc. Adv. Neural Inf. Process. Syst., vol. 34,
+2021, pp. 7978–7992.
+[19] N. Karim et al., “UNICON: Combating label noise through uniform
+selection and contrastive learning,” in Proc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit., Jun. 2022, pp. 9676–9686.
+[20] A. Fahad, A. Almalawi, Z. Tari, K. Alharthi, F. S. Al Qahtani,
+and M. Cheriet, “SemTra: A semi-supervised approach to traffic
+flow labeling with minimal human effort,” Pattern Recognit., vol. 91,
+pp. 1–12, Jul. 2019.
+[21] Z. Yang et al., “WTAGRAPH: Web tracking and advertising detection
+using graph neural networks,” in Proc. IEEE Symp. Secur. Privacy (SP),
+May 2022, pp. 1540–1557.
+[22] M. Kim and I. Lee, “Human-guided auto-labeling for network traffic
+data: The GELM approach,” Neural Netw., vol. 152, pp. 510–526,
+Aug. 2022.
+[23] J. Zhang et al., “Autonomous unknown-application filtering and labeling
+for DL-based traffic classifier update,” in Proc. IEEE Conf. Comput.
+Commun. (INFOCOM), Jun. 2020, pp. 397–405.
+[24] B. A. Alahmadi, L. Axon, and I. Martinovic, “99% false positives: A
+qualitative study of SOC analysts’ perspectives on security alarms,”
+in Proc. 31st USENIX Secur. Symp. (USENIX Security), 2022,
+pp. 2783–2800.
+[25] W. Li, X.-Y. Zhang, H. Bao, H. Shi, and Q. Wang, “ProGraph: Robust
+network traffic identification with graph propagation,” IEEE/ACM Trans.
+Netw., vol. 31, no. 3, pp. 1385–1399, Jun. 2023.
+[26] Z. Zhu, Z. Dong, and Y. Liu, “Detecting corrupted labels without
+training a model to predict,” in Proc. Int. Conf. Mach. Learn., 2022,
+pp. 27412–27427.
+[27] R. Wang, T. Liu, and D. Tao, “Multiclass learning with partially
+corrupted labels,” IEEE Trans. Neural Netw. Learn. Syst., vol. 29, no. 6,
+pp. 2568–2580, Jun. 2018.
+[28] E. Arazo et al., “Unsupervised label noise modeling and loss correction,”
+in Proc. Int. Conf. Mach. Learn. (PMLR), 2019, pp. 312–321.
+[29] D. Arpit et al., “A closer look at memorization in deep networks,” in
+Proc. Int. Conf. Mach. Learn., 2017, pp. 233–242.
+[30] A. Iscen et al., “Learning with neighbor consistency for noisy labels,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2022,
+pp. 4672–4681.
+[31] D. Ortego et al., “Multi-objective interpolation training for robustness to
+label noise,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+Jun. 2021, pp. 6606–6615.
+[32] H. Maennel et al., “What do neural networks learn when trained with
+random labels?” in Proc. Adv. Neural Inf. Process. Syst., vol. 33, 2020,
+pp. 19693–19704.
+[33] K. He et al., “Momentum contrast for unsupervised visual representation
+learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+2020, pp. 9729–9738.
+[34] L. Dhanabal and S. P. Shantharajah, “A study on NSL-KDD dataset
+for intrusion detection system based on classification algorithms,” Int.
+J. Adv. Res. Comput. Commun. Eng., vol. 4, no. 6, pp. 446–452,
+2015.
+[35] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+network intrusion detection systems (UNSW-NB15 network data set),”
+in Proc. Mil. Commun. Inf. Syst. Conf. (MilCIS), 2015, pp. 1–6.
+[36] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+a new intrusion detection dataset and intrusion traffic characterization,”
+in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018, pp. 108–116.
+[37] R. Damasevicius et al., “LITNET-2020: An annotated real-world
+network flow dataset for network intrusion detection,” Electronics, vol. 9,
+no. 5, p. 800, May 2020.
+[38] A. Parmisano, S. Garcia, and M. Erquiaga. (2020). A Labeled Dataset
+With Malicious and Benign IoT Network Traffic. [Online]. Available:
+https://mcfp.felk.cvut.cz/publicDatasets/IoT-23-Dataset
+[39] D. S. Keyes et al., “EntropLyzer: Android malware classification and
+characterization using entropy analysis of dynamic characteristics,” in
+Proc. Reconciling Data Analytics, Autom., Privacy, Secur., Big Data
+Challenge (RDAAPS), 2021, pp. 1–12.
+[40] K. M. Al-Gethami, M. T. Al-Akhras, and M. Alawairdhi, “Empirical
+evaluation of noise influence on supervised machine learning algorithms
+using intrusion detection datasets,” Secur. Commun. Netw., vol. 2021,
+pp. 1–28, Jan. 2021.
+
+147
+
+Qingjun Yuan received the M.Eng. degree from
+Strategic Support Force Information Engineering
+University, China, in 2016. He is currently with the
+Henan Key Laboratory of Network Cryptography
+Technology. His research interests include network
+security and side channel attack.
+
+Gaopeng Gou received the bachelor’s, M.Eng., and
+Ph.D. degrees from Beihang University in 2005,
+2008, and 2014, respectively. He is currently a
+Full Professor with the Institute of Information
+Engineering, Chinese Academy of Sciences, China.
+His research interests include network security and
+network anomaly detection.
+
+Yanbei Zhu received the M.A.S. degree from the
+Beijing Institute of Technology, China, in 2019.
+She is currently with the Henan Key Laboratory
+of Network Cryptography Technology. Her research
+interests include network security and complex data
+analysis.
+
+Yuefei Zhu received the Ph.D. degree from the
+Zhengzhou Information Science Technology Institute, China, in 1990. He is currently a Professor with
+the Henan Key Laboratory of Network Cryptography
+Technology, China. He is the Main Designer of
+the Elliptic Curve Cryptography (ECC) PublicKey Algorithm SM2. His research interests include
+cryptography and network security.
+
+Gang Xiong is currently a Full Professor and a
+Ph.D. Supervisor with the Institute of Information
+Engineering, Chinese Academy of Sciences, China.
+He has authored more than 60 papers in refereed
+journals and conference proceedings. His research
+interests include network and information security.
+He is a member of the 3rd Communication Security
+Technical Committee of the China Institute of
+Communications.
+
+Yongjuan Wang received the Ph.D. degree from
+Information Engineering University in 2009. She
+is currently with the Henan Key Laboratory
+of Network Cryptography Technology. Her main
+research interests include cryptographic analysis and
+cyberspace security.
+PAPER_TEXT

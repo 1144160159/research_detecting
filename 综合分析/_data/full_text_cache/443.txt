@@ -1,0 +1,827 @@
+5326 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+FG-SAT: Efficient Flow Graph for Encrypted Traffic
+ Classification Under Environment Shifts
+ Susu Cui , Xueying Han , Dongqi Han , Zhiliang Wang , Member, IEEE, Weihang Wang, Bo Jiang ,
+ Baoxu Liu, and Zhigang Lu
+
+ Abstract—Encrypted traffic classification plays a critical role it also poses challenges for security managers and internet
+in network security and management. Currently, mining deep service providers (ISPs). Firstly, malware can be encrypted
+patterns from side-channel contents and plaintext fields through and transmitted as easily as legitimate files. In fact, over 80%
+neural networks is a major solution. However, existing methods
+have two major limitations: 1) They fail to recognize the criti- of malware spreads through TLS protocol [1]. Many malicious
+cal link between transport layer mechanisms and applications, network attacks also employ encryption technology to conceal
+missing the opportunity to learn internal structure features for communication content [2]. Therefore, security managers need
+accurate traffic classification. 2) They assume network traffic in to identify encrypted traffic in order to inspect malicious
+an unrealistically stable and singular environment, making it dif- encrypted traffic. Secondly, with the rapid growth of smart
+ficult to effectively classify real-world traffic under environment
+shifts. In this paper, we propose FG-SAT, the first end-to-end devices and new applications, network traffic is increasing
+method for encrypted traffic analysis under environment shifts. geometrically. ISPs need to identify encrypted traffic to pro-
+We propose a key abstraction, the Flow Graph, to represent vide personalized services, enhancing network efficiency and
+flow internal relationship structures and rich node attributes, service quality.
+which enables robust and generalized representation. Addition- With traffic payloads encrypted, traditional classification
+ally, to address the problem of inconsistent data distribution
+under environment shifts, we introduce a novel feature selection methods become ineffective. However, studies show that
+algorithm based on Jensen-Shannon divergence (JSD) to select machine learning and neural networks can classify encrypted
+robust node attributes. Finally, we design a classifier, GraphSAT, traffic by analyzing its statistical, byte, and sequential features.
+which integrates GraphSAGE and GAT to deeply learn Flow Based on feature analysis, encrypted traffic classification can
+Graph features, enabling accurate encrypted traffic identifica- be divided into three methods: (1) Statistics-based methods [3],
+tion. FG-SAT exhibits both efficient and robust classification
+performance under environment shifts and outperforms state- [4], [5], [6], [7], [8], [9], [10], [11] extract the side-channel
+of-the-art methods in encrypted attack detection and application statistical features and header fields to construct machine
+classification. learning classifiers for traffic classification. (2) Byte-based
+ Index Terms—Encrypted traffic, environment shifts, flow methods [12], [13], [14], [15], [16] utilize the raw bytes of
+graph, feature selection, graph neural networks (GNNs). encrypted traffic and transform the classification task into
+ an image classification task, using neural networks such as
+ I. I NTRODUCTION convolutional neural network (CNN) or capsule neural network
+
+T RAFFIC encryption technology plays a significant role
+ in enhancing network security and privacy. However,
+ (CapsNet) to learn the spatial features of raw bytes in traffic.
+ (3) Sequence-based methods [17], [18], [19], [20] treat the
+ traffic as the sequence of packets and extract the packet
+ Received 6 January 2025; revised 15 April 2025; accepted 12 May
+2025. Date of publication 19 May 2025; date of current version 4 June length and arrival time as the sequential features, and use
+2025. This work was supported in part by the National Key Research and the recurrent neural network (RNN) or Encoder-Decoder for
+Development Program of China under Grant 2023YFC2206402, in part by the classification.
+Strategic Priority Research Program of Chinese Academy of Sciences under
+Grant XDA0460100, in part by the Program of Key Laboratory of Network Unfortunately, despite the progress made, there are still two
+Assessment Technology, in part by Chinese Academy of Sciences, and in part primary limitations in existing works as follows:
+by Program of Beijing Key Laboratory of Network Security and Protection Overlook the Critical Link Between Transport Layer
+Technology. The associate editor coordinating the review of this article and
+approving it for publication was Dr. Weizhi Meng. (Corresponding author: Mechanisms and Applications: Transport layer features are
+Bo Jiang.) intrinsically linked to applications. To communicate more
+ Susu Cui, Xueying Han, Bo Jiang, Baoxu Liu, and Zhigang Lu are with the efficiently, the TCP protocol uses a sliding window and
+Institute of Information Engineering, Chinese Academy of Sciences, Beijing
+100085, China, and also with the School of Cyber Security, University of acknowledgment mechanism to send multiple packets at the
+Chinese Academy of Sciences, Beijing 100049, China (e-mail: cuisusu@iie. same time and a single acknowledgment number to confirm
+ac.cn; hanxueying@iie.ac.cn; jiangbo@iie.ac.cn; liubaoxu@iie.ac.cn; receipt of multiple packets. As a result, larger sliding windows
+luzhigang@iie.ac.cn).
+ Dongqi Han is with the School of Cyberspace Security, Beijing Uni- are common for streaming applications to complete data
+versity of Posts and Telecommunications, Beijing 100876, China (e-mail: transfer quickly, but instant messaging applications typically
+handongqi@bupt.edu.cn). use a balanced exchange of received and acknowledgment
+ Zhiliang Wang is with the Institute for Network Sciences and
+Cyberspace, BNRist, Tsinghua University, Beijing 100084, China (e-mail: packets. Therefore, encoding structural relationships between
+wzl@cernet.edu.cn). packets can be beneficial for encrypted traffic classification.
+ Weihang Wang is with the Department of Computer Science, Uni- However, existing works either do not consider the structural
+versity of Southern California, Los Angeles, CA 90089 USA (e-mail:
+weihangw@usc.edu). relationships between packets [21], [22] or are limited to
+ Digital Object Identifier 10.1109/TIFS.2025.3571663 specific classification scenarios and deployment locations [23],
+ 1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+CUI et al.: FG-SAT: EFFICIENT FLOW GRAPH FOR ENCRYPTED TRAFFIC CLASSIFICATION 5327
+
+ attributes in the face of environment shifts. We use Jensen-
+ Shannon divergence (JSD), a method for measuring similarity
+ between two probability distributions, to assess the stability of
+ features. Specifically, we compare the distribution differences
+ between inter-class (with environment shifts) and extra-class
+ (with varying traffic types) using JSD. When the extra-class
+ JSD is greater than the inter-class JSD, we consider the
+ features to be stable under environment shifts. Finally, we
+ build a classifier based on graph neural networks (GNN),
+ named GraphSAT, to identify encrypted traffic types. Graph-
+ SAT combines GraphSAGE [28] and GAT [29] to deeply
+ learn the structural relationships and rich node attributes
+ of the Flow Graph, enabling efficient encrypted traffic
+ classification.
+Fig. 1. The comparison with the traditional encrypted traffic classification
+methods. Traditional methods can only identify traffic matching the training Our contributions are summarized as follows:
+set distribution, FG-SAT can classify traffic even under environment shifts. • We define a key abstraction, the Flow Graph, to represent
+ encrypted flows, which features a general representation
+[24], [25], missing the opportunity to learn transport layer for diverse traffic, rich features and encryption protocol
+features for accurate and generic classification of the encrypted independence.
+traffic. • We propose a feature selection algorithm, which mea-
+ Unrealistic Stable and Singular Network Environment: Cur- sures the distribution differences of features by evaluating
+rent methods mainly focus on traffic classification in a stable header fields and selecting stable fields in environment
+and singular network environment, which is unrealistic in shifts.
+representing real-world traffic. As shown in Figure 1, network • We design an encrypted traffic classifier based on GNN,
+traffic is susceptible to environmental influences and undergoes which accurately learns the internal structure and node
+long-term dynamic change [22], [26], [27], which we call attributes of the Flow Graph from the raw traffic.
+environment shifts1 in this paper. Consider “browsing” appli- • We conduct experiments using publicly available datasets
+cations as an example, their environment shifts can include for attack detection, malware detection and our own colnew browser software, different browsing contents, and a lected dataset for application classification. Our method
+change in network bandwidth, compared with the training data outperforms state-of-the-art methods, increasing accuracy
+environment. If not handled properly, these changes can cause by 6.85% over pre-training methods and by 15.84% over
+shifts in the distribution of traffic features, leading to poor traditional deep learning methods.
+classification performance. • We evaluate the effects of environment shifts on encrypted
+ To address the abovementioned limitations, we propose traffic classification. The results show that as the envi-
+FG-SAT, the first end-to-end method for encrypted traffic clas- ronment shifts, all other methods’ accuracy decreases,
+sification in environment shifts. We define a key abstraction, whereas our JSD-based feature selection algorithm
+the Flow Graph, to characterize the internal relationship struc- increases accuracy by 7.44%.
+ture based on the transport layer mechanisms inside a flow.
+The Flow Graph provides several key promises: (1) It treats II. R ELATED W ORK
+packets as nodes and identifies structural relationships between
+packets using edges of multiple types that characterize the A. Methods on Encrypted Traffic Classification
+window and acknowledgment mechanisms. (2) It features a 1) Statistics-Based Methods: Statistics-based methods clasgeneral representation that can represent diverse traffic types, sify encrypted traffic using features like flow duration and
+include rich features, and adapt to environment shifts. (3) It packet count, applying machine learning to distinguish traffic
+also augments node attributes with header fields extracted types. Draper-Gil et al. [3] use time-related features and
+from the 2-4 layers that are independent of encryption the C4.5 algorithm for classifying 12 service types. Other
+protocols. works propose features like packet count, peak, and time
+ To achieve high classification performance in environment for encrypted web classification [4], [5], and enrich analysis
+shifts, we propose a robust feature selection algorithm to with unencrypted field data for identifying malicious applicasolve the problem of inconsistent data distribution. Specifi- tions [6], [7]. Ede et al. [11] highlight the use of temporal
+cally, our feature selection algorithm evaluates packet header correlations among destination-related features for generating
+fields and automatically selects those stable fields as node application fingerprints. Feng et al. [33], [34] utilize the ratio
+ of inbound traffic volume to outbound traffic volume and
+ 1 We define environment shifts as changes in application configuration implement an enhanced KNN algorithm to achieve explainable
+and/or network environment that cause changes in statistics and feature DDoS attack detection. Feng et al. [35] aggregate multiple trafdistribution of traffic within the same class. The application configuration fic flows and generate a fingerprint matrix to classify social bot
+shift includes, but is not limited to, changes in user behaviors. The network
+environments shift includes, but is not limited to, changes in protocols and traffic from real online social network user traffic. However,
+network quality. these methods face limitations including high time latency
+5328 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE I
+ T HE C OMPARISON W ITH THE E XISTING C LASSIFICATION M ETHODS FOR E NCRYPTED T RAFFIC C LASSIFICATION
+
+from processing complete flows, strong feature dependency representing communication for anomaly detection. However,
+limiting cross-protocol classification, and a lack of structural this approach is unsuitable for general encrypted traffic clasfeature consideration, reducing accuracy under environment sification. Fu et al. [23] use network interaction graphs for
+shifts. unsupervised anomaly detection via clustering loss but is not
+ 2) Byte-Based Methods: Byte-based methods classify suited for multi-class classification. Similarly, Fu et al. [24]
+encrypted traffic by feeding raw bytes into neural networks, build a heterogeneous graph to detect host infections based on
+avoiding manual feature extraction. Wang et al. [12], [13] use temporal-spatial features, but this approach lacks flexibility
+the first 784 bytes with CNNs for feature learning in malware for application classification since a host can produce diverse
+and encrypted app classification, while Cui et al. [14] improve traffic types. In application classification, graphs model comspatial and byte feature analysis using CapsNet. Han et al. [15] munication relationships for traffic classification. Pham et al.
+use Transformers on n-gram frequency vectors for flow feature [25] use IPs and ports as nodes, converting app traffic into
+learning. Lin et al. [16] and Zhao et al. [30] introduce pre- a graph for fingerprinting, but it assumes uniform traffic
+training models for generic traffic representation learning in a labels, limiting it to endpoint classification rather than gateway
+few-shot context. Byte-based methods simplify feature extrac- analysis. Shen et al. [20] construct flow-specific graphs with
+tion but face challenges in cross-protocol classification due to packet length and direction, using a GNN to learn flow
+plaintext fields in application protocols. These methods may structures, though simple node features reduce effectiveness
+not fully utilize byte information, including timestamps that in complex networks. Overall, IPs are mainly used as nodes
+risk overfitting and hamper generalization across environment to construct network interaction graphs for analysis. However,
+shifts. Additionally, while focusing on spatial and temporal they have limitations in general traffic classification tasks, such
+traffic byte features, they neglect structural aspects. as classification scenarios and deployment locations.
+ 3) Sequence-Based Methods: Sequence-based methods utilize packet length and time interval sequences, applying
+models like LSTM and Encoder-Decoder to understand C. Comparison With Existing Classification Methods
+sequence relationships. Ramezani et al. [17] use the server We compare FG-SAT with related classification methods,
+name from Client Hello packets for fingerprints. Shapira and focusing on four performance aspects, as shown in Table I.
+Shavitt [18] develop FlowPic, an image from packet size Low latency takes into account both the feature construction
+and arrival times, analyzed with CNN. Liu et al. [19] intro- time and the model prediction time. Generally, a longer flow
+duce FS-Net, leveraging LSTM-based Encoder-Decoder to aggregation time is required for feature calculation on the comexplore packet length sequences for classification. Akbari et al. plete flow, resulting in higher latency. Additionally, complex
+[36] combine bytes, statistics and sequences features to models with longer prediction times can also contribute to
+achieve classification. Guthula et al. [37] integrate multi-level higher latency. As a result, 1dCNN, FlowPic, and GraphDApp
+sequences of packets, bursts, and flows to construct traffic can achieve low latency in both feature construction and model
+tokens for pretraining and fine-tuning the foundation model. prediction. Lightweight performance considers memory and
+Sequence-based methods analyze packet relationships in a flow computation requirements, often determined by the model’s
+but face challenges with environment shifts like network con- complexity. FlowPrint, 1dCNN, FlowPic, RF and GraphDApp
+gestion, bandwidth changes, and application updates, affecting employ models with fewer parameters and simpler compusequence consistency and accuracy across environments. Addi- tations, thus offering a lightweight advantage. Cross-protocol
+tionally, they sort by packet arrival time, missing varied packet capability is essential for general classification across multiple
+structure representations. protocols. Methods using the complete flow content, like
+ 1dCNN, CapsNet, and GTID, face challenges with cross-
+B. Graph-Based Methods on Traffic Analysis protocol classification due to embedded application-specific
+ Graph construction methods are task-specific. For intru- content. However, ET-BERT and YaTC overcome this by
+sion detection, IPs or domains serve as nodes, with edges leveraging extensive unlabeled data to pre-train a model that
+CUI et al.: FG-SAT: EFFICIENT FLOW GRAPH FOR ENCRYPTED TRAFFIC CLASSIFICATION 5329
+
+Fig. 2. The framework of FG-SAT, including 1. Flow Graph construction, 2. JSD-based feature selection, 3. GraphSAT for encrypted traffic classification.
+
+achieves cross-protocol performance. Strong generalization key abstraction, the Flow Graph, that can represent multireflects the method’s adaptability across different data dis- ple relationships between packets within the same flow and
+tributions or network conditions. Among related methods, contains rich node attributes. It comprehensively mines the
+ET-BERT and YaTC achieve generalized flow representation statistical, sequential, and structural features of encrypted
+through pre-training on large unlabeled traffic datasets, while traffic. Secondly, we propose a novel JSD-based feature selec-
+Rosetta and RF enhance generalization through data augmen- tion algorithm for environment shifts. It can evaluate and
+tation and robust representation. select a stable set of features in dynamic and variable traffic
+ In contrast, FG-SAT is designed with practical deployment environments. Finally, we establish a GNN-based encrypted
+considerations in mind, achieving a balance of low latency, traffic classifier, named GraphSAT, which fully explores the
+lightweight structure, cross-protocol capability, and strong internal relationships between different nodes within the Flow
+generalization. This integrated approach makes FG-SAT well- Graph and rich node attributes, achieving efficient encrypted
+suited for real-world applications. traffic classification.
+ During Flow Graph construction, each flow is viewed as
+ III. P ROBLEM D ESCRIPTION AND C ORE I DEA a graph, capturing its statistical, sequential, and structural
+A. Problem Description features for a comprehensive feature representation. Packets
+ In this paper, we classify encrypted traffic into types such as serve as nodes, with relationships defined by transport layer
+application, attack, and malware. Encrypted traffic consists of mechanisms and node attributes derived from header fields like
+client-server packets encrypted with protocols like TLS, SSH, packet length, arrival time, direction, TTL, and window size.
+and Tor, obscuring content while leaving some header informa- These attributes are essential for encrypted traffic classification
+tion visible. We treat bidirectional flow, defined by five-tuple [38]. The transport layer’s window size, vital for classification,
+information (source IP, destination IP, source port, destination indicates the communication type, with the TCP protocol’s
+port, transport protocol), as the classification object, modeling sliding window mechanism adjusting for efficient, reliable
+each flow as a graph for classification using a GNN-based transmission tailored to the application’s needs, such as larger
+method. windows for streaming traffic to ensure high throughput. To
+ Moreover, we focus on the traffic classification at the depict the flow’s internal structure, we establish two types of
+firewall and local ISP network nodes, which are typically relationships:
+deployed in enterprise networks. These nodes are primarily • Window relationship: The client or server sends multiple
+responsible for identifying network-side attacks, such as DDoS packets continuously, and these packets are connected in
+or port scanning. Therefore, our method specifically targets sequence based on their arrival time to form the window
+the detection of network-based attacks. Additionally, our goal relationship.
+is to design an end-to-end system that captures simple traffic • Acknowledgment relationship: The client or server
+information at the edge of the enterprise network for traffic acknowledges the received packets so that the packet
+classification. This system ultimately supports resource opti- and its corresponding acknowledgment packet form the
+mization and security monitoring within enterprise networks acknowledgment relationship.
+through encrypted traffic classification. Due to the environment shifts, including changes in application configuration and network environment, network traffic is
+B. Core Idea in a state of constant change, causing traditional encrypted
+ We introduce FG-SAT to achieve efficient encrypted traffic traffic classification methods to lose accuracy [27], [39].
+classification, as shown in Figure 2. Firstly, we define a To address this, we introduce a JSD-based feature selection
+5330 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+algorithm that assesses feature stability across different environments by measuring inter-class and extra-class distribution
+differences with JSD. This algorithm helps select stable distribution features as final node attributes amidst environment
+shifts.
+ We also develop GraphSAT, a GNN-based classifier, combining GraphSAGE and GAT to analyze Flow Graph’s
+structure and node attributes. GraphSAGE samples neighbors
+to enhance generalization and reduce memory use, while
+GAT assesses neighbor importance. GraphSAT effectively and
+accurately classifies encrypted traffic types.
+ Fig. 3. An example of Flow Graph on TCP flow. Packets are sorted according
+ to their arrival time, and we use two colors to denote relationships. Orange
+ IV. C ONSTRUCTION AND A NALYSIS OF F LOW G RAPH represents the window relationship, while blue indicates the acknowledgment
+ relationship.
+ In this section, we describe the flow graph construction (as
+shown in module 1 of Figure 2) and analysis on flow graph.
+
+A. Flow Graph Construction
+ To achieve an end-to-end encrypted traffic classification, we
+convert the raw traffic into the Flow Graph. Firstly, we aggregate traffic based on flow granularity. In long-term services
+such as file transfers or malicious C&C communication, the
+duration of a flow can be last for several hours. In order to
+perform efficient traffic classification, we only extract the first
+n packets of a flow to establish a Flow Graph, where n is
+considered a hyperparameter of our method.
+ After traffic aggregation, we construct the Flow Graph
+ Fig. 4. An example of Flow Graph on UDP flow. Packets are sorted according
+consisting of no more than n packets. In this paper, a Flow to their arrival time, and we use two colors to denote relationships. Orange
+Graph is defined as G(V, E) consisting of n nodes and m represents the window relationship, while blue indicates the acknowledgment
+edges. V = {v1 , v2 , . . . , vn } is the set of nodes, with each node relationship.
+representing a packet within the flow. The node attributes of
+the node v, denoted as xv , are a vector representation, includfields. Packets within the same window share direction, contiing packet header, ethernet header, IP header and TCP/UDP
+ nuity, and ACK number, forming window relationships based
+header. We delete Mac and IP addresses, convert hexadecimal
+ on arrival times. Acknowledgment relationships occur when
+values to decimal and normalize in the preprocessing step.
+ the receiver’s ACK matches the sender’s SEQ plus packet
+However, some fields may not be effective in environment
+ length. Thus, nodes in the same window, like nodes 5-9, share
+shifts. Therefore, we use the JSD-based feature selection
+ window and acknowledgment relationships, often connected
+algorithm to evaluate and select the stable fields as the final
+ to a common node.
+node attributes, with details provided in Section V.
+ For UDP flows (Figure 4), lacking SEQ and ACK fields,
+ E = {e1 , e2 , . . . , em } is the set of edges, where each e ∈ E
+ TCP’s reliability mechanisms are absent. Here, packets with
+represents the relationship between packets, including window
+ shared direction and continuity form a window, and adjacent
+and acknowledgment relationships, defined as follows:
+ packets in opposite directions have acknowledgment rela-
+ • Window relationship: When multiple packets are sent tionships. In both TCP and UDP, windowed nodes share
+ continuously from sender to receiver, they connect in acknowledgment ties with a specific node, simplifying UDP
+ sequence by arrival time, forming a window relationship. Flow Graph construction.
+ All packets in a window are contiguous and share the
+ same direction. They also share the same ACK number.
+ • Acknowledgment relationship: When the receiver B. Analysis on Flow Graph
+ acknowledges received packets, these packets and their In this section, we describe and compare the Flow Graphs of
+ corresponding acknowledgment packet form an acknowl- different encrypted traffic types. We focus on the overall graph
+ edgment relationship, with packets traveling in opposite structure rather than node attributes. Based on the definition
+ directions. For TCP, this relationship is based on SEQ and of Flow Graph mentioned above, we construct Flow Graphs
+ ACK numbers. For UDP, adjacent packets in opposite for four types of encrypted traffic, Bot, DoS, Email, and
+ directions are considered to have an acknowledgment Streaming, as shown in Figure 5. It can be seen that different
+ relationship. types of encrypted traffic have different graph structures. Bot
+ We analyze TCP and UDP flows to understand their trans- traffic is primarily controlled by streamlined commands, so it
+mission behaviors and Flow Graph construction. In TCP flows has a small window size and frequent acknowledgment. DoS
+(Figure 3), packets are graph nodes represented by header attack sends packets with large window size at the beginning
+CUI et al.: FG-SAT: EFFICIENT FLOW GRAPH FOR ENCRYPTED TRAFFIC CLASSIFICATION 5331
+
+ Fig. 5. Examples of Flow Graph with different labels. Flow graphs with different labels exhibit significant structural differences.
+
+of the TCP connection. Emails generally transmit plaintext Algorithm 1 JSD-Based Feature Selection Algorithm
+content, thus, the upload and download windows are similar 1: Input: Training set data T, label L, candidate feature set
+in size. Streaming servers typically send large window size F, shift factor EL (optional), number of samples for each
+packets to clients because they download data more than class Len.
+they upload. Thus, different types of traffic exhibit different 2: Output: Stable feature set under environment shifts Z.
+internal transmission structures based on the content of their 3: Variables:
+upper-layer applications. Flow Graphs can clearly represent 4: T I , T II , T III ← subsets of T, all three mutually exclusive.
+the internal structure of traffic through the edge relationships. 5: ELI , ELII ←: subsets of EL, two are mutually exclusive.
+ 6: FD ←: JSD difference matrix, FD[ f, l] denotes the JSD
+ V. JSD-BASED A LGORITHM FOR F EATURE S ELECTION difference of label l ∈ L in feature f ∈ F.
+ 7: procedure JSD DIFFERENCE CALCULATION (T, L, EL, F)
+ In this section, we introduce a JSD-based feature selec- 8: ELI , ELII ← two empty lists.
+tion algorithm (as shown in module 2 in Figure 2) to 9: if EL is True then
+assess inter-class and extra-class distribution differences under 10: Randomly divide EL into ELI and ELII , which of
+environment shifts, selecting stable features for accurate rep- them have different environment settings.
+resentation. JSD measures similarity between two probability 11: end if
+distributions, addressing the asymmetry of KL divergence [40]. 12: for l in L do
+Given two distributions P and Q, with density functions p(x) 13: T I ← data labeled as l and el belongs to ELI .
+and q(x) at point x, JSD is defined as follows: 14: T II ← data whose label is l and el belongs to ELII .
+ 1 15: T III ← data whose label is not l.
+ JS D(P, Q) = (DKL (P||M) + DKL (Q||M)) (1)
+ 2 16: for f in F do
+ X P(i) 17: FD[ f ][l] ← JS D(T I [ f ], T II [ f ])−
+ DKL (P, Q) = P(i) log (2)
+ Q(i) JS D(T I [ f ], T III [ f ])
+ i
+ 1 18: end for
+ M= (P + Q) (3) 19: end for
+ 2
+ 20: return FD.
+where DKL denotes the KL divergence, and M is the intermedi- 21: end procedure
+ate distribution between P and Q. The JSD value ranges from 22: procedure S TABLE F EATURE S ELECTION (FD, Len)
+0 to 1, with 0 indicating that the two distributions are identical 23: for fd in FD P do
+and 1 signifying both distributions are completely different. n
+ 24: di f f ← i=1 f di × Leni , where n is the number
+ The JSD-based feature selection algorithm is described in of types.
+Algorithm 1 for multi-class classification tasks. Note that 25: if di f f < 0 then
+we only use labeled data from the training set for feature 26: Add the feature f to Z.
+evaluation and selection. We evaluate the inter-class and extra- 27: end if
+class JSD of each feature for every class. We create three 28: end for
+datasets from the training set: T I and T II for evaluating the 29: return Z.
+inter-class JSD of the traffic, and T I and T III for evaluating the 30: end procedure
+extra-class JSD. For example, when we evaluate the difference
+in feature distribution between “browsing” and other labels, we
+can divide “browsing” traffic into two non-overlapping datasets
+T I and T II based on shift factors.2 Specifically, we randomly split the factors of “browsing” into two non-overlapping sets:
+ 2 The shift factor refers to the internal variables and their values that
+ ELI and ELII , as shown in Table II. Subsequently, we allocate
+cause environment shifts, such as access content (Blog, Map, Picture, Video), the traffic belonging to ELI into T I and the traffic belonging
+bandwidth (20Mbps, 100Mbps). to ELII into T II . If there is no factor present, T I and T II are
+5332 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE II GraphSAT integrates GraphSAGE and GAT to deeply learn
+ T HE S TATISTICS OF E XPERIMENTAL DATASETS the internal structure of the Flow Graph, and can efficiently and
+ accurately classify encrypted traffic types. Firstly, GraphSAT
+ introduces GraphSAGE to aggregate nodes through neighbor sampling, which effectively reduces memory usage and
+ computation time. Additionally, through neighbor sampling,
+ we transform the direct transductive node representation into
+ an inductive node representation, which can effectively prevent overfitting during training and enhance generalization
+ capability. Secondly, GraphSAT introduces GAT to learn the
+ relationships between nodes. GAT assigns different weights
+ to neighbors through attention mechanism [41], which can
+ capture important neighbors while weakening the correlation
+ of low-relevance neighbors. Therefore, we use GraphSAGE
+ and GAT to learn the node embeddings, and then we get the
+obtained by randomly dividing “browsing” traffic. In contrast, graph embeddings by the mean pooling and finally classify
+T III is the traffic of other labels, in this example, that include them by the softmax function.
+chat, email, file and streaming.
+ We calculate the inter-class and extra-class JSD for each B. GraphSAT Architecture
+feature using T I , T II , and T III to assess feature stability across
+ GraphSAT takes the Flow Graph as input and learns the
+environments. A feature is retained if its inter-class JSD is
+ internal structure features and rich node attributes to achieve
+smaller than its extra-class JSD, indicating stability. For multiefficient and accurate encrypted traffic classification. The
+class classification, we evaluate overall feature stability across
+ structure of GraphSAT mainly consists of GraphSAGE Block,
+classes, weighted by sample count per class.
+ GAT Block, Readout, and Classifier, which we will introduce
+ In this paper, we use header fields as node attributes, notbelow.
+ing their distribution can vary across different environments.
+ 1) GraphSAGE Block: GraphSAT takes the Flow Graph as
+For instance, the type of content in instant messaging, like
+ input and learns the internal structure features and rich node
+text or multimedia, impacts packet length distribution, and
+ attributes to achieve efficient and accurate encrypted traffic
+network bandwidth influences arrival time fields. To address
+ classification. Firstly, we use GraphSAGE to gather local node
+this, we apply a feature selection algorithm described in
+ information in the Flow Graph and compute node embeddings.
+Algorithm 1 for encrypted traffic classification tasks, choosing
+ It learns node representations by sampling and aggregating
+stable header fields as final node attributes to accurately
+ features from each node’s local neighbors. The GraphSAGE
+characterize encrypted traffic.
+ block consists of two steps: neighbor sampling and feature
+ aggregation.
+ VI. G RAPH SAT C LASSIFIER FOR E NCRYPTED T RAFFIC Neighbor sampling: For each node, a fixed number of
+ C LASSIFICATION neighbors S is sampled to ensure efficient computation. It
+ In this section, we describe the GraphSAT classifier (as defines a hop count K for neighbor sampling, enhancing
+shown in module 3 of Figure 2). We provide a general distant neighbor information capture. We set K = 2, sampling
+overview and a detailed description of its architecture. S 1 first-order and S 2 second-order neighbors for each node.
+ Feature aggregation: To create the target node’s embedding, the feature vectors of sampled neighbors are averaged
+A. Overview from second-order to first-order, concluding with the target
+ To deeply mine the rich feature representation and inter- node. Average aggregation combines neighbor embeddings
+nal structure relationships of the Flow Graph, we propose dimension-wise, followed by a non-linear transformation,
+GraphSAT, as shown in Figure 2. GraphSAT is a GNN-based defined as follows:
+model to whole-graph classification. The key steps of GNNs
+ hkv = σ(W · MEAN(hvk−1 ∪ huk−1 ), ∀u ∈ Nv ) (4)
+performing whole-graph classification are as follows:
+ • Node embeddings: GNNs first embed each node in where hkv is the k-th layer node v feature vector, Nv is v’s
+ the graph. Typically, It is accomplished by propagating neighbor set, σ denotes the activation function, and W is the
+ and aggregating information between the node and its k-th layer’s trainable weight matrix.
+ neighbors. 2) GAT Block: We obtain the first layer of node embed-
+ • Graph embedding: GNNs need to learn a global rep- dings using GraphSAGE. Next, we further calculate node
+ resentation of the graph from the node embeddings. The importance and generate new embeddings using GAT. It
+ graph embedding captures the structural information and assigns different learning weights to different neighbors for
+ features of the entire graph. learning the interrelationships between nodes. GAT Block
+ • Classification: The graph embedding is fed into a fully consists of two processes, calculating attention coefficients and
+ connected layer to predict the graph’s category. feature aggregation.
+CUI et al.: FG-SAT: EFFICIENT FLOW GRAPH FOR ENCRYPTED TRAFFIC CLASSIFICATION 5333
+
+ Attention coefficient: Each attention coefficient is learned email and streaming. To evaluate environment shifts, we
+through the self-attention mechanism, where each node in the collect a new application dataset, APP-SHIFTS, capturing
+graph learns the weight for each of its neighbors based on encrypted application traffic in a campus network. When a
+their respective feature vectors. The definition of the attention user accesses an encrypted application on a PC, the generated
+coefficient is as follows: traffic is saved on a data server using a traffic capture tool.
+ exp LeakyReLU (a[Whi ||Wh j])
+  Environment shifts are simulated by a total of 72 factors,
+ αi, j = P  (5) including content, bandwidth, and resolution. The dataset is
+ k ∈ Ni exp LeakyReLU aT [Whi ||Whk ]
+ collected using a combination of manual interactions and
+where αi, j represents the attention coefficient for the edge scripted actions. Manual interactions involve engaging with
+between nodes i and j, W is a weight matrix, hi and h j are specific applications, such as reading emails in Outlook. Meanthe feature vectors for nodes i and j, respectively, Ni is the while, scripts are employed to control the shift factors and
+set of neighbors of node i, || represents concatenation, and execute specific actions with the applications. For example,
+LeakyReLU is the leaky rectified linear unit activation func- a script may randomly generate text content and send it
+tion. The vector a is a learnable parameter vector that is shared via WeChat, simulating user interactions while capturing the
+across all nodes and is used to calculate the compatibility score associated traffic. In the application shift classification task,
+between node attributes. training and test sets have non-overlapping shift factors to
+ Feature aggregation: According to the attention coefficient, simulate environment shifts. In contrast, in the traditional
+we aggregate the node attributes by weighting and summing application classification task, traffic is randomly divided into
+them to obtain the embedded representation of the aggregated training and test sets ignoring environment shifts. Dataset
+node. It is defined as follows: statistics are summarized in Table II.
+ Attack detection: It is identifying and detecting malware
+ 0 1
+ X
+ h0i = σ @ αi j Wh j A (6) activities in encrypted traffic, such as Zeus, Emotet. We
+ j∈Ni use the publicly available CIC-IOT2023 [42] dataset, which
+ contains benign and the most up-to-date common attacks
+where h0i is the new feature output by GAT for each node resembling real-world traffic. To construct environment shifts
+i, which incorporates neighbors information, and σ is the in attack detection, we partition data according to the IP
+activation function. In addition, we use multi-head attention pair method, ensuring that traffic from the same IP pair
+to enhance the node attributes, which is defined as follows: exists only in either the training set or the test set. Addi-
+ −
+ → K tionally, we enhance the realism of environment shifts by
+ hi = k=1 h(k)
+ i (7)
+ supplementing the “Benign” class traffic with APP-SHIFTS
+ −
+ →
+where K is the number of attention heads. The final output hi dataset.
+is the concatenation of the outputs from all attention heads. Malware detection: It is detecting network attack behaviors
+ 3) Readout: After the GraphSAGE and GAT processing, in encrypted traffic, such as DDoS, port scanning. We use
+we generate node embeddings for the Flow Graph. To repre- the publicly available Malware Capture Facility Project [43]
+sent the whole graph, we use a global mean pooling to derive dataset to evaluate the proposed method’s capability in malthe graph’s overall representation vector, defined as: ware detection. From this dataset, we select six well-known
+ N
+ ! types of malware, including Zeus, Dridex, DownloadGuide,
+ 1 X Wisdomeyes, Wannacry, and Trickbot, along with benign
+ R(H) = σ hi (8)
+ N HTTPS traffic. The malware samples vary by capture time
+ i=1
+ and variants to reflect environment shifts, while the benign
+where R(H) is the whole graph’s embedding, hi represents
+ traffic includes visits to different types of websites to reflect
+the i-th node’s feature, and σ refers to the sigmoid function.
+ environment shifts.
+ 4) Classifier: The classifier consists of dropout, linear, and
+ 2) Baseline Methods: To evaluate the performance of FGsoftmax layers to prevent overfitting and classify encrypted
+ SAT, we summarize the following baseline methods:
+traffic. Dropout layers randomly omit nodes to reduce interactions and overfitting, serving as regularization. Linear layers • FlowPrint [11]: It is a semi-supervised mobile app
+map high-dimensional data to a lower-dimensional label space, fingerprinting method using temporal correlations.
+with the softmax layer finalizing classification. We concentrate • 1dCNN [13]: It uses the first 784 bytes of encrypted flows
+on classifying encrypted traffic according to application type, and applies 1dCNN for classification.
+attack type and malware type. • CapsNet [14]: It leverages CapsNet to learn spatial and
+ location features of encrypted flows.
+ • GTID [15]: It computes n-gram frequencies and uses
+ VII. E XPERIMENT AND E VALUATION
+ transformers for feature learning.
+A. Experiment Setting • ET-BERT [16]: It is a pre-training model for generic
+ 1) Task and Datasets: We evaluate our proposed method traffic representation and fine-tuning.
+through four encrypted traffic classification tasks: • YaTC [30]: It is an Autoencoder-based traffic classifica-
+ Application classification and Application shift classi- tion with hierarchical flow representation.
+fication: The aim is to identify and classify the types of • FlowPic [18]: It creates flow images from packet size
+applications transmitted in encrypted traffic, such as chat, and time, which are classified via CNN.
+5334 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE III
+ T HE R ESULTS AND C OMPARISON W ITH BASELINE M ETHODS
+
+ TABLE IV
+ C OMPARISON R ESULTS OF T IME AND PARAMETERS W ITH BASELINE M ETHODS
+
+ • FS-Net [19]: It uses packet length sequences and an In terms of accuracy, we observe that FG-SAT shows the
+ LSTM-based Encoder-Decoder. best performance in all encrypted traffic classification tasks,
+ • Rosetta [31]: It enhances TLS classification with TCP- reaching an accuracy of 0.8508 and 0.9416 in the attack
+ aware augmentation and self-supervised learning. classification and malware detection, 6.85% and 6.33% higher
+ • RF [32]: It is a CNN-based Tor traffic fingerprinting with than the best baseline methods. The accuracy of 0.9516 in
+ traffic aggregation matrix. application classification is 3.02% higher than the best baseline
+ • GraphDApp [20]: It is a GNN-based method learning method, and the accuracy of 0.8979 in the application shift
+ structural relationships for DAPP identification. classification is 3.65% higher than the best baseline method.
+ 3) Evaluation Metrics and Implementation Details: We ET-BERT achieves the highest classification accuracy among
+assess FG-SAT’s performance using Accuracy (Acc), Preci- the baseline methods. ET-BERT leverages a large corpus of
+sion (Pre), Recall (Rec), and F1 , employing macro average traffic data during its pre-training phase, which allows it
+to mitigate bias from class imbalances. Prediction speed is to capture complex features and achieve high accuracy in
+gauged by the time taken to predict 100 flows, and model classification tasks. The superior performance of ET-BERT is
+complexity and memory usage are evaluated through trainable therefore largely driven by its extensive pre-training on a broad
+parameters. Our experiments rely on 5-fold cross validation dataset, which gives it an edge in recognizing encrypted traffic
+for robustness. patterns. Despite this, FG-SAT significantly outperforms all
+ For Flow Graph construction, we limit each flow to other traditional baseline methods in terms of both efficiency
+20 packets. In GraphSAT, hidden layers for both GraphSAGE and resource usage, making it more practical for real-time
+and GAT are set at 128. We use a batch size of 128, a deployment and limited computational resources.
+learning rate of 0.003, and cap epochs at 100, incorporating In terms of time and parameters, we investigate the time
+a 0.7 dropout ratio. Parameter fine-tuning details are in sec- it takes to predict a flow. FG-SAT takes only 4.82ms to
+tion VII-G. predict 100 flows, which is the shortest time than baselines. It
+ The model has up to 44,551 parameters and is suitable indicates that FG-SAT can simultaneously classify encrypted
+for deployment on various hardware platforms. We train it traffic quickly. Moreover, we count the number of trainable
+on an Ubuntu 22.04 system with an NVIDIA Tesla P100- parameters during the model training, and the number of
+PCIE-16GB GPU. Due to its small size and low resource parameters in FG-SAT is only second to GraphDAPP, which
+consumption, FG-SAT demonstrates strong deployability. has just one node attribute. Moreover, the number of parameters in FG-SAT is 3 out of 10,000 of that in ET-BERT.
+B. Comparison With Baseline Methods Thus, FG-SAT can achieve the lightweight encrypted traffic
+ We evaluate FG-SAT and baseline methods in application classification, which greatly reduces the memory requirements
+classification, application shift classification, attack detection, of devices in practical deployments.
+and malware detection, focusing on accuracy, classification Furthermore, comparing FG-SAT with FG-SAT full, we
+speed, and model parameters. Moreover, we compare FG- observe that after JSD-based feature selection, FG-SAT is able
+SAT, utilizing JSD-based feature selection, with FG-SAT full to achieve better performance. In particular, the accuracy of
+without feature selection. Results are detailed in Table III and FG-SAT is 7.44% higher than that of FG-SAT full under
+Table IV. environment shifts. Thus, the JSD-based feature selection
+CUI et al.: FG-SAT: EFFICIENT FLOW GRAPH FOR ENCRYPTED TRAFFIC CLASSIFICATION 5335
+
+ Fig. 6. Differences in data distribution under various environment shifts.
+
+algorithm selects robust features and improve the generalization ability of the method.
+
+C. Analysis on Environment Shifts and JSD-Based Algorithm
+ 1) Analysis on Environment Shifts: In the collected
+encrypted traffic application classification dataset, environment
+shifts are constructed by altering various factors. In this
+ Fig. 7. Mean distances (Euclidean, Cosine, Manhattan) for datasets with and
+section, we analyze the impact of these factors on data distri- without environment shifts. Darker colors indicate greater distances.
+bution. Different shift settings are implemented for five types
+of encrypted traffic, such as bandwidth, application, and action.
+Header fields are selected as node attributes in this paper,
+therefore, the distribution of packet header fields is compared conditions. However, this ideal situation is rarely seen in realto clearly reflect data distribution differences. Since header world scenarios. In all shift settings, the data distributions
+fields represent multi-dimensional features, data distribution is show varying degrees of divergence, with content, application,
+measured by comparing the distance of packets to the cluster resolution, and playback shifts causing significant differences.
+centroid through clustering methods. Note that we use cluster- These shifts lead to distinct distributions, which reduce the
+ing only to obtain the centroid for calculating data distribution, accuracy of encrypted traffic classification.
+not for classification. Therefore, we set the number of clusters Moreover, we use three distance metrics for environto 1. For instance, under the content shift of “browsing” traffic, ment shifts, including Euclidean distances, Cosine distances,
+K-means [44] clustering is performed on the traffic of two and Manhattan distances. As shown in Figure 7, it reveals
+groups of content, the cluster centroid is obtained, and then that all distance metrics are greater under environment
+the Euclidean distance of the data packet to the centroid is shifts than without environment shift. This indicates that
+calculated. This distance characterizes the distribution status of the factors can produce environment shifts at the traffic
+packets. Ultimately, kernel density estimation curves [45] are level.
+employed to statistically analyze the distribution of Euclidean 2) Analysis on JSD-Based Algorithm: In this section, we
+distances of the two types of content traffic, representing traffic analyze the JSD-based algorithm with specific browsing traffic
+distribution differences under content shift. environment shifts scenarios to observe the impact on the
+ Figure 6 illustrates the traffic distribution statistics for each different fields. We set four kinds of environment shifts for
+environmental shift. The “none” scenario refers to traffic gen- Browsing traffic, content, bandwidth, browser, and speed.
+erated without environment shift, representing traffic generated Content shifts refer to browsing different types of pages,
+under stable conditions, without changes in user behavior, such as blogs, pictures, and maps. Browser shifts refer to
+application configurations, or network quality. In this case, accessing pages with different browsers, such as Google and
+the distributions of the two groups nearly overlap under stable Edge. Bandwidth shifts refer to accessing pages at varying
+5336 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE V TABLE VI
+C OMPARISON R ESULTS W ITH BASELINE F EATURE S ELECTION A LGO - T HE R ESULTS OF A NALYSIS ON G RAPH SAT AND C OMPARISION W ITH
+ RITHMS GCN [50], G RAPH SAGE [28], AND GAT [29]
+
+ D. Analysis on GraphSAT
+bandwidths, and speed shifts refer to opening new pages in In this section, we conduct a comprehensive analysis of
+different time intervals. the GraphSAT model in relation to other traditional GNN
+ We classify features as robust or unstable based on inter- models, specifically, GCN, GraphSAGE, and GAT. Our goal is
+class and extra-class JSD comparisons. As shown in Figure 3, to evaluate the efficacy and efficiency of our proposed model
+blue indicates stable features (smaller inter-class differences), in the context of encrypted traffic application classification.
+while red indicates unstable features (larger inter-class differ- The results shown in Table VI demonstrate that GraphSAT
+ences). A color gradient represents the magnitude of the JSD exhibits better performance across various evaluation metrics,
+difference, with stronger colors indicating larger differences. including Pre, Rec, F1 , and Acc, highlighting its effectiveness
+ In the “None” environment shift scenario, namely when the in handling encrypted traffic classification tasks.
+environment shift does not happen, the inter-class distribution Furthermore, our analysis reveals that GraphSAT offers
+differences for all fields are smaller than the extra-class a competitive balance between accuracy and computational
+distribution differences, indicating that none of the fields have demands. The optimal combination of accuracy, time, and
+a negative effect on browsing traffic identification. When the parameter count positions GraphSAT as a more favorable
+environment shifts, we find that each shift scenario produces choice for encrypted traffic classification in comparison to the
+some unstable features. Meanwhile, both the packet length and other GNN models.
+time features, commonly used in existing studies, are greatly
+affected. This highlights the sensitivity of these features to E. Analysis on Open-World Classification
+environment shifts.
+ In the open-world, challenges arise not only from envi-
+ Overall, we observe that IP header fields such as ip.dsfield,
+ ronment shifts but also from the presence of unknown class
+ip.id, ip.flags, ip.ttl are robust fields across environment shifts,
+ traffic, which is not seen during training. To investigate the
+and therefore important for browsing traffic identification.
+ performance of FG-SAT in such open-world scenarios, we
+However, across shift scenarios, we find that content differincorporate an additional unknown class in the test set that
+ences have the greatest impact on features, with only 20 fields
+ is absent from the training set. The experimental results, as
+being robust, while bandwidth differences appear to have the
+ depicted in Figure 9, demonstrate some noteworthy patterns.
+least impact on the fields. Content differences directly alter the
+ We observe that the prediction probability for known classes
+intrinsic characteristics of network traffic, such as packet size
+ is relatively high, with 85% exceeding 0.975. In contrast,
+and transmission patterns, leading to changes in more field
+ the prediction probability for 70% of the unknown traffic
+distributions. In contrast, bandwidth differences only affect
+ falls below 0.975. This finding indicates that FG-SAT is
+transmission speed, resulting in a relatively smaller impact on
+ generally adept at detecting known classes with high confifield distributions.
+ dence. However, when confronted with unknown traffic, the
+ 3) Comparison With Baseline Feature Selection: The JSD
+ feature patterns of unknown traffic often exhibit substantial
+feature selection algorithm aims to evaluate feature distribution
+ dissimilarities compared to those of known classes, which
+differences and select robust features under environment shifts.
+ consequently leads FG-SAT to struggle to predict them as
+In this section, we compare the JSD algorithm with other
+ one of the known classes. This results in lower classification
+feature selection methods, including Chi-Squared Test [46],
+ probabilities for unknown traffic.
+L1-Regularized Logistic Regression (L1-LR) [47], Recursive
+ Given these findings, we propose that in open-world sce-
+Feature Elimination (RFE) [48], and Random Forest Feature
+ narios, the identification of unknown traffic can be effectively
+Importance (RFFI) [49]. To clearly compare their performance
+ achieved by setting an appropriate threshold for the classifier.
+with that of the JSD algorithm, we ensure that the dimensions
+ This approach allows FG-SAT to discriminate between known
+of their respective features remain consistent with the dimenand unknown classes based on their classification probabilities.
+sions of the JSD features. While the L1-LR indirectly achieves
+feature selection by reducing the coefficients of some features
+to zero, we maintain its original feature selection dimensions. F. Analysis on Adversarial Attack
+ As shown in Table V, none of these algorithms outper- In this section, we use the APP-SHIFT dataset for APP
+forms JSD under environment shifts. Only L1-LR yields classification experiments to analyze the impact of adversarial
+better classification results than without feature selection, attacks on FG-SAT model performance. Specifically, we create
+while the others result in lower accuracy. Therefore, the JSD training and test sets based on APP-SHIFT and generate
+algorithm outperforms current state-of-the-art methods in these adversarial samples using the automatic evasion method [51].
+conditions. To simulate environment shifts, the shift factors for the training
+CUI et al.: FG-SAT: EFFICIENT FLOW GRAPH FOR ENCRYPTED TRAFFIC CLASSIFICATION 5337
+
+Fig. 8. Results of JSD-based feature selection. The horizontal axis represents header fields, and the vertical axis represents specific environment shifts. The
+color gradient indicates the magnitude of the JSD difference: blue for stable fields, red for unstable fields, with stronger colors representing larger differences.
+
+ Fig. 10. The results on the maximum packet number of FG-SAT.
+
+Fig. 9. Open-world classification results, where the email class is removed
+from training but retained as an unknown class in testing. 70% of traffic falls
+below the threshold, while over 85% of known traffic is above it.
+
+ TABLE VII
+ T HE ACCURAY R ESULTS OF A NALYSIS ON A DVERSARIAL ATTACK
+
+ Fig. 11. The results on the dimension of the hidden channel of FG-SAT.
+
+ G. Parameter Tuning
+and test sets do not overlap. We select 3,000 samples from the 1) The Maximum Packet Number: Flow duration can vary
+training set for adversarial testing. widely, impacting model efficiency. We adjust flow aggrega-
+ For comparative experiments, we follow the configuration tion time by setting a maximum packet number, the results of
+in [51], using an ensemble model as the local model and which are illustrated in Figure 10. Experiments with different
+LR and FG-SAT as target models. The features for the packet counts show accuracy improves with higher counts up
+ensemble model and LR align with those in [51] while to a threshold. Analysis indicates accuracy gains level off
+FG-SAT employs the Flow Graph as traffic representation. beyond 20 packets, while aggregation time increases signif-
+Adversarial samples are generated through three methods: Add icantly. Therefore, we set the maximum packet count at 20.
+characters, Increase packets, and Change time. We assess FG- 2) The Dimension of Hidden Channel: A larger hidden
+SAT and LR on 3000 samples and the APP-SHIFT test set channel dimension enhances flow graph feature extraction and
+under none shift, adversarial attacks, and environment shifts accuracy but increases computation time. Balancing accuracy
+conditions. and computational complexity is key. Through a series of
+ As shown in Table VII, under adversarial attacks, FG- experiments, as depicted in Figure 11, we observe that as the
+SAT accuracy decreases by 3.24%, while LR drops by hidden channel dimension grows, accuracy improves up to a
+42.27%. Under environment shifts, FG-SAT decreases by point. At a dimension of 128, accuracy plateaus, indicating
+5.18%, and LR by 39.04%, indicating FG-SAT’s superior an optimal balance between accuracy and processing time.
+robustness. We attribute LR’s instability to its reliance on Thus, we set the hidden channel dimension at 128 for efficient,
+flow-level statistical features, lacking finer-grained packet effective encrypted traffic classification.
+and structural details, and the shared features between the
+local and target models, which raises the success rate of VIII. C ONCLUSION
+attacks. In this paper, we propose the Flow Graph for efficient
+ Overall FG-SAT combines Flow Graph with JS divergence encrypted traffic classification, which constructs flows as
+feature selection, providing stable traffic representation. It graphs to characterize the internal structure relationships and
+further incorporates packet header and structural relationships, rich node attributes. To improve the generalization of the
+capturing deeper traffic features to maintain high performance model to the real world, we propose a JSD-based feature
+under adversarial attack. selection algorithm that is able to select robust features under
+5338 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+environment shifts. In addition, we design a fusion Graph- [13] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+SAGE and GAT classifier GraphSAT, which can efficiently and encrypted traffic classification with one-dimensional convolution neural
+ networks,” in Proc. IEEE Int. Conf. Intell. Secur. Informat. (ISI), Jul.
+deeply learn Flow Graph features to achieve fast and accurate 2017, pp. 43–48.
+classification. We comprehensively evaluate the FG-SAT in [14] S. Cui, B. Jiang, Z. Cai, Z. Lu, S. Liu, and J. Liu, “A session-packetsthree different scenarios of encrypted traffic classification based encrypted traffic classification using capsule neural networks,”
+ in Proc. IEEE 21st Int. Conf. High Perform. Comput. Commun.
+tasks. It shows outstanding performance and outperforms state- IEEE 17th Int. Conf. Smart City IEEE 5th Int. Conf. Data Sci. Syst.
+of-the-art methods in terms of accuracy, time, parameters, and (HPCC/SmartCity/DSS), Z. Xiao, L. T. Yang, P. Balaji, T. Li, K. Li, and
+generalizability. A. Y. Zomaya, Eds., Aug. 2019, pp. 429–436.
+ [15] X. Han, S. Cui, S. Liu, C. Zhang, B. Jiang, and Z. Lu, “Network intrusion
+ The current method necessitates constructing Flow Graph detection based on n-gram frequency and time-aware transformer,”
+based on bidirectional flows, while in certain backbone net- Comput. Secur., vol. 128, May 2023, Art. no. 103171.
+works, individual nodes might only capture unidirectional flow [16] X. Lin, G. Xiong, and G. Gou, “ET-BERT: A contextualized datadata. This limitation inherently constrains the applicability gram representation with pre-training transformers for encrypted traffic
+ classification,” in Proc. ACM Web Conf., F. Laforest, R. Troncy, E. Simof the proposed method. To address this challenge, in our perl, D. Agarwal, A. Gionis, I. Herman, and L. Médini, Eds., 2022,
+future work, we will focus on refining the Flow Graph pp. 633–642.
+construction methodology to enable effective adaptation to [17] A. Ramezani, A. Khajehpour, and M. J. Siavoshani, “On multi-session
+ website fingerprinting over TLS handshake,” in Proc. 10th Int. Symp.
+unidirectional flow-based traffic classification. Meanwhile, we Telecommunications (IST), Dec. 2020, pp. 211–216.
+plan to improve the Flow Graph by investigating the influence [18] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for
+of different edge relationships and assigning them varying encrypted traffic classification and applications identification,” IEEE
+ Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1218–1232, Jun. 2021.
+weights. Additionally, we will further investigate the ability of [19] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow sequence
+FG-SAT to identify unknown categories and collect additional network for encrypted traffic classification,” in Proc. IEEE Conf. Comreal-world datasets with naturally occurring environment shifts put. Commun. (INFOCOM), Apr. 2019, pp. 1171–1179.
+to further verify the method’s practical effectiveness. These [20] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized application identification via encrypted traffic analysis using
+efforts will enhance the effectiveness and robustness of our graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+proposed method, as well as contribute to the advancement of pp. 2367–2380, 2021.
+the field of network traffic analysis. [21] S. Rezaei and X. Liu, “Deep learning for encrypted traffic classification:
+ An overview,” IEEE Commun. Mag., vol. 57, no. 5, pp. 76–81, May
+ 2019.
+ R EFERENCES [22] M. Shen et al., “Machine learning-powered encrypted network traffic
+ analysis: A comprehensive survey,” IEEE Commun. Surveys Tuts.,
+[1] C. Oh, J. Ha, and H. Roh, “A survey on TLS-encrypted malware network vol. 25, no. 1, pp. 791–824, 1st Quart., 2023.
+ traffic analysis applicable to security operations centers,” Appl. Sci., [23] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted malicious traffic
+ vol. 12, no. 1, p. 155, Dec. 2021. in real time via flow interaction graph analysis,” in Proc. Netw. Distrib.
+[2] J. Liu, Y. Zeng, J. Shi, Y. Yang, RuiWang, and L. He, “MalDetect: Syst. Secur. Symp., San Diego, CA, USA, Mar. 2023, pp. 1–18.
+ A structure of encrypted malware traffic detection,” Comput., Mater. [24] Z. Fu et al., “Encrypted malware traffic detection via graph-based
+ Continua, vol. 60, no. 2, pp. 721–739, 2019. network analysis,” in Proc. 25th Int. Symp. Res. Attacks, Intrusions Def.,
+[3] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani, 2022, pp. 495–509.
+ “Characterization of encrypted and VPN traffic using time-related,” [25] T.-D. Pham, T.-L. Ho, T. Truong-Huu, T.-D. Cao, and H.-L. Truong,
+ in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), 2016, “MAppGraph: Mobile-app classification on encrypted network traffic
+ pp. 407–414. using deep graph convolution neural networks,” in Proc. Annu. Comput.
+[4] T. Wang, X. Cai, R. Nithyanand, R. Johnson, and I. Goldberg, “Effective Secur. Appl. Conf., Dec. 2021, pp. 1025–1038.
+ attacks and provable defenses for website fingerprinting,” in Proc. 23rd [26] N. Malekghaini et al., “Data drift in DL: Lessons learned from encrypted
+ USENIX Secur. Symp. (USENIX Secur.), 2014, pp. 143–157. traffic classification,” in Proc. IFIP Netw. Conf., 2022, pp. 1–9.
+[5] J. Hayes and G. Danezis, “K-fingerprinting: A robust scalable website [27] N. Malekghaini et al., “Deep learning for encrypted traffic classification
+ fingerprinting technique,” in Proc. 25th USENIX Secur. Symp. (USENIX in the face of data drift: An empirical study,” Comput. Netw., vol. 225,
+ Secur.), T. Holz and S. Savage, Eds., Aug. 2016, pp. 1187–1203. Apr. 2023, Art. no. 109648.
+[6] B. Anderson, S. Paul, and D. McGrew, “Deciphering malware’s use of
+ [28] W. L. Hamilton, Z. Ying, and J. Leskovec, “Inductive representation
+ TLS (without decryption),” J. Comput. Virol. Hacking Techn., vol. 14,
+ learning on large graphs,” in Proc. NIPS, I. Guyon, U. von Luxburg,
+ no. 3, pp. 195–211, Aug. 2018.
+ S. Bengio, H. M. Wallach, R. Fergus, S. V. N. Vishwanathan, and
+[7] B. Anderson and D. A. McGrew, “Identifying encrypted malware
+ R. Garnett, Eds., Dec. 2017, pp. 1024–1034.
+ traffic with contextual flow data,” in Proc. ACM Workshop Artif. Intell.
+ [29] P. Velič ković, G. Cucurull, A. Casanova, A. Romero, P. Lio, and
+ Secur., D. M. Freeman, A. Mitrokotsa, and A. Sinha, Eds., Oct. 2016,
+ Y. Bengio, “Graph attention networks,” 2017, arXiv:1710.10903.
+ pp. 35–46.
+[8] M. Korczynski and A. Duda, “Markov chain fingerprinting to classify [30] R. Zhao et al., “A novel self-supervised framework based on masked
+ encrypted traffic,” in Proc. IEEE INFOCOM Conf. Comput. Commun., autoencoder for traffic classification,” IEEE/ACM Trans. Netw., vol. 32,
+ Apr. 2014, pp. 781–789. no. 3, pp. 2012–2025, Jun. 2024.
+[9] M. Shen, M. Wei, L. Zhu, M. Wang, and F. Li, “Certificate-aware [31] R. Xie et al., “Rosetta: Enabling robust TLS encrypted traffic clasencrypted traffic classification using second-order Markov chain,” in sification in diverse network environments with TCP-aware traffic
+ Proc. IEEE/ACM 24th Int. Symp. Quality Service (IWQoS), Jun. 2016, augmentation,” in Proc. 32st USENIX Secur. Symp., USENIX Secur.,
+ pp. 1–10. Jul. 2023, pp. 131–132.
+[10] Y. Chen, T. Zang, Y. Zhang, Y. Zhou, and Y. Wang, “Rethinking [32] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Subverting website
+ encrypted traffic classification: A multi-attribute associated fingerprint fingerprinting defenses with robust traffic representation,” in Proc. 32nd
+ approach,” in Proc. IEEE 27th Int. Conf. Netw. Protocols (ICNP), Oct. USENIX Secur. Symp., 2023, pp. 607–624.
+ 2019, pp. 1–11. [33] Y. Feng, J. Li, D. Sisodia, and P. Reiher, “On explainable and adaptable
+[11] T. van Ede et al., “FlowPrint: Semi-supervised mobile-app fingerprinting detection of distributed denial-of-service traffic,” IEEE Trans. Dependon encrypted network traffic,” in Proc. Netw. Distrib. Syst. Secur. Symp., able Secure Comput., vol. 21, no. 4, pp. 2211–2226, Jul. 2024.
+ San Diego, CA, USA, 2020, pp. 1–18. [34] Y. Feng and J. Li, “Toward explainable and adaptable detection and
+[12] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic classification of distributed denial-of-service attacks,” in Proc. Int.
+ classification using convolutional neural network for representation Workshop Deployable Mach. Learn. Secur. Defense, San Diego, CA,
+ learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2017, pp. 712–717. USA, Aug. 2020, pp. 105–121.
+CUI et al.: FG-SAT: EFFICIENT FLOW GRAPH FOR ENCRYPTED TRAFFIC CLASSIFICATION 5339
+
+[35] Y. Feng, J. Li, L. Jiao, and X. Wu, “Towards learning-based, content- Dongqi Han received the Ph.D. degree in computer
+ agnostic detection of social bot traffic,” IEEE Trans. Dependable Secure science from Tsinghua University, Beijing, China, in
+ Comput., vol. 18, no. 5, pp. 2149–2163, Sep. 2021. 2024. He is currently an Associate Researcher with
+[36] I. Akbari et al., “A look behind the curtain: Traffic classification in an the School of Cyberspace Security, Beijing Univerincreasingly encrypted Web,” Proc. ACM Meas. Anal. Comput. Syst., sity of Posts and Telecommunications. His research
+ vol. 5, no. 1, pp. 1–26, Feb. 2021. interests include network and artificial intelligence
+[37] S. Guthula, R. Beltiukov, N. Battula, W. Guo, A. Gupta, and security.
+ I. Monga, “NetFound: Foundation model for network security,” 2023,
+ arXiv:2310.17025.
+[38] S. Cui, J. Liu, C. Dong, Z. Lu, and D. Du, “Only header: A reliable
+ encrypted traffic classification framework without privacy risk,” Soft
+ Comput., vol. 26, no. 24, pp. 13391–13403, Dec. 2022.
+[39] B. Anderson and D. McGrew, “Machine learning for encrypted malware
+ traffic classification: Accounting for noisy labels and non-stationarity,” Zhiliang Wang (Member, IEEE) received the B.E.,
+ in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, M.E., and Ph.D. degrees in computer science from
+ Aug. 2017, pp. 1723–1732. Tsinghua University, China, in 2001, 2003, and
+[40] F. Nielsen, “On a generalization of the Jensen–Shannon divergence 2006, respectively. Currently, he is an Associate Proand the Jensen–Shannon centroid,” Entropy, vol. 22, no. 2, p. 221, Feb. fessor with the Institute for Network Sciences and
+ 2020. Cyberspace, Tsinghua University. His research inter-
+[41] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural ests include formal methods and protocol testing,
+ Inform. Process. Syst. (NIPS), I. Guyon, U. von Luxburg, S. Bengio, next-generation internet, and network measurement.
+ H. M. Wallach, R. Fergus, S. V. N. Vishwanathan, and R. Garnett, Eds.,
+ Dec. 2017, pp. 5998–6008.
+[42] E. C. P. Neto, S. Dadkhah, R. Ferreira, A. Zohourian, R. Lu, and
+ A. A. Ghorbani, “CICIoT2023: A real-time dataset and benchmark
+ for large-scale attacks in IoT environment,” Sensors, vol. 23, no. 13, Weihang Wang received the Ph.D. degree in comp. 5941, Jun. 2023. puter science from Purdue University, USA, in 2018.
+[43] Stratosphere.(2015). Stratosphere Laboratory Datasets. [Online]. Avail- She is currently an Assistant Professor with the Uniable: https://www.stratosphereips.org/datasets-overview versity of Southern California. Her research interests
+[44] M. Ahmed, R. Seraj, and S. M. S. Islam, “The k-means algorithm: A include software engineering and system security.
+ comprehensive survey and performance evaluation,” Electronics, vol. 9,
+ no. 8, p. 1295, Aug. 2020.
+[45] F. Kamalov, “Kernel density estimation based sampling for imbalanced
+ class distribution,” Inf. Sci., vol. 512, pp. 1192–1201, Feb. 2020.
+[46] L. Hakim, R. Fatma, and Novriandi,, “Influence analysis of feature
+ selection to network intrusion detection system performance using NSL-
+ KDD dataset,” in Proc. Int. Conf. Comput. Sci., Inform. Technol. Electr.
+ Eng. (ICOMITEE), 2019, pp. 217–220.
+[47] W. Li and J. Lederer, “Tuning parameter calibration for `1-regularized Bo Jiang received the Ph.D. degree from Chinese
+ logistic regression,” J. Stat. Planning Inference, vol. 202, pp. 80–98, Academy of Sciences in 2016. He is currently an
+ Sep. 2019. Assistant Professor at with the Institute of Infor-
+[48] H. Jeon and S. Oh, “Hybrid-recursive feature elimination for efficient mation Engineering, Chinese Academy of Sciences.
+ feature selection,” Appl. Sci., vol. 10, no. 9, p. 3211, May 2020. His research interests include network situational
+[49] J. L. Speiser, M. E. Miller, J. Tooze, and E. Ip, “A comparison of random awareness, knowledge graph, and data mining.
+ forest variable selection methods for classification prediction modeling,”
+ Expert Syst. Appl., vol. 134, pp. 93–101, Nov. 2019.
+[50] B. Jiang, Z. Zhang, D. Lin, J. Tang, and B. Luo, “Semisupervised learning with graph learning-convolutional networks,” in
+ Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+ 2019, pp. 11313–11320.
+[51] H. Yan et al., “Automatic evasion of machine learning-based network
+ intrusion detection systems,” IEEE Trans. Dependable Secure Comput., Baoxu Liu received the Ph.D. degree from the Gradvol. 21, no. 1, pp. 153–167, Jan. 2023. uate School, Chinese Academy of Sciences, Beijing,
+ China, in 2002. He is currently a Professor and a
+ Ph.D. Supervisor with the Institute of Information
+ Engineering, Chinese Academy of Sciences, Beijing,
+ Susu Cui received the Ph.D. degree from the School
+ and the School of Cyber Security, University of
+ of Cyber Security, University of Chinese Academy
+ Chinese Academy of Sciences, Beijing. His current
+ of Sciences, Beijing, China, in 2024. She is curresearch interests include network attack detection
+ rently an Assistant Researcher with the Institute
+ and defense, and network security situational awareof Information Engineering, Chinese Academy of
+ ness.
+ Sciences. Her research interests include encrypted
+ traffic analysis and network security.
+
+ Zhigang Lu received the Ph.D. degree in computer applications from the University of Chinese
+ Academy of Sciences. He is currently a Professor
+ Xueying Han received the B.S. degree from Bei- with the Department of Cyber Security, University
+ jing University of Posts and Telecommunications, of Chinese Academy of Sciences. He has pub-
+ Beijing, China, in 2020. She is currently pursuing lished more than 30 papers in top network and
+ the Ph.D. degree with the Institute of Information security journals and conferences, including IEEE
+ Engineering, University of Chinese Academy of Sci- T RANSACTIONS ON I NFORMATION F ORENSICS
+ ences, Beijing. Her research interests include deep AND S ECURITY , Computer Networks, Computers
+ learning and intrusion detection. & Security, and Trustcom. His research interests
+ include network and system security, with a specific
+ focus on cyber situation awareness, intrusion detection and prevention, and
+ mobile terminal security.

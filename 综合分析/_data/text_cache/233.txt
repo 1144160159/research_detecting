@@ -1,0 +1,149 @@
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024                                                  2045
+
+
+
+
+     GETRF: A General Framework for Encrypted
+    Traffic Identification With Robust Representation
+              Based on Datagram Structure
+         Xiaojuan Wang , Zikui Lu , Xinlei Wang , Mingshu He , Member, IEEE, and Xiaojun Wang
+
+
+
+   Abstract—Identifying encrypted traffic is essential for network              randomness of payload data and statistic values makes fin-
+management, but it becomes increasingly challenging as more                     gerprinting and feature-counting methods inadequate for the
+and more users adopt encryption protocols and traffic defense                   current environment.
+mechanisms for data privacy. Most existing methods heavily rely
+on deep features and labeled samples, overlooking the oppor-                       Deep learning, through hierarchical mapping and
+tunity to capture pattern information of datagram structure.                    weighted computations, enables automatic feature extraction,
+As a consequence, these methods are unable to extract rule-                     thereby addressing the challenges posed by random
+based knowledge from unlabeled data, limiting their ability to                  algorithms [9], [10]. As such, researchers employ end-to-end
+identify unseen or feature-perturbed traffic. In this paper, we                 models to classify encrypted traffic. However, these end-to-
+propose a new framework for encrypted traffic identification
+named Generic Encrypted Traffic Representation Framework                        end methods heavily depend on the feature distribution of
+(GETRF), which includes three pre-training tasks designed based                 samples and label quality, which can limit the generalization
+on the datagram structure. By leveraging the advantages of                      ability of the models. To mitigate the impact of label
+these tasks, GETRF can utilize unlabeled traffic to form generic                quality on models, researchers begin to adopt pre-training
+and robust representations, capturing the characteristics of                    approaches for identification. Works [11], [12] apply pre-
+datagrams at the byte, packet, and flow levels. After fine-tuning,
+these representations can be applied to identification tasks across             training techniques to encrypted traffic classification and
+multiple scenarios. The results demonstrate that GETRF achieves                 achieve significant results in application classification and
+state-of-the-art performance in multi-scenario and fine-grained                 attack detection tasks. Although reducing the amount of
+identifications, and effectively handles feature-perturbed traffic.             labeled data during the training, these works overlook the
+   Index Terms—Encrypted traffic identification, pre-training,                  effect of latent information of datagram structure on traffic
+generic traffic representation, cyberspace management, datagram                 representation, resulting in poor performance in multi-scenario
+structure, privacy-enhancing technology.                                        and fine-grained classification.
+                                                                                   To better tackle the challenge of encrypted traffic identifi-
+                                                                                cation, some practical issues that need to be discussed:
+                                                                                   1) The method for encrypted traffic identification should
+                          I. I NTRODUCTION                                      minimize the use of specific field values and hand-craft
+   DENTIFYING and categorizing traffic behaviors into                           features.
+I  their respective applications and services is crucial for
+cyberspace management [1], [2], [3], [4], [5]. They allow
+                                                                                   Encryption algorithms gradually cover plaintext, render-
+                                                                                ing the traffic behavior analysis based on specific values
+Internet service providers to improve the quality of service                    ineffective. Manual feature extraction, which often relies on
+as well as detect potential security threats [6]. However, with                 expert knowledge, faces challenges due to the rapid growth of
+the growth of privacy-enhancing technologies [7], [8], tradi-                   applications and services on the network, making the manual
+tional methods and machine learning models are encountering                     update of effective features increasingly complex.
+two significant challenges. Firstly, the availability of plain-                    2) The method for encrypted traffic identification should
+text is decreasing, making methods based on port numbers                        be robust and not rely on label quality or specific feature
+and protocol information unreliable. Secondly, the increasing                   distributions.
+                                                                                   Data labeling is a time-consuming task, and such a data col-
+   Manuscript received 16 November 2023; revised 27 March 2024; accepted        lection process not only results in long bootstrap times but also
+7 May 2024. Date of publication 14 May 2024; date of current version            poses additional challenges for identification. Furthermore,
+6 December 2024. This work was supported by the National Natural Science        traffic defense mechanisms aim to disrupt the feature distri-
+Foundation of China under Grant 62227805 and Grant 62071056. The
+associate editor coordinating the review of this article and approving it for   bution, negatively impacting models that rely on the specific
+publication was Y. Sagduyu. (Corresponding authors: Zikui Lu; Mingshu He.)      feature distribution of sample data for traffic classification.
+   Xiaojuan Wang, Zikui Lu, Xinlei Wang, and Mingshu He are with                   3) The method for encrypted traffic identification should be
+the School of Electronic Engineering, Beijing University of Posts and
+Telecommunications, Beijing 100876, China (e-mail: Luzikui@bupt.edu.cn;         generalized and able to be quickly applied to multi-scenario
+hemingshu@bupt.edu.cn).                                                         tasks as well as fine-grained classification.
+   Xiaojun Wang is with the School of Electronic Engineering, Dublin City          Encrypted traffic identification includes application classi-
+University, Dublin 9, Ireland.
+   Digital Object Identifier 10.1109/TCCN.2024.3400825                          fication, attack detection, anonymous detection, encapsulation
+                      2332-7731 
+                                c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+2046                                  IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 10, NO. 6, DECEMBER 2024
+
+
+
+detection, malware detection, and other tasks. An ideal method           state-of-the-art performance across five tasks with an
+should perform well across all of these tasks. Furthermore,              average F1 score of 99.12%. Additionally, we further val-
+in real network scenarios, there exists a significant amount of          idate the ability of GETRF for fine-grained identification
+background traffic. A method with strong generalization capa-            and its capability to resist traffic defense mechanisms, and
+bilities should be able to mitigate the impact of background             our method shows effectiveness under these conditions.
+traffic and complete fine-grained identification of target flows.      The remainder of the paper is organized as follows:
+   To sum up, considering the application scenarios and             Section II discusses the related work. Section III proposes
+challenges faced in encrypted traffic identification, an ideal      the framework architecture and pre-training tasks. Section IV
+method needs to satisfy both generality and robustness. For         presents the results and analysis of comparison experiments.
+generality, employing pre-training models to generate traffic       Finally, the paper is concluded in Section V.
+representations is a natural idea. These models can leverage
+large-scale unlabeled data and minimize the impact of specific
+                                                                                         II. R ELATED W ORK
+feature distributions on generic representations by separat-
+ing representation objectives from specific task objectives.        A. Encrypted Traffic Identification
+Compared to generality, robustness is a more challenging               The research on traffic identification has been widely
+issue. We consider that addressing this issue should focus          applied across a variety of applications. For discussion pur-
+on the datagram structure itself. Due to the limitations of         poses, we categorize the methods into three classes [6], with
+current random algorithms and the cold-start policy followed        the related works summarized in Table I.
+by the traffic protection measures, privacy-enhanced tech-             1) Statistic Method: The earliest methods used for traffic
+nologies cannot produce perfectly random encrypted traffic.         classification were port-based methods and DPI [13]. However,
+Therefore, similar patterns exist in datagrams of the same          these methods heavily relied on unencrypted information, and
+type. These similarities, observable in the traffic structure and   random changes in it could lead to misleading results. In
+padding characters, are influenced by the protocol, content, and    contrast, our method learns the traffic representations from
+encryption algorithm. By thoroughly leveraging this metadata,       multiple perspectives, which helps to enhance its robustness.
+we can uncover latent patterns behind the traffic.                     2) Machine Learning Method: To reduce the impact of
+   Based on the above considerations, in this paper, we propose     random content on classification, researchers utilize side-
+a new framework with a pre-training model, named Generic            channel information and machine learning to classify traffic.
+Encrypted Traffic Representation Framework (GETRF), for             Panchenko et al. [14] identified unknown traffic using features
+building generic and robust traffic representations. The frame-     like packet size, packet direction, and the volume of bytes.
+work includes three pre-training tasks based on datagram            AppScanner [15] trained classifiers using statistical features
+structure: Mask Token Prediction (MTP), Same Packet                 such as packet sizes, while BIND [16] exploited temporal
+Prediction (SPP), and Hidden State Feature Prediction (HSP).        features to classify traffic. However, these methods rely on
+Benefiting from these tasks, GETRF can utilize unlabeled            expert knowledge and require appropriate feature design. The
+traffic to form generic and robust representations by capturing     evolving nature of network traffic makes solutions, based on
+datagram characteristics at the byte, packet, and flow levels.      manually- and expert-originated features, unable to keep pace.
+Additionally, knowledge extraction from different aspects of           3) Deep Learning Method: Deep learning methods include
+datagram structures can also help mitigate the impact of traffic    end-to-end approaches, multimodal-based approaches, and
+defense mechanisms. The main contributions of this paper are        representation-based approaches.
+summarized as follows:                                                 Wang et al. [17] first introduced the end-to-end method
+   • We propose a novel pre-training learning framework             for flow classification, transforming packet data into grayscale
+      for encrypted traffic identification, which leverages         images for CNN. Building on this, Sirinam et al. [18]
+      large-scale unlabeled data to achieve high-performance        employed CNN for deep fingerprinting, while Bhat et al. [19]
+      and multi-scenario traffic classification without model       designed Var-CNN for flow classification. However, these
+      modification or extensive data training. Moreover, the        schemes did not fully consider the characteristics of datagram
+      framework can effectively mitigate interference of            structure in their design, leading to unsatisfactory model
+      privacy-enhancing technologies and background traffic.        performance. Lotfollahi et al. [20] developed DeepPacket to
+   • We design three pre-training tasks based on datagram           characterize raw payloads. Luo et al. [21] utilized trans-
+      characteristics, capturing byte, packet, and flow-level       former models to capture semantic relationships between
+      traffic information to generate generic and robust rep-       characters for traffic classification. Shen et al. introduced
+      resentations. Benefiting from the knowledge extraction        GraphDApp [22], transforming application traffic into graphs
+      from different aspects of datagram structures, representa-    for GNN-based identification. Huoh et al. [23] analyzed the
+      tions that are fine-tuned with a small amount of sample       relationships between traffic bytes, metadata, and packet inter-
+      data can be applied to various tasks. Additionally, multi-    actions for application classification. Although these methods
+      perspective learning enhances the framework’s ability to      do not require feature engineering, they require substantial
+      resist feature perturbations.                                 amounts of new, task-specific labeled data for retraining when
+   • We conduct comprehensive experiments to evaluate the           addressing new tasks. In contrast, our model can be easily
+      framework using five public datasets and an experi-           adapted to new scenarios with minimal fine-tuning on a small
+      mental dataset. The results show that GETRF achieves          dataset.
+WANG et al.: GETRF: A GENERAL FRAMEWORK FOR ENCRYPTED TRAFFIC IDENTIFICATION                                                     2047
+
+
+                                                               TABLE I
+                                N OTABLE R ELATED W ORKS IN E NCRYPTED T RAFFIC I DENTIFICATION TASKS
+
+
+
+
+   To overcome the limitation of single-model approaches,           have demonstrated that traffic patterns can be distorted through
+which fail to generalize high-dimensional features,                 methods such as dummy packet padding or traffic regular-
+researchers adopt multimodal approaches to classify traffic.        ization [29], [30]. These methods, which prevent accurate
+MIMETIC [24], by assembling models that observe different           traffic identification, are referred to as traffic defense mecha-
+features, addresses the problem of multi-view capitalization        nisms [31].
+of traffic data. However, this method still requires a large           During the transmission of traffic, datagrams pass through
+number of labeled samples for training, resulting in a              multiple relay nodes. By deploying defense models at these
+long bootstrap time. Considering bursts and communication           relay nodes, traffic can be manipulated, resulting in distorted
+protocols separately, Mimetic-All [25] leveraged context      

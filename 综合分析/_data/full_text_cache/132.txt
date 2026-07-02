@@ -1,0 +1,784 @@
+Knowledge-Based Systems 273 (2023) 110626
+
+ Contents lists available at ScienceDirect
+
+ Knowledge-Based Systems
+ journal homepage: www.elsevier.com/locate/knosys
+
+DI-NIDS: Domain invariant network intrusion detection system
+ ∗
+Siamak Layeghy , Mahsa Baktashmotlagh, Marius Portmann
+School of ITEE, The University of Queensland, Brisbane, Australia
+
+article info a b s t r a c t
+
+Article history: The performance of machine learning based network intrusion detection systems (NIDSs) severely
+Received 15 October 2022 degrades when deployed on a network with significantly different feature distributions from the
+Received in revised form 26 April 2023 ones of the training dataset. In various applications, such as computer vision, domain adaptation
+Accepted 5 May 2023
+ techniques have been successful in mitigating the gap between the distributions of the training and
+Available online 12 May 2023
+ test data. In the case of network intrusion detection however, the state-of-the-art domain adaptation
+Keywords: approaches have had limited success. According to recent studies, as well as our own results, the
+Adversarial domain adaptation performance of an NIDS considerably deteriorates when the ‘unseen’ test dataset does not follow
+Network intrusion detection system (NIDS) the training dataset distribution. In order to enhance the generalisability of machine learning based
+Cross-domain evaluation network intrusion detection systems, we propose to extract domain invariant features using adversarial
+Domain invariant anomaly detection domain adaptation from multiple network domains, and then apply an unsupervised technique for
+One-class SVM recognising abnormalities, i.e., intrusions. More specifically, we train a domain adversarial neural
+ network on labelled source domains, extract the domain invariant features, and train a One-Class
+ SVM (OSVM) model to detect anomalies. At test time, we feedforward the unlabelled test data to
+ the feature extractor network to project it into a domain invariant space, and then apply OSVM on
+ the extracted features to achieve our final goal of detecting intrusions. Our extensive experiments on
+ the NIDS benchmark datasets of NFv2-CIC-2018 and NFv2-UNSW-NB15 show that our proposed setup
+ demonstrates superior cross-domain performance in comparison to the previous approaches.
+ Crown Copyright © 2023 Published by Elsevier B.V. This is an open access article under the CC BY license
+ (http://creativecommons.org/licenses/by/4.0/).
+
+1. Introduction evaluation samples are drawn from the same dataset, and crossdomain evaluation is rarely considered.
+ For network anomaly/intrusion detection, labelling millions Moreover, current approaches for anomaly detection assume
+of real-world network records requires a significant amount of similar feature distributions for the training and test datasets [2].
+resources and human expertise. Various attacks do not happen Therefore, these models fail to perform well when there is a
+all the time/everywhere, and due to privacy and security con- distribution difference between the train (i.e., source) and test
+cerns, labelled real-world network intrusion detection systems (i.e., target) data. Our study shows that the performance of the ex-
+(NIDS) datasets are scarce, and rarely publicly available. Accord- isting NIDS models degrades when they are applied in a network
+ingly, the common way of training machine learning (ML) based environment that has a different feature distribution compared
+NIDSs is by using publicly available synthetic datasets. How- to the training environment/dataset [3,4].
+ever, as has been shown [1], there is a considerable difference To address the domain shift problem, several domain adaptain the feature distribution of the benign/background traffic be- tion (DA) techniques have been introduced in the literature. These
+tween real-world datasets and the synthetic benchmark datasets
+ techniques try to reduce the gap between the feature representacreated in research labs. Thus, the cross-domain performance,
+ tions of the labelled source and unlabelled target domains, so that
+i.e., the capability of correctly classifying the test samples in
+ the classifiers trained on the source domain perform similarly
+the presence of distribution shifts, is essential for adapting MLwell on the target domain [5,6].
+based NIDSs for successful deployment and use in real-world
+ Generally speaking, domain adaptation approaches follow a
+production networks.
+ supervised learning strategy, and thus, they are better suited
+ However, the majority of the proposed ML-based NIDSs are
+evaluated only on domain-specific datasets, i.e., the training and to class-balanced datasets. However, in the field of network intrusion/anomaly detection, anomalies are relatively rare events,
+ ∗ Corresponding author. i.e., network anomalies are in high class imbalance compared to
+ the benign/background traffic class. Based on our experimental
+ E-mail addresses: siamak.layeghy@uq.net.au (S. Layeghy),
+m.baktashmotlagh@uq.edu.au (M. Baktashmotlagh), marius@ieee.org results, current domain adaptation techniques based on a super-
+(M. Portmann). vised learning strategy perform poorly on finding anomalies.
+
+https://doi.org/10.1016/j.knosys.2023.110626
+0950-7051/Crown Copyright © 2023 Published by Elsevier B.V. This is an open access article under the CC BY license (http://creativecommons.org/licenses/by/4.0/).
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+ To address this gap, we are proposing a new unsupervised- three studies from the first subcategory and two studies from the
+learning scheme for cross-domain anomaly detection. In this second subcategory as explained below.
+method, we use a domain adaptation technique to first extract In the first subcategory, consisting of studies that do not need
+a domain-invariant representation of the data, and then apply labelled data from the target domain, [11] is the only work, to the
+the anomaly detection on the projected representation. For the best of our knowledge, that uses a DANN in the field of network
+domain adaptation, we use a Domain-Adversarial Neural Network intrusion detection. The paper focuses on detecting attacks in
+(DANN) [7], which is one of the well-known and best working smart grid networks. By applying the adversarial training to adapt
+approaches. The DANN can be simply incorporated in the feature learned models on normal operation data of the ISO New England
+extraction network by adding a gradient reversal layer to min- grids, the authors try to detect attacks at different times of the
+imise the difference between the representations of the source day on their smart grid network. The paper shows that, due to the
+and target domains. We first train the DANN using the labelled load demand changes during different times of day, conventional
+source data and unlabelled target data, and then, we exploit the ML-based NIDSs fail to detect attacks, and their proposed DANNfeature extraction branch of the DANN to obtain the domain based method improves the detection performance. The authors
+invariant features. Finally, we apply one-class Support Vector Ma- use false data injection attacks synthesised on the IEEE 30-bus
+chines or One-Class SVM (OSVM) [8] on the extracted features to system for the evaluation of their proposed framework. The paper
+reach our final goal of cross-domain anomaly detection. shows that the proposed method has superior detection perfor-
+ A network anomaly is a somewhat ill-defined concept that mance for persistent threats recurring in a highly dynamic smart
+is used to describe any networking event such as network at- grid, compared to conventional ML-based NIDSs.
+tacks/intrusions, failure, etc., that can significantly change the In [12] partial domain adaptation is used to map the source
+overall and flow-based feature statistics of a monitored network, and target domains to a domain-invariant feature space to ade.g. the number of input bytes [9]. dress the differences between the source and target datasets.
+ Note that, similar to other machine learning approaches, OS- The authors use weighted adversarial networks-based domain
+VMs fails to perform well in the presence of distribution shift. adaptation for transferring knowledge from the publicly available
+Therefore, before feeding the data to an OSVM, we project the labelled datasets, such as CIC-IDS2017 [13], to an unlabelled
+training and test data to a common subspace using a DANN. Internet of Things (IoT) dataset, such as [14]. In order to evaluate
+Our results clearly indicate that projecting features to a domain their proposed framework, the authors apply it to a combination
+invariant feature space, before feeding them into an OSVM, sig- of benign traffic and various common attack classes, across two
+ datasets. They train their model on CIC-IDS201, and evaluate it
+nificantly improves the cross-domain performance of intrusion
+ on the IoT dataset. In another evaluation, they train and test their
+detection.
+ model on different attack classes to evaluate the performance of
+ In summary, we propose a domain-invariant NIDS (DI-NIDS)
+ their model for detecting unknown attacks. The authors finally
+framework by leveraging recent advances in the domain adapcompare their framework with a DANN on a binary classification
+tation literature. DI-NIDS takes into account the intense classproblem consisting of benign traffic and a specific attack class,
+imbalance nature of anomalies in the NIDS data when addressing
+ and show it performs similar to a DANN. While this is an example
+the domain shift between the train and test datasets. The proof a partial cross-domain evaluation of NIDSs, they do not evaluposed framework is evaluated against various ML-models in both
+ ate their methods on full set of classes of the datasets. In addition,
+cross-domain and domain-specific evaluation scenarios, where it
+ the evaluation only considers one direction of the cross-domain
+shows superior performance. In the rest of this paper we first
+ evaluation, i.e. with training on one dataset and evaluation on
+discuss the related works in the next section, then explain the
+ the other, but not vice versa. As we show in this paper, this is
+proposed solution in Section 4. Extensive evaluation of DI-NIDS
+ a significant limitation, since the results are highly asymmetric.
+and comparison to the state-of-the-art are discussed in Section 5,
+ The authors of [15] propose the Energy-based Flow Classifier
+and Section 6 concludes the paper. (EFC), an anomaly-based classifier that infers a statistical model
+ based on labelled benign samples. They define the concept of
+2. Related work quantum energy for network flows and compute a threshold for
+ the benign flows as the 95th percentile of the benign flows’
+ New NIDS proposals such as [10], which focus on the domain- energy distribution. Then, they compare the energy of a given
+specific intrusion detection problem, have been provided by the flow to this threshold and declare a flow as malicious if its
+research community. For the relevant related works of this paper energy is above the threshold. The authors use three versions
+we considered proposed NIDSs which at least follow a partial of the CIC-IDS [13] dataset for the evaluation of their proposed
+cross-domain evaluation approach across different datasets. We algorithm. The paper’s results are compared with conventional
+managed to find two main groups of NIDS proposals in which ML-based NIDSs for both domain-specific, i.e., the same dataset as
+some aspects of the training and evaluation datasets are different. the source and target, and cross-domain, i.e., different source and
+While many of these works cannot be directly compared to our target domains. While the reported domain-specific performance
+work, we still included them since they consider partial elements is relatively high, the cross-domain performance is significantly
+of cross-domain evaluation. reduced.
+ While these previous studies do not require labelled data from
+2.1. Separate source and target domains the target domain, the next two studies need a small portion of
+ the target domain to have labels. The first paper in this group [16]
+ In the first group, cross-domain evaluation is realised via sep- considers a host-based intrusion detection approach, rather than
+arate training (source domain) and test datasets (target domain). network intrusion detection, and aims to reduce the number of
+In this group of NIDSs, techniques such as domain adaptation labelled samples from the target domain. The authors use two
+and transfer learning are applied on the source domain to ac- different host-based intrusion detection datasets as the source
+quire the knowledge of anomalies/attacks, and to extend this and target domains respectively. By using fine tuning techniques
+knowledge to classify samples from the target domain. This group of deep learning models, such as freezing the hidden layers, they
+can be further divided into two sub-categories; those which do manage to reduce the number of labelled samples from the target
+not require labelled data from the target domain, and those that domain, while improving the Area Under Curve (AUC) metric by
+need a subset of the target domain to have labels. We found 8%.
+ 2
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+ The last paper [17] in this subcategory uses domain adaptation The method presented in [15] is the only approach with a
+to address the scarcity of labelled training data by transferring cross-domain performance evaluation that is comparable to ours.
+the acquired knowledge from a publicly available labelled dataset. However, the performance of the method proposed in [15] shows
+Initially, the authors use the UNSW-NB15 [18] dataset and di- a 19% degradation (on average) of the cross-domain performance
+vide it into two subsets of complementary attack classes, and compared to the corresponding domain-specific performance. As
+evaluate their approach for the same feature set assessment. we will demonstrate, our proposed method performs significantly
+Then they use the NSL-KDD [19] dataset as the source and the better in this critical regard.
+UNSW-NB15 [18] dataset as the target domain, and evaluate their
+proposed method for different feature set assessment. Based on 3. Background: Unsupervised domain adaptation
+the provided results, the proposed method achieves a higher
+accuracy for various attack classes compared to the fine tuning Various unsupervised domain adaptation (UDA) proposals exmethod, for the same number of samples from the target domain. ist, which employ different techniques to mitigate the distribu-
+Although these two methods cannot be directly compared to our tional differences between the source and target datasets.
+work, as they need labels from the target domain, they discuss the Domain Alignment Networks (DAN) [25] is a UDA that utilises
+challenges of addressing the distribution gap between different a domain alignment layer to align the feature distributions of
+intrusion detection datasets. the source and target domains and learn domain-invariant features. The method employs the Maximum Mean Discrepancy
+2.2. Partially different domains (MMD) loss, which measures the distance between the means
+ of the feature distributions, to encourage the model to learn
+ In the second group of studies, the training and test datasets domain-invariant features that can generalise well across differare the same, but the dataset is divided into subsets containing ent domains. However, DAN solely focuses on aligning the means
+various attack classes. One subset is used as the source and the of the feature distributions of the source and target domains using
+other, which might include attack classes not present in the MMD loss, which may not always be adequate to capture complex
+source domain, as the target domain. Techniques such as domain domain shifts. Furthermore, the method does not explicitly take
+adaptation and transfer learning have been used to transfer the into account the class information of the source and target doknowledge learnt from the attack classes available in the source mains during the alignment process. This may lead to sub-optimal
+domain, to classify/detect the attack classes in the target do- feature alignment in scenarios where the class distributions of the
+main. It is noticeable that although there are studies that employ source and target domains differ significantly.
+transfer learning for closely related tasks such as malware de- Adversarial Discriminative Domain Adaptation (ADDA) [26] is
+tection [20], this paper primarily focuses on research concerning another UDA that combines adversarial training with a discriminetwork intrusion detection. native loss to acquire domain-invariant features. It is based on the
+ In [21], a transfer learning algorithm is used to transfer the Generative Adversarial Networks (GANs) principle, with two main
+knowledge of an image-based representation of network flows. components - a feature extractor and a domain discriminator.
+The authors train a convolutional neural network (CNN) in the The adversarial training alternates optimising the feature extracsource domain and augment it with one dense layer in the target tor and domain discriminator to prevent distinguishing source
+domain. In [22] the authors also use a CNN architecture for trans- and target domain features. By jointly optimising the adversarial
+fer learning on NIDS datasets. They use two concatenated CNNs to loss and classification loss, ADDA learns domain-invariant fealearn network attack patterns on a divided NSL-KDD dataset [19] tures that generalise well across different domains. This method
+and improve unknown/unseen attack detection performance in has achieved impressive results in several unsupervised domain
+comparison to conventional ML-based NIDSs. Similar to [21], the adaptation tasks like object recognition and semantic segmentaauthors in [23] convert divided KDD99 dataset [24] records into tion. However, the adversarial training can be sensitive to hypergray-scale images which are then processed for detecting attacks parameter choices and may suffer from instability during training.
+using a CNN architecture. For the purpose of transfer learning, Moreover, the method does not explicitly consider the class inthey use samples of unseen attacks to fine tune the trained CNN. formation during the alignment process, which could lead to
+ With the exception of [15], none of the related works dis- misaligned classes.
+cussed in this section provides a comparable cross-domain eval- Maximum Mean Discrepancy (MMD) [27] is a kernel-based
+uation of the proposed NIDS across different benchmark datasets. method UDA that aims to minimise distribution discrepancy be-
+While the methods proposed in [16,17] apply domain adaptation tween source and target domains by comparing their means in a
+techniques on network intrusion detection datasets, they are Reproducing Kernel Hilbert Space. It maps data into a common
+fundamentally different to our approach, since they rely on the feature space using a kernel function, and computes MMD as
+availability of target domain labels, which are difficult to obtain a distance measure between the means of source and target
+in real-world networks. In contrast, our method proposed in this domain data. This method is effective and widely used in unsupaper does not require target domain labels, and is hence much pervised domain adaptation tasks. Nonetheless, the method may
+more practical. not be efficient for large datasets due to its computational com-
+ The last three discussed studies, i.e., [21–23], do not consider plexity. In addition, it assumes that the two datasets are drawn
+domain adaptation, and mainly focus on detecting one or more from continuous distributions, which may not be applicable in
+attacks that were unseen during training. real-world scenarios where data is discrete or contains missing
+ While [11,12] are similar to our work in the sense that they values. Furthermore, it assumes that the kernel function is fixed
+do not require any target domain labels, these works do not and known in advance, which may be challenging to choose and
+provide a complete cross-domain evaluation such as presented can significantly impact the results of the test.
+in this paper. In [11], the proposed method is evaluated against Cycle-Consistent Adversarial Domain Adaptation (CyCADA) [28]
+the attacks injected into a smart grid network, and there is no combines the ideas of cycle-consistency and adversarial training
+consideration of applying such a method on the publicly avail- to learn domain-invariant features. In CyCADA, the goal is to learn
+able NIDS datasets. In [12] the proposed method is evaluated a mapping between the source and target domains such that the
+against subsets of the target domain and performance metrics are mapped source domain data is indistinguishable from the target
+provided for individual attack classes. domain data, and vice versa. The key innovation of CyCADA is the
+ 3
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+introduction of a cycle-consistency loss, which ensures that the
+mappings between the source and target domains are consistent
+and reversible. This cycle-consistency loss is combined with an
+adversarial loss, which encourages the mapped source domain
+data to be indistinguishable from the target domain data. The
+main limitation of CyCADA is its reliance on cycle-consistency,
+which can be sensitive to hyperparameter choices and may not
+always guarantee meaningful mappings between domains. Moreover, the method can be computationally expensive due to the
+need for training multiple networks.
+ Deep CORAL [29] aligns the second-order statistics of the
+source and target domain feature distributions using a deep neural network. It introduces a CORrelation ALignment (CORAL) loss
+to measure the distance between source and target domain covariance matrices and adds it to the standard classification loss.
+Deep CORAL can be easily integrated into existing deep learning architectures, enabling the neural network to learn domaininvariant features that generalise well across different domains.
+However, merely aligning the second-order statistics of source
+and target domain feature distributions may not be adequate to
+capture intricate domain shifts.
+ Contrastive Adaptation Network (CAN) [30] learns domaininvariant features by minimising the contrastive loss between Fig. 1. Proposed DI-NIDS architecture.
+positive pairs (samples from the same class) and negative pairs
+(samples from different classes) across domains. The CAN consists of three main components: a feature extractor, a domain The above-mentioned approaches are suitable for classdiscriminator, and a label predictor. The feature extractor learns balanced datasets, but may not be effective in dealing with imbaldomain-invariant features, the domain discriminator distinguishes anced datasets. In the context of network intrusion and anomaly
+between source and target domains, and the label predictor detection, anomalies are rare events, leading to high class imperforms classification. The effectiveness of CAN is demonstrated balance compared to benign or background traffic. Hence, these
+on several benchmark datasets, showing that it outperforms methods are not optimal for detecting anomalies in networking
+existing unsupervised domain adaptation methods. Nonetheless, data. To address this gap, a new method is proposed in the next
+CAN relies heavily on the quality of the negative pairs for con- section.
+trastive learning. If the negative pairs are not representative of
+the true data distribution, the model may not learn meaningful 4. Proposed method (DI-NIDS)
+domain-invariant features.
+ More recently, Generative Domain Adaptation (GDA) [31], is Fig. 1 shows the architecture of Domain Invariant-Network
+proposed to use domain adaptation for face anti-spoofing. It Intrusion Detection System (DI-NIDS), our proposed approach, conconsists of three main components: a generator, a discriminator, sisting of two main components, DANN and OSVM. While OSVMs
+and a face anti-spoofing classifier. The generator is responsible generally perform well for one-class classification problems, in
+for generating target domain samples, the discriminator distin- particular anomaly detection, they do not perform well for crossguishes between real and generated samples, and the classifier domain data [33] in general. DANNs on the other hand, were
+performs face anti-spoofing. The GDA framework is trained in designed to address the problem of domain gap, i.e., different
+two stages. First, the generator and discriminator are trained feature distributions, in conventional machine learning models.
+using adversarial learning to generate realistic target domain The key idea of DI-NIDS is to enhance the domain adaptability of
+samples. Second, the face anti-spoofing classifier is trained using OSVM by leveraging the capabilities provided by a DANN.
+the generated samples and the source domain data. The reliance As can be seen in Fig. 1, a dense Multi Layer Perceptron
+on GANs is the main limitation of GDA, as it can be challenging to (MLP) is used as the basis of the DANN in our model, with the
+train and may suffer from mode collapse, leading to less diverse main hyper-parameters listed in Table 1. As per [7], it is possible
+generated samples. to implement a DANN using any feed-forward neural network
+ Another recent study, Unsupervised Domain Generalisation architecture, and the type of the neural network can be selected
+(UDG) [32], tries to address three challenges of (1) the presence to best match the attributes of the input data. For instance, if
+of domain-specific biases, (2) the difficulty in learning domain- the input type is an image, convolutional neural networks are
+invariant features, and (3) the lack of a clear evaluation protocol typically chosen. Since the NIDS data consist of a small number of
+for assessing the performance of domain generalisation methods. numeric and categorical features, we select a basic MLP network
+The UDG framework consists of two main components: a feature as a starting point.
+extractor and a domain classifier. The feature extractor learns The training of our DI-NIDS follows a two-step process. In the
+domain-invariant features, while the domain classifier distin- first step, the DANN is trained using the source data, source labels,
+guishes between different source domains. The authors introduce target data, and domain labels (labels that identify which domain
+a new loss function that combines classification loss and domain the input belongs to, i.e., train or test dataset). Note that no target
+confusion loss to encourage the learning of domain-invariant class labels are required in the training stage of the DANN. Once
+features. Nonetheless, the UDG framework may struggle if the the training stage of the DANN is completed, we employ the
+features learned by the feature extractor are not truly domain- trained feature extractor network Gf to extract domain invariant
+invariant, the model may not generalise well to unseen target features from the data. In the second step, the OSVM is trained
+domains using the extracted domain invariant features.
+ 4
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+ Table 1
+ Parameters of three neural networks utilised in the implemented DI-NIDS architecture.
+ Name Function Input nodes Output nodes No. of hidden layers Hidden layers nodes
+ Gf Feature extractor 39 10 2 10
+ GC Label classifier 10 2 0 0
+ GD Domain classifier 10 2 1 10
+
+ Fig. 2. Domain adversarial neural network.
+
+DANN Component: In ML-based NIDSs, as is the case in other application areas as well, it is difficult and time-consuming to label
+real-world data. Consequently, synthetic datasets are often used
+for training and evaluation of machine learning models. However,
+these synthetic datasets usually do not adequately represent realworld networks and suffer from distribution shift, i.e. a significant
+difference in feature distributions [1]. Generally speaking, domain
+adaptation aims at as making the distributions of source and
+target domains similar, so that if a classifier or detector is trained
+on the source data, it can perform well on the target data. [7].
+ In this work, we employ adversarial domain adaptation to
+extract domain invariant features from the source and target
+domains. The architecture of a DANN [7] is shown in Fig. 2. The Fig. 3. Two sub-processes of DANN including: (a) Source classifier training and
+architecture consists of three networks: feature extractor to ex- (b) Domain classifier training.
+tract features from the source and target domains, label classifier
+to predict class labels, and domain classifier to predict domain
+labels. The domain classifier network includes a gradient reversal 1
+ (1 − γi )log (4)
+layer to make the distributions of the source and target features 1 − GD (Gf (xi ))
+similar. Specifically, for the samples that are correctly classified
+ where
+by the domain classifier, a penalty is applied through multiplying
+ γi = 0
+ {
+their gradient by a negative factor during back propagation [7,11]. if xi ∈ DS
+ γi = 1 if xi ∈ DT
+Definition. Assume X = {x1 , x2 , . . . , xn } represents the input
+space, Y = {0, 1} is the set of binary labels, and η : X → Y is a bi- With the label classifier loss Ly (x, y) defined as
+nary classifier. Given the source domain, DS = {(xS1 , yS1 ), (xS2 , yS2 ),
+ 1
+. . . , (xSnS , ySn1 )}, and the target domain, DT = {(xT1 , yT1 ), (xT2 , yT2 ), Ly (xi , yi ) = log (5)
+ GC (Gf (xi ))yi
+. . . , (xTnT , yTn2 )}, the feature extractor neural network Gf can be
+ the optimisation function of the domain adversarial neural netdefined as work [7] can be written as
+Gf (x; W, b) = sigmoid (Wx + b) (1) ⎡
+where (W, b) are network weights and biases, with x ∈ DS . The ⎣1
+ ∑
+ min Ly (x, y)
+ W ,b,V ,c ,u,z nS
+label classifier network GC can be written as x∈DS
+
+GC (Gf (x); V, c) = sigmoid VGf (x) + c
+ ( ) ⎤
+ (2)
+ λ ∑ λ ∑
+with (V, c) representing the network parameters. Finally, the − LD (x, γ ) − LD (x, γ )⎦ (6)
+ nS nT
+domain classifier network GD can be formulated as x∈DS x∈DT
+
+GD (Gf (x); u, z) = sigmoid uT Gf (x) + z
+ ( )
+ (3) with nS and nT being the number of samples from the source and
+ target domains.
+with (u, z) the network parameters.
+ Two simultaneous sub-processes of label classifier training and
+ More specifically, for a given sample-label pair (x, y), x ∈ domain classifier training, as shown in Fig. 3-(a) and (b) respec-
+X , y ∈ Y , the domain classifier loss LD (x, γ ) is defined as follows: tively, contribute to the training process of the DANN. During
+ 1 the label classifier training, the source data and its labels are
+LD (xi , γi ) = γi log +
+ GD (Gf (xi )) passed through the feature extractor (Gf ) and label classifier (GC )
+ 5
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+networks, and are optimised through stochastic gradient descent the offset. The Lagrange method is used to solve the above minto update the weights in GC and Gf . imisation problem which results in the following classification
+ In the domain classifier training sub-process, the source data, rule [35]:
+the target data, and domain labels are passed through the feature
+ f (x) = sgn (wφ (xi ) − ρ)
+extractor (Gf ) and domain classifier (GD ). The domain labels (γ ) [ n ]
+identify the domain to which a given input belongs, as defined in ∑
+ = sgn αi yi K (x, xi ) − ρ (10)
+Eq. (4). In this sub-process, the samples with correctly predicted
+ i=1
+domain labels are penalised by the ‘‘Gradient Reversal’’ layer. The
+two sub-processes are optimised simultaneously, so the domain The hyperplane identified by w and ρ has the maximum distance
+invariant and discriminative features can be learnt. to the origin in the feature space F, which separates anomalous
+ data points from the normal ones concentrated in the origin.
+OSVM Component: In the one-class classification problem, the
+objective is to learn the feature distributions of the normal/benign 5. Experimental evaluation
+network flows, and identify samples that deviate significantly
+from that distribution. This is known as anomaly detection. 5.1. Datasets
+ Support Vector Machines (SVM) [34] were originally proposed
+for the multi-class classification problems and were later adopted For the evaluation of our proposed approach and models,
+for the one-class classification problem as proposed in [8,35]. we used the NetFlow versions of two publicly available NIDS
+ Assume χ = {(x1 , y1 ), (x2 , y2 ), . . . , (xn , yn )} represents a datasets, UNSW-NB15 [18] and CIC-2018 [13]. These are the two
+dataset in which xi ∈ Rd is the ith data point in a d-dimensional most-cited NIDS benchmark datasets among the recent NIDS
+input space I, and yi ∈ {−1, 1} represents the ith output, i.e., class datasets, providing a more realistic representation of today’s netlabels. A SVM uses a nonlinear function φ , i.e., a kernel, to project work traffic in comparison to older benchmark datasets such as
+data points from their input space I to a high dimensional feature NSL-KDD [19].
+space F, in which the classes can be distinguished by a linear The original UNSW-NB15 dataset was generated and pubhyperplane w T x + b = 0, with w ∈ F and b ∈ R. To find this lished by researchers at the University of New South Wales at
+hyperplane, SVM minimises the following objective function [35]: the Australian Defence Force Academy Canberra in 2015. The
+ second dataset, CIC-2018, was collected from a completely dif-
+ [ n
+ ] ferent network setup and published by the Canadian Institute for
+ ∥w∥2 ∑ Cybersecurity (CIC), University of New Brunswick (UNB), in 2018.
+min +C ξi (7)
+w,b,ξi 2 The original versions of these datasets are published with two
+ i=1
+ very different feature sets, with only six common features across
+subject to the two constraints of: the two sets, out of a total of 42 and 75 features of UNSW-NB15
+ and CIC-2018 datasets respectively [36]. This generally makes it
+⎨yi w φ (xi ) + b ≥ 1 − ξi ∀ i = 1, . . . , n
+⎧ ( t )
+ impossible to fairly compare the performance of ML models on
+ both datasets.
+ ξi ≥ 0 ∀ i = 1, . . . , n
+⎩
+ Therefore, a common feature set was needed for the crossdomain evaluation of our ML models. Accordingly, we used the
+Here, C is a constant determining the number of training data
+ NFv2-UNSW-NB15 and NFv2-CIC-2018 datasets, that were conpoints within the margin between two classes, i.e., training error,
+ verted to NetFlow from their original formats in [37]. NetFlow
+and ξ is the slack variable to prevent overfitting. Solving this
+ is the de facto standard in network flow reporting and is widely
+minimisation problem via Lagrange multipliers results in the deployed in real-world networks. The features in the NetFlow
+following classification rule for a given data point x [35]: versions of these datasets are comprised of 43 NetFlow version
+ 9 fields, which represent bi-directional network flows.1
+ [ n ]
+ ∑
+f (x) = sgn αi yi K (x, xi ) + b (8) Fig. 4 shows the class distributions for these two datasets. The
+ i=1 NFv2-UNSW-NB15 dataset includes 2,390,275 flows, labelled as
+ either Benign/background traffic, or one of the 9 attack classes.
+with αi being the Lagrange multipliers and the function K (x, xi ) =
+ The Benign class makes up 96.02% of the entire dataset. The NFv2-
+φ (x)T φ (x) being the kernel function.
+ CIC-2018 dataset consists of 18,893,708 flows, which are either
+ In OSVM [8], instead of learning a hyperplane to separate two
+ Benign or belong to one of the 14 attack classes, including various
+classes of data, a hyperplane is learnt to separate the abnormal
+ DoS and DDoS attacks, SQL Injection, Infiltration and Brute Force
+data points from the normal density in the origin. Hence, the
+ attacks. In this dataset, 88.05% of the flows are Benign.
+intention is to maximise the distance of the learnt hyperplane Since the focus of this paper is on binary classification, all the
+from the origin in the feature space F. An OSVM can be math- various attack classes in each dataset are aggregated into a single
+ematically formulated as a minimisation of the below objective class called Attack. However, the nature of this Attack class is
+function [35]: totally different for each dataset. Indeed, the number of attack
+ types, the number of flows belonging to each attack type and the
+ [ n
+ ]
+ ∥w∥2 1 ∑
+min + ξi − ρ (9) ratio of number of flows in each attack type to total flows are
+w,ξi ,ρ 2 νn different in each dataset. Even the attacks with similar names
+ i=1
+ from two datasets, such as DoS (from NFv2-UNSW-NB15) and
+subject to the following two constraints:
+ DoS attacks-Slowloris (from NFv2-CIC-2018) represent completely
+⎨(w.φ (xi )) ≥ ρ − ξi ∀ i = 1, . . . , n different types of attacks.
+⎧
+ Consequently, these datasets not only represent different network environments, as they have been generated in completely
+ ξi ≥ 0 ∀ i = 1, . . . , n
+⎩
+
+with ν ∈ (0, 1) being the upper bound identifier for the fraction of 1 A previous version of these datasets with 20 NetFlow fields is also publicly
+outliers and lower bound on the support vectors, and ρ ∈ R being available [36].
+
+ 6
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+Fig. 4. Class distribution for the datasets used in this study (a) NFv2-UNSW-
+NB15 and (b) NFv2-CIC-2018.
+
+different networks, they represent domains with different label sets. This is also reflected in previous studies such as [4],
+where it is shown that the performance of conventional ML
+models trained on one of these datasets severely degrades when
+tested on the other dataset. Another previous study [1] has also
+shown the difference between the feature distributions in the
+benign/background traffic of various NIDS datasets.
+
+5.2. Domain invariant projection
+
+ As shown in [38], the main objective of adversarial domain
+adaptation (ADA) is to map datasets to a new feature space, Fig. 5. Domain shift for NFv2-UNSW-NB15 and NFv2-CIC-2018 datasets in (a)
+ Before projection (Input data), and when projected via model trained on (b)
+where:
+ NFv2-UNSW-NB15 (DANN1) and (c) NFv2-CIC-2018 (DANN2).
+ • The feature distributions of the two datasets are aligned
+ • The feature distributions of different classes are discriminative and NFv2-CIC-2018 (referred to as DANN2) datasets, respectively. The input datasets consist of 43 features, and after passing
+In this section, we visually explore these objectives for the two through the Feature Extractor (Gf ) of the DANN component, the
+NIDS datasets used in this study. First, we investigate the separa- number of features is reduced to 10, as indicated by the number
+tion or closeness of feature distributions in these datasets before of nodes on the output layer of Gf in Fig. 1. To generate these
+and after applying domain-invariant projection via DANN. Then, visualisations, we use the Isomap [39] embedding algorithm to
+we examine the feature distributions of different classes before reduce the dimensionality of the data from 43 and 10 to 2,
+and after the projection using DANN. respectively.
+ Fig. 5 illustrates the visualisation of the NFv2-UNSW-NB15 and Let us now turn our attention to the second objective with
+NFv2-CIC-2018 datasets before and after projection via DANN. In respect to the NIDS datasets. Fig. 6 presents the visualisation of
+Fig. 5-(a), the two datasets are shown before projection, while in the Attack and Benign classes of the NFv2-CIC-2018 dataset, both
+Fig. 5-(b) and (c), they are shown after projection via DANN (Gf before and after undergoing DANN projection. To generate Fig. 6-
+network) trained on NFv2-UNSW-NB15 (referred to as DANN1) (a), (b), and (c), we have zoomed in on Fig. 5-(a), (b), and (c)
+ 7
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+ objective of adversarial domain adaptation for the NIDS datasets
+ has been successfully accomplished.
+ Likewise, the distribution of Attack and Benign classes of the
+ NFv2-CIC-2018 dataset illustrated in Fig. 6-(a) indicates a mixed
+ scatter of both classes, with samples from both classes located
+ in close proximity to one another in many areas of the feature
+ space. There exist only a few scattered clusters of the Benign
+ class. However, once again, after undergoing projection via either
+ DANN1 (Fig. 6-(b)) or DANN2 (Fig. 6-(c)), an increased separation
+ between the two classes can be observed, indicating a potential
+ for improved anomaly detection in the projected datasets.
+
+ 5.3. Results
+
+ In order to evaluate the proposed DI-NIDS framework, we
+ performed three sets of experiments. In the first set of experiments, DI-NIDS was evaluated in a domain-specific setup on our
+ chosen two benchmark datasets, i.e., it was trained and tested
+ on the same dataset, for each dataset separately. In the second
+ and third sets of experiments, we evaluated DI-NIDS in a crossdomain setup, i.e., with training on one dataset and testing on
+ the other. First, one dataset was used as the train/source, and
+ the other dataset as the test/target dataset. Then, we swapped
+ the train/source and test/target datasets and ran the evaluation
+ again, in order to obtain the cross-domain performance in both
+ directions. The domain-specific evaluation mainly serves as a
+ baseline, i.e., to compare the performance to the cross-domain
+ evaluation scenario.
+ Since there is no previous study of domain adaptation using
+ the same NIDS datasets that we are using in this study, we rely
+ on the results published in one of our previous works [4], which
+ includes both cross-domain and domain-specific evaluation of
+ conventional deep and shallow machine learning models. The
+ models used in this study include a long short-term memory
+ (LSTM) model, an AutoEncoder-based anomaly detection model,
+ and three shallow learning methods: Extra-Tree, Random-Forest
+ and Isolation-Forest. We used the results provided in [4] for
+ the LSTM, Extra-Tree and Random-Forest models. However, for
+ the AutoEncoder and Isolation-Forest models we had to conduct
+ new experiments because the results in [4] are for the balanced
+ version of datasets. In addition to the model performance results
+ provided in [4], we also used an MLP (Feed Forward) model in this
+ study, to provide an additional baseline result. This MLP model
+ is similar to the MLP model utilised to create the DANN, i.e., a
+ combination of the Gf and GC blocks of the DANN, as shown in
+ Fig. 3-(a). Selecting similar models in the DANN component of
+ DI-NIDS and the baseline MLP allowed us to evaluate the role of
+ the augmenting block GD in the cross-domain evaluation. Tables 2
+ and 3 show the parameters of the conventional deep and shallow
+Fig. 6. The Attack/Benign separation for the NFv2-CIC-2018 dataset for (a) learning models used for the comparison.
+input data before projection, and after projection via the model trained on (b) In addition to these conventional ML models, we also included
+NFv2-UNSW-NB15 (DANN1) and (c) NFv2-CIC-2018 (DANN2) datasets. the OSVM and DANN blocks individually in our evaluation. This
+ allowed us to evaluate the performance of DI-NIDS and compare
+ it with the performance of its key building blocks separately.
+respectively, and selected the NFv2-CIC-2018 dataset to make it For the evaluation of OSVM and DANN, each of these models
+easier to discern the changes before and after projection. We have was separately trained and evaluated. In the case of domainutilised green and red colours to represent the Benign and Attack specific evaluation, these models were trained and tested on
+classes, respectively. Therefore, Fig. 6-(a), (b), and (c) depict a por- NFv2-UNSW-NB15 and NFv2-CIC-2018 datasets separately. In the
+tion of the data displayed in Fig. 5-(a), (b), and (c), respectively, case of the cross-domain evaluation, each model was once trained
+to facilitate the investigation of the class distributions. on NFv2-UNSW-NB15 and tested on NFv2-CIC-2018 and then
+ The visual representation in Fig. 5-(a) reveals that there is trained on NFv2-CIC-2018 and tested against NFv2-UNSW-NB15.
+minimal overlap between the NFv2-UNSW-NB15 and NFv2-CIC- Table 4 shows the results (F1-Score) of domain-specific perfor-
+2018 datasets within the feature space, and the samples appear mance evaluation for DI-NIDS, and the eight baseline ML models
+scattered across a vast area. However, after undergoing projection used for comparison. As can be seen, while the performance of all
+via either DANN1 (Fig. 5-(b)) or DANN2 (Fig. 5-(c)), a significant the models except AutoEncoder are largely similar on both NIDS
+number of samples from both datasets are closely clustered to- datasets, DANN and DI-NIDS show the best performance on the
+gether in the feature space. Therefore, it is evident that the first NFv2-CIC-2018 and NFv2-UNSW-NB15 datasets respectively.
+ 8
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+ Table 2
+ The model parameters for three deep learning-based NIDSs along with the other parameters for training and evaluation of the
+ models.
+ Parameter Feed Forward LSTM AutoEncoder
+ No. Hidden layers 3 4 9
+ No. Nodes (each layer) 10 10 Differenta
+ Learning rate 0.0001 0.0001 0.0001
+ Dropout ratio 0.2 0.2 0.2
+ Batch size 512 512 512
+ Validation split 0.3 0.3 0.3
+ No. of folds 5 5 5
+ a
+ Nodes on layers [32,16,8,4,2,4,8,16,32].
+
+Table 3 Table 5
+The model parameters for three shallow learning-based NIDSs along with the Cross-domain performance (F1-Score (%)) and its difference to the correspondother parameters for training and evaluation of the models. ing domain-specific performance of DI-NIDS and conventional ML models for
+ Parameter Random-Forest Extra Tree Isolation-Forest the case where source domain is NFv2-CIC-2018 and the target domain is
+ NFv2-UNSW-NB15.
+ ccp_alpha 0.001 0.001 –
+ Batch size 512 512 512 ML model F1-Score (%) Performance degradation
+ Validation split 0.3 0.3 0.3 Random-Forest [4] 0.84% 94.60%
+ No. of folds 5 5 5 Extra Tree [4] 0.57% 84.05%
+ LSTM NN [4] 9.63% 80.54%
+ Feed Forward NNa 3.09% 94.63%
+Table 4 OSVM 86.15% 6.79%
+Domain-specific performance (F1-Score (%)) of various ML models compared to AutoEncoder 86.27% −28.00%
+DANN, OSVM and DI-NIDS when trained and evaluated on the same dataset. Isolation-Forest 26.96% 64.06%
+ ML model NFv2-CIC-2018 NFv2-UNSW-NB15 DANN 17.31% 80.50%
+
+ Random-Forest [4] 95.44% 92.17% DI-NIDS 85.79% 7.44%
+ Extra Tree [4] 84.62% 91.73% a
+ The feed forward neural network as depicted in Fig. 3-a.
+ LSTM NN [4] 90.17% 92.82%
+ Feed Forward NNa 97.72% 92.24%
+ OSVM 92.97% 98.28%
+ AutoEncoder 58.27% 75.52% Table 6
+ Isolation-Forest 91.02% 87.43% Cross-domain performance (F1-Score (%)) and its difference to the corresponding
+ DANN 97.81% 93.38% domain-specific performance of DI-NIDS and conventional ML models for the
+ case where source domain is NFv2-UNSW-NB15 and the target domain is
+ DI-NIDS 93.23% 98.68%
+ NFv2-CIC-2018.
+a
+ The feed forward neural network as depicted in Fig. 3-a. ML model F1-Score (%) Performance degradation
+ Random-Forest [4] 7.70% 84.47%
+ Extra Tree [4] 17.47% 74.26%
+ LSTM NN [4] 14.20% 78.62%
+ Feed Forward NNa 30.79% 61.45%
+ OSVM 15.74% 82.54%
+ AutoEncoder 12.29% 63.23%
+ Isolation-Forest 32.80% 54.63%
+ DANN 61.94% 31.44%
+ DI-NIDS 93.29% 5.39%
+ a
+ The feed forward neural network as depicted in Fig. 3-a.
+
+ this setting, first each model is trained on the NFv2-CIC-2018
+ dataset, and then tested against the NFv2-UNSW-NB15 dataset.
+ Then the source and target domains are swapped, i.e., the models
+ are trained on NFv2-UNSW-NB15 and tested against NFv2-CIC-
+ 2018. Tables 5 and 6 show the results of these evaluations re-
+Fig. 7. Average domain-specific F1-Score of various ML models on two datasets spectively. Similar to the domain-specific evaluation, we used the
+NFv2-CIC-2018 and NFv2-UNSW-NB15 (shown in Table 4) where the test and results of the Random-Forest, Extra-Tree and LSTM models on the
+training datasets are the same. same datasets from [4] for cross-domain evaluation. For the Feed
+ Forward model (MLP), AutoEncoder and Isolation-Forest, similar
+ to the domain-specific evaluation, we used the same network
+ Fig. 7 shows the average domain-specific performance (F1- setting/parameters as mentioned in Table 2.
+Score) of the considered models for the two datasets, as stated In both tables, the first column shows the model name, the
+in Table 4. As can be seen, DI-NIDS has the highest average per- second column shows its cross-domain performance and the
+formance on these two datasets, closely followed by OSVM and third column shows the difference between the cross-domain
+DANN. While the main idea of proposing DI-NIDS is to address performance and its corresponding domain-specific evaluation.
+the low cross-domain performance of conventional ML-based For instance, in Table 5 the Random-Forest model has a F1-
+NIDSs, the fact that DI-NIDS has the highest domain-specific Score of 0.84% when trained on NFv2-CIC-2018 and tested against
+performance among all the considered models is very promising. NFv2-UNSW-NB15. This is 94.60% lower than its performance
+ In the next set of experiments, we compared the performance (F1-Score) when trained and tested on NFv2-CIC-2018, as shown
+of DI-NIDS to the other models in two cross-domain setups. In in the first column of Table 4. Accordingly, the third column of
+ 9
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+ Table 7
+ Cross-domain performance comparison degradation (Degr.) comparison.
+ Model Train dataset Test dataset F1-Score (%) Degr. (%) Avg. Degr. (%)
+
+ Pontes et al. [15]
+ CIC-2017 89.80
+ CIC-2017 11.10
+ CIC-2019 78.70
+ 19.30
+ CIC-2019 91.60
+ CIC-2019 27.50
+ CIC-2017 64.10
+
+ NFv2-CIC-2018 93.23
+ NFv2-CIC-2018 7.44
+ NFv2-UNSW-NB15 85.79
+ DI-NIDS
+
+ NFv2-UNSW-NB15 98.68 6.42
+ NFv2-UNSW-NB15 5.39
+ NFv2-CIC-2018 93.29
+
+ 5.4. Comparison to baseline results
+
+ While there is no previous work evaluating the cross-domain
+ performance of NIDSs using the same set of datasets as used in
+ this study, there is a previous work [15] running similar experiments using other datasets. The authors of [15] used two versions
+ of the CIC-IDS dataset in their original format [13], CIC-2017
+ and CIC-2019, for their cross-domain evaluations. Although we
+ cannot compare the absolute performance numbers, we believe
+ it is possible to compare the corresponding degree of performance degradation from the domain-specific to the cross-domain
+ evaluation scenario.
+ Table 7 shows the performances of DI-NIDS compared to the
+ relevant state-of-the-art [15]. Here, each model is independently
+ trained on two datasets, and evaluated on the training dataset
+ (domain-specific evaluation), as well as the other, unseen dataset
+ (cross-domain evaluation). The cross-domain results are shown
+Fig. 8. Averaged cross-domain performance (F1-Score) of ML models across two
+cross-domain experiments.
+ as shaded cells in the table. The first column indicates the model,
+ followed by the training dataset and the test dataset. The fourth
+ column shows the corresponding F1-Scores.
+ The fifth column presents the cross-domain degradation, i.e. the
+Table 5 shows 94.60% for the performance degradation of the
+ difference between the F1-Score achieved in the domain-specific
+Random-Forest model.
+ evaluation and the corresponding cross-domain evaluation. Fi-
+ As can be seen, AutoEncoder, which is closely followed up
+ nally, the sixth column shows the cross-domain degradation avby one-class SVM, is the best performing model when NFv2-CICerage across the two test and train dataset combinations.
+2018 is the source and NFv2-UNSW-NB15 is the target domain.
+ While the absolute performance numbers of DI-NIDS and [15]
+In this case, the performance (F1-Score) of DI-NIDS is only 0.48%
+ in the table might not be comparable due the use of different
+lower than AutoEncoder, i.e., 85.79%. While this is a great redatasets, we argue that it is reasonable to compare the corresult for AutoEncoder in regards to domain adaptation, the next
+ sponding cross-domain degradation figures. We can see that the
+evaluation shows an entirely different results.
+ cross-domain degradation values of DI-NIDS are 7.44% and 5.39%
+ The results in Table 6 indicate that DI-NIDS is the best performing model in the second experiment, with a significant for the two ‘directions’ of evaluation, compared to 11.10% and
+advantage over the other models. In fact, DI-NIDS is the only 27.50% of [15].
+model capable of maintaining its performance over the two One of the benefits of DI-NIDS is that its performance degracross-domain experiments. It has a 7.44% performance degra- dation is relatively consistent across the two directions of crossdation in the first cross-domain experiment and 5.39%. AutoEn- domain evaluation, with only a (absolute) difference of 2%
+coder, which was the best performing model in the first between the two values. In contrast, the model proposed in [15] is
+experiment, only achieves an F1-Score of 12.29% in this exper- sensitive to the direction of cross-domain evaluation, and exhibits
+iment, with 63.23% degradation compared to its corresponding a higher degree of variance, with difference of more than 16%
+domain-specific performance. between the two directions of evaluation.
+ Fig. 8 shows the average performance (F1-Score) of the mod- Furthermore, and more importantly, the average cross-domain
+els for the two cross-domain experiments. As can be seen, all degradation of DI-NIDS is only 6.42%, compared to 19.3% to the
+the conventional ML models, including Random-Forest, Isolation- relevant state-of-the-art [15]. This is a significant improvement
+Forest, Extra-Tree, LSTM and Feed Forward, have very low average in terms of cross-domain performance, and represents a step
+cross-domain performance, no better than 29.88%. The OSVM, towards more domain invariant, and hence practical ML-based
+AutoEncoder and DANN models are somewhat better, with av- NIDSs.
+erage cross-domain performances of 50.96%, 49.28% and 39.63%
+respectively. However, they are still far from a truly domain 6. Conclusion
+invariant model, i.e., a model that is capable of maintaining its
+performance in the presence of domain shifts. This is in clear This paper proposes a domain-invariant network intrusion decontrast to DI-NIDS, which largely maintains its performance, tection system (NIDS) framework to address the shortcomings
+with an average cross-domain performance of 89.54%. of the existing NIDSs in regards to distribution shifts in data.
+ 10
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+While domain adaptation methods to address the problem of [3] S. Al-riyami, F. Coenen, A. Lisitsa, A re-evaluation of intrusion detection
+distribution shift have been extensively studied in a range of accuracy : an alternative evaluation strategy, in: ACM SIGSAC Conference
+ on Computer and Communications Security, 2018, pp. 2195–2197.
+machine learning application areas, it has not received significant
+ [4] S. Layeghy, M. Portmann, Explainable cross-domain evaluation of MLattention in the context of ML-based NIDSs. This is despite the based network intrusion detection systems, 2023, http://dx.doi.org/10.
+fact there are likely to be significant distribution shifts between 1016/j.compeleceng.2023.108692.
+training datasets and test data, in particular between (synthetic) [5] Mohammad J. Hashemi, Detecting anomalies in network systems by
+training datasets and real-world production networks, such as leveraging neural networks, (Ph.D. thesis), University of Colorado, 2021.
+ [6] M. Baktashmotlagh, M.T. Harandi, B.C. Lovell, M. Salzmann, Unsupervised
+shown in [1]. As we demonstrate in this paper, standard do- domain adaptation by domain invariant projection, in: Proceedings of the
+main adaptation (DA) methods based on a supervised learning IEEE International Conference on Computer Vision, 2013, pp. 769–776.
+approach do not work very well for NIDSs. One of the key reasons [7] Y. Ganin, E. Ustinova, H. Ajakan, P. Germain, H. Larochelle, F. Laviolette,
+is that the existing DA approaches generally assume balanced M. Marchand, V. Lempitsky, U. Dogan, M. Kloft, F. Orabona, T. Tommasi,
+ A. Ganin, Domain-adversarial training of neural networks, J. Mach. Learn.
+datasets. Realistic datasets (and network traffic in general) in the Res. 17 (2016) 1–35.
+context of NIDS are highly imbalanced, with attack or anomalous [8] B. Scholkopf, R. Williamson, A. Smola, J. Shawe-taylor, J. Platt, Support
+traffic representing only a small proportion of the overall network vector method for novelty detection, in: Advances in Neural Information
+traffic. Processing Systems, Vol. 12, 1999, pp. 1–7.
+ [9] D. Brauckhoff, A. Wagner, M. May, FLAME: A flow-level anomaly modeling
+ In order to address this gap, this paper proposes DI-NIDS, a doengine, in: Terry Benzel (Ed.), Workshop on Cyber Security Experimentamain invariant NIDS framework that takes into account the highly tion and Test, USENIX Association, San Jose, California, USA - CSET, 2008,
+imbalanced nature of network traffic, while efficiently address- p. 6, http://www.usenix.org/events/cset08/tech/full%5C_papers/brauckhoff/
+ing the distribution shift between source and target domains. brauckhoff.pdf.
+ [10] J.K. Samriya, R. Tiwari, X. Cheng, R.K. Singh, A. Shankar, M. Kumar,
+DI-NIDS achieves this by using a Domain-Adversarial Neural Net-
+ Network intrusion detection using ACO-DNN model with DVFS based
+work (DANN) to project the data into a domain-invariant feature energy optimization in cloud framework, Sustain. Comput.: Inform. Syst.
+space. The DANN is trained using data and labels from the source 35 (2022) 100746.
+domain, and unlabelled data from the target domain. DI-NIDS [11] Y. Zhang, J. Yan, Semi-supervised domain-adversarial training for intrusion
+learns features that discriminate between classes in the source detection against false data injection in the smart grid, in: Proceedings of
+ the International Joint Conference on Neural Networks, 2020.
+domain, but that do not discriminate between the source and [12] Y. Fan, Y. Li, H. Cui, H. Yang, Y. Zhang, An intrusion detection framework
+target domains. It leverages the feature extractor network of the for IoT using partial domain adaptation, in: International Conference on
+trained DANN, and uses an OSVM model for the downstream Science of Cyber Security, Vol. 2, Springer International Publishing, 2021,
+task of traffic classification and anomaly detection. Our exper- pp. 36–50, http://dx.doi.org/10.1007/978-3-030-89137-4_3.
+ [13] I. Sharafaldin, A.H. Lashkari, A.A. Ghorbani, Toward generating a new
+imental results show that, in addition to achieving excellent
+ intrusion detection dataset and intrusion traffic characterization, in: ICISSP
+domain-specific classification performance, DI-NIDS significantly 2018 - Proceedings of the 4th International Conference on Information
+improves the cross-domain performance over the relevant state- Systems Security and Privacy 2018-January, 2018, pp. 108–116.
+of-the-art. We believe that improving the domain invariance, and [14] Yisroel Mirsky, Tomer Doitshman, Yuval Elovici, Asaf Shabtai, Y. Mirsky, T.
+ Doitshman, Y. Elovici, A. Shabtai, Kitsune: an ensemble of autoencoders for
+robustness against feature distribution shifts, for ML-based NIDSs
+ online network intrusion detection, 2018, arXiv preprint arXiv:1802.09089.
+is an important step towards a more widespread deployment of [15] C.F.T. Pontes, M.M.C.D. Souza, J.J.C. Gondim, M. Bishop, M.A. Marotta, A
+such systems in practical real-world networks. new method for flow-based network intrusion detection using the inverse
+ potts model, IEEE Trans. Netw. Serv. Manage. 18 (2021) 1125–1136.
+CRediT authorship contribution statement [16] O. Ajayi, A. Gangopadhyay, DAHID : Domain adaptive host-based intrusion detection, in: IEEE International Conference on Cyber Security and
+ Resilience (CSR) Workshops DAHID, IEEE, 2021, pp. 467–472.
+ Siamak Layeghy: Conceptualization, Software, Validation, [17] A. Singla, E. Bertino, D. Verma, Preparing network intrusion detection deep
+Investigation, Writing – original draft, Visualization. Mahsa Bak- learning models with minimal data using adversarial domain adaptation,
+tashmotlagh: Methodology, Validation, Investigation, Writing – in: ACM SIGSAC Conference on Computer and Communications Security,
+ 2020, pp. 127–140.
+review & editing. Marius Portmann: Validation, Investigation,
+ [18] N. Moustafa, J. Slay, UNSW-NB15: A comprehensive data set for network
+Writing – review & editing, Supervision. intrusion detection systems (UNSW-NB15 network data set), in: Military
+ Communications and Information Systems Conference (MilCIS), IEEE, IEEE,
+Declaration of competing interest 2015, pp. 1–6, http://dx.doi.org/10.1109/MilCIS.2015.7348942.
+ [19] M. Tavallaee, E. Bagheri, W. Lu, A.A. Ghorbani, A detailed analysis of
+ the KDD cup 99 data set, in: 2009 IEEE Symposium on Computational
+ The authors declare that they have no known competing finan- Intelligence for Security and Defense Applications, 2009, pp. 1–6, http:
+cial interests or personal relationships that could have appeared //dx.doi.org/10.1109/CISDA.2009.5356528.
+to influence the work reported in this paper. [20] F. Ullah, S. Ullah, M.R. Naeem, L. Mostarda, S. Rho, X. Cheng, Cyberthreat detection system using a hybrid approach of transfer learning and
+ multi-model image representation, Sensors 22 (2022) 5883.
+Data availability [21] A.G. B, I. Odebode, Y. Yesha, A domain adaptation technique for deep
+ learning in cybersecurity, in: OTM Confederated International Conferences
+ The data used in this study is publicly available on the Move To Meaningful Internet Systems, Vol. 1, Springer International Publishing, 2020, pp. 221–228, http://dx.doi.org/10.1007/978-3-030-
+ 40907-4_24.
+Acknowledgements [22] P. Wu, H. Guo, R. Buckland, A transfer learning approach for network
+ intrusion detection, in: 4th IEEE International Conference on Big Data
+ This research is made possible by an Advance Queensland Analytics, 2019, http://dx.doi.org/10.1109/ICBDA.2019.8713213.
+Industry Research Fellowship, grant number RM2019002409. [23] Y.X. Yingying Xu, Zhi Liu, Yanmiao Li, Yushuo Zheng, Haixia Hou,
+ Mingcheng Gao, Yongsheng Song, Y. Xu, Z. Liu, Y. Li, Y. Zheng, H.M.G.
+ Hou, Y. Song, Y. Xin, Intrusion detection based on fusing deep neural
+References networks and transfer learning, in: International Forum on Digital TV and
+ Wireless Multimedia Communications. Vol. 1, Springer Singapore, 2020,
+ [1] S. Layeghy, M. Gallagher, M. Portmann, Benchmarking the benchmark - pp. 212–221, http://dx.doi.org/10.1007/978-981-15-3341-9_18.
+ analysis of synthetic NIDS datasets, 2021, arXiv preprint arXiv:2104.09029. [24] KDD Cup 1999 Data, University of California, Irvine, 1999, http://kdd.ics.
+ [2] S.M. Erfani, M. Baktashmotlagh, M. Moshtaghi, V. Nguyen, C. Leckie, J. uci.edu/databases/kddcup99/kddcup99.html, Accessed: 2020-07-30.
+ Bailey, K. Ramamohanarao, Robust domain generalisation by enforcing [25] M. Long, Y. Cao, J. Wang, M.I. Jordan, Learning transferable features with
+ distribution invariance, in: IJCAI International Joint Conference on Artificial deep adaptation networks, in: 32nd International Conference on Machine
+ Intelligence, Volume 2016-Janua,2016, pp. 1455–1461. Learning, ICML 2015, Vol. 1, 2015, pp. 97–105.
+
+ 11
+S. Layeghy, M. Baktashmotlagh and M. Portmann Knowledge-Based Systems 273 (2023) 110626
+
+[26] E. Tzeng, Judy Hoffman, Kate Saenko, Trevor Darrell, Adversarial discrimi- [32] V. Narayanan, Aniket An, Deshmukh, U. Dogan, V.N. Balasubramanian,
+ native domain adaptation, in: CVPR, InProceedings of the IEEE Conference On challenges in unsupervised domain generalization, in: Proceedings of
+ on Computer Vision and Pattern Recognition, 2017, pp. 7167–7176. Machine Learning Research, Vol. 181, 2022, pp. 42–58.
+[27] A. Gretton, K.M. Borgwardt, M.J. Rasch, B. Schökopf, A. Smola, A kernel [33] P. Oza, H.V. Nguyen, V.M. Patel, Multiple Class Novelty Detection under
+ two-sample test, J. Mach. Learn. Res. 13 (2012) 723–773. Data Distribution Shift, in: LNCS, Vol. 12352, 2020, pp. 432–449.
+[28] J. Hoffman, E. Tzeng, T. Park, J.Y. Zhu, P. Isola, K. Saenko, A.A. Efros, T. [34] C. Cortes, V. Vapnik, Support-vector networks, Mach. Learn. 20 (1995)
+ Darrell, CyCADA: Cycle-consistent adversarial domain adaptation, in: 35th 273–297.
+ International Conference on Machine Learning, ICML 2018, Vol. 5, 2018, [35] R. Vlasveld, Introduction to one-class support vector machines, 2013,
+ pp. 3162–3174. http://rvlasveld.github.io/blog/2013/07/12/introduction-to-one-class-
+[29] B. Sun, K. Saenko, Deep CORAL: Correlation alignment for deep domain support-vector-machines/.
+ adaptation, in: Computer Vision – ECCV 2016 Workshops, Vol. 9915, 2016, [36] M. Sarhan, S. Layeghy, N. Moustafa, M. Portmann, Netflow datasets for
+ pp. 443–450, http://dx.doi.org/10.1007/978-3-319-49409-835. machine learning-based network intrusion detection systems, 2020, arXiv
+[30] G. Kang, L. Jiang, Y. Yang, A.G. Hauptmann, Contrastive adaptation network preprint arXiv:2011.09144.
+ for unsupervised domain adaptation, in: Proceedings of the IEEE Computer [37] M. Sarhan, S. Layeghy, N. Moustafa, M. Portmann, Towards a standard
+ Society Conference on Computer Vision and Pattern Recognition, 2019, pp. feature set of NIDS datasets, 2021, arXiv preprint arXiv:2101.11315.
+ 4893–4902, http://dx.doi.org/10.1109/CVPR.2019.00503. [38] Y. Ganin, V. Lempitsky, Unsupervised domain adaptation by backpropaga-
+[31] Q. Zhou, K.Y. Zhang, T. Yao, R. Yi, K. Sheng, S. Ding, L. Ma, Genera- tion, in: International Conference on Machine Learning, PMLR, 2015, pp.
+ tive domain adaptation for face anti-spoofing, in: Computer Vision–ECCV 1180–1189.
+ 2022: 17th European Conference, Springer Nature Switzerland, 2022, pp. [39] J.B. Tenenbaum, V. De Silva, J.C. Langford, A global geometric framework
+ 335–356, http://dx.doi.org/10.1007/978-3-031-20065-6_20. for nonlinear dimensionality reduction, Science 290 (2000) 2319–2323.
+
+ 12

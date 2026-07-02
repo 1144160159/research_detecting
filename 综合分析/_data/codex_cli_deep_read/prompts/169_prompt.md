@@ -1,0 +1,1170 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [169] Advancing Security and Trust in WSNs: A Federated Multi-Agent Deep Reinforcement Learning Approach
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：169
+题名：Advancing Security and Trust in WSNs: A Federated Multi-Agent Deep Reinforcement Learning Approach
+年份：2024
+DOI：10.1109/tce.2024.3440178
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2024.3440178.pdf
+已有粗分类：联邦学习、隐私保护与分布式协同
+二级关联：IoT、车联网、工业互联网与边缘安全
+相关性：中相关，分数 9
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\169.txt
+- 原始字符数：49623
+- 本次发送字符数：49623
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+6909
+
+Advancing Security and Trust in WSNs:
+A Federated Multi-Agent Deep Reinforcement
+Learning Approach
+Hajar Moudoud , Member, IEEE, Zakaria Abou El Houda , Member, IEEE,
+and Bouziane Brik , Senior Member, IEEE
+
+Abstract—Wireless Sensor Networks (WSNs) show significant
+potential through their ability to collect and analyze real-time
+data, notably enhancing various sectors. The new emerging
+security threats present a severe risk to the security and
+reliability of WSNs. Data-driven Artificial Intelligence (AI)
+leverages WSNs data to deal with new emerging threats like
+zero-day attacks. However, AI-based models suffer from poor
+adoption due to the lack of realistic/up-to-date attack data.
+Recently, Multi-Agent Deep Reinforcement Learning (MARL)
+has gained significant attention for enhancing Intrusion Detection
+Systems (IDS) capabilities. MARL offers improved flexibility,
+efficiency, and robustness. However, this requires data sharing, leading to network bandwidth consumption and slower
+training. Additionally, the curse of dimensionality hampers its
+benefits, given the exponential expansion of the state-action
+space. Privacy-aware collaborative methods such as Federated
+Learning (FL) emerge as a new approach, enabling decentralized
+model training across a network of devices while preserving
+the privacy of each participant. In this context, we introduce
+a novel framework (MAF-DRL) that leverages FL and MARL
+to efficiently detect WSN-based attacks. MAF-DRL enables
+distributed learning across multiple agents with adaptive, flexible,
+and robust attack detection. We also introduce a trust-based
+scheduling mechanism that dynamically allocates resources based
+on agent reliability. This trust-aware approach allows FL systems
+to adapt to changing network conditions and device behaviors.
+By prioritizing reliable devices, our method improves the energy
+efficiency of WSNs and enhances the resilience and effectiveness
+of the distributed FL paradigm. Finally, we assess the robustness of our framework by testing it against real-world WSN
+attacks. This evaluation demonstrates its efficiency for secure and
+communication-efficient federated edge learning across various
+agents.
+Index Terms—Wireless sensor networks (WSNs), E-commerce,
+multi-agent federated learning, trust evaluation, energy
+efficiency.
+
+Manuscript received 31 January 2024; revised 24 March 2024 and 18 June
+2024; accepted 1 August 2024. Date of publication 7 August 2024; date of
+current version 31 December 2024. (Corresponding author: Hajar Moudoud.)
+Hajar Moudoud is with the Department of Computer Science and
+Engineering, Université du Quebec en Outaouis, Gatineau, QC J8X 3X7,
+Canada (e-mail: hajar.moudoud@uqo.ca).
+Zakaria Abou El Houda is with the Centre Énergie Matériaux
+Télécommunications, Institut National de la Recherche Scientifique
+(INRS-EMT), UMR INRS-UQO, Gatineau, QC J8X 3X7, Canada
+(e-mail: zakaria.abouelhouda@inrs.ca).
+Bouziane Brik is with the Computer Science Department, College of
+Computing and Informatics, Sharjah University, Sharjah, UAE (e-mail:
+bbrik@sharjah.ac.ae).
+Digital Object Identifier 10.1109/TCE.2024.3440178
+
+I. I NTRODUCTION
+IRELESS Sensor Networks (WSNs) play a crucial
+role in enhancing various aspects of e-commerce
+operations. These networks consist of spatially distributed
+autonomous sensors/nodes that monitor physical or environmental conditions and transmit data wirelessly [1], [2], [3].
+These nodes collaborate to monitor and collect data from
+their surrounding environments and transmit these data to a
+central location or a sink node for further processing. WSNs
+have demonstrated versatility in various applications, including
+resource management and e-commerce [4]. However, they face
+challenges related to resource limitations and security [5], [6].
+Context-aware WSNs offer a promising solution by tailoring feedback and recommendations to user needs, thereby
+streamlining daily activities. In this context, the integration of
+complex object networks holds the potential to enrich user
+experiences by adapting to dynamic contexts and preferences.
+Despite these advances, the overarching challenge of resource
+consumption persists, impacting operational efficiency and
+scalability. As e-commerce systems evolve, security becomes a
+paramount concern. Beyond usability and manageability challenges, ensuring robust security measures becomes critical to
+safeguarding sensitive user data and maintaining trust in online
+transactions. In this context, several Artificial Intelligence (AI)
+based solutions have been proposed to detect and predict
+attacks on these systems [7], [8]. Using the power of AI
+algorithms, e-commerce platforms can proactively identify
+anomalous behavior and mitigate potential threats.
+Recently, Multi-Agent Deep Reinforcement Learning
+(MARL) aims at enhancing Intrusion Detection Systems (IDS)
+capabilities by offering unparalleled flexibility, efficiency,
+robustness, adaptability, and scalability. Its ability to train
+multiple agents to collaborate or compete in complex environments enables rapid adaptation to evolving threats. By
+learning directly from raw data, MARL-based IDS systems
+automate feature extraction, enhancing detection accuracy
+while demonstrating resilience against adversarial attacks.
+The decentralized nature of MARL ensures fault tolerance
+and redundancy, guaranteeing uninterrupted operation even in
+dynamic network environments. Furthermore, MARL enables
+continuous learning, allowing IDS to stay ahead of emerging
+threats. Its scalability makes it suitable for large-scale network
+environments, ensuring consistent performance as networks
+
+W
+
+c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+1558-4127 
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+6910
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+grow. Despite its advantages, MARL encounters challenges
+that include data-sharing requirements leading to increased
+network bandwidth consumption and slower training speeds.
+Moreover, the curse of dimensionality poses a significant
+obstacle, as the exponential growth of the state-action space
+limits the effectiveness of MARL-based approaches.
+Privacy-aware collaborative methods such as Federated
+Learning (FL) emerge as a new approach, enabling decentralized model training across a network of devices while
+preserving the privacy of each participant. The FL allows
+for model training across a network of decentralized devices,
+exemplified by drones operating at the network edge. Within
+FL, each device autonomously refines its model using locally
+collected data, focusing on features relevant to its distinct
+operational context. Significantly, FL ensures data privacy by
+transmitting only aggregated model updates. This approach
+not only safeguards sensitive information, but also protects
+the autonomy of individual devices/sensors [3], [9], [10], [11],
+[12]. WSNs, characterized by their distributed nature and
+resource constraints, require FL models that account for the
+reliability of the device to ensure the integrity and efficiency
+of the learning process [13]. Thus, it is important to consider
+the trustworthiness of the sensors and to be context-aware to
+address the unique challenges posed by WSNs. By incorporating trustworthiness metrics into FL frameworks, we can
+mitigate the impact of unreliable devices on model accuracy
+and overall system performance. This proactive approach not
+only enhances the security and privacy of WSNs but also promotes energy efficiency and resource optimization. Therefore,
+by prioritizing device reliability and context awareness, we
+can unlock the full potential of FL in ensuring the integrity
+and efficiency of machine learning processes within WSNs.
+The continuous communication demands of FL also contribute
+to increased network load, and bottlenecks may exacerbate
+this situation, potentially leading to congestion and straining
+the network infrastructure. While previous FL studies have
+explored scheduling techniques aimed at optimizing resource
+utilization, focusing on resources such as time and local
+computing power, these approaches often overlooked crucial
+learning-related factors, including device trustworthiness.
+Sensors in WSNs exhibit various behaviors influenced by
+various factors such as environmental conditions, user interactions, and network activity. In WSNs, sensors can demonstrate
+different patterns based on their locations, sensing capabilities, and communication protocols. Similarly, in e-commerce
+systems, sensors embedded in devices or infrastructure can
+exhibit different behaviors depending on user preferences,
+purchasing habits, and browsing activities. Understanding and
+analyzing these behavioral patterns are crucial for detecting
+anomalies, identifying potential security threats, and optimizing system performance. Therefore, it’s crucial to group
+sensors with similar behaviors into clusters to improve security
+and enhance overall system efficiency.
+To address the challenges outlined above, this paper
+introduces a novel framework (MAF-DRL) that leverages
+FL and MARL to efficiently detect WSN-based attacks.
+Our proposed framework enables distributed learning while
+ensuring adaptive, flexible, and robust attack detection. Our
+
+proposed framework involves clustering sensors based on their
+behavior, which allows for more focused monitoring and
+analysis. This method expedites the detection of suspicious
+activities or deviations from normal behavior. Additionally, we
+propose a trust-based scheduling mechanism, to dynamically
+allocate resources based on agent reliability. This incorporation of trust-awareness enables FL systems to adapt to
+evolving network conditions and device behaviors. By prioritizing devices with proven reliability, our approach not only
+enhances the energy efficiency of WSNs but also strengthens
+the resilience and effectiveness of distributed FL paradigms.
+Finally, we evaluate the robustness of our framework using
+real-world WSN attacks. This evaluation demonstrates its
+efficiency for secure and communication-efficient federated
+edge learning across various agents.
+The main contributions of this paper are summarized as
+follows:
+• We propose a novel framework (MAF-DRL) that leverages FL and MARL to efficiently detect WSN-based
+attacks. MAF-DRL leverages MARL and FL for intrusion
+detection within WSNs, empowering autonomous identification and response to potential security threats.
+• We design a novel strategy of clustering sensors based on
+behavior, enabling focused monitoring and analysis for
+expedited detection of suspicious activities.
+• We design a scheduling algorithm that meticulously
+allocates necessary bandwidth to reliable sensors, emphasizing the reduction of communication expenses during
+the learning process and prioritizing participants demonstrating superior model learning performance.
+• We evaluate the effectiveness of our framework by testing
+it against real-world WSN attacks.
+The rest of this paper is organized as follows: Section II
+reviews the current state of the art of WSN-based attacks.
+Section III outlines our system model. Section IV introduces
+our MAF-DRL framework. Section V details the trust-based
+recommendation system. Section VI presents the performance
+evaluation. Finally, Section VII concludes the paper.
+II. R ELATED W ORK
+WSNs have demonstrated their adaptability in numerous
+fields [14], [15]. WSN security has become crucial, with
+several state-of-the-art schemes leveraging AI techniques to
+mitigate attacks in the wireless networks. In this section, we
+delve into some of the most prominent schemes leveraging
+AI techniques to ensure WSN security, along with their
+limitations.
+Vu et al. [16] focused on the design and implementation
+of a Mobile Ad Hoc Network (MANET) routing protocol optimized for energy efficiency within 5G networks.
+Khera et al. [17] evaluated existing clustering-based methodologies aimed at improving energy efficiency in sensor
+networks. The authors introduced a novel method called
+Hibernated Clustering Wireless Sensor Networks to address
+these shortcomings. This methodology focused on extending
+the operational duration of individual sensor nodes, thereby
+enhancing the overall network lifespan. Liu et al. [18]
+
+MOUDOUD et al.: ADVANCING SECURITY AND TRUST IN WSNs: A FEDERATED MARL APPROACH
+
+Fig. 1.
+
+6911
+
+Two-Tier System Architecture for Enhanced WSN Security and Efficiency.
+
+proposed a routing protocol modification, termed the
+Improved Energy-Efficient LEACH (IEE-LEACH) protocol.
+The IEE-LEACH protocol takes into consideration both the
+remaining energy levels of individual nodes and the average
+energy status of the entire network. Wei et al. [19] introduced
+a distributed clustering algorithm to adapt cluster sizes based
+on the hop distance to the data sink.
+The importance of trust spans across WSNs and
+e-commerce platforms, where it ensures reliability and
+integrity. In WSNs, trust guarantees accurate data exchange,
+while in e-commerce, it fosters secure transactions.
+Chen et al. [20] introduced IoTrust, a novel trust framework
+that integrated Software Defined Network (SDN) with the
+Internet of Things (IoT), alongside a cross-layer authorization
+protocol rooted in IoTrust principles. This innovative approach
+provided a unique angle on trust administration within IoT
+systems. Kumar et al. [21] introduced a novel approach to
+evaluate trust in WSNs by employing ML techniques. This
+method involves identifying specific trust attributes using a
+predefined model and then devising a unique algorithm that
+utilizes machine learning to categorize and integrate these
+attributes into a comprehensive trust value. Chen et al. in [20]
+introduced a novel approach to assess user trust within social
+e-commerce platforms, aimed at addressing the shortcomings
+of conventional methods marked by inaccurate evaluations
+and inefficiencies. This method leveraged AI techniques to
+establish a novel framework grounded on diverse factors such
+as business, environmental, and social elements, facilitating
+user trust levels.
+Security measures are indispensable for safeguarding data
+integrity and confidentiality in WSNs. Kumar et al. [21] introduced an innovative approach termed Intelligent Clustering for
+Intelligent Transportation Systems (ICITS), which employed
+a unique selection method for Cluster Heads (CHs) called
+GABAT, blending Genetic Algorithm (GA) and BAT
+
+Algorithm. ICITS aimed to meet stringent security and reliability requirements while collecting data from sensor nodes
+deployed in road transport scenarios. Yingzi and Zhaoji [22]
+proposed a hierarchical trust management system, TSW, tailored for Secure and Dynamic Wireless Sensor Networks
+(SDWSNs).
+To address the issues of these existing solutions, we introduce a novel framework (MAF-DRL) that leverages FL and
+MARL to efficiently detect WSN-based attacks. Our proposed
+framework enables distributed learning while ensuring adaptive, flexible, and robust attack detection. Our proposed
+framework involves clustering sensors based on their behavior,
+which allows for more focused monitoring and analysis. This
+method expedites the detection of suspicious activities or
+deviations from normal behavior. Additionally, we propose a
+trust-based scheduling mechanism, to allocate resources based
+on agent reliability dynamically. This incorporation of trustawareness enables FL systems to adapt to evolving network
+conditions and device behaviors. By prioritizing devices with
+proven reliability, our approach not only enhances the energy
+efficiency of WSNs but also strengthens the resilience and
+effectiveness of distributed ML paradigms.
+III. S YSTEM A RCHITECTURE
+Our system architecture (see Fig. 1) is structured into two
+tiers: Tier-1 consists of Base Stations (BS A, BS B, BS C,
+BS D) responsible for collecting and processing real-time data
+at the edge layer. Tier 2 comprises controllers to manage and
+process data from Tier 1. These controllers handle various
+critical functions, including the aggregation of secure FL data,
+reputation calculation, agent selection, and implementation of
+security actions and policies. The controllers communicate
+using Southbound APIs, such as OpenFlow, to ensure realtime data exchange and immediate response actions, such as
+
+6912
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+blocking jamming attacks. This architecture facilitates distributed learning across multiple agents with adaptive, flexible,
+and robust attack detection, leveraging both FL and MARL to
+improve the security and efficiency of WSNs. Table I shows
+the notations used to present our system model. Also, our
+proposed system model allows:
+1) Agent Representation: Each node in the network acts
+as an agent, representing either an individual device or
+a cluster of devices. Agents maintain localized datasets
+containing pertinent information about network activities, system logs, and relevant features.
+2) Local Attack Detection Models: Agents independently
+maintain their local attack detection models. Deep
+Q-Learning (DQL) is employed as the primary method
+for attack detection in this decentralized setup. DQL
+enables agents to continuously refine their models by
+dynamically interacting with the environment, resulting
+in a robust and adaptive defense mechanism against
+potential threats. The iterative improvement of local
+attack detection capabilities enhances the collective
+intelligence of the system, fostering a comprehensive
+and resilient security posture.
+3) Collaborative Learning: Agents participate in collaborative learning via our FL training process, collectively
+contributing to the refinement of the global attack detection model. Through this collaborative effort, agents
+leverage their diverse datasets to enhance the effectiveness and robustness of the global attack detection model.
+4) Recommendation System based on Reputation: Each
+agent has a reputation score that reflects the trustworthiness and reliability of individual devices within the
+network. By considering reputation scores, the recommendation system can offer personalized and reliable
+recommendations tailored to the specific needs and
+preferences of users. This enhances the overall user
+experience and fosters a collaborative and trustworthy
+environment within the WSN ecosystem.
+5) Resource Usage Personalization: We introduce an innovative scheduling algorithm that prioritizes participants
+with higher reputation scores, ensuring efficient utilization of resources. By strategically allocating bandwidth
+to trusted devices, we aim to enhance the overall
+efficiency of the federated learning system, reducing
+overhead while accelerating model convergence.
+IV. S ECURE AND E FFICIENT M ULTI -AGENT F EDERATED
+L EARNING
+The traditional update rule in Q-learning for a single-agent
+DQL is given by:
+
+
+  
+Q(s, a) ← Q(s, a) + α r + γ max Q s , a − Q(s, a) (1)
+a
+
+We then adapt the update rule for multiple agents, where i
+represents the agent’s index:
+
+
+  
+Qi (s, ai ) ← Qi (s, ai ) + α ri + γ max Qi s , ai − Qi (s, ai )
+ai
+
+(2)
+
+TABLE I
+N OTATIONS
+
+Then, we introduce the federated joint value function, which
+quantifies the expected cumulative return when a group of
+agents collaborates to detect and mitigate attacks within a
+shared network:
+∞
+N
+VFJ (s) = E
+
+γt
+t=0
+
+rit s0 = s
+
+(3)
+
+i=1
+
+where, VFJ (s) represents the federated joint value function for
+the state s, while N is the number of agents dedicated to attack
+detection and mitigation. In this setting, s0 = s denotes the
+initial state, t denotes the time step, and rit denotes the reward
+received by agent i at time step t.
+Furthermore, we define the federated joint action-value
+function for attack detection and mitigation as the cumulative
+return when all agents collaboratively take a set of joint actions
+to detect and mitigate attacks in a shared environment using
+federated learning.
+∞
+N
+γt
+
+QFJ (s, a) = E
+t=0
+
+rit s0 = s, a0 = a
+
+(4)
+
+i=1
+
+where, QFJ (s, a) signifies the federated joint action-value
+function for the state s and joint actions a, with N as the
+number of agents engaged in the detection and mitigation of
+attacks using FL (see Algorithm 1).
+A. Cluster-Based Anomaly Detection and Reward
+Optimization
+In the pursuit of enhancing anomaly detection within the
+Multi-Agent Framework for Deep Reinforcement Learning
+(MAF-DRL), we introduce an innovative approach that leverages clustering techniques to group agents exhibiting similar
+behaviors. This method significantly improves anomaly detection by focusing on deviations or unusual patterns within these
+clusters. By isolating and analyzing specific cluster behaviors,
+the detection and response to security attacks become more
+effective. We formulated this problem as an optimization
+
+MOUDOUD et al.: ADVANCING SECURITY AND TRUST IN WSNs: A FEDERATED MARL APPROACH
+
+Algorithm 1 Multi-Agent Federated Deep Reinforcement
+Learning (MAF-DRL)
+Input:
+Network environment, sensor agents, federated
+learning parameters
+Output: Collaborative reinforcement learning model
+1: Initialize federated learning environment
+2: Initialize sensor agents with DQL models θi
+3: Initialize federated learning parameters: learning rate α,
+discount factor γ , exploration rate 
+4: for each iteration t do
+5:
+for each sensor agent i do
+6:
+Receive state observation si from environment
+7:
+Select action ai using DQL model: ai =
+argmaxa Q(si , a; θi )
+8:
+Execute action ai in environment
+9:
+Receive reward ri from environment
+10:
+Update DQL model using Eq. (3)
+11:
+end for
+12:
+Share updated DQL models with other agents
+13:
+Aggregate models to form global model: θ̄ ←
+N
+1
+i=1 θi
+N
+14: end for
+15: return Collaborative reinforcement learning model θ̄
+
+problem in which the objective is to maximize the cumulative
+reward attained by the selected agents during training. The
+reward for attack detection (Rdetection (St )) incentivizes agents
+to accurately identify security threats based on the current
+state. It is determined by a weight factor wdetection and can be
+expressed as:
+1 if an attack is detected
+0 otherwise
+
+Rdetection (St ) =
+
+(5)
+
+Each agent’s participation in the training process is
+represented by a binary variable (xk,j ), where 0 denotes nonselection and 1 denotes selection. This problem is formulated
+as:
+∞
+
+R(st , at )xk,j
+
+maximize
+x
+
+(6a)
+
+t=0
+
+subject to
+xk,j ≤ 1,
+
+∀k ∈ [1, K],
+
+(6b)
+
+xk,j ≥ 1,
+
+∀k ∈ [1, K],
+
+(6c)
+
+xk ∈ {0, 1},
+
+∀k ∈ [1, K].
+
+(6d)
+
+j
+
+k
+
+where, xk,j represents the binary variable indicating agent
+selection for training, subject to constraints ensuring each
+cluster has at least one agent (6b) and each agent belongs
+to only one cluster (6c). The binary nature of the decision
+variable is enforced by constraint (6d). Notably, Problem (6a)
+is NP-hard due to its mixed-integer non-linear nature.
+To tackle this complexity, we propose employing stochastic
+gradient descent (SGD), where devices are assigned to clusters
+satisfying the constraints. The problem is then converted
+
+6913
+
+into a differentiable form suitable for SGD, allowing for
+gradient-based optimization. This transformation enables efficient solution space exploration, facilitating the maximization
+of total reward values for the selected agents during training.
+Subsequently, we employ SGD to iteratively update the
+values of xk,j to maximize the objective function. The update
+rule for each iteration i can be defined as follows:
+
+
+∞
+(i+1)
+(i)
+= clip xk,j
++ α∇xk,j
+xk,j
+
+(i)
+R(st , at )xk,j
+, 0, 1
+
+(7)
+
+t=0
+
+where, α denotes the learning rate, ∇xk,j represents the gradient
+concerning xk,j , and clip(·) is a function that restricts the values
+to fall within the range [0, 1].
+V. R ECOMMENDATION S YSTEM BASED ON T RUST
+In our proposed MAF-DRL, we utilize Graph Neural
+Networks (GNNs) to enhance the evaluation of participants’
+trust in the FL process. Our proposed approach leverages a
+graph structure to model the relationships and interactions
+among participants. Also, we introduce a consensus-based
+trust algorithm to capture the variance or disagreement among
+the FL participants. In this context, we use a distributed linear
+iterative algorithm to achieve consensus in the network.
+Let G = (P, E) be a network of FL participants, where P
+represents the set of FL participants and E represents the set
+of directed edges (connections between participants).
+Each FL participant p ∈ P has an initial state x(0)v , which
+is a real number representing its current value or opinion.
+The objective is to achieve consensus among the participants,
+where all participants eventually converge to a common value.
+The distributed linear iterative algorithm can be described by
+the following dynamics:
+x(t + 1)p =
+
+w(p, q)x(t)q
+
+(8)
+
+where, x(t + 1)p denotes the state or feedback of participant
+p at time t + 1, and x(t)q denotes the state or feedback of
+participant q at time t. The term w(p, q) represents the weight
+of the participant directly connected to p.
+The algorithm then updates the state of each participant at
+each time step by taking a weighted average of the states of its
+neighboring agents. The weights w(p, q) determine the influence or importance of each neighbor in the update process.
+In cases where participants p and q do not communicate with
+each other, the weights are w(p, q) = 0. In such instances, the
+FL participants converge i.e., limt→∞ x(p) = x(∞).
+Based on the feedback of other FL participants, we evaluated each participant’s trust score. We averaging the feedback
+ratings T(p) for participant p as follows:
+T(p) =
+
+N
+q=0 x(t + 1)q
+
+(9)
+N
+where, x(t + 1)q represents the FL participants providing
+feedback about participant p, and N is the total number of
+participants providing feedback.
+We then assign weights as follows:
+T(p) =
+
+q w(q, p)x(t + 1)q
+q w(q, p)
+
+(10)
+
+6914
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+where, q represents the FL participants providing feedback
+about p.
+A. Behavioral Clustering for Enhanced Anomaly Detection
+The level of agreement or convergence achieved by participants within the network is assessed using a consensus error
+metric, which quantifies the disparity between the actual states
+of participants and the desired consensus value. Typically,
+the consensus value is determined as the average state of
+all participants within the network. The difference between a
+participant’s actual state and the consensus value is termed as
+the consensus error, reflecting the reliability of FL participants.
+We
+define
+the
+reliability
+vector
+x(t)
+=
+[x1 (t), x2 (t), . . . , xn (t)] at time t, where x(t)p denotes the
+reliability state of participant p at time t. Here, the reliability
+state is binary, with x(t)p = 1 indicating a reliable agent and
+x(t)p = 0 indicating an unreliable agent.
+The consensus error at time t quantifies the discrepancy or
+deviation of each participant’s state from the average state. To
+represent the consensus error at time t, we use the root mean
+square error, defined as:
+
+
+1 N 
+2
+x(t)p − x̄(t)p
+(11)
+ConsensusErr(t) = 
+N
+p=1
+
+where, x̄(t)p is the average state of all participants at time t.
+The trust score is calculated based on the consensus error,
+where participants with smaller error values are considered
+more trustworthy. To provide a thorough assessment of a
+participant’s trust, we accumulate the trust scores over multiple
+time steps. Formally, the trust of a participant p can be
+expressed as:
+T  (p) =
+
+1
+T
+
+T(p, t)
+
+(12)
+
+where T(p, t) represents the trust of participant p from time
+t = 1 to t = T.
+Incorporating feedback alongside the consensus error allows
+for a more nuanced evaluation. While the consensus error
+measures the level of agreement within the network, the
+feedback score captures the direct feedback received by
+participants. The global trust of a participant is then computed
+as a combination of these factors:
+
+
+1
+(13)
+Tp = αx(p) + β
+ConsensusErr(p)
+where (x(p)) denotes the feedback-based trust received for
+participant p, ConsensusErr(p) is the consensus error of
+participant p, and α and β are weighting variables that regulate
+the influence of feedback and consensus in trust calculation.
+These components can be weighted based on their perceived
+relevance or trustworthiness, similar to the feedback-based
+trust formulation.
+We then define the global trust of an FL participant as:
+T  (p) = (Wfeedback × x(p))
+
+
+1
++ Wconsensus ×
+ConsensusErr(p)
+
+(14)
+
+Algorithm 2 Consensus Trust Algorithm
+1: Input: Feedback from participants
+2: Output: Consensus trust score for the target participant
+3: Initialization:
+4: Initialize trust scores for all participants to neutral values
+5: Specify the number of iterations and consensus threshold
+6: Feedback Collection:
+7: Gather feedback about the target participant’s behavior
+from multiple sources
+8: Consensus Error Trust Calculation:
+9: for i = 1 to N do
+10:
+Compute the consensus error trust using Equation (8)
+11:
+Update the trust scores of all participants using
+Equation (11)
+12: end for
+13: Consensus Verification:
+N
+T  (i)
+14: if T  (p) ≤ i=0N
+then
+15:
+return Consensus Reached
+16: else
+17:
+return Consensus Unreached
+
+where Wfeedback and Wconsensus represent the weights
+assigned to feedback-based trust and consensus-based trust,
+respectively.
+To verify the trustworthiness of a participant, we propose a
+consensus algorithm among all participants. Algorithm 2 calculates the consensus trust score for the target participant using
+inputs from various participants. Initially, it sets the number
+of iterations and the consensus threshold, then initializes a
+neutral trust value for each participant. The algorithm collects
+information on the behavior of the target participant from
+multiple sources and computes the difference between each
+participant’s trust score and the overall average trust score. It
+updates all participants’ trust scores using the consensus error
+values. Finally, consensus is determined by checking if the
+average trust score of each participant differs from the target
+participant’s trust score by less than the consensus threshold.
+B. Agent Selection
+Agent selection is crucial in dynamic environments where
+diverse skills are required for each agent to perform effectively.
+Optimal agent selection improves overall system performance
+and reduces computational complexities, thus improving the
+efficiency of the learning process. Given the resource-intensive
+nature of large-scale models, efficient scheduling is necessary
+to evenly distribute the workload and optimize learning efficiency. We propose an agent scheduling approach focused on
+resource optimization to prevent delays or interruptions during
+model transmission. This study utilizes Orthogonal Frequency
+Division Multiple Access (OFDMA), which allows simultaneous data transmission from multiple agents by assigning
+distinct subcarrier subsets to individual users, ensuring concurrent and interference-free communication.
+The transmission rate (rk ) of a device to the Mobile Edge
+Computing (MEC) server is calculated as follows:
+
+
+Pk gk
+, ∀k ∈ [1, K],
+(15)
+rk = αk B log2 1 +
+αk BN0
+
+MOUDOUD et al.: ADVANCING SECURITY AND TRUST IN WSNs: A FEDERATED MARL APPROACH
+
+Algorithm 3 Greedy Bandwidth Allocation Algorithm
+1: Input: Total_Bandwidth, T, ttrain , and tup
+2: Output: xk and bk
+3: N ← length(T)
+4: remaining_bandwidth ← Total_Bandwidth
+5: selected_agents ← empty_list()
+6: sorted_agents ← S ORTAGENTS B Y T RUST (T)
+7: for each agent in sorted_agents do
+8:
+k ← agent.index
+9:
+if isCandidate(k) ∧ has Sufficient Bandwidth(k) then
+10:
+select Agent(k)
+11:
+allocate Bandwidth(k)
+12:
+update Remaining Bandwidth(k)
+13:
+add To Selected Agents(k)
+14:
+end if
+15: end for
+16: return xk , bk = 0
+
+where rk represents the transmission rate of device k to the
+MEC server, αk denotes the allocated bandwidth for device
+k, B signifies the total available bandwidth, Pk denotes the
+transmission power of device k, gk represents the channel gain
+of device k, and N0 stands for the power spectral density of
+Gaussian noise.
+We then propose a device scheduling algorithm that optimizes not only the overall trust scores but also additional
+factors related to agents’ interactions and the learning process.
+up
+The training time (tktrain ) and upload time (tk ) are calculated
+as follows:
+We estimate the training time as:
+tktrain =  Dtk
+
+ζk
+fk
+
+(16)
+
+where  serves as a scaling factor, Dtk represents the dataset
+of agent k, ζk denotes the number of CPU cycles required to
+process a single data sample, and fk represents the processing
+power of the CPU.
+The upload time for transmitting a model from agent k to
+the central server can be expressed as:
+s
+up
+tk =
+(17)
+rk
+where s denotes the size of the model to be uploaded, and rk
+signifies the achievable data rate of agent k.
+We formulate an optimization problem for device
+scheduling that incorporates bandwidth constraints into the
+decision-making process. The objective is to maximize the
+cumulative reward, denoted by k Rk xk , where xk is a binary
+variable indicating the selection of agent k. The optimization
+problem is expressed as:
+maximize
+x,b
+
+Rk xk
+
+(18a)
+
+bk ≤ 1
+
+(18b)
+
+k
+
+subject to
+k
+
+
+up 
+xk tktrain + tk ≤ T, ∀k ∈ [1, K]
+
+(18c)
+
+6915
+
+xk ∈ {0, 1}, ∀k ∈ [1, K]
+0 ≤ bk ≤ 1, ∀k ∈ [1, K]
+
+(18d)
+(18e)
+
+where, bk denotes the bandwidth fraction allocated to agent k.
+The constraint (18b) ensures that the total bandwidth allocations among all agents do not exceed the available bandwidth.
+In our formulation, where timely responses are critical and
+operations must align with specific temporal requirements
+dictated by the dynamic WSN environment, we assert in
+constraint (18c) that the selected agents must complete their
+model training and upload within a predefined time frame.
+Constraint (18d) denotes the binary nature of xk , designating
+device k as either selected or not. Bandwidth allocation ratios
+are bounded by constraint (18e). In particular, considering
+constraints (18b), (18c), (18d), and (18e) solely mirrors the
+complexity of a knapsack problem, making it NP-hard. To
+tackle this challenge, we employ a greedy method, as detailed
+in Algorithm 3, effectively navigating the constraints while
+optimizing agent selection and bandwidth allocation, recognizing the intricate interplay between bandwidth considerations
+and model training deadlines.
+VI. P ERFORMANCE E VALUATION
+We implemented our proposed framework (MAF-DRL)
+using PySyft, a privacy-aware deep learning framework built
+on the PyTorch platform. We have considered a test environment, where multiple agents were deployed to conduct
+local training and then through the FL process conduct
+collaborative learning in a fully distributed manner. This capability empowers every agent to effectively attain an optimal
+policy, maximizing the cumulative expected reward, while
+simultaneously upholding the privacy of each agent’s data. Our
+exploration encompasses two distinct scenarios (see Table II
+and Table III). The initial scenario involves binary classification, where the focus is on binary classification for jamming
+events. The trained model is specialized in distinguishing
+between two possible outcomes: the presence or absence
+of jamming interference. This approach proves valuable in
+scenarios where a simple binary decision is sufficient, such
+as determining whether a communication channel is under
+intentional disruption. In the second scenario, we extend
+our approach to multiclass classification for jamming attack
+detection. This involves configuring the model to handle more
+than two classes, allowing it to categorize different types
+of jamming attacks. This classification is particularly useful
+in sophisticated environments where various jamming techniques may be employed, each requiring a specific response.
+Throughout both scenarios, the training process involves optimizing the model’s parameters to discern patterns and features
+indicative of jamming activities. The objective is to enhance
+the model’s accuracy in detecting and classifying jamming
+events, contributing to the overall resilience of the Wireless
+Sensor Network.
+To feed the initial environment with attack data, we used the
+WSN-DS dataset, which includes four distinct jamming attacks
+that were simulated using the LEACH protocol. These attacks
+comprise black hole, gray hole, flood, and scheduling attacks.
+In the black hole attack, a malicious node masquerades
+
+6916
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+Fig. 2.
+
+Agent rewards for (a) 10 rounds; (b) 25 rounds; and (c) 50 rounds.
+
+Fig. 3.
+
+Model Accuracies for (a) 10 rounds; (b) 25 rounds; and (c) 50 rounds.
+
+Fig. 4.
+
+Confusion matrices for (a) 10 rounds; (b) 25 rounds; and (c) 50 rounds.
+
+Fig. 5.
+
+ROC Curves for (a) 10 rounds; (b) 25 rounds; and (c) 50 rounds.
+
+as a Cluster Head (CH) and intentionally discards all data
+packets relayed through it. The Grayhole attack involves
+a deceptive CH selectively dropping packets, introducing a
+random or targeted element. Flooding attacks disrupt the
+LEACH protocol by flooding it with numerous advertising
+CH messages, leading to increased energy consumption and
+delayed decision-making by nodes. Scheduling attacks take
+place during the setup phase, causing data loss by assigning
+the same time slot to all cluster members to transmit data.
+The attacks were simulated with varying intensities (10%,
+30%, and 50%) to thoroughly assess their impact on the
+
+lifetime of the WSN, energy consumption, and overall network
+services.
+In this simulated environment, various scenarios were
+explored from 10 to 50 rounds of training. The evaluation of
+our proposed framework involved an extensive examination
+using key metrics, including accuracy, F1 score, receiver
+operating characteristic (ROC) curves, and confusion matrices.
+These metrics serve as crucial indicators for quantifying the
+model’s performance across different dimensions.
+Figs. 2(a), 2(b), and 2(c) show the convergence (i.e., cumulative average rewards) of our framework over 10, 25, and
+
+MOUDOUD et al.: ADVANCING SECURITY AND TRUST IN WSNs: A FEDERATED MARL APPROACH
+
+TABLE II
+WSN-DS L ABELS
+
+6917
+
+TABLE IV
+P ERFORMANCE M ETRICS OF MAF-DRL AND C URRENT AI-BASED
+M ETHODS
+
+TABLE III
+C LASSIFICATION S CENARIOS
+
+50 training rounds, respectively. We observe a continuous
+improvement in the average reward with increasing training
+rounds, reaching its maximum after only three rounds of training. Figs. 3(a), 3(b), and 3(c) show the obtained accuracy in
+both scenarios for 10, 25, and 50 training rounds, respectively.
+We observe that the accuracy of our proposed framework
+increases, reaching a maximum of 99. This shows that the
+agents learn from each other while preserving privacy, leading
+to a high accuracy score in the global model. Figs. 4(a),
+4(b), and 4(c) show the confusion matrix curves of our
+framework, highlighting its performance over 10, 25, and 50
+training rounds, respectively. Figs. 5(a), 5(b), and 5(c) show
+the confusion matrix curves of our framework, highlighting its
+performance over 10, 25, and 50 training rounds, respectively.
+Our framework achieves an accuracy of 99% and an F1 score
+of 99%. These curves offer a detailed visual breakdown of the
+model’s classification outcomes, emphasizing the distribution
+of true positive, true negative, false positive, and false negative
+instances. These obtained results emphasize the robustness and
+reliability of our framework, showcasing its ability to produce
+consistently accurate and precise predictions across varying
+training rounds. The visual representation through confusion
+matrix curves provides a general understanding of the model’s
+performance, further reinforcing its effectiveness in the context
+of the implemented jamming attack detection system.
+Table. IV shows the performance metrics of our proposed
+framework and current AI-based methods using the WSN-DS
+dataset. We have compared the performance of our proposed
+framework with some recent AI-based solutions (i.e., Naive
+Bayes (NB) [23], Multilayer Perceptron (MLP) [24], Adaptive
+boosting [25], and Boosting [25]) using the same WSNDS dataset. The remarkable performance metrics, including
+accuracy, precision, recall, and F1 score all reaching 99%,
+signify the robustness and reliability of our proposed solution.
+One of the key highlights of our framework is its ability
+to achieve such exceptional results with a minimal training
+time of only 52.12 seconds. This aspect underscores the
+efficiency and time-saving benefits that our solution brings to
+the table. The rapid convergence of our model during training
+further emphasizes its suitability for real-time applications and
+
+resource-constrained environments, such as wireless sensor
+networks. These promising results not only showcase the
+prowess of our proposed framework but also position it
+as a leading solution for WSN-DS applications. The high
+accuracy, precision, recall, and F1 score collectively validate
+the framework’s ability to accurately classify and detect attacks
+in the WSN-DS dataset.
+VII. C ONCLUSION
+In this paper, we have introduced a novel framework that
+uses a Multi-Agent federated learning and deep reinforcement
+learning Approach to secure WSNs against new emerging
+threats while preserving privacy. Our proposed framework
+facilitates collaborative learning among multiple agents. This
+enables each agent to efficiently acquire an optimal policy that
+maximizes the cumulative expected reward while maintaining
+the privacy of individual agent data. The obtained results
+showed that our proposed framework improves WSN security
+while ensuring privacy and resilient defense against potential
+threats in the WSNs ecosystem. For future directions, we
+intend to enhance the framework’s robustness against adversarial attacks by incorporating adversarial training approaches
+and developing mechanisms to detect and mitigate adversarial
+manipulation attempts targeting the federated learning process.
+R EFERENCES
+[1] A. Taneja and S. Rani, “A novel energy conservation scheme for
+IoT-based wireless networks: A use case of E-commerce systems for
+consumer electronics,” IEEE Trans. Consum. Electron., vol. 70, no. 1,
+pp. 1648–1655, Feb. 2024.
+[2] N. A. Pantazis, S. A. Nikolidakis, and D. D. Vergados, “Energy-efficient
+routing protocols in wireless sensor networks: A survey,” IEEE Commun.
+Surveys Tuts., vol. 15, no. 2, pp. 551–591, 2nd Quart., 2012.
+[3] P. Chanak and I. Banerjee, “Congestion free routing mechanism for
+IoT-enabled wireless sensor networks for smart healthcare applications,” IEEE Trans. Consum. Electron., vol. 66, no. 3, pp. 223–232,
+Aug. 2020.
+[4] L. Yang, Y. Li, J. Wang, and R. S. Sherratt, “Sentiment analysis for
+E-commerce product reviews in Chinese based on sentiment lexicon and
+deep learning,” IEEE Access, vol. 8, pp. 23522–23530, 2020.
+[5] Z. A. El Houda, L. Khoukhi, and B. Brik, “A low-latency fog-based
+framework to secure IoT applications using collaborative federated
+learning,” in Proc. IEEE 47th Conf. Local Comput. Netw. (LCN), 2022,
+pp. 343–346.
+[6] W. Mao, Z. Zhao, Z. Chang, G. Min, and W. Gao, “Energy-efficient
+Industrial Internet of Things: Overview and open issues,” IEEE Trans.
+Ind. Informat., vol. 17, no. 11, pp. 7225–7237, Nov. 2021.
+[7] B. Kumar et al., “A static machine learning based evaluation method for
+usability and security analysis in E-commerce website,” IEEE Access,
+vol. 11, pp. 40488–40510, 2023.
+
+6918
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 70, NO. 4, NOVEMBER 2024
+
+[8] R. Ketipov, V. Angelova, L. Doukovska, and R. Schnalle, “Predicting
+user Behavior in e-commerce using machine learning,” Cybern. Inf.
+Technol., vol. 23, no. 3, pp. 89–101, 2023.
+[9] C. Wang, D. Wang, Y. Tu, G. Xu, and H. Wang, “Understanding
+node capture attacks in user authentication schemes for wireless sensor
+networks,” IEEE Trans. Dependable Secure Comput., vol. 19, no. 1,
+pp. 507–523, Jan./Feb. 2020.
+[10] J.-Y. Yu, E. Lee, S.-R. Oh, Y.-D. Seo, and Y.-G. Kim, “A survey on
+security requirements for WSNs: Focusing on the characteristics related
+to security,” IEEE Access, vol. 8, pp. 45304–45324, 2020.
+[11] Z. A. E. Houda, D. Naboulsi, and G. Kaddoum, “A privacy-preserving
+collaborative jamming attacks detection framework using federated
+learning,” IEEE Internet Things J., vol. 11, no. 7, pp. 12153–12164,
+Apr. 2024.
+[12] Z. A. E. Houda, H. Moudoud, and B. Brik, “Federated deep reinforcement learning for efficient jamming attack mitigation in O-RAN,” IEEE
+Trans. Veh. Technol., vol. 11, no. 7, pp. 12153–12164, Apr. 2024.
+[13] F. Ding, G. Zhu, M. Alazab, X. Li, and K. Yu, “Deep-learningempowered digital forensics for edge consumer electronics in 5G
+HetNets,” IEEE Consum. Electron. Mag., vol. 11, no. 2, pp. 42–50,
+Mar. 2022.
+[14] J. Amutha, S. Sharma, and J. Nagar, “WSN strategies based on
+sensors, deployment, sensing models, coverage and energy efficiency:
+Review, approaches and open issues,” Wireless Pers. Commun., vol. 111,
+pp. 1089–1115, Mar. 2020.
+[15] M. Shafiq, H. Ashraf, A. Ullah, and S. Tahira, “Systematic literature
+review on energy efficient routing schemes in WSN—A survey,” Mobile
+Netw. Appl., vol. 25, pp. 882–895, Jun. 2020.
+[16] K. Q. Vu, V. K. Solanki, and A. N. Le, “A saving energy MANET routing
+protocol in 5G,” in Secure Communication for 5G and IoT Networks.
+Cham, Switzerland: Springer, 2022, pp. 213–220.
+[17] S. Khera, N. Turk, and N. Kaur, “HC-WSN: A hibernated clustering
+based framework for improving energy efficiency of wireless sensor
+networks,” Multimedia Tools Appl., vol. 82, no. 3, pp. 3879–3894,
+Jan. 2023.
+[18] Y. Liu, Q. Wu, T. Zhao, Y. Tie, F. Bai, and M. Jin, “An improved energyefficient routing protocol for wireless sensor networks,” Sensors, vol. 19,
+no. 20, p. 4579, 2019.
+[19] D. Wei, Y. Jin, S. Vural, K. Moessner, and R. Tafazolli, “An energyefficient clustering solution for wireless sensor networks,” IEEE Trans.
+Wireless Commun., vol. 10, no. 11, pp. 3973–3983, Nov. 2011.
+[20] J. Chen, Z. Tian, X. Cui, L. Yin, and X. Wang, “Trust architecture and
+reputation evaluation for Internet of Things,” J. Ambient Intell. Humaniz.
+Comput., vol. 10, pp. 3099–3107, Aug. 2019.
+[21] A. Kumar, K. Singh, and S. Vats, “Trust evaluation-based machine
+learning for WSNs,” in Proc. 10th Int. Conf. Comput. Sustain. Global
+Develop. (INDIACom), 2023, pp. 1430–1436.
+[22] Z. Yingzi and Y. Zhaoji, “Research on user trust evaluation of social ecommerce platform based on artificial neural network,” Optik, vol. 271,
+Dec. 2022, Art. no. 170193.
+[23] S. Ismail, Z. El Mrabet, and H. Reza, “An ensemble-based machine
+learning approach for cyber-attacks detection in wireless sensor
+networks,” Appl. Sci., vol. 13, no. 1, p. 30, 2023. [Online]. Available:
+https://www.mdpi.com/2076-3417/13/1/30
+[24] I. Almomani, B. Al-Kasasbeh, and M. AL-Akhras, “WSN-DS: A Dataset
+for intrusion detection systems in wireless sensor networks,” J. Sens.,
+vol. 2016, no. 1, Aug. 2016, Art. no. 4731953.
+[25] M. Nouman, U. Qasim, H. Nasir, A. Almasoud, M. Imran, and
+N. Javaid, “Malicious node detection using machine learning and
+distributed data storage using blockchain in WSNs,” IEEE Access,
+vol. 11, pp. 6106–6121, 2023.
+
+Hajar Moudoud (Member, IEEE) received the
+B.Eng. degree in software engineering from the
+Mohammadia School of Engineers, Rabat, Morocco,
+in 2018, the first Ph.D. degree in computer engineering from the University of Sherbrooke, Canada,
+in 2022, and the second Ph.D. degree in computer
+engineering from the University of Technology of
+Troyes, France, in 2022. Her research interests
+include the security of the Internet of Things,
+applied machine/deep learning for intrusion detection systems, and leveraging blockchain to enhance
+the security of next-generation networks.
+
+Zakaria Abou El Houda (Member, IEEE) received
+the first Ph.D. degree in computer science from
+the University of Montreal, Montreal, QC, Canada,
+in 2021, and the second Ph.D. degree in computer engineering from the University of Technology
+of Troyes, Troyes, France, in 2021. He is currently a Professor with the Energy, Materials, and
+Telecommunications Center of the National Institute
+of Scientific Research (INRS), Canada. He is also a
+member of the INRS-UQO Joint Research Unit in
+Cybersecurity. Prior to joining INRS, he served as
+a research scientist in various institutions, contributing to significant research
+projects on the application of machine learning for intrusion detection systems,
+and studying the expansibility and robustness of these systems. His current
+research interests include applied AI for intrusion detection systems, security
+in distributed machine learning, and blockchain for network security.
+
+Bouziane Brik (Senior Member, IEEE) received
+the engineering degree (Ranked First) in computer science and the M.Sc. and Ph.D. degrees
+from Laghouat University, Algeria, in 2010, 2013,
+and 2017, respectively. He is currently working as
+an Assistant Professor with the Computer Science
+Department of Computing and Informatics College,
+Sharjah University, UAE. Before joining Sharjah
+University, he worked as an Assistant Professor
+with the DRIVE Department, Bourgogne University,
+France. He has been (still) working on resources
+management and security challenges of 5G network slicing in the context
+of H2020 European projects including MonB5G, 5GDrones, InDiD, and
+5G-INSIGHT. His research interests also include 5G and beyond networks,
+explainable AI, and machine/deep learning for wireless networks.
+PAPER_TEXT

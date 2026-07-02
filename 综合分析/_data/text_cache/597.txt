@@ -1,0 +1,147 @@
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026                                                                            7893
+
+
+
+
+              Adaptive Latent Distribution Modeling for
+              Industrial Time Series Anomaly Detection
+            Yu Liu , Yifan Song , Shaolong Shu , Senior Member, IEEE, Feng Lin , Life Fellow, IEEE,
+                              Jun Wang , Senior Member, IEEE, and Yafeng Guo
+
+
+
+   Abstract—Anomaly detection is critical for ensuring the relia-                 Index Terms—Anomaly detection, cyber-physical systems, fault
+bility of industrial cyber-physical systems. Identifying anomalies             diagnosis, time series analysis, unsupervised learning.
+based on data distribution is regarded as a promising approach.
+However, inherent noise in data collection and complex dependen-
+cies within the underlying structure can lead to class ambiguity.                                      I. I NTRODUCTION
+This ambiguity obscures the boundary between normal data and
+anomalies, thereby degrading the accuracy of distribution model-
+ing. To address this issue, we shift the distribution modeling from
+                                                                               S     ECURITY monitoring is essential for maintaining modern
+                                                                                     infrastructures. Deep-learning-based models enhance the
+                                                                               efficiency of monitoring and provide timely alerts for potential
+the data space to a latent space to mitigate ambiguity and then
+propose a label free anomaly detection network, named ALDM.                    anomalies, thereby preventing damage from escalating. It is
+In ALDM, a contrastive-based methods is designed to facilitate                 widely adopted in various domains, including healthcare, smart
+the construction of a latent space, where the margin between                   buildings, and industrial monitoring [1], [2]. Among these
+normal data and anomalies has been expanded. Anomalies are                     scenarios, industrial cyber-physical systems (CPS) are char-
+then discerned through embeddings using a flow-based process.                  acterized by their extensive use of sensors to monitor system
+Recognizing the importance of distance metrics in contrastive-
+based methods, we propose an adaptive approach to obtain the                   behavior [3]. This generates complex, multivariate dynamics,
+optimal distance metric during network training instead of pre-                thereby making anomaly detection more challenging [4].
+setting a fixed formula. Furthermore, to accommodate anomalies                    Traditional anomaly detection methods depend on sta-
+of varying durations, we propose another event-wise performance                tistical analysis, which assumes linearity, stationarity, or
+index for evaluation. Extensive evaluations on three widely used               specific distributions [5]. These methods often struggle with
+benchmarks and a newly constructed dataset demonstrate that
+ALDM achieves state-of-the-art detection performance across                    high-dimensional data or complex temporal dependencies.
+both conventional metrics and our proposed index.                              Considering the robust capability in handling high-dimensional
+                                                                               data, AI-based methods have been developed to improve the
+   Note to Practitioners—Accurately detecting faults (anomalies)               reliability of various industrial CPS [6].
+in industrial systems, such as factories or power grids, is vital
+to prevent costly downtime. However, noisy data and complex                       In the scope of AI-based methods, due to the scarcity of
+interactions make it challenging. Our solution, ALDM, tackles                  labeled anomaly data, anomaly detection is typically studied
+this by learning a clearer representation of system’s data where               in an unsupervised manner. Some previous methods exploit
+normal and abnormal patterns are easier to distinguish. ALDM                   unlabeled time series data and treat anomaly detection as
+employs an adaptive projection to aid in anomaly detection,                    a one-class classification (OCC) problem. Many prediction-
+which minimizes expert tuning and enhances uptime. This
+approach improves detection accuracy, leading to enhanced                      based methods and reconstruction-based methods are proposed
+system reliability and fewer unplanned stoppages. Although                     to achieve anomaly detection under the OCC setting [7], [8].
+ALDM requires sufficient training data for reliable detection,                 The basic assumption of the OCC setting is that the training
+its label-free methodology provides a practical solution for more              dataset covers all possible normal samples that can be easily
+robust monitoring in industrial systems.                                       obtained [9]. This premise is hard to hold in the real world,
+                                                                               and its application requires additional calibration [10], [11].
+                                                                               Due to the typically sparse density of anomalies compared
+  Received 8 August 2025; revised 30 January 2026; accepted 11 March 2026.     to normal instances, density-based methods have been widely
+Date of publication 16 March 2026; date of current version 16 April 2026.
+This article was recommended for publication by Associate Editor B. Lacevic    explored for anomaly detection. These approaches transform
+and Editor L. Moench upon evaluation of the reviewers’ comments. This          the problem into estimating the likelihood that a given instance
+work was supported in part by the National Key Research and Development        belongs to the normal data distribution. Anomalies are then
+Program under Grant 2022YFB3305300 and in part by the National Natural
+Science Foundation of China under Grant 62473289. (Corresponding author:       detected as instances with a low probability of being normal.
+Shaolong Shu.)                                                                    Density estimation involves calculating the probability of
+  Yu Liu is with the School of Computer Science and Technology, Tongji         an observed data vector. Common techniques for this task
+University, Shanghai 201804, China (e-mail: liu y@tongji.edu.cn).
+  Yifan Song, Shaolong Shu, Jun Wang, and Yafeng Guo are with the College      include energy-based models (EBMs), undirected probabilistic
+of Electronics and Information Engineering, Tongji University, Shanghai        graphical models (UPGMs), autoregressive models (ARMs),
+201804, China (e-mail: shushaolong@tongji.edu.cn).                             and normalizing flow (NF) models [12], [13]. However,
+  Feng Lin is with the Department of Electrical and Computer Engineering,
+Wayne State University, Detroit, MI 48202 USA (e-mail: flin@wayne.edu).        EBMs and UPGMs typically yield only approximate density
+  Digital Object Identifier 10.1109/TASE.2026.3674236                          estimates, limiting their suitability for anomaly detection.
+             1558-3783 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+7894                                                                   IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+
+
+
+                                                                               Fig. 2. Underexplored aspects of F1 score and AUROC in performance
+                                                                               evaluation of anomaly detection.
+
+
+
+                                                                               like F1-score and AUROC focus solely on point-wise assess-
+                                                                               ment, making them inadequate for event-level evaluation.
+                                                                               Figure 2 illustrates this limitation: While Method 1 detects
+                                                                               more anomaly points (yielding higher point-wise scores), it
+                                                                               identifies only one anomaly event. Method 2 detects fewer
+Fig. 1. Anomaly scores of existing methods on SWaT dataset. All moments        points but captures all three events. To address this gap,
+are normal. Vertical drift occurs in the blue area. The moment with a higher   we propose a new metric for the auxiliary of performance
+anomaly score is more likely to be identified as an anomaly.
+                                                                               evaluation at the event level.
+                                                                                  Extensive experiments are conducted on three widely used
+Similarly, ARMs suffer from computational inefficiency due                     benchmarks and a newly constructed dataset. All these datasets
+to their inherently fixed sequential structure. Consequently,                  are sourced from representative industrial CPSs. ALDM
+research in density-based anomaly detection has increasingly                   demonstrates superior detection performance, outperforming
+focused on normalizing flow (NF) models [14], which have                       existing methods on both established point-wise metrics and
+demonstrated superior performance in industrial applications.                  our proposed event-level evaluation metric.
+NF models capture complex, high-dimensional data distribu-                        Compared with existing works, the contributions of this
+tions by applying a learnable, invertible transformation to a                  paper are summarized as follows:
+simple base distribution (or prior) and leveraging the change of                  • We propose ALDM, a novel unsupervised model for
+variables formula. Building upon this, conditional normalizing                      multivariate anomaly detection. To the best of our knowl-
+flow models [10] have been developed to exploit evolving                            edge, this represents the first flow-based method explicitly
+mutual information within the data.                                                 focused on modeling latent distributions within this
+   In industrial CPS, inherent noise and bias in data trans-                        context.
+mission and collection lead to data drifts [15], causing the                      • We design an adaptive latent distribution projection
+distributions of normal and abnormal data to overlap. This                          method. This innovation employs a decomposition-based
+overlap gives rise to the class ambiguity problem [16], [17],                       learnable distance metric to construct an optimized latent
+obscuring the boundary between different classes in the current                     space, effectively expanding the margin between normal
+data space. However, existing methods often overlook this                           and anomalous distributions.
+issue and proceed to model the data distribution directly, which                  • We propose a new event-level performance evaluation
+limits further improvement in detection performance. Figure 1                       metric to address limitations of point-wise assessment.
+shows the anomaly detection in an industrial water treatment                      • We comprehensively validate the effectiveness of ALDM
+plant. Existing methods tend to increase the anomaly score                          on three public industrial CPS datasets and a newly
+in the blue area during data drift, leading to false alarms. To                     constructed dataset.
+address this issue, we propose an Adaptive Latent Distribution                    The rest of this article is organized as follows. Section II
+Model (ALDM). ALDM incorporates a contrastive objective                        reviews related work on industrial CPS anomaly detection.
+to adaptively reweight the loss function, guiding the model                    Section III details the proposed ALDM network. Section IV
+to learn a latent space optimized for distribution modeling.                   comprehensively validates the effectiveness of ALDM through
+Within this space, negative data pairs are pushed apart while                  extensive experiments across four datasets and three perfor-
+positive pairs are pulled closer, thereby intrinsically increasing             mance metrics. Finally, Section V concludes the paper.
+the inter-class margin.
+   The distance metric plays a crucial role in the contrastive                                      II. R ELATED W ORK
+process of ALDM. While recent contrastive methods [18] use
+a fixed metric for assignments, they fail to enhance separabil-                A. Anomaly Detection in Industrial CPS
+ity between normal and anomalous distributions. This preset                       Industrial Cyber-Physical Systems (CPS) generate high-
+metric is often suboptimal and adversely impacts learning the                  dimensional data with complex structures. These structures
+projection from data space to latent space. To address this,                   involve nonlinear dynamics and intricate spatiotemporal
+ALDM proposes a learnable, decomposition-based approach                        dependencies. Traditional anomaly detection methods [20]
+that adaptively optimizes the distance metric during training,                 struggle with this complexity. They often fail to capture the
+eliminating reliance on predefined fixed formulations.                         necessary patterns, leading to poor detection performance.
+   In terms of performance evaluation, anomalies in industrial                 Deep neural networks provide a solution to this challenge.
+CPS exhibit variable durations [19], necessitating event-level                 They excel at modeling the spatiotemporal features of multi-
+analysis for many applications. However, established metrics                   dimensional time series. This capability enables a shift from
+LIU et al.: ADAPTIVE LATENT DISTRIBUTION MODELING FOR INDUSTRIAL TIME SERIES ANOMALY DETECTION                                    7895
+
+
+
+shallow statistical models to deep representation learning for      tions using neural networks [26]. DGMs are mainly grouped
+anomaly detection.                                                  by how they handle the likelihood function: approximate
+   Labeled anomaly data is scarce in practice. Therefore, most      likelihood models and exact likelihood models.
+deep learning approaches for this task are unsupervised. These         Approximate likelihood models (e.g., Variational Autoen-
+methods fall into three main categories: prediction-based,          coders (VAE) [27], Generative Adversarial Networks (GAN)
+reconstruction-based, and density-based approaches.                 [28], and Diffusion Models [29]) do not provide direct access
+   Prediction-based and reconstruction-based methods share a        to the exact likelihood. Instead, they optimize lower bounds or
+core idea: they learn representations of normal time series         alternative objectives via variational inference and adversarial
+patterns. Anomalies are detected by mea

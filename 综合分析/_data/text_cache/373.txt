@@ -1,0 +1,150 @@
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025                                                                                 5536217
+
+
+
+
+           Beyond Spatial Priors: Spectral-Aware
+       Hyperspectral Anomaly Detection Network via
+       Heterogeneous–Homogeneous Super-Band and
+            Quaternionic Sparse Representation
+                  Xianyue Wang , Graduate Student Member, IEEE, Yuli Sun , Tao Tang, and Lin Lei
+
+
+   Abstract—When incorporating spatial priors (such as sparsity                   hi ∈ R s×1            ith spectral vector in H.
+and low-occurrence frequency) to identify anomalies, existing                     p j ∈ Rb×1            Spectral observations of the jth pixel.
+hyperspectral anomaly detection (HAD) methods typically oper-                     M(m)   ∈ Rb×σ         Spectral matrix for cross-segmentation.
+ate on the original high-dimensional spectral bands or features                       i
+                                                                                    (m)
+obtained through dimensionality-reduction techniques. However,                    t i ∈ R1×n            Index sets of mutation points.
+they often neglect the explicit modeling and exploitation of                      t ∗ ∈ R1×n            Final index set of mutation points.
+the internal discriminative structure inherent in bands, conse-                   B j ∈ R s×4           Selected band set of the jth super-band.
+quently diluting the discriminative spectral information crucial                  B j ∈ Rr×c×4          Folding B j to conduct spatial recovery.
+for effective anomaly-background separation. This limitation                      B j ∈ Qr×c            Quaternization matrix of B j .
+becomes particularly pronounced when processing hyperspec-
+tral data, where the rich spectral heterogeneity could provide                    A j ∈ Qr×c            Sparse anomaly part of B j .
+valuable discriminative cues for HAD. To address this issue,                      (µ, ν)                Spatial position of any pixel.
+we propose a super-band quaternion-guided sparse network                          A j ∈ Rr×c×4          Sparse anomaly part in the real-number
+(SuperB-QSNet), which explicitly encodes the spectral discrim-                                          field.
+inant structure while retaining the advantage of spatial sparse                   A ∈ Rr×c×4n           Global sparse component.
+priorities. First, a heterogeneous–homogeneous super-band com-
+pression (HH-SBC) organizes spectral bands into meaningful                        Gδ (·)                Convolution function.
+heterogroups. It naturally reduces redundancy and retains the                     K ∈ R1×1×r×c          Anomaly score map.
+representative spectral information. Second, the quaternionic
+sparse recovery (QSR) model encodes both spatial structures                                               I. I NTRODUCTION
+and intragroup spectral correlations via hypercomplex algebra,
+ensuring robust anomaly preservation and enhanced detection of
+spectral variations. Third, we design a difference-guided
+quaternionic convolution detector (DG-QCD) to maintain spec-
+                                                                               I   N REMOTE sensing images, an anomaly typically refers to
+                                                                                   a small spatial region that exhibits distinct characteristics
+                                                                               compared to its surrounding background [1]. These anomalies
+tral coherence via group processing and enhance discrimina-                    can arise from natural phenomena (e.g., mineral leakage
+tive capability via intergroup difference operation. Extensive                 and vegetation diseases) or artificial targets (e.g., camouflage
+experiments show that SuperB-QSNet enhances anomaly detec-
+tion accuracy while ensuring computational efficiency across                   facilities and building ruins) and can be characterized by two
+real-world hyperspectral datasets.                                             key features: 1) sparse spatial distribution, with occurrence
+                                                                               frequencies much lower than background pixels, and 2) subtle
+   Index Terms—Hyperspectral anomaly detection (HAD),
+quaternion representation, spatial and spectral priors, superpixel             spectral differences, making them challenging to detect [2],
+segmentation.                                                                  [3], [4]. Anomaly detection aims to isolate these rare yet dis-
+                                                                               tinctive targets from complex and heterogeneous backgrounds
+                          N OMENCLATURE                                        without prior category labels.
+          r×c×b
+                                                                                  Hyperspectral images (HSIs), with their continuous narrow
+  H∈R                   Hyperspectral image (HSI).                             spectral bands, provide significant advantages for anomaly
+  H ∈ R s×b             Unfolding a 2-D matrix of HSI.                         detection. HSIs capture detailed reflection characteristics of
+   Received 14 June 2025; revised 30 October 2025; accepted 26 Novem-          various substances across spectral bands, enabling precise
+ber 2025. Date of publication 3 December 2025; date of current version         identification of subtle spectral variations [4], [5]. They
+22 December 2025. This work was supported in part by the National Natural      enhance the detection of subtle anomalies by leveraging spatial
+Science Foundation of China under Grant 62401577 and in part by the
+China Postdoctoral Science Foundation under Grant 2024M754301 and Grant        and spectral information, even those with minimal spectral
+2025T181178. (Corresponding author: Lin Lei.)                                  deviations or subpixel coverage [6], [7]. This multidimen-
+   Xianyue Wang, Tao Tang, and Lin Lei are with the College of Elec-           sional analysis combines local spatial distribution, global
+tronic Science and Technology, National University of Defense Technology,
+Changsha 410073, China (e-mail: alaleilin@163.com).                            contextual features, and fine-grained spectral characteristics,
+   Yuli Sun is with the College of Aerospace Science and Engineering           significantly improving detection accuracy. Therefore, hyper-
+and Hunan Provincial Key Laboratory of Image Measurement and Vision            spectral anomaly detection (HAD) has become indispensable
+Navigation, National University of Defense Technology, Changsha 410073,
+China.                                                                         in numerous fields, such as ecological monitoring [8], mineral
+   Digital Object Identifier 10.1109/TGRS.2025.3639603                         exploration [9], and military reconnaissance [10]. It should
+             1558-0644 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+5536217                                                           IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+
+
+be noted that HAD extends the capabilities beyond Earth,           treat the entire high-dimensional spectral band set uniformly
+facilitating interstellar exploration by identifying spectral      (e.g., computing global covariance matrices, applying
+anomalies in planetary surfaces [9]. This broad applicability      full-band low-rank decomposition, or processing all bands
+underscores HAD’s significance as a powerful terrestrial and       as independent channels), thereby overlooking the physi-
+extraterrestrial analysis tool.                                    cally driven organization of spectra into homogeneous groups
+   HAD algorithms can be systematically categorized into           separated by heterogeneous boundaries [12], [14], [18].
+three primary groups based on their underlying mechanisms          Spectral homogeneity refers to the commonality among
+[4]. First, statistical-based methods primarily depend on sta-     correlated spectral bands, enabling natural dimensionality
+tistical models of spectral variance and covariance structures,    reduction by identifying consistent spectral patterns [22],
+operating under the premise that anomalies exhibit significant     [23], [24]. Meanwhile, spectral heterogeneity, characterized
+deviations from the statistical properties of the background.      by the discriminative variance among distinct band groups,
+A higher order adaptive cosine estimator-based detector            provides crucial information for material identification [25],
+overcomes the limitations of the assumption of a normal            [26]. When these complementary structural properties are
+multivariate distribution of background in the Reed–Xiaoli         not explicitly modeled, discriminative spectral features that
+(RX) [11] detector. A fractional Fourier entropy-based model       could aid anomaly-background separation become diluted
+(FrFE-RX) is also developed, incorporating the fractional          in global processing [27]. This limitation becomes particu-
+Fourier transform with RX [12]. Nevertheless, the detection        larly critical when processing hyperspectral data containing
+performance of these methods frequently degrades signifi-          rich homogeneous–heterogeneous spectral channels, where the
+cantly in complex environments with diverse and nonuniform         structural information could provide valuable discriminative
+background characteristics.                                        cues beyond spatial sparsity alone [18], [19].
+   Second, representation-based methods [13], capitalizing on         To overcome the aforementioned issues, we propose
+the sparse spatial distribution of anomaly targets, typically      the     super-band     quaternion-guided     sparse    network
+employ the principle that background pixels can be effec-          (SuperB-QSNet) composed of the following three modules.
+tively represented by a learned low-rank dictionary, whereas       First, to overcome the overlook of spectral priors, we design
+anomalies cannot. Qin et al. [14] developed a generalized          a heterogeneous–homogeneous super-band compression
+nonconvex low-rank tensor representation (GNLTR) for HAD,          (HH-SBC), which groups bands based on their intrinsic
+which utilizes double low-rank recovery processing to obtain       characteristics rather than arbitrary clustering metrics. The
+the background and corresponding dictionary. Additionally,         method first applies a cross-segmentation algorithm that
+SuperRPCA employs a superpixel-wise collaborative repre-           extends superpixel concepts to the spectral domain. A parallel
+sentation detector to reconstruct the background and a robust      quantile-based band selection obtains four representative bands
+principal component analysis (RPCA) to further separate the        per group, reducing redundancy and enhancing discriminative
+background from anomaly pixels [15].                               features for anomaly detection. Second, focusing on intragroup
+   Finally, deep learning models based on low-occurrence           relationships of homogeneous spectral bands rather than
+frequency typically analyze background reconstruction errors,      employing global processing of all bands (which may disrupt
+where more significant errors indicate a higher likelihood of      the original spectral structures and introduce unnecessary
+anomaly pixels. Traditional approaches focus on learning the       interference), our quaternionic sparse recovery (QSR) model
+background distribution specific to individual datasets, which     encodes each super-band as a quaternion. It eliminates
+limits their generalizability across different scenarios [16],     the need for explicit background modeling and delivers a
+[17]. In contrast, Li et al. [4], [18], [19] proposed a novel      refined sparse input to the subsequent networks, thereby
+cross-modality anomaly detection framework that leverages a        improving sensitivity to subtle spectral deviations. Finally,
+consistent deviation metric for score ranking. This approach       to leverage the spectral–spatial features from the preceding
+shifts the paradigm from learning specific anomaly score           components, we design a difference-guided quaternionic
+values to learning the relative ranking of scores, akin to         convolution detector (DG-QCD) that processes band groups
+the transformation from parametric to nonparametric statistics     holistically. It further amplifies discriminative features by
+[20]. While this innovation enhances the intrinsic connection      computing differences between adjacent heterogeneous
+between multimodal data, its underlying principle remains          groups, enhancing anomaly-background separation. The
+rooted in the fundamental distinction between background and       framework is designed as a streamlined deep detection
+anomaly characteristics and the low-occurrence frequency of        pipeline that operates without supervision, though not strictly
+anomalies across multiple remote sensing images. Besides,          end-to-end due to the nondifferentiable band grouping step.
+compared to statistical-based methods, representation- and            The main contributions of this article can be summarized
+deep learning-based approaches demonstrate excessive depen-        as follows.
+dence on the purity of background assumptions in their mask
+configurations or dictionary constructions [21].                     1) We propose a framework unifying spectral compression,
+   Although these algorithms have effectively leveraged the             sparse recovery, and detection modules to develop a
+fundamental spatial prior knowledge (sparse distribution and            complete data-mechanism co-driven paradigm for HAD.
+low-occurrence frequency) of anomaly detection, they fre-            2) Our framework maintains spectral structural integrity
+quently fail to fully exploit the intrinsic spectral structure          throughout all processing stages by designing operations
+of HSIs that complements these spatial assumptions. Specifi-            that jointly preserve spatial arrangements and spectral
+cally, most methods perform global processing operations that           grouping in an inseparable manner.
+WANG et al.: BEYOND SPATIAL PRIORS: SPECTRAL-AWARE HAD NETWORK                                                                              5536217
+
+
+
+
+Fig. 1. Flowchart of the proposed SuperB-QSNet: A HAD framework integrating (a) HH-SBC yielding optimized super-bands through heterogeneous edge
+segmentation and parallel band selection, (b) QSR producing low-rank background and sparse components via quaternion transformation, and (c) DG-QCD
+generating the final anomaly score map by exploiting intergroup spectral differences and multiscale convolution features.
+
+
+
+   3) We extend spatial algorithms to the spectral domain,                 achieve dimensionality reduction, they treat bands as inde-
+       introducing heterogeneous–homogeneous super-bands                   pendent entities, ignoring the intrinsic spectral mechanisms
+       that explicitly model spectral structure.                           of homogeneity and heterogeneity that can enable natural
+   4) We pioneer incorporating quaternion algebra with intrin-          

@@ -1,0 +1,137 @@
+                    This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3700403
+
+IEEE TRANSACTIONS ON SERVICES COMPUTING                                                                                                                                                        1
+
+
+
+
+LogMUSE: Log Anomaly Detection via Multi-Scale
+          Semantic Representation
+     Mengyao Liu, Tianbo Wang, Member, IEEE, Yuan Zhao, Chunhe Xia, Yingming Zeng, and Yuan Tao
+
+
+
+
+   Abstract—Logs serve as an effective data source for recording                                 concurrency, and heterogeneity of these systems introduce
+and judging system states and abnormal events in complex                                         unprecedented challenges in system operation, fault diagnosis,
+systems. Current deep learning-based methods have proven                                         and security management.
+effective in detecting anomalies in these system logs. However,
+existing anomaly detection methods, which predominantly rely                                        System logs play a vital role in monitoring system behavior
+on template-based and global window-based approaches, still                                      and diagnosing operational issues. They record both high-
+face challenges in terms of flexibility and practicality. Template-                              level user activities and low-level system events, capturing
+based methods, while widely adopted for their simplicity and                                     critical information about state transitions, execution flows,
+efficiency, overlook parameter information and fail to capture                                   and fault symptoms. However, as system scales grow, the
+the true execution semantics. And global window-based methods,
+despite their effectiveness in modeling global dependencies, can-                                volume of log data has expanded dramatically. Public data
+not simultaneously capture both global and local dependencies,                                   indicate that Alibaba’s production environment can generate
+leading to the obscuration of important local features. To address                               over 10 PB of logs daily [1], while major internet companies
+these issues, we propose a Log anomaly detection method based                                    like Google process billions of events per day [2]. Manual
+on MUlti-scale SEmantic representation, LogMUSE. Specifically,                                   analysis of such massive log data is labor-intensive, error-
+LogMUSE obtains template and parameter information through
+log parsing, employs a pre-trained Bidirectional Encoder Rep-                                    prone, and incapable of providing timely responses. As a
+resentations from Transformers (BERT) model for template                                         result, log analysis has become a fundamental technique for
+semantic embedding, and enhances log entry representations                                       ensuring system reliability and identifying potential security
+via cross-attention mechanisms to effectively capture different                                  threats.
+parameter features under the same template. Additionally, we                                        Early approaches to log anomaly detection leveraged shal-
+design the multi-scale Transformer model to capture global and
+local anomaly patterns, which enable fixed-length log sequences                                  low machine learning models such as Support Vector Machines
+to focus on features at different scales. Extensive experiments                                  (SVM) [3], Logistic Regression (LR) [4], and Information-
+on real-world benchmark datasets, including BGL, Thunderbird                                     Theoretic Methods (IM) [5], using statistical features extracted
+and Spirit, show that LogMUSE outperforms existing methods in                                    from log sequences. However, these methods struggle to
+log anomaly detection, achieving F1-scores of 98.62%, 94.32%,                                    capture complex temporal dependencies and semantic
+and 99.20% respectively. These results surpass the performance
+of current state-of-the-art methods and demonstrate the strong                                   patterns in logs, limiting their detection performance in
+generalization across different system scenarios.                                                dynamic environments.
+                                                                                                    Subsequent studies introduced deep learning-based models
+  Index Terms—Log analysis, log parsing, anomaly detection,
+multi-scale, deep learning.                                                                      that leverage sequential modeling capabilities. For instance,
+                                                                                                 DeepLog [6], LogAnomaly [7], and LogRobust [8] utilize
+                                                                                                 Recurrent Neural Network (RNN) or Long Short-Term Mem-
+                           I. I NTRODUCTION                                                      ory (LSTM) architectures to capture dependencies across log
+
+W       ITH the rapid advancement of cloud computing, dis-
+        tributed architectures, and microservice technologies,
+modern computing systems are becoming increasingly com-
+                                                                                                 sequences. While effective in certain scenarios, these models
+                                                                                                 are sensitive to sequence interleaving caused by concurrent
+                                                                                                 tasks. In practice, system logs are recorded as a single
+plex and large-scale. A typical production environment may                                       chronological stream, where entries from multiple tasks may
+consist of thousands of interconnected components deployed                                       be interleaved, breaking the semantic continuity of individual
+across hybrid cloud infrastructures. The increasing dynamism,                                    execution paths and impairing sequence modeling.
+                                                                                                    The Transformer architecture has emerged as a promising
+   Manuscript received 2025. The work was supported by National Engineer-
+ing Research Center of Classified Protection and Safeguard Technology for                        alternative for log anomaly detection due to its ability to model
+Cybersecurity under Grant C24640-XD-04 and the Fundamental Research                              long-range dependencies without sequential bottlenecks. Log-
+Funds for the Central Universities. (Corresponding author: Tianbo Wang).                         BERT [9] represents each log message by mapping it to a
+   M.Y. Liu and T.B. Wang are with the School of Cyber Science and Tech-
+nology, Beihang University, Beijing, 100191, China. E-mail: {liumengyao,                         unique log event template (with parameters removed), and
+wangtb}@buaa.edu.cn.                                                                             models the resulting sequence of template identifiers as a
+   Y. Zhao and C.H. Xia are with the School of Computer Science                                  natural language sequence. Based on this abstraction, it applies
+and Engineering, Beihang University, Beijing, China. E-mail: {zhaoyuan ,
+xch}@buaa.edu.cn.                                                                                the BERT framework with masked token prediction to detect
+   Y.M. Zeng is with Beijing Institute of Computer Technology and Applica-                       log anomalies. NeuralLog [10] directly tokenizes raw log
+tions, Beijing, China. E-mail:zengyingming@163.com                                               messages using natural language processing techniques and
+   Y. Tao is with National Engineering Research Center of Classified Protec-
+tion and Safeguard Technology for Cybersecurity, the Third Research Institute                    embeds them with a pre-trained language model. It then
+of Ministry of Public Security, Shanghai, China. E-mail:taoyuan@gass.ac.cn.                      applies a Transformer-based classification model for training
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                 This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+                                            content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3700403
+
+IEEE TRANSACTIONS ON SERVICES COMPUTING                                                                                                                                                                                        2
+
+
+
+and anomaly detection. LogFormer [11] decomposes each log                                          Users         Service Application                                 Raw Logs (Content field）
+
+message into a template and its corresponding parameters,                                                  command               record
+                                                                                                                                                  : total of 3 ddr error(s) detected and corrected
+                                                                                                                                                  : machine check interrupt (bit=0x06): L3 major internal error
+and encodes them separately. The parameter embeddings are                                                                                         : instruction address: 0x00000760
+
+injected as attention biases, thereby implicitly influencing the                                                                                                               Parsing
+                                                                                                                                Log Templates                                                          Parameters
+representation of the log template. The model is trained using                                               : total of <*> ddr error(s) detected and corrected                    :3
+a two-stage strategy comprising pre-training and fine-tuning                                                 : machine check interrupt (bit=<*>): <*> <*> <*> <*>
+                                                                                                             : instruction address: <*>
+                                                                                                                                                                                   : 0x06, L3, major, internal, error
+                                                                                                                                                                                   : 0x00000760
+to perform anomaly detection on log sequences.                                                                                                                             Detection
+   While these methods show promise, they still face two
+                                                                                                   Normal
+major limitations that hinder real-world effectiveness:                                           Sequence
+                                                                                                                                                                       …
+
+   First, parameter values, such as IP addresses, file paths,                                     Abnormal                                                             …
+block identifiers, and hardware status codes, often encode                                        Sequence
+
+context-specific semantics that are crucial for determining                                                              Local sequence anomaly                                              Parameter anomaly
+
+
+the nature of an event. For example, two log messages may
+                                                                                                           Global-only              Multi-Windows                    Without Parameters              High-quality Parameters
+share the same parsed template after parameter abstraction, but
+                                                                                                                                                                  With same embedding           With different embedding
+their parameter values may correspond to different execution                                                                                                     Normal                          Normal
+
+contexts, such as different accessed files, affected nodes, or
+                                                                                                                                                                Abnormal                       Abnormal
+abnormal resource identifiers. Methods that discard parameters
+or incorporate them only implicitly may therefore assign
+nearly identical representations to semantically different log                                Fig. 1: Illustration of the real-world log processing workflow
+instances, making it difficult to detect parameter-sensitive                                  and key challenges in anomaly detection
+anomalies.
+   Second, anomalies can manifest across diverse temporal
+spans. Some anomalies appear as short-term bursts involving                                   2) We design a multi-scale attention-based Transformer ar-
+only a few adjacent log entries, such as consecutive I/O                                          chitecture that integrates representations across different
+failures, repeated timeout messages, or machine-check errors                                      window scales. This architecture captures both global and
+within a short sequence. In contrast, other anomalies evolve                                      local dependencies in log sequences, thereby improving
+gradually over longer sequences, such as progressive resource                                     the model’s sensitivity to diverse anomaly patterns. Conse-
+exhaustion, repeated retry-failure patterns, or slowly accumu-                                    quently, it addresses the challenge of temporal heterogene-
+lating hardware error reports. Existing methods often divide                                      ity in anomaly manifestation.
+log streams into fixed-length windows and apply a uniform                                     3) We conduct a comprehensive empirical evaluation on
+modeling scope to the entire sequence. As a result, local ab-                                     three real-world datasets, including BGL, Thunderbir

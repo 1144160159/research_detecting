@@ -1,0 +1,148 @@
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026                                                                                                    1205
+
+
+
+
+ Explainable Anomaly Detection in Network Traffic
+             Using Normalizing Flows
+                                            Lior Shafir , Raja Giryes , and Avishai Wool
+
+
+
+   Abstract—Anomaly detection in network traffic is critical for                  Network Intrusion Detection Systems (NIDSs) detect
+identifying deviations from normal behavior—including sophis-                  attacks via signature- or anomaly-based inspection of network
+ticated cyber threats and previously unseen attacks—especially                 traffic [2], [3]. Recent progress in machine learning (ML)
+when anomalous examples are absent from the training data. The
+escalating complexity of cyber-attacks necessitates developing                 has opened new opportunities for improving the accuracy of
+methods that not only identify low-likelihood traffic but also                 traffic classification tasks, including the detection of anoma-
+provide insights into its anomalous nature and deviations from                 lous or malicious activity. However, ML-based NIDS still face
+normal behavior, enabling effective response and troubleshooting.              substantial challenges due to the complexity of modern ML
+In this work, we leverage the unique capabilities of normalizing               models and the need to process high-dimensional or time-
+flows (NF), a state-of-the-art reversible generative model for exact
+density estimation, to detect anomalies using only normal traffic.             series network data [4].
+Our approach fundamentally differs from previous methods by                       Supervised ML approaches, in particular, face several lim-
+utilizing NF’s exact likelihood computation for unsupervised                   itations in this context: Firstly, they require large amounts of
+detection and combining it with Shapley values to introduce a                  labeled anomalous data for training, which is often unavail-
+novel feature selection framework for guiding the selection of                 able. Secondly, they encounter challenges with extreme class
+discriminative features in anomaly detection, while also providing
+statistically grounded enhanced explanations for detected anoma-               imbalance, which further degrades detection accuracy, skewing
+lies, pinpointing potential root causes. Through experiments on                model learning towards majority classes and hindering the
+CICIoT-2023, ISCXTor2016, and CICIDS2017, we demonstrate                       identification of minority traffic classes. Lastly, collecting
+that our NF-based approach outperforms existing state-of-the-                  anomalous traffic data is a costly and time-consuming task
+art methods for unsupervised anomaly detection. Notably, on                    due to its elusive and sporadic nature.
+the CICIoT-2023 dataset, we achieve an accuracy of 0.9951,
+comparable or higher than supervised methods, despite being                       To address the lack of anomalous data for training, some
+trained solely on normal data.                                                 approaches have explored the use of deep generative models,
+                                                                               such as Generative Adversarial Networks [5] (GANs), to
+  Index Terms—DDoS attacks, intrusion detection system, flow-
+based network intrusion detection, network flow.                               synthetically create anomaly samples [6]. However, while
+                                                                               generative neural methods like GANs and Variational Autoen-
+                       I. I NTRODUCTION                                        coders [7] (VAEs) have demonstrated prominent performance
+                                                                               results on tasks like learning the distribution of natural images,
+W        ITH the exponential growth of connected devices,
+         particularly in the Internet of Things (IoT) domain,
+the cyber threat landscape has evolved significantly. According
+                                                                               neither of them allows for exact computation of the probability
+                                                                               density of new data points.
+to Cisco [1], the proliferation of IoT devices is expected to                     In this work, we propose a novel approach leveraging
+reach hundreds of billions by 2030. This surge in connectivity                 Normalizing Flows (NF) [8] for anomaly detection. NF is a
+presents a vast attack surface, increasing the complexity and                  reversible generative model framework that produces tractable
+frequency of potential cyber threats. Consequently, the number                 distributions, where both sampling and density-estimation
+of types of anomalous network traffic that threaten the internet               directions (i.e., the generative and normalizing directions,
+is larger than ever before. Hence, with such a broad spectrum                  respectively) can be efficient and exact.
+of low-likelihood network traffic, anomaly detection remains                      NF learn an invertible mapping between a simple base
+a critical challenge.                                                          distribution and a complex data distribution, enabling exact
+   Anomalous traffic may refer to malicious attacks but it can                 likelihood computation. By training the flow solely on
+also include benign deviations—such as infrequent legitimate                   normal network traffic data, anomalies can be detected
+variations in traffic or undesired behaviors stemming from                     as low-likelihood samples under the learned distribution,
+regulatory compliance, privacy constraints, or capacity limi-                  eliminating the need for labeled anomaly examples during
+tations.                                                                       training.
+                                                                                  While NF have generative abilities, we leverage its density
+  Received 16 January 2025; revised 10 August 2025; accepted 8 Septem-         estimation capability rather than its generative direction. Our
+ber 2025; approved by IEEE T RANSACTIONS ON N ETWORKING Editor
+E. Bertino. Date of publication 13 October 2025; date of current version       approach fundamentally differs from other anomaly detection
+5 January 2026. (Corresponding author: Lior Shafir.)                           works that employ generative methods such as GANs, AEs,
+  The authors are with the School of Electrical Engineering, Tel Aviv
+University, Tel Aviv 6997801, Israel (e-mail: lior.shafir@gmail.com).
+                                                                               and even NF in that we do not generate synthetic anomalies
+  Digital Object Identifier 10.1109/TON.2025.3617580                           followed by training a supervised classifier.
+             2998-4157 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+1206                                                                                   IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+
+
+   Such models are inherently sensitive to the proportion and             or higher than supervised methods, despite being trained
+authenticity of anomalies present in the training set. Firstly,           solely on normal data.
+the generated synthetic anomalies do not overlap well with
+real anomaly samples [9], which may lead to suboptimal                                    II. R ELATED W ORK
+training, and reduce the model’s detection effectiveness in             Anomaly-Based Intrusion Detection. Anomaly detection
+real-world scenarios. Secondly, according to [9], the model’s        in network traffic has been extensively studied over the past
+performance decreases when the anomaly-to-normal sample              few decades, cf. [14], [15]. In recent years, deep learning-
+ratio is modified. This indicates that the model’s efficacy          based methods have gained significant traction, offering
+is closely tied to specific sample ratios, which may not be          improved accuracy and robustness. Proposed methods include
+feasible to predict in real-world scenarios where the rate of        Support Vector Machines (SVM), Convolutional or Recurrent
+anomalies can be unpredictable.                                      Neural Networks (CNN/RNN), and more, cf. [16].
+   Feature selection is a critical challenge in anomaly detec-          More recently, the application of generative models such
+tion, particularly in unsupervised settings, where including         as VAEs and GANs for anomaly-based detection has been
+irrelevant or redundant features can obscure the essential           thoroughly investigated. Zavrak and Iskefiyeli [17] employ
+characteristics of normal traffic and degrade the model’s            both Autoencoders (AEs) and VAEs in a semi-supervised
+performance. To address this, we propose a novel Shapley-            learning framework to identify unknown attacks based on
+based [10] feature selection framework that leverages NF’s           flow features extracted from network traffic. Another work
+probability-based evaluation function. This approach enables         by Min et al. [18] explores the use of a memory-augmented
+us to identify and rank discriminative features effectively, over-   deep autoencoder for network anomaly detection. It focuses on
+coming the limitations of traditional feature selection methods      leveraging deep learning techniques, specifically AE, enhanced
+that often struggle in unsupervised contexts. Additionally, our      with memory components to improve anomaly detection accu-
+use of Shapley values enhances the interpretability of detection     racy in network traffic data. Azmin and Islam [19] combine a
+results, providing statistically grounded explanations for why       variational Laplace AE (VLAE) with a deep neural network
+a particular traffic sample is anomalous and how it deviates         (DNN) to enhance intrusion detection accuracy.
+from normal patterns.                                                   GANs [5] have also been used for adversarial traffic gen-
+   We evaluate our method on three benchmarks: CICIoT-               eration and anomaly-based intrusion detection. E.g., NetShare
+2023 [11], ISCXTor2016 [12], and CICIDS2017 [13]. While              [20] is a GAN-based framework for generating synthetic IP
+two of these datasets contain comprehensive and diverse sets         header traces, Gadot [21] is a GAN-based framework aimed at
+of attack scenarios, we also extend our evaluation to the            enhancing the detection of DDoS attacks, and NIDSGAN [22]
+ISCXTor2016 dataset, which focuses on encrypted network              is a GAN-based framework for generating realistic adversarial
+traffic and includes both Non-Tor and Tor network traffic            network traffic flows.
+across seven different application categories. Notably, the             Wang et al. [23] present Def-IDS, an ensemble-based
+recent CICIoT-2023 dataset encompasses 33 distinct attacks           defense mechanism designed to protect deep learning-based
+across seven attack categories. To the best of our knowledge,        network intrusion detection systems from adversarial attacks.
+our work is the first study to evaluate this dataset using only         Peng et al. [24] also propose a framework where a GAN is
+normal traffic.                                                      used to generate adversarial network traffic, which is then used
+   Our contributions may be summarized as follows:                   to train the NIDS. The GAN-generated adversarial examples
+   • We introduce a novel anomaly detection method that              help the NIDS to better identify and mitigate potential threats.
+      leverages NF’s exact density estimation capabilities to           While various studies employed VAEs and GANs for
+      model normal network traffic and identify anomalies as         anomaly detection, they face challenges like intractable
+      low-likelihood samples.                                        marginal likelihoods and mode collapse. Additionally, GANs
+   • We integrate the NF probability-based evaluation function       require a large amount of training data to generate network
+      with Shapley values [10] to propose a novel wrapper fea-       traffic samples. Thus, the acquisition of malicious samples is
+      ture selection method tailored for unsupervised learning,      still a challenging task.
+      demonstrating its efficacy through extensive experiments.         Another category of unsupervised learning approaches
+      Additionally, through simulations and real attack exam-        includes classical algorithms such as Isolation Forest (IF)
+      ples, we demonstrate the explainability benefits of using      and more recent self-supervised methods based on contrastive
+      Shapley values with NF to provide statistically grounded       learning. These techniques are trained without access to labels
+      explanations for detected anomalies.                           and aim to identify structural irregularities in the data. For
+   • We evaluate our method on three publicly available              example, Zhang et al. [25] propose an online IF-based model
+      datasets: two from the DDoS and IDS cyber-attacks              for malicious traffic detection in SD-WAN environments,
+      domain, and one from the encrypted traffic classification      where the model is trained on a mixture of benign and attack
+      domain. We show that our flow-based approach outper-           traffic without using labels. Similarly, Li et al. [26] present
+      forms existing state-of-the-art anomaly detection methods      a self-supervised contrastive learning framework that learns
+      for binary classification tasks. Perhaps most strikingly,      representations for intrusion detection using data augmenta-
+      on the recent CICIoT-2023 dataset, which contains 33           tions and contrastive loss, without label supervision during
+      attacks across 7 different categories, we demonstrate that     the pretraining stage. However, unlike our approach, these
+      our method achieves a detection accuracy comparable            methods are typically trained on a mixture of normal and
+SHAFIR et al.: EXPLAINABLE ANOMALY DETECTION IN NETWORK TRAFFIC USING NORMALIZING FLOWS                                                           1207
+
+
+
+anomalous samples, relying on their presence in the training
+data to identify structural irregularities. In contrast, our model
+is trained exclusively on clean benign traffic.
+   Normalizing Flows for Anomaly Detection. NF have
+received attention in the field of anomaly detection, partic-
+ularly due to their capability to model complex probability
+distributions. Various studies in fields other than network
+traffic detection have utilized NF for anomaly detection, pro-
+ducing promising outcomes. Gudovskiy et al. [27] proposed            Fig. 1. NF Key Idea Illustration. The left figure is the density function of the
+CFLOW-AD, which employs conditional NF for anomaly                   source pZ (z). The right figure is the density function of the target distribution
+                                                    

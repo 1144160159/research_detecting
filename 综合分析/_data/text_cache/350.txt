@@ -1,0 +1,145 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025                                                                             2514512
+
+
+
+
+     A Time Series Self-Supervised Contrastive
+Pretraining Method With Data Augmentation Using
+ Discrepancy of Reconstruction Information Loss
+                     Zhen Zhang , Yongming Han , Member, IEEE, Bo Ma , and Zhiqiang Geng
+
+
+   Abstract— Self-supervised pretraining has shown considerable                modeling using massive amounts of data with labels has
+advantages in multiple time series tasks. A widely used class of               shown a promising progress [4]. However, in a real-world
+methods is based on contrastive learning and a key problem                     industrial scenario, there are some problems using the above
+is how to construct augmented samples. At present, explicit
+augmentation approaches are the mainstream for constructing                    approach: 1) the data for a new industrial scenario is scarce and
+positive pairs with similar features. However, explicitly aug-                 2) labeling a large number of time series is difficult, and only
+mented samples may deviate from the original data space and                    a few samples in real-world scenarios have been labeled [5].
+have aliasing features. Therefore, this article designs an end-to-                To solve the problem of scarcity of labeled samples,
+end time series self-supervised contrastive pretraining network                researchers introduced the self-supervised learning (SSL) [6],
+with implicit data augmentation using discrepancy of recon-
+struction information loss (CLR-DRL). Specifically, augmented                  which extracts inherent representations in the data through
+positive pairs with discrepancies and inherent features of the                 training on an upstream task without labeling samples, and
+original series can be generated automatically using different                 uses them for target tasks. In recent years, self-supervised
+autoencoders (AE) due to different information loss in their                   pretraining of time series using the contrastive learning frame-
+hidden spaces. Combined with the joint constraint, inherent fea-               work with data augmentation has gained widespread attention
+tures can be extracted and the aliasing impact existing in explicit
+augmented approaches could be mitigated. Moreover, theoretical                 and achieved a promising progress. The basic principle is
+analysis is provided using gradient flow calculation, which can                that the sample representation is obtained through the con-
+also be confirmed by experiment analysis. Experimentally, the                  trastive constraint after generating two different augmented
+CLR-DRL achieves state-of-the-art (SOTA) performance com-                      samples. Chen et al. [7] proposed a simple contrastive learning
+pared to current baselines on in- and cross-domain settings
+                                                                               framework for visual representation (SimCLR), for the first
+on nine real-world benchmarks for both time series anomaly
+detection (AD) and classification tasks. An actual pipeline                    time showing that the combination of data augmentations
+transportation status monitoring case is provided to verify the                played a key role in representations by contrastive learning.
+effectiveness.                                                                 Subsequently, Ian Tang et al. [8] introduced the SimCLR
+   Index Terms— Autoencoder (AE), data augmentation, indus-                    into the time series field and Eldele et al. [9] innovated the
+trial process, self-supervised learning (SSL), time series.                    framework through cross-view forecasting tasks. In addition,
+                                                                               the researchers further extended the modeling process by
+                         I. I NTRODUCTION                                      fusing the frequency domain information. Zhang et al. [6]
+                                                                               designed a time–frequency consistency (TF-C) module and
+T     IME series are widely existed in real-world scenarios,
+      including human activity recognition (HAR) [1], indus-
+trial anomaly detection (AD) [2], and energy consumption
+                                                                               data augmentation approaches for frequency domain data to
+                                                                               extract the representation of time series by pulling closer
+prediction [3]. The key to successfully handling these tasks                   the time- and frequency-domain representations of the hidden
+is to achieve effective modeling of time series and to identify                space.
+inherent features implicit in data. In recent years, research                     Although the above methods have achieved good per-
+on achieving high-precision deep learning-based time series                    formance in extracting time series representations, the data
+                                                                               augmentation approaches they used are all explicit approaches,
+  Received 14 August 2024; revised 21 November 2024; accepted 2 December       such as random flipping, jittering, and scaling, which are also
+2024. Date of publication 5 March 2025; date of current version 20 March
+2025. This work was supported by the National Natural Science Foundation
+                                                                               widely used in the image processing field. However, different
+of China under Grant 62373035 and Grant 62203038. The Associate Editor         from discrete image data, which tends to contain more explicit
+coordinating the review process was Dr. Ferdinanda Ponci. (Corresponding       and complete information, continuous time series data tends to
+authors: Yongming Han; Zhiqiang Geng.)
+  Zhen Zhang, Yongming Han, and Zhiqiang Geng are with the College
+                                                                               contain more complex information. For example, as shown in
+of Information Science and Technology, Beijing University of Chemical          Fig. 1(a), a sample labeled cat can still be considered a cat after
+Technology, Beijing 100029, China, and also with the Engineering Research      being flipped. But for the time series shown in Fig. 1(b), after
+Center of Intelligent Process System Engineering (PSE), Ministry of Edu-
+cation of China, Beijing 100029, China (e-mail: zhang_zhen@buct.edu.cn;
+                                                                               random flipping, a rising sample becomes a falling sample,
+hanym@mail.buct.edu.cn; gengzhiqiang@mail.buct.edu.cn).                        which usually indicates two completely opposite working con-
+  Bo Ma is with the College of Mechanical and Electrical Engineering,          ditions in an actual industrial process. Therefore, augmenting
+Beijing University of Chemical Technology, Beijing 100029, China (e-mail:
+mabo@mail.buct.edu.cn).
+                                                                               samples through explicit augmentation approaches may not
+  Digital Object Identifier 10.1109/TIM.2025.3548177                           be appropriate in time series tasks. Specifically, the possible
+               1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+2514512                                                            IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+
+
+                                                                               explicit augmented samples and extracts inherent repre-
+                                                                               sentation.
+                                                                            2) Technically, the CLR-DRL is a simple but effective
+                                                                               method, which generates samples and extracts inher-
+                                                                               ent representations by a joint constraint covering the
+                                                                               reconstructed and contrastive loss. Theoretically, the
+                                                                               effectiveness of the CL-DRL is verified by gradient flow
+                                                                               calculation of the joint constraint.
+                                                                            3) Experimentally, the CLR-DRL achieves state-of-the-art
+                                                                               (SOTA) performance in two typical time series tasks
+                                                                               with classification and AD, covering multiple domains
+Fig. 1.    Augmented samples by flipping operation of an (a) image and         of experimental settings. And extensive analysis exper-
+(b) industrial time series.
+                                                                               iments verify the proposed method.
+                                                                            Section II reviews the related work. Section III introduces
+category aliasing of augmented samples has a large impact on             the proposed CLR-DRL method. Section IV analyzes and
+industrial time-series classification and AD tasks.                      discusses the performance of the CLR-DRL through extensive
+   In addition to the contrastive learning, the autoencoder (AE)         experiments. Section V verifies the application effect of the
+is also an effective SSL method, which maps the times series             CLR-DRL using an actual industrial case. Section VI draws
+to a hidden space to generate the effective representation. The          the conclusion of this article.
+training process of the AE is to minimize the error between the
+reconstructed and input time series. In this process, although                               II. R ELATED W ORKS
+there is information loss in the extracted representation, the
+reconstructed series can still be close to the original series [10].     A. Self-Supervised Contrastive Pretraining for Time Series
+Moreover, for different AEs, different reconstructed series                 Currently, self-supervised pretraining has achieved great
+can be obtained although the optimization objective is the               success in the fields of computer vision [11] and natural
+same, which suggests that the representation obtained by                 language processing [12]. Moreover, researchers have begun
+the AE contains both the inherent feature and discrepant                 to study self-supervised pretraining methods for time series.
+information. Therefore, it is natural to use the property of the         Contrastive learning-based methods have made promising
+AE that there is information loss in the reconstruction process          progress, which realizes time series representation by clas-
+to automatically generate augmentation samples required for              sifying positive and negative samples, and one of the keys is
+contrastive learning.                                                    how to construct high-quality positive and negative pairs [6].
+   Inspired by the above insights, this article incorporates the            Franceschi et al. [13] considered subseries close or not close
+properties of the AE in the contrastive learning and proposes            to the reference subseries as positive and negative samples,
+a time series self-supervised contrastive pretraining method             and used triplet loss for training to extract the representation.
+with data augmentation using discrepancy of reconstruction               Yue et al. [14] called the above idea subseries consistency,
+information loss (CLR-DRL). Specifically, the CLR-DRL uti-               and believed that it would cause the augmented samples to
+lizes the discrepancies of the information loss in the hidden            be susceptible to the “level shifts,” which could result in
+space of different AEs to obtain reconstructed series with               false positive pairs. To solve this problem, they proposed
+discrepancies, and considers them as augmented samples                   the time series to vector method (TS2Vec), which utilized
+needed for contrastive learning. Technically, the CLR-DRL                context consistency to construct positive samples, arguing that
+does not use explicit augmentation technologies, but directly            only subseries with identical timestamps can be considered as
+uses different AEs to obtain implicit augmented samples. Since           positive pairs.
+both augmented samples come from the reconstruction process                 Different from the above method of using subseries to
+of the time series, the common features contained in the two             achieve negative sampling, inspired by the SimCLR [7],
+augmented samples can be regarded as inherent representa-                Ian Tang et al. [8] regarded the samples augmented by dif-
+tions. The CLR-DRL uses the contrastive loss to constrain                ferent explicit techniques in the entire series as positive
+the representations extracted from the two augmented samples             samples, and other time series in a small batch as negative
+to obtain the inherent representation of time series. Benefit-           samples. They designed eight explicit time series augmented
+ing from the above design, the CLR-DRL can mitigate the                  approaches, including random noise addition, scaling, and
+categories aliasing problem caused by explicit augmentation              inverting. Recently, under the framework of the SimCLR,
+approaches and obtain the inherent representation, making it             many methods with good performance have been proposed.
+achieving well performances in two target tasks with time                Eldele et al. [9] designed a temporal and contextual contrastive
+series classification and AD.                                            module to implement time series modeling (TS-TCC) through
+   Overall, our contributions can be summarized as follows.              cross-view prediction tasks, and achieved well performance in
+   1) Inspired by the discrepancies of the information loss in           the time series classification and cross-domain transfer tasks.
+       the reconstruction process of different AEs, a novel time         Furthermore, combining the frequency domain information of
+       series self-supervised contrastive pretraining method is          the time series, Yang and Hong [15] proposed the bilinear
+       proposed, which uses carefully designed AEs to generate           temporal–spectral fusion method (BTSF), which generated
+ZHANG et al.: TIME SERIES SELF-SUPERVISED CONTRASTIVE PRETRAINING METHOD                                                                  2514512
+
+
+
+instance-level positive samples in the time domain by random        mented samples can be regarded as the inherent feature of the
+dropout and selected any one other series as a negative             original series, which can be well extracted and characterized
+sample. And when modeling, the time

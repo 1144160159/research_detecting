@@ -1,0 +1,766 @@
+4766 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ MTRF: Multidomain Transformation Representation
+ for Network Flows in Network Intrusion Detection
+ Xinlei Wang , Mingshu He , Member, IEEE, Xiaojuan Wang , Member, IEEE, and Shize Guo
+
+ Abstract—In IoT device applications, due to privacy protection Intrusion Detection Systems (IDS) closer to IoT devices at the
+requirements, it is often impossible to obtain large-scale labeled network edge, fog computing mitigates latency issues inherent
+datasets for model training. A representation model that effec- in cloud-centric approaches [25]. However, due to the limited
+tively extracts flow features with limited labeled samples is therefore critical. To meet this need, we propose a model combining resources of the fog equipment, a lightweight model with high
+temporal features (for trend changes/short-term fluctuations) and detection accuracy is required. In this study, we propose a novel
+frequency-domain features (for periodicity/stability patterns) in learning representation method for fog nodes, using a small set
+network flows. In order to fully tap the potential of these two of labeled samples to characterize encrypted network flows. This
+types of features, contrastive learning (CL) technology is used to representation supports the creation of lightweight IDS models,
+model them respectively. For temporal-domain features, we employ
+a momentum encoder-based training strategy to learn robust rep- including Extra Tree (ET), Random Forest (RF), Decision Tree
+resentations adaptable to network-induced noise. For frequency (DT), and eXtreme Gradient Boosting (XGBoost), tailored for
+domain features, we propose a new supervised CL loss function. IoT devices.
+It enhances inter-class separability while improving the represen- In recent years, significant efforts have been made in IDS,
+tation ability (i.e., the model’s capacity to extract discriminative with most research focusing on framing intrusion detection as a
+features) of minority classes. The experimental results demonstrate
+the universality of this approach, which is not limited to specific classification problem and developing end-to-end models. Tradata sets or attack types. The most representative results were ditional machine learning (ML) algorithms offer fast inference
+obtained on the UNSW-NB15 dataset, with an accuracy of 0.9699 speeds but rely on manual feature selection, limiting adaptabilfor the balanced training sets, surpassing the other best models’ ity to emerging threats [19]. Although end-to-end DL models
+performance(0.6300). are widely studied [1], [3], [11], [12], [14], [16], their joint
+ Index Terms—Contrastive learning, frequency domain trans- learning approach may overfit and capture spurious correlations
+formation, intrusion detection, sample representation. from noisy network flow data [5]. Emerging malware targeting
+ compromised IoT devices demands models that learn broader
+ I. INTRODUCTION data representations. However, data collection and labeling difficulties often yield imbalanced datasets with scarce labeled
+ NTERNET of Things (IoT) adoption escalates cyberattack
+I risks in sensitive-data industries, compromising intelligent
+analysis and decision-making. While many intrusion detection
+ examples. This highlights two critical challenges: capturing
+ subtle behavioral differences in minority classes and improving
+ generalization from limited data.
+models perform well, they are often deployed in the cloud, Representation learning captures intrinsic features of unlaleading to detection delays and privacy risks [26]. By deploying beled data, improving generalization to new data [20], [21], [22].
+ Ceschin et al. [23] employed denoising autoencoders for unsu-
+ Received 12 January 2025; revised 24 July 2025; accepted 24 December pervised pre-training. Optimizing the encoder’s representational
+2025. Date of publication 29 December 2025; date of current version 12 capacity by minimizing the loss function between input sam-
+May 2026. This work was supported in part by the National Natural Science
+Foundation of China under Grant 62402053 and Grant 62227805 and in part ples and predicted outputs. [9] employs supervised contrastive
+by the Fundamental Research Funds for the Central Universities under Grant learning (CL) for a binary representation model, but directly
+2025KYQD17 (BUPT). (Xinlei Wang and Mingshu He contributed equally to feeding features into the model without distinction may lead to
+this work.) (Corresponding author: Mingshu He.)
+ Xinlei Wang is with the School of Electronic Engineering, Beijing University overfitting noise. [24] suggests separate representation learning
+of Posts and Telecommunications, Beijing 100876, China, and also with the for categorical and numerical features, using a hard triplet loss
+The First Research Institute of the Ministry of Public Security of P.R.C, Beijing for classes with limited labeled data. Based on this study, we
+100741, China (e-mail: ann96125@126.com).
+ Mingshu He is with the School of Cyberspace Security, Beijing University of were inspired to use hard contrastive loss on the labeled dataset
+Posts and Telecommunications, Beijing 100876, China, and also with the Key to enhance the representation learning of minority class samples.
+Laboratory of Trustworthy Distributed Computing and Service (BUPT), Min- However, in our approach, we aim to separately learn different
+istry of Education, Beijing 100876, China (e-mail: hemingshu@bupt.edu.cn).
+ Xiaojuan Wang and Shize Guo are with the School of Cyberspace Security, types of features to mitigate the interference of noisy features
+Beijing University of Posts and Telecommunications, Beijing 100876, China on other types.
+(e-mail: wj2718@bupt.edu.cn; nsfgsz@126.com). Complex network topologies, such as distributed systems,
+ We have released our source code to facilitate future studies on https://github.
+com/Ann96125/MTRF. inevitably lead to network-induced phenomena, causing packet
+ Digital Object Identifier 10.1109/TDSC.2025.3649110 loss, transmission delays, and other issues [1]. The delay or
+
+ 1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+WANG et al.: MTRF: MULTIDOMAIN TRANSFORMATION REPRESENTATION FOR NETWORK FLOWS IN NETWORK INTRUSION DETECTION 4767
+
+interruption of network data packet transmission is manifested
+in the time domain as a feature with transmission noise. Alternatively, the frequency domain features of network traffic are
+less sensitive to interference and can better reflect the inherent
+properties of the data, such as periodic components. These stable
+features are less influenced by external disturbances, making
+them more reliable for analysis [6]. Separately learning both
+features ensures that interference in the temporal domain does
+not affect the representation learning of the frequency domain.
+ Under the assumption in [5], data X is generated by the
+error variable  and the error-free latent variable X ∗ . Here, as
+the error  varies, the latent variable X ∗ remains unchanged.
+Thus, learning the representation of X ∗ involves finding stable
+associations with the optimal X ∗ across various types of errors.
+Along these lines of thought, we propose a model called the
+ Fig. 1. Diagram illustrating fog nodes for data representation combined with
+Multi-domain Transformation Representation of Network Flows rapid inference models on IoT devices.(The figure only shows the inference
+(MTRF). MTRF can simulate noise in different network envi- stage.
+ronments and learn invariant representations of useful features.
+ The dataset was augmented eight times through network-
+ II. PROPOSED FRAMEWORK
+induced perturbations, increasing the training samples eightfold.
+This augmentation with the MTRF method enhanced the stabil- In this section, we present our fog based framework for
+ity of network flow representations despite the small sample size. detecting intrusions in IoT traffic. The process diagram for
+In the temporal domain, self-supervised CL is used to construct intrusion detection using fog and edge computing is illustrated in
+a feature space. This involves maximizing the feature similarity Fig. 1. Fog nodes deployed near devices extend IoT capabilities,
+of positive samples and minimizing the similarity of negative supporting low-latency intrusion detection. These nodes can use
+samples (i.e., noise interference). The result is disentangled encrypted network traffic and perform inference through the
+representations of temporal domain features and noise, thereby MTRF model, thereby avoiding the privacy leakage that occurs
+enhancing the robustness of network flows against environmen- when IoT devices transmit data to fog nodes. The characterized
+tal interference. flows obtained from the MTRF model are transmitted back to
+ Furthermore, using relatively stable frequency-domain fea- IoT devices for edge detection. Different IoT devices can flexibly
+tures increases the distance between negative samples. Inspired choose detection models based on storage capacity, supporting
+by [24], we incorporate hard margin penalty into the learning of lightweight ML detection models. With reduced sample dimenfrequency domain features. The core of hard margin penalty is to sions after characterization by fog nodes, there are advantages
+enforce a strict constraint that mutually negative samples main- such as suitability for lightweight device storage and detection,
+tain a clear separation in the feature space. In [24], hard margin is reduced transmission latency, resistance to reverse engineering,
+incorporated into the contrastive loss, requiring negative samples and enhanced privacy security.
+to be at least M (where M is the set threshold) farther away from The cloud server conducts training on a small number of
+the anchor samples than positive samples. The aim is to bring network flows. Due to the small amount of training data required
+the original data into a more precise representation space using a by MTRF, it avoids the increase in network bandwidth resources
+hard margin penalty factor, while introducing relaxation factors and transmission delay caused by uploading a large number of
+and regularization terms to mitigate the risk of overfitting in the samples.
+representation. The contributions of our work are as follows:
+ 1) We deploy the representation model on fog nodes. To III. RELATED WORK
+ prevent interference, we extracted the temporal-domain
+ and frequency-domain features of network traffic sepa- A. Deep Learning-Based IDS
+ rately. The represented test data is suitable for customized We summarize the IDS using DL models, categorizing them
+ lightweight intrusion detection models in IoT devices. broadly into two types: end-to-end models and non-end-to-end
+ 2) MTRF uses original packet headers as input, avoiding representational models. In end-to-end models, CNNs have long
+ feature selection and plaintext payloads for privacy protec- been considered as good classification models. [3] treats network
+ tion. We apply a hard margin penalty factor for frequency- flows as images and, using Convolutional Neural Networks
+ domain contrastive loss to enhance representations of (CNNs) for classification, demonstrates that multi-layer bidiminority classes. rectional network protocols are optimal. [16] preprocessed pcap
+ 3) We devised five tasks varying in sample distribution dif- files with IP masking and other methods before directly using
+ ficulty, covering balanced and imbalanced datasets of autoencoders and CNNs for encrypted traffic classification. [14]
+ different sizes. Results showed MTRF excelling in both used CNNs, transfer learning, ensemble learning, and hypermulti-class and binary classification, achieving the best F1 parameter optimization for complex network flow data, adding
+ score of 0.9802 on the imbalanced MQTT dataset. hyperparameter tuning beyond prior research. [11] addressed
+4768 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+concept drift in evolving malware samples by updating feature TABLE I
+ THE KEY DIFFERENCES BETWEEN THE PROPOSED WORK AND EXISTING
+categories. This indicates that different feature representations APPROACHES
+of the same dataset can have a significant impact. Therefore, it
+is highly necessary to propose a unified representation model
+to enhance task adaptability. [12] adopt feature engineering
+for network flows and use stacked tree models to train the
+meta-learner. Low-confidence samples are input into the biased
+classifier for detection. [1] enhance the robustness of network
+flows by simulating network-induced phenomena (e.g., packet
+loss) via recurrent neural networks. These end-to-end methods
+offer quicker detection but demands more feature engineering
+for input data.
+ Non-end-to-end models primarily refer to representing network flows before feeding them into classifiers. We roughly
+ datasets, posing challenges for storage-constrained fog comcategorize the representation process into methods based on
+ puting nodes. MLCL [33] employs three fusion strategies to
+graphs, CL, and encoder-decoder approaches. [10] used topoachieve cross-modal semantic alignment between images and
+logical data analysis to extract features before detection with
+ text. However, MLCL is validated only on large-scale datasets
+ML models. [8] created graph representations of network flows
+ and does not address few-shot scenarios. [29] initializes weights
+with feature-rich nodes and edges, feeding them into Graph
+ based on class proportions in the dataset to improve minority-
+Neural Networks (GNNs) for training. Graph-based approaches
+ class performance. However, this requires consistent data disessentially relies on feature engineering. [15] divide the input
+ tributions between training and testing sets. [34] combines
+data into K groups and construct a topological structure for
+ supervised CL with self-supervision, but its 1,440-batch Imaeach group based on the clustering results. It is demonstrated that
+ geNet pre-training requires multi-GPU parallelism – infeasible
+this method is highly effective for imbalanced datasets. [13] utifor resource-constrained scenarios. The USTGCL model [35]
+lized a feature extraction encoder with enhanced representation
+ achieves data augmentation at topological and feature levels
+capability and weighted supervised contrastive loss to address
+ but overlooks temporal correlations. However, network traffic
+class-imbalanced learning. [31] developed a supervised variant
+ detection relies more on dynamic time-series features. [28]
+of the twin variational autoencoder to enhance class discriminaconstructs a CL task by randomly masking network packet
+tion by transforming latent representations into distinguishable
+ sequences. This method only considers packet loss and fails to
+Gaussians using labels. Compared to graph-based methods, CL
+ cover more complex network environments (including packet reand encoder-decoder approaches do not require predefined graph
+ transmission, out-of-order delivery). [30] proposes a multimodal
+structures. Instead, they can automatically learn intrinsic data
+ learning method based on federated learning. The reconstructed
+representations and capture important features directly from the
+ data of each modality is decoded from the shared representaraw input.
+ tion encoded by the original input data. However, the shared
+ representation may not fully capture each modality’s specific
+B. Related Works to CL information, leading to the loss of some modality-specific details
+ or information during the decoding process.
+ CL is a promising approach in unsupervised representation
+ In summary, current CL-based research faces three key challearning. The core idea of CL is to unearth semantic discriminalenges: existing methods rely on large-scale labeled data or
+tive features by contrasting similarities and differences between
+ distributional assumptions, struggling to adapt to real-world
+samples, significantly reducing reliance on manually annotated
+ networks with label scarcity and dynamic distribution shifts.
+labels. However, existing CL-based methods still face critical
+ Data augmentation for network flows must address temporal
+challenges. Current methods [27], [33], [29], [34] require largesensitivity and semantic complexity. Feature entanglement in
+scale datasets or strong distributional assumptions for training,
+ cross-domain fusion introduces unpredictable noise. To overlimiting flexibility in real-world networks with scarce labels and
+ come these, this paper proposes a non-end-to-end framework
+dynamic distribution shifts. Besides, in some studies, the temrequiring minimal labeled data for enhanced transferability.
+poral sensitivity [35] and semantic complexity [28] of network
+ Inspired by [1], we introduce four environmentally induced
+traffic data are ignored. More critically, the existing multimodal
+ augmentations to learn representations separately in time and
+models [30] often entangle the modal specificity (information
+ frequency domains.
+unique to a certain modality) and modal sharing (information
+shared by multiple modalities) representations, which limits the
+classification performance of the models [36]. Table I summa- C. The Principle of MoCo
+rizes the comparison between the existing CL methods and the This subsection will summarize the operation process of
+method proposed in this paper. momentum contrast (MoCo) [32]. Given a sample x, generate
+ [27] embeds labels as class prototypes into the same space two different views of it through data augmentation: the query
+as feature embeddings to reduce the number of pairwise view xq and the key view xk . The encoder fq processes xq
+comparisons. However, this method relies on fully labeled to generate query feature q = fq (xq ); the momentum encoder
+WANG et al.: MTRF: MULTIDOMAIN TRANSFORMATION REPRESENTATION FOR NETWORK FLOWS IN NETWORK INTRUSION DETECTION 4769
+
+Fig. 2. Overall Framework.
+
+fk (whose parameters are the sliding average of fq ) processes Network (TGCN) branch and the Global Frequency-based Conxk to generate key feature k = fk (xk ), and stores k in the trastive Network (GFCN) branch.Two branches train the same
+queue. The queue stores a large number of key features from encoder, which is then used for inference representation. For
+historical batches as negative samples (i.e., enhanced features of the TGCN branch, MoCo is applied to compute the contrastive
+other samples), with the goal of bringing the distance between q loss Lt , using a momentum encoder for positive sample repand its positive sample key feature k closer through contrastive resentation and a dynamic queue for negative sample learning.
+loss (such as InfoNCE), while pushing the distance between q The encoder employs a multi-layer feature extractor to capture
+and all negative sample key features in the queue farther apart. temporal patterns in F. For the GFCN branch, the Fourier trans-
+This is to update the parameters of fq and improve its feature form is used to extract the amplitude-frequency representation
+quality. of F, and a contrastive loss Lf with hard boundary parameters
+ MoCo’s dynamic queue stores historical negative key features is applied to capture relationships between different classes.
+(generated by the momentum encoder fk ). When the parameters For the sake of clarity, Fig. 2 illustrates the overall architecture
+of the query encoder fq are updated rapidly, the output query and training process of our proposed method. In summary, the
+feature q may undergo feature space drift. At this point, if the primary objective of our approach is:
+negative features in the queue are generated by an earlier version
+of fk , the similarity discrepancies between q and the negatives L = Lt + αLf (1)
+may stem from feature space shifts between the new and old
+ where α represents the hyperparameter that regulates the equilibmodels, rather than the semantic differences of the samples
+ rium between the learnable temporal and frequency components.
+themselves, rendering the contrastive loss ineffective. If fk were
+ Below is a detailed description of the network flow preprocessing
+updated simultaneously with fq each time, the negative features
+ and the two branches.
+in the queue would lack consistency—negatives from different
+ As there are numerous symbol representations in this paper,
+moments would be generated by highly divergent versions of
+ Table II is provided for reference.
+fk —also leading to the aforementioned issue.
+ Thus, MoCo designs two techniques. The first one momentum
+ A. Packet Segmentation and Enhanced Transformations
+update strategy. The parameters of fk are updated via exponential moving average (EMA) toward those of fq , preventing The unidirectional flows are extracted by polling all packets
+abrupt feature space shifts. The second one is the queue update in the packet capture (pcap) file with the same five-tuple. Each
+strategy. When new key features (generated by fk ) from each flow Fk consists of N packets, and the first M decimal digits
+batch are enqueued, the oldest batch of features is dequeued from the packet headers are extracted. In this way, a single flow
+following a first-in-first-out (FIFO) policy. This ensures that the is represented as an N × M matrix. The matrix Fk represents
+ (k)
+negative samples in the queue are always derived from recent the collection of information quantities for each packet Pi =
+versions of fk , thus preserving the consistency of the feature (k,1) (k,2) (k,j)
+ [pi , pi , . . ., pi ](j = 1, 2, . . ., M ), where pi
+ (k,j)
+ represpace. sents the j-th decimal digit of the i-th packet.
+ ⎡ (k) ⎤ ⎡ (k,1) (k,2) (k,M ) ⎤
+ P1 p1 p1 · · · p1
+ IV. METHODOLOGY ⎢ (k) ⎥ ⎢ (k,1) (k,2) (k,M ) ⎥
+ ⎢P2 ⎥ ⎢p2 p2 · · · p2 ⎥
+ Given a labeled dataset F = {(Fk , yk ), k = 1, . . ., K} con- ⎢ ⎥
+ Fk = ⎢ . ⎥ = ⎢ . ⎢ ⎥ (2)
+ ⎣ .. ⎦ ⎣ ..
+ .
+ .. . .. .. ⎥
+ .
+ ⎦
+sisting of K network flows, each of which undergoes a se-
+ (k) (k,1) (k,2) (k,M )
+ries of random transformations, including normal transmission, PN pN pN · · · pN
+packet reordering, loss, and retransmission. Subsequently, these
+transformed flows are individually inputted into the temporal- Flatten each network flow Fk into a 1 × (N × M ) vector
+domain and frequency-domain networks to extract multi-scale Fk,t (t = 1, 2, . . ., N × M ). Construct matrix D ∈ RK×(N ×M )
+features. Following that, these features are propagated to two dis- by stacking the flattened 1 × (N × M ) vectors of all flows, with
+tinct branches, including Temporal Gaussian-aware Contrastive each row corresponding to a flow.
+4770 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE II
+ MATHEMATICAL SYMBOL TABLE
+
+ B. Temporal Gaussian-Aware Contrastive Network
+ In CL, the model’s output undergoes loss computation through
+ an instance discrimination proxy task, followed by backpropagation, making it a self-supervised learning approach. A
+ MoCo [32] variant is applied to obtain the temporal CL loss.
+ MoCo consists of a trainable base encoder (θbase ) and a
+ momentum encoder (θmom ) updated via exponential moving av-
+Fig. 3. The representation of the network-induced environment of data flows
+using a LSTM network. The gate mechanisms, which are consistent with the erage (EMA). While both encoders share identical architectures,
+regular LSTM, are simply depicted here. the momentum encoder maintains slowly-evolving parameters
+ through:
+ We utilize the method proposed in [1] to simulate common θmom ← m · θmom + (1 − m) · θbase (m ∈ [0, 1)) (4)
+network-induced phenomena, including normal transmission,
+retransmission, loss, and out-of-order, in order to enhance the
+error resilience of network flows and improve the robustness of The anchor samples are processed by the base encoder, while
+the model. Specifically, (1) Normal Transmission indicates that the positive samples are encoded by the momentum encoder.
+the network flow is directly processed through the traditional This asymmetric design builds a dynamic queue through the
+GRU network. (2) Retransmission represents performing the stable feature space constructed by the momentum encoder,
+same operation again on the currently processed network flow, where the positive samples of the dictionary remain consistent.
+i.e., repeating the process through the GRU network. (3) Loss Both encoder consist of a series of fully connected layers and
+indicates skipping all network flows, preventing them from dilated convolutional operations, where the fully connected laypassing through the GRU network. (4) Out-of-order involves ers reduce the dimensionality while retaining important features,
+introducing random noise to each network flow before passing improving efficiency and generalization. Dilated convolutions
+it through the GRU network. This is achieved by randomly expand the receptive field, lowering computational costs without
+adding noise to the bytes in the network flow (each processed reducing the feature map size, thus minimizing information loss
+byte should not exceed 255), approximating the combination of from the fully connected layers. After the first step of processing
+multiple random noise processes. the network flow data through their respective encoders, the
+ T
+ At the same time, we encapsulated the entire dataset and ran- anchor matrix DA and the positive matrix DPT are obtained, both
+domly selected one transformation method to establish a uniform with dimensions (T , K, Do ). Here, K represents the number of
+network-induced environment for all data instances, enabling network flows, each flow is represented by Do features, and
+iterative environment transformations to handle small sample each flow has undergone T transformations. This is immedisets. The Fig. 3 illustrates the representations corresponding to ately followed by 1D convolutions with varying kernel sizes
+the four states. to capture multi-granularity features, while achieving feature
+ After T iterations of data augmentation, Di represents the compression. The compressed dimension is (T , K, O), where
+transformation of a dataset containing K flows triggered by a O =  D2o  + 1. Within each iteration, one sample is randomly
+specific network environment. All matrices Di are concatenated selected from the K samples in the anchor matrix to serve as the
+along the first dimension to obtain the final transformation result new anchor sample At = [at1 , at2 , . . . , atT ]T ∈ RT ×O , and one
+DT . sample is randomly selected from the positive matrix to serve
+ as the positive sample Pt = [pt1 , pt2 , . . . , ptT ]T ∈ RT ×O . The
+ DT = {D1 , D2 , . . ., DT }, DT ∈ RT ×K×(N ×M ) (3) contrastive loss is then computed between At and Pt .
+ The negative sample matrix Nt = [nt1 , nt2 , . . . , ntNneg ] ∈
+ For the TGCN branch, the positive samples originate from the RDo ×Nneg is initialized with noise vectors drawn from a Gauspredefined tensor DT , while the anchor samples are generated sian distribution [2], where Nneg is a predefined hyperparameter
+by replicating matrix D T times along the first dimension. denoting the number of negative samples. The noise vector is
+WANG et al.: MTRF: MULTIDOMAIN TRANSFORMATION REPRESENTATION FOR NETWORK FLOWS IN NETWORK INTRUSION DETECTION 4771
+
+initialized using a Gaussian distribution and embedded into the in the following formula indicates the dimension.
+CL framework as a continuous and differentiable representation.
+ Consider an anchor sample ati , and assume there exists a D
+  o −1
+
+single positive sample pti paired with ati . The contrastive loss BL = B̃Ti ,fk ,Do,i · Wfk ,Do,i ,Oi + Bfk ,Oi (7)
+function operates on the principle that the loss should be low Do,i =0
+when ati is similar to its positive pair pti and dissimilar to all
+negative samples. We adopt the InfoNCE loss Lt , defined as:
+ The DFT decomposes network traffic features into distinct
+ T ati ·pti frequency components, where each frequency corresponds to
+ 1  exp τ
+ Lt = − log ati ·ntj
+ (5) a specific periodicity. An affine transformation assigns weights
+ T i=1 exp
+ ati ·pti
+ +
+ Nneg
+ τ j=1 exp τ and biases to each frequency component fk , automatically amplifying or diminishing the influence of current features.
+where ati · pti and ati · ntj denotes the vector dot product Next, reconstruct the time-domain network flow sequence
+(equivalent to cosine similarity for normalized vectors), and τ from BL by performing the inverse DFT (IDFT) along dim=1,
+is the temperature hyperparameter. obtaining the reconstructed sequence. Previously, we extracted
+ inter-flow periodic patterns by applying the DFT along dim=1
+ (across different flows). Now, to capture intra-flow periodicity
+C. Global Frequency-Based Contrastive Network
+ within individual flows, we will similarly transform the recon-
+ In this branch, supervised CL is performed. First, define the structed sequences into the frequency domain by performing
+background matrix B as the matrix containing the represen- DFT along dim=2. The resulting frequency-domain representations of all samples in the current batch extracted by the tation B˜L ∈ RT ×K×O will enable multi-scale frequency feature
+encoder. This matrix serves as the foundational storage structure extraction, where each element BTi ,Ki ,Oi (Ki ∈ {0, 1, . . . , K −
+for sample representations, from which anchor samples and 1} is a complex number, denoted as BTi ,Ki ,Oi = ReTi ,Ki ,Oi +
+their corresponding positive and negative sample pairs can be j · ImTi ,Ki ,Oi . In the following work, we will only consider the
+constructed. Following the process described in Section B, we amplitude and obtain:
+ T
+obtain DA and DPT as the background matrices.
+ In the subsequent analysis, a discrete Fourier trans- 
+form (DFT) is performed along the sample dimension BA (Ti , Ki , Oi ) = (ReTi ,Ki ,Oi )2 + (ImTi ,Ki ,Oi )2 (8)
+(dim = 1) on the feature matrix B ∈ RT ×K×Do , converting the time-domain distribution of each feature into a
+frequency-domain representation. For the sequence BTi ,:,Do,i = Consequently, the amplitude matrix is obtained by computing
+[FTi ,0,Do,i , FTi ,1,Do,i , . . ., FTi ,K−1,Do,i ], Ti ∈ {0, 1, . . . , T − the complex modulus of all elements in matrix B˜L . We randomly
+1}, Do,i ∈ {0, 1, . . . , Do − 1} at Ti -th transformation and Do,i - select a complete data set from the T transformations of the
+th feature across all flows, its DFT is: amplitude matrix to construct BA ∈ RK×O . The contrastive loss
+ is calculated by measuring feature similarity between positive
+ K−1
+  2πfk n and negative sample pairs within BA . Positive samples refer to
+ FTi ,Do,i [fk ] = BTi ,n,Do,i · e−j K , sample pairs belonging to the same class, while negative samples
+ n=0
+   represent pairs from different classes. Similarity is measured by
+ K the dot product between samples, where higher values indicate
+ fk ∈ 0, 1, . . ., +1
+ 2 (6) greater similarity.
+ Experimental observations show that most similarity values
+ FTi ,Do,i [fk ] represents the fk -th frequency component of the exceed 0.5, suggesting that instances classified as negative
+DFT result for the Do,i -th feature in the Ti -th transformation. samples exhibit high similarity. This implies that the boundary
+Since the Fourier transform of a real-valued signal is conju- between different classes is relatively ambiguous. The similarity
+gate symmetric, only the positive frequency components are matrices for negative pairs are denoted as Nf . Therefore, a
+returned. For all T iterations of data augmentation, each iteration stronger penalty is applied only to negative sample pairs. The
+computes the frequency-domain representation of Do features new loss function with a relaxation factor is formulated as
+distributed across all K network flows, with the output result follows:
+being B̃ ∈ R(T ×FK ×Do ) , where FK =  K 2  + 1. ⎛ ⎞
+ Nneg
+ To enhance the representation learning in the Fourier layer and 
+promote interactions among different frequency components, Lf = log ⎝ eg(Nf )λγ ⎠ (9)
+we introduce an affine transformation composed of a linear i=1
+
+transformation and an offset vector. For each transformation
+Ti and frequency component fk ∈ {0, 1, . . . , FK }, multiply the where Nneg represents the number of pairs of negative samples
+Do -dimensional feature vector at that frequency by weight ma- in a certain dataset. We determine the value of the hyperparametrix Wfk ,Do,i ,Oi (Oi ∈ {1, 2, . . . , O − 1}), then add bias term ter γ by experiments. g(Nf )γ achieves a stricter data separation
+Bfk ,Oi to obtain BL ∈ RT ×FK ×O . The subscript of each matrix through the hard margin, providing a closer approximation to
+4772 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE III
+ DATASET DETAILS
+
+representing the data. g(·) represents the relaxation function as:
+ λ = Nf + m
+ g(Nf ) = max{0, Nf − m}
+ m ≤ 0.5 (10)
+
+ It is worth mentioning that, we did not strictly differentiate
+the inner product similarity between (non-)similar data as 0 or
+1. Instead, we used m, which is a relaxation boundary between
+samples of different classes. The adoption of relaxation factors
+allows the model to pay more attention to challenging samples
+during learning, thereby avoiding overfitting on the negative
+samples with low similarity itself.
+
+ V. EXPERIMENTS
+A. Experimental Setup
+ The experiments were conducted within the Ubuntu 20.04
+operating system, employing an NVIDIA GeForce RTX 2080
+Ti, accompanied by six Intel(R) Xeon(R) Silver 4216 CPU @
+ Fig. 4. Data distribution for five tasks (T1 , T2 , T3 , T4 and T5 ).
+2.10 GHz processors, and a total of 251 gigabytes of memory.
+The experimentation environment was configured with Python
+3.8.16, CUDA 12.2, and PyTorch 1.9.0+cu102.
+ Datasets and Settings: We evaluate the proposed method Each task exhibits increasing levels of difficulty. T1 represents
+on five publicly available datasets, and more details about the a multiclass task with a balanced dataset. T2 represents an
+dataset will be presented in Table III. The datasets used for imbalanced training dataset, where the normal class accounts for
+comparison include MQTT-IoT-IDS2020 [4], UNSW-NB15 [7], 0.6 of the total instances in the normal class, and each category
+USTC-TFC2016 [3], CIC-DDoS2019 [17], and TON-IoT [18]. of malware accounts for 0.1 of its respective category’s total
+They offer diverse scenarios, from simulated IoT networks to instances. T3 has led to an increase in the complexity of the T2 ,
+real network testing platforms, covering various attack types which in turn resulted in a reduction in the size of the training
+such as DDoS attacks and content-based attacks like injection set and an increase in the proportion of the test set. T4 is devised
+and XSS. as a binary classification task with an imbalanced dataset. In T5 ,
+ We utilized pcap-formatted data for each dataset and ap- switched to a larger dataset, with 5000 instances each for benign
+plied the USTC-TK20161 tool uniformly. The process involved data and attack behaviors. For specific partitioning details, please
+converting pcap data into decimal format. Each network flow refer to Fig. 4.
+consisted of 28 data packets, each capturing the first 28 B, To clarify, we’ll use task T2 as an illustrative example in Fig. 4.
+resulting in a 28∗28 decimal array for each flow. Additionally, When C = 400, the number of normal samples in the training
+we designed five distinct tasks, denoted as T1 , T2 , T3 , T4 and T5 . set is 0.6 ∗ C = 240. This sample size is not considered large
+ for easily obtainable normal traffic. The number of samples for
+ 1 https://github.com/yungshenglu/USTC-TK2016 other malware categories is 0.1 ∗ C = 40 each.
+WANG et al.: MTRF: MULTIDOMAIN TRANSFORMATION REPRESENTATION FOR NETWORK FLOWS IN NETWORK INTRUSION DETECTION 4773
+
+Fig. 5. Validation of the selection of network induction environment.
+
+ Fig. 6. Validation of the impact of packet quantity on detection results.
+
+ To mitigate the effects of randomness, we averaged the results of each experiment over ten different random seeds. The
+main hyperparameters that affect the computation of Lf are
+the initialization of γ, as well as the adjustment process during 2) Solution of Q2: We set the number of packets in a network
+backpropagation. We directly set γ to 6.4 ∗ 106 . The reason for flow to be 28. However, with a larger number of packets, it
+this configuration was determined through experimentation, as implies that a certain amount of packets needs to be accumulated
+detailed in the second part of trial D. in advance for detection, inevitably causing significant delays
+ For the parameters of the detection head, the settings are as in real-time packet detection. Therefore, the first step is to
+follows. In the XGBoost model, the number of trees is 10, the validate to what extent the number of packets can impact the
+step size is 0.1, and the maximum depth of each tree is 6; in detection results. To address this question, we partitioned the
+the RF and ET, the values of the important parameters are the training and test sets on the USTC-TFC2016 dataset according
+same, the number of trees is 100, and the splitting criterion is to the distribution of T2 . Starting with one data packet, we
+based on the Gini coefficient. The minimum number of samples incrementally added one data packet at a time, checking the
+that a node can split is 2, and the minimum number of samples test results after each length change. The experimental results
+required for a leaf node is 1. are shown in Fig. 6.
+ Observing the results depicted in Fig. 6, an interesting finding
+ emerged. Surprisingly, the detection performance was notably
+B. Preliminary Parameters effective when considering only a single packet. However, as the
+ Before initiating the experiments, we posed three questions to number of packets increased, especially beyond the 21th packet,
+address uncertainties regarding the creation and preprocessing the test results started to decline. This decline might be attributed
+of input network flows: to subsequent packets being empty, and for network flows with
+ Q1: Which network induction environment yields better de- fewer than 28 packets, padding with zeros led to meaningless
+tection results? data in the latter part of the sequence.
+ Q2: How effective is single-packet detection? Consequently, MTRF demonstrates the capability to effec-
+ Q3:Is the detection effective for content-based attack behav- tively detect malicious behavior even with a limited number of
+iors? packets, potentially as few as one. The choice of 28 packets was
+ 1) Solution of Q1: The network flows are primarily enhanced made to accommodate the general scenarios present in most
+by simulating common network-induced phenomena, including datasets.
+normal transmission, retransmission, loss, and out-of-order, to To conduct an in-depth analysis of the information captured
+improve the robustness of the model. This trial will verify which by individual data packets, the mutual information (Mutual Ininduced phenomenon yields the best detection results. For this formation, MI) was calculated between each data packet feature
+purpose, we use the CIC-DDoS2019 dataset under the data value and the label. MI quantifies the statistical dependence
+distribution of T2 , and detailed results are shown in Fig. 5. relationship between the feature and the label, and the higher
+ The results indicate that the detection outcomes for normal the value, the more effective the feature is for classification.For
+transmission, retransmission, and loss inductions are similar, the core fields of the IP layer(MI=0.4111), such as TOS, prowhile the results for out-of-order are slightly higher than the tocol field, and flags are universal features for traffic classificaothers. This phenomenon can be approximated as a combination tion. Link-layer fields, including Ethernet type(MI=0.4081) and
+of multiple random noise processes designed to confuse the MAC address(MI=0.4085), are also of secondary importance.
+original sequence, enhancing the model’s robustness. Therefore, Since the USTC-TFC2016 dataset was collected using differin the subsequent experiments, we will use out-of-order as the ent virtual machine simulations to generate traffic, the MAC
+pre-processing method for the network traffic. addresses also play a certain role in classification.
+4774 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE IV
+ RESULTS OF ANOMALY DETECTION ON PACKET PAYLOADS
+
+ TABLE V
+ COMPARE THE PERFORMANCE METRICS OF DIFFERENT METHODS ON THE UNSW-NB15 DATASET FOR THE T1
+
+ 3) Solution of Q3: The question stems from extracting the C. Experimental Results
+initial 28 bytes of each packet, which includes a substantial 1) Following the Settings of Task T1 : We conducted experportion of packet header information. We need to verify the iments on the UNSW-NB15 dataset and combined the data
+effectiveness of detecting payload-based malware implantation.
+ distribution from T1 to verify the intrusion detection capability
+Injection attacks like SQL injection and XSS achieve their goals of our MTRF model. Various competition models are compared.
+by injecting malicious code into an application’s content. Hence, We selected (non-)end-to-end models from related works for
+we conduct experiments using the TON-IoT dataset (including
+ competitive analysis. Here, we process each model according to
+injection attacks, as shown in Table III). Additionally, we ex- its original form of input samples. For instance, [8] utilizes IP
+tract bytes 28-100 of each packet to include maximum payload addresses and ports to represent nodes, so we extracted these two
+information while excluding headers. Following the setup of
+ features to represent nodes in the graph. However, the sample
+T5 , we allocate 100 samples for the training set and 9,900 sizes of the training and testing sets used are consistent with
+samples for the test set. The experimental results are presented in
+ those we set. For the four ML models, including ET, RF, DT,
+Table IV.
+ and XGBoost, the input data is identical to that of the MTRF
+ Compared to extracting payload information (with an accu- model. The purpose is to compare the representational capability
+racy rate of 0.9994), using packet header extraction does not
+ of MTRF to what extent it improves over directly inputting raw
+perform well in detecting injection attacks and XSS attacks
+ data, while keeping the detection models consistent.
+(with an accuracy rate of 0.9734). However, when more attack In Table V, the data in the last four rows were represented
+behaviors are mixed in, the opposite is true. The detection
+ using the proposed models, followed by the application of four
+of extracting the header information becomes more effective
+ different classifiers for detection. While both RF and ET models
+(0.9953 vs. 0.9210). This suggests that our model is effective performed similarly, ET exhibited the best performance with an
+in handling both headers and payloads. The key lies in under-
+ F1-score of 0.9699. Table V also lists the training convergence
+standing the general categories of such attack behaviors before time and average inference time per sample for each model.
+segmenting and extracting packet data, significantly enhancing MTRF represents each test sample (took about 23.90 ms) before
+detection accuracy.
+ feeding it into the ML model for testing (took about 0.04 ms),
+WANG et al.: MTRF: MULTIDOMAIN TRANSFORMATION REPRESENTATION FOR NETWORK FLOWS IN NETWORK INTRUSION DETECTION 4775
+
+ TABLE VI
+COMPARE THE PERFORMANCE METRICS OF VARIOUS METHODS ON THE UNSW-NB15 DATASET FOR TASKS T2 AND T3 , AND ON THE MQTT DATASET FOR TASK
+ T4
+
+ 2) Following the Settings of T2 and T3 : In this experiment,
+ we will continue conducting imbalanced 10-class classification
+ tests using the UNSW-NB15 dataset. Based on our findings in
+ the T1 task, we observed that the ET classifier yielded the best
+ detection performance. Therefore, we will continue to apply this
+ technique in the T2 and T3 tasks. Based on the observations from
+ Table VI, it can be observed that the performance of all models
+ has declined to varying degrees compared to T1 . However, in
+ these two tasks, MTRF consistently maintains a significant lead.
+ Competitors evidently struggle to adapt to the challenges of
+ multi-class classification. Because the highest F1 score in both
+Fig. 7. The heat map for intrusion detection with (a) the ET model and (b) the tasks is nearly twice as high as the competitors’highest score.
+MTRF-ET model under the task T1 . 3) Following the Settings of T4 : In the upcoming experiments, we will conduct the T4 task on the MQTT dataset, which
+ has fewer categories. The experimental results are as shown in
+ Table VI. In this task, MTRF’s performance closely matches
+resulting in a total inference time of 23.94 ms per sample. It is that in the T2 task. Other competitors have shown significant
+observed that MTRF achieves the best detection performance, improvements, with a preference for binary classification scenaralthough its training and testing times are at a moderate level. ios. Surprisingly, DT performs unexpectedly poorly, exhibiting
+ To provide a more detailed representation of the improvement minimal effectiveness in this context.
+achieved by MTRF-ET over the ET model, we visualize the Taking into account the experimental results of T2 , T3 and
+performance results using heat map. As shown in Fig. 7, each T4 , it can be concluded that MTRF is suitable for imbalanced
+element represents the number of samples that match the actual datasets in both multi-class and binary classification scenarios.
+and predicted class. Among them, (a) is the prediction result of 4) Following the Settings of T5 : In all previous experiments,
+the ET model, and (b) is the prediction result of the MTRF-ET only a small number of samples were used for training. Theremodel. From Fig. 7, we observe that in (b), the poorest classifi- fore, this trial will increase the data volume to further validate
+cation performance is for DoS attacks, with only three samples the effectiveness of MTRF on a larger training set. In this trial,
+being misclassified. In (a), the worst-performing class is also we employed a balanced binary detection. There were 5000
+DoS, with its misclassified instances spread across the other samples for both benign and malicious flows, while all malicious
+eight classes. behaviors are assigned one label.
+ All competing models adhere to their original input require- We conducted experiments on the USTC-TFC2016 dataset,
+ments. With T1 ’s distribution containing 80 samples per cate- and the results are shown in Fig. 8. The numbers below each
+gory, the training and test sets are divided equally. This results subplot indicate the actual ratio of samples in the training set
+in the training set having only 400 samples that come from to the test set. This series of results indicate that as the ratio of
+the UNSW-NB15 dataset. In contrast, E-GraphSAGE requires the training set to the test set changes, the inference results vary
+datasets in the tens of millions for multi-class detection. The minimally, remaining within the range of 0.980 to 0.985. This
+limited dataset size is the primary reason why most competing suggests that MTRF exhibits good stability in balanced binary
+models struggle to accurately classify the 10 categories. Unlike classification.
+other methods that rely on large-scale datasets for training,
+MTRF offers an effective data representation approach without D. Further Analysis
+imposing specific requirements on the classification network.
+ 1) Analysis on Domain Transformation: This trial aims to
+Furthermore, our approach requires extracting only a few packinvestigate the influence of temporal-domain and frequencyets from each flow, eliminating the need for additional feature
+ domain transformations on the contrastive loss. We conducted
+extraction.
+4776 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ Fig. 9. Compare the classification results by varying the hard margin following
+ the distribution of the training data in T3 on the MQTT dataset.
+
+Fig. 8. The total number of samples for both the training and testing sets was
+expanded to 10,000 in a binary classification conducted on the USTC-TFC2016
+dataset.
+
+ TABLE VII
+ ABLATION EXPERIMENTS ON DOMAIN TRANSFORMATIONS CONDUCTED ON
+ THE MQTT DATASET FOR T1 AND T2 TASKS
+
+ Fig. 10. In the USTC-TFC2016 dataset with T2 distribution, we gradually
+ increased the size of the test set to obtain intrusion detection performance.
+
+ the training and testing datasets are succinctly represented as
+ Xtr and Xte . Definition 1: The presence of unknown samples in
+ablation experiments to investigate their impact on MTRF. This the test set, symbolically expressed as Ftr = Fte , Xtr = Xte .
+trial used the MQTT dataset following the data distribution of Definition 2: The occurrence of unknown categories in the test
+T1 and T2 . The results are presented in Table VII. set, symbolically expressed as Ftr = Fte , Xtr = Xte . There-
+ Our experiments show that solely using temporal-domain fore, we designed two experiments, namely data augmentation
+features (Lt) or frequency-domain features (Lf ) exhibits detec- and dataset transfer, from these two perspectives to demonstrate
+tion capabilities for different-distribution datasets. However, the the representation capabilities of MTRF.
+fusion of data after undergoing multiple domain transformations Data Augmentation: To verify MTRF’s generalizability to unyields superior results. seen data, we progressively expanded the test set while preserv-
+ 2) Analysis on Hard Margin: We also investigated the im- ing the training data distribution of T2 in the USTC-TFC2016
+pact of the hard margin parameter γ within the frequency dataset. In accordance with Definition 1, only unknown samples
+domain loss function (9) on intrusion detection. The results are added to the test set. The ultimate exploration yields the
+are shown in Fig. 9, where the horizontal axis represents the classification results for 11 types of network behaviors on this
+numerical variations of the parameter γ ranging from 6.4 ∗ 102 dataset.
+to 6.4 ∗ 107 , increasing by a factor of 10.As γ increases, all The experimental results are shown in Fig. 10, where the
+performance metrics improve, especially rapidly initially. This horizontal axis represents the size of the test data, growing
+indicates a stronger demand for γ growth in intrusion detection as a multiple. From the Fig. 10, it can be observed that the
+performance. However, it is worth noting that a larger γ is performance of intrusion detection does not exhibit a significant
+not necessarily better. Once the parameter exceeds 6.4 × 106 , decline as the size of the test set increases. This shows MTRF’s
+further increases lead to performance degradation. strong representation ability, effectively learning general pat-
+ 3) Analysis on Representation: As a representation model, terns from training data and generalizing well to unseen datasets.
+MTRF should generalize learned data representations to unseen Dataset Transferability: To assess the generalization abiltest data. To clarify the meaning of the unknown test dataset, we ity of the MTRF model, we aim to determine its capacity to
+define the following symbols. The network flow categories are represent previously unseen datasets aligning with Definition
+denoted by F . Ftr and Fte respectively signify the categories 2. Specifically, MTRF learns parameters from known datasets,
+present in the training and testing sets. The sets of samples within then directly applies them to represent and detect intrusions in
+WANG et al.: MTRF: MULTIDOMAIN TRANSFORMATION REPRESENTATION FOR NETWORK FLOWS IN NETWORK INTRUSION DETECTION 4777
+
+Fig. 11. The ROC curve obtained by directly representing the data from the Fig. 12. The model trained on the CICDDoS-2019 dataset is transferred for
+USTC-TK2016 dataset using the MTRF model trained on the MQTT dataset validation on the USTC-TK2016 dataset.
+with data distribution task T4 .
+
+unseen data. Check whether its performance is comparable to visualizations were conducted on the samples before and after
+that achieved by training solely based on unseen data. representation.
+ To achieve this, we initially train the MTRF model on the Our specific approach is as follows: T4 proportions were used
+MQTT dataset and saved the model parameters. Then, these to mix DNS attack behavior and benign traffic from the CICDparameters were loaded to represent the previously unseen DoS2019 dataset. The trained model was then directly applied
+USTC-TK2016 dataset. We utilize ROC curves to observe intru- to the MQTT dataset and the USTC-TK2016 dataset, obtainsion detection performance, helping us ascertain whether such ing characterized samples. The x-axis represents the flattened
+representations remain effective. one-dimensional representation of each sample. For instance,
+ The specific results are shown in Fig. 11. We conducted in (a), after characterization, each sample is represented as a
+binary classification using the T4 data distribution. We tested (1,320)-dimensional vector, resulting in 320 values along the
+the intrusion detection results of the malware Cridex and Geodo x-axis.The results are illustrated in Fig. 13.
+in the USTC-TK2016 dataset, denoted as Origin_Cridex and Initially chaotic data distributions (Fig. 13(b)(c)) become
+Origi_Geodo, respectively. After reloading the model, we tested clearly separable between benign and malicious flows after
+the classification results for the same two types of malware, representation, demonstrating MTRF’s effectiveness. Additiondenoted as Transfer_Cridex and Transfer_Geodo. From Fig. 11, ally, the data distribution of benign flows after representation
+it can be observed that the results after model loading are 0.90 becomes more structured.
+and 0.94, slightly lower compared to 0.92 and 0.96. This suggests 4) Large-Scale Imbalanced Dataset: The false positive (FP)
+that MTRF exhibits a certain degree of generalization capability and false negative (FN) are crucial assessment metrics for rein terms of representation. liable intrusion detection. A high FP trigger unnecessary false
+ In-depth Analysis of Dataset Transferability: In MQTT data, alarms, while a high FN leaves threats undetected. We conducted
+the observed attack behaviors primarily involve brute-force at- binary classification experiments on the TON-IoT dataset, comtacks or scanning attacks utilizing Geodo (a botnet). These attack prising 9500 benign samples and 500 attack samples (featuring
+behaviors bear resemblance to trojans and worm viruses found various attack behaviors). The training and testing sets were
+in the USTC-TFC2016 dataset. Therefore, we need to conduct sized at 100 and 9900, respectively, and the experimental results
+more comprehensive experiments to thoroughly validate the are depicted in Fig. 14.
+transferability of the dataset. According to Fig. 14, it can be observed that the MTRF-ET
+ Following T4 data distribution, we trained a model on the model yields FP = 0 and FN = 74 in its detections, while
+CICDDoS-2019 dataset for malicious traffic detection. The using only the ET model results in FP = 63 and FN = 404.
+model was then directly applied to the USTC-TK2016 dataset, This indicates that the MTRF demonstrates effective detection
+evaluating its performance on each category using AUC as performance on imbalanced datasets. The low FP rate helps
+the detection metric. The experimental results are illustrated in reduce false alarms, providing benefits for maintaining system
+Fig. 12. stability and reducing business interruptions.
+ The CICDDoS-2019 dataset primarily focuses on protocol- Statistical Significance Tests: We selected the dataset CICspecific attacks, while the USTC-TK2016 dataset concentrates DDoS2019 which has 13 categories, and for each category, we
+on trojans and worm viruses. Therefore, the similarity between chose 100 samples. By applying the DFT to each sample’s
+the attack types of the two datasets is relatively low. How- feature dimensions, the amplitude spectra are obtained. The
+ever, observing the AUC in the graph, there is only a minor frequency domain feature changes before and after the MTRF
+decrease of around 2%. In fact, under the T4 data distribu- model representation are compared in detail. The study visually
+tion, the training of the transferable model only utilized two presents the differences in the amplitude spectrum distribuattack samples. We speculate that this might be due to the tion before and after the representation. Mltivariate analysis
+strong representation capabilities for benign samples. Therefore, of variance (MANOVA) was further employed to evaluate the
+4778 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+Fig. 13. Visualization of network flow samples before and after representation.
+
+ TABLE VIII
+ THE RESULTS OF MANOVA
+
+Fig. 14. The impact of MTRF on FP and FN in imbalanced datasets.
+
+ value is smaller (0.0415 vs 0.0754), and the Hotelling-Lawley
+ trace value is larger (23.12 vs 12.27). Moreover, the number
+ of characteristic features of the characterized network flow is
+ half of the original. This result proves that the feature set of
+ MTRF has better discrimination efficiency and stronger class
+ discrimination ability.
+
+ VI. RESOURCE CONSUMPTION
+ During the training phase, the resident set size (RES) of the
+Fig. 15. Compare the amplitude spectra before and after using MTRF for
+ MTRF model was approximately 3.038 GB, the shared memory
+representation.
+ size (SHR) was about 573.67 MB, the CPU requirement was
+ approximately 13 cores, and the memory occupancy rate (%)
+multi-class discrimination enhancement of post-representation was 1.2%. Therefore, the training task is suitable for being
+amplitude spectra. Fig. 15. shows the amplitude spectrum, with carried out on a cloud platform. After the training is completed,
+the horizontal axis representing the normalized frequency rang- the model can be saved, and its size is only 150 MB.
+ing from 0 to 0.5. It can be seen that the 13 types of network When performing inference on the fog node device, while the
+flows can be clearly distinguished in the amplitude spectra after occupation of other resources remains basically unchanged, the
+the representation. CPU usage approaches 2 cores. To prevent overloading, the fog
+ Table VIII shows the results of MANOVA. It can be seen node requires over 2 CPU cores and 4 GB of combined physical
+that the network flow characterized by MTRF has an F value as and shared memory. The disk space only needs to be sufficient
+high as 163.6 (5.7 times that of the original), the Wilks’ lambda for more than 150 MB.
+WANG et al.: MTRF: MULTIDOMAIN TRANSFORMATION REPRESENTATION FOR NETWORK FLOWS IN NETWORK INTRUSION DETECTION 4779
+
+ In terms of real-time performance, the single inference time of [7] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+the model is approximately 24 ms (refer to Table V). Moreover, network intrusion detection systems (UNSW-NB15 network data set),”
+ in Proc. Mil. Commun. Inf. Syst. Conf., Canberra, ACT, Australia, 2015,
+since the fog nodes are close to the IoT devices and the commu- pp. 1–6, doi: 10.1109/MilCIS.2015.7348942.
+nication delay is low, the overall system can meet the response [8] W. W. Lo et al., “E-graphsage: A graph neural network based intrusion
+requirements of most IoT real-time monitoring scenarios. detection system for IoT,” in Proc. NOMS 2022-2022 IEEE/IFIP Netw.
+ Oper. Manage. Symp. IEEE, 2022, pp. 1–9.
+ The scalability of the model mainly depends on the resource [9] N. Wang, Y. Chen, Y. Hu, W. Lou, and Y. T. Hou, “FeCo: Boosting
+redundancy of the fog nodes. A single MTRF instance only intrusion detection capability in IoT networks via contrastive learnrequires approximately 2 CPU cores and 3.5 GB of memory. ing,” in Proc. IEEE INFOCOM 2022 - IEEE Conf. Comput. Commun.,
+ London, United Kingdom, 2022, pp. 1409–1418, doi: 10.1109/INFO-
+For fog node devices with multiple cores and large memory, COM48880.2022.9796926.
+multiple MTRF model instances can be deployed in parallel [10] L. N. Tidjon and F. Khomh, “Reliable malware analysis and detection
+to enhance processing speed. Additionally, the model size is using topology data analysis–.,” 2022, arXiv:2211.01535.
+ [11] F. Ceschin et al., “Fast & Furious–: On the modelling of malware detection
+relatively small (150 MB), and it does not impose significant as an evolving data stream,” Expert Syst. with Appl., vol. 212, 2023, Art.
+pressure on the storage resources of the fog nodes. If a fog node no. 118590.
+cluster is adopted for deployment, the detection tasks can be [12] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multi-tiered hybrid
+ intrusion detection system for Internet of Vehicles,” IEEE Internet Things
+distributed to multiple nodes, thereby achieving good overall J., vol. 9, no. 1, pp. 616–632, Jan. 2022, doi: 10.1109/JIOT.2021.3084796.
+scalability. [13] L. Liu et al., “ConFlow: Contrast network flow improving classimbalanced learning in network intrusion detection,” in Proc. SPNCE 2023,
+ Cham, Switzerland, 2025, pp. 120–136.
+ VII. CONCLUSION [14] L. Yang and A. Shami, “A Transfer learning and optimized cnn based
+ intrusion detection system for internet of vehicles,” in Proc. IEEE ICC,
+ In our work, we separate the network flow representation Seoul, South Korea, 2022, pp. 1–6.
+learning from downstream classification tasks, avoiding the [15] M. Zhong, M. Lin, and Z. He, “Dynamic multi-scale topological repredirect end-to-end learning and detection dependence on large- sentation for enhancing network intrusion detection,” Comput. Secur., vol.
+ 135, 2023, Art. no. 103516.
+scale labeled samples. This has also been confirmed by com- [16] M. Lotfollahi et al., “Deep packet: A novel approach for encrypted
+paring with previous state-of-the-art end-to-end anomaly de- traffic classification using deep learning,” Soft Comput., vol. 24, no. 3,
+tection methods. MTRF employs a hard margin strategy to pp. 1999–2012, 2020.
+ [17] I. Sharafaldin, A.H. Lashkari, and A.A. Ghorbani, “Toward generating a
+represent packet data in the frequency domain, and it has been new intrusion detection dataset and intrusion traffic characterization,” in
+demonstrated that a larger parameter γ within a certain range Proc. ICISSP, 2018, vol. 1, pp. 108–116.
+can achieve better intrusion detection results. A large num- [18] N. Moustafa, “A new distributed architecture for evaluating AI-based
+ security systems at the edge: Network TON_IoT datasets,” Sustain. Cities
+ber of experiments have shown that our method outperforms Soc., vol. 72, Sep. 2021, Art. no. 102994.
+fourteen other models in multi-class tasks, achieving the best [19] S. Tsimenidis, T. Lagkas, and K. Rantos, “Deep learning in IoT inperformance. Furthermore, as a representation model, good trusion detection,” J. Netw. Syst. Manage., vol. 30, no. 8, pp. 1–40,
+ 2022.
+generalization capability is crucial for MTRF. This is because it [20] D. Kim et al., “SelfReg: Self-supervised contrastive regularization for
+means that the model can be applied to unseen datasets. Further domain generalization,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., 2021,
+still, even if trained solely based on the existing dataset, it 9619–9628.
+ [21] W. Huang et al., “Towards the generalization of contrastive self-supervised
+can still achieve outstanding detection performance. Even when learning.,” in Proc. Int. Conf. Learn. Representations, Kigali, Rwanda,
+training on completely unknown data using pre-loaded model 2023.
+parameters, MTRF can achieves AUC scores of 0.90 and 0.92. [22] L. Le, A. Patterson, and M. White “Supervised autoencoders: Improving
+ generalization performance with unsupervised regularizers,” in Proc. Proc.
+This is only 0.02 lower than the AUC obtained by training on Int. Conf. Neural Inf. Process. Syst., 2018, pp. 107–117.
+the unknown data from scratch. [23] I. O. Lopes et al., “Effective network intrusion detection via representation
+ learning: A denoising AutoEncoder approach,” Comput. Commun., vol.
+ 194, pp. 55–65, 2022.
+ REFERENCES [24] X. Liang, Y. Ji, W. -S. Zheng, W. Zuo, and X. Zhu, “SV-Learner:
+ [1] Z. Zhao et al., “ERNN: Error-resilient RNN for encrypted traffic detection Support-vector contrastive learning for robust learning with noisy latowards network-induced phenomena,” IEEE Trans. Dependable Secure bels,” IEEE Trans. Knowl. Data Eng., vol. 36, no. 10, pp. 5409–5422,
+ Comput.vol. 22, no. 1, pp. 493–510, Jan.-Feb. 2025. Oct. 2024.
+ [2] K. Ethayarajh, “How contextual are contextualized word representations? [25] N. F. Syed, M. Ge, and Z. Baig, “Fog-cloud based intrusion detection
+ Comparing the geometry of BERT, ELMo, and GPT-2 embeddings.,” in system using recurrent neural networks and feature selection for IoT
+ Proc. Conf. Empirical Methods Natural Lang. Process.-Int. Joint Conf. networks,” Comput. Netw., vol. 225, 2023, Art. no. 109662 .
+ Natural Lang. Process., 2019,pp. 55–65. [26] L. Lyu et al., “Fog-embedded deep learning for the Internet of
+ [3] W. W. Zhu et al., “Malware traffic classification using convolutional neural Things,” IEEE Trans. Ind. Inform., vol. 15, no. 7, pp. 4206–4215, Jul.
+ network for representation learning,” Proc. Int. Conf. Inf. Netw., 2017, 2019.
+ pp. 712–717. [27] M. Lopez-Martin et al., “Supervised contrastive learning over prototype-
+ [4] H. Hindy et al., “Machine learning based IoT intrusion detection system: label embeddings for network intrusion detection,” Inf. Fusion, vol. 79,
+ An MQTT case study (MQTT-IoT-IDS2020 dataset,” in Proc. Int. Netw. pp. 200–228, 2022.
+ Conf., Cham: Springer International Publishing, 2020, pp. 73–84. [28] Y. Yue, X. Chen, Z. Han, X. Zeng, and Y. Zhu, “Contrastive learning
+ [5] G. Woo et al., “CoST: Contrastive learning of disentangled seasonal-trend enhanced intrusion detection,” IEEE Trans. Netw. Service Manage., vol.
+ representations for time series forecasting,” in Proc. Int. Conf. Learn. 19, no. 4, pp. 4232–4247, Dec. 2022, doi: 10.1109/TNSM.2022.3218843.
+ Representations, Virtual Event, 2022, pp. 1–18. [29] H. Dong and I. Kotenko, “An autoencoder-based multi-task learning
+ [6] J. A. Barnes et al., “Characterization of frequency stability,” IEEE for intrusion detection in IoT networks,” in Proc. IEEE Ural-Siberian
+ Trans. Instrum. Meas., vol. IM-20, no. 2, pp. 105–120, May 1971, doi: Conf. Biomed. Eng., Radioelectronics Inf. Techn., Yekaterinburg, Russian
+ 10.1109/TIM.1971.5570702. Federation, 2023, pp. 1–4.
+4780 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+[30] H. Q. Le, Y. Qiao, L. X. Nguyen, L. Zou, and C. S. Hong, “Federated mul- Mingshu He (Member, IEEE) received the PhD detimodal learning for IOT applications: A contrastive learning approach,” gree in electronic science and technology from the
+ in Proc. 24th Asia-Pacific Netw. Oper. Manage. Symp., sejong, korea, Beijing University of Posts and Telecommunications,
+ republic, 2023, pp. 201–206. Beijing, China, in 2022. He is currently doing re-
+[31] P. V. Dinh, Q. U. Nguyen, D. T. Hoang, D. N. Nguyen, S. P. Bao, search with the School of Cyberspace Security, Beiand E. Dutkiewicz, “Constrained twin variational auto-encoder for intru- jing University of Posts and Telecommunications. His
+ sion detection in IoT systems,” IEEE Internet Things J., vol. 11, no. 8, research interests include network security, anomaly
+ pp. 14789–14803, Apr. 2024, doi: 10.1109/JIOT.2023.3344842. detection, and machine learning.
+[32] K. He et al., “Momentum contrast for unsupervised visual representation
+ learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2020„
+ pp. 9729–9738, doi: 10.1109/CVPR42600.2020.00975.
+[33] Y. Zhao, H. Lu, S. Zhao, H. Wu, and Z. Lu, “Multi-level contrastive
+ learning for hybrid cross-modal retrieval,” in Proc. ICASSP 2024-2024
+ IEEE Int. Conf. Acoust., Speech Signal Process., Seoul, Korea, Republic,
+ 2024,pp. 6390–6394. Xiaojuan Wang (Member, IEEE) received the PhD
+[34] H. Deng and Y. Yang, “Context-enriched contrastive loss: Enhancing degree in electronic science and technology from
+ presentation of inherent sample connections in contrastive learning frame- the University of Beijing University of Posts and
+ work,” IEEE Trans. Multimedia, vol. 27, pp. 429–441, 2025. Telecommunications, Beijing, China, in 2015. She is
+[35] L. Pan and Q. Ren, “Urban traffic flow forecasting based on spatial- currently an associate professor with the School of
+ temporal graph contrastive learning,” in Proc. ICASSP 2024-2024 IEEE Electronic Engineering, Beijing University of Posts
+ Int. Conf. Acoust., Speech and Signal Process., Seoul, Korea, Republic, and Telecommunications. Her research interests in-
+ 2024, pp. 5560–5564. clude deep learning, complex networks, and human
+[36] A. Eijpe et al., “Disentangled and interpretable multimodal attention fusion gesture recognition.
+ for cancer survival prediction,” in Proc. MICCAI, 2025, pp. 117–127.
+
+ Shize Guo was born in 1969. He received the MS
+ Xinlei Wang received the PhD degree in electronic and BS degrees from Ordnance Engineering College,
+ science and technology from the Beijing University China, in 1991 and 1988, respectively, and the PhD
+ of Posts and Telecommunications, Beijing, China, in degree from the Harbin Institute of Technology, in
+ 2025. Her current research interests include machine 1989. He is currently a researcher with the Institute of
+ learning and network security. North Electronic Equipment and also a professor with
+ the Beijing University of Post and Telecommunications. His main research interests include information
+ technology and information security.

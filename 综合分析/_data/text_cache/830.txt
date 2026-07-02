@@ -1,0 +1,146 @@
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026                                                                                     1633
+
+
+
+
+   TraceHG: An Unsupervised Dual-View Framework
+         for Microservice Anomaly Detection
+      Ningning Han, Member, IEEE, Siyang Lu , Member, IEEE, Zaichao Lin, Graduate Student Member, IEEE,
+          Bin Li, Member, IEEE, Nan Wang, Graduate Student Member, IEEE, and Xin Luo , Fellow, IEEE
+
+
+   Abstract—Traces and logs record the behaviors and interactions
+between microservices, making them indispensable for diagnosing
+system anomalies. However, the intricate and flexible architec-
+ture of microservices presents significant challenges for automated
+anomaly detection. Existing approaches often struggle to capture
+the internal dynamics and correlations among microservices, which
+limits their ability to comprehensively detect anomalies arising
+from synchronous or asynchronous calls. Therefore, we catego-
+rize three prevalent anomaly paradigms in microservice systems:
+intra-service, inter-service, and joint anomalies. To address these
+challenges, we propose a novel unsupervised learning framework
+for dual-view anomaly detection, named TraceHG. Specifically,
+it constructs the trace graph composed of logs, response times,
+and traces. Besides, TraceHG utilizes hypergraph transformation
+to establish two views, providing comprehensive information in                     Fig. 1. Relationship between trace, log, and response time. A trace consists
+microservices. Furthermore, we introduce a dual-view framework                     of multiple spans, each containing multiple logs. Response time is defined as
+that leverages both a hypergraph-view and a graph-view encoders                    the time interval between consecutive log events, capturing fine-grained runtime
+to explicitly learn associations among microservices. These two                    dynamics.
+views, employing GCN and HGNNs, capture representations of
+internal dynamics, invocations, and their associated contexts in
+microservices. By constructing two minimized hyperspheres and
+measuring the distances from their centers in the latent space,                    enterprise applications. However, substantial challenges have in-
+we identify anomalies based on the anomaly scores. Extensive                       fluence on system reliability because of its intricate and dynamic
+experiments on public benchmark datasets demonstrate that the                      constructions. Specifically, microservices are prone to failure
+proposed framework outperforms several state-of-the-art baselines                  from various sources, such as hardware malfunctions, miscon-
+in microservice anomaly detection.
+                                                                                   figurations, implementation errors, and faulty coordination in
+  Index Terms—Microservice, Big Data, anomaly detection, graph                     service interactions. Moreover, the uncertain environment cre-
+neural networks.                                                                   ated by issues like data leakage and unauthorized access further
+                                                                                   complicates system maintenance. In light of these challenges,
+                                                                                   logs play a critical role, as they are widely used to record the
+                            I. INTRODUCTION                                        behaviors of each service. Simultaneously, traces describe the
+        ICROSERVICE architectures typically follow a dis-                          invocations between microservices, providing insight into these
+M       tributed design, decomposing applications into multiple
+independent services, each executing within its own process or
+                                                                                   systemic challenges. A trace represents the complete execution
+                                                                                   path of a user request in a distributed system, spanning multiple
+container [1], [2], [3]. Due to its efficient resource allocation                  services or components. It records the full invocation chain
+and flexible deployment, it is widely appealing to industrial and                  corresponding to a single request. Within each trace, the system
+                                                                                   generates logs that capture fine-grained runtime events during
+                                                                                   service execution. Fig. 1. illustrates the relationship between
+   Received 3 November 2024; revised 15 January 2026; accepted 18 February
+2026. Date of publication 24 February 2026; date of current version 10 April       trace, and log. As presented in the existing work [4], [5], [6],
+2026. This work was supported in part by the General Program of National           trace and log-based anomaly detection methods are tailored for
+Natural Science Foundation of China under Grant 62376023 and in part by the        automatically identifying and mining potential issues within
+State Key Laboratory of Internet Architecture, Tsinghua University, under Grant
+HLW2025MS03. (Corresponding author: Siyang Lu.)                                    distributed systems.
+   Ningning Han, Siyang Lu, Zaichao Lin, and Bin Li are with the                      Recent research [7], [8], [9], [10] leverage deep learning-
+School of Computer Science and Technology, Beijing Jiaotong University,            based trace and log analysis methods to automatically detect
+Beijing 100044, China (e-mail: 22120493@bjtu.edu.cn; sylu@bjtu.edu.cn;
+lzc_eastchina@bjtu.edu.cn; 24120434@bjtu.edu.cn).                                  runtime anomalies of microservice systems. Owing to the unique
+   Nan Wang is with the School of Cyberspace Science and Techonology, Beijing      invocation relationships in microservices, many researchers [6],
+Jiaotong University, Beijing 100044, China (e-mail: wangnanbjtu@bjtu.edu.cn).      [11], [12], [13], [14] have utilized Graph Neural Networks
+   Xin Luo is with the College of Computer and Information Science, Southwest
+University, Chongqing 400715, China (e-mail: luoxin@swu.edu.cn).                   (GNNs) and their variants to capture the topology structure
+   Digital Object Identifier 10.1109/TSC.2026.3667576                              among traces. By leveraging graph-based message passing,
+      1939-1374 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+1634                                                                    IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+
+
+
+                                                                               Fig. 3. Overview of TraceHG. The proposed framework consists of two main
+                                                                               stages: offline training and online detection. The offline training phase utilizes
+                                                                               only normal microservice logs to learn the normal behavior patterns, while the
+                                                                               online detection phase applies the trained model to incoming traces for real-time
+                                                                               anomaly detection.
+
+
+                                                                                      being unconditional. These anomalies arise from issues
+                                                                                      in the deployment environment, such as CPU or memory
+                                                                                      contention caused by co-located processes or container
+                                                                                      resource limits. Since these factors impact the runtime
+Fig. 2. Illustration of a normal trace and three typical anomalies in the             performance of services, they usually result in gradual or
+microservice framework. Arrows represent invocations between microservices,           persistent increases in response time for specific services
+with orange indicating abnormal invocations, whereas black represents normal
+                                                                                      or invocation paths.
+ones. The numbers above the arrows represent the microservice response time.
+                                                                                   r Joint anomaly: The joint anomaly can be triggered when
+                                                                                      strong dependencies between microservices, long invoca-
+these models effectively capture latent relationshipes in invo-                       tion chains, or a critical service fails [17], [18]. It can
+cation chains of microservices.                                                       cause a cascading reaction across multiple distributed
+   Despite the success of existing trace and log-based mi-                            nodes. Unlike intra- or inter-service anomalies that are
+croservice anomaly methods they still suffer from a significant                       localized, joint anomalies often manifest as a series of
+limitation. Specifically, the significance of response time as a                      abnormal response times across multiple services along the
+manifestation of microservice behavior has been overlooked,                           invocation path. For instance, if a payment service slows
+which hinders comprehensively detecting anomalies. To de-                             down, upstream services like order processing, inventory,
+scribe system performance at a more granular level, we define the                     and even user-facing APIs may not immediately fail, but
+response time as the time interval between every two consecutive                      will experience progressively increasing delays. This la-
+log events. In practice, anomalies in microservice systems often                      tency propagation leads to queuing, retries, and eventually
+manifest as abnormal patterns in response time sequences. As                          system-wide degradation.
+shown in Fig. 2, there are three commonly observed types of                       These three scenarios demonstrate that response time is a key
+anomalies, each exhibiting distinct temporal characteristics. The              behavioral signal that reflects both local processing conditions
+following summarizes their representative behaviors:                           and the dynamic state of microservice interactions. However,
+   r Intra-service anomaly: intra service anomalies are typi-                  many existing trace-based approaches overlook response time
+     cally caused by issues internal to a microservice, such                   or capture the response time implicitly, leading to the omission
+     as a corrupted cache or file I/O errors, and are gener-                   of anomalies, particularly in the case of inter-service and joint
+     ally unrelated to interactions between services [15]. These               anomalies.
+     anomalies usually do not have an immediate impact on the                     To address this issue, we propose a novel unsupervised
+     response time of the overall invocation chain. However,                   learning framework that explicitly incorporates response time
+     they can still result in localized latency spikes or irregular            as a core component. Our approach is designed to capture
+     timing patterns within the affected service. If such anoma-               fine-grained spatiotemporal patterns from traces and logs, in-
+     lies occur frequently or persist under high load, they may                troducing response time and explicitly modeling spatiotempo-
+     eventually affect downstream services, thereby evolving                   ral features, to improve the detection of complex anomalies,
+     into inter-service anomalies and leading to broader perfor-               especially, inter-service and joint anomalies in microservices.
+     mance degradation.                                                        As illustrated in Fig. 3, the proposed framework is divided
+   r Inter-service anomaly: The inter-service anomalies stem                   into offline training and online detecting. During offline train-
+     from the environmental configurations under which mi-                     ing, normal microservice logs are used for model training.
+     croservices are deployed [16]. For instance, other pro-                   After training, a refined anomaly detection model is employed
+     cesses running in the same environment as microservices                   to detect microservice anomalies. To construct TraceHG, we
+     occupy memory or CPU, resulting in the microservices                      first reorganize the recorded microservice events into traces in
+HAN et al.: TRACEHG: AN UNSUPERVISED DUAL-VIEW FRAMEWORK FOR MICROSERVICE ANOMALY DETECTION                                        1635
+
+
+
+chronological order. Each trace is then transformed into a graph.    DeepLog [5] employs LSTM networks trained exclusively
+In parallel, the log events are parsed and embedded into the graph   on normal log sequences to detect deviations in real-time.
+structure. Besides, the hypergraph transformed from the original     LogAnomaly [8] further integrates semantic features such as
+trace graph is designed to explicitly represent response time        synonyms and antonyms, improving the representation of nor-
+and interaction information among microservices. Moreover, we        mal behaviors without requiring anomaly labels. Similarly,
+design two views: a graph view and a hypergraph view to learn        LogBERT [24] utilizes transformer-based architectures with
+temporal and spatial information from the trace graph and the        self-supervised learning tasks to model normal log sequence
+hypergraph. The trace graph and hypergraph are employed as           distributions. Besides, Li et al. [25] proposed an unsupervised
+inputs for the graph-view encoder and hypergraph-view encoder,       multi-parameter log anomaly detection method to address the
+respectively. We facilitate mutual detection by swapping the         challenge of dataset diversity. Zhang et al. [26] introduced a
+surrounding contexts of graph and hypergraph views. Subse-           multivariate log-based anomaly detection approach tailored for
+quently, two minimized hyperspheres are generated by graph           distributed database systems and released a new dataset specif-
+and hypergraph views, respectively. Finally, by combining both       ically designed for such environments. Nevertheless, anomaly
+graph-view and hypergraph anomaly scores calculated from             detection approaches that rely solely on sequence or semantic
+hyperspheres, we obtain a comprehensive objective to detect          representations of log events are inadequate for meeting the
+complex microservice anomalies thoroughly. In summary, the           specific and complex architectural requirements of microservice
+main contributions of the proposed work are as follows:              anomaly detection systems.
+   r We propose an unsupervised learning model based on dual
+      graph and hypergraph views, capturing the correlat

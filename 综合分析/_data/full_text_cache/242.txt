@@ -1,0 +1,601 @@
+416 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 1, JANUARY 2024
+
+ Hierarchical-Instance Contrastive Learning for
+ Minority Detection on Imbalanced
+ Medical Datasets
+ Yiyue Li , Guangwu Qian, Xiaoshuang Jiang, Zekun Jiang , Wen Wen,
+ Shaoting Zhang, Senior Member, IEEE, Kang Li , and Qicheng Lao
+
+ Abstract — Deep learning methods are often hampered by ple conditions. Extensive experiments have been conducted
+issues such as data imbalance and data-hungry. In med- to evaluate the proposed method on three datasets of
+ical imaging, malignant or rare diseases are frequently different diseases and modalities. The experimental results
+of minority classes in the dataset, featured by diversified show that the proposed method outperforms the state-ofdistribution. Besides that, insufficient labels and unseen the-art methods.
+cases also present conundrums for training on the minority
+classes. To confront the stated problems, we propose a Index Terms— Data imbalance, minority detection, hierarnovel Hierarchical-instance Contrastive Learning (HCLe) chical instance, medical image analysis.
+method for minority detection by only involving data from
+the majority class in the training stage. To tackle inconsis- I. I NTRODUCTION
+tent intra-class distribution in majority classes, our method
+ RAINING a deep neural network (DNN) to perform well
+introduces two branches, where the first branch employs
+an auto-encoder network augmented with three constraint
+functions to effectively extract image-level features, and the
+ T requires a relatively balanced dataset, and imbalanced
+ ones may lead to a biased model towards the majority class
+second branch designs a novel contrastive learning network while ignoring the minority class [1]. In medical data, samples
+by taking into account the consistency of features among
+hierarchical samples from majority classes. The proposed in some specific or severe diseases are often insufficient, even
+method is further refined with a diverse mini-batch strategy, though these diseases are usually seen as of scientific interest
+enabling the identification of minority classes under multi- and essence [2].
+ Conventional methods for dealing with data imbalance are
+ Manuscript received 24 July 2023; accepted 15 August 2023. Date of re-sampling [3], [4], [5], [6], re-weighting [7], [8], [9], [10],
+publication 31 August 2023; date of current version 2 January 2024. and synthesizing data [11] or labels [12]. Re-sampling is to
+This work was supported in part by the National Key Research and
+Development Program of China under Grant 2020YFB1711500 and increase the number of minority samples. Re-weighting adjusts
+Grant 2020YFB1711503; in part by the 1.3.5 Project for Disciplines of the weights between the minority and majority classes, which
+Excellence; and in part by the West China Hospital, Sichuan University, aims to re-balance these imbalanced data. However, most of
+under Grant ZYYC21004 and Grant ZYJC18010. (Yiyue Li and Guangwu
+Qian contributed equally to this work.) (Corresponding authors: Qicheng these conventional methods focus on re-balancing samples
+Lao; Kang Li.) among classes but still lack samples of minority classes,
+ Yiyue Li and Zekun Jiang are with the Department of Pathology, which is inappropriate for clinical practice due to 1) Limited
+and the West China Biomedical Big Data Center, West China Hospital, Sichuan University, Chengdu, Sichuan 610041, China (e-mail: contribution from rare cases of clinical significance in minority
+yiyuelili@foxmail.com; zekun_jiang@163.com). classes [13]; 2) Poor performance on learning diverse cases.
+ Guangwu Qian is with the Department of Computer Science, Sichuan Even after rebalancing, it is still unlikely to increase the under-
+University-Pittsburgh Institute, Sichuan University, Chengdu 610041,
+China (e-mail: guangwu.qian@scupi.cn). lying information of minority classes. Certain minority classes
+ Xiaoshuang Jiang is with the Department of Ophthalmology, West (e.g., rare or malignant diseases) have a limited number of
+China Hospital, Sichuan University, Chengdu 610041, China (e-mail: samples and are mostly the class of interest and essence [14],
+jiangxiaoshuang@wchscu.cn).
+ Wen Wen is with the Department of Ultrasound, West China Hospital, some of which are even unseen in some medical institutions.
+Sichuan University, Chengdu 610041, China (e-mail: wendywen072@ Thus it is difficult to train a network based on such limited
+163.com). data. Apart from the rare case issue, the diversity of cases also
+ Shaoting Zhang is with the Shanghai Artificial Intelligence Laboratory,
+Shanghai 200030, China (e-mail: rutgers.shaoting@gmail.com). poses difficulties for learning. In terms of minority classes,
+ Kang Li is with the West China Biomedical Big Data Center, West China besides the sample size issues, these cases in a minority class
+Hospital, Sichuan University, Chengdu 610041, China, and also with (e.g., malignant) are accompanied by distribution diversity. For
+the Shanghai Artificial Intelligence Laboratory, Shanghai 200030, China
+(e-mail: likang@wchscu.cn). instance, certain cancers vary considerably in terms of shape,
+ Qicheng Lao is with the School of Artificial Intelligence, Beijing Univer- color, and location distributions [15]. Also, the consistency
+sity of Posts and Telecommunications (BUPT), Beijing 100876, China, of the majority class fails to be guaranteed in numerous
+and also with the Shanghai Artificial Intelligence Laboratory, Shanghai
+200030, China (e-mail: qicheng.lao@bupt.edu.cn). imbalanced medical scenarios. The majority class mainly
+ Digital Object Identifier 10.1109/TMI.2023.3310716 contains multiple sub-classes in clinical practice (e.g., several
+
+ 1558-254X © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+LI et al.: HCLe FOR MINORITY DETECTION ON IMBALANCED MEDICAL DATASETS 417
+
+sub-classes in a benign class). In this way, conventional meth- the intra-class feature similar. By designing a mini-batch
+ods distinguish sub-classes of the majority class and minority of contrast inputs, this method identifies minority classes
+class by learning their diverse features implicitly. Due to the (e.g., certain malignant diseases) underlying the multiple
+high diversity and lack of numbers in the imbalanced data, the cases condition. Unlike many methods that are only
+decision boundaries could be biased toward the majority class, available for a single case to identify the malignant
+and thus it is challenging to distinguish minority classes. disease, our approach can be applied for more complex
+ In this paper, we propose a novel method Hierarchical- cases.
+instance Contrastive Learning (HCLe) for minority detection. • Our method is compared with conventional imbalanced
+The HCLe requires only the majority class in the training methods and anomaly detection methods, is validated
+process to avoid training on the rare and diverse minority. on three imbalanced medical datasets (i.e., ISIC 2020,
+Unlike conventional methods of learning biased features, BRACS, REFUGE) of different modalities and achieves
+it learns consistent features of the majority class. Due to improved results in AUC, BACC, and F1-score evaluation
+the influence of diverse cases, our proposed method has two metrics.
+branches. Firstly, we introduce an image reconstruction branch
+augmented with multi-constraint functions (i.e., SSIM, GMS, II. R ELATED W ORK
+and adversarial losses) to enhance the feature extraction ability. A. Data Imbalance Methods
+This image reconstruction branch is derived from conventional encoder-decoder networks. Secondly, to address the The current data imbalance solutions predominantly include
+inconsistency issue of the majority class (e.g., high intra-class re-sampling, re-weighting, designing loss functions, and synvariation [16]), our method uses a novel hierarchical-instance thesizing data or labels. Re-sampling use over-sampling [4],
+contrastive learning branch to improve the consistency of [23], [24] to increase the number of samples in the minority
+feature representation among majority samples. This branch classes or under-sampling [5], [25], [26] by removing samples
+learns intra-class consistent features by sampling hierarchical for majority classes, which often leads to either over-fitting or
+instances from sub-classes of the majority class as contrastive under-fitting. Re-weighting adjusts the weighting factor in line
+pairs. Our hierarchical-instance contrastive learning network with the proportion of samples [7], [27], [28] or adopts weights
+shares some similarities with multi-instance contrastive learn- to the effective number of samples [8]. Some methods introing (MICLe) [17] which also uses multiple instances for duce new loss functions to change classification boundaries for
+contrastive learning. However, we emphasize to a greater majority and minority classes [29], [30], and synthesizing data
+extent on the hierarchical relationship among the instances, or labels [12]. However, in certain medical contexts, where
+which can cope with the imbalanced data in a better way. minority classes are malignant or rare diseases, these methods
+These two branches share the same feature embedding, thus may have restrictions for medical practices for their diversity
+considering both feature representations and the similarity and lack of labels [31].
+within the majority class. In the inference stage, the minority
+class (e.g., certain malignant diseases) is detected because B. Multi-Instance Contrastive Learning
+its distribution differs from the majority class. For instance, 1) Contrastive Learning: Contrastive learning methods,
+melanoma (a skin cancer) has asymmetry, blurred irregu- based on self-supervised learning, MoCo [32], Simlarity, and uneven color distribution, different from benign CLR [33], [34], BYOL [35], and SimSiam [36] transforms
+moles [18]. Although our method is inspired by anomaly unlabeled samples randomly, and result in two augmented
+detection methods [19], [20], [21], [22], they are not designed views of the same sample as contrastive positive pairs. Among
+for imbalanced data and can only address issue #1 (i.e., limited these methods, the core idea of MoCo and SimCLR is to
+contribution from rare cases of clinical significance in minority attract the positive pairs and repulse the negative pairs, which
+classes). benefit from a large number of negative data. BYOL and
+ We evaluate our method with conventional and anomaly Simsiam methods use positive sample pairs only as inputs for
+detection methods on three imbalanced medical datasets with contrastive learning networks. Furthermore, Li et al. [37] is
+different modalities. In brief, our main contributions are sum- based on few-shot learning, utilizing a dual-path contrastive
+marised as follows: learning approach to enhance the acquisition of generalized
+ • We propose a new method HCLe to address data imbal- feature embeddings. It distinguishes classes in natural images
+ ance, which only requires the majority class in the using a small number of labeled examples per novel class.
+ training process and learns the majority class’ consistent Conversely, our anomaly detection based approach utilizes
+ features. a hierarchical-instance contrastive learning network to facil-
+ • The proposed HCLe has two branches, image recon- itate the acquisition of feature embeddings between majority
+ struction and hierarchical-instance contrastive learning. classes, without incorporating malignant samples during train-
+ These two branches share the same encoder for mining ing. All of the above methods only use data augmentation
+ the complementary information in both good image-level to construct positive sample pairs, and their application in
+ features and intra-class similarity features. medicine is limited.
+ • For the hierarchical-instance contrastive learning branch, 2) Multi-Instance Contrastive Learning: Different from cona novel strategy is introduced by minimizing the distance ventional contrastive learning, Azizi et al. [17] proposed
+ among hierarchical samples of the majority class to keep the multi-instance contrastive learning (MICLe) method to
+418 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 1, JANUARY 2024
+
+deal with unlabeled medical images if multiple images of multi-constraint functions, which aims to encode good repeach patient are available. They treat multiple instance pairs, resentations to better reconstruct the input image (i.e., images
+e.g., different viewpoints or different lighting conditions of the from the majority class), so that the encoded feature embedsame image, as contrastive medical sample pairs for the pre- dings contain satisfactory image-level information for better
+training stage. The network learns invariant representation fea- image reconstruction. 2) The hierarchical-instance contrastive
+tures from not only multiple data transformations of one image learning branch is a new strategy, which considers intra-class
+but also different viewpoints or conditions of one medical similar representations, i.e., the consistency of intra-class
+pathology. Vu et al. [38] introduced a MedAug method to use features encoded in the feature embedding. Notably, these two
+patient metadata as contrastive positive pairs in chest X-rays, branches share the same encoder and the network is trained
+so the same patient shares underlying pathologies, hence end-to-end.
+improving the performance when compared to the ImageNet
+pre-trained model. These MICLe-based methods are proven to A. Image Reconstruction Branch
+be effective and robust in medical applications. DA-CMIL [39] Inspired by [47] and [48], we design the image reconintegrated multi-instances into contrastive learning for chest struction branch with multi-constraint functions to extract
+Computed Tomography (CT). It uses k instances from each good representations to reconstruct samples from the majority
+patient’s CT scan as multi-instance contrastive pairs and class. In Fig. 1, first, the input image x is encoded as a
+validates the method’s effectiveness and robustness. However, feature embedding e by the encoder E. Here it is expected
+these methods neglect the hierarchical relationship and only that the encoder E can extract good embeddings from each
+substitute their input in the contrastive learning pre-training image, and then a generator G is introduced to reconstruct
+model. input x via the encoded embedding e. Finally, we utilize
+ multiple constraint functions to constrain the original image
+C. Anomaly Detection and reconstructed image. The purpose of the encode-decode
+ Anomaly detection is usually used to identify abnormal, process is to make the distance between the reconstructed
+novel, or invisible data, and there are GAN-based [19], [21], image x̂ and the original image x as close as possible.
+[22], auto-encoder based [20], [40], [41], knowledge distil- Instead of traditional L2 loss as a constraint function, we not
+lation based [42], [43] models, and others [44], [45], [46]. only use a discriminator to improve the feature extraction and
+AnoGAN [19] and AnoVAEGAN [20] used the GAN frame- reconstruction capabilities of the auto-encoder [31] but also
+work, the former was used to detect anomalies of retinal employ structure similarity (SSIM) [50], [51] and gradient
+OCT images, and the latter detected MRI brain lesions. magnitude similarity (GMS) [47], [52] losses to extract great
+In recent anomaly detection methods, the primary focus lies image-level representations of the majority class and getting
+in learning the distribution of anomaly-free data through an plausible reconstruction results. The SSIM loss pays more
+auto-encoder network, e.g., RIAD [47], SSM [48]. Most of attention to global rather than local information [27], which
+them learn normal images with good consistency. In the test considers luminance, contrast, and anatomical features. GMSD
+stage, abnormal images are detected due to their different penalizes global variation of local structure between the recondistributions. However, this series of methods may not be structed regions and the original image regions. SSIM and
+well-suited for handling imbalanced data, as the consistency of GMS are pixel-level similarity metrics focusing on different
+samples belonging to the majority class is relatively inadequate image properties.
+when compared to anomaly-free samples. For imbalanced
+medical data applications, ICOCC [49] method introduces B. Hierarchical-Instance Contrastive Learning Branch
+perturbed images generated by given samples, and performs in In order to enable the network to consider consisa better way for learning the inherent features of a given class, tent representations of intra-class samples, we introduce a
+since the perturbed imagery can represent complexity and novel hierarchical-instance contrastive learning branch, which
+specificity within classes. Nevertheless, they fails to consider extracts more consistent representations within the majority
+the similarity within the class. class and adapts the network to multiple sub-classes per class.
+ Our hierarchical-instance contrastive learning branch is a
+ III. M ETHODOLOGY novel contrastive learning architecture and has two networks,
+ We propose a novel method HCLe to address certain raw and contrast. The input of raw network is the original
+imbalanced medical conditions (e.g., minority classes are input x, and the contrast network input x ′ is the image ranmalignant and rare diseases). It requires only the majority domly sampled from the hierarchical instance of the majority
+class to participate in training and learns its distribution during class instead of the image x. Different from data augmentation
+training. When inferring, the minority samples (e.g., melanoma of the same image (e.g., BYOL [35]) and different viewpoints
+of skin diseases) can be detected for their distribution is of the same patient (e.g., MICLe [34]) as contrastive input
+different from the majority ones (e.g., benign skin images). pairs, this branch’s contrastive input pairs are generated from
+With the sub-classes included in the majority, imbalanced their own sub-classes, which helps adapt contrastive learning
+cases lead to high variation distributions of intra-class images to multiple images of the majority class. Such multiple hierarin the majority class. Therefore, we propose a method with two chical instances are available in different sub-classes, patients
+branches (See Fig. 1) to address these issues: 1) The image or images of the same underlying pathology, e.g., nevus
+reconstruction branch is an auto-encoder framework with and keratosis images of benign skin data. This provides a
+LI et al.: HCLe FOR MINORITY DETECTION ON IMBALANCED MEDICAL DATASETS 419
+
+Fig. 1. Our framework consists of two branches, image reconstruction and hierarchical-instance contrastive learning, sharing the same input x and
+encoder E to learn comprehensive information. The first branch (red box) is to extract good feature representations for image reconstruction using
+a generator G, and introduces multiple constraints: GMS, SSIM, and adversarial loss (using a discriminator D). The other branch (blue box) takes
+into account intra-class features, which alleviates the poor consistency of samples in clinical practice. This branch is a new hierarchical-instance
+contrastive learning strategy containing two networks, raw and contrast. Both the raw network input x and the contrastive input x′ are from the majority
+class but different samples at one time. Branch (B) maintains their instance similarity by minimizing the distance between the outputs of x and x ′ .
+These outputs are generated by subjecting x to the encoding process with encoder E followed by projection with projector jθ , while x ′ is encoded
+using encoder E1 and projected using projector jξ , respectively. More importantly, we extend HCLe to a diverse mini-batch version by designing the
+mini-batch of contrastive inputs. In the inference stage, the feature embedding e of trained encoder E considers both intra-image and intra-class
+information of the majority class, and then is fed to image reconstruction. A gradient magnitude similarity (GMS) is used to compute the detection
+map and detection score.
+
+satisfactory contrastive input to learn good intra-class similar weight ξ , and trains the raw network by offering regression
+features for the contrastive learning network. targets [35].
+ Given an image x, it is processed as embedding e via an
+encoder E, which is shared in the training of two different
+ C. Diverse Mini-Batch HCLe Strategy
+branches. In Fig. 1 (B), the raw network shows that the
+embedding e is transformed to z θ by a projector jθ . At the We further refine the HCLe to diverse mini-batch strategy
+same time with the contrast network, the instance image x ′ so that it can perform better in more complex conditions,
+sampled from the same training set D, but different from x, for example, a more realistic clinical scenario and the idene.g., a nevus and a keratosis images of the same benign skin tification of the malignant diseases (minority class) from
+class represent x and x ′ , respectively. Then x ′ is encoded multiple sub-classes of the majority class. For instance, the
+and projected using encoder E 1 and projector jξ . The output benign class of the ISIC 2020 skin dataset has most samples
+vector is denoted as z ξ ≜ jξ (E 1 (x ′ )). The architecture of that contain multiple sub-classes, e.g., unknown, nevus, solar
+projector jθ , jξ is a multi-layer perceptron (MLP) [33]. lentigo, and the model can better identify the minority class
+ We then use ℓ2 -norm to make z θ and z ξ to z θ = z θ /||z θ ||2 (e.g., melanoma) from these benign sub-classes. Moreover,
+and z ξ = z ξ /||z ξ ||2 . We write the mean squared error between some of these cases are not of clinical significance, e.g., many
+the z θ and z ξ , samples of the benign class can not be identified, which
+ is named unknown class. It does not make sense and is
+ Lθ,ξ = ||z θ − z ξ ||22 = ||I (x) − H (x ′ )||, (1) resource-wasting to identify them. Thus they are all treated
+ as the majority class input for model training.
+ Here, we denote I (·) = jθ (E(·)) for the raw network and In these cases, for the new diverse mini-batch HCLe strat-
+H (·) = jξ (E 1 (·)) for the contrast network, and exchange the egy, the inputs of the raw network are randomly sampled
+input between the raw and the contrast networks to calculate a mini-batch of N examples and do not need any data
+the symmetrized loss: augmentation. For the contrast network input x ′ , if multiple
+ Lclass = ||I (x) − H (x ′ )|| + ||I (x ′ ) − H (x)|| (2) sub-classes of the majority class are available (distinguishing these sub-classes are meaningless and resource-wasting),
+ Moreover, the raw network has weights θ at two stages: an we ensure that each mini-batch N has sampled all subencoder E and projector jθ . The contrast network has a set of classes (see Fig. 2). The proportion of each sub-classes in
+420 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 1, JANUARY 2024
+
+ similarity in luminance l(x, x̂), contrast c(x, x̂), and structure
+ s(x, x̂):
+ SS I M(x, x̂) =l(x, G(E(x)))α c(x, G(E(x)))β s(x, G(E(x)))γ
+ (5)
+ where α, β and γ are constants for adjust weights.
+ b) Gradient magnitude similarity: GMS is unlike L 2 assuming independence between neighboring pixels, it penalizes
+ global variation of local structure between the reconstructed
+ regions and the original image regions. The image gradients
+ are sensitive to image distortions [52], especially the local
+ structures difference between original image and reconstructed
+ image [48], which is computed as follows:
+ q
+ g(x) = (x ⊗ h i )2 + (x ⊗ h j )2 , (6)
+
+Fig. 2. An illustration of our diverse (right) mini-batch HCLe strategy. where g(x) is the gradient map of original image x. ⊗ denotes
+If multiple sub-classes of the majority class are available, we design the convolution operation. h i and h j are 3 × 3 Prewitt
+the diverse mini-batch containing every sub-classes as contrast input.
+Otherwise, we randomly select the mini-batch to the contrast network.
+ filters along the i and j dimensions. The gradient magnitude
+ similarity loss is the mean value of GMS map between image x
+ and reconstructed image x̂:
+the mini-batch is based on their approximate proportions in 2g(x)g(x̂) + c
+the training set. For instance, each mini-batch of ISIC 2020 LG M S = −G M S(x, x̂) = − , (7)
+ g(x)2 + g(x̂)2 + c
+dataset contains all benign cases, e.g., unknown, nevus, solar
+lentigo, etc., as contrast inputs. Then the aim is to minimize where c is a constant to ensure the stability of the calculation
+the distance between representations of the raw network results and to help balance the noise region.
+and the contrast network. Each updating step includes all c) Adversarial loss: To further match the distributions of
+the sub-classes, shortening the distance between the multiple the input, we use PatchGAN [53] to constrain the difference
+sub-classes within the majority class, thus alleviating the prob- between the original image x and the reconstructed image x̂,
+lem caused by poor intra-class consistency. After the training which can be expressed as:
+step of each batch size N , the multi-instance self-supervision Ladv = E[log(1 − Dc (x̂))] + E[log D(x)]. (8)
+performs a stochastic optimization step to minimize:
+ Here, we introduce a discriminator Dc to try to distinguish
+ N
+ 1X the fake data (reconstructed image) from a real data (original
+L(xk ,xk′ ) = (||I (xk ) − H (xk′ )|| + ||I (xk′ ) − H (xk )||) (3)
+ n image).
+ k=1
+ d) Objective function: Our method consists of two
+ branches. In the hierarchical-instance contrastive learning
+D. Overall Framework branch, the input image’s embedding is fed into the raw
+ 1) Training Stage: The image reconstruction branch incorpo- network. Simultaneously, in the image reconstruction branch,
+rates three constraint functions: gradient magnitude similarity the embedding is passed through the generator G of the
+(GMS) [47], [52], structure similarity (SSIM) [50], [51] and autoencoder network. Both branches are trained end-to-end.
+adversarial losses. On the other hand, the hierarchical-instance To optimize our method, we employ five loss functions.
+contrastive learning branch penalizes the network using Lclass . Therefore, we arrive at the objective function of our model:
+ a) Structure similarity index: Many auto-encoder based
+methods using L 2 loss (e.g., ℓ2 -Autoencoder) as reconstruction L = λ1 L SS I M + λ2 LG M S + λ3 Ladv + λ4 Lclass (9)
+loss cannot reconstruct original images well, nor can they where λ1 , λ2 , λ3 , λ4 are the hyper-parameters. After the trainobtain satisfactory anomaly maps since it evaluates each ing step of each batch size N , the network performs a stochaspixel point independently without considering the association tic optimization step to minimize L of the hierarchical-instance
+of adjacent pixels [51]. Conversely, the structure similarity contrastive learning network, and update the weight by a
+loss pays more attention to global rather than local informa- contrast decay rate τ ∈ [0, 1]. Moreover, a stop-gradient is
+tion [31], which considers luminance, contrast, and anatomical only applied in contrast network in Fig. 1 (B).
+information [50] to constrain image reconstruction. The struc- 2) Inference Stage: The inference stage is illustrated
+ture similarity loss can be defined as: in Fig. 1. A test image x is fed to the encoder E and
+ L SS I M = −SS I M(x, x̂) = −SS I M(x, G(E(x))) (4) generator G, which obtains a reconstructed image x̂. Then we
+ calculate the anomaly map by the GMS score map between the
+where E and G denotes the encoder directly to x and the original image x and the reconstructed image x̂. Since the netgenerator. Moreover, the SSIM index defines a distance mea- work never sees the minority class (e.g., malignant diseases)
+sure between image and reconstructed image, considering their during training, different regions (e.g., malignant regions)
+LI et al.: HCLe FOR MINORITY DETECTION ON IMBALANCED MEDICAL DATASETS 421
+
+may not be reconstructed well. Hence, the distance between class imbalance and rare cases. Particularly, the dataset conthe original image and the reconstructed image in the abnormal tains a total of 800 samples with clinical ground truth labels,
+region may be larger than the normal region. The GMS map and the training set consists of 400 samples, comprising
+function is introduced as follows: 360 non-glaucoma samples and 40 glaucoma samples, resulting in an imbalanced ratio of 9:1. Similarly, the test set
+ M( x, x̂) = 1 − G M S(x, x̂) (10)
+ comprises 400 samples, also demonstrating an imbalanced
+where M denotes a score function, G M S(x, x̂) is G M S maps. ratio of 9:1. It should be highlighted that our approach does
+To detect minority class, the detection score A is calculate not require the use of minority samples and relies solely on
+according to the GMS map of image x and reconstructed majority class samples (e.g., 360) for training.
+image x̂. A higher detection score indicates that the image
+is more likely to be malignant.
+ B. Experimental Setup
+ IV. E XPERIMENTS The model is implemented and developed in Python,
+A. Datasets PyTorch toolbox. Our models are trained for 800 epochs. The
+ Adam optimizer with an initial learning rate of 0.001 for
+ Here, three imbalanced underlying diseases with different the first 200 epochs, which is then reduced to 0.0002 until
+modalities are compared in this paper. convergence. The input image size is set to 224 × 224. For
+ 1) ISIC 2020 [54]: A challenge dataset consisting of
+ the ISIC 2020 and BRACS datasets, we set λ1 : λ2 : λ3 :
+33126 skin appearance images has been compiled for this
+ λ4 = 0.5 : 1 : 1 : 0.5, and for the REFUGE dataset, we set
+study, obtained from over 2000 patients. Among these images,
+ λ1 : λ2 : λ3 : λ4 = 1 : 1 : 1 : 0.5. All networks, including the
+only 584 are malignant, whereas the remaining 32542 images
+ baseline models, were trained from scratch with a batch-size
+have been identified as benign. Nonetheless, it should be noted
+ of 48.
+that a substantial portion of the benign images (over 26000) are
+ Comparison methods We compare our method with conclassified as “unknown”, indicating that they are indeed benign
+ ventional supervised (e.g., re-sampling (RS), focal loss [57],
+and yet present difficulties and lack meaningful classification.
+ SEDC [13]) and anomaly detection (e.g., VAE-GAN [20],
+For the purpose of training our models by employing this
+ f-AnoGAN [21], RIAD [47]) baselines. For conventional
+dataset, we have utilized various imbalance ratios between
+ supervised methods, we use ResNet-50 [58], ResNet-101,
+malignant and benign samples. Particularly, for the training set,
+ Vgg16 [59], and DenseNet169 [60] as backbones respecwe have utilized ratios of 300:300, 300:1000, 300:2000, and
+ tively. In the case of comparison methods, all methods are
+300:3000 for malignant to benign images, respectively. For the
+ trained using an initial learning rate of 0.001 for the first
+test stage, the benign and malignant images are both 190 from
+ 200 epochs, followed by a reduction to 0.0002 for the remainpatients who are different from the training set. More imporing 600 epochs until convergence. Re-sampling is sampled
+tantly, the split of the testing dataset was hierarchical-instance
+ with a probability that is inversely proportional to the sambased and designed to simulate complex clinical scenarios in
+ ple size of its class. Similar to our method, VAE-GAN,
+which malignant lesions need to be identified from hierarchical
+ f-AnoGAN, and RIAD only use the majority class in the
+benign samples.
+ training process. RIAD is trained using a varying region size
+ 2) BRACS Datasets [55]: The BRACS dataset conwith K = {2, 4, 8, 16.}
+tains 4539 Regions of Interest (RoIs) from 547 breast carcinoma whole-slide images (WSIs), which H&E stained.
+These RoIs were classified as normal, benign, Usual ductal C. Evaluation Metrics
+hyperplasia (UDH), Atypical Ductal Hyperplasia (ADH), Flat In this project, we use three metrics, the area under the
+Epithelial Atypia (FEA), Ductal Carcinoma In Situ (DCIS). receiver operating characteristic curve (AUC), F1-score and
+Distinguishing UDH, FEA, ADH, and DCIS is a big challenge, balanced accuracy (BACC), to evaluate the classification persince UDH, ADH, and DCIS share an intraductal growth formance of imbalanced data comprehensively. BACC has
+pattern, and FEA is easily confused with ADH and DCIS. been described as the average sum of the sensitivity and
+As a result, non-malignant (UDH, FEA, ADH) and malig- specificity, and is more accurate for imbalanced data evaluation
+nant (DCIS) breast images are utilized in this project. Specif- than the Accuracy (ACC). The formula is equivalent to the
+ically, the aim is to detect malignant (DCIS) breast samples following:
+from three non-malignant samples (UDH, FEA, ADH) that n
+share the most similar structural characteristics. Furthermore, 1X T Pk
+ B ACC = (11)
+the training, validation, and test sets are partitioned using n T Pk + F Nk
+ k=1
+official splits. The dataset exhibits an imbalance ratio of 2.1:1,
+ where T P and F N denote true positives and false negatives,
+with the training set comprising a total of 2065 samples and
+ and n is the number of classification classes.
+the test set containing 340 samples.
+ 3) REFUGE Datasets [56]: This is a retinal fundus glaucoma
+challenge dataset with highly imbalanced data for glaucoma V. R ESULTS AND D ISCUSSION
+detection and optic disc segmentation. In this work, the official In this section, the performance of our method is compared
+splits of this dataset are utilized for fair comparisons. Specif- with the state-of-the-art methods on three different datasets.
+ically, this dataset has two distinct types of data imbalances: Furthermore, the effect of different imbalance ratios on these
+422 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 1, JANUARY 2024
+
+ TABLE I
+ O UR M ETHOD I S E VALUATED ON THE T HREE D IFFERENT M ODALITY DATASETS W ITH D IFFERENT I MBALANCE R ATIOS
+
+ TABLE II
+ Q UANTITATIVE C OMPARISON OF AUC, BACC, AND F1-S CORE M ETRICS B ETWEEN O UR P ROPOSED HCL E AND OTHER M ETHODS ON
+ ISIC 2020, BRACE AND REFUGE DATASETS . F OR E ACH TARGET TASK , W E S HOW THE AVERAGE P ERFORMANCE AND S TANDARD
+ D EVIATION ACROSS F IVE RUNS . F OR E ACH C OLUMN , THE TOP VALUE I S H IGHLIGHTED IN B OLD FOR E ASY C OMPARISON
+
+methods is evaluated. Finally, comprehensive ablation studies glaucoma fundus dataset with an imbalance rate of 9 and a
+are conducted to justify the rationality of the design of the small number of samples, including training and testing sets.
+proposed HCLe. Our model demonstrates great performance, with scores of
+ 87.36%, 96.26%, and 74.76% on BACC, AUC, and F1 scores,
+A. Comparison Performance on Different Datasets respectively. Furthermore, it outperforms all other methods,
+ 1) Results on ISIC 2020 Dataset: The performance of securing the top rank in both AUC and F1-score metrics.
+our method, traditional imbalanced methods, and anomaly 4) Results of Different Imbalance Ratios on the
+detection methods on the ISIC 2020 dataset is reported ISIC 2020 Dataset: To further validate the effect of our
+in TABLE II, and the imbalance ratio is extremely high method with different imbalance ratios, we conduct more
+at 10:1 (in TABLE I). It can be seen from TABLE II experiments on the ISIS2020 dataset. The performance of
+that our method achieves the best performances on BACC, our method is compared with that of conventional and
+AUC, and F1-score compared to conventional supervised or anomaly detection methods, and experiments are designed,
+anomaly detection methods. Moreover, it increases the BACC, starting with a 1:1 balanced ratio. The TABLE III (column
+AUC, and F1-score by 6.64%, 5.66%, and 6.95% respectively, 300:300 (1:1)) and Fig 3 illustrate that the conventional
+compared to the second-best baseline. This indicates that method outperforms the anomaly detection methods in
+our method is effective for the skin ISIC 2020 dataset with all three evaluation metrics with a balanced ratio (1 : 1).
+interwoven imbalances, more serious imbalance ratio (10:1) Nonetheless, by increasing the imbalance ratio to 3.3 : 1,
+and high intra-class variation. the performance of the conventional methods rises slowly.
+ 2) Results on BRACS Dataset: To validate the model’s Moreover, on the condition that the imbalance ratio becomes
+performance on different medical diseases, we also conduct 6.7 : 1 or higher, the performance of the conventional method
+in-depth experiments on the breast pathology slides, which starts to drop significantly. On the contrary, the anomaly
+have an inhomogeneous appearance and are coupled with detection method indicates an upward trend from increasing
+data imbalance. Moreover, the TABLE II indicates that our the imbalance ratio from 1 : 1 to 3.3 : 1 and 6.7 : 1. Notably,
+method achieves the best performance on three evaluation our method outperforms the conventional method with an
+metrics, 76.57% of BACC, 82.63% of AUC, and 77.16% of imbalance ratio of 3.3 : 1 or higher.
+F1-score. Particularly in BACC and F1-score, they are 4.41%
+and 4.75% higher than the second-highest score, respectively, B. Ablation Study
+which demonstrates that our method HCLe can cope with 1) Effectiveness of Sharing Strategy: For the purpose of
+imbalanced breast pathological data well. evaluating the contribution of each component in our method,
+ 3) Results on REFUGE Dataset: The performance of our we conduct experiments revealed in TABLE IV. ‘Imagemethod and state-of-the-art approaches on glaucoma diseases level’ and ‘Intra-class’ denote image reconstruction branch
+is finally evaluated, and glaucoma is also a disease with a and hierarchical-instance contrastive learning branch. For the
+highly imbalanced number of cases. Moreover, REFUGE is a ‘Intra-class’ alone, the detection score to detect the minority
+LI et al.: HCLe FOR MINORITY DETECTION ON IMBALANCED MEDICAL DATASETS 423
+
+ TABLE III
+ P ERFORMANCE OF O UR HCL E M ETHOD IN C OMPARISON TO OTHER E XISTING M ETHODS , U SING T HREE D IFFERENT I MBALANCE R ATIOS
+ (300:300, 1000:300, 2000:300) ON THE ISIC 2020 DATASET. F OR E ACH TARGET TASK , W E S HOW THE AVERAGE P ERFORMANCE AND
+ S TANDARD D EVIATION ACROSS F IVE RUNS . F OR E ACH C OLUMN , THE TOP VALUE I S H IGHLIGHTED IN B OLD FOR E ASY C OMPARISON
+
+Fig. 3. The trend of different balance ratios in the three evaluation indicators with conventional and anomaly detection methods.
+
+Fig. 4. Unsupervised pixel-level detection results of our proposed method. The green box indicates the majority class’s test images and anomaly
+maps obtained by our method. The red box (the top raw) represents test images from the minority class, and ’Ionly ’ is anomaly maps obtained only
+by the image reconstruction branch. ’I + Caug ’ presents two branches that share the same encoder E and use the data augmentation strategy.
+The last row of the red box is anomaly maps from our method. The results of the three datasets (i.e., ISIC 2020, REFUGE, BRACS) demonstrate
+the effectiveness of our approach in accurately detecting malignant regions. However, from the first column of failure cases, it indicates occasional
+misclassification of clinical markings regions (highlighted by the red arrows) as malignant regions by the proposed framework. Similarly, the last two
+columns of the failure cases show that our method occasionally misclassifies regions with altered edge brightness (highlighted by the red arrows)
+as anomalies.
+
+class was obtained by adopting the output from the E x these two branches do not share the encoder E, the detection
+in Fig. 1. In the case of ‘share E’, it refers to ‘image-level’ score is calculated by summing score maps from the two
+and ‘intra-class’ branches sharing the same encoder E. When branches.
+424 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 1, JANUARY 2024
+
+ TABLE IV TABLE V
+ A BLATION S TUDIES FOR F RAMEWORK D ESIGN ON T HREE DATASETS . P ERFORMANCE C OMPARISON OF D IFFERENT S TRATEGIES OF THE
+‘I MAGE - LEVEL’ AND ‘I NTRA - CLASS ’ D ENOTE I MAGE R ECONSTRUCTION HCL E B RANCH ON T HREE DATASETS . ‘AUGMENTATION ’ I NDICATES
+ AND H IERARCHICAL -I NSTANCE C ONTRASTIVE L EARNING B RANCHES . THE U SE OF T RADITIONAL DATA AUGMENTATION T ECHNIQUES IN THE
+ ‘S HARE E ’ M EANS ‘I MAGE - LEVEL’ AND ‘I NTRA - CLASS ’ B RANCHES HCL E N ETWORK . ‘R ANDOM HCL E ’ R EPRESENTS C ONTRASTIVE
+ S HARING THE S AME E NCODER E ; OTHERWISE , T HESE T WO S AMPLES S ELECTED E NTIRELY AT R ANDOM . ‘D IVERSE HCL E ’
+ B RANCHES A RE N OT S HARED. F OR E ACH TASK , THE M EANS D IVERSE M INI -B ATCH HCL E S TRATEGY, W HICH
+ TOP VALUES A RE H IGHLIGHTED IN B OLD E NSURES T HAT E ACH M INI -B ATCH H AS S AMPLED A LL
+ FOR E ASY C OMPARISON S UB -C LASSES . F OR E ACH TASK , THE TOP VALUES
+ A RE H IGHLIGHTED IN B OLD FOR E ASY C OMPARISON
+
+ TABLE VI
+ P ERFORMANCE C OMPARISON OF T HREE I MAGE -R ECONSTRUCTION
+ The results are indicated in TABLE IV, where both C ONSTRAINT F UNCTIONS IN THE HCL E M ETHOD ON T HREE
+ DATASETS . F OR E ACH TASK , THE TOP VALUES A RE
+the ‘Image-level’ alone and the ‘Intra-class’ alone achieve H IGHLIGHTED IN B OLD FOR E ASY C OMPARISON
+extremely limited performance. However, training with the
+concatenation of the two branches results in higher performance. Furthermore, the shared encoder E substantially
+strengthened the performance, as evidenced by the improvements in BACC, AUC, and F1-score for the ISIC 2020 dataset,
+which are 0.0789, 0.0973, and 0.0893, respectively. This conclusion is also validated in the other two datasets, indicating
+the effectiveness of the sharing strategy.
+ 2) Effectiveness of Diverse Mini-Batch Strategy in HCLe:
+Here, we compare three strategies i.e., data augmentation,
+Random HCLe, and Diverse HCLe. For the data augmentation
+ diseases (the minority class), and cannot be substituted by data
+strategy, widely adopted techniques such as Flip, Gaussian
+ augmentation or random strategies.
+blur, and Color jitter are applied to the inputs x and x ′ of
+ 3) Effectiveness of Image Reconstruction Constraint Functhe raw network and contrast network. Besides, the remaining
+ tions: TABLE VI compares the effectiveness of these constrain
+experimental settings are kept the same for a fair comparison.
+ functions. When using multiple constraint functions (Ladv ,
+Furthermore, two additional HCLe strategies are compared:
+ L SS I M , and LG M S loss), the model performs best on all
+1) Random HCLe: randomly select contrastive pairs from
+ metrics in ISIC 2020 datasets, and it performs best on two
+hierarchical instances of the majority class, i.e., the conmetrics in BRACS and REFUGE datasets. Specifically, our
+trastive network input x ′ random selected from the training
+ multiple constraints increase the BACC, AUC, and F1-score in
+set. 2) Diverse HCLe: For the contrastive network input x ′ ,
+ ISIC 2020 dataset by 0.0237, 0.0316, and 0.0132 respectively,
+we sample each mini-batch of N samples containing all
+ compared to the second-best baseline. TABLE VI confirms
+sub-classes of a majority class according to their approximate
+ that multiple constraint functions are effective for medical
+proportions in the training set.
+ images of different diseases and modalities.
+ As can be seen from TABLE V, compared with the
+data augmentation strategy, HCLe strategies achieve superior
+performance, which indicates HCLe strategies can leverage C. Significant Difference Analysis
+unlabeled data of the training set to improve the perfor- We conducted a comprehensive assessment to analyze the
+mance significantly in three datasets. Furthermore, if mul- statistical significance of the achieved performance improvetiple sub-classes are available, the diverse HCLe strategy ment. Specifically, the statistical significance of the proposed
+can steadily improve the minority detection performance HCLe versus other methods including baseline approaches
+(e.g., ISIC 2020 dataset from 0.8024, 0.8346 and 0.7991 to and alternative strategies of our method, is examined by
+0.8263, 0.8665 and 0.8290 in BACC, AUC and F1-score). the paired t-test. A p-value less than 0.05 indicates that
+In the REFUGE dataset, where a sub-class is lacking in the the method performs significantly better than the baseline
+majority class, both the random and diverse HCLe strategies method. Based on the results presented in the TABLE VII,
+yield the same results. These quantitative results demonstrate it demonstrates that all improvements are statistically signifithe effectiveness of the diverse HCLe strategy in the prediction cant. These results further demonstrate the effectiveness of the
+task, as it enables more accurate detection of malignant proposed HCLe.
+LI et al.: HCLe FOR MINORITY DETECTION ON IMBALANCED MEDICAL DATASETS 425
+
+ TABLE VII [2] J. Sun, D. Wei, K. Ma, L. Wang, and Y. Zheng, “Unsupervised
+ S TATISTICAL S IGNIFICANCE (p-VALUE ) OF THE P ROPOSED HCL E representation learning meets pseudo-label supervised self-distillation:
+ C OMPARED W ITH OTHER M ETHODS ( I . E ., B ASELINE M ETHODS AND A new approach to rare disease classification,” in Proc. Int. Conf. Med.
+ OTHER S TRATEGIES OF O UR A PPROACH ). T HE ‘Ionly ’ I S A NOMALY Image Comput. Comput.-Assist. Intervent. Cham, Switzerland: Springer,
+ M APS O BTAINED O NLY BY THE IMAGE R ECONSTRUCTION B RANCH . 2021, pp. 519–529.
+ ‘I + Caug ’ P RESENTS T WO B RANCHES T HAT S HARE THE S AME [3] A. More, “Survey of resampling techniques for improving classification
+ performance in unbalanced datasets,” 2016, arXiv:1608.06048.
+ E NCODER E AND U SE THE DATA AUGMENTATION S TRATEGY
+ [4] L. Shen, Z. Lin, and Q. Huang, “Relay backpropagation for effective
+ learning of deep convolutional neural networks,” in Proc. Eur. Conf.
+ Comput. Vis. Cham, Switzerland: Springer, 2016, pp. 467–482.
+ [5] M. Buda, A. Maki, and M. A. Mazurowski, “A systematic study of
+ the class imbalance problem in convolutional neural networks,” Neural
+ Netw., vol. 106, pp. 249–259, Oct. 2018.
+ [6] B. Kang et al., “Decoupling representation and classifier for long-tailed
+ recognition,” 2019, arXiv:1910.09217.
+ [7] C. Huang, Y. Li, C. C. Loy, and X. Tang, “Learning deep representation
+ for imbalanced classification,” in Proc. IEEE Conf. Comput. Vis. Pattern
+ Recognit. (CVPR), Jun. 2016, pp. 5375–5384.
+ [8] Y. Cui, M. Jia, T.-Y. Lin, Y. Song, and S. Belongie, “Class-balanced
+ loss based on effective number of samples,” in Proc. IEEE/CVF Conf.
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 9268–9277.
+ VI. C ONCLUSION [9] C. Huang, Y. Li, C. C. Loy, and X. Tang, “Deep imbalanced learning
+ In this work, a novel approach was proposed to address for face recognition and attribute prediction,” IEEE Trans. Pattern Anal.
+ Mach. Intell., vol. 42, no. 11, pp. 2781–2794, Nov. 2020.
+imbalanced conditions in certain medical diseases. The train- [10] B. Li, Y. Liu, and X. Wang, “Gradient harmonized single-stage detector,”
+ing stage only requires the majority class (e.g., normal or in Proc. AAAI Conf. Artif. Intell., vol. 33, 2019, pp. 8577–8584.
+benign data) to participate in the training stage, and the [11] E. Schwartz et al., “δ-encoder: An effective sample synthesis method
+ for few-shot object recognition,” in Proc. Adv. Neural Inf. Process. Syst.,
+minority class is detected because it is out of distribution in vol. 31, 2018, pp. 1–11.
+the inference stage. To enhance the learning of the majority [12] A. Galdran et al., “Non-uniform label smoothing for diabetic retinopaclass distribution, improving the feature extraction ability, and thy grading from retinal fundus images with deep neural networks,”
+ Translational Vis. Sci. Technol., vol. 9, no. 2, p. 34, Jun. 2020.
+addressing the inconsistency issue were deemed necessary, our [13] R. Zhao, X. Chen, Z. Chen, and S. Li, “Diagnosing glaucoma on
+method employed two branches, namely image reconstruc- imbalanced data with self-ensemble dual-curriculum learning,” Med.
+tion and hierarchical-instance contrastive learning. The former Image Anal., vol. 75, Jan. 2022, Art. no. 102295.
+ [14] K. Napierala and J. Stefanowski, “Types of minority class examples and
+incorporated multi-constraint functions into the auto-encoder their influence on learning classifiers from imbalanced data,” J. Intell.
+network to facilitate better feature extraction. Meanwhile, Inf. Syst., vol. 46, no. 3, pp. 563–597, Jun. 2016.
+the latter introduced a new hierarchical-instance contrastive [15] T. Cai, H. He, and W. Zhang, “Breast cancer diagnosis using imbalanced
+ learning and ensemble method,” Appl. Comput. Math., vol. 7, no. 3,
+learning strategy, which aimed to enhance the consistency pp. 146–154, 2018.
+of feature representation among majority samples through [16] P. Yao et al., “Single model deep learning on imbalanced small datasets
+multi-instance contrastive learning. for skin lesion classification,” IEEE Trans. Med. Imag., vol. 41, no. 5,
+ pp. 1242–1254, May 2022.
+ Subsequently, we evaluate our method on three medical [17] S. Azizi et al., “Big self-supervised models advance medical image
+datasets (i.e., ISIC 2020, BRACS, REFUGE) with different classification,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+modalities. The experimental results demonstrate that the Oct. 2021, pp. 3478–3488.
+proposed method achieves improved performance in AUC, [18] E. Nasr-Esfahani et al., “Melanoma detection by analysis of clinical
+ images using convolutional neural network,” in Proc. 38th Annu. Int.
+BACC, and F1-score evaluation metrics compared with con- Conf. IEEE Eng. Med. Biol. Soc. (EMBC), Aug. 2016, pp. 1373–1376.
+ventional and anomaly detection methods. On three datasets, [19] T. Schlegl, P. Seeböck, S. M. Waldstein, U. Schmidt-Erfurth, and
+the HCLe strategy improves classification performance relative G. Langs, “Unsupervised anomaly detection with generative adversarial
+ networks to guide marker discovery,” in Proc. Int. Conf. Inf. Process.
+to the data augmentation strategy. Moreover, according to the Med. Imag. Cham, Switzerland: Springer, 2017, pp. 146–157.
+HCLe, the diverse mini-batch strategy performs better than the [20] C. Baur, B. Wiestler, S. Albarqouni, and N. Navab, “Deep autoencoding
+random mini-batch strategy. models for unsupervised anomaly segmentation in brain MR images,” in
+ Proc. Int. MICCAI Brainlesion Workshop. Cham, Switzerland: Springer,
+ Moreover, due to the generality of the proposed HCLe 2019, pp. 161–169.
+method, the HCLe can be further extended to other imbalanced [21] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and U. Schmidtmedical image tasks and even try anomaly segmentation of Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection with generative adversarial networks,” Med. Image Anal., vol. 54, pp. 30–44,
+these imbalanced images. Although our method achieves great May 2019.
+performance, it still comes with some unresolved limitations. [22] K. Zhou et al., “Sparse-GAN: Sparsity-constrained generative adversar-
+For instance, it may not effectively detect certain malignant or ial network for anomaly detection in retinal OCT image,” in Proc. IEEE
+ 17th Int. Symp. Biomed. Imag. (ISBI), Apr. 2020, pp. 1227–1231.
+rare diseases in cases where the lesion area closely resembles [23] J. Byrd and Z. Lipton, “What is the effect of importance weighting in
+the benign tissue area, as their feature distributions exhibit deep learning?” in Proc. Int. Conf. Mach. Learn., 2019, pp. 872–881.
+no obvious differences. In light of this, future research will [24] B. Zhou, Q. Cui, X.-S. Wei, and Z.-M. Chen, “BBN: Bilateral-branch
+ network with cumulative learning for long-tailed visual recognition,”
+prioritize the segmentation and detection of these challenging in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+diseases. Jun. 2020, pp. 9716–9725.
+ [25] N. Japkowicz and S. Stephen, “The class imbalance problem: A system-
+ R EFERENCES atic study,” Intell. Data Anal., vol. 6, no. 5, pp. 429–449, Oct. 2002.
+ [26] H. He and E. A. Garcia, “Learning from imbalanced data,” IEEE Trans.
+ [1] B. Krawczyk, “Learning from imbalanced data: Open challenges and Knowl. Data Eng., vol. 21, no. 9, pp. 1263–1284, Sep. 2009.
+ future directions,” Prog. Artif. Intell., vol. 5, no. 4, pp. 221–232, [27] Y.-X. Wang, D. Ramanan, and M. Hebert, “Learning to model the tail,”
+ Nov. 2016. in Proc. Adv. Neural Inf. Process. Syst., vol. 30, 2017, pp. 1–11.
+426 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 1, JANUARY 2024
+
+[28] Z. Liu, Z. Miao, X. Zhan, J. Wang, B. Gong, and S. X. Yu, [44] P. Liznerski, L. Ruff, R. A. Vandermeulen, B. Joe Franks, M. Kloft,
+ “Large-scale long-tailed recognition in an open world,” in Proc. and K.-R. Müller, “Explainable deep one-class classification,” 2020,
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, arXiv:2007.01760.
+ pp. 2532–2541. [45] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Self-
+[29] X. Zhang, Z. Fang, Y. Wen, Z. Li, and Y. Qiao, “Range loss for deep supervised learning for anomaly detection and localization,” in Proc.
+ face recognition with long-tailed training data,” in Proc. IEEE Int. Conf. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+ Comput. Vis. (ICCV), Oct. 2017, pp. 5419–5428. pp. 9664–9674.
+[30] K. Cao, C. Wei, A. Gaidon, N. Arechiga, and T. Ma, “Learning [46] C. Huang, H. Guan, A. Jiang, Y. Zhang, M. Spratling, and Y.-F. Wang,
+ imbalanced datasets with label-distribution-aware margin loss,” in Proc. “Registration based few-shot anomaly detection,” in Proc. Eur. Conf.
+ Adv. Neural Inf. Process. Syst., vol. 32, 2019, pp. 1–18. Comput. Vis. Cham, Switzerland: Springer, 2022, pp. 303–319.
+[31] H. Zhao et al., “Anomaly detection for medical images using self- [47] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting
+ supervised and translation-consistent features,” IEEE Trans. Med. Imag., for visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021,
+ vol. 40, no. 12, pp. 3641–3651, Dec. 2021. Art. no. 107706.
+[32] X. Chen, H. Fan, R. Girshick, and K. He, “Improved baselines with [48] C. Huang, Q. Xu, Y. Wang, Y. Wang, and Y. Zhang, “Selfmomentum contrastive learning,” 2020, arXiv:2003.04297. supervised masking for unsupervised anomaly detection and local-
+[33] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework ization,” IEEE Trans. Multimedia, early access, May 19, 2020, doi:
+ for contrastive learning of visual representations,” in Proc. Int. Conf. 10.1109/TMM.2022.3175611.
+ Mach. Learn., 2020, pp. 1597–1607. [49] L. Gao, L. Zhang, C. Liu, and S. Wu, “Handling imbalanced medical
+[34] T. Chen, S. Kornblith, K. Swersky, M. Norouzi, and G. E. Hinton, “Big image data: A deep-learning-based one-class classification approach,”
+ self-supervised models are strong semi-supervised learners,” in Proc. Artif. Intell. Med., vol. 108, Aug. 2020, Art. no. 101935.
+ Adv. Neural Inf. Process. Syst., vol. 33, 2020, pp. 22243–22255. [50] Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, “Image
+[35] J.-B. Grill et al., “Bootstrap your own latent-a new approach to self- quality assessment: From error visibility to structural similarity,” IEEE
+ supervised learning,” in Proc. Adv. Neural Inf. Process. Syst., vol. 33, Trans. Image Process., vol. 13, no. 4, pp. 600–612, Apr. 2004.
+ 2020, pp. 21271–21284. [51] P. Bergmann, S. Löwe, M. Fauser, D. Sattlegger, and C. Steger, “Improv-
+[36] X. Chen and K. He, “Exploring simple Siamese representation learning,” ing unsupervised defect segmentation by applying structural similarity
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), to autoencoders,” 2018, arXiv:1807.02011.
+ Jun. 2021, pp. 15745–15753. [52] W. Xue, L. Zhang, X. Mou, and A. C. Bovik, “Gradient magnitude
+[37] B. Li, E. Han Cui, Y. Li, D. Wang, and W. Kee Wong, “Dual path similarity deviation: A highly efficient perceptual image quality index,”
+ structural contrastive embeddings for learning novel objects,” 2021, IEEE Trans. Image Process., vol. 23, no. 2, pp. 684–695, Feb. 2014.
+ arXiv:2112.12359. [53] P. Isola, J.-Y. Zhu, T. Zhou, and A. A. Efros, “Image-to-image translation
+[38] Y. N. T. Vu, R. Wang, N. Balachandar, C. Liu, A. Y. Ng, and with conditional adversarial networks,” in Proc. IEEE Conf. Comput. Vis.
+ P. Rajpurkar, “MedAug: Contrastive learning leveraging patient metadata Pattern Recognit. (CVPR), Jul. 2017, pp. 1125–1134.
+ improves representations for chest X-ray interpretation,” in Proc. Mach. [54] V. Rotemberg et al., “A patient-centric dataset of images and metadata
+ Learn. Healthcare Conf., 2021, pp. 755–769. for identifying melanomas using clinical context,” Scientific Data, vol. 8,
+[39] P. Chikontwe, M. Luna, M. Kang, K. S. Hong, J. H. Ahn, and S. H. Park, no. 1, pp. 1–8, Jan. 2021.
+ “Dual attention multiple instance learning with unsupervised comple- [55] N. Brancati et al., “BRACS: A dataset for breast carcinoma submentary loss for COVID-19 screening,” Med. Image Anal., vol. 72, typing in H&E histology images,” Database, vol. 2022, Oct. 2022,
+ Aug. 2021, Art. no. 102105. Art. no. baac093.
+[40] A. Vasilev et al., “q-space novelty detection with variational autoen- [56] J. I. Orlando et al., “REFUGE challenge: A unified framework for
+ coders,” in Computational Diffusion MRI. Cham, Switzerland: Springer, evaluating automated methods for glaucoma assessment from fundus
+ 2020, pp. 113–124. photographs,” Med. Image Anal., vol. 59, Jan. 2020, Art. no. 101570.
+[41] K. Zhou et al., “Encoding structure-texture relation with p-net for [57] T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár, “Focal loss for
+ anomaly detection in retinal images,” in Computer Vision–ECCV. Glas- dense object detection,” in Proc. IEEE Int. Conf. Comput. Vis. (ICCV),
+ gow, U.K.: Springer, Aug. 2020, pp. 360–377. Oct. 2017, pp. 2999–3007.
+[42] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed [58] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+ students: Student-teacher anomaly detection with discriminative latent image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+ embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016, pp. 770–778.
+ (CVPR), Jun. 2020, pp. 4182–4191. [59] K. Simonyan and A. Zisserman, “Very deep convolutional networks for
+[43] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee, large-scale image recognition,” 2014, arXiv:1409.1556.
+ “Multiresolution knowledge distillation for anomaly detection,” in Proc. [60] M. Tan and Q. Le, “EfficientNet: Rethinking model scaling for con-
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, volutional neural networks,” in Proc. Int. Conf. Mach. Learn., 2019,
+ pp. 14902–14912. pp. 6105–6114.

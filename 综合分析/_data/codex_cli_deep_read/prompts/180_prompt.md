@@ -1,0 +1,1248 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [180] Auto-Updating Intrusion Detection System for Vehicular Network: A Deep Learning Approach Based on Cloud-Edge-Vehicle Collaboration
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：180
+题名：Auto-Updating Intrusion Detection System for Vehicular Network: A Deep Learning Approach Based on Cloud-Edge-Vehicle Collaboration
+年份：2024
+DOI：10.1109/tvt.2024.3399219
+来源：IEEE Transactions on Vehicular Technology
+PDF：paper/10.1109_TVT.2024.3399219.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：IoT、车联网、工业互联网与边缘安全、时序、日志、KPI 与云原生异常检测
+相关性：强相关，分数 13
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\180.txt
+- 原始字符数：63096
+- 本次发送字符数：63096
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+15372
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 73, NO. 10, OCTOBER 2024
+
+Auto-Updating Intrusion Detection System for
+Vehicular Network: A Deep Learning Approach
+Based on Cloud-Edge-Vehicle Collaboration
+Chunyang Fan , Jie Cui , Senior Member, IEEE, Hulin Jin , Hong Zhong , Member, IEEE, Irina Bolodurina ,
+and Debiao He , Member, IEEE
+
+Abstract—Intrusion detection systems play a crucial role in ensuring the safety of vehicle driving. Traditional intrusion detection
+systems face challenges in efficiently extracting key features from
+network traffic, resulting in inefficiency. To obtain better detection
+performance, many researchers adopted deep learning to build
+intrusion detection systems for vehicular network. However, these
+systems can only identify learned network attacks, while failing
+to identify the unknown attacks present in open scenarios. In this
+paper, we propose a deep learning-based auto-updating intrusion
+detection system for vehicular network, which uses a two-layer
+filter to effectively sense unknown attacks in open scenarios and
+proactively updates the attack recognizer to enable it with the
+ability to identify unknown attacks. In addition, we design a cloudedge-vehicle collaborative model updating approach, where the
+updating task of the attack recognizer is deployed on a cloud server
+to reduce the computational load of the vehicle. The comprehensive
+experiments on three open scenarios show that the updated attack
+recognizer can accurately identify both known and unknown attacks.
+Index Terms—Vehicular network, intrusion detection system,
+deep learning, unknown attack.
+
+I. INTRODUCTION
+
+W
+
+ITH the application of sensor and wireless communication technologies in transportation systems, the world
+
+Manuscript received 16 October 2023; revised 20 March 2024; accepted
+30 April 2024. Date of publication 10 May 2024; date of current version
+17 October 2024. This work was supported in part by the National Natural
+Science Foundation of China under Grant U23A20308, Grant 62202008, Grant
+62302008 and Grant 62325209, in part by the Fundamental Research Funds for
+the Central Universities under Grant 2042023KF0203, in part by the Natural
+Science Foundation of Anhui Province, China under Grant 2208085QF196, and
+in part by the University Synergy Innovation Program of Anhui Province under
+Grant GXXT-2022-049. The review of this article was coordinated by Prof.
+Liehuang Zhu. (Corresponding author: Jie Cui.)
+Chunyang Fan, Jie Cui, Hulin Jin, and Hong Zhong are with the Key
+Laboratory of Intelligent Computing and Signal Processing of Ministry of
+Education, School of Computer Science and Technology, Anhui University,
+Hefei 230039, China, and also with the Anhui Engineering Laboratory of
+IoT Security Technologies, Anhui University, Hefei 230039, China (e-mail:
+cuijie@mail.ustc.edu.cn).
+Irina Bolodurina is with the Faculty of Mathematics and Information
+Technologies, Orenburg State University, 460018 Orenburg, Russia (e-mail:
+prmat@mail.osu.ru).
+Debiao He is with the School of Cyber Science and Engineering, Wuhan
+University, Wuhan 430072, China, and also with the Shanghai Key Laboratory
+of Privacy-Preserving Computation, MatrixElements Technologies, Shanghai
+201204, China (e-mail: hedebiao@163.com).
+Digital Object Identifier 10.1109/TVT.2024.3399219
+
+Fig. 1.
+
+The process of recognizing attacks by intrusion detection system.
+
+has transitioned into an era of intelligent transportation [1].
+Smart vehicles are equipped with an increasing number of safety
+and entertainment applications, such as road prediction, assisted
+driving, and audio/video streaming downloads [2]. However,
+while vehicle users enjoy the services of vehicular applications,
+malicious attackers may launch network attacks on vehicles
+and cause serious traffic accidents [3], [4], [5]. In particular,
+vehicular networks operate in open scenarios, and malicious
+attackers will constantly create new types of attacks to attack
+vehicular networks. Since this new type of attack is unknown
+to the intrusion detection system, it is difficult for the detection
+system to recognize the new unknown attack accurately, and the
+vehicle is more vulnerable to the attack. Therefore, to ensure the
+security of vehicular network, the development of an efficient
+and reliable intrusion detection system for vehicular network
+becomes increasingly important [6]. Traditional intrusion detection methods mostly use fixed rules and features as the basis
+for network attack detection [7], [8]. However, in large-scale
+and complex vehicular network environments, these methods
+prove ineffective as extracting useful features from network flow
+becomes challenging [9], [10]. In recent years, the application
+of deep learning in image recognition and natural language processing has led researchers to explore its potential in constructing
+intrusion detection systems for vehicular network, yielding improved results [11]. Despite these advancements, most existing
+vehicular network intrusion detection methods can only identify
+learned network attacks and cannot detect possible unknown
+attacks [12]. Since the types and number of network attacks are
+not constant in the real world, there will always be unknown
+attacks that have not been learned by the intrusion detection
+system. As shown in Fig. 1, a malicious attacker launches three
+types of network attacks on a target vehicle. Since the intrusion
+
+0018-9545 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+FAN et al.: AUTO-UPDATING INTRUSION DETECTION SYSTEM FOR VEHICULAR NETWORK: A DEEP LEARNING APPROACH
+
+detection system has learned the data features of two types of
+known attacks, the network flows of the known attacks are easily
+recognized and defended by the detection system. However, the
+third type of attack is an unknown attack that has not been learned
+by the intrusion detection system, which makes it difficult for
+the detection system to recognize this attack.
+In particular, many researchers utilize datasets consisting of
+fixed types of attacks to train intrusion detection systems, leading
+to the system’s outputs being confined within a limited range,
+while unknown attacks do not fall within this range. Therefore,
+when faced with an unknown attack, the intrusion detection
+system produces two possible results [13]. The first result is
+that the unknown attack is judged as normal traffic, resulting in
+the vehicle being victimized directly. The second result is that
+the unknown attack is judged to be a known attack, leading the
+vehicle to deal with the unknown attack using methods that defend against known attacks. However, the defenses employed by
+the vehicle may be ineffective due to the different characteristics
+of the different attacks [14].
+To address the above problem, we propose an auto-updating
+intrusion detection system for vehicular network, which periodically updates the attack recognizer to identify known/unknown
+network attacks present in open scenarios. The basic idea of the
+proposed system is mainly 1) filtering out the network flows of
+unknown attacks from the mixed traffic, 2) since there may be
+more than one kind of unknown attack, the obtained unknown
+attack flows need to be classified, 3) based on the network
+flows of unknown attacks and the initial dataset, a new dataset
+containing normal flows, known/unknown attacks is formed and
+the attack recognizer is updated using this dataset. 4) the updated
+attack recognizer has the ability to recognize known/unknown
+attacks. Moreover, it is important to note that the update of the
+attack recognizer cannot be performed on the vehicle due to its
+limited computing and storage capacity. As a result, we design a
+cloud-edge-vehicle cooperative model update method to avoid
+the vehicle computation task overload problem. In summary, the
+contributions of this paper are summarized as follows:
+r We propose a deep learning-based auto-updating intrusion detection system for vehicular network, which can
+effectively detect unknown attack flows present in open
+scenarios and proactively update the attack recognizer to
+improve the ability to recognize unknown attacks.
+r We propose a cloud-edge-vehicle collaboration-based
+model updating approach, which deploys the attack recognizer updating task on cloud servers to reduce the computational and storage load of vehicles.
+r The comprehensive experiments on three open scenarios
+show that the proposed intrusion detection system for
+vehicular network can effectively identify both known
+and unknown attacks, and outperform the state-of-the-art
+methods in terms of precision, recall and F1-score.
+The remainder of this paper is organized as follows. The
+related work is described in Section II. The preliminaries are described in Section III. In Section IV, we introduce the proposed
+auto-updating intrusion detection system for vehicular network.
+In Section V, we evaluate the performance of the proposed
+system. Finally, we summarize our work in Section VI.
+
+15373
+
+II. RELATED WORK
+Recently, there has been a proliferation of research on intrusion detection systems. In this section, we will discuss four main
+categories of intrusion detection systems.
+A. Anomaly-Based Intrusion Detection Methods
+Anomaly-based intrusion detection system is a popular
+method for detecting unknown attacks, which utilizes the features of normal traffic to build an attack recognizer for detecting
+the presence of anomalous attack traffic in the network. Zhang
+et al. [15] proposed an anomaly detection method for unknown
+attacks, which uses Kmeans and isolated forests to detect the
+presence of anomalous traffic in mixed traffic. To avoid botnet
+attacks on network devices, Sriram et al. in [16] proposed a
+botnet attack detection framework based on a multilayer perception, which identifies malicious traffic based on statistical
+features of network flows. Considering that the training data may
+contain privacy information of users, Shi et al. [17] proposed a
+hybrid intrusion detection system based on differential privacy
+and machine learning, which uses one class support vector
+machine and local outlier factor algorithm for network traffic
+detection. To reduce the false alarm rate of network anomalies,
+Li et al. [18] propose an anomalous traffic detection method
+based on a bidirectional gated recurrent unit and an attention
+mechanism, which uses a stacked sparse auto-encoder to extract
+useful features of network traffic, so as to improve the accuracy
+of detection. The above-mentioned anomaly-based intrusion
+detection methods all achieve good results in terms of detection
+accuracy. However, these methods can only determine whether
+the network contains anomalous traffic, and cannot construct
+suitable defenses for such anomalous traffic.
+B. Machine Learning-Based Intrusion Detection Methods
+To formulate appropriate defense strategies against different
+types of network attacks, many researchers have conducted
+fine-grained analyses for network anomalies (i.e., categorizing
+anomalous network traffic). In this subsection, we focus on
+machine learning-based intrusion detection methods, while in
+the next subsection, we will discuss deep learning-based intrusion detection methods. Alani et al. [19] propose a two-layer
+intrusion detection method for malicious attacks in networks,
+which uses multiple machine learning algorithms for packetlevel data and flow-level data. Yang et al. [20] proposed a
+multi-layer hybrid intrusion detection method that uses decision
+trees, random forests, and other algorithms as base classifiers to
+identify both inside and outside vehicle anomalous messages. To
+avoid distributed denial of service attacks on vehicles, Anyanwu
+et al. [21] proposed a vehicular network intrusion detection
+method based on the RBF-SVM kernel, which uses a grid search
+cross-validation algorithm to select the hyperparameters of the
+model. Jin et al. [22] proposed an intrusion detection method
+based on outlier detection, oversampling and metric learning
+for achieving fast detection of malicious attacks in a vehicular
+network environment. These aforementioned schemes achieve
+the fine-grained classification of network attacks. However, the
+
+15374
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 73, NO. 10, OCTOBER 2024
+
+accuracy of machine learning algorithms is relatively low due
+to their weak learning ability on large-scale datasets. Moreover,
+machine learning algorithms rely on manual feature selection,
+which increases the training cost.
+C. Deep Learning-Based Intrusion Detection Methods
+To improve the accuracy of identifying network attacks at a
+fine-grained level, more and more researchers have used deep
+learning to train intrusion detection models. Deep learning can
+use multilayer neural networks to perform automatic feature
+extraction on large-scale data and obtain high accuracy rates. To
+detect false message attacks in vehicular networks, Yu et al. [23]
+proposed an intrusion detection system based on long and shortterm memory networks, which uses vehicle message sequences
+as input to determine emergency message classes. Shu et al. [24]
+proposed a GAN distributed training-based intrusion detection
+method for the biased flow problem in vehicular networks, which
+increases the robustness of the model by collecting network
+traffic from multiple regions. Tian et al. [25] proposed an intrusion detection method based on residual convolutional neural
+networks, which uses a distributed deep learning system to
+improve the accuracy of the classification model. These intrusion
+detection schemes mentioned above can achieve accurate and
+fine-grained identification of network attacks. However, since
+the models of these solutions usually do not have the ability
+to sense unknown attacks, they cannot effectively identify unknown attacks in open scenarios.
+D. Physical Signal-Based Intrusion Detection Methods
+To realize timely detection of network attacks, many researchers have proposed physical signal-based detection methods for vehicular network attacks. Deng et al. [26] proposed
+an in-vehicle intrusion detection system called IdentifierIDS,
+which detects both periodic and non-periodic malicious frames
+by establishing a voltage fingerprint for each CAN identifier
+(ID) and does not consume the limited bandwidth of the CAN
+bus. It is worth noting that IdentifierIDS does not rely on ECU
+and ID mapping knowledge, which greatly enhances utility. Qin
+et al. [27] proposed a collaborative cloud-vehicle intrusion detection system based on multidimensional features, which solves
+the data heterogeneity problem by abstracting different vehicle
+data into the same feature space. Comprehensive experiments
+on three real vehicles show that the scheme can effectively
+detect potential attacks and greatly improve the robustness of
+the detection system. To reduce the consumption of CAN bus
+bandwidth resources by the intrusion detection system, Xun
+et al. [28] proposed an intrusion detection system based on
+vehicle voltage signals, which utilizes the side channel information of the vehicle ECU to detect malicious messages and
+attack sources. It is worth mentioning that the experiments of
+this system on real vehicles have high detection accuracy and it
+takes only 0.537 ms to detect a data frame, which means that the
+system can accurately recognize malicious attacks in a shorter
+time. To detect malicious spoofing attacks on the CAN bus, Levy
+et al. [29] proposed a spoofing attack detection scheme based
+on voltage signals, which utilizes the physical side channel to
+
+detect and localize malicious attacks and can adaptively adjust
+the detection model according to the surrounding environment.
+In summary, many researchers have proposed a large number of intrusion detection schemes to secure the network of
+vehicles. However, most vehicular intrusion detection systems
+rarely consider the detection of new unknown attacks, resulting
+in vehicles being vulnerable to potential attack threats. In this
+paper, we propose an auto-updating vehicular intrusion detection
+system based on cloud-edge-vehicle collaboration. The proposed scheme can effectively sense unknown attacks present
+in open vehicular network scenarios and improve the detection
+capability by continuously updating the attack recognizer. In
+addition, the updating process of the attack recognizer is completed by a cloud server, which greatly reduces the computation
+and storage overhead of the vehicle.
+
+III. PRELIMINARIES
+In this section, we formulate the problem of identifying
+network attacks in open scenarios and then present the main
+components of the proposed attack recognizer.
+
+A. Problem Formulation
+Let Dt = {(x1 , y1 ), (x2 , y2 ), . . . , (xi , yi ), . . . , (xn , yn )} be a
+labeled training dataset that contains M known network attacks,
+where t denotes the current time. Define xi as the i-th sample
+in dataset Dt and yi as the label corresponding to xi . Define
+the current known attack set as C = {c1 , c2 , . . . , cj , . . . , cM }
+and cj corresponds to the j-th known network attack. Using
+dataset Dt to train an initial attack recognizer F t that can
+identify the known M network attacks. Assume that at time
+t + 1, the attacker launches a novel network attack cM +1 and
+the existing attack recognizer F t cannot effectively identify the
+unknown attack cM +1 . To prevent the vehicular network against
+attackers, we need to update the attack recognizer F t → F t+1
+to effectively identify the M + 1 attacks present in the current
+scenario. The update of recognizer F t → F t+1 relies on the new
+dataset Dt+1 , which contains samples with unknown attacks and
+the corresponding labels. Therefore, the core challenge of constructing an intrusion detection system for vehicular network in
+open scenarios is to efficiently detect unknown attack flows and
+form a dataset containing unknown attacks. The identification
+of network attacks in the open scenario can be divided into four
+subproblems as follows:
+1) To identify existing known attacks, we need to train a
+known attack recognizer with high accuracy.
+2) Design an unknown attack filter to identify whether an
+attack is known or unknown.
+3) To determine how many kinds of unknown attacks exist in
+the open scenario, an efficient unknown attack classifier
+needs to be designed.
+4) Generate a labeled dataset Dt+1 containing known attack
+flows and unknown attack flows based on the unknown
+attack filter and unknown attack classifier, and use Dt+1
+to update the attack recognizer.
+
+FAN et al.: AUTO-UPDATING INTRUSION DETECTION SYSTEM FOR VEHICULAR NETWORK: A DEEP LEARNING APPROACH
+
+B. Composition of Attack Recognizer
+The proposed attack recognizer mainly consists of convolutional neural network (CNN) and self-attention mechanism. The
+CNN is used to extract useful information about the network
+flow, and the self-attention mechanism correlates these information with each other to form a global information representation [30], [31], [32]. It is worth mentioning that CNNs are further
+divided into 1D-CNN, 2D-CNN, and 3D-CNN to handle data of
+different dimensions (for example, 1D-CNN is commonly used
+to handle text data). Since network flow is a kind of text data,
+we use 1D-CNN and self-attention mechanism to build an attack
+recognizer.
+1) 1D-CNN: A classical 1D-CNN model usually consists of
+multiple convolutional layers and pooling layers. The convolutional layer is mainly used to extract the features of the network
+flow. The specific convolution process is as follows:
+⎛
+⎞
+m−1
+
+wj xi+j + b⎠
+(1)
+hi = σ ⎝
+j=0
+
+where σ is the activation function, m is the size of the convolution
+kernel, wj is the j-th weight of the convolution kernel, b is the
+offset, xi+j is the (i + j)-th element of the input sequence, and hi
+is the output value of the convolution operation. To obtain better
+performance, we use multi-layer 1D-CNN for feature extraction
+of network traffic. The final convolution result C res needs to be
+input to the pooling layer for dimensionality reduction to reduce
+the risk of model overfitting and increase the training speed. The
+specific pooling process is as follows:
+Z = M axP ooling(C res )
+
+(2)
+
+2) Self-Attention Mechanism: Generally, the self-attention
+mechanism uses three matrixes of “query”, “key” and “value”
+to construct the relational features between vectors. For convenience, “query”, “key” and “value” are denoted as Q, K and V ,
+respectively, and their values are calculated as follows:
+⎧
+⎨Q = Z · W Q
+K = Z · WK
+(3)
+⎩
+V = Z · WV
+where W Q , W K , and W V are learnable weight matrices.
+According to the matrix Q and the matrix K, the value of the
+attention matrix A can be calculated by (4)
+A = Sof tmax
+
+Q · KT
+√
+dk
+
+(4)
+
+where the Sof tmax is a activation function, and dk is the
+dimension of K. Note that the matrix A contains the relationship
+between any two elements of the pooling result Z. Then, we
+use the attention matrix A to extract the key information from
+the matrix V and generate a sequence O that can reflect the
+relationship between the elements. The value of O can be
+calculated by the (5)
+O = Attention(Q, K, V ) = A · V
+
+(5)
+
+15375
+
+Note that the O is the output of a single-head attention mechanism, and single-head attention suffers from the drawback of
+over-focusing attention on a certain location. Therefore, we
+avoid the over-focusing problem by training multi-groups of
+different parameter matrices to generate a series of O . Then,
+the output sequence O of the multi-headed attention mechanism
+can be calculated by (6)
+
+) · WO
+O = (O1 ⊕ O2 ⊕ · · · OH
+
+(6)
+
+where W O is a learnable weight matrix, H is the number of
+heads of the attention mechanism.
+IV. AUTO-UPDATING INTRUSION DETECTION SYSTEM FOR
+VEHICULAR NETWORK
+The proposed auto-updating intrusion detection system for vehicular network consists of four components: attack recognizer,
+unknown attack filter, unknown attack classifier, and update
+attack recognizer. The overview of the system is shown in
+Fig. 2. Note that the four parts of the proposed system correspond
+to each of the four subproblems in the problem formulation.
+A. Attack Recognizer
+To enable the defense against network attacks, we need to
+design attack recognizer with high accuracy to identify the attacks present in the vehicular network. As declared in subsection
+B of the preliminaries, the attack classifier mainly consists of
+a 1D-CNN and a multi-headed attention mechanism. Initially,
+the attack recognizer extracts the key features of the network
+flow using 1D convolution and uses maximum pooling to reduce
+the risk of model overfitting. Subsequently, the pooled feature
+vectors are fed to the multi-headed attention mechanism to
+capture the correlation between features. Then, we obtain a
+hidden vector O containing the key information of the network
+flow. Finally, the vector O is flattened and fed into a linear layer
+with a Sof tmax activation function. Note that the Sof tmax
+activation function is often used for classification tasks, and its
+output is the predicted probability of each category. The output
+of the linear layer and the Softmax activation function are shown
+in (7) and (8)
+y = [y1 , y2 , . . . , yM , yM +1 ] = (W T · O) + bf
+pj =
+
+exp(yj )
+M +1
+i=1 exp(yi )
+
+(7)
+(8)
+
+where W T is the weight matrix, bf is the offset, y is the
+output of linear layer, pj is the predicted probability of the
+j-th class, and M + 1 denotes normal traffic and M types of
+known attacks. According to (8), we can obtain the probability
+p = [p1 , p2 , . . . , pM +1 ] that a flow belongs to normal traffic and
+M +1
+pi = 1 and pi ≤ 1. The
+each of the known attacks, where i=1
+type of the network flow is determined by the maximum value
+in p, which is denoted as p∗ = Max(p).
+To sum up, the attack recognizer has been built. However,
+the initial attack recognizer can only identify M known attacks
+and cannot identify unknown attacks that may exist in open
+
+15376
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 73, NO. 10, OCTOBER 2024
+
+Overview of auto-updating intrusion detection system for vehicular network.
+
+scenarios. Inspired by Sun et al. [33] and our experimental validation, we find that unknown and known attacks show different
+distributions on the probability. More specifically, the p∗ value
+of a known attack is slightly less than 1, while the p∗ value of
+an unknown attack is much less than 1. Therefore, we define a
+threshold θ to determine whether a network flow belongs to a
+known class or not. When p∗ > θ, the flow is determined to be
+a known class, otherwise it belongs to an uncertain class (i.e., it
+may be either a known or an unknown class). We set the flows
+with p∗ > θ as xk , and the flows with p∗ ≤ θ as xu .
+
+B. Unknown Attack Filter
+To further determine whether a network flow is an unknown
+attack flow, we need to design a filter to eliminate the normal
+flows and known attack flows in xu .
+Let Dt be the training dataset with labels at the initial time t,
+and Dt contains both normal traffic samples and known attack
+samples. Since we do not know any useful information about
+the unknown attack at the initial time t, a discriminator for the
+unknown attack is difficult to construct. However, the dataset
+Dt contains information about both normal flows and known
+attack flows. Therefore, a feasible approach is to build a twolayer filter to sequentially filter out the normal flows and known
+attack flows in xu based on the features of normal and known
+attack flows. Then, the remaining network flows are the unknown
+attack flows. Note that the first layer of the two-layer filter is used
+to identify whether a network flow is normal or not, while the
+second layer of the two-layer filter is used to detect unknown
+attack traffic. The reason for this is to avoid some normal flows
+being incorrectly recognized as attack flows.
+
+Algorithm 1: Unknown Attack Filter.
+Input: Dataset Dt and Dataset xu
+Output: Unknown Attack Dataset Du
+1 Define Dnt as the normal flow in the dataset Dt ;
+2 Define Dkt as the known attack flows in the dataset Dt ;
+3 Building OCSVM-based first layer filters using Dnt ;
+4 Φn = OCSV M (Dnt );
+5 Building OCSVM-based second layer filters using Dkt ;
+6 Φk = OCSV M (Dkt );
+7 Φn and Φk are used to implement filtering of normal
+flows and known attack flows;
+8 xu1 = Φn (xu );
+9 Du = Φk (xu1 );
+10 return Du ;
+
+It is worth mentioning that the two-layer filter is built based
+on one-class support vector mechanism (OCSVM) [34], [35].
+The OCSVM is a commonly used anomaly detection algorithm
+that builds a decision boundary in a high-dimensional space
+by features of training data. The decision boundary can cover
+most of the normal data and separate out the abnormal data. The
+objective function of the decision boundary is as follows:
+
+n
+1 
+1
+2
+||w|| +
+ζi − ρ
+(9)
+Minw,ζi ,ρ
+2
+vn i=1
+
+(w · φ(xi )) ≥ ρ − ζi
+s.t.
+ζi ≥ 0
+where w is the normal vector of the hyperplane, v is a hyperparameter to adjust the slack degree, n is the number of samples,
+
+FAN et al.: AUTO-UPDATING INTRUSION DETECTION SYSTEM FOR VEHICULAR NETWORK: A DEEP LEARNING APPROACH
+
+ζi is the slack variable, ρ is the offset, and φ(xi ) is the radial
+basis kernel function. The detailed filter construction is shown
+in Algorithm 1, and based on the unknown attack filter, we can
+obtain Du containing the unknown attack flows.
+
+15377
+
+Algorithm 2: Unknown Attack Classification.
+
+C. Unknown Attack Classifier
+Although the dataset Du containing unknown attacks is obtained after the two-layer filter, we do not know how many
+unknown attacks are contained in Du . Therefore, to further
+determine the number of unknown attack types in Du , we need to
+perform clustering operation for Du . The process of clustering is
+to divide Du into a number of clusters, and the network flows in
+each cluster have some similarity to each other. To improve the
+accuracy of the clustering results and reduce the computational
+complexity, we use principal component analysis (PCA) to
+perform dimensionality reduction for dataset Du . PCA is a classical data dimensionality reduction algorithm that reduces the
+correlation between features by changing the coordinate system
+to find the main features in the data [36], [37]. Specifically, PCA
+first normalizes the data so that each feature with mean of 0 and
+variance of 1. The data normalization process is as follows:
+T =
+
+q−μ
+τ
+
+(10)
+
+where q is the feature value, μ and τ are the mean and the
+standard deviation of the feature value set respectively, and
+T represents the normalization result. Then, we calculate the
+covariance matrix to find a feature space that minimizes the
+correlation between the features. The covariance matrix is calculated as shown in (11)
+CM =
+
+G
+T
+i=1 (xi − x)(xi − x)
+
+G−1
+
+(11)
+
+where G is the number of samples, xi is the eigenvector of
+the i-th sample in Du , and x is the mean vector of samples.
+According to the matrix CM , we can calculate its corresponding
+eigenvector V and eigenvalue λ. The size of the eigenvalue
+reflects the importance of the feature vector. Therefore, we sort
+the eigenvector V in descending order by eigenvalue λ and select
+the first k eigenvectors to realize data dimensionality reduction.
+The dataset after dimensionality reduction is denoted as follows:
+Dpca = XV k
+
+(12)
+
+where X is the original data matrix and V k is a matrix consisting
+of the first k eigenvectors.
+Subsequently, we use the Kmeans clustering algorithm to
+analyze how many unknown attacks are contained in Dpca .
+Kmeans is a distance-based clustering algorithm that divides
+a set of data into κ classes by continuous iterations, where κ is a
+hyperparameter. In the initial time, Kmeans selects κ clustering
+centers. Then, the distance from sample point s to each cluster
+center is calculated according to (13), and the minimum distance
+is chosen to determine the class to which the sample point
+belongs.
+
+(13)
+dj = (s − cj )2
+
+where cj denotes the j-th clustering center. Since the initial clustering centers are chosen randomly, there exists the possibility
+that they are not real centroids. Therefore, the clustering centers
+need to be updated continuously, and the updating process can
+be represented by (14).
+1 
+si
+(14)
+cj =
+|Nj |
+si ∈Nj
+
+where Nj is the sample point in the j-th class and si is the
+coordinate of the sample point. Finally, the Kmeans algorithm
+generates κ data clusters by continuous iterations and each
+cluster is an unknown attack. Since we do not know how many
+unknown attacks are present in the open scenario, the value of
+κ is set to [2, κmax ]. The number of unknown attacks in the
+open scenario is determined based on the best clustering results
+(i.e., the silhouette coefficient score). Note that the reason for
+not choosing 1 as κ is that the data in Dpca is unlikely to be of
+one class. In addition, we consider the case that the unknown
+
+15378
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 73, NO. 10, OCTOBER 2024
+
+attack has only one class when κ = 2. The detailed unknown
+attack classification process is shown in Algorithm 2. Note that
+in Algorithm 2, we design a score threshold η, and determine
+that the clustering result is valid only if S max > η. The reason
+is to ensure that the unknown attack dataset C u is valid and
+accurate.
+To improve the sample quality of the unknown attack, we
+need to process the obtained C u = {d1 , d2 , . . . , dκ }, where d
+denotes a sample cluster. It is well known that the closer sample
+points are to the cluster center, the lower the probability of them
+becoming outliers. Therefore, the basic idea of improving data
+quality is to select samples that are closer to the center of the
+cluster. Let D = {dis1 , dis2 , . . . , disi , . . . , disn } be the set of
+distances of a sample cluster, where disi denotes the distance
+from the i-th sample to the center of the cluster. The average
+distance in D is calculated as follows:
+disavg =
+
+n
+i=1 disi
+
+(15)
+n
+Then, we use disavg as a threshold to filter the sample points
+closer to the cluster center, i.e., if disi < disavg , retain this sample point, otherwise discard it. Similarly, we deal with the sample
+clusters in C u based on this idea to improve the sample quality
+of unknown attacks, and the processed C u = {d1 , d2 , . . . , dκ }.
+Finally, a new dataset Dt+1 is formed based on the obtained C u
+and the initial dataset Dt , and the attack recognizer is updated
+by utilizing Dt+1 .
+D. Update of Attack Recognizer Based on Cloud-Edge-Vehicle
+Collaboration
+In this subsection, we describe how the proposed attack
+recognizer enables auto-updating in cloud-edge-vehicle environments.
+The vehicle is not suitable for performing the recognizer
+update task due to limited computational and storage capacity.
+To alleviate the computational load on vehicles, we propose a
+cloud-edge-vehicle collaborative model updating method, and
+the specific updating architecture is shown in Fig. 3. As shown in
+Fig. 3, the attack recognizer is deployed on the vehicle, while the
+unknown attack filter and unknown attack classifier are deployed
+on the cloud server. First, the initial attack recognizer on the
+vehicle forwards network flows of undeterminable type to the
+connected edge base station (i.e. network flows for p∗ ≤ θ). The
+edge base station forwards these flows to the cloud server and
+forms the dataset xu . Then, the cloud server inputs xu into the
+unknown attack filter and unknown classifier in turn and obtains
+the dataset C u . C u contains unknown attack features present in
+the current scenario and the initial dataset Dt contains normal
+traffic and known attack features. Based on datasets Dt and C u
+we can generate a new dataset Dt+1 , which contains samples
+and labels of normal traffic, known attacks and unknown attacks.
+The cloud server updates the attack recognizer using the dataset
+Dt+1 to ensure that the updated recognizer can identify unknown
+attacks present in open scenarios. It is worth mentioning that the
+cross-entropy loss function is used for model training to compute
+the losses and the Adam optimizer to update the parameters. The
+detailed attack recognizer update is shown in Algorithm 3.
+
+Fig. 3.
+
+A model updating method based on cloud-edge-vehicle collaboration.
+
+Algorithm 3: Attack Recognizer Update.
+
+1
+2
+3
+4
+5
+6
+7
+
+Input: Dataset Dt+1
+Outuput: New attack recognizer F t+1
+Divide the dataset Dt+1 into a training set, a validation
+set and a test set;
+Resize the number of output SoftMax layers;
+Train the new attack recognizer using the training and
+validation sets;
+Test the new attack recognizer using the test set;
+Save the model of the attack recognizer;
+The cloud server sends updated model to each vehicle;
+Install the updated attack recognizer in each vehicle;
+
+V. EXPERIMENTAL RESULTS
+In this section, we describe the dataset used for the experiments, the experimental settings, and the performance analysis
+of the proposed auto-updating intrusion detection system for
+vehicular network. Specifically, we will discuss five research
+questions.
+r Q1: How is the overall performance of the proposed autoupdating intrusion detection system for vehicular network?
+r Q2: Whether the proposed two-layer unknown attack filter
+can effectively extract the unknown attacks?
+r Q3: Can the unknown attack classifier effectively classify
+unknown attacks?
+r Q4: Whether attack recognizer based on 1D-CNN and
+multi-head attention mechanisms have higher accuracy
+compared to other algorithms?
+r Q5: Why are vehicles not suitable for training attack recognizers?
+
+FAN et al.: AUTO-UPDATING INTRUSION DETECTION SYSTEM FOR VEHICULAR NETWORK: A DEEP LEARNING APPROACH
+
+15379
+
+TABLE I
+DIVIDE KNOWN AND UNKNOWN ATTACKS FROM THREE DATASETS
+
+library to build the proposed auto-updating intrusion detection
+system for vehicular network.
+2) Evaluation Metrics: To evaluate the performance of the
+proposed vehicular network attack recognizer to identify known
+or unknown network attacks, we calculated the number of true
+positives (TP), false positives (FP), true negatives (TN), and
+false negatives (FN) predicted by the model. Based on these
+definitions, we can calculate the precision, recall, and F1 score
+by (16), (17), and (18), respectively.
+TP
+TP + FP
+TP
+Recall =
+TP + FN
+P recision · Recall
+F 1 − score = 2 ·
+P recision + Recall
+P recision =
+
+Fig. 4.
+
+Baidu apollo auto-driving car.
+
+(16)
+(17)
+(18)
+
+A. Dataset
+
+C. Overall Performance of the Proposed System (Q1)
+
+We use open datasets VeReMi [38], ToN-IOT [39] and EDGEIIOT [40] to train an intrusion detection system for vehicular network. The VeReMi dataset is a dataset for evaluating malicious
+vehicle misbehavior in vehicular network that includes DoS,
+false location, message replay, and other attacks. ToN-IOT and
+EDGE-IIOT are datasets commonly used in intrusion detection
+systems in recent years. The ToN-IoT dataset consists of 21,000+
+network flows and contains attacks such as DoS, DDoS, XSS,
+etc. EDGE is a larger intrusion detection dataset that consists of
+millions of network flows and includes attacks such as SQL
+injection, port scanning, password, etc. To simulate network
+attacks in open scenarios, we further divide each dataset into
+known attacks and unknown attacks as shown in Table I. It is
+important to mention that the training data of the initial attack
+recognizer does not contain unknown attacks.
+
+To answer Q1, we use the confusion matrix to evaluate the
+overall performance of the proposed system, and the results of
+the confusion matrix are shown in Fig. 5. The Fig. 5(a)–(c) shows
+the performance of the initial attack recognizer in detecting
+known attacks, while Fig. 5(d)–(f) shows the performance of
+the updated attack recognizer in detecting known attacks and
+unknown attacks. We can observe that the proposed vehicular
+network intrusion detection system can efficiently identify both
+known attacks at the initial time and unknown attacks after
+auto-updating. In addition, we note that the updated model has a
+reduced detection accuracy for some known attacks. The reason
+for this phenomenon is that a small amount of known attack
+data is incorrectly identified as unknown attacks. However, the
+updated model can still identify most of the known attacks
+with over 90% accuracy. It is also worth noting that the attack
+recognizer performs best on the TON-IOT dataset. The reason
+for this phenomenon is the relatively simple feature distribution
+of the data samples in the TON-IOT dataset. Some existing
+intrusion detection schemes [39], [41], [42] have also achieved
+good experimental results on the ToN-IoT dataset.
+
+B. Experimental Settings
+1) Experimental Environment: The attack recognizer update
+task was deployed on an Xeon(R) Platinum 8336 C cloud server
+with 228 G of RAM and an NVIDIA A100 GPU. We use a
+high-performance computer as the host for the edge base station,
+which is equipped with an Intel(R) Core i9-11900 K CPU, 64 G
+of RAM, and an RTX 3090 GPU. The trained attack recognizer
+was deployed in the Baidu Apollo auto-driving car shown in
+Fig. 4. Moreover, we use the TensorFlow 2.9.0 deep learning
+algorithm library and the Sklearn machine learning algorithm
+
+D. Unknown Attack Detection Performance (Q2)
+In open scenarios, constructing efficient filters for unknown
+attacks is the basis for reconfiguring attack recognizers. In this
+subsection, we will discuss the performance of the proposed
+two-layer filter. Fig. 6 represents the accuracy of the first layer
+filter in identifying normal flows and abnormal flows. Fig. 7
+
+15380
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 73, NO. 10, OCTOBER 2024
+
+Fig. 5. Performance of the attack recognizer at initial and after update on three datasets. (a) The initial confusion matrix of VeReMi. (b) The initial confusion
+matrix of ToN-IoT. (c) The initial confusion matrix of EDGE-IIoT. (d) The updated confusion matrix of VeReMi (e) The updated confusion matrix of ToN-IoT. (f)
+The updated confusion matrix of EDGE-IIoT.
+
+Fig. 6.
+
+Performance analysis of the first layer of filters.
+
+represents the accuracy of the second layer filter in identifying
+known attacks and unknown attacks. We can observe that the
+first layer filter is effective in identifying anomalous flows from
+mixed flows, and the second layer filter is able to filter out
+unknown attacks from mixed attacks. In addition, the two-layer
+filter is more sensitive to anomalous data on ToN-IoT datasets.
+The reason for this phenomenon is that ToN-IoT is a smaller
+dataset and has low data complexity, thus the filters generated
+on the dataset perform better. Finally, it is important to note that
+
+Fig. 7.
+
+Performance analysis of the second layer of filters.
+
+we use the true labels of unknown attacks to accurately evaluate
+the performance of the two-layer filter.
+E. Unknown Attack Clustering Results Analysis (Q3)
+To answer Q3, we analyze the clustering results of unknown
+attacks in this subsection. Assume that there are at maximum
+10 unknown attacks in the open scenario, i.e., set κ to 10.
+Then, according to the description in Algorithm 2, we perform
+clustering from 2 to 10 on the obtained unknown attack data and
+select the best clustering model by silhouette coefficients. The
+
+FAN et al.: AUTO-UPDATING INTRUSION DETECTION SYSTEM FOR VEHICULAR NETWORK: A DEEP LEARNING APPROACH
+
+15381
+
+TABLE II
+UNKNOWN ATTACK CLUSTERING ACCURACY
+
+r NIDT [44]: To improve the accuracy of the intrusion
+
+Fig. 8. Silhouette coefficient scores for the number of unknown attack types
+from 2 to 10.
+
+silhouette coefficient scores for the three datasets are shown in
+Fig. 8. We can observe that VeReMi and ToN-IoT obtain the
+highest silhouette coefficients when the number of unknown
+attack types is set to 2, while EDGE-IIoT obtains the highest
+silhouette coefficients when the number of unknown attack types
+is set to 3. It corresponds exactly to the number of unknown
+attack types set in Table I.
+Furthermore, we analyze the accuracy of clustering and the
+results are shown in Table II. We observe that the clustering
+accuracy for each unknown attack is higher than 89%. It should
+be mentioned that the higher the clustering accuracy, the higher
+the accuracy of the updated model to identify unknown attacks.
+Similarly, we used the true labels of the unknown attack data to
+evaluate the unknown attack classifier.
+F. Comparison With Other Methods (Q4)
+To answer Q4, we compare the proposed attack recognizer
+with some existing methods [23], [43], [44] in terms of precision,
+recall, and F1-score. The main features of the compared schemes
+are as follows:
+r TLOC [43]: To detect both in-vehicle network attacks
+and out-of-vehicle network attacks faced by vehicles, the
+scheme proposes an intrusion detection method based on
+five advanced CNN models such as VGG16, VGG19,
+Xception, Inception, and InceptionResnet, and optimizes
+the hyper-parameters using particle swarm.
+r LIDS [23]: To detect the presence of false message attacks
+in vehicular network, an LSTM-based intrusion detection
+method is proposed, which utilizes the strong processing
+capability of LSTM on time series to detect whether a
+message sequence is abnormal or not.
+
+detection model and reduce the false alarm rate, an intrusion detection method based on CNN and BiGRU
+is proposed, which uses CNN to extract the spatial
+features of the network traffic, and then uses BiGRU
+to extract the time series information of the network
+traffic.
+The comparison results are shown in Table III, we can observe that the proposed method achieves a high performance
+and outperforms these compared methods. The reason for this
+result is that 1D-CNN and the multi-head attention mechanism
+can effectively extract the features of network traffic and the
+correlation between the features. In addition, we further analyze
+the shortcomings of the compared methods. (1) The TLOC [43]
+builds an intrusion detection system by integrating five advanced
+CNN models, but this simple integration may result in overall
+performance degradation due to the poor performance of one
+of the base learners. (2) LIDS [23] utilizes the powerful timeseries processing capability of LSTM to detect network attacks
+on vehicles, but LSTM suffers from gradient vanishing when
+processing longer sequences, resulting in poor performance. (3)
+Similarly, the reason for the poor performance of NIDT [44] is
+that BiGRU has difficulty in capturing long-term dependencies
+in longer sequences. Compared with these methods, the proposed attack recognizer with 1D-CNN + multi-head attention
+mechanism can achieve more flexible and efficient detection
+for network traffic. Specifically, 1D-CNN can effectively extract local features of network traffic, and multi-head attention
+utilizes these local features to form a global information representation, which enhances the long-range dependency between
+different locations and improves detection accuracy. In addition,
+it is important to note that our proposed intrusion detection
+system is composed of multiple modules, and each module
+works individually. This implies that the detection system is
+highly scalable (e.g., the attack recognizer based on 1D-CNN +
+multiple-attention mechanism can be flexibly replaced with an
+LSTM-based attack recognizer).
+G. Comparison of Vehicle and Server Efficiency on Training
+Models (Q5)
+We explain why vehicles are not suitable for training attack
+recognizers by comparing the efficiency of vehicle and cloud
+server training models. The comparison results are shown in
+Fig. 9. We can clearly observe that as the data scale increases,
+the time consumed to train the model on the vehicle increases
+significantly, while the time consumed on the cloud server is
+relatively low. When the computational resources of a vehicle are
+occupied for a long time due to updating the attack recognizer,
+it is likely to affect the operation of normal safety applications,
+
+15382
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 73, NO. 10, OCTOBER 2024
+
+TABLE III
+COMPARISON WITH OTHER METHODS
+
+Fig. 9. Comparison of vehicle and cloud servers in terms of model training
+efficiency.
+
+leading to an elevated probability of traffic accidents. In addition, the vehicle requires a large amount of data to complete
+the update of the attack recognizer. However, the vehicle has
+limited storage capacity and this training data is not important
+for the usual operation of the vehicle. Therefore, vehicles are
+not suitable for the task of updating attack recognizers in terms
+of both computation and storage, whereas cloud servers have
+more powerful computation and storage capabilities, and model
+updating is more efficient and independent of the surrounding
+environment.
+VI. CONCLUSION
+In this paper, we propose an auto-updating intrusion detection system for vehicular network, which can detect known
+attacks and unknown attacks present in open scenarios. More
+specifically, the system mainly consists of an attack recognizer,
+an unknown attack filter, an unknown attack classifier, and an
+update attack recognizer. The initial attack recognizer based
+on 1D-CNN and multi-headed attention mechanism is able
+to accurately identify known attacks in open scenarios. The
+unknown attack filter is used to filter the unknown attack data
+present in the open scenario. Then, the unknown attack classifier
+
+is used to determine how many unknown attacks are present in
+the open scenario. Finally, the attack recognizer is updated using
+the known attack data and the unknown attack data. The updated
+attack recognizer is able to identify more network attacks. In addition, we devise a cloud-edge-vehicle model updating method
+that makes the vehicle not responsible for attack recognizer
+updating tasks, thus reducing the computational and storage load
+on the vehicles. Our comprehensive experiments on three open
+scenarios demonstrate that the proposed auto-updating vehicular
+network intrusion detection system can effectively identify both
+known and unknown attacks.
+In the future, we will study a federated learning-based intrusion detection system for vehicles that enables joint training
+of multi-area detection models, as well as the ability to detect
+unknown attacks in multiple areas. Vehicular ad hoc networks
+are large distributed networks, and an intrusion detection system
+trained solely on network traffic in one region is prone to the
+biased flow problem, resulting in a small detection range of
+the model. In addition, most existing federated learning-based
+intrusion detection models for vehicles rarely consider the identification of unknown attacks, leading to poor robustness of the
+models. Therefore, building an open federated learning-based
+vehicular intrusion detection system is the direction of our future
+work.
+REFERENCES
+[1] F. Zhu, Y. Lv, Y. Chen, X. Wang, G. Xiong, and F.-Y. Wang, “Parallel
+transportation systems: Toward IoT-enabled smart urban traffic control
+and management,” IEEE Trans. Intell. Transp. Syst., vol. 21, no. 10,
+pp. 4063–4071, Oct. 2020.
+[2] Z. Zhang, Y. Cao, Z. Cui, W. Zhang, and J. Chen, “A many-objective
+optimization based intelligent intrusion detection algorithm for enhancing
+security of vehicular networks in 6G,” IEEE Trans. Veh. Technol., vol. 70,
+no. 6, pp. 5234–5243, Jun. 2021.
+[3] T. Alladi, B. Gera, A. Agrawal, V. Chamola, and F. R. Yu,
+“DeepADV: A deep neural network framework for anomaly detection in
+VANETs,” IEEE Trans. Veh. Technol., vol. 70, no. 11, pp. 12013–12023,
+Nov. 2021.
+[4] M. L. Han, B. I. Kwak, and H. K. Kim, “Event-triggered interval-based
+anomaly detection and attack identification methods for an in-vehicle
+network,” IEEE Trans. Inf. Forensics Secur., vol. 16, pp. 2941–2956,
+2021.
+[5] M. Zang and Y. Yan, “Machine learning-based intrusion detection system
+for Big Data analytics in VANET,” in Proc. IEEE 93rd Veh. Technol. Conf.,
+2021, pp. 1–5.
+
+FAN et al.: AUTO-UPDATING INTRUSION DETECTION SYSTEM FOR VEHICULAR NETWORK: A DEEP LEARNING APPROACH
+
+[6] X. Li et al., “CAN bus messages abnormal detection using improved
+SVDD in Internet of Vehicles,” IEEE Internet Things J., vol. 9, no. 5,
+pp. 3359–3371, Mar. 2022.
+[7] I. Butun, S. D. Morgera, and R. Sankar, “A survey of intrusion detection
+systems in wireless sensor networks,” IEEE Commun. Surv. Tuts., vol. 16,
+no. 1, pp. 266–282, Firstquarter 2014.
+[8] E. Benkhelifa, T. Welsh, and W. Hamouda, “A critical review of practices
+and challenges in intrusion detection systems for IoT: Toward universal and resilient systems,” IEEE Commun. Surv. Tuts., vol. 20, no. 4,
+pp. 3496–3509, Fourthquarter 2018.
+[9] W. Li, W. Meng, and L. F. Kwok, “Surveying trust-based collaborative
+intrusion detection: State-of-the-art, challenges and future directions,”
+IEEE Commun. Surv. Tuts., vol. 24, no. 1, pp. 280–305, First Quarter 2022.
+[10] S. T. Mehedi, A. Anwar, Z. Rahman, K. Ahmed, and R. Islam, “Dependable intrusion detection system for IoT: A deep transfer learning
+based approach,” IEEE Trans. Ind. Inform., vol. 19, no. 1, pp. 1006–1017,
+Jan. 2023.
+[11] M. F. Murk, N. Zahid, A. H. Sodhro, and B. Zahid, “Decentralized
+smart grid system:a survey on machine learning-based intrusion detection
+approaches,” in Proc. IEEE 96th Veh. Technol. Conf., 2022, pp. 1–5.
+[12] R. Ramachandra, A Survey on Unknown Presentation Attack Detection for
+Fingerprint, vol. 1382, Berlin, Germany: Springer, 2021, pp. 189–202.
+[13] E. M. Rudd, A. Rozsa, M. Günther, and T. E. Boult, “A survey of stealth
+malware attacks, mitigation measures, and steps toward autonomous open
+world solutions,” IEEE Commun. Surv. Tuts., vol. 19, no. 2, pp. 1145–1172,
+Secondquarter 2017.
+[14] Y. Guo, “A review of machine learning-based zero-day attack detection: Challenges and future directions,” Comput. Commun., vol. 198,
+pp. 175–185, 2022.
+[15] Y.-L. Zhang, L. Li, J. Zhou, X. Li, and Z.-H. Zhou, “Anomaly detection
+with partially observed anomalies,” in Proc. Companion Proc. Web Conf.,
+2018, pp. 639–646.
+[16] S. Sriram, R. Vinayakumar, M. Alazab, and S. KP, “Network flow based
+IoT botnet attack detection using deep learning,” in Proc. IEEE Conf.
+Comput. Commun. Workshops, 2020, pp. 189–194.
+[17] J. Shi, Y. Lin, Z. Zhang, and S. Yu, “A hybrid intrusion detection system
+based on machine learning under differential privacy protection,” in Proc.
+IEEE 94th Veh. Technol. Conf., 2021, pp. 1–6.
+[18] H. Li, E. He, C. Kuang, X. Yang, X. Wu, and Z. Jia, “An abnormal traffic
+detection based on attention-guided bidirectional GRU,” in Proc. IEEE
+22nd Int. Conf. Commun. Technol., 2022, pp. 1300–1305.
+[19] M. M. Alani and A. I. Awad, “An intelligent two-layer intrusion detection
+system for the Internet of Things,” IEEE Trans. Ind. Informat., vol. 19,
+no. 1, pp. 683–692, Jan. 2023.
+[20] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered hybrid
+intrusion detection system for Internet of Vehicles,” IEEE Internet Things
+J., vol. 9, no. 1, pp. 616–632, Jan. 2022.
+[21] G. O. Anyanwu, C. I. Nwakanma, J.-M. Lee, and D.-S. Kim, “RBF-SVM
+kernel-based model for detecting DDoS attacks in SDN integrated vehicular network,” Ad Hoc Netw., vol. 140, 2023, Art. no. 103026.
+[22] F. Jin, M. Chen, W. Zhang, Y. Yuan, and S. Wang, “Intrusion detection on Internet of Vehicles via combining log-ratio oversampling,
+outlier detection and metric learning,” Inf. Sci., vol. 579, pp. 814–831,
+2021. [Online]. Available: https://www.sciencedirect.com/science/article/
+pii/S0020025521008021
+[23] Y. Yu, X. Zeng, X. Xue, and J. Ma, “LSTM-based intrusion detection system for VANETs: A time series classification approach to false
+message detection,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 12,
+pp. 23906–23918, Dec. 2022.
+[24] J. Shu, L. Zhou, W. Zhang, X. Du, and M. Guizani, “Collaborative intrusion
+detection for VANETs: A deep learning-based distributed SDN approach,”
+IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7, pp. 4519–4530, Jul. 2021.
+[25] Z. Tian, C. Luo, J. Qiu, X. Du, and M. Guizani, “A distributed deep
+learning system for web attack detection on edge devices,” IEEE Trans.
+Ind. Informat., vol. 16, no. 3, pp. 1963–1971, Mar. 2020.
+[26] Z. Deng, J. Liu, Y. Xun, and J. Qin, “IdentifierIDS: A practical voltagebased intrusion detection system for real in-vehicle networks,” IEEE Trans.
+Inf. Forensics Secur., vol. 19, pp. 661–676, 2024.
+[27] J. Qin, Y. Xun, and J. Liu, “CVMIDS: Cloud–vehicle collaborative intrusion detection system for Internet of Vehicles,” IEEE Internet Things J.,
+vol. 11, no. 1, pp. 321–332, Jan. 2024.
+[28] Y. Xun, Z. Deng, J. Liu, and Y. Zhao, “Side channel analysis: A novel
+intrusion detection system based on vehicle voltage signals,” IEEE Trans.
+Veh. Technol., vol. 72, no. 6, pp. 7240–7250, Jun. 2023.
+
+15383
+
+[29] E. Levy, A. Shabtai, B. Groza, P.-S. Murvay, and Y. Elovici, “CAN-LOC:
+Spoofing detection and physical intrusion localization on an in-vehicle
+CAN bus based on deep features of voltage signals,” IEEE Trans. Inf.
+Forensics Secur., vol. 18, pp. 4800–4814, 2023.
+[30] R. Hu and S. Xiang, “Reversible data hiding by using CNN prediction and
+adaptive embedding,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 44,
+no. 12, pp. 10196–10208, Dec. 2022.
+[31] S. Mohine, B. S. Bansod, R. Bhalla, and A. Basra, “Acoustic modality
+based hybrid deep 1D CNN-BiLSTM algorithm for moving vehicle classification,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 9, pp. 16206–16216,
+Sep. 2022.
+[32] H. Tan, X. Liu, B. Yin, and X. Li, “MHSA-Net: Multihead self-attention
+network for occluded person re-identification,” IEEE Trans. Neural Netw.
+Learn. Syst., vol. 34, no. 11, pp. 8210–8224, Nov. 2023.
+[33] X. Sun, Z. Yang, C. Zhang, K.-V. Ling, and G. Peng, “Conditional Gaussian
+distribution learning for open set recognition,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit., 2020, pp. 13480–13489.
+[34] A. Derhab, M. Belaoued, I. Mohiuddin, F. Kurniawan, and M. K. Khan,
+“Histogram-based intrusion detection and filtering framework for secure
+and safe in-vehicle networks,” IEEE Trans. Intell. Transp. Syst., vol. 23,
+no. 3, pp. 2366–2379, Mar. 2022.
+[35] S. Fong and S. Narasimhan, “An unsupervised bayesian OC-SVM approach for early degradation detection, thresholding, and fault prediction
+in machinery monitoring,” IEEE Trans. Instrum. Meas., vol. 71, pp. 1–11,
+2022.
+[36] D. Paul, S. Chakraborty, and S. Das, “Robust principal component analysis: A median of means approach,” IEEE Trans. Neural Netw. Learn. Syst.,
+early access, Aug. 07, 2023, doi: 10.1109/TNNLS.2023.3298011.
+[37] Z. Li, F. Nie, J. Bian, D. Wu, and X. Li, “Sparse PCA via, p-norm
+regularization for unsupervised feature selection,” IEEE Trans. Pattern
+Anal. Mach. Intell., vol. 45, no. 4, pp. 5322–5328, Apr. 2023.
+[38] J. Kamel et al., “VeReMi extension: A dataset for comparable evaluation
+of misbehavior detection in VANETs,” in Proc. IEEE Int. Conf. Commun.,
+2020, pp. 1–6.
+[39] T. M. Booij, I. Chiscop, E. Meeuwissen, N. Moustafa, and F. T. den Hartog,
+“ToN_IoT: The role of heterogeneity and the need for standardization of
+features and attack types in IoT network intrusion data sets,” IEEE Internet
+Things J., vol. 9, no. 1, pp. 485–496, Jan. 2022 .
+[40] M. A. Ferrag, O. Friha, D. Hamouda, L. Maglaras, and H. Janicke, “EdgeIIoTset: A new comprehensive realistic cyber security dataset of IoT and
+IIoT applications for centralized and federated learning,” IEEE Access,
+vol. 10, pp. 40281–40306, 2022.
+[41] A. Oseni et al., “An explainable deep learning framework for resilient
+intrusion detection in IoT-enabled transportation networks,” IEEE Trans.
+Intell. Transp. Syst., vol. 24, no. 1, pp. 1000–1014, Jan. 2023.
+[42] P. Kumar et al., “PPSF: A privacy-preserving and secure framework using
+blockchain-based machine-learning for IoT-driven smart cities,” IEEE
+Trans. Netw. Sci. Eng., vol. 8, no. 3, pp. 2326–2341, Jul.–Sep. 2021.
+[43] L. Yang and A. Shami, “A transfer learning and optimized CNN based
+intrusion detection system for Internet of Vehicles,” in Proc. IEEE Int.
+Conf. Commun., 2022, pp. 2774–2779.
+[44] B. Cao, C. Li, Y. Song, and X. Fan, “Network intrusion detection technology based on convolutional neural network and BiGRU,” Comput. Intell.
+Neurosci., vol. 2022, 2022 .
+
+Chunyang Fan is currently working toward the Ph.D.
+degree with the School of Computer Science and
+Technology, Anhui University, Hefei, China. His research interests include vehicular network intrusion
+detection and mobility management of the software
+defined vehicular networks.
+
+15384
+
+IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 73, NO. 10, OCTOBER 2024
+
+Jie Cui (Senior Member, IEEE) was born in Henan
+Province, China, in 1980. He received the Ph.D. degree from the University of Science and Technology
+of China, Hefei, China, in 2012. He is currently a
+Professor and Ph.D. supervisor with the School of
+Computer Science and Technology, Anhui University, Hefei. He has more than 150 scientific publications in reputable journals, such as IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING,
+IEEE TRANSACTIONS ON INFORMATION FORENSICS
+AND SECURITY, IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, IEEE TRANSACTIONS ON MOBILE COMPUTING,
+IEEE TRANSACTIONS ON PARALLEL AND DISTRIBUTED SYSTEMS, IEEE TRANSACTIONS ON COMPUTERS, IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, IEEE
+TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, IEEE TRANSACTIONS ON INDUSTRIAL
+ELECTRONICS, IEEE TRANSACTIONS ON CLOUD COMPUTING, and IEEE TRANSACTIONS ON MULTIMEDIA, academic books and international conferences. His
+research interests include applied cryptography, IoT security, vehicular ad hoc
+network, cloud computing security, and software-defined networking (SDN).
+
+Hulin Jin was born in Jilin Province, China, in 1977.
+He received the Ph.D. degree from Sejong University,
+Seoul, South Korea, in 2013. He is currently a Professor and Ph.D. supervisor with the School of Big Data,
+Anhui University, Hefei, China. He has more than 100
+scientific publications. His research interests include
+Big Data, computer vision, cloud networks, and cloud
+computing.
+
+Hong Zhong (Member, IEEE) was born in Anhui
+Province, China, in 1965. She received the Ph.D.
+degree in computer science from the University of
+Science and Technology of China, Hefei, China, in
+2005. She is currently a Professor and Ph.D. supervisor with the School of Computer Science and Technology, Anhui University, Hefei. She has more than
+200 scientific publications in reputable journals, such
+as IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, IEEE TRANSACTIONS ON PARALLEL
+AND DISTRIBUTED SYSTEMS, IEEE TRANSACTIONS
+ON MOBILE COMPUTING, IEEE TRANSACTIONS ON DEPENDABLE AND SECURE
+COMPUTING, IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, IEEE
+TRANSACTIONS ON MULTIMEDIA, IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT,
+IEEE TRANSACTIONS ON CLOUD COMPUTING, IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS,
+AND IEEE TRANSACTIONS ON BIG DATA, academic books and international
+conferences. Her research interests include applied cryptography, IoT security,
+vehicular ad hoc network, cloud computing security, and software-defined
+networking (SDN).
+
+Irina Bolodurina received the Ph.D. degree from
+South Ural State University, Chelyabinsk, Russia. She
+is currently a Professor and Head of the Department
+of Applied Mathematics, Orenburg State University,
+Orenburg, Russia. She has more than 60 scientific
+publications in academic journals and international
+conferences which indexing in Scopus and WoS. She
+has participated in more than 20 scientific projects
+supported by the RFBR and other Russian scientific
+programs. Her research interests include theory of
+optimal control, mathematical modeling, information
+analysis software, control of social and economic systems, decision support
+systems, data integration, and processing.
+
+Debiao He (Member, IEEE) received the Ph.D. degree in applied mathematics from the School of Mathematics and Statistics, Wuhan University, Wuhan,
+China, in 2009. He is currently a Professor with the
+School of Cyber Science and Engineering, Wuhan
+University, Wuhan, and the Shanghai Key Laboratory
+of Privacy Preserving Computation, MatrixElements
+Technologies, Shanghai, China. He has authored or
+coauthored more than 100 research papers in refereed
+international journals and conferences, such as IEEE
+TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY,
+and Usenix Security Symposium. His main research interests include cryptography and information security, in particular, cryptographic protocols. He was
+the recipient of the 2018 IEEE SYSTEMS JOURNAL Best Paper Award and the
+2019 IET Information Security Best Paper Award. His work has been cited
+more than 10000 times at Google Scholar. He is in the Editorial Board of several
+international journals, such as Journal of Information Security and Applications,
+Frontiers of Computer Science, and Human-centric Computing & Information
+Sciences.
+PAPER_TEXT

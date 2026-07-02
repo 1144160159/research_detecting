@@ -1,0 +1,156 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025                                                                                   5012009
+
+
+
+
+        ToCoAD: Two-Stage Contrastive Learning for
+              Industrial Anomaly Detection
+     Yun Liang , Zhiguang Hu , Junjie Huang , Donglin Di , Anyang Su , and Lei Fan , Member, IEEE
+
+
+
+   Abstract— Unsupervised industrial anomaly detection methods
+can identify product defects in industrial images using only
+normal samples for training. Existing approaches perform well
+on public industrial image datasets but struggle with specific
+anomaly types due to the domain gap between pretrained feature
+extractors and target-specific domains. To tackle this issue, this
+article presents a two-stage training strategy, called ToCoAD.
+In the first stage, a discriminative network is trained by using
+synthetic anomalies in a self-supervised learning manner. This
+network is then utilized in the second stage to provide a
+negative feature guide, aiding in the training of the feature
+extractor through bootstrap contrastive learning. This approach
+enables the model to progressively learn the distribution of
+anomalies specific to industrial datasets, effectively enhancing
+its generalizability to various types of anomalies. Extensive
+experiments are conducted to demonstrate the effectiveness of
+our proposed two-stage training strategy, and our model produces
+competitive performance, achieving pixel-level AUROC scores of
+98.21%, 98.43%, and 97.70% on MVTec AD, VisA, and BTAD,
+respectively.                                                                  Fig. 1. Existing methods rely on frozen pretrained feature extractors, which
+                                                                               can lead to inaccuracies in anomaly detection. In contrast, our method utilizes
+   Index Terms— Anomaly detection, contrastive learning, indus-                a two-stage training strategy to fine-tune the feature extractor under the
+trial manufacturing, self-supervised learning, synthetic anomaly.              contrastive learning paradigm.
+
+                         I. I NTRODUCTION
+                                                                               unsupervised learning task. The objective is to train models
+I  NDUSTRIAL anomaly detection aims to identify defec-
+   tive products during quality inspection sessions within
+the production process, intending to improve the yield rate.
+                                                                               using only defect-free images, enabling them to detect and
+                                                                               localize anomalous regions during the testing phase. Specifi-
+Recently, interest in this field has surged due to the growing                 cally, during the training phase, only normal images are used to
+demands of industrial development [1], [2], [3]. The anomaly                   train models in an unsupervised learning manner. For example,
+detection models employ the image data of the sample, such                     feature embedding-based [4], [5], [6] methods typically use
+as battery images captured from a fixed position or screw                      Gaussian distribution or normalizing flow (NF) [7] to model
+images at various rotation angles, to determine whether the                    the distributions of normal samples, representing a normal
+sample is anomalous or not and to localize the anomalies                       prototype or feature set. During the test phase, anomalies
+within the image. Given the challenge of obtaining suffi-                      are identified by comparing the features of the test image
+cient anomalous samples, the distribution of anomalies is                      with those in the coreset. On the other hand, reconstruction-
+typically nonestimable, making this scenario classified as an                  based [8], [9], [10] methods utilize a reconstruction network
+                                                                               to generate an image that closely resembles the normal image
+  Received 8 July 2024; revised 8 October 2024; accepted 4 November 2024.      during training. Anomalies are then detected by analyzing the
+Date of publication 26 February 2025; date of current version 11 March
+2025. The Associate Editor coordinating the review process was Dr. Yi Qin.     differences between the input image and the reconstructed
+(Corresponding author: Lei Fan.)                                               image during testing.
+  Yun Liang, Zhiguang Hu, and Junjie Huang are with the College                   Existing anomaly detection methods, predominantly lever-
+of Mathematics and Informatics, South China Agricultural University,
+Guangzhou 510642, China (e-mail: yliang@scau.edu.cn; huzhiguang2000@           aging deep learning techniques [11], [12], have shown superior
+stu.scau.edu.cn; junjie666@stu.scau.edu.cn).                                   performance in industrial benchmarks [13]. As illustrated in
+  Donglin Di is with Space AI, Li Auto, Beijing 101399, China (e-mail:         Fig. 1, the majority of existing methods, including feature
+didonglin@lixiang.com).
+  Anyang Su is with the College of Software, Jilin University, Changchun       embedding-based [4], [5], [6] and synthetic anomaly-based
+130012, China (e-mail: aysu17@mails.jlu.edu.cn).                               methods [14], [15], [16], have attempted to train a classifier
+  Lei Fan is with the School of Computer Science and Engineering, The          or discriminative network to identify anomalies by utilizing
+University of New South Wales, Sydney, NSW 2052, Australia (e-mail:
+lei.fan1@unsw.edu.au).                                                         a pretrained truncated model for extracting features. How-
+  Digital Object Identifier 10.1109/TIM.2025.3545987                           ever, it is challenging to accurately identify all anomalies,
+               1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+5012009                                                        IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+
+
+primarily due to the indistinguishability of frozen pretrained           and then it is employed to facilitate the fine-tuning of
+models from normal and anomalous features. This issue arises             the extractor in the second stage.
+from the domain gaps [17] between pretrained datasets (e.g.,          2) We introduce a negative-guided contrastive learning
+ImageNet [18]) and target-specific domains (i.e., industrial             (NCL) paradigm, which utilizes the discriminative net-
+images). Specifically, the anomaly detection task is lim-                work guiding negative bootstrap contrastive learning to
+ited by two factors. First, the covariate shift phenomenon,              fine-tune the feature extractor. A contrastive loss is intro-
+caused by the domain gap between source and target data,                 duced to regularize negative bootstrap joint learning.
+can hinder anomaly localization [19], making it difficult for         3) Our model shows competitive performance on three
+a pretrained network to extract discriminative features for              popular anomaly detection datasets. It achieves AUROC
+anomalies. Second, the features learned during pretraining               scores of 99.10%/98.21% (image-/pixel-level) on
+are typically optimized for different tasks, but they may not            MVTec AD, 95.35%/98.43% on VisA, and 97.70%
+be fully suitable due to the imbalance between normal and                (pixel-level) on BTAD.
+anomalous samples [20]. For example, semantic segmentation
+and image classification often use balanced datasets with                                II. R ELATED W ORK
+predefined labels, whereas anomaly detection is formulated
+in an unsupervised learning manner, and data deviating from         A. Anomaly Detection
+the normal distribution is treated as anomalous. Recently,             Most anomaly detection methods utilize a feature extractor
+reconstruction-based methods [8], [9] have been developed to        pretrained on ImageNet [18] to obtain generalized fea-
+train a decoder and feature extractor jointly by learning an        tures. These methods can be classified into three types:
+identical map between the input and output. However, the            feature embedding-based, reconstruction-based, and synthetic
+performance of these methods remains suboptimal, limited            anomaly-based methods.
+by the training overhead and the ability to reconstruct large          1) Feature Embedding-Based Methods: They typically uti-
+areas of anomalies. Recently, the application of contrastive        lize pretrained models to extract features and directly model
+learning has demonstrated considerable progress in cross-           the distributions using various machine learning techniques.
+domain learning [21]. Fine-tuning the network using positive        For example, PaDiM [5] decomposes the image into patches to
+sample pairs or negative samples has been demonstrated to           obtain a probabilistic representation of the normal class using
+be effective in enhancing the network’s generalizability to         multivariate Gaussian distributions. PatchCore [4] constructs
+domain-specific datasets, indicating significant potential in the   a memory bank for storing neighborhood-aware patch-level
+field of anomaly detection as well. Contrastive learning has        features. Some methods are based on NF [7] to con-
+recently proven effective for label-efficient fine-tuning [20],     vert pretrained feature distributions into simple distributions.
+[22]. It has the potential to mitigate domain gaps and help the     CFLOW-AD [6] utilizes a pretrained encoder with multi-
+network adapt to the target domain data.                            scale pyramid pooling to capture rich features and leverages
+   In order to mitigate the domain gaps between source and          conditional normalization flows to enhance anomaly detec-
+target data, and to fully utilize the advantages of contrastive     tion efficiency. PyramidFlow [25] utilizes invertible pyramids
+learning in unsupervised fine-tuning training, we propose           and coupled pyramid blocks to localize anomalies through
+a two-stage training strategy that incorporates a contrastive       multiscale feature interaction. These methods use pretrained
+learning framework to adapt to the target domain data by            feature extractors, such as ResNet [26], WideResNet [27], and
+learning robust features from target samples through self-          EfficientNet [28] to extract features for modeling distributions.
+supervised learning [23]. Specifically, we initially leverage a        2) Reconstruction-Based Methods: They assume that mod-
+frozen feature extractor to obtain generalized features and train   els trained on only normal samples cannot accurately
+a discriminative network progressively to identify anomalies        reconstruct anomalous regions, thus allowing for the local-
+using synthetic anomalous samples. In the second stage, the         ization of anomalies by identifying differences between the
+discriminate network is fixed to provide a negative guide,          input and reconstruction results. For instance, RIAD [9] and
+while a bootstrap contrastive learning is employed to fine-tune     InTra [8] perform mask operations on normal samples, and
+the feature extractor and contrastive learning network jointly.     train reconstruction models to recover the masked regions.
+This joint learning can be viewed as a form of adversarial          DiffusionAD [29] uses a diffusion model [30] to reconstruct
+learning [24] of defect and defect-free features, where normal      normal samples as near-normal samples, and localizes anoma-
+features are compactly enclosed and distinct from defective         lous regions using a segmentation network.
+features. Finally, the fine-tuned feature extractor is used to         3) Synthetic Anomaly-Based Methods: They formulate
+extract patch features to construct a memory bank through           unsupervised anomaly detection as a binary classification
+coreset subsampling, and distance metrics between the test          task, in which pseudo anomaly samples are generated to
+sample features and the memory bank features are computed           train the discriminative network for identifying anomalies.
+to localize anomalies during the inference phase.                   CutPaste [16] employs an augmentation strategy where a
+   Our contributions can be summarized as follows.                  smaller patch is replaced by other regions. DRAEM [14]
+   1) We propose a two-stage training strategy to fine-tune the     combines Perlin noise [31] and binarized masks of samples
+       feature extractor to bridge the domain gap between pre-      to generate anomalous images for training their discriminative
+       trained and target features. In the first stage, a network   networks. NSA [15] employs Poisson image editing techniques
+       is progressively trained to localize anomalies coarsely,     to achieve a seamless fusion of anomalies.
+LIANG et al.: ToCoAD: TWO-STAGE CONTRASTIVE LEARNING FOR INDUSTRIAL ANOMALY DETECTION                                                          5012009
+
+
+
+
+Fig. 2. Overview of ToCoAD. First, a synthetic anomaly image is generated by anomaly generator G to train a discriminative network D. Then, the feature
+extractor F is fine-tuned jointly by contrastive learning network C and pretrained D using synthetic anomaly images and augmented image pairs.
+
+   However, most of these methods [4], [5], [6], [32], [33],                 C denote the height, width, and the number of the channel
+[34], [35] rely on feature extractors pretrained on Ima-                     of the image. For unsupervised anomaly detection, all images
+geNet [18], leading to a domain gap between pretrained                       in Ttrain are categorized into normal (e.g., defect-free) images
+features and industrial target features. To alleviate this prob-             with c = 0, while Ttest may contain anomalous images with
+lem, our ToCoAD employs a two-stage training approach                        c = 1 and a corresponding binary annotation y ∈ {0, 1} H ×W ×C
+that uses positive and negative samples to jointly fine-tune                 indicating the anomalous regions. The normal images in the
+the feature extractor, guiding it to acquire adaptive feature                training set and the test set come from the same normal
+representation capabilities.                                                 data distribution with similar sample characteristics, while the
+                                                                             anomalous images deviate from these normal samples. The
+                                                                             goal is to classify and localize anomalous regions in Ttest .
+B. Contrastive Learning
+                                                                                As shown in Fig. 2, we propose a two-stage training strategy
+   Recently, contrastive learning [36], [37], [38] has played a              to learn a feature representation adapted to the target data
+significant role in self-supervised learning, offering a promis-             distribution. The first stage is to train a discriminative network
+ing paradigm for exploiting unlabeled data without the need                  to detect anomalies and localize anomalous reg

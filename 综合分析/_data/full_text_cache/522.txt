@@ -1,0 +1,719 @@
+Revolutionizing Encrypted Traffic Classification with MH-Net: A Multi-View
+ Heterogeneous Graph Model
+ Haozhen Zhang1,2,3 * , Haodong Yue1,2,3 * , Xi Xiao1,2,3† , Le Yu4 , Qing Li2 , Zhen Ling5 , Ye Zhang6
+ 1
+ Tsinghua Shenzhen International Graduate School, Tsinghua University, Shenzhen, China
+ 2
+ Peng Cheng Laboratory, Shenzhen, China
+ 3
+ Key Laboratory of Cyberspace Security, Ministry of Education of China, Zhengzhou, China
+ 4
+ Nanjing University of Posts and Telecommunications, Nanjing, China
+ 5
+ Southeast University, Nanjing, China
+ 6
+ National University of Singapore, Singapore
+arXiv:2501.03279v1 [cs.CR] 5 Jan 2025
+
+ zhang-hz21@tsinghua.org.cn, yhd24@mails.tsinghua.edu.cn, xiaox@sz.tsinghua.edu.cn, yulele08@njupt.edu.cn,
+ liq@pcl.ac.cn, zhenling@seu.edu.cn, e1124294@u.nus.edu
+
+ Abstract ing or application usage) from encrypted traffic remains a
+ formidable challenge.
+ With the growing significance of network security, the classification of encrypted traffic has emerged as an urgent chal- In the past few years, many methods have been proposed
+ lenge. Traditional byte-based traffic analysis methods are to enhance the capability of encrypted traffic classification
+ constrained by the rigid granularity of information and fail techniques. Among them, statistic-based methods (Taylor
+ to fully exploit the diverse correlations between bytes. To ad- et al. 2016; Hayes and Danezis 2016; van Ede et al. 2020;
+ dress these limitations, this paper introduces MH-Net, a novel Panchenko et al. 2016; Xu, Geng, and Jin 2022) generally
+ approach for classifying network traffic that leverages multi- rely on hand-crafted traffic statistical features and then leverview heterogeneous traffic graphs to model the intricate relationships between traffic bytes. The essence of MH-Net lies in
+ age a traditional machine learning model for classification.
+ aggregating varying numbers of traffic bits into multiple types However, they require heavy feature engineering and are
+ of traffic units, thereby constructing multi-view traffic graphs susceptible to unreliable flows (Zhang et al. 2023). With the
+ with diverse information granularities. By accounting for dif- burgeoning of representation learning (Le-Khac, Healy, and
+ ferent types of byte correlations, such as header-payload rela- Smeaton 2020), some methods also use deep learning modtionships, MH-Net further endows the traffic graph with het- els to conduct traffic classification, such as pre-trained lanerogeneity, significantly enhancing model performance. No- guage models (Lin et al. 2022; Meng et al. 2022), neural
+ tably, we employ contrastive learning in a multi-task manner networks (Liu et al. 2019; Zhang et al. 2023; Zhao et al.
+ to strengthen the robustness of the learned traffic unit repre- 2023), etc. Although these methods demonstrate competisentations. Experiments conducted on the ISCX and CIC-IoT tive performance, they fail to sufficiently uncover the finedatasets for both the packet-level and flow-level traffic classification tasks demonstrate that MH-Net achieves the best
+ grained correlations between traffic bytes, which can be atoverall performance compared to dozens of SOTA methods. tributed to the following two disadvantages. (1) Rigid information granularity constrained by bytes. Most existing
+ Code — https://github.com/ViktorAxelsen/MH-Net methods treat a byte as an indivisible unit by default, which
+ ignores the diverse granularity of information contained in
+ traffic data. To give a practical example, a Chinese charac-
+ Introduction ter is represented by two bytes, while an English character is
+ As advancements in computer network technology continue represented by only one byte, indicating that traffic data conand various devices connect to the Internet, user privacy be- tains information of different granularities universally (note
+ comes increasingly vulnerable to malicious attacks. While that the granularity is not necessarily bytes, it may also be
+ encryption technologies like VPNs and Tor (Ramadhani bits). (2) Lack of consideration of multiple correlation
+ 2018) offer protection to users (Sharma, Dangi, and Mishra types between bytes. Current methods mix the correlation
+ 2021; Xiao et al. 2024), they can paradoxically serve as of bytes at different positions in the byte sequence, which
+ tools for attackers to conceal their identities. Traditional overlooks and fails to utilize the differences between diverse
+ data packet inspection (DPI) methods have lost effective- types of correlation (e.g., the correlation types between bytes
+ ness against encrypted traffic (Papadogiannaki and Ioanni- in the header and bytes in the payload are different). Condis 2021). Designing a universally effective method to clas- sequently, how to uncover and leverage the potential finesify an attacker’s network activities (e.g., website brows- grained correlations between traffic bytes to enhance traffic
+ * These authors contributed equally.
+ classification is a salient problem.
+ †
+ Corresponding author. To address the above challenges, in this paper, we pro-
+ Copyright © 2025, Association for the Advancement of Artificial pose a novel model named MH-Net, which classifies net-
+ Intelligence (www.aaai.org). All rights reserved. work traffic using multi-view heterogeneous traffic graphs.
+In particular, MH-Net first aggregates different numbers of traffic fingerprints by creating correlation graphs that comtraffic bits into multiple types of traffic units (e.g., 4-bit units pute activity values between destination IPs. K-FP (Hayes
+and 8-bit units), which facilitates the diversity of informa- and Danezis 2016) uses the random forest to construct fintion granularity of traffic data. Since graphs have excellent gerprints and identifies unknown samples through k-nearest
+capabilities in processing relational data, MH-Net further neighbor matching.
+leverages point-wise mutual information (PMI) to convert • Deep Learning Based Methods. Deep learning has
+diverse types of traffic unit sequences into multi-view traffic demonstrated powerful learning abilities, and many trafgraphs. On top of this, considering the distinct functionality fic classification methods are based on it. RBRN (Zheng
+in different parts of the traffic unit sequence, MH-Net in- et al. 2020), DF (Sirinam et al. 2018), and FS-Net (Liu
+troduces three types of unit correlations, i.e., header-header, et al. 2019) all use statistical feature sequences (e.g., packet
+header-payload, and payload-payload unit correlations, and length sequences) as inputs for convolutional neural netdesigns a heterogeneous traffic graph encoder for multi-view works (CNNs) or recurrent neural networks (RNNs). Adheterogeneous graph representation learning. To strengthen ditionally, there are some methods using raw bytes as feathe robustness of traffic unit representations, we additionally tures. EBSNN (Xiao et al. 2022) combines RNNs with the
+perform contrastive learning in a multi-task manner on traf- attention mechanism to process header and payload byte
+fic graphs. To comprehensively evaluate MH-Net, we con- segments. ET-BERT (Lin et al. 2022) conducts pre-training
+duct both the packet-level and flow-level traffic classifica- tasks on large-scale traffic datasets to learn a powerful raw
+tion tasks on the ISCX and CIC-IoT datasets. Experimental byte representation, which is time-consuming and expenresults show that MH-Net achieves competitive performance sive. Graph neural networks (GNNs) are another model that
+and ranks first among all the state-of-the-art methods. Fur- can be used for traffic classification tasks. GraphDApp (Shen
+ther analysis of traffic units also reveals the potential trade- et al. 2021) builds traffic interaction graphs from traffic
+off between complementarity and interference between traf- bursts and uses GNNs for representation learning. TFEfic units with different information granularity. GNN (Zhang et al. 2023) employs point-wise mutual infor-
+ To summarize, our main contributions include: mation (Yao, Mao, and Luo 2019) to construct byte-level
+ • We propose a novel model named MH-Net, which aggre- traffic graphs and designs a traffic graph encoder for feagates different numbers of traffic bits into multiple types ture extraction. YaTC (Zhao et al. 2023) features a masked
+ of traffic units to construct multi-view traffic graphs, en- autoencoder-based traffic transformer to enable efficient feariching the diversity of information granularity while im- ture extraction while boosting performance.
+ proving model performance. Packet-level Traffic Classification Methods. In contrast,
+ packet-level traffic classification methods identify diverse
+ • MH-Net further introduces three types of traffic unit cor- categories of each network packet. Securitas (Yun et al.
+ relations to model the heterogeneity of traffic graphs 2015) generates n-grams for raw bytes and utilizes Latent
+ and employs a heterogeneous graph neural network for Dirichlet Allocation (LDA) to form protocol keywords as
+ feature extraction. Furthermore, we conduct contrastive features, followed by SVM, C4.5 decision tree, or Bayes
+ learning in a multi-task manner to enhance the robust- network for packet classification. 2D-CNN (Lim et al. 2019)
+ ness of traffic unit representations. and 3D-CNN (Zhang et al. 2020) treat packet bytes as pixel
+ • We conduct experiments on both the packet-level and values and convert them into images, which are further
+ flow-level traffic classification tasks using the ISCX and fed into 2D-CNNs and 3D-CNNs for packet classification.
+ CIC-IoT datasets. The experimental results show that DP (Lotfollahi et al. 2020) leverages CNNs and autoen-
+ MH-Net achieves the overall best performance compared coders to extract byte features. BLJAN (Mao et al. 2021)
+ with dozens of baselines. explores the correlation between packet bytes and their labels and encodes them into a joint embedding space to clas-
+ Related Work sify packets. EBSNN (Xiao et al. 2022) and ET-BERT (Lin
+Flow-level Traffic Classification Methods. Flow-level traf- et al. 2022) can also perform packet classification. But, they
+fic classification methods aim to classify traffic flows, which still require two independent training or fine-tuning to concan be summarized into three categories. duct flow-level and packet-level tasks, which are compu-
+ • Statistical Feature Based Methods. Many methods use tationally expensive. PacRep (Meng et al. 2022) leverages
+statistical features to represent packet properties and utilize triplet loss (Schroff, Kalenichenko, and Philbin 2015) withtraditional machine learning models for classification. App- out data augmentation and jointly optimizes multiple packet-
+Scanner (Taylor et al. 2016) extracts features from traffic level tasks to learn a better packet representation.
+flows based on bidirectional flow characteristics, while CU- In summary, existing methods conduct traffic classifica-
+MUL (Panchenko et al. 2016) uses cumulative packet length tion tasks without sufficiently considering the informative
+as its feature. ETC-PS (Xu, Geng, and Jin 2022) strengthens correlations contained in raw bytes, thus facing performance
+packet length sequences by applying the path signature the- bottlenecks.
+ory, and hierarchical clustering is also leveraged for feature
+extraction by Conti et al. (Conti et al. 2015). Methodology
+ • Fingerprinting Matching Based Methods. Fingerprint- In this section, we will introduce the components of MHing denotes traffic characteristics and is also used in traf- Net, which include multi-view traffic graph construction,
+fic identification. FlowPrint (van Ede et al. 2020) generates heterogeneous traffic graph representation learning, and
+ ... ...
+ Multi-view Heterogeneous
+ Traffic Graph Construction h-p h-p ...
+
+ h-h
+
+ h-h
+ p-p p-p
+ #...
+ N1-bit #1
+
+ Heterogeneous Graph Neural Network
+ h-p h-p
+ Traffic ...
+
+ Random
+ Unit Seq.
+
+ Drop
+ Flow-level
+ #... Contrastive
+ Traffic Packet #1 Learning
+
+ Recurrent Neural Network
+ Random
+
+ Feature
+ 0 1 1 0 0 1 1 1 0 1 0 1... Packet-level
+
+ Walk
+ Flow
+
+ Flip
+ Contrastive CONCAT
+ Learning
+ CONCAT
+ #... MLP
+ N2-bit #1 MLP
+ ...
+ Traffic ... ...
+
+ (HGNN)
+ Unit Seq.
+
+ (RNN)
+ #...
+ Header #1
+ ... h-h
+ correlation
+ Sliding
+
+ Random
+
+ Feature
+ #... Packet-level
+ Walk
+
+ Flip
+ Payload #1 Contrastive
+ ... p-p Learning
+ correlation
+ Sliding ... ...
+
+ Random
+ Flow-level
+
+ Drop
+ #... Contrastive
+ #1 Learning
+ ... h-p h- h- ...
+ h-h
+
+ p
+
+ h-h
+ p
+ correlation
+ Sliding h-p h-p
+ p p
+ p- p-
+ Multi-view Heterogeneous
+ Traffic Graph Construction
+
+ Figure 1: MH-Net Model Architecture.
+
+multi-task training of MH-Net. The MH-Net model archi- units and the frequency of each unit are used to compute
+tecture is shown in Figure 1. PMI, which can be formulated as:
+
+Multi-View Traffic Graph Construction #W (UiN , UjN ) #W (UiN )
+ p(UiN , UjN ) = , p(UiN ) =
+In this section, we first describe the rationale behind the uti- #W #W
+lization of traffic units and detail the construction of multi- (1)
+view traffic graphs using traffic units. p(UiN , UjN )
+ PMI(UiN , UjN ) = log (2)
+Traffic Units with Diverse Granularity. To uncover the p(UiN )p(UjN )
+diverse information granularity contained in raw bytes, we where #W is the total number of sliding windows,
+attempt to seek more beyond the byte itself and instead ag- #W (UiN ) is the number of times unit UiN appears in the
+gregate raw bits of different lengths into various traffic units.
+Traffic units with different bit numbers can “interpret” or sliding window, and #W (UiN , UjN ) denotes the number of
+“express” the transmitted data from distinct perspectives, times units UiN and UjN appear in the sliding window sithereby being able to mine potential highly discriminative multaneously. We connect two traffic units UiN and UjN if
+features. Taking character encoding as an example, given bi- and only if PMI(UiN , UjN ) > 0 is satisfied, which indicates
+nary data with 16 bits, it can be converted into a Chinese high unit correlation. For the traffic data in each packet, we
+character using 16-bit traffic units or 2 English characters select two types of traffic units, e.g., N1-bit and N2-bit trafusing 8-bit traffic units. Therefore, we can draw on various fic units, and apply the PMI algorithm on their sequences
+traffic units to perform multi-view feature extraction on the to construct the multi-view traffic graphs GN 1 and GN 2 for
+same traffic data to derive better traffic representations. each packet, respectively. Note that the node features of the
+Traffic Graph Construction. Although we aggregate traffic graph are the value of each traffic unit.
+traffic data into traffic units, they are still scattered individuals, which is not conducive to mining the potential fine- Heterogeneous Traffic Graph Representation
+grained correlations between a sequence of traffic units. In- Learning
+spired by (Zhang et al. 2023; Yao, Mao, and Luo 2019), due This section will present the further integration of heterogeto the natural advantages of graph structure in data correla- neous correlations in traffic graphs. Then, a heterogeneous
+tion modeling, we further convert the traffic unit sequence traffic graph encoder is elaborated to conduct heterogeneous
+into a traffic graph to make it an interconnected whole. For a traffic graph representation learning.
+sequence of N-bit traffic units, we leverage point-wise mutual information (PMI) to quantify the correlation between Heterogeneous Traffic Unit Correlations. In the byte setraffic units. PMI employs a sliding window on a traffic unit quence of a packet, the header and payload have information
+sequence and counts the number of times two units co-occur heterogeneity due to their different functions (the former
+within the window. The co-occurring frequency of the two carries the metadata of the packet, and the latter carries the
+actual transmitted content). However, the homogeneous cor- Traffic Classification Tasks. In this work, we conduct the
+relations between traffic units in G restrict the full utilization flow-level and packet-level traffic classification tasks in MHof the heterogeneity in the header and payload. Therefore, Net simultaneously. As shown in Figure 1, we utilize an unwe argue that the correlations between traffic units should shared traffic classifier with a multilayer perceptron (MLP)
+have multiple types according to their positions in the traffic to transform the flow-level and packet-level representations
+unit sequence. Intuitively, we propose three types of traffic and calculate the corresponding traffic classification task
+unit correlations, i.e., header-header (h-h), payload-payload loss, respectively:
+(p-p), and header-payload (h-p) correlations, to alleviate the
+above issue. We then apply the PMI algorithm to the traffic f = CONCAT(fN 1 , fN 2 ), p = CONCAT(pN 1 , pN 2 )
+unit sequences of the header, payload, and header + payload (7)
+(i.e., the entire traffic unit sequence), respectively, to obtain LFCLS = CE(MLP(f ), y f ), LPCLS = CE(MLP(p), y p )
+three types of traffic edges, which are further integrated into (8)
+a heterogeneous traffic graph G H . where CONCAT(·) denotes concatenation operation, CE(·)
+ In this way, we transform GN 1 and GN 2 into multi-view is the cross entropy loss function, y f is the flow label, and
+heterogeneous traffic graphs GN H H
+ 1 and GN 2 whereby the cory p is the packet label that is consistent with the flow label it
+relations between traffic units becomes more fine-grained, belongs to.
+enabling seamless heterogeneous fusion of the header and
+ Contrastive Learning at Dual Levels. Inspired by the
+payload in a single traffic graph.
+ powerful representation learning capabilities of contrastive
+Heterogeneous Traffic Graph Encoder. So far, we have learning (van den Oord, Li, and Vinyals 2018; He et al. 2020;
+ H H
+obtained traffic graphs GN 1 and GN 2 for each packet, which Chen et al. 2020), which aims to learn semantic-invariant
+will be further fed into a heterogeneous traffic graph encoder representations by contrasting positive and negative sample
+for traffic representation learning. Specifically, the heteroge- pairs derived from various data augmentation, we propose
+neous traffic graph encoder features a heterogeneous graph to utilize it to further enhance the multi-view packet-level
+neural network (HGNN) to extract discriminative features and flow-level traffic representations in MH-Net. In particof traffic graphs. HGNN employs GraphSAGE (Hamilton, ular, MH-Net features a supervised contrastive loss (Khosla
+Ying, and Leskovec 2017) as its basic backbone, and the et al. 2020) to take better advantage of the data labels during
+model weights are not shared across edge types. Generally, training, which can be formulated as:
+the forward pass of HGNN in the l-th layer can be described
+as:
+ X −1 X exp (zi · zm /τ )
+ LSCL (z) = log P
+ (l)
+ n o
+ l,m l,m l,m
+  |M (i)| k∈K(i) exp (zi · zk /τ )
+ m(l)
+ v = MSG h(l−1)
+ u , u ∈ N (v) ; θh-h , θp-p , θh-p i∈I m∈M (i)
+ (9)
+   (3) where z refers to the embedding vector collection of two
+ (l) (l) (l−1) (l) l,a l,a l,a
+ hv = AGG hv , mv ; θh-h , θp-p , θh-p (4) groups of augmented data samples from the same source. i ∈
+ (l) I is the index of an arbitrary augmented sample in z, K(i) ≡
+where hv are the embedding vectors of nodes v in layer l, I\{i}, and M (i) ≡ {m ∈ K(i) : y m = y i } is the indices
+ (l)
+mv is the computed neighbor message for node v in layer l, of all positive samples of i, conditioned on the same data
+and N (v) is the neighbors of node v. MSG(l) (·) is a message label. The symbol · represents the inner product operation
+computation function parameterized by θh-h l,m l,m l,m
+ , θp-p , θh-p and and τ ∈ R+ denoted the temperature parameter.
+ (l) Packet-level Contrastive Learning. Since the packet-
+AGG (·) is a message aggregation function parameterized
+ l,a l,a l,a level traffic representation is derived based on the traffic
+by θh-h , θp-p , θh-p in layer l. Then, we perform the element- graph, we need to generate an augmented graph for further
+wise average operation on all the node embedding vectors in contrastive learning (You et al. 2020; Qiu et al. 2020). In
+the last layer to obtain the final packet-level traffic represen- this work, we mainly adopt two augmentation approaches:
+ H H
+tation pN 1 and pN 2 for GN 1 and GN 2 , respectively, which graph structure and node feature augmentation. For graph
+can be simplified as: structure augmentation, we leverage the random walk al-
+ H
+ pN 1 = HGNN(GN H gorithm (Tong, Faloutsos, and Pan 2006), which starts by
+ 1 ), pN 2 = HGNN(GN 2) (5)
+ randomly picking a node and iteratively performs a random
+We can further obtain the flow-level traffic representation traversal on its neighbors to obtain the augmented traffic
+fN 1 and fN 2 using a recurrent neural network (RNN): graph GN,sH
+ . As for node feature augmentation, we augment
+fN 1 = RNN(p1N 1 , ..., pL
+ N 1 ), fN 2 = RNN(p1N 2 , ..., pL
+ N 2)
+ the traffic graph by flipping its node features (Hou et al.
+ H
+ (6) 2022), resulting in another augmented traffic graph GN,f .
+where L is the length of a traffic flow. H H
+ After obtaining the embedding vector of GN,s and GN,f , the
+ packet-level contrastive loss can be formulated as:
+Multi-Task Training of MH-Net
+ {1,2}
+We aim to jointly train MH-Net in a multi-task manner X
+ H
+for better optimization. The training objective of MH-Net LPCL = LSCL ({HGNN(GN i,s ), pN i })+
+ (10)
+mainly includes traffic classification and contrastive learn- i
+ing tasks, which will be presented in detail below. H
+ LSCL ({HGNN(GN i,f ), pN i })
+Notably, we treat the embedding vector pN of the origi- the temperature coefficient τ is 0.07. The objective coeffi-
+ H
+nal traffic graph GN as an “anchor” without augmentation cients α and β are set to 1.0 and 0.5, respectively. We imfor training stability (with slight abuse of notation). By di- plement MH-Net and conduct all experiments with PyTorch
+rectly perturbing structures and features on the traffic graph, and Deep Graph Library. The experimental results are rethe semantic-invariant representations contained in traffic ported as the mean over five runs on an NVIDIA RTX 3080.
+units (i.e., nodes) can be well-uncovered through contrastive As for evaluation metrics, we use Overall Accuracy (AC)
+learning, thus enhancing model performance. and Macro F1-score (F1). We compare MH-Net with the
+ Flow-level Contrastive Learning. We further conduct flow-level and packet-level methods for a comprehensive
+the flow-level contrastive learning task by randomly drop- comparison. The comparison baselines include Flow-level
+ping packets from a traffic flow with a certain probability Traffic Classification Methods (i.e., AppScanner (Taylor
+PPD ∈ [0, 1] and obtain an augmented traffic flow. Similarly, et al. 2016), K-FP (K-Fingerprinting) (Hayes and Danezis
+the flow-level contrastive loss can be formulated as: 2016), CUMUL (Panchenko et al. 2016), ETC-PS (Xu,
+ {1,2}
+ X Geng, and Jin 2022), FS-Net (Liu et al. 2019), DF (Sirinam
+ LFCL = LSCL ({RNN(p1N i ⊙ ρ1 , ..., pL
+ N i ⊙ ρL ), fN i })
+ et al. 2018), ET-BERT (Lin et al. 2022), GraphDApp (Shen
+ i et al. 2021), TFE-GNN (Zhang et al. 2023), and YaTC (Zhao
+ (11) et al. 2023)) and Packet-level Traffic Classification Methwhere ρi ∈ {0, 1} is drawn from a Bernoulli distribution ods (i.e., Securitas (Yun et al. 2015), 2D-CNN (Lim et al.
+ρi ∼ B(PPD ), denoting whether to drop the packet. Such 2019), 3D-CNN (Zhang et al. 2020), DeepPacket (DP) (Lotlearning paradigms can also help the model capture the com- follahi et al. 2020), BLJAN (Mao et al. 2021), and EBmon characteristics of the traffic flow through augmentation, SNN (Xiao et al. 2022)).
+leading to a robust flow-level representation. For the rest of the experiment section, we will evaluate
+ MH-Net from the following research questions:
+Overall Training Objective. In summary, we propose the RQ1: How does MH-Net perform on the packet-level and
+overall end-to-end multi-task training objective of MH-Net flow-level classification tasks?
+as follows: RQ2: How much does each module of MH-Net contribute
+ L = LPCLS + LFCLS + αLPCL + βLFCL (12) to the model performance?
+where α, β ∈ [0, 1] are the coefficients that control the con- RQ3: How sensitive is MH-Net to hyper-parameters, and
+tribution of the packet-level and flow-level contrastive tasks, how does the choice and combination of traffic units affect
+respectively. model performance?
+
+ Experiments Comparison Experiments (RQ1)
+Experimental Settings The comparison results of the flow-level and packet-level
+ traffic classification tasks on the CIC-IoT and ISCX datasets
+Dataset To thoroughly evaluate MH-Net on the packetare shown in Tables 1 and 2, respectively.
+level and flow-level traffic classification tasks, we adopt the
+ Flow-level Traffic Classification Results. According to
+CIC-IoT (Dadkhah et al. 2022), ISCX VPN-nonVPN (Gil
+ Table 1, we can draw several conclusions w.r.t. the flow-level
+et al. 2016) and ISCX Tor-nonTor (Lashkari et al. 2017)
+ task. (1) MH-Net achieves the overall best results w.r.t. all
+datasets. In the experiment, we conduct all experiments inthe metrics on the CIC-IoT and ISCX datasets, followed by
+dependently on these five datasets, i.e., CIC-IoT, ISCX-
+ TFE-GNN and YaTC, respectively. (2) Compared with tra-
+VPN, ISCX-NonVPN, ISCX-Tor, and ISCX-NonTor.
+ ditional statistical feature methods, our approach surpasses
+ Since our method performs both the flow-level and
+ them by a large margin due to the sufficient utilization
+packet-level classification tasks, we first adopt stratified
+ of traffic bytes instead of statistical features. As for deep
+sampling to partition the flow-level training and testing
+ learning methods, MH-Net still has obvious advantages. (3)
+dataset into 9:1 according to the number of traffic flows for
+ Among these methods, although TFE-GNN and YaTC also
+all datasets. All packets in the flow-level training and testleverage raw bytes for representation learning, the overall
+ing datasets are directly used as the packet-level training and
+ performance is still significantly worse than that of MH-Net,
+testing datasets, respectively. The category of each packet is
+ which implies insufficient byte utilization and ignorance of
+consistent with the traffic flow to which it belongs.
+ fine-grained byte correlations in their model design. (4) Ad-
+Implementation Details and Baselines Since the value ditionally, ET-BERT, which features a large number of parange of an N-bit traffic unit is determined by the number rameters and pretraining on large-scale datasets, reaches deof bits it contains (i.e., 2N ), we utilize 4-bit and 8-bit traf- cent results on the ISCX-nonVPN dataset, but its computafic units to construct multi-view heterogeneous traffic graphs tional overhead is outrageously large.
+to achieve a trade-off between diversity and computational Packet-level Traffic Classification Results. From Table
+costs. The max flow length (i.e., the max packet number 2, we can also conclude several observations and findings
+within a flow) is set to 15. The number of layers in HGNN regarding the packet-level task. (1) MH-Net still has absois set to 4, and we initialize the RNN to LSTM in MH-Net lute superiority over other baselines, followed by EBSNNby default. As for the random walk, we set the scale of sub- LSTM and EBSNN-GRU. (2) Although EBSNN shows
+graphs following (Qiu et al. 2020), and the restart probabil- competitive results across all the datasets, its overall reity is 0.8. We set the packet dropping ratio PPD to 0.6, and sults are still inferior to MH-Net by a noticeable margin,
+ CIC-IoT ISCX-Tor ISCX-nonTor ISCX-VPN ISCX-nonVPN Avg.
+ Model
+ AC F1 AC F1 AC F1 AC F1 AC F1 Rank
+
+ AppScanner 0.9674 0.9620 0.7543 0.6163 0.9153 0.8273 0.8889 0.8722 0.7576 0.7486 6
+ K-FP 0.9349 0.9254 0.7771 0.6313 0.8741 0.8167 0.8713 0.8747 0.7551 0.7387 8
+ CUMUL 0.9153 0.9101 0.6686 0.4997 0.8605 0.7627 0.7661 0.7644 0.6187 0.5897 9
+ ETC-PS 0.9218 0.9122 0.7486 0.6033 0.9365 0.8486 0.8889 0.8851 0.7273 0.7208 7
+ FS-Net 0.9805 0.9759 0.8286 0.7242 0.9278 0.8285 0.9298 0.9234 0.7626 0.7555 5
+ DF 0.8664 0.8601 0.6514 0.4719 0.8568 0.7590 0.8012 0.7921 0.6742 0.6701 10
+ ET-BERT 0.9565 0.9122 0.9543 0.9397 0.9029 0.8332 0.9532 0.9463 0.9167 0.9235 4
+ GraphDApp 0.6808 0.7263 0.4286 0.2281 0.6936 0.5352 0.6491 0.5740 0.4495 0.3614 11
+ TFE-GNN 0.9699 0.9666 0.9886 0.9855 0.9390 0.8507 0.9591 0.9536 0.9040 0.9240 2
+ YaTC 0.9397 0.9105 0.9868 0.9869 0.9579 0.9522 0.9605 0.9671 0.7546 0.7544 3
+ MH-Net 0.9900 0.9896 0.9886 0.9886 0.9465 0.9453 0.9942 0.9941 0.9141 0.9141 1
+
+Table 1: Experimental Results on CIC-IoT, ISCX Tor-nonTor, and ISCX VPN-nonVPN Datasets w.r.t. Flow-level Traffic Classification Task. (BOLD indicates the best score, and UNDERLINE denotes the second-best one. Avg. Rank indicates the average
+ranking of each model’s results across all datasets and metrics.)
+
+ CIC-IoT ISCX-Tor ISCX-nonTor ISCX-VPN ISCX-nonVPN Avg.
+ Model
+ AC F1 AC F1 AC F1 AC F1 AC F1 Rank
+
+ Securitas-C4.5 0.8675 0.8571 0.9520 0.9429 0.8916 0.8652 0.7250 0.7250 0.5833 0.6212 4
+ Securitas-SVM 0.6526 0.7098 0.8229 0.8046 0.7333 0.7180 0.6375 0.6454 0.5750 0.6933 9
+ Securitas-Bayes 0.6667 0.7541 0.8083 0.6938 0.8062 0.7842 0.6125 0.6736 0.5416 0.6938 10
+ 2D-CNN 0.7745 0.7863 0.3781 0.3576 0.6560 0.6877 0.2887 0.2219 0.5517 0.4638 11
+ 3D-CNN 0.8788 0.8779 0.7837 0.7534 0.4791 0.4273 0.8445 0.8436 0.5346 0.5114 8
+ DP-SAE 0.7284 0.6134 0.8190 0.8078 0.8244 0.7889 0.7227 0.6849 0.6985 0.6952 6
+ DP-CNN 0.8664 0.8607 0.6622 0.6342 0.8784 0.8633 0.9270 0.9283 0.4326 0.3201 7
+ BLJAN 0.9643 0.9620 0.7580 0.7762 0.1348 0.2081 0.8539 0.7646 0.7356 0.7640 5
+ EBSNN-GRU 0.9440 0.9431 0.9319 0.9208 0.9271 0.9207 0.9467 0.9463 0.8103 0.8096 3
+ EBSNN-LSTM 0.9759 0.9819 0.7663 0.7183 0.9519 0.9484 0.9527 0.9531 0.8156 0.8128 2
+ MH-Net 0.9806 0.9800 0.9916 0.9917 0.9156 0.9122 0.9768 0.9766 0.8822 0.8814 1
+
+Table 2: Experimental Results on CIC-IoT, ISCX Tor-nonTor, and ISCX VPN-nonVPN Datasets w.r.t. Packet-level Traffic
+Classification Task. (BOLD indicates the best score, and UNDERLINE denotes the second-best one. Avg. Rank indicates the
+average ranking of each model’s results across all datasets and metrics.)
+
+which can be attributed to the fact that the byte segment than the 4-bit one. Still, the information carried by the latter
+in EBSNN cannot fully exploit the informative correlation cannot be ignored (the detailed analysis of traffic units will
+between bytes, thus causing performance bottleneck. (3) be presented later in RQ3). After we convert the heteroge-
+Securitas, which uncovers n-gram keywords for frequency neous traffic graph into a homogeneous one (i.e., with only
+matching and ranks fourth according to the Avg. Rank in Ta- one edge type), we can see a significant drop in the results,
+ble 2, performs much worse than MH-Net due to the inflexi- showing that it is necessary to model the heterogeneous corble and rigid keyword patterns, reflecting the importance and relations between traffic units (or bytes). We also investigate
+effectiveness of mining informative byte correlations. how contrastive learning tasks contribute to the results. The
+ From the overall perspective of the flow-level and packet- results indicate that integrating packet-level and flow-level
+level tasks, MH-Net reaches the best comprehensive perfor- contrastive loss can improve the classification performance
+mance, verifying the effectiveness of our proposed model. of both tasks, with the latter having a more salient impact.
+ In short, MH-Net achieves the best results on flow-level
+Ablation Study (RQ2) and packet-level tasks compared to various variants.
+For a clear understanding of MH-Net’s architecture design,
+we conduct a comprehensive ablation study on the CIC-IoT More Analysis on MH-Net (RQ3)
+and ISCX-VPN dataset w.r.t. F1-Score, and the results are In this section, we first analyze the sensitivity of MH-Net.
+shown in Table 3. From Table 3, we can conclude that the Then, to investigate the impact of traffic units, we further
+8-bit traffic unit contributes more to the model performance analyze the choice and combination of traffic units.
+ CIC-IoT ISCX-VPN 1.0
+ Variant Flow-level Task
+ Flow Packet Flow Packet Packet-level Task
+ 0.8
+
+ w/o 4-bit View 0.9800 0.9681 0.9498 0.9355
+
+ F1-Score
+ 0.6
+ w/o 8-bit View 0.8842 0.8970 0.1702 0.1488
+ w/o Hetero. 0.9154 0.9551 0.9120 0.9010 0.4
+ w/o LPCL 0.9835 0.9618 0.9524 0.9524
+ w/o LFCL 0.9767 0.9631 0.9467 0.9204 0.2
+
+ MH-Net 0.9896 0.9800 0.9941 0.9766 0.0
+ 2 4 6 8 10
+ Traffic Unit (bit)
+Table 3: Ablation Study of MH-Net on the CIC-IoT and
+ISCX-VPN Dataset w.r.t. F1-Score. Figure 3: The Choice of Traffic Units on the ISCX-VPN
+ Dataset.
+Sensitivity Analysis. We conduct sensitivity analysis on
+the ISCX-VPN dataset to investigate the impact of the the best result, followed by the combination of 8&10-bit
+packet-level and flow-level contrastive loss ratios α and β. traffic units. (2) Combining two traffic units can improve the
+Figure 2 shows that (1) both tasks show a gradual improve- model performance to a certain extent compared to a single
+ment trend with the increase of α, which implies the effec- traffic unit (e.g., 4&6-bit, 4&8-bit, 4&10-bit, and 8&10-bit
+tiveness of packet-level contrastive learning. (2) In contrast, traffic units), but it may also produce more negative results
+the impact of β on model performance fluctuates slightly (e.g., 2&8-bit and 6&8-bit traffic units). This implies that
+and reaches its best at about β = 0.5, which may be due there may be a trade-off between information complemento the excessive randomness caused by the augmentation of tarity and interference between traffic units with different
+the traffic flow. One promising improvement may be intro- information granularity, which can be potentially utilized to
+ducing learnable augmentation to drop packets adaptively. further improve model performance.
+
+ 1.00 1.00 1.0
+ 0.98 0.98 Flow-level Task
+ 0.96 0.96 0.8 Packet-level Task
+ F1-Score
+F1-Score
+
+ 0.94 0.94
+ F1-Score
+
+ 0.92 0.92 0.6
+ 0.90 0.90
+ 0.88 Flow-level Task 0.88 Flow-level Task 0.4
+ 0.86 Packet-level Task 0.86 Packet-level Task
+ 0.84 0.84 0.2
+ 0.2 0.4 0.6 0.8 1.0 0.1 0.3 0.5 0.7 0.9
+ α β
+ 0.0
+ 2&
+
+ 2&
+
+ 2&
+
+ 2&
+
+ 4&
+
+ 4&
+
+ 4&
+
+ 6&
+
+ 6&
+
+ 8&
+Figure 2: Sensitivity Analysis w.r.t. α and β on the ISCX-
+ 4
+
+ 6
+
+ 8
+
+ 10
+
+ 6
+
+ 8
+
+ 10
+
+ 8
+
+ 10
+
+ 10
+VPN Dataset. Combination of Traffic Units (bit&bit)
+
+ Figure 4: The Combination of Traffic Units on the ISCX-
+The Choice of Traffic Units. As shown in Figure 3, we VPN Dataset.
+aggregate different numbers of traffic bits into traffic units
+and conduct experiments using single-view heterogeneous
+traffic graphs. Figure 3 shows that the 8-bit traffic unit Conclusion
+achieves the best result, while others are much worse than it.
+In addition, both the flow-level and packet-level tasks show This paper proposes an effective model named MH-Net,
+almost the same fluctuation trend w.r.t. F1-Score with traffic which constructs multi-view heterogeneous traffic graphs
+unit changes. The results also suggest that byte (i.e., 8-bit) is via point-wise mutual information by aggregating different
+the primary unit of information transmission, and the reason numbers of traffic bits into traffic units. In particular, we
+for the decline in the performance of other traffic units may uncover the heterogeneous byte correlations contained in
+come from two aspects: (1) they break the integrity of bytes; the traffic graph and employ a heterogeneous graph neural
+(2) the traffic graph’s size is limited by the traffic unit’s bit network for graph representation learning. Furthermore, we
+length, which may be one of the influencing factors. conduct supervised contrastive learning in a multi-task manner to obtain more robust traffic representations. The exper-
+The Combination of Traffic Units. To further reveal how imental results show that MH-Net reaches the overall best
+the combination of traffic units affects model performance, performance on both the flow-level and packet-level trafwe conduct experiments on any two traffic unit combina- fic classification tasks compared with dozens of baselines.
+tions of 2, 4, 6, 8, and 10, and the result is shown in Fig- In addition, an extensive analysis of traffic units reveals the
+ure 4. From Figure 4, we can draw the following conclu- possibility of using complementary information from differsions. (1) The combination of 4&8-bit traffic units reaches ent traffic units to improve traffic classification performance.
+ Acknowledgments Le-Khac, P. H.; Healy, G.; and Smeaton, A. F. 2020. Con-
+This work was supported in part by the Major Key Project trastive Representation Learning: A Framework and Review.
+of PCL (No. PCL2023A06-4), Open Foundation of Key IEEE Access, 8: 193907–193934.
+Laboratory of Cyberspace Security, Ministry of Educa- Lim, H.-K.; Kim, J.-B.; Heo, J.-S.; Kim, K.; Hong, Y.-G.;
+tion of China, Henan Key Laboratory of Network Cryp- and Han, Y.-H. 2019. Packet-based Network Traffic Clastography (No. KLCS20240304), Natural Science Research sification Using Deep Learning. In International Confer-
+Startup Foundation of Recruiting Talents of Nanjing Uni- ence on Artificial Intelligence in Information and Communiversity of Posts and Telecommunications (No. NY223164, cation, 046–051.
+NY224001), National Natural Science Foundation of China Lin, X.; Xiong, G.; Gou, G.; Li, Z.; Shi, J.; and Yu, J. 2022.
+(No. 62022024), CCF-Huawei Populus Grove Fund, Jiangsu ET-BERT: A Contextualized Datagram Representation with
+Provincial Key Laboratory of Network and Information Se- Pre-training Transformers for Encrypted Traffic Classificacurity (No. BM2003201), Key Laboratory of Computer Net- tion. In The Web Conference, 633–642.
+work and Information Integration of Ministry of Education Liu, C.; He, L.; Xiong, G.; Cao, Z.; and Li, Z. 2019. FS-Net:
+of China (No. 93K-9), and Collaborative Innovation Center A Flow Sequence Network For Encrypted Traffic Classifiof Novel Software Technology and Industrialization. cation. In IEEE Conference on Computer Communications,
+ 1171–1179.
+ References Lotfollahi, M.; Siavoshani, M. J.; Zade, R. S. H.; and
+Chen, T.; Kornblith, S.; Norouzi, M.; and Hinton, G. 2020. Saberian, M. 2020. Deep packet: a novel approach for en-
+A Simple Framework for Contrastive Learning of Visual crypted traffic classification using deep learning. Soft Com-
+Representations. In International Conference on Machine puting, 24(3): 1999–2012.
+Learning, 1597–1607. Mao, K.; Xiao, X.; Hu, G.; Luo, X.; Zhang, B.; and Xia,
+Conti, M.; Mancini, L. V.; Spolaor, R.; and Verde, N. V. S. 2021. Byte-Label Joint Attention Learning for Packet-
+2015. Analyzing Android Encrypted Network Traffic to grained Network Traffic Classification. In International
+Identify User Actions. IEEE Transactions on Information Workshop on Quality of Service, 1–10.
+Forensics and Security, 11(1). Meng, X.; Wang, Y.; Ma, R.; Luo, H.; Li, X.; and Zhang, Y.
+Dadkhah, S.; Mahdikhani, H.; Danso, P. K.; Zohourian, A.; 2022. Packet Representation Learning for Traffic Classifica-
+Truong, K. A.; and Ghorbani, A. A. 2022. Towards the tion. In ACM SIGKDD Conference on Knowledge Discovery
+development of a realistic multidimensional IoT profiling and Data Mining, 3546–3554.
+dataset. In 2022 19th Annual International Conference on Panchenko, A.; Lanze, F.; Zinnen, A.; Henze, M.; Pen-
+Privacy, Security & Trust (PST), 1–11. IEEE. nekamp, J.; Wehrle, K.; and Engel, T. 2016. Website Fin-
+Gil, G. D.; Lashkari, A. H.; Mamun, M.; and Ghorbani, gerprinting at Internet Scale. In Annual Network and Dis-
+A. A. 2016. Characterization of Encrypted and VPN Traffic tributed System Security Symposium.
+Using Time-Related Features. In International Conference Papadogiannaki, E.; and Ioannidis, S. 2021. A Survey
+on Information Systems Security and Privacy, 407–414. on Encrypted Network Traffic Analysis Applications, Tech-
+Hamilton, W.; Ying, Z.; and Leskovec, J. 2017. Inductive niques, and Countermeasures. ACM Computing Surveys,
+Representation Learning on Large Graphs. In Conference 54(6): 1–35.
+on Neural Information Processing Systems. Qiu, J.; Chen, Q.; Dong, Y.; Zhang, J.; Yang, H.; Ding, M.;
+Hayes, J.; and Danezis, G. 2016. k-fingerprinting: a Robust Wang, K.; and Tang, J. 2020. GCC: Graph Contrastive
+Scalable Website Fingerprinting Technique. In USENIX Se- Coding for Graph Neural Network Pre-Training. In ACM
+curity Symposium, 1187–1203. SIGKDD International Conference on Knowledge Discov-
+He, K.; Fan, H.; Wu, Y.; Xie, S.; and Girshick, R. 2020. ery and Data Mining, 1150–1160.
+Momentum Contrast for Unsupervised Visual Representa- Ramadhani, E. 2018. Anonymity communication VPN and
+tion Learning. In Computer Vision and Pattern Recognition, Tor: a comparative study. Journal of Physics: Conference
+9729–9738. Series, 983(1): 012060.
+Hou, Z.; Liu, X.; Cen, Y.; Dong, Y.; Yang, H.; Wang, C.; and Ren, J.; Dubois, D.; and Choffnes, D. 2019. An international
+Tang, J. 2022. Graphmae: Self-supervised masked graph au- view of privacy risks for mobile apps.
+toencoders. In Proceedings of the 28th ACM SIGKDD Con- Schroff, F.; Kalenichenko, D.; and Philbin, J. 2015. FaceNet:
+ference on Knowledge Discovery and Data Mining, 594– A Unified Embedding for Face Recognition and Clustering.
+604. In Computer Vision and Pattern Recognition, 815–823.
+Khosla, P.; Teterwak, P.; Wang, C.; Sarna, A.; Tian, Y.; Isola, Shapira, T.; and Shavitt, Y. 2021. FlowPic: A Generic Rep-
+P.; Maschinot, A.; Liu, C.; and Krishnan, D. 2020. Super- resentation for Encrypted Traffic Classification and Applivised Contrastive Learning. In Conference on Neural Infor- cations Identification. IEEE Transactions on Network and
+mation Processing Systems, 18661–18673. Service Management, 18(2): 1218–1232.
+Lashkari, A. H.; Draper-Gil, G.; Mamun, M. S. I.; and Ghor- Sharma, R.; Dangi, S.; and Mishra, P. 2021. A Comprehenbani, A. A. 2017. Characterization of Tor Traffic Using Time sive Review on Encryption based Open Source Cyber Se-
+Based Features. In International Conference on Information curity Tools. In IEEE International Conference on Signal
+System Security and Privacy, 253–262. Processing, Computing and Control, 614–619.
+Shen, M.; Zhang, J.; Zhu, L.; Xu, K.; and Du, X. 2021. Zhao, R.; Zhan, M.; Deng, X.; Wang, Y.; Wang, Y.; Gui, G.;
+Accurate Decentralized Application Identification via En- and Xue, Z. 2023. Yet another traffic classifier: A masked
+crypted Traffic Analysis Using Graph Neural Networks. autoencoder based traffic transformer with multi-level flow
+IEEE Transactions on Information Forensics and Security, representation. In Proceedings of the AAAI Conference on
+16(1): 2367–2380. Artificial Intelligence, volume 37, 5420–5427.
+Sirinam, P.; Imani, M.; Juarez, M.; and Wright, M. K. 2018. Zheng, W.; Gou, C.; Yan, L.; and Mo, S. 2020. Learning
+Deep Fingerprinting: Undermining Website Fingerprinting to Classify: A Flow-Based Relation Network for Encrypted
+Defenses with Deep Learning. In Conference on Computer Traffic Classification. In The Web Conference, 13–22.
+and Communications Security, 1928–1943.
+Taylor, V. F.; Spolaor, R.; Conti, M.; and Martinovic, I.
+2016. AppScanner: Automatic Fingerprinting of Smartphone Apps From Encrypted Network Traffic. In IEEE European Symposium on Security and Privacy, 439–454.
+Tong, H.; Faloutsos, C.; and Pan, J.-Y. 2006. Fast random
+walk with restart and its applications. In Sixth international
+conference on data mining (ICDM’06), 613–622. IEEE.
+van den Oord, A.; Li, Y.; and Vinyals, O. 2018. Representation Learning with Contrastive Predictive Coding. arXiv
+preprint arXiv:1807.03748v2.
+van Ede, T.; Bortolameotti, R.; Continella, A.; Ren, J.;
+Dubois, D. J.; and Lindorfer, M. 2020. FlowPrint: Semi-
+Supervised Mobile-App Fingerprinting on Encrypted Network Traffic. In Annual Network and Distributed System
+Security Symposium.
+Xiao, X.; Xiao, W.; Li, R.; Luo, X.; Zheng, H.; and Xia,
+S. 2022. EBSNN: Extended Byte Segment Neural Network
+for Network Traffic Classification. IEEE Transactions on
+Dependable and Secure Computing, 19(5): 3521–3538.
+Xiao, X.; Zhou, X.; Yang, Z.; Yu, L.; Zhang, B.; Liu, Q.;
+and Luo, X. 2024. A comprehensive analysis of website
+fingerprinting defenses on Tor. Computers & Security, 136:
+103577.
+Xu, S.-J.; Geng, G.-G.; and Jin, X.-B. 2022. Seeing Traffic
+Paths: Encrypted Traffic Classification With Path Signature
+Features. IEEE Transactions on Information Forensics and
+Security, 17(1): 2166–2181.
+Yao, L.; Mao, C.; and Luo, Y. 2019. Graph Convolutional
+Networks for Text Classification. In AAAI Conference on
+Artificial Intelligence, 7370–7377.
+You, Y.; Chen, T.; Sui, Y.; Chen, T.; Wang, Z.; and Shen,
+Y. 2020. Graph Contrastive Learning with Augmentations.
+In Conference on Neural Information Processing Systems,
+5812–5823.
+Yun, X.; Wang, Y.; Zhang, Y.; and Zhou, Y. 2015. A
+Semantics-Aware Approach to the Automated Network Protocol Identification. IEEE/ACM Transactions on Networking, 24(1): 583–595.
+Zhang, H.; Yu, L.; Xiao, X.; Li, Q.; Mercaldo, F.; Luo, X.;
+and Liu, Q. 2023. TFE-GNN: A Temporal Fusion Encoder
+Using Graph Neural Networks for Fine-grained Encrypted
+Traffic Classification. In The Web Conference, 2066–2075.
+Zhang, J.; Li, F.; Ye, F.; and Wu, H. 2020. Autonomous
+Unknown-Application Filtering and Labeling for DL-based
+Traffic Classifier Update. In IEEE Conference on Computer
+Communications, 397–405.
+ Threat Model and Assumptions As for category types of the ISCX VPN-NonVPN dataset,
+We briefly describe the threat model and assumptions as fol- some files can be labeled as either “Browser” or other types
+lows. like “Streaming.” So, we abandoned “Browser” and used the
+ Normal users employ mobile apps to communicate with remaining six types. Note that we didn’t delete data but used
+remote servers. The attacker is a passive observer (i.e., he the alternative types instead.
+cannot decrypt or modify packets). The attacker captures
+the packets of the target apps by compromising the device
+ Pre-processing
+or sniffing the network link. Then, the attacker analyzes the For each dataset, we use SplitCap to obtain bidirectional
+captured packets to infer the behaviors of normal users. flows from each pcap file. Due to the limited number of
+ flows in the ISCX-Tor dataset, we enrich traffic flows by
+ More Experimental Details dividing each flow into 60-second non-overlapping blocks
+ in our experiments (Shapira and Shavitt 2021). Follow-
+Dataset Details ing (Zhang et al. 2023), we filter out traffic flows without
+We adopt the CIC-IoT, ISCX VPN-nonVPN, and ISCX Tor- payload or that surpass a length of 10000. Such flows usunonTor in this work. ally establish connections between two communicating en-
+ The CIC-IoT (Dadkhah et al. 2022) dataset consists of tities or result from temporary network failures, which have
+network traffic of IoT devices. The ISCX VPN-nonVPN (Gil little useful information for classification. As for each packet
+et al. 2016) dataset is a collection of two datasets: the in a traffic flow, we remove the Ethernet header, IP ad-
+ISCX-VPN and ISCX-nonVPN datasets. The ISCX-VPN dresses, and port numbers to protect sensitive information
+dataset contains traffic collected over virtual private net- while eliminating the potential interference it brings. After
+works (VPNs), which are commonly used for accessing the above processing, we only keep the first 15 packets of a
+blocked websites or services. Due to obfuscation technol- traffic flow at most to ensure relatively smaller computation
+ogy, this kind of traffic can be challenging to detect. In costs, which is enough to achieve good performance.
+contrast, the ISCX-nonVPN dataset contains regular traffic Since our method performs both the flow-level and
+not collected over VPNs. The ISCX Tor-nonTor (Lashkari packet-level classification tasks, we first adopt stratified
+et al. 2017) dataset comprises the ISCX-Tor and ISCX- sampling to partition the flow-level training and testing
+nonTor datasets. The ISCX-Tor dataset involves traffic col- dataset into 9:1 according to the number of traffic flows for
+lected over the onion router (Tor), making its traffic difficult all datasets. All packets in the flow-level training and testto trace, whereas the ISCX-nonTor is a regular dataset not ing datasets are directly used as the packet-level training and
+collected over Tor. testing datasets, respectively. The category of each packet is
+ In the experiment, we divide the traffic data in the CIC- consistent with the traffic flow to which it belongs. Note that
+IoT, ISCX VPN-nonVPN, and ISCX Tor-nonTor datasets independent packets can also be used to evaluate the packetinto six, six, and eight categories, respectively, according level task. Here, for convenience, the packets in a traffic flow
+to the type of traffic following the dataset description. The are directly used for evaluation.
+dataset statistics are presented in Table 1.
+ Hyper-parameters
+ Dataset #Flow #Packet #Category In this section, we give hyper-parameters used in this paper
+ in Table 2.
+ CIC-IoT 2961 39208 6
+ ISCX-VPN 1674 19282 6 Comparison with More Datasets
+ ISCX-NonVPN 3928 33838 6
+ ISCX-Tor 1697 22888 8 In this section, we conduct extensive experiments on the
+ ISCX-NonTor 7979 68024 8 CrossPlatform(Android) (Ren, Dubois, and Choffnes 2019)
+ dataset to further demonstrate the effectiveness of MH-Net,
+ and the results are shown in Tables 3 and 4.
+ Table 4: Dataset Statistics
+ From Tables 3 and 4, we can observe that MH-Net outperforms dozens of baselines and achieves SOTA performance
+ We give specific category divisions for each dataset in the on both the packet-level and flow-level classification tasks.
+following:
+ • CIC-IoT: Power, Idle, Interactions, Scenarios, Active,
+ Attacks.
+ • ISCX-VPN: VoIP, Streaming, P2P, File, Email, Chat.
+ • ISCX-NonVPN: VoIP, Video, Streaming, File, Email,
+ Chat.
+ • ISCX-Tor: VoIP, Video, P2P, Mail, File, Chat, Browsing,
+ Audio.
+ • ISCX-NonTor: VoIP, Video, P2P, FTP, Email, Chat,
+ Browsing, Audio.
+ Datasets ISCX-VPN ISCX-NonVPN ISCX-Tor ISCX-NonTor CIC-IoT
+ Batch Size 16 102 32 102 24
+ Gradient Accumulation 1 5 1 5 1
+ Epoch 20 120 100 120 20
+ Learning Rate (Max, Min) (1e-2, 1e-4) (1e-2, 1e-5) (1e-2, 1e-4) (1e-2, 1e-4) (1e-2, 1e-4)
+ Label Smoothing 0.0 0.01 0.0 0.0 0.0
+ Warm Up 0.1 0.1 0.1 0.1 0.1
+ GNN Dropout Ratio 0.0 0.1 0.0 0.2 0.0
+ LSTM Dropout Ratio 0.0 0.15 0.0 0.1 0.0
+ Embedding Dimension 64 64 64 64 64
+ Hidden Dimension 128 128 128 128 128
+ PMI Window Size 5 5 5 5 5
+ Packet Dropping Ratio PPD 0.6 0.6 0.6 0.6 0.6
+ Temperature τ 0.07 0.07 0.07 0.07 0.07
+ Flow-level Contrastive Loss Ratio β 0.5 0.8 1.0 1.0 0.5
+ Packet-level Contrastive Loss Ratio α 1.0 0.4 0.4 0.6 1.0
+
+ Table 5: Hyper-parameters
+
+ CrossPlatform(Android) Avg. CrossPlatform(Android) Avg.
+ Model Model
+ AC F1 Rank Rank
+ AC F1
+ AppScanner 0.7812 0.7517 6 Securitas-C4.5 0.6444 0.6847 4
+ K-FP 0.8438 0.8218 4 Securitas-SVM 0.5333 0.6331 6
+ CUMUL 0.7188 0.7092 8 Securitas-Bayes 0.5388 0.6891 4
+ ETC-PS 0.8125 0.7931 5 2D-CNN 0.1602 0.0922 10
+ FS-Net 0.5625 0.4919 9 3D-CNN 0.4440 0.4007 7
+ DF 0.4375 0.4417 10 DP-SAE 0.6608 0.5897 5
+ ET-BERT 0.9893 0.9869 2 DP-CNN 0.2136 0.1514 8
+ GraphDApp 0.7500 0.7255 7 BLJAN 0.1348 0.2081 9
+ TFE-GNN 0.9818 0.9818 3 EBSNN-GRU 0.9069 0.8998 3
+ YaTC 0.9889 0.9872 2 EBSNN-LSTM 0.9832 0.9831 2
+ MH-Net (Ours) 0.9893 0.9893 1 MH-Net (Ours) 0.9875 0.9875 1
+
+Table 6: Experimental Results on the CrossPlat- Table 7: Experimental Results on the CrossPlatform(Android) Dataset w.r.t. Flow-level Traffic Clas- form(Android) Dataset w.r.t. Packet-level Traffic Classification Task. (BOLD indicates the best score, and sification Task. (BOLD indicates the best score, and
+UNDERLINE denotes the second best one. Avg. Rank UNDERLINE denotes the second best one. Avg. Rank
+indicates the average ranking of each model’s results across indicates the average ranking of each model’s results across
+all datasets and metrics.) all datasets and metrics.)

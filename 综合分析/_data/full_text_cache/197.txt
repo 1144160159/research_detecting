@@ -1,0 +1,691 @@
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024 5053
+
+ Contrastive Time-Series Anomaly Detection
+ HyunGi Kim , Siwon Kim , Seonwoo Min , and Byunghan Lee , Member, IEEE
+
+ Abstract—In addition to its success in representation learning, failure. Advances in deep learning methods for anomaly deteccontrastive learning is effective in image anomaly detection. Al- tion have enabled accurate detections of anomalies in multivarithough contrastive learning depends significantly on data aug- ate time-series [4], [5], [6], [7]. Moreover, deep-learning-based
+mentation methods, time-series data augmentation for time-series
+anomaly detection is not investigated sufficiently. Additionally, anomaly detection has shown remarkable adaptability across
+although time-series data share a temporal context, the existing various practical scenarios, including medical diagnosis [8],
+contrastive loss contrasts temporally related samples, in which gesture recognition [9], visitation prediction [10], and other
+deteriorated anomaly detection performance is observed on time- applications [11], [12]. Nonetheless, a more accurate, fast, and
+series data. Herein, we propose contrastive multivariate time-series robust multivariate time-series anomaly detection framework
+anomaly detection (CTAD), a multivariate time-series anomaly
+detection framework that addresses these challenges by incorpo- that is applicable to real-world scenarios is necessitated.
+rating a one-class learning scheme into the contrastive loss based on Contrastive learning has received attention owing to its
+meticulously designed time-series data augmentations. Specifically, anomaly detection performance in the field of computer viwe propose seven types of general time-series data augmentations sion [13], [14], [15]. For an encoder trained using contrastive
+to be applied variable- and point-wise, and provide guidance on learning, unseen anomalies or out-of-distribution samples are
+data augmentation methods for contrastive time-series anomaly
+detection. The superiority of the one-class contrastive loss and the assumed to be encoded at a distance from the normal samples
+appropriate selection of time-series data augmentation allow CTAD in the embedding space. Thus, the anomaly score for an unseen
+to achieve outstanding performance in multiple datasets, even sample is defined based on the distance between the unseen
+using a simple long short-term memory network. Furthermore, sample and training samples, which are normal or in-distribution
+CTAD is robust to noise as it trains a noise-invariant network.
+ samples. Existing contrastive learning-based anomaly detection
+This enables up to 47× faster and 20× more memory-efficient
+anomaly detection performance compared with existing methods methods in the image domain rely on instance discrimination by
+while affording robustness, which are essential considerations in exploiting contrastive loss.
+real-world applications. Owing to the successful incorporation of data augmentation
+ Index Terms—Anomaly detection, contrastive learning, into contrastive learning frameworks, data augmentation has
+multivariate time-series, one-class classification. become the core component of contrastive learning frameworks.
+ Existing approaches are typically based on instance discrimination [16], where representations from different instances
+ I. INTRODUCTION are discriminated in the embedding space. However, instance
+ NOMALY detection aims to detect anomalous behaviors discrimination can degrade the representation quality because
+A that deviate from normal behaviors. As cyber-physical systems (CPS) become more complex, more sensors and actuators
+ semantically related samples (e.g., multiple dog images) in a
+ mini-batch or queue can be regarded as negatives [17], [18].
+are used to operate the system [1], [2], [3]. This complexity In this study, we focus on some challenges in applying an
+renders anomaly detection in CPS more challenging, and unex- instance discrimination-based contrastive learning framework to
+pected behaviors can result in monetary damage or total system unsupervised multivariate time-series anomaly detection. First,
+ for multivariate time-series data, one continuous signal is segmented with a sliding window, and each segment serves as
+ Manuscript received 21 December 2021; revised 31 January 2023; accepted 10
+November 2023. Date of publication 22 November 2023; date of current version
+ an instance. Therefore, a temporal correlation exists between
+4 October 2024. This work was supported in part by the National Research Foun- different instances, and treating them as negatives separates the
+dation of Korea (NRF) funded by the Ministry of Science and ICT under Grant representations of related instances. Second, suitable data aug-
+NRF-2022R1C1C1006511, in part by the Information Technology Research
+Center (ITRC) support program under Grant IITP-2023-RS-2022-00156295, in
+ mentation for contrastive time-series anomaly detection must be
+part by the BK21 FOUR program of the Education and Research Program for investigated. Although data augmentations in image contrastive
+Future ICT Pioneers , Seoul National University in 2023, and in part by Hyundai learning (e.g., cropping, color jittering, and rotation) have been
+Motor Company. Recommended for acceptance by X. Zhu. (Corresponding
+author: Byunghan Lee.)
+ investigated [13], [19], these spatial or image-specific augmen-
+ HyunGi Kim and Siwon Kim are with the Department of Electrical and tations are not applicable to time-series data. Because the appro-
+Computer Engineering, Seoul National University, Seoul 08826, South Korea priate data augmentation method is vital to anomaly detection
+(e-mail: rlagusrl0128@snu.ac.kr; tuslkkk@snu.ac.kr).
+ Seonwoo Min is with the LG AI Research, Seoul 07796, South Korea (e-mail:
+ performance [19], [20], extensive research for determining the
+seonwoo.min@gmail.com). optimal composition is indispensable.
+ Byunghan Lee is with the Department of Electronic Engineering, Seoul A contrastive learning framework for multivariate time series
+National University of Science and Technology, Seoul 01811, South Korea
+(e-mail: bhlee@seoultech.ac.kr).
+ anomaly detection, called contrastive multivariate time-series
+ Digital Object Identifier 10.1109/TKDE.2023.3335317 anomaly detection (CTAD), is proposed herein. CTAD differs
+
+ 1041-4347 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5054 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024
+
+from previous contrastive methods for anomaly detection in that B. Contrastive Learning for Time-Series
+the contrastive learning loss is based on one-class discrimination
+ Owing to the superior performance of contrastive learning in
+instead of instance discrimination. The proposed one-class dis- image representation learning across many downstream tasks
+crimination considers all instances within the training distribuand multiple domains [24], [25], researchers have leveraged the
+tion as positives, whereas the negatives are sampled solely from
+ contrastive learning framework for time-series representation
+the augmented out-of-distribution. To contrast the negatives, learning. SeqCLR [26] proposed channel recombination prepro-
+CTAD generates synthetic anomalies through negative data
+ cessing and time-series data augmentations for the contrastive
+augmentation, which intentionally generates out-of-distribution
+ representation learning of electroencephalogram (EEG) signals.
+data and has been effectively leveraged in the image domain [13], However, this approach is only meaningful for bio-signals, such
+[15], [21]. We categorize time-series data augmentations into
+ as EEG signals, and data augmentation is particularly suitable
+three types: scale perturbation, temporality perturbation, and for EEG signals. CLOCS [27] learns a patient-specific reprenoise interference. We empirically show that scale-perturbing sentation of electrocardiogram (ECG) signals via contrastive
+augmentations are effective as negative data augmentation for
+ learning. In this regard, a data augmentation method that concontrastive time-series anomaly detection. siders domain-specific knowledge of ECG signals is designed.
+ CTAD exhibits remarkable performance even with a simple The transformed ECG segments originating from the same
+encoder architecture. With one layer LSTM [22], followed
+ patient are regarded as a positive pair. GATE [28] proposed a
+by projection layers consisting of two multi-layer perceptron self-supervised learning method to classify neuro-disease using
+(MLP) layers with batch normalization, CTAD outperforms functional magnetic resonance imaging (fMRI). To extract inother alternatives that adopt complex architectures. Its simple
+ formative features from fMRI, GATE uses a domain-specific
+network enables fast and memory-efficient inferences. Our main augmentation strategy to effectively augment the population
+contributions are summarized as follows:
+ r To the best of our knowledge, this is the first study to adopt graph, which is an input to the graph convolutional network.
+ Similar to the image domain, appropriately designed data augone-class learning to a contrastive learning framework for
+ mentation is crucial to the contrastive learning of time-series
+ multivariate time-series anomaly detection. We propose a
+ data. However, existing data augmentation strategies typically
+ one-class contrastive learning loss scheme that combines
+ require data-specific knowledge [26], [27], [28], rendering them
+ contrastive learning loss and a one-class learning scheme.
+ r We propose a time-series data augmentation strategy for incompatible with other time-series data. Therefore, we aim
+ to identify the general time-series data augmentation methods
+ contrastive time-series anomaly detection that is generalizfor contrastive learning that do not require domain-specific
+ able, generates various samples by increasing randomness,
+ background knowledge. Moreover, we focus on effective data
+ and generates hard-negative samples.
+ r We inspect seven general time-series data augmentation augmentations for time-series anomaly detection instead of representation learning.
+ methods and provide a guideline for selecting the appropriate data augmentation method in contrastive time-series
+ anomaly detection, based on experiments and ablation
+ studies. C. Contrastive Learning for Anomaly Detection
+ r We empirically demonstrate the validity of our proposed Contrastive learning demonstrates high representation quality
+ framework using multiple real-world datasets and show that is applicable to many downstream tasks and transfer learnthat it outperforms the compared methods even with a ing [29]; recently, it has been shown to be effective in detecting
+ simple LSTM-based architecture. out-of-distribution data in the image domain [13], [14], [15].
+ CSI [13] exploits undesirable augmentations for standard con-
+ II. RELATED WORK trastive representation learning (e.g., rotations). It additionally
+ generates instances from those augmentations and trains the
+A. Contrastive Learning
+ encoder with existing instance discrimination-based contrastive
+ Contrastive learning is a self-supervised representation learn- loss and an auxiliary classifier to predict data augmentation.
+ing framework that encodes the semantic information of data SSD [14] proposed an anomaly score based on the clusterwithout hand-labeled supervision. It causes the representation conditioned Mahalanobis distance in the embedding space; howof semantically related samples (i.e., positives) to be attracted ever, the encoder network was trained with the existing instance
+while being repelled from the others (i.e., negatives). Recent discrimination-based contrastive loss. In another study [15], a
+works define a positive sample as an augmented view from the one-class classifier was trained on a learned representation in a
+same instance (e.g., image) and define a negative sample as an two-stage manner. This is different from our study in that we
+augmented view from all other instances in a mini-batch [19] trained the one-class contrastive loss in an end-to-end manner.
+or dictionary queue [23]. Recent contrastive learning methods These contrastive anomaly detection approaches are typically
+depend significantly on data augmentation to generate seman- based on instance-discrimination-based contrastive learning.
+tically related samples [19], [20], [23]. Determining effective However, instance discrimination is unsuitable for time-series
+augmentation is critical to the performance of contrastive learn- anomaly detection because it contrasts with temporally related
+ing and depends on the data domain. For instance, color jittering data. We address this concern by proposing one-class contrastive
+is applicable to image data, but not applicable to time-series data. loss, which is introduced in the following section. Table I
+KIM et al.: CONTRASTIVE TIME-SERIES ANOMALY DETECTION 5055
+
+ TABLE I
+ SUMMARY AND COMPARISON OF RELATED WORKS AND OUR WORK
+
+Fig. 1. Overview of CTAD framework. (a) Construction of window-sliced batch and generation of synthetic anomalies via negative augmentation. (b) Encoder
+network and schematic of proposed one-class contrastive loss.
+
+summarizes methods associated with our proposed contrastive with a window size s to construct the window-sliced batch W =
+ −s+1
+time-series anomaly detection framework. {W t }Tt=1 , where W t = {xt , xt+1 , . . . , xt+s−1 } ∈ Rd×s .
+ At the inference time, a window-sliced test batch W  =
+ 
+ −s+1
+ {(W t , yt )}Tt=1 is constructed from the labeled test dataset
+ 
+ III. METHODS  
+ (X , Y ) = {(xt , yt )}Tt=1 . The test dataset is composed of nor-
+ Fig. 1 illustrates the overall training process of the CTAD mal and anomalous observations for T  time steps, and a binary
+framework. CTAD attracts all window samples augmented from label yt ∈ {0, 1} indicates whether xt is an anomalous observathe training data because they share temporal context and re- tion (yt = 1) or not (yt = 0). An anomaly score S is defined for
+pels synthetic anomalies, which are generated via an augmen- a specified unseen window W t . If the anomaly score is above
+tation function named negative augmentation. In the follow- the selected threshold, then the observation at the final time step
+ing subsections, each component of CTAD is elaborated. In of the window is predicted to be an anomaly (ŷt+s−1 = 1).
+Section III-A, we first formulate unsupervised multivariate
+time-series anomaly detection problems and notations. In
+ B. Contrastive Representation Learning
+Section III-B, we introduce a contrastive representation and its
+limitations in time-series anomaly detection. In Section III-C, Using stochastic data augmentation, we generate two semanwe explain the inspected time-series data augmentations for tically related “views” of the window segments. First, from W ,
+ −1
+CTAD. Finally, we introduce a one-class contrastive loss that mini-batch B = {W t }N t=0 with batch size N is constructed.
+complements the limitations of the existing contrastive loss in Inspired by recent representative works on contrastive learn-
+Section III-D and an anomaly score in Section III-E. ing [19], [23], we introduce an augmentation random variable
+ A whose state space is a set of augmentation functions. Using
+ two augmentation functions T1 and T2 , which are the realizations
+A. Problem Formulation of augmentation random variable A, a multi-viewed mini-batch
+ In unsupervised multivariate time-series anomaly detection, B̃ is constructed as follows:
+the unlabeled train dataset X = {x1 , x2 , . . . , xT } := {xt }Tt=1
+is assumed to be composed of normal observations for T time B̃ = {W̃ t }2N −1
+ t=0 ,
+steps. It should be noted that xt ∈ Rd , where d denotes the num- −1 2N −1
+ber of variables. During training, a contiguous series X is sliced {W̃ t }N
+ t=0 = T1 (B), {W̃ t }t=N = T2 (B) (1)
+5056 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024
+
+where T1 (B) is a set of augmented samples obtained by applying T1 on each element of mini-batch B, i.e., T1 (B) :=
+ −1
+{T1 (W t )}N t=0 .
+ Before introducing the proposed one-class contrastive loss,
+we first elaborate on the contrastive loss of SimCLR [19] to highlight its limitations in time-series anomaly detection. SimCLR
+follows instance discrimination [16], in which a view originating
+from the same instance is considered positive, whereas views Fig. 2. Three types of time-series data augmentations. Colored squares reprefrom other instances are considered negatives. Based on the sent randomly selected observations to be augmented. In all three cases, s = 6,
+ d = 4, and nv = 2. It should be noted that (c) does not require p, whereas
+notations above and the formulation of instance discrimination, p = 0.5 in both (a) and (b). Best visualized in color.
+one can define the index of the positive sample for the anchor
+W̃ i as i+ = (i + N ) mod 2N , and the index set of the negative samples as i− = {0, 1, . . . , 2N − 1} \ {i, i+ }. It should be Scale-perturbing data augmentation changes the scale of the
+noted that one positive sample exists, and all the other 2N − 2 time-series. We designed these augmentations such that they
+samples except for the anchor are negative samples. operate point-wise. For a specified W t , the variables and time
+ Let zi = fθ (W̃ i ) be the encoded vector of W̃ i by encoder steps to apply augmentation were randomly and independently
+fθ , and sim(zi , zj ) be the cosine similarity between two vectors selected (lines 2–5). For the selected points across the selected
+zi and zj : variables, the deterministic point-wise operation was applied to
+ augment W t (line 7).
+ zi zj
+ sim(zi , zj ) = . (2) Scale-perturbing data augmentation comprises amplifying
+ zi  zj 
+ (Tamplify ), biasing (Tbias ), and dropping out (T dropout ) time series,
+The contrastive loss of SimCLR, which is termed as NT-Xent as follows:
+(the normalized temperature-scaled cross entropy loss), is ex- Tamplify (xt ; a) = a × xt (4)
+pressed as follows:
+ Tbias (xt ; b) = xt + b (5)
+ 2N
+  −1
+ 1 exp(sim(zi , zi+ )/τ ) T dropout (xt ) = 0.
+ L=− log  , (3) (6)
+ 2N i=0
+ exp(sim(zi , zj )/τ )
+ j∈i− ∪{i+ }
+ The diversity and strength of the augmentations are controlled
+where τ is the temperature-scaling hyper-parameter. When NT- by two parameters: the number of variables nv to select, and
+Xent is used as a training objective, the similarity of the encoded the percent p of selected points per variable. In the case of
+vector between the anchor and positive sample increases (max- amplification and additive bias, the augmentation strength can
+imizing the numerator inside the logarithm). By contrast, the also be represented by an amplification factor a and a bias scale b.
+similarities between the anchor and negative samples decrease Temporality perturbing data augmentations use a continuous
+(minimizing the denominator inside the logarithm). univariate time-series as input to change the temporal infor-
+ NT-Xent is based on instance discrimination; therefore, only mation of the time-series. These include reversing (Treverse ),
+one positive sample exists for each instance. However, because permuting, (Tpermute ) or masking (Tmask ) time-series:
+of the temporal characteristics of the time-series data, other se-
+ Treverse ([x1 , . . . , xt ]) = [xt , . . ., x1 ] (7)
+mantically related samples within the same mini-batch can exist.
+Thus, regarding these samples as negatives generates false nega- Tpermute ([x1 , . . . , xt ]) = π([x1 , . . ., xt ]) (8)
+tives; they degrade the quality of the learned representation [17],
+ Tmask ([x1 , . . . , xt ]) = [0, . . ., 0]. (9)
+which can be more severe in time-series data that share temporal
+relations. Hence, we first devise time-series data augmentation The temporality perturbing augmentations involve two parammethods and then propose a one-class contrastive loss based on eters, nv and p, as well as scale-perturbing augmentations.
+the proposed time-series data augmentation methods. For a multivariate time-series to be augmented, nv variables
+ are randomly selected. For each selected variable, continuous
+C. Time-Series Data Augmentation t = s × p time steps are selected from a randomly selected
+ starting point.
+ In this subsection, we propose a general time-series data Noise interference data augmentation augments the timeaugmentation method to generate positive and negative sam- series by injecting additive white Gaussian noise, which is
+ples. We inspected seven general time-series data augmentation independent and identically distributed Gaussian noise with zero
+methods to generate semantic-preserving views and synthetic mean and variance σ 2 :
+anomalies: amplification, additive bias, dropout, permutation,
+masking, reversing, and additive Gaussian noise. We categorized TGaussian ([x1 , . . . , xt ]; σ) = [x1 , . . . , xt ] + w,
+these time-series data augmentations into three types based on
+ where w ∼ N (0, σ 2 I). (10)
+the augmentation characteristics: scale perturbation, temporality
+perturbation, and noise interference. Fig. 2 and Algorithm 1 The interference is applied in a variable-wise manner using
+  
+show each type of time-series data augmentation. nv . This simple variation diversifies randomness because ndv
+KIM et al.: CONTRASTIVE TIME-SERIES ANOMALY DETECTION 5057
+
+ normal class, and trained an encoder that attracts their represen-
+ Algorithm 1: Time-Series Data Augmentation.
+ tations simultaneously. Hence, we constructed a contrastive loss
+ such that all augmented views from the window segment in W
+ are regarded as positive to each other. However, no negatives for
+ contrast exist if we consider every augmented normal segment
+ to be positive.
+ To generate negative samples for contrast, we introduced
+ a negative data augmentation random variable A− . Negative
+ data augmentation has been effectively used in the image domain [13], [15], [21], [30]. Window segments augmented via
+ negative augmentation are regarded as synthetic anomalies,
+ and thus their representations are repelled from the anchor
+ representation. In other words, for normal window segments,
+ negative time-series data augmentation generates negative window segments that deviate from the normal distribution. The
+ intentionally generated negative samples function as negatives
+ and are repelled from every normal window segment because
+ every normal window is regarded as positive. In terms of the
+ difference between A and A− , both of which are random
+ variables of one of the proposed seven general time-series data
+ augmentation methods, A aims to generate semantically related
+ TABLE II
+ PERFORMANCE COMPARISON OF CTAD WITH NT-XENT samples, whereas A− aims to generate synthetic anomalies.
+ The experimental analysis and a guideline for selecting both
+ augmentation variables are introduced in Section IV-F.
+ −1
+ Specifically, for a mini-batch B = {W t }N t=0 ⊆ W comprising N normal window segments, a negative mini-batch B − =
+ T − (B) is constructed, where T − is the realization of A− . Based
+ on semantic-preserving data augmentations T1 , T2 ∼ A and two
+variable combinations are possible. Moreover, the strength of types of mini-batches B and B − , a multi-viewed mini-batch B̃
+the augmentation can be controlled not only by σ, but also nv . is constructed as follows:
+ B̃ = {W̃ t }4N −1
+ t=0 ,
+D. One-Class Contrastive Loss 
+ where {W̃ t }2N
+ t=0
+ −1
+ = Ti (B),
+ In this subsection, we describe the process to exploit the pro- i=1,2
+posed time-series data augmentations and address the limitations 
+of the existing contrastive loss in time-series anomaly detec- {W̃ t }4N −1
+ t=2 N = Ti (B − ). (11)
+tion using a one-class approach. Unlike contrastive learning in i=1,2
+the image domain, multivariate time-series anomaly detection
+ As mentioned above, our one-class contrastive loss considers
+presents two clear differences. First, training data are potentially
+ instances from the training normal distribution and augmented
+overlapped across time and time steps are shared between them.
+ negative distribution as positives and negatives, respectively.
+For example, W t and W t+1 share every observation except
+ Therefore, for each anchor window segment 2N − 1 positive
+for one time step. Second, temporal dynamics exist across time
+ and 2N negative samples exist in B̃. The loss function is exsteps, and the training data share a common context in that they
+ pressed as follows:
+are continuously operated under normal behavior.
+ 2N −1
+ In addition to these differences, we observed that merely 1  1  exp(sim(zi , zk )/τ )
+using the NT-Xent loss significantly degrades the multivari- Loc = − +
+ log  ,
+ 2N i=0 |i | + j∈i− ∪i+ exp(sim(zi , zj )/τ )
+ate time-series anomaly detection performance, as shown in k∈i
+Table II. This observation empirically demonstrates the limi- +
+ where i = {0, . . . , 2N − 1} \ {i}, i− = {2N, . . . , 4N − 1}.
+tation of the instance discriminating contrastive loss in multi- (12)
+variate time-series anomaly detection. Instance discrimination
+contrasts views from different window segments; however, every Fig. 3 illustrates a comparison between CTAD and other
+window segment exhibits normal behavior and can exhibit the types of contrastive learning frameworks. SimCLR generates insame temporal dynamics. stances from only the training data and discriminates instances at
+ Hence, we incorporated contrastive loss with one-class clas- the instance level. CSI uses the concept of negative augmentation
+sification for time-series anomaly detection. Because a training to generate distributionally shifted instances but discriminates
+batch W comprises normal segments that share a temporal instances at the instance level. Although a supervised variant of
+context, we regarded the training segments as one-class, i.e., the CSI exists, it is only applicable in a labeled multi-class setting.
+5058 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024
+
+Fig. 3. Comparison of the one-class contrastive learning framework of CTAD with SimCLR and CSI.
+
+The proposed CTAD discriminates instances at the class level, TABLE III
+ STATISTICS OF THE EXPERIMENTAL DATASETS
+where negative samples are generated solely through negative
+data augmentation.
+
+E. Anomaly Score
+ By contrasting the generated anomalous window segments
+against the normal window segments, we expect unseen anomalous window segments to be clustered far from the normal
+cluster. Hence, the distance between the centroid of the normal
+cluster and the embedding of the unseen window sample can be operation during the first 14 days, and 15 different attacks are
+considered as the extent to which the unseen window sample launched in the subsequent 2 days. The values of 123 sensors and
+deviates from the normal behavior. We defined the anomaly actuators are obtained during this period. The data characteristics
+score S of unseen window W t as follows: of the datasets are summarized in Table III.
+ MSL and SMAP are spacecraft telemetry datasets from
+ S(W t ; fθ , zcent ) = D(fθ (W t ), zcent ), (13) NASA. They contain multivariate data captured from multiple
+ −s+1
+ T telemetry channels across multiple entities. The MSL and SMAP
+ 1
+ zcent = fθ (W i ) (14) datasets contain 27 and 55 entities, respectively, and each entity
+ T − s + 1 i=1 contains 55 and 25 telemetry channels, respectively. Similar to
+where zcent is the centroid of the embeddings of training batch W SWaT and WADI, the training data contain behaviors under
+and D(·, ·) can be any type of the distance function such as the L2 normal operations. Therefore, spacecraft anomalies exist only
+distance or cosine distance. Because zcent can be pre-computed in the test data, which are labeled by expertise.
+and stored after the training ends, fast inference is enabled by
+computing only fθ (W t ) during the inference time. B. Model Architecture and Hyper-Parameters
+ The encoder network fθ consists of one LSTM layer, fol-
+ IV. EXPERIMENTS lowed by a projection layer. The projection layer is known to
+A. Dataset Description be important for contrastive learning [19], and we used the
+ sequential operation of MLP - Batch Normalization - ReLU -
+ We conducted experiments on four widely used public MLP layers as the projection layer. The hidden state dimension
+datasets: Secure Water Treatment (SWaT) [31], WAter DIstribu- of the LSTM was set to 64 for SWaT and 128 for WADI, and
+tion (WADI) [32], Mars Science Laboratory rover (MSL) [33], the hidden state vector of the last time step was used as the
+and Soil Moisture Active Passive satellite (SMAP) [33]. input to the projection layer. Both MLP layers in the projection
+ SWaT 1 represents a scaled-down version of the real-world in- layer had output dimensions of 128. Using this relatively simple
+dustry water treatment plant. Each time step consisted of values network, we show that CTAD consistently performs well on
+obtained from 51 sensors and actuators. 11 days of continuous various datasets. We optimized the network using the Adam
+operations are split into training and test sets. For the first 7 days, optimizer [34] with a learning rate of 0.001 and weight decay
+the system is under normal operation (training set). During the of 0.0001. The learning rate gradually decayed to zero as the
+following 4 days, 41 cyber and physical attacks are launched training progressed, which involved the use of a cosine annealing
+(test set). learning rate scheduler [35]. The network was trained for 100
+ WADI testbed is an extension of the SWaT testbed. It consists epochs with a batch size of 1024 for SWaT, and 50 epochs with
+of 16 days of continuous operation. The system is in normal the same batch size for WADI. The temperature parameter τ was
+ set to 0.1 in all experiments. For data augmentation, TGaussian
+ 1 We used version 1 dataset. In version 1, the first 30 minutes of data are was used as augmentation A and Tbias was used as negative
+removed from version 0 which is not considered a normal operation. augmentation A− . Detailed hyper-parameters of the window
+KIM et al.: CONTRASTIVE TIME-SERIES ANOMALY DETECTION 5059
+
+ TABLE IV
+ HYPER-PARAMETER SETTINGS FOR WINDOW SIZE, DATA AUGMENTATION, AND DISTANCE FUNCTION
+
+size, data augmentations, and distance function are presented in r SimCLR [19] uses randomized data augmentation to gen-
+Table IV. erate positive and negative samples and trains an encoder
+ to predict a positive sample.
+C. Compared Anomaly Detection Methods
+ r CSI [13] additionally generates negative samples via negative data augmentation using the SimCLR contrastive loss.
+ We compared our method with i) classical methods, ii) ex- We exclude the auxiliary classifier of the CSI to perform
+isting multivariate time-series anomaly detection methods, iii) an unbiased comparison of the effectiveness of contrastive
+a one-class anomaly detection method, and iv) self-supervised loss.
+learning methods. r MoCo [23] uses the momentum encoder and dictionary
+ The compared classical methods include autoencoders (AE) queue to increase the number of negative samples. The
+and Isolation Forests (IF). These methods can be summarized representations of the negative samples are stored in a
+as:
+ r The AE trains the encoder–decoder architecture that recon- queue.
+ r BYOL [42] is a non-contrastive learning method in which
+ structs the training data, and the reconstruction error of the the encoder is trained to predict the representation of the
+ test data is defined as an anomaly score.
+ r The IF [36] isolates data in the form of a decision tree. The augmented view from the same image.
+ For the comparison with classical methods and existing timeanomaly score is defined based on the path length of the series anomaly detection methods, the results in [40] were
+ tree. referred to. It should be noted that we performed the same pre-
+ The compared multivariate time-series anomaly detection processing as that reported in [40] for an unbiased comparison.
+methods can be summarized as follows:
+ r The LSTM-VAE [37] constructs a VAE using LSTM layers
+ and a progress-based prior. The anomaly score is defined D. Experimental Setup
+ based on the reconstruction probability of the data. In all the experiments of the CTAD and compared methods,
+ r DAGMM [38] learns the approximated density distribution the training set is min-max normalized in the range [0, 1]
+ of the data by jointly optimizing a deep AE and a Gaussian before constructing the window-sliced batch W . Every test set
+ mixture model to evaluate the likelihood of the samples. is normalized with the min and max values of the correspondr OmniAnomaly [39] renders the VAE representation more ing training set, i.e., xi,normalized = (xi − mintrain )/(maxtrain −
+ robust via a stochastic variable connection and a planar mintrain ), 1 ≤ i ≤ T  . It should be noted that normalizing the
+ normalizing flow. test set with the min and max values of the test set can result in
+ r USAD [40] adversarially trains the AE in two phases. In a mismatch between the training and test sets (e.g., the overall
+ Phase 1, the standard AE is trained, and in Phase 2, the scale of the signal can be reduced by an unexpectedly high value
+ reconstructed output is used as an input for the second AE. of anomalous observation). We downsampled all datasets at a
+ The compared one-class anomaly detection method includes rate of 5 before normalization using the median values, following
+one representative method, and we implemented an encoder the setting provided in [40]. When the test data had less than
+network similar to that for CTAD without using a projection 1,200 time-steps for MSL and SMAP, we did not downsample
+layer. The method is summarized as follows: the data because downsampling erased anomalous observations.
+ r Deep SVDD [41] minimizes the volume of a hypersphere For the evaluation metrics, we used the Area Under the
+ that encloses the training data representation. The anomaly Receiver Operating Characteristic (AUROC), Area Under the
+ score is defined as the distance between the test represen- Precision-Recall curve (AUPR), and F1-score (F1). Most multation and the center of the hypersphere. tivariate time-series anomaly detection methods use only F1
+ Self-supervised learning methods include contrastive and to evaluate the detection performance. Additionally, we report
+non-contrastive learning methods. These methods were initially the threshold-independent metrics (e.g., AUROC and AUPR),
+proposed in the image domain and thus used data augmentations which can be used to evaluate the model performance without
+for the image. We implemented these methods using the pro- the effect of threshold selection.
+posed time-series data augmentation and encoder architecture In [43], F1 with point-adjust (PA) was proposed because
+same as CTAD. The self-supervised learning methods are briefly anomalous observations typically appear in segments (continusummarized as follows: ously in time) and correctly detecting at least once in the segment
+5060 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024
+
+Fig. 4. Conditional probability distribution of anomaly score given normal
+observation p(S|y  = 0) and anomalous observation p(S|y  = 1) (best viewed
+in color).
+
+is sufficient. Specifically, for each ground-truth anomalous segment, if any point in the segment is correctly detected as an
+anomaly, then the entire segment is adjusted to be correctly
+detected as an anomaly. Additionally, we adjusted F1 with
+PA based on previous studies and reported the value herein.
+ Fig. 5. AUPR for augmentation compositions.
+F1, precision, and recall adjusted with PA are denoted herein
+by F1PA , precisionPA , and recallPA , respectively. We report the
+averaged AUROC and AUPR over the entities for MSL and
+SMAP, which contain multiple entities. Similarly, we calculated score distribution differs significantly between the normal and
+F1 and F1PA based on the averaged precision, recall, precisionPA , anomalies, compared with those of SimCLR and CSI. Moreover,
+and recallPA based on the setting provided in [39]. the score distribution of the normal samples was concentrated
+ All experiments were performed on a server with the follow- around 0, thus forming a sharp distribution. This implies that
+ing specifications: Ubuntu 20.04 OS, Intel i7-9800X CPU with the embeddings of the unseen normal samples were clustered
+128 GB of RAM, NVIDIA GeForce GTX Titan X Pascal GPU around the centroid of the normal training samples. Moreover,
+with 12 GB of VRAM, Python version 3.8.8, PyTorch version the anomaly score scale was extremely large (from 15 to 20) for
+1.7.1, and CUDA version 11.0. the anomalous samples in CTAD. This shows the discriminative
+ ability of CTAD, and the embeddings of the anomalies are
+ clustered far from the centroid of the training normal samples.
+E. Anomaly Detection Performance
+ Table V presents the anomaly detection performance of the
+ F. Effect of Data Augmentation Composition
+proposed method compared with those of other methods. For the
+SWaT, WADI, and MSL datasets, CTAD exhibited the highest Fig. 5 shows the AUPR for each data augmentation comperformance in terms of the AUROC, AUPR, F1, and F1PA . position using the SWaT dataset. For the seven designed data
+MoCo showed the second-best performance among contrastive augmentation methods, each row and column represents the data
+learning methods. This may be due to the momentum encoder augmentation used as negative augmentation A− and augmenand dictionary queue. The enqueued normal embeddings at the tation A, respectively. The last row and column represent the
+head of the queue are from the old version of the encoder. averaged AUPR for each augmentation and negative augmen-
+Thus, they are more suitable as negative samples in the instance tation, respectively. The numbers in parentheses indicate the
+discrimination setting. For BYOL, which is a non-contrastive average AUPR rankings of each augmentation, when used as A
+learning method that does not require negative samples, the or A− . The results were sorted based on the ranking of A− .
+anomaly detection performance is low for the SWaT, WADI, We obtained three sets of important results. First, the anomaly
+and MSL datasets. detection performance was primarily affected by the type of neg-
+ The effectiveness of one-class contrastive loss is highlighted ative augmentation instead of the semantic-preserving augmenin the comparison with SimCLR and CSI. Compared to Sim- tation. For example, when the negative augmentation A− is Tbias
+CLR, CSI uses negative augmentation to generate additional or Treverse , the AUPR is consistently high regardless of A. In the
+negative samples for contrast. Although this improves the case of TGaussian or T dropout , however, the AUPR is consistently
+anomaly detection performance compared with SimCLR (i.e., low when they are used as negative augmentation. Second, the
+AUPR from 0.127 to 0.384, and F1 score from 0.279 to 0.455 in augmentation that is not suitable for negative augmentation A−
+SWaT), the performance remained worse than the other mul- is suitable for augmentation A. In fact, TGaussian and T dropout
+tivariate time-series anomaly detection methods. Leveraged by are the two worst alternatives for negative augmentation, althe one-class contrastive loss, CTAD improves the performance though they are the two best ones for augmentation. Finally,
+compared with CSI (i.e., AUPR from 0.384 to 0.802 (2.08× scale-perturbing augmentation is typically preferred for negative
+higher), and F1 score from 0.455 to 0.841 (1.85× higher)). augmentation; however, perturbing to zero significantly deterio-
+ Fig. 4 shows the conditional probability distribution of the rates the performance. Meanwhile, both Tbias and Tamplify are
+anomaly scores of SimCLR, CSI, and CTAD. In CTAD, the high-performing negative augmentation alternatives, whereas
+KIM et al.: CONTRASTIVE TIME-SERIES ANOMALY DETECTION 5061
+
+ TABLE V
+ PERFORMANCE COMPARISON WITH COMPARED METHODS
+5062 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024
+
+ TABLE VI
+ ABLATION STUDIES ON COMPONENTS OF CTAD
+
+ Fig. 7. Ablation studies on various components of the CTAD such as batch
+ size, model size, temperature, learning rate, and augmentation parameters.
+
+ strengths. BN appears to prevent collapse and thus enables the
+ utilization of near anomalous samples. The effective use of
+ hard negative samples allows the contrastive learning encoder
+ to be trained more effectively [44], [45], and the use of hard
+ anomalous samples is also effective for time-series anomaly
+ detection.
+Fig. 6. AUPR for different augmentation strengths with and without batch
+normalization (BN). Bias strength and noise strength are represented by b and
+ Because CTAD considers every normal window segment as
+σ, respectively. (a) With BN, AUPR increased for weak negative augmentation. positive, multiple positives exist even without augmentation A
+(b) Without BN, weak negative augmentation resulted in mode collapse. (i.e., N − 1 positives which are different normal window segments in the mini-batch). We denote augmentation A as positive
+ augmentation, and Table VI shows that the AUPR decreases
+T dropout exhibits the worst performance. This is because per- from 0.802 to 0.262 for the case without positive augmentation.
+turbing to zero removes the information. Tmask exhibits inferior This implies that positive augmentation is important in CTAD.
+performance, with zeros in the time steps. In summary, the type Moreover, as each anchor contains 2N − 1 positive samples,
+of negative augmentation is the most important factor in con- the exponential terms from the positive samples can be summed
+trastive time-series data augmentation, and Tbias is generally a inside the logarithm as:
+good option. These observations are crucial when designing and 2N −1
+selecting time-series data augmentation methods for contrastive 1 
+ Loc = − log
+time-series anomaly detection. 2N i=0
+   
+ 1 k∈i+ exp (sim(zi , zk )/τ )
+G. Ablation Studies × · . (15)
+ |i+ | j∈i− ∪i+ exp (sim(zi , zj )/τ )
+ We performed experimental analyses to determine components that are vital to CTAD. Table VI summarizes the AUPR When (15) is used as a one-class contrastive loss, the AUPR
+when each component of CTAD is eliminated. Most notably, deteriorated to 0.384, as shown in Table VI. This tendency
+batch normalization (BN) is the key difference. When BN is was first observed in contrastive representation learning with
+removed from the projection layer, the learned embeddings supervision in the image domain [18]; similarly, this is also
+collapse to a single point, resulting in a significant decrease in applicable to CTAD.
+the AUPR from 0.802 to 0.121. Cosine learning rate scheduling is another important factor
+ Fig. 6 further analyzes this phenomenon. Herein, we report that improves contrastive representation learning [19]. We inthe AUPR for different augmentation and negative augmentation vestigated whether this is applicable to multivariate time-series
+strengths. Additive bias is used as a negative augmentation A− anomaly detection. Table VI shows that the absence of cosine
+and the bias scale b is increased from 0.1 to 0.4 by 0.1. Additive learning rate scheduling decreased the AUPR from 0.802 to
+Gaussian noise is used as an augmentation A and the used 0.772. In other words, cosine scheduling enhanced anomaly
+standard deviations σ are 0.03, 0.05, 0.1, and 0.15. When the detection performance, but the effect was insignificant compared
+strength of the negative augmentation is weak, negative aug- with those of other components.
+mentation generates hard anomalous samples that are difficult We conducted ablation studies by changing the hyperto distinguish from normal samples. If BN is not used, then parameters of several components of CTAD, such as the batch
+the encoder network cannot distinguish the hard anomalous size, number of LSTM layers, LSTM hidden state dimension,
+samples from normal samples. Therefore, the embeddings are projection layer dimension, temperature, learning rate, and augcollapsed to a single point for the weak negative augmentation mentation parameters. The results are shown in Fig. 7. When the
+KIM et al.: CONTRASTIVE TIME-SERIES ANOMALY DETECTION 5063
+
+Fig. 8. Visualization of PCA results of SimCLR (left), CSI (middle), and CTAD (right).
+
+number of layers was increased, the performance deteriorated TABLE VII
+ MODEL SIZE AND INFERENCE TIME
+slightly but remained similar in general. This supports the idea
+that simple networks are sufficient for achieving good performance in multivariate time-series anomaly detection. Existing
+methods may be over-parameterized to fit multivariate timeseries datasets. The most appropriate hidden state dimension of
+LSTM is 64, and a higher dimension degrades the performance.
+This shows that a higher model capacity is not the best choice.
+The performance improves when the number of variables to be
+augmented is randomly selected (line 2 of Algorithm 1). More- I. Model Size and Inference Time
+over, instead of augmenting the entire time-series of the selected
+variables, providing additional randomness by augmenting only Table VII presents the model size and inference time
+a few percent of the time-series (line 5 of Algorithm 1) is more compared with OmniAnomaly and USAD. Compared with
+effective. This is because the increased randomness provides OmniAnomaly, CTAD has 47.96× fewer parameters and
+more variety to the generated samples and augmenting a small demonstrates 20.21× faster inference. Compared with USAD,
+portion, instead of the entire sample, can generate hard anoma- CTAD has 1.54× fewer parameters and demonstrates 1.36×
+lies. faster inference. CTAD demonstrates fast and memory-efficient
+ To summarize the important implications of the ablation performance, which is vital to time- and memory-critical tasks
+studies, BN is vital to the successful anomaly detection of such as real-time monitoring or anomaly detection in wearable
+CTAD, and using various samples and hard-negative samples for devices.
+contrast is crucial. Thus, increasing randomness and generating
+hard negative samples using the proposed augmentation strategy
+improves the anomaly detection performance of CTAD. J. Noise Robustness
+ By incorporating additive Gaussian noise as the augmentation of the contrastive learning framework, we expect another
+ desirable property of the time-series anomaly detection model:
+H. Representation Separateness robustness to noise. Specifically, the “noise augmented view”
+ To verify whether the normal and anomalous window seg- of the window segments are considered positive to each other,
+ments were separated sufficiently in the embedding space, we resulting in invariance to noise. Robustness to noise is crucial
+visualized the embeddings of the test data via principal com- because signals can interfere with undesired noise. This can inponent analysis in a three-dimensional space. Fig. 8 shows the crease the number of false positives, i.e., noisy normal segments
+comparison of the visualizations of SimCLR, CSI, and CTAD. can be predicted as anomalies.
+In CTAD, anomalous segments were well clustered and sepa- To demonstrate that CTAD performs robustly, we considered
+rated from normal segments, and the embeddings of the normal two scenarios where the training data are perturbed or the test
+segments were highly clustered. Conversely, the embeddings data are perturbed at a certain ratio. In both cases, perturbation
+of SimCLR and CSI were not well separated between normal was injected with independent and identically distributed Gausand anomalous segments. Meanwhile, in CTAD, the scale of sian noise sampled from N (0, (0.3)2 ). This setting is similar to
+most principal components (Component 1) was much larger that presented in [40], however, in [40], noise was injected only
+for the anomalous segments compared with the other methods. into the training data.
+This implies that CTAD performs well because the principal Table VIII shows the AUPR as the perturbation rate increased
+component represents the degree of the anomaly. from 0 to 0.3. When CTAD was trained with the perturbed
+5064 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 10, OCTOBER 2024
+
+ TABLE VIII
+ ROBUSTNESS TO NOISE FOR DIFFERENT PERTURBATION RATES
+
+training data, the AUPR was consistently high with little degra- positive samples and uses negative samples solely from negative
+dation until a perturbation rate of 0.05. Specifically, the AUPR distributions generated via negative data augmentations. Moredecreased by only 1.6% at a perturbation rate of 0.05. Simi- over, we designed general time-series data augmentations for
+larly, when the test data were perturbed, AUPR decreased only time-series contrastive learning and empirically demonstrated
+slightly, i.e., 3.2%, at a perturbation rate of 0.05. the effectiveness of the proposed data augmentations for timeseries anomaly detection. We identified the key role of BN
+ V. DISCUSSION in enabling the exploitation of hard anomalous samples. The
+ We designed three types of general time-series data augmen- simple yet effective modification of the contrastive loss and
+tation methods, and these methods present the following advan- the appropriate time-series data augmentation method enable
+tages. First, compared with augmenting the entire time series, the accurate, fast, memory-efficient, and robust multivariate timerandomness of augmentation is significantly diversified by two series anomaly detection. In future investigations, one-class
+controlling parameters nv and p, which improves the detection contrastive loss should be applied to other domain tasks and the
+performance (bottom right of Fig. 7). Second, scale-perturbing role of BN in contrastive anomaly detection should be analyzed
+augmentation can generate point-wise anomalies, which can rep- theoretically.
+resent hard anomalies in real-world scenarios such as glitching
+to only a few specific variables. The generated hard anomalies
+enhance the detection performance when BN is applied, as REFERENCES
+shown in Fig. 6. Finally, scale-perturbing augmentation can [1] E. A. Lee, “Cyber physical systems: Design challenges,” in Proc. IEEE
+minimize the hurt of temporality because the augmentation does 11th Int. Symp. Object Compon.-Oriented Real-Time Distrib. Comput.,
+not occur in consecutive periods. 2008, pp. 363–369.
+ [2] R. Baheti and H. Gill, “Cyber-physical systems,” Impact Control Technol.,
+ One potential limitation of the current augmentation method is vol. 12, no. 1, pp. 161–166, 2011.
+that the augmentation strength relies on pre-defined parameters, [3] J. Lee, B. Bagheri, and H.-A. Kao, “A cyber-physical systems architecsuch as b or σ. Adaptive time-series augmentation strategies, ture for industry 4.0-based manufacturing systems,” Manuf. Lett., vol. 3,
+ pp. 18–23, 2015.
+such as determining the augmentation strength based on the sig- [4] K. Choi, J. Yi, C. Park, and S. Yoon, “Deep learning for anomaly detection
+nal power of the window or generating synthetic anomalies via in time-series data: Review, analysis, and guidelines,” IEEE Access, vol. 9,
+generative models, instead of negative augmentation, would be pp. 120043–120065, 2021.
+ [5] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, and S.-K. Ng, “MAD-GAN:
+an interesting future direction. Moreover, whereas our one-class Multivariate anomaly detection for time series data with generative
+contrastive loss considers every window segment in the training adversarial networks,” in Proc. Int. Conf. Artif. Neural Netw., 2019,
+data to be positive, more closely related window segments may pp. 703–716.
+ [6] C. Zhang et al., “A deep neural network for unsupervised anomaly detecexist, e.g., window segments that are closer in time can share a tion and diagnosis in multivariate time series data,” in Proc. AAAI Conf.
+more temporal context. We expect the positive sample mining Artif. Intell., 2019, pp. 1409–1416.
+strategy, which quantifies the temporal context between window [7] L. Shen, Z. Li, and J. Kwok, “Timeseries anomaly detection using temporal
+ hierarchical one-class network,” in Proc. Adv. Neural Inf. Process. Syst.,
+segments, to further enhance multivariate time-series anomaly 2020, pp. 13016–13026.
+detection performance. In addition, the application of our results [8] R. Elakkiya, V. Subramaniyaswamy, V. Vijayakumar, and A. Mahanti,
+to other applications, such as anomaly detection in embedded “Cervical cancer diagnostics healthcare system using hybrid object detection adversarial networks,” IEEE J. Biomed. Health Inform., vol. 26, no. 4,
+systems that require memory-critical service as well as the pp. 1464–1471, Apr. 2022.
+anomaly detection of sequential data, would be an interesting [9] D. K. Jain, A. Mahanti, P. Shamsolmoali, and R. Manikandan, “Deep
+future investigation. neural learning techniques with long short-term memory for gesture
+ recognition,” Neural Comput. Appl., vol. 32, no. 20, pp. 16073–16089,
+ The model performs well even under a moderate amount 2020.
+of noise because it is trained in similar situations, i.e., noisy [10] N. Yap, M. Gong, R. K. Naha, and A. Mahanti, “Machine learning-based
+window segments are regarded as positives. Having prior knowl- modelling for museum visitations prediction,” in Proc. IEEE Int. Symp.
+ Netw. Comput. Commun., 2020, pp. 1–7.
+edge regarding the potential noise would allow one to adjust [11] H. Chegini, F. Beltran, and A. Mahanti, “Fuzzy logic based pasture
+the robustness of the model by setting the appropriate noise assessment using weed and bare patch detection,” in Proc. Int. Conf. Smart
+augmentation strength during training. Sustain. Agriculture, 2021, pp. 1–18.
+ [12] R. Elakkiya et al., “Hybrid deep neural network for handling data
+ imbalance in precursor microrna,” Front. Public Health, vol. 9, 2021,
+ VI. CONCLUSION Art. no. 821410.
+ [13] J. Tack, S. Mo, J. Jeong, and J. Shin, “CSI: Novelty detection via contrastive
+ Herein, we proposed a novel one-class contrastive learning learning on distributionally shifted instances,” in Proc. Adv. Neural Inf.
+method that considers all data in the training data distribution as Process. Syst., vol. 33, pp. 11839–11852, 2020.
+KIM et al.: CONTRASTIVE TIME-SERIES ANOMALY DETECTION 5065
+
+[14] V. Sehwag, M. Chiang, and P. Mittal, “SSD: A unified framework for self- [39] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+ supervised outlier detection,” in Proc. Int. Conf. Learn. Representations, detection for multivariate time series through stochastic recurrent neural
+ 2021. [Online]. Available: https://openreview.net/forum?id=v5gjXpmR8J network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discov. Data
+[15] K. Sohn, C.-L. Li, J. Yoon, M. Jin, and T. Pfister, “Learning and evaluat- Mining, 2019, pp. 2828–2837.
+ ing representations for deep one-class classification,” in Proc. Int. Conf. [40] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+ Learn. Representations, 2021. [Online]. Available: https://openreview.net/ “USAD: Unsupervised anomaly detection on multivariate time series,” in
+ forum?id=HCSgyPUfeDj Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2020,
+[16] Z. Wu, Y. Xiong, S. X. Yu, and D. Lin, “Unsupervised feature learning pp. 3395–3404.
+ via non-parametric instance discrimination,” in Proc. IEEE Conf. Comput. [41] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+ Vis. Pattern Recognit., 2018, pp. 3733–3742. Learn., 2018, pp. 4393–4402.
+[17] C.-Y. Chuang, J. Robinson, Y.-C. Li, A. Torralba, and S. Jegelka, “Debiased [42] J.-B. Grill et al., “Bootstrap your own latent: A new approach to selfcontrastive learning,” in Proc. Adv. Neural Inf. Process. Syst., vol. 33, 2020, supervised learning,” in Proc. Adv. Neural Inf. Process. Syst., vol. 33,
+ pp. 8765–8775. 2020, pp. 21 271–21 284.
+[18] P. Khosla et al., “Supervised contrastive learning,” in Proc. Adv. Neural [43] H. Xu et al., “Unsupervised anomaly detection via variational auto-encoder
+ Inf. Process. Syst., vol. 33, 2020, pp. 18661–18673. for seasonal KPIs in web applications,” in Proc. World Wide Web Conf.,
+[19] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework 2018, pp. 187–196.
+ for contrastive learning of visual representations,” in Proc. Int. Conf. Mach. [44] J. D Robinson, C.-Y. Chuang, S. Sra, and S. Jegelka, “Contrastive
+ Learn., 2020, pp. 1597–1607. learning with hard negative samples,” in Proc. Int. Conf. Learn. Repre-
+[20] X. Chen, H. Fan, R. Girshick, and K. He, “Improved baselines with sentations, 2021. [Online]. Available: https://openreview.net/forum?id=
+ momentum contrastive learning,” 2020, arXiv:2003.04297. CR1XOQ0UTh-
+[21] A. Sinha, K. Ayush, J. Song, B. Uzkent, H. Jin, and S. Ermon, “Negative [45] Y. Kalantidis, M. B. Sariyildiz, N. Pion, P. Weinzaepfel, and D. Larlus,
+ data augmentation,” in Proc. Int. Conf. Learn. Representations, 2021. “Hard negative mixing for contrastive learning,” in Proc. Adv. Neural Inf.
+ [Online]. Available: https://openreview.net/forum?id=Ovp8dvB8IBH Process. Syst., 2020, pp. 21798–21809.
+[22] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural
+ Comput., vol. 9, no. 8, pp. 1735–1780, 1997.
+[23] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for
+ unsupervised visual representation learning,” in Proc. IEEE/CVF Conf. HyunGi Kim received the BS degree in electrical and
+ Comput. Vis. Pattern Recognit., 2020, pp. 9729–9738. computer engineering in 2020 from Seoul National
+[24] N. Zhao, Z. Wu, R. W. H. Lau, and S. Lin, “What makes instance University, Seoul, South Korea, where he is currently
+ discrimination good for transfer learning?” in Proc. Int. Conf. Learn. Rep- working toward the integrated MS/PhD degree in
+ resentations, 2021. [Online]. Available: https://openreview.net/forum?id= electrical and computer engineering. His research
+ tC6iW2UUbJf interests include deep learning, self-supervised learn-
+[25] M. Laskin, A. Srinivas, and P. Abbeel, “CURL: Contrastive unsupervised ing, and anomaly detection.
+ representations for reinforcement learning,” in Proc. Int. Conf. Mach.
+ Learn., 2020, pp. 5639–5650.
+[26] M. N. Mohsenvand, M. R. Izadi, and P. Maes, “Contrastive representation
+ learning for electroencephalogram classification,” in Proc. Mach. Learn.
+ Health, 2020, pp. 238–253.
+[27] D. Kiyasseh, T. Zhu, and D. A. Clifton, “Clocs: Contrastive learning of
+ cardiac signals across space, time, and patients,” in Proc. Int. Conf. Mach.
+ Learn., 2021, pp. 5606–5615. Siwon Kim received the BS degree in electrical and
+[28] L. Peng, N. Wang, J. Xu, X. Zhu, and X. Li, “GATE: Graph CCA for computer engineering in 2018 from Seoul National
+ temporal self-supervised learning for label-efficient FMRI analysis,” IEEE University, Seoul, South Korea, where she is currently
+ Trans. Med. Imag., vol. 42, no. 2, pp. 391–402, Feb. 2023. working toward the integrated MS/PhD degree in
+[29] L. Ericsson, H. Gouk, and T. M. Hospedales, “How well do self-supervised electrical and computer engineering. Her research
+ models transfer?,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recog- interests include deep learning, explainable AI, and
+ nit., 2021, pp. 5414–5423. biomedical applications.
+[30] C. Chen et al., “Novelty detection via contrastive learning with negative
+ data augmentation,” in Proc. 30th Int. Joint Conf. Artif. Intell., Z.-H.
+ Zhou, Ed., Aug. 2021, pp. 606–614. [Online]. Available: https://doi.org/
+ 10.24963/ijcai.2021/84
+[31] J. Goh, S. Adepu, K. N. Junejo, and A. Mathur, “A dataset to support Seonwoo Min received the BS and PhD degrees
+ research in the design of secure water treatment systems,” in Proc. Int. in electrical and computer engineering from Seoul
+ Conf. Crit. Inf. Infrastructures Secur., 2016, pp. 88–99. National University, Seoul, South Korea, in 2015
+[32] C. M. Ahmed, V. R. Palleti, and A. P. Mathur, “WADI: A water distribution and 2021, respectively. He is currently a research
+ testbed for research in the design of secure cyber physical systems,” scientist with Fundamental Research Laboratory, LG
+ in Proc. 3rd Int. Workshop Cyber-Phys. Syst. Smart Water Netw., 2017, AI Research. His research interests include machine
+ pp. 25–28, doi: 10.1145/3055366.3055375. learning and bioinformatics. He was the recipient of
+[33] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Soder- the Global PhD Fellowship in 2016, Microsoft Restrom, “Detecting spacecraft anomalies using LSTMs and nonparametric search Asia Fellowship Nomination Award in 2018,
+ dynamic thresholding,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl. Korea National Excellent Researcher Award in 2020,
+ Discov. Data Mining, 2018, pp. 387–395. and many other prestigious awards.
+[34] D. Kingma and J. Ba, “Adam: A method for stochastic optimization,” in
+ Proc. Int. Conf. Learn. Representations, San Diega, CA, USA, 2015.
+[35] I. Loshchilov and F. Hutter, “SGDR: Stochastic gradient descent with
+ Byunghan Lee (Member, IEEE) received the BS dewarm restarts,” in Proc. Int. Conf. Learn. Representations, 2017. [Online].
+ Available: https://openreview.net/forum?id=Skq89Scxx gree in electrical engineering from Korea University,
+ South Korea, in 2011, and the PhD degree in elec-
+[36] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 18th
+ trical and computer engineering from Seoul National
+ IEEE Int. Conf. Data Mining, 2008, pp. 413–422.
+ University, Seoul, South Korea, in 2018. He is cur-
+[37] D. Park, Y. Hoshi, and C. C. Kemp, “A multimodal anomaly detector
+ for robot-assisted feeding using an LSTM-based variational autoencoder,” rently an assistant professor with the Department of
+ Electronic Engineering, Seoul National University of
+ IEEE Robot. Automat. Lett., vol. 3, no. 3, pp. 1544–1551, Jul. 2018.
+ Science and Technology, Seoul. His research interests
+[38] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsuinclude machine learning, artificial intelligence, and
+ pervised anomaly detection,” in Proc. Int. Conf. Learn. Representations,
+ their biomedical applications.
+ 2018.

@@ -1,0 +1,150 @@
+7612                                                        IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 12, DECEMBER 2024
+
+
+
+
+   Adversarial Graph Neural Network for Multivariate
+            Time Series Anomaly Detection
+ Bolong Zheng , Member, IEEE, Lingfeng Ming, Kai Zeng, Mengtao Zhou, Xinyong Zhang, Tao Ye, Bin Yang ,
+                 Xiaofang Zhou , Fellow, IEEE, and Christian S. Jensen , Fellow, IEEE
+
+
+   Abstract—Anomaly detection is one of the most significant tasks                to determine whether performance failures happen in online
+in multivariate time series analysis, while it remains challenging                transaction processing (OLTP) workloads [4]. In industrial in-
+to model complex patterns for improving detection accuracy and                    frastructures, operators monitor equipments through sensors to
+to interpret the root causes of anomalies. However, existing studies
+either consider only the temporal dependencies, or simply recon-                  ensure the safety from attack [5].
+struct the original input for detection, both neglecting the hidden re-              As labeling anomalies by human experts is time consuming
+lationships among multivariate. We propose an adversarial graph                   and labor intensive, time series often come without anomaly
+neural network based anomaly detection model, called SGAT-AE,                     labels, so the anomaly detection is usually considered as an
+which consists of a Self-learning Graph ATtention network (SGAT),                 unsupervised learning problem. In the past few years, classi-
+an Auto-Encoder (AE), and an adversarial training component.
+Specifically, SGAT is a prediction model that discovers the graph                 cal unsupervised statistical learning methods [6], [7], [8] are
+dependency relationships among multivariate and acts as a sample                  proposed to deal with the dependencies among multivariate in a
+generator to confuse AE, while AE reconstructs the samples and                    linear manner.
+acts as a discriminator that distinguishes a real sample from a                      In order to extract more complex features of multivariate time
+generated one. A novel adversarial training between SGAT and                      series data, deep learning based methods have been proposed for
+AE is applied to amplify the errors of anomalies such that the
+prediction performance of SGAT is improved and the overfitting                    anomaly detection, which can be mainly divided into prediction-
+of AE is avoided. In addition, we aggregate the prediction error,                 based [1], [9] and reconstruction-based methods [10], [11],
+the reconstruction error, and the adversarial error for anomaly de-               [12]. In particular, prediction-based methods model the normal
+tection, and develop a graph based anomaly interpretation method                  patterns of historical time series and predict the future trend,
+that locates the root causes from both local and global perspectives.             but they are easily affected by noise. The reconstruction-based
+Extensive experiments with five real-world data offer evidence
+that the proposed solution SGAT-AE is capable of achieving better                 methods learn latent representations of normal patterns and use it
+performance when compared with the state-of-the-art proposals.                    to reconstruct the original input, and then use the reconstruction
+                                                                                  error to detect anomalies. Although these methods can reduce
+  Index Terms—Anomaly detection, anomaly interpretation,
+graph neural network, time series.
+                                                                                  the influence of noise, they are prone to overfitting. Gener-
+                                                                                  ative adversarial networks (GANs) [13], [14] and variational
+                            I. INTRODUCTION                                       autoencoders (VAEs) [12] are generative models that learn the
+    N real-world applications, sensing technologies are being                     distributions of normal data, and detect anomalies with recon-
+I   deployed that produce increasing volumes of multivariate
+time series data, which enables the monitoring capabilities with
+                                                                                  struction probabilities. More recently, ensemble models [15],
+                                                                                  [16] are proposed to improve the performance by combining the
+the objective of supporting a variety of applications [1], [2],                   advantages of multiple base models. In addition, transformer-
+[3]. The anomaly detection in time series is one of the most                      based methods [17], [18] are proposed that use attention-based
+significant tasks, refers to identifying abnormal states within                   autoencoders for reconstruction.
+a specific time period. For instance, database administrators                        However, anomaly detection in multivariate time series re-
+(DBAs) monitor thousands of key performance indicators (KPIs)                     mains challenging due to the following reasons:
+                                                                                     (1) Hidden Spatial Dependency: In addition to the inherent
+                                                                                  temporal dependencies in time series, the spatial dependencies
+  Manuscript received 24 November 2022; revised 22 April 2024; accepted 23
+June 2024. Date of publication 2 July 2024; date of current version 13 November   (hidden complex relationships) among multivariate exist and are
+2024. This work was supported in part by NSFC under Grant 62372194 and            unknown to operators. Consider an example in a water treatment
+Grant 62322205 and has already been applied in Huawei’s GaussDB (DWS)             plant where sensor 1 records the state of a valve and sensor 2
+system." Recommended for acceptance by P. Tsaparas. (Corresponding author:
+Bolong Zheng.)                                                                    records the flow rate. The change of sensor 1 leads to the change
+  Bolong Zheng and Lingfeng Ming are with the Huazhong University of              of sensor 2, and this affection may also be delayed. Although
+Science and Technology, Wuhan 430074, China (e-mail: zblchris@gmail.com).         principal component analysis (PCA) [19], [20] and auto-encoder
+  Kai Zeng, Mengtao Zhou, Xinyong Zhang, and Tao Ye are with Huawei,
+Shenzhen 518129, China.                                                           (AE) [21], [22] can model the correlations of latent representa-
+  Bin Yang is with East China Normal University, Shanghai 200050, China.          tions among multivariate, they do not explicitly present these
+  Xiaofang Zhou is with the Hong Kong University of Science and Technology,       dependency relationships to operators. The ambiguous spatial
+Hong Kong, SAR, China.
+  Christian S. Jensen is with Aalborg University, 9220 Aalborg, Denmark.          dependencies make it difficult to detect and interpret anomalies
+  Digital Object Identifier 10.1109/TKDE.2024.3419891                             correctly.
+
+                         1041-4347 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+ZHENG et al.: ADVERSARIAL GRAPH NEURAL NETWORK FOR MULTIVARIATE TIME SERIES ANOMALY DETECTION                                            7613
+
+
+
+   (2) Indistinguishably Small Anomaly Score: Existing models          relationships among multivariate, and interpret effectively the
+learn the normal patterns during training and take the error           anomaly from both local and global perspectives (Challenge 3).
+between the model output and the ground truth as the anomaly              Overall, the contributions are summarized as follows:
+score, so a sample with a high score is labeled as an anomaly.            1) We propose a novel adversarial graph neural network
+However, if the anomaly is relatively close to the normal data,               SGAT-AE for anomaly detection in multivariate time se-
+the error might be too small to detect correctly. Therefore, the              ries. SGAT learns graph dependency relationships among
+core of improving the performance of anomaly detection is                     multivariate to better extract the spatial dependencies and
+to amplify the errors, especially for the anomalies with low                  temporal dependencies. The idea of SGAT-AE is to em-
+scores. Although USAD [5] proposes two AEs sharing a same                     ploy an adversarial training between SGAT and AE to
+encoder for adversarial training to amplify the errors, it dose not           amplify the errors of anomalies.
+model the spatial and temporal dependencies, which limits the             2) We develop a novel anomaly interpretation method that
+performance.                                                                  effectively locates the root cause variables of the anoma-
+   (3) Accurate Anomaly Interpretation: Most existing studies                 lies by considering the dependency relationships among
+only focus on detecting the anomaly, but neglect the anomaly                  multivariate, which are obtained from the self-learning
+interpretation that analyzes which main variables cause the                   graph in SGAT.
+anomaly that can help speed up troubleshooting. Both DAE-                 3) We conduct extensive experiments in five real-world
+MON [23] and OmniAnomaly [2] simply identify the top-k                        datasets, and the experimental results show that SGAT-
+variables with the largest errors or with the lowest reconstruction           AE outperforms state-of-the-art baseline methods. A case
+probabilities as the interpretation of the anomaly. However, they             study also shows that the anomaly interpretation method
+fail to consider the dependency relationships among multivariate              effectively locates the root causes of anomalies.
+and may miss the true root cause variables.
+   To address the challenges above, we propose a novel adver-
+sarial graph neural network, called SGAT-AE, which consists                                    II. PRELIMINARIES
+of a Self-learning Graph-structured ATtention network (SGAT),            We proceed to introduce the settings and formally define the
+an Auto-Encoder (AE), and an adversarial training component.           problem of anomaly detection in multivariate time series.
+SGAT is a prediction-based model that combines a self-learning
+graph and an attention network to discover the hidden spatial
+dependencies among multivariate (Challenge 1). Specifically,           A. Settings
+different from most graph learning methods [24], [25], SGAT               Definition 1 (Time Series): A multivariate time series se-
+learns a directed graph structure since the dependence patterns        quence is denoted as X = {X1 , . . . , Xt , . . . , XT }, where Xt ∈
+among multivariate time series are asymmetric. SGAT uses               RN ×d is an observation at time t that contains N variables with
+the multiscale 1D convolution to extract the nonlinear tem-            d-dimensional features, and T is the length of the time series.
+poral dependencies of multivariate time series. Different from            To model the strong temporal dependencies of time series,
+GDN [26] that only captures the spatial dependencies, SGAT             we pre-process the original sequences into time windowed se-
+enables to learn both the spatial and temporal dependencies            quences.
+simultaneously. AE is a reconstruction-based model that learns            Definition 2 (Time Windowed Sequence): We denote a
+the latent representations of normal patterns and reconstructs the     windowed sample at time t with length w as Wt =
+original input.                                                        {Xt−w+1 , . . . , Xt }, which contains the historical observations
+   As mentioned previously, the reconstruction-based methods           from time t − w + 1 to t in X . Therefore, X is transformed
+enable to learn the normal patterns but are easy to get overfitting,   into a time windowed sequence W = {W1 , . . . , Wt , . . . , WT  },
+while the prediction-based methods are susceptible to noise.           where T  = T − w + 1.
+Therefore, to take the best of the both worlds, an adversarial            In order to extract temporal patterns and reduce the impact
+training process between SGAT and AE is adopted. The input             of noise, we adopt a feature enrichment method [27], [28]
+data is first processed by SGAT whose role is to reconstruct           that uses the moving average to smooth short-term fluctua-
+the input as close as possible. Then AE tries to distinguish the       tions and to highlight long-term trends. We denote Xtm as the
+data generated by SGAT from the original input. It is worth            moving average value of the latest m times at time t. Note
+noting that AE is able to identify whether an input sample             that, a large m indicates an emphasis on long-term trends.
+is normal or not before reconstruction. So we introduce an             Based on practitioner’s experiences, we adopt the moving av-
+adversarial training that allows to amplify the reconstruction         erage features of Xt3 , Xt5 for short-term patterns, and those
+errors from data generated by SGAT to avoid over-parameterized         of Xt10 , Xt20 for long-term patterns, respectively, in order to
+(Challenge 2). Different from GANs [13], the reason why we             obtain abundant temporal features and to reduce the impacts
+use AE as the discriminator is to get rid of the mode collapse         of noises by both the short and long-term patterns. For ease
+and non-convergence owing to the stability of AE [5].                  of presentation, we use Xt to represent all these moving av-
+   We compute the anomaly score by aggregating the predic-             erage features, i.e., Xt = [Xt3 ; Xt5 ; Xt10 ;Xt20 ], where [; ] rep-
+tion error, the reconstruction error, and the adversarial error        resents the concatenation operation. Then, we transform Xt
+together. In addition, we use the self-learning graph to clarify the   to Wt .
+7614                                               IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 12, DECEMBER 2024
+
+
+
+
+Fig. 1.   The SGAT-AE model.                                          Fig. 2.    The architecture of SGAT.
+
+
+
+
+B. Problem Statement                                                            merging its input and prediction output to obtain a gen-
+                                                                                erated sample W̃t , while AE discriminates whether the
+   We study two problems as follows.                                            input is an original input Wt or a generated input W̃t .
+   1) Anomaly Detection: Given a windowed sample Wt and                         As a result, SGAT-AE enables to amplify the errors of
+      the corresponding moving average feature Wt at time                      anomalies through the adversarial training between the
+      t, SGAT-AE aims to label the observation Xt with yt ∈                     two networks.
+      {0, 1} by computing an anomaly score St based on the
+      error between the original input and the model output. If       B. Multivariate Time Series Forecasting
+      St is larger than a threshold τ , we label Xt as an anom

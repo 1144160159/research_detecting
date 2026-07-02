@@ -1,0 +1,145 @@
+IEEE TRANSACTIONS ON ARTIFICIAL INTELLIGENCE, VOL. 6, NO. 2, FEBRUARY 2025                                                                        317
+
+
+
+
+  A Membership Inference and Adversarial Attack
+ Defense Framework for Network Traffic Classifiers
+               Guangrui Liu , Weizhe Zhang , Senior Member, IEEE, Xurun Wang , Stephen King ,
+                                          and Shui Yu , Fellow, IEEE
+
+
+   Abstract—Malicious traffic identification methods in intrusion               AI security defenses ignore the network traffic characteristics,
+detection systems have evolved from rule-based matching to                      resulting in weak protection for ML-NIDS. They not only failed
+machine learning. However, security risks such as membership                    to effectively defend against member inference and adversarial
+inference and adversarial attacks hinder the practical deployment               attacks, but they also lead to a decrease in ACC. This article
+of machine learning-based network intrusion detection systems                   introduces the HierarchicalDP defense framework to protect ML-
+(ML-NIDSs). In this work, we design a defense framework called                  NIDS. HierarchicalDP reduces the success rate of membership
+hierarchical differential privacy (HierarchicalDP) to safeguard                 inference to 54.4% (ineffective binary classification), lowers the
+ML-NIDS against membership inference and adversarial attacks.                   evasion rate of adversarial samples to 23.2%, and maintains ACC
+First, we analyze the principles of membership inference and                    fluctuations within 4.2%. Furthermore, HierarchicalDP does not
+adversarial attacks to find their correlation. Based on this, we                affect the inference speed, providing efficient and convenient
+propose the feature distribution security metric (FDSM) to mea-                 defenses for ML-NIDS.
+sure the risk of membership inference and adversarial attacks                      Index Terms—Artificial intelligence (AI) in cybersecurity,
+on ML-NIDS. Then, we design the HierarchicalDP framework,                       artificial intelligence safety, machine learning, responsible artifi-
+which partitions network traffic sample features according to                   cial intelligence, verifiable artificial intelligence.
+security levels and introduces distinct noise on each security
+level feature to satisfy FDSM, thus defensing against mem-
+bership inference and adversarial attacks. Finally, we evaluate                                          I. INTRODUCTION
+the defensive performance of the HierarchicalDP framework on
+two network traffic datasets and four machine-learning models.
+The HierarchicalDP defense framework, based on Laplace noise,
+reduces the success rate of membership inference from 64.9%
+                                                                                T     HE number of security vendors planning to integrate arti-
+                                                                                      ficial intelligence (AI) technology into network intrusion
+                                                                                detection systems is increasing [1]. However, the practical de-
+to 54.4% (ineffective binary classification), the evasion rate                  ployment of machine learning-based network intrusion detec-
+of adversarial samples from 86.1% to 23.2%, and maintains                       tion systems (ML-NIDSs) often encounters obstacles [2]. On
+model accuracy (ACC) fluctuations within 4.2%. Furthermore,
+the HierarchicalDP framework adjusts sample features without
+                                                                                the one hand, the accuracy of malicious traffic identification by
+modifying the model, thereby not affecting the inference speed.                 ML-NIDS is unstable. On the other hand, the machine learning
+HierarchicalDP offers efficient and convenient defenses for                     security risks make ML-NIDS susceptible to attacks [3].
+ML-NIDS deployed in a network.                                                     Membership inference and adversarial attacks are two pri-
+   Impact Statement—Artificial intelligence (AI)-driven network                 mary machine learning security risks [4], [5]. Membership in-
+intrusion detection is on the rise. ML-NIDSs are superior to
+rule-based NIDS in identifying new network attacks. However,
+                                                                                ference threatens the privacy of a model. This attack primarily
+AI security problems hinder ML-NIDS deployment. Existing                        stems from vulnerabilities in the model training process, where
+                                                                                slight differences between training samples can be amplified
+   Manuscript received 30 October 2023; revised 18 December 2023; accepted      and reflected in the training results of the model. Adversarial
+19 January 2024. Date of publication 26 January 2024; date of current version   attacks threaten the inference accuracy of a model. This attack
+27 February 2025. This work was supported in part by the Joint Funds of the     primarily stems from vulnerabilities in the model inference
+National Natural Science Foundation of China under Grant U22A2036 and in
+part by the National Key Research and Development Program of China under        process, where specific small perturbations to test samples can
+Grant 2021YFB3101102. This article was recommended for publication by           be amplified and reflected in the inference results of the mode.
+Associate Editor Qinghua Lu upon evaluation of the reviewers’ comments.            Most existing defenses against membership inference and
+(Corresponding author: Guangrui Liu.)
+   Guangrui Liu and Xurun Wang are with the School of Cyberspace Science,       adversarial attacks are designed for computer vision [6], [7],
+Harbin Institute of Technology, Harbin, Heilongjiang 150001, China (e-mail:     which neglects particular characteristics of network traffic.
+liuguangrui@hit.edu.cn; 22S003113@stu.hit.edu.cn).                              When applied to network traffic classifiers, these defenses not
+   Weizhe Zhang is with the School of Cyberspace Science, Harbin Institute
+of Technology, Harbin, Heilongjiang 150001, China, and also with Peng           only exhibit poor protection performance but also yield a signif-
+Cheng Laboratory, Shenzhen, Guangdong 518055, China (e-mail: wzzhang@           icant drop in ACC [8], [9]. To address this issue, we introduce
+hit.edu.cn).                                                                    a defense framework custom-built to protect ML-NIDS called
+   Stephen King is with Leland High School, San Jose, CA 95120 USA
+(e-mail: stephenking192008@gmail.com).                                          HierarchicalDP. This framework leverages the structural char-
+   Shui Yu is with the School of Computer Science, University of Technology     acteristics of network traffic samples. The HierarchicalDP
+Sydney, Ultimo, NSW 2007, Australia (e-mail: shui.yu@uts.edu.au).               framework adjusts sample features without modifying the
+   This article has supplementary downloadable material available at https://
+doi.org/10.1109/TAI.2024.3357791, provided by the authors.                      model, thereby not affecting the inference speed. Hierarchi-
+   Digital Object Identifier 10.1109/TAI.2024.3357791                           calDP offers efficient and convenient defenses for ML-NIDS
+
+                       2691-4581 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+318                                                                    IEEE TRANSACTIONS ON ARTIFICIAL INTELLIGENCE, VOL. 6, NO. 2, FEBRUARY 2025
+
+
+
+
+Fig. 1.   Hierarchical differential privacy (HierarchicalDP) defense effectiveness and FDSM operation principle.
+
+
+
+deployed in a network. There are three major challenges in                      by feature smoothing based on the structured characteristics of
+designing this new defense framework.                                           traffic samples. First, since differential privacy and adversarial
+  1) CH1: How to design a security metric method for                            robustness are quantifiable metrics for describing membership
+      network traffic classifiers? For member inference risk,                   inference and adversarial attack risks, we analyze their corre-
+      existing methods [10] use differential privacy to measure                 lation and combine them by defining the feature distribution
+      the privacy security of the model, but they lack consid-                  security metric (FDSM). FDSM aims to ensure that the fea-
+      eration for the characteristics of network traffic samples.               ture probability distribution of samples meets the robustness
+      For adversarial attack risk, existing methods [11] conduct                requirement under the security budget. Then, we design the
+      adversarial robustness testing after model training is fin-               HierarchicalDP defense framework based on FDSM, which
+      ished, lacking a way to evaluate the adversarial attack risk              realizes the smoothing of feature distribution by adding dif-
+      before model training.                                                    ferential noise to the critical features of the samples. The crit-
+  2) CH2: How to identify the security-sensitive features of                    ical features contain privacy- and category-sensitive features
+      network traffic samples? Network traffic samples exhibit                  computed by the feature hierarchization strategy based on the
+      structured characteristics, with the feature distributions of             attention mechanism. HierarchicalDP can defend ML-NIDS
+      samples in the same category displaying similarity [12].                  based on raw traffic or statistical feature datasets. Due to only
+      Moreover, the impact of each feature on model privacy                     modifying input data, it applies to any commonly used machine
+      and robustness varies. If privacy- and category-sensitive                 learning model.
+      features can be identified and protected, it can minimize                    The contributions of our work are summarized as follows.
+      the impact of defense methods on model performance.                          1) Targeting CH1, we introduce the FDSM. By extending
+      This aspect is rarely considered in existing work.                               the existing descriptions of differential privacy and adver-
+  3) CH3: How to design differential privacy for ML-NIDS                               sarial robustness using Rényi divergence, we unify their
+      to defend against member inference and adversarial                               formal expressions under α-metric and β-divergence.
+      attacks? On the one hand, since most ML-NIDS use                             2) Targeting CH2, we calculate the contribution of each fea-
+      incremental learning to update models [1], the defenses                          ture to the predicted label using the self-attention mecha-
+      should not change the model structure but rather add noise                       nism. Then, we design a feature hierarchization strategy
+      to sample features. On the other hand, different sensitivity                     to identify the privacy- and category-sensitive features of
+      features should add different noise to effectively protect                       network traffic samples.
+      the security of ML-NIDS while keeping the added noise                        3) Targeting CH3, we design HierarchicalDP defense
+      as small as possible.                                                            framework for ML-NIDS. For training samples, we add
+  To address the above challenges, we design the Hierarchi-                            differential noise to privacy-sensitive features, enabling
+calDP, as shown in Fig. 1, which solves the above problems                             a lightweight differential privacy mechanism. For test
+LIU et al: MEMBERSHIP INFERENCE AND ADVERSARIAL ATTACK DEFENSE FRAMEWORK                                                                          319
+
+
+
+      samples, we introduce differential perturbations to                                              TABLE I
+      category-sensitive features, achieving provably secure                                     IMPORTANT NOTATIONS
+      techniques for enhancing adversarial robustness.
+                                                                         Symbol                             Definition
+   4) Furthermore, we evaluate the defense effectiveness of Hi-
+      erarchicalDP on two publicly available malicious traffic           xi = (xi1 , xi1 , . . . , xid )    The vector of sample features
+                                                                         f i = (fi1 , fi1 , . . . , fid )   The distribution of sample features
+      datasets, consisting of packet and session samples, using          i(1 ≤ i ≤ n)                       The index of samples
+      four standard models. Compared to the state-of-the-art             j(1 ≤ j ≤ d)                       The index of feature dimensions
+      existing methods, HierarchicalDP reduces the member-               Y = {Y1 , Y2 , · · · , Ym }        The set of sample category labels
+                                                                         c(1 ≤ c ≤ m)                       The index of category labels
+      ship inference success rate (MIR) by 8.4% and lowers the           w ∼ Yc = (w1 , w2 , · · · , wd )   The feature weights of category Yc
+      adversarial example escape rate (AER) by 23.7% while               Strain                             The set of training samples
+      keeping the impact on ACC within 4.2%.                             Stest                              The set of testing samples
+                                                                         X                                  The set of all possible samples
+   The rest is organized as below. Related works are discussed           F                                  The model of machine learning
+in Section II. The analysis of the correlation between member            α                                  The norm of the metric
+privacy and adversarial robustness and the formal definition of          β                                  The order of divergence
+FDSM are introduced in Section III. The feature hierarchiza-
+tion strategy and HierarchicalDP algorithms are explained in
+Section IV. Experiment results are shown and discussed in                Various studies enhance the adversarial robustness of ma-
+Section V. Finally, we conclude our work in Section VI.               chine learning models, but they interpret the adversarial ex-
+                                                                      ample differently. Standard robustness enhancement techniques
+                      II. RELATED WORKS                               [11] include adversarial training, feature denoising, and random
+                                                                      transformation. However, most existing works only test the ef-
+   In this section, we review related works in machine learning       fectiveness of methods experimentally and rarely theoretically
+on differential privacy and adversarial robustness, as well as re-    analyze the adversarial robustness. Diochnos et al. [18] gave a

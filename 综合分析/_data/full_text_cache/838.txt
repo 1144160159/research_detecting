@@ -1,0 +1,673 @@
+IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS, VOL. 73, NO. 2, FEBRUARY 2026 3025
+
+ Unsupervised Cross-Domain Attack Traffic
+ Classifier for Intelligent Connected Vehicle
+ Yongping He , Yuanqing Xia , Fellow, IEEE, Tijin Yan , Yufeng Zhan , Jiaru Song , and
+ Zihang Feng
+
+ Abstract—The heterogeneous communication ecosys- area network (CAN) and FlexRay], vehicle-to-everything
+tem in intelligent connected vehicles (ICVs) has signif- (V2X) communication (such as DSRC and C-V2X), and cloud
+icantly broadened attack surfaces, making accurate at- connectivity via transmission control protocol/internet protocol
+tack traffic classification crucial for the security of vehicular networks. Existing deep learning (DL)-based classifi- (TCP/IP), which creates a broad and diverse attack surface that
+cation methods face challenges such as reliance on la- is vulnerable to both conventional network attacks and cyberbeled data and susceptibility to cross-domain data dis- physical threats [2].
+tribution discrepancies. To mitigate these challenges, a Attack traffic classification technology is a pivotal tool in
+cross-domain attack traffic classifier named domain adap- the network security of industrial control systems (ICS), which
+tation noisy label (DANL) is proposed in this article. DANL
+integrates uncertainty-aware sample selection and graph holds significant strategic value when applied to ICVs. As inspectral alignment into unsupervised domain adaptation vehicle networks have evolved from transmitting simple control
+(UDA) frameworks to bridge domain gaps. Furthermore, a messages to encompassing sensor data and external commudual correction framework integrating noisy label learning nication signals, the dimensionality and complexity of data
+(LNL) with pseudolabel aggregation is developed to further have significantly increased. Traditional attack classification
+correct misclassifications caused by erroneous alignment.
+Extensive experiments on public datasets demonstrate models for single regions have struggled to meet the security re-
+DANL’s superiority, achieving an improvement of classifica- quirements of complex environments. Unsupervised clusteringtion accuracy up to 5.8% over baselines. Further validation based methods struggle to achieve accurate classification when
+in real-world tests on self-constructed ICV testbed with handling such data, as they are prone to getting trapped in local
+simulated attacks confirming its effectiveness. optima and sensitive to noise [3]. On the other hand, supervised
+ Index Terms—Attack traffic classification, cyber-physical deep learning (DL)-based methods have demonstrated promissystem, deep learning (DL), intelligent connected vehicle ing classification performance in many classification tasks [4],
+(ICV), unsupervised learning. they also face practical limitations in real-world connected vehicle environments. This is mainly due to the significant time
+ I. INTRODUCTION and labor costs associated with constructing labeled datasets.
+ Additionally, the dynamic nature of driving environments, such
+
+I NTELLIGENT connected vehicles (ICVs) are rapidly transforming the future of transportation by integrating advanced sensors, controllers, and communication technologies.
+ as variations in speed, road conditions, and weather, causes
+ shifts in sensor data distributions, which reduces the effectiveness of static attack classification models. Furthermore, over-
+Although this interconnected ecosystem improves safety and the-air (OTA) updates in ICVs often modify ECU software
+efficiency, it also introduces substantial cybersecurity risks. [1]. and may alter communication patterns, these changes highlight
+The multilayered and heterogeneous communication architec- the imperative for adaptive learning frameworks capable of
+ture of ICVs, including in-vehicle networks [such as controller generalizing across diverse deployment scenarios.
+ Existing domain adaptation methods predominantly focus on
+ Received 26 May 2025; revised 25 July 2025; accepted 9 August 2025. aligning the marginal distributions of features across source and
+Date of publication 10 October 2025; date of current version 23 January
+2026. This work was supported by Beijing Natural Science Foundation target domains, employing techniques such as adversarial adap-
+Haidian Original Innovation Joint Fund Project under Grant L252035. tation or discrepancy minimization [5], [6], [7]. While effective
+(Corresponding author: Yuanqing Xia.) in certain scenarios, these approaches often overlook the criti-
+ Yongping He, Tijin Yan, Yufeng Zhan, and Zihang Feng are with
+the School of Automation, Beijing Institute of Technology, Beijing cal importance of sample-level uncertainty. This is particularly
+100081, China (e-mail: 3120215481@bit.edu.cn; yantijin@bit.edu.cn; crucial in complex vehicle environments where data quality and
+yu-feng.zhan@bit.edu.cn; 3120185474@bit.edu.cn). reliability vary significantly. To mitigate these challenges, we
+ Yuanqing Xia is with Zhongyuan University of Technology,
+Zhengzhou 450007, China, and also with the School of Automation, propose domain adaptation noisy label (DANL), a cross-domain
+Beijing Institute of Technology, Beijing 100081, China (e-mail: attack traffic classifier for ICVs based on unsupervised domain
+xia_yuanqing@bit.edu.cn). adaptation (UDA). DANL aims to achieve strong performance
+ Jiaru Song is with Jilin University, Changchun 130012, China
+(e-mail: songjr22@mails.jlu.edu.cn). in attack traffic classification by integrating learning from noisy
+ Digital Object Identifier 10.1109/TIE.2025.3600524 labels (LNL), all without requiring pretrained models from
+
+1557-9948 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+ Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+ for more information.
+3026 IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS, VOL. 73, NO. 2, FEBRUARY 2026
+
+other environments. This approach enhances adaptability across A. DL-Based Attack Traffic Classification and
+different network environments while maintaining robust clas- Detection Method
+sification accuracy. DANL constructs a graph based on feature
+ DL plays a crucial role in protecting connected devices such
+similarities and aligns its spectral properties across domains as the internet of vehicles (IoV) and vehicular ad hoc networks
+using a graph spectral alignment loss. This facilitates a more
+ (VANETs) [8], [9]. By harnessing labeled data, supervised DLnuanced and discriminative alignment that captures both local
+ based methods exhibit remarkable efficacy, surpassing conand global data structures, providing a more effective and flexi- ventional methods. For example, Desta et al. [10] proposed
+ble way to achieve domain invariance in the heterogeneous and
+ an intrusion detection system for in-vehicle networks, which
+dynamic settings characteristic of ICV environments. Furtherutilizes recurrence plots to generate images from in-vehicle
+more, by integrating an uncertainty-aware selection mechanism network data and classifies by a convolutional neural network
+that estimates the confidence of pseudolabels during adaptation,
+ model. On the other hand, Seo et al. [11] proposed a generative
+DANL can reduce the negative impact of noisy labels and en- adversarial network (GAN)-based unsupervised vehicle nethance the overall robustness of the learning process. To mitigate work intrusion detection model GIDS, which detects unknown
+inconsistencies in pseudolabels generated by different models,
+ attacks by learning normal data. As unsupervised methods often
+we frame the issue as a learning from noisy labels (LNL) prob- rely on threshold selection, leading to high false positive rates
+lem and apply a decoupling method to reduce model discrep- and limited to binary classification. To address this problem,
+ancies and refine the pseudolabels. Additionally, we design an
+ Xu et al. [12] utilized a few-shot meta-learning framework to
+aggregation mechanism to unify these pseudolabels. Through extract valuable information from a limited set of anomalous
+this iterative process, the pseudolabels are consolidated into data for intrusion detection. In this article, we employ domain
+hard labels and used for the next round of training. Repeating
+ adaptation to extract effective information from attack traffic in
+this process over several iterations leads to promising improve- other domains to assist in unsupervised attack traffic classificaments in performance. The main contributions of this work are
+ tion on the target domain. Compared with existing methods, our
+as follows.
+ approach refrains from utilizing any labels from the target do-
+ 1) A cross-domain attack traffic classifier DANL is intro- main. Instead, it adeptly harnesses information from the source
+ duced in this article, which enables attack traffic clasdomain to achieve fine-grained classification of network traffic.
+ sification in ICVs without requiring labeled data from
+ the specific target vehicle or environment. By integrating B. Deep Domain Adaptation
+ uncertainty-aware sample selection and alignment loss
+ into existing UDA frameworks, DANL bridges the do- Deep domain adaptation offers a feasible solution by endeavmain gap caused by variations in vehicle models, sensor oring to map data from disparate source and target domains
+ configurations, and driving conditions, while maintaining with distinct distributions into a shared feature space. The priresilience against heterogeneous data distributions com- mary objective is to minimize the distances of data distributions
+ mon in ICV deployments. within this shared space. There are a few works concentrating
+ 2) To mitigate the inherent noise in pseudolabels caused by on attack traffic classification and anomaly detection. Hu et al.
+ alignment, a dual correction framework integrating noise- [13] combined DSAN [14] with attention mechanism to identify
+ resistant LNL mechanism and iterative pseudolabel re- malware variant traffic at an IoT edge gateway, but data used
+ finement strategy is further introduced. in the source and target domains are sampled from a same
+ 3) The effectiveness of DANL is evaluated through com- dataset. Wu et al. [15] proposed a multisource heterogeneous
+ prehensive experiments on benchmark datasets and a semisupervised domain adaptation method called joint semantic
+ self-constructed ICV testbed. It achieves up to 5.8% im- transfer network (JSTN) to achieve a more effective intrusion
+ provement in classification accuracy compared with base- knowledge transfer. They further proposed a geometric graph
+ lines on public datasets, while simulated attack scenario alignment approach with a pseudolabel election mechanism
+ testing on the ICV testbed further confirms its robustness to refine the pseudolabel of domain adaptation for intrusion
+ and practical viability for securing real-world intelligent detection [16]. Building models for detection and classificatransportation systems. tion without any prior knowledge of target domain is first a
+ The structure of the remaining sections of this article is significant challenge. In this article, we also ensemble some
+arranged as follows. In Section II, we detail some of the most domain adaptation methods together to extract diverse valuable
+related works. In Section III, we provide a detailed description information from attack traffic in source domain to aid in clasof the main methods. In Sections IV and V, we demonstrate the sification on the target domain. Besides, we discover that when
+results of the proposed framework by experiments. Our work the attack traffic patterns in different domains vary significantly,
+is concluded in the final Section VI. relying only on domain adaptation will lead to suboptimal results. Consequently, uncertainty assessment and pseudolabels
+ refinement are introduced to further rectify these results.
+ II. RELATED WORK
+ III. METHOD
+ In this section, we give some reviews on classical works in
+attack traffic classification and detection, deep domain adapta- In this section, the designed method for cross-domain attack
+tion, and LNL. traffic classification in ICVs is described in detail. We aim to
+HE et al.: UNSUPERVISED CROSS-DOMAIN ATTACK TRAFFIC CLASSIFIER 3027
+
+ the training process of GAN-based models is often extremely
+ unstable. The alignment loss Lalign in DSAN is based on the
+ proposed local maximum mean discrepancy (LMMD) criterion,
+ which can effectively measure the difference in kernel mean
+ embeddings between relevant subdomains of the source domain
+ and the target domain. Therefore, a natural improvement idea
+ is to integrate a similar metric criterion into DANN to help the
+ model achieve stable training. Given that attack traffic contains
+ rich temporal information and spatial structural information, we
+ model it as a graph structure. By constructing a self-correlation
+ graph, we can model the relationships between different traffic
+ samples within the domain and capture the underlying data
+ distribution characteristics.
+ Specifically, the backbone network f extracts features fs and
+ ft from source and target domain data, respectively. An undi-
+Fig. 1. Overview. (a) Workflow of DANL. Initially, different domain
+ rected weighted graph Gs = (Vs , Es ) is constructed where each
+adaptation methods are employed to train models, which subsequently vertex vi ∈ Vs corresponds to a feature vector fsi . Edge weights
+generate pseudolabels for the target data. In the subsequent phase, the ei,j ∈ Es are determined by a distance metric δ(fsi , fsj ), with
+decoupling method is utilized to retrain models, refining the pseudolabels
+of target data. Further, the pseudolabels of target data obtained by each
+ δ(·) being a predefined metric function. The adjacency matrix
+well-trained model are aggregated in the last phase. These aggregated of Gs is denoted as As . By modeling source and target domains
+pseudolabeled target data are incorporated into the source data as prior as graphs Gs1 , Gs2 , . . . , Gsk and Gt , the cross-domain aligninformation for training in next round. (b) Backbone of DANL. It takes data
+xi as input and outs the extracted feature Zi and the probability logit pi ,
+ ment problem is transformed into a graph matching task [17].
+which are normalized via softmax. Given a finite graph G = (V, E), the graph Laplacian Δ acting
+ on vertex function φ : V → R and edge  weighting function
+ γ : E → R is defined as (Δγ φ) (v) = w:d(w,v)=1 γwv [φ(v) −
+distill knowledge from the source domain data, where “domain”
+ φ(w)], where d(w, v) is the graph distance and γwv is the edge
+refers to different vehicles or heterogeneous communication
+ weight. Then for two simple nonisomorphic graphs Gs and
+networks in the internet of vehicles (IoV), making it applicable
+ Gt with Laplacian spectra Λs = {λsi }ni=1 (λs1 ≥ λs2 ≥ · · · ≥ λsn )
+for identifying target domain data. The primary workflow of
+ and Λt = {λti }ni=1 (λt1 ≥ λt2 ≥ · · · ≥ λtn ), the spectral distance
+our designed DANL, as illustrated in Fig. 1(a), comprises three
+ is σ(Gs , Gt ) = Λs − Λt d , d ≥ 1, where d denotes the order
+main components: domain adaptation, pseudolabel refinement,
+ of the norm. The Laplacian matrices Ls and Lt and their eigenand pseudolabel aggregation. Uncertainty assessment and pseuvalues Λs and Λt can be computed by the adjacency matrices
+dolabel refinement are also introduced to refine pseudolabels in
+ As and At , and the graph spectral alignment loss is Lgsa =
+domain adaptation training. Furthermore, a training loss func-
+ Λs − Λt d , which measures the spectral difference between
+tion is utilized to alleviate the alignment and class-imbalance
+ domain graphs. Then for DANN, its domain classifier is D(·),
+issues. Following sections will provide detailed descriptions of
+ f represents its feature extractor, the alignment loss is
+each component. The backbone of the DANL can be found in
+Fig. 1(b). Lalign = Ladv + Lgsa
+ = Exs ∼D̃s log[D(f (xsi ))] + Ext ∼D̃t log[1 − D(f (xti ))]
+A. UDA With Uncertainty i i
+
+ + Λs − Λt d (1)
+ In the cross-domain scenario, the correlation knowledge of
+attack traffic is expected to be transferred from source domain to where D̃s and D̃t denote the induced feature distributions of
+target domain, for effectively capturing the temporal dynamics Ds and Dt respectively, and Lce (·, ·) is the cross-entropy loss
+and spatial structural characteristics of attack traffic. To improve function.
+computational efficiency and support parallel training, a random Furthermore, in cross-domain multiclass classification tasks,
+partitioning strategy is adopted to divide the source domain DL-based models employing cross-entropy loss are inherently
+into multiple independent subdomains. Each subdomain forms prone to class bias. This bias occurs because simpler classes are
+a domain pair with the target domain, and UDA learning is car- learned more readily and converge faster than complex classes,
+ried out separately through parallel training. This multiperspec- even when the labels are accurate, ultimately resulting in class
+tive learning mechanism can not only accelerate the training imbalance problems. Consequently, the following classification
+process through a distributed computing architecture but also loss function is incorporated into our design
+mine cross-domain relationships from multiple perspectives by
+ 
+ K 
+ K
+aligning the feature distributions of different subdomains, thus Lcls = − q(k|x) log p(k|x) − p(k|x) log q(k|x)
+enabling a more comprehensive understanding of the character- k=1 k=1
+istics of the target domain. λ m
+ However, in the initial training stage, due to the significant + fi − cyi 22 (2)
+ 2 i=1
+differences between the source domain and the target domain,
+3028 IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS, VOL. 73, NO. 2, FEBRUARY 2026
+
+where fi represents the extracted features, cyi refers to the
+center of the yi th class associated with deep features, which can
+be update during training. The parameter λ balances these two
+components. This regularization term helps limit the distance
+between outliers and class centroids, which not only accelerates convergence and slightly improves performance but also
+distinguishes clean samples from mislabeled ones.
+ Furthermore, we can easily get the loss in the phase of domain adaptation as
+ LDA = Lcls + Lalign . (3)
+ Furthermore, existing UDA methods generate pseudolabels
+for the target domain. However, pseudolabel errors tend to Fig. 2. Pseudolabel aggregation strategy. The pseudosoft labels of the
+accumulate during iterations. To mitigate noise in early iter- target domain are generated by the trained model. Redundant data are
+ations and avoid error propagation, we introduce an entropy- then removed through a standardized preprocessing pipeline. Conflicting
+ annotations are resolved by majority voting. The refined labels are
+based uncertainty measure during training. This augmentation converted into hard labels to form a labeled dataset, which is aggrestrategy enhances alignment by alleviating error accumula- gated with the original source dataset for next-round training by domain
+tion in pseudolabels. The uncertainty Hi of each sample is adaptation.
+calculated as
+  their judgment are in disagreement (h1 (xi ) = h2 (xi )). For each
+ Hi = − pij log(pij ) (4) data sample (xi , yi ), the update strategy can be explained
+ j as follow:
+where pij denotes the probability of sample i belonging to class S = {(xi , yi ) : h1 (xi ) = h2 (xi )}
+j as predicted by the final classifier layer. The uncertaintyh1 ← U (h1 , S)
+sorting mechanism is introduced to progressively remove data
+with higher uncertainty. h2 ← U (h2 , S) (5)
+ where S represents the dataset composed of the data that cause
+B. Pseudolabels Refinement by Learning the different judgments between model h1 and h2 , and h ←
+From Noisy Labels U (h, S) represents the model h updating with dataset S, which
+ is usually the standard gradient descent method. For simplicity,
+ Despite enhancing pseudolabels through ensemble methods,
+ we directly employ the backbone used in domain adaptation as
+well-trained models face challenges aligning the source and
+ the model for training.
+target domain distributions due to these disparities. As a result,
+the pseudolabels retain numerous inaccuracies. To tackle this,
+we employ LNL methods to transform the task of aligning C. Pseudolabel Aggregation Strategy
+data distributions into robust learning from noisy labels. It’s We further employ an approach to improve our model’s perworth noting that the noisy labels within the pseudolabel dataset formance in target domain through ensemble learning, which
+of the target domain, acquired through the proposed ensemble can be found in Fig. 2. After the pseudolabel refinement, each
+domain adaptation method, represent a prevalent type of real- model can provide good predictions in the target domain by
+world label noise. In our studying scenario, this noise stems integrating insights from their individual source domains.
+from the diverse knowledge acquired by each model from the First, we directly leverage these trained models to generate
+source domain and the inherent disparities found within the pseudo soft labels (per-label logit vectors) within the target
+target domain data. domain. Subsequently, per-label logit vectors from each model
+ After obtaining abundant data with pseudolabels by domain are aggregated to derive the global logit vectors. This step
+adaptation, a natural idea is to filter out certain data points facilitates the assimilation of transferable knowledge from multhat might be irrelevant or contaminated. We use a simple but tiple source domains, enhancing classification capabilities in
+effective decoupling method introduced in Malach et al. [18] to the target domain. Then the global logit vectors are converted
+train models by their disagreement. We found that this decou- into hard labels, constituting a novel pseudolabeled dataset with
+pling method could stably improve domain adaptation results, the corresponding features. Following this, each model is realthough it gradually tends to converge. When trained on noisy trained with domain adaptation by incorporating this pseudolalabels, DL-based model first fits data with clean labels during an beled dataset alongside their respective source domain datasets.
+early learning phase. However, it then tends to memorize exam- Finally, models are trained by employing the target domain
+ples annotated with erroneous labels, consequently limiting the data with the aggregated pseudolabels. This whole process can
+model’s improvement. Specifically, we train two identical mod- alleviate the negative impact of irrelevant source information,
+els h1 and h2 on target domain data with pseudolabel obtained enabling the model to refine its initial judgments and achieve
+from the previously well-trained model in the aforementioned improved performance of classification. Despite the inclusion
+domain adaptation. During the later phases of the training pro- of diverse judgments from various models, potentially containcess, an update rule U is adopted for updating models only when ing inaccurate pseudolabels, within the source domain data for
+HE et al.: UNSUPERVISED CROSS-DOMAIN ATTACK TRAFFIC CLASSIFIER 3029
+
+Algorithm 1: EM Algorithm for the Pseudo-Missing Strategy. process continues until convergence, progressively enhancing
+ target domain performance through collaborative model training and robust pseudolabel refinement.
+
+ IV. EXPERIMENT IN PUBLIC DATASETS
+ In this section, we perform comprehensive experiments on
+ four benchmark datasets to assess the effectiveness of the proposed DANL against several baseline methods. We also examine its sensitivity to some key parameters. The ablation experiments are conducted to demonstrate the efficacy of each module
+ within DANL as well.
+
+ A. Experimental Setup
+ 1) Datasets: We utilize four benchmark network traffic
+ datasets (KDDCup99 [20], NSL-KDD [21], CIC-IDS2017 [22],
+ and CSE-CIC-IDS2018 [22]) to evaluate the effectiveness of the
+ proposed DANL. These datasets are widely used in the field of
+ network security for connected vehicles and have been proven
+ suitable for evaluating attack traffic classification and detection
+ performance in vehicular communication environments [23],
+ [24]. For the aforementioned four datasets, we formulate two
+ tasks.
+ The first task involves utilizing the KDDCup1999 and NSL-
+ KDD datasets to assess the efficacy of our method across diverse data distributions. We further employ the CIC-IDS2017
+ and CSE-CIC-IDS2018 datasets to create a more challenging
+ task. These datasets were collected at different times and in different environments. To ensure consistent feature dimensions,
+ identical data preprocessing methods are applied. This allows
+ us to assess the performance of our method when handling
+ entirely distinct data sources with significant variations in data
+ distribution.
+ 2) Baselines: Several representative classical domain adaptation algorithms [batch nuclear-norm maximization (BNM)
+subsequent training iterations, it is found that models’ perfor- [25], deep adaptation network (DAN) [6], dynamic adversarmance will continue to improve [19], after iterating this process ial adaptation network (DAAN) [7], deep subdomain adaptaseveral times, our models have a certain ability to classify the tion network (DSAN) [14], domain adaptive neural network
+target domain by domain adaptation. (DANN) [26], graph spectral alignment framework (SPA) [27],
+ The entire workflow consists of three phases, as shown in a discriminator-free adversarial-based unsupervised domain
+Algorithm 1. Initially, the labeled source domain data Ds is adaptation for multilabel image classification (DDA-MLIC)
+partitioned into N random subdomains {Ds1 , . . . , DsN } using (D-M, for short) [28]] are utilized to compare and confirm the
+a predefined seed (Line 2). The main training loop commences effectiveness of the proposed DANL. It is worth noting that
+with the domain adaptation phase, where each model θk is the absence of labels in the target domain renders traditional
+trained on the subdomain Dsi combined with target domain supervised intrusion detection or classification methods inapplidata Dt using the specified domain adaptation method M with cable, and the nuanced nature of fine-grained multiclassification
+uncertainty sorting (lines 3–5). Subsequently, pseudo soft labels problems precludes the utilization of conventional unsupervised
+are generated for Dt by the trained model (line 6). In the de- intrusion detection techniques.
+coupling phase (lines 7–9), each model pair is trained based on 3) Implementation Details: To evaluate the experimental retheir disagreement regarding these pseudolabels to encourage sults, accuracy is adopted as a metric. Additionally, the condiversity (lines 7–8). Pseudosoft labels for Dt are then gener- fusion matrices is presented to provide a detailed view of the
+ated by the decoupled models (line 9). During the pseudolabel class-wise performance. In the domain adaptation phase, the
+aggregation phase (lines 10–12), these pseudosoft labels are model is trained with a batch size of 128 across 100 epochs,
+aggregated and processed (e.g., duplicate removal) to generate utilizing the Stochastic gradient descent (SGD) optimizer. The
+global logits (line 10). These logits are converted into hard learning rate for the backbone is set at 1e-4, while the other
+labels to create a new pseudolabeled dataset (line 11), which layers are trained with the learning rate of 1e-3. The parameter
+is then used to update each subdomain (line 12). This iterative λ in (2)is set as 1. The output dimension in Task 1 is 4, while
+3030 IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS, VOL. 73, NO. 2, FEBRUARY 2026
+
+ TABLE I
+ CLASSIFICATION ACCURACY RESULTS FOR TRANSFERRING BETWEEN
+ KDDCUP99 AND NSL-KDD
+
+ KDDCup99 to NSL-KDD NSL-KDD to KDDCup99
+ Method
+ DoS Probe U2R R2L Avg. DoS Probe U2R R2L Avg.
+ T-T 0.999 0.997 0.994 0.993 0.996 0.992 0.998 0.996 0.997 0.996
+ S-T 0.973 0.973 0.913 0.978 0.959 0.994 0.986 0.879 0.856 0.929
+ BNM 0.943 0.922 0.758 0.924 0.887 0.994 0.974 0.932 0.612 0.878
+ DAN 0.972 0.968 0.846 0.965 0.938 0.994 0.991 0.908 0.893 0.947
+ DAAN 0.975 0.971 0.902 0.896 0.936 0.995 0.994 0.913 0.894 0.949
+ DSAN 0.970 0.969 0.916 0.947 0.951 0.995 0.994 0.902 0.896 0.947
+ DANN 0.972 0.970 0.848 0.966 0.939 0.994 0.994 0.913 0.892 0.948
+ SPA 0.989 0.979 0.963 0.982 0.978 0.990 0.999 0.942 0.937 0.967
+ D-M 0.986 0.965 0.970 0.962 0.971 0.995 0.992 0.921 0.924 0.958
+ DSAN+ 0.973 0.973 0.959 0.947 0.963 0.973 0.966 0.964 0.942 0.961
+ DANN+ 0.975 0.974 0.969 0.946 0.966 1.000 0.998 0.912 0.922 0.958
+ DANL 0.991 0.976 0.957 0.994 0.980 0.986 0.971 0.970 0.951 0.970
+Note: Bold values are in tables I-IV identify and emphasize the results
+obtained using DANL, the method proposed in this paper.
+
+ TABLE II
+ CLASSIFICATION ACCURACY RESULTS FOR TRANSFERRING FROM Fig. 3. Confusion matrices of the target datasets. Different colors de-
+ CIC-IDS2017 TO CSE-CIC-IDS2018 note diverse sample counts, where lighter shades correspond to higher
+ counts. For the transfer tasks on KDDCup99 and NSL-KDD datasets,
+ Method Botnet DDoS DoS BF Infiltra WA Avg. the diagonal values typically range from 0 to approximately 60 000. For
+ the transfer tasks on CIC-IDS2017 and CEC-CIC-IDS2018 datasets, the
+ T-T 0.998 0.996 0.971 0.988 0.990 0.967 0.985 diagonal values range from 0 to approximately 80 000.
+ S-T 0.000 0.000 0.644 0.533 0.069 0.000 0.208
+ BNM 0.030 0.225 0.141 0.000 0.062 0.417 0.146
+ DAN 0.990 0.509 0.146 0.999 0.106 0.286 0.506
+ DAAN 0.961 0.388 0.206 1.000 0.272 0.569 0.566
+ DSAN 0.980 0.054 0.623 0.999 0.115 0.285 0.509
+ DANN 0.961 0.001 0.220 1.000 0.271 0.568 0.504
+ SPA 0.970 0.689 0.754 0.930 0.563 0.693 0.767
+ D-M 0.959 0.460 0.707 0.990 0.303 0.591 0.668
+ DSAN+ 0.961 0.037 0.690 0.999 0.115 0.286 0.515
+ DANN+ 0.961 0.388 0.206 0.999 0.272 0.569 0.566
+ DANL 0.972 0.999 0.761 0.814 0.540 .865 0.825
+
+ TABLE III
+ CLASSIFICATION ACCURACY RESULTS FOR TRANSFERRING FROM
+ CSE-CIC-IDS2018 TO CIC-IDS2017
+
+ Method Botnet DDoS DoS BF Infiltra WA Avg.
+ T-T 0.995 0.987 0.999 0.999 0.693 0.991 0.944
+ S-T 0.000 0.180 0.260 0.341 0.590 0.006 0.230 Fig. 4. Computation complexity analysis. DANL mainly consists of three
+ BNM 0.604 0.462 0.114 0.813 0.022 0.041 0.343 modules, and the total FLOPs are represented by the pink rectangle.
+ DAN 0.603 0.416 0.530 0.812 0.524 0.041 0.488
+ DAAN 0.600 0.002 0.551 0.823 0.566 0.041 0.431
+ DSAN 0.940 0.508 0.846 0.814 0.471 0.049 0.605 in Fig. 3. We compare it with established benchmark algo-
+ DANN 0.811 0.507 0.600 0.814 0.453 0.095 0.547 rithms, presenting both the overall accuracy and class-specific
+ SPA 0.969 0.787 0.892 0.821 0.562 0.082 0.686
+ D-M 0.941 0.613 0.747 0.816 0.593 0.052 0.627 accuracies in these Tables. “T-T” signifies that training and
+ DSAN+ 0.937 0.767 0.893 0.816 0.573 0.041 0.671 testing models both on the same target domain, which is also
+ DANN+ 0.806 0.502 0.660 0.823 0.566 0.001 0.560 the common practice of supervised methods. These methods
+ DANL 0.973 0.817 0.883 0.813 0.860 0.045 0.732
+ rely heavily on a large amount of labeled data, which is usually
+ impossible to achieve in practical scenarios. Notably, this “Tit is set to 6 in task 2. Each training iteration involves selecting T” displays effective recognition of various attack traffic bethe top 10% of samples based on their uncertainty for domain haviors, achieving commendable results and representing our
+adaptation. method’s ultimate aspiration. The “S-T” illustrates the results
+ of training the model directly on the source domain and testing
+ on the target domain. Although the model exhibits acceptable
+B. Effectiveness Evaluation performance on task 1, its efficacy significantly diminishes on
+ In Tables I–III, we demonstrate the effectiveness of DANL in the more challenging task 2. Specifically, it suggests that apattack traffic classification across four network traffic datasets, plying knowledge solely acquired from CIC-IDS2017 directly
+confusion matrices of these target datasets are also visualized to the CSE-CIC-IDS2018 dataset fails to identify Botnet and
+HE et al.: UNSUPERVISED CROSS-DOMAIN ATTACK TRAFFIC CLASSIFIER 3031
+
+ (a) (b) (c)
+
+Fig. 5. Accuracy result of model robustness study. (a) Accuracy result of model robustness study with uncertainty. The boxplots depict the impact of
+varying uncertainty levels on the performance of two domain adaptation methods. Numerical values represent the means, while gray lines indicate
+medians. The trends in maximum and minimum values are illustrated by dashed connections, reflecting their fluctuations. (b) Accuracy result of
+model robustness study with different numbers of subdomain. (c) Accuracy result of model robustness study with iterations. The performance of
+models improves with increasing iterations, eventually tend to stabilize.
+
+DDoS attacks effectively. The results of comparative algorithms the target domain due to insufficient training samples. There
+are also presented in these tables, most of which surpass the appears an inflection point in model performance as the pro-
+“S-T”, which signifies the rationality and applicability of do- portion gradually decreases. It can be observed that for DSAN,
+main adaptation in addressing cross-domain attack traffic clas- this turning point is around 10%, while for DANN, it lies besification problems. Additionally, “DSAN+” and “DANN+” de- tween 5% and 10%, with little difference in model performance
+note the classification results achieved by replacing the original between these two proportions.
+classification loss in these two domain adaptation methods with We further investigate how partitioning the source domain
+our proposed loss function. It is evident across all tasks that affects model performance in domain adaptation for the task of
+these modifications yield performance improvements over the transferring from CIC-IDS2017 to CSE-CIC-IDS2018, which
+original methods, underscoring the efficacy of our designed loss can be viewed as leveraging limited attack traffic knowledge
+function. The last row in each table showcases the results of from multiple vehicles to assist classification in the target vehiour proposed DANL, it surpasses all comparative algorithms, cle [Fig. 5(b)]. The results reveal a gradual performance decline
+thereby substantiating the effectiveness of our approach. as the number of subdomains increases (with correspondingly
+ Furthermore, we have also provided the computational com- fewer training samples per subdomain), though the model evenplexity of DANL compared with the baselines, as shown in tually stabilizes at an acceptable accuracy level. While this
+Fig. 4. The designed lightweight backbone enables DSAN+ and partitioning approach incurs a modest performance reduction
+DANN+ to achieve lower computational complexity. The de- in the initial phase, it offers significant practical advantages by
+coupling module’s dual-model training roughly doubles FLOPs enabling efficient deployment across multiple lightweight deto 8.688M, leading to a total of approximately 52.393M FLOPs vices. This trade-off proves particularly valuable for real-world
+for the DANL framework. While overall FLOPs are comparable IoV applications, where the model’s ability to run concurrently
+to baseline models, our modular decoupling and collaborative on more resource-constrained edge devices (e.g., vehicle ECUs
+optimization ensure component independence and reduce indi- or roadside units) outweighs the marginal accuracy decrease,
+vidual module costs. This design balances controllable com- while maintaining sufficient classification capability for most
+plexity with full functionality, ideal for resource-constrained attack scenarios. Additional experiments analyzing the impact
+domain adaptation tasks such as edge deployment and real- of different random seeds on domain partitioning can be found
+time processing. in Fig. 6. As can be seen from the training results of the
+ first round, compared with DSAN+, the accuracy fluctuation of
+ DANN+ across various subdomains is slightly larger; however,
+C. Sensitive Analysis
+ the average accuracy of both models remains relatively stable
+ To further assess the stability and robustness of our proposed under different seed settings.
+model, we conduct sensitivity experiments on some critical Subsequently, we delve deeper into the impact of iteration
+parameters. First, we evaluate the strategy of selecting train- rounds on the performance using the task from CIC-IDS2018
+ing sample based on uncertainty during the domain adapta- to CSE-CIC-IDS2017 as an example. As illustrated in Fig. 5(c),
+tion phase, and observe its impact on the model’s performance the results indicate that relying solely on source domain inforby adjusting the proportion of training data. As depicted in mation obtained from some single domain adaptation method
+Fig. 5(a), using 100% of the target data increases training time is insufficient for handling the complexity of extensive highand may reduce model performance due to the accumulation dimensional attack traffic. This inadequacy becomes evident
+of incorrect pseudolabels. After gradually filtering out samples in effective classification of attack traffic in the target domain.
+with lower confidence, the model performance shows an up- In addition, it can be seen from the figure that implementing
+ward trend. However, when an extremely small proportion of only one iteration strategy can significantly improve the model’s
+data is used, the model performance also degrades, indicating ability. Moreover, as the round of iteration increases, the model
+that the model cannot fully learn effective knowledge from consistently improves in classification performance. Notably,
+3032 IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS, VOL. 73, NO. 2, FEBRUARY 2026
+
+ TABLE IV
+ ABLATION EXPERIMENTS FOR TRANSFERRING FROM CIC-IDS2017 TO
+ CEC-CIC-IDS2018
+
+ Method Botnet DDoS DoS BF Infiltra WA Avg.
+ DSAN 0.772 0.040 0.670 0.999 0.117 0.145 0.457
+ DANN 0.767 0.095 0.516 0.999 0.062 0.137 0.429
+ DSAN+ 0.961 0.037 0.690 0.999 0.115 0.286 0.515
+ DANN+ 0.961 0.388 0.206 0.999 0.272 0.569 0.566
+ 1st-D 0.961 0.747 0.231 0.999 0.391 0.557 0.568
+ 2nd-DSAN+ 0.961 0.757 0.889 0.999 0.172 0.569 0.725
+ 2nd-DANN+ 0.961 0.734 0.404 0.999 0.211 0.552 0.644
+ 2nd-D 0.960 0.739 0.883 0.999 0.286 0.583 0.742
+ 3rd-DSAN+ 0.961 0.757 0.900 0.999 0.285 0.582 0.747
+ 3rd-DANN+ 0.961 0.759 0.901 0.999 0.298 0.583 0.750
+ 3rd-D (DANL) 0.972 0.999 0.761 0.814 0.540 0.865 0.825
+ (a) (b)
+
+Fig. 6. Accuracy result of (a) DSAN+ and (b) DANN+ with random
+seeds. The bar chart represents results on each subdomain under the TABLE V
+setting of splitting the source domain into five parts, and the line chart ABLATION STUDY ON THE EFFECTIVENESS OF
+denotes the average value. DISTANCE METRICS FOR THE ALIGNMENT LOSS
+
+ Distance Metric
+ Model
+ Cosine Euclidean Gaussian
+the performance stabilizes after approximately 3–4 rounds of
+iteration, validating the robustness of our iterative approach. DANN+ 0.520 0.566 0.534
+ DSAN+ 0.479 0.515 0.512
+These findings underscore the necessity and effectiveness of
+iterative strategies in bolstering classification capabilities and
+effectively classifying attack traffic during the knowledge transfer across domains.
+
+D. Ablation Study
+ We also conduct ablation experiments to validate the effectiveness of the components in the proposed DANL, as illustrated
+in Table IV, where “1st-D” means the first round of decoupling. The original DSAN and DANN employ the standard
+cross-entropy loss for classification assistance. Subsequently,
+integrating our designed classification loss enhances the results.
+After the first iteration with the decoupling method, the model
+achieves a result of 0.568. This iteration enables the model to (a) (b)
+learn the discrimination of “DDoS” and “Infiltra” (infiltration)
+ Fig. 7. Ablation study on: (a) loss; and (b) backbone component effecattack traffic from DSAN+ and DANN+. Upon involving the tiveness.
+target domain dataset with aggregated pseudolabels in domain
+adaptation training, the model’s performance further improves.
+After three iterations, the model reaches a final result of 0.825, To further investigate the impact of each loss component on
+showcasing robust judgments across various classes. Notably, the results we conduct study under the task of transferring from
+our approach contributes to providing further granularity in CIC-IDS2017 to CSE-CIC-IDS2018, as shown in Fig. 7(a),
+unsupervised methods, enabling the identification of diverse where “baseline” refers to the original DSAN and DANN modattack traffic. els. It can be observed that the alignment loss appropriately
+ We then conduct ablation experiments to compare different improves the model performance during the first round of traindistance metrics in the alignment loss under the task from CIC- ing, while the addition of more robust classification losses helps
+IDS2017 to CSE-CIC-IDS2018. The results are summarized better distinguish decision boundaries and enhances classificain Table V. The results indicate that using Euclidean distance tion accuracy. Furthermore, we conduct experiments to show
+consistently outperforms other metrics for both DANN+ and the results of replacing the designed CNN backbone in DANL
+DSAN+. This superiority is likely attributed to its sensitiv- with RNN and Transformer, as presented in Fig. 7(b). It can be
+ity to magnitude differences in feature distributions, which observed that DANL, with its designed lightweight CNN-based
+aligns well with our Laplacian spectral framework. Based on backbone, achieves detection results comparable to those of
+these findings, we have adopted Euclidean distance as the de- the Transformer while maintaining relatively low training and
+fault choice for empirical evaluations, given its demonstrated inference time per epoch, indicating its potential for application
+effectiveness. in edge or lightweight devices in the ICVs.
+HE et al.: UNSUPERVISED CROSS-DOMAIN ATTACK TRAFFIC CLASSIFIER 3033
+
+ (a) (b)
+
+ (c) (d) (e)
+
+Fig. 8. Cloud control platform for intelligent connected unmanned systems. (a) Outdoor operating scene of autonomous vehicles. (b) Close-up of
+autonomous vehicle exterior. (c) Interior view of unmanned vehicle cockpit. (d) Data monitoring interface of unmanned vehicle system. (e) Interface
+of cloud control platform for intelligent connected unmanned systems.
+
+ V. EXPERIMENT IN REAL-WORLD SCENARIO Considerable research has been conducted on intrusion detection and attack classification for the CAN, as referenced [29],
+ In this section, we verify the effectiveness of the proposed
+ [30], etc. We collect real-time CAN data from three autonomous
+method by collecting data from real vehicles on a self-construct
+ vehicles during their operation at different times to obtain
+intelligent connected unmanned platform.
+ datasets for various scenarios. Similar to existing works [11],
+ [29], [31], three types of attacks are considered: DoS attack,
+ fuzzy attack, and injection attack.
+A. Experimental Setup
+ The experimental platform is shown in Fig. 8. The vehicle- B. Effectiveness Evaluation
+road-cloud integrated control system part of this platform The effectiveness of the proposed DANL is evaluated using
+consists of three unmanned vehicles, a cloud data center, and the collected CAN dataset, with the corresponding experimental
+supporting monitoring equipment. Fig. 8(a)–(b) depicts the ex- results presented in Fig. 9. The figure illustrates the attack traffic
+perimental scene and the full-view exterior of the autonomous classification accuracy and F1 scores under various transfer
+vehicle (Kayyi Showjet Pro EV), while Fig. 8(c)–(d) shows learning settings. For instance, following the experimental setup
+the interior of the cockpit, including the steering wheel, dash- described in Section IV, the label “From-Car1-to-Car2” on the
+board, and related display devices. Each autonomous vehicle is horizontal axis represents the scenario where attack detection
+equipped with NVIDIA Orin. The autonomous driving system is performed on the second vehicle using knowledge extracted
+operates on the Ubuntu 20.04 operating system, with robot from the first vehicle. The classification accuracy and F1 score
+operating system2 (ROS2) framework, and the algorithms are results suggest that the proposed DANL exhibits competitive
+developed using Python 3. The system adopts a distributed attack classification performance across most transfer settings,
+and modular design, covering core functional modules such indicating its potential as a viable solution for attack detection
+as perception, planning, control, coordination, status monitor- in heterogeneous vehicular systems. Additionally, confusion
+ing, positioning, and map building. These modules are both matrices for target datasets across three autonomous vehicles
+independent and work in coordination, enabling the efficient are presented in Fig. 10. High diagonal values of these macompletion of autonomous driving tasks in complex scenarios. trices indicate accurate classification of specific attack types,
+Fig. 8(e) displays the real-time monitoring interface of the cloud highlighting the model’s reliability in threat detection. Low
+control platform. Multisource data (environmental perception, off-diagonal entries further suggest minimal misclassification,
+device status, and vehicle trajectories) are collected by the underscoring its robustness and capacity to distinguish traffic
+devices deployed on roadside sensors and onboard terminals. patterns across heterogeneous vehicular systems.
+These data are transmitted via 5G/4G networks to the platform. Furthermore, to evaluate the attack traffic classification per-
+A digital twin of physical road scenarios and vehicle operations formance of DANL in cross-vehicle scenarios, experiments
+is dynamically updated through 3-D modeling and simulation are conducted using the public dataset OTIDS [31] and our
+techniques. Structured information (e.g., vehicle speed and fault dataset. Taking the first car (car 1) as an example, the results are
+alerts) and raw data are stored in Alibaba Cloud databases for shown in Fig. 11(a). The results of DNAL, first-round DSAN+,
+efficient storage, querying, and historical traceability. DANN+, and direct training and testing (“S-T”) are provided.
+ The CAN protocol is a serial communication protocol de- The first-round results of DSAN+ and DANN+ reflect initial
+signed for real-time communication, with wide applications in improvements through migration over direct training and testautomotive electronics, industrial automation, and other fields. ing. DSAN+ shows limited attack classification performance
+3034 IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS, VOL. 73, NO. 2, FEBRUARY 2026
+
+ (a) (b)
+
+ Fig. 11. Classification performance results under: (a) different vehicles;
+Fig. 9. Comparison of accuracy and F1 results with different transfer and (b) different networks.
+settings in CAN datasets.
+
+ Fig. 12. Classification performance results under the designed attack.
+ The notation ‘K to M’ represents the transfer learning scenario from the
+Fig. 10. Confusion matrices of the target datasets across three different Kayyi Showjet Pro EV (denoted as K) to the Wuling Hongguang Mini EV
+autonomous vehicles. For the transfer tasks between the three vehicles, (denoted as M), with the reverse transfer indicated accordingly.
+the diagonal values in the confusion matrices are generally in the range
+of 0 to approximately 40 000.
+
+ high and low beam headlights. In real-world nighttime highway
+when transferred from the OTIDS dataset to car 1. After incor- conditions, sudden frequent switching of high and low beams
+porating the knowledge from DANN+ and applying iterative can indeed distract and impair the vision of oncoming drivers,
+optimization, DNAL achieves significantly improved classifi- potentially leading to safety hazards. Since this attack primarily
+cation accuracy. affects the protocol related to the vehicle’s lighting system,
+ We further investigate the impact of cross-network data on it poses relatively low risk during experiments. Specifically,
+the performance of attack traffic classification. Specifically, we implemented this by alternatingly injecting CAN messages
+we transfer knowledge between CAN data and external sensor that switch the headlights during normal driving conditions and
+network data to simulate real-world scenarios. As illustrated collected corresponding data. To simulate cross-domain transin Fig. 11(b), we extract historical sensor network data from fer scenarios, we included an additional vehicle of a different
+the Alibaba cloud database, which captures environmental con- model, the Wuling Hongguang MINIEV. The collected dataset
+ditions and traffic patterns. We then conduct transfer learning comprises three types of attack data: 1) DoS attack data; 2)
+experiments with the CAN data from car 1. The results show fuzzy attack data; and 3) message injection attack targeting
+that direct training on one network and testing on the other yield the lighting system. The results of experiments in transferring
+accuracies of only 0.492 and 0.373, highlighting the challenge between Kayyi (K) and MINI (M) can be found in Fig. 12.
+of cross-network generalization, while DANL maintains stable It can be observed that, even though there are differences in
+classification accuracy in both scenarios. This demonstrates the CAN IDs and message formats associated with headlight
+DANL’s superiority in handling heterogeneous data sources, control among these distinct vehicle models, the cross-domain
+suggesting its potential as a viable option for securing inter- feature alignment strategy of DANL sustained robust attack
+connected vehicle systems in practical deployments. classification performance in both scenarios. This serves to
+ Finally, we consider a new type of attack: a message injection validate the robustness of our proposed method with respect to
+attack where we inject tampered data to switch the vehicle’s protocol variations across heterogeneous vehicles.
+HE et al.: UNSUPERVISED CROSS-DOMAIN ATTACK TRAFFIC CLASSIFIER 3035
+
+ VI. CONCLUSION [10] A. K. Desta, S. Ohira, I. Arai, and K. Fujikawa, “REC-CNN: In-vehicle
+ networks intrusion detection using convolutional neural networks trained
+ In this article, we proposed a cross-domain attack traffic on recurrence plots,” Veh. Commun., vol. 35, 2022, Art. no. 100470.
+classifier for ICV named DANL, which leveraged attack traffic [11] E. Seo, H. M. Song, and H. K. Kim, “GIDS: GAN based intrusion
+ detection system for in-vehicle network,” in Proc. Annu. Conf. Privacy,
+information from other domains to aid the unlabeled target Secur. Trust, 2018, pp. 1–6.
+domain in fine-grained attack traffic classification. It amal- [12] C. Xu, J. Shen, and X. Du, “A method of few-shot network intrusion degamated various domain adaptation methods to train models tection based on meta-learning framework,” IEEE Trans. Inf. Forensics
+ Secur., vol. 15, pp. 3540–3552, 2020.
+in the source domain, acquiring pseudolabels for target do- [13] X. Hu, C. Zhu, G. Cheng, R. Li, H. Wu, and J. Gong, “A deep
+mains and subsequently refining these labels via learning from subdomain adaptation network with attention mechanism for malware
+noisy labels. By integrating a pseudolabel aggregation strategy, variant traffic identification at an IoT edge gateway,” IEEE Internet
+ Things J., vol. 10, no. 5, pp. 3814–3826, Mar. 2023.
+a straightforward iterative process showcased promising per- [14] Y. Zhu et al., “Deep subdomain adaptation network for image classiformance. Experimental results showcased that the proposed fication,” IEEE Trans. Neural Netw. Learn. Syst., vol. 32, no. 4, pp.
+DANL outperformed existing methods by up to 5.8% in per- 1713–1722, Apr. 2020.
+ [15] J. Wu et al., “Joint semantic transfer network for IoT intrusion detecformance across classical network traffic datasets. Moreover, tion,” IEEE Internet Things J., vol. 10, no. 4, pp. 3368–3383, Feb. 2022.
+the effectiveness of DNAL has been verified by real data ex- [16] J. Wu, H. Dai, Y. Wang, K. Ye, and C. Xu, “Heterogeneous domain
+periments on the self-constructed ICV platform. adaptation for IoT intrusion detection: A geometric graph alignment
+ approach,” IEEE Internet Things J., vol. 10, no. 12, pp. 10 764–10 777,
+ It can be found that DANL can be integrated with existing Jun. 2023.
+unsupervised anomaly detectors to perform fine-grained net- [17] L. Chen, Z. Gan, Y. Cheng, L. Li, L. Carin, and J. Liu, “Graph optimal
+work intrusion detection. After intercepting the data, most of transport for cross-domain alignment,” in Proc. Int. Conf. Mach. Learn.
+ (PMLR), 2020, pp. 1542–1553.
+the easily identifiable normal traffic is filtered by traditional [18] E. Malach and S. Shalev-Shwartz, “Decoupling ‘when to update’ from
+unsupervised methods with set thresholds, and then DANL ‘how to update,” in Proc. Adv. Neural Inf. Process. Syst., vol. 30, 2017,
+is used to further classify the attack traffic data in the target pp. 961–971.
+ [19] C. Wei, K. Shen, Y. Chen, and T. Ma, “Theoretical analysis of selfdomain by learning the knowledge from other domains. In the training with deep networks on unlabeled data,” in Proc. Int. Conf.
+future, we will explore more appropriate data augmentation Learn. Representations, 2021. [Online]. Available: https://openreview.
+methods for attack traffic classification, specifically addressing net/forum?id=rC8sJ4i6kaH
+ [20] S. Stolfo, W. Fan, W. Lee, A. Prodromidis, and P. Chan, “KDD
+class imbalance. Furthermore, we will investigate the incorpo- Cup 1999 Data,” UCI Machine Learning Repository, 1999, doi:
+ration of multimodal data sources to enrich feature representa- 10.24432/C51C7N.
+tions and enhance detection capabilities. We will also consider [21] M. Tavallaee, E. Bagheri, W. Lu, and A. A. Ghorbani, “A detailed
+ analysis of the KDD Cup 99 data set,” in Proc. IEEE Symp. Comput.
+more practical and theoretically guaranteed adversarial attack Intell. Secur. Defense Appl., 2009, pp. 1–6.
+models, continuously improving our classification and detec- [22] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+tion methods from an adversarial perspective. a new intrusion detection dataset and intrusion traffic characterization,” in Proc. Int. Conf. Inf. Syst. Secur. Privacy, vol. 1, 2018,
+ pp. 108–116.
+ REFERENCES [23] M. Fu, P. Wang, M. Liu, Z. Zhang, and X. Zhou, “IoV-BERT-IDS:
+ Hybrid network intrusion detection system in IOV using large language
+ [1] W. Gong et al., “Multi-order feature interaction-aware intrusion de- models,” IEEE Trans. Veh. Technol., vol. 74, no. 2, pp. 1909–1921, Feb.
+ tection scheme for ensuring cyber security of intelligent connected 2025.
+ vehicles,” Eng. Appl. Artif. Intell., vol. 135, 2024, Art. no. 108815. [24] J. Zhang, J. Zhang, Z. Ma, T. Li, X. Li, and J. Ma, “RUPT-FL:
+ [2] C. I. Nwakanma et al., “Explainable artificial intelligence (XAI) for Robust two-layered privacy-preserving federated learning framework
+ intrusion detection and mitigation in intelligent connected vehicles: A with unlinkability for IoV,” IEEE Trans. Veh. Technol., vol. 74, no.
+ review,” Appl. Sci., vol. 13, no. 3, p. 1252, 2023. 4, pp. 5528–5541, Apr. 2025.
+ [3] C. Sheng, Y. Yao, W. Li, W. Yang, and Y. Liu, “Unknown attack traffic [25] S. Cui, S. Wang, J. Zhuo, L. Li, Q. Huang, and Q. Tian, “Towards
+ classification in SCADA network using heuristic clustering technique,” discriminability and diversity: Batch nuclear-norm maximization under
+ IEEE Trans. Netw. Service Manag., vol. 20, no. 3, pp. 2625–2638, Sep. label insufficient situations,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ 2023. Pattern Recognit., 2020, pp. 3941–3950.
+ [4] A. Yılmaz, T. Ateşci, H. Meral, and G. Bayrak, “A real-time improved [26] M. Ghifary, W. B. Kleijn, and M. Zhang, “Domain adaptive neural
+ ML method for PQD classification of a PV-powered EV charging networks for object recognition,” in Proc. Pacific Rim Int. Conf. Artif.
+ station,” IEEE Trans. Ind. Electron., vol. 72, no. 3, pp. 2622–2632, Intell., 2014, pp. 898–904.
+ Mar. 2025. [27] Z. Xiao et al., “SPA: A graph spectral alignment perspective for domain
+ [5] Y. Huang, J. Peng, G. Zhang, W. Sun, N. Chen, and Q. Du, “Adversarial adaptation,” Adv. Neural Inf. Process. Syst., vol. 36, pp. 37252–37272,
+ domain adaptation network with calibrated prototype and dynamic in- Sep. 2023.
+ stance convolution for hyperspectral image classification,” IEEE Trans. [28] I. P. Singh, E. Ghorbel, A. Kacem, A. Rathinam, and D. Aouada,
+ Geosci. Remote Sens., vol. 62, pp. 1–13, 2024, Art. no. 5514613. “Discriminator-free unsupervised domain adaptation for multi-label im-
+ [6] M. Long, Y. Cao, J. Wang, and M. Jordan, “Learning transferable age classification,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis.,
+ features with deep adaptation networks,” in Proc. Int. Conf. Mach. 2024, pp. 3936–3945.
+ Learn., 2015, pp. 97–105. [29] S. Jeong, S. Lee, H. Lee, and H. K. Kim, “X-CANIDS: Signal-aware
+ [7] C. Yu, J. Wang, Y. Chen, and M. Huang, “Transfer learning with explainable intrusion detection system for controller area network-based
+ dynamic adversarial adaptation network,” in Proc. IEEE Int. Conf. Data in-vehicle network,” IEEE Trans. Veh. Technol., vol. 73, no. 3, pp. 3230–
+ Mining, 2019, pp. 778–786. 3246, Mar. 2023.
+ [8] Z. Niu, J. Wu, and H. He, “A novel experience replay-based offline [30] L. Du, Z. Gu, Y. Wang, and C. Gao, “Open world intrusion detection:
+ deep reinforcement learning for energy management of hybrid electric An open set recognition method for can bus in intelligent connected
+ vehicles,” IEEE Trans. Ind. Electron., vol. 72, no. 7, pp. 7160–7169, vehicles,” IEEE Netw., vol. 38, no. 3, pp. 76–82, May 2024.
+ Jun. 2025. [31] H. Lee, S. H. Jeong, and H. K. Kim, “OTIDS: A novel intrusion
+ [9] H. H. Kang and C. K. Ahn, “Distributed finite memory online learning detection system for in-vehicle network by using remote frame,” in Proc.
+ strategy for multi-UAV systems with neural networks,” IEEE Trans. Ind. Annu. Conf. Privacy, Secur. Trust., Piscataway, NJ, USA: IEEE Press,
+ Electron., vol. 72, no. 1, pp. 919–927, Jan. 2025. 2017, pp. 57–5709.
+3036 IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS, VOL. 73, NO. 2, FEBRUARY 2026
+
+ Yongping He is currently working toward the Yufeng Zhan received the Ph.D. degree in con-
+ Ph.D. degree in control science and engineering trol theory and control engineering from Beijing
+ from the School of Automation, Beijing Institute Institute of Technology (BIT), Beijing, China, in
+ of Technology (BIT), Beijing, China. 2018.
+ His research interests include Internet of He is currently an Associate Professor with
+ Things, time series anomaly detection, and gen- the School of Automation, BIT. Prior to joining
+ erative models. BIT, he was a Postdoctoral Fellow with the Department of Computing, The Hong Kong Polytechnic University, Hong Kong. His research interests include Internet of Things, cloud/edge
+ computing, and machine learning systems.
+ Yuanqing Xia (Fellow, IEEE) received the Ph.D.
+ degree in control theory and control engineer- Jiaru Song was born in Shanxi, China, in 2000.
+ ing from Beijing University of Aeronautics and He received the M.S. degree in computer sci-
+ Astronautics, Beijing, China, in 2001. ence from Jilin University, Jilin, China, in 2025.
+ From 2002 to 2003, he was a Postdoctoral Re- He is currently a Research Assistant at The
+ search Associate with the Institute of Systems Hong Kong Polytechnic University, Shenzhen
+ Science, Academy of Mathematics and System Research Institute. His research interests in-
+ Sciences, Chinese Academy of Sciences, Bei- clude intelligent connected vehicle and intrusion
+ jing. From 2003 to 2004, he was with the Na- detection.
+ tional University of Singapore, Singapore, as a
+ Research Fellow, where he worked on variable
+structure control. From 2004 to 2006, he was with the University of
+Glamorgan, Pontypridd, U.K., as a Research Fellow. From 2007 to 2008,
+ Zihang Feng was born in Shanxi, China, in
+he was a Guest Professor with Innsbruck Medical University, Innsbruck,
+ 1997. He received the B.S. degree in automa-
+Austria. Since 2004, he has been with the Department of Automatic
+ tion in 2018 from Beijing Institute of Technology,
+Control, Beijing Institute of Technology, Beijing, first as an Associate Pro-
+ Beijing, China, where he is currently working tofessor, then, since 2008, as a Professor. In 2023, he was also hired as the
+ ward the Ph.D. degree in control science and
+President of Zhongyuan University of Technology, Zhengzhou, China. He
+ engineering with the School of Automation.
+is currently both a Professor with Beijing Institute of Technology and the
+ His research interests include visual tracking
+President of Zhongyuan University of Technology. His research interests
+ and multimodality fusion.
+include cloud control systems, networked control systems, robust control
+and signal processing, active disturbance rejection control, unmanned
+system control, and flight control.
+
+ Tijin Yan received the B.S. degree in control
+ science and engineering in 2019 from Beijing
+ Institute of Technology (BIT), Beijing, China,
+ where he is currently working toward the Ph.D.
+ degree in control science and engineering.
+ His research interests include graph representation learning, generative models, time series modeling, time series anomaly detection,
+ and dynamic systems.

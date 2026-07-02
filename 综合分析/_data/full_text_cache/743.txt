@@ -1,0 +1,971 @@
+920 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 1, JANUARY 2026
+
+ MPdetector: A Multi-Party Collaborative Federated
+ Transfer Learning Approach for IoT
+ Intrusion Detection
+ Li Lin , Member, IEEE, and ZhenKun Chen
+
+ Abstract—The pervasive adoption of the Internet of Things (IoT) attacks and Distributed Denial of Service (DDoS) attacks [6].
+is accompanied by numerous network security threats, making the According to statistics, IoT devices on the Internet suffered up to
+timely detection of anomalies in traffic data through intrusion de- 5.7 billion attacks in 2020, most of which were DDoS and botnet
+tection increasingly critical. The existing intrusion detection methods based on federated learning can achieve good results under attacks launched by malware such as Mirai and Gafgyt [7]. In
+the condition of sufficient labeled data. However, the traffic data of addition, there are differences in terminal devices, applications
+participants in real IoT environments have various characteristics and network protocols in IoT network, which makes network
+and there are a large amount of unlabeled data, which easily leads traffic highly heterogeneous and leads to increasingly complex
+to the performance degradation of the intrusion detection model. patterns of network attacks. Consequently, detecting potential
+To address this challenge, this paper proposes a novel federated
+transfer learning approach for IoT intrusion detection based on intrusions in IoT environment to avoid more threats is crucial
+multi-party collaboration called MPdetector. MPdetector uses an for the healthy and sustainable development of IoT.
+encoder to extract the feature representation of diverse traffic data Traditional network intrusion detection methods are typifrom heterogeneous clients, and maps the feature representation of cally divided into two categories: signature-based and anomalyeach client to a unified feature space. In addition, a label transfer based [8]. Signature-based methods identify intrusions by
+strategy is introduced to make full use of unlabeled data, and a
+new mapping function is used to reconstruct the traffic data of each matching known attack features or patterns stored in a feature
+client to expand client’s local data set, which can further improve library. However, it is difficult for these methods to detect
+the detection performance of the model in varied and complex IoT unknown attacks such as Zero-day attacks [9]. With the adenvironments. Theoretical analysis proves that the entire transfer vancement of machine learning and deep learning, anomalylearning process of MPdetector is conducted within a secure con- based detection methods have shown improved performance
+text. Experiments on four widely used intrusion detection datasets
+show that MPdetector can detect known and unknown abnormal in recognizing complex attack patterns and detecting Zero-day
+traffic more accurately than the existing three classical intrusion attacks [10]. Despite these advances, the training of these models
+detection algorithms, and has strong generalization. Meanwhile, often relies on single-source datasets i.e., traffic data collected
+the detection effect of MPdetector will be further improved with from a single node. Single-souce datasets are insufficient to
+the increase of the volume of labeled traffic. reflect the complex network intrusions behaviors such as DDoS
+ Index Terms—IoT, intrusion detection, federated transfer and botnet attacks that widely appear in IoT environments. For
+learning, deep learning. instance, botnet attacks typically involve large amounts of data
+ from multiple nodes [11]. If the detection model lacks sufficient
+ I. INTRODUCTION information, it often causes problems such as model overfitting
+ and poor generalization.
+ ITH the rapid development and widespread application
+W of IoT technology [1], [2], [3], the number and types
+of IoT devices have increased rapidly in the past few years [4].
+ In addition, the above schemes also ignore the privacy leakage
+ problem introduced by collecting the data of IoT devices [12]. A
+ common approach to address the privacy issue is the deployment
+However, most IoT devices are small, low-cost, lack fixed power
+ of federated learning technology in network intrusion detecsupplies, and are difficult to maintain. These characteristics
+ tion [13], where participant nodes only upload model parameters
+often result in inadequate security considerations, making these
+ without sharing their local training data, a intrusion detection
+devices more vulnerable to cyber-attacks [5] such as Zero-day
+ center server is responsible for aggregating the model parameters
+ and distributing to the participant nodes, and the participant
+ Received 2 January 2025; revised 10 July 2025; accepted 13 August 2025.
+Date of publication 19 August 2025; date of current version 3 December 2025. nodes update the model locally. However, most existing feder-
+This work was supported by the China National Science Foundation under ated learning-based network intrusion detection schemes usually
+Grant 61502017. Recommended for acceptance by F. Restuccia. (Corresponding require data samples to have the same feature space. Then the
+author: Li Lin.)
+ Li Lin is with the College of Computer Science, Beijing University of heterogeneous traffic data in the real IoT environments will
+Technology, Beijing 100124, China, and also with the Beijing Key Laboratory of significantly affect the global model performance of federated
+Trusted Computing, Beijing 100124, China (e-mail: linli_2009@bjut.edu.cn). learning IoT intrusion detection [14].
+ ZhenKun Chen is with the College of Computer Science, Beijing University
+of Technology, Beijing 100124, China (e-mail: 1317889183@qq.com). Several studies have proposed to use federated transfer learn-
+ Digital Object Identifier 10.1109/TMC.2025.3600306 ing technology to achieve knowledge sharing required for IoT
+
+ 1536-1233 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+LIN AND CHEN: MPDETECTOR: A MULTI-PARTY COLLABORATIVE FEDERATED TRANSFER LEARNING APPROACH 921
+
+intrusion detection while protecting participant’s privacy [15], generalization performance and detection performance of
+that is, leveraging rich labels in fully labeled data source do- the model on target domains were improved.
+mains to help build flexible and efficient detection models in r We have successfully implemented and evaluated MPdetarget domains with large amounts of unlabeled data. Unlike tector on the UNSW-NB15 [24], NSL-KDD [25], CItraditional federated learning methods, federated transfer learn- CIDS2017 [26], and N-BaIoT [27], [28] datasets. The reing technology does not require participants to have the same sults demonstrate that MPdetector can achieve a detection
+features or the same sample space, so it is now receiving more accuracy of up to 98.2%, substantially outperforming the
+and more attention. According to the number of participants, existing methods based on deep learning, semi-supervised
+existing schemes can be divided into two categories. One is learning, federated learning and semi-supervised federated
+designed for two parties (a single source domain and a single learning.
+target domain) [16], [17], which still faces the limitation of
+single-source data.The other is suitable for multiple parties [8],
+[18], [19], [20], [21], [22], but it requires the central server to II. PROBLEM STATEMENT
+have a common data set for initializing the model and the local In the traditional IoT intrusion detection scenarios using
+training data set of participants must be labeled data. However, machine learning or deep learning, IoT devices provide their
+in real IoT environments, most traffic data is unlabeled. On local data as participants to participate in the network intrusion
+the one hand, manual labeling requires professional knowledge detection model training, and the final model is used to distinand is time-consuming. On the other hand, labeled data usually guish normal and abnormal traffic. However, these methods face
+raises privacy concerns, so many participating organizations or two main challenges. On the one hand, the detection accuracy of
+institutions only provide unlabeled data. these methods is limited by the small amount of labeled data per
+ To address the above issues, exploiting the idea of client. On the other hand, it is easy to expose the user privacy of
+SHFTL [23], this paper proposes a novel federated transfer learn- IoT devices when aggregating network traffic data from multiple
+ing approach for IoT intrusion detection based on multi-party clients. Although the IoT intrusion detection scheme based on
+collaboration called MPdetector. In MPdetector, each participat- federated learning does not require clients to provide local traffic
+ing client extracts the feature representation of its traffic data, data, the model performance is still affected by the heterogeneity
+which is mapped into a unified feature space by a task manager of network traffic data. To overcome the above issues, federated
+to realize the alignment of feature representations of traffic data transfer learning can be employed to assign pseudo-labels to unand reduce the difference between feature representations. A labeled data and then clients can use both labeled and unlabeled
+label transfer scheme is introduced to assign pseudo-labels to data for intrusion detection model training. Meanwhile each IoT
+unlabeled network traffic data, and these pseudo-labeled data client does not expose data information during the process of
+are integrated into the set of labeled data to participate in collaborative transfer learning, which ensures the security of
+supervised training. Additionally, a deep learning-based traffic users’ privacy.
+data reconstruction mechanism is proposed to facilitate feature This paper proposes a method designed for scenarios involvtransfer among clients, and a new mapping function is used to ing multiple participants, where most of the data on the client
+reconstruct unlabeled traffic data of each client, so as to fully side is unlabeled, as illustrated in Fig. 1. It is important to note
+integrate multi-source data information. that, unlike existing two-party-based approaches [17], the pro-
+ Compared with existing work, our contributions are summa- posed method fully supports collaborative participation of over
+rized as follows. 100 clients in the same task. A central task manager coordinates
+ r A novel IoT intrusion detection method is proposed, which with all clients to jointly perform federated transfer learning.
+ uses multi-party semi-supervised federated transfer learn- This design offers greater generality and scalability. Assume
+ ing to better exploit unlabeled valuable data, and integrates that there are n IoT device participants, denoted as client k (k =
+ feature representation alignment and reconstruction mech- 1, 2 . . . , n), participating in the collaboration. Each client posanisms, to solve the performance degradation problem of sesses a network traffic dataset, represented as X 1 , X 2 , . . . , X n ,
+ detection model caused by a large number of unlabeled with the corresponding sample sizes M 1 , M 2 , . . . , M n . Considdata of participants and heterogeneity of data samples in ering the heterogeneity of traffic data features between multiple
+ existing IoT attack detection methods. clients, that is, there is no overlap of traffic data features between
+ r A traffic data reconstruction mechanism is proposed to clients but their traffic data samples partially overlap. Denote
+ generate pseudo-labels from unlabeled data, which op- the overlap of traffic data samples between the kth client and
+ k
+ timizes the mapping function in the classical federated MO
+ other clients as Ok = {xki }i=1 and the non-overlapping part as
+ transfer learning, achieves high detection accuracy without Mk
+ N k = {xkj }j=1
+ N
+ , where MOk represents the number of overlapincreasing the training cost and with minimal labeled data
+ requirements, enhancing the ability of the model to identify ping samples and MN k
+ represents the number of non-overlapping
+ malicious traffic data. samples. Obviously there is M k = MOk + MN k
+ . Moreover, the
+ r The auxiliary training information provided by the unla- overlapping traffic data is labeled as yo = {yik }i=1 O Mk
+ , and the
+ beled data in the target domain of intrusion detection was label information is stored by the task manager, while the nonfully used to realize the collaborative training between a overlapping traffic data remains unlabeled. A specific example
+ single source domain and multiple target domains, and the of network traffic data distribution is illustrated in Fig. 2.
+922 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 1, JANUARY 2026
+
+Fig. 1. IoT intrusion detection scenario with federated transfer learning.
+
+ TABLE I
+ SYMBOL DEFINITIONS
+
+Fig. 2. Illustration of data distribution.
+
+ The goal of this paper is to propose a new federated transfer
+learning approach that is applicable to the above multi-party
+scenarios and has high performance. That is, the following
+problem will be solved.
+ The Optimal Ferderated Transfer Learning Problem is as
+follows.
+ Input: The number of participants n, the initial Intrusion Detection Classification Model gcla
+ k
+ , the local dataset of participants
+is X .
+ k
+
+ Question: Is there an optimal federated transfer learning approach that maximizes the ACC of intrusion detection classification models.
+ To address unlabeled traffic data, an effective feature extraction scheme and a label transfer scheme are presented in
+the proposed transfer learning approach. Participating clients
+provide unlabeled traffic data and extract network traffic feature
+representations. The task manager aligns these feature representations, assigns pseudo-labels to the unlabeled data, and
+reconstructs participating clients’ traffic data using mapping
+functions.
+ To standardize the notation, the symbols used are defined in
+Table I. label information and handles feature representation alignment,
+ label transfer, and feature transfer. The workflow of MPdetector
+ III. DESIGN OF MPDETECTOR is as follows.
+ 1 Each participating client trains an encoder to extract the
+ In this section, we will give the design of the proposed apfeature representation of its traffic data and sends it to the
+proach MPdetector, including its working principles and detailed
+ task manager.
+functions.
+ 2 The task manager aligns the feature representations of
+ the clients to reduce the differences between the feature
+A. Sections and Subsections
+ representations of different clients.
+ As depicted in Fig. 3, in MPdetector, each participating client 3 The task manager assigns pseudo-labels to the nonis responsible for achieving the feature representation extraction, overlapping traffic data using the aligned global reprewhile the task manager stores the overlapping network traffic sentation, selects the non-overlapping traffic data with
+LIN AND CHEN: MPDETECTOR: A MULTI-PARTY COLLABORATIVE FEDERATED TRANSFER LEARNING APPROACH 923
+
+Fig. 3. Interaction flow between the task manager and the client.
+
+ classification result is denoted as ŷlk = gcla
+ k
+ (RO
+ k
+ ). The classification loss function is as follows.
+ M0k
+   
+ Arg min Lcla =
+ k
+ XE ŷik , yik , (1)
+ k
+ θenc k
+ ,θcla i=1
+
+ where, θenc
+ k
+ , θcla
+ k
+ represent the model parameters of the encoder
+ genc and classifier gcla
+ k k
+ , respectively, and M SE is the cross-
+Fig. 4. Extracting feature representations of traffic data.
+ entropy loss function.
+ For the feature representation of unlabeled traffic data, the
+ more reliable pseudo-labels to participate in the training client uses the decoder gdeck
+ for reconstruction. The reconstrucof intrusion detection model, and sends the unified fea- tion result is denoted as x̃j = gdec
+ k k
+ (RN
+ k
+ ). The reconstruction loss
+ ture representation and pseudo-labels to the participating is defined as follows:
+ clients. k
+ 
+ 4 Each participating client uses an optimized traffic data 
+ MN
+  
+ mapping function to reconstruct the unified feature rep- Arg min Ldec =
+ k
+ M SE x̃kj , xkj , (2)
+ k
+ θenc k
+ ,θdec j=1
+ resentation of non-overlapping traffic data from other
+ clients, and adds the reconstructed traffic data to its train- where θdec
+ k
+ is the model parameter of the decoder gdec
+ k
+ and M SE
+ ing dataset. is the mean square error loss function. In this way, the final
+ 
+ 5 Each participating client uses the extended data set to objective function for extracting the feature representation of
+ train and obtain an intrusion detection model, and then traffic data is as follows.
+ uses the model to classify and detect the traffic data.
+ Arg min Lkr = Lkdec = Lkcla + λLkdec , (3)
+ k
+ θenc k ,θ k
+ ,θcla dec
+B. Local Representation Extraction
+ where λ(λ ∈ (0, 1)) is a hyperparameter that balances classifi-
+ In MPdetector, each client extracts the feature representation
+ cation and reconstruction.
+of its networking traffic data using a combination of encoder,
+ The specific feature extraction algorithm is outlined in
+classifier and decoder, and the extraction process is divided
+ Algorithm 1.
+into two tasks, supervised classification and unsupervised reconstruction, according to whether the data has labels, as shown
+in Fig. 4. C. Feature Representation Alignment
+ For client k, as described in Table I, its overlapping traffic data In order to reduce the feature differences of traffic data be-
+Ok contains labeled data where labels information is stored by tween clients, MPdetector map the traffic data features of clients
+the task manager, its non-overlapping traffic data N k contains into a unified feature space, that is, to realize the alignment of
+unlabeled data. The encoder genc k
+ is uesd to extract feature traffic data features between clients.
+representation RO = genc (O ) of Ok and RN
+ k k k k
+ = genc
+ k
+ (N k ) of  uses client k’s classification accuracy
+ First, the task manager
+N .k
+ wk as the weight wk ( nk=1 wk = 1), to synthesize the feature
+ For the feature representation of labeled traffic data RO k
+ , representations of different clients’ traffic data to obtain ithe
+the task manager uses the classifier gcla for classification. The
+ k
+ global feature representation of traffic data RU ( ni=1 wi ∗ RO ).
+924 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 1, JANUARY 2026
+
+ Algorithm 1: Local Feature Representation Extraction. Algorithm 2: Feature Representation Alignment.
+ Input: Overlapping and non-overlapping portions of client Input: The feature representation of the client k’s labeled
+ and unlabeled traffic data, label set of the client k’s labeled
+ k
+ MO
+ k’s network traffic data Ok = {xki , yik }i=1 and k
+ MO
+ N k = {xkj }j=1
+ Mk N
+ , client k’s encoder genc k
+ , classifier gcla
+ k
+ , and traffic data {yik }i=1 , classification accuracy wk of
+ classifier gcla , and initialized mapping function F k and
+ k
+ decoder gdeck
+ .
+ classifier FCk (k = 1, 2 . . . , n).
+ Output: The feature representation of client k’s labeled and
+ Output: Unified feature representations of client k’s
+ unlabeled traffic data RO k
+ and RN k
+ , classification accuracy
+ labeled and unlabeled traffic data RU k
+ O and RU N .
+ k
+ wk of classifier gcla k
+ .
+ 1: w (k = 1, 2 . . . , n) is normalized such that
+ k
+ 1: for k = 1 to n do
+ ( nk=1 wk = 1);
+ 2: Client k calculates RO k
+ = genc
+ k
+ (xki ) and sends RO k
+ to
+ 2: RU k
+ O = F (RO );
+ k k
+ the task manager;
+ 3: RU N = F (RN
+ k k k
+ );
+ 3: Client k calculates RN k
+ = genc
+ k
+ (xkj );
+ calculate
+ 4:  the reconstruction loss
+ 4: (x̃kj ) = gdec k
+ (RN k
+ ); MOK
+ L (R k
+ , R );
+ j=1 M SE UO U
+ 5: The task manager calculates ŷlk = gcla k
+ (ROk
+ );
+ 5: ŷlk = FCk (RU k
+ O );
+ 6: The task manager calculates the classification loss Lkcla MOk
+ according to Formula (1); 6: calculates the classification loss i=1 LXE (ŷik , yik );
+ 7: Client k calculates the reconstruction loss Lkdec 7: update θmap and θclb based on Formula (4);
+ k k
+
+ O and RU N ;
+ k k
+ according to Formula (2); 8: returnRU
+ 8: Client k’s updates θenc k
+ , θcla
+ k
+ , θdec
+ k
+ based on Lkdec and
+ Lcla ;
+ k
+
+ 9: Client k uses the trained gcla k
+ to calculate wk ; unlabeled traffic data by leveraging the similarity between the
+ 10: end for labeled and unlabeled traffic data. The label transfer process
+ 11: returnRO k
+ , RN k
+ and wk ; is illustrated in Fig. 5. The task manager concatenates feature
+ representations RU k
+ O and RU N of the client k’s traffic data to
+ k
+
+ obtain RU = [RU O ; RU N ], which is used to construct its W k .
+ k k k
+
+The task manager uses the mapping function F k to map the A labeling matrix Y k is defined for client k, where the row
+labeled traffic data feature representations and obtain the uni- vectors in the Y k corresponding to the one-hot encoded vectors
+fied feature representation RU of labeled traffic data and the rows for unlabeled traffic data are
+ O = F (RO ). To ensure that the
+ k k k
+
+mapped feature representations retain their classification infor- set to zero.
+mation, the classifier FCk is used to classify the mapped feature The probability matrix Z k is used to assign pseudo-labels to
+representations ŷlk = Fck (RU unlabeled traffic data. The probability matrix Z k can be obtained
+ O ). Then, the objective function
+ k
+
+for traffic data feature mapping is then expressed as follows. by using the conjugate gradient method to solve the linear system
+ (I − αS k )Z k = Y k [29], where I is the identity matrix, and
+ α(α ∈ (0, 1)) is used to regulate the relative importance of a
+ k
+ 
+ MO
+   k 
+ arg min LkU = MSE F k RO , RU traffic data samples and its neighboring traffic data samples.
+ k ,θ k
+ θmap clb j=1 Finally, based on the probability matrix Z k , the pseudo-labels
+ ⎛ k
+ ⎞ of unlabeled traffic data are calculated as follows.
+ 
+ MU O
+    
+ +γ⎝ XE Fck RU
+ k
+ O , yi ⎠ , (4) ŷpk = Arg max Z k (i, j), (5)
+ i=1 j
+
+where θmapk
+ and θclb
+ k
+ are the model parameters of the mapping where the element Z k (i, j) represents the values at the i-th row
+ and j-th column in the matrix Z k .
+function F and the classifier ŷlk = FCk , respectively γ(γ ∈
+ k
+ The pseudo-labels derived from this process may not always
+(0, 1)) is a hyperparameter. Using the optimized mapping funcbe accurate, and training with incorrect pseudo-labels can detion, the aligned uniform feature representation of labeled traffic
+ grade the performance of the client-side intrusion detection
+data RU k
+ O = F (RO ) and the unified feature representation of
+ k k
+ model. To mitigate this issue, the entropy value of traffic data
+unlabeled traffic data RU k
+ N = F (RN ) can be obtained.
+ k k
+ samples is calculated to measure the uncertainty. The pseudo-
+ The specific algorithm is shown in Algorithm 2.
+ labels with high certainty ŷps
+ k
+ are selected to ensure accuracy, and
+ the feature representation of corresponding traffic data samples
+D. Label Transfer Nhk is expressed as RU k
+ NS.
+ In real IoT environments, the amount of labeled traffic data To further improve pseudo-label accuracy, each client initialavailable to each client is limited. Only using labeled traffic izes a N N Rw model. The model is trained using the global feadata to train intrusion detection models is easy to cause model ture representations RU k
+ O of labeled traffic data. After training
+overfitting. To fully utilize the information in unlabeled traffic completion, this model is applied to label unmarked traffic data,
+data, a label transfer scheme is introduced into MPdetector, generating a membership matrix for each sample. This matrix
+which enable the task manager to assign pseudo-labels to the represents the probability distribution of samples belonging to
+LIN AND CHEN: MPDETECTOR: A MULTI-PARTY COLLABORATIVE FEDERATED TRANSFER LEARNING APPROACH 925
+
+Fig. 5. K-nearest neighbors matrix propagation process.
+
+Fig. 6. Label transfer process.
+
+different categories. The fuzziness of traffic data is then calcu- either the size of the labeled traffic dataset stabilizes or the maxlated through membership vectors V = {u1 , u2 , . . ., un }. imum number of iterations is reached. The detailed algorithm is
+ provided in Algorithm 3.
+ 1
+ n
+ F (V ) = − [ui log ui + (1 − ui ) log (1 − ui )] , (6) E. Feature Transfer
+ n i=1
+ Through the above label transfer scheme, client k can obtain
+where u1 represents the membership degree of the traffic data. pseudo-labels ŷps
+ k
+ for unlabeled traffic data and the correspond-
+ As shown in Fig. 6, the traffic data is divided into low fuzziness ing global feature representation RU k
+ N S . However, since the
+group F Glow , medium fuzziness group F Gmid , and high fuzzi- feature information of each clients’ traffic data is limited, a
+ness group F Ghigh based on the fuzziness value F(V). Samples feature transfer scheme is introduced into MPdetector. In the
+belonging to F Gmid and F Ghigh are selected, and their labeling scheme, a new nonlinear mapping function H k is proposed,
+results from the N N Rw model are used as pseudo-labels ŷpsf k
+ . which is used to reconstruct the unlabeled traffic data from other
+Additionally, pseudo-labels ŷps for unlabeled traffic data are
+ k
+ clients and expand the missing features of the labeled traffic data
+obtained using the K-nearest neighbor matrix label propagation by client k, so that the intrusion detection model can learn a
+method. The pseudo-labels generated by the N N Rw model more comprehensive network traffic feature representation and
+are then compared with those obtained through the K-nearest improve the ability of the model to identify abnormal traffic and
+neighbor matrix label propagation approach. Consistent results normal traffic.
+from both methods are selected as the final pseudo-labels for Compared with the linear mapping matrix, the deep learning
+these unlabeled traffic data samples. These filtered unlabeled model uses nonlinear activation functions to extract and learn
+traffic data are subsequently merged into the labeled traffic the abstract features and representations of the data step by step
+dataset to retrain the N N Rw model. This process repeats until through the multi-level structure [10]. It can better fit the network
+926 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 1, JANUARY 2026
+
+ Algorithm 3: Label Transfer. Algorithm 4: Feature Transfer.
+ Input: global feature representations RU Input: global feature representations RU k
+ O and RU N S of
+ k
+ O and RU N for
+ k k
+
+ client k’s labeled and unlabeled traffic data the clients’ labeled and unlabeled traffic data, mapping
+ (k = 1, 2, . . . , n). function H k (k = 1, 2 . . . , n).
+ Output: highly accurate pseudo-labels ŷps k
+ and the Output: the expanded traffic dataset XE k
+ of client k.
+ corresponding global feature representation RU k 1: reconstruct the global feature representation of the
+ NS.
+ 1: for k = 1 to n do labeled traffic data H k (RU k
+ O );
+ 2: RU ← [RU 2: calculate the reconstruction loss Lk based on Formula
+ O ; RU N ];
+ k k k
+ Rk (i,:)−Rk (j,:)2 (6);
+ 3: Generate W k where Wijk = exp(− U σ2
+ U
+ ) 3: update θres
+ k
+ according to the reconstructed loss Lk ;
+ (i = j); 4: (x̃js ) = H n (xti ) is sent to other client;
+ kt
+ 4: S k ← (Dk )−1/2 W k (Dk )−1/2 ;
+ 5: merges the data set XE k
+ js ; . . .; xjs ; . . .; x̃js };
+ = {xki ; x̃k1 k kn
+ 5: Z k ← (I − αS k )−1 Y k ; k
+ 6: Calculate ŷpk using Formula (5); 6: returnXE ;
+ 7: while iteration ≤ T do
+ 8: Calculate F (V ) using Formula (6); Algorithm 5: Traffic Data Recognition.
+ 9: Select samples RU K
+ N E from both F Gmid and Input: client k s trained encoder genc
+ k
+ and classifier gcla
+ k
+ ,
+ F Ghigh groups;
+ and its network traffic dataset X .
+ k
+ 10: Check consistency between ŷpsf k
+ and ŷpk , then send
+ Output: predicted labels Ŷ k for the network traffic dataset
+ matching pseudo-labels ŷps to clients;
+ k
+ Xk.
+ 11: ŷpsf
+ k
+ = N N Rw (RU k
+ N E ); 1: Ŷ k = gcla
+ k
+ (genc
+ k
+ (X k ));
+ 12: Select high confidence ŷpsk
+ and denote the 2: returnŶ k ;
+ corresponding feature representation as RU k
+ NS;
+ 13: end while
+ 14: Send ŷps k
+ and RUk
+ N S to client k; the traffic data feature representation, which ensures the privacy
+ 15: end for security of client k. The detailed algorithm is shown as follows.
+ 16: return ŷps
+ k
+ and RUk
+ NS;
+ F. Traffic Data Recognition
+ Next, client k uses the expanded traffic dataset XE k
+ to train an
+traffic data, understand the internal structure of traffic data more intrusion detection model to accurately identify normal traffic
+accurately, and then realize more effective data reconstruction. and abnormal traffic. To achieve this goal, client k retrains
+However, in real IoT environment, most of IoT devices have the encoder genc
+ k
+ and classifier gcla
+ k
+ , to minimize the following
+limited computing and storage resources, so it is more important objective function.
+to save the cost of client-side intrusion detection model training.  k  k  k  K 
+ Arg min Lkcla = XE gcla genc XE , YE , (8)
+Therefore, MPdetector uses a nonlinear deep learning model to k
+ θenc k
+ ,θcla
+reconstruct traffic data, which can not only reduce the pressure of
+client model training, but also improve the reconstruction effect where θenc
+ k
+ and θcla
+ k
+ are the model parameters of encoder genc
+ k
+
+of traffic data. and classifier gcla , respectively.
+ k
+
+ The objective function of traffic data feature reconstruction The detail is presented in Algorithm 5.
+can be expressed as follows.
+ IV. THEORETICAL ANALYSIS
+ k
+ 
+ MO
+  k  A. Complexity Analysis of Mapping Functions
+ Arg min LkC = M SE RU N S , H (RU O ) ,
+ K K
+ (7)
+ k
+ θres j=1 Theorem 1: Let H k be the new mapping function for feature
+ transfer on client side in MPdetector, where a deep neural
+where θresk
+ is the model parameter of the mapping function H k . network model replaces the mapping matrix M (n∗) . The compu-
+ Client k (k = 1, 2 . . . , n) uses the trained mapping function tational complexity of H k is O(Eiter MOn L−1
+ l=1 Sl Sl+1 ), which
+H k to reconstruct the unlabeled traffic data from other clients is approximately the same as the computational complexity
+x̃kt
+ js = H (xi ). Then, the reconstructed traffic data and the origik t O(MOn 3 ) of M (n∗) .
+nal traffic data set of client k can be merged to obtain the extended Proof: The computational cost of matrix mapping
+traffic data set XE k
+ js ; . . .; xjs ; . . .; x̃js }, with the cor-
+ = {xki ; x̃k1 k kn mainly lies in matrix multiplication. The matrix M n∗ =
+ −1
+responding label set YE = {y , {ŷs }j=1 }. Since the traffic data
+ k k j k
+ RUn
+ N S RU O (RU O RU O + μI)
+ n T n n T
+ has a computational comn3
+feature representation needs the original traffic data dimension plexity of O(MO ), where MO represents the number of overn
+
+to reconstruct the original traffic data, the original traffic data lapping traffic data samples.
+dimension is only accessed by client k, and other parties cannot For deep neural network mapping, the computational cost
+obtain the information of the original traffic data only through is concentrated in the forward and backward transfer phases.
+LIN AND CHEN: MPDETECTOR: A MULTI-PARTY COLLABORATIVE FEDERATED TRANSFER LEARNING APPROACH 927
+
+If the network has L layers with Sl neurons in each layer, V. EXPERIMENT EVALUATION
+and the number of iterations during training is Eiter , the
+ In this section, comprehensive experiments have been contime complexity is O(Eiter MOn L−1 l=1 Sl Sl+1 ), where, Eiter = ducted to evaluate the effect of MPdetector.
+epochs ∗ (MOn /batch_size). And the epochs and batch size are
+approximately the same, that means, epochs ≈ batch_size, so
+Eiter ≈ MOn . With the increase of the amount of traffic data A. Experimental Environment
+MOn , in order to ensure that the deep learning model can better We have implemented MPdetector using Python3 and Pyfit the traffic data structure, the number of layers of the neural Torch to achieve deep learning algorithm. An autoencoder is
+network may increase, and the model can still converge when used as the feature extraction model, a decoder is used to
+ L−1
+ l=1 Sl Sl+1 ≈ MO . 
+ n
+ reconstruct the traffic data, and a classifier is used to classify
+ Theorem 1 indicates that the computational complexity of the traffic data. The learning objective is to classify the traffic
+deep neural networks is approximately the same as that of data into two classes. The learning rate is set to 0.0001, and the
+matrix mapping. This means that, compared with the traditional experiments is conducted on Intel Core i9-12900H, 2.50 GHz
+lightweight matrix mapping reconstruction methods applicable CPU, 16 GB memory.
+to resource-constrained IoT devices, the method in MPdetector, Four well-known intrusion detection datasets: UNSWwhich uses deep learning (non-linear mapping functions) to NB15 [24], NSL-KDD [25], CICIDS2017 [26], and Nreconstruct traffic features, does not introduce additional time BaIoT [27], [28] are used to evaluate the performance of MPdeoverhead. tector. The UNSW-NB15 dataset was collected in 2015 from a
+ real network environment at the Australian Security Laboratory.
+B. Security Analysis It includes a diverse range of network traffic, featuring both
+ common network attacks and normal traffic. The NSL-KDD
+ Theorem 2: During the the feature representation alignment dataset is a refined version of the classic KDD dataset, created
+process in MPdetector, the task manager cannot retrieve client by removing duplicate samples from the original training and
+k’s original traffic data (k ∈ (1, n)). test sets. The CICIDS2017 dataset contains daily benign activity
+ Proof: If the task manager want to obtain client k’s traffic data traffic data and various types of attacks, closely resembling
+Ok and N k (k ∈ (1, n)), it must access the feature dimensions of real-world data. The N-BaIoT dataset consists of raw traffic
+Ok and N k and client k’s encoder parameters θenc k
+ . As stated in captured from nine kinds of IoT devices infected by the Mirai
+Section III, the task manager can only access to the the encoded and BASHLITE botnets.
+representations RO k
+ and RN k
+ in MPdetector but cannot get the The experimental procedure consists of the following steps.
+feature dimensions of the traffic data.  First, we preprocess the aforementioned datasets by ran-
+ Theorem 3: During the label transfer process in MPdetector, domly sampling the processed traffic data to create overlapthe task manager cannot retrieve client k’s original traffic data ping and non-overlapping traffic data for IoT clients. Withk (k = 1, 2 . . . , n). out loss of generality, the non-overlapping data is then di-
+ Proof: During the label transfer process, if the task manager vided into training, validation, and test sets with a ratio of
+want to access client k’s original traffic data Ok and N k , the 7:2:1.
+number of the unified feature representations RU k
+ O and RU N
+ k
+ MPdetector fully supports applications in scenarios with
+must exceed the feature dimension. The labels corresponding homogeneous traffic data or partial feature overlap. However,
+to the unified feature representations RU k
+ O and RU N have two
+ k
+ to experimentally verify its detection performance under fully
+categories: yˆis
+ k ∈ (0, 1) and y ∈ (0, 1). The feature dimension
+ o heterogeneous client traffic data, we partition the traffic features
+of RU O and RU
+ k k
+ N is equal to the number of neurons Eenc in
+ k
+ to simulate a feature-heterogeneous environment, where the
+the final layer of the encoder genc , and since Eenc
+ k k
+ 2, the feature spaces of different clients do not overlap at all, as shown
+feature dimensions of RU k
+ O and RU N will also
+ k
+ 2, therefore in Table II. To simulate such a setting, in our experiments, if
+the task manager is prevented from accessing the client k’s orig- there are n clients participating in training, the traffic features
+inal traffic data.the labels corresponding to the uniform feature are divided into n parts. Each client is then assigned a distinct
+representations RU ˆk
+ O and RU N are yis ∈ (0, 1) and yo ∈ (0, 1),
+ k k
+ feature space, achieving feature heterogeneity. However, to exrepresenting two classes. The feature dimension of RU k
+ O and tend this partitioning to over 100 clients, the features would
+RU N is determined by the number of neurons Eenc in the final
+ k k
+ need to be split into more than 100 parts. Due to the limited
+layer of the encoder genc k
+ . If Eenc
+ k
+ 2, the feature dimensions feature dimensions in existing intrusion detection datasets, this
+of RU O and RU N will also greatly exceed 2. Therefore, the task
+ k k
+ would inevitably cause overlap between client feature spaces,
+manager is prevented from accessing client k’s original traffic making it impossible to simulate a completely heterogeneous
+data.  scenario. Therefore, to evaluate MPDetector in a setting where
+ Theorems 2 and 3 show that even if the task manager is un- feature spaces are entirely disjoint, we conducted experiments
+trusted, it cannot obtain the clients’ original traffic data through on multiple clients (without loss of generality, n = 3) using
+feature representations or pseudo-labels of traffic data, thus datasets with limited feature dimensions. Among these, the
+ensuring the security of clients’ data. That is, the entire federated client responsible for maintaining network traffic data labels
+transfer learning process in MPdetector is conducted within a serves as the task manager, which typically initiates the intrusion
+secure context. detection model training process. The remaining clients function
+928 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 1, JANUARY 2026
+
+ TABLE II
+ FEATURE PARTITIONING OF THE DATASET
+
+as participants. The final experimental results are reported as the TABLE III
+ COMPARISON ON ACC, FAR, AND F1 FOR DIFFERENT DATASETS UNDER FIVE
+average performance across all participating clients. METHODS
+
+B. Classification Performance
+ In the experiment, MPdetector was compared with deep
+learning (DL), semi-supervised deep learning (SDL), federated
+learning (FL), and semi-supervised FL (SFL) based intrusion
+detection methods. In DL-based methods, each client uses an
+autoencoder to extract feature representations from the training data and then trains a classifier to detect intrusions. In
+SDL-based methods, each client extracts feature representations
+using an autoencoder, clusters the non-overlapping traffic data
+with K-means, and then trains classifiers on both overlapping
+and non-overlapping traffic data. The FL-based method applies
+the FedAVG algorithm to detect intrusions using an aggregated
+model. In SFL-based methods Each client employs an autoencoder to extract feature representations from training data. The As shown in Table III, FL performs worse than DL on
+K-means technique is then applied to cluster feature represen- the UNSW-NB15 and CICIDS2017 datasets. It is due to the
+tations of non-overlapping traffic data. Both overlapping and different training data characteristics used by each client, and
+non-overlapping traffic data are subsequently used as inputs for the heterogeneity of data feature space between clients, which
+the FedAVG algorithm during federated training. Finally, the affects the performance of FL. For the UNSW-NB15 dataset,
+aggregated model obtained from this training process is utilized SDL achieves higher detection accuracy than DL. However,
+to evaluate the training data. on the NSL-KDD and CICIDS2017 datasets, SDL performs
+ In the experiment, some common machine learning perfor- worse than DL. This is because when using K-means techmance indicators are used to compare and evaluate the perfor- nology for clustering, some traffic data clustering results do
+mance of different intrusion detection methods as follows. not match the actual labels, which affects the performance of
+ Accuracy (ACC) is the ratio of traffic data correctly identified the final model. On relevant datasets, SFL consistently demonby the intrusion detection model, which is calculated according strates higher accuracy than FL, as semi-supervised learning
+to the following Formula (8). effectively addresses the insufficiency of labeled data across
+ TP + TN clients. However, the persistent feature heterogeneity among
+ ACC = , (9) clients results in SFL’s accuracy remaining lower than SDL’s
+ TP + TN + FP + FN
+ performance. MPdetector demonstrates superior performance
+ False Alarm Rate (FAR) represents the proportion of normal across all evaluated datasets, achieving particularly outstanding
+traffic data being misclassified as abnormal traffic data resulting results on the CICIDS2017 dataset with 98.86% accuracy. This
+in false positives and is calculated according to Formula (9). exceptional performance stems from the fine-grained feature
+ FP characteristics of CICIDS2017 dataset, combined with MPde-
+ F AR = , (10) tector’s collaborative transfer mechanism that effectively inte-
+ TN + FP
+ grates comprehensive feature representations. The model’s abil-
+ The F1 Score (F1 ) provides a balanced evaluation of precision ity to precisely capture complex attack patterns is significantly
+and recall. It is calculated using (10): enhanced through this feature integration approach. Experimen-
+ TP tal results confirm that MPdetector exhibits strong generalization
+ F1 = , (11) capabilities across diverse datasets. Compared with DL, SDL,
+ T P + 12 (F P + F N )
+ FL, and SFL methods, MPdetector consistently achieves higher
+ In the above equations, TP represents correctly classified accuracy and F1 scores while maintaining lower false alarm
+normal traffic data, FP refers to normal traffic data misclassified rates.
+as abnormal, TN represents correctly classified abnormal traffic, In MPdetector, the task manager acts as the knowledge-rich
+and FN refers to abnormal traffic misclassified as normal. source domain, while the clients act as the knowledge-poor
+LIN AND CHEN: MPDETECTOR: A MULTI-PARTY COLLABORATIVE FEDERATED TRANSFER LEARNING APPROACH 929
+
+Fig. 7. Feature distribution and correlation analysis on the UNSW-NB15 dataset.
+
+target domain. Collaborative knowledge transfer occurs be- by tracking connection frequencies of source/destination adtween the task manager and multiple clients. This cooperative dresses within time windows. Abnormal values in Sload (source
+framework helps the clients train intrusion detection models, instantaneous transmission rate) and Sttl (initial time-to-live)
+effectively addressing the issue of insufficient labeled data. typically correlate with Exploits or Shellcode attacks, as these
+Additionally, MPdetector employs a label transfer mechanism to often involve non-standard packet rates or forged hop counts.
+assign pseudo labels to unlabeled data, and uses a nonlinear data Swin (TCP receive window size) reflects protocol-level flow
+reconstruction mechanism to achieve feature transfer to enrich control anomalies. Additionally, Proto (protocol type) and Dttl
+the feature representation of traffic data. These measures collec- (destination-to-source TTL value) further assist in detecting
+tively solve the problem of data heterogeneity and significantly abnormal behaviors, such as UDP protocol abuse or TTL maimprove the detection accuracy of client traffic analysis. nipulation. These features collectively form the detection basis
+ To better interpret the detection results, we conducted fea- for MPdetector, and the correlation analysis demonstrates its
+ture correlation analysis on the UNSW-NB15 dataset based effectiveness in capturing attack-related anomalies.
+on MPdetector’s outputs, as illustrated in Fig. 7. The analysis Fig. 7 shows the feature distribution of traffic data, comreveals that connection timing features (ct_srv_dst, ct_src_ltm, paring normal and anomalous traffic across clients. The most
+ct_srv_src, ct_dst_ltm) and traffic behavior features (Sload, Sttl, distinguishable features between normal and anomalous traf-
+Swin) show the most significant correlations with intrusion fic are crucial for model detection. For Client 1, significant
+detection. Specifically, ct_srv_dst effectively identifies abnor- distribution differences appear in ct_srv_dst, ct_src_ltm, and
+mal service access patterns by counting connection frequen- ct_dst_sport_ltm. The median ct_srv_dst value for normal traffic
+cies between specific services and destination addresses, while reaches 0.3, substantially higher than anomalous traffic, with a
+ct_src_ltm and ct_dst_ltm detect lateral movement behaviors wider interquartile range. For Client 2, clear differences appear
+930 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 1, JANUARY 2026
+
+Fig. 8. Different numbers of overlapping data versus detection accuracy under Fig. 9. Different numbers of overlapping data versus Pseudo-labeling accuracy
+two different traffic mapping functions. on different datasets under MPdetector.
+
+in ct_srv_src, ct_dst_src_item, and ct_dst_ltm. Although swin
+and proto_udp demonstrate high correlation with detection results in Fig. 7, their distributions show no discernible difference
+between normal and anomalous traffic, potentially leading to
+model misclassification. For Client 3, marked differences exist
+in dttl and ct_state_ttl between traffic types.
+
+C. Influence of Different Mapping Function
+ This experiment evaluates whether the new nonlinear mapping function proposed in the feature transfer part of MPdetector
+can improve the detection performance while ensuring the computational overhead of participating clients. We compare detection accuracy of two mapping functions: a linear mapping matrix Fig. 10. Different numbers of overlapping data versus detection accuracy on
+(LiMatrix) and the nonlinear mapping function (NonLiFunc) in different datasets under MPdetector.
+MPdetector, across various amounts of overlapping traffic data.
+Detection accuracy is the model performance trained on both
+overlapping and non-overlapping data. As illustrated in Fig. 8, Fig. 10, the horizontal axis represents the number of overlapping
+the horizontal axis represents the number of overlapping data, data, and the vertical axis represents detection accuracy. The
+and the vertical axis represents detection accuracy. The results results reveals that as the amount of overlapping data increases,
+show that NonLiFunc significantly improves the performance the shared knowledge among clients grows, the effect of transof the intrusion detection model. Notably, the enhancement is fer learning is improved, and model detection performance is
+more pronounced when the number of overlapping data reaches significantly improved. In summary, pseudo-labeling accuracy
+50 and 1,000 rows. significantly impacts model performance. When the amount
+ of overlapping data reaches 500, both pseudo-label accuracy
+D. Influence of Different Amounts of Overlapping Data and model detection performance achieve satisfactory results
+ on relevant datasets. MPdetector significantly mitigates the ad-
+ This experiment examines how different amounts of over- verse impact of limited overlapping data on model performance
+lapping data affect pseudo-labeling accuracy and detection ac- through its nonlinear data reconstruction method and label transcuracy, when MPdetector is applied. Pseudo-label accuracy is fer approach. With the increasing of overlapping data, pseudothe accuracy of pseudo-labels assigned to non-overlapping data labeling accuracy continues to rise, and detection accuracy is
+during label transfer process, detection accuracy is the model further improved.
+performance trained on both overlapping and non-overlapping
+data. The results are illustrated in Figs. 9 and 10 . Fig. 9 shows
+ E. Generalization Performance
+the impact of overlapping data on pseudo-labeling accuracy
+across different datasets. As shown in Fig. 9, the horizontal axis This experiment uses the N-BaIoT dataset to evaluate whether
+represents the number of overlapping data, and the vertical axis MPdetector not only detects abnormal traffic within the training
+represents the pseudo-labeling accuracy. The results indicate set but also enhances the ability to identify unknown abnormal
+that pseudo-labeling accuracy improves with the increasing in traffic through knowledge transfer. Since the datasets of seven
+overlapping data and the number of labeled data involved in the kinds of IoT devices in the N-BaIoT dataset contain two types
+transfer of labels. Fig. 10 illustrates the effect of overlapping of botnets, Gafgyt and Mirai, the data of these seven kinds
+data on detection accuracy for different datasets. As shown in of IoT devices are mainly used in this experiment, denoted
+LIN AND CHEN: MPDETECTOR: A MULTI-PARTY COLLABORATIVE FEDERATED TRANSFER LEARNING APPROACH 931
+
+Fig. 11. Different kinds of IoT devices versus detection accuracy under different intrusion detection methods on two different cases.
+
+as device1 - 7. The experiment involves two cases. Case 1 is be shared between clients. Meanwhile, various types of client
+called OnlyMirai, where Gafgyt attack data is removed from attack data are unbalanced. Different types of attack data from
+the training set and only Mirai attack data is retained to test different clients also suffer from imbalance.
+the detection accuracy for Gafgyt attack data. Case 2 is called Federated learning offers a solution by allowing clients to
+OnlyGafgyt, where the Mirai attack data is removed from the collaboratively train a model without directly sharing local data,
+training set and only Gafgyt attack data is retained to test the thus maintaining data security and achieving privacy protecdetection accuracy for Mirai attack data. tion. Idrissi et al. [33] proposed a federated learning based
+ The experimental results are shown in Fig. 11, where the hori- intrusion detection method to tackle privacy issues associated
+zontal axis represents the data of seven kinds of IoT devices and with centralized models. An autoencoder is used to calculate
+the vertical axis represents detection accuracy under different the intrusion score based on the reconstruction error, which
+intrusion detection methods. The results show that the detection achieves high accuracy and low false alarm rate. Li et al. [34]
+accuracy of MPdetector in identifying unknown abnormal traffic adopted federated learning with dynamic filtering and weighting
+data is higher than that of other methods, which indicates that strategies to protect data privacy and reduce communication
+MPdetector has strong generalization ability. This is because overhead, and proved through experiments that the detection
+MPdetector uses the similarity between labeled and unlabeled performance was improved with minimal network communicadata for label transfer, makes full use of the information provided tion. Rashid et al. al. [35] show that federated learning can ensure
+by unlabeled data, and then greatly improves the identification privacy and security by having IoT clients only share parameter
+ability of unknown traffic data. updates and a central server is responsible for aggregating and
+ refining parameters. Karmakar et al. [36] enhanced the sharing of
+ Autonomous Aerial Vehicle (AAV) data with federated learning,
+ VI. RELATED WORK which enables multiple deep neural network models to collabo-
+ With the development of machine learning and deep learning ratively learn and update their parameters. Although the above
+technology, intrusion detection methods based on deep learning federated learning schemes can solve the problem of privacy
+have achieved good results in learning complex attack patterns protection, they still require enough labeled data for local model
+and zero-day attack detection [10]. These algorithms have been training. In addition, data heterogeneity among participants can
+used to detect anomalies in IoT networks, and have achieved affect model performance. Consequently, numerous studies have
+good detection results. Abdelmoumin et al. [30] used hyper- proposed intrusion detection methods utilizing self-supervised
+parameter adjustment and ensemble learning to optimize the learning and transfer learning approaches.
+learning model to detect intrusion in the Internet of things in Self-supervised learning is an unsupervised approach that
+order to solve the problem of insufficient training data and generates supervisory signals from data characteristics without
+single model easily falling into local optimum. Saba et al. [31] manual labeling. Nguyen et al. [37] proposed a GNN-based
+used genetic algorithm to select important features to improve self-supervised method for IoT intrusion detection, which learns
+the accuracy of the model, and machine learning algorithm to node features through graph networks and enhances representadistinguish malicious traffic from regular traffic. Ge et al. [32] tion learning via traffic attribute prediction. Evaluations on real
+proposed an intrusion detection method based on deep learning network traffic demonstrated its superiority in binary/multi-class
+network traffic classification, considering both multi-class and attack detection, significantly outperforming GNN baselines in
+binary classification schemes. A feed-forward neural network AUC and F1-score. Xu et al. [38] developed a graph contrastive
+with embedding layers and a second neural network for binary learning framework using edge-attention encoders to capture
+classification are used to leverage network embedding and trans- traffic interaction patterns, achieving supervised-comparable
+fer learning. However, IoT intrusion detection methods based on accuracy with lower computational costs. However, these graphmachine learning or deep learning rely on a large amount of data based methods suffer from high complexity when handling
+to achieve high performance. In reality, there is a phenomenon of large-scale node-edge relationships, making them unsuitable for
+data islands. Due to privacy and security concerns, data cannot IoT scenarios.
+932 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 1, JANUARY 2026
+
+ Adaptive transfer learning dynamically optimizes knowledge VII. CONCLUSION AND FUTURE WORK
+transfer between domains. Anley et al. [39] designed depth-
+ To address the challenges of heterogeneous IoT network
+adaptive CNNs with traffic-to-image conversion, enabling pre- traffic data and the large volume of unlabeled data, this paper
+trained vision models to process non-visual data and achieve
+ proposes a federated transfer learning method for IoT intrusion
+cross-dataset feature transfer. Ajayi et al. [40] proposed an
+ detection based on multi-party collaboration, called MPdetector.
+LSTM-based domain adaptation method for host intrusion de- In MPdetector each client extracts feature representations of
+tection, transferring knowledge via sequence modeling and
+ both label and unlabeled traffic data using an autoencoder. The
+fine-tuning to reduce label dependency. While effective, these
+ task manager maps these feature representations to a unified
+approaches only support single-source-to-single-target transfer, feature space and applies a label transfer scheme to assign
+requiring separate adaptations for multiple targets with substanpseudo-labels to unlabeled data, enabling label transfer. Each
+tial resource consumption. client then can use a new proposed new mapping function to
+ Federated transfer learning seeks to transfer knowledge from reconstruct the traffic data of other clients, achieving feature
+diverse data sources to enhance local models’ performance.
+ transfer of the traffic data. The effectiveness of MPdetector is
+This approach often outperforms models trained solely on local verified by theoretical analysis and experiments. Experimental
+data [41]. Khoa et al. [17] introduced a collaborative learning results show that MPdetector can achieve a detection accuracy
+framework that allows a target network, which has only unlaas high as 98.2% and has strong generalization. Meanwhile the
+beled data, to learn efficiently from an original network with higher the number of labeled traffic data, the better the detection
+extensive labeled data. This framework improves performance performance.
+by over 40% compared to existing deep learning methods.
+ The effectiveness of MPdetector has been validated through
+However, it is limited to interactions between two parties. When experiments. The experimental results show that the intrusion
+multiple participants are involved, updating models requires
+ detection accuracy of MPdetector is as high as 98.2%, which
+exchanging parameters in pairs, which complicates the process
+ can effectively identify known and unknown abnormal traffic
+and increases both communication and computational costs. data, and has strong generalization. The higher the number of
+Cheng et al. [21] integrated federated 11 transfer learning
+ labeled traffic data, the better the detection performance.
+with reinforcement learning to optimize intrusion detection in
+ MPdetector introduces a label transfer scheme to realize label
+mobile edge computing. Their approach aims to achieve the transfer and reconstruct client traffic data to enable feature
+highest detection accuracy with a limited number of clients
+ transfer across clients. However, the pseudo-labeling accuracy
+while reducing costs. Ji et al. [20] proposed a method combining
+ and the quality of data reconstruction may lead to irrelevant
+federated transfer learning with convolutional neural networks. knowledge being learned, resulting in a decrease in detection
+This method builds a cloud model and then personalizes learning
+ accuracy. There are still some challenges to improve the pseudoacross organizations through transfer learning. After numerous labeling accuracy and the quality of data reconstruction. In the
+iterations, it produces a highly effective detection model. Fan next step, the optimized pseudo-label allocation method and data
+et al. [18] developed a federated transfer learning-based intrumapping method will be given to improve thepseudo-labeling
+sion detection frame work for 5 G IoT. The framework aggre- accuracy and the quality of data reconstruction, and further
+gates data through federated learning and customizes detection improve the identification efficiency of traffic data. In addition,
+models through transfer learning, allowing IoT clients to share
+ the current MPdetector approach involves multiple interactions
+knowledge while preserving privacy, which in turn improves between participating clients. In the future, the interaction bedetection performance. Zhang et al. [8] proposed a lightweight tween the task manager and the clients will be further optimized
+anomaly based intrusion detection algorithm using a two-step
+ to ensure the detection accuracy while reducing the commufusion boosting strategy. This strategy evaluates data distribution nication overhead of clients. In the future, it is expected to
+variance with maximum average variance and adjusts model
+ reduce the interaction between clients, and reduce the comweights to enhance overall detection performance. However,
+ munication overhead of clients while ensuring the detection
+these federated transfer learning methods typically require a accuracy.
+central server to possess a large, labeled dataset to initialize the
+model, making them unsuitable for intrusion detection scenarios
+with extensive amounts of unlabeled data. REFERENCES
+ Unlike the above methods that require both extensive labeled [1] L. Catarinucci et al., “An IoT-aware architecture for smart healthcare
+traffic data for training initial detection models and homoge- systems,” IEEE Internet Things J., vol. 2, no. 6, pp. 515–526, Dec. 2015.
+ [2] Y. Tian, B. Zheng, and Z. Li, “Agricultural greenhouse environment
+neous data distribution to achieve optimal performance, this pa- monitoring system based on Internet of Things,” in Proc. 3rd IEEE Int.
+per propose MPdetector, a federated transfer learning approach Conf. Comput. Commun., 2017, pp. 2981–2985.
+for IoT intrusion detection, which supports the collaborative [3] H. Ghayvat, S. Mukhopadhyay, X. Gui, and N. Suryadevara, “WSN-and
+ IoT-based smart homes and their extension to smart buildings,” Sensors,
+transfer learning of multiple clients and is effective even when vol. 15, no. 5, pp. 10350–10379, 2015.
+most local data is unlabeled. It also addresses the challenges of [4] F. Sattler, S. Wiedemann, K.-R. Müller, and W. Samek, “Robust and
+IoT traffic data heterogeneity and the abundance of unlabeled communication-efficient federated learning from non-i.i.d. data,” IEEE
+ Trans. Neural Netw. Learn. Syst., vol. 31, no. 9, pp. 3400–3413, Sep. 2020.
+data. Experimental results demonstrate that MPdetector can [5] M. Abomhara and G. M. Køien, “Cyber security and the Internet of Things:
+maintain superior detection accuracy even with limited labeled Vulnerabilities, threats, intruders and attacks,” J. Cyber Secur. Mobility,
+data and under significant feature heterogeneity conditions. vol. 4, pp. 65–88, 2015.
+LIN AND CHEN: MPDETECTOR: A MULTI-PARTY COLLABORATIVE FEDERATED TRANSFER LEARNING APPROACH 933
+
+ [6] Y. R. Siwakoti, M. Bhurtel, D. B. Rawat, A. Oest, and R. Johnson, “Ad- [30] G. Abdelmoumin, D. B. Rawat, and A. Rahman, “On the performance of
+ vances in IoT security: Vulnerabilities, enabled criminal services, attacks, machine learning models for anomaly-based intelligent intrusion detection
+ countermeasures,” IEEE Internet Things J., vol. 10, no. 13, pp. 11224– systems for the Internet of Things,” IEEE Internet Things J., vol. 9, no. 6,
+ 11239, Jul. 2023. pp. 4280–4290, Mar. 2022.
+ [7] NSFocus Information Technology Co Ltd, “2020 cybersecurity insights,” [31] T. Saba, T. Sadad, A. Rehman, Z. Mehmood, and Q. Javaid, “Intrusion
+ vol. 1, 2022. [Online]. Available: https://nsfocusglobal.com/wp-content/ detection system through advance machine learning for the Internet of
+ uploads/2021/06/2020-NSFOCUS-Cybersecurity-Insights.pdf Things networks,” IT Professional, vol. 23, no. 2, pp. 58–64, 2021.
+ [8] J. Zhang, C. Luo, M. Carpenter, and G. Min, “Federated learning for [32] M. Ge, N. F. Syed, X. Fu, Z. Baig, and A. Robles-Kelly, “Towards a
+ distributed IIoT intrusion detection using transfer approaches,” IEEE deep learning-driven intrusion detection approach for Internet of Things,”
+ Trans. Ind. Informat., vol. 19, no. 7, pp. 8159–8169, Jul. 2023. Comput. Netw., vol. 186, 2021, Art. no. 107784.
+ [9] A. L. Buczak and E. Guven, “A survey of data mining and machine learning [33] M. J. Idrissi et al., “Fed-ANIDS: Federated learning for anomaly-based
+ methods for cyber security intrusion detection,” IEEE Commun. Surveys network intrusion detection systems,” Expert Syst. Appl., vol. 234, 2023,
+ Tuts., vol. 18, no. 2, pp. 1153–1176, Second Quarter, 2016. Art. no. 121000.
+[10] A. Aldweesh, A. Derhab, and A. Z. Emam, “Deep learning approaches [34] J. Li, X. Tong, J. Liu, and L. Cheng, “An efficient federated learning
+ for anomaly-based intrusion detection systems: A survey, taxonomy, and system for network intrusion detection,” IEEE Syst. J., vol. 17, no. 2,
+ open issues,” Knowl.-Based Syst., vol. 189, 2020, Art. no. 105124. pp. 2455–2464, Jun. 2023.
+[11] H. Wang, J. Hou, and Z. Gong, “BotNet detection architecture based on [35] M. M. Rashid, S. U. Khan, F. Eusufzai, M. A. Redwan, S. R. Sabuj, and M.
+ heterogeneous multi-sensor information fusion,” J. Netw., vol. 6, no. 12, Elsharief, “A federated learning-based approach for improving intrusion
+ 2011, Art. no. 1655. detection in industrial Internet of Things networks,” Network, vol. 3, no. 1,
+[12] S. Hui et al., “Systematically quantifying IoT privacy leakage in mo- pp. 158–179, 2023.
+ bile networks,” IEEE Internet Things J., vol. 8, no. 9, pp. 7115–7125, [36] R. Karmakar, G. Kaddoum, and O. Akhrif, “A novel federated learning-
+ May 2021. based smart power and 3D trajectory control for fairness optimization in
+[13] S. Agrawal et al., “Federated learning for intrusion detection system: secure UAV-assisted MEC services,” IEEE Trans. Mobile Comput., vol. 23,
+ Concepts, challenges and future directions,” Comput. Commun., vol. 195, no. 5, pp. 4832–4848, May 2024.
+ pp. 346–361, 2022. [37] H. Nguyen and R. Kashef, “TS-IDS: Traffic-aware self-supervised learn-
+[14] K. Chen et al., “Privacy preserving federated learning for full heterogene- ing for IoT network intrusion detection,” Knowl.-Based Syst., vol. 279,
+ ity,” ISA Trans., vol. 141, pp. 73–83, 2023. 2023, Art. no. 110966.
+[15] Y. Liu, Y. Kang, C. Xing, T. Chen, and Q. Yang, “A secure federated [38] R. Xu, G. Wu, W. Wang, X. Gao, A. He, and Z. Zhang, “Applying selftransfer learning framework,” IEEE Intell. Syst., vol. 35, no. 4, pp. 70–82, supervised learning to network intrusion detection for network flows with
+ Jul./Aug. 2020. graph neural network,” Comput. Netw., vol. 248, 2024, Art. no. 110495.
+[16] J. Zhao, S. Shetty, and J. W. Pan, “Feature-based transfer learning [39] M. B. Anley, A. Genovese, D. Agostinello, and V. Piuri, “Robust DDoS
+ for network security,” in Proc. 2017 IEEE Mil. Commun. Conf., 2017, attack detection with adaptive transfer learning,” Comput. Secur., vol. 144,
+ pp. 17–22. 2024, Art. no. 103962.
+[17] T. V. Khoa et al., “Deep transfer learning: A novel collaborative learning [40] O. Ajayi and A. Gangopadhyay, “DAHID: Domain adaptive host-based
+ model for cyberattack detection systems in IoT networks,” IEEE Internet intrusion detection,” in Proc. 2021 IEEE Int. Conf. Cyber Secur. Resilience,
+ Things J., vol. 10, no. 10, pp. 8578–8589, May 2023. 2021, pp. 467–472.
+[18] Y. Fan, Y. Li, M. Zhan, H. Cui, and Y. Zhang, “IoTDefender: A federated [41] D. Gao, X. Yao, and Q. Yang, “A survey on heterogeneous federated
+ transfer learning intrusion detection framework for 5G IoT,” in Proc. IEEE learning,” 2022, arXiv:2210.04505.
+ 14th Int. Conf. Big Data Sci. Eng., 2020, pp. 88–95.
+[19] Y. Otoum, V. Chamola, and A. Nayak, “Federated and transfer learningempowered intrusion detection IoT applications,” IEEE Internet Things
+ Mag., vol. 5, no. 3, pp. 50–54, Sep. 2022.
+[20] X. Ji, H. Zhang, and X. Ma, “A novel method of intrusion detection based
+ on federated transfer learning and convolutional neural network,” in Proc. Li Lin (Member, IEEE) received the BS and MS de-
+ IEEE 10th Joint Int. Inf. Technol. Artif. Intell. Conf., 2022, pp. 338–343. grees in mathematics from Guangxi Normal Univer-
+[21] Y. Cheng, J. Lu, D. Niyato, B. Lyu, J. Kang, and S. Zhu, “Federated sity, Guangxi Zhuang Autonomous Region, China,
+ transfer learning with client selection for intrusion detection in mobile edge in 2001 and 2004, respectively, and the PhD degree
+ computing,” IEEE Commun. Lett., vol. 26, no. 3, pp. 552–556, Mar. 2022. in computer science from Beihang University, in
+[22] Y. Otoum, Y. Wan, and A. Nayak, “Federated transfer learning-based IDS 2009. She is currently an associate professor and a
+ for the internet of medical things (IoMT),” in Proc. 2021 IEEE Globecom supervisor of master’s candidates with the College of
+ Workshops, 2021, pp. 1–6. Computer Science, Beijing University of Technology,
+[23] S. Feng, B. Li, H. Yu, Y. Liu, and Q. Yang, “Semi-supervised federated China. She has under taken research projects funded
+ heterogeneous transfer learning,” Knowl.-Based Syst., vol. 252, 2022, by National Natural Science Foundation of China
+ Art. no. 109384. and Beijing Natural Science Foundation and has been
+[24] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for participating in various research projects supported by the National High-Tech
+ network intrusion detection systems (UNSW-NB15 network data set),” in Research and Development Program of China etc. Her current research interests
+ Proc. 2015 Mil. Commun. Inf. Syst. Conf., 2015, pp. 1–6. include cloud computing and edge computing security, Big Data security and
+[25] NSL-KDD dataset, 2009. Accessed: Feb. 08, 2021. [Online]. Available: privacy protection, and artificial intelligence security.
+ https://www.unb.ca/cic/datasets/nsl.html
+[26] I. Sharafaldin et al., “Toward generating a new intrusion detection dataset
+ and intrusion traffic characterization,” in Proc. 4th Int. Conf. Inf. Syst.
+ ZhenKun Chen received the BS degree from the
+ Secur. Privacy, 2018, pp. 108–116.
+ School of Information, Beijing Wuzi University, Bei-
+[27] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An ensemjing, China, in 2022, and the MS degree from the
+ ble of autoencoders for online network intrusion detection,” 2018, arXiv: College of Computer Science, Beijing University of
+ 1802.09089.
+ Technology, Beijing, China, in 2025. His research
+[28] Y. Meidan et al., “N-BaIoT—Network-based detection of IoT BotNet
+ interests include federated transfer learning and inattacks using deep autoencoders,” IEEE Pervasive Comput., vol. 17, no. 3,
+ trusion detection technology. He has participated in
+ pp. 12–22, Third Quarter 2018. some research projects funded by National Natural
+[29] A. Iscen, G. Tolias, Y. Avrithis, and O. Chum, “Label propagation for deep
+ Science Foundation of China and Beijing Natural
+ semi-supervised learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ Science Foundation.
+ Recognit., 2019, pp. 5070–5079.

@@ -1,0 +1,716 @@
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+RTF-Net: A Lightweight Dual-View Framework for
+Fine-Grained Encrypted Short-Video Fingerprinting
+ Yinhao Xiao1,* , Xiaoya Xu2,*,† , Haoran Xie3 and Fu Lee Wang4
+ 1
+ School of Big Data and Artificial Intelligence, Guangdong University of Finance and Economics, Guangzhou, China
+ 2
+ School of Business Administration, Guangdong University of Finance and Economics, Guangzhou, China
+ 3
+ School of Data Science, Lingnan University, Hong Kong, China
+ 4
+ School of Science and Technology, Hong Kong Metropolitan University, Hong Kong, China
+ Emails: 20191081@gdufe.edu.cn, xuxiaoya@gdufe.edu.cn, hrxie@ln.edu.hk, pwang@hkmu.edu.hk
+ *
+ Co-first authors (Contributed equally).
+ †
+ Corresponding author.
+
+ Abstract—Short video platforms like TikTok have dominated This unprecedented scale not only highlights the platform’s
+global internet traffic. Despite the deployment of robust en- dominance but also implies that a vast amount of user intercryption protocols (e.g., TLS 1.3 and QUIC) to protect user action data is being transmitted across networks every second,
+confidentiality, side-channel information leaking from encrypted
+traffic remains a significant privacy threat. However, accurately making the privacy and security of these encrypted traffic flows
+identifying specific video content is increasingly challenging due a critical concern for billions of users.
+to complex Adaptive Bitrate (ABR) algorithms, which homog- As short-form video platforms become the primary applicaenize traffic patterns, especially in high-motion viral content. tion for billions of mobile consumer electronics users, the se-
+Existing methods relying on simple statistical features or single- curity of encrypted traffic flows has become a critical concern.
+view deep learning models often struggle to capture the finegrained fingerprints of specific videos under these conditions. These devices often handle sensitive personal data, and the
+In this paper, we propose a novel Multi-View Fusion Network, side-channel leakage identified in this paper directly threatens
+namely Rocket-Transformer Fusion (RTF-Net), that integrates the digital privacy and security of the broader consumer base.
+time-domain convolutional features with frequency-domain at- To safeguard user data during transmission, leading shorttention mechanisms. Our approach utilizes MiniRocket to extract video platforms have universally adopted robust encryption
+deterministic sequential patterns from traffic bursts, while simultaneously employing Fast Fourier Transform (FFT) combined protocols, primarily the QUIC protocol layered over UDP and
+with TinyBERT to capture global periodic dependencies in the TLS 1.3. These mechanisms ensure that the payload content
+frequency domain. We evaluate our method on a self-collected remains confidential, making direct decryption of plaintext
+dataset comprising 2,000 encrypted traffic traces generated from data computationally infeasible for third-party eavesdroppers.
+20 most viral short dramas (each exceeding 100 million views) However, while encryption effectively conceals the content, it
+on TikTok. Experimental results demonstrate that our method
+achieves a state-of-the-art classification accuracy of 91.33% using fails to mask the underlying traffic patterns. This gap exposes
+only the first 30 seconds of viewing traffic, significantly outper- a critical vulnerability known as the side-channel attack,
+forming other baseline machine learning algorithms, showing that where adversaries can analyze unencrypted metadata—such
+side-channel leakage is indeed a threat to short video platforms. as packet sizes, inter-arrival times, and burst sequences—to
+To facilitate reproducibility and future research, we have open- infer specific user activities. If an attacker can successfully
+sourced our dataset and code online.
+ Index Terms—Encrypted Traffic Analysis, ide-Channel Attack,
+ fingerprint the specific short video a user is watching, they
+Multi-View Fusion, Video Fingerprinting. can reconstruct the user’s viewing history with high precision.
+ This leakage extends far beyond mere curiosity; it enables the
+ profiling of a user’s personal interests, political orientation,
+ I. I NTRODUCTION
+ and sexual identity. The consequences range from intrusive,
+ In recent years, the landscape of mobile Internet traffic has hyper-targeted advertising to severe physical security risks.
+undergone a paradigm shift, characterized by the explosive For instance, identifying videos related to specific landmarks,
+growth of short-form video platforms. These applications, local news, or neighborhood events could inadvertently reveal
+offering bite-sized and algorithmically curated content, have a user’s real-world location or home address, thereby bridging
+revolutionized digital media consumption and user engage- the gap between cyber surveillance and physical safety threats.
+ment patterns globally. Among the myriad of platforms, Tik- Despite the high potential payoff for attackers, executing
+Tok has emerged as the undisputed market leader, fundamen- such fine-grained attacks within a specifically encrypted applitally reshaping the social media ecosystem. The platform’s cation is practically non-trivial. Existing research on encrypted
+influence is evidenced by its massive and rapidly expanding traffic analysis predominantly focuses on Website Fingerprintuser base; recent statistics indicate that TikTok has amassed ing (WF), Protocol Identification, Browser Fingerprinting and
+approximately 1.59 billion monthly active users worldwide [1]. so on [2]–[4]. In those scenarios, classifiers can rely on
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+discriminative inter-site features, such as distinct destination sive audience reach. In the preprocessing phase, we filtered the
+IP addresses, unique Server Name Indication (SNI) fields in raw packets to isolate QUIC/TLS flows and aggregated them
+TLS handshakes, or significant differences in traffic volume into burst sequences, transforming unstructured binary data
+between different services (e.g., differentiating YouTube from into vectorized time-series representations suitable for deep
+Wikipedia). However, distinguishing individual videos within learning. To the best of our knowledge, this is the first study
+a single platform like TikTok presents a significantly more to investigate fine-grained specific video fingerprinting on
+complex challenge due to the homogeneity of the traffic. First, the TikTok platform. To foster reproducibility and encourage
+all video contents are delivered via the same Content Delivery further research in the community, we have made our full
+Networks (CDNs) using identical QUIC protocols, rendering dataset and source code publicly available on online.
+packet headers and IP-based features virtually useless. Second, The main contributions of this paper are summarized as
+and more critically, the widespread deployment of Adaptive follows:
+Bitrate (ABR) algorithms introduces severe stochasticity to • We propose the Multi-View Fusion Network, a novel
+the traffic patterns. The ABR mechanism dynamically adjusts side-channel analysis framework specifically designed to
+video quality and chunk sizes based on real-time network infer encrypted traffic of short videos under complex
+conditions, meaning that traffic traces generated by the same ABR and QUIC obfuscation. By synergizing discrimivideo can vary drastically across different viewing sessions. native temporal features (via MiniRocket) with global
+Furthermore, the QUIC protocol employs padding mechanisms frequency-domain attention (via FFT and TinyBERT), our
+to obfuscate packet sizes, and the short duration of viral method achieves a state-of-the-art accuracy of 91.33%,
+videos limits the amount of temporal information available for demonstrating superior robustness compared to traditional
+analysis, leading to substantial feature overlap among different baselines.
+videos. • We constructed and released the first publicly available
+ To overcome these sophisticated obfuscation techniques, we encrypted traffic dataset tailored for the TikTok
+propose a novel Multi-View Fusion Network, namely Rocket- platform. This dataset comprises 2,000 real-world traf-
+Transformer Fusion (RTF-Net), that synergizes the strengths fic traces collected from 20 viral short dramas (each
+of discriminative feature engineering and deep representation with over 100 million views), addressing the scarcity of
+learning. Unlike previous works that rely solely on time- benchmarks in short video fingerprinting and facilitating
+domain analysis, our framework treats encrypted traffic finger- future research in the community.
+printing as a dual-modal problem. The first view focuses on the
+ II. R ELATED W ORK
+Time Domain, employing MiniRocket [5], a state-of-the-art
+time series transformation method. MiniRocket utilizes a vast A. Side-Channel Attacks
+set of random convolutional kernels to extract deterministic, Side-channel attacks (SCAs) exploit unintended information
+high-resolution features from the burst sequences, effectively leakage from system implementations. Recently, research has
+capturing the localized ”shape” and ”texture” of traffic bursts shifted from network-level observations to microarchitectural
+which remain consistent for specific video contents. Comple- and AI-specific leakages. Mai et al. [7] leverages GPU-based
+menting this, the second view explores the Frequency Domain side-channel from the WebGL framework to successfully infer
+to mitigate the stochastic noise introduced by ABR algorithms. to accurate geographical information of a victim who is brows-
+We apply Fast Fourier Transform (FFT) to convert the raw ing a Navigation App. Li et al. [8] proposes a mutual detection
+traffic series into its spectral representation, which is then and two-stage identification framework that leverages enprocessed by TinyBERT [6]. The self-attention mechanism of crypted traffic analysis to autonomously detect and accurately
+TinyBERT is adept at identifying global, long-range dependen- identify wireless IoT devices. Haghighi et al. [9] proposes a
+cies and periodic artifacts within the frequency spectrum that novel covert malware attack that spreads through intelligent
+are often invisible to local convolutions. By fusing these two transportation systems to stealthily manipulate adaptive cruise
+complementary views—local temporal precision and global control parameters, thereby engineering vehicle crash statisspectral robustness—our model can effectively penetrate the tics, and introduces a non-disruptive anomaly-based intrusion
+noise of ABR and encryption padding, constructing a unique detection system that effectively detects such attacks using
+and resilient fingerprint for each viral video. real-world data. Maar et al. [12] demonstrated that kernel
+ To rigorously evaluate the proposed framework, we con- defenses can be compromised via defense-amplified TLB sidestructed a large-scale, real-world encrypted traffic dataset. We channel leaks, enabling stable kernel exploits. Similarly, Wang
+developed an automated traffic collection system to simulate et al. [14] introduced the Page Walk Side Channel (PWSC),
+realistic user viewing behaviors, capturing raw traffic traces which leaks secrets even during invalid pointer dereferences
+(PCAP) directly from the network interface. The dataset tar- by exploiting speculative execution and prefetching. In the
+gets the most influential content on the platform; specifically, context of AI, Yuan et al. [11] proposed CipherSteal, the first
+we selected 20 viral short dramas from Douyin (the Chinese framework to successfully recover visually identical input data
+version of TikTok), each of which has garnered over 100 from TEE-shielded neural networks by exploiting ciphertext
+million views. These high-profile videos represent the most side channels. These works highlight that side-channel threats
+valuable targets for potential privacy attacks due to their mas- are becoming increasingly sophisticated and fine-grained.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+ TABLE I
+ C OMPARISON OF RTF-N ET WITH R EPRESENTATIVE S IDE -C HANNEL A NALYSIS W ORKS (U PDATED WITH R ECENT 2025-2026 S TUDIES )
+
+ Reference Target Domain Primary Task Granularity Methodology
+ Mai et al. [7] GPU / WebGL Infer Geographical Info Coarse (User Info) GPU Side-channel Analysis
+ Li et al. [8] Wireless IoT Identify IoT Devices Coarse (Device Type) Two-stage Identification
+ Haghighi et al. [9] ITS (Vehicles) Detect Anomalies/Malware Coarse (Anomaly) Non-disruptive IDS
+ Ahmed et al. [10] 6G Networks Detect Attacks Coarse (Attack Detection) Bayesian Optimization DL
+ Yuan et al. [11] TEE-Shielded NN Stealing Input Data Fine (Input Image) Ciphertext Side-channel
+ Maar et al. [12] Linux Kernel Kernel Exploitation Coarse (Address Leak) TLB Side-channel
+ Yu et al. [13] Federated Learning Infer Data Distribution Coarse (Distribution) RL-based Analysis
+ RTF-Net (Ours) Short Video Identify Specific Video Fine (Content Title) Dual-View Fusion (Time+Freq)
+* ”Coarse” refers to tasks like device identification or anomaly detection; ”Fine” refers to precise identification of specific content titles or original input
+ recovery.
+
+B. Security in Collaborative and Algorithm Systems a victim on the TikTok platform. We assume that all communi-
+ Collaborative learning and outsourced computing have in- cation between the client and the server is protected by robust
+troduced new privacy dimensions. Yu et al. [13] proposed encryption protocols (e.g., QUIC and TLS 1.3), preventing
+a reinforcement-learning-based attack that deduces global the attacker from inspecting packet payloads. However, the
+data distribution from shared model parameters in Federated adversary can capture unencrypted side-channel information,
+Learning (FL), proving that global models can leak collective specifically the sequence of packet sizes, directions, and interknowledge. To address model integrity, Alqattan et al. [15] arrival times. To demonstrate the ubiquity of this threat, we deintroduced the Model Discrepancy Score (MDS) to detect fine three realistic attack scenarios: (1) Intermediate Routing
+adversarial updates in Hierarchical FL (HFL). In outsourced Nodes: The adversary controls network infrastructure (e.g.,
+computing, Luo et al. [16] developed a secure three-party malicious Wi-Fi, ISPs) between the victim and TikTok CDNs.
+clustering scheme that effectively identifies malicious behavior (2) Local Area Network (LAN) Attacks: An attacker on the
+during data processing. Furthermore, Xiao et al. [17] showed same LAN (e.g., coffee shop) uses ARP spoofing to redirect
+that lightweight hybrid obfuscation at the binary level can sig- and capture victim traffic. (3) On-Device Parasitic Malware:
+nificantly reduce malware detection rates, emphasizing the on- A background Android application with standard network
+going arms race between attackers and defenders. Li et al. [18] permissions captures packets via APIs like VpnService
+proposes TLD-SCA, a hybrid detection model that combines without requiring root privileges.
+Transformer-based global dependency modeling with LSTM- This is particularly dangerous for the consumer electronbased local time-series dynamics against network-based side- ics ecosystem, as malicious software can leverage standard
+channel attacks. Ahmed et al. [10] proposes AutoSCA, an Android APIs to capture traffic patterns without requiring
+automated deep learning side-channel analysis framework that elevated root privileges. This makes the attack highly feasible
+leverages Bayesian optimization to detect side-channel attacks in typical consumer environments, such as using a standard
+against 6G network. Ali et al. [19] proposes a differential smartphone in a public Wi-Fi area.
+privacy method to secure Consumer Internet of Things (CIoT) This threat model confirms that the proposed side-channel
+from possible leakage. attack does not rely on specialized hardware or restricted
+ network positions, making it highly feasible in diverse real-
+C. Summary and Discussion world environments.
+ In summary, while these recent studies have significantly
+advanced our understanding of side-channel leakages in hard- B. Overview of RTF-Net
+ware [12], [14] , collaborative AI [13], [15] , and TEE To effectively identify specific video fingerprints from enenvironments [11] , they primarily focus on static assets crypted traffic obfuscated by ABR and QUIC padding, we proor architectural flaws. Identifying specific, dynamic content pose a lightweight, dual-stream architecture named Rocketwithin encrypted short-video traffic—which is obfuscated by Transformer Fusion Network (RTF-Net). As illustrated in
+both ABR and QUIC—remains an underexplored challenge Figure 1 (placeholder for your architecture diagram), RTFthat requires the dual-modal temporal and spectral analysis Net is designed to capture complementary features from
+proposed in RTF-Net. both the time and frequency domains while maintaining low
+ computational complexity.
+ III. M ETHODOLOGY The framework consists of three integrated stages:
+A. Threat Model 1) Data Preprocessing: The raw PCAP files are first
+ In this study, we consider a passive, local adversary who filtered to extract QUIC/TLS flows. We then aggregate
+aims to infer the specific short video content being viewed by packets into a sequence of bursts, represented by a 4-
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+Fig. 1. The overall architecture of the proposed Rocket-Transformer Fusion Network (RTF-Net). The framework adopts a dual-stream design: the Time-
+Domain branch (Top) utilizes MiniRocket to extract deterministic local convolution features, while the Frequency-Domain branch (Bottom) leverages FFT
+and TinyBERT to capture global spectral dependencies. ...
+
+ dimensional vector (size, duration, packet count, inter- This hybrid design ensures that RTF-Net remains
+ arrival time). This transforms unstructured traffic into a lightweight enough for potential mobile deployment while
+ unified time-series format. achieving robust accuracy through the fusion of deterministic
+ 2) Dual-View Feature Extraction: The input sequence is convolutions and global self-attention.
+ fed into two parallel lightweight branches:
+ • Time-Domain View (MiniRocket): We utilize C. Design Rationale
+ MiniRocket, a fast and deterministic convolutional While fundamental components such as FFT and Selfmethod, to extract high-resolution local shape fea- Attention are widely used in general signal processing, their
+ tures from the burst sequence. This branch excels at direct application to encrypted traffic fingerprinting is noncapturing the sequential ”texture” of traffic patterns trivial due to the complex noise introduced by Adaptive Bitrate
+ with minimal training cost. (ABR) algorithms and QUIC padding. The technical core of
+ • Frequency-Domain View (FFT + Self-Attention): RTF-Net lies in the strategic orchestration of these modules to
+ To mitigate the stochastic noise introduced by ABR, address two specific challenges:
+ we transform the sequence into the frequency do- 1) Combating ABR Stochasticity: Standard time-domain
+ main using Fast Fourier Transform (FFT). The convolutions (e.g., 1D-CNN) struggle with the jittery
+ spectral features are then processed by a TinyBERT burst patterns of ABR. We introduce the Frequencymodule equipped with Squeeze-and-Excitation (SE) Domain View (via FFT and TinyBERT) specifically to
+ blocks. This branch leverages multi-head self- capture the global periodic rhythms of video buffering,
+ attention mechanisms to identify global periodic which remain invariant even when packet timing fluctudependencies and long-range correlations that are ates.
+ invariant to local jitter. 2) Balancing Accuracy and Efficiency: To ensure deploy-
+ 3) Adaptive Fusion and Classification: Finally, the fea- ability on consumer electronics, we avoid heavy, fully
+ ture vectors from both the MiniRocket and TinyBERT learnable backbones. Instead, we utilize MiniRocket
+ branches are concatenated. A lightweight Multilayer (which uses fixed kernels for rapid shape extraction)
+ Perceptron (MLP) fuses these multi-view representations to handle high-dimensional time series, reserving the
+ to generate the final prediction scores for specific video computationally intensive Attention mechanism only for
+ identification. the compact spectral features. The design of RTF-Net
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+ specifically prioritizes the resource constraints typical bandwidth availability and transmission congestion, providing
+ of modern consumer electronics. By minimizing the resilience against network jitter; and Inter-Burst Time (Ii )
+ model’s footprint, we ensure its feasibility for edge acts as the ”heartbeat” of the player’s buffer management,
+ deployment on smartphones or smart home gateways. serving as a unique temporal signature of the video’s encoding
+This dual-view fusion design allows RTF-Net to achieve state- structure. The resulting bursts form a sequence X which is
+of-the-art accuracy with minimal computational overhead. The fixed to a length of L = 1024 via truncation or zero-padding.
+core novelty of RTF-Net lies in its ”Synergistic Duality” de- Finally, to handle the high dynamic range of traffic values,
+signed to handle the non-stationary nature of ABR-obfuscated we apply a RobustScaler to normalize the features, ensuring
+traffic. The necessity of the two-channel fusion is rooted in the stability during the subsequent deep learning training.
+fundamental trade-off between temporal precision and spectral E. Dual-View Feature Extraction
+robustness.
+ The preprocessed burst sequence X ∈ RL×C (where
+ First, the Time-Domain View (via MiniRocket) is essential
+ L = 1024 is the sequence length and C = 4 is the channel
+for capturing the ”instantaneous volume signatures”—such as
+ dimension) serves as the input to our dual-view architecture.
+the specific size of I-frame bursts—which are deterministic
+ This module is designed to capture complementary features:
+indicators of video content complexity. However, temporal
+ deterministic local shapes from the time domain and global
+features are highly sensitive to the stochastic timing jitter
+ periodic dependencies from the frequency domain.
+and packet-level padding introduced by QUIC and ABR
+ 1) Time-Domain View: Deterministic Convolution via
+algorithms. Second, the Frequency-Domain View (via FFT
+ MiniRocket: To extract high-resolution local features from the
+and TinyBERT) acts as a noise-invariant anchor. While ABR
+ traffic bursts, we employ MiniRocket, a state-of-the-art time
+shifts the ”when” of a burst, it cannot easily mask the ”how
+ series transformation method. Unlike learnable Convolutional
+often,” which is the periodic rhythm of buffer replenishment.
+ Neural Networks (CNNs), MiniRocket utilizes a fixed set of
+ Our ablation study (Table IV) empirically validates this
+ random convolutional kernels to transform the input signal,
+necessity: relying on the Time-Domain alone leads to a
+ offering extreme computational efficiency while maintaining
+significant accuracy drop to 84.15%, as it overfits to tranhigh discriminative power.
+sient network noise. Conversely, the Frequency-Domain alone For an input univariate time series x ∈ RL (corresponding
+achieves only 78.60%, as it loses the fine-grained ”burst- to one channel of X), MiniRocket applies a set of fixed conshape” information. Only through the strategic fusion of local volutional kernels K = {w1 , w2 , . . . , wK }. The convolution
+temporal precision and global spectral stability can RTF- operation for a kernel w at time step t is defined as:
+Net achieve the state-of-the-art 91.33% accuracy required for
+ M −1
+fine-grained identification in real-world consumer electronics X
+ (x ∗ w)t = xt−j·d · wj (1)
+environments.
+ j=0
+D. Data Preprocessing and Feature Engineering where M is the kernel length (fixed to 9 in our setup), d is
+ Raw encrypted traffic, particularly over the QUIC protocol, the dilation rate, and wj ∈ {−1, 2} are the discrete weights
+presents significant challenges for fingerprinting due to packet constrained to a small set of values to accelerate computation.
+padding and header encryption. Direct packet-level analysis Instead of using the raw convolution output, MiniRocket
+is often noisy and computationally expensive. To address computes the Proportion of Positive Values (PPV), which
+this, we implement a burst-level preprocessing pipeline. First, acts as a pooling mechanism to generate a fixed-length feature
+raw PCAP traces are filtered to isolate UDP flows carrying vector. For a given kernel w and a bias term b, the feature hw,b
+QUIC payloads. We then adopt a Burst Aggregation strategy, is calculated as:
+where a burst is defined as a continuous sequence of packets 1X
+ L
+traveling in the same direction with inter-arrival times less hw,b = I ((x ∗ w)t > b) (2)
+ L t=1
+than a threshold τ = 0.5s. This aggregation is critical as
+it reconstructs semantic application-layer units (e.g., video where I(·) is the indicator function which equals 1 if the condislices) from fragmented transport-layer packets. By summing tion is true and 0 otherwise. By aggregating these PPV features
+packet sizes within a burst, we effectively neutralize the impact across all kernels and channels, we obtain the time-domain
+of QUIC padding and align the traffic representation with the feature representation Htime ∈ RDtime . This representation
+logical download events driven by the Adaptive Bitrate (ABR) effectively captures the ”shape” and ”texture” of the burst
+algorithm, capturing the request-response behavior intrinsic to sequence, such as the frequent alternation of small requests
+video streaming. and large response chunks, which are critical fingerprints of
+ For each aggregated burst bi , we extract a 4-dimensional video buffering.
+feature vector vi = [Si , Di , Ci , Ii ] to represent its spatiotem- 2) Frequency-Domain View: Spectral Attention via FFT
+poral characteristics. Specifically, Signed Burst Size (Si ) cap- and TinyBERT: While MiniRocket excels at local pattern
+tures the volume and direction of data (positive for downloads, extraction, it may miss global periodicities obscured by ABRnegative for requests), helping to identify heavy I-frames; induced jitter. To address this, we transform the sequence into
+Burst Duration (Di ) and Packet Count (Ci ) jointly reflect the frequency domain and apply a self-attention mechanism.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+ 1. Fast Fourier Transform (FFT): First, we apply the 1) Feature Fusion and Classification: The time-domain
+one-dimensional Discrete Fourier Transform (DFT) to each feature vector Htime (from MiniRocket) and the frequencychannel of the input X. The frequency spectrum F(k) for a domain feature vector Hf req (from TinyBERT) provide comchannel xn is computed as: plementary perspectives of the traffic. We fuse them via
+ L−1
+ concatenation:
+ X 2π Z = [Htime ⊕ Hf req ] (8)
+ F(k) = xn e−i L kn , k = 0, . . . , L − 1 (3)
+ n=0 The combined vector Z is fed into a lightweight Multilayer
+where i is the imaginary unit. We utilize only the real compo- Perceptron (MLP) classifier with a softmax activation function
+nent of the sequence (rFFT) and compute the magnitude. To to produce the predicted probability distribution ŷ over the N
+handle the large dynamic range of traffic spectral density, we video classes:
+apply a logarithmic scaling: ŷ = Softmax(MLP(Z)) (9)
+ (k) 2) Hybrid Objective Function: Focal Loss with Flooding:
+ Xf req = log(1 + |F(k)|) (4)
+ Training deep models on encrypted traffic datasets faces
+We truncate the spectrum to the first L/2 frequency compo- two specific challenges: (1) Sample Hardness Imbalance:
+nents, resulting in a spectral input Xf req ∈ R(L/2)×C . Some video pairs exhibit distinct bitrates and are easy to
+ 2. Self-Attention Mechanism (TinyBERT): The spectral classify, while others (e.g., videos of the same genre) generate
+sequence Xf req is then fed into a TinyBERT encoder. To highly similar burst patterns, acting as ”hard samples.” (2)
+capture the dependencies between different frequency com- Overfitting to Noise: With a limited dataset size (e.g., 2,000
+ponents, we employ Multi-Head Self-Attention (MSA). For a traces), models tend to memorize specific network jitter or
+specific head, the input is projected into Query (Q), Key (K), TCP retransmission noise, driving the training loss to zero
+and Value (V ) matrices: but hurting generalization. To address these, we propose a
+ hybrid objective function combining Focal Loss [20] and
+ Q = Xf req W Q , K = Xf req W K , V = Xf req W V (5) Flooding [21].
+ 1. Hard Mining via Focal Loss: Standard Cross-Entropy
+where W Q , W K , W V ∈ Rdmodel ×dk are learnable projection (CE) loss treats all samples equally. However, easily classified
+matrices. The attention scores are computed using the scaled samples often dominate the gradient, preventing the model
+dot-product: from learning subtle differences in hard samples. We adopt
+ 
+ QK T
+  Focal Loss (FL) to dynamically down-weight easy examples.
+ Attention(Q, K, V ) = softmax √ V (6) Let pt be the model’s estimated probability for the grounddk
+ truth class. The Focal Loss is defined as:
+where dk is the dimension of the key vectors. This mechanism allows the model to weigh the importance of different LF L (pt ) = −(1 − pt )γ log(pt ) (10)
+frequency bands globally. For instance, if a video has a char- where γ ≥ 0 is the focusing parameter.
+acteristic burst cycle of 5 seconds, the attention mechanism • When a sample is misclassified (pt → 0), the modulating
+will highlight the corresponding low-frequency components factor (1 − pt )γ → 1, and the loss remains unaffected.
+regardless of where the bursts appear in the time domain. • When a sample is correctly classified with high confi-
+ 3. Squeeze-and-Excitation (SE) Block: To further refine dence (pt → 1), the factor (1−pt )γ → 0, down-weighting
+the spectral features, we introduce a Squeeze-and-Excitation the loss.
+(SE) block after the Transformer encoder. The SE block
+ In our experiments, we set γ = 2.0. This forces the RTF-Net
+recalibrates channel-wise feature responses by modeling interto focus its learning capacity on the ”hard” video traces that
+dependencies between channels.
+ are easily confused due to ABR similarities.
+ s = σ(W2 δ(W1 z)) (7) 2. Generalization via Flooding: To prevent the model from
+ overfitting to trivial network noise (which would result in a
+where z is the global average pooling of the encoder output, training loss of zero), we implement the Flooding strategy.
+W1 and W2 are weights of two fully connected layers reducing We define a flood level b (a small constant, set to 0.40). The
+and restoring the dimensionality, δ is the ReLU activation, final objective function Ltotal is:
+and σ is the Sigmoid function. The final frequency-domain
+ Ltotal = |LF L − b| + b (11)
+representation Hf req is obtained by scaling the encoder output
+with the learned weights s. The mechanism works as follows:
+ • When LF L > b, the gradient flows normally, minimizing
+F. Adaptive Fusion and Optimization Strategy the loss.
+ The final stage of RTF-Net involves fusing the dual-view • When LF L < b (i.e., the model becomes too confident),
+representations and optimizing the network using a specialized the term |LF L − b| causes the gradient direction to flip
+loss function designed for encrypted traffic analysis. (gradient ascent), pushing the loss back up towards b.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+This ”random walk” around the flood level b prevents the the trace level, ensuring that the evaluation is session-disjoint,
+parameters from settling into a sharp, narrow minimum (over- i.e., the training and testing sets contain traffic from comfitting) and instead forces them into a flatter loss landscape, pletely independent viewing sessions. Furthermore, to improve
+which corresponds to better generalization on unseen test data. the model’s generalization capability against potential crossnetwork jitter, we applied data augmentation during training
+ IV. P ERFORMANCE E VALUATION
+ by injecting Gaussian noise (µ = 0, σ = 0.05) into the spectral
+ In this section, we detail the performance of RTF-Net, we features.
+first
+ B. Dataset Collection
+A. Experimental Configuration
+ To ensure the reproducibility and reliability of our experi-
+ Hardware and Software Setup. To demonstrate that our ments, we constructed a standardized encrypted traffic dataset
+proposed RTF-Net is lightweight and deployable on standard specifically for the TikTok platform.
+consumer-grade hardware, we conducted all experiments on Data Collection Environment. All traffic data were cola standard desktop PC. The system is equipped with an Intel lected in an isolated laboratory network environment. We
+Core i9-10900K CPU, 64GB of RAM, and a single NVIDIA utilized a dedicated Wi-Fi access point connected to a gateway
+GeForce RTX 3090 GPU (24GB VRAM). The framework server running tcpdump. During the collection process, no
+is implemented in Python 3.9 using the PyTorch library for other background applications were running on the test device
+deep learning and the sktime library for the MiniRocket (a Google Pixel 4 running Android 11) to eliminate interfertransformation. ence from irrelevant background traffic.
+ Hyperparameter Settings. The detailed hyperparameters Target Selection and Sampling. We selected 20 viral
+for the model architecture and training process are summarized short dramas from TikTok, each with over 100 million views,
+in Table II. We process input sequences with a length of L = ensuring that the targets represent high-value content for
+1024. The Time-Domain branch utilizes MiniRocket features privacy attacks. For each video, we developed an automated
+projected to a lower dimension of 256. The Frequency-Domain script to simulate user viewing behavior. The script opened
+branch (TinyBERT) operates on the first 512 frequency com- the specific video, played it for 30 seconds, and then closed
+ponents with a hidden size of 64 and 2 encoder layers. The the application. This process was repeated 100 times for each
+model is trained for 300 epochs using the AdamW optimizer video to capture variations caused by network fluctuations and
+with a weight decay of 0.05 to ensure robust convergence. ABR adjustments.
+ Dataset Statistics and Open Source. The final dataset
+ TABLE II
+ H YPERPARAMETER S ETTINGS OF RTF-N ET
+ comprises 2,000 raw PCAP files (20 classes × 100 traces).
+ After preprocessing, these traces were converted into the burst
+ Parameter Value sequences used for training and testing. To facilitate future
+ research in the community, we have made the full dataset
+ Input & Preprocessing
+ Raw Sequence Length (L) 1024
+ publicly available online1 .
+ FFT Sequence Length 512
+ C. Comparative Analysis with Baseline Models
+ Input Channels 4
+ To demonstrate the superiority of our proposed method, we
+ Model Architecture
+ conducted a comprehensive comparison against 13 state-of-
+ TinyBERT Hidden Size (dmodel ) 64
+ TinyBERT Heads 4
+ the-art baseline models, including both classic Machine Learn-
+ TinyBERT Layers 2 ing (ML) algorithms and deep learning (DL) architectures
+ MiniRocket Projection Dim 256 commonly used in encrypted traffic analysis.
+ Fusion Hidden Size 128 Baselines. The evaluated baselines are categorized as fol-
+ Dropout Rate 0.5 lows:
+ Training Strategy • Classic ML Models: We selected 8 representative classi-
+ Batch Size 32 fiers including Random Forest (RF), Support Vector Ma-
+ Learning Rate 5 × 10−4 chine (SVM), k-Nearest Neighbors (k-NN), Decision Tree
+ Optimizer AdamW (DT), Gaussian Naive Bayes (GNB), Logistic Regression
+ Weight Decay 0.05 (LR), Linear Discriminant Analysis (LDA), and Extra
+ Max Epochs 100
+ Trees (ET). These models were trained on statistical fea-
+ Loss Function (Focal + Flood) tures (packet sizes, inter-arrival times) similar to standard
+ Focal Gamma (γ) 2.0 flow fingerprinting approaches.
+ Label Smoothing 0.1 • Deep Learning Models: We compared against 5 standard
+ Flood Level (b) 0.40
+ sequence modeling architectures: 1D-CNN, LSTM, GRU,
+ Bi-LSTM, and a standard Transformer. These models
+ Data Splitting and Robustness. We employed a stratified
+70/30 split for training and testing. The split is performed at 1 https://www.scidb.cn/en/detail?dataSetId=71c64c5d9f4c4961a8dbff9e5a43d43f
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+ took the same raw burst sequences as input but lacked
+ the specialized dual-view fusion mechanism.
+ To validate the superiority of RTF-Net against the latest
+advancements in sequence modeling, we compared it with
+three cutting-edge methods from recent top conferences:
+ • ET-BERT (WWW ’22) [22]: A Transformer-based
+ framework adapted for encrypted traffic representation
+ learning.
+ • PatchTST (ICLR ’23) [23]: A SOTA Transformer model
+ utilizing patching techniques for effective time-series
+ modeling.
+ • Mamba (2024) [24]: A novel State Space Model (SSM)
+ architecture that has recently gained attention for its
+ efficiency.
+ Results Analysis. The quantitative comparison results are Fig. 2. Performance comparison of RTF-Net against 16 baseline models.
+ The proposed RTF-Net (Red bar) significantly surpasses both classic machine
+summarized in Table III and visualized in Figure 2. As learning classifiers and standard deep learning models in identification accuobserved, our proposed RTF-Net achieves a state-of-the-art racy.
+accuracy of 91.33%, significantly outperforming all baseline
+methods. Among the ML baselines, tree-based ensemble meth- TABLE III
+ods (e.g., Random Forest and Extra Trees) performed relatively P ERFORMANCE C OMPARISON WITH 16 BASELINE M ODELS (I NCLUDING
+ R ECENT SOTA)
+well but plateaued around 60-70%, indicating that handcrafted
+statistical features fail to capture the fine-grained, sequential Model Acc (%) Prec Recall F1
+dependencies of ABR traffic.
+ Classic Machine Learning
+ Most notably, we observe a distinct performance gap when
+ Random Forest 62.45 0.61 0.62 0.61
+comparing against recent state-of-the-art sequence models. Support Vector Machine 45.12 0.44 0.45 0.44
+Contrary to the trend in general Computer Vision or NLP k-Nearest Neighbors 58.30 0.57 0.58 0.57
+tasks, the latest large-scale models did not yield the best Extra Trees 65.80 0.65 0.66 0.65
+performance in this specific domain. Mamba and PatchTST Decision Tree 55.20 0.55 0.55 0.55
+ Gaussian NB 32.15 0.31 0.32 0.31
+achieved accuracies of only 47.33% and 47.00%, respectively. AdaBoost 48.90 0.48 0.49 0.48
+This counter-intuitive result highlights the unique challenge of Gradient Boosting 60.10 0.60 0.60 0.60
+ABR video fingerprinting: general SOTA models typically re-
+ Standard Deep Learning Baselines
+quire large-scale datasets to converge and are highly sensitive 1D-CNN 72.50 0.72 0.72 0.72
+to the stochasticity of packet bursts. Without domain-specific LSTM 68.40 0.67 0.68 0.67
+inductive biases, they struggle to disentangle video content GRU 69.10 0.68 0.69 0.68
+from network noise. ET-BERT performed relatively better Bi-LSTM 70.20 0.70 0.70 0.70
+ Transformer (Vanilla) 75.80 0.75 0.76 0.75
+(66.17%) but was still limited by its single-view perspective.
+In contrast, RTF-Net’s superior performance (an improvement Recent SOTA Sequence Models
+of over 25% compared to the best SOTA baseline) can ET-BERT [22] 66.17 0.66 0.66 0.66
+ PatchTST [23] 47.00 0.47 0.47 0.46
+be attributed to its unique Time-Frequency Fusion design, Mamba [24] 47.33 0.47 0.47 0.45
+which effectively combines the local discriminative power of
+ RTF-Net (Ours) 91.33 0.91 0.91 0.91
+MiniRocket with the global noise-resilience of TinyBERT.
+D. Ablation Study
+ To rigorously validate the contribution of each component • w/o Time View (Freq-Only): Using only the FFT and
+within the RTF-Net framework, we conducted a series of TinyBERT branch results in an accuracy of 78.60%.
+ablation experiments. We created four variants of the model by Although the frequency domain is robust to jitter, it lacks
+systematically removing key modules or altering the training the fine-grained local texture information provided by
+strategy. The results are summarized in Table IV. convolutions, leading to lower precision in distinguishing
+ 1. Impact of Dual-View Fusion. We first evaluated the similar videos.
+individual branches independently. The superior performance of the full RTF-Net (91.33%)
+ • w/o Frequency View (Time-Only): This variant relies demonstrates that the time and frequency domains are indeed
+ solely on the MiniRocket branch. As shown in the complementary, and their fusion is essential for high-accuracy
+ table, accuracy drops significantly to 84.15%. While fingerprinting.
+ MiniRocket effectively captures local burst shapes, it 2. Impact of Advanced Optimization.
+ fails to mitigate the stochastic noise introduced by ABR, • w/o Focal Loss & Flooding: We replaced our hyconfirming the necessity of spectral analysis. brid objective function with the standard Cross-Entropy
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+ (CE) loss. The accuracy decreases to 87.50%. This drop TABLE V
+ suggests that the model struggles with ”hard samples” S ENSITIVITY A NALYSIS OF K EY H YPERPARAMETERS
+ (similar videos) without Focal Loss and tends to overfit
+ Factor Variant Acc (%) ∆ Acc
+ to network noise without the regularization provided by
+ Flooding. τ = 0.1s 86.50 -4.83
+ Burst Threshold τ = 1.0s 88.20 -3.13
+ • w/o SE-Block: Removing the Squeeze-and-Excitation
+ τ = 0.5s (Ours) 91.33 -
+ block from the TinyBERT encoder leads to a minor
+ performance degradation ( 1.2%), indicating that channel- L = 256 90.83 -0.50
+ Seq Length (L) L = 512 90.33 -1.00
+ wise attention helps in refining the spectral features. L = 1024 (Ours) 91.33 -
+ DCT 90.17 -1.16
+ TABLE IV Transform STFT 89.67 -1.66
+ A BLATION S TUDY R ESULTS OF RTF-N ET VARIANTS FFT (Ours) 91.33 -
+ Phase 90.17 -1.16
+ Model Variant Acc (%) Macro F1 ∆ Acc
+ Input Type Complex 89.67 -1.66
+ RTF-Net (Full Model) 91.33 0.912 - Magnitude (Ours) 91.33 -
+
+ w/o Frequency View (Time-Only) 84.15 0.839 ↓ 7.18
+ w/o Time View (Freq-Only) 78.60 0.781 ↓ 12.73
+ w/o SE-Block 90.10 0.898 ↓ 1.23 inference latency (including both MiniRocket transformation
+ w/o Focal Loss & Flooding 87.50 0.871 ↓ 3.83 and model inference).
+ The results are summarized in Table VI. RTF-Net is highly
+ lightweight, with only 2.66 million parameters and a storage
+E. Sensitivity Analysis footprint of approximately 10.13 MB. This compact size
+ To assess the robustness of RTF-Net, we conducted ablation allows the model to be easily loaded into the memory of
+studies on key hyperparameters and design choices. The results mobile devices. The total inference latency is 19.85 ms per
+are summarized in Table V. trace. Specifically, the deterministic MiniRocket transforma-
+ 1. Burst Threshold (τ ) and Sequence Length (L). The tion takes 16.38 ms, while the lightweight neural network
+burst aggregation threshold τ is critical for semantic traffic inference requires only 3.47 ms. Considering that video fingerrepresentation. We found that τ = 0.5s yields the best printing typically requires one classification every 30 seconds,
+performance (91.33%). Lower thresholds (τ = 0.1s) tend to this latency is negligible (less than 0.1% of the video duration).
+fragment meaningful video chunks, while higher thresholds These metrics confirm that RTF-Net achieves high accuracy
+(τ = 1.0s) merge distinct request cycles, both degrading with minimal computational overhead, confirming that RTFaccuracy. Similarly, a sequence length of L = 1024 (approx. Net achieves high accuracy with minimal computational over-
+30s) is optimal; reducing the input length to L = 512 or head, making it perfectly suitable for real-time privacy protec-
+L = 256 resulted in accuracy drops of 1.00% and 0.50%, tion or auditing on resource-constrained consumer electronics.
+respectively, indicating that capturing sufficient temporal context is beneficial.
+ TABLE VI
+ 2. Spectral Transform and Input Types. We compared C OMPUTATIONAL E FFICIENCY P ROFILE (CPU B ENCHMARK )
+FFT with Discrete Cosine Transform (DCT) and Short-Time
+Fourier Transform (STFT). FFT (Magnitude) outperformed Metric Value
+DCT (-1.16%) and STFT (-1.66%). This suggests that the
+ Model Complexity
+magnitude spectrum of FFT provides the most robust shift-
+ Parameters 2.66 M
+invariant features against network jitter. Regarding spectral FLOPs 40.24 M
+inputs, Magnitude proved superior to Phase and Complex Model Size (Storage) 10.13 MB
+representations. Notably, even with suboptimal spectral inputs,
+ Latency (Single Core CPU)
+the model maintains high accuracy (> 90%), demonstrating
+ MiniRocket Transform 16.38 ms
+that the Time-Domain branch (MiniRocket) effectively com-
+ Neural Net Inference 3.47 ms
+plements the frequency view, ensuring the framework’s overall Total Latency 19.85 ms
+robustness.
+
+F. Computational Efficiency Analysis
+ G. Qualitative Analysis and Visualization
+ To validate the feasibility of deploying RTF-Net on consumer electronics, we evaluated its computational efficiency To intuitively demonstrate the effectiveness of RTF-Net
+on a standard CPU (Single Core) without GPU acceleration. in penetrating network noise, we visualize the fine-grained
+The metrics include the number of trainable parameters, Float- fingerprints of two representative viral videos (video 01 and
+ing Point Operations (FLOPs), model storage size, and total video 06) in Fig. 3.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+ As illustrated in Fig. 3(a) and (b), the raw time-domain I. Evaluation against Potential Defenses
+burst sequences exhibit significant stochasticity and pulse- To assess the robustness of RTF-Net against counterlike irregularity. This is primarily due to the Adaptive Bitrate forensic measures, we evaluated its performance under four
+(ABR) algorithm, which dynamically adjusts traffic patterns simulated defense scenarios. The results are presented in Table
+based on transient network conditions, making different videos VIII.
+appear visually homogenized in the temporal dimension. How- Ineffectiveness of Traffic Shaping (Padding & Smoothever, our proposed spectral transformation reveals a different ing). Contrary to common assumptions, simple traffic shapperspective. In Fig. 3(c) and (d), the FFT-based spectral ing proved ineffective. Uniform Padding (quantizing burst
+signatures show distinct ”magnitude envelopes.” These spectral sizes) had no impact on accuracy (91.33%), confirming that
+patterns reflect the unique periodic rhythms of the player’s RTF-Net extracts patterns from the temporal sequence rather
+buffer management and chunk-loading strategies, which re- than absolute packet sizes. Remarkably, Bitrate Smoothing
+main relatively stable despite temporal jitter]. slightly improved accuracy to 92.10%. This suggests that the
+ Furthermore, Fig. 3(e) presents the t-SNE visualization of smoothing filter inadvertently acts as a denoiser, removing
+the latent features extracted by the RTF-Net fusion layer for high-frequency outliers and helping the model focus on the
+all 20 video classes. Each color represents a specific video deterministic video burst structure.
+content. The visualization clearly shows that the samples of Impact of Randomization (Jitter & DP). Randomizathe same video are tightly clustered, while different videos tion defenses were more successful. Temporal Jitter (injectare well-separated in the feature manifold. This visual evi- ing random delays) reduced accuracy to 80.15%, though
+dence qualitatively confirms that our dual-view architecture the model retained reasonable predictive power due to its
+successfully disentangles content-specific fingerprints from the shift-invariant spectral features. The most effective defense
+stochastic noise of encrypted consumer electronics traffic. was Differential Privacy (Laplacian noise injection), which
+H. Scalability Analysis dropped accuracy to 61.20%. This indicates that defending
+ To evaluate the scalability and stability of RTF-Net, we against deep-learning-based fingerprinting requires rigorous,
+conducted experiments with varying trace lengths and class mathematically guaranteed noise injection rather than heuristic
+numbers. Each configuration was repeated with three random traffic shaping.
+seeds to report the Mean Accuracy and Standard Deviation.
+ Impact of Trace Length (Temporal Dynamics). We trun- TABLE VIII
+ ROBUSTNESS AGAINST T RAFFIC A NALYSIS D EFENSES
+cated the input traffic to the first 10s, 20s, and 30s. As shown in
+Table VII, the model performs poorly at 10s (37.50%), which Defense Mechanism Acc (%) Impact
+corresponds to the initial buffering phase where traffic pat-
+ None (Baseline) 91.33 -
+terns are homogenized by aggressive downloading. However, Bitrate Smoothing 92.10 Negative (Helps Attack)
+accuracy jumps to 78.20% at 20s and reaches 91.33% at 30s. Uniform Padding 91.33 None
+This confirms that capturing the steady-state ABR switching Temporal Jitter 80.15 Moderate
+behavior (typically occurring after the initial buffer fills) is Differential Privacy (DP) 61.20 High
+crucial for accurate fingerprinting.
+ Impact of Class Number. We evaluated the model on
+subsets of 5, 10, 15, and 20 classes. The performance remains V. C ONCLUSION
+highly robust, with accuracy fluctuating slightly between In this paper, we identified and validated a severe privacy
+93.45% (5 classes) and 91.33% (20 classes). The low standard vulnerability in modern short-video platforms, demonstrating
+deviation across seeds (< 1.5%) confirms the model’s stability that encrypted traffic analysis can accurately infer specific
+and sufficient capacity for multi-class classification. video content despite the use of advanced protocols like
+ QUIC and complex Adaptive Bitrate (ABR) mechanisms. To
+ TABLE VII exploit this side channel effectively, we proposed RTF-Net,
+ S CALABILITY A NALYSIS (M EAN ± S TD D EV ACROSS 3 SEEDS )
+ a lightweight Rocket-Transformer Fusion Network. By synergizing deterministic local shape features (via MiniRocket)
+ Condition Value Accuracy (%)
+ with global spectral dependencies (via FFT and TinyBERT),
+ Varying Trace Length (Classes=20) RTF-Net overcomes the stochastic noise inherent in dynamic
+ 10 s 37.50 ± 4.17
+ 20 s 78.20 ± 0.85
+ streaming.
+ 30 s (Full) 91.33 ± 0.41 Extensive experiments on a real-world dataset of 2,000
+ Varying Class Number (Length=30s)
+ traces collected from viral TikTok videos demonstrate that
+ 5 Classes 93.45 ± 1.26 our approach achieves a state-of-the-art identification accuracy
+ 10 Classes 92.89 ± 0.57 of 91.33%, significantly outperforming 13 baseline methods
+ 15 Classes 91.59 ± 1.18 including traditional machine learning classifiers and standard
+ 20 Classes 91.33 ± 0.41 deep learning models. To the best of our knowledge, this is
+ the first study to successfully perform fine-grained specific
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+Fig. 3. Visualization analysis of RTF-Net. (a)-(b) Raw time-domain bursts for two different videos showing high stochasticity. (c)-(d) Corresponding spectral
+signatures showing distinct periodic patterns. (e) t-SNE visualization of the learned features across 20 video classes, demonstrating high discriminative power.
+
+video fingerprinting on the TikTok platform. Furthermore, [3] Y. Ginige, B. Silva, T. Dahanayaka, and S. Seneviratne, “Trafficllm:
+we have open-sourced our collected dataset to facilitate fu- Llms for improved open-set encrypted traffic analysis,” Computer
+ Networks, vol. 274, p. 111847, 2026. [Online]. Available: https:
+ture research in the community. We hope this work raises //www.sciencedirect.com/science/article/pii/S1389128625008138
+awareness regarding the privacy risks of short-video apps [4] A. M. Elshewey and A. M. Osman, “Enhancing encrypted https trafand inspires the development of more robust traffic padding fic classification based on stacked deep ensembles models,” Scientific
+ Reports, vol. 15, no. 1, p. 35230, Oct. 2025.
+defenses in consumer electronics.
+ [5] A. Dempster, D. F. Schmidt, and G. I. Webb, “Minirocket: A very
+ fast (almost) deterministic transform for time series classification,” in
+ ACKNOWLEDGMENT Proceedings of the 27th ACM SIGKDD Conference on Knowledge
+ Discovery & Data Mining, ser. KDD ’21. New York, NY, USA:
+ This work is sponsored by the Guangdong Basic Association for Computing Machinery, 2021, p. 248–257. [Online].
+ Available: https://doi.org/10.1145/3447548.3467231
+and Applied Basic Research Foundation (Grant No.
+ [6] X. Chen, B. He, K. Hui, L. Sun, and Y. Sun, “Simplified tinybert:
+2025A1515010111, 2025A1515010513), National Natural Knowledge distillation for document retrieval,” in Advances in
+Science Foundation of China (Grant No. 72101059, 62406076, Information Retrieval: 43rd European Conference on IR Research,
+62506081) and Natural Society Foundation of Guangdong ECIR 2021, Virtual Event, March 28 – April 1, 2021, Proceedings, Part
+ II. Berlin, Heidelberg: Springer-Verlag, 2021, p. 241–248. [Online].
+Province (Grant No. GD25CSG32). Available: https://doi.org/10.1007/978-3-030-72240-1\ 21
+ [7] W. Mai and Y. Xiao, “A novel gpu based geo-location inference attack
+ R EFERENCES on webgl framework,” High-Confidence Computing, vol. 3, no. 4,
+ p. 100135, 2023. [Online]. Available: https://www.sciencedirect.com/
+ [1] D. Slotta, “Tiktok - statistics & facts,” Statista, 2024, accessed: 2025- science/article/pii/S2667295223000338
+ 01-25. [Online]. Available: https://www.statista.com/topics/6077/tiktok/ [8] Y. Li, L. Wang, S. Zhang, M. Wang, and H. Liu, “A mutual detection
+ [2] B. Gahtan, R. J. Shahla, R. Cohen, and A. M. Bronstein, “Exploring quic method for wireless iot devices based on encrypted traffic analysis,”
+ dynamics: A large-scale dataset for encrypted traffic analysis,” in 2025 The Computer Journal, vol. 69, no. 1, pp. 90–107, 08 2025. [Online].
+ IEEE International Mediterranean Conference on Communications and Available: https://doi.org/10.1093/comjnl/bxaf101
+ Networking (MeditCom), 2025, pp. 1–6. [9] M. Sayad Haghighi, F. Farivar, A. Jolfaei, A. B. Asl, and
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689649
+
+ W. Zhou, “Cyber attacks via consumer electronics: Studying the
+ threat of covert malware in smart and autonomous vehicles,”
+ vol. 69, no. 4, p. 825–832, Nov. 2023. [Online]. Available:
+ https://doi.org/10.1109/TCE.2023.3297965
+[10] A. A. Ahmed, M. K. Hasan, I. Memon, A. H. M. Aman, S. Islam, T. R.
+ Gadekallu, and S. A. Memon, “Secure ai for 6g mobile devices: Deep
+ learning optimization against side-channel attacks,” IEEE Transactions
+ on Consumer Electronics, vol. 70, no. 1, pp. 3951–3959, 2024.
+[11] Y. Yuan, Z. Liu, S. Deng, Y. Chen, S. Wang, Y. Zhang, and Z. Su,
+ “Ciphersteal: Stealing input data from tee-shielded neural networks with
+ ciphertext side channels,” in 2025 IEEE Symposium on Security and
+ Privacy (SP), 2025, pp. 4136–4154.
+[12] L. Maar, L. Giner, D. Gruss, and S. Mangard, “When good kernel
+ defenses go bad: reliable and stable kernel exploits via defense-amplified
+ tlb side-channel leaks,” in Proceedings of the 34th USENIX Conference
+ on Security Symposium (SEC ’25), 2025.
+[13] D. Yu, H. Zhang, Y. Huang, and Z. Xie, “Data distribution inference
+ attack in federated learning via reinforcement learning support,” High-
+ Confidence Computing, vol. 5, no. 1, p. 100235, 2025.
+[14] A. Wang, B. Chen, Y. Wang, C. W. Fletcher, D. Genkin, D. Kohlbrenner,
+ and R. Paccagnella, “Peek-a-walk: Leaking secrets via page walk side
+ channels,” in 2025 IEEE Symposium on Security and Privacy (SP), 2025,
+ pp. 3534–3548.
+[15] D. S. Alqattan, V. Snasel, R. Ranjan, and V. Ojha, “Analysis of deep
+ learning under adversarial attacks in hierarchical federated learning,”
+ High-Confidence Computing, vol. 5, no. 4, p. 100321, 2025.
+[16] Q. Luo, H. Li, X. Yang, and H. Qin, “Secure three-party clustering
+ with identifying malicious behavior,” High-Confidence Computing, p.
+ 100342, 2025.
+[17] Y. Xiao, C.-C. Liu, F. Mo, and Q. Liang, “A novel lightweight binarylevel malware hybrid obfuscation against black-box anti-malware engines,” High-Confidence Computing, p. 100368, 2025.
+[18] T. Li, F. Qiao, Y. Wang, K. Lu, Y. Lv, and Y. Wang, “Tld-sca:
+ A transformer-lstm detection model against side-channel attack in
+ blockchain payment channel,” ACM Trans. Web, Oct. 2025, just
+ Accepted. [Online]. Available: https://doi.org/10.1145/3771990
+[19] W. Ali, M. Amin, F. K. Alarfaj, Y. D. Al-Otaibi, and S. Anwar, “Aienhanced differential privacy architecture for securing consumer internet
+ of things (ciot) data,” IEEE Transactions on Consumer Electronics,
+ vol. 71, no. 2, pp. 5201–5215, 2025.
+[20] T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár, “Focal loss for
+ dense object detection,” IEEE Transactions on Pattern Analysis and
+ Machine Intelligence, vol. 42, no. 2, pp. 318–327, 2020.
+[21] T. Ishida, I. Yamane, T. Sakai, G. Niu, and M. Sugiyama, “Do we need
+ zero training loss after achieving zero training error?” ser. ICML’20.
+ JMLR.org, 2020.
+[22] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+ contextualized datagram representation with pre-training transformers
+ for encrypted traffic classification,” in WWW ’22: The ACM Web
+ Conference 2022, Virtual Event, Lyon, France, April 25 - 29, 2022.
+ ACM, 2022, pp. 633–642.
+[23] Y. Nie, N. H. Nguyen, P. Sinthong, and J. Kalagnanam, “A time
+ series is worth 64 words: Long-term forecasting with transformers,” in
+ International Conference on Learning Representations, 2023.
+[24] T. Dao and A. Gu, “Transformers are SSMs: Generalized models and
+ efficient algorithms through structured state space duality,” in International Conference on Machine Learning (ICML), 2024.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

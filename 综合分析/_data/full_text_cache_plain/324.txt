@@ -1,0 +1,1408 @@
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+2745
+
+WAKE: A Weakly Supervised Business Process
+Anomaly Detection Framework via
+a Pre-Trained Autoencoder
+Wei Guan , Jian Cao , Senior Member, IEEE, Haiyan Zhao , Yang Gu , and Shiyou Qian , Member, IEEE
+
+Abstract—The ability to detect anomalies in business processes
+is crucial for achieving success in business operations. While unsupervised anomaly detection approaches have gained popularity in
+recent years due to their label-free nature, in some cases, a limited
+number of labelled anomalies can be provided and using them can
+improve the performance of anomaly detection. To address this
+issue, we propose a novel framework for anomaly detection that
+uses a pre-trained autoencoder to extract feature representations
+of traces. An anomaly score generator based on a multi-layer
+perceptron is utilized to evaluate the extracted features. The entire
+framework is trained using a joint loss that ensures the generated
+anomaly scores satisfy a specific distribution without compromising
+the autoencoder’s ability to reconstruct normal traces. The feature
+encoder is fine-tuned to provide insights into the cause of anomalies.
+Additionally, we design a novel technique for calculating anomaly
+scores to mitigate the effects of varying numbers of potential attribute values. We conduct extensive experiments on both synthetic
+and real-life logs, and our results demonstrate that our proposed
+method, WAKE, outperforms state-of-the-art unsupervised deep
+business process anomaly detection methods by a significant margin. Additionally, it outperforms other weakly supervised anomaly
+detection methods as well.
+Index Terms—Process mining, weakly supervised anomaly
+detection, deep learning, recurrent neural networks, autoencoder.
+
+I. INTRODUCTION
+NSURING smooth and organized business processes is
+crucial to maintaining a successful enterprise. This makes
+it an important task for both IT departments and business administrators. Despite efforts to maintain the correct executions
+of these processes, anomalies are inevitable and can arise from
+various causes such as system malfunctions and human errors.
+Detecting anomalies in event traces of business processes can aid
+
+E
+
+Manuscript received 1 June 2023; revised 13 September 2023; accepted 3
+October 2023. Date of publication 13 October 2023; date of current version 19
+April 2024. This work was supported in part by the China National Science
+Foundation under Grant 62072301, and in part by the Program of Technology
+Innovation of the Science and Technology Commission of Shanghai Municipality under Grant 21DZ1205000. Recommended for acceptance by R.C.-W.
+Wong. (Corresponding author: Jian Cao.)
+Wei Guan, Jian Cao, Yang Gu, and Shiyou Qian are with the Department of Computer Science and Engineering, Shanghai Jiao Tong University,
+Shanghai 200240, China (e-mail: guan-wei@sjtu.edu.cn; cao-jian@sjtu.edu.cn;
+gu_yang@sjtu.edu.cn; qshiyou@sjtu.edu.cn).
+Haiyan Zhao is with the University of Shanghai for Science and Technology,
+Shanghai 200093, China (e-mail: zhaohaiyan1992@foxmail.com).
+Digital Object Identifier 10.1109/TKDE.2023.3322411
+
+practitioners and decision-makers in analyzing and managing
+businesses more effectively, and preventing severe consequences
+resulting from anomalies.
+Many anomaly detection methods for business processes have
+been proposed, including conformance checking-based [1], [2],
+information theory-based [3], [4], probabilistic [5], [6], [7] and
+distance-based [8], [9]. They are either based on assumptions
+about the data distribution or require extensive prior knowledge
+of the process, which is not always available in real life.
+In recent years, deep learning [10] has achieved remarkable
+feats in revealing complex relationships in high-dimensional
+data. Not surprisingly, it has become the mainstream approach for business process anomaly detection [11], [12],
+[13], [14], [15]. In these models, anomalies are detected in
+terms of reconstruction errors directly and there is no need
+to spend time annotating the data. However, without incorporating prior knowledge about anomalies, the performance of
+these approaches and the reliability of their results can not be
+guaranteed.
+Providing supervision information to train a model can not
+only improve its performance but also enhance its trustworthiness. Unfortunately, fully-supervised anomaly detection approaches are often impractical as they require labelled training
+data containing both normal and anomalous samples [16]. However, detecting anomalies using a limited number of labelled
+anomalies can be challenging. First, the insufficient supervised
+information provided by the limited number of labelled anomalies poses a significant challenge to generalize the detection
+of both known anomalies, whose behaviors resemble those of
+labelled anomalies, and unknown anomalies, whose behaviors
+differ from those of labelled anomalies. Additionally, in the
+unlabelled samples, the large number of normal samples can
+potentially overwhelm the model’s ability to distinguish between
+normal and anomalous behavior.
+Thankfully, researchers have proposed several approaches to
+address these challenges. For instance, there has been research
+into anomaly detection with incomplete supervision, which
+involves labeling only a portion of the input data. The major
+methods [17], [18], [19] focus on learning feature representations while other approaches [20], [21], [22] directly learn
+anomaly scores within an end-to-end learning framework. Approximate labels can also be generated to detect anomalies by
+directly addressing the insufficiency of labels [23], [24], [25].
+
+1041-4347 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+2746
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+r We provide a formal definition for the problem of detect-
+
+Fig. 1.
+
+Illustration of our proposed framework.
+
+Moreover, the multiple-instance learning (MIL) framework is
+applied in [26], [27], [28] to detect anomalies with inexact
+labels.
+Despite these advances, these weakly supervised anomaly
+detection methods for other applications are not directly applicable to business processes. First, they do not have the ability
+to learn the temporal relationships between events in traces
+of business processes. Second, these methods require identical
+features as inputs, while traces have different lengths. Third,
+none of these methods simultaneously consider incomplete and
+inexact supervision.
+Recently, Elaziz et al. [29] introduced a novel weakly supervised anomaly detection method tailored for business processes.
+However, a notable limitation of their approach is the absence of
+explanations for the detected anomalies, which holds significant
+practical importance. Identifying which attribute of an event
+contributes to the detection of an anomaly using trace-level
+(inexact) labels can be challenging due to ambiguous label
+information.
+To tackle the aforementioned challenges, we design a
+Weakly-supervised business process Anomaly detection frameworK via a prE-trained autoencoder, named WAKE, which is
+illustrated in Fig. 1. WAKE, which effectively exploits a few
+labelled anomalies in logs, is optimized through a three-stage
+training procedure to detect and interpret anomalies. WAKE
+leverages a pre-trained autoencoder capable of reconstructing
+normal traces as a feature encoder. The feature representation extracted from the feature encoder somehow reveals prior
+knowledge about the normal traces. Specifically, the feature
+representation of the trace is composed of three factors (i.e.,
+latent representation, reconstruction error vector and maximum
+reconstruction error vector) and characterizes whether the trace
+deviates from the normal pattern. Latent representation is the
+low-dimensional vector representation of the trace, while reconstruction error vector and maximum reconstruction error
+vector are the reconstruction errors of the trace. Following
+feature extraction, the feature representations are fed into an
+anomaly score generator to detect anomalies. The feature encoder and the anomaly score generator are jointly optimized
+using both unlabelled traces and a limited number of labelled
+anomalies. The feature encoder can also be applied to interpret
+the cause of anomalies after fine-tuning to provide an insight into
+anomalies.
+The main contributions of our work are as follows:
+
+ing and interpreting the cause of anomalies in business
+processes using weak supervision.
+r We design the WAKE framework, which can detect and
+interpret the cause of anomalies by utilizing incomplete
+and inexact labelled anomalies.
+r We propose a new method for extracting feature representations of traces by utilizing a pre-trained autoencoder.
+r To interpret the causes of anomalies, we propose a novel
+calculation method for anomaly scores that mitigates the
+influence of varying numbers of potential attribute values.
+We conduct comprehensive experiments on synthetic and
+real-life datasets, which demonstrate that WAKE achieves superior performance. Additionally, we carry out ablation studies
+to evaluate the impact of each individual component in our
+approach.
+The rest of this paper is organized as follows. Section II
+introduces the related work. Section III gives the definition of
+the problem. Then proposed framework WAKE is elaborated in
+Section IV. Section V reports the experiment results on both
+synthetic and real-life logs. Finally, we conclude our work and
+discuss future work in Section VI.
+II. RELATED WORK
+To align with the focus of our research, we provide a concise
+review of existing work in three areas: i) traditional business
+process anomaly detection approaches, ii) deep business process
+anomaly detection approaches, and iii) the utilization of weakly
+supervised learning in anomaly detection. To serve as a point of
+reference, we present an overview of these works in Table I.
+A. Traditional Business Process Anomaly Detection
+Approaches
+Traditional business process anomaly detection approaches
+can be broadly divided into four categories.
+The conformance checking-based approaches [1], [30] are
+the first category, which utilize conformance checking techniques to examine the synchronisation between the recorded
+log and the corresponding process model. The process model
+can either be given or discovered from the log using process
+mining techniques. In some studies [2], [31], the integration of
+conformance checking techniques and association rule learning
+has been shown to improve the accuracy of anomaly detection.
+The second category is information theory-based approaches [3], [4], [32], [33], which applies statistical leverage
+to detect trace-level anomalies in business processes while accounting for varying trace lengths.
+The third category is probabilistic approaches, which utilizes
+probabilistic graphical models such as likelihood graph [34],
+Bayesian networks [35], hidden Markov model (HMM) [5],
+[6] and variable order Markov models (VOMMs) [7] to create
+normal process behavior probabilistic models based on event
+logs for detecting anomalies.
+The fourth category involves distance-based approaches that
+consider the distance between traces for anomaly detection. For
+example, Sureka [8] calculate the normalized longest common
+
+GUAN et al.: WAKE: A WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION FRAMEWORK VIA A PRE-TRAINED AUTOENCODER
+
+2747
+
+TABLE I
+BRIEF SUMMARY OF RELATED WORKS
+
+sub-sequence (NLCS) between traces and apply k nearest neighbor (KNN) to detect anomalies. Kang et al. [36] use the LOF
+algorithm based on k nearest neighbor imputation (KNNI) to
+detect abnormal termination. In other studies [37], outlier-aware
+clustering algorithms are used, while Hsu et al. [9] utilize the
+duration of events to compute the distance between traces for
+detecting temporal anomalies.
+The traditional approaches are either based on data distribution assumptions or require prior knowledge, and none of them
+can take advantage of labelled anomalies.
+B. Deep Business Process Anomaly Detection Approaches
+Recently, deep business process anomaly detection have
+gained significant attention due to their ability to extract complex
+underlying relationships from unlabelled data. These techniques
+can be categorized into two main groups: unsupervised and
+weakly supervised approaches.
+Unsupervised: Due to the user-friendly nature of unsupervised methods, they have garnered extensive research attention.
+Studies by Tavares et al. [38] and Junior et al. [39] encode
+traces as vectors using the word2vec [63] encoding method,
+taking into account semantic information about the process.
+After encoding, the random forest algorithm [38] or one-class
+SVM [39] can be applied to detect anomalous traces. Krajsic
+and Franczyk [40] use an autoencoder to reconstruct traces and
+detect anomalies based on reconstruction error. To overcome the
+overfitting problem, Nolle et al. [11], [41] utilize a denoising
+autoencoder that introduces additive Gaussian noise over the
+input vector. Nguyen et al. [12], [42] employ a variational
+autoencoder (VAE), which is an autoencoder with additional
+constraints on the hidden representation. Considering that traces
+
+are time series, the authors in [12], [13], [15], [43] embed
+LSTM or GRU in the autoencoder to improve the reconstruction
+capability of the model. GAE [14] and GAMA [44] convert
+traces into graphs and utilize graph neural networks (GNN) to
+obtain graph encoding. Anomalies are detected based on the
+reconstruction error of the graphs or traces.
+These approaches may be biased by the presence of anomalies, as they treat normals and anomalous data equally.
+Weakly Supervised: Krajsic et al. [45] propose a bidirectional LSTM variational autoencoder with self-attention. This
+approach requires a clean log for training purposes. In the
+study by Elaziz et al. [29], reinforcement learning is employed
+to enhance information extraction from a limited number of
+labelled anomalies.
+Nevertheless, current approaches fall short in their ability to
+interpret the fundamental causes underlying anomalies.
+C. Weakly Supervised Learning for Anomaly Detection
+Given the current limited research on applying weakly
+supervised learning to business process anomaly detection, we conduct a thorough review of weakly supervised learning approaches applied in anomaly detection
+within various other domains. These studies leverage labelled data to improve the anomaly detection performance,
+even though the supervision may be incomplete, inexact, or
+inaccurate.
+Incomplete supervision refers to the situation where only part
+of the input data is labelled. Some studies [17], [18], [19],
+[46], [47], [48] have utilized deep neural networks to extract
+anomaly-oriented representations from input data. While feature
+representation learning can enhance downstream detection, it
+
+2748
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+only provides indirect learning for anomaly scores. End-toend anomaly score learning frameworks such as DevNet [20],
+PReNet [21], and FEAWAD [22] can directly acquire anomaly
+scores from trained models. In addition to using existing labels,
+active learning strategies are applied in [23], [24], [25] to gather
+more supervision.
+Anomaly detection with inexact supervision occurs when
+labels are not as precise as required, i.e., only coarse-grained
+labels are available due to the high cost of labeling. In [26],
+[27], [28], [49], authors detect anomalies with inexact supervision via the multiple-instance learning (MIL) framework, where
+video segments are considered as instances, while normal and
+abnormal videos are classified as positive and negative bags,
+respectively. A self-reasoning framework proposed in [50] trains
+neural networks by generating pseudo labels through binary
+clustering of video features. WETAS [51] uses dynamic time
+wrapping (DTW) alignment to enhance detection performance.
+Anomaly detection with inaccurate supervision occurs when
+labels are not entirely accurate and may contain errors. Zhang
+et al. and Zhao et al. [52], [53] propose to learn a joint model
+from multiple sets of noisy labels using ensemble learning. Gao
+et al. [54] propose a denoising network based on GAN for
+anomaly detection in dynamic graphs that employs self-training
+to progressively refine inaccurate node labels.
+Our proposed approach is superior to these methods, as it can
+detect anomalies with both incomplete and inexact supervision
+in business processes.
+
+Please note that activity is a unique attribute in the attribute
+set A that reflects the control flow. Let te,a denote the value of
+attribute a of event e in trace t.
+Example 1: Given an attribute set A = {Activity, Country}.
+t = [CRP, ES], [AIC, CN], [LEU, US], [AN, CN], [RA, FR]
+represents a trace containing five simple events taking place
+in chronological order. The value of the first attribute (i.e.,
+Activity) in the second event (i.e., [AIC, CN]) in trace t can
+be obtained with t2,1 = AIC.
+Next, we define the weakly supervised (i.e., with incomplete
+supervision) business process anomaly detection as follows:
+Definition III.2 (Weakly Supervised Business Process
+Anomaly Detection): Given a log L = t1 , t2 , . . . , tu ,
+tu+1 , tu+2 , . . . , tu+g  containing u + g traces, where
+U = t1 , t2 , . . . , tu  is a set of unlabelled traces and
+G = tu+1 , tu+2 , . . . , tu+g  with g  u is a very small set
+of labelled anomalies that provide some prior knowledge of
+anomalies, the goal is to detect some anomalous traces that
+differ significantly from the majority of traces in U .
+However, it is not sufficient to only detect these anomalies, we
+also need to interpret the cause of anomalies (i.e., with inexact
+supervision), which are defined as follows:
+Definition III:3 (Interpretation of the Cause of Anomalies).
+Given a set of labelled anomalies G and a set of detected
+anomalous traces D, which is a subset of unlabelled trace set,
+the goal is to
+ determine which attribute a of which event e in
+trace t ∈ G D is anomalous.
+IV. METHODOLOGY
+
+D. Masked Autoencoding Techniques
+Masked autoencoders (MAE) have recently gained significant traction as a scalable self-supervised learning method. The
+seminal paper by He et al. [55] introduces masked autoencoders
+for self-supervised learning of image representations. This fundamental contribution has paved the way for their exploration
+in various domains. For example, in [56], [57], MAEs are effectively employed for learning graph representations. Notably,
+Huang et al. [58] extend the application of MAEs to the realm
+of audio data.
+Notably, MAEs have found utility in anomaly detection. The
+authors in [59], [60] have harnessed MAEs to identify image
+anomalies. Furthermore, the capabilities of MAEs extend to
+video anomaly detection [61], and even to the detection of
+anomalies in road networks [62].
+
+In this section, we introduce our proposed anomaly detection
+framework, WAKE, which employs a novel feature encoding
+strategy to overcome the limitations of inadequately labelled
+anomalies. Fig. 2 shows the architecture of WAKE, which
+comprises an autoencoder-like feature encoder and an anomaly
+score generator that collaborate with each another within the
+model. The feature encoder converts the trace into a more meaningful feature representation, i.e., three factors that characterize
+whether the trace deviates from the normal pattern, while the
+anomaly score generator generates an anomaly score based on
+the feature representation from the feature encoder. The anomaly
+score is a scalar between 0 and 1 indicating the probability
+that the trace is an anomaly. WAKE is optimized through a
+three-stage training procedure to detect and interpret the cause of
+anomalies in the log. The following subsections provide details
+about the proposed framework.
+
+III. PROBLEM FORMULATION
+To set the foundation for the following sections, we will
+provide definitions for key terms including attribute, event,
+trace, and log.
+Definition III: 1 (Event, Trace, Log). Let A =
+{a1 , a2 , . . . , aA } denote a set of attributes, where A = |A|
+represents the total number of attributes. For each attribute
+a ∈ A, Va is the set of possible values. An event is a tuple
+e = [Va1 , Va2 , . . . , VaA ], where Va ∈ Va is a potential value for
+attribute a. A trace t is a sequence of events, and an event log
+L is a set of traces. We denote the number of events in a trace t
+by |t|, and the number of traces in an event log L by |L|.
+
+A. Feature Encoder
+The objective of the feature encoder is to transform the input
+trace into a meaningful feature representation that improves
+anomaly detection. To accomplish this, we utilize an autoencoder (AE) with recurrent layers to generate the feature representation. Particularly, three factors, namely the latent representation, reconstruction error vector, and maximum reconstruction
+error vector, characterize whether the trace deviates from the
+normal pattern. In addition, we employ teacher forcing methods
+to improve the convergence speed and reconstruction capability
+of the feature encoder.
+
+GUAN et al.: WAKE: A WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION FRAMEWORK VIA A PRE-TRAINED AUTOENCODER
+
+Fig. 2.
+
+2749
+
+Architecture of WAKE where E = maxt∈L |t| is the maximum length of traces in log L and A is the total number of attributes.
+
+In order to make the model work properly, we pad the traces
+that are shorter than E with padding events to make their length
+equal to E, where E = maxt∈L |t| is the maximum length of
+traces in log L. As different attributes have distinct anomaly
+patterns, we assign different embedding layers, bidirectional
+gated recurrent units (BGRU) encoders, attention layers, gated
+recurrent units (GRU) [64] decoders, linear layers, and softmax,
+to different attributes.
+Due to the mathematical nature of neural networks, embedding layers are used to convert each attribute value te,a into
+vector representation fea . GRUs typically learn information from
+previous states. However, in cases where the current attribute
+value is influenced by both the attribute value preceding it
+and the one following it, the conventional learning behavior of
+GRUs proves to be insufficient for accurately reconstructing the
+attribute value. Therefore, the embedding vectors fea are fed
+into the BGRU, which is an extension of GRU. The BGRU
+consists of two GRUs: a forward GRU that accepts forward
+inputs and a backward GRU that accepts backward inputs. For
+each attribute a of event e, the forward GRU generates forward
+−
+→
+hidden states hae , and the backward GRU generates backward
+←−
+−−−−
+hidden states haE+1−e . These hidden states are concatenated to
+−
+→ ←−−−−−
+produce the BGRU output hae = [hae haE+1−e ]. To generate the
+latent representation sa0 based on the autoencoder for attribute
+−→
+a, the final hidden states of the forward GRU haE and the
+←−
+backward GRU haE are concatenated and fed into linear layers.
+The activation function used in the linear layer is the Leaky
+ReLU.
+−→ ←−
+sa0 = LeakyRELU(Wsa [haE haE ])
+
+(1)
+
+where Wsa is a learnable matrix and LeakyRELU(x) =
+max(0.1x, x) is a non-linear activation function. The first factor
+of our feature representation is the concatenation of sa0 for all
+attributes a ∈ A:
+s = a∈A sa0
+
+(2)
+
+where  indicates concatenation.
+We will now explain the process of reconstructing the value
+of attribute a of event e. To capture the inherent relationships
+among attributes, all the outputs of the BGRU encoders, H =
+A
+{h11 , h12 , . . . , hA
+E−1 , hE }, must be fed into the attention layer:
+a
+a T
+a a
+= (Vα
+) tanh(Wα
+[se−1 hi ])
+ege,i
+a
+)
+exp(ege,i
+a
+m exp(ege,m )
+
+(4)
+
+a
+αe,i
+hi
+
+(5)
+
+a
+=
+αe,i
+
+cae =
+
+
+
+(3)
+
+i
+a
+where hi ∈ H, ·T represents transposition, Wα
+is a learnable
+a
+a
+matrix, Vα is a learnable vector and se−1 is the hidden state of
+the GRU decoder for attribute a at the previous event e − 1.
+To improve the feature encoder’s reconstruction capability,
+we utilize the teacher forcing method, which is a widely used
+technique in natural language processing. For the first attribute
+(Activity), we use the previous ground truth attribute value (i.e.,
+activity name) te−1,1 to guide the reconstruction of the activity
+name for the current event e.
+
+s1e = GRU1 (s1e−1 , [c1e tf 1e−1 ]))
+
+(6)
+
+where s1e−1 is the hidden state of the first GRU decoder for the
+first attribute at previous event e − 1, tf 1e−1 is the embedding
+
+2750
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+vector of te−1,1 and c1e is the output of the attention layer for the
+first attribute at event e. The initial hidden state of the first GRU
+decoder for the first attribute is s10 . The probability distribution
+p1e , which is the probability distribution over all possible values
+of the first attribute (Activity) of event e, can be calculated by
+p1e = Softmax(Wp1 [s1e c1e tf 1e−1 ])
+
+(7)
+
+which represents the linear layer and the softmax layer.
+We assume that the value of the other attribute a is primarily
+affected by the current activity name. Thus, we use the ground
+truth activity name te,1 of the current event e to predict the
+probability distribution over all possible values of attribute a of
+event e. The probability distribution pae can be computed by
+sae = GRUa (sae−1 , [cae tf 1e ])
+
+(8)
+
+pae = Softmax(Wpa [sae cae tf 1e ])
+
+(9)
+
+where tf 1e is the embedding vector of te,1 .
+Specifically, pae is a vector of dimension |Va |. Let pa =
+a
+[p1 [t1,a ], . . . , pa|t| [t|t|,a ], 1, . . . , 1], where |t| is the original
+length of trace t and pae [te,a ] denotes the probability that the
+value of attribute a of event e in trace t is te,a . The probability
+vector can be represented as
+p = a∈A pa
+
+(10)
+a
+
+Take the negative logarithm of each element in p , we can obtain ra = [− log pa1 [t1,a ], . . . , − log pa|t| [t|t|,a ], 0, . . . , 0]. Then,
+the second factor of the feature representation, i.e., the reconstruction error vector can be represented as
+r = a∈A ra
+
+(11)
+
+Finally, the third factor of the feature representation,
+i.e., the maximum reconstruction error vector is m =
+[max(r1 ), . . . , max(rA )] where max(ra ) represents the maximum value in the vector ra .
+In summary, the input trace is characterized by the three
+factors (i.e., latent representation s, reconstruction error vector
+r and maximum reconstruction error vector m) and anomalies in any one of these factors will be detected by WAKE.
+Each of these three factors has its own specific meaning. s is
+the low-dimensional vector representation of the trace, while
+r and m are the reconstruction errors of the trace, which
+have been shown to reflect anomalies in previous studies [11],
+[12], [40].
+B. Anomaly Score Generator
+The anomaly score generator produces a scalar, i.e., an
+anomaly score, between 0 and 1 based on the feature representation from the feature encoder. The anomaly score indicates
+the probability that a trace is anomalous.
+The concatenation of three factors is processed by a multilayer perceptron (MLP) to map the input into an anomaly score.
+Specifically, for each layer of the MLP, we have
+zk = LeakyRELU(Wzk zk−1 + bk )
+
+(12)
+
+Algorithm 1: Training Procedure.
+Stage 1: Pre-training
+Input: Unlabelled trace set U
+Output: Feature encoder ψ(·; Θf e )
+1: Randomly initialize Θf e
+2: for i = 1 to n_epochs1 do
+3: for j = 1 to n_batches1 do
+4:
+B ← Randomly sample batch_size traces from U
+5:
+loss ← Calculate Lpre (B) from (13)
+6:
+Perform a gradient descent step w.r.t. the parameters
+in Θf e
+7: end for
+8: end for
+9: return ψ(·; Θf e )
+Stage 2: End-to-end optimization
+Input: Unlabelled trace set U , labelled anomaly set G
+Output: Feature encoder ψ(·; Θf e ), anomaly score
+generator ϕ(·; Θasg )
+10: Randomly initialize Θasg and load Θf e from the
+pre-trained feature encoder ψ(·; Θf e ) returned in stage
+1
+11: for i = 1 to n_epochs2 do
+12: for j = 1 to n_batches2 do
+13:
+B ← Randomly sample batch_size traces from G
+and U with probability β and 1 − β, respectively
+14:
+loss ← Calculate Lete (B) from (16)
+15:
+Perform a gradient descent step w.r.t. the
+parameters in Θf e and Θasg
+16: end for
+17: end for
+18: return ψ(·; Θf e ), ϕ(·; Θasg )
+Stage 3: Fine-tuning 
+Input: Entire log L = U G
+Output: Another feature encoder ψ (·; Θf e ) for
+interpreting the cause of anomalies
+19: Θf e ← Load Θf e from the feature encoder ψ(·; Θf e )
+returned in stage 2
+20: for i = 1 to n_epochs3 do
+21: for j = 1 to n_batches3 do
+22:
+B ← Randomly sample batch_size traces from L
+23:
+loss ← Calculate Lf t (B) from (17)
+24:
+Perform a gradient descent step w.r.t. the
+parameters in Θf e
+25: end for
+26: end for
+27: return ψ (·; Θf e )
+
+where zk and zk−1 are the activations at the k-th layer and k − 1th layer, respectively. Wzk and bk are the weight and bias for the
+k-th layer. For the first layer of MLP, z0 = [srm]. For the
+last layer, we use the sigmoid activation function to map z k to
+a scalar between 0 and 1, producing the anomaly score z.
+
+GUAN et al.: WAKE: A WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION FRAMEWORK VIA A PRE-TRAINED AUTOENCODER
+
+C. Training Procedure
+The training procedure of WAKE consists of three stages:
+i) Pre-training: The feature encoder is trained to reconstruct
+normal traces. ii) End-to-end optimization: The feature encoder
+and the anomaly score generator are jointly trained based on
+the pre-trained feature encoder. iii) Fine-tuning: The end-to-end
+optimized feature encoder is fine tuned to enable it to interpret
+the cause of anomalies. The architecture parameters are trained
+using mini-batch stochastic gradient descent (SGD) and optimized with Adam [65]. We use ψ(·; Θf e ) to denote an feature
+encoder and ϕ(·; Θasg ) to denote an anomaly score generator,
+where Θf e and Θasg represent the model parameters for the
+feature encoder and the anomaly score generator, respectively.
+The training procedure is detailed in Algorithm 1.
+It is worth noting that our anomaly detection framework
+is weakly supervised, meaning that only a limited number of
+labelled anomalies are available. The set of unlabelled traces
+may contain both normal and anomalous traces. However, as
+anomalies are rare in real-world and the majority of unlabelled
+traces are normal, a straightforward strategy is employed: considering all unlabelled traces as normal. This approach has been
+demonstrated to be effective in previous studies [20], [22]. Our
+experiments confirm that this simple strategy yields satisfactory
+performance.
+1) Pre-Training: We first employ a pre-training stage to
+train the feature encoder to be able to reconstruct normal traces,
+providing a basic reference for the subsequent end-to-end
+optimization. The pre-training stage is depicted in lines 1-9 of
+Algorithm 1. The feature encoder is pre-trained with all
+unlabelled traces by minimizing the reconstruction errors (i.e.,
+cross-entropy loss). Our objective is to reconstruct the value of
+each attribute a of each event e in each trace t ∈ B, where B is
+a batch of traces:
+
+ri
+(13)
+Lpre (B) =
+t∈B ri ∈rt
+
+where rt represents the second factor of the feature
+representation of trace t (i.e., the reconstruction error vector).
+2) End-to-End Optimization: In stage 2, to ensure that
+WAKE was able to effectively detect anomalies, a mini-batch
+is constructed by random sampling, i.e., we sample batch_size
+traces from labelled anomaly set G and unlabelled trace set U
+with user-chosen probability β and 1 − β, respectively, to form
+a mini-batch. In other words, the anomalies are oversampled
+to address the sample imbalance. The end-to-end optimization
+stage is depicted in lines 10-18 of Algorithm 1.
+Our objective is to make the anomaly scores generated by the
+anomaly score generator satisfy a specific distribution (i.e., the
+anomaly scores of normal traces converge to 0 and the anomaly
+scores of anomaly traces converge to 1.) without destroying
+the ability of the feature encoder to reconstruct normal traces.
+Therefore, the first part of the loss function is:
+
+[(1 − yt )zt + yt (log zt )2 ]
+(14)
+Lasg (B) =
+t∈B
+
+where yt ∈ {0, 1} indicates whether the current trace t is anomalous (yt = 1) and zt represents the anomaly score of trace t.
+
+2751
+
+In Lasg , we employ different loss functions depending on the
+trace’s label. For an unlabelled trace, the loss increases linearly
+as its anomaly score increases. However, for a labelled anomalous trace, we utilize a logarithmic function and square to achieve
+an exponential increase in loss as its abnormal score decreases.
+The square operation is applied to introduce a varying degree
+of monotonicity to vary the monotonicity of the logarithmic
+function between 0 and 1. The primary objective of this equation
+is to assign a significantly higher loss to traces that have been
+confidently labelled as anomalous. By incorporating the logarithmic function, we effectively amplify the loss for these traces,
+magnifying their impact on the overall loss computation. This
+approach underscores the importance of accurately identifying
+and penalizing labelled anomalies, as they are deemed to be
+more critical and necessitate greater attention during the training
+procedure.
+The second part of the loss function is to minimize the reconstruction errors for normal traces, and minimize the minimum
+probabilities of attribute values in anomalous traces, which is
+based on the idea that at least one attribute value in the anomalous
+trace is anomalous.
+
+
+
+
+ri + yt min {pi }
+(15)
+(1 − yt )
+Lre (B) =
+t∈B
+
+ri ∈rt
+
+pi ∈pt
+
+where rt represents the second factor of the feature representation of trace t. pt represents the probability vector of trace t.
+Based on (14) and (15), our joint loss function can be formally
+calculated as
+Lete (B) = Lasg (B) + λLre (B)
+
+(16)
+
+where λ is a hyper-parameter to balance the contributions of two
+parts to the joint loss function.
+3) Fine-Tuning: Finally, we fine-tune the feature encoder
+obtained in stage 2 to obtain a new feature encoder so that
+it can interpret the cause of anomalies. The fine-tuning stage
+is depictedin lines 19-27 of Algorithm 1. We use the entire
+log L = U G, which contains both labelled anomalous traces
+and unlabelled traces without oversampling anomalies. The loss
+function in stage 3 is the same as that in (15).
+Lf t (B) = Lre (B)
+
+(17)
+
+D. Interpretation of the Cause of Anomalies
+The output of stage 3 (i.e., feature encoder) can be applied
+to interpret the cause of anomalies. With the input trace t, we
+consider the probability distribution pae over all possible values
+of attribute a of event e generated by the feature encoder.
+Intuitively, compared to a normal attribute value, the probability of an anomalous one is lower. However, since the number
+of possible values for each attribute varies (i.e., |Va1 | = |Va2 |
+where a1 , a2 ∈ A), it would be unfair to rely solely on a linear transformation of the probability of attribute values when
+calculating the anomaly score for each attribute of each event.
+To mitigate this phenomenon, we design a novel anomaly score
+that is comparable across attributes. We consider the logarithm
+of the probability of the value of attribute a in event e to be a
+
+2752
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+random variable, then the difference
+between the expectation of
+
+this random variable (i.e., pi ∈pae pi log pi ) and the logarithm
+of the probability of the actual attribute value (i.e., log pae [te,a ])
+is defined as the anomaly score, which is similar to information
+gain in decision tree [66]. The introduction of the logarithm
+increases the anomaly score for low-probability attribute values,
+while this expectation compensates for the effect of the difference in the number of possible attribute values. The anomaly
+score zea for attribute a of event e can be calculated by:
+⎛
+⎞
+
+pi log pi − log pae [te,a ]⎠
+(18)
+zea = Sigmoid ⎝
+
+Among these methods, GAE, DAE, VAE, LAE and BINet are
+deep unsupervised anomaly detection methods specifically for
+business processes. They apply different types of autoencoders
+to reconstruct traces and detect anomalies based on reconstruction errors. DeepSAD and REPEN are weakly supervised
+anomaly detection methods by extracting an anomaly-oriented
+representation. DevNet, PReNet and FEAWAD are also weakly
+supervised anomaly detection methods by directly learning
+anomaly scores. DAE, VAE, LAE and BINet are adapted to
+perform the interpretation of the cause of anomalies. However,
+the other methods are not proposed for business processes and
+they cannot interpret the cause of the anomalies.
+
+pi ∈pa
+e
+
+where pi is the i-th element of vector pae . If the actual attribute
+value has a low probability compared to the probability distribution, then the anomaly score will be high.
+E. Complexity Analysis
+Regarding the feature encoder, the computational complexity
+of the embedding layer is O(EAxh), where h represents the
+hidden layer size and x = max{|Va |}a∈A is the maximum of the
+cardinalities of sets Va for all a in A. The computational complexity of the BGRU layer is O(EAh2 ). The linear layer used
+to obtain s0 has a computational complexity of O(Ah2 ). The
+attention mechanism introduces a complexity of O(E 2 A2 h2 ).
+The computational complexity of the GRU layer is O(EAh2 ),
+and the linear layer before the Softmax has a complexity of
+O(EAxh). Note that x is usually smaller than EAh, the overall
+time complexity is O(E 2 A2 h2 ).
+Moving on to the anomaly score generator, the input dimension is the sum of the dimensions of vectors s, p and m. The
+dimensions of vectors s, p and m are Ah, AE, and A respectively. Note that, the dimension of the hidden layer size is always
+smaller than the input dimension, the computational complexity
+of the anomaly score generator is O(A(E + h)2 ) = O(AE 2 ) or
+O(Ah2 ) based on the relative order of magnitude of E and h.
+Overall, when considering an event log comprising T traces,
+whether it pertains to the optimization process of the feature
+encoder in stages 1 and 3, or the joint training of both the feature
+encoder and the anomaly score generator in stage 2, the time
+complexity of each epoch is O(T E 2 A2 h2 ).
+
+B. Parameter Settings and Metrics
+WAKE is implemented based on PyTorch. In our experiment,
+we apply two-layer BGRUs for encoding and two-layer GRUs
+for decoding in feature encoder. Dropout is applied after each
+layer of both BGRUs and GRUs in the feature encoder and
+after each layer of the anomaly score generator to counteract
+overfitting. We initialize weights using the initialization introduced in [67], and train the proposed model for 14 epochs
+in stage 1, 10 epochs in stage 2 and 4 epochs in stage 3
+(i.e., n_epochs1 = 14, n_epochs2 = 10, n_epochs3 = 4) with
+Adam optimizer [65]. In the absence of special statements, the
+hidden layer size of the BGRUs and GRUs is 64, the learning
+rate is 0.0002, the batch size is 64, β used to handle the sample
+imbalance in stage 2 is 0.3 and λ in the joint loss is 10. To ensure
+a fair comparison, the parameters for all the compared methods
+are set according to the values given in the original article. For
+the weakly supervised anomaly detection methods, we take ten
+percent of all anomalous traces as labelled anomalies and the
+other traces are unlabelled.
+We employ the commonly used metric F −score which is the
+harmonic mean of P recision and Recall to evaluate the effectiveness of these methods. P recision and Recall are defined
+P
+TP
+as P recision = T PT+F
+P , Recall = T P +F N , and F −score =
+2∗P recision∗Recall
+P recision+Recall , respectively, where T P , F N and F P denote
+true positives, false negatives and false positives. The F −score
+for each method is calculated based on the optimal threshold
+value, which is determined by using a grid search method.
+The method has excellent anomaly detection performance when
+F −score is close to 1. We conduct each experiment five times
+and report the mean F −score.
+
+V. EXPERIMENTS
+In this section, we empirically evaluate the effectiveness
+of WAKE on both synthetic and real-life datasets. WAKE is
+implemented in Python, and the source code is accessible at
+https://github.com/guanwei49/WAKE.
+A. Compared Methods
+To verify the superiority of the proposed method, we compare WAKE with ten state-of-the-art anomaly detection methods: DAE [11], VAE [12], LAE [12], BINet [13], GAE [14],
+DeepSAD [17], REPEN [18], DevNet [20], PReNet [21] and
+FEAWAD [22].
+
+C. Artificial Anomalies
+Similar to previous studies [3], [11], [13], [30], [34], we
+create artificial anomalies in logs to evaluate the effectiveness
+of WAKE. We manually inject six types of anomalies into
+the logs, which are commonly observed in real-life business
+processes [13]. Fig. 3 illustrates the different anomalous traces
+generated by applying the six types of anomalies to a normal
+trace. The definitions of these anomaly types are as follows:
+r Skip: A sequence of events has been skipped.
+r Insert: A sequence of random events has been inserted.
+r Rework: A sequence of events has been executed a second
+time.
+
+GUAN et al.: WAKE: A WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION FRAMEWORK VIA A PRE-TRAINED AUTOENCODER
+
+2753
+
+TABLE II
+STATISTICS OF THE LOGS USED IN THE EXPERIMENTS
+
+Fig. 3.
+
+Different anomaly types applied to a normal trace.
+
+cases from a hospital. iv) Request: This log contains events
+related to Requests for Payment. v) Prepaid: This log contains
+events related to prepaid travel costs. vi) Loan: This log contains events related to the loan application process of a Dutch
+financial institute. vii) Approval: This log contains information
+for loan and overdraft approvals processes from submission to
+eventual resolution (approval, cancellation, or rejection). viii)
+Declaration: This log contains events related to domestic travel
+declarations.
+The summary of statistics for each event log used in the
+experiments is presented in Table II. To evaluate the efficacy
+of our approach, we deliberately introduce ten percent artificial
+anomalies into both synthetic and real-life logs. This means that
+ten percent of the traces will be anomalous.
+
+r Early: A sequence of events has been executed too early,
+and hence is skipped later.
+
+r Late: A sequence of events has been executed too late, and
+hence is skipped earlier.
+r Attribute: Some attribute value has been replaced by an
+incorrect value in some events.
+D. Dataset
+We evaluate our method using both synthetic and real-life
+logs. To generate synthetic logs, we utilize simulation technology and adopt eight different business process models [13].
+Among these models, two (Paper and P2P) are handmade, while
+the remaining six (Small, Medium, Large, Huge, Gigantic, and
+Wide) are randomly generated using the PLG2 tool [68]. The
+randomly generated process models have different numbers of
+activities and varying size ranges. We also use a likelihood
+graph [34] to generate causally dependent event attributes. Each
+synthetic log contains 2 to 5 attributes, and we generate a total
+of 4 ∗ 8 = 32 synthetic logs that are free of anomalies.
+For real-life logs, there are eight commonly used logs, which
+include the following: i) Billing: This log contains events that
+pertain to the billing of medical services provided by a hospital.
+ii) Receipt: This log contains records of the receiving phase
+of the building permit application process in an anonymous
+municipality. iii) Sepsis: This log contains events of sepsis
+
+E. Experiments on Synthetic Logs
+1) Performance Evaluation: Table III reports the performance of weakly supervised business process anomaly detection
+and interpretation of the cause of anomalies of various methods
+over eight synthetic logs. The best results are indicated using
+bold typeface. We have the following observations.
+The proposed WAKE framework achieves the best performance on all the synthetic logs in terms of weakly supervised business process anomaly detection and interpretation
+of the cause of anomalies. In terms of anomaly detection, the
+F −scores of WAKE are on average 18.63% better than the
+best weakly supervised anomaly detection method (DevNet),
+and the F −scores of WAKE are on average 27.48% better than
+the best deep unsupervised anomaly detection method (DAE).
+This demonstrates that a few labelled anomalies are well leveraged by WAKE to improve the detection performance. While
+existing weakly supervised anomaly detection methods are able
+to exploit a few labelled anomalies, they do not take into account
+the impact of the temporal nature of the events and the varying
+length of traces in business processes. WAKE utilises BGRUs to
+capture the temporal information of events and employs a mask
+mechanism to deal with varying trace lengths. More importantly,
+the reconstruction errors of traces, which is widely used in unsupervised anomaly detection, is also incorporated into WAKE
+
+2754
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+TABLE III
+F −scoreS OVER SYNTHETIC LOGS WHERE “AD” REPRESENTS WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION AND “IA” REPRESENTS
+INTERPRETATION OF THE CAUSE OF ANOMALIES. THE BEST RESULTS ARE INDICATED USING BOLD TYPEFACE
+
+Fig. 4.
+logs.
+
+F −scores under different ratios of labelled anomalies over synthetic
+
+to improve detection performance. In terms of interpretation
+of the cause of anomalies, the F −scores of WAKE are on
+average 16.16% better than the best deep unsupervised anomaly
+detection method (BINet). This suggests that the feature encoder
+which is used to extract feature representations of traces to reflect
+anomalies can be fine-tuned and well adapted to interpret the
+cause of the anomalies.
+2) Impact of Degree of Supervision: Next, we evaluate the
+impact of degree of supervision i.e., different ratios of labelled
+anomalies γ. F −score is averaged over all synthetic logs.
+Fig. 4(a) shows the F −scores under different ratios of labelled anomalies γ (i.e., γ percent of all anomalous traces are
+labelled as labelled anomalies) in terms of weakly supervised
+anomaly detection. The best unsupervised anomaly detection
+results are shown as dark yellow dashed lines. We can see
+that all weakly supervised anomaly detection methods behave
+similarly with their F −scores increasing with γ. As expected,
+more labelled anomalies can provide more supervised information. None of the weakly supervised methods outperform
+the unsupervised method with only 1% labelled anomalies. As
+expected, the unsupervised approaches only consider the essential features of the process, while the existing semi-supervised
+approaches treat all unlabelled anomalies as normal samples,
+and the learned detector can be biased by this large number of
+unlabelled anomalies (99% of anomalies). Our proposed WAKE
+and FEAWAD outperform the best unsupervised method with
+only 5% labelled anomalies, confirming the advantage of WAKE
+in leveraging a few labelled anomalies more efficiently. When
+γ is between 1% and 10%, the F −score of WAKE increases
+rapidly, while when γ > 10%, the F −score of WAKE barely
+
+increases and approaches 1. However, other methods require a
+higher γ to achieve a relatively good performance (e.g., at least
+40% labelled anomalies are required to achieve a F −score of
+0.9 for DevNet). This demonstrates that our approach requires
+fewer labelled anomalies and saves on human annotation costs.
+REPEN hardly varies with γ, whose performance is the worst.
+Even 50% labelled anomalies are not enough to surpass the
+best unsupervised method, which may be because the distance
+between the traces does not reflect the nature of the anomaly.
+In terms of interpretation of the cause of anomalies, from
+Fig. 4(b), we can see that the F −score of WAKE increases with
+the γ and is always higher than the best unsupervised method.
+This illustrates that coarse-grained labels are helpful to obtain
+more accurate fine-grained labels and the proposed calculation
+of anomaly scores for each attribute value does indeed mitigate
+the effect of the difference in the number of possible values of
+different attributes.
+F. Experiments on Real-Life Logs
+1) Performance Evaluation: To validate the applicability of
+our method, we conduct experiments on eight real-life logs.
+The results are shown in Table IV. For the datasets Billing and
+Declaration, the hidden layer size of WAKE is set to 16.
+As can be seen, the proposed WAKE framework is also
+superior over all the real-life logs in terms of weakly supervised business process anomaly detection and interpretation
+of the cause of anomalies. In terms of anomaly detection, the
+F −scores of WAKE are on average 16.17% better than the
+best weakly supervised anomaly detection method (DevNet),
+and the F −scores of WAKE are on average 22.21% better than
+the best deep unsupervised anomaly detection method (DAE).
+At the same time, for most logs (e.g., Request and Declaration),
+there are some weakly supervised anomaly detection methods
+that perform better than deep unsupervised business process
+anomaly detection methods. This also indicates that if a limited
+number of anomalies can be used wisely, it can help a lot
+in improving the detection results. In terms of interpretation
+of the cause of anomalies, the F −scores of WAKE are on
+average 15.49% better than the best deep unsupervised anomaly
+detection method (BINet), showing that a limited number of
+labelled anomalies are equally helpful in interpreting the cause
+of anomalies.
+
+GUAN et al.: WAKE: A WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION FRAMEWORK VIA A PRE-TRAINED AUTOENCODER
+
+2755
+
+TABLE IV
+F −scoreS OVER REAL-LIFE LOGS WHERE “AD” REPRESENTS WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION AND “IA” REPRESENTS
+INTERPRETATION OF THE CAUSE OF ANOMALIES. THE BEST RESULTS ARE INDICATED USING BOLD TYPEFACE
+
+TABLE V
+ABLATION STUDY - F −scoreS FOR WAKE AND ITS ABLATED VERSIONS IN TERMS OF ANOMALY DETECTION
+
+TABLE VI
+EFFECT OF PRE-TRAINING STAGE IN TERMS OF ANOMALY DETECTION
+
+G. Ablation Study
+
+Fig. 5.
+logs.
+
+F −scores under different ratios of labelled anomalies over real-life
+
+2) Impact of Degree of Supervision: Next, we evaluate the
+impact of degree of supervision. F −score is obtained over all
+real-life logs. The results are shown in Fig. 5(a) and (b) in terms
+of weakly supervised anomaly detection and the interpretation
+of the cause of anomalies, respectively.
+Similar to that in Section V-E2, our proposed framework
+WAKE achieves a good anomaly detection performance with
+only 10% labelled anomalies, which proves that WAKE is also
+applicable in real life. However, the F −score of each method
+remains scarcely close to 1 even when 50% of the anomalies
+are labelled. This is possibly due to some natural anomalies that
+are detected but not labelled in the datasets. From Fig. 5(b),
+we can see that WAKE is able to better interpret the cause of
+anomalies, whose F −score exceeds 0.6 even with only 1%
+labelled anomalies.
+
+We investigate the relative importance of each factor of feature
+representation in terms of anomaly detection for each log. The
+results are shown in Table V .
+As can be seen, when only one factor is used for anomaly
+detection, the reconstruction error vector r performs best, with
+the exception of the log Billing. This demonstrates that the
+effectiveness of using the reconstruction error, which is a commonly used indicator for unsupervised anomaly detection, as
+a component of the feature representation of a trace. It also
+illustrates the ability of our pre-trained autoencoder to reflect the
+anomalies. However, using only the maximum reconstruction
+error vector m results in relatively poor performance, suggesting that relying solely on the maximum reconstruction error
+for each attribute may not be sufficient to reflect anomalies,
+and detection results may be biased by special events. Similarly, using only the latent representation s also results in
+relatively poor performance, indicating that with few labelled
+anomalies, the model may easily overfit without the aid of
+a reconstruction error that is representative of the distance
+from the normal pattern. The proposed WAKE framework (i.e.,
+all three factors were used simultaneously to detect anomalies) has the best performance, suggesting that the combination of the three factors is a more effective strategy, as any
+significant deviation in any of the three factors can be detected
+by WAKE.
+
+2756
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+TABLE VII
+EFFECT OF PRE-TRAINING STAGE IN TERMS OF INTERPRETATION OF THE CAUSE OF ANOMALIES
+
+TABLE VIII
+COMPUTATIONAL COST
+
+Fig. 6.
+
+Parameter analysis in terms of weakly supervised anomaly detection.
+
+H. Effect of Pre-Training Stage
+We evaluate the effectiveness of the pre-training stage adopted
+in our proposed model. We compare WAKE with a model that
+does not include the pre-training stage (the first stage described
+in Algorithm 1) in the training procedure.
+The results in terms of anomaly detection and interpretation of
+the cause of anomalies are shown in Tables VI and VII, respectively. In terms of anomaly detection, compared with the model
+without a pre-training stage, WAKE achieves a significant improvement by 5.81% (average) and 7.75% (average) on synthetic
+logs and real-life logs, respectively. In terms of interpretation
+of the cause of anomalies, compared with the model without a
+pre-training stage, WAKE achieves a significant improvement
+by 4.13% (average) and 10.45% (average) on synthetic logs and
+real-life logs, respectively. These results show that pre-training
+is a necessary stage to avoid some bad local minima so that our
+model can better detect anomalies and interpret their causes.
+I. Parameter Analysis
+1) Impact of β: Note that the parameter β controls the proportion of labelled anomalies and unlabelled traces in minibatches in training stage 2, aiming to address sample imbalance.
+In this section, we investigate the impact of β for weakly supervised business process anomaly detection by varying the value
+of β. Fig. 6(a) illustrates the performance of WAKE on Small,
+Medium, Gigantic (synthetic logs), Request and Declaration
+(real-life logs) under different magnitudes of β in terms of
+weakly supervised anomaly detection. The labelled anomalies
+are not oversampled when β = 0.
+As can be seen, the changing pattern of F −scores is basically
+the same on all logs. Their F −scores increase and then decrease
+as β increases. When β is small, the model may be biased by
+a large number of negative samples, i.e., in order to reduce
+anomaly scores for a large number of unlabelled traces, even
+
+some labelled anomalies may be given a very low anomaly score
+by the trained model. When β is greater than 0.5, the F −scores
+of WAKE decrease sharply on all logs, indicating that the model
+is biased by too many labelled anomalies in a mini-batch. At
+the same time, since the number of labelled anomalies is few,
+they are oversampled. To traverse all unlabelled traces in a
+single epoch, the number of batches (i.e., n_batches2 ) has to
+be increased, which increases the training time. All in all, a β
+between 0.2 and 0.5 seems to be a good choice.
+2) Impact of λ: Note that λ is a hyper-parameter to balance
+the contributions of two parts in the joint loss (i.e., (16)). When
+λ = 0, the anomaly scores generated by the anomaly score
+generator only have to satisfy a specific distribution (i.e., without
+minimizing reconstruction errors). In this section, we investigate
+the impact of λ for weakly supervised anomaly detection by
+varying the value of λ.
+From Fig. 6(b), we can see that the changing pattern of
+F −scores on logs Small, Medium, Gigantic and Request is
+basically the same. Their F −scores increase sharply and then
+decrease as λ increases which suggests that focusing on the
+reconstruction errors of traces in the feature encoder can improve the anomaly detection performance of WAKE when the
+limited number of labelled anomalies is not sufficient to cover
+all anomaly patterns, but paying too much attention to the
+reconstruction errors can lead to a poor anomaly detection
+performance. For the log Declaration, λ has less of an effect
+on it. When additional analyses are performed to examine the
+characteristics of the log, it can be observed that the limited
+number of labelled anomalies in the log Declaration can cover
+most anomalous patterns and WAKE performs well even when
+not concerned with reconstruction errors, but it performs slightly
+worse when overly concerned with reconstruction errors.
+
+J. Computational Cost
+The time consumption of each method is presented in
+Table VIII. These results have been averaged across all the
+datasets.
+While our proposed method, WAKE, demonstrates superior
+performance, it also incurs the highest computational cost. In
+contrast to other approaches, WAKE necessitates three stages of
+training. Moreover, the incorporation of GRU further intensifies
+the computational cost. Similarly, GAE employs graph neural
+networks, which contribute to a higher computational cost.
+
+GUAN et al.: WAKE: A WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION FRAMEWORK VIA A PRE-TRAINED AUTOENCODER
+
+VI. CONCLUSIONS AND FUTURE WORK
+In this paper, we propose WAKE, a weakly supervised
+business process anomaly detection framework via a pretrained autoencoder. Our approach takes advantage of a few
+labelled anomalies, which are always available in real life,
+to detect anomalies in unlabelled traces. We propose a novel
+feature encoder that transforms traces into more meaningful
+feature representations. The feature encoder is pre-trained to
+be able to reconstruct normal traces. The feature representations
+are fed into an anomaly score generator to detect anomalies.
+To overcome the limitation of data insufficiency for labelled
+anomalies, the feature encoder and the anomaly score generator
+are jointly optimized through the training process with a specially designed joint loss. The feature encoder is fine-tuned to
+interpret the cause of the anomalies. We propose a novel method
+for interpreting the cause of anomalies by computing anomaly
+scores that can be compared across attributes, addressing the
+problem of unfairness caused by differences in the number of
+possible values for different attributes. Extensive experiments
+demonstrate that the proposed approach can effectively exploit
+limited-but-valuable information from a few labelled anomalies.
+The proposed approach outperforms state-of-the-art approaches
+with superior performance.
+Event logs now contain multimedia data such as videos and
+images, which capture the scenes upon completion of an event.
+These diverse sources of information can easily lead to anomalies. In the future, we plan to investigate the fusion of these
+heterogeneous data types to implement cross-media anomaly
+detection in business processes.
+
+REFERENCES
+[1] M. Ebrahim and S. A. H. Golpayegani, “Anomaly detection in business
+processes logs using social network analysis,” J. Comput. Virol. Hacking
+Techn., vol. 18, no. 2, pp. 127–139, 2022.
+[2] R. Sarno, F. Sinaga, and K. R. Sungkono, “Anomaly detection in business
+processes using process mining and fuzzy association rule learning,” J.
+Big Data, vol. 7, no. 1, 2020, Art. no. 5.
+[3] J. Ko and M. Comuzzi, “Detecting anomalies in business process event
+logs using statistical leverage,” Inf. Sci., vol. 549, pp. 53–67, 2021.
+[4] J. Ko and M. Comuzzi, “Keeping our rivers clean: Information-theoretic
+online anomaly detection for streaming business process events,” Inf. Syst.,
+vol. 104, 2022, Art. no. 101894.
+[5] D. Rahmawati, R. Sarno, C. Fatichah, and D. Sunaryono, “Fraud detection
+on event log of bank financial credit business process using hidden Markov
+model algorithm,” in Proc. 3rd Int. Conf. Sci. Inf. Technol., 2017, pp. 35–40.
+[6] C. Linn and D. Werth, “Sequential anomaly detection techniques in
+business processes,” in Proc. Int. Workshops Bus. Inf. Syst. Workshops,
+Springer, 2017, pp. 196–208.
+[7] M. G. Armentano and A. A. Amandi, “Detection of sequences with
+anomalous behavior in a workflow process,” in Proc. 26th Int. Conf.
+Database Expert Syst. Appl., Q. Chen, A. Hameurlain, F. Toumani, R.
+R. Wagner, and H. Decker, Eds., Springer, 2015, pp. 111–118.
+[8] A. Sureka, “Kernel based sequential data anomaly detection in business
+process event logs,” 2015, arXiv:1507.01168.
+[9] P. Hsu, Y. Chuang, Y. Lo, and S. He, “Using contextualized activity-level
+duration to discover irregular process instances in business operations,”
+Inf. Sci., vol. 391, pp. 80–98, 2017.
+[10] Y. LeCun, Y. Bengio, and G. E. Hinton, “Deep learning,” Nature, vol. 521,
+no. 7553, pp. 436–444, 2015.
+[11] T. Nolle, S. Luettgen, A. Seeliger, and M. Mühlhäuser, “Analyzing business process anomalies using autoencoders,” Mach. Learn., vol. 107,
+no. 11, pp. 1875–1893, 2018.
+
+2757
+
+[12] H. T. C. Nguyen, S. Lee, J. Kim, J. Ko, and M. Comuzzi, “Autoencoders
+for improving quality of process event logs,” Expert Syst. Appl., vol. 131,
+pp. 132–147, 2019.
+[13] T. Nolle, S. Luettgen, A. Seeliger, and M. Mühlhäuser, “BINet: Multiperspective business process anomaly classification,” Inf. Syst., vol. 103,
+2022, Art. no. 101458.
+[14] S. Huo, H. Völzer, P. Reddy, P. Agarwal, V. Isahagian, and V. Muthusamy,
+“Graph autoencoders for business process anomaly detection,” in Proc.
+19th Int. Conf. Bus. Process Manage., Springer, 2021, pp. 417–433.
+[15] W. Guan, J. Cao, Y. Gu, and S. Qian, “GRASPED: A GRU-AE
+network based multi-perspective business process anomaly detection
+model,” IEEE Trans. Services Comput., early access, Mar. 30, 2023,
+doi: 10.1109/TSC.2023.3262405.
+[16] G. Pang, C. Shen, L. Cao, and A. van den Hengel, “Deep learning for
+anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2, pp. 38:1–
+38:38, 2022.
+[17] L. Ruff et al., “Deep semi-supervised anomaly detection,” 2019, arXiv:
+1906.02694.
+[18] G. Pang, L. Cao, L. Chen, and H. Liu, “Learning representations of
+ultrahigh-dimensional data for random distance-based outlier detection,”
+in Proc. 24th ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2018,
+pp. 2041–2050.
+[19] B. Tian, Q. Su, and J. Yin, “Anomaly detection by leveraging incomplete anomalous knowledge with anomaly-aware bidirectional GANs,”
+2022, arXiv:2204.13335.
+[20] G. Pang, C. Shen, and A. van den Hengel, “Deep anomaly detection with
+deviation networks,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discov.
+Data Mining, 2019, pp. 353–362.
+[21] G. Pang, C. Shen, H. Jin, and A. V. D. Hengel, “Deep weakly-supervised
+anomaly detection,” 2019, arXiv: 1910.13601.
+[22] Y. Zhou, X. Song, Y. Zhang, F. Liu, C. Zhu, and L. Liu, “Feature encoding
+with autoencoders for weakly supervised anomaly detection,” IEEE Trans.
+Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2454–2465, Jun. 2022.
+[23] N. Görnitz, M. Kloft, K. Rieck, and U. Brefeld, “Toward supervised
+anomaly detection,” J. Artif. Intell. Res., vol. 46, pp. 235–262, 2013.
+[24] S. Das, W.-K. Wong, T. Dietterich, A. Fern, and A. Emmott, “Incorporating
+expert feedback into active anomaly discovery,” in Proc. IEEE 16th Int.
+Conf. Data Mining, 2016, pp. 853–858.
+[25] T. Huang, P. Chen, and R. Li, “A semi-supervised VAE based active
+anomaly detection framework in multivariate time series for online systems,” in Proc. ACM Web Conf., 2022, pp. 1797–1806.
+[26] Y. Gong, C. Wang, X. Dai, S. Yu, L. Xiang, and J. Wu, “Multiscale continuity-aware refinement network for weakly supervised video
+anomaly detection,” in Proc. IEEE Int. Conf. Multimedia Expo, 2022,
+pp. 1–6.
+[27] J. Wu et al., “Weakly-supervised spatio-temporal anomaly detection in
+surveillance video,” 2021, arXiv:2108.03825.
+[28] B. Wan, Y. Fang, X. Xia, and J. Mei, “Weakly supervised video anomaly
+detection via center-guided discriminative learning,” in Proc. IEEE Int.
+Conf. Multimedia Expo, 2020, pp. 1–6.
+[29] E. A. Elaziz, R. Fathalla, and M. Shaheen, “Deep reinforcement learning
+for data-efficient weakly supervised business process anomaly detection,”
+J. Big Data, vol. 10, no. 1, 2023, Art. no. 33.
+[30] F. de Lima Bezerra and J. Wainer, “Algorithms for anomaly detection of
+traces in logs of process aware information systems,” Inf. Syst., vol. 38,
+no. 1, pp. 33–44, 2013.
+[31] R. Sarno, R. D. Dewandono, T. Ahmad, M. F. Naufal, and F. Sinaga,
+“Hybrid association rule learning and process mining for fraud detection,”
+IAENG Int. J. Comput. Sci., vol. 42, no. 2, pp. 59–72, 2015.
+[32] J. Ko and M. Comuzzi, “Online anomaly detection using statistical leverage for streaming business process events,” in Proc. Int. Workshops Process
+Mining Workshops, S. J. J. Leemans and H. Leopold, Eds., Springer, 2020,
+pp. 193–205.
+[33] J. Ko and M. Comuzzi, “Business process event log anomaly detection
+based on statistical leverage,” in Proc. 1st Italian Forum Bus. Process
+Manage. Co-Located 19th Int. Conf. Bus. Process Manage., 2021, pp. 7–
+12.
+[34] K. Böhmer and S. Rinderle-Ma, “Multi-perspective anomaly detection in
+business process execution events,” in Proc. OTM Confederated Int. Conf.
+“On Move to Meaningful Internet Syst.”, C. Debruyne, H. Panetto, R.
+Meersman, T. S. Dillon, E. Kühn, D. O’Sullivan, and C. A. Ardagna, Eds.,
+2016, pp. 80–98.
+[35] A. Rogge-Solti and G. Kasneci, “Temporal anomaly detection in business
+processes,” in Proc. Int. Conf. Bus. Process Manage., Springer, 2014,
+pp. 234–249.
+
+2758
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+[36] B. Kang, D. Kim, and S. Kang, “Real-time business process monitoring
+method for prediction of abnormal termination using KNNI-based LOF
+prediction,” Expert Syst. Appl., vol. 39, no. 5, pp. 6061–6068, 2012.
+[37] F. Folino, G. Greco, A. Guzzo, and L. Pontieri, “Mining usage scenarios
+in business processes: Outlier-aware discovery and run-time prediction,”
+Data Knowl. Eng., vol. 70, no. 12, pp. 1005–1029, 2011.
+[38] G. M. Tavares and S. Barbon Jr, “Analysis of language inspired trace
+representation for anomaly detection,” in Proc. Int. Conf. Theory Pract.
+Digit. Libraries, Springer, 2020, pp. 296–308.
+[39] S. B. Junior, P. Ceravolo, E. Damiani, N. J. Omori, and G. M. Tavares,
+“Anomaly detection on event logs with a scarcity of labels,” in Proc. 2nd
+Int. Conf. Process Mining, 2020, pp. 161–168.
+[40] P. Krajsic and B. Franczyk, “Lambda architecture for anomaly detection
+in online process mining using autoencoders,” in Proc. 12th Int. Conf. Adv.
+Comput. Collective Intell., M. Hernes, K. Wojtkiewicz, and E. Szczerbicki,
+Eds., Springer, 2020, pp. 579–589.
+[41] T. Nolle, A. Seeliger, and M. Mühlhäuser, “Unsupervised anomaly detection in noisy business process event logs using denoising autoencoders,”
+in Proc. 19th Int. Conf. Discov. Sci., T. Calders, M. Ceci, and D. Malerba,
+Eds., 2016, pp. 442–456.
+[42] P. Krajsic and B. Franczyk, “Variational autoencoder for anomaly detection
+in event data in online process mining,” in Proc. 23rd Int. Conf. Enterprise
+Inf. Syst., 2021, pp. 567–574.
+[43] T. Nolle, A. Seeliger, and M. Mühlhäuser, “BINet: Multivariate business
+process anomaly detection using deep learning,” in Proc. 16th Int. Conf.
+Bus. Process Manage., M. Weske, M. Montali, I. Weber, and J. vom
+Brocke, Eds., Springer, 2018, pp. 271–287.
+[44] W. Guan, J. Cao, Y. Gu, and S. Qian, “GAMA: A multi-graph-based
+anomaly detection framework for business processes via graph neural
+networks,” 2023, 10.36227/techrxiv.23627850.v1.
+[45] P. Krajsic and B. Franczyk, “Semi-supervised anomaly detection in business process event data using self-attention based classification,” Procedia
+Comput. Sci., vol. 192, pp. 39–48, 2021.
+[46] C. Huang, F. Ye, Y. Zhang, Y. Wang, and Q. Tian, “ESAD: End-to-end
+deep semi-supervised anomaly detection,” 2020, arXiv: 2012.04905.
+[47] Z. Li, C. Sun, C. Liu, X. Chen, M. Wang, and Y. Liu, “Dual-MGAN: An
+efficient approach for semi-supervised outlier detection with few identified
+anomalies,” ACM Trans. Knowl. Discov. Data, vol. 16, no. 6, pp. 107:1–
+107:30, 2022.
+[48] Z. Feng, J. Tang, Y. Dou, and G. Wu, “Learning discriminative features
+for semi-supervised anomaly detection,” in Proc. IEEE Int. Conf. Acoust.
+Speech Signal Process., 2021, pp. 2935–2939.
+[49] W. Sultani, C. Chen, and M. Shah, “Real-world anomaly detection in
+surveillance videos,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.,
+2018, pp. 6479–6488.
+[50] M. Z. Zaheer, A. Mahmood, H. Shin, and S. Lee, “A self-reasoning
+framework for anomaly detection using video-level labels,” 2020, arXiv:
+2008.11887.
+[51] D. Lee, S. Yu, H. Ju, and H. Yu, “Weakly supervised temporal anomaly
+segmentation with dynamic time warping,” in Proc. IEEE/CVF Int. Conf.
+Comput. Vis., 2021, pp. 7355–7364.
+[52] C. Zhang et al., “Fraud detection under multi-sourced extremely noisy
+annotations,” in Proc. 30th ACM Int. Conf. Inf. Knowl. Manage., 2021,
+pp. 2497–2506.
+[53] Y. Zhao, G. Zheng, S. Mukherjee, R. McCann, and A. H. Awadallah,
+“ADMoE: Anomaly detection with mixture-of-experts from noisy labels,”
+2022, arXiv:2208.11290.
+[54] Y. Gao, X. Wang, X. He, Z. Liu, H. Feng, and Y. Zhang, “Alleviating
+structural distribution shift in graph anomaly detection,” in Proc. 16th
+ACM Int. Conf. Web Search Data Mining, 2023, pp. 357–365.
+[55] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked
+autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit., 2022, pp. 16 000–16 009.
+[56] Y. Ye, L. Xia, and C. Huang, “Graph masked autoencoder for sequential
+recommendation,” in Proc. 46th Int. ACM SIGIR Conf. Res. Develop. Inf.
+Retrieval, 2023, pp. 321–330.
+[57] Q. Tan, N. Liu, X. Huang, R. Chen, S.-H. Choi, and X. Hu,
+“MGAE: Masked autoencoders for self-supervised learning on graphs,”
+2022, arXiv:2201.02534.
+[58] P.-Y. Huang et al., “Masked autoencoders that listen,” in Proc. Int. Conf.
+Neural Inf. Process. Syst., 2022, pp. 28 708–28 720.
+[59] H. Yao, X. Wang, and W. Yu, “Siamese transition masked autoencoders as
+uniform unsupervised visual anomaly detector,” 2022, arXiv:2211.00349.
+[60] M.-I. Georgescu, “Masked autoencoders for unsupervised anomaly detection in medical images,” 2023, arXiv:2307.07534.
+
+[61] N.-C. Ristea, F.-A. Croitoru, R. T. Ionescu, M. Popescu, F. S. Khan, and
+M. Shah, “Self-distilled masked auto-encoders are efficient video anomaly
+detectors,” 2023, arXiv:2306.12041.
+[62] W. Yu, M. Huang, S. Wu, and Y. Zhang, “Ensembled masked graph
+autoencoders for link anomaly detection in a road network considering
+spatiotemporal features,” Inf. Sci., vol. 622, pp. 456–475, 2023.
+[63] T. Mikolov, K. Chen, G. Corrado, and J. Dean, “Efficient estimation of
+word representations in vector space,” 2013, arXiv:1301.3781.
+[64] K. Cho et al., “Learning phrase representations using RNN encoderdecoder for statistical machine translation,” in Proc. Conf. Empirical Methods Natural Lang. Process., A. Moschitti, B. Pang, and W. Daelemans,
+Eds., 2014, pp. 1724–1734.
+[65] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+2014, arXiv:1412.6980.
+[66] J. R. Quinlan, “Induction of decision trees,” Mach. Learn., vol. 1, no. 1,
+pp. 81–106, 1986.
+[67] X. Glorot and Y. Bengio, “Understanding the difficulty of training deep
+feedforward neural networks,” in Proc. 13th Int. Conf. Artif. Intell. Statist.,
+Y. W. Teh and D. M. Titterington, Eds., 2010, pp. 249–256.
+[68] A. Burattin, “PLG2: Multiperspective processes randomization and simulation for online and offline settings,” 2015, arXiv:1506.08415.
+Wei Guan is currently working toward the PhD
+degree with the Department of Computer Science
+and Engineering, Shanghai Jiao Tong University.
+His research interests include predictive monitoring,
+anomaly detection, and machine learning.
+
+Jian Cao (Senior Member, IEEE) is currently a
+tenured professor with the Department of Computer
+Science and Engineering, Shanghai Jiao Tong University. He is also the director of research institute
+of network computing and service computing. His
+research interests include intelligent data analytics,
+service computing. He has published more than 300
+research papers in prestigious journals and conferences. Currently, he is the distinguished member of
+CCF.
+Haiyan Zhao received the PhD degree from the
+Nanjing University of Science and Technology, in
+2002. She is an associate professor affiliated with the
+University of Shanghai for Science and Technology.
+She has authored more than 80 papers in journals
+and conferences, and her research interests include
+data analytics, recommender systems, and business
+process management.
+
+Yang Gu is currently working toward the PhD degree
+with the Department of Computer Science and Engineering, Shanghai Jiao Tong University. His research
+interests include service computing and data mining.
+
+Shiyou Qian (Member, IEEE) received the PhD degree in computer science from Shanghai Jiao Tong
+University, China, in 2015. He is currently an associate researcher with the Department of Computer
+Science and Engineering, Shanghai Jiao Tong University, China. His research interests include event
+matching for content-based publish/subscribe systems, resource scheduling for hybrid-cloud, and driving recommendation with vehicular networks.

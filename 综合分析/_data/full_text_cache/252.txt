@@ -1,0 +1,722 @@
+Computers & Security 145 (2024) 103999
+
+ Contents lists available at ScienceDirect
+
+ Computers & Security
+ journal homepage: www.elsevier.com/locate/cose
+
+LLM-TIKG: Threat intelligence knowledge graph construction utilizing large
+language model
+Yuelin Hu a , Futai Zou a ,∗, Jiajia Han b , Xin Sun b , Yilei Wang b
+a
+ School of Electronic Information and Electrical Engineering, Shanghai Jiao Tong University, Shanghai, China
+b
+ State Grid Zhejiang Electric Power Co..Ltd Research Institute, Hangzhou, Zhejiang, China
+
+ARTICLE INFO ABSTRACT
+
+Keywords: Open-source threat intelligence is often unstructured and cannot be directly applied to the next detection
+Threat intelligence and defense. By constructing a knowledge graph through open-source threat intelligence, we can better
+Large language model apply this information to intrusion detection. However, the current methods for constructing knowledge
+Knowledge graph
+ graphs face limitations due to the domain-specific attributes of entities and the analysis of lengthy texts,
+TTP classification
+ and they require large amounts of labeled data. Furthermore, there is a lack of authoritative open-source
+ annotated threat intelligence datasets, which require significant manual effort. Moreover, it is noteworthy
+ that current research often neglects the textual descriptions of attack behaviors, resulting in the loss of vital
+ information to understand intricate cyber threats. To address these issues, we propose LLM-TIKG that applies
+ the large language model to construct a knowledge graph from unstructured open-source threat intelligence.
+ The few-shot learning capability of GPT is leveraged to achieve data annotation and augmentation, thereby
+ creating the datasets for fine-tuning a smaller language model (7B). Using the fine-tuned model, we perform
+ topic classification on the collected reports, extract entities and relationships, and extract TTPs from the
+ attack description. This process results in the construction of a threat intelligence knowledge graph, enabling
+ automated and universal analysis of textualized threat intelligence. The experimental results demonstrate
+ improved performance in both named entity recognition and TTP classification, achieving the precision of
+ 87.88% and 96.53%, respectively.
+
+1. Introduction Fortinet, 0000; Trendmicro, 0000; CISA, 0000). The nature of OSCTI often presents challenges due to its article-type content and unstructured
+ The rapid development of zero-day attacks, advanced persistent format, rendering it unsuitable for direct application in subsequent
+threats (APTs), and other novel attack methods has elevated the com- detection and defense.
+plexity of cyberspace attacks to an unprecedented level. In response, Traditional OSCTI collection methods (IBM, 0000; AlienVault, 0000)
+the cybersecurity defense approach of ‘‘active defense, traceability, and concentrate on Indicators of Compromise (IoCs) such as hashes, IP
+countermeasures’’ is gradually gaining recognition (Zhou et al., 2022), addresses, and domains. However, attackers can easily change the
+which relies on the collection and utilization of a large amount of threat characteristics of an attack, rendering them no longer matching the
+intelligence. Cyber Threat Intelligence (CTI) is a type of information previously defined IoCs. Moreover, these approaches yield low-level,
+about cyber threats and attacks that is characterized by high accuracy fragmented threat intelligence, which lacks high-level information
+and strong correlation. CTI can provide powerful data support for all
+ (e.g., attackers, tools) and the relationships between intelligence entistages of security analysis and help shift cyber security behavior from
+ ties that are essential for threat hunting and attack attribution (Kaiser
+reactive to proactive. As such, CTI plays an immeasurable role in cyber
+ et al., 2023; Sikos, 2023). Discrete indicators make it challenging for
+security (Shin and Lowry, 2020; Kotsias et al., 2023).
+ analysts to comprehend the complete picture of the attack and give
+ In addition to commercially available threat information dissemiattackers the opportunity to evade detection.
+nated through security vendors, an increasing number of Open Source
+Threat Intelligence (OSCTI) resources have emerged as crucial com- Constructing a threat intelligence knowledge graph can help alleviponents in the field of threat intelligence research (Symantec, 0000; ate these issues and holds significant value. It integrates intelligence
+
+ ∗ Corresponding author.
+ E-mail addresses: huyuelin@sjtu.edu.cn (Y. Hu), zoufutai@sjtu.edu.cn (F. Zou), 36155384@qq.com (J. Han), 16526452@qq.com (X. Sun),
+wangyileichn@163.com (Y. Wang).
+
+https://doi.org/10.1016/j.cose.2024.103999
+Received 6 December 2023; Received in revised form 21 February 2024; Accepted 7 July 2024
+Available online 14 July 2024
+0167-4048/© 2024 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+from multiple sources and graphically depicts threat relationships,
+allowing analysts to conduct more in-depth analyses through threat
+entities and their relationships. This aids in tracing the attack chain,
+deducing attacker intentions, and enhancing capabilities for responding
+to network security threats. Current research is beginning to focus on
+the construction of threat intelligence knowledge graphs. They employ
+Named Entity Recognition (NER) and Relationship Extraction (RE) from
+the field of Natural Language Processing (NLP) to analyze textualized
+threat intelligence (Zhao et al., 2020; Sarhan and Spruit, 2021; Gao
+et al., 2022), using various NLP techniques to extract threat entities
+and relations. These methods facilitate the extraction of a broader range
+of threat intelligence entities and the mining of relationships between
+entities.
+ Despite their advance in constructing the threat intelligence knowledge graph, current approaches also suffer from the following limitations:
+ Accuracy of information extraction: Threat intelligence entities exhibit domain-specific characteristics, such as ambiguous entity
+boundaries and polysemous expressions, which complicate the named Fig. 1. An example of motivatio for espionage attackers’s intrusion. The upper figure
+entity recognition (Wang et al., 2022). The present approach also faces represents the text from a threat intelligence report, while the lower figure depicts the
+ graph extracted from the text.
+limitations related to the maximum sequence length (Zhang et al.,
+2020), resulting in decreased effectiveness for long text. These two
+factors affect the accuracy of information extraction.
+ Demand for labeled data: Current approaches heavily depend on dataset can be found at https://github.com/Netsec-SJTU/LLM-TIKGan extensive corpus of annotated data (Chen et al., 2020). Moreover, dataset.
+there is a scarcity of authoritative open-source threat intelligence an- (4) The results reveal enhanced performance in named entity recognotation datasets, and data annotation for model training necessitates nition and TTP classification, achieving the precision of 87.88% and
+significant labor investment. 96.53%, respectively.
+ Absence of attack behaviors: Current research ignores descriptions of attack behaviors in textual information (Zhao et al., 2020; 2. Background
+Gao et al., 2022), such as ‘‘inject shellcode into file’’, from which it is
+challenging to extract entities. The Tactics, Techniques, and Procedures
+ This section presents a practical example to illustrate the motivation
+(TTP) framework proposed by MITRE ATT&CK (MITRE, 0000) offers
+ behind the method proposed in this paper and introduces the large
+a summary of attack methods, and we can map such statements to
+TTPs. Incorporating these techniques into the knowledge graph and language model and its application in this context.
+correlating them with other information can yield valuable insights into
+the tools and attack patterns employed by adversaries. 2.1. Motivation example
+ The emergence of Large Language Models (LLMs) provides a solution to the above problem by strong generalization capabilities across Fig. 1 gives an example for knowledge graph construction from
+various downstream tasks (Zhao et al., 2023). Instruction tuning can unstructured text. The text in the upper figure is a segment of a threat
+further guide LLMs to more effectively address these tasks using natural intelligence report encompassing a wealth of threat intelligence entities
+language instructions. In this paper, we innovatively apply LLMs to and relationships. After the initial intrusion, the attacker conducted a
+the analysis of textualized threat intelligence, constructing a knowledge series of attack activities. The malicious DLL file was side-loaded using
+graph from unstructured open-source threat intelligence. We leverage imjpuex.exe, which then loaded a .dat file, and imjpuex.exe started
+GPT’s few-shot learning capability by designing appropriate prompts network services through svchost.exe. The hash value of imjpuex.exe is
+for data annotation and data enhancement to construct the dataset
+ also provided. Most current research focuses on extracting standardized
+required for model training. This avoids substantial manual effort.
+ threat intelligence. However, isolated threat intelligence entities often
+Subsequently, the Llama2-7B model is fine-tuned using the LoRAlack the relationships between different entities and attack behaviors.
+based instruction tuning to accomplish topic classification, entity and
+ Moverover, they neglect to extract the TTPs from the attack description,
+relationship extraction, and TTP classification on the collected threat
+ which is a higher level of threat intelligence.
+intelligence text. Finally, the threat intelligence knowledge graph is
+ We expect to extract diverse threat intelligence entities and their
+constructed, achieving automatic and universal analysis of textualized
+ relationships from this text, ranging from low-level IoCs to high-level
+threat intelligence. The contributions of this paper are as follows:
+ (1) We propose a method, LLM-TIKG, that leverages the large details like attacker and TTP, as shown in the lower part of Fig. 1. The
+language model to analyze textualized threat intelligence. This method invocation relationships between malicious files in the graph imply the
+automates the extraction of entities and relationships in open-source attack path and the text also includes the description of the attacker’s
+threat intelligence and maps natural language descriptions of attack behavior, such as ‘‘side-load a malicious DLL file’’ indicating that the
+behaviors into TTPs, which facilitates the efficient construction of a attacker used the technique of Hijack Execution Flow (T1574). These
+knowledge graph that correlates low-level and high-level threat intelli- attacker behaviors are the results of thorough analysis by security
+gence. analysts and represent more advanced threat intelligence. If these
+ (2) The few-shot learning capability of the GPT model is used pieces of information are missed in threat intelligence analysis, only
+for data annotation and data augmentation, assisting the creation of some surface-level information is retained, and the full value of these
+datasets for model fine-tuning while significantly diminishing the need analytical findings cannot be effectively utilized.
+for costly manual effort. Constructing a knowledge graph with multiple levels of information,
+ (3) We manually correct a portion of the labeled dataset generated especially with the inclusion of TTP, fosters a better understanding of
+by GPT which used for the knowledge graph construction, and this the attack’s intent and the attribution of the attacker.
+
+ 2
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+ Fig. 2. The framework for LLM-TIKG, which generates labeled datasets using GPT and utilizes the fine-tuned model to construct a threat intelligence knowledge graph.
+
+2.2. Large language model module, that is, data construction, model fine-tuning, and knowledge
+ graph construction.
+ Large Language Models (LLMs) (Zhao et al., 2023) refer to Transformer language models with hundreds of billions or more parameters, 3.1. Overview
+such as GPT-3 (Brown et al., 2020), PaLM (Chowdhery et al., 2022),
+and Llama (Touvron et al., 2023a). Among them, ChatGPT (OpenAI, We propose an automated threat intelligence analysis method, LLM-
+2023) is currently the most popular model, which is trained to follow TIKG, whose framework is shown in Fig. 2. It takes textual open-source
+an instruction in a prompt and presents an amazing conversation threat intelligence as input and constructs a threat intelligence knowlability with humans. And Llama2 (Touvron et al., 2023b) is a superior edge graph through the analysis of text content by large language
+open-source model series ranging in scale from 7 billion to 70 billion models. Firstly, leveraging the powerful few-shot learning capability of
+parameters. the GPT model, we design task instructions and output examples for
+ These models have emerged as powerful tools in the field of natural data annotation and data enhancement to obtain the dataset required
+language processing. Researches have indicated that expanding pre- for this method. The Llama2-7B model is then fine-tuned using the
+trained language models, either in terms of model parameter size or LoRA-based instruction tuning approach (Hu et al., 2021), enabling
+training data size, typically enhances the model’s capacity for down- it to classify input texts, extract threat intelligence entities and their
+stream tasks. This surprising capabilities (referred to as emergent abili- relationships, as well as extract TTP from attack descriptions. Based on
+ties) can be used for a wide range of complex tasks (Zhao et al., 2023). the extracted information, entities and relationships are integrated to
+These abilities are primarily manifested in three aspects: in-context construct a threat intelligence knowledge graph that connects low-level
+learning, instruction following, and step-by-step reasoning. and high-level intelligence.
+ In-context learning refers to the ability of a model to generate
+expected outputs according to task requirements when provided with a 3.2. Dataset construction
+natural language instruction and a few task demonstrations, without
+the need for additional training or gradient updates. This capability
+ 3.2.1. Data acquisition
+enables the model to tackle few-shot or zero-shot tasks. Instruction fol-
+ The purpose of this paper is to construct a threat intelligence knowllowing involves fine-tuning the model parameters using a task dataset
+ edge graph through the analysis of open-source threat intelligence. To
+described in natural language, also known as instruction tuning (Wei
+ achieve this, we first collect a large amount of content published on
+et al., 2021), which allows the model to achieve better generalization
+ various open-source threat intelligence platforms, including security
+capabilities on unseen tasks. Step-by-step reasoning employs the chaincompany content platforms (Symantec, 0000; Fortinet, 0000; Trendmiof-thought (CoT) prompting strategy (Wei et al., 2022), enabling the
+ cro, 0000; CISA, 0000), security news (Sophos, 0000; TheHackerNews,
+model to arrive at the final answer by utilizing prompts containing
+ 0000), and influential personal security blogs (KrebsonSecurity, 0000).
+intermediate reasoning steps.
+ These online resources provide numerous open-source threat intelli-
+ In this paper, we leverage GPT’s few-shot learning capability by
+ gence reports, detailing various malware, vulnerabilities, threat actors
+constructing instruction descriptions and task demonstrations corresponding to specific tasks. We utilize the out-of-the-box GPT-3.5 model and attack activities. They offer authoritative and accurate analyses
+for data annotation and data enhancement through a question-and- of security incidents, making them rich and valuable sources of threat
+answer interaction, thereby obtaining the dataset required for the intelligence.
+training and significantly reducing manual effort. Furthermore, we em- To collect the data, we design web crawlers tailored to the layout
+ploy instruction tuning on the Llama2-7B model (considered a smaller structure of each platform’s website. After gathering the URLs of inlanguage model compared to ChatGPT and Llama2-70B in terms of dividual reports within these websites, we crawl the content of each
+parameter size) to accomplish constructing a threat intelligence knowl- report, extracting the text and removing extraneous information such
+edge graph. Running the model locally reduces the risk of data leakage as advertisements and sidebars. These reports often use subheadings to
+and enables the model to better adapt to the specific use case. divide different sections, with each section describing content in different directions. The paragraph structure of each section is preserved
+3. Proposed method based on the website’s layout, removing unnecessary blank lines and
+ using blank lines to separate different sections, which is beneficial for
+ This section provides a detailed description of the threat intelligence subsequent processing and analysis. The crawled reports are stored in
+knowledge graph construction method proposed in this paper, LLM- the format of ‘‘title + link + content’’, serving as the data source for
+TIKG, including an overview of the method and a description of each the threat intelligence analysis in this study.
+
+ 3
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+Fig. 3. The prompt for different tasks with instruction, examples and input. The figures a, b, and c respectively represent prompts for three tasks: Topic Classification, Entity And
+Relationship Extraction and Rewriting.
+
+3.2.2. Dataset generation Table 1
+ Extracted entity categories and examples.
+ Subsequently, we leverage the few-shot learning capability of GPT
+to generate the dataset for model fine-tuning. It requires setting instruc- Entity type Example
+
+tions and demonstrations for different tasks, combining them with the Malware Stuxnet, Truebot
+ Threat Type Ransomware, APT
+input text, and feeding them to the model. The model then produces
+ Attacker Shuckworm, APT15
+answers in the target format, which serve as the ‘‘output’’ in the fine- Technique TA0004:Privilege Escalation, T1057: Process
+tuning dataset. We choose the ‘‘GPT-3.5-turbo’’ model and use the Discovery
+‘‘instruction + examples + input’’ template shown in Fig. 3, where the Tool PowerShell script, EHole
+instruction describes the generation task, examples are pairs of inputs Vulnerability CVE-2020-1472, Scripting Engine Memory
+ Corruption Vulnerability (CVE-2020-0832)
+and outputs that explain the tasks in the instructions and represent the IP 45.153.243.93, 92.242.62.131
+desired output structure, and the input represents the statement to be Domain personnel[.]bdm-sa[.]fr, xsph[.]ru
+processed. We now discuss the specific dataset construction methods for URL hxxp://178.73.192[.]15/ca1.exe,
+the three tasks: topic classification, entity and relationship extraction, https://myvaccinerecord.cdph.ca.gov/creds
+ File rtk.lnk, shtasks.exe
+and TTP classification.
+ 2aee8bb2a953124803bc42e5c42935c9 (MD5)
+ Topic Classification: In open-source threat intelligence platforms, Hash 91d42a959c5e4523714cc589b426fa83a aeb9228
+the information available is not solely limited to descriptions of mal- (SHA1)
+ware and attack activities. It also encompasses product advertisements, c62dd5b6036619ced5de3a340c1bb2c9
+ d9564bc5c48e25496466a36ecd00db30 (SHA256)
+security knowledge dissemination, irrelevant news, and other content
+unrelated to threat intelligence extraction. Analyzing such reports is not
+only resource-intensive but also potentially detrimental to the quality
+of the extracted threat intelligence information. Consequently, LLM- entities. In this paper, we define the entity categories as illustrated
+TIKG initially bicategorizes the reports based on their titles and first in Table 1.
+paragraph content to determine whether the report topic pertains to We discover that when only specifying the entity types to be exmalware, security vulnerabilities, or attack activities. If so, the method tracted in the instruction, GPT-3.5’s responses may exhibit a certain
+further outputs the main object of this report, which is subsequently degree of ‘‘LLM hallucination’’ phenomenon, extracting entity words
+utilized in the knowledge graph construction.
+ that do not match the specified types. To mitigate this issue, examples
+ To achieve this, the prompt is constructed as shown in Fig. 3(a).
+ corresponding to each type are added in the prompt, enabling the
+Additionally, due to the input length constraints of the large language
+ model to better understand the generation task. Since GPT-3.5 is not
+model, we impose a limit on the input length, truncating the first
+ a specialized security domain model, there remains some bias in entity
+paragraph of the report if it exceeds 150 words.
+ extraction, such as identifying security organizations like ‘‘Symantec’’
+ Entity and Relationship Extraction: The objective of this step
+ and ‘‘Check Point’’ as attackers, or extracting words containing IP or
+is to identify and extract structured information from unstructured
+ Domain as entities of this category. We design filtering rules to further
+data sources, based on the target structure obtained from the extracted
+ refine these results and subsequently filter the extracted relationships
+content. Traditional approaches typically involve employing named
+entity recognition methods to extract specific types of entity words from based on this output. For the extracted relationships in the responses,
+the text, followed by rule-based or syntactic analysis to extract inter- we only keep the relationships between two entities existed in the list
+entity relationships. Leveraging the text comprehension and generation of extracted entities.
+capabilities of large language models, we adopt a novel information Moreover, GPT-3.5 is a generative model rather than a classification
+extraction method, Instruction-based Information Extraction (Gui et al., model. The model’s output extracts entities from other categories in
+2023), which aims to require the LLM to adhere to specific instructions addition to the predefined ones. After analyzing the results, we retain
+or guidelines for information extraction. entities of the ‘‘attack’’ and ‘‘device’’ categories in the dataset, filtering
+ Consequently, the prompt is designed as shown in Fig. 3(b) in out unrelated entity types. Additionally, we manually correct a portion
+accordance with this objective, enabling the model to extract specified of the results to further enhance the quality of the extracted entities
+entity words from the input text and discern the relationships between and relationships.
+
+ 4
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+ TTP Classification: Since the annotation of TTP classification re- 3.4. Knowledge graph construction
+quires sufficient knowledge of network security and TTP, the accuracy
+of TTP classification for attack descriptions directly using the GPT Utilizing the fine-tuned model, we can perform topic classificamodel is not very high. Therefore, we utilize a dataset derived from tion, entity and relationship extraction, and TTP classification on the
+two sources of manually labeled data for this task. One part of the collected textual threat intelligence, as shown in Algorithm 1. When
+dataset uses the TTP classification of malware examples from MITRE inputting a report, we first judge its topic based on the title and the
+ATT&CK (MITRE, 0000) as the original data source, taking the descrip- first paragraph content (Line 2). If it belongs to the threat intelligence,
+tion of the malware attack behavior as input and its corresponding the model outputs the main object of this report (Line 4). Otherwise,
+Technique as output. The other part originates from the labeled dataset the report is skipped. Some reports provide numerous IoCs at the
+in Tram (CTID, 2023), which labels the technique presented in each end. While the model can recognize these entities, it is challenging
+sentence and includes sentences where the corresponding Technique is to directly extract relationships between entities from such a list or
+absent. table. Therefore, when extracting entities and relationships from the
+ Due to the high similarity of the styles describing attacks in the report, we first filter out the IoCs at the end of the report, extract the
+dataset, and the original large language model’s limited capacity to entity words and their types (e.g., Hash, Domain, IP) using regular
+comprehend this aspect, we perform data augmentation on the col- expressions, and establish relationships between these IoCs and the
+lected data to enhance the number and diversity of the dataset. Data main object of this report. We then incorporate this information into
+enhancement in natural language processing needs to preserve the the knowledge graph (Line 5).
+correctness and original semantics of the sentences. Since specialized Algorithm 1: Threat Intelligence Report Processing
+vocabulary in the security domain is involved, simple substitution of
+ Input: Trained model, Collected Report dataset
+near-synonyms is not desirable. Two methods are employed to extend
+ Output: Entity and relationship
+the dataset, with the data being in English. One involves translating the
+ 1 foreach Report in Collected Report dataset do
+original statements into another language and then translating them
+ 2 Perform topic classification;
+back into English, and the other method consists of obtaining alter-
+ 3 if Belong to threat intelligence then
+native expressions of the input sentences by inputting the instruction
+ 4 Output main object;
+‘‘please rewrite the following sentence, keeping the original semantics
+ 5 Process end-of-report IoCs;
+unchanged’’ to the GPT model, which is shown in Fig. 3(c). In practice,
+ 6 Get each section of the report;
+this task only requires the input of an instruction and not the output
+ 7 foreach Section in the report do
+examples.
+ 8 Conduct entity and relationship recognition;
+ 9 if Main object belongs to malware or attacker then
+3.3. Model fine-tuning
+ 10 foreach Sentence in the report do
+ 11 TTP classification;
+ In order to create an LLM tailored for the specific task, we utilize
+ 12 Establish relationship between TTP and main
+the aforementioned collected dataset to perform instruction tuning on
+ object;
+Meta’s Llama2-7B model (Touvron et al., 2023b), a publicly accessible
+LLM. Instruction tuning is a technique employed for the fine-tuning 13 return Entities and relationships;
+of pre-trained large language models using a curated collection of 14 else
+natural language instances. This approach enables these LLMs to refine 15 Skip this report;
+their performance with respect to specific goals using their capacity
+ Additionally, entities and relationships are extracted section by secto generalize effectively to unseen tasks. Since LLMs consist of a vast
+ tion using the trained model. Since the paragraph structure is preserved
+number of model parameters, performing full parameter optimization
+ when crawling the text information, analyzing each section separately
+is costly. This issue can be addressed by training only a small subset of
+ helps retain contextual information, as a section often introduces a
+parameters, which may either be a subset of existing model parameters
+ complete topic. If a section exceeds the model’s input length, we divide
+or a newly added set of parameters. This approach mitigates the
+ it according to the input length and paragraphs, striving to preserve the
+resource-intensive nature of traditional fine-tuning techniques.
+ information within the paragraphs (Line 6–8).
+ Here, Low-Rank Adaptation (LoRA) (Hu et al., 2021) is adopted for
+ Next, TTP classification is performed on reports whose main object
+fine-tuning the model. Consider the case of optimizing the parameter
+ belongs to attacker or malware. Since the input in the TTP classificamatrix 𝑊 , the update process can be written in a general form as:
+ tion training dataset consists of single sentences, we also use single
+𝑊 ← 𝑊0 + 𝛥𝑊 . The fundamental idea of LoRA is to freeze the original
+ sentences as input when employing the model for this step (Line 9–
+matrix 𝑊0 𝜖𝑅𝑚∗𝑛 and only update the 𝛥𝑊 parameters. This update
+ 12). Finally, the entities and relationships contained in each report are
+process can be represented as shown in Eq. (1), where only A and B
+ output (Line 13).
+are training parameters. During the forward process, both 𝑊0 and 𝛥𝑊
+ However, directly using this information extracted through these
+are multiplied by the same input and subsequently added, as illustrated
+ steps cannot complete a threat intelligence knowledge graph, and it
+in Eq. (2).
+ needs further processing. One problem is that models tend to fo-
+𝑊0 + 𝛥𝑊 = 𝑊0 + 𝐵𝐴, 𝐵𝜖𝑅𝑚∗𝑟 , 𝐴𝜖𝑅𝑟∗𝑛 (1) cus more on what the current sentence describes when extracting
+ inter-entity relationships, and in some cases relationships can be interleaved. For example, a relationship may appear as malware A using
+ℎ = 𝑊0 𝑥 + 𝛥𝑊 𝑥 = 𝑊0 𝑥 + 𝐵𝐴𝑥 (2)
+ PowerShell, followed by PowerShell executing the msf.ps1 file (A-
+ The Llama2-7B model is fine-tuned with the collected dataset so that PowerShell-msf.ps1), and another relationship may be B-PowerShellit can output results corresponding to the target instructions. The data cmd.exe. PowerShell is a commonly used tool in malware. Directly
+format of the training dataset is ‘‘instruction+input+output’’, where connecting PowerShell with msf.ps1 or cmd.exe may lead to confuinstruction is the natural language interpretation of the task, input is sion in relationships, as it would be unclear which malware executed
+the corresponding segment to be processed, and output is the desired the specific file due to multiple malware instances connecting with
+response. In the entity and relationship extraction task, instruction also PowerShell. To address this issue, the main object of the report is
+contains several output examples for higher quality responses. The taken as an attribute of the entity through which the threat intellicollected threat intelligence reports are then analyzed using the trained gence correlation information about a particular malware or attacker
+model. can be depicted. The model may also extract relationships containing
+
+ 5
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+ Table 2 Table 3
+ The dataset size for each task. The results of named entity recognition.
+ Task Dataset size Model Precision Recall F1-Score
+ Topic Classification 2000 BERT-CRF 70.98 66.40 68.61
+ Entity and Relationship Extraction 1600/15000 GPT3.5 77.83 95.72 85.85
+ TTP Classification 38 946 GPT4 79.30 94.73 86.33
+ LLaMA-15000 68.72 77.78 72.97
+ LLaMA-1600 87.88 83.99 85.89
+
+non-specific words such as ‘‘attacker’’, ‘‘campaign’’ or ‘‘malware’’ as
+entities from a sentence description. We further convert these words
+into corresponding entities that have appeared in the preceding text to 4.2. Performance on tasks
+enhance the accuracy and specificity of the extracted relationships in
+the knowledge graph. 4.2.1. Named entity recognition
+ Another problem is the data redundancy in the extracted enti- Named Entity Recognition requires extracting entity words and their
+ties and relationships, which necessitates consolidation. For entities corresponding types from textual information. In order to compare this
+with specific formats, such as URLs, IPs, CVEs, and files, different method with other models, we train the BERT-CRF model with 20
+values carry distinct meanings, so we do not perform entity fusion epochs using the same dataset (manually modified version), which is
+for these types. For malware, the same malicious software may be currently one of the most commonly used methods for named entity
+described differently in various reports, such as ‘‘Backdoor.Pterodo’’ recognition. GPT3.5 and GPT4 are powerful out-of-the-box LLMs, and
+and ‘‘Pterodo’’. These terms are merged using rule-based methods. For they are able to give valid answers based on input prompts on multiple
+attack types and relationships, we adopt a clustering-based approach domains. We use GPT3.5 and GPT4 with the prompt templates shown
+for consolidation. First, we calculate the word embeddings for each in Fig. 3(b) for named entity recognition. Then we test on BERT-CRF,
+term and use cosine similarity as the distance metric. Then hierarchical GPT-3.5, and GPT4 models using the same test set.
+agglomerative clustering (HAC) is performed on these terms. Taking The experimental results are shown in Table 3, where LLaMAinto account the frequency of word occurrences and the distance to 15000 and LLaMA-1600 represent different fine-tuned dataset sizes,
+the cluster center, we calculate the representative term for each cluster respectively, as explained in more detail in 4.3.1. From the results, it
+using a method similar to Eq. (3), with the highest weighted term can be seen that the BERT-CRF model has slightly lower results. This
+serving as the representative word for a particular cluster. can be attributed to two primary factors: the relatively limited size of
+ the training dataset and the over-representation of non-specific entity
+ 1 words within the dataset. The latter issue arises due to the fact that the
+𝑠𝑐𝑜𝑟𝑒 = 𝛼 ∗ 𝑧(𝑓 ) + 𝛽 ∗ 𝑧( ) (3)
+ 𝑑 corpus in the training data is the whole article, resulting in a reduced
+Where 𝛼 and 𝛽 are the set weights, 𝑧 denotes Z-Score standardization, presence of specific types of entity words and, consequently, lower test
+and 𝑓 and 𝑑 represent the number of occurrence and the distance from results for the BERT-CRF model. Since GPT-3.5 and GPT4 have a strong
+the clustering center, respectively. The threat intelligence knowledge comprehension of natural language text, their generated results have
+graph is updated by the results of entity and relationship fusion. a high recall, but some misclassifications can occur. These errors are
+ corrected in the training dataset, so the fine-tuned Llama2-7B model
+4. Experiment & analysis performs better in terms of precision. The recall of the fine-tuned model
+ is relatively low, and among these types of entities, hashes and domains
+ This section evaluates our proposed method LLM-TIKG through ex- are more likely to produce omissions.
+periments, giving the experimental setup and analyzing the evaluation The Llama2-7B model’s entity extraction capabilities are less effecresults. tive when applied to very long text and non-natural language descriptions like tables. Consequently, some omissions may occur in these
+4.1. Experimental setup contexts. The accuracy of named entity recognition can be further
+ improved by some methods such as increasing the number of certain
+ First, we collect a total of 12,545 pieces of content, including blogs, types of entities in the dataset, cooperating with regular expression
+news articles, and security analysis reports in recent years, from various matching, and increasing the input sequence length of the model using
+threat intelligence sharing platforms. The labeled data are obtained some advanced methods.
+using the aforementioned methods, and the dataset size for each task
+is presented in Table 2. The model fine-tuning process is implemented 4.2.2. TTP classification
+using Python 3.9 on 2 × 3090 GPUs, with a maximum learning rate of The TTPs used in the attack can be classified based on the textual
+1×10−4 and a maximum of 10 epochs. The maximum sequence length description of the attack process. The MITRE ATT&CK matrix includes
+was set to 1024 tokens for the Entity and Relationship Extraction due both techniques and sub-techniques, with 229 distinct technique cateto the inclusion of additional output examples in the input instructions, gories and 595 sub-technique categories incorporated in our dataset.
+and 512 tokens for the remaining two tasks. Unrepresented techniques within the dataset are not considered as
+ To evaluate the performance of the proposed model, we employ separate classification categories. We conduct tests using both classifi-
+Accuracy, Precision, Recall, and F1-Score as evaluation metrics. Three cation methods. Moreover, the dataset is divided into a training set and
+experiments are designed as follows: a test set at a ratio of 10 ∶ 1. Since the dataset contains negative samples
+ (1) Performance on tasks: We evaluate the performance of the (i.e., data without TTP), accuracy is added to the evaluation indices.
+model in named entity recognition and TTP classification tasks through Owing to the considerable difference in the number of categories, the
+experiments, and compared it with some currently popular methods. model exhibits enhanced accuracy when a smaller number of categories
+ (2) Fine-tuning settings: We observe the impact of dataset quality are involved utilizing technique classification, as depicted in Table 4.
+and the number of training epochs on results of the fine-tuning model The same dataset with techniques is also tested on TTPDrill (Husari
+through experiments. et al., 2017) and Tram (CTID, 2023). TTPDrill, which employs rule-
+ (3) Performance on real datasets: To test the model on a real based matching and provides models and patterns in their github,
+dataset, we apply the trained model to construct a threat intelligence is not very accurate. The rule matching method will fail when new
+knowledge graph on all the collected data. categories and new expressions appear. Tram is a method based on
+
+ 6
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+Table 4
+The results of TTP classification.
+ Model Accuracy Precision Recall F1-Score
+ TTPDrill 10.23 8.17 52.15 11.05
+ Tram 23.83 23.07 99.49 37.45
+ LLaMA-Tec 97.47 96.53 99.95 98.21
+ LLaMA-SubTec 83.60 77.89 99.80 87.50
+
+logistic regression and Naive Bayes for extracting TTPs from textual Fig. 4. The prompt for threat type extraction.
+reports. It also provides a containerized environment with Docker
+to automate the mapping of CTI reports to MITRE ATT&CK, con- Table 5
+ The named entity recognition results with improved prompt.
+sidering only 50 techniques during model training. Consequently, its
+ Method Precision Recall F1-Score
+accuracy diminishes when applied to texts containing a broader range
+ GPT3.5 83.28 92.64 87.71
+of techniques. However, its accuracy can reach 85.37% for the 50
+ GPT4 92.87 87.26 89.98
+techniques it is trained on. Our method can reach 97.47% accuracy
+in classifying all technique categories. The fine-tuned large language
+model gradually ‘‘understands’’ the meaning and distinctions of these
+techniques, demonstrating superior performance in extracting a more 4.3.2. Instruction task
+extensive array of TTP categories. Moreover, while there exist over Dataset Generation: In employing GPT for named entity recognition, analysis of the results indicates a higher precision in extracting
+a hundred classifications for TTP, their output is comparatively fixed
+ entity types characterized by standardized formats, such as files, IP
+when contrasted with the variable output of named entity recognition,
+ addresses, and domain names. However, for types with relatively amand the accuracy of TTP classification is higher.
+ biguous definitions, such as tools and attack types, the precision tends
+ In instances of misclassification, a portion of errors is attributable to be lower, leading to the inclusion of words that do not pertain to
+to deviations between the model’s output and the TTP category names, these types. The quality of data generated by GPT can be enhanced by
+while another portion arises from imbalances in the labeling of dataset adjusting the prompt:
+samples. This imbalance arises due to variations in the number of ex- (1) When extracting entities from text, GPT occasionally exhibits
+amples for different technologies, potentially resulting in a bias towards a tendency to extract words it deems significant, even if these words
+labels with higher sample counts when the distinction between two do not fall within the specified types. Consequently, these extractions
+classifications for a given data point is minor. are classified into one of the required types, resulting in a decrease in
+ precision. To mitigate this issue, we introduce the requirements within
+ the prompt, including:
+4.3. Fine-tuning settings * Only the listed entity types are extracted, no other entity types
+ can be extracted.
+ * If there are no entities pertaining to the specified types, please
+4.3.1. Dataset quality
+ state ’No related entities’.
+ The performance of the entity extraction dataset generated using * If the extracted entities do not belong to the types listed above,
+GPT-3.5 in terms of accuracy is somewhat different from the perfor- they are marked as ‘‘other type’’.
+mance of manual labeling. Despite the implementation of a rule-based By adding these few hints, the precision of the model output can be
+filtering method for the extracted entities, inaccuracies persist in the improved overall.
+form of omitted and misjudged information. On this basis, we con- (2) For types with inherently vague definitions, such as threat
+ducted manual modifications on a subset of 1,600 data samples, each types, providing explicit definitions within the prompt substantially
+comprising a paragraph. Subsequently, the model is trained on two aids GPT comprehension. By solely extracting threat types from each
+distinct datasets: 15,000 instances of coarsely filtered data and the text paragraph and providing more specific explanations and examples
+1,600 manually modified samples with the same training parameter in the prompt shown as Fig. 4, the F1 score for threat type extraction
+settings. can be enhanced from approximately 76 to 87.2.
+ Using the above two methods to refine the prompt and refraining
+ The results of LLaMA-15000 and LLaMA-1600 are shown in Table 3,
+ from extracting entity categories that can be extracted using reguand the use of manually modified data makes the results more accurate. lar expressions, such as IP, Hash, and CVE numbers, both GPT-3.5
+The accuracy of the model is improved by manually correcting the and GPT-4 models generate data again, and the results are presented
+labeling errors in the dataset. The results illustrate that when a model is in Table 5. The accuracy of the outputs of both models improves.
+trained using a dataset that includes inaccurate data, it may encounter GPT-3.5 performs better in terms of recall but tends to have relatively
+a degree of mislabeling, consequently impacting the model’s output, more misclassifications, while GPT-4 demonstrates a more balanced
+even though the number of datasets is larger with more correct labels performance.
+contained in them. From this, we hypothesize that when fine-tuning Model Fine-tuning: One hypothesis posits that as tasks within the
+a large language model, the quality of the training dataset is more prompt become simpler, the accuracy of the generated results increases.
+important, and that a relatively small amount of high-quality data can When only the named entity recognition task is retained during
+lead to better results. Of course, increasing the size of the high-quality fine-tuning without performing relation extraction, the results do not
+ change significantly.
+dataset can also improve the model’s output to some extent.
+ When excluding entity categories that can be extracted using regular
+ Furthermore, given that the dataset for TTP classification derives
+ expressions, such as IP addresses, hashes, and CVE numbers, from the
+from expert analysis, the labels within the training data are inherently extracted entities, the accuracy of other entity types does not improve,
+precise. Conversely, although the dataset for named entity recognition and additional misclassifications occur. For example, CVE numbers are
+has undergone manual refinement, minor inaccuracies persist. This mistakenly labeled as attacks, and hashes are misidentified as malware.
+discrepancy partly accounts for the superior accuracy observed in TTP Hence, data quality emerges as a more pivotal factor influencing model
+classification compared to named entity recognition tasks. outcomes.
+
+ 7
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+Fig. 5. The Results Corresponding to Different Training Epochs. The figures a and
+b represent the results in the training dataset with technique and sub-tectechnique,
+respectively.
+
+ Fig. 7. A portion of the constructed the knowledge graph associated with Shuckworm,
+ where yellow nodes represent attacker, green nodes represent malwares, blue nodes
+ represent files, and light blue, red, and orange nodes represent hash values. (For
+ interpretation of the references to color in this figure legend, the reader is referred
+ to the web version of this article.)
+
+Fig. 6. The number of Extracted entities and relationships. Figure a represents the
+extracted entities and Figure b represents the highest number of relationships.
+
+4.3.3. The number of training epoch
+ When training the deep learning models, choosing the appropriate
+number of training rounds is crucial to obtain excellent performance.
+Compared to BERT, the number of epochs required for fine-tuning the
+large language model decreases, but the training time increases, due
+ Fig. 8. A portion of the constructed the knowledge graph related to the intrusion
+to a significant increase in the model parameters. Since the size of the
+ process of PivNoxy, where purple nodes represent malwares, brown nodes represent
+finetuing dataset for TTP classification is relatively large, we would like files, and blue nodes represent domains. (For interpretation of the references to color
+to know what epoch is the most appropriate value. in this figure legend, the reader is referred to the web version of this article.)
+ Therefore, we test it using the same data on models trained at different epochs. The results corresponding to different training epochs are
+illustrated in the Fig. 5. As the number of rounds increases, the model’s used by Shuckworm, along with related IoC information. The graph
+performance gradually improves. Upon reaching a certain epoch, the illustrates the connections between various threat intelligence data,
+model’s learning capacity becomes saturated, meaning that the accu- providing insights into the malicious activities of the attacker.
+racy reaches a peak value. In subsequent epochs, the accuracy exhibits
+some fluctuations and experiences a decline. 5. Case study
+
+4.4. Performance on real datasets In this section, we explain how the constructed Threat Intelligence Knowledge Graph can be applied to threat hunting and attack
+ Utilizing the trained model, we classify 9681 articles as threat attribution through two practical examples.
+intelligence reports from a collection of 12,542 articles. The extracted
+and processed information is deposited into the graph database Neo4j, 5.1. Threat hunting
+which converts the list into a graph. This process results in the extraction of 50,745 entities and 64,948 relationships. By constructing the threat intelligence knowledge graph from at-
+ The categories and quantities of entities are depicted in Fig. 6(a), tack analysis reports, textualized threat attack behavior can be conwhile the 15 most frequent relationship types are illustrated in Fig. 6(b). verted into graph form. Fig. 8 illustrates the nodes and relationships
+Of these, the largest number of entities extracted is tool, followed by in the constructed knowledge graph related to the intrusion process of
+attacker and MD5. Based on the number of relationships associated PivNoxy. It uses phishing to lure the victim to download ‘‘Please help
+with other entities, the most common tools are PowerShell, Cobalt to CHECK.doc’’ in the email, which then loads three files which load
+Strike, C2 server, and Mimikatz. The attacker entity contains some each other, and eventually LBTServ.dll injects itself into svchost.exe
+aliases for the attacker due to the fact that different analysts may and spreads the malicious payload.
+have different ways of naming the attacker, which corresponds to To avoid detection, attackers usually update their used IPs and dothe relation ‘‘aka’’. Among the extracted relationships, ‘‘use’’ has the mains from time to time. Using only IoC values for intrusion detection
+highest number, which indicates the invocation relationship between is ineffective. However, a distinction exists between malicious attack
+entities such as attackers, malware, and tools. behavior and normal behavior, notwithstanding the attacker’s best ef-
+ Fig. 7 presents a portion of the constructed knowledge graph, forts to minimize this distinction. Additionally, certain similarities can
+showcasing some threat intelligence information associated with the be discerned among malicious actions. As shown in Figs. 1 and 8, the
+attacker, Shuckworm. The figure reveals some of the malware and tools threat intelligence knowledge graph contains actions of the attacker,
+
+ 8
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+ Long Short Term Memory + Conditional Random Fields (BiLSTM+CRF)
+ model (Huang et al., 2015) is a commonly used model for entity recognition, tagging entity label types. On this foundation, some studies have
+ incorporated self-attention mechanisms and multi-granularity attention
+ mechanisms to enhance the accuracy of IoC entity extraction. Long
+ et al. (2019) proposed an neural-based sequence labeling model using
+ a self-attention module and contextual features to identify IoCs from
+ cybersecurity articles. But they only extracted IoC entities, without
+ extracting relationships between entities.
+ The diverse range of online platform resources offers various avenues for obtaining threat intelligence, making the extraction and
+ application of threat intelligence information a crucial area of research.
+ Social media platforms such as Twitter and Weibo are characterized by
+ high interactivity, extensive information coverage, and strong timeliness, making them valuable sources of cybersecurity-related resources.
+ Given these attributes, Dionísio et al. (2019) employed an end-to-end
+Fig. 9. A portion of the constructedthe knowledge graph that shows the similarity
+between BlackSuit and Royal Ransomware,where purple nodes represent malwares,
+ neural network that does not require feature engineering to automatgray nodes represent threat types, green nodes represent techniques, and the remaining ically filter out a large amount of irrelevant information. They then
+nodes represent hash values. (For interpretation of the references to color in this figure introduced Word-level Bi-LSTM layers and Tweet-level Bi-LSTM layers
+legend, the reader is referred to the web version of this article.) to achieve threat information processing and security entity recognition
+ extraction. Additionally, some research has mined threat intelligence
+ related to open-source projects and libraries from reported errors and
+which can serve as malicious samples for training the model, thereby issues in public code repositories such as GitHub and GitLab (Neil
+enabling it to acquire knowledge about the attacker’s behavioral traits. et al., 2018). These methods are more suitable for threat intelligence
+ extraction in specific scenarios, and do not apply in generel threat
+5.2. Attack attribution intelligence reports.
+
+ The information contained within the knowledge graph can be 6.2. Knowledge graph construction
+leveraged to discern similarities between entities, such as malware and
+attackers. In instances where multiple attackers employ identical mal- After extracting the entity words, it is necessary to further extract
+ware and techniques, there is a high likelihood that they are affiliated the relationships between the entity to construct the knowledge graph.
+with the same organization. Similarly, when distinct malware strains This process is typically achieved through rule definition, semantic
+employ shared techniques, exhibit the same IoCs, and demonstrate parsing, or sequence tagging (Zhao et al., 2020; Satvat et al., 2021;
+comparable attack behavior, it is probable that they belong to the same Sarhan and Spruit, 2021). ThreatKG (Gao et al., 2022) was proposed
+malware family. to collect OSCTI reports from diverse sources, extract high-fidelity
+ Fig. 9 shows some of the nodes and relationships where BlackSuit threat knowledge and construct a threat knowledge graph, thereby
+and Royal Ransomware have associations. It can be found that the automating these processes. CSKG4APT (Ren et al., 2022) leveraged the
+similarity relationship between them has been labeled in the graph. power of BERT for extraction of threat intelligence. The data was fed
+The diagram reveals that both entities have established connections into BERT to obtain word vectors, which were then sequentially fed into
+with specific nodes, signifying their affiliation with the ransomware BiLSTM, GRU and CRF modules to obtain entities and labels. Neverthecategory. Notably, they are both linked to another ransomware strain,
+ less, they extracted only a few predefined entities and relationships and
+Conti. Furthermore, they have common hash values present in their
+ ignored the attack behaviors in text messages.
+samples and employ several common techniques, such as Data from
+Local System (T1005), Command and Scripting Interpreter (T1059),
+ 7. Conclusion
+and Data Encrypted for Impact (T1486). Through methods such as similarity matching or link prediction, we can conduct similarity analysis of
+ In this paper, we propose an automated and universal method for
+attackers or malware in the graph, with the goal of attack attribution.
+ constructing the threat intelligence knowledge graph based on the large
+With this information, a deeper understanding of cyberattacks can be
+ language model. By leveraging the few-shot learning capability of GPT
+gained to help take appropriate measures to counter the threat.
+ and constructing corresponding prompts, we achieve data annotation
+6. Related work and augmentation, thereby creating the necessary datasets for model
+ training and reducing the cost of manual annotation. Then, we fine-
+ In this section, we provide a detailed review of the work related to tune the Llama2-7B model to perform topic classification, entity and
+the threat intelligence. relationship extraction, and TTP classification for threat intelligence
+ reports, resulting in the construction of a threat intelligence knowledge
+6.1. Threat intelligence analysis graph. Experiments prove that our method is more effective than other
+ methods in named entity recognition and TTP classification. In future
+ Open-source threat intelligence analysis primarily relies on un- work, we will explore ways to further enhance model performance to
+structured text data as input and depends on rule matching or NER release the greater potential of large language models.
+techniques to extract IoC entities and their corresponding labels (Luo
+et al., 2021; Long et al., 2019). Generally, the extraction process CRediT authorship contribution statement
+in NER begins by defining the types of IoCs, such as file, domain
+name, IP address, attacker, and vulnerability. The B-I-O sequence tag- Yuelin Hu: Conceptualization, Methodology, Software, Writing –
+ging method is then employed to annotate the text data, followed original draft. Futai Zou: Conceptualization, Supervision, Writing –
+by the use of NLP methods like Doc2Vec (Le and Mikolov, 2014) review & editing. Jiajia Han: Investigation, Visualization. Xin Sun:
+to embed the textual language into feature vectors. The Bidirectional Investigation, Resources. Yilei Wang: Formal analysis.
+
+ 9
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+Declaration of competing interest Sarhan, I., Spruit, M., 2021. Open-cykg: An open cyber threat intelligence knowledge
+ graph. Knowl.-Based Syst. 233, 107524.
+ The authors declare that they have no known competing finan- Satvat, K., Gjomemo, R., Venkatakrishnan, V., 2021. Extractor: Extracting attack
+ behavior from threat reports. In: 2021 IEEE European Symposium on Security and
+cial interests or personal relationships that could have appeared to
+ Privacy (EuroS&P). IEEE, pp. 598–615.
+influence the work reported in this paper. Shin, B., Lowry, P.B., 2020. A review and theoretical explanation of the ‘Cyberthreat-
+ Intelligence (CTI) capability’that needs to be fostered in information security
+Data availability practitioners and how this can be accomplished. Comput. Secur. 92, 101761.
+ Sikos, L.F., 2023. Cybersecurity knowledge graphs. Knowl. Inf. Syst. 1–21.
+ Data will be made available on request. Sophos, https://news.sophos.com/en-us/category/threat-research.
+ Symantec, Symantec-Enterprise-Blog. https://symantec-enterprise-blogs.security.com/
+ blogs/threat-intelligence.
+Acknowledgments TheHackerNews, https://thehackernews.com/.
+ Touvron, H., Lavril, T., Izacard, G., Martinet, X., Lachaux, M.-A., Lacroix, T., Rozière, B.,
+ This work is supported by the State Grid Corporation of China Goyal, N., Hambro, E., Azhar, F., et al., 2023a. Llama: Open and efficient
+Science and Technology Project, China (5700-202319297A-1-1-ZN). foundation language models. arXiv preprint arXiv:2302.13971.
+ Touvron, H., Martin, L., Stone, K., Albert, P., Almahairi, A., Babaei, Y., Bashlykov, N.,
+ Batra, S., Bhargava, P., Bhosale, S., et al., 2023b. Llama 2: Open foundation and
+References
+ fine-tuned chat models. arXiv preprint arXiv:2307.09288.
+ Trendmicro, https://www.trendmicro.com/en_us/research.html.
+AlienVault, OTX. https://otx.alienvault.com/.
+ Wang, X., Liu, R., Yang, J., Chen, R., Ling, Z., Yang, P., Zhang, K., 2022. Cyber
+Brown, T., Mann, B., Ryder, N., Subbiah, M., Kaplan, J.D., Dhariwal, P., Neelakanthreat intelligence entity extraction based on deep learning and field knowledge
+ tan, A., Shyam, P., Sastry, G., Askell, A., et al., 2020. Language models are
+ engineering. In: 2022 IEEE 25th International Conference on Computer Supported
+ few-shot learners. In: Advances in Neural Information Processing Systems, vol. 33,
+ Cooperative Work in Design. CSCWD, IEEE, pp. 406–413.
+ pp. 1877–1901.
+ Wei, J., Bosma, M., Zhao, V.Y., Guu, K., Yu, A.W., Lester, B., Du, N., Dai, A.M.,
+Chen, J., Wang, Z., Tian, R., Yang, Z., Yang, D., 2020. Local additivity based data
+ Le, Q.V., 2021. Finetuned language models are zero-shot learners. arXiv preprint
+ augmentation for semi-supervised NER. arXiv preprint arXiv:2010.01677.
+ arXiv:2109.01652.
+Chowdhery, A., Narang, S., Devlin, J., Bosma, M., Mishra, G., Roberts, A., Barham, P.,
+ Wei, J., Wang, X., Schuurmans, D., Bosma, M., Xia, F., Chi, E., Le, Q.V., Zhou, D., et
+ Chung, H.W., Sutton, C., Gehrmann, S., et al., 2022. Palm: Scaling language
+ al., 2022. Chain-of-thought prompting elicits reasoning in large language models.
+ modeling with pathways. arXiv preprint arXiv:2204.02311.
+ Adv. Neural Inf. Process. Syst. 35, 24824–24837.
+CISA, Cisa-blog. https://www.cisa.gov/news-events/. Zhang, L., Lei, Y., Wang, Z., 2020. Long-text sentiment analysis based on semantic
+CTID, 2023. Tram. https://github.com/center-for-threat-informed-defense/tram/. graph. In: 2020 IEEE International Conference on Embedded Software and Systems.
+Dionísio, N., Alves, F., Ferreira, P.M., Bessani, A., 2019. Cyberthreat detection from ICESS, pp. 1–6. http://dx.doi.org/10.1109/ICESS49830.2020.9301570.
+ twitter using deep neural networks. In: 2019 International Joint Conference on Zhao, J., Yan, Q., Liu, X., Li, B., Zuo, G., 2020. Cyber threat intelligence modeling based
+ Neural Networks. IJCNN, IEEE, pp. 1–8. on heterogeneous graph convolutional network. In: 23rd International Symposium
+Fortinet, Fortinet-Threat-Research. https://www.fortinet.com/blog/threat-research. on Research in Attacks, Intrusions and Defenses. RAID 2020, pp. 241–256.
+Gao, P., Liu, X., Choi, E., Ma, S., Yang, X., Ji, Z., Zhang, Z., Song, D., 2022. ThreatKG: Zhao, W.X., Zhou, K., Li, J., Tang, T., Wang, X., Hou, Y., Min, Y., Zhang, B., Zhang, J.,
+ A threat knowledge graph for automated open-source cyber threat intelligence Dong, Z., et al., 2023. A survey of large language models. arXiv preprint arXiv:
+ gathering and management. arXiv preprint arXiv:2212.10388. 2303.18223.
+Gui, H., Zhang, J., Ye, H., Zhang, N., 2023. Instructie: a chinese instruction-based Zhou, Y., Tang, Y., Yi, M., Xi, C., Lu, H., 2022. CTI view: APT threat intelligence
+ information extraction dataset. arXiv preprint arXiv:2305.11527. analysis system. Secur. Commun. Netw. 2022, 1–15.
+Hu, E.J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., Chen, W.,
+ 2021. Lora: Low-rank adaptation of large language models. arXiv preprint arXiv:
+ 2106.09685.
+Huang, Z., Xu, W., Yu, K., 2015. Bidirectional LSTM-CRF models for sequence tagging. Yuelin Hu is currently a Master’s Student at School of
+ arXiv preprint arXiv:1508.01991. Electronic Information and Electrical Engineering, Shanghai
+Husari, G., Al-Shaer, E., Ahmed, M., Chu, B., Niu, X., 2017. Ttpdrill: Automatic and Jiao Tong University in China. Her research interests include
+ intrusion detection, threat intelligence and large language
+ accurate extraction of threat actions from unstructured text of cti sources. In:
+ model.
+ Proceedings of the 33rd Annual Computer Security Applications Conference. pp.
+ 103–115.
+IBM, X-Force Exchange. https://exchange.xforce.ibmcloud.com/.
+Kaiser, F.K., Dardik, U., Elitzur, A., Zilberman, P., Daniel, N., Wiens, M., Schultmann, F., Elovici, Y., Puzis, R., 2023. Attack hypotheses generation based on threat
+ intelligence knowledge graph. IEEE Trans. Dependable Secure Comput..
+Kotsias, J., Ahmad, A., Scheepers, R., 2023. Adopting and integrating cyber-threat
+ intelligence in a commercial organisation. Eur. J. Inf. Syst. 32 (1), 35–51.
+ Futai Zou is Associate Professor at School of Electronic
+KrebsonSecurity, https://krebsonsecurity.com/. Information and Electrical Engineering, Shanghai Jiao Tong
+Le, Q., Mikolov, T., 2014. Distributed representations of sentences and documents. In: University in China. He received the Ph.D degree at the
+ International Conference on Machine Learning. PMLR, pp. 1188–1196. department of Computer Science and Engineering, Shanghai
+Long, Z., Tan, L., Zhou, S., He, C., Liu, X., 2019. Collecting indicators of compromise Jiao Tong University, China in 2005. His research interests
+ from unstructured text of cybersecurity articles using neural-based sequence la- include network attack and defense technology, software
+ belling. In: 2019 International Joint Conference on Neural Networks. IJCNN, IEEE, and system security. He is a senior member of IEEE and
+ pp. 1–8. a senior member of CCF.
+Luo, N., Du, X., He, Y., Jiang, J., Wang, X., Jiang, Z., Zhang, K., 2021. A framework
+ for document-level cybersecurity event extraction from open source data. In: 2021
+ IEEE 24th International Conference on Computer Supported Cooperative Work in
+ Design. CSCWD, IEEE, pp. 422–427.
+MITRE, ATT&CK Matrix. https://attack.mitre.org/. Jiajia Han received Master’s degree in computer science
+Neil, L., Mittal, S., Joshi, A., 2018. Mining threat intelligence about open-source from Zhejiang University. Currently, she is engaged in cyprojects and libraries from code repository issues and bug reports. In: 2018 IEEE berspace security work at State Grid Zhejiang Electric Power
+ International Conference on Intelligence and Security Informatics. ISI, IEEE, pp. Research Institute. Her research interests cover several areas
+ 7–12. in cyberspace security, etc.
+OpenAI, 2023. ChatGPT-Blog. https://openai.com/blog/chatgpt.
+Ren, Y., Xiao, Y., Zhou, Y., Zhang, Z., Tian, Z., 2022. CSKG4APT: A cybersecurity
+ knowledge graph for advanced persistent threat organization attribution. IEEE
+ Trans. Knowl. Data Eng..
+
+ 10
+Y. Hu et al. Computers & Security 145 (2024) 103999
+
+ Xin Sun received Master’s degree in system analysis and Yilei Wang received Bachelor’s degree in automation from
+ integration from Zhejiang University in 2006. Currently, Shanghai Jiao Tong University in 2016. Currently, he is
+ he is engaged in cyberspace security work at State Grid engaged in cyberspace security work at State Grid Zhejiang
+ Zhejiang Electric Power Research Institute. His research Electric Power Research Institute. His research interests
+ interests cover several areas in Industrial control system cover several areas in cyberspace security, Industrial control
+ security, IoT security, etc. system security, etc.
+
+ 11

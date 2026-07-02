@@ -1,0 +1,818 @@
+4970 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ FSLog: Adversarial Margin for Cross-System
+ Few-Shot Log Anomaly Detection
+ Jiyu Tian , Mingchu Li , and Jianyuan Gan
+
+ Abstract—Log-based anomaly detection (LAD) is imperative
+to ensure both the reliability and security of software systems.
+Although many deep learning approaches have been designed to
+capture complex and diverse anomaly patterns from log files, they
+heavily rely on large-scale annotated data. However, collecting sufficient labeled data is impractical when a software system has just
+been deployed. In this paper, we propose a cross-system few-shot
+learning log-based anomaly detection approach, namely FSLog,
+to solve the abnormal label scarcity problem, which is the main
+challenge of recent LAD research. Specifically, we leverage a pretrained model from source system to enrich feature representations
+so that data instances from target system can also be effectively Fig. 1. An illustration of the division of datasets in few-shot learning.
+represented. To this end, we introduce a novel adversarial margin
+loss to enhance our feature distinguishability while preserving their
+generalizability. Further, we also develop a masked interactive
+temporal network for robust feature extraction of temporal rela- Despite its valuable applications, detecting anomalous logs is
+tionships for log samples. We evaluate the proposed FSLog on three still a challenging task. Since there are various software systems
+publicly available datasets based on a standard few-shot learning (e.g., operating system CentOS, database system SQL Server,
+setup protocol. Experimental results demonstrate that our method and distributed file system HDFS), it is impractical to establish
+achieves the best performance in detecting abnormal logs when
+compared to state-of-the-art methods. a unified log anomaly detection model that can be applied to all
+ software systems. While re-training a new log anomaly model
+ Index Terms—Log anomaly detection, few-shot learning, fine- in a new software system (i.e. target system) is also difficult
+tuning, Softmax, margin.
+ because labeled logs in the target system are rare and may present
+ different patterns when compared to the log data in the original
+ I. INTRODUCTION software system (i.e. source system). We illustrate this research
+ gap in Fig. 1.
+ OG data is a valuable source for security analysis, fault di-
+L agnosis, and troubleshooting. To reduce system downtime
+and improve system reliability, log anomaly detection, enabling
+ Existing log anomaly detection models have not fulfilled
+ the performance requirement due to the following reasons:
+ supervised learning methods for log anomaly detection heavily
+rapid problem localization, abnormal behavior identification, rely on large-scale labeled training data, which is expensive to
+and attack tracking, has been an active research topic [1], [2], obtain and requires tedious manual work. Thus, it is difficult to
+[3]. Recently, various deep learning-based methods are proposed apply them to any new systems or dynamically evolved systems;
+for this log analysis task. They include unsupervised approaches, unsupervised and semi-supervised learning methods alleviate
+e.g., DeepLog [4] and LogAnomaly [5], supervised approaches, the labeling problem. However, they are extremely susceptible
+e.g., LogRobust [6] and LightLog [7], semi-supervised ap- to log parsing errors since they are unable to adequately learn
+proaches, e.g., PLELog [8], transfer learning-based approaches, explicit anomaly features and perform poorly in terms of dee.g., LogTransfer [9]. tection accuracy [10]; transfer learning methods leverage rich
+ prior knowledge from the source system and fine-tune with a
+ Received 24 January 2025; revised 28 October 2025; accepted 14 December few supervisions from the target system to achieve cross-system
+2025. Date of publication 2 January 2026; date of current version 12 May 2026. detection. However, insufficient supervised samples make these
+This work was supported in part by the National Nature Science Foundation of methods vulnerable to overfitting. Few-shot learning provides a
+China under Grant 625B2031, Grant 62466025 and Grant T2350710232, and
+in part by the Fundamental Research Funds for the Central Universities under novel solution for LAD in label-scarce scenarios. However, the
+Grant DUT20GJ205. (Corresponding author: Mingchu Li.) detection performance of existing few-shot detection methods
+ Jiyu Tian and Jianyuan Gan are with the School of Software Tech- is still limited either by the generalization and distinguishability
+nology, Dalian University of Technology, Dalian 116024, China (e-mail:
+tianjiyu@mail.dlut.edu.cn). of the model or by the robustness of noisy logs. The research
+ Mingchu Li is with the School of Artificial Intelligence, Jiangxi Normal challenges we address in this paper are formalized as:
+University, Nanchang 330022, China, and also with the School of Software r Generalization and Discrimination: are conflicting objec-
+Technology, Dalian University of Technology, Dalian 116024, China (e-mail:
+mingchu@jxnu.edu.cn). tives in model training. In our study, we found that existing
+ Digital Object Identifier 10.1109/TDSC.2025.3647445 methods only focus on either of them, thus compromising
+
+ 1545-5971 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+TIAN et al.: FSLOG: ADVERSARIAL MARGIN FOR CROSS-SYSTEM FEW-SHOT LOG ANOMALY DETECTION 4971
+
+ their overall performance. For instance, LogTransfer [9] relationships of log sequence samples while ensuring the
+ focuses on the syntax and noise problems of cross-system robustness of the representations.
+ logs and only shares the output layer during the fine-tuning r We provided a method to construct few-shot datasets for
+ stage, while MetaLog [2] pays more attention to global base training and fine-tuning corresponding to log anomaly
+ semantic consistency and generalization, ignoring the dis- detection based on HDFS, BGL, and Thunderbird datasets
+ criminability of representations. If an effective fine-tuning and conducted extensive experiments on four few-shot
+ strategy cannot be designed, the model is likely to over-rely datasets to demonstrate the usability and superiority of our
+ on the prior knowledge of the source system, which leads model.
+ to a degradation of the model’s performance. The remainder of the paper is organized as follows: Section II
+ r Roubustness: Existing methods are difficult to process discusses related works. Section III describes the proposed
+ the inherent temporal dependencies and noise in log time approach. Section IV presents the designed adversarial margin
+ sequences. For example, MetaLog [2] uses a GRU network cosine softmax loss. Section V reports the evaluation results
+ with an attention mechanism to extract features without of the proposed approach and compares it with advanced apconsidering the effect of noise, while Log-MatchNet [11] proaches. Section VI discusses the advantages and limitations
+ combines log timestamps with the Bert model, aiming to of our approach. Finally, the work is concluded in Section VII.
+ capture temporal dependencies and semantic relationships,
+ but the Transformer in Bert is more sensitive to noise. Log II. RELATED WORKS
+ noise may not only mask useful features but also mislead
+ the model to learn erroneous patterns, thus weakening the A. Log-Based Anomaly Detection
+ robustness of detection. Existing approaches that use log data for anomaly detection
+ To address the challenges above, in this paper, we propose a can be grouped into two broad categories: traditional machine
+novel few-shot learning-based log anomaly detection method, learning-based approaches [14], [15] and deep learning-based
+which aims to improve the transferability of novel classes approaches [16], [17], [18], [9], [13], [19], [11]. Classical maby fuzzing the decision boundary with an adversarial margin. chine learning-based approaches require hand-crafted features
+As shown in Fig. 1, following the fine-tuning-based few-shot and a combination of expert knowledge to classify anomalous
+learning framework, we establish an explicit support set for events in the logs. These methods, such as the PCA-based
+the target system based on the ”N-way K-shot” principle in method [15] and invariant mining (IM) based method [14],
+meta-learning [12], which serves as the training set for the required a lot of manual effort in the modeling process and have
+fine-tuning process. Specifically, (i) first, we innovatively create limited performance in detecting anomalies.
+an adversarial margin cosine softmax (AMCS) loss function for Deep learning-based models have been dominant in log
+both training and fine-tuning phases, i.e., using cosine soft- anomaly detection. DeepLog [4] first utilized One-Hot encoding
+max with an adaptive rescaling factor to update the feature to vectorize the templates during log representation and converts
+extractor during pre-training to ensure representational dis- the log sequences into a sparse matrix that contains no semantic
+criminability, and utilizing appropriate negative margins during information. Noting the semantic information hidden in the log
+fine-tuning to ensure generalization to the novel samples; (ii) templates, LogAnomaly [5] then modeled log detection as a
+furthermore, we design a mask-based interactive temporal con- natural language sequence prediction problem by introducing
+volutional network (MITNet) for extracting temporal features quantitive vectors and the word2vec algorithm. The LogRoof log samples while effectively mitigating noise. Compared bust [6] combined TF-IDF with FastText to counteract evolutionto the state-of-the-art (SOTA) log anomaly detection meth- ary and parsing noise and introduced an attention mechanism in
+ods [4], [5], [6], [13], [8], [9], [2], [11] proposed in recent Bi-LSTM to capture contextual information in log sequences
+years, our approach achieves better performance on classifica- based on the supervised learning framework. LightLog [7]
+tion and generalizability in the presence of scarce annotated significantly reduced floating-point computation and detection
+samples. time by introducing semantic vector dimensionality reduction
+ The main contributions of this paper are summarized as and designing a lightweight TCN network. PLELog [8], which
+follows: is based on semi-supervised learning, incorporated knowledge
+ r We proposed a few-shot log anomaly detection method of historical anomalies through probabilistic label estimation
+ based on the fine-tuning framework for overcoming the and designed an attention-based GRU neural network to detect
+ reliance of existing methods on large-scale supervision. anomalies. LogTransfer [9] used the similarity of logs between
+ With sufficient prior knowledge of the base classes from different systems and applied transfer learning to transfer the
+ the source system, the novel classes in the target system knowledge of anomalies from one software system to another.
+ can be classified using a limited number of samples. MetaLog [2] combines globally consistent semantic embedr We designed a novel adversarial margin cosine softmax ding modules and meta-learning methods to improve the genloss function that balances the transferability and distin- eralization ability of cross-system anomaly detection models.
+ guishability of log samples during both the training and Log-MatchNet [11] extracts the features of log vectors using
+ fine-tuning phases. Bert’s model and achieves anomaly detection by calculating
+ r We introduce a masked interactive temporal network the distances between test samples and positive and negative
+ as a backbone for extracting temporal and semantic samples through a matching network. Le et al. [10] presented a
+4972 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+unified parsing and grouping of logs, as well as a fair compari- difficult to generalize existing supervised log anomaly detection
+son of sophisticated log anomaly detection methods (including approaches.
+DeepLog, LogAnomaly, LogRobust, PLELog, and CNN [20])
+on the same platform, pointing out that existing methods still C. Margin-Based Loss Function
+face challenges such as limited labeled data, early detection,
+evolving systems, and relations among log events. Margin plays a critical role for achieving adequate discrim-
+ Recent research has made progress in addressing the chal- ination between feature representations, and the margin-based
+lenges of early detection with limited computing power, as softmax loss function has been widely studied [29], [30], [31].
+described in [7]. The out-of-vocabulary (OOV) problem caused Wen et al. [32] proposed to minimize intra-class variation
+by log evolution as well as parsing noise has also been tackled as much as possible while ensuring that different class features
+in the research of [21] and [6] respectively. Experimental results are distinguishable. To encourage intra-class compactness and
+presented in [10] demonstrated that the accuracy of unsupervised inter-class separability, Liu et al. [33] proposed a generalized
+and semi-supervised models is difficult to guarantee, especially large-margin softmax (L-Softmax) to adjust the decision boundin the presence of parsing noise. The transfer methods neglected aries. In their further research [34], they proposed to impose
+the issue of overfitting during cross-system fine-tuning, which discriminative constraints on the hypersphere manifold, that is,
+still leads to subpar detection performance. However, given the to restrict the angular margin (A-Softmax). Deng et al. [29]
+diversity of log types and the significant differences between proposed additive angular margin loss (ArcFace) to further solve
+software systems, initiating detection projects in scenarios with the problem of unstable training and difficult convergence in
+extremely limited labeled data and log noise remains an urgent A-Softmax, and significantly improve the discrimination power.
+problem. Wang et al. [35] reformulated the softmax loss as a cosine
+ loss by normalizing both features and weights to remove radial
+ variations and proposed a large-margin cosine loss (LMCL) to
+B. Few-Shot Learning maximize the decision margin in the angular space.
+ Few-shot learning refers to the training of a model using a Contrary to the common practice in previous studies, Liu
+limited number of data to achieve good generalization perfor- et al. [30] found that the positive margin would expand the intramance on new tasks or novel classes [22]. Existing few-shot class variance of the novel class. Accordingly, the appropriate
+learning algorithms can be roughly categorized as either: fine- negative margin would better achieve discriminability and transtuning [23], [24], meta-learning [25], [26], and metric learn- ferability of the model in few-shot learning (Negcos). However,
+ing [27], [28], [12]. simply introducing negative margins in the pre-training phase
+ Fine-tuning methods follow the standard transfer learning ignores the validity of the feature representation. This research
+procedure, which consists of pre-training with base classes and inspired us to rethink the discriminability and representativeness
+fine-tuning with novel classes. The baseline algorithm and base- of features in few-shot learning.
+line++ algorithm [23], which are widely used for performance
+comparison, are both implemented based on fine-tuning. The III. METHODOLOGY
+primary distinction between these two algorithms resided in
+ A. Problem Definition
+their loss functions, with the baseline algorithm employing the
+standard softmax and the baseline++ algorithm utilizing the Conventional log anomaly detection approaches typically
+cosine softmax. Meta-learning methods perform a meta-training focus on using a binary classifier to determine labels for log
+on multiple subtasks constructed from the base classes during samples. When the number of annotated samples is small, the
+the training phase to enable the learned model can quickly traditional useful models applied to the problem will encounter
+adapt novel tasks during the test phase. MAML [25] is a typical overfitting. In the above scenario, learning deep representations
+representative of meta-learning in few-shot learning, which does driven on base logs and fine-tuning the classifiers with a few
+not rely on any specific model architecture. By training a model support logs of novel classes is an effective research line.
+on multiple related tasks, it can quickly adapt to new tasks For a few-shot log anomaly detection task, the dataset consists
+with minimal data. Metric-learning methods directly compare of a base set Dbase with sufficient labeled logs from the source
+the similarities between the query samples and support classes system and a novel set Dnovel containing only a few supervisions
+through one single feed-forward pass. Xie et al. [28] proposed a from the target system. In a task, base samples (source-system
+deep brownian distance covariance (DeepBDC) method, which samples) can form a base set B, which can be expressed as (Bi ,
+measures the difference between the joint characteristic func- YiB ), where Bi ∈ Rd , i={1, 2, ..., I}, YiB ={1, 2, ..., Y}. The
+tions of embedded features and the product of their marginals to novel samples (target-system samples) can constitute a support
+learn image representations for few-shot classification. set S and a query set Q. Given N classes, each of which has
+ Few-shot based log anomaly detection methods are a rela- K samples of the same type (N-way K-shot), S can be further
+tively novel subject. To the best of our knowledge, there are denoted as (Sj,k , Yj,k
+ S
+ ), where Sj,k ∈ Rd , j={1, 2, ..., N}, k={1,
+almost no few-shot related studies available for comparison on 2, ..., K}, Yj,k is the corresponding label. The samples with
+ S
+
+current log anomaly detection methods, and there are no suitable labels to be verified constitute a query set. The main objective
+datasets for the benchmark. Introducing few-shot learning is a of few-shot log anomaly detection is to accomplish the binary
+pioneering and innovative solution in the situation where it is classification task by learning Dbase and Dnovel in steps to
+TIAN et al.: FSLOG: ADVERSARIAL MARGIN FOR CROSS-SYSTEM FEW-SHOT LOG ANOMALY DETECTION 4973
+
+Fig. 2. Overview of FSLog approach, which consists of two phases: the pre-training phase to learn a feature extractor fθ () with sufficient labeled logs sequences
+on base classes from source system, and the fine-tuning phase to learn a new classifier C( |Wb ) on novel classes with few labeled log samples from target system.
+
+obtain the ultimate detection model. Firstly, the pre-training from the source system to train a MITNet model capable of
+phase trains a detection backbone fθ ()(using MITNet as a extracting robust temporal features, and fix the network paramfeature extractor, parametrized by the network parameters θ) eters as a feature extractor for the next phase. In the fine-tuning
+with the logs in Dbase and fixes its weights fθ () after training phase, we obtain the feature representations of the novel samples
+to construct the feature representation xi . Here, ω represents a through the feature extractor and train the classifier using a
+fixed parameter operation. Formally, limited number of labeled samples from the target system,
+ while introducing adversarial margin to adjust the intra-class
+ fθ () = ω(fθ (Dbase )) = ω(fθ (Bi ), YiB ) (1)
+ and inter-class distances to eliminate the heterogeneity between
+ The classifier C( |Wb ) is then fine-tuned with a few labeled different log sets.
+novel samples (support set S) to distinguish the unlabeled in- Pre-training with Sufficient Labeled Data From Source Sysstances (Query set Q) from novel classes, updating the weights tem: The pre-training phase aims to train an effective back-
+Wb by bone fθ () with abundant annotated log sequences from the
+ base classes. Logs are semi-structured semantic data in the
+ C(|Wb ) = C(WbT  ω(fθ (Dsupport ))) form of text, accompanied by noise and evolution, and require
+ = C(WbT  ω(fθ (Sj,k )), Yj,k
+ S
+ ) (2) specific processing. Specifically, the original log messages are
+ first parsed into structured templates, then sequenced based on
+ For the general log anomaly detection task, the target of the session, sliding, and fixed grouping algorithms. Finally, the temclassification results is expected to match the novel log instance, plates are mapped into semantic vectors to form a log semantic
+by minimizing the following loss matrix Bi containing semantic information as input to the feature
+ extractor. It is worth noting that different types of logs usually
+ arg min Lce (σ(WbT , ω(fθ (Sj,k )), Yj,k
+ S
+ ) (3) differ in syntax. Therefore, for cross-system knowledge transfer,
+ it is important to evaluate the similarity of logs between the
+ Where σ is used to obtain the similarity between the two
+ source system and the target system. LogTransfer provides a
+inputs, Lce denotes the cross-entropy loss between predictions
+ cross-system log processing method that not only extracts local
+and truth labels.
+ contextual information but also takes into account the global
+ word co-occurrence information of template sets, thus reliably
+B. Cross-System Few-Shot Log Anomaly Detection Framework measuring the similarity of cross-system logs. (As this is not the
+ The proposed FSLog aims to achieve cross-system log focus of this paper, details are provided in [9].) Inspired by [7],
+anomaly detection by utilizing an effective feature extractor the fully convolutional network MITNet fθ () is able to extract
+trained with sufficient labeled data from the source system temporal features more quickly and efficiently, compensating
+and constructing a classification model with limited supervision for the slow computation of LSTM and the inability of standard
+from the target system. As illustrated in Fig. 2, following the CNN to capture causality in time-series data (details are provided
+standard transfer learning paradigm, the FSLog detection model in Section III.C). During pre-training, first of all, the samples
+consists of two phases: pre-training and fine-tuning. In the pre- are input into the backbone to obtain their feature map xi .
+training phase, we utilize sufficiently labeled base class samples Afterwards, the method utilizes the AMCS Φ1 as a loss function
+4974 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+to gradually update the MITNet weights while extracting more
+discriminative representations for fine-tuning (more details are
+provided in Section IV.C).
+ Fine-tuning with Few Supervision for Target System LAD:
+With insufficient supervised log samples in the newly deployed
+system, the few novel classes cannot effectively transform the
+backbone during fine-tuning [36]. Thus, fine-tuning follows the
+meta-learning framework, using only a limited number of novel
+classes to update the classifier parameters. Similar to the pretraining process, the raw logs in the target system are also parsed,
+grouped, represented, and finally transformed into log semantic
+matrices based on cross-system log data processing. During
+fine-tuning, the samples from the novel classes are divided into
+two sets: the support set S and the query set Q. The support
+set consists of a few labeled samples from the novel classes,
+which are used to update the classifier parameters. The query set
+consists of unlabeled test samples, which are used to evaluate the
+performance of the updated model. Exactly, in the LAD field,
+the classification task only involves two classes: normal and
+abnormal. Therefore, we set N to 2, meaning that K samples are
+selected from each of the normal and abnormal classes to form Fig. 3. The MITNet architecture contains four key components: patchpositional embedding, event masking, dilation convolution, and interaction
+a support set with 2∗K samples. Then, the support set is fed convolution. For the log semantic matrix consisting of log event semantic
+into the feature extractor with fixed parameters as the training vectors in temporal order, MITNet uses the following strategies for processing:
+samples for the fine-tuning phase. The AMCS Φ2 Loss Function patch-positional embedding is used to keep temporal ordering; event masking
+ is used to ensure robustness of the representation; dilated convolution is used to
+is introduced to fuzz the inter-class variance, which significantly expand the receptive field; and interaction convolution is used to extract and fuse
+improves the generalization performance of the classifier (details features from different scales. After feature extraction, MITNet flattens the 300
+are provided in Section IV.C). Eventually, we use the fine-tuned × 300 log sequence into 1 × n-dimensional features for input to the downstream
+ classifier.
+classifier to detect the query samples and obtain the exact labels.
+
+ Specifically, we randomly mask the hidden vectors after patch
+C. Feature Extraction Backbone MITNet and position embedding along the time axis with a binary mask.
+ It has been widely demonstrated that temporal relations, Since each patch covers multiple log events, masking the patches
+semantic relations, and parsing noise between logs. Therefore, is equivalent to removing some of the information, which motiwe develop the MITNet feature extractor for log data and intro- vates the feature extractor to ensure robust feature extraction in
+duce it into a fine-tuning-based few-shot learning framework the face of missing information (e.g., incorrect parsing).
+to extract robust temporal semantic representations. As shown Dilated Convolution: To obtain long and effective memories,
+in Fig. 3, MITNet consists of four main parts: patch-positional standard CNN typically require a deep network and a large filter.
+embedding, time masking, dilated convolution, and interactive However, dilated convolution offers an alternative approach that
+convolution. Among them, the patch-positional embedding and involves the inclusion of a dilation rate d, i.e., interval sampling
+interactive convolution blocks are a continuation of of the input during convolution. As the depth of the network
+TSLANet [37], while the event masking and dilated increases, the receptive field size expands exponentially. Thus,
+convolution [38] are enhancement modules that we introduce as shown in the figure, the 2-layer dilation convolution that we
+for log data. The specific implementation of MITNet is as introduce enables MITNet to obtain long temporal dependenfollows: cies.
+ Patch-Positional Embedding: To preserve the temporal de- Interactive convolution: consists of two parallel 1D convopendencies between log events, we employ a positional embed- lutional layers that use different-sized kernels to interact with
+ding method. Given an input log time series sample, we first local features and remote dependencies. Specifically, the first
+divide it into M patches of length |p| ( is rounded down) convolutional layer uses a smaller convolutional kernel (e.g.,
+using convolution and map each patch to another embedding Kernel=1) to capture fine-grained local patterns in the data. The
+vector. Then, the positional embedding is summed with each second convolutional layer, on the other hand, uses a larger conpatch to preserve its temporal order. volutional kernel (e.g., Kernel=3) to recognize long-duration
+ Event Masking: first, unlike the continuous values of a stan- dependencies. These two features are activated by GELU, fused
+dard time series, log samples are discrete values composed of log by multiplication and addition operations, and fed into additional
+events in chronological order. Second, log noise is mainly caused convolutional layers for feature extraction and interactive fusion
+by log incorrect parsing, so denoising methods for frequency across different scales.
+components become infeasible. Inspired by [39], we adopt a Overall, compared with the following TSLANet [37] aprandomized masking patch approach to generate robust features. proach, MITNet addresses the problem of log discrete events
+TIAN et al.: FSLOG: ADVERSARIAL MARGIN FOR CROSS-SYSTEM FEW-SHOT LOG ANOMALY DETECTION 4975
+
+and parsing noise by adopting a random event masking strategy performance, while adding an appropriate negative margin could
+to simulate parsing anomalous scenarios, forcing the model to achieve a better tradeoff between the discriminability and translearn robust feature representations, effectively solving the inter- ferability. Hence, combining LMCL, the Negcos breaks with the
+ference of log noise; second, MITNet introduces a double-layer inherent understanding that the margin can only be restricted to
+dilated convolution that exponentially expands the filter field a positive integer by redefining the softmax loss with margin
+with lower computation to capturing long term dependencies. (m<0) as follows:
+These two improvements enhance the performance in terms of
+robustness and model efficiency, respectively.
+ ϕ1 = β · σ xi , WyTi − m (6)
+ IV. ADVERSARIAL MARGIN COSINE SOFTMAX LOSS
+ In this section, we begin with a review and standardization of ⎛ ⎞
+existing softmax-based loss functions. Then, we analyze the differences between the proposed function and existing functions. ⎜ e ϕ1 ⎟
+ Li = − log ⎜
+ ⎝  ⎟ (7)
+Finally, we elaborate on the proposed loss function AMCS. βσ (xi ,WjT ) ⎠
+ e ϕ1 + e
+ j=1,j=yi
+A. Softmax Loss Function Revisited
+ Where σ denotes the similarity function between two input
+ We denote i-th input samples as zi and its corresponding vectors and can be either the inner product or the cosine. β delabel as yi . Combined with feature extractor fθ (), the feature notes the temperature parameter [40] which could help to apply
+representations of deep networks can be indicated as xi = the appropriate concentrated level around the largest scores and
+fθ (zi ), xi ∈ Rd . Based on the problem definition in Section avoids models falling into local optimum solutions.
+III-A, we provided a unified and standardized explanation of
+Softmax, LMCL [35], and Negcos [30].
+ B. Analysis of AMCS
+ Softmax The most widely used classification loss function,
+standard softmax loss, can be formulated as follows: Few-shot learning can solve the problem of supervision
+ ⎛ ⎞ deficits, but the implicit contradiction between the base class
+ T
+ Wb,y  xi cos(θyi )
+ e i and the novel class is ignored, i.e., there is feature heterogene-
+ Li = − log ⎝  W T  x cos(θ ) ⎠ (4) ity between different log sets. Specifically, there are not only
+ j e b,j i j
+
+ similarities but also distributional differences between the base
+where weight vector WyTi is the yi -th column of W, b is a bias log samples of the source system and the novel log samples
+term (for simplicity, it will be omitted next). The inner product of the target system. Similarities between the base and novel
+between WjT and xi can be expressed as ||WjT || ||xi || cos(θyi ), log samples may exist due to the presence of common system
+ components, standardized APIs, and shared libraries. In conwhere θj is the angle between the vector WjT and xi .
+ trast, changes in system functionality, configurations, and user
+ LMCL: However, the standard softmax loss function does not
+ interaction behaviors lead to differences in log sequence patterns
+explicitly encourage intra-class compactness and inter-class sepbetween base and novel samples. Therefore, the model trained on
+arability, which results in degeneration for classification perforthe base classes gains outstanding feature discrimination ability
+mance under large intra-class variations. LMCL is proposed to
+ and instead fails to fit the novel classes well.
+increase intra-class similarity and inter-class diversity. To elim-
+ As mentioned in Negcos, when implementing few-shot
+inate radial variation, the method performs L2 -normalization of
+ learning using LMCL, the intra-class variance on the base class
+the feature and weight vectors. Additionally, a decision margin
+ decreases and the model becomes more distinguishable on the
+is generated by introducing a positive number m (m>0), which
+ base class as the positive margins increase during training.
+makes the classification more rigorous. Since replacing the inner
+ However, the dissimilarity between the base class and the new
+product by the cosine similarity between two feature vectors
+ class of samples instead leads to an increase in the intra-class
+leads to better performance, this means that the norm of xi 
+ variance of the novel class. Based on the log samples from
+does not contribute to the scoring function, the method fixes the
+ different systems, we also verified this phenomenon. This is
+normalized WjT  to 1 and redefines xi  to s, respectively.
+ because as the positive margins increase, the model focuses more
+Therefore, the altered loss function reinforces the discriminaon correctly classifying existing categories, but lacks sufficient
+tion of learned features by encouraging an extra margin in the
+ learning and generalization ability for novel categories. In
+decision. Formally, the general formulation of LMCL is defined
+ addition, the increase in positive margins can also lead to
+as
+ ⎛ ⎞ overfitting of the model, further affecting the classification
+ performance of novel categories. Therefore, as shown in Fig. 4,
+ ⎜ es(cos(θyi )−m) ⎟
+ Li = − log ⎝ s(cos(θ )−m)  scos(θ ) ⎠ (5) the ideology of Negcos is to weaken the distinguishability of the
+ e yi
+ + e j
+ model on the base class samples by adding appropriate negative
+ j=yi
+ margins in the pre-training phase to avoid overfitting for better
+ Negcos: Nevertheless, when LMCL is used for few-shot transferability. However, using a negative margin in the training
+classifications, adding a positive margin instead can hurt the process does not achieve separability between classes of
+4976 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ target domain, a feature extractor freezing strategy is used and a
+ negative Margin mechanism for label scarcity is introduced. This
+ mechanism relaxes the decision boundary from strict inequality
+ cos(θyi ) ≥ cos(θj + m) to allow the target domain samples and
+ the source domain to generate controlled overlap in the boundary
+ region, thus effectively mitigating the inter-domain distribution
+ gap Ps − PT H .
+
+ C. Adversarial Margin Cosine Softmax Loss
+ In this subsection, we give specific AMCS loss function implementation details. In AMCS, we introduce a negative margin
+ in stages to counteract the overfitting of the model, i.e., adjusting
+ the margin is incorporated into the fine-tuning process of the
+Fig. 4. Decision boundaries of different loss functions under binary classification. (a) margin=0 (e.g., standard Softmax) lacks generalization in few-shot
+ classifier. Since the work we followed (i.e., Negcos) introduces
+scenarios; (b) margin>0 (e.g., LMCL) increases inter-class separation but may the training strategy of temperature parameters [40] when imcause overfitting; (c) margin<0 (e.g., NegCos) applies a negative margin during plementing margin-based few-shot learning, it effectively helps
+pretraining, which weakens feature discriminability for base model; (d) the
+proposed method uses margin=0 during pretraining (left) to learn clear and
+ to apply appropriate concentration levels around the maximum
+discriminative boundaries from source system data, and introduces a small score, providing more options for parameter optimization during
+negative margin (margin<0) during fine-tuning (right) to blur boundaries and training. Inspired by Negcos, we further introduce two temperaimprove generalization to novel classes in the target system.
+ ture parameters, g1 and g2 , to achieve optimization during model
+ training. For a uniform description, we still use zi for i-th input
+ log samples and xi for the corresponding feature representation,
+ where zi ∈ {Bi , Sj,k }, the remaining cosine similarity is
+samples and obtain distinguishable feature representations [35].
+Consequently, Negcos faces challenges in effectively learning WyT fθ (zi )
+prior knowledge from the base class. Log sequence samples σ(WyTi , xi ) = i
+
+  WyT 2 fθ (zi )2
+ i
+exhibit complex temporal and semantic relationships with one
+another, making it difficult for feature extractors with limited WyT xi
+distinguishability to capture anomalous log patterns accurately. = i
+ = cos(θyi ) (8)
+  WyT 2 xi 2
+ i
+ To resolve the contradiction between generalization and distinguishability in Negcos, our approach focuses on achieving In the training phase, we use cosine softmax with parameter
+distinguishable but not overfitted feature extractors using suf- scalar to implement the feature extractor, decoupling the direcficient base class samples in the pre-training phase and gen- tion and length of the vectors. As described in IV-B, the margin
+eralizing the classifier using limited labels from novel classes of this stage is fixed to 0 to ensure effective feature extraction
+in the fine-tuning phase. Exactly, by following this approach, and avoid overfitting. Additionally, we add a learnable rescaling
+the feature extractor learns sufficient prior knowledge from the factor g1 [23] as an adaptive temperature parameter for training
+base class while using the classifier to combat the distributional (this is the first time that g1 has been introduced in a margindifferences between the new class and the base class. As shown based loss function). Unlike the fixed temperature parameter
+in Fig. 4, different from the single-stage softmax-based loss in Negcos, our strategy can provide adaptive control based on
+function, we set the margin to 0 in the pre-training phase and the smoothness and sharpness of the probability distribution,
+set the margin to negative in the fine-tuning phase. In the pre- avoiding falling into local optima and allowing the model to
+training phase, since a positive margin can overfit the model and converge faster. The general loss formula in the training phase
+a negative margin does not guarantee the effectiveness of feature is defined as
+ ⎛ ⎞
+extraction, we do not manipulate the margin to ensure that the
+extractor achieves distinguishability without hindrance. In the ⎜ eg1 cos(θyi ) ⎟
+ Φ1 = − log ⎝  g cos(θ ) ⎠ (9)
+fine-tuning phase, we fix the parameters of the feature extractor e1 yi
+
+ j
+and use negative margins to fuzzy the boundaries of the classifier
+to make the model more transferable. In the fine-tuning phase, we appropriately introduce a negative
+ Theoretically, in the pre-training stage of the source domain, margin to fuzz the decision boundary of the classifier to make
+minimizing the softmax cross-entropy loss function is equivalent the model better generalized to novel classes. It is worth noting
+to accomplishing the dual optimization task described above, that log samples are time series data consisting of log events.
+expanding both the inter-class distance and compressing the Consequently, anomalous samples usually overlap with normal
+intra-class distribution. Thus, according to Fisher principle, the samples in the feature space, which makes samples that are
+loss function of the first stage trains a representation model on close to the classification boundary sharing high similarity and
+the source domain that satisfies the following condition, i.e., indistinguishable from each other. To solve the problem, we
+maxfθ (.) (SB /SW ), where SB stands for inter-class variance use a very small temperature parameter g2 at the fine-tuning
+and SW for intra-class variance. In the fine-tuning stage of the process to make the distribution sharper, giving difficult negative
+TIAN et al.: FSLOG: ADVERSARIAL MARGIN FOR CROSS-SYSTEM FEW-SHOT LOG ANOMALY DETECTION 4977
+
+ TABLE I
+ DESCRIPTION OF LOG DATASETS USED IN THE EXPERIMENTS
+
+samples a larger gradient to separate from positive samples. As a TABLE II
+ RESULTS OF THE EXISTING UNSUPERVISED AND SEMI-SUPERVISED LAD
+consequence, the classifier can better capture the heterogeneity APPROACHES
+between the base class and the novel class and interfere with
+the features of the novel instances in an adversarial manner. The
+general loss formula for the fine-tuning phase is defined as
+ ⎛ ⎞
+ e g2 (cos(θyi )−m)
+ 1
+ ⎜ ⎟
+ Φ2 = − log ⎜
+ ⎝ 
+ ⎟(10)
+ ⎠
+ e
+ 1
+ g2  ( cos(θ yi )−m ) + e
+ 1
+ g 2(cos(θ j ))
+ j=1,j=yi
+
+ Combining (9) (10), the formula (11) implements the margin
+equilibrium for base class transferability and novel class discriminability.
+ Φ1 , zi ∈ fθ (B)
+ Li,p = (11)
+ Φ2 , zi ∈ fθ (S)
+
+ V. EXPERIMENT
+ In our study, we evaluate our approach by answering the
+following research questions.
+ RQ1: How does the FSLog method perform in terms of
+effectiveness in label scarcity scenarios?
+ The BGL Dataset [42] consists of 4,747,963 logs generated
+ RQ2: How does the FSLog method perform in terms of
+advancement? by a supercomputing system Blue-Gene/L. As shown in Table I,
+ we use the session window and sliding window to divide the log
+ RQ3: How robust does the FSLog method perform in terms
+of noise scenarios? sequence respectively and label the log sequence as abnormal
+ RQ4: How sensitive is the FSLog method to hyperparameters? if there are any faulty logs in the sequence. When using the
+ session window, we construct 69,252 log sequences based on
+ RQ5: How does each component contribute to FSLog?
+ its node ID, of which 31,429(45.4%) log sequences are labeled
+ as malfunctions. When using the sliding window, we set the
+A. Experimental Setup size of the sliding window to 300 and the step size to 100, a
+ 1) Datasets: In the field of log anomaly detection, the widely total of 6,007(12.7%) abnormal sequences were obtained by this
+used datasets include various sources. However, there is no method.
+suitable public dataset available for few-shot log anomaly de- The thunderbird dataset (TBird): [42] consists of more than
+tection. To evaluate the proposed method, we consider the raw 200 million logs collected from a Thunderbird supercomputer
+log messages contained in HDFS, BGL, and Thunderbird as at Sandia National Labs (SNL). As presented in Table I, we
+the data sources, and then reconstruct the few-shot datasets as set the window size to 300 and the step size to 100, use the
+HDFS-FS-Session (HF), BGL-FS-Session (BS), BGL-FS-Time sliding window to divide the logs, and obtain 41,780 anomalous
+(BT), and TBird-FS-Time (TB). The details of each raw dataset sequences (41.9%).
+are as follows: The reconstruction of the dataset first requires log processing.
+ The HDFS dataset [15] consists of 11,175,629 logs produced The use of Spell [41] to parse the logs was in response to the high
+from more than 200 Amazon EC2 nodes. These log messages susceptibility of the unsupervised learning approach to noise as
+form different log samples according to their block ID, includ- mentioned in Section II-A. We follow up the work in [6], [7],
+ing 575,059 normal log sequences and 16,838 abnormal log hence the dimension d of the semantic vectors is 300, and the
+sequences (2.8%). window size w is also 300. After parsing, grouping, and semantic
+4978 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+representation, the length of each log sequence d∗w is 300 ∗ 300 Linux release 7.9, CUDA 11.7, cuDNN 7.6.5, Python 3.7.12,
+(Note that d=w is not a strict requirement, and the introduced and PyTorch 1.7.0. All of the conducted experiments took about
+MITNet can effectively process input dimensions and unequal two months to complete, using two physical GPUs.
+input lengths).
+ Next, according to the specific conditions of different data B. RQ1: Comparison With Different Log Anomaly Detection
+sources, the four few-shot datasets HF, BS, BT, and TB were Approaches
+constructed. Every few-shot dataset contains normal and abnor- This section compares the proposed few-shot detection
+mal sequences. For each type of set, we chronologically selected method with the existing unsupervised and semi-supervised
+2,000 samples as the data source to construct few-shot query baseline methods DeepLog, LogAnomaly and PLELog in
+sets for testing. Each detection task was defined as a few-shot Table II, as well as the supervised and transfer learning basebinary classification task to distinguish between normal samples line methods LogTransfer, NeuralLog, LogRobust, LogGroup,
+and abnormal samples from the same dataset, i.e., N in N-way Log-MatchNet and MetaLog in Fig. 5. Except for the methods
+K-shot is 2. proposed in this paper, none of the other considered approaches
+ Experiments are conducted on four few-shot datasets sepa- are the few-shot detection ones. Please note that to fairly simulate
+rately. For HF and BS, they contain two types of log sequences the scarce scenario of anomalous samples, in the conducted
+that are grouped by session, respectively. We utilize BS as the experiments, the normal samples of the novel sets available
+data source for the base set and the remaining one as the data for each unsupervised and semi-supervised learning method are
+source for the novel set. Conversely, predictions for BS using sufficient, while the samples for the supervised and transfer
+HS as the base class also hold. Correspondingly, BT and TB can methods adhered to the N-way K-shot limitation and we rotate
+be used as base sets for each other. Hence, there are four combi- the training and testing types of samples. Taking Fig. 5 as an
+nations, providing four sets of experiments. A sufficient number example, the first experiment (Test on HF) uses the samples of
+of training and testing tasks are constructed for experiments. the BS dataset as base classes for pre-training, and the samples
+The model has to learn from the K (K=5, 20) samples using of the HF dataset as novel classes for fine-tuning and testing.
+chronological selection, performing the real few-shot detection Since the feature extractor was trained on a large number of
+of normal and abnormal log sequences. BS samples, the labeled samples in the HF dataset represent the
+ 2) Evaluation Metrics: To measure the effectiveness of mod- support set and are only used to fine-tune the classifier using a
+els in anomaly detection, we use Precision (PRE), Recall (REC), limited number of K (K=5 or 20, i.e., 2-way 5-shot or 2-way
+False Positive Rate (FPR), and F1 score (F1) as detection 20-shot) samples.
+metrics. Among them, precision is the proportion of all log When K=5, the FSLog achieves the best accuracy among the
+sequences identified as anomalous that are correctly identified five methods, having an averaged F1 of 96.7 percentage points
+as anomalous. Precision = T PT+F P
+ P Recall is the proportion (abbreviated as pp hereafter) on the BS dataset, 89.1 pp on the
+of all log sequences that are correctly identified as anomalous. BT dataset, 76.6 pp on the HF and 77.5 pp on the TB dataset as
+Recall = T PT+FP
+ N FPR is the proportion of misclassified normal illustrated in Fig. 5. As shown in Table II, DeepLog, PLELog,
+samples to all normal log sequences. FPR = T NF+F P
+ P F1 score and LogAnomaly show significant advantages on the HF and BS
+is the summed average of precision and Recall. F1 score = datasets and even achieve an F1 of over 99.0 pp on the BS dataset
+2∗P recision∗Recall
+ P recision+Recall with a false alarm rate of less than 0.5 pp. However, on the other
+ TP: is the number of abnormal samples correctly detected as two datasets based on chronological selection, these methods
+abnormal. FN is the number of abnormal samples that are not fail to achieve effective detection. This demonstrates that unsudetected by the model. TN is the number of normal samples that pervised and semi-supervised learning methods still cannot be
+are correctly detected as normal samples. FP is the number of applied in to newly deployed software systems. The detection
+normal samples wrongly identified as abnormal. performance of the metric-based few-shot learning method Log-
+ 3) Implementations and Environments: In our experiments, MatchNet, while higher than supervised and transfer learning
+we process the log data and conduct log-based anomaly detec- methods, is lower than that of FSLog, and even slightly lower
+tion as follows: we adopt the implementations of log parsing than that of meta-learning methods in most scenarios.
+provided by open source [10] and log representation based on When K=20, the FSLog has significantly improved, having
+FastText. We use SGD as the optimizer, set the learning rate an averaged F1 of 96.9 pp on the BS dataset, 92.8 pp on
+to 0.01, the momentum of 0.9 for 100 iterations in fine-tuning, the BT dataset, 86.1 pp on the HF dataset, and 80.3 pp on
+weight_decay to 0.0005, set the number of epochs to 50. Fur- the TB-FS dataset as illustrated in Fig. 5. Even compared to
+thermore, the classifiers being compared are all implemented unsupervised and semi-supervised learning models trained on
+using the scikit-learn library. We set neighbors = 5 for KNN, sufficient labels as shown in II, our method still has an absolute
+kernel to linear in SVM, and tuned C in the interval [0,1], and advantage. Obviously, the transfer and supervised methods used
+other classifier hyperparameters as default. for comparison still suffer from overfitting. This indicates that
+ To complete the testing of the method, the experiments are existing methods are still powerless for application scenarios
+performed using the following hardware and software platforms: such as cross-system cold starts, even with a slight increase
+Intel(R) Xeon(R) Gold 5218 CPU @ 2.30 GHz, CPU cores 16, in supervision. Moreover, despite outperforming other methods
+256 GB RAM, NVIDIA Tesla V100-PCIE-32 GB∗2, CentOS in terms of detection performance, FSLog still reaches a 20%
+TIAN et al.: FSLOG: ADVERSARIAL MARGIN FOR CROSS-SYSTEM FEW-SHOT LOG ANOMALY DETECTION 4979
+
+Fig. 5. Comparison with the existing supervised LAD approaches.
+
+ TABLE III and is more suitable for the cold start phase of the system with
+ DETECTION EFFICIENCY OF EXISTING LAD METHODS
+ limited labels and less demanding requirements on detection
+ efficiency.
+
+ C. RQ2: Comparison With the State-of-The-Art Few-Shot
+ Learning Approaches
+ Table IV compares FSLog and current few-shot classification
+ methods on four datasets. According to novel classes on HF
+ dataset, for the 5-shot task, FSLog achieved the best detection
+ results on all three evaluation metrics. On the comprehensive
+ evaluation criterion F1, FSLog outperforms RFS, which is also
+false alarm rate on TB, hindering the online deployment of based on fine-tuning, by 6.6 pp, even exceeding the baseline
+the detection model. However, our approach is still effective by 21.5 pp. With the increase of labeled samples in the support
+in coping with the cold-start phase where samples are scarce. set, the detection rate of FSLog is further improved. We achieve
+The proposed few-shot approach provides a feasible solution to 86.0/86.3/86.1 pp for 20-shot tasks on each of the three evaluathis challenge of cross-system detection. tion criteria, outperforming R2D2 85.4/86.0/85.7 pp (based on
+ In addition, Table III demonstrates the significant differences meta-learning, the second-best result). Several few-shot learning
+between the models in terms of inference time, floating point methods based on metric learning have not achieved impressive
+operations (FLOPs), and number of parameters (Params). In results.
+terms of inference time, LogRobust has a clear advantage, From BS dataset, our methods are high-ranking across the
+being almost 760 times faster than the slowest Log-MatchNet. board. Compared to RENet (based on metric learning), the gains
+The supervised inference framework makes LogRobust highly of FSLog are 0.4 pp and 0.2 pp on F1 for the 5-shot/20-shot
+efficient, while the matching network-based inference model task, respectively. Using HF as the base set for the prediction of
+leads to high computational consumption and low computational BGL-FS-Session, FSLog outperforms even a detection model
+efficiency of Log-MatchNet. Although the inference speed of trained with sufficient labeled samples. Furthermore, all four
+FSLog is slower than that of methods such as LogRobust, it fine-tuning-based methods exceed 90 pp. The results for BT
+has the lowest FLOPs (5.9 M) and parametric count (105.7 K), dataset are shown in Table IV. For the 5-shot task, FSLog results
+which are only 0.02% and 0.12% of that of Log-MatchNet, and are the best. But for the 20-shot task, RFS is very competitive
+it can be adapted to most of the practical application scenarios. and is much better than the other methods except R2D2 and
+Moreover, it has obvious advantages in detection performance ours. We are slightly inferior to RFS, being only 0.3 pp below
+4980 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE IV
+ EXPERIMENT RESULTS OF FEW-SHOT LEARNING APPROACHES ON DIFFERENT FEW-SHOT DATASETS
+
+it on the F1. From TB dataset, the baseline is superior among AEL, Drain, Brain) to demonstrate FSLog performance under
+our competitors. However, for the 20-shot task, our REC, FPR, different parsing noise. Additionally, to simulate the worst-case
+and F1 still reached 80.7pp, 0.7pp, and 80.3pp respectively. scenario where parsed logs completely lose semantic informa-
+This does not prevent our method from having the best overall tion, we randomly replace a certain percentage of events in the
+detection performance. log sequence samples with zero vectors (which lose sample
+ In summary, it can be observed that the fine-tuning-based information to varying degrees) to evaluate the sensitivity of
+few-shot learning approaches are more suitable for log anomaly the detection model to missing noise.
+detection, which is also the basis for our improvement direction. As illustrated in Fig. 6, FSLog exhibits extremely high ro-
+These comparisons demonstrate that our models have stronger bustness on all datasets. The detection performance of FSLog
+domain transfer capability. remains stable in the log data generated by different parsers. In
+ particular, the F1 of FSLog is basically the same for the three log
+D. RQ3: Robustness Analysis data parsed by Spell, Drain, and Brain. On the log data parsed
+ To verify the robustness of FSLog to parsing noise, we conduct by AEL, the detection performance of FSLog is slightly lower
+experiments using different log parsers and zero-vector injec- than the other three parsers, but the performance drop is not
+tion. First, following [10], we employ multiple log parsers (Spell, significant.
+TIAN et al.: FSLOG: ADVERSARIAL MARGIN FOR CROSS-SYSTEM FEW-SHOT LOG ANOMALY DETECTION 4981
+
+Fig. 6. Impact of Injection Noise and Parsing Noise on Detection Performance.
+
+ In the noise-injected scenario, when K=5 and the noise ratio classifiers, namely KNN, SVM, GaussianNB, and AdaBoost, for
+is increased from 0% to 10%, the F1 scores of FSLog on the anomaly detection. The experimental results depicted in Fig. 7
+HF, BS, BT, and TB datasets decrease by 1.9 pp, 1.1 pp, 2.6 provide compelling evidence that the classifier when paired with
+pp, and 3.2 pp, respectively. When K = 20 and the noise ratio AMCS, attains superior performance. Particularly, when K=5,
+is similarly increased from 0% to 10%, the F1 score of FSLog our classifier outperforms the other classifiers by a significant
+decreases by 1.4 pp, 1.2 pp, 3.3 pp, and 3.2 pp. It is worth noting margin on the BT dataset, demonstrating the capability to apthat for the HF and BS datasets, the detection performance of proach a commendable 90.0pp in the comprehensive evaluation
+FSLog is almost unaffected by noise. For the BT and TB datasets, metric F1, while the F1 of KNN, SVM, GaussianNB, and
+although the detection performance slightly decreases when AdaBoost are 75.9 pp, 64.6 pp, 73.3 pp and 75.2 pp respectively,
+the noise reaches 10%, FSLog still maintains a good detection which are more than 15 pp lower than the proposed classifiers.
+performance compared to the existing methods shown in Fig. On the other three datasets, our classifier consistently maintains
+5, which indicates that FSLog has excellent robustness to deal its advantage and achieves an FPR of 3.3 pp on the BS dataset.
+with log noise effectively. When K=20, a noteworthy improvement in performance is
+ observed across all classifiers.
+ As shown in Fig. 8, for different window sizes, on the BT
+E. RQ4: Comparison With Different Classifiers and Window dataset, the detection performance of FSLog remains basically
+Size the same when w is 300, 100, and 50, respectively. When w = 20,
+ In this study, the LAD framework is built upon a fine-tuned the F1 of FSLog decreases by 1 pp and 0.8 pp in the scenarios
+implementation of classifiers based on the Multilayer Percep- with K = 5 and K = 20, respectively. on the TB dataset, the
+tron (MLP) structure. To demonstrate the effectiveness of the performance of FSLog is similar at w = 300 and w = 20, but
+classifier, a comparative analysis is conducted using different the performance shows a clear decrease at w = 100 and w =
+classifiers in addition to those employed in this study. The exper- 50. In particular, when K = 5 and w = 50, the F1 of FSLog
+imental results are elaborated in Fig. 7. For ease of comparison, decreases by 3 pp compared to w = 300, which shows that
+we use the Baseline++ model that applies ResNet18 as ConvNet FSLog is sensitive to the time window size. However, compared
+to feature extraction and use cosine similarity as the metric. In with the existing methods in Table II and Fig. 5, FSLog maintains
+addition, the size of the sliding window affects the detection leading performance under different windows.
+performance. To better investigate the effect of window size on
+FSLog, we use window size as a hyperparameter and test the
+ F. RQ5: Ablation Studies
+sensitivity of FSLog under four different window sizes: 300,
+100, 50, and 20. To investigate the effects of core components in FSLog,
+ To assess the overall performance of the classifiers, we con- we conduct extensive ablation studies either in the absence of
+duct feature extraction using the MITNet with fixed parame- each component or by replacing them with others and compare
+ters. The extracted features are then inputted into five different the results in the 5-shot and 20-shot settings. In Table V, the
+4982 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+Fig. 7. Comparison with different classifiers.
+
+Fig. 8. Comparison with different window size.
+
+√
+ indicates that each component is utilized in the experiments, by a staged margin. However, the TB dataset is not learned by
+while the ✗indicates that the component is not employed. the model using the Negcos loss, and accordingly, the detection
+ As log sequences contain both temporal and semantic infor- results are very poor, even similar to random guessing. This
+mation, we introduce MITNet with dilated and denosing con- further indicates that only fuzzing the decision boundary of the
+volutional network to capture the relatedness between logs. As classifier during fine-tuning is more suitable for heterogeneous
+shown in Table V, compared to ResNet18, when using MITNet and diverse log data.
+as the feature extractor, although the detection performance is Notably, in the experimental results in Table V, the combislightly lower for the TB dataset, there is an improvement on nation of AMCS and MITNet achieved the best performance
+the other three few-shot datasets. Especially on the BS dataset, in five out of the eight test scenarios (4 datasets × K = 5/20).
+the highest F1 has achieved 96.8 pp (for 5-shot) and 97.0 pp (for However, in the remaining three scenarios, MITNet+ArcFace
+20-shot). and ConvNet+AMCS slightly outperform FSLog, respectively.
+ For each fine-tuning task of FSLog based on the meta-learning The possible reasons are: the target domain anomaly samples
+framework, we need to build and train a new classifier that in- of the HF dataset contain relatively simple log types, and the
+troduces new parameters. In Table V, we quantify the classifiers classification strategy of ArcFace by increasing the interclass
+constructed with several different loss functions. The proposed distance may be more adapted to this kind of scenario; AMCS
+AMCS loss function outperforms all baseline methods (e.g., may slightly blur the classification boundary, leading to a slight
+Cosine, LMCL, Arcface, and Negcos) in the detection accuracy underperformance of FSLog’s detection performance. However,
+TIAN et al.: FSLOG: ADVERSARIAL MARGIN FOR CROSS-SYSTEM FEW-SHOT LOG ANOMALY DETECTION 4983
+
+ TABLE V
+ RESULTS OF ABLATION EXPERIMENTS WITH FSLOG
+
+when the K value was increased to 20, FSLog countered the meta-learning (e.g., MetaLog and MAML) relies on task gen-
+MITNet+ArcFace combination. In addition, when AMCS and eralization capabilities and needs to simulate multidomain task
+MITNet are used as a single component, the detection per- distributions during the training phase, but cross-domain differformance is significantly improved either in combination with ences in logs are difficult to cover by limited meta-tasks. Second,
+existing modules such as ConvNet or ArcFace, which potentially fine-tuning-based few-shot learning adjusts only the lightweight
+demonstrates the generalization of the proposed components. classifiers by freezing the backbone network parameters without
+ having to relearn the global features, whereas meta-learning
+ VI. DISCUSSION requires adjusting all the parameters in the stage of adapting
+ to the target-domain data, which is susceptible to log noise.
+A. Why Does FSLog Work? Our study demonstrates the effectiveness of FSLog in cross-
+ There are two main reasons why FSLog outperforms state- system log anomaly detection, though limitations exist. First,
+of-the-art methods in cross-system log anomaly detection. First, when high log parsing error rates cause significant information
+recognizing that fuzzy classification boundaries are beneficial loss, the MITNet event masking mechanism struggles to extract
+for the generalization of novel system log data, we design an features from severely noisy sequences. Second, minimal seinnovative adversarial margin cosine loss function to enhance the mantic overlap between target and source system logs hinders
+discriminative and generalization performance of the detection knowledge transfer from source to target systems. Furthermore,
+model. Second, noting that existing feature extractors are not FSLog is more suitable for cold-start phases with scarce target
+robust enough and difficult to represent temporal relationships samples, while its accuracy remains insufficient for large-scale
+when facing log data effectively, we design a novel feature data. Given unsupervised models inherent limitations in preciextraction module that can simultaneously achieve temporal sion and robustness, O&M personnel can use FSLog to leverage
+relationship extraction, anti-noise interference, receptive field source system prior knowledge for initial training with minimal
+expansion, and multi-scale feature fusion. target system labeled data.
+ Notably, meta-learning methods have also been used to address the generalizability problem of log anomaly detection, but
+ B. Threats to Validity.
+we are motivated to use fine-tuning-based few-shot learning and
+achieve leading detection performance for the following reasons: Data quality: Although the HDFS, BGL, and Thunderbird
+First, fine-tuning-based few-shot learning utilizes sufficient data datasets have been widely used and publicly available in past
+from the source domain to adequately learn generalized log studies, they all originate from before 2007 and may not cover
+patterns and establish strong representation ability. However, the latest features and patterns of current syslogs. Therefore,
+4984 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+conclusions relying on these datasets may be biased and their [8] L. Yang et al., “Semi-supervised log-based anomaly detection via probageneral applicability in real-world environments cannot be fully bilistic label estimation,” in Proc. IEEE/ACM 43rd Int. Conf. Softw. Eng.,
+ 2021, pp. 1448–1460.
+guaranteed. [9] R. Chen et al., “LogTransfer: Cross-system log anomaly detection for
+ Tool comparison: We implemented log anomaly detec- software systems with transfer learning,” in Proc. IEEE 31st Int. Symp.
+tion methods including DeepLog, LogAnomaly, PLELog and Softw. Rel. Eng., 2020, pp. 37–47.
+ [10] V.-H. Le and H. Zhang, “Log-based anomaly detection with deep learn-
+LogRobust based on literature [10]. For LogTransfer and Neu- ing: How far are we?,” in Proc. 44th Int. Conf. Softw. Eng., 2022,
+ralLog, we used their public source code for implementation. pp. 1356–1367, doi: 10.1145/3510003.3510155.
+For LogGroup, MetaLog, and Log-MatchNet, we reproduced [11] C. Han, B. Guan, T. Li, D. Kang, J. Qin, and Y. Wu, “Few-shot log
+ anomaly detection based on matching networks,” IEEE Trans. Netw.
+them based on the original papers and confirmed that the results Service Manag., vol. 21, no. 3, pp. 2909–2925, Jun. 2024.
+are highly consistent with the reported values. Meanwhile, the [12] C. Xu, J. Shen, and X. Du, “A method of few-shot network intrusion
+few-shot learning method uses the open source code from the detection based on meta-learning framework,” IEEE Trans. Inf. Forensics
+ Secur., vol. 15, pp. 3540–3552, 2020.
+literature [22]. However, there may be errors or inconsistencies [13] J. Li, H. He, S. Chen, D. Jin, and J. Yang, “LogGraph: Log event graph
+in the conversion process, which could potentially affect the learning aided robust fine-grained anomaly diagnosis,” IEEE Trans. Defairness and accuracy of the tool comparisons. pendable Secure Comput., vol. 21, no. 4, pp. 1876–1889, Jul./Aug., 2024.
+ [14] J.-G. Lou, Q. Fu, S. Yang, Y. Xu, and J. Li, “Mining invariants from console
+ logs for system problem detection,” in Proc. USENIX Conf. USENIX Annu.
+ Tech. Conf., 2010, pp. 1–14.
+ VII. CONCLUSION [15] W. Xu, L. Huang, A. Fox, D. Patterson, and M. I. Jordan, “Detecting
+ large-scale system problems by mining console logs,” in Proc. ACM
+ In this paper, we have presented FSLog, a method based on the SIGOPS 22nd Symp. Operating Syst. Princ., New York, NY, USA, 2009,
+fine-tuning framework to implement cross-system few-shot log pp. 117–132.
+anomaly detection. FSLog adopts cosine softmax with adaptive [16] H. Studiawan, F. Sohel, and C. Payne, “Anomaly detection in operating
+ system logs with deep learning-based sentiment analysis,” IEEE Trans. Dere-scaling factors to train the feature extractor MITNet and pendable Secure Comput., vol. 18, no. 5, pp. 2136–2148, Sep./Oct. 2021.
+pursues the balance between feature transferability and distin- [17] V.-H. Le and H. Zhang, “Log-based anomaly detection without log parsguishability by introducing an adversarial margin. To evalu- ing,” in Proc. 36th IEEE/ACM Int. Conf. Automated Softw. Eng., 2022,
+ pp. 492–504.
+ate FSLog, we constructed four datasets based on public data [18] X. Li, P. Chen, L. Jing, Z. He, and G. Yu, “SwissLog: Robust anomaly desources. Experimental results show that our approach achieves tection and localization for interleaved unstructured logs,” IEEE Trans. Dea significant advantage in initialization scenarios with scarce pendable Secure Comput., vol. 20, no. 4, pp. 2762–2780, Jul./Aug. 2023.
+ [19] J. Tian, M. Li, Z. Wang, L. Chen, J. Qin, and R. Zhang, “OMLog: Online log
+labels. anomaly detection for evolving system with meta-learning,” IEEE Internet
+ Our research still has limitations, as compared to supervised Things J., vol. 12, no. 15, pp. 30142–30155, Aug. 2025.
+learning models based on sufficient label training, few-shot mod- [20] S. Lu, X. Wei, Y. Li, and L. Wang, “Detecting anomaly in Big Data
+ system logs using convolutional neural network,” in Proc. IEEE 16th Int.
+els exhibit a relatively higher false positive rate. Nonetheless, the Conf. Dependable, Autonomic Secure Comput., 16th Int. Conf. Pervasive
+application of FSLog in the cold start scenario can effectively Intell. Comput., 4th Int. Conf. Big Data Intell. Comput. Cyber Sci. Technol.
+avoid the problems of untrainable and overfitting caused by a Congr., 2018, pp. 151–158.
+ [21] W. Meng et al., “A semantic-aware representation framework for online
+lack of samples compared to current methods. In our future log analysis,” in Proc. 29th Int. Conf. Comput. Commun. Netw., 2020,
+work, we will further explore how to achieve online deployment pp. 1–7.
+of few-shot models. [22] W. Li et al., “LibFewShot: A comprehensive library for few-shot learning,”
+ IEEE Trans. Pattern Anal. Mach. Intell., vol. 12, no. 12, pp. 14938–14955,
+ Dec. 2023.
+ [23] W.-Y. Chen, Y.-C. Liu, Z. Kira, Y.-C. F. Wang, and J.-B. Huang, “A closer
+ REFERENCES look at few-shot classification,” in Proc. Int. Conf. Learn. Representations,
+ 2019, pp. 1–16.
+ [1] S. He, P. He, Z. Chen, T. Yang, Y. Su, and M. R. Lyu, “A survey on [24] K. Zheng, H. Zhang, and W. Huang, “DiffKendall: A novel approach for
+ automated log analysis for reliability engineering,” ACM Comput. Surv., few-shot learning with differentiable Kendall’s rank correlation,” in Proc.
+ vol. 54, no. 6, Jul. 2021, Art. no. 130, doi: 10.1145/3460345. 37th Int. Conf. Neural Inf. Process. Syst.. Red Hook, NY, USA:Curran
+ [2] C. Zhang, T. Jia, G. Shen, P. Zhu, and Y. Li, “MetaLog: Generalizable Associates Inc., 2024, pp. 49403–49415.
+ cross-system anomaly detection from logs with meta-learning,” in Proc. [25] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for fast
+ IEEE/ACM 46th Int. Conf. Softw. Eng., 2024, pp. 1899–1910. adaptation of deep networks,” in Proc. 34th Int. Conf. Mach. Learn., 2017,
+ [3] J. Tian, M. Li, L. Chen, Z. Wang, X. Nie, and J. Qin, “SSDALog: pp. 1126–1135.
+ Semi-supervised domain adaptation for incremental log-based anomaly [26] J. Oh, H. Yoo, C. Kim, and S. Yun, “BOIL: Towards representation change
+ detection,” IEEE Trans. Inf. Forensics Secur., vol. 20, pp. 6607–6619, for few-shot learning,” in Proc. Int. Conf. Learn. Representations, 2021,
+ 2025. pp. 1–24.
+ [4] M. Du, F. Li, G. Zheng, and V. Srikumar, “DeepLog: Anomaly detection [27] J. Snell, K. Swersky, and R. Zemel, “Prototypical networks for few-shot
+ and diagnosis from system logs through deep learning,” in Proc. ACM learning,” in Proc. 31st Int. Conf. Neural Inf. Process. Syst., Red Hook,
+ SIGSAC Conf. Comput. Commun. Secur., New York, NY, USA, 2017, NY, USA:Curran Associates Inc., 2017, pp. 4080–4090.
+ pp. 1285–1298, doi: 10.1145/3133956.3134015. [28] J. Xie, F. Long, J. Lv, Q. Wang, and P. Li, “Joint distribution matters:
+ [5] W. Meng et al., “LogAnomaly: Unsupervised detection of sequential and Deep Brownian distance covariance for few-shot classification,” in Proc.
+ quantitative anomalies in unstructured logs,” in Proc. 28th Int. Joint Conf. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2022, pp. 7962–7971.
+ Artif. Intell., 2019, pp. 4739–4745. [29] J. Deng, J. Guo, and S. Zafeiriou, “ArcFace: Additive angular margin loss
+ [6] X. Zhang et al., “Robust log-based anomaly detection on unstable log for deep face recognition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ data,” in Proc. 27th ACM Joint Meeting Eur. Softw. Eng. Conf. Symp. Recognit., 2018, pp. 4685–4694.
+ Foundations Softw. Eng., 2019, pp. 807–817. [30] B. Liu et al., “Negative margin matters: Understanding margin in few-shot
+ [7] Z. Wang, J. Tian, H. Fang, L. Chen, and J. Qin, “LightLog: A lightweight classification,” in Proc. Eur. Conf. Comput. Vis.>, 2020, pp. 438–455.
+ temporal convolutional network for log anomaly detection on the edge,” [31] M. Kim, A. K. Jain, and X. Liu, “AdaFace: Quality adaptive margin for face
+ Comput. Netw., vol. 203, 2022, Art. no. 108616. [Online]. Available: https: recognition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+ //www.sciencedirect.com/science/article/pii/S1389128621005119 2022, pp. 18729–18738.
+TIAN et al.: FSLOG: ADVERSARIAL MARGIN FOR CROSS-SYSTEM FEW-SHOT LOG ANOMALY DETECTION 4985
+
+[32] Y. Wen, K. Zhang, Z. Li, and Y. Qiao, “A discriminative feature learning [48] P. Goyal et al., “Accurate, large minibatch SGD: Training imagenet in 1
+ approach for deep face recognition,” in Proc. Eur. Conf. Comput. Vis.>, hour,” 2017, arXiv:1706.02677.
+ 2016, pp. 499–515. [49] K. Lee, S. Maji, A. Ravichandran, and S. Soatto, “Meta-learning with
+[33] W. Liu, Y. Wen, Z. Yu, and M. Yang, “Large-margin softmax loss for differentiable convex optimization,” in Proc. IEEE/CVF Conf. Comput.
+ convolutional neural networks,” in Proc. 33rd Int. Conf. Mach. Learn., Vis. Pattern Recognit., 2019, pp. 10649–10657.
+ New York, New York, USA, 2016, pp. 507–516.
+[34] W. Liu, Y. Wen, Z. Yu, M. Li, B. Raj, and L. Song, “SphereFace: Deep hypersphere embedding for face recognition,” in Proc. IEEE Conf. Comput.
+ Vis. Pattern Recognit., 2017, pp. 6738–6746.
+[35] H. Wang et al., “CosFace: Large margin cosine loss for deep face recog- Jiyu Tian received the master’s degree in cyberspace
+ nition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2018, security from Dalian University, Dalian, China, where
+ pp. 5265–5274. he is currently working toward the PhD degree. His
+[36] B. Li, B. Yang, C. Liu, F. Liu, R. Ji, and Q. Ye, “Beyond max-margin: Class current research interests include log anomaly detecmargin equilibrium for few-shot object detection,” in Proc. IEEE/CVF tion and cyberspace security.
+ Conf. Comput. Vis. Pattern Recognit., 2021, pp. 7359–7368.
+[37] E. Eldele, M. Ragab, Z. Chen, M. Wu, and X. Li, “TSLANet: Rethinking
+ transformers for time series representation learning,” in Proc. 41st Int.
+ Conf. Mach. Learn., 2024, pp. 12409–12428.
+[38] S. Bai, J. Z. Kolter, and V. Koltun, “An empirical evaluation of generic
+ convolutional and recurrent networks for sequence modeling,” in Proc.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2018.
+[39] Z. Yue et al., “TS2Vec: Towards universal representation of time series,”
+ inProc. AAAI Conf. Artif. Intell., 2022, pp. 8980–8987.
+[40] F. Wang and H. Liu, “Understanding the behaviour of contrastive
+ Mingchu Li received the doctorate degree in mathloss,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2021,
+ ematics from the University of Toronto, in 1998. He
+ pp. 2495–2504. was with the School of Software, Tianjin University,
+[41] M. Du and F. Li, “Spell: Streaming parsing of system event logs,” in Proc.
+ as a full professor from 2002 to 2004, School of Soft-
+ IEEE 16th Int. Conf. Data Mining, 2016, pp. 859–864.
+ ware Technology, Dalian University of Technology,
+[42] A. Oliner and J. Stearley, “What supercomputers say: A study of five
+ as a full professor and the vice dean from 2002 to
+ system logs,” in Proc. 37th Annu. IEEE/IFIP Int. Conf. Dependable Syst. 2023. He has been with Jiangxi Normal University
+ Netw., 2007, pp. 575–584.
+ as a full professor since 2024. His main research
+[43] Y. Tian, Y. Wang, D. Krishnan, J. B. Tenenbaum, and P. Isola, “Rethinking
+ interests include theoretical computer science and
+ few-shot image classification: A good embedding is all you need?,” in Proc.
+ information security, trust models, and cooperative
+ 16th Eur. Conf. Comput. Vis. Proc. Eur. Conf. Comput. Vis., Glasgow, U.K.: game theory.
+ Springer-Verlag, 2020, pp. 266–282.
+[44] L. Bertinetto, J. F. Henriques, P. Torr, and A. Vedaldi, “Meta-learning
+ with differentiable closed-form solvers,” in Proc. Int. Conf. Learn. Representations, 2019, pp. 1–15. [Online]. Available: https://openreview.net/
+ forum?id=HyxnZh0ct7 Jianyuan Gan received the BS and MS degrees in
+[45] F. Sung, Y. Yang, L. Zhang, T. Xiang, P. H. Torr, and T. M. Hospedales, science from Nanchang Hangkong University, Nan-
+ “Learning to compare: Relation network for few-shot learning,” in Proc. chang, China, in 2016 and 2019, respectively. He
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2018, pp. 1199–1208. is currently working toward the EngD degree with
+[46] R. Hou, H. Chang, B. MA, S. Shan, and X. Chen, “Cross attention network the Dalian University of Technology. His research
+ for few-shot classification,” in Proc. Adv. Neural Inf. Process. Syst., 2019, interests include traffic engineering and AI.
+ pp. 4003–4014.
+[47] D. Kang, H. Kwon, J. Min, and M. Cho, “Relational embedding for fewshot classification,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., 2021,
+ pp. 8802–8813.

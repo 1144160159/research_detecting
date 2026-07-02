@@ -1,0 +1,159 @@
+                                                                           Array 22 (2024) 100349
+
+
+                                                                  Contents lists available at ScienceDirect
+
+
+                                                                                  Array
+                                                         journal homepage: www.elsevier.com/locate/array
+
+
+
+
+Network intrusion detection leveraging multimodal features
+Aklil Kiflay ∗, Athanasios Tsokanos, Mahmood Fazlali, Raimund Kirner
+University of Hertfordshire, Hatfield, AL10 9AB, United Kingdom
+
+
+
+ARTICLE               INFO                               ABSTRACT
+
+Keywords:                                                Network Intrusion Detection Systems (NIDSes) are essential for safeguarding critical information systems.
+Intrusion detection                                      However, the lack of adaptability of Machine Learning (ML) based NIDSes to different environments could
+Network flow                                             cause slow adoption. In this paper, we propose a multimodal NIDS that combines flow and payload features
+Packet payload
+                                                         to detect cyber-attacks. The focus of the paper is to evaluate the use of multimodal traffic features in detecting
+Random forest
+                                                         attacks, but not on a practical online implementation. In the multimodal NIDS, two random forest models
+Machine learning
+                                                         are trained to classify network traffic using selected flow-based features and the first few bytes of protocol
+                                                         payload, respectively. Predictions from the two models are combined using a soft voting approach to get
+                                                         the final traffic classification results. We evaluate the multimodal NIDS using flow-based features and the
+                                                         corresponding payloads extracted from Packet Capture (PCAP) files of a publicly available UNSW-NB15 dataset.
+                                                         The experimental results show that the proposed multimodal NIDS can detect most attacks with average
+                                                         Accuracy, Recall, Precision and F1 scores ranging from 98% to 99% using only six flow-based traffic features,
+                                                         and the first 32 bytes of protocol payload. The proposed multimodal NIDS provides a reliable approach to
+                                                         detecting cyber-attacks in different environments.
+
+
+
+1. Introduction                                                                           across networks. Thirdly, there is no consensus among researchers on
+                                                                                          which flow-based features to use in ML-based NIDSes, resulting in
+    Network Intrusion Detection Systems (NIDSes) are used to detect                       lack of standardization, compatibility, repeatability, and adaptability
+security threats to information systems [1,2]. To detect attacks effec-                   to different domains and environments [11,12]. These problems have
+tively, state-of-the-art NIDSes have used Machine Learning (ML) [3–                       led to flow-based NIDSes that can detect attacks accurately in one net-
+9]. Broadly, NIDSes are either signature-based or anomaly-based sys-                      work environment, while giving unacceptably low levels of detection
+tems [10]. Signature-based NIDSes detect intrusions by comparing                          in others [13,14]. Furthermore, extracting and pre-processing flow-
+network traffic with known attack patterns using a set of rules pre-
+                                                                                          based features require human expertise and tend to be costly and
+determined by security experts. In contrast, anomaly-based NIDSes use
+                                                                                          time-consuming.
+ML algorithms to model normal traffic behavior and deviations thereof
+                                                                                               Unlike their flow-based counterparts, payload-based NIDSes detect
+are considered as attacks. While ML has been applied in both signature-
+                                                                                          attacks using the actual user data exchanged between hosts. While
+based and anomaly-based intrusion detection, most ML-based NIDSes
+                                                                                          payload-based NIDSes inspect payloads of network packets, they do not
+nowadays use anomaly-based approach. With respect to what aspect of
+a network packet is analyzed for intrusion detection, ML-based NIDSes                     use flow-based features for intrusion detection. Instead, packet contents
+can be further classified into flow-based and payload-based.                              are analyzed including any application data. Payload-based methods
+    Flow-based NIDSes use statistical features and packet metadata,                       are particularly useful for detecting attacks that are embedded as user
+collectively referred to as flow-based features, to identify unexpected                   contents. Therefore, payload-based NIDSes are effective in detecting
+changes in network traffic and detect attacks. As they use summarized                     various threats such as application-layer attacks. However, payload-
+information, flow-based NIDSes are more scalable and require less com-                    based NIDSes require large computational resources and have limited
+puting resources than payload-based methods. However, flow-based                          scalability.
+NIDSes have limitations that could hamper their adoption in practice.                          In this paper we focus on an NIDS for offline attack detection,
+Firstly, since they do not analyze user data in network packets, flow-                    i.e., we focus on after-the-fact detection of attacks. This decision is
+based NIDSes lack capability to detect threats concealed within packet                    noteworthy, as it allows us to access information that would not be
+payloads. Secondly, flow-based NIDSes are not usually domain-adaptive                     available to an online NIDS for intrusion prevention. For example, this
+because the features based on which they detect attacks can change
+
+
+  ∗ Corresponding author.
+     E-mail addresses: a.z.kiflay@herts.ac.uk (A. Kiflay), a.tsokanos@herts.ac.uk (A. Tsokanos).
+
+https://doi.org/10.1016/j.array.2024.100349
+Received 7 November 2023; Received in revised form 5 February 2024; Accepted 14 May 2024
+Available online 16 May 2024
+2590-0056/© 2024 The Author(s). Published by Elsevier Inc. This is an open access article under the CC BY license (http://creativecommons.org/licenses/by/4.0/).
+A. Kiflay et al.                                                                                                                     Array 22 (2024) 100349
+
+
+
+
+                                                             Fig. 1. Multimodal ML-based NIDS.
+
+
+allows us to access statistical features that are computed after the end         features using which an ML classifier can detect attacks in one network
+of the traffic flow.                                                             may not enable the detection of the same attacks in another network
+    Our NIDS approach is based on machine learning and uses a mul-               due to inherent unpredictability of network traffic [29,30]. Secondly,
+timodal detection using flow-based and payload-based information,                there is no consensus among researchers on which set of traffic features
+which is shown in Fig. 1. We use a soft-voting approach to merge the             to use in ML-based NIDSes [31]. As a result, current ML-based NIDSes
+predictions of the two detection models.                                         use non-standard set of traffic features, creating compatibility and
+    This paper provides the following scientific contributions:                  adaptability problems across networks [32,33].
+                                                                                     Overall, most ML-based NIDSes tend to use flow-based traffic fea-
+     1. Proposing a multimodal NIDS using flow-based and payload-
+                                                                                 tures for attack detection, thereby focusing more on statistical at-
+        based information (see Fig. 1). To the best of our knowledge, this
+                                                                                 tributes of network traffic rather than packet payloads. Flow-based
+        is the first ML-based NIDS approach that combines flow-based
+                                                                                 NIDSes have minimum data processing costs because they use sum-
+        and payload-based information as a multimodal approach. To
+                                                                                 marized traffic information. However, they can detect only a limited
+        merge the results of the two models, we have used a soft-voting
+                                                                                 range of cyber-attacks since they rely solely on information extracted
+        method.
+                                                                                 from packet headers. Flow-based methods do not scan packet pay-
+     2. Focus on first 32 bytes of protocol payload to minimize payload
+                                                                                 loads, and therefore, their capacity to detect network attacks embedded
+        processing overhead of the NIDS. Previous works focused on
+                                                                                 within application-layer data is relatively lower than payload-based
+        larger packet payload sizes.
+                                                                                 methods [34].
+     3. An experimental evaluation of the multimodal NIDS.
+     4. An algorithm to extract and label the protocol payload from the
+                                                                                 2.2. Payload-based intrusion detection
+        traffic data. This algorithm is needed, as publicly available open
+        source datasets provide labeled flow-based traffic features, but
+                                                                                    Some ML-based NIDSes detect cyber-attacks based on the actual
+        not the extracted protocol payload information.
+                                                                                 user data exchanged during network traffic transactions [35]. In
+   The paper is structured as follows: Section 2 reviews related work            payload-based intrusion detection, data from a network application is
+on flow-based and payload-based intrusion detection. The proposed                analyzed for signs of maliciousness. Previously, some payload-based
+multimodal NIDS is presented in Section 3. Section 4 presents eval-              NIDSes have been proposed. In general, most of these NIDSes are
+uation of the proposed method. In Section 5, the obtained results                designed to classify traffic using either N-gram analysis of the payload
+are presented and comparisons with alternative approaches are made.              or deep learning methods.
+Section 6 concludes the paper.
+                                                                                 2.2.1. N-gram analysis
+2. Related work                                                                      N-grams are used to model the payload distributions of normal and
+                                                                                 attack traffic. Although N-gram methods were originally developed for
+   In this section, previous studies are classified and discussed. With          text categorization [36], they have been applied in network traffic
+respect to data used to detect attacks, the broad categories of ap-              classification and intrusion detection [37–39]. To analyze traffic using
+proaches are flow-based and payload-based methods. While packet                  N-grams, packet payloads are treated as strings of bytes. From each
+metadata from protocol headers and traffic statistics are used in flow-          packet, sets of payload sub-strings of a fixed length are extracted and
+based techniques, payload-based methods use either the actual user               analyzed to identify attacks. Accordingly, by taking the user content
+data of application-layer protocols or features extracted thereof as a           as the basis of attack detection, a number of payload-based NIDSes
+foundation for detecting intrusions [15,16].                                     extracted features using N-grams [40–42].
+
+2.1. Flow-based intrusion detection                                              2.2.2. Deep learning approaches
+                                                                                     Deep neural networks, commonly known as Deep Learning (DL), are
+    In flow-based methods, cyber-attacks are identified by tracking              used to extract representation features from raw data through layered
+changes in the statistical properties of network traffic and packet meta-        processing [43]. DL-based NIDSes usually convert packet payloads to
+data, collectively referred to as flow-based features. Several ML-based          sequences of bytes, characters or images. Recently, DL methods like
+NIDSes monitor flow-based features to detect cyber-attacks [17–22].              Convolutional Neural Networks (CNNs) have been used to detect cyber-
+Therefore, a significant body of previous work in ML-based NIDSes                attacks [44]. CNNs can extract spatial and temporal traffic features
+focused on determining a subset of flow-based features that result in            from packet payloads without manual expert involvement.
+high detection rates [2,23–26]. However, NIDSes that are based on flow               Classical ML and one dimensional (1D) CNN were used to detect net-
+features usually consume high dimensional data as input. As a result,            work attacks in [45]. While CNN was used for feature learning, attacks
+they tend to require high computational resources due to the curse of            were detected using classical ML. In [46], images were generated from
+dimensionality [27,28].                                                          network traffic to detect malware using 2D CNNs. The images were
+    Consequently, ML-based NIDSes that depend on flow-based features             created from raw traffic and passed to CNN which learned the traffic
+have limitations that hamper their adoption in practice. Firstly, many           features. In [47], Marín et al. proposed DeepMAL to detect network
+of the statistical traffic attributes are not domain-adaptive because            traffic flows that contain malware. The authors used a DL model to
+
+                                                                             2
+A. Kiflay et al.                                                                                                                      Array 22 (2024) 100349
+
+
+classify traffic using only raw byte streams without any handcrafted                   Table 1
+ 

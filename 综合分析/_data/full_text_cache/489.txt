@@ -1,0 +1,860 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025 11447
+
+ Mining Multi-Scale Spatial-Frequency Clues for
+ Unsupervised Intrusion Detection
+Chenyang Qiu , Graduate Student Member, IEEE, Guoshun Nan , Member, IEEE, Caiyi Zhang, Chenrui Liang,
+ Ruiqi Dai, Hongchen Yang, Shiyuan Liu , Zhili Zhou, Member, IEEE, Changhua Pei,
+ and Xiaofeng Tao , Senior Member, IEEE
+
+ Abstract—Unsupervised network-based intrusion detection
+system (UNIDS) identifies suspicious traffic and alerts administrators without using any traffic labels. Existing Graph
+Convolutional Network (GCN)-based UNIDS approaches show
+great potential with collaboratively utilizing traffic features and
+network topologies. However, these methods suffer from an
+excessively high false-positive rate (FPR), e.g., 3.27% FPR in
+a supervised NIDS approach, while increases dramatically to
+19.37% under the unsupervised setting. We reveal that the
+high FPR stems from a single-scale spatial-frequency learning Fig. 1. Illustration of a GCN-based UNIDS. The left is encrypted traffic
+paradigm, which blurs the distinction between benign and data, with only available traffic features and network topology. The former
+malicious traffic and misleads UNIDS systems. Therefore, we includes the statistical description of the traffic flow, i.e. source IP, flow
+propose a Multi-scale Spatial-Frequency Intrusion Detection duration, etc. The network topology and features are fed into UNIDS in a
+System (MSF-IDS) to mitigate the high FPR. Specifically, we read-only way. Then the UNIDS aggregates the traffic features by topology
+ in an unsupervised way and alerts the suspected ones to administrator for
+propose multi-scale frequency encoders, thereby differentiating
+ further response. More specific threat model of this paper is available in
+abnormal feature patterns. Then we propose NAPH as a spatial Appendix P (see supplementary material).
+encoder, mining intrinsic abnormal topology patterns by tracking
+tens of thousands of evolving traffic nodes. To the best of
+our knowledge, NAPH takes the first step toward differentiable
+persistent homology analysis over dynamic network data. We datasets, and an executable application are available at https://
+also develop an executable application for NAPH to provide github.com/qcydm/MSF-IDS
+easy-access visualization insights. Finally, a self-supervised rep- Index Terms—Unsupervised intrusion detection, network securesentation augmentor and an intrusion detector are proposed rity, anomaly detection.
+to refine and highlight the attack-specific information. Equipped
+with MSF-IDS, administrators effectively identify the unknown
+attack traffic, freeing security staff from labor-intensive engi- I. I NTRODUCTION
+neering. Extensive experiments demonstrate the superiority of
+MSF-IDS, including binary classification, multi-classification,
+online intrusion detection, and visualized discussions. Our codes, N ETWORK intrusion detection system (NIDS) [1], [2],
+ [3], [4] forms a security frontline in network systems,
+ aiming to filter out malicious network attacks in an automatic
+ way, such as man-in-the-middle attacks (MITM) [5], and
+ Received 3 March 2025; revised 28 July 2025 and 29 September 2025; denial of service (DoS) [6]. These attacks can be considered
+accepted 30 September 2025. Date of publication 10 October 2025; date
+of current version 29 October 2025. This work was supported in part by outliers or anomalies, as they may involve different characterthe National Key Research and Development Program of China under Grant istics in both traffic features and traffic topologies from
+2022YFB2902200 and in part by the General Program of National Natural the benign ones [7]. However, most of the existing NIDS
+Science Foundation of China under Grant 62471064. The associate editor
+coordinating the review of this article and approving it for publication was methods are built on inherent anomaly patterns, e.g. blacklist
+Prof. Mika Ylianttila. (Corresponding author: Guoshun Nan.) [8], whitelist [9], or known attack labels [10], struggling to
+ Chenyang Qiu, Guoshun Nan, Caiyi Zhang, Chenrui Liang, Ruiqi identify new attacks accurately, such as sophisticated phishing
+Dai, Hongchen Yang, Shiyuan Liu, and Xiaofeng Tao are with the
+National Engineering Research Center for Mobile Network Technolo- schemes, using deep fake technology to impersonate trusted
+gies, Beijing University of Posts and Telecommunications, Beijing sources [11]. With the rapid development of mobile online
+100876, China, and also with the Beiyou Shenzhen Institute, Shen- business and wireless communications [12], [13], [14], [15],
+zhen 518057, China (e-mail: cyqiu@bupt.edu.cn; nanguo2021@bupt.edu.cn;
+zcy qyq@bupt.edu.cn; lcr2021211321@bupt.edu.cn; dairuiqi@bupt.edu.cn; unknown network attacks show an escalation in both sophistiyanghongchen@bupt.edu.cn; liu sy@bupt.edu.cn; taoxf@bupt.edu.cn). cation and frequency. According to Splunk’s “State of World
+ Zhili Zhou is with the School of Artificial Intelligence, Guangzhou Uni- Security 2023” [16], 65% of respondents indicated that they
+versity, Guangzhou 510006, China (e-mail: zhou zhili@gzhu.edu.cn).
+ Changhua Pei is with the Computer Network Information Cen- have observed an increase in attempts at unknown attacks, a
+ter, Chinese Academy of Sciences, Beijing 100045, China (e-mail: 39% increase over the previous year’s survey. The surge of
+changhuapei@gmail.com). unknown attacks in mobile online businesses leaves security
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TIFS.2025.3620090, provided by the authors. teams exhausted and overextended. This urgently calls for
+ Digital Object Identifier 10.1109/TIFS.2025.3620090 an intelligent unsupervised network-based intrusion detection
+ 1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+11448 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 2. (a)(b)(c)(d) show that the GCN-based UNIDS filters out high-frequency information in spectral view, referred to as single-scale frequency learning,
+and leads to high FPR. (e)(f) show that the single-scale topology learning exacerbates FPR in spatial view.
+
+system (UNIDS) capable of identifying unknown and evolving traffic representations indistinguishable and misleads UNIDS.
+attacks, especially for the abnormal spatial-frequency patterns. In short, single-scale spatial-frequency learning focuses only
+ The existing unsupervised NIDS methods involve three cat- on a narrow frequency range and filters out high-frequency
+egories: the signature-based ones [17], the anomaly-based ones attack information, causing traffic representations blur between
+[18], [19], and the deep learning-based ones [20], [21]. The benign and malicious traffic, thus leading to a high FPR.
+signature-based ones are built on pre-defined anomaly patterns, Q1: Single-scale frequency learning. From the spectral
+i.e. blacklist [22]. The attack traffic can easily escape, once the view, GCN-based UNIDS are low-pass filters [18], [42].
+pre-defined patterns are not matched. The anomaly-based ones They collaboratively capture feature and topology information
+can automatically mine the attack patterns in a data-driven by aggregating neighboring traffic features [43]. In this way,
+way, i.e. clustering methods [23], [24], one-class classifications potential attack information will be filtered out, making it
+[25], [26], etc. Lately, deep learning-based ones are popular hard for UNIDS to differentiate between benign and attack
+in UNIDS, freeing security staff from labor-intensive hand- traffic, thus causing a high false positive rate. As shown in Fig.
+crafted traffic feature engineering, i.e. self-supervised [27], 2(b) (c), we depict the frequency distribution of benign and
+[28], [29], [30], reconstruction-based [27], [31], [32], and attack traffic in 100 and 300,000 samples, respectively.1 We
+graph convolution network-based [33], [34], [35], [36], [37], observe that the frequency distributions of attack traffic have
+[38]. The GCN-based UNIDS utilizes both traffic features and significant ‘right-shift’ phenomena, compared to the benign
+topology for intrusion detection, as shown in Fig 1, showcasing traffic. It reveals that high-frequency information commonly
+great potential in UNIDS tasks. exists in attack traffic, an important evidence for distinction.
+ Although promising, our empirical analyses indicate that Fig. 2(d) further shows that GCN-processed features undergo
+existing GCN-based UNIDS faces a high false positive rate a left-shift, compared to the without one. This observation
+(FPR) problem As shown in Fig. 2(a), we conduct unsuper- uncovers that the GCN learning paradigm will filter out and
+vised intrusion detection on three representative baselines and suppress the high-frequency information in attack traffic.
+compare the FPR on the CIC-TON-IoT dataset [39]. AGNN Q2: Single-scale spatial learning. Moreover, the topology
+[40], a GCN-based approach, achieves 88.48% F1-score, out- learning of GCN-based UNIDS exacerbates the suppression of
+performing the deep-learning baseline SOM-DAGMM [21] important high-frequency traffic information. As shown in Fig.
+at 78.13%. However, AGNN’s FPR is 21.33%, significantly 2(e), ‘left-shift’ phenomenons exist in different layers of GCN,
+higher than the 15.88% of SOM-DAGMM. Furthermore, we and the shift rates increase as the GCN layer increases. Finally,
+report the FPR of an existing SOTA-supervised intrusion we verify our hypothesis quantitatively using three metrics:
+detection approach 3D-IDS(S) [41], as low as 3.27%. Then entropy, measuring the redundancy or uncertainty, FPR, and
+we utilize a cluster model to replace the original classifier for mean squared error, measuring the representation similarity.
+unsupervised intrusion detection in 3D-IDS, referred to as 3D- As shown in Fig. 2(f), the entropy and FPR increase with the
+IDS(U). Under unsupervised settings, the FPR of 3D-IDS(S) GCN layer, aligning with the hypothesis on single-scale spatial
+rapidly increases to 19.37%, almost 5 times than 3D-IDS(S). learning, while MSE decreases, revealing that traffic repre-
+These results pinpoint the high FPR as the key bottleneck sentations become increasingly similar and indistinguishable
+of GCN-based UNIDS. Boosting GCN-based UNIDS per- between attack and benign traffic.
+formance by mitigating its FPR rates is feasible and In response to the above discussion, we raise a crucial
+prospective. question: ‘How can a UNIDS model automatically preserve
+ We attribute the high FPR problem to single-scale spatialfrequency learning in GCN-based UNIDS. We present 1 More frequency distribution analyses are available in the Appendix L (see
+discussions Q1 and Q2 to understand why this scheme makes supplementary material).
+QIU et al.: MINING MULTI-SCALE SPATIAL-FREQUENCY CLUES FOR UNSUPERVISED INTRUSION DETECTION 11449
+
+ TABLE I
+T HE C OMPARISONS OF THE R ELATED W ORKS , W HERE X M EANS T HAT H AS THE C APABILITY, AND × M EANS T HAT D OES N OT H AVE THE C APABILITY
+
+multi-scale spatial-frequency traffic information to high- • We propose multi-scale spatial-frequency encoders to diflight attacks, thus reducing FPR and boosting performance?’. ferentiate the salient anomaly patterns in traffic topologies
+Achieving this goal is challenging. First, existing spec- and features, boosting the performances of unsupervised
+tral GCNs focus on multi-scale frequency preserving, while intrusion detection.
+the effective multi-scale topology learning is underexplored • We firstly propose a novel NAPH module to track multi-
+[43], [44], [45], [46]. Second, the persistent homology (PH) scale topological information over dynamic networks.
+approach [47], [48] showcases great potential in multi-scale NAPH can be seamlessly incorporated into end-to-end
+spatial learning in anomaly detection [49], [50], biomedicine deep learning approaches. We also developed an easy-
+[51], and finance [52], etc. However, PH faces two challenges access NAPH app for visualized topological insights.
+when deployed in real-world dynamic intrusion detection: • We demonstrate the effectiveness of the proposed
+ MSF-IDS in various benchmarks, including binary clas-
+ • Challenge 1. Static data only: PH is specially designed sification, multi-classification, online intrusion detection,
+ for static data, e.g., data cloud. Since traffic data evolve visualized discussions, etc.
+ over time, efficiently mining abnormal spatial patterns
+ from dynamic traffic streams remains challenging. II. R ELATED W ORK
+ • Challenge 2. Scalability: PH provides multi-scale spatial A. Unsupervised Network Intrusion Detection
+ insights through persistent diagrams, but the scalability
+ The existing unsupervised network intrusion detection sysof this paradigm is insufficient for large-scale dynamic
+ tems (UNIDS) can be classified into three categories: the
+ traffic data. Bridging the gap between PH and an end-tosignature-based ones [17], the anomaly-based ones [18],
+ end UNIDS framework for tens of thousands of evolving
+ [19], and the deep learning-based ones [20], [21]. In the
+ traffic nodes remains challenging.
+ deep learning-based ones, the state-of-the-art methods are the
+ We propose a novel UNIDS approach MSF-IDS, aiming to GCN-based ones [33], [34], [35], [37]. Zhang et al. [53]
+mitigate the high FPR and boost detection performance. It has systematically reviews recent GCN-based intrusion detection
+three key components, multi-scale spatial-frequency encoders, approaches, pointing that ‘reducing the FPR within a secure
+a self-supervised representation augmentor, and an unsuper- range’, which poses practical challenge to existing GCN-based
+vised intrusion detector. In the proposed spatial-frequency methods and also aligned with our study motivation. Among
+encoders, we present wavelet-based dual graph filters to them, GLD-Net [54] augments traffic features with dynamic
+efficiently preserve multi-scale frequency information. As DDoS topology graphs, but still relies on vanilla GCN layers
+for spatial encoders, we propose a differentiable network- that suffer from over-smoothing. GLAD-PAW [55] leverages
+aware persistent homology, i.e., NAPH, to track the abnormal weighted graph attention to capture session-level anomalies,
+multi-scale spatial patterns. Specifically, we propose a time yet its graph-level pooling strategy aggregates all nodes
+filtration for spatial mining over dynamic networks and address uniformly, thereby diluting fine-grained multi-scale patterns.
+Challenge 1. Then we propose a novel persistent heatmap Most related to our works is EULER [33], an unsupervised
+tool for end-to-end intrusion detection, benefiting abnormal GCNs and Recurrent Neural Networks (RNNs) stacking-based
+topological mining in tens of thousands involving traffic nodes, dynamic intrusion detection technique. The key differences
+and address Challenge 2. Finally, the augmentor and detector between our MSF-IDS and EULER lie in the following two
+refine and highlight attack-specific information without using aspects: 1) MSF-IDS preserves multi-scale feature information
+any prior knowledge. Our specific contributions are as follows: to mitigate high FPR, while EULER tends to filter out the
+ high-frequency anomaly information by using traditional GCN
+ • We present MSF-IDS, a novel unsupervised intrusion schemes. 2) MSF-IDS mines the anomaly topology patterns by
+ detection approach to mitigate the false positive rate. To tracking multi-scale topology information, while EULER uses
+ the best of our knowledge, we are the first to qualitatively a single-scale spatial learning strategy, making representations
+ and quantitatively uncover the underlying reason. blur and misleading the UNIDS.
+11450 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+B. Spectral Graph Neural Networks TABLE II
+ Frequency-based graph neural networks, or graph filters, ACRONYMS TABLE
+focus on handling the GCNs by graph signal optimization
+[56], [57], [58], [59], [60]. The pioneering work is the GCN
+[43], a low-pass filter, using a simplified first-order Chebyshev
+kernel. The following works focus on different-pass filters via
+various optimizations, i.e. low-pass, high-pass, and all-pass.
+Additionally, there is a line of works designing graph neural
+networks in spectra view, e.g. ESGNN [61], BWGNN [62].
+The frequency-based GCNs have shown a broad picture and
+potential in graph mining e.g. network intrusion detection.
+BWGNN is the most similar work to us. Ours differs from
+it in two aspects: 1) We utilize dual graph filters to preserve
+the multi-scale traffic frequency information more efficiently,
+while BWGNN uses a single graph filter to preserve information; 2) We propose a persistent homology-based approach to
+mine traffic networks explicitly, while BWGNN has no other
+explicit topology learning design.
+ a NAPH application to support visualization and easy-access
+C. Persistent Homology and Multi-Scale Topology Mining analysis, which the listed approaches do not equipped.
+
+ Persistent Homology [47], [48], [67], [68] analyzes the
+topological structure across different scales. As a Topological III. P RELIMINARIES
+Data Analysis (TDA) approach, PH identifies and tracks the In this section, we define network traffic flow and its
+‘birth-death’ progression [68], such as connected components, notations, and then provide Definitions 2 to 5. They progresholes, and voids in specific topologies. Specifically, the “birth” sively introduce the theoretical basis of persistent homology
+of a homology class is defined as the scale i at which it first to help readers quickly understand it. They also form the
+appears, while “death” refers to the smallest subsequent scale necessary theoretical foundations of the following proposed
+ j where it no longer exists [47]. In this way, dynamic changes Definitions 6 to 8. Finally, they are used to prove the consisat different scales can be used for downstream tasks, such as tency of our proposed NAPH in Theorem 1. We also list an
+intrusion detection. More background about PH are available acronyms Table II, thus enhancing the readability. The detailed
+in Appendix J (see supplementary material). Persistent homol- notations used in the paper are available in Appendix A (see
+ogy has been applied in various fields, including biology [51], supplementary material).
+finance [52], and anomaly detection [49], [50]. However, to Definition 1 (Network Flow): Given a network topology G,
+the best of our knowledge, the existing PH approaches are considered as an adjacency matrix, vi , v j ∈ G are device nodes
+established on static data points or data point clouds [68]. with IP address. Fi j (t) = (vi , v j , t, ∆t, Fi j ) is defined as a traffic
+Second, scalability remains an ongoing challenge in this field, flow at time t, from the source IP vi to the destination IP v j ,
+especially when dealing with large-scale dynamic datasets with duration ∆t and traffic feature Fi j .
+[65]. To address these two challenges, we propose NAPH, a The MSF-IDS inputs are network topology G and features
+differentiable PH approach, achieving end-to-end multi-scale Fi j . The MSF-IDS outputs are traffic flow types, e.g., benign,
+topological analysis over large-scale dynamic network. attacks. Then we provide the following concepts for our
+ In multi-scale topological information mining, a line of topological NAPH algorithm.
+UNIDS focused on multi-scale topology in traffic [21], [36], Definition 2 (Rips Complex): The Vietoris-Rips complex,
+[69], [70], [71], [72]. Most related to our work is DMTR referred to as the Rips complex, is constructed from a metric
+[36]. The key differences between DMTR and our work are space (X, d) with a specified distance threshold  > 0:
+two-fold: first, DMTR preserves only multi-scale topology
+information; second, we propose an augmentor and a intrusion R (X) = {σ ⊆ X : ∀u, v ∈ σ, d(u, v) ≤ }. (1)
+detector to refine and highlight attack-specific information, The Rips complex consists of subsets of points that meet
+while DMTR directly utilizes topology to identify anomalous specific distance criteria, and these subsets are closed under
+traffic. inclusion. If |σ| = k + 1, the subset σ is called a k-simplex,
+ Finally, we provide a comparison Table I. Specifically, e.g., points, edges, triangles and tetrahedrons corresponding to
+compared to the existing methods, the proposed MSF-IDS 0-, 1-, 2-, and 3-simplices.
+achieves multi-scale spatial-frequency information mining and Definition 3 (Filtration): Filtration decomposes a topologiself-supervised refinement to effectively reduce FPR. Further- cal space into nested subcomplexes. Given a topological space
+more, the proposed NAPH module can be utilized in dynamic X and increasing distance thresholds 0 < 1 < . . . < m , we
+scenarios in an end-to-end manner. Especially for large-scale construct nested Rips complexes Ri (X) such that:
+dynamic networks, NAPH tracks the multi-scale topology and
+identify anomalies with high scalability. We also developed R0 (X) ⊆ R1 (X) ⊆ . . . ⊆ Rm (X). (2)
+QIU et al.: MINING MULTI-SCALE SPATIAL-FREQUENCY CLUES FOR UNSUPERVISED INTRUSION DETECTION 11451
+
+ Fast Daubechies Wavelet Transformation: First, we introduce the following Daubechies wavelet transformation, which
+ is broadly used as an implementation of fast wavelet transformation, FWT [73]:
+ Fig. 3. 0-,1-,2-, and 3-simplex from left to right. Z ∞  
+ 1 t−b
+ Wψ (a, b) = √ x(t)ψ dt, (4)
+ a −∞ a
+ Each Ri (X) builds topology elements of different scales.
+However, the above-defined trivial and fundamental topology where a and b are preset scale hyperparameters. In practice,
+complexes are not enough to mine subtle topology anomalies Eq. 4 is computed using numerical integration techniques, such
+in traffic data. We introduce the following definitions: as Monte Carlo methods. Then the raw traffic features Fi j can
+ Definition 4 (Homology Group): Given a Rips com- be transformed as Wψ Fi j .
+plex, homology group Hk (Ri (X)) is used to quantify its The advantages of Daubechies wavelet are two-fold:
+k-dimensional high-order topological information, such as 1) Daubechies wavelet effectively extracts low and high
+holes or connected components. multi-scale frequency information, the former contains key
+ The details of Hk (Ri (X)) are available in Appendix B information of traffic flow, while the latter has the subtle
+(see supplementary material). The homology group benefits information to distinguish the anomaly traffic. 2) Daubechies
+us from mining the high-order information, e.g., holes, in a wavelet boosts the efficiency of frequency information pregiven topology. In this way, we have established the high-order serving as a pre-wavelet. it reversibly compresses raw features
+topology foundations for the following persistent homology, with 75% compression efficiency theoretically. In practice, we
+benefiting the mining of anomaly topology patterns. can efficiently conduct Daubechies wavelet transformation by
+ Definition 5 (Persistent homology): Given a series of FWT. The specific compression efficiency analysis is available
+homology groups, generated by nested Rips complexes in in Appendix E (see supplementary material). We also verify
+Definition 4, persistent homology aims to conduct topological the effectiveness of Daubechies wavelet in the Ablation Study
+analysis, after employing natural homomorphisms over these section.
+groups: Multi-Scale Beta Wavelet Transformation: Then we use
+ beta kernel-based wavelets to preserve multi-scale frequency
+ Hk (R0 (X)) → Hk (R1 (X)) → · · · → Hk (Rm (X)). (3) information in Wψ Fi j . We have discussed why beta wavelets
+ are capable of preserving multi-scale frequencies, e.g., the
+Through these mappings, persistent homology tracks the high-frequency attack information in Appendix C (see supchanges of homology groups Hk (R (X)) across different scales plementary material). Specifically, we introduce a probability
+ ∈ {0 , . . . , m }. density function of Beta distribution β p,q (w):
+ More information about PH is available in Appendix J (see
+ 1
+ 8
+supplementary material), which analyses topological informa- < w p (1 − w)q if w ∈ [0, 1]
+tion over a series of homology groups in different scales. β p,q (w) = B(p + 1, q + 1) (5)
+ 0 otherwise,
+ :
+However, the traditional PH is limited by the filtration with
+preset  and hard to apply on the real-world evolving network
+ where p, q ∈ R+ , B(p + 1, q + 1) = (p+q+1)!
+ p! q!
+ is a constant,
+data, e.g., traffic network.
+ and w ∈ [0, 1] covers the complete spectral range of traffic
+ features.
+ IV. M ODEL We add a restrictions p, q ∈ N+ to ensure β∗ (p, q) is a
+ The proposed MSF-IDS consists of three critical modules, polynomial, which is same as the previous work [62]. Then
+as shown in Fig. 4. We propose frequency and spatial lenses the Beta wavelet transform W p,q can be written as:
+that highlight spatial-frequency information across multi-scale (L) p (I − L)q
+views. Then we propose spatial-frequency encoders by equip- W p,q = , (6)
+ B(p + 1, q + 1)
+ping the lenses. Finally, we propose augmentor and a detector
+for unsupervised intrusion detection. where L is the Laplacian matrix of traffic features. Let p+q =
+ C be a constant and Beta wavelet transform W is constructed
+ by a group of C + 1 Beta wavelets with the same order:
+A. Multi-Scale Spatial-Frequency Lenses
+ W = W0,C , W1,C−1 , · · · , WC,0 .
+ 
+ (7)
+ 1) Wavelet Kernels-Based Frequency Lenses: Given raw
+traffic features Fi j , frequency lenses serve as a plug-and- Then the raw traffic feature are transformed into different
+play module, preserving multi-scale frequency information. frequencies as follows:
+Mathematically, high-frequency information corresponds to
+ F̂i j = W(Wψ Fi j ). (8)
+features with high eigenvalues. From this perspective, a feasible approach is computing the eigenvector of each eigenvalue. The frequency lenses effectively preserve the subtle high-
+However, this naive method is time-consuming. frequency information, which is filtered out by traditional
+ To this end, graph filters are used to preserve information GCN-based schemes. The pseudo-code of multi-scale fremore efficiently. Specifically, we propose the following dual quency encoders is available in Appendix F (see supplemengraph filters, involving two steps: tary material).
+11452 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 4. The architecture of the proposed MSF-IDS. MSF consists of three key components. First, the traffic features and traffic network are fed into the
+Spatial-Frequency Encoders. The traffic features are handled by the frequency encoder (top) to preserve multi-scale feature information. The traffic network
+is fed into the spatial encoder (bottom) to track and mine multi-scale topology information. Then the multi-scale features are refined by the Representation
+Augmentor. Finally, we concatenate the refined feature and topology representations and feed them into the Intrusion Detector to identify suspect traffic.
+
+ The frequency lenses help UNIDS effectively preserve to the nested Rips complexes constructed by filtration in
+subtle high-frequency information, which is filtered out by Def. 3.
+traditional GCN-based schemes. The pseudo-code of the We rigorously prove the equivalence in Appendix D (see
+multi-scale frequency encoders is given in Appendix F (see supplementary material) from the perspective of graph isosupplementary material). We verify this benefit empirically in morphism. Equipped with Theorem 1, we bridge the gap
+Discussion RQ1. between NATA and persistent homology, terming it network-
+ 2) Persistent Homology-Based Spatial Lenses: In this sec- aware persistent homology (NAPH). The input of NAPH is
+tion, we formally propose spatial encoders NAPH to track solely topological information, i.e., network topology. In this
+multi-scale topology information in an evolving traffic net- way, NAPH tracks multi-scale topology patterns over evolving
+work. We first propose a specialized filtration as follows: traffic networks, thereby addressing Challenge 1. NAPH
+ Definition 6 (Time Filtration): A topological space X is involves three steps and its pseudo-code is given in Appendix
+decomposed into a series of time-based nested Rips com- G (see supplementary material).
+plexes, defined as R(t) (X) for time points t0 , t1 , . . . , tm : We provide three steps to incorporate NAPH into a learnable
+ UNIDS task. NAPH is proposed as an end-to-end topology
+ R(t0 ) (X) ⊆ R(t1 ) (X) ⊆ · · · ⊆ R(tm ) (X). (9) learning module, thereby addressing Challenge 2. More
+ discussions on scalability are available in Appendix R (see
+At each time point ti , R(ti ) (X) includes all pairs of points
+ supplementary material).
+(xi , x j ) such that d(xi , x j ) ≤ (ti ), where d represents the
+distance between points xi and x j . This construction allows i) Constructing Nested Traffic Complexes By Time Filtraus to observe and analyze the changes in the complexes over tion: For a target traffic node x, we construct its multi-scale
+time and varying distance thresholds. nested complexes Rt (G(x, t) by the proposed time filtration.
+ The proposed time filtration enables tracking multi-scale Rt (G(x, t) contains topological information over dynamic nettopology in an evolving time stream using (ti ), rather than work data, i.e., constructing the network complexes using
+a predefined . Equipped with time filtration, we propose the time information t. Note that our NAPH and learnable repfollowing network-aware topology analysis (NATA), enabling resentations are established on the target traffic node and its
+tracking multi-scale topology over dynamic traffic data. sub-network, ensuring the scalability of NAPH.
+ Definition 7 (NATA): Given a node in traffic network ii) Generating Traffic Topological Summaries via NAPH:
+x ∈ G, where each node x ∈ G has a timestamp T (x). The node Equipped with the equivalence Theorem 1, we employ persisx and its connections form a sub-network G(x, t) indexed by tent homology [49] on the traffic nested complexes Rt (G(x, t)
+time t. By introducing time filtration, we generate a series of in step 1. PH generates the topological summary of each
+nested topological complexes {Rt }t∈R , where t0 < t1 < · · · < tm : nested complex. The topological summary can be considered
+ as a profile with evolving multi-scale topological information.
+ Rt0 (G(x, t)) ⊆ Rt1 (G(x, t)) ⊆ · · · ⊆ Rtm (G(x, t)). (10)
+ Specifically, we generate the barcode bar(x, t) by analyzing
+ Specifically, Eq. 10 specifies the topological space X in the high-order topological birth-death relationships of traffic
+Eq. 9 to dynamic network topological space G(x, t), i.e., complexes. Then the persistent diagrams PD(x, t) with highly
+dynamic network traffic. Each complex Rti contains rich topo- refined multi-scale topological information can be generated
+logical information of evolving traffic flow within a given time from barcode bar(x, t).
+window. Finally, Theorem 1 proves the consistency between iii) Generating Distinguishable Persistent Heatmap: By
+NATA and PH theory, enabling multi-scale topology tracking comparing the differences between diagrams, the persistent
+over dynamic traffic networks. diagram PD(x, t) with dynamic information is distinguishable
+ Theorem 1 (Equivalence): The constructed nested topolog- for the topology anomalies. However, the diagram PD(x) is
+ical complexes in NATA (Def. 7) are topologically equivalent not learnable for end-to-end intrusion detection, which means
+QIU et al.: MINING MULTI-SCALE SPATIAL-FREQUENCY CLUES FOR UNSUPERVISED INTRUSION DETECTION 11453
+
+PD(x, t) is non-scalable. To enhance scalability, we develop a 1) Generating Dynamic Node Representations: We generpersistent heatmap tool to bridge the gap between persistent ate dynamic node representation from evolving traffic edge
+diagrams and learnable end-to-end intrusion detection. Specif- representations following [41]. Specifically, as for a multiically, we have the following definition: scale traffic flow Fi j , we generate the representation of the
+ Definition 8 (Persistent Heatmap): Given dynamic network node i at t time as Fi (t) = Fi (t− ) + mi (t), where Fi (t− ) is the
+data, the persistent heatmap extracts time-aligned statistical historical representation of node i with initial value Fi (0) is
+information from the persistence diagram, visualizing the 0. mi (t) is the memory of node i at t time. Now, we formally
+multi-scale topology information in color intensity. denote F as the updated dynamic node representations, where
+ Fi ∈ F, i ∈ G. The detailed updating rules are available in
+ Heatmap(x) = fH (PD(x, t)), (11) Appendix I (see supplementary material).
+ 2) Augmenting Representations By Dual-View graphs:
+where fH is a transformation and the pseudo-code of fH is Then we generate two graph views G1 and G2 , using the
+available in the Appendix H (see supplementary material). The corruption function [74]. The function randomly removes a
+persistent heatmap benefits the following spatial encoder to small portion of edges from G and also randomly masks a
+encode distinguishable topology patterns into learnable repre- fraction of dimensions with zeros in node features Fi . The
+sentations, achieving visualisable, learnable, and differentiable augmented representations of each graph view as:
+for the multi-scale topological information in dynamic network
+data. Z = ReLU(ĜReLU(ĜFW (0) )W (1) ), (14)
+ We also incorporate the above three steps into an executable where ReLU is an activate function, W , W ∈ WR are shared
+ (0) (1)
+application, benefiting user personal topological analysis and parameter weights between two graph views, Ĝ is normalized
+visualization. NAPH can also seamlessly incorporate into your laplace matrix of G. We simulate disturbance and noise in realown end-to-end deep learning model. The details of our world traffic networks by augmenting feature representations
+NAPH app are available in Section VI and Appendix X (see via corrupted dual-view graphs.
+supplementary material). 3) Refining Representations By Self-Supervised Learning:
+ Finally, we refine the node representations F by proposing a
+ self-supervised loss. The refinement also makes traffic features
+B. Multi-Scale Spatial-Frequency Encoders more distinguishable, using an agreement constraint between
+ Equipped with multi-scale spatial-frequency lenses, we dual-view graphs. Specifically, we sample the contrastive
+formally present spatial-frequency encoders for end-to-end samples from augmentations and minimize LR as follows:
+intrusion detection. First, we propose the following frequency 0 0 11
+encoder for raw traffic features Fi j :
+ X X
+ min LR = @−S1 + log @ [exp(S2 ) + exp(S3 )]AA ,
+ WR
+ i∈G j∈G−i
+ Fi j = E f (Fi j ) = CONCAT(W(Wψ Fi j ), Fi j ). (12) (15)
+ sim(z1i ,z1 j ) sim(z1i ,z2 j )
+ where S1 = sim(zτ1i ,z2i ) , S2 = τ , S3 = τ , z 1i and
+Fi j carries the multi-scale frequency information in the raw
+ z2i denote embeddings node i on Z1 and Z2 respectively, G−i
+feature Fi j . It will be fed into the following representation
+ is the node set excluding node i, sim(·) is the cosine similarity
+augmentor for refinement. Furthermore, we propose the folbetween the two embeddings, and τ is a temperature parameter.
+lowing spatial encoders:
+ The features can be strengthened to counteract the noise by
+ H x = E s (G(x)) = FLAT(Heatmap(x)), (13) the refinement, without using any labels or prior knowledge.
+
+where G(x) is a sub-network of node x, E s is a spatial encoder. D. Unsupervised Intrusion Detector
+Specifically, a simple yet effective flatten function FLAT The refined feature representations Z can be generated from
+as E s can be used to transform the two-dimensional image Eq. 14. We concatenate Z and the topology representations H
+Heatmap(x) into learnable representation H x ∈ H, x ∈ G. as the final representations Z. Then we propose a subspace
+More details are available in Appendix Q (see supplementary clustering scheme to identify the attack or suspicious traffic in
+material). an end-to-end manner. The detector first derives each traffic
+ node’s similarity matrix Q and then outputs the type of each
+ traffic flow, e.g., benign, attack.
+C. Self-Supervised Representation Augmentor
+ min kZ − QZk2F + λ1 kQk2F s.t. diag(Q) = 0, (16)
+ We propose an augmentor to refine the generated multi-scale Q
+
+frequency information. The rationale is two-fold: 1) contrastive where k · kF is a matrix F-norm. Then we generate the
+rules automatically generate negative samples. We refine the traffic membership C = Softmax(MLP(Z)) by matching the
+traffic features far from the negative samples without using similarity matrix Q, minWM L M = kCCT − S k2F . We have the
+any labels or prior knowledge. 2) The proposed augmentor following intrusion detection loss Lin :
+simulates real-world noise and disturbances. Through self- min Lin = LR + L M . (17)
+supervised learning, representation refinement and generation WR ,W M ,C
+will be more robust and reliable for UNIDS. The Augmentor Finally, well-trained traffic memberships C can be utilized for
+involves three steps: unsupervised intrusion detection.
+11454 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE III
+ C OMPARISONS OF B INARY C LASSIFICATION ON F IVE P UBLIC DATASETS . T HE R ESULTS A RE AVERAGE S CORES OF T HREE -T IME R EPETITIONS
+
+ V. E XPERIMENTS Metrics: We follow the previous work [82] to evaluate all
+A. Experimental Settings baselines’ performances by two commonly used metrics in
+ intrusion detection, F1-score and ROC-AUC score (AUC).
+ 1) Datasets: 2 We performed experiments using 5 extensively utilized datasets that capture significant network traffic
+within the Internet of Things (IoT). CIC-ToN-IoT [39] is B. Main Results
+derived from the ToN-IoT dataset [75] using the CICFlowMe-
+ 1) Comparisons of Binary Classification: The proposed
+ter tool [76] The dataset includes 5, 351, 760 flows, with
+ MSF-IDS outperforms 9 advanced baselines on 5 benchmarks
+53.00% classified as attack samples and 47.00% as benign
+ for the binary classification task. Binary classification idensamples. CIC-BoT-IoT [77] is derived from the existing BoTtifies whether a traffic flow is benign or an attack, which
+IoT dataset using the CICFlowMeter tool [78]. The dataset
+ is conducted on the datasets after proper data sampling. For
+contains 6, 714, 300 traffic flows, with 98.82% classified as
+ each comparison method, we run our experiment 3 times and
+attack samples and 1.18% as benign samples. NF-UQ-NIDS
+ report the mean and variance values. The reproducible results
+[79] is a comprehensive dataset that merges multiple smaller
+ in Table III show that our MSF-IDS consistently performs the
+datasets to form a larger, universal NIDS dataset. It includes
+ best among 9 baselines over the five benchmarks, showing the
+11, 994, 893 records, with 76.77% benign flows and 23.23%
+ superiority of our method in unsupervised intrusion detection.
+attack flows. NF-UNSW-NB15-v2 [80] is NetFlow-based,
+ Specifically, compared to EULER, the previous state-of-theoriginating from the UNSW-NB15 dataset [81]. The dataset
+ art GCN-based UNIDS approach, MSF-IDS achieves 5.50%
+contains 2, 390, 275 traffic flows, with 3.98% identified as
+ higher F1-score over the CIC-ToN-IoT dataset. MSF-IDS
+attack samples and 96.02% as benign samples. NF-BoT-IoTalso outperforms SOM-DAGMM, the previous state-of-thev2 [80] is an IoT NetFlow-based dataset that extends the
+ art deep learning-based method on F1-score by 1.84 points
+NF-BoT-IoT dataset [79]. The dataset comprises a total of
+ and on AUC by 26.39 points over the NF-UNSW-NB15-v2
+37, 763, 497 data flows, of which 99.64% are attack samples
+ dataset, a challenging benchmark for UNIDS. We attribute
+and 0.36% are benign.
+ the gains stem from 1) multi-scale spatial-frequency encoders
+ 2) Configurations: All experiments and performance
+ that differentiate anomaly patterns, 2) augmentor that highreports are conducted on a machine with Intel Xeon Gold
+ lights attack-specific information. To address data imbalance
+6330@ 2.00GHz, RTX A40 GPU, and A100 GPU, and on
+ issues, some strategies have been adopted, e.g., re-weight [83]
+the above 5 datasets with proper data sampling. We set the
+ and oversampling [84]. We also observed that the AUC in
+frequency scale parameter C in the beta wavelet to 4. In
+ NF-UQ-NIDS, and F1-score in NF-UNSW-NB15-v2 remain
+NAPH, we predefine the hops of neighbor nodes to 2 with
+ below the supervised ceiling. We leave further improvement
+the maximum neighbor node sample number 1024. We use
+ to future work.
+the Adam optimizer with different learning rates for each
+ 2) Comparisons of Multi-Classification: The proposed
+component and weight decay being 1e−5 . We train all the
+ MSF-IDS achieves state-of-the-art performance with lower
+models within 100 epochs.
+ FPR among three selective baselines on the multi-classification
+ 3) Baselines: We select 5 GCN based-models as baselines,
+ task. Multi-classification is a more challenging task to disincluding 2 spatial domain GCN models(i.e., EULER [33],
+ tinguish which type of attacks the suspicious traffic. After
+AGNN [40]), 2 spectral GCN model (i.e., ClenshawGCN [64],
+ appropriate sampling to mitigate imbalance, we compare
+APPNP [63]), and 1 graph anomaly-based GNN model(i.e.,
+ the proposed MSF-IDS with AGNN, APPNP, and AGC,
+GmapAD [37]). Additionally, we choose 2 anomaly-based
+ as they are representative and have been widely used in
+baselines(i.e., AGC [18], DSVD [19]), 2 deep learning-based
+ previous studies. Fig. 5 shows that the proposed MSF-IDS
+baselines(i.e., OmniAnomaly [20], SOM-DAGMM [21]) to
+ consistently achieves the best results among three baselines
+compare with the proposed MSF-IDS.
+ on five datasets. Our MSF-IDS also achieves relatively low
+ 2 The details of datasets, baselines, and implementations are available in FPR values across (a) to (d) four datasets. Specifically,
+Appendix M and Appendix W (see supplementary material). MSF-IDS yields the highest F1-scores with 18.85% to 88.30%
+QIU et al.: MINING MULTI-SCALE SPATIAL-FREQUENCY CLUES FOR UNSUPERVISED INTRUSION DETECTION 11455
+
+ Fig. 5. Comparisons of multi-classification between MSF-IDS and the selective three baselines on five benchmarks.
+
+performance gains over five benchmarks, e.g., outperforms TABLE IV
+the previous SOTA approach AGNN on CIC-TON-IoT by C OMPARISONS OF O NLINE I NTRUSION D ETECTION
+up to 9.03 points. The performances benefit from multi-scale ON THE CIC-T O N-I OT DATASET
+
+spatial-frequency designs, thus differentiating anomaly patterns and highlighting attack-specific information. Achieving
+state-of-the-art F1-score performances, the proposed MSF-IDS
+also exhibits the lowest FPR across three benchmarks, with
+reductions ranging from 28.75% to 54.78%. For example,
+on the CIC-TON-IoT dataset, MSF-IDS achieves an FPR
+8.13 points lower than APPNP, reaching as low as 6.71%.
+The empirical studies in multi-classifications also demonstrate the effectiveness of MSF-IDS in mitigating high FPR.
+As for the CIC-BoT-IoT dataset, MSF-IDS has a slightly
+higher FPR, i.e., only 0.15 points than APPNP. However, the
+F1-score performance of the proposed MSF-IDS is significantly higher than APPNP by 368.14%. Finally, in the
+NF-BOT-IOT-v2 dataset, the FPR values across various baselines, including the proposed MSF-IDS, remain relatively high,
+ranging from 14.62% to 18.49%. This highlights the need for
+further reducing in FPR. Even though, the proposed MSF-
+ Fig. 6. The practical deployment architecture of the proposed MSF-IDS.
+IDS still achieves the highest F1-score among all baselines,
+with an improvement of more than 86.87% compared to other
+methods. MSF-IDS performs better offline than online. We leave how to
+C. Online Unsupervised Intrusion Detection close this gap for future work. Nevertheless, the online UNIDS
+ can be an optimal choice, a trade-off, between performance
+ We deploy MSF-IDS online for more efficient unsuper- and time cost. We report that 10000 traffic data only requires
+vised intrusion detection at lower computational time cost. 10.98s in online detection, while requiring 878.73s in offline
+In practice, new traffic samples emerge with time evolving, detection, involving an expensive time cost in retraining,
+and frequent retraining is time-consuming and impractical. almost 80 time practical cost. More discussions and future
+To this end, a feasible way is to perform incremental online directions are available in Appendix N (see supplementary
+detection. Specifically, for a well-trained UNIDS, we conduct material).
+incremental detection for a short period, e.g., one day, and for
+a long period, e.g., one week, we re-train the UNIDS.
+ Task setting: We extract 20% traffic in the whole dataset D. Model Deployment
+as real-time traffic for online scenario. Then the other 80% Furthermore, we present a deployment architecture to illustraffic is used to train a UNIDS. Finally, the extracted 20% trate MSF-IDS’s future applicability, as shown in Fig. 6. We
+traffic can be detected in an online way. demonstrate how our model work in real-world traffic streams.
+ Baselines and metrics: We select 4 baselines AGC, Specifically, we adopt an offline-online deployment strategy.
+SOM-DAGMM, and EULER to evaluate MSF-IDS in online In a predefined time window such as T 1 T 0 , the online intrusion
+scenario. We use F1-Score and NMI values for metrics, detector runs for high-efficiency detection. At the end of the
+following the previous work [33]. time window such as T 1 , the offline detector incrementally
+ As shown in Table IV, the proposed MSF-IDS consistently retrains and updates the online detector. This strategy effecachieves the highest F1-score and AUC, and the lowest FPR. tively balances efficiency and performance without frequent
+This empirical study demonstrates that our spatial-temporal retraining. The online detector can also be empowered by the
+encoders are also effective in online settings. Specifically, period update. In real-word scenarios, the time window T 1 T 0
+our MSF-IDS yields 27.16 and 32.69 points improvements in can be one day or one week, depending on demands. This
+F1-score and AUC, respectively, compared to the previous hybrid online-offline approach significantly improves detection
+SOTA GCN-based UNIDS EULER, while MSF-IDS still has performance and efficiency. Future challenges include contin-
+4.60 points lower than EULER in FPR. We also observe that ual updates and adaptive update periods for online detection.
+11456 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE V TABLE VI
+C OMPUTATIONAL C OMPLEXITY C OMPARISONS W ITH THE S TATE - OF - THE - A BLATION S TUDY OF MSF-IDS ON THE CIC-T O N-I OT DATASET W ITH
+ A RT EULER U NDER D IFFERENT T RAFFIC S CALES F1-S CORE (%), AUC (%), AND FPR (%), R ECALL (%)
+
+E. Time Cost Analyses
+ We provide time cost analyses for MSF-IDS and its critical
+modules to showcase practical computational superiority. First,
+we compare the time cost of MSF-IDS and EULER under
+different traffic scales. As shown in Table V, MSF-IDS is more
+efficient than the previous SOTA UNIDS approach EULER
+under 10, 000 and 100, 000 traffic detection. One single traffic
+detection cost within 0.11ms. Especially for multi-scale
+spatial mining, our proposed NAPH framework achieves
+10,000 traffic node computation within 1s (0.78s).
+ Fig. 7. The spectra distribution between different schemes.
+ Furthermore, we conduct time cost analyses for the critical
+modules of the online model. The specific computational cost
+of critical modules are divided into two parts: Daubechies wavelet and self-expressive detector are also non-
+ • Frequency encoder (FE): FE runs 67.48% of the total trivial to push the F1-score to 92.22%, with 3.74% - 5.23%
+ time. Fast wavelet transformations (FWT) are proven to performance gains. More importantly, MSF-IDS achieves the
+ handle large-scale data in industry areas efficiently. Using lowest FPR among different variants. In contrast, without fremultiple FWTs for FEs to parallelly handle traffic data is quency or spatial encoders leads to the highest FPR, verifying
+ feasible and prospective for further acceleration. the effectiveness of MSF-IDS in mitigating high FPR.
+ • Spatial encoder (NAPH): NAPH runs 7.03% of the total
+ time, lying in, 1) limited neighbor nodes sampling strategy (in Configuration), supporting parallel computation G. Discussion
+ of millions of nodes. 2) we use system-inherent operators RQ1: How do our wavelet-based frequency encoders
+ to achieve computation, e.g., FLAT operator in heatmap, help distinguish the anomalous traffic? First, the quantitative
+ reducing additional complexity. results are available in the ablation study. The F1-score and
+ More importantly, both the FE and NAPH are neural- the FPR of w/o FE and MSF-IDS significantly demonstrate the
+parametric-free and will not involve computational-intensive effectiveness of frequency encoders. Furthermore, we conduct
+backpropagation. We can parallelly detect with a preset batch a visualized study to demonstrate whether our frequency
+size, e.g., 10000, thus accelerating the inference speed. encoders help distinguish the anomaly patterns. Specifically,
+ we depict the frequency distributions in different schemes,
+ i.e., the raw features, features handled with GCN, and fea-
+F. Ablation Study tures handled with our frequency encoders. As shown in
+ The critical modules such as spatial-frequency encoders, Fig 7, the distribution of frequency encoders has mitigated
+self-supervised representation augmentor, effectively con- the ’left-shift‘ phenomenon, preserving more high-frequency
+tribute to performances and reduce FPR in UNIDS task. information, compared to the distribution handled with GCN.
+Specifically, we conduct an ablation study on the CIC-ToN- Future directions on spatial-frequency attack and defense are
+IoT dataset with three repetitions to evaluate the effectiveness available in Appendix S (see supplementary material).
+of each component. We remove our multi-scale frequency RQ2: How does our NAPH highlight the anomalous
+encoders, the proposed Daubechies wavelet, and multi-scale traffic topology? To answer this question, we analyze a MITM
+spatial encoders, and denote them as “w/o FE”, “w/o DW”, case using our NAPH application. We first run NAPH on a
+and “w/o NAPH”, respectively. We use “w/o SS” and “w/o benign topology, top box of Fig. 7, and then on the MITM
+SC” to refer to the model that removes the self-supervised attack topology, bottom box of Fig. 8, with a red attack node
+representation augmenter and the subspace clustering-based UE6. The visualized results of heatmaps are highly distinintrusion detector, respectively. guishable in (d) and (h). It shows that our spatial encoders
+ Table VI reports the comparison results. Specifically, effectively identify the anomaly pattern of MITM, a tough
+removing the self-supervised augmentor module leads to the case when using the existing topology learning approaches
+most significant performance degradation, e.g., a 14.48 point [85], [86]. Most existing approaches are built on the cluster
+decrease in F1-score, indicating the necessity for highlighting assumption [87], leading to two topological patterns in (a)
+attack-specific information with the self-supervised term. Our and (b) undistinguishable. To further reveal the underlying
+multi-scale spatial-frequency encoder, including the proposed reason, we analyze the barcodes in (b) and (f). The differences
+QIU et al.: MINING MULTI-SCALE SPATIAL-FREQUENCY CLUES FOR UNSUPERVISED INTRUSION DETECTION 11457
+
+ Fig. 9. The t-SNE visualizations of representations on the CIC-TON-IoT
+ dataset without and with the augmentor and detector.
+
+Fig. 8. NAPH analysis for benign and attack traffic topology, respectively. Fig. 10. The sensitivity analysis of hyperparameter Beta.
+(a)(e) traffic networks. (b)(f) topological barcodes. (c)(d) persistent diagrams
+correspond to barcodes. (d)(h) heatmaps generated via persistent diagrams.
+
+ TABLE VII
+ C OMPARISONS OF FPR ON F IVE DATASETS
+
+ Fig. 11. The sensitivity analysis of hyperparameter drop feature rate.
+
+in barcodes directly determine the distinguishable heatmaps. separated and distinguishable when using the augmentor and
+First, the barcode of the benign one shows longer persistent detector as shown in Fig. 9(b), i.e., the square box. It signifitimes in high-order structure, the blue color ones, compared cantly verifies the effectiveness of our augmentor and detector
+to the anomaly one. It is related to potential stable communi- in highlighting attack-specific information. We further discuss
+cation topology pattern construction. These patterns are more novel attack detection ability of the proposed MSF-IDS in
+persistent and robust than the patterns in MITM attack. As Appendix T (see supplementary material).
+shown in Fig. 8(e) the attack node UE6 blocks the normal
+communications of other attacked nodes. It is one of the
+reasons why MITM cannot establish stable patterns. H. Hyperparameter Sensitivity Analyses
+ RQ3: Can the spatial-frequency encoders reduce the We conduct hyperparameter sensitivity analyses on the CICfalse positive rate in binary classification? To answer this BoT-IoT dataset to demonstrate how the critical hyperparamquestion, we conduct FPR comparisons in binary classification eters affect MSF-IDS. We select two critical hyperparameters,
+on five datasets, as shown in Table VII. The proposed MSF- Beta, which controls the loss intensity and drop feature 2,
+IDS achieves the lowest FPR among 4 selective baselines, which control the feature learning intensity of the represen-
+20.89% -92.64% decreases, compared to previous approaches. tation augmentor. As shown in Fig. 10 and Fig. 11, the
+For example, in the CIC-ToN-IoT dataset, our MSF-IDS yields proposed MSF-IDS stably converged to the best performance
+a 31.36% decrease from deep learning-based SOM-DAGMM. with increasing epoch. Specifically, a larger beta and drop rate
+ RQ4: How do the augmentor and detector highlight 2 perform better, demonstrating the effectiveness of mitigating
+attack-specific information? To answer this question, we FPR and boosting performance. More hyperparameter sensivisualize the representations with and without the augmentor tivity analyses are available in Appendix V (see supplementary
+and detector on the CIC-TON-IoT dataset via t-SNE tech- material).
+nology. As shown in Fig. 9(a), representations without the Finally, we depict performance curves on the CIC-ToNaugmentor and detector are indistinguishable and are very IoT dataset with different feature space dimensions, 64, 128,
+close and similar in low-dimension space, i.e., the red round and 256, respectively. As shown in Fig. 12, all dimensions
+box. It is an important visualization evidence of why without settings are stable and converge to the best performance as
+augmentor and detector leads to poor performance as shown FPR decreases. More performance curves on various benchin ablation studies. In contrast, the representations are highly marks in different dimensions are available in Appendix U
+11458 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ As shown in Fig. 13, a data example we provided, NAPH
+ can automatically extract the network topology information
+ for multi-scale analyses. After processing the data, as shown
+ in Fig. 14, NAPH provides distinguishable heatmaps of multiscale topology. The representations can be used to end-to-end
+ deep learning, e.g., UNIDS task. Specifically, NAPH displays:
+ input topology, i.e., left side, dynamic topology evolving
+ and persistent barcode, i.e., center, persistent diagram and
+ our persistent heatmap, i.e., right side. Finally, the generated
+ representation is shown at the bottom and can be seamlessly
+Fig. 12. The F1-score and FPR comparisons on the CIC-ToN-IoT dataset incorporated into end-to-end deep learning. The future pracwith different feature space dimensions. ticability of NAPH in various security tasks are available in
+ Appendix O (see supplementary material), including IoT security enhancement, Industrial Control Systems (ICS) Protection,
+ and Zero-Day attack detection, ect.
+
+ VII. C ONCLUSION
+ This paper reveals that the high FPR of GCN-based UNIDS
+ stems from a single-scale spatial-frequency learning paradigm.
+ This interesting observation motivates us to propose MSF-IDS,
+ mitigating high FPR by mining multi-scale spatial-frequency
+ clues. Specifically, the proposed MSF-IDS employs dual graph
+ filters as frequency encoders, differentiating high-frequency
+Fig. 13. The Raw traffic data. NAPH processes them in an end-to-end way. abnormal patterns. Then a NAPH module is seamlessly integrated into MSF-IDS to track multi-scale topological patterns
+ over dynamic networks. The developed NAPH app also benefits the topological analysis and visualizations of network data,
+ e.g., traffic network. Our MSF-IDS also refines and highlights
+ attack-specific information through the proposed representation augmentor and intrusion detector. Finally, extensive
+ experiments including binary, multi-class, online intrusion
+ detection and discussions demonstrate MSF-IDS’s superiority
+ over the traditional GCN-based UNIDS, effectively reducing
+ false positive rates and improving detection performance.
+ NAPH also sheds light on effective multi-scale topology
+ mining over dynamic networks, such as financial, social, and
+ geometric networks. Future work can extend to effective smallsample or few-shot learning in UNIDS.
+
+ R EFERENCES
+ [1] C. Zhang, D. Jia, L. Wang, W. Wang, F. Liu, and A. Yang, “Comparative
+Fig. 14. A topological case of our NAPH, the visualization can be used research on network intrusion detection methods based on machine
+for topological data analysis, e.g., traffic topology, geological analysis, social, learning,” Comput. Secur., vol. 121, Oct. 2022, Art. no. 102861.
+financial network analysis, etc. [2] V. Varanasi and S. Razia, “Network intrusion detection using machine
+ learning, deep learning—A review,” in Proc. 4th Int. Conf. Smart Syst.
+ Inventive Technol. (ICSSIT), Jan. 2022, pp. 1618–1624.
+ [3] Z. Ahmad, A. Shahid Khan, C. Wai Shiang, J. Abdullah, and F. Ahmad,
+(see supplementary material). The empirical results show that “Network intrusion detection system: A systematic study of machine
+sufficient, diverse datasets and multi-scale spatial-frequency learning and deep learning approaches,” Trans. Emerg. Telecommun.
+ Technol., vol. 32, no. 1, p. 4150, Jan. 2021.
+preservation schemes effectively mitigate overfitting. [4] H. Asad and I. Gashi, “Dynamical analysis of diversity in rule-based
+ open source network intrusion detection systems,” Empirical Softw.
+ Eng., vol. 27, no. 1, pp. 1–30, Jan. 2022.
+ VI. NAPH A PPLICATION [5] Z. Cekerevac, Z. Dvorak, L. Prigoda, and P. Cekerevac, “Internet of
+ Things and the man-in-the-middle attacks–security and economic risks,”
+ To enable visual analysis of multi-scale traffic topology, MEST J., vol. 5, no. 2, pp. 15–25, 2017.
+especially for readers unfamiliar with PH and provided source [6] K. M. Prasad, “Dos and DDoS attacks: Defense, detection and traceback
+ mechanisms—A survey,” Global J. Comput. Sci. Technol., vol. 14,
+codes, we develop an executable (.exe) NAPH application. It no. E7, pp. 15–32, 2014.
+supports the real-time multi-scale topology computation for [7] V. Chandola, A. Banerjee, and V. Kumar, “Anomaly detection: A
+input dynamic traffic data using NAPH algorithm. survey,” ACM Comput. Surv., vol. 41, no. 3, pp. 1–58, 2009.
+QIU et al.: MINING MULTI-SCALE SPATIAL-FREQUENCY CLUES FOR UNSUPERVISED INTRUSION DETECTION 11459
+
+[8] Y. Meng and L.-F. Kwok, “Adaptive blacklist-based packet filter with [33] I. J. King and H. H. Huang, “Euler: Detecting network lateral movement
+ a statistic-based approach in network intrusion detection,” J. Netw. via scalable temporal graph link prediction,” in Proc. Netw. Distrib. Syst.
+ Comput. Appl., vol. 39, pp. 83–92, Mar. 2014. Secur. Symp., 2022, pp. 1–16.
+[9] T. S. Hwang, T.-J. Lee, and Y.-J. Lee, “A three-tier IDS via data mining [34] R. Paudel and H. H. Huang, “Pikachu: Temporal walk based dynamic
+ approach,” in Proc. 3rd Annu. ACM Workshop Mining Netw. Data, Jun. graph embedding for network anomaly detection,” in Proc. NOMS
+ 2007, pp. 1–6. IEEE/IFIP Netw. Oper. Manage. Symp., Apr. 2022, pp. 1–7.
+[10] I. Kotenko et al., “Detection of anomalies and attacks in container [35] J. Ye et al., “Learning the evolutionary and multi-scale graph structure
+ systems: An integrated approach based on black and white lists,” in for multivariate time series forecasting,” in Proc. 28th ACM SIGKDD
+ Proc. Int. Conf. Intell. Inf. Technol. Ind., 2022, pp. 107–117. Conf. Knowl. Discovery Data Mining, Aug. 2022, pp. 2296–2306.
+[11] M. Westerlund, “The emergence of deepfake technology: A review,” [36] M. Zhong, M. Lin, and Z. He, “Dynamic multi-scale topological rep-
+ Technol. Innov. Manage. Rev., vol. 9, no. 11, pp. 39–52, Jan. 2019. resentation for enhancing network intrusion detection,” Comput. Secur.,
+[12] Y. Rong et al., “Semantic entropy can simultaneously benefit vol. 135, Dec. 2023, Art. no. 103516.
+ transmission efficiency and channel security of wireless seman- [37] X. Ma, J. Wu, J. Yang, and Q. Z. Sheng, “Towards graph-level anomaly
+ tic communications,” IEEE Trans. Inf. Forensics Security, vol. 20, detection via deep evolutionary mapping,” in Proc. 29th ACM SIGKDD
+ pp. 2067–2082, 2025. Conf. Knowl. Discovery Data Mining, Aug. 2023, pp. 1631–1642.
+[13] C. Qiu et al., “Plugging and breathing on the air: A practical defense [38] C. Qiu et al., “Disentangled dynamic intrusion detection,” IEEE Trans.
+ system for deep learning-based wireless semantic communications,” Pattern Anal. Mach. Intell., vol. 47, no. 11, pp. 1–18, Nov. 2025.
+ IEEE Trans. Mobile Comput., vol. 24, no. 9, pp. 8683–8699, Sep. 2025. [39] N. Moustafa, “New generations of Internet of Things datasets for
+[14] G. Nan et al., “Physical-layer adversarial robustness for deep learning- cybersecurity applications based machine learning: TON IoT datasets,”
+ based semantic communications,” IEEE J. Sel. Areas Commun., vol. 41, in Proc. eResearch Australasia Conf., 2019, pp. 21–25.
+ no. 8, pp. 2592–2608, Aug. 2023. [40] Z. Chen, Z. Wu, Z. Lin, S. Wang, C. Plant, and W. Guo,
+[15] X. Cao et al., “Exploring LLM-based multi-agent situation awareness “AGNN: Alternating graph-regularized neural networks to alleviate overfor zero-trust space-air-ground integrated network,” IEEE J. Sel. Areas smoothing,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 10,
+ Commun., vol. 43, no. 6, pp. 2230–2247, Jun. 2025. pp. 13764–13776, Oct. 2024.
+[16] Splunk Inc.(2023). The State of Security. [Online]. Available: https:// [41] C. Qiu et al., “3D-IDS: Doubly disentangled dynamic intrusion
+ www.splunk.com/ detection,” in Proc. 29th ACM SIGKDD Conf. Knowl. Discovery Data
+[17] D. Kshirsagar and J. M. Shaikh, “Intrusion detection using rule-based Mining, Aug. 2023, pp. 1965–1977.
+ machine learning algorithms,” in Proc. 5th Int. Conf. Comput., Com- [42] X. Zheng et al., “Graph neural networks for graphs with heterophily: A
+ mun., Control Autom. (ICCUBEA), Sep. 2019, pp. 1–4. survey,” 2022, arXiv:2202.07082.
+[18] X. Zhang, H. Liu, Q. Li, and X.-M. Wu, “Attributed graph clustering [43] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+ via adaptive graph convolution,” 2019, arXiv:1906.01210. convolutional networks,” 2016, arXiv:1609.02907.
+[19] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach. [44] T. Altaf, X. Wang, W. Ni, G. Yu, R. P. Liu, and R. Braun, “A new
+ Learn., 2018, pp. 4393–4402. concatenated multigraph neural network for IoT intrusion detection,”
+[20] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly Internet Things, vol. 22, Jul. 2023, Art. no. 100818.
+ detection for multivariate time series through stochastic recurrent neural [45] M. Defferrard, X. Bresson, and P. Vandergheynst, “Convolutional neural
+ network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Disc. Data networks on graphs with fast localized spectral filtering,” in Proc. Adv.
+ Min., 2019, pp. 2828–2837. Neural Inf. Process. Syst., 2016, pp. 1–9.
+[21] Y. Chen, N. Ashizawa, S. Yean, C. K. Yeo, and N. Yanai, “Self- [46] J. Bruna, W. Zaremba, A. Szlam, and Y. LeCun, “Spectral networks and
+ organizing map assisted deep autoencoding Gaussian mixture model for locally connected networks on graphs,” 2013, arXiv:1312.6203.
+ intrusion detection,” in Proc. IEEE 18th Annu. Consum. Commun. Netw. [47] H. Edelsbrunner and J. Harer, “Persistent homology—A survey,” Con-
+ Conf. (CCNC), Jan. 2021, pp. 1–6. temp. Math., vol. 453, no. 26, pp. 257–282, 2008.
+[22] A. Tariq and R. Mohammed, “Signature-based and supervised learning [48] M. E. Aktas, E. Akbas, and A. E. Fatmaoui, “Persistence homology
+ to improve data loss protection,” Signature, vol. 15, no. 5, pp. 161–166, of networks: Methods and applications,” Appl. Netw. Sci., vol. 4, no. 1,
+ 2017. pp. 1–28, Dec. 2019.
+[23] V. Q. Nguyen, T. L. Ngo, L. M. Nguyen, V. H. Nguyen, and N. Shone, [49] P. Bruillard, K. Nowak, and E. Purvine, “Anomaly detection using
+ “Deep nested clustering auto-encoder for anomaly-based network intru- persistent homology,” in Proc. Cybersecurity Symp. (CYBERSEC), Apr.
+ sion detection,” in Proc. RIVF Int. Conf. Comput. Commun. Technol. 2016, pp. 7–12.
+ (RIVF), Dec. 2023, pp. 289–294. [50] Z. Yuan, H. Zhou, T. Chen, and J. Li, “PhoGAD: Graph-based anomaly
+[24] H. Bahjat, S. N. Mohammed, W. Ahmed, S. Hamad, and S. Mohammed, behavior detection with persistent homology optimization,” in Proc. 17th
+ “Anomaly based intrusion detection system using hierarchical classi- ACM Int. Conf. Web Search Data Mining, Mar. 2024, pp. 920–929.
+ fication and clustering techniques,” in Proc. 13th Int. Conf. Develop. [51] G.-W. Wei, Persistent Homology Analysis of Biomolecular Data.
+ eSystems Eng. (DeSE), Dec. 2020, pp. 257–262. Philadelphia, PA, USA: SIAM, 2017.
+[25] F. V. Massoli, F. Falchi, A. Kantarci, S. Akti, H. K. Ekenel, and [52] M. S. Ismail, M. S. M. Noorani, M. Ismail, F. A. Razak, and M. A. Alias,
+ G. Amato, “MOCCA: Multilayer one-class classification for anomaly “Early warning signals of financial crises using persistent homology,”
+ detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, Phys. A, Stat. Mech. Appl., vol. 586, Jan. 2022, Art. no. 126459.
+ pp. 2313–2323, Jun. 2022. [53] M. Zhong, M. Lin, C. Zhang, and Z. Xu, “A survey on graph neural net-
+[26] P. Arregoces, J. Vergara, S. A. Gutiérrez, and J. F. Botero, “Network- works for intrusion detection systems: Methods, trends and challenges,”
+ based intrusion detection: A one-class classification approach,” in Proc. Comput. Secur., vol. 141, Jun. 2024, Art. no. 103821.
+ NOMS-IEEE/IFIP Netw. Oper. Manage. Symp., Apr. 2022, pp. 1–6. [54] W. Guo, H. Qiu, Z. Liu, J. Zhu, and Q. Wang, “GLD-Net: Deep
+[27] W. Wang, S. Jian, Y. Tan, Q. Wu, and C. Huang, “Robust unsuper- learning to detect DDoS attack via topological and traffic feature fusion,”
+ vised network intrusion detection with self-supervised masked context Comput. Intell. Neurosci., vol. 2022, pp. 1–20, Aug. 2022.
+ reconstruction,” Comput. Secur., vol. 128, May 2023, Art. no. 103131. [55] Y. Wan, Y. Liu, D. Wang, and Y. Wen, “GLAD-PAW: Graph-based
+[28] E. Caville, W. W. Lo, S. Layeghy, and M. Portmann, “Anomal-E: A self- log anomaly detection by position aware weighted graph attention
+ supervised network intrusion detection system based on graph neural network,” in Proc. Pacific–Asia Conf. Knowl. Discovery Data Mining,
+ networks,” Knowl.-Based Syst., vol. 258, Dec. 2022, Art. no. 110030. 2021, pp. 66–77.
+[29] M. Nakıp and E. Gelenbe, “Online self-supervised deep learning [56] Y. Dong, K. Ding, B. Jalaian, S. Ji, and J. Li, “AdaGNN: Graph neural
+ for intrusion detection systems,” IEEE Trans. Inf. Forensics Security, networks with adaptive frequency response filter,” in Proc. 30th ACM
+ vol. 19, pp. 5668–5683, 2024. Int. Conf. Inf. Knowl. Manage., Oct. 2021, pp. 392–401.
+[30] Z. Wang, Z. Li, J. Wang, and D. Li, “Network intrusion detection model [57] E. Isufi, F. Gama, D. I. Shuman, and S. Segarra, “Graph filters for
+ based on improved BYOL self-supervised learning,” Secur. Commun. signal processing and machine learning on graphs,” IEEE Trans. Signal
+ Netw., vol. 2021, pp. 1–23, Oct. 2021. Process., vol. 72, pp. 4745–4781, 2024.
+[31] S. Tuli, G. Casale, and N. R. Jennings, “TranAD: Deep transformer [58] F. Gama, E. Isufi, G. Leus, and A. Ribeiro, “Graphs, convolutions, and
+ networks for anomaly detection in multivariate time series data,” 2022, neural networks: From graph filters to graph neural networks,” IEEE
+ arXiv:2201.07284. Signal Process. Mag., vol. 37, no. 6, pp. 128–138, Nov. 2020.
+[32] W. Xu and Y. Fan, “Intrusion detection systems based on logarithmic [59] N. Hoang, T. Maehara, and T. Murata, “Revisiting graph neural netautoencoder and XGBoost,” Secur. Commun. Netw., vol. 2022, pp. 1–8, works: Graph filtering perspective,” in Proc. 25th Int. Conf. Pattern
+ Apr. 2022. Recognit. (ICPR), Jan. 2021, pp. 8376–8383.
+11460 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+[60] C. Qiu et al., “Refining latent homophilic structures over heterophilic [85] A. Venturi, M. Ferrari, M. Marchetti, and M. Colajanni, “ARGANIDS:
+ graphs for robust graph convolution networks,” in Proc. AAAI Conf. A novel network intrusion detection system based on adversarially
+ Artif. Intell., 2024, vol. 38, no. 8, pp. 8930–8938. regularized graph autoencoder,” in Proc. 38th ACM/SIGAPP Symp. Appl.
+[61] X. Liu et al., “Elastic graph neural networks,” in Proc. Int. Conf. Mach. Comput., Mar. 2023, pp. 1540–1548.
+ Learn., 2021, pp. 6837–6849. [86] W. W. Lo, S. Layeghy, M. Sarhan, M. Gallagher, and M. Portmann, “E-
+[62] J. Tang, J. Li, Z. Gao, and J. Li, “Rethinking graph neural net- GraphSAGE: A graph neural network based intrusion detection system
+ works for anomaly detection,” in Proc. Int. Conf. Mach. Learn., 2022, for IoT,” in Proc. IEEE/IFIP Netw. Oper. Manage. Symp., Apr. 2022,
+ pp. 21076–21089. pp. 1–9.
+[63] J. Gasteiger, A. Bojchevski, and S. Günnemann, “Predict then prop- [87] Y. Wang, S. Chen, and Z.-H. Zhou, “New semi-supervised classification
+ agate: Graph neural networks meet personalized PageRank,” 2018, method based on modified cluster assumption,” IEEE Trans. Neural
+ arXiv:1810.05997. Netw. Learn. Syst., vol. 23, no. 5, pp. 689–702, May 2012.
+[64] Y. Guo and Z. Wei, “Clenshaw graph neural networks,” in Proc.
+ 29th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug. 2023,
+ pp. 614–625.
+[65] H. Adams et al., “Persistence images: A stable vector representation of
+ persistent homology,” J. Mach. Learn. Res., vol. 18, no. 8, pp. 1–35,
+ 2015. Chenyang Qiu (Graduate Student Member, IEEE)
+[66] Q. Zhao and Y. Wang, “Learning metrics for persistence-based sum- received the B.Sc. degree in science from Beijing
+ maries and applications for graph classification,” in Proc. Adv. Neural Jiaotong University, Beijing, China, in 2020. He
+ Inf. Process. Syst., vol. 32, 2019, pp. 9855–9866. is currently pursuing the Ph.D. degree with the
+[67] H. Edelsbrunner and D. Morozov, “Persistent homology: Theory and National Engineering Research Center for Mobile
+ practice,” in Proc. Eur. Congr. Math., 2013, pp. 31–50. Network Technologies, Beijing University of Posts
+[68] N. Otter, M. A. Porter, U. Tillmann, P. Grindrod, and H. A. Harrington, and Telecommunications, Beijing. He has published
+ “A roadmap for the computation of persistent homology,” EPJ Data the papers in top-tier journals and conferences,
+ Sci., vol. 6, no. 1, pp. 1–38, Dec. 2017. including IEEE T RANSACTIONS ON PATTERN
+[69] S. Zhao, Z. Guo, X. Cheng, S. Jiang, W. Zhao, and H. Wang, “Learning A NALYSIS AND M ACHINE I NTELLIGENCE, IEEE
+ spatial–temporal features of fiber-optical data with multi-scale double T RANSACTIONS ON M OBILE C OMPUTING, IEEE
+ dynamic network for human intrusion detection,” IEEE Trans. Instrum. T RANSACTIONS ON C YBERNETICS, KDD, and AAAI. His research interests
+ Meas., vol. 72, pp. 1–11, 2023. include wireless network intrusion detection, semantic communication, graph
+[70] I. O. Lopes et al., “Network intrusion detection based on the temporal neural networks, and AI robustness. He severed as a Program Committee
+ convolutional model,” Comput. Secur., vol. 135, Dec. 2023, Art. no. Member for AAAI-26.
+ 103465.
+[71] X. Guo and Y. Liu, “Network traffic intrusion detection based on multiscale convolution and enhanced temporal convolution,” in Proc. 36th
+ Chin. Control Decis. Conf. (CCDC), May 2024, pp. 4844–4848.
+[72] X. Lu, X. Zhang, and P. Lio, “GAT-DNS: DNS multivariate time series
+ prediction model based on graph attention network,” in Companion
+ Proc. ACM Web Conf., Apr. 2023, pp. 127–131. Guoshun Nan (Member, IEEE) is a Full Professor
+[73] S. Mallat, A Wavelet Tour of Signal Processing. Amsterdam, The with the National Engineering Research Center for
+ Netherlands: Elsevier, 1999. Mobile Network Technologies, Beijing University
+[74] P. Veličković, W. Fedus, W. L. Hamilton, P. Lió, Y. Bengio, and of Posts and Telecommunications, Beijing, China.
+ R. D. Hjelm, “Deep graph infomax,” in Proc. ICLR, 2018, pp. 1–4. He has published more than 30 papers in top-tier
+[75] N. Moustafa, “A new distributed architecture for evaluating AI-based journals and conferences, including IEEE T RANS -
+ security systems at the edge: Network TON IoT datasets,” Sustain. ACTIONS ON PATTERN A NALYSIS AND M ACHINE
+ Cities Soc., vol. 72, Sep. 2021, Art. no. 102994. I NTELLIGENCE, IEEE J OURNAL ON S ELECTED
+[76] A. H. Lashkari, Y. Zang, G. Owhuo, M. Mamun, and G. Gil. (2017). A REAS IN C OMMUNICATIONS, IEEE T RANSAC -
+ Cicflowmeter. Accessed: Aug. 10, 2021. [Online]. Available: https:// TIONS ON M OBILE C OMPUTING , IEEE T RANSAC -
+ github.com/ahlashkari/CICFlowMeter/blob/master/ReadMe.txt TIONS ON I NFORMATION F ORENSICS AND S ECU -
+[77] M. Sarhan, S. Layeghy, and M. Portmann, “An explainable machine RITY , NeurIPS, ICML, CVPR, ICCV, and ACL. He also serve as a reviewer
+ learning-based network intrusion detection system for enabling general- for these communities. He has broad interests in multimodal learning, large
+ isability in securing IoT networks,” 2021, arXiv:2104.07183. language models, and 6G network security.
+[78] N. Koroniotis, N. Moustafa, E. Sitnikova, and B. Turnbull, “Towards
+ the development of realistic botnet dataset in the Internet of Things for
+ network forensic analytics: Bot-IoT dataset,” Future Gener. Comput.
+ Syst., vol. 100, pp. 779–796, Nov. 2019.
+[79] M. Sarhan, S. Layeghy, N. Moustafa, and M. Portmann, “NetFlow
+ datasets for machine learning-based network intrusion detection
+ systems,” in Proc. 10th EAI Int. Conf. Big Data Technol. Appl., 2020, Caiyi Zhang is currently a Senior Student in computer science and techpp. 117–135. nology with Beijing University of Posts and Telecommunications (BUPT).
+[80] M. Sarhan, S. Layeghy, and M. Portmann, “Towards a standard feature His research interests include graph learning, large language models, and
+ set for network intrusion detection system datasets,” Mobile Netw. Appl., topological data analysis.
+ vol. 27, no. 1, pp. 357–370, Feb. 2022.
+[81] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+ network intrusion detection systems (UNSW-NB15 network data set),”
+ in Proc. Mil. Commun. Inf. Syst. Conf. (MilCIS), Nov. 2015, pp. 1–6.
+[82] M. Sarhan, S. Layeghy, and M. Portmann, “Evaluating standard feature
+ sets towards increased generalisability and explainability of ML-based Chenrui Liang is currently pursuing the M.S.
+ network intrusion detection,” Big Data Res., vol. 30, Nov. 2022, Art. degree in computer science with the School of
+ no. 100359. Computer Science, Beijing University of Posts and
+[83] S. Khanam, I. Ahmedy, M. Y. I. Idris, and M. H. Jaward, “Towards an Telecommunications, Beijing, China. His research
+ effective intrusion detection model using focal loss variational autoen- interests include cloud native and AI agent.
+ coder for Internet of Things (IoT),” Sensors, vol. 22, no. 15, p. 5822,
+ Aug. 2022.
+[84] L. Sun, Y. Zhou, Y. Wang, C. Zhu, and W. Zhang, “The effective methods
+ for intrusion detection with limited network attack data: Multi-task
+ learning and oversampling,” IEEE Access, vol. 8, pp. 185384–185398,
+ 2020.
+QIU et al.: MINING MULTI-SCALE SPATIAL-FREQUENCY CLUES FOR UNSUPERVISED INTRUSION DETECTION 11461
+
+ Ruiqi Dai is currently pursuing the M.S. degree Zhili Zhou (Member, IEEE) received the M.S.
+ in computer science with the School of Cyberspace and Ph.D. degrees in computer application from
+ Security, Beijing University of Posts and Telecom- the School of Information Science and Engineering,
+ munications, Beijing, China. Her research interests Hunan University, China, in 2010 and 2014, respecinclude network security, anomaly detection, and tively. He is currently a Professor with the School of
+ graph-based machine learning. Artificial Intelligence, Guangzhou University, China.
+ He was a Post-Doctoral Fellow with the Department
+ of Electrical and Computer Engineering, University
+ of Windsor, Canada. He has authored or co-authored
+ more than 150 refereed papers. His current research
+ interests include multimedia security, artificial intelligence security, and information hiding. He received the ACM SIGWEB
+ Rising Star Award and the Guangdong Natural Science Funds for Distinguished Young Scholar. He has been selected as a World’s Top 2% Scientists
+ by Stanford University and Elsevier from 2020 to 2023. He is serving as an
+ Associate Editor for Tsinghua Science and Technology, Journal of Real-Time
+ Image Processing, International Journal on Semantic Web and Information
+ Systems, CMC–Computers Materials and Continua, and Big Data Mining and
+ Analytics.
+ Hongchen Yang is currently a Senior Student in
+ computer science and technology with Beijing University of Posts and Telecommunications (BUPT).
+ His research interests include graph learning, large Changhua Pei received the B.S. and Ph.D. degrees
+ language models, and topological data analysis. in computer science and technology from Tsinghua
+ University, in 2012 and 2017, respectively. He is
+ currently an Associate Researcher with the Computer Network Information Center (CNIC), Chinese
+ Academy of Sciences (CAS). His research interests
+ encompass time-series anomaly detection, AI for IT
+ operations (AIOps), AI for networking, and networking.
+
+ Xiaofeng Tao (Senior Member, IEEE) received
+ the bachelor’s degree in electrical engineering from
+ Xi’an Jiaotong University, Xi’an, China, in 1993,
+ Shiyuan Liu is currently pursuing the bachelor’s and the master’s and Ph.D. degrees in telecommunidegree majoring in computer science and technol- cation engineering from Beijing University of Posts
+ ogy with the School of Computer Science, Beijing and Telecommunications (BUPT), Beijing, China,
+ University of Posts and Telecommunications, Bei- in 1999 and 2002, respectively. He is currently a
+ jing, China. Her research interests lie in anomaly Professor with the National Engineering Research
+ detection, graph-based machine learning, and their Center for Mobile Network Technologies, BUPT. He
+ applications in network security and data analysis. has authored or co-authored over 200 articles and
+ three books in wireless communication areas. He
+ focuses on B5G/6G research. He is a fellow of the Institution of Engineering
+ and Technology and the Chair of IEEE ComSoc Beijing Chapter.

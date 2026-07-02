@@ -1,0 +1,1128 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [581] A Domain Adaptive IoT Intrusion Detection Algorithm Based on AEC–GAT Feature Extraction and Joint Domain Adversary
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：581
+题名：A Domain Adaptive IoT Intrusion Detection Algorithm Based on AEC–GAT Feature Extraction and Joint Domain Adversary
+年份：2025
+DOI：10.1109/tii.2025.3631964
+来源：IEEE Transactions on Industrial Informatics
+PDF：paper/10.1109_TII.2025.3631964.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：IoT、车联网、工业互联网与边缘安全
+相关性：强相关，分数 11
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\581.txt
+- 原始字符数：57020
+- 本次发送字符数：57020
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+1850
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 3, MARCH 2026
+
+A Domain Adaptive IoT Intrusion Detection
+Algorithm Based on AEC–GAT Feature
+Extraction and Joint Domain Adversary
+Qian Wang , Menghui Fan, Zhijuan Wu, Hongnian Yu , Senior Member, IEEE, Yongqiang Cheng ,
+and Bing Zhang , Member, IEEE
+
+Abstract—The high heterogeneity of Internet of Things
+(IoT) devices causes severe imbalance in network traffic
+data, and the cost of collecting and labeling sufficient intrusion samples is high or impossible, resulting in data
+scarcity in IoT security. Therefore, this article proposes a
+domain adaptive IoT intrusion detection algorithm based on
+causal embedding autoencoder and a graph attention network (AEC–GAT) feature extraction and joint domain adversary, which leverages abundant data resources from traditional network intrusion detection to improve the detection
+accuracy in IoT environments. First, a feature extraction
+method combining an AEC–GAT is designed. The AEC uses
+causal inference to uncover deep semantic links between
+domains, while GAT captures device interaction patterns
+to enhance semantic relevance and structure awareness
+in the features. Second, to address the pronounced class
+imbalance in IoT datasets, focal loss is introduced to replace the traditional cross-entropy (CE) loss. This formulation dynamically adjusts the sample weight through the
+scaling factor to guide the algorithm to focus on the minority samples that are difficult to classify. Meanwhile, a
+class adaptive independent domain discriminator method
+is proposed, which incorporates a class-level alignment
+mechanism within a joint adversarial training method. This
+method dynamically adjusts both the training intensity and
+the loss weight of each class specific domain discriminator.
+The experimental results show that the algorithm in this
+article significantly improves the detection performance
+of IoT intrusion detection by migrating traditional network
+intrusion detection domain knowledge, and has superior
+
+Received 14 October 2025; accepted 4 November 2025. Date of publication 25 November 2025; date of current version 5 March 2026. This
+work was supported in part by the National Natural Science Foundation
+of China under Grant 62376240 and Grant 62302428, in part by the
+S&T Program of Hebei under Grant 236Z0304G, and in part by the
+Innovation Capability Improvement Plan Project of Hebei Province under
+Grant 22567626H. Paper no. TII-25-7175. (Corresponding author: Qian
+Wang.)
+Qian Wang, Menghui Fan, Zhijuan Wu, and Bing Zhang are
+with the School of Artificial Intelligence (School of Software) and
+the Hebei Key Laboratory of Computer Virtual Technology and
+System Integration, Yanshan University, Qinhuangdao 066004, China
+(e-mail:
+wangqian@ysu.edu.cn;
+fanmenghui@stumail.ysu.edu.cn;
+wzj0911@stumail.ysu.edu.cn; bingzhang@ysu.edu.cn).
+Hongnian Yu is with the School of Computing Engineering and the
+Built Environment, Edinburgh Napier University, EH10 5DT Edinburgh,
+U.K. (e-mail: H.Yu@napier.ac.uk).
+Yongqiang Cheng is with the School of Computer Science,
+University of Sunderland, SR1 3SD Sunderland, U.K. (e-mail:
+yongqiang.cheng@sunderland.ac.uk).
+Digital Object Identifier 10.1109/TII.2025.3631964
+
+performance in various indicators compared to existing algorithms.
+Index Terms —Adversarial domain adaptation (DA), class
+imbalance, graph attention network (GAT), Internet of
+Things (IoT) intrusion detection.
+
+I. INTRODUCTION
+ITH the accelerating advancement of Internet of Things
+(IoT) technologies, the number of intelligent devices has
+increased exponentially. These devices have been extensively
+deployed across critical sectors, such as the Internet of Vehicles,
+industrial control systems, and intelligent healthcare [1]. The
+high connectivity and openness of IoT not only significantly
+enhance system efficiency and intelligence but also heighten
+its susceptibility to sophisticated security threats. IoT has become the key target of hacker attacks due to the characteristics
+of heterogeneous devices, diverse communication protocols,
+and complex deployment environment [2]. Intrusion detection
+systems (IDS) constitute a fundamental defense mechanism in
+IoT security, enabling the real-time identification of anomalous
+traffic and malicious intrusions.
+In recent years, with the rapid development of deep learning
+technology, it has shown strong feature learning and recognition
+capabilities in IDS. Detection algorithms based on convolutional neural networks (CNN) [3], recurrent neural networks
+(RNN) [4], and graph neural networks (GNN) [5] have been
+developed to extract rich semantic features from original traffic
+data. However, these algorithms highly rely on a large number of
+complete annotation data, and their acquisition costs are high and
+the annotation process is tedious. It is particularly challenging
+for IoT intrusion detection due to the heterogeneity and wide
+distribution of IoT devices. It is also difficult to build a unified
+attack sample collection mechanism, resulting in a serious scarce
+of attack samples.
+To address these challenges, domain adaptation (DA) has
+emerged as a promising solution for intrusion detection by
+enabling knowledge transfer and enhancing the robustness of
+learning in the target domain. Its core idea is to use the existing
+models and data in the source domain to improve the generalization ability of the model in the target domain by reducing
+the distribution difference between the source domain and the
+target domain in the feature space. Leveraging the richness of
+
+W
+
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+for more information.
+
+WANG et al.: DOMAIN ADAPTIVE IOT INTRUSION DETECTION ALGORITHM
+
+Fig. 1. Classification comparison with consideration of different class
+distrubution. Source Class A and B correspond to blue triangles and
+squares, and Target Class A and B correspond to green triangles and
+squares. Before adding class information [see Fig. 1(a)], the feature
+confusion appears across different classes, and after adding class information [see Fig. 1(b)], different classes are better separated.
+
+traditional network intrusion detection data and their alignment
+with IoT attack patterns, this study defines them as the source
+domain, with IoT intrusion data constituting the target domain.
+By mapping the two to the shared feature subspace, the traditional network intrusion knowledge can be effectively migrated
+to the IoT domain, thus improving the performance of IoT
+intrusion detection.
+In DA algorithms, in order to measure and reduce the distribution difference between the source domain and the target domain,
+the measurement algorithms commonly used in the research
+include the maximum mean difference [6] and Wasserstein
+distance [7]. In recent years, with the widespread application
+of generative adversarial networks in cross-domain tasks, DA
+algorithms based on adversarial learning have shown significant
+advantages. These algorithms learn domain-invariant features
+through adversarial training, aligning feature distributions by
+minimizing domain-specific discrepancies. The algorithm proposed by Layeghy et al. [8] employs adversarial training to
+extract domain-invariant features, effectively enhancing model
+robustness across diverse network environments. Compared to
+specific network structures, adversarial learning provides a more
+flexible feature alignment mechanism for DA, which can be
+implemented through different algorithms.
+Although adversarial learning demonstrates considerable
+cross-domain transferability, there are still many challenges
+in existing DA algorithms. First, existing algorithms predominantly rely on statistical distribution alignment while disregarding the deep semantic relationships among attack samples.
+Second, most algorithms adopt the standard CE loss function.
+In highly imbalanced class scenarios, this loss tends to underemphasize minority classes resulting in substantially degraded
+detection performance. Finally, prevailing DA algorithms, such
+as domain adversarial neural network (DANN) [9], typically
+employ global distribution alignment, which neglects classwise
+discrepancies between source and target domains. Consequently,
+such confusion often results in feature confusion across different
+classes (as illustrated in Fig. 1).
+To address the shortcomings of these algorithms, a domain
+adaptive IoT intrusion detection algorithm based on AEC-GAT
+feature extraction and joint domain adversary is proposed to
+enable efficient cross-domain intrusion detection.
+The main contributions of this article are as follows:
+1) An AEC–GAT feature extraction method is proposed
+to enhance domain invariance. It combines an AEC for
+causal modeling of semantic relationships with a GAT for
+
+1851
+
+attention-based interaction modeling, improving feature
+robustness and domain generalize ability.
+2) Focal loss is introduced to address the class imbalance
+problem. Focal loss dynamically adjusts class-specific
+weights to mitigate majority class dominance during
+training, prioritizing difficult classified minority samples
+and thereby enhancing detection performance under class
+imbalance.
+3) A class adaptive independent domain discriminator
+method is proposed to enable class level alignment. Separate domain discriminators are constructed for each class
+to address the class confusion. In addition, the intensity of
+adversarial training is adaptively modulated according to
+the distributional similarity among classes. This method
+improves class-level alignment and mitigates negative
+transfer.
+The rest of this article is organized as follows. Section II
+introduces the relevant work. Section III explains the algorithm
+proposed in this article. Section IV is validated through experiments. Finally, Section V concludes this article.
+II. RELATED WORK
+DA has improved IoT intrusion detection by leveraging
+knowledge from traditional networks. However, its performance
+is still hampered by the feature heterogeneity, class imbalance,
+and coarse alignment common in IoT environments. To address
+the shortcomings of existing algorithms, this paper conducts research on feature extraction method, class imbalance processing
+and domain alignment method.
+A. Feature Extraction Method
+Feature extraction is central to the performance of IDS, directly affecting the ability of the model to identify and classify
+network behaviors. Early research methods mainly rely on artificially designed features, such as traffic statistics, protocol
+field information, and behavior pattern extraction [10]. With
+the development of deep learning, data-driven feature extraction methods gradually replace the traditional methods. CNN
+and RNN have been widely employed to model the spatial
+and temporal dependencies of network traffic. For example,
+literature [4] has constructed a CNN-LSTM fusion algorithm,
+which can simultaneously capture local structure and sequence
+dynamics. In recent years, GNN has been introduced into intrusion detection tasks because of its advantages in processing
+non-Euclidean structured data. The feature extraction algorithm
+proposed in [11] employs graph convolutional networks (GCN)
+to learn domain-invariant representations, thereby enhancing
+the cross-scenario adaptability of the algorithm. However, the
+existing GNN based on intrusion detection algorithms still has
+some generalization ability problems in cross-domain scenarios,
+and fails to fully consider the impact of correlation between
+features on feature extraction.
+B. Class Imbalance Processing
+IoT intrusion detection often encounters a serious class imbalance problem. The number of normal traffic samples far exceeds
+
+1852
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 3, MARCH 2026
+
+that of abnormal traffic, which limits the model in identifying
+minority classes. In order to alleviate this problem, traditional
+methods often use resampling techniques, such as undersampling and oversampling [12]. Synthetic minority over-sampling
+technique (SMOTE) [13], as a classic oversampling method,
+expands the scale of minority classes by generating new samples,
+and is widely used for network traffic classification. However, it
+may distort the original data distribution or introduce redundant samples, thereby increasing the risk of overfitting [14].
+In contrast, the optimization method based on loss function is
+more flexible. Saito et al. [15] improved the performance of
+minority class recognition by alternately optimizing conditional
+entropy in the select targets (STAR) algorithm, which enables
+the algorithm to use a small number of labeled samples in the
+target domain. The weighted CE loss [16] assigns different loss
+weights to each class to enhance the focus on minority classes.
+However, the use of static weights limits its ability to adapt
+to dynamic changes in data distribution. Focal loss [17] was
+initially used for target detection and has been introduced into
+the intrusion detection field in recent years.
+
+TABLE I
+SYMBOL DEFINITION TABLE
+
+C. Domain Alignment Method
+Domain alignment is a common strategy in DA techniques,
+aiming to reduce distribution discrepancies between source and
+target domains to improve model generalization. Ganin and
+Lempitsky [18] proposed DANN, which learns domain-invariant
+features through adversarial training with a gradient inversion
+layer. However, its performance degrades in intrusion detection
+due to class imbalance and sparse target labels. To address these
+challenges, Yao et al. [19] introduced soft transmission network
+(STN) with soft labels to enhance conditional distribution alignment, while Wang et al. [20] proposed an unsupervised whole
+graph embedding method called weighted causal graph network
+(WCGN) to achieve graph-level feature alignment. Li et al. [21]
+proposed cross-domain adaptive clustering (CDAC), a semisupervised method that integrates inter- and intracluster alignment.
+In addition, many methods have focused on leveraging sample
+and structural relationships to achieve finer-grained alignment.
+Saito et al. [22] proposed a minimax entropy method called
+attract, perturb, and explore (APE) that enhances intradomain
+consistency and selective alignment. Similarly, Yao et al. [23]
+introduced discriminant distribution alignment in the discriminative distribution alignment with squared loss (DDAS) and
+discriminative distribution alignment with CE loss (DDAC),
+which aligns distributions while enlarging interclass separability
+through adaptive classifiers. In contrast, Wu et al. [24] proposed geometric graph alignment (GGA), a graph-based method
+that captures semantic associations between intrusion domains
+for domain-invariant representation learning. However, existing
+methods often overlook the distribution differences between
+classes, which can lead to confusion of features across different
+classes, limiting the overall effectiveness and generalization
+ability of cross-domain detection.
+III. PROPOSED ALGORITHM
+First, an AEC-GAT feature extraction method is devised to
+enhance semantic integrity and structural awareness. Second,
+
+focal loss is applied to mitigate class imbalance and heighten
+sensitivity to underrepresented attack samples. Finally, a class
+adaptive independent domain discriminator method is proposed
+to achieve fine-grained, class-level alignment through joint
+adversarial training. The complete algorithm is illustrated in
+Fig. 2.
+A. Feature Extraction Method Based on AEC–GAT
+Combining AEC and GAT to construct an adaptive feature
+extraction method, which provides more robust shared feature
+representation for subsequent domain alignment. This method
+combines causal mechanism and graph attention to effectively
+distinguish normal and abnormal behaviors.
+1) Causal Embedding Autoencoder (AEC): AEC is a structural extension that introduces causal modeling mechanism on
+the basis of traditional autocoder, aiming to improve the causal
+consistency and portability of features learned in cross-domain
+tasks. All class features were transformed using one-hot encoding, and the feature set was standardized through min–max normalization to ensure numerical consistency across dimensions.
+Features were then ranked according to the Pearson correlation
+coefficients with the labels, and those with higher correlations
+were retained for causal graph construction, reducing redundancy and computational complexity. The AEC encoder subsequently maps the high-dimensional features into a lower dimensional latent space through multiple nonlinear fully connected
+layers, producing compact representations that preserve critical
+causal structures while suppressing noise. Subsequently, the
+constraint-based peter-clark (PC) algorithm [25] is used to build
+cause and effect graphs GS and GT . The algorithm determines
+causal directions by leveraging V-structures and the acyclicity
+constraints inherent in causal graphs. Assuming that the input is
+
+WANG et al.: DOMAIN ADAPTIVE IOT INTRUSION DETECTION ALGORITHM
+
+Fig. 2.
+
+1853
+
+Overall process of the proposed algorithm.
+
+a feature set V = {v1 , v2 , . . . , vd }, where each vi ∈ V denotes
+a feature variable, the procedure consists of two stages: first, a
+fully connected undirected graph is constructed. For any pair
+of adjacent nodes (vi , vj ) in the graph, the Fisher Z test is
+employed as a conditional independence test to assess their
+dependence. If independence is detected, then the corresponding
+edge is removed, resulting in an undirected graph G . Second, the
+direction of edges is determined based on the d-separation principle, expanding the skeleton into a completed partially directed
+acyclic graph. The constructed causal graphs GS and GT guide
+the AEC in extracting structurally coherent and transferable
+feature representations within their respective domains.
+Reconstruction loss aims to minimize the error between the reconstructed output and the original input. This objective encourages the encoder to learn compact and shared low-dimensional
+representations
+
+
+(1)
+Lrecon = Ex∼Ds ∪Dt x − x̂2
+where x is the input data, x̂ is the reconstruction output of the
+method, and  . 2 denotes the squared L2 norm. Simply relying
+on reconstruction loss fails to ensure that the representation
+aligns with the causal structure of data generation. Therefore,
+a causal consistency loss Lcausal is introduced
+Lcausal = Evi ∈V [F (vi ) − Φ(vi |P a(vi ))2 ]
+
+(2)
+
+where F (vi ) is the prediction or feature representation of the
+model for the sample, Φ represents the condition generation
+function based on the causality diagram, and Pa(vi ) is the parent
+node set of vi in the causal graph.
+
+The encoder of the AEC employs a multilayer perceptron
+(MLP). Rectified linear unit (ReLU) activations enhance its
+nonlinear modeling capacity, while dimensionality reduction
+yields compact latent representations. This design preserves key
+causal dependencies, suppresses noise, and thereby improves the
+generalization performance of the proposed algorithm.
+2) Graph Attention Network (GAT): The causal graph directs
+the model to capture true causal relationships between variables.
+Based on this causal structure, this article further introduces GAT
+to model and aggregate node relationships. GCN relies on predefined adjacency matrices for feature propagation, limiting their
+flexibility in capturing semantic relationships between nodes. In
+contrast, GAT introduces a learnable attention mechanism that
+adaptively assigns aggregation weights to neighboring nodes.
+GAT effectively reduces reliance on fixed graph structures and
+enhances the capacity of the method to represent complex graph
+topologies. Simultaneously, its multihead attention mechanism
+enhances the diversity and robustness of feature representations.
+The input data of GAT are graph G = (V, E). The initial
+feature of each node vi is hi ∈ Rm , where m represents the
+dimension of the feature. In order to obtain sufficient expression
+ability, a shared linear transformation parameterized by the
+
+weight matrix W ∈ Rm ×m is applied to each node.
+The weight between neighbor nodes is calculated through the
+attention mechanism. For node vi and its neighbor ∀vj ∈ N (i),
+the attention score is calculated as follows:
+
+eij = LeakyReLU(aT · [Whi  Whj ])
+
+(3)
+
+1854
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 3, MARCH 2026
+
+
+
+where a ∈ R2 m is a trainable weight vector,  is a feature
+connection operation, and eij is an unnormalized attention score.
+Next, use the function softmax to normalize eij to obtain the
+attention weight αij representing the relative importance of
+neighbor vi to node vj
+αij = 
+
+exp(eij )
+k∈N (i) exp(eik )
+
+(4)
+
+where αij represents the relative importance of neighbor vi to
+node vj . Here, attention weight αij is used to weight and sum the
+features of neighboring nodes, updating the feature representation of node vi . Specifically, the new feature representation hi
+of node vi is obtained by weighted summation of the features
+hi of all neighboring nodes vj ∈ N (i)
+⎞
+⎛
+
+(5)
+hi = σ ⎝
+αij Whj ⎠
+j∈N (i)
+
+where σ is the activation function using ReLU. The multihead
+mechanism employs independent attention heads to compute
+node features, followed by fusion via concatenation or averaging. If there are N attention heads, then the update feature of
+node vi is shown as
+⎞
+⎛
+
+n
+⎝
+(6)
+αij
+W n hj ⎠ .
+hi = N
+n=1 σ
+j∈N (i)
+
+AEC-GAT combines causal reasoning and graph attention
+to extract domain-invariant features f (x∗ ). The adaptive attention mechanism dynamically allocates node weights, effectively
+capturing the importance of neighborhoods and improving the
+performance of cross-domain learning.
+B. Processing Class Imbalance Through Focal Loss
+To alleviate the performance degradation caused by the difference of feature distribution between different domains, DANN
+is widely applied in unsupervised DA tasks. Its network architecture consists of three components: feature extractor, label classifier, and domain discriminator. Concurrently, DANN
+embeds a gradient reversal layer (GRL) between the feature
+extractor and domain discriminator. This layer directly transmits
+features without any transformation during forward propagation,
+while in backward propagation, GRL multiplies the gradient
+returned by the domain discriminator by a negative coefficient,
+thereby reversing the direction of gradient updates. Through
+this adversarial mechanism, the feature extractor constantly
+learns to generate domain invariant features that can confuse
+the domain discriminator, while the domain discriminator continuously optimizes its domain classification capability. Both of
+them collectively enhance the domain invariance of the learned
+features through this adversarial game mechanism.
+The training objective of DANN is formulated as a minimax
+problem, aiming to minimize classification loss LC while maximizing domain discriminator loss LD across domains
+LC = −E(xs ,y)∼Ds
+
+K
+
+k=1
+
+yk · log P (yk | f (xs ))
+
+(7)
+
+LD = −Exs ∼Ds [log D(f (xs ))] − Ext ∼Dt [log (1 − D(f (xt )))]
+(8)
+where K is the total number of classes, yk is the one pot code
+of the real tag, P (yk |f (xs )) is the prediction probability of
+classifier C to feature f (xs ), and D(.) is the probability that
+the output sample of the domain discriminator belongs to the
+source domain.
+The label classifier relies on the standard CE loss as the
+optimization objective, as shown in (9), without adequately
+addressing the performance degradation caused by class imbalance. This guides the model toward learning an optimal decision
+boundary for classification
+CrossEntropy(p, y) =
+
+− log(p), if y = 1
+− log(1 − p), otherwise.
+
+(9)
+
+In practical applications, such as IoT intrusion detection,
+normal traffic samples overwhelmingly outnumber malicious
+ones. As a result, the training data exhibit severe class imbalance.
+Under such conditions, CE loss is dominated by majority class
+samples during training, causing the model to underemphasize
+minority classes. Meanwhile, traditional CE assigns uniform
+weights across samples, ignoring differences in classification
+difficulty. This prevents the model from focusing on critical
+instances near the decision boundary, further hindering its ability
+to learn from minority classes.
+Therefore, this article introduces the focal loss function into
+the label classifier. The prediction probability pk of this method
+is defined as follows:
+pk =
+
+p,
+if y = 1
+1 − p, otherwise
+
+(10)
+
+where pk denotes the predicted probability of the true class.
+The focal loss extends the standard CE by introducing a focusing parameter that adaptively adjusts the contribution of each
+sample. By reducing the weight of easily classified examples
+and increasing emphasis on difficult ones during training, the
+algorithm is effectively guided to focus on more challenging
+instances. The formulation is as follows:
+FL(pk ) = −(1 − pk )γ log(pk ).
+λ
+
+(11)
+
+(1 − pk ) can be regarded as a modulation factor that suppresses
+the contribution of easily classified samples, thereby increasing
+the relative weight of the difficult to classify samples in the
+loss function. Specifically, when pk approaches 1, the modulation factor (1 − pk )γ approaches 0, substantially reducing
+the loss contribution of easily classified samples. Conversely,
+when the predicted probability pk approaches 0, the modulation
+factor (1 − pk )γ approaches 1, thereby increasing the relative
+weight of difficult classified samples in the loss. Through this
+mechanism, the loss weights are dynamically adjusted, reducing
+the overemphasis on easily classified samples while placing
+enhanced emphasis on difficult classified samples. For different
+values of γ, the loss effect is shown in Fig. 3.
+As pk increases—indicating a higher confidence in correct
+classification—the associated loss correspondingly decreases.
+To further alleviate the problem of class imbalance in IoT
+
+WANG et al.: DOMAIN ADAPTIVE IOT INTRUSION DETECTION ALGORITHM
+
+Fig. 3.
+
+Influence of the focusing parameter γ on focal loss.
+
+intrusion detection data, this method adds class weight αk in
+focal loss
+FL(pk ) = − αk (1 − pk )γ log(pk )
+
+(12)
+
+where αk is the relative weight of different classes. Smaller
+values of αk are assigned to majority-class samples, while larger
+values are given to minority-class samples, thereby increasing
+the contribution of minority in the overall loss. This modification
+enables the model to maintain overall classification performance
+while improving its ability to detect critical attack classes in IoT
+intrusion detection tasks.
+The modulation factor αk for each class k is determined by
+computing the weighted proportion of class αk among all source
+domain samples. This ensures that the weight for each class can
+be adaptively adjusted according to its prevalence in the training
+data. The calculation formula is as follows:
+
+(xj ,yj )∈Ds yk
+αk = 
+.
+(13)
+(xj ,yj )∈Ds xj · yk
+According to the above inference, in order to enhance the
+adaptability of the label classifier to the class imbalance data in
+DANN, focal loss is introduced into the loss function of the label
+classifier. The improved label classifier loss function formula is
+as follows:
+= − E(xs ,y)∼Ds
+LFocal
+C
+
+K
+
+
+αk 1 − P (yk | f (xs ))
+
+k=1
+
+× yk log P (yk | f (xs ))
+
+γ
+
+
+
+1855
+
+domain discriminator (CA-DD) that enhances cross-domain
+generalization.
+Specifically, an independent domain discriminator Dk is designed for each class k. After introducing independent domain
+discriminators, the DANN training process begins by extracting
+features from input samples using the feature extractor. These
+features are initially classified by the label predictor to generate
+predicted class labels. Then, the samples will be assigned to
+the corresponding class discriminator according to the predicted
+class. The domain discriminator Dk then attempts to distinguish
+whether the class k sample originates from the source domain
+or the target domain. For each domain discriminator Dk , its loss
+function is as follows.
+
+
+LDk = − Exs ∼Dsk log Dk (f (xs ))
+
+
+− Ext ∼Dtk log 1 − Dk (f (xt ))
+(15)
+In order to further improve the accuracy of domain alignment,
+this paper introduces a class adaptability evaluation mechanism. Specifically, the similarity between the source and target
+domain feature distributions is calculated for each class. This
+information is used to dynamically adjust the weight of each
+class-specific domain discriminator. This method addresses the
+differences in domain alignment effectiveness across classes
+through fine-grained adjustment of the adversarial training process.
+This paper first calculates the similarity dH,U (Dsk , Dtk )
+between the feature distributions of the source and target domains for each class, using a measurement based on
+H−divergence[26]. For each class k, the distribution discrepancy between the source and target domains is computed and
+measured using H−divergence.
+
+
+
+
+dH,U Dsk , Dtk = sup Ex∼Dsk [h(x)] − Ex∼Dtk [h(x)] (16)
+h∈H
+
+where Dsk and Dtk respectively denote the sets of source and
+target domain samples for class k. Dynamic weights for each
+class-specific domain discriminator are adjusted inversely proportional to the corresponding class values. The dynamic weight
+hk of the domain discriminator for class k can be adjusted inversely proportional to the corresponding H−divergence value.
+
+(14)
+
+where P (yk | f (xs )) is the prediction probability of the label
+γ
+classifier for class k, 1 − P (yk | f (xs )) is the moderating
+factor, which gives greater weight to difficult classified samples.
+Focal loss is adopted to address class imbalance in crossdomain scenarios by dynamically adjusting sample weights, enhancing focus on difficult and minority samples. This preserves
+domain-invariant feature learning while improving classification
+robustness for imbalanced data.
+C. Class Adaptive Independent Domain Discriminator
+Traditional IoT cross-domain transfer learning aligns global
+feature distributions but ignores class-level discrepancies,
+causing class confusion near decision boundaries. To address
+this issue, the paper proposes a class-adaptive independent
+
+hk =
+
+1
+1 + dH,U (Dsk , Dtk )
+
+(17)
+
+A higher H−divergence value indicates a larger distribution
+gap between the source and target domains, suggesting poorer
+alignment quality for that class. As a result, a smaller adaptive
+weight is assigned to its domain discriminator, reducing its
+training intensity. This helps prevent overtraining on classes that
+are inherently difficult to align, and reduces model overfitting
+on those classes. In contrast, a smaller H−divergence indicates
+greater similarity between the source and target domain distributions, reflecting better alignment quality. Consequently, a higher
+adaptive weight is assigned to the class, resulting in increased
+training intensity. This method can increase the training intensity
+of those classes that have been aligned well, thereby further
+optimizing their performance in the target domain.
+
+1856
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 3, MARCH 2026
+
+During the optimization process, an adaptive weight hk is
+incorporated into the loss function of each class-specific domain
+discriminator.
+LH
+D =
+
+K
+
+
+h k LDk
+
+TABLE II
+CROSS-DOMAIN DETECTION OF K → B
+
+(18)
+
+k=1
+
+By jointly optimizing causal loss, label classification loss, and
+domain discrimination loss, the algorithm effectively improves
+IoT intrusion detection performance. The overall loss function
+of the algorithm is as follows:
+− λ 4 LH
+λ1 Lrecon + λ2 Lcausal + min max λ3 LFocal
+C
+D .
+C
+
+D
+
+(19)
+
+IV. EXPERIMENTAL RESULTS AND ANALYSIS
+
+TABLE III
+CROSS-DOMAIN DETECTION OF N → T
+
+In order to comprehensively evaluate the effectiveness and
+generalization capability of the proposed algorithm in this article, multiple experiments are designed to validate its performance across different cross-domain intrusion detection tasks.
+A. Dataset Introduction and Experimental Setup
+This study selects representative cross-domain intrusion detection datasets to evaluate the proposed algorithm. The datasets
+are as follows: the source domain is NSL-KDD [27], UNSWNB15[28] and CIC-IDS2017[29]; the target domain is UNSWBOTIOT [30] and UNSW-TONIOT[31]. The dataset will be
+described in detail below.
+NSL-KDD (recorded as K), a standard dataset for network
+intrusion detection, includes multiple types of network attacks
+and has a relatively balanced sample distribution, and it is suitable for intrusion detection in traditional network environments;
+UNSW-NB15 (recorded as N) is a collection based on the
+real network environment in the UNSW series, combined with
+simulated attacks. It contains diverse network traffic characteristics and is widely used to evaluate the performance of IDS;
+CIC-IDS2017 (recorded as C) is a baseline dataset in the field
+of network intrusion detection. It is based on real network traffic
+capture, covering multiple network protocols, and can be used
+for research related to network security in IDS.
+UNSW-BOTIOT (recorded as B) simulates the real network
+behavior of IoT devices, with a small sample size and obvious
+distribution deviation. It can better reflect the security challenges
+in the IoT environment; UNSW-TONIOT (recorded as T) is
+specifically designed for IoT scenarios. It can simulate the
+network behaviors of IoT devices in real-world operations, and
+has more complex and representative feature distributions.
+These datasets not only reflect the differences between traditional computer networks and IoT environments, but also cover
+the challenges of significant distribution deviation and sample
+imbalance.
+In terms of experimental implementation, this article implements the proposed model structure based on PyTorch framework. The classifier and domain discriminator are both constructed as MLP with two hidden layers. After each layer,
+LeakyReLU activation function and Dropout layer (rejection
+rate is 0.3) are connected to enhance the nonlinear expression
+ability of the algorithm and inhibit overfitting. At the same time,
+
+batch normalization is introduced to accelerate convergence and
+improve training stability. This structural design has significantly enhanced the generalization ability and discrimination
+performance of the algorithm in IoT cross-domain intrusion
+detection tasks.
+B. Comparison Experiment of Overall Performance
+Evaluation
+In the overall performance evaluation, this article uses a
+variety of evaluation indicators to comprehensively measure
+the performance of the algorithm, including accuracy, precision,
+recall, F1-score, and area under the curve (AUC).
+To fully verify the performance advantages of the proposed
+algorithm in the cross-domain IoT intrusion detection task.
+This article selects eight current mainstream transfer learning
+algorithms as the comparison baseline, including APE [22],
+CDAC [21], STAR [15], DDAS [23], STN [19], DDAC [23],
+WCGN [20], and GGA [24]. The experiment is conducted on
+three representative cross-domain tasks: K → B, N → T, and C
+→ B. The experimental results are shown in Tables II–IV.
+It can be seen from the results that in the K → B task, the
+algorithm in this article achieves the best performance in the
+five indicators of accuracy, precision, recall, F1 score, and AUC.
+Especially on F1 score and AUC, it reached 0.892 and 0.901,
+respectively, indicating that it still maintains excellent overall
+detection performance in the face of significant cross-domain
+differences and uneven class distribution. In the N → T task,
+although the accuracy of the proposed algorithm is slightly
+lower than that of GGA (0.905 versus 0.927), it achieves superior performance across four key indicators—precision, recall,
+
+WANG et al.: DOMAIN ADAPTIVE IOT INTRUSION DETECTION ALGORITHM
+
+TABLE IV
+CROSS-DOMAIN DETECTION OF C → B
+
+TABLE V
+EXPERIMENTAL DESIGN FOR ABLATION
+
+1857
+
+K → B, N → T, and C → B. The experimental results are
+shown in Fig. 4. From the comparison between the model M1
+and the complete model M4, it can be seen that removing the
+AEC-GAT reduces accuracy to 76.8%, 77.1%, and 70.8% on
+the three tasks, indicating that the AEC-GAT method plays
+a crucial role in maintaining overall performance. After focal
+loss is replaced by the traditional CE loss function in model
+M2, F1-score in the three cross-domain tasks is lower than the
+complete model M4. This shows that focal loss can effectively
+promote overall performance improvement. By comparing M3
+and M4, it can be observed that replacing the class-adaptive
+domain discriminator globally leads to accuracy drops of 4.0%,
+5.2%, and 4.5% on the three cross-domain tasks, demonstrating
+the importance of fine-grained class-level alignment. Therefore,
+each method proposed in this article has played an important
+role in cross-domain intrusion detection. The complete model
+M4 has achieved optimal performance in both tasks, verifying
+its wide adaptability and robustness in IoT scenarios.
+D. Visual Analysis of Feature Distribution
+
+F1-score, and AUC. Notably, it attains a precision of 0.898,
+higher than the precision of GGA (0.828), and improves the
+F1-score by nearly 10% (0.891 versus 0.790). It is worth noting
+that this task presents a severe imbalance between positive
+and negative classes. Significant improvements in recall and
+F1-score demonstrate the ability of the algorithm to mitigate
+class imbalance. In the C → B task, the proposed algorithm
+achieves the highest performance across all indicators compared
+to the baseline algorithms. This demonstrates its capability to
+reliably detect abnormal IoT traffic in cross-domain scenarios.
+The consistent precision and recall values further highlight the
+robustness of the algorithm across different IoT environments.
+Based on the performance of the three tasks, it can be seen that
+the algorithm can not only accurately identify most class samples, but also maintain stable performance in detecting minority
+class attack traffic.
+C. Ablation Experiment
+To comprehensively evaluate the effectiveness of each key
+component in the proposed algorithm, ablation experiments
+were conducted to individually analyze the contributions of the
+AEC-GAT feature extractor, focal loss, and class adaptive independent domain discriminator. This is achieved by removing or
+replacing the corresponding methods and analyzing the resulting
+changes in detection performance on the target domain. This
+section carries out ablation tests based on cross-domain tasks to
+keep data preprocessing, training rounds, optimizer, and super
+parameters consistent. The specific comparison model design is
+shown in Table V.
+To verify the actual effectiveness of each key method in
+cross-domain intrusion detection, this article conducted ablation
+experiments on representative cross-domain tasks, including
+
+To further validate the effectiveness of the proposed algorithm in cross-domain feature alignment, principal component
+analysis was employed to reduce the dimensionality of highdimensional features. Both source and target domain samples
+were projected into a 2-D space for visualization. The crossdomain intrusion detection performance was evaluated using
+the transfer task K → B. For this task, the feature distributions
+were systematically analyzed, and the visualization results confirm the effectiveness of the domain alignment, as shown in
+Fig. 5.
+Fig. 5(a) illustrates the original feature distribution in the K
+→ B task, where a clear separation between source and target
+domains reveals pronounced domain shift. After applying the
+proposed algorithm [see Fig. 5(b)], the two distributions exhibit
+substantial overlap, indicating that the feature difference between the two domains is significantly reduced, and the domain
+alignment effect is obvious.
+E. Real Intrusion Dataset Detection Experiment
+In order to further verify the adaptability and effectiveness
+of the proposed algorithm in real-world IoT environments, this
+article introduces two additional real industrial IoT monitoring
+datasets: Gas Pipeline (recorded as G) and Water Storage Tank
+(recorded as W). Gas Pipeline dataset is collected from the
+natural gas pipeline monitoring system, covering a variety of
+sensor readings and attack injection scenarios. Water Storage
+Tank dataset originates from an operational water treatment
+control system and includes multidimensional monitoring indicators under both normal and malicious conditions. Compared to
+traditional datasets, these industrial datasets exhibit higher noise
+levels, greater complexity, and more pronounced distributional
+differences, thereby providing a more realistic evaluation setting
+for IoT intrusion detection. In the cross-domain evaluation, two
+tasks were considered: K → W and N → G. The corresponding
+experimental results are presented in Table VII.
+
+1858
+
+Fig. 4.
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 3, MARCH 2026
+
+Ablation experiment.
+TABLE VI
+OVERHEAD ANALYSIS
+
+F. Parameter Analysis
+
+Fig. 5. Data distribution before(a) and after feature alignment(b). (a) K
+→ B original data. (b) K → B feature alignment data.
+TABLE VII
+CROSS-DOMAIN DETECTION OF K → W AND N → G
+
+In the cross-domain evaluation on real industrial IoT datasets,
+the proposed algorithm maintains high detection performance,
+demonstrating its effectiveness in diverse operational scenarios.
+For the K → W task, the algorithm achieves an accuracy of
+79.7%, demonstrating its ability to distinguish between normal
+and attack samples when traditional network traffic is applied to
+a real water treatment system. Similarly, in the N → G task, the
+algorithm achieves consistently high accuracy, indicating stable
+cross-domain detection even for gas pipeline monitoring data
+with pronounced distributional differences. Analysis of precision and recall indicates that the algorithm delivers consistently
+reliable detection, evidencing both robustness and generalizability in real-world IoT environments. Overall, these results
+substantiate that the proposed algorithm is not only effective
+on traditional IoT datasets but also practical and reliable for
+deployment in real-world industrial IoT environments.
+
+In the overall loss function in this article, the weight of each
+task is controlled by the parameters γ, λ1 , λ2 , λ3 , and λ4 , and
+the overall optimization goal is shown in (19). In order to verify
+the rationality of parameter selection, this article designs an
+analysis to examine the effects of γ and λ1 − λ4 on algorithm
+performance. Furthermore, transfer tasks K → B, N → T, and
+C → B were selected for detailed analysis, with corresponding
+results visualized in Fig. 6. Experiments show that the rationality
+of parameter values directly affects the cross-domain detection
+effect. The parameter configuration finally adopted in this article is: γ = 2, λ1 = 1.0, λ2 = 0.5, λ3 = 1.0, and λ4 = 1.0.
+The best-performing baseline algorithm in each task is also
+indicated by a dashed line in the corresponding color. It can
+be observed that when the parameters change, the performance
+of the algorithm in this article remains relatively stable without
+sharp fluctuations. In addition, in almost all parameter ranges,
+the solid line is always higher than the corresponding dotted
+line elevation, which means that the algorithm in this article is
+superior to its corresponding best baseline algorithm in most
+parameter ranges.
+G. Overhead Analysis
+To further evaluate the practicality of the proposed algorithm
+in IoT scenarios, the computational overhead is systematically
+analyzed in terms of memory usage, GPU utilization, training
+time, and throughput. The evaluation was conducted on three
+cross-domain tasks (K → B, N → T, and C → B), and the results
+are shown in Table VI.
+The results indicate that the complete algorithm (ours) maintains memory usage between 6.5 and 6.9 GB, confirming that
+the resource requirements are compatible with practical IoT
+deployment. The throughput of 7400–7950 samples across three
+cross-domain tasks further demonstrates the efficiency of the
+data processing capability. Both AEC-GAT and CA-DD exhibit
+
+WANG et al.: DOMAIN ADAPTIVE IOT INTRUSION DETECTION ALGORITHM
+
+Fig. 6.
+
+1859
+
+Parameter analysis of loss weight.
+
+overhead within desirable ranges, supporting feasibility in IoT
+deployment.
+V. CONCLUSION
+To address the challenge of degraded intrusion detection
+performance caused by data scarcity in IoT scenarios, this article
+proposes a domain adaptive IoT intrusion detection algorithm
+based on AEC-GAT feature extraction and joint domain adversary. The algorithm enhances feature representation through
+causal reasoning and graph attention, mitigates class imbalance
+via focal loss, and achieves fine-grained class-level alignment
+using a class-adaptive independent domain discriminator. Extensive experiments, including cross-domain comparative evaluations, ablation studies, parameter analyses, and real-world industrial IoT validations, demonstrate that the proposed algorithm
+consistently outperforms existing baselines across multiple performance indicators. The results substantiate that each constituent method contributes significantly to enhancing algorithm
+robustness, generalization capability, and deployment feasibility. Moreover, the overhead analysis shows that the algorithm
+maintains desirable computational efficiency, supporting feasibility in real-world IoT deployment. Future work will further
+explore causal structure enhancement and continual learning
+mechanisms to better meet practical IoT deployment needs.
+ACKNOWLEDGMENT
+The authors would like to thank valuable comments and
+suggestions of the reviewers.
+REFERENCES
+[1] M. A. Khatun, S. F. Memon, C. Eising, and L. L. Dhirani, “Machine learning for Healthcare-IoT security: A review and risk mitigation,” IEEE Access, vol. 11, pp. 145869–145896, 2023, doi: 10.1109/ACCESS.2023.3346320.
+[2] P. Baniya, A. Agrawal, K. Abid, J. Nath, B. K. Chaudhary, and B. Kunwar,
+“The Internet of Things: Security challenges and opportunities,” in Proc.
+3rd Int. Conf. Power Electron. IoT Appl. Renewable Energy Control, 2024,
+pp. 153–158, doi: 10.1109/PARC59193.2024.10486356.
+[3] A. Deshmukh and K. Ravulakollu, “An efficient CNN-based intrusion
+detection system for IoT: Use case towards cybersecurity,” Technologies,
+vol. 12, 2024, Art. no. 203, doi: 10.3390/technologies12100203.
+[4] C. Yin, Y. Zhu, J. Fei, and X. He, “A deep learning approach for intrusion detection using recurrent neural networks,” IEEE Access, vol. 5,
+pp. 21954–21961, 2017, doi: 10.1109/ACCESS.2017.2762418.
+[5] Z. Sun, A. M. H. Teixeira, and S. Toor, “GNN-IDS: Graph neural network
+based intrusion detection system,” in Proc. 19th Int. Conf. Availability,
+Rel. Secur., 2024, pp. 1–12.
+
+[6] A. Gretton, K. M. Borgwardt, M. J. Rasch, B. Schölkopf, and A. Smola, “A
+kernel two-sample test,” J. Mach. Learn. Res., vol. 13, no. 1, pp. 723–773,
+2012.
+[7] N. Courty, R. Flamary, D. Tuia, and A. Rakotomamonjy, “Optimal transport for domain adaptation,” IEEE Trans. Pattern Anal. Mach. Intell.,
+vol. 39, no. 9, pp. 1853–1865, Sep. 2017.
+[8] S. Layeghy, M. Baktashmotlagh, and M. Portmann, “DI-NIDS: Domain invariant network intrusion detection system,” Knowl.-Based Syst., vol. 273,
+2023, Art. no. 110626.
+[9] Y. Ganin et al., “Domain-adversarial training of neural networks,” J. Mach.
+Learn. Res., vol. 17, no. 59, pp. 2096–2030, 2016.
+[10] W. Wang et al., “HAST-IDS: Learning hierarchical spatial-temporal features using deep neural networks to improve intrusion detection,” IEEE Access, vol. 6, pp. 1792–1806, 2018, doi: 10.1109/ACCESS.2017.2780250.
+[11] Q. Wang, X. Wang, H. Liu, Y. Wang, J. Ren, and B. Zhang, “A
+domain adaptive IoT intrusion detection algorithm based on GWRGCN feature extraction and conditional domain adversary,” IEEE Internet Things J., vol. 11, no. 24, pp. 41223–41234, Dec. 2024, doi:
+10.1109/JIOT.2024.3457894.
+[12] H. He and E. A. Garcia, “Learning from imbalanced data,” IEEE Trans.
+Knowl. Data Eng., vol. 21, no. 9, pp. 1263–1284, Sep. 2009, doi:
+10.1109/TKDE.2008.239.
+[13] N. V. Chawla et al., “SMOTE: Synthetic minority over-sampling technique,” J. Artif. Intell. Res., vol. 16, pp. 321–357, 2002.
+[14] C. Bunkhumpornpat, K. Sinapiromsaran, and C. Lursinsap, “Safe-levelsmote: Safe-level-synthetic minority over-sampling technique for handling
+the class imbalanced problem,” in Proc. Adv. Knowl. Discov. Data Mining:
+13th Pacific-Asia Conf., Bangkok, Thailand, Springer Berlin Heidelberg,
+2009, pp. 475–482.
+[15] A. Singh et al., “Improving semi-supervised domain adaptation using effective target selection and semantics,” in Proc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit., 2021, pp. 2709–2718.
+[16] Y. Cui et al., “Class-balanced loss based on effective number of samples,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.. 2019, pp. 9268–
+9277.
+[17] T. Y. Lin et al., “Focal loss for dense object detection,” in Proc. IEEE Int.
+Conf. Comput. Vis., 2017, pp. 2980–2988.
+[18] Y. Ganin and V. Lempitsky, “Unsupervised domain adaptation by backpropagation,” in Proc. Int. Conf. Mach. Learn., 2015, pp. 1180–1189.
+[19] Y. Yao, Y. Zhang, X. Li, and Y. Ye, “Heterogeneous domain adaptation via
+soft transfer network,” in Proc. 27th ACM Int. Conf. Multimedia, 2019,
+pp. 1578–1586.
+[20] L. Wang, C. Huang, W. Ma, X. Cao, and S. Vosoughi, “Graph embedding
+via diffusion-wavelets-based node feature distribution characterization,”
+in Proc. 30th ACM Int. Conf. Inf. Knowl. Manage., 2021, pp. 3478–3482.
+[21] J. Li, G. Li, Y. Shi, and Y. Yu, “Cross-domain adaptive clustering for
+semi-supervised domain adaptation,” in Proc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit., 2021, pp. 2505–2514.
+[22] K. Saito, D. Kim, S. Sclaroff, T. Darrell, and K. Saenko, “Semisupervised
+domain adaptation via minimax entropy,” in Proc. IEEE/CVF Int. Conf.
+Comput. Vis., 2019, pp. 8050–8058.
+[23] Y. Yao, Y. Zhang, X. Li, and Y. Ye, “Discriminative distribution alignment: A unified framework for heterogeneous domain adaptation,” Pattern
+Recognit., vol. 101, 2020, Art. no. 107165.
+[24] J. Wu, H. Dai, Y. Wang, K. Ye, and C. Xu, “Heterogeneous domain adaptation for IoT intrusion detection: A geometric graph alignment approach,”
+IEEE Internet Things J., vol. 10, no. 12, pp. 10764–10777, Jun. 2023, doi:
+10.1109/JIOT.2023.3239872.
+[25] M. Kalisch and P. Bühlman, “Estimating high-dimensional directed acyclic
+graphs with the PC-algorithm,” J. Mach. Learn. Res., vol. 8, no. 3,
+pp. 613–636, 2007.
+
+1860
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 3, MARCH 2026
+
+[26] S. Ben-David et al., “A theory of learning from different domains,” Mach.
+Learn., vol. 79, pp. 151–175, 2010.
+[27] M. Tavallaee, E. Bagheri, W. Lu, and A. A. Ghorbani, “A detailed analysis
+of the KDD CUP 99 data set,” in Proc. 2009 IEEE Symp. Comput. Intell.
+Secur. Defense Appl., 2009, pp. 1–6.
+[28] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+network intrusion detection systems (UNSW-NB15 network data set),” in
+Proc. 2015 Mil. Commun. Inf. Syst. Conf., 2015, pp. 1–6.
+[29] Kurniabudi, D. Stiawan, Darmawijoyo, M. Y. Bin Idris, A. M. Bamhdi,
+and R. Budiarto, “CICIDS-2017 dataset feature analysis with information
+gain for anomaly detection,” IEEE Access, vol. 8, pp. 132911–132921,
+2020.
+[30] N. Koroniotis, N. Moustafa, E. Sitnikova, and B. Turnbull, “Towards the
+development of realistic botnet dataset in the Internet of Things for network
+forensic analytics: Bot-IoT dataset,” Future Gener. Comput. Syst., vol. 100,
+pp. 779–796, 2019.
+[31] T. M. Booij, I. Chiscop, E. Meeuwissen, N. Moustafa, and F. T. H. d.
+Hartog, “ToN_IoT: The role of heterogeneity and the need for standardization of features and attack types in IoT network intrusion data sets,”
+IEEE Internet Things J., vol. 9, no. 1, pp. 485–496, Jan. 2022.
+Qian Wang received the B.S. in educational
+technology, M.S., and Ph.D. degrees in computer science and technology from the School of
+Information Science and Engineering, Yanshan
+University, Qinhuangdao, China, in 2009, 2012
+and 2016, respectively.
+From 2015 to 2016, she has been with the
+University of Hull, Hull, U.K., as a Visiting
+Scholar. Since 2016, she has been a Lecture
+with the School of Information Science and Engineering, Yanshan University. Since 2019, she
+has been an Associate Professor. She is currently a Supervisor for both
+master and doctoral students. She is currently with Edinburgh Napier
+University, Edinburgh, U.K., as a Visiting Scholar. Her research interests
+include machine learning, network security, and healthcare analysis.
+Menghui Fan received the bachelor’s degree in computer science and technology from
+Hebei Normal University, Shijiazhuang, China,
+in 2023. She is currently working in computer
+science and technology toward the master’s degree with the School of Artificial Intelligence
+(School of Software), Yanshan University, Qinhuangdao, China.
+She has been actively engaged in developing adaptive and generalized intrusion detection
+models based on deep learning and causal reasoning techniques to enhance cross-domain detection performance. Her
+current work explores adversarial learning and graph-based representation methods to improve the robustness and interpretability of IoT security systems. Her research interests focuses on network security, with
+an emphasis on intrusion detection, domain adaptation, and intelligent
+data analysis in IoT environments.
+Zhijuan Wu received the bachelor’s degree in
+computer science and technology from Hebei
+University, Baoding, China, in 2021. She is currently working in computer science and technology toward the master’s degree with the School
+of Artificial Intelligence (School of Software),
+Yanshan University, Qinhuangdao, China.
+She focuses on algorithm optimization and
+its applications to complex, real-world data
+problems. She has developed strong skills in
+model development, feature selection, and performance evaluation. Her current work investigates effective methods for
+handling high-dimensional and imbalanced data in multilabel learning.
+She aims to contribute to machine learning through both theoretical
+study and practical innovation in real applications. Her research interests
+include data mining, multilabel classification, and intelligent information
+processing.
+
+Hongnian Yu (Senior Member, IEEE) received
+the B.S. degree in industrial automation from the
+Harbin Institute of Technology, Harbin, China,
+in 1982, the M.S. degree in industrial automation from Northeast Heavy Machinery Institute,
+Qinhuangdao, China, in 1985, and the Ph.D.
+degree in mechanical engineering from King’s
+College London, London, U.K., in 1994.
+He has successfully supervised 20 Ph.D. theses and 18 Master by Research theses, and
+has trained 12 postdoctoral research fellows. He
+has authored or coauthored more than 200 journal and conference
+papers. He has held several research grants totaling approximately eight
+million pounds from the U.K. EPSRC, the Royal Society, the European
+Union, AWM, and industry. His research interests include robotics and
+nonlinear control, complex network modeling, wireless communications,
+and applied artificial intelligence.
+
+Yongqiang Cheng received the B.S. and M.S.
+degrees in automatic control from Tongji University, Shanghai, China, in 2001 and 2004, respectively, and the Ph.D. degree in engineering
+design and technology from the University of
+Bradford, Bradford. U.K., in 2010.
+Between 2004 and 2007, he worked fulltime with the ZTE R&D Centre, Shanghai. He
+is currently a Professor of artificial intelligence
+aligned with digital healthcare with the University of Sunderland, Sunderland, U.K. He is the
+REF lead for the School of Computer Science and Technology, the
+Deputy Director of the Research Centre for Emerging Technologies and
+Innovation, and leads the Data Science and AI Workstream with the
+John Dawson Drug Discovery and Development Institute. His research
+interests include artificial intelligence, trustworthy AI, machine learning,
+wireless sensor networks, smart systems, and digital technologies.
+
+Bing Zhang (Member, IEEE) received the B.S.
+degree in computer science and technology
+from the College of Computer and Information
+Technology, Three Gorges University, Yichang,
+China, in 2012, and the Ph.D. degree in computer science and technology from the School of
+Information Science and Engineering, Yanshan
+University, Qinhuangdao, China, in 2018.
+Since 2018, he has been a Lecturer with the
+School of Information Science and Engineering,
+Yanshan University, and has been an Associate
+Professor since 2020. He has been with the Norwegian University of
+Science and Technology, Trondheim, Norway, as a Visiting Scholar. He is
+currently supervises both master’s and doctoral students. His research
+interests include data mining, network security, machine learning, and
+software security.
+PAPER_TEXT

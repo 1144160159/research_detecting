@@ -1,0 +1,836 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024 17921
+
+ Curved Geometric Networks for
+ Visual Anomaly Recognition
+ Jie Hong , Pengfei Fang , Weihao Li, Junlin Han, Lars Petersson, and Mehrtash Harandi
+
+ Abstract— Learning a latent embedding to understand the Index Terms— Anomaly recognition, geometric learning,
+underlying nature of data distribution is often formulated in hyperbolic space, mixed-curvature space, open-set recognition,
+Euclidean spaces with zero curvature. However, the success out-of-distribution (OOD) detection, spherical space.
+of the geometry constraints, posed in the embedding space,
+indicates that curved spaces might encode more structural
+information, leading to better discriminative power and I. I NTRODUCTION
+hence richer representations. In this work, we investigate
+the benefits of the curved space for analyzing anomalous,
+open-set, or out-of-distribution (OOD) objects in data. This
+ I N THIS article, we aim to leverage the curved geometry for
+ learning embeddings, which in return allows us to analyze
+ and identify anomalous, open-set, or out-of-distribution (OOD)
+is achieved by considering embeddings via three geometry
+constraints, namely, spherical geometry (with positive curvature), objects from normal, closed-set, or in-distribution (ID) input
+hyperbolic geometry (with negative curvature), or mixed data. Nonflat geometry has gained an increasing amount
+geometry (with both positive and negative curvatures). Three of interest in various machine learning approaches due to
+geometric constraints can be chosen interchangeably in a unified its intriguing properties in encoding the inherent geometry
+design, given the task at hand. Tailored for the embeddings in
+the curved space, we also formulate functions to compute the
+ or hidden structure information of the data [1], [2], [3],
+anomaly score. Two types of geometric modules (i.e., geometric- [4], [5], [6]. For example, spherical spaces with constant
+in-one (GiO) and geometric-in-two (GiT) models) are proposed positive curvature show appealing properties along with
+to plug in the original Euclidean classifier, and anomaly scores deep neural networks (DNNs) to encode samples resembling
+are computed from the curved embeddings. We evaluate the the sphere [7], [8]. Hyperbolic spaces, featured with a
+resulting designs under a diverse set of visual recognition
+scenarios, including image detection (multiclass OOD detection
+ constant negative curvature, are shown to be rich in encoding
+and one-class anomaly detection) and segmentation (multiclass the underlying hierarchical structure in the data. Such a
+anomaly segmentation and one-class anomaly segmentation). The property enables hyperbolic spaces to better discriminate
+empirical results show the effectiveness of our proposal through input samples [4]. Fig. 1 conceptualizes the distinctive
+consistent improvement over various scenarios. The code is made characteristics of Euclidean, spherical, and hyperbolic spaces
+available at https://github.com/JHome1/GiO-GiT.
+ and highlights their disparities. Euclidean spaces with zero
+ curvature are familiar faces in DNNs [see Fig. 1(a)]. Spherical
+ geometry, as shown in Fig. 1(b), has been successfully
+ Manuscript received 28 July 2022; revised 27 May 2023;
+accepted 18 August 2023. Date of publication 8 September 2023; date
+ employed to encode directional data (i.e., samples where
+of current version 3 December 2024. This work was supported in part by the magnitude does not carry important information). The
+the National Science Foundation of China under Grant 62306070 and in part Poincaré ball model for the hyperbolic spaces, as shown in
+by the Southeast University Start-Up Grant for New Faculty under Grant
+4009002309. The work of Mehrtash Harandi was supported by the Australian
+ Fig. 1(c), provides a structure with constant negative curvature
+Research Council (ARC) under Project DP230101176. (Corresponding to encode data.
+author: Pengfei Fang.) Previous studies, such as [4], [11], and [12], show that
+ Jie Hong and Junlin Han are with the College of Engineering,
+Computing and Cybernetics, Australian National University, Canberra,
+ curved spaces can attain a superior performance gain over
+ACT 2601, Australia, and also with Data61-CSIRO, Black Mountain the Euclidean space, especially for tasks relying on image
+Laboratories, Canberra, ACT 2601, Australia (e-mail: jie.hong@anu.edu.au; embeddings (e.g., zero-/few-shot learning or metric learning).
+u6835134@anu.edu.au).
+ Pengfei Fang is with the School of Computer Science and Engineering and
+ For example, in [12], by employing the similarity metric
+the Key Laboratory of New Generation Artificial Intelligence Technology and in spherical embedding spaces, the model enhances its
+Its Interdisciplinary Applications, Ministry of Education, Southeast University, discriminative ability in zero-shot classification for unknown
+Nanjing, 210096, China (e-mail: fangpengfei@seu.edu.cn).
+ Weihao Li is with the College of Engineering, Computing and Cybernetics,
+ classes. In [4] and [13], hyperbolic spaces are shown to
+Australian National University, Canberra, ACT 2601, Australia (e-mail: have a better distribution across unknown classes, therefore
+weihao.li1@anu.edu.au). improving few-shot learning performance. Based on the
+ Lars Petersson is with Data61-CSIRO, Black Mountain Laboratories,
+Canberra, ACT 2601, Australia (e-mail: lars.petersson@data61.csiro.au).
+ interpretations in Fig. 1, we infer that the curved geometric
+ Mehrtash Harandi is with the Department of Electrical and Computer embeddings exhibit enhanced discrimination due to the
+Systems Engineering, Monash University, Clayton, VIC 3800, Australia following reasons.
+(e-mail: mehrtash.harandi@monash.edu). 1) In the spherical space, all points are constrained to lie
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TNNLS.2023.3309846, provided by the authors. on the surface of a hypersphere, as shown in Fig. 1(b).
+ Digital Object Identifier 10.1109/TNNLS.2023.3309846 On the surface of the hypersphere, the embedding
+ 2162-237X © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+17922 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+Fig. 1. Illustration of Euclidean space and curved spaces (i.e., spherical and hyperbolic spaces). (a) Euclidean space represents a flat space without curvature.
+(b) In contrast, the spherical space restricts all points to lie on the surface of a hypersphere. (c) Hyperbolic space, represented by the Poincaré ball model,
+makes points exist inside the ball, demonstrating its negatively curved nature. The transformation from Euclidean space to spherical or hyperbolic space can
+be achieved through respective spherical or hyperbolic transformation, which project points onto the corresponding curved space.
+
+ “ant” (olive) and “bookshop” (purple) exhibit better
+ separation than Euclidean embeddings as they originate
+ from distinct superclasses, “insect” and “building.”
+ Learning such hierarchies will lead to success at the
+ inference.
+ With the appealing observations shown above, in this
+ article, we investigate the practice of using geometries with
+ fixed nonzero curvature in visual anomaly, open-set, or OOD
+Fig. 2. Illustration of the discrimination ability of curved spaces on recognition tasks. For the purpose of realizing our idea,
+unknown data. We train two models using Euclidean and hyperbolic geometry
+ a natural solution is to simply replace the existing Euclidean
+on miniImageNet dataset [9], following the few-shot learning protocol.
+We randomly choose four unknown classes and plot the class embeddings classifier with one based on a curved geometry. This idea
+using t-SNE [10]. Each unknown class is represented by one color. From is behind the design of our geometric-in-one (GiO) model.
+this visualization, we can directly observe that within each unknown class, In addition, we also find that the “divergence” between
+embeddings in hyperbolic space (see the figure on the right) show a more
+compact distribution than embeddings in Euclidean space (see the figure Euclidean embeddings and curved embeddings can provide
+on left). Moreover, it can be observed that hyperbolic embeddings exhibit a reliable indicator useful for anomaly, open-set, or OOD
+improved separations based on the discovered hierarchies. For instance, identification. To benefit from this interesting observation,
+when compared to the distribution of Euclidean embeddings, hyperbolic
+embeddings show closer proximity between classes (i.e., the yellow-colored we further develop a geometric-in-two (GiT) model. Having
+“African hunting dog” and the green-colored “lion”) that belong to the same multiple geometry-aware networks at our disposal, we further
+superclass (i.e., “animal”). Conversely, hyperbolic embeddings of classes (i.e., present approaches for getting the anomaly score to identify
+the olive-colored “ant” and the purple-colored “bookshop”), which belong to
+different superclasses (i.e., “insect” and “building”), are pulled further apart. abnormal objects.
+ Our main objective is to show that geometry plays an
+ essential role in identifying anomalies. As such, we develop
+ space is enforced to have a uniform distribution a generic solution and incorporate it into various baselines in
+ across multiple classes, promoting a more unbiased our empirical study. The contributions of this work can be
+ classification. Furthermore, scale-free analysis, the summarized as follows.
+ inclusion of spherical spaces, e.g., via ℓ2 normalization 1) We propose two types of lightweight curvature-aware
+ in a DNN, provides useful constraints for learning and geometric networks for visual anomaly, open-set,
+ has been used with success in the majority of modern or OOD recognition. To the best of our knowledge,
+ neural structures [7], [8], [14]. this is the first attempt to adopt curved manifolds as
+ 2) As shown in Fig. 1(c), points in the hyperbolic space embedding spaces to distinguish normal/closed-set/ID
+ lie inside the ball. The volume in a hyperbolic space and anomalous/open-set/OOD data. In addition, multiple
+ expands exponentially with dimensions. This enables us curved spaces, including spherical, hyperbolic, and
+ to embed tree-like structures with less distortion (see mixed spaces, are studied.
+ the green-colored triangle) and aids the discovery of 2) Extensive experiments on a wide range of visual
+ hierarchical relationships among samples. For instance, anomaly, open-set, or OOD recognition tasks (e.g.,
+ as shown in Fig. 2 and compared to Euclidean multiclass OOD detection, one-class anomaly detecembeddings, the hyperbolic embeddings of “African tion, multiclass anomaly segmentation, and one-class
+ hunting dog” (yellow) and “lion” (green) are closer, anomaly segmentation) suggest that the proposed
+ emphasizing their similarity at the superclass level (i.e., technique leads to a substantial performance gain over
+ “animals”). Moreover, the hyperbolic embeddings of the Euclidean geometry.
+HONG et al.: CURVED GEOMETRIC NETWORKS FOR VISUAL ANOMALY RECOGNITION 17923
+
+ II. R ELATED W ORK inference, local and global features are compared to
+ compute the anomaly score.
+A. Visual Anomaly Recognition 3) Some approaches compute the anomaly score of
+ test samples by comparing their features with those
+ Three main approaches are developed for doing visual
+ of training samples [37], [45]. In the Patch-SVDD
+anomaly (or open-set/OOD) recognition: confidence-,
+ method [37], for instance, the anomaly scores of test
+generative-, and self-supervised-based methods. However,
+ samples are obtained by calculating the L2 distance
+a few works are learning features in non-Euclidean spaces.
+ between the features of the test and training samples.
+ 1) Confidence-Based Method: It is well known that the
+confidence from the softmax in a classifier helps to detect
+OOD samples from ID samples since ID samples are B. Geometric Learning
+more likely to have a greater maximum softmax confidence Geometric learning has been studied extensively to encode
+compared to ODD samples [15]. OOD detector for neural structured representations [51]. For example, the set has been
+network (ODIN) [16] applies temperature scaling to the used to model order-invariant data (e.g., 3-D point clouds [52]
+confidence vector and adds small perturbations to input or video data [53]). Orthogonal constraints, i.e., subspaces,
+samples for more accurate OOD detection. Additional are often used to encode set data [54], [55], for its potential
+confidence-based methods, which make use of the confidence, to be robust against illumination variations, background, and
+have been studied in [17], [18], [19], [20], and [21]. so on. In vectorized representations, spherical or hyperbolic
+ 2) Generative-Based Method: One of the generative-based spaces are also very effective for metric learning-related tasks.
+methods is to synthesize effective training samples to avoid the In the spherical space, the similarity of representations is upper
+DNNs becoming overconfident in their predictions [22], [23], bounded. Hence, such a space is particularly well-behaved
+[24], [25], [26]. Another choice is to optimize features in the at learning a metric space [7], [56], [57]. As opposed to
+latent space of an encoder–decoder network toward generating the spherical space, tree-like data can be embedded in the
+a more general distribution [27], [28], [29], [30], [31] or a hyperbolic space for its intriguing property to capture the
+more representative attention map [32], [33], [34]. hierarchical structure of the data [4], [11], [58]. To further
+ 3) Self-Supervised-Based Method: Self-supervised learning increase the discrimination power of the learned embeddings
+techniques have been widely employed in anomaly recog- in curved spaces, the kernel methods, which implicitly map the
+nition. Ensemble leave-out classifier (ELOC) [35] trains geometric representation to a high or even infinite-dimensional
+classifiers in a self-supervised manner by setting a subset feature space, are studied for spherical embgedings [59] or
+of training data as OOD data. One main idea behind the hyperbolic embeddings [13]. To fully model the structure
+self-learning method is to apply geometric transformations of the data, mixed-curved spaces are good candidates as
+(GTs) or augmentations on the input images and train a embedding spaces [14], [60].
+multiclass model to discriminate such transformations (or
+augmentations). Prediction of image rotation is used in III. P RELIMINARIES AND BACKGROUND
+rotation network (RotNet) [36]. Jittered patches of an image
+are classified in Patch-SVDD [37] for anomaly localization. In this section, we will briefly introduce the preliminary
+Another idea is to use contrastive learning for better visual knowledge and background used in this article.
+representations [38], [39], [40]. More works using selfsupervised learning are presented in [38], [41], [42], [43], [44], A. Notation
+[45], and [46]. We use κ to denote the curvature of a manifold. In general,
+ Some other facts should be noted. a vectorized representation or an embedding can be embedded
+ 1) Confidence-based as well as self-supervised-based in three types of manifolds: the Euclidean space M E ,
+ methods mainly adopt “encoder–classifier” structures the spherical space M S , and the hyperbolic space M H ,
+ and generative-based models with “encoder–decoder” corresponding to κ = 0, κ > 0, and κ < 0, respectively.
+ architectures. The proposed modules in our work are Throughout this article, we call any space with κ ̸ = 0, as a
+ best applied to an “encoder–classifier” rather than an curvature-aware space or a curved space. A mixed-curvature
+ “encoder–decoder” structure. manifold M M is a product space, consisting of a set of
+ 2) Teacher–student structures have been utilized in anomaly different spaces [14], [60]. In our work, the mixed-curvature
+ recognition problems [47], [48], [49], [50]. These manifold is defined as M M = M1 × M2 × M3 × · · · × M N ,
+ approaches demonstrate the effectiveness of leveraging in which we mix N different manifolds. For example, the
+ the discrepancy between the teacher and student mixed-curvature manifold M M = M E × M S × M H includes
+ branches to identify and localize anomalies. In [49], a Euclidean space, a spherical space, and a hyperbolic space.
+ a pair of networks are employed for anomaly detection,
+ where the teacher network is pretrainedon ImageNet.
+ The discrepancy between multilevel layers is utilized to B. Spherical Geometry
+ compute anomaly scores. In the case of the local–global The n-sphere with curvature κ > 0 is defined as
+ net proposed in [50], a teacher–student architecture is
+ Sn−1 = x ∈ Rn : ∥x∥2 = 1/κ .
+ 
+ trained to compute local and global features. In the κ (1)
+17924 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+Fig. 3. General frameworks of the models and their training processes are depicted. (a) Baseline model follows an “encoder–classifier” structure. The
+image encoder takes the input image I and encodes it into an embedding vector e E . The classifier, primarily composed of an FC layer, generates the
+confidence vector for loss computation. We propose two models in our work: GiO and GiT. GiO and GiT differ from the baseline model in that they integrate
+the GT and geometric FC layer into the classifier. In essence, while the baseline model follows an “encoder–classifier” structure, GiO and GiT adopt an
+“encoder-geometric-classifier” structure. (b) In the GiO model, the original Euclidean FC layer is replaced with a geometric FC layer based on a curved
+geometry. (c) GiT model adopts the geometric FC layer as the additional branch. In the training stage, we follow the setting that the training data do not
+include any anomalous or OOD samples.
+
+The mapping 0S : Rn → Sn−1κ projects an embedding x ∈ Rn those closer to the origin, as the space expands from the
+generated by an image encoder to n-sphere as origin [4].
+ x In this article, we employ the Poincaré ball [1], [4] to
+ x S = 0S (x) = √ . (2) model and work with the hyperbolic space. The n-dimensional
+ κ∥x∥
+ Poincaré ball, with curvature κ, is defined by the manifold
+ The embedding x S indicates a point in the n-sphere,
+ Hnκ = x ∈ Rn : ∥x∥ < −1/κ .1
+ 
+satisfying the constraint in (1). In practice, the angular
+mapping in the n-sphere, analogous to the linear mapping in To embed x ∈ Rn , obtained by an image encoder to the
+the Euclidean space, can be realized by a fully connected (FC) Poincaré ball, we use the following transformation:
+layer with weight W. Let W = [w1 , w2 , . . . , w j , . . . , wC ],  1
+where w j ∈ Sn−1 κ is the corresponding column, representing  x,
+  if ∥x∥ ≤
+ x H = 0H (x) = 1 − ξ x |κ| (4)
+the parameters of the classifier. The prediction associated
+with the jth class for an embedding x is determined by w j .
+ 
+  , else
+ |κ| ∥x∥
+We note that for x, w j ∈ Sn−1 κ , the term for the jth class,
+lS (x, w j ) = ⟨x, w j ⟩, is indeed related to the geodesic distance where ξ > 0 is a small value to ensure numerical stability.
+on Sn−1 The embedding x H is a point in the Poincaré ball. To enable
+ κ ; hence, one can understand this term as a form of
+the distance-based value. Here, we use the notation lS (x, W) the vector operations in the Poincaré ball, we make use of the
+to show a vector obtained by applying the columns of W to Möbius addition for x, y ∈ Hnκ as
+  
+x ∈ Sn−1
+ κ . 1 + 2|κ|⟨x, y⟩ + |κ|∥y∥2 x + 1 − |κ|∥x∥2 y
+ For the spherical network, we compute the angular loss ℓS x ⊕κ y = (5)
+ 1 + 2|κ|⟨x, y⟩ + |κ|2 ∥x∥2 ∥y∥2
+based on B samples in one batch
+ where ⟨, ⟩ is the inner product. The geodesic distance between
+ x, y ∈ Hnκ is defined as
+ 
+ 1 X exp lS,yi
+ ℓS = − log P  (3)
+ B i j exp lS, j
+ 2 p 
+ dGeo (x, y) = √ tanh−1 |κ|∥ − x ⊕κ y∥ . (6)
+ |κ|
+where lS, j is the jth element in lS (x, W) under the ith input
+sample and x ∈ Sn−1 One can also generalize the hyperbolic linear operation,
+ κ . Accordingly, l S,yi is the the yi th element
+in lS (x, W) and yi indicates the label class to the ith input parameterized by W (e.g., the hyperbolic linear layer), in the
+sample. Poincaré ball [4]
+   Wx
+ 1 ∥Wx∥ p
+ W⊕κ (x) := √ tanh tanh −1
+ |κ|∥x∥ .
+C. Hyperbolic Geometry |κ| ∥x∥ ∥Wx∥
+ (7)
+ In contrast to the n-sphere Sn−1
+ κ , the hyperbolic space
+is a curved space with a constant negative curvature (i.e., The proposed network contains the multiclass classification
+κ < 0). The hyperbolic space offers an appealing property for layer. We employ the generalization of multiclass logistic
+anomaly problems. Specifically, the volume in the hyperbolic regression (MLR) to the hyperbolic spaces [4]. Following the
+space increases exponentially. This allows the algorithm to 1 In this case, the Riemannian metric is defined as g H (x) = λ2 (x) · g E ,
+ κ κ
+incorporate more embeddings of unknown objects, particularly where λκ (x) = 1+κ∥x∥
+ 1
+ 2 , and g
+ E is the Euclidean metric.
+HONG et al.: CURVED GEOMETRIC NETWORKS FOR VISUAL ANOMALY RECOGNITION 17925
+
+work in [4], the formulation of the hyperbolic MLR for C function tanh(.) is employed to make sure that the anomaly
+classes is given by: score AS falls between 0 and 1.
+
+l H (y = j|x)
+ √ !! A. GiO Model
+ λκ (x)∥W j ∥ 2 |κ|⟨−p j ⊕κ x, W j ⟩ We first introduce a single-branch framework, i.e., the GiO
+ ∝ exp √ sinh−1 
+ |κ| 1 − |κ| · ∥ − p j ⊕κ x∥2 ∥W j ∥ model. The GiO model [see Fig. 3(b)] is a natural modification
+ (8) that replaces the Euclidean embeddings with curved geometry
+ embeddings. It provides a straightforward comparison to
+where j ∈ {1, 2, . . . , C}. Here, x ∈ Hnκ is an embedding in the justify the advantages of using curved geometry for anomaly
+hyperbolic space, and p j ∈ Hnκ , W j ∈ Tpκ Hnκ \{0} are learnable recognition. Specifically, as shown in Fig. 3(b), the image or
+weights. pixel embeddings can be obtained by applying the GT function
+ (i.e., (2) for M S and (4) for M H ) to the feature vectors
+ IV. A PPROACH encoded by the image encoder. Then, the following geometric
+ classifier, realized by the geometric FC layer, is further used to
+ Visual anomaly (or open-set/OOD) recognition aims to
+ predict the class of its input. For example, the hyperbolic-inidentify abnormal (or open-set/OOD) samples from normal (or
+ one (HiO) model refers to a network with a geometric classifier
+closed-set/ID) samples. During the training process, as shown
+ in the hyperbolic space. Compared to the baseline model [see
+in Fig. 3, only normal, closed-set, or ID data can be accessed.
+ Fig. 3(a)], the GiO model only modifies the embedding layer
+For the evaluation stage, as shown in Fig. 4, both normal
+ and classifier without bringing extra parameters, thereby being
+(or ID) and anomalous (or OOD) inputs to be recognized
+ a cheap yet flexible solution.
+exist.
+ In the GiO model, the geometric score z G ∈ {z S , z H , z M }
+ The pipeline of the baseline is shown in Fig. 3(a) for
+ can be obtained from embedding eG . In our work, the
+the training phase and Fig. 4(a) for the inference phase.
+ geometric score from the spherical manifold M S is defined
+Specifically, an image encoder first maps the input image
+ as
+to a feature embedding e E , lying in a Euclidean space. The
+following FC layer and Softmax function further predict the z S (e S ) = max(lS (e S , W)) (9)
+probability belonging to each normal (or ID) class, denoted
+ where e S ∈ Sn−1
+ κ . Experiments in [7] and [31] verified that
+by c E [see Fig. 3(a)]. In the evaluation process, to identify
+ z S from M S is suitable for visual tasks under the open-set
+whether the input image or pixel is an outlier (also known
+ protocol. Hence, we expect that z S could help in anomaly,
+as anomalous, open-set, or OOD data), one needs to define
+ open-set, or OOD recognition. For the hyperbolic space M H ,
+the anomaly score AS ∈ [0, 1]. In this vanilla model
+ the geometric score is defined as
+[see Fig. 4(a)], we follow the common practice in [15] to
+define the anomaly score by leveraging the predication c E as z H (e H ) = dGeo (e H , 0 H ) (10)
+AS = 1 − max(c E ).
+ where dGeo (e H , 0 H ) is also known as the geodesic distance
+ A curvature-aware geometric model indicates a model
+ between the point e H and the origin 0 H , for e H , 0 H ∈ Hnκ .
+where its classifier operates in a curved space MG , and
+ The experiment of image-level OOD detection in [4] shows
+we term its classifier geometric classifier. Two curvaturethe property of e H , and the hyperbolic embedding points of
+aware geometric models are presented in this section: GiO
+ OOD samples are closer to the origin. In the mixed-curvature
+and GiT, as shown in Fig. 3(b) and (c). Compared to the
+ manifold M M , the geometric score z M is formulated as
+baseline model, the curvature-aware geometric model has two
+geometric layers, namely, GT and geometric FC layer. The N
+ X
+GT is to transform the Euclidean embedding e E computed by z 2M = z 2M,i (11)
+an image encoder to the geometric embedding eG (see (2) i
+
+for the spherical geometry M S and (4) for the hyperbolic where there are N spaces in M M and z M,i is the
+geometry M H ). The geometric FC layer is a generalization geometric score from the ith component space. For instance,
+of the FC layer in MG (e.g., the angular linear layers in M S in M M = M S × M H , z 2M = z 2S + z 2H . The GiO model with
+or the hyperbolic linear layers in M H ). As shown in Fig. 3, M M = M S × M H is actually a two-branch architecture.
+we learn geometric classifiers where embeddings extracted We can even incorporate the Euclidean space into the mixedfrom an image encoder are manipulated in the curved spaces. in-one (MiO) model. In M M = M E ×M S ×M H , we can have
+During the inference phase, as shown in Fig. 4(b) and (c), z 2M = z 2E + z 2S + z 2H where the geometric score from Euclidean
+the geometric score z is initially obtained from the curved space is z E = max(c E ) [15]. Table I lists the proposed
+embedding. In GiO, the variable z can be interpreted as the geometric networks, in conjunction with the geometry score,
+distance value between the curved embedding point and the in the GiO model.
+reference point in the curved space. In GiT, z represents Having the geometry score z G at our disposal, the anomaly
+the discrepancy between two embeddings originating from score is defined as AS = 1 − tanh(z G ). A higher value of AS
+different spaces. Subsequently, the anomaly score in our indicates a higher probability that the input is coming from the
+geometric model is computed as AS = 1 − tanh(z). Since anomalous distribution. The purpose of tanh(·) is to normalize
+z ∈ [0, +∞) is not constrained within the range of 0–1, the z G to a value that is in the range of 0–1 [see Fig. 4(b)].
+17926 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+Fig. 4. General frameworks of the models and their evaluation processes are depicted. In the evaluation stage, the model would process both normal (or
+ID) and anomalous (or OOD) inputs. The geometric score z G is extracted from the curved embedding for anomaly score computation in the GiO model. For
+the GiT model, the geometric score z E G is obtained via Euclidean and curved embeddings. During the evaluation process, GiO and GiT models use the less
+parameters than the baseline. (a) Baseline model. (b) GiO model. (c) GiT model.
+
+ TABLE I spherical-in-two (SiT), hyperbolic-in-two (HiT), and mixed-
+P ROPOSED G EOMETRIC N ETWORKS IN THE G I O M ODEL AND THE G I T in-two (MiT) models, and thereby, z E G ∈ {z E S , z E H , z E M }
+ M ODEL . “A BB .,” “G EO . C OMPONENTS ,” AND “G EO . S CORE ” I NDICATE
+ “ABBREVIATION ,” “G EOMETRY C OMPONENTS ,” AND “G EOMETRY
+ where z E S , z E H , and z E M are from three models. The values
+ S CORE ,” R ESPECTIVELY z E S and z E H can be easily calculated by (12). Inspired by (11),
+ we define z E M in M M as follows:
+ N
+ X
+ z 2E M = z 2E M,i (13)
+ i
+
+ where N indicates the number of component spaces in M M .
+ For example, when M M = M S × M H , the score metric
+ can be obtained by z 2E M = z 2E S + z 2E H . The GiT model with
+ M M = M S × M H is actually a three-branch architecture.
+ Our experiments show that z E G is able to provide reliable
+B. GiT Model discrimination information for anomaly identification. We find
+ Several recent works [47], [48], [49], [50] develop the that similar to our GiO models, the anomaly score of GiT
+dual-branch architecture and exploit the discrepancy between models should be AS = 1 − tanh(z E G ) [see Fig. 4(c)]. Table I
+features in separate classifiers for anomaly, open-set, or OOD lists the networks and the geometry score in the GiT model.
+recognition. Motivated by this fact, we further introduce our
+second framework, termed GiT, where a Euclidean classifier C. Model Training
+and a geometric classifier are integrated after the image In the baseline model, as shown in Fig. 3(a), the Euclidean
+encoder [see Fig. 3(c)]. In the GiT model, in parallel with classifier is optimized by a standard cross-entropy loss
+a branch of the Euclidean classifier, the other branch learns function, as ℓ = ℓ E (c E ). Similarly, we optimize the GiO model
+the feature embedding in the curved space, and the following using the confidence vector cG , predicted in its geometric
+geometric FC layer is used as a class predictor. The embedding classifier with its own specific loss ℓ = ℓG (cG ) [see Fig. 3(b)].
+in the curved space MG is achieved by transforming e E The loss functions for the spherical and hyperbolic geometric
+to eG via a GT function, as shown in Fig. 3(c). In such networks are described in (3) and (8).
+a pipeline, the geometry-aware score z E G is defined as the The GiT model, as shown in Fig. 3(c), is trained in a
+discrepancy between distributions of e E and eG , measured via multitask learning manner by optimizing a Euclidean classifier
+the Kullback–Leibler (KL) divergence, as follows: and a geometric classifier, as ℓ = ℓ E (c E )+ℓG (cG ). To be more
+ X p E,i specific, a shared image encoder encodes the input image in
+ zEG = p E,i log (12) a Euclidean space M E and the curved spaces MG . Then,
+ i
+ p G,i
+ the following Euclidean classifier and geometric classifier are
+where p E,i and pG,i are the ith element in p E and pG , optimized separately. In contrast to the well-studied studentrespectively. Here, p E = softmax(e E ) and pG = softmax(eG ). teacher models [48], [49], which aim to transfer the knowledge
+The geometric score z E G is essentially the distribution from the teacher model to the student model, our GiT model
+discrepancy between the learned embedding e E from M E learns subbranches guided by its own spaces and objective
+and eG from MG . We have three types of GiT models: functions [see (3) and (8)].
+HONG et al.: CURVED GEOMETRIC NETWORKS FOR VISUAL ANOMALY RECOGNITION 17927
+
+ TABLE II
+ V ISUAL A NOMALY TASKS W HERE W E E VALUATE THE P ROPOSED G EOMETRIC M ODELS
+
+ TABLE III
+M ULTICLASS OOD D ETECTION ON CIFAR-10/CIFAR-100 [61] W ITH D ENSE N ET /WRN-28-10 I MAGE E NCODER . M IXED -G EOMETRY E MBEDDING IN
+ THE M I O/M I T M ODEL I NCLUDES S PHERICAL E MBEDDING AND H YPERBOLIC E MBEDDING . W E P ROVIDE AVERAGING R ESULTS OVER F IVE
+ M ULTIPLE OOD DATASETS : TIN C , TIN R , LSUN C , LSUN R , AND iSUN. “*” I NDICATES T HAT THE R ESULTS A RE O BTAINED VIA A
+ S ELF -I MPLEMENTED N ETWORK . T HE C URVATURES OF SiO, SiT, HiO, HiT, MiO, AND MiT A RE S ET TO 1.0, 1.0, −0.01, −1.0,
+ (1.0, −0.01), AND (1.0, −1.0), R ESPECTIVELY
+
+ TABLE IV
+M ULTICLASS OOD D ETECTION ON CIFAR-10/CIFAR-100 [61] W ITH D ENSE N ET /WRN-28-10 I MAGE E NCODER . W E P ROVIDE AVERAGING R ESULTS
+ OVER F IVE M ULTIPLE OOD DATASETS : TIN C , TIN R , LSUN C , LSUNr, AND iSUN. “*” I NDICATES T HAT THE R ESULTS A RE O BTAINED VIA
+ S ELF -I MPLEMENTED N ETWORKS . T HE C URVATURE OF HiO I S S ET TO −0.01
+
+ TABLE V
+M ULTICLASS OOD D ETECTION ON CIFAR-100 [61] W ITH D ENSE N ET [62] AND WRN-28-10 [63] I MAGE E NCODERS . M IXED -G EOMETRY E MBEDDING
+ IN THE M I T M ODEL C OMBINES A S PHERICAL E MBEDDING AND H YPERBOLIC E MBEDDING . W E P ROVIDE AVERAGING R ESULTS OVER F OUR
+ M ULTIPLE OOD DATASETS : TINc, TINr, LSUNc, AND LSUNr. T HE C URVATURES OF SiT, HiT, AND MiT A RE S ET TO 1.0, −0.001, AND
+ (1.0, −0.001), R ESPECTIVELY
+
+ V. E XPERIMENTS shows the difference between each task used in this article.
+ In this section, we evaluate our models on four visual For simplicity, we use the following abbreviations for our
+anomaly, open-set, or OOD tasks: 1) multiclass OOD detec- models: spherical-in-one (SiO), SiT, HiO, HiT, MiO, and MiT.
+tion; 2) one-class anomaly detection; 3) multiclass anomaly It is notable that such terms (e.g., SiO and SiT) indicate that
+segmentation; and 4) one-class anomaly segmentation. Table II the curved geometric models apply the geometric classifiers
+17928 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+ TABLE VI
+O NE -C LASS A NOMALY D ETECTION ON CIFAR-10 [61]. I MAGE -L EVEL AUROC IN % I S G IVEN . classi I NDICATES THE i TH C LASS . “E XTRA” I NDICATES
+ U TILIZING E XTRA DATA FOR T RAINING ( E . G ., U SING P RETRAINED M ODELS ON I MAGE N ET [64]). “*” I NDICATES T HAT THE R ESULTS A RE
+ O BTAINED VIA A S ELF -I MPLEMENTED N ETWORK . M IXED -G EOMETRY E MBEDDING IN THE M I T M ODEL I NCORPORATES B OTH THE
+ S PHERICAL E MBEDDING AND H YPERBOLIC E MBEDDING . ROT N ET∗ , SiT, HiT, AND MiT A DOPT WRN-28-10 [63] AS I MAGE
+ E NCODER , W HILE CSI, SiT, HiT, AND MiT U TILIZE R ES N ET-18 [65]. T HE C URVATURES OF SiT, HiT, AND M I T BASED
+ ON ROT N ET ∗ A RE S ET TO 1.0, −0.005, AND (1.0, −0.005), R ESPECTIVELY. T HE C URVATURES OF SiT, HiT, AND MiT
+ BASED ON CSI A RE G IVEN AS 1.0, −0.01, AND (1.0, −0.01), R ESPECTIVELY
+
+ TABLE VII is trained on the ID dataset only. In this setting, CIFAR-10
+M ULTICLASS A NOMALY S EGMENTATION ON S TREET H AZARDS [19]. and CIFAR-100 [61] are chosen as ID datasets, while the
+ FPR (95% TPR), P IXEL -L EVEL AUROC, AND AUPR IN % A RE
+ G IVEN . T HE M ETRIC S TD OVER F IVE RUNS . T HE R ESULTS
+ cropped TinyImageNet (TINc), the resized TinyImageNet
+ OF AE, D ROPOUT, AND MSP A RE P ROVIDED IN [19]. T HE (TINr) [64], the cropped LSUN (LSUNc), the resized LSUN
+ C URVATURES OF SiT, HiT, AND MiT BASED ON MSP A RE (LSUNr) [76], and iSUN [77] are OOD datasets. We first adopt
+ S ET TO 1.0, −0.01, AND (1.0, −0.01), R ESPECTIVELY
+ the Hendrycks&Gimpel model [15] as the baseline network.
+ Both Dense-BC [62] and WRN-28-10 [63] are used as image
+ encoders. As shown in Table III, we can observe that the
+ HiO model attains the overall best accuracy. In addition, our
+ models, except the SiO model, bring the performance gain over
+ the baselines, showing the superiority of curved geometries
+ as embedding spaces. It is also notable that our models are
+ light. For example, the HiT model surpasses the baseline by
+ 4.2% with WRN-28-10 on CIFAR-100, while it only uses an
+ extra 0.02 M parameters, i.e., from 146.05 M to 146.07 M.
+ Moreover, in most cases, the performance of the mixedcompared to their corresponding baselines (see Table I for curvature model, MiO or MiT, is in between that of hyperbolic
+more details). Metrics, including the false positive rate at and spherical models. Besides the Hendrycks&Gimpel model,
+95% true positive rate (FPR at 95% TPR), the detection we also use ODIN [16] as the baseline where we employ the
+error, the area under the receiver operating characteristics input preprocessing at the test phase. The results of geometric
+(AUROC) [72], [73], and the area under the precision-recall models that adopt ODIN as the baseline are reported in
+(AUPR) [74], [75], are measured. All results are averaged over Table IV. From Table III, we identify HiO as the model,
+five independent trials. which obtains the best performance. Hence, we choose and test
+ For the experiments on multiclass OOD detection, HiO for ODIN. Except for the experiment of WRN-28-10 on
+we train the geometric models for 300/300/100 epochs CIFAR-100, we see that HiO boosts the performance against
+using Hendrycks&Gimpel [15]/ODIN [16]/ELOC [35] as the baseline.
+the baselines, with a learning rate of 0.05/0.05/0.1. In the In addition to Hendrycks&Gimpel and ODIN models,
+experiments of one-class anomaly detection, the models based we also incorporate the proposed geometric classifier into
+on RotNet [36]/CSI [38] are trained for 100/1000 epochs with advanced baselines. In this study, we employ the ELOC [35]
+learning rates of 0.01/0.1. For the multiclass segmentation as the baseline network. As shown in Table V, the HiT
+task, the models are trained for 30 epochs with a learning model performs the best over two image encoders. Specifically,
+rate of 0.02. In one-class anomaly segmentation, the models it surpasses the baseline by 0.77%/1.60% in AUROC under
+are trained for 1200 epochs with a learning rate of 1e−4 . The Dense-BC/WRN-28-10. Similar to the results shown in
+values of curvatures for the GiO/GiT models are provided in Table III, the performance of the MiT model is in between SiT
+the captions of Tables III–IX. and HiT with Dense-BC on CIFAR-100, but it unexpectedly
+ becomes the worst with WRN-28-10.
+A. Multiclass OOD Detection
+ The objective of multiclass OOD detection, traditionally B. One-Class Anomaly Detection
+termed OOD detection, is to identify whether a sample is In the one-class anomaly (or open-set) detection setting,
+from the given dataset with multiple ID classes. The model only one class is set as the normal class, while other classes
+HONG et al.: CURVED GEOMETRIC NETWORKS FOR VISUAL ANOMALY RECOGNITION 17929
+
+ TABLE VIII
+O NE -C LASS A NOMALY S EGMENTATION (A NOMALY L OCALIZATION ) ON MVT EC AD [68]. P IXEL -L EVEL AUROC IN % I S G IVEN . “E XTRA” I NDICATES
+ U TILIZING E XTRA DATA FOR T RAINING ( E . G ., U SING P RETRAINED M ODELS ON I MAGE N ET [64]). “C PR ” I NDICATES U SING THE C OMPARISON
+ W ITH THE T RAINING DATA FOR A NOMALY S CORE C OMPUTATION D URING E VALUATION . T HE R ESULTS OF AVID AND A NO GAN/AE A RE
+ P ROVIDED IN [32] AND [49], R ESPECTIVELY. M IXED -G EOMETRY E MBEDDING IN THE MiO/MiT M ODEL I NCLUDES S PHERICAL
+ E MBEDDING AND H YPERBOLIC E MBEDDING . T HE C URVATURES OF SiO, HiO, MiO, SiT, HiT, AND MiT A RE S ET TO 1.0,
+ −0.01, (1.0, −0.01), 1.0, −1.0, AND (1.0, −1.0), R ESPECTIVELY. T HE M ODEL S IZES OF PATCH -SVDD† , SiO, HiO,
+ MiO, SiT, HiT, AND MiT A RE 1.72 M, 1.72 M, 1.72 M, 1.82 M, 1.82 M, 1.83 M, AND 1.93 M, R ESPECTIVELY
+
+are used as abnormal classes. The common practice of D. One-Class Anomaly Segmentation
+creating discriminative representations under this setting is
+modeled as a multiclass classification problem using the self- One-class anomaly segmentation, also known as anomaly
+supervised learning (SSL) algorithms [36], [38], [38], [41], localization, aims to identify whether the input pixel is
+[42], [43]. In this task, we evaluate our models on the one- an anomalous pixel or not [33], [68]. In contrast to the
+class CIFAR-10 dataset [61]. multiclass anomaly segmentation, the training samples in one-
+ Our geometric classifier is built on RotNet [36] and class anomaly segmentation are drawn from only one class of
+CSI [38]. RotNet predicts the rotation angles as supervision for the dataset.
+SSL. Following the setting in [36], we set the rotation angles We verify the effectiveness of our models on the MVTecAD
+to 0◦ , 90◦ , 180◦ , and 270◦ . A 4-D classifier that predicts the dataset [68] and adopt the SOTA model Patch-SVDD [37]
+angle of rotation is applied to the input image. CSI adopts as a baseline without using extra data. A possible limitation
+the contrastive learning scheme, which contrasts the negative of Patch-SVDD is that the computation of the anomaly
+samples coming from the data augmentation. The results are scores AS for inference depends to a great extent on the
+shown in Table VI. We can observe that either of our models comparison with training samples. To simplify the evaluation
+can improve the baselines, showing that embedding in curved process, we calculate the anomaly score directly from its
+spaces indeed benefits the discrimination of data embedding. normalized classifier’s value without utilizing any training
+For example, in RotNet, the method with mixed-curvature data (denoted by Patch-SVDD† ). We then plug our geometric
+geometry, MiT, attains the best performance improvement, models on top of Patch-SVDD† . The results are reported
+e.g., 1.53%, and outperforms the SiT and HiT models. in Table VIII. As suggested in Table VIII, all geometric
+It verifies that mixed-curvature geometry indeed benefits from models, except the SiO model, boost the performance of
+the advantages of both spherical geometry and hyperbolic the baseline, and the mixed-curvature geometric model, MiT,
+geometry. In CSI [38], as a strong baseline, our models again performs the best. It gains 17.55% improvement. In this task,
+bring a performance gain, and the MiT method achieves the the dual-branch architecture (i.e., SiT/HiT/MiT) consistently
+best average performance, revealing that our models generalize outperforms the single-branch model (i.e., SiO/HiO/MiO).
+and are effective. Along with a considerable improvement, our proposal is also
+ cheap. For example, the SiT improves the baseline by a margin
+ of 16.41%, while it only brings extra 0.1 M parameters, i.e.,
+ 1.82 M versus 1.72 M, again showing the benefits from curved
+C. Multiclass Anomaly Segmentation
+ geometric embeddings.
+ In contrast to multiclass OOD detection, which recognizes The idea of Patch-SVDD† is to evaluate our method on a
+the OOD samples at the image level, multiclass anomaly toy example to illustrate the advantage of curved geometries.
+(or open-set) segmentation is required to predict anomalous However, after we remove the comparison process with
+objects at the pixel level. Following [19] and [25], training images from Patch-SVDD, we find its identification
+we evaluate this task using the StreetHazards dataset [19]. performance significantly drops. To show the full potential
+The Hendrycks&Gimpel model [15] with maximum softmax of our design in conjunction with the original Patch-SVDD,
+probability (MSP) is adopted as the baseline. We report the we employ our geometric model over the original Patchresults in Table VII. As suggested in Table VII, this task SVDD where training images are considered for calculating
+also benefits the most from the mixed-curvature geometry the anomaly score. As shown in Table IX, the accuracy
+(MiT), again showing that multiple geometries are essential of Patch-SVDD on MVTecAD is boosted from 95.7% to
+to learning discriminative embeddings. 96.5%/96.5%/96.7% once using SiT/HiT/MiT. We follow
+17930 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+ TABLE IX
+O NE -C LASS A NOMALY S EGMENTATION (A NOMALY L OCALIZATION ) ON MVT EC AD [68]. P IXEL -L EVEL AUROC IN % I S G IVEN . “E XTRA” I NDICATES
+ U TILIZING E XTRA DATA FOR T RAINING ( E . G ., U SING P RETRAINED M ODELS ON I MAGE N ET [64]). “C PR ” I NDICATES U SING THE C OMPARISON
+ W ITH THE T RAINING DATA FOR A NOMALY S CORE C OMPUTATION D URING E VALUATION . T HE R ESULTS OF LSA A RE P ROVIDED IN [32].
+ M IXED -G EOMETRY E MBEDDING IN THE MiT M ODEL I NCLUDES S PHERICAL E MBEDDING AND H YPERBOLIC E MBEDDING . T HE
+ C URVATURES OF SiT, HiT, AND MiT A RE S ET TO 1.0, −1.0, AND (1.0, −1.0), R ESPECTIVELY
+
+ TABLE X
+ M ULTICLASS A NOMALY S EGMENTATION ON MVT EC AD [68]. P IXEL -L EVEL AUROC IN % I S G IVEN . M IXED -G EOMETRY E MBEDDING
+ IN THE M I T M ODEL I NCLUDES S PHERICAL E MBEDDING AND H YPERBOLIC E MBEDDING . T HE C URVATURES OF SiT, HiT, AND MiT
+ A RE S ET TO 1.0, −1.0, AND (1.0, −1.0), R ESPECTIVELY
+
+the anomaly score computation of the original Patch-SVDD TABLE XI
+except for replacing the patch’s embedding with the geometric A BLATION S TUDY: M ULTICLASS OOD D ETECTION . I MAGE -L EVEL
+ AUROC IN % I S G IVEN . D IFFERENT C ASES A RE E VALUATED
+score z E G . ON CIFAR-10 [61] TO V ERIFY THE I NTERACTIONS B ETWEEN
+ As described in Section V-C, the multiclass setting allows H YPERBOLIC OR S PHERICAL AND E UCLIDEAN S PACES
+training data from multiple classes. We utilize this multiclass
+data to train PatchSVDD† and the proposed geometric models
+on the MVTecAD dataset [68]. Consistent with the approach
+outlined in [79], we do not employ class label information. The
+results, presented in Table X, demonstrate the clear superiority
+of the geometric approaches over the baseline model.
+ the mixed-curvature geometry has a balanced performance.
+ For example, in the task of multiclass OOD detection, there
+E. Analysis exists a significant performance gap between hyperbolic and
+ In this section, we aim to provide studies to analyze the spherical geometries, as evidenced by SiO versus HiO. Thus,
+superiority of our design. the mixed space MiO might be expected to have an average
+ 1) Performance: We learn from empirical observations performance.
+in Sections V-A–V-D that the curved spaces are able to 3) Interactions Among Geometries: The GiT model
+consistently provide reliable information for anomaly, open- requires meanwhile learning two embeddings (e.g.,
+set, or OOD recognition. In most cases, our curvature-aware a Euclidean e E , and a hyperbolic e H or spherical
+geometric networks clearly outperform Euclidean networks. embedding e S ). We observe that it happens in the interactions
+One possible explanation is that the geometric representations between different geometric components. For instance,
+benefit particular problems. For example, as we discussed in multiclass OOD detection (see Table III), e E could enrich
+in Section I, hyperbolic geometry is good at encoding e S (SiO versus SiT); however, for e H , it has less or even
+hierarchical structures inside the data. The datasets we test negative impact (HiO versus HiT). To further understand the
+include hierarchical information to some extent. For instance, influence, we analyzed the experiments of WRN-28-10 on
+the CIFAR dataset includes ten superclasses and ten subclasses CIFAR-10 where we separately test e E and e H (or e S ) in
+under each superclass. The 15 classes of MVTecAD can HiT (or SiT). Results in Table XI suggest the aforementioned
+be categorized into two main supercategories, “object” and point (HiO versus e H in HiT and SiO versus e S in SiT).
+“texture.” Hence, the hyperbolic space takes effect. 4) Curvature: The curvature κ is the only hyperparameter
+ 2) Mixed Geometry: Another interesting fact has been in the proposed curvature-aware geometric networks. The
+observed is that the mixed-curvature geometry beats its study of one-class anomaly segmentation of HiT based on
+component single-curvature geometries in several cases: Patch-SVDD† in Table XII suggests that κ clearly has an
+MiT based on RotNet∗ /CSI of one-class anomaly detection, impact on anomaly recognition performance. Table XII shows
+MiT based on MSP of multiclass anomaly segmentation, that for each category, there exists an optimal curvature value κ
+and MiT based on Patch-SVDD† of one-class anomaly that leads to the best performance. Deviating from this optimal
+segmentation in Tables VI–VIII, respectively. In some cases, value results in a decrease in performance.
+HONG et al.: CURVED GEOMETRIC NETWORKS FOR VISUAL ANOMALY RECOGNITION 17931
+
+Fig. 5. Visualization: multiclass OOD detection. Density distributions of max(c E ), tanh(z S ), tanh(z E S ), tanh(z H ), and tanh(z E H ) of Hendrycks&Gimpel,
+SiO, SiT, HiO, and HiT models with Dense-BC on CIFAR10→TINc are provided. The obtained AUROC for these five models are 94.8%, 94.7%, 98.1%,
+98.7%, and 96.0%. More corresponding results can be referred to in Table III.
+
+ TABLE XII
+ A BLATION S TUDY: O NE -C LASS A NOMALY S EGMENTATION (A NOMALY
+ L OCALIZATION ). P IXEL -L EVEL AUROC IN % I S G IVEN . D IFFERENT
+ F IXED C URVATURES ON MVT EC AD [68] A RE E VALUATED . F OR
+ E ACH C ATEGORY, D IFFERENT C URVATURES B RING A BOUT
+ D IFFERENT P ERFORMANCES . A LSO , THE O PTIMAL C URVA -
+ TURE C HOICE I S N OT C ONSISTENT A MONG
+ D IFFERENT C ATEGORIES
+
+Fig. 6. Visualization: one-class anomaly detection. Density distribution of
+anomaly score AS(z E H ) of HiT based on RotNet∗ on CIFAR-10 [61] is
+visualized. We choose cases where class1 , class5 , or class9 is taken as the
+normal class. The distribution of one case is shown in one column. More
+corresponding results can be referred to in Table VI.
+
+ 5) Method Choice: Our comprehensive empirical study
+suggests that a single definitive conclusion cannot be made.
+This is in line with observations made in recent works. For
+example, in [14], the best geometry choice depends on the task.
+Our study clearly shows that curved geometry is beneficial
+in capturing the geometry of data, contributing tangibly to
+identifying anomalies in data. Specifically, our empirical study
+suggests that the preferred model for each task is shown
+as follows—multiclass OOD detection: HiO/HiT; multiclass
+anomaly segmentation: MiT; one-class anomaly detection:
+MiT; and one-class anomaly segmentation: MiT. If one model
+should be chosen in all instances, then we will opt for MiT as Fig. 7. Visualization: one-class anomaly detection. Examples with anomaly
+ scores AS computed by RotNet∗ , HiT, and MiT are provided (see the top).
+the potential model for the visual anomaly recognition tasks. In addition, AUROC curves along the training epoch are plotted in the
+ bottom.
+F. Visualization
+ In this section, we qualitatively study our method in imagelevel classification task and pixel-level segmentation task, embedding spaces can provide more useful information than
+to understand why our method can bring performance gain the confidence vector c E from the Euclidean space in distinover the baseline model. guishing normal (or closed-set/ID) and abnormal (or open-
+ 1) Image-Level Classification: In this work, we particularly set/OOD) objects. We visualize the distribution of max(c E ),
+study whether the geometric score z G and z E G from the curved tanh(z S ), tanh(z E S ), tanh(z H ), and tanh(z E H ) on multiclass
+17932 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+ VI. C ONCLUSION
+ In this article, we study the potential use and benefit of
+ employing curved spaces for the purpose of visual anomaly,
+ open-set, or OOD recognition tasks. Our idea is inspired by
+ the observation that curved embedding spaces help better
+ represent “unknown” data in low-shot problems. Our work
+ proposes two novel geometric networks, GiO and GiT,
+ for the visual anomaly data analysis. In each geometric
+ model, we fully study the potential of different geometry
+ constraints. To the best of our knowledge, our curvatureaware geometric networks are the first attempt to employ
+ curved geometries in visual anomaly, open-set, or OOD
+ recognition. Based on extensive experiments, we confirm
+ that more distinct representations between normal (or closedset/ID) and anomalous (or open-set/OOD) samples can be
+ learned using curved spaces, clearly showing the benefits
+ of the curved spaces. We hope that this work can inspire
+ researchers to explore curved geometries further in other
+ domains.
+ While the proposed geometric modules successfully
+ enhance performance, their applicability is currently limited
+ to baselines employing the “encoder–classifier” structure.
+ Furthermore, the fixed curvature of these designs does
+ not guarantee the optimal performance. To address these
+ limitations, future research could explore the integration
+ of curved embeddings into generative-based models with
+ “encoder–decoder” structures. In addition, efforts can be
+ directed toward developing adaptive-curvature designs to
+Fig. 8. Visualization: one-class anomaly segmentation (anomaly localization). achieve the optimal performance.
+The heatmaps of anomaly score AS(c E ), AS(z E S ), AS(z E H ), and AS(z E M )
+of Patch-SVDD† , SiT, HiT, and MiT on MVTecAD [68] are visualized.
+We provide examples from “bottle,” “metal nut,” “tile,” and “grid.” More R EFERENCES
+corresponding results can be found in Table VIII. In addition, for the category [1] M. Nickel and D. Kiela, “Poincaré embeddings for learning hierarchical
+“bottle,” AUROC curves of different models along the training epoch are representations,” in Proc. Adv. Neural Inf. Process. Syst., vol. 30, 2017,
+plotted in the bottom. pp. 6338–6347.
+ [2] A. Tifrea, G. Bécigneul, and O.-E. Ganea, “Poincaré GloVe: Hyperbolic
+ word embeddings,” 2018, arXiv:1810.06546.
+ [3] B. Dhingra, C. J. Shallue, M. Norouzi, A. M. Dai, and G. E. Dahl,
+ “Embedding text in hyperbolic spaces,” 2018, arXiv:1806.04313.
+OOD detection over CIFAR-10 (CIFAR10→TINc) in Fig. 5. [4] V. Khrulkov, L. Mirvakhabova, E. Ustinova, I. Oseledets, and V.
+As shown in Fig. 5, the curved embedding spaces help to Lempitsky, “Hyperbolic image embeddings,” in Proc. IEEE/CVF Conf.
+better separate ID and OOD distributions. The distribution of Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020, pp. 6418–6428.
+ [5] J. Park, J. Cho, H. J. Chang, and J. Young Choi, “Unsupervised
+anomaly score AS(z E H ) of one-class anomaly detection on hyperbolic representation learning via message passing auto-encoders,”
+one-class CIFAR-10 is visualized in Fig. 6. The visualization in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+shows that z E H provides reliable information for distinguish- Jun. 2021, pp. 5516–5526.
+ [6] Y. Zhang, L. Luo, W. Xian, and H. Huang, “Learning better visual
+ing the normal one-class and the abnormal classes. We present data similarities via new grouplet non-Euclidean embedding,” in Proc.
+some examples in Fig. 7 to verify the performance differences IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021, pp. 9918–9927.
+among models, where we compare RotNet∗ /HiT/MiT on [7] W. Liu, Y. Wen, Z. Yu, M. Li, B. Raj, and L. Song, “SphereFace:
+ Deep hypersphere embedding for face recognition,” in Proc. IEEE Conf.
+Class 2 as a normal class. The anomaly scores AS in Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017, pp. 212–220.
+the top figure show different models that have different [8] X. Fan, W. Jiang, H. Luo, and M. Fei, “SphereReID: Deep hypersphere
+capacities to recognize abnormal classes. Also, the AUROC manifold embedding for person re-identification,” J. Vis. Commun. Image
+curve suggests substantial improvements led by the curved Represent., vol. 60, pp. 51–58, Apr. 2019.
+ [9] S. Ravi and H. Larochelle, “Optimization as a model for few-shot
+geometries. learning,” in Proc. Int. Conf. Learn. Represent. (ICLR), 2017, pp. 1–11.
+ 2) Pixel-Level Segmentation: From experiments, we find [10] L. Van der Maaten and G. Hinton, “Visualizing data using t-SNE,”
+ J. Mach. Learn. Res., vol. 9, no. 11, pp. 2579–2605, 2008.
+that besides image-level tasks, curved spaces as embedding
+ [11] S. Liu, J. Chen, L. Pan, C.-W. Ngo, T.-S. Chua, and Y.-G. Jiang,
+spaces do help in pixel-level anomaly tasks. In Fig. 8, “Hyperbolic visual embedding learning for zero-shot recognition,” in
+we show examples in which we visualize the anomaly score Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), 2020,
+AS of Patch-SVDD† , SiT, HiT, and MiT on MVTecAD [68]. pp. 9273–9281.
+ [12] J. Shen, Z. Xiao, X. Zhen, and L. Zhang, “Spherical zero-shot learning,”
+As shown in Fig. 8, z E G from MG outperforms c E from M E IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 2, pp. 634–645,
+in identifying anomalous pixels. Feb. 2022.
+HONG et al.: CURVED GEOMETRIC NETWORKS FOR VISUAL ANOMALY RECOGNITION 17933
+
+[13] P. Fang, M. Harandi, and L. Petersson, “Kernel methods in hyperbolic [37] J. Yi and S. Yoon, “Patch SVDD: Patch-level SVDD for anomaly
+ spaces,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021, detection and segmentation,” in Proc. Asian Conf. Comput. Vis., 2020,
+ pp. 10665–10674. pp. 1–16.
+[14] O. Skopek, O.-E. Ganea, and G. Bécigneul, “Mixed-curvature variational [38] J. Tack, S. Mo, J. Jeong, and J. Shin, “CSI: Novelty detection via
+ autoencoders,” in Proc. ICLR, 2020, pp. 1–44. contrastive learning on distributionally shifted instances,” in Proc.
+[15] D. Hendrycks and K. Gimpel, “A baseline for detecting misclassified NeurIPS, 2020, pp. 1–14.
+ and out-of-distribution examples in neural networks,” in Proc. ICLR, [39] J. Zheng, W. Li, J. Hong, L. Petersson, and N. Barnes, “Towards open-
+ 2017, pp. 1–12. set object detection and discovery,” in Proc. IEEE/CVF Conf. Comput.
+[16] S. Liang, Y. Li, and R. Srikant, “Enhancing the reliability of out-of- Vis. Pattern Recognit. Workshops (CVPRW), Jun. 2022, pp. 3960–3969.
+ distribution image detection in neural networks,” in Proc. ICLR, 2018, [40] J. Hong et al., “GOSS: Towards generalized open-set semantic
+ pp. 1–27. segmentation,” 2022, arXiv:2203.12116.
+[17] T. DeVries and G. W. Taylor, “Learning confidence for out-of- [41] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+ distribution detection in neural networks,” 2018, arXiv:1802.04865. Learn., 2018, pp. 4393–4402.
+[18] C. Corbière, N. Thome, A. Bar-Hen, M. Cord, and P. Pèrez, “Addressing [42] I. Golan and R. El-Yaniv, “Deep anomaly detection using geometric
+ failure prediction by learning model confidence,” in Proc. NeurIPS, transformations,” in Proc. NeurIPS, 2018, pp. 1–12.
+ 2019, pp. 1–12. [43] D. Hendrycks, M. Mazeika, S. Kadavath, and D. Song, “Using self-
+[19] D. Hendrycks et al., “Scaling out-of-distribution detection for real- supervised learning can improve model robustness and uncertainty,” in
+ world settings,” in Proc. 39th Int. Conf. Mach. Learn. (ICML), 2022, Proc. NeurIPS, 2019, pp. 1–13.
+ pp. 8759–8773. [44] L. Bergman and Y. Hoshen, “Classification-based anomaly detection for
+[20] Y.-C. Hsu, Y. Shen, H. Jin, and Z. Kira, “Generalized ODIN: Detecting general data,” in Proc. ICLR, 2020, pp. 1–12.
+ out-of-distribution image without learning from out-of-distribution data,” [45] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Selfin Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), supervised learning for anomaly detection and localization,” in Proc.
+ Jun. 2020, pp. 10951–10960. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+[21] J. Jang and C. O. Kim, “Collective decision of one-vs-rest networks pp. 9659–9669.
+ for open-set recognition,” IEEE Trans. Neural Netw. Learn. Syst., early [46] Y. Liu, Z. Li, S. Pan, C. Gong, C. Zhou, and G. Karypis,
+ access, Jul. 14, 2022, doi: 10.1109/TNNLS.2022.3189996. “Anomaly detection on attributed networks via contrastive self-
+[22] K. Lee, H. Lee, K. Lee, and J. Shin, “Training confidence-calibrated supervised learning,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33,
+ classifiers for detecting out-of-distribution samples,” in Proc. ICLR, no. 6, pp. 2378–2392, Jun. 2022.
+ 2018, pp. 1–16. [47] Q. Yu and K. Aizawa, “Unsupervised out-of-distribution detection by
+[23] M. Sabokrou et al., “AVID: Adversarial visual irregularity detection,” maximum classifier discrepancy,” in Proc. IEEE/CVF Int. Conf. Comput.
+ in Proc. Asian Conf. Comput. Vis. Cham, Switzerland: Springer, 2018, Vis. (ICCV), Oct. 2019, pp. 9517–9525.
+ pp. 488–505. [48] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed
+[24] K. Lis, K. K. Nakka, P. Fua, and M. Salzmann, “Detecting the students: Student-teacher anomaly detection with discriminative latent
+ unexpected via image resynthesis,” in Proc. IEEE/CVF Int. Conf. embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+ Comput. Vis. (ICCV), Oct. 2019, pp. 2152–2161. (CVPR), Jun. 2020, pp. 4182–4191.
+[25] Y. Xia, Y. Zhang, F. Liu, W. Shen, and A. L. Yuille, “Synthesize then [49] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee,
+ compare: Detecting failures and anomalies for semantic segmentation,” “Multiresolution knowledge distillation for anomaly detection,” in Proc.
+ in Proc. Eur. Conf. Comput. Vis. Cham, Switzerland: Springer, 2020, IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+ pp. 145–161. pp. 14897–14907.
+[26] S. Kong and D. Ramanan, “OpenGAN: Open-set recognition via open [50] S. Wang, L. Wu, L. Cui, and Y. Shen, “Glancing at the patch:
+ data generation,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Anomaly localization with global and local feature comparison,” in Proc.
+ Oct. 2021, pp. 813–822. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+[27] J. Ren et al., “Likelihood ratios for out-of-distribution detection,” in pp. 254–263.
+ Proc. NeurIPS, 2019, pp. 1–12. [51] M. M. Bronstein, J. Bruna, Y. LeCun, A. Szlam, and P. Vandergheynst,
+[28] D. Abati, A. Porrello, S. Calderara, and R. Cucchiara, “Latent space “Geometric deep learning: Going beyond Euclidean data,” IEEE Signal
+ autoregression for novelty detection,” in Proc. IEEE/CVF Conf. Comput. Process. Mag., vol. 34, no. 4, pp. 18–42, Jul. 2017.
+ Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 481–490. [52] M. Zaheer et al., “Deep sets,” in Proc. NeurIPS, 2017, pp. 1–11.
+[29] P. Perera, R. Nallapati, and B. Xiang, “OCGAN: One-class novelty [53] P. Fang, P. Ji, L. Petersson, and M. Harandi, “Set augmented triplet
+ detection using GANs with constrained latent representations,” in Proc. loss for video person re-identification,” in Proc. WACV, Jan. 2021,
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 464–473.
+ pp. 2898–2906. [54] A. Cheraghian et al., “Synthesized feature based few-shot class-
+[30] D. Gong et al., “Memorizing normality to detect anomaly: Memory- incremental learning on a mixture of subspaces,” in Proc. ICCV,
+ augmented deep autoencoder for unsupervised anomaly detection,” Oct. 2021, pp. 8661–8670.
+ in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019, [55] C. Simon, P. Koniusz, R. Nock, and M. Harandi, “Adaptive subspaces
+ pp. 1705–1714. for few-shot learning,” in Proc. CVPR, Jun. 2020, pp. 1–10.
+[31] F. V. Massoli, F. Falchi, A. Kantarci, S. Akti, H. K. Ekenel, and [56] A. M. Bronstein, M. M. Bronstein, and R. Kimmel, “Expression-
+ G. Amato, “MOCCA: Multilayer one-class classification for anomaly invariant face recognition via spherical embedding,” in Proc. IEEE Int.
+ detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, Conf. Image Process., vol. 3, Sep. 2005, p. 756.
+ pp. 2313–2323, Jun. 2022. [57] W. Liu et al., “Deep hyperspherical learning,” 2017, arXiv:1711.03189.
+[32] S. Venkataramanan, K.-C. Peng, R. V. Singh, and A. Mahalanobis, [58] R. Ma, P. Fang, T. Drummond, and M. Harandi, “Adaptive poincaré
+ “Attention guided anomaly localization in images,” in Proc. Eur. Conf. point to set distance for few-shot classification,” in Proc. AAAI Conf.
+ Comput. Vis. Cham, Switzerland: Springer, 2020, pp. 485–503. Artif. Intell., vol. 36, no. 2, 2022, pp. 1926–1934.
+[33] W. Liu et al., “Towards visually explaining variational autoencoders,” [59] S. Jayasumana, S. Ramalingam, and S. Kumar, “Model-efficient deep
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), learning with kernelized classification,” in Proc. ICLR, 2022, pp. 1–18.
+ Jun. 2020, pp. 8642–8651. [Online]. Available: https://openreview.net/forum?id=30SXt3-vvnM
+[34] K. Zhou et al., “Memorizing structure-texture correspondence for image [60] A. Gu, F. Sala, B. Gunel, and C. Ré, “Learning mixed-curvature
+ anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33, representations in product spaces,” in Proc. ICLR, 2019, pp. 1–21.
+ no. 6, pp. 2335–2349, Jun. 2022. [61] A. Krizhevsky et al., “Learning multiple layers of features from tiny
+[35] A. Vyas, N. Jammalamadaka, X. Zhu, D. Das, B. Kaul, and T. L. Willke, images,” Univ. Toronto, Toronto, ON, Canada, Tech. Rep., 2009.
+ “Out-of-distribution detection using an ensemble of self supervised [62] G. Huang, Z. Liu, L. Van Der Maaten, and K. Q. Weinberger, “Densely
+ leave-out classifiers,” in Proc. Eur. Conf. Comput. Vis. (ECCV), 2018, connected convolutional networks,” in Proc. IEEE Conf. Comput. Vis.
+ pp. 550–564. Pattern Recognit. (CVPR), Jul. 2017, pp. 2261–2269.
+[36] S. Gidaris, P. Singh, and N. Komodakis, “Unsupervised representation [63] S. Zagoruyko and N. Komodakis, “Wide residual networks,” 2016,
+ learning by predicting image rotations,” in Proc. ICLR, 2018, pp. 1–14. arXiv:1605.07146.
+17934 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+[64] J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and L. Fei-Fei, “ImageNet: Pengfei Fang received the M.E. degree from
+ A large-scale hierarchical image database,” in Proc. IEEE Conf. Comput. Australian National University (ANU), Canberra,
+ Vis. Pattern Recognit., Jun. 2009, pp. 248–255. ACT, Australia, in 2017, and the Ph.D. degree from
+[65] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for ANU and DATA61-CSIRO, Canberra, in 2022.
+ image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. He was a Post-Doctoral Fellow at Monash
+ (CVPR), Jun. 2016, pp. 770–778. University, Clayton, VIC, Australia, in 2022. He is
+[66] C. Baur, B. Wiestler, S. Albarqouni, and N. Navab, “Deep autoencoding currently an Associate Professor with the School
+ models for unsupervised anomaly segmentation in brain MR images,” in of Computer Science and Engineering, Southeast
+ Proc. Int. MICCAI Brainlesion Workshop. Cham, Switzerland: Springer, University (SEU), Nanjing, China.
+ 2018, pp. 161–169. His research interests include computer vision and
+[67] Y. Gal and Z. Ghahramani, “Dropout as a Bayesian approximation: machine learning.
+ Representing model uncertainty in deep learning,” in Proc. Int. Conf.
+ Mach. Learn., 2016, pp. 1050–1059.
+[68] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A Weihao Li received the Ph.D. degree in computer
+ comprehensive real-world dataset for unsupervised anomaly detection,” science from Heidelberg University, Heidelberg,
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Germany, in 2019, under the supervision of
+ Jun. 2019, pp. 9584–9592. Prof. Dr. Carsten Rother.
+ He is currently a Research Fellow at Australian
+[69] T. Schlegl et al., “Unsupervised anomaly detection with generative
+ National University (ANU), Canberra, ACT,
+ adversarial networks to guide marker discovery,” in Proc. Int. Conf. Inf.
+ Australia. Before joining ANU in 2022, he was a
+ Process. Med. Imag. Cham, Switzerland: Springer, 2017, pp. 146–157.
+ Post-Doctoral Research Fellow at Data61-CSIRO,
+[70] P. Bergmann, S. Löwe, M. Fauser, D. Sattlegger, and C. Steger, Canberra, from 2019 to 2022. His research interests
+ “Improving unsupervised defect segmentation by applying structural include computer vision and machine learning.
+ similarity to autoencoders,” 2018, arXiv:1807.02011.
+[71] D. Dehaene, O. Frigo, S. Combrexelle, and P. Eline, “Iterative energybased projection on a normal data manifold for anomaly localization,”
+ in Proc. ICLR, 2020, pp. 1–17. Junlin Han received the Bachelor of Information
+[72] J. Davis and M. Goadrich, “The relationship between precision-recall Technology degree (Hons.) from Australian National
+ and ROC curves,” in Proc. 23rd Int. Conf. Mach. Learn. (ICML), 2006, University (ANU), Canberra, ACT, Australia,
+ pp. 233–240. in 2023.
+[73] T. Fawcett, “An introduction to ROC analysis,” Pattern Recognit. Lett., His academic pursuits focus on computer vision,
+ vol. 27, no. 8, pp. 861–874, Jun. 2006. deep learning, and artificial intelligence, with a
+[74] C. Manning and H. Schutze, Foundations of Statistical Natural specific emphasis on leveraging data-centric method-
+ Language Processing. Cambridge, MA, USA: MIT Press, 1999. ologies to attain human-like visual intelligence.
+[75] T. Saito and M. Rehmsmeier, “The precision-recall plot is more Mr. Han actively participates as a reviewer for
+ informative than the ROC plot when evaluating binary classifiers esteemed conferences. He was honored as a top
+ on imbalanced datasets,” PLoS ONE, vol. 10, no. 3, Mar. 2015, reviewer in Conference on Neural Information
+ Art. no. e0118432. Processing Systems (NeurIPS) 2022.
+[76] F. Yu, A. Seff, Y. Zhang, S. Song, T. Funkhouser, and J. Xiao, “LSUN:
+ Construction of a large-scale image dataset using deep learning with
+ humans in the loop,” 2015, arXiv:1506.03365. Lars Petersson is currently the Group Leader and
+[77] P. Xu, K. A. Ehinger, Y. Zhang, A. Finkelstein, S. R. Kulkarni, and a Principal Research Scientist with the Imaging and
+ J. Xiao, “TurkerGaze: Crowdsourcing saliency with webcam based eye Computer Vision Group, Data61-CSIRO, Canberra,
+ tracking,” 2015, arXiv:1504.06755. ACT, Australia. He is also leading one of the
+[78] T. Reiss, N. Cohen, L. Bergman, and Y. Hoshen, “PANDA: Adapting activities under CSIRO’s Machine Learning and
+ pretrained features for anomaly detection and segmentation,” in Proc. Artificial Intelligence Future Science Platform effort
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, where data science problems from the smallest of
+ pp. 2805–2813. microscopy scales to the largest of astronomical
+ scales are addressed. Previous to joining Data61-
+[79] Z. You et al., “A unified model for multi-class anomaly detection,” in
+ CSIRO, he was a Principal Researcher and the
+ Proc. Adv. Neural Inf. Process. Syst., 2022, pp. 1–14.
+ Research Leader of the Computer Vision Research
+ Group, NICTA, Canberra, where he was leading projects, such as smart cars,
+ AutoMap, and distributed large-scale vision.
+
+ Mehrtash Harandi is currently an Associate Professor with the Department of Electrical and Computer
+ Jie Hong received the M.Eng. degree from the Systems Engineering, Monash University, Clayton,
+ School of Electrical and Electronic Engineer- VIC, Australia. He is also a contributing Research
+ ing, Nanyang Technological University (NTU), Scientist with the Machine Learning Research Group
+ Singapore, in 2017. He is currently pursuing the (MLRG), Data61-CSIRO, Canberra, ACT, Australia,
+ Ph.D. degree with the College of Engineering, and an Associate Investigator with the Australian
+ Computing and Cybernetics, Australian National Center for Robotic Vision (ACRV), Brisbane, QLD,
+ University (ANU), Canberra, ACT, Australia, and Australia. His current research interests include
+ DATA61-CSIRO, Canberra. theoretical and computational methods in machine
+ His research interests include computer vision, learning, computer vision, signal processing, and
+ deep learning, robotics, and control systems. Riemannian geometry.

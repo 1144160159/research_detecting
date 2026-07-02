@@ -1,0 +1,693 @@
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 8, AUGUST 2025 4485
+
+ DACAD: Domain Adaptation Contrastive Learning
+ for Anomaly Detection in Multivariate Time Series
+ Zahra Zamanzadeh Darban , Yiyuan Yang , Geoffrey I. Webb , Fellow, IEEE,
+ Charu C. Aggarwal , Fellow, IEEE, Qingsong Wen , Shirui Pan , and Mahsa Salehi
+
+ Abstract—In time series anomaly detection (TSAD), the scarcity performance of deep models drops significantly due to the
+of labeled data poses a challenge to the development of accurate discrepancy between the data distributions in the source and
+models. Unsupervised domain adaptation (UDA) offers a solution target domains, a phenomenon known as domain shift [2].
+by leveraging labeled data from a related domain to detect anomalies in an unlabeled target domain. However, existing UDA methods Applications of UDA are diverse, ranging from image and
+assume consistent anomalous classes across domains. To address video analysis to natural language processing and time series
+this limitation, we propose a novel Domain Adaptation Contrastive data analysis. However, the time series domain differs greatly
+learning model for Anomaly Detection in multivariate time series from the image and text data domains for which UDA methods
+(DACAD), combining UDA with contrastive learning. DACAD are well developed [3], [4]. UDA can be particularly challenging
+utilizes an anomaly injection mechanism that enhances generalization across unseen anomalous classes, improving adaptability for time series analysis, given that often i) the aspects of time
+and robustness. Additionally, our model employs supervised con- series that may be relevant to different tasks can vary greatly,
+trastive loss for the source domain and self-supervised contrastive such as frequency, magnitude, rate of change in either of these,
+triplet loss for the target domain, ensuring comprehensive feature global shape or local shape [2], [5], [6] and ii) the number
+representation learning and domain-invariant feature extraction. of anomalous classes changes between the source and target
+Finally, an effective Center-based Entropy Classifier (CEC) accurately learns normal boundaries in the source domain. Extensive domains.
+evaluations on multiple real-world datasets and a synthetic dataset For time series data specifically, UDA methods often employ
+highlight DACAD’s superior performance in transferring knowl- neural architectures as feature extractors. These models are
+edge across domains and mitigating the challenge of limited labeled designed to handle domain adaptation, primarily target time
+data in TSAD. series regression and classification problems [7], [8], [9], [10],
+ Index Terms—Anomaly detection, time series, deep learning, focusing on aligning the major distributions of two domains.
+contrastive learning, self-supervised learning, domain adaptation. This approach may lead to negative transfer effects [11] on
+ minority distributions, which is a critical concern in time series
+ anomaly detection (TSAD). The minority distributions, often
+ I. INTRODUCTION
+ representing rare events or anomalies, may be overshadowed
+ NSUPERVISED Domain Adaptation (UDA) is a tech-
+U nique used to transfer knowledge from a labeled source
+domain to an unlabeled target domain. Such an approach is
+ or incorrectly adapted due to the model’s focus on aligning
+ dominant data distributions, potentially leading to a higher rate
+ of false negatives in anomaly detection [12]. Since transferring
+particularly useful when labeled data in the target domain is knowledge of anomalies requires aligning minority distribuscarce or unavailable [1]. Deep learning methods have become tions, anomaly label spaces often have limited similarity across
+the predominant approach in UDA, offering advanced capa- domains, and existing methods face limitations in addressing
+bilities and significantly improved performance compared to anomaly detection in time series data. This highlights a signiftraditional techniques. UDA is crucial in situations where the icant gap in current UDA methodologies, pointing towards the
+ need for novel approaches that can effectively address the unique
+ Received 11 July 2024; revised 7 March 2025; accepted 10 May 2025. Date requirements of anomaly detection in time series data.
+of publication 13 May 2025; date of current version 7 July 2025. Recommended To further substantiate our approach, theoretical insights
+for acceptance by Zhen Wang. (Corresponding author: Zahra Zamanzadeh indicate that reducing contrastive loss lowers the Class-wise
+Darban.)
+ Zahra Zamanzadeh Darban, Geoffrey I. Webb, and Mahsa Salehi are with the Mean Maximum Discrepancy (CMMD) [13], thereby improving
+Department of Data Science and AI, Monash University, Melbourne, VIC 3800, domain adaptation. This reinforces the validity of integrating
+Australia (e-mail: zahra.zamanzadeh@monash.edu; geoff.webb@monash.edu; contrastive learning with UDA in our approach and strengthens
+mahsa.salehi@monash.edu).
+ Yiyuan Yang is with the Department of Computer Science, University of the theoretical foundation of our work.
+Oxford, OX1 3SA Oxford, U.K. (e-mail: yiyuan.yang@cs.ox.ac.uk). Furthermore, in the realm of time series anomaly detection,
+ Charu C. Aggarwal is with IBM T. J. Watson Research Center, Yorktown in the recent model called ContextDA [14], the discriminator
+Heights, NY 10598 USA (e-mail: charu@us.ibm.com).
+ Qingsong Wen is with Squirrel Ai Learning, Bellevue, WA 98004 USA aligns source/target domain windows without leveraging label
+(e-mail: qingsongedu@gmail.com). information in the source domain, which makes the alignment
+ Shirui Pan is with the School of ICT, Griffith University, Nathan, QLD ineffective. Unlike these approaches, our proposed model lever-
+4111, Australia (e-mail: s.pan@griffith.edu.au).
+ Digital Object Identifier 10.1109/TKDE.2025.3569909 ages source labels and anomaly injection to enhance feature
+
+ 1041-4347 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+4486 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 8, AUGUST 2025
+
+extraction, particularly by focusing on distinguishing normal and speech data, with significant advancements in areas like
+from anomalous samples through contrastive learning. This sleep classification [20], energy safety detection [21], arrhythanomaly injection follows the method that has been proposed in mia classification [22], and various forms of anomaly detecthe CARLA model [15], demonstrating its efficacy in real-world tion [14], fault diagnosis [23], and lifetime prediction [24].
+scenarios. Our model leverages source labels and anomaly in- Time series-specific UDA approaches like variational recurjection for better feature extraction, enhancing the alignment of rent adversarial deep domain adaptation (VRADA) [7], pionormal samples. This is particularly vital due to the challenges neered UDA for MTS, utilizing adversarial learning with an
+in aligning anomalies across domains with different anomalous LSTM network [25] and variational RNN [26] feature extractor.
+classes. Convolutional deep domain adaptation for time series (Co-
+ In our study, we introduce the Domain Adaptation Contrastive DATS) [10], built on VRADA’s adversarial training, but emlearning model for Anomaly Detection in time series (DACAD), ployed a convolutional neural network as the feature extractor.
+a unique framework for UDA in multivariate time series (MTS) A metric-based method, time series sparse associative strucanomaly detection, which leverages contrastive learning (CL) ture alignment (TS-SASA) [8] aligns intra and inter-variable
+and focuses on contextual representations. It forms positive pairs attention mechanisms between domains using MMD. Adding to
+based on proximity and negative pairs using anomaly injection, these, the CL for UDA of time series (CLUDA) [9] model offers
+subsequently learning their embeddings with both supervised a novel approach, enhancing domain adaptation capabilities
+CL in the source domain and self-supervised CL in the target in time series. All these methods share a common objective
+domain. To sum up, we make the following contributions: of aligning features across domains, each contributing unique
+ r We introduce DACAD, a pioneering contrastive learning strategies to the complex challenge of domain adaptation in
+ framework for multivariate time series anomaly detection time series classification data. However, they are ineffective
+ with UDA. DACAD is a novel deep UDA model that when applied to TSAD tasks. Additionally, ContextDA [14]
+ incorporates both supervised contrastive learning in the is a TSAD model that applies deep reinforcement learning to
+ source domain and self-supervised contrastive learning in optimize domain adaptation, framing context sampling as a
+ the target domain. To address the scarcity of real anoma- Markov decision process. However, it is ineffective when the
+ lies, we enhance representation learning through synthetic anomaly classes change between the source and the target.
+ anomaly injection, providing effective differentiation be- Recently, Large Language Models (LLMs) and Pretrained
+ tween normal and anomalous patterns. The source code of Models (PMs) have gained attention for addressing Unsuper-
+ DACAD is available on GitHub.1 vised Domain Adaptation (UDA) in time series tasks [27], [28].
+ r Our proposed Center-based Entropy Classifier (CEC) in- These models leverage their robust transfer learning capabilities
+ troduces a novel enhancement to DeepSVDD [16] by and the benefits of extensive pre-training on a vast array of
+ explicitly leveraging source domain label information to sequential data across different domains. This pre-training phase
+ refine anomaly detection. CEC enforces spatial separation equips the models with comprehensive knowledge and advanced
+ in the feature space by pulling “normal” sample represen- pattern recognition skills, allowing them to effectively adapt
+ tations closer to the center and distancing anomalous ones. to and perform well on specific time series tasks through a
+ This adjustment is guided by a distance metric that en- relatively straightforward fine-tuning process [29], [30]. This
+ hances anomaly detection by improving class separability. extensive pre-training enables LLMs and PMs to adeptly handle
+ r Our comprehensive evaluation with real-world datasets time series anomaly detection, even when these tasks differ
+ highlights DACAD’s efficiency. In comparison with the significantly from the domains on which they were originally
+ recent TSAD deep models and UDA models for time series trained. Additionally, diffusion model-based UDA methods
+ classification and UDA for anomaly detection, DACAD have emerged as a promising approach, utilizing the inherent
+ demonstrates superior performance, emphasizing the ef- strengths of diffusion models in capturing dynamic changes
+ fective contribution of our approach. over time [31]. By integrating a small amount of target domain
+ data to guide the adaptation process, these models can achieve
+ II. RELATED WORKS effective domain transfer [32], [33]. However, neither LLM nor
+ diffusion models are without their challenges. Issues such as
+ In this section, we provide a brief survey of the existing
+ computational efficiency and training stability are prevalent and
+literature that intersects with our research. We concentrate on
+ continue to be significant areas of research and discussion in the
+two areas: UDA for time series and deep learning for TSAD.
+ field [30], [31].
+ UDA for time series: In the realm of UDA for time series
+ Deep Learning for TSAD: The field of Time Series Anomaly
+analysis, the combination of domain adaptation techniques with
+ Detection (TSAD) has advanced significantly, embracing a vathe unique properties of time series data presents both challenges
+ riety of methods ranging from basic statistical approaches to
+and opportunities [17]. Traditional approaches such as Maxsophisticated deep learning techniques [34], [35], [36]. Noimum Mean Discrepancy (MMD) [18] and adversarial learntably, deep learning has emerged as a promising approach due
+ing frameworks [19] are geared towards minimizing domain
+ to its autonomous feature extraction capabilities [37]. TSAD
+discrepancies by developing domain-invariant features. These
+ primarily focuses on unsupervised [38], [39], [40], [41] and
+methods are vital in applications spanning medical, industrial,
+ semi-supervised methods [42], [43], [44] to tackle the challenge
+ of limited labeled data availability. Unsupervised methods like
+ 1 https://github.com/zamanzadeh/DACAD OmniAnomaly [45] and GDN [46] are especially valuable in
+DARBAN et al.: DACAD: DOMAIN ADAPTATION CONTRASTIVE LEARNING FOR ANOMALY DETECTION IN MULTIVARIATE TIME SERIES 4487
+
+scenarios with sparse anomaly labels, whereas semi-supervised Algorithm 1. DACAD(S, T , α, β, γ, λ).
+methods leverage available labels effectively. Input: Source time series windows
+ Advanced models such as LSTM-NDT [39] and THOC [47] s
+ S = {w1s , w2s , . . ., w|S| }, Target time series windows
+excel in minimizing forecasting errors and capturing temporal t t t
+ T = {w1 , w2 , . . ., w|T | , Loss coefficients α, β γ, λ
+dependencies. However, models like USAD [40] face challenges
+with long time series data due to error accumulation in decoding. Output: Representation function φR , classifier φCL ,
+Additionally, unsupervised representation learning, exemplified centre c
+by SPIRAL [48] and TST [49], shows impressive performance, 1: Initialise φR , φD , φCL , c
+albeit with scalability issues in long time series. Newer models 2: Split S to Snorm and Sanom
+like TNC [50] aim to overcome these challenges using methods 3: Create Sinj , Tinj  Anomaly Injection (Section III-A)
+such as time-based negative sampling. 4: Form Striplets and Ttriplets  Pair Selection (Section
+ Furthermore, contrastive representation learning, crucial in III-B)
+TSAD for pattern recognition, groups similar samples together 5: for each training iteration do
+while distancing dissimilar ones [51]. It has been effectively em- 6: Compute φR (S), φR (T ), φR (STriplets ), φR (TTriplets ) 
+ployed in TS2Vec [38] for multi-level semantic representation (Section III-C)
+and in DCdetector [52], which uses a dual attention asymmet- 7: Compute LSupCont using (1) and φR (STriplets )
+ric design for permutation invariant representations. Recently, 8: Compute LSelfCont using (2) and φR (TTriplets )
+PatchAD [53] designs a lightweight patch-based MLP-mixer 9: Compute LDisc using (3), φR (S) and φR (T ) 
+based on contrastive learning for TSAD. (Section III-D)
+ Moreover, time series transformers leverage self-attention 10: Compute LCls using (4) and φR (S)  (Section III-E)
+mechanisms specifically adapted for sequential data, enabling 11: LDACAD ←
+them to capture both long-term dependencies and local pat- α · LSupCont + β · LSelfCont + γ · LDisc + λ · LCls
+terns effectively. For instance, approaches like AnomalyTrans- 12: Update model parameters to minimise LDACAD
+former [41] and Patch-based TS models [53] have demonstrated 13: end for
+improved performance by focusing on multi-scale temporal fea- 14: Return φR , φCL , c
+tures and patching mechanisms. Additionally, masked modeling
+for time series, especially for time series forecasting, inspired
+by techniques in natural language processing like masked lan- mean-margin contrastive loss. A Temporal Convolutional Netguage modeling, introduces pretext tasks that encourage better work (TCN) in DACAD captures temporal dependencies, genfeature representation. By randomly masking parts of the time erating domain-invariant features. A discriminator ensures these
+series during training and requiring the model to predict the features are domain-agnostic, leading to consistent anomaly
+missing values, these methods promote learning robust, domain- detection across domains. DACAD’s strength lies in its dual
+invariant representations [54], [55]. ability to adapt to new data distributions and to distinguish
+ between normal and anomalous patterns effectively. In DA-
+ CAD, time series data is split into overlapping windows of size
+ WS with a stride of 1, forming detailed source (S) and target
+ III. DACAD
+ (T ) datasets. Source windows are classified as normal (Snorm )
+ Problem formulation: Given an unlabeled time series dataset anomalous Sanom ) based on anomaly presence. Fig. 1 shows the
+T (target), the problem is to detect anomalies in T using a labeled DACAD architecture, and Algorithm 1 details its steps. The
+time series dataset S (source) from a related domain. following subsections explore DACAD’s components and their
+ In this section, we present DACAD, which uses temporal cor- functionalities.
+relations ingeniously and adapts to differences between source
+and target domains. It starts with a labeled dataset in the source
+ A. Anomaly Injection
+domain, featuring both normal and anomalous instances. Both
+real and synthetic (injected) anomalies aid in domain adaptation, In the anomaly injection phase, we augment the original time
+thereby training in a manner that improves generalizability on a series windows through a process of negative augmentation,
+wide range of anomaly classes. thereby generating synthetic anomalous time series windows.
+ DACAD’s core is CL as inspired by a recent UDA for time This step is applied to all windows in the target domain (T ) and
+series work [9], which strengthens its ability to handle changes all normal windows in the source domain (Snorm ). We employ
+between domains by improving the feature representation learn- the anomaly injection method outlined in [15], which encoming in source and target domains. As described in Section II- passes five distinct types of anomalies: Global, Seasonal, Trend,
+I-C, in the target domain, we use a self-supervised contrastive Shapelet, and Contextual. This procedure results in the creation
+loss [56] by forming triplets to minimize the distance between of two new sets of time series windows. The first set, Sinj ,
+similar samples and maximize the distance between different consists of anomaly-injected windows derived from the normal
+samples. Additionally, in the source domain, we leverage label samples in the source domain. The second set, Tinj , comprises
+information of both anomaly and normal classes and propose anomaly-injected windows originating from the target domain
+an effective supervised contrastive loss [57] named supervised data.
+4488 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 8, AUGUST 2025
+
+Fig. 1. DACAD Model Overview: Involves source (S) and target (T ) domains. Source domain uses normal (Snorm ) and anomalous (Sanom ) samples, plus synthetic
+anomalies (Sinj ) for source triplets (STriplets ) and contrastive loss. Target domain similarly uses proximity-based pair selection and anomaly injection (Tinj ) to create
+target triplets (TTriplets ). TCN (φR ) is used for feature extraction. Features from both domains are fed into the discriminator (φD ) for domain-invariant learning.
+Source features are classified by classifier φCL .
+
+B. Pair Selection 1) Supervised Mean Margin Contrastive Loss for Source
+ In DACAD’s pair selection step, appropriate triplets from the Domain (LSupCont ): This loss aims to embed time series windows
+source and target domains are created for CL. In the source into a feature space where normal sequences are distinctively
+ separated from anomalous ones. It utilizes a triplet loss framedomain, we use labels to form distinct lists of normal samples
+(Snorm ), anomalous samples (Sanom ), and anomaly-injected sam- work, comparing a base (anchor) window with both normal
+ples (Sinj ). This allows for a supervised CL approach, enhancing (positive) and anomalous (negative) windows [57]. Our method
+ diverges from traditional triplet loss by focusing on the average
+differentiation between normal and anomalous samples. Here,
+triplets (Striplets ) consist of an anchor (normal window from effect of all negatives within a batch. The formula is given by
+Snorm ), a positive (different normal window from Snorm ), and a (1):
+ |B|
+negative (randomly selected from either an anomalous window 1 
+from Sanom or an anomaly-injected anchor from Sinj ). LSupCont = max
+ |B| i=1
+ In the unlabeled target domain, a self-supervised approach
+constructs the triplets (Ttriplets ). Each target triplet includes an ⎛ ⎞
+ |N |
+   
+anchor (original window from T ), a positive (temporally close ⎝ 1 φR (asi )−φR (psi )22 −φR (asi )φR (nsj )22 +m , 0⎠
+window to anchor, from T , likely sharing similar characteris- |N | j=1
+tics), and a negative (anomaly-injected anchor from Tinj ).
+ (1)
+ Here, |B| is the batch size, and |N | is the number of negative
+ samples in the batch. The anchor asi is a normal time series win-
+C. Representation Layer (φR ) dow, and the positive pair psi is another randomly selected normal
+ In our model, we employ a TCN [58] for the representation window. Negative pairs nsj are either true anomalous windows
+layer, which is adept at handling MTS windows. This choice is or synthetically created anomalies through the anomaly injector
+motivated by the TCN’s ability to capture temporal dependencies module applied on the anchor asi . This loss function uses true
+effectively, a critical aspect in time series analysis. The inputs anomaly labels to enhance the separation between normal and
+to the TCN are the datasets and triplets from both domains, anomalous behaviors by at least the margin m. It includes both
+specifically S, T , STriplets , and TTriplets . The outputs of the TCN, genuine and injected anomalies as negatives, balancing ground
+representing the transformed feature space, are truth and potential anomaly variations. The supervised mean
+ r φR (S): The representation of source windows. margin contrastive loss offers several advantages for TSAD:
+ r φR (T ): The representation of target windows. supervised learning (uses labels for better anomaly distinction),
+ r φR (STriplets ): The representation of source triplets. comprehensive margin (applies a margin over average distance
+ r φR (TTriplets ): The representation of target triplets to negatives), and flexible negative sampling (incorporates a mix
+ Utilizing the outputs from the representation layer φR , we of real and injected anomalies, enhancing robustness against
+compute two distinct loss functions. These are the supervised diverse anomalous patterns).
+mean margin contrastive loss for source domain data (LSupCont ) 2) Self-Supervised Contrastive Triplet Loss for Target Doand the self-supervised contrastive triplet loss for target domain main (LSelfCont ): For the target domain, we employ a self-
+(LSelfCont ). These loss functions are critical for training our model supervised contrastive approach using triplet loss [56], designed
+to differentiate between normal and anomalous patterns in both to ensure that the anchor window is closer to a positive window
+source and target domains. than to a negative window by a specified margin. The anchor is
+DARBAN et al.: DACAD: DOMAIN ADAPTATION CONTRASTIVE LEARNING FOR ANOMALY DETECTION IN MULTIVARIATE TIME SERIES 4489
+
+assumed to be normal, following the standard TSAD assumption E. Centre-Based Entropy Classifier (φCL )
+that the majority of the data is normal, as anomalies are rare by
+ Extending the DeepSVDD [16] designed for anomaly detecnature. The self-supervised triplet loss formula is shown in (2):
+ tion, the CEC (φCL ) in DACAD is proposed as an effective
+ anomaly detection classifier in the source domain. It assigns
+ LSelfCont = anomaly scores to time series windows, using labeled data from
+ |B| the source domain S for training and applying the classifier to
+ 1 
+ target domain data T during inference. It is centered around a
+ |B| i=1 Multi-Layer Perceptron (MLP) with a unique “center” parameter
+   crucial for classification.
+ max φR (ati ) − φR (pti )22 − φR (ati ) − φR (nti )22 + m, 0
+ The classifier operates by spatially separating transformed
+ (2)
+ time series window representations (φR (wis )) in the feature
+ In this setup, the anchor window ati is compared to a positive
+ space relative to a learnable “center” c. The MLP aims to draw
+window pti (a randomly selected nearby window from T ) and a
+ normal sample representations closer to c and push anomalous
+negative window nti (the anomaly-injected version of the anchor
+ ones further away. This spatial reconfiguration is quantified
+from Tinj ), ensuring the anchor is closer to the positive than the
+ using a distance metric, forming the basis for anomaly scoring.
+negative by at least the margin m.
+ A sample closer to c is considered more normal, and vice versa.
+ The effectiveness of this spatial adjustment is measured using a
+D. Discriminator Component (φD ) BCE-based loss function, expressed in (4):
+ The model incorporates a discriminator component within an
+ LCls =
+adversarial framework. This component is crucial for ensuring
+that the learned features are not only relevant for the anomaly |S|
+ 1 
+detection task but also general enough to be applicable across − yi · log(g(wis ) − c22 ) + (1 − yi )·
+different domains. The discriminator is specifically trained to |S| i=1
+distinguish between representations from the source and target log(1 − g(wis ) − c22 )
+domains.
+ Designed to differentiate between features extracted from the where g(w) = φCL (φR (w)) (4)
+source and target domains, the discriminator employs adversarial training techniques similar to those found in Generative
+ In this Equation, |S| is the number of samples in S, wis is the ith
+Adversarial Networks [59]. Discriminator φD is trained to difwindow in S, and yi is its ground truth label, with 1 for normal
+ferentiate between source and target domain features, while φR
+ and 0 for anomalous samples.
+is conditioned to produce domain-invariant features.
+ The loss function is designed to minimize the distance be-
+ A crucial element is the Gradient Reversal Layer [60], which
+ tween normal samples and c while maximizing it for anomalous
+functions normally during forward passes but reverses gradient
+ samples. These distances are directly used as anomaly scores,
+signs during backpropagation. This setup enhances the training
+ offering a clear method for anomaly detection.
+of φD and simultaneously adjusts φR to produce features that
+challenge φD .
+ The discriminator’s training involves balancing its loss against F. Overall Loss in DACAD
+other model losses. Effective domain adaptation occurs when
+φR yields discriminator accuracy close to random guessing. φD , The overall loss function in the DACAD model is the amaltaking φR (S) and φR (T ) as inputs, classifies them as belonging gamation of four distinct loss components, each contributing
+to the source or target domain. Its loss, a binary classification to the model’s learning process in different aspects. These
+problem, minimizes classification error for source and target components are the Supervised Contrastive Loss (LSupCont ), the
+representations. The loss function for the discriminator φD is Self-Supervised Contrastive Loss (LSelfCont ), the Discriminator
+defined using the Binary Cross-Entropy (BCE) loss, as shown Loss (LDisc ), and the Classifier Loss (LCls ). The overall loss
+in (3): function for DACAD denoted as LDACAD , is formulated as a
+ weighted sum of these components (with a specific weight: α
+ ⎛ ⎞ for LSupCont , β for LSelfCont , γ for LDisc , and λ for LCls ), as shown
+ |S| |T |
+ 1   in (5):
+LDisc = − ⎝ log(f (wis )))+ log(1 − f (wjt )))⎠
+ |S| + |T | i=1 j=1
+ LDACAD = α · LSupCont + β · LSelfCont + γ · LDisc + λ · LCls
+where f (w) = φD (φR (w)) (5)
+ (3) The overall loss function LDACAD is what the model seeks
+Here, |S| and |T | are the source and target window counts. wis to optimize during the training process. By fine-tuning these
+and wjt represent the ith and jth windows from S and T . The weights (α, β, γ, and λ), the model can effectively balance the
+function φD (φR (·)) computes the likelihood of a window being significance of each loss component. This balance is crucial as
+from the source domain. it allows the model to cater to specific task requirements.
+4490 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 8, AUGUST 2025
+
+G. Role of Anomaly Injection in Convergence TABLE I
+ STATISTICS OF THE BENCHMARK DATASETS USED
+ Under standard assumptions in nonconvex optimization, the
+anomaly injection mechanism in DACAD enforces a minimum
+margin m between normal and anomalous embeddings. This
+guarantees that the contrastive losses remain strictly positive unless the model achieves the desired separation, thereby preventing degenerate solutions such as feature collapse. Assuming that
+the feature extractor is L-Lipschitz and that the loss functions are in Table I. Since DACAD utilizes UDA, it is designed to work
+smooth with Lipschitz-continuous gradients [61], an update via in scenarios where datasets contain multiple entities. Domain
+stochastic gradient descent with a sufficiently small learning rate adaptation relies on inter-domain feature alignment, requiring
+ensures that the overall loss is lower bounded. Moreover, under at least one entity as the source and one as the target.
+these conditions, the loss locally satisfies a Polyak–Łojasiewicz Mars Science Laboratory (MSL) and Soil Moisture Active
+condition, which implies that the expected gradient norm de- Passive (SMAP) 2 datasets [39] are real-world datasets colcreases at a rate of O(1/K) over K iterations [62]. This result lected from NASA spacecraft. These datasets contain anomaly
+formally guarantees convergence to a stationary point. information derived from reports of incident anomalies for a
+ spacecraft monitoring system. MSL and SMAP comprise 27 and
+H. DACAD’s Inference 55 datasets, respectively, and each is equipped with a predefined
+ In the inference phase of the DACAD model, the primary train/test split, where, unlike other datasets, their training set is
+objective is to identify anomalies in the target domain T . This is unlabeled.
+accomplished for each window wt in T . The anomaly detection Server Machine Dataset (SMD) 3 [45] is gathered from 28
+is based on the concept of spatial separation in the feature space, servers, incorporating 38 sensors, over a span of 10 days. During
+as established during the training phase. The anomaly score for this period, normal data was observed within the initial 5 days,
+each window is derived from the spatial distance between the while anomalies were sporadically injected during the subseclassifier’s output and a learnable center c in the feature space. quent 5 days. The dataset is also equipped with a predefined
+This score is calculated as the squared euclidean distance, as train/test split, where the training data is unlabeled.
+shown in (6): Boiler Fault Detection Dataset. 4 [8] The Boiler dataset
+ includes sensor information from three separate boilers, with
+ Anomaly Score(wt ) = φCL (φR (wt )) − c22 (6) each boiler representing an individual domain. The objective of
+Where φCL (φR (wt )) denotes the feature representation of the the learning process is to identify the malfunctioning blowdown
+window wt after processing by the representation layer φR and valve in each boiler. Obtaining samples of faults is challenging
+the classifier layer φCL . The distance measured here quantifies due to their scarcity in the mechanical system.
+how much each window in the target domain deviates from the
+“normal” pattern, as defined by the center c. V. BASELINES
+ The anomaly score is a crucial metric in this process. A Below, we will provide an enhanced description of the UDA
+higher score suggests a significant deviation from the normative models for time series classification and anomaly detection.
+pattern, indicating a higher likelihood of the window being an Additionally, we provide a description of the five prominent
+anomaly. Conversely, a lower score implies that the window’s and state-of-the-art TSAD models that were used for comparrepresentation is closer to the center, suggesting it is more likely ison with DACAD. We have selected the models from differto be normal. In practical terms, the anomaly score can be thresh- ent categories of TSAD, namely, unsupervised reconstructionolded to classify windows as either normal or anomalous. By based (OmniAnomaly [45] and AnomalyTransformer [41])
+effectively utilizing these anomaly scores, the DACAD model models, unsupervised forecasting-based (THOC [47]), and selfprovides a robust mechanism for identifying anomalous patterns supervised contrastive learning (TS2Vec [38] and DCdetecin unlabeled target domain data. tor [52]) TSAD models.
+ AE-MLP [63] is an anomaly detection model that uses autoen-
+ IV. EXPERIMENTS coders for nonlinear dimensionality reduction. It encodes data
+ This section provides a comprehensive evaluation of DACAD, points into a lower-dimensional space and reconstructs them,
+covering the experimental setups (Section V-A) and results highlighting deviations to detect anomalies.
+(Sections V-B and V-E) to clearly understand its performance AE-LSTM [64] is an anomaly detection model using an
+and capabilities in different contexts. LSTM-based encoder-decoder for multi-sensor data. It detects
+ anomalies by the reconstruction error of time series sequences.
+A. Datasets 2 https://www.kaggle.com/datasets/patrickfleith/nasa-anomaly-detection-
+
+ We evaluate the proposed model and make comparisons dataset-smap-msl
+ 3 https://github.com/NetManAIOps/OmniAnomaly/tree/master/
+across the four datasets, including the three most commonly
+ ServerMachineDataset
+used real benchmark datasets for TSAD and the dataset used 4 https://github.com/DMIRLAB-Group/SASA-pytorch/tree/main/datasets/
+for time series domain adaptation. The datasets are summarized Boiler
+DARBAN et al.: DACAD: DOMAIN ADAPTATION CONTRASTIVE LEARNING FOR ANOMALY DETECTION IN MULTIVARIATE TIME SERIES 4491
+
+ RDC 5 [65] is built upon deep domain confusion to enhance compute association discrepancies, enhancing the distinguishadomain adaptation by maximizing domain invariance. It aligns bility between adjacent normal and abnormal points through a
+feature distributions through a domain confusion objective, mak- minimax strategy.
+ing learned representations indistinguishable across domains DCdetector 14 [52] is distinctive for its use of a dual attention
+and improving model performance on unseen domains. asymmetric design combined with contrastive learning. Unlike
+ VRADA 6 [7] combines deep domain confusion [65] with traditional models, DCdetector does not rely on reconstruction
+variational recurrent adversarial deep domain adaptation [7], loss for training. Instead, it utilizes pure contrastive loss to
+optimizing source domain label prediction, MMD, and domain guide the learning process. This approach enables the model
+discrimination using latent representations from the LSTM en- to learn a permutation invariant representation of time series
+coder. Concurrently, AE-LSTM’s reconstruction objective is anomalies, offering superior discrimination abilities compared
+utilized for anomaly detection. to other methods.
+ SASA 7 [8] improves time series classification using adaptation across domains by identifying and aligning key sparse A. Experimental Setup
+patterns. It uses a self-attention layer with LSTM units to find In our study, we evaluate several SOTA TSAD models, inoptimal global context windows for source and target domains cluding OmniAnomaly [45], TS2Vec [38], THOC [47], and
+and aligns them using Maximum Mean Discrepancy (MMD). DCdetector [52] and SOTA UDA models that support MTS clas-
+ CLUDA 8 [9] is a novel UDA framework for time series sification including VRADA [7] and CLUDA [9] on benchmark
+data, leveraging contrastive learning to capture domain-invariant datasets previously mentioned in Section I using their source
+semantics while preserving label information. It is the first UDA code and best hyper-parameters as they stated to ensure a fair
+framework designed for contextual representation learning in evaluation. The hyperparameters used in our implementation are
+MTS, with effectiveness demonstrated on multiple time series as follows: DACAD consists of a 3-layer TCN architecture with
+classification datasets. three different channel sizes [128, 256, 512] to capture temporal
+ ContextDA 9 [14] is a sophisticated approach for detecting dependencies. The dimension of the representation is 1024. We
+anomalies in time series data. It formulates context sampling use the same hyperparameters across all datasets to evaluate
+as a Markov decision process and employs deep reinforcement DACAD: window size (WS ) = 100, margin m = 1, and we run
+learning to optimize the domain adaptation process. This model our model for 20 epochs.
+is designed to generate domain-invariant features for better
+anomaly detection across various domains. It has shown promise B. Baselines Comparison
+in transferring knowledge between similar or entirely different
+domains. Table II provides a comprehensive comparison of the perfor-
+ OmniAnomaly 10 [45] is a model operating on an unsupervised mance of the different models on MTS benchmark datasets. The
+basis, employing a Variational Autoencoder (VAE) to handle performance measurements include the F1 score (best F1 score),
+MTS data. It identifies anomalies by evaluating the reconstruc- AUPR (Area Under the Precision-Recall Curve), and AUROC
+tion likelihood of specific data windows. (Area Under the Receiver Operating Characteristic Curve). De-
+ THOC 11 [47] utilizes a multi-layer dilated recurrent neural spite Point Adjustment (PA) popularity in recent years, we do
+network (RNN) alongside skip connections in order to handle not use PA when calculating these metrics due to Siwon Kim’s
+contextual information effectively. It adopts a temporal hierar- findings [66] that its application leads to an overestimation
+chical one-class network approach for detecting anomalies. of a TSAD model’s capability and can bias results in favor of
+ TS2Vec 12 [38] is an unsupervised model that is capable of methods that produce extreme anomaly scores. Instead, we use
+learning multiple contextual representations of MTS and UTS conventional performance metrics for anomaly detection.
+semantically at various levels. This model employs contrastive Benchmark datasets like SMD contain multiple time series
+learning in a hierarchical way, which provides a contextual that cannot be merged due to missing timestamps, making them
+representation. A method within TS2Vec has been proposed for unsuitable for averaging their F1 scores. The F1 score is a nonapplication in TSAD. additive metric combining precision and recall. To address this,
+ AnomalyTransformer 13 [41] detects anomalies in time se- we compute individual confusion matrices for each time series.
+ries data by using a novel “Anomaly-Attention” mechanism to These matrices are then aggregated into a collective confusion
+ matrix for the entire dataset. From this aggregated matrix, we
+ calculate the overall precision, recall, and F1 score, ensuring
+ 5 https://github.com/syorami/DDC-transfer-learning an accurate and undistorted representation of the dataset’s F1
+ 6 https://github.com/floft/vrada score. Additionally, we report the Affiliation F1 (Aff-F1) [67],
+ 7 https://github.com/DMIRLAB-Group/SASA
+ 8 https://github.com/oezyurty/CLUDA
+ calculated from Aff-Precision (Aff-Pre) and Aff-Recall (Aff-
+ 9 There is no implementation available for this model, so we rely on the results Rec), to provide a comprehensive evaluation focused on early
+claimed in the paper. detection. For datasets with multiple time series, we present the
+ 10 https://github.com/smallcowbaby/OmniAnomaly mean and standard deviation of Aff-F1, AUPR, and AUROC for
+ 11 We utilized the authors’ shared implementation, as it is not publicly availeach series.
+able.
+ 12 https://github.com/yuezhihan/ts2vec
+ 13 https://github.com/thuml/Anomaly-Transformer 14 https://github.com/DAMO-DI-ML/KDD2023-DCdetector
+4492 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 8, AUGUST 2025
+
+ TABLE II
+ F1, AUPR, AND AUROC RESULTS FOR VARIOUS MODELS ON MULTIVARIATE TIME SERIES BENCHMARK DATASETS (SMD, MSL, SMAP)
+
+ It is evident from Table II that DACAD is the best performer, its efficacy in accurately identifying anomalies, highlighting its
+consistently achieving the best results across all scenarios and potential as a solution in time series anomaly detection.
+metrics, as highlighted in bold. This suggests its robustness and
+adaptability to handling normal and anomalous representations C. UDA Comparison
+of time series for anomaly detection. VRADA and CLUDA models often rank as the second best, with their results underlined Table III, adapted from [14], now includes results of CLUDA
+in several instances. Other models like OmniAnomaly, THOC, and our model in the last two columns. This table provides
+TS2Vec, AnomalyTransformer, and DCdetector demonstrate a comprehensive comparison of the performances of various
+more uniform performance across various metrics but gener- models on the SMD and Boiler datasets, as measured by Macro
+ally do not reach the top performance levels seen in DACAD, F1 and AUROC scores.
+VRADA, or CLUDA. Their consistent but lower performance To assess our model against ContextDA [14] — the only
+could make them suitable for applications where top-tier accu- existing UDA for the TSAD model — we use the same datasets
+racy is less critical. and metrics reported in ContextDA’s main paper, as its code
+ The addition of the Affiliation F1 (Aff-F1) metric further is unavailable. On the SMD dataset, ContextDA achieves an
+reinforces the strength of DACAD. A high value of the affiliation average macro F1 of 0.63 and AUROC of 0.75, whereas our
+metric indicates a strong overlap or alignment between the model achieves a higher average macro F1 of 0.81 and AUROC
+detected anomalies and the true anomalies in a time series. of 0.86. Similarly, on the Boiler dataset, ContextDA’s average
+DACAD’s superior Aff-F1 scores across all datasets underline macro F1 is 0.50 and AUROC 0.65, compared to our model’s
+DARBAN et al.: DACAD: DOMAIN ADAPTATION CONTRASTIVE LEARNING FOR ANOMALY DETECTION IN MULTIVARIATE TIME SERIES 4493
+
+ TABLE III
+ MACRO F1/AUROC RESULTS ON SMD AND BOILER DATASET
+
+superior performance with an average macro F1 of 0.63 and
+AUROC of 0.71. In this comparative analysis, the DACAD
+model distinctly outperforms others, consistently achieving the
+highest scores in both Macro F1 and AUROC across the majority
+of test cases in both datasets. Its performance is not only superior
+but also remarkably stable across different scenarios within each
+dataset, showcasing its robustness and adaptability to diverse
+data challenges.
+ The ContexTDA model frequently ranks as the runner-up after
+DACAD, particularly in the SMD dataset, where it often secures
+the second-highest scores in either or both the Macro F1 and
+AUROC metrics. Interestingly, certain models exhibit a degree
+of specialization. For example, SASA, which underperforms in
+the SMD dataset, demonstrates notably better results in specific
+scenarios within the Boiler dataset, particularly in terms of the
+Macro F1 score. This suggests that some models may be more
+suited to specific types of data or scenarios.
+ In conclusion, while the DACAD model emerges as the most
+effective across most scenarios, the varying performances of
+different models across scenarios and datasets highlight the Fig. 2. Comparison of execution time and peak memory usage for DACAD
+importance of carefully evaluating each model’s unique char- and other models. The top plots show execution time against time series length
+acteristics and capabilities. A thoughtful selection process is and dimensionality, while the bottom plots show memory usage.
+essential to ensuring the most suitable model is chosen for a
+given task. This subtle approach is crucial in leveraging each DACAD demonstrates excellent scalability in terms of time
+model’s strengths and achieving optimal results. series length, outperforming other domain adaptation models
+ such as VRADA and CLUDA. It maintains lower execution
+D. Scalability Test times, particularly evident with larger datasets, highlighting its
+ efficiency. DACAD’s scalability regarding time series dimen-
+ Scalability tests are crucial to evaluate a model’s performance
+ sions is also remarkable. It remains stable as dimensionality
+as data scales up in size and complexity. The plots in Fig. 2
+ increases, with execution times growing at a very small slope,
+provide a comprehensive comparison of DACAD’s scalability
+ ensuring it never exceeds reasonable memory limits. Compared
+with other models described in Section V-B. The experiment
+ to all other anomaly detection models, DACAD shows good
+measures execution time and peak memory usage in relation
+ scalability concerning time series length, consistently outperto the length of the time series and their dimensionality. For
+ forming other methods and demonstrating its robustness in
+the dimensionality test, eight synthetic time series datasets with
+ various performance metrics.
+varying dimensions (ranging from 8 to 1024, doubling each step)
+and a fixed length of 2,000 are generated using the NeurIPS-
+TS [68]. Another set of eight synthetic datasets with a fixed E. Ablation Study
+dimension of 8 varying lengths (ranging from 2,000 to 256,000) Our ablation study focused on the following aspects: (1) Effect
+is created for the scale-up test concerning length. We report the of the loss components, (2) Effect of CEC, and (3) Effect of
+execution time and memory usage of all models with the same anomaly injection.
+parameter settings as in Section V-B. Effect of the loss components:
+4494 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 8, AUGUST 2025
+
+ TABLE IV TABLE V
+ EFFECT OF LOSS COMPONENTS ON MSL DATASET (SOURCE: F-5) EFFECT OF CEC CLASSIFIER ON MSL DATASET (SOURCE: F-5)
+
+ TABLE VI
+ EFFECT OF ANOMALY INJECTION ON MSL DATASET (SOURCE: F-5)
+
+ of DACAD feature representations φCL (φR (w)) for the MSL
+ dataset. Each point represents a time series window, which can be
+ normal, anomalous, or anomaly-injected. These representations
+ highlight the domain discrepancies between source and target
+ entities and demonstrate how DACAD aligns the time series
+ window features effectively. The comparison of feature representations with and without UDA reveals a significant domain
+ shift when UDA is not employed between the source (entity F-5)
+ and the target (entity T-5) within the MSL dataset.
+ Effect of CEC: Table V compares the performance of our
+ CEC classifier with two BCE and DeepSVDD - on the MSL
+ dataset using F-5 as a source. Our proposed CEC shows superior
+ performance compared to BCE and DeepSVDD across three
+ metrics on the MSL dataset. With the highest F1 score, it
+Fig. 3. Impact of UDA on DACAD feature representations. It contrasts the
+embeddings of (a) source entity F-5 with UDA, (b) target entity T-5 with UDA, demonstrates a better balance of precision and recall. Its leading
+(c) source entity F-5 without UDA, and (d) target entity T-5 without UDA. performance in AUPR indicates greater effectiveness in identifying positive classes in imbalanced datasets. Additionally, CEC’s
+ higher AUROC suggests it is more capable of distinguishing
+ Table IV offers several key insights into the impact of different
+ between classes.
+loss components on the MSL dataset using F-5 as a source.
+ Effect of anomaly injection: We study the impact of anomaly
+Removing the target self-supervised CL (w/o LSelfCont ) leads
+ injection in Table VI on the MSL dataset when using F-5 as a
+to lower metrics (F1: 0.481, AUPR: 0.495, AUROC: 0.697).
+ source. It shows that anomaly injection significantly improves all
+Moreover, excluding source-supervised CL (w/o LSupCont ) remetrics (F1: 0.595, AUPR: 0.554, AUROC: 0.787), enhancing
+duces effectiveness (F1: 0.463, AUPR: 0.427, AUROC: 0.639),
+ the model’s ability to differentiate between normal and anomahighlighting its role in capturing source-specific features, which
+ lous patterns, thereby improving DACAD’s overall accuracy.
+are crucial for the model’s overall accuracy. Similarly, omitting
+ Without anomaly injection, there is a notable decline in perforthe discriminator component results in performance reduction
+ mance, emphasizing its role in precision. The higher standard
+(F1: 0.471, AUPR: 0.484, AUROC: 0.699). However, the most
+ deviation in AUROC scores without injection suggests more
+significant decline occurs without the classifier (F1: 0.299,
+ variability and less stability in the model performance. The study
+AUPR: 0.170, AUROC: 0.503), underscoring its crucial role
+ underscores the vital role of anomaly injection in improving
+in effectively distinguishing between normal/anomaly classes.
+ anomaly detection models. It reveals that incorporating anomaly
+Overall, the best results (F1: 0.595, AUPR: 0.554, AUROC:
+ injection not only boosts detection accuracy but also enhances
+0.787) are achieved with all components, highlighting the efthe model’s overall stability.
+fectiveness of an integrated approach.
+ Overall, each component within the model plays a crucial role
+in enhancing its overall performance. The highest performance VI. CONCLUSION
+across all metrics (F1: 0.595, AUPR: 0.554, AUROC: 0.787) is The DACAD model is an innovative approach to TSAD that is
+achieved when all components are included. particularly effective in environments with limited labeled data.
+ To elucidate the effectiveness of UDA within DACAD, we By combining domain adaptation and contrastive learning, it
+examine the feature representations from the MSL dataset, as applies labeled anomaly data from one domain to detect anomaillustrated in Fig. 3. It presents the t-SNE 2D embeddings lies in another. Its anomaly injection mechanism, introducing
+DARBAN et al.: DACAD: DOMAIN ADAPTATION CONTRASTIVE LEARNING FOR ANOMALY DETECTION IN MULTIVARIATE TIME SERIES 4495
+
+a spectrum of synthetic anomalies, significantly bolsters the [20] R. Zhao, Y. Xia, and Y. Zhang, “Unsupervised sleep staging system based
+model’s adaptability and robustness across various domains. Our on domain adaptation,” Biomed. Signal Process. Control, vol. 69, 2021,
+ Art. no. 102937.
+evaluations on diverse real-world datasets establish DACAD’s [21] Y. Yang, H. Zhang, and Y. Li, “Long-distance pipeline safety early warnsuperiority in handling domain shifts and outperforming exist- ing: A distributed optical fiber sensing semi-supervised learning method,”
+ing models. Its capability to generalize and accurately detect IEEE Sensors J., vol. 21, no. 17, pp. 19453–19461, Sep. 2021.
+ [22] G. Wang, M. Chen, Z. Ding, J. Li, H. Yang, and P. Zhang, “Inter-patient
+anomalies, regardless of the scarcity of labeled data in the target ECG arrhythmia heartbeat classification based on unsupervised domain
+domain, represents a significant contribution to TSAD. In future adaptation,” Neurocomputing, vol. 454, pp. 339–349, 2021.
+work, we aim to refine the anomaly injection process further, [23] N. Lu, H. Xiao, Y. Sun, M. Han, and Y. Wang, “A new method for intelligent
+ fault diagnosis of machines based on unsupervised domain adaptation,”
+enhancing the model’s ability to simulate a broader range of Neurocomputing, vol. 427, pp. 96–109, 2021.
+anomalous patterns. Additionally, we plan to evolve the model to [24] M. Ragab et al., “Contrastive adversarial domain adaptation for machine
+encompass univariate time series analysis, broadening its scope remaining useful life prediction,” IEEE Trans. Ind. Informat., vol. 17, no. 8,
+ pp. 5239–5249, Aug. 2021.
+and utility. Furthermore, we intend to explore alternative feature [25] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural
+extraction architectures beyond TCN to assess their impact on Computation, vol. 9, pp. 1735–1780, 1997.
+model performance. [26] J. Chung, K. Kastner, L. Dinh, K. Goel, A. C. Courville, and Y. Bengio,
+ “A recurrent latent variable model for sequential data,” in Proc. Int. Conf.
+ Neural Inf. Process. Syst., 2015, pp. 2980–2988.
+ REFERENCES [27] T. Zhou et al., “One fits all: Power general time series analysis by pretrained
+ LM,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2023, pp. 43322–43355.
+ [1] B. Xie, S. Li, F. Lv, C. H. Liu, G. Wang, and D. Wu, “A collaborative [28] J. Liu et al., “Large language models can deliver accurate and interpretable
+ alignment framework of transferable knowledge extraction for unsuper- time series anomaly detection,” 2024, arXiv:2405.15370.
+ vised domain adaptation,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 7, [29] X. Zhang, R. R. Chowdhury, R. K. Gupta, and J. Shang, “Large language
+ pp. 6518–6533, Jul. 2023. models for time series: A survey,” 2024, arXiv:2402.01801.
+ [2] X. Liu et al., “Deep unsupervised domain adaptation: A review of recent [30] M. Jin et al., “Large models for time series and spatio-temporal data: A
+ advances and perspectives,” APSIPA Trans. Signal Inf. Process., vol. 11, survey and outlook,” 2023, arXiv:2310.10196.
+ no. 1, 2022. [31] Y. Yang et al., “A survey on diffusion models for time series and spatio-
+ [3] H. I. Fawaz, G. Forestier, J. Weber, L. Idoumghar, and P.-A. Muller, “Deep temporal data,” 2024, arXiv:2404.18886.
+ learning for time series classification: A review,” Data Mining Knowl. [32] C. Wang et al., “Drift doesn’t matter: Dynamic decomposition with
+ Discov., vol. 33, pp. 917–963, 2019. diffusion reconstruction for unstable multivariate time series anomaly
+ [4] Q. Wen et al., “Time series data augmentation for deep learning: A survey,” detection,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2024, Art. no. 473.
+ 2020, arXiv: 2002.12478. [33] P. Zhao, X. Wang, Y. Zhang, Y. Li, H. Wang, and Y. Yang, “Diffusion-
+ [5] G. Wilson and D. J. Cook, “A survey of unsupervised deep domain UDA: Diffusion-based unsupervised domain adaptation for submersible
+ adaptation,” ACM Trans. Intell. Syst. Technol., vol. 11, pp. 1–46, 2020. fault diagnosis,” Electron. Lett., vol. 60, no. 3, 2024, Art. no. e13122.
+ [6] H. Xu, Y. Wang, S. Jian, Q. Liao, Y. Wang, and G. Pang, “Calibrated [34] S. Schmidl, P. Wenig, and T. Papenbrock, “Anomaly detection in time
+ one-class classification for unsupervised time series anomaly detection,” series: A comprehensive evaluation,” Proc. VLDB Endowment, vol. 15,
+ IEEE Trans. Knowl. Data Eng., vol. 36, no. 11, pp. 5723–5736, Nov. 2024. pp. 1779–1797, 2022.
+ [7] S. Purushotham, W. Carvalho, T. Nilanon, and Y. Liu, “Variational re- [35] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga, “Do deep
+ current adversarial deep domain adaptation,” in Proc. Int. Conf. Learn. neural networks contribute to multivariate time series anomaly detection?,”
+ Representations, 2016. Pattern Recognit., vol. 132, 2022, Art. no. 108945.
+ [8] R. Cai et al., “Time series domain adaptation via sparse associative struc- [36] H. Xu, G. Pang, Y. Wang, and Y. Wang, “Deep isolation forest for
+ ture alignment,” in Proc. AAAI Conf. Artif. Intell., 2021, pp. 6859–6867. anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+ [9] Y. Ozyurt, S. Feuerriegel, and C. Zhang, “Contrastive learning for un- pp. 12591–12604, Dec. 2023.
+ supervised domain adaptation of time series,” in Proc. Int. Conf. Learn. [37] Z. Zamanzadeh Darban, G. I. Webb, S. Pan, C. Aggarwal, and M.
+ Representations, 2023. Salehi, “Deep learning for time series anomaly detection: A survey,” ACM
+[10] G. Wilson, J. R. Doppa, and D. J. Cook, “Multi-source deep domain adap- Comput. Surv., vol. 57, no. 1, pp. 1–42, 2024.
+ tation with weak supervision for time-series sensor data,” in Proc. ACM [38] Z. Yue et al., “TS2Vec: Towards universal representation of time series,”
+ SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2020, pp. 1768–1778. in Proc. AAAI Conf. Artif. Intell., 2022, pp. 8980–8987.
+[11] W. Zhang, L. Deng, L. Zhang, and D. Wu, “A survey on negative transfer,” [39] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Soder-
+ IEEE/CAA J. Automatica Sinica, vol. 10, no. 2, pp. 305–329, Feb. 2023. strom, “Detecting spacecraft anomalies using LSTMs and nonparametric
+[12] Q. Zhou, S. He, H. Liu, J. Chen, and W. Meng, “Label-free multivariate dynamic thresholding,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov.
+ time series anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 36, Data Mining, 2018, pp. 387–395.
+ no. 7, pp. 3166–3179, Jul. 2024. [40] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+[13] G. I. Quintana, L. Vancamberg, V. Jugnon, A. Desolneux, and M. Mougeot, “USAD: Unsupervised anomaly detection on multivariate time series,”
+ “Bridging contrastive learning and domain adaptation: Theoretical per- in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2020,
+ spective and practical application,” 2025, arXiv:2502.00052. pp. 3395–3404.
+[14] K.-H. Lai et al., “Context-aware domain adaptation for time series anomaly [41] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer: Time
+ detection,” in Proc. SIAM Int. Conf. Data Mining, 2023, pp. 676–684. series anomaly detection with association discrepancy,” in Proc. Int. Conf.
+[15] Z. Z. Darban, G. I. Webb, S. Pan, C. C. Aggarwal, and M. Salehi, “CARLA: Learn. Representations, 2022. [Online]. Available: https://openreview.net/
+ Self-supervised contrastive representation learning for time series anomaly forum?id=LzQQ89U1qm_
+ detection,” Pattern Recognit., vol. 157, 2025, Art. no. 110874. [42] Z. Niu, K. Yu, and X. Wu, “LSTM-based VAE-GAN for time-series
+[16] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach. anomaly detection,” Sensors, vol. 20, 2020, Art. no. 3738.
+ Learn., 2018, pp. 4393–4402. [43] J. Zhan, C. Wu, C. Yang, Q. Miao, and X. Ma, “HFN: Heterogeneous
+[17] H. Li, W. Zheng, F. Tang, Y. Zhu, and J. Huang, “Few-shot time- feature network for multivariate time series anomaly detection,” Inf. Sci.,
+ series anomaly detection with unsupervised domain adaptation,” Inf. Sci., vol. 670, 2024, Art. no. 120626.
+ vol. 649, 2023, Art. no. 119610. [44] F. Zhou, G. Wang, K. Zhang, S. Liu, and T. Zhong, “Semi-supervised
+[18] M. Long, Z. Cao, J. Wang, and M. I. Jordan, “Conditional adversarial anomaly detection via neural process,” IEEE Trans. Knowl. Data Eng.,
+ domain adaptation,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2018, vol. 35, no. 10, pp. 10423–10435, Oct. 2023.
+ pp. 1647–1657. [45] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+[19] E. Tzeng, J. Hoffman, K. Saenko, and T. Darrell, “Adversarial discrim- detection for multivariate time series through stochastic recurrent neural
+ inative domain adaptation,” in Proc. IEEE Conf. Comput. Vis. Pattern network,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining,
+ Recognit., 2017, pp. 7167–7176. 2019, pp. 2828–2837.
+4496 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 8, AUGUST 2025
+
+[46] H. Deng, Y. Sun, M. Qiu, C. Zhou, and Z. Chen, “Graph neural network- Zahra Zamanzadeh Darban is a PhD researcher with the Department of Data
+ based anomaly detection in multivariate time series data,” in Proc. IEEE Science and AI, Monash University, Australia. She focuses on anomaly detection
+ Annu. Comput. Softw. Appl. Conf., 2021, pp. 1128–1133. in time series using deep learning. Supervised by dr. Salehi, professor pan, and
+[47] L. Shen, Z. Li, and J. Kwok, “Timeseries anomaly detection using temporal professor webb, she previously spent seven years as a software engineer, machine
+ hierarchical one-class network,” in Proc. Int. Conf. Neural Inf. Process. learning engineer, and system analyst in the industry before joining Monash.
+ Syst., 2020, pp. 13016–13026.
+[48] Q. Lei, J. Yi, R. Vaculin, L. Wu, and I. S. Dhillon, “Similarity preserving
+ representation learning for time series clustering,” in Proc. Int. Joint Conf.
+ Artif. Intell., 2019, pp. 2845–2851.
+[49] G. Zerveas, S. Jayaraman, D. Patel, A. Bhamidipaty, and C. Eickhoff, “A Yiyuan Yang is currently working toward the DPhil degree with the Department
+ transformer-based framework for multivariate time series representation of Computer Science, University of Oxford, U.K. He focuses on the field of
+ learning,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, intelligent sensing systems, time series, spatiotemporal data mining, anomaly
+ 2021, pp. 2114–2124. detection, and generative models. He previously studied with the Department
+[50] S. Tonekaboni, D. Eytan, and A. Goldenberg, “Unsupervised representa- of Automation, Tsinghua University and interned with the Alibaba DAMO
+ tion learning for time series with temporal neighborhood coding,” in Proc. Academy and Huawei Noah’s Ark Lab.
+ Int. Conf. Learn. Representations, 2021.
+[51] H. Zhou, K. Yu, X. Zhang, G. Wu, and A. Yazidi, “Contrastive autoencoder
+ for anomaly detection in multivariate time series,” Inf. Sci., vol. 610,
+ pp. 266–280, 2022.
+[52] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: Dual Geoffrey I. Webb (Fellow, IEEE) is the research director with Monash Uniattention contrastive representation learning for time series anomaly de- versity Data Futures Institute, Australia. Former editor-in-chief of DMKD
+ tection,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, (2005-2014), he chaired ACM SIGKDD and IEEE ICDM conferences. Advisor
+ 2023, pp. 3033–3045. to BigML Inc and FROOMLE, he innovated in association discovery and rule
+[53] Z. Zhong, Z. Yu, Y. Yang, W. Wang, and K. Yang, “PatchAD: A search. Awards include the 2017 Eureka Prize in data science.
+ lightweight patch-based MLP-mixer for time series anomaly detection,”
+ 2024, arXiv:2401.09793.
+[54] Y. Fang, J. Xie, Y. Zhao, L. Chen, Y. Gao, and K. Zheng, “Temporalfrequency masked autoencoders for time series anomaly detection,” in
+ Proc. IEEE 40th Int. Conf. Data Eng., 2024, pp. 1228–1241. Charu C. Aggarwal (Fellow, IEEE) received the BS degree from IIT Kanpur,
+[55] D. Lee, S. Malacarne, and E. Aune, “Explainable time series anomaly in 1993, and PhD degree from Massachusetts Institute of Technology, in 1996.
+ detection using masked latent generative modeling,” Pattern Recognit., He is a research scientist at the IBM T.J. Watson Research Center, working in
+ vol. 156, 2024, Art. no. 110826. performance analysis, databases, and data mining. He has served as program
+[56] F. Schroff, D. Kalenichenko, and J. Philbin, “FaceNet: A unified embed- vice chair for SDM 2007, ICDM 2007, WWW 2009, and ICDM 2009, and was
+ ding for face recognition and clustering,” in Proc. IEEE Conf. Comput. associate editor of IEEE TKDE (20042008). He currently serves on editorial
+ Vis. Pattern Recognit., 2015, pp. 815–823. boards of TKDD, DMKD, SIGKDD Explorations, and KAIS. He is also a Fellow
+[57] P. Khosla et al., “Supervised contrastive learning,” in Proc. Int. Conf. of the ACM.
+ Neural Inf. Process. Syst., 2020, pp. 18661–18673.
+[58] C. Lea, R. Vidal, A. Reiter, and G. D. Hager, “Temporal convolutional
+ networks: A unified approach to action segmentation,” in Proc. Eur. Conf.
+ Comput. Vis. Workshops, Springer, 2016, pp. 47–54.
+[59] A. Creswell, T. White, V. Dumoulin, K. Arulkumaran, B. Sengupta, and Qingsong Wen received the PhD in electrical and computer engineering from
+ A. A. Bharath, “Generative adversarial networks: An overview,” IEEE Georgia Tech. He is the head of AI Research and chief scientist at Squirrel
+ Signal Process. Mag., vol. 35, no. 1, pp. 53–65, Jan. 2018. Ai Learning. He has published 100+ papers, including Oral/Spotlight papers at
+[60] Y. Ganin and V. Lempitsky, “Unsupervised domain adaptation by back- NeurIPS, ICML, and ICLR, and won awards such as IJCAI Most Influential
+ propagation,” in Proc. Int. Conf. Mach. Learn., 2015, pp. 1180–1189. Paper and AAAI IAAI Deployed Application Award. He serves as associate
+[61] L. Bottou, F. E. Curtis, and J. Nocedal, “Optimization meth- editor for IEEE TPAMI, IEEE SPL, and Neurocomputing, and guest editor for
+ ods for large-scale machine learning,” SIAM Rev., vol. 60, no. 2, Applied Energy and IEEE IoT Journal. His research focuses on AI for time
+ pp. 223–311, 2018. series, education, and general machine learning.
+[62] S. Ghadimi and G. Lan, “Stochastic first-and zeroth-order methods for
+ nonconvex stochastic programming,” SIAM J. Optim., vol. 23, no. 4,
+ pp. 2341–2368, 2013.
+[63] M. Sakurada and T. Yairi, “Anomaly detection using autoencoders with
+ nonlinear dimensionality reduction,” in Proc. MLSDA 2nd Workshop Shirui Pan received the PhD degree in computer science from UTS and is
+ Mach. Learn. Sensory Data Anal., 2014, pp. 4–11. a professor at Griffith University. His research in data mining and machine
+[64] P. Malhotra, L. Vig, G. Shroff, and P. Agarwal, “LSTM-based encoder- learning has appeared in top venues like Nature Machine Intelligence, KDD, and
+ decoder for multi-sensor anomaly detection,” in Proc. Int. Conf. Mach. ICLR. He has received several awards, including the 2024 IEEE CIS TNNLS
+ Learn., 2016, pp. 1724–1732. Outstanding Paper Award, 2020 ICDM Best Student Paper, and 2024 IEEE
+[65] E. Tzeng, J. Hoffman, N. Zhang, K. Saenko, and T. Darrell, “Deep domain ICDM Tao Li Award, and is an ARC Future Fellow.
+ confusion: Maximizing for domain invariance,” 2014, arXiv:1412.3474.
+[66] S. Kim, K. Choi, H.-S. Choi, B. Lee, and S. Yoon, “Towards a rigorous
+ evaluation of time-series anomaly detection,” in Proc. AAAI Conf. Artif.
+ Intell., 2022, pp. 7194–7201.
+[67] A. Huet, J. M. Navarro, and D. Rossi, “Local evaluation of time series Mahsa Salehi received the PhD degree in computer science from the University
+ anomaly detection algorithms,” in Proc. 28th ACM SIGKDD Conf. Knowl. of Melbourne, Australia, in 2016. She then joined IBM Research as a postdoc-
+ Discov. Data Mining, 2022, pp. 635–645. toral researcher. In 2017, she joined Monash University, Faculty of IT, where
+[68] K.-H. Lai, D. Zha, J. Xu, Y. Zhao, G. Wang, and X. Hu, “Revis- she is currently a senior lecturer. Her research includes time series analytics
+ iting time series outlier detection: Definitions and benchmarks,” in and anomaly detection. She serves as an associate editor of the Transactions on
+ Proc. 35th Conf. Neural Inf. Process. Syst. Datasets Benchmarks Track, Knowledge Discovery from Data.
+ 2021.

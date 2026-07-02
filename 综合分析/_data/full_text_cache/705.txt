@@ -1,0 +1,657 @@
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026 8415
+
+ Honeypot-Driven Proactive Detection Network
+ for Attacks in Smart Grids
+ Yi-Xuan Chen , Xi-Ming Sun , Senior Member, IEEE, Xue-Fang Wang , Member, IEEE, and Tianju Sui
+
+ Abstract—This paper proposes a honeypot-driven active detec- I. I NTRODUCTION
+tion framework to address the growing cyber threats targeting
+smart grids. To address the limitations of existing detection
+methods and the lack of proactive defense capabilities, the
+framework integrates interpretable decision mechanisms with an
+ E MERGING from the deep integration of information and
+ communication technologies (ICT), the smart grid significantly enhances the efficiency, reliability, and sustainability
+adaptive modular architecture, through the dynamic weighting of traditional power systems [1]. However, this transformation
+of the gated aggregation mechanism. It incorporates data prepro- also introduces new cybersecurity challenges. The smart grid’s
+cessing, honeypot interaction, dual-path detection, and decision distributed architecture, extensive sensor deployment, and deep
+fusion to more effectively capture diverse attack behaviors and integration with the Internet and IoT significantly expand
+strengthen overall detection reliability. The framework integrates its attack surface, exposing the system to a wide range of
+a GBDT-based anomaly scorer with a dedicated Denial-of-Service
+(DoS) detector, and combines multidimensional evidence using
+ cyber threats, including false data injection [2], denial of
+a gated aggregation mechanism. Moreover, theoretical analyses service (DoS) attacks, data tampering, malware propagation,
+establish a lower bound on feature distinguishability, prove model and eavesdropping, all of which can compromise its physical,
+convergence, and demonstrate effective false-alarm suppression, communication, and control layers [3]. Attacks that target grid
+providing formal guarantees for feasibility. Finally, experiments reliability are particularly critical. By compromising measureon real-world smart grid datasets show that the proposed frame- ment devices (e.g. PMUs, SCADA), attackers can circumvent
+work accurately detects DoS, replay, and integrity attacks while bad-data detection mechanisms [4], distort state estimation,
+maintaining strong overall performance. The results confirm its
+effectiveness as a theoretically grounded and proactive defense and induce unsafe control decisions. Such failures in realsolution for smart grid security. time monitoring may lead to frequency deviations, localized
+ outages, or even large-scale system collapse.
+ Note to Practitioners—Smart grids face unique cybersecurity To address these challenges, attack detection in smart
+challenges. Attacks like data replay or network floods can grids is evolving toward deeper integration of data-driven
+disrupt physical operations, leading to outages or equipment
+ AI methods, cross-layer coordinated defense, and improved
+damage. Traditional IT security tools often struggle here, as
+they may only respond after the system has been attacked. real-time adaptability. Machine learning and deep learning
+This work addresses this gap by integrating deceptive honeypot are widely applied to attack identification: supervised and
+nodes directly into the operational network architecture. These semi-supervised models achieve high accuracy in detecthoneypots act as intelligent sensors, attracting and engaging ing false data injection attacks, while Convolutional Neural
+attackers. The core innovation is a method to automatically Networks (CNN)- and Long Short Term Memory(LSTM)-
+convert the observed attacker interactions into clear, actionable based architectures enhance time-series anomaly detection
+signals. These signals are then fused with conventional traffic
+analysis in a decision framework to reliably distinguish between
+ [5]. Generative adversarial networks(GANs) further enhance
+Replay attacks, Integrity tampering, Denial-of-Service attempts, robustness against adversarial samples [6]. Hybrid detection
+and normal operations. For security teams, this means more frameworks that combine power system dynamics with dataprecise alerts with contextual evidence, intercepting attacks driven methods are also gaining maturity, enabling cross-layer
+before any damage occurs. attack identification of coordinated attacks through residual
+ Index Terms—Smart grid security, honeypot interaction, active analysis and state estimation deviation in Cyber-Physical
+defense, attack detection. Systems (CPS) [7]. Mitigation strategies such as adversarial
+ training and moving target defense address model vulner-
+ Received 6 January 2026; revised 12 March 2026; accepted 2 April 2026. abilities and evolving attack environments, and online or
+Date of publication 7 April 2026; date of current version 24 April 2026. reinforcement learning techniques enable real-time adaptation
+This article was recommended for publication by Associate Editor M. Zhang
+and Editor Q. Zhao upon evaluation of the reviewers’ comments. This
+ [8]. In addition, distributed detection architectures prevent
+work was supported in part by the National Natural Science Foundation single points of failure [9], and privacy-preserving techniques,
+(NNSF) of China under Grant 61890920 and Grant 08120003 and in part including federated learning, support secure multi-party colby the Fundamental Research Funds for the Central Universities under Grant laboration without exposing sensitive data [10].
+DUT22RT(3)090. (Corresponding author: Xi-Ming Sun.)
+ Yi-Xuan Chen, Xi-Ming Sun, and Tianju Sui are with the School of Within this broader landscape, proactive defense has
+Control Science and Engineering, Dalian University of Technology, Dalian emerged as a critical direction for smart grid cybersecurity
+116024, China (e-mail: chenyixuan@mail.dlut.edu.cn; sunxm@dlut.edu.cn; due to its capability for early warning and early intervention
+suitj@dlut.edu.cn). [1]. Unlike passive detection methods, proactive approaches
+ Xue-Fang Wang is with the School of Engineering, University of Leicester,
+LE1 7RH Leicester, U.K. (e-mail: xw259@leicester.ac.uk). facilitate early identification and dynamic response to complex
+ Digital Object Identifier 10.1109/TASE.2026.3681594 attacks behaviors [11]. They offer three key advantages. First
+ 1558-3783 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+8416 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+they help prevent physical-level cascading failures through temporal consistency criterion is additionally incorporated
+real-time monitoring and behavior analysis [12]. Second, to reduce false alarms by enforcing stability across sliding
+they adapt to evolving threats by employing dynamic policy time windows. Finally, the proposed framework is evaluated
+updates and attack graph-based reasoning [13]. Third, they within operational smart grid environments under diverse and
+safeguard data integrity using spatiotemporal anomaly detec- complex attack scenarios. Experimental findings demonstrate
+tion [14], [15]. Advanced AI techniques further strengthen that the system achieves high detection accuracy, strong genproactive defense. Hybrid architectures such as CNN-LSTM eralization capability, and stable long-term performance.
+models enable multi-source data fusion and early anomaly The rest of this paper is organized as follows. Section II
+detection [17], [18]. Spatiotemporal Transformers capture grid presents the current status and challenges of smart grid
+patterns via self-attention mechanisms [19] while federated security, followed by a detailed description of the system.
+learning enables distributed, privacy-preserving detection in Section III details a construction of the attack detection netlarge-scale smart grid environments [20]. However, despite work, covering the data preprocessing module, the honeypot
+these advancements, practical implementation faces significant interaction layer, the dual-path detection module, and the
+challenges, including the need for high-fidelity attack data, decision fusion with post-processing mechanisms. Section IV
+real-time adaptation to evolving threats, and balancing detec- provides a theoretical analysis and feasibility demonstration of
+tion accuracy with computational efficiency in large-scale grid the proposed approach. Section V provides experimental evalenvironments. These limitations highlight the critical need for uations on real-world datasets, demonstrating the effectiveness
+novel frameworks that can translate theoretical advantages into of the framework in detecting multiple types of cyber-physical
+operational reliability. attacks. Finally, Section VI concludes the paper and discusses
+ To enhance proactive sensing and intervention, deception- future research directions.
+based strategies, particularly honeypot techniques, are gaining
+increasing attention [21]. While mixed H− /H∞ optimization II. P ROBLEM F ORMULATION
+effectively balances detection sensitivity and robustness in
+local physical systems [25], its integration with such proactive The growing openness and interconnectedness of smart
+deception mechanisms is imperative for achieving resilient grids enhance operational efficiency and system flexibility but
+defense in large-scale, heterogeneous smart grids. Tradition- also increase their vulnerability to sophisticated cyber attacks.
+ally, honeypots have proven effective in cybersecurity for Current attack detection methods face two major challenges.
+attracting attackers and gathering threat intelligence [22], [23], First, relying on a single detection model makes it difficult to
+and their growing potential in power systems is becoming capture both general anomalies, such as data tampering, and
+increasingly evident as a means to bridge the gap between specific, targeted attacks, leaving vulnerabilities in the highreactive detection and active defense. By deploying dynamic dimensional feature space. Second, many AI-based models
+and scalable decoys, honeypots enable active defenses through operate as unobservable systems, providing limited interattack deception and early intervention. This “deception-for- pretability regarding their decision-making processes. This
+early-warning” paradigm plays a crucial role in evolving grid lack of explainability poses significant risks when deploying
+security from passive protection to active engagement. Never- such models in critical power infrastructure. Although some
+theless, applying honeypots in smart grids introduces unique studies attempt to fuse data from multiple sources, these
+complexities, such as designing grid-specific lure services, approaches are typically reactive, detecting attacks only after
+mitigating false alarms induced by legitimate operational vari- they occur and failing to identify early indicators of emerging
+ations, and ensuring seamless integration with existing grid threats. These limitations collectively lead to a critical gap: the
+control systems. Addressing these challenges is essential to inability to proactively sense and characterize attacks during
+unlock the full potential of honeypot-driven defense, ultimately their initial stages with high confidence and clear reasoning,
+enhancing grid resilience against sophisticated cyber-physical which is paramount for preventing cascading failures in smart
+attacks. grids.
+ To provide security solutions that are both reliable and The smart grid communication environment can be
+adaptive to emerging threats, this paper presents the follow- described as a dynamic time-series system. The main idea is
+ing contributions. First, a formal framework is established to build a clear mathematical connection between what goes
+through mathematically defined models of industrial com- into the system and what comes out. Industrial communication
+munication sequences, enabling precise characterization of sequences are represented as a collection of quadruples:
+system input–output behaviors and principled identification of D = {(ti , fi , ci , si )}i=1
+ N
+ , (1)
+potential threats. Second, a multi-layer detection architecture is
+developed, incorporating data preprocessing, honeypot-driven where ti is the timestamp, fi stands for the protocol field, ci is
+interaction, dual-path detection, and decision fusion mecha- the instruction code, and si is the device status vector. We use
+nism, along with a gated aggregation strategy for integrating a sliding window approach to break the continuous stream of
+heterogeneous evidence under dynamic conditions. Third, a communication into separate session segments {S j } M j=1 . Each
+comprehensive theoretical analysis framework is developed to session includes Q consecutive interaction events. The core
+substantiate the reliability of the proposed detection scheme. objective of the detection system is to map each session
+The analysis derives a lower bound on feature discriminability, segment S j to a comprehensive output Γ j = (y j , R j , E j ). Here,
+ensuring sufficient separability between normal and malicious y j ∈ {0, 1} is the final attack determination, R j ∈ [0, 1] is a finebehaviors, and establishes an upper bound on the general- grained risk score indicating the severity level, and E j is a set
+ization error of the GBDT-based component. Moreover, a of evidence supporting the decision. Designing this detection
+CHEN et al.: HONEYPOT-DRIVEN PROACTIVE DETECTION NETWORK FOR ATTACKS IN SMART GRIDS 8417
+
+Fig. 1. Architecture of the honeypot-driven proactive detection network for
+smart grids. Fig. 2. Feature extraction engine and processing flow in the honeypot-driven
+ detection network.
+function F : D → Γ necessitates balancing multiple critical
+requirements. First, it must achieve a high detection rate while used to make a final classification into one of four categories:
+controlling the false alarm rate below an acceptable threshold replay attack, integrity attack, DoS attack, or normal operation.
+α. Second, it must ensure real-time performance such that The following subsections detail the implementation of each
+the average detection delay E[τdetection ] does not exceed a module.
+maximum tolerable time T max . Third, it must provide inherent
+explainability for every decision, ideally by quantifying the
+ ∂R A. Data Preprocessing Module
+contribution of each feature (e.g., E j = {φi }di=1 , where φi = ∂ fij ).
+ To address the limitations of existing detection methods, this The data preprocessing module serves as the foundational
+paper proposes a honeypot-driven active detection network. By stage that transforms the raw communication event streams,
+simulating decoy services to attract and engage attackers, the represented as a collection of quadruples D = {(ti , fi , ci , si )}i=1
+ N
+
+honeypot generates discriminative behavioral features while (1) into a structured and analytically ready format. This modproviding interpretable real-time evidence for detection. This ule directly operationalizes the mathematical model defined in
+proactive mechanism shifts defense efforts upstream, capturing Section II.
+attack signatures at the source and overcoming the delayed The preprocessing pipeline begins with sessionization,
+responses typical of traditional approaches. However, effec- where a configurable Land overlap sliding window is applied
+tively leveraging honeypot interactions requires addressing to the continuous data stream, breaking it into discrete anatwo key technical challenges, including ensuring the discrim- lyzable sessions {S j } M
+ j=1 . This approach balances the need for
+inability of extracted features against evolving attacks and sufficient contextual information with computational tractabildesigning a robust fusion mechanism that integrates multi- ity. Each session window then undergoes a comprehensive
+source evidence reliably. cleaning procedure. Missing values in temporally dependent
+ This paper aims to propose an attack detection network fields, such as device status si , are imputed via linear interframework to meet the aforementioned requirements by con- polation informed by neighboring time points. Meanwhile,
+struction. Its modular architecture, detailed in the next section, categorical variables including protocol fields fi and instrucis architected to transform raw communication sequences tion codes ci are transformed through one-hot encoding to
+into trustworthy detection outcomes Γ j , explicitly tackling the yield structured categorical feature representations. Numerical
+challenges of model generalization, operational stability, and features are subsequently standardized to zero mean and unit
+decision transparency outlined in this problem formulation. variance to prevent model bias towards features with larger
+The next section will describe the detailed structure and scales. Concurrently, a suite of statistical features is extracted
+implementation of the detection system. from each window, including time-domain characteristics
+ (e.g., mean, variance, and entropy of inter-arrival times) and
+III. ATTACK D ETECTION N ETWORK F RAMEWORK D ESIGN frequency-domain energy signatures derived via Fast Fourier
+ Transform (FFT). The output is a clean, normalized, and
+ In this section, we construct the details of the detection feature-rich representation of each session, forming a reliable
+network, which is designed to fulfill the requirements of accu- base for subsequent detection modules and ensuring the input
+rate detection, false alarm control, real-time performance, and data quality necessary for achieving the detection goals set
+explainability as outlined in Section II. The system translates forth in Section II.
+the abstract detection function F : D → Γ into a practical,
+layered architecture. As shown in Fig. 1, the system leverages
+time-series interaction data from grid communications to accu- B. Honeypot Interaction Layer
+rately classify behaviors. It is worth noting that, preprocessing The honeypot interaction layer acts as the core component
+and interaction operate in parallel to minimize detection of the active defense system. It uses a decoy environment
+latency. It computes two key probabilities: a general anomaly with fake services and simulated systems, as shown in Fig. 2.
+score (Path Y) and a DoS-specific probability (Path X). These All interactions occurring within this controlled environment
+probabilities, together with honeypot-derived evidence, are are rigorously recorded, thereby producing a comprehensive
+8418 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+dataset of attacker behaviors. A dedicated feature engine then DoS floods, which may remain inconspicuous in the general
+processes these logs to generate a multi-dimensional evidence feature space captured by Path Y. The output of this module
+vector. The selected features are purposefully designed to is a dedicated DoS probability PX .
+capture essential attack characteristics. Replay Similarity mea- By combining a general anomaly detector with this
+sures the proportion of session commands exhibiting strong specialized DoS-focused pathway, the system achieves comcorrespondence to historical attack sequences, quantified via a plementary detection capabilities, ensuring high sensitivity
+normalized Hamming distance. Protocol Compliance evaluates to both subtle, broad-spectrum anomalies and concentrated,
+adherence to protocol state machines and syntax rules. Burst high-volume attacks, thereby significantly enhancing overall
+Intensity calculates the Z-score of request rates to identify robustness and reliability.
+flooding patterns. Timing Consistency examines the distribution of inter-packet delays to detect artificial timing patterns
+typical of replay attacks. Categorical features are transformed D. Decision Fusion and Post-Processing Module
+using one-hot encoding before GBDT scoring. And honey- The decision fusion module combines evidence from difpots identify integrity violations by detecting deviations from ferent sources to make the final decision about an attack,
+protocol templates ultimately producing the following output triplet:
+ A primary technical challenge is to ensure the extracted fea-
+ Γ j = y j, R j, E j .
+ 
+tures possess sufficient discriminability. This layer addresses (4)
+this by designing a feature engine that creates multiple evi- This module employs a parallel gating structure in which
+dence types (e.g., replay similarity, protocol compliance) from independent triggers operate concurrently on different evithe interaction data, with the explicit goal of maximizing dence streams. Specifically, the Replay Trigger is activated
+the separation between attack and normal patterns, thereby when the replay similarity evidence is high AND the general
+satisfying the following condition: anomaly score PY exceeds a threshold. The Integrity Trigger is
+ Dtotal = kE[Φ(S j )|Pk ] − E[Φ(S j )|P0 ]k2 ≥ δ > 0. (2) engaged upon the detection of protocol compliance violations
+ OR abnormal timing consistency, while the DoS Trigger is
+ Each piece of evidence is binarized by comparing it to a triggered if the burst intensity is high AND the DoS-specific
+set threshold. This practical setup ensures a clear separation probability PX is elevated. This parallel configuration enables
+between normal and malicious behavior in the features we use, the simultaneous detection of co-occurring attacks. In cases
+providing the foundational input for the subsequent detection where multiple triggers are simultaneously activated, a rulemodules. based conflict resolution mechanism is employed, prioritizing
+ the attack with the highest potential impact, thereby produc-
+C. Dual-Path Detection Module ing a single, deterministic output y j . Furthermore, to ensure
+ The dual-path detection module employs a collaborative operational reliability and meet the stability requirement, the
+two-model architecture designed to address the limitation of following measures are implemented:
+single-model approaches by providing complementary analytical strengths. kF(S j + ) − F(S j )k ≤ βkk. (5)
+ The first path, referred to the general anomaly detector This module incorporates a temporal stabilization mecha-
+(Path Y), is implemented using a gradient boosting decision nism, wherein a moving average filter to the risk score R j over
+tree (GBDT) model, specifically the XGBoost algorithm. Its a short, configurable time window. An alarm is triggered only
+input consists of a fused feature representation that integrates if the smoothed risk score persistently exceeds the predefined
+statistical descriptors extracted during preprocessing with bina- threshold for a minimum duration, temporal characteristics
+rized threat evidence produced by the honeypot layer. The are implicitly embedded in the input feature vectors. This
+model is trained to learn complex, non-linear relationships straightforward yet effective method achieves exponential supthat indicate broad-spectrum anomalies, including replay and pression of isolated false alarms while maintaining sensitivity
+integrity attacks. The training process formalizes the model to sustained attacks. Due to the shallow architecture of the
+adaptability requirement as an optimization problem: fusion layer, gradient issues are negligible. Consequently, it
+ min E[L(Fθ (S j ), y j )] + λR(θ), (3) ensures the crucial balance between detection sensitivity and
+ θ operational reliability, which is particularly essential in grid
+where L is the logistic loss function and R(θ) is an L2 and other high-stakes cyber-physical environments.
+regularization term applied to the weights of the decision This section explains how the honeypot-based detection
+trees to control model complexity and prevent overfitting. network is built. The main idea is to turn the theoretical model
+The output is a calibrated probability score PY reflecting the into a practical solution using a modular design. The data
+likelihood of a general anomaly. preparation module first organizes raw communication flows
+ The second path, designed as the DoS-specific detector into sessions and standardizes them. This creates a foundation
+(Path X), is a specialized component focusing exclusively on for feature extraction. The honeypot interaction layer mimics
+DoS attacks. It takes as input the raw traffic volume time series real services to attract attacks, generating evidence from
+within the session and is conditioned on the anomaly prob- multiple aspects. The dual-path detection module uses two
+ability PY produced by Path Y, thereby enabling contextual methods: one provides general anomaly scores from a GBDT
+interpretation of high-volume traffic in relation to the overall model, and the other looks for specific signs of DoS attacks.
+system anomaly state. Path X is designed to detect the short- These two methods work together to improve detection. The
+term, high-frequency burst patterns that are characteristic of decision fusion module then brings all the evidence together
+CHEN et al.: HONEYPOT-DRIVEN PROACTIVE DETECTION NETWORK FOR ATTACKS IN SMART GRIDS 8419
+
+using parallel gating and a temporal stabilization mechanism. Theorem 1: (Lower Bound of Feature Discriminability)
+Produces a final reliable risk score. The whole system works Consider any feature fk extracted at the honeypot interacas an end-to-end process, from raw data to final decision. Its tion layer of the industrial communication anomaly detection
+modular design makes it easy to extend or modify. system. Let P1 denote the attack distribution and P0 the
+ Remark 1: The four modules form a closely coordinated normal-operation distribution. Then the expected values of fk
+detection pipeline. Data preprocessing serves as the starting under these two regimes exhibit a strictly positive separation,
+point. It converts raw communication traffic into structured
+ Dk = ˇEP1 [ fk ] − EP0 [ fk ]ˇ > 0.
+ ˇ ˇ
+sessions suitable for analysis, delivering a unified input foundation for all following stages. The honeypot interaction layer
+acts as the core component for active sensing. It simulates a Moreover, for the full feature vector f = [ f1 , f2 , . . ., fd ]T , the
+realistic environment to capture first-hand evidence of attacks, overall feature discriminability satisfies:
+supplying critical feature inputs to the detection module.
+ v
+ u d
+The dual-path detection module leverages the outputs from
+ uX
+ Dtotal = EP1 [f] − EP0 [f] 2 ≥ t D2k > 0, (6)
+the previous stages, including structured session data and k=1
+threat information obtained from the honeypot, to conduct indepth analysis from two complementary perspectives, namely which establishes a nontrivial lower bound on the separability
+broad-spectrum anomalies and dedicated DoS attacks, thereby of the attack and normal distributions in the feature space.
+producing initial probability assessments. Finally, the decision Proof: We use replay similarity r as an illustrative feature,
+fusion module integrates direct evidence from the honeypot quantifying the repetition of session interactions relative to
+with detection results from the dual paths. Through parallel historical honeypot responses. Under normal conditions (P0 ),
+triggering and temporal stability processing, it outputs the the expected value is EP0 [r] = pnormal , while under attack (P1 )
+final classification and risk score. The entire workflow is it becomes EP1 [r] = preplay + δ with δ > 0. The discriminative
+data-driven. It not only preserves the functional independence power is then:
+and extensibility of each module, but also ensures that the Dr = ˇEP1 [r] − EP0 [r]ˇ = ˇ(preplay + δ) − pnormal ˇ .
+ ˇ ˇ ˇ ˇ
+ (7)
+system operates as an integrated whole, achieving end-to-end
+detection from raw data to reliable decisions. Given that attacks inherently produce more repetition
+ With the above architectural design established, the detec- (preplay  pnormal ) and δ > 0, we have:
+tion network not only accurately identifies attacks but also
+makes its decisions understandable through feature importance Dr = δ + (preplay − pnormal ) > 0. (8)
+analysis. However, practical deployment in critical infrastruc- Thus, replay similarity effectively distinguishes attacks. The
+tures requires that such a design be grounded in rigorous same rationale applies to other features. For each designed
+theoretical justification. To this end, the following section feature fk , the fundamental pattern difference ensures Dk > 0.
+will explore the mathematical foundations of the proposed For the complete feature vector f = [ f1 , f2 , . . ., fd ]T , let µ1 =
+framework. This includes an analysis of the lower bounds EP1 [f] and µ0 = EP0 [f]. The overall discriminative power is
+on feature discriminability, the convergence properties of the v
+learning components, and the theoretical mechanism enabling u d
+ uX
+false-alarm suppression. These results collectively substantiate Dtotal = kµ1 − µ0 k2 = t D2k . (9)
+the feasibility and robustness of the system when applied to k=1
+real-world power-grid environments. Since each Dk > 0, we obtain Dtotal > 0, confirming that
+ attack and normal patterns form separable clusters.
+ IV. T HEORETICAL A NALYSIS AND For bounded features (e.g., ratios in [0,1]), statistical con-
+ F EASIBILITY D EMONSTRATION vergence is ensured by Hoeffding’s inequality:
+ This section provides a systematic theoretical analysis to P(| fˆk − E[ fk ]| ≥ ) ≤ 2 exp(−2n 2 ). (10)
+ensure the feasibility and robustness of the proposed detection
+framework. We establish a unified mathematical foundation With sufficient samples n, feature estimates converge expoto verify three key aspects: the usefulness of the feature nentially to their expectations, guaranteeing the theoretical
+representations, the learnability and convergence behavior discriminative power manifests in practice.
+of the model, and the reliability of the overall decision The proof establishes both the inherent discriminative capaprocess. Specifically, we will first show that the features bility of features and their statistical estimability, completing
+created from honeypot interactions, such as replay similar- the demonstration of Theorem 1. 
+ity and protocol compliance, have a clear and measurable This upper bound 10 decays exponentially with sample size
+difference between attack and normal traffic. We then demon- n. For any predefined error tolerance  > 0 and confidence
+strate that GBDT algorithm under proper regularization learns level δ > 0, if the sample size satisfies n > log(2/δ)
+ 2 2 , we can
+very efficiently with exponential convergence. Furthermore, guarantee with confidence at least 1 − δ that the estimation
+the system’s false alarm rate can be reduced exponentially error | fˆk − E[ fk ]| < . This observation provides theoretical
+through a window-based consistency check. These results not guidance for system design: ensuring that sessionization proonly provide theoretical support for the deployment of the cedure yields communication fragments of sufficient length (n
+network’s design but also ensure its long-term robustness and large enough) enables feature estimates to converge to their
+explainability. theoretical expectations with high probability. Consequently,
+ We first analyze the effectiveness of the feature set. the guaranteed discriminative properties Dk and Dtotal are
+8420 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ regularization 12 λ Jj=1 ω2j with parameter λ ≥ 0 yields the
+ P
+reliably reflected in practical observations, thereby enabling
+effective model training and robust attack–benign separation regularized objective:
+in real deployments. J  
+ We now analyze the convergence properties of the proposed X 1
+ L̃reg =
+ (m)
+ G j ω j + (H j + λ)ω j .
+ 2
+attack detection framework. 2
+ j=1
+ Theorem 2 (GBDT Convergence): Let L(y, F) be a convex and twice-differentiable loss function. Under appropriate This quadratic form admits a closed-form solution by setting
+ M the derivative to be zero:
+regularization conditions, the sequence of models {Fm }m=1
+generated by the GBDT algorithm exhibits exponential con-
+ ∂L̃(m)
+ reg Gj
+vergence. Specifically, there exists a constant 0 < ρ < 1, = G j + (H j + λ)ω j = 0 ⇒ ω∗j = − .
+dependent on the condition number of the problem, such that ∂ω j Hj + λ
+the gap between the empirical risk at iteration m, denoted by The regularization term λ in the denominator prevents exces-
+R̂(Fm ), and the optimal empirical risk R̂∗ satisfies the following sively large weights, enhancing generalization.
+bound The convexity of the optimization problem is ensured by the
+ R̂(Fm ) − R̂∗ ≤ K · (1 − ρ)m , positive definiteness of the Hessian matrix. For the quadratic
+where K is a positive constant. This guaranties that the approximation, the second derivative with respect to ω j is H j =
+ require hi > 0 for all i to guarantee a unique
+ P
+algorithm converges to the optimal solution at an exponential h
+ i∈R j i . Thus, we
+rate. minimum. For binary classification with logistic loss:
+ Proof: Gradient boosting constructs an additive model that L(y, F) = −y log(σ(F)) − (1 − y) log(1 − σ(F)), (13)
+sequentially minimizes a differentiable loss function L(y, F(x))
+through iterative weak learner incorporation. At each iteration where σ(F) = 1/(1 + e−F ) is the sigmoid function, and the
+m, the model undergoes the update Fm (x) = Fm−1 (x) + fm (x), second derivative is:
+where fm typically represents a decision tree with limited ∂2 L
+depth, ensuring the weak learner condition. h= = σ(F)(1 − σ(F)) > 0 for all finite F,
+ ∂F 2
+ The fundamental advancement of GBDT lies in its exploitation of both first and second-order gradient information for satisfying the convexity condition.
+more informed optimization. This approach provides superior Under appropriate regularity conditions (strong convexity,
+convergence properties compared to first-order methods. The exact solving), GBDT exhibits linear convergence. After m
+optimization objective in iteration m considers the composite iterations, the gap between the current loss and the optimal
+model: value decreases as (1 − ρ)m , where 0 < ρ < 1 depends on the
+ n
+ X problem’s condition number. The generalization error bound
+ L(m) = L (yi , Fm−1 (xi ) + fm (xi )) , (11) follows from statistical learning theory:
+ i=1 r
+where n denotes the training sample size. x denotes a log(1/δ)
+ R(F) ≤ R̂(F) + Rn (F) + , (14)
+d-dimensional feature vector. 2n
+ When the incremental update fm is relatively small comwhere R̂(F) is the empirical risk, Rn (F) is the Rademacher
+pared to the current model Fm−1 , we employ a second-order
+ complexity of the hypothesis space F, and the third term
+Taylor expansion around Fm−1 :
+ is a confidence bound. Regularization techniques effectively
+ 1 control model complexity, ensuring the bound remains tight
+ L (yi , Fm−1 + fm ) ≈ L (yi , Fm−1 ) + gi fm (xi ) + hi fm2 (xi ),
+ 2 and preventing overfitting.
+ ∂L(yi ,F) ˇ The proof thus establishes theoretical convergence guarwhere gi = ∂F F=Fm−1 is the first-order gradient and hi =
+ ˇ
+∂2 L(yi ,F) ˇ
+ ˇ antees and generalization properties of GBDT, thereby
+ ∂F 2 F=Fm−1
+ is the second-order derivative (i.e., Hessian). completing the demonstration of Theorem 2. 
+This quadratic approximation captures the local curvature of Theorem 2 shows the effectiveness and reliability of the
+the loss function, leading to more precise updates. Since GBDT model as the core detector. The analysis provides a
+L(yi , Fm−1 ) remains constant with respect to fm , the optimiza- theoretical explanation for GBDT’s capability to efficiently
+tion objective is reduced to: learn complex nonlinear relationships through an iterative
+ n   process. The resulting model exhibits strong generalization
+ X 1
+ L̃(m) = gi fm (xi ) + hi fm2 (xi ) . (12) performance, thereby ensuring the learning capability of the
+ 2
+ i=1 industrial communication anomaly detection system.
+ For a tree structure partitioning the feature space into J Theorem 3 (False Alarm Rate Reduction): The window
+disjoint regions R1 , . . ., R J , we assign a constant weight ω j to consistency check mechanism reduces the probability of isoall samples falling into leaf node R j . The objective function lated false alarms from the single-time-point probability pFP
+can be regrouped by leaf nodes: to: !
+ W k
+ X J 
+ 1
+  window
+ PFP ≈ pFP , (15)
+ L̃ =
+ (m)
+ G jω j + H jω j ,2 k
+ 2
+ j=1
+ where W is the time window size and k is the minimum
+where G j = i∈R j gi and H j =
+ P P
+ i∈R j hi represent the sum number of threshold exceedances required for a positive deciof gradients and Hessians within each leaf. Introducing L2 sion, with k ≤ W. For pFP  1, this mechanism yields an
+CHEN et al.: HONEYPOT-DRIVEN PROACTIVE DETECTION NETWORK FOR ATTACKS IN SMART GRIDS 8421
+
+exponential reduction (of order k) in the resulting false alarm of magnitude relative to pkFP . This dominance permits the
+rate. following approximation:
+ Proof: The temporal stabilization module continuously !
+monitors risk scores Rt over a sequence of consecutive time W k
+ window
+ PFP ≈ pFP (1 − pFP )W−k .
+segments t = 1, 2, . . ., W. This monitoring process forms the k
+basis for reducing transient false alarms while maintaining sensitivity to sustained attacks. For each time segment, we define Given the small magnitude of pFP , the factor (1 − pFP )W−k
+a Bernoulli random variable Xt that captures the threshold approaches unity, leading to the simplified expression:
+exceedance event: !
+ W k
+ window
+ PFP ≈ pFP .
+ (
+ 1 if Rt > Θ (indicating a false alarm occurrence) k
+ Xt =
+ 0 otherwise (normal operation)
+ This result demonstrates that the window consistency check
+where Θ represents the decision threshold for anomaly detec- mechanism reduces the false alarm rate exponentially with
+tion. Under the assumption that false alarm events at different exponent k when pFP  1, providing substantial improvement
+time segments are independent and occur with identical over single-point detection schemes.
+probability, we have P(Xt = 1) = pFP for all t. This indepen- The proof of Theorem 3 is completed. 
+dence assumption is reasonable when considering sufficiently Remark 2 (Index reduction effect): The approximation
+spaced time segments where temporal correlations diminish. formula Wk pkFP clearly demonstrates that the false alarm rate
+Consequently, the sequence {Xt }Wt=1 constitutes independently
+ after window processing is proportional to the k-th power of
+and identically distributed Bernoulli random variables with the single-point false alarm rate. Since k ≥ 1 and pFP < 1,
+parameter pFP . an exponential reduction in the false alarm rate is achieved
+ The window consistency check mechanism implements a whenever k > 1. The coefficient Wk represents a binomial
+robust decision rule where an alarm is triggered only when coefficient, which typically remains a moderate constant under
+the cumulative number of threshold exceedances, S W , within practical parameter settings.
+a sliding window of length W reaches or exceeds a predeter- Notably, while effectively suppressing isolated false alarms,
+mined minimum count k, with k ≤ W. This approach ensures this mechanism has minimal impact on the detection probathat isolated anomalies do not trigger false alarms while bility of sustained attacks. For a real attack lasting W time
+maintaining detection capability for sustained attack patterns. segments, the risk score Rt at each segment has a high
+The random variable S W , representing the total number of probability pD (probability of detection) of exceeding the
+exceedances, is defined as the sum of the W independent threshold Θ. In this scenario, S W also follows a binomial
+Bernoulli variables: distribution Binomial(W, pD ). Since pD is designed to be much
+ larger than pFP , the value of P(S W ≥ k) remains very close to
+ W
+ X 1, ensuring a high attack recall rate.
+ SW = Xt . (16) Theorem 4 (System Effectiveness Lower Bound): The
+ t=1 overall detection probability of the industrial communication
+By the additive property of independent Bernoulli trials, S W anomaly detection system satisfies the following lower bound:
+follows a binomial distribution: S W ∼ Binomial(W, pFP ). The Psystem ≥ 1 − exp (−n · min(SNRY , SNRX )) − δcal , (17)
+probability mass function characterizing this distribution is
+described as follows: where n is the sample size used for feature estimation (e.g.,
+ ! number of interactions in a session fragment), SNRY and
+ W s SNRX represent the signal-to-noise ratios in the feature spaces
+ P(S W = s) = pFP (1 − pFP )W−s , s = 0, 1, . . ., W.
+ s of Path Y and Path X detectors, respectively, δcal is the upper
+ bound of error introduced by model score calibration.
+ The false alarm probability under the window-based mech- Proof: The overall detection process of the system can be
+anism corresponds to the probability that S W meets or exceeds decomposed into three sequential stages: feature extraction
+the threshold k under normal operating conditions (absence of (F), model inference (M), and decision fusion (D). Successful
+real attacks): system operation requires correct execution across all stages.
+ ! To characterize this behavior, we derive a comprehensive lower
+ W
+ X W s bound for the overall success probability by systematically
+ window
+ PFP = P(S W ≥ k) = pFP (1 − pFP )W−s .
+ s examining the error probability contributions from each indis=k
+ vidual stage.
+ In practical industrial anomaly detection systems, stringent Define the following success events:
+reliability requirements dictate that the single-point false alarm • E F : Feature extraction successfully produces discrimrate pFP must be maintained at very low levels (typically inative features that distinguish attacks from normal
+pFP < 0.1). When pFP  1, we can perform an asymptotic behavior.
+analysis of the summation. The dominant contribution comes • E M : Model inference correctly maps features to accurate
+from the first term (s = k) since pFP s
+ decreases superlinearly risk scores.
+with increasing s. The higher-order terms (s = k + 1, k + • E D : Decision fusion properly classifies events based on
+2, . . ., W) become negligible because pFPs
+ diminishes by orders the synthesized evidence.
+8422 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ The overall system detection probability is given by
+Psystem = P(E F ∩ E M ∩ E D ). Applying the complement form
+of the union bound from probability theory, we have
+ Psystem = 1 − P(¬E F ∪ ¬E M ∪ ¬E D )
+ ≥ 1 − [P(¬E F ) + P(¬E M ) + P(¬E D )]. (18)
+This inequality provides the foundation for establishing a
+lower bound by analyzing the individual failure probabilities.
+ Feature extraction fails when the estimated feature vector
+possesses insufficient signal-to-noise ratio (SNR) to reliably
+distinguish between attack and normal patterns. From Theorem 1, the theoretical feature discriminability Dtotal > 0 Fig. 3. Attack classification confusion matrix.
+under attack conditions. However, practical estimation from
+finite samples introduces statistical uncertainty. For bounded error bounds, theoretically supports the learning capability of
+features, Hoeffding’s inequality bounds the estimation error: the model. Moreover, the window-based consistency check
+ mechanism exponentially suppresses the false positive rate, as
+ P(| fˆ − E[ f ]| ≥ ) ≤ 2 exp(−2n 2 ).
+ characterized by Pwindow
+ FP ∝ pkFP , thereby ensuring the system’s
+This exponential concentration inequality ensures that with reliability in practical deployments. Collectively, these results
+sufficient sample size n, the feature estimation error becomes not only validate the soundness of the proposed the network
+negligible. The failure probability is consequently bounded by: design but also provide explicit mathematical guidance for
+ parameter selection, such as the decision threshold Θ and
+ P(¬E F ) ≤ exp(−n · min(SNRY , SNRX )), (19) window size W, reducing reliance on purely empirical tuning.
+where the min operation ensures robustness regardless of
+which detection path identifies the attack. V. E XPERIMENT
+ The model inference stage learns the mapping x 7→ s =
+ In this section, we evaluate the proposed active defense
+M(x) from features to risk scores. Theorem 2 guarantees
+ detection network using real-world datasets. The experimental
+that under appropriate regularization, the GBDT algorithm
+ validation assesses the system’s feasibility and robustness
+converges with bounded generalization error. Additionally, calthrough a two-phase approach. Initial model training and
+ibration techniques such as Platt scaling control the calibration
+ performance analysis are conducted on a single-phase reperror within δcal , ensuring that the output scores accurately
+ resentation of a realistic low-voltage grid in Denmark [24].
+represent true posterior probabilities. The model-specific errors
+ To examine generalization capability, the trained model is
+beyond those attributable to poor feature quality are considered
+ subsequently evaluated on data collected from an IEEE
+higher-order terms, as the primary discriminative capability
+ 14-bus microgrid environment, which maintains consistent
+originates from the feature engineering stage.
+ attack logic while incorporating system noise.
+ Decision fusion integrates scores from both paths through
+ The experimental design strictly follows theoretical guideparallel gating and temporal stabilization. The OR-logic parlines, with emphasis on validating feature effectiveness,
+allel gating ensures P(E D ) ≥ max(P(E DY ), P(E DX )), meaning
+ model convergence, and decision mechanism rationality. This
+the system succeeds if either path produces correct detection.
+ approach establishes a complete verification chain from theo-
+Theorem 3 further guarantees that temporal stabilization proretical foundation to practical implementation.
+vides exponential reduction in false alarms while maintaining
+high detection probability for sustained attacks. Consequently,
+P(¬E D ) represents a negligible higher-order contribution com- A. Model Performance Validation on Danish Low-Voltage
+pared to the preceding stages. Grid Data
+ Integrating the individual error bounds through the union This study presents a comprehensive evaluation of the
+bound framework yields the comprehensive system guarantee: proposed anomaly detection network using real-world communication data collected from an operational low-voltage
+ Psystem ≥ 1 − exp(−n · min(SNRY , SNRX )) + δcal + σ grid infrastructure in Denmark. The experimental methodology
+  
+ employs rigorous time-series splitting procedures, partitioning
+ ≈ 1 − exp(−n · min(SNRY , SNRX )) − δcal ,
+ the dataset into distinct validation and test sets containing
+where σ aggregates the higher-order terms from the decision 1,540 and 1,538 samples respectively. Attack scenarios confusion stage. This result provides a rigorous theoretical guar- stitute approximately 76% of the total samples, encompassing
+antee for the overall system effectiveness. three critical attack categories: DoS attacks, integrity viola-
+ The proof of Theorem 4 is completed.  tions, and replay attacks. This balanced distribution ensures
+ Remark 3: Through the proofs of Theorems 1-4, this both statistical significance and practical relevance for induspaper develops a complete theoretical framework for the trial security applications.
+proposed detection network. The derived lower bound on The detection model demonstrates remarkable consistency
+feature discrimination, Dtotal > 0, ensures that behavioral across both validation and test environments. Attack-specific
+features extracted from honeypot interactions are separable classification capabilities are quantitatively illustrated through
+between attack and normal modes. The exponential conver- the confusion matrix presented in Fig. 3, which provides
+gence property of GBDT, together with its generalization detailed accuracy metrics for each attack category. Diagonal
+CHEN et al.: HONEYPOT-DRIVEN PROACTIVE DETECTION NETWORK FOR ATTACKS IN SMART GRIDS 8423
+
+ Fig. 6. Hardware-in-the-loop security testbed for IEEE 14-Bus microgrid.
+
+Fig. 4. Top-20 feature importance ranking.
+ cations. Attack samples demonstrate significant concentration
+ in the high-probability region (0.8-1.0), while normal samples exhibit substantially lower densities within this critical
+ range. This clear probabilistic separation establishes a reliable
+ foundation for threshold configuration and enables precise
+ alert generation in high-risk operational scenarios. The welldefined boundary between classes further confirms the model’s
+ calibration quality and its suitability for practical deployment.
+ Generalization capability assessment through cross-dataset
+ performance comparison reveals exceptional stability. Key
+ detection metrics maintain consistency with less than 0.5%
+ degradation in detection rates across all three attack categories
+ between validation and test environments. This minimal performance variation confirms the temporal stability of learned
+ attack patterns and the system’s inherent adaptability to natural grid communication variations. The results collectively
+Fig. 5. Class probability distribution comparison.
+ demonstrate the practical viability and operational value of the
+ detection system in real-world low-voltage grid environments,
+elements represent correct classification rates, achieving 0.984 establishing it as a reliable security solution for industrial confor DoS attacks, 0.990 for integrity attacks, and 0.990 for trol systems requiring robust anomaly detection capabilities.
+replay attacks. These near-perfect values indicate exceptional
+recognition accuracy across all attack types. Off-diagonal
+elements, representing misclassification errors, maintain values B. Model Generalization Validation on IEEE 14-Bus
+below 0.01, confirming minimal false positive rates that satisfy Microgrid Data
+stringent industrial precision requirements. On the independent The experimental platform for data acquisition is depicted in
+test set, all three attack categories maintain detection rates Fig. 6, comprising core components including a DC-DC buck
+exceeding 98.4%, with DoS attacks at 98.4% while integrity converter, DC voltage source, oscilloscope, and rapid control
+and replay attacks approach 99.0% accuracy. This consistently prototyping hardware. This setup provides reliable experimenhigh performance across diverse attack scenarios validates the tal conditions for collecting communication data with system
+effectiveness of the parallel gating mechanism in complex noise in an IEEE 14-bus microgrid environment. The detection
+operational environments. model, previously trained on Danish low-voltage grid data,
+ Feature importance analysis, depicted in Fig. 4, offers is directly applied to this new environment to evaluate the
+valuable insights into the underlying operation of the detec- practical performance of the honeypot-based active defense
+tion mechanism. The three most influential features, namely detection network in cross-system deployment scenarios.
+previous window similarity (0.15), replay ratio (0.14), and Experimental results demonstrate excellent generalization
+excessive stability (0.12), are all originate from the honeypot capability and robustness. On the validation set, the model
+interaction layer and exhibit substantially stronger discrimina- achieved an accuracy of 0.989, with perfect normal sample
+tive capability than the remaining features. This concentration recall (1.0) and attack sample recall of 0.987. When evaluated
+of honeypot-derived features provides empirical validation on the test set containing mild system noise, the model
+for the theoretical principle of a lower bound on feature maintained high performance with an accuracy of 0.974,
+discriminability established earlier in this work. In addition, stable normal sample recall (1.0), and attack sample recall of
+the top four features together contribute more than 50% of 0.968. Although test set performance showed approximately
+the overall feature importance, demonstrating the efficiency 1.8 percentage points degradation due to noise interference,
+of the proposed feature engineering approach, which achieves this reduction remains within acceptable limits, indicating
+reliable decision-making while keeping computational com- overall stability.
+plexity low. Analysis of specific attack categories reveals strong detec-
+ Probability distribution analysis, illustrated in Fig. 5, reveals tion capabilities across different attack patterns. DoS attacks
+distinct separation patterns between normal and attack classifi- achieved the highest detection rate (0.984), while replay and
+8424 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+integrity attacks maintained detection rates of 0.959 and 0.955, [3] S. Fahmeeda and B. K. Bhagyashree, “Detection and prevention of false
+respectively. Notably, DoS attacks demonstrated the strongest data injection attack in cyber physical power system,” in Proc. IEEE Int.
+ Conf. Mobile Netw. Wireless Commun. (ICMNWC), Dec. 2021, pp. 1–5.
+noise immunity under current threshold settings. Both replay [4] Z. Qu, J. Yang, Y. Wang, and P. M. Georgievitch, “Detection of false
+and integrity attacks maintained detection rates above 95% data injection attack in power system based on Hellinger distance,” IEEE
+under mild noise conditions, confirming the significant dis- Trans. Ind. Informat., vol. 20, no. 2, pp. 2119–2128, Feb. 2024.
+criminative power and stability of attack features extracted by [5] Z. Yan and H. Wen, “Performance analysis of electricity theft detection
+ for the smart grid: An overview,” IEEE Trans. Instrum. Meas., vol. 71,
+the honeypot-based active defense mechanism. pp. 1–28, 2022.
+ Validation on the practical microgrid experimental platform [6] R. Nawaz, R. Akhtar, S. U. Khan, S. Bu, and M. H. Mahmood, “Deep
+further demonstrates the advantages of the proposed detec- learning-driven false data injection attack in renewable integrated smart
+ grids,” Eng. Appl. Artif. Intell., vol. 156, Sep. 2025, Art. no. 110953.
+tion network, including strong generalization ability, modular [7] W. Sun, M. Zamani, M. R. Hesamzadeh, and H.-T. Zhang, “Data-driven
+design that allows integration of new specialized detectors, probabilistic optimal power flow with nonparametric Bayesian modeling
+high tolerance to system noise, and a favorable balance and inference,” IEEE Trans. Smart Grid, vol. 11, no. 2, pp. 1077–1090,
+between accuracy and robustness. These results indicate that Mar. 2020.
+ [8] R. Huang and Y. Li, “Adversarial attack mitigation strategy for machine
+the proposed approach provides a reliable and effective tech- learning-based network attack detection model in power system,” IEEE
+nical solution for power system security protection. Trans. Smart Grid, vol. 14, no. 3, pp. 2367–2376, May 2023.
+ [9] Y. Zhang, L. Wang, W. Sun, R. C. Green II, and M. Alam, “Distributed
+ intrusion detection system in a multi-layer network architecture of smart
+ VI. C ONCLUSION grids,” IEEE Trans. Smart Grid, vol. 2, no. 4, pp. 796–808, Dec. 2011.
+ [10] M. A. Husnoo et al., “FedDiSC: A computation-efficient federated
+ This paper addresses the challenge of industrial com- learning framework for power systems disturbance and cyber attack
+munication anomaly detection in smart grids by proposing discrimination,” Energy AI, vol. 14, Oct. 2023, Art. no. 100271.
+a honeypot-based active defense framework. A hierarchical [11] D. An et al., “Data integrity attack in dynamic state estimation of smart
+ grid: Attack model and countermeasures,” IEEE Trans. Autom. Sci. Eng.,
+detection architecture is designed that integrates feature extrac- vol. 19, no. 3, pp. 1631–1644, Mar. 2022.
+tion, dual-path modeling, and decision fusion to accurately [12] J. Yan, H. He, and Y. Sun, “Integrated security analysis on cascading
+identify multiple attack types while maintaining operational failure in complex networks,” IEEE Trans. Inf. Forensics Security, vol. 9,
+ no. 3, pp. 451–463, Mar. 2014.
+reliability. Theoretical analysis establishes fundamental per- [13] Z. Ni and S. Paul, “A multistage game in smart grid security: A
+formance guarantees, including lower bounds on feature reinforcement learning solution,” IEEE Trans. Neural Netw. Learn. Syst.,
+discriminability, model convergence properties, and system- vol. 30, no. 9, pp. 2684–2695, Sep. 2019.
+wide effectiveness thresholds. Experimental validation using [14] A. Farraj, E. Hammad, and D. Kundur, “On the impact of cyber attacks
+ on data integrity in storage-based transient stability control,” IEEE
+real-world power grid data demonstrates stable performance, Trans. Ind. Informat., vol. 13, no. 6, pp. 3322–3333, Dec. 2017.
+achieving detection accuracies exceeding 98.4% for DoS, [15] M. K. Hasan, A. A. Habib, Z. Shukur, F. Ibrahim, S. Islam, and
+integrity, and replay attacks, with only degradation under M. A. Razzaque, “Review on cyber-physical and cyber-security system
+noisy conditions. Furthermore, the proposed implementation in smart grid: Standards, protocols, constraints, and recommendations,”
+ J. Netw. Comput. Appl., vol. 209, Jan. 2023, Art. no. 103540.
+translates theoretical insights into practical detection modules, [16] C. Zhang et al., “Anomaly detection and defense techincorporating adaptive threshold calibration and evidence- niques in federated learning: A comprehensive review,”
+based decision mechanisms. Overall, the framework provides Artif. Intell. Rev., vol. 57, p. 150, 2024, doi: 10.1007/s10
+ 462-024-10796-1.
+a mathematically grounded and practically deployable solu- [17] J. Wang et al., “Self-learning model fusion for network anomaly
+tion for power grid cybersecurity, achieving high detection detection: A hybrid CNN-LSTM-transformer framework,” PLoS ONE,
+accuracy and robustness without compromising operational vol. 20, no. 10, Oct. 2025, Art. no. e0332502.
+stability. [18] K. Kharoubi, S. Cherbal, M. Akkal, and A. Gawanmeh, “Fed-CNN-
+ IDS: A privacy-preserving federated learning-based CNN intrusion
+ Future work will focus on developing detection systems that detection system for IoMT,” in Proc. Int. Conf. Commun., Comare more robust and adaptive. A primary focus is on deeply put., Netw., Control Cyber-Physical Syst. (CCNCPS), Jun. 2025,
+integrating the physical laws of power grids as hard constraints pp. 151–156.
+ [19] S. Aboukadri, A. Ouaddah, and A. Mezrioui, “Machine learning in
+into the models. This allows the system to internalize these identity and access management systems: Survey and deep dive,”
+principles, which naturally rules out unrealistic attack patterns Comput. Secur., vol. 139, Apr. 2024, Art. no. 103729.
+and makes its decisions more interpretable and trustworthy. [20] A. Belenguer, J. A. Pascual, and J. Navaridas, “GöwFed: A novel
+Another important direction involves creating online adaptive federated network intrusion detection system,” J. Netw. Comput. Appl.,
+ vol. 217, Aug. 2023, Art. no. 103653, doi: 10.1016/j.jnca.2023.103653.
+mechanisms. Since the grid topology and operating conditions [21] G. Pagnotta, F. De Gaspari, D. Hitaj, M. Andreolini, M. Colajanni,
+constantly change, the system must dynamically adjust. Using and L. V. Mancini, “DOLOS: A novel architecture for moving target
+real-time feedback on its performance such as false alarms defense,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 5890–5905,
+and novel attack samples, which can continuously refine its 2023, doi: 10.1109/TIFS.2023.3318964.
+ [22] A. Javadpour, F. Ja’fari, T. Taleb, M. Shojafar, and C. Benzaı̈d,
+detection thresholds and parameters. The goal is to shift from “A comprehensive survey on cyber deception techniques to improve
+static defense to a self-evolving one, ultimately forming an honeypot performance,” Comput. Secur., vol. 140, May 2024,
+active defense framework that seamlessly blends physics-based Art. no. 103792.
+ [23] L. Zhang and V. L. L. Thing, “Three decades of deception techniques in
+knowledge with data-driven learning for ongoing adaptation. active cyber defense–retrospect and outlook,” Comput. Secur., vol. 106,
+ Jul. 2021, Art. no. 102288.
+ R EFERENCES [24] M. S. Kemal, W. Aoudi, R. L. Olsen, M. Almgren, and H.-P. Schwefel,
+ “Model-free detection of cyberattacks on voltage control in distribution
+[1] H. T. Reda, A. Anwar, A. N. Mahmood, and Z. Tari, “A taxonomy of grids,” in Proc. 15th Eur. Dependable Comput. Conf. (EDCC), Naples,
+ cyber defence strategies against false data attacks in smart grids,” ACM Italy, Sep. 2019, pp. 171–176.
+ Comput. Surv., vol. 55, no. 14s, pp. 1–37, Dec. 2023. [25] X.-J. Li and X.-Y. Shen, “A data-driven attack detection approach for
+[2] P. L. Bhattar and N. M. Pindoriya, “False data injection attack with max- DC servo motor systems based on mixed optimization strategy,” IEEE
+ min optimization in smart grid,” Comput. Secur., vol. 140, May 2024, Trans. Ind. Informat., vol. 16, no. 9, pp. 5806–5813, Sep. 2020, doi:
+ Art. no. 103761. 10.1109/TII.2019.2960616.

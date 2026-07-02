@@ -1,0 +1,545 @@
+MIETT: Multi-Instance Encrypted Traffic Transformer
+ for Encrypted Traffic Classification
+ Xu-Yang Chen* , Lu Han* , De-Chuan Zhan, Han-Jia Ye†
+ School of Artificial Intelligence, Nanjing University, China
+ National Key Laboratory for Novel Software Technology, Nanjing University, China
+ {chenxy, hanlu, zhandc, yehj}@lamda.nju.edu.cn
+arXiv:2412.15306v1 [cs.CR] 19 Dec 2024
+
+ Abstract
+ Internet
+ Header <IP version=4 ihl=5 tos=0x0
+ Network traffic includes data transmitted across a network, len=134 id=8194 flags= frag=0 ttl=128
+ Packets proto=udp chksum=0xc63d
+ such as web browsing and file transfers, and is organized src=131.202.240.87
+ dst=121.171.102.90 …
+ into packets (small units of data) and flows (sequences of Payload (Encrypted)
+
+ packets exchanged between two endpoints). Classifying en- Encrypted Classification
+ crypted traffic is essential for detecting security threats and Traffic
+ Classifier Email 90%
+ Flows Chat 6%
+ optimizing network management. Recent advancements have File Transfer 1%
+ highlighted the superiority of foundation models in this task, …
+
+ particularly for their ability to leverage large amounts of unlabeled data and demonstrate strong generalization to unseen data. However, existing methods that focus on tokenlevel relationships fail to capture broader flow patterns, as Figure 1: Encrypted traffic classification task description.
+ tokens, defined as sequences of hexadecimal digits, typically Raw traffic is first divided into session flows, with each flow
+ carry limited semantic information in encrypted traffic. These further segmented into a sequence of packets. A packet typflow patterns, which are crucial for traffic classification, arise ically consists of a header and a payload. The task is to clasfrom the interactions between packets within a flow, not just sify the type of a given flow.
+ their internal structure. To address this limitation, we propose a Multi-Instance Encrypted Traffic Transformer (MI-
+ ETT), which adopts a multi-instance approach where each
+ packet is treated as a distinct instance within a larger bag such as routing details, source and destination addresses, and
+ representing the entire flow. This enables the model to cap- packet length, while the payload carries the actual data being
+ ture both token-level and packet-level relationships more ef- transmitted, which may be encrypted for security purposes.
+ fectively through Two-Level Attention (TLA) layers, improv- Traffic classification, the process of identifying and cating the model’s ability to learn complex packet dynamics and
+ flow patterns. We further enhance the model’s understandegorizing network traffic, is crucial for both network maning of temporal and flow-specific dynamics by introducing agement and cybersecurity. It allows network administrators
+ two novel pre-training tasks: Packet Relative Position Pre- to ensure Quality of Service (QoS), optimize bandwidth and
+ diction (PRPP) and Flow Contrastive Learning (FCL). After detect malicious activities, thus maintaining network secufine-tuning, MIETT achieves state-of-the-art (SOTA) results rity and efficiency. The overview of encrypted traffic classiacross five datasets, demonstrating its effectiveness in classi- fication task is provided in Figure 1.
+ fying encrypted traffic and understanding complex network However, the increasing prevalence of encryption has
+ behaviors. Code is available at https://github.com/Secilia- made traditional classification methods, such as port-based
+ Cxy/MIETT.
+ and statistics-based approaches, less effective. The advent of
+ deep learning (DL) brought significant improvements, with
+ Introduction payload-based methods using models like CNNs to automatically extract features from raw data. Despite their success,
+ Network traffic refers to the flow of data transmitted between these methods rely heavily on large amounts of labeled data,
+ devices over a network, typically structured into packets, which can be difficult to obtain.
+ which are small units sent across the network, and flows,
+ Recently, foundation models have emerged as a powerwhich are sequences of packets exchanged between two
+ ful alternative, pre-trained on large volumes of unlabeled
+ points. Each packet is composed of two parts: the header
+ data and fine-tuned for specific tasks. PERT (He, Yang, and
+ and the payload. The header contains essential information,
+ Chen 2020) employs a BERT-based model with a Masked
+ * These authors contributed equally. Language Modeling (MLM) task to pre-train a packet-
+ †
+ Corresponding Author level encoder, but this approach primarily focuses on token-
+ Copyright © 2025, Association for the Advancement of Artificial level relationships within individual packets, overlooking
+ Intelligence (www.aaai.org). All rights reserved. the broader context of inter-packet relationships. ET-BERT
+(Lin et al. 2022) addresses this limitation by introducing accuracy and F1-score.
+the Same-origin BURST Prediction (SBP) task, which determines whether one packet follows another within the same Related work
+flow. While this method accounts for adjacent packet relationships, it still falls short of capturing the full complex- Encrypted traffic classification is an essential research area
+ity of flow-level interactions and the broader context across in network security. As encryption becomes more prevamultiple packet segments. YaTC (Zhao et al. 2023) takes lent, traditional traffic analysis methods that inspect packet
+a different approach by tokenizing traffic data into patches payloads have become less effective. Researchers now foand using a Masked Auto-Encoder (MAE) for pre-training a cus on methods to classify encrypted traffic without accesstoken-level encoder within a flow. However, focusing solely ing its content directly. These methods can be divided into
+on token dependencies is less effective due to the low seman- three types: port-based methods, statistics-based methods,
+tic information in encrypted traffic tokens. This approach and payload-based methods.
+tends to overlook the broader patterns and relationships that Port-based Methods. Port-based traffic classification, one
+exist between entire packets within a traffic flow. Instead, of the oldest methods, relies on associating port numbers
+learning packet representations that capture these packet pat- in TCP/UDP headers with well-known IANA port numterns proves to be more robust. Given that each packet can bers. Although it is fast and simple, the method’s accuracy
+be viewed as a distinct instance carrying unique informa- has declined due to port obfuscation, dynamic port assigntion within a flow, it is crucial to effectively model the rela- ments, network address translation (NAT), and other techtionships between packets to achieve a comprehensive flow niques (Moore and Papagiannaki 2005).
+representation. To address this, we propose a Multi-Instance
+Encrypted Traffic Transformer (MIETT) with Two-Level Statistics-based Methods. Statistics-based methods for
+Attention (TLA) layers that capture both token-level and encrypted traffic classification leverage features independent
+packet-level relationships. To further enhance the model’s of payloads, such as packet sizes, timing, and flow duraability to capture temporal and flow-specific dynamics, we tion, to analyze and categorize traffic. Wang et al. comintroduce two novel pre-training tasks: Packet Relative Po- puted entropy from packet payloads to classify eight traffic
+sition Prediction (PRPP) and Flow Contrastive Learning classes, using an SVM algorithm to select features (Wang
+(FCL). The PRPP task is designed to help the model under- et al. 2011). Similarly, Korczynski and Duda focused on
+stand the sequential relationships between packets within a packet sizes, timing, and communication patterns for clasflow by predicting their relative positions, thereby enabling sifying traffic in encrypted tunnels (Korczyński and Duda
+a more accurate representation of the flow’s structure. Mean- 2012). However, these methods are based on manually dewhile, the FCL task focuses on distinguishing packets from signed features and are now outdated due to advancements
+the same flow and those from different flows by learning in encryption protocols, changes in traffic patterns, and the
+robust representations that emphasize intra-flow similarities use of traffic obfuscation techniques.
+and inter-flow differences.
+ Payload-based DL Methods. Payload-based methods
+ Building on the robust representations learned during preusually leverage deep learning to analyze raw packet data,
+training, the model is then fully fine-tuned on the specific
+ eliminating the need for manually designed features. These
+classification task. During this stage, both the packet enapproaches have significantly advanced encrypted traffic
+coder and the flow encoder are jointly optimized to adapt the
+ classification by automatically extracting discriminative feamodel to the task at hand. Across experiments conducted on
+ tures. Deep Packet (Lotfollahi et al. 2020) employs a CNN
+five datasets, MIETT consistently demonstrates competitive
+ within a framework that includes a stacked autoencoder
+or superior performance compared to existing methods. In
+ and convolutional neural network to classify network trafconclusion, this paper presents several key contributions to
+ fic. TSCRNN (Lin, Xu, and Gao 2021) utilizes CNN to
+the field of encrypted traffic classification:
+ extract abstract spatial features and introduces a stacked
+ • We propose a novel Multi-Instance Encrypted Traf- bidirectional LSTM to learn temporal characteristics. BiLfic Transformer (MIETT) architecture, which introduces STM ATTN (Yao et al. 2019) combines attention mecha-
+ Two-Level Attention (TLA) layers to effectively capture nisms with LSTM networks for enhanced encrypted traffic
+ both token-level and packet-level relationships within classification. Though these methods can automatically extraffic flows. tract features, they heavily rely on labeled data, which is of-
+ • We introduce two innovative pre-training tasks, Packet ten difficult to obtain in large quantities for training.
+ Relative Position Prediction (PRPP) and Flow Con- Payload-based Foundation Models. In recent years, pretrastive Learning (FCL). The PRPP task enhances the trained foundation models have become popular for addressmodel’s understanding of the sequential order of packets ing this issue. These models are pre-trained on large amounts
+ within a flow, while the FCL task improves the model’s of unlabeled data and fine-tuned on downstream labeled
+ ability to differentiate between packets from the same tasks. PERT (He, Yang, and Chen 2020) and ET-BERT (Lin
+ flow and those from different flows. et al. 2022) tokenize traffic data using a vocabulary. PERT
+ • We provide extensive empirical validation of the pro- employs a Masked Language Model (MLM) pre-training
+ posed MIETT model on multiple datasets, showing that task, while ET-BERT utilizes a modified MLM and Next
+ our approach outperforms existing methods in terms of Sentence Prediction (NSP) task. Additionally, YaTC (Zhao
+ Anonymize
+ Figure 2. Following ET-BERT (Lin et al. 2022), we encode
+ the hexadecimal sequence using a bi-gram model, where
+ each unit consists of two consecutive bytes. We then utilize
+ Separate Anonymized Byte-Pair Encoding (BPE) for token representation, with to-
+ Packets Packet
+ ken units ranging from 0 to 65535 and a maximum dictio-
+ Packet-based Hex Form nary size of 65536. For training, we also incorporate special
+ Splitting tokens, including [CLS], [PAD], and [MASK].
+ 263dd0…758d
+ Packet Representation. Each packet begins with a [CLS]
+ Hexadecimal token, followed by tokens extracted from the packet’s con-
+ Session Flow Datagram
+ tent, which includes a header containing meta-features and
+ Flow-based
+ Tokenization an encrypted payload. The embedding of each token is ob-
+ Splitting
+ tained by combining two parts: position embedding, which
+ 263d 3d11 … 8592 indicates the token’s position within the packet, and value
+ 929c 9c10 … 758d
+ embedding. To ensure efficient information utilization and
+ avoid excessive focus on long packets, the packet length is
+ PCAP Trace Tokens
+ standardized to a fixed size of 128. Packets shorter than 128
+ tokens are padded with [PAD] tokens at the end.
+Figure 2: Data preprocessing. The raw traffic (PCAP trace)
+is first split into session flows and then further divided into Flow Representation. The flow representation consists of
+individual packets. To protect data privacy, each packet is multiple packet representations, which are stacked to form a
+anonymized by masking the source and destination IP ad- matrix X ∈ RN ×L×d , where N is the number of packets,
+dresses and port numbers (replacing them with 0). The L is the packet length, and d is the embedding dimension.
+packet is then converted to its hexadecimal form, which is This multi-instance representation, as opposed to the pretokenized using a bi-gram model. vious method employed by ET-BERT of directly concatenating packets, allows for more effective modeling of the
+ relationships between packets and better captures the orgaet al. 2023), a vision model adaptation, tokenizes traffic data nizational structure of flows.
+into patches and uses a Mask Auto-Encoder (MAE) for pre-
+ MIETT Architecture
+training. However, these approaches do not adequately consider the unique structure of traffic flows and the relation- The flow representation, a 2D map of tokens, can be flatships between packets. To address these limitations, we in- tened into a 1D sequence for input into a standard transtroduce the Multi-Instance Encrypted Traffic Transformer former, as done in ViT (Dosovitskiy et al. 2021) and
+(MIETT) architecture, which leverages novel Packet Rela- YaTC (Zhao et al. 2023) during pre-training and fine-tuning.
+tive Position Prediction (PRPP) and Flow Contrastive Learn- However, this approach introduces two issues: (1) Flating (FCL) tasks to better capture the complexities of traffic tening the sequence loses temporal information, such as
+flows. packet order, potentially overlooking important dependencies. While 2D position embeddings could indicate temporal
+ relationships, they are inflexible and may fail in scenarios
+Multi-Instance Encrypted Traffic Transformer like packet loss. (2) The computational complexity, which
+In the task of encrypted traffic classification, we are provided is O(N 2 L2 d), increases significantly with the inclusion of
+with raw network traffic (PCAP traces) as input, and the ob- more packets due to the extended sequence length. To adjective is to classify it into categories, such as VPN services dress these concerns, we introduce the Two-Level Atten-
+(e.g., P2P, streaming, email) and applications. In this sec- tion (TLA) layer to preserve temporal structure and maintain
+tion, we first outline the preprocessing steps that transform computational efficiency.
+the raw data into a multi-instance traffic representation. We
+then introduce our Multi-Instance Encrypted Traffic Trans- Overall Architecture. The Multi-Instance Encrypted
+former (MIETT) architecture, which is specifically designed Traffic Transformer (MIETT) begins by embedding the toto handle and classify this traffic data efficiently. kens as described in the MIETT Encoder section. Following
+ this, the flow representation is processed through M TLA
+MIETT Encoder layers. Finally, the embeddings of the [CLS] tokens from all
+ the packets are utilized for pre-training or fine-tuning tasks.
+This section details the process of representing multi- The overall architecture of MIETT can be found in Figure 3.
+instance traffic data for use in the Multi-Instance Encrypted
+Traffic Transformer (MIETT) architecture. The process in- Two-Level Attention (TLA) Layer. The TLA layer capvolves three key steps: tokenization of the raw data, repre- tures both intra-packet and inter-packet dependencies to ensentation of individual packets, and the aggregation of these hance the model’s understanding of complex traffic flows. It
+packet representations into a unified flow representation. operates in two stages: Packet Attention and Flow Attention.
+ In the Packet Attention stage, Multi-Head Self-Attention
+Tokenization. The hexadecimal sequence of the flow is (MHSA) is applied within individual packets to identify deobtained through the data preprocessing steps outlined in pendencies between tokens, ensuring the model understands
+ Two-Level Attention ×𝑀
+ transpose transpose
+ packet [CLS]
+
+ packet
+ Packet Flow
+ packet Attention Attention
+
+ packet
+
+ original order:
+ Encrypted
+Figure 3: Overall architecture of the Multi-Instancepacket Traffic Transformer (MIETT). After passing through the MIETT
+ packet packet
+encoder, the flow representation is processed by M Two-Level Attention (TLA) layers, each comprising a packet attention
+mechanism and a flow attention mechanism. flow flow
+ [MASK]
+ task samples:
+ packet
+ packet packet packet packet
+the internal structure of each packet. For MHSA, the key,
+query, andpacket
+ value are all set to the input sequence, with the √ ×
+ X̂flow
+ ·j = LayerNorm(X
+ 𝑆 , pkt
+ ·j + MHSA
+ 𝑆 , flow (Xpkt ·j )) (3)
+output being an
+ packet
+ enriched sequence representation.
+ packet packet packet packet
+ In the Flow Attention stage, MHSA is used across packet flow
+ X·j = LayerNorm( positive X̂
+ pair: + MLP(
+ flow negative pair:))
+ flow
+ X̂·j (4)
+ packet at each position to capture dependencies berepresentations √ × packets from·j
+ packets from
+ the same flow different flows
+tween tokens across different packets. This two-stage packet
+ ap- packet packet
+ packet Training Tasks
+proach effectively models the hierarchical structure of traffic flows by combining detailed packet-level insights with √ × outlines the training tasks designed to improve
+ This section
+broader inter-packet relationships. the model’s ability to classify encrypted network traffic. The
+ ThisMasked
+ method Flowsignificantly
+ Prediction (MFP) Task
+ improves Packet Relative
+ the model’s Position
+ ability (PRPP) Taskphase includes
+ pre-training
+ to Prediction three Learning
+ Flow Contrastive tasks: Masked
+ (FCL) Task Flow Precapture complex(a)dependencies but also introduces compu-(b) diction (MFP), Packet Relative Position
+ (c) Prediction (PRPP),
+tational complexity. The MHSA in Packet Attention has a and Flow Contrastive Learning (FCL). These tasks help
+complexity of O(L2 d) per packet, while Flow Attention has the model capture flow dependencies, predict packet order,
+a complexity of O(N 2 d) per position, resulting in an over- and differentiate flow-level features. After pre-training, the
+ 2 2
+all complexity of O(N L d + LN d). For default values of model is fine-tuned for traffic flow classification, optimizing
+L = 128 and N = 5, our method is approximately 4.8 times it for the final task.
+more efficient than flattening the sequence to 1D and feeding
+ Pre-Training tasks
+it into a standard transformer.
+ The model we propose consists of several Two-Level At-
+Packet Attention. In the first stage of the TLA layer, we tention (TLA) layers, designed to effectively capture both
+focus on the intra-packet relationships by performing Multi- packet-level and flow-level information within traffic flows.
+Head Self-Attention (MHSA) within individual packets. Let During the pre-training stage, We utilize a pre-trained ET-
+X ∈ RN ×L×d be the flow representation, where N is the BERT checkpoint for the packet attention, which is kept
+number of packets, L is the packet length, and d is the em- frozen during training, while the flow attention is trained
+bedding dimension. to learn the overall structure and dependencies within the
+ For each packet Xi ∈ RL×d , we apply self-attention flows. This design allows our model to leverage established
+to capture the dependencies between the tokens within the packet-level features while focusing on improving flowpacket. The process is as follows: level understanding. The general view of our proposed 3 prepkt pkt training tasks can be found in Figure 4.
+ X̂i = LayerNorm(Xi + MHSA (Xi )) (1)
+ Masked Flow Prediction (MFP) Task. The Masked Flow
+ Xpkt pkt
+ i = LayerNorm(X̂i + MLP(X̂i ))
+ pkt
+ (2) Prediction (MFP) task is aimed at enhancing the model’s
+Flow Attention. In the second stage of the TLA layer, we ability to handle incomplete information within a traffic
+focus on the inter-packet relationships by performing multi- flow. In this task, 15% of the tokens within a flow are ranhead self-attention (MHSA) across the packet representa- domly masked, and the model is tasked with predicting the
+tions at each position within the packets. Let X packet
+ ∈ original content of these masked tokens using the context
+RN ×L×d be the updated flow representation after the packet provided by the unmasked tokens. By training the flow enattention stage. coder to infer the missing tokens, the model learns to capture
+ For each position j (where j ∈ 1, 2, . . . , L) within the the underlying structure and dependencies within the traffic
+packets, we gather the token representations across all pack- flow.
+ets, resulting in a matrix Xpacket
+ ·j ∈ RN ×d , where N is the Packet Relative Position Prediction (PRPP) Task. The
+number of packets. We apply self-attention to these matrices Packet Relative Position Prediction (PRPP) task is designed
+to capture the dependencies between tokens across different to predict the relative order of packets within a flow, based
+packets. The process is as follows: on the embeddings of the [CLS] tokens extracted from each
+ packet Attention Attention
+
+ packet
+
+ original order:
+ packet packet packet
+
+ flow flow
+ [MASK]
+ task samples:
+ packet
+ packet packet packet packet
+
+ packet √ ×
+ 𝑆 , 𝑆 ,
+ packet packet packet packet packet
+ positive pair: negative pair:
+ packet √ × packets from packets from
+ the same flow different flows
+ packet packet packet packet
+
+ √ ×
+ Masked Flow Prediction (MFP) Task Packet Relative Position Prediction (PRPP) Task Flow Contrastive Learning (FCL) Task
+ (a) (b) (c)
+Figure 4: Overview of pre-training tasks. (a) Masked Flow Prediction (MFP) Task: The model is tasked with predicting the
+original content of masked tokens using the context provided by the unmasked tokens. (b) Packet Relative Position Prediction
+(PRPP) Task: The model’s objective is to determine, for each pair of packets (i, j), whether packet i precedes packet j. (c) Flow
+Contrastive Learning (FCL) Task: The goal is to ensure that packets within the same flow (positive pairs) are more similar in
+the embedding space, while packets from different flows (negative pairs) are less similar.
+
+packet. This task helps the model understand the sequen- Flow Contrastive Learning (FCL) Task. The Flow Contial relationships between packets, which is critical for accu- trastive Learning (FCL) task enhances the model’s ability
+rately modeling traffic flows. to differentiate between traffic flows by learning robust rep-
+ Given an output flow representation with N packets, let resentations. The objective is to ensure that packets within
+Opkt ∈ RN ×d represent the embeddings of the [CLS] to- the same flow (positive pairs) are more similar in the emkens from all packets in the flow, where d is the embedding bedding space, while packets from different flows (negative
+dimension. The task is to determine, for each pair of packets pairs) are less similar. Notably, both positive and negative
+(i, j), whether packet i comes before packet j. pairs are constructed using identical packet positions within
+ Firstly, a linear transformation is applied followed by an their respective flows, maintaining consistency in the comactivation function and layer normalization to [CLS] tokens: parisons.
+ Given a batch of output flow representations, let Oflow ∈
+ P = LayerNorm(GELU(Opkt W1 + b1 )) (5) RBS×N ×d represent the embeddings of the [CLS] tokens
+ from all packets in the flows within the batch, where BS
+where W1 ∈ Rd×d and b1 ∈ Rd are learnable parameters. denotes the batch size, N the number of packets per flow,
+P ∈ RN ×d . and d the embedding dimension.
+ Then, the predicted relative position of packets (i, j) is
+computed as follows: First, a multi-layer perceptron (MLP) is applied to each
+ [CLS] token:
+ ẑij = Softmax((Pi − Pj )W2 + b2 ) (6)
+ C = LayerNorm(GELU(Oflow W3 + b3 )) (9)
+ d×2 2
+where W2 ∈ R and b2 ∈ R are learnable parameters, C = CW4 + b4 (10)
+and ẑij ∈ R2 gives the probability that packet i comes before or after packet j. where W3 ∈ Rd×d , b3 ∈ Rd , W4 ∈ Rd×d , and b4 ∈ Rd
+ The ground truth labels zij ∈ {0, 1} are based on the orig- are learnable parameters. C ∈ RBS×N ×d .
+inal order of packets: Next, the similarity between two packets is computed us-
+  ing cosine similarity:
+ 1 if packet i comes before packet j
+ zij = (7)
+ 0 otherwise CTi1 j1 Ci2 j2
+ Si1 j1 ,i2 j2 = (11)
+ Finally, the PRPP loss LPRPP is calculated using cross- ∥Ci1 j1 ∥∥Ci2 j2 ∥
+entropy between the predicted labels and the ground truth:
+ where i1 , i2 represent the flow IDs within the batch, and
+ j1 , j2 denote the packet positions within the flow. Cij ∈ Rd .
+ X
+ LPRPP = − zij log(ẑij ) + (1 − zij ) log(1 − ẑij ) (8)
+ i,j,i̸=j Finally, the contrastive loss is computed using the similar-
+ ISCXVPN 2016 ISCXTor 2016 CrossPlatform (Android) CrossPlatform (iOS) CICIoT 2023
+Methods
+ AC F1 AC F1 AC F1 AC F1 AC F1
+Datanet 69.18% 13.63% 49.81% 9.50% 9.45% 1.53% 4.81% 0.05% 2.50% 0.81%
+Fs-Net 29.30% 33.67% 82.03% 63.54% 7.08% 4.11% 10.94% 6.38% 66.80% 54.81%
+BiLSTM ATTN 0.57% 3.13% 88.33% 55.54% 0.45% 0.04% 0.29% 0.01% 5.79% 4.66%
+DeepPacket 69.18% 13.63% 49.81% 9.50% 4.84% 0.04% 4.81% 0.05% 34.35% 8.52%
+TSCRNN 69.18% 13.63% 44.70% 13.40% 2.43% 0.24% 2.84% 0.51% 2.50% 0.81%
+YaTC 78.05% 70.83% 97.39% 85.12% 91.61% 82.28% 75.31% 69.57% 86.18% 73.16%
+ET-BERT 74.62% 71.10% 95.71% 80.29% 84.63% 67.70% 77.05% 74.26% 88.09% 83.29%
+MIETT (ours) 76.07% 77.86% 96.60% 82.15% 93.00% 82.36% 79.63% 75.03% 88.53% 82.48%
+
+Table 1: Performance comparisons on encrypted traffic classification tasks. We denote the best and second-best results with
+bold and underline.
+
+ity matrix S: Dataset #Flow Task #Label
+ X exp(Si1 j1 ,i1 j2 ) ISCXVPN 2016 311,390 VPN Service 6
+LFCL = − log P
+ i1 ,j1 ,j2
+ exp(Si1 j1 ,i1 j2 ) + exp(Si1 j1 ,i2 j2 ) ISCXTor 2016 55,523 Tor Service 7
+ j1 ̸=j2 i2 ̸=i1
+ CrossPlatform (Android) 66,346 Application 212
+ (12)
+where i1 , i2 ∈ [1, BS] represent the flow IDs in the batch, Cross Platform (iOS) 34,912 Application 196
+j1 , j2 ∈ [1, N ] denote the packet positions within the flow. CICIoT Dataset 2023 1,163,495 IoT Attack 7
+Conclusion. Overall, the final loss during the pre-train
+stage is the weighted sum of the above 3 losses: Table 2: The statistical information of 5 different datasets.
+ Lpt = LMPF + αLPRPP + βLFCL (13)
+where α and β are hyperparameters. datasets: ISCXVPN 2016 (Draper-Gil et al. 2016), IS-
+ CXTor 2016 (Lashkari et al. 2017), and the Cross-
+Fine-Tuning Task Platform (Van Ede et al. 2020) dataset, which includes two
+ subsets (Android and iOS), as well as the CIC IoT Dataset
+The objective of the fine-tuning task is to classify a given 2023 (Neto et al. 2023). We utilize data preprocessed by Netflow into a specific class. After processing the flow through bench (Qian et al. 2024). The data used for pre-training conseveral TLA layers, we obtain a flow representation by ex- sists of the training sets from all five datasets in Netbench,
+tracting the embeddings of the [CLS] tokens from all pack- without labels. The dataset statistics and descriptions of the
+ets. These embeddings, representing each packet, are then fine-tuning tasks are detailed in Table 2. The data is split into
+aggregated using mean pooling to form a comprehensive training, validation, and test sets with a ratio of 8:1:1.
+representation of the entire flow. This mean-pooled flow
+representation is passed through a multi-layer perceptron Compared Methods. We compare our method against 7
+(MLP) to produce the final classification output, indicating payload-based approaches, including deep learning methods
+the predicted class of the traffic flow. such as Datanet (Wang et al. 2018), Fs-Net (Liu et al. 2019),
+ During this stage, the entire model, including both the BiLSTM ATTN (Yao et al. 2019), DeepPacket (Lotfollahi
+packet encoder (previously frozen during pre-training) and et al. 2020), TSCRNN (Lin, Xu, and Gao 2021), as well
+the flow encoder, is fine-tuned. The fine-tuning process op- as foundation models like ET-BERT (Lin et al. 2022) and
+timizes the model by minimizing the cross-entropy loss: YaTC (Zhao et al. 2023).
+ X Implementation Details. During the pre-training stage,
+ Lft = − yc log(ŷc ) (14) we set the training steps to 150,000 and randomly select five
+ c
+ of the first ten packets for training. The masking ratio for
+where yc is the true label, and ŷc is the predicted probability the Masked Flow Prediction (MFP) task is set to 15%. The
+for class c. weights for the Packet Relative Position Prediction (PRPP)
+ and MFP tasks are both set to 0.2. In the fine-tuning stage,
+ Experiments we train for 30 epochs using the first five packets. For both
+ stages, the packet length (L) is set to 128, the number of
+Experiment Setup packets (N ) is set to 5, the embedding dimension (d) is set
+Datasets and Benchmarks. For the encrypted traf- to 768, and the number of Two-Level Attention (TLA) layfic classification task, we evaluate our method on five ers is set to 12. The learning rate is set to 2 × 10−5 , and the
+ CrossPlatform (Android) CrossPlatform (iOS)
+Methods
+ AC F1 AC F1
+from scratch 88.08% 73.62% 71.63% 63.43%
+w/o PRPP 90.79% 79.02% 78.96% 74.35%
+w/o FCL 91.90% 81.60% 79.46% 74.80%
+Ours 93.00% 82.36% 79.63% 75.03%
+
+ Table 3: Impact of Pre-Training Tasks.
+
+ Figure 5: Impact of the Number of Packets.
+ CrossPlatform (Android) CrossPlatform (iOS)
+Methods
+ AC F1 AC F1 CrossPlatform (Android) CrossPlatform (iOS)
+ Methods
+w/o pkt attn 62.19% 28.59% 55.58% 39.93% AC F1 AC F1
+w/o flow attn 91.85% 80.77% 79.11% 72.46%
+TLA (ours) 93.00% 82.36% 79.63% 75.03% header only 78.77% 64.98% 52.96% 41.66%
+ payload only 72.46% 65.80% 63.82% 55.30%
+Table 4: Impact of TLA components, where ’pkt attn’ refers All 93.00% 82.36% 79.63% 75.03%
+to packet attention and ’flow attn’ refers to flow attention.
+ Table 5: Impact of the Component of Packets.
+
+AdamW optimizer is used. All experiments are conducted
+on a server with two NVIDIA RTX A6000 GPUs. Prediction (PRPP) and Flow Contrastive Learning (FCL)
+ further boosts the model’s performance.
+Main Results Impact of TLA Components. TLA captures intra- and
+The primary metrics for comparison are Accuracy and F1- inter-packet dependencies, efficiently handling the chal-
+Score. Accuracy measures the proportion of correct pre- lenges of modeling token-to-token relations across packets.
+dictions, while F1-Score balances precision and recall. Ta- Table 1 shows that ET-BERT, using only token-level attenble 1 presents the performance comparison of various mod- tion, performs worse. As shown in Table 4, results on Crossels on encrypted traffic classification tasks, with baseline Platform(Android) shows removing flow attention raises erresults sourced from NetBench (Qian et al. 2024). The re- ror rates by 16.4%, and using token-mean embeddings for
+sults clearly indicate that traditional deep learning methods, packets lowers accuracy to 62.19%, underscoring the imporsuch as DataNet, DeepPacket, FS-Net, TSCRNN, and BiL- tance of both attentions.
+STM ATTN, struggle to generalize effectively to new tasks,
+particularly on complex datasets. These models frequently Impact of the Number of Packets. Figure 5 shows the
+exhibit a bias toward dominant classes, resulting in consis- impact of packet count. On the left, we observe that as
+tently low F1-scores, especially on datasets like CrossPlat- more packets provide additional information, the F1 score
+form (Android) and CrossPlatform (iOS). increases, confirming our expectations. However, on the
+ In contrast, our MIETT model demonstrates significant CrossPlatform (Android) dataset, using just one packet outimprovements in both accuracy and F1-scores across the performs using three, with 91.79% accuracy, higher than all
+board, showcasing its superior capability to handle the baseline models using five packets. This suggests that in
+complexities of encrypted traffic. Notably, MIETT consis- some datasets, the initial packets may contain the most crittently achieves competitive or superior performance com- ical information, and adding more packets may not always
+pared to existing methods. For instance, in the CrossPlat- improve performance. If packet relationships are not effecform (Android) dataset, MIETT outperforms ET-BERT with tively modeled, it could even harm performance. In this case,
+an 8.27% increase in accuracy and a 14.66% increase in F1- the reason our model did not perform well may be due to the
+score, highlighting the effectiveness of the flow attention. discrepancy between the pre-training stage, where five packets were used, and the fine-tuning stage, where only three
+Ablation Study were used, leading to a mismatch in distribution.
+Impact of Pre-Training Tasks. Table 3 presents an ab- Impact of the Component of Packets. Table 5 highlights
+lation study that compares different versions of the pre- the advantages of payload-based methods in traffic classitraining tasks on the CrossPlatform (Android) and Cross- fication. When using only the packet header, the model’s
+Platform (iOS) datasets to evaluate the contributions of spe- performance is significantly lower, showing that the header
+cific tasks. The baseline model (”from scratch”) shows de- lacks sufficient information for accurate classification. Howcent performance, indicating that pre-training is important ever, when focusing on the payload, which contains the acand can significantly enhance the model’s ability to gener- tual data, the model’s F1-scores improve, especially on comalize to new tasks. As the results demonstrate, incorporating plex datasets like Cross Platform (iOS). This demonstrates
+specific pre-training tasks such as Packet Relative Position that payload-based methods are more effective in capturing
+the essential characteristics of traffic, making them superior Liu, C.; He, L.; Xiong, G.; Cao, Z.; and Li, Z. 2019. Fs-net:
+for encrypted traffic classification. Combining both header A flow sequence network for encrypted traffic classification.
+and payload yields the best results. In IEEE INFOCOM 2019-IEEE Conference On Computer
+ Communications, 1171–1179. IEEE.
+ Conclusion Lotfollahi, M.; Jafari Siavoshani, M.; Shirali Hossein Zade,
+In this paper, we introduced MIETT to address challenges in R.; and Saberian, M. 2020. Deep packet: A novel approach
+encrypted traffic classification. The model uses TLA layers for encrypted traffic classification using deep learning. Soft
+to capture both token-level and packet-level relationships. Computing, 24(3): 1999–2012.
+Through novel pre-training strategies, MIETT effectively Moore, A. W.; and Papagiannaki, K. 2005. Toward the acculearns temporal and flow-specific dynamics. Our experi- rate identification of network applications. In International
+ments demonstrate that MIETT outperforms existing meth- workshop on passive and active network measurement, 41–
+ods, achieving superior results across five datasets. 54. Springer.
+ Neto, E. C. P.; Dadkhah, S.; Ferreira, R.; Zohourian, A.; Lu,
+ Acknowledgments R.; and Ghorbani, A. A. 2023. CICIoT2023: A real-time
+ dataset and benchmark for large-scale attacks in IoT envi-
+This work is partially supported by the National Science ronment. Sensors, 23(13): 5941.
+and Technology Major Project (2022ZD0114805), NSFC
+(62376118), Key Program of Jiangsu Science Foundation Qian, C.; Li, X.; Wang, Q.; Zhou, G.; and Shao, H. 2024.
+(BK20243012), Collaborative Innovation Center of Novel NetBench: A Large-Scale and Comprehensive Network
+Software Technology and Industrialization. Traffic Benchmark Dataset for Foundation Models. In 2024
+ IEEE International Workshop on Foundation Models for
+ Cyber-Physical Systems & Internet of Things (FMSys), 20–
+ References 25. IEEE Computer Society.
+Dosovitskiy, A.; Beyer, L.; Kolesnikov, A.; Weissenborn, Van Ede, T.; Bortolameotti, R.; Continella, A.; Ren, J.;
+D.; Zhai, X.; Unterthiner, T.; Dehghani, M.; Minderer, M.; Dubois, D. J.; Lindorfer, M.; Choffnes, D.; Van Steen, M.;
+Heigold, G.; Gelly, S.; Uszkoreit, J.; and Houlsby, N. 2021. and Peter, A. 2020. Flowprint: Semi-supervised mobile-app
+An Image is Worth 16x16 Words: Transformers for Image fingerprinting on encrypted network traffic. In Network and
+Recognition at Scale. In 9th International Conference on distributed system security symposium (NDSS), volume 27.
+Learning Representations, ICLR 2021, Virtual Event, Austria, May 3-7, 2021. OpenReview.net. Wang, P.; Ye, F.; Chen, X.; and Qian, Y. 2018. Datanet: Deep
+ learning based encrypted network traffic classification in sdn
+Draper-Gil, G.; Lashkari, A. H.; Mamun, M. S. I.; and Ghor- home gateway. IEEE Access, 6: 55380–55391.
+bani, A. A. 2016. Characterization of encrypted and vpn
+traffic using time-related. In Proceedings of the 2nd interna- Wang, Y.; Zhang, Z.; Guo, L.; and Li, S. 2011. Using entional conference on information systems security and pri- tropy to classify traffic more deeply. In 2011 IEEE Sixth
+vacy (ICISSP), 407–414. International Conference on Networking, Architecture, and
+ Storage, 45–52. IEEE.
+He, H. Y.; Yang, Z. G.; and Chen, X. N. 2020. PERT:
+Payload Encoding Representation from Transformer for En- Yao, H.; Liu, C.; Zhang, P.; Wu, S.; Jiang, C.; and Yu, S.
+crypted Traffic Classification. In 2020 ITU Kaleidoscope: 2019. Identification of encrypted traffic through attention
+Industry-Driven Digital Transformation, Kaleidoscope, Ha mechanism based long short term memory. IEEE transac-
+Noi, Vietnam, December 7-11, 2020, 1–8. IEEE. tions on big data, 8(1): 241–252.
+ Zhao, R.; Zhan, M.; Deng, X.; Wang, Y.; Wang, Y.; Gui, G.;
+Korczyński, M.; and Duda, A. 2012. Classifying service
+ and Xue, Z. 2023. Yet Another Traffic Classifier: A Masked
+flows in the encrypted skype traffic. In 2012 IEEE Interna-
+ Autoencoder Based Traffic Transformer with Multi-Level
+tional Conference on Communications (ICC), 1064–1068.
+ Flow Representation. In Thirty-Seventh AAAI Conference on
+IEEE.
+ Artificial Intelligence, AAAI 2023, 5420–5427. AAAI Press.
+Lashkari, A. H.; Gil, G. D.; Mamun, M. S. I.; and Ghorbani,
+A. A. 2017. Characterization of tor traffic using time based
+features. In International Conference on Information Sys- Appendix
+tems Security and Privacy, volume 2, 253–262. SciTePress. We provide details omitted in the main paper.
+Lin, K.; Xu, X.; and Gao, H. 2021. TSCRNN: A novel
+classification scheme of encrypted traffic based on flow spa- Pseudo Code
+tiotemporal features for efficient management of IIoT. Com- As described in the main section, we introduce a new archiputer Networks, 190: 107974. tecture called the Multi-Instance Encrypted Traffic Trans-
+Lin, X.; Xiong, G.; Gou, G.; Li, Z.; Shi, J.; and Yu, J. 2022. former (MIETT), along with two novel pre-training tasks:
+ET-BERT: A Contextualized Datagram Representation with the Packet Relative Position Prediction (PRPP) Task and
+Pre-training Transformers for Encrypted Traffic Classifica- the Flow Contrastive Learning (FCL) Task. Additionally,
+tion. In WWW ’22: The ACM Web Conference 2022, Virtual the fine-tuning task is presented. Below are their respective
+Event, Lyon, France, April 25 - 29, 2022, 633–642. ACM. pseudocode implementations.
+ Algorithm 4: Fine-Tuning Task
+Algorithm 1: MIETT Encoder
+ Require: X ∈ RB×N ×L×d is the output from the MIETT
+Require: Raw traffic flow tokens Xraw ∈ RB×N ×L , where
+ Encoder, where B is the batch size, N is the number of
+ B is the batch size, N is the number of packets, and
+ packets, L is the packet length, and d is the dimension
+ L is the packet length. Position embedding function
+ of embedding.
+ Position Emb : {0, 1, . . . , L − 1} → Rd , which maps
+ 1: XCLS = X:,:,0,: ▷ XCLS ∈ RB×N ×d
+ each position to a d-dimensional embedding. Value embedding function Value Emb : {0, 1, . . . , Vocab size − 2: Xmean = MeanPooling(XCLS ) ▷ Xmean ∈ RB×d
+ 1} → Rd , which maps each token value to a d- 3: ŷ = MLP(Xmean ) ▷ ŷ ∈ RB×C , where C is the
+ dimensional embedding. number ofPclasses
+ 1: X = Position Emb(Xraw ) + Value Emb(Xraw ) 4: Lft = − c yc log(ŷc )
+ 2: for l = 1 . . . M do 5: Return Lft
+ 3: X = LayerNorm(X + MHSApkt (X)) ▷ Packet
+ Attention, X ∈ RB×N ×L×d
+ 4: X = LayerNorm(X + MLP(X)) Implementation Details.
+ 5: X = XT During the pre-training stage, we set the training steps to
+ 6: X = LayerNorm(X + MHSAflow (X)) ▷ Flow 150,000 and randomly select five of the first ten packets for
+ Attention, X ∈ RB×L×N ×d training. The masking ratio for the Masked Flow Prediction
+ 7: X = LayerNorm(X + MLP(X)) (MFP) task is set to 15%. The weights for the Packet Rela-
+ 8: X = XT tive Position Prediction (PRPP) and Flow Contrastive Learn-
+ 9: end for ing (FCL) tasks are both set to 0.2. In the fine-tuning stage,
+10: Return X we train for 30 epochs using the first five packets.
+ For both stages, the packet length (L) is set to 128, the
+ number of packets (N ) is set to 5, the embedding dimension
+Algorithm 2: PRPP Task (d) is set to 768, and the number of Two-Level Attention
+Require: X ∈ RB×N ×L×d is the output from the MIETT (TLA) layers is set to 12. The learning rate is set to 2 ×
+ Encoder, where B is the batch size, N is the number of 10−5 , and the AdamW optimizer is used. All experiments
+ packets, L is the packet length, and d is the dimension are conducted on a server with two NVIDIA RTX A6000
+ of embedding. W1 ∈ Rd×d , W2 ∈ Rd×2 and b1 ∈ GPUs. The PyTorch version is 2.3.0, and the random seed
+ Rd , b2 ∈ R2 are learnable parameters. is fixed at 0 for reproducibility. Pre-processed hexadecimal
+ 1: XCLS = X:,:,0,: ▷ XCLS ∈ RB×N ×d data are provided by Netbench (Qian et al. 2024), so we do
+ 2: P = LayerNorm(GELU(XCLS W1 + b1 )) ▷ not need to handle raw traffic data.
+ P ∈ RB×N ×d
+ 3: for each pair of packets (i, j) do
+ 4: ẑij = Softmax((P:,i,: − P:,j,: )W2 + b2 ) ▷
+ ẑij ∈ RB×2
+ 5: end for P
+ 6: LPRPP = − i,j,i̸=j I(i < j) log(ẑij )+I(i > j) log(1−
+ ẑij )
+ 7: Return LPRPP
+
+Algorithm 3: FCL Task
+Require: X ∈ RB×N ×L×d is the output from the MIETT
+ Encoder, where B is the batch size, N is the number of
+ packets, L is the packet length, and d is the dimension
+ of embedding.
+ 1: XCLS = X:,:,0,: ▷ XCLS ∈ RB×N ×d
+ 2: C = MLP(XCLS ) ▷ C ∈ RB×N ×d
+ 3: for each pair of packets (i1 j1 , i2 j2 ) where i1 , i2 ∈
+ [1, B] and j1 , j2 ∈ [1, N ] do
+ CT Ci j
+ 4: Si1 j1 ,i2 j2 = ∥Ci ij1 j1∥∥C2i 2j ∥ ▷ Cosine similarity
+ 1 1 2 2
+ 5: end for P
+ exp(Si j ,i j2 )
+ 6: LFCL = − i1 ,j1 ,j2 log exp(Si j ,i j )+ 1P1 1exp(S i j ,i j )
+ j1 ̸=j2 1 1 1 2 1 1 2 2
+ i2 ̸=i1
+
+ 7: Return LFCL

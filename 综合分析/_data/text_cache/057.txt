@@ -1,0 +1,110 @@
+                                           Fingerprinting Encrypted Voice Traffic on Smart Speakers with
+                                                                  Deep Learning
+                                                         Chenggang Wang∗                                                  Sean Kennedy                                       Haipeng Li
+                                                   University of Cincinnati, USA                                University of Cincinnati, USA                     University of Cincinnati, USA
+                                                      wang2c9@mail.uc.edu                                          kenneds6@mail.uc.edu                                li2hp@mail.uc.edu
+
+                                                             King Hudson                                                Gowtham Atluri                                      Xuetao Wei
+                                                   University of Cincinnati, USA                                University of Cincinnati, USA                  Southern University of Science and
+                                                     hudsonk4@mail.uc.edu                                         atlurigm@ucmail.uc.edu                              Technology, China
+arXiv:2005.09800v1 [cs.CR] 20 May 2020
+
+
+
+
+                                                                                                                                                                     weixt@sustech.edu.cn
+
+                                                                                             Wenhai Sun                                          Boyang Wang
+                                                                                      Purdue University, USA                              University of Cincinnati, USA
+                                                                                       whsun@purdue.edu                                      boyang.wang@uc.edu
+
+                                         ABSTRACT                                                                                     (WiSec ’20), July 8–10, 2020, Linz (Virtual Event), Austria. ACM, New York,
+                                         This paper investigates the privacy leakage of smart speakers under                          NY, USA, 14 pages. https://doi.org/10.1145/3395351.3399357
+                                         an encrypted traffic analysis attack, referred to as voice command
+                                         fingerprinting. In this attack, an adversary can eavesdrop both out-
+                                                                                                                                      1    INTRODUCTION
+                                         going and incoming encrypted voice traffic of a smart speaker, and                           Smart speakers, such as Amazon Echo, Google Home and Apple
+                                         infers which voice command a user says over encrypted traffic. We                            HomePod, are being increasingly adopted in the U.S. with sales sur-
+                                         first built an automatic voice traffic collection tool and collected                         passing 133 million [2]. However, privacy remains one of the major
+                                         two large-scale datasets on two smart speakers, Amazon Echo and                              concerns limiting a more widespread adoption among consumers.
+                                         Google Home. Then, we implemented proof-of-concept attacks by                                This includes two types of concerns: (1) privacy disclosed to voice
+                                         leveraging deep learning. Our experimental results over the two                              service providers [1], and (2) the focus of this research, sensitive
+                                         datasets indicate disturbing privacy concerns. Specifically, com-                            information that can be revealed by external attackers.
+                                         pared to 1% accuracy with random guess, our attacks can correctly                               We investigated the privacy leakage of smart speakers by consid-
+                                         infer voice commands over encrypted traffic with 92.89% accuracy                             ering an external attacker that runs voice command fingerprinting
+                                         on Amazon Echo.                                                                              attacks [18]. In this attack, an attacker eavesdrops encrypted voice
+                                            Despite variances that human voices may cause on outgoing                                 traffic of a smart speaker, and leverages side-channel information,
+                                         traffic, our proof-of-concept attacks remain effective even only                             including the size, direction, and order of encrypted packets, to
+                                         leveraging incoming traffic (i.e., the traffic from the server). This                        infer a user’s voice command without decryption. For instance, an
+                                         is because the AI-based voice services running on the server side                            attacker can be a local eavesdropper on a victim’s WiFi network or a
+                                         response commands in the same voice and with a deterministic                                 compromised WiFi access point. As the content of a response from
+                                         or predictable manner in text, which leave distinguishable pattern                           the server is correlated with a voice command, an attacker leverages
+                                         over encrypted traffic. We also built a proof-of-concept defense to                          both outgoing traffic (the encrypted packets of a voice command)
+                                         obfuscate encrypted traffic. Our results show that the defense can                           and incoming traffic (the encrypted packets of a response) to infer a
+                                         effectively mitigate attack accuracy on Amazon Echo to 32.18%.                               voice command in this attack.
+                                                                                                                                         Revealing voice commands can uncover users’ activities, lead
+                                         KEYWORDS                                                                                     to unauthorized disclosure, and compromise privacy of millions
+                                         machine learning, encrypted traffic analysis, smart speaker                                  of users. Moreover, an attacker could leverage voice command
+                                                                                                                                      fingerprinting to assist malicious attacks (such as skill squatting [20,
+                                         ACM Reference Format:                                                                        50]) to attack specific targets. For instance, an attacker could infer
+                                         Chenggang Wang, Sean Kennedy, Haipeng Li, King Hudson, Gowtham                               which voice commands a specific victim often says by leveraging
+                                         Atluri, Xuetao Wei, Wenhai Sun, and Boyang Wang. 2020. Fingerprinting
+                                                                                                                                      voice command fingerprinting and then create malicious skills using
+                                         Encrypted Voice Traffic on Smart Speakers with Deep Learning. In 13th
+                                         ACM Conference on Security and Privacy in Wireless and Mobile Networks
+                                                                                                                                      skill squatting, where the names of malicious skills share similar
+                                                                                                                                      pronunciations of words appeared in those voice commands. An
+                                         ∗ The first two authors contributed equally to this research.
+                                                                                                                                      attacker could further record user conversations through smart
+                                                                                                                                      speakers using malicious skills and steal sensitive information such
+                                         WiSec ’20, July 8–10, 2020, Linz (Virtual Event), Austria
+                                         © 2020 Association for Computing Machinery.
+                                                                                                                                      as passwords and credit card information [20, 50].
+                                         This is the author’s version of the work. It is posted here for your personal use. Not for      Similar to website fingerprinting [5, 11–14, 19, 22, 25, 27, 28, 30,
+                                         redistribution. The definitive Version of Record was published in 13th ACM Conference        34–36, 41] voice command fingerprinting is an encrypted traffic
+                                         on Security and Privacy in Wireless and Mobile Networks (WiSec ’20), July 8–10, 2020,
+                                         Linz (Virtual Event), Austria, https://doi.org/10.1145/3395351.3399357.                      analysis attack, which can be formulated as supervised learning
+                                                                                                                                      problem. Machine-learning-based encrypted traffic analysis can
+WiSec ’20, July 8–10, 2020, Linz (Virtual Event), Austria                                         C. Wang, S. Kennedy, H. Li, K. Hudson, G. Atluri, X. Wei, W. Sun and B. Wang
+
+
+also be used to fingerprint devices [8, 40]. Kennedy et al. [18] pre-                            • We designed a proof-of-concept defense, which obfuscates
+viously studied voice command fingerprinting over a small dataset,                                 traffic and mitigates privacy leakage against voice command
+which consists of 100 commands with 10 traffic traces per com-                                     fingerprinting. According to our results on Amazon Echo
+mand. By manually selecting features and utilizing AdaBoost as                                     dataset, with privacy parameter ϵ = 0.005, our defense can
+the classifier, their attack can achieve 33.8% accuracy.                                           reduce attack accuracy to 1.23% if an attacker trains models
+    This paper aims to improve attack accuracy and advance our un-                                 with original traffic and tests with obfuscated traffic. If an
+derstanding of the privacy leakage. Deep learning techniques [21]                                  attacker adapts, in which it trains and tests with obfuscated
+that have been found to improve attack accuracy of encrypted traf-                                 traffic, attack accuracy can still be reduced to 32.18%.
+fic analysis in website fingerprinting [5, 25, 30, 34, 35], are potential
+candidates to address the problem of voice command fingerprint-
+ing. However, deep learning techniques require large datasets with
+thousands to millions of samples. Currently, there are no large-scale                        2   RELATED WORK
+research datasets available that can be harnessed in the context of                          Website Fingerprinting. The purpose of website fingerprinting
+voice command fingerprinting.                                                                is to infer which website a user visits over encrypted traffic [12–14,
+    In this paper, we report the advances we made in bridging the                            22, 27, 28, 30, 35, 41]. Early-stage research in website fingerprinting
+gap in the understanding of privacy impacts of smart speakers. Our                           focused on manually extracting features from encrypted traffic and
+experimental results derived from neural networks over two large-                            harnessing different conventional machine learning algorithms to
+scale datasets indicate disturbing privacy concerns on smart speak-                          achieve higher accuracy. Among these studies, Panchenko et al.
+ers as well as the driving force of smart speakers — the AI-based                            [27] proposed CUMUL by considering the cumulative sum function
+voice services. According to our results, despite high variances that                        of traffic size. This attack leveraged Support Vector Machine as
+human voices may cause on the outgoing traffic of a smart speaker,                           the classifier and outperformed other methods [30]. This attack
+our proof-of-concept attacks remain effective by only lever-                                 achieved an accuracy of 93%, and is even comparable in performance
+aging the incoming traffic from the server side. This is mainly                              with deep-learning-based attacks [30, 35].
+because the AI-based voice services running on the server side response                          Recent work in website fingerprinting attacks used deep learning
+commands in the same voice and with a deterministic or predictable                           models to automatically extract features and resulted in higher ac-
+manner in text, which leave distinguishable network traffic pattern.                         curacy. Sirinam et al. [35] leveraged Convolutional Neural Network
+    Contributions. Our main contributions are summarized below:                              (CNN) and attained 98% accuracy in the closed-world setting with
+                                                                                             95 websites. Rimmer et al. [30] investigated website fingerprinting
+      • We built an automatic tool to collect encrypted voice traffic
+                                                                                             with CNN, Long Short-Term Memory (LSTM) and Stacked Denois-
+        on a smart speaker. It is capable of collecting approximately
+                                                                                             ing Autoencoder (SDAE). SDAE achieved 94% accuracy on a dataset
+        3,000 traffic traces per day, which addresses the limitation
+                                                                                             with 900 classes while CNN and LSTM reached 91% and 88%.
+        of data collection in voice command fingerprinting.
+                                                                                                 Different defense methods have also been proposed. BuFLO [12]
+      • We collected two large-scale datasets on two popular smart
+                                                                                             sends packets at a fixed size with fixed intervals but introduces high
+        speakers, Amazon Echo and Google Home, using 5 auto-
+                                        

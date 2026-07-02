@@ -1,0 +1,726 @@
+1422 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+CL-ViME: Contrastive Learning and Vision Mixture
+ of Experts for Encrypted Traffic Classification
+ Saihua Cai , Member, IEEE, Lizhou Chen, Jinfu Chen , Member, IEEE, Shengran Wang,
+ and Guofeng Zhang , Member, IEEE
+
+ Abstract—Network traffic classification is essential for appli- improving the accuracy of encrypted traffic classification has
+cation identification and malicious behavior detection. However, become a critical challenge.
+the widespread use of encryption protocols hides payloads and Compared with machine learning (such as SVM [8],
+reduces the availability of high-quality labeled data, both of which
+constrain the effectiveness of current models. To address these hierarchical clustering [9] and Random forest [10]), the powchallenges, we propose CL-ViME, a self-supervised encrypted erful automatic feature extraction capability of deep learning
+traffic classification framework that integrates Contrastive provides a new direction for encrypted traffic classifica-
+Learning and Vision Mixture of Experts. First, we design tion. Deep learning models, such as convolutional neural
+a packet-temporal matrix that preserves fine-grained packet network (CNN) [11], recurrent neural network (RNN) [12]
+headers and flow-level temporal structure. Second, we introduce
+a Vertical Vision Transformer-Mixture of Experts model to and Transformer [13], can reduce the reliance on handextract dual-view features through vertical patching and dynamic crafted features. However, they typically require large-scale,
+expert routing. Third, we develop a dual-granularity contrastive high-quality labeled data for training, yet obtaining acculearning framework that aligns packet-level and flow-level rep- rate labels is costly. Moreover, enabling deep learning
+resentations via an MoE projector, followed by lightweight models to effectively recognize emerging traffic classes
+classifier-head fine-tuning. Experiments on three public datasets
+show that CL-ViME significantly outperforms state-of-the-art in dynamic network environments remains a significant
+self-supervised and supervised baselines across accuracy, macro- challenge [14].
+precision, macro-recall, and macro-F1. It also demonstrates To reduce dependence on large-scale labeled data and
+strong generalization and stability. improve generalization on unknown traffic, contrastive learn-
+ Index Terms—Encrypted traffic classification, contrastive ing [15], [16] has gained attention for its self-supervised
+learning, mixture of experts, self-supervised learning. nature. Through designing suitable pretext tasks, it learns
+ discriminative feature representations from large volumes of
+ unlabeled data. It constructs positive and negative sample
+ I. I NTRODUCTION pairs, and then optimizes the loss function to pull posi-
+ ETWORK traffic classification [1], [2] has become tive pairs closer while pushing negative pairs apart. In this
+N a key technology for network management. Accurate
+classification helps understand network behaviors [3], idenway, it autonomously captures category-level distinctions in
+ network traffic. However, contrastive learning still faces sevtify applications [4], and detect malicious traffic [5], [6]. eral challenges in encrypted traffic classification [17], [18]:
+However, the widespread use of encryption technologies (such (1) Many models slice encrypted traffic into fixed-length byte
+as TLS/HTTPS) renders most payload contents invisible. sequences or gray-scale images. This approach loses fine-
+This obscurity complicates feature extraction and leads to grained packet-level header semantics and disrupts flow-level
+performance bottlenecks in existing models [7], including temporal structures. (2) The priori design assumptions, such as
+reduced accuracy and limited generalization. Consequently, kernel shapes, receptive field layouts and positional encodings,
+ often mismatch the characteristics of encrypted traffic, leading
+ to distorted feature extraction when directly transferred. (3)
+ Received 18 August 2025; revised 6 December 2025; accepted 29
+December 2025. Date of publication 31 December 2025; date of current
+ Most models build positive and negative pairs at only one
+version 13 January 2026. This work was supported by the National Natural granularity, either packet-level or flow-level. This single-
+Science Foundation of China (NSFC) (Grant nos. 62202206 and 62172194), level design limits their ability to exploit complementary
+the Natural Science Foundation of Jiangsu Province (Grant no. BK20220515),
+the China Scholarship Council (CSC), the Qinglan Project of Jiangsu
+ information across granularities, making it hard to capture both
+Province, and the Shandong Provincial Natural Science Foundation (Grant microscopic protocol fingerprints and macroscopic behavioral
+nos. ZR2024MF120 and ZR2021QF056). The associate editor coordinating patterns, and ultimately restricting generalization.
+the review of this article and approving it for publication was M.-S. Kim.
+(Corresponding author: Jinfu Chen.)
+ To address the above limitations, focusing on the chal-
+ Saihua Cai, Lizhou Chen, Jinfu Chen, and Shengran Wang are lenges of feature representation, model adaptation and
+with the School of Computer Science and Communication Engineering multi-granularity feature extraction, this paper proposes CLand the Jiangsu Provincial Key Laboratory of Industrial Cyberspace
+Security Technology, Jiangsu University, Zhenjiang 212013, China (e-mail:
+ ViME, a self-supervised encrypted traffic classification model
+caisaih@ujs.edu.cn; 2222408019@stmail.ujs.edu.cn; jinfuchen@ujs.edu.cn; built on Contrastive Learning and Vision Mixture of Experts.
+shrwang@stmail.ujs.edu.cn). The main contributions are as follows:
+ Guofeng Zhang is with the School of Information Science and Technology,
+ • Structured representation with dual-granularity fusion:
+Taishan University, Tai’an 271021, China (e-mail: zhangguofeng@tsu.edu.cn).
+ Digital Object Identifier 10.1109/TNSM.2025.3650038 We first organize raw encrypted traffic into a
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+CAI et al.: CL-ViME: CONTRASTIVE LEARNING AND VISION MIXTURE 1423
+
+ two-dimensional matrix in a structured manner, and then traffic through low-dimensional signature paths and achieves
+ fuse packet-level information (e.g., header fields) and strong accuracy with high training efficiency. Nonetheless, its
+ flow-level information (e.g., temporal relationships) into fixed feature dimensionality limits generalization in complex
+ a unified packet-temporal matrix. This representation scenarios. Overall, traditional machine learning models depend
+ preserves both fine-grained headers and macroscopic on handcrafted features, while encrypted traffic conceals
+ temporal patterns of encrypted traffic. payload semantics and undermines the transferability of such
+ • Vertical Vision Transformer-Mixture of Experts (Vertical features. Moreover, these models also struggle to capture
+ ViT-MoE): To address the anisotropic semantics of the complex, high-dimensional patterns of encrypted traffic,
+ packet-temporal matrices, where horizontal and vertical resulting in limited robustness and adaptability in dynamic
+ axes encode intra-packet fields and inter-packet temporal network environments.
+ sequences respectively, we replace the square patching 2) Deep-Learning-Based Techniques: For the strong autoof standard ViT with vertical segmentation. We further matic feature extraction capability and the ability to model
+ combine this strategy with a MoE to dynamically extract complex patterns, deep learning has become a mainstream
+ packet-level features from the horizontal dimension and approach for encrypted traffic classification. For example,
+ flow-level features from the vertical dimension, produc- FlowPic [11] converts encrypted traffic into a 2D histogram of
+ ing dual-view representations for subsequent contrastive arrival time and packet length,and applies CNNs for imagelearning. level classification. This design preserves privacy by avoiding
+ • Dual-Granularity Contrastive Learning: We first drive payload inspection, but the ultra-high-resolution images con-
+ MoE projector to map the packet-level and flow- tain sparse information because they rely on low-entropy
+ level representations into a shared latent space. We features. Song et al. [12] proposed I2 RNN, an interpretable
+ then use hybrid bidirectional contrastive loss to jointly RNN that constructs fingerprint modules using LSTM. Each
+ optimize consistency and discrimination across granu- module learns the sequence patterns of one traffic class,
+ larities, enabling self-supervised alignment of packet- enabling incremental learning without retraining the entire
+ and flow-level features without labels and significantly model. However, the number of modules grows linearly with
+ improving robustness and generalization. the number of classes, increasing storage and inference cost.
+ • MoE Auxiliary Loss: We introduce an MoE auxiliary DigTraffic [13] adopts a message-level graph representation
+ loss that applies alignment-divergence regularization to to capture client-server interactions using heterogeneous edge
+ expert routing. It enforces maximal routing divergence types. It encodes long and temporal flow sequences through
+ between different views of the same sample and maximal a dual-channel network, and then employs a message-aware
+ routing similarity across encoders for the same view. Graph Transformer that leverages node and edge information
+ This constraint enables adaptive and robust alignment of to model complex graph structures. However, its detection
+ packet-level and flow-level representations in a unified accuracy needs to be improved in scenarios with few labels.
+ latent space. Deep learning reduces dependence on handcrafted features
+ The remainder of this paper is organized as follows: and demonstrates strong capability across byte-, packet-, and
+Section II reviews some related works. Section III detailed sequence-level representations. However, most models require
+describes the CL-ViME model. Section IV provides the exper- large volumes of high-quality labeled data, which are difficult
+imental setup. Section V presents and analyzes experimental to obtain for encrypted traffic and thus limit generalization.
+results to validate the effectiveness of CL-ViME. Section VI
+summarizes the full paper and provides some future directions.
+ B. Contrastive Learning Models for Traffic Classification
+ II. R ELATED W ORKS Most mainstream traffic classification models rely on
+ supervised learning, their performance is constrained by
+ This section reviews encrypted traffic classification techthe scarcity of high-quality labeled data. Given the diffiniques and contrastive learning models for traffic classification.
+ culty of labeling traffic and the continuous emergence of
+ new traffic types, these models struggle to adapt quickly
+A. Encrypted Traffic Classification Techniques to unseen classes. In contrast, contrastive learning lever-
+ With the develop of artificial intelligence, machine learning ages large volumes of unlabeled traffic for representation
+and deep learning techniques have been widely used in learning, enabling faster adaptation to evolving network
+encrypted traffic classification. environments.
+ 1) Machine-Learning-Based Techniques: Machine The FlowPic-based contrastive learning framework [15]
+learning-based techniques achieve automatic classification learns the representations from unlabeled traffic, and groups
+of different applications, protocols or malicious activities flows within the same category. This model reduces reliance on
+by analyzing the statistical characteristics and behavioral large labeled datasets and improves performance on minority
+patterns of traffic packets. For example, a cost-sensitive classes. The ContraMTD [16] combines CNN-based local
+SVM with active learning [8] improves generalization under feature extraction with a dual-edge attention GNN for global
+class imbalance by selectively labeling minority classes interactions. Its contrastive learning design supports crossand querying uncertain samples. However, it still relies on network training and enhances malicious traffic detection, but
+manual labeling. The ETC-PS method [10] models encrypted its generalization to broader encrypted traffic tasks remains
+1424 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+limited. The pretraining framework CETP [17] learns gen- random masking, are first applied to construct discriminative
+eralized features from imbalanced encrypted traffic using positive and negative pairs, enabling the model to capture
+contrastive learning and occlusion sequence modeling, and intrinsic characteristics of encrypted traffic. The Vertical
+then uses fine-tuning to further mitigate class imbalance. ViT-MoE then serves as the backbone. It processes struc-
+However, its positive sample construction relies solely on ran- tured inputs through a vertically partitioned patch-embedding
+dom Dropout, which is often insufficient for low-redundancy scheme, and uses a routing mechanism to dynamically select
+encrypted traffic. Shen et al. [18] proposed a contrastive expert modules for feature extraction. This design jointly
+learning-based detector, it converts traffic into a semantic captures packet-level and flow-level semantics and routes
+attribute matrix and pretrains on unlabeled data to capture nor- heterogeneous features to the most suitable experts. With these
+mal behavior patterns. This design supports rapid adaptation to operations, the pretrained model attains robust representation
+new attacks and improves robustness against obfuscation with capability for downstream encrypted traffic classification.
+limited labels. The multi-instance contrastive learning model Fine-tuning: This phase adopts a classification-head–only
+MIETT [19] uses a two-level attention mechanism for packet- strategy. The pretrained Vertical ViT-MoE backbone is fully
+and flow-level features. It employs masked flow prediction, frozen, and only the task-specific classification head is
+packet position prediction, and flow-level contrastive learning updated. This approach verifies the generalization of the
+to improve traffic discrimination, but its accuracy still lags learned encrypted traffic representations while enabling effibehind supervised models. cient adaptation to downstream classification tasks with low
+ Researches in this area remain preliminary, and current computational overhead.
+models still trail state-of-the-art supervised models in classification accuracy. Existing contrastive tasks, typically adapted
+from computer vision, fail to capture the spatiotemporal struc- B. Structured Representation of Encrypted Traffic
+ture and contextual dependencies inherent in network traffic. In encrypted traffic classification, packet-level granularity
+This study leverages the structured nature of encrypted traffic treats each packet as the basic unit and captures fineto derive refined packet- and flow-level representations and grained protocol fields and flags. However, it fails to model
+introduces a dual-granularity contrastive learning framework to global behavioral patterns because it ignores inter-packet
+strengthen classification capability. Experiments show that the dependencies. Flow-level granularity aggregates bidirectional
+proposed model achieves accuracy comparable to supervised packets sharing the same 5-tuple (source/destination IP,
+deep learning models. source/destination port, and transport protocol) into a single
+ unit to enable the extraction of temporal dynamics and
+ III. M ETHODOLOGY interaction behaviors, albeit at the cost of losing detailed
+ protocol and payload information. Existing representation
+ This section describes the proposed CL-ViME, a selfmethods either extract abstract features [20] and map them
+supervised encrypted traffic classification model based on
+ to pixel values [11], [21]-an approach that performs poorly
+Contrastive Learning and Vision Mixture of Experts. It
+ on encrypted traffic due to weak feature extraction-or directly
+improves existing models by addressing the key challenges in
+ process raw traffic with simplistic single-granularity filling
+feature representation, model adaptation and dual-granularity
+ strategies, which disregard packet structure and lead to inefficontrastive learning.
+ cient matrix usage and ambiguous semantic representations.
+ To address these challenges, we propose a structured fea-
+A. Framework of CL-ViME Model ture representation method that constructs a packet-temporal
+ The overall framework of the proposed self-supervised matrix through dual-granularity fusion. The key idea is to
+CL-ViME model is shown in Fig. 1. It comprises three directly populate raw encrypted traffic into a structured matrix,
+components: a structured representation phase, a contrastive thereby integrating packet-level and flow-level information. At
+learning pretraining phase, and a fine-tuning phase. the packet level, the horizontal dimension encodes protocol
+ Structured representation: This phase converts raw fields, flags and limited payload content while preserving raw
+encrypted-traffic PCAP files into a packet–temporal matrix header semantics. At the flow level, the vertical dimension
+using structured padding. Matrix construction includes two captures temporal dependencies and interaction patterns across
+steps: First, it horizontally pads packet protocols, flags packets. This dual-granularity representation preserves fineand limited plaintext payloads. Second, it vertically embeds grained details and simultaneously models global behavioral
+temporal patterns and interaction modes based on packet characteristics. The detailed process is as follows:
+arrival order. This two-dimensional encoding jointly captures First, we reorganize packets in the PCAP file into bidipacket-level and flow-level semantics within a unified matrix rectional flows. Specifically, packets are first grouped into
+structure. The resulting representation preserves fine-grained bidirectional sessions using the 5-tuple, and then sorted by
+packet features and global flow dynamics, providing an effec- timestamp to form interleaved, time-aligned round-trip flows
+tive input for subsequent contrastive learning. of “source→destination” and “destination→source”. Although
+ Contrastive learning pretraining: This phase employs payloads are encrypted, packet headers remain in plaintext and
+a self-supervised contrastive learning framework to exploit provide stable structured features. Their field distributions and
+large-scale unlabeled traffic and enhance representation qual- semantics offer a reliable basis for encrypted traffic feature
+ity. Two data augmentation strategies, transposition and extraction.
+CAI et al.: CL-ViME: CONTRASTIVE LEARNING AND VISION MIXTURE 1425
+
+Fig. 1. The framework of CL-ViME model.
+
+ To mitigate interference from MAC and IP addresses and classify encrypted traffic by exploiting unlabeled data. In
+to prevent privacy leakage, we remove MAC addresses and contrastive learning, positive and negative pairs must be
+anonymize source and destination IP addresses, retaining only constructed, then the model minimizes the feature distance of
+the last-byte segment. This reduces the IP header to 13 bytes. positive pairs and maximizes that of negative pairs through the
+The TCP header contains 20 fixed bytes and up to 40 optional contrastive loss. The framework of proposed dual-granularity
+bytes. Since optional fields rarely exceed 20 bytes, we allocate contrastive learning is shown in Fig. 2.
+a uniform 40-byte space. Shorter headers are zero-padded, and 1) Construction of Positive and Negative Sample Pairs:
+longer ones are truncated to the first 40 bytes. In addition, In the computer vision domain, positive sample pairs for
+although payloads are encrypted, some protocol-control fields contrastive learning are typically generated using techniques
+following the TCP layer remain in plaintext and can be parsed. such as random cropping. However, this method may destroy
+These fields are useful for downstream analysis, so we retain the integrity of structured features, such as those in packet-
+7 bytes to capture essential communication behaviors while temporal matrices, which represent packet-level features
+avoiding redundant or sensitive content. After these operations, horizontally and flow-level features vertically. To address
+each packet provides a fixed 60-byte header representation. this, we propose a novel method for constructing positive
+ These 60 bytes are linearly mapped from 0-255 to decimal sample pairs based on row-column transposition. Specifically,
+integers and placed into one row of a matrix, forming the as shown in Eq. (1), we first transpose the rows and columns
+horizontal spatial dimension. Each packet occupies a single of matrix to achieve symmetric transformation in the spatiorow, and packets are stacked vertically by arrival order to form temporal dimension. Next, we introduce a random mask
+a 60×60 matrix. A bidirectional flow thus yields a sequence perturbation mechanism to the transposed matrix. This dual
+of matrices S = [X1 , X2 , . . . , Xn ], where Xn denotes the augmentation strategy preserves the semantic integrity of
+n th packet. This transformation preserves packet-header struc- original encrypted traffic, enhances the feature robustness
+ture and embeds temporal patterns into the matrix layout. through structural reorganization and local masking.
+Horizontally, each row encodes the packet’s internal fields and
+byte-level variations. Vertically, row-to-row differences cap- x1 = Tmask (X ), x2 = Tmask (Ttrans (X )) (1)
+ture temporal dependencies and interaction dynamics within
+the flow. By aligning intra-packet structure along rows and In Eq. (1), X is the transformed encrypted traffic matrix,
+inter-packet sequences along columns, the method effectively Tmask () denotes the random mask operation, Ttrans () denotes
+exploits both spatial and temporal semantics of encrypted the transpose operation, (x1 , x2 ) is the positive sample pairs.
+traffic. Negative samples are typically drawn from other samples
+ within the same training batch. Since each batch contains
+ traffic matrices from different communication behaviors, pro-
+C. Dual-Granularity Contrastive Learning Pretraining tocol types or attack patterns, their semantic differences are
+ Most labeled network traffic datasets (e.g., substantial, making them suitable negative samples. Suppose
+CICIOT2023 [22], CICIDS2018 [23]) are generated in a batch contains N independent samples {X1 , X2 ,. . . , XN }.
+virtual environments. Meanwhile, labeling real-world traffic is Each sample is augmented to produce two views (x1 , x2 ),
+extremely difficult, which limits the applicability of supervised resulting in 2N samples in total. For any positive pair (x1 , x2 ),
+models due to the scarcity of reliable labels. A practical the remaining 2(N -1) samples serve as negative samples. If
+solution is to adopt self-supervised contrastive learning to Xi is the anchor, all samples other than (xi,1 , xi,2 ) constitute
+1426 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 2. The framework of dual-granularity contrastive learning.
+
+its negative set, as shown in Eq. (2). A global [CLS] token is then prepended to the N /2 region
+    embeddings to form the full input sequence T, as shown in
+ Ni = xj ,1 , xj ,2 |j ∈ [1, N ], j = i (2)
+ Eq. (5).
+ In summary, the proposed method introduces a struc- N /2
+tured data augmentation strategy that preserves spatiotemporal T = {ei }i=1 + [eCLS ] (5)
+integrity through matrix transposition and improves robustness Next, T is processed by 12 stacked Transformer encoder
+through random masking. This approach avoids the structural layers. Each layer contains:
+distortion introduced by conventional cropping, it is well (1) A multi-head self-attention mechanism [25]. It uses
+suited for feature representation scenarios of encrypted traffic 8 attention heads, where each head linearly transforms the
+with strict spatiotemporal dependencies. embedding vectors ei in T through WQ , WK and WV to
+ 2) Vertical ViT-MoE Model: Vision Transformer (ViT) [24] generate the query (Q), key (K) and value (V) matrices, as
+revolutionizes computer vision by splitting the images into shown in Eq. (6).
+uniform patches for sequence-based modeling. However, its  
+isotropic 16×16 patching works well for natural images but [Qi , Ki , Vi ] = ei WQ , WK , WV (6)
+not for encrypted traffic matrices. In those matrices, rows
+and columns carry different kinds of information: rows show The attention weight αi for the i th embedding is then
+protocol hierarchy, while columns show time dynamics. computed via dot product, as shown in Eq. (7), where dh
+ To address this, we propose the Vertical Vision Transformer denotes the dimension of Ki .
+Mixture of Experts (Vertical ViT-MoE). It is a feature-oriented 
+ Qi K T
+architecture with two key components: (1) Vertical Patching αi = Attention(Qi , Ki , Vi ) = softmax √ i Vi (7)
+Strategy: Instead of using square patches, we segment inputs dh
+along the longitudinal axis. Given a positive sample pair
+ (2) MoE Feed-Forward Network [26]: The standard two-
+(x1 , x2 ), this approach extracts stream-level features from the
+ layer MLP (typically expanding to 4D is replaced with a
+original sample x1 and packet-level features from the trans-
+ Mixture-of-Experts (MoE) layer. Each expert is a single linear
+posed sample x2 . (2) Dynamic Mixture-of-Experts (MoE): We
+ transformation with input and output dimensions equal to the
+integrate a dynamic MoE mechanism into the Transformer
+ patch-embedding dimension D. A routing module computes
+encoder. This allows specialized experts to capture the multithe expert probabilities si using a learnable matrix Wrouter ∈
+granular semantic patterns that align with the inherent vertical
+ RD×E , as shown in Eq. (8), where Gaussian noise  ∼
+structure of network traffic.
+ N (0, 1) is added to improve routing diversity. Due to only
+ Specifically, we first design a parameterized vertical segthe top-2 experts are activated per token, the theoretical
+mentation strategy for spatial feature decomposition. As shown
+ computation is reduced to roughly 25% of the original MLP.
+in Eq. (3), it partitions the input N ∗ N matrix X into N/2
+consecutive subregions along the horizontal dimension. si = softmax(αi Wrouter + ) (8)
+ N /2
+ P = Partition(X ) = {Pi }i=1 , Pi ∈ R N ×2 (3) Based on the routing probabilities si , only the top-k expert
+ Each vertical bar region Pi is projected into a 2N - outputs gj are preserved using a Top-k sparse activation
+dimensional embedding vector ei ∈ RD (D = 2N ) using mechanism, as shown in Eq. (9). Here, s ∈ RE is the routinga linear projection matrix Wp , as shown in Eq. (4). A score vector, E is the number of experts, TopK(s, k ) returns
+learnable positional encoding vector eipos ∈ RD is added to the selected expert indices, and the indicator function I(·)
+preserve spatial order, and Flatten(·) denotes the vectorization ensures that all non-selected experts are suppressed.
+operation.  
+ exp sj · I(j ∈ TopK(s, k ))
+ pos gj = , ∀j ∈ {1, 2, . . . , E } (9)
+ ei = Flatten(Pi )Wp + ei (4) m∈TopK(s,k ) exp(sm )
+CAI et al.: CL-ViME: CONTRASTIVE LEARNING AND VISION MIXTURE 1427
+
+ The MoE output is then computed as the weighted sum of This loss strengthens model’s adaptability and expressiveness
+the activated expert outputs, as shown in Eq. (10), where yi by refining the expert assignment strategy. The loss consists
+denotes the enhanced feature vector for the i th vertical bar of two components:
+region Pi , and Ej is the j th expert. (1) Similarity minimization loss Lmoe _view for dual-view
+ k
+ routing weights: This loss drives the routing weights (qr1 , qr2 )
+ of two augmented views (x1 , x2 ) of the same sample to
+ yi = gj · Ej (x ) (10)
+ diverge. Each view is generated through distinct data augj =1
+ mentation. By encouraging inconsistent expert activations
+ Finally, the [CLS] token aggregates the global contextual across views, the loss promotes diverse expert usage and
+information to produce final high-dimensional representation. improves representation robustness. The formulation is shown
+ 3) Design of Loss Function: In contrastive learning, target in Eq. (14), where sim(·, ·) denotes cosine similarity.
+encoder stabilizes feature representations of negative samples
+to improve training robustness and consistency. It shares the Lmoe _view = sim(qr1 , qr2 ) (14)
+same architecture as the query encoder but updates its param- (2) Similarity maximization loss Lmoe _enc for heteroeters via a momentum rule rather than backpropagation [27], encoder routing weights: This loss enforces high similarity
+as shown in Eq. (11), where θk and θq are the parameters between the routing weights (qr, kr) produced by the query
+of target and query encoders, respectively, and m ≈ 1 is the encoder and the target (key) encoder for the same input view.
+momentum coefficient. It promotes consistent expert selection for identical semantic
+ θk = m · θk + (1 − m) · θq (11) content, even when obtained through different encoding paths,
+ thereby stabilizing expert activation. The formulation is shown
+ Traditional contrastive learning often employs a nonlinear in Eq. (15).
+projector-typically an MLP-after the encoder to map features 1
+into an embedding space, emphasizing invariant semantic Lmoe _enc = − (sim(qr1 , kr1 ) + sim(qr2 , kr2 )) (15)
+ 2
+content [28]. The packet-level and flow-level perspectives of
+encrypted traffic belong to same segment but from different Finally, Lmoe _view and Lmoe _enc are combined to form the
+representational perspectives, requiring the projector to be able MoE auxiliary loss Lmoe , as shown in Eq. (16).
+to understand and process these two heterogeneous represen- Lmoe = Lmoe _view + Lmoe _enc (16)
+tations separately and map them to a unified latent space. To
+unify this representation, we replace original single projectors After imposing semantic consistency constraints on the
+in the query and target encoders with a shared MoE (Mixture- expert routing mechanism through the MoE auxiliary loss
+of-Experts) projector. This design enables parallel processing (Eqs. (14)-(16)), the MoE projector maps heterogeneous
+of encoder features through multiple expert networks, with packet-level and flow-level features into a unified latent space.
+a gating router dynamically selecting and combining experts This process yields more discriminative and aligned expert
+per sample. It enhances model expressiveness and nonlinearity representations.
+while preserving consistency between flow-level and packet- Next, we need to compute sample similarity to pull positive
+level features. pairs closer and push negative pairs apart. The standard
+ Specifically, dual-view positive pairs (x1 , x2 ) are generated InfoNCE loss (shown in Eq. (17)) [29] is widely used to
+via data augmentation and encoded by query encoder (Vertical compute similarity, where q denotes the query features from
+ViT-MoE) into features (z1 , z2 ). They are then passed through the query encoder, k + represents the corresponding positive
+unified MoE projector to yield expert representations (q1 , q2 ) sample features from the target encoder, {k − } is a set of
+and routing weights (qr1 , qr2 ), as shown in Eqs. (12) and (13), negative sample features, and τ is the temperature that controls
+where Wrouter is a learnable weight matrix, Ej denotes the j-th the sharpness of the similarity distribution.
+    
+expert, rij is the selection probability for expert j given feature exp sim(q, k + )/τ
+ LInfoNCE q, k + , {k − } = − log  
+ −
+  (17)
+zi , and qi is the resulting MoE-projected representation. A k − exp sim(q, k )/τ
+predictor network then maps (q1 , q2 ) into the contrastive However, standard InfoNCE loss only considers unidireclearning space, producing final query predictions (p1 , p2 ). The tional relations, i.e., the similarity between query features
+target encoder follows the same pipeline to generate target and positive sample features. It fails to leverage the semanrepresentations (k1 , k2 ) and routing weights (kr1 , kr2 ) from tic correspondence from dual-view augmented sample pairs.
+(x1 , x2 ). The target encoder follows the same pipeline to Consequently, the model may overfit to a specific viewpoint
+generate target representations (k1 , k2 ) and routing weights and neglect complementary information between different
+(kr1 , kr2 ) from (x1 , x2 ). augmented views. This limitation reduces the generalization of
+ ri = softmax(zi Wrouter ) (12) learned representations. To address this, we propose a hybrid
+ k bidirectional contrastive loss based on InfoNCE, as shown
+ qi = rij Ej (zi ) (13) in Eq. (18). It computes contrastive losses in both directions,
+ j =1 leveraging mutual prediction between the two augmented
+ views for more robust feature alignment.
+ Next, to make expert selection in the MoE module more    
+discriminative and adaptive, we design an auxiliary loss Lmoe . LCL = LInfoNCE p1 , k2 , {k2− } + LInfoNCE p2 , k1 , {k1− } (18)
+1428 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Algorithm 1 Dual-Granularity Contrastive Learning The dual-view encoding and cross-level alignment design
+Require: Batch_size n, Packet-temporal matrix X, Vertical of CL-ViME makes its computational cost largely dominated
+ ViT-MoE: θ, MoE Projector: M, Predictor P, Balancing by the Transformer blocks and MoE modules. Given L spatial
+ parameter λ, Momentum m, Mask Augmentation Tmask , patches and an embedding dimension D, the PatchEmbed layer
+ Transpose Augmentation Ttrans has a complexity of O(LD 2 ). The multi-head attention blocks
+Ensure: Total loss LTotal add O(36LD 2 + L2 D), while the MoE-based feed-forward
+ 1: V = [] // initialize to store sample pairs layer incurs O(24LD 2 ). Thus, the overall complexity of CL-
+ 2: for each sample Xi in X do ViME is O(L2 D + LD 2 ), indicating strong dependence on
+ 3: v1 = Tmask (Xi ) // Flow-level view both the embedding dimension and the number of patches.
+ 4: v2 = Tmask (Ttrans (Xi )) // Packet-level view
+ 5: V [i ].append (v1 , v2 ) D. Fine-Tuning of Encrypted Traffic Classification Model
+ 6: end for
+ After pretraining, the contrastive model acquires general-
+ 7: θq , θk =θ.copy // create query & target encoders izable representations from large-scale unlabeled encrypted
+ 8: for i ∈ [1, 2n] do
+ traffic, capturing deep spatiotemporal patterns across traffic
+ 9: qi , qri = M (θq (V [i ])) types. To assess the transferability and quality of these rep-
+10: pi = P (qi ) resentations, we apply head-only fine-tuning. The pretrained
+11: start no-gradient operation backbone is frozen to preserve its extraction capability, while
+12: θk = m · θk + (1 − m) · θq // momentum update only a lightweight classification head (e.g., a small MLP and a
+13: ki , kri = M (θk (V [i ])) fully connected layer) is trained. The head is randomly initial-
+14: end no-gradient operation ized (e.g., Xavier initialization), and all backbone parameters
+15: end for
+ remain fixed.
+16: Lmoe = sim(qr1 , qr2 )−((sim(qr1 , kr1 )+sim(qr2 , kr2 ))·0.5)
+17: LCL = LInfoNCE (p1 , k2 , {ki , i ∈ [3, 2n]}) To mitigate severe class imbalance, which is common in
+ +LInfoNCE (p2 , k1 , {i ∈ [3, 2n]}) encrypted traffic, we use a weighted cross-entropy loss. This
+18: LTotal = LCL + λ · Lmoe loss increases penalties for minority-class errors and improves
+19: return LTotal sensitivity to rare traffic types. We optimize the head with an
+ efficient optimizer such as AdamW and a low learning rate,
+ enabling fast convergence on limited labeled data.
+ Ultimately, the objective function is a weighted sum of This setup isolates the effect of pretrained features. Because
+these two losses, balanced by parameter λ (Eq. (19)). This the head serves only as a simple linear adapter, downstream
+formulation enables joint optimization of feature learning and classification performance directly reflects the quality and
+expert routing mechanism. adaptability of the learned representations, providing a clean
+ evaluation of the contrastive pretraining phase.
+ LTotal = LCL + λLmoe (19)
+ IV. E XPERIMENTAL S ETUP
+ The process of proposed dual-granularity contrastive learning is shown in Algorithm 1. To validate the effectiveness of proposed CL-ViME model,
+ This algorithm comprises three phases, each corresponding we compare it with five state-of-the-art models through extento a core contribution. (1) Positive and negative sample sive experiments.
+construction (lines 1-6): An empty view list V is initialized
+(line 1) to store augmented samples. For each raw matrix Xi , A. Description of Encrypted Traffic Datasets
+two augmented views are generated: a flow-level view v1 by In the experiments, we use four encrypted traffic datasets
+random masking (line 3), and a packet-level view v2 by row- to evaluate the performance of proposed CL-ViME model.
+column transposition followed by masking (line 4). Both views (1) MAWI [30]: It is maintained by WIDE project, capturare appended to V (line 5). These two views from the same ing the encrypted traffic from a trans-Pacific backbone link
+Xi form positive pairs, and all others are treated as negative between Japan and global Internet. It captures snapshots at
+pairs. (2) Query and target encoder construction (lines fixed 15-minute interval using tcpdump and stores raw packets
+7-15): Each augmented view passes through Vertical ViT- in PCAP format. This traffic has no manual labels, offering
+MoE to obtain the query representation qi and router logits multi-scenario and prior-free characteristics suitable for selfqri (line 9). The predictor maps qi to the contrastive space supervised pretraining. We select the traffic from Jan. 1 to Jan.
+pi (line 10). The target encoder freezes gradients and uses 5, 2025 for pretraining.
+momentum (lines 11-14) to generate target representations ki (2) ISCX-VPN [31]: It is released by the Canadian
+and logits kri . (3) Loss computation (lines 16-19): The MoE Institute for Cybersecurity, containing raw PCAP traffic for
+auxiliary loss Lmoe minimizes cosine similarity between dual- six VPN-encrypted application categories. It is widely used
+view routers (qr1 , qr2 ) while maximizing similarity between for evaluating encrypted traffic classification models.
+query and target routers (qri , kri ) (line 16). The bidirectional (3) CICIoT [22]: It is designed for IoT environments, con-
+InfoNCE loss LCL is computed for positive pairs (qp1 , k2 ) taining normal behaviors and multiple attack types and benign
+and (qp2 , k1 ), treating all other views as negatives (line 17). IoT traffic. It contains both encrypted and unencrypted flows,
+Finally, Lmoe and LCL are combined to form LTotal (line 18). covering benign and malicious communication channels.
+CAI et al.: CL-ViME: CONTRASTIVE LEARNING AND VISION MIXTURE 1429
+
+ TABLE I
+ DATASET S TATISTICS (5) CL-FlowPic [33]: A self-supervised model using mini-
+ FlowPic histograms. It employs SimCLR-based representation
+ learning with RTT scaling, time shifting, and packet loss
+ augmentations, clustering traffic from the same application in
+ latent space.
+ (6) YaTC [34]: A masked autoencoder-based traffic transformer with multi-level flow representation. It encodes raw
+ traffic into a hierarchical matrix and applies packet- and flowlevel attention for efficient feature extraction. Subsequently, it
+ is pretrained on unlabeled data via the MAE paradigm and
+ fine-tuned on limited labeled samples for classification.
+
+ C. Evaluation Metrics
+ (4) CTU-Malware [32]: It is built for long-term malware To evaluate the CL-ViME model, we use standard multitraffic analysis, containing various malware families alongside class classification metrics. For a k-class problem, TPi , FPi ,
+normal traffic. It contains encrypted and unencrypted flows, and FNi represent the true positives, false positives, and false
+and simulates realistic network environments with detailed negatives for class i (i = 1, . . . , k ), and N denotes the total
+attack records. number of samples.
+ Table I summarizes the class composition and sample dis- (1) Accuracy (Acc): It represents the percentage of correctly
+tribution of three labeled datasets used in the fine-tuning classified network traffic samples among all samples. It is
+and evaluation stages. Due to MAWI dataset only used for calculated by Eq. (20).
+self-supervised pretraining, it is not included in this table.
+Note that all datasets exhibit significant class imbalance— k
+ Accuracy = i=1 TPi (20)
+a common characteristic in real-world encrypted traffic—our N
+experimental setup preserves it to reflect practical deployment
+ (2) Macro-Precision (Ma-Pre): It measures the classification
+scenarios.
+ correctness of the model, computed as the unweighted mean
+ During pretraining, the model uses only unlabeled encrypted
+ of precision across all classes, as shown in Eq. (21).
+traffic from MAWI for self-supervised representation learning,
+allowing a comprehensive evaluation of transferability and k
+ 1 TPi
+generalization. In the fine-tuning stage, the model is trained Macro − Precision = (21)
+ k TPi + FPi
+on three labeled datasets: ISCX-VPN, CICIOT2023 and CTU- i=1
+Malware. Each dataset is stratified and randomly split into (3) Macro-Recall (Ma-Rec): It is the arithmetic mean of
+training, validation and testing datasets using an 8:1:1 ratio, recall across all categories, giving equal weight to each class—
+preserving the original class imbalance and reducing sampling particularly important under class imbalance. It is calculated
+bias. This yields a stable and reliable evaluation environment by Eq. (22).
+for encrypted traffic classification.
+ k
+ 1 TPi
+ Macro − Recall = (22)
+B. Baselines k TPi + FNi
+ i=1
+ To evaluate CL-ViME, we compare it with six representative (4) Macro-F1 (Ma-F1): It provides a harmonic balance
+baselines. between precision and recall at the class level, then averages
+ (1) CETP [17]: A semi-supervised model using contrastive uniformly across classes, as given in Eq. (23).
+pretraining on multi-granularity token sequences. It performs
+fine-tuning with pseudo-label iteration and dynamic loss k
+ 1 2TPi
+weighting for imbalanced traffic. Macro − F1 = (23)
+ k 2TPi + FPi + FNi
+ (2) SmartDetector [18]: A contrastive learning-based model i=1
+embedding traffic sequences into context-aware vectors. It
+simulates obfuscation via data augmentation and pretrains the D. Set of Parameters
+encoder on unlabeled traffic for robust detection. In the pretraining phase, we train for 300 epochs with a
+ (3) MIETT [19]: A multi-instance learning model treating learning rate of 3e-4, a batch size of 2048, and a momentum
+packets as instances and flows as bags. It applies two-level coefficient m of 0.99.
+attention to capture token- and packet-level relations and uses In the fine-tuning phase, we train for 50 epochs with a
+packet position prediction and flow contrastive learning for learning rate of 1e-2, a batch size of 512, and an equilibrium
+pretraining. parameter λ of 0.9.
+ (4) MTC-MAE [15]: A masked autoencoder model con- For both phases, the embedding dimension is 120, the
+verting traffic into gray-scale images for pretraining. It adopts number of ViT layers is 12, and the optimizer is AdamW. All
+fine-tuning with few labels to achieve high-precision classifi- experiments are conducted on a server using an NVIDIA A40
+cation. GPU.
+1430 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE II
+ C LASSIFICATION P ERFORMANCE U NDER D IFFERENT F EATURE R EPRESENTATIONS (%)
+
+ TABLE III
+ V. E XPERIMENTAL R ESULTS AND A NALYSIS C LASSIFICATION P ERFORMANCE OF D IFFERENT M ODELS (%)
+ To better evaluate the performance of the CL-ViME model,
+we pose the following four research questions (RQs):
+ RQ1: Is the proposed packet-temporal matrix representation
+superior to traditional feature representation methods?
+ RQ2: Can the proposed Vertical ViT-MoE model extract
+more effective information, thereby improving classification
+performance?
+ RQ3: Can the self-supervised contrastive learning pretraining strategy enhance the model’s classification and
+generalization capabilities?
+ RQ4: Can the CL-ViME model outperform other state-ofthe-art models?
+ To reduce experimental randomness, each experiment is in these tasks, confirming their suitability as backbones for
+repeated 30 times. Values before the “±” symbol indicate the subsequent model design and optimization.
+mean, while those after indicate the standard deviation. In the
+experimental results, the best results are highlighted in bold
+and the second-best results are marked with underline. B. Answer to RQ2
+ To answer RQ2, we compare the proposed Vertical ViT-
+ MoE model with ResNet18, AutoEncoder, GNN and ViT. All
+A. Answer to RQ1 models are trained under identical self-supervised learning
+ To answer RQ1, we select five classic models (CNN, VGG, conditions. Experimental results are presented in Table III.
+RNN, LSTM, and Transformer) in a supervised learning As shown in Table III, the proposed Vertical ViT-MoE
+setting. Experiments are conducted using three representation outperforms the other four models across all evaluation metmethods: feature sequence, gray-scale image, and packet- rics. On the CTU-Malware dataset, it achieves a macro-F1 of
+temporal matrix. Detailed results are shown in Table II. 96.02%, exceeding the best baseline (ViT, 88.67%) by 7.35%.
+ As shown in Table II, the proposed packet-temporal matrix This gain arises because the isotropic square patching in stanachieves the highest performance in most cases. This is mainly dard ViT disrupts the semantic integrity of highly structured
+due to its structured fusion of dual-granularity information, traffic matrices. In contrast, Vertical ViT-MoE uses a vertical
+combining fine-grained packet-level headers with macroscopic patching strategy aligned with the anisotropic nature of the
+flow-level temporal patterns. Such a representation enriches data, preserving and extracting distinct packet-level and flowfeature information and enhances class separability, improv- level features. On the ISCX-VPN dataset, Vertical ViT-MoE
+ing classification efficiency. On the ISCX-VPN dataset, it reaches an accuracy of 99.46%, outperforming best baseline
+outperforms feature sequence and gray-scale image represen- of ViT (97.64%) by 1.82%. Although standard ViT captures
+tations by 7.02% and 4.36% in accuracy, and 5.87% and spatial correlations, its uniform segmentation is suboptimal
+3.44% in macro-precision, respectively. On the CICIOT2023 for encrypted traffic, where semantics are organized by rows
+dataset, the performance gain over gray-scale images is and columns. The vertical segmentation combined with the
+slightly reduced for some models, likely because IoT traffic MoE architecture enables the model to learn specialized and
+exhibits simpler characteristics that are visually captured by robust representations, making it more suitable for encrypted
+less-structured representations. On other datasets, gray-scale traffic classification. Overall, Vertical ViT-MoE overcomes the
+images consistently underperform compared to the packet- limitations of standard vision models for structured encrypted
+temporal matrix. Overall, the proposed representation stores traffic. By respecting the intrinsic structure of traffic, it
+richer dual-granularity features, enhancing the performance captures both fine-grained packet-level headers and broader
+and stability of supervised encrypted traffic classification. temporal-flow dynamics, resulting in improved performance
+Additionally, sequence-based models like Transformer excel and stability.
+CAI et al.: CL-ViME: CONTRASTIVE LEARNING AND VISION MIXTURE 1431
+
+Fig. 3. Ablation experiments.
+
+ TABLE IV
+ C LASSIFICATION P ERFORMANCE OF D IFFERENT C ONTRASTIVE L EARNING M ODELS (%)
+
+C. Answer to RQ3 and flow-level features into a unified latent space and learn
+ To answer RQ3, we select three representative self- more discriminative semantic features through dynamic expert
+supervised models of MoCo [27], SimCLR [28] and routing.
+BYOL [35] as baselines, the experimental results are shown in Overall, experimental results verify that the proposed self-
+Table IV. In addition, we also perform ablation experiments to supervised pretraining model enhances model generalization.
+verify the role of each component. Experiments are conducted Its success relies on two aspects: (1) collaborative use of
+under the following conditions: (1) with the MoE projector packet- and flow-level features via structured data augmenremoved, including only flow-level contrastive learning (Flow- tation (matrix transposition), and (2) efficient integration and
+CL), only packet-level contrastive learning (Packet-CL), or refinement of heterogeneous features through the MoE projecdual-granularity contrastive learning (F&P-CL); and (2) with tor and auxiliary loss. These mechanisms together enable the
+the MoE projector applied to dual-granularity contrastive model to learn rich and discriminative representations from
+learning (F&P-CL+MoE). All comparisons use identical unlabeled encrypted traffic.
+self-supervised contrastive learning settings, with Vertical ViT-
+MoE as the backbone to ensure fairness. The results are shown D. Answer to RQ4
+in Fig. 3. To answer RQ4, we compare the proposed CL-ViME model
+ As shown in Table IV, the complete proposed model with seven state-of-the-art models.The detailed results are
+achieves optimal performance on all three encrypted traffic presented in Table V.
+datasets. It significantly outperforms the baselines MoCo, As shown in Table V, the proposed CL-ViME model
+SimCLR, and BYOL across all evaluation metrics. On the achieves both high accuracy and remarkable stability com-
+CICIOT2023 dataset, the macro-F1 of the proposed model pared to other traffic classification models. On the ISCX-VPN
+reaches 88.62%, exceeding the best baseline (BYOL, 81.70%). and CICIOT2023 datasets, it ranks first on all four met-
+This demonstrates the overall advantage of dual-granularity rics, outperforming competitors by a substantial margin. On
+contrastive learning with the MoE projector. CICIOT2023, its macro-F1 reaches 88.62%, 8.6% higher
+ Fig. 3 highlights the importance of each component. than the runner-up YaTC, demonstrating superior discrim-
+The following conclusions can be drawn: (1) Necessity inative power. For YaTC, the full-model fine-tuning used
+of dual-granularity contrastive learning: On ISCX-VPN and in downstream classification can induce catastrophic forget-
+CTU-Malware datasets, packet-level contrastive learning out- ting in the backbone, weakening the pre-training benefits.
+performs flow-level learning, while both achieve similar In addition, its masked autoencoder is optimized for token
+accuracy on CICIOT2023. Combining the two granularities reconstruction, which biases the learned representations toward
+consistently surpasses single-granularity models, validat- structural fidelity rather than discriminative separability. This
+ing their complementarity. For instance, on CICIOT2023, design limits its effectiveness in classification tasks. On the
+the dual-granularity model achieves 92.30% accuracy, CTU-Malware dataset, CL-ViME shows robustness to class
+higher than flow-level (90.07%) or packet-level (90.39%). imbalance. Although CETP slightly surpasses it in raw accu-
+(2) Effectiveness of MoE projector: Introducing the MoE racy (99.04% vs. 98.94%), its macro-averaged metrics lag far
+projector further improves performance. On ISCX-VPN, accu- behind. This “high accuracy, low macro” profile indicates overracy rises from 98.75% to 99.46% and macro-F1 from fitting to majority classes. The macro metrics weight each class
+93.90% to 97.94%. This confirms that the MoE projector and equally, providing a more realistic measure of performance.
+auxiliary loss Lmoe effectively map heterogeneous packet- Here, CL-ViME achieves a macro-F1 of 96.02%, exceeding
+1432 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE V
+ P ERFORMANCE OF D IFFERENT E NCRYPTED T RAFFIC C LASSIFICATION M ODELS (%)
+
+Fig. 4. Performance on each category of encrypted traffic.
+
+CETP by over 15%, confirming its ability to maintain high learning pretraining scheme aligns packet- and flow-level repprecision across both dominant and rare classes. resentations without labels, substantially boosting robustness
+ Fig. 4 presents radar charts of classification performance and generalization.
+for seven contrastive learning-based models. CL-ViME out- CL-ViME is evaluated on three encrypted traffic datasets
+performs rivals in most categories and achieves comparable against advanced self-supervised and supervised models. It
+performance in the remaining ones. While other models achieves accuracies of 99.46%, 94.87% and 98.94%, outperoccasionally misclassify specific classes completely, CL- forming all baselines. Even under severe class imbalance, it
+ViME does not fail catastrophically. This robustness is maintains high precision on minority classes, demonstrating
+attributed to three key designs: (1) structured data aug- its effectiveness in feature representation, model architecture
+mentation (row-column transposition and random masking) and pretraining design.
+generates high-quality positive sample pairs while preserving Despite its strengths, CL-ViME has following limitations:
+semantic structures; (2) the Vertical ViT-MoE architecture (1) Current design is computationally expensive due to the
+efficiently extracts anisotropic features of encrypted traffic; large embedding dimension (120) and the numerous vertical
+(3) the combination of hybrid bidirectional contrastive loss patches (e.g., 30 for a 60×60 input). Future work will
+and MoE auxiliary loss provides a comprehensive optimization explore replacing PatchEmbed with a CNN-based module that
+target. Overall, CL-ViME demonstrates excellent classification performs spatial downscaling, thereby reducing the sequence
+performance, strong stability, and robustness across diverse length and embedding dimension while preserving essential
+encrypted traffic datasets, especially under class imbalance. traffic structures. (2) Dynamic network environment may cause
+ concept drift, significantly degrading the performance of CL-
+E. Discussion ViME model. To address this challenge, we can incorporate
+ incremental or continual learning mechanisms, allowing the
+ Existing contrastive learning-based encrypted traffic classimodel to adapt to evolving traffic distributions without catasfication models suffer from three main limitations. (1) They
+ trophic forgetting.
+slice encrypted traffic into fixed-length byte sequences or
+2-D matrices, discarding fine-grained packet-header semantics
+and severing macroscopic temporal structures. (2) Directly F. Threats to Validity
+transferring vision models distorts the anisotropic structure of This section discusses potential threats to the internal and
+traffic matrices. (3) They exploit only a single granularity, fail- external validity of the CL-ViME model during experimental
+ing to leverage the complementarity of packet- and flow-level evaluation.
+information. To address these issues, we propose CL-ViME. Internal validity. First, there are potential threats in repro-
+It introduces a packet-temporal matrix that fuses packet-level ducing baselines. Some models, such as CETP, MIETT,
+headers with flow-level temporal patterns. The Vertical ViT- SmartDetector and CL-FlowPic, do not provide official source
+MoE employs vertical patching and dynamic expert routing codes. We reproduced them based on the descriptions in the
+to respect the traffic structure. A dual-granularity contrastive papers. Although we follow the algorithm descriptions and
+CAI et al.: CL-ViME: CONTRASTIVE LEARNING AND VISION MIXTURE 1433
+
+experimental settings, complete consistency with the original [3] J. Zhao, X. Jing, Z. Yan, and W. Pedrycz, “Network traffic classification
+implementations cannot be guaranteed. Second, hyperparam- for data fusion: A survey,” Inf. Fusion, vol. 72, pp. 22–47, Aug. 2021.
+ [4] C. Fu, Q. Li, M. Shen, and K. Xu, “Realtime robust malicious traffic
+eter optimization may introduce bias. Although the same detection via frequency domain analysis,” in Proc. ACM SIGSAC Conf.
+search space and optimization strategy are used for all models, Comput. Commun. Security, 2021, pp. 3431–3446.
+different models have varying sensitivity to hyperparameters. [5] J. Chen, T. Lv, S. Cai, L. Song, and S. Yin, “A novel detection model for
+ abnormal network traffic based on bidirectional temporal convolutional
+The CL-ViME model has been thoroughly tuned, but some network,” Inf. Softw. Technol., vol. 157, May 2023, Art. no. 107166.
+baselines may not reach their optimal performance. [6] S. Cai, W. Zhao, J. Chen, Y. Zhao, and S. Wang, “MTD-FRD:
+ External validity. Threats to external validity concern the Malicious traffic detection method based on feature representation
+generalizability of the results. The three datasets used (ISCX- and conditional diffusion model,” J. Netw. Comput. Appl., vol. 242,
+ Oct. 2025, Art. no. 104256.
+VPN, CICIoT2023, CTU-Malware) cover diverse network [7] H. Zhang et al., “Revolutionizing encrypted traffic classification with
+environments and encryption protocols. However, they do not MH-net: A multi-view heterogeneous graph model,” in Proc. AAAI Conf.
+represent all possible encrypted traffic scenarios. Therefore, Artif. Intell., 2025, pp. 1048–1056.
+ [8] S. Dong, “Multi class SVM algorithm with active learning for
+the results may not fully capture nuances of emerging encryp- network traffic classification,” Expert Syst. Appl., vol. 176, Aug. 2021,
+tion techniques or novel attack vectors. Art. no. 114885.
+ [9] Z. Chen, G. Cheng, Z. Wei, D. Niu, and N. Fu, “Classify traffic
+ rather than flow: Versatile multi-flow encrypted traffic classification with
+ VI. C ONCLUSION AND F UTURE W ORK flow clustering,” IEEE Trans. Netw. Service Manag., vol. 21, no. 2,
+ pp. 1446–1466, Apr. 2024.
+ To address the challenges of incomplete feature representa- [10] S. Xu, G. Geng, X. Jin, D. Liu, and J. Weng, “Seeing traffic paths:
+tion and limited labeled data in encrypted traffic classification, Encrypted traffic classification with path signature features,” IEEE Trans.
+this paper proposes CL-ViME, a self-supervised encrypted Inf. Forensics Security, vol. 17, pp. 2166–2181, 2022.
+ [11] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for
+traffic classification model built upon three key technical encrypted traffic classification and applications identification,” IEEE
+components. First, we introduce a packet-temporal matrix Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1218–1232, Jun. 2021.
+that fuses fine-grained packet headers with macroscopic flow- [12] Z. Song et al., “i2 RNN: An incremental and interpretable recurrent neural network for encrypted traffic classification,” IEEE
+level temporal patterns, forming a more comprehensive and Trans. Dependable Secure Comput., early access, Feb. 28, 2023,
+informative representation of encrypted traffic. Second, we doi: 10.1109/TDSC.2023.3245411.
+design a Vertical ViT-MoE architecture tailored to traffic struc- [13] X. Qiu, G. Cheng, W. Zhu, D. Niu, and N. Fu, “Dual-channel interactive
+ture. It uses vertical patching to preserve packet sequencing graph transformer for traffic classification with message-aware flow
+ representation,” in Proc. AAAI Conf. Artif. Intell., 2025, pp. 685–693.
+and employs dynamic expert routing to select the most suit- [14] X. Yang, F. Tong, F. Jiang, and G. Cheng, “A lightweight and dynamic
+able expert subnetworks, thereby improving representational open-set intrusion detection for Industrial Internet of Things,” IEEE
+quality and computational efficiency. Third, we develop a dual- Trans. Inf. Forensics Security, vol. 20, pp. 2930–2943, 2025.
+ [15] K. Xu et al., “Self-supervised learning malware traffic classification
+granularity contrastive pretraining scheme that removes the based on masked autoencoder,” IEEE Internet Things J., vol. 11, no. 10,
+need for manual labels. It constructs complementary packet- pp. 17330–17340, May 2024.
+level and flow-level views of the same traffic sample and aligns [16] X. Han et al., “Contramtd: An unsupervised malicious network traffic
+ detection method based on contrastive learning,” in Proc. ACM Web
+their representations, enabling the model to learn essential Conf., 2024, pp. 1680–1689.
+and invariant features in an unsupervised manner. These [17] X. Lin et al., “CETP: A novel semi-supervised framework based on
+components jointly enhance the robustness and generalization contrastive pre-training for imbalanced encrypted traffic classification,”
+capability of CL-ViME. Comput. Security, vol. 143, Aug. 2024, Art. no. 103892.
+ [18] M. Shen, J. Wu, K. Ye, K. Xu, G. Xiong, and L. Zhu, “Robust detection
+ Extensive experiments validate the effectiveness and superi- of malicious encrypted traffic via contrastive learning,” IEEE Trans. Inf.
+ority of the proposed CL-ViME model. Results on three public Forensics Security, vol. 20, pp. 4228–4242, 2025.
+encrypted traffic datasets show that CL-ViME consistently [19] X. Chen, L. Han, D. Zhan, and H. Ye, “MIETT: Multi-instance encrypted
+ traffic transformer for encrypted traffic classification,” in Proc. AAAI
+surpasses state-of-the-art models. In particular, it maintains Conf. Artif. Intell., 2025, pp. 15922–15929.
+strong robustness and generalization under class imbalance [20] J. Xu et al., “A cascaded broad learning network embedded image
+in real-world malware traffic, highlighting its potential for features for malware traffic classification,” IEEE Trans. Cogn. Commun.
+ Netw., vol. 11, no. 4, pp. 2426–2439, Aug. 2025.
+deployment in complex network environments. However,
+ [21] A. Finamore, C. Wang, J. Krolikowski, J. M. Navarro, F. Chen, and
+the CL-ViME model suffers from high computational cost D. Rossi, “Replication: Contrastive learning and data augmentation in
+and limited robustness to distribution shifts introduced by traffic classification using a flowpic input representation,” in Proc. ACM
+emerging encryption protocols. Future work should investigate Internet Meas. Conf., 2023, pp. 36–51.
+ [22] E. C. P. Neto, S. Dadkhah, R. Ferreira, A. Zohourian, R. Lu, and
+lightweight architectures to enhance efficiency and explore A. A. Ghorbani, “CICIoT2023: A real-time dataset and benchmark
+incremental or continual learning mechanisms to improve for large-scale attacks in IoT environment,” Sensors, vol. 23, no. 13,
+model’s adaptability to evolving traffic distributions. p. 5941, 2023.
+ [23] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+ a new intrusion detection dataset and intrusion traffic characterization,”
+ in Proc. 4th Int. Conf. Inf. Syst. Security Privacy (ICISSP), 2018,
+ R EFERENCES pp. 108–116.
+ [1] X. Xiao, W. Xiao, R. Li, X. Luo, H. Zheng, and S. Xia, “EBSNN: [24] A. Dosovitskiy et al., “An image is worth 16x16 words: Transformers for
+ Extended byte segment neural network for network traffic classification,” image recognition at scale,” in Proc. Int. Conf. Learn. Representations
+ IEEE Trans. Dependable Secure Comput., vol. 19, no. 5, pp. 3521–3538, (ICLR), 2021, pp. 1–22.
+ Sep./Oct. 2022. [25] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Int. Conf.
+ [2] X. Xiao et al., “RBLJAN: Robust byte-label joint attention network for Neural Inf. Process. Syst., 2017, pp. 1–11.
+ network traffic classification,” IEEE Trans. Dependable Secure Comput., [26] C. Riquelme et al., “Scaling vision with sparse mixture of experts,” in
+ vol. 22, no. 3, pp. 2161–2178, May/Jun. 2025. Proc. 35th Int. Conf. Neural Inf. Process. Syst., 2021, pp. 8583–8595.
+1434 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+[27] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for Jinfu Chen (Member, IEEE) received the Ph.D.
+ unsupervised visual representation learning,” in Proc. IEEE/CVF Conf. degree in computer science and technology from the
+ Comput. Vis. Pattern Recognit., 2020, pp. 9729–9738. Huazhong University of Science and Technology,
+[28] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework Wuhan, China, in 2009. He is currently a Full
+ for contrastive learning of visual representations,” in Proc. Int. Conf. Professor with the School of Computer Science and
+ Mach. Learn., 2020, pp. 1597–1607. Communication Engineering, Jiangsu University,
+[29] A. V. D. Oord, Y. Li, and O. Vinyals, “Representation learning with Zhenjiang, China. He has published more than
+ contrastive predictive coding,” 2018, arXiv:1807.03748. 100 papers in some famous journals or confer-
+[30] “Mawi working group traffic archive,” 2013. [Online]. Available: http:// ences, including in TRel, IEEE T RANSACTIONS
+ mawi.wide.ad.jp/mawi/ ON N ETWORK AND S ERVICE M ANAGEMENT , ACM
+[31] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani, Transactions on Privacy and Security, Journal of
+ “Characterization of encrypted and VPN traffic using time-related,” Systems and Software, NDSS, ISSTA, and ASE. His major research interests
+ in Proc. 2nd Int. Conf. Inf. Syst. Security Privacy (ICISSP), 2016, include software testing, software security, and intrusion detection. He is a
+ pp. 407–414. member of the ACM, and a Distinguished Member of the China Computer
+[32] “Stratosphere laboratory datasets,” 2015. Accessed: Mar. 13, 2025. Federation.
+ [Online]. Available: https://www.stratosphereips.org/datasets-overview
+[33] E. Horowicz, T. Shapira, and Y. Shavitt, “Self-supervised traffic classification: Flow embedding and few-shot solutions,” IEEE Trans. Netw.
+ Service Manag., vol. 21, no. 3, pp. 3054–3067, Jun. 2024.
+[34] R. Zhao et al., “Yet another traffic classifier: A masked autoencoder
+ based traffic transformer with multi-level flow representation,” in Proc.
+ AAAI Conf. Artif. Intell., 2023, pp. 5420–5427.
+[35] J. B. Grill et al., “Bootstrap your own latent—A new approach to selfsupervised learning,” in Proc. 34th Conf. Neural Inf. Process. Syst., 2020,
+ pp. 21271–21284.
+
+ Saihua Cai (Member, IEEE) received the Ph.D.
+ degree from China Agricultural University, China, in Shengran Wang received the master’s degree
+ 2020. He is currently an Associate Professor with the in software engineering from Jiangsu University,
+ School of Computer Science and Communication Zhenjiang, China, in 2023, where he is currently pur-
+ Engineering, Jiangsu University, Zhenjiang, China. suing the Ph.D. degree in computer science. He has
+ He has published more than 100 papers in some published more than 20 papers in some famous jourfamous journals or conferences, including in IEEE nals and conferences. His research interests include
+ T RANSACTIONS ON N ETWORK AND S ERVICE Android malware detection, intrusion detection, and
+ M ANAGEMENT, ACM Transactions on Privacy and Fuzzing.
+ Security, TRel, IST, Computers & Security, and
+ ASE. His major research interests include intrusion
+detection and encrypted traffic classification. He is a member of the ACM,
+and a Senior Member of the China Computer Federation.
+
+ Lizhou Chen received the B.E. degree in intelligent Guofeng Zhang (Member, IEEE) received the
+ science and technology from Jiangsu University in Ph.D. degree in agricultural engineering from China
+ 2024, where he is currently pursuing the master’s Agricultural University, Beijing, China, in 2020. He
+ degree in computer technology. His research interest is currently an Associate Professor with the School
+ includes encrypted traffic classification and con- of Information Science and Technology, Taishan
+ trastive learning. University, Shandong, China. He has published more
+ than 20 papers in journals or conferences. His major
+ research interests include IoT security, blockchain
+ security, and data security. He is a member of the
+ China Computer Federation.

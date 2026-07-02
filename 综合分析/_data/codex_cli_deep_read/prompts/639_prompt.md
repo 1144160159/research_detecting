@@ -1,0 +1,1236 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [639] DCANFL: Decentralized Federated Learning for In-Vehicle CAN Intrusion Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：639
+题名：DCANFL: Decentralized Federated Learning for In-Vehicle CAN Intrusion Detection
+年份：2026
+DOI：10.1109/tvt.2026.3671351
+来源：IEEE Transactions on Vehicular Technology
+PDF：paper/10.1109_TVT.2026.3671351.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：IoT、车联网、工业互联网与边缘安全、联邦学习、隐私保护与分布式协同
+相关性：强相关，分数 12
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\639.txt
+- 原始字符数：35212
+- 本次发送字符数：35212
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3671351
+
+1
+
+DCANFL: Decentralized Federated Learning for
+In-Vehicle CAN Intrusion Detection
+Yunjian Jia, Zirui Liu, Wanli Wen, Tian Tian, and Liang Liang
+
+Abstract—The controller area network (CAN) bus, a core invehicle communication protocol, is highly vulnerable to cyber
+attacks due to its lack of built-in security mechanisms. While
+many intrusion detection systems (IDS) have been proposed,
+most rely on centralized training that requires sensitive data
+to be uploaded to a server, raising privacy and deployment
+concerns. Federated learning (FL) mitigates these issues by
+keeping data local, yet conventional FL still depends on a
+central coordinator, making it unsuitable for vehicular networks
+with intermittent connectivity and single points of failure. To
+address these challenges, we propose DCANFL, a decentralized
+FL framework for in-vehicle CAN intrusion detection. DCANFL
+uses gossip-based, dissimilarity-driven pairing for efﬁcient model
+exchange and a continual learning training pipeline to improve
+performance and maintain high accuracy across diverse attack
+types. Experiments on two in-vehicle CAN datasets show that
+DCANFL, without central server coordination, achieves better
+detection performance than centralized FedAvg and other decentralized FL baselines.
+Index Terms—Vehicle CAN bus security, Decentralized federated learning, Intrusion detection, Unsupervised learning.
+
+I. I NTRODUCTION
+The rapid development of intelligent vehicles has established the Controller Area Network (CAN) as the core protocol
+for powertrain, steering, and infotainment systems. However,
+lacking built-in authentication and encryption, CAN is highly
+vulnerable to injection, replay, and masquerade attacks, which
+threaten vehicle stability and passenger safety [1]. To address
+these risks, intrusion detection systems (IDS) have become
+a major research focus [2], [3], [4]. For example, CANet
+uses multi-scale signal decomposition and autoencoders for
+unsupervised anomaly detection without labeled data, while XCANIDS employs signal deserialization to improve detection
+accuracy, interpretability, and zero-day attack resilience.
+Vehicle CAN data contains sensitive information about
+vehicle status and driving behavior, making it difﬁcult to share
+directly due to privacy concerns. However, most existing IDS
+Copyright (c) 20xx IEEE. Personal use of this material is permitted.
+However, permission to use this material for any other purposes must be
+obtained from the IEEE by sending a request to pubs-permissions@ieee.org.
+This work was sponsored by the National Natural Science Foundation of
+China under Grant 62571071 and 62571072, the National Natural Science
+Foundation of Chonqging, China under Grant CSTB2023NSCQ-LZX0079,
+and the Fundamental Research Funds for the Central Universities under Grant
+2023CDJKYJH014. (Corresponding author: Wanli Wen)
+Yunjian Jia, Zirui Liu, Wanli Wen, and Liang Liang are with the
+School of Microelectronics and Communication Engineering, Chongqing
+University, Chongqing, China. (yunjian@cqu.edu.cn, carame1111@163.com,
+wanli_wen@cqu.edu.cn, liangliang@cqu.edu.cn).
+Tian Tian is with the State Key Laboratory of Intelligent Vehicle Safety
+Technology and China Automotive Engineering Research Institute Co., Ltd
+Chongqing, China (tiantian@caeri.com.cn).
+
+methods rely on centralized training that requires uploading
+local data to a central server, posing privacy risks and limiting practical deployment. Federated Learning (FL) offers a
+promising alternative by enabling local model training with
+only parameter sharing for global aggregation [5], [6]. This
+approach balances privacy and collaboration and has been
+shown to be effective for IDS tasks in prior studies [7].
+However, most current FL frameworks still rely on a central
+server for model coordination and aggregation, which present
+practical limitations in dynamic and intermittently connected
+vehicular environments, including communication bottlenecks
+and a central point of failure issues [8]. In contrast, vehicles
+naturally support vehicle-to-vehicle (V2V) communication,
+making it feasible to form decentralized network structures.
+Notably, CCID-CAN leverages blockchain and cross-chain
+attack log sharing to realize collaborative in-vehicle intrusion
+detection in a decentralized manner [9]. This motivates the
+design of FL architectures that operate without a central
+server. Recently, Decentralized federated learning (DFL) has
+attracted increasing attention, where models are exchanged
+among clients through various decentralized topologies to
+achieve collaborative training [10]. This paradigm is well
+aligned with the communication and deployment characteristics of vehicular networks. Although DFL has recently been
+investigated in vehicular scenarios [11], [12], existing studies
+are not tailored to time-series CAN intrusion detection and do
+not sufﬁciently address performance degradation induced by
+decentralized model aggregation.
+In this work, we aim to address the above limitations. Our
+main contributions are twofold:
+1) We propose DCANFL, a decentralized federated learning
+method for in-vehicle CAN bus intrusion detection. This
+method is based on the gossip protocol and performs node
+pairing by calculating model similarity to enable fully
+decentralized collaborative training. It also integrates a
+continual learning mechanism to effectively mitigate the
+performance degradation caused by the decentralized
+framework.
+2) We apply the proposed method to a signal-based unsupervised intrusion detection framework and conduct
+experimental comparisons with the centralized federated
+learning baseline, FedAvg, as well as other DFL baselines. The results demonstrate that, even without any
+central server coordination, DCANFL achieves competitive or superior performance compared to the centralized
+FedAvg baseline, while substantially surpassing existing
+DFL approaches.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3671351
+
+2
+
+In-Vehicle Intrusion Detection Layer
+CAN bus
+
+CAN Frame
+
+ECU
+
+ID(hex)
+
+Autoencoder
+
+Data(hex)
+
+E
+
+DBC
+
+ECU
+
+ECU
+
+Signal sequence
+per ID
+
+D
+
+Signal Data
+ID(hex)
+
+Decentralized Federated Learning Layer
+Compute Model
+Dissimilarity
+
+Dynamic
+construction of
+an intra-regional
+gossip topology
+for vehicles
+
+Normal
+MSE
+
+Abnormal
+
+Signal values
+
+②
+
+reconstructed
+signals
+
+Aggregated
+
+Model
+
+②
+
+② Pairing and Aggregation
+
+Client Pairing
+
+①
+
+① Initial Local Training
+
+③
+
+④
+
+③ Rewind Review Training
+④ Cross-Update Training
+
+Fig. 1. System model.
+
+II. S YSTEM M ODEL
+The system model of the proposed decentralized in-vehicle
+intrusion detection scheme is illustrated in Fig. 1. The scheme
+consists of a set of intelligent connected vehicles, which operate as decentralized clients in a federated learning paradigm.
+Each vehicle is equipped with an in-vehicle intrusion detection system and a V2V communication module. Each client
+k ∈ {1, 2, . . . , K} maintains a local CAN signal dataset Dk
+and hosts an intrusion detection model wk . The objective of
+the system is to collaboratively train intrusion detection models
+across clients while preserving the privacy of local data. The
+overall system architecture is composed of the following two
+functional layers:
+In-Vehicle Intrusion Detection Layer: The in-vehicle intrusion detection layer comprises participating vehicles.
+Each vehicle performs real-time monitoring of its CAN
+bus trafﬁc and conducts anomaly detection based on
+signal reconstruction. Speciﬁcally, raw CAN frames are
+parsed using a DBC ﬁle to extract semantically meaningful signal values [13], which are then fed into a locally
+deployed autoencoder model wk . The model reconstructs
+the input signals, and the reconstruction error is used to
+determine whether the input is anomalous. This layer
+adopts an unsupervised learning strategy that requires
+no manual labeling and supports lightweight, real-time
+intrusion detection.
+• Decentralized Federated Learning Layer: At this layer,
+the system employs the Gossip protocol to enable decentralized communication. Spatially neighboring vehicles are grouped into dynamic intra-regional clusters,
+•
+
+and, due to vehicle mobility, the membership of each
+cluster changes over time. Each vehicle connects to its
+nearby neighbors to form a lightweight, dynamic gossip
+graph, over which peer-to-peer (P2P) model training and
+aggregation are carried out. To improve the efﬁciency
+of information exchange, we adopt a dissimilarity-based
+pairing strategy that prioritizes clients with larger model
+divergence. To mitigate performance degradation and
+unstable convergence in conventional DFL, we further
+design a local training procedure that integrates continual
+learning, thereby enhancing training stability and overall
+model performance, as detailed in Section III.
+This architecture is built upon a DFL mechanism, enabling vehicles to collaboratively train models through direct
+V2V communication. By eliminating dependence on a central
+server, the system achieves greater scalability and adaptability.
+While preserving the privacy of vehicle data, it supports
+efﬁcient knowledge sharing and collaborative model construction across nodes. With an unsupervised learning approach,
+each vehicle is capable of independently performing real-time
+intrusion detection.
+III. T HE P ROPOSED DCANFL S CHEME
+The proposed DCANFL method adopts a signal-based intrusion detection approach at the in-vehicle side and designs
+a decentralized federated learning scheme to enable collaborative training among vehicles.
+A. Signal-based Unsupervised Intrusion Detection
+With the increasing diversity of attack strategies in invehicle networks, intrusion behaviors often exhibit complex
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3671351
+
+3
+
+and unpredictable patterns. Traditional supervised learning
+methods, which rely heavily on labeled attack data, struggle to
+generalize to unseen attacks and thus face limitations in practical applications. Furthermore, raw CAN bus data are typically
+transmitted in hexadecimal format with complex structures and
+limited semantic meaning, making it challenging to interpret
+and model effectively.
+To address these challenges, the proposed method adopts
+a signal-based unsupervised learning strategy that enables
+effective anomaly detection without requiring labeled data.
+Speciﬁcally, the system leverages a DBC ﬁle to deserialize the
+raw payloads in CAN messages, converting the hexadecimal
+data into meaningful multi-dimensional signal values [13].
+These decoded signals reﬂect the physical state and operational
+dynamics of various vehicle subsystems, providing discriminative input features for the detection model.
+During training, the autoencoder is optimized in an unsupervised manner to reconstruct all signal dimensions under
+normal conditions. The reconstruction loss is deﬁned as the
+mean squared error (MSE) between the original and reconstructed signal vectors:
+2
+
+L(x, x̂) = ∥x − x̂∥ ,
+
+(1)
+
+where x and x̂ denote the original and reconstructed signal
+vectors, respectively, and ∥ · ∥ denotes the ℓ2 norm. This loss
+computes the error across all signals at each time step, thereby
+capturing inter-signal dependencies. In the detection phase, the
+same reconstruction error L is used as the anomaly score,
+and samples whose reconstruction errors exceed a predeﬁned
+threshold are ﬂagged as anomalies.
+B. Gossip Protocol with Dissimilarity-driven Pairing
+In the proposed DCANFL framework, we adopt the Gossip
+protocol as a decentralized communication mechanism. Unlike
+centralized federated learning that requires all clients to upload models to a central server, Gossip enables each vehicle
+node to perform P2P communication and aggregation. This
+decentralized design improves scalability, fault tolerance, and
+resilience to network failures.
+To further enhance information diversity and accelerate convergence, we replace purely random pairing with a
+dissimilarity-driven strategy. In each communication round,
+neighboring clients ﬁrst compute the pairwise cosine similarities between their current local models. The cosine similarity
+between clients i and j at round t is deﬁned as
+simti,j =
+
+⟨wit , wjt ⟩
+,
+∥wit ∥ · ∥wjt ∥
+
+(2)
+
+where wit and wjt denote the local models of clients i and j
+at round t, ⟨·, ·⟩ represents the inner product, and ∥ · ∥ denotes
+the Euclidean ℓ2 norm.
+To construct the aggregation pairs, we adopt a dissimilaritydriven greedy strategy. Speciﬁcally, all possible client pairs
+(i, j) with i < j and i, j ∈ K are ﬁrst sorted in ascending
+order based on their cosine similarity simti,j . Then, the pairing
+set S is constructed by iteratively selecting the most dissimilar
+pairs, ensuring that each client appears in at most one pair. If
+
+the number of clients is odd, the remaining unpaired client
+performs only local training in that communication round.
+Formally, the pair selection process can be expressed as
+
+S = (i, j) ∈ C simti,j is minimal and i, j ∈
+/S ,
+(3)
+where C = {(i, j) | i < j, i, j ∈ K} denotes the set of all
+candidate pairs.
+C. Federated Continual Learning Based on Gossip
+Compared with centralized federated learning, gossip-based
+federated learning is more susceptible to two forms of heterogeneity. On the systemic side, time-varying V2V connectivity and neighborhood relationships, together with partial
+client participation in each round, lead to imbalanced information propagation and inconsistent optimization trajectories, which further exacerbate unstable training dynamics
+and increase convergence variance. On the statistical side,
+the non-stationarity of temporal CAN messages induces timevarying data distributions and cross-client distribution shift,
+resulting in pronounced statistical heterogeneity. The interplay
+of these two heterogeneity sources often causes performance
+degradation and yields larger convergence variance. To mitigate these issues, we introduce continual learning [14] and
+design a local training procedure embedded into the gossip
+communication mechanism described in Section III-B, so
+that all gradients are computed locally while only model
+parameters are exchanged. This lightweight rehearsal over
+previously encountered partner distributions mitigates crossclient distribution shift and counteracts the representation
+drift caused by weighted parameter averaging. Overall, for
+CAN messages with pronounced temporal characteristics, this
+rehearsal-style local training mechanism is simple yet effective
+in improving training stability and preserving key temporal
+patterns. In each communication round, the training process
+consists of the following four stages:
+1) Initial Local Training: Each client k updates its local
+model wkt on the local dataset Dk for e epochs, as follows
+wkt = wkt−1 − η
+
+e−1
+X
+
+∇L(wkt−1 , Dk ),
+
+(4)
+
+s=0
+
+where wkt denotes the updated model of client k at round t, η
+is the learning rate, ∇L denotes the gradient of the local loss
+function, and Dk is the local dataset of client k.
+2) Gossip Pairing and Weighted Aggregation: Clients are
+paired as (i, j) based on model dissimilarity, as described in
+Section III-B. The weighted aggregation is then performed as
+t
+wij
+=
+
+ni wit + nj wjt
+,
+ni + nj
+
+(5)
+
+where wit and wjt denote the local models of clients i and j
+at round t, respectively, and ni , nj represent the number of
+local training samples at clients i and j.
+3) Rewind Review Training: For each paired clients (i, j),
+t
+the aggregated model wij
+is computed locally at both clients,
+and further trained for E − 2e epochs on their own datasets.
+t
+For example, on client j, wij
+is updated on Dj to obtain w̃it ,
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3671351
+
+4
+
+which serves as the rewind-review model prepared for client
+i and will be returned to client i in the next step.
+t
+w̃it = wij
+−η
+
+E−2e−1
+X
+
+t
+∇L(wij
+, Dj ),
+
+(6)
+
+t
+∇L(wij
+, Di ).
+
+(7)
+
+s=0
+t
+w̃jt = wij
+−η
+
+E−2e−1
+X
+s=0
+
+4) Cross-Update Training: After the rewind-review step,
+the matched client pair exchange the reviewed models w̃it
+and w̃jt produced by their partners. Each client then trains
+the received model on its own dataset for e epochs, thereby
+completing this communication round, as given by
+wit = w̃it − η
+
+e−1
+X
+
+∇L(w̃it , Di ),
+
+(8)
+
+∇L(w̃jt , Dj ).
+
+(9)
+
+s=0
+
+wjt = w̃jt − η
+
+e−1
+X
+s=0
+
+This mechanism mitigates decentralization-induced performance degradation through a redesigned training procedure
+summarized in Algorithm 1, where Train(w, D, e) denotes the
+local routine that runs e epochs of optimization on dataset D
+starting from parameters w.
+Algorithm 1 DCANFL: Decentralized Federated Learning for
+In-Vehicle CAN Intrusion Detection
+1: Input: Local datasets {Dk } for all clients k = 1, . . . , K,
+epochs per stage e, total epochs per round E, total rounds
+T
+2: Output: Final decentralized models {wkT } for all clients
+3: for each round t = 1 to T do
+4:
+Select available clients At at round t;
+5:
+for each client k ∈ At in parallel do
+6:
+Initial Local Training: wk ← Train(wk , Dk , e);
+7:
+end for
+8:
+Compute all pairwise similarities simti,j ;
+9:
+Greedily form pairing set S by sorting simti,j in ascending order;
+10:
+for each pair (i, j) ∈ P in parallel do
+11:
+Compute sample sizes: ni = |Di |, nj = |Dj |;
+t
+12:
+Aggregate models using (5) to get wij
+;
+13:
+Rewind Review Training using (6) and (7):
+14:
+w̃it ← Train(wij , Dj , E − 2e);
+15:
+w̃jt ← Train(wij , Di , E − 2e);
+16:
+Exchange updated models between paired clients;
+17:
+Cross-Update Training using (8) and (9):
+18:
+wit ← Train(w̃i , Di , e);
+19:
+wjt ← Train(w̃j , Dj , e);
+20:
+end for
+21: end for
+T
+22: return {wk
+};
+To characterize the communication overhead and scalability
+of DCANFL, we summarize its per-round communication cost
+as follows. Let P denote the number of model parameters,
+
+K the number of active clients participating in each round
+within a cluster, and d the number of peers with whom
+a client exchanges model information during the similarityestimation stage. Let R denote the size of the exchanged model
+representation used for similarity estimation, where R ≤ P
+and R = P corresponds to exchanging full model parameters. In centralized FedAvg, each active client uploads one
+local model and downloads one aggregated global model per
+round, incurring about 2P model-sized transmissions and thus
+O(P ) communication complexity. In DCANFL, similaritybased pairing requires exchanging the representation of size
+R with d peers to compute cosine similarity, which incurs
+about 2dR model-sized transmissions per client per round
+in the worst case. After pairing, each client exchanges the
+rewind-review model with its matched peer for cross-update
+training, incurring an additional 2P model-sized transmissions
+per round. Therefore, the per-round per-client communication
+cost of DCANFL is bounded by 2dR + 4P . Since DCANFL
+operates within clusters, d is typically bounded by the local neighborhood size, which keeps the practical overhead
+manageable. Moreover, DCANFL enables fully decentralized
+training without a central server and distributes trafﬁc over local V2V links, avoiding server-side bottlenecks and improving
+deployability and resilience in vehicular networks.
+IV. E XPERIMENT
+A. Experiment Setup
+We used two representative CAN datasets, SynCAN [2] and
+X-CANIDS [3], to evaluate the proposed intrusion detection
+methods. SynCAN is a widely used benchmark with synthetic
+attacks, while X-CANIDS contains real CAN trafﬁc from a
+production vehicle, which we deserialized into signal-level
+representations using OpenDBC [13]. Both datasets cover ﬁve
+attack types for comprehensive evaluation. X-CANIDS further
+assesses typical IDs (e.g., 2B0h, 044h, 47fh, 220h) under
+suspension, fabrication, and masquerade attacks, and includes
+fuzzing attacks of varying intensities (fuzz-10 to fuzz-1000).
+Models were trained unsupervised using the revised CANet
+architecture [4], capturing temporal patterns without labeled
+data. A validation split was used to set detection thresholds,
+which were then applied to the test set for performance
+evaluation across attack scenarios.
+The experiments were implemented using the PyTorch
+framework. All models were trained using the mean squared
+error loss with a ﬁxed learning rate of 1 × 10−4 and a batch
+size of 256. In the experiments, the number of FL clients
+was set to 10. These 10 clients belong to a single cluster,
+and the CAN frames are ﬁrst sorted in chronological order
+and sliced into 10 non-overlapping segments to construct their
+local datasets, while all FL methods share the same client
+data split and hyperparameters. The number of local training
+epochs per stage e was set to 1, and the total number of epochs
+per round E was set to 3. The number of available clients
+participating in each round ranged from 7 to 10. The total
+number of communication rounds T was set to 15 for the
+SynCAN dataset and 20 for the X-CANIDS dataset.
+In the experiments, we evaluated the performance of FedAvg [5], DCANFL, DFL [10], and GL [15] on the intrusion
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3671351
+
+5
+
+TABLE I
+C OMPARISON OF D IFFERENT FL M ETHODS ACROSS 10 C LIENTS ON THE S YN CAN DATASET
+
+FL Method
+FedAvg
+GL
+DFL
+DCANFL
+
+Flooding
+
+Suppress
+
+Plateau
+
+Continuous
+
+Playback
+
+Average
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+0.9859
+0.9368
+0.9255
+0.9829
+
+0.9457
+0.7692
+0.8487
+0.9324
+
+0.8656
+0.8229
+0.8319
+0.8692
+
+0.7311
+0.5621
+0.6333
+0.7393
+
+0.9858
+0.9366
+0.9238
+0.9866
+
+0.9106
+0.7317
+0.8320
+0.9112
+
+0.9435
+0.9213
+0.9301
+0.9562
+
+0.8352
+0.7219
+0.7814
+0.8691
+
+0.9803
+0.9663
+0.9720
+0.9814
+
+0.9305
+0.7875
+0.9052
+0.9354
+
+0.9526
+0.9168
+0.9166
+0.9553
+
+0.8706
+0.7145
+0.8001
+0.8775
+
+TABLE II
+C OMPARISON OF D IFFERENT FL M ETHODS ACROSS 10 C LIENTS ON THE X-CANIDS DATASET
+
+Fabrication
+
+Masquerade
+
+Suspension
+
+Replay
+
+Average
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+AUC
+
+F1
+
+0.9000
+0.8462
+0.8864
+0.8980
+
+0.7938
+0.6854
+0.7218
+0.7870
+
+0.8103
+0.7374
+0.7886
+0.8107
+
+0.7209
+0.6647
+0.6673
+0.7409
+
+0.8470
+0.8582
+0.8104
+0.8582
+
+0.7361
+0.7328
+0.6889
+0.7623
+
+0.5715
+0.5288
+0.6666
+0.5681
+
+0.4202
+0.5389
+0.5363
+0.5290
+
+0.8742
+0.8416
+0.8689
+0.9055
+
+0.8981
+0.7933
+0.8361
+0.8846
+
+0.8006
+0.7624
+0.8042
+0.8081
+
+0.7138
+0.6830
+0.6901
+0.7408
+
+detection task across 10 clients. The evaluation metrics were
+the AUC and F1 scores. AUC measures the trade-off between
+true and false positive rates, while F1 is the harmonic mean
+of precision and recall. Both are standard in intrusion and
+anomaly detection and capture overall detection performance
+and the balance between missed and false alarms.
+
+ ) H G $ Y J
+ ' ) /
+ * /
+ ' & $ 1 ) /
+
+    
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+
+ 
+
+  
+
+ & R P P X Q L F D W L R Q  5 R X Q G
+
+B. Experiment Results
+Table I presents the detection performance of different FL
+methods on the SynCAN dataset, covering ﬁve typical attack
+types. In all scenarios, DCANFL consistently achieves high
+AUC and F1 scores. On average, DCANFL attains an overall
+AUC of 0.9553 and F1 score of 0.8775, slightly outperforming FedAvg and signiﬁcantly surpassing the decentralized
+FL methods GL and DFL, demonstrating consistently high
+detection performance across different attack types and clients,
+as well as strong adaptability in simulated vehicular anomaly
+detection tasks.
+Table II reports the evaluation results on the real-world XCANIDS dataset. Compared to the simulated environment,
+the real-world dataset involves more noise, dynamic behaviors, and signal diversity. Despite these challenges, DCANFL
+maintains strong performance, achieving the highest F1 scores
+across several key attack types. Its overall average F1 score
+reaches 0.7408, outperforming all baseline methods, further
+validating the generalization capability and effectiveness of
+the proposed method in complex real-world conditions.
+It is worth emphasizing that in the baseline FedAvg setting,
+a central server is assumed to perform global aggregation,
+whereas DCANFL operates in a fully decentralized manner
+without relying on any central server coordination during
+training. While retaining the advantages of decentralized communication, it signiﬁcantly outperforms the GL method, which
+only adopts random gossip. The comparison with GL can
+also be regarded as an ablation study. These results strongly
+validate the effectiveness and practical value of our design,
+particularly the model dissimilarity-driven pairing strategy
+
+ ) H G $ Y J
+ ' ) /
+ * /
+ ' & $ 1 ) /
+
+    
+
+ 0 H D Q  9 D O L G D W L R Q  / R V V
+
+FedAvg
+GL
+DFL
+DCANFL
+
+Fuzzing
+
+ 0 H D Q  9 D O L G D W L R Q  / R V V
+
+FL Method
+
+(a) SynCAN dataset
+
+  
+
+ 
+
+  
+
+ & R P P X Q L F D W L R Q  5 R X Q G
+
+  
+
+  
+
+(b) X-CANIDS dataset
+
+Fig. 2. Convergence comparison of different FL methods on two
+
+intrusion detection datasets. The validation MSE is evaluated at each
+FL communication round.
+
+and the continual learning mechanism, which play a critical
+role in enhancing collaborative training efﬁciency and model
+performance.
+Fig. 2 illustrates the convergence behavior of different FL
+methods on the SynCAN and X-CANIDS intrusion detection datasets. For a fair comparison, the validation MSE is
+computed at the end of each FL communication round on
+the corresponding validation set of each dataset. It can be
+observed that the proposed DCANFL framework and FedAvg
+both converge substantially faster on the two datasets, and
+clearly outperform DFL and the GL method with random
+gossip. In intrusion detection tasks, the MSE directly quantiﬁes
+the reconstruction or prediction deviation between the model
+output and normal trafﬁc patterns, and therefore serves as a
+sensitive indicator of anomaly discrimination capability. The
+faster decrease in validation MSE achieved by DCANFL thus
+provides quantitative evidence of its superior convergence
+efﬁciency in DFL scenarios.
+Fig. 3 presents the confusion matrix visualizations of our
+proposed DCANFL method on both datasets. In both cases,
+DCANFL exhibits clear diagonal dominance across most
+attack types, indicating strong intrusion detection capabilities.
+A notable exception is the Suspension attack, which shows
+signiﬁcant confusion with the Normal class. This is attributed
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Vehicular Technology. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TVT.2026.3671351
+
+0.991
+
+0.002
+
+0.001
+
+0.003
+
+0.001
+
+0.001
+
+0.187
+
+0.813
+
+0.000
+
+0.000
+
+0.000
+
+0.000
+
+0.112
+
+0.000
+
+0.888
+
+0.000
+
+0.000
+
+0.000
+
+0.8
+
+Plateau
+
+0.101
+
+Playback
+
+0.082
+
+0.391
+
+0.000
+
+0.000
+
+0.000
+
+0.000
+
+0.609
+
+Normal
+
+Continuous
+
+Flooding
+
+Plateau
+
+Playback
+
+Suppress
+
+0.6
+
+0.000
+
+0.000
+
+0.899
+
+0.000
+
+0.000
+
+0.000
+
+0.000
+
+0.000
+
+0.918
+
+0.000
+
+0.4
+
+0.2
+
+Predicted label
+
+0.0
+
+Normal
+
+0.528
+
+Repl
+
+0.003
+
+Susp
+
+0.399
+
+Fuzz
+
+0.054
+
+Fabr
+
+0.108
+
+Masq
+
+(a) Confusion matrix on SynCAN dataset
+
+0.072
+
+0.000
+
+0.000
+
+0.000
+
+0.000
+
+0.928
+
+Normal
+
+Repl
+
+Susp
+
+Fuzz
+
+Fabr
+
+Masq
+
+True label
+
+and gradient-level information. Future work will investigate
+model heterogeneity across different vehicle types, resilience
+to Byzantine nodes and highly dynamic V2V mobility, and the
+integration of techniques such as differential privacy to further
+enhance privacy and security for in-vehicle applications.
+R EFERENCES
+
+Suppress
+
+True label
+
+Flooding Continuous
+
+Normal
+
+6
+
+0.095
+
+0.094
+
+0.094
+
+0.094
+
+0.094
+
+0.997
+
+0.000
+
+0.000
+
+0.000
+
+0.000
+
+0.000
+
+0.601
+
+0.000
+
+0.000
+
+0.000
+
+0.6
+
+0.000
+
+0.000
+
+0.946
+
+0.000
+
+0.000
+
+0.4
+
+0.000
+
+0.000
+
+0.000
+
+0.892
+
+0.000
+
+0.8
+
+0.2
+
+Predicted label
+
+0.0
+
+(b) Confusion matrix on X-CANIDS dataset
+Fig. 3. Confusion matrices of DCANFL on the SynCAN and X-CANIDS
+datasets.
+
+to the difﬁculty of the CANet model in detecting Suspension
+attacks due to its high sensitivity to signal variations. Since
+such attacks often involve minimal or no signal change,
+distinguishing between naturally stable signals and halted
+updates remains challenging, consistent with prior ﬁndings [4].
+Nevertheless, for other attack types with more distinct signal
+patterns, DCANFL continues to achieve high detection performance under the 10-client FL setting.
+V. C ONCLUSION
+This paper proposed DCANFL, a decentralized federated
+learning method for in-vehicle CAN intrusion detection. It
+employs gossip-based model similarity pairing for V2V collaboration without a central server and integrates continual
+learning to mitigate performance degradation. Experiments
+show that DCANFL outperforms FedAvg and other baselines under fully decentralized settings. Nevertheless, further
+validation and reﬁnement are needed in multi-vehicle-type
+and highly dynamic V2V scenarios, and more comprehensive
+security safeguards are required to protect model updates
+
+[1] H. J. Jo and W. Choi, “A survey of attacks on controller area networks
+and corresponding countermeasures,” IEEE Transactions on Intelligent
+Transportation Systems, vol. 23, no. 7, pp. 6123–6141, Jul. 2022.
+[2] M. Hanselmann, T. Strauss, K. Dormann, and H. Ulmer, “Canet: An
+unsupervised intrusion detection system for high dimensional can bus
+data,” IEEE Access, vol. 8, pp. 58 194–58 205, 2020.
+[3] S. Jeong, S. Lee, H. Lee, and H. K. Kim, “X-CANIDS: Signal-aware
+explainable intrusion detection system for controller area networkbased in-vehicle network,” IEEE Transactions on Vehicular Technology,
+vol. 73, no. 3, pp. 3230–3246, 2024.
+[4] H. Kang, T. Vo, H. K. Kim, and J. B. Hong, “CANival: A multimodal
+approach to intrusion detection on the vehicle can bus,” Vehicular
+Communications, vol. 50, p. 100845, 2024.
+[5] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. Aguera y
+Arcas, “Communication-Efﬁcient Learning of Deep Networks from Decentralized Data,” in Proceedings of the 20th International Conference
+on Artiﬁcial Intelligence and Statistics, ser. Proceedings of Machine
+Learning Research, A. Singh and J. Zhu, Eds., vol. 54. PMLR, 20–22
+Apr 2017, pp. 1273–1282.
+[6] W. Wen, Z. Chen, H. H. Yang, W. Xia, and T. Q. S. Quek, “Joint
+scheduling and resource allocation for hierarchical federated edge learning,” IEEE Transactions on Wireless Communications, vol. 21, no. 8, pp.
+5857–5872, 2022.
+[7] M. J. Idrissi, H. Alami, A. E. Mahdaouy, A. E. Mekki, S. Oualil,
+Z. Yartaoui, and I. Berrada, “Fed-ANIDS: Federated learning for
+anomaly-based network intrusion detection systems,” Expert Systems
+with Applications, vol. 234, p. 121000, 2023.
+[8] Y. Wu, X. Huang, B. Cao, C. Liang, and Q. Chen, “DAG blockchainassisted asynchronous federated mutual learning for autonomous driving,” IEEE Transactions on Intelligent Transportation Systems, vol. 26,
+no. 5, pp. 6263–6275, 2025.
+[9] H. Sun, W. Huang, J. Weng, Z. Liu, W. Tan, Z. He, M. Chen, B. Wu,
+L. Li, and X. Peng, “CCID-CAN: Cross-chain intrusion detection on can
+bus for autonomous vehicles,” IEEE Internet of Things Journal, vol. 11,
+no. 15, pp. 26 146–26 159, 2024.
+[10] W. Liu, L. Chen, and W. Zhang, “Decentralized federated learning:
+Balancing communication and computing costs,” IEEE Transactions on
+Signal and Information Processing over Networks, vol. 8, pp. 131–143,
+2022.
+[11] D. Chen, T. Deng, J. Jia, S. Feng, and D. Yuan, “Mobility-aware
+decentralized federated learning with joint optimization of local iteration
+and leader selection for vehicular networks,” Computer Networks, vol.
+263, p. 111232, 2025.
+[12] M. N. Ali, M. Imran, I. Ullah, G. M. Raza, H.-Y. Kim, and B.-S. Kim,
+“Ensemble and gossip learning-based framework for intrusion detection
+system in vehicle-to-everything communication environment,” Sensors,
+vol. 24, no. 20, p. 6528, 2024.
+[13] Comma.ai, “OpenDBC,” https://github.com/commaai/opendbc, 2017, accessed: 2024-07-02.
+[14] L. Palazzo, M. Pennisi, F. Proietto Salanitri, G. Bellitto, S. Palazzo, and
+C. Spampinato, “Fedrewind: Rewinding continual model exchange for
+decentralized federated learning,” in Pattern Recognition, A. Antonacopoulos, S. Chaudhuri, R. Chellappa, C.-L. Liu, S. Bhattacharya, and
+U. Pal, Eds. Cham: Springer Nature Switzerland, 2025, pp. 79–94.
+[15] I. Hegeds, G. Danner, and M. Jelasity, “Gossip learning as a decentralized alternative to federated learning,” in Distributed Applications and
+Interoperable Systems (DAIS), ser. Lecture Notes in Computer Science,
+J. Pereira and L. Ricci, Eds., vol. 11534. Springer, Cham, 2019, pp.
+74–90.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+PAPER_TEXT

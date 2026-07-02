@@ -1,0 +1,745 @@
+3240 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ HINHJ: Hierarchical Attention-Based
+ Heterogeneous Graph Neural Network for
+ DNS Hijacking Detection
+ Haoran Jiao , Cong Dong , Chenglong Li , Jiahai Yang , Senior Member, IEEE, Leyao Nie, Yuling Liu ,
+ Jing Wang, Changzhi Zhao , and Xia Yin
+
+ Abstract—The Domain Name System (DNS) is a critical inter- Index Terms—DNS hijacking, graph neural network, heteronet infrastructure that translates human-readable domain names geneous graph, hierarchical attention mechanism.
+into machine-routable IP addresses. However, DNS is inherently
+vulnerable to manipulation, with hijacking attacks growing in
+ I. I NTRODUCTION
+both frequency and sophistication. Existing detection methods
+primarily rely on traffic analysis at specific network points.
+However, they suffer from limited coverage and low accuracy
+in complex environments, such as when CDN is employed.
+ T HE Domain Name System (DNS) serves as the cornerstone of the entire internet, functioning as the
+ critical bridge between human-readable domains and machine-
+While recent approaches employ graph-based techniques, they
+still suffer from detection inaccuracy issues due to their failure routable IP addresses. However, DNS inherently possesses
+to account for the complex interdependencies among multiple numerous security vulnerabilities that render it susceptible to
+types of nodes. To address these limitations, we propose a manipulation and tampering [1]. DNS hijacking has grown in
+novel heterogeneous graph-based detection framework. Based both frequency and complexity in recent years. It now includes
+on the collected DNS records from distributed scanners, our not only malicious activities but also state-level censorship
+method extracts activity and security features and constructs
+a heterogeneous graph to capture resolution patterns and cross- and commercial exploitation. This form of DNS compromise
+entity relationships. We further design a time-decay graph neural not only leads to data breaches but also poses significant
+network TNHAN that enhances traditional Heterogeneous Graph risks to the stability of critical infrastructure systems. Hence,
+Attention Networks (HAN) by dynamically weighting recent it is significant to develop effective detection mechanisms
+records. This network improves adaptability to legitimate DNS specifically targeting DNS hijacking.
+changes. For evaluation, we conduct experiments on real-world
+resolvers and domain datasets. Experiment results demonstrate Notably, the DNS hijacking studied in this paper refers to
+the effectiveness of our method. Our method can achieve an the destruction of DNS integrity. DNS integrity is defined as
+F1-score of 0.96, outperforming the best baseline by 0.057 on users consistently receiving unaltered responses from authoraverage, and up to 0.113 under low label proportion. More- itative servers [1]. It can be violated through two attack
+over, we conduct several case studies on detected incidents, vectors: (1) Institutional manipulation via query intercepincluding cases related to geopolitical conflicts, censorship-related
+hijacking, and manipulation by malicious resolvers. These cases tion or response forgery by network operators [2], [3], [4];
+demonstrate the method’s effectiveness in identifying diverse (2) Technical exploits like cache poisoning by malicious actors
+hijacking behaviors in practice. [5], [6], [7]. Recursive resolvers are particularly vulnerable
+ to these integrity violations due to their intermediary role in
+ Received 4 June 2025; revised 8 December 2025; accepted 11 March 2026. DNS resolution. As the critical link between end users and
+Date of publication 19 March 2026; date of current version 27 March 2026. authoritative servers, they face threats from both institutional
+This work was supported by Zhongguancun Laboratory. The associate editor interference and technical exploits.
+coordinating the review of this article and approving it for publication was
+Prof. Libing Wu. (Corresponding authors: Cong Dong; Chenglong Li.) Detecting DNS hijacking attacks presents a complex chal-
+ Haoran Jiao, Cong Dong, and Leyao Nie are with Zhongguancun lenge due to multiple inherent difficulties. A primary obstacle
+Laboratory, Beijing 100194, China (e-mail: jiaohr@mail.zgclab.edu.cn; lies in DNS’s extensive attack surface. Its distributed archidongcong@mail.zgclab.edu.cn; niely@mail.zgclab.edu.cn).
+ Chenglong Li and Jiahai Yang are with the Institute for Network tecture and complex recursive query process involve extensive
+Sciences and Cyberspace, Tsinghua University, Beijing 100084, China, network communication, creating multiple potential points for
+and also with Zhongguancun Laboratory, Beijing 100194, China (e-mail: hijacking. Another critical difficulty stems from the continuous
+lichenglong@tsinghua.edu.cn; yang@cernet.edu.cn).
+ Yuling Liu and Changzhi Zhao are with the Institute of Information Engi- emergence of vulnerabilities. At the DNS protocol level, perneering, Chinese Academy of Sciences, Beijing 100085, China, and also with sistent cache poisoning vulnerabilities allow malicious records
+the School of Cyber Security, University of Chinese Academy of Sciences, to overwrite legitimate cached entries [6], [7], [8]. Simultane-
+Beijing 101408, China (e-mail: liuyuling@iie.ac.cn; zhaochangzhi@iie.ac.cn).
+ Jing Wang is with the College of Artificial Intelligence, Beijing Normal ously, system-level vulnerabilities enable attackers to directly
+University, Beijing 100875, China (e-mail: wangjing@bnu.edu.cn). compromise authoritative servers or modify records at domain
+ Xia Yin is with the Department of Computer Science and Technology, registrar systems [9].
+Tsinghua University, Beijing 100084, China, and also with Zhongguancun
+Laboratory, Beijing 100194, China (e-mail: yxia@tsinghua.edu.cn). To address these challenges, current research has proposed
+ Digital Object Identifier 10.1109/TIFS.2026.3675876 various detection approaches. The predominant methodology
+ 1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+JIAO et al.: HINHJ: HIERARCHICAL ATTENTION-BASED HETEROGENEOUS GRAPH NEURAL NETWORK 3241
+
+involves deploying traffic capture devices at specific net- • This paper presents a novel Heterogeneous Graph Dualwork locations during the resolution process and applying Layer Attention Neural Network (TNHAN) with a timedetection methods on the captured traffic. However, these decay neighbor selection mechanism for DNS hijacking
+methods exhibit several critical limitations. First, these meth- detection. The proposed network architecture incorporates
+ods demonstrate limited coverage against attacks targeting a time-decay neighbor selection mechanism that enhances
+different network locations. By relying exclusively on traffic conventional HAN, resulting in significant improvements
+analysis from specific monitoring points, they fail to detect in detection performance.
+hijacking activities occurring in non-cooperative domains, par- • We deploy our method in a real-world network environticularly those downstream relative to the observation points ment and successfully obtain multiple cases of different
+[10], [11], [12], [13], [14]. Second, accuracy issues arise as types of DNS hijacking events, with purposes including
+they rely on single-point features such as NS/AS changes. censorship factors, political factors, and malicious hijack-
+Consequently, they are only effective for domains with simple ing.
+deployment structures and fail to identify DNS hijacking in The remainder of this paper is structured as follows.
+complex scenarios like CDN environments accurately [15], Section II summarizes the preliminary and previous works
+[16], [17]. To enhance accuracy, recent studies employ graph- related to DNS hijacking. Section III elaborates on the details
+based methods [18]. However, they only focus on simple of our proposed HINHJ method. Section IV describes the
+node connections rather than detecting abnormal interaction experiment settings. Secition V shows the detailed analysis
+patterns between resolvers, IPs, and domains. This limitation results of experiment and provides several hijacking case
+also results in missed detections for sophisticated hijacking studies in reality. Section VI provides the conclusion.
+attacks.
+ In this paper, we propose a novel heterogeneous graph-based II. R ELATED W ORK
+approach for DNS hijacking detection. Targeting specific
+ As a core internet infrastructure, the domain name system
+public resolvers and domain lists, our method employs geofaces security threats from both malicious attacks and manipugraphically distributed scanners to probe and collect DNS
+ lation. In 2024, a large-scale DNS hijacking in China exploited
+records. Based on these records, the approach generates two
+ router vulnerabilities to redirect millions of users to fake CDN
+distinct feature categories, activity features and security feanodes. This incident disrupts services like Alibaba Cloud and
+tures. To comprehensively capture cross-entity relationships
+ Tencent Cloud [19]. State-level interventions routinely replace
+in DNS resolution, we construct a heterogeneous graph that
+ authentic IP addresses with government-approved servers [14].
+visually represents both the resolution process and the complex
+ For example, Iran’s DNS tampering for political censorship.
+associative structures of resolution records. Based on this
+ Commercial operators also prefer to hijack user queries to
+graph, we design a novel graph neural network architecture to
+ their own DNS services (e.g., 8.8.8.8) [20]. For example,
+model the complex neighbor relationships accurately. Building
+ Chinese companies redirect 30% of Google DNS traffic to
+upon conventional heterogeneous graph neural networks, our
+ local servers for cost reduction or ad injection [14]. These
+model introduces a time-decay neighbor selection mechapractices compromise data security and destabilize critical
+nism TNHAN that enhances traditional Heterogeneous Graph
+ internet infrastructure.
+Attention Networks (HAN). This mechanism dynamically
+ To mitigate the aforementioned challenges, recent studies
+adjusts the weights of resolution records from different dates.
+ on DNS hijacking detection proposed several approaches.
+In particular, it assigns higher weights to more recent records,
+ They can be categorized into three: response record based
+thus adapting to scenarios involving legitimate modifications
+ methods, traditional machine learning based methods, and
+of DNS records.
+ graph learning methods.
+ To validate the effectiveness of the proposed method,
+we constructed a representative list of resolvers and critical domains. We evaluated our approach using DNS 1) Response Record Based Methods:
+records collected from these targets and conducted com- DNS hijacking can be detected based on analyzing response
+parative experiments with state-of-the-art methods in this inconsistencies to specialized queries. Randall et al. [10]
+field. Experimental results demonstrate that our method detect router-level interception by sending diagnostic requests
+achieves superior accuracy, attaining an F1-score of 0.96. to public DNS services, whereas Luo et al. [11] identify
+Furthermore, based on the detection results, we performed a hijacked resolvers through subdomain probes monitored at
+manual in-depth analysis of several hijacking incidents, which authoritative servers. While these methods require minimal
+yielded case studies characterizing typical DNS hijacking resources, their effectiveness depends on target configurabehaviors. tions and cannot detect hijacking at public resolver level.
+ The main contributions of this paper are as follows: Through experiments with controlled domains, Liu et al. [14]
+ • This paper proposes a heterogeneous graph frame- reveal widespread DNS interception by comparing expected
+ work that models domain-resolver-answer ip correla- and actual query resolution paths. Akiwate et al. [12]
+ tions through four predefined relationship types and combine internet scans with DNS/certificate logs to detect
+ multi-dimensional node features. This approach dynami- historical anomalies in domain-IP-certificate patterns. Their
+ cally captures evolving DNS resolution patterns, enabling shortage remains in that manual verification limits scalability.
+ systematic analysis of hijacking behaviors. Nosyk et al. [13] passively detect middlebox injections using
+3242 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 1. Core concepts. Differences between normal and hijacking records can be categorized into three aspects: stability vs volatility, consistency vs isolation,
+and security vs risk.
+
+root server response patterns, but miss DNS cache poisoning the overall architecture of the HINHJ. After that, we elaborate
+attacks. on each process of HINHJ in detail.
+
+2) Traditional Machine Learning Based Methods: A. Core Concepts
+ Machine learning approaches for DNS hijacking detection In this section, we examine several representative DNS
+typically combine statistical features with algorithmic analysis. hijacking examples and abstract three core concepts that guide
+Houser et al. [15] utilize DNSDB data to identify server our detection design. As shown in Figure 1, DNS hijackresponse anomalies (e.g., IP/NS record changes) through SVM ing exhibits abnormal connection patterns among domains,
+and RF models trained on daily passive DNS features. While resolvers, and records. These patterns can be directly shown
+effective in detecting new NS/AS ownership patterns, this through changes in node relationships on graphs. Specifically,
+method shows elevated false positives due to overlooking differences between normal and hijacking records can be catresolver-domain-IP correlations. Jin et al. [17] develop a egorized into three aspects: stability, consistency, and security.
+multi-dimensional detection framework incorporating protocol Stability vs volatility. Benign DNS resolution demonstrates
+features, temporal features, and geographic features to dis- structural stability, consistently resolving to static record IP
+tinguish legitimate DNS updates from malicious alterations. addresses or CDN nodes. In contrast, DNS hijacking induces
+Fejrskov et al. [16] use traffic data to extract multiple types abrupt topological shifts through recursive resolver cache poiof resolver features, including resolver prefixes, number of soning. This triggers sudden resolution pattern mutations. As a
+associated records, etc., and use machine learning methods to result, these behavioral contrasts manifest in graph structures
+implement DNS hijacking detection. Their method assumes as spatial stability versus spatial volatility.
+that if a resolver is well-known, it is benign. However, well- Consistency vs isolation. Benign resolvers demonstrate
+known resolvers can also cause DNS hijacking. global consistency. While load balancing and geo-routing
+ strategies [22], [23] may create variations, resolution patterns
+ remain coherent within geographic or network boundaries.
+3) Graph Learning Methods: In contrast, hijacked resolvers exhibit behavioral isolation
+ In recent years, graph learning based methods have emerged when persistently manipulating specific domains for purposes
+in multiple anomaly monitoring domains. Its effectiveness like advertisement injection and censorship. Leveraging graph
+in capturing sharp relationships among different nodes for analysis can capture the distinction that benign resolution
+detection makes it a focus in complex detection problems. In patterns form cohesive subgraphs over time, while hijacked
+this paper, we also follow this routine to design our method. resolution patterns appear as topological outliers beyond dom-
+In previous studies related to DNS hijacking, graph-based inant communities.
+detection methods address this problem through relational Security vs risk. Benign DNS resolutions exhibit highanalysis of interconnected network entities. Jia et al. [18] confidence security attributes, commonly appearing in threat
+demonstrate this approach by constructing resolver-web server intelligence whitelists. Conversely, hijacking resolutions show
+interaction graphs and using Louvain community detection strong associations with blocklisted entities and high-risk
+and node2vec [21] embeddings to identify malicious resolvers. domains. Leveraging graph analysis can capture the distinction
+However, this method relies only on a bipartite graph between through node attributes that hijacking nodes exhibit lowthe resolver and the web server. As a result, the relationships credibility features and connect to high-risk domains.
+it captures are not comprehensive.
+ B. Overview
+ III. M ETHODOLOGY As shown in Figure 2, HINHJ comprises four processes:
+ In this section, we introduce our proposed method for DNS records collection, graph construction, feature design and
+hijacking detection. We first introduce the core concepts that TNHAN-based detection. HINHJ first collects response mesmotivated us to design the approach. Then we briefly introduce sages from recursive resolvers through active probing. Then
+JIAO et al.: HINHJ: HIERARCHICAL ATTENTION-BASED HETEROGENEOUS GRAPH NEURAL NETWORK 3243
+
+ Fig. 2. The overall architecture of HINHJ.
+
+HINHJ constructs a heterogeneous graph and corresponding of entities. Hence, we employ the Heterogeneous Information
+meta-path set by combining various auxiliary information. Network (HIN) [24] to capture more semantics and support
+The graph and path represent the association relationships more comprehensive representations.
+among resolvers, domains, and answer ips (the IP address As shown in Fig. 2, an HIN is built consisting of resolvers,
+returned as the DNS answer) in DNS scenarios. Subsequently, domains, answer ips (the IP address returned as the DNS
+HINHJ produces behavior patterns of each entity as features of answer). Formally, the heterogeneous graph is defined as
+nodes. Finally, to effectively identify abnormal patterns from G =< V, E >, with V = {Vd , Vr , Va } denoting domains,
+heterogeneous graph with properties of meta-path set and node resolvers, and answer ips respectively, and E =
+features, the TNHAN model is employed for DNS hijacking {E1 , E2 , E3 , E4 } represents four types of relationships.
+detection. The following sections elaborate details of each The details of these relations are as follows, and Table I lists
+component. their adjacency matrices.
+ • Resolver queries to Domain. We use matrix Q to denote
+C. Records Collection that resolver queries to domain.
+ • Domain is resolved to answer ip. We use matrix R to
+ The first process of HINHJ is collecting DNS records from
+ denote that domain is resolved to answer ip.
+resolvers. In general, collecting these records can be divided
+ • rDNS (reverse DNS record) of answer ip contains
+into active probing and passive monitoring. Both of these
+ domain. We use matrix F to denote that the reverse DNS
+methods can achieve the collection of resolver, domain and
+ record for answer ip i contains domain j.
+records. However, considering the flexibility and the specificity
+ • Resolver in the same AS of another resolver. We use
+of monitoring targets, we prefer to choose the active probing.
+ Matrix A to denote that two resolvers belong to the same
+Specifically, we maintain two specific lists for monitoring,
+ AS.
+a critical domain list and a public resolver list. In probing,
+we initially request the domains on the list to each public ASN information and rDNS information of resolvers and
+resolver and parse corresponding response to collect records. records are acquired through open source [25] and host
+This procedure is repeated periodically to observe the change command queries. Among these relations, Q, R, and F repof each record. resent directional interactions. We model them as directed
+ Notably, when PDNS sources from strategic locations are edges. Specifically, DNS queries originate from resolvers and
+available, the collection process can also be conducted by pas- domains, while resolution mappings and reverse DNS relationsive monitoring. These strategic locations include the ingress ships also have clear source and target semantics. Modeling
+or egress points of resolvers and critical routing nodes that them as directed edges preserves the directionality of informacover the target resolver’s network interactions. Such positions tion flow in the DNS resolution process. In contrast, A captures
+ensure that passive monitoring can obtain rich redundant the symmetric AS-level co-location between resolvers, so we
+records, including interested targets. Therefore, HINHJ can model it as an undirected relation.
+also leverage such monitored PDNS data in its subsequent We formulate DNS hijacking detection as an answer ip
+processing. node classification task. On the built graph, we define several
+ metapaths to focus on crucial relationships [26]. We specifically consider metapaths where both endpoints are IP nodes,
+D. Graph Construction yielding four fundamental metapath types P = {P1, P2, P3, P4}
+ The DNS resolution process involves data flows across mul- as detailed in Table II, where a, d, and r represent the
+tiple entities. To model the relationships among these entities, answer ip, domain, and resolver, respectively.
+we prefer to use a graph structure for representation. Since These meta-paths are designed to capture different semantic
+the types of entities in the resolution process are different, relationships between answer ips. These include co-resolving
+it causes information loss when using a homogeneous graph. to the same domain, sharing reverse DNS entries, and being
+This is due to ignoring the relationship among different types returned by the same or AS-affiliated resolvers. Each meta-
+3244 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE I
+ A DJACENCY M ATRIX
+
+ TABLE II
+ M ETA -PATH D EFINITIONS
+
+ TABLE III
+ F EATURE D ESCRIPTION
+
+path represents a type of semantic connection, and HINHJ window. This type of feature reflects their stable and change
+applies semantic-level attention to learn the relative importance pattern over a period. These features include three subtypes:
+of each meta-path. query frequency, request diversity, and network topology.
+ Each meta-path is formally encoded as a commuting matrix. a) Query frequency features: Dynamic Activity Index
+We use these matrices to build a subgraph, connecting (DAI) is calculated as follows,
+answer ips that meet the meta-path condition. In the node-
+ T
+level attention stage, the model learns to aggregate features X
+ DAI = w(t) · I(answer ip active at day t),
+across these subgraphs.
+ t=1
+ The selection of meta-paths is guided by domain knowledge
+ w(t) = e−λ(T −t)
+ (1)
+of DNS hijacking. The selected meta-paths reflect different
+dimensions of relationships between answer ips, including where λ is the attenuation coefficient(we set λ = 0.7), and T
+domain-level association (co-resolving to the same domain), is the total number of days in the time window. A higher DAI
+network-level similarity (sharing reverse DNS entries), and value indicates recent concentrated activity, whereas a lower
+resolver-level behavior (being returned by the same or AS- value indicates earlier or more evenly distributed activity.
+affiliated resolvers). These patterns correspond to key stages longest active streak represents the answer ip’s maximum
+in the DNS resolution process and contribute discriminative consecutive active days within the time window. Higher value
+information for distinguishing between benign and hijacked indicates sustained activity or persistent DNS hijacking, while
+answer ips. lower values suggest potential cache pollution or configuration
+ anomalies. std degree nd measures daily fluctuations in
+E. Node Feature Design domain associations, where abnormal volatility may signal
+ In the heterogeneous graph, each answer ip node can be malicious hijacking.
+correlated with abundant information. As an enhancement, we b) Request diversity features: Domain count and
+further produce node features. As shown in Table III, these domain count ndays represent the number of associated
+features are categorized into activity features and security domains in a single query round and across time windows
+features. respectively. Significant daily variations in these metrics may
+ 1) Activity Features: Activity features are designed to suggest potential hijacking activity. resolver count quantifies
+capture the dynamic behavior of answer ips within a time the unique resolvers within two hops of the answer ip,
+JIAO et al.: HINHJ: HIERARCHICAL ATTENTION-BASED HETEROGENEOUS GRAPH NEURAL NETWORK 3245
+
+while the Domain Diversity Entropy (DDE) measures domain Wk ∈ Rd×dh is the projection matrix of the meta-path pk , and
+diversity through the following equation, ak ∈ R2dh is the attention parameter vector of the meta-path
+ K pk .
+ X nk
+ DDE = − pk log2 pk , pk = (2) It is worth noting that when searching for the neighbors of
+ N node i, we do not directly select in the heterogeneous graph,
+ k=1
+where K represents the total common TLD types but adopt a time-decayed neighbor selection strategy. By prior-
+(e.g.,.com,.net,.gov), nk denotes the request count for itizing more recent interactions and changes in neighborhood
+T LDk and N is the total request volume. patterns, HINHJ is more sensitive to the abrupt behavioral
+ c) Network topology features: The binary feature is cdn shifts that often characterize the onset of hijacking events, an
+identifies whether the answer ip’s autonomous system (AS) aspect that static graph analyses might overlook.
+belongs to CDN providers, as attackers typically are less  ˇ
+ (t)
+ Nk (i) = Nk (i) ∪ j ∈ V \ Nk (i) ˇˇ
+ (t)
+ ˇ
+likely to point the hijacking to CDN. ip resolver as sim
+checks whether the answer ip and its resolver (within two
+ t−1 
+hops) share the same AS. A higher value suggests the X
+resolver is resolving domains to its own AS, potentially I( j ∈ Nk(τ) (i)) · λt−τ ≥ θ (4)
+ τ=t−∆
+indicating hijacking. Similarly, ip resolver geo sim detects
+answer ip-resolver country matches. Nk (i) denote the neighbor set of node i in the daily sub-
+ 2) Security Features: Security features are used to describe graph Gk , where V represents the complete node set of Gk .
+the security risks of answer ip itself. The blocklist fea- The time window ∆ filters recent active neighbors, and the
+ture identifies whether the answer ip appears in historical threshold θ selects the most active neighbors. The decay factor
+malicious lists, though this feature alone cannot defini- λ ∈ [0, 1) controls the influence of past interactions, where a
+tively assess risk due to potential answer ip dynamism. The smaller λ assigns lower weights to older neighbor occurrences.
+sensitive ratio feature measures the proportion of sensitive This exponential decay ensures that more recent interactions
+domains associated with the answer ip, where a higher contribute more to the final neighbor selection, effectively
+ratio indicates greater security risk due to potential mali- capturing temporal locality in graph dynamics. The time-aware
+cious activity. Similarly, gov ratio quantifies the fraction of neighbor set Nk(t) (i) captures node interactions within ∆.
+government-related domains linked to the answer ip. Addi- After that, the neighbor features are aggregated through
+tionally, ttl long identifies DNS records with TTL values Path-Specific Aggregation:
+exceeding a predefined threshold, as DNS hijacking attacks 0 1
+frequently employ abnormally high TTL values to prolong X
+their effectiveness. hi,k = σ @ αkij Wk x j A + Wres xi (5)
+ Finally, we construct a feature matrix x. This matrix is used j∈Nk(t) (i)
+with the heterogeneous graph as input to the later TNHAN
+model. In 5, Wres ∈ Rd×dh , σ is the ReLU activation function. This
+ step uses node-level attention calculation to identify which
+F. Attention Network Classifier neighbor answer ip under each meta-path is more important
+ To effectively classify answer ip nodes in heterogeneous to the target node, and finally generates the node embedding
+graphs, we propose TNHAN, a dual-layer attention neural matrix Hk under the meta-path pk .
+network based on heterogeneous graphs. It enables HINHJ 2) Semantic-Level Attention: After aggregating information
+to not only learn from node features in time series but also to within each meta-path, it remains to combine the resulting
+dynamically weigh the importance of different neighborhood embeddings to form a unified node representation. Since differstructures and semantic meta-paths. This enhances the model ent meta-paths capture different semantics, their contributions
+to discern critical relational patterns indicative of hijacking, to the final classification may vary. Semantic-level attention
+rather than treating all connections as equally significant. is used to adaptively weigh the importance of each meta-
+ For specific, TNHAN takes the heterogeneous graphs G = path based on its relevance to the task. Following node-level
+(V, E), meta-path set P = {p1 , p2 , p3 , p4 } and feature matrix attention, HINHJ produces node embeddings Hk for each
+x as input. Briefly, TNHAN includes node-level attention, meta-path pk . The model then dynamically integrates these
+semantic-level attention, and classification. We elaborate each semantic representations. First, our method learns the global
+layer in detail. context vector and its importance weight for each meta-path:
+ 1) Node-Level Attention: HINHJ constructs a subgraph Gk
+ ck = MEAN(Hk ) ∈ Rdh (6)
+for each meta-path pk , and then calculates the attention weight
+of answer ip node i to neighbor node j under meta-path pk . γk = v> tanh(Uck + b) (7)
+ 
+ exp ReLU a>k [Wk xi kWk x j ] ck represents the average behavior pattern of all nodes under
+ αi j = P
+ k
+ (3)
+ the meta-path pk , and γk represents the global contribution of
+ 
+ exp ReLU a>k [Wk xi kWk x j0 ]
+ j0 ∈Nk (i) the meta-path pk to the classification task.
+This is a node-level attention neural network that calculates the Then, our method employs linear projection coupled
+importance between neighbor nodes i and j in the subgraph. with multi-head attention computation to capture complex
+3246 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+interaction patterns across diverse meta-path combinations. government, critical infrastructure, and sensitive domains. This
+WQ , WK , WV are learnable parameters and we set M = 4. diverse dataset enables comprehensive DNS hijacking analy-
+ 4 sis.
+ We deploy five globally distributed scanners to conduct
+ X
+ Hweighted = γk Hk (8)
+ k=1
+ continuous DNS measurements over 10 months (September
+ Q = Hweighted WQ , K = Hweighted WK , 2024 to April 2025), with detection rounds performed every
+ 2–3 days. Each round targeted 2,001 public resolvers and
+ V = Hweighted WV (9) 36,192 domains. For this study, we analyze data from the latest
+ Qm K >
+  
+ Attentionm = softmax √ m Vm (10) seven rounds, with each round generating approximately 20M
+ dh /M packets. In probing, we use ZDNS [35] as the tool to send
+The attention outputs are then aggregated to produce the final queries. Notably, to avoid potential ethical risk and disruptions
+semantic-level embedding: to DNS service, we strictly limit the query rate and randomize
+ the query order.
+ Z = LayerNorm ([Attention1 k · · · kAttention M ] WO To support evaluation, groundtruth of hijacking events
+ + Hweighted ) (11) is manually confirmed from multiple sources. Specifically,
+ hijacking samples are identified using threat intelligence
+ 3) Classification: The model is trained by learning the final platforms, including VirusTotal and ThreatBook [36], [37].
+embeddings of labeled sample nodes using a cross-entropy loss Additionally, we develop a crawler that uses custom host
+function: X headers to access web pages from answer ips. By comparing
+ L=− Yi ln(Θ · Z i ) (12) the content with trusted References, we can identify potential
+ i∈YL DNS hijacking. For benign samples, we configure a controlled
+where Θ denotes the model parameters, Z i represents the local recursive resolver and use its responses as trusted data.
+embedding of labeled nodes and Yi indicates the labels of We exclude ambiguous cases (responses that could not be
+marked nodes. Through minimizing this cross-entropy loss, definitively classified as hijacking or benign) from both trainthe model learns to predict labels for unmarked nodes in the ing and testing datasets. Our method incorporates auxiliary
+graph. IP-ASN and IP-geolocation data obtained from the MaxMind
+ database [25].
+ IV. E XPERIMENT S ETTINGS
+ B. Ethical Considerations
+ In this section, we provide preparation for the experiment.
+First, we specify the targets for monitoring and details in active To minimize potential impact on DNS infrastructure, we
+probing. Besides, we also provide the method for acquiring strictly limit the query rate and randomize the resolver selecgroundtruth. Second, we describe the metrics used in the later tion. These measures ensure that no individual resolver or
+experiment. authoritative server experiences significant load. Furthermore,
+ We use PyTorch [27] to run experiments on a server our experiments do not involve any user-side data collection.
+equipped with an NVIDIA Tesla V100 GPU with 16GB We do not access or analyze personal DNS traffic, and the
+memory, an Intel Xeon Gold 6226R CPU (16 cores), and 128 entire dataset is generated from controlled queries.
+GB RAM. For data collection, we deploy a scanner running on
+an Ubuntu 22.04 system with an Intel Xeon Platinum 8255C C. Metrics
+CPU (2 cores) and 2GB memory. For a comprehensive evaluation, we use several standard
+ metrics derived from the confusion matrix, including Accuracy (ACC), Precision, Recall, F1 score, Balanced Accuracy
+A. Active Probing
+ (B-Acc), Cohen’s kappa, Matthews correlation coefficient
+ To acquire records of domain name from resolvers, we (MCC), and Area Under the ROC Curve (AUC). Since the
+employ active probing for collection. Notably, we treat DNS dataset is imbalanced, we pay particular attention to B-Acc
+servers serving dual roles (both resolver and authoritative) and kappa. The formulas for these two metrics are as follows:
+solely as public resolvers for our analysis.  
+ 1 TP TN
+ The public resolver list is obtained from multiple sources B-Acc = + (13)
+[28], [29], [30], [31], [32]. In order to maximize the coverage, 2 TP + FN TN + FP
+our principle is to choose the resolver ISP public resolvers po − pe TP + TN
+ Kappa = , po = ,
+and famous national DNS services [33]. Nevertheless, there 1 − pe N
+also exist invalid resolvers. Hence, we adopt a two-stage (TP + FP)(TP + FN) (TN + FN)(TN + FP)
+ pe = +
+validation process to filter out unreliable services following N2 N2
+the two processes: (1) Port verification using geographically (14)
+distributed scanners to confirm open port 53 accessibility, TN indicates the number of benign answer ips correctly
+and (2) DNS query validation requiring correct NOERROR classified; FP indicates the number of benign answer ips
+responses to controlled test queries. These criteria effectively classified as hijacked; FN indicates the number of hijacked
+filter out private resolvers and authoritative-only servers. Addi- answer ips classified as benign; TP indicates the number of
+tionally, we utilize active domains from Tranco [34], including hijacked answer ips correctly classified.
+JIAO et al.: HINHJ: HIERARCHICAL ATTENTION-BASED HETEROGENEOUS GRAPH NEURAL NETWORK 3247
+
+ TABLE IV
+ P ERFORMANCE OF HINHJ
+
+ V. E XPERIMENTS
+ In this section, we present comprehensive experiments to
+evaluate HINHJ. In total, we conduct three experiments for
+evaluation. First, we show the overall performance of HINHJ
+as an initial evaluation. Second, we compare HINHJ with
+baseline detection methods from the perspective of precision.
+Third, we provide visualization analysis demonstrating our Fig. 3. Training loss and F1-score across epochs. The model quickly
+dual-layer attention mechanism’s effectiveness in identifying converges within 100 epochs, with loss decreasing and F1-score stabilizing
+important nodes and meta-paths. Fourth, we describe several above 0.95.
+hijacking cases detected by HINHJ.
+
+A. Preliminary Experiment of HINHJ
+ To evaluate the model’s robustness and performance under
+varying levels of supervision, we simulate scenarios with
+different amounts of labeled data. Specifically, we select k%
+of graph nodes as training samples, where k is set to 10, 30,
+50, 70, or 90. By varying k, we are able to assess the model’s
+behavior across a spectrum of labeled data availability. HINHJ
+still needs a validation set to train the parameters of the model,
+so we then select m% (where m is equal to 10) of the dataset
+as the validation set, using the remaining nodes for testing
+model performance. Fig. 4. Training time per epoch across epochs. The bars illustrate the training
+ Table IV and Table V show the overall experiment results time for each epoch, while the line represents the cumulative average training
+ time.
+when using different ratios of label proportion. It can be seen
+that HINHJ achieves strong performance when trained on 90% per epoch is illustrated in Fig. 4, showing that each epoch takes
+of graph nodes, reaching 99% F1-score. This indicates our less than 0.5 seconds on average, indicating high efficiency.
+method performs exceptionally well with sufficient training Further, we find that some false alerts in HINHJ are
+data. As the number of training samples decreases, there is caused by legitimate answer ip connected to hijacked ones
+a small decrease in each evaluation metric value of HINHJ. via meta-paths. This typically happens when attackers use
+When HINHJ is trained with only a small number of training shared infrastructure such as CDN nodes or cloud services for
+label samples (about 10% of training samples in the graph), it malicious activities. However, such cases are relatively rare
+also has good performance with balanced accuracy above 95%. and do not significantly affect the overall performance of our
+These results demonstrate that our graph structure features method.
+and two-layer attention network effectively extend detection
+coverage to identify related hijacked nodes.
+ It can be seen from Table IV that our method maintains B. Comparison Experiments
+stable accuracy as label proportions decrease. However, recall To evaluate HINHJ, we compare it with both traditional
+declines slightly due to behavioral variations across different machine learning models and recent state-of-the-art methhijacking categories and organizations. HINHJ misses some ods. For traditional machine learning methods, we use RF,
+hijacking cases where attackers use reputable cloud servers. XGBoost, and AdaBoost, and apply the node features designed
+These servers exhibit normal behavior in other periods, leading by HINHJ to these models. In addition, we introduce several
+to false negatives. Additionally, some false positives occur state-of-the-art approaches: (1) MC-RF and MC-GBDT [15],
+with geographically optimized domain resolutions that show machine learning methods detecting hijacking through multimutation in timing characteristics. day DNS record analysis; (2) G-Belief [18], a semi-supervised
+ Moreover, considering the cost of labeling data and detec- method based on graph modeling answer ip-domain relationtion efficiency in practical applications, we evaluate the ships with SybilScar belief propagation [38] for reputation
+method’s F-score and loss at 50% label proportion as shown scoring; (3) SeHGNN [39], a simple and efficient hetin Fig. 3. The performance improves with increasing epochs erogeneous GNN framework that aggregates neighborhood
+and stabilizes at epoch 100, which we consequently adopt for information using a parameter-free design tailored for hetall subsequent experiments. The corresponding training time erogeneity; (4) LMSPS [40], a graph learning method that
+3248 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE V
+P ERFORMANCE C OMPARISON ACROSS D IFFERENT L ABEL P ROPORTIONS . NF I NDICATES THE U SE OF O UR E XTRACTED N ODE F EATURES ; HG D ENOTES
+ THE U SE OF O UR C ONSTRUCTED H ETEROGENEOUS G RAPH ; MP I NDICATES THE U SE OF O UR M ANUALLY D EFINED M ETA -PATHS
+
+enhances long-range dependency modeling on large-scale performance of G-Belief method is lower than XGBoost and
+heterogeneous graphs by searching informative meta-paths AdaBoost. These results prove that the features we designed
+across multiple hops. (5) TESA [41], a temporal heteroge- can well mine DNS hijacking behavior patterns.
+neous GNN that captures temporal behavioral patterns via Both SeHGNN and LMSPS operate on the heterogeneous
+trajectory-based evolution and models relation-specific seman- graph constructed by our method. However, neither method
+tics through semantic-aware aggregation. incorporates time-aware neighbor information, which limits
+ Regarding input requirements, MC-RF, MC-GBDT, and G- their ability to characterize temporal resolution behaviors.
+Belief operate directly on DNS records or answer ip-domain For SeHGNN, manually specified meta-paths are required.
+graphs and do not require manually constructed heterogeneous We therefore provide the same meta-paths used in HINHJ.
+graphs or meta-paths. SeHGNN requires a heterogeneous LMSPS, in contrast, selects meta-paths automatically, but
+graph together with manually specified meta-paths, both sup- the selected ones do not match DNS hijacking well. As a
+plied by our constructed graph. In contrast, LMSPS performs result, SeHGNN achieves better performance than LMSPS.
+automatic meta-path discovery and does not rely on our man- In comparison, HINHJ integrates temporal modeling with
+ually defined meta-paths. For TESA, it directly captures the our designed meta-paths and node-level attention, leading
+historical behavior of answer ip nodes using a timestamped to consistently superior performance. TESA operates on a
+heterogeneous graph without the need for meta-paths. temporal heterogeneous graph and captures the time-evolving
+ Considering the significant imbalance of benign and hijack- behavior of individual answer ip nodes. However, it overing instances (1% hijacking messages in ground truth), we looks semantic correlations across nodes, which are crucial in
+primarily assess performance using F1 and B-Acc as shown DNS hijacking detection for identifying coordinated behaviors.
+in Table V. These results demonstrate that general-purpose HINHJ addresses this by leveraging meta-paths to aggregate
+models achieve good performance when combined with our cross-node semantics, leading to more expressive and disextracted node features (NF), constructed heterogeneous graph criminative representations. As a result, TESA shows weaker
+(HG), and manually defined meta-paths (MP). This confirms performance compared to HINHJ.
+the effectiveness of our feature extraction, graph construction, When we deep into the falsely predicted instances, we
+and meta-path design. found that MC-RF/MC-GBDT generate false positives from
+ First, when compare with traditional machine learning based legitimate DNS variations, like dynamic IP, and miss longmethods, HINHJ consistently outperforms machine learning term hijacking (e.g., censorship) by only examining temporal
+baselines across all label proportions. Notably, XGBoost and resolver behavior. G-Belief’s graph propagation fails when
+AdaBoost achieve more than 85% F1 at 50% label propor- hijacking affects few domains as it lacks supplementary station, demonstrating that our features effectively capture DNS tistical features. This explains why our feature design, which
+hijacking behavior and approximate node graph structures. combines graph structures with statistical features, achieves
+However, their graph representation capability remains inferior superior performance when applied to machine learning methto graph models, explaining HINHJ’s superior performance. ods compared to these baseline approaches. SeHGNN and
+Moreover, XGBoost and AdaBoost outperform other machine LMSPS effectively capture answer ip associations in the daily
+learning methods. This stems from our high-dimensional fea- graph, but due to the lack of historical context modeling,
+ture space containing numerous sparse, nonlinearly separable they miss some long-term hijacking cases. Due to the lack
+features, which particularly disadvantages linear classifiers. of modeling correlations between answer ip nodes, TESA
+ Second, when compare with state-of-the-arts, it can be misses some hijacking cases where suspicious answer ips
+seen that the F1 and B-Acc of our method are significantly resolve the same domain or resolvers.
+higher than all other methods. In addition, the performance of Our proposed TNHAN is designed based on HAN [42],
+MC-RF and MC-GBDT methods is lower than the other four [43], [44] by introducing a temporal neighbor mechanism and
+machine learning methods using our extracted features, and the a multi-head attention mechanism at the semantic layer. To
+JIAO et al.: HINHJ: HIERARCHICAL ATTENTION-BASED HETEROGENEOUS GRAPH NEURAL NETWORK 3249
+
+ Fig. 7. Meta-path attention for different label proportion.
+
+Fig. 5. Performance evaluation on HINHJ and TNHAN. TNHAN introduces a
+temporal neighbor selection mechanism based on the HAN model to improve
+the ability to capture temporal neighbor nodes.
+
+ Fig. 8. The change in attention of different meta-paths as the training epoch
+ increases.
+Fig. 6. Neighbors and attention values of node P18563. Red represents DNS
+hijacking nodes, and blue represents normal nodes.
+ domains on the same resolver. These hijackings point to IPs
+ that share the same resolver.
+verify the effect of our improvement on the model, we compare In addition, we further record the weight evolution of metathe proposed model with the original HAN model [42], and paths throughout training, as shown in Fig. 8. Initially uniform,
+the results are shown in Fig. 5. It can be seen that our method the weights diverge as training progresses: P1 and P2 decline,
+can capture the temporal neighbor node information of the while P3 and P4 rise. This shows our method’s ability to
+node, so it can achieve higher performance than HAN. dynamically discern meta-path importance for DNS hijacking
+ detection.
+C. Analysis of Hierarchical Attention
+ Our approach hierarchically integrates neighboring node D. Analysis of Time Decay Mechanism
+relationships and multi-relational meta-paths. To facilitate a Our method uses a time decay mechanism to model the
+deeper understanding of its decision process, we visualize both historical connections between nodes, where more recent
+node-level attention and semantic-level attention. neighbor relations are assigned higher weights through a decay
+ As aforementioned, HINHJ effectively assigns attention factor λ. A larger λ means historical neighbors have more
+weights among neighboring nodes within meta-paths, where influence. For each candidate neighbor, we compute a cumulacritical neighbors for detection receive higher attention val- tive weight by summing its past occurrences, each discounted
+ues. Fig. 6 demonstrates this mechanism through P18563’s by a factor of λ based on its recency. Only neighbors whose
+neighborhood analysis. In sub-Figure 6a, P18563 connects total weight exceeds the threshold are kept. This helps the
+to six nodes - three hijacked (P20082, P27724, P18563) model focus on recent patterns while reducing the effect of
+and three normal (P18563, P18563, P27724). Edge widths outdated or rare connections.
+represent attention weights, revealing significantly stronger To evaluate the effect of the time decay factor λ, we
+attention (thicker edges) to the hijacked nodes than to normal vary its value from 0 to 0.9 and evaluate the F1-scores, as
+ones. This selective attention mechanism enables our model shown in Fig. 9. Notably, λ = 0 corresponds to the no-decay
+to automatically prioritize relevant nodes while suppressing setting, where the model only uses neighbors from the daily
+irrelevant connections. subgraph, resulting in an F1-score of 0.939. As λ increases, the
+ As shown in Fig. 7, our analysis of meta-path attention model includes more historical neighbors, leading to improved
+across varying label proportions reveals P3 and P4 are more performance. The F1-score peaks at λ = 0.7, suggesting that
+important compared to P1 and P2.as shown in Fig. 7. This leveraging historical information benefits detection. However,
+is mainly because the DNS hijacking we detect occurs on setting λ too high brings in outdated neighbors, which introthe public resolver, and the hijacker tends to hijack different duces noise and degrades performance.
+3250 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ Fig. 11. Certificate comparison for hijacking answer ip (AS16223) and normal answer ip. Red markings indicate the hijacking answer ip (AS16223)
+ with all certificates having the .ua TLD, blue markings denote normal
+ answer ips with certificates including .com, .ru, .ag, and other TLDs but
+ excluding .ua.
+Fig. 9. F1-score under different time decay factors λ. The performance peaks
+at time decay factor λ = 0.7.
+
+Fig. 10. The proportion of domains hijacked by AS16223, AS8764 and Fig. 12. Hijacking cases of some Russian domains (e.g., rutube.ru,
+AS2588, with Russian domains accounting for the majority. yandex.ru). Public resolvers in Latvia, Lithuania, and Ukraine are shown to
+ resolve Russian domains to block IPs in their respective countries.
+E. Real-World Dns Hijacking Incidents
+ To illustrate this approach concretely, we first describe how certificates parking.columbus.te.ua for these domains, conwe use HINHJ to identify a set of DNS hijacking incidents trasting sharply with normal regional resolution certificates
+in reality. Then we discuss the characteristics of the full set shown in Fig. 11. This discrepancy rules out legitimate
+of hijacking events and the validation. In general, we apply CDN optimization. Furthermore, normal resolvers maintain
+HINHJ to real-world networks and discover multiple types proper.ru-authoritative NS records (e.g., ns1.yandex.ru for
+of hijacking incidents, including geopolitical conflicts, DNS yandex.ru) while AS16223 resolver does not. This provides
+censorship, malicious hijacking, and configuration errors. conclusive evidence of DNS hijacking rather than infrastruc-
+ 1) Geopolitical Conflicts: As a concrete example of ture anomalies.
+our method, we discovered a DNS hijacking activity on Our findings demonstrate that the Ukrainian AS16223
+Ukrainian resolver AS16223. Compromised IPs associated public resolver has been hijacking Russian domains. This
+with this resolver exhibit strong meta-path correlations with pattern extends to other regional public resolvers - Lithuania’s
+known malicious infrastructure through meta-paths P3 and AS8764 and Latvia’s AS2588 similarly target.ru domains and
+P4 while exhibiting significant deviations from benign IPs Russian news sites as shown in Fig. 12 and Fig. 10, aligning
+in activity features and security features. While most of with their governments’ political positions. Notably, while
+its domain resolutions appear legitimate, our method iden- most countries’ public resolvers hijack both illegal content and
+tifies targeted hijacking of 70 specific domains—29 .ru politically sensitive domains, Lithuania’s AS8764 exclusively
+TLDs (e.g., yandex.ru) and 41 Russian-oriented non-.ru sites targets Russian domains and excludes illegal domains such
+(e.g., kinogo.best)—redirecting traffic to Ukrainian IPs within as gambling, reflecting a focused political agenda rather than
+AS16223. As shown in Fig. 10, the website types include standard security filtering.
+search engine websites, streaming media websites, news web- In contrast, we found that a number of public resolvers also
+sites, social networking websites, etc. hijack .ua domains, including Russia, Belarus and Iran, mainly
+ Through manual verification with extra information, we including Ukrainian news websites nv.ua, unian.ua, f ocus.ua,
+confirm DNS hijacking for Russian domains on AS16223. etc. The relevant manual judgment process is similar to the
+The Ukrainian-operated host columbus.te.ua presents parking previous one.
+JIAO et al.: HINHJ: HIERARCHICAL ATTENTION-BASED HETEROGENEOUS GRAPH NEURAL NETWORK 3251
+
+Fig. 13. Changes in the answer ip organization of TikTok-related domains
+resolved by the Albanian resolver. In March 2025, Albania decided to
+block TikTok, and the proportion of abissnet (affiliated with the Albanian Fig. 15. Answer ip distribution of wesleyancollege.edu resolution results on
+government) in answer ip organizations gradually increased. In February all resolvers. Dark shades indicate the presence of records on the correspond-
+2025, there was a resolution to Italia-Tele, speculated to be a pre-blocking ing date, while light shades indicate no records.
+test.
+
+ Fig. 16. ASN distribution of wesleyancollege.edu resolution results on all
+Fig. 14. Changes in the AS50057 resolver’s resolution results for the domain resolvers. Dark shades indicate the presence of AS on the corresponding date,
+wesleyancollege.edu. The domain was hijacked for less than a day. while light shades indicate no records.
+
+ 2) Censorship of ByteDance-Related Domains: In April
+2025, our method detected DNS hijacking of ByteDance
+domains (including tiktok.com, bytedance.com, etc.) by
+Albania’s public resolver AS35037. Verification through certificates and landing pages confirms this as hijacking rather Fig. 17. Abnormal response message about name-mismatch.
+than CDN usage. As shown in Fig. 13, historical analysis since September 2024 reveals stable resolution patterns of the domain’s resolution history shows stable patterns except
+through China Telecom, Akamai, and Amazon cloud servers for this brief anomaly on April 8. Comparative resolution
+until February 2025, when tiktok.com first redirected to Italia distributions across all resolvers confirm temporal consistency
+Telecom. The resolution pattern shifted dramatically in March in most answer ip assignments, with AS210083 appearing
+2025, with Albania-local servers (matching the resolver’s AS) only during the attack window as shown in Fig. 15 and Fig. 16.
+gradually replacing previous destinations, showing a system- Certificate verification and threat intelligence checks identify
+atic takeover rather than temporary anomalies. the answer ip as malicious, collectively proving this was
+ News reports confirm that the Albanian government offi- a deliberate DNS cache poisoning attack rather than CDNcially banned TikTok in March 2025 for alleged legal related anomalies. It is worth noting that wesleyancollege.edu
+violations [45], coinciding with our detection of ByteDance is a women’s university and this hijacking may be relevant to
+domains being redirected to Abissnet servers. This indicates the situation of women in Iran.
+Albania’s censorship strategy includes DNS hijacking through 4) Configuration Error: In addition to the hijacking incipublic resolvers. The earlier redirection to an Italian server dents mentioned above, our approach also discovers some
+on February 15, 2025 suggests testing of DNS blocking records with abnormal resolver configurations. We find that
+mechanisms, demonstrating that ByteDance restrictions were there was a mismatch between the name in the response A
+already being implemented at that time. record and the requested domain, which has not been studied
+ 3) Malicious Hijacking: Our method also detected short- before.
+lived hijacking events, such as a less-than-one-day hijack Our method identifies a novel resolver misconfiguraof wesleyancollege.edu by Iran’s AS50057 resolver in April tion termed “name-mismatch”, where queries return correct
+2025, redirecting to AS210083. As shown in Fig. 14, analysis answer ip but incorrect domain names (e.g., ahcme.edu.cn
+3252 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+resolving to elster.de’s IP, as shown in Fig. 17). Analysis [14] B. Liu et al., “Who is answering my queries: Understanding and
+of 2M messages from April 8, 2025 reveals 95 such cases characterizing interception of the DNS resolution path,” in Proc. 27th
+ USENIX Secur. Symp. (USENIX Secur.), 2018, pp. 1113–1128.
+across 8 resolvers and 94 domains. Daily detection shows [15] R. Houser, S. Hao, Z. Li, D. Liu, C. Cotton, and H. Wang, “A
+100-200 name mismatch occurrences with varying resolver comprehensive measurement-based investigation of DNS hijacking,”
+lists, while a few resolvers exhibit this behavior persis- in Proc. 40th Int. Symp. Reliable Distrib. Syst. (SRDS), Sep. 2021,
+ pp. 210–221.
+tently with different domains each day. This pattern suggests [16] M. Fejrskov, J. M. Pedersen, and E. Vasilomanolakis, “Detecting DNS
+underlying software/hardware defects rather than manual con- hijacking by using NetFlow data,” in Proc. IEEE Conf. Commun. Netw.
+figuration errors. Secur. (CNS), Jul. 2022, pp. 273–280.
+ [17] Y. Jin, M. Tomoishi, and S. Matsuura, “A detection method against
+ DNS cache poisoning attacks using machine learning techniques: Work
+ VI. C ONCLUSION in progress,” in Proc. IEEE 18th Int. Symp. Netw. Comput. Appl. (NCA),
+ Sep. 2019, pp. 1–3.
+ In this paper, we propose an effective method HINHJ [18] J. Jia, Z. Dong, J. Li, and J. W. Stokes, “Detection of malicious DNS
+ and web servers using graph-based approaches,” in Proc. IEEE Int. Conf.
+for detecting DNS hijacking. HINHJ first constructs a het- Acoust. (ICASSP), Aug. 2021, pp. 2625–2629.
+erogeneous graph to represent the cross-entity association [19] WebRAY & Panabit. (2024). Analysis of a Large Number of Abnorrelationship between domains, answer ips, and resolvers, mal Network Access and Traffic Hijacking Incidents of Domestic
+ Home Routers. [Online]. Available: https://blog.csdn.net/c20220511/
+and then extracts features based on the behavior patterns of article/details/141019242
+each answer ip. In order to better combine graph structure [20] Google Public DNS. Accessed: Apr. 23, 2025. [Online]. Available:
+features and statistical features, HINHJ uses an improved HAN https://dns.google.com/
+model TNHAN to learn the embedding representation of each [21] A. Grover and J. Leskovec, “Node2vec: Scalable feature learning for
+ networks,” in Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discovery
+answer ip through node-level and semantic-level attention Data Mining, 2016, pp. 855–864.
+networks. We evaluate HINHJ on the test set and in the [22] K. Govindan, K. Arunachalam, and K. Subramaniam, “Optimal server
+real network environment. The experimental results show that selection policy for improved network efficiency in smart phones,” in
+ Proc. IEEE Wireless Commun. Netw. Conf. (WCNC), Apr. 2018, pp. 1–6.
+our method can achieve accurate detection performance when [23] K. Schomp, O. Bhardwaj, E. Kurdoglu, M. Muhaimen, and R. K. Sitaracompared with other state-of-the-arts. Besides, we also provide man, “Akamai DNS: Providing authoritative answers to the world’s
+several DNS hijacking cases in real-world. queries,” in Proc. ACM Conf. Spec. Interest Group Data Commun.
+ (SIGCOMM), 2020, pp. 465–478.
+ [24] Y. Sun, Y. Yu, and J. Han, “Ranking-based clustering of heterogeneous
+ R EFERENCES information networks with star network schema,” in Proc. 15th ACM
+ SIGKDD Int. Conf. Knowl. Discovery Data Mining, 2009, pp. 797–806.
+[1] R. Arends, R. Austein, M. Larson, D. Massey, and S. Rose, “DNS [25] MaxMind Inc. (2025). GeoIP2/GeoLite2 Database. [Online]. Available:
+ security introduction and requirements,” RFC Editor, Fremont, CA, https://www.maxmind.com
+ USA, Tech. Rep. RFC 4033, 2005. [26] C. Shi, Y. Li, J. Zhang, Y. Sun, and P. S. Yu, “A survey of heterogeneous
+[2] P. Pearce et al., “Global measurement of DNS manipulation,” in Proc. information network analysis,” IEEE Trans. Knowl. Data Eng., vol. 29,
+ 26th USENIX Secur. Symp. (USENIX Secur.), 2017, pp. 307–323. no. 1, pp. 17–37, Jan. 2017.
+[3] A. Bhaskar and P. Pearce, “Understanding routing-induced censorship [27] A. Paszke et al., “PyTorch: An imperative style, high-performance deep
+ changes globally,” in Proc. ACM SIGSAC Conf. Comput. Commun. learning library,” in Proc. Adv. Neural Inf. Process. Syst., vol. 32, 2019,
+ Secur., Dec. 2024, pp. 437–451. pp. 8026–8037.
+[4] L. Jin, S. Hao, H. Wang, and C. Cotton, “Understanding the impact of [28] Trickest. (2024). Resolvers: The Most Exhaustive List of Reliable DNS
+ encrypted DNS on internet censorship,” in Proc. Web Conf., Apr. 2021, Resolvers. [Online]. Available: https://github.com/trickest/resolvers
+ pp. 484–495. [29] Cujanovic. (2023). Public-DNS-Resolvers: List of Periodically Validated
+[5] J. Park, M. Mohaisen, and A. Mohaisen, “Investigating DNS manipu- Public DNS Resolvers. [Online]. Available: https://github.com/cujanovic/
+ lation by open DNS resolvers,” in Proc. 15th Int. Conf. Emerg. Netw. public-dns-resolvers
+ EXperiments Technol., Dec. 2019, pp. 45–46. [30] (2023). Public DNS Server List. [Online]. Available: https://public-
+[6] K. Man, X. Zhou, and Z. Qian, “DNS cache poisoning attack: Res- dns.info/
+ urrections with side channels,” in Proc. ACM SIGSAC Conf. Comput. [31] Mutin-Sa. (2021). Top Public Recursive Name Servers.
+ Commun. Secur., Nov. 2021, pp. 3400–3414. [Online]. Available: https://gist.github.com/mutin-sa/
+[7] K. Man, Z. Qian, Z. Wang, X. Zheng, Y. Huang, and H. Duan, 5dcbd35ee436eb629db7872581093bc5
+ “DNS cache poisoning attack reloaded: Revolutions with side channels,” [32] M. Fejrskov, E. Vasilomanolakis, and J. M. Pedersen, “A study on the
+ in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Oct. 2020, use of 3rd party DNS resolvers for malware filtering or censorship
+ pp. 1337–1350. circumvention,” in Proc. IFIP Int. Conf. ICT Syst. Secur. Privacy
+[8] X. Li et al., “The maginot line: Attacking the boundary of DNS caching Protection, 2022, pp. 109–125.
+ protection,” in Proc. 32nd USENIX Secur. Symp. (USENIX Secur.), 2023, [33] A. Randall et al., “Trufflehunter: Cache snooping rare domains at large
+ pp. 3153–3170. public DNS resolvers,” in Proc. ACM Internet Meas. Conf., Oct. 2020,
+[9] Y. Afek, A. Bremler-Barr, and L. Shafir, “NXNSAttack: Recursive DNS pp. 50–64.
+ inefficiencies and vulnerabilities,” in Proc. 29th USENIX Secur. Symp. [34] V. Le Pochat, T. Van Goethem, S. Tajalizadehkhoob, M. Korczyński,
+ (USENIX Secur.), 2020, pp. 631–648. and W. Joosen, “Tranco: A research-oriented top sites ranking hardened
+[10] A. Randall et al., “Home is where the hijacking is: Understanding DNS against manipulation,” 2018, arXiv:1806.01156.
+ interception by residential routers,” in Proc. 21st ACM Internet Meas. [35] L. Izhikevich et al., “ZDNS: A fast DNS toolkit for internet
+ Conf., Nov. 2021, pp. 390–397. measurement,” in Proc. 22nd ACM Internet Meas. Conf., Oct. 2022,
+[11] M. Luo, L. Xin, Y. Yao, Z. Jiang, Q. Wang, and W. Shi, “Who are pp. 33–43.
+ querying for me? Egress measurement for open DNS resolvers,” in Proc. [36] (2025). Virustotal: R Client for the Virustotal API. [Online]. Available:
+ 26th Int. Conf. Comput. Supported Cooperat. Work Design (CSCWD), https://www.virustotal.com
+ May 2023, pp. 1544–1550. [37] (2025). Threatbook. [Online]. Available: https://x.threatbook.com
+[12] G. Akiwate et al., “Retroactive identification of targeted DNS infrastruc- [38] B. Wang, L. Zhang, and N. Z. Gong, “SybilSCAR: Sybil detection in
+ ture hijacking,” in Proc. 22nd ACM Internet Meas. Conf., Oct. 2022, online social networks via local rule based propagation,” in Proc. IEEE
+ pp. 14–32. Conf. Comput. Commun. (IEEE INFOCOM), May 2017, pp. 1–9.
+[13] Y. Nosyk et al., “Intercept and inject: Dns response manipulation in the [39] X. Yang, M. Yan, S. Pan, X. Ye, and D. Fan, “Simple and efficient
+ wild,” in Proc. Int. Conf. Passive Act. Netw. Meas. Cham, Switzerland: heterogeneous graph neural network,” in Proc. AAAI Conf. Artif. Intell.,
+ Springer, 2023, pp. 461–478. 2023, vol. 37, no. 9, pp. 10816–10824.
+JIAO et al.: HINHJ: HIERARCHICAL ATTENTION-BASED HETEROGENEOUS GRAPH NEURAL NETWORK 3253
+
+[40] Z. Guo, K. He, Q. He, and C. Li, “Long-range meta-path search on Leyao Nie received the M.S. degree from the Instilarge-scale heterogeneous graphs,” in Proc. Adv. Neural Inf. Process. tute for Network Sciences and Cyberspace, Tsinghua
+ Syst., vol. 37, 2024, pp. 44240–44268. University, Beijing, China, in 2024. She is currently
+[41] X. Wang, J. Jiang, X. Yan, and Q. Huang, “Tesa: A trajectory and an Assistant Engineer with Zhongguancun Labosemantic-aware dynamic heterogeneous graph neural network,” in Proc. ratory. Her current research interests include DNS
+ ACM Web Conf., 2025, pp. 1305–1315. measurement and situational awareness.
+[42] X. Wang et al., “Heterogeneous graph attention network,” in Proc. World
+ Wide Web Conf., 2019, pp. 2022–2032.
+[43] M. Liu et al., “Enhanced detection of obfuscated HTTPS tunnel traffic
+ using heterogeneous information network,” Comput. Netw., vol. 257,
+ Feb. 2025, Art. no. 110975.
+[44] Q. Wang et al., “HANDOM: Heterogeneous attention network model
+ for malicious domain detection,” Comput. Secur., vol. 125, Jun. 2022,
+ Art. no. 103059.
+[45] CNN.(2025). Albania Shuts Down Tiktok for a Year Amid Concerns Over
+ Violence Among Children. [Online]. Available: https://edition.cnn.com/
+ 2025/03/06/europe/albania-shuts-down-tiktok-intl-latam/index.html Yuling Liu received the Ph.D. degree from the
+ Institute of Software, Chinese Academy of Sciences.
+ He is currently a Professorate Senior Engineer with
+ the Institute of Information Engineering, Chinese
+ Academy of Sciences. His research interests include
+ Haoran Jiao received the M.S. degree from the network security situational awareness, network
+ School of Cyber Security, University of Chinese security, big data analysis, and security measurement
+ Academy of Sciences, Beijing, China, in 2023. He is and certification.
+ currently an Engineer with Zhongguancun Laboratory. His research interests include network security
+ and network measurement.
+
+ Jing Wang received the Ph.D. degree from Beijing
+ University of Posts and Telecommunications, China,
+ in 2012. She is currently an Associate Professor with
+ Cong Dong received the Ph.D. degree from the the School of Artificial Intelligence, Beijing Normal
+ School of Cyber Security, University of Chinese University, China. Her current research interests
+ Academy of Sciences, Beijing, China, in 2022. He is include networking, communications, and security.
+ currently an Assistant Professor with Zhongguancun
+ Laboratory. His research interests include network
+ security awareness, network measurement, anomaly
+ detection, and traffic analysis.
+
+ Changzhi Zhao received the Ph.D. degree in cyber
+ Chenglong Li received the B.E. and Ph.D. degrees security from the School of Cyber Security, Uniin computer science and technology from Tsinghua versity of Chinese Academy of Sciences, Beijing,
+ University, China, in 2007 and 2012, respectively. China, in 2026. His research interests include net-
+ He is currently an Associate Research Professor with work security awareness and anomaly detection.
+ the Institute for Network Sciences and Cyberspace,
+ Tsinghua University. His research interests include
+ network measurement, situational awareness, and the
+ IoT security.
+
+ Jiahai Yang (Senior Member, IEEE) received the
+ B.Sc. degree in computer science from Beijing Tech- Xia Yin received the B.E., M.E., and Ph.D. degrees
+ nology and Business University and the M.Sc. and in computer science from Tsinghua University in
+ Ph.D. degrees in computer science from Tsinghua 1995, 1997, and 2000, respectively. She is currently
+ University, China. He is currently a Professor with a Full Professor with the Department of Computer
+ the Institute for Network Sciences and Cyberspace Science and Technology, Tsinghua University. Her
+ and Beijing National Research Center for Informa- research interests include future Internet architection Science and Technology, Tsinghua University, ture, formal method, protocol testing, and large-scale
+ Beijing, China. He is a Researcher Fellow with Internet routing.
+ Zhongguancun Laboratory, Beijing. His research
+ interests include network management, network
+measurement, network security, Internet routing, and cloud computing.

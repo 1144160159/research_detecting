@@ -1,0 +1,959 @@
+4954 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+ PrivBox: Privacy-Preserving Deep Packet Inspection
+ With Dual Double-Masking Obfuscated
+ Rule Generation
+ Pengfei Wu , Member, IEEE, Jianting Ning , Member, IEEE, Xinyi Huang , Rongmao Chen , Kai Zhang ,
+ and Kaitai Liang , Member, IEEE
+
+ Abstract—Many network middleboxes have been deployed to Index Terms—Traffic inspection, network privacy, privacyperform deep packet inspection (DPI) over packet payloads. How- preserving.
+ever, such middleboxes cannot accomplish their tasks when the
+traffic is encrypted. BlindBox (SIGCOMM 2015) provided the first
+solution for performing DPI over encrypted traffic. To improve I. INTRODUCTION
+its efficiency, a later proposal PrivDPI (CCS 2019) introduced a
+ O PROTECT network operators and end users, network
+practical technique to generate encrypted rules. However, a recent
+proposal P2DPI (ASIACCS 2021) showed that the rule generator
+in PrivDPI can comprise the user’s privacy. In this article, we
+ T middleboxes have been deployed to perform deep packet
+ inspection (DPI) to provide a wide range of functionalities,
+present a new attack on P2DPI and show that the privacy of its
+endpoints can still be compromised by the rule generator. We
+ including intrusion detection, intrusion prevention, exfiltration
+comprehensively analyze the vulnerability of prior studies and prevention, etc. These middleboxes share a common feature that
+present PrivBox, a new DPI system that achieves the same privacy they inspect packet payloads directly. In recent years, however,
+guarantee as BlindBox while maintaining practical efficiency. This the use of encryption protocols (such as HTTPS) has been a
+is based on a new technique called dual double-masking obfuscated dramatic increase in traffic on the Internet. It is estimated that
+rule generation. For a ruleset of 3,000, PrivBox achieves connection
+establishment time on the endpoint side comparable to PrivDPI
+ more than 80% of enterprises’ web traffic is sent over HTTPS,
+and supports up to 4,672 token encryptions per second, which is and 94% of Google web traffic is encrypted [10]. Though these
+sufficient for a number of real-world applications. Overall, our encryptions protect the confidentiality of network packets, they
+experiment demonstrates that PrivBox is practical and well-suited pose a long-standing challenge for DPI services. In particular,
+for short, frequently established sessions, especially when token traditional network middleboxes can no longer perform DPI
+repeating is common.
+ tasks since packet payloads are encrypted.
+ To inspect encrypted traffic, a well-known technique called
+ Received 31 October 2023; revised 23 March 2025; accepted 28 March 2025. “split-TLS” has been deployed in some middlebox systems.
+Date of publication 3 April 2025; date of current version 4 September 2025. This
+work was supported in part by the National Natural Science Foundation of China In these systems, a man-in-the-middle (MitM) attack on TLS
+under Grant 62425205, Grant 62032005, Grant 62122092, and Grant 62372285, is mounted and the traffic is decrypted (and inspected) at the
+in part by Shanghai Rising-Star Program under Grant 22QA1403800, and in middlebox. However, such MitM approach is not deemed to be
+part by the EU Horizon Europe Research and Innovation Program under Grant
+101073920 (TENSOR), Grant 101070052 (TANGO), and Grant 101070627 secure: it violates the end-to-end security guarantees of TLS and
+(REWIRE). (Corresponding author: Jianting Ning.) hence various security issues have been caused (due to the weak-
+ Pengfei Wu is with the School of Cyber Science and Engineering, Wuhan nesses in its implementation) [11], [14], [20], [37]. The recent
+University, Wuhan 430072, China, and also with the School of Computing and
+Information Systems, Singapore Management University, Singapore 188065 unfortunate set of issues prompted National Security Agency to
+(e-mail: pfwu@smu.edu.sg). outline the risks of Transport Layer Security Inspection [1] and
+ Jianting Ning is with the School of Cyber Science and Engineering, Wuhan the US-Cert to issue an alert (TA17-075 A) about problems on
+University, Wuhan 430072, China, also with the Faculty of Data Science, City
+University of Macau, Macau 999078, China, and also with the College of some HTTPS inspection products [36].
+Computer and Cyber Security, Fujian Normal University, Fuzhou 350007, China To enable DPI over encrypted traffic while preserving user
+(e-mail: jtning88@gmail.com). privacy, new solutions have been proposed in recent years.
+ Xinyi Huang is with the College of Cyber Security, Jinan University,
+Guangzhou 510632, China (e-mail: xinyi@ust.hk). These solutions need to deal with an unfortunate choice of only
+ Rongmao Chen is with the College of Computer, National University of one of two desirable but seemingly conflicting properties: the
+Defense Technology, Changsha 410073, China (e-mail: chromao@nudt.edu.cn). protection of endpoint’s privacy and the functionality of DPI.
+ Kai Zhang is with the College of Computer Science and Technology,
+Shanghai University of Electric Power, Shanghai 201399, China (e-mail: To address this problem, Sherry et al. [31] proposed BlindBox,
+kzhang@shiep.edu.cn). demonstrating the possibility of building a system that satisfies
+ Kaitai Liang is with the Faculty of Electrical Engineering, Mathematics both of these controversial properties. BlindBox performs DPI
+and Computer Science, Delft University of Technology, 2628 Delft, CD, The
+Netherlands (e-mail: Kaitai.Liang@tudelft.nl). directly on the encrypted payload, keeping the rules hidden
+ This article has supplementary downloadable material available at from the endpoints and payload hidden from the middlebox
+https://doi.org/10.1109/TDSC.2025.3557423, provided by the authors. (except for the content that matches predefined rules). To that
+ Digital Object Identifier 10.1109/TDSC.2025.3557423
+ end, Sherry et al. introduced a technique named obfuscated rule
+ 1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION 4955
+
+encryption that allows the middlebox to obtain encrypted rules for reusability. In each session, the middlebox and endpoints
+generated from the private key of the endpoints and the rules require a long delay for connection, not suitable for frequent
+from the middlebox in a privacy-preserving manner (i.e., without session establishment. Therefore, taking rule tuples from the
+leaking the private key to the middlebox and the rules to the first challenge, a second challenge is to deal with the secure
+endpoints). The technique of obfuscated rule encryption is built and efficient production of obfuscated rules and simultaneously
+on garbled circuit, which incurs significant computation and allows for reusability across different sessions.
+communication overheads (around 97 s for the setup as reported
+in [31]). To improve the overall efficiency, Ning et al. [27]
+introduced the technique of reusable obfuscated rule generation A. Our Contributions
+that significantly reduces the complexity. However, as pointed In this paper, we propose PrivBox, a new protocol that enables
+in [21], the threat model in PrivDPI does not include the case privacy-preserving deep packet inspection over encrypted traffic
+when the rule generator is compromised, and hence PrivDPI directly. Our scheme offers the same privacy level as BlindBox
+does not retain the same privacy as BlindBox. To address the while maintaining efficiency close to PrivDPI. The main contriscenario in which either the rule generator or the middlebox butions are summarized as follows.
+is coerced by the attacker (i.e., the same privacy guarantee as r Effective Attack on P2DPI: We revisit P2DPI, and demon-
+BlindBox), Kim et al. [21] recently proposed a DPI system called strate that it is susceptible to an attack (that we propose
+P2DPI. However, as we will demonstrate in a later section (see in this paper) when the rule generator is coerced by an
+Section III), P2DPI still suffers an attack (that we propose in this attacker. We say that a rule generator is coerced if it is
+paper) launched by the compromised rule generator, and hence not fully trusted and will try to generate valid obfuscated
+cannot achieve the same privacy level as BlindBox (unlike what rules for any new rules on its preference by utilizing the
+they claimed). In particular, the rule generator in P2DPI can messages it observes. These newly generated obfuscated
+generate more (new) obfuscated rules than allowed when the rules give the rule generator more power than allowed to
+rule generator is compromised. We present an attack on P2DPI, scan the encrypted traffic, enabling it to exhaustively search
+demonstrating that it does not guarantee the claimed privacy. the contents of the encrypted traffic and hence compromise
+The reason why it suffers from our attack is that the generation the endpoint’s privacy. We present our analysis on the rule
+of obfuscated rules in P2DPI is malleable. That is, given an obfuscation scheme in P2DPI, and further show that it is
+obfuscated rule of a rule r, it is possible to generate a valid possible to generate a valid obfuscated rule for a new rule
+obfuscated rule of a rule r for r = r. r by modifying a given obfuscated rule of rule r (where
+ Keeping the efficiency limit on BlindBox as well as the r = r ).
+privacy concern on PrivDPI and P2DPI in mind, we need to r New solution for secure DPI over encrypted traffic: We
+address the following two challenges: present PrivBox as a replacement for Blindbox and PrivDPI
+ Challenge 1: How does the middlebox interact with the rule with which a compromised rule generator or middlebox
+generator securely and efficiently to prepare rule tuples? We alone cannot forge a valid obfuscated rule. To this end,
+investigate prior studies including PrivDPI and P2DPI and find we introduce a new technique called dual double-masking
+that the main reason for the above vulnerability is that the rule obfuscated rule generation, which is instantiated by the
+generator has to initialize and know all secrets in the system rule preparation protocol and preprocessing protocol. Besetup. Upon obtaining an obfuscated rule from endpoints, it can sides providing the guarantee of exact match privacy (i.e.,
+easily derive a new one using these secrets. A potential solution the middlebox can learn the position of an attack keyword
+is to split secrets into two parts and allow the rule generator and occurs in a flow), PrivBox can also be extended to support
+middlebox to initialize them separately, e.g., via secret sharing, probable-cause privacy model in the sense that the middlethereby avoiding the rule generator dominating the generation box can reveal the contents of the encrypted traffic when
+of rule tuples. However, consider that the rule generator can gen- the traffic is suspicious.
+erate illegal information that helps forge valid obfuscated rules r Novel structure supporting non-malleability and reusabilin interacting with the middlebox, and a complicated two-party ity. The core of above dual double-masking obfuscated
+protocol would lead to heavy computation and communication rule generation is the so-called dual double-masking strucburden. An issue would arise to ensure two entities securely and ture. It means that the output of rule preparation protocol
+efficiently prepare rule tuples. (i.e., rule tuple) and the output of preprocessing protocol
+ Challenge 2: How does the middlebox securely and efficiently (i.e., obfuscated rule) are in the form of g aF1 (ri )+bF2 (ri ) ,
+interact with the endpoints while simultaneously supporting where F1 (ri ) and F2 (ri ) are two functions on a given
+reusable obfuscated rules? This is a fundamental problem in rule ri and a, b are secrets. This structure supports two
+designing a DPI scheme. That is, the rule provided by the mid- important properties: non-malleability and reusability. The
+dlebox and the private key provided by the endpoints are always former ensures that given the obfuscated rules of a rule
+kept secret during the interaction process. A straightforward set {ri }i∈[n] , anyone (including the rule generator or the
+solution falls in a two-party computation between two entities, middlebox alone) who does not know a and b simultafor example, following the idea of BlindBox that leverages neously cannot forge a new valid obfuscated rule for any
+the garbled circuit to produce obfuscated rules. However, even rule r ∈/ {ri }i∈[n] . The latter enables the obfuscated rules
+though the secrecy of rules can be guaranteed, it loses the support generated in the previous session(s) to be reused across
+4956 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+Fig. 1. System Architecture. RG first runs a rule preparation protocol with MB. MB then interacts with the endpoints to generate encrypted rules of the current
+session (
+ 1 ). For a payload sent through MB, in addition to the encryption of the traffic using regular TLS (i.e., TLS encrypted traffic), the sender encrypts
+the payload to generate the PrivBox encrypted traffic during the token encryption phase ( 2 ). MB performs inspection using the encrypted rules (generated
+from session rules) during the traffic inspection phase (
+ 3 ). Upon receiving the encrypted traffic, the receiver performs traffic validation in case the sender is
+malicious (
+ 4 ).
+
+ subsequent sessions, which speeds up the connection estab- more suitable for short, frequently established sessions. For
+ lishment. To further improve the performance of PrivBox, those scenarios when token repeating frequently happens
+ we introduce the property of reusability into the token (e.g., more than 92% repeated tokens exist for a set of 8,000
+ encryption algorithm such that the intermediate values tokens), PrivBox is also more practical than PrivDPI.
+ generated in each session can be reused within the same
+ session or across different session(s) for repeated tokens. II. OVERVIEW
+ On top of this structure, our rule preparation protocol and
+ preprocessing protocol are quite efficient, which only in- A. System Architecture
+ volve some lightweight group operations and verifications, The system architecture of PrivBox is shown in Fig. 1, which
+ so we believe this structure may have independent interests. follows BlindBox and PrivDPI. Specifically, there are four parr Extensive experiments for evaluating performance: We
+ ties in PrivBox: sender (S), receiver (R), rule generator (RG)
+ conduct extensive experiments to demonstrate the perfor- and middlebox (MB), which are described as follows.
+ mance of PrivBox through comparison with PrivDPI (and r S: The endpoint that sends network traffic to R.
+ other related systems). The connection establishment time r R: The endpoint that receives network traffic from S.
+ (i.e., preprocessing) in PrivBox on the endpoint side is close r RG: It generates the rule tuples with MB that contain attack
+ to PrivDPI. For 10 consecutive sessions, the connection rules. Each rule aims to describe an attack and contains
+ establishment time in PrivBox is only 45.605 ms.1 In our one or more keywords. These rule tuples will be utilized
+ implementation, the token encryption rate of PrivBox is by MB to generate encrypted rules for inspection. The role
+ around 4,672 per second, which is sufficient for a number of of RG is usually performed by organizations that provide
+ real-world applications. By reusing the intermediate values network security services, such as McAfee [28], Emerging
+ generated in each session for repeated tokens, the token Threats [33].
+ encryption delay of PrivBox can be further reduced. In r MB: It is a network appliance that inspects the encrypted
+ particular, the performance of token encryption in PrivBox traffic sent between S and R. In particular, it tries to
+ outperforms PrivDPI when the percentage of a token re- discover malicious payload in the traffic.
+ peating exceeds around 93% for a set of 800 tokens. For a
+ round trip on a ruleset of 3,000 in the first session, PrivBox
+ is approximately 79.5% slower than PrivDPI for a set of B. Usage Scenarios
+ 10,000 tokens. For a subsequent session under the same set- Before presenting the system requirements and threat model
+ ting, PrivBox is approximately 65.6% slower than PrivDPI. of PrivBox, we describe the usage scenarios with the following
+ This is because PrivBox employs dual double-masking examples. For each party in the examples, we will indicate the
+ obfuscated rule generation, which retains the same pri- entity (i.e., S, R, RG and MB) in our model that corresponds to.
+ vacy guarantee as BlindBox (while PrivDPI cannot) but r Cybercrime Examination: Considering the increasing
+ involves more computation on the group. For a set of 8,000 prevalence of financial fraud and money laundering, a
+ tokens with more than 92% already appeared in previous multinational corporation is asked to register for data traffic
+ session(s), PrivBox runs faster than PrivDPI. To sum up, detection with the internet service provider (MB) so that
+ PrivBox retains efficiency close to PrivDPI but achieves the all its sent and received information can be monitored. It
+ same privacy guarantee as BlindBox. Generally, PrivBox is trusts the international criminal police organization (RG)
+ which generates rulesets for monitoring. Each employee (S
+ 1 The endpoint side is more sensitive to such delay since it is usually deployed
+ or R) of the corporation installs PrivBox HTTPS configuon personal computers or mobile phones while the middlebox is generally ration, enabling her/his traffic to be scanned with the rules
+deployed in the cloud with more powerful computing resources. generated by RG. In this example, the corporation wants
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION 4957
+
+ MB to perform traffic detection, but MB is not allowed to endpoints. MB is assumed to be semi-honest that it follows
+ obtain any information about the content of the traffic (as the system honestly but tries to learn the plaintext of the
+ it is highly related to business confidentiality). encrypted traffic and thus violates the privacy of S or
+ r Phishing Detection: Tom (S or R) is a student at a college. R [9], [39], [40]. PrivBox aims to protect the privacy of the
+ It is required by the college policy that all students’ emails endpoints from MB, while enabling MB to perform DPI.
+ should be scanned and monitored. To get rid of phishing Sharing the same philosophy with BlindBox and PrivDPI,
+ emails, Tom desires such a policy applied to his email. A we do not hide the rules from MB.
+ security organization such as McAfee (RG) provides such r Type-III: This models the attacker at RG for the case
+ a service that issues rules to the email server deployed by where RG is compromised. Such an attacker tries to exthe college (MB). Tom allows MB to examine his emails tract private information from the messages it collects.
+ but does not want it (or who could access MB) to read his In particular, RG is assumed to be malicious which may
+ email contents. To this end, Tom installs PrivBox HTTPS deviate from the protocol interacting with MB to learn
+ configuration such that MB can scan his traffic without its secrets. Besides, we allow RG to eavesdrop (but not
+ revealing the contents. manipulate) the data traffic over the network (between
+ r Copyright Protection: Suppose Carl (R) is a subscriber of endpoints and between endpoints and MB) and attempt
+ a website (S) and all videos and pictures downloaded from to forge an obfuscated rule that is illegal for the system.
+ the website are paid. In order to thwart some users from Such rules will further be used to inspect encrypted traffic
+ using bugs on website service to obtain videos and pictures to violate the privacy of the endpoints. Here, allowing a
+ without paying them, the official copyright administrator third party to access transmitted data is possible because
+ (RG) registers owned multimedia data with the internet the encrypted data can be observed by anyone including
+ service provider (MB), who is responsible for monitoring RG, which has also been considered in many secure data
+ network traffic to filter out those flow downloading pirates. transmission solutions, e.g., [12], [21], [38]. Similar to
+ Therefore, Carl installs PrivBox HTTPS configuration as BlindBox, we assume that at most one of RG and MB
+ a plugin for downloading software such that MB can scan can be compromised. This is well understood as if both of
+ his traffic without knowing the downloaded contents. them are controlled by an adversary, RG can generate any
+ rules as it wishes and MB can use these rules to scan the
+C. System Requirements traffic and further read all contents between endpoints.
+ The main goal of PrivBox is to perform inspection directly
+over encrypted traffic (i.e., without decrypting the encrypted E. System Flow
+traffic at MB) communicated between S and R. Specifically, PrivBox consists of the following phases:
+there are five goals: (1) MB is able to check whether the r Setup: RG runs a rule preparation protocol with MB. The
+encrypted traffic communicated between S and R is malicious; endpoints install PrivBox HTTPS configuration, and derive
+(2) The endpoints cannot learn what MB is detecting, i.e., cannot keys from the session key established during the regular
+learn the rules; (3) If the encrypted traffic between the endpoints TLS handshake protocol. This phase is executed before
+is not suspicious, then MB cannot read the contents; (4) Retain any session starts.
+the same privacy level of BlindBox; (5) Preserve efficiency close r Preprocessing: MB runs a preprocessing protocol with the
+to PrivDPI. endpoints to generate the obfuscated rules. This preprocessing protocol is executed in the first session right after
+D. Threat Model the completion of the regular TLS handshake protocol.
+ r Session Rule P reparation: The obfuscated rules are
+ We consider three types of attackers (that reflect the same
+privacy guarantee as BlindBox) described as follows. used to generate the session rules for current session. Such
+ r Type-I: This type of attacker models as those in traditional session rules will be used to generate encrypted rules for
+ intrusion detection system (IDS). Such attackers aim to traffic inspection in the subsequent inspection phases.
+ r T oken encryption: S generates a ciphertext from a payescape the detection of malicious activities. The goal of
+ PrivBox is to detect them over encrypted traffic. Similar load3 and sends it to MB for inspection before it is
+ to standard IDS, either S or R can be malicious, however, transmitted to R. Throughout this paper, we use the term
+ at least one of the endpoints should be honest2 . This as- encrypted traffic (or PrivBox encrypted traffic) to refer to
+ sumption is a standard setting in reality such as exfiltration the ciphertext mentioned above unless otherwise stated.
+ r T raf f ic Inspection: MB performs packet inspection
+ detection and parental filtering [31].
+ r Type-II: This models the attacker at MB. Such an attacker over the encrypted traffic it receives. If the traffic is maattempts to subvert the system via trying to extract sensitive licious, MB takes the corresponding actions; otherwise,
+ information from the encrypted traffic sent between the the non-matching traffic remains unreadable to MB.
+ r T raf f ic V alidation: This phase is executed on R to
+ 2 Note that this is the fundamental requirement of IDS. This is because: if both prevent S from sending not valid traffic. In particular, it
+S and R are malicious, they may agree on a secret key and encrypt the traffic
+sent between them with this key. If this happens, the encrypted traffic cannot be
+detected anymore. 3 This payload is the same as the one encrypted in the standard TLS protocol.
+4958 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+ first recovers a payload from the TLS encrypted traffic, B. Discussion
+ and then runs the same token encryption algorithm as used
+ We here give the reason why P2DPI cannot be secure against
+ by S to generate a new encrypted traffic. Recall that, in our the Type-III attacker. We found that Ii = (g H1 (ri ) )kM B ·kSR for
+ threat model, either S or R may be malicious – this endpoint
+ rule ri (in Step 5 of the rule setup stage) in P2DPI is malleable.
+ could try to cheat by not encrypting the tokens correctly
+ That is, given Ii , it is possible for RG to generate a modified I 
+ or by encrypting only a subset of the tokens to eschew that is well-formed for a new rule r . We say that I  is well-formed
+ detection at MB. Since at least one endpoint is honest, such 
+ if I  is in the form of (g H1 (r ) )kM B ·kSR .
+ verification will prevent this attack. If the newly generated
+ To resist the above attack, we need to introduce an imporencrypted traffic does not equal to the traffic it receives, it tant property called non-malleability into the rule obfuscation
+ aborts the session.
+ scheme. Loosely speaking, a rule obfuscation scheme is nonmalleable if the adversary can only output an invalid obfuscated
+ III. ATTACK ON P2DPI rule for rule r when given a valid obfuscated rule for rule r
+ where r = r .
+ In this section, we analyze the security of P2DPI via presenting a new attack that enables a compromised RG to generate more (new) valid obfuscated rule(s) than allowed (on its IV. PRIVBOX
+own). As described in Section II-D, we say that RG (resp. In this section, we present PrivBox, which is described right
+MB) is compromised if RG (resp. MB) is not fully trusted after the preliminaries. The rationale behind the rule preparation
+but is curious about the contents of the encrypted traffic by protocol in the setup phase and the preprocessing protocol
+collecting all message it observes. As stated in [21], [31], in the preprocessing phase is a new technique called dual
+PrivBox cannot work in the setting where both MB and RG are double-masking obfuscated rule generation. In particular, the
+compromised, but works for the case where either RG or MB is obfuscated rule generated by these protocols has two imporcompromised. tant properties, namely non-malleability and reusability. The
+ non-malleability property is served for security in the sense
+ that anyone (including MB or RG alone) cannot generate a
+A. Security Analysis on P2DPI
+ new valid obfuscated rule for r∗ ∈ / {ri }i∈[n] when given the
+ We present our attack on the rule setup stage of P2DPI when obfuscated rules of {ri }i∈[n] . The property of reusability is used
+RG is compromised. We first revisit its rule setup stage: for efficiency in the sense that the obfuscated rule generated in
+ 1. RG generates a randomization key kM B ∈ Zp , which is previous session(s) can be reused across subsequent sessions
+ securely shared with MB, and obfuscates ri to Ri with and hence we can reduce the connection establishment delay.
+ kM B as follows:
+ For i ∈ [Nr ], compute Ri = (g H1 (ri ) )kM B , where Nr is
+ A. Preliminaries
+ the total number of detection rules, g is the generator of a
+ group, and H1 (·) is a hash function. RG then signs Ri to Let λ be the security parameter, PPT be probabilistic
+ sig(Ri ) using its private key and sends a set of detection polynomial-time, and R = {ri }i∈[n] be the rule domain, where
+ rules {Ri , sig(Ri )|i ∈ [Nr ]} to MB. [n] denotes the set {1, 2, . . ., n} and n denotes the number of
+ 2. S and R send a connection request to MB. rules in R. Similar to the setting in BlindBox and PrivDPI, both
+ 3. MB sends {Ri , sig(Ri )|i ∈ [Nr ]} to S and R. RG and MB know R. Let Π = (Gen, Enc, Dec) be a data encap-
+ 4. Both S and R verify sig(Ri ) using the RG’s public key. sulation mechanism with keyspace K. We say Π is CPA-secure
+ If they are valid, either S or R generates kSR and shares if it has indistinguishable encryptions under a chosen-plaintext
+ it with the other using key sharing protocol of SSL/TLS attack. The definitions of the data encapsulation mechanism
+ handshake. Otherwise, they output ⊥. and the discrete logarithm assumption are given in Appendix
+ 5. Both S and R compute a set of intermediate obfuscated A, available online. Let G be a group of prime order p and g
+ rules {Ii = RikSR = (g H1 (ri ) )kM B ·kSR |i ∈ [Nr ]}. S and be a generator of G. Define three hash functions H1 , H2 , H3 as
+ R return {Ii |i ∈ [Nr ]} to MB. follows: H1 : G → K, H2 : R → Zp , H3 : G → Zp . We further
+ 6. MB checks whether {Ii |i ∈ [Nr ]} sent from S and R are define a “random function” H4 that takes a random salt and a
+ identical. If not, it disconnects the connection between S value in Zp , and outputs a random value. H4 is pseudorandom
+ and R. If they are identical, MB computes a set of session and not invertible, which is implemented with AES algorithm.
+ rules {Si = (Ii )1/kM B = g H1 (ri )·kSR |i ∈ [Nr ]}. We additionally define a value RS, which is a parameter to reduce
+ As shown in Step 1, RG knows kM B and ri . RG can fur- the ciphertext size such that the bandwidth overhead can be
+ther obtains Ii = (g H1 (ri ) )·kM B ·kSR in Step 5. For any new reduced. The notations used in the system are listed as follows:
+rule r∗ , RG can forge the session rule of r∗ by computing r (Ri , SigRG (Ri ), SigM B (Ri ), Ri , SigRG (Ri ), SigM B
+ ∗ ∗
+S ∗ = (Ii )H1 (r )/(H1 (ri )·kM B ) = g H1 (r )·kSR . This shows that i )): rule tuple of rule ri , used to generate the obfuscated
+ (R
+P2DPI is insecure against the Type-III attacker. RG can further rule of ri .
+exhaustively search the contents of the encrypted traffic that r Ki : obfuscated rule of ri , used to generate the session rule
+match the rule(s) by forging arbitrary session rule, thereby of ri .
+breaking the privacy of the encrypted traffic. r Ii : session rule of ri , used to generate the encrypted rule.
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION 4959
+
+Fig. 2. Rule preparation protocol.
+
+ r Er : encrypted rule of ri , used for traffic inspection. Similarly, with MB’s public key SB , RG can derive the shared
+ r Ti :i session token of token ti , used to generate encrypted secret key g ab using its randomness a. Upon receiving (SB , S)
+ token. from MB, RG computes SA = (SB )a (i.e., the shared secret
+ r Dt : encrypted token of token ti , used for traffic inspection. key g ab ) using its randomness a, Vi = (SA )H2 (ri ) for rule ri ,
+ i
+
+ and returns {Vi }i∈[n] to MB. Here, the shared secret key g ab is
+ served as a mask for H2 (ri ) such that one cannot infer ri once
+B. Setup
+ it sees Vi .
+ RG first chooses a signature scheme SigRG with a pub- Upon receiving {Vi }i∈[n] , MB computes SB = (SA )b (i.e.,
+lic/private key pair (pkSigRG , skSigRG ), and chooses uni- the shared secret key g ab ) using its randomness b, and checks
+form a, r ∈ Zp as its secret. Similarly, MB chooses a if the equation Vi = (SB )H2 (ri ) holds for i ∈ [n] to ensure
+signature scheme SigM B with a public/private key pair that Vi is honestly generated by RG using g ab and H2 (ri ).
+(pkSigM B , skSigM B ), and chooses uniform b, s, y, y ∈ Zp as its If {Vi }i∈[n] are correctly generated, MB attaches its secret
+secret. RG then runs the rule preparation protocol with MB, s to SB and Vi for i ∈ [n] respectively to generate R  and
+which is described in Fig. 2. This protocol is run before (and Si for i ∈ [n]. Additionally, MB utilizes a data encapsulaindependent of) the connection between the endpoints. The aim tion mechanism to “securely transfer” (y, y) to RG. Once reof this protocol is to generate the rule tuple for each rule ri ∈ R, ceiving (Y, R,  {Si }i∈[n] ) from MB, RG decrypts Y to obtain
+where i ∈ [n]. These rule tuples will be used to generate the  r, R  = R · SA , Ri = (Si )r , R i =
+obfuscated rules during the subsequent phase. (y, y), computes R = (R)
+ y ·H3 (Ri )  y·H3 (Ri ) i ,
+ The rationale behind this protocol is as follows. To “securely (Ri ) · g
+ y y
+ , Ri = g for i ∈ [n], signs R, R
+generate” the rule tuple of each rule for MB, RG and MB en- Ri with skSig to obtain the corresponding signatures, and
+ RG
+
+gage in this rule preparation protocol. Here, “securely generate” 
+ finally sends (R, {Ri , R i , Ri }i∈[n] ) and the corresponding sigmeans that anyone (including MB or RG alone) cannot forge the natures to MB. MB then computes R = R/  SB and checks
+valid rule tuple for any rule r∗ ∈/ {ri }i∈[n] that will be accepted whether e(R, g) = e(R,
+ ?  L) (resp. e(L, Si ) = ?
+ e(g, Ri )) holds
+by the endpoints during the subsequent phase. Specifically, RG  (resp.
+ to ensure R (resp. Ri ) is correctly generated from R
+computes SA = g a and L = g r using its secret (a, r), and sends i
+ Si ) and RG’s secret r. In addition, MB checks whether R
+(SA , L) to MB. Here, L is served as a commitment of RG’s 
+ and Ri are correctly generated from Ri and (y, y) by checksecret r. MB computes SB = g b , S = g s , and sends (SB , S)
+ ing whether R i = ?
+ (Ri )y · g yyH3 (Ri ) and Ri =?
+ Ri · g yH3 (Ri )
+to RG. Similarly, S is served as a commitment of MB’s secret
+s. In the above two steps, SA , SB can be treated as the public  
+ hold. If yes, it finally signs R, {Ri , Ri }i∈[n] with skSigM B
+keys of MB and RG, respectively. With RG’s public key SA , to obtain the signatures SigM B (R), {SigM B (R i ), SigM B
+MB can derive the shared secret key g ab using its randomness b. 
+ (Ri )}i∈[n] .
+4960 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+Fig. 3. Preprocessing protocol.
+
+ In this phase, the endpoints independently install a PrivBox
+HTTPS configuration which includes H1 , H2 , H3 , H4 , pkSigRG
+and pkSigM B . They then run the regular TLS handshake protocol
+to agree on a session key k and derive three types of secret
+keys from k, described as follows: (1) kSSL , the regular SSL
+key, used for encrypting the traffic; (2) ks1 , ks2 ∈ Zp , used to
+generate obfuscated rules during the preprocessing phase and
+the encrypted token during the token encryption phase; (3) kr ,
+a seed that will be used to generate randomness and the initial
+salt Ssalt . The endpoints calculate Ks1 = g ks1 and store Ks1
+for future use.
+
+C. Preprocessing
+ This phase is only executed in the first session. In this
+phase, MB runs a preprocessing protocol with the endpoints
+to generate the obfuscated rules. The preprocessing protocol
+is given in Fig. 3. Specifically, each endpoint first sends its Fig. 4. A diagram of dual double-masking obfuscated rule generation. The
+ output of MB is in the form of g aF1 (ri )+bF2 (ri ) where F1 (ri ) = absrH2 (ri )
+Ks1 to MB. Upon receiving Ks1 from each endpoint, MB
+ and F2 (ri ) = H3 (g absrH2 (ri ) ). We call this form as dual double-masking
+checks whether the received Ks1 are the same. If yes, it sends structure.
+(R, SigRG (R), SigM B (R), {R i , SigRG (R i ), SigM B (R i ,
+ i ), R
+SigRG (R i ), SigM B (R i )}i∈[n] ) to the endpoints, where
+R = g absr 
+ , Ri = g yabsrH2 (ri )+yH3 (g
+ absrH2 (ri )
+ )
+ , R i = In the protocol (as described in Fig. 3), the input x1 is (ks1 , ks2 ),
+ absrH2 (ri )
+ yH3 (g ) the input x2 is the rule tuple (generated by the rule preparag . Each endpoint checks whether the signatures
+are valid to make sure the received (R, {R i , Ri }i∈[n] ) are the tion protocol) of ri for i ∈ [n], and the output of F (x1 , x2 ) is
+ absrH2 (ri )
+right parameters generated by the rule preparation protocol. Ki = g ks1 absrH2 (ri )+ks2 H3 (g )
+ for i ∈ [n]. The security
+If yes, each endpoint calculates K  i = (R i )ks2 for
+  i ) k s1 · ( R requirements here include (1) the endpoint(s) should not obtain
+i ∈ [n], returns {K  i }i∈[n] to MB, and stores R that will be used ri while MB cannot know (ks1 , ks2 ); and (2) anyone (including
+to generate the encrypted token during the subsequent token MB or RG alone) cannot forge a valid obfuscated rule for
+encryption phase. MB then checks if the received {K  i }i∈[n] are r∗ ∈/ {ri }i∈[n] . The rule preparation protocol in Fig. 2 and the
+the same. If yes, it calculates Ki = (Ki /(Ks1 )  yy H3 (Ri ) 1/y
+ ) = preprocessing protocol given in Fig. 3 are designed (together)
+ absrH2 (ri ) to satisfy such requirements.
+g ks1 absrH2 (ri )+ks2 H3 (g )
+ for i ∈ [n].
+ The rationale of this protocol is described as follows. To
+ D. Session Rule Preparation
+enable MB to inspect the encrypted traffic, MB needs to obtain
+the output of a function F (x1 , x2 ), where the input x1 is derived The underlying design of these two protocols is a new
+from the secret owned by the endpoint(s) and the input x2 is technique that we introduced, called dual double-masking
+derived from a rule ri for i ∈ [n]. To that end, MB runs the obfuscated rule generation, see Fig. 4. In particular, the
+preprocessing protocol with the endpoints to derive F (x1 , x2 ). rule tuple of rule ri (generated by the rule preparation
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION 4961
+
+protocol in Fig. 2) is in the form of (R i , SigRG (R i ),
+   
+SigM B (Ri ), Ri , SigRG (Ri ), SigM B (Ri )),  where 
+ Ri =
+g yabsrH2 (ri )+yyH3 (g
+ absrH2 (ri )
+ )
+ , R i = g yH3 (gabsrH2 (ri ) ) . The
+exponent of R i consists of two parts: yabsrH2 (ri ) and
+ absrH2 (ri )
+yy H3 (g ), each of which is generated from the secret
+of MB (i.e., y and y) and the hash value of ri (i.e., H2 (ri ) and
+H3 (g absrH2 (ri ) )). In other words, H2 (ri ) and H3 (g absrH2 (ri ) )
+are masked by y and y. The obfuscated rule Ki of ri (generated
+by the preprocessing protocol in Fig. 3) is in the form of
+ absrH2 (ri )
+g ks1 absrH2 (ri )+ks2 H3 (g )
+ . Similarly, the exponent of
+Ki consists of the following two parts: ks1 absrH2 (ri ) and
+ks2 H3 (g absrH2 (ri ) ), each of which is generated from the Fig. 5. Session rule preparation protocol.
+secret of the endpoint (i.e., ks1 and ks2 ) and the hash value
+of ri (i.e., H2 (ri ) and H3 (g absrH2 (ri ) )). That is, H2 (ri ) and
+H3 (g absrH2 (ri ) ) are masked by ks1 and ks2 . We call such
+ to be honest, to check whether the received Ks is the correct
+masking structure as the dual double-masking structure.
+ i and R i are elaborately designed such that one, MB can simply check whether the received values are the
+ In particular, R
+ same. If so, MB calculates Ii = Ki · Ks , which is used to adapt
+(1) enable RG and MB to run the preprocessing protocol in
+ Ki to the new session.
+this phase to generate the obfuscated rule of ri ; (2) do not leak
+ As noted in [27], more and more group elements will be
+ri to the endpoints; and (3) do not enable anyone (including
+ consumed as the number of session increases. The protocol in
+MB or RG alone) to forge the valid obfuscated rule for any
+ Fig. 3 will be called every N sessions (where N depends on the
+r∗ ∈/ {ri }i∈[n] .
+ group we chosen), which is used to prevent potential brute-force
+ In the preprocessing protocol, each endpoint is given
+ attack.
+R = g absr , {Ri = g yabsrH2 (ri )+yyH3 (gabsrH2 (ri ) ) , R i =
+ absrH2 (ri )
+ yH3 (g )
+g }i∈[n] . Let b1 = absr, b2,i = H2 (ri )
+ E. Token Encryption
+and b3,i = H3 (g absrH2 (ri ) ), then the exponents of the
+messages the endpoint received (i.e., R, R i and R i ) are We utilize the window-based tokenization methodology. As
+(b1 , {yb1 b2,i + y y b3,i , yb3,i }i∈[n] ). Clearly, since y and y described in BlindBox, the windows-based tokenization extracts
+are unknown to the endpoint, b1 , {yb1 b2,i + y y b3,i }i∈[n] and tokens from a given packet by utilizing the sliding window
+{yb3,i }i∈[n] are random from the endpoint’s point of view. algorithm. We parse a bytestream by a fixed length of 8 bytes. For
+This ensures that the endpoint cannot obtain ri . In terms of a traffic “keep secret” consisting of 11 bytes of character, the to-
+MB (resp. RG), the messages it receives from the network are kens derived by the windows-based tokenization are “keep sec”,
+Ks1 and {K  i }i∈[n] , and the corresponding exponents are ks “eep secr”, “ep secre” and “p secret”. To reduce the bandwidth
+ 1
+and {ks1 (yb1 b2,i + y y b3,i ) + ks2 yb3,i }i∈[n] . Recall that ks1 overhead, we can further utilize the delimiter-based tokenization
+and ks2 are unknown to MB (resp. RG), we have that ks1 and as introduced in BlindBox. Delimiters are spacing, punctuation,
+{ks1 (yb1 b2,i + y y b3,i ) + ks2 yb3,i }i∈[n] are random because and special symbols. For a payload “login.jsp?username=carl”,
+the determinants of the following coefficient matrices are all the possible keywords in rules are “login”, “login.jsp”, “?usernonzero: name”, “username=carl”, instead of “ogin” or “ogin.j”. In this
+    sense, the endpoint(s) only needs to generate tokens that could
+ 1 0   yb1 b2,i +y y b3,i yb3,i 
+ = 0,   = 0, match rules that start and end on delimiter-based offsets. In this
+yb1 b2,i + y y b3,i yb3,i  y b3,j  yb3,j  
+ yb1 b2,j  + y
+ way, the redundant tokens in the window can be ignored.
+for i ∈ [n], i , j  ∈ [n] s.t. i = j  . This ensures that MB (resp. In this phase, for each token ti , S runs the token encryp-
+RG) cannot forge a valid obfuscated rule. tion algorithm described in Fig. 6. To reuse the session to-
+ A session rule preparation protocol will be executed in this ken Ti of token ti that has been generated, S first initializes
+phase. Let k  be the session key of a new session, and kSSL 
+ , ks ∈ a counter table CT that stores a tuple (countti , Tti , ti ) for
+ 
+Zp be the keys derived from k by the endpoints, where kSSL is  each token ti , where countti is the times ti appeared in the
+the regular SSL key of the new session and ks is the key used packet. Recall that the session rule Ii of rule ri is in the
+ absrH2 (ri )
+to generate session rules of the new session in this phase. The form of g ks1 absrH2 (ri )+ks2 H3 (g )
+ for the first session
+ absrH2 (ri ) 
+ ks1 absrH2 (ri )+ks2 H3 (g )
+session rule preparation protocol is described in Fig. 5, which (resp. g · g ks for a subsequent
+aims to generate session rule Ii of rule ri for the current session session). To enable MB to detect the encrypted traffic during
+from the obfuscated rule Ki . the traffic inspection phase, the session token of a token ti
+ Specifically, for rule ri , since Ki is generated from the secret (used to generate the corresponding encrypted token) should
+ absrH2 (ti )
+(ks1 , ks2 ) of the endpoints in the first session, Ki can be directly be in the form of g ks1 absrH2 (ti )+ks2 H3 (g )
+ for the first
+ ks1 absrH2 (ti )+ks2 H3 (g absrH2 (ti ) ) 
+set as the session key for the first session. For any subsequent session (resp. g · g ks for a subsession different from the first session, each endpoint will send sequent session). The token encryption algorithm in Fig. 6 is
+ 
+Ks = g ks to MB. Since at least one of the endpoints is assumed designed to satisfy the above requirement. To prevent frequency
+4962 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+ Fig. 7. Traffic inspection algorithm.
+
+ G. Traffic Validation
+ The aim of this phase is to prevent S from encrypting a
+ different, benign payload during the generation of encrypted
+ traffic to evade inspection. Specifically, upon receiving the encrypted traffic forwarded by MB, R will run this traffic validation
+ algorithm to check whether the encrypted traffic is honestly
+ encrypted from the payload. To this end, R takes the decrypted
+ traffic from the TLS encrypted traffic and encrypts the decrypted
+ traffic using the same token encryption algorithm as used by S.
+ R then checks whether the resulting ciphertext is the same as the
+ encrypted traffic received. If not, it concludes that S is malicious
+Fig. 6. Token encryption algorithm.
+ and aborts.
+
+analysis attack, we insert a random salt during the encryption V. VARIANT OF PRIVBOX
+of each token, as described in Fig. 6. The initial salt Ssalt is
+derived from kr by S, which will be sent to MB.4 There are A. Enhanced Rule Preparation Protocol
+two cases for the token encryption. If it is the first session, The rule preparation protocol in Fig. 2 requires the pair-
+ 
+the session rule Tti is set to be (R)ks1 H2 (ti ) · g ks2 H3 (Tti ) ; ing operation to check whether the parameters are correctly
+otherwise (i.e., it is a subsequent session), Tti is set to be generated using RG’s secret r. Generally, the elliptic curves
+ 
+(R)ks1 H2 (ti ) · g ks2 H3 (Tti ) · g ks , where Tti = (R)H2 (ti ) . For a
+ 
+ supporting pairing are less efficient than other normal elliptic
+given token ti , if it does not appear in any tuple in CT, the curves. Intuitively, we can select a more efficient elliptic curve
+encrypted token Dti is generated as H4 (Ssalt , Tti ); otherwise, to reduce the computation overhead of the rule preparation
+Dti is generated as H4 (Ssalt + countti , Tti ), where countti is protocol. To this end, we utilize the technique of non-interactive
+the frequency ti appeared in the stream so far. To prevent the (one-round) zero-knowledge proof of knowledge (via applying
+count table from growing too large,5 S can reset CT, generate a the Fiat-Shamir heuristic [16]) to eliminate the usage of pairing
+ operation. In the following, we take the checking of R  as an
+ 
+new salt S salt = Ssalt + maxti countti + 1 and send it to MB.
+ example to illustrate how to replace the pairing operation with
+F. Traffic Inspection non-interactive (one-round) zero-knowledge proof of knowledge. Recall that to check whether R  is correctly generated
+ Upon receiving the encrypted tokens sent from S, MB per- 
+ from R and RG’s secret r, the rule preparation protocol in
+forms the traffic inspection algorithm, which is described in Fig. 2 needs to check whether e(R,  g) = ?
+ e(SA , L) holds, which
+Fig. 7. Similar to PrivDPI, MB employs a fast search tree requires two pairings. We observe that such checking is the
+that contains Eri and a count table CTm that includes tuple same to the problem of proving knowledge of a discrete log-
+(countri , Eri ) for each rule ri , where countri is the count of arithm (i.e., RG’s secret r). A promising technique for provrule ri (initialized to be 0) and Eri is the encrypted rule of ri ing knowledge of a discrete logarithm is the technique of the
+corresponding to countri . During this phase, an equality check well-known Schnorr protocol [30], a three-round example of
+between encrypted rules and encrypted tokens is performed by a zero-knowledge protocol. To prove the knowledge of r for
+MB. To this end, given an encrypted token Dti = H4 (Ssalt +  RG first randomly chooses x1 ∈ Zp , calculates Z1 = (R)
+ R,  x1 ,
+countti , Tti ), MB only needs to calculate the encrypted rule and sends Z1 to MB. Upon receiving Z1 , MB randomly chooses
+Eri = H4 (Ssalt + countri , Ii ) and checks if Eri equals Dti . c1 ∈ Zp as its challenge and returns c1 to RG. RG then calculates
+ z1 = rc1 + x1 and sends z1 to MB. Once receiving z1 , MB can
+ 4 To ensure whether the received S
+ salt is correct, MB may ask each endpoint conclude that R  is correctly generated from R and RG’s secret r
+to send its Ssalt and check whether the received value are the same.
+ 5 Note search overhead will increase as the growth of the count table.  z1 ?
+ if (R) = Z1 · (R) holds. However, as shown above, simply
+ c1
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION 4963
+
+Fig. 8. Enhanced rule preparation protocol.
+
+applying technique of the Schnorr protocol incurs two addi- subsequent session), if ti is matched by a rule r, it can obtain
+tional rounds. Fortunately, the Fiat-Shamir heuristic allows us to kSSL by calculating Dt i ⊕ Er .
+transform the three-round Schnorr protocol into non-interactive
+(one-round) zero-knowledge proof of knowledge. In particu- VI. SECURITY
+lar, we can modify the above three-round protocol as follows:
+RG first randomly chooses x1 ∈ Zp , calculates Z1 = (S)  x1 , A. Rule Preparation Security
+c1 = H3 (Z1 ), z1 = rc1 + x1 , and sends (z1 , Z1 ) to MB. Upon From the security point of view, the rule preparation proreceiving (z1 , Z1 ), MB computes c1 = H3 (Z1 ) and accepts if tocol is a two-party computation that maps pairs of in-
+  z1 = Z1 · (R)c1 . Similarly, we can apply the same idea to
+(R) puts to pairs of outputs. By fRP we denote the process
+check whether {Ri }i∈[n] are correctly generated. The enhanced of the computation, which is defined as fRP : {0, 1}∗ ×
+rule preparation protocol is described in Fig. 8. {0, 1}∗ → {0, 1}∗ × {0, 1}∗ . Let ai be the i-th party’s input,
+ 1 2
+ and (fRP (a1 , a2 ), fRP (a1 , a2 )) be the output pair. For the rule
+B. Supporting Full IDS Functionality preparation protocol in Section IV-B, the two parties are MB and
+ RG. For a clear description of our proof, we give a simplified
+ The system described in Section IV provides the guarantee
+ version of rule preparation protocol in Appendix B, available
+of exact match privacy, i.e., MB could learn the position of
+ online, and the security definition of the rule preparation protocol
+an attack keyword occurs in a flow. In this section, we extend
+ is given in Appendix C, available online.
+PrivBox to support full IDS functionality (i.e., the guarantee of
+ Theorem 1: Assuming that the data encapsulation mechanism
+probable-cause privacy model) such that MB is able to decrypt
+ Π is CPA-secure and computing discrete logarithms is hard in
+the encrypted traffic if a token is matched, allowing MB to
+ the group G, the rule preparation protocol securely computes
+inspect (e.g., run regular expression) on the plaintext. The idea is
+ the functionality fRP .
+to attach the regular SSL key kSSL to the encrypted token such
+ Proof: The proof of this theorem is given in Appendix D,
+that MB will obtain kSSL if the token is matched. In particular,
+ available online. 
+for a token t, we add Dt i = H4 (Ssalt + countti , Tti ) ⊕ kSSL
+as the additional part of the encryption of token t, where Tti =
+ absrH2 (ri )
+g ks1 absrH2 (ri )+ks2 H3 (g )
+ for the first session (resp. B. Preprocessing Security
+ ks1 absrH2 (ri )+ks2 H3 (g absrH2 (ri ) ) 
+T ti = g · g ks for a subsequent The preprocessing protocol in Section IV-C is also a two-party
+session). Since MB knows Er = H4 (Ssalt + countr , I) for a computation. By fP P we denote the process of the computaabsrH2 (r)
+rule r where I = g ks1 absrH2 (r)+ks2 H3 (g )
+ for the first tion, which is defined as fP P : {0, 1}∗ × {0, 1}∗ → {0, 1}∗ ×
+ ks1 absrH2 (r)+ks2 H3 (g absrH2 (r) ) 
+session (resp. I = g · g ks for a {0, 1}∗ . Let bi be the input of the i-th party, for every input
+4964 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+pair (b1 , b2 ), the output pair is (fP1 P (b1 , b2 ), fP2 P (b1 , b2 )). For TABLE I
+ COMPUTATIONAL COMPLEXITY OF DIFFERENT SCHEMES∗
+the preprocessing protocol, the two parties are MB and the
+endpoint(s). For a clear description of our proof, we give a
+simplified version of preprocessing protocol in Appendix E,
+available online, and the security definitions, including confidentiality and non-malleability [7], [17] are given in Appendix
+F, available online.
+ Theorem 2: If computing discrete logarithms is hard in the
+group G, the preprocessing protocol securely computes the
+function fP P .
+ Proof: The proof of this theorem is given in Appendix G,
+available online. 
+ Theorem 3: If computing discrete logarithms is hard in the
+group G, the preprocessing protocol is non-malleable.
+ Proof: The proof of this theorem is given in Appendix H,
+available online. 
+ in Section V using the Charm-Crypto framework. Our experiment was conducted on the prime256v1 curve (known as
+C. Middlebox Searchable Encryption NIST Curve P-256), and we utilized pyOpenSSL library for
+ The underlying key component of PrivBox is a notion called establishing a TLS connection between the endpoints. Besides,
+middlebox searchable encryption scheme (MBSE). MBSE pro- we used the Linux Traffic Control (tc) tool to emulate a realistic
+vides a matching mechanism for middlebox-based encrypted network environment and the traffic between endpoints was
+traffic inspection. An MBSE scheme with message space M is throttled to 100 Mbps to align with the modern WAN network.
+defined as follows. Our middlebox and prototype of the client software run with
+ r Setup(1λ ): This algorithm takes as input the security pa- an Intel(R) Xeon(R) E5-2680 CPU with 4 cores at 2.40 GHz
+ rameter 1λ , and outputs the public parameters pp and a key under 64-bit Linux OS (Ubuntu 18.04). The CPU supports
+ k. AES-NI instructions. We implemented the hash function H with
+ r RuleEnc(pp, k, r): The rule encryption algorithm takes as AES-256 algorithm.
+ input the public parameters pp, the key sk, and a rule r ∈ R. Since PrivBox follows the setting of BlindBox, PrivDPI and
+ It outputs an encrypted rule ER of r.6 P2DPI, and PrivDPI, P2DPI outperform BlindBox, we comr TokenEnc(pp, k, {ti }i∈[d] ): The token encryption algo- pared PrivBox with PrivDPI and P2DPI in the experiments.
+ rithm takes as input the public parameters pp, the key k, and We also compared PrivBox with a recent DPI system Pine [26]
+ a token set {ti }i∈[d] , where ti ∈ M for i ∈ [d]. It outputs for completeness. We used ECDSA as the signature deployed
+ a salt Ssalt and a set of ciphertexts {CTi }i∈[d] . in both PrivDPI and PrivBox. To conduct a comprehensive
+ r Match(ER, Ssalt , {CTi }i∈[d] ): The match algorithm takes comparison, we used the rulesets from Snort [34], adapting to
+ as input ER, a salt Ssalt and {CTi }i∈[d] . It outputs an index different cases in our experiments, in which a rule is tokenized to
+ set S = {s1 , . . ., sm }, where si ∈ [d] for i ∈ [m]. a size of 8 bytes. We repeated each instance of our experiments
+ The correctness and security of MBSE are given in Appendix 10,000 times and eventually took the average.
+I and Appendix J, available online, respectively. For a clear
+description of our proof, we present an MBSE scheme that A. Complexity Analysis
+outlines the main structure of PrivBox (in the first session)
+ We first compare the computational and space complexity of
+from the security point of view, which is given in Appendix
+ different schemes in theory with results reported in Tables I and
+K, available online.
+ II. From Table I, we observe that all four schemes have a O(n)
+ Theorem 4: If computing discrete logarithms is hard in the
+ complexity for setup in RG, while PrivBox and Pine require
+group G and H4 is a random oracle, the MBSE scheme presented
+ additional operations after MB receives the rules from RG, such
+in Appendix K, available online, is secure under the definition
+ as validating the signature of each rule. During preprocessing,
+given in Appendix J, available online.
+ MB generates obfuscated rules with endpoints, but the way
+ Proof: The proof of this theorem is given in Appendix L,
+ endpoints (S and R) interact varies among schemes. In P2DPI
+available online. 
+ and PrivBox, both S and R must verify rules prepared by MB
+ to mitigate malicious behavior. Instead, PrivDPI and Pine only
+ VII. PERFORMANCE EVALUATION require verification on S, with PrivDPI additionally performing
+ We evaluated the performance of PrivBox by implementing a lightweight parameter initialization on R. Unlike the other
+the main construction in Section IV with the variant described three schemes, P2DPI does not support reusable obfuscated
+ rules, necessitating repeated setup and preprocessing during
+ 6 Here, by encrypted rule ER we mean the session rule of the first session as
+ session rule preparation (see Section VII-B3 for a concrete overdescribed in Section IV-D, which outlines the main structure of PrivBox from head comparison). The other schemes do not require significant
+the security perspective. endpoint intervention in this phase. Finally, all four schemes
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION 4965
+
+ TABLE II TABLE III
+ SPACE COMPLEXITY OF DIFFERENT SCHEMES∗ TIME OF MB IN THE TRAFFIC INSPECTION PHASE
+
+ Fig. 10. Time and bandwidth cost of MB in the preparation of session rule (in
+ the subsequent session).
+
+ The reason is that all of these systems only send a few group
+ elements for each rule.
+Fig. 9. Time and bandwidth cost of MB in the preprocessing phase (in the 2) Performance of Traffic Inspection Phase in the First Sesfirst session). sion: Since there is no communication cost in this phase, we
+ only consider the traffic inspection time. Table III shows the
+ one token inspection time for four different rulesets, which
+have the same complexity in token encryption (O(m), handling indicates that PrivBox, PrivDPI and Pine share similar traffic
+tokens sequentially) and traffic inspection (O(mn), detecting inspection delay, which is quite low. In particular, PrivBox only
+each token across all given rules). takes 340.711 µs for inspecting one token with a ruleset of 3,000
+ From Table II, we observe that the space complexity for setup, rules.
+preprocessing, session rule preparation, and token encryption 3) Performance of the Preparation of Session Rule in Subclosely aligns with their computational complexity. This is well sequent Session: To generate a session rule, PrivDPI, Pine and
+understood as computation over a linear (or constant) number PrivBox need to run the preprocessing protocol and the session
+of inputs requires corresponding linear (or constant) storage to rule preparation protocol for the first session. For any subsequent
+record results. The only difference lies in setup, where, after session, they just run the session rule preparation protocol for
+receiving detection rules from RG, PrivDPI and P2DPI require the same rule. For P2DPI, it needs to run the rule setup protocol
+O(n) additional space for storing them locally in MB. Since for every session.
+MB in four schemes employs a similar detection approach, Time Cost: For a ruleset of 3,000, the time costs for 1, 5, 10
+utilizing a tree-based structure and a token list as inputs, all and 20 consecutive sessions are given in Fig. 10(a). It shows
+traffic inspection phases have a space complexity of O(m + n). that the time cost of PrivBox is similar to that of PrivDPI.
+ In particular, for 10 consecutive sessions, PrivBox only takes
+ 45.605 ms, which is over 38x faster than Pine and over 177x
+B. Performance of Middlebox faster than P2DPI. This is due to the fact that Pine needs to run
+ For a connection between S and R, the main computation an extra session detection rule preparation protocol for every
+and communication overheads are from the preprocessing, the session, and P2DPI needs to run the rule setup protocol for every
+session rule preparation and the traffic inspection phases. session.
+ 1) Performance of the Preprocessing Phase in the First Ses- Bandwidth Cost: As shown in Fig. 10(b), the bandwidth
+sion: Time Cost: The preprocessing time in the first session of incurred by PrivBox is relatively low (only 0.488 KB for 10
+MB is shown in Fig. 9(a). Though PrivBox takes more time than consecutive sessions), which is the same as PrivDPI and Pine.
+other systems in the first session, the overhead is still relatively This is due to the fact that PrivBox, PrivDPI and Pine only need
+small (especially for the fact that MB is generally deployed in to send a group element for the preparation of session rule. In
+a powerful cloud server). contrast, P2DPI needs to recompute and send session rules for
+ Bandwidth Cost: As shown in Fig. 9(b), PrivBox incurs more every session, as a result, it incurs relatively high bandwidth as
+bandwidth than other systems, however, it is still acceptable. compared to other systems.
+4966 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+ TABLE IV R having similar content each time it is accessed by S. Also,
+ TIME OF ENDPOINT IN THE PREPROCESSING PHASE (IN THE FIRST SESSION)
+ it is very likely that keywords in documents or articles tend
+ to have a high frequency of common english words such as
+ “encryption”, “decryption”. Fig. 11(a), (b) and (c) depict the
+ improved performance of token encryption for a token set of
+ 800 as the number of repeated tokens increases for three cases:
+ (a) when the number of repeated token (repeating for four time)
+ increases, as shown in Fig. 11(a), (b) when the number of times
+ TABLE V a token repeating itself increases, as shown in Fig. 11(b); and
+ TIME OF ENDPOINT IN TOKEN ENCRYPTION (c) when the percentage of (repeated) token being repeated from
+ the previous session increases, as shown in Fig. 11(c). As shown
+ in Fig. 11(a), (b) and (c), the more repeated tokens exist, the less
+ the token encryption time of PrivBox consumes as compared to
+ other systems. In particular, PrivBox outperforms PrivDPI when
+ the percentage of one token repeating exceeds around 93% for
+ a token set of 800.
+
+ 4) Performance of Traffic Inspection Phase in a Subsequent D. Performance of a Round Trip
+Session: As described before (cf. Table III), the traffic inspection
+delay in PrivBox is close to that of PrivDPI and Pine. For a ruleset We also perform the experiment for round trip time to evaluate
+of 3,000, the gap is <0.1 µs. the trade off between preprocessing and token encryption. We
+ record the time that it takes to send a payload from S and further
+C. Performance of Endpoint receive a message of the same length from R. The whole process
+ of such one round trip mainly consists of the preprocessing
+ The main computation and communication overheads of the phase, the token encryption phase, and the traffic inspection.
+endpoint are on preprocessing and token encryption. 1) Performance in a Different Number of Rules: In this
+ 1) Performance of the Preprocessing Phase in the First Ses- experiment, we set the number of tokens as 8,000, and from
+sion: We consider the time and the communication costs of the Fig. 12(a) we find that the performance gap between PrivBox and
+preprocessing phase executed on the endpoint side. two prior works PrivDPI and Pine is very small, only about 1.3
+ Time Cost: Table IV illustrates the preprocessing time on seconds. When supporting multiple sessions, this gap becomes
+the endpoint side,7 which shows that PrivBox requires similar smaller, which is about 0.7 seconds from our results shown in
+time as other systems on the endpoint side. It is interesting to Fig. 12(b). It is because our scheme supports reusability across
+note that for a session with 3,000 rules, the PrivBox endpoints encrypted tokens – some intermediate values for repeated tokens
+incur less than one second to prepare obfuscated rules. This is can be reused across different sessions, which further reduces
+because the endpoints of our system only need to compute two the delay in sending a message. In real use, this small gap is
+exponentiation and a multiplication, which is quite lightweight hard to perceive so we believe PrivBox meets the scalability
+so we believe it can also be applied to computation-constraint requirement in handling large rule sets.
+devices such as mobile and IoT devices. 2) Performance in a Different Number of Tokens: Here, the
+ Bandwidth Cost: In term of bandwidth, since there exists no number of tokens can represent the size of data traffic in a
+discernible difference between the endpoint and MB (whatever session. If a session has a large traffic, e.g., sending a long
+sent by the endpoints will be received by MB), the bandwidth message, more tokens would be produced. So this experiment
+of the endpoint is the same as that of MB (cf. Fig. 9(b)). can be also used to evaluate the latency under high-throughput
+ 2) Performance of the Token Encryption Phase: Table V traffic. Fig. 12(c) shows the time of one round trip when the
+shows the time cost for token encryption in the first session. For number of (no repeating) token varies from 500 to 10,000
+one token, PrivBox takes a little more time than other systems. for a ruleset of 3,000 in the first session. For a token set of
+For 800 tokens, PrivBox is approximately 1.3x∼1.73x slower 10,000, PrivBox is approximately 79.5% slower than PrivDPI
+than other systems. This is mainly due to the following reason. and approximately 75.2% slower than Pine. In contrast, P2DPI
+To retain similar privacy guarantee as BlindBox (while other takes much more time than other systems, this is due to the fact
+systems fail to retain such guarantee), PrivBox employs a more that the traffic inspection of P2DPI incurs much more time than
+sophisticated mechanism (i.e., dual double-masking obfuscated other three systems. Fig. 12(d) presents the one round trip time
+rule generation) for the generation of obfuscated rules. As a of a subsequent session for a ruleset of 3,000. For a token set of
+result, the corresponding token encryption takes more time than 10,000 in a subsequent session, PrivBox is approximately 65.6%
+other systems. As noted in [27], repeating tokens are likely to slower than PrivDPI and approximately 59.3% slower than Pine.
+occur in actual communications, especially for the case where This shows that the round trip time of PrivBox in a subsequent
+ session is closer to PrivDPI and Pine.
+ 7 For Pine, since the preprocessing protocol is run between the gateway and We also evaluated the scenario where token repeating exists
+the middlebox, we here record the running time of the gateway. for a token set of 8,000. We here consider the same cases as
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION 4967
+
+Fig. 11. Experimental results of Token Encryption for Repeated Token.
+
+ TABLE VII
+ ROUND TRIP TIME FOR A TOKEN SET OF 8,000
+
+ TABLE VIII
+ ROUND TRIP TIME FOR A TOKEN SET OF 8,000 (TOKEN REPEATED IN
+ SUBSEQUENT SESSION)
+
+Fig. 12. Round trip time with a different number of rules and tokens (subfigures sessions) ≥91% (c.f. Table VIII). This indicates that for those
+(a) and (c) are for the first session; subfigures (b) and (d) are for the subsequent scenarios where token repeating frequently happens, PrivBox is
+session).
+ more practical than PrivDPI. For other scenarios where tokens
+ are required changed (i.e., with token reuse ≤92%) such as
+ TABLE VI intrusion prevention in the dynamic environment, one can be
+ ROUND TRIP TIME FOR A TOKEN SET OF 8,000 suggested to process token encryption in the pipeline. That is,
+ for those tokens to repeat in the next session, the system can run
+ token encryption in the current session instead of moving them
+ to the next session. This will mitigate a long delay and lead to
+ a faster round trip time for the next session. Alternatively, one
+ can encrypt tokens with the aid of multi-threaded processors.
+ By the Single Instruction Multiple Data (SIMD) technique, the
+ system can generate encrypted tokens in parallel, which can also
+ effectively speed up the token encryption protocols.
+in the token encryption discussed above, and present the results
+in Tables VI, VII and VIII. As shown in Table VI, PrivBox
+runs approximately 45% slower than PrivDPI and 50.3% slower VIII. RELATED WORK
+than Pine when the number of repeated token (repeating for The most relevant works, which we have discussed in Secfour times) is 2,000 for a token set of 8,000. In Table VII, tion I, are BlindBox by Sherry et al. [31] and PrivDPI by
+we may see that PrivBox is only approximately 38.1% slower Ning et al. [27]. These protocols enable privacy-preserving
+than PrivDPI and approximately 45.3% slower than Pine when packet inspection directly over encrypted traffic by tokenizing
+the percentage of one token repeating ≥85%. For a subsequent and encrypting the payload. In particular, BlindBox is the first
+session, PrivBox is faster than PrivDPI when the percentage privacy-preserving DPI system that uses searchable encryption
+of repeated token (from previous sessions) ≥92% and faster technique. The tokenization mechanism was later extended to
+than Pine when the percentage of repeated token (from previous include prefix matching in Embark by Lan et al. [22], which
+4968 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+caters for inspections under different services such as IP firewall, which utilizes zero-knowledge proof to enforce network usage
+NAT, HTTP Proxy, data exfiltration and intrusion detection. Em- policies on encrypted traffic.
+bark introduces a fully trusted gateway at the sender to perform Independently, there are proposals that address the issue of
+the tokenization and encryption. However, unlike conventional accelerating inspection [42], [44] and authenticating middle-
+(symmetric) searchable encryption, DPI asks for higher func- boxes that perform inspection on the encrypted traffic, such
+tionality and security. A trusted key-generation center produces as the accountable model proposed by Bhargavan et al. [6],
+the private key in searchable encryption and it is used both in mcTLS [25], mbTLS [24] and maTLS [23]. In these works, the
+encryption and token generation. Instead, in DPI, the private middlebox is able to decrypt the encrypted traffic, but it should
+key can only be known to endpoints so an additional procedure be authenticated by both endpoints to ensure it is a legitimate
+is required to generate obfuscated rules without knowing this and approved middlebox. Such accountable model also proposes
+key, i.e., preprocessing protocol. This leads to an additional decryption and read/write authorizations based on the services
+security requirement beyond the confidentiality of keywords and to be performed by the middleboxes. The focus of our work
+documents as in searchable encryption. is different from theirs in that we address the privacy of the
+ To mitigate the computation overhead of BlindBox, Ca- payload during traffic inspection, while these proposals consider
+nard et al. [8] introduced a token-matching protocol utilizing the authentication of middleboxes.
+pairing-based public key operation, which is not compatible
+with current TLS protocol. SPABox [15] is another system
+ IX. CONCLUSION
+that utilizes public key operation, which is mainly based on
+homomorphic encryption. A more efficient system was later We presented PrivBox, a DPI system that inspects encrypted
+proposed by Yuan et al. [43] by utilizing a high-performance traffic directly, which retains the same privacy guarantee as
+encrypted filter, but it requires the server to register with the BlindBox and comparable efficiency to PrivDPI. The key techadministration service of the enterprise hosting the client. A nique behind PrivBox is the dual double-masking obfuscated
+system called SplitBox [4] utilized two cloud servers to perform rule generation that we proposed. The connection establishtraffic inspection, in which every rule is XOR with a random ment time on the endpoint side of PrivBox is demonstrated
+string and then split into many blocks to the various middleboxes to be similar as PrivDPI. The limitation of PrivBox is that
+resided in one of the cloud servers. The performance of BlindBox the token encryption is around 1.46x slower than PrivDPI for
+was recently improved by PrivDPI [27], which introduces a non-repeating token. By reusing the session token(s) generated
+reusable obfuscation mechanism that generates intermediate previously, the token encryption delay can be further reduced.
+values to be reused across subsequent sessions. The efficiency PrivBox runs faster than PrivDPI for a set of 8,000 tokens
+of PrivDPI was further enhanced by Pine [26]. The property with more than 92% already appeared in previous session(s).
+of rule hiding is also supported in Pine, which addresses the Overall, PrivBox is applicable to cases that require short and
+concern on the third-party cloud DPI setting. A more recent frequently established sessions, especially scenarios in which
+proposal P2DPI [21] showed that PrivDPI doesn’t retain the token repeating is common.
+same privacy of BlindBox as it can be compromised by the rule
+generator. As shown in Section III, P2DPI also cannot guarantee REFERENCES
+the same level of privacy as BlindBox. This work aims to provide
+ [1] National Security Agency, “Managing risk from transport layer
+a privacy-preserving DPI system that tackles the privacy concern security inspection,” 2019. [Online] Available: https://media.defewhile maintaining comparable performance as PrivDPI. nse.gov/2019/Dec/16/2002225460/-1/-1/0/INFO%20SHEET%20%
+ Another line of work on encrypted traffic inspection utilizes 20MANAGING%20RISK%20FROM%20TRANSPORT%20LAYER%
+ 20SECURITY%20INSPECTION.PDF
+machine learning technique to analyze the meta data of the [2] B. Anderson and D. A. McGrew, “Identifying encrypted malware traffic
+encrypted traffic without directly inspecting the encrypted pay- with contextual flow data,” in Proc. 2016 ACM Workshop Artif. Intell.
+load. This includes the proposal by Anderson et al. [2], [3], [5] Secur., 2016, pp. 35–46.
+ [3] B. Anderson and D. A. McGrew, “Machine learning for encrypted malware
+and Shi et al. [32]. Besides the technique of machine learning, traffic classification: Accounting for noisy labels and non-stationarity,” in
+trusted execution environment such as Intel SGX has also been Proc. ACM Int. Conf. Knowl. Discov. Data Mining, 2017, pp. 1723–1732.
+deployed for deep packet inspection, including SGX-Box [19], [4] H. J. Asghar, L. Melis, C. Soldani, E. D. Cristofaro, M. A. Kâafar, and L.
+ Mathy, “SplitBox: Toward efficient private network function virtualiza-
+SafeBricks [29], ShieldBox [35] and LightBox [13]. Compared tion,” in Proc. ACM SIGCOMM Workshop Hot Top. Middleboxes Netw.
+to cryptographic schemes, the private and sensitive data can Function Virtualization, 2016, pp. 7–13.
+be processed within the enclave directly, so their performance [5] B. Anderson, S. Paul, and D. A. McGrew, “Deciphering malware’s use of
+ TLS (without decryption),” J. Comput. Virology Hacking Techn., vol. 14,
+can be drastically increased. As reported in LightBox [13], the no. 3, pp. 195–211, 2018.
+packet I/O can achieve up to 10 Gbps. However, due to the need [6] K. Bhargavan, I. Boureanu, A. Delignat-Lavaud, P.-A. Fouque, and C.
+for the trusted hardware, these schemes introduces additional Onete, “A formal treatment of accountable proxying over TLS,” in Proc.
+ IEEE Symp. Secur. Privacy, 2018, pp. 339–356.
+equipment costs and are difficult to be outsourced or virtualized. [7] H. Brenner, V. Goyal, S. Richelson, A. Rosen, and M. Vald, “Fast non-
+Moreover, TEE requires specialized code designs for different malleable commitments,” in Proc. ACM SIGSAC Conf. Comput. Commun.
+applications and may suffer from side-channel attacks [41]. Secur., 2015, pp. 1048–1057.
+ [8] S. Canard, A. Diop, N. Kheir, M. Paindavoine, and M. Sabt, “BlindIDS:
+Therefore, users are left with a tradeoff between efficiency and Market-compliant and privacy-friendly intrusion detection system over
+security, which depends on the real use. More recently, Grubbs encrypted traffic,” in Proc. ACM Asia Conf. Comput. Commun. Secur.,
+et al. [18] initiated research on zero-knowledge middleboxes, 2017, pp. 561–574.
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION 4969
+
+ [9] R. Canetti, “Security and composition of multiparty cryptographic proto- [36] US-CERT, “HTTPS interception weakens TLS security (alert TA17–
+ cols,” J. Cryptol., vol. 13, no. 1, pp. 143–202, 2000. 075A),” 2017. [Online] Available: https://www.us-cert.gov/ncas/alerts/
+[10] Cisco, “Cisco encrypted traffic analytics,” 2021. [Online] Available: TA17-075A
+ https://www.cisco.com/c/en/us/solutions/collateral/enterprise-networks/ [37] L. Waked, M. Mannan, and A. M. Youssef, “The sorry state of TLS security
+ enterprise-network-security/nb-09-encrytd-traf-anlytcs-wp-cte-en.pdf in enterprise interception appliances,” 2018, arXiv: 1809.08729. [Online]
+[11] X. de Carné de Carnavalet and M. Mannan, “Killed by proxy: Analyzing Available: https://arxiv.org/abs/1809.08729
+ client-end TLS interception software,” in Proc. 23rd Annu. Netw. Distrib. [38] P. Wu, R. Deng, Q. Shen, X. Liu, Q. Li, and Z. Wu, “ObliComm: Towards
+ Syst. Secur. Symp., 2016. building an efficient oblivious communication system,” IEEE Trans. De-
+[12] M. Deng, K. Zhang, P. Wu, M. Wen, and J. Ning, “DCDPI: Dynamic pendable Secure Comput., vol. 18, no. 5, pp. 2331–2348, Sep./Oct. 2021.
+ and continuous deep packet inspection in secure outsourced middleboxes,” [39] P. Wu, Q. Li, J. Ning, X. Huang, and W. Wu, “Differentially oblivious
+ IEEE Trans. Cloud Comput., vol. 11, no. 4, pp. 3510–3524, Fourth Quarter data analysis with Intel SGX: Design, optimization, and evaluation,”
+ 2023. IEEE Trans. Dependable Secure Comput., vol. 19, no. 6, pp. 3741–3758,
+[13] H. Duan, C. Wang, X. Yuan, Y. Zhou, Q. Wang, and K. Ren, “LightBox: Nov./Dec. 2022.
+ Full-stack protected stateful middlebox at lightning speed,” in Proc. ACM [40] P. Wu, J. Ning, X. Huang, and J. K. Liu, “Differentially oblivious two-party
+ SIGSAC Conf. Comput. Commun. Secur., 2019, pp. 2351–2367. pattern matching with sublinear round complexity,” IEEE Trans. Depend-
+[14] Z. Durumeric et al., “The security impact of HTTPS interception,” in Proc. able Secure Comput., vol. 20, no. 5, pp. 4101–4117, Sep./Oct. 2023.
+ Netw. Distrib. Syst. Secur. Symp., 2017. [41] P. Wu, J. Ning, J. Shen, H. Wang, and E.-C. Chang, “Hybrid trust multi-
+[15] J. Fan, C. Guan, K. Ren, Y. Cui, and C. Qiao, “SPABox: Safeguarding party computation with trusted execution environment,” in Proc. Netw.
+ privacy during deep packet inspection at a MiddleBox,” IEEE/ACM Trans. Distrib. Syst. Secur. Symp., 2022.
+ Netw., vol. 25, no. 6, pp. 3753–3766, Dec. 2017. [42] H. Xu, H. Chang, K. Qiu, Y. Hong, W. Zhu, and X. Wang, “Accel-
+[16] A. Fiat and A. Shamir, “How to prove yourself: Practical solutions to erating deep packet inspection with SIMD-based multi-literal matchidentification and signature problems,” in Proc. Adv. Cryptol., 1986, ing engine,” IEEE Trans. Netw. Service Manag., to be published,
+ pp. 186–194. doi: 10.1109/TNSM.2024.3354985.
+[17] V. Goyal, “Constant round non-malleable protocols using one way func- [43] X. Yuan, X. Wang, J. Lin, and C. Wang, “Privacy-preserving deep packet
+ tions,” in Proc. ACM Symp. Theory Comput., 2011, pp. 695–704. inspection in outsourced middleboxes,” in Proc. IEEE Int. Conf. Comput.
+[18] P. Grubbs, A. Arun, Y. Zhang, J. Bonneau, and M. Walfish, “Zero- Commun., 2016, pp. 1–9.
+ knowledge middleboxes,” IACR Cryptol. ePrint Arch., 2021. [Online] [44] C. Zhou et al., “NetDPI: Efficient deep packet inspection via filtering-
+ Available: https://eprint.iacr.org/2021/1022 plus-verification in programmable 5G data plane for multi-access edge
+[19] J. Han, S. M. Kim, J. Ha, and D. Han, “SGX-box: Enabling visibility on computing,” IEEE Trans. Mobile Comput., vol. 23, no. 12, pp. 15031–
+ encrypted traffic using a secure middlebox module,” in Proc. 1st Asia- 15047, Dec. 2024.
+ Pacific Workshop Netw., 2017, pp. 99–105.
+[20] J. Jarmoc, “Transitive trust: SSL/TLS interception proxies,” 2012. [Online]
+ Available: https://www.secureworks.com/research/transitive-trust
+[21] J. Kim, S. Camtepe, J. Baek, W. Susilo, J. Pieprzyk, and S. Nepal, “P2DPI: Pengfei Wu (Member, IEEE) received the PhD de-
+ Practical and privacy-preserving deep packet inspection,” in Proc. ACM gree in software engineering from Peking University,
+ Asia Conf. Comput. Commun. Secur., 2021, pp. 135–146. Beijing, China, in 2020. Now, he is working as a
+[22] C. Lan, J. Sherry, R. A. Popa, S. Ratnasamy, and Z. Liu, “Embark: Securely research scientist with the School of Computing and
+ outsourcing middleboxes to the cloud,” in Proc. USENIX Symp. Netw. Syst. Information Sciences, Singapore Management Uni-
+ Des. Implementation, 2016, pp. 255–273. versity. Before joining SMU in September 2023, he
+[23] H. Lee et al., “maTLS: How to make TLS middlebox-aware?,” in Proc. was a research fellow with the School of Computing,
+ Netw. Distrib. Syst. Secur. Symp., 2019. National University of Singapore. His research inter-
+[24] D. Naylor, R. Li, C. Gkantsidis, T. Karagiannis, and P. Steenkiste, “And ests include cloud security and Big Data security.
+ then there were more: Secure communication for more than two parties,”
+ in Proc. Int. Conf. Emerg. Netw. Experiments Technol., 2017, pp. 88–100.
+[25] D. Naylor et al., “Multi-context TLS (mcTLS): Enabling secure in-network
+ functionality in TLS,” in Proc. ACM Conf. Special Int. Group Data
+ Commun., 2015, pp. 199–212. Jianting Ning (Member, IEEE) received the PhD
+[26] J. Ning et al., “Pine: Enabling privacy-preserving deep packet inspection degree from the Department of Computer Science and
+ on TLS with rule-hiding and fast connection establishment,” in Proc. Eur. Engineering, Shanghai Jiao Tong University, in 2016.
+ Symp. Res. Comput. Secur., 2020, pp. 3–22. He is currently with the School of Cyber Science
+[27] J. Ning, G. S. Poh, J.-C. Loh, J. Chia, and E.-C. Chang, “PrivDPI: and Engineering, Wuhan University, Wuhan, China,
+ Privacy-preserving encrypted traffic inspection with reusable obfuscated Faculty of Data Science, City University of Macau,
+ rules,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2019, Macau, China, and also with the College of Compp. 1657–1670. puter and Cyber Security, Fujian Normal University,
+[28] McAfee Network Security Platform, 2020. [Online] Available: http:// Fuzhou, China. He has published papers in major
+ www.mcafee.com/us/products/network-security-platform.aspx conferences or journals, such as ACM CCS, NDSS,
+[29] R. Poddar, C. Lan, R. A. Popa, and S. Ratnasamy, “SafeBricks: Shielding and the IEEE Transactions on Dependable and Secure
+ network functions in the cloud,” in Proc. USENIX Symp. Netw. Syst. Des. Computing. His research interests include applied cryptography and information
+ Implementation, 2018, pp. 201–216. security.
+[30] C.-P. Schnorr, “Efficient signature generation by smart cards,” J. Cryptol.,
+ vol. 4, no. 3, pp. 161–174, 1991.
+[31] J. Sherry, C. Lan, R. A. Popa, and S. Ratnasamy, “BlindBox: Deep packet Xinyi Huang received the PhD degree from the
+ inspection over encrypted traffic,” in Proc. ACM Conf. Special Int. Group School of Computer Science and Software Engineer-
+ Data Commun., 2015, pp. 213–226. ing, University of Wollongong, Australia, in 2009. He
+[32] R. Shi, H. Sun, L. Lan, Z. Peng, and C. Wang, “POSTER: A two-stage is currently an associate professor with the Thrust of
+ encrypted cryptomining traffic detection mechanism in campus network,” Artificial Intelligence, Information Hub, Hong Kong
+ in Proc. Netw. Distrib. Syst. Secur. Symp., 2024. University of Science and Technology (Guangzhou),
+[33] Emerging Threats: Open Source Signatures, 2020. [Online] Available: China. His research interests include cryptography
+ https://rules.emergingthreats.net/open/snort-2.9.0/rules/ and information security. He has published more
+[34] Snort, 2019. [Online] Available: https://www.snort.org/downloads/ than 160 research papers in refereed international
+[35] B. Trach, A. Krohmer, F. Gregor, S. Arnautov, P. Bhatotia, and C. Fetzer, conferences and journals, such as CCS, Crypto, and
+ “ShieldBox: Secure middleboxes using shielded execution,” in Proc. ACM the IEEE Transactions on Information Forensics and
+ Symp. SDN Res., 2018, pp. 2:1–2:14. Security.
+4970 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+ Rongmao Chen received the PhD degree in com- Kaitai Liang (Member, IEEE) received the PhD deputer science from the University of Wollongong, gree in computer science from the Department of
+ Australia. He is now a full professor with the Col- Computer Science, City University of Hong Kong.
+ lege of Computer Science and Technology, National He worked as a post-doctoral researcher with Aalto
+ University of Defense Technology in China. His ma- University and held a permanent assistant professor
+ jor research interests include applied cryptography position in secure systems with the University of
+ and cybersecurity. He has published more than 70 Surrey. He has published a series of research works,
+ research papers in refereed international conferences applying information security and crypto tools to
+ and journals, such as Crypto, the IEEE Transactions address cybersecurity challenges. These publications
+ on Information Forensics and Security and IEEE have appeared in high-tier international information
+ Transactions on Dependable and Secure Computing. security journals and conferences, e.g., USENIX Security, NDSS, the IEEE Transactions on Dependable and Secure Computing.
+
+ Kai Zhang received the bachelor’s degree in computer science and technology from Shandong Normal
+ University, China, in 2012, and the PhD degree in
+ computer science and technology from East China
+ Normal University, China, in 2017. He visits Nanyang
+ Technological University in 2017. He is currently a
+ professor with the Shanghai University of Electric
+ Power, China. His research interests include applied
+ cryptography and information security.

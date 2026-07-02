@@ -1,0 +1,842 @@
+4460 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Early-Stage Detection of Encrypted Malware Traffic
+ via Multi-Flow Temporal Graph Learning
+ Jizhe Jia, Yi Zhao , Member, IEEE, Meng Shen , Member, IEEE, Susu Cui , Jing Wang, Bufan Zhao,
+ Wei Wang , Member, IEEE, and Liehuang Zhu , Senior Member, IEEE
+ Abstract—Malware widely adopts network traffic encryption I. I NTRODUCTION
+techniques to conceal malicious activities. Recent research has
+demonstrated the effectiveness of machine learning (ML)-, deep
+learning (DL)-, and pre-training-based malware traffic detection
+methods. However, a vast majority of these methods rely on
+ T HE proliferation of network encryption protocols
+ (SSL/TLS [1]), while essential for privacy protection, has
+ inadvertently empowered cyber attackers to weaponize cryptothe collected complete traffic during the malware attack. While graphic channels. Modern malware, particularly remote access
+certain methods can operate on partial traffic, their detection trojans (RATs) that grant attackers administrative control
+accuracy often significantly decreases when the available data is over compromised systems, increasingly leverages encrypted
+restricted to the extreme early stage, where information is most
+sparse. In this paper, we propose DawnGuard, an effective early- traffic to evade traditional signature-based network intrusion
+stage encrypted malware traffic detection framework through detection systems (NIDS) [2], [3], [4], [5]. This encryption
+multi-flow temporal graph learning. Specifically, based on the paradigm fundamentally reduces observable payload informatemporal packet density distribution analysis, DawnGuard inno- tion at the transport layer [6], [7], [8], [9], resulting in sparser
+vatively proposes a self-adjusting data augmentation strategy for features available for detection. Alarmingly, 60% of malware
+early-stage malware traffic, which can force the model to focus
+on the early-stage interaction phase with more distinguishable spread over encrypted connections during Q4 of 2024, which
+properties. Meanwhile, considering that temporal-topological is an 8% increase from last quarter and a continued increase
+correlations among multiple flows can provide more distinguish- for the year [10].
+able properties in a malware attack, we further develop a Researchers have proposed various detection methods that
+temporal graph learning framework to extract features, which can be categorized into four types based on their technican form Multi-Flow Graph Features (MGF). By utilizing MGF,
+DawnGuard implements a Vision Transformer-based detection cal approaches: rule-based methods [11], machine learning
+mechanism, enabling accurate and precise encrypted malware (ML)-based methods [2], [4], [12], deep learning (DL)-based
+traffic detection with early-stage traffic by capturing both local methods [3], [13], [14], and pre-training-based methods [15],
+and global contextual relationships. Extensive experiments with [16], [17]. Most of these methods mainly focus on specific
+two real-world datasets demonstrate that DawnGuard outper- field features, statistical features, and packet sequence features
+forms the state-of-the-art (SOTA) methods in three typical
+scenarios: varying early-stage time windows, imbalanced data, of full flows to build detection models. However, malware
+and unseen malware detection. Particularly, DawnGuard achieves attacks typically unfold through a phased and sequential proan average F1 of 95.11%, 8.7% higher than the SOTA method, cess, and waiting for a complete flow collection will result in
+by only utilizing the first 20% loading ratio of complete traffic. delayed detection, which introduces a prolonged period before
+ Index Terms—Malware traffic detection, encrypted traffic taking countermeasures, resulting in non-negligible security
+analysis, graph learning. risks (e.g., financial losses and confidential data thefts). For
+ instance, in 2022, Costa Rica declared a nationwide emergency
+ following a major ransomware attack by the Conti Group,
+ impacting its Department of Finance and business activities.
+ Received 19 May 2025; revised 12 January 2026 and 24 March 2026; The ransom demanded up to 20 million [18]. Early-stage
+accepted 12 April 2026. Date of publication 17 April 2026; date of current
+version 4 May 2026. This work was supported in part by NSFC under Project malware traffic detection refers to a continuous monitoring
+U25A20428, Project U23A20304, and Project 62472036; in part by Beijing and detection mechanism that can detect malware traffic as
+Advanced Innovation Center for Future Blockchain and Privacy Computing; early as possible (i.e., 20%, 30%) before the complete flow
+and in part by Beijing Nova Program. The associate editor coordinating
+the review of this article and approving it for publication was Dr. Daisuke transmission, which mitigates the risks to the victim, including
+Mashima. (Corresponding author: Meng Shen.) system file encryption, credential theft, and data exfiltration.
+ Jizhe Jia and Meng Shen are with the School of Cyberspace Science and Despite some progress on detection accuracy and efficiency
+Technology, Beijing Institute of Technology, Beijing 100081, China, and also
+with the State Key Laboratory of Cryptology, Beijing 100878, China (e-mail: in encrypted malware traffic detection [2], [3], [4], critical
+jiajizhe@bit.edu.cn; shenmeng@bit.edu.cn). challenges remain, which can be summarized as follows:
+ Yi Zhao, Bufan Zhao, and Liehuang Zhu are with the School of Cyberspace 1) Information sparsity in early-stage traffic. While certain
+Science and Technology, Beijing Institute of Technology, Beijing 100081,
+China (e-mail: zhaoyi@bit.edu.cn; bitzbf@163.com; liehuangz@bit.edu.cn). methods [14], [16], [20] have explored detection using partial
+ Susu Cui is with the Institute of Information Engineering, Chinese Academy traffic features, they heavily rely on the temporal accumulation
+of Sciences, Beijing 100089, China (e-mail: cuisusu@iie.ac.cn). of intra-flow features. For instance, sequence-based models
+ Jing Wang is with the National Computer Network Emergency Response
+Technical Team/Coordination Center of China, Beijing 100094, China (e-mail: like RNNs with attention [14] often require a substantial
+wangjing str@163.com). observation budget (e.g., a large number of initial packets or
+ Wei Wang is with the Key Laboratory for Intelligent Networks and Network higher loading ratios) to achieve stable performance. When the
+Security, Ministry of Education, Xi’an Jiaotong University, Xi’an 710049,
+China (e-mail: wangwei1@bjtu.edu.cn). available traffic is extremely limited (e.g., the first 20%), the
+ Digital Object Identifier 10.1109/TIFS.2026.3685079 information within a single isolated flow is often too sparse
+ 1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+JIA et al.: EARLY-STAGE DETECTION OF ENCRYPTED MALWARE TRAFFIC VIA TEMPORAL GRAPH LEARNING 4461
+
+ TABLE I The main contributions of this paper are as follows:
+F LOW D URATION S TATISTICS (S ECONDS ) OF THE S IX T YPICAL M ALWARE • We propose DawnGuard, an effective early-stage malware
+ IN THE CTU-M ALWARE DATASET [19]
+ traffic detection framework based on multi-flow temporal
+ graph learning. By focusing on information sparsity and
+ attack pattern heterogeneity, it achieves high-precision
+ early-stage detection by emphasizing high-density information, expanding multi-flow distinguishable properties,
+ as well as integrating local and global contextual
+ relationships.
+to provide a definitive signature, leading to a significant drop • To solve information sparsity and boost training data
+in accuracy for these methods. 2) Heterogeneity of attack diversity, we propose a self-adjusting data augmentation
+patterns. The heterogeneity of malware attack patterns is a strategy, which combines temporal packet density analynatural concealment method relative to detection methods, thus sis with a tail-masking method, thereby forcing the model
+posing a critical challenge to achieving high precision in early- to focus on the early-stage interaction phase with more
+stage traffic detection. For example, malicious activities (e.g., distinctive characteristics.
+victim scanning, spam propagation, or click fraud) exhibit • To adapt to the heterogeneity of attack patterns, we
+highly divergent flow duration characteristics [21]. Botnets develop the temporal graph learning method to extract
+like Zeus predominantly generate short-lived flows (median temporal-topological correlations among multiple flows
+duration < 1 second), whereas advanced threats like TrickBot in a malware attack (i.e., MGF), which can provide more
+sustain prolonged connections (median duration > 1 minute), distinguishable properties for early-stage detection.
+as quantified in TABLE I. • We evaluate DawnGuard in two real-world datasets in
+ In this paper, we propose DawnGuard, an effective three typical scenarios, i.e., varying early-stage time winearly-stage detection method that can accurately distin- dows, imbalanced data, and unseen malware detection.
+guish encrypted malware traffic based on early-stage traffic. The results demonstrate that DawnGuard significantly
+Specifically, due to information sparsity, existing single-flow outperforms existing methods in all scenarios. Particudetection methods fail to identify encrypted malware traffic larly, DawnGuard achieves an average F1 of 95.11%,
+in the early stage [20], [22]. To maximize the utilization of 8.7% higher than the SOTA method, with the first 20%
+available information in the early stage, we can analyze multi- loading ratio of complete traffic. We release the dataset
+flow temporal interaction patterns that reveal distinct attack and source code of DawnGuard.1
+behaviors (e.g., abnormal spam bot-SMTP communications The rest of the paper is organized as follows. We first
+[4]) that deviate from benign traffic. introduce the background and the threat model in Section II.
+ DawnGuard is composed of three key modules. First, the We present the high-level design of DawnGuard in Section III
+early-stage interaction phase (e.g., protocol handshake and and the design details in Section IV. Next, we conduct the
+configuration download) contains more distinctive properties theoretical analysis in Section V and comprehensive experithan the subsequent phase [2], [23]. To force the model ments to evaluate the detection performance of DawnGuard
+to focus on the early-stage interaction phase, we design in Section VI. Finally, we review related works in Section VII
+a self-adjusting data augmentation strategy. Crucially, this and conclude this paper in Section VIII.
+strategy is self-adjusting because it dynamically determines
+the optimal cut-off point for tail-masking for each flow by II. P RELIMINARIES
+analyzing its unique temporal packet density distribution.
+ In this section, we introduce the threat model and the
+This ensures that the augmented data consistently retains the
+ definition of early-stage detection.
+most discriminative, the early-stage interaction phase of the
+traffic, which systematically addresses the sparsity of earlystage traffic information. Second, to address attack pattern A. Threat Model
+heterogeneity, we design a multi-flow temporal graph learn- From the attacker’s perspective, the attack surface comprises
+ing algorithm, which can explore temporal and topological the network boundary where compromised internal devices
+correlations between multiple flows to enrich discriminative interact with external malicious infrastructures, such as C&C
+features in a malware attack, named Multi-Flow Graph Fea- servers and malware delivery sites [2]. We assume that the
+tures (MGF) from multiple flows. Notably, compared with attacker can leverage encryption protocols (e.g., SSL/TLS) to
+single flow-based detection methods, a more global view obscure payloads, rendering traditional Deep Packet Inspection
+based on multiple flows within a malware attack reflects (DPI) ineffective. In addition, they can coordinate multiple
+more flow inter-relationships. Finally, we construct a Vision network flows to execute sophisticated, multi-stage objectives.
+Transformer (ViT)-based detector, which can capture both Note that, these attacks are typically constructed with numerlocal and global contextual relationships for accurate and ous addresses controlled by attackers [4].
+precise encrypted malware traffic detection with early-stage From the defender’s perspective, DawnGuard operates at
+traffic. For real-world deployments, DawnGuard employs a the network level, collecting traffic via port mirroring at
+persistent monitoring mechanism that iteratively collects pack- edge routers without deploying agents on end-user devices
+ets and performs progressive traffic analysis across subsequent
+monitoring cycles. 1 https://github.com/jiajizhe1997/DawnGuard
+4462 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 1. The KDE of malware and benign traffic across packet length and IAT
+in CTU-Malware dataset [19].
+
+[3]. Our detection model operates under the assumptions that
+the encryption algorithms can not be decrypted. Furthermore, Fig. 2. Packet load ratio analysis over time for the flows of six typical malware
+ in the CTU-Malware dataset [19].
+our detection scope is focused on detecting active network
+attacks, excluding passive eavesdropping or side-channel anal- Afterward, we explore the possibility of achieving earlyysis which do not generate network traffic. stage malware traffic detection without waiting for the whole
+ flow termination. While recent methods [14] have investi-
+B. Early-Stage Detection gated early detection by focusing on initial packet segments
+ A core challenge in this threat landscape is achieving effec- within isolated flows, they remain constrained by single-flow
+tive early-stage detection, the ability to identify and prevent information scarcity. Our analysis of such methods reveals
+damage before an attack sequence fully unfolds. Ideally, a that they often require a relatively high observation budget
+detection model should react within the initial phase of a (e.g., a substantial number of initial packets or higher loadconnection (e.g., the first 20-40% of the complete traffic).2 ing ratios) to extract stable signatures. When the available
+This not only enables timely mitigation but also ensures traffic is extremely limited (e.g., the first 20%), the internal
+the model acquires sufficient discriminative data before a information of a single flow is often too sparse to provide a
+potentially short-lived malicious flow terminates [24]. definitive malicious signature, leading to degraded reliability.
+ A natural question that arises is the selection between However, temporal packet density analysis (Fig. 2) reveals
+relative and absolute early-stage time windows. We analyze that even within these sparse segments, early interactions
+the flow durations of six representative malware families (i.e., (e.g., handshakes, C&C establishment) exhibit higher packet
+Dridex, Emotet, Geodo, Miuref, Zeus, and TrickBot) from the concentrations and more distinctive properties than subsemalware capture project [19]. As shown in TABLE I, the quent phases. Thus, the key challenge is to extract these
+flow durations exhibit significant statistical variations across discriminative signals from minimal and sparse early-stage
+different malware. An absolute window that is effective for data.
+a short-lived attack might be insufficient for a long-running Driven by these observations, the design of DawnGuard
+one. Therefore, to ensure that DawnGuard remains effective is guided by two core intuitions to overcome the limitations
+across diverse malware, we adopt a relative early-stage time of current detection approaches. First, to resolve single-flow
+window, analyzing packets across different loading ratios of a ambiguity and filter global noise, we propose a multi-flow temflow rather than relying on a fixed absolute time window. poral graph learning framework. Unlike single-flow sequence
+ III. D ESIGN OF DAWN G UARD models that hit an information bottleneck in the earliest
+ In this section, we present the motivation for our design and phases, this framework leverages the topological structure
+provide an overview of DawnGuard. of concurrent flows to reconstruct the global attack context,
+ thereby isolating attack progression from background noise
+A. Motivation even with minimal data. Second, to specifically address information sparsity at extremely low loading ratios, we design
+ Malware traffic detection faces a dual challenge. As shown a self-adjusting data augmentation mechanism. By dynamiin Fig. 1, fundamental single-flow features (e.g., packet length, cally locating high-density interaction phases and generating
+IAT) exhibit significant overlap between benign and malware diverse, realistic training samples, this mechanism forces the
+traffic in CTU-Malware [19]. This ambiguity limits single model to learn intrinsic malicious patterns that remain invisible
+flow-based methods [15], [25], [26], which lack the context to methods relying on isolated single flow or static observation
+to detect multi-flow patterns like C&C communication. windows.
+ To incorporate such context, graph-learning techniques [2],
+[4], [27] have been adopted but suffer from two shortcomings. B. Overview of DawnGuard
+First, global modeling paradigms indiscriminately include all As shown in Fig. 3, itDawnGuard consists of three
+concurrent flows, introducing noise from irrelevant activities. modules: Self-Adjusting Data Augmentation, Multi-Flow
+Second, static graph modeling ignores temporal interdepen- Temporal Graph Learning, and Early-Stage Malware
+dencies, causing flows with different chronological orders to Detection.
+yield isomorphic structures, thus eroding the detection of time- 1) Self-Adjusting Data Augmentation: To address inforsensitive patterns. mation sparsity, we design a self-adjusting mechanism that
+ 2 For instance, DawnGuard detects TrickBot traffic, which has an average
+ dynamically determines the optimal tail-masking point for
+duration exceeding 60 seconds, using only the first ∼12 seconds (20%) of the each flow. This approach generates diverse training samples
+flow, as shown in TABLE I.
+JIA et al.: EARLY-STAGE DETECTION OF ENCRYPTED MALWARE TRAFFIC VIA TEMPORAL GRAPH LEARNING 4463
+
+ Fig. 3. The system overview of DawnGuard.
+
+and directs the model’s attention to the critical early interaction TABLE II
+phase with distinctive characteristics. We detail this module in L IST OF N OTATIONS
+Section IV-A.
+ 2) Multi-Flow Temporal Graph Learning: To address
+attack pattern heterogeneity, we design an algorithm to synergistically explore temporal-topological correlations among
+multiple flows (i.e., MGF). This approach integrates distinguishable properties reflected by flow inter-relationships to
+enhance early-stage malware detection. We elaborate on this
+module in Section IV-B.
+ 3) Early-Stage Malware Detection: Given the multi-flowbased traffic representation, i.e., MGF of each flow, we develop
+a ViT-based detector to capture both local and global contextual relationships from spatial-temporal features and detect
+early-stage encrypted malware traffic accurately and precisely.
+We will describe the details of our detector in Section IV-C.
+
+ IV. D ESIGN D ETAILS
+ In this section, we present the design details of Dawn-
+Guard, including self-adjusting data augmentation, multi-flow
+temporal graph learning, and early-stage malware detection.
+The main notations are illustrated in Table II.
+
+A. Self-Adjusting Data Augmentation
+ To address the challenge of information sparsity in earlystage traffic, we propose a self-adjusting data augmentation
+module. Self-adjusting refers to the mechanism that dynamically determines the optimal tail-masking point for each
+traffic flow, rather than applying a fixed or random masking
+ratio. This process aims to precisely preserve the critical, high-density early-stage interaction phase (e.g., protocol
+handshakes) within the augmented traffic. Consequently, this
+strategy forces the model to focus on the more distinguishable flows into loading ratio slots. We define the packet density
+property part in the early stages, thereby boosting training data di ∈ D = {d1 , d2 , . . ., dn } as the ratio of packets in the i-th slot
+diversity and enhancing detection performance. to the total packet count. For generality, we analyze six typical
+ 1) Temporal Packet Density Distribution Analysis: To malware from the CTU-Malware dataset [19].
+ensure the augmented traffic contains sufficient information As illustrated in Fig. 2, packet density is significantly
+for detection, we analyze packet distributions by dividing higher in the early-stage interaction phase than in subsequent
+4464 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+phases. Specifically, 35% of total packets (and up to 96% Algorithm 1 Self-Adjusting Data Augmentation
+for Geodo) are typically transmitted within the initial 10%
+of flow duration, driven by protocol handshakes and C&C
+establishment. This pattern concludes with a low-activity phase
+or session termination. Consequently, we design a mask-based
+data augmentation strategy that preserves these high-density,
+discriminative early-stage interactions.
+ 2) Mask-Based Data Augmentation: Data augmentation
+improves model performance by boosting training diversity,
+but fixed masking ratios either erase critical semantics or retain
+redundant noise. To address this, we propose a density-aware,
+self-adjusting data augmentation strategy. By dynamically
+generating early-stage samples with adaptive tail-masking,
+it enables the subsequent graph learning module to capture
+multi-scale temporal dependencies and resolve information
+sparsity. As detailed in Algorithm 1, the process involves
+three phases: adaptive time bin partition, density-aware dualthreshold selection, and adaptive tail masking.
+ a) Adaptive Time Bin Partition (Algorithm 1, Lines 3-8).
+To handle flows of varying durations, we partition each flow
+into K adaptive time bins and calculate the raw packet density
+array D in each time bin in Eq. (1).
+ (k − 1)
+ B = {bk }k=1
+ K+1
+ where bk = t1 + T total (1)
+ K
+ We then apply Savitzky-Golay smoothing [28] to suppress
+high-frequency noise while preserving critical phase transition
+patterns, yielding the smoothed density curve D̃, thereby
+facilitating the robust location of density plunge points for
+threshold calculation in Eq. (2).
+ D̃[k] = SG-Filter(D, window, poly order) (2)
+Here, window denotes the number of adjacent data points used
+for local polynomial fitting, while poly order denotes the
+polynomial degree to model the underlying trend.
+ b) Density-Aware Dual-Threshold Selection (Algorithm 1, The final termination point is determined by the minimum of
+Lines 10-16). We design a dual-threshold mechanism to locate kh , k s , and a pre-defined minimum retention bound derived
+the optimal plunge point of early-stage interactions. A hard from ratio α (Algorithm 1, lines 15-16).
+threshold τh detects sharp traffic drops (e.g., handshake com- c) Adaptive Tail Masking (Algorithm 1, Lines 18-22). Based
+pletion) by finding the first bin where density falls below a on the identified termination point, we establish a masking
+fraction γ of the peak density within a search bound β: window Wi to obscure the non-critical tail traffic of flow fi ,
+ yielding Fmasked (Algorithm 1, lines 18-22). This strategic trunkh = min k ∈ {1, . . . , K} | D̃[k] < γ · max(D̃[1 : dβKe]) (3)
+ ˚
+ cation forces the subsequent graph learning module to focus on
+ Alternatively, a soft threshold τ s identifies progressive den- highly distinguishable early-stage interaction representations.
+sity decay. We introduce a sensitivity hyperparameter θ (i.e.,
+representing the declination angle) to control this progressive
+decay detection. The soft threshold is dynamically calculated B. Multi-Flow Temporal Graph Learning
+based on the average density scaled by this slope factor, as Utilizing the early-stage traffic generated by the selfdefined in Eq. (4). adjusting data augmentation module, the multi-flow temporal
+ K
+ 1 X graph learning module explores temporal-topological correla-
+ τ s = tan(θ) · D̃[k] (4) tions among multiple flows in a malware attack (i.e., MGF),
+ K
+ k=1 which enriches discriminative features for early-stage malware
+Here, D̃[k] represents the packet density in the k-th bin, traffic detection. Specifically, we first design a traffic represenand tan(θ) adjusts the threshold relative to the overall traffic tation method to extract single-flow features (i.e., Packet Byte
+volume. We then slide a three-slot window to find the first Matrix) efficiently from raw traffic. Afterward, we construct a
+point k s where the density decrease ∆ s across three consecutive host-server bipartite graph to capture the interactions between
+bins consistently exceeds τ s : hosts and external servers. Based on the bipartite graph,
+ 8 9 we design a multi-flow temporal graph learning algorithm
+ 2
+ < ^ = to extract temporal-topological correlations between multiple
+ k s = min k ∈ {3, . . . , K} | (∆ s [k − j] > τ s ) (5)
+ : ; flows in a malware attack. The details are as follows:
+ j=0
+JIA et al.: EARLY-STAGE DETECTION OF ENCRYPTED MALWARE TRAFFIC VIA TEMPORAL GRAPH LEARNING 4465
+
+ Algorithm 2 Temporal Graph Learning
+
+Fig. 4. Illustration of observable unencrypted metadata (e.g., Extensions)
+within the payload bytes of encrypted traffic.
+
+ 1) Single-Flow Feature Extraction: To extract multidimensional features efficiently, we design the Packet Byte
+Matrix (PBM). For each flow, we strictly monitor the first M
+consecutive packets. Each packet is partitioned into a header
+segment (X bytes) and a payload segment (Y bytes). To prevent
+the model from overfitting to network-specific artifacts (e.g.,
+MAC/IP addresses and port numbers), we apply standard
+traffic anonymization strategies [29] to these raw bytes.
+ We preserve complete header fields and retain the first
+Y bytes of the packet payload. Crucially, while encryption
+obscures the semantic content of the payload, the initial
+bytes in early-stage traffic often carry unencrypted protocol
+metadata specific to malware families [2], [20], such as TLS
+handshake extensions and Server Name Indication (SNI), as
+shown in Fig. 4. By including these payload segments in
+the PBM, we enable the model to capture these fingerprints
+that remain observable even in encrypted traffic. The headerpayload sequences from M packets are reshaped into a 2D
+matrix M ∈ R2×Q . Here, Q = M × (X + Y)/2.
+ 2) Bipartite Graph Construction: We design a bipartite
+graph, G = (H, S, E, F, T ) to represent the interaction relationships between hosts and external servers that are linked to each
+host. We denote the hosts as a vertex set H, where each host is
+uniquely identified by its IP address. Differently, we denote the
+external servers as a vertex set S, where each external server a) Sinusoidal Temporal Encoding (Algorithm 2, Line 2). To
+is uniquely identified by its IP address and port. Besides, we model the sequential dependencies of concurrent flows without
+adopt an edge set E = {e|e = {he , se }, ∀he ∈ H, ∀se ∈ D} to introducing absolute timestamp bias, we project flow initiadenote all interaction relationships between hosts and servers. tion timestamps into a continuous vector space. Inspired by
+If there is a connection between the host h and an external Transformer positional encodings [31], we apply a sinusoidal
+server s, then an edge e = (h, s) is constructed between them. mapping Φ(te ) as shown in Eq. (6).
+We denote the features extracted from every single flow e as ! !
+F = { fe |∀e ∈ E} through the single-flow feature extraction. te te
+ Φ(te )2i = sin 2i/d p , Φ(te )2i+1 = cos 2i/d p (6)
+We denote the corresponding timestamp of every flow e as τbase τbase
+T = {te |∀e ∈ E}. Here, te is defined as the timestamp of the
+ Note that d p is the encoding dimension and τbase = 10000.
+first packet in flow e.
+ Instead of directly concatenating Φ(te ) with node features, we
+ 3) Graph Representation Learning: To explore temporal- maintain it as a parallel structural context to calculate the
+topological correlations among concurrent flows in a malware relative time lag ∆tu,e between flows, dynamically modulating
+attack, we design a Temporal Graph Learning Algorithm subsequent neighbor filtering and aggregation.
+tailored for early-stage detection. Compared to traditional b) Time-Aware Neighbor Sampling (Algorithm 2,
+Probabilistic Graphical Models (PGM) [30] that rely on Lines 7-11). Malware attacks typically exhibit strong temporal
+predefined assumptions and struggle with continuous traffic, locality [20], while older flows often represent unrelated
+our approach enables joint end-to-end optimization of intra- background noise. To maintain computational efficiency and
+flow features and inter-flow topologies, effectively capturing focus on highly correlated events, we dynamically filter the
+complex non-linear malware attack correlations. host-centric neighborhood Ce . At each layer k, we restrict
+ As outlined in Algorithm 2, the learning process integrates candidate neighbors to a sliding time window τk and retain
+sinusoidal temporal encoding, time-aware neighbor sampling, only the top-n most recent interactions:
+and time-weighted aggregation across K layers to generate the
+ Nt(k) (e) = Top-n u ∈ Ce | ∆tu,e ≤ τk
+ ˚
+final Multi-Flow Graph Features (MGF). (7)
+4466 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ c) Time-Weighted Aggregation (Algorithm 2, Lines 13-21). b) Transformer Encoder. The embedded patches pass
+Standard graph convolutions treat all neighbors equally, failing through six Transformer encoder layers, each consisting of
+to capture the time-sensitive nature of attack behaviors. We Multi-Head Self-Attention (MHSA) with eight heads to model
+introduce a time decay factor λ to assign higher attention long-range dependencies, layer normalization after each subweights to recent interactions. For each neighbor u, the weight layer, a position-wise feed-forward network with Gaussian
+wu,e is computed as shown in Eq. (8). Error Linear Unit (GELU) activation, and residual connections around each sub-layer. Specifically, MHSA projects the
+ wu,e = exp(−λ · ∆tu,e ) (8)
+ queries, keys, and values into h independent subspaces through
+A positive λ ensures recent edges receive higher weights linear transformations in Eq. (12).
+(wu,e ≈ 1 when ∆t → 0). Neighbor features are then aggregated
+into a latent space as detailed in Eq. (9): MHS A(Q, K, V)
+ 0 1 = CONCAT (head1 , head2 , . . . , headh )W O (12)
+ X w
+ h(k)
+ N (e) = σ @
+ B Pu,e h̃(k−1)
+ u
+ C
+ (9) Note that headi = Attention(QWiQ , KWiK , VWiV ), and WiQ , WiK ,
+ w
+ A
+ (k)
+ u∈Nsampled WiV , and W O are all learnable parameter matrices.
+ w Following the self-attention mechanism in our ViT archiwhere Pu,ew is the normalized temporal coefficient ensuring
+ tecture, the second sublayer implements a position-wise
+scale-invariance, and h̃(k−1)
+ u denotes the neighbor representation feed-forward network (FFN), which consists of two confrom the previous iteration (with h̃(0) = F). secutive linear transformations with a GELU activation in
+ To update the edge representation, we concatenate self- Eq. (13).
+information with aggregated context, as shown in Eq. (10).
+ FFN(x) = W2 · GELU(W1 x + b1 ) + b2 (13)
+  
+ (k) (k−1) (k)
+ e = σ CONCAT(Wself h̃e
+ h̃(k) , hN (e) ) (10)
+ Here, W1 and W2 are the weight parameters, b1 and b2 are the
+Here, W(k) self is a learnable matrix designed to preserve the bias parameters.
+edge’s own information from the previous state, while σ(·)
+ c) Classification Head. We apply a lightweight classification
+(ReLU) mitigates gradient vanishing. After K iterations, the
+ head to the final [CLS] token embedding, consisting of layer
+representation is normalized to a unit vector (Algorithm 2,
+ normalization and a linear layer with a softmax function. The
+line 18). For notational convenience, we denote the final
+ model is optimized via Adam with weight decay and crossrepresentation output at depth K as zeK (Algorithm 2, line 19).
+ entropy loss, using dropout for regularization.
+Finally, to prevent the dilution of original single-flow features
+ fe , we extract MGF (i.e., zeK ) as shown in Eq. (11).
+ zeK = CONCAT ( fe , zeK ) (11) V. T HEORETICAL A NALYSIS
+ To quantitatively analyze the optimality of DawnGuard, we
+C. Early-Stage Malware Detection model the malware traffic detection process as an information
+ In this module, we propose a ViT-based detector to preservation problem. Let the optimal detection performance
+capture both local and global contextual relationships and be bounded by the mutual information I(X ; Y) between the
+achieve early-stage encrypted malware traffic detection, con- raw traffic space X and the label space Y. We demonstrate that
+sisting of an input layer and a ViT-based architecture, as our three-stage design minimizes the information loss Lin f o
+follows: compared to existing methods.
+ 1) Input Layer: The proposed ViT-based detector accepts
+the output MGF (i.e., zeK ) of the multi-flow feature extraction
+as input, represented as a 2D matrix M ∈ R2×(Q+L) with a A. Entropy Model Setup
+single channel (1 × 2 × (Q + L)). By adjusting the number We formalize a single flow as a random variable sequence
+of packets M, the number of bytes for the packet header X, X = {x1 , x2 , . . ., xL } governed by a distribution P(X). For
+and the payload Y, we extract various lengths of PBM, i.e., detection methods treating flows in isolation, performance is
+Q. By adjusting the output length of the multi-flow feature theoretically bounded by the mutual information I(X; Y) with
+embedding, we extract various lengths of zeK , i.e., L. the label Y. By the data processing inequality [33], any feature
+ 2) ViT-Based Architecture: We adopt the ViT framework extraction φ(X) yields I(φ(X); Y) ≤ I(X; Y), establishing an
+[32] to capture both local and global contextual relationships information barrier for intra-flow methods.
+in the traffic data. The architecture consists of three main However, in real-world networks, X correlates with neighbor
+components as follows. flows, denoted as context C. Consequently, the true approacha) Patch Embedding and Positional Encoding. We split able bound is their joint mutual information: I(X, C; Y) =
+the input tensor into non-overlapping patches. Each patch is I(X; Y) + I(C; Y|X). While single-flow baselines are limited to
+projected into an embedding space through a linear layer. I(X; Y), our graph-based framework leverages this expanded
+To retain positional information, we add learnable 1D posi- observable space to capture the conditional mutual information
+tional embeddings and a [CLS] token to aggregate global I(C; Y|X), fundamentally raising the theoretical upper bound of
+features. detection accuracy.
+JIA et al.: EARLY-STAGE DETECTION OF ENCRYPTED MALWARE TRAFFIC VIA TEMPORAL GRAPH LEARNING 4467
+
+B. Analysis of Main Modules in DawnGuard information I(u; Y). This targeted prioritization allows the
+ 1) Self-Adjusting Augmentation as Optimal Information model to effectively extract temporal discriminative patterns
+Selection: Unlike simply assigning more weight to early while suppressing interference from outdated noise.
+stages of data, our Self-Adjusting Data Augmentation iden- 3) ViT as Optimal Information Aggregation: Finally, we
+tifies and preserves the region of highest information density. analyze the encoding efficiency. Let Z be the final represen-
+Given a flow X with packet densities D = {d1 , . . ., dL }, the tation. A standard CNN encoder with local receptive fields
+goal of tail masking is to find an optimal truncation point effectively applies a mask M, losing long-range dependencies:
+k∗ such that the retained subsequence X1:k∗ maximizes the I(ZCNN ; Y) = I(X; Y) − H(Xlong ). In contrast, the ViT architecrelevant information density while minimizing redundancy, as ture in DawnGuard, with its global self-attention mechanism,
+shown in Eq. (14). maintains a global receptive field. Thus, it minimizes the
+ encoding loss, as shown in Eq. (18).
+ I(X1:k ; Y)
+ k∗ = arg max s.t. k ≥ αL (14)
+ k k HDawnGuard ≥ HCNN =⇒ I(ZViT ; Y) ≈ I(Zoptimal ; Y) (18)
+Our dual-threshold mechanism (Algorithm 1) dynamically
+estimates this k∗ by detecting the plunge point of packet
+ (i) C. Quantitative Analysis of Information Loss
+density. By synthesizing augmented samples {X1:k ∗ } concentrated around this high-density phase (e.g., handshakes), we To evaluate the theoretical optimality discussed in
+reconstruct a training distribution P̂aug that approximates the Section V-B, we conduct a quantitative evaluation of the infortrue intrinsic distribution Pint of malware behaviors more mation preservation capabilities of DawnGuard. Following
+accurately than the raw distribution Praw . Thus, the entropy model setup, we need to measure the Mutual
+ Information I(Z; Y) between the extracted high-dimensional
+ H(P̂aug ) ≈ H(Pint ) =⇒ I(Daug ; Y)  I(D static ; Y) (15) continuous features Z and the discrete label space Y. To quan-
+This proves that our density-aware strategy theoretically tify this, we utilize the Kraskov-Stögbauer-Grassberger (KSG)
+retains more discriminative information than static weighting. estimator [34]. Because traditional binning-based methods
+ 2) Temporal Graph Learning as Causal Information Recov- suffer from severe bias in high-dimensional continuous spaces.
+ery: While existing graph learning based methods exploit In contrast, the KSG estimator provides estimation based
+contextual information, they typically treat all neighbors N (e) on k-nearest neighbors. It adjusts neighborhood distances to
+equally, ignoring the temporal interdependencies between mul- mitigate estimation bias for continuous, discrete variable pairs
+tiple flows. In malware detection, attack patterns exhibit strong without requiring prior assumptions about the data distribution,
+causal dependencies. Treating historical neighbors (high ∆t) thereby ensuring the reliability of our information loss quanas equivalent to recent ones introduces temporal noise, which tification. Our evaluation subset comprises randomly selected
+increases the conditional entropy H(Y|N (e)). Our module 1000 TrickBot samples in the CTU-Malware dataset [19] from
+addresses this by maximizing the Causal Mutual Information D1 and 1000 benign samples from D4 .
+through two mechanisms as follows. As shown in Table III, the results demonstrate a significant
+ a) Time-Aware Sampling as Relevance Denoising: Let the reduction in information loss across all three dimensions:
+neighborhood set Nall contain all historical interactions. Most 1) Sparsity-Induced Loss Reduction: Compared to applying
+elements in Nall are statistically independent of the current a static high weight to the first 30% traffic, our self-adjusting
+attack state Y due to large time lags (i.e., larger than 5 minutes data augmentation preserves more discriminative information
+[20]). DawnGuard filters neighbors using a sliding window τk by dynamically locating high-density interaction phases.
+to construct a subset Nt∗ . This process can be modeled as 2) Independence-Assumption Loss Reduction: By expandsearching for the optimal context window that maximizes the ing the observation space from isolated single flows to
+information density, as shown in Eq. (16). temporal multi-flow graphs, DawnGuard captures the condi-
+ I(S; Y) tional mutual information I(C; Y|X), and reduces the entropy
+ Nt∗ = arg max s.t. ∀u ∈ S, ∆tu,e ≤ τk (16) noise from irrelevant background traffic.
+ S⊆Nall |S|
+ 3) Locality-Induced Loss Reduction: The ViT-based archi-
+By discarding outdated interactions, we effectively prune the tecture, benefiting from its global self-attention mechanism,
+graph topology to remove uncorrelated edges that would act minimizes encoding loss by maintaining long-range depenas entropy noise sources. dencies that are often masked by the local receptive fields of
+ b) Time-Weighted Aggregation as Causal Weighting: Even CNN-based models.
+within the active window, P relevance is different. The stan- These findings demonstrate that unlike the methods that
+dard aggregation sum hu assumes a uniform prior on suffer from sparsity-induced loss (low Ĥ), independenceneighbor importance [27]. Our decay mechanism wu,e = assumption loss (missing I(C|X)), and locality-induced loss
+exp(−λ∆tu,e ) introduces a temporal prior Ptime (∆t) that aligns (masking Xlong ), DawnGuard minimizes these information
+with the natural decay of network causality. The aggregated losses, theoretically approaching the detection optimality.
+ (k)
+representation hN (e) thus represents a weighted information
+integration: X VI. P ERFORMANCE E VALUATION
+ (k)
+ I(hN (e) ; Y) ≈ wu,e · I(u; Y) (17) We prototype DawnGuard and conduct extensive experiu∈Nt∗ ments to evaluate its effectiveness. Moreover, we compare its
+Specifically, our mechanism aligns the attention weights wu,e accuracy with state-of-the-art methods on existing datasets,
+with the temporal decay of causal dependencies, thereby pri- including two well-known real-world datasets. In general, the
+oritizing recent neighbors that inherently maximize the mutual experiments will demonstrate that DawnGuard is able to:
+4468 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE III
+ Q UANTITATIVE R EDUCTION OF I NFORMATION L OSSES ACROSS D IFFERENT M ODULES IN DAWN G UARD
+
+ • detect various malware traffic in varying early-stage loading ratios and time windows (Section VI-B).
+ • achieve reliable early-stage malware detection in highly
+ imbalanced data scenarios, effectively mitigating the bias
+ towards the majority benign class (Section VI-C).
+ • achieve zero-shot detection ability to capture unseen patterns of malware traffic generated by unknown malware
+ types (Section VI-D).
+ • exhibit strong stability across different parameter configurations (Section VI-E). Fig. 5. The evaluation results (%) of different detection methods at different
+ loading ratios of malware in D3 .
+
+ Z 1
+A. Experiment Setting 2 · Precision · Recall
+ F1 = , AUC = ROC(x) dx
+ Baseline Methods. To measure the improvement achieved Precision + Recall 0
+by DawnGuard, we establish five baselines, among which two (20)
+are multi-flow-based, i.e., ST-Graph [2] and CBSeq [3]. Addi- T P, T N, FP, and FN denote the number of True Positives,
+tionally, YaTC [16] is included as a representative baseline True Negatives, False Positives, and False Negatives.
+that enables detection without requiring complete traffic. Implementation Details. To ensure the reproducibility of
+ • Kitsune [13] uses unsupervised autoencoders for feature our results and facilitate fair comparisons with baselines, we
+ learning and anomaly detection. provide the implementation details as follows.
+ • FC-Net [15] detects malicious traffic by extracting image- • Setup & Scalability. All experiments were conducted
+ based feature maps from raw flows. on a server with an Intel Core i73.4 GHz, 32GB RAM,
+ • ST-Graph [2] explores network behaviors using graph and an RTX 3080 using PyTorch. To ensure scalability
+ learning frameworks integrated with TLS metadata. on RAM-constrained hardware, DawnGuard avoids full
+ • CBSeq [3] characterizes attacking intents via a dataset loading by streaming traffic via mini-batches.
+ Transformer-based multi-flow representation. • Data Partitioning & Preprocessing. Datasets (D1 –D4 )
+ • YaTC [16] leverages a Masked Autoencoder architecture were split into training, validation, and testing sets at flow
+ and raw-byte representations for traffic classification. granularity via stratified sampling with an 8 : 1 : 1 ratio.
+ Evaluation Dataset. As shown in TABLE IV, we use the To build inter-flow interaction graphs, we sorted flows
+following public datasets for evaluation. chronologically, which bridges the gap between discrete
+ flows and the required graph structure.
+ • CTU-Malware [19]. Comprising continuous real-world
+ • Evaluation Setting. For fair comparison, baseline hyper-
+ PCAP traces, this dataset preserves flow chronology
+ parameters were tuned on our validation set to match
+ for the temporal-topological reconstruction of multi-flow
+ or exceed their reported performance. Under loading
+ attacks. We select six malware families (Dridex, Emotet,
+ ratio η, input traffic was truncated for all methods to
+ Geodo, Miuref, Zeus, TrickBot) for D1 , reserving the
+ the same initial segment and all statistics were derived
+ remainder (D2 ) for unseen malware evaluation.
+ from these observed segments to eliminate look-ahead
+ • USTC-TFC2016 [35]. Comprising ten categories each of
+ bias.
+ benign and malware traffic, this dataset’s timestamps and
+ • Validation. It is important to note that the datasets used
+ IPs are used to establish session contexts, grouping interin training and testing are entirely independent. To reduce
+ actions into local subgraphs. D3 and D4 are constructed
+ the impact of randomness in sample selection, we repeat
+ from its malware and benign subsets, respectively.
+ all experiments ten times to ensure more credible results.
+ Evaluation criteria. The fundamental goal of encrypted • Hyperparameter Settings. Data Augmentation: retention
+malware traffic detection is to be accurate. To achieve this goal, ratio α = 0.1, min packets µ = 6, Savitzky-Golay smoothwe mainly use the F1 and AUC because they are most widely ing (window 11, poly order 3), threshold coefficient
+used in the literature [3], [4], [13]. We also use precision to γ = 0.3, peak density bound β = 0.15, and soft threshold
+validate DawnGuard’s improvements. The formal definitions angle θ = 30◦ . Feature Extraction: initial packets M = 6,
+of these metrics are presented in Eq. 19 and 20. header bytes X = 80, and payload bytes Y = 240 [16].
+ TP TP Graph Learning: time window τk = 5 minutes [20], max
+ Precision = , Recall = (19) neighbors n = 8, depth K = 2, time encoding dimension
+ T P + FP T P + FN
+JIA et al.: EARLY-STAGE DETECTION OF ENCRYPTED MALWARE TRAFFIC VIA TEMPORAL GRAPH LEARNING 4469
+
+ TABLE IV
+ S UMMARY OF THE DATASETS W ITH T RAFFIC T YPES AND F LOW C OUNTS PER C ATEGORY
+
+ TABLE V
+ T HE E VALUATION R ESULTS (%) OF D IFFERENT D ETECTION M ETHODS AT D IFFERENT L OADING R ATIOS OF M ALWARE IN D1
+
+ TABLE VI
+ T HE E VALUATION R ESULTS (%) OF D IFFERENT D ETECTION M ETHODS AT D IFFERENT E ARLY-S TAGE T IME W INDOWS OF M ALWARE IN D1
+
+ m = 64, edge embedding dimension ω = 512, and dropout absolute windows (t ∈ {1s, 3s, 5s, 10s}) based on Table I. We
+ 0.1. Detection Phase: 2D matrix M ∈ R2×1088 (fusing build binary classifiers for malware in D1 , D3 , and benign
+ 1920 single-flow and 256 multi-flow features), patch size traffic in D4 . To observe the performance of these methods
+ 2×64. The Transformer Encoder uses 6 layers, 8 attention in detecting early-stage malware traffic, we generate testing
+ heads, and a hidden dimension of 512. We trained the traffic in different loading ratios and time windows based on
+ model with a batch size of 150, learning rate 0.0001, and packet timestamps. The results are illustrated in Fig. 5 and 6,
+ weight decay 0.001. TABLE V and VI.
+ As shown in TABLE V and Fig. 5, itDawnGuard achieves
+ the best detection F1 and AUC under each early-stage time
+B. Malware Detection in Varying Early-Stage Time Window window setting in both evaluation datasets. Specifically, Fig. 5
+ We evaluate detection performance in relatively early-stage (a) and (b) visualize the Precision and F1 trends on D3 . It is
+windows (loading ratios η ∈ {20%, 30%, 40%, 100%}) and evident that while the performance of all methods improves
+4470 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 6. ROC of different detection methods at different loading ratios of
+malware in D1 and D3 .
+
+ Fig. 8. The detection F1 (%) of different parameter settings at different loading
+ ratios of malware in D3 .
+
+Fig. 7. The early-stage unseen malware detection F1 of different methods
+under different imbalance ratios in D2 .
+
+as the loading ratio increases from 20% to 100%, DawnGuard
+maintains a consistently high performance curve. In contrast,
+the curves for baseline methods like FC-Net and Kitsune
+show a sharp decline in the low loading ratio region (e.g., Fig. 9. Ablation study: comparing existing models.
+20%-30%), visually demonstrating their inability to handle
+sparse early-stage information. Even in the smallest loading As shown in TABLE V, DawnGuard consistently outperratio scenario in D1 , i.e., η = 20%, where data is most sparse, forms baselines across all early-stage settings, exhibiting the
+DawnGuard still achieves an average F1 of 95.11%, which highest average and minimum precision on the six malware
+is 8.7% improvement over the best accuracy of the SOTA families. This demonstrates its reliability in early-stage detecmethods. DawnGuard demonstrates a significant advantage tion. It stems from our multi-flow temporal graph learning,
+in early-stage detection compared with the SOTA methods, which extracts distinguishable properties among multiple flows
+which can be primarily attributed to our self-adjusting data to precisely detect diverse malware attacks.
+augmentation and the MGF representation. The self-adjusting In addition, we also evaluate the performance of Dawndata augmentation dynamically creates effective training sam- Guard under the complete dataset without splitting early-stage
+ples from limited early-stage data (see the 22.33% F1 drop time windows. As shown in TABLE V and Fig. 5, it can
+without the data augmentation module in ablation study in be found that DawnGuard achieves the F1 of 99.36% and
+Fig. 9), while the MGF representation’s ability to model inter- AUC of 99.81% on average in D1 , and the F1 of 99.88% and
+flow dependencies allows it to extract meaningful patterns even AUC of 99.99% on average in D3 , which are higher than the
+from scarce data (see the 14.57% F1 drop without multi-flow best accuracy of the SOTA methods. While Kitsune fails in
+features in ablation study in Fig. 9). In contrast, methods D1 due to ineffective feature extraction, these results confirm
+relying on single flow or static graph fail to compensate that our MGF representation efficiently captures discriminative
+for the information scarcity. The results at different specific- features for malware traffic detection.
+size time windows are illustrated in TABLE VI and also To further evaluate the robustness against false positives,
+demonstrate the effectiveness of DawnGuard in early-stage which is critical for deployment in large-scale networks, we
+detection. analyze the Receiver Operating Characteristic (ROC) curves of
+JIA et al.: EARLY-STAGE DETECTION OF ENCRYPTED MALWARE TRAFFIC VIA TEMPORAL GRAPH LEARNING 4471
+
+ TABLE VII
+ T HE E VALUATION R ESULTS (%) OF D IFFERENT D ETECTION M ETHODS U NDER D IFFERENT I MBALANCE R ATIOS OF B ENIGN AND M ALWARE IN D1
+
+ TABLE VIII
+ T HE E VALUATION R ESULTS (%) OF D IFFERENT D ETECTION M ETHODS U NDER D IFFERENT I MBALANCE R ATIOS OF B ENIGN AND M ALWARE IN D3
+
+different methods. Fig. 6 illustrates the ROC curves for loading which reinforces discriminative features in sparse early stages
+ratios of 20% and 30% on both D1 and D3 . We observe that to mitigate bias towards the majority class. The evaluation
+DawnGuard consistently maintains a better performance, with results under different imbalanced ratios in D3 are shown in
+its curve significantly closer to the top-left corner compared to TABLE VIII, which also demonstrates the generalization capaall baselines. Specifically, as shown in Fig. 6(a) and (c), even at bility of DawnGuard in imbalanced data.
+a challenging 20% loading ratio, DawnGuard achieves a high In addition, TABLE VII also illustrates that DawnGuard
+True Positive Rate (TPR) while suppressing the False Positive achieves the most stable detection performance in average
+Rate (FPR) to a near-zero level. In contrast, baseline methods and minimum precision across different malware under each
+like Kitsune and FC-Net exhibit a much slower rise in TPR, imbalance ratio setting. From ρ = 4 : 1 enlarges to ρ = 48 : 1,
+indicating they would trigger significantly more false alarms average precision remains higher than 89% and only reduces
+to reach the same detection sensitivity. This high resistance to by 4.54%, which is superior to the SOTA methods. In the
+false positives demonstrates that our multi-flow temporal graph highest imbalance ratio, i.e., ρ = 48 : 1, DawnGuard achieves
+learning can extract discriminative features that effectively an average and minimum precision of 91.53% and 89.73%,
+distinguish coordinated malware activities from benign traffic. which are 34.83% and 42.75% higher than the SOTA method
+ in this scenario, FC-Net.
+C. Early-Stage Malware Detection in Imbalanced Data
+ To evaluate the ability against imbalanced data in early- D. Unseen Malware Early Detection in Imbalanced Data
+stage detection, we construct a binary classifier for each type In this section, we evaluate the ability of different methods
+of malware traffic in D1 and D3 and benign traffic in D4 . to deal with imbalanced datasets in early-stage unseen mal-
+Performance across varying imbalance ratios of benign and ware detection. Specifically, we construct a binary classifier
+malware samples ρ ∈ {4 : 1, 16 : 1, 48 : 1} is summarized in trained by D1 and detect malware traffic in D2 in the early
+TABLES VII and VIII. stage. To observe the detection performance of these methods
+ As shown in TABLE VII, DawnGuard consistently out- when the imbalance ratio changes, we set the imbalance ratios
+performs baselines across all imbalance ratios. Even under of the data as ρ ∈ {4 : 1, 16 : 1, 48 : 1}.
+extreme imbalance, i.e., ρ = 48 : 1, it achieves an aver- As shown in Fig. 7, itDawnGuard achieves the best
+age F1 of 92.9% and an AUC of 99.54%, surpassing the unseen malware detection accuracy under each imbalance ratio
+best SOTA method by 35.19% and 7.89%, respectively. This setting. Even in the most highly imbalanced dataset scenario,
+advantage stems from our self-adjusting data augmentation, i.e., ρ = 48 : 1, DawnGuard still achieves an average F1 of
+4472 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE IX F. Evaluation of Efficiency
+ E VALUATION OF E FFICIENCY: T RAINING AND T ESTING T IME We evaluate the time cost of all methods across training
+ and testing phases, as summarized in TABLE IX. The training
+ process comprises feature extraction time (FET), classifier
+ training time (CTT), and pre-training time (PTT) specifically
+ for meta-learning methods. Testing time represents the inference latency of the trained classifier. We set the sample size
+ for model retraining to 10.
+ As shown in TABLE IX, DawnGuard achieves a relatively short CTT and the second-shortest testing time. Since
+ TABLE X
+ FC-Net directly converts raw traffic into color images, it
+E UCLIDEAN D ISTANCE B ETWEEN M ALWARE AND B ENIGN T RAFFIC
+ U NDER D IFFERENT R EPRESENTATIONS achieves the shortest FET and testing time. However, this
+ simple representation lacks the expressiveness of our MGF.
+ While DawnGuard’s longer FET stems from computational
+ overheads in data augmentation and graph learning, these
+ modules are crucial for detection accuracy improvements
+ (Section VI-G).
+
+ G. Ablation Experiment
+ In this section, we evaluate the contribution of the main
+ modules of DawnGuard separately, illustrated in Fig. 9. We
+91.34%, which is 42.68% higher than the SOTA method in
+ conduct experiments with the loading ratio η = 30% and
+this scenario, i.e., ST-Graph, demonstrating DawnGuard can
+ the imbalance ratio ρ = 4 : 1 in D1 . We also evaluate the
+extract general features of malware traffic and remain resistant
+ effectiveness of MGF with quantitative measures.
+in the high imbalance ratio. When the imbalance ratio enlarges,
+ 1) Self-Adjusting Data Augmentation Module: To validate
+FC-Net, CBSeq, and YaTC lose the ability to detect unseen
+ our augmentation strategy, we first remove the module entirely.
+malware traffic, which achieves F1 of 17.08%, 18.18%, and
+ This results in a significant performance degradation, with an
+27.63%, respectively, when ρ = 48 : 1. This is because the
+ average drop of 22.33% in F1 and 5.33% in AUC. Furtherfeatures extracted by these methods are not distinguishable
+ more, we evaluate an alternative strategy that applies a static
+enough to detect unseen malware traffic, evidenced by quanhigh weight to the first 30% of the traffic. While this simple
+titative analysis of feature representation in TABLE X.
+ weighting improves the F1 to 82.95% from the non-augmented
+ baseline (74.11%), it remains 13.49% lower than DawnGuard.
+ This substantial gap demonstrates that the effectiveness of our
+E. Parameter Sensitivity Analysis approach stems from generating diverse, structurally-aware
+ samples, rather than merely biasing the model’s attention
+ We further study the impact of different parameter values towards the beginning of the flow.
+on the performance of DawnGuard. We select six key param- 2) Multi-Flow Temporal Graph Learning Module: To juseters across different modules, including the hard threshold tify our choice of temporal graph learning, we compare
+coefficient γ, the peak density search upper bound β, the soft DawnGuard against two categories of modeling paradigms:
+threshold angle θ, the number of initial consecutive packets static graph neural networks (GraphSAGE [36] and GAT
+M, the neighborhood sample max size n, and the dimension [37]) and fundamental Probabilistic Graphical Models (PGMs)
+of edge embeddings ω. We measure the F1 of DawnGuard in including Hidden Markov Model (HMM) [38], Bayesian
+D3 under different loading ratios (i.e., 20%, 30%, and 40%). Networks [39], and Markov Random Field (MRF) [40].
+ As shown in Fig. 8, itDawnGuard demonstrates strong The results clearly show the necessity of capturing temporobustness to these parameters. For instance, the number ral dynamics. Replacing Temporal GraphSAGE with static
+of initial packets M, which defines the input granularity GraphSAGE and GAT causes the F1 to drop to 87.46% and
+of single-flow features, shows minimal impact on the F1 58.60%, respectively. Furthermore, the PGM-based models
+within the range of [4, 8]. Specifically, at a 20% loading (HMM, Bayesian Networks, and MRF) exhibit limited effecratio, the F1 only varies between 92.76% and 94.69% as tiveness, achieving F1 of only 71.01%, 71.00%, and 74.92%.
+M changes. Similarly, the performance remains stable when This performance gap demonstrates that PGMs, limited by
+the edge embedding dimension ω varies from 128 to 1024, structural assumptions and feature representation scalability,
+and when the neighborhood sample size n ranges from 2 to cannot effectively model the temporal-topological correlations
+14. The high stability across these parameters, particularly that DawnGuard extracts.
+those governing the self-adjusting augmentation (i.e., γ, β, θ), 3) Early-Stage Malware Detection Module: We select ViT
+confirms that DawnGuard effectively captures the intrinsic [32] as the backbone for its superior feature extraction capapatterns of early-stage traffic through its design rather than bilities. To validate this choice, we conduct experiments
+relying on an over-optimized parameter space. In conclusion, by replacing ViT with other powerful architectures suitthe performance of DawnGuard is not sensitive to parameter able for processing our 2 × 1216 MGF matrix: Transformer
+choices. [31], ResNet50, and LSTM. All three alternatives lead to a
+JIA et al.: EARLY-STAGE DETECTION OF ENCRYPTED MALWARE TRAFFIC VIA TEMPORAL GRAPH LEARNING 4473
+
+ TABLE XI
+ C OMPARISON B ETWEEN DAWN G UARD AND THE SOTA BASELINE M ETHODS E VALUATED IN T HIS W ORK
+
+notable performance decline. Specifically, their F1 decrease by [44] extracts characteristic sequences of message lengths to
+14.09%, 18.65%, and 21.01%, respectively, compared to the achieve classification. Kitsune [13] uses autoencoders for
+ViT-based DawnGuard. This demonstrates that ViT’s global packet-level statistical feature analysis. To utilize multi-flow
+self-attention mechanism is more effective at mining high- features, CBSeq [3] employs Transformers to analyze behavlevel discriminative features from the MGF representations, ior sequences from full channels. Other approaches include
+thus enhancing the overall detection performance. attention-based certificate identification [45] and methods that
+ 4) Effectiveness of Feature Representation: To evaluate adopt the sequential nature of packets within isolated flows
+the effectiveness of our multi-flow representation MGF, we for early detection [14].
+compare it against three flow-based baselines: Color Image
+[15], ST-Graph [2], and MFR [16], excluding non-flow-based C. Pre-Training-Based Methods
+methods [3], [13]. Using 3,000 samples per category from
+ In recent years, pre-training frameworks have been intro-
+D1 , we vectorize the initial 30% of each flow to compute
+ duced to malware traffic detection models. FC-Net [15]
+the Euclidean distance between benign and malware samples
+ leverages meta-learning for few-shot detection by representing
+(larger indicates better discriminability). The hyperparamefull flows as color images datasets. In another approach,
+ters chosen for baselines are identical to those in [2], [15],
+ YaTC [16] utilizes masked autoencoders to learn high-level
+and [16].
+ representations from the first five packets.
+ As shown in TABLE X, MGF achieves the highest average distance across all malware categories. This quantitative
+evidence confirms that MGF extracts more discriminative D. Summary
+features than existing representations, creating a feature space In conclusion, the limitations of existing methods reflect
+where benign and malicious traffic are more separable thereby, two fundamental challenges of NIDS [46], [47], [48]: 1)
+reducing the detection difficulty in early stages. Information sparsity in early-stage traffic. Most methods rely on intra-flow features within a flow and suffer
+ VII. R ELATED W ORK
+ from a significant performance drop when only a small
+ Existing malware traffic detection methods can be broadly
+ fraction of traffic is available. 2) Heterogeneity of attack
+categorized into rule-based, machine learning (ML)-based,
+ patterns. Existing methods often treat flows in isolation,
+deep learning (DL)-based, and pre-training-based methods.
+ failing to capture the features across contextual flows. Dawn-
+We summarize the multi-dimensional differences between
+ Guard addresses these gaps by integrating self-adjusting data
+DawnGuard and the representative SOTA baseline methods
+ augmentation, which dynamically optimizes tail-masking to
+evaluated in this study in Table XI.
+ focus the model on discriminative early-stage interaction
+ phases, with multi-flow temporal graph learning to extract
+A. Rule- and ML-Based Methods temporal-topological correlations for reliable detection with
+ Traditional malware traffic detection methods often rely on early-stage traffic data.
+predefined rules. Bro [11] utilizes a layered architecture to
+separate event engines from policy scripts for real-time detec- VIII. C ONCLUSION
+tion. To handle encrypted traffic, ML-based methods focused
+ In this paper, we proposed DawnGuard, an effective
+on extracting statistical features from specific protocols (e.g.,
+ and reliable early-stage encrypted malware traffic detection
+TLS/DNS) [20] or leveraging graph models. For instance,
+ method. Specifically, DawnGuard utilized the temporal packet
+ST-Graph [2] constructs spatio-temporal graphs to analyze
+ density distribution of malware traffic to achieve self-adjusting
+full flows. Other methods leverage factor graphs to infer user
+ data augmentation and employed temporal graph learning
+states [41]. Furthermore, to achieve detection without complete
+ to extract temporal-topological correlations among multiple
+traffic, researchers have explored side-channel features [42],
+ flows, which formed MGF. By utilizing MGF, DawnGuard
+randomness tests [12], and transport-layer behaviors [43].
+ constructed a ViT-based detector to capture both local and
+ global contextual relationships, thereby enabling early-stage
+B. DL-Based Methods encrypted malware traffic detection. We conducted extensive
+ To reduce reliance on expert knowledge, DL-based methods experiments to evaluate DawnGuard, and the results demonhave been proposed for automated feature extraction. GGFAST strated that DawnGuard achieved effectiveness for early-stage
+4474 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+encrypted malware traffic detection. In future work, we will [23] X. Deng, Q. Li, and K. Xu, “Robust and reliable early-stage webcombine DawnGuard with unsupervised learning to improve site fingerprinting attacks via spatial–temporal distribution analysis,”
+ in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Dec. 2024,
+the performance of early-stage unknown encrypted malware pp. 1997–2011.
+traffic detection. Furthermore, we plan to deploy Dawn- [24] A. Alqahtani, M. Gazzan, and F. T. Sheldon, “A proposed
+Guard in an edge gateway for analysis on large-scale ISP crypto-ransomware early detection(CRED) model using an integrated deep learning and vector space model approach,” in Proc.
+traffic to further validate its robustness in high-throughput 10th Annu. Comput. Commun. Workshop Conf. (CCWC), Jan. 2020,
+environments. pp. 0275–0279.
+ [25] S. Rahmat, Q. Niyaz, A. Mathur, W. Sun, and A. Y. Javaid, “Network
+ R EFERENCES traffic-based hybrid malware detection for smartphone and traditional networked systems,” in Proc. IEEE 10th Annu. Ubiquitous
+[1] E. Rescorla, SSL and TLS: Designing and Building Secure Systems, Comput., Electron. Mobile Commun. Conf. (UEMCON), Oct. 2019,
+ vol. 1. Reading, MA, USA: Addison-Wesley, 2001. pp. 0322–0328.
+[2] Z. Fu et al., “Encrypted malware traffic detection via graph-based [26] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained webpage
+ network analysis,” in Proc. 25th Int. Symp. Res. Attacks, Intrusions fingerprinting using only packet length information of encrypted traffic,”
+ Defenses, Oct. 2022, pp. 495–509. IEEE Trans. Inf. Forensics Security, vol. 16, pp. 2046–2059, 2021.
+[3] S. Cui, C. Dong, M. Shen, Y. Liu, B. Jiang, and Z. Lü, “CBSeq: [27] W. W. Lo, S. Layeghy, M. Sarhan, M. Gallagher, and M. Portmann, “E-
+ A channel-level behavior sequence for encrypted malware traffic GraphSAGE: A graph neural network based intrusion detection system
+ detection,” IEEE Trans. Inf. Forensics Secur., pp. 5011–5025, Aug. for IoT,” in Proc. IEEE/IFIP Netw. Operations Manage. Symp., Apr.
+ 2023. 2022, pp. 1–9.
+[4] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted malicious traffic [28] R. W. Schafer, “What is a Savitzky-Golay filter? [lecture notes],” IEEE
+ in real time via flow interaction graph analysis,” in Proc. Netw. Distrib. Signal Process. Mag., vol. 28, no. 4, pp. 111–117, Jul. 2011.
+ Syst. Secur. Symp., 2023. [29] D. Koukis, S. Antonatos, D. Antoniades, E. P. Markatos, and P. Trim-
+[5] M. Shen et al., “Machine learning-powered encrypted network traffic intzios, “A generic anonymization framework for network traffic,” in
+ analysis: A comprehensive survey,” IEEE Commun. Surveys Tuts., Proc. IEEE Int. Conf. Commun., Jun. 2006, pp. 2302–2309.
+ vol. 25, no. 1, pp. 791–824, 1st Quart., 2023. [30] D. Koller and N. Friedman, Probabilistic Graphical Models: Principles
+[6] C. V. Wright, F. Monrose, G. M. Masson, and P. Chan, “On inferring and Techniques. Cambridge, MA, USA: MIT Press, 2009.
+ application protocol behaviors in encrypted network traffic,” JMLR, [31] A. Vaswani et al., “Attention is all you need,” in Proc. NIPS, 2017,
+ vol. 7, pp. 2745–2769, Dec. 2006. pp. 6000–6010.
+[7] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decen- [32] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers
+ tralized application identification via encrypted traffic analysis using for image recognition at scale,” in Proc. ICLR, 2020.
+ graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16, [33] R. Zamir, “A proof of the Fisher information inequality via a data
+ pp. 2367–2380, 2021. processing argument,” IEEE TIT, vol. 44, no. 3, pp. 1246–1250, May
+[8] M. Shen, K. Ji, Z. Gao, Q. Li, L. Zhu, and K. Xu, “Subverting 1998.
+ website fingerprinting defenses with robust traffic representation,” in [34] W. Gao, S. Kannan, S. Oh, and P. Viswanath, “Estimating mutual
+ Proc. USENIX Secur., Aug. 2023, pp. 607–624. information for discrete-continuous mixtures,” in Proc. Adv. Neural Inf.
+[9] M. Shen et al., “Swallow: A transfer-robust website fingerprinting attack Process. Syst., 2017, pp. 5988–5999.
+ via consistent feature learning,” in Proc. ACM SIGSAC Conf. Comput. [35] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+ Commun. Secur., Nov. 2025, pp. 1574–1588. classification using convolutional neural network for representation
+[10] (2024). WatchGuard’s Threat Lab Analyzes the Latest Malware and learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Da Nang, Vietnam,
+ Internet Attacks. [Online]. Available: https://www.watchguard.com/ Jan. 2017, pp. 712–717.
+ wgrd-resource-center/security-report-q4-2024 [36] W. L. Hamilton, R. Ying, and J. Leskovec, “Inductive representation
+[11] V. Paxson, “Bro: A system for detecting network intruders in real-time,” learning on large graphs,” in Proc. NIPS, vol. 30, 2017, pp. 1024–1034.
+ Comput. Netw., vol. 31, nos. 23–24, pp. 2435–2463, Dec. 1999. [37] P. Velickovic, G. Cucurull, A. Casanova, A. Romero, P. Lió, and
+[12] W. Niu, Z. Zhuo, X. Zhang, X. Du, G. Yang, and M. Guizani, Y. Bengio, “Graph attention networks,” in Proc. ICLR, 2018.
+ “A heuristic statistical testing based approach for encrypted net- [38] L. R. Rabiner and B. Juang, “An introduction to hidden Markov models,”
+ work traffic identification,” IEEE Trans. Veh. Technol., vol. 68, no. 4, IEEE ASSP Mag., vol. ASSPM-3, no. 1, pp. 4–16, Jan. 1986.
+ pp. 3843–3853, Apr. 2019. [39] F. V. Jensen, “Bayesian networks,” Encyclopedia Statist. Quality Rel.,
+[13] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An vol. 1, no. 3, pp. 307–315, 2009.
+ ensemble of autoencoders for online network intrusion detection,” in [40] S. Z. Li, Markov Random Field Modeling in Image Analysis. Cham,
+ Proc. Netw. Distrib. Syst. Secur. Symp., 2018. Switzerland: Springer, 2009.
+[14] T. E. T. Djaidja, B. Brik, S. Mohammed Senouci, A. Boualouache, [41] P. Cao, E. Badger, Z. Kalbarczyk, R. Iyer, and A. Slagell,
+ and Y. Ghamri-Doudane, “Early network intrusion detection enabled by “Preemptive intrusion detection: Theoretical framework and real-world
+ attention mechanisms and RNNs,” IEEE Trans. Inf. Forensics Security, measurements,” in Proc. Symp. Bootcamp Sci. Secur., Apr. 2015,
+ vol. 19, pp. 7783–7793, 2024. pp. 1–12.
+ [42] G. Stergiopoulos, A. Talavari, E. Bitsikas, and D. Gritzalis, “Automatic
+[15] C. Xu, J. Shen, and X. Du, “A method of few-shot network intrusion
+ detection of various malicious traffic using side channel features on TCP
+ detection based on meta-learning framework,” IEEE Trans. Inf. Forenpackets,” in Proc. ESORICS, 2018, pp. 346–362.
+ sics Security, vol. 15, pp. 3540–3552, 2020.
+ [43] Z. Berkay Celik, R. J. Walls, P. McDaniel, and A. Swami, “Malware
+[16] R. Zhao et al., “A novel self-supervised framework based on masked
+ traffic detection using tamper resistant features,” in Proc. MILCOM -
+ autoencoder for traffic classification,” IEEE/ACM TON, vol. 32, no. 3,
+ IEEE Mil. Commun. Conf., Oct. 2015, pp. 330–335.
+ pp. 2012–2025, Jan. 2024.
+ [44] J. Piet, D. Nwoji, and V. Paxson, “GGFAST: Automating generation
+[17] M. Shen, J. Wu, K. Ye, K. Xu, G. Xiong, and L. Zhu, “Robust detection
+ of flexible network traffic classifiers,” in Proc. ACM SIGCOMM Conf.,
+ of malicious encrypted traffic via contrastive learning,” IEEE Trans. Inf.
+ 2023, pp. 850–866.
+ Forensics Security, vol. 20, pp. 4228–4242, 2025.
+ [45] I. Torroledo, L. D. Camacho, and A. C. Bahnsen, “Hunting malicious
+[18] M. Cen, F. Jiang, X. Qin, Q. Jiang, and R. Doss, “Ransomware early
+ TLS certificates with deep neural networks,” in Proc. 11th ACM
+ detection: A survey,” Comput. Netw., vol. 239, Feb. 2023, Art. no.
+ Workshop Artif. Intell. Secur. (CCS), S. Afroz, B. Biggio, Y. Elovici,
+ 110138.
+ D. Freeman, and A. Shabtai, Eds., Toronto, ON, Canada: ACM, Oct.
+[19] Stratosphere.(2015). Stratosphere Laboratory Datasets. [Online]. Avail- 2018, pp. 64–73.
+ able: https://www.stratosphereips.org/datasets-overview [46] J. Sowa et al., “Post-quantum cryptography (PQC) network instrument:
+[20] B. Anderson and D. McGrew, “Identifying encrypted malware traffic Measuring PQC adoption rates and identifying migration pathways,”
+ with contextual flow data,” in Proc. ACM Workshop Artif. Intell. Secur., in Proc. IEEE Int. Conf. Quantum Comput. Eng. (QCE), Sep. 2024,
+ Oct. 2016, pp. 35–46. pp. 1835–1846.
+[21] G. Jacob, R. Hund, C. Kruegel, and T. Holz, “JACKSTRAWS: Picking [47] R. Sommer and V. Paxson, “Outside the closed world: On using machine
+ command and control connections from bot traffic,” in Proc. USENIX learning for network intrusion detection,” in Proc. IEEE Symp. Secur.
+ Secur. 11, 2011, p. 29. Privacy, May 2010, pp. 305–316.
+[22] F. Tegeler, X. Fu, G. Vigna, and C. Kruegel, “BotFinder: Finding bots in [48] L. Yang et al., “True attacks, attack attempts, or benign triggers? An
+ network traffic without deep packet inspection,” in Proc. 8th Int. Conf. empirical measurement of network alerts in a security operations center,”
+ Emerg. Netw. experiments Technol., Dec. 2012, pp. 349–360. in Proc. USENIX Secur., 2024, pp. 1525–1542.

@@ -1,0 +1,730 @@
+IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 7, JULY 2026 10061
+
+ HTTP/2 DoS Attacks in 5G Networks: Impact
+ Analysis and Anomaly Detection
+ Nathalie Wehbe , Member, IEEE, Hyame Assem Alameddine , Member, IEEE, and Chadi Assi , Fellow, IEEE
+
+ Abstract—Fifth Generation (5G) and beyond networks rely on
+the HTTP/2 protocol for signaling between core Network Functions (NFs). While HTTP/2 vulnerabilities have been exploited to
+perform various types of Denial of Service (DoS) attacks in web environments, their impact on telecommunication networks remains
+under-studied. Though secure by design, the 5G Service-Based
+Architecture (SBA) can be vulnerable to misconfigurations and virtualization exploits, particularly with Mobile Network Operators
+(MNOs) using hyper-scale technologies. This work addresses the
+lack of practical studies and analyses on the impact of HTTP/2 Fig. 1. 5G service-based architecture [3].
+attacks on 5G networks, especially given the absence of a 5Gcompliant dataset for anomaly detection. Utilizing the open-source
+free5GC testbed and UERANSIM emulator, we emulate six dif- communication protocol in 5G SBA [4], [5]. 5G employs a
+ferent HTTP/2 attacks on various NFs within the 5G SBA. We
+analyze their impact on the network and demonstrate that many Service-based Interface (SBI) (i.e., nnrf, namf, nsmf, etc.) using
+of them cause cascading effects on other NFs involved in related an Application Programming Interface (API) over HTTP/2 [4]
+jeopardized 5G procedures. Our emulations include both malicious in the Control Plane (Fig. 1).
+and normal network behavior, resulting in the first 5G anomaly HTTP/2 introduces significant improvements over its prededetection dataset that we are aware of. Using CICFlowmeter, we cessor, HTTP/1.1, providing features like stream multiplexing,
+extract flow-based features known for their anomaly detection
+capabilities and train multiple machine learning models. These header compression, and optimized connection management [6].
+models can serve as benchmarks for detecting HTTP/2 attacks in These enhancements are crucial for handling the increased
+5G networks. signaling traffic and dynamic interactions between 5G NFs.
+ Index Terms—5G networks, 5G security, HTTP/2, HTTP/2
+ HTTP/2, a fundamental component of the 5G SBA, enables
+attacks, 5G SBA security, 5G dataset, machine learning, anomaly reduced latency, efficient resource allocation, and scalable opdetection. erations among NFs [4]. By harnessing the protocol features,
+ HTTP/2 ensures robust and seamless communication [4].
+ To ensure a resilient and dependable experience for 5G users,
+ I. INTRODUCTION SBA includes crucial functionalities such as NF registration,
+ HE Fifth Generation (5G) mobile networks introduce re- discovery, and authorization, along with security measures for
+T markable advancement in communication technology [1].
+Designed to accommodate a wide range of applications, 5G
+ the SBI [7]. These functions are supported by the standardized
+ HTTP/2 protocol, secured with Transport Layer Security (TLS),
+networks enhance everything from broadband mobile services to enhancing both security and the system’s agility and scalability.
+the Internet of Things (IoT) and critical communication tasks [2]. Nonetheless, securing 5G SBA presents notable challenges.
+At the heart of 5G architecture is the innovative Service-Based For instance, NFs can enable on-demand firewall and Intrusion
+Architecture (SBA) (Fig. 1), which coordinates specialized Net- Detection Systems (IDS) to block or reroute malicious traffic.
+work Functions (NFs) to manage network operations [3]. These However, the design of such dynamic NF-based security mech-
+NFs utilize standardized protocols for their efficient communica- anisms is yet to be explored [8]. It is imperative to investigate
+tion. The Third Generation Partnership Project (3GPP) adopted emerging security challenges specific to the 5G SBA and its
+the Hypertext Transfer Protocol Version 2 (HTTP/2) as their associated technologies and protocols. There is a significant need
+ for more research into the cybersecurity impacts of web-based
+ technologies such as HTTP/2 on SBA.
+ Received 27 December 2024; revised 15 June 2025; accepted 15 January
+2026. Date of publication 29 January 2026; date of current version 5 June 2026. Although 5G network security has been the focus of exten-
+This work was supported in part by the National Cybersecurity Consortium, sive research, most studies concentrate on well-known threats
+in part by the Government of Canada, in part by Ericsson Canada, and in such as jamming, Denial of Service (DoS), eavesdropping,
+part by Concordia University. Recommended for acceptance by M. N. Aman.
+(Corresponding author: Chadi Assi.) and Man-in-the-Middle (MITM) attacks [2]. Other works [1],
+ Nathalie Wehbe and Chadi Assi are with the Concordia University, Montreal, [9], [10] explore the implications of virtualization in 5G SBA,
+QC H3G 1M8, Canada (e-mail: Chadi.assi@concordia.ca). revealing how the use of containers, VNFs, and cloud-native
+ Hyame Assem Alameddine is with the Ericsson Research, Montreal, QC H3B
+4W5, Canada. infrastructure broadens the attack surface. However, far fewer
+ Digital Object Identifier 10.1109/TMC.2026.3657143 studies have critically examined the security implications of
+ 1536-1233 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+10062 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 7, JULY 2026
+
+adopting HTTP/2 as the core signaling protocol in 5G SBA. and malicious network emulations. In addition, we conduct a
+Only a limited number of efforts [11], [12], [13] have addressed thorough analysis of the impact of HTTP/2 attacks on 5G
+this emerging threat landscape, usually focused on signaling networks with protection measures in Section VI. Section VII
+vulnerabilities or specific features of HTTP/2. In particular, the presents our dataset. Our model results are presented in Secwork in [13] investigates HTTP/2 Stream Multiplexing Attacks tion VIII. The paper concludes in Section X.
+(SMAs) in a 5G environment but does not release its dataset or
+extend the analysis to other classes of attacks. Similarly, [14] II. BACKGROUND ON HTTP/2 IN 5G
+introduces fuzzing and replay methodologies using 5Greplay,
+but does not simulate these threats in a full 5G testbed, thus The HTTP/2 protocol was developed to address the shortlacking empirical information on their operational impact. comings and performance limitations of its predecessor,
+ These limitations highlight a critical gap in the literature HTTP/1.1 [6]. HTTP/2 uses stream for Request/Response exrelated to the absence of a publicly available dataset, or a changes, where each message is either a request or a response.
+comprehensive experimental analysis of HTTP/2 attacks affect- HTTP/2 messages are built from HTTP/2 frames. An HTTP/2
+ing 5G NFs. Furthermore, existing anomaly detection efforts frame is the smallest unit of communication within an HTTP/2
+have not focused on HTTP/2 threats within a standalone 5G connection, encoded in binary. HTTP/2 frames include (1)
+SBA environment. To bridge this gap, our work makes several HEADERS frame for opening streams and contain different
+novel contributions motivated by the shortcomings of prior header fields in the form of key-value pairs, (2) DATA frame
+studies [11], [12], [13], [14], [15]: carries a payload, and (3) SETTINGS frame carries configur We leverage the open-source free5GC [16] core and ration parameters that impact the communication [6]. For ex-
+ UERANSIM [17] UE/RAN emulator, aligned with 3GPP ample, SETTINGS_MAX_CONCURRENT_STREAMS SETstandards [18]. We emulate realistic 5G control plane TINGS allows an HTTP/2 client/server to limit the maximum
+ operations and inject six distinct HTTP/2-based attacks, number of concurrent streams over a single HTTP/2 connection
+ including variations of stream multiplexing, rapid reset, with its peers and enables the HTTP/2 stream multiplexing
+ and slow rate attacks. Unlike previous studies that focus on features. Other HTTP/2 features include flow control, and header
+ isolated NFs or simulated HTTP/2 traffic, our emulations compression, among others [6]. For instance, header comprescapture the full impact on NF-to-NF signaling, cascading sion minimizes the redundancy and size of header data, which
+ failures, and degradation of service availability across the minimizes bandwidth utilization [6].
+ entire SBA. 3GPP adopted the HTTP/2 protocol in 5G to facilitate sigr We build a novel dataset that includes both benign and naling between 5G NFs given its secure, reliable, and bidirecmalicious traffic flows generated during the emulation of tional communication [2]. These benefits position HTTP/2 as a
+ realistic 5G procedures and attacks. To the best of our proficient choice for 5G NFs communication, enabling robust,
+ knowledge, this dataset is the first to capture HTTP/2 efficient, and scalable network operations. This communication
+ behavior within a fully functional 5G SBA environment. takes the form of Request/Response or Subscribe/Notify, en-
+ It is designed to support advanced research in areas such abling seamless interaction between the NF Service consumer
+ as adversarial robustness, transfer learning, and adaptive (NFc) and the NF Service producer (NFp) [4]. Request/Response
+ anomaly detection. The dataset will be made publicly is used when the NFc requests a service and the NFp responds. In
+ available upon acceptance. contrast, Subscribe/Notify is employed when the NFc subscribes
+ r We pre-process our 5G HTTP/2 dataset to extract flow- to an NFp event (e.g., Session Management Function (SMF)
+ based features that are widely known in the literature for subscribes to location report to get notified of the last known
+ their ability to distinguish between normal and malicious location of a UE or group of UEs by the Access and Mobility
+ behaviors. We evaluate three unsupervised machine learn- Management Function (AMF) [4], etc.), that causes the NFc
+ ing models for detecting HTTP/2-based anomalies: Au- to be called back when the event occurs. HTTP/2 enhances
+ toencoder (AE), LSTM-Autoencoder, and Isolation Forest efficiency and speed, however, it opens up new avenues for
+ (IF). The AE model builds on our prior work [13] which exploitation by malicious actors. For instance, despite 5G SBA
+ focused on detecting HTTP/2 SMAs. In this work, we test being secure by design, it remains susceptible to virtualization
+ its ability to generalize across all six attack types. LSTM- exploits and misconfigurations which can be used as entry points
+ AE, inspired by its successful use in detecting non-HTTP/2 to launch attacks exploiting HTTP/2 vulnerabilities [10], [20],
+ attacks in 5G SBA [19], demonstrates the advantage of [21].
+ modeling temporal dependencies. Our evaluation shows
+ that LSTM-AE achieves the highest average F1-score of III. RELATED WORKS
+ 92.24%, confirming the viability of using flow-based models for HTTP/2 attack detection in real 5G environments. A. HTTP/2 Anomaly Detection
+ The paper is organized as follows: Section II gives a back- Numerous studies examine threats exploiting the HTTP/2
+ground on the 5G networks, then an overview of related works protocol in web environments, such as HTTP/2 stream mulis presented in Section III. The threat model for HTTP/2 at- tiplexing attacks [13], [22], HTTP/2 rapid reset attacks [23],
+tacks and its variants are explored in Section IV. Furthermore, [24], and HTTP/2 slow rate attacks [25], [26]. These studies
+Section V outlines the experimental setup, including the normal often suggest anomaly detection methods that are generally less
+WEHBE et al.: HTTP/2 DOS ATTACKS IN 5G NETWORKS: IMPACT ANALYSIS AND ANOMALY DETECTION 10063
+
+effective against HTTP/2 threats targeting web environments. transitions [27], [28], [29], [30], [31]. These datasets have
+For example, [22] shows that the HTTP/2 stream multiplexing proven useful for general network anomaly detection and have
+feature can be exploited to launch multiple streams over the demonstrated the value of flow-based features in identifying
+same connection, overwhelming the server or causing DoS. In threats such as DoS attacks, unauthorized access, and traffic
+HTTP/2 slow rate DoS attacks, attackers send multiple specially manipulation. Flow features such as duration, volume, and
+crafted incomplete requests that occupy the server’s connection packet counts provide a compact yet powerful representation
+queue space, preventing it from processing other requests [25]. of network behavior, especially useful in environments with
+They can still exhaust server resources, leading to performance limited visibility into payload data. However, these datasets
+degradation and DoS. To detect such attacks, [25] proposes fall short when applied to 5G SBA scenarios. First, most of
+using a Chi-square test to identify abnormal intervals of HTTP/2 them were created in pre-5G contexts and do not reflect the
+traffic. However, its effectiveness varies with the attack rate and architectural changes, service-based interactions, or traffic
+the chosen detection interval. The same authors later developed characteristics of standalone 5G networks. Second, while a few
+an event sequence analysis method, achieving high accuracy recent efforts have attempted to model HTTP/2 specific behavior
+with minimal computational demands [26], only for this attack. and attacks, such as those using stream multiplexing in 5G [13],
+Another method by [27] focuses on identifying HTTP/2 multi- they either rely on private datasets or simulate traffic without
+plexed asymmetric DDoS attacks by contrasting the behavior grounding in a real 5G SBA testbed. Furthermore, works that
+of legitimate users and attackers. While effective for DDoS use 5G testbeds often focus on non-HTTP/2 protocols and
+attacks, this approach fails to detect HTTP/2 slow-rate DoS do not capture the application layer characteristics unique to
+attacks due to the minimal computational overhead and pattern HTTP/2-based service communication in 5G [32], [33], [34].
+mimicking by attackers. Both slow rate and stream multiplexing This lack of a public, domain-specific dataset limits reattacks exploit various HTTP/2 parameters, leading to a DoS. searchers’ ability to design, evaluate, and compare anomaly de-
+One of the latest attacks related to HTTP/2 is the HTTP/2 rapid tection methods tailored for real-world 5G HTTP/2 traffic. The
+reset attack, identified as CVE-2023-44487 [24]. This attack need for such datasets is especially pressing given the growing
+exploits the stream multiplexing feature by resetting streams adoption of HTTP/2 in 5G core networks and the increasing
+currently handling requests using the RST_STREAM frame. The sophistication of potential attacks. In response to this gap, our
+mitigation for this attack involved bounding the number of work contributes a novel dataset that captures both normal and
+simultaneously executing handler routines to a defined limit malicious traffic in a controlled 5G SBA environment using
+(SETTINGS_MAX_CONCURRENT_STREAMS=200), pre- real NF interactions and HTTP/2 communication. By emulating
+venting server overload by queuing incoming requests until a diverse HTTP/2-specific attacks and collecting flow-level data
+current request is completed. If the queue becomes excessively in a fully standalone 5G testbed, we provide the community
+long, the server terminates the connection. with a resource that better reflects the operational realities of
+ With the adoption of the HTTP/2 protocol by 3GPP as modern 5G deployments. This significantly advances the field
+a signaling protocol in 5G networks, it becomes crucial to of 5G security, facilitating further exploration and development
+understand its security implications. To date, to the best of of effective anomaly detection and security measures for safeour knowledge, [13] remains the only study that has emulated guarding 5G networks.
+HTTP/2-related attacks in a 5G SBA environment. This research
+focused on anomaly detection systems that monitor stream pat- IV. HTTP/2 ATTACKS IN 5G NETWORKS
+terns to identify malicious behaviors, specifically targeting only
+ Although secure by design, the 5G SBA can still experience
+HTTP/2 stream multiplexing attacks within the context of a 5G
+ some attacks resulting from virtualization exploits, misconfigunetwork. Another work [14], proposed testing methodologies
+ rations, and its HTTP/2 signaling protocol vulnerabilities. In the
+using an open-source solution called 5Greplay, allowing netfollowing, we shed light on some HTTP/2 attacks in 5G networks
+work operators to defend against flooding and fuzzing attacks.
+ while detailing the vulnerabilities they exploit and their related
+However, the authors did not focus on the impact of these attacks
+ threat models.
+on 5G networks, as their study did not employ a 5G testbed.
+Additionally, the HTTP/2 dataset in their research was created
+using MMT-DPI, a tool developed to parse and mutate HTTP/2 A. Assumptions
+packets. Unlike [13], [14], the current paper significantly ex- HTTP/2 attacks in 5G networks can be performed through
+pands their scopes by targeting multiple HTTP/2-related attack misconfigured or compromised NFs. We consider the following
+types, including slow-rate and rapid-reset attacks, in addition to assumptions for HTTP/2 attacks, assuming that attackers comstream multiplexing within 5G SBA. Furthermore, our dataset promise the NFc and use it to attack the NFp or vice versa.
+is based on a 5GC testbed that follows 3GPP standardization. 1) Attacker compromises an NFc: Many standardization documents discuss threats brought by NFV and virtualization
+ technologies (e.g., container, virtual machines, etc.) to
+B. HTTP/2 Datasets telecommunication networks and 5G [20]. The adoption of
+ Several prior studies have leveraged publicly available hyper-scale cloud by mobile operators extends the attack
+datasets such as CICIDS2018, CICDDoS2019, and datasets surface of their network and makes their NFs vulneraderived from 4G-LTE and traditional HTTP/1.1-to-HTTP/2 ble [20]. An attacker can compromise 5G NFs deployed
+10064 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 7, JULY 2026
+
+Fig. 2. HTTP/2 attacks in 5G SBA.
+
+ on docker containers in the cloud, by exploiting docker leveraging 5G-specific APIs, making these attacks more chalvulnerabilities to perform container escape (i.e., CVE- lenging to perform than in a web, where APIs are not necessarily
+ 2016-5195 [35], CVE-2019-5736 [36], and CVE-2023- used. Furthermore, their impact on a 5G network can be more
+ 20864 [37]) [38]. Breach of isolation between network disruptive than in a web environment, given the dependencies
+ slices served by the same compromised NF can also be and interactions existing between the different 5G NFs, as we
+ exploited by attackers [39], [40]. show in Section VI.
+ 2) NFc can successfully authenticate with the NFp: We assume that if TLS is used, the malicious NFc can still
+ authenticate with the NFp as the attacker has access to B. Attack 1: HTTP/2 Stream Multiplexing Attack (SMA)
+ its public/private key pairs. To perform an HTTP/2 SMA, attackers send multiple
+ 3) NFc is authorized to access NFp services: We assume that requests, as much as the NFp allows in the HTTP/2 SETTINGS_
+ the malicious NFc has already acquired OAuth2.0 access MAX_CONCURRENT_STREAMS, into a single HTTP/2
+ tokens to the NFp services. These tokens are cached and connection. By default, the NFc can send up to 2,147,483,647
+ can be reused by the attacker [2], [41]. Alternatively, the (default value of SETTINGS_MAX_CONCURRENT_
+ malicious NFc can request new access tokens from the STREAMS) streams per HTTP/2 connection [6]. Attackers can
+ NRF given that it can successfully authenticate with it (i.e., trigger HTTP/2 SMA in two ways within 5G SBA, either by
+ assumption 2). An attacker can exploit vulnerabilities in employing the Request/Response or the Subscribe/Notify.
+ network slicing and service authorization, as noted in [40], 1) Attack 1.1-SMA-Request/Response: In an HTTP/2 SMA
+ to access NFp services. using Request/Response (Fig. 2(a)), attackers compromise NFc
+ 4) Attacker has access to UE information: As some network and send multiple requests over a single HTTP/2 connection toservices require exchanging UE information (e.g., Sub- wards NFp. Attackers repeat this behavior over multiple HTTP/2
+ scription Permanent Identifier (SUPI)) [42], we assume connections which results in a DoS on the NFp.
+ that the attacker can gain access to such information by 2) Attack 1.2-SMA-Subscribe/Notify: According to 3GPP
+ monitoring NFc communications or even by requesting [4], the Subscribe/Notify service operations in HTTP/2 involve
+ such information from other NFs. two HTTP/2 connections, each handling one direction of traffic.
+ We should note that these attacks are not new or novel. NFc acts as an HTTP/2 client when subscribing to notifications,
+HTTP/2 attacks are general attacks that can occur in a web while NFp functions as an HTTP/2 server. Conversely, the roles
+environment as they exploit HTTP/2 features. However, their are reversed when NFp sends notifications to NFc. As depicted in
+variations, applicability, and impact on a 5G network are dif- Fig. 2(b), a compromised NFc establishes an HTTP/2 connection
+ferent from a web environment due to the specificity of the with NFp and sends a subscription request containing a notify
+5G SBA and the 5G procedures. In 5G, any NF can act as a URI to signal to the NFp to notify it when the occurrence of the
+service consumer (i.e., HTTP/2 client) or producer (i.e., HTTP/2 API-related event (e.g., N1N2TransferFailureNotification [43]
+server), enabling attacks from both HTTP/2 clients and servers. is triggered). Attackers exploit the event conditions (i.e., UE state
+However, in a web environment, attacks are generally initiated is DISCONNECTED [43]) to initiate the notification. Attackers
+from HTTP/2 clients to the web server. Although exploited in repeat the request with the notification URI to cause an SMA
+the web, applying these attacks in a 5G environment requires and overwhelm both NFp and NFc. The NFc will be receiving an
+WEHBE et al.: HTTP/2 DOS ATTACKS IN 5G NETWORKS: IMPACT ANALYSIS AND ANOMALY DETECTION 10065
+
+excessive number of notifications causing a DoS, while the NFp NFc services. The NFc initiates the first HTTP/2 connection
+struggles with the high number of requests and from managing with the compromised NFp, followed by sending a SETTINGS
+and forwarding the notifications to the NFc, eventually leading frame. However, the malicious NFp does not acknowledge the
+to resource exhaustion and DoS on the NFp. received SETTINGS frame. NFc continues to send numerous
+ requests of SETTINGS frame to NFp. Since the malicious NFp
+C. Attack 2: HTTP/2 Rapid Reset Attack consistently fails to acknowledge the HTTP/2 SETTINGS frame
+ for all messages received, it can exhaust the available connection
+ Attack 2-Rapid Reset, identified as CVE-2023-44487 [24],
+ pool. This not only blocks other NFs from communicating with
+exploits the stream multiplexing feature of HTTP/2. It employs
+ the victim NFc but also keeps the connection from NFc open for
+the RST_STREAM frame to terminate streams that are currently
+ an extended period.
+processing requests [6]. In this case, the number of streams that
+ 2) Attack 3.2-Slow Rate-Connection Preface: The connecwere reset by the RST_STREAM frame do not count towards
+ tion preface is sent from the NFc to inform the NFp that
+SETTINGS_MAX_CONCURRENT_STREAMS. The mitiga-
+ HTTP/2 will be used for further communications. In this attion for this attack considers counting any request reaching the
+ tack (Fig. 2(e)), after establishing an HTTP/2 connection, a
+server, even if it is a RST_STREAM frame, as part of the defined
+ compromised NFc sends the connection preface to the NFp,
+maximum stream limit. It involves limiting the number of siprompting it to wait for a GET/POST HTTP/2 request. However,
+multaneously executing handler routines (SETTINGS_MAX_
+ the malicious NFc intentionally withholds any HTTP/2 requests,
+CONCURRENT_STREAMS= 200) and prevents server overforcing the NFp to wait until the NFp drops the connection, thus
+load by queuing incoming requests until a current request is
+ wasting its resources and denying its service to other NFs.
+completed. If the queue becomes excessively long, the server
+ 3) Attack 3.3-Slow Rate-Window Size: In a standard HTTP/2
+terminates the connection as a safeguard. However, increasing
+ connection, both endpoints are required to send an HTTP/2
+the SETTINGS_MAX_CONCURRENT_STREAMS slightly
+ payload that includes a SETTINGS frame with the SETcould significantly impact network performance.
+ TINGS_INITIAL_WINDOW_SIZE field, along with a complete
+ In this attack (Fig. 2(c)), attackers compromise the NFc
+ GET request. The SETTINGS_INITIAL_WINDOW_SIZE field
+and establish an HTTP/2 connection with the NFp. In this
+ specifies the sender’s capacity to receive data in bytes from its
+work, we assume that the reset attack is patched, however, we
+ peer. Upon receiving this, the NFp expects that the NFc can
+assume that the NFp is misconfigured to allow an unusually
+ receive data of the indicated size. However, attackers exploit
+high number of concurrent streams (e.g., SETTINGS_MAX_
+ this mechanism for a slow rate attack by compromising the
+CONCURRENT_STREAMS = 1000 instead of the default 200
+ NFc (Fig. 2(f)). After establishing the HTTP/2 connection,
+set in the golang library). The malicious NFc then rapidly genthe malicious NFc sends a SETTINGS frame with the SETerates requests and immediately issues RST_STREAM frames
+ TINGS_INITIAL_WINDOW_SIZE set to zero, falsely indicating
+for each request across multiple HTTP/2 connections, forcing
+ no available window space for data reception. The NFp, in turn,
+the NFp to terminate the requests. This flood of reset stream
+ holds the data until it receives a WINDOW_UPDATE frame
+requests can lead to resource exhaustion at the NFp.
+ that increases the window size. Nonetheless, the malicious NFc
+ intentionally never sends a WINDOW_UPDATE, thus causing
+D. Attack 3: HTTP/2 Slow Rate Attacks the NFp to wait till the connection pool is full, resulting in
+ Another type of HTTP/2 attack is an HTTP/2 slow rate DoS dropping the connection. Thus, this attack exhausts the available
+attack which involves attackers sending HTTP/2 frames at a connection pool at the NFp and blocks its service for other
+deliberately slow rate to exhaust NFp resources [21], [25], [26]. legitimate UEs.
+HTTP/2 slow rate attacks require low bandwidth and are difficult
+to detect. Attackers exploit the HTTP/2 frame between the NFc V. ENVIRONMENT SETUP
+and NFp, such as the exchange of SETTINGS frame, capitalizing
+ In this section, we present the environment that we use to
+on the design of NFp which waits for certain responses. In this
+ emulate normal and malicious network traffic.
+work, we target three variations of HTTP/2 slow rate attacks.
+ 1) Attack 3.1-Slow Rate-Setting: HTTP/2 slow Rate-Setting
+ A. Emulation Setup - 5G Testbed
+is a slow rate attack that is based on un-acknowledging a SET-
+TINGS frame. In a normal HTTP/2 communication scenario, We emulate the HTTP/2 attacks using free5GC [16], an
+both endpoints must exchange SETTINGS frames at the start open-source 5G core network testbed, and UERANSIM [17],
+of a connection and may send them at any other time during a UE/RAN emulator, adhering to the 3GPP standard [18].
+the connection. SETTINGS frame allows each endpoint to ac- We [44] as depicted in Fig. 3. The VMs are equipped with
+knowledge the parameters of the connection. When an endpoint Ubuntu 20.04-Focal, 8 virtual Central Processing Units (CPU),
+receives a SETTINGS frame, it should send an acknowledgment and 64 GB of RAM. We use free5GC docker-compose version
+response that tells the sender that the SETTINGS frame was re- 3.4.0 [45], which runs NFs in separate containers on the same
+ceived and processed. Thus, the slow Rate-Setting attack mainly VM. UERANSIM facilitates the emulation of network traffic
+takes advantage of the SETTINGS frame to let the endpoint and 5G operations, including UE registration, deregistration,
+wait. As depicted in Fig. 2(d), attackers compromise the NFp and service requests [42], providing crucial insights into network
+that has already been authenticated and authorized to access behavior and system performance.
+10066 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 7, JULY 2026
+
+Fig. 3. 5G Testbed with normal and malicious network behaviors.
+
+ TABLE I follows the principles outlined in [48], where Poisson processes
+ LOGICAL DEPENDENCY BETWEEN 5G PROCEDURES
+ are used to model the arrival of UE requests in realistic network
+ scenarios. Each UE engages in one or more 5G procedures
+ selected from a set provided by UERANSIM (Table I). To ensure
+ that our emulation of 5G normal network behavior is realistic,
+ we follow the 3GPP standard definition of the different 5G procedures and their logical dependencies [18], [42]. We limit these
+ procedures to those available in UERANSIM and which we
+ can emulate. Table I defines the possible subsequent procedure
+ for each triggered procedure by the UE following the 3GPP
+ standard. Given that 5G procedures have logical dependencies
+ and specific order requirements defined by the 3GPP standard,
+ in our emulation, we choose a subsequent procedure (p + 1) that
+B. Emulation Configuration follows a procedure p for a UE by randomly selecting it from
+ a predefined list of procedures that logically follow p . The list
+ Given the lack of publicly accessible datasets for anomaly of the possible subsequent procedures for each 5G operation in
+detection in the 5G SBA, we employ our emulated 5G testbed to UERANSIM, is outlined in Table I. For instance, a UE cannot
+emulate normal and malicious network behaviors. For normal proceed to deregistration if it has not completed its registration.
+network behavior, we replicate the standard activities of UEs Moreover, each 5G procedure triggers various communication
+within our 5G testbed by leveraging different 5G procedures between NFs. These communications may vary based on the UE
+implemented in UERANSIM (Table I). These same procedures state (e.g., CONNECTED, IDLE, DISCONNECTED) and other
+are also employed to model HTTP/2 attacks and generate mali- factors such as network conditions and RAN resources [42].
+cious traffic. In our emulation, each UE starts by first registering to the
+ network and then selects a subsequent procedure as detailed
+C. Normal Network Behavior Emulation in Table I. Hence, the following procedure is randomly chosen
+ To emulate normal network behavior, we consider the arrival from the appropriate options, which include Uplink, Downlink,
+of 100 UEs to the network using a Poisson process [46], [47] UE release PDU session, gNodeB release PDU session, and
+over two hours. The Poisson process is widely recognized as Deregistration procedures. After the registration, let us assume,
+an effective method for modeling arrival times of events in for example, that the gNodeB release PDU session procedure
+network traffic due to its ability to capture the randomness of user was selected by the UE. Following its execution, either Uplink,
+behavior and service requests over time. For our implementation, Downlink, or Deregistration procedures can be initiated. Note
+we defined the load (number of requests) per 10-minute intervals that these procedures are triggered for the same UE at different
+as [1, 2, 3, 5, 6, 7, 8, 9, 7, 5, 3, 0.5], to reflect the dynamic nature of times to replicate 5G communications and can switch the UE
+5G network traffic. We use 100 UEs in each 10-minute interval, between different states. For example, (1) UE registers to the
+representing one predefined network load. For each load value, network; after a certain period of time, (2) RAN releases the
+we emulate a number of 5G procedures calculated based on PDU resources allocated to the UE, switching its state to IDLE;
+the Poisson process for each of these 100 UEs. This approach (3) Subsequently, a Downlink procedure is triggered from the
+WEHBE et al.: HTTP/2 DOS ATTACKS IN 5G NETWORKS: IMPACT ANALYSIS AND ANOMALY DETECTION 10067
+
+ procedures such as Uplink, Downlink, UE release PDU session,
+ and UDR Management, frequently used in our 5G testbed. We
+ emulate HTTP/2 attacks (Section IV) where attackers compromise NFc/NFp which are highlighted in red, such as a
+ PCF, UDR, or SMF, as shown in Fig. 3, in addition to UE
+ information (i.e., SUPI). We assume that attackers exploit 30
+ legitimate UEs out of 100. Through the compromised NFc,
+ each attack is launched using the IMSI of the 30 legitimate
+ UEs, where multiple HTTP/2 connections are established toward the NFp. These connections are configured with a default
+ SETTINGS_MAX_CONCURRENT_STREAMS=200 in our 5G
+ testbed. Thus, in our attack emulations, the network operates
+ normally for the first 60 minutes, after which the attack is
+ initiated when the load in the network is designed to be around
+ its peak (load = 8).
+ 1) Attack 1: HTTP/2 Stream Multiplexing Attack: For instance, Fig. 2(a) involves a malicious SMF that randomly triggers various procedures toward the AMF, adhering to HTTP/2
+ protocol precedence constraints [6], [43]. For Attack 1.1-SMA-
+ Request/Response, we use three different procedures, that are
+ triggered from the malicious SMF towards the AMF using the
+ same Namf_Communication_N1N2MessageTransfer API, such
+ as Uplink, downlink, and UE release PDU session. Note that this
+ API covers most of the service operations provided by the AMF
+ and consumed by the SMF [43]. As attackers, we repeat this
+ attack over 55,954 HTTP/2 connections, each handling up to 907
+ requests, resulting in an NFp overload and a DoS. The second
+ attack scenario (Fig. 2(b)) considers an SMA that involves a malicious SMF exploiting 30 UEs by triggering only the Downlink
+ procedure using Namf_Communication_N1N2MessageTransfer
+ API, however, we include a notify URI for DISCONNECTED
+Fig. 4. Benign network traffic.
+ UEs. According to 3GPP specifications [43], when the Downlink
+ procedure is initiated while the UE state is DISCONNECTED,
+network to signal to the UE which is in IDLE state, hence, the N1N2TransferFailureNotification API is triggered to notify
+switching its state to CONNECTED. SMF that the UE is unreachable [43]. Consequently, the AMF
+ Fig. 4 highlights the interactions between pairs of NFs ob- sends a notification back to the malicious SMF. We emulated
+served within our 5G testbed (i.e., control plane). We extract the this attack using 54,188 HTTP/2 connections, each handling up
+total number of messages reflecting these interactions between to 841 requests over 40 minutes before the AMF goes down.
+pairs of NFs during 20 minutes of emulations of different 5G This attack effectively exploits the signaling mechanisms of the
+procedures and present them in Fig. 4(a). The latter shows that network, leading to a DoS on the AMF and SMF. The continuous
+interactions involving the AMF, SMF, UDR, and PCF are more failure notifications overwhelm both AMF and SMF, making
+frequent, reflecting the intensive activity associated with Uplink, it unresponsive and crippling NFs, degrading the Quality of
+Downlink, and UDR management procedures during our normal Service (QoS) for legitimate UEs.
+network traffic. This data is crucial as it represents the peak To better illustrate how we perform Attack 1.1-SMA-Request/
+demands for each interaction, offering insights into network load Response, we illustrate in Fig. 5 the normal Downlink procedure
+during typical operations. triggered from the Data Network (DN) when the UE is in the
+ Along with observing NFs interactions, we monitor resource IDLE state [43], and highlight in red how an attacker can perform
+utilization during normal network traffic by tracking CPU con- the attack as in our emulation assuming that the SMF was
+sumption across various NFs over two hours, as shown in compromised. In a normal scenario, the SMF sends a request to
+Fig. 4(b). We observe that although the CPU load of the different the AMF using Namf_Communication_N1N2MessageTransfer
+NFs remains under 25%, AMF, SMF, and UDR exhibit higher API (Fig. 5(3a)). The AMF responds to the SMF indicating
+CPU consumption than other NFs which can be explained by that the UE is not reachable, and subsequently sends a Pagthe high number of requests they manage (Fig. 4(a)). ing Request to the UE/RAN (Fig. 5(4b)). The Paging Request triggers the Uplink procedure to activate the UE. In
+ the dashed red box (Fig. 5), we highlight a scenario where
+D. Malicious Network Behavior Emulation an attacker compromises the SMF and launches a malicious
+ 5G testbed emulates various HTTP/2 attacks to expose poten- Namf_Communication_N1N2MessageTransfer request towards
+tial vulnerabilities within the 5G SBA. Specifically, we target the AMF, triggering a Downlink procedure for a UE in IDLE
+10068 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 7, JULY 2026
+
+ SETTINGS_INITIAL_WINDOW_SIZE equal to zero, signaling
+ that the PCF can no longer receive data. This manipulation
+ forces the UDR to halt all data transmissions until it receives
+ a WINDOW_UPDATE frame, effectively freezing the data flow.
+ The malicious PCF repeats this attack over 3,815 HTTP/2 connections severely impacting the 5G network availability.
+
+ VI. ATTACKS IMPACT AND PREVENTION
+ A. HTTP/2 Attacks Impact
+ Our emulations of HTTP/2 attacks on 5G SBA presents various impact on NFs resource utilization that we measure through
+ observing the CPU consumption of the different NFs in Fig. 6.
+ Additionally, we measure the total number of messages (i.e.,
+ requests and notifications only) exchanged per each pair of NFs
+ within the 5G SBA during 20 minutes of the different attacks
+ as shown in Fig. 7. This metric reflects the volume of control
+ signaling traffic impacted by the HTTP/2 attacks especially
+ when compared to the benign traffic captured for the same period
+Fig. 5. Network triggered service request procedure [43].
+ during the benign emulation (Fig. 4). We analyze in the following
+ the impact of the different attacks on 5G networks, suggest
+ prevention and mitigation measures, and summarize them in
+state without requiring network signaling. Although the attacker Table II.
+only initiates a single request, it results in a chain of other 1) Attack 1: HTTP/2 Stream Multiplexing Attack: Upon the
+messages (Fig. 5(3b-8)) related to paging, service request, PDU start of Attack 1.1-SMA-Request/Response (Fig. 6(a)) and Atsession update, and PDU session modification in the 5G network. tack 1.2-SMA-Subscribe/Notify (Fig. 6(b)) at time 60 (i.e., after
+This depicts a high overhead that an attacker can introduce to around an hour of emulations), the CPU usage of the AMF and
+the network with a single malicious request. SMF increases sharply, while the CPU usage for the rest of
+ 2) Attack 2: HTTP/2 Rapid Reset Attack: In our emulation the NFs decreases. This is mainly attributed to the overload
+of Attack 2-Rapid Reset, a compromised PCF targets the UDR at the AMF and SMF, delaying and potentially blocking the
+using a UDR Management procedure [42]. We assume that completion of 5G procedures that are stuck at the SMF-AMF
+the UDR sets its HTTP/2 connection with SETTINGS_MAX_ interactions. As shown in Fig. 6(a), at time 104 (i.e., after
+CONCURRENT_STREAMS= 1000. As depicted in Fig. 2(c), the 44 minutes of the start of the attack), the AMF fails, result-
+PCF sends to the UDR a request using Nudr_DataManagement ing in a DoS. Further, the regular CPU spikes during Attack
+API followed by a RST_STREAM frame to stop the sent request. 1.2-SMA-Subscribe/Notify (Fig. 6(b)) highlight intense activity
+The malicious PCF establishes around 263,251 HTTP/2 connec- periods that stress the SMF and potentially degrade services of
+tion with the UDR over 2 hours, with up to 2306 requests and other NFs. Notably, we observe the highest number of messages
+RST_STREAM frame per connection. This action aims to create during SMF-AMF interaction due to frequent attack requests
+a DoS situation, effectively disrupting the network’s operations from the SMF towards the AMF as illustrated in Fig. 7(a) and
+and impacting its ability to process legitimate requests. (b). Additionally, the number of messages in the AMF-SMF
+ 3) Attack 3: HTTP/2 Slow Rate Attack: We emulate three interactions during Attack 1.2-SMA-Subscribe/Notify (Fig. 7(b))
+variations of HTTP/2 slow rate attack from PCF to UDR. As de- is higher than during the Attack 1.1-SMA-Request/Response
+picted in Fig. 2(d), to emulate the Attack 3.1-Slow Rate-Setting, (Fig. 6(a)) due to the notifications sent from the AMF to the
+the PCF establishes around 3,947 HTTP/2 connections with the SMF. In summary, SMA attacks significantly impact network
+UDR and sends to it on each of them a SETTINGS frame. As availability by exhausting its resources, and causing a DoS on
+the UDR is malicious, it does not acknowledge the SETTINGS the targeted NF and potentially on the whole 5G network.
+frames sent by the PCF, leading to a backlog of unacknowledged 2) Attack 2: HTTP/2 Rapid Reset Attack: Although the Atframes, hence, causing a drop of these connections after a certain tack 2: HTTP/2 Rapid Reset was emulated while the official
+timeout time. We emulate the Attack 3.2-Slow Rate-Connection patch was deployed in our network, we notice that the in-
+Preface (Fig. 2(e)) by accounting for a malicious PCF that sends crease in the SETTINGS_MAX_CONCURRENT_STREAMS
+a connection preface to the UDR without following it by any (Section IV-C) can still disrupt the provided QoS, not only by
+HTTP/2 GET/POST. This makes the UDR wait endlessly for overloading the attack target (i.e., UDR) but also the attack
+an HTTP/2 request that never arrives. This scenario is repeated source (i.e., PCF). Fig. 6(c) shows high CPU consumption at
+over 5,733 HTTP/2 connections and exhibits similar behavior the UDR and PCF that often reaches 80% for an hour. However,
+to normal network traffic. During Attack 3.3-Slow Rate-Window after 2 hours of running the attack, we observe CPU spikes
+Size (Fig. 2(f)), the malicious PCF establishes the first HTTP/2 reaching 160% between times 120 and 180, indicating moments
+connection and sends a manipulated HTTP/2 SETTINGS with of intense load on the UDR, always accompanied by a high load
+WEHBE et al.: HTTP/2 DOS ATTACKS IN 5G NETWORKS: IMPACT ANALYSIS AND ANOMALY DETECTION 10069
+
+Fig. 6. 5G SBA NFs CPU consumption during malicious network behavior.
+
+Fig. 7. Total number of messages between pairs of NFs in 5G SBA during malicious network behavior.
+
+on the PCF. This is also reflected by the high number of messages 3) Attack 3: HTTP/2 Slow Rate Attack: When examining the
+exchanged between PCF and UDR in Fig. 7(c). However, a lower variations of HTTP/2 slow rate attacks, we notice their distinct
+CPU consumption is observed at the remainder NFs between impacts on the NFs within the 5G SBA, starting at attack time 60.
+times 120 and 180 reflecting a DoS attack on the network and a Fig. 6(d) and (f) reflect a high CPU consumption on the targeted
+degradation of the QoS of those NFs (Fig. 6(c)). NF, the PCF, with a degradation of the CPU consumption on the
+10070 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 7, JULY 2026
+
+ TABLE II
+ HTTP/2 ATTACKS, IMPACT AND PROTECTION MEASURES IN 5G SBA
+
+other NFs, reflecting a degradation of the network availability completion of these procedures which was reflected by a degraand QoS without observing a total DoS. Although the PCF dation of the CPU consumption of other NFs which were not
+CPU consumption is comparable in both, Attack 3.1-Slow Rate- receiving as many messages as during the normal network traffic
+Setting and Attack 3.3-Slow Rate-Window Size, we notice from emulations. Similar performance degradation was also observed
+Fig. 7(d) and (f) that the number of messages exchanged between on the NFs not involved in the attack during the rapid reset and
+UDR and PCF is higher in Attack 3.3-Slow Rate-Window Size slow rate attacks. However, these attacks exploit the inherent
+than in Attack 3.1-Slow Rate-Setting. This explains that the high limitations in timeout and rate-handling mechanisms within
+CPU consumption is not a result of the number of exchanged the network, pushing the 5G SBA towards a slow degradation
+messages but rather of resources allocated during the waiting rather than a sudden failure. This subtlety can lead to longer
+times at the PCF for a SETTINGS acknowledgment in case of periods of unnoticed impact, allowing significant damage over
+Attack 3.1-Slow Rate-Setting and for a WINDOW_UPDATE in time.
+case of Attack 3.3-Slow Rate-Window Size. It is worth noting that the value assigned to the SET-
+ Attack 3.2-Slow Rate-Connection Preface does not exhibit a TINGS_MAX_CONCURRENT_STREAMS plays an imporsignificant impact on the CPU of the different NFs, as illustrated tant role in protecting the network against SMA and rapid reset
+in Fig. 6(e). In contrast, although the trend is different, the attacks. Here, an intelligent solution for setting the value of
+CPU consumption is comparable to the benign network behavior this SETTINGS_MAX_CONCURRENT_STREAMS is highly
+shown in Fig. 4(b). This indicates that detecting this attack may important to achieve the trade-off between network secube more challenging. By observing Fig. 7(d), (e), and (f), we rity and network performance. A high value of this setting
+note that the total number of messages exchanged during the can maximize the benefits of the stream multiplexing feature
+different HTTP/2 slow rate attacks is lower than that exchanged in terms of latency, however, it can increase the SMA imduring normal network operations (Fig. 4(b)). This demonstrates pact on the network. Thus, an intelligent and adaptive SETthat simply counting messages between NFs is insufficient to TINGS_MAX_CONCURRENT_STREAMS value adjustment
+detect manipulation in the HTTP/2 flow, particularly in HTTP/2 solution based on network state can be efficient in protecting the
+frames. network against SMA attacks. The stealthy nature of slow-rate
+ attacks can make their detection challenging, requiring intelligent anomaly detection solutions. In contrast, they can be
+B. Discussion and Mitigation Measures prevented by intelligent monitoring solutions and timer values
+ The analysis of HTTP/2 attacks on our 5G testbed reveal that to drop or close malicious connections with long inactivity time
+HTTP/2 SMA attacks are the most damaging due to the DoS at the HTTP/2 client. Although these attacks are exploited in
+impact they cause on the targeted NF and on the 5G network as the web, exploiting these attacks in a 5G environment requires
+a whole. More specifically, degradation of the performance of attacking 5G specific API, making these attacks more challengthe 5G NFs not directly involved in the attack is observed and ing to perform than in the web where APIs are not necessarily
+is highly related to the type of the targeted NFs. For instance, used. Furthermore, their impact on 5G network can be more
+the emulated 5G procedures (Table I) involve many interactions disruptive than in a web environment given the dependencies
+between the AMF and SMF that cause a bottleneck for the and interactions existing between 5G NFs.
+WEHBE et al.: HTTP/2 DOS ATTACKS IN 5G NETWORKS: IMPACT ANALYSIS AND ANOMALY DETECTION 10071
+
+ TABLE III TABLE IV
+ SELECTED FLOW-BASED FEATURES [50] FLOW-BASED DATASET IN 5G NETWORKS
+
+ are mutually exclusive and do not include any redundant records.
+ For the data to be usable for anomaly detection, we label our
+ flows as benign (0) and attack (1) based on our knowledge of
+ the compromised UEs used and the time of the attack emulations
+ were launched.
+
+ VIII. HTTP/2 ANOMALY DETECTION
+ In this section, we evaluate the performance of three un-
+ VII. DATASETS supervised models using flow-based features as an anomaly
+ detection solution in 5G SBA, focusing on their ability to identify
+ To generate a 5G dataset that mirrors real 5G network traffic, HTTP/2-5G-specific attacks.
+we emulate normal and attack traffic as noted in Section V and
+collect the generated data. Using Wireshark [49], a network A. Anomaly Detection Benchmark Models
+monitoring tool, we capture network traffic data within our
+5G testbed. These captures are raw packets stored as PCAP To detect HTTP/2 attacks in 5G networks, we adopt unsufiles [49], and document raw network interactions between pervised machine learning models due to the lack of labeled
+various entities like UE, RAN, and 5G NFs. We collect be- real-world data and the need to detect zero-day attacks [52]. In
+nign data and execute HTTP/2 attacks at different times. We 5G SBA, compromised Network Functions (NFs) may act marefine our dataset by processing raw network-layer data with liciously while still appearing legitimate, and the origin of such
+CICFlowMeter [50], which generates 84 flow-based features attacks is often unknown. Unsupervised models are therefore
+capable of distinguishing normal and malicious behaviors [29], well-suited to this threat landscape.
+[30], [31]. Each row in the resulting CSV file represents a single Among the unsupervised models, we first include the AE.
+flow, defined as packets with the same source IP, destination IP, AEs are designed to learn compact representations of normal
+source port, and destination port within a specified time interval. data through reconstruction, such that large reconstruction errors
+Separate CSV files were created for benign traffic and each indicate deviations or anomalies [53]. We selected the AE model
+emulated HTTP/2 attack.1 not only because of its proven applicability in general anomaly
+ Following the extracted features, we perform feature nor- detection, but also to evaluate its performance beyond its origmalization and select the most relevant ones. At the feature inal design context in [13], where we previously developed an
+selection stage, we use the variance threshold [51] function AE-based solution specifically for detecting HTTP/2 SMA. In
+to determine the most relevant variance value of the features. this work, we challenge the AE’s ability to generalize by testing
+We choose this selection function, as it is well known for its whether a model effective against a single known attack (SMA)
+usage in unsupervised models [51]. The purpose of its usage is can also identify five additional HTTP/2 attacks that exhibit
+to help in removing features with minimal variations or those different traffic characteristics and complexities. This allows us
+deemed as noise. As the model is highly dependent on 5G SBA to evaluate the generalization capability of AE for broader 5G
+behavior patterns, the features selected to train the model must HTTP/2 attack detection.
+be accurately represented (i.e., have high variance) and provided We further include the LSTM-based Autoencoder (LSTMto the anomaly detection module, as a result, we consider 54 AE) to account for temporal patterns in 5G network traffic [54].
+features that have high variance, as shown in Table III. 5G SBA communication flows exhibit sequential dependen-
+ For each emulated scenario, we divide the flow-based dataset cies due to service chaining, stateful procedures, and inter-NF
+(Table IV) into two categories: benign and attack, with the total signaling. LSTM layers can capture these dependencies, makduration of each emulation. Although emulations were planned ing LSTM-AE particularly effective for recognizing complex,
+for two hours, Attack 1.1-SMA-Request/Response and Attack multi-stage attacks that develop over time. Our choice is also
+1.2-SMA-Subscribe/Notify lasted for 1 hour 40 minutes and motivated by the work in [19], which successfully employed
+1 hour 50 minutes, respectively, as the network went down due to LSTM-AE for detecting non-HTTP/2-based attacks in 5G SBA.
+the attack. It is worth noting that the reported datasets in Table IV By adopting and adapting the same model in this study, we
+ extend its application to new attack classes specific to HTTP/2,
+ 1 The different CSV files from our dataset will be made publicly available assessing its robustness across a wider threat spectrum in the 5G
+upon the paper acceptance. context.
+10072 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 7, JULY 2026
+
+ TABLE V
+ HYPERPARAMETERS
+
+ TABLE VI
+ F1-SCORE OF LSTM-AE, AE, IF ACROSS HTTP/2 ATTACKS
+
+ Fig. 8. LSTM-AE performance across HTTP/2 attacks.
+ Finally, we include the Isolation Forest (IF) as a lightweight,
+scalable, and interpretable unsupervised model. IF is effective
+for detecting outliers in high-dimensional data by recursively detailed performance of LSTM-AE which consistently achieved
+partitioning data points based on randomly selected features. Its the highest F1-score across all HTTP/2 attacks, highlighting its
+core strength lies in its independence from distribution assump- superior ability to capture temporal dependencies in 5G network
+tions and its capability to isolate rare anomalies quickly [55]. data. Notably, it has higher precision for Attack 1.1 or Attack 3.1
+This is crucial in our use case, where the attacker may compro- depicting the ability of LSTM-AE to detect them. However, a
+mise any NF (NFc or NFp) and initiate attacks without triggering higher recall is obtained for the remaining attacks, showing the
+obvious symptoms. Since we do not assume prior knowledge model struggles to correctly detect them. The results suggest
+of the attack’s origin, and the dataset is largely unlabelled, IF that although LSTM-AE is the most robust, further fine-tuning
+allows us to detect anomalous flows without explicit supervision, and optimization of all models are necessary to enhance their
+relying instead on the statistical rarity of malicious behavior in performance, especially in complex scenarios.
+the flow-based feature space. Thus, we train and compare the To better evaluate the LSTM-AE model across six distinct
+performance of LSTM-AE, AE, and IF in detecting HTTP/2 attacks, we rely on the Receiver Operating Characteristic (ROC)
+attacks. curves. An ROC curve illustrates the trade-off between the False
+ Positive Rate (FPR) and the True Positive Rate (TPR) across
+ all thresholds [56]. The Area Under the ROC Curve (AUC) is
+B. Experimental Results
+ a commonly used metric in conjunction with the ROC curve,
+ We evaluate the performance of the three aforementioned providing an aggregated measure of the model’s performance
+models in detecting the six HTTP/2 attacks that we emulated. over all thresholds. An AU C = 1 indicates a perfect model
+We use the F1-score, an effective evaluation metric to assess capable of achieving T P R = 1 and F P R = 0 with an ideal
+the models’ precision and recall capabilities and hence, their threshold. Fig. 9 showcases the performance of the LSTM-AE
+detection performance. We first train and validate multiple ar- model tested over six attacks. With AUC values ranging from
+chitectures for each of the three models, selecting the one with 0.87 to 0.97 across HTTP/2 attacks, the results highlight the
+the best detection performance. The final chosen architecture model’s ability to detect anomalies effectively. However, the
+and hyperparameters for each model are reported in Table V. To variation in AUC across attacks emphasizes the impact of attack
+accomplish this, we allocate 20% of the training dataset of size complexity and feature relevance on the detection performance.
+100,000 rows as a validation dataset, and we train the models We analyzed the LSTM-AE model’s training and detection
+using the remaining training dataset. To test the three models time efficiency to examine its scalability. The model processes
+and to check their performance over different HTTP/2 attacks, input batches with low memory overhead and <50 millisecond
+we select from each attack file (Table IV) 30,000 benign rows detection time per 1,000 records on a standard GPU, making
+and 10,000 attack rows. it suitable for near real-time detection tasks. Its architecture
+ After training and validating the models, we test each model also supports parallelization across slices or functions. These
+using the test dataset. As shown in Table VI, LSTM-AE outper- characteristics suggest that the model can scale to larger deployforms AE and IF across all HTTP/2 attacks. LSTM-AE achieves ments by replicating across multiple nodes in a 5G environment,
+an average F1-score of 92.24% across HTTP/2 attacks, reflecting maintaining consistent performance.
+its robustness in anomaly detection. IF follows with a lower
+F1-score. AE shows a comparable average F1-score to IF, but
+ IX. COMPARISON WITH THE STATE OF THE ART
+a lower F1-score particularly in more complex attack scenarios
+(i.e., attack 1.1, attack 3.3), indicating its relative difficulty in Despite the increasing reliance on HTTP/2 as the primary
+capturing all anomalies compared to other models. Fig. 8 shows a signaling protocol in 5G SBA, there remains a significant gap in
+WEHBE et al.: HTTP/2 DOS ATTACKS IN 5G NETWORKS: IMPACT ANALYSIS AND ANOMALY DETECTION 10073
+
+Fig. 9. AUC-ROC of LSTM-AE across HTTP/2 attacks.
+
+the literature regarding the empirical analysis and detection of practical evaluation of six HTTP/2 attack variants: two SMAs
+HTTP/2-based attacks within this context. Existing works either (Request/Response and Subscribe/Notify), one rapid reset atlack experiments or provide only a limited evaluation of specific tack (CVE-2023-44487), and three slow-rate attacks (based on
+attack types. For example, [11], [12] provide general overviews settings frame, connection preface, and window size manipuof signaling security in 5G networks and mention potential lation). All attacks were implemented and evaluated on a fully
+HTTP/2-related risks. However, their studies are theoretical standalone 5G testbed, adhering to 3GPP standards to ensure
+and do not include simulation, detection, or attack modeling. a realistic emulation of 5G network interactions and control
+Similarly, [57] highlighted flaws in HTTP/2 design but focused plane behavior. Additionally, this study is the first to generate
+on general web environments rather than 5G-specific systems. and publish a comprehensive dataset capturing both benign and
+ Several studies have experimentally analyzed HTTP/2 at- malicious HTTP/2 traffic within a real 5G SBA environment.
+tacks, but mostly outside the 5G context. [25], [26], [58] demon- This dataset includes flow-based features commonly used in
+strated slow-rate DoS attacks using settings flooding, connection anomaly detection and is structured to support reproducibility,
+preface abuse, and delayed streams, proposing detection based benchmarking, and further research on 5G network security.
+on event-sequence analysis. [22], [28] explored asymmetric In summary, unlike [11], [12], which remains theoretical,
+multiplexing-based attacks, while [59] proposed intelligent fea- and [13], which is limited in scope and effectiveness, our work
+ture selection techniques for detecting HTTP/2 threats. How- delivers a comprehensive, practical, and publicly reproducible
+ever, these efforts did not consider the 5G SBA architecture, framework for evaluating the impact of HTTP/2 attacks on 5G
+limiting their relevance to 5G networks. In addition, [14] focused SBA. It also provides a solid benchmark for developing and
+on HTTP/2 attack traffic generation using 5Greplay, allowing testing advanced anomaly detection models specifically tailored
+replay-based simulation of protocol-level threats. While the tool to the security challenges of HTTP/2 in next-generation mobile
+supports traffic generation, the study did not include evaluations networks.
+of detection performance, impact on 5G functions, or dataset
+release for benchmarking.
+ In contrast, [13] is the only work that emulates HTTP/2 attacks X. CONCLUSION
+in 5G SBA. While this study takes an important step forward, it In conclusion, this work presented the first practical study
+focuses exclusively on SMAs and lacks coverage of other critical of various HTTP/2 attacks in 5G SBA using the open-source
+HTTP/2 attack vectors, such as rapid reset and slow-rate attacks. free5GC testbed and UERANSIM, adhering to 3GPP standards.
+Furthermore, [13] does not release its dataset publicly, limiting For instance, our emulation showed that an attacker who manreproducibility and comparative research across the field. The aged to compromise an NF can cause harm to a 5G network
+detection method used in [13] relies on AE. We test the AE with through HTTP/2 DoS attacks and that HTTP/2 settings configuthe six HTTP/2 attacks, which report an average F1-score of ration across the different 5G NFs play a crucial role in securing
+83.28%. These results surpass those reported in [13] in terms of 5G networks against such exploitation. Further, our emulations
+detection accuracy and the range and realism of attack scenarios were leveraged to offer the first public dataset for anomaly deteccovered. tion in a 5G network. The dataset depicted flow-based features
+ Our work addresses these limitations by significantly ex- of benign and six different HTTP/2 attacks traffic, including two
+panding the attack coverage and introducing a detailed, versions of HTTP/2 stream multiplexing attacks, HTTP/2 rapid
+10074 IEEE TRANSACTIONS ON MOBILE COMPUTING, VOL. 25, NO. 7, JULY 2026
+
+reset attacks, and three variations of HTTP/2 slow rate attacks. [19] R. M. A. Molina, N. Wehbe, H. A. Alameddine, M. Pourzandi, and C.
+Finally, we presented three machine learning models, including Assi, “Inter-slice defender: An anomaly detection solution for distributed
+ slice mobility attacks,” in Proc. IFIP Netw. Conf., 2024, pp. 432–440.
+AE, LSTM-AE, and IF, that detected HTTP/2 attacks with a [20] ETSI, “Network functions virtualisation (NFV) release 4; security;
+respective average F1-score of 92.24%, 83.28%, and 84.34%. secure end-to-end VNF and NS management specification,” ETSI,
+These models can serve as benchmarking algorithms for future 2020. [Online]. Available: https://portal.etsi.org/webapp/WorkProgram/
+ Report_WorkItem.asp?WKI_ID=59208
+research. [21] E. Chatzoglou, V. Kouliaridis, G. Kambourakis, G. Karopoulos, and
+ Future work will focus on refining and combining the pro- S. Gritzalis, “A hands-on gaze on HTTP/3 security through the lens
+posed models through ensemble learning, while incorporating of HTTP/2 and a public dataset,” Comput. Secur., vol. 125, 2023,
+ Art. no. 103051.
+diverse feature types such as flow-based, temporal, and protocol- [22] A. Praseed and P. S. Thilagam, “Multiplexed asymmetric attacks: Nextspecific features to improve detection accuracy and robustness generation DDoS on HTTP/2 servers,” IEEE Trans. Inf. Forensics Secur.,
+against sophisticated and evolving HTTP/2 threats in 5G net- vol. 15, pp. 1790–1800, 2020.
+ [23] N. V. D. (NVD), “CVE-2023-39325,” 2023. [Online]. Available: https:
+works. //nvd.nist.gov/vuln/detail/CVE-2023-39325
+ [24] National Vulnerability Database (NVD), “CVE-2023-44487,” 2023. [On-
+ ACKNOWLEDGMENT line]. Available: https://nvd.nist.gov/vuln/detail/CVE-2023-44487
+ [25] N. Tripathi and N. Hubballi, “Slow rate denial of service attacks
+ The authors thank Dr. Makan Pourzandi, Dr. Amine against HTTP/2 and detection,” Comput. Secur., vol. 72, pp. 255–272,
+ 2018.
+Boukhtouta, Dr. Luis Suárez, and Dr. Boubakr Nour from Eric- [26] N. Tripathi, “Delays have dangerous ends: Slow HTTP/2 DoS attacks into
+sson Research, for their invaluable feedback. the wild and their real-time detection using event sequence analysis,” 2022,
+ arXiv:2203.16796.
+ [27] A. Praseed and P. S. Thilagam, “Fuzzy request set modelling for detecting
+ REFERENCES multiplexed asymmetric DDoS attacks on HTTP/2 servers,” Expert Syst.
+ [1] B. Christine Jost, “Security for 5G service-based architecture: What Appl., vol. 186, 2021, Art. no. 115697.
+ you need to know,” 2020. Accessed: Mar. 18, 2022. [Online]. Avail- [28] A. Praseed and P. S. Thilagam, “Modelling behavioural dynamics for
+ able: https://www.ericsson.com/en/blog/2020/8/security-for-5g-service- asymmetric application layer DDoS detection,” IEEE Trans. Inf. Forensics
+ based-architecture Secur., vol. 16, pp. 617–626, 2021.
+ [2] 3GPP, “5G; Security architecture and procedures for 5G System: TS [29] B. Hussain, Q. Du, B. Sun, and Z. Han, “Deep learning-based DDOS-attack
+ 33.501 v.17.5.0,” The 3rd Generation Partnership Project (3GPP), 2022. detection for cyber-physical systems over 5G network,” IEEE Trans. Ind.
+ [3] 3GPP, “5G; System architecture for the 5G System: TS 23.501 v.17.5.0,” Informat., vol. 17, no. 2, pp. 860–870, Feb. 2021.
+ The 3rd Generation Partnership Project (3GPP), 2022. [30] M. A. Salahuddin, V. Pourahmadi, H. A. Alameddine, M. F. Bari, and
+ [4] 3GPP, “5G; 5G System; Technical Realization of Service Based Architec- R. Boutaba, “Chronos: DDoS attack detection using time-based autoenture; Stage 3: TS 29.500 v.17.7.0,” The 3rd Generation Partnership Project coder,” IEEE Trans. Netw. Service Manag., vol. 19, no. 1, pp. 627–641,
+ (3GPP), 2022. Mar. 2022.
+ [5] A. Dutta and E. Hammad, “5G security challenges and opportunities: A [31] V. Pourahmadi, H. A. Alameddine, M. A. Salahuddin, and R. Boutaba,
+ system approach,” in Proc. IEEE 3rd 5G World Forum, 2020, pp. 109–114. “Spotting anomalies at the edge: Outlier exposure-based cross-silo fed-
+ [6] IETF, “Hypertext transfer protocol version 2 (HTTP/2) - RFC 7540,” erated learning for DDoS detection,” IEEE Trans. Dependable Secure
+ Internet Engineering Task Force (IETF), 2015. Comput., vol. 20, no. 5, pp. 4002–4015, Sep./Oct. 2023.
+ [7] 3GPP, “5G; Security architecture and procedures for 5G System: TS [32] S. Samarakoon et al., “5G-NIDD: A comprehensive network intru-
+ 33.501 v.17.5.0,” The 3rd Generation Partnership Project (3GPP), 2022. sion detection dataset generated over 5G wireless network,” 2022,
+ [8] R. Khan, P. Kumar, D. N. K. Jayakody, and M. Liyanage, “A survey on arXiv:2212.01298.
+ security and privacy of 5G technologies: Potential solutions, recent ad- [33] G. Amponis et al., “Generating full-stack 5G security datasets: IP-layer and
+ vancements, and future directions,” IEEE Commun. Surveys Tuts., vol. 22, core network persistent PDU session attacks,” Int. J. Electron. Commun.,
+ no. 1, pp. 196–248, First Quarter 2020. vol. 171, 2023, Art. no. 154913.
+ [9] M. Akon, T. Yang, Y. Dong, and S. R. Hussain, “Formal analysis of access [34] I. Karim, K. S. Mubasshir, M. M. Rahman, and E. Bertino,
+ control mechanism of 5G core network,” in Proc. ACM SIGSAC Conf. “SPEC5G: A dataset for 5G cellular network protocol analysis,” 2023,
+ Comput. Commun. Secur., 2023, pp. 666–680. arXiv:2301.09201.
+[10] ENISA, “Security in 5G Specifications Controls in 3GPP Security Speci- [35] N. V. D. (NVD), “CVE-2016-5195,” 2019. [Online]. Available: https://
+ fications (5G SA),” 2021. nvd.nist.gov/vuln/detail/CVE-2016-5195
+[11] N. Wehbe, H. A. Alameddine, M. Pourzandi, E. Bou-Harb, and [36] National Vulnerability Database (NVD), “CVE-2016-5736,” 2019. [On-
+ C. Assi, “A security assessment of HTTP/2 usage in 5G service- line]. Available: https://nvd.nist.gov/vuln/detail/CVE-2019-5736
+ based architecture,” IEEE Commun. Mag., vol. 61, no. 1, pp. 48–54, [37] National Vulnerability Database, “CVE-2023-20864,” 2023. [Online].
+ Jan. 2023. Available: https://nvd.nist.gov/vuln/detail/CVE-2023-20864
+[12] X. Hu, C. Liu, S. Liu, W. You, and Y. Zhao, “Signalling security analysis: [38] T. Madi, H. A. Alameddine, M. Pourzandi, and A. Boukhtouta, “NFV
+ Is HTTP/2 secure in 5G core network?,” in Proc. 10th Int. Conf. Wireless security survey in 5G networks: A three-dimensional threat taxonomy,”
+ Commun. Signal Process., 2018, pp. 1–6. Comput. Netw., vol. 197, 2021, Art. no. 108288.
+[13] N. Wehbe, H. A. Alameddine, M. Pourzandi, and C. Assi, “5GShield: [39] D. Sattar, A. H. Vasoukolaei, P. Crysdale, and A. Matrawy, “A stride
+ HTTP/2 anomaly detection in 5G service-based architecture,” in Proc. threat model for 5G core slicing,” in Proc. IEEE 4th 5G World Forum,
+ 2023 IFIP Netw. Conf., 2023, pp. 1–9. 2021, pp. 247–252.
+[14] F. G. Caccavale, H.-N. Nguyen, A. Cavalli, E. Montes De Oca, and W. [40] AdaptiveMobile, “A slice in time: Slicing security in 5G core
+ Mallouli, “HTTP/2 attacks generation using 5GREPlay,” in Proc. 18th networks,” 2021. [Online]. Available: https://info.adaptivemobile.com/
+ Int. Conf. Availability Rel. Secur., 2023, pp. 1–7. network-slicing-security?hsLang=en#download
+[15] r. Communications security and interoperability council VIII working [41] G. TSG-SA3, “Key issue on misuse of OAuth 2.0 access token by
+ group 1: 5G signaling protocols security, “Report on security vulnerabil- anomalous network functions, TSG-SA3 meeting #108e, S3-221787,”
+ ities in http/2,” Communications security, reliability, and interoperability 3GPP, 2022. [Online]. Available: https://www.3gpp.org/ftp/TSG_SA/
+ council VIII, 2022. WG3_Security/TSGS3_108e/Docs/S3-221787.zip
+[16] Free5GC, “Free5GC,” Free5GC, 2021. [Online]. Available: https://www. [42] 3GPP, “5G; Procedures for the 5G system (5GS) TS 123.502 v.17.5.0,”
+ free5gc.org/ The 3rd Generation Partnership Project (3GPP), 2022.
+[17] aligungr, “UERANSIM,” 2021. [Online]. Available: https://github.com/ [43] 3GPP, “5G; 5G system; Access and mobility management services; TS
+ aligungr/UERANSIM 129.518 v.17.5.0,” The 3rd Generation Partnership Project (3GPP), 2022.
+[18] 3GPP, “The 5G standard,” 2023. Accessed: Aug. 2023. [Online]. Avail- [44] OpenStack, “Build the future of open infrastructure,” The Wireshark Team,
+ able: https://www.3gpp.org/ 2021. [Online]. Available: https://www.openstack.org/
+WEHBE et al.: HTTP/2 DOS ATTACKS IN 5G NETWORKS: IMPACT ANALYSIS AND ANOMALY DETECTION 10075
+
+[45] Free5GC, “Free5GC-compose,” Free5GC, 2021. [Online]. Available: Nathalie Wehbe (Member, IEEE) received the
+ https://github.com/free5gc/free5gc-compose/tree/v3.0.5 BSc and MSc degrees in software engineer from
+[46] Y. Raaijmakers, S. Mandelli, and M. Doll, “Reinforcement learning for Antonine University, Lebanon, in 2016, and the PhD
+ admission control in 5G wireless networks,” in Proc. IEEE Glob. Commun. degree in information and systems engineering from
+ Conf., 2021, pp. 1–6. Concordia University, Canada, in 2025. Her current
+[47] J. Navarro-Ortiz, P. Romero-Diaz, S. Sendra, P. Ameigeiras, J. J. Ramos- research interests include the areas of 5G networks,
+ Munoz, and J. M. Lopez-Soler, “A survey on 5G usage scenarios and traffic security, anomaly detection, and machine learning.
+ models,” IEEE Commun. Surv. Tut., vol. 22, no. 2, pp. 905–929, Second
+ Quarter, 2020.
+[48] F. Mehmeti and T. F. La Porta, “Modeling and analysis of mMTC traffic
+ in 5G base stations,” in Proc. IEEE 19th Annu. Consum. Commun. Netw.
+ Conf., 2022, pp. 652–660.
+[49] T. W. Team, “Wireshark, go deep,” The Wireshark Team, 2021. [Online].
+ Available: https://www.wireshark.org/ Hyame Assem Alameddine (Member, IEEE) re-
+[50] C. I. Cybersecurity, “Cicflowmeter,” Canadian Institute for ceived the PhD degree in information and systems
+ Cybersecurity, 2020. [Online]. Available: https://github.com/ engineering from Concordia University, Canada, in
+ CanadianInstituteForCybersecurity/CICFlowMeter/blob/master/ 2019. She is currently a senior specialist in security
+ ReadMe.txt automation for mobile networks with Ericsson Re-
+[51] scikit learn, “scikit-learn,” scikit-learn Team, 2021. [Online]. search, Canada, and an affiliated assistant professor
+ Available: https://scikit-learn.org/stable/modules/generated/sklearn. with Concordia University, Canada. Before joining
+ feature_selection.VarianceThreshold.html Ericsson, she served as a postdoctoral fellow with
+[52] Y. Li et al., “Self-supervised MAFENN for classifying low-labeled dis- the Cheriton School of Computer Science, University
+ torted images over mobile fading channels,” IEEE Trans. Mobile Comput., of Waterloo, Canada, between 2019 and 2020. Her
+ vol. 23, no. 8, pp. 8077–8091, Aug. 2024. current research interests include cybersecurity, 5G
+[53] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An en- networks, O-RAN, intent-based networking, anomaly detection, attack mitigasemble of autoencoders for online network intrusion detection,” 2018, tion, network slicing, ML/AI, edge computing, network management, network
+ arXiv:1802.09089. function virtualization, and Internet of Things. She serves as a technical program
+[54] M. Said Elsayed, N.-A. Le-Khac, S. Dev, and A. D. Jurcut, “Network committee member and a member of the organizing committees at multiple
+ anomaly detection using LSTM based autoencoder,” in Proc. 16th ACM international conferences and is a reviewer for various journals and magazines.
+ Symp. QoS Secur. Wireless Mobile Netw., 2020, pp. 37–45.
+[55] M. T. R. Laskar et al., “Extending isolation forest for anomaly detection
+ in Big Data via k-means,” ACM Trans. Cyber- Phys. Syst., vol. 5, no. 4,
+ pp. 1–26, 2021. Chadi Assi (Fellow, IEEE) received the PhD degree
+[56] H. Dalianis, “Evaluation metrics and evaluation,” in Clinical Text Mining. from CUNY, where his thesis received the Mina Rees
+ Berlin, Germany: Springer, 2018, pp. 45–53. Dissertation Award. He is a professor with Concordia
+[57] Imperva, “HTTP/2: In-depth analysis of the top four flaws of the next University, holding a university research chair. His
+ generation web protocol,” 2016. research interests include networks, cybersecurity,
+[58] N. Tripathi and A. K. Shaji, “Defer no time, delays have dangerous ends: cyber threat intelligence, and 5G technologies.
+ Slow HTTP/2 DoS attacks into the wild,” in Proc. 14th Int. Conf. Commun.
+ Syst. Netw., 2022, pp. 194–198.
+[59] E. Adi and Z. Baig, “Intelligent feature selection for detecting HTTP/2
+ denial of service attacks,” 2017.

@@ -1,0 +1,1165 @@
+1
+
+ TrafficLLM: Enhancing Large Language Models for Network Traffic
+ Analysis with Generic Traffic Representation
+ Tianyu Cui , Xinjie Lin , Sijia Li, Miao Chen, Qilei Yin, Qi Li, Senior Member, IEEE,
+ and Ke Xu, Fellow, IEEE
+
+ Abstract—Machine learning (ML) powered network traffic learning abilities for diverse traffic patterns. Despite their
+ analysis has been widely used for the purpose of threat detection. promising potential, ML-based methods still suffer from the
+ Unfortunately, their generalization across different tasks and unarXiv:2504.04222v2 [cs.LG] 15 Apr 2025
+
+ following limitations, leading to low generalization of existing
+ seen data is very limited. Large language models (LLMs), known
+ for their strong generalization capabilities, have shown promising ML-based models: (i) Generalization across various tasks.
+ performance in various domains. However, their application to In each sub-field of traffic analysis tasks, existing methods
+ the traffic analysis domain is limited due to significantly different usually learn with handcrafted features and supervised labels
+ characteristics of network traffic. To address the issue, in this to develop complicated ML models for specific tasks [15],
+ paper, we propose TrafficLLM, which introduces a dual-stage [16]. These task-specific models are hardly shared across
+ fine-tuning framework to learn generic traffic representation
+ from heterogeneous raw traffic data. The framework uses traffic- different tasks due to the specialized handcrafted features or
+ domain tokenization, dual-stage tuning pipeline, and extensible model designs. The development costs will be considerable
+ adaptation to help LLM release generalization ability on dynamic in covering various tasks. (ii) Generalization to unseen data.
+ traffic analysis tasks, such that it enables traffic detection and ML-based methods are widely criticized for their inability to
+ traffic generation across a wide range of downstream tasks. We handle unseen data [11]. These models are usually forced
+ evaluate TrafficLLM across 10 distinct scenarios and 229 types of
+ traffic. TrafficLLM achieves F1-scores of 0.9875 and 0.9483, with to learn known patterns in the high-quality labeled datasets.
+ up to 80.12% and 33.92% better performance than existing detec- When faced with unseen data scenarios like concept drift [17]
+ tion and generation methods. It also shows strong generalization and zero-day attacks [18], ML models often achieve poor
+ on unseen traffic with an 18.6% performance improvement. We performance due to low generalization.
+ further evaluate TrafficLLM in real-world scenarios. The results Thus, it is vital to develop a more generic model to enconfirm that TrafficLLM is easy to scale and achieves accurate
+ detection performance on enterprise traffic. hance generalization of ML models across different tasks and
+ data distributions [16], [19]. Recently large language models
+ Index Terms—Large language models, network traffic analysis,
+ (LLMs) [20]–[24] have shown outstanding performance in
+ intrusion detection systems.
+ many complex tasks [25]. Thanks to their pattern mining, generalization to unseen data, and reproducibility across different
+ I. I NTRODUCTION tasks, LLMs could release remarkable capabilities in various
+
+ N ETWORK traffic is the cornerstone of the Internet,
+ carrying all interactions and transfers within the network. However, as networking techniques evolve, attackers
+ downstream tasks [26], which inspired multiple high-level
+ views to develop specialized large-scale models for network
+ traffic analysis. For instance, LLMs’ pattern mining and reacan leverage network traffic to conduct various malicious soning ability can be utilized to learn generic representations
+ activities, such as fishing [1], malware campaigns [2], web behind IP attributes, flags, timings, and datagram lengths in
+ attacks [3], and exploiting vulnerabilities [4]. Considerable traffic data. Moreover, the generalization ability allows LLMs
+ enterprises have recognized the importance of analyzing traffic to adapt to diverse network environments and attack scenarios.
+ data to detect threats, investigate incidents, and monitor envi- Therefore, LLM could serve as a more powerful ML model to
+ ronments [5], [6]. This has facilitated the development of many provide traffic representation with strong generalization ability.
+ sophisticated network traffic analyzers (NTA) and security in- However, it is non-trivial to utilize LLMs for network traffic
+ formation and event management (SIEM) solutions, e.g., Cisco analysis. First, the traffic data contains considerable heteroge-
+ Secure Network Analytics [7] and Rapid7 InsightIDR [8]. neous meta-information (i.e., protocol fields in packets and
+ Existing work has achieved great improvement in many tasks, flows) for pattern learning, which is significantly different
+ such as encrypted application classification [9], website fin- from the natural language. This input modality gap from the
+ gerprinting [10], and malicious traffic detection [11]. plain text makes it difficult for native LLMs to process the
+ In recent years, machine learning (ML) based methods [12]– traffic data [21], [23], which further prevents LLMs from
+ [14] have been proposed due to their strong representation- generalizing to traffic data of different network scenarios.
+ Second, different downstream tasks involve diverse domain
+ Tianyu Cui, Xinjie Lin, Sijia Li, Miao Chen, and Qilei Yin are
+ with the Zhongguancun Laboratory, Beijing, 100093, China (e- knowledge and traffic patterns (e.g., botnet traffic and Tor
+ mail: cuity@zgclab.edu.cn; linxj@zgclab.edu.cn; lisj@zgclab.edu.cn; network traffic). Jointly learning the multi-type task-specific
+ chenm@zgclab.edu.cn; yinql@zgclab.edu.cn). instruction semantics and traffic data can confuse LLM, lead-
+ Qi Li and Ke Xu are with the Zhongguancun Laboratory, Beijing 100093,
+ China, and also with the Tsinghua University, Beijing, 100094, China (e-mail: ing to poor generalization across different tasks [19], [27].
+ qli01@tsinghua.edu.cn; xuke@tsinghua.edu.cn). Third, the traffic domain often faces environment drift like
+ 2
+
+application updates and attack changes [3]. Unfortunately, TABLE I
+LLM adaptation is extremely time-consuming due to the T HE BASIC INFORMATION AND MODEL CAPABILITIES OF CURRENT
+ MAINSTREAM LLM S AND TRAFFIC - DOMAIN PLM S . (” ” = HAS THE
+large model size. The high costs to update models for new ABILITY. ”○” = DOESN ’ T HAVE THE ABILITY. ”○␣” = HAS THE BASIC
+environment generalization make LLM impractical in real- ABILITY BUT STILL HAS SHORTCOMINGS )
+world scenarios.
+ Basic Information Model Capability
+ To overcome these challenges, we propose TrafficLLM, a Model
+ Model Open Traffic Traffic Language
+dual-stage fine-tuning framework for all open-sourced LLMs Size Source Detection Generation Processing
+to learn generic traffic representation from expert instructions Llama3 [29] 8B/70B Yes ○ ○
+ Gemini1.5 [30] Unk. No ○ ○
+and raw traffic data, helping LLMs acquire extensive domain Claude3 [31] Unk. No ○ ○
+ Mistral Large 2 [32] Unk. No ○ ○
+knowledge to enhance the generalization across diverse traffic GPT-4 [21] Unk. No ○ ○
+analysis tasks and unseen scenarios. TrafficLLM implements GLM-4 [24] 9B/130B Yes ○ ○
+ Baichuan4 [33] 53B Yes ○ ○
+three core designs: (i) Traffic-domain tokenization: To mit- ET-BERT [16] 0.1B Yes ○ ○
+igate the input modality gap between traffic and language, PERT [34]
+ netFound [19]
+ 0.04B
+ 0.2B
+ Yes
+ No
+ ○
+ ○
+ ○
+ ○
+TrafficLLM is equipped with a traffic-domain tokenization NetGPT [35] 0.1B No ○␣ ○
+ Lens [36] 0.25B No ○␣ ○
+mechanism to extend LLM’s native tokenizers. It helps LLM
+ TrafficLLM 6B/12B Yes
+generalize to different types of traffic data and achieves
+efficiency improvement by reducing token length. (ii) Dualstage tuning pipeline: TrafficLLM implements a dual-stage tation dataset for future research. To the best of our knowltuning pipeline to conduct multimodal learning with text and edge, we have collected the largest LLM tuning dataset for
+traffic data. This pipeline helps LLM accurately understand the traffic domain to date, which includes ≈ 0.4M samples
+the instruction text of security experts and achieve effective consisting of instruction text and traffic data supervised by
+traffic pattern learning in different downstream tasks, forming experts and AI assistants.
+generic representations across different tasks. (iii) Extensible • We conduct extensive experiments on various downstream
+adaptation with parameter-effective fine-tuning (EA-PEFT): tasks to demonstrate the superiority of TrafficLLM. Traffi-
+To facilitate LLM’s generalization to new environments, Traffi- cLLM achieves better performance with generic represencLLM employs extensible adaptation using parameter-effective tation compared to 15 state-of-the-art traffic detection or
+fine-tuning (PEFT) technique [28]. EA-PEFT splits different generation methods. Moreover, TrafficLLM obtains strong
+traffic representation abilities into various PEFT models, which generalization on unseen data and real-world settings.
+helps TrafficLLM preserve existing capabilities and upgrade Website demo and datasets. We provide TrafficLLM’s
+the model on new network environments. demo, source codes and all the tuning datasets at
+ We build TrafficLLM prototype to achieve generic traffic https://github.com/ZGC-LLM-Safety/TrafficLLM.
+representation on ten downstream tasks, which supports traffic
+analysis for different applications (e.g., mobile apps, websites, II. P ROBLEM S TATEMENT & T HREAT M ODEL
+and malware), protocols (e.g., HTTP, TLS1.3, and DoH), A. Problem Statement
+network environments (e.g., VPN, Tor, and botnet), and threats
+(e.g., web attacks and APT attacks). TrafficLLM builds generic Investigation on Existing LLMs. We survey existing LLM’s
+representation for two key abilities, i.e., traffic detection and capabilities for network traffic analysis. Due to the difficulty of
+traffic generation ability, to assist traffic analyst in their daily processing traffic data, we have not witnessed the deployment
+attack detection and red teaming work, with 5.90%-80.12% of the foundation model for network traffic analysis in the
+and 3.07%-33.92% of performance improvement over existing industry. As of December 2024, we have compiled the model
+ML methods. We further evaluate TrafficLLM on unseen envi- capabilities of the current mainstream LLMs in Table I.
+ronments and real-world scenarios. TrafficLLM shows stronger Although the existing LLMs have initially possessed certain
+generalization compared to existing ML models. knowledge in the network security field [26], the majority of
+ them can not accomplish traffic analysis tasks due to the lack
+Contributions. Our contributions can be shown as follows: of capabilities for traffic processing. Most LLMs lack insights
+• We develop TrafficLLM, a dual-stage fine-tuning framework from traffic data learning. They can only respond to basic
+ learning with extensive expert instruction and raw traffic instructions with inaccurate conclusions. To overcome the
+ data, which helps LLM obtain generic traffic representation problem, a series of works like ET-BERT [16] and PERT [34]
+ from the domain knowledge to achieve strong generalization have been developed in recent years to process traffic data
+ across diverse traffic analysis tasks. with pre-trained language models (PLMs) [26], aiming to build
+• We build TrafficLLM with three core techniques to over- effective traffic detection and generation capabilities. However,
+ come the challenges of using LLMs in the traffic domain. they have several shortcomings:
+ TrafficLLM employs traffic-domain tokenization to mitigate • High development cost. These approaches mainly utilize
+ the modality gap and generalize to heterogeneous data, dual- pre-training techniques [37], which has a high training time
+ stage tuning pipeline to conduct multimodal learning across and resource cost. Compared with fine-tuning, they can not
+ diverse tasks, and EA-PEFT to realize generalization to new inherit existing LLMs’ abilities, which is less practical.
+ environments. • Limited model size. These models are usually smaller than
+• We construct the first large-scale traffic-domain LLM adap- 1B. Strictly speaking, they are not part of LLMs [26]. These
+ 3
+
+ formats and load them with default tokenization.
+ To give an instance, we adapt Llama2-7B [23] to conduct
+ the malware traffic detection (MTD) [40] task with its native
+ tokenizer. First, it is not effective to split traffic information
+ as the input. As shown in Figure 1 (left), the default tokenizer
+ will produce many redundancies when processing metadata in
+ TLS packets. It may reduce the efficiency of LLMs in realistic
+Fig. 1. Native LLM’s limitation to handle traffic data with default tokenization traffic analysis work. Second, the transformed tokens are not
+and tuning strategies. Left and Middle: LLM is ineffective and inaccurate in performed well to ensure detection accuracy. In Figure 1
+loading traffic data with language tokens directly. Right: LLM suffers from (middle), the performance of native LLM is not remarkable
+learning multi-type semantics and traffic data at the same stage.
+ on the MTD task (only 79.5% of accuracy on USTC-TFC
+ 2016 dataset [40]) since the unsuitable tokenization split key
+ features incorrectly, leading to the failure to capture distinct
+ patterns between benign and malicious traffic.
+ Challenge 2: Generalization across different tasks with
+ multimodal learning. Network traffic analysis covers a wide
+ range of specific tasks, including detecting and generating
+ attack traffic in different scenarios (e.g., the MTD task). It
+Fig. 2. The adaptation costs of LLM’s retraining to update traffic detection involves diverse task-specific knowledge in the instruction
+capabilities on new scenarios. TrafficLLM employs EA-PEFT to reduce the
+cost by using multiple external parameters to encapsulate different capabilities. to prompt LLM to conduct different work. Moreover, these
+ downstream tasks usually point to different network envimodels may lose LLM’s surprising emergent abilities [38] ronments, which involve representations learned from multiwith strong generalization that can not be present in small type traffic meta-information (e.g., packet lengths in encrypted
+ models. application classification (EAC) [41] and HTTP request head-
+• Narrow scenarios. These efforts only train on traffic ers in web attack detection (WAD) [3]). These complexities
+ datasets. They fall short in handling natural language, ren- of instructions and traffic patterns can easily confuse LLM
+ dering them incapable of following instructions and con- when facing multimodal learning [19], [27]. As depicted in
+ ducting complex traffic analysis tasks [39], requiring a high Figure 1 (right), we directly mix the training data of three
+ user threshold. traffic detection tasks (i.e., MTD, EAC, and WAD tasks) and
+• Defective abilities. These methods have shortcomings in train Llama2 with the default tuning strategy. Llama2 only
+ traffic detection and generation. They do not have the reaches 10.2% of average accuracy, indicating the difficulty
+ generalization abilities to detect traffic on unseen data [11]. for LLM to learn with multimodal across different tasks.
+ Moreover, they can only generate 5-tuples of packets and Challenge 3: Generalization to new environments with
+ flows, whose practical uses are very limited [35], [36]. model update. The adaptation cost of LLM is quite expensive
+ In this paper, we aim to exploit LLM to facilitate the work as it requires training large-scale parameters with extensive
+of network traffic analysis with strong generalization across datasets [20], [21]. However, many traffic analysis tasks often
+different tasks. Given the language instructions that involve need to update the model’s traffic representation to struggle
+diverse domain knowledge and the traffic data that contains with dynamic scenarios, which are raised by the application
+multi-type benign or malicious traffic, an adapted LLM in the version updates (e.g., concept drift [17]) and attack method
+traffic domain is expected to learn generic traffic representation changes (e.g., APT attacks [42]). The high adaptation costs
+with its accuracy and generalization in pattern learning. Note of LLMs prevent the update of traffic representations on new
+that all work can be completed through dialogue with the scenarios. As shown in Figure 2, we measure Llama2-7B’s
+generic model, which reduces the operational threshold and adaptation overhead on 5 NIVIDA A100-80GB GPUs for
+development costs for security practitioners. However, the traffic detection tasks. Traditional retraining methods consume
+characteristics of the traffic domain leave three challenges to 78.5GB GPU memory and 126.7h to adapt to new environrealizing LLM’s generalization on traffic analysis tasks. ments for one epoch, which is unacceptable in real-world
+ dynamic scenarios.
+Challenge 1: Generalization to heterogeneous input of
+traffic data. Traffic data consists of structured metadata in
+packets and flows (e.g., IPs and ports). However, most LLMs B. Threat Model
+are considered as the specialized model for processing plain Our purpose is to develop an LLM for traffic representation,
+text, which has a huge gap from the traffic data. Before being which can be leveraged to construct traffic detection and
+fed into LLM, the text is converted into language tokens generation methods to replace traditional ML-based methods
+using a standard tokenizer [21], [23]. These tokenizers are that can be integrated into existing sophisticated network
+usually trained on large-scale text corpora with tokenization traffic analyzers (NTA) [7] and security information and event
+algorithms like WordPiece and Byte-Pair Encoding (BPE), management (SIEM) systems [43], which are widely deployed
+which rarely see heterogeneous traffic data. Consequently, in Security Operation Centers (SOCs) to analyze abnormal
+LLM may fail to directly transform traffic data into textual events based on traffic mirroring and logs. Different from
+ 4
+
+ Natural Language Web Attack
+ NLP WAD
+ Processing Model Detection Model
+ 1. Traﬃc-Domain Tokenization 2. Dual-Stage Tuning Pipeline MTD Malware Traﬃc
+ Detection Model
+ BND Botnet
+ Detection Model
+
+ Traﬃc Analysis
+
+ Adaptation
+ Instruction Parameter-Eﬃcient
+
+ First
+ [ eos ]
+
+ [ eos ]
+ _
+ _
+ _
+ _
+ _
+ _ Fine-Tuning (PEFT) Malicious Benign
+ _ _ _ + Large Language
+
+ Traﬃc-domain Tokenizer
+ 0000 0000
+ Security _ _ _ Tuned P-tuning v2 Models (LLMs) 0212 0212
+ _ _ _
+
+ …
+
+ …
+ _ _ _
+ Experts
+ Text Learning Traﬃc Pattern Learning
+
+ Ip.len 1360
+ Traﬃc Detection
+
+ [ cls ] Given the
+ NLP
+ +
+ MTD WAD … BND + Llama
+ Task Understanding Task-specific Traﬃc Learning Generated
+ 0000 0000 0000
+ 0212 0212 0212 Samples
+ … ChatGLM 0000 Red Teaming
+
+ [ cls ]
+ 0000 0000 0000
+ NLP1 MTD WAD1 BND 0212
+ +
+
+ New Scenario
+ Adaptation
+ 0212 0212 0212
+Traﬃc Mirror Language Traﬃc ML-based IDS
+ NLP2 MTD WAD2 … BND Frozen
+ Benign / Malicious Tokens Tokens Traﬃc Generation
+ Updating Updating
+ Traﬃc Data
+ 3. Extensible Adaptation with PEFT
+
+Fig. 3. The overall framework of TrafficLLM. TrafficLLM employs three core techniques: traffic-domain tokenization to process instructions and traffic data,
+dual-stage tuning pipeline to learn text semantics and traffic patterns across different tasks, extensible adaptation with parameter-effective fine-tune to update
+model parameters for new scenario adaptation.
+
+the threat model of the existing ML-based traffic detection Driven by expert instructions, TrafficLLM automatically exand generation studies [9], [44], TrafficLLM aims to develop tracts task-related traffic patterns from raw packets and flows,
+LLM-based model to adapt to different tasks, which is more forming the generic representation across different tasks. We
+generalized than specific ML models. TrafficLLM can be present the architecture overview of TrafficLLM in Figure 3.
+directly driven by instructions from experts. It achieves generic TrafficLLM designs three modules:
+traffic representation using domain knowledge to extract task- Traffic-Domain Tokenization. To overcome the modality
+related traffic patterns from raw traffic based on instructions. gap between natural language and heterogeneous traffic data,
+Leveraging LLM’s pattern learning and generalization abili- TrafficLLM employs traffic-domain tokenization to process the
+ties, we develop TrafficLLM to build the centralized traffic diverse input of traffic detection and generation tasks for repreanalysis solution, which can achieve the following goals: sentation learning. This mechanism effectively extends LLM’s
+• Attack detection. TrafficLLM establishes comprehensive native tokenizer by training the specialized tokenization model
+ traffic detection capabilities to process and analyze diverse on large-scale traffic-domain corpora (Section III-B).
+ benign and malicious traffic. Learning with a variety of Dual-Stage Tuning Pipeline. TrafficLLM designs a dual-stage
+ heterogeneous traffic data, TrafficLLM can extract generic tuning pipeline to achieve LLM’s generic representation learntraffic representation from raw traffic to identify benign ing across different traffic-domain tasks. The pipeline trains
+ and malicious categories [9], [45], or realize more fine- LLM to understand instructions and learn task-related traffic
+ grained classification (e.g., application types in encrypted patterns at different stages, which builds upon TrafficLLM’s
+ application classification (EAC) [16], [41] and network domain knowledge to learn traffic representations for diverse
+ types in botnet detection (BND) [46]). traffic detection and generation tasks (Section III-C).
+• Attack synthesis. TrafficLLM can generate attack samples
+ to facilitate red teaming and enhance the robustness of Extensible Adaptation with Parameter-Effective Finenetwork-based IDSes (NIDS) [47] when lacking the high- Tuning (EA-PEFT). To adapt LLM for generalization to
+ quality traffic data in practical scenarios. Different from new traffic environments, TrafficLLM proposes an extensible
+ existing ML-based traffic generation studies [35], [36], [44], adaptation with parameter-effective fine-tuning (EA-PEFT) to
+ TrafficLLM can generate a wide range of target traffic with update model parameters with low overhead. The technique
+ .pcap format based on LLM’s strong memorization. It can splits model capabilities in different PEFT models, which
+ help security practitioners simulate traffic attacks to measure helps minimize the adaptation costs on dynamic scenarios
+ the vulnerability of systems and build robust IDSes through raised by traffic pattern changes (Section III-D).
+ data augmentation. B. Traffic-Domain Tokenization
+ TrafficLLM utilizes traffic-domain tokenization to encode
+ III. D ESIGN OF T RAFFIC LLM
+ original inputs of traffic analysis tasks and makes them learn-
+A. Overall Framework able for LLMs. We extract tuning data from raw traffic to train
+ We develop TrafficLLM, which captures generic traffic the specialized tokenizer, which effectively extends LLM’s
+representation from diverse traffic-domain instruction text and native tokenizer. The principle of traffic-domain tokenization
+raw traffic data through a dual-stage fine-tuning framework, is to map the natural language and traffic data into the same
+aiming to release LLM’s strong generalization across diverse feature space, supporting LLM in accepting heterogeneous
+traffic analysis tasks. TrafficLLM overcomes the challenges of traffic data to build the representation.
+applying LLM in traffic analysis. It builds domain knowledge Tuning Data Extraction. To help LLMs reduce the modality
+by training with extensive expert instructions and traffic data. gap and make them feasible to handle traffic data across
+ 5
+
+different tasks, TrafficLLM directly extracts training data from TABLE II
+raw traffic for generic traffic representation. The purpose of T HE TOKENIZATION OF T RAFFIC LLM’ S TOKENIZER ON THE TRAFFIC
+ DATA COMPARED TO C HAT GLM2’ S TOKENIZER .
+using raw traffic is to release the generalization of TrafficLLM
+ Default tokenization: ip . proto : 6 , ip . che cks um : 0
+in different scenarios, different from the traditional ML-based
+ x 0 0 0 0 1 7 a 7 , ip . che cks um . status : 2 ,
+methods that heavily rely on predefined features. Rather than
+ ip . src : 1 0 . 0 . 2 . 1 5 , ip . d st : 1 9
+select for certain features, TrafficLLM leverages the whole 8 . 5 2 . 2 0 0 . 3 9 , t cp . src port : 4 3 7 3
+meta-information in the packets to learn the important features 1 , t cp . d st port : 4 4 3 , t ... [Token length : 1405]
+without human guidance. It helps TrafficLLM obtain strong TrafficLLM tokenization: ip . proto : 6, ip . checksum : 0 x
+generalization across different scenarios. 000017 a 7, ip . checksum . status : 2, ip . src : 10.0.
+ To facilitate LLMs acquire domain knowledge to learn 2.15, ip . dst : 198.52. 200.39, tcp . srcport : 43731, dstport :
+traffic representations across different tasks, TrafficLLM em- 443, ... [Token length : 690]
+
+ploys instruction-learning [39] to build tuning data templates
+and adapt LLMs to the traffic-domain semantic space. These
+instructions can guide LLM to automatically extract task- split the field names (e.g., checksum and tcp) since they
+related patterns in the traffic data to build representations. have learned less of the traffic-domain languages. In contrast,
+Then, we utilize Tshark to extract protocol fields in different TrafficLLM’s tokenizer can retain these field name indicators
+packet layers. These meta-information are organized by pairs based on their appearance frequency in training data. It can
+including the field name and the corresponding value (e.g., also store the common field values (e.g., window sizes and
+tcp.srcport: 443). To indicate the beginning of traffic flags), helping LLMs learn the numerical meta-information
+data, we define an indicator token <packet> in the context. correctly. Furthermore, due to the accurate tokenization on
+Each packet data is started with this special indicator to form traffic data, TrafficLLM can produce shorter packet tokens
+the flow data. This instruction-learning design helps LLM with a 699.36 average token length, compared to ChatGLM2’s
+obtain domain knowledge to capture valuable semantics for 1445.04 token length. It helps TrafficLLM obtain faster packet
+pattern learning across different tasks. Finally, TrafficLLM processing efficiency compared to the native LLMs.
+combines traffic analysis instructions and the extracted traffic As shown in Figure 1 (left) and (middle), TrafficLLM’s
+data to build the tuning data. The examples of TrafficLLM’s tokenization is more effective and accurate in loading traffic
+tuning data are shown as follows. data compared to the default tokenization. This mechanism
+ helps TrafficLLM reach 106% efficiency improvement to pro-
+ Traffic Detection Tuning Data Example cess traffic data. TrafficLLM also achieves 17.4% better performance on MTD tasks by using the traffic-domain tokenization.
+ Instruction: Given the following traffic data that contains protocol fields, traffic features, and payloads.
+ Please conduct the Malicious Traffic Detection task C. Dual-Stage Tuning Pipeline
+ to determine which application category the encrypted TrafficLLM proposes a dual-stage tuning pipeline to help
+ benign or malicious traffic belongs to. LLMs acquire domain knowledge to achieve generic represen-
+ ¡packet¿: ip.len: 1360, ip.proto: 6, tcp.srcport: 443, tation learning on diverse traffic analysis tasks. The pipeline
+ tcp.dstport: 56603, tcp.len: 1308, tcp.window size: ... can help LLMs obtain two abilities in different stages: (i)
+ Output: Zeus . understanding the task-related natural language to determine
+ which task should be conducted and (ii) learning the taskspecific traffic pattern across different tasks. Guided by expert
+ Traffic Generation Tuning Data Example instructions, TrafficLLM autonomously extracts task-specific
+ traffic patterns from encoded inputs, building generic repre-
+ Instruction: Based on the protocol fields, traffic
+ sentations across different tasks.
+ features, and payloads of traffic in your knowledge.
+ Please generate a packet of Skype traffic . Tuning Objectives. TrafficLLM aims to leverage LLMs’ pattern mining and generalization abilities to learn generic traffic
+ Output: Skype.pcap (ip.src: 1.2.102.211, ip.dst:
+ representations. Based on LLM’s strong memorization coming
+ 1.1.210.113, tcp.srcport:443, tcp.dstport: 27567, raw:
+ from the deep Transformer architecture, these representations
+ 1021ac5010000021ac50200000800450002aeea10400
+ can obtain distinct traffic patterns learned from the meta-
+ 0200632f2010266d30101...).
+ information (e.g., lengths, directions, and flags). TrafficLLM
+ automatically integrates these heterogeneous data and finds
+Tokenizer Training. After extracting the tuning data, we their importance for different tasks (e.g., lengths for encrypted
+build a specialized traffic-domain tokenizer to form the input traffic classification (EAC) [41] and directions for website
+traffic tokens. We use the BPE method to train the specialized fingerprinting (WF) [48]. TrafficLLM uses the generic repretokenizer on the large-scale tuning data. Since native LLM sentations to realize two mainstream tasks, i.e., traffic detection
+has hardly ever seen traffic data, it can be considered as and traffic generation.
+an extension to the existing tokenizer. Table II shows an • Traffic detection. Given the security expert’s instruction
+example of tokenization of TrafficLLM and an open-sourced S = {s1 , s2 , ..., sm } that contains m language tokens, the
+LLM ChatGLM2 [24]. Tokenizers of existing LLMs tend to traffic data X = {x0 , x1 , ..., xn } that contains n traffic
+ 6
+
+ _
+ _ Language PEFT Model Set
+ _
+ Tokens Model_Update(
+ [ cls ] Given the following traﬃc data that contains … [ eos ] TraﬃcLLM, Instruction, …
+ NLP1 MTD WAD1 BND
+ Traﬃc_Data, Labels)
+ 0000 Traﬃc
+ 0212
+ Tokens Old Task Updating NLP2 MTD WAD2 … BND
+ [ cls ] ip.len 1360 ip.proto 6 tcp.srcport 443 tcp.dstport … [ eos ]
+ TraﬃcLLM Updating Updating
+
+ PEFT models Labels Adaptor Model_Insert(TraﬃcLLM,
+ Task-Specific Instruction, Traﬃc_Data, NLP1 MTD WAD … BND
+ Natural Language Labels, New_Task_Name)
+ Web Attack Traﬃc Tuning
+ Instruction Tuning WAD
+ Detection y1 BitTorrent
+ New Task Inserting NLP2 MTD WAD … BND EAC
+ Malicious Traﬃc Updating Adding
+ MTD y2 Nsis-ay
+ Detection
+ LLMs LLMs
+ EAC Encrypted App y3 Zeus
+ + Classification
+ +
+ Fig. 5. The workflow of the extensible adaptation with parameter-effective
+ BND
+ Botnet
+ MTD y4 Virut
+ fine-tuning (EA-PEFT) in TrafficLLM.
+ NLP Detection
+ … …
+ Task-Specific Traffic Tuning. The second stage we propose
+Fig. 4. Illustration of the dual-stage tuning pipeline to learn natural language
+and traffic patterns respectively.
+ is task-specific traffic tuning. After understanding the task,
+ we force TrafficLLM to learn the traffic pattern under the
+ tokens to describe the traffic meta-information, traffic de- downstream tasks. In this stage, we fine-tune LLM using
+ tection requires the task-related instruction Si and traffic the training pairs (Xi , yi ) to model the traffic representation
+ data Xi (flows or packets) as TrafficLLM’s input (Si , Xi ). under traffic detection tasks ϕT D and traffic generation tasks
+ Then, TrafficLLM can identify the ground truth label yi ∈ ϕT G . For the specific downstream task ϕi , TrafficLLM trains
+ Y = {y0 , y1 , ..., yc } of the traffic across different traffic the second stage parameters θ2 to predict traffic labels yi or
+ detection tasks (e.g., MTD, WAD, and BND tasks) with its generate synthetic traffic X̂i :
+ parameter θ:
+ yi = TrafficLLMstage2 (Xi |(θ2 ; ϕi ∈ ϕT D ))
+ yi = TrafficLLM((Si , Xi )|θ) (1) (5)
+ X̂i = TrafficLLMstage2 (yi |(θ2 ; ϕi ∈ ϕT G ))
+• Traffic generation. Traffic generation can be regarded as To inject the knowledge of heterogeneous traffic data into
+ the reversed process of traffic detection tasks. It aims to LLMs, TrafficLLM builds and updates the representation of
+ input the generation instruction Si to describe the specific traffic data Xi = {x1 , x2 , ..., xn }, by learning the context of
+ scenario and the traffic category yi ∈ Y = {y0 , y1 , ..., yc } traffic packets and flows with the loss function J (θ2 ):
+ of the traffic to be generated. TrafficLLM can generate a
+ synthetic packet X̂i that satisfies the instruction: Pn (xi |x1 , ..., xi−1 ) = softmax(Wl hi−1 )
+ (6)
+ XX
+ J (θ2 ) = logPn (xi |x1 , ..., xi−1 )
+ X̂i = TrafficLLM((Si , yi )|θ) (2)
+ i
+
+Natural Language Instruction Tuning. In the first stage where Wl is the trainable parameter matrix for traffic repof the dual-stage tuning in TrafficLLM, we introduce natural resentation learning. The task-specific traffic tuning aims to
+language instruction tuning to inject the professional task align the LLMs with various traffic data under different
+description text from the field of cybersecurity into LLMs. As scenarios, such as VPN and Tor networks, which allows LLMs
+shown in Figure 4, the pipeline forces LLM to understand the to accomplish diverse downstream tasks with these traffic
+instructions from security experts and predict the task name representations.
+ϕi that needs to be performed. As shown in Figure 1 (right), the dual-stage tuning pipeline
+ helps TrafficLLM achieve 95.0% of average accuracy across
+ ϕi = TrafficLLMstage1 (Si |θ1 ) (3) MTD, EAC, and WAD tasks. TrafficLLM has an 84.8%
+ higher accuracy than directly fine-tuning due to learning text
+where θ1 is the trainable parameters in the first stage. ϕi is the semantics and task-specific traffic patterns in different stages.
+downstream task name to be performed. To learn the context of
+the security task description, we follow LLM’s autoregressive
+ D. Extensible Adaptation with PEFT
+objective function to converge the model. Given the human
+instruction Si = {s1 , s2 , ..., sm }, TrafficLLM calculates the To realize LLM’s generalization to new traffic environments,
+probability Pm of token si to model the loss J (θ1 ): TrafficLLM employs extensible adaptation with parametereffective fine-tuning (EA-PEFT) to efficiently update repre-
+ Pm (si |s1 , ..., si−1 ) = softmax(Ws hi−1 ) sentations on dynamic scenarios. The principle of EA-PEFT
+ (4)
+ XX
+ J (θ1 ) = logPm (si |s1 , ..., si−1 ) is to split traffic representation abilities of different tasks into
+ i various additional parameters, supporting for TrafficLLM to
+where Ws is the learning parameter matrix for task understand- selectively update parts of capabilities to enable rapid updates
+ing. hi−1 denotes the representation encoded in TrafficLLM of representations in new environments.
+with the input of the preceding i − 1 tokens. The natural Traffic Domain Adaptation with PEFT. Assume that the
+language instruction tuning technique plays a crucial role in pre-trained LLM’s parameters are θLLM , to adapt to new
+accurately matching instruction text with the corresponding environments, traditional retraining methods require training
+downstream task, thereby enabling LLMs’ domain knowledge the full parameters of models, which indicates the parameter
+to understand different tasks. update ∆θ is equal to θLLM , i.e., |∆θ| = |θLLM |. However,
+ 7
+
+the large parameter size of LLM entails huge costs of repeated Hyper-parameters. During the data pre-processing, we emretraining in new environments. To address this limitation, ploy a data sampling process for each class to avoid the data
+TrafficLLM freezes the parameters of the LLM and tunes imbalance issue. The maximum number of flows in each class
+extra parameters to achieve parameter effective fine-tuning is 5,000. We set the ratio of training sets, validation sets, and
+(PEFT) [49]. During the dual-stage tuning, TrafficLLM tunes test sets to 8:1:1. In traffic detection tasks, we followed [16]
+additional parameters to respectively build θP EF T0 for task to mask the Ethernet layer, IP addresses, and ports to avoid
+understanding and θP EF Tϕi for task-specific traffic learning: the bias derived by the sensitive meta-information. During
+ the training stage, we set the training steps as 20,000; the
+ θ1 = θLLM + θP EF T0 initial learning rate is 2 × 10−2 . The maximum source and
+ (7)
+ θ2 = θLLM + θP EF Tϕi target lengths of generation tasks are set as 128 and 3,072,
+ while detection tasks are 3,072 and 32. During the inference
+where θP EF T0 and θP EF Tϕi are the parameter updates ∆θ
+ stage, we set top-p and temperature to 0.70 and 0.90 in traffic
+in the two stages. This strategy helps TrafficLLM encapsulate
+ generation, while 0.90 and 0.10 in traffic detection.
+abilities of natural language processing and traffic pattern
+learning across different tasks into specialized PEFT models,
+which are triggered by instructions from different tasks. B. Datasets & Tasks
+Extensible Adaptation with PEFT Models. Using the PEFT To comprehensively evaluate the effectiveness of Traffimodels trained during traffic domain adaptation, TrafficLLM cLLM, we collect a wide set of traffic datasets and natural
+employs EA-PEFT to organize these models with an ex- language instructions for LLM adaptation and experiments.
+tensible adaptation, which can help TrafficLLM easily adapt Traffic Datasets. The traffic datasets used in our experiments
+to new environments. Figure 5 shows the overview of EA- are shown in Table III. We use 10 traffic datasets with
+PEFT’s workflow implemented by Python scripts. In EA- different scenarios to collect ≈ 0.4M training data and build
+PEFT, TrafficLLM adaptor allows flexible operations to update generalization abilities:
+old models or register new tasks. For instance, When faced • Generalization across different tasks. (i) Traffic detection:
+with the traffic update in EAC and WAD tasks raised by client To evaluate the detection performance of TrafficLLM on
+version upgrade (e.g., App version drift) or attack method various network scenarios, we choose 8 traffic datasets
+changes (e.g., HTTP request body changes), the adaptor can to measure TrafficLLM’s abilities to detect malicious and
+call Model_Update to update the specific PEFT models by benign traffic. In malicious traffic detection tasks, we inproviding new EAC or WAD datasets. Moreover, TrafficLLM troduce malware traffic detection (USTC TFC 2016 [40]),
+can easily add new traffic analysis scenarios. The adaptor botnet detection (ISCX Botnet 2014 [46]), malicious DoH
+can schedule Model_Insert to train new PEFT models detection (CIC DoHBrw 2020 [50]), and web attack detecand insert them in the EA-PEFT framework. Based on these, tion (CSIC 2010 [51]) tasks. In fine-grained benign traffic
+TrafficLLM easily scales to a wide range of traffic domain detection, we employ encrypted VPN detection (ISCX VPN
+tasks with the light-wise adaption scheme of EA-PEFT. 2016 [52]), Tor behavior detection (ISCX Tor 2016 [53]),
+ As shown in Figure 2, the EA-PEFT technique helps Traffi- encrypted App classification (CSTNET 2023 [16]), and
+cLLM only need to train 0.62% of parameters when adapting website fingerprinting (CW-100 2024 [54]). We use traffic
+to new traffic environments, which significantly reduces the detection instructions, flows/packets in the traffic datasets,
+adaptation costs with the reduction of 69.9% GPU memory and the corresponding labels to build the human instructions
+and 88.8% training time. TrafficLLM effectively mitigates the Si , traffic data Xi , and the target label yi . (ii) Traffic
+high adaptation cost of retraining methods, facilitating deploy generation: To implement the traffic generation capability,
+more traffic analysis tasks in real-world settings. we reuse the traffic datasets mentioned above. We use the
+ traffic label yi to produce the generation task instructions
+ IV. E XPERIMENT S ETUP & I MPLEMENTATION Si and sample the packets to form the synthetic packets X̂i .
+ • Generalization to unseen data. To measure TrafficLLM’s
+ In this section, we introduce the experimental setup and
+ generalization ability on unseen traffic data, we set up the
+implementation of TrafficLLM, including the implementation,
+ concept drift [55] and APT attack detection [42] scenarios,
+datasets, baselines, and metrics used in the experiments.
+ which are of great concern in the community. We selected
+ APP-53 2023 [55] and DAPT 2020 [42], two representative
+A. Implementation of TrafficLLM open-sourced datasets containing historical and future-stage
+Testbed. We conduct our experiments on a Super GPU server traffic for evaluation.
+(super-SYS-420GP-TNR) with 5 NVIDIA A100 80G GPUs, We choose these datasets to cover various applications (i.e.,
+Ubuntu 18.04.1 (Linux 5.4.0), and 1TB memory. We use mobile apps, websites, and malware), protocols (i.e., HTTP,
+PyTorch 2.0.1 to build the prototype TrafficLLM and deploy QUIC, TLS1.3, and DoH), network environments (i.e., VPN,
+Python scripts to incorporate TrafficLLM adaptor and PEFT Tor, and botnet), and attacks (i.e., web attacks and APT
+models in the EA-PEFT framework. We employ Llama2- attacks) in the traffic. This ensures the variety to evaluate
+7B [23] and ChatGLM2-6B [24] as the base LLMs for model robustness across different scenarios.
+most experiments. We choose P-Tuning v2 [28] as the PEFT Natural Language Instructions. We show the details of the
+method. The storage of each PEFT model is 7.1MB. natural language dataset in Table IV. To build the natural
+ 8
+
+ TABLE III
+ T HE DETAIL OF 10 TRAFFIC DATASETS USED TO BUILD THE TRAFFIC ANALYSIS DOWNSTREAM TASKS IN EXPERIMENTS . T RAFFIC LLM USES THE
+ TRAFFIC DATA AND LABELS OF THESE DATASETS TO BUILD TRAFFIC DETECTION AND GENERATION CAPABILITIES RESPECTIVELY.
+
+ Tasks Abbrev. Traffic Datasets Description #Flows #Packets #Labels
+ Malware Traffic Detection MTD USTC TFC 2016 [40] 10-class malware and 10-class benign Apps 9,853 97,115 20
+ Botnet Detection BND ISCX Botnet 2014 [46] 4-class botnets and 1-class benign network 30,511 300,000 5
+ Malicious DoH Detection MDD CIC DoHBrw 2020 [50] 4-class benign DoH and 1-class malicious DoH 545,463 28,341,000 5
+ Web Attack Detection WAD CSIC 2010 [51] 1-class Web attack requests and 1-class benign requests 61,000 61,000 2
+ APT Attack Detection AAD DAPT 2020 [42] 1-class APT attack traffic and 1-class benign traffic 3,000 10,000 2
+ Encrypted VPN Detection EVD ISCX VPN 2016 [52] 19-class VPN encrypted App traffic 3,694 60,000 14
+ Tor Behavior Detection TBD ISCX Tor 2016 [53] 8-class user behaviors under Tor network 3,021 80,000 8
+ Encrypted App Classification EAC CSTNET 2023 [16] 20-class mobile App traffic using TLS encryption 65,128 602,568 20
+ Website Fingerprinting WF CW-100 2024 [54] 100-class website accessing traffic under Tor 9,000 603,072 100
+ Concept Drift CD APP-53 2023 [55] 53-class mobile App traffic with concept drift 133,000 449,000 53
+
+ TABLE IV
+ T HE STATISTIC INFORMATION AND THE TOP WORDS OF THE NATURAL LANGUAGE INSTRUCTIONS WE COLLECT FOR TASK UNDERSTANDING .
+
+ Statistics Value Statistics Value Word %Hits Word %Hits Word %Hits
+ Total words 128,248 Average number of words per instruction 15.26 traffic 4.15% packet 1.01% software 0.48%
+ Total unique words 1,999 Average number of unique words per instruction 13.92 network 2.58% application 0.79% tunnel 0.44%
+ Total sentences 15,238 Average number of sentence per instruction 1.65 data 1.60% IP 0.56% behavior 0.35%
+ Total instructions 9,209 Type Token Ratio (TTR) 1.56 field 1.54% botnet 0.49% set 0.33%
+
+language corpus as the human instructions in TrafficLLM, we macro-average area under ROC curve (Macro-AUC), and (vii)
+invite security experts and college students to provide accurate Jensen-Shannon Divergence (JSD). Note that lower JSD and
+task descriptions for each downstream task. Moreover, to FP denote better fidelity.
+increase the diversity of the context, we use ChatGPT [56] to
+rewrite these expert instructions through prompt engineering V. E VALUATION
+and remove similar instructions based on human annotation.
+Each instruction is rewritten 20 times at least. Finally, we In this section, we evaluate TrafficLLM’s generalization
+collect ≈ 10K text instructions to build the training data. abilities across different scenarios, including various detection
+ and generation tasks, unseen scenarios, and real-world settings.
+C. Baselines & Evaluation Metrics
+ A. Generalization across Detection Tasks
+Baselines. To compare the performance of TrafficLLM, we
+mainly use two types of baselines, including ML-based traffic We first evaluate whether TrafficLLM can reach robust
+detection and generation methods. detection performance across different scenarios and analyze
+• ML-based detection methods. We use state-of-the-art traf- the reason for its generalization ability on traffic detection.
+ fic detection methods across different tasks as baselines to Generalization on Different Tasks. Table V and Table VI
+ evaluate the traffic detection abilities of TrafficLLM. The present the performance of TrafficLLM on 10 datasets for
+ baselines include (i) Statistical Feature Methods: AppScan- various traffic detection tasks. Results indicate that TrafficLLM
+ ner [12], CUMUL [13], BIND [14], k-fingerprinting (K- can classify all 229 types of traffic with F1-score ranging from
+ FP) [57], and FlowPrint [9]; (ii) Deep Learning Meth- 0.9320 to 0.9960. TrafficLLM achieves at most 80.12% better
+ ods: FS-Net [41], Deep Fingerprinting (DF) [48], Graph- results than all baselines. Pre-training methods like PERT and
+ DApp [58], TSCRNN [59], and Deeppacket [45]; (iii) Pre- ET-BERT obtained acceptable results with the average F1-
+ training Methods: PERT [34] and ET-BERT [16]. scores of 0.8128 and 0.9324 since they additionally put the
+• ML-based generation methods. To evaluate the perfor- traffic bytes of pre-trained datasets into the model compared to
+ mance of traffic generation, we compare TrafficLLM to prior works. Nevertheless, since TrafficLLM leverages LLM’s
+ state-of-the-art ML-based generation methods. The baselines pattern mining and generalization abilities, the performance
+ include (i) The GAN-based IP header trace generation outperforms PERT and ET-BERT with an improvement of
+ algorithm: Netshare [44]; (ii) The conditional GANs-based 9.63% at most on the F1-score metric.
+ augmentation method: PacketCGAN [60]; (iii) The CNN- Furthermore, due to the difference between various detec-
+ GAN-based IP packet generator: PAC-GAN [61]. Note that tion scenarios, most works keep a poor generalization ability
+ the rule-based methods are not in the range since they can to share their models across different tasks (e.g., FlowPrint
+ only simulate network characteristics and are difficult to keeps F1-scores ranging from 0.2254 to 0.7015 with a variance
+ generate fine-grained packet features with manual config- of 3.396%). Results indicate that previous ML-based methods
+ uration (e.g., diverse meta-information in App traffic). usually show low generalization due to their dependence on
+Evaluation Metrics. We use the following metrics to evaluate handcrafted features and predefined model structures. For
+TrafficLLM: (i) Precision (PR), (ii) Recall (RC), (iii) F1-score instance, Deeppacket gets an F1-score of 0.9503 on the
+(F1), (iv) Accuracy (acc), (v) False Positive (FP), (vi) the EVD task (ISCX VPN 2016) but only obtains an F1-score
+ 9
+
+ TABLE V
+ T RAFFIC DETECTION RESULTS ON APP-53 2023, ISCX T OR 2016, ISCX VPN 2016, CSTNET 2023, AND CW-100 2024.
+
+ ISCX Tor 2016 ISCX VPN 2016 APP-53 2023 CSTNET 2023 CW-100 2024
+ Method
+ PR RC F1 PR RC F1 PR RC F1 PR RC F1 PR RC F1
+ AppScanner [12] 0.7251 0.6512 0.6124▼ 0.7395 0.7125 0.7304 0.7035 0.6957 0.6980 0.6481 0.6420 0.6467 0.6780 0.6825 0.6802
+ CUMUL [13] 0.5672 0.5731▼ 0.5628 0.6322 0.6824 0.6570 0.5563 0.5467▼ 0.5480▼ 0.5373 0.5217▼ 0.5274▼ 0.5623 0.5715▼ 0.5697▼
+ BIND [14] 0.4569▼ 0.4385▼ 0.4469▼ 0.5067▼ 0.4975▼ 0.5008▼ 0.6566▼ 0.6456▼ 0.6502▼ 0.7712 0.7689 0.7691 0.7504 0.7489 0.7501
+ K-FP [57] 0.7035 0.6789 0.6951 0.6784 0.6967 0.6891 0.5660▼ 0.5260▼ 0.5295▼ 0.4172▼ 0.3981▼ 0.4012▼ 0.5101▼ 0.4995▼ 0.5010▼
+ FlowPrint [9] 0.4201▼ 0.3789▼ 0.3901▼ 0.7084 0.6608 0.6888 0.4890▼ 0.5023▼ 0.4950▼ 0.2371▼ 0.2270▼ 0.2254▼ 0.5237▼ 0.5227▼ 0.5225▼
+ GraphDApp [58] 0.4789▼ 0.4878▼ 0.4781▼ 0.6478 0.6488 0.6476 0.6860 0.6450 0.6550 0.6329 0.5965 0.6078 0.6530 0.6974 0.6870
+ FS-Net [41] 0.6283▼ 0.6274▼ 0.5916▼ 0.7693 0.7488 0.7507 0.8550 0.8349 0.8376 0.8291 0.8061 0.8195 0.4582▼ 0.4781▼ 0.4668▼
+ DF [48] 0.6072▼ 0.6123▼ 0.6090▼ 0.6296▼ 0.6051▼ 0.6139▼ 0.7689▼ 0.7523▼ 0.7604▼ 0.7729▼ 0.7621▼ 0.7682▼ 0.9120 0.9046 0.9075
+ TSCRNN [59] 0.9051 0.9178 0.9105 0.9346 0.9367 0.9349 0.7057▼ 0.6890▼ 0.6995▼ 0.7529▼ 0.7566▼ 0.7558▼ 0.8350 0.8210▼ 0.8260
+ Deeppacket [45] 0.7456▼ 0.7469▼ 0.7400▼ 0.9467 0.9508 0.9503 0.5590▼ 0.5489▼ 0.5506▼ 0.4013▼ 0.2965▼ 0.3890▼ 0.8243▼ 0.8246▼ 0.8244▼
+ PERT [34] 0.7480▼ 0.4952▼ 0.4874▼ 0.8573 0.7394▼ 0.7481▼ 0.8458 0.8369 0.8403 0.8896 0.8721 0.8771 0.8247 0.8355 0.8300
+ ET-BERT [16] 0.9809 0.9830 0.9810 0.9890 0.9890 0.9890 0.8540▼ 0.8494▼ 0.8506▼ 0.9581 0.9478 0.9496 0.8670▼ 0.8650▼ 0.8660▼
+ TrafficLLM 0.9810 0.9871 0.9810 0.9960 0.9970 0.9960 0.9325 0.9315 0.9320 0.9678 0.9369 0.9599 0.9370 0.9360 0.9366
+ 1 We use
+ ▼ to mark the results of each baseline with a decrease of more than 10% compared to their best results among 5 fine-grained benign traffic detection tasks.
+
+ TABLE VI
+ T RAFFIC DETECTION RESULTS ON ISCX B OTNET 2014, USTC TFC 2016, D O HB RW 2020, CSIC 2010, AND DAPT 2020.
+
+ ISCX Botnet 2014 USTC TFC 2016 CIC DoHBrw 2020 DAPT 2020 CSIC 2010
+ Method
+ PR RC F1 PR RC F1 PR RC F1 PR RC F1 PR RC F1
+ AppScanner [12] 0.9021 0.9004 0.9008 0.8872 0.8910 0.8972 0.7331▼ 0.7063▼ 0.7106▼ 0.7590▼ 0.7226▼ 0.7408▼ 0.7465▼ 0.7112▼ 0.7220▼
+ CUMUL [13] 0.8791 0.8320 0.8417 0.6074▼ 0.5239▼ 0.5437▼ 0.5623▼ 0.5281▼ 0.5301▼ 0.6509▼ 0.6486▼ 0.6492▼ 0.6905▼ 0.6870▼ 0.6894▼
+ BIND [14] 0.6798▼ 0.6489▼ 0.6582▼ 0.8268 0.8014 0.8209 0.7137▼ 0.7003▼ 0.7077▼ 0.7224▼ 0.7026▼ 0.7115▼ 0.7022▼ 0.7002▼ 0.7010▼
+ K-FP [57] 0.8398 0.8960 0.8591 0.6447▼ 0.4172▼ 0.3981▼ 0.7035▼ 0.6789▼ 0.6951▼ 0.6585▼ 0.6496▼ 0.6542▼ 0.6855▼ 0.6960▼ 0.6920▼
+ FlowPrint [9] 0.5898▼ 0.6309 0.5967 0.6609▼ 0.6596 0.6584 0.7712 0.2371▼ 0.2270▼ 0.6960 0.6894 0.6935 0.7025 0.7009 0.7015
+ GraphDApp [58] 0.7578 0.7598 0.7538 0.8027 0.8320 0.8263 0.6478▼ 0.6791▼ 0.6512▼ 0.8350 0.8342 0.8345 0.8050 0.8240 0.8120
+ FS-Net [41] 0.7303 0.8546 0.7876 0.5964▼ 0.7174▼ 0.6371▼ 0.7123 0.6991▼ 0.7053 0.8056 0.7783 0.7946 0.6255▼ 0.6145▼ 0.6190▼
+ DF [48] 0.8267 0.8509 0.7980 0.7623 0.7598 0.7604 0.7078▼ 0.6986▼ 0.7022▼ 0.7892 0.7759 0.7805▼ 0.6470▼ 0.6455▼ 0.6464▼
+ TSCRNN [59] 0.9206 0.8976 0.8989 0.9538 0.9428 0.9503 0.8837 0.8672 0.8695 0.8453▼ 0.8550 0.8503 0.6480▼ 0.6326▼ 0.6370▼
+ Deeppacket [45] 0.9408 0.9520 0.9496 0.9369 0.9292 0.9338 0.8930 0.8977 0.8965 0.8934 0.8924 0.8930 0.6469▼ 0.6510▼ 0.6505▼
+ PERT [34] 0.9268 0.9078 0.9096 0.9605 0.9611 0.9574 0.9378 0.9052 0.8977 0.8990 0.8868 0.8960 0.8274▼ 0.7588▼ 0.7685▼
+ ET-BERT [16] 0.9503 0.9462 0.9489 0.9930 0.9930 0.9930 0.8927▼ 0.8674▼ 0.8467▼ 0.9450 0.9423 0.9435 0.9021 0.8920▼ 0.8995
+ TrafficLLM 0.9800 0.9861 0.9800 0.9950 0.9957 0.9950 0.9640 0.9640 0.9639 0.9820 0.9806 0.9810 0.9870 0.9823 0.9845
+ 1 We use
+ ▼ to mark the results of each baseline with a performance decrease of more than 10% compared to their best results among 5 malicious traffic detection tasks.
+
+ (a) 5-Tuples JSD (b) Destination IP JSD
+ Fig. 7. JSD between real and synthetic distributions on ISCX Botnet 2014
+ (a) TrafficLLM on Masked Features (b) Compared to ET-BERT and PERT and USTC TFC 2016 (⇓ JSD is better).
+
+Fig. 6. The Macro-AUC of TrafficLLM and baselines with different ratios of against missing features comes from the pattern reasoning and
+masked features on ISCX Tor 2016.
+ generalization abilities inherited from LLMs, while previous
+ work does not. Using the raw traffic data as inputs, TrafficLLM
+of 0.3890 on the EAC task (CSTNET 2023). Conversely, does not heavily rely on the partial features. It benefits from the
+TrafficLLM outperforms existing methods with an average F1- ability to automatically learn the importance and relationships
+score of 0.9875 and a variance of 0.018%, compared to the of meta-information to the specific task to build generic traffic
+pre-trained model ET-BERT’s 0.9324 average F1-score and representation, helping TrafficLLM release strong generaliza-
+0.151% variance. tion across different scenarios.
+Robustness against masking features. To understand why
+TrafficLLM keeps such generalization ability on traffic detec- B. Generalization across Generation Tasks
+tion tasks, we randomly mask partial packet meta-information
+in the inference stage to test detection performance. In Fig- We evaluate TrafficLLM’s generation ability across different
+ure 6, results indicate that TrafficLLM can obtain a Macro- scenarios and analyze the practicality of the generated traffic.
+AUC of 0.9171 even when 15% of features missing. How- Distribution Metrics. To evaluate the performance of the
+ever, the performance of pre-trained models ET-BERT and traffic generation capability, we compute the distribution met-
+PERT significantly declines. For instance, for a target FPR rics between the real and synthetic distribution of the meta-
+= 1 × 10−1 , while TrafficLLM achieves a TPR of 0.90, both information in the packets. Figure 7 shows the results on
+two baselines provide TPRs less than 0.40. The robustness 5-tuples compared to 3 baselines. We find that TrafficLLM
+ 10
+
+ TABLE VII
+ T HE PERFORMANCE OF IDENTIFYING THE 2 K SYNTHETIC AND REAL PACKETS USING THE CLASSIFIERS BUILT FROM THE SAME SIZE OF REAL AND
+ SYNTHETIC DATA UNDER USTC TFC 2016, ISCX B OTNET 2014, ISCX VPN 2016, AND CSTNET 2023 DATASETS .
+
+ USTC TFC 2016 ISCX Botnet 2014 ISCX VPN 2016 CSTNET 2023
+ Method Setting1
+ PR RC F1 PR RC F1 PR RC F1 PR RC F1
+ PAC-GAN [60] 0.7825 0.7432 0.7453 0.7234 0.7421 0.7256 0.8196 0.7945 0.8204 0.8402 0.8794 0.8571
+ ❶
+ PacketCGAN [61] 0.7673 0.7925 0.7529 0.8057 0.8245 0.8050 0.8342 0.8454 0.8345 0.8590 0.8881 0.8530
+ R-Train
+ NetShare [44] 0.8178 0.8157 0.8042 0.9021 0.9105 0.9042 0.9859 0.9675 0.9734 0.9314 0.9146 0.9345
+ S-Test
+ TrafficLLM 0.9315 0.8604 0.8354 0.9778 0.9730 0.9727 0.9802 0.9754 0.9779 0.9861 0.9852 0.9852
+ PAC-GAN [60] 0.6459 0.6375 0.6431 0.6204 0.6079 0.6202 0.8192 0.8023 0.8205 0.7056 0.6859 0.6980
+ ❷
+ PacketCGAN [61] 0.6724 0.6458 0.6532 0.7057 0.6894 0.6995 0.8525 0.8678 0.8548 0.6861 0.6404 0.6489
+ S-Train
+ NetShare [44] 0.8521 0.8254 0.8322 0.7974 0.7854 0.8024 0.9045 0.8845 0.8964 0.8420 0.8299 0.8405
+ R-Test
+ TrafficLLM 0.8843 0.8641 0.8589 0.8634 0.8375 0.8334 0.9716 0.9686 0.9688 0.8630 0.8289 0.8340
+ 1 Setting ❶ uses the real packets to train classifiers to test synthetic packets. Setting ❷ trains with synthetic packets and test on real packets.
+
+ (a) No Drift (b) Time Drift (c) Version Drift
+
+ Fig. 9. Concept drift experiments with 1-month time drift and new App
+ version drift settings on APP-53 2023 datasets.
+ (a) Source port (b) Packet length (bytes)
+
+Fig. 8. Source port and packet length CDFs compared with baselines and the
+ground truth on ISCX VPN 2016.
+
+is at most 73.76% better than existing methods to degrade
+ (a) Stage-2 APT Attacks (b) Stage-3 APT Attacks (c) Stage-4 APT Attacks
+the gap from the real distribution. For different categories of
+benign and malicious traffic, TrafficLLM achieves an average Fig. 10. Future stage APT attack detection based on historical stage-1 APT
+JSD of 0.0179, which is 39.32% better than the state-of-the- attack knowledge on DAPT 2020 datasets.
+art traffic generation method NetShare’s 0.0295 average JSD. packets to build the classifiers and treat the real packets as
+For a more detailed analysis, Figure 8 shows the CDFs of the the test sets. Results indicate that TrafficLLM outperforms
+source port and packet length. Results indicate that existing baselines on most metrics to detect real-world traffic using
+GAN-based methods can not capture the distribution well. the classifiers built from synthetic data. TrafficLLM can be
+TrafficLLM’s memorization advantage from parameter volume applied in data augmentation for benign or malicious traffic
+can help restore the field values of the original traffic data. with a 0.8739 average F1-score, which is 3.07%-33.92% better
+The results also indicate that TrafficLLM effectively learns than baselines.
+the fine-grained traffic representations to make the distribution
+consistent with the ground truth.
+ C. Generalization to Unseen Data
+Practicality of Synthetic Samples. TrafficLLM can rebuild the packets of raw traffic using the generated meta- Unlike traditional ML-based methods, a salient property of
+information. Furthermore, we consider that the generation TrafficLLM is its generalization abilities on unseen data. We
+ability of TrafficLLM has two promising applications: (i) utilize concept drift and APT attack datasets [42], [55] to set
+generating packets for security tests and (ii) building classifiers up unseen data detection scenarios for evaluation.
+under few-shot scenarios. First, to verify the quality of the Time and Version Drift. We evaluate TrafficLLM under congenerated packets, we use 2k traffic traces of real datasets to cept drift [17] scenarios that the detecting traffic distribution
+build a robust ensemble model based on Multinomial Naive often shifts from the original training data over time due to
+Bayesian and SGD classifiers to construct a prototype of dynamic behaviors (e.g., application updating). In this setting,
+ML-based NIDS. Then we use the synthetic traces to test we use the APP-53 2023 dataset, including 53-type mobile
+whether the model can identify these packets. In Table VII, App traffic and its drifted traffic with a 1-month time interval
+we find that the generated packets of TrafficLLM can be and new App version updates. We train TrafficLLM on the
+identified by the real-world classifier with an average F1- historical traffic and evaluate its generalization performance
+score of 0.9483, which is 4.68% better than the state-of-the- on the no drift, 1-month time interval, and new App version
+art method NetShare. It means that TrafficLLM can generate drift datasets. In Figure 9, TrafficLLM effectively maintains the
+test samples with extremely high confidence. To measure detection performance when facing the concept drift scenarios.
+the second application of TrafficLLM, we use 2k generated It outperforms baselines with 4.3%-11.3% and 6.7%-18.6%
+ 11
+
+ (a) Avg. F1-Score (b) False Positives (a) Robustness of Different LLMs (b) Impact of LLM Parameter Size
+
+Fig. 11. Exploring the influence of the Pre-trained and traffic-domain Fig. 12. Different types and model sizes of LLM adapted in TrafficLLM.
+knowledge on the generalization ability. The generation performance uses the R-Train and S-Test settings (the same
+ as below).
+F1-score under time and version drift respectively. Since
+TrafficLLM inherits the strong generalization from LLMs, it
+captures the common traffic representations in drifted environments, which ensures the robustness of detecting unseen
+drifted traffic.
+APT Attack Detection. We then evaluate TrafficLM under
+ (a) Traffic Detection (b) Traffic Generation (c) Computation Overhead
+APT attacks [42] that the traffic contains unseen distribution Fig. 13. The effectiveness of traffic-domain tokenization, dual-stage tuning
+due to dynamic behavior changes of attackers. We evalu- pipeline, and EA-PEFT in TrafficLLM.
+ate it on the multi-stage APT attack detection tasks using
+the DAPT 2020 dataset [42]. In this setting, the adversary traffic representations on unseen traffic.
+conducts 4-stage attacks including reconnaissance, foothold
+establishment, lateral movement, and data exfiltration in a few D. Deep Dive
+days. We train TrafficLLM with the benign and stage-1 APT
+ Adaptability across different LLMs. To verify whether
+attack traffic and test it on the attacks of future stages. As
+ TraffiLLM is applicable to different LLMs, except for Llama2
+shown in Figure 10, results indicate that TrafficLLM achieves
+ and ChatGLM2, we employ additional state-of-the-art LLMs
+89.3% average F1-score to detect future-stage attack traffic.
+ to build TrafficLLM, which includes Vicuna [62], Mistral [32],
+Although the attack traffic is extremely different in these stages
+ and Gemma [63]. As shown in Figure V-C, results indicate
+(e.g., stage-1 attack mainly aims to identify vulnerabilities
+ that the framework of TraffiLLM can be easily applied to all
+with attack tools, while the stage-4 attack contains the traffic
+ open-sourced LLMs with strong performance.
+that downloading files from the victim server using C&C
+tunnels), the pattern mining ability of TrafficLLM can differ the Impact of LLM Parameter Size. In Figure V-C, we exrepresentation of malicious traffic from the benign. This robust plore the impact of LLM’s parameter size on traffic deanomaly detection ability helps TrafficLLM achieve better tection and generation performance. Although Llama2-13B
+generalization performance on the dynamic traffic distribution and ChatGLM2-12B’s parameter size is almost 2-fold that
+compared to the three baselines. of their 7B and 6B versions, the four LLMs achieve similar
+ performance. The 6B model is enough to outperform existing
+Remark on Generalization Ability. To further analyze why
+ ML-based baselines on traffic detection and generation tasks.
+TrafficLLM keeps such generalization ability that traditional
+ML-based methods do not have, we investigate the influence Effectiveness of Core Components. To validate the effectiveof the capability from native base LLMs and tuned traffic- ness of TrafficLLM’s core components, we build three Traffidomain PEFT models. First, we randomly initialize LLM’s cLLM’s variants by removing the traffic-domain tokenizer (-
+weights to remove the pre-trained knowledge and directly tune Tokenization), replacing the dual-stage tuning pipeline with
+it with traffic datasets. We reuse the same settings of APP- default tuning (- Dual-Stage), and replacing EA-PEFT scheme
+53 2023 and DAPT 2020 datasets and report the average F1- with full fine-tuning (- EA-PEFT). As shown in Figure 13,
+score and FP. As shown in Figure 11, TrafficLLM dramatically modifying these components will entail 7.2%-78.7% perfordrops the performance without pre-trained knowledge. This mance reduction and 927.9% time and 216.2% GPU memory
+is because the pre-trained knowledge helps LLM acquire overhead increase among five LLMs mentioned above, which
+pattern mining and reasoning abilities through massive corpora indicates the significance of these components.
+(e.g., planning and calculation [23]), which is also critical Overhead Analysis. We investigate TrafficLLM’s computation
+for traffic analysis. Second, we disable the traffic-domain overhead on a NVIDA A100-80GB GPU. Training a 6B
+knowledge by removing PEFT models and directly testing model like ChatGLM2-6B requires 23GB GPU memory and
+on the base model. Without any guidance of traffic-domain 14h training time for a new PEFT model update (involving
+knowledge, LLM tends to randomly generate labels, making it 20,000 training steps on 50,000 task-specific samples). During
+not qualified for the work. However, when using 20% training the inference stage, loading TrafficLLM requires 13GB GPU
+data to inject partial traffic-domain knowledge into LLMs, memory and takes about 0.2s or 10s to generate a predicted
+TrafficLLM acquires great improvement on the unseen traffic label or a 1000-token synthetic packet. To reduce the overhead,
+data. The domain knowledge helps LLM effectively activate we consider employing a smaller LLM or using compression
+the generalization ability on the traffic data, building generic methods [64] can help speed up the adaptation.
+ 12
+
+ security monitoring. With the inability to inspect the content of
+ encrypted packets directly, researchers have turned to various
+ machine-learning algorithms [9], [11], [12] to analyze patterns,
+ timings, packet sizes, and other metadata to classify traffic.
+ For instance, Van et al. [9] used semi-supervised methods to
+ model device, certificate, and statistical features for mobile app
+ fingerprinting. Taylor et al. [12] utilized packet size to train
+ traffic classifiers with Random Forest. Fu et al. [11] exploited
+ flow interaction graphs to distinguish malicious behaviors from
+ (a) Evaluation on the ATEC 2023 (b) Enterprise Deployment
+Fig. 14. Players’ model performance in the competition and detection
+ benign traffic. Recent research [16], [34] focused more on
+performance under enterprise deployment. model generalization using pre-trained models. For instance,
+ Lin et al. [16] leveraged BERT to build the pre-trained model
+E. Real-World Evaluation for multi-type traffic classification tasks. However, existing
+ To evaluate the practicality in real-world scenarios, we works only focus on handling traffic data. Unlike these works,
+opened TrafficLLM’s framework for extensive security prac- TrafficLLM jointly learns expert instructions and raw traffic
+titioners in an LLM competition and deployed TrafficLLM in data, making TrafficLLM more powerful in various traffic
+a top security company. analysis tasks.
+Individual Use Evaluation. To investigate TrafficLLM’s effec- Traffic Data Augmentation. Data augmentation has been
+tiveness in research and collect feedback from the community, widely applied in the few-shot scenarios of traffic analysis to
+we integrate TrafficLLM as a race track on a national LLM increase the amount and diversity of traffic data. For example,
+competition1 with 1,901 teams and over 3,000 players from Qing et al. [65] utilized distributions of traffic data in the
+about 200 institutions from November 2023 to March 2024. feature space to augment training data for model training. Jan
+We have united many universities and Internet companies et al. [47] generated labeled datasets for botnet detection using
+to develop the competition platform. In this track, players generative models. A bunch of prior works [44], [60], [61]
+must use TrafficLLM’s framework with custom instructions leveraged Generative Adversarial Nets (GANs) to synthesize
+and traffic data to tackle MTD, BND, and EVD tasks. Each metadata in the traffic. Unlike these works, TrafficLLM can
+player can train their model and submit it in our scoring system generate entire packets including accurate headers and synonline. At the end of the competition, we draw up the statistics thetic payloads based on traffic representation learning.
+for all the players’ scores. As shown in Figure V-E, 58% of
+players achieve above 90% accuracy in this competition. Even
+ VII. C ONCLUSION
+24% of player models performed better than 96% Accuracy.
+After extensive verification by players during the competition, In this paper, we develop a powerful framework to adapt
+TrafficLLM was proven to adapt LLMs with powerful perfor- LLMs for network traffic analysis with strong generalization.
+mance easily. TrafficLLM employs three core techniques including traffic-
+Enterprise Deployment. We deploy TrafficLLM in a security domain tokenization to process instructions and traffic data,
+company that offers signature-based WAF and NIDS services the dual-stage tuning pipeline to learn generic traffic repto hundreds of its enterprise customers. The services are resentations with instructions and raw traffic data, and the
+operated by security specialists to record the daily malware EA-PEFT technique to update model parameters for new
+and Web attacks through manual analysis behind the services. scenario adaptation. We evaluate TrafficLLM on 10 open-
+They generated the ground truth by matching the WAF rules sourced datasets. Extensive experiments indicate that Traffior manually analyzing the traffic log with abnormal behaviors cLLM shows remarkable generalization abilities across differ-
+(e.g., containing attack payloads). We replay the recorded ent tasks and unseen traffic scenarios compared to existing
+traffic that contains 17,556 and 7,083 flows of malware and ML-based models. We release the source code and datasets to
+Web attack traffic to conduct MTD and WAD tasks using facilitate future research and hope that TrafficLLM can serve
+TrafficLLM. As shown in Figure V-E, TrafficLLM outperforms as the stepping stone for more LLM adaptation designs in the
+baselines by reaching 98.7% and 99.8% F1-scores in the real- traffic analysis community.
+world MTD and WAD task. TrafficLLM effectively reduces at
+least 69% and 95% of FPs compared to existing ML-based R EFERENCES
+methods. This is attributed to TrafficLLM’s robust represen- [1] S. Hu, T. Huang, K.-H. Chow, and et al., “Zipzap: Efficient training
+tation learning to differ the pattern of benign and abnormal of language models for large-scale fraud detection on blockchain,” in
+traffic, making TrafficLLM release strong generalization in the WWW, 2024, pp. 2807–2816.
+ [2] Z. Fu, M. Liu, Y. Qin, and et al., “Encrypted malware traffic detection
+real-world scenario. via graph-based network analysis,” in RAID. USENIX Association,
+ 2022, pp. 495–509.
+ VI. R ELATED W ORK [3] P. Li, Y. Wang, Q. Li, and et al., “Learning from limited heterogeneous
+ training data: Meta-learning for unsupervised zero-day web attack de-
+Encrypted Traffic Classification. Encrypted traffic classifi- tection across web domains,” in CCS, 2023, pp. 1020–1034.
+cation is a crucial technique for network management and [4] G. Pellegrino, M. Johns, S. Koch, and et al., “Deemon: Detecting csrf
+ with dynamic analysis and property graphs,” in CCS. ACM, 2017, pp.
+ 1 ATEC 2023 Website: https://www.atecup.cn/matchHome/100001 1757–1771.
+ 13
+
+ [5] T. Bujlow, V. Carela-Español, and P. Barlet-Ros, “Independent compar- [38] J. Wei, Y. Tay, R. Bommasani, and et al., “Emergent abilities of large
+ ison of popular dpi tools for traffic classification,” Computer Networks, language models,” Transaction of Machine Learning Research, 2022.
+ vol. 76, pp. 75–89, 2015. [39] P. Liu, W. Yuan, J. Fu, and et al., “Pre-train, prompt, and predict: A
+ [6] H. Shi, H. Li, D. Zhang, and et al., “An efficient feature generation systematic survey of prompting methods in natural language processing,”
+ approach based on deep learning and feature selection techniques for ACM Computing Surveys, vol. 55, no. 9, pp. 1–35, 2023.
+ traffic classification,” Computer Networks, vol. 132, pp. 81–98, 2018. [40] W. Wang, M. Zhu, X. Zeng, and et al., “Malware traffic classification
+ [7] C. Systems, “Cisco secure network analytics,” https://www.cisco.com/ using convolutional neural network for representation learning,” in
+ site/us/en/products/security/security-analytics/secure-network-analytics/ ICOIN. IEEE, 2017, pp. 712–717.
+ index.html, 2024. [41] C. Liu, L. He, G. Xiong, and et al., “Fs-net: A flow sequence network
+ [8] Rapid7, “Insightidr,” https://www.rapid7.com/products/insightidr/, 2024. for encrypted traffic classification,” in INFOCOM. IEEE, 2019, pp.
+ [9] T. Van Ede, R. Bortolameotti, A. Continella, and et al., “Flowprint: Semi- 1171–1179.
+ supervised mobile-app fingerprinting on encrypted network traffic,” in [42] S. Myneni, A. Chowdhary, A. Sabur, and et al., “Dapt 2020-constructing
+ NDSS, vol. 27. The Internet Society, 2020. a benchmark dataset for advanced persistent threats,” in DMLSD.
+[10] T. Wang, “High precision open-world website fingerprinting,” in SP. Springer, 2020, pp. 138–163.
+ IEEE, 2020, pp. 152–167. [43] ArcSight, “Enterprise security manager,” https://www.microfocus.com/
+[11] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted malicious traffic en-us/cyberres/secops/arcsightesm, 2023.
+ in real time via flow interaction graph analysis,” in NDSS. The Internet [44] Y. Yin, Z. Lin, M. Jin, and et al., “Practical gan-based synthetic ip
+ Society, 2023. header trace generation using netshare,” in SIGCOMM. ACM, 2022,
+[12] V. F. Taylor, R. Spolaor, M. Conti, and et al., “Robust smartphone app pp. 458–472.
+ identification via encrypted network traffic analysis,” IEEE Transactions [45] M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, and et al.,
+ on Information Forensics and Security, vol. 13, no. 1, pp. 63–78, 2017. “Deep packet: A novel approach for encrypted traffic classification using
+[13] A. Panchenko, F. Lanze, J. Pennekamp, and et al., “Website fingerprint- deep learning,” Soft Computing, vol. 24, no. 3, pp. 1999–2012, 2020.
+ ing at internet scale.” in NDSS. The Internet Society, 2016. [46] E. B. Beigi, H. H. Jazi, N. Stakhanova, and et al., “Towards effective fea-
+[14] K. Al-Naami, S. Chandra, A. Mustafa, and et al., “Adaptive encrypted ture selection in machine learning-based botnet detection approaches,”
+ traffic fingerprinting with bi-directional dependence,” in ACSAC. ACM, in CNS. IEEE, 2014, pp. 247–255.
+ 2016, pp. 177–188. [47] S. T. Jan, Q. Hao, T. Hu, and et al., “Throwing darts in the dark?
+[15] Z. Meng, M. Wang, J. Bai, and et al., “Interpreting deep learning-based detecting bots with limited data using neural data augmentation,” in SP.
+ networking systems,” in SIGCOMM. ACM, 2020, pp. 154–171. IEEE, 2020, pp. 1190–1206.
+[16] X. Lin, G. Xiong, G. Gou, and et al., “Et-bert: A contextualized [48] P. Sirinam, M. Imani, M. Juarez, and et al., “Deep fingerprinting:
+ datagram representation with pre-training transformers for encrypted Undermining website fingerprinting defenses with deep learning,” in
+ traffic classification,” in WWW. ACM, 2022, pp. 633–642. CCS. ACM, 2018, pp. 1928–1943.
+[17] L. Yang, W. Guo, Q. Hao, and et al., “{CADE}: Detecting and [49] N. Ding, Y. Qin, G. Yang, and et al., “Parameter-efficient fine-tuning of
+ explaining concept drift samples for security applications,” in USENIX large-scale pre-trained language models,” Nature Machine Intelligence,
+ Security, 2021, pp. 2327–2344. vol. 5, no. 3, pp. 220–235, 2023.
+[18] R. Tang, Z. Yang, Z. Li, and et al., “Zerowall: Detecting zero-day [50] M. MontazeriShatoori, L. Davidson, G. Kaur, and et al., “Detection
+ web attacks through encoder-decoder recurrent neural networks,” in of doh tunnels using time-series classification of encrypted traffic,” in
+ INFOCOM. IEEE, 2020, pp. 2479–2488. CyberSciTech. IEEE, 2020, pp. 63–70.
+[19] S. Guthula, N. Battula, R. Beltiukov, and et al., “netfound: Foundation [51] C. . Dataset, “Csic,” http://www.isi.csic.es/dataset/, 2024.
+ model for network security,” arXiv preprint arXiv:2310.17025, 2023. [52] G. D. Gil, A. H. Lashkari, M. Mamun, and et al., “Characterization
+[20] T. Brown, B. Mann, N. Ryder, and et al., “Language models are few-shot of encrypted and vpn traffic using time-related features,” in ICISSP.
+ learners,” in NeurIPS, 2020. SciTePress, 2016, pp. 407–414.
+[21] OpenAI, “GPT-4 technical report,” arXiv preprint arXiv:2303.08774, [53] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and et al., “Characterization
+ 2023. of tor traffic using time based features,” in ICISSP, vol. 2. SciTePress,
+[22] H. Touvron, T. Lavril, G. Izacard, and et al., “Llama: Open and efficient 2017, pp. 253–262.
+ foundation language models,” arXiv preprint arXiv:2302.13971, 2023. [54] X. Zhao, X. Deng, Q. Li, and et al., “Towards fine-grained webpage
+[23] H. Touvron, L. Martin, K. Stone, and et al., “Llama 2: Open foundation fingerprinting at scale,” in CCS 2024. ACM, 2024, pp. 423–436.
+ and fine-tuned chat models,” arXiv preprint arXiv:2307.09288, 2023. [55] M. Jiang, M. Cui, C. Liu, and et al., “Zero-relabelling mobile-app iden-
+[24] A. Zeng, X. Liu, Z. Du, and et al., “GLM-130B: an open bilingual tification over drifted encrypted network traffic,” Computer Networks,
+ pre-trained model,” in ICLR, 2023. vol. 228, p. 109728, 2023.
+[25] J. Wei, X. Wang, D. Schuurmans, and et al., “Chain-of-thought prompt- [56] OpenAI, “Chatgpt,” https://chat.openai.com/, 2024.
+ ing elicits reasoning in large language models,” in NeurIPS, 2022. [57] J. Hayes and G. Danezis, “k-fingerprinting: A robust scalable website
+[26] W. X. Zhao, K. Zhou, J. Li, and et al., “A survey of large language fingerprinting technique,” in USENIX Security. USENIX Association,
+ models,” arXiv preprint arXiv:2303.18223, 2023. 2016, pp. 1187–1203.
+[27] D. Zhang, Y. Yu, J. Dong, and et al., “Mm-llms: Recent advances [58] M. Shen, J. Zhang, L. Zhu, and et al., “Accurate decentralized appliin multimodal large language models,” in ACL. Association for cation identification via encrypted traffic analysis using graph neural
+ Computational Linguistics, 2024, pp. 12 401–12 430. networks,” IEEE Transactions on Information Forensics and Security,
+[28] X. Liu, K. Ji, Y. Fu, and et al., “P-tuning v2: Prompt tuning can be vol. 16, pp. 2367–2380, 2021.
+ comparable to fine-tuning universally across scales and tasks,” arXiv [59] K. Lin, X. Xu, and H. Gao, “Tscrnn: A novel classification scheme
+ preprint arXiv:2110.07602, 2021. of encrypted traffic based on flow spatiotemporal features for efficient
+[29] Meta, “Meta llama 3,” https://llama.meta.com/llama3/, 2024. management of iiot,” Computer Networks, vol. 190, p. 107974, 2021.
+[30] Google, “Gemini - google deepmind,” https://deepmind.google/ [60] A. Cheng, “Pac-gan: Packet generation of network traffic using generatechnologies/gemini/, 2024. tive adversarial networks,” in IEMCON. IEEE, 2019, pp. 0728–0734.
+[31] Anthropic, “Claude,” https://claude.ai/, 2024. [61] P. Wang, S. Li, F. Ye, and et al., “Packetcgan: Exploratory study of
+[32] A. Q. Jiang, A. Sablayrolles, A. Mensch, and et al., “Mistral 7b,” arXiv class imbalance for encrypted traffic classification using cgan,” in ICC.
+ preprint arXiv:2310.06825, 2023. IEEE, 2020, pp. 1–7.
+[33] B. AI, “Baichuan,” https://www.baichuan-ai.com/, 2024. [62] W.-L. Chiang, Z. Li, Z. Lin, and et al., “Vicuna: An open-source
+[34] H. Y. He, Z. G. Yang, and X. N. Chen, “Pert: Payload encoding chatbot impressing gpt-4 with 90%* chatgpt quality,” March 2023.
+ representation from transformer for encrypted traffic classification,” in [Online]. Available: https://lmsys.org/blog/2023-03-30-vicuna/
+ ITU K. IEEE, 2020, pp. 1–8. [63] G. Team, T. Mesnard, C. Hardin, and et al., “Gemma: Open
+[35] X. Meng, C. Lin, Y. Wang, and et al., “Netgpt: Generative pretrained models based on gemini research and technology,” arXiv preprint
+ transformer for network traffic,” arXiv preprint arXiv:2304.09513, 2023. arXiv:2403.08295, 2024.
+[36] Q. Wang, C. Qian, X. Li, and et al., “Lens: A foundation model [64] C. Xu and J. McAuley, “A survey on model compression and accelerafor network traffic in cybersecurity,” arXiv preprint arXiv:2402.03646, tion for pretrained language models,” in AAAI, vol. 37, no. 9, 2023, pp.
+ 2024. 10 566–10 575.
+[37] J. Devlin, M. Chang, K. Lee, and et al., “BERT: pre-training of deep [65] Y. Qing, Q. Yin, X. Deng, and et al., “Low-quality training data only?
+ bidirectional transformers for language understanding,” in NAACL-HLT. a robust framework for detecting encrypted malicious network traffic,”
+ Association for Computational Linguistics, 2019, pp. 4171–4186. in SP. IEEE, 2023.
+ 14
+
+[66] H. Zhang, L. Yu, X. Xiao, and et al., “TFE-GNN: A temporal fusion The experiments are conducted in an isolated environment. We
+ encoder using graph neural networks for fine-grained encrypted traffic further guarantee that our evaluation process does not disrupt
+ classification,” in WWW. ACM, 2023, pp. 2066–2075.
+[67] Docker, “Docker: Accelerated container application development,” https: or harm other hosts or targets.
+ //www.docker.com/, 2024.
+[68] X. Yang, S. Ruan, Y. Yue, and et al., “Petnet: Plaintext-aware encrypted Instruction Examples of Different Tasks
+ traffic detection network for identifying cobalt strike https traffics,”
+ Computer Networks, vol. 238, p. 110120, 2024.
+[69] Scapy, “Scapy community,” https://scapy.net/, 2024.
+ TBD Task Instruction: The Tor network transmits
+[70] W. Foundation, “Wireshark - go deep,” https://www.wireshark.org/, traffic through multiple layers of encryption and re-
+ 2024. lay nodes, providing users with online privacy and
+[71] Z. Ji, N. Lee, R. Frieske, and et al., “Survey of hallucination in natural
+ language generation,” ACM Computing Survey, vol. 55, no. 12, pp.
+ anonymity. Please classify the traffic application or
+ 248:1–248:38, 2023. behavior according to the traffic data I provided.
+ EAC Task Instruction: Hi, I have noticed at home
+ A PPENDIX A that my children spend a lot of time online and worry
+ O PEN S CIENCE & E THICAL C ONSIDERATIONS that they may be exposed to unsafe apps. I have
+A. Open Science obtained some network traffic data. Please help to
+ analyze it to determine which applications the children
+ To facilitate future research to adapt LLMs in the trafare accessing.
+fic analysis domain, we release the source code of Traf-
+ MDD Task Instruction: The traffic may be DoH data
+ficLLM and the datasets at https://github.com/ZGC-LLMgenerated by an encrypted DNS server. Please help me
+Safety/TrafficLLM. The dataset consists of over 0.4M tuning
+ determine whether it contains malicious DoH behavior.
+data that include human instructions and traffic features super-
+ WAD Task Instruction: Analyze the pattern characvised by manual annotation. To the best of our knowledge, this
+ teristics of the Web request data and determine whether
+is the largest LLM adaptation dataset for traffic domain to date.
+ it contains malicious attacks.
+To enhance the reproducibility of our work, we mainly use
+ BND Task Instruction: The traffic data generated by
+open-sourced datasets and LLMs to conduct the experiments in
+ the communication between the server and the client
+this paper. All the original traffic data and LLMs are publicly
+ is obviously different from that of the normal network.
+available in their released repositories.
+ The data is shown as follows. Please guess the botnet
+ type to which this data belongs.
+B. Ethical Considerations
+ MTD Task Instruction: I have a piece of traffic data
+ In this paper, we discuss ethical considerations about dataset that may be malicious software communication behavconstruction, human evaluation, and real-world deployment. ior, but I don’t know the specific software type behind
+Dataset Construction. We leverage the human instruction and the traffic. Could you provide more information?
+traffic data to construct the tuning data for LLM adaptation. EVD Task Instruction: I have used a specific en-
+The released traffic data are all extracted from the open- crypted VPN protocol to transmit the traffic generated
+sourced datasets. For the natural language instruction dataset, by an application. Please check the application type in
+we invite five network security practitioners and students to the traffic.
+generate task-specific instructions with manual annotation and CD Task Instruction: I would like you to help analyze
+AI assistance. The instructions are required not including the following unknown traffic, determine whether there
+corporate confidentiality and privacy data. We have submitted is a concept drift phenomenon, and identify the type
+the data review material to our institutional ethics review body of the traffic. Please note that the unknown patterns
+(IRB). Our work has been approved by IRB to ensure ethical that may result from version updates require special
+soundness and justification. attention.
+Individual Use Evaluation. We evaluate TrafficLLM’s effectiveness with extensive participation of players in the national
+LLM competition. All the players have signed an informed A PPENDIX B
+consent agreement to allow us to collect the competition D ETAILS OF LLM I NVESTIGATION
+data. In the competition system, each player is assigned a We investigate the capabilities of existing LLMs and earlier
+model submitter ID. We did not over-explore data involving PLMs to achieve the traffic analysis tasks in Section II. For
+personal information and designed a detailed exit mechanism a more detailed study of existing LLMs, Table VIII shows
+to remove user records only necessary statistical data used examples of 3 state-of-the-art LLMs’ responses to traffic
+in our experiments. The released statistical data has been analysis instructions. We can see that existing LLMs tend
+approved by the competition organizer and IRB. to give random guesses, only descriptions of the traffic data,
+Enterprise Deployment. The recorded traffic has been or only recommendations of manual steps when receiving 2
+anonymized and only contains necessary meta-information that types of traffic analysis instructions. For instance, when facing
+is helpful for traffic detection. Any fields containing sensitive a traffic detection instruction of EAC or MTD tasks, native
+user information have been removed. We do not use the traffic LLM usually generate a random label based on its knowledge
+data to identify individuals. All the traffic data used in the real- (e.g., Alipay), give a detailed description of the traffic features
+world evaluation has been approved by the company’s IRB. (e.g., IP and protocol), and give a recommendation to use
+ 15
+
+ TABLE VIII
+E XAMPLES OF G EMINI (G EMINI 1.5), C LAUDE (C LAUDE 3 S ONNET ), AND C HAT GPT (GPT-4)’ S RESPONSES TO THE INSTRUCTIONS FOR CONDUCTING
+ TRAFFIC DETECTION AND TRAFFIC GENERATION TASKS .
+ Task Instruction Response
+ ❶ Please conduct the ENCRYPTED APP Gemini: Based on the provided traffic Claude: The most likely app category for ChatGPT: To determine which class
+ CLASSIFICATION TASK to determine data, the predicted app category is: Alipay. the provided encrypted traffic is Apple. encrypted traffic belongs to based on
+ which APP category the encrypted traffic Explanation: The packet size and structure The packet data contains patterns and packet data, a detailed analysis of
+ Traffic Detection
+
+ belongs to. The categories include ’Adobe, may resemble previously observed patterns characteristics that strongly suggest the patterns and features within the
+ Alipay, ..., and Booking’. ¡packet¿: 04d9... associated with Alipay’s protocols ... traffic is related to Apple services ... encrypted traffic itself is required ...
+ [Encrypted App Classification] [Random Guess] [Random Guess] [Only Recommendations]
+ ❷ The following is a segment of network Gemini: The provided packet snippet Claude: Without additional context or ChatGPT: Considering the DNS query
+ traffic data, you need to analyze whether it appears to be a DNS query, but without analysis, it’s difficult to definitively characteristics, and without additional
+ is generated by the communication behavior additional context and analysis, it’s difficult determine if this specific packet is gener- payload decryption or further traffic
+ of malware. If so, please categorize it as to definitively determine if it’s generated ated by malware communication behavior. analysis, this packet could be related
+ Cridex, Geodo, ..., and Zeus. ¡packet¿: 04... by malware. However, we can examine ... However, I can provide an overview ... to families like Zeus or Shifu ...
+ [Malware Traffic Detection] [Only Description] [Only Description] [Random Guess]
+ ❶ Based on the protocol of fields, traffic Gemini: Due to the limitations of my Claude: Unfortunately, I cannot generate ChatGPT: IP Header: Source IP: 192.16
+ features, and payloads of different types of knowledge cutoff and the dynamic nature of packet capture (pcap) files or raw network 8.1.2, Destination IP: 216.58.214.14, Pro-
+ Traffic Generation
+
+ traffic in your knowledge. Please generate YouTube traffic, I cannot directly generate a traffic data. As an AI assistant without tocol: TCP, TCP Header: Source Port:
+ a packet of YouTube with the pcap format. specific packet in hexadecimal format ... direct access to network devices or the ... 49152, Destination Port: 443, Flags: ...
+ [Youtube Traffic Generation] [Only Recommendations] [Only Recommendations] [Random Generation]
+ ❷ I need a packet of Weibo traffic. Based Gemini: Unfortunately, due to limitations Claude: I’m afraid I cannot provide ChatGPT: To obtain a real packet of
+ on Weibo’s traffic feature, please provide in my capabilities and knowledge cutoff, I you with an actual packet capture (pcap) Weibo’s traffic in PCAP format, you
+ me with a packet of Weibo’s traffic cannot directly generate a pcap file file containing Weibo traffic data. would typically use a network traffic
+ data with the pcap format. containing Weibo traffic. However, ... As an AI assistant without direct access ... capturing tool like Wireshark ...
+ [Weibo Traffic Generation] [Only Recommendations] [Only Recommendations] [Only Recommendations]
+
+Wireshark or other network traffic analyzer. This investigation • AppScanner [12]. AppScanner is a statistical feature
+demonstrates that existing LLMs still cannot obtain accurate method using 54 statistical features for smartphone App
+results for traffic detection and generation. identification based on ML models.
+ • CUMUL [13]. CUMUL extracts packet size, direction,
+ and ordering features for website fingerprinting on the Tor
+ A PPENDIX C
+ network.
+ D ETAILS OF E XPERIMENTAL S ETTINGS
+ • BIND [14]. BIND uses bi-directional burst features for
+A. Instruction Dataset encrypted traffic fingerprinting in a wide range.
+ • k-fingerprinting (K-FP) [57]. K-FP extracts the most im-
+ The human instructions for LLM adaptation are constructed portant features using random forests for large-scale traffic
+by 5 experts in the network security industries and PH.D. stu- classification.
+dents majoring in cybersecurity. They are required to generate • FlowPrint [9]. FlowPrint extracts statistical features for eninstruction templates using domain knowledge across different crypted traffic classification tasks using the semi-supervised
+traffic detection and generation tasks and extend the scale clustering method.
+via generative AI assistants. We generate expert instructions • FS-Net [41]. FS-Net uses RNN models to learn packet
+according to the backgrounds of 10 traffic classification tasks length sequences for traffic classification.
+and 229 types of traffic generation tasks. After collecting • Deep Fingerprinting (DF) [48]. DF uses deep Convoluprofessional instructions with extensive traffic-domain knowl- tional Neural Networks to realize website fingerprinting.
+edge from security experts, we use them as templates for AI • GraphDApp [58]. GraphDApp extracts traffic interaction
+assistants to supplement the instruction dataset. We collect graphs and uses Graph Neural Networks to detect traffic.
+diverse AI-generated instructions using ChatGPT [56] with a • TSCRNN [59]. TSCRNN combines CNN and RNN to
+rewrite instruction like ‘The following is a traffic analysis in- extract abstract features of the flow for traffic classification.
+struction provided by network security experts. Please consider • Deeppacket [45]. Deeppacket uses deep Convolutional Neudifferent scenarios, security goals, question subjects, writing ral Networks to realize encrypted traffic classification.
+styles, and text descriptions. Rewrite the following instructions • PERT [34]. PERT uses a Transformer-based encoder and
+and generate 20 new different traffic analysis instructions’. All pre-training technique to learn traffic representation.
+the generated instructions have been supervised by manual • ET-BERT [16]. ET-BERT pre-trains BERT with large-scale
+annotation. We removed the overlapped text and mistakes. We traffic to realize traffic classification across different tasks.
+released all our collected traffic-domain instructions for future
+research. We show instruction examples of partial tasks. Traffic Generation. We use the following traffic generation
+ algorithms as the baselines in the experiments.
+ • Netshare [44]. Netshare uses the GAN-based method to
+B. Description of Baselines
+ generate IP header traces at a large scale.
+ In this paper, we compare the performance of TrafficLLM • PacketCGAN [60]. PacketCGAN uses conditional GANs
+with 15 baselines across different tasks, including state-of-the- to generate the encrypted traffic using bit vectors.
+art traffic detection and generation algorithms. • PAC-GAN [61]. PAC-GAN uses CNN GAN to encode
+
+Traffic Detection. The following provides an overview of the packets into images and use them to generate packets.
+traffic classification baseline used in our evaluation. Note that we choose these representative methods to cover a
+ 16
+
+ (a) 5-Class packets generated from ISCX Botnet 2014 (b) 10-Class packets generated from CSTNET 2023
+Fig. 15. Entropy analysis of synthetic packets on ISCX Botnet 2014 and CSTNET 2023. In each index, a higher entropy score (red) refers to more diverse
+nybbles generated; A lower entropy score (blue) refers to more fixed nybbles generated.
+
+ TABLE IX in a top global security company. The company has supported
+ T HE DETAILS OF TRAFFIC DATA IN THE EVALUATION UNDER THE LLM signature-based WAF and NIDS services for over 20 years.
+ COMPETITION AND ENTERPRISE DEPLOYMENT.
+ It has provided security services for 100K+ enterprises. To
+ Experiment Task #Flows #Packet #Labels evaluate TrafficLLM’s practical performance, we collected
+ MTD 2,855 9,458 20 17,556 and 7,083 flows of malware and Web attack traffic
+ Evaluation on
+ the LLM Competition
+ BND 16,930 52,278 5 according to WAF rules hitting and manual analysis. The Web
+ EVD 1,025 3,392 19
+ attack traffic contains many attack payloads such as command
+ Experiment Task #Malicious #Benign #Labels injection, which is different from normal user behavior of Web
+ MTD 17,556 219,450 2 applications. The malware traffic includes the communication
+ Enterprise Deployment
+ WAD 7,083 215,323 2 behavior of malware such as Cobalt Strike [68]. Otherwise,
+ the traffic that bypasses the rules and is confirmed by the
+ security engineers is considered benign traffic. Table IX shows
+wide range of traffic detection and generation tasks. To help the detailed setting of the dataset. We build TrafficLLM and
+all baselines be evaluated reasonably, we use the raw traffic its API in an isolated environment with a super GPU server.
+data for most of datasets and preprocess them following the We leverage TrafficLLM’s API to conduct MTD and WAD
+baselines’ instructions in their repositories. We contacted the tasks using its command mode. The security engineers report
+authors to obtain the datasets that do not open-source their F1-scores and false positives to evaluate the performance in
+raw PCAP files. We keep similar setups to prior work [16], real-world scenarios.
+[66] to evaluate baselines on different scenarios.
+
+ A PPENDIX D
+C. Real-World Evaluation Setup D ETAILS OF E VALUATION
+Individual Use Evaluation Setup. To investigate the effectiveness of deploying TrafficLLM in the community, we A. Packet Generation
+conduct an extensive evaluation of TrafficLLM by integrating TrafficLLM can rebuild the raw traffic across different scethe framework as a track in a national LLM competition. In narios using the representation learned from the tuning stage.
+this track, we collect the traffic including 20 types of malware, Leveraging the generated fine-grained meta-information, Traf-
+5 types of botnets, and 19 types of VPN-encrypted Apps in our ficLLM can be equipped with packet manipulation tools like
+experimental environments. The competition requires players Scapy [69] to generate PCAP packets. These synthetic packets
+to build traffic-domain LLMs using TrafficLLM’s framework follow standard formats that can be completely readable by
+with strong performance on all 3 tasks. Table IX shows the de- Wireshark [70]. TafficLLM does not directly generate the
+tail of the competition dataset to evaluate TrafficLLM. As one Ethernet layer since it often varies depending on the different
+of the organizers of the competition, we join the development types of physical devices at the viewpoints. We use Scapy to
+of the competition platform. The platform can run the model synthesize a default Ethernet layer for every generated packet.
+image submitted by players and record the score on a real- To further analyze the integrity of the generated packets,
+time ranking web page. Each player is allocated an account Figure 15 shows the entropy analysis results of the packets
+to log in to the fortress machine and access the development generated from ISCX Botnet 2014 and CSTNET 2023. We find
+machine to build their models. The players must upload their that TrafficLLM can learn fixed field values (e.g., TCP Flags)
+Docker [67] images to the cloud environment to load GPU effectively and imitate changed field values (e.g., Source and
+servers. We use average accuracy (Acc) as the metric and build Destination Port) according to the distribution in the dataset.
+the scoring procedures to update player ranking. At the end Moreover, TrafficLLM can capture the traffic characteristics for
+of the competition, we analyze the overall performance of all different network scenarios. For instance, TrafficLLM keeps an
+players to evaluate TrafficLLM’s practicality. average entropy of 0.55 to generate the packet nybbles of the
+Enterprise Deployment Setup. In the real-world deployment target botnet (i.e., Virut, Neris, IRC, and RBot), while the
+scenario, we implement TrafficLLM prototype and deploy it normal network is 0.64 due to the diversity of protocols.
+ 17
+
+ (a) LLM Instruction Embeddings (b) TrafficLLM Instructions (c) LLM Traffic Embeddings (d) TrafficLLM Traffic Embeddings
+Fig. 16. The hidden state visualization of task instructions and traffic data in ChatGLM2 and TrafficLLM. TrafficLLM can learn better representations under
+traffic detection instructions of EVD, BND, and MTD tasks and ISCX Tor 2016 traffic datasets.
+
+ TABLE X
+ T HE TASK UNDERSTANDING ABILITIES OF T RAFFIC LLM AND THE NATIVE
+ LLM BASED ON INSTRUCTIONS OF DOWNSTREAM TASKS .
+ Model Task PR RC F1 Acc
+ Native LLM Traffic Detection 0.4422 0.6650 0.5312 0.6650
+ (Llama2-7B) Traffic Generation 0.5776 0.7600 0.6564 0.7600
+ Traffic Detection 0.9910 0.9925 0.9915 0.9925
+ (a) RGE and SMS Metrics (b) Top-p and Temperature TrafficLLM
+ Traffic Generation 0.9935 0.9960 0.9940 0.9960
+
+Fig. 17. Left: The ratio of generated errors (RGE) and the similarity of
+misclassified samples (SMS) metric; Right: The performance of different topp and temperature.
+ datasets of misclassified labels, which we consider as the
+ reason for raising the hallucination issues. To address the
+B. Efficiency Evaluation problem, Figure 17-b measures the performance of different
+ Model quantization [64] is a widely used technique to Top-p and Temperature parameters setting in the sampling
+deploy LLM-based systems in real-world scenarios. To further strategy. A higher Top-p and a lower Temperature parameter
+evaluate TrafficLLM’s efficiency, we employ INT4 quantiza- can help the model keep strong confidence when predicting
+tion to help TrafficLLM overcome LLM’s computation over- labels and mitigate the hallucination in traffic detection.
+head and reach faster inference speed. We observe that TrafficLLM’s average prediction latency for a sample is 0.1408s,
+ D. Representation Learning
+which is 42% better than no quantization on TrafficLLM
+(BF16). TrafficLLM only consumes 8.3GB memory, which is a To further indicate the robustness of TrafficLLM on different
+3.5-fold decrease. The performance has almost no degradation. datasets, we show TrafficLLM’s robust traffic representation
+Additionally, we compare TrafficLLM’s inference latency with in the vector space and evaluate its performance by using
+existing ML-based models. TrafficLLM incurs lower detection different instructions.
+latency which is 3.51 times lower than that of the existing Hidden State Visualization. To explain TrafficLLM’s ability
+method, i.e., FS-Net, which incurs 0.4950s per flow latency. to learn text and traffic data, in Figure 16, we show the
+It is attributed to traffic-domain tokenization and quantization visualization of TrafficLLM’s hidden state representation ustechniques to achieve a significant reduction on the traffic input ing T-SNE. Compared to the native LLM, TrafficLLM can
+and model overhead. learn more distinguishable representations of different traffic
+ analysis instructions through instruction tuning. Moreover,
+C. Hallucination Evaluation TrafficLLM also learns better traffic representation for each
+ class due to the task-specific traffic tuning with the specialized
+ LLM is prone to hallucination [71] due to the token gentraffic tokens. TrafficLLM’s traffic representations of each type
+eration with word sampling strategies. This may influence the
+ keep clearer boundaries in the feature space, which ensures
+detection accuracy during the inference. In the hallucination
+ accuracy across different tasks.
+evaluation experiment, we collect the prediction results from
+10 rounds of inference using the same test set. We define Task Understanding. The representation learning ability helps
+the different responses for the same test sample input as the TrafficLLM correctly understand different task instructions
+generated errors. Figure 17-a shows the ratio of generated from security practitioners. In Table X, we compare Traferrors in the misclassified samples and the average Jaccard ficLLM’s performance to the native Llama2-7B, which is
+similarity between the misclassified samples and the dataset of required to choose the correct task labels based on the instructhe misclassified label. Results indicate that 3.9% and 4.7% tions and given options across different detection and generof the misclassified output are generated errors on average ation tasks. Results indicate that TrafficLLM has effectively
+when using ChatGLM2 and Llama2 as the foundation model acquired the domain knowledge for traffic analysis, achieving
+in TrafficLLM. These misclassified samples usually keep a strong task understanding performance (0.9920 average F1-
+high similarity (i.e., 82.4% and 81.5% on average) to the score) to conduct different downstream tasks.

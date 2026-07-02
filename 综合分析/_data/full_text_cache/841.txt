@@ -1,0 +1,919 @@
+2012 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ Web Page Tampering Detection Based on Dynamic
+ Temporal Graph Pre-Training
+ Yijia Xu , Qiang Zhang , Kaiyang Wang , Zhonglin Liu , Cheng Huang , Senior Member, IEEE,
+ and Yong Fang
+
+ Abstract—Web page tampering detection is crucial in web threat and restore the site. When web page tampering occurs without
+perception. Current methods rely on monitoring historical changes detection, the personal privacy information of website users
+of web pages to identify anomalies. These approaches often struggle is at significant risk of exposure, and website operators may
+to effectively distinguish between tampering and benign changes,
+especially in the presence of numerous dynamic pages. Further- suffer reputational and possibly financial losses. Consequently,
+more, the increasing complexity of website structures places more timely detection of web page tampering becomes crucial. Its
+resource demands on tampering monitoring and makes some ma- purpose is to ensure the integrity and authenticity of web pages
+licious alterations more covert and challenging to detect. We pro- to prevent them from causing bad influence under the control of
+pose a web page tampering detection based on pretraining with criminals [2].
+dynamic temporal graphs. The core of the method involves constructing a website temporal graph model based on evolutionary Web page tampering detection is commonly integrated as a
+information, and enhances the graph feature perturbations to ex- functional module within the Web Application Firewall (WAF).
+pose concealed tampering behaviors. Specifically, the framework’s Four prevalent technologies serve real-world network environautoencoder is composed of enhanced DySAT, enabling it to handle ments: time polling, kernel embedding, event triggering, and
+dynamic data. We introduce DySAT, bolstered with GATv2, to file filtering [3]. Each method offers distinct advantages but also
+capture dynamic attention. Additionally, we design a temporal
+masking mechanism and prediction error to improve the effec- suffers from inherent limitations. Time polling, which perioditiveness of generative self-supervised learning in temporal graph cally compares snapshots of web content, may miss short-lived
+pretraining. Experimental results on Webpage Tampering Dataset tampering events and incur high resource costs. Kernel embed-
+(WPT-Dataset) demonstrate that our method outperforms other ding monitors changes at the system or file level but is often
+comparative approaches in terms of both detection efficacy and constrained by operating system compatibility and deployment
+stability. Furthermore, the research findings on the anomaly detector and model performance provide direction for the practical complexity. Event triggering provides real-time alerts based on
+application of our method. specific system or application-level events, yet it can struggle to
+ distinguish between benign and malicious behavior in dynamic
+ Index Terms—Web security, pre-training, dynamic graph,
+temporal data, anomaly detection.
+ web contexts. File filtering inspects content for unauthorized
+ modifications, but may be bypassed by obfuscated or subtle
+ tampering techniques. As a result, practical deployments of-
+ I. INTRODUCTION ten combine multiple techniques to improve coverage, though
+ TTACKERS have various means to compromise web challenges persist. Given the limitations and vulnerabilities of
+A pages, including social engineering, network attacks, and
+virus implantation. With unknown attacks emerging as a top
+ individual methods, integrating several approaches into production is common to achieve comprehensive web page tampering
+threat, a security system can offer only partial protection for detection.
+Web applications [1]. Web page tampering attackers are often The evolution of hacking techniques has heightened the chalindividuals or organizations with strong Web attack capabilities lenge of detecting web page tampering, leading to various techwho attempt to alter web page content for illicit purposes, such nical hurdles in existing detection methods. Here’s a summary of
+as spreading malware, conducting phishing attacks, disseminat- these key challenges: (a) Dynamic nature of web pages. Modern
+ing false information, damaging brand reputation, and stealing websites, particularly those emphasizing interaction and user exsensitive information. As the defenders, website administrators perience, automate the updating of web page content in response
+must introduce appropriate defense mechanisms to monitor to user interactions, data inputs, or other real-time events [4].
+changes to web pages, assess tampering risks, respond swiftly, Technologies like JavaScript, AJAX, or server-side scripting
+ languages commonly achieve this dynamic updating of web
+ Received 29 April 2024; revised 11 October 2025; accepted 15 October 2025. pages, enabling seamless real-time updates and sophisticated
+Date of publication 20 October 2025; date of current version 12 March 2026. data handling. However, distinguishing between malicious tam-
+This work was supported in part by the National Natural Science Foundation
+of China under Grant U20B2045. (Corresponding authors: Qiang Zhang; Yong pering and routine changes becomes difficult for highly dynamic
+Fang.) web pages. (b) Complex site structure. Extensive websites com-
+ The authors are with the School of Cyber Science and Engineering, Sichuan prising numerous pages and external links present a daunting
+University, Chengdu 610065, China (e-mail: zhangqiangcs@stu.scu.edu.cn;
+yfang@scu.edu.cn). task for tamper detection. As websites become more complex,
+ Digital Object Identifier 10.1109/TDSC.2025.3623257 the factors to consider in web page tampering detection become
+
+ 1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2013
+
+more uncertain [5]. Unfortunately, greater website complexity handle dynamic temporal graph data, and design a temporal
+often leads to diminished efficiency in detecting tampering. (c) masking mechanism to reconstruct node features.
+Concealed tampering. While some web page tampering seeks r We optimize the components of the generative selfto create a conspicuous impact, others covertly embed hidden supervised learning framework to enhance pre-training
+links on the page to achieve long-term gains, such as improved effectiveness. In DySAT, we incorporate GATv2 [9] to
+Search Engine Optimization (SEO) rankings [6]. Such tamper- enable it to capture dynamic attention in dynamic temporal
+ing alters minimal content, frequently eluding detection under graphs. Furthermore, we employ a feedback mechanism
+the guise of web page dynamics. Addressing these technical combining prediction and reconstruction errors to facilitate
+bottlenecks is pivotal for enhancing web page tampering detec- autoencoder fitting.
+tion and safeguarding the integrity and trustworthiness of online r We propose a method for discovering tampered web pages
+content. based on anomaly detection. We construct a temporal
+ To overcome these technical challenges, exploring novel so- graph using content, structural, and statistical features from
+lutions for web page tampering detection is essential. The core web pages as node attributes, and perform pretraining to
+lies in addressing the dynamic changes, complex structures, generate node embeddings for downstream anomaly detecand covert alterations of websites. Contemplating the following tion. We designed a series of experiments to validate the
+questions is vital to breaking through: feasibility of our proposed method, covering aspects such
+ r Q1: How to model comprehensively considering the web- as detection capability, performance, modular design, pasite structure and page dynamics? rameter sensitivity, and algorithmic behavior. Experimenr Q2: How to construct feature representations based on the tal results demonstrate that our approach can effectively
+ temporal changes of web pages? identify covert web page tampering in complex dynamic
+ r Q3: How to amplify anomalous perturbations to uncover scenarios while maintaining a balanced performance. To
+ covert web page tampering? support future research, we have made the dataset publicly
+ Regarding Q1, we treat web pages as nodes and their linking available [10].
+relationships as edges, constructing a graph structure to model
+complex websites. To capture the dynamic changes in web II. RELATED WORK
+pages, we establish a timeline and record graph snapshots at different timestamps, creating a dynamic temporal graph. For Q2, A. Content Anomaly
+we extract three types of features to represent the temporal states Some research focused on detecting anomalies based on web
+of web pages and employ dynamic temporal graph embedding page content, such as detecting malicious links, malicious web
+to train tamper detection representations for web pages. As for pages, or phishing pages. Many malicious and phishing pages
+Q3, we choose a pretraining approach to optimize node feature result from changes in web page properties due to tampering
+representations. Using generative self-supervised learning [7], attacks. Zhiqiang Wu [11] targeted external website links for dewe perform node feature reconstruction on the dynamic temporal tection, proposing a malicious website detection method based
+graph, amplifying anomalies within the temporal relation. Based on multimodal fusion. This method extracted features from exon the solutions to the questions above, we propose a novel web ternal web page texts, dynamic scripts, and images, constructing
+page tampering detection based on dynamic temporal graph pre- a deep fusion model that combines these multimodal features to
+training. Combining dynamic temporal graphs with generative identify anomalous external links. Qian Shao et al. [12] and
+self-supervised learning enables the model to capture both the others suggested using Bert and a ternary decision algorithm to
+structural evolution and temporal dependencies of web data, detect hidden links on web pages. They extracted feature vectors
+while learning representations without labeled samples. This encapsulating text information from target external pages and
+is particularly crucial for detecting subtle, time-dependent tam- then classified hidden links using a comprehensive decision alpering patterns that unfold across pages. The method effectively gorithm. The mainstream research trend for malicious or phishmonitors the tampering impact of any Web attack, promptly ing web page detection involves combining machine learning
+alerting website administrators to initiate emergency response with web content feature extraction. G Pradeepa et al. [13]
+and security risk investigation, thereby mitigating the loss of introduced various machine learning algorithms for comparison
+online assets in the aftermath of a website system breach. The in malicious web page detection, among which random forests
+contributions are as follows: achieved the best results. To enhance the training effectiveness
+ r We use dynamic temporal graph structure to model the of machine learning, MF Rozi et al. [14] aimed to enrich web
+ website, named “Website Temporal Graph”. The website page features by capturing the intent of web page JavaScript
+ temporal graph is a linear arrangement set of graph snap- content to improve the abstraction of the webpage’s source code
+ shots in the time series, which is composed of “Website syntax tree. Peng Jiang et al. [15] conducted research on feature
+ Structure Graph” at different timestamps. engineering for malicious websites from a system provenance
+ r We introduced the generative self-supervised learning into analysis perspective, ultimately identifying eight useful features
+ the dynamic temporal graph for pre-training. Our primary for malicious website detection. Belfedhal et al. [16] proposed
+ effort lies in adapting the generative self-supervised a multimodal deep learning framework, processing each type
+ learning framework to dynamic temporal graphs. We of feature with different deep learning models to enhance the
+ choose DySAT [8] as an autoencoder and decoder to model’s overall analytical capability of web pages. In phishing
+2014 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+page detection, Asadullah Safi et al. [17] found that machine Senhao Wen et al. [24] devised a comprehensive model for anlearning techniques were applied in as many as 57 variations alyzing complete web page associations, combining techniques
+within the field. Among them, random forests were the most such as topic analysis, visual similarity assessment, website
+used, but convolutional neural networks achieved the highest structure analysis, and external resource correlation to detect
+accuracy. Mahdi Bahaghighat et al. [18] evaluated eight major malicious behaviors, including tampering. Luk Kim et al. [25]
+unique scenarios of phishing websites, proving that most ma- proposed a dynamic analysis-based method to uncover vulnerchine learning methods could excellently perform phishing site abilities susceptible to web page tampering. Their approach
+detection tasks. In the latest research on phishing page detection, entailed gathering site information, identifying potential JS code
+Furkan Çolhak et al. [19] introduced dedicated multilayer per- elements prone to tampering, and scanning vulnerability through
+ceptrons and pre-trained models. They designed a novel feature tampering testing, culminating in a vulnerability mining system.
+fusion process, inputting the resulting fusion embeddings into a In conclusion, although tampering detection methods based
+linear classifier. on logs, text content, and structural analysis have advanced
+ Detecting web page tampering by identifying malicious con- significantly in terms of feature representation and data sources,
+tent is a widely adopted approach, often relying on models they still underexplore the structural and temporal relationships
+trained on static features such as text, HTML structure, or between web pages, overlooking how changes tend to propagate
+embedded links. However, these models tend to struggle with along specific paths. Most existing approaches treat pages as
+covert, low-amplitude tampering attacks, where feature fluctu- isolated entities and lack the capacity to model temporal contiations are too minor to trigger alarms. Moreover, their depen- nuity and cross-page dependencies, making them less effective
+dence on external links introduces temporal instability. Once a at capturing unexpected, subtle, or progressive changes that
+referenced external page becomes invalid or changes, detection deviate from a page’s normal evolution. As a result, they often
+performance degrades significantly. These limitations suggest fail to detect tampering behavior that unfolds gradually, spans
+that current content-based methods underexploit the sequential multiple pages, or remains within the acceptable thresholds of
+and contextual nature of tampering behavior, failing to capture single-page analysis. Furthermore, the limited utilization of deep
+how content evolves over time as a result of cyber confrontation learning techniques leads to suboptimal representation learndynamics. We should not overlook the dynamic information ing and hinders the detection of context-sensitive tampering.
+resulting from the temporal sequence of web page tampering To address these limitations, we propose a dynamic temporal
+as a product of cyber confrontation. graph-based approach that integrates both structural and temporal signals to enhance tampering detection in complex web
+ environments.
+B. Tampering Detection
+ To detect web page tampering in complex website structures
+and dynamic environments, website log files have become a C. Temporal Graph Pre-Training
+crucial data source for identifying it. Web server log files are Recent spatio-temporal pre-training frameworks mainly tarpivotal data sources for detecting web page tampering. Gaurav get sensor-driven urban or neuro signals and assume three
+Varshney et al. [20] proposed a tampering detection approach conditions: dense and regularly sampled time series at nodes,
+reliant on domain expressiveness. They harnessed DNS history short-horizon forecasting or imputation objectives, and stable
+to calculate hash values for crucial web pages and employed spatial neighborhoods. Representative examples include PreSTbrowser verification to forestall malicious content modifications. Net [26] for traffic forecasting, spatial-temporal decoupled
+A drawback of these methods lies in the potential for attackers to masked pre-training [27] designed for heterogeneous spatiomanipulate log files, prompting researchers to explore text-based temporal patches, unified or multi-subgraph urban pre-training
+detection mechanisms. Xiangyu Fan et al. [21] introduced a and prompting [28] aiming at city-level foundation models with
+method grounded in text content to identify web page tampering dense streams, importance-masked neuro-decoding pre-training
+attacks. Their approach involved extracting semantic features with fine-grained temporal masking [29], and PPT-GNN [30]
+from text via the BiGRU model and incorporating CRF learning designed for network security. In our setting, web pages are
+for sequence state, resulting in feature-rich text representation. content-rich nodes and hyperlinks are edges. The graph evolves
+Junlin Gao et al. [22] presented text content detection technology irregularly and asynchronously with DOM changes, crawl gaps,
+using an enhanced Faster-RCNN model for web page tampering and missing timestamps. Edges are long-range and bursty
+detection. They employed a rectangular convolution kernel to through cross-site redirects. The task depends on structural and
+accommodate the text’s elongated and narrow characteristics semantic generation and reconstruction rather than scalar foreand used the Soft-NMS algorithm to minimize missed detec- casting. These spatio-temporal pipelines require dense per-node
+tion within densely populated regions. As feature engineering time series and forecasting heads that do not supervise the
+advanced, the scope of feature extraction for web page tam- long-range link and content generation we need. Transferring
+pering expanded. Hanji Shen et al. [23] introduced a tampering them would add heavy assumptions and still leave our core
+attack detection method predicated on web page change features. challenges unresolved, including irregular dynamics, sparse and
+Their methodology refined feature engineering encompassing noisy timestamps, and co-evolution of text and structure.
+time, amplitude, frequency, location, and content of web page Generative self-supervised learning directly supervises strucchanges, contributing to training the final detection model. ture and attribute generation and has recently advanced for
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2015
+
+ potentially catalyzing a crisis of trust between users and website
+ operators. Neglecting to rectify tampering vulnerabilities could
+ profoundly stain a website’s reputation. Furthermore, attackers
+ might exploit web page tampering, upload ransomware against
+ website owners, or peddle website vulnerabilities on the dark
+ web, all in pursuit of financial gains.
+ To differentiate web page tampering from the dynamic
+ changes of web pages, a thorough investigation of the feature of
+Fig. 1. Hacker’s target and purpose for web page tampering attack. page tampering is essential. According to Trendmicro’s analysis
+ report, many of the 1,300,000 website tampering incidents over
+graphs and time series. Dynamic graph masked autoencod- the past 18 years were acts of expression by hacker organizations
+ing introduces pretexts that reconstruct informative evolution with political motives [35]. The objectives pursued by attackers
+subgraphs instead of predicting a scalar time step, aligning when executing page tampering underscore their intent to sustain
+better with topology and content regeneration under irregu- the tampered state for an extended duration. Moreover, the adlar clocks as shown in DyGIS [31]. Diffusion-autoregressive versarial nature of the attacker-defender interaction illuminates
+hybrids such as TimeDART [32] unify sequence generation various distinctive traits of web page tampering.
+ r Concealment: The concealment of web page tampering
+with diffusion priors for transferable pre-training under missing or uneven sampling. Graph-generative pre-training such mainly falls into two types. Firstly, attackers endeavor
+as GraphGPT [33] provides sequence-level graph generation to modify page content without leaving traces, making it
+objectives, though with non-trivial tokenization and scalability appear indistinguishable from normal pages. This scenario
+costs on very large graphs. We therefore build our generative is often characterized by the embedding of hidden links,
+self-supervised learning around DySAT [8] as the backbone. where the tampered web page maintains these links for
+The DySAT with temporal self-attention naturally models asyn- an extended period to contribute to SEO fraud. However,
+chronous and bursty link changes, and our pretext tasks such as more frequently, attackers opt for visible page tampering
+masked page-attribute reconstruction and future-snapshot edge to amplify the impact of their modifications to achieve
+proposal supervise semantic and structural generation instead their goals. Thus, the second type of concealment refers
+of dense forecasting. Newer generative SSL variants that rely to the methods attackers use to alter web pages without
+on heavy graph tokenization or long diffusion chains are less triggering tamper detection systems. They exploit covert
+suitable for million-scale web graphs and are slow to train and tampering tactics to bypass defensive measures, enabling
+infer, while DySAT-based masking and generation remain scal- unauthorized activities on web pages.
+ r Diversity: The diversity of web page tampering stems
+able and directly target the artifacts that define our task, including
+missing links, volatile content, and cross-page evolution. from attackers employing various techniques and means
+ to alter content, increasing their chances of success and
+ stealthiness. The most common method involves modify-
+ III. BACKGROUND ing the web page’s source code, including HTML, CSS, and
+ Web page tampering arises from the vested interests of ma- JavaScript. Attackers alter the appearance and behavior of a
+licious actors. As depicted in Fig. 1, it underscores the primary page by changing HTML tags, stylesheets, or script codes.
+objectives that drive the initiation of web page tampering attacks. Replacing images, multimedia, and content on web pages is
+Cybersecurity attackers use web page tampering to covertly ac- also a crucial tactic for criminals to spread false information
+cess sensitive user information, encompassing login credentials, and conduct scams. Moreover, attackers may modify a
+personal identification particulars, and credit card data. This data page’s redirection rules or external links to redirect users
+extraction might entail minor tweaks to the frontend code of a to malicious sites for information theft or other malicious
+web page. However, web page tampering may cascade into more activities. Aggressively, attackers could directly modify
+profound security repercussions. After web page tampering, at- database query statements to manipulate or remove content
+tackers may escalate their actions to include additional malicious from databases.
+activities like embedding trojan viruses, hijacking user sessions, r Real-time: Web page tampering can occur in real-time,
+and injecting concealed hyperlinks. affecting users as soon as they access the page. Attackers
+ Web page tampering can potentially unleash significant fi- can tamper with the content dynamically based on the
+nancial fraud [34]. Attackers can manipulate data on bank or specific requests and characteristics of the user, keeping
+payment pages, craftily deceiving users into transferring funds the tampered pages interactive. In actual web sessions,
+to fraudulent accounts. From a societal viewpoint, web page such real-time tampering is more deceptive and concealed.
+tampering is adept at disseminating deceptive information, en- Furthermore, real-time tampering allows attackers to imabling the manipulation of public sentiment to exert control over mediately observe the effects of their actions, meaning they
+information dissemination. The propagation of false propaganda can adjust and optimize as needed to ensure the tampered
+and the fabrication of news stories could incite social unrest. content more effectively achieves their objectives.
+Within the domain of websites, web page tampering erodes r Customization: Attackers carry out customized tampering
+users’ confidence in the authenticity of information sources, operations on targets based on specific purposes and needs,
+2016 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ making the tampering actions more precise and targeted.
+ This customization is usually goal-oriented. Attackers select specific web pages to tamper with, often because these
+ pages have significant influence, user bases, or sensitive
+ information. They carefully assess the value of targets and
+ develop tampering strategies based on the characteristics of
+ the target website and the behavioral habits of specific user
+ groups. Customized tampering aims to alter content with-
+ Fig. 2. The graph element anomaly caused by different types of tampering.
+ out drawing attention, thus also enhancing the stealthiness
+ of the tampering.
+ r Automation: Under certain conditions, attackers utilize
+ automated tools and techniques for rapid, large-scale tam- the likelihood of false positives. These false alerts place adpering operations. For instance, the exposure of some 0-day ministrators in a perpetual cycle of verification tasked with
+ vulnerabilities can lead to widespread website tampering. discerning genuine tampering instances amidst the noise [37].
+ Attackers can use tools and scripts to scan numerous web Consequently, the central thrust of this research endeavor is to
+ pages and automatically execute code insertion or modifi- effectively utilize time-series data to develop a high-precision
+ cation. Automated tools enable attackers to target multiple web page tampering detection model.
+ victims simultaneously, achieving scaled attacks. They can
+ easily manage and control a large volume of tampering B. Graph Element Anomaly
+ actions to maximize their impact. It is common to convert a website into a graph for analysis [38]. In instances of aberrant alterations within the graph,
+ it is plausible that web pages have been tampered with. Such
+ IV. PRELIMINARY anomalies predominantly encompass variations in node features
+ and modifications to the website’s structure. Fig. 2 shows the cor-
+A. Temporal Anomaly
+ responding perturbation changes when different elements in the
+ Contemporary approaches to web page tampering, whether webpage are tampered with. Our capability to detect tampering
+involving scrutinizing the modification time of web page files on web pages is evident when deviations in node features are
+or comparing data before and after alterations, predominantly present. Dynamic page alterations generally manifest as localrely on anomaly analysis within the framework of temporal data. ized text changes. Tampering with textual content by attackers
+Detection systems collect and look at old versions of target pages induces drastic semantic shifts that result in perturbations within
+or records of users accessing them. This creates chronological the node feature vectors. Conversely, inserting malicious code
+patterns that show normal patterns of behavior. These temporal within a web page leads to structural changes in the DOM (Docpatterns encompass variations spanning page structure, content, ument Object Model) tree [39]. These alterations are absorbed
+style, and other dimensions. Once a web page undergoes ab- during information aggregation, leading to atypical disruptions
+normal tampering, deviating from normal behavioral patterns, in structural features. Concurrently, associated statistical data
+the detection system will trigger an alert or implement corre- transforms when attackers tamper with web page elements.
+sponding defensive measures. Consequently, unauthorized file This statistical data not only aids in analyzing web pages that
+modifications, interface invocations, or changes to web page have suffered tampering but also facilitates unearthing attackers’
+content inherently manifest as outcomes of anomaly analysis primary motives and methodologies in executing the tampering.
+within a temporal context. Structural changes within a website are observed from a broader
+ The core challenge in time-series AD (Anomaly Detection) perspective. Attackers’ tampering is mobile, with adjacent pages
+lies in precisely modeling the typical behavioral patterns of to the tampered web page susceptible to tampering. Analyzing
+web pages [36]. The dynamic and highly interactive nature temporal web page tampering assists in confirming the trajectory
+of web pages often engenders frequent alterations in structural and direction of mobile tampering, consequently delving deeper
+and content elements, thus complicating the modeling process. into concealed web page tampering. Additionally, the deletion
+Initial complexities emerge from the characteristics of web page or addition of specific high-weight nodes within the time series
+tampering, characterized by concealment and customization. could indicate tampering activities undertaken by attackers.
+Certain covert and targeted tampering efforts prove difficult
+to identify as anomalies, sometimes even infusing temporal V. METHOD
+data to taint detection models. The diversification of web page
+tampering introduces unpredictability in the types of anomalies, A. Framework Overview
+exacerbating the challenge of identifying previously unknown We introduce a novel web page tampering detection approach
+anomalies. Furthermore, the real-time aspect of web page tam- based on dynamic temporal graph pretraining. The overall
+pering allows for continuous adjustments and refinements, pro- framework of the method is illustrated in Fig. 3. Initially, the
+gressively eluding conventional AD techniques. method extracts the essential components for constructing the
+ It’s important to note that building detection models based on web structure graph from the website. By capturing snapshots
+the typical behaviors of genuine pages significantly increases of the graph at different timestamps, a Website Temporal Graph
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2017
+
+Fig. 3. The framework overview: the purple part represents the construction of the website temporal graph. We extract three types of webpage features as node
+features, collect edge-set based on the website link structure, and gather multiple timestamped graph snapshots to generate the website temporal graph. The light
+red part represents the enhanced DySAT model structure. We replace its structural self-attention step in each graph snapshot with GATv2 to capture dynamic
+attention. The green part represents the pretraining process. We use the enhanced DySAT as the autoencoder and employ a temporal masking mechanism to adapt
+to temporal data. Additionally, pretraining combines prediction error and reconstruction error to improve encoder fitting.
+
+is generated. Subsequently, modifications are made to the gen- The feature mapping ensemble is encapsulated within X =
+erative self-supervised learning framework to extend its appli- (Xv , Xe ), wherein Xv encompasses mappings of node features
+cability to dynamic temporal graph pretraining. The embedding and Xe encompasses mappings of edge features.
+vectors produced by the pretrained autoencoder serve as inputs To capture the essence of website evolution, a meticulous
+to the AD model for identifying tampered pages. design and execution of the website structure graph, aligned
+ with the prescribed parameters, is carried out for each distinct
+ moment of website data acquisition. This intricate graph func-
+B. Graph Construction tions as a model, capturing the assimilated website information
+ The approach to web page tampering detection involves a at a precise juncture and effectively encapsulating its immediate
+comprehensive investigation into the temporal dynamics of web- status within the broader temporal panorama. The static aspect
+site data. Data collection occurs at distinct time intervals, and of this graph offers an enlightening perspective, unveiling the
+a structured graph-based framework is meticulously fashioned. structural arrangement of web pages and the intricate network of
+The website temporal graph is a robust and purpose-built data linkages pertinent to a particular snapshot. Using careful comstructure, capturing the nuanced shifts in website architecture parison and analysis of website structure graphs from various
+and content over time. This dynamic representation provides a points in time, one can accurately follow the path of the website’s
+visual narrative of the intricate interplay among pages, links, evolution and spot oddities like the addition or removal of web
+and various elements across diverse temporal snapshots. This pages, changes to the website’s basic structure or content, and
+section introduces key information in graph construction: other noticeable deviations.
+ r Define ”Website Temporal Graph” and its basic constituent Definition 2. Node and Edge [41]: Within the network strucelement ”Website Structure Graph”; ture graph G, nodes are denoted as V = {vi |0 < i < (N + 1)},
+ r Graph node features extraction and edge construction rules; where N = |V |. The feature mapping ensemble Xv records the
+ r Web page tampering analysis theory based on website feature vectors corresponding to each node vi , with the mapping
+ temporal graph. relationship represented by a bijective function f : V → Xv ,
+ Definition 1. Website Structure Graph [40]: Within the where |V | = |Xv | = N . Given that the node type remains conscholarly context of this research, a core concept is introduced, stant, each feature vector within Tv possesses identical dimendenoted as the ”Website Structure Graph.” This graph is con- sions. Meanwhile, edges are represented as E = {ei |0 < i <
+structed within the comprehensive G = (V, E, X) framework, (M + 1)}, where M = |E|. Each edge connects two nodes,
+where V signifies the node set and E embodies the edge set. expressed as ei = (vi , vj ), with i, j ∈ [1, N ].
+2018 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ Within the website structure graph framework, we have curated three distinct features to serve as the node feature: content
+features, structural features, and statistical features. Content
+features encapsulate features that portray the textual information
+within a web page, incorporating the contextual dependencies
+and semantic facets of all textual components. Structural features
+embody attributes delineating the source code structure within
+a web page. These features are extracted using the DOM tree as
+ Fig. 4. Tampering path analysis in website temporal graph.
+a foundational basis to capture the structural essence of the web
+page. Statistical features encompass attributes that encapsulate
+statistical data within a web page. These features primarily the sequence of page information inevitably shifts, consequently
+include statistical information concerning text, images, links, altering the features of page nodes. When compared to the
+and keywords. We selected 12 statistical features, such as the controlled and stable dynamics of regular transformations, tamnumber of scripts, keyword density, and the number of original pering causes big changes that cause noticeable changes in the
+tags, that closely relate to tampering behavior. extracted feature vectors.
+ Each edge within the website structure graph bears directional When malevolent actors implant hidden links or erase connecfeatures, signifying the interlinking relationships between web tions within a page, the corresponding alterations in the website
+pages. While constructing the graph structure, we evaluate the structure graph ripple through, impacting the construction of
+involvement of internal web pages and prune low-value leaf node target page features during information aggregation. After the
+pages. Web pages can exist as isolated islands, devoid of any con- completion of specific Web page tampering, it is plausible
+nections to other pages; such pages are deliberately omitted from that the assailant may navigate through links within the page,
+our consideration. The greater the number of edges attributed to advancing to the subsequent stage of tampering. Consequently,
+an internal web page node, the more significant its influence the likelihood of neighboring tampered pages being influenced
+within the website. This heightened influence corresponds to an is notably elevated. By harnessing this distinctive attribute, we
+elevated likelihood of attacker access and tampering. can aggregate information from adjacent nodes of the target
+ Definition 3. Website Temporal Graph [42]: We define the page, complemented by analyzing the tampered state of other
+temporal graph as Ĝ = (G , T  ). Within a period T , times- interconnected pages [43]. Furthermore, we harness the temtamps are systematically recorded at fixed intervals denoted poral relationships inherent in Web page tampering to dissect
+by k, creating the time sequence T  = {t1 , t2 , . . ., tn }, where the assailant’s tampering trajectory, thus unmasking concealed
+n = T /k. The website temporal graph is a linear sequence instances of Web page tampering. Fig. 4 shows an example
+of website structure graphs along the time series, denoted as of an attacker’s tampering path analysis. Indeed, web pages
+G = {G1 , G2 , . . ., Gn }. Each graph within the sequence G is situated on paths susceptible to tampering are at a heightened
+constructed based on website information assimilated during a risk of being targeted by attackers, warranting greater vigiunitary time interval, substantiating the presence of a mapping lance and scrutiny. An abrupt, large-scale transformation of
+function ϕ : T  − > G . Hence, every temporal node within T  the dynamic temporal graph at a given temporal juncture could
+corresponds to a distinct website structure graph. indicate a profound tampering assault on the website. Through
+ By meticulously comparing the website structures and link- meticulous deep-dive analyses of the website temporal graph,
+ages across different temporal points, variations in pages, addi- we efficaciously oversee the website’s integrity, harnessing the
+tions, or deletions can be identified, thereby unveiling potential harmonious interplay between graph structures and the rhythmic
+tampering endeavors. For dynamic websites, the website tempo- cadence of temporal mutations to unearth Web pages subjected
+ral graph effectively abstracts and analyzes patterns of web page to tampering.
+evolution over time, facilitating the identification of concealed
+tampering assaults by unearthing nodes exhibiting exceptional
+shifts. Furthermore, the website temporal graph imbues the tem- C. Pre-Training
+poral dimension with significance, affording valuable assistance In web page tampering detection, certain subtle tampering
+in pinpointing the temporal junctures of web page tampering instances are not readily mapped to features. To enhance the clasincidents. The strength of the website temporal graph lies in its sification effectiveness of node features, we propose a dynamic
+capacity to facilitate the observation of the evolution of graph temporal graph pretraining method based on the generative selfstructures and features along the trajectory of time. Following supervised learning architecture. The objective of pre-training
+the training of graph sequences, the change of dynamic web is to reconstruct node features, enabling the model to learn
+pages often adheres to discernible patterns and predictability. comprehensive information and thereby improve downstream
+However, when unanticipated changes arise, the web page tam- classification tasks. By using generative self-supervised learning
+pering detection model must swiftly identify these anomalies to pre-train website temporal graphs, we can reconstruct node
+and undertake recognition. Leveraging the chronicle of website features, thereby enhancing the capture of tampering informacontent and structural transformations over time, the website tion. We discuss applying generative self-supervised learning
+temporal graph can unearth more covert instances of web page to dynamic temporal graphs by answering the following three
+tampering. As the content of Web pages undergoes tampering, questions:
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2019
+
+ r Q1: How to choose autoencoder to process temporal DySAT structure design ensures the stable flow and processing
+ graph? of temporal data within the pretraining framework.This array of
+ r Q2: How to tune masking strategies based on temporal codes from DySAT encoder will serve as an intermediate output
+ data? upon completion of the entire training process, serving as the
+ r Q3: How to adjust the reconstruction error in pre-training? new node embedding representation. The final vector will be
+ By answering these questions, it can help to understand the created by averaging the encoding results from all time slices:
+flow and reconstruction of temporal data in pre-training.
+ Q1: Select the DySAT+GATv2 as autoencoder: In generative 
+ 
+ T
+ cv (t)
+self-supervised learning, multi-layer GNN (Graph Neural Net- cv = . (2)
+work) or GAT (Graph Attention Network) are common choices t=tw
+ p
+for autoencoders. However, they may not be suitable for handling
+temporal data structures, which is crucial when dealing with
+dynamic temporal graphs. The prerequisite for pretraining on The cv represents the final node embedding expression for the
+dynamic temporal graphs is an autoencoder that can handle tem- corresponding node, and w represents the time sliding window
+poral data effectively. Given that our input consists of discrete length of DySAT. The p represents the number of time slices,
+sequences of graph snapshots, methods like TGN (Temporal calculated from (n − w + 1). In the web page tampering detec-
+Graph Network), designed for continuous-time inductive graph tion task, this vector also represents the feature representation
+learning, are not applicable. of the web page at the current moment.
+ After careful consideration, we opted for DySAT as the au- The adoption of DySAT+GATv2 as an autoencoder in webtoencoder to take inputs from the website’s temporal graph. page tampering detection significantly improves the identifi-
+DySAT aims to capture the structural dynamics of dynamic cation and classification of subtle and sophisticated tampertemporal graphs through a self-attention mechanism, enabling ing activities by leveraging generative self-supervised learning
+it to learn graph nodes’ structural neighborhood and temporal on dynamic temporal graphs. This method not only captures
+dynamics. DySAT’s core components include structural self- comprehensive information through the reconstruction of node
+attention and temporal self-attention. Structural self-attention features but also adeptly handles the temporal dynamics inherent
+aggregates information from neighboring nodes and executes the in web structures, making it especially effective in distinguishing
+GAT algorithm on each graph snapshot, followed by weighted between normal updates and malicious alterations.
+summation. However, what sets our approach apart from the Q2: Set the temporal masking mechanism: For generative
+original DySAT is the bold replacement of the multi-head self-supervised learning, masking nodes is a critical step that
+attention module in the structural self-attention with a more provides the training direction for feature reconstruction. In
+suitable dynamic attention mechanism. The GATv2 considers conventional graph data, under the condition of maintaining the
+the influence of query nodes in the graph structure, optimizing masking rate, only a subset of nodes needs to be sampled for
+the ranking results of attention weights to achieve dynamic at- masking and input into the encoder. However, a new masking
+tention. Building on the GAT framework, the GATv2 adjusts the strategy needs to be set up for dynamic temporal graphs to
+parameters a in the scoring function to yield nonlinear results, apply to node sampling at different timestamps. This new node
+and it concatenates the query-key pair before processing. The sampling method is called the ”temporal masking mechanism”.
+specific implementation formula is as follows: This mechanism follows the principles of time slices being
+ independent and non-fixed sampling. Under the temporal maske (xi , xj ) = a LeakyReLU (W · [xi xj ]) . (1)
+ ing mechanism, node sampling in each time slice is conducted
+ independently, and the masking rate is constrained within the
+ The W represents the shared weight matrix, and a denotes graph of each time slice rather than the entire dynamic temporal
+a feedforward neural network that maps the concatenated high- graph. It ensures a balanced sampling distribution in the dynamic
+dimensional features to the real number space. We replaced the temporal graph. Furthermore, under the non-fixed sampling rule,
+structural self-attention in DySAT with GATv2 to better adapt to nodes sampled in each time slice are not shared, which means
+the embedding of dynamic temporal graphs. The DySAT’s tem- that the masking status of the same node may vary at different
+poral self-attention can capture temporal patterns and aggregate timestamps. It implies that during self-supervised learning, the
+node representations from time steps before t into v(t). After autoencoder can refer to node information from previous and
+completing the structural self-attention, DySAT performs tem- subsequent timestamps for encoding, thereby guiding the trainporal self-attention to ensure the stability of graph embeddings. ing direction for feature reconstruction.
+To facilitate feasible decoding in subsequent steps, we omit the Firstly, a subset of nodes Ṽ ⊂ V  is sampled from the dynamic
+final aggregation of node embeddings from all timestamps in temporal graph, and these nodes are replaced with a masking
+DySAT. Instead, we retain the encoding outcomes from each identifier ”[MASK]”, denoting their node feature representation
+individual time slice. As a result, the code vectors produced by as x[M ] . When inputting a dynamic temporal graph, it is necesthe encoder constitute an array of codes across different times- sary to sample the graph snapshots at different timestamps and
+tamps, denoted as: C = {c(t)|t ∈ T  }. Simultaneously, to match set the masking identifier separately. Use the temporal masking
+the temporal code input to the encoder, the decoder has also been mechanism to mask the dynamic temporal graph, the resulting
+designed as DySAT to achieve feature reconstruction. This dual node feature matrix after masking at time t is X̃(t) = {x̃i (t)|0 ≤
+2020 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+i < |V (t) |}, where: as follows:
+  T
+  γ
+ x[M ] , vi (t) ∈ Ṽ (t) 1  1 (xi (t))T zi (t)
+ x̃i (t) = . (3) LRE = 1− , γ ≥ 1. (5)
+ xi (t), vi (t) ∈
+ / Ṽ (t) p t=t Ṽ (t) xi (t) · zi (t)
+ w
+
+ Taking into account the intricate structure of the website The γ is the scaling factor, and the z denotes the reconstructemporal graph, a masking ratio of 50% is implemented to tion output. The p denotes the number of time steps used to
+mitigate redundancy in node features, ensuring the effective- compute the average reconstruction error. This term represents
+ness of self-supervised learning. The updated dynamic temporal the average of masked nodes across all time slices. The scaling
+graphs are fed into the DySAT for training upon accumulating factor γ is adaptively adjusted across different datasets, ensuring
+substantial amounts of collected data. The temporal encoding that different samples are assigned different weights based on
+obtained by training the DySAT encoder contains multiple time the reconstruction error.
+slices. Following the re-masking of latent codes, they are then In the case of a dynamic temporal graph, relying solely on
+input into the DySAT decoder for node feature reconstruction. reconstruction error may not suffice for downstream tasks. It is
+Before inputting the temporal code into decoder, we replace because the key lies in predicting node information within the
+the original masking tag with another, ”[RMASK]”, which current timestamp for web page tampering detection. It implies
+forces the masked nodes to reconstruct their input features from that data from past timestamps, in the form of graph snapshots,
+adjacent unmasked latent representations. When implementing should contribute more to reconstructing node features in the
+the temporal masking mechanism in the decoding process, the current timestamp. Therefore, we introduce a new metric called
+re-masked code can be represented as: ”Prediction Error (LP E )”. This process involves masking all
+ nodes in the current timestamp and subsequently using graph
+ 
+ h[M ] , vi (t) ∈ Ṽ (t) snapshots from the past time window to reconstruct the node
+ h̃i (t) = . (4)
+ hi (t), / Ṽ (t)
+ vi (t) ∈ features in the same timestamp. The decoder for prediction error
+ is generated by exponentially moving averaging the decoder
+ from the scaled cosine error. Its role is to predict the feature
+ The temporally re-masked code will be input into the DySAT
+ reconstruction for all nodes in the current timestamp. The recondecoder for feature reconstruction. The reconstructed features
+ structed node features for the current timestamp are then input
+will be restored to the dimensions of the initial features, and the
+ into the scaled cosine error to compute the prediction error. The
+error of the reconstruction results will be calculated to adjust the
+ final error value is obtained by adding the reconstruction error
+coefficients of the autoencoder network.
+ and the prediction error:
+ Implementing the temporal masking mechanism in webpage
+tampering detection plays a pivotal role by introducing a so- L = μLRE + (1 − μ)LP E . (6)
+phisticated layer of analysis to handle the temporal complexity
+of web content changes. This mechanism strategically obscures
+certain node features across different timestamps, compelling The variable μ represents the weight in the error calculation,
+the model to infer missing information based on its temporal which takes different values in various dynamic temporal graph
+context and adjacent node attributes. Such a process is crucial tasks. The inclusion of prediction error makes self-supervised
+for differentiating between normal content evolution and mali- learning more suitable for dynamic temporal graph pretraining.
+cious tampering, as it forces the model to recognize patterns of The autoencoder continuously adjusts its coefficients in response
+legitimate updates and identify outliers indicative of tampering to the calculated error values until it reaches an equilibrium in
+activities. By simulating scenarios where information is partially the training process.
+hidden, the model becomes more attuned to subtle indications Combining reconstruction error with prediction error in the
+of webpage tampering, enhancing its precision in flagging sus- context of webpage tampering detection introduces a nuanced
+picious alterations. evaluation metric that significantly amplifies the model’s sensi-
+ Q3: Combine reconstruction error with prediction error: In tivity to anomalies indicative of tampering. This dual-error apgenerative self-supervised learning, measuring reconstruction proach not only assesses the accuracy of node feature reconstrucerror is a core step in assessing the training state. It calculates tion but also evaluates the model’s ability to predict the current
+the perturbation between the reconstruction and input features, state of a node based on its historical context. The introduction of
+providing feedback to the autoencoder’s fitting process. The prediction error is particularly valuable for webpage tampering
+generative self-supervised learning introduces the scaled cosine detection, as it emphasizes the model’s capacity to detect deviaerror to evaluate the ”Reconstruction Error (LRE )”, which mit- tions from expected temporal patterns, a hallmark of malicious
+igates the impact of feature dimensionality and vector norms. tampering activities. By requiring the model to both accurately
+This method adjusts the contributions of different samples in reconstruct known node features and effectively predict future
+training through a scaling factor, further improving the cosine states, this method enriches the model’s understanding of norerror. For temporal reconstruction features, scaled cosine error mal webpage evolution versus tampering-induced anomalies.
+needs to calculate the reconstruction error at each time step and Consequently, the combination of these errors sharpens the
+then take the average of the results. The calculation formula is model’s ability to discern between benign changes and malicious
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2021
+
+ Step 2. Filtering of collected web pages: The filtering module encompasses URL deduplication and pseudo-static URL
+ filtration. To enhance the quality of web page collection, we
+ introduce stringent rule mechanisms during the filtering process.
+ The filtering mechanism extracts data from various dimensions
+ such as request method, URL, value, and redirection for URL
+ deduplication, generating MD5 hashes to identify corresponding requests uniquely. Concerning the assessment of static resources, the filtering mechanism creates a mapping type marked
+ with common static resource suffixes. Subsequently, the URL’s
+ suffix serves as the key for this map. Finally, thresholds are
+ established based on the number of key parameters and paths,
+Fig. 5. The tampered web page detection process.
+ and unique identifiers are allocated to web pages surpassing
+ these thresholds.
+ Step 3. Security Policy Review for Web pages: We assess
+alterations, enhancing the overall robustness and reliability of the legitimacy of websites through an initial security policy
+webpage tampering detection mechanisms. review. These checks include indicators of secure browsing,
+ certificate signatures, resource cross-origin attributes, privacy
+ policies, and more. These tests allow us to confirm that the initial
+D. Tampering Detection status of the websites under monitoring is not malicious. This
+ Unearthing web page tampering within the dynamic realm of effectively prevents the wastage of resources on web page tamconstantly changing web pages presents a formidable challenge. pering detection and also offers deployment recommendations to
+Our objective is centered on harnessing website temporal graphs administrators.
+as a lens to observe whether there are evident disruptions in Step 4. Construction of the website temporal graph: Initially,
+graph structures and information during instances of tampering. web page content features are computed using the Bert model.
+The tampering tends to bring about non-uniform alterations in As Bert employs an encoder to handle the semantics, it is adept
+node features and graph structures, resulting in perturbations that at capturing long-range dependencies and bidirectional textual
+impact the characteristics of specific nodes. These perturbations information within the web page text. Next, we use Doc2Vec [44]
+can be amplified by the pre-training, thereby aiding in identi- to embed the DOM tree structure of web pages. Each tag on the
+fying whether the intended page has undergone tampering. We web page is assigned a unique identifier corresponding to a charpropose a web page tampering detection scheme, and its basic acter. A depth-first traversal strategy is employed to traverse all
+process is shown in Fig. 5. paths in the DOM tree, arranging the identifiers corresponding
+ Website administrators, cybersecurity service providers, and to tags in the paths to form words. After all paths are converted,
+relevant government agencies are all potential beneficiaries of a document composed of words is generated. We train Doc2Vec
+this method. A major advantage of this method lies in its consis- on these path documents to generate corresponding embedding
+tent approach of collecting website data from a third-party closed vectors as structural features. After that, informational and stabox perspective for modeling, eliminating the need for access tistical elements within web pages are extracted and normalized
+to the website’s source code, directories, or databases. This into a vector format. These extracted features are included as
+is particularly important for website operations that prioritize feature sets in the graph construction process.
+foundational privacy protection. It also means that in practical All collected web pages within the website are transformed
+applications, this method can be directly integrated as a plugin or into nodes. Each node’s features encompass content, structural,
+functional module within conventional Web application firewall and statistical features. By analyzing the linking relationships
+software or deployed as a standalone system on servers to moni- on each page, vector edges are established between web pages
+tor multiple websites. This technology routinely gathers relevant exhibiting navigational connections. Initiating with the current
+website data, automatically updates the website temporal graph, time as the initial timestamp, the website structure graph is
+and detects web page tampering activities. The specific steps of preserved as the initial graph. Subsequently, the following fixed
+the method are as follows: time intervals, corresponding timestamps, and website structure
+ Step 1. Crawling of web pages from the target Website: graphs are recorded. The collection of graph snapshots at all
+We employ a browser-based crawler to collect all web pages timestamps forms the website temporal graph.
+from the target website. This crawler is designed to collect the Step 5. Pretrain on the dynamic temporal graph: Set the slid-
+URLs of web pages by strategically positioning hooks at crucial ing window length to w, and take the graph snapshots from the
+points within the web page’s DOM rendering phase. Upon past w timestamps in the website temporal graph to participate in
+initializing the network crawler, the robot and fuzz dictionaries training. Apply masking to the dynamic temporal graph using
+are integrated into the link pool to expand entry URLs. The a temporal masking mechanism and input it into the DySAT
+crawler automatically performs form population and submission autoencoder for encoding. After re-masking the encoding reto comprehensively gather exposed entry points to the website, sults, reconstruct the node features through the DySAT decoder.
+thus complementing intelligent JavaScript event triggering. Calculate the reconstruction deviation using a loss function and
+2022 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+fit the autoencoder until the loss reaches the expected level. After
+complete pretraining, output the encoding results from the last
+round as new feature vectors.
+ Step 6. Detect web page tampering using an anomaly detector: We have chosen various state-of-the-art anomaly detectors
+to test the feature vectors generated during pretraining. These
+anomaly detectors focus on identifying abnormal components
+in the input and classifying them as anomalies. These anomaly
+detectors will collectively determine the identification of web Fig. 6. The t-SNE visualization results of node characteristics of website
+page tampering. No. 24.
+
+ VI. EXPERIMENT impact these tampering events had on website pages. To ensure
+A. Dataset concealment and authenticity, the restoration process involves
+ minimal alterations to links, website content, and source code.
+ For data collection, we maintained a list of 600 authorized Besides, thoroughly taking into account the number of web
+websites, primarily concentrated in industries such as finance, pages hackers alter in a single attack incident, this standard
+healthcare, and education. Websites in these sectors have high was then used to proportionally incorporate various tampering
+tampering value due to their data sensitivity and public influence, categories into our web page dataset, ensuring a realistic repremaking them prime targets for hackers. Utilizing concurrency sentation. We believe that hackers, who alter web page content or
+mechanisms, we fully leverage the computational power of insert malicious code, do so to achieve their goals with minimal
+multiple CPUs to process and collect nearly 600,000 pages changes, thus they only tamper with the homepage. In contrast,
+per hour. All 600 websites will be completely crawled within to increase the click-through rates of ads, malicious advertisers
+5 hours, and the data collected will serve as the foundational may modify multiple important pages. We consider a webpage
+dataset for the current time slice. Subsequently, the data gathered significant if the number of links to it surpasses a certain threshevery 24 hours will be used for the next time slice. This process old. The methodology for calculating this threshold involves:
+will be continuously repeated until 21 time slices are generated.
+ In the course of data collection, we rigorously adhered to
+the limitations prescribed by the Robots protocol file of each Wthreshold = importancef actor × Wmax . (7)
+website. Initially, our dataset encompassed over two million web
+ Wmax is the maximum number of times a page in a website
+pages sourced from 600 distinct websites. Subsequent filtering
+ is pointed to, and the importancef actor of the paper is set
+was executed based on several criteria: (a) Page Anomalies:
+ to 0.3. We used t-SNE (T-Distribution Stochastic Neighbour
+The task of automatically harvesting data from 600 diverse web-
+ Embedding) to visualize the samples from the 24th website in
+sites, each developed with different technological frameworks
+ Fig. 6, demonstrating that positive samples are local anomalies
+across various sectors, presented substantial challenges. Not all
+ within the entire sample set [45].
+pages were viable; thus, we excluded any page that returned
+ After integrating positive and negative web page samples,
+response errors. (b) Pseudo-static Pages: Despite efforts to
+ we created a dataset that records the evolution of web pages
+exclude pseudo-static pages during the initial crawling phase,
+ over time. Since the negative samples in the dataset comprise
+numerous instances were overlooked. Two reviewers indepenmalicious tampering activities, we named the dataset the Webdently developed identification rules, resolved interpretation
+ page Tampering Dataset (WPT-Dataset) [10]. We desensitized
+differences through iterative discussion, and jointly applied the
+ parts of the dataset that may involve privacy leaks. We employ
+unified criteria to manually remove pseudo-static pages. (c) Hopseudonymization techniques, using hash functions to convert
+mogeneous Technology Stacks: Throughout the data cleaning
+ the original text data into irreversible identifiers, such as names,
+phase, we observed that several websites, likely developed by the
+ email addresses, telephone numbers, and addresses. We will not
+same entity, shared similar structural attributes. To enhance the
+ release the original text data of all web pages, but instead publish
+diversity of our dataset and manage the data volume effectively,
+ the extracted feature graphs. The dataset is provided in the form
+we retained only one representative website from each group
+ of graph data, where all node attributes have been vectorized.
+of structurally similar entities. (d) Websites with Insufficient
+ Users will not be able to restore any network identifiers or
+Pages: Websites that contained fewer than a predefined threshold
+ personal identity information from the dataset. We have made
+M , of pages within a single temporal segment were excluded.
+ the Dataset publicly available on a data-sharing platform to
+This criterion was established because a minimal number of
+ facilitate similar research endeavors. The composition of the
+pages could lead to an inadequately detailed representation in
+ WPT is shown in Table I.
+our dataset analysis.
+ We also applied security policy review and valid page coverage testing to the web pages. After cleansing, we obtained a B. Baselines
+dataset comprising over 204,000 clean web pages collected from We selected the SMGCN (Semi-supervised Multi-view Graph
+75 different websites. We referenced real web page tampering Convolutional Networks), DySAT (Dynamic Graph Neural Netcases from zone-h.org, manually simulating and restoring the work), EvolveGCN (Evolving Graph Convolutional Networks
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2023
+
+ TABLE I For each experiment, we repeated it ten times with different
+ COMPOSITION OF WPT-DATASET
+ random seeds to ensure result reliability. We used AUC-ROC and
+ AUC-PR as performance metrics, which assess the model’s performance on the ROC and PR curves, respectively. All training
+ and testing tasks were implemented using PyTorch 2.0.1+cu118,
+ Python 3.9.17, CogDL, and basic models from PyOD [47].
+ Besides, we trained the model on a server with two RTX 3090
+ GPUs.
+
+for Dynamic Graphs), and GraphMAE (Self-Supervised Masked
+Graph Autoencoders) on static graphs as baselines for our ex- D. Q1: Comparative Experiment
+periments.
+ SMGCN [38] achieves state-of-the-art (SOTA) performance We adopted AUC-ROC and AUC-PR as the evaluation metrics
+in two web page classification datasets through multi-view graph to assess the model’s performance. Table II presents the results
+construction and semi-supervised multi-view graph convolu- for 15 randomly selected websites. We conducted hyperpational representation learning. Notably, SMGCN employs semi- rameter searches using grid search to find the best-performing
+supervised learning, and the multi-view convolutional module hyperparameter combinations and then fixed these hyperparamis implemented using self-supervised learning for adaptation to eters to repeat the experiment 10 times with different random
+this scenario. seeds to compare the statistical results. EvolveGCN achieved
+ DySAT [8] employs self-attention mechanisms to aggregate the best performance on some websites (e.g., 4 and 73) and
+structural neighborhood and temporal dynamics for node repre- showed significantly improved performance compared to ussentation learning. Comparing our results to DySAT highlights ing either the spatial-temporal self-attention mechanism or the
+the contributions of our self-supervised learning approach. generative self-supervised framework independently on other
+ EvolveGCN [46] utilizes an RNN (Recurrent Neural Net- websites. We partly attribute this result to EvolveGCN’s ability
+work) to dynamically update internal GNN weights, allowing to update the coefficient matrix without relying on node features,
+the model to adapt during testing. Comparing our results to making it perform well when dealing with network structures
+EvolveGCN helps assess our model’s ability to evolve. that undergo significant changes in node sets across different
+ GraphMAE [7] uses a masked graph autoencoder for self- snapshots. However, its performance is not consistently stable
+supervised learning on graphs and has demonstrated superior across different websites and, in most cases, falls short of our
+performance across various tasks on 21 datasets. Comparing model. In the comparative experiments, our model achieved an
+our approach to GraphMAE showcases the effectiveness of our average AUC-ROC value of 0.9816 and an AUC-PR value of
+dynamic attention aggregation in both the temporal and spatial 0.9447. We continue to test all tampered website samples using
+dimensions within the generative self-supervised framework. our model. Fig. 7 displays the specific detection results for all
+ 75 website samples. The AUC values for all websites tampering
+ detection results exceeded 0.8725, with an average value of
+C. Process and Evaluation 0.9602. It indicates that our model exhibits strong adaptability
+ We conducted our experiments in the following manner. (a) and can effectively detect most cases of webpage tampering.
+Pretraining dynamic temporal graph encoders. (b) Node embedding generation. (c) Unsupervised AD model training. (d)
+Testing on snapshots with positive samples. It’s important to
+note that we didn’t employ a single unique AD model but trained E. Q2: Hyperparameter Experiment
+13 different unsupervised AD models, one for each website. This experiment evaluated the impact of different en-
+This approach allowed us to find each website’s most suitable coder/decoder layer depths and attention head numbers on web-
+AD model. We believe that different anomaly detectors excel page tampering detection performance. We tested nine differat handling different types of anomalies, and the distribution ent hyperparameter combinations, consisting of three different
+characteristics of tampered content vary across different web- encoder/decoder layer depths (1/2/3) and three different attensites. Therefore, selecting different AD models tailored to each tion head numbers (1/2/4), on 25 randomly selected websites.
+website can yield better personalized results. The experiment results in Table III show that increasing the
+ We evaluated our model from five different perspectives: encoder/decoder layer depth from 1 to 3 leads to a noticeable
+ Q1: How does the model perform on the WPT-Dataset? improvement in both AUC-ROC and AUC-PR scores. The influ-
+ Q2: How do hyperparameters affect the model’s perfor- ence of attention head numbers is slightly more complex, with
+mance? performance varying for different combinations. When using
+ Q3: What is the impact of the improved parts of the model on a deeper encoder/decoder architecture, increasing the number
+the final results? of attention heads can significantly enhance AUC-ROC and
+ Q4: Which AD algorithm should be chosen? AUC-PR scores. It suggests a multi-head attention mechanism
+ Q5: Is the model’s performance and efficiency feasible? benefits webpage tampering detection tasks in more complex
+ Q6: Is there any real-life example? scenarios.
+2024 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ TABLE II
+ THE EVALUATION OF 15 RANDOMLY SELECTED WEBSITES UNDER DIFFERENT BASELINES AND OURS
+
+Fig. 7. The ROC curve evaluation results for all websites in WPT-Dataset (AUC value is displayed next to the ID number).
+
+F. Q3: Ablation Experiment 25 randomly selected websites using different random seeds.
+ The ”w/o DySAT” indicates that our encoder did not undergo
+ Our approach recommends the joint modeling of spatiotemporal neighborhoods, dynamic attention mechanisms, prediction pretraining on the dynamic temporal graph; instead, it directly
+ employed an enhanced graph attention network (GATv2) on the
+errors, and a generative self-supervised training framework.
+ time windows. The ”w/o GATv2” signifies that our encoder used
+To evaluate this design, we conducted experiments by removing each of these four features individually and creating four a standard GAT to aggregate spatiotemporal features. The ”w/o
+ prediction” means that we did not utilize temporal prediction
+variants. These experiments were performed on datasets from
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2025
+
+ TABLE III
+ EXPERIMENTAL EFFECTS OF DIFFERENT HYPERPARAMETER COMBINATIONS
+
+ Fig. 8. The performance of AD algorithms.
+
+ TABLE IV
+ ABLATION EXPERIMENTAL RESULTS OF KEY COMPONENTS achieve the best performance like LOF, it demonstrated relative
+ stability with the best performance in 16% of experiments,
+ indicating robustness suitable for specific tampering scenarios. OCSVM (One-Class Support Vector Machine) [50], KNN
+ (K-Nearest Neighbors), and DAGMM (Deep Autoencoding
+ Gaussian Mixture Model) [51] ranked third, fourth, and fifth,
+ respectively, with best performance rates of 11.4% , 11.0% ,
+ and 9.2% . Their general applicability allowed them to perform
+ well in a variety of experiments. Isolation Forest [52] may not
+errors and trained solely with masked reconstruction errors. The have excelled in achieving the best performance, but it showed
+”w/o MAE” indicates that we did not use a generative self- advantages in second-best performance and consistently ranking
+supervised training mechanism and predicted node attributes among the top performers. On the other hand, other presented
+directly from data preceding the last time snapshot in the time AD algorithms demonstrated relatively average performance
+window. and did not gain significant advantages.
+ The experimental results in Table IV demonstrate that the To probe why certain detectors excel under specific tampering
+absence of any of these key components significantly reduces the type, we further evaluate each AD model in a one-vs-normal
+model’s detection performance, with detection loss rates exceed- setting for the three dominant tampering types. Fig. 9 visualises
+ing 11% . This degradation is rooted in extreme class imbalance the mean ROC–AUC rank (1 = best) as a 3 × 13 heat map. A
+(positives ≈ 0.76% ), which makes AUC-PR hypersensitive consistent trend emerges: when anomalies are very sparse, as
+to minor positive-sample fluctuations. Each module uniquely in the Implant-Trojan setting, statistics-based SOD attains the
+suppresses specific noise types: DySAT’s 21-snapshot aggre- lowest rank, whereas denser, locally clustered deviations chargation mitigates temporal noise; GATv2 counters structural acteristic of Malvertising-Inserted pages are best captured by
+noise; MAE and prediction heads regulate parameter/decision LOF and, closely behind, DeepSVDD. In contrast, the broad disnoise. Removing any element propagates sampling noise into tribution shift caused by a full Homepage-Replacement favours
+metric variance (AUC-PR s.d. surges from ± 0.83 to ≥ 5.5). distance- and density-aware methods such as COF and SOD.
+Consequently, the complete model jointly minimizes both mean These results emphasise that detector choice should be guided
+error and variance, whereas removing any component degrades by the underlying distribution of anomalies rather than a single
+accuracy and stability. ”one-size-fits-all” rule.
+
+G. Q4: Selection of AD Models
+ In this experiment, we compared the performance of 13 differ- H. Q5: Performance Analysis
+ent AD algorithms. We conducted over a thousand experiments The Table V provides an overview of the time required for
+and recorded the number of times each AD algorithm achieved each process in the data preprocessing, model training, and
+the best and second-best performance across all experiments. AD phases. Once the model is deployed in a real environment,
+Finally, we visualized this data in five vertically aligned scatter converting web page text into node features takes only 5 minutes
+plots in Fig. 8 to facilitate algorithm performance comparison. per website. Additionally, the time for anomaly processing
+ Based on the experimental results, we found that the LOF (Lo- presented in the table refers to the total time taken by the 13
+cal Outlier Factor) [48] algorithm performed the best, achieving different AD models. When our model is actually deployed in a
+the best performance in 24.2% of all experiments. LOF excels real environment, it will determine a suitable AD model for each
+at capturing local outliers, contributing to its top performance. website based on the data distribution of its features. It means
+DeepSVDD (Deep Support Vector Data Description) [49] fol- that the processing time for each website during the AD phase
+lowed as the second-best performer. While it didn’t consistently will also be reduced to seconds.
+2026 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+Fig. 9. One-vs-normal mean rank (↓ better) of ROC-AUC for 13 anomaly-detection (AD) models across three web-tampering types. Values denote the average
+rank among 25 websites;  marks the top-3 models per row.
+
+ TABLE V
+ STAGED MODEL PERFORMANCE TESTING
+
+ Fig. 11. Real-life cases of web page tamper detection by using our model.
+
+ aggregate AD time, the total scaling inherits the order of the
+ dominant detector (i.e., LOF O(f (N 2 ))). In our LOF setting,
+ tree-based kNN back-ends and a small fixed k yield near-linear
+ empirical growth over the evaluated range, which explains why
+ the end-to-end latency (blue) is well approximated by an Ordinary Least Squares fit T = aN + b. These results, together with
+ Table V, show that the online pipeline scales gracefully as the
+ site graph grows.
+
+ I. Q6: Case Study
+ With authorization, we deployed a web page tampering monitoring system for a Chinese university and its sub-colleges. The
+Fig. 10. Empirical scalability of the online stage. Execution time versus the system, hosted on cloud servers as a third-party service, performs
+number of nodes (x-axis in 2n ). The orange curve shows total time of running real-time data collection and analysis of the university’s website.
+13 anomaly-detection (AD) algorithms sequentially; the green curve shows
+embedding-inference time. Shaded regions denote 95% confidence intervals
+ The collection covers all pages under the official website, with
+over 10 seeds. The blue line is a fit T = aN + b to the end-to-end online latency data re-collected and website temporal graph updated every
+(AD + embedding), indicating an approximately linear trend in the sparse-graph 24 hours. On April 1, 2024, the monitoring system issued a
+regime.
+ tampering alert, pinpointing the official website of a particular
+ college within the university. The college posted a notice for
+ master’s degree re-examination on the affected page, as depicted
+ The upstream ETL steps (HTML parsing, Doc2vec, feature in Fig. 11. The anomaly detector in our model indicated an
+extraction) are linear scans over the page corpus and therefore increase in the probability of page tampering from 2% to 98%
+scale linearly with the total number of DOM tags. The main within two time intervals. After confirming the authenticity of
+computational cost lies in (i) DySAT pre-training, whose time this web page tampering event, we conducted an in-depth analgrows as O(T · E · d) with the number of snapshots T , edges E, ysis. The re-examination notice page contained an embedded
+and hidden dimension d; and (ii) anomaly detection, whose hidden link that pointed to an external website. The hidden link
+complexity ranges from O(N · k) (COPOD) to O(N 2 ) (LOF), was aimed at a graduate entrance examination service provider,
+where N denotes the number of web page nodes in the site. which we suspect may have employed hackers to conduct illegal
+ At deployment time, pretraining is offline; the online latency promotional activities. We have reported the tampering incident
+decomposes as Tonline (N, E) = Tembed (N, E) + TAD-total (N ). to the relevant authorities and completed timely web page repair
+Here TAD-total (N ) = 13 j=1 Tj (N ) aggregates the time of 13 AD and vulnerability self-checks. During subsequent continuous
+algorithms that we evaluate independently and then ensemble monitoring of the same college site, neither our system nor
+at the score level. Embedding accounts for about 5% of the manual reports observed further tampering, suggesting that the
+end-to-end time and scales nearly linearly with N on sparse remediation and hardening steps reduced the likelihood of simgraphs (E = Θ(N )). The orange curve in Fig. 10 reports this ilar incidents.
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2027
+
+J. Result Analysis at scale since October 2023, continuously monitoring approxi-
+ The WPT-Dataset faced significant variations in web page mately 600 websites comprising about 150,000 pages, and has
+content during the data collection, leading to dynamic changes identified more than 400 incidents of tampering or abnormal
+in the node sets for each snapshot. The results of comparative activity across participating organizations. The university deexperiments show that the DySAT and GraphMAE models are ployment described above represents one component of this
+not well-suited for web page tampering detection scenarios. broader rollout. However, limitations remain, including a 24-
+We suspect that GraphMAE cannot capture dynamic changes hour recrawl interval that may miss short-lived defacements,
+in web pages over time, while DySAT may lack effective monitoring restricted to public pages, manual confirmation reguidance from a high-level learning framework. The SMGCN quirements, and deployment within a single institution. Future
+underperforms on our dataset, which we attribute to the lack of work will address these by increasing crawl frequency, expandkey technical expertise in replicating the model, as well as the ing deployment to more sites, integrating multi-source telemetry,
+performance degradation resulting from the transformation and conducting red-team tests.
+of multi-view graph convolution from semi-supervised to
+self-supervised learning. In contrast, our approach combines
+DySAT’s ability to capture spatiotemporal features with the re- VII. CONCLUSION
+construction capability of the generative self-supervised frame- In this paper, we propose a web page tamper detection based
+work. It additionally incorporates a dynamic attention mecha- on dynamic temporal graph pretraining, which improves the
+nism to enhance its feature extraction capabilities and is com- effectiveness of web page tamper detection through pretraining
+plemented by a heuristic prediction error, ultimately achieving on dynamic temporal graphs. The paper provides an overview
+competitive performance. of web page tampering and discusses web page tamper analysis
+ In the hyperparameter experiments, the number of en- under temporal and graph. The proposed method is detailed,
+coder/decoder layers has a greater impact on the model’s per- covering website temporal graph construction, generative selfformance. Deeper encoder/decoder structures can better cap- supervised learning pretraining, and web page tamper detecture data features and anomaly patterns. Choosing a deeper tion under anomaly analysis. Experimental results demonstrate
+encoder/decoder structure may improve AD performance in that pre-trained node embedding vectors can better distinguish
+practical applications. Furthermore, the final hyperparameter anomalous web pages and perform excellently in various AD
+selection should consider the interplay between the number of classification tasks. The paper also tested the hyperparameter
+encoder/decoder layers, attention heads, and dataset complexity. sensitivity and performance of the proposed model, proving the
+Different datasets and tasks may require different combinations applicability of the proposed model in real-world scenarios.
+of hyperparameters.
+ In the ablation experiments, the impact of key components
+on the model is significant. Among them, the introduction of REFERENCES
+DySAT has the most pronounced impact, providing a 21% [1] C. Sheng, Y. Yao, W. Li, W. Yang, and Y. Liu, “Unknown attack traffic
+absolute gain in performance. It is because DySAT can aggregate classification in SCADA network using heuristic clustering technique,”
+structural neighborhoods and temporal dynamics, allowing it to IEEE Trans. Netw. Service Manag., vol. 20, no. 3, pp. 2625–2638,
+ Sep. 2023.
+learn data features from both temporal and spatial dimensions. [2] J. Huo, H. Qu, and L. Liu, “Design and implementation of automatic
+The dynamic graph attention mechanism, prediction error, and defensive websites tamper-resistant system,” J. Softw., vol. 7, no. 10,
+generative autoencoder, respectively, provide gains of 12% to pp. 2379–2386, 2012.
+ [3] L. Zhao, X. Ling, and F. Deng, “Research on key technology of webpage
+19% . Such large gains are attributed to the effectiveness of tampering prevention,” Appl. Mechan. Mater., vol. 644, pp. 2755–2758,
+the various model components and the characteristics of the 2014.
+WPT-Dataset, where each website has an average of only 21 [4] H. Shuang, L. Zhao, and D. Lie, “vWitness: Certifying web page interactions with computer vision,” in Proc. 53rd Annu. IEEE/IFIP Int. Conf.
+snapshots, and the number of nodes in each snapshot is relatively Dependable Syst. Netw. (DSN), 2023, pp. 431–444.
+small, leading to larger fluctuations in the experimental results. [5] P. Kanti Kumar, A. Dutta, and P. Kumar, “Application of graph mining
+ The selection and performance analysis of AD models guide algorithms for the analysis of web data,” SSRN Electron. J., 2023.
+ [6] D. Lewandowski and S. Schultheiß, “Public awareness and attitudes tothe practical application of our model. In the web page tampering wards search engine optimization,” Behav. Inf. Technol., vol. 42, no. 8,
+detection scenario, the LOF algorithm’s strong performance al- pp. 1025–1044, 2023.
+leviates the difficulty of choosing among diverse AD algorithms. [7] Z. Hou et al., “GraphMAE: Self-supervised masked graph autoencoders,”
+ in Proc. 28th ACM SIGKDD Conf. Knowl. Discov. Data Mining, 2022,
+Of course, we can also combine multiple AD algorithms to pp. 594–604.
+provide a comprehensive conclusion if slightly lower efficiency [8] A. Sankar, Y. Wu, L. Gou, W. Zhang, and H. Yang, “DySAT: Deep neural
+is acceptable. The superior performance allows our model to be representation learning on dynamic graphs via self-attention networks,” in
+ Proc. 13th Int. Conf. Web Search Data Mining, 2020, pp. 519–527.
+maintained on servers at a lower cost and complete tampering [9] S. Brody, U. Alon, and E. Yahav, “How attentive are graph attention
+detection for all web pages within a website in a short time (<10 networks?” in Proc. Int. Conf. Learn. Representations, 2022. [Online].
+minutes), replacing the need for global scans and comparisons. Available: https://openreview.net/forum?id=F72ximsx7C1
+ [10] wpt-dataset, 2024. Retrieved: Apr. 29, 2024. [Online]. Available: https:
+ The case study demonstrated that our model can detect web //github.com/Polylanger/wpt-dataset
+tampering events in real-world college network scenarios, prov- [11] Z. Wu, “An abnormal external link detection algorithm based on multiing its practical value. Besides, our system has been operating modal fusion,” Int. J. Inf. Secur. Privacy (IJISP), vol. 18, no. 1, pp. 1–15,
+ 2024.
+2028 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+[12] Q. Shao, J. Liu, J. Fang, W. Xiong, and L. Xia, “A novel webpage [37] M. Albalawi, R. Aloufi, N. Alamrani, N. Albalawi, A. Aljaedi, and A.
+ hiddenlink detection method using bert and ternary decision approach,” R. Alharbi, “Website defacement detection and monitoring methods: A
+ in Proc. Int. Conf. Comput. Eng. Netw., 2023, pp. 420–431. review,” Electronics, vol. 11, no. 21, 2022, Art. no. 3573.
+[13] G. Pradeepa and R. Devi, “Malicious webpage detection based on feature [38] F. Wu et al., “Semi-supervised multi-view graph convolutional networks
+ fusion using natural language processing and machine learning,” in Proc. with application to webpage classification,” Inf. Sci., vol. 591, pp. 142–154,
+ 2nd Int. Conf. Edge Comput. Appl. (ICECAA), 2023, pp. 486–491. 2022.
+[14] M. F. Rozi, S. Ozawa, T. Ban, S. Kim, T. Takahashi, and D. Inoue, [39] S. Venugopal, S. Y. Panale, M. Agarwal, R. Kashyap, and U. Ananthanagu,
+ “Understanding the influence of AST-JS for improving malicious webpage “Detection of malicious URLs through an ensemble of machine learning
+ detection,” Appl. Sci., vol. 12, no. 24, 2022, Art. no. 12916. techniques,” in Proc. 2021 IEEE Asia-Pacific Conf. Comput. Sci. Data
+[15] P. Jiang et al., “Detecting malicious websites from the perspective of Eng. (CSDE), 2021, pp. 1–6.
+ system provenance analysis,” IEEE Trans. Dependable Secure Comput., [40] L. Asprino, E. Daga, A. Gangemi, and P. Mulholland, “Knowledge graph
+ vol. 21, no. 3, pp. 1406–1423, May/Jun. 2024. construction with a façade: A unified method to access heterogeneous data
+[16] A. E. Belfedhal, “Multi-modal deep learning for effective malicious web- sources on the web,” ACM Trans. Internet Technol., vol. 23, no. 1, pp. 1–31,
+ page detection,” Revue d’Intelligence Artificielle, vol. 37, no. 4, pp. 1005– 2023.
+ 1013, 2023. [41] L. Gong and Q. Cheng, “Exploiting edge features for graph neural net-
+[17] A. Safi and S. Singh, “A systematic literature review on phishing website works,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2019,
+ detection techniques,” J. King Saud Univ.- Comput. Inf. Sci., vol. 35, no. 2, pp. 9211–9219.
+ pp. 590–611, 2023. [42] T. Erlebach, M. Hoffmann, and F. Kammer, “On temporal graph explo-
+[18] M. Bahaghighat, M. Ghasemi, and F. Ozen, “A high-accuracy phishing ration,” J. Comput. Syst. Sci., vol. 119, pp. 1–18, 2021.
+ website detection method based on machine learning,” J. Inf. Secur. Appl., [43] H. Zhang, Y. Chen, X. Li, and X. Zhao, “Simplifying knowledge-aware
+ vol. 77, 2023, Art. no. 103553. aggregation for knowledge graph collaborative filtering,” in Proc. Int. Conf.
+[19] F. Çolhak, M. İ. Ecevit, B. E. Uçar, R. Creutzburg, and H. Dağ, “Phishing Web Inf. Syst. Appl., 2022, pp. 52–63.
+ website detection through multi-model analysis of HTML content,” in [44] Q. Le and T. Mikolov, “Distributed representations of sentences and
+ Proc. Int. Conf. Theor. Appl. Comput., Algorithms Intell. Syst.. Singapore: documents,” in Proc. Int. Conf. Mach. Learn., 2014, pp. 1188–1196.
+ Springer Nature, 2025, pp. 171–184, doi: 10.1007/978-981-97-6957-5_15. [45] V. Borisov, T. Leemann, K. Seßler, J. Haug, M. Pawelczyk, and G.
+[20] G. Varshney and N. Shah, “A DNS security policy for timely detection of Kasneci, “Deep neural networks and tabular data: A survey,” IEEE
+ malicious modification on webpages,” in Proc. 28th Int. Conf. Telecom- Trans. Neural Netw. Learn. Syst., vol. 35, no. 6, pp. 7499–7519, Jun.
+ mun., 2021, pp. 1–5. 2024.
+[21] X. Fan, J. Yang, W. Zhao, J. Deng, and F. Liu, “Webpage tampering [46] A. Pareja et al., “EvolveGCN: Evolving graph convolutional netdetection method based on BiGRU-CRF-RCNN,” in Proc. China Cyber works for dynamic graphs,” in Proc. AAAI Conf. Artif. Intell., 2020,
+ Secur. Annu. Conf., Springer Nature, Singapore, 2022, pp. 113–126. pp. 5363–5370.
+[22] J. Gao, M. Zhao, J. Wang, Y. Zhao, L. Ma, and P. Yu, “Webpage text [47] Y. Cen et al., “CogDL: A comprehensive library for graph deep learning,”
+ detection based on improved faster-RCNN model,” in Proc. Int. Conf. in Proc. ACM Web Conf., 2023, pp. 747–758.
+ Mach. Learn. Cyber Secur., 2022, pp. 54–66. [48] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+[23] H. Shen et al., “Tamper detection based on webpage change features,” in density-based local outliers,” in Proc. 2000 ACM SIGMOD Int. Conf.
+ Proc. 23rd Int. Conf. Adv. Commun. Technol. (ICACT), 2021, pp. 182–186. Manage. Data, 2000, pp. 93–104.
+[24] S. Wen, Z. Zhao, and H. Yan, “Detecting malicious websites in depth [49] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+ through analyzing topics and web-pages,” in Proc. 2nd Int. Conf. Cryptogr. Learn., 2018, pp. 4393–4402.
+ Secur. Privacy, 2018, pp. 128–133. [50] J. Pang, X. Pu, and C. Li, “A hybrid algorithm incorporating vector
+[25] I. L. Kim et al., “Finding client-side business flow tampering vulnerabili- quantization and one-class support vector machine for industrial anomaly
+ ties,” in Proc. ACM/IEEE 42nd Int. Conf. Softw. Eng., 2020, pp. 222–233. detection,” IEEE Trans. Ind. Informat., vol. 18, no. 12, pp. 8786–8796,
+[26] S. Fang, W. Ji, S. Xiang, and W. Hua, “PreSTNet: Pre-trained spatio- Dec. 2022.
+ temporal network for traffic forecasting,” Inf. Fusion, vol. 106, 2024, [51] W. Khan et al., “DVAEGMM: Dual variational autoencoder with Gaus-
+ Art. no. 102241. sian mixture model for anomaly detection on attributed networks,” IEEE
+[27] M. Zhong, Z. Long, X. Wang, T. Cheng, M. Fang, and L. Chen, “A Access, vol. 10, pp. 91160–91176, 2022.
+ unified multi-subgraph pre-training framework for spatio-temporal graph,” [52] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 8th IEEE
+ Knowl.-Based Syst., vol. 330, 2025, Art. no. 114428. Int. Conf. Data Mining, 2008, pp. 413–422.
+[28] Y. Yuan, J. Ding, J. Feng, D. Jin, and Y. Li, “A universal pre-training and
+ prompting framework for general urban spatio-temporal prediction,” IEEE
+ Trans. Knowl. Data Eng., vol. 37, no. 5, pp. 2212–2225, May 2025.
+[29] Z. Li, Z. Zhu, Q. Li, and X. Wu, “Graph pre-trained framework with
+ spatio-temporal importance masking and fine-grained optimizing for neu-
+ Yijia Xu received the PhD degree in 2024 from
+ ral decoding,” Pattern Recognit., vol. 170, 2025, Art. no. 112006. Sichuan University, Chengdu, China, where he is
+[30] L. V. Langendonck, I. Castell-Uroz, and P. Barlet-Ros, “PPT-GNN: A
+ currently an associate research fellow in the School
+ practical pretrained spatio-temporal graph neural network for network
+ of Cyber Science and Engineering. His current resecurity,” in Proc. 2025 IEEE Eur. Symp. Secur. Privacy Workshops search interests include cyber confrontation and web
+ (EuroS&PW), 2025, pp. 169–175.
+ security.
+[31] P. Jiao, X. Zhang, M. Gao, T. Li, and Z. Zhao, “Informative subgraphs
+ aware masked auto-encoder in dynamic graphs,” in Proc. 2024 IEEE Int.
+ Conf. Data Mining (ICDM), 2024, pp. 161–170.
+[32] D. Wang, M. Cheng, Z. Liu, and Q. Liu, “TimeDART: A diffusion
+ autoregressive transformer for self-supervised time series representation,”
+ in Proc. 42nd Int. Conf. Mach. Learn., PMLR, vol. 267, 2025, pp. 62627–
+ 62651.
+[33] Q. Zhao, W. Ren, T. Li, H. Liu, X. He, and X. Xu, “GraphGPT: Generative
+ pre-trained graph eulerian transformer,” in Proc. 42nd Int. Conf. Mach.
+ Learn., PMLR, vol. 267, 2025, pp. 77630–77656. Qiang Zhang received the bachelor’s degree in soft-
+[34] X. Luo and J. Wang, “Research on internet financial fraud identification ware engineering from Sichuan University, Chengdu,
+ based on data mining,” Front. Econ. Manage., vol. 3, no. 1, pp. 560–564, China, in 2018. He is currently working toward the
+ 2022. PhD degree in the School of Cyber Science and Engi-
+[35] trendmicro, “A deep dive into defacement: How geopolitical events neering with Sichuan University. His current research
+ trigger web attacks,” 2023. Retrieved Mar. 26, 2024. [Online]. interests include OS security, intrusion detection, and
+ Available: https://documents.trendmicro.com/assets/white_papers/wp-a- investigation.
+ deep-dive-into-defacement.pdf
+[36] A. Sgueglia, A. D. Sorbo, C. A. Visaggio, and G. Canfora, “A systematic
+ literature review of IoT time series anomaly detection solutions,” Future
+ Gener. Comput. Syst., vol. 134, pp. 170–186, 2022.
+XU et al.: WEB PAGE TAMPERING DETECTION BASED ON DYNAMIC TEMPORAL GRAPH PRE-TRAINING 2029
+
+ Kaiyang Wang received the Bachelor of Science Cheng Huang (Senior Member, IEEE) received
+ degree in 2021. He is currently working toward the the PhD degree from Sichuan University, Chengdu,
+ master’s degree in cyberspace security with Sichuan China, in 2017. From 2014 to 2015, he was a visiting
+ University in Chengdu, China. His current research student with the School of Computer Science, Uniinterests include artificial intelligence security, back- versity of California, CA, USA. He is currently an
+ door attacks, and graph neural networks. associate professor with the School of Cyber Science
+ and Engineering, Sichuan University. His current research interests include web security, attack detection,
+ and artificial intelligence.
+
+ Zhonglin Liu received the PhD degree from Sichuan Yong Fang received the PhD degree from Sichuan
+ University, Chengdu, China, in 2024. He is currently University, Chengdu, China, in 2010. He is currently
+ a full-time teacher with Sichuan University. His cur- a professor with the School of Cyber Science and
+ rent research interests include web security, machine Engineering, Sichuan University. His research interlearning, and attack detection. ests include network security, web security, Internet
+ of Things, Big Data, and artificial intelligence.

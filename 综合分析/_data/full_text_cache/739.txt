@@ -1,0 +1,482 @@
+3764 IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+ Memory Augment Is All You Need
+ for Image Restoration
+ Xiaofeng Zhang , Xuhang Chen , Chaochen Gu, Shanying Zhu, Kim-Fung Tsang ,
+ and Xinping Guan , Fellow, IEEE
+
+ Abstract—The quality of images captured by consumer elec- of degradation challenges in consumer imaging applications,
+tronic devices, such as smartphones and digital cameras, is often such as super-resolution for mobile photography, defogging
+compromised by adverse environmental conditions, leading to for automotive cameras, de-shadowing for outdoor surveildegradations like rain, shadows, blur, and low light. These issues
+significantly impact the user experience. This paper introduces lance, removal of rain artifacts from dashcam footage, and
+MemoryNet, a novel image restoration framework designed enhancement of low-light images captured by smartphone.
+to enhance the quality of images captured with consumer Image restoration is a fundamental yet inherently ill-posed
+devices. We also propose Degradation-Aware CLIP (DA-CLIP) inverse problem: a single degraded image can correspond
+for the perceptual classification of degraded images, a common to infinitely many plausible high-quality reconstructions, as
+challenge in consumer photography. MemoryNet utilizes a threegranularity memory layer and contrastive learning to effectively real-world degradation processes—such as motion blur, rain
+restore images. The memory layer retains deep image features, streaks, shadows, or low-light noise—irreversibly discard
+while contrastive learning ensures the alignment of learned visual information. In consumer electronics (e.g., smartphones,
+features for a balanced restoration. We have tested our model on dashcams, surveillance cameras), this ambiguity is further
+several challenging tasks, including de-raining, de-shadowing, de- amplified by the highly diverse and uncontrolled imaging
+blurring, and low-light enhancement. The results show significant
+improvements in PSNR and SSIM in four datasets, demonstrating conditions under which images are captured. Unlike controlled
+that MemoryNet can produce restored images with high percep- laboratory settings, consumer devices must handle arbitrary
+tual authenticity, making it a promising solution to improve the combinations of degradations without access to ground-truth
+imaging capabilities of consumer electronics. The code can be degradation models or auxiliary inputs (e.g., shadow masks),
+accessed in https://github.com/zhangbaijin/MemoryNet making restoration both technically challenging and practically
+ Index Terms—Image restoration, memory augmentation, critical for user experience.
+degradation-aware CLIP. To regularize this ill-posed problem, image priors are
+ essential to guide the solution toward perceptually plausible
+ I. I NTRODUCTION and structurally coherent results. Classical priors—such as
+ sparsity or total variation—often fail to generalize across
+I MAGE restoration pertains to a fundamental vision task
+ focused on enhancing degraded images captured by consumer electronic devices. In the era of ubiquitous consumer
+ real-world scenes and device-specific artifacts. While modern
+ deep learning approaches have made significant progress by
+electronics, smartphones, digital cameras, dashcams, and learning implicit priors from large-scale data, most existing
+surveillance systems have become integral to daily life. How- methods focus narrowly on architectural innovation (e.g.,
+ever, images captured by these devices often suffer from attention mechanisms, transformers, or Generative Adversarial
+various degradations, including noise, blur, low light condi- Networks (GANs) [1], [2]. Crucially, they overlook a key
+tions, and weather-related artifacts, significantly affecting the insight from human vision: the ability to restore corrupted
+user experience and device functionality. The rapid progress perception often relies on memory of typical structures and
+in computer vision has enabled addressing an expanding array patterns—such as the expected shape of a car, the texture
+ of pavement, or the lighting consistency of a scene. This
+ Received 10 December 2025; accepted 15 January 2026. Date of publication structural memory enables robust inference even under severe
+19 January 2026; date of current version 2 June 2026. This work was
+supported in part by the National Natural Science Foundation under Grant
+ degradation, yet it remains underexplored in current consumer-
+62273235; in part by the National Major Scientific Research Instrument oriented restoration frameworks.
+Development Project under Grant 62227811; in part by the Joint Fund of the Moreover, practical deployment in consumer electronics
+Ministry of Education under Grant 8091B022101; and in part by the Deep
+Blue Program Fund Project, Second Institute of Oceanography, Ministry of
+ imposes stringent constraints: algorithms must be lightweight,
+Natural Resources. (Corresponding author: Chaochen Gu.) fast, and mask-free, while still delivering high perceptual
+ Xiaofeng Zhang, Chaochen Gu, Shanying Zhu, and Xinping Guan are quality. Unfortunately, many state-of-the-art methods either
+with the Center for Intelligent Wireless Network and Collaborative Control, Shanghai Jiao Tong University, Shanghai 200240, China (e-mail:
+ require auxiliary inputs (e.g., shadow masks [1], [3]), rely on
+framebreak@sjtu.edu.cn; jacygu@sjtu.com; shyzhu@sjtu.com). heavy generative models unsuitable for on-device inference,
+ Xuhang Chen and Kim-Fung Tsang are with Shenzhen Institutes of or fail to leverage semantic guidance in a degradation-aware
+Advanced Technology, Chinese Academy of Sciences, Shenzhen 518055,
+China (e-mail: xx.chen2@siat.ac.cn; kftsang@ieee.org).
+ manner. Meanwhile, recent advances in vision-language mod-
+ Digital Object Identifier 10.1109/TCE.2026.3655769 els (e.g., Contrastive Language-Image Pre-training (CLIP))
+ 1558-4127 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+ZHANG et al.: MEMORY AUGMENT IS ALL YOU NEED FOR IMAGE RESTORATION 3765
+
+offer powerful semantic priors but are ill-suited for low- accentuating normal frames while magnifying reconstruction
+level restoration tasks due to their insensitivity to fine-grained errors in anomalous frames. Park et al. [5] advances the Auto
+structural details and their assumption of clean inputs. Encoder with information on normal frames to enhance the
+ To address these gaps, we propose MemoryNet, a novel distinction between normal and abnormal frames in video
+image restoration framework that explicitly integrates hier- anomaly detection. For de-raining tasks, MMOS [6] integrates
+archical structural memory with degradation-aware semantic an intermediate Memory module to model and store diverse
+guidance—tailored for real-world consumer electronics. Our rain patterns, assisting in the rain removal process.
+approach is motivated by two key observations: (1) Memoryaugmented representation enables the model to recall and B. Vision-Language Models
+reconstruct prototypical patterns at multiple granularities (part,
+ Recent research underscores the promising potential of
+instance, and semantic levels), thereby constraining the soluusing pre-trained Vision-Language Models (VLMs) to improve
+tion space toward structurally consistent outputs without
+ subsequent tasks by leveraging universal visual and text reprequiring masks or paired degradation labels; (2) Pre-trained
+ resentations [7], [8], [9]. Typically, a VLM consists of a text
+vision-language models can be adapted for low-level tasks if
+ encoder and an image encoder, which work to obtain aligned
+made aware of input degradation, allowing them to provide
+ multimodal features from noisy image-text pairs through conmeaningful perceptual supervision even when the input is
+ trastive learning. The BLIP approach refines this by filtering
+severely corrupted.
+ out noisy data from the web using generated captions. While
+ Accordingly, we introduce two core components: (i) a
+ VLMs excel in zero-shot and label-free classification for
+three-granularity memory augmentation module that encodes
+ downstream tasks, their success in image restoration has been
+learnable structural prototypes to enhance restoration fidelity
+ limited due to the necessity for precise, specialized vocabulary.
+and generalization; and (ii) a Degradation-Aware CLIP
+ A novel technique for refining vision-language models is
+(DA-CLIP) that repurposes CLIP’s semantic knowledge for
+ known as prompt learning [10], where words within the
+perceptual classification and guidance under degradation.
+ prompt context are represented by learnable vectors which are
+ MemoryNet is designed to be lightweight, mask-free,
+ then optimized for the specific task. The degradation-aware
+and end-to-end trainable, making it suitable for realvisual language model DA-CLIP [11] incorporates an Image
+time deployment on consumer devices. It achieves strong
+ Controller to predict degradation types and uses a CLIP Image
+performance across four representative tasks—shadow
+ Encoder module to extract high-quality content embeddings,
+removal, raindrop cleaning, motion deblurring, and low-light
+ integrating DA-CLIP with a reconstruction network. For the
+enhancement—demonstrating that memory is indeed “all you
+ training of DA-CLIP, a hybrid dataset featuring 10 types of
+need” to bridge the gap between real-world degradation and
+ degradation is constructed.
+perceptually authentic restoration.
+ The key contributions of this paper are as follows:
+ III. N ETWORK S TRUCTURE
+ 1) We developed an innovative memory augmentation mod-
+ The MemoryNet architecture is depicted in Fig. 1. This
+ ule that models a learnable latent property variable
+ paper presents the Degradation-aware CLIP (DA-CLIP) [11],
+ to capture globally representative structural prototype
+ designed for low-level visual applications, offering a uniform
+ patterns, optimized for efficient execution on consumer
+ approach to image restoration. DA-CLIP creatively incorpodevice processors.
+ rates an extra controller to alter the standard CLIP image
+ 2) We proposed a degradation-aware visual language model
+ encoder, which aids in forecasting enhanced feature embed-
+ (DA-CLIP) to effectively adapt the pre-trained visual
+ dings. This process allows for the development of adaptive
+ language model for low-level visual tasks in consumer
+ classifiers tailored to diverse degradation scenarios such as
+ electronics, serving as a comprehensive framework for
+ blur, dim lighting, shadows, and rain.
+ image restoration in smartphones, cameras, and other
+ consumer imaging devices.
+ 3) We conducted extensive experiments across four com- A. Memory Augmentation
+ mon image restoration tasks relevant to consumer 1) How to Detect Abnormal Area?: Blur is categorized as
+ electronics: synthetic image de-shadowing for outdoor a type of irregular pattern. To distinguish and convert it into
+ photography, real image deraining for dashcam appli- a normal pattern, we employ a mixture of abnormal deteccations, image deblurring for handheld camera shake tion and a completion proxy. This method aligns well with
+ correction, and image low-light enhancement for smart- the transformer framework. Within this framework, shadow
+ phone night photography. images are treated as abnormal, whereas clean images are
+ deemed normal.
+ II. R ELATED W ORK Our anomaly detection model adopts the conventional
+ Encoder-Decoder architecture. Within this framework,
+A. The Development of Memory Modules pristine images are processed by a memory-augmented
+ He et al. [4] pioneered the use of a memory module for encoder/decoder to capture standard patterns. This technique
+anomaly detection, conceptualizing the Encoder as a means to draws on the approach described in [12]. It is not necessary
+generate queries. The Decoder employs fresh feature maps to alter the fundamental encoder/decoder of your existing
+from the Memory module to reconstruct images, thereby system. Just integrate memory and guidance into it. Once the
+3766 IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+Fig. 1. Overview of the proposed MemoryNet framework. (a) The degradation-aware CLIP module identifies image degradation types through text-guided
+classification. (b) The core MemoryNet architecture features hierarchical memory augmentation and contrastive learning mechanisms for image restoration.
+
+ enables the capture of typical frame attributes and decreases
+ the CNN’s capacity to characterize them, thereby improving the differentiation between normal and abnormal frames.
+ Furthermore, in our research, we have redesigned the interpretability of probabilities processed in the final CNN layer for
+ classification-based ranking retrieval. We have also introduced
+ a hierarchical memory adjustment and alignment module to
+ mitigate domain bias.
+ The memory module consists of N prototypes, depicted
+ by a matrix M ∈ RN×C , where C refers to the constant
+ feature dimension. The parameter N, representing the number of memory items, can be adjusted. Addressing memory
+ involves determining how relevant each query is to all memory
+ items, which is then followed by the use of an attentionbased addressing mechanism. This mechanism, known as the
+ memory reader, serves to assign each image to a suitable
+ prototype:
+Fig. 2. Detailed illustration of the memory augmentation component.
+ exp d fi , m j
+ 
+Input features are processed through an encoder yielding tensors of shape
+(bs, 256, W, H), subsequently transformed to (bs, W, H, 256) format. The
+ wi j = PN  ,
+memory mechanism employs a learnable matrix T M ((M, C) dimensions) to j=1 exp d fi , m j
+compute attention weights through matrix multiplication. A hard threshold fi m>j
+ d fi , m j = ,
+ 
+of 0.0025 is applied followed by normalization to generate the final output (1)
+features. kfi k m j
+ where fi and m j are the feature and prototype slice prototype
+ matrix M from input f . wi j is the normalized weight to meaanomaly detection training phase is completed, the encoder sure the cosine similarity d(·, ·) between fi and m j . Therefore,
+and decoder can reconstruct images, with the memory the assigned prototype from feature f can be calculated h as:
+preserving normal patterns. Nevertheless, if a blurred image
+ H×W N
+is input, the model fails to restore it to its original clarity. XX
+ y = Memory(f, M) = wi j m j . (2)
+ 2) Memory Module: The configuration of Memory augi=1 j=1
+mentation is depicted in Fig. 2. When abnormal frames are
+processed by the CNN model, its high capacity can lead to Let fi ∈ RC denote the i-th spatial feature vector
+low reconstruction errors and subsequently, incorrect results. extracted from the input feature map f ∈ RH×W×C , and let
+To address this challenge, we have embedded a Memory m j ∈ RC denote the j-th prototype in the memory matrix
+Module in both the Encoder and Decoder. This inclusion M = [m1 , . . ., mN ]> ∈ RN×C . The attention weight wi j is
+ZHANG et al.: MEMORY AUGMENT IS ALL YOU NEED FOR IMAGE RESTORATION 3767
+
+computed as the normalized cosine similarity between fi and B. Loss Function Design
+m j: The overall loss function L is a weighted sum of three
+ components:
+ exp d(fi , m j )
+ 
+ fi> m j
+ wi j = P N , d(fi , m j ) = . (3) 3
+ k=1 exp d(fi , mk )
+ kfi k km j k X
+ L= Lchar (X s , Y) + λLedge (X s , Y) + Lrecon ,
+  
+ (9)
+ s=1
+The memory-augmented output feature map y ∈ RH×W×C is
+then obtained by aggregating the prototypes according to the where X s denotes the output at scale s, and Y is the groundattention weights: truth image. The term Lchar is the Charbonnier loss, which
+ provides robust pixel-wise supervision. The term Ledge is
+ H×W
+ XX N an edge loss that preserves high-frequency structural details.
+ y = Memory(f, M) = wi j m j . (4) Finally, Lrecon is the LMSE reconstruction constraint that
+ i=1 j=1 ensures the memory module learns representative patterns.
+ q
+ The Memory Augmentation (MA) module is designed to Lchar = kXS − Yk2 + ε2 , (10)
+capture hierarchical semantics through three granularities: part,
+instance, and semantic levels. The full memory matrix M has with the constant ε empirically set to 10−3 for all experiments.
+the structure 2 × (P × I × S × Nc ) × C, where P, I, and In addition, Ledge is the edge loss, defined as:
+S denote the number of prototypes at the part, instance, and q
+semantic levels, respectively, and Nc is the number of semantic Ledge = k∆ (XS ) − ∆(Y)k2 + ε2 (11)
+categories. Each higher-level prototype is constructed as a
+weighted aggregation of lower-level prototypes. Specifically, IV. E XPERIMENT
+the i-th instance-level prototype mins,i ∈ RC is defined as:
+ A. Implementation Details
+ (PSN
+ Xc )i MemoryNet is a fully trainable model from scratch, elimi-
+ 1
+ mins,i = α mpart, j , (5) nating the need for pre-training. It was developed with PyTorch
+ PS Nc 1.8.0 and an NVIDIA GTX 3090 GPU. Our evaluation
+ j=(PSNc )(i−1)+1
+ in this study utilized metrics such as PSNR, SSIM, and
+where α is a learnable scalar weight (or can be absorbed into RMSE.This study employs the ISTD dataset as referenced
+the prototype learning process). in [1], DeRainDrop dataset [28], LOL-v2 dataset [29] and
+ The hierarchical memory readout is performed sequentially: GoPro dataset [30] for deblurring images. For optimization
+ of our network, we utilize the Adam optimizer with β1 = 0.9
+ ypart = Memory(f, Mpart ), and β2 = 0.999. Learning Rate: An initial learning rate of
+ yins = Memory(hpart , Mins ), 2×10−4 was used, which was gradually reduced using a cosine
+ ysem = Memory(hins , Msem ), (6) annealing scheduler over the training process. Batch Size: 16
+ for all experiments. Epochs: Training was conducted for 300
+where hpart and hins denote intermediate feature representations epochs on each dataset, with early stopping based on validation
+passed from the previous stage. performance.
+ During the encoding phase, the memory-augmented features
+are fused with shallow features from the decoder via skip B. Comparison With State-of-the-Art Methods
+connections. The inputs to the three encoder stages are given
+ 1) Shadow Removal: Our approach is evaluated against a
+by:
+ range of existing methods, such as Yang [13], Guo [14], Gong
+ [15], DeShadowNet [16], STC-GAN [1], DSC [18], Mask-
+ Enc1input = ypart ,
+ ShadowGAN [23], RIS-GAN [19], DHAN [20], SID [17],
+ Enc2input = yins + SFeDec1 , LG-shadow [24], G2R [22], DC-ShadowNet [53], Auto-exp
+ Enc3input = ysem + SFeDec2 , (7) [21], SpA-Former [25], Shadow-Refiner [26], ShadowFormer
+ [3] and Diff-Shadow [27]. For assessment, we use the root
+where SFeDeck denotes the shallow feature embedding from mean square error (RMSE), structural similarity index (SSIM),
+the k-th decoder block. and Peak Signal-to-Noise Ratio (PSNR) in the LAB color
+ To ensure faithful reconstruction of normal patterns and space. Table I details the RMSE, SSIM, and PSNR outcomes
+effective suppression of anomalies, we impose a reconstruction for these shadow removal techniques on the ISTD dataset
+constraint: [1]. The comprehensive evaluation is depicted in Fig. 3.
+ MemoryNet excels in PSNR across partially, non-partially
+ Lrecon = Mem Dec(Enc(Y)) − Y 2 ,
+ 
+ (8) shaded, and unshaded regions. In unshaded areas, our RMSE
+ also sets a new standard, outperforming the state-of-the-art
+where Y is the ground-truth clean image, and Enc(·), Dec(·), generally. SID [17] and G2R [22] sometimes inaccurately
+and Mem(·) denote the encoder, decoder, and memory readout assess dark non-shaded areas, leading to estimation errors.
+operations, respectively. Their models do not fully leverage the shadow mask data,
+3768 IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+Fig. 3. Qualitative results demonstrating shadow removal performance on the ISTD benchmark dataset.
+
+ TABLE I
+ Q UANTITATIVE E VALUATION OF S HADOW R EMOVAL M ETHODS ON THE ISTD B ENCHMARK
+
+Fig. 4. Comparative visualization of raindrop removal results on the Raindrop benchmark.
+
+despite its inclusion in their network inputs. Although Auto- on the DeRainDrop testB and testA datasets. Our approach is
+exp [21] and G2R [22] effectively employ triplet datasets evaluated against existing techniques, such as CMFNet [55],
+(input, mask, target) based on evaluative metrics, the need D-DAM [31], BPP [32], Maxim [34], IDT [35] and Rainfor shadow mask acquisition in real-world application settings dropClarity [36]. On the test-b set, our MemoryNet attained
+is questionable. Our training only needs data pairs, while the top SSIM score of 0.84 and the second-highest PSNR
+testing requires just a basic shadow image, offering signifi- of 25.38 dB. In comparison, it achieved the highest SSIM
+cant practical benefits. DSC [54], and SpA-Former [25] may score of 0.904 and the best PSNR of 24.64 dB on test-a.
+incorrectly handle relatively dark non-shaded regions bringing The visualization results for the DeRainDrop test-b image are
+some misestimation. It turns out that their model fails to take illustrated in the figure. These findings indicate the superior
+full advantage of the shadow mask information, even if their effectiveness of our method in eliminating raindrops. The
+network input contains a shadow mask. images produced by our technique more closely resemble
+ 2) Rain Removal: As presented in Table II and Fig. 4, we the actual images than those produced by other models.
+outline the PSNR/SSIM performance scores for rain removal Additionally, we carried out rain removal experiments using
+ZHANG et al.: MEMORY AUGMENT IS ALL YOU NEED FOR IMAGE RESTORATION 3769
+
+Fig. 5. Qualitative comparison of motion deblurring performance on the GOPRO test set.
+
+Fig. 6. Visual results comparing low-light enhancement performance using the LOL-v2 benchmark.
+
+ TABLE IV
+ TABLE II L OW-L IGHT E NHANCEMENT P ERFORMANCE C OMPARISON
+ Q UANTITATIVE R ESULTS FOR R AINDROP R EMOVAL ON THE LOL DATASET
+ ON R AINDROP DATASET
+
+ TABLE III
+ M OTION D EBLURRING P ERFORMANCE M ETRICS 3) Image Deblurring: Within Table III and Fig. 5, we
+ ON THE GOPRO T EST S ET present the PSNR/SSIM results for various methods applied to
+ the deblurring task. Our analysis includes a comparison with
+ numerous leading algorithms such as Gao [37], DBGAN [38],
+ MT-RNN [39], MPRNet [33], DGUNet [41], MADANet [42],
+ SFNet and DeblurDiff [43]. The results of the quantitative
+ assessment are displayed in Table III. Despite MemoryNet
+ not achieving the top scores, its performance remains commendable, illustrating its ability to handle image degradation
+ effectively. DGUNet achieved superior performance metrics,
+ which can be credited to its novel gradient strategy integrated
+ into the proximal gradient descent (PGD) algorithm. This
+ enables the model to address complex, real-world image degradation scenarios, thus enhancing its suitability for practical
+MMOS [6], a rain removal network that also incorporates use.
+a memory module. Nonetheless, MMOS yielded unrealistic 4) Low-Light Image Enhancement: We compare our
+results, proving ineffective on actual rain removal datasets. approach against KinD [29], Zero-DCE [44], SCI [46], Pair-
+We believe this may be due to the unsuccessful integration of Lie [47], GenerativePrior [48], NeRCO [49], CLIP-LIE [50],
+noisy data with pseudo-labels generated by the target network LPDM [51] and Lighten-Diffusion [52]. The results of these
+during real data processing. comparisons are displayed in Fig. 6 and Table IV. KinD [29]
+3770 IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+Fig. 7. Feature map visualizations comparing network activations: (a) baseline model without memory augmentation, (b) enhanced representations with
+memory augmentation applied.
+
+ TABLE V
+ C OMPONENT A NALYSIS E VALUATING THE C ONTRIBUTION OF M EMORY
+ AUGMENTATION AND C ONTRASTIVE L EARNING
+ ON THE ISTD B ENCHMARK
+
+ and contrastive learning techniques introduced in this study,
+ we carried out ablation analyses on the ISTD datasets. These
+ analyses are illustrated in Figs. 7 and 8, and Table V. Since
+ each Memory item calculates cosine similarity with all queries,
+ we explored different configurations of our Memory layer,
+Fig. 8. Comparative feature visualizations from the initial layer: left shows
+raw features before processing, right displays enhanced features after memory including three-branch, two-branch, and single-branch models.
+augmentation. The findings, as detailed in Table V, reveal that Memory
+ augmentation is especially effective within a three-stage recovery network. Additionally, to clarify the influence of Memory
+enhances image details and contrast by decomposing images augmentation, we visualized features within a compact netinto illumination and reflection, effectively managing issues work using a car image, as shown in Fig. 7. The comparative
+like overexposure and color distortion. However, this technique visualization indicates that the feature map with Memory augmay not be ideal for images with highly uneven lighting mentation is more consistent with the network’s propagation,
+conditions. Zero-DCE [44] employs a deep learning approach unlike the original feature map without augmentation, which
+without a reference, adjusting well to diverse lighting, although diverges from the source image. The Memory augmentation
+it might result in unnatural color changes, compromising the network adeptly highlights the prominent features of the
+image’s natural appearance. SCI [46] introduces an innova- image, as demonstrated by the more distinct heatmap in the car
+tive strategy for enhancing low-light images, offering rapid image, confirming the successful identification of key features.
+processing speed and adaptability. Despite impressive flex-
+ 2) Quantitative Comparisons on Contrastive Learning:
+ibility and speed, maintaining the image’s naturalness and
+ Our study investigates contrastive learning as a substitute for
+detail in low-light situations can be challenging. PairLie [47],
+ generative learning. Unlike generative learning, contrastive
+LPDM [51] and Lighten-Diffusion [52] offer a technique for
+ learning emphasizes distinguishing differences between data
+boosting low-light images by comparing them to their normalon a conceptual level without examining the specific details
+light counterparts. The approach processes image pairs, which
+ of each example. This approach simplifies the model and
+confines its usefulness to instances where a reference image
+ optimization process, while also enhancing generalizability.
+is unavailable. Nonetheless, the method detailed in the paper
+ We apply contrastive learning following the residual network,
+yields acceptable outcomes concerning color and exposure,
+ effectively converting it into a discriminator. This technique
+among other factors.
+ aids in crafting an encoder capable of producing similar
+ representations for data in the same category, while amplifying
+C. Ablation Study on MemoryNet the differences between representations of data from different
+ 1) Quantitative Comparisons on Memory Augmentation: categories. The outcomes of our research indicate that applying
+In order to evaluate the efficacy of the Memory augmentation contrastive learning significantly enhances certain tasks, such
+ZHANG et al.: MEMORY AUGMENT IS ALL YOU NEED FOR IMAGE RESTORATION 3771
+
+as de-shadowing. Notably, integrating a memory network with [17] H. Le and D. Samaras, “Shadow removal via shadow image
+contrastive learning led to substantial improvements in metrics, decomposition,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+ Oct. 2019, pp. 8578–8587.
+with PSNR increasing by 1 point to 33.44, SSIM rising to [18] X. Hu, C.-W. Fu, L. Zhu, J. Qin, and P.-A. Heng, “Direction-aware
+0.986, and RMSE decreasing to 6.03, as detailed in Table V. spatial context features for shadow detection and removal,” IEEE Trans.
+ Pattern Anal. Mach. Intell., vol. 42, no. 11, pp. 2795–2808, Nov. 2020.
+ [19] L. Zhang, C. Long, X. Zhang, and C. Xiao, “RIS-GAN: Explore resid-
+ V. C ONCLUSION ual and illumination with generative adversarial networks for shadow
+ This paper presents MemoryNet, a system that includes removal,” in Proc. AAAI, 2020, pp. 12829–12836.
+ [20] X. Cun, C.-M. Pun, and C. Shi, “Towards ghost-free shadow removal
+two key components: DA-CLIP and MemoryNet. DA-CLIP via dual hierarchical aggregation network and shadow matting GAN,”
+is tailored for perceptual classification of images with degra- in Proc. AAAI Conf. Artif. Intell., 2020, pp. 10680–10687.
+dation, and MemoryNet features a tri-level memory layer and [21] L. Fu et al., “Auto-exposure fusion for single-image shadow removal,”
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+contrastive learning. Our tests across four different settings 2021, pp. 10571–10580.
+show the effectiveness of these approaches in improving image [22] Z. Liu, H. Yin, X. Wu, Z. Wu, Y. Mi, and S. Wang, “From shadow
+restoration outcomes. Additionally, the model put forth in this generation to shadow removal,” in Proc. IEEE/CVF Conf. Comput. Vis.
+work exhibits significant improvements in both PSNR and Pattern Recognit. (CVPR), Jun. 2021, pp. 4925–4934.
+ [23] X. Hu, Y. Jiang, C. Fu, and P. Heng, “Mask-ShadowGAN: Learning
+SSIM metrics across three datasets with different degradation to remove shadows from unpaired data,” in Proc. IEEE/CVF Int. Conf.
+types, highlighting its capability to generate perceptually accu- Comput. Vis. (ICCV), Oct. 2019, pp. 2472–2481.
+rate restored images. [24] Z. Liu, H. Yin, Y. Mi, M. Pu, and S. Wang, “Shadow removal by a
+ lightness-guided network with training on unpaired data,” IEEE Trans.
+ Image Process., vol. 30, pp. 1853–1865, 2021.
+ R EFERENCES [25] X. Zhang, Y. Zhao, C. Gu, C. Lu, and S. Zhu, “SpA-former: An effective
+ and lightweight transformer for image shadow removal,” in Proc. Int.
+[1] J. Wang, X. Li, and J. Yang, “Stacked conditional generative adversarial
+ Joint Conf. Neural Netw. (IJCNN), Jun. 2023, pp. 1–8.
+ networks for jointly learning shadow detection and shadow removal,”
+ [26] W. Dong et al., “ShadowRefiner: Towards mask-free shadow removal
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2018,
+ via fast Fourier transformer,” 2024, arXiv:2406.02559.
+ pp. 1788–1797.
+[2] H. Zhang, V. Sindagi, and V. M. Patel, “Image de-raining using a [27] C. Li, B. Yang, Z. Wu, G. Chen, Y. Yu, and S. Zhou, “Shadow removal
+ conditional generative adversarial network,” IEEE Trans. Circuits Syst. based on diffusion, segmentation and super-resolution models,” in Proc.
+ Video Technol., vol. 30, no. 11, pp. 3943–3956, Nov. 2020. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops (CVPRW),
+[3] L. Guo, S. Huang, D. Liu, H. Cheng, and B. Wen, “ShadowFormer: Jun. 2024, pp. 6045–6054.
+ Global context helps shadow removal,” in Proc. AAAI, 2023, vol. 37, [28] R. Qian, R. T. Tan, W. Yang, J. Su, and J. Liu, “Attentive generative
+ no. 1, pp. 710–718. adversarial network for raindrop removal from a single image,” in
+[4] T. He, D. Gong, Z. Tian, and C. Shen, “Learning and memorizing Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2018,
+ representative prototypes for 3D point cloud semantic and instance pp. 2482–2491.
+ segmentation,” in Proc. ECCV, 2020, pp. 564–580. [29] Y. Zhang, J. Zhang, and X. Guo, “Kindling the darkness: A practical
+[5] H. Park, J. Noh, and B. Ham, “Learning memory-guided normality low-light image enhancer,” in Proc. 27th ACM Int. Conf. Multimedia
+ for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern (ACM MM), Oct. 2019, pp. 1632–1640.
+ Recognit. (CVPR), Jun. 2020, pp. 14372–14381. [30] S. Nah, T. H. Kim, and K. M. Lee, “Deep multi-scale convolutional
+[6] H. Huang, A. Yu, and R. He, “Memory oriented transfer learning for neural network for dynamic scene deblurring,” in Proc. IEEE Conf.
+ semi-supervised image deraining,” in Proc. IEEE/CVF Conf. Comput. Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017, pp. 3883–3891.
+ Vis. Pattern Recognit. (CVPR), Jun. 2021, pp. 7732–7741. [31] K. Zhang, D. Li, W. Luo, and W. Ren, “Dual attention-in-attention model
+[7] A. Radford et al., “Learning transferable visual models from natural for joint rain streak and raindrop removal,” IEEE Trans. Image Process.,
+ language supervision,” in Proc. Int. Conf. Mach. Learn., vol. 139, 2021, vol. 30, pp. 7608–7619, 2021.
+ pp. 8748–8763. [32] P. N. Michelini et al., “Back–projection pipeline,” in Proc. ICIP, 2021,
+[8] C. Jia et al., “Scaling up visual and vision-language representation pp. 1949–1953.
+ learning with noisy text supervision,” in Proc. 38th Int. Conf. Mach. [33] S. W. Zamir et al., “Multi-stage progressive image restoration,”
+ Learn., vol. 139, M. Meila and T. Zhang, Eds., Jul. 2021, pp. 4904–4916 in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2021,
+ https://v139/jia21b.html pp. 14821–14831.
+[9] J. Li, D. Li, C. Xiong, and S. Hoi, “Blip: Bootstrapping language-image [34] Z. Tu et al., “MAXIM: Multi-axis MLP for image processing,” in Proc.
+ pretraining for unified vision-language understanding and generation,” IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+ in Proc. ICML, 2022, pp. 12888–12900. pp. 5769–5780.
+[10] K. Zhou, J. Yang, C. C. Loy, and Z. Liu, “Learning to prompt for vision [35] J. Xiao, X. Fu, A. Liu, F. Wu, and Z.-J. Zha, “Image de-raining
+ language models,” IJCV, vol. 130, no. 9, pp. 2337–2348, 2022. transformer,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 11,
+[11] Z. Luo, F. K. Gustafsson, Z. Zhao, J. Sjölund, and T. B. Schön, pp. 12978–12995, Nov. 2023.
+ “Controlling vision-language models for universal image restoration,” [36] Y. Jin, X. Li, J. Wang, Y. Zhang, and M. Zhang, “Raindrop clarity:
+ 2023, arXiv:2310.01018. A dual-focused dataset for day and night raindrop removal,” in Proc.
+[12] D. Gong et al., “Memorizing normality to detect anomaly: Memory- ECCV. Cham, Switzerland: Springer, 2024, pp. 1–17.
+ augmented deep autoencoder for unsupervised anomaly detection,”
+ [37] H. Gao, X. Tao, X. Shen, and J. Jia, “Dynamic scene deblurring
+ in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019,
+ with parameter selective sharing and nested skip connections,” in Proc.
+ pp. 1705–1714.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019,
+[13] Q. Yang, K.-H. Tan, and N. Ahuja, “Shadow removal using bilateral
+ pp. 3848–3856.
+ filtering,” IEEE Trans. Image Process., vol. 21, no. 10, pp. 4361–4368,
+ [38] K. Zhang et al., “Deblurring by realistic blurring,” in Proc.
+ Oct. 2012.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020,
+[14] R. Guo, Q. Dai, and D. Hoiem, “Paired regions for shadow detection
+ pp. 2734–2743.
+ and removal,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 35, no. 12,
+ pp. 2956–2967, Dec. 2013. [39] D. Park, D. U. Kang, J. Kim, and S. Y. Chun, “Multi-temporal recurrent
+[15] H. Gong and D. Cosker, “Interactive shadow removal and ground truth neural networks for progressive non-uniform single image deblurring
+ for variable scene categories,” in Proc. Brit. Mach. Vis. Conf. (BMVC), with incremental temporal training,” in Proc. Eur. Conf. Comput. Vis.
+ 2014, pp. 1–11. Cham, Switzerland: Springer, 2020, pp. 327–343.
+[16] L. Qu, J. Tian, S. He, Y. Tang, and R. W. H. Lau, “DeshadowNet: [40] S. W. Zamir, A. Arora, S. Khan, M. Hayat, F. S. Khan, and M.-H. Yang,
+ A multi-context embedding deep network for shadow removal,” in “Restormer: Efficient transformer for high-resolution image restoration,”
+ Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017, in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+ pp. 4067–4075. 2022, pp. 5728–5739.
+3772 IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+[41] C. Mou, Q. Wang, and J. Zhang, “Deep generalized unfolding networks [48] B. Fei et al., “Generative diffusion prior for unified image restoration and
+ for image restoration,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern enhancement,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+ Recognit., 2022, pp. 17399–17410. Jun. 2023, pp. 9935–9946.
+[42] D. Yang and M. Yamac, “Motion aware double attention net- [49] S. Yang, M. Ding, Y. Wu, Z. Li, and J. Zhang, “Implicit neural
+ work for dynamic scene deblurring,” in Proc. IEEE/CVF Conf. representation for cooperative low-light image enhancement,” in Proc.
+ Comput. Vis. Pattern Recognit. Workshops (CVPRW), Jun. 2022, IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2023, pp. 12918–12927.
+ pp. 1112–1122. [50] Z. Liang, C. Li, S. Zhou, R. Feng, and C. C. Loy, “Iterative prompt
+[43] L. Kong et al., “DeblurDiff: Real-world image deblurring with generative learning for unsupervised backlit image enhancement,” in Proc. IEEE
+ diffusion models,” 2025, arXiv:2502.03810. Int. Conf. Comput. Vis., 2023, pp. 8094–8103.
+[44] C. Guo et al., “Zero-reference deep curve estimation for low-light image [51] S. Panagiotou and A. S. Bosman, “Denoising diffusion post-processing
+ enhancement,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., for low-light image enhancement,” Pattern Recognit., vol. 156, Dec.
+ 2020, pp. 1780–1789. 2024, Art. no. 110799.
+[45] R. Liu, L. Ma, J. Zhang, X. Fan, and Z. Luo, “Retinex-inspired [52] H. Jiang, A. Luo, X. Liu, S. Han, and S. Liu, “LightenDiffusion:
+ unrolling with cooperative prior architecture search for low-light image Unsupervised low-light image enhancement with latent-retinex diffusion
+ enhancement,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. models,” in Proc. ECCV, 2024.
+ (CVPR), Jun. 2021, pp. 10561–10570. [53] Y. Jin, A. Sharma, and R. T. Tan, “DC-ShadowNet: Single-image hard
+[46] L. Ma, T. Ma, R. Liu, X. Fan, and Z. Luo, “Toward fast, and soft shadow removal using unsupervised domain-classifier guided
+ flexible, and robust low-light image enhancement,” in Proc. network,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021,
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 5027–5036.
+ pp. 5637–5646. [54] P. Perona and J. Malik, “Scale-space and edge detection using
+[47] Z. Fu, Y. Yang, X. Tu, Y. Huang, X. Ding, and K.-K. Ma, “Learning anisotropic diffusion,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 12,
+ a simple low-light image enhancer from paired low-light instances,” no. 7, pp. 629–639, Jul. 1990.
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2023, [55] C.-M. Fan, T.-J. Liu, and K.-H. Liu, “Compound multi-branch feature
+ pp. 22252–22261. fusion for real image restoration,” 2022, arXiv:2206.02748.

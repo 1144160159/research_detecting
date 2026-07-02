@@ -1,0 +1,1325 @@
+This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 1
+
+ Accurate and Scalable Detection and Investigation
+ of Cyber Persistence Threats
+ Qi Liu, Muhammad Shoaib, Mati Ur Rehman, Kaibin Bao, Veit Hagenmeyer, Wajih Ul Hassan
+
+ Abstract—In Advanced Persistent Threat (APT) attacks, remote connections. Notably, persistence techniques were a
+achieving stealthy persistence within target systems is often cru- key feature in nearly 75% of cyberattacks in 2022 [2].
+cial for an attacker’s success. This persistence allows adversaries For instance, the Sandworm APT group used webshell perto maintain prolonged access, often evading detection mechanisms. Recognizing its pivotal role in the APT lifecycle, this paper sistence in multistage attacks [3]–[5]. The SolarWinds attack
+introduces Cyber Persistence Detector (CPD), a novel system shows how persistence is crucial in APT campaigns, using
+dedicated to detecting cyber persistence through provenance scheduled tasks for this purpose [1], [6]–[8]. APT attackers
+analytics. CPD is founded on the insight that persistent operations often use a “low and slow” strategy, breaking their actions
+typically manifest in two phases: the “persistence setup” and the into phases with waiting periods to avoid detection. They
+subsequent “persistence execution”. By causally relating these
+phases, we enhance our ability to detect persistent threats. gain initial access, establish persistence, disconnect to evade
+First, CPD discerns setups signaling an impending persistent detection, and later reconnect for further malicious activities.
+threat and then traces processes linked to remote connections This segmentation and strategic pausing are trademarks of the
+to identify persistence execution activities. A key feature of our most stealthy APT attacks, as illustrated in Figure 1.
+system is the introduction of pseudo-dependency edges (pseudo-
+ In addressing the complexities of APT attacks, Provenanceedges), which effectively connect these disjoint phases using
+data provenance analysis, and expert-guided edges, which enable based Intrusion Detection Systems (PIDS) [9]–[20] have befaster tracing and reduced log size. These edges empower us to come essential by transforming audit logs into provenance
+detect persistence threats accurately and efficiently. Moreover, graphs, providing causal relationships among system entities,
+we propose a novel alert triage algorithm that further reduces such as processes and network sockets. In contrast, rule-based
+false positives associated with persistence threats. Evaluations
+ detection systems, such as Elastic [21], Google Chronicle [22],
+conducted on well-known datasets demonstrate that our system
+reduces the average false positive rate by 93% compared to state- and Sigma [23], which match audit logs against a predefined
+of-the-art methods. set of signatures, are industry standards for their capability to
+ identify persistence threats.
+ Index Terms—Advanced Persistence Threat detection, data
+provenance analysis. Persistence techniques, as defined by MITRE [1], often
+ involve the misuse of “sensitive” system functionalities, such
+ as Registry run keys [24]. Current threat detection systems
+ I. I NTRODUCTION generate persistence attack alerts whenever these functionalities are accessed, irrespective of whether they are being
+ Advanced Persistent Threat (APT) attacks are increasingly misused by an attacker or legitimately used by a normal user.
+leveraging Living-Off-the-Land Binaries (LOLBins), shifting This approach fails to assess the consequences of the use
+the strategic focus from traditional malware to more nuanced of system functionalities, which might only become apparent
+persistence techniques. According to MITRE [1], persistence later. Consequently, this leads to a high number of false
+techniques are defined as methods that adversaries use to positives; for example, a normal user adding entries in the
+keep access to systems across restarts, changed credentials, Registry run keys or startup folder to launch programs upon
+or other interruptions that could cut off their access. These log-on would trigger an alert, even though the action is benign.
+techniques typically involve the installation of malicious soft- Conversely, if an attacker sets a Registry run key to initiate
+ware or the manipulation of legitimate scripts and tasks to a command and control (C2) agent that connects back postensure continuous, unauthorized remote access. Techniques reboot, existing systems would identify the key’s creation but
+such as reverse shells, SSH, Powershell Remoting, or other might not link it to subsequent C2 activities due to the delay
+executables are often used for establishing and maintaining in their occurrence and the lack of a comprehensive context
+ check necessary for accurate persistence detection.
+ This work was supported by funding of the Helmholtz Association (HGF)
+through the Energy System Design (ESD) program. We also acknowledge
+support by the Karlsruhe House of Young Scientists (KHYS) for the research
+stay of Qi Liu at University of Virginia.
+ A. Limitations of Existing PIDS
+ Qi Liu, Kaibin Bao, and Veit Hagenmeyer are with Institute for Automation Anomaly-based or learning-based PIDS [9], [17]–[20],
+and Applied Informatics, Karlsruhe Institute of Technology (KIT), Eggenstein-
+Leopoldshafen 76344, Germany (e-mail: qi.liu@kit.edu; kaibin.bao@kit.edu; [25]–[27] aim to detect novel attacks with less prior knowlveit.hagenmeyer@kit.edu). edge. These PIDS model benign behavior from provenance
+ Muhammad Shoaib, Mati Ur Rehman, and Wajih Ul Hassan are graphs, and detect deviations from the modeled normal bewith the School of Engineering & Applied Science, University of Virginia, Charlottesville, VA 22904-4740, USA (e-mail: mshoaib@virginia.edu; havior. However, the assumption that attack-related activiwkw9be@virginia.edu; hassan@virginia.edu). ties are anomalous is not always true. Besides, they require
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 2
+
+representative training data which are not always available, Initial Establish
+ Leave
+ </>
+ Access Persistence
+and the training phase slows down the detection process.
+ Reconnect Local Leave
+Last, learning-based PIDS are inherently more susceptible to via persistence Discovery
+concept drift and more vulnerable to evasion attacks [28],
+ Reconnect Defense Leave
+[29]. Our evaluation in Section VI shows that state-of-the-art via persistence Evasion
+
+learning-based PIDS [17], [18] are not only slower but also
+ Reconnect Privilege Leave
+less accurate in persistence detection, due to failure to learn via persistence Escalation
+
+persistence attacks’ semantics. Reconnect Network Lateral
+ Leave
+ via persistence Discovery Movement
+ Existing heuristic-based PIDS also struggle with semantic
+understanding of persistence attacks, leading to significant Reconnect Data Leave
+ via persistence Exfiltration
+challenges in connecting the dots across fragmented APT at-
+ Fig. 1: Stealthiness by persistence
+tack stages. This often results in incomplete and disconnected
+provenance (attack) graph reconstructions. Consider the attack
+ ⋆ triages persistence-related threat alerts, and
+scenario depicted in Figure 1; heuristic-based PIDS, such as
+ ⋆ generates accurate graphs for quick incident response.
+Holmes [13] and RapSheet [15], often fail to piece together the
+full scope of an attack involving persistence. Instead, they pro- CPD is rooted in a thorough analysis of the MITRE
+duce isolated graphs, each representing only fragments of the ATT&CK framework [35] which is recognized as the most
+APT attack. These systems triage attack graphs based on the comprehensive and widely referenced directory of persistence
+number of APT stages, such as lateral movement and privilege threats. We discovered that effective persistence attacks always
+escalation, contained within the graphs. If an attacker manages consist of two phases: the persistence setup (e.g., creating a
+to fragment the attack graph into smaller, disconnected graphs, Registry run key) and the persistence execution (e.g., a remote
+each segment inherently receives a lower severity score and connection initiated by that key). Persistence setup serves
+is subsequently ranked lower for detection and investigation. solely as preparation, whereas persistence execution exhibits
+Moreover, these heuristic-based PIDS require benign training attackers’ true motives. Recognizing this two-phase process is
+data to quantify severity scores and filter false alarms. crucial, yet it is overlooked by existing detection systems.
+ Leveraging the above key insight, CPD introduces a novel
+B. Limitations of Rule-based Persistence Detectors concept of pseudo-dependency edges (pseudo-edges) to connect persistence setup and persistence execution activities
+ Current rule-based persistence detection systems, including
+ within system logs, creating a comprehensive provenance
+popular solutions like Elastic [21] and Chronicle [22], are
+ graph. CPD starts by recording every persistence setup activity
+plagued by a high rate of false positives (FPs). These systems
+ in system logs, and then specifically checks if there is a subsetypically analyze persistence techniques in isolation, neglectquent remote connection, i.e., potential persistence execution,
+ing the broader context of an attack. They often generate alerts
+ that can be traced back to the persistence setup activity. If
+for system activities that appear suspicious but are actually
+ not, it does not raise an alert, significantly reducing false
+benign, leading to numerous false alarms. In an effort to
+ positives. If yes, it creates a pseudo-edge, and then utilizes
+mitigate these false positives, these systems may overly relax
+ even more contextual indicators, detailed in Section IV-C,
+their detection rules. For instance, our evaluation in Section VI
+ before deciding if it is a persistence attack. The creation of a
+revealed that activities from programs in standard directories
+ pseudo-edge involves tracing processes in provenance graphs
+are automatically deemed benign without further scrutiny. This
+ that initiate or receive remote connections, assessing their
+approach has inadvertently resulted in a significant increase in
+ alignment with persistence execution and persistence setup as
+false negatives (FNs).
+ per our advanced detection rules. This approach enables CPD
+ The narrow detection strategy has tangible consequences
+ to identify potential persistence activities through detection
+in Security Operations Centers (SOCs), where analysts spend
+ rules and to analyze processes engaged in remote connections,
+roughly 30 minutes on each alert [30], [31], but with up to 99%
+ assessing their role in the broader scheme of a persistence
+of these turning out to be FPs [32], leading to alert fatigue. To
+ threat. This dual-layered strategy, combining precise activity
+manage the deluge of alerts, thresholds are often set or hightracking with the creation of pseudo-edges, empowers CPD to
+volume alert rules are disabled, resulting in over two-thirds of
+ surpass existing threat detectors.
+alerts being disregarded [33], [34]. This underscores the dire
+ Despite the advantages, relying solely on pseudo-edges for
+need for a system that can automatically reduce alert numbers.
+ enhancing persistence detection accuracy presents challenges.
+ One major issue is that even the most comprehensive logging
+C. Our Approach and Contributions systems may not capture all connections, potentially leading
+ To address the issues with current persistence threat de- to gaps in the provenance graph and, consequently, false
+tection, we introduce Cyber Persistence Detector (CPD), a negatives. Our research found that integrating Windows ALPC
+novel system optimized for quick and accurate identification logs with system audit logs could bridge these gaps. However,
+of persistence threats in enterprise networks. Our approach this integration significantly increases log storage require-
+ ⋆ avoids optimistic assumptions about persistence behavior, ments. Instead of depending on ALPC logs, CPD employs a
+ ⋆ avoids the need for any training data, novel technique of expert-guided edges, utilizing insights from
+ ⋆ generates few FPs and FNs, process creation and system policy to refine the provenance
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 3
+
+graph and reduce log volume by an average of 37%. While II. M OTIVATION
+pseudo-edges specifically aid in identifying persistence threats, A. APT Attack Stages
+expert-guided edges serve a broader purpose, improving overall efficiency in tracing and log management without being In a typical APT attack campaign, attackers gain initial
+limited to detecting persistence threats. access to a victim organization mainly through program ex-
+ Another challenge arises from some benign programs’ be- ploits or stolen credentials. Program vulnerabilities are often
+haviors that cause pseudo-edges to be generated excessively, patched, and users frequently change passwords, making these
+which can complicate the detection process. To counteract methods unreliable for long-term operations. Thus, attackers
+this, CPD incorporates a sophisticated false positive reduction establish persistence using various methods for prolonged,
+algorithm, which is informed by an in-depth analysis of reliable access. Post-persistence, they perform local discov-
+APT behaviors. This ensures that only genuinely malicious ery to understand target systems, including security program
+activities are flagged. Our algorithm capitalizes on the crucial details. To evade detection, they select tools to bypass these
+understanding that persistence is merely one component of a security programs or deactivate them after privilege escalation.
+multi-stage APT kill chain, all of which need to be executed Afterwards, attackers conduct network discovery to find and
+in concert to fulfill the attackers’ objectives. By verifying the move laterally to other vulnerable machines. The hallmark
+presence of related kill chain techniques and tactics within of APT campaigns is not immediate impact but remaining
+close proximity in the provenance graph, CPD significantly undetected for long periods, aiming to collect and exfiltrate
+enhances its capability to distinguish between benign and data or cause significant impact at a strategic point. The ability
+malicious actions, improving both the accuracy and reliability to achieve persistence is critical for attackers’ success.
+of threat detection.
+ Our system CPD outperforms existing detection systems, B. Persistence Prevalence
+as evidenced by evaluations on both public datasets and We extracted data from MITRE ATT&CK knowledge
+those derived from strictly implemented MITRE emulation base [37], which includes adversary tactics and techniques
+plans [36]. It excels in reducing FPs by 93% on average, based on real-world observations. Our statistical analysis on
+effectively detecting true persistence attacks, and producing MITRE’s database sheds light on the prevalence of persistence
+succinct attack graphs that explain the persistence setup and (sub-)techniques in the wild. There are 99 distinct (sub)-
+execution. The capability to pinpoint persistence setup and techniques in persistence tactic. We find out that 94 out
+execution within a provenance graph and present it in context of 136 APT groups (69%) leveraged at least one persisprovides security analysts with actionable insights for further tence (sub-)technique in the past. We rank both persistence
+investigation, demonstrating CPD’s practicality. Mostly, CPD (sub-)techniques based on the number of APT groups that
+has a response time of under a minute for its entire pipeline. leveraged these techniques in the real world, and APT groups
+ Unlike previous techniques, CPD produces alarms satisfying based on the number of persistence (sub-)techniques employed
+all five properties of reliability, explainability, analytical depth, by them. Due to space limit, we only show the top 10
+contextuality, and transferability as introduced in [32]. In its persistence (sub)-techniques in Table I, and top 10 “persistent”
+first stage, CPD’s detection rules avoid easily changeable APT groups in Table II.
+indicators, such as hard-coded IP addresses and file hashes,
+which are common in rule-based security systems [21]–[23],
+ensuring reliable detection. The attack graphs produced in the C. Why is Persistence Misunderstood in APT Detection?
+second stage of CPD are both explainable and contextual, Persistence is often seen in the wild, but ironically, deproviding an analytical overview of the attack. Finally, the spite its emphasis in the term APT, it is misunderstood in
+system’s customizable weighting factors for indicators and the academic research. MITRE defines persistence as the ability
+alert budget introduced in the third stage make CPD highly to maintain access to victim systems across restarts, changed
+transferable and adaptable for practical use. credentials, and other interruptions that could (temporally)
+ The main contributions of our paper are: cut off access. This can be achieved in two primary ways:
+• We present a thorough analysis of cyber persistence attacks either by attackers initiating a remote connection using stolen
+ and propose CPD, the first detection system specifically credentials (T1078.003) or placing a public key in the SSH
+ targeting persistence threats. authorized_keys file (T1098.004); or by the attackers
+• We introduce pseudo-dependency edges to causally relate initiating a connection from within the victim system, such
+ disjoint persistence phases and improve the detection of as by placing a new entry in the Registry run keys or startup
+ these threats. folder (T1547.001), creating scheduled tasks or jobs (T1053),
+• We propose the novel concept of expert-guided edges to or inserting commands in Unix shell configuration files like
+ enable efficient provenance tracing of persistence threats. .bashrc (T1546.004). For further details regarding these
+• We identify critical insights on determining malicious per- techniques, we refer the reader to [35].
+ sistence behaviors and propose an alert triage algorithm In our review of all public audit log datasets [38]–[40]
+ incorporating these insights to reduce false positives. for evaluating PIDS, we identified a significant gap in the
+• We implement and evaluate CPD on diverse datasets, understanding of persistence. Effective persistence hinges on
+ demonstrating better attack detection rates and provenance three key conditions: setting a trigger (like creating a Registry
+ graph completeness versus state-of-the-art methods. run key), linking code for remote connection to this trigger
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 4
+
+ TABLE I: Top 10 persistent (sub-)techniques
+ Registry Run Keys Scheduled Web DLL External Windows Domain WMI Event DLL Search Local
+ / Startup Folder Task Shell Side-Loading Remote Services Service Accounts Subscription Order Hijacking Account
+ 49 45 23 21 20 20 11 10 9 9
+
+ TABLE II: Top 10 persistent APT groups
+
+ Lazarus Sandworm Magic Threat
+ APT29 APT41 Kimsuky APT28 APT39 APT3
+ Group Team Hound Group-3390
+ 25 16 12 11 10 10 8 8 8 8
+
+(e.g., placing an executable in the Registry run key), and the system event logs to create a persistence setup table, recording
+successful initiation of a remote connection when the trigger activities that match persistence setup detection rules, such as
+is activated. In practice, the third condition may not always be new account creations or Registry run key additions. Next,
+met, prompting APT actors, such as APT29 to deploy multiple it identifies processes with remote connections in the event
+persistence techniques to enhance their odds of maintaining stream, performing individual backward tracing to generate
+presence in the target environment. Unfortunately, existing sub-graphs for each. These sub-graphs are then checked
+datasets often fulfill only the first condition, setting up a against our persistence execution detection rules, with matches
+trigger, and frequently link an irrelevant value to it, thereby recorded in a persistence execution table. In the third step,
+missing the second and third conditions. This oversimplifi- CPD aligns entries from persistence execution table with
+cation can be counterproductive, as normal programs often persistence setup table based on TTP labels1 , temporal order,
+activate these persistence triggers, enabling attackers to blend and specific attributes. It creates a persistence setup atomic
+into routine system activities. Unlike these datasets, each of graph, i.e., a minimal sub-graph directly related to persistence,
+MITRE’s eleven emulation plans [36], based on real-world and a persistence execution atomic graph when an alignment is
+APT behaviors, incorporates at least two persistence tech- found, and then links them with a pseudo-edge. For evaluation
+niques without such oversimplification. Thus, we utilize these purposes (Section VI), steps 2 and 3 are combined as step 2
+emulation plans to evaluate CPD as detailed in Section VI. alone does not yield direct alerts. The final step introduces
+ pseudo-edge strength and a false positive reduction algorithm
+ III. T HREAT M ODEL to ensure only significant events are connected.
+ Our system, like other PIDS [9]–[16], considers firmware,
+OS, and our logging systems in trusted computing base (TCB).
+Unlike [9], [13]–[15], we do not presume attacks end before an A. Persistence Threat Detection
+OS reboot. Our system is unique in linking provenance attack
+ Our persistence setup detection rules are created by studying
+graphs across reboots using pseudo-edges. Our logging, as a
+ persistence (sub-)techniques described in MITRE ATT&CK
+Windows service or a Systemd service on Linux, restarts
+ Matrix, hundreds of persistence-related threat reports, and
+post-reboot, but an OS reboot may miss system audit events.
+ red team tools that provide visibility into low-level code
+Notably, attack-related processes starting before our logging
+ related to persistence attacks, like Atomic Red Team [43].
+service are not logged, often indicating persistence attacks.
+ We then improved our persistence setup detection rules by
+On Windows, persistence can be achieved through “Create or
+ studying and incorporating open-source detection rules from
+Modify System Process: Windows Service” (T1543.003), and
+ popular rule repositories like Sigma [23] and Elastic [21].
+on Linux through “Create or Modify System Process: Systemd
+ However, as discussed in Section VI-A in details, our rules
+Service” (T1543.002). We can trace back to the root process
+ are different from the ones in those repositories. We will
+in logs despite missing initial process creation events, using
+ commit our persistence detection rules to these open-source
+parent process GUID/ID. Our tools System Monitor [41] on
+ rule repositories for the public’s benefit.2 The persistence
+Windows and Auditd [42] on Linux record these IDs.
+ setup detection process is mostly a straightforward string
+Technique Coverage. Of those 99 distinct (sub-)techniques
+ match process against information inside a single system log
+in persistence tactic, only half of them were knowingly used
+ event. But some rules have a few more rule conditions, which
+by at least one APT group in the past according to MITRE’s
+ require information across several log events. For this, we
+database. We only created detection rules for about a third
+ use “sequenced” query of EQL, a query language specifically
+of all persistence (sub-)techniques, which all fall into the
+ designed for threat hunting [44]. Indicative strings include
+“significant” half of persistence (sub-)techniques and include
+ especially file paths, Registry locations, process names and
+all top 10 persistence (sub-)techniques. We have excluded all
+ command lines etc. Note that these strings are characteristic
+persistence (sub-)techniques related to macOS, cloud infrasto the persistence (sub-)techniques. For instance, to implement
+tructures, pre-OS boot like Bootkit.
+ 1 TTP stands for Tactics, Techniques, and Procedures. An exemplary TTP
+ IV. S YSTEM D ESIGN
+ label is T1547.001.
+ CPD employs a four-step approach for accurate persistence 2 The first author of this article has been submitting accepted commits for
+detection, as illustrated in Figure 2. Initially, CPD processes non-persistence-related TTP detection rules to those repositories.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 5
+
+ I: Persistence Setup Detection II: Persistence Execution Detection III: Pseudo-edge Creation IV: False Positive Reduction & Persistence Detection
+
+ Persistence Persistence
+ Setup False Positive
+ Tables
+ Table Persistence Reduction
+ Alignment
+ Persistence Execution Algorithm
+ Setup Table
+ Detection
+ Rules
+ Disconnected Graph Stream ... Connecting the Big Dots via Pseudo-edges True Dependency Graph
+ System Event Logs ...
+ Persistence ...
+ ... ... ...
+ Audit Processor
+ Logs ... ... ...
+ ... ...
+ ...
+
+ Backward Persistence
+ Tracing Execution
+ Process List Detection
+ with Remote Rules
+ Connections
+
+Fig. 2: CPD overview. CPD implements a four-step approach for detecting persistence threats, starting with the creation of a persistence
+setup table from audit logs that tracks potential setup actions. It then traces processes with remote connections to form sub-graphs, which
+are evaluated against execution rules and aligned with setup actions to form atomic graphs linked by a pseudo-edge. The process is refined
+through the introduction of pseudo-edge strength and a false positive reduction algorithm.
+
+the persistence sub-technique T1547.001 (Registry run keys), Algorithm 1: PSEUDO - EDGE C REATION
+one of a few known Registry locations must be modified. 1 Function C REATE P SEUDO E DGE (Events E)
+ Simply matching system events against those detection rules /* Get a list of persistent setup events */
+ 2 L<Eα,Lα,T α> ← G ET P ERSISTENCE S ETUP(E)
+generates a huge volume of alerts in practice. To reduce /* Get a list of processes with remote conn.
+false alerts, CPD first spots every process initiating or accept- */
+ 3 L<Pγ> ← G ET P ROCESS W ITH R EMOTE C ONNECTION(E)
+ing remote connection(s) in the event stream, then performs 4 foreach Pγ ∈ L<P> do
+backward tracing on these processes individually. During /* Get a list of persistent exec. events
+the backward tracing, CPD inspects whether its provenance */
+ 5 L<Eγ,Lγ,T γ> ← G ET P ERSISTENCE E XECUTION(Pγ )
+graph contains system activities matching our persistence 6 foreach (Eγ ,Lγ ,Tγ ) ∈ L<Eγ,Lγ,T γ> do
+ 7 foreach (Eα ,Lα ,Tα ) ∈ L<Eα,Lα,T α> do
+execution detection rules. Like persistence setup detection 8 if Lγ == Lα then
+rules, our persistence execution detection rules contain other 9 if Tγ > Tα then
+ 10 AGγ ← G ETATOMIC G RAPH(Eγ )
+indicative strings incorporating file paths, Registry locations, 11 AGα ← G ETATOMIC G RAPH(Eα )
+process names etc. These strings are also characteristic to the /* Create a pseudo-edge */
+ 12 P AG(γ, α) ← AGγ ∪ AGα
+persistence (sub-)techniques. For example, to “activate” the 13 L<P E,P AG> ← L<P E,P AG> ∪
+persistence sub-technique T1547.001 (Registry run keys), one < P E(γ, α), P AG(γ, α) >
+ 14 return L<P E,P AG>
+of a few known Registry locations must be read by exactly the
+process explorer.exe, and it must rely on this process to 15 Function G ET P ERSISTENCE S ETUP (E)
+ 16 foreach Rule ∈ LP ersistenceSetupRule do
+(directly or indirectly) start the malicious process. 17 forall Condition ∈ Rule do
+ Table III demonstrates how sensitive these detection rules 18 satisf ied ← C HECK C ONDITION(Condition, E)
+ 19 if satisf ied then
+are. Note that we assume the integrity of the operating system 20 L<Eα,Lα,T α> ← L<Eα,Lα,T α> ∪ (E,L,T)
+including its native built-in system programs. We stress that, 21 return L<Eα,Lα,T α>
+
+at its stage 1, CPD sacrifices specificity for sensitivity in 22 Function G ET P ERSISTENCE E XECUTION (Pγ )
+ 23 L<Eκ> ← T RAVERSAL BACKWARD(Pγ , E)
+its detection results, in order to not miss a single potential 24 foreach Eκ ∈ L<Eκ> do
+persistence attack. In other words, CPD will not have false 25 foreach Rule ∈ LP ersistenceExecutionRule do
+ 26 forall Condition ∈ Rule do
+negatives at this stage, but at the cost of having many false 27 satisf ied ← C HECK C ONDITION(Condition, Eκ )
+positives. The optimization techniques introduced in CPD 28 if satisf ied then
+ 29 L<Eα,Lα,T α> ← L<Eα,Lα,T α> ∪
+and discussed in Section VI-A only improve its stage 1’s (Eκ ,Lκ ,Tκ )
+specificity, and do not impact the sensitivity. Besides, we argue 30 return L<Eγ,Lγ,T γ>
+
+that the evasion techniques for SIEM (Security Information
+and Event Management) rules introduced in [45] have only
+limited impact on our detection rules. Because, as discussed
+in Table III, we mostly do not rely on recorded command
+lines or code executed by attackers. Rather, we use indicative execution atomic graph is created (Algorithm 1 Line 10),
+file paths, Registry locations and system process names. These which includes only information related to persistence exestrings are immutable under the assumption of OS integrity. cution. Likewise, a persistence setup atomic graph containing
+ For every detected potential malicious process (with remote only critical attack information is also generated. Then CPD
+connections) from above, CPD checks if it has corresponding creates a pseudo-edge to connect the persistence setup atomic
+entries in the persistence setup table, based on the TTP labels, graph and the persistence execution atomic graph (Algorithm 1
+some TTP-specific attributes, and happens-before relationship Line 12), resulting into a succinct and insightful persistence
+(Algorithm 1 Lines 4-9). If an alignment is found, a persistence attack graph, as shown in Figure 3.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 6
+
+ c:\Windows\System32\hostui.exe
+ S S S
+ rcs.3aka3.doc cmd.exe sdclt.exe control.exe w
+ S w c:\Windows\System32\hostui.bat
+
+ S w c:\ProgramData\Microsoft\Windows\Start
+ https.exe powershell.exe
+ Menu\Programs\StartUp\hostui.lnk
+ before reboot
+ after reboot pseudo-edge
+ S
+ userinit.exe S explorer.exe cmd.exe S
+ powershell.exe
+ S
+
+ S S S c
+ hostui.exe powershell.exe powershell.exe powershell.exe 10.0.3.102, 443
+
+Fig. 3: A persistence attack graph automatically generated by CPD on the EP-APT29-1 dataset. It uses rectangles for processes, ovals
+for files / Registry keys, and diamonds for network sockets. Annotations include S=Start, W=Write, C=Connect. The graph successfully
+pinpoints T1547.001 (Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder). The upper section reveals persistence
+setup: a malicious Microsoft Word-like program (.doc) starts, resulting in a Powershell instance and a shortcut creation in the Windows
+startup folder. This shortcut leads to another dropped malicious program, hostui.exe. The lower section, post-reboot, shows persistence
+execution: explorer.exe auto-executes startup folder shortcuts, triggering malicious Powershell code and connecting to the attacker.
+Indicative strings are bolded for clarity. CPD forms a pseudo-edge linking the process initiating persistence setup with the one managing
+the remote connection, i.e., the c2 agent.
+
+ –
+ TABLE III: Detection rule sensitivity for the top 10 persistent techniques. TPR = True Positive Rate, ✓ = Yes, ✓ = Almost.
+ Detection rules
+ (Sub-)techniques Remark
+ with TPR=1?
+ Registry Run ✓ During persistence setup, new entries must be added to the the standard Registry run keys locations or standard
+ Keys / Startup Startup folders. During persistence execution, the corresponding new entries must be read by the system process
+ Folder explorer.exe. The malicious process must be ultimately started by explorer.exe.
+ Scheduled ✓ During persistence setup, one of a few Windows task creation programs / Powershell cmdlets / API must be called,
+ Task and file modification in the Windows standard Tasks folder must be undertaken. During persistence execution, the
+ malicious process must be ultimately started by the system process svchost.exe with the flags “-k netsvcs
+ -p -s Schedule”.
+ –
+
+ Web Shell ✓ During persistence setup, a file containing executable code like PHP is very likely dropped to the web root directory
+ like /var/www/html. During persistence execution, the malicious process must be ultimately started by the web
+ server program like apache2.
+ DLL ✓ During persistence setup, a DLL file must be dropped to the file system. During persistence execution, that DLL
+ Side-Loading file must be loaded by a process initiating or accepting remote connection(s).
+ External ✓ During persistence setup, a common remote access program must be installed, and its executable file must be
+ Remote Services dropped to the file system. During persistence execution, that program must initiate or accept remote connection(s).
+ Windows ✓ During persistence setup, a new entry must be added to the standard Registry location for Windows services.
+ Service During persistence execution, the corresponding new entry must be read by the system process services.exe.
+ The malicious process must be ultimately started by services.exe.
+ Domain ✓ During persistence setup, a new entry must be created in the domain controller’s standard Active Directory database
+ Accounts stored in the file system. During persistence execution, this new account must be used for logging into target systems.
+ WMI Event ✓ During persistence setup, one of a few Windows WMI event creation programs / Powershell cmdlets / API
+ Subscription must be called, and file modification in the Windows standard WMI event repository must be undertaken. During
+ persistence execution, the malicious process must be ultimately started by the system process wmiprvse.exe.
+ DLL Search ✓ During persistence setup, a DLL file must be dropped to the file system. During persistence execution, that DLL
+ Order Hijacking file must be loaded by a process initiating or accepting remote connection(s).
+ Local ✓ During persistence setup, a new entry must be created in the standard user information database stored in the local
+ Account file system. During persistence execution, this new account must be used for logging into target systems.
+
+B. Expert-guided Edges In the logs, the corresponding Registry key modifications
+ appear to be done by services.exe, not sc.exe, with no
+ In our experiments, we found limitations in linking system apparent link between the two. Further research and consultaentities solely based on Windows’ Process Monitor / System tion with the Windows Developer Reference [46] revealed that
+Monitor logs. Specifically, during T1543.003 (Create or the communication between these processes occurs through
+Modify System Process: Windows Service) persistence ALPC, a Windows inter-process communication (IPC) method
+setup, attackers often use sc.exe to create a malicious not typically logged by standard frameworks. Additional log-
+Windows service. This results in a new Registry key under ging via Windows ETW “NT Kernel Logger” confirmed the
+HKLM\SYSTEM\CurrentControlSet\Services, the link but resulted in excessively large datasets due to ALPC’s
+basis for our detection rule. This approach, focusing on an widespread use.
+immutable Registry location, is more reliable than relying on
+command lines, which are easily bypassed, as recent research To address this, we introduce expert-guided edges in CPD.
+shows [45]. These edges are formed by applying specialized parsing rules
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 7
+
+ s s
+malicious.exe cmd.exe sc.exe create myService C. False Positive Reduction
+ expert-guided edge
+ Creating a pseudo-edge that accurately indicates a persisw HKLM\SYSTEM\CurrentControlSet\
+ services.exe tence attack is challenging. This is mainly due to the fact that
+ Services\myService
+ many benign programs use Registry run keys (T1547.001),
+Fig. 4: An expert-guided edge is created during reconstruction of Windows services (T1543.003), scheduled tasks (T1053.005)
+a T1543.003 persistence setup attack graph. An attacker-controlled
+malicious process leverages LOLBins to create a malicious service etc. for some program-specific routines involving remote confor persistence. The indicative Registry key is however modified by a nections, leading to an inadequate amount of false-positive
+Windows system process, to which no link from the malicious process persistence attack graphs. For instance, some benign procan be built using logs from standard logging frameworks. grams create a Windows service to check and download
+ updates periodically, like Adobe Acrobat’s Update Service
+ (armsvc.exe), mimicking persistence behaviors and trigger-
+ Algorithm 2: EXPERT- GUIDED EDGE CREATION ing false-positive pseudo-edges in CPD. While the Windows
+ Inputs : System audit log events E; service creation itself mimics persistence setup, the resulted
+ List of critical system processes L<P> update downloads (involving remote connections) later on
+ Output: List of dependency path L<P >
+1 foreach Eκ ∈ E do
+ mimic persistence execution. Similarly, programs such as
+ /* Get the process of current event */ Google Chrome and Microsoft OneDrive use Registry run keys
+2 Pκ ← G ET S UBJECT(Eκ ) for updates, frequently leading to false alarms. Figure 5 shows
+3 if Pκ ∈ L<P> then
+ /* Add dependency path to the standard a typical false-positive persistence attack graph generated by
+ routine nodes */ CPD after its stage 2.
+4 P ← A DD PATH T O ROUTINE N ODES(Pκ )
+5 L<P > ← L<P > ∪ P To address this, we developed a false positive reduction
+6 return LP algorithm using contextual indicators to differentiate between
+ benign and malicious activities. This algorithm introduces
+ pseudo-edge strength and ranks pseudo-edges based on a
+ calculated threat score. We categorize pseudo-edges as either
+during log processing for provenance graph generation. This causality-based or correlation-based for improved detection
+method embeds expert knowledge about process creation rou- accuracy, due to the difference in the nature of various pertines and operating system policies into the backward and for- sistence techniques. Correlation-based pseudo-edges, related
+ward tracing process. For example, we can link sc.exe and to login account techniques like T1098, T1136, and T1078,
+services.exe if services.exe modifies a Registry key are less reliable due to the uncertainty of user identity behind
+under the specified location right after sc.exe is executed consecutive logins. These receive a ‘penalty’ weight (less than
+with the same service name, as illustrated in Figure 4. This 1) in the anomaly score assignment (Equation 3). For precise
+approach offers three benefits: faster search process, reduced detection, we utilize context not only from the cyber-killdependency explosion, and bridging gaps otherwise impossible chain tactic and technique levels, but also from the program
+to close. execution level.
+ 1) Causality-based pseudo-edges: We formulate the fol-
+ Similarly, we observe missing links on Linux using
+ lowing indicators based on studying APT behaviors in real-
+Auditd logs even though we are monitoring a very exworld attacks.
+tensive list of syscalls. Specifically, during T1543.002
+ • Degree of indirection in both persistence setup and per-
+(Systemd Service) persistence setup, an indicative file
+ sistence execution. As observed in APT29’s real-world
+/etc/systemd/system/*.service is created. Howbehaviors, multiple indirection is implemented to start the
+ever, during persistence execution, we cannot observe the same
+ command and control (c2) agent program. That is, when the
+file being accessed, but rather a closely related in-memory
+ malicious shortcut file in a Windows startup folder is read,
+file /sys/fs/cgroup/system.slice/*.service/*
+ the explorer.exe process runs a normal-looking batch
+with the same service file name. An edge cannot be built
+ file linked to the shortcut file (indirection 1). The resulted
+between the corresponding sub-graphs if using the traditional
+ cmd.exe process starts a powershell.exe process as
+“write and read on the same file node” principle. Hence we
+ instructed in the batch file (indirection 2), which in turn
+use an expert-guided edge to resolve this issue. Algorithm 2
+ starts another normal-looking process (indirection 3). This
+describes the creation of expert-guided edges, and is applied
+ process then starts another powershell.exe process (inin Line 23 of Algorithm 1. Note that we create expert-guided
+ direction 4), which again starts another powershell.exe
+edges under the assumption that the integrity of the OS itself
+ process (indirection 5) before contacting the c2 server. This
+is not compromised. We show the log storage reduction rate
+ obviously deviates from normal programs’ use of Windows
+by introducing expert-guided edges in Section VI-B.
+ startup folders.
+ We acknowledge that currently CPD employs a non-data- • Credential access tactic, as observed in APT actors’ past
+driven approach for creating expert-guided edges. However, behaviors, e.g., APT29 [47], Sandworm [3], Wizard Spifuture work may explore a more data-driven method for ex- der [48], is almost always executed as an attempt to obtain
+tracting or learning rules for identifying expert-guided edges, the “low-hanging fruits” persistence.
+and therefore further enhance the scalability of the system. • Persistence techniques are often executed together, as
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 8
+
+ HKU\....\Software\Microsoft\Windows\
+ w CurrentVersion\RunOnce
+
+ s w
+ explorer.exe onedrivesetup.exe HKU\....\Software\Microsoft\Windows\
+ CurrentVersion\Run\OneDrive
+ before reboot
+ pseudo-edge
+ after reboot
+ s s c
+ userinit.exe explorer.exe onedrive.exe 20.189.173.5, 443
+
+Fig. 5: A false-positive persistence attack graph automatically generated by CPD on the EP-APT29-1 dataset. This graph wrongly classifies
+an instance of T1547.001. It turns out to be a benign program, i.e., Microsoft OneDrive, leveraging Registry run keys for updates. It in fact
+connects back to an IP address belonging to Microsoft Corporation.
+
+ they together will likely contribute to more reliable persis- • Remote system discovery (T1018) is performed on one
+ tence. domain-joined computer before a remote connection is initi-
+• APT actors tend to execute persistence techniques right ated from this computer to another computer in the network.
+ after initial access or lateral movement. For example, For instance, APT29 used LDAP queries to enumerate other
+ Wizard Spider achieved persistence right after initial com- hosts in the domain before creating a remote Powershell
+ promise on the first victim machine, and then persistence session to a secondary victim.
+ on the second victim machine right after lateral movement. • Ingress tool transfer (T1105) is performed from one
+• APT actors tend to execute some discovery techniques domain-joined computer to another computer before the
+ before persistence techniques. However, we find that this remote connection.
+ indicator tends to be less reliable and more “noisy” than • Credential access tactic is performed on one domainother indicators. To counter this, we assign the smallest joined computer before a remote connection. For instance,
+ weighting factor to this indicator during anomaly score Sandworm has stolen SSH keys on the first compromised
+ calculation in Equation 3. computer and then use these credentials to move laterally
+ 2) Correlation-based pseudo-edges: We further classify to a second computer.
+correlation-based pseudo-edges into two types. • Local account creation after or during lateral movement.
+ • Installing, activating and enabling standard remote ac-
+Type 1 - persistent initial re-access We identified the fol- cess tools like VNC and RDP server.
+lowing indicators for this type of persistence. Taking into account above indicators, CPD calculates an
+• Observation of credential access tactic is also an indi- anomaly/threat score, and uses this score to quantify pseudocator for correlation-based pseudo-edges. For instance, OS edge strength and rank pseudo-edges. By doing so, we ensure
+ credential dumping (T1003) is often performed on victim that the most likely malicious pseudo-edges are always incomputers, and the stolen credentials are used for the remote vestigated first by a security analyst. During the final stage
+ re-connection. Besides, the usage intensity, i.e., occurrence of CPD, as formulated in Algorithm 3, a pseudo-edge is first
+ of the same technique, and extensiveness, i.e., variation of classified into one of the three categories above (Line 4). Then
+ attempted credential access techniques, can be a weighting the corresponding persistence attack graph is automatically
+ factor. For example, during one of Sandworm’s engage- 1) analyzed on to extract features related to indicators from
+ ments, they uploaded an executable to its target machine above, e.g., the degree of indirection during both persistence
+ for dumping web credentials, and another executable for setup and persistence execution, and 2) further explored on
+ key-logging a valid user RDP session to obtain domain to include more contextual information and search for the
+ credentials. existence of other indicators from above, i.e., related attack
+• The accessing computer does not have a legit FQDN or steps in a cyber-kill-chain, e.g., whether credential access
+ computer account in the domain. This is more likely a is observed in its dependency graph. The dependency graph
+ malicious persistent initial re-access, as attackers typically expands on the persistence attack graph, and is therefore more
+ do not physically own a domain joined computer. verbose. That is, our false positive reduction algorithm takes
+• Local account creation after lateral movement, e.g., in a as input all indicators found in the succinct persistence attack
+ WinRM [49] session. graph as well as in its more verbose dependency graph. In the
+• Installing, activating and enabling standard remote ac- following, we explain how these indicators are adopted for
+ cess tools like VNC and RDP server. For instance, Car- anomaly score assignment in three equations.
+ bank [50] installed a VNC server on its victim machine First, we calculate the anomaly score of an indicator obfor persistence after capturing credentials, and opened the servable from the persistence attack graph as follows (Line 8
+ corresponding port on firewall. in Algorithm 3):
+Type 2 - persistent lateral movement Type 2 correlation-
+ ASind−P AG = Ns2 × Ne2 (1)
+based pseudo-edges are a special kind of pseudo-edges, which
+represent an intersection between persistence tactic and lateral where Ns and Ne are the degree of indirection in persistence
+movement tactic. The following indicators are extracted from setup atomic graph and persistence execution atomic graph,
+analyzing real-world APT attacks. respectively.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 9
+
+ Algorithm 3: FALSE POSITIVE REDUCTION being applied. The rationale behind this is that attackers often
+ Inputs : System audit log events E; try a variety of techniques from the same tactic together to
+ List L<P E,P AG> of pseudo-edge and persistence attack maximize the chance of achieving their objectives. tteq is the
+ graph pairs;
+ List L<ind−P AG> of indicators inside persistence attack time when an attack step is conducted, and te is the time
+ graphs; when persistence execution is performed. If multiple attack
+ List L<ind−DG> of indicators inside dependency graphs; (sub-)techniques are observed for the same indicator, we only
+ Max persistence-edge alert number N
+ Output: List L<P E,AS> of persistence edge and its anomaly score consider the one with the maximal anomaly score.
+ pairs In the end, we obtain the final anomaly score from the
+ 1 foreach < P E(γ, α), P AG(γ, α) > ∈ L<P E,P AG> do Equation 3 (Line 20 in Algorithm 3).
+ 2 ASP E(γ,α) ← 0
+ 3 L<ASP E > ← 0 n
+ Y
+ /* Classify pseudo-edge */ ASP E = (ASi )wi (3)
+ 4 P E ′ (γ, α) ← G ET C ATEGORY(P E(γ, α)) i=1
+ /* Select indicators based on pseudo-edge
+ type */ where n denotes the number of found indicators for a given
+ 5 L′<ind−P AG> ← G ET I NDICATORS(P E ′ (γ, α), pseudo-edge, ASi denotes the anomaly score of an indicator
+ L<ind−P AG> )
+ 6 L′<ind−DG> ← G ET I NDICATORS(P E ′ (γ, α), L<ind−DG> ) obtained from Equation 1 or Equation 2 for this pseudoedge, and wi is a weighting factor. Afterwards, the pseudo-
+ 7 foreach indicator ∈ L′<ind−P AG> do edge and anomaly score pair is added to a list (Line 21
+ 8 ASindicator ← C ALCULATE S CORE 1(indicator,
+ P AG(γ, α)) in Algorithm 3), which is sorted by anomaly score at the
+ 9 L<ASP E > ← L<ASP E > ∪ ASindicator end (Line 22 in Algorithm 3). Pseudo-edges ranked lower
+10 (L<Eδ> , DG(δ)) ← T RAVERSAL BACKWARD(P AG(γ, α), E) than the N-th pseudo-edge are considered as false-positive
+11 (L<Eη> , DG(η)) ← T RAVERSAL F ORWARD(P AG(γ, α), E) pseudo-edges, and therefore removed from the list (Line 23 in
+12 DG(κ) ← M ERGE G RAPH(DG(δ), DG(η)) Algorithm 3). Algorithm 3 returns the final list of pseudo-edge
+13 L<Eκ> ← L<Eδ> ∪ L<Eη> and anomaly score pairs.
+14 foreach Eκ ∈ L<Eκ> do
+15 foreach indicator ∈ L′<ind−DG> do
+16 satisf ied ← C HECK I NDICATOR(indicator, Eκ ) V. I MPLEMENTATION
+17 if satisf ied then
+ 18 ASindicator ← For our experiments, we implemented the prototype of
+ C ALCULATE S CORE 2(indicator, DG(κ)) CPD in Python (∼ 6K lines of code), and deployed it on a
+ 19 L<ASP E > ← L<ASP E > ∪ ASindicator
+20 ASP E(γ,α) ← S UM S CORE(L<ASP E > )
+ 64bit Ubuntu 23.04 OS with 512 GB of RAM and a 64-core
+21 L<P E,AS> ← L<P E,AS> ∪ ASP E(γ,α) AMD processor. This machine hosts a dozen virtual machines
+22 L<P E,AS> ← S ORT B Y S CORE (L<P E,AS> ) used by several researchers for conducting separated scientific
+23 L<P E,AS> ← R EMOVE B Y B UDGET (L<P E,AS> , N)
+ experiments at the same time. Our implementation interfaces
+24 return L<P E,AS> Elasticsearch [51] via EQL, a query language specifically
+ designed for security use cases. Elasticsearch provides scalable
+ and near real-time search for log data investigation. Besides,
+ Second, the anomaly score of an indicator observable from we use Python NetworkX [52] for generating provenance
+the dependency graph is calculated as follows (Line 18 in graphs on demand, and PyVis [53] for graph visualization.
+Algorithm 3): For Linux log collection, we use Auditd [42]. On Windows,
+ our primary tool is System Monitor (Sysmon) [41], which,
+  unlike Windows ETW, generates and records a process GUID
+ max( Dc × F req(teqi ) × V ar(tac)) tteq ≤ te
+ ASind−DG = i Ds
+ (2) for each process, reducing false dependencies during post-
+ Dc
+ max( D × F req(teqi ) × V ar(tac))
+ e
+ tteq > te processing. However, Sysmon lacks file/Registry read colleci
+ tion, so we use Windows Security Audit logs for recording all
+ where Ds denotes the distance between an indicative attack file and Registry operation. We also collect ALPC logs with
+step, e.g., OS credentials dumping, and the persistence setup the “NT Kernel Logger” [54] ETW session.
+step. The distance is measured as the number of hops between the corresponding two processes. Similarly, De denotes
+ VI. E VALUATION
+the distance between the persistence execution step and an
+indicative attack step, e.g., remote system discovery. Dc is In this section, we evaluate the efficacy and effectiveness
+a predefined cut-off value representing the maximal number of CPD as a persistence detection system. In particular, we
+of hops considered as having positive impact on the anomaly investigate the following research questions (RQs):
+score. By doing so, it penalizes an indicative attack step too RQ1 How does CPD compare in soundness of persistence
+far away from the persistence setup or execution step, in which detection, false positive reduction, and accuracy to openthe weighting factor in Equation 2 is less than 1, when Ds or source SIEM detection rules, commercial EDR systems
+De is greater than Dc . F req(teq) represents the occurrence of and state-of-the-art PIDS? (VI-A)
+the same attack technique being executed as repeated attempt, RQ2 How high is the log reduction rate by introducing expertwhereas V ar(tac) represents usage extensiveness of the same guided edges in CPD? (VI-B)
+tactic, i.e., number of different techniques from the same tactic RQ3 What is the runtime overhead of CPD? (VI-C)
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 10
+
+ TABLE IV: Overview of the evaluation datasets
+ related detection rules from these repositories, converted them
+ Dataset
+ Target Host Persistence Target Data Event into EQL queries and ran them alongside CPD on datasets
+ Number Attack Number Host OS Size Number
+ containing persistence attacks. The results in Table V reveal
+ ATLASv2 2 0 Windows 26GB 5.6M
+ that open-source SIEM rules generated more false positives
+ DARPA-E5-
+ Fivediretions
+ 3 2 Windows 348GB 1.4B and missed true attacks, and CPD significantly outperformed
+ DARPA- 50
+ these rules. Further comparison between CPD’s stages 2 and
+ 1 Windows 380GB 338M 3 is presented in Figure 6. This figure displays the cumulative
+ OpTC (/500)
+ EP-APT29-1 3 2 Windows 32GB 22M distribution of threat scores for benign and attack pseudo-
+ EP-APT29-2 3 3 Windows 24GB 14M edges. The stage 3 results in Table V are based on the lowest
+ EP- Windows true attack threat score threshold.
+ 4 4 68GB 57M
+ Sandworm-1 Linux In addition, we employ the ranking metrics cPrecision@k
+ (cumulative precision at k) and NDCG@k (normalized discounted cumulative gain at k) to measure the performance of
+RQ4 How precise are persistence attack graphs generated by CPD’s threat score ranking in its stage 3. While cPrecision@k
+ CPD? (VI-D) measures the proportion of relevant items, i.e., true attacks,
+Public Datasets. Public datasets often lack persistence traces. in the top k ranking results, NDCG@k measures ranking
+From DARPA datasets, we chose the E5 dataset [39] and quality, rewarding relevant items ranked higher in the list and
+OpTC dataset [38], but omitted the E3 [55] due to its lack supporting graded relevance. In Table VI, we show CPD’s
+of persistence attacks. DARPA E5 dataset features emulated stage 3’s ranking performance in terms of the top 5 results and
+APT attacks. Only the E5 Fivedirections subset, focused on the top 20 results, respectively. It is important to note that these
+Windows, contains two instances of persistence attacks. We ranking metrics are inherently relative. That is, to objectively
+evaluated only this subset with CPD. The DARPA OpTC assess a system’s ranking performance, various factors should
+dataset contains logs from 500 Windows machines. It includes be considered, e.g., baseline systems’ ranking performance,
+three persistence instances, but only one meets all criteria from task difficulty. Unfortunately, all of the baseline systems, with
+Section II. The other two failed the third condition as the attack which we compare CPD, perform simple binary classification;
+ended prematurely. We tested CPD on a subset of 50 machines, they do not rank those instances. That is, we believe that
+including the 3 with persistence and 47 random ones. We Table VI provides only a limited assessment of CPD’s threat
+also included ATLASv2 [56] for its CBC detection results score ranking performance.
+on persistence. ATLASv2 dataset offers more background Nevertheless, we show in Table V that CPD’s final stage
+activities and extensive logging than ATLAS [40], such as drastically reduced false positives—from thousands in openthrough Sysmon and VMware CBC [57]. While lacking actual source rules to just dozens per dataset. When comparing to
+persistence attacks, it includes CBC’s persistence alerts. We CPD’s stage 2, the false positive reduction algorithm in stage
+used these for comparison with CPD. CPD’s detection results 3 of CPD via its threat score ranking achieved an average
+on these datasets are verified against the provided ground truth. reduction rate of 83%, significantly enhancing accuracy.
+MITRE Attack Emulation. MITRE’s eleven full emulation CPD’s great improvement over SIEM detection rules mainly
+plans [36], based on real APT behaviors, each include at result from our two key insights, implemented on its stage
+least two persistence techniques. These plans are used in 2 and 3 respectively. Our first powerful insight is that all
+MITRE Engenuity ATT&CK® Evaluations [58] to assess persistence attacks require a setup stage that (mis)uses a
+commercial EDR systems [59]. However, MITRE has not “sensitive” system functionality and a subsequent execution
+published any corresponding datasets. We precisely imple- stage linked with a remote connection. Both SIEM rules
+mented two relevant emulation plans, focusing on top 10 and CPD’s stage 1 rules raise alerts when persistence-related
+most “persistent” APT groups from Section II-B, and then system functionality is used, but not necessarily misused.
+evaluated CPD on these datasets, valuable for PIDS research. Unlike SIEM rules, which don’t associate log events generated
+MITRE’s emulation plans target enterprise networks with more at different times, CPD’s stage 2 checks if there is a remote
+sophisticated, cross-machine attacks than most public datasets, connection that can be traced back to a setup alert, leading to
+offering greater authenticity. The APT29 plan has two distinct removal of alerts on system activities associated with benign
+scenarios, while Sandworm’s are identical. We created three usage of system functionality. Our second practical insight is
+datasets from emulating APT29 scenario 1, APT29 scenario 2, that persistence is only one of multiple stages in a cyber-killand Sandworm scenario 1, named EP-APT29-1, EP-APT29-2, chain that must be executed together to achieve attackers’
+and EP-Sandworm-1, respectively. Table IV gives an overview goals. This key insight is discussed in details in our false
+of our datasets. positive reduction algorithm in Section IV-C. Both key insights
+ fully leverage the power of provenance analytics, i.e., context
+ provided by system activities across a large timespan.
+A. Effectiveness of CPD
+ All parameters in our false positive reduction algorithms,
+CPD vs. SIEM detection rules. After finalizing our persis- e.g., weighting factors, are unchanged for each dataset. Like
+tence detection rule set, we compared it with popular open- previous works [13]–[15], our goal is not to exclude all FPs,
+source SIEM detection rules from Elastic [21], Sigma [23] but rather to prioritize most potential attacks for investigation
+and Google Chronicle [22]. We extracted all persistence- using threat score ranking. In other words, CPD aims to
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 11
+
+ TABLE V: Comparison of CPD and open-source SIEM rules.
+
+ CPD Elastic Chronicle Sigma
+ Datasets
+ Stage 1 Stage 2 Stage 3
+
+ FP FN FP FN FP FN FP FN FP FN FP FN
+ *
+ DARPA-E5 21911 0/2 117 0/2 7 0/2 5371 1/2 - - 57869 0/2
+
+ DARPA-OpTC 63460 0/1 35 0/1 4 0/1 15111 1/1 47584 0/1 11567 0/1
+
+ EP-APT29-1 4489 0/2 82 0/2 23 0/2 260 2/2 1680 1/2 15158 0/2
+
+ EP-APT29-2 3256 0/3 62 0/3 14 0/3 351 2/3 1724 1/3 13305 0/3
+
+ EP-Sandworm-1 3881 0/4 48 0/4 8 0/4 527 1/4 1209 0/4 63760 0/4
+ * The number before / represents false negatives, and the number after / represents true positives in the
+ corresponding dataset.
+
+ DARPA-E5 DARPA-OpTC EP-APT29-1
+ 1.0 Benign 1.0 Benign 1.0
+ 0.8 Attack 0.8 Attack 0.8
+ Threshold Threshold
+ 0.6 0.6 0.6
+ 0.4 0.4 0.4 Benign
+ 0.2 0.2 0.2 Attack
+ Threshold
+ 0.0 0.0 0.0
+ 0.0 2.5 5.0 7.5 0 2 4 6 0.0 2.5 5.0 7.5
+ CDF
+
+ EP-APT29-2 EP-Sandworm-1
+ 1.0 1.0
+ 0.8 0.8
+ 0.6 0.6
+ 0.4 Benign 0.4 Benign
+ 0.2 Attack 0.2 Attack
+ Threshold Threshold
+ 0.0 0.0
+ 0 2 4 6 0 2 4 6
+ Threat Score [log-scale]
+ Fig. 6: CDF of threat score for false and true alerts
+
+ TABLE VI: Evaluation of CPD’s threat score ranking.
+ Elastic’s persistence detection rules. We find out that Elastic’s
+ Dataset cPrecision@5 cPrecision@20 NDCG@5 NDCG@20 rules not only overly allowlist programs, but also tend to be
+ DARPA-E5 1.00 0.61 1.00 0.80 too specific, containing many hard-coded strings as conditions.
+ DARPA- Both cases make them very vulnerable to evasion attacks
+ 0.20 0.20 0.39 0.39
+ OpTC and have many false negatives in practice. For instance,
+ EP-APT29-1 0.33 0.33 0.50 0.50 this Elastic rule for T1547.001 [60] allowlists all programs
+ EP-APT29-2 0.00 0.15 0.00 0.39 not only under C:\Windows\System32\ but also under
+ EP- C:\Program Files\, essentially excluding the majority of
+ 0.25 0.30 0.43 0.52
+ Sandworm-1 programs on Windows. As discussed above, DARPA OpTC
+ has three persistence instances, including two “unsuccessful”
+ persistence instances only due to incomplete attack scenarios.
+maximize the likelihood of detecting persistence attacks based We find that, due to the high-degree of specificity and overly
+on limited human resources. Based on the alert budget security allowlisting, Elastic’s rules missed all these three persistence
+analysts have, they can flexibly configure this parameter. instances. On the contrary, our system CPD detected all
+ We further investigate on why these open-source detection three persistence instances in stage 1, and removed the two
+rules have undesired outcomes, in particular, 1) why there unsuccessful persistence instances in stage 2, presenting only
+are many false negatives when applying Elastic’s rules; 2) the true persistence as its final output.
+why Sigma’s rules create exceptionally high number of false To answer the second question, we resort to manually
+positives. To answer the first question, we carefully inspect inspecting Sigma’s persistence detection rules. We find that
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 12
+
+ TABLE VII: Comparison of CPD and CBC EDR
+Sigma’s rules are more diverse, with some being overly
+specific and others being too general. This Sigma rule sample CPD CBC
+for T1574.009 [61] uses only a program file path as condition, Dataset
+ Stage 1 Stage 2 Stage 3
+leading to excessive amount of alerts. We also find that the
+ FP FN FP FN FP FN FP FN
+high number of alerts is partly due to the fact that the Sigma
+rule repository contains many similar rules created by different ATLASv2 1602 0 11 0 - - 56 0
+
+contributors for the same attack (sub-)techniques. We argue
+that the repository maintainers should more properly organize
+the rules and remove seemingly redundant rules. for us to make direct comparison with them. However, they
+ In comparison to Sigma, Chronicle’s rules cause less alerts, would, by construction, fail at detecting persistence. Because a
+but have a few false negatives. Besides, we also find out that forward or backward tracing will not reach an event of interest
+Chronicle has overly simple rules causing too many alerts such in the next phase, if attackers break down the entire cyber-killas this rule for T1053.005 [62]. At last, Chronicle’s rules chain into multiple phases like in Figure 1. In fact, persistence
+overly use process names/paths as conditions. However, in attacks can be used to totally evade them.
+the DARPA E5 dataset, process name is absent in log events Therefore, we performed a comparison with five
+caused by processes that were created before the logging most recent state-of-the-art learning/anomaly-based PIDS
+framework started. Lacking this information will result in KAIROS [17], FLASH [18]3 , MAGIC [27], ORTHRUS [63]
+wrong results. Hence we do not evaluate Chronicle’s rules on and VELOX [64], which show superior performance over
+the DARPA E5 dataset. It is worth mentioning that this study other learning-based PIDS like [9], [19], [20], [25], [26].
+focuses on detecting persistence, which is often overlooked or However, none of these works outline detection results
+even badly understood, as explained in Section II. It is not regarding to persistence attacks on each dataset. Each attack
+surprising that those popular detection rule repositories have graph shown in the original papers was created from a subset
+less sound or complete persistence detection rule sets. of DARPA E3, DARPA E5, or DARPA OpTC dataset. None
+ of those chosen subsets contains a true persistence attack.
+CPD vs. CBC EDR. We then compare our system CPD
+ This is little surprising, as we already discussed above that
+with the commercial VMware CBC EDR [57] on ATLASv2
+ public datasets often lack persistence traces. True persistence
+dataset. For fair comparison, we did not run CPD’s stage 3
+ attacks only exist in DARPA E5 Fivedirections subset and
+on this dataset, because it does not include a real persistence
+ DARPA OpTC day 2 subset.
+attack. Table VII shows the detection results of CPD and CBC
+ MAGIC was evaluated only on DARPA E3 dataset by
+EDR. Like above, without running its stage 3, CPD already
+ the authors, but not on more recent DARPA E5, DARPA
+outperforms the CBC EDR by reducing the false positive
+ OpTC or any datasets containing true persistence attacks.
+rate by 80%. Besides, we find that CBC’s IOC (indicator of
+ ORTHRUS was evaluated only on some subsets of DARPA
+compromise) hits reveal that they blindly allowlist programs
+ E3 and DARPA E5 datasets by the authors; those subsets
+as well, like SIEM detection rules discussed above. This could
+ do not include any true persistence attack. In comparison,
+easily result in false negatives.
+ KAIROS, FLASH and VELOX were evaluated on the most
+ We stress that CPD’s stage 1 also eliminates excessive false recent DARPA dataset, i.e., OpTC dataset. The authors of
+alarms caused by critical system programs modifying files and VELOX present a framework [64], [65] for comparing deep
+Registry at indicative locations. But CPD first checks if those learning-based PIDS, with which they evaluated state-of-theallowlisted programs are potentially compromised by exam- art PIDS on diverse datasets in terms of general detection
+ining whether their executable files are modified. To further performance.
+optimize the detection results at the stage 1 of CPD, it does Hence, we took the framework, and evaluated all of the five
+not create unnecessary alerts for DLL files dropped on disk state-of-the-art PIDS on the OpTC dataset. More specifically,
+that get deleted afterwards. Otherwise it would produce lots of we evaluated them only on the subset containing a true
+security alerts related to several persistence (sub-)techniques, persistence attack, i.e., system events from the host 0501. As
+e.g., T1574.001 and T1574.002. This is due to a common criticized in the comparison study [64], learning-based PIDS
+Windows program behavior, in which a program drops some are sensitive to hyperparameter tuning and previous studies
+DLL files to a (temporary) file folder after being started, commonly omit hyperparameter tuning for baseline systems.
+then it starts some new instances (as child processes) that Therefore, we took the pre-trained models provided by the
+load those DLL files. The DLL files get deleted when those authors of each PIDS, and first performed fine-tuning on the
+child processes terminate. However, unlike Linux, Windows OpTC dataset to find the best-performing model of each PIDS.
+by default never deletes temporary files, and leaves it to the We leveraged the hyperparameter optimization engine W&B
+programs for the clean-up. That is, temporary files persist Sweeps [66] for this purpose.
+reboots if not deleted by their creator. Hence, if a DLL
+ As suggested in [64], to evaluate a learning-based PIDS,
+file is dropped and not deleted afterwards, CPD generates a
+ it should be run several times under identical configurations
+persistence setup alert for it in its stage 1.
+ to compensate the performance instability. This is due to the
+CPD vs. prior PIDS. Most state-of-the-art heuristics-based fact that deep learning-based systems often exhibit predictive
+PIDS [13]–[15] are evaluated on either proprietary datasets or
+datasets without persistence attacks. Hence it is not possible 3 We acknowledge that FLASH and this paper share a subset of authors.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 13
+
+TABLE VIII: Comparison of CPD and prior PIDS on DARPA OpTC TABLE IX: Log reduction rate of expert-guided edges
+(Host 0501). ✓ = Detected, ✗= Not Detected
+ Dataset Data Size ALPC Data Size Reduction Rate
+ Persistence Persistence Run Time Mean Memory
+ Setup Execution (minute)* Consumption (GB) EP-APT29-1 32GB 12GB 38%
+ CPD ✓ ✓ 2 2.6 EP-APT29-2 24GB 5GB 20%
+ KAIROS ✓ ✗ 443 29.2 EP-Sandworm-1 68GB 36GB 53%
+ FLASH ✓ ✗ 244 7.6
+ MAGIC ✓ ✗ 81 6.3 TABLE X: Memory utilization (MB) of running CPD
+ ORTHRUS ✗ ✗ 121 58.3 DARPA- DARPA-
+ ATLASv2
+ EP- EP- EP-
+ OpTC E5 APT29-1 APT29-2 Sandworm-1
+ VELOX ✗ ✗ 78 26.0
+ max 10830 18464 579 3625 3513 3484
+ * From data processing to detection result.
+ mean 4484 11720 247 892 895 573
+
+instability [67]. Thus, we ran each fine-tuned learning-based
+PIDS five times during our evaluation, and present the results detection system, requires at most less than half of memory
+in Table VIII. Note that the run time and the mean memory resource than learning-based PIDS, while being more accurate
+consumption in Table VIII are the average values of five runs and at least 39× faster than learning-based PIDS. Note that
+for each learning-based PIDS. CPD interfaces with Elasticsearch, a scalable and near real-
+ It is worth noting that learning-based PIDS perform attack time search engine, for rule matching, and performs provedetection at various granularity levels, unlike heuristics-based nance analytics only on system events related to persistence
+PIDS [13]–[15], which inherently perform attack detection at setup and execution.
+the finest granularity level, i.e, the node level. All five PIDS
+in Table VIII perform detection at a finer granularity than B. Log Reduction via Expert-Guided Edges
+previous learning-based PIDS like UNICORN [9], which clas- As discussed in Section IV, with system logs generated by
+sifies an entire graph as benign or malicious. KAIROS takes most popular logging frameworks we observe missing links
+system events as input, splits the entire time line into many due to the absence of IPC log events. However, by introducing
+time windows, and classifies each time window as benign or expert-guided edges, we can cut the dependence on IPC events
+malicious. In comparison, FLASH, MAGIC, ORTHRUS and while still capable of detecting relevant attack steps. During
+VELOX can classify each node in the provenance graph as implementation of MITRE full emulation plans, we collect
+benign or malicious. ALPC log events using the “NT Kernel Logger” [54] ETW
+ KAIROS’s detection result on OpTC shows that it has trace session. Table IX shows the log reduction rate of CPD
+correctly classified the time window, in which persistence by employing expert-guided edges instead of relying on ALPC
+setup was conducted, as malicious, but wrongly classified logs on each dataset.
+the time window, in which the corresponding persistence
+execution happened, as benign. Similarly, FLASH and MAGIC
+produce a set of malicious nodes, which include the nodes C. Response Time & Runtime Overhead
+related to persistence setup, but not the nodes responsible We divide the response time of CPD into three parts.
+for persistence execution. Surprisingly, the best-performing Figure 7 presents the cumulative distribution function of
+models of ORTHRUS and VELOX have failed consistently response time of CPD in its three stages, respectively. The
+across several runs to detect both malicious nodes related to stage 1 response time is measured per detection rule matching.
+persistence setup and malicious nodes related to persistence Figure 7 (a) shows that it takes less than half a second to find
+execution. alert events in an entire dataset for more than 95% of detection
+ Though, it is important to note that ORTHRUS and VELOX rules. We measure the stage 2 response time as the time to
+perform attack detection actually at a finer granularity than perform backward tracing on an indicative process with remote
+FLASH and MAGIC. That is, FLASH and MAGIC consider connection(s) while matching against persistence execution
+that nodes within the neighborhood of a known malicious node rules, persistence tables alignment and pseudo-edge creation.
+also as malicious, regardless whether they are actually related As shown in Figure 7 (b), it takes less than 11 seconds to
+to the attack. This overestimation contributes to less false create a pseudo-edge for over 90% of all indicative processes.
+negatives in node classification, but inevitably leads to more The stage 3 response time is the time for performing backward
+false positives. To avoid an overwhelming number of false and forward tracing on each alert produced from stage 2 while
+positive nodes, and hence potentially increase the practicality checking for contextual indicators, and calculating the threat
+of learning-based PIDS for security analysts, ORTHRUS and score. Figure 7 (c) shows that it takes less than 140 seconds
+VELOX refrain from the overestimation shared by previous to inspect each alert for over 95% of all alerts in DARPAlearning-based PIDS. However, our evaluations show that OpTC dataset, and only less than 42 seconds for all alerts in
+ORTHRUS and VELOX have weakened their performance other datasets. Memory overhead caused by running CPD on
+in detecting true malicious nodes in exchange for less false each dataset is presented in Table X. The results are measured
+positive nodes. by using mprof [68], which samples memory consumption
+ As shown in Table VIII, CPD, as a dedicated persistence every 100 ms.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 14
+
+ Stage 1 Stage 2 Stage 3
+ 1.0 1.0 1.0
+ 0.8 0.8 0.8
+ 0.6 DARPA-OpTC 0.6 DARPA-OpTC 0.6
+ DARPA-E5 DARPA-E5 DARPA-OpTC
+ CDF
+
+ 0.4 ATLASv2 0.4 ATLASv2 0.4 DARPA-E5
+ EP-APT29-1 EP-APT29-1 EP-APT29-1
+ 0.2 EP-APT29-2 0.2 EP-APT29-2 0.2 EP-APT29-2
+ EP-Sandworm-1 EP-Sandworm-1 EP-Sandworm-1
+ 0.0 0.0 0.0
+ 0 2 4 6 0 5 10 15 0 200 400 600
+ (a) (b) (c)
+ Response Time [sec]
+ Fig. 7: CDF of response time of CPD
+
+ powershell.exe s CommandInvokation(Set-WmiInstance): ... That is, we believe this will have a limited impact on the
+ before reboot practicality of CPD. Further, CPD is robust against evasion
+ services.exe pseudo-edge after reboot
+ techniques proposed in [28], [29], as they specifically target
+ s
+ svchost.exe s wmiprvse.exe
+ anomaly-based PIDS that are based on path-based embedding
+ s or graph-based embedding.
+ c
+ powershell.exe 202.6.172.98, 443
+ B. Maintain and Extend CPD
+Fig. 8: WMI persistence attack graph automatically generated by
+ One limitation of CPD is that it relies on existing threat
+CPD on DARPA OpTC dataset.
+ intelligence knowledge base (MITRE ATT&CK), which is
+ subject to expansion. That is, the detection rule base in stage
+D. Reconstructed Persistence Attack Graphs 1 and the indicator list in stage 3 of CPD need to be updated,
+ if new attack techniques or behaviors emerge in the wild.
+ An example of reconstructed persistence attack graph from
+ Nonetheless, manually updating the rule base in stage 1 and
+the public dataset OpTC is showed in the Figure 8. This figure
+ the indicator list in stage 3 takes only a few minutes. Besides,
+depicts a true positive of T1546.003 (Event Triggered Execuwe stress that unlike signature-based IDS relying on easily
+tion: WMI Event Subscription). Like Figure 3 and Figure 5
+ modifiable hard-coded strings, CPD is based on characteristic
+presented in Section IV, the upper part of the figure shows
+ attack behaviors and mostly uses immutable indicative strings
+the persistence setup graph, whereas the lower part shows
+ in its stage 1. In other words, CPD depends on MITRE
+the persistence execution graph. Both parts are connected via
+ ATT&CK Matrix and high-level behavior rules that are subject
+a pseudo-edge. This succinct attack graph exhibits that the
+ to change in a much slower pace.
+attacker created a WMI instance during persistence setup. During persistence execution, the Powershell code for connecting
+ C. Adaptability and Generality of CPD
+back to the attacker is executed through the Windows system
+process wmiprvse.exe, when a specified event is triggered. CPD is based on MITRE ATT&CK Matrix, which is a
+We stress that the preciseness of this succinct attack graph general framework valued by organizations across the globe.
+containing the most critical information related to persistence As such, leading security vendors, on the one hand, continue
+can help even inexperienced security analysts achieve a speedy contributing to this framework and, on the other hand, use
+full attack investigation. this framework as a reference to develop detection rules/mechanisms. Besides, we use popular standard instrumentationfree logging frameworks for collecting system logs. Our CPD
+ VII. L IMITATIONS & D ISCUSSION
+ prototype interfaces with Elasticsearch, which is one of the
+A. Evasion (Mimicry) Attacks most popular tools for event search and threat analysis among
+ As described in Section III, CPD is not designed to de- organizations. CPD is tested on a typical Windows Domain
+tect all persistence (sub-)techniques. Although CPD is not network (including both Windows and Linux machines as
+tested to detect macOS-based persistence (sub-)techniques, being monitored clients) as required in the MITRE emulation
+we believe the principle is transferable. However, detecting plans. CPD is deployed on a Linux machine functioning
+cloud infrastructures-related persistence (sub-)techniques may as a server that processes system logs shipped from client
+require a different strategy with cloud infrastructures-specific machines and performs attack detection. These characteristics,
+conditions considered. Like all other provenance-based detec- combined with its robust foundation in the MITRE ATT&CK
+tion systems, which assume the OS integrity, CPD is not able framework, establish CPD as a versatile and comprehensive
+to detect pre-OS boot persistence attacks like Bootkit. How- solution, readily deployable in a wide range of enterprise
+ever, none of these unaddressed persistence (sub-)techniques settings for effective persistence threat detection with minimal
+fall into the most misused top 10 persistence (sub-)techniques. implementation effort.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 15
+
+D. Completeness of CPD Heuristics-based PIDS, such as [13], [15], apply detection
+ CPD’s methodology, while illustrated through specific ex- signatures on provenance graphs to transform them into highamples and MITRE techniques in the paper, embodies a level APT stage graphs. These systems calculate threat scores
+comprehensive and generalizable framework for detecting per- based partly on the rarity of events and the correlation of APT
+sistence threats. The case-by-case analysis serves not merely stages within the APT graphs. However, they face difficulties
+as isolated instances but as representative samples of broader in linking fragmented APT attack stages due to not recognizing
+persistence threat patterns, showcasing CPD’s practicality the dual nature of persistence attacks, often resulting in
+across varied threat landscapes. This approach ensures that incomplete attack graph reconstructions. Consequently, they
+while the examples may appear specific in the paper, the rank disconnected graphs so low that true attacks frequently
+underlying principles – such as the segmentation into setup and remain uninvestigated. Moreover, these systems require benign
+execution phases – are universally applicable. Such a strategy training data to assign rarity scores to events and filter false
+underlines CPD’s completeness, affirming its capability to alarms. Additionally, RapSheet [15] is designed as an offline
+address not just known scenarios but also to adapt and respond detection system, leading to significant delays in threat idento emerging threats. CPD’s effectiveness is further validated tification and investigation. Unlike these systems, CPD excels
+through extensive evaluation on diverse datasets, showcasing in detecting persistence techniques by combining advanced
+its superior attack detection rates and graph completeness com- detection rules with pseudo-edges and expert-guided edges.
+pared to state-of-the-art methods. However, we acknowledge This unique approach enables CPD to effectively identify and
+that CPD does not guarantee the detection of novel persistence investigate persistence threats in real-time, bridging the gaps
+techniques. that other PIDS fail to address.
+ Specialized Threat Detectors. Specialized threat detectors
+ focusing on single stages of APT attacks are well-documented
+E. Ablation Analysis in the literature. For instance, Ho et al. [69] introduced the
+ The contribution of each of CPD’s modules and techniques Hopper system, and King and Huang [70] developed the
+is explained through the paper theoretically and experimen- Euler system, both targeting lateral movement detection using
+tally. That is, Table V shows the contribution of each of network logs. There are also specialized systems for detecting
+CPD’s three stages’ components in detecting true attacks or phishing emails [71], data exfiltration [72], command and
+reducing false positives, i.e., its detection rules in stage 1, control (C2) activities [73], and ransomware [74]. To the
+pseudo-dependency edges in stage 2 and the false positive best of our knowledge, CPD is the first specialized detector
+reduction algorithm in stage 3. However, we cannot simply that focuses on persistence threats using provenance analytics,
+remove stage 1 or stage 2 to evaluate CPD’s performance; filling a critical gap in APT defense strategies.
+it would break CPD, as each stage absolutely depends on the Log Reduction Schemes. Numerous log reduction systems
+previous stage. Further, the contribution of expert-guided edge have been proposed recently, such as [75]–[79]. Unlike these
+is experimentally evaluated and showed in Table IX. Expert- systems, CPD specifically aims to reduce the reliance on IPC
+guided edges contribute to, on the one hand, log reduction, and logs to enhance persistence detection, a focus not typically
+on the other hand, repair of some broken links in system logs, addressed by existing log reduction schemes. These systems,
+as explained in section IV-B. For instance, in practice, CPD while complementary to CPD, can also be integrated to further
+would not be able to accurately detect persistence technique decrease the size of audit logs.
+T1543.002 (Systemd Service) without expert-guided edges.
+ IX. C ONCLUSION
+ VIII. R ELATED WORK In this paper, we introduce CPD, a novel system dedicated
+ In Section I, we described the limitations of the existing to detecting persistence attacks. Distinctively, CPD leverages
+threat detection system that CPD addresses, and complement provenance analytics, moving beyond the basic detection rules
+the discussion on related work here: traditionally used. This approach not only significantly reduces
+ false alarms but also notably enhances accuracy in identifying
+Provenance-based IDS (PIDS). Learning-based PIDS use
+ genuine persistence attacks. Our evaluations, conducted on
+machine learning to model benign behavior from provenance
+ both public datasets and datasets derived from rigorously exegraphs. They alert on deviations during runtime. Early models,
+ cuted MITRE emulation plans, demonstrate CPD’s superiority
+such as [9], [20], detected anomalies at the graph level,
+ over state-of-the-art detection methods. Furthermore, CPD
+complicating attack investigations. Newer models improve
+ incurs low runtime overhead, making it a valuable addition
+detection by focusing on time windows [17], edges [19], or
+ to the suite of threat detectors in enterprise settings.
+nodes [18], [26], [27]. Despite advancements, these systems
+lack explanations for alerts, reducing interpretability. They
+ R EFERENCES
+also require extensive training data and slow down detection
+ [1] The MITRE Corporation. “MITRE ATT&CK.” Accessed: Jan. 2023.
+processes. Furthermore, they are vulnerable to concept drift [Online]. Available: https://attack.mitre.org.
+and evasion attacks [28], [29]. Recent systems like [17], [2] CrowdStrike, Inc., “Crowdstrike 2023 global threat report,” 2023.
+[18], [27] have addressed some issues but still fail to fully [Online]. Available: https : / / www . crowdstrike . com / global - threat -
+ report/.
+understand persistence attacks or include necessary contextual [3] The MITRE Corporation. “Sandworm Team.” Accessed: June 2023.
+checks. [Online]. Available: https://attack.mitre.org/groups/G0034/.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 16
+
+ [4] French Cybersecurity Agency, “Sandworm intrusion set campaign [27] Z. Jia, Y. Xiong, Y. Nan, Y. Zhang, J. Zhao, and M. Wen, Magic:
+ targeting Centreon systems,” 2021. [Online]. Available: https://www. Detecting advanced persistent threats via masked graph representation
+ cert.ssi.gouv.fr/uploads/CERTFR-2021-CTI-005.pdf. learning, 2023. arXiv: 2310.09831 [cs.CR].
+ [5] Pulsedive. “P.A.S. Webshell.” Accessed: Sept. 2023. [Online]. Avail- [28] A. Goyal, X. Han, G. Wang, and A. Bates, “Sometimes, you aren’t
+ able: https://pulsedive.com/threat/P.A.S.%5C%20Webshell. what you do: Mimicry attacks against provenance graph host intrusion
+ [6] Microsoft Threat Intelligence. “Deep dive into the Solorigate second- detection systems,” in Proc. Netw. Distrib. Syst. Secur. Symp., 2023,
+ stage activation.” Accessed: Oct. 2023. [Online]. Available: https : / / pp. 1–18.
+ www.microsoft.com/en- us/security/blog/2021/01/20/deep- dive- into- [29] K. Mukherjee, J. Wiedemeier, T. Wang, J. Wei, F. Chen, M. Kim, M.
+ the - solorigate - second - stage - activation - from - sunburst - to - teardrop - Kantarcioglu, and K. Jee, “Evading Provenance-Based ML detectors
+ and-raindrop/. with adversarial system actions,” in Proc. USENIX Secur. Symp., 2023,
+ [7] P. Paganini. “SolarWinds hack: the mystery of one of the biggest pp. 1199–1216.
+ cyberattacks ever.” Accessed: Oct. 2023. [Online]. Available: https : [30] E. Segal. “Alert Fatigue.” Accessed: Aug. 2023. [Online]. Available:
+ //cybernews.com/security/solarwinds- hack- the- mystery- of- one- of- https://www.forbes.com/sites/edwardsegal/2021/11/08/alert- fatiguethe-biggest-cyberattacks-ever/. can - lead - to - missed - cyber - threats - and - staff - retentionrecruitment -
+ [8] CrowdStrike Intelligence Team. “SUNSPOT: An Implant in the Build issues-study/?sh=4c96871035c9.
+ Process.” Accessed: Oct. 2023. [Online]. Available: https : / / www . [31] C. Robinson, “In Cybersecurity Every Alert Matters,” 2021. [Online].
+ crowdstrike.com/blog/sunspot-malware-technical-analysis/. Available: https://www.criticalstart.com/wp-content/uploads/2021/11/
+ [9] X. Han, T. Pasqueir, A. Bates, J. Mickens, and M. Seltzer, “UNICORN: US48277521 TLWP.pdf.
+ Runtime provenance-based detector for advanced persistent threats,” in [32] B. A. Alahmadi, L. Axon, and I. Martinovic, “99% false positives: A
+ Proc. Netw. Distrib. Syst. Secur. Symp., 2020, pp. 1–18. qualitative study of soc analysts’ perspectives on security alarms,” in
+[10] S. Ma, X. Zhang, and D. Xu, “ProTracer: Towards practical provenance Proc. USENIX Secur. Symp., 2022, pp. 2783–2800.
+ tracing by alternating between logging and tainting,” in Proc. Netw. [33] M. Wojtasiak, “The defenders’ dilemma,” 2023. [Online]. Available:
+ Distrib. Syst. Secur. Symp., 2016, pp. 1–15. https://info.vectra.ai/state-of-threat-detection.
+[11] M. N. Hossain, S. M. Milajerdi, J. Wang, B. Eshete, R. Gjomemo, [34] CRITICALSTART, “The Impact of Security Alert Overload,” 2019.
+ R. Sekar, S. D. Stoller, and V. Venkatakrishnan, “SLEUTH: Real- [Online]. Available: https://www.criticalstart.com/wp-content/uploads/
+ time attack scenario reconstruction from COTS audit data,” in Proc. 2021/02/CS Report-The-Impact-of-Security-Alert-Overload.pdf.
+ USENIX Secur. Symp., 2017, pp. 487–504. [35] The MITRE Corporation. “MITRE Matrix.” Accessed: Jan. 2023.
+[12] W. U. Hassan, L. Mark, N. Aguse, A. Bates, and T. Moyer, “To- [Online]. Available: https://attack.mitre.org/matrices/enterprise/.
+ wards scalable cluster auditing through grammatical inference over [36] The MITRE Corporation. “MITRE Adversary Emulation Library.”
+ provenance graphs,” in Proc. Netw. Distrib. Syst. Secur. Symp., 2018, Accessed: Jan. 2023. [Online]. Available: https://github.com/centerpp. 1–15. for-threat-informed-defense/adversary emulation library.
+[13] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. N. [37] The MITRE Corporation. “MITRE Attack Stix Data.” Accessed: April
+ Venkatakrishnan, “HOLMES: Real-time apt detection through corre- 2023. [Online]. Available: https://github.com/mitre-attack/attack-stixlation of suspicious information flows,” in Proc. IEEE Symp. Secur. data.
+ Privacy, 2019, pp. 1137–1152. [38] M. van Opstal and W. Arbaugh. “DARPA OpTC.” Accessed: Sept.
+[14] W. U. Hassan, S. Guo, D. Li, Z. Chen, K. Jee, Z. Li, and A. Bates, 2023. [Online]. Available: https://github.com/FiveDirections/OpTC-
+ “NoDoze: Combatting threat alert fatigue with automated provenance data.
+ triage,” in Proc. Netw. Distrib. Syst. Secur. Symp., 2019, pp. 1–15. [39] J. Torrey. “DARPA Transparent Computing.” Accessed: Sept. 2023.
+[15] W. U. Hassan, A. Bates, and D. Marino, “Tactical provenance analysis [Online]. Available: https : / / github . com / darpa - i2o / Transparent -
+ for endpoint detection and response systems,” in Proc. IEEE Symp. Computing.
+ Secur. Privacy, 2020, pp. 1172–1189. [40] A. Alsaheel, Y. Nan, S. Ma, L. Yu, G. Walkup, Z. B. Celik, X. Zhang,
+[16] M. N. Hossain, S. Sheikhi, and R. Sekar, “Combating dependence and D. Xu, “Atlas: A sequence-based learning approach for attack
+ explosion in forensic analysis using alternative tag propagation seman- investigation,” in Proc. USENIX Secur. Symp., 2021, pp. 3005–3022.
+ tics,” in Proc. IEEE Symp. Secur. Privacy, 2020, pp. 1139–1155. [41] M. Russinovich and T. Garnier. “System Monitor.” Accessed: Feb.
+[17] Z. Cheng, Q. Lv, J. Liang, Y. Wang, D. Sun, T. Pasquier, and X. 2023. [Online]. Available: https : / / learn . microsoft . com / en - us /
+ Han, “KAIROS: Practical intrusion detection and investigation using sysinternals/downloads/sysmon.
+ whole-system provenance,” in Proc. IEEE Symp. Secur. Privacy, 2024, [42] S. Grubb, The Linux audit daemon, Accessed: Feb. 2023. [Online].
+ pp. 9–28. Available: https://linux.die.net/man/8/auditd.
+[18] M. Rehman, H. Ahmadi, and W. Hassan, “Flash: A comprehensive [43] Red Canary. “Atomic Red Team.” Accessed: Jan. 2023. [Online].
+ approach to intrusion detection via provenance graph representation Available: https://atomicredteam.io/.
+ learning,” in Proc. IEEE Symp. Secur. Privacy, 2024, pp. 142–161. [44] Elastic NV. “EQL search.” Accessed: Sept. 2023. [Online]. Available:
+[19] J. Zeng, X. Wang, J. Liu, Y. Chen, Z. Liang, T.-S. Chua, and Z. L. https://www.elastic.co/guide/en/elasticsearch/reference/current/eql.
+ Chua, “Shadewatcher: Recommendation-guided cyber threat analysis html.
+ using system audit records,” in Proc. IEEE Symp. Secur. Privacy, 2022, [45] R. Uetz, M. Herzog, L. Hackländer, S. Schwarz, and M. Henze, You
+ pp. 489–506. cannot escape me: Detecting evasions of SIEM rules in enterprise
+[20] F. Yang, J. Xu, C. Xiong, Z. Li, and K. Zhang, “Prographer: An networks, 2023. arXiv: 2311.10197 [cs.CR].
+ anomaly detection system based on provenance graph embedding,” in [46] A. Allievi, A. Ionescu, D. A. Solomon, K. Chase, and M. E. Russi-
+ Proc. USENIX Secur. Symp., 2023, pp. 4355–4372. novich, Windows Internals, Part 2, 7th Edition. Microsoft Press, 2022.
+[21] Elastic. “Elastic Detection Rules.” Accessed: Sept. 2023. [Online]. [47] The MITRE Corporation. “APT29.” Accessed: April 2023. [Online].
+ Available: https://github.com/elastic/detection-rules. Available: https://attack.mitre.org/groups/G0016/.
+[22] Google Security Operations. “Chronicle Detection Rules.” Accessed: [48] The MITRE Corporation. “Wizard Spider.” Accessed: April 2023.
+ Sept. 2023. [Online]. Available: https://github.com/chronicle/detection- [Online]. Available: https://attack.mitre.org/groups/G0102/.
+ rules. [49] S. White. “Windows Remote Management.” Accessed: March 2023.
+[23] SigmaHQ. “Sigma.” Accessed: Sept. 2023. [Online]. Available: https: [Online]. Available: https://learn.microsoft.com/en-us/windows/win32/
+ //github.com/SigmaHQ/sigma. winrm/portal.
+[24] The MITRE Corporation. “MITRE T1547001.” Accessed: May 2023. [50] The MITRE Corporation. “Carbanak.” Accessed: April 2023. [Online].
+ [Online]. Available: https://attack.mitre.org/techniques/T1547/001/. Available: https://attack.mitre.org/groups/G0008/.
+[25] Q. Wang, W. U. Hassan, D. Li, K. Jee, X. Yu, K. Zou, J. Rhee, Z. Chen, [51] Elastic NV. “Elasticsearch.” Accessed: Sept. 2023. [Online]. Available:
+ W. Cheng, C. A. Gunter, et al., “You are what you do: Hunting stealthy https://www.elastic.co/.
+ malware via data provenance analysis,” in Proc. Netw. Distrib. Syst. [52] NetworkX developers. “NetworkX.” Accessed: Sept. 2023. [Online].
+ Secur. Symp., 2020, pp. 1–17. Available: https://networkx.org/.
+[26] S. Wang, Z. Wang, T. Zhou, H. Sun, X. Yin, D. Han, H. Zhang, X. Shi, [53] West Health Institute. “PyVis.” Accessed: Sept. 2023. [Online]. Availand J. Yang, “Threatrace: Detecting and tracing host-based threats in able: https://pyvis.readthedocs.io/en/latest/.
+ node level through provenance graph learning,” IEEE Transactions on [54] D. Marshall. “NT Kernel Logger.” Accessed: Feb. 2023. [Online].
+ Information Forensics and Security, vol. 17, pp. 3972–3987, 2022. Available: https : / / learn . microsoft . com / en - us / windows - hardware /
+ drivers/devtest/nt-kernel-logger-trace-session.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 17
+
+[55] A. D. Keromytis. “DARPA Transparent Computing E3.” Accessed: for big-data causality analysis,” in Proc. ACM SIGSAC Conf. Comput.
+ Sept. 2023. [Online]. Available: https : / / github . com / darpa - i2o / Commun. Secur., 2018, pp. 1324–1337.
+ Transparent-Computing/blob/master/README-E3.md. [79] M. N. Hossain, J. Wang, R. Sekar, and S. D. Stoller, “Dependence-
+[56] A. Riddle, K. Westfall, and A. Bates. “ATLASv2.” Accessed: Oct. Preserving data compaction for scalable forensic analysis,” in Proc.
+ 2023. [Online]. Available: https : / / bitbucket . org / sts - lab / atlasv2 / src / USENIX Secur. Symp., 2018, pp. 1723–1740.
+ master/.
+[57] VMware LLC. “Carbon Black Cloud.” Accessed: Oct. 2023. [Online].
+ Available: https://www.vmware.com/products/carbon- black- cloud.
+ html.
+[58] The MITRE Corporation. “MITRE Engenuity.” Accessed: Jan. 2023.
+ [Online]. Available: https://attackevals.mitre-engenuity.org/.
+[59] The MITRE Corporation. “MITRE Engenuity Evaluation.” Accessed:
+ Jan. 2023. [Online]. Available: https://attackevals.mitre-engenuity.org/ Qi Liu received his PhD degree from Karlsruhe Inenterprise/wizard-spider-sandworm/. stitute of Technology, Germany, in 2025. His current
+[60] Elastic. “A Elastic rule sample.” Accessed: Sept. 2023. [Online]. research interests include system security, auditing
+ Available: https://github.com/elastic/detection- rules/blob/main/rules/ & logging, data provenance analysis, and Advanced
+ windows/persistence registry uncommon.toml. Persistence Threat detection and investigation.
+[61] SigmaHQ. “A Sigma rule sample.” Accessed: Sept. 2023. [Online].
+ Available: https : / / github. com / SigmaHQ / sigma / blob / master / rules /
+ windows / file / file event / file event win creation unquoted service
+ path.yml.
+[62] Google Security Operations. “A Chronicle rule sample.” Accessed:
+ Sept. 2023. [Online]. Available: https://github.com/chronicle/detectionrules / blob / main / mitre attack / T1053 005 windows creation of
+ scheduled task.yaral.
+[63] B. Jiang, T. Bilot, N. El Madhoun, K. Al Agha, A. Zouaoui, S.
+ Iqbal, X. Han, and T. Pasquier, “ORTHRUS: Achieving High Quality
+ of Attribution in Provenance-based Intrusion Detection Systems,” in Muhammad Shoaib received his BS degree in
+ Security Symposium (USENIX Sec’25), USENIX, 2025. Broad Discipline of Computing from Hong Kong
+[64] T. Bilot, B. Jiang, Z. Li, N. El Madhoun, K. Al Agha, A. Zouaoui, and Polytechnic University in 2022. He is currently a
+ T. Pasquier, “Sometimes Simpler is Better: A Comprehensive Analysis PhD student in the DART Lab at University of
+ of State-of-the-Art Provenance-Based Intrusion Detection Systems,” in Virginia. His current research interests include en-
+ Security Symposium (USENIX Sec’25), USENIX, 2025. terprise systems security and vulnerability detection.
+[65] T. Bilot, B. Jiang, and T. Pasquier, “Pidsmaker: Building and evaluating provenance-based intrusion detection systems,” arXiv preprint
+ arXiv:2601.22983, 2026.
+[66] wandb. “Weights & Biases.” Accessed: Feb. 2026. [Online]. Available:
+ https://github.com/wandb/sweeps.
+[67] C. Summers and M. J. Dinneen, “Nondeterminism and instability in
+ neural network optimization,” in Proceedings of the 38th International
+ Conference on Machine Learning, M. Meila and T. Zhang, Eds.,
+ ser. Proceedings of Machine Learning Research, vol. 139, PMLR, Mati Ur Rehman received his BS degree in Com-
+ 2021, pp. 9913–9922. puter Science from Lahore University of Manage-
+[68] F. Pedregosa and P. Gervais. “Memory Profiler.” Accessed: Oct. 2023. ment Sciences in 2022. He is currently a graduate
+ [Online]. Available: https://pypi.org/project/memory-profiler/. student at the University of Virginia, pursuing a
+[69] G. Ho, M. Dhiman, D. Akhawe, V. Paxson, S. Savage, G. M. Voelker, PhD in Computer Science. His main research arand D. A. Wagner, “Hopper: Modeling and detecting lateral move- eas include machine learning and system security,
+ ment,” in Proc. USENIX Secur. Symp., 2021, pp. 3093–3110. with a focus on developing host intrusion detection
+[70] I. J. King and H. H. Huang, “Euler: Detecting network lateral move- systems.
+ ment via scalable temporal link prediction,” in Proc. Netw. Distrib.
+ Syst. Secur. Symp., 2022, pp. 1–16.
+[71] G. Ho, A. Sharma, M. Javed, V. Paxson, and D. Wagner, “Detecting
+ credential spearphishing in enterprise settings,” in Proc. USENIX Secur.
+ Symp., 2017, pp. 469–485.
+[72] Y. Ozery, A. Nadler, and A. Shabtai, “Information based heavy hitters
+ for real-time dns data exfiltration detection,” in Proc. Netw. Distrib. Kaibin Bao received his PhD degree from Karlsruhe
+ Syst. Secur. Symp., 2024, pp. 1–15. Institute of Technology, Germany, in 2021. He is
+[73] C. Novo and R. Morla, “Flow-based detection and proxy-based evasion currently the Head of the working group Resilient
+ of encrypted malware c2 traffic,” in Proc. ACM Workshop on Artificial Secure Automation of the Institute for Automation
+ Intelligence and Security, 2020, pp. 83–91. and Applied Informatics at the Karlsruhe Institute
+[74] A. Kharaz, S. Arshad, C. Mulliner, W. Robertson, and E. Kirda, “UN- of Technology. His current research topics include
+ VEIL: A Large-Scale, automated approach to detecting ransomware,” cybersecurity for critical infrastructures and automain Proc. USENIX Secur. Symp., 2016, pp. 757–772. tion systems using machine learning methods.
+[75] M. A. Inam, Y. Chen, A. Goyal, J. Liu, J. Mink, N. Michael, S. Gaur,
+ A. Bates, and W. U. Hassan, “Sok: History is a vast early warning
+ system: Auditing the provenance of system intrusions,” in Proc. IEEE
+ Symp. Secur. Privacy, 2023, pp. 2620–2638.
+[76] Z. Xu, Z. Wu, Z. Li, K. Jee, J. Rhee, X. Xiao, F. Xu, H. Wang, and
+ G. Jiang, “High fidelity data reduction for big data security dependency
+ analyses,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Veit Hagenmeyer received his PhD degree from
+ 2016, pp. 504–516. Universit´e Paris XI, Paris, France in 2002. He is
+[77] H. Ding, S. Yan, J. Zhai, and S. Ma, “Elise: A storage efficient logging currently a Professor of Energy Informatics in the
+ system powered by redundancy reduction and representation learning,” Faculty of Computer Science, and the Director of
+ in Proc. USENIX Secur. Symp., 2021, pp. 3023–3040. the Institute for Automation and Applied Informat-
+[78] Y. Tang, D. Li, Z. Li, M. Zhang, K. Jee, X. Xiao, Z. Wu, J. Rhee, ics at Karlsruhe Institute of Technology, Karlsruhe,
+ F. Xu, and Q. Li, “Nodemerge: Template based efficient data reduction Germany. His research interests include modeling,
+ optimization and control of energy systems, machine
+ learning-based forecasting in energy systems, and
+ integrated cybersecurity of such systems.
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3689905
+
+ 18
+
+ Wajih Ul Hassan received his PhD degree in Computer Science from the University of Illinois Urbana-
+ Champaign in 2021. He is currently an Assistant
+ Professor in the Department of Computer Science at
+ the University of Virginia. His research focuses on
+ securing complex networked systems by leveraging
+ data provenance approaches and scalable system
+ design. He has collaborated with NEC Labs and
+ Symantec Research Labs to integrate his defensive
+ techniques into commercial security products. He
+ has received an NSF CAREER Award, a Symantec
+Research Labs Graduate Fellowship, recognition as a Young Researcher at the
+Heidelberg Laureate Forum, an RSA Security Scholarship, a Mavis Future
+Faculty Fellowship, a Sohaib and Sara Abbasi Fellowship, and an ACM
+SIGSOFT Distinguished Paper Award.
+
+ This work is licensed under a Creative Commons Attribution 4.0 License. For more information, see https://creativecommons.org/licenses/by/4.0/

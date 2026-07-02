@@ -1,0 +1,2339 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [833] Uncertainty-Aware Multimodal Anomaly Detection for Microservice Systems With Active Learning
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：833
+题名：Uncertainty-Aware Multimodal Anomaly Detection for Microservice Systems With Active Learning
+年份：2026
+DOI：10.1109/tsc.2026.3672587
+来源：IEEE Transactions on Services Computing
+PDF：paper/10.1109_TSC.2026.3672587.pdf
+已有粗分类：时序、日志、KPI 与云原生异常检测
+二级关联：入侵检测与网络异常检测、其他AI安全与跨域异常检测
+相关性：中相关，分数 7
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\833.txt
+- 原始字符数：89192
+- 本次发送字符数：89192
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+1
+
+Uncertainty-Aware Multimodal Anomaly Detection
+for Microservice Systems with Active Learning
+Hui Dou, Shenglai Guo, Lele Zou, Yiwen Zhang*, Pengfei Chen, and Zibin Zheng, Fellow, IEEE
+
+Abstract—Accurate and robust anomaly detection is critical for
+microservice system reliability. Recent multimodal approaches
+have improved detection comprehensiveness by integrating metrics, logs, and traces. However, they often overlook intra-modal
+uncertainty from noise, ambiguity, or missing data, and intermodal uncertainty arising from varying predictive capabilities
+across modalities. Additionally, extensive labeling of multimodal
+data remains costly. To address these limitations, we propose
+MUAD, an uncertainty-aware multimodal anomaly detection
+framework with active learning. MUAD employs a Graph-based
+Probabilistic Encoder (GPE) to model intra-modal uncertainty
+through probabilistic representations, and a Confidence-aware
+Fusion Mechanism (CFM) to dynamically weight modalities
+based on their prediction confidence. Furthermore, an active
+learning paradigm iteratively refines the model using highconfidence pseudo-labels and informative samples, maintaining
+performance under label-deficient conditions. Experiments on
+three benchmark datasets demonstrate MUAD achieves 98.10%
+average F1-score, outperforming state-of-the-art methods by up
+to 7.87%. Results also confirm its robustness under low-quality
+data and limited labels.
+Index Terms—Microservice systems, anomaly detection, multimodal data, active learning.
+
+I. I NTRODUCTION
+In recent years, microservices architecture has gained
+widespread adoption in modern application development. By
+decomposing tightly coupled applications into independently
+deployable services, this approach enhances both flexibility
+and scalability. However, as system scale and complexity
+increase, the risk of anomalies escalates correspondingly.
+Anomalies originating in a single service may propagate
+through the call chain and adversely affect the performance
+of dependent services, thereby degrading the user experience
+and potentially leading to economic losses [1]. Consequently,
+timely detection and remediation of performance anomalies is
+essential for maintaining system reliability and availability.
+The observability data collected by operators in microservice systems, encompassing metrics, logs, and traces, plays
+Hui Dou, Shenglai Guo, Lele Zou and Yiwen Zhang are with the School
+of Computer Science and Technology, Anhui University, Hefei, China.
+E-mail: {douhui, zhangyiwen}@ahu.edu.cn,
+{e24201079, e22301352}@stu.ahu.edu.cn
+Pengfei Chen is with the School of Computer Science and Engineering,
+Sun Yat-sen University, Guangzhou, China.
+E-mail: chenpf7@mail.sysu.edu.cn
+Zibin Zheng is with the School of Software Engineering, Sun Yat-sen
+University, Zhuhai, China.
+E-mail: zhzibin@mail.sysu.edu.cn
+Yiwen Zhang is the corresponding author.
+
+a pivotal role in ensuring system reliability and security.
+Specifically, logs record detailed information during service
+operation, including requests, errors, exceptions, and other
+events. Metrics, on the other hand, provide a quantitative
+representation of the system’s performance and health status,
+with common examples including response time, error rate,
+and CPU utilization. Trace data captures the complete path of
+a request as it usually flows through multiple microservices.
+By utilizing trace IDs and span IDs, it reveals invocation
+relationships and provides a global view of service interactions, aiding in the analysis of service dependencies and
+performance bottlenecks. Over these years, many studies have
+successfully utilized unimodal data (i.e., solely metrics [2],
+[3], logs [4], [5] or traces [6], [7]) to achieve automated
+anomaly detection, demonstrating certain effectiveness in specific detection tasks. However, due to the limited information
+provided by each individual modality, unimodal approaches
+exhibit significant limitations in identifying particular types of
+anomalies [8], [9], [10]. For example, log data may sometimes
+reflect minor errors that have little impact on the overall
+system performance, which can easily trigger false alarms
+and lead to false positives. Figure 1 provides an illustrative
+example of how different modal data may manifest under
+various anomaly scenarios in microservice systems. Certain
+business-level anomalies, such as database query exceptions
+or code defects, often do not cause significant fluctuations in
+metrics data, yet they are more readily identifiable through
+logs and trace data. In contrast, network congestion anomalies
+are typically evident in both metrics and trace data. Therefore,
+analytical methods that comprehensively leverage multimodal
+data can compensate for the shortcomings of single data
+sources, thereby ensuring the comprehensiveness of anomaly
+detection.
+Given the limitations of unimodal anomaly detection approaches, several studies have proposed multimodal anomaly
+detection methods in recent years [11], [8], [12], [13]. Although these approaches obtained prospective performance,
+they still suffer from the following challenges:
+(1) Intra-modal uncertainty: Multimodal data originates
+from heterogeneous sources and is prone to data uncertainty
+due to modality noise, absence, and intrinsic ambiguity.
+These uncertainties directly compromise data quality, thereby
+diminishing the model’s ability to comprehend multimodal
+content effectively. Existing approaches [11] [8] typically
+employ deterministic point embeddings to learn modalityspecific representations. However, such methods rely heavily
+on clean or high-quality data. When processing low-quality
+data, uncertain sample embeddings may cause the model to
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+no detected unusual pa�erns
+
+detected unusual pa�erns
+
+System Fault Type
+
+2
+
+Metric
+
+Log
+
+Trace
+
+Resource Underprovisioning
+Database Query Failure
+Network Conges�on
+
+Fig. 1: Abnormal patterns in multimodal data for different
+system failures. This figure illustrates how different fault
+types manifest across metrics, logs, and traces. For instance,
+resource underprovisioning manifests primarily in metrics,
+while database query failures are evident in logs and traces.
+inaccurately capture critical information, consequently limiting
+both performance and robustness.
+(2) inter-modal uncertainty: Although each modal data
+deserves to be paid enough attention in order to detect various
+anomalous patterns in practical scenarios, the confidence level
+of each modality is not static across different samples, which
+are termed as “inter-modal uncertainty” in our paper. Existing
+multimodal anomaly detection [11], [14], [15] methods inherently assume that all modalities contribute positively to the
+detection process. However, when confronted with inter-modal
+conflicts, these approaches prevents the dynamic assessment of
+which modality can most accurately reflect the system state,
+thereby lacking the ability to dynamically assess and adjust
+the confidence levels of each modality.
+(3) Paucity of training data: Fully labeled high-quality
+samples can significantly enhance the detection performance
+of models but require extensive manual annotation, which is
+both time-consuming and costly. Particularly in the context
+of multimodal data, the complexity and workload increase
+significantly due to the need to integrate information from
+heterogeneous sources and make comprehensive judgments
+about the system state. Consequently, a key challenge in
+multimodal anomaly detection lies in balancing the trade-off
+between annotation cost and detection performance, so as to
+maintain effectiveness under under label-deficient conditions.
+In this work, we propose MUAD, an uncertainty-aware
+multimodal anomaly detection framework enhanced with active learning. It consists of four stages: (1)Unimodal Feature
+Encoding, where each modality is encoded into deterministic
+point-wise features; (2)Uncertainty Modeling, which derives
+robust modality-specific representations by sampling stochastic latent vectors; (3)Dynamic Modality Fusion, where a
+Confidence-aware Fusion Mechanism (CFM) adaptively assigns weights to each modality based on confidence estimates
+and fuses them into a global representation; (4)Active Training, which iteratively updates the model using high-confidence
+pseudo-labeled data and highly informative manually labeled
+samples until the query budget is exhausted. Specifically, to
+address the first challenge, we design a Graph-based Probabilistic Encoder (GPE) module to extract robust feature representations from complex multimodal content. For the second
+challenge, CFM enables the model to dynamically focus on
+the most discriminative modalities. For the third challenge, we
+incorporate an active learning framework for iterative model
+training that maintains high detection performance even under
+limited labeling resources.
+We conducted extensive experiments on two widely adopted
+benchmark microservice platforms (TrainTicket [16] and SocialNetwork [15] ) and one public dataset (SN from Eadro
+[11]). The experimental results demonstrate that our approach
+achieves an average F1-score of 98.10%, surpassing previous
+state-of-the-art unimodal and multimodal methods by up to
+7.87%. These results also highlight the high robustness and
+resilience of MUAD, as it maintains excellent detection performance even under conditions of low-quality modal data and
+limited labeled samples.
+In summary, our work makes the following contributions:
+• We propose MUAD, a novel multimodal anomaly detection framework for microservice systems that leverages
+metrics, logs, and traces. By jointly modeling intra-modal
+and inter-modal uncertainties, MUAD significantly improves the accuracy and robustness of anomaly detection.
+• MUAD employs a graph-based probabilistic encoder
+to robustly learn information representations for each
+modality, and dynamically integrates these modalities
+through a confidence-aware fusion mechanism, achieving
+efficient multimodal data integration.
+• We innovatively integrate active learning into the multimodal anomaly detection setting, which enables MUAD
+to maintain strong detection performance even under
+label-deficient conditions. This is particularly important
+for multimodal anomaly detection, as the complexity of
+multimodal data typically incurs high annotation costs.
+• We conduct extensive experiments on three benchmark
+datasets, where MUAD achieves state-of-the-art performance. The source codes and datasets utilized in MUAD
+is open-sourced as a GitHub project [17].
+The rest of this paper is organized as follows. Section II
+introduces the key motivations. Section III describes the detail
+design and implementation of MUAD. After that, Section IV
+describes the experimental setups and presents the experimental results and analysis. Section V introduces the related work.
+Finally, Section VI concludes this paper.
+II. M OTIVATION
+Motivation #1: It is necessary to model intra-modal
+data uncertainty to enhance the robustness of multimodal
+anomaly detection. In real-world scenarios, the collected data
+is subject to various uncertainties arising from environmental
+disturbances, limitations in the performance of monitoring
+components, and human errors. As shown in Figure 2, intramodal data uncertainty primarily includes modality noise,
+absence, and intrinsic ambiguity. Specifically, since normal
+and anomalous logs may share the same log events, this eventlevel ambiguity makes it difficult for existing log event-based
+feature extraction methods to effectively distinguish between
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+Log Uncertainty
+
+3
+
+Metric Uncertainty
+
+...LoggingReporter : Span reported:a56b4…- POST
+...LoggingReporter : Span reported:4e26a…- error
+...LoggingReporter : Span reported: <*> - <*>
+Trace Uncertainty
+
+Fig. 2: Examples of low-quality multimodal data in microservices. Log Uncertainty (Left Top): the consistent log templates
+used for extracting both normal and abnormal events result
+in ambiguity at the event level. Metric Uncertainty (Right):
+unusual fluctuations in CPU and network metrics occur during
+normal system operation, introducing noise that may not
+indicate actual anomalies. Trace Uncertainty (Left Bottom):
+missing latency data in call chains compromises the integrity
+and completeness of trace information.
+normal and anomalous patterns, thereby increasing the risk
+of false positives and false negatives. Moreover, we observed
+that the presence of noisy metric data further confounds the
+identification of genuine anomalies, as transient fluctuations
+induced by factors such as resource contention do not necessarily indicate system anomalies and should not trigger
+alerts. Additionally, real-world microservice systems often
+face issues with missing multimodal data, which not only undermines the overall integrity of the data but also significantly
+impacts the quality of feature representation. In particular, the
+absence of call chain data adversely affects the learning of
+modal graph features that rely on call chain generation. These
+findings suggest that intra-modal data uncertainty diminishes
+the model’s ability to comprehend multimodal content, thereby
+necessitating a robust feature extraction method to effectively
+model such uncertainty.
+Motivation #2: It is necessary to deal with intermodal uncertainty to ensure the reliability of multimodal
+anomaly detection. Due to the various anomalous patterns,
+the confidence level of each modality in anomaly detection
+is inherently non-stationary across different samples. To validate this conclusion, we utilize the trained MUAD model to
+predict the True Classification Probability (TCP) values for
+each modality across two different fault sample sets and two
+different normal sample sets from Dataset B. Specifically, TCP
+is derived from the softmax output of the modality-specific
+classifier, representing how confidently each modality predicts
+the correct system state. Higher TCP values (closer to 1.0)
+indicate more reliable modality predictions (Detailed formulation can be found in Section III-D). Besides, Dataset B was
+collected locally from the open-source microservice systems
+SocialNetwork [15] and detailed can be found in Section IV-A.
+We focused on two fault types: CPU exhaustion and Database
+query failure, as well as another two separate sample sets
+from the normal data. These experimental setups enable us
+to evaluate the confidence levels of different modalities under
+various conditions. As shown in Figure 3, the metrics demon-
+
+Fig. 3: Based on the experimental results of MUAD on
+Dataset B, we can find that the confidence scores of different
+modalities vary dynamically across samples. Data from lowconfidence modalities may constrain optimal fusion strategies,
+thereby adversely affecting system state inference.
+strate high confidence scores in detecting CPU overload conditions, indicating their effectiveness in inferring system status.
+However, they become unreliable when diagnosing database
+query anomalies, where traces obtain the highest confidence
+score. If proper weight allocation is not implemented during
+multimodal fusion, these metrics may dominate the overall
+detection decision, posing a risk to detection robustness. In
+such cases, greater emphasis should be placed on modalities
+with higher prediction confidence to ensure the reliability of
+anomaly detection results. Notably, logs consistently exhibit
+low confidence scores, primarily because log-based anomaly
+detection methods often fail to meet the precision requirements
+of practical applications [8], [14]. These critical observations
+motivate our introduction of a dynamic fusion mechanism
+into the multimodal anomaly detection framework, enabling
+automatic identification of the most trustworthy information
+sources and consequently enhancing overall detection accuracy.
+III. A PPROACH
+A. Design Overview
+Figure 4 presents an overview of the MUAD framework, a
+multimodal anomaly detector integrated with an active learning strategy. The framework operates in an iterative training
+paradigm, wherein human annotators label the most informative samples and high-confidence predictions are automatically
+assigned pseudo-labels to expand the annotated dataset. Due
+to the innovative introduction of confidence prediction into
+the active learning process, MUAD can significantly reduce
+the effort of manually labeling data. Within a given query
+budget, the model aims to maximize detection performance.
+During each iteration, MUAD adopts the approach illustrated
+in Figure 5 to jointly model both intra-modal and inter-modal
+uncertainties, thereby ensuring the detector’s performance and
+robustness. Specifically, modality-specific encoders are first
+applied to process inputs from different data sources. To
+capture intra-modal uncertainty, a Graph-based Probabilistic
+Encoder (GPE) is employed to represent input features as
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+4
+
+service and construct the corresponding time series data.
+Similarly, a GRU is employed to generate the trace feature
+t
+representation, denoted by ft ∈ RD .
+
+Online Detection
+
+Data
+Preprocessing
+
+MUAD
+
+Anomaly Detection
+
+Trace
+Active Training
+
+Update
+
+Metric
+Label
+
+High-confidence
+samples
+Log
+
+Unlabeled pool
+
+High-information
+samples
+
+Engineer
+
+Labeled pool
+
+Fig. 4: The overview framework of MUAD. The framework
+operates in an iterative training paradigm with active learning.
+In each iteration, multimodal data (metrics, logs, traces) are
+processed by MUAD for anomaly detection. The labeled pool
+is updated through two mechanisms: high-confidence samples are automatically pseudo-labeled, while high-informative
+samples are manually annotated by engineers. This process
+continues until the query budget is exhausted.
+Gaussian distributions. Subsequently, a Confidence-aware Fusion Mechanism (CFM) is designed to adaptively assign fusion
+weights to each modality. The final fused representation is then
+forwarded to the anomaly detector for prediction.
+B. Unimodal Feature Representation
+In microservice systems, different observable data typically
+exist in heterogeneous forms, including logs, metrics, and
+traces. To capture modality-specific representations, we design individual unimodal feature extractors tailored to each
+modality.
+Metric Feature Representation: The metrics collected
+from each microservice are presented as a multivariate time
+series, reflecting the performance status of the corresponding
+service. To efficiently capture the key dynamic information,
+we employ a Gated Recurrent Unit (GRU) to model the
+intramodality dynamics in the time series, using its final
+hidden state to represent the entire sequence:
+
+t
+fm = GRU ( M1k , M2k , ..., MTk ), fm ∈ RD
+(1)
+ k
+k
+k
+where M1 , M2 , ..., MT denote the multivariate time series
+composed of k metrics over an observation window of size T .
+fm represents the metric feature, and Dt denotes the output
+dimension of the feature extractor.
+Log Feature Representation: Following the log parsing approach described in previous work, we first use Drain, a widely
+adopted log parsing tool in AIOps research community, to
+convert unstructured log messages into structured log events.
+Subsequently, we model the occurrence of these log events
+using the Hawkes process [18], as it has demonstrated both
+effectiveness and efficiency in prior evaluations of log event
+representation learning [11]. To ensure that the resulting log
+features are compatible with subsequent processing stages, we
+project them into a unified D-dimensional space using a fully
+connected layer with a ReLU activation function. Finally, we
+t
+extract deterministic log embeddings, denoted by fl ∈ RD .
+Trace Feature Representation: We follow up-to-date previous works [11], [19] and capture delay times to represent
+traces. Specifically, we process all traces within each sliding
+window to extract the average delay associated with each
+
+C. Graph-based Probabilistic Encoder
+Existing multimodal representation methods encode each
+modality as a deterministic point in the embedding space,
+thereby overlooking the uncertainty inherent in the data.
+To address this limitation, we model the input features of
+each modality as Gaussian distributions and reconstruct their
+embedding representations through distribution sampling. Notably, given the characteristics of anomaly propagation among
+microservices, we focus on capturing graph-level features
+for each modality to sense the topological structure over a
+broader neighborhood, rather than reconstructing independent
+embeddings for each service. Specifically, we employ a Graph
+Attention Network (GAT) to learn the salient information of
+each modality within the graph structure and utilize a pooling
+layer to obtain the graph-level features, i.e., {gm , gl , gt }. However, these features remain deterministic and fail to capture
+the uncertainty present in multimodal data. Our GPE module
+further models the input features of each modality as Gaussian
+distributions, which can be formally expressed as:
+µv , σv2 = M LP (gv ) , v ∈ {m, l, t}
+
+p(zv |x) = N µv , σv2
+
+(2)
+(3)
+
+where the mean vector(µ) represents the feature representation identified by each modality, and the variance vector(σ)
+indicates the range of the modality’s distribution over each
+dimension—the larger the variance, the higher the uncertainty
+of the observed content. Now, instead of a deterministic
+point embedding, we can sample a random embedding zv
+from p(zv |x). However, since the sampling operation is nondifferentiable, we employ the reparameterization trick to allow
+gradient descent to back-propagate normally during parameter
+optimization. Specifically, for each modality, we first sample
+random noise ξ from a standard normal distribution and then
+generate zv as an equivalent sampled representation:
+zv = µv + ξσv2 , ϵ ∼ N (0, I)
+
+(4)
+
+Although GPE is capable of estimating the mean and
+variance for each modality, if the variance becomes too
+small during training, the modality feature representations can
+degenerate into deterministic embeddings. To counteract this
+effect, we introduce a KL divergence regularization term to
+constrain each modality’s distribution to approach the standard
+normal distribution, N (0, I). Specifically, the optimization is
+formulated as follows:
+
+1X
+KL N (µv , σ 2v ) || N (0, I)
+Lkl =
+3 v
+(5)
+1X1 2
+=
+(µv + σ 2v − log σ 2v − 1)
+3 v 2
+where KL(·) denotes the divergence between two probability
+distributions. Under the guidance of this loss function, the
+model is discouraged from adopting excessively low variances,
+thus preserving the uncertainty in the multimodal features and
+preventing their collapse into deterministic representations.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+5
+
+True Classification Probabilities
+Modality-Specific Classifier
+
+FC
+
+Log
+Encoder
+
+SoftMax
+
+Confidence Learning
+
+Log
+
+FC
+
+Sigmoid
+
+(2) Graph-based Probabilistic Encoder
+
+Trace
+Encoder
+
+(3) Confidence-aware Fusion Mechanism
+
+MLP
+
+Adaptive Weights
+
+Trace
+
+L
+
+GAT
+Metric
+Encoder
+
+T
+
+M
+
+(4) Anomaly Detection
+
+Metric
+
+MLP
+
+Anomaly
+Detector
+
+(1) Unimodal Feature Representation
+
+Fig. 5: Major stages in MUAD for anomaly detection by modeling both intra-modal and inter-modal uncertainties. The pipeline
+consists of four stages: (1) Unimodal Feature Representation extracts modality-specific features using dedicated encoders;
+(2) Graph-based Probabilistic Encoder (GPE) models intra-modal uncertainty by mapping features to Gaussian distributions
+N (µ, σ 2 ) through GAT and MLP layers; (3) Confidence-aware Fusion Mechanism (CFM) dynamically assigns fusion weights
+based on confidence scores,thereby modeling inter-modal uncertainty; (4) Anomaly Detector produces the final prediction.
+D. Confidence-aware Fusion Mechanism
+As the varying importance of different modalities in predicting the final system state, a dynamic mechanism is required
+to weigh their contributions during the fusion process. Here
+we adopt a confidence-aware fusion mechanism (CFM) that
+adaptively estimates modality-specific weights. As shown in
+Figure 5, CFM applies a modality-specific classifier to each
+modality after obtaining its uncertainty representation. This
+classifier generates a softmax output, and the module selects
+the true classification probability (TCP) [20], [21] from the
+softmax outputs as the confidence score. Unlike using the maximum softmax probability, which may lead to overconfidence
+when a modality makes an incorrect prediction, TCP uses the
+softmax probability corresponding to the actual label, thereby
+mitigating such overconfidence. Formally, for each modality,
+the confidence score can be expressed as:
+TCPv = y · p (y | zv ) =
+
+K
+X
+
+yk pvk
+
+(6)
+
+k=1
+
+where (·) denotes the inner product operation, and yk represents the k element of the label. It can be observed that
+TCPv ∈ (0, 1) reflects the correctness of a modality’s information in representing the system state. A higher value of
+TCPv indicates that the modality’s features accurately capture
+the system state, whereas a lower value suggests incorrect predictions. However, ground-truth labels are unavailable during
+the testing phase, making it infeasible to use TCPv directly as
+a weight. To ensure consistency between training and testing, a
+confidence network is constructed to predict confidence scores
+that will serve as the modality fusion weights:
+ωv = Sigmoid (MLP (zv ))
+
+(7)
+
+The confidence network is implemented as a lightweight
+architecture: a single fully-connected layer that maps zv ∈ RD
+
+to a scalar, followed by a Sigmoid activation to ensure
+ωv ∈ (0, 1). This simple design prevents overfitting while
+enabling efficient confidence estimation during both training
+and inference.
+To achieve the above objective, we employ the following
+loss function:
+n
+X
+Lvp = −
+log(giv (Ii∗ ))
+(8)
+i=1
+
+Lvq =
+
+n
+X
+
+MSE (TCPvi , ωiv )
+
+(9)
+
+X
+
+(10)
+
+i=1
+
+Lcon =
+
+(Lvp + Lvq )
+
+v∈{m,l,t}
+
+In practice, Lvp and Lvq are jointly optimized through endto-end training. During each forward pass, the classifier g v
+generates softmax outputs, from which TCPv is computed
+and used as the supervision signal for training the confidence
+network. Both the classifier and confidence network are updated simultaneously via backpropagation through Eq.(10),
+where the two loss components play complementary roles: Lvp
+(Eq. 8) ensures accurate classification through cross-entropy
+loss on the ground-truth label Ii∗ , while Lvq (Eq. 9) trains the
+confidence predictor ω v to estimate the classifier’s reliability
+via mean squared error with TCPv . This joint optimization
+enables each modality to develop reliable self-assessment
+capabilities for optimal multi-modal fusion.
+Finally, we aggregate the representations from all modalities
+into a unified system state representation
+by performing a
+P
+confidence-weighted fusion: h = ωv zv .
+E. Anomaly Detection
+Finally, the anomaly detector uses the fused representation
+as input to to classify the current system state as either
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+6
+
+The active training procedure of MUAD is described in
+Algorithm 1. To fully leverage the above advantages, we
+design a novel active learning query strategy hybridly utilizing
+the MIS and HCS. Specifically, high-informative samples are
+identified by calculating the prediction entropy:
+X
+H(xi ) = −
+p(c | xi ) log p(c | xi )
+(12)
+
+Algorithm 1: Active training procedure of MUAD
+Input: Unlabeled pool NU ; Labeled pool NL ;
+High-confidence sample set; NC Query budget
+b; Query batch size k; Confidence threshold θ.
+Output: Anomaly detection model MUAD and
+Labeled dataset NL .
+1 NC = ∅;
+2 while |NU | < b do
+3
+▷Stage 1: Training the MUAD Model
+4
+begin
+5
+NL ←NL ∪ NC ;
+6
+Train the anomaly detection model ▷Eq. (13);
+7
+end
+
+c
+
+where higher entropy indicates greater model uncertainty.
+These samples, termed as most informative samples (MIS) in
+our framework, are selected for expert annotation. For highconfidence samples (HCS), the predicted confidence score
+[ i (defined in Eq. (6)) serves as the confidence indicator,
+TCP
+[ i > θ are automatically assigned
+and samples with TCP
+pseudo-labels via arg max p(y|xi ). These two mechanisms
+work complementarily to balance annotation cost and detection performance controlled by the confidence threshold
+θ. Based on the above query strategy, the active training
+process proceeds as follows. We begin by randomly labeling
+10% of the data to initialize the MUAD model. During each
+subsequent iteration, we select MIS by computing the entropy
+of the model’s predictions. High entropy typically indicates
+that the model is uncertain about the sample’s classification,
+highlighting areas where the current model struggles and
+where expert labeling is most valuable. Next, we perform
+confidence prediction and label inference on the remaining unlabeled data, and incorporate samples with confidence scores
+exceeding a predefined threshold θ (i.e., HCS) into the training
+set for the next iteration. Since the model is essentially a
+classifier, we adopt the T[
+CP value as an indicator of the
+model’s confidence in its predictions. In each learning phase,
+the model’s training loss consists of the following components:
+
+8
+
+9
+10
+11
+12
+13
+
+▷Stage 2: Labeling High-Informative Samples
+begin
+Calculate the entropy values in NU ;
+Select the Top-k samples for annotation;
+Update NL ;
+end
+
+14
+
+▷Stage 3: Selecting High-Confidence Samples
+for xi ∈ NU do
+16
+if T[
+CP i > θ then
+17
+Assign pseudo-labels;
+18
+Update NC ← xi ;
+19
+end
+20
+end
+21
+NL ← NL ∪ S, NC ← NC ∪ H, NU ← NU \ S;
+22 end
+23 return NL
+15
+
+LMU AD = Lano + λ1 Lkl + λ2 Lconf + Lmse
+normal or anomalous. We formulate this explicitly as a binary
+classification task. Formally, this can be expressed as:
+ŷ = argmax[Sof tmax (W h + b)]
+
+(11)
+
+In the equation above, W and b respectively denote the
+trainable parameters, and ŷ ∈ {0, 1} represents the predicted
+discrete label, where 0 denotes a normal state and 1 denotes an
+anomaly. If an anomaly is detected, MUAD triggers an alert
+and provides the modality confidence scores to the operator,
+facilitating the assessment of the alert’s reliability.
+F. Active Training
+To balance labeling cost and model performance, we apply
+active learning to train our model. As a label-efficient learning
+paradigm, active learning selects the most informative samples
+(MIS) for annotation under a given query budget, aiming to
+maximize model performance at minimal labeling cost. Most
+existing studies on active anomaly detection focus on selecting
+samples for expert annotation, while overlooking the value of
+high-confidence samples (HCS) in accelerating model training.
+However, if the model exhibits sufficient confidence in its
+predictions, pseudo-labels can be automatically assigned and
+incorporated into the training process.
+
+(13)
+
+where Lano denotes the binary cross-entropy loss on labeled
+data, and Lmse represents the loss for label confidence estimation. λ1 and λ2 are the weighting coefficients for the
+corresponding loss components. We repeat the above iterative
+process until the query budget b is exhausted.
+IV. E XPERIMENT
+In this section, we evaluate MUAD by answering the following
+research questions (RQs) through empirical studies:
+• RQ1: How effective is MUAD in anomaly detection
+tasks?
+• RQ2: How does each component contribute to MUAD’s
+overall performance?
+• RQ3: Does MUAD exhibit high robustness?
+• RQ4: Is it necessary to consider high confidence samples
+in MUAD’s active learning strategy?
+• RQ5: How do MUAD’s hyperparameters affect its performance?
+A. Experimental Setup
+1) Datasets: To evaluate the performance of MUAD, we
+conduct extensive experiments on three datasets (A, B and C),
+as summarized in Table I. We randomly selected 60% of the
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+7
+
+TABLE I: Dataset composition.
+Dataset
+
+Metric Length
+
+Log Messages
+
+Trace Quantity
+
+model dependency-aware system states in microservices.
+DeAnomaly [25] is a two-phase unsupervised anomaly
+detection framework that decomposes multivariate time
+series to remove normal patterns and uses diffusion
+models on residuals for robust and accurate anomaly
+detection.
+• HG-PAD [26] is an unsupervised framework that models microservice dependencies via heterogeneous graphs,
+employing GNN, CVAE, and GAT for anomaly detection
+using metrics and traces. We implement this method following the original paper as no official code is available.
+• Medicine [10] is a multimodal failure diagnosis approach
+that mitigates modality dominance through independent
+encoding and adaptive optimization, achieving robust
+performance under missing or low-quality modality data.
+3) Performance Metrics: Since anomaly detection is essentially a binary classification task, we adopt Precision, Recall,
+and F1-score to evaluate the performance of MUAD and other
+baseline models. These metrics are defined as follows:
+TP
+(14)
+Precision =
+TP + FP
+•
+
+Dataset A
+
+473575
+
+386707
+
+Dataset B
+
+290184
+
+216249
+
+33545
+
+Dataset C
+
+16944
+
+15365
+
+11345
+
+11132
+
+data from each of the three datasets for training and used the
+remaining 40% for testing, ensuring that the ratio of normal
+to abnormal samples remains consistent between the training
+and testing sets.
+Dataset A and Dataset B were collected locally from
+the open-source microservice systems TrainTicket [16] and
+SocialNetwork [15], respectively. TrainTicket is a platform
+that provides railway ticketing services, while SocialNetwork
+simulates a microservice-based social networking application.
+Both have been widely studied in prior research on microservice anomaly detection. Following previous studies [11], [22],
+we adopt chaos engineering techniques to inject seven types of
+anomalies: CPU/memory/disk stress, service failure, database
+query exceptions, packet loss, and packet loss/delay. During
+our data collection phase, each anomaly lasts for two minutes.
+In total, we perform 133 and 84 injection operations on Dataset
+A and Dataset B, respectively. Metrics, logs, and trace data
+are collected through three separate collectors.
+Dataset C is the SN dataset from Eadro [11], which provides a multimodal dataset suitable for microservice anomaly
+detection. It contains various faults, such as CPU overload,
+network packet loss, and network latency. The dataset includes
+7 metrics sampled every 1 second, 126,384 traces, and 15 log
+templates.
+2) Baselines: We compare MUAD against representative
+state-of-the-art methods in microservice anomaly detection,
+including both unimodal and multimodal approaches. These
+baselines were selected based on their technical diversity,
+recency, and reproducibility, ensuring comprehensive evaluation across different modality combinations and detection
+paradigms. The selected baselines are as follows:
+• MTAD-GAT [23] is a multivariate time series anomaly
+detection method that leverages graph attention networks
+to capture temporal and inter-variable dependencies of
+metrics.
+• HADES [8] is a semi-supervised multimodal anomaly
+detection model that takes logs and metrics as inputs
+and fuses modality features via a cross-modal attention
+mechanism.
+• MRCA [19] performs automated fault localization using
+multimodal data, mainly logs and traces, and detects
+anomalous services based on reconstruction probabilities.
+• UAC-AD [24] is an unsupervised adversarial contrastive
+learning-based method that enhances anomaly detection
+by distinguishing hard and abnormal samples.
+• MSTGAD [12] proposes a multimodal anomaly detection framework that integrates metrics, logs, and traces
+through attentive multi-modal learning.
+• Eadro [11] is a supervised multimodal anomaly detection approach that nonlinearly fuses features from three
+modalities and employs a graph attention network to
+
+Recall =
+
+TP
+TP + FN
+
+(15)
+
+Precision × Recall
+(16)
+Precision + Recall
+where TP (True Positives) denotes the number of correctly
+identified anomalous samples, FP (False Positives) refers to the
+number of normal samples incorrectly identified as anomalous,
+and FN (False Negatives) represents the number of anomalous
+samples that were not detected.
+4) Implementation and Settings: We implement the prototype of our method using Python 3.8. All experiments are conducted on a Linux server equipped with an NVIDIA GeForce
+GTX 3060 GPU. The experimental hyperparameters include
+the sliding window length, stride, confidence threshold θ, and
+manually tuned loss weights. Specifically, we set the sliding
+window length to 10 and the stride to 1. It is worth noting that
+microservice modalities are sometimes asynchronous in practice. While data alignment is necessary for multimodal fusion,
+the small stride allows MUAD to capture transient anomalies
+that might otherwise be smoothed out, and the Hawkes process
+implicitly preserves the asynchronous arrival dynamics of logs
+within each window. The threshold θ to 0.9. MUAD is trained
+using the Adam optimizer [27] with an initial learning rate
+of 0.001, a batch size of 50, and 120 epochs per training
+stage. We continue the iterative process of sample selection
+and training until the model performance reaches the level of
+using the fully labeled dataset. For the baseline methods, we
+adopt the parameters provided in the corresponding papers and
+official open-source implementations.
+F1-score = 2 ×
+
+B. RQ1: Overall Performance of MUAD
+To evaluate the effectiveness of MUAD in anomaly detection tasks, we compare its overall performance and performance under varying labeled data quantities with several
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+8
+
+TABLE II: Performance comparison for anomaly detection.
+Dataset A
+
+Modality
+
+Approach
+Metric
+MTAD-GAT
+
+✓
+
+HADES
+
+✓
+
+UAC-AD
+
+✓
+
+MRCA
+MSTGAD
+
+✓
+
+DeAnomaly
+
+✓
+
+HG-PAD
+
+✓
+
+Medicine
+
+✓
+
+Eadro
+
+✓
+
+MUAD
+
+Log
+
+Trace
+
+✓
+✓
+
+Dataset B
+
+Dataset C
+
+F1-score
+
+Recall
+
+Precision
+
+F1-score
+
+Recall
+
+Precision
+
+F1-score
+
+Recall
+
+Precision
+
+0.7520
+
+0.8267
+
+0.6897
+
+0.6706
+
+0.6455
+
+0.6978
+
+0.8561
+
+0.9999
+
+0.7484
+
+0.4275
+
+0.3305
+
+0.6053
+
+0.5631
+
+0.6060
+
+0.5259
+
+0.9084
+
+1.0000
+
+0.8321
+
+0.4589
+
+0.3606
+
+0.6309
+
+0.5070
+
+0.4236
+
+0.6314
+
+0.4761
+
+0.3255
+
+0.8861
+
+✓
+
+✓
+
+0.2090
+
+0.1346
+
+0.4592
+
+0.4355
+
+0.3013
+
+0.7857
+
+0.9412
+
+0.8889
+
+0.9412
+
+✓
+
+✓
+
+0.7438
+
+0.6994
+
+0.7943
+
+0.8251
+
+0.8261
+
+0.8240
+
+0.9802
+
+0.9920
+
+0.9686
+
+0.5259
+
+0.4607
+
+0.6124
+
+0.6788
+
+0.5316
+
+0.9387
+
+0.9753
+
+0.9701
+
+0.9806
+
+✓
+
+0.4742
+
+0.3477
+
+0.7455
+
+0.5121
+
+0.4004
+
+0.7102
+
+0.8167
+
+0.7154
+
+0.9514
+
+✓
+
+✓
+
+0.3663
+
+0.3905
+
+0.4476
+
+0.4143
+
+0.4048
+
+0.4881
+
+0.8056
+
+0.8334
+
+0.8667
+
+✓
+
+✓
+
+0.9022
+
+0.8484
+
+0.9632
+
+0.9234
+
+0.8936
+
+0.9551
+
+0.9831
+
+0.9839
+
+0.9823
+
+✓
+
+✓
+
+✓
+
+0.9809
+
+0.9789
+
+0.9829
+
+0.9692
+
+0.9593
+
+0.9657
+
+0.9928
+
+0.9941
+
+0.9914
+
+MUAD-10%
+
+✓
+
+✓
+
+✓
+
+0.8447
+
+0.8452
+
+0.8443
+
+0.8729
+
+0.8514
+
+0.8956
+
+0.9314
+
+0.9849
+
+0.8833
+
+MUAD-30%
+
+✓
+
+✓
+
+✓
+
+0.9208
+
+0.9271
+
+0.9145
+
+0.9289
+
+0.9231
+
+0.9348
+
+0.9759
+
+0.9822
+
+0.9697
+
+MUAD-40%
+
+✓
+
+✓
+
+✓
+
+0.9584
+
+0.9625
+
+0.9543
+
+0.9358
+
+0.9421
+
+0.9295
+
+0.9825
+
+0.9844
+
+0.9807
+
+representative anomaly detection models, as shown in Table
+II. Notably, to mitigate potential dataset size bias, we selected
+the closest matching percentage of labeled samples for fair
+comparison. Based on these results, we make the following
+observations:
+Overall, MUAD outperforms other state-of-the-art anomaly
+detection methods in terms of F1-score, recall, and precision.
+Our approach achieves the highest average F1-scores of 0.9809
+on Dataset A, 0.9692 on Dataset B, and 0.9928 on Dataset C,
+surpassing the best-performing baselines by 7.87%, 4.58%,
+and 0.97%, respectively. Notably, on Dataset C, although
+MUAD exhibits a slightly lower recall than Hades, it achieves
+a 24.3% improvement in precision. This suggests that Hades
+incurs a higher false positive rate, which in turn compromises
+the overall reliability of the system. These results further confirm MUAD’s ability to detect anomalies with minimal false
+alarms or missed detections, underscoring the effectiveness of
+the proposed method.
+To further understand MUAD’s advantages, we analyze
+the performance of the baseline methods. Single-modality
+methods like DeAnomaly show strong performance on specific
+datasets (e.g., F1=0.9753 on Dataset C) but suffer degradation
+on others (F1=0.5259 and 0.6788 on Datasets A and B),
+indicating sensitivity to dataset characteristics and limited
+generalization. Multimodal methods, while leveraging richer
+information, do not automatically guarantee superiority. HGPAD achieves F1-scores ranging from 0.4742 to 0.8167, and
+Medicine yields 0.3663 to 0.8056 across the three datasets.
+This suggests that the key challenge lies not in the number of modalities, but in effective fusion under uncertainty.
+Among all baselines, Eadro achieves the strongest performance (F1=0.9022–0.9831) yet remains constrained by limited
+uncertainty modeling. In contrast, MUAD explicitly models
+both intra-modal and inter-modal uncertainties through GPE
+and CFM, enabling consistently superior performance across
+all datasets. In addition, MUAD’s representations are robust
+
+not only for detection but also for identifying the source of
+anomalies, paving the way for future end-to-end troubleshooting frameworks. In a preliminary experiment on Dataset C, we
+extended MUAD with a simple classification head for servicelevel localization. The extended model achieved a HitRate@1
+of 99.24%, outperforming the baseline Eadro (97.59%). Finally, despite the architectural complexity, MUAD remains
+computationally efficient. For example, it requires only 3.35s
+for inference on Dataset C with a consumer-grade NVIDIA
+RTX 3060 GPU, which is well within the acceptable range
+for practical anomaly detection tasks.
+Due to the active learning strategy specially designed for
+multimodal anomaly detection model training, MUAD further
+demonstrates superior performance under label scarcity. As
+shown in Table II, across all three datasets, our approach
+is able to achieve an average F1-score of 94.18% using
+only 30% of labeled data, marginally outperforming the fully
+supervised Eadro method, which attains 93.62%. Moreover,
+model performance progressively improves with additional
+labeled data, confirming MUAD’s capability to effectively
+balance annotation costs and detection performance.
+C. RQ2: The Ablation Study of the Proposed Method
+To further validate the effectiveness of MUAD, we performed ablation experiments on Datasets A, B, and C. We
+designed six sets of ablation experiments to evaluate the
+individual modules of MUAD as follows:
+• Only Metric: Uses only metric data to evaluate its standalone contribution.
+• Only Trace: Employs only trace data to assess its impact.
+• Only Log: Relies solely on log data to measure its
+effectiveness.
+• w/o GPE: This variant removes the Graph-based Probabilistic Encoder, instead using deterministic point features
+extracted from each modality.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+9
+
+TABLE III: Experimental results of the ablation study.
+Dataset
+
+Dataset A
+
+Dataset B
+
+Dataset C
+
+Approach
+
+F1-score
+
+Recall
+
+Precision
+
+Only Metric
+
+0.9459
+
+0.9306
+
+0.9619
+
+Only Log
+
+0.6805
+
+0.5916
+
+0.8008
+
+Only Trace
+
+0.8837
+
+0.8252
+
+0.9511
+
+w/o GPE
+
+0.9467
+
+0.9367
+
+0.9568
+
+w/o G
+
+0.9650
+
+0.9607
+
+0.9694
+
+w/o CFM
+
+0.9651
+
+0.9666
+
+0.9635
+
+MUAD
+
+0.9809
+
+0.9789
+
+0.9829
+
+Only Metric
+
+0.9452
+
+0.9511
+
+0.9394
+
+Only Log
+
+0.7350
+
+0.5810
+
+0.7070
+
+Only Trace
+
+0.8735
+
+0.8455
+
+0.9035
+
+w/o GPE
+
+0.9484
+
+0.9432
+
+0.9536
+
+w/o G
+
+0.9524
+
+0.9477
+
+0.9571
+
+w/o CFM
+
+0.9350
+
+0.9143
+
+0.9086
+
+MUAD
+
+0.9692
+
+0.9593
+
+0.9657
+
+Only Metric
+
+0.9903
+
+0.9925
+
+0.9882
+
+Only Log
+
+0.9064
+
+1.000
+
+0.8289
+
+Only Trace
+
+0.9470
+
+0.9758
+
+0.9199
+
+w/o GPE
+
+0.9922
+
+0.9919
+
+0.9925
+
+w/o G
+
+0.9925
+
+0.9962
+
+0.9888
+
+w/o CFM
+
+0.9909
+
+0.9919
+
+0.9898
+
+MUAD
+
+0.9928
+
+0.9941
+
+0.9914
+
+w/o G: A simplified variant where the graph component
+is removed from GPE, retaining only the probabilistic
+encoding for each modality.
+• w/o CFM: This variant excludes the Confidence-aware
+Fusion Module, performing anomaly detection by directly
+concatenating features from all modalities.
+
+•
+
+As presented in Table III, the superior performance of
+MUAD can be primarily attributed to the complementary integration of multiple modalities. Relying on a single modality
+leads to varying degrees of performance degradation across
+datasets. For Dataset A and B, MUAD respectively achieves
+an average F1-score improvement of 14.42% and 11.80%,
+demonstrating its excellent capability in handling multimodal
+data. These results further underscore the importance of integrating diverse data modalities to enhance the accuracy of
+anomaly detection.
+Modeling intra-modal uncertainty is crucial for robustly
+capturing modality-specific features. When the GPE module
+is removed, the model struggles to extract meaningful information from low-quality multimodal data, leading to degraded
+overall performance. Moreover, in the experimental results on
+Datasets A and B, we observe that w/o G performs worse than
+w/o GPE, highlighting the benefits of modeling uncertainty
+in graph-based modality features. Notably, prior studies [28],
+[29] have also widely adopted graph-based representations for
+modality features, further validating the effectiveness of our
+feature extraction approach.
+It is evident that w/o CFM, which relies on simple concatenation rather than the proposed confidence-aware fusion
+
+strategy, exhibits varying degrees of performance degradation
+across different evaluation metrics. This further highlights the
+superiority of our fusion approach. We attribute this to the
+fact that different modalities contribute unequally, and the use
+of a confidence-aware approach enables adaptive learning of
+weights for each modality, allowing the model to focus more
+on the most informative modalities for anomaly detection.
+Finally, it is worth noting that the ablation results on
+Dataset C seems less pronounced, which is mainly due to the
+dataset’s specific characteristics. In detail, the Only Metric
+variant achieves an F1-score of 0.9903, which is close to
+MUAD’s 0.9928. This is mainly because the smaller size
+of Dataset C limits the ability of complex models to fully
+exploit their structural advantages. Moreover, the fault types
+in Dataset C are relatively homogeneous, with resource- and
+performance-related anomalies (e.g., CPU overload, network
+latency) accounting for a significant proportion. These anomalies are directly and prominently reflected in performance
+metrics, enabling the Only Metric variant to achieve strong
+discriminative capability on its own. As a result, incorporating
+additional modalities and considering intra-modal and intermodal uncertainty yields only limited incremental gains for
+Dataset C.
+In summary, the ablation results demonstrate that MUAD’s
+components contribute synergistically to its performance gains.
+The multimodal integration provides comprehensive observability, while GPE and CFM ensure robust uncertainty modeling and reliable fusion, collectively enabling MUAD to achieve
+state-of-the-art anomaly detection across diverse scenarios.
+D. RQ3: Robustness Evaluation
+To comprehensively evaluate the robustness of MUAD
+under realistic data quality degradation, we select Dataset A,
+which has the largest data volume among our benchmarks, for
+experimentation. We examine two data imperfection scenarios
+prevalent in production microservice systems: Inter-modal
+Information Inconsistency and Random Modality Missing.
+We quantify robustness using relative performance degradation, which normalizes the impact of perturbations against each
+model’s clean baseline:
+F 1baseline − F 1perturbed
+× 100
+(17)
+Degradation(%) =
+F 1baseline
+Lower degradation indicates stronger robustness. We compare
+MUAD against Eadro, the best-performing multimodal baseline from Section IV-B, using this metric alongside absolute
+F1-scores.
+1) Inter-modal Information Inconsistency: In practical
+microservice systems, multimodal observations may become
+inconsistent due to heterogeneous noise, asynchronous data
+collection, or partial modality corruption. To simulate such
+realistic conditions, we construct an inter-modal information
+inconsistency setting, where the reliability of different modalities is unevenly and asynchronously degraded across samples.
+Specifically, we consider two perturbation scenarios with increasing severity. Perturbations are generated by adding noise
+factor τ sampled from a standard normal distribution N (0, I),
+and scaled according to empirical data statistics, ensuring
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+10
+
+TABLE IV: Robustness to Inter-modal Information Inconsistency.
+Perturbation Setting
+Clean Single-Modal Multi-Modal
+
+Method
+
+Metric
+
+Eadro
+
+F1
+0.9022
+Deg (%) 0.00
+
+0.8455
+6.28
+
+0.7823
+13.29
+
+MUAD
+
+F1
+0.9809
+Deg (%) 0.00
+
+0.9584
+2.29
+
+0.9399
+4.18
+
+TABLE V: Robustness to Random Modality Missing.
+Overall Missing Rate
+Method
+
+Metric
+
+Clean
+
+20%
+
+40%
+
+60%
+
+Eadro
+
+F1
+Deg (%)
+
+0.9022
+0.00
+
+0.8362
+7.32
+
+0.7800
+13.54
+
+0.7183
+20.38
+
+MUAD
+
+F1
+Deg (%)
+
+0.9809
+0.00
+
+0.9338
+4.80
+
+0.8888
+9.39
+
+0.8401
+14.35
+
+realistic distortion levels without assuming identical noise
+patterns across modalities. In the Single-Modality Perturbation
+setting, we randomly select 30% of the test samples. For each
+selected sample, we apply the noise injection to a single,
+randomly chosen modality while keeping others clean. In the
+Multi-Modality Perturbation setting, we randomly select 40%
+of the test samples and apply simultaneous noise injection to
+multiple modalities for each selected sample. By perturbing
+several modalities at the same time, this setting induces more
+severe inter-modal inconsistency.
+As shown in Table IV, MUAD demonstrates strong robustness under both perturbation scenarios. For example, under the
+Multi-Modality Perturbation setting, MUAD achieves an F1score of 0.9399 with only 4.18% performance degradation,
+significantly outperforming Eadro, whose F1-score drops to
+0.7823 with 13.29% degradation—corresponding to a 9.11
+percentage point reduction in relative performance loss. This
+robustness advantage stems from MUAD’s joint modeling
+of intra-modal and inter-modal uncertainties. Specifically, the
+Graph-based Probabilistic Encoder (GPE) captures modalityspecific uncertainty by representing features as probabilistic
+distributions, while the Confidence-aware Fusion Mechanism
+(CFM) dynamically adjusts fusion weights by down-weighting
+unreliable modalities and emphasizing more trustworthy ones
+at the sample level. In contrast, Eadro adopts a fixed fusion
+strategy that cannot adapt to modality-level reliability variations, resulting in pronounced performance degradation under
+inter-modal inconsistency.
+2) Random Modality Missing: In real-world microservice
+systems, observability data is often incomplete due to collector
+failures, network partitions, or transient system issues. To evaluate MUAD’s resilience under such conditions, we construct a
+random modality missing setting, where observability data is
+partially unavailable at the sample level. Specifically, for each
+test sample, one or more modalities are randomly masked to
+simulate unpredictable data loss, with overall missing rates of
+
+20%, 40%, and 60%. The missing pattern is fully randomized
+across samples, without assuming which modality is absent or
+how many modalities are simultaneously unavailable, reflecting the inherent unpredictability of real-world data collection
+failures.
+As shown in Table V, MUAD demonstrates strong robustness across all missing rates. At a 60% overall missing
+rate, MUAD maintains an F1-score of 0.8401 with 14.35%
+performance degradation, substantially outperforming Eadro
+(F1: 0.7183, 20.38% degradation), corresponding to a 6.03
+percentage point advantage in relative robustness. Moreover,
+MUAD exhibits graceful degradation with near-linear performance decay as missing rates increase, whereas Eadro
+shows a steeper decline, particularly beyond 40% missing.
+This robustness can be attributed to the Confidence-aware Fusion Mechanism (CFM), which dynamically reallocates fusion
+weights when modalities are unavailable, allowing MUAD to
+emphasize remaining reliable modalities. In contrast, Eadro’s
+fixed fusion strategy cannot adapt to modality absence, resulting in pronounced performance degradation.
+In summary, these robustness experiments show that MUAD
+maintains stable anomaly detection performance under both
+inter-modal information inconsistency and random modality
+missing. This demonstrates MUAD’s robustness to degraded
+and incomplete multimodal observations and highlights the
+importance of uncertainty modeling and dynamic modality
+fusion for reliable anomaly detection in practical microservice
+environments.
+E. RQ4:Necessity of Considering High-Confidence Samples in
+Active Learning
+In this section, we construct a variant of MUAD without the
+High Confidence Samples (w/o HCS) to evaluate the necessity
+of taking HCS into consideration in the active learning process. The experiment was conducted on Dataset A which is
+considered representative as it features a balanced distribution
+of anomalies and a sufficient amount of high-quality data for
+reliable evaluation. As shown in the comparative results in
+Figure 6, MUAD consistently outperforms the variant without
+HCS across all query iterations. On Dataset A, as the number
+of query iterations increases, the F1-score of MUAD with HCS
+steadily improves from approximately 0.85 to 0.96, whereas
+the variant without HCS exhibits lower performance with
+d values
+limited improvement. Selecting samples with high TCP
+proves effective in identifying high-confidence instances and
+assigning reliable pseudo-labels, thereby significantly boosting
+detection performance. Furthermore, the continual inclusion
+of high-entropy samples into the training set facilitates the
+discovery of more accurate high-confidence samples over
+time. Since these high-entropy samples typically correspond
+to instances where the model is uncertain, their annotation
+gradually enhances the model’s decision confidence and robustness.
+In summary, the experimental results confirm that incorporating high-confidence samples is essential for MUAD’s active
+learning strategy, as it effectively reduces annotation costs
+while maintaining strong detection performance under label
+scarcity.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+0.98
+
+11
+
+w/o HCS
+MUAD
+
+0.96
+0.94
+
+F1-Score
+
+0.92
+0.90
+0.88
+0.86
+0.84
+0.82
+0.80
+
+5
+
+10
+
+15
+20
+25
+30
+Query Iteration
+Fig. 6: Impact of high-confidence samples (HCS) selection
+on active learning performance. The x-axis denotes active
+learning query iterations, where each iteration corresponds
+to one querying round followed by model retraining. The
+orange bars represent MUAD with HCS, while the blue bars
+show the variant without HCS. Incorporating high-confidence
+pseudo-labeled samples consistently improves F1-score across
+query iterations, demonstrating the effectiveness of leveraging
+reliable predictions to reduce manual annotation costs while
+maintaining performance.
+
+F. RQ5:Parameter Sensitivity
+In order to balance the ability to model intra- and intermodal uncertainties, MUAD comprises multiple loss components. We conducted further experiments to analyze the impact
+of two key loss weights, λ1 and λ2 .
+Impact of loss weight λ1 on intra-modal uncertainty
+modeling: λ1 controls the weight of the KL divergence term in
+intra-modal uncertainty modeling. This hyperparameter serves
+as a regularization factor that balances the trade-off between
+the compactness and richness of modality-specific information
+retained in the learned subspace. As shown in Figure 7, the
+optimal values of λ1 for the two datasets are 1.0 and 0.1,
+respectively. Under these optimal settings, the model tends to
+predict higher variance for noisy samples and lower variance
+for high-quality samples.
+Impact of loss weight λ2 on inter-modal uncertainty
+modeling: λ2 primarily influences the performance of confidence prediction for each modality. As illustrated in Figure
+7, the optimal value for both datasets is 0.6. By optimizing
+λ2 , the model can adjust its final decision strategy according
+to the dynamically learned weights of each modality.
+In summary, MUAD demonstrates stable performance
+across a wide range of loss weight configurations, indicating low sensitivity to precise hyperparameter selection. This
+robustness can be attributed to the complementary nature of
+MUAD’s loss components: the primary anomaly detection
+objective (Lano ) dominates the optimization process, while the
+auxiliary uncertainty modeling terms (Lkl and Lconf ) provide
+effective regularization as long as their weights fall within
+reasonable ranges. Such stability is particularly valuable for
+
+Fig. 7: Sensitivity analysis of loss weights λ1 and λ2 on
+Datasets A and B. The colorbars indicate F1-score performance. Results demonstrate that MUAD maintains consistently high performance across a wide range of hyperparameter
+values, indicating strong robustness and low sensitivity to
+parameter selection in practical deployment.
+
+practical deployment, as it reduces the need for extensive
+hyperparameter tuning across different microservice environments.
+V. R ELATED W ORK
+A. Unimodal Anomaly Detection
+Over the years, numerous anomaly detection methods have
+been proposed to ensure the reliability of large-scale systems. Existing unimodal anomaly detection approaches can
+be categorized into three types according to the dependent
+modality: metric-based, log-based, and trace-based methods.
+Metric-based approaches can be further classified into three
+categories. Reconstruction-based methods [30], [31], [32] typically reconstruct multivariate time series and detect anomalies
+based on reconstruction error or reconstruction probability.
+Prediction-based methods [23], [33], [34] forecast future metrics and trigger anomaly alarms when the actual values deviate
+from the predicted ones beyond a predefined threshold. Cluster
+analysis-based approaches [35], [36], [37] embed time series
+segments into a vector space and apply clustering or distancebased techniques to identify segments that deviate significantly
+from the majority, thereby flagging them as anomalies.
+Logs record critical events during system operation and
+serve as an important and valuable resource for online anomaly
+detection. Various log-based anomaly detection techniques
+[38], [39], [5], [40] have been proposed. For instance, NeuralLog [40] extracts the semantic information of raw log
+messages using the BERT model and employs a Transformerbased classification model to detect anomalies. In addition,
+since traces capture the interaction details among microservices, they play an indispensable role in reconstructing the
+propagation paths of anomalies. Several studies [41], [42], [6]
+have focused on anomaly detection in trace data. TraceCRL
+[6] integrates graph structural information and differentiates
+between normal and abnormal behavior representations in call
+chains through a contrastive learning framework. However,
+as these methods rely solely on a single modality, they are
+prone to overlooking certain types of anomalies, which limits
+their ability to ensure the overall security and reliability of the
+system.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+12
+
+B. Multimodal Anomaly Detection
+
+and accurate multimodal anomaly detection.
+
+To overcome the limitations of unimodal anomaly detection,
+researchers have developed anomaly detection methods based
+on multimodal data [43], [9], [24], [12], [44], [45], [1], [46],
+[47], [48]. Specifically, DeepTraLog [43] uses a unified graph
+to represent the complex structure of traces and the log events
+embedded within them, and then builds a deep SVDD model
+based on this to detect anomalies in microservice systems.
+Anofusion [9] employs GTN to learn the correlations between
+heterogeneous multimodal data and uses GAT to capture
+key features, ultimately predicting data patterns for anomaly
+detection through GRU. AMulSys [44] employs a hierarchical
+architecture to model traces, metrics, and logs, utilizes graph
+attention network for trace-metric representation extraction,
+applies heterogeneous graph Transformer for log representation learning, and introduces category prior guided multimodal
+data augmentation with multifaceted contrastive learning to
+address class imbalance in anomaly detection. MicroDig [45]
+employs a heterogeneous propagation graph to model causal
+relationships between microservices, combines heterogeneityoriented random walk algorithm to analyze anomaly propagation patterns, and effectively addresses the root cause localization accuracy issues caused by inconsistency between causality
+and calling relationships. MULAN [1] proposes a unified
+framework for multi-modal causal structure learning aimed at
+root cause localization. It leverages a log-tailored language
+model for log representation learning, employs contrastive
+learning within a shared latent space to extract both modalityinvariant and modality-specific features, and incorporates a
+KPI-aware attention mechanism to evaluate the reliability
+of each modality and jointly learn the final causal graph.
+In comparison with these methods, our approach explicitly
+accounts for both intra-modal and inter-modal uncertainties,
+demonstrating superior effectiveness and robustness.
+Recently, a few works have leverage the advantages of
+large language models (LLMs) to improve the performance of
+AIOPS tasks in microservice systems. For instance, Flow-ofAction [46] proposes an SOP-enhanced multi-agent framework
+that constrains LLM reasoning through SOP flow mechanisms.
+By incorporating multiple auxiliary agents, it effectively mitigates the hallucination problems of the ReAct framework in
+root cause analysis (RCA), thereby significantly improving
+diagnostic accuracy. LasRCA [47], designed for one-shot scenarios with extremely scarce fault labels, introduces a collaborative framework that integrates LLMs with small classifiers.
+Through iterative sample selection and LLM-driven feedback
+annotation, it achieves efficient RCA while balancing accuracy
+and computational cost. Furthermore, TAMO [48] presents a
+tool-assisted LLM agent framework that unifies temporally
+aligned multimodal data representations with domain-specific
+tools. This design addresses challenges such as restricted
+context windows, modal input constraints, and dynamic dependency hallucinations, and demonstrates superior diagnostic
+performance across heterogeneous datasets and common fault
+types. Given the growing research interest in combining multimodal data with LLMs for AIOPS in microservices, we plan
+to incorporate LLMs in future work to achieve more efficient
+
+C. Uncertainty Learning
+Uncertainty is primarily categorized into data uncertainty,
+which is caused by noise within the training data and cannot be
+mitigated by increasing the amount of data; and model uncertainty, which is mainly due to incomplete training or data and
+is related to model parameters. Recently, some studies [49],
+[50], [51], [52] have focused on uncertainty research in deep
+learning to achieve more robust performance. DUA-Nets [51]
+dynamically assigns weights to different views of each sample
+by estimating data uncertainty, thereby effectively integrating
+multi-view information and mitigating noise effects. DMUE
+[52] effectively addresses the issue of label ambiguity in facial
+expression recognition by introducing a multi-branch learning
+framework to discover the latent distribution within the label
+space, and leveraging pairwise relationships between instances
+to estimate uncertainty. Our research focuses primarily on
+leveraging data uncertainty to improve the performance and
+robustness of microservice anomaly detection. At the same
+time, we utilize model uncertainty in active learning to select
+high-information samples.
+VI. C ONCLUSION AND F UTURE W ORK
+In this paper, we proposed MUAD, an uncertainty-aware
+multimodal anomaly detection framework for microservice
+systems that explicitly models both intra-modal and intermodal uncertainties. MUAD integrates a graph-based probabilistic encoder to robustly learn modality-specific representations under noisy and incomplete observations, a confidenceaware fusion mechanism to dynamically adjust modality contributions, and an active learning strategy to reduce labeling cost. Extensive experiments on three benchmark datasets
+demonstrate that MUAD achieves an average F1-score of
+98.10%, outperforming state-of-the-art multimodal methods
+by up to 7.87%, while consistently exhibiting significantly
+lower performance degradation under challenging conditions
+such as inter-modal information inconsistency and random
+modality missing.
+Despite these promising results, we summarize the limitations of our current work and outline corresponding directions
+for future research: (1) Log Semantics: While current log
+embeddings capture basic patterns, they may miss deep semantic nuances in complex log messages. We plan to incorporate
+Large Language Models (LLMs) to enhance log semantics and
+generalization capabilities. (2) Task Scope: The current framework of MUAD is primarily optimized for anomaly detection.
+We intend to extend the uncertainty-aware representations to
+support a unified framework that simultaneously performs
+anomaly detection and fine-grained root cause localization for
+microservice systems.
+ACKNOWLEDGMENT
+This work was supported by the National Natural Science
+Foundation of China under Grant 61902440 and 62272001.
+This work was also supported by the Key Project of Nature
+Science Research for Universities of Anhui Province of China
+under Grant 2022AH040019 and 2022AH05008637.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+R EFERENCES
+[1] L. Zheng, Z. Chen, J. He, and H. Chen, “Mulan: multi-modal causal
+structure learning and root cause analysis for microservice systems,” in
+Proceedings of the ACM Web Conference 2024, 2024, pp. 4107–4116.
+[2] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+detection for multivariate time series through stochastic recurrent neural
+network,” in Proceedings of the 25th ACM SIGKDD international
+conference on knowledge discovery & data mining, 2019, pp. 2828–
+2837.
+[3] L. Shen, Z. Li, and J. Kwok, “Timeseries anomaly detection using temporal hierarchical one-class network,” Advances in neural information
+processing systems, vol. 33, pp. 13 016–13 026, 2020.
+[4] L. Yang, J. Chen, Z. Wang, W. Wang, J. Jiang, X. Dong, and W. Zhang,
+“Semi-supervised log-based anomaly detection via probabilistic label
+estimation,” in 2021 IEEE/ACM 43rd International Conference on
+Software Engineering (ICSE). IEEE, 2021, pp. 1448–1460.
+[5] X. Zhang, Y. Xu, Q. Lin, B. Qiao, H. Zhang, Y. Dang, C. Xie,
+X. Yang, Q. Cheng, Z. Li et al., “Robust log-based anomaly detection on
+unstable log data,” in Proceedings of the 2019 27th ACM joint meeting
+on European software engineering conference and symposium on the
+foundations of software engineering, 2019, pp. 807–817.
+[6] C. Zhang, X. Peng, T. Zhou, C. Sha, Z. Yan, Y. Chen, and H. Yang,
+“Tracecrl: contrastive representation learning for microservice trace
+analysis,” in Proceedings of the 30th ACM joint European software
+engineering conference and symposium on the foundations of software
+engineering, 2022, pp. 1221–1232.
+[7] S. Zhang, Z. Pan, H. Liu, P. Jin, Y. Sun, Q. Ouyang, J. Wang, X. Jia,
+Y. Zhang, H. Yang et al., “Efficient and robust trace anomaly detection
+for large-scale microservice systems,” in 2023 IEEE 34th International
+Symposium on Software Reliability Engineering (ISSRE). IEEE, 2023,
+pp. 69–79.
+[8] C. Lee, T. Yang, Z. Chen, Y. Su, Y. Yang, and M. R. Lyu, “Heterogeneous anomaly detection for software systems via semi-supervised crossmodal attention,” in 2023 IEEE/ACM 45th International Conference on
+Software Engineering (ICSE). IEEE, 2023, pp. 1724–1736.
+[9] C. Zhao, M. Ma, Z. Zhong, S. Zhang, Z. Tan, X. Xiong, L. Yu,
+J. Feng, Y. Sun, Y. Zhang et al., “Robust multimodal failure detection
+for microservice systems,” in Proceedings of the 29th ACM SIGKDD
+Conference on Knowledge Discovery and Data Mining, 2023, pp. 5639–
+5649.
+[10] L. Tao, S. Zhang, Z. Jia, J. Sun, M. Ma, Z. Li, Y. Sun, C. Yang,
+Y. Zhang, and D. Pei, “Giving every modality a voice in microservice
+failure diagnosis via multimodal adaptive optimization,” in Proceedings
+of the 39th IEEE/ACM International Conference on Automated Software
+Engineering, 2024, pp. 1107–1119.
+[11] C. Lee, T. Yang, Z. Chen, Y. Su, and M. R. Lyu, “Eadro: An endto-end troubleshooting framework for microservices on multi-source
+data,” in 2023 IEEE/ACM 45th International Conference on Software
+Engineering (ICSE). IEEE, 2023, pp. 1750–1762.
+[12] J. Huang, Y. Yang, H. Yu, J. Li, and X. Zheng, “Twin graph-based
+anomaly detection via attentive multi-modal learning for microservice
+system,” in 2023 38th IEEE/ACM International Conference on Automated Software Engineering (ASE). IEEE, 2023, pp. 66–78.
+[13] Z. Zhao, T. Zhang, Z. Shen, H. Dong, X. Ma, X. Liu, and Y. Yang,
+“Chase: A causal heterogeneous graph based framework for root cause
+analysis in multimodal microservice systems,” arXiv e-prints, pp. arXiv–
+2406, 2024.
+[14] N. Zhao, J. Chen, Z. Yu, H. Wang, J. Li, B. Qiu, H. Xu, W. Zhang,
+K. Sui, and D. Pei, “Identifying bad software changes via multimodal
+anomaly detection for online service systems,” in Proceedings of the
+29th ACM Joint Meeting on European Software Engineering Conference
+and Symposium on the Foundations of Software Engineering, 2021, pp.
+527–539.
+[15] Y. Gan, Y. Zhang, D. Cheng, A. Shetty, P. Rathi, N. Katarki, A. Bruno,
+J. Hu, B. Ritchken, B. Jackson et al., “An open-source benchmark suite
+for microservices and their hardware-software implications for cloud
+& edge systems,” in Proceedings of the Twenty-Fourth International
+Conference on Architectural Support for Programming Languages and
+Operating Systems, 2019, pp. 3–18.
+[16] X. Zhou, X. Peng, T. Xie, J. Sun, C. Xu, C. Ji, and W. Zhao, “Benchmarking microservice systems for software engineering research,” in
+Proceedings of the 40th International Conference on Software Engineering: Companion Proceeedings, 2018, pp. 323–324.
+[17] MUAD, https://github.com/slg-frank/muad.git.
+[18] A. G. Hawkes, “Markov processes in apl,” ACM SIGAPL APL Quote
+Quad, vol. 20, no. 4, pp. 173–185, 1990.
+
+13
+
+[19] Y. Wang, Z. Zhu, Q. Fu, Y. Ma, and P. He, “Mrca: Metric-level root
+cause analysis for microservices via multi-modal data,” in Proceedings
+of the 39th IEEE/ACM International Conference on Automated Software
+Engineering, 2024, pp. 1057–1068.
+[20] C. Corbière, N. Thome, A. Bar-Hen, M. Cord, and P. Pérez, “Addressing
+failure prediction by learning model confidence,” Advances in neural
+information processing systems, vol. 32, 2019.
+[21] Z. Han, F. Yang, J. Huang, C. Zhang, and J. Yao, “Multimodal
+dynamics: Dynamical fusion for trustworthy multimodal classification,”
+in Proceedings of the IEEE/CVF conference on computer vision and
+pattern recognition, 2022, pp. 20 707–20 717.
+[22] G. Yu, P. Chen, Y. Li, H. Chen, X. Li, and Z. Zheng, “Nezha:
+Interpretable fine-grained root causes analysis for microservices on
+multi-modal observability data,” in Proceedings of the 31st ACM Joint
+European Software Engineering Conference and Symposium on the
+Foundations of Software Engineering, 2023, pp. 553–565.
+[23] H. Zhao, Y. Wang, J. Duan, C. Huang, D. Cao, Y. Tong, B. Xu, J. Bai,
+J. Tong, and Q. Zhang, “Multivariate time-series anomaly detection via
+graph attention network,” in 2020 IEEE international conference on data
+mining (ICDM). IEEE, 2020, pp. 841–850.
+[24] H. Liu, X. Huang, M. Jia, T. Jia, J. Han, Y. Li, and Z. Wu, “Uacad: Unsupervised adversarial contrastive learning for anomaly detection
+on multi-modal data in microservice systems,” IEEE Transactions on
+Services Computing, 2024.
+[25] H. Dou, P. Shi, Y. Zhang, P. Chen, and Z. Zheng, “Deanomaly: Anomaly
+detection for multivariate time series using robust decomposition and
+memory-augmented diffusion models,” IEEE Transactions on Instrumentation and Measurement, 2025.
+[26] J. Yang, Z. Wang, S. Chen, H. He, Y. Hou, and X. Jiang, “Hg-pad:
+Heterogeneous graph structure learning aided performance anomaly
+diagnosis in microservice systems,” IEEE Transactions on Services
+Computing, 2025.
+[27] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+in 3rd International Conference on Learning Representations, ICLR
+2015, 2015. [Online]. Available: https://arxiv.org/abs/1412.6980
+[28] Z. Xie, H. Xu, W. Chen, W. Li, H. Jiang, L. Su, H. Wang, and D. Pei,
+“Unsupervised anomaly detection on microservice traces through graph
+vae,” in Proceedings of the ACM Web Conference 2023, 2023, pp. 2874–
+2884.
+[29] S. Xie, J. Wang, H. He, Z. Wang, Y. Zhao, N. Zhang, and
+B. Li, “Tvdiag: A task-oriented and view-invariant failure diagnosis
+framework for microservice-based systems with multimodal data,”
+ACM Transactions on Software Engineering and Methodology, 2025,
+just Accepted. [Online]. Available: https://doi.org/10.1145/3734868
+[30] S. Liu, B. Zhou, Q. Ding, B. Hooi, Z. Zhang, H. Shen, and X. Cheng,
+“Time series anomaly detection with adversarial reconstruction networks,” IEEE Transactions on Knowledge and Data Engineering,
+vol. 35, no. 4, pp. 4293–4306, 2022.
+[31] Z. Li, Y. Zhao, J. Han, Y. Su, R. Jiao, X. Wen, and D. Pei, “Multivariate
+time series anomaly detection and interpretation using hierarchical intermetric and temporal embedding,” in Proceedings of the 27th ACM
+SIGKDD conference on knowledge discovery & data mining, 2021, pp.
+3220–3230.
+[32] J. Wang, S. Shao, Y. Bai, J. Deng, and Y. Lin, “Multiscale wavelet
+graph autoencoder for multivariate time-series anomaly detection,” IEEE
+Transactions on Instrumentation and Measurement, vol. 72, pp. 1–11,
+2022.
+[33] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+in multivariate time series,” in Proceedings of the AAAI conference on
+artificial intelligence, vol. 35, no. 5, 2021, pp. 4027–4035.
+[34] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Soderstrom, “Detecting spacecraft anomalies using lstms and nonparametric
+dynamic thresholding,” in Proceedings of the 24th ACM SIGKDD
+international conference on knowledge discovery & data mining, 2018,
+pp. 387–395.
+[35] A. Zimek, E. Schubert, and H.-P. Kriegel, “A survey on unsupervised
+outlier detection in high-dimensional numerical data,” Statistical Analysis and Data Mining: The ASA Data Science Journal, vol. 5, no. 5, pp.
+363–387, 2012.
+[36] J. Kim and C. D. Scott, “Robust kernel density estimation,” The Journal
+of Machine Learning Research, vol. 13, no. 1, pp. 2529–2565, 2012.
+[37] L. Xiong, B. Póczos, and J. Schneider, “Group anomaly detection
+using flexible genre models,” Advances in neural information processing
+systems, vol. 24, 2011.
+[38] M. Du, F. Li, G. Zheng, and V. Srikumar, “Deeplog: Anomaly detection
+and diagnosis from system logs through deep learning,” in Proceedings
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Services Computing. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TSC.2026.3672587
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+of the 2017 ACM SIGSAC conference on computer and communications
+security, 2017, pp. 1285–1298.
+[39] W. Meng, Y. Liu, Y. Zhu, S. Zhang, D. Pei, Y. Liu, Y. Chen, R. Zhang,
+S. Tao, P. Sun et al., “Loganomaly: Unsupervised detection of sequential
+and quantitative anomalies in unstructured logs.” in IJCAI, vol. 19, no. 7,
+2019, pp. 4739–4745.
+[40] V.-H. Le and H. Zhang, “Log-based anomaly detection without log parsing,” in 2021 36th IEEE/ACM International Conference on Automated
+Software Engineering (ASE). IEEE, 2021, pp. 492–504.
+[41] P. Liu, H. Xu, Q. Ouyang, R. Jiao, Z. Chen, S. Zhang, J. Yang,
+L. Mo, J. Zeng, W. Xue et al., “Unsupervised detection of microservice
+trace anomalies through service-level deep bayesian networks,” in 2020
+IEEE 31st International Symposium on Software Reliability Engineering
+(ISSRE). IEEE, 2020, pp. 48–58.
+[42] Y. Xu, Y. Zhu, B. Qiao, H. Che, P. Zhao, X. Zhang, Z. Li, Y. Dang, and
+Q. Lin, “Tracelingo: Trace representation and learning for performance
+issue diagnosis in cloud services,” in 2021 IEEE/ACM International
+Workshop on Cloud Intelligence (CloudIntelligence). IEEE, 2021, pp.
+37–40.
+[43] C. Zhang, X. Peng, C. Sha, K. Zhang, Z. Fu, X. Wu, Q. Lin, and
+D. Zhang, “Deeptralog: Trace-log combined microservice anomaly detection through graph-based deep learning,” in Proceedings of the 44th
+International Conference on Software Engineering, 2022, pp. 623–634.
+[44] P. Wang, X. Zhang, and Z. Cao, “Anomaly detection for microservice
+system via augmented multimodal data and hybrid graph representations,” Information Fusion, vol. 118, p. 103017, 2025.
+[45] L. Tao, X. Lu, S. Zhang, J. Luan, Y. Li, M. Li, Z. Li, Q. Yu,
+H. Xie, R. Xu et al., “Diagnosing performance issues for large-scale
+microservice systems with heterogeneous graph,” IEEE Transactions on
+Services Computing, vol. 17, no. 5, pp. 2223–2235, 2024.
+[46] C. Pei, Z. Wang, F. Liu, Z. Li, Y. Liu, X. He, R. Kang, T. Zhang,
+J. Chen, J. Li et al., “Flow-of-action: Sop enhanced llm-based multiagent system for root cause analysis,” in Companion Proceedings of the
+ACM on Web Conference 2025, 2025, pp. 422–431.
+[47] Y. Han, Q. Du, Y. Huang, J. Wu, F. Tian, and C. He, “The potential of
+one-shot failure root cause analysis: Collaboration of the large language
+model and small classifier,” in Proceedings of the 39th IEEE/ACM
+International Conference on Automated Software Engineering, 2024, pp.
+931–943.
+[48] Q. Wang, X. Zhang, M. Li, Y. Yuan, M. Xiao, F. Zhuang, and D. Yu,
+“Tamo: Fine-grained root cause analysis via tool-assisted llm agent with
+multi-modality observation data in cloud-native systems,” arXiv preprint
+arXiv:2504.20462, 2025.
+[49] P.-Y. Huang, W.-T. Hsu, C.-Y. Chiu, T.-F. Wu, and M. Sun, “Efficient
+uncertainty estimation for semantic segmentation in videos,” in Proceedings of the European Conference on Computer Vision (ECCV), 2018, pp.
+520–535.
+[50] F. Kraus and K. Dietmayer, “Uncertainty estimation in one-stage object
+detection,” in 2019 ieee intelligent transportation systems conference
+(itsc). IEEE, 2019, pp. 53–60.
+[51] Y. Geng, Z. Han, C. Zhang, and Q. Hu, “Uncertainty-aware multi-view
+representation learning,” in Proceedings of the AAAI Conference on
+Artificial Intelligence, vol. 35, no. 9, 2021, pp. 7545–7553.
+[52] J. She, Y. Hu, H. Shi, J. Wang, Q. Shen, and T. Mei, “Dive into
+ambiguity: Latent distribution mining and pairwise uncertainty estimation for facial expression recognition,” in Proceedings of the IEEE/CVF
+conference on computer vision and pattern recognition, 2021, pp. 6248–
+6257.
+
+Hui Dou is currently an associated professor in
+School of Computer Science and Technology at
+Anhui University. He graduated from the department
+of computer science of Xi’an Jiaotong University
+with a Ph.D. degree in 2017. Dr. Dou is now
+interested in AI-driven performance diagnosis and
+optimization for distributed systems. Until now, Dr.
+Dou has published more than 20 papers in some
+international conferences and journals such as ASE,
+ICDCS, ICPP and IEEE TSC, TPDS, TIM.
+
+14
+
+Shenglai Guo received his BE degree in Software
+Engineering from Wuhan Polytechnic University in
+2022, and now is a master student in the School of
+Computer Science and Technology at Anhui University. His current research topics mainly focus on
+anomaly detection in microservices.
+
+Lele Zou received his BE degree in Data Science
+and Big Data Technology from Anhui Polytechnic
+University in 2022. He received the MS degree
+in Artificial Intelligence from Anhui University in
+2025. His current research topics mainly focus on
+intelligent operations and maintenance for microservices.
+
+Yiwen Zhang received the Ph.D. degree in management science and engineering from the Hefei
+University of Technology, in 2013. He is currently a
+Professor with the School of Computer Science and
+Technology, Anhui University. Meanwhile, he is a
+Ph.D. advisor. His research interests include service
+computing, cloud computing, and big data analytics.
+Until now, Dr. Zhang has published more than 70
+papers in some international conferences including
+AAAI, ICSOC, ICWS and journals including IEEE
+IEEE TSC, TKDE, ACM TOIS, TKDD.
+
+Pengfei Chen is currently a professor in School
+of Computer Science and Engineering at Sun Yatsen University. He graduated from the department
+of computer science of Xi’an Jiaotong University
+with a Ph.D. degree in 2016. Now, he is interested
+in distributed systems, AIOps, cloud computing,
+Microservice. Until now, Dr. Chen has published
+more than 50 papers in some international conferences including ICSE, FSE, ASE, ICSOC, ICWS
+and journals including IEEE TDSC, TSC, TCC.
+
+Zibin Zheng (Fellow, IEEE) is currently a Professor
+and the Dean of the School of Software Engineering,
+Sun Yat-sen University, Zhuhai, China. He authored
+or coauthored more than 200 international journal
+and conference papers, including 1 ESI hot paper
+and 10 ESI highly cited papers. His research interests include blockchain, software engineering, and
+services computing. Prof. Zheng was a recipient of
+several awards, including the Top 50 Influential Papers in Blockchain of 2018 and the ACM SIGSOFT
+Distinguished Paper Award at ICSE 2010.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+PAPER_TEXT

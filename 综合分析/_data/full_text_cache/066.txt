@@ -1,0 +1,767 @@
+Received: 19 April 2019
+ | Revised: 6 September 2019
+ | Accepted: 1 October 2019
+
+DOI: 10.4218/etrij.2019-0190
+
+F E AT U R E D A RT I C L E
+
+Practical evaluation of encrypted traffic classification based on a
+combined method of entropy estimation and neural networks
+
+Kun Zhou1,2 | Wenyong Wang1 | Chenhuang Wu1,3 | Teng Hu1,2
+1
+ School of Computer Science and
+Engineering, University of Electronic
+ Encrypted traffic classification plays a vital role in cybersecurity as network traffic
+Science and Technology of China, Sichuan, encryption becomes prevalent. First, we briefly introduce three traffic encryption
+China mechanisms: IPsec, SSL/TLS, and SRTP. After evaluating the performances of sup-
+2
+ Institute of Computer Applications, China
+ port vector machine, random forest, naïve Bayes, and logistic regression for traffic
+Academy of Engineering Physics (CAEP),
+Sichuan, China classification, we propose the combined approach of entropy estimation and artificial
+3
+ Putian University, Fujian, China neural networks. First, network traffic is classified as encrypted or plaintext with
+ entropy estimation. Encrypted traffic is then further classified using neural networks.
+Correspondence
+Wenyong Wang and Kun Zhou, School
+ We propose using traffic packet’s sizes, packet's inter-arrival time, and direction as
+of Computer Science and Engineering, the neural network's input. Our combined approach was evaluated with the dataset
+University of Electronic Science and obtained from the Canadian Institute for Cybersecurity. Results show an improved
+Technology of China, Sichuan, China.
+Email: wangwy@uestc.edu.cn (W. W.) and precision (from 1 to 7 percentage points), and some application classification metrics
+zhoukun@std.uestc.edu.cn (K. Z.) improved nearly by 30 percentage points.
+
+Funding information KEYWORDS
+This work was partially supported by
+ deep neural networks, encrypted traffic classification, entropy estimation, PCA
+National Science Foundation of China with
+the Grant Number: 2018YFB08040505
+
+1 | IN T RO D U C T ION Some inspiring methods based on the statistical behavior of
+ traffic flow have been proposed. Although these methods
+Research on traffic classification has become more chal- achieved high accuracies in differentiating non-encrypted
+lenging than ever, as the innovative applications and mech- traffic flows, encrypted traffic classification is still in its inianisms to conceal the nature of traffic develop and mature tial development.
+rapidly. The accuracy and efficiency of traffic classification IP packets transmitted in plaintext can be easily recovered
+methods have attracted great research interest from academia by network sniffer tools such as Wireshark. Thus, to ensure
+and industry. For example, encrypted Voice over IP network communication confidentiality, encryption methods must be
+(VoIP) traffic flow needs to be correctly picked out and la- employed, and that is becoming a fast-growing trend.
+beled with appropriate transmission priorities—because of IPsec virtual private network (VPN), transport layer seits time-delay sensitive nature—to preserve the quality of ser- curity (TLS)/secure socket layer (SSL), and secure real-time
+vice (QoS). Old-fashioned strategies such as packet's header transport protocol (SRTP) dedicated to encrypted VoIP are
+and payload inspection failed to discriminate traffic, because three major protocols for encrypted network traffic. We secontent checking on encrypted traffic was unsuccessful. lected the IPsec protocol to brief the principles and approaches
+
+This is an Open Access article distributed under the term of Korea Open Government License (KOGL) Type 4: Source Indication + Commercial Use Prohibition + Change
+Prohibition (http://www.kogl.or.kr/info/licenseTypeEn.do).
+1225-6463/$ © 2019 ETRI
+
+ETRI Journal. 2020;42(3):311–323. ﻿ wileyonlinelibrary.com/journal/etrij | 311
+ |   
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+312 ZHOU et al.
+
+for traffic encryption. IPsec can be deployed to enable VoIP encryption. VoIP service provider, Skype, protects users’
+communication confidentiality at the IP network level. Some privacy by applying mechanisms such as stronger encrypresearch concluded that a cryptographic engine could bring tion, proprietary protocols, unknown codecs, dynamic path
+large overhead for voice traffic and was not perfect for VoIP selection, and the constant packet rate. However, researchencryption. This hot topic is worthy of investigation not only ers have demonstrated how to compromise users’ privacy
+for its omnipresence in real-life VoIP scenarios but also for according to a novel traffic analysis attack that extracted
+its academic value. Widely used in HTTPS Web traffic, TLS/ application-level features from VoIP call traces. In an in-
+SSL is undoubtedly one of the most important encryption teresting study, Wright and others [1] suggested that VoIP
+mechanisms for packet transmission, as the NSS lab predicts packets compressed with variable bit rate (VBR) encodthat 75% of global web traffic will be encrypted by 2019. ing schemes and encrypted with a fixed-length cipher were
+ We investigated and evaluated numerous flow features for susceptible to the attacks of using only the packet length
+encrypted traffic classification using four traditional machine feature to infer the spoken language of the encrypted conlearning methods—support vector machines (SVM), ran- versation. Wright and others [2] showed possibilities of
+dom forest (RF), naïve Bayes, and logistic regression—and spotting the phrases within encrypted VoIP calls under
+a neural network (NN). An entropy-based method was used specific circumstances. The article proposed profile hidden
+to first distinguish encrypted from non-encrypted traffic. For Markov models (pHMM) to model the packet sequences
+encrypted traffic, based on the results from the first phase, we for the given phrases. Results indicated an average accudesigned a NN using three types of packet discriminators— racy of 50% (greater than 90% for some phrases).
+packet length, inter-arrival time (IAT), and direction (forward Traffic features are critical to the identification and clasand backward)—as input-layer parameters. For non-en- sification of encrypted VoIP traffic for NNs. Anderson and
+crypted traffic, we employed principal component analysis others [3] introduced a complex set of observable data fea-
+(PCA) to cut dimensions by half to achieve high efficiency of tures and showed that these features could be exercised to
+classification while maintaining a certain degree of accuracy. detect malware communication while preserving the privacy
+ Contributions we made in this study are as follows: of benign users. Wright and others [4] investigated the extent
+ to which average application protocols could be differenti-
+• We investigated three network traffic encryption mecha- ated with features such as packet size, timing, and direction
+ nisms to prepare for classification analysis and evaluation. that remained unchanged after encryption. The accuracy of
+• Four traditional machine learning methods and a neural their traffic classifier was greater than 80% for most protonetwork were evaluated for network traffic classification. cols. Sherry and others [5] inspected the packet directly in
+• We proposed a combined approach to distinguish the en- the encrypted traffic. This article elaborated on the approach
+ crypted traffic from the plaintext traffic using information through an original protocol and encryption scheme.
+ entropy and a neural network, and we achieved improved Sun and others [6] focused on the inference of sensitive
+ results. information from encrypted network connections with packet
+ sizes and timing. Liberatore and Levine [7] reported their
+ The remainder of the article is structured as follows. findings of identifying web pages encapsulated in encrypted
+Section 2 describes related research. In Section 3, we cover HTTPs using only the number and size of the encrypted packour methodology with an emphasis on machine learning ets. Similarly, Schuster and others [8] proposed a method to
+techniques, features, and datasets. Section 4 presents evalua- spot videos played over an encrypted network channel using
+tion methods and results. Section 5 concludes the article and the total size of the packets transmitted in a short-time window.
+discusses future work. Packet inter-arrival times have been studied to infer keystrokes
+ within SSH sessions [9]. Entropy estimation for real-time
+ encrypted traffic identification [10] presented the approach.
+2 | R ELATE D WO R K Results indicated that the encrypted VoIP traffic was detected
+ correctly with a precision greater than 94%. Moore and oth-
+Some research demonstrated the feasibility of inferring the ers [11] made an impressive contribution by proposing more
+encrypted packets without decryption from the information than 200 flow features for further analysis. Velan and others
+leakage or the so-called “side-channel.” Attacks by traffic [12] compared the feature-based classification methods and
+analysis usually materialize at the application or transport/ pointed out their weaknesses and strengths. Daniel and others
+network level for traditional methods. General traffic anal- [13] evaluated three machine learning techniques—k-means
+ysis is based on application/traffic flow-level features, such clustering algorithm, MOGA, and C4.5—and concluded that
+as correlation statistics between flows at the transceiver C4.5 was the fastest. Nguyen and others [14] surveyed 18 sigends, which is especially the case for encrypted traffic, nificant works published from 2004 to 2007 and categorized
+because the packet content inspection methods fail before them according to machine learning algorithms and primary
+ | 313
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+ZHOU et al.   
+
+contributions. An inspiring result by Zhang and others [15] was works for the empirical evaluation test. Paninski [20] conthat traffic classification performance could still be enhanced cluded that at least N > m samples were needed for the
+ √
+
+drastically even with very few training samples. Finamore and uniformity test. Inspired by the aforementioned methods, we
+others [16] proposed KISS, an Internet classification engine, propose the following information entropy-based algorithm.
+which achieved very good results with the average true posi- Using the traffic sniffer tool's data processing functionaltive rate of 99.6% and 98.1% for the worst case. ity, we selected randomly 64 bytes in TCP protocol contents
+ Traffic encryption has also gained research interest from (TLSv1.2 for encrypted traffic) from the experimental pcap
+the industry. IEEE industry connections established the files (ISCX-VPN-NonVPN-2016) to compute the entropy.
+security subgroup on encrypted traffic inspection (ETI), We used Monte Carlo pseudorandom sequence to mimic the
+which aims to standardize an accepted way of traffic in- encrypted traffic and compared it with the experiment data.
+spection, on top of encrypted transport standards. The group See Algorithm 1 in Table 1 for entropy estimation details.
+also covers requirements for traffic inspection mechanisms
+based on different use cases and explores proofs of concepts
+of implementations. Network giant Cisco's latest network- 3.2 | Artificial neural networks
+ing gear, encrypted traffic analytics (ETA) [17] unleashed in
+2017, provides advanced traffic analytics including machine The research demonstrated the efficacy of artificial neural
+learning to identify encrypted network threats. networks, especially the deep learning technologies [21], in
+ traffic classification. Computational power, such as graphical processing units (GPUs) and Google's tensor processing
+3 | M ET H OD O LO GY unit (TPU), grows exponentially, and a deep NNs design and
+ training have become more feasible. There are reports that
+3.1 | Entropy-based methods NN architectures such as multilayer perceptrons (MLP), convolutional neural networks (CNN), recurrent neural networks
+Shannon's entropy theory measures information uncertainty. (RNN), autoencoders, and generative adversarial networks
+Given m possible events A1, …, Am with probabilities of oc- (GAN) have all been used for traffic classification. In this
+currence p1, …, pm, entropy H is defined by (1). article, we used a traditional NN with three layers (input, hidden, and output layer) to evaluate our combined approach.
+ ∑m
+ (1)
+ ( )
+ H =− pi log pi .
+ i=1
+ h(1) = 𝜎(W (1) x),
+ Equal probabilities have the maximum value of entropy. h(2) = ReLu(W (2) x),
+ (3)
+Unpredictable behavior means uncertainties and, thus, in- h(3) = 𝜎(W (3) h(1) ),
+creases entropy. An appropriate estimator for the entropy is
+ y = 𝜎(W (3) h(1) + W (5) h(2) ⋅
+needed for small datasets, but entropy estimation based on
+a small sample becomes harder [18], especially for N < m.
+ TABLE 1 Algorithm using entropy-based methods
+Motivated by the problems of estimating the entropy with
+small length N, Olivain and Goubault-Larrecq [19] presented Algorithm 1 Distinguish encrypted traffic from plaintext traffic
+the N-truncated entropy method. The N-truncated entropy using entropy-based methods
+HN(p) is defined as for words w of length N using a maximum 1. Generate Monte Carlo pseudorandom sequence between 0 and
+likelihood estimator (MLE) to estimate the entropy. Average 256 with the length of 64 bytes for 10 000 times; for example, (a3
+MLE estimates the number of words to formulate HN(p). If b4 f1 23 48 90 ab 34…), where “a3” stands for one character.
+pi = 1/m for all i (where p follows the uniform distribution U), 2. Using (2) to calculate HN (U), where N = 64, m = 256, and Ni
+then HN(U) can be computed by (2). stands for the frequency of character i, and HN (U) represents the
+ average information entropy using the MLE method.
+ 3. Collect and save the experimental pcap dataset using the sniffer
+ [( ) (m )]
+ 1 ∑ N ∑ ni ni
+HN (U) = × − log tool's functionality.
+ mN n +⋯+n =N n1 + ⋯ + n m N N
+ 4. Select randomly 64 bytes protocol contents in 100 TCP flow data
+ 1 m i=1
+ ( )
+ N N! and store them into 100*64 dataset matrix (test dataset matrix);
+where = .
+ n1 + ⋯ + n m n1 ! ⋯ n m ! 5. For every row of the test dataset matrix, calculate information
+ (2) entropy for every character using (1), that is Hk(P).
+ We used MLE as an unbiased estimator of HN. The esti- 6. Calculate average variance, 𝜎 = ki=1 (Hi (p) − Hu (p) )2 ∕ (k − 1),
+ ∑
+
+mated value of similarity to HN(U) reflects how much it re- determine encryption = true if actual information entropy
+sembled the uniform distribution. A Monte Carlo method for value falls within three times confidence range, otherwise
+ encryption = false.
+estimating HN(U) with corresponding confidence intervals
+ |   
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+314 ZHOU et al.
+
+ The NN architecture is shown in Figure 1. traffic such as IDS, Tor/Non-Tor, VPN/Non-VPN, and an
+ The NN uses modular backpropagation algorithms, linear Android malware dataset. For this study, we selected two
+module plus softmax (activation function), and cross-entropy relevant traffic datasets, “ISCX-Tor/Non-Tor” and “ISCX
+(loss function). The basic principle for each module was to VPN/Non-VPN.” These two datasets store captured traffic
+(i) calculate “forward_pass,” “backward_pass,” and “para_ packets in the pcap format files, which we can open with
+gradients,” (ii) chain together “forward_pass” and “back- Wireshark to inspect the packet details. The CSV files are
+ward_pass,” (iii) compute “para_gradients,” and (iv) apply traffic flow statistics typically used for supervised learning
+gradients and iterate. For the NN, online stochastic gradient with assigned training labels. For “ISCX VPN-NonVPN”
+descent (SGD) was used to construct our model. See Table 2 datasets, packets are captured over virtual private network
+for the main modular processes. (VPN) sessions, which are generally considered to be en-
+ We proposed a combined approach to distinguish the en- crypted. The “ISCX-Tor/Non-Tor” dataset is generated by
+crypted and plaintext traffic and then to further classify the the Tor browser. The basic principle for Tor is to build enencrypted traffic into eight types of applications. The NN is com- crypted connections in a way that no individuals ever know
+prised of three layers: the input layer has 23 neurons for 23 traffic the complete path. Complex port obfuscation algorithms also
+features, the hidden layer has 100 neurons, and the output layer improve the privacy and anonymity of Tor traffic. As the
+has eight neurons for eight classes (which are VoIP, audio stream- complete datasets were very huge and diversified, we chose
+ing, browsing, chat, email, file transfer, P2P, and video stream- the aforementioned two datasets for our experiments. VPNing). Figure 2 depicts the high-level workflow of our approach. NonVPN datasets were used to classify the encrypted and
+ non-encrypted traffic, while Tor/Non-Tor was for application classification. We separated the training and test sets (no
+3.3 | Dataset validation set) using random sampling. About 2000 packets
+ randomly selected from the original dataset were used to feed
+The dataset from the Canada Institute for Cybersecurity is to the NN. The repeat times for the train/test were set to 10.
+widely used by researchers worldwide. It includes network The training set size was 90% and 10% was for the test set.
+
+ 3.4 | Methods for encrypted and nonh(1) Output: Y
+ h(3)
+
+ encrypted traffic classification
+ W(3)
+Input: X W(4)
+ We investigated correlations between the 23 different statistic features and the target class. The following figures
+ W(1)
+ show the density distribution of the features “duration”
+ and “total_fiat” with class type (VPN/Non-VPN), respectively. There were two spikes for “duration” of Non-VPN
+ W(5)
+ and one spike for “total_fiat” of Non-VPN. The differences
+ between the two types of distributions were obvious, which
+ h(2) indicated these two features could be used for classification. Figure 3 demonstrates the distribution of the two se-
+ (2)
+ W
+
+ lected features.
+ We selected VPN/Non-VPN dataset and studied the distribution of every feature and class type. The heat map for
+ (A)
+ the dataset and box plot for the two chosen statistic features
+ (duration, total_fiat) are illustrated in Figure 4.
+ W(1) W(3) W(4)
+ Heat map represents data in the matrix with changing colors.
+ X Linear Sigmoid Linear Sigmoid Linear SUM Sigmoid Y
+ Darker colors mean the larger data. Some features showed they
+ might be useful for classification. Box plot depicts the numeric
+ ReLu
+ data value of “duration” and “total_fiat” through quartiles.
+ Linear Linear
+ We ranked the top 10 among 23 features using three metrics: information gain (IG), Gini decrease, and χ2. IG for a
+ W(2) W(5)
+ specified attribute is defined using Shannon entropy H(T).
+ (B)
+ IG(T, a) = H(T) –H(T | a) is the difference between the a
+F I G U R E 1 (A) Traditional neural network representation and priori Shannon entropy H(T) of the training set and the condi-
+(B) neural network computational graph tional entropy H(T | a). The mean decrease in Gini coefficient
+ | 315
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+ZHOU et al.   
+
+TABLE 2 Neural network modular
+ Modular Processes
+and processes
+ forward_pass: Y = Wx + b;
+ backward_pass: 𝜕L = 𝜕LW
+ T T 𝜕L 𝜕L
+ 𝜕x ( 𝜕y )
+ para_gradients: 𝜕w= 𝜕L
+ 𝜕L
+ 𝜕y
+ x ; 𝜕b= 𝜕y
+
+ forward_pass: Y = ReLu(x);
+ backward_pass: 𝜕x
+ 𝜕L
+ = (yi > 0)
+ i
+
+ Y = Softmax(x); yn=∑e exm
+ xn
+
+ m
+
+ forward_pass: Y = L
+ = Cross_entropy(p, x); Y
+ = − pi logxi
+ ∑
+ i
+ backward_pass: 𝜕x =𝜕x
+ 𝜕L pi
+ i i
+
+ Parameters
+ S C = 1.0, ε = 0.1
+ V Kernel: Sigmoid, tanh(auto x*y + 0.0)
+ M Numerical tolerance: 0.0003
+ Iteration limt: 2000
+
+ Parameters
+ Number of trees: 10
+ Dataset1 Random Maximal number of features: unlimited
+ Encrypted Forest Maximal tree depth: unlimited
+ traffic Sop splitting nodes with maximum instances: 5
+
+ Parameters
+ Performance
+ Entropy Hidden layers: 100 Comparison
+ Methods Activation : ReLu Reports
+ Dataset2 Neural Solver: Adam
+ Non-encrypted Network Alpha: 0.002
+ traffic Max iterations: 10 000
+ Replicable training: True
+
+ Naive Bayes
+
+ Parameters
+ Logistical
+ regression Regularization: Lasso (L1), C = 50 Combined
+ Approach
+
+FIGURE 2 Workflow of the combined approach
+
+measures each variable's contributions to the homogeneity of 3.5 | Methods for application classification
+the nodes from scale 0 (homogeneous) to 1 (heterogeneous).
+Chi-squared test calculates the difference between the distri- Dataset ISCX-Tor-Non-tor2017 was used for the classification
+bution of plaintext and decrypted ciphertext. A lower value of of different types of applications. We use eight applications and
+the test means a higher probability of successful decryption. 23 features (see Table A1 in Appendix for definitions). The dis-
+Figure 5 illustrates the results of the top 10 rankings. tribution of application type with frequency and probabilities is
+ |   
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+316 ZHOU et al.
+
+ 22
+ Non-VPN
+ 20
+ VPN
+ 18
+ 16
+ Density (x1e – 09)
+
+ 14
+ 12
+ 10
+ 8
+ 6
+ 4
+ 2
+ 0
+ –60 –40 –20 0 20 40 60 80 100 120 140 160 180
+ FIGURE 5 Input data features ranking by relevance: top 10
+ Duration (x1e + 06)
+ (A)
+ We first employed principal component analysis (PCA)
+ 200
+ to preprocess this type of dataset. This method efficiently re-
+ Non-VPN
+ 180 VPN
+ 160 duces the dimensions while retaining the variance of the data
+ 140 and, thus, reduces the sizes of input layer. The dataset con-
+Density (x1e – 09)
+
+ 120 tains 23 features. After PCA processing, 10 principal compo-
+ 100 nents were computed at the variance greater than 98%. We
+ 80
+ selected the top 10 principal components to preserve the data
+ variance at 0.984 (Figure 7).
+ 60
+ 40
+ 20
+ After analyzing 23 features using PCA, we found that half
+ 0 of the features could be dropped to improve efficiency while
+ 0 20 40 60 80 100 120 preserving accuracy at a variance of 98.4%. Figure 8 demon-
+ Total_fiat (x1e + 06) strates the top 10 principal components.
+ (B)
+
+F I G U R E 3 (A) Distribution for feature “duration” and Class and
+(B) distribution for feature “total_fiat” and Class 4 | RESULTS AND DISCUSSIO N
+
+shown as a bar chart and freeviz in Figure 6. Freeviz shows that Numerous machine learning approaches have been proposed
+points in the same class are attracted to each other, whereas for traffic classification. Gil and others [22] adopted features
+points in different classes repel each other. such as the flow's duration, bps, and inter-arrival time for both
+
+ Non-VPN: 46818642.11 ± 54947389.61
+
+ 1207.00 2382589.00 119245457.00
+
+ VPN: 57964317.31 ± 54677146.24
+
+ 273.00 59867085.00 118650591.00
+
+ 0000000 0 20000000 40000000 60000000 80000000 100000000 120000000 140000000
+
+ (A)
+
+ Non-VPN: 2065364.213063 ± 8716373.265607
+
+ 165.324800 18341.850000 146863.200000
+
+ VPN: 3199439.452356 ± 9271798.636702
+
+ 103.500000 348513.650000 1261536.500000
+
+ 20000000 0 20000000 40000000 60000000 80000000 100000000 120000000 140000000
+
+ (B) (C)
+
+F I G U R E 4 (A) Feature “duration” at student’ t: 3.453 (p = 0.001), (B) feature “max_fiat” at student’ t: 2.095 (p = 0.037), and (C) heat map
+for 23 data features
+ | 317
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+ZHOU et al.   
+
+ FIGURE 8 Top 10 features using the PCA method
+
+ and others [23] selected 111 discriminators for 14 classes of
+ applications and achieved an accuracy of 94% with k-NN algorithm. However, in their report, they did not mention the
+ (A) specific details of their implementation, and the results need
+ 1.0
+ to be revalidated by independent third parties to increase their
+ 160
+ credibility.
+ 140
+ 0.8 SVM [24] is used for data classification and regression.
+ 120
+ RF [25] mainly constructs decision trees to achieve the same
+ 100 0.6 functions as SVM does. Naïve Bayes model [26] is derived
+Frequency
+
+ Frequency
+ 80 from applying Bayes’ theorem with strong independence as-
+ 60
+ 0.4 sumptions between the features. Logistic regression models
+ 40
+ the probability of output in terms of input and can be used
+ 0.2
+ for classification. Aceto and others [27,28] proposed many
+ 20
+ novel approaches to classify mobile applications. In the
+ study by G. Aceto et al and others [29], their results showed
+ 0 0
+
+ that three anonymity networks (Tor, I2P, and JonDonym)
+ No
+ Selected
+
+ (B) can be easily distinguished with an accuracy of 99.99%.
+ Taylor [30] studied smartphone apps from the encrypted
+F I G U R E 6 (A) Freeviz for different application distribution and
+ traffic and achieved more than 99% accuracy. Rezaei and
+(B) application distribution with frequency (left) and probabilities
+(right)
+ others [31] presented commonly used deep learning methods and their applications in traffic classification tasks.
+ Lotfollahi and others [32] proposed a “deep packet” scheme
+directions to characterize the network traffic. They experi- to identify encrypted traffic and distinguish between VPN
+mented using k-nearest neighbor (kNN) and C4.5 decision tree and non-VPN network traffic. Aceto and others [33] prealgorithms and achieved approximately 92% and 88% recall, sented an inspiring contribution to encrypted TC: they used
+respectively, for the VPN-tunneled dataset. Yamansavascilar several state-of-the-art deep learning techniques to set a
+ framework for comparisons and a performance evaluation
+ workbench. They concluded that although DL had open issues and pitfalls, it was viable for the traffic classification.
+ 0.984
+ 1.0
+ Our method of entropy estimation for encrypted or non-encrypted traffic achieved an average accuracy of 98%. Dataset VPN
+ 0.8 stands for encrypted and non-VPN for plaintext (See Table 3).
+ The test results showed that the RF outperformed the NN by
+Proportion of variance
+
+ 0.6 a small margin. We consider that this is because the RF parameters (such as “fixed random seeds” and hyperparameters) hap-
+ 0.4
+ pened to be well set. NN has also many important parameters
+
+ 0.2
+ TABLE 3 Metrics for entropy methods
+
+ Non-VPN VPN ∑
+ 0 0.014
+ 1 3 5 7 9 11 13 15 17 19 21 23 Non-VPN 97.7% 1.0% 1651
+ Principal Components VPN 2.3% 99% 348
+ ∑ 1686 313 1999
+FIGURE 7 PCA analysis of 23 data features
+ |   
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+318 ZHOU et al.
+
+ 1.0 of NN, we could not conclude that RF outperformed the NN
+ methods, and it was highly possible that fine-tuning of the parameters of NN could produce better results.
+ 0.8
+TP rate (sensitivity)
+
+ 0.6 4.1 | Encrypted traffic classification
+
+ We compared traditional machine learning methods with
+ 0.4
+ our combined approach for classification using the same
+ dataset, NN, and parameters. The following two ROC
+ 0.2 SVM curves (Figure 9) representing the FP rate for “VPN” and
+ Random Forest
+ Naive Bayes
+ “Non-VPN,” respectively, demonstrated the traditional ma-
+ Logistic Regression chine learning methods used to distinguish encrypted from
+ 0 Neural Network
+ plaintext traffic. These traffic traces were directly classified
+ 0 0.2 0.4 0.6 0.8 1.0
+ without using the entropy method.
+ FP rate (1-specificity)
+ (A)
+
+ 1.0
+ 1.0
+
+ 0.8
+ 0.8
+ TP rate (sensitivity)
+ TP rate (sensitivity)
+
+ 0.6
+ 0.6
+
+ 0.4
+ 0.4
+
+ 0.2 SVM
+ 0.2 SVM Random Forest
+ Random Forest Naive Bayes
+ Logistic Regression
+ Naive Bayes
+ Logistic Regression 0 Neural Network
+ 0 Neural Network 0 0.2 0.4 0.6 0.8 1.0
+ 0 0.2 0.4 0.6 0.8 1.0 FP rate (1-specificity)
+ FP rate (1-specificity) (A)
+ (B)
+ 1.0
+FIGURE 9 (A) FP rate for Non-VPN class using traditional
+methods. (B) FP rate for VPN class using traditional methods
+ 0.8
+ TP rate (sensitivity)
+
+TABLE 4 Metrics using the traditional methods
+ 0.6
+ Method AUC F1 Precision Recall
+ SVM 0.500 0.274 0.657 0.270 0.4
+ Random forest 0.933 0.915 0.916 0.919
+ Neural network 0.819 0.846 0.858 0.868
+ 0.2 SVM
+ Naïve Bayes 0.779 0.768 0.809 0.746 Random Forest
+ Naive Bayes
+ Logistic regression 0.717 0.787 0.792 0.830 Logistic Regression
+ 0 Neural Network
+
+ 0 0.2 0.4 0.6 0.8 1.0
+ FP rate (1-specificity)
+to set, and we simply used the combination of ReLU activa-
+ (B)
+tion function, Adam solver, regularization alpha = 0.002, and
+maximum 10 000 iterations, and the results were close to RF. F I G U R E 1 0 (A) FP rate for Non-VPN class using our combined
+Because we did not exhaust the combinations of the parameters approach. (B) FP rate for VPN class using our combined approach
+ | 319
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+ZHOU et al.   
+
+TABLE 5 Metrics of our proposed methods probability (FP rate) and the y-axis for the cumulative distri-
+ Method AUC F1 Precision Recall bution of the detection probability (TP rate). Using our combined approach, we obtained the following results of the ROC
+ SVM 0.443 0.564 0.714 0.505
+ curve for the two class types (“VPN” and “Non-VPN”). The
+ Random forest 0.986 0.971 0.971 0.971
+ same traffic traces were tested with our combined approach.
+ Neural network 0.947 0.925 0.929 0.930 They were first distinguished as encrypted or non-encrypted
+ Naïve Bayes 0.784 0.769 0.811 0.751 and then further classified if encrypted. Two kinds of class type
+ Logistic regression 0.732 0.794 0.807 0.836 results using our combined approach are summarized in Figure
+ 10 and Table 5.
+ To compare the traditional and our combined approach, the
+ Metrics in Table 4 summarize the two kinds of class type same parameters as in “cross-validation” were used. We conresults using five different methods with four criteria using cluded that all five methods’ performances have been improved,
+the traditional approach. from 1 percentage point for the naïve Bayes method to 7 percent-
+ Note that recall (Rc), precision (Pr), and F1 score (F1) age points for the NN.
+are important metrics for classification performance. These
+metrics are calculated as (4).
+ 4.2 | Application of traffic classification
+ 2TP
+ F1 = ,
+ 2TP + FP + FN As stated in the methodology section, we used Tor/non-Tor
+ TP dataset as plaintext traffic classified by the first stage of the en-
+ Precision = , (4)
+ TP + FP tropy method to classify applications. Results in Table 6 were
+ TP
+ Recall = . obtained by using traditional machine learning methods, and
+ TP + FN
+ the confusion matrix (Figure 11) was specifically for NNs.
+ AUC represents the area the ROC curve occupies. The x- Metrics in Table 7 were for our combined approach, and
+axis stands for the cumulative distribution of the false-alarm the confusion matrix (Figure 12) was also for the same NN.
+
+TABLE 6 Metrics for different classes
+ TP Rate FP Rate Precision Recall F1 ROC Area Class
+of applications using traditional methods
+ 0.963 0.040 0.939 0.963 0.951 0.968 VoIP
+ 0.357 0.020 0.385 0.357 0.370 0.672 Audio
+ 0.306 0.050 0.367 0.306 0.333 0.661 Browsing
+ 0.571 0.065 0.500 0.571 0.533 0.803 Chat
+ 0.478 0.023 0.550 0.478 0.512 0.735 Email
+ 0.740 0.041 0.712 0.740 0.725 0.870 FTP
+ 0.500 0.007 0.625 0.500 0.556 0.742 P2P
+ 0.636 0.083 0.636 0.636 0.636 0.813 Video
+ 0.719 0.049 0.713 0.719 0.715 0.855 Weighted Avg.
+
+FIGURE 11 Matrix for different
+application types using traditional methods
+ |   
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+320 ZHOU et al.
+
+ TABLE 7 Metrics for different classes
+ TP Rate FP Rate Precision Recall F1 ROC Area Class
+ of applications using our combined methods
+ 0.994 0.004 0.994 0.994 0.994 1.000 VoIP
+ 0.857 0.008 0.800 0.857 0.828 0.997 Audio
+ 0.889 0.013 0.865 0.889 0.877 0.993 Browsing
+ 0.976 0.011 0.911 0.976 0.943 0.997 Chat
+ 0.826 0.000 1.000 0.826 0.905 0.996 Email
+ 0.940 0.003 0.979 0.940 0.959 0.999 File-Transfer
+ 0.800 0.000 1.000 0.800 0.889 0.998 P2P
+ 0.974 0.015 0.938 0.974 0.955 0.995 Video
+ 0.954 0.007 0.956 0.954 0.954 0.998 Weighted Avg.
+
+ FIGURE 12 Matrix for different
+ application types using our combined
+ approach
+
+ The criteria of the TP rate, FP rate, precision, and recall is at the same scale as naïve Bayes. The overall complexity
+for classification have been greatly improved, with some met- of the combined approach is the maximum of all the aforerics nearly 30 percentage points up, which proved the effec- mentioned methods.
+tiveness of our approach in traffic applications. Finally, we concluded that our combined approach outperformed all the other naïve machine learning methods on
+ the “ISCX VPN-NonVPN/ISCX-Tor-NonTor-2017” traffic
+5 | CO NC LU SION S dataset in the traffic classification. We envisage that our
+ work can be viewed as a fusion of machine learning, es-
+We analyzed the computational complexities for the com- pecially deep learning, with traffic classification issues.
+bined approach. For training a NN, we analyzed the time Although deep learning methods for traffic classification
+complexity that has three layers with i, j, and k nodes, re- were proposed and reported with high accuracy, open isspectively, with n training examples and m epochs. The sues still exist: for example, features or models may be
+result was O(mn × (ij + jk)). For the SVM problem, the non-representative, or the approach may only work for a
+computational complexity was on the order of n3 (n is the particular dataset. Moreover, our approach has only been
+size of the training dataset). RF is an ensemble model of studied on certain types of traffic. A comprehensive study
+decision trees. The time complexity for building one de- of new encryption protocols, such as TLS 1.3, has not been
+cision tree is O(v × n log(n)), where n is the number of conducted yet.
+records and v is the number of variables. Therefore, for a
+RF with ntree number of trees, the complexity would be ACKNOWLEDGMENTS
+O(ntree × v × n log(n)). For naïve Bayes, it is O(N × d), The author would like to thank all the anonymous reviewwhere N is the number of training examples, and d stands ers for valuable suggestions and the Canadian Institute for
+for the dimensionality of the features. For logistic regres- Cybersecurity for the datasets.
+sion, computational complexity with gradient-based optimization is O(f × c × s × e), with f features, c classes, s CONFLICT OF INTEREST
+samples, and e epochs. Complexity for entropy estimation The author and co-authors have no conflict of interest to declare.
+ | 321
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+ZHOU et al.   
+
+ORCID 15. J. Zhang et al., Network traffic classification using correlation in-
+Kun Zhou https://orcid.org/0000-0002-7926-6017 formation, IEEE Trans. Parallel Distrib. Syst. 24 (2012), 104–117.
+ https​://doi.org/10.1109/TPDS.2012.98.
+Chenhuang Wu https://orcid.org/0000-0001-8002-7630
+ 16. A. Finamore et al., KISS: Stochastic packet inspection classifier for
+Teng Hu https://orcid.org/0000-0002-8624-0210 UDP traffic, IEEE/ACM Trans. Netw. 18 (2010), 1505–1515. https​
+ ://doi.org/10.1109/TNET.2010.2044046.
+R E F E R E NC E S 17. B. Anderson, S. Paul, and D. McGrew, Deciphering malware’s use
+ 1. C. V. Wright et al., Language identification of encrypted VoIP traffic: of TLS, [without decryption] J. Comput. Virology Hacking Techn.
+ Alejandra y Roberto or Alice and Bob?, in Proc. USENIX Security 14 (2018), 195–211.
+ Symp. USENIX Security Symp., Moston, MA, USA, Aug. 2007, 18. J. A. Bonachela, H. Hinrichsen, and M. A. Munoz, Entropy esti-
+ Article no. 4. mates of small data sets, J. Phys. A: Math. Theor. 41 (2008), 1–9.
+ 2. C. V. Wright et al., Spot me if you can: Uncovering spoken phrases 19. J. Goubault-Larrecq and J. Olivain, Detecting Subverted
+ in encrypted VoIP conversations, in IEEE Symp. Security Privacy, Cryptographic Protocols by Entropy Checking, Research Report
+ Oakland, CA, USA, May 2008, pp. 35–49, https​://doi.org/10.1109/ LSV-06-13, 2006, INRIA Futurs projet SECSI.
+ SP.2008.21. 20. L. Paninski, Estimation of entropy and mutual information, Neural
+ 3. B. Anderson, S. Paul, and D. McGrew, Deciphering malware's Computation, Neural Comput. 15 (2003), 1191–1253.
+ use of TLS without decryption, arXiv, 2016. https​ ://arxiv.org/ 21. M. Lotfollahi et al., Deep Packet: A novel approach for encrypted
+ abs/1607.01639​. traffic classification using deep learning, Soft Comput. (2019),
+ 4. C. V. Wright, F. Monrose, and G. M. Masson, On inferring appli- 1–14, https​://doi.org/10.1007/s00500-019-04030-2.
+ cation protocol behaviors in encrypted network traffic, J. Mach. 22. G. D. Gil et al., Characterization of encrypted and VPN traf-
+ Learning Research 7 (2006), 2745–2769. fic using time-related features, in Proc. Int. Conf. Inform. Syst.
+ 5. J. Sherry et al., BlindBox: Deep Packet Inspection over Encrypted Security Privacy, 2016 pp. 407–414, https​://doi.org/10.5220/00057​
+ Traffic, in Proc. ACM Conf. Special Interest Group Data Commun., 40704​070414.
+ London, UK, Aug. 2015, pp. 213–226. 23. B. Yamansavascilar et al., Application identification via network
+ 6. Q. Sun et al., Statistical identification of encrypted web browsing traffic classification, in Proc. Int. Conf. Comput., Netw. Commun.,
+ traffic, in Proc.IEEE Symp. Security Privacy Berkeley, CA, USA, Santa Clara, CA, USA, Jan. 2017, https​://doi.org/10.1109/ICCNC.
+ May 2002, pp. 1–12. 2017.7876241.
+ 7. M. Liberatore and B. N. Levine, Inferring the source of encrypted 24. B.-H. Asa et al., Support vector clustering, J. Mach. Learn.
+ HTTP connections, in Porc. ACM Confe. Comput. Commun. Research 2 (2001), 125–137.
+ Security, Alexandria, VA, USA, 2006, pp. 255–263. 25. T. K. Ho et al., The random subspace method for constructing decision
+ 8. R. Schuster, V. Shmatikov, and E. Tromer, Beauty and the burst: forests, IEEE Trans. Pattern Anal. Mach. Intell. 20 (1998), 832–844.
+ Remote identification of encrypted video streams, in Proc.USENIX 26. I. Rish, An empirical study of the naive Bayes classifier, IJCAI
+ Security Symp., Vancuver, Canada, 2017, pp. 1357–1374. Workshop Empirical Methods AI 3 (2001), 41–46.
+ 9. D. X. Son, D. Wagne, and X. Tian, Timing analysis of keystrokes 27. G. Aceto et al., Multi-classification approaches for classifyand timing attacks on SSH, in Proc. USENIX Security Symp., ing mobile app traffic, J. Netw. Comput. Applicat. 103 (2018),
+ Washington, DC, USA, Aug. 2001, Article no. 25. 131–145.
+10. P. Dorfinger, G. Panholzer, and W. John, Entropy estimation for 28. G. Aceto et al., Mobile encrypted traffic classification using deep
+ real-time encrypted traffic identification, in Proc. Int. Workshop learning: Experimental evaluation, lessons learned, and chal-
+ Traffic Monitoring Analysis, Vienna, Austria, 2011, pp. 164–171. lenges, IEEE Trans. Netw. Service Manag. 16 (2019), 445–458.
+ https​://doi.org/10.1007/978-3-642-20305-3_14. 29. G. Aceto et al., Anonymity services Tor, I2P, JonDonym:
+11. A. Moore, D. Zuev, and M. Crogan, Discriminators for use in flow- Classifying in the Dark (Web), IEEE Trans. Dependable Secure
+ based classification, Department of Computer Science Research Comput. (2018), Early Access.
+ Reports; RR-05-13, 2005. 30. V. F. Taylor et al., Appscanner: Automatic fingerprinting of smart-
+12. P. Velan et al., A survey of methods for encrypted traffic classifica- phone apps from encrypted network traffic, in Proc. IEEE Eur.
+ tion and analysis, Int. J. Netw. Manag. 25 (2015), 1–24. Symp. Security Privacy (EuroS&P), Saarbrucken, Germany, Mar.
+13. D. J. Arndt and A. N. Zincir-Heywood, A comparison of three 2016, pp. 439–454.
+ machine learning techniques for encrypted network traffic 31. S. Rezaei and X. Liu, Deep learning for encrypted traffic classifianalysis, in IEEE Symp. Computat. Intell. Security Defense cation: An overview, IEEE Commun. mag. 57(2019), 76–81.
+ Applicat. Paris, France, Apr. 2011, https​ ://doi.org/10.1109/ 32. M. Lotfollahi et al., Deep packet: A novel approach for en-
+ CISDA.2011.5945941. crypted traffic classification using deep learning, Springer, Berlin
+14. T. T. Nguyen and G. Armitage, A survey of techniques for Internet Heidelberg, Soft Computing, 2019, pp. 1–14.
+ traffic classification using machine learning, IEEE Commun. 33. G. Aceto et al., Mobile encrypted traffic classification using deep
+ Surveys Tutor. 10 (2008), 56–76. https​ ://doi.org/10.1109/ learning, in Proc. Netw. Traffic Measurement Analysis Conf.,
+ SURV.2008.080406. Vienna, Austria, June 2018, pp. 1–8.
+ |   
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+322 ZHOU et al.
+
+AUTHOR BIOGRAPHIES Chenhuang Wu received his BS degree in mathematics from Minnan
+ Kun Zhou received his BS degree in Normal University, China, in 2007.
+ information engineering from Since then, he has been with the School
+ Southwest Normal University, China, in of Mathematics and Finance, Putian
+ 2000, and his MS degree in computer University. Currently, he is an associapplications from the School of ate professor at Putian University and
+ Electronic Engineering, Beijing is pursuing his doctorate at the
+ University of Posts and University of Electronic Science and Technology of
+ Telecommunications, China, in 2006. China. His research interests include elliptic curve cryp
+ From 2000 to 2003 and from 2006 to 2016, he worked for tography and digital signatures.
+ the Institute of Computer Applications, China Academy of
+ Engineering Physics, where he is now a senior research en- Teng Hu received his BS degree from
+ gineer. He is now pursuing his doctorate in computer science Sichuan University in 2011 and his MS
+ at the University of Electronic Science and Technology of degree from Beijing University of Posts
+ China. His research interests are cybersecurity-related issues and Telecommunications in 2014.
+ with artificial intelligence technologies, such as machine Currently, he is a Ph.D. candidate in
+ learning and deep learning. the School of Computer Science and
+ Engineering, University of Electronic
+ Wenyong Wang received a BS degree Science and Technology of China,
+ in computer science from BeiHang Chengdu. His research interests include cyber-security,
+ University, Beijing, China, in 1988, and big-data security, and blockchain security.
+ MS and PhD degrees from the University
+ of Electronic Science and Technology
+ (UESTC), Chengdu, China, in 1991 and
+ 2011, respectively. He has been the pro
+ fessor and supervisor for PhD students
+ in computer science and engineering. He served as a director
+ of the Information Center of UESTC and chairman of the
+ UESTC-Dongguan Information Engineering Research
+ Institute since 2003. He holds many academic titles, such as
+ an IEEE member, senior member of the Chinese Computer
+ Federation, director of China Internet Association, and
+ member of China Next-Generation Internet Committee of
+ Experts. He is now a visiting professor at Macau University
+ of Technology. His main research interests include computer
+ networks, next-generation Internet, software-defined networking, software engineering, and artificial intelligence.
+ | 323
+
+ 22337326, 2020, 3, Downloaded from https://onlinelibrary.wiley.com/doi/10.4218/etrij.2019-0190 by CochraneChina, Wiley Online Library on [18/08/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+ZHOU et al.   
+
+APPENDIX A
+
+TABLE A1 Definitions for ISCX VPN-Non-VPN dataset's 23 features
+
+ No Feature Definitions
+ 1 duration Flow transmitting time
+ 2 total_fiat Total inter-arrival time for forward communication
+ 3 total_biat Total inter-arrival time for backward communication
+ 4 min_fiat Minimum packet inter-arrival time for forward communication
+ 5 min_biat Minimum packet inter-arrival time for backward communication
+ 6 max_fiat Maximum packet inter-arrival time for forward communication
+ 7 max_biat Maximum packet inter-arrival time for backward communication
+ 8 mean_fiat Mean of inter-arrival time for forward communication
+ 9 mean_biat Mean of inter-arrival time for backward communication
+ 10 flowPktsPerSecond Flow packets per second, pps
+ 11 flowBytesPerSecond Flow bytes per second, Bps
+ 12 min_flowiat Minimum flow inter-arrival time
+ 13 max_flowiat Maximum flow inter-arrival time
+ 14 mean_flowiat Mean of flow inter-arrival time
+ 15 std_flowiat Standard deviation of flow inter-arrival time
+ 16 min_active Minimum flow active time
+ 17 mean_active Mean of flow active time
+ 18 max_active Maximum of flow active time
+ 19 std_active Standard deviation of flow active time
+ 20 min_idle Minimum flow idle time
+ 21 max_idle Maximum flow idle time
+ 22 mean_idle Mean of flow idle time
+ 23 std_idle Standard deviation of flow idle time

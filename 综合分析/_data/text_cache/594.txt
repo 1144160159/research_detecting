@@ -1,0 +1,136 @@
+906                                                                         IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 2, MARCH/APRIL 2026
+
+
+
+
+       Adapting Large Language Models for Encrypted
+      Traffic Analysis Services: An Efficient Realization
+               With Mixture of LoRA Experts
+           Yi Liu , Xiang Zheng , Chengjun Cai , Member, IEEE, Xingliang Yuan , Senior Member, IEEE,
+                                        and Cong Wang , Fellow, IEEE
+
+
+   Abstract—As encrypted traffic grows, traditional rule-based and                                             I. INTRODUCTION
+deep learning methods struggle with engineering costs and en-
+                                                                                          NCRYPTED network traffic analysis has become a critical
+cryption complexity. While Large Language Models (LLMs) offer
+promise for traffic analysis via pre-trained feature learning, they
+face challenges in handling diverse tasks, retaining pre-training
+                                                                                   E      component of network security and management due to the
+                                                                                   widespread adoption of encryption protocols such as HTTPS,
+knowledge, and adapting efficiently. To address these issues, we                   which protect sensitive data during online communications [1].
+propose a new traffic representation learning method and a new
+Parameter-Efficient Fine-Tuning (PEFT) method for multi-task
+                                                                                   Broadly, encrypted traffic analysis services aim to develop
+encrypted traffic analysis services, called TrafficLLM. Traffi-                    advanced algorithms and tools (e.g., Cisco Encrypted Traffic
+cLLM alleviates task heterogeneity by utilizing a universal multi-                 Analytics) that can accurately identify and classify encrypted
+task prompt template and addresses pre-training knowledge forget-                  traffic without compromising user privacy [2]. This capability
+ting by integrating Singular Value Decomposition based Low-Rank                    enables organizations to infer accessed applications or services
+Adaptation (SVD-LoRA). To further reduce the cost of adapting to
+multiple tasks, we combine the strengths of the Mixture of Experts
+                                                                                   within their networks, such as mobile app classification [3] or
+(MoE) for multi-task learning with SVD-LoRA for PEFT, enabling                     service identification [4]. To this end, various traditional meth-
+efficient multi-task traffic analysis. Additionally, we introduce task-            ods have been proposed, including port-based approaches [5],
+aware gating functions to dynamically assign different weights                     payload or packet inspection-based techniques [6], and traffic
+to experts, facilitating the efficient fusion of expert knowledge.                 statistics feature-based methods [7]. However, these approaches
+Comprehensive experiments on 7 datasets across 5 downstream
+tasks demonstrate that TrafficLLM delivers superior analysis
+                                                                                   rely heavily on rule engineering, requiring substantial manual
+performance and resource efficiency compared to state-of-the-art                   effort to design and maintain classification rules [8]. Moreover,
+models, including DeepSeek, NetGPT, ET-BERT, and TFE-GNN.                          the rapid evolution of encryption technologies has increasingly
+Detailed analysis of throughput, memory usage, and latency further                 limited their adaptability to emerging encryption schemes [9].
+highlights the practical advantages of TrafficLLM.                                 As a result, there is an urgent need for more generalizable meth-
+  Index Terms—Encrypted traffic classification, LLMs, LoRA,                        ods that can capture implicit and robust patterns in encrypted
+mixture of experts.                                                                traffic, enabling accurate and universal traffic analysis [8], [9],
+                                                                                   [10].
+                                                                                      To eliminate the need for rule engineering, recent advances
+   Received 9 July 2025; revised 15 January 2026; accepted 23 February 2026.       in Deep Learning (DL) have been applied to encrypted traffic
+Date of publication 9 March 2026; date of current version 10 April 2026. This
+work was supported in part by the Hong Kong Research Grants Council under          classification [11], [12], [13]. DL techniques, particularly neural
+Grant CityU 11218322, Grant 11219524, Grant R6021-20F, Grant R1012-21,             network architectures such as Convolutional Neural Networks
+Grant RFS21221S04, Grant C2004-21G, Grant C1029-22G, Grant C6015-23G,              (CNNs) [14] and Graph Neural Networks (GNNs) [12], are capa-
+and Grant N_CityU139/21, and in part by the Innovation and Technology
+Commission (ITC) under the Joint Mainland-Hong Kong Funding Scheme                 ble of capturing complex patterns in encrypted traffic, enabling
+(MHKJFS) under Grant MHP/135/23. This work was also supported in part by           more accurate and adaptive analysis. Early studies typically em-
+the InnoHK initiative, the Government of the HKSAR, in part by the Laboratory      ployed a single DL model trained on large-scale labeled datasets
+for AI-Powered Financial Technologies (AIFT), and in part by the Guangdong
+and Hong Kong Universities “1+1+1” Joint Research Collaboration Scheme.            to perform a specific task, such as protocol identification [15] or
+(Corresponding author: Cong Wang.)                                                 application classification [16]. As network management tasks
+   Yi Liu, Xiang Zheng, and Cong Wang are with the Department of                   become more complex, multi-task DL models that leverage
+Computer Science, City University of Hong Kong, Kowloon Tong Hong
+Kong (e-mail: yiliu247@cityu.edu.hk; xzheng235-c@my.cityu.edu.hk; cong-            multi-task learning [17] have been proposed to simultaneously
+wang@cityu.edu.hk).                                                                address multiple encrypted traffic analysis tasks [18]. Overall,
+   Chengjun Cai is with the Computer Science and Information Technology            DL-based approaches enable network management systems to
+Center, City University of Hong Kong (Dongguan), Dongguan 523808, China
+(e-mail: chengjun.cai@cityu-dg.edu.cn).                                            better adapt to evolving encryption schemes and substantially
+   Xingliang Yuan is with the School of Computing and Information Sys-             outperform hand-crafted rule-based methods.
+tems, University of Melbourne, Parkville, VIC 3010, Australia (e-mail:                Despite their promising potential, existing DL-based algo-
+xingliang.yuan@unimelb.edu.au).
+   Our data and code are available at https://github.com/yiliucs/TrafficLLM.       rithms still suffer from two key limitations (see Fig. 1): 1) High
+   Digital Object Identifier 10.1109/TSC.2026.3671484                              Model Engineering Costs. The focus of DL-based algorithms
+
+      1939-1374 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+LIU et al.: ADAPTING LARGE LANGUAGE MODELS FOR ENCRYPTED TRAFFIC ANALYSIS SERVICES                                                            907
+
+
+
+                                                                                    (e.g., HTTP, DNS, and SMTP) and heterogeneous sub-
+                                                                                    tasks, such as mobile application classification and behav-
+                                                                                    ior analysis [16]. The need to extract heterogeneous head-
+                                                                                    ers and payloads from multimodal network traffic therefore
+                                                                                    poses a major challenge. Moreover, advances in encryption
+                                                                                    technologies increasingly reduce the availability of shared
+                                                                                    extractable traffic features [8], further exacerbating the
+                                                                                    difficulty of accurate heterogeneous task alignment.
+                                                                                 r C2: Pre-training Knowledge Forgetting: In general, pre-
+                                                                                    trained LLMs typically require fine-tuning [8], [26], [33],
+                                                                                    a training technique tailored to new tasks, before they
+Fig. 1. Multi-task scenarios for DL-based traffic data analysis. Since the
+above-mentioned heterogeneous tasks require different specific models, DL-          can effectively address encrypted traffic analysis tasks.
+based methods suffer from high model engineering costs and low cross-task           However, existing methods appear to prioritize achieving
+generalization capabilities.                                                        accurate analysis while overlooking the considerable pre-
+                                                                                    training knowledge (e.g., common sense and traffic pat-
+has shifted from rule engineering to model engineering [19],                        terns) associated with LLMs [8]. In this context, prolonged
+with success largely dependent on manually tailoring DL models                      fine-tuning may lead to the phenomenon of catastrophic
+for specific encrypted traffic analysis tasks. This process is                      forgetting, where the model loses previously acquired
+labor-intensive due to the complexity of DL models. Addi-                           knowledge [34].
+tionally, the diversity of tasks prevents the use of a single DL                 r C3: High Adaptation Costs: Adaptation costs in multi-task
+model across different tasks, necessitating specialized models                      traffic analysis include fine-tuning, training, and inference
+for each task [8]. This “one model for one task” approach further                   overheads. Existing LLMs, such as ET-BERT [9], require
+escalates engineering costs. 2) Low Generalization. Current DL                      task- and dataset-specific fine-tuning, resulting in high
+models are typically tailored to specific data distributions or                     adaptation costs, while approaches like NetGPT [8] rely
+environments, overlooking commonalities across diverse en-                          on large-scale model training, incurring substantial train-
+crypted traffic behaviors [9]. This leads to poorer performance                     ing overhead. Moreover, the use of extensive parameters
+on unseen data distributions compared to rule-based algorithms.                     to enhance feature extraction often degrades inference
+Although transfer learning can address these challenges, its                        efficiency, introducing latency in network management
+effectiveness depends on access to large-scale annotated traffic                    systems [14]. The high memory demands of instruction
+data. As a result, the generalization ability across different tasks                processing further limit throughput, largely due to the
+is weakened, hindering the widespread deployment of DL-based                        attention mechanism inherent to LLMs.
+algorithms in practice.                                                         Design Goals: The aforementioned challenges call for a
+   The advent of pre-training techniques [20] and Large Lan-                 holistic solution toward efficient LLMs for encrypted traffic
+guage Models (LLMs; e.g., GPT-2 [21]) built upon the Trans-                  classification, which is characterized by the following essential
+former architecture [22] offers promising solutions to the afore-            design goals: (G1) Robust Performance: The designed LLMs
+mentioned challenges. Through large-scale pre-training, LLMs                 can achieve precise task alignment for multiple and multi-source
+exhibit strong capabilities in knowledge transfer and represen-              encrypted traffic data. (G2) Strong Versatility: LLMs retain pre-
+tation learning, demonstrating superior performance in feature               training knowledge while efficiently completing traffic anal-
+extraction, few-shot learning, and multi-task learning [23], [24],           ysis tasks. (G3) Energy Efficient: Adaptation cost should be
+[25], [26]. As a result, they have been widely adopted in nat-               acceptable. In this paper, we formulate an input-agnostic service
+ural language processing, computer vision, and increasingly                  for encrypted traffic analysis, leveraging a singular LLM (e.g.,
+in cybersecurity research [27], [28], [29]. In particular, LLMs              ChatGLM [37]) to accomplish diverse and refined encrypted
+pre-trained for traffic analysis [30], [31], [32], such as Net-              traffic data analysis tasks.
+GPT [8] and ET-BERT [9], have achieved remarkable perfor-                       Our Contributions: To achieve the above design goals, we
+mance. These models can accurately align traffic inputs with                 propose TrafficLLM, an LLM service specially formulated
+corresponding analysis outputs for specific tasks, e.g., encrypted           for encrypted traffic analysis, which can effectively adapt LLMs
+malicious traffic classification [8]. This progress naturally raises         to multiple encrypted traffic analysis tasks while maintaining
+a key question: can we fully embrace the era of LLMs and                     efficient inference. TrafficLLM comprises three core com-
+efficiently adapt them to solve diverse traffic analysis tasks in            ponents: traffic representation learning, an efficient low-rank
+a unified manner?                                                            adapter, and a mixture of expert networks. Specifically, we ex-
+   Despite the considerable enhancement in representation                    tract the key five-tuple and statistical features from the encrypted
+learning that LLMs bring to downstream tasks, e.g., mobile                   traffic data of heterogeneous multi-tasks, leveraging a designed
+application classification, attack detection, and traffic behavior           multi-task prompt template to normalize this data into text input
+classification, several challenges persist due to the distinct re-           for effective processing by TrafficLLM (G1). Building on
+quirements and characteristics of network traffic and tasks.                 this, we design a singular value decomposition-aware low-rank
+    r C1: Heterogeneous Task Alignment: On one hand, en-                     adapter (SVD-LoRA) to retain pretrain knowledge (G2) and
+      crypted traffic classification involves diverse traffic types          reduce adaptation costs (G3). Additionally, we develop a
+908             

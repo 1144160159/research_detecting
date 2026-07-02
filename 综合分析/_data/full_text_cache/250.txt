@@ -1,0 +1,510 @@
+14114 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 12, DECEMBER 2024
+
+Large-Scale Visual Language Model Boosted by
+ Contrast Domain Adaptation for Intelligent
+ Industrial Visual Monitoring
+ Huan Wang , Chenxi Li , and Yan-Fu Li , Senior Member, IEEE
+
+ Abstract—Industrial visual monitoring (IVM) is crucial in from production lines to critical infrastructure. An effective IVM
+enhancing the reliability and efficiency of manufacturing method is capable of identifying potential issues, discovering
+processes. Recently, large vision-language models (LVLMs) surface anomalies, and recognizing defection patterns [5], [6],
+have demonstrated remarkable semantic understanding
+and natural language interaction capabilities, which pro- [7]. The introduction of IVM enables predictive maintenance
+vide a novel solution to IVM. However, LVLMs pretrained and optimization of resource utilization, which shows an imporon common domains lack specific knowledge for IVM sce- tant area of applied study.
+narios, causing insufficient adaptation to industrial image In recent years, as an efficient data-driven approach, deep
+patterns and specialized textual corpora. In this article,
+ learning methods have attracted the attention of researchers,
+we deeply studied the adaptation of LVLMs to IVM and
+proposed DefectGLM. First, we proposed the first large- demonstrating excellent application potential in practical monscale multimodal wafer dataset as a reliable data basis itoring scenarios. It generally trains a neural network with
+for model domain generalization. Second, this model em- industrial monitoring data, so that the model can identify the
+ploys low-rank adaptation–based contrast visual adapta- anomalies or defection patterns in an end-to-end manner. Convotion to align with industrial image patterns and utilizes
+ lutional neural networks (CNNs), one of the popular network arvision-language instruction tuning for professional knowledge alignment. DefectGLM is the first large-model-based chitectures in computer vision, can extract visual features using
+wafer image recognition model, and can accurately iden- convolution kernels capable of recognizing complex, multilevel
+tify 36 types of wafer defects and provide appropriate text patterns. Many advanced variants of CNNs have been proposed
+descriptions. DefectGLM provides a new solution for the recently to tackle more complex tasks, e.g., AlexNet [8], VGG
+development of industrial large models.
+ [9], ResNet [10], and DenseNet [11]. Additionally, the appear-
+ Index Terms—Defect detection, industrial visual monitor- ance of transformer architecture also leads to a breakthrough
+ing (IVM), large vision-language model (LVLM), semicon- in visual pattern recognition. Methods like Vision Transformer
+ductor manufacturing. (ViT) [12] and Swin-Transformer [13] introduced attention
+ mechanisms to extract features that are most relevant to an image
+ I. INTRODUCTION while suppressing irrelevant details.
+ These data-driven approaches have achieved great success in
+ N MODERN industry, the manufacturing process tends to
+I be more sophisticated and complex, which raises higher
+requirements against automation, reliability, and safety [1], [2],
+ IVM scenarios like anomaly detection and defect recognition.
+ However, they still face some limitations in further practical application. The out-of-distribution problems are the first
+[3], [4]. To this end, industrial visual monitoring (IVM) aims concern against classic deep learning methods. When facing
+to integrate advanced visual sensors and artificial intelligence practical scenarios where the data distribution is diverse and
+technologies to oversee and optimize various facets ranging complex, these methods trained on small datasets typically face
+ generalization problems [14]. Second, classic deep learning
+ Received 28 February 2024; revised 14 July 2024; accepted 28 July methods are sensitive and unrobust to image noise, which could
+2024. Date of publication 5 September 2024; date of current version affect the final diagnosis performance [15]. Finally, these classic
+5 December 2024. This work was supported in part by the Beijing
+Municipal Natural Science Foundation-Rail Transit Joint Research Pro- vision methods can only output discrete and probability-oriented
+gram under Grant L231020, and in part by the National Natural Science results, which lack sufficient human interaction.
+Foundation of China under a key project Grant 71731008. Paper no. TII- More recently, the pretrained large language models (LLMs)
+24-0906. (Huan Wang and Chenxi Li contributed equally to this work.)
+(Corresponding author: Yan-Fu Li.) like ChatGPT, LLaMA [16], and ChatGLM [17] have demon-
+ Huan Wang and Yan-Fu Li are with the Department of Indus- strated powerful comprehension and dialogue ability to natural
+trial Engineering, Tsinghua University, Beijing 100084, China (e-mail: language. These LLMs are pretrained with enormous textual
+huan-wan21@mails.tsinghua.edu.cn; liyanfu@tsinghua.edu.cn).
+ Chenxi Li is with the Glasgow College, University of Electronic Sci- data from the Internet and possess a degree of world knowledge
+ence and Technology of China, Chengdu 611731, China. from text modality. Besides the language modality, the emer-
+ Color versions of one or more figures in this article are available at gence of the pretrained large vision-language models (LVLMs)
+https://doi.org/10.1109/TII.2024.3441638.
+ Digital Object Identifier 10.1109/TII.2024.3441638 has bridged the modality gap across information between images
+
+ 1551-3203 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+WANG et al.: LARGE-SCALE VISUAL LANGUAGE MODEL BOOSTED BY CONTRAST DOMAIN ADAPTATION FOR INTELLIGENT IVM 14115
+
+ The contributions of this article are summarized as follows.
+ 1) This article explores an efficient application of LVLMs
+ to professional IVM tasks, which tackles the problem of
+ lacking specific domain knowledge within LVLMs in two
+ aspects, including discrepant industrial image patterns
+ and different professional domain knowledge.
+ 2) This article introduces DefectGLM, a novel two-stage
+ adaptation strategy for LVLMs in IVM. It utilizes LoRAbased contrast visual adaptation and vision-language instruction tuning to enhance defect pattern recognition and
+ professional knowledge alignment. DefectGLM achieves
+Fig. 1. Difference between existing vision methods and LVLMs in wafer over 99% accuracy in wafer defect recognition, demondefect recognition scenarios. The vision methods can only output dis- strating state-of-the-art performance.
+crete diagnosis results. DefectGLM is an agent that allows for both wafer 3) The presented multimodal wafer dataset and our Deimage and textual instruction input, which can generate recognition
+results in natural language. fectGLM will be released for facilitating related IVM
+ research.
+ The rest of this article is organized as follows. Section II
+and texts. LVLMs demonstrate a series of advantages, including discusses the related work. Section III introduces the proposed
+image semantic understanding, noise robustness, and language DefectGLM method. In Section IV, the experiment results and
+interaction capabilities. Therefore, the emergence of LVLMs discussions will be detailed. Finally, Section V concludes this
+offered a novel opportunity for creating an IVM agent that can article.
+effectively recognize defection patterns and generate diagnosis
+responses for operators in natural language. The difference be- II. RELATED WORKS
+tween classic deep learning methods and LVLMs is highlighted
+in Fig. 1. However, LVLMs pretrained on common-knowledge A. Deep Learning Based IVM Methods
+domains are short of proven to be insufficient in obtaining Recently, many deep learning approaches have been utilized
+professional domain knowledge for IVM scenarios. Specifi- to process and recognize the defect and anomaly pattern in IVM
+cally, the absence of domain knowledge includes two aspects. scenarios. CNN is a well-known architecture, which is widely
+First, LVLMs lack the adaptation of industrial image patterns applied in IVM. Wang et al. [18] developed a deformable CNN
+in specific scenarios. Industrial images have discrepant data architecture to extract high-qualified features within the wafer
+distributions and vision patterns compared to common images, maps for defect pattern recognition. Staar et al. [19] constructed
+which may lead to unsatisfactory image modeling performance a triplet CNN to inspect industrial surface anomalies. Kim et
+in IVM tasks. Second, LVLMs lack alignment with professional al. [20] used a CNN-based shot detector to recognize wafer
+knowledge, as the jargon and concepts in IVM scenarios are defect objects, which can further localize the defect information.
+highly specialized. Consequently, the model may fail to follow Yu and Liu [21] employed a convolutional autoencoder for
+instructions and generate the expected diagnostic responses. wafer defect detection with a novel 2-D principal component
+Therefore, these biases from discrepant vision patterns and convolution kernel. Napoletano et al. [22] introduced a CNN,
+different text corpora could cause knowledge absence in LVLMs, self-similarity-based method, and scanning electron microscope
+resulting in undesirable performance when directly utilized in to detect and localize the anomalies in nanofibrous materials.
+professional IVM scenarios. More recently, other deep learning architectures, e.g., trans-
+ To tackle the knowledge absence problem, we explore adapt- formers have attracted attention in IVM scenarios. Nafi et al.
+ing LVLMs to professional IVM scenarios and propose Defect- [23] trained a Swin-Transformer with mixed-type wafer data
+GLM, a novel vision-language IVM solution. In this article, and achieved great performance in defect recognition. Mishra et
+we proposed the first large-scale multimodal wafer dataset as a al. [24] presented a transformer-based Gaussian mixture density
+reliable data basis for model domain generalization. Moreover, network to capture the anomaly patterns within the industrial
+DefectGLM introduces a simple yet effective two-stage adap- images. Hsu et al. [25] combined the ViT and a novel cluster
+tation strategy to compensate for the absence of professional method to analyze wafer map defects. There are still some
+domain knowledge. Specifically, we employ low-rank adapta- methods that use U-Net or autoencoder architecture to solve
+tion (LoRA)–based contrast visual adaptation in the first stage, IVM problems. These methods achieved significant success but
+which enables DefectGLM to adapt specific visual patterns and also faced some problems of generalization, robustness, and
+improve the industrial image modeling capability. Furthermore, interpretability.
+a visual language instruction tuning is introduced in the second
+stage to align DefectGLM to professional domain knowledge,
+which enhances the instruction-following ability to generate sat- B. Large Vision-Language Models
+isfactory diagnosis responses. We utilize the proposed strategy While LLMs have demonstrated powerful performance in
+to fine-tune our DefectGLM with the presented dataset, which many NLP tasks, LVLMs have further extended their abilisuccessfully adapts LVLMs into professional IVM scenarios. ties into the vision-language modality. Li et al. [26] proposed
+14116 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 12, DECEMBER 2024
+
+BLIP-2, which used a learnable querying transformer to bridge module and language model to achieve an accurate understandthe modality gap between vision and language. Liu et al. [27] ing of industrial image data.
+introduced LLaVA, which is trained with instruction tuning,
+which incorporates a learnable projection matrix to convert III. METHODOLOGY
+visual features into the language embedding space. Zhu et al.
+ DefectGLM represents an innovative vision-language
+[28] proposed a MiniGPT4 that utilizes a linear projection to
+ solution for addressing IVM tasks by analyzing defect patterns
+align visual representation with an LLM named Vicuna. Du
+ and providing natural language interactions for operators.
+et al. [17] presented VisualGLM, which utilized the BLIP-2
+ To tackle the absence of specialized domain knowledge
+framework to connect pretrained ViT and ChatGLM, and it
+ within LVLMs, we propose a two-stage adaptation strategy,
+was trained with 300M image-text data. These methods demoncomprising contrast visual adaptation and vision-language
+strate remarkable capabilities in handling multimodality tasks.
+ instruction tuning. The primary objective of contrast
+The work using vision-language models and contrastive learnvisual adaptation is to compensate for the visual pattern
+ing with DefectGLM for IVM addresses the gap in adapting
+ gap between Internet common images and professional
+LVLMs to specialized industrial scenarios. Ranasingh et al.
+ industrial images. This is achieved by utilizing LoRA
+[29] enhanced vision-language representations by integrating
+ adapters and contrastive representation techniques, which
+perceptual grouping principles, improving feature alignment
+ enhance the industrial image modeling capability of the
+and robustness. Gao et al. [30] proposed a pyramid architec-
+ DefectGLM. Vision-language instruction tuning aims to align
+ture for hierarchical feature alignment, capturing various levels
+ the LVLMs to professional domain knowledge so that the
+of detail and significantly outperforming existing models in
+ DefectGLM can comprehend specific instructions and therefore
+vision-language tasks. Luo et al. [31] introduced contrastive
+ generate expected instruction-following responses. In our
+learning and denoising mechanisms to improve the alignment of
+ implementation, we use a pretrained ViT as the visual encoder
+video frames and textual descriptions, boosting performance on
+ and a pretrained ChatGLM-6B as the LLM text decoder. We
+video-language benchmarks. Unlike the general enhancements
+ utilize the proposed two-stage adaptation method to fine-tune
+presented in the earlier works, DefectGLM focuses specifically
+ the pretrained model on a multimodal wafer defect dataset.
+on IVM, a crucial area for enhancing manufacturing process
+ The generation process of the dataset will be detailed in
+reliability and efficiency.
+ Section III-D. The DefectGLM can analyze industrial defect
+ However, these models pretrained with common data, may
+ patterns and generate instruction-following responses.
+lack specific knowledge in the professional domain, leading to
+undesirable performance when simply applied to IVM scenarios.
+To adapt LVLMs to professional tasks, we introduce a novel A. Network Architecture
+two-stage adaptation method and propose DefectGLM as a novel The network architecture of the proposed DefectGLM is
+vision-language solution for defect recognition. shown in Fig. 2. Mainly, DefectGLM consists of three parts, a
+ visual encoder for processing vision modality, a querying transformer for bridging the modality gap, and a language decoder
+C. Parameter Efficient Fine-Tuning for processing and generating language modality. Specifically,
+ To adapt a large-scale model to a specific downstream task, the visual encoder uses a pretrained ViT to extract visual repparameter-efficient fine-tuning (PEFT) methods are considered a resentation from the defect patterns. The ViT contains a convomore efficient solution compared to full fine-tuning. PEFT intro- lutional projection layer and stacked multihead attention blocks
+duces only a few learnable parameters during fine-tuning, signif- to convert industrial images into patch tokens and then extract
+icantly reducing computation costs. Recently, Houlsby et al. [32] multilevel features. The querying transformer is an intermediate
+proposed adapter tuning, which adds learnable adapter modules module designed to project extracted visual information into
+to the network architecture to adapt to new tasks. This method language embedding spaces. This lightweight transformer takes
+reduces fine-tuning costs but increases network depth. Subse- the learned tokens as queries and the extracted visual features
+quently, Hu et al. [33] introduced LoRA to build a learnable low- as keys and values to perform a cross-attention mechanism,
+rank matrix parallelly in the model, which avoids the increase of which captures text-related visual information from the visual
+network depth. Additionally, Yin et al. [34] employed the tiny features. Its primary function is to align visual semantics with
+adapter with low-rank synthesis to improve the adapter tuning their corresponding linguistic counterparts, projecting the visual
+performance. Besides, Dettmers et al. [35] utilized quantization features from a dimensionality of 768 to 409, making them
+mechanics to optimize the LoRA approach, reducing memory suitable for input into LLMs. For language modality, the lanusage without sacrificing performance. Different from the above guage decoder utilizes a novel LLM, i.e., ChatGLM-6B that
+methods, this study focuses on the generalization and adaptation is pretrained on an enormous text corpus and is capable of
+of multimodal large models to industrial fields and proposes a understanding and generating natural language. The details of
+two-stage adaptation strategy. This strategy uses LoRA-based the network architecture are summarized in Table I.
+contrast visual adaptation and visual language instruction tuning In the fine-tuning process, we freeze all the parameters of
+methods, which optimize the visual representation module and the pretrained image encoder and language decoder to reduce
+language generation module to achieve the best understanding training costs and prevent catastrophic forgetting of pretrained
+of industrial data, and finally comprehensively align the visual knowledge. Furthermore, we plug LoRA into the frozen ViT and
+WANG et al.: LARGE-SCALE VISUAL LANGUAGE MODEL BOOSTED BY CONTRAST DOMAIN ADAPTATION FOR INTELLIGENT IVM 14117
+
+Fig. 2. Network architecture of the DefectGLM. DefectGLM consists of a pretrained ViT as a visual encoder for extracting wafer visual features, a
+coupled querying transformer for mapping visual features into the language embedding space, and a ChatGLM as an LLM decoder for generating
+instruction-following responses.
+
+ TABLE I given one weight matrix W0 ∈ Rd×k and input matrix x ∈ Rb×d ,
+ MODEL ARCHITECTURE DETAILS
+ the forward result constrained by LoRA is W0 x + BAx, where
+ B ∈ Rd×r and A ∈ Rr×k are two low-rank decomposition matrices, and the rank parameter satisfies r  min(d, k). For
+ the self-attention mechanism in the pretrained ViT, first given
+ three weight matrices, query, key, and value Wq ∈ RdHidden ×dk ,
+ Wk ∈ RdHidden ×dk , and Wv ∈ RdHidden ×dv , the attention output is
+ computed as
+
+ Q = Wq x + Bq Aq x ; K = Wk x + Bk Ak x ;
+ChatGLM as the learnable parameter matrixes. We only update V = Wv x + Bv Av x (1)
+the LoRA parameters when adapting LVLMs to IVM tasks. The  
+utilization of LoRA can help visual adaptation of specific pattern QK T
+ Attention (Q, K, V ) = soft max √ V (2)
+representations for ViT and language instruction understanding dk
+for ChatGLM.
+ where Q, K, and V are three matrices modified by the LoRA
+ constraint, dk is the dimension of the hidden representation.
+B. LoRA-Based Contrast Visual Domain Adaptation In the visual adaptation process, we freeze all the parameters
+ The visual encoder of the proposed DefectGLM is a ViT of pretrained ViT and only train the LoRA adapter that only
+backbone that is pretrained with huge image data in the common- requires much fewer parameters.
+knowledge domain. However, the direct utilization of freezing To adapt the pretrained ViT to specific visual patterns in
+ViT in IVM tasks will lead to undesirable performance, which the industrial monitoring scenarios, we employ contrastive repmay be caused by discrepant visual patterns in specific industrial resentation as a self-supervised visual adaptation approach in
+scenarios. The pretrained ViT is capable of processing common DefectGLM. The introduction of contrastive representation can
+images but still lacks adaptation of professional visual patterns force the pretrained visual encoder to adapt specific visual
+in industrial scenarios. Therefore, it is essential to perform patterns in a self-supervised manner and extract more transfervisual pattern adaptation to the pretrained visual encoder for able representations for the following language modality probetter extracting industrial image representations to that improve cess. Specifically, suppose we have an industrial image dataset
+the image modeling capability. The process of contrast visual X = {xi , y i }ni=1 that has a total of n image-label pairs. We
+adaptation is shown in Fig. 3(a). perform random augmentation to each image and therefore
+ Here, we utilize the contrastive representation and PEFT obtain an augmented dataset Xaug = {xaug i , yi }i=1 as the positive
+ n
+
+strategy LoRA to adapt the pretrained visual encoder to pro- example for the corresponding industrial image xi . Then, both
+fessional IVM tasks. LoRA uses trainable rank decomposition the datasets are fed into the ViT that is modified with LoRA
+matrixes that can be inserted into any self-attention layers for to obtain the original representation {zi }batchsize
+ i=1 and augmented
+the pretrained ViT to adapt downstream works. Specifically, representation {zjaug }batchsize
+ j=1 from the final output layer. For each
+14118 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 12, DECEMBER 2024
+
+Fig. 3. Two-stage adaptation strategy, including contrast visual adaptation and vision-language instruction tuning. DefectGLM freezes most of the
+parameters and only updates LoRA parameters during fine-tuning. (a) First stage. (b) Second stage.
+
+representation pair, the InfoNCE contrastive representation loss image-text dataset to align the domain knowledge for improving
+can be computed as follows: the instruction-following capability.
+     As shown in Fig. 3(b), vision-language instruction tuning
+ exp s zi , ziaug /τ
+ Lr = − log batchsize     (3) leverages a generated image-text dataset as a supervised signal
+ j exp s zi , zjaug /τ to guide the model to generate expected diagnosis answers based
+ on input industrial images and instruction prompts. Specifically,
+where τ is a temperature threshold (0.1 in this case) and s(·, ·) is
+ suppose the industrial visual imagesXv = {xi }ni=1 are first fed
+the cosine similarity score for each pair given as
+ into the visual encoder ViT fv (·), which obtains the visual
+   zi · zjaug representationZv = fv (Xv ). Then, the querying transformer
+ s zi , zjaug = . (4) fq (·) is applied to align the visual representation that is semantic
+  zi  zjaug 
+ important into the language embedding spaces. Thus, we obtain
+ Additionally, the presented dataset includes ground-truth the output visual tokens Tv = fq (Zv ). Then, we concatenate the
+labels that can be utilized. So, the classification loss is introduced visual tokens with instruction prompt tokens Tq that are obtained
+to boost the modeling capability of DefectGLM. Classification by the language embedding layer. We utilize the concatenated
+loss can assist contrastive loss to learn more category discrimi- multimodal tokens [Tv ;Tq ] that contain the information of visual
+native features, which alleviates the separation of false-negative images and language instruction as the input of ChatGLM, and
+samples caused by contrastive loss. The classification loss uses therefore predict the text outputyi = [yi,1 , yi,2 , . . . yi,T ]. The
+a cross-entropy function, which can be derived as autoregressive loss function is utilized here, which can be repre-
+ 
+ batchsize sented by the negative sum of the predicted probability of yi,t+1
+ Lc = − yi log (p (xi )) (5) given previously predicted text tokensyi,1···t . The computation
+ i=1 is shown as follows:
+where p(xi ) ∈ R1×c is the predicted probability vector and yi is  
+ batchsize Ti
+
+the one-hot vector. Therefore, the final training goal of the first L=− log [p (yi,t+1 | [Tv :Tq ] , yi,1···t , Φ)] (6)
+ i=1 t=1
+stage can be the sum of the contrastive adaptation loss and the
+classification loss. where Ti is the sequence length of the ith output and Φ is
+ the parameters of the ChatGLM-6B. The autoregressive loss
+C. Vision-Language Instruction Tuning function can make predicted answers close to the ground truth
+ and therefore improve the response performance.
+ The primary goal of the DefectGLM is to accept industrial
+visual images and generate concise and reliable natural language
+responses about diagnosis results. To make the pretrained LLM D. Industrial Image and Text Dataset
+comprehend the specific task instructions and output desirable We utilize the open-source mixed-type wafer dataset publanguage responses based on given industrial images, we employ lished by Wang et al. [18]. The wafer maps are obtained using
+a vision-language instruction tuning strategy on a generated test probes for each die to test the electrical performance. The
+WANG et al.: LARGE-SCALE VISUAL LANGUAGE MODEL BOOSTED BY CONTRAST DOMAIN ADAPTATION FOR INTELLIGENT IVM 14119
+
+ The defective dies form a ring structure in this wafer map.
+ The templates consist of two parts: the first gives the diagnosis
+ results, and the second describes the defective patterns illustrated
+ in the wafer images. The generation of text descriptions can also
+ be assisted by ChatGPT or other LLMs.
+
+ E. Application Procedure of DefectGLM
+ The detailed procedure of DefectGLM for fine-tuning LVLMs
+ into a professional IVM scenario is shown in this section. The
+ procedure consists of two stages summarized as follows.
+ Stage I: Contrast visual adaptation
+ This part includes the following four steps.
+ Step 1: Collect the wafer maps for each defection pattern to
+ generate a fine-tuning dataset.
+ Step 2: Preprocess the collected wafer maps and generate another
+Fig. 4. Mixed-type wafer images with RGB standard. (a) Single defec- augmented dataset.
+tive patterns. (b) Mixed-type defective patterns.
+ Step 3: Both original and augmented wafer images are used as
+ the ViT inputs for representation extraction.
+ Step 4: Use extracted representations to fine-tune LoRA in ViT
+wafer map only contains three different values with 52 × 52 with contrastive and classification learning.
+size, in which 0 denotes a blank plot, 1 presents a normal die,
+and 2 is a broken die. To adapt the dataset to the input of LVLM, Stage II: Vision language instruction tuning
+these wafer maps are converted to the standard RGB images This part includes the following five steps.
+with 224 × 224 size as the input of the visual encoder. The Step 1: Generate a visual instruction dataset with wafer images
+wafer RGB images are shown in Fig. 4. Fig. 4 shows some and text templates.
+examples of the single and mixed-type defection patterns. The Step 2: Input the wafer images into the pretrained ViT to extract
+dataset encompasses 36 distinct defect patterns, including 7 visual representations.
+single-type defects, 13 two-mixed type defects, 12 three-mixed Step 3: The extracted visual representations are used as input
+type defects, and 4 four-mixed type defects. The single-type for the querying transformer to project them into the language
+defects indicate that only one defect pattern occurs in the wafer embedding space.
+map. We considered seven single defect patterns in our study: Step 4: The projected representation is concatenated with the
+Normal, Center (C), Donut (D), Edge_Loc (EL), Edge_Ring token embeddings of language instruction, and then used as
+(ER), Loc (L), and Scratch (S). The “Normal” pattern signifies input for ChatGLM.
+no defects, whereas C denotes a central circular defect. D is Step 5: The outputs of the ChatGLM and the text labels are
+characterized by a circular ring-like defect, EL indicates a local utilized to fine-tune the LoRA parameters.
+defect region near the wafer’s edge, ER represents a ring defect
+pattern near the edge, L represents a localized defect region, and By employing the two-stage adaptation strategy, the Defect-
+S denotes a long strip-like defect. GLM can be adapted to professional industrial monitoring tasks.
+ In addition to these 7 single-type defects, multiple defect
+patterns may occur in one wafer map, which is a combina- IV. EXPERIMENTS
+tion of multiple single-type defects. For two-mixed type defects, we considered 13 classes: C + EL, C + ER, C + L, C + S, A. Experiment Setting
+D + EL, D + ER, D + L, D + S, EL + L, EL + S, ER + L, ER + S, 1) Dataset: The experiments were conducted on a diverse
+and L + S. These two-mixed type defects feature two single wafer dataset comprising 36 distinct categories of defective
+defect patterns in the wafer map. Additionally, we consid- patterns [18]. To maintain data balance, we allocated 800 wafer
+ered three mixed-type defects and four mixed-type defects, images from each category for the training dataset, while reservincluding C + EL + L, C + EL + S, C + ER + L, C + ER + S, ing 100 wafer images for validation and 50 for testing purposes.
+C + L + S, D + EL + L, D + EL + S, D + ER + L, D + ER + S, In total, our dataset is comprised of 34 200 wafer images, which
+D + L + S, EL + L + S, ER + L + S for three mixed-type de- were utilized for both training and assessing the performance of
+fects, and C + L + EL + S, C + L + ER + S, D + L + EL + S, and each method.
+D + L + ER + S for four mixed-type defects. 2) Evaluation Metric: To evaluate the performance of dif-
+ For text alignment, we first construct a hard prompt as the ferent models, several evaluation metrics are utilized. Since
+instruction for all text input, such as What is the defect in this wafer defection recognition is a classification task, we follow
+wafer map? Then, since the industrial dataset generally lacks text the classic setting of multiclass classification, including mean
+annotations, the description templates are utilized to generate the accuracy, precision, and F1-score to evaluate the defect recogtext label of each wafer image. For instance, “Donut” defect. nition performance of the model.
+14120 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 12, DECEMBER 2024
+
+ TABLE II TABLE III
+ DEFECT RECOGNITION RESULTS OF LORA SENSITIVITY STUDIES ABLATION RESULTS OF DIFFERENT COMPONENTS OF EACH COMPONENT
+
+ 3) Implementation Details: We use the pretrained ViT as
+the visual encoder of the backbone and utilize the pretrained
+ChatGLM-6B as the text decoder. We plug the ViT LoRA (VL)
+at 0, 13, 26, and 38 layers and ChatGLM LoRA (CL) at 0, 19, more LoRA parameters. Thus, we use a LoRA rank of 16 in
+and 27 layers as the trainable parameters for fine-tuning. The the ViT and ChatGLM as the final solution of the proposed
+fine-tuning process was conducted on two NVIDIA A40 GPUs DefectGLM.
+throughout 4500 iterations for each stage, resulting in a total of
+9000 iterations. The learning rate was set at 1e-3 and a batch C. Ablation Results
+size of 32 was employed. To enhance the stability of the training
+ In this section, we conduct ablation studies to verify the
+process, we utilized a warm-up phase of 0.2 and implemented
+ effectiveness of each component in the proposed DefectGLM.
+a cosine learning rate decay strategy. It is important to note
+ We investigate the influence of adjusting vision parameters and
+that all pretrained models remained frozen during the training
+ the effectiveness of the proposed visual representation adaptaprocess, and only the LoRA parameters will be updated. This
+ tion. We only retain CL to perform language instruction tuning
+strategy was employed to ensure effective knowledge transfer
+ and eliminate VL to verify if the LVLMs can obtain desirable
+while fine-tuning the model using wafer images and instructional
+ performance using pure language techniques without vision
+data.
+ adjustments. Then, we continue to explore how the contrast
+ visual adaptation learning loss influences the recognition result.
+B. LoRA Sensitivity Results All the ablation studies are conducted with the LoRA rank of
+ This section aims to investigate the affection of the rank 16 for a fair comparison. Notably, Lc and Lr are specifically
+number of the LoRA adapter in industrial monitoring scenarios. designed to improve the vision encoder, so we only conduct
+The LoRA rank will directly affect the number of trainable ablation experiments for Lc or Lr when VL is present.
+parameters in the DefectGLM, resulting in different adaptation Table III presents the recognition performance results obperformances on specific scenarios. A larger LoRA rank can lead tained from the ablation studies. These ablation results highlight
+to more trainable parameters to enable more volume for learn- several pivotal factors for adapting LVLMs to the complex
+ing new knowledge but it also requires more training samples domain of professional industrial monitoring scenarios. First,
+and times for convergence. Therefore, investigating the optimal the comparison between the first and third rows in Table III,
+value of LoRA rank is essential for applying LVLMs to specific shows that only adjusting language parameters is insufficient
+scenarios. The number of LoRA ranks in the ViT and ChatGLM for adapting LVLMs. The possible reason could be the absence
+varies from 8 to 128 to adapt the wafer defect recognition task. of visual knowledge within the visual encoder, so it is essential
+We record the number of trainable parameters and the percentage to conduct visual pattern adaptation to adapt specific industrial
+of parameter reduction compared to the full-fine-tuning. The image patterns. By comparing the second row and the first
+parameter changes and final recognition results under different row, it is further verified the importance of adjusting the vision
+LoRA rank settings are drawn in Table II. encoder to adapt industrial image patterns. We found that the
+ According to Table II, it is obvious that using LoRA can accuracy of the third row is 97.44%, which demonstrates that
+significantly reduce the total number of trainable parameters by using both CL and VL can help to improve model performance.
+up to 99.98%. The results show that LoRA is efficient in saving Then, we investigate how contrast-representation learning and
+memory and computational resources during the fine-tuning supervised learning contribute to adapting the vision encoder.
+process. By comparing the second row and the fourth row, it is ob-
+ Table II shows that the DefectGLM performs best when the vious that contrast learning provides an efficient solution for
+LoRA rank is 16 and the corresponding trainable parameters are the vision encoder to learn defect pattern-related representa-
+1.59 M. We also observe that the performance will first increase tion. The comparison between the second row and the fifth
+and then decrease as increasing the value of the LoRA rank. This row shows that supervised learning can also enforce the vision
+could be caused by the small size of the wafer defection dataset, encoder to learn category-discriminative representations. Both
+which cannot provide enough training samples for adapting these learned representations can contribute to improving the
+WANG et al.: LARGE-SCALE VISUAL LANGUAGE MODEL BOOSTED BY CONTRAST DOMAIN ADAPTATION FOR INTELLIGENT IVM 14121
+
+ TABLE IV
+ DEFECT RECOGNITION RESULTS OF COMPARISON STUDIES
+
+answer quality of LLMs. Notably, the accuracy results of the larger model than the classic vision models, boasting a total
+fourth row and the seventh row are the same, which the possible parameter count of 7.2 billion. However, it is essential to note
+reason is that the model may met a performance bottleneck that only 1.59 M parameters require updating during the training
+when approaching an accuracy of 98.9%. Finally, the final row process, a significantly smaller number than other models.
+achieved the best performance, which shows the classification The results given in Table IV show that the convolutional
+task can further boost the contrastive training. The possible and ViT methods achieve the quickest inference times, which
+reason could be that using classification loss can alleviate the are beneficial because of their small parameter sizes and high
+separation of negative samples caused by contrast learning. This parallel architecture. Although DenseNet has fewer parameters,
+result shows that contrast representation loss and classification its inference time is significantly longer, because it has larger
+loss are complementary learning approaches that can learn more feature maps with more channels that increase computational decomprehensive representations of LLMs. mands during convolutional operations. Additionally, the Swin-
+ Transformer’s shifting-window attention mechanism, designed
+ to capture hierarchical information, adds to its computational
+D. Comparison Results complexity and increases the inference time. DefectGLM ex-
+ In this section, we conduct comparative studies utilizing hibits the slowest inference time, which is caused by extensively
+the mixed-type wafer dataset in conjunction with other well- higher parameter size and recursive text generation mechanism.
+established vision methods, including VGG19 [7], ResNet18 As a vision-and-language model, DefectGLM generates the text
+and ResNet50 [10], DenseNet [11], ViT [12], Swin-Transformer by recursively predicting the next token, which the recursive
+[13], Swin-Transformer V2 [36], and ConvNeXt [37]. To adapt mechanism naturally slows down the inference speed.
+these methods to the task at hand, we replace their final layers To mitigate the issue of slow inference time and enhance
+with initialized linear classifiers to facilitate the classification efficiency in real-world applications, several strategies can be
+of defect patterns. Subsequently, we select the model with the employed. First, applying quantization techniques to convert the
+highest validation performance and assess its defect recognition model to INT8 or even INT4 data types can conserve computacapabilities on the test dataset. tional resources. Second, utilizing batch inference can speed up
+ The results of wafer recognition on the testing dataset are the process. Third, model pruning can be used to eliminate represented in Table IV. Our proposed method consistently outper- dundant parameters, simplifying the model and thereby reducing
+forms other approaches for all mixed wafer defects, achieving computational complexity and improving inference speed.
+a remarkable overall accuracy exceeding 99.0%. Notably, the
+convolution-based methods (such as VGG, ResNet, DenseNet,
+and ConvNeXt) generally exhibit superior performance com- E. Qualitative Results
+pared to the transformer-based methods (such as ViT and Swin- The examples shown in Fig. 5 showcase the practical appli-
+Transformer). This disparity can be attributed to the fact that cation of DefectGLM in wafer defect recognition. We can see
+transformer models typically require a more extensive amount of that DefectGLM demonstrates high generalization to different
+training data to converge and achieve satisfactory performance. text prompts and can generate expected answers. In contrast
+This requirement is often challenging to meet in scenarios in- to previous methods that are limited to providing classificavolving small wafer datasets. This finding underscores the robust tion results and lack substantial user interaction, DefectGLM
+generalization capabilities of DefectGLM, which prove effective offers a comprehensive language-vision solution for IVM sceeven in cases with limited dataset sizes. narios. Notably, wafer defect recognition is only one case of
+ Additionally, Table IV also compared the trainable parameters the DefectGLM; the proposed method can also be utilized in
+and inference time of the different methods. We use one NVIDIA other scenarios, such as anomaly detection. The advantages
+A40 (48 GB) GPU with an Intel Xeon Platinum 8358P CPU to of DefectGLM can be summarized as follows. First, Defectevaluate the average inference time for each image in the test GLM leverages the powerful instruction-following and image
+dataset. Our proposed DefectGLM stands out as a considerably semantic understanding capabilities of pretrained LVLMs, thus
+14122 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 12, DECEMBER 2024
+
+Fig. 5. Qualitative examples of the DefectGLM.
+
+Fig. 6. Comparison results with other LVLM-powered VQA models.
+
+achieving excellent defect pattern recognition performance in knowledge absence in LVLMs. The strategy compensated for the
+IVM scenarios. Second, the DefectGLM can follow prompt knowledge absence in two aspects. First, the LoRA-based coninstructions and generate concise and clear instruction-following trast visual adaptation allowed the model to adapt specific indusresponses, which allows more human interaction with operators. trial visual patterns, thus reducing the knowledge gap between
+Finally, the DefectGLM represents a novel technique solution common images and industrial images. Second, vision-language
+path that integrates LVLMs into intelligent IVM tasks. instruction tuning aligned the model to a specific knowledge
+ Additionally, to compare our DefectGLM with other LVLM- domain and enhanced its instruction-following ability.
+powered vision question-answering models, we conducted an By utilizing the proposed adaptation strategy to pretrained
+experiment to evaluate their answer quality against a wafer map LVLMs on a multimodal wafer defect dataset, a novel visionwith a central defect. We select MiniGPT-4 7B [28] and LLaVA language method, DefectGLM, was proposed. The proposed
+v1.5 13B [27] as the comparison methods and evaluate the DefectGLM was specialized for IVM scenarios, which could
+answer from diagnosis correctness and pattern understanding, recognize defect patterns and generate instruction-following
+which the results are shown in Fig. 6. From Fig. 6, MiniGPT-4 responses. After evaluation, the DefectGLM showcased remarkshows some ability to recognize the circular defect patterns but able wafer defect recognition performance, which obtained an
+outputs an incorrect diagnosis. LLaVA’s answer identifies both accuracy of over 99.0%. In our future work, we will widely
+center and edge defects, correctly recognizing the central black validate the performance of the proposed method on other genspot in the wafer map, but incorrectly identifying an edge defect eral multimodal model structures to extend its applications and
+that does not exist. Finally, our proposed DefectGLM provides values. Finally, to facilitate the IVM research, we will release
+the correct diagnosis and pattern description, demonstrating the our DefectGLM and the dataset.
+effectiveness of the proposed two-stage fine-tuning strategy.
+
+ REFERENCES
+ V. CONCLUSION
+ [1] S. Yin, S. X. Ding, X. Xie, and H. Luo, “A review on basic data-driven
+ In this article, we undertook a comprehensive exploration approaches for industrial process monitoring,” IEEE Trans. Ind. Electron.,
+ vol. 61, no. 11, pp. 6418–6428, Nov. 2014.
+to efficiently adapt pretrained LVLMs to meet the demands of [2] S. Yin, H. Gao, and O. Kaynak, “Data-driven control and process monprofessional IVM scenarios. We introduced an effective two- itoring for industrial applications—Part II,” IEEE Trans. Ind. Electron.,
+stage adaptation strategy to address the challenge of domain vol. 62, no. 1, pp. 583–586, Jan. 2015.
+WANG et al.: LARGE-SCALE VISUAL LANGUAGE MODEL BOOSTED BY CONTRAST DOMAIN ADAPTATION FOR INTELLIGENT IVM 14123
+
+ [3] X. Kong and Z. Ge, “Deep learning of latent variable models for in- [21] J. Yu and J. Liu, “Two-dimensional principal component analysis-based
+ dustrial process monitoring,” IEEE Trans. Ind. Inform., vol. 18, no. 10, convolutional autoencoder for wafer map defect detection,” IEEE Trans.
+ pp. 6778–6788, Oct. 2022. Ind. Electron., vol. 68, no. 9, pp. 8789–8797, Sep. 2021.
+ [4] W. Lu and X. Yan, “Deep double supervised embedding neural network [22] P. Napoletano, F. Piccoli, and R. Schettini, “Anomaly detection in nanofienhancing class separation for visual high-dimensional industrial process brous materials by CNN-based self-similarity,” Sensors, vol. 18, no. 1,
+ monitoring,” IEEE Trans. Ind. Inform., vol. 17, no. 9, pp. 6357–6367, Jan. 2018, Art. no. 209.
+ Sep. 2021. [23] T. Nafi, E. Haque, F. Farhan, and A. Rahman, “High accuracy swin
+ [5] L. Qi, Y. Yang, X. Zhou, W. Rafique, and J. Ma, “Fast anomaly identifica- transformers for image-based wafer map defect detection,” Int. J. Eng.
+ tion based on multiaspect data streams for intelligent intrusion detection Manuf., vol. 12, pp. 10–21, Oct. 2022.
+ toward secure Industry 4.0,” IEEE Trans. Ind. Inform., vol. 18, no. 9, [24] P. Mishra, R. Verk, D. Fornasier, C. Piciarelli, and G. L. Foresti, “VTpp. 6503–6511, Sep. 2022. ADL: A vision transformer network for image anomaly detection and
+ [6] D. Tabernik, S. Šela, J. Skvarč, and D. Skočaj, “Segmentation-based deep- localization,” in Proc. IEEE 30th Int. Symp. Ind. Electron., 2021, pp. 1–6.
+ learning approach for surface-defect detection,” J. Intell. Manuf., vol. 31, [25] Y.-M. Hsu, X. Jia, W. Li, and J. Lee, “A novel quality clustering methodno. 3, pp. 759–776, Mar. 2020. ology on fab-wide wafer map images in semiconductor manufacturing,”
+ [7] J. Yu and J. Liu, “Multiple granularities generative adversarial network in Proc. ASME 17th Int. Manuf. Sci. Eng. Conf., 2022, vol. 85819, Paper
+ for recognition of wafer map defects,” IEEE Trans. Ind. Inform., vol. 18, V002T06A022.
+ no. 3, pp. 1674–1683, Mar. 2022. [26] J. Li, D. Li, S. Savarese, and S. Hoi, “BLIP-2: Bootstrapping language-
+ [8] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “ImageNet classification image pre-training with frozen image encoders and large language modwith deep convolutional neural networks,” Commun. ACM, vol. 60, no. 6, els,” in Proc. Int. Conf. Mach. Learn., 2023.
+ pp. 87–90, Jun. 2017, doi: 10.1145/3065386. [27] H. Liu, C. Li, Q. Wu, and Y. J. Lee, “Visual instruction tuning,” in Proc.
+ [9] K. Simonyan and A. Zisserman, “Very deep convolutional networks for Adv. Neural Inf. Process. Syst., 2024, pp. 34892–34916.
+ large-scale image recognition,” 2023, arXiv:1409.1556. [28] D. Zhu, J. Chen, X. Shen, X. Li, and M. Elhoseiny, “MiniGPT-4: Enhancing
+[10] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image vision-language understanding with advanced large language models,”
+ recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2016, 2023, arXiv:2304. 10592.
+ pp. 770–778. [29] K. Ranasinghe, B. McKinzie, S. Ravi, Y. Yang, A. Toshev, and J. Shlens,
+[11] G. Huang, Z. Liu, L. Van Der Maaten, and K. Q. Weinberger, “Densely “Perceptual grouping in contrastive vision-language models,” in Proc.
+ connected convolutional networks,” in Proc. IEEE Conf. Comput. Vis. IEEE/CVF Int. Conf. Comput. Vis., 2023, pp. 5571–5584.
+ Pattern Recognit., 2017, pp. 2261–2269. [30] Y. Gao et al., “PyramidCLIP: Hierarchical feature alignment for vision-
+[12] A. Dosovitskiy et al., “An image is worth 16x16 words: Transformers for language model pretraining,” Adv. Neural Inf. Process. Syst., vol. 35,
+ image recognition at scale,” 2021, arXiv:2010.11929. pp. 35959–35970, Dec. 2022.
+[13] Z. Liu et al., “Swin transformer: Hierarchical vision transformer using [31] J. Luo, Y. Li, Y. Pan, T. Yao, H. Chao, and T. Mei, “CoCo-BERT: Imshifted windows,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., 2021, proving video-language pre-training with contrastive cross-modal matchpp. 9992–10002. ing and denoising,” in Proc. 29th ACM Int. Conf. Multimedia, 2021,
+[14] G. Pang, L. Cao, and C. Aggarwal, “Deep learning for anomaly detection: pp. 5600–5608.
+ Challenges, methods, and opportunities,” in Proc. 14th ACM Int. Conf. [32] N. Houlsby et al., “Parameter-efficient transfer learning for NLP,” in Proc.
+ Web Search Data Mining, 2021, pp. 1127–1130. 36th Int. Conf. Mach. Learn., 2019, pp. 2790–2799.
+[15] N. Akhtar and A. Mian, “Threat of adversarial attacks on deep learning in [33] E. J. Hu et al., “LoRA: Low-rank adaptation of large language models,”
+ computer vision: A survey,” IEEE Access, vol. 6, pp. 14410–14430, 2018. 2021, arXiv:2106.09685.
+[16] H. Touvron et al., “LLaMA: Open and efficient foundation language [34] D. Yin, Y. Yang, Z. Wang, H. Yu, K. Wei, and X. Sun, “1% vs 100%:
+ models,” 2023, arXiv:2302.13971. Parameter-efficient low rank adapter for dense predictions,” in Proc.
+[17] Z. Du et al., “GLM: General language model pretraining with autore- IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2023, pp. 20116–20126.
+ gressive blank infilling,” in Proc. 60th Annu. Meeting Assoc. Comput. [35] T. Dettmers, A. Pagnoni, A. Holtzman, and L. Zettlemoyer, “QLORA:
+ Linguistics, 2022, pp. 320–335. Efficient finetuning of quantized LLMs,” Adv. Neural Inf. Process. Syst.,
+[18] J. Wang, C. Xu, Z. Yang, J. Zhang, and X. Li, “Deformable convolutional vol. 36, pp. 10088–10115, 2023.
+ networks for efficient mixed-type wafer defect pattern recognition,” IEEE [36] Z. Liu et al., “Swin transformer V2: Scaling up capacity and resolu-
+ Trans. Semicond. Manuf., vol. 33, no. 4, pp. 587–596, Nov. 2020. tion,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2022,
+[19] B. Staar, M. Lütjen, and M. Freitag, “Anomaly detection with convolu- pp. 12009–12019.
+ tional neural networks for industrial surface inspection,” Procedia CIRP, [37] Z. Liu, H. Mao, C.-Y. Wu, C. Feichtenhofer, T. Darrell, and S. Xie, “A
+ vol. 79, pp. 484–489, Jan. 2019. ConvNet for the 2020s,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+[20] T. S. Kim, J. W. Lee, W. K. Lee, and S. Y. Sohn, “Novel method for Recognit., 2022, pp. 11976–11986.
+ detection of mixed-type defect patterns in wafer maps based on a single
+ shot detector algorithm,” J. Intell. Manuf., vol. 33, no. 6, pp. 1715–1724,
+ Aug. 2022.

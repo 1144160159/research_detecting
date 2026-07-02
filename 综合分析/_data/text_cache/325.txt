@@ -1,0 +1,150 @@
+30                                                                    IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+
+
+
+     WF-Transformer: Learning Temporal Features for
+      Accurate Anonymous Traffic Identification by
+              Using Transformer Networks
+               Qiang Zhou , Liangmin Wang , Member, IEEE, Huijuan Zhu , Member, IEEE, Tong Lu,
+                                   and Victor S. Sheng , Senior Member, IEEE
+
+
+   Abstract— Website Fingerprinting (WF) is a network traffic                security. Last decades, several anonymous communication sys-
+mining technique for anonymous traffic identification, which                 tems have been designed and developed for the users‘ privacy
+enables a local adversary to identify the target website that an             protection [1]. Tor (or The Onion Router) is a popular low
+anonymous network user is browsing. WF attacks based on
+deep convolutional neural networks (CNN) get the state-of-the-art            latency anonymous network, and has more than three million
+anonymous traffic classification performance. However, due to the            daily users [2]. Latest studies have shown traffic mining
+locality restriction of CNN architecture for feature extraction on           algorithm called Website Fingerprinting (WF) technique can
+sequence data, these methods ignore the temporal feature extrac-             destroy the anonymity of the Tor [3]. Since the different add-in
+tion in the anonymous traffic analysis. In this paper, we present            and content of different websites, there is a specific pattern
+Website Fingerprinting Transformer (WF-Transformer), a novel
+anonymous network traffic analysis method that leverages Trans-              of traffic encrypted through an anonymous network system,
+former networks for temporal feature extraction of traffic traces            which can be used for determining the destination of the target
+and improves the classification performance of Tor encrypted                 website based on the collected traces [4], [5], [6], [7], [8], [9].
+traffic. The architecture of WF-Transformer is specially designed            Network attackers eavesdrop and collect the network traffic
+for traffic trace processing and can classify anonymous traf-
+                                                                             passively when a user visits the target website. WF attackers
+fic effectively. Furthermore, we evaluate the performance of
+WF-Transformer in both closed-world and open-world scenarios.                use the features that are calculated from the network traffic
+In the closed-world scenario, WF-Transformer attains 99.1%                   traces, such as packet rates [10], directions of packets [7] and
+accuracy on Tor traffic without defenses, better than state-                 inter-arrive time [11], and then a classifier is trained for the
+or-the-art attacks, and archives 92.1% accuracy on the traces                classification of anonymous traces.
+defended by WTF-PAD method. In the open-world scenario, WF-
+                                                                                The pioneering WF attacks are mainly focusing on the hand-
+Transformer has better precision and recall on both defended
+and non-defended traces. Furthermore, WF-Transformer with a                  crafting feature extraction of the anonymous traces and the
+short input length (2000 cells) outperforms the DF method with               selection of classifiers [10], [11], [12], [13], [14]. Wang et al.
+a long input length (5000 cells).                                            utilize several traffic features, such as packet direction, packet
+  Index Terms— Website fingerprinting, traffic                  analysis,    size, and burst number, and then a k-NN classifier is trained for
+encrypted communication, transformer networks.                               the prediction of target traces [11]. Panchenko et al. propose
+                                                                             a WF attack method named CUMUL [13], which calculates a
+                         I. I NTRODUCTION                                    novel feature set with a cumulative behavioral representation
+                                                                             of the collected traffic traces and utilizes Support Vector
+W       ITH the development of Internet, privacy disclosure
+        of network users is an urgent problem for network                    Machine (SVM) as the classifier. Hayes et al. propose a
+                                                                             k-FP method for WF attack [14], which utilizes a random
+   Manuscript received 17 December 2022; revised 23 June                     forest to rank the importance of different traffic features
+2023 and 1 September 2023; accepted 11 September 2023. Date of publication   and then uses k-NN classifier to predict the labels of target
+25 September 2023; date of current version 16 November 2023. This work
+was supported in part by the National Natural Science Foundation of China
+                                                                             traffic traces. These three WF attack methods achieve about
+under Grant 62372105 and Grant 62272204, in part by the Leading-Edge         91% classification accuracy for Tor anonymous traffic trace
+Technology Program of the Jiangsu Natural Science Foundation under Grant     classification in the closed-world setting.
+BK20202001, and in part by the Natural Science Foundation of the Jiangsu
+Higher Education Institutions of China under Grant 23KJB520004. The
+                                                                                With the development of WF attack methods, several
+associate editor coordinating the review of this manuscript and approving    defense methods have been proposed [15], [16], [17], [18],
+it for publication was Dr. Grigorios Loukides. (Corresponding authors:       [19], [20]. Dyer et al. propose a WF defense method named
+Qiang Zhou; Liangmin Wang.)
+   Qiang Zhou, Huijuan Zhu, and Tong Lu are with the School of Com-          BuFLO [15], which pads a large number of dummy packets
+puter Science and Communication Technology, Jiangsu University, Zhenjiang    into normal traffic traces to protect users’ privacy. Cai et al.
+212013, China (e-mail: zhouqiang@ujs.edu.cn; huijuanzhu@ujs.edu.cn;          improve the BuFLO defense method and propose TAMARAW
+lutong@stmail.ujs.edu.cn).
+   Liangmin Wang is with the School of Cyber Space and Secu-                 [16]. TAMARAW sets a hyperparameter to restrict the number
+rity Engineering, Southeast University, Nanjing 211189, China (e-mail:       of the padded dummy packets during the transmission process,
+liangmin@seu.edu.cn).                                                        but the bandwidth overhead and the latency are still too high
+   Victor S. Sheng is with the Department of Computer Science, Texas Tech
+University, Lubbock, TX 79409 USA (e-mail: victor.sheng@ttu.edu).            to be implemented in a real network scenario. Juarez et al.
+   Digital Object Identifier 10.1109/TIFS.2023.3318966                       propose a lightweight defense method named WTF-PAD
+                      1556-6021 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+ZHOU et al.: WF-TRANSFORMER: LEARNING TEMPORAL FEATURES                                                                              31
+
+
+
+[17], and the strategy of the WTF-PAD is that it only pads
+dummy packets into the gaps between the real packets, which
+decreases the bandwidth overhead efficiently, and has no delay.
+   However, with the development of deep learning techniques
+[21], [22], [23], [24], [25], traffic data mining methods that
+based on CNN network architecture and its variants are used
+for traffic analysis [26], [27]. WF attacks based on deep
+convolutional neural networks have been proposed [7], [28],                     Fig. 1.   Demo of website fingerprinting attack.
+and existing defenses that padding dummy packets into normal
+trace based on the statistical information of traces fail to
+counter deep WF attacks [7], [29], [30]. Rimmer et al. test            2) We propose a more sophisticated design of Transformer
+multiple deep frameworks to classify the anonymous traffic                 network for traffic analysis and corresponding opti-
+and get better performance than existing non-deep WF attack                mization function. WF-Transformer shows two main
+methods [29]. Sirinam et al. utilize a more sophisticated                  advantages. One is its shorter input than CNN-based
+convolutional neural network to construct a deep WF model                  methods, which allows an adversary to save time in
+called DF, and DF only uses the direction of the packets as                traffic collection. The other is its fast convergence, which
+the input of the model. Both of the deep WF attack methods                 helps to get a robust model.
+achieve more than 96% classification accuracy [7].                     3) We evaluate the effectiveness of WF-Transformer on
+   Although the latest deep WF attack methods based on CNN                 the public Tor dataset for both closed-world and open-
+architecture have obtained a lot of progress in anonymous                  world settings, and we also show the performance
+traffic classification [7], [30], the design of existing deep WF           of WF-Transformer on non-defended and defended
+attacks based on CNN fails to extract the temporal feature of              traces. Compared with the state-of-the-art methods, WF-
+the traces, which can be seen as the long-term dependence                  Transformer outperforms existing methods in terms of
+among the cells of traffic traces. For example, one request is             classification accuracy in closed-world setting, TPR,
+sent to the server by the client, the response of the current              FPR, Precision and Recall for open-world setting.
+request may not be send back to the client immediately due             4) We conduct experiments to show the information leak-
+to the response of the former request is transmitting, and the             age of features extracted by WF-Transformer and
+current request has been delayed, so the local features extract            CNN-based model, respectively, and reveal the impact
+by CNN fail to represent the patterns of the traces. CNN only              of the Transformer architecture on feature extraction.
+focuses on the local features of the traffic and fails to capture          The study indicates that WF-Transformer can utilize
+the long-term dependence among the packets in a traffic trace,             shorter traces to learn more information from traces than
+which can make the discriminative patterns of the traffic traces           CNN-based models with the help of extracted temporal
+be ignored, and reduce the performance of the deep model on                features, demonstrating the superiority and effectiveness
+the classification of anonymous traffic.                                   of Transformer architecture used for traffic analysis.
+   To tackle this problem, we present a novel anonymous                The rest of the paper is organized as follows. The threat
+trace classification model called Website Fingerprinting Trans-     model about WF attacks is introduced in Section II. Related
+former (WF-Transformer). Unlike the existing deep WF attack         works are shown in Section III. Preliminary knowledge
+models, WF-Transformer utilizes Transformer network [24] to         about Transformer network is introduced in Section IV. The
+extract the temporal feature of the traffic traces. Furthermore,    proposed method is shown in Section V. The evaluation
+we propose a more sophisticated design on the network               setting and experiment results are shown in Section VI and
+architecture of Transformer and the corresponding optimiza-         Section VII, respectively. In Section VIII, we show differ-
+tion function, and make the proposed WF-Transformer more            ent information leakage for different models. In Section IX,
+suitable for processing traffic trace data. To demonstrate the      we give some discussion about our proposed method, and we
+effectiveness and superiority of WF-Transformer, we conduct         conclude our work in Section X.
+extensive experiments on a public dataset and evaluate the per-
+formance of our method in both closed-world and open-world                                 II. T HREAT M ODEL
+scenarios. Considering the existing WF defense methods,                Tor network is a popular low-latency anonymous system,
+we also conduct experiments to show the effectiveness of our        and encrypted packets are transmitted in Tor with multiple
+method against WF defenses. To sum up, the contributions of         proxies to protect the users’ privacy. Figure 1 shows the WF
+this paper can be summarized as follows:                            attack scenario, and we can find that attackers are located
+                                                                    between the client and the entry node of Tor, and record the
+  1) We present WF-Transformer, a novel WF attack based             traffic traces passively during the user is browsing the target
+     on Transformer network. To the best of our knowledge,          websites with Tor. Generally, the sequence of the packets
+     WF-Transformer is the first WF attack that utilizes            and time stamps of the trace can be collected, and several
+     Transformer network to extract the temporal feature of         handcrafting trace features can be calculated and the classifier
+     the traffic traces for traffic classification, and yields a    can be trained for the identification of the anonymous trace.
+     better performance than state-of-the-art CNN-based WF             We formalize the WF attack scenario in this part. Generally,
+     attacks.                                                       WF attackers are located between the client and the entry node
+32                                                             IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+
+
+of the Tor, and they can only record the transmitted packets         LSTM. With the help of deep learning techniques, AWF
+passively, which means that attackers can not drop, modify,          achieves 96% classification accuracy on Tor traffic in closed-
+decrypt or delay the packets. Furthermore, the transmitted           world setting. Sirinam et al.propose Deep Fingerprinting (DF)
+packets are encrypted with different secret keys in different        to classify the anonymous traffic [7]. DF utilizes a CNN
+proxy nodes of Tor. The plaintext information and IP of the          network with a sophisticated design. DF only uses the direction
+packets are invisible to attackers without packet decryption.        of packets as inputs, and an end-to-end training manner is
+For the attacker, we assume that the identity of the client is       used for the training of the model. In closed-world setting,
+known by the attacker, and the goal of the attacker is to identify   DF can obtain 98% classification accuracy on non-defended
+the target websites that the user visits.                            Tor traffic. As for the Tor traffic defended by WTF-PAD
+   Closed-World and Open-World Scenario: To evalu-                   method, DF can still achieve over 90% classification accuracy.
+ate the performance of WF attack, there are two settings,            Bhat et al. propose Var-CNN method [30], which utilizes
+the closed-world setting and the open-world setting. For the         dee

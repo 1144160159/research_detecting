@@ -1,0 +1,158 @@
+2760                                                       IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+
+
+
+           One2: An Intrusion Detection System for Both
+             Internal and External Vehicular Network
+                     From Weak Labeled Data
+              He Lu , Yilong Ren , Yue Liu, Yanan Zhao , Kaiwen Guo , Yang Yang, and Haohua Du
+
+
+   Abstract—Network attacks on the Internet of Vehicles (IoV)                                                  I. INTRODUCTION
+can lead to catastrophic consequences such as traffic congestion,
+                                                                                            HE rapid development of the Internet of Vehicles (IoV)
+incorrect routing, and even accidents. Existing rule-based coun-
+termeasures are effective only in specific scenarios, while machine
+learning-based methods suffer from suboptimal performance due
+                                                                                     T      enables vehicles to communicate with various entities,
+                                                                                     including network infrastructure and pedestrians [1]. While this
+to data quality issues. Furthermore, the isolation between in-vehicle                connectivity brings convenience, it also introduces significant
+networks (IVN) and external vehicle networks (EVN) prevents
+independent intrusion detection systems (IDS) from detecting con-
+                                                                                     security risks [2]. For example, renowned white hat hackers
+tinuous attack behaviors. To address these issues, we propose a                      Valasek and Miller exploited a vulnerability in the in-vehicle
+mechanism that characterizes attack behaviors solely based on                        infotainment (IVI) system to gain remote control of a Jeep
+network connection information. This mechanism downplays the                         Cherokee [3]. Similarly, Keen Security Lab of Tencent demon-
+specifics of the traffic itself, allowing for the integration of IVN                 strated a comprehensive attack chain that successfully infil-
+and EVN through structure, thus breaking the internal-external
+boundary and providing relatively stable logical structure infor-                    trated the in-vehicle network (IVN) system through the wireless
+mation. This approach also offers opportunities to address the                       communication module of the external vehicle network (EVN),
+scarcity of labeled data. Based on this characterization mecha-                      enabling remote control attacks on both Tesla Model series and
+nism, we develop an intrusion detection system – One2 , utilizing                    BMW vehicles [4], [5]. If such incidents were to occur in a real
+a multi-attribute heterogeneous graph transformer to achieve ac-                     traffic environment, they would significantly compromise the
+curate multi-classification of various types of attacks. To assess the
+compatibility of the proposed IDS for IVN and EVN, extensive                         vehicle’s communication safety and functional integrity, even
+experiments were conducted using six real-world datasets that ac-                    leading to traffic accidents and casualties. Therefore, Intrusion
+curately depict IVN and EVN. The results show that One2 improves                     Detection Systems (IDS) for IoV have become a critical research
+average accuracy by 7.14% and F1 score by 6.97% compared to                          issue recently [6].
+state-of-the-art methods.                                                               Currently, intrusion detection systems (IDS) for the Internet
+   Index Terms—Internet of Vehicles (IoV), intrusion detection                       of Vehicles (IoV) can be categorized into two main types:
+system (IDS), weak label.                                                            rule-based and machine learning-based. Rule-based IDS can
+                                                                                     only describe known and formalizable attack behaviors, making
+   Received 9 April 2025; revised 22 September 2025; accepted 3 November
+2025. Date of publication 6 November 2025; date of current version 12 March          them effective only in specific scenarios [7], [8], [9]. In con-
+2026. This work was supported in part by the National Key R&D Program of             trast, machine learning-based IDS automatically derive “rules”
+China under Grant 2022YFB3104403 and in part by Shandong Provincial Natu-            from data, allowing them to be applicable in more diverse
+ral Science Foundation under Grant ZR2025QB43 and Grant ZR2025QC1536.
+(Corresponding author: Haohua Du.)                                                   scenarios [10], [11], [12]. However, the performance of machine
+   He Lu is with the School of Civil and Environmental Engineering, Nanyang          learning algorithms is highly dependent on data quality, which
+Technological University, Singapore 639798, and also with the School of Trans-       limits the effectiveness of these systems [13], [14]. Recent
+portation Science and Engineering, Beihang University, Beijing 100191, China
+(e-mail: herlu@buaa.edu.cn).                                                         efforts have utilized self-supervised learning to address the
+   Yilong Ren is with the School of Transportation Science and Engineering,          issue of scarce labeled data in IoV scenarios [15]. However,
+Beihang University, Beijing 100191, China, also with the Beihang Hangzhou            these efforts typically focus only on either the IVN or the
+Innovation Institute, Hangzhou 310023, China, also with Zhongguancun Labora-
+tory, Beijing 100083, China, and also with the State Key Lab of Intelligent Trans-   EVN. Given that attack chains typically progress from EVN
+portation System, Beijing 100191, China (e-mail: yilongren@buaa.edu.cn).             to IVN, detecting intrusions at each network layer separately
+   Yue Liu is with the School of Urban Construction, Beijing University of           is crucial. Early detection of attacks at the EVN level enables
+Technology, Beijing 100124, China (e-mail: yueliu@emails.bjut.edu.cn).
+   Yanan Zhao and Yang Yang are with the School of Transportation Science            preemptive warnings and protective measures, thereby prevent-
+and Engineering, Beihang University, Beijing 100191, China (e-mail: zyn-             ing attackers from progressing to the IVN and gaining control
+byxz@gmail.com; yang_yang@buaa.edu.cn).                                              of the vehicle. Therefore, it is evident that an IDS system for
+   Kaiwen Guo is with the Ocean University of China, Qingdao 266100, China
+(e-mail: kevinguo@ouc.edu.cn).                                                       IoV needs to have three key capabilities: recognizing attack
+   Haohua Du is with the School of Cyber Science and Technology, Beihang             types, being compatible with both IVN and EVN, and per-
+University, Beijing 100191, China (e-mail: duhaohua@buaa.edu.cn).                    forming well with limited labeled data. However, achieving
+   The source code of this work is available at: https://github.com/
+LouHerGetUp/One2                                                                     these capabilities is highly challenging due to the following
+   Digital Object Identifier 10.1109/TDSC.2025.3629862                               reasons:
+
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+LU et al.: ONE2 : AN INTRUSION DETECTION SYSTEM FOR BOTH INTERNAL AND EXTERNAL VEHICULAR NETWORK                                       2761
+
+
+
+   1) Attack behaviors are often multilayered and hidden within         In [21], the authors also designed an IDS incorporating three
+       normal behaviors, leading to similar features among dif-         algorithms. Nevertheless, both IDS heavily rely on feature en-
+       ferent attack types and diverse features within the same at-     gineering. Additionally, they require extensive training using a
+       tack type. This makes feature-based recognition extremely        substantial volume of labeled data.
+       difficult.
+   2) IVN and EVN use different network protocols, resulting in         B. Deep Learning-Based IDS
+       distinct network data structures, complicating the design
+                                                                           To avoid the dependence on feature engineering, researchers
+       of an intrusion detection algorithm that works for both.
+                                                                        employ Deep Learning [22] to build IDS. Seo et al. [23] proposed
+   3) Machine learning-based methods heavily rely on data
+                                                                        a Generative Adversarial Network-based IDS for IVN. Nguyen
+       quality for performance. IoV data is difficult to obtain due
+                                                                        et al. [24] proposed a novel approach for developing an IDS
+       to its sensitive nature, and the few available datasets often
+                                                                        specifically designed for CAN buses. However, these IDS fail
+       lack high-quality type annotations.
+                                                                        to consider the intricate attributes of the external network. As
+   To address the aforementioned challenges, we propose a
+                                                                        a result, their effectiveness is limited to IVN with relatively
+behavior representation mechanism based on network structure,
+                                                                        simple data structures. For EVN, Han et al. [25] introduced
+modeling network data as a multi-attribute heterogeneous graph.
+                                                                        the Spatial and Time-aware Intrusion Detection Model. Deng
+In this graph, data flows, IP addresses, and ports are treated
+                                                                        et al. [15] proposed an IDS based on Graph Convolutional
+as nodes, and nodes belonging to the same traffic flow form a
+                                                                        Network with stream topology. To achieve Bot detection in
+fully connected subgraph. This approach weakens the specific
+                                                                        external networks, Zhao et al. [26] transformed the bot detection
+characteristics of the traffic data, allowing the logical integration
+                                                                        problem into a classification task on a semi-supervised graph.
+of IVN and EVN by breaking the boundaries between them.
+                                                                        To detect Distributed Denial of Service (DDoS) attacks, Cao
+Additionally, the stability of the structure serves as implicit in-
+                                                                        et al. [27] designed an IDS based on a spatio-temporal graph
+formation, enabling the clustering of behavior data with similar
+                                                                        convolutional network. However, these IDS only apply to EVN
+structures for self-supervised learning with weak labels [16].
+                                                                        and mostly focus on the binary classification problem of network
+Furthermore, to effectively learn the information from this multi-
+                                                                        traffic. To design IDS that can be used in IVN and EVN, Yang and
+attribute heterogeneous graph, we introduce a corresponding
+                                                                        Shami [28] proposed an IDS system based on transfer learning
+Multi-attribute Heterogeneous Graph Transformer (MA-HGT).
+                                                                        and ensemble learning. However, it is important to note that
+This model employs multiple attention heads to learn different
+                                                                        transforming network data into images for training requires
+attention weight distributions within the graph and capture corre-
+                                                                        substantial data. Ashraf et al. [13] developed an IDS utilizing the
+lations at various positions [17], thereby enhancing the model’s
+                                                                        LSTM autoencoder architecture. Nevertheless, these two IDS
+representational capability.
+                                                                        only address the binary classification problem of IoV traffic data.
+   In summary, the major contributions of this work are as
+follows:
+    r We designed and implemented an IDS called One2 that is                        III. IOV AND THEIR VULNERABILITIES
+      compatible with both IVN and EVN using limited weakly             A. Preliminary
+      labeled data. It can accurately identify attacks, including
+                                                                          The IoV enables wireless communication between vehicles
+      cross-network continuous attacks.
+    r We proposed a network structure-based representation              and network infrastructure setups, making it a critical foun-
+                                                                        dation for intelligent transportation systems. According to the
+      mechanism, modeling network data as a multi-attribute
+                                                                        communication range, the IoV can be categorized into IVN and
+      heterogeneous graph to extract deep implicit information.
+                                                                        EVN [29]. The IVN consists of numerous Electronic Control
+      Additionally, we designed a novel deep learning model
+                                                                        Unit (ECU) interconnected via controller area network (CAN)
+      structure, MA-HGT, to efficiently learn the information
+                                                                        bus [30]. This facilitates the integration of various features in
+      within this multi-attribute heterogeneous graph.
+    r To validate the performance of One2 , we conducted exper-         Connected Vehicles (CV) and Autonomous Vehicles (AV) [31].
+                                                                        The EVN establishes a connection between CV, AV and external
+      iments on multiple real-world datasets. The results show
+                                                                        devices via Vehicle-to-Everything (V2X) technology, includ-
+      that One2 improves average accuracy by 7.14% and F1-
+                                                                        ing Vehicle-to-Vehicle (V2V), Vehicle-to-Infrastructure (V2I),
+      Score by 6.97% compared to state-of-the-art methods.
+                                                                        Vehicle-to-Pedestrian (V2P) and Vehicle-to-Sensors (V2S) [2].
+                      II. RELATED WORKS
+                                                                        B. Vulnerabil

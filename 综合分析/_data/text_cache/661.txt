@@ -1,0 +1,153 @@
+7662                                                              IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+
+                Encrypted Traffic Classification Based on
+                       Two-Phase Feature Fusion
+          Xiaobin Tan , Member, IEEE, Chaoming Huang , Hao Wang, Shuangwu Chen , Member, IEEE,
+                                      and Quan Zheng , Member, IEEE
+
+
+
+   Abstract—The existing encrypted traffic classification schemes                  and ensuring application security [1], [2], [3]. However, as
+have not taken full advantage of the principles of network traffic                 the demand for data privacy and security keeps growing, an
+encryption technology, resulting in poor classification accuracy                   increasing proportion of network traffic is encrypted, making
+and interpretability. In fact, the transmission process of encrypted
+flows can be divided into a handshake phase and a secure                           classification more challenging [4], [5], [6].
+data transmission phase, each with distinct characteristics and                       Traditional network traffic classification approaches, such as
+inter-packet correlations. Therefore, an effective approach for                    port-based, deep packet inspection (DPI) based, and machine
+encrypted traffic classification should employ different processing                learning-based, are ineffective in classifying encrypted net-
+methods for each phase and then combine the results. In                            work traffic. Port-based approaches rely on known ports
+this paper, we propose the Two-Phase Feature Fusion (2P2F)
+approach for classifying encrypted network flows. In 2P2F,                         assigned by the Internet Assigned Numbers Authority (IANA),
+during the handshake phase, a convolutional neural network                         rendering them incapable of handling dynamic or disguised
+(CNN) processes the encryption protocol extension field to extract                 ports [7]. DPI-based approaches analyze the payload data of
+application-related features. For the secure data transmission                     the entire data packet to match predefined regular expres-
+phase, a transformer model captures content-related features                       sions, but they cannot inspect encrypted packet payloads [8].
+from the TCP segment length sequence. Finally, an attention
+mechanism is used to fuse the refined features from both phases,                   Machine learning-based approaches heavily rely on feature
+allowing the classification model to focus more on important                       engineering and professional knowledge, which can be a
+features and achieve accurate classification of encrypted network                  challenging and laborious task [9], [10], [11], [12], [13].
+flows. The experimental results demonstrate the superiority of the                    Recently, deep learning (DL) has gained significant attention
+proposed scheme.                                                                   as a potential solution for encrypted network traffic classi-
+   Index Terms—Encrypted traffic classification, two-phase fea-                    fication due to its capability to effectively extract complex
+tures, feature fusion, deep learning.                                              features and capture intricate relationships automatically [14].
+                                                                                   However, many existing deep learning-based approaches tend
+                     I. I NTRODUCTION                                              to focus solely on either classifying the application types [15],
+
+W       ITH the rapid development of the Internet technol-
+        ogy and its applications, network traffic is constantly
+increasing, which puts a strain on network management. Effec-
+                                                                                   [16], [17], [18], [19] or content types [20], [21], [22] of
+                                                                                   encrypted traffic. Furthermore, these approaches often exhibit
+                                                                                   limitations, such as either solely considering the characteristics
+tive network traffic classification is essential for enhancing                     of individual packets rather than the packet sequences within
+network management capabilities, improving service quality,                        network flows, or failing to address the underlying principles
+                                                                                   of network encryption protocols.
+   Received 5 May 2025; revised 25 November 2025 and 10 February 2026;                The most widely used encryption protocols are Secure Sock-
+accepted 6 April 2026. Date of publication 14 April 2026; date of current
+version 30 April 2026. This work was supported in part by the National Key         ets Layer (SSL) and its successor Transport Layer Security
+R&D Program of China under Grant 2020YFA0711400, in part by the Anhui              (TLS) protocol [23]. According to the workflow of SSL/TLS,
+Provincial Natural Science Foundation under Grant 2408085MF165, in part by         an encrypted network flow can be naturally divided into two
+the China Environment for Network Innovations under Grant 2016-000052-
+73-01-000515, in part by the National Natural Science Foundation of China          phases, namely, the TLS handshake phase and the secure
+under Grant U23A20275, 62341113, and 62021001, by the Fundamental                  data transmission phase [24], [25]. These two phases expose
+Research Funds for the Central Universities. The associate editor coordinating     different observable information and exhibit distinct inter-
+the review of this article and approving it for publication was L. Z. Granville.
+(Corresponding author: Shuangwu Chen.)                                             packet correlations. In the handshake phase, packets follow
+   Xiaobin Tan, Shuangwu Chen, and Quan Zheng are with the Department              a well-defined protocol format and contain unencrypted hand-
+of Automation, University of Science and Technology of China, Hefei, Anhui
+230000, China, and also with the Institute of Artificial Intelligence, Hefei
+                                                                                   shake metadata that reflects negotiation details between the
+Comprehensive National Science Center, Hefei, Anhui 230000, China (e-mail:         client and server. In the secure data transmission phase,
+xbtan@ustc.edu.cn; chensw@ustc.edu.cn; qzheng@ustc.edu.cn).                        the application payload is encrypted and remains opaque.
+   Chaoming Huang is with the Department of Automation, University of              Nevertheless, traffic-analysis side-channel patterns such as the
+Science and Technology of China, Hefei, Anhui 230000, China (e-mail:
+huangcm@mail.ustc.edu.cn).                                                         sequence and distribution of TCP segment lengths can still
+   Hao Wang is with the Institute of Advanced Technology, University of            be observed and may correlate with coarse content types.
+Science and Technology of China, Hefei, Anhui 230000, China (e-mail:
+wanghao1014@mail.ustc.edu.cn).
+                                                                                   Importantly, we do not decrypt or inspect application payload
+   Digital Object Identifier 10.1109/TCCN.2026.3683889                             contents at any stage. Therefore, to improve classification
+              2332-7731 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+TAN et al.: ENCRYPTED TRAFFIC CLASSIFICATION BASED ON TWO-PHASE FEATURE FUSION                                                 7663
+
+
+
+accuracy and interpretability, a sensible strategy is to extract   classification scheme is proposed in Section IV. The exper-
+complementary features from these two phases using phase-          iment results and analysis are given in Section V, and the last
+appropriate models, and then fuse them to obtain the final         Section VI gives the conclusion of this paper.
+classification result.
+   However, many existing approaches treat an encrypted flow                            II. R ELATED W ORK
+as a single homogeneous entity and apply one generic model to         In this section, we provide an overview of prior research
+the entire flow, or they focus on coarse intra-packet divisions    on traffic classification, categorized into traditional, machine
+(e.g., header/body) rather than the protocol-phase workflow.       learning-based, and deep learning-based approaches.
+As a result, they may fail to fully exploit the heterogeneous
+yet complementary information available in the handshake
+                                                                   A. Traditional Traffic Classification
+metadata and in the transmission-phase traffic patterns.
+   In this paper, we present a novel encrypted network traffic        Port-based schemes [7] encounter challenges in scenar-
+classification scheme called Two-Phase Feature Fusion (2P2F).      ios involving dynamic ports, while DPI-based approaches
+This scheme is motivated by the analysis that different phases     [26] prove ineffective in classifying encrypted traffic. Proto-
+of the encrypted network flows play distinct roles in traffic      col analysis-based methods extract the distinctive behavioral
+classification. In 2P2F, during the handshake phase, a convolu-    characteristics of specific applications by analyzing their com-
+tional neural network (CNN) processes the encryption protocol      munication processes. Korczyński and Duda [15] proposed
+extension field to extract application-related features. Mean-     first-order homogeneous Markov model fingerprints to charac-
+while, in the secure data transmission phase, a transformer        terize the dynamics of SSL/TLS sessions. Shen et al. [16], [17]
+model captures side-channel statistical features from the TCP      extended it to the second-order Markov model by clustering
+segment length sequence. Finally, the attention mechanism is       the certificate length and the first packet length to improve
+employed to fuse refined features from both phases, allowing       the classification performances. However, due to the caching
+the model to focus more on important features, effectively         mechanism, not all encrypted flow contains a certificate.
+classify encrypted network data flows.                                Pan et al. [18] combined Message Type Sequence (MTS)
+   The contributions of this paper can be summarized as            and the lengths of the first several packets in a network flow
+follows:                                                           to construct the Markov model and hidden Markov model
+   • We propose an encrypted traffic classification framework      (HMM) and then used a weighted ensemble classifier to
+      based on two-phase feature fusion. In this framework,        improve the results. Despite achieving commendable clas-
+      features are extracted from both the handshake phase         sification performance, this approach has limitations due to
+      and the secure data transmission phase, which are sub-       the potential lack of clear distinctions in packet length when
+      sequently fused to achieve accurate classification. This     different applications transmit identical business content.
+      scheme leverages the unique characteristics of both             In summary, the failure of these traditional methods to reli-
+      phases, enabling precise classification results while uti-   ably handle encrypted payloads necessitates the shift towards
+      lizing only a limited number of features.                    more advanced, learning-based approaches.
+   • We design two feature extraction schemes tailored to the
+      characteristics of each phase. The CNN-based scheme          B. Traditional Machine Learning Based Traffic Classification
+      is designed to process the encryption protocol extension        Anderson et al. [9] employed logistic regression with a
+      field of handshake phase to extract application-related      combination of flow metadata, packet length distributions,
+      features, while a transformer model is employed to cap-      time distributions, byte distributions, and unencrypted TLS
+      ture content-related features from the TCP segment length    header information to identify malware-encrypted traffic.
+      sequence in the secure data transmission phase.              Sun et al. [10] applied TLS pattern matching to filter out all
+   • We design an attention mechanism based feature fusion         TLS traffic, followed by Naı̈ve Bayes classification, achieving
+      algorithm for the semantic features from the handshake       a classification precision of 93%–96% for HTTPS and TOR
+      phase with the statistical features from the secure data     traffic.
+      transmission phase of encrypted network flows. This             Sivanathan et al. [11] effectively identified encrypted traf-
+      approach effectively classifies encrypted network data by    fic, particularly IoT devices, by leveraging carefully selected
+      focusing on the most important features.                     features through the Random Forest algorithm. Cao et al. [12]
+   • We implement an encrypted traffic classification testbed      proposed a real-time accurate SVM training model. They used
+      and construct a real-world network traffic dataset.          PCA to extract features from the data to reduce the dimension
+      Through extensive experiments, we compare the perfor-        of the original features and a particle swarm optimization
+      mance of our proposed scheme against state-of-the-art        algorithm to search the optimal working parameters of the
+      methods. The experimental results demonstrate the supe-      kernel function automatically. This method can improve traffic
+      riority and effectiveness of the proposed scheme.            classification accuracy through a small number of training
+   The remainder of this paper is organized as follows.            samples compared with the traditional SVM. Lashkari et al.
+Section II describes some of the related work of net-              [13] used time-related features such as the duration of the
+work traffic classification. Section III introduces the concept    flow, flow bytes per second, forward and backward inter-arrival
+of encrypted traffic classification problem and motivation.        time, etc., to characterize the network traffic using k-nearest
+Then, the two-phase feature fusion-based encrypted traffic         neighbor (k-NN) and C4.5 decision tree algorithms.
+7664                                                 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+   However, the performance of machine learning methods
+depends on the rich experience, professional knowledge, and
+features that are artificially selected.
+
+C. Deep Learning Based Traffic Classification
+   Deep learning has emerged as a promising technique for
+encrypted traffic classification. Wang [27] applied a simple
+SAE automatic encoder to traffic classification. Li et al. [28]
+                                                                   Fig. 1. The composition of encrypted flow.
+introduced the recurrent neural network to network traffic
+classificat

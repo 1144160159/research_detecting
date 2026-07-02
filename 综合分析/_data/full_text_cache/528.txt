@@ -1,0 +1,812 @@
+Journal of Network and Computer Applications 233 (2025) 104036
+
+ Contents lists available at ScienceDirect
+
+ Journal of Network and Computer Applications
+ journal homepage: www.elsevier.com/locate/jnca
+
+Research Paper
+
+RT-APT: A real-time APT anomaly detection method for large-scale
+provenance graph
+Zhengqiu Weng a , Weinuo Zhang a , Tiantian Zhu b, Zhenhao Dou a , Haofei Sun b,
+Zhanxiang Ye c,d,* , Ye Tian b
+a
+ School of Data Science and Artificial Intelligence, Wenzhou University of Technology, Wenzhou, 325035, China
+b
+ College of Computer Science and Technology, Zhejiang University of Technology, Hangzhou, 310023, China
+c
+ School of Artificial Intelligence, Wenzhou Polytechnic, Wenzhou, 325035, China
+d
+ Wenzhou Cyber Security and Protection Technology Research Center, Wenzhou, 325035, China
+
+A R T I C L E I N F O A B S T R A C T
+
+Handling Editor: M. Atiquzzaman Advanced Persistent Threats (APTs) are prevalent in the field of cyber attacks, where attackers employ advanced
+ techniques to control targets and exfiltrate data without being detected by the system. Existing APT detection
+Keywords: methods heavily rely on expert rules or specific training scenarios, resulting in the lack of both generality and
+APT attack reliability. Therefore, this paper proposes a novel real-time APT attack anomaly detection system for large-scale
+Provenance graph
+ provenance graphs, named RT-APT. Firstly, a provenance graph is constructed with kernel logs, and the WL
+Anomaly detection
+ subtree kernel algorithm is utilized to aggregate contextual information of nodes in the provenance graph. In this
+Clustering analysis
+ way we obtain vector representations. Secondly, the FlexSketch algorithm transforms the streaming provenance
+ graph into a sequence of feature vectors. Finally, the K-means clustering algorithm is performed on benign
+ feature vector sequences, where each cluster represents a different system state. Thus, we can identify abnormal
+ behaviors during system execution. Therefore RT-APT enables to detect unknown attacks and extract long-term
+ system behaviors. Experiments have been carried out to explore the optimal parameter settings under which RT-
+ APT can perform best. In addition, we compare RT-APT and the state-of-the-art approaches on three datasets,
+ Laboratory, StreamSpot and Unicorn. Results demonstrate that our proposed method outperforms the state-ofthe-art approaches from the perspective of runtime performance, memory overhead and CPU usage.
+
+1. Introduction wide incidents, followed by defense and military sectors with a 16%
+ share. APT attacks often operate stealthily. Attackers hide in the
+ In the past decades, different from traditional attacks, a novel type of compromised systems for extended periods, where they clandestinely
+attacks has become increasingly popular. These attacks are typically gather information, or conduct malicious operations. Currently, for
+carried out by organized and well-resourced attackers who employ slow unknown APT attacks, there are significant challenges.
+and low-profile techniques to compromise targets, often specific orga- A significant amount of research has been conducted by numerous
+nizations, government agencies, or commercial enterprises, in order to experts and scholars on defending against APTs. Recent research points
+steal data without being detected by defense systems. Such activities are out that Al techniques can be applied in the field of cybersecurity (Yu
+referred to as Advanced Persistent Threats (APTs). APT attackers access et al., 2020).In the field of multi-agent systems, researchers have
+the networks of their target entities, using known application vulnera- explored cooperative fault-tolerant output regulation through adaptive
+bilities, malware, spear-phishing, zero-day exploits, network down- dynamic event-triggered mechanisms (Piskozub et al., 2021), In addiloads, watering hole attacks, etc. According to the “Global Advanced tion, the H ∞ controller synthesis technique (Kang et al., 2022) shows its
+Persistent Threat Mid-year Report 20231”, government sectors remain effectiveness when dealing with network systems with mixed attacks
+primary targets of APT attacks, accounting for 30% of related world- and disturbances.which provides an important reference for our APT
+
+ * Corresponding author. School of Artificial Intelligence, Wenzhou Polytechnic, Wenzhou, 325035, China.
+ E-mail addresses: derisweng@wzut.edu.cn (Z. Weng), limitixynuo@gmail.com (W. Zhang), ttzhu@zjut.edu.cn (T. Zhu), 221122120316@zjut.edu.cn (H. Sun),
+wzynetwork@wzpt.edu.cn (Z. Ye), 2112012221@zjut.edu.cn (Y. Tian).
+ 1
+ https://www.qianxin.com/threat/reportdetail?reportid = 295.
+
+https://doi.org/10.1016/j.jnca.2024.104036
+Received 2 May 2024; Received in revised form 10 August 2024; Accepted 24 September 2024
+Available online 10 October 2024
+1084-8045/© 2024 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+detection system. However, APT attacks have different characteristics hard to train the detection models with high generalization, since
+from traditional attack patterns, and conventional detection systems the diverse and numerous attack-related samples required in
+cannot effectively identify APT attacks. Previous research has focused on training cannot be obtained from the low-frequency APT attaks.
+analyzing system-originated data, but ignored two elements: generality In long-term attack scenarios, maintaining incremental system
+and reliability, which needs to be considered in our proposed APT behavior embeddings incurs significant costs and introduces the
+detection system. We detail these two elements in detail. concept drift problem, thus affecting detection reliability.
+
+ (1) Generality. APTs feature in their prolonged duration, lengthy This paper proposes a novel real-time detection system for largeattack chains, high-level stealthiness, diverse techniques, etc. scale provenance graph, named RT-APT. Firstly, this method begins
+ Traditional single-point intrusion detection based countermea- with the analysis of kernel logs from the operating system, which
+ sures cannot effectively address them. For instance, to circum- meticulously record system calls and kernel module activities, providing
+ vent the attacks, the attackers can use traffic encryption for the us with rich contextual information. We have chosen fine grained logattack detection based on network traffic analysis (e.g., OWL ging that captures subtle system behaviors such as file operations and
+ (Song et al., 2021), SH-LOT (Pan et al., 2018),MalPhase (Shi network connections laying the groundwork for the construction of the
+ et al., 2020)) and polymorphic variations and obfuscation of provenance graph, The log data is collected through the SPADE tool and
+ attack samples for the attack detection based on software static then transformed by a preprocessing module into data structures for
+ feature analysis (e.g., TRACER (Qu et al., 2017)). The dynamic nodes and edges, which are subsequently used to build the provenance
+ sandbox analysis (e.g., VPBox (Xiong et al., 2020), FlowCog graph, In the provenance graph, each node represents an entity within
+ (Hossain et al., 2017)) is not suitable for client-side deployments the system, such as a process, file, or network connection, while edges
+ due to significant overhead, and attackers often employ denote the interactions or relationships between these entities. This
+ anti-detection techniques to mislead sandbox behaviors. Detec- approach allows us to capture and represent the system’s execution
+ tion technologies based on hook tracking analysis (e.g., VAHunt history and the complex causal relationships between entities in detail.
+ (Milajerdi et al., 2019a), Appshield (Zhu et al., 2023)) modify the The rich contextual information of nodes in the provenance graph is
+ operating system kernel, which has been prohibited in Windows then aggregated with the WL subtree graph kernel algorithm, and these
+ operating systems because it can adversely affect system stability. nodes are transformed into vector representations. Secondly, the Flex-
+ Although rule-based matching methods (e.g., CONAN (Feng Sketch algorithm is employed to handle the streaming growth of the
+ et al., 2003), SLEUTH (Maggi et al., 2008), HOLMES (Mutz et al., provenance graph, generating a feature vector sequence that maintains
+ 2007)) can detect many attacks, they heavily rely on predefined similarity and allows for incremental updates. Finally, all benign feature
+ rules or patterns, requiring extensive human involvement, and it vector sequences are clustered, and each cluster represents various
+ often proves that they does not work in unknown attacks, such as states of system execution. Anomalous behaviors in system execution are
+ 0-day vulnerabilities. Moreover, the rule formulation in previous detected by using the K-means clustering-based detection method.
+ detection systems has been cumbersome as the rules are designed In this study,the RT-APT system proposed offers advanced detection
+ for specific environments. For instance, APTSHIELD (Manzoor capabilities for APT attacks across various domains in the real world.
+ et al., 2016) formulates rules based on the contextual semantics The real-time anomaly detection mechanism is of significant importance
+ within the origin graph, constructs system event compression for enterprises in protecting sensitive data, for government agencies in
+ strategies that maintain global dependencies and preserve attack defending against cyber espionage activities, and for industrial control
+ semantics, APTSHIELD also conducts APT attack response and systems in preventing potential disruptions. Furthermore, with the
+ alerting through label transfer and aggregation of reduced data. proliferation of cloud computing services, the deployment of the RT-APT
+ However, it is difficult for the system to detect new attacks and system can provide an additional layer of security for cloud platforms,
+ adapt to changing environments. safeguarding their user’s data and operations from the impact of
+ (2) Reliability. APT attacks are characterized by their long duration advanced persistent threats.
+ and strong concealment, and are hard to detect with context in- This paper makes the following contributions.
+ formation and provenance graphs. Researchers face such issues as
+ a broad period of attacks, many attack-irrelevant events, and (1) We propose a novel real-time APT attack anomaly detection
+ attack-relevant problems. Existing short sequence detection sys- system (RT-APT), which is different from existing APT detection
+ tems (Han et al., 2020) (Kapoor et al., 2021) (Zengy et al., 2022) methods due to that RT-APT considers the balance between
+ perform poor in the long-term characteristics of APT attacks, as generality and reliability. We construct a provenance graph first,
+ they fail to model and analyze the long-term behaviors of the then use the WL subtree kernel algorithm (Hodge and Austin,
+ system. Moreover, they are susceptible to evasion techniques and 2004) and Flexsketch algorithm to obtain the contextual inforprone to mimicry attacks. StreamSpot (Chen et al., 2022) and mation of nodes and the streaming growth respectively, and
+ Unicorn (Milajerdi et al., 2019b) use long sequence events for eventually analyze the long-term behaviors of the system.
+ anomaly detection and utilize automata to model how the system (2) We cluster generated benign feature vector sequences where each
+ state changes. PROV-GEM (Hassan et al., 2020) transforms cluster represents different states of system execution. During
+ graphs into aggregated node embeddings to capture context in- deployment, the K-means clustering-based detection method
+ formation and adopts supervised learning for classification. matches all trained models and detects anomalies in system
+ ShadeWatcher (Hassan et al., 2019) detects malicious in- execution. In this way we can detect the unknown attacks.
+ teractions between entities by constructing a recommendation (3) The method proposed, RT-APT, can detect APT attacks with high
+ system based on Graph Neural Networks (GNNs). APT-KGL precision and accuracy, and achieves better detection results on
+ (Hossain et al., 2020) proposes a GNN-based intelligent APT StreamSpot (Chen et al., 2022) dataset and Unicorn dataset.
+ detection method combining heterogeneous graph embeddings
+ pre-training to reduce real-time processing complexity and 2. Related work
+ determine the detection scope through subgraph sampling.
+ However, existing graph-based modeling approaches have a In this section, to grasp the research status of APT detection, we
+ coarse granularity, requiring analysts to spend significant time analyze the provenance graph based detection first and then focus on the
+ identifying malicious entities or events from subgraphs,which graph-based similarity comparison.
+ may potentially contain thousands of nodes. Furthermore, it is
+
+ 2
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+2.1. Provenance graph-based APT attack detection machine-learning-based attack detection algorithm, Unicorn, which
+ automatically constructed normal system behaviors and use the clus-
+ In this subsection, we divide the provenance graph based APT attack tering to detect abnormal behaviors. PROGRAPHER (Vishwanathan
+detection into heuristic-based detection (rule or pattern matching) and et al., 2010) combines graph embeddings (graph2vec) with sequence
+anomaly-based detection. learning (TextRCNN), and AIRTAG (Papadimitriou et al., 2010) in-
+ Pattern-matching based APT attack detection (PM-APT). With tegrates BERT with a one-class support veetor machine (OC-SVM) to
+network security knowledge and threat intelligence, existing studies achieve fine grained log detection, Alsajri and Steiti (Alshamrani et al.,
+manually design predefined rules to detect APT attacks. SLEUTH (Maggi 2019)present a proposed method for detecting intrusion in network
+et al., 2008) was the first to reconstruct APT attacks by using provenance traffic using a hybrid approach, which combines a genetic algorithm and
+graphs, marking audit log information, and constructing dependency an SVM algorithm. However, these methods still face challenges in
+graphs. The attack scenarios were reconstructed through label analysis capturing the long-term behaviors and subtle patterns indicative of
+and by defining rules to match threat attacks. Poirot (Berrada et al., APTs.
+2020), based on the previous work, introduced threat intelligence and In comparison, anomaly detection based learning techniques have
+added an alignment algorithm for query graphs and provenance graphs. the following advantages. (1) They can automatically extract potential
+APT attacks were detected by modeling threat detection as an imprecise patterns and construct detection models from training datasets. (2) The
+graph pattern matching (GPM) problem and matching specific sub- detection models can adapt to new environments through automatic
+graphs. Addressing the semantic loss, HOLMES (Mutz et al., 2007) in- retraining or fine-tuning, overcoming the limitations in detecting
+tegrated high-level scenario graphs (HSG) and the ATT&CK framework. stealthy attacks.
+The former is designed to map the information from the low level to the
+high level, and the latter is used to map the APT activity information to
+the kill chain model. In this way, eventually benign or attack scenarios 2.2. Graph feature extraction
+were detected. In addition, PM-APT commonly faces dependency explosion, where many false dependencies result in alert fatigue for ana- Graph similarity calculation aims to determine the degree of similysts. RapSheet (Zimba et al., 2020) and NODOZE (Akoglu et al., 2015) larity between two graphs. It is crucial in various real-world applicaincorporated alerts triggered by the matching of Tactics, Techniques, tions, such as object tracking, recommendation systems, binary code
+and Procedures (TTP) rules. The former reduced the long-term system analysis, and similarity search. Additionally, it has significant implicalog storage cost. In contrast,the latter effectively reduced the false pos- tions in the network security as it helps defense systems issue timely
+itive rate and resolved alert fatigue through a path-based threat scoring threat alerts and assists cybersecurity analysts in analyzing attacks
+scheme. MORSE (Ding et al., 2012) employed label decay techniques to within a system. Meanwhile, similarity evaluation methods for anomaly
+mitigate the dependency explosion, that is, reducing the impact of po- detection on network graphs have also become widespread. Akoglu et al.
+tential threats with increasing propagation rounds. PM-APT is the (Berlingerio et al., 2012) classified graphs or subgraphs based on attrimainstream approach in the industry due to its high accuracy, strong butes (static vs dynamic, attribute-less vs attributed) to determine their
+interpretability, and ease of deployment. However, there are still some similarity for anomaly detection. Ding et al. (Gehani and Tariq, 2012)
+limitations. (1) In the rule-matching detection, the comprehensive identified malicious network sources in flow graphs using vertex-cutting
+expertise in network security, operating systems and more is a high and employed similarity measures like centrality to detect
+design threshold for the security personnel. (2) With the release of inter-community communication behaviors. Liu et al. (Park and Kim,
+malware variants, there is no one-for-all formulated rules. The rules just 2021) constructed a software behavior graph to describe program
+work for specific scenarios. When the scenarios change or new/- execution and used support vector machines based on closed and
+unknown attacks emerge, they do not work well. frequent subgraphs to classify non-crash errors (logical errors that do not
+ Anomaly-based attack detection. APT attacks can adapt to defense cause program crashes). However, almost all the graph mining algotechniques. Therefore, APT attackers can evade these defense methods rithms (Berlingerio et al., 2012) (Gehani and Tariq, 2012) (Park and
+in such ways as creating new malware and modifying existing malware Kim, 2021) (Shervashidze et al., 2011) (Hunt et al., 2010) and graph
+to have unique signatures. Hodge and Austin (Liu et al., 2005) investi- similarity measures (e.g., graph kernels (Weisfeiler and Leman, 1968))
+gated different anomaly-based detection methods. They are categorized are designed for static graphs. There are some challenges when they are
+into three types: unsupervised clustering, which processes data into applied to similarity comparison on streaming graphs. Therefore,
+static distributions, accurately identifies the most remote points, and Papadimitriou et al. (Baker and McCallum, 1998) proposed five aplabels them as potential anomalies; supervised classification, which proaches for similarity comparison on dynamic network graphs
+pre-labels data classified as normal or abnormal; and semi-supervised (Chapelle et al., 1999). However, the aforementioned similarity evaludetection, which models pre-classified data with normal or a small ation methods (Berlingerio et al., 2012) (Gehani and Tariq, 2012) (Park
+amount of anomalous data. In the unsupervised clustering, when new and Kim, 2021) (Shervashidze et al., 2011) (Baker and McCallum, 1998)
+data arrives, the model is adjusted to improve outlier detection rates by (Hunt et al., 2010) (Weisfeiler and Leman, 1968) primarily rely on the
+defining a normal boundary. Berrada et al. (Gao et al., 2010) extracted existing graph structure and do not involve learning processes, making it
+boolean features from provenance graphs and treated APT attack difficult to effectively utilize the features provided by nodes and edges.
+detection as an anomaly detection task. Unlike supervised classification, To address this, NetSimile (Xu et al., 2018) leveraged distribution moit does not require abnormal training data but learns to recognize ments to aggregate egonet-based features (such as the number of
+anomalies. StreamSpot (Chen et al., 2022) was an anomaly detection neighboring nodes) for clustering social networks. Nonetheless, most
+system that employs clustering to handle heterogeneous streaming methods for streaming graphs are often application-specific or only
+graphs. It extracted local graph features from individual node/edge la- applicable to homogeneous graphs.
+bels through a breadth-first traversal and converted them into vectors In contrast to previous work, this paper utilizes a locality-sensitive
+for classification. In a semi-supervised learning framework, Zimba et al. hashing (LSH) approach. It employs a consistent weighted sampling
+(Perozzi et al., 2014) identified hosts exhibiting suspicious, malicious algorithm to measure similarity based on the underlying distribution of
+activities, where features were extracted based on network clustering graph features.Furthermore, we employ the FlexSketch method to effialgorithms, and a detection model was trained using both labeled and ciently and rapidly generate compact and fixed-size feature represenunlabeled data. Han et al. (Milajerdi et al., 2019b) proposed a tations to address the continuously growing dynamic graphs, thus
+ maintaining graph similarity in a streaming environment.
+
+ 3
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+ Fig. 1. The architecture of APT attack detection system based on provenance graph.
+
+3. Systematic design between them can be established.
+
+ The proposed RT-APT consists of three modules, as shown in Fig. 1.
+(1) In the data acquisition and processing module, the SPADE (Indyk and 3.2. Graph feature extraction
+Motwani, 1998) is a tool used for Linux system to collect the kernel-level
+logging data, and then Preproccess transforms the log data into the data 3.2.1. Streaming histogram construction
+structure. (2) In the graph feature extraction module, we introduce how In this paper, we take the WL subtree graph kernel algorithm as a
+to generate histograms using the WL subtree graph kernel algorithm graph embedding technique for the provenance graphs. This algorithm
+which aggregates the contextual information of nodes. The histograms can rapidly and efficiently construct a histogram representing the entire
+are incrementally updated when new edges arrive. Then a summary history of system executions. The histogram is a counting statistical
+graph generation algorithm based on FlexSketch (Philbin and Zisser- structure where each element corresponds to a node in the provenance
+man, 2008) produces a fixed-size feature sequence (graph sketch) rep- graph. The value of each piece represents to what degree the complex
+resenting the evolving histogram. (3) In the real-time anomaly detection contextual information aggregates, including causal relationships bemodule, the K-means clustering anomaly detection algorithm is used to tween objects, subjects, and activities, involving the corresponding node
+compare the summary graph of the current system with all trained and all its neighboring nodes (Lü and Zhou, 2011). Furthermore, each
+normal models to determine if there is any abnormal behavior. Finally, element in the histogram describes a substructure of the graph and
+we illustrate the working process through a real attack case. considers heterogeneous labels attached to nodes and edges and the
+ temporal order of these edges.
+ The WL subtree graph kernel algorithm is a one-dimensional variant
+3.1. Kernel-level log data collection and processing of the Weisfeiler-Lehman isomorphism test (Rajaraman and Ullman,
+ 2011). The key idea of this algorithm is to expand node labels based on
+ The data collection tool needs to meet the following three re- the ordered set of labels from neighboring nodes (e.g., those sorted acquirements. (1) In APT scenarios, it is essential to ensure the security and cording to the logical timestamps of neighboring nodes) and compress
+integrity of information flow capture. APT attacks are insidious, and these expanded labels into new shortened labels. These two steps are
+attackers often eliminate their traces in the system. Therefore, the col- repeated until the iteration reaches a predetermined maximum value n.
+lector must capture all system activities. (2) The collector must have We brielly compare the W subtree kernel with other prominent
+long-term stability to resist persistent APT threats. (3) Data collection kernels like the random walk kernel and shortestpath kernel. The
+and transmission must be fast enough to achieve real-time detection. random walk kernel, while useful for stochastic similarity measures,
+Therefore, in the data collection, we choose SPADE. may overlook the deterministic causal structures inherent in kernel logs.
+ SPADE can collect two types of data structures: node-based and edge- The shortestpath kernel excels at identifying topological similarities but
+based. For node-based data structures, it is necessary to cover attributes may not sufficiently distinguish the nuanced differences inthe execution
+such as the type and properties of each node. The relationships (oper- context of system activities. We conducted a series of benchmarks to
+ations) between nodes are associated via the edge-based data structure. compare the performance of these algorithms on graphs of different
+For edge-based data structures, a single edge represents an event. Edge- sizes, The results show that while all algorithms perform well on smallbased data structures capture various relationships between nodes, scale graphs, the WL subtree kernel algorithm still maintains high effienabling the association of two nodes that may be far apart. This is ciency and accuracy on large-scale graphs.The WL subtree kernel’s
+crucial for uncovering covert behaviors in APT attacks. During the iterative label compression technique adeptly encapsulates the causal
+construction of the provenance graph, entity nodes (subjects, objects) and contextual depth of provenance graphs making it an optimal choice
+can be linked based on the edge-based data, and thus connections for our purposes.
+
+ 4
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+ Using a designated labeling function, the WL subtree graph kernel 2011). Subsequently, these nodes are classified according to their
+algorithm first assigns specific labels to each node. Then, it calculates expanded labels, which describe the R-hop neighborhood information of
+the frequency each label occurs in the graph, which forms a histogram each node. These expanded node labels are constructed through iteravector. Next, a hash-based compression method is employed to trans- tive label propagation. For every node in the provenance graph, we take
+form the histogram vector into a fixed-size summary graph, which as input all node labels, incoming edge labels to each node, and source
+measures the similarity between different graphs. Finally, a clustering node labels for all the edges. For each node, a new label is then
+algorithm is applied to group the summary graphs, capturing behavioral outputted, representing the aggregation of all input labels, and this
+changes during the execution of system and forming an evolutionary process is repeated. The entire process is repeated R times to construct
+model. Fig. 2 illustrates these steps with an example. In step 1, the R-hop neighborhood labels. Accordingly, the provenance graph is repnumbers 1–5 represent the number of labels assigned to each node. In resented as a histogram structure. If two graphs have similar distribueach iteration, the labels from neighboring nodes are aggregated onto tions on similar label sets, they are considered equal.
+the current node, forming a set structure (step 2). However, the large
+number of neighboring nodes results in the increase of the length of the 3.2.2. Graph Sketches Generation method based on FlexSketch
+recent label, leading to insufficient storage space. Therefore, the Different from traditional histogram-based similarity (Sivic and
+expanded labels need to be compressed through a relabeling method, Zisserman, 2003) (MacQueen et al., 1967) (Yadav and Rao, 2015), this
+where a new label is generated by the labeling function (step 3). Finally, paper proposes a graph sketch based method which uses FlexSketch
+for a node, the relabeled label becomes the new label after one iteration (Philbin and Zisserman, 2008) to generate fixed-size vector represen-
+(step 4). tations of streaming histograms that are continuously updated and
+ The WL subtree graph kernel algorithm has a time complexity of O preserve the similarity between histograms. Measuring the similarity
+(k*|E|), ensuring fast and efficient graph computation. Here, k repre- between streaming histograms is not easy because the number of hissents the total number of iterations, and |E| denotes the total number of togram elements is unknown and constantly changes. Additionally, the
+edges. Specifically, in step 2, defining a multiset for all nodes requires an underlying distribution of graph features is essential to measure the
+O(|E|) operation. In step 3, sorting each multiset can be achieved by similarity of histograms rather than absolute counts. To this end, preusing counting sort (an implementation algorithm of bucket sort) since vious research has attempted to combine enumeration and manual
+the range of multiset elements is limited, which is suitable for counting feature engineering methods to pre-enumerate all possible histogram
+sort. The time complexity of this step is O(|E|). Subsequently, com- elements. However, given the potentially large number of nodes and
+pressing the expanded labels requires a time complexity of O(|E|). edge labels, the resulting histogram data structure becomes sparse due
+ To further analyze the scalability of the algorithm, we conduct per- to the multi-label provenance graph and a large number of neighborformance tests on graphs of different sizes to evaluate the efficiency of hood iterations.
+the algorithm when dealing with large scale datasets, We find that the This paper utilizes Locality Sensitive Hashing (LSH) (Jacob et al.,
+computation time of the algorithm grows linearly as the graph size in- 2008), a consistent weighted sampling-based approach to achieve. It
+creases.which indicates its good scalability, However, on large-scale leverages histogram normalization and generalized min-max (Jaccard)
+graphs, reasonable parameter selection and optimization become similarity to approximate histograms. Jaccard similarity (Kyrola et al.,
+crucial in order to maintain system efficiency, For example, for graphs 2012) has been successfully applied to solve various real-world tasks
+with millions of nodes and edges, we may need to adjust the number of based on machine learning, such as social network analysis (Friedman,
+iterations k to balance accuracy and computational cost. 1997), text mining [54], and image processing [55]. The similarity be-
+ This paper utilizes the WL subtree graph kernel algorithm to tween two graphs can be effectively computed by projecting their
+construct a histogram representation of the provenance graph. In the high-dimensional histogram representations into a lower-dimensional
+provenance graph, each node captures the surrounding graph structural space. Specifically, the LSH method is a distribution over a family Ϝ of
+information, including complex contextual information about causal hash functions operating on a collection of objects. For two objects, m
+relationships between objects, subjects, and activities (Lü and Zhou, and n:
+
+ Fig. 2. Example of one-dimensional Weisfeiler-Lehman isomorphism test.
+
+ 5
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+Ph∈F [h(m) = h(n)] = sim(m, n) (1) range of K values and identified the ‘elbow’ point where the rate of
+ decrease sharply changes, suggesting an optimal K that balances the
+where h ∈ ϵ,h represents histogram elements, ϵ represents the set of number of clusters with their cohesion and separation.
+histogram elements, and sim(m, n) is a similarity function defined on the Although K-means is a basic clustering technique, Sakirin and Asif
+sets of objects. This paper adopts the normalized min-max similarity to [57] have further explored the adaptability of K-means in dynamic enmeasure the similarity between two histogram vectors, as shown in vironments and its potential to improve complex threat detection, and
+Equation (2), where a and b represent the units of the histograms. these insights can strengthen the theoretical foundation of our approach.
+ ∑ ( ) Additionally, a sub-model is created for each training instance to capture
+ ( ) min Hha , Hhb ∑ ∑
+Simmin− max Ha , Hb = ∑ h∈ϵ ( a b ), Ha = 1, Hb = 1 (2) the variations in the execution state during the runtime. The final model
+ max H H h∈ϵ h h∈ϵ h
+ h∈ϵ h , h comprises sub-models from provenance graphs of all training data. By
+ Moreover, FlexSketch, generating graph sketches in this paper, can modeling the sub-models, the final model learns the changing behaviors
+also address the concept drift. It processes streaming data dynamically, at multiple time points. During the deployment detection, the anomaly
+and decides when to forget the old data and constructs a new statistical detection follows the same streaming paradigm described in Subsection
+model by measuring the difference between the current model and the 3.2.1: periodically creating histograms and generating graph sketches.
+recently sampled data. It can use minimal memory to estimate the We compare a given graph sketch with all the sub-models learned in the
+probability density function (PDF) with a high speed and precision for training and then fit it into the clusters of each sub-model. Assuming
+both stationary (i.e., no concept drift) and non-stationary (i.e., concept monitoring starts when system starts up and tracks the system state
+drift) data streams. transitions in each sub-model, a graph sketch must match with one of the
+ Specifically, let S denote the data structure of the FlexSketch current states or a state within a sub-model. Otherwise, it is considered
+framework, which is composed of the latest data stream and statistical an anomaly. Therefore, this paper can detect two types of abnormal
+models of multiple versions denoted as M. It can be expressed as follows: behaviors: those that do not fit into existing clusters and those that
+ represent invalid transitions between clusters.
+S = {Q, M1, ..., MNM, n1, ..., nNM } (3) There are diverse APT attack methods, and attackers often exploit
+ The buffer Q represents the latest data set provided by the input data zero-day vulnerabilities. It is difficult for the detection system to
+stream, and Mi denotes the i th histogram. We assume that the total establish models for all attack behaviors. Therefore, this paper adopts a
+number of histograms is greater than 2, that is, NM ≥ 2, and ni repre- modeling approach based on normal behaviors. When two system states
+sents the number of data points used for updating Mi,A new histogram is are similar, their corresponding feature vectors are similar. During the
+constructed once significant changes are detected in the data stream. attack detection, we can calculate the distance between the feature
+Therefore, the histograms within the data structure are created at vector of the current system state and the cluster center. Any behavior
+different time points. According to that the convention M1 is the most that exceeds a threshold distance determined by the training data of the
+recently added, if MNM is the oldest, indicating that Mi+1 has under- model is considered an anomaly.
+gone more updates than Mi,then ni+1 > ni. Each histogram consists of a Furthermore, we explored alternative clustering algorithms to assess
+set of disjoint intervals called buckets, denoted as Ij, and each bucket has their comparative advantages over K- means. The DBSCAN algorithm
+a frequency count mj, where j = 1, …, NB. Therefore, M can be repre- [58], which does not require a predefined number of clusters and can
+sented as: handle noise in the data, was considered for its ability to identify outliers
+ and discover clusters of arbitrary shapes, Hierarchical Clustering[59]
+M = {I1, ..., INb, m1, ..., mNB } (4) was also examined for its ability to generate a dendrogram that visually
+ Assumed that FlexSketch can keep its stability and tolerate tempo- represents the hierarchical structure of clusters.However, its computarary linear outliers without changing the concept of data stream, it can tional complexity can be a limiting factor for large datasets, (Gaussian
+achieve low computational overhead and high throughput, which is Mixture Models (GMM)[60]。offer a soft-clustering approach, allowing
+crucial for processing streaming data. data points to belong to multiple clusters with certain probabilities,
+ which can be beneficial in cases where clear cluster boundaries are not
+ present, Nonetheless, the fitting process of GMMs can be computation-
+3.3. APT anomaly detection method based on clustering ally intensive and requires careful selection of the number of
+ components.
+ Given graph sketches and a similarity measure, clustering is a Each clustering algorithm has its unique merits and is suited to
+commonly-utilized anomaly detection method to identify outliers. This different scenarios. The choice of the appropriate algorithm hinges on
+paper leverages the capability of graph sketches to handle the streaming the characteristics of the data and the specific requirements of the
+to create a model that captures normal variations in system behaviors. It analysis.
+is of paramount importance that the benign model is established during
+the training rather than the deployment process. In the deployment, 3.4. Case analysis
+building a dynamic model can lead to model poisoning after the prolonged APT attacks, significantly reducing accuracy. In this subsection, we illustrate the proposed method, RT-APT, using
+ A sequentially ordered feature sequence is created in the training to a real attack case. Given a provenance graph, rectangles represent prorepresent all benign behaviors generated within a complete system cesses, ellipses represent files, and diamonds represent networks.
+execution cycle. Then the K-means [56] algorithm clusters the graph Fig. 3 shows specific attack cases. This attack scenario is a Webshell
+sketches sequence, and the optimal value of K depends on the silhouette attack from Apache The victim host has port 80 open for web services
+coefficient. The resulting K clusters represent the K elemental states of (time points 1–3). In the web service, user-uploaded files are stored in
+the system execution, such as the startup state, initialization state, stable var/www/html/uploads/shell.php. However, a file upload vulnerability
+state, and so on. exists, allowing users to upload any type of files and access it (time point
+ To ascertain the optimal number of clusters (K), we employed 4). Consequently, an attacker scans for this vulnerability and uploads a
+Silhouette Analysis, a statistical method that quantifies the similarity of Trojan file, establishing a connection and successfully obtaining a
+an object to its own cluster compared to other clusters, This approach Webshell (time points 5–8). However, the acquired Webshell only has
+provides a measure of how close each point in one cluster is to the points www-data user privileges, which are insufficient for the attacker’s need.
+in the neighboring clusters, with higher Silhouette coefficients indi- Therefore, the attacker performs an elevation-of-privilege operation.
+cating better defined clusters, We plotted the Silhouette coefficients for a During further infiltration, the attacker discovers that the administrator
+
+ 6
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+ Fig. 3. The provenance graph of real attack cases.
+
+periodically uses a cleanup.sh script to clear the folder where uploaded 4. Experiments and results
+files are stored, as specified in the/etc/crontab file. By examining this
+script file, it is found that anyone has the permission to read and write. We conducted experiments to evaluate the accuracy and efficiency of
+Thus, the attacker injects malicious code into this script file to gain RT-APT. Our evaluation focused on addressing the following research
+reverse shell access (time points 9–16). Subsequently, the attacker be- questions.
+gins to listen and wait for the administrator to execute the script file
+(time point 17), thereby acquiring administrator privileges. By running (1) What should the number of hops (k-hop), sketch graph size
+commands, the attacker identifies that the administrator belongs to the (sketch-size), update triggering Interval (Interval), and decay rate
+root group and possesses all the necessary permissions for the attacker’s (α) of the sketch graph be if our proposed detection system peractivities. Using the administrator’s shell, the attacker can modify/etc/ forms best?
+crontab and/etc/sudoers for persistent control (time points 24–38). (2) How does our proposed detection system perform on the Lab,
+Afterwards, the attacker can read valuable files on the host (time points StreamSpot, and Unicorn datasets, respectively?
+39–40) and send them to the organization’s system via network trans- (3) How is our system superior toStreamSpot and Unicorn?
+mission (time points 22, 41). (4) What is the runtime performance of our proposed detection
+ According to (Xiong et al., 2020), the ultimate goal of an APT attack system?
+is to steal sensitive information or cause damage. Therefore, during the
+attack, there are some common behavioral characteristics, such as
+executing sensitive commands, reading sensitive files, and transmitting
+sensitive data. These covert attack behaviors are rare in normal sce- 4.1. Experimental datasets
+narios and can be learned and represented by the WL subtree graph
+kernel algorithm. Moreover, the emergence of these new operations The experimental data in this paper consists mainly of the Laboratory
+(nodes) leads to changes in the underlying distribution of statistical Dataset, StreamSpot Dataset, and Unicorn Dataset. Specifically, the
+features in the provenance graph learned from previous representations. optimal parameters were determined by analyzing the Laboratory
+To address the concept drift in streaming graphs, the FlexSketch graph Dataset. At the same time, the StreamSpot Dataset and Unicorn Dataset
+sketching method is employed. Although this method reduces the in- were used to compare RT-APT and existing state-of-the-art (SOTA)
+fluence of the old data on the current provenance graph, and no matter methods.
+how far the event (behavior) occurred in time from the current system’s
+execution state (time point 39), as long as it has a causal relationship 4.1.1. Laboratory dataset
+with the most recently occurring operation (node) (e.g., the process ”sh” In this paper, the laboratory dataset, primarily used to determine the
+associated with time point 39), the event and its neighborhood infor- optimal parameters for the experiments, can be grouped into an attack
+mation will have an unreserved impact on the current features of dataset and a benign dataset. Both of them were collected via the SPADE
+provenance graph. Therefore, RT-APT can better differentiate between tool in a controlled laboratory environment. There are two teams
+attack behaviors and normal behaviors, and separate anomalous prov- involved in the experiments: defense team and attack team. The defense
+enance graphs from normal ones in the vector space. team was responsible for collecting audit data and detecting attacks
+ from Linux platforms, including three hosts with Ubuntu 16.04
+
+ 7
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+operating systems. The attack team was responsible for detecting vul- Table 2
+nerabilities in the operating systems and carrying out attacks on the Laboratory benign dataset characteristics.
+target systems. Additionally, the attack team produced benign back- Dateset Time Source Tools Data Attack Descriptions
+ground activities such as web browsing and document editing to simu- (h) Systems Sources
+late normal system behaviors. B-1 24 Ubuntu SPADE Laboratory no data collection
+ 16.04 operations
+ (1) Attack Dataset. We designed three APT attack scenarios, as shown B-2 24 Ubuntu SPADE Laboratory wget downloads,
+ in Table 1. APT datasets, T-1, T-2, and T-3 are generated by 16.04 software upgrades
+ B-3 24 Ubuntu SPADE Laboratory service startups
+ simulating real-world scenarios in the laboratory. Each group 16.04
+ records all the activities performed by the system within a 24-h B-4 24 Ubuntu SPADE Laboratory file operations, script
+ period. 16.04 writing
+ B-5 24 Ubuntu SPADE Laboratory website browsing,
+ 16.04 chatting, or email
+ To simulate APT attacks, the design of the attack path in the data
+ sending
+collection followed a typical network kill chain model. This model
+consists of approximately seven stages, namely, reconnaissance (identifying the target and exploring its vulnerabilities), weaponization necessary to collect benign scenario data as many as possible to avoid
+(designing backdoors and penetration plans), delivery (delivering the false positive alerts generated due to system behaviors that do not
+weapon), exploitation (triggering vulnerabilities on the victim’s sys- perform in training.
+tem), installation (installing backdoors or malicious software), com- Table 3 shows the statistical results obtained after we preprocessed
+mand and control (C&C) (issuing remote commands to the victim), and all the obtained benign and attack data. The first column of the table
+actions on target (taking actions against the target) (Yadav and Rao, represents the dataset label, the second column represents the number of
+2015). provenance graphs in the dataset, the third column represents the
+ To collect the data set T-1, we simulated a Webshell attack on the average number of nodes in the graph, the fourth column represents the
+Apache web server. The details of T-1 have already been mentioned in average number of edges, and the last column represents the current
+Section 3.4, so we will not repeat them here. dataset size.
+ To collect the data set T-2, we simulated a remote access Trojan
+attack on phishing websites. In this attack, the attacker leveraged the 4.1.2. StreamSpot dataset
+phishing website to entice the administrator to click a malicious link. The StreamSpot dataset, collected by the SystemTap kernel tool
+Subsequently, the Trojan file was downloaded onto the victim’s host. (Jacob et al., 2008), is publicly available only in preprocessed format. As
+The attacker then monitored and waited for the administrator to execute shown in Table 4, it consists of one drive-by download attack scenario
+the Trojan file, gaining ordinary user privileges. The subsequent privi- and five benign host activity scenarios, i.e., watching YouTube,
+lege escalation was similar to that described in dataset T-1. Once priv- browsing CNN, downloading files, viewing emails, and playing games.
+ileges were elevated, the attacker modified sensitive files, establishing Each scenario was run 100 times, resulting in 100 graphs. The attack
+persistent control and exfiltrating valuable files and user information scenario involves downloading files from a malicious URL, exploiting
+from the compromised system. Flash vulnerabilities, and gaining root access to the host. Table 4 pro-
+ To collect the data set T-3, we simulate a fileless attack on a vides a summary of this dataset. By analyzing these dataset, we notice
+vulnerable program. In this attack, the attacker discovered a special that each benign graph in the dataset has about 173K edges on average,
+service on port 29273 of the victim’s host. This service had a vulnera- while the attack graph has about 28K edges on average (Han et al.,
+bility that the attackers exploited through string overflow to gain user 2020).
+privileges. Subsequently, the attacker crafted a script to trigger a string
+overflow, and eventually achieved the fileless attacks. As a result, the 4.1.3. Unicorn Dataset
+attacker obtained the user privileges associated with running the Unicorn is a machine learning based attack anomaly detection alvulnerable service. The subsequent attack is the same with that in gorithm on provenance graphs, and capable of automatically condataset T-1. structing system behavior models. Firstly, the provenance graph, which
+ describes system behaviors, is transformed into a sequence of feature
+ (2) A benign dataset. This paper presents five benign scenarios as vectors. The feature vectors are then clustered to generate system states.
+ shown in Table 2. Benign datasets B-1, B-2, B-3, B-4, and B-5 are Subsequently, the changes of system states are described with automgenerated in a laboratory environment to simulate the real work aton models. An automaton model is established for each normal
+ of enterprise employees. Each dataset records all activities per- sequence, and during testing, the current state is examined for detection.
+ formed by the system within 24 h. Unicorn is designed with two APT attack scenarios and benign scenarios as shown in Table 5, and there is a certain level of similarity
+ We regarded as benign scenarios normal system activities, such as between the benign and attack scenarios. The two attack scenarios and
+writing files and scripts with the vim command, downloading datasets the benign scenario are analyzed separately, and the results are shown in
+and resources (including the third-party libraries), upgrading software Table 5. Unicorn simulated two APT supply chain attacks (SC-1 and SCpackages and so on. Since RT-APT is based on anomaly detection, it is
+ Table 3
+Table 1 Characteristics of the Laboratory dataset.
+Laboratory dataset features attack.
+ Dateset Graphs Avg. nodes Avg. edge Dateset Size(GiB)
+ Dateset Time Source Tools Data Attack Descriptions
+ T-1 20 132457 1068953 15.57
+ (h) Systems Sources
+ T-2 20 162587 1141039 16.69
+ T-1 24 Ubuntu SPADE Laboratory Apache Webshell T-3 20 86785 958924 13.87
+ 16.04 attack B-1 100 8647 41228 3.49
+ T-2 24 Ubuntu SPADE Laboratory Phishing website B-2 100 87553 451863 31.01
+ 16.04 Trojan attacks B-3 100 61867 369252 29.21
+ T-3 24 Ubuntu SPADE Laboratory Fileless attack B-4 100 17300 104260 7.79
+ 16.04 B-5 100 10758 62543 5.47
+
+ 8
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+Table 4
+Characteristics of the StreamSpot dataset.
+ Scenario Graphs Avg. nodes Avg. edge Dateset Size(GiB)
+
+ YouTube 100 8292 113229 0.3
+ Gmail 100 6827 37382 0.1
+ Downloading 100 8831 310814 1
+ VGame 100 8637 112958 0.4
+ CNN 100 8990 294903 0.9
+ Attack 100 8891 28423 0.1
+
+Table 5
+Characteristics of the Unicorn dataset.
+ Dateset Label Graphs Avg. nodes Avg. edge Dateset Size(GiB)
+
+ SC-1 Benign 125 265424 975226 64
+ Attack 25 257156 957968 12 Fig. 4. The influence of parameter k-hop.
+ SC-2 Benign 125 238338 911153 59
+ Attack 25 243658 949887 12
+ the highest, implying the best detection performance. However,
+ when k-hop exceeds 3, the captured contextual information may
+2) using a Continuous Integration (CI) approach. It utilized CamFlow to become irrelevant and unintentionally mask potential attacks,
+capture the provenance of the entire system, including background leading to a decline in detection effectiveness.
+activities. (2) The parameter ”sketch-size” represents the size of the summary
+ graph obtained by taking the growing histogram as a fixed-size
+ sketch. A larger sketch-size allows the graph sketches to contain
+4.2. Experimental results and analysis more information about the streaming updates of the histogram,
+ thereby reducing errors in normalizing the maximum and mini-
+4.2.1. Experimental environment mum similarity and improving the detection precision, recall, and
+ The experiments in this paper were conducted on a server running accuracy. The influence of the sketch-size is shown in Fig. 5. We
+Ubuntu 16.04. The server is equipped with an Intel Xeon E5-2680 v4 can find that our method performs best when the sketch-size is set
+CPU with 14 cores clocked at 2.4 GHz, 128 GB of RAM, and four NVIDIA to 2000. When the value of sketch-size exceeds 2000, it is influ-
+GeForce RTX 2080Ti GPUs. The real-time detection algorithm proposed enced by the dimensional factors in the clustering detection
+in this paper is implemented using C++ and Python. We analyzed the (Friedman, 1997), leading to a decline in detection performance.
+system log data of approximately 150 GB. GraphChi (Kyrola et al., 2012) (3) ”Interval of Sketch Generation” represents the condition for
+was employed to make efficient graph computation. triggering updates of the provenance graph in a streaming environment. Typically, the Interval value can indicate the number of
+4.2.2. Experimental evaluation index newly added edges or nodes. In this paper, we first make the
+ RT-APT takes a binary classification for benign and attack samples. Interval represent the number of edges. The influence of the In-
+Therefore, in this paper, we have four metrics: TP (true positive), rep- terval size is shown in Fig. 6. A smaller Interval makes the adjaresenting the number of attack samples correctly classified; FP (false cent provenance graphs appear more similar, resulting in a higher
+positive), representing the number of attack samples mistakenly classi- false negative count and lower recall and accuracy. Conversely,
+fied; TN (true negative), representing the number of benign samples when the Interval is too large, the granularity of changes between
+correctly classified; and FN (false negative), representing the number of the provenance graphs would become great, making it difficult to
+benign samples mistakenly classified. highlight the attack behaviors and thus causing the adjacent
+ Accordingly, to classify the samples, we get the following evaluation graphs to appear similar as well. As shown in Fig. 6, the Interval
+metrics: value should be set to 3000. Similarly, if we make the Interval
+ TP represent the number of nodes, the optimal Interval* value
+precision = (5) should be set to 500 as shown in Fig. 7.
+ TP + FP
+ (4) The decay rate (α) represents the gradual forgetting of old data in
+ TP the provenance graph with a decay rate of α. The gradual
+recall = (6)
+ TP + FN forgetting method helps the detection system to focus on the
+
+ TP + TN
+accuracy = (7)
+ TP + TN + FP + FN
+
+ 2 × precision × recall
+F − score = (8)
+ precision + recall
+
+4.2.3. Parameter configuration
+ In this paper, we use four important parameters from which we can
+find how our method performs and when it performs best.
+
+ (1) The parameter ”k-hop” in the provenance graph denotes the
+ neighborhood size of each node. A larger k-hop indicates that the
+ current model captures a larger size of neighborhood, thereby
+ incorporating more contextual information. The influence of the
+ k-hop size on the detection is illustrated in Fig. 4. We can find that
+ when k-hop is set to 3, all the precision, recall, and accuracy are Fig. 5. The influence of parameter sketch-size.
+
+ 9
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+ Fig. 6. The influence of parameter Interval.
+ Fig. 9. The PR curve of experimental results.
+
+ used as an evaluation metric, where a larger area indicates a better
+ overall classification across different threshold values.
+
+ 4.2.5. Precision experiment
+ This paper compares our proposed RT-APT with existing detectors on
+ three datasets: the laboratory dataset, the StreamSpot dataset, and the
+ Unicorn dataset.
+ On the laboratory dataset, this paper conducts experiments by using
+ 80% of the total 500 benign graphs for training. The remaining 20% of
+ the benign graphs combined with 60 attack graphs are for testing. In the
+ experiments, the proposed method is configured with optimal parameters: k-hop = 3, sketch-size = 2000, and Interval = 3000.
+ The experimental results are shown in Table 6,and our proposed RT-
+ Fig. 7. The influence of parameter Interval*. APT method based on the WL subtree kernel algorithm outperforms the
+ existing detection methods in terms of precision, recall, and F-score.
+ current state of system execution (i.e., the most recent part of the On the StreamSpot dataset, this paper conducts experiments by using
+ provenance graph) and any part of the provenance graph causally 80% of the total 500 benign graphs for training. The remaining 20% of
+ related to the current execution, while preserving the log. The the benign graphs combined with 100 attack graphs are for testing.
+ influence of different α is shown in Fig. 8. We can find that when α Similarly, the proposed method is configured with optimal parameters:
+ is set to 0.03, the graph sketches achieve a good balance between k-hop = 3, sketch-size = 2000, and Interval = 3000.
+ the historical histogram and the current histogram. The results on the StreamSpot dataset shown in Table 7 indicate that
+ the proposed method is more suitable for APT attack detection on the
+4.2.4. Experimental results StreamSpot dataset. This is because it incorporates multi-hop graph
+ In this paper, according to the silhouette coefficient we set the exploration when aggregating neighboring node information and utioptimal number of clusters as K = 6. All 500*0.8 = 400 benign graphs lizes an automaton modeling strategy to model normal behaviors.
+are used for training. The remaining 500*0.2 = 100 benign graphs and Then we compare our evaluation metrics with the Unicorn (Han
+60 attack graphs are used for testing. In the experiments, the optimal et al., 2020) detector on the Unicorn dataset. The experiments involve
+parameters are set as: k-hop = 3, sketch-size = 2000, Interval = 3000, randomly dividing 125 benign graphs into 5 groups for 5-fold
+and α = 0.03. We use the 5-fold cross-validation in the experiments. cross-validation. Specifically, each training set consists of 100 benign
+ Since RT-APT models normal behaviors, we plot a precision-recall graphs. After modeling normal behaviors, the false positive of the
+(PR) curve as shown in Fig. 9 to determine the optimal threshold for remaining 25 benign graphs is evaluated. Then, the model is evaluated
+the testing. The area between the PR curve and the coordinate axis is in false negatives on 25 attack graphs. This process is repeated for each
+ group, and the average results are recorded. The results on the Unicorn
+ dataset presented in Table 8 indicate that compared with the Unicorn
+ method, the proposed method is better at distinguishing normal and
+ abnormal behavior in long-term attack scenarios.
+ In summary, RT-APT exhibits superior performance when evaluated
+ on the laboratory dataset, StreamSpot dataset, and Unicorn dataset, as
+ depicted in Fig. 10.
+ The primary reason why we choose the FlexSketch algorithm is that
+
+ Table 6
+ Comparison of different detection methods on the Lab dataset.
+ Detector precision recall accuracy F-score
+
+ StreamSpot (baseline) 0.84 0.72 0.86 0.82
+ Unicorn 0.95 0.92 0.97 0.94
+ RT-APT 0.98 0.96 0.94 0.97
+ Fig. 8. The influence of parameter α.
+
+ 10
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+Table 7 complexities introduced by high dimensionality or temporal dynamics.
+Comparison of different detection methods on the StreamSpot dataset. To assert the robustness and scalability of the FlexSketch algorithm,
+ Detector precision recall accuracy F-score we conducted additional experiments to evaluateits performance under
+ varied environments and different load conditions. The FlexSketch al-
+ StreamSpot (baseline) 0.74 0.72 0.66 0.78
+ Unicorn 0.98 0.93 0.96 0.94 gorithm was tested withvarying data set sizes and streaming rates to
+ RT-APT 0.96 0.94 0.95 0.95 simulate diverse real-world scenarios.
+ Our results indicate that FlexSketch maintains a consistent performance profile across a wide range of conditions.Even under high-load
+Table 8 situations, the algorithm demonstrates minimal memory overhead and
+Comparison of different detection methods on the Unicorn dataset.
+ acceptable processing latency, outperforming other state-of-the-art al-
+ Unicorn Dataset Detector precision recall accuracy F-score gorithms in terms of scalability.
+ SC-1[13](baseline) StreamSpot 0.80 0.88 0.85 0.85
+ Unicorn 0.85 0.96 0.90 0.90 4.3. Overhead
+ RT-APT 0.88 0.92 0.90 0.90
+ SC-2[13] (baseline) StreamSpot 0.72 0.72 0.70 0.74
+ Unicorn 0.75 0.80 0.77 0.78 In this subsection, we analyze the runtime overhead, including
+ RT-APT 0.84 0.88 0.86 0.85 runtime performance, and memory consumption and CPU utilization.
+
+ 4.3.1. Runtime performance
+it can capture features in long sequences more effectively. In real-world In APT scenarios, runtime performance is crucial as intrusion
+network attack scenarios, APT attack cycles are long, and the corre- detection systems (IDS) which often need to monitor systems in real
+sponding feature sequences are lengthy. The proposed method can time. In this subsection, to grasp the runtime performance of RT-APT, we
+extract patterns from long sequences more efficiently, and adapt to the take the same parameter settings as in Subection 4.2.3. We conduct
+characteristics of APT attacks in real scenarios. Although the Unicorn experiments on a laboratory dataset. The results demonstrate the tradealgorithm also utilizes feature sequences, it tends to overlook the subtle off between accuracy and runtime performance. Table 9 records the
+differences of the anomalies and normal behaviors in matching state average number of edges processed within a given time (data processing
+machine templates This study employs the FlexSketch algorithm, which rate) under different parameter settings. This quantifies the speed at
+constructs a new statistical model by measuring the differences between which our method processes data. In Table 9, ”inline” represents the
+the current model and the most recent sampled data. While capturing speed close to that of the SPADE collection system (data generation
+sequence features, the algorithm integrates historical and current fea- rate). Smaller differences between the detection processing speed and
+tures of the feature sequences. The resulting sequence feature calcula- the inline rate indicate better runtime performance. The difference in
+tion incorporates the entire sequence’s characteristics, preserving and Table 9 is obtained by calculating the average processing edge speed
+accumulating minor differences. This increases the distance between under different parameters minus the difference of processing edge
+normal and abnormal behaviors in the feature space.
+ The FlexSketch algorithm adeptly manages high-dimensional data by
+ Table 9
+utilizing Local Sensitive Hashing (LSH) techniques,.which efficiently
+ The impact of different parameter Settings on running performance.
+approximate the similarity of feature vectors in high-dimensional spaces
+ Parameter Value Average processing speed (bars/sec) Difference%
+and maintain the integrity of temporal relationships, This is achieved by
+dynamically processing data streams, deciding the optimal time to inline (baseline) N/A 267.12 0
+phaseout outdated information, and constructing new statistical models k-hop 2 265.25 − 0.7
+ 3 263.38
+that consider both historical and recent data points.The algorithm’s
+ ¡1.4
+ 4 262.84 − 1.6
+consistent weighted sampling approach ensures stability and adapt- sketch-size 1000 266.90 − 0.8
+ability to concept drift, while the decay rate parameter (a) facilitates a 2000 266.82 ¡1.1
+balanced focus on the current system execution state and its causal de- 3000 252.30 − 5.6
+ Interval 2000 267.06 − 0.2
+pendencies as recorded in the provenance graph, This harmonized
+ 3000 266.31 ¡0.3
+approach allows FlexSketch to effectively capture and analyze the 4000 266.31 − 0.3
+evolving patterns within the data, without being overwhelmed by the
+
+ Fig. 10. Metric comparison of the proposed method in three datasets.
+
+ 11
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+speed under the inline condition, and then dividing with the processing Table 10
+edge speed under the inline condition. Average memory overhead and average CPU usage.
+ In general, RT-APT is relatively insensitive to variations in these Detector Lab StreamSpot Unicorn
+parameters at runtime. Under the optimal parameter settings (high- Dataset Dataset Dataset
+lighted in bold in the table), the differences with the baselines are Average memory RT-APT 597 588 609
+around 1%. This means that the proposed method can perform real-time cost (MB) StreamSpot 734 726 765
+detection effectively. Unicorn 686 664 586
+ Average CPU RT-APT 18.6 17.4 16.9
+ usage (%) StreamSpot 23 18 25.4
+4.3.2. Memory overhead and CPU usage Unicorn 19.2 19.6 14.3
+ In this subsection, we test the memory consumption and CPU utilization. The results are shown in Table 10. It can be observed that the
+proposed system has a memory consumption of around 600 MB on graph. This allows for extensive and efficient graph analysis computavarious datasets. Compared with the Unicorn method (with a memory tions while enabling rapid updates of feature vectors in streaming enconsumption of 687 MB under optimal detection performance), our vironments. Experimental evaluations conducted on the StreamSpot
+proposed system reduces the memory consumption by approximately dataset, Unicorn dataset, and in-house dataset demonstrate that the
+15%. In comparison to the StreamSpot method, the average memory proposed method outperforms the state-of-the-art (SOTA) approaches.
+consumption is reduced by about 23%. The average CPU utilization
+remains stable at around 17.6%, indicating a clear advantage over CRediT authorship contribution statement
+StreamSpot and Unicorn methods.
+ Zhengqiu Weng: Writing – review & editing, Writing – original
+5. Discussion draft, Project administration, Methodology, Funding acquisition, Formal
+ analysis, Conceptualization. Weinuo Zhang: Software, Formal analysis,
+ The RT-APT system demonstrates a robust generalization capability, Data curation. Tiantian Zhu: Methodology, Investigation, Funding
+vital for its effectiveness across various APT detection scenarios. It ex- acquisition, Conceptualization. Zhenhao Dou: Validation, Software,
+hibits consistent performance across multiple datasets, such as Labora- Resources, Data curation. Haofei Sun: Writing – original draft, Visualtory, StreamSpot,and Unicorn, showcasing its adaptability in different ization, Software. Zhanxiang Ye: Writing – original draft, Supervision,
+operational environments. This cross-dataset generalization enables RT- Project administration, Funding acquisition. Ye Tian: Writing – review
+APT to maintain high detection accuracy in realworld applications. & editing, Visualization, Validation, Software.
+Moreover, in terms of identifying novel and unknown attacks, the RT-
+APT system is robust because it analyzes behaviors instead of relying Data availability
+on specific attack signatures.
+ Despite these strengths, RT-APT has certain limitations.It assumes a The data used in this study are sourced from three distinct datasets.
+secure initial modeling phase to capture normal system behaviors, The Unicorn dataset can be accessed from https://drive.google.co
+which is crucial for distinguishing benign from malicious activities. m/drive/folders/1QlbUFWAGq3Hpl8wVdzOdIoZLFxkII4EK. The
+However, this assumption may occasionally lead to false positives when StreamSpot dataset can be accessed and downloaded from https://sbust
+encountering new or unknown attack patterns. The effectiveness of the reamspot.github.io/. Interested parties may request our Laboratory
+system also depends on the integrity of the log data, and the complexity dataset by contacting the authors via email at derisweng@wzut.edu.cn.
+of APTs brings the risk of data leakage, which may affect the detection All of these datasets are publicly available and can be obtained without
+effect. restrictions.
+ While the FlexSketch algorithm excels in handling high-dimensional
+data and time series, it does have some limitations.For instance, when Funding
+dealing with data that exhibit very complex patterns, the algorithm may
+require more computational resources to maintain high accuracy. This research was funded by Wenzhou Cyber Security Detection and
+Furthermore,the performance of the algorithm may be affected by the Protection Technology Research Center (No. WZKF2023001 and No.
+choice of hash functions and parameter settings, necessitating careful WZKF2023002), supported by Wenzhou Major Scientific and Technoadjustment during actual deployment. logical Innovation Research Project (No.ZG2023031 and No.
+ Parameter tuning presents another challenge, as RT-APT requires ZG2024007), funded by Wenzhou Basic scientific Research Project (No.
+precise configuration of parameters like k-hop,sketch-size, and update G2024033), supported by National Natural Science Foundation of China
+intervals to optimize performance.This can be complex across different (No.62273263), supported by Fundamental Research Funds for the
+systems and conditions.Additionally, the reliance on external tools like Provincial Universities of Zhejiang (No. RF-A2023009).
+SPADE for data collection introduces potential reliability issues.
+ While RT-APT marks a step forward in APT detection, ongoing
+research and development are necessary to overcome these limitations Declaration of competing interest
+and refine the system’s capabilities.
+ The authors declare that they have no known competing financial
+6. Conclusion interests or personal relationships that could have appeared to influence
+ the work reported in this paper.
+ This paper proposes a real-time method for detecting APT attacks The author is an Editorial Board Member/Editor-in-Chief/Associate
+based on provenance graphs constructed from log data. The proposed Editor/Guest Editor for Journal of Network and Computer Applications
+method uses graph embedding techniques to consider rich contextual and was not involved in the editorial review or the decision to publish
+information and long-term causal relationships within the provenance this article.
+
+ 12
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+Data availability L’u, L., Zhou, T., 2011. Link prediction in complex networks: a survey. Phys. Stat. Mech.
+ Appl. 390 (6), 1150–1170.
+ MacQueen, J., et al., 1967. Some methods for classification and analysis of multivariate
+ Data will be made available on request. observations. In: Proceedings of the Fifth Berkeley Symposium on Mathematical
+ Statistics and Probability, vol. 1, pp. 281–297. Oakland, CA, USA.
+References Maggi, F., Matteucci, M., Zanero, S., 2008. Detecting intrusions through system call
+ sequence and argument analysis. IEEE Trans. Dependable Secure Comput. 7 (4),
+ 381–395.
+Akoglu, L., Tong, H., Koutra, D., 2015. Graph based anomaly detection and description: a Manzoor, E., Milajerdi, S.M., Akoglu, L., 2016. Fast memory-efficient anomaly detection
+ survey. Data Min. Knowl. Discov. 29, 626–688. in streaming heterogeneous graphs. In: Proceedings of the 22nd ACM SIGKDD
+Alshamrani, A., Myneni, S., Chowdhary, A., Huang, D., 2019. A survey on advanced International Conference on Knowledge Discovery and Data Mining, pp. 1035–1044.
+ persistent threats: techniques, solutions, challenges, and research opportunities. Milajerdi, S.M., Gjomemo, R., Eshete, B., Sekar, R., Venkatakrishnan, V., 2019a. Holmes:
+ IEEE Communications Surveys & Tutorials 21 (2), 1851–1877. real-time apt detection through correlation of suspicious information flows. In: 2019
+Baker, L.D., McCallum, A.K., 1998. Distributional clustering of words for text IEEE Symposium on Security and Privacy (SP). IEEE, pp. 1137–1152.
+ classification. In: The 21st Annual International ACM SIGIR Conference on Research Milajerdi, S.M., Eshete, B., Gjomemo, R., Venkatakrishnan, V., 2019b. Poirot: aligning
+ and Development in Information Retrieval, pp. 96–103. attack behavior with kernel audit records for cyber threat hunting. In: Proceedings of
+Berlingerio, M., Koutra, D., Eliassi-Rad, T., Faloutsos, C., 2012. A Scalable Approach to the 2019 ACM SIGSAC Conference on Computer and Communications Security,
+ Size-independent Network Similarity. ArXiv Preprint ArXiv: 12092684. pp. 1795–1812.
+Berrada, G., Cheney, J., Benabderrahmane, S., Maxwell, W., Mookherjee, H., Mutz, D., Robertson, W., Vigna, G., Kemmerer, R., 2007. Exploiting execution context for
+ Theriault, A., Wright, R., 2020. A baseline for unsupervised advanced persistent the detection of anomalous system calls. In: Recent Advances in Intrusion Detection:
+ threat detection in system-level provenance. Future Generat. Comput. Syst. 108, 10th International Symposium, RAID 2007, Gold Goast, Australia, September 5-7,
+ 401–413. 2007. Proceedings 10. Springer, pp. 1–20.
+Chapelle, O., Haffner, P., Vapnik, N.V., 1999. Support vector machines for Pan, X., Cao, Y., Du, X., He, B., Fang, G., Shao, R., Chen, Y., 2018. Flowcog: contextaware
+ histogrambased image classification. IEEE Trans. Neural Network. 10 (5), semantics extraction and analysis of information flow leaks in android apps. In: 27th
+ 1055–1064. USENIX Security Symposium (USENIX Security 18), pp. 1669–1685.
+Chen, T., Dong, C., Lv, M., Song, Q., Liu, H., Zhu, T., Xu, K., Chen, L., Ji, S., Fan, Y., 2022. Papadimitriou, P., Dasdan, A., GarciaMolina, H., 2010. Web graph similarity for anomaly
+ Apt-kgl: an intelligent apt detection system based on threat knowledge and detection. Journal of Internet Services and Applications 1, 19–30.
+ heterogeneous provenance graph learning. IEEE Trans. Dependable Secure Comput. Park, N., Kim, S., 2021. Flexsketch: estimation of probability density for stationary and
+ https://doi.org/10.1109/TDSC.2022.3229472 (Access, Dec. 26, 2022). nonstationary data streams. Sensors 21 (4), 1080.
+Ding, Q., Katenka, N., Barford, P., Kolaczyk, E., Crovella, M., 2012. Intrusion as (anti) Perozzi, B., Akoglu, L., Iglesias Sánchez, P., Müller, E., 2014. Focused clustering and
+ social communication: characterization and detection. In: Proceedings of the 18th outlier detection in large attributed graphs. In: Proceedings of the 20th ACM SIGKDD
+ ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, International Conference on Knowledge Discovery and Data Mining, pp. 1346–1355.
+ pp. 886–894. Philbin, J., Zisserman, A., 2008. Near duplicate image detection: min-hash and tf-idf
+Feng, H.H., Kolesnikov, O.M., Fogla, P., Lee, W., Gong, W., 2003. Anomaly detection weighting. In: Proceedings of the British Machine Vision Conference, vol. 3, p. 4.
+ using call stack information. In: 2003 Symposium on Security and Privacy, 2003. Piskozub, M., De Gaspari, F., Barr-Smith, F., Mancini, L., Martinovic, I., 2021. Malphase:
+ IEEE, pp. 62–75. fine-grained malware detection using network flow data. In: Proceedings of the 2021
+Friedman, J.H., 1997. On bias, variance, 0/1—loss, and the curse-of-dimensionality. ACM Asia Conference on Computer and Communications Security, pp. 774–786.
+ Data Min. Knowl. Discov. 1, 55–77. Qu, Z., Guo, G., Shao, Z., Rastogi, V., Chen, Y., Chen, H., Hong, W., 2017. Appshield:
+Gao, J., Liang, F., Fan, W., Wang, C., Sun, Y., Han, J., 2010. On community outliers and enabling multi-entity access control cross platforms for mobile app management. In:
+ their efficient detection in information networks. In: Proceedings of the 16th ACM Security and Privacy in Communication Networks: 12th International Conference,
+ SIGKDD International Conference on Knowledge Discovery and Data Mining, SecureComm 2016, Guangzhou, China, October 10-12, 2016, Proceedings 12.
+ pp. 813–822. Springer, pp. 3–23.
+Gehani, A., Tariq, D., 2012. Spade: support for provenance auditing in distributed Rajaraman, A., Ullman, J.D., 2011. Mining of Massive Datasets. Cambridge University
+ environments. In: ACM/IFIP/USENIX International Conference on Distributed Press.
+ Systems Platforms and Open Distributed Processing. Springer, pp. 101–120. Shervashidze, N., Schweitzer, P., Van Leeuwen, E.J., Mehlhorn, K., Borgwardt, K.M.,
+Han, X., Pasquier, T., Bates, A., Mickens, J., Seltzer, M., 2020. Unicorn: runtime 2011. Weisfeiler-lehman graph kernels. J. Mach. Learn. Res. 12 (9).
+ provenance-based detector for advanced persistent threats. In: 27TH ANNUAL Shi, L., Ming, J., Fu, J., Peng, G., Xu, D., Gao, K., Pan, X., 2020. Vahunt: warding off new
+ NETWORK AND DISTRIBUTED SYSTEM SECURITY SYMPOSIUM (NDSS 2020). repackaged android malware in appvirtualization’s clothing. In: Proceedings of the
+Hassan, W.U., Guo, S., Li, D., Chen, Z., Jee, K., Li, Z., Bates, A., 2019. Nodoze: 2020 ACM SIGSAC Conference on Computer and Communications Security,
+ Combatting threat alert fatigue with automated provenance triage. In: Network and pp. 535–549.
+ Distributed Systems Security Symposium. Sivic and Zisserman, 2003. Video Google: A Text Retrieval Approach to Object Matching
+Hassan, W.U., Bates, A., Marino, D., 2020. Tactical provenance analysis for endpoint in Videos. IEEE.
+ detection and response systems. In: 2020 IEEE Symposium on Security and Privacy Song, W., Ming, J., Jiang, L., Xiang, Y., Pan, X., Fu, J., Peng, G., 2021. Towards
+ (SP). IEEE, pp. 1172–1189. transparent and stealthy android os sandboxing via customizable container-based
+Hodge, V., Austin, J., 2004. A survey of outlier detection methodologies. Artif. Intell. virtualization. In: Proceedings of the 2021 ACM SIGSAC Conference on Computer
+ Rev. 22, 85–126. and Communications Security, pp. 2858–2874.
+Hossain, M.N., Milajerdi, S.M., Wang, J., Eshete, B., Gjomemo, R., Sekar, R., Stoller, S., Vishwanathan, S.V.N., Schraudolph, N.N., Kondor, R., Borgwardt, K.M., 2010. Graph
+ Venkatakrishnan, V., 2017. {SLEUTH}: Realtime attack scenario reconstruction from kernels. J. Mach. Learn. Res. 11, 1201–1242.
+ {COTS} audit data. In: 26th USENIX Security Symposium (USENIX Security 17), Weisfeiler, B.Y., Leman, A.A., 1968. A reduction of a graph to a canonical form and an
+ pp. 487–504. algebra arising during this reduction. Nauchno-Technicheskaya Informatsiya 2 (9),
+Hossain, M.N., Sheikhi, S., Sekar, R., 2020. Combating dependence explosion in forensic 12–16.
+ analysis using alternative tag propagation semantics. In: 2020 IEEE Symposium on Xiong, C., Zhu, T., Dong, W., Ruan, L., Yang, R., Cheng, Y., Chen, Y., Cheng, S., Chen, X.,
+ Security and Privacy (SP). IEEE, pp. 1139–1155. 2020. Conan: a practical real-time apt detection system with high accuracy and
+Hunt, P., Konar, M., Junqueira, F.P., Reed, B., 2010. Zookeeper: wait-free coordination efficiency. IEEE Trans. Dependable Secure Comput. 19 (1), 551–565.
+ for internet-scale systems. In: 2010 USENIX Annual Technical Conference (USENIX Xu, K., Li, C., Tian, Y., Sonobe, T., Kawarabayashi, K.-i., Jegelka, S., 2018.
+ ATC 10). Representation learning on graphs with jumping knowledge networks. In:
+Indyk, P., Motwani, R., 1998. Approximate nearest neighbors: towards removing the International Conference on Machine Learning. PMLR, pp. 5453–5462.
+ curse of dimensionality. In: Proceedings of the Thirtieth Annual ACM Symposium on Yadav, T., Rao, A.M., 2015. Technical aspects of cyber kill chain. In: Security in
+ Theory of Computing, pp. 604–613. Computing and Communications: Third International Symposium, SSCC 2015,
+Jacob, B., Larson, P., Leitao, B., Da Silva, S., 2008. Systemtap: instrumenting the linux Kochi, India, August 10-13, 2015. Proceedings 3. Springer, pp. 438–452.
+ kernel for analyzing performance and functional problems. IBM Redbook 116. Yu, L., Luo, B., Ma, J., Zhou, Z., Liu, Q., 2020. You are what you broadcast: identification
+Kang, W., Son, B., Heo, K., 2022. Tracer: signature-based static analysis for detecting of mobile and iot devices from (public) wifi. In: 29th USENIX Security Symposium
+ recurring vulnerabilities. In: Proceedings of the 2022 ACM SIGSAC Conference on (USENIX Security 20), pp. 55–72.
+ Computer and Communications Security, pp. 1695–1708. Zengy, J., Wang, X., Liu, J., Chen, Y., Liang, Z., Chua, T.-S., Chua, Z.L., 2022.
+Kapoor, M., Melton, J., Ridenhour, M., Krishnan, S., Moyer, T., 2021. Prov-gem: Shadewatcher: recommendation-guided cyber threat analysis using system audit
+ automated provenance analysis framework using graph embeddings. In: 2021 20th records. In: 2022 IEEE Symposium on Security and Privacy (SP). IEEE, pp. 489–506.
+ IEEE International Conference on Machine Learning and Applications (ICMLA). Zhu, T., Yu, J., Xiong, C., Cheng, W., Yuan, Q., Ying, J., Chen, T., Zhang, J., Lv, M.,
+ IEEE, pp. 1720–1727. Chen, Y., et al., 2023. Aptshield: a stable, efficient and real-time apt detection system
+Kyrola, A., Blelloch, G., Guestrin, C., 2012. {GraphChi}:{Large-Scale} graph computation for linux hosts. IEEE Trans. Dependable Secure Comput.
+ on just a {PC}. In: 10th USENIX Symposium on Operating Systems Design and Zimba, A., Chen, H., Wang, Z., Chishimba, M., 2020. Modeling and detection of the
+ Implementation (OSDI 12), pp. 31–46. multi-stages of advanced persistent threats attacks based on semi-supervised
+Liu, C., Yan, X., Yu, H., Han, J., Yu, P.S., 2005. Mining behavior graphs for “backtrace” of learning and complex networks characteristics. Future Generat. Comput. Syst. 106,
+ noncrashing bugs. In: Proceedings of the 2005 SIAM International Conference on 501–517.
+ Data Mining. SIAM, pp. 286–297.
+
+ 13
+Z. Weng et al. Journal of Network and Computer Applications 233 (2025) 104036
+
+Zhengqiu Weng received the Ph.D. degree in computer science and technology from the Zhenhao Dou is currently pursuing the bacheleor degree in big data technologies from the
+Zhejiang University of Technology, Zhejiang, China, in 2023,and the M.S. degree in Wenzhou University of Technology, Zhejiang, China. His research interests include system
+software engineering from the Beijing Institute of Technology, Beijing, China, in 2005. She security, software security, and firmware analysis.
+is also a professor with the Wenzhou University of Technology, Zhejiang, China. Her
+current research interests include networks security and big data technologies.
+ Zhanxiang Ye received the M.S. degree from Wuhang University of in Wuhang, china, in
+ 2006, He is currently a Associate professor in Wenzhou Polytechnic. His research interests
+Weinuo Zhang is currently pursuing the bacheleor degree in big data technologies from the include Network Technology and Information Security.
+Wenzhou University of Technology, Zhejiang, China. His research interests include system
+security, software security, and firmware analysis.
+ Haofei Sun is currently pursuing the M.S. degree in computer science and technology from
+ the Zhejiang University of Technology, Zhejiang, China. His research interests include
+Tiantian Zhu received the PhD degree in computer science from Zhejiang University, system security, software security, and firmware analysis.
+Hangzhou, China, in 2019. He is currently an associate professor with the college of
+computer science and technology, Zhejiang University of Technology, China. His research
+ Ye Tian is currently pursuing the M.S. degree in computer science and technology from the
+interests include mobile security, system security and artificial intelligence.
+ Zhejiang University of Technology, Zhejiang, China. His research interests include system
+ security, software security, and firmware analysis.
+
+ 14

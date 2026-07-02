@@ -1,0 +1,1201 @@
+This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 1
+
+ MTG-GAN: A Masked Temporal Graph Generative
+ Adversarial Network for Cross-Domain System Log
+ Anomaly Detection
+ Jing Zhang, Chao Luo member, IEEE, and Rui Shao
+
+ Abstract—Anomaly detection of system logs is crucial for the of cross-domain log anomaly detection. For example, in 5G
+service management of large-scale information systems. mobile base station management, a group of base stations that
+Nowadays, log anomaly detection faces two main challenges: 1) are geographically adjacent and have close mutual influence
+capturing evolving temporal dependencies between log events to are usually treated as a management cluster. When using
+adaptively tackle with emerging anomaly patterns, 2) and machine learning based anomaly detection models, different
+maintaining high detection capabilities across varies data clusters need to be trained separately due to significant
+distributions. Existing methods rely heavily on domain-specific differences in size, external environment, and diverse
+data features, making it challenging to handle the heterogeneity monitoring indicators, resulting in significant maintenance
+and temporal dynamics of log data. This limitation restricts the costs. From a practical perspective, an effective cross-domain
+deployment of anomaly detection systems in practical
+ log anomaly detection system can significantly reduce the
+environments. In this article, a novel framework, Masked
+ operational costs, as it eliminates the need for system-specific
+Temporal Graph Generative Adversarial Network (MTG-GAN),
+ model retraining and extensive labeled data collection when
+is proposed for both conventional and cross-domain log anomaly
+detection. The model enhances the detection capability for deploying to new environments. Although recent deep learning
+emerging abnormal patterns in system log data by introducing an methods have achieved breakthroughs in log anomaly
+adaptive masking mechanism that combines generative detection, significant limitations remain in terms of
+adversarial networks with graph contrastive learning. generalization capability, dynamic dependency modeling, and
+Additionally, MTG-GAN reduces dependency on specific data interpretability, constraining their practical deployment [7], [8],
+distribution and improves model generalization by using diffused [9].
+graph adjacency information deriving from temporal relevance In practical applications, log data distribution is highly
+of event sequence, which can be conducive to improve cross- dependent on specific system environments, making crossdomain detection performance. Experimental results system model migration a fundamental challenge [10], [11].
+demonstrate that MTG-GAN outperforms existing methods on This dependency manifests at three levels: first, significant
+multiple real-world datasets in both conventional and cross- differences in log formats and event types across systems result
+domain log anomaly detection.
+ in feature space inconsistency; second, the diverse
+Index Terms—Log Anomaly Detection, Generative Adversarial
+Networks (GANs), Temporal Data Analysis
+ manifestations of anomaly patterns across different systems
+ make single detection strategies inadequate; and third, system
+ I. INTRODUCTION behavior patterns dynamically change with environmental and
+ load variations, rendering static models ineffective [12], [13].
+
+T HE widespread adoption of modern distributed systems,
+ cloud computing platforms, and industrial control
+ systems has increased the importance of system log
+ data for anomaly detection and system monitoring.
+These logs capture detailed system operations, containing
+ For instance, research in Google’s production environment
+ shows that identical anomaly detection models can exhibit
+ performance variations 20%-30% across different server
+ clusters [14]. This lack of cross-system generalization
+extensive temporal information and interaction patterns [1], [2]. increases model deployment and maintenance costs and
+Statistics show that a large-scale distributed system can significantly impacts the reliability and practicality of anomaly
+generate terabytes of log data daily, encompassing millions of detection systems [15].
+event records [3]. However, the high dimensionality, Additionally, the complex temporal dependencies and
+unstructured nature, and heterogeneity of log data across dynamic evolutionary characteristics among events in log data
+different systems present significant challenges for anomaly present a second core challenge for anomaly detection [16].
+detection [4], [5], [6]. In reality, there are various applications Traditional methods tend to employ static sequence models or
+ fixed adjacency matrices to represent event relationships [17],
+This research is supported by the National Natural Science Foundation of presenting three critical issues: first, they neglect long-term
+China (Nos: 62172264) (Corresponding Author: Chao Luo).
+Chao Luo, Jing Zhang are with School of Information Science and
+ dependencies between events, resulting in insufficient
+Engineering, Shandong Normal University, Jinan 250014, China. Chao Luo is detection capability for complex anomaly patterns [18];
+with Shandong Provincial Key Laboratory for Novel Distributed Computer second, static modeling methods cannot adapt to dynamic
+Software Technology, Jinan 250014, China. Rui Shao is with the center of changes in system behavior, particularly during load
+network optimization, China Mobile Shandong Co., Ltd, Jinan 250014, China.
+ fluctuations or configuration updates [16], [19]; finally,
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 2
+
+existing methods struggle to effectively distinguish between ● Integration of spectral loss and feature perturbation
+regular behavioral changes and genuine anomalous events, contrastive loss to improve detection accuracy and
+leading to high false-positive rates. For example, in OpenStack interpretability. Spectral loss ensures the preservation
+systems, certain anomalies might manifest as unusual of global topological structure, enhancing the
+combinations of specific event sequences or rare temporal model’s ability to capture long-term dependencies;
+patterns rather than individual anomalous events [20], [21]. feature perturbation contrastive loss provides
+This dynamicity and context dependency make detection preliminary reasoning capability for anomaly
+methods based on static features inadequate for accurately detection through analysis of feature changes before
+identifying complex anomaly patterns. and after masking, enhancing the transparency and
+ interpretability of detection results.
+ Challenges lie in these two issues’ interconnected and
+progressive nature: enhancing cross-system generalization
+requires models to understand the essential characteristics of
+event sequences across different systems, which depends on II. RELATED WORK
+accurate modeling of temporal dependencies. Simultaneously, A. Conventional Log Anomaly Detection
+the quality of temporal feature modeling directly influences the Early research on log anomaly detection relied heavily on
+model’s adaptability to new systems. This complex interaction rule-based and statistical approaches. Principal component
+demands solutions to both challenges while achieving analysis (PCA), as introduced by Xu et al. [23], pioneered the
+interpretability in anomaly detection results to support system use of dimensionality reduction to identify anomalies in largemaintenance personnel’s decision-making processes [22]. scale structured log data, marking a significant advancement
+ This paper introduces MTG-GAN, a novel approach to in automated anomaly detection. Similarly, the clusteringcross-domain system log anomaly detection leveraging based LogCluster algorithm, developed by Vaarandi et al.,
+masked temporal graph generative adversarial networks. facilitated pattern recognition in large-scale textual log
+MTG-GAN addresses the critical challenges of generalization datasets, offering a straightforward yet effective means of
+and accurate temporal dependency modeling in diverse system detecting anomalous events [24]. The introduction of deep
+environments. By incorporating an adaptive masking learning has significantly expanded the capabilities of log
+mechanism into the training process, MTG-GAN learns robust anomaly detection. DeepLog, proposed by Du et al., utilized
+representations by selectively masking portions of the Recurrent Neural Networks (RNNs) to predict future log
+adjacency matrix, preventing over-reliance on system-specific events, enabling real-time anomaly detection in sequential data
+data patterns. This masking strategy, coupled with a generative [1]. Expanding this approach, Meng et al. developed
+adversarial network (GAN) architecture, empowers the model LogAnomaly, which incorporates semantic embeddings to
+to generate diffused adjacency matrices, significantly detect sequential and quantitative anomalies, thereby
+improving robustness against distant data distributions. improving robustness to unseen log patterns [25]. LogRobust,
+Further enhancing performance, a spectral loss function proposed by Zhang et al., addressed data instability issues with
+preserves global topological structure during adjacency matrix Bi-LSTM and attention mechanisms, further enhancing
+representation learning, enabling the capture of both short- detection reliability under dynamic log environments [26].
+term anomalies and long-term dependencies. Finally, a feature Graph-based methods have emerged as a robust alternative for
+perturbation contrastive loss facilitates anomaly reasoning by capturing complex interdependencies between log events. Yan
+comparing feature changes before and after masking, adding et al. introduced temporal event graphs, leveraging graphinterpretability to the detection process and contributing to a based link prediction for anomaly detection in dynamic
+more transparent understanding of anomaly causation. The systems [27]. Similarly, Velickovic et al.'s Deep Graph
+main contributions are: Infomax framework established a strong foundation for
+ ● Design of a diffused graph generation module based contrastive representation learning on graphs, later adapted for
+ on generative adversarial networks. The generator
+ log anomaly detection [28]. Hou et al.'s GraphMAE further
+ enhances the model’s capability to handle emerging
+ innovated with a self-supervised masked graph autoencoder to
+ anomaly patterns by simulating complex
+ reconstruct graph features, addressing both local and global
+ relationships between log events, which can
+ efficiently detect known anomaly patterns and structure consistency [29]. Self-supervised learning techniques
+ effectively handle unknown cases. have also contributed to advancements in log anomaly
+ ● Proposal of a dynamical masking mechanism to detection. LogFiT, by Almodovar et al., demonstrated the
+ enhance generalization capability. By adaptively effectiveness of fine-tuned language models for log analysis
+ masking portions of adjacency matrix information, without the need for labeled data [30]. Qi et al. proposed
+ the model reduces dependency on specific data LogEncoder, integrating contrastive representation learning
+ patterns during training, improving its transfer and one-class classification to effectively distinguish between
+ capability across different datasets. This mechanism normal and anomalous sequences [31].
+ effectively mitigates performance degradation caused Despite significant progress, existing methods struggle to
+ by data distribution differences in cross-domain balance local feature extraction and global structural
+ environments. consistency, particularly in dynamic and heterogeneous
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 3
+
+ Fig. 1 Overall Architecture of MTG-GAN
+environments. Hence, the above methods have generally not al., introduced time-aware self-attention and inter-class
+been tested in cross domain applications. Our proposed model, boundary optimization to preserve temporal relationships and
+MTG-GAN, addresses these challenges by integrating graph align domain distributions effectively [35]. Wang et al.'s
+contrastive learning with generative adversarial networks. By LogGT highlighted the challenges of aligning heterogeneous
+incorporating adaptive masking and spectral loss mechanisms, graph features while ensuring robust transfer learning. By
+MTG-GAN effectively captures both temporal dependencies combining graph-based feature extraction with domain
+and global structure, improving anomaly detection accuracy adaptation, LogGT advanced the state-of-the-art (SOTA) in
+and robustness across diverse datasets. feature alignment for cross-domain tasks [36].
+ Current cross-domain methods often fail to address large
+B. Cross-domain Log Anomaly Detection
+ distributional shifts and maintain temporal dependencies,
+Cross-domain anomaly detection tackles the cold-start limiting their accuracy and robustness. MTG-GAN overcomes
+problem of insufficient labeled data in newly deployed these limitations by employing a masked temporal graph GAN
+systems. Han et al.'s LogTAD employed adversarial domain framework. Its adaptive masking mechanism reduces domain
+adaptation to align feature distributions across domains, dependency, while a generative approach ensures effective
+enabling models to adapt without labeled target data [32]. modeling of complex temporal relationships. These
+Similarly, LogTransfer by Chen et al. leveraged transfer innovations make MTG-GAN particularly adept at handling
+learning to align semantic similarities while mitigating domain shifts and enhancing anomaly detection in diverse and
+syntactic differences, demonstrating its utility in cross-system dynamic environments.
+applications [33]. Meta-learning has emerged as a powerful
+technique for enhancing model generalization in cross-domain III. PROPOSED METHOD
+scenarios. MetaLog, introduced by Zhang et al., employed
+ The two challenges of cross-domain log anomaly detection
+global semantic embeddings and meta-learning frameworks to
+ are capturing dynamic time dependencies and cross domain
+achieve near-supervised performance with minimal labeled
+ generality. Simply put, the log formats and event patterns of
+data [34]. Temporal dependencies play a pivotal role in crossdifferent systems vary greatly. Traditional models are not
+domain log anomaly detection. LogETA, proposed by Gong et
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 2
+
+adapted to different systems, and the event associations in the thereby modeling the system's dynamic evolution and
+logs will change over time. The core idea of MTG-GAN is capturing temporal dependencies. This predictive capability,
+straightforward: first, turn discrete log events into a dynamic refined through adversarial training against the discriminator,
+event graphs, and then use adaptive masking as filtering also endows the model with the potential to simulate complex
+mechanism to remove the "noise" unique to each system, event interrelations and anticipate emerging or unseen
+focusing on learning event patterns that are common to anomaly patterns. Furthermore, the adversarial process
+different systems; Subsequently, by combining generative encourages the generation of realistic yet potentially diffused
+adversarial networks and temporal modeling capabilities, it has adjacency information, which further bolsters robustness
+the ability to understand the long-term correlations of events, against the distributional shift characteristic of cross-domain
+flexibly adapt to new systems, and distinguish between local scenarios—a fundamental requirement for maintaining
+event anomalies or overall pattern problems. generalizability across heterogeneous systems. Finally,
+ Specifically, MTG-GAN is designed to confront the dual recognizing that many anomalies unfold over extended
+challenges inherent in system log analysis: capturing complex durations, a Temporal Convolutional Network (TCN) is
+temporal dependencies and emerging anomaly patterns, and incorporated. Operating on the sequence of graph embeddings
+ensuring robust generalization across diverse system generated over time, the TCN is specifically designed with
+environment. The efficacy of MTG-GAN stems from the causal convolutions and a large receptive field to explicitly
+seamless integration of several specialized components, each capture long-range temporal dependencies—a critical
+chosen for its specific contribution towards these goals: capability often lacking in static or short-memory models. This
+temporal graph representation, graph contrastive learning, architectural design directly empowers the framework to
+adaptive masking mechanisms embedded within a generative overcome the inherent limitations of conventional approaches
+adversarial network, and temporal convolutional networks, as in modeling systemic behavioral evolution and detecting
+illustrated in Fig. 1. multi-scale anomalies.
+ The process begins with standard preprocessing where raw
+ A. Temporal Event Graph Construction
+logs are parsed by using Drain and partitioned into structured
+event sequences. Crucially, the temporal event graph
+construction module then transforms these linear sequences
+into dynamic graph representations. This structural conversion
+is foundational, moving beyond simple sequential modeling to
+explicitly encode both the temporal progression and the
+intricate relational dependencies between log events, thereby
+establishing a richer substrate for tackling capturing complex
+temporal dependencies and emerging anomaly patterns. To
+extract meaningful insights from these structures, we employ
+graph contrastive learning (GCL) for pre-training the graph
+encoder. The objective here is not merely features extraction Fig. 2. Construction Process of Temporal Event Graphs
+but learning robust and discriminative node embeddings that
+capture essential topological information. By maximizing After log parsing, the parsed event templates are divided
+mutual information between augmented views of the graph, into sequences. Event sequences in log data are typically
+GCL yields representations that are more resilient to noise and partitioned along temporal or session dimensions to capture
+minor structural variations, enhancing the basis for subsequent temporal dependencies and causal relationships between
+temporal analysis and inherently improving feature events. Common partitioning methods include fixed windows,
+generalizability across different graph instances contributing sliding windows, and session windows. This partitioning
+to ensure robust generalization across diverse system transform raw unstructured log data into event sequences that
+environment. reflect temporal order or logical associations.
+ At the core of MTG-GAN resides the mask-based Constructing temporal event graphs is essential for
+generative adversarial network (GAN), a module strategically capturing temporal dependencies in log data. We adopt an
+designed to synergistically address both core challenges. The incremental approach to construct temporal event graphs to
+adaptive masking mechanism plays a pivotal role in better model temporal dependencies between logs and events.
+overcoming cross-system generalization barriers by actively Given a set of event sequences ℒ = 𝐿0 , 𝐿1 , ⋯ , 𝐿𝑡 , where each
+suppressing domain-specific spurious correlations. By sequence 𝐿𝑖 = 𝑒0𝑖 , 𝑒1𝑖 , ⋯ , 𝑒𝑇𝑖 represents the 𝑖-th event sequence
+dynamically and selectively obscuring parts of the input and 𝑒𝑗𝑖 denotes the 𝑗-th event, we convert these sequences into
+graph's adjacency matrix during training, it prevents the model temporal event graph sequences 𝒢 = 𝐺0 , 𝐺1 , ⋯ , 𝐺𝑡‾ , where
+from overfitting to potentially spurious, domain-specific 𝐺𝑢 = (𝑉, 𝐸𝑢 ) with 𝑉 as the node set and 𝐸𝑢 as the edge set.
+correlations. This forces the generator and discriminator to The general process of transforming event sequences into
+learn based on more fundamental, transferable structural and corresponding temporal graph representations is illustrated in
+temporal patterns, significantly enhancing cross-domain Fig. 2. By introducing a control parameter 𝑘, longer-distance
+generalization. Concurrently, the generative aspect of the event correlations can be effectively captured. The
+GAN specifically tackles the critical task of temporal construction of temporal event graphs considers both the
+dependency modeling and anomaly pattern capture. The temporal sequence of events and multi-order adjacency
+generator learns to predict the subsequent event graph state,
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 3
+
+relationships, facilitating a better understanding of complex or sampling structurally similar subgraphs. Minimizing this
+associations between log events. This approach effectively loss function enables unsupervised learning of graph structural
+represents the temporal features of system logs in high- features while enhancing the model’s sensitivity to topological
+dimensional space, thereby improving anomaly detection changes. For temporal domain representation, we employ a
+accuracy. TCN with causality constraints for sequence modeling. Given
+ During data processing, each log event is mapped to a node, the feature sequence 𝒵 = 𝑍0 , 𝑍1 , ⋯ , 𝑍𝑡‾ output by the GCN, the
+and edges are added based on temporal relationships between TCN’s progressive feature extraction process is defined as:
+events. This process ensures that the input data is already in 𝑌 𝑡‾ = TCN(𝒵) = 𝑓𝑛 ∘ 𝑓𝑛−1 ∘ ⋯ ∘ 𝑓1 (𝒵) (3)
+graph form when it enters the model, facilitating subsequent
+graph convolutional network processing. where 𝑓𝑖 represents the transformation function of the 𝑖 -th
+ TCN layer. Core operations in each TCN layer include causal
+ convolution, non-linear activation, and residual connections,
+B. Hierarchical Learning Mechanism for Spatiotemporal with causal convolution calculated as:
+Domain Feature Representation 𝑓𝑖conv (𝒵)𝑡 = ∑𝑘 = 0𝐾−1 𝑤𝑘 𝒵𝑡−𝑘 (4)
+ This study proposes a hierarchical feature representation
+ where 𝐾 is the convolution kernel size and 𝑤𝑘 represents
+framework based on graph contrastive learning and temporal learnable kernel parameters. By stacking multiple causal
+convolutional networks to capture spatiotemporal features of convolution layers, the TCN achieves exponentially expanding
+log events. This framework enables high-dimensional receptive fields, effectively capturing long-term temporal
+representations of log event sequences through progressive dependencies. The introduction of residual connections
+feature learning in spatial and temporal domains. alleviates the gradient vanishing problem in deep networks,
+ In the spatial domain representation stage, we first construct mathematically expressed as:
+adjacency matrix sequences 𝒜 = 𝐴0 , 𝐴1 , ⋯ , 𝐴𝑡‾ to capture 𝑓𝑖residual (𝒵) = ReLU(𝑓𝑖conv (𝒵) + 𝒵) (5)
+temporal relationships between events, along with
+corresponding feature matrix sequences 𝒳 = 𝑋0 , 𝑋1 , ⋯ , 𝑋𝑡‾ . This hierarchical feature representation mechanism
+We use Graph Convolutional Networks (GCN) as encoders for establishes a feature learning framework that progresses from
+feature embedding, formally defined as: local to global, from spatial to temporal domains. At the
+ −
+ 1 1 implementation level, this framework maps unstructured log
+ ̃ 𝑖 −2 𝑋𝑖 𝑊)
+ ̃ 2 𝐴̃𝑖 𝐷
+ 𝑍𝑖 = GCN(𝑋𝑖 , 𝐴𝑖 ) = 𝜎 (𝐷 (1) sequences to structured feature spaces by constructing high-
+ 𝑖
+ dimensional adjacency and feature matrices. The spatial
+where 𝐴̃𝑖 = 𝐴𝑖 + 𝐼𝑁 is the adjacency matrix with self-loops, domain graph contrastive learning focuses on capturing
+̃ 𝑖 is the degree matrix, 𝑊 is the learnable parameter matrix,
+𝐷 topological relationships between events, while the temporal
+and 𝜎 is the non-linear activation function. domain convolutional network extracts temporal patterns.
+ Together, these components provide feature representations
+ rich in spatiotemporal information, enhancing anomaly
+ detection.
+ C. Link Prediction via Masked Generative Adversarial
+ Networks
+ At the heart of MTG-GAN lies an innovative link prediction
+ framework that integrates a GAN with an adaptive masking
+ mechanism. Its objective function is defined as:
+ min max 𝔼𝐴∼𝑝data [log 𝐷(𝐴)] +
+ 𝐺 𝐷
+
+Fig. 3. Illustration of Positive Sample Construction under 𝔼𝑧∼𝑝𝑧 [log (1 − 𝐷 (𝐺(𝑧, 𝑀(𝐴))))] (6)
+Graph Contrastive Learning Paradigm
+ where 𝐺, 𝐷, and 𝑀 represent the generator, discriminator, and
+ We introduce a contrastive learning objective function masking module respectively, 𝐴 is the real adjacency matrix,
+based on InfoNCE at this stage: and 𝑧 is random noise. Through adversarial generation, this
+ 𝑠(ℎ(𝑥), ℎ(𝑥 + )) framework effectively models both normal and anomalous
+ exp ( ) patterns in log events, wherein the generator synthesizes graph
+ 𝜏
+ ℒInfoNCE = −𝔼𝑥, 𝑥 + log (2) representations approximating real adjacency matrices, while
+ −
+ 𝑠(ℎ(𝑥), ℎ(𝑥 − )) the discriminator iteratively refines its discriminative capacity
+ ∑𝑥 exp ( )
+ [ 𝜏 ] through an adversarial learning process. The incorporation of
+ an adaptive masking mechanism introduces controlled
+where ℎ(⋅) represents the encoder function, 𝑠(⋅,⋅) is the stochastic perturbations into the input data, consequently
+similarity measure function, 𝜏 is the temperature parameter, enhancing the robustness of both the generator and
+(𝑥, 𝑥 + ) is a positive sample pair, and 𝑥 − represents negative discriminator while significantly improving the model’s
+samples. Fig. 3 provides a conceptual illustration of positive generalization capability towards unseen anomaly patterns. In
+sample pair construction within the graph contrastive learning data processing, the adjacency matrix undergoes adaptive
+paradigm, which typically involves creating augmented views masking before being fed into the generator, ensuring model
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 4
+
+robustness to partial information loss while making generated masking strategies during training, we propose an adaptive
+features more diverse, thereby improving anomaly detection weight function with nonlinear growth characteristics:
+ 𝛾
+effectiveness. 𝑡
+ 1) Generation Mechanism Based on Selective Masking 𝛼adv (𝑡) = 𝛼start + ( ) (𝛼end − 𝛼start ) ⋅
+ Tpretrain
+ 𝑡
+ exp (−𝛽 | − 0.5|) (8)
+ Tpretrain
+ This function is designed based on the following
+ considerations: in the early stages of training, when the
+ model’s understanding of data distribution is rudimentary,
+ more random exploration is needed; as training progresses, the
+ model gradually masters the inherent patterns of the data, at
+ which point the proportion of learned masking should increase
+ to capture key features. The introduction of the exponential
+ decay term provides a smooth transition period during midtraining, avoiding training instability caused by abrupt weight
+Fig. 4. Adaptive Masking Mechanism combining learned changes.
+(Gumbel-SoftMax based) and random masks. We employ a contrastive loss function, ℒcon , to encourage
+ the model to learn representations that are sensitive to the
+ This study introduces a novel graph generation mechanism structural changes introduced by masking. This loss function
+leveraging adaptive selective masking to address the inherent is defined as:
+challenges in system log anomaly detection, where graph- 𝑛 𝐷
+structured data exhibits complex temporal dependencies and 1 2
+structural biases that significantly complicate feature learning. ℒcon = ∑ [max (0, 𝑚 − √∑ (𝑓(𝐴𝑡 )𝑗 − 𝑓(𝐴˜𝑡 )𝑗 ) )] + 𝜖(9)
+ 𝑛
+Although conventional random masking approaches provide 𝑖=1 𝑗=1
+
+limited enhancement to model robustness, their inherent where 𝑛 is the number of samples in a batch, 𝐷 is the
+inability to preserve structural information and temporal dimensionality of the feature representations, 𝑚 is a margin
+features in graph data significantly impairs the model’s parameter that controls the separation between positive
+capacity to capture anomalous patterns effectively. Based on (similar) and negative (dissimilar) pairs, and 𝜖 is a small
+this observation, we designed a dual masking mechanism with constant for numerical stability. Minimizing this loss
+dynamic weight adjustment, achieving adaptive capture of key encourages the feature representations of the original and
+structural features through the synergistic effect of learned and masked adjacency matrices to be close, within a margin 𝑚.
+random masking. The overall adaptive masking process, This effectively forces the model to learn representations that
+illustrating how the generated learned mask ( 𝑚learning ) is are invariant to the masked elements, thereby focusing on the
+combined with a random mask (𝑚𝑟 ) using the adaptive weight core structural information that remains. This process allows
+αadv (𝑡), is depicted in Fig. 4. the generator to learn to better distinguish anomalies by
+ In the design of selective learning masks, we constructed a implicitly learning the characteristics of the self-supervised
+differentiable mask generation module based on Gumbel- anomalies introduced by the masking process, ultimately
+SoftMax. Compared to discrete Bernoulli sampling, Gumbel- enhancing the model’s anomaly detection capabilities.
+SoftMax provides a differentiable discrete approximation, For preserving global topological structure of graphs, simple
+enabling end-to-end training of the mask generation process. node-level or edge-level reconstruction losses often struggle to
+Given input feature tensor 𝑋 ∈ ℝ𝐵×𝑊×𝑁×𝐹 (where 𝐵, 𝑊, 𝑁, 𝐹 capture high-order structural features. Based on this
+represent batch size, time window length, number of nodes, understanding, we introduce a generalized spectral loss
+and feature dimension respectively), the mask generation function based on spectral graph theory:
+process can be formalized as a two-stage feature ℒspectral = |𝛷(𝐿real) − 𝛷(𝐿pred )|𝐹 2 +
+transformation:
+ 𝜆tr (𝛷(𝐿real)𝑇 𝛷(𝐿pred )) (10)
+ ℎ𝑙 = LayerNorm(ReLU(𝑊1 𝑋 + 𝑏1 ))
+ 𝑊2 ℎ𝑙 + 𝑏2 (7) The design of this loss function is based on the following
+ 𝑚learning = GumbelSoftmax ( , 𝜏)
+ √𝑑𝑘 theoretical foundations: first, the eigen spectrum of the
+ Laplacian matrix contains essential structural information of
+where 𝑊1 ∈ ℝ𝑑model ×𝑑ff , 𝑊2 ∈ ℝ𝑑ff×𝑁 are learnable the graph, such as connectivity and clustering characteristics;
+transformation matrices, 𝑑𝑘 is the feature dimension scaling second, through the introduction of the spectral projection
+factor, and 𝜏 is the temperature parameter. The advantages of operator 𝛷(⋅), we can better measure structural differences
+this design are: first, normalizing feature distributions through between graphs in the frequency domain; finally, the
+LayerNorm reduces the impact of Internal Covariate Shift; introduction of the trace term provides a soft constraint,
+second, introducing the scaling factor √𝑑𝑘 effectively ensuring alignment of eigenvector spaces, which is particularly
+mitigates the gradient vanishing problem caused by increasing important for preserving local structural features of the graph.
+feature dimensions. To address the dynamic adjustment of
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 5
+
+2) Discriminator Design and Optimization
+ Building upon the aforementioned generation framework,
+we propose a structurally-aware discriminator architecture that
+incorporates sophisticated topological learning capabilities.
+Our discriminator extends beyond conventional GAN
+architectures by not only differentiating between authentic and
+synthesized graph structures but also facilitating the
+generator’s learning process through dual mechanisms: feature
+uniformity constraints and spectral domain consistency
+preservation, thereby promoting the generation of more
+realistic anomaly patterns. To address the inherent high Fig. 5. Flow Chart of Anomaly Score Calculation
+dimensionality and sparsity of graph-structured data, we
+implement a multi-layer discrimination framework utilizing This prediction is then compared against the actual observed
+feed-forward neural networks as the architectural foundation: adjacency matrix ( 𝑆𝑟𝑒𝑎𝑙 ) using a differential analysis
+ 𝐷(𝐴) = FFN(vec(𝐴)) (11) framework based on graph Laplacians. For the pair 𝑆𝑟𝑒𝑎𝑙 and
+where 𝐴 is the input adjacency matrix, vec(⋅) represents the 𝑆𝑝𝑟𝑒𝑑 , their corresponding Laplacian matrices are computed as:
+matrix flattening operation, and FFN denotes a feed-forward 𝐿𝑟𝑒𝑎𝑙 = 𝐷𝑟𝑒𝑎𝑙 − 𝑆𝑟𝑒𝑎𝑙
+neural network with nonlinear activation functions. Through (14)
+ 𝐿𝑝𝑟𝑒𝑑 = 𝐷𝑝𝑟𝑒𝑑 − 𝑆𝑝𝑟𝑒𝑑
+this design, the discriminator can effectively capture global where 𝐷𝑟𝑒𝑎𝑙 and 𝐷𝑝𝑟𝑒𝑑 are the degree matrices. By calculating
+features of graph structures. To enhance the model’s
+discriminative capability, we adopt a loss function based on the Laplacian difference Δ𝐿 = 𝐿𝑟𝑒𝑎𝑙 − 𝐿𝑝𝑟𝑒𝑑 and performing
+Wasserstein distance: eigenvalue decomposition, we obtain the eigenvalue
+ ℒ𝐷 = 𝔼[𝐷(𝐴𝑟𝑒𝑎𝑙)] − 𝔼[𝐷(𝐴𝑓𝑎𝑘𝑒 )] (12) difference sequence δλ𝑛𝑖𝑖=1 . Crucially, as the Laplacian
+ spectrum encapsulates the graph's global topological
+where 𝐴𝑟𝑒𝑎𝑙 and 𝐴𝑓𝑎𝑘𝑒 represent real and generated adjacency
+ properties, such as connectivity and clustering characteristics,
+matrices respectively. This formulation of the loss function
+ the magnitude of the L2 norm of this difference, ||δλ||2 =
+yields dual advantages: it ensures gradient stability during
+training while providing a more robust metric for quantifying |δλ𝑛𝑖𝑖=1 |2 , serves as a potent indicator of global structural
+the distributional divergence between real and generated anomalies. Significant deviations suggest substantial shifts in
+samples. During training, the discriminator’s parameter the overall system behavior and event interaction patterns,
+updates follow the optimization objective: often associated with major faults or configuration changes.
+ minℒ𝐷 + 𝜆ℒ𝑔𝑝 (13) The derived eigenvalues and their associated eigenvectors also
+ 𝐷
+ aid in identifying pivotal event nodes exhibiting maximum
+where ℒ𝑔𝑝 is the gradient penalty term used to enforce the 1-
+ structural impact, enabling targeted analysis.
+Lipschitz constraint on the discriminator, and 𝜆 is the weight Based on these central events identified via an improved
+coefficient. This optimization strategy ensures that the top-k algorithm applied to the spectral analysis results, time
+discriminator maintains moderate discriminative ability during windows are constructed. Event subsequences within these
+training, avoiding gradient vanishing or explosion problems. windows are converted into subsequence adjacency matrices
+This streamlined discriminator architecture achieves a and fed into the discriminator network. The discriminator,
+favorable balance between model complexity and detection trained to distinguish real (normal) from generated graph
+efficacy. Empirical evaluations demonstrate that our design structures, evaluates these subsequences, outputting an
+effectively steers the generator towards producing more anomaly score 𝑆𝑤 . This score, 𝑆𝑤 , reflects the discriminator's
+faithful graph structure representations, consequently assessment of the subsequence's consistency with learned
+elevating the model’s overall anomaly detection capabilities. normal local event patterns. Since the discriminator implicitly
+D. Anomaly Score Evaluation Method learns valid short-term sequences and contextual relationships
+ We propose a novel anomaly scoring framework, depicted during adversarial training, a high 𝑆𝑤 points towards local
+in Fig. 5, that integrates spectral graph theory with the pattern anomalies, such as the occurrence of rare events,
+generative adversarial network to enable precise detection and incorrect event ordering within a short timeframe, or
+quantitative evaluation of diverse system anomalies by deviations from expected contextual behavior within the
+comprehensively analyzing both local event patterns and window.
+global structural changes. The scoring process begins with the The final comprehensive anomaly score 𝑆𝑡𝑜𝑡𝑎𝑙 is then
+pre-trained generator predicting the expected adjacency matrix calculated as a weighted sum:
+𝑆𝑝𝑟𝑒𝑑 for a given input sequence, representing the anticipated 𝑠𝑡𝑜𝑡𝑎𝑙 = 𝛽 ⋅ 𝑠𝑤 + (1 − 𝛽) ⋅ |𝛿𝜆𝑖 𝑛𝑖=1 | (15)
+ 2
+normal state. where β is a weight parameter balancing the contributions
+ from the two complementary perspectives. The term 𝑆𝑤
+ captures deviations in local sequence patterns within specific,
+ potentially problematic time windows, while the term
+ |δλ𝑛𝑖𝑖=1 |2 quantifies shifts in the global graph structure,
+ reflecting large-scale behavioral changes. This sophisticated
+ multi-dimensional scoring mechanism synthesizes both local
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 6
+
+and global viewpoints, yielding a more comprehensive and secure water treatment testbed. Our analysis used data
+robust anomaly detection framework capable of identifying from 𝑁=30 critical sensors/actuators over 7 normal and 4
+local pattern anomalies (indicated primarily by high 𝑆𝑤 ), attack days. The continuous MTS was segmented using a
+global structural anomalies (indicated primarily by high 60s sliding window with a 10s stride into windowed
+||δλ||2 ), and hybrid scenarios exhibiting characteristics of both. sequences 𝑋𝑡𝑤 . Following a graph construction
+This synthesis significantly enhances detection accuracy and methodology analogous to that presented in [39], each
+reliability across diverse anomaly types. Anomaly sequence 𝑋𝑡𝑤 was subsequently organized into a temporal
+determination is subsequently accomplished through a graph 𝐺𝑡 = (𝑉, 𝐸𝑡 ) , where 𝑉 represents the nodes
+dynamic thresholding mechanism that adaptively adjusts based (sensors/actuators) and 𝐸𝑡 captures the dynamic
+on historical data distributions and operational contexts, interactions inferred within that time window. The initial
+ensuring contextually appropriate detection criteria across node features were derived from 𝑋𝑡𝑤 .
+varying scenarios. For instance, during periods of elevated 6) WADI Dataset [40]: As an extension of SWaT, this
+system load, the framework dynamically modulates its dataset represents a water distribution system developed
+thresholds to accommodate increased frequencies of by iTrust SUTD, containing MTS data from 𝑁 = 121
+anomalous yet potentially benign event sequences, thereby sensors and actuators over 14 days of normal operation
+mitigating false positive rates. This adaptive thresholding and 2 days of anomalies. Our study utilizes 𝑁 = 75
+strategy substantially enhances the model’s operational relevant nodes and focuses on 13 specific attack cases.
+efficacy and reliability in production environments, The data processing methodology aligns with that of
+particularly in systems with varying load patterns and SWaT.
+operational characteristics. B. Evaluation Metrics
+ To measure anomaly detection performance, Precision,
+ Recall, F1 Score, and AUC were used as evaluation metrics,
+ IV. EXPERIMENTS
+ defined as follows:
+A. Datasets 𝑇𝑃
+ Precision = ,
+1) HDFS dataset [37]: This dataset comprises log data 𝑇𝑃 + 𝐹𝑃
+ generated from executing Hadoop-based map-reduce jobs. 𝑇𝑃
+ Recall = ,
+ It contains 11,175,629 log messages, with each message 𝑇𝑃 + 𝐹𝑁
+ containing a block ID. Using session windows for 2 ⋅ Precision ⋅ Recall
+ sequence partitioning, parsing yielded 558,221 normal 𝐹1 = ,
+ Precision + Recall
+ sequences, 16,838 anomalous sequences, and 29 event 𝑀(1 + 𝑀)
+ ∑𝑖∈positive class rank 𝑖 −
+ templates.
+ 𝐴𝑈𝐶 = 2 .
+2) BGL dataset [37]: This dataset consists of log data generated 𝑀×𝑁
+ by the BlueGene/L supercomputer system. It contains where TP represents true positives, indicating the number of
+ 4,747,963 log messages, partitioned using a timestamp- correctly identified anomalous sequences; FP represents false
+ based sliding window approach. The window size is 6 hours positives, indicating the number of normal sequences
+ with a 1-hour step size. Parsing yielded 2,969 normal incorrectly identified as anomalous; FN represents false
+ sequences, 1,723 anomalous sequences, and 379 event negatives, indicating the number of anomalous sequences
+ templates. incorrectly identified as normal; 𝑟𝑎𝑛𝑘𝑖 is the rank of the i-th
+3) OpenStack dataset [37]: This dataset contains log data sample; 𝑀 is the number of positive samples, and 𝑁 is the
+ generated on CloudLab. It comprises 207,820 log messages, number of negative samples.
+ partitioned using a timestamp-based fixed window approach. C. Experiment results
+ With a window size of 1 minute, parsing yielded 1,634
+ normal sequences, 138 anomalous sequences, and 72 event MTG-GAN demonstrates exceptional anomaly detection
+ templates. performance across diverse benchmark datasets (TABLE I for
+4) Thunderbird dataset [37]: This dataset comes from the details), spanning scenarios from traditional system logs (e.g.,
+ Thunderbird supercomputer system at Sandia National HDFS, BGL) to industrial control system (ICS) time series
+ Laboratories (SNL). It contains 211,212,192 log messages, (e.g., SWaT, WADI). The model not only establishes a new
+ partitioned using a timestamp-based fixed window approach. SOTA on the complex BGL dataset with an F1 score of 96.31%
+ With a window size of 1 hour, parsing yielded 268,055 but also achieves highly competitive F1 scores (generally
+ normal sequences, 70,403 anomalous sequences, and 1,147 ranging from 93% to 98%, depending on the dataset) across all
+ event templates. For anomaly detection experiments, a other tested datasets.
+ portion of the data was randomly sampled.
+5) SWaT Dataset [38]: Provided by iTrust SUTD, this
+ dataset contains multivariate time series (MTS) from a
+
+ TABLE I
+ COMPARISON OF DIFFERENT METHODS FOR CONVENTIONAL LOG ANOMALY DETECTION
+ Dataset Method Precision (%) Recall (%) F1 score (%)
+ HDFS DeepLog (2017) [1] 92.98 90.09 91.51
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 2
+
+ LogAnomaly (2019) [25] 93.46 59.20 72.49
+ LogBASA (2023) [41] 99.30 98.10 98.70
+ LogEncoder (2023) [31] 94.40 94.50 94.30
+ LogGPT (2023) [42] 88.40 92.10 90.10
+ DLAD (2023) [27] 99.50 96.40 97.93
+ LogFiT (2024) [30] 99.78 90.70 95.02
+ MTG-GAN 90.56 99.40 94.77
+ DeepLog (2017) [1] 92.31 90.91 91.60
+ LogAnomaly (2019) [25] 78.03 86.70 82.14
+ LogBASA (2023) [41] 95.10 92.80 93.90
+ LogEncoder (2023) [31] 89.60 93.50 87.60
+ BGL
+ LogGPT (2023) [42] 94.00 97.70 95.80
+ DLAD (2023) [27] 97.40 94.20 95.77
+ LogFiT (2024) [30] 94.39 85.80 89.89
+ MTG-GAN 93.52 99.27 96.31
+ DeepLog (2017) [1] 69.20 80.31 74.34
+ LogAnomaly (2019) [25] 79.48 98.55 88.39
+ LogBASA (2023) [41] 97.20 90.30 93.60
+ LogEncoder (2023) [31] 48.30 20.10 94.70
+ Thunderbird
+ LogGPT (2023) [42] 97.30 100.00 98.60
+ DLAD (2023) [27] 98.50 98.10 98.30
+ LogFiT (2024) [30] 89.72 98.60 93.94
+ MTG-GAN 94.39 99.30 96.31
+ DeepLog (2017) [1] 64.94 92.87 76.43
+ LogAnomaly (2019) [25] 79.48 88.10 83.57
+ ULAD (2020) [43] 92.90 94.10 93.10
+ OpenStack Trine (2022) [44] 80.00 93.50 88.90
+ PRPCA-CS (2022) [45] 100.00 87.00 93.00
+ DLAD (2023) [27] 94.00 85.60 89.60
+ MTG-GAN 95.40 97.63 96.50
+ GSC-MAD (2023) [46] 96.73 95.11 95.91
+ CTAD (2024) [47] 97.10 74.20 84.10
+ SA2 (2024) [48] 96.20 82.71 88.95
+ STAGED (2024) [39] 97.28 93.72 96.47
+ SWaT
+ HSC (2025) [49] 90.80 95.80 84.70
+ AnoDual (2025) [50] 96.54 75.29 84.60
+ ConFlow (2025) [51] 89.06 91.38 90.26
+ MTG-GAN 91.00 96.36 93.60
+ SA2E-AD (2024) [52] 83.37 82.95 83.16
+ KeAD (2024) [53] 87.97 65.71 75.22
+ CTAD (2024) [47] 79.20 34.60 48.10
+ SA2 (2024) [48] 77.77 52.43 62.63
+ WADI
+ ConFlow (2025) [51] 92.63 93.88 93.19
+ AnoDual (2025) [50] 66.20 58.76 62.26
+ MGRD (2025) [54] 52.00 44.90 48.20
+ MTG-GAN 93.79 91.56 92.66
+
+ A core advantage lies in its consistently high recall (steadily positive rate under certain conditions (especially on noisy data
+exceeding 95% and even reaching over 99% on most datasets), or data with significant normal pattern variations), reflecting a
+which is crucial for minimizing missed detections of critical potential trade-off between robustness and precision.
+anomalies. This capability likely stems from several key Nevertheless, the high adaptability and overall superior
+aspects of the model's design: the Temporal Convolutional performance demonstrated by MTG-GAN when handling
+Network (TCN) effectively captures long-range dependencies structurally diverse data from different sources robustly
+potentially indicative of anomalies, while the graph-based validate the effectiveness of its framework. Notably, its
+representation learning (combining GCL pre-training and success on both traditional logs and physical system time series
+spectral loss) enables sensitive identification of structural data highlights the flexibility of the temporal graph
+deviations in event interaction patterns, even subtle ones. representation and the potential of the GAN in modeling
+ Concurrently, we observed that precision can fluctuate diverse underlying data distributions. Collectively, these
+depending on dataset characteristics, such as the number of results validate MTG-GAN as a powerful and versatile
+event templates and the clarity of anomaly patterns. This anomaly detection solution, particularly suitable for practical
+suggests that the adaptive masking mechanism, while application scenarios requiring high detection rates and crossenhancing generalization and capturing emerging anomaly system deployment capabilities.
+patterns (boosting recall), might introduce a higher false
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 1
+
+ TABLE II
+ COMPARISON OF DIFFERENT METHODS FOR CROSS-DOMAIN LOG ANOMALY DETECTION
+ Method F1 (Source) AUC (Source) F1 (Target) AUC (Target)
+ PCA w/ TB 0.322 0.587 0.731 0.776
+ PCA w/o TB 0.642 0.816 0.558 0.504
+ LogCluster w/ TB 0.530 0.746 0.677 0.716
+ LogCluster w/o TB 0.713 0.829 0.559 0.504
+ DeepLog w/ TB 0.662 0.854 0.590 0.619
+ DeepLog w/o TB 0.678 0.867 0.556 0.500
+ BGL → TB DeepSVDD w/ TB 0.499 0.725 0.567 0.616
+ DeepSVDD w/o TB 0.566 0.789 0.577 0.646
+ LogTransfer(Supervised)(2020) [33] 0.971 0.972 0.792 0.828
+ LogTAD(Unsupervised)(2021) [32] 0.926 0.964 0.792 0.828
+ LogGT(Unsupervised)(2024) [36] 0.995 0.964 0.919 -
+ LogETA(Supervised)(2024) [35] 0.957 0.959 0.947 0.963
+ MTG-GAN(Unsupervised) 0.963 0.921 0.951 0.937
+ PCA w/ BGL 0.789 0.798 0.577 0.773
+ PCA w/o BGL 0.760 0.779 0.229 0.658
+ LogCluster w/ BGL 0.708 0.688 0.697 0.886
+ LogCluster w/o BGL 0.724 0.716 0.223 0.500
+ DeepLog w/ BGL 0.687 0.701 0.527 0.843
+ DeepLog w/o BGL 0.660 0.677 0.223 0.500
+ TB → BGL DeepSVDD w/ BGL 0.660 0.699 0.196 0.537
+ DeepSVDD w/o BGL 0.794 0.808 0.195 0.497
+ LogTransfer(Supervised)(2020) [33] 0.995 0.995 0.788 0.833
+ LogTAD(Unsupervised)(2021) [32] 0.788 0.797 0.845 0.909
+ LogGT(Unsupervised)(2024) [36] 0.985 0.991 0.798 -
+ LogETA(Supervised)(2024) [35] 0.997 0.996 0.880 0.898
+ MTG-GAN(Unsupervised) 0.963 0.976 0.892 0.899
+ BGL → SWaT 0.963 0.921 0.818 0.766
+ BGL → WADI 0.963 0.921 0.795 0.709
+ MTG-GAN
+ SWaT → WADI 0.936 0.882 0.768 0.738
+ WADI → SWaT 0.926 0.876 0.791 0.754
+
+ achieves a target F1 score of 0.818 and AUC of 0.766.
+D. Cross-Domain Generalization Evaluation
+ Similarly, for BGL→WADI, the target F1 is 0.795 and AUC
+ In the log↔log transfer scenarios (BGL↔TB), MTG-GAN is 0.709. While these scores represent a noticeable drop
+demonstrates robust performance. For the BGL→TB transfer, compared to the log↔log transfer results, they demonstrate
+it achieves a target F1 score of 0.951 and AUC of 0.937, that MTG-GAN can achieve non-trivial generalization even
+outperforming several established baseline and even across highly disparate domains. A plausible explanation for
+specialized unsupervised transfer methods like LogTAD the performance difference lies in the nature of the node
+(Target F1=0.792) and LogGT (Target F1=0.919), while being features. In log datasets like BGL and TB, node features are
+competitive with the supervised LogETA (Target F1=0.947). derived from semantic embeddings of log templates,
+Similarly, in the TB→BGL scenario, MTG-GAN obtains a potentially capturing abstract event types (e.g., 'connection
+target F1 score of 0.892 and AUC of 0.899, again showing error', 'authentication failure') that might share underlying
+strong performance compared to baselines and unsupervised similarities across different software systems. In contrast,
+methods like LogTAD (Target F1=0.845) and LogGT (Target SWaT and WADI node features represent physical sensor
+F1=0.798). These results highlight the effectiveness of MTG- readings or actuator states (e.g., water level, flow rate), which
+GAN's architecture in capturing transferable patterns between are inherently tied to the specific physical process and lack the
+different system log environments. The adaptive masking direct semantic correspondence found in logs. Bridging this
+mechanism likely plays a crucial role by preventing overfitting semantic gap between system event logs and physical process
+to source-specific log event patterns and forcing the model to data presents a greater challenge for transfer learning.
+learn more fundamental temporal and structural dependencies, Nonetheless, the fact that MTG-GAN still yields reasonable
+which are more likely to generalize. Furthermore, the temporal performance suggests its graph-based structure learning and
+convolutional network's ability to model long-range temporal modeling can capture some universal dynamics
+dependencies and the GAN's capability to implicitly align data related to sequential behavior and node interactions, even
+distributions contribute to this strong cross-system when node semantics differ significantly.
+performance. Finally, we evaluate transfer performance between the two
+ We further investigate MTG-GAN's generalization related ICS datasets, SWaT and WADI. For SWaT→WADI,
+capabilities across fundamentally different data types by the target F1 score is 0.768 (Target AUC is 0.738). For WADI
+conducting log↔ICS transfer experiments. Transferring from →SWaT, the target F1 score is 0.791 (Target AUC is 0.754).
+BGL (system logs) to SWaT (ICS time-series), MTG-GAN The performance in these ICS↔ICS transfers is notably better
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 2
+
+than the BGL → WADI transfer, likely because SWaT and domain sample sizes ranging from 1 to 10,000 sequences in
+WADI represent similar physical systems (water treatment and both transfer scenarios. Fig. 6 how performance variations
+distribution), allowing for more effective knowledge transfer under different sample sizes. The experiments used Precision,
+regarding sensor interactions and process dynamics. An Recall, and F1-score as evaluation metrics, with each
+interesting observation is the slight asymmetry in performance; experimental point repeated 5 times to ensure result stability.
+the transfer from WADI to SWaT appears marginally easier. Several key characteristics can be observed from the results:
+Given that WADI is documented as an extension of the SWaT First, in the BGL→TB scenario, the model exhibited clear
+testbed, it might encompass more complex dynamics or attack staged learning characteristics. With sample sizes below 500,
+scenarios. Transferring from the more complex WADI system model performance was relatively low, with precision
+to the potentially simpler core SWaT system could leverage fluctuating between 0.22-0.58, though recall maintained high
+learned representations of shared fundamental dynamics more levels (0.51-0.78). This performance characteristic reflects a
+readily than transferring from SWaT to the extended WADI key advantage of MTG-GAN: even with insufficient training
+system, which might contain novel behaviors not seen in the data, the model can maintain strong detection capability for
+source SWaT data. anomalous patterns through graph structures and masking
+ mechanisms, albeit with some false positives. When sample
+ size reached 1,000-3,000, model performance showed
+ significant improvement, with precision increasing from 0.72
+ to 0.83, recall from 0.85 to 0.91, and F1-score correspondingly
+ from 0.78 to 0.87. This rapid improvement phase indicates that
+ as target domain data accumulates, the model can construct
+ more reliable event graph structures, thereby improving
+ detection accuracy. After exceeding 3,000 samples,
+ performance improvement became gradual but maintained an
+ upward trend, ultimately achieving 0.89 precision and 0.96
+ recall with 10,000 samples. In the more challenging TB→BGL
+ scenario, due to the complexity of the Thunderbird dataset, the
+ model showed more pronounced performance disadvantages
+ in the small sample phase. With sample sizes below 500,
+ precision was only 0.12-0.51, and although recall was
+ relatively better (0.31-0.69), the overall F1-score remained low
+ (0.17-0.59). This performance characteristic confirms our
+ theoretical analysis: when source domain data distribution is
+ more complex, the model requires more target domain samples
+ to achieve effective knowledge transfer. As sample size
+ increased, model performance showed a similar but steeper
+ improvement curve. In the 1,000~3,000 sample range,
+ performance rapidly improved, with precision increasing from
+ 0.68 to 0.79 and recall from 0.81 to 0.88. Notably, even in this
+ more challenging scenario, the model’s recall consistently
+ maintained high levels, verifying MTG-GAN’s robustness in
+ capturing anomalous patterns. Comparing performance curves
+Fig. 6. Impact of Target Domain Training Sample Size on from both transfer scenarios yields several key findings: First,
+Cross-Domain Performance. MTG-GAN demonstrated high recall advantages in both
+ scenarios, benefiting from effective anomaly pattern capture
+ Overall, the cross-domain experiments summarized in through graph structure learning and key feature retention
+TABLE II validate MTG-GAN's strong generalization through the masking mechanism. Second, model performance
+capabilities. The adaptive masking mechanism, combined with showed an inflection point around 1,000 samples, reflecting
+graph contrastive learning for robust structural representations, the minimum data volume needed to construct reliable graph
+generative adversarial training for distribution alignment, and structures. Third, slight performance fluctuations in the large
+temporal convolutional networks for capturing sequential sample region (5,000-10,000) reflect the model’s sensitivity to
+dynamics, equips the model to effectively transfer knowledge distribution differences across different batches, a
+across diverse system types and data modalities. While characteristic that helps the model continuously adapt to target
+performance is naturally influenced by the degree of similarity domain distribution changes. Finally, performance differences
+between source and target domains, particularly concerning between the two scenarios confirm the impact of dataset
+the nature of node features, MTG-GAN demonstrates complexity on transfer learning and validate our data
+significant potential for practical deployment in scenarios configuration design considerations. These experimental
+requiring cross-system applicability. results indicate that while MTG-GAN requires relatively more
+ To analyze the impact of training sample size on model target domain samples to achieve optimal performance, its
+performance in depth, we conducted experiments with target unique model architecture maintains good anomaly detection
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 3
+
+capability even with insufficient samples, particularly in terms different components is indeed modulated by the intrinsic
+of recall. This characteristic makes MTG-GAN particularly characteristics of the dataset, such as structural complexity.
+suitable for practical application scenarios where log data can
+ F. Complexity Analysis and Implementation Details
+be continuously collected, allowing the model to gradually
+improve performance while maintaining high detection rates
+for anomalous events. TABLE III
+ MTG-GAN Resource Utilization during Training and
+E. Ablation Study Inference (Measured on BGL Dataset)
+ An ablation study (illustrated in Fig. 7) quantified the Average Average Average Average
+contributions of MTG-GAN's core components to model Stage Memory CPU VRAM GPU
+performance. Removing the adaptive masking mechanism had Utilization Utilization Utilization Utilization
+the most significant impact on performance, especially on the
+ Train 5.4 GB 12.15% 3.8 GB 22.8%
+BGL and Thunderbird datasets featuring more event templates
+and complex structures, causing a sharp drop in F1 score by Inference 2.3 GB 10.08% 200.0 MB 12.5%
+5.06 percentage points on Thunderbird, for instance. This
+directly highlights its critical role in enhancing generalization The model's training complexity is primarily composed of
+capability by mitigating overfitting to specific data patterns. several core components. Specifically, the GCN encoder
+Similarly, removing the Graph Contrastive Learning (GCL) contributes a complexity of 𝑂(𝐿 × |𝐸| × 𝑑) for its 𝐿 -layer
+pre-training also resulted in substantial performance forward propagation when processing a graph containing |𝐸|
+degradation on BGL and Thunderbird (3.77 percentage point edges (where |𝐸| denotes the number of edges in a temporal
+decrease in F1 on Thunderbird), demonstrating the crucial graph instance) and node features of dimension 𝑑 .
+importance of pre-learning robust topological embeddings in Subsequently, the Temporal Convolutional Network (TCN)
+complex graphs for subsequent tasks. module, which handles sequences of length 𝑊 across 𝐿 𝑇𝐶𝑁
+ layers, exhibits a complexity of 𝑂(𝐿 𝑇𝐶𝑁 × 𝑊 × 𝑘 × 𝑑𝑖𝑛 ×
+ 𝑑𝑐ℎ ), dependent on the kernel size 𝑘, as well as the input and
+ channel dimensions 𝑑𝑖𝑛 and 𝑑𝑐ℎ . Furthermore, the complexity
+ of the adaptive masking module is mainly determined by its
+ internal feed-forward network layers, approximating 𝑂(𝑊 ×
+ 𝑁 × 𝐹 × 𝑑𝑓𝑓 ), and scales with the sequence length 𝑊 , the
+ number of nodes/templates 𝑁, the input feature dimension 𝐹,
+ and the feed-forward dimension 𝑑𝑓𝑓 . Finally, the spectral loss
+ computation part, involving 𝑁 nodes and 𝑘 ′ eigenvectors,
+ adds a main computational cost per batch of approximately
+ 𝑂(𝑁 × (𝑘 ′ )2 ). Synthesizing the computational costs of these
+ components, the overall training time complexity of the model
+ is the sum of these individual terms. Among these, the
+ processing of the graph structure by the GCN, specifically the
+ 𝑂(𝐿 × |𝐸| × 𝑑) term, typically represents the key factor
+ influencing the model's scalability and constitutes the main
+ computational bottleneck.
+ This quadratic dependency on the number of event
+ templates underscores a critical consideration for the model's
+Fig. 7. Comparison of Ablation Study Results across Different scalability in real-world deployments facing diverse and
+Datasets numerous log types. All experiments reported herein were
+ conducted on a server platform equipped with an Intel®
+ The removal of the spectral loss, impacting global structure Xeon® Silver 4214R CPU operating at 2.40GHz,
+preservation, was more pronounced on complex datasets, complemented by 256 GB of system RAM, and running
+leading to an F1 score decrease of approximately 1.7 Ubuntu 20.04.6 LTS. For computational acceleration, a single
+percentage points on BGL and Thunderbird, compared to a NVIDIA GeForce RTX 3090 GPU possessing 24 GB of
+smaller impact on the relatively simpler HDFS dataset (around VRAM was utilized. The core software environment was
+1.25 percentage points). This indicates its value in capturing managed using Python 3.9.21. The implementation relied
+large-scale behavioral changes is particularly evident in significantly on PyTorch 2.3.1 as the primary deep learning
+complex systems. The uniformity loss, on the other hand, framework, interfaced with CUDA Toolkit 11.8. Graphprovided consistent performance improvements across all specific operations and sequence modeling were facilitated by
+datasets (boosting F1 scores by about 1.3-1.8 percentage the Deep Graph Library (DGL) version 2.3.0.
+points), confirming its general benefit in improving feature The average computational resource utilization for MTGspace distribution and enhancing overall model stability. GAN, measured on the BGL dataset, is detailed in TABLE III.
+Collectively, these results validate the necessity of each MTG- The training phase utilized 5.4 GB RAM, 12.15% CPU, 3.8
+GAN component for achieving high performance and their GB VRAM, and 22.8% GPU on average. In contrast, the
+synergistic effects. They also indicate that the importance of
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 4
+
+inference phase showed comparable RAM (2.3 GB) and CPU systems, particularly in adapting to concept drift and
+(10.08%) usage but significantly reduced VRAM (200.0 MB) previously unseen anomaly patterns. This implies that while
+and GPU (12.5%) utilization. This marked difference MTG-GAN exhibits commendable baseline stability,
+underscores the feasibility of deploying the trained model in sustaining optimal performance long-term in highly dynamic
+resource-aware environments, despite the higher cost production environments may necessitate the consideration of
+associated with the training procedure. complementary strategies, such as periodic retraining, online
+ learning adjustments, or the integration of explicit drift
+ adaptation mechanisms. In summary, this study confirms that
+G. Long-Term Stability Evaluation
+ MTG-GAN possesses a solid stability foundation, while
+ Ascertaining the long-term stability of MTG-GAN within simultaneously providing a clear direction for future research
+dynamic environments is crucial for validating its practical focused on developing more adaptive log anomaly detection
+deployment viability. To this end, we trained the model using methodologies.
+the initial 40% of chronologically ordered sequences and
+subsequently evaluated its F1-score across five consecutive 10%
+temporal windows spanning the remaining 50%-100% of the
+timeline (as illustrated in Fig. 8). The experimental results
+clearly indicate slow degradation in performance over time
+across all tested datasets (HDFS, BGL, Thunderbird,
+OpenStack). For instance, the F1-score on the BGL dataset
+moderately declined from a peak of approximately 94.5% to
+90.7% in the final evaluation window, representing a total
+decrease of about 3.8 percentage points. Despite this decline,
+the degradation process is noticeably gradual, and the model
+maintains relatively high-performance levels during the final
+evaluation stages across all datasets (with F1 scores generally
+remaining above 89%-91%), demonstrating good resilience
+against significant decay.
+
+ Fig. 9. Distinct Score Component Responses for
+ Representative Anomaly Categories from BGL Data.
+ Comparison of local (𝑆𝑤 ) versus global (structural difference
+ ||δλ||2 ) score components for normal behavior and
+ representative examples of different anomaly categories
+ identified in the BGL dataset (e.g., "Rare HW Event," "Comm
+ Storm"). Highlights how the framework differentiates
+ observed anomaly types based on their scoring signature.
+
+ H. Analysis of Anomaly Type Detection
+ To elucidate MTG-GAN's capability to distinguish between
+Fig. 8. MTG-GAN Performance Stability Over Time. different anomaly types, we conducted a case study on typical
+ anomaly patterns observed in the BGL dataset, focusing on the
+ This noteworthy stability can be primarily attributed to the differential responses of the local pattern score (𝑆𝑤 ) versus the
+synergistic interplay of the model's key design elements. The
+ global structural change score (||𝛿𝜆||2 ) (as depicted in Fig. 9).
+adaptive masking mechanism enhances generalization to
+subsequent data variations by compelling the learning of The analysis confirmed that distinct anomaly categories
+transferable underlying patterns and suppressing overfitting to indeed trigger different activation patterns across these two
+specific features from the initial training phase. The GAN scoring components. For instance, sequences primarily
+framework likely facilitates the modeling of core system involving rare but critical hardware events tend to significantly
+operational dynamics rather than superficial phenomena. elevate the local pattern anomaly score (𝑆𝑤 ) with relatively
+Furthermore, the TCN effectively captures dependencies limited impact on the overall graph structure. Conversely,
+spanning long time windows, rendering the model less anomalies characterized by significant reordering of normal
+susceptible to short-term fluctuations. Concurrently, graph- event sequences (sequence disruption) may result in a higher
+based representation learning (potentially augmented by global structural difference score ( ||𝛿𝜆||2 ), even if the
+spectral loss) enables the sensitive identification of structural constituent events themselves are not uncommon. Events like
+deviations that reflect changes in system state. error bursts (communication storms) typically cause deviations
+ However, the gradual performance decline also underscores in both local patterns and global structure, leading to elevated
+the inherent limitations of statically trained models when scores in both components. This differential scoring response
+confronted with the continuous evolution of real-world demonstrates that MTG-GAN's composite scoring mechanism
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 5
+
+not only detects anomalies but also provides preliminary masking rate, reaching peak values of 90.56%, 99.40%, and
+insights into their fundamental nature (whether it's a localized 94.77% for precision, recall, and F1 score respectively. The
+event anomaly or a system-level structural perturbation), BGL dataset performed best within a masking rate range of 0.5
+thereby offering richer diagnostic information beyond a single to 0.7, while the Thunderbird dataset maintained high
+anomaly indicator for operators. performance across a broader range (0.2 to 0.7). These
+ differences may be attributed to varying dataset complexities.
+ The Thunderbird dataset, being the most complex, enables
+I. Impact of Masking Rate on Model Performance
+ MTG-GAN to capture intricate relationships more effectively,
+ To investigate the impact of masking rate on MTG-GAN’s thus showing less sensitivity to masking rate variations.
+performance, we conducted comprehensive experiments on Conversely, the relatively simple HDFS dataset is more
+three datasets: HDFS, BGL, and Thunderbird. The masking susceptible to information loss, resulting in a lower optimal
+rate, defined as the proportion of masked adjacency matrix masking rate. The BGL dataset, with intermediate complexity,
+ exhibits moderate optimal masking rates. AUC curves follow
+ trends consistent with F1 scores across all datasets, further
+ confirming the effectiveness of the masking mechanism.
+ Notably, optimal masking rates vary by dataset and metric,
+ emphasizing the need to adjust masking rates for specific
+ datasets and target metrics in practical applications to achieve
+ excellent anomaly detection performance.
+
+ J. Weight Parameters in Masking Strategy
+
+ TABLE IV
+ IMPACT OF DIFFERENT MASKING STRATEGY GROWTH
+ PATTERNS ON MODEL PERFORMANCE (BGL DATASET)
+
+ Precision Recall F1 Score AUC
+ Growth Strategy
+ (%) (%) (%) (%)
+ Linear Growth 93.52 96.27 94.87 94.35
+ Exponential Growth 92.45 98.68 95.46 95.48
+ Piecewise Growth 94.51 97.72 96.08 95.92
+ Periodic Growth 93.88 97.95 95.87 95.73
+ No Masking 90.56 94.79 92.62 91.57
+ To thoroughly investigate the impact of growth strategies
+Fig. 10. Sensitivity Analysis: Effect of Masking Rate on Model for the weight parameter 𝛼adv in the masking strategy on
+Performance. Precision, Recall, F1 Score, and AUC trends on model performance, we conducted a series of experiments on
+HDFS, BGL, and Thunderbird datasets as the masking rate the BGL dataset. We evaluated four different 𝛼adv growth
+changes from 0% to 100%. Demonstrates the existence of strategies: linear growth, exponential growth, piecewise
+optimal masking ranges that balance robustness gains and growth, and periodic growth. All experiments were conducted
+information loss. while keeping other hyperparameters constant to ensure result
+ reliability. Results were evaluated using precision, recall, F1
+elements, was systematically varied from 0 to 1 with a step size score, and AUC values, with averages taken from multiple runs
+of 0.1. We used Precision, Recall, F1 score, and Area Under to reduce randomness effects. TABLE IV shows model
+Curve (AUC) as evaluation metrics to measure model performance under different 𝛼adv growth strategies.
+performance under different masking conditions. Fig. 10 Experimental results reveal several key findings. First, all
+shows performance trends across different masking rates for variants using masking strategies significantly outperformed
+each dataset. Experimental results demonstrate that masking the no-masking baseline model, validating the effectiveness of
+rate has significant yet subtle effects on MTG-GAN’s the adaptive masking mechanism. Specifically, the noperformance, with optimal rates varying by dataset and masking model achieved an F1 score of 92.62%, while models
+performance metric. For all three datasets, precision, recall, employing masking strategies all achieved F1 scores above
+and F1 scores exhibit a concave trend, initially increasing then 94%, confirming the masking mechanism’s important role in
+decreasing. This pattern suggests that moderate masking enhancing model robustness. Among different masking
+enhances model performance, possibly by improving strategies, the piecewise growth strategy performed best,
+robustness to noise and data loss while encouraging learning achieving an F1 score of 96.08% and AUC value of 95.92%.
+more generalizable feature representations. However, The advantage of this strategy might stem from its ability to
+excessive masking rates lead to performance degradation, adjust growth rates according to different training stages,
+likely due to loss of critical information. On the HDFS dataset, allowing the model to fully explore feature space in early
+the model achieved optimal performance at approximately 0.4 stages while focusing on refining learned patterns in later
+ stages. Particularly in terms of precision, the piecewise growth
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 6
+
+strategy achieved the highest level at 94.51%, indicating its spectral loss and feature perturbation contrastive loss preserves
+effectiveness in reducing false positives and improving global topological structure, captures long-range dependencies,
+detection accuracy. The periodic growth strategy showed and provides preliminary reasoning capabilities, thereby
+outstanding performance in recall, reaching the highest value improving result transparency and interpretability.
+of 97.95%. This strategy, through periodically adjusting Extensive experimental validation across multiple realmasking weights, may enable the model to refocus on different world datasets (including system logs and industrial control
+feature patterns at various learning stages, thereby improving system time-series data) has demonstrated MTG-GAN's
+recognition of various anomalies. This finding has particular superior detection performance and strong cross-domain
+practical significance for applications prioritizing anomaly generalization. The model particularly excels in maintaining
+detection rates. The exponential growth strategy (base 1.5), high recall and exhibits good stability in low-data regimes. The
+while slightly lower in precision (92.45%), maintained good model particularly excels in maintaining high recall and
+overall performance with high recall (98.68%). This strategy exhibits good stability in low-data regimes. Critically, the
+increases masking weights more rapidly in later training stages, dual-component anomaly score not only enhances
+potentially helping the model better adapt to complex anomaly generalization but also differentiates anomaly types based on
+patterns. In comparison, the linear growth strategy scoring signatures, offering system maintenance personnel
+demonstrated balanced performance characteristics, achieving preliminary diagnostic insights beyond simple anomaly labels,
+good balance between precision (93.52%) and recall (96.27%). which holds significant practical value. Beyond these
+ These experimental results not only validate the importance quantitative improvements, our results suggest that effective
+of the masking mechanism but also provide important cross-domain log anomaly detection is achievable without
+reference for strategy selection in different application requiring extensive system-specific retraining, which has
+scenarios. For instance, the piecewise growth strategy might practical implications for reducing operational overhead in
+be preferable in scenarios with strict false positive organizations managing diverse IT infrastructure.
+requirements, while the periodic growth strategy might be To further broaden its applicability, future work could
+more suitable for scenarios emphasizing anomaly detection. explore optimizations for even greater scalability, particularly
+Additionally, performance differences across strategies investigating automated or adaptive hyperparameter tuning
+suggest that dynamic adjustment of masking weights strategies, especially for the masking mechanism, could
+profoundly impacts the model’s learning process, providing streamline deployment across diverse datasets. Besides,
+new research directions for further optimizing the masking integrating online learning or concept drift adaptation
+mechanism. Notably, performance differences across these mechanisms presents a promising direction for ensuring
+strategies also reflect the model’s sensitivity to masking sustained optimal performance in highly dynamic operational
+parameters. For example, the superior performance of settings. Continued validation and potential adaptation across
+piecewise and periodic growth strategies suggests that an even wider spectrum of domains, such as Internet of Things
+dynamically adjusting masking weights during training might or network security logs, will further underscore its versatility.
+be more beneficial for model learning than simple monotonic More broadly, this work demonstrates the feasibility of
+growth. This finding not only has direct implications for building anomaly detection systems that can transfer
+improving MTG-GAN’s performance but also provides knowledge across heterogeneous environments—a capability
+valuable reference for other mask-based models. increasingly important as organizations adopt multi-cloud and
+ hybrid infrastructure. The ability to deploy a single model
+ across different systems without extensive reconfiguration
+ V. CONCLUSION addresses a key barrier to practical adoption of learning-based
+ This research successfully introduces and validates MTG- anomaly detection in industry settings.
+GAN, a novel framework for cross-domain system log
+anomaly detection leveraging masked temporal graph
+generative adversarial networks. By innovatively integrating REFERENCES
+adaptive masking mechanisms, temporal graph structure [1] M. Du, F. Li, G. Zheng, and V. Srikumar, “DeepLog: Anomaly
+ Detection and Diagnosis from System Logs through Deep Learning,”
+learning, generative adversarial networks, and temporal
+ in Proceedings of the 2017 ACM SIGSAC Conference on Computer
+convolutional networks, MTG-GAN effectively addresses the and Communications Security, in CCS ’17. New York, NY, USA:
+two core challenges in log anomaly detection: accurately Association for Computing Machinery, Oct. 2017, pp. 1285–1298. doi:
+capturing evolving temporal dependencies to identify 10.1145/3133956.3134015.
+ [2] Z. Chen, J. Liu, W. Gu, Y. Su, and M. R. Lyu, “Experience Report:
+emerging anomaly patterns, and ensuring robust generalization
+ Deep Learning-based System Log Analysis for Anomaly Detection,”
+capability across diverse system environments. Jan. 11, 2022, arXiv: arXiv:2107.05908. doi:
+ The core strengths of MTG-GAN stem from the synergistic 10.48550/arXiv.2107.05908.
+interplay of its key mechanisms. The diffused graph generation [3] M. Platini, T. Ropars, B. Pelletier, and N. De Palma, “LogFlow:
+ Simplified Log Analysis for Large Scale Systems,” in Proceedings of
+module based on generative adversarial networks enhances the
+ the 22nd International Conference on Distributed Computing and
+model's capability to handle both known and unknown Networking, in ICDCN ’21. New York, NY, USA: Association for
+anomaly patterns. The innovative adaptive masking Computing Machinery, Jan. 2021, pp. 116–125. doi:
+mechanism, by reducing dependency on specific data patterns, 10.1145/3427796.3427808.
+ [4] Y. Chen, N. Luktarhan, and D. Lv, “LogLS: Research on System Log
+substantially improves its transfer generalization capability
+ Anomaly Detection Method Based on Dual LSTM,” Symmetry, vol.
+across different datasets. Furthermore, the integration of 14, no. 3, Art. no. 3, Mar. 2022, doi: 10.3390/sym14030454.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 7
+
+[5] S. He, J. Zhu, P. He, and M. R. Lyu, “Experience Report: System Log [23] W. Xu, L. Huang, A. Fox, D. Patterson, and M. I. Jordan, “Detecting
+ Analysis for Anomaly Detection,” in 2016 IEEE 27th International large-scale system problems by mining console logs,” in Proceedings
+ Symposium on Software Reliability Engineering (ISSRE), Oct. 2016, of the ACM SIGOPS 22nd symposium on Operating systems principles,
+ pp. 207–218. doi: 10.1109/ISSRE.2016.21. in SOSP ’09. New York, NY, USA: Association for Computing
+[6] H. Yang, D. Sun, Y. Wang, and W. Huang, “DSGN: Log-based Machinery, Oct. 2009, pp. 117–132. doi: 10.1145/1629575.1629587.
+ anomaly diagnosis with dynamic semantic gate networks,” [24] R. Vaarandi and M. Pihelgas, “LogCluster - A data clustering and
+ Information Sciences, vol. 680, p. 121174, Oct. 2024, doi: pattern mining algorithm for event logs,” in 2015 11th International
+ 10.1016/j.ins.2024.121174. Conference on Network and Service Management (CNSM), Nov. 2015,
+[7] M. Landauer, S. Onder, F. Skopik, and M. Wurzenberger, “Deep pp. 1–7. doi: 10.1109/CNSM.2015.7367331.
+ Learning for Anomaly Detection in Log Data: A Survey,” Machine [25] W. Meng et al., “LogAnomaly: Unsupervised Detection of Sequential
+ Learning with Applications, vol. 12, p. 100470, Jun. 2023, doi: and Quantitative Anomalies in Unstructured Logs.,” in Proceedings of
+ 10.1016/j.mlwa.2023.100470. the Twenty-Eighth International Joint Conference on Artificial
+[8] X. Ma et al., “A Comprehensive Survey on Graph Anomaly Detection Intelligence, IJCAI 2019, Macao, China, August 10-16, 2019, 2019,
+ With Deep Learning,” IEEE Transactions on Knowledge and Data pp. 4739–4745. doi: 10.24963/IJCAI.2019/658.
+ Engineering, vol. 35, no. 12, pp. 12012–12038, Dec. 2023, doi: [26] X. Zhang et al., “Robust log-based anomaly detection on unstable log
+ 10.1109/TKDE.2021.3118815. data,” in Proceedings of the 2019 27th ACM Joint Meeting on
+[9] X. Xie, S. Jian, C. Huang, F. Yu, and Y. Deng, “LogRep: Log-based European Software Engineering Conference and Symposium on the
+ Anomaly Detection by Representing both Semantic and Numeric Foundations of Software Engineering, in ESEC/FSE 2019. New York,
+ Information in Raw Messages,” in 2023 IEEE 34th International NY, USA: Association for Computing Machinery, Aug. 2019, pp.
+ Symposium on Software Reliability Engineering (ISSRE), Oct. 2023, 807–817. doi: 10.1145/3338906.3338931.
+ pp. 194–206. doi: 10.1109/ISSRE59848.2023.00015. [27] L. Yan, C. Luo, and R. Shao, “Discrete log anomaly detection: A novel
+[10] V.-H. Le and H. Zhang, “Log-based anomaly detection with deep time-aware graph-based link prediction approach,” Information
+ learning: how far are we?,” in Proceedings of the 44th International Sciences, vol. 647, p. 119576, Nov. 2023, doi:
+ Conference on Software Engineering, in ICSE ’22. New York, NY, 10.1016/j.ins.2023.119576.
+ USA: Association for Computing Machinery, Jul. 2022, pp. 1356– [28] P. Veličković, W. Fedus, W. L. Hamilton, P. Liò, Y. Bengio, and R.
+ 1367. doi: 10.1145/3510003.3510155. D. Hjelm, "Deep Graph Infomax," in Proc. Int. Conf. Learn.
+[11] X. Li, P. Chen, L. Jing, Z. He, and G. Yu, “SwissLog: Robust Anomaly Representations (ICLR), 2019. [Online]. Available:
+ Detection and Localization for Interleaved Unstructured Logs,” IEEE https://openreview.net/forum?id=rklz9iAcKQ
+ Transactions on Dependable and Secure Computing, vol. 20, no. 4, pp. [29] Z. Hou et al., “GraphMAE: Self-Supervised Masked Graph
+ 2762–2780, Jul. 2023, doi: 10.1109/TDSC.2022.3162857. Autoencoders,” in Proceedings of the 28th ACM SIGKDD Conference
+[12] M. Landauer, F. Skopik, and M. Wurzenberger, “A Critical Review of on Knowledge Discovery and Data Mining, in KDD ’22. New York,
+ Common Log Data Sets Used for Evaluation of Sequence-Based NY, USA: Association for Computing Machinery, Aug. 2022, pp.
+ Anomaly Detection Techniques,” Proc. ACM Softw. Eng., vol. 1, no. 594–604. doi: 10.1145/3534678.3539321.
+ FSE, p. 1354-1375, Jul. 2024, doi: 10.1145/3660768. [30] C. Almodovar, F. Sabrina, S. Karimi, and S. Azad, “LogFiT: Log
+[13] X. Xie, Z. Jin, J. Wang, L. Yang, Y. Lu, and T. Li, “Confidence guided Anomaly Detection Using Fine-Tuned Language Models,” IEEE
+ anomaly detection model for anti-concept drift in dynamic logs,” Transactions on Network and Service Management, vol. 21, no. 2, pp.
+ Journal of Network and Computer Applications, vol. 162, p. 102659, 1715–1723, Apr. 2024, doi: 10.1109/TNSM.2024.3358730.
+ Jul. 2020, doi: 10.1016/j.jnca.2020.102659. [31] J. Qi et al., “LogEncoder: Log-Based Contrastive Representation
+[14] L. Bao, Q. Li, P. Lu, J. Lu, T. Ruan, and K. Zhang, “Execution Learning for Anomaly Detection,” IEEE Transactions on Network and
+ anomaly detection in large-scale systems through console log analysis,” Service Management, vol. 20, no. 2, pp. 1378–1391, Jun. 2023, doi:
+ Journal of Systems and Software, vol. 143, pp. 172–186, Sep. 2018, 10.1109/TNSM.2023.3239522.
+ doi: 10.1016/j.jss.2018.05.016. [32] X. Han and S. Yuan, “Unsupervised Cross-system Log Anomaly
+[15] P. Jia, S. Cai, B. C. Ooi, P. Wang, and Y. Xiong, “Robust and Detection via Domain Adaptation,” in Proceedings of the 30th ACM
+ Transferable Log-based Anomaly Detection,” Proc. ACM Manag. International Conference on Information & Knowledge Management,
+ Data, vol. 1, no. 1, p. 1-26, May 2023, doi: 10.1145/3588918. in CIKM ’21. New York, NY, USA: Association for Computing
+[16] M. Landauer, M. Wurzenberger, F. Skopik, G. Settanni, and P. Machinery, Oct. 2021, pp. 3068–3072. doi:
+ Filzmoser, “Dynamic log file analysis: An unsupervised cluster 10.1145/3459637.3482209.
+ evolution approach for anomaly detection,” Computers & Security, vol. [33] R. Chen et al., “LogTransfer: Cross-System Log Anomaly Detection
+ 79, pp. 94–116, Nov. 2018, doi: 10.1016/j.cose.2018.08.009. for Software Systems with Transfer Learning,” in 2020 IEEE 31st
+[17] A. A. Cook, G. Mısırlı, and Z. Fan, “Anomaly Detection for IoT Time- International Symposium on Software Reliability Engineering (ISSRE),
+ Series Data: A Survey,” IEEE Internet of Things Journal, vol. 7, no. 7, Oct. 2020, pp. 37–47. doi: 10.1109/ISSRE5003.2020.00013.
+ pp. 6481–6494, Jul. 2020, doi: 10.1109/JIOT.2019.2958185. [34] C. Zhang, T. Jia, G. Shen, P. Zhu, and Y. Li, “MetaLog: Generalizable
+[18] R. Vinayakumar, K. P. Soman, and P. Poornachandran, “Long short- Cross-System Anomaly Detection from Logs with Meta-Learning,” in
+ term memory based operation log anomaly detection,” in 2017 Proceedings of the IEEE/ACM 46th International Conference on
+ International Conference on Advances in Computing, Software Engineering, in ICSE ’24. New York, NY, USA: Association
+ Communications and Informatics (ICACCI), Sep. 2017, pp. 236–242. for Computing Machinery, Apr. 2024, pp. 1–12. doi:
+ doi: 10.1109/ICACCI.2017.8125846. 10.1145/3597503.3639205.
+[19] R. Larisch, J. Vitay, and F. H. Hamker, “Detecting Anomalies in [35] K. Gong, S. Luo, L. Pan, L. Zhang, Y. Zhang, and H. Yu, “LogETA:
+ System Logs With a Compact Convolutional Transformer,” IEEE Time-aware cross-system log-based anomaly detection with inter-
+ Access, vol. 11, pp. 113464–113479, 2023, doi: class boundary optimization,” Future Generation Computer Systems,
+ 10.1109/ACCESS.2023.3323252. vol. 157, pp. 16–28, Aug. 2024, doi: 10.1016/j.future.2024.03.028.
+[20] H. Li and Y. Li, “LogSpy: System Log Anomaly Detection for [36] P. Wang, X. Zhang, Z. Cao, W. Xu, and W. Li, “LogGT: Cross-system
+ Distributed Systems,” in 2020 International Conference on Artificial log anomaly detection via heterogeneous graph feature and transfer
+ Intelligence and Computer Engineering (ICAICE), Oct. 2020, pp. learning,” Expert Systems with Applications, vol. 251, p. 124082, Oct.
+ 347–352. doi: 10.1109/ICAICE51518.2020.00073. 2024, doi: 10.1016/j.eswa.2024.124082.
+[21] H. Guo, S. Yuan, and X. Wu, “LogBERT: Log Anomaly Detection via [37] J. Zhu, S. He, P. He, J. Liu, and M. R. Lyu, “Loghub: A Large
+ BERT,” in 2021 International Joint Conference on Neural Networks Collection of System Log Datasets for AI-driven Log Analytics,” in
+ (IJCNN), Jul. 2021, pp. 1–8. doi: 10.1109/IJCNN52387.2021.9534113. 2023 IEEE 34th International Symposium on Software Reliability
+[22] S. Han and S. S. Woo, “Learning Sparse Latent Graph Representations Engineering (ISSRE), Oct. 2023, pp. 355–366. doi:
+ for Anomaly Detection in Multivariate Time Series,” in Proceedings 10.1109/ISSRE59848.2023.00071.
+ of the 28th ACM SIGKDD Conference on Knowledge Discovery and [38] A. P. Mathur and N. O. Tippenhauer, “SWaT: a water treatment
+ Data Mining, in KDD ’22. New York, NY, USA: Association for testbed for research and training on ICS security,” in 2016
+ Computing Machinery, Aug. 2022, pp. 2977–2986. doi: International Workshop on Cyber-physical Systems for Smart Water
+ 10.1145/3534678.3539117. Networks (CySWater), Apr. 2016, pp. 31–36. doi:
+ 10.1109/CySWater.2016.7469060.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+ 8
+
+[39] S. Li, W. Meng, S. He, J. Bi, and G. Liu, “STAGED: A Spatial- Jing Zhang received the B.S. degree from
+ Temporal Aware Graph Encoder–Decoder for Fault Diagnosis in
+ Industrial Processes,” IEEE Transactions on Industrial Informatics,
+ Shanghai Institute of Technology, China,
+ vol. 20, no. 2, pp. 1742–1752, Feb. 2024, doi: in 2023. He is currently pursuing the M.E.
+ 10.1109/TII.2023.3281083. degree with the School of Information
+[40] C. M. Ahmed, V. R. Palleti, and A. P. Mathur, “WADI: a water
+ Science and Engineering, Shandong
+ distribution testbed for research in the design of secure cyber physical
+ systems,” in Proceedings of the 3rd International Workshop on Cyber- Normal University. His research interests
+ Physical Systems for Smart Water Networks, in CySWATER ’17. New include anomaly detection and
+ York, NY, USA: Association for Computing Machinery, Apr. 2017, multivariate time series analysis.
+ pp. 25–28. doi: 10.1145/3055366.3055375.
+[41] L. Liao, K. Zhu, J. Luo, and J. Cai, “LogBASA: Log Anomaly
+ Detection Based on System Behavior Analysis and Global Semantic
+ Awareness,” International Journal of Intelligent Systems, vol. 2023,
+ no. 1, p. 3777826, 2023, doi: 10.1155/2023/3777826.
+[42] J. Qi et al., “LogGPT: Exploring ChatGPT for Log-Based Anomaly Chao Luo received the PhD degree
+ Detection,” in 2023 IEEE International Conference on High in computer science from Dalian
+ Performance Computing & Communications, Data Science & Systems, University of Technology, China,
+ Smart City & Dependability in Sensor, Cloud & Big Data Systems &
+ Application (HPCC/DSS/SmartCity/DependSys), Dec. 2023, pp. 273– 2013. He is currently a professor in
+ 280. doi: 10.1109/HPCC-DSS-SmartCity- the School of Information Science
+ DependSys60770.2023.00045. and Engineering, Shandong Normal
+[43] A. Farzad and T. A. Gulliver, “Unsupervised log message anomaly
+ detection,” ICT Express, vol. 6, no. 3, pp. 229–237, Sep. 2020, doi:
+ University, China. He has published
+ 10.1016/j.icte.2020.06.003. more than 60 refereed papers. His
+[44] Z. Zhao, W. Niu, X. Zhang, R. Zhang, Z. Yu, and C. Huang, “Trine: research interests include machine learning, complex
+ Syslog anomaly detection with three transformer encoders in one
+ generative adversarial network,” Applied Intelligence, vol. 52, no. 8,
+ system and time series analysis.
+ pp. 8810–8819, Jun. 2022, doi: 10.1007/s10489-021-02863-9.
+[45] P. S. Kalaki, A. Shameli-Sendi, and B. K. E. Abbasi, “Anomaly Rui Shao graduated from Shandong
+ detection on OpenStack logs based on an improved robust principal
+ component analysis model and its projection onto column space,”
+ University with a Master's degree in
+ Software: Practice and Experience, vol. 53, no. 3, pp. 665–681, 2023, Computer Software and Theory. He is
+ doi: 10.1002/spe.3164. currently employed by China Mobile
+[46] Z. Zhang, Z. Geng, and Y. Han, “Graph Structure Change-Based Communications Group Shandong Co.,
+ Anomaly Detection in Multivariate Time Series of Industrial
+ Processes,” IEEE Transactions on Industrial Informatics, vol. 20, no. Ltd., mainly engaged in wireless
+ 4, pp. 6457–6466, Apr. 2024, doi: 10.1109/TII.2023.3347000. network optimization and planning
+[47] H. Kim, S. Kim, S. Min, and B. Lee, “Contrastive Time-Series work for 5G/4G networks. At present,
+ Anomaly Detection,” IEEE Transactions on Knowledge and Data
+ Engineering, vol. 36, no. 10, pp. 5053–5065, Oct. 2024, doi: the main research directions are 5G
+ 10.1109/TKDE.2023.3335317. communication network planning, strategy optimization,
+[48] J. Cai, Z. Wei, and J. Luo, “ICS Anomaly Detection Based on Sensor SON, anomaly recognition, and network structure
+ Patterns and Actuator Rules in Spatiotemporal Dependency,” IEEE
+ Transactions on Industrial Informatics, vol. 20, no. 8, pp. 10647–
+ optimization.
+ 10656, Aug. 2024, doi: 10.1109/TII.2024.3393528.
+[49] J. Li, Z. Yu, Q. Jiang, and Z. Cao, “One-Class Classification
+ Constraint in Reconstruction Networks for Multivariate Time Series
+ Anomaly Detection,” IEEE Transactions on Instrumentation and
+ Measurement, vol. 74, pp. 1–13, 2025, doi:
+ 10.1109/TIM.2025.3548251.
+[50] M. Yao, D. Tao, P. Qi, and R. Gao, “Rethinking Discrepancy Analysis:
+ Anomaly Detection via Meta-Learning Powered Dual-Source
+ Representation Differentiation,” IEEE Transactions on Automation
+ Science and Engineering, vol. 22, pp. 8579–8592, 2025, doi:
+ 10.1109/TASE.2024.3486688.
+[51] R. Li, Z. Liu, X. Zhu, L. Li, and X. Cao, “Detecting Multivariate Time
+ Series Anomalies With Cascade Decomposition Consistency,” IEEE
+ Transactions on Instrumentation and Measurement, vol. 74, pp. 1–14,
+ 2025, doi: 10.1109/TIM.2025.3547479.
+[52] M. Li et al., “SA2E-AD: A Stacked Attention Autoencoder for
+ Anomaly Detection in Multivariate Time Series,” ACM Trans. Knowl.
+ Discov. Data, vol. 18, no. 7, p. 174:1-174:15, Jun. 2024, doi:
+ 10.1145/3653677.
+[53] Y. Li et al., “Accurate Anomaly Detection Leveraging Knowledgeenhanced GAT,” in 2024 IEEE International Conference on Web
+ Services (ICWS), Jul. 2024, pp. 568–577. doi:
+ 10.1109/ICWS62655.2024.00077.
+[54] F. Peng et al., “MGRD: Multigranularity Reconstruction Deviation
+ Modeling for Time Series Anomaly Detection,” IEEE Transactions on
+ Instrumentation and Measurement, vol. 74, pp. 1–11, 2025, doi:
+ 10.1109/TIM.2025.3545174.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

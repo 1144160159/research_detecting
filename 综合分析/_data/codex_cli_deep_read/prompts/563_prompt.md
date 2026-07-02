@@ -1,0 +1,2170 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [563] Towards Context-Aware Traffic Classification via Time-Wavelet Fusion Network
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：563
+题名：Towards Context-Aware Traffic Classification via Time-Wavelet Fusion Network
+年份：2025
+DOI：10.1145/3690624.3709315
+来源：Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.1
+PDF：paper/10.1145_3690624.3709315.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：其他AI安全与跨域异常检测
+相关性：强相关，分数 13
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\563.txt
+- 原始字符数：73935
+- 本次发送字符数：73935
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+Singapore Management University
+
+Institutional Knowledge at Singapore Management University
+Research Collection School Of Computing and
+Information Systems
+
+School of Computing and Information Systems
+
+8-2025
+
+Towards context-aware traffic classification via time-wavelet
+fusion network
+Ziming ZHAO
+Singapore Management University, zmzhao@smu.edu.sg
+
+Zhuoxue SONG
+Xiaofei XIE
+Singapore Management University, xfxie@smu.edu.sg
+
+Zhaoxuan LI
+Jiongchi YU
+Singapore Management University, jcyu.2022@phdcs.smu.edu.sg
+
+See next page for additional authors
+Follow this and additional works at: https://ink.library.smu.edu.sg/sis_research
+Part of the Databases and Information Systems Commons, and the OS and Networks Commons
+
+Citation
+ZHAO, Ziming; SONG, Zhuoxue; XIE, Xiaofei; LI, Zhaoxuan; YU, Jiongchi; ZHANG, Fan Terry; and LI,
+Tingting. Towards context-aware traffic classification via time-wavelet fusion network. (2025). KDD '25:
+Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2, Toronto,
+Canada, August 3-7. 2089-2100.
+Available at: https://ink.library.smu.edu.sg/sis_research/10304
+
+This Conference Proceeding Article is brought to you for free and open access by the School of Computing and
+Information Systems at Institutional Knowledge at Singapore Management University. It has been accepted for
+inclusion in Research Collection School Of Computing and Information Systems by an authorized administrator of
+Institutional Knowledge at Singapore Management University. For more information, please email
+cherylds@smu.edu.sg.
+
+Author
+Ziming ZHAO, Zhuoxue SONG, Xiaofei XIE, Zhaoxuan LI, Jiongchi YU, Fan Terry ZHANG, and Tingting LI
+
+This conference proceeding article is available at Institutional Knowledge at Singapore Management University:
+https://ink.library.smu.edu.sg/sis_research/10304
+
+Towards Context-Aware Traffic Classification via Time-Wavelet
+Fusion Network
+Ziming Zhao
+
+Zhuoxue Song
+
+Xiaofei Xie
+
+Zhejiang University
+Hangzhou, China
+zhaoziming@zju.edu.cn
+
+Zhejiang University
+Hangzhou, China
+songzhuoxue@zju.edu.cn
+
+Singapore Management University
+Singapore, Singapore
+xfxie@smu.edu.sg
+
+Zhaoxuan Li
+
+Jiongchi Yu
+
+Fan Zhang∗
+
+Institute of Information Engineering,
+CAS, Beijing, China
+lizhaoxuan@iie.ac.cn
+
+Singapore Management University
+Singapore, Singapore
+jcyu.2022@phdcs.smu.edu.sg
+
+Zhejiang University
+Hangzhou, China
+fanzhang@zju.edu.cn
+
+Tingting Li
+Zhejiang University
+Hangzhou, China
+litt2020@zju.edu.cn
+
+Abstract
+
+CCS Concepts
+
+Encrypted traffic classification occupies a significant role in cybersecurity and network management. The existing encrypted traffic
+classification technology mostly relies on intra-flow semantics for
+extracting features. However, considering that some attack behaviors inherently have similar patterns to legitimate behaviors, and
+powerful adversaries could simulate benign users to conceal their attack intentions, intra-flow features may be similar between different
+categories. In this paper, we propose TrafficScope, a time-wavelet
+fusion network based on Transformer to enhance the performance
+of encrypted traffic classification. Specifically, in addition to using
+intra-flow semantics, TrafficScope also extracts contextual information to construct more comprehensive representations. Moreover,
+to cope with the non-stationary and dynamic contextual traffic, we
+employ wavelet transform to extract invariant features. For feature
+fusion, the cross-attention mechanism is adopted to inline combine
+temporal and wavelet-domain features. We extensively evaluate
+TrafficScope compared with 7 state-of-the-art baselines based on
+four groups of real-world traffic datasets, the results show that
+TrafficScope outperforms existing methods. We conduct a series of
+experiments in terms of similar intra-flow feature evaluation, data
+pollution, flow manipulations, and dynamic context to demonstrate
+the robustness and stability of the proposed method. Furthermore,
+we produce additional experiments to present the potential of TrafficScope in cross-dataset scenarios.
+
+• Security and privacy → Network security; • Information
+systems → Traffic analysis.
+
+Keywords
+Traffic Classification, Wavelet Analysis, Attention Mechanism
+ACM Reference Format:
+Ziming Zhao, Zhuoxue Song, Xiaofei Xie, Zhaoxuan Li, Jiongchi Yu, Fan Zhang,
+and Tingting Li. 2025. Towards Context-Aware Traffic Classification via
+Time-Wavelet Fusion Network. In Proceedings of the 31st ACM SIGKDD
+Conference on Knowledge Discovery and Data Mining V.1 (KDD ’25), August 3–7, 2025, Toronto, ON, Canada. ACM, New York, NY, USA, 12 pages.
+https://doi.org/10.1145/3690624.3709315
+KDD Availability Link:
+The source code of this paper has been made publicly available at https:
+//doi.org/10.5281/zenodo.14699123.
+
+1
+
+Introduction
+
+Network traffic classification, which aims at identifying network
+traffic categories such as intrusion detection, applications/web services identification, malware detection, and so on, has emerged as
+a critical task for cyberspace security and management [1, 2].
+With the widespread use of encryption protocols (e.g., Secure
+Socket Layer/Transport Layer Security (SSL/TLS) [3, 4]), traditional deep packet inspection (DPI) such as signature-based and
+payload-based solutions have encountered some limitations. Therefore, adopting machine learning (ML) techniques for modeling
+encrypted traffic has attracted widespread attention across both
+academia and industry [5].
+Existing ML-based traffic analysis methods can be roughly divided into two categories from the perspective of feature extraction.
+(i) Packet-based methods [6–8] directly extract relevant fields from
+each single raw packet, such as total length, TCP flags, time to live
+(TTL), etc. The extracted field information will be parsed and fed
+into the ML classifier for subsequent model inference. (ii) Flow-based
+methods analyze traffic by sessions, which are divided according
+
+∗ Corresponding author.
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+KDD ’25, Toronto, ON, Canada
+© 2025 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 979-8-4007-1245-6/25/08
+https://doi.org/10.1145/3690624.3709315
+
+2089
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+Session 4
+
+Session 3
+
+Ziming Zhao et al.
+Session 2
+
+Session 1
+
+flow_1
+
+flow_0
+
+Arriving
+packets
+
+Packet fields,
+e.g., TTL, TCP flags,…
+
+Flow features, e.g.,
+statistics, sequence,…
+
+(a) Packet-based
+Intra-flow stateful
+Context-aware
+
+(b) Flow-based
+Intra-flow stateful
+Context-aware
+
+Time-domain
+features
+
+Case 1
+
+Client
+
+Wavelet-domain
+features
+
+POP3 Server
+
+request
+
+response
+
+response
+
+request
+
+request
+
+response
+
+response
+
+request
+request
+Malware apps
+
+capture
+Attacker
+
+requ
+
+capture
+
+capture
+
+Benign apps
+
+flow_0
+flow_1
+
+Similar time
+interval
+Similar
+packet size
+
+label:
+malicious
+label:
+malicious
+
+similar flow
+
+est
+
+Case 2
+
+to five-tuple indexes, i.e., {Source IP, Source Port, Destination IP, Destination Port, Protocol}. Such method can learn intra-flow patterns,
+e.g., calculating statistical features [9], extracting sequence information [10–12], and generating histogram distribution [13]. As shown
+in Figure 1, compared to flow-based methods, packet-based schemes
+mainly focus on detailed packet information, while failing to track
+flow-level state information, which leads to limited effectiveness in
+traffic detection [12, 14].
+Although flow-based methods demonstrate some advantages,
+intra-flow feature representation still has certain limitations. On
+the one hand, some attack behaviors may natively have similar
+patterns to legitimate user operations. As the DDoS filtering service
+provider [15] reports the Empty Connection Flood attack is no
+different from that of a legitimate user from the intra-flow analysis
+perspective. Also, a POP3 mail server might get queried in the same
+interval as a bot communication with its C&C server, and their
+traffic sizes might accidentally match [16]. On the other hand, some
+malicious adversaries often perform several behaviors that simulate
+benign users to cover up their attack intentions. For instance, benign
+and malware applications may generate similar traffic when they
+use shared third-party libraries and Content Delivery Network
+(CDN) services [17]. These examples indicate that it is difficult to
+accurately identify traffic based solely on a single flow (session).
+More details can be found in § 2.1. This motivates us to advance
+context-aware traffic analysis, as shown in Figure 1 (c), which not
+only considers intra-flow semantics but also observes inter-flow
+information (neither packet-based nor flow-based scheme has this
+context-aware capability).
+In this paper, we propose a time-wavelet fusion network named
+TrafficScope to enhance encrypted traffic classification by extracting
+features in terms of intra-flow and contextual information from the
+network traffic, respectively. For intra-flow features, TrafficScope
+focuses on the raw packet bytes of the flow. For contextual features,
+TrafficScope will aggregate the feature sequences of contextual
+traffic at different time granularities. These aggregated sequences
+will be conducted wavelet transform to cope with non-stationary
+and dynamic contexts (more explanation in § 2.2). To this end,
+TrafficScope is designed with three tightly coupled modules to generate traffic representations. Specifically, the extracted intra-flow
+features and the contextual features are separately input into the
+① Temporal Flow Representation module and ② Contextual Traffic Representation module. These modules adopt the self-attention
+mechanism of Transformer [18] encoder blocks for modeling and
+mining temporal semantics and contextual information from the
+traffic. In the ③ Feature Fusion module, the temporal intra-flow representations are integrated with contextual representations with
+
+C&C Server
+
+request
+
+(c) Flow+Context (Ours)
+Intra-flow stateful
+Context-aware
+
+Figure 1: The illustration of different feature extractions.
+
+Client
+
+request
+
+capture
+
+request
+
+capture
+Cloud services
+
+flow_2
+flow_3
+flow_4
+
+label:
+Similar
+malicious behaviors,
+different
+label:
+label
+benign
+label:
+benign
+
+Figure 2: The illustration of similar intra-flow features.
+the cross-attention mechanism [19] to obtain an overall representation vector. Finally, the obtained fused representations are fed into
+the tailored classification layer to identify traffic categories.
+Contributions. Our contributions can be summarized as:
+• Considering that solely intra-flow features are insufficient
+to accurately characterize traffic, we propose enhancing the
+encrypted traffic representation by combining temporal intraflow and contextual information, which offers a new perspective for analyzing encrypted traffic.
+• We present leverage wavelet transform to profile contexts thus
+adapting to non-stationary and dynamic traffic characteristics.
+Meanwhile, we design a time-wavelet fusion network named
+TrafficScope to model intra-flow semantics and contextual
+information via three tightly coupled Transformer modules.
+• We conduct extensive experiments on four real-world encrypted traffic datasets and results show that TrafficScope
+outperforms state-of-the-art methods on multiple metrics. In
+terms of similar intra-flow feature evaluation, data pollution,
+flow manipulations, and dynamic context, the results demonstrate the robustness and stability of TrafficScope. Furthermore,
+we produce additional experiments to present the potential of
+TrafficScope in cross-dataset scenarios.
+
+2
+
+Motivation
+
+We outline here the motivations for leveraging the wavelet transform to develop inter-flow features, and introduce the advantages
+of Transformer modeling in § A.1.
+
+2.1
+
+Why Intra-Flow Features are Insufficient?
+
+The existing traffic classification methods mainly extract the intraflow features as the traffic representation. However, existing research [16] and vendor [15] reports indicate that attack and benign
+traffic can be very similar, indicating the intra-flow features may
+not be sufficient for accurate traffic characterization. (i) On the one
+hand, some attack behaviors may inherently have similar patterns
+to legitimate user operations. For instance, as the case 1 in Figure 2
+shows, a POP3 mail server might get queried in the same interval
+as a malicious bot communication with its C&C server, and their
+traffic sizes might accidentally match [16]. Besides, according to the
+DDoS filtering service provider [15, 20, 21], the Empty Connection
+Flood attack is indistinguishable from that of the single three-way
+
+2090
+
+Different
+scales/durations
+
+Time (ms)
+
+Frequency
+Frequency
+
+(b) DoS
+
+Time (ms)
+
+Transform
+Frequency
+
+Time (ms)
+
+Transform
+
+Figure 3: Wavelet transform for non-stationary context.
+attacks may be launched at the same time or may appear alternately.
+Furthermore, we consider the network-induced phenomena, such
+as packet loss, retransmission, out-of-order, etc. Meanwhile, we do
+not assume additional collaborations from other Internet entities,
+such as IP blacklists provided by security vendors.
+
+3.2
+
+Problem Definition
+
+Traffic classification refers to differentiating network traffic into
+different categories based on their characteristics. Specifically, our
+work concentrates on flow-level traffic classification. A flow in this
+paper is defined as a bi-directional sequence of packets that share
+the same 5-tuple (i.e., same source/destination IP and port, same
+protocol). Assume that there are 𝑁 samples and 𝑄 categories of
+traffic in total. Let the raw bytes of the 𝑖-th sample be x (i) . The
+traffic type of x (i) is denoted as 𝑦 (𝑖 ) , where 0 ≤ 𝑦 (𝑖 ) < 𝑄. We aim to
+build a context-aware traffic classification model Ω(x (i) , (ctx) (i) )
+to predict a label 𝑦ˆ (𝑖 ) that is exactly the real label 𝑦 (𝑖 ) , where
+(ctx) (i) represents the contextual flows of the 𝑖-th sample.
+
+Problem Formulation
+
+In this section, we introduce the adversary model and assumptions,
+as well as provide specific problem definitions in this work.
+
+3.1
+
+Time shifting
+
+Why Adapt Wavelet to Construct Context?
+
+Given the limitations of relying on intra-flow features, we aim to
+optimize the flow analysis with the conjunction of contextual information. However, it is non-trivial to extract representative features
+from contextual flows as network traffic is non-stationary [26]. In
+the fields of image and signal processing, the wavelet transform
+has demonstrated a strong capability in retaining translation- and
+scale-invariant properties [27, 28]. Moreover, it has been outlined
+in practical signal processing theory [29] that wavelet transform
+demonstrates theoretical superiority over Fourier transform in feature representation of non-stationary signals such as network traffic.
+Correspondingly, we also observe the advantages of wavelet transform in characterizing network traffic in practice. In Figure 3, the
+patterns of contextual flows in the time domain may vary significantly due to different runtime behaviors of applications, which
+involves time-shifting in subfigure (a) and diverse scales (durations) in subfigure (b). After applying wavelet transform (from
+left to right), we observe that the traffic contexts within the same
+category exhibit similar patterns in the wavelet domain, despite
+exhibiting variations in the time domain. Thus, we could obtain
+similar representations for traffic context within the same category
+(e.g., intra-DoS or intra-benign) and different representations for
+contexts of different categories (e.g., between benign and DoS).
+
+3
+
+Time (ms)
+
+Wavelet Transform
+
+2.2
+
+(a) Benign
+
+handshake behavior of a legitimate user. (ii) On the other hand,
+some malware deliberately simulates behaviors of benign users to
+cover up its attack intentions [22–25]. For example, as shown in
+case 2 of Figure 2, malware and benign applications may generate
+similar or even the same traffic when they use shared third-party
+libraries and Content Delivery Network (CDN) services [17], e.g.,
+visit common web services such as GitHub, Twitter, Google Storage,
+etc. Therefore, it is of great importance to enhance richer traffic
+representation beyond intra-flow features.
+
+Frequency
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+Wavelet Transform
+
+Towards Context-Aware Traffic Classification via Time-Wavelet Fusion Network
+
+Threat Model and Assumptions
+
+Adversary Model. We consider strong adversaries will simulate
+benign user behaviors to conceal their attack intentions [22, 23, 25,
+30]. This means that intra-flow features have relatively large similarities between different traffic categories. The powerful attacker
+may also deliberately mix mislabeled samples for data pollution. As
+time and environment change, traffic characteristics are not set in
+stone. Therefore, the problem of concept drift is within the scope
+of consideration. In addition, we mainly focus on encrypted traffic
+analysis in this paper, since the transmission content is increasingly
+being encrypted in existing networks, such as SSL/TLS and SSH.
+Concretely, we tend to characterize traffic behavior by portraying
+packet field distribution rather than analyzing transmission content,
+e.g., TCP Payload.
+Assumptions. We do not make assumptions about the traffic
+distribution, which means that the context information is dynamic
+and non-stationary, as is the case in the real world. We also do
+not make assumptions about the time between flows, e.g., multiple
+
+4
+
+Design of TrafficScope
+
+In this section, we elaborate on the design of TrafficScope. We first
+present the design overview, followed by a detailed description of
+each module in TrafficScope.
+
+4.1
+
+Overview
+
+In Figure 4, the overall pipeline refers to data pre-processing, timewavelet fusion network, and classification layer (from left to right).
+As stated in § 3.2, the classification task of this paper is carried out
+on quintuple streams. The main difference from existing work is that
+our input not only includes the flow to be classified (called the flow
+
+2091
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+Split to Flows
+
+Intra-flow analysis
+
+48 0e ec 91 2d 53 ...
+03 18 00 00 40 00 ...
+25 27 df 1e 00 50 ...
+10 00 e7 e9 00 00 ...
+73 2f 35 37 37 34 ...
+31 2e 31 0d 0a 41 ...
+... ... ... ... ... ... ... ... ...
+
+72 14 236 145 45 83
+
+0 72 14 236 145 45 83
+
+3
+
+1
+
+0
+
+64
+
+0
+
+37 39 223 30
+
+0
+
+80
+
+0 231 233 0
+
+0
+
+16
+
+24
+
+0
+
+3
+
+24
+
+0
+
+0
+
+64
+
+0
+
+SPE 2 37 39 223 30 0 80
+3 16
+
+115 47 53 55 55 52
+
+0 231 233 0
+
+Temporal
+Features
+
+Transformer
+
+Encrypted Network
+Traffic Data
+
+Ziming Zhao et al.
+
+0
+
+4 115 47 53 55 55 52
+
+Contextual
+Features
+
+raw packet bytes in flow
+
+Feature Fusion
+
+Time
+
+Temporal Flow Representation
+
+FC
+
+0
+
+Agg
+
+Wavelet
+Transform
+
+SPE
+
+0
+1
+
+TSPE
+
+Contextual Flow
+
+2
+
+Context analysis
+
+1
+
+Transformer
+
+0
+
+1
+0
+
+Result
+Category
+
+1
+
+Contextual Traffic Representation
+
+Flow of Interest (FoI)
+
+Data Pre-Processing
+
+Softmax
+
+Classification
+
+Time-Wavelet Fusion Network
+
+Figure 4: The overall architecture of TrafficScope.
+of interest, FoI), but also involves its contextual information. The
+key structure of TrafficScope is the time-wavelet fusion network
+(the middle part of Figure 4) for traffic representation, which aims
+at improving encrypted traffic classification. We will elaborate on
+the three modules (i.e., temporal flow representation, contextual
+traffic representation, and feature fusion) in § 4.2∼§ 4.4. Finally, we
+introduce the classification layer in § 4.5.
+
+where 𝑆𝑃𝐸 (𝑖,𝑗 ) denotes the positional encoding value for the element (𝑖, 𝑗) in feature matrix, 𝑑𝑡 is the dimensionality of the temporal
+feature after embedding.
+In summary, for the temporal feature matrix Ft = [m1, m2, · · · , mM ],
+where mi ∈ R𝐵 , we denote Et as the temporal flow representation
+generated by the sequence model Transformer:
+h
+i
+
+Et =𝑇𝑟𝑎𝑛𝑠 𝑓 𝑜𝑟𝑚𝑒𝑟 Wt mT1,· · ·, Wt mTM +𝑆𝑃𝐸𝑇(𝑖,𝑗 ) ∈F
+(2)
+t
+
+4.2
+
+where Wt ∈ R𝑑𝑡 ×𝐵 is a learnable parameter.
+If the number of packets in the target flow is less than 𝑀 or the
+length of each packet is less than 𝐵, we pad the missing elements
+with a value of -1, which can be distinguished from the value range
+of normal elements. It is worth noting that the Transformer does not
+need a uniform sequence length. The padding here is only beneficial
+for data storage and batch calculation. In order to eliminate the
+padded values during model computation, we provide the model
+with a 0-1 mask matrix Fmask , where 1 represents the positions
+that have been padded. With mask matrix, the model can identify
+padded positions and solely calculate original values in sequence.
+With the above mechanisms, we capture the temporal patterns
+of FoI, generate effective temporal flow representation, and simplify
+the complex traffic input (encrypted or plain text, variant protocols,
+and packet lengths), which is used for the subsequent feature fusion.
+
+Temporal Flow Representation
+
+Temporal flow representations are generated from raw bytes of
+packets in FoI. This module is designed as a general approach to
+extract temporal flow representation. It does not depend on the specific characteristic of the traffic, i.e., the overall process of features
+input can be applied to both encrypted traffic and non-encrypted
+traffic. Besides, it should be protocol-agnostic as it is difficult to
+recognize and parse fields of all variant protocols [7]. Therefore,
+instead of performing complex packet parsing, we directly utilize
+raw traffic bytes as features. Specifically, we analyze the FoI, which
+consists of bi-directional packets with the same 5-tuple as we defined in § 3.2. We extract the first 𝑀 packets from the FoI, taking the
+first 𝐵 bytes from each packet in the flow, to form a feature matrix
+Ft in the time domain, where Ft ∈ R𝑀 ×𝐵 and the value range of
+each element in the matrix is [0, 255].
+We apply the sequence model Transformer [18] to characterize
+and capture the temporal intra-flow pattern of FoI. The packets in
+FoI are treated as time-series data, sorted in ascending order by
+timestamp, and then fed into the Transformer model. As transformers are insensitive to the order of input sequence elements, we need
+to perform sequence positional encoding to preserve the temporal
+relationships in the input sequence. We employ sequence positional
+encoding (SPE) of commonly used sine and cosine functions with
+different frequencies [18]:
+
+
+
+
+ sin 10000𝑖 2𝑗 /𝑑𝑡 ,
+
+
+
+𝑆𝑃𝐸 (𝑖,𝑗 ) =
+
+ cos 100002(𝑖𝑗 −1) /𝑑𝑡 ,
+
+
+if 𝑗 is even
+if 𝑗 is odd
+
+4.3
+
+Contextual Traffic Representation
+
+In this module, contextual representations are generated from the
+contextual packet length sequence [11, 23] of FoI. To extract invariant and representative features (as stated in § 2.2) from the
+contextual packet length sequence, we employ the wavelet transform. The wavelet transform is a well-known time-wavelet analysis
+tool that has been widely used to analyze non-stationary signals
+and provide variant resolutions to a signal at different scales. In
+this paper, we utilize the wavelet transform to extract invariant
+and representative contextual features from the flow of interest.
+Mathematically, the wavelet transform used is defined as follows
+
+
+𝑇𝑒𝑛𝑑
+1 ∑︁
+𝑡 −𝑏
+W𝑥 (𝑎, 𝑏) = √
+𝑥 (𝑡)Ψ
+(3)
+𝑎
+𝑎
+
+(1)
+
+𝑡 =𝑇𝑠𝑡𝑎𝑟𝑡
+
+2092
+
+Towards Context-Aware Traffic Classification via Time-Wavelet Fusion Network
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+
+
+where 𝑥 (𝑡) is the signal to be analyzed, Ψ 𝑡 −𝑏
+is the mother
+𝑎
+wavelet function Ψ(𝑡) after scaled by a factor of 𝑎 and translated by
+a factor of 𝑏. 𝑇𝑠𝑡𝑎𝑟𝑡 and 𝑇𝑒𝑛𝑑 specify the start and the end time of the
+signal to be processed. The wavelet coefficients W𝑥 (𝑎, 𝑏) capture
+the energy of the traffic signal at different scales and positions. The
+wavelet spectrogram can be given as
+𝑆𝑝𝑒𝑐𝑡𝑟𝑜𝑔𝑟𝑎𝑚(𝑎, 𝑏) = 𝑁𝑜𝑟𝑚(log2 ||Wx (a, b)||)
+(4)
+where ||·|| returns the amplitude, and 𝑁𝑜𝑟𝑚 is min-max normalization function. The spectrogram efficiently represents how the
+instantaneous frequency changes over time. It not only provides
+information in the wavelet domain but also reveals the temporal
+variations of the signal. In this paper, we use logarithmic and normalized spectrograms as contextual features.
+About contextual information, we aggregate it over a unit of time
+(e.g., 𝑠, 𝑚𝑠, and 𝑚𝑖𝑛). Considering the start time𝑇𝑠𝑡𝑎𝑟𝑡 , end time𝑇𝑒𝑛𝑑 ,
+and the number of aggregation points 𝐺, we utilize hierarchical time
+scales for aggregation to accommodate different traffic categories.
+Let 𝜏 be the aggregation time scale, i.e., aggregation occurs every 𝜏
+seconds. If the target flow starts at time 𝑡 𝐹𝑜𝐼 , then the start time of
+the contextual length sequence is 𝑇𝑠𝑡𝑎𝑟𝑡 = 𝑡 𝐹𝑜𝐼 − 𝐺/2 × 𝜏, and the
+end time is 𝑇𝑒𝑛𝑑 = 𝑡 𝐹𝑜𝐼 +𝐺/2 ×𝜏. That is, (ctx) in § 3.2 corresponds
+to the packets from 𝑇𝑠𝑡𝑎𝑟𝑡 to 𝑇𝑒𝑛𝑑 . After the aggregation of the
+packet length sequence, we apply wavelet transform to extract
+contextual features. We use the wavelet spectrum defined in Eq. (3)
+as the final wavelet domain feature matrix Fw ∈ R𝐶 𝑤𝑡 ×𝐺 , where
+𝐶 𝑤𝑡 is the dimension of wavelet coefficients.
+We apply another Transformer to characterize and capture the
+contextual traffic pattern of FoI. The wavelet spectrum is treated as
+a time series, sorted in ascending order by transform coefficients,
+and then fed into the Transformer model. To preserve the temporal
+relationships in the wavelet spectrum and the hierarchy of spectrums at different time scales, we need to perform both sequence
+positional encoding and hierarchical time scale positional encoding.
+The sequence positional encoding is the same as defined in Eq. (1).
+To encode information of different time scales into the sequence, we
+use a learnable embedding weight WTSPE : 𝑁𝜏 → 𝑑 𝑤𝑡 , where 𝑁𝜏
+represents the number of time scales used, 𝑑 𝑤𝑡 is the dimensionality
+of the contextual feature after embedding.
+In summary, for the wavelet spectrum F𝜏wt = [g1, g2, · · · , gG ],
+where gi ∈ R𝐶 𝑤𝑡 , we denote E𝜏wt as the contextual traffic representation at time scale 𝜏 generated by the sequence model Transformer:
+h
+i
+E𝜏wt =𝑇 𝑟𝑎𝑛𝑠 𝑓 𝑜𝑟𝑚𝑒𝑟 Wwt gT1, Wwt gT2, · · · , Wwt gTG
+(5)
+
++ 𝑆𝑃𝐸𝑇(𝑖,𝑗 ) ∈F + WTSPE𝑖𝑑𝑥 (𝜏)
+
+Position
+Attention score
+
++
+Intra-flow
+
+Target
+sequence
+Attention score calculation
+
+Weighted sum calculation
+
+Feature fusion
+
+Figure 5: Feature fusion with cross-attention mechanism.
+features could be similar between different categories. According to
+the motivation described in § 2, we tend to fuse temporal representations of the flow of interest (FoI) with contextual traffic representations. As depicted in Figure 5, we adopt a Transformer encoder
+with the cross-attention mechanism [19] to extract and integrate
+the relationships between temporal and contextual representations,
+and finally generate the fusion features. For each temporal representation vector, the cross-attention mechanism learns and calculates
+the weight of the contextual representation vector. The weighted
+sum of the contextual representation vector and the temporal representation vector is the output of the Feature Fusion module. For
+formalization, let qi , kj , and vj be the query, key, and value vectors
+for the 𝑖-th element in Et , 𝑗-th element in Ewt , respectively. The
+fusion representations as Ef = [e1f, e2f, · · · , eM
+], and
+f
+𝐺
+∑︁
+qi · kj
+©
+ª
+eif = 𝑇𝑟𝑎𝑛𝑠 𝑓 𝑜𝑟𝑚𝑒𝑟 ­qi +
+(6)
+· vj ®
+Í𝐺
+′
+q
+·
+k
+j
+𝑗=1 𝑗 ′ =1 i
+«
+¬
+where qi · kj denotes the dot product between qi and kj .
+There are two main advantages to our time-wavelet fusion design. First, it provides a more comprehensive representation of
+traffic data. By introducing contextual information to assist the
+classification of FoI, such feature fusion design enables more distinguishable between different categories even if they have similar
+intra-flow features, thus improving the model performance. Second, the cross-attention mechanism enables the model to focus on
+valuable features in the contextual information for the target flow
+classification and cope with dynamic traffic.
+
+4.5
+
+Classification Layer
+
+The task of the classification layer is to distinguish categories of FoI.
+After the above operations, we have obtained fusion representations for FoI. To acquire classification results, we need to learn the
+difference between representations of categories. So we input them
+into the classifier which consists of a fully connected layer with
+the softmax function. The output of the softmax function is the
+probabilities of each category. During training, the cross-entropy
+loss is employed to measure the difference between the predicted
+class probabilities and the actual labels. The cross-entropy loss as:
+𝑁 𝑄
+1 ∑︁ ∑︁
+𝐻 (y, prob) = −
+𝑦𝑖 𝑗 log(𝑝𝑟𝑜𝑏𝑖 𝑗 )
+(7)
+𝑁 𝑖=1 𝑗=1
+
+wt
+
+where Wwt ∈ R𝑑 𝑤𝑡 ×𝐶 𝑤𝑡 is a learnable parameter, 𝑖𝑑𝑥 (𝜏) gives the
+index of time scales (i.e., from 1 to 𝑁𝜏 ).
+With the above mechanisms, we capture the contextual patterns
+of FoI, and generate effective contextual traffic representation with
+information on hierarchical time scales, which are used to combine
+with temporal features.
+
+4.4
+
+Context
+
+Source
+sequence
+
+where 𝑁 is the number of samples, 𝑦𝑖 𝑗 is the actual probability
+that sample 𝑖 belongs to class 𝑗, and 𝑝𝑟𝑜𝑏𝑖 𝑗 is the predicted probability for sample 𝑖 belonging to class 𝑗. In the inference phase,
+the predicted category is determined as the one with the highest
+probability from the softmax output:
+
+Time-Wavelet Feature Fusion
+
+In this module, traffic representations are enriched by the integration of temporal flow representations with contextual traffic
+information. In the encrypted traffic classification task, intra-flow
+
+𝑄
+
+𝑦ˆ𝑖 = arg max 𝑝𝑟𝑜𝑏 𝑗
+𝑗=1
+
+where 𝑦ˆ𝑖 is the predicted label of the input traffic data.
+
+2093
+
+(8)
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+Ziming Zhao et al.
+
+Table 1: Performance comparison results (%) w.r.t. Accuracy (AC), Precision (PR), Recall (RE), and F1-Score (F1).
+
+5
+
+CIC-IDS2017/2018
+PR
+RE
+F1
+AC
+86.99 90.07 86.98 87.02
+72.05 75.02 72.38 71.31
+79.34 82.45 82.39 82.43
+90.28 90.89 91.89 91.02
+91.25 88.21 90.09 87.89
+93.28 87.26 88.53 86.26
+95.68 91.23 91.94 90.40
+98.65 92.34 92.66 92.46
+
+AC
+82.38
+84.36
+71.24
+91.31
+83.85
+86.28
+88.72
+98.42
+
+CrossNet2021
+PR
+RE
+89.32 88.42
+82.23 83.84
+71.34 72.68
+92.38 92.83
+82.93 84.23
+84.78 87.92
+89.81 88.98
+94.22 94.39
+
+F1
+87.11
+82.22
+71.39
+92.43
+83.48
+87.47
+89.19
+94.30
+
+Experiments
+
+AC
+79.62
+76.47
+80.34
+91.29
+86.10
+71.82
+85.34
+97.29
+
+ISCXVPN2016
+PR
+RE
+80.42 78.12
+78.19 78.48
+79.76 79.54
+89.13 85.19
+78.83 86.76
+73.39 72.25
+85.83 84.88
+97.56 97.31
+
+F1
+78.20
+77.37
+79.66
+85.98
+86.68
+71.97
+84.20
+97.33
+
+1.0
+
+In this section, we perform empirical evaluations to demonstrate the
+effectiveness of the proposed TrafficScope framework. Specifically,
+we aim to answer the following research questions:
+
+0.5
+
+True Positive Rate
+
+0.8
+
+• RQ1: How is the traffic classification effect of TrafficScope
+compared to SOTA baselines? (§ 5.2)
+• RQ2: How effective do temporal and wavelet features contribute to traffic classification? How much will the performance of TrafficScope change with different time granularity
+aggregation and wavelet function selection? (§ 5.3)
+• RQ3: How does TrafficScope perform when against similar
+intra-flow features, data pollution, traffic manipulation, and
+dynamic context? (§ 5.4)
+• RQ4: How much is the overhead of TrafficScope? (§ 5.5)
+• RQ5: How does TrafficScope perform with cross-dataset evaluation? (§ 5.6)
+
+0.6
+0.4
+TrafficScope (AUC = 0.99)
+FS-Net (AUC = 0.81)
+Whisper (AUC = 0.86)
+ET-BERT (AUC = 0.93)
+ROC curve for chance level (AUC = 0.5)
+
+0.2
+0.0
+0.0
+
+0.2
+
+0.4
+0.6
+0.8
+False Positive Rate
+
+(a) ROC Curves
+
+1.0
+
+0.4
+TrafficScope
+FS-Net
+Whisper
+ET-BERT
+
+0.3
+0.2
+0.1
+0.0
+0.00
+
+0.05
+
+0.10 0.15 0.20
+False Positive Rate
+
+0.25
+
+(b) DET Curves
+
+Figure 6: Comparison results of ROC curves and DET curves.
+DDoS
+
+I
+CQ
+
+SFTP
+
+Vi
+meo
+
+Beni
+gn
+
+Voi
+pBust
+er
+
+Bot
+net
+
+Por
+t
+Scan
+
+DoS
+
+5.1
+
+CIC-InvesAndMal2019
+PR
+RE
+F1
+AC
+72.38 71.49 71.76 72.89
+81.37 82.74 81.89 82.38
+62.45 63.72 61.23 63.56
+88.56 89.97 89.45 89.65
+84.22 84.78 84.72 84.89
+85.82 83.80 84.23 84.29
+87.42 87.29 88.92 88.23
+95.39 95.03 95.73 95.17
+
+False Negative Rate
+
+Datasets
+Methods
+FlowPrint [31]
+FS-Net [11]
+Whisper [23]
+ET-BERT [32]
+FlowLens [13]
+HyperVision [33]
+nPrint [7]
+TrafficScope
+
+SSH Pat
+at
+or
+
+Experimental Setup
+
+FTPPat
+at
+or
+
+YouTube
+Bi
+t
+Tor
+r
+ent
+Hangout
+s
+
+(a) Visualization of IDS dataset
+
+Emai
+l
+Ai
+m
+FTPS
+
+Facebook
+
+Br
+ut
+eFor
+ce
+
+Datasets. To comprehensively evaluate the effectiveness of TrafficScope, we adopt four groups of public datasets. These datasets
+cover common traffic classification tasks and are summarized as follows. (i) Intrusion Detection. CIC-IDS2017 dataset and CIC-IDS2018
+dataset [34] are included in this task. (ii) Desktop Application Identification. CrossNet2021 dataset [35] contains traffic data from
+20 categories of desktop applications such as 360, Sougou, and
+CSDN in two practical scenarios. (iii) VPN Traffic Classification.
+ISCXVPN2016 dataset contains pure encrypted traffic from common applications, e.g., Facebook, Netflix, Skype, etc. (iv) Malware
+Identification. CIC-InvesAndMal2019 [36] dataset collected traffic
+of 426 malicious and 5065 benign applications on real smartphones.
+We set 𝑡𝑟𝑎𝑖𝑛 : 𝑡𝑒𝑠𝑡 = 8 : 2. More details of datasets are in § B.1.
+Baselines. We evaluate proposed TrafficScope framework with
+7 state-of-the-art baselines of encrypted traffic classification, including FlowPrint [31], FS-Net [11], Whisper [23], ET-BERT [32],
+FlowLens [13], HyperVision [33], and nPrint [7]. They involve traditional machine learning, recurrent neural networks, pre-trained
+transformer, etc., based on time-domain and frequency-domain
+features. More details are in § B.2.
+Evaluation Metrics. To give a fair comparison, we employ evaluation metrics commonly used in traffic classification tasks, i.e., Overall Accuracy (AC), Precision (PR), Recall (RE), and Macro F1-Score
+(F1) [37]. For four groups of datasets, all the results are reported
+based on multiple classification tasks.
+
+Skype
+
+Net
+ﬂi
+x
+
+(b) Visualization of VPN dataset
+
+Figure 7: Visualizing time-wavelet fusion features.
+Implementation Details. We extract the first 64 packets of the
+target flow and the first 64 bytes of each packet. The dimension of
+the wavelet coefficients is 128. We aggregate the contextual length
+sequence at the millisecond level, second level, and minute level
+respectively. In each level, we use 128 as the number of aggregation
+points. The number of heads in the multi-head attention mechanism
+is set as 8. The number of Transformer encoder layers is set as 4. We
+use the dropout layer [38] with the probability of 0.5 in TrafficScope.
+The Adam [39] optimizer with a learning rate of 0.001 is used.
+TrafficScope is implemented with PyTorch. For all the comparison
+methods, we set parameters based on their official implementations.
+All experiments are conducted on the Ubuntu 18.04.2 server with
+Intel i7-12700K CPU, NVIDIA TITAN GPU, and 64GB memory.
+
+5.2
+
+Effectiveness Evaluation (RQ1)
+
+Classification Performance on Various Datasets. Compared
+with 7 state-of-the-art (SOTA) baselines, the multiple classification
+results are summarized in Table 1. In terms of the four evaluation
+metrics, our approach outperforms other baselines by a significant
+margin. The most competitive baseline varies across datasets, e.g.,
+nPrint presents better performance than the other six baselines
+in the IDS dataset and ET-BERT dominates among baselines in
+
+2094
+
+90.092.5
+84.6
+
+89.994.3
+83.2
+
+97.3
+90.1
+79.1
+
+95.2
+88.4
+81.2
+
+TrafficScope/t
+TrafficScope/c
+TrafficScope
+
+D1
+
+D2
+
+Datasets
+
+D3
+
+D1
+D2
+
+95
+
+(a) Ablation study of TrafficScope
+
+D3
+D4
+
+90
+85
+80
+ms
+
+D4
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+F1-Score (%)
+
+100
+80
+60
+40
+20
+0
+
+F1-Score (%)
+
+F1-Score (%)
+
+Towards Context-Aware Traffic Classification via Time-Wavelet Fusion Network
+
+s
+
+min
+
+ms&s ms&min s&min
+
+Aggregation Time Scales
+
+all
+
+(b) Sensitivity analysis of aggregation scales
+
+98
+97
+96
+95
+94
+93
+92
+
+97.197.397.197.3
+
+mexh
+morl
+gaus
+cgau
+
+95.195.195.195.2
+94.194.394.294.3
+
+92.4 92.5
+92.1 92.3
+
+D1
+
+D2
+
+D3
+Datasets
+
+D4
+
+(c) Sensitivity analysis of mother wavelet functions
+
+Figure 8: Ablation study and sensitivity analysis. 𝐷 1 : IDS, 𝐷 2 : CrossNet, 𝐷 3 : ISCXVPN, and 𝐷 4 : InvesAndMal.
+TrafficScope
+
+FlowPrint
+
+(a) CIC-IDS2017/2018
+
+FS-Net
+
+Whisper
+
+ET-BERT
+
+(b) CrossNet2021
+
+FlowLens
+
+(c) ISCXVPN2016
+
+HyperVision
+
+nPrint
+
+(d) CIC-InvesAndMal2019
+
+Figure 9: Performance comparison results under similar intra-flow features on four datasets.
+CrossNet2021. Among these baselines, HyperVision considers the
+aggregation between multiple flows based on addresses. It is not
+robust enough because attackers will deploy botnets and change IP
+configuration [8, 40]. The other six baselines focus on intra-flow
+information, resulting in some accuracy loss.
+ROC Curves and DET Curves. To further analyze the classification performance, we plot the ROC curves and the DET curves
+of TrafficScope and baselines (including FS-Net, Whisper, and ETBERT that can adjust the decision threshold). From Figure 6, TrafficScope is better than other baselines in both ROC curves and
+DET curves. This shows the ability of TrafficScope to achieve high
+precision and recall while maintaining low false positive rates.
+Visualization for Time-Wavelet Fusion Features. In Figure 7,
+we utilize t-SNE [41] to visualize time-wavelet fusion features for
+IDS and VPN datasets. It is clear that traffic with the same category
+will gather together to form clusters, which indicates the effectiveness of combining intra-flow temporal semantics and contextual
+wavelet information.
+
+The performance of the complete model TrafficScope on the four
+datasets is better than other ablation models.
+Aggregation Time Scales. From Figure 8 (b), we can find that (i)
+when using the three aggregation time scales together (i.e., millisecond, second, and minute), the model has achieved the best performance on all datasets. (ii) In different datasets, the contributions of
+each time scale are various. Therefore, TrafficScope hierarchically
+aggregates with different time scales by default, which enhances
+the model’s adaptability to traffic with various characteristics and
+ensures the effectiveness of the model.
+Wavelet Functions. In Figure 8 (c) with selecting different mother
+wavelet functions, we can observe that cgau and morl often tend
+to achieve great performance. Nonetheless, with different mother
+wavelet function settings, the F1 score of TrafficScope does not
+change significantly (e.g., <1%), which is still the best performance
+compared with other methods in Table 1. Therefore, we conclude
+that TrafficScope is robust to the choice of mother wavelet function
+and consistently outperforms other compared methods.
+
+5.3
+
+5.4
+
+Ablation Study (RQ2)
+
+Robustness and Stability (RQ3)
+
+Similar Intra-Flow Features Evaluation. We evaluate here the
+performance of TrafficScope and 7 compared methods, under similar
+intra-flow features. Details of similarity calculation are in Appendix B.3. The corresponding results are shown in Figure 9. Specifically, it is clear that as the similarity of intra-flow features increases,
+TrafficScope always maintains relatively stable classification performance. Therefore, our integration of temporal flow and contextual
+traffic representation is proved to be effective when against similar
+intra-flow features, echoing our original design intentions.
+Data Pollution Evaluation. Furthermore, we consider data pollution with an error label of probability 𝑝 in Figure 10. We observe that
+as the probability of error labels increases, TrafficScope maintains
+better performance than other baselines. This can be attributed to
+
+In this section, we conduct the ablation study to explore the contributions of temporal and wavelet features, as well as perform
+experiments by using different aggregation time scales and various
+wavelet functions.
+Feature Ablation. To explore the contributions of each feature
+module in TrafficScope, we eliminate the Temporal Flow Representation module (i.e., TrafficScope/t) and the Contextual Traffic
+Representation module (i.e., TrafficScope/c) respectively. As shown
+in Figure 8 (a), we could summarize the following observation. (i)
+The Temporal Flow Representation module can fully extract the
+temporal pattern of the flow of interest (FoI). (ii) The integration
+of contextual representations can more comprehensively profile
+the traffic and strengthen the feature representation ability. (iii)
+
+2095
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+Ziming Zhao et al.
+
+(a) CIC-IDS2017/2018
+
+(b) CrossNet2021
+
+(c) ISCXVPN2016
+
+(d) CIC-InvesAndMal2019
+
+Figure 10: Performance comparison results under imprecise traffic labels on four datasets.
+Table 2: Dynamic context evaluation with the IDS dataset.
+Mixed
+AC (%)
+Same
+F1 (%)
+AC (%)
+Diff
+F1 (%)
+
+𝜅=0
+98.65
+92.46
+98.65
+92.46
+
+𝜅=1
+98.65
+92.46
+98.18
+92.16
+
+𝜅=2
+98.64
+92.46
+97.82
+91.61
+
+𝜅=3
+98.66
+92.47
+96.42
+91.11
+
+𝜅=4
+98.70
+92.50
+95.90
+90.28
+
+𝜅=5
+98.73
+92.84
+94.92
+89.30
+Methods
+
+Figure 12: The time overhead.
+
+(a) Precision results of packet retransmission
+
+(b) Recall results of packet retransmission
+
+(c) Precision/recall of packet loss
+
+(d) Precision/recall of packet out-of-order
+
+multiple different types of contextual traffic. Even if mix different
+types of traffic into context, the performance of TrafficScope will
+not be greatly affected. This echoes back our intention of using
+wavelets to deal with non-stationary and dynamic traffic in § 2.2.
+Traffic Manipulation. To further assess the robustness of TrafficScope, we investigate the effects of various manipulations on the
+target flow. We mainly consider three types of real-world manipulations including packet retransmission, loss, and out-of-order of
+the target flows [10, 42]. Figure 11 displays the results based on the
+CIC-IDS2017/2018 datasets. (i) By varying the retransmission times
+𝜂 and probability 𝛼 in subfigures (a)-(b), TrafficScope performs an
+average drop of 2.29% and 2.72% in precision and recall respectively,
+which still outperforms most baselines. (ii) By varying the packet
+loss probability 𝛽 increases from 0% to 50% in subfigures (c), the
+average recall of TrafficScope drops from 92.66% to 75.29%. (iii)
+By varying the out-of-orde probability 𝛾, subfigure (d) exhibits a
+relatively small impact than the packet loss scenario. Overall, TrafficScope achieves relatively robust performance even if occurring
+packet retransmission, loss, and out-of-order, given TrafficScope
+combines contextual information with the temporal feature for
+traffic classification.
+
+Figure 11: Evaluation under manipulations on target flow.
+the contextual feature that provides additional support for model
+classification. Therefore, TrafficScope is relatively robust against
+data pollution since the time-wavelet feature fusion design.
+Dynamic Context Evaluation. We evaluate TrafficScope under
+dynamic context with the IDS dataset, by randomly selecting 𝜅
+samples of contextual traffic in categories different from the FoI.
+As a control group, we also select 𝜅 contextual traffic of the same
+category as the FoI and mix them into the original contextual traffic.
+The experimental results are summarized in Table 2. We find that if
+mix the contextual traffic with the same category of FoI, the classification performance of TrafficScope could be slightly improved (e.g.,
+98.73% accuracy in 𝜅 = 5). On the contrary, the detection results of
+TrafficScope decrease (∼3.7% accuracy when 𝜅 = 5) when mixing
+
+5.5
+
+Overhead Evaluation (RQ4)
+
+We measure the time overhead in Figure 12. All models run on the
+Ubuntu 18.04.2 server with Intel i7-12700K CPU, NVIDIA TITAN
+GPU, and 64GB memory. Overall, FlowLens, Whisper, FlowPrint,
+HyperVision, and nPrint are on one level (<2𝑚𝑠) since there are machine learning based methods. Particularly, the original papers of
+Whisper and HyperVision use DPDK [43] for dataplane deployment,
+
+2096
+
+Towards Context-Aware Traffic Classification via Time-Wavelet Fusion Network
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+Table 3: Running time of TrafficScope.
+Steps
+
+Time (𝑠)
+
+Temporal Feature Extraction
+Contextual Feature Extraction
+Temporal Transformer Forwarding
+Contextual Transformer Forwarding
+Feature Fusion
+Flow Classification
+Total
+
+2.97 × 10 −3
+5.10 × 10 −4
+3.61 × 10 −5
+7.73 × 10 −5
+2.39 × 10 −5
+1.39 × 10 −6
+3.48 × 10 −3
+
+unsuitable for scenarios where network flows are inseparable, such
+as Tor. (ii) In the future, we can consider combining the latest dataplane primitives (e.g., Intel DPDK [8, 23] and P4 in programmable
+switches [50, 51]) with TrafficScope to implement real-time traffic
+analysis. (iii) In the real world, traffic categories are continuously
+increasing [52], class-incremental learning is a promising direction.
+
+7
+
+Encrypted Traffic Classification. Encrypted traffic classification [53, 54] is an essential task in network security and management [55, 56]. There are some works that leverage the attention
+mechanism and Transformer for traffic classification tasks [57–59].
+However, PEAN [57] and YaTC [58] focus on intra-flow features
+(involving packet-level and flow-level), and MT-FlowFormer [59]
+only considers randomly introducing an additional flow for feature
+enhancement. These works rarely use the contextual information
+of flows, so they could not maintain stable performance when intraflow features are similar.
+App Fingerprinting. App fingerprinting aims to identify specific
+applications or services by analyzing the characteristics of their
+generated network traffic [31, 60, 61]. Compared with these app fingerprinting approaches, TrafficScope achieves a more general classification of encrypted traffic. Our model does not depend on specific
+characteristics of application traffic and is protocol-agnostic.
+ML-Based NIDS. Network Intrusion Detection Systems (NIDSes)
+are critical components in safeguarding network infrastructures
+against various malicious activities [30, 62]. Numerous studies have
+proposed ML-based NIDS [9, 13, 23, 33]. Our work covers malicious
+traffic detection and can be used for NIDS in practice.
+
+Table 4: Cross-dataset evaluation.
+Cross-dataset
+Metric
+FlowPrint
+Whisper
+ET-BERT
+HyperVision
+nPrint
+TrafficScope
+TrafficScope (Context)
+TrafficScope (FoI)
+
+C17→C18
+AC (%) F1 (%)
+72.85
+69.63
+45.21
+36.88
+38.82
+29.16
+41.55
+33.29
+32.44
+25.79
+91.20
+88.28
+96.91
+91.07
+98.31 92.29
+
+nonVPN→VPN
+AC (%) F1 (%)
+40.22
+33.80
+65.03
+61.82
+40.52
+31.64
+55.73
+49.26
+38.61
+29.70
+90.13
+89.32
+95.73
+93.69
+97.16
+96.85
+
+ScenA→ScenB
+AC (%) F1 (%)
+48.62
+41.39
+39.84
+32.68
+42.29
+34.47
+62.81
+57.44
+44.19
+31.86
+94.35
+89.21
+95.02
+91.61
+97.96
+93.89
+
+and the time overhead here is measured based on Python running.
+The deep learning model does have more time overhead (generally
+than 3𝑚𝑠). The overhead of TrafficScope is close to FS-Net, ∼3𝑚𝑠.
+Also, the most time-consuming model is ET-BERT because it contains massive parameters. In addition, we provide the overhead
+breakdown for TrafficScope. As Table 3, TrafficScope takes an average of 3.48 × 10 −3𝑠 to recognize the category of the flow of interest.
+The main time cost is from the temporal feature extraction, which
+takes up 2.97 × 10 −3𝑠.
+
+5.6
+
+Cross-Dataset Experiments (RQ5)
+8
+
+For three cross-dataset scenarios (based on IDS, VPN, and CrossNet)
+in Table 4, and it is clear that TrafficScope outperforms the baseline
+by >15% accuracy and F1 score. Meanwhile, we conduct ablation
+experiments on the drift of content and FoI. The results show that
+when only FoI drifts or context drifts, the performance of TrafficScope is only slightly affected. In real scenarios, the occurrence of
+concept drift is gradual, the background traffic and FoI may not
+change suddenly simultaneously. Overall, TrafficScope performs
+limited accuracy loss against cross-dataset tests.
+
+6
+
+Related Work
+
+Conclusions
+
+In this work, we propose TrafficScope, a time-wavelet fusion network based on Transformer to enhance the performance of encrypted traffic classification against similar intra-flow features. TrafficScope first captures the temporal relationship of packet bytes in
+flow and applies wavelet transform for generating invariant and representative contextual features, to realize a powerful representation
+ability. Extensive experiments indicate that TrafficScope’s performance and practicality outperform state-of-the-art algorithms by
+significant margins. We believe TrafficScope provides new perspectives for encrypted traffic classification.
+
+Discussion
+
+Practicality. In addition to typical intrusion detections, TrafficScope can be extended to more application scenarios. Considering
+the advanced persistent threat (APT) attacks usually include multiple stages [44, 45], e.g., MITRE ATT&CK [46] kill chain shows
+that attackers often use a series of related behaviors dispersed in
+multiple sessions to coordinate to achieve attack goals.
+Extensibility. On the one hand, applying TrafficScope for unknown detection is feasible. We could use the fusion features (the
+hidden layer state output by feature fusion Transformer in TrafficScope) and combine anomaly detection models [47, 48] to develop
+unknown attack detection. On the other hand, TrafficScope could
+provide a new perspective to cope with low-quality datasets [49],
+by considering inter-stream contextual semantics.
+Limitations and Future Work. (i) The basic classification unit
+of TrafficScope is a flow. This implies that TrafficScope may be
+
+Acknowledgments
+This work was supported in part by National Key R&D Program of
+China (2023YFB3106800), by the National Research Foundation, Singapore, and the Cyber Security Agency under its National Cybersecurity R&D Programme (NCRP25-P04-TAICeN), by National Natural Science Foundation of China (62227805, 62072398, 62172405), by
+the Natural Science Foundation of Jiangsu Province (BK20220075),
+by the Fok Ying-Tung Education Foundation for Young Teachers in
+the Higher Education Institutions of China (No.20193218210004),
+and by Key R&D Program of Zhejiang Province (2023C01039). Any
+opinions, findings and conclusions or recommendations expressed
+in this material are those of the authors and do not reflect the views
+of National Research Foundation, Singapore and Cyber Security
+Agency of Singapore.
+
+2097
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+Ziming Zhao et al.
+
+References
+
+[26] Blake Anderson and David McGrew. Machine learning for encrypted malware
+traffic classification: accounting for noisy labels and non-stationarity. In Proceedings of the 23rd ACM SIGKDD International Conference on knowledge discovery
+and data mining, pages 1723–1732, 2017.
+[27] Michael Unser and Dimitri Van De Ville. Wavelet steerability and the higher-order
+riesz transform. IEEE Trans. Image Process., 19(3):636–652, 2010.
+[28] Huilin Xiong, Tianxu Zhang, and Y. S. Moon. A translation- and scale-invariant
+adaptive wavelet transform. IEEE Trans. Image Process., 9(12):2100–2108, 2000.
+[29] Christopher Torrence and Gilbert P Compo. A practical guide to wavelet analysis.
+Bulletin of the American Meteorological society, 79(1):61–78, 1998.
+[30] Karel Bartos, Michal Sofka, and Vojtech Franc. Optimized invariant representation of network traffic for detecting unseen malware variants. In USENIX security
+symposium, pages 807–822, 2016.
+[31] Thijs Van Ede, Riccardo Bortolameotti, Andrea Continella, Jingjing Ren, Daniel J
+Dubois, Martina Lindorfer, David Choffnes, Maarten van Steen, and Andreas
+Peter. FLOWPRINT: Semi-supervised mobile-app fingerprinting on encrypted
+network traffic. In Network and Distributed System Security Symposium (NDSS),
+volume 27, 2020.
+[32] Xinjie Lin, Gang Xiong, Gaopeng Gou, Zhen Li, Junzheng Shi, and Jing Yu. ETBERT: A contextualized datagram representation with pre-training transformers
+for encrypted traffic classification. In Proceedings of the ACM Web Conference
+2022, pages 633–642, 2022.
+[33] Chuanpu Fu, Qi Li, and Ke Xu. Detecting unknown encrypted malicious traffic
+in real time via flow interaction graph analysis. In NDSS. The Internet Society,
+2023.
+[34] Iman Sharafaldin, Arash Habibi Lashkari, and Ali A Ghorbani. Toward generating
+a new intrusion detection dataset and intrusion traffic characterization. ICISSP,
+1:108–116, 2018.
+[35] Wenhao Li, Xiao-Yu Zhang, Huaifeng Bao, Haichao Shi, and Qiang Wang. Prograph: Robust network traffic identification with graph propagation. IEEE/ACM
+Trans. Netw., pages 1–15, 2022.
+[36] Laya Taheri, Andi Fitriah Abdul Kadir, and Arash Habibi Lashkari. Extensible
+android malware detection and family classification using network-flows and
+API-calls. In 2019 International Carnahan Conference on Security Technology
+(ICCST), pages 1–8. IEEE, 2019.
+[37] Wenbo Zheng, Chao Gou, Lan Yan, and Shaocong Mo. Learning to classify: A
+flow-based relation network for encrypted traffic classification. In Proceedings of
+The Web Conference 2020, pages 13–22, 2020.
+[38] Geoffrey E Hinton, Nitish Srivastava, Alex Krizhevsky, Ilya Sutskever, and Ruslan R Salakhutdinov. Improving neural networks by preventing co-adaptation of
+feature detectors. arXiv preprint arXiv:1207.0580, 2012.
+[39] Diederik P Kingma and Jimmy Ba. Adam: A method for stochastic optimization.
+arXiv preprint arXiv:1412.6980, 2014.
+[40] Ziming Zhao, Zhaoxuan Li, Fan Zhang, Tingting Li, and Jianwei Yin. Poster:
+Combine topology and traffic to calibrate p2p botnet identification in large-scale
+network. In Proceedings of the ACM SIGCOMM 2024 Conference: Posters and
+Demos, pages 16–18, 2024.
+[41] Laurens van der Maaten and Geoffrey Hinton. Visualizing data using t-sne.
+Journal of machine learning research, 9(Nov):2579–2605, 2008.
+[42] Renjie Xie, Jiahao Cao, Enhuan Dong, Mingwei Xu, Kun Sun, Qi Li, Licheng Shen,
+and Menghao Zhang. Rosetta: Enabling robust TLS encrypted traffic classification
+in diverse network environments with tcp-aware traffic augmentation. In USENIX
+Security Symposium, pages 625–642. USENIX Association, 2023.
+[43] D. Project. Dpdk: Data plane development kit. [EB/OL], 2010. http://dpdk.org/
+Accessed November 27, 2020.
+[44] Florian Wilkens, Felix Ortmann, Steffen Haas, Matthias Vallentin, and Mathias Fischer. Multi-stage attack detection via kill chain state machines. In CYSARM@CCS,
+pages 13–24. ACM, 2021.
+[45] Chunlin Xiong, Tiantian Zhu, Weihao Dong, Linqi Ruan, Runqing Yang, Yueqiang
+Cheng, Yan Chen, Shuai Cheng, and Xutong Chen. Conan: A practical real-time
+APT detection system with high accuracy and efficiency. IEEE Trans. Dependable
+Secur. Comput., 19(1):551–565, 2022.
+[46] Blake E. Strom, Andy Applebaum, Doug P. Miller, et al. Mitre att&ck: Design
+and philosophy. In Technical report. The MITRE Corporation, 2018.
+[47] Ziming Zhao, Zhaoxuan Li, Xiaofei Xie, Jiongchi Yu, Fan Zhang, Rui Zhang,
+Binbin Chen, Xiangyang Luo, Ming Hu, and Wenrui Ma. FOSS: Towards finegrained unknown class detection against the open-set attack spectrum with
+variable legitimate traffic. IEEE/ACM Transactions on Networking, 2024.
+[48] Ziming Zhao, Zhaoxuan Li, Zhuoxue Song, et al. Trident: A universal framework
+for fine-grained and class-incremental unknown traffic detection. In Proceedings
+of the ACM on Web Conference 2024, pages 1608–1619, 2024.
+[49] Yuqi Qing, Qilei Yin, Xinhao Deng, Yihao Chen, Zhuotao Liu, Kun Sun, Ke Xu,
+Jia Zhang, and Qi Li. Low-quality training data only? A robust framework for
+detecting encrypted malicious network traffic. CoRR, abs/2309.04798, 2023.
+[50] Ziming Zhao, Zhaoxuan Li, Zhuoxue Song, and Fan Zhang. Work-in-progress: Towards real-time IDS via RNN and programmable switches co-designed approach.
+In RTSS, pages 431–434. IEEE, 2023.
+
+[1] Zhaoxuan Li, Ziming Zhao, Rui Zhang, et al. metanet: Interpretable unknown
+mobile malware identification with a novel meta-features mining algorithm.
+Computer Networks, 250:110563, 2024.
+[2] Hongtao Shi, Hongping Li, Dan Zhang, Chaqiu Cheng, and Xuanxuan Cao. An
+efficient feature generation approach based on deep learning and feature selection
+techniques for traffic classification. Computer Networks, 132:81–98, 2018.
+[3] Alan Freier, Philip Karlton, and Paul Kocher. The secure sockets layer (ssl)
+protocol version 3.0. Technical report, 2011.
+[4] Tim Dierks and Eric Rescorla. The transport layer security (tls) protocol version
+1.2. Technical report, 2008.
+[5] Ly Vu, Hoang V Thuy, Quang Uy Nguyen, Tran N Ngoc, Diep N Nguyen,
+Dinh Thai Hoang, and Eryk Dutkiewicz. Time series analysis for encrypted
+traffic classification: A deep learning approach. In 2018 18th International Symposium on Communications and Information Technologies (ISCIT), pages 121–126.
+IEEE, 2018.
+[6] Guorui Xie, Qing Li, Yutao Dong, et al. Mousika: Enable General In-Network
+Intelligence in Programmable Switches by Knowledge Distillation. In INFOCOM.
+IEEE, 2022.
+[7] Jordan Holland, Paul Schmitt, Nick Feamster, and Prateek Mittal. New directions
+in automated traffic analysis. In Proceedings of the 2021 ACM SIGSAC Conference
+on Computer and Communications Security, pages 3366–3383, 2021.
+[8] Ziming Zhao, Zhuotao Liu, Huan Chen, Fan Zhang, Zhuoxue Song, and Zhaoxuan
+Li. Effective DDoS Mitigation via ML-Driven In-network Traffic Shaping. IEEE
+Transactions on Dependable and Secure Computing, 2024.
+[9] Yisroel Mirsky, Tomer Doitshman, Yuval Elovici, and Asaf Shabtai. Kitsune: an
+ensemble of autoencoders for online network intrusion detection. arXiv preprint
+arXiv:1802.09089, 2018.
+[10] Ziming Zhao, Zhaoxuan Li, Jialun Jiang, Fengyuan Yu, Fan Zhang, Congyuan Xu,
+Xinjie Zhao, Rui Zhang, and Shize Guo. ERNN: Error-resilient RNN for encrypted
+traffic detection towards network-induced phenomena. IEEE Transactions on
+Dependable and Secure Computing, 2023.
+[11] Chang Liu, Longtao He, Gang Xiong, Zigang Cao, and Zhen Li. FS-Net: A flow
+sequence network for encrypted traffic classification. In IEEE INFOCOM 2019-IEEE
+Conference On Computer Communications, pages 1171–1179. IEEE, 2019.
+[12] Guangmeng Zhou and Zhuotao Liu and Chuanpu Fu and Qi Li and Ke Xu. An
+efficient design of intelligent network data plane. In USENIX Security Symposium,
+pages 6203–6220. USENIX Association, 2023.
+[13] Diogo Barradas, Nuno Santos, Luís Rodrigues, Salvatore Signorello, Fernando MV
+Ramos, and André Madeira. FlowLens: Enabling efficient flow classification for
+ml-based network security applications. In NDSS, 2021.
+[14] Aristide Tanyi-Jong Akem, Michele Gucciardo, and Marco Fiore. Flowrest: Practical flow-level inference in programmable switches with random forests. In
+INFOCOM, pages 1–10. IEEE, 2023.
+[15] MAZEBOLT. Mazebolt knowledge base. https://kb.mazebolt.com/, 2016.
+[16] Florian Tegeler, Xiaoming Fu, Giovanni Vigna, and Christopher Kruegel.
+BotFinder: Finding bots in network traffic without deep packet inspection. In Proceedings of the 8th international conference on Emerging networking experiments
+and technologies, pages 349–360, 2012.
+[17] Yael Daihes, Hen Tzaban, Asaf Nadler, and Asaf Shabtai. MORTON: detection
+of malicious routines in large-scale DNS traffic. In Computer Security–ESORICS
+2021: 26th European Symposium on Research in Computer Security, Darmstadt,
+Germany, October 4–8, 2021, Proceedings, Part I 26, pages 736–756. Springer, 2021.
+[18] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones,
+Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin. Attention is all you need.
+Advances in neural information processing systems, 30, 2017.
+[19] Xi Wei, Tianzhu Zhang, Yan Li, Yongdong Zhang, and Feng Wu. Multi-modality
+cross attention network for image and sentence matching. In CVPR, pages
+10938–10947. Computer Vision Foundation / IEEE, 2020.
+[20] Xi Ling, Jiongchi Yu, et al. Ddosminer: An automated framework for ddos attack
+characterization and vulnerability mining. In International Conference on Applied
+Cryptography and Network Security, pages 283–309. Springer, 2024.
+[21] Ziming Zhao, Zhaoxuan Li, Zhihao Zhou, Jiongchi Yu, Zhuoxue Song, Xiaofei
+Xie, Fan Zhang, and Rui Zhang. Ddos family: A novel perspective for massive
+types of ddos attacks. Computers & Security, 138:103663, 2024.
+[22] Carlos Novo and Ricardo Morla. Flow-based detection and proxy-based evasion
+of encrypted malware C2 traffic. In AISec@CCS, pages 83–91. ACM, 2020.
+[23] Chuanpu Fu, Qi Li, Meng Shen, and Ke Xu. Realtime robust malicious traffic
+detection via frequency domain analysis. In Proceedings of the 2021 ACM SIGSAC
+Conference on Computer and Communications Security, pages 3431–3446, 2021.
+[24] Ziming Zhao, Zhaoxuan Li, Tingting Li, and Fan Zhang. Tpe-det: A tamper-proof
+external detector via hardware traces analysis against iot malware. IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, 43(11):3455–
+3466, 2024.
+[25] Chuanpu Fu and Qi Li and Meng Shen and Ke Xu. Frequency domain feature
+based robust malicious traffic detection. IEEE/ACM Trans. Netw., 31(1):452–467,
+2023.
+
+2098
+
+Towards Context-Aware Traffic Classification via Time-Wavelet Fusion Network
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+A Additional Details of Transformer
+A.1 Why Use the Transformer Modeling?
+
+[51] Ziming Zhao, Zhaoxuan Li, Zhuoxue Song, Fan Zhang, and Binbin Chen. Rids:
+Towards advanced ids via rnn model and programmable switches co-designed approaches. In IEEE INFOCOM 2024-IEEE Conference on Computer Communications,
+pages 591–600. IEEE, 2024.
+[52] Zhuoxue Song, Ziming Zhao, Fan Zhang, Gang Xiong, Guang Cheng, Xinjie
+Zhao, Shize Guo, and Binbin Chen. I2 RNN: An incremental and interpretable
+recurrent neural network for encrypted traffic classification. IEEE Transactions
+on Dependable and Secure Computing, 2023.
+[53] Manish Marwah and Martin F. Arlitt. Deep learning for network traffic data. In
+KDD, pages 4804–4805. ACM, 2022.
+[54] Kevin Fauvel, Fuxing Chen, and Dario Rossi. A lightweight, efficient and
+explainable-by-design convolutional neural network for internet traffic classification. In KDD, pages 4013–4023. ACM, 2023.
+[55] Ziming Zhao, Zhaoxuan Li, Jiongchi Yu, Fan Zhang, Xiaofei Xie, Haitao Xu, and
+Binbin Chen. Cmd: co-analyzed iot malware detection and forensics via network
+and hardware domains. IEEE Transactions on Mobile Computing, 2023.
+[56] Haozhen Zhang, Le Yu, Xi Xiao, Qing Li, Francesco Mercaldo, Xiapu Luo, and
+Qixu Liu. Tfe-gnn: A temporal fusion encoder using graph neural networks
+for fine-grained encrypted traffic classification. In Proceedings of the ACM Web
+Conference 2023, pages 2066–2075, 2023.
+[57] Peng Lin, Kejiang Ye, Yishen Hu, Yanying Lin, and Cheng-Zhong Xu. A novel multimodal deep learning framework for encrypted traffic classification. IEEE/ACM
+Transactions on Networking, 31(3):1369–1384, 2022.
+[58] Ruijie Zhao, Mingwei Zhan, Xianwen Deng, Yanhao Wang, Yijun Wang, Guan
+Gui, and Zhi Xue. Yet another traffic classifier: A masked autoencoder based
+traffic transformer with multi-level flow representation. In Proceedings of the
+AAAI Conference on Artificial Intelligence, volume 37, pages 5420–5427, 2023.
+[59] Ruijie Zhao, Xianwen Deng, Zhicong Yan, Jun Ma, Zhi Xue, and Yijun Wang.
+Mt-flowformer: A semi-supervised flow transformer for encrypted traffic classification. In Proceedings of the 28th ACM SIGKDD Conference on Knowledge
+Discovery and Data Mining, pages 2576–2584, 2022.
+[60] Jianfeng Li, Shuohan Wu, Hao Zhou, Xiapu Luo, Ting Wang, Yangyang Liu, and
+Xiaobo Ma. Packet-level open-world app fingerprinting on wireless traffic. In
+The 2022 Network and Distributed System Security Symposium (NDSS’22), 2022.
+[61] Sanghak Oh, Minwook Lee, Hyunwoo Lee, Elisa Bertino, and Hyoungshick Kim.
+Appsniffer: Towards robust mobile app fingerprinting against vpn. In Proceedings
+of the ACM Web Conference 2023, pages 2318–2328, 2023.
+[62] Liang Li, Yuanhui He, Feiyang Huang, et al. An automated alert cross-verification
+system with graph neural networks for ids events. In 2024 27th International
+Conference on Computer Supported Cooperative Work in Design (CSCWD), pages
+2240–2245. IEEE, 2024.
+[63] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. BERT: Pretraining of deep bidirectional transformers for language understanding. arXiv
+preprint arXiv:1810.04805, 2018.
+[64] Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang,
+Michael Matena, Yanqi Zhou, Wei Li, and Peter J Liu. Exploring the limits of
+transfer learning with a unified text-to-text transformer. The Journal of Machine
+Learning Research, 21(1):5485–5551, 2020.
+[65] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan,
+Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda
+Askell, et al. Language models are few-shot learners. Advances in neural information processing systems, 33:1877–1901, 2020.
+[66] Linhao Dong, Shuang Xu, and Bo Xu. Speech-transformer: a no-recurrence
+sequence-to-sequence model for speech recognition. In 2018 IEEE international
+conference on acoustics, speech and signal processing (ICASSP), pages 5884–5888.
+IEEE, 2018.
+[67] Anmol Gulati, James Qin, Chung-Cheng Chiu, Niki Parmar, Yu Zhang, Jiahui
+Yu, Wei Han, Shibo Wang, Zhengdong Zhang, Yonghui Wu, et al. Conformer:
+Convolution-augmented transformer for speech recognition. arXiv preprint
+arXiv:2005.08100, 2020.
+[68] Hangbo Bao, Li Dong, Songhao Piao, and Furu Wei. Beit: BERT pre-training of
+image Transformers. arXiv preprint arXiv:2106.08254, 2021.
+[69] Zhiliang Peng, Li Dong, Hangbo Bao, Qixiang Ye, and Furu Wei. Beit v2:
+Masked image modeling with vector-quantized visual tokenizers. arXiv preprint
+arXiv:2208.06366, 2022.
+
+Samples
+
+Transformer [18] is a neural network architecture that has shown
+remarkable performance in various tasks such as natural language
+processing [63–65], speech processing [66, 67], and computer vision [68, 69]. This motivates us to leverage the power of the Transformer for network traffic classification. The basic building block of
+Transformer is the self-attention mechanism, which computes the
+importance of different parts of a sequence based on their relevance
+to other parts of the same sequence. The self-attention mechanism
+enables the network to focus on different parts of the input sequence based on their relevance to the given task. As we visualized
+the attention weights of samples from multiple categories in Figure 13, the attention positions of different samples belonging to
+the same categories exhibit similar distributions, while the samples
+of different categories hold various distributions. This fact reflects
+that the attention mechanism can help distinguish categories by focusing on salient positions. Besides, the Transformer also includes
+other components such as multi-head attention and position-wise
+feed-forward networks, and the details are illustrated in § A. We
+design TrafficScope with three Transformer encoders. Among them,
+two encoders are fed with the original raw bytes of network traffic
+and wavelet spectrogram respectively, to perform linear projection and self-attention mechanism. The third Transformer encoder
+combines information from both the time domain and wavelet domain via the cross-attention mechanism [19]. Overall, leveraging
+the Transformer to model time-wavelet features allows us to extract informative representations for intra-flow and traffic context.
+Meanwhile, the cross-attention mechanism can construct inline
+fusion for features, which can be helpful to focus on significant
+differences in various categories.
+Unsimilar
+Similar
+
+(a) Benign
+
+(b) DoS
+
+Figure 13: Visualization of the attention weight for samples.
+
+A.2
+
+Attention Mechanism
+
+Self-Attention Mechanism. Suppose the input sequence is with
+a size of 𝑇 × 𝐷, representing the temporal sequence length and
+feature dimensions, respectively. Each self-attention head computes
+Q, K, V ∈ R𝑇 ×𝐻 by a linear transformation, representing Query
+Matrix, Key Matrix, and Value Matrix, respectively.
+Q = XWQ, K = XWK, V = XWV
+
+(9)
+
+where WQ, WK, WV ∈ R𝐷 ×𝐻 are trainable parameters, 𝐻 is the
+hidden layer dimension. Then the output of this self-attention head
+is computed as
+QKT
+Self-Attention(Q, K, V) = 𝑠𝑜 𝑓 𝑡𝑚𝑎𝑥 ( √ )V
+(10)
+𝐻
+For each query vector qi , the self-attention mechanism calculates its
+similarity with each key vector ki as weights, to perform a weighted
+sum on all value vectors vi . Therefore, the length of the output
+
+2099
+
+KDD ’25, August 3–7, 2025, Toronto, ON, Canada
+
+Ziming Zhao et al.
+
+1.0
+
+Multi-head(Q, K, V) = 𝐶𝑜𝑛𝑐𝑎𝑡 (ℎ𝑒𝑎𝑑 1, ..., ℎ𝑒𝑎𝑑ℎ )WO
+Q
+
+Cumulative Distribution
+
+sequence length only depends on the number of query vectors. In
+other words, the Transformer is capable of handling sequence data
+of variable length without requiring explicit specification.
+Multi-Head Mechanism. Multi-head attention allows the network to attend to different aspects of the input sequence in parallel,
+by computing multiple sets of attention weights with different
+linear projections of the input vectors.
+(11)
+
+0.6
+0.4
+
+Q
+
+CIC-IDS2017/2018
+CrossNet2021
+
+0.2
+0.0
+
+V
+𝐷 ×𝐻𝑘 ,
+where ℎ𝑒𝑎𝑑𝑖 = Self-Attention(XWi , XWK
+i , XWi ). Wi ∈ R
+K
+𝐷
+×𝐻
+V
+𝐷
+×𝐻
+O
+𝐻
+ℎ×𝐷
+𝑣 , and W
+𝑘, W
+Wi ∈ R
+∈R 𝑣
+are projection
+i ∈ R
+parameters. The parameter ℎ denotes the number of self-attention
+layers (heads). Typically, 𝐻𝑘 = 𝐻 𝑣 = 𝐷/ℎ.
+Position-Wise Feed-Forward Networks. Position-wise feedforward networks are employed to apply a non-linear transformation to the output of the self-attention mechanism.
+
+𝐹 𝐹 𝑁 (𝑥) = 𝑚𝑎𝑥 (0, 𝑥W1 + 𝑏 1 )W2 + 𝑏 2
+
+0.8
+
+ISCXVPN2016
+CIC-InvesAndMal2019
+
+0.0
+
+0.2
+
+0.4
+0.6
+Similarity
+
+0.8
+
+1.0
+
+Figure 14: Cumulative distribution of similar intra-flow features on CIC-IDS2017/2018, CrossNet2021, ISCXVPN2016,
+and CIC-InvesAndMal2019 datasets.
+
+B.2
+
+Additional Details of Baselines
+
+• FlowPrint [31] automatically finds temporal correlations
+among destination-related features of network traffic and uses
+these correlations to generate app fingerprints.
+• FS-Net [11] uses flow length sequences to classify encrypted
+traffic via the Gated Recurrent Unit.
+• Whisper [23, 25] expresses traffic as frequency domain information through the fast Fourier transform and then performs
+robust identification.
+• ET-BERT [32] handles the raw packets in hexadecimal and
+deploys a pre-trained transformer to represent and learn the
+contextualized datagram-level information.
+• FlowLens [13] calculates statistical histograms of packet size
+distribution and adopts machine learning models (e.g., XGBoost) to perform classification.
+• HyperVision [33] is an unsupervised malicious traffic detection system that could capture flow interaction patterns
+represented by the graph’s structural features.
+• nPrint [7] is a tool that generates a unified packet representation and then leverages AutoML to fit the tabular data.
+
+(12)
+
+B Additional Details of Evaluations
+B.1 Additional Details of Datasets
+• Intrusion Detection. Malicious traffic identification is to recognize various encrypted attack traffic from benign traffic. CICIDS2017 dataset and CIC-IDS2018 dataset [34] are included
+in this task. The CIC-IDS2017 dataset collects network traffic
+across five days, including benign and a series of attacks such
+as Botnet, DDoS, Patator, etc. The CIC-IDS2018 dataset is an
+upgrade to the 2017 version dataset. It is more diverse and comprehensive and is based on user profiles that contain abstract
+representations of events and behaviors on the network.
+• Desktop Application Identification. Application identification
+aims to classify encrypted application traffic into specific application categories. CrossNet2021 dataset [35] contains traffic
+data from 20 categories of desktop applications such as 360,
+Sougou, and CSDN in two practical scenarios, i.e., stable (ScenarioA) and production (ScenarioB) networks. The traffic was
+captured using tcpdump, including 2.5GB of data. Note that the
+same categories of applications in two scenarios with different
+network quality-of-service (QoS), such as various bandwidths
+and channel disturbance, can be used to evaluate the model
+robustness in cross-network identification tasks.
+• VPN Traffic Classification. As Virtual Private Networks (VPNs)
+are popular for bypassing censorship as well as accessing geolocked services, which are difficult to detect due to their protocol obfuscation, we include the ISCXVPN2016 dataset in the
+experiment. It contains pure encrypted traffic from common
+applications, e.g., Facebook, Netflix, Skype, etc. The applications are encrypted with various security protocols, including
+HTTPS, SSH, and proprietary protocols.
+• Malware Identification. The CIC-InvesAndMal2019 [36] dataset
+collected traffic of 426 malicious and 5065 benign applications
+on real smartphones. The traffic types can be divided into five
+categories including Benign, Adware, Ransomware, Scareware,
+and SMS Malware.
+
+B.3
+
+Distribution of Similar Intra-flow
+
+To develop experiments, we first compute the similarity based on
+intra-flow features, including packet time interval, packet size, IP
+TTL, six TCP Flags (SYN, FIN, ACK, PSH, RST, URG), TCP window
+size, and UDP length. Between pairs of flows, where the similarity is a float number between 0 and 1. The cumulative distribution
+curves of the similarity calculation results of four groups of datasets
+are shown in Figure 14. We divide the interval [0, 1] evenly into
+ten parts (i.e., {0.1, 0.2, · · · 1.0}), and then calculate model performance according to test data of different similarity intervals. We
+calculate the similarity of intra-flow features on CIC-IDS2017/2018,
+CrossNet2021, ISCXVPN2016, and CIC-InvesAndMal2019 datasets.
+Figure 14 shows that the similarity of the intra-flow features within
+the dataset is mainly between 0.15 and 0.4.
+
+2100
+PAPER_TEXT

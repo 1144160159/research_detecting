@@ -1,0 +1,151 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025                                                                             2511614
+
+
+
+
+Detecting Multivariate Time Series Anomalies With
+        Cascade Decomposition Consistency
+             Ruoheng Li , Zhongyao Liu , Xi Zhu , Lin Li , and Xianbin Cao , Senior Member, IEEE
+   Abstract— Multivariate time series anomaly detection is crucial             costs through predictive maintenance. Similarly, in healthcare,
+in sensitive domains such as cybersecurity and grid moni-                      the early detection of anomalies in heart rate variability, blood
+toring, significantly contributing to the reliability and safety               glucose levels, and respiratory patterns can be lifesaving for
+of system operation. However, current methods suffer from
+inadequate utilization of decomposed time series, insufficient                 patients, facilitating timely medical interventions [6].
+mining of contextual dependencies within the time series, and                     The early methods of anomaly detection relied on sta-
+limited robustness against anomalies during training. To address               tistical techniques such as extreme value theory [9] and
+these limitations, we propose the consistency-enhanced normal-                 statistical tests [4], [10]. However, as data has become
+izing flow (ConFlow) model, which utilizes the consistency of                  high-dimensional and non-stationary, these statistical methods
+decomposed time series and contextual temporal embedding
+to enhance the discriminative ability of the flow model. First,                have become less effective due to their strict assumptions about
+to refine the extraction of time series components, we propose                 data distribution. To overcome these drawbacks, prediction-
+a cascade decomposition and mixing module that iteratively                     based [11], [12] and reconstruction-based methods [13] that
+decouples the time series. Second, these components are mapped                 are empowered by deep learning methods have emerged. These
+to Gaussian distributions through the context-aware normalizing
+                                                                               techniques rely on clean data to learn normal representations
+flow, incorporating both inter- and intra-series information into
+the density estimation. Third, the density consistency among                   and identify data with significant prediction or reconstruc-
+decomposed time series is measured to reweight the estimation,                 tion errors as anomalies. However, labeled data is costly,
+while highly inconsistent series are viewed as anomalies and                   and clean datasets are often difficult to obtain, which limits
+masked during training to improve model robustness. Finally,                   the adaptability of these methods. In contrast, density-based
+anomalies are detected using reweight density estimation. Exper-
+                                                                               methods are less dependent on labels and quality of training
+iments on five widely used datasets in the time series anomaly
+detection field demonstrate the superiority of our method over                 data, identifying data distributed in the sparse regions as
+state-of-the-art (SOTA) approaches.                                            anomalies through density estimation. Nevertheless, classical
+  Index Terms— Consistency measurement, density estimation,
+                                                                               techniques in this category, such as kernel density estimation
+normalizing flow, time series anomaly detection, time series                   (KDE) [10] and Gaussian mixture models (GMMs) [14],
+decomposition.                                                                 face challenges in effectively managing high-dimensional
+                                                                               time series.
+                         I. I NTRODUCTION                                         In recent years, density-based approaches have turned to
+                                                                               normalizing flow models, a type of deep generative model
+T     IME series exist in various forms in different domains,
+      such as electroencephalogram (EEG) recordings [1],
+industrial sensor outputs [2], and flight trajectories [3]. The
+                                                                               that enables flexible density estimation through an invertible
+                                                                               transformation [16], [17]. Normalizing flows were first intro-
+                                                                               duced for time series anomaly detection by GANF [18], which
+ability to detect anomalies in time series data is paramount for
+                                                                               augments the flow model with a directed acyclic graph to better
+ensuring operational efficiency and reliability [4]. For exam-
+                                                                               capture temporal dependencies, thus improving the accuracy
+ple, in motor fault diagnosis [5], time series anomaly detection
+                                                                               of the estimation. However, GANF estimated the density for
+facilitates the early identification of irregular motor behaviors,
+                                                                               all series using a unified distribution, ignoring the specific
+preventing unexpected downtime and reducing maintenance
+                                                                               characteristics of individual series. To address this limitation,
+  Received 1 August 2024; revised 30 October 2024; accepted 10 November        MTGFLOW [19] was proposed, mapping different time series
+2024. Date of publication 3 March 2025; date of current version 13 March       into distinct Gaussian distributions. However, MTGFLOW
+2025. This work was supported in part by Beijing Natural Science Foundation
+under Grant 4254101 and in part by the National Natural Science Foundation     overlooked intra-series temporal information, limiting the esti-
+of China under Grant 62373029. The Associate Editor coordinating the review    mation accuracy of the normalizing flow. The above methods
+process was Dr. Mahnoosh Tajmirriahi. (Corresponding author: Xi Zhu.)          still share some limitations that need improvement.
+  Ruoheng Li, Zhongyao Liu, Xi Zhu, and Xianbin Cao are with the School of
+Electronic and Information Engineering, Beihang University, Beijing 100191,       1) Insufficient utilization of decomposed time series: Time
+China, also with the Key Laboratory of Advanced Technology of Near Space
+Information System, Ministry of Industry and Information Technology of               series can be decomposed into low-frequency trend
+China, Beijing 100191, China, also with the National Engineering Laboratory          and high-frequency seasonal components (as shown in
+for Comprehensive Transportation Big Data Application Technology, Beijing            Fig. 1) [20], offering detailed and diverse views for
+100191, China, and also with the State Key Laboratory of CNS/ATM, Beijing
+100191, China (e-mail: ruohengli@buaa.edu.cn; zhongyaoliu@buaa.edu.cn;               temporal analysis [21]. However, effectively utilizing
+zhuxi@buaa.edu.cn; xbcao@buaa.edu.cn).                                               decomposed components to enhance anomaly represen-
+  Lin Li is with the National Computer Network Emergency Response                    tation in density-based methods remains under-explored.
+Technical Team, Coordination Center of China, Beijing 100029, China
+(e-mail: lilin@cert.org.cn).                                                      2) Insufficient mining of contextual dependencies in time
+  Digital Object Identifier 10.1109/TIM.2025.3547479                                 series: Anomalies typically exhibit different correlations
+               1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+2511614                                                                IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+
+
+                                                                                This article is organized as follows. Section II reviews
+                                                                             the related work on time series decomposition and anomaly
+                                                                             detection. Section III details our findings on the density
+                                                                             inconsistency of anomalous time series and provides some
+                                                                             background information on the normalizing flow models.
+                                                                             Section IV presents a detailed description of the proposed
+                                                                             model, followed by extensive experiments that demonstrate
+                                                                             the performance of the proposed model in Section V. Finally,
+Fig. 1. Original time series as well as the trend and seasonal components
+extracted from it through seasonality-trend decomposition [7]. Both of the   Section VI summarizes this article and presents some limita-
+original series are selected from the PSM dataset [8].                       tions of our work.
+
+                                                                                                 II. R ELATED W ORKS
+       with their adjacent time points [22]. Current anomaly
+       detection methods primarily focused on modeling tem-                     Considering that time series decomposition serves as the
+       poral correlation between different series but overlooked             foundation of ConFlow, we survey the approaches of time
+       the contextual information within individual time series,             series decomposition before reviewing the time series anomaly
+       degrading the accuracy of density estimation and                      detection methods.
+       anomaly detection.
+   3) Limited robustness against anomalies during model                      A. Time Series Decomposition
+       training: Normalizing flows do not depend heavily on                     Time series typically consist of multiscale periods and
+       a clean training set. However, a training set with many               diverse underlying patterns [20]. Decomposition techniques
+       abnormal time series may cause models to misinterpret                 can help to separate these patterns [23], thereby improving
+       frequent anomalous patterns as normal. Therefore, the                 data utility and feature representation quality. In recent years,
+       strategy should be designed to enhance model tolerance                decomposition has become integral to various time series tasks
+       against anomalies.                                                    such as forecasting, classification, and anomaly detection,
+   To address the above challenge, we propose consistency-                   contributing to several SOTA methods like TimeMixer [24]
+enhanced normalizing flow (ConFlow). Compared with                           and FEDformer [25].
+previous works that based on the normalizing flow                               Commonly used time series decomposition methods include
+model [18], [19], we further utilize time series decomposition
+                                                                             discrete wavelet transformation [26] and seasonality-trend
+and find that abnormal decomposed time series often show
+                                                                             decomposition [27], both of which divide time series into
+poor consistency in density estimation (details elaborated in
+                                                                             high-frequency seasonal components and low-frequency trend
+Section III). We utilize this generalizable characteristic of
+                                                                             components [28]. Wu proposed a seasonality-trend decomposi-
+anomalies and design a consistency-mask loss reweight mod-
+                                                                             tion block [7] using moving average pooling to separate trend
+ule to enhance model robustness and discriminative ability.
+                                                                             and seasonal components. This method is simple to implement
+Additionally, we encode contextual relevance within individual
+                                                                             and integrate with deep learning models, offering a fast and
+time series using self-attention, which captures subtle varia-
+                                                                             scalable solution for time series decomposition.
+tions in time series so as to help anomaly detection. Overall,
+                                                                                Recently, the time series decomposition module has been
+our model contains three key innovative components. First,
+                                                                             incorporated into several prediction-based and reconstruction-
+a cascade decomposition and mixing module to iteratively
+                                                                             based time series anomaly detection methods, such as
+refine the discriminative decomposed components. Second,
+                                                                             MEGA [20] and TimesNet [29], achieving improved perfor-
+context-aware normalizing flow that embeds both inter- and
+                                                                             mance by combining anomaly scores across different decom-
+intra-series correlation for accurate density estimation. Third,
+                                                                             posed components. However, effectively utilizing decomposed
+a consistency-mask loss reweight module that utilizes the
+                                                                             time series in density-based anomaly detection methods
+consistency of decomposed components to enhance model
+                                                                             remains a challenge. Decomposition often leads to varying
+robustness and discriminative ability.
+                                                                             density estimations and inconsistent anomaly scores, as shown
+   Our main contributions can be summarized as follows.
+                                                                             in Fig. 2. Simply combining derived anomaly scores from the
+   1) We propose an enhanced normalizing flow model that                     original series and its decomposed components can produce
+       utilizes cascade decomposition consistency and con-                   confounded results and achieve poor anomaly discriminative
+       textual d

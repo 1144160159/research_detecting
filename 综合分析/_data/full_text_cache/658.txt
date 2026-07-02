@@ -1,0 +1,933 @@
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 1
+
+ Efficient Federated LLM Framework for Intelligent
+ IoMT Management
+ Yazan Otoum, Syed Muhammad Danish, Ishtiaq Ahmad, Yazeed Alkhrijah, and Arghavan Asad
+
+ Abstract—The rapid expansion of Internet of Medical Things allocation, security, and energy efficiency. Traditional cloud-
+(IoMT) deployments has introduced significant challenges in centric approaches struggle to meet the demands of modern
+scalability, security, and real-time data analytics. Conventional IoMT workloads due to scalability bottlenecks, latency issues,
+centralized learning architectures are increasingly impractical
+due to high latency, privacy concerns, and elevated communica- and critical privacy concerns, particularly in sensitive domains
+tion overhead. To address these challenges, this paper proposes such as clinical care and hospital operations, medical imaging
+a Federated Learning-enabled Large Language Model (LLM) pipelines, and device-integrated healthcare workflows [1], [2].
+framework that supports intelligent, privacy-preserving analyt- These limitations underscore the need for decentralized, intelics in IoMT environments. The framework targets emerging ligent, and adaptive frameworks that can operate effectively
+Graphics Processing Unit (GPU)-equipped edge platforms, such
+as smart medical gateways and hospital fog nodes, to enable on- in dynamic, distributed IoMT environments. Recent advances
+site LLM inference and lightweight adaptation via prompt tuning in artificial intelligence, especially the emergence of Large
+and partial fine-tuning, thereby supporting edge-scale healthcare Language Models (LLMs), have demonstrated transformative
+applications. The proposed framework integrates transformer- capabilities in natural language understanding, predictive anbased LLMs within a hybrid edge–cloud architecture that alytics, and decision-making. In IoMT contexts, LLMs can
+jointly balances on-device intelligence, communication efficiency,
+and centralized coordination for scalable IoMT analytics. It interpret complex telemetry, detect anomalies, and enable
+introduces an Enhanced Gradient Sensing Federated Strategy context-aware automation [3].
+(Enhanced GSFS) that dynamically optimizes model updates However, integrating LLMs into distributed IoMT environin response to real-time network conditions. Enhanced GSFS ments poses several challenges, including high computational
+incorporates two key optimization mechanisms: (i) adaptive demands, real-time responsiveness, and stringent data privacy
+thresholding based on real-time performance metrics, and (ii)
+priority-aware client scheduling guided by historical contribu- constraints. Without appropriate adaptation, the direct deploytion tracking. These enhancements collectively improve conver- ment of LLMs can lead to communication inefficiencies and
+gence behaviour and communication efficiency under federated increased energy consumption [4]. Federated Learning (FL)
+constraints. Extensive experiments across two benchmark IoT has emerged as a promising paradigm for addressing these
+datasets, IoT-23 and ToN IoT, demonstrate that the proposed challenges by enabling decentralized model training across
+FL-LLM framework achieves superior performance, reducing
+average inference latency by 5.47% and improving energy edge devices without exchanging raw data. By aggregating
+efficiency by 9.25% compared to state-of-the-art FL methods, local model updates centrally, FL enhances privacy and scalincluding Federated Averaging (FedAvg), Federated Optimization ability while reducing communication overhead [5], [6]. As
+(FedOpt), and Gradient Sensing Federated Strategy (GSFS). IoMT deployments increasingly incorporate Graphics Process-
+ Index Terms—Large Language Models (LLMs), Internet of ing Unit (GPU)-enabled edge infrastructure, such as smart
+Medical Things (IoMT), Federated Learning (FL), Edge-cloud medical hubs, hospital gateways, and clinical fog computing
+Aggregation, Gradient-sensing Federated Strategy. nodes, new opportunities arise to execute LLMs directly at
+ the edge [7]. These resource-rich platforms support advanced
+ I. I NTRODUCTION local inference and fine-tuning, enabling semantic reasoning,
+ anomaly detection, and real-time decision-making close to
+
+T HE rapid proliferation of Internet of Medical Things
+ (IoMT) ecosystems has led to a surge in connected devices, generating vast amounts of heterogeneous data. Managthe data source while preserving the locality of Protected
+ Health Information (PHI). This shift toward capable edge
+ environments motivates the development of hybrid learning
+ing and optimizing these distributed systems poses substantial architectures that can harness the strengths of both LLMs and
+challenges, particularly in real-time data processing, resource FL while preserving data locality and optimizing latency and
+ energy performance. Yet, despite rapid progress, practitioners
+ Y. Otoum, S. M. Danish, and A. Asad are with the School of Computer lack a systematic comparison of LLM families for IoMT
+Science and Technology, Algoma University, ON, Canada (e-mail: {otoum,
+syed.danish, arghavan.asad}@algomau.ca). security and clinical telemetry under federated constraints;
+ I. Ahmad is with the Faculty of Electrical Engineering, Czech Technical a clear benchmark is needed to guide model selection and
+University in Prague, Prague, Czech Republic (e-mail: ahmadish@fel.cvut.cz). deployment.
+ Y. Alkhrijah is with the Department of Electrical Engineering, College of Engineering, Imam Mohammad Ibn Saud Islamic University (IM- To this end, we propose a federated LLM deployment
+SIU), Riyadh 11564, Saudi Arabia, (e-mail: Ymalkhrijah@imamu.edu.sa; framework built upon a hybrid edge–cloud architecture. LLMs
+maawaad@imamu.edu.sa) are distributed across edge and cloud tiers to enable in-
+ This work was supported and funded by the Deanship of Scientific Research
+at Imam Mohammad Ibn Saud Islamic University (IMSIU) (grant number telligent decision-making for IoMT security classification
+IMSIU-DDRSP26041). and anomaly detection, while FL provides scalable, privacy-
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 2
+
+preserving learning across participating devices. At the core substantial body of research has explored FL for IoMT security
+of our framework is a novel performance-aware coordination and analytics. The authors of [11] develop a standardization
+mechanism, the Enhanced Gradient Sensing Federated Strat- and benchmarking framework for FL-based intrusion detecegy (Enhanced GSFS), which dynamically regulates client par- tion systems in IoMT, using multicriteria decision-making
+ticipation and model updates based on real-time performance to rank candidate ML-based IDS models on both security
+metrics, namely, accuracy, precision, recall, F1-score, infer- and performance, with CPU time identified as the dominant
+ence latency, and energy consumption. Our baselines comprise efficiency criterion. The authors of [12] design a federated
+Federated Averaging (FedAvg), which performs simple un- blockchain–IoT framework for sustainable Healthcare 5.0 that
+weighted averaging of client updates; Federated Optimization integrates FL with blockchain-backed IoMT sensing to enable
+(FedOpt), which applies server-side adaptive optimization of secure health monitoring and intrusion detection. In [13], the
+the global model using methods such as Adam or Yogi; and authors propose FED-EHR, a privacy-preserving FL frame-
+Gradient Sensing Federated Strategy (GSFS), which schedules work for decentralized EHR analytics that emphasizes seclients based on gradient sensing without performance-aware cure aggregation and robustness to institutional data silos.
+priority scoring. This strategy minimizes communication over- Complementary IoMT-focused efforts target continuous senshead while ensuring rapid convergence and high predictive ing and activity monitoring: the work in [14] introduces a
+accuracy in heterogeneous, distributed IoMT environments. federated human-activity-recognition pipeline built on hybrid
+The paper contributes the following: LSTM–GRU models for wearable IoMT devices; the authors
+ • We present the first comprehensive empirical benchmark of [15] present a fused FL architecture combining RTS-DELM
+ of 17 transformer-based LLMs across six model families, and homomorphic encryption for chronic kidney disease preevaluating their suitability for federated IoMT security diction over heterogeneous IoMT streams; and the work in [16]
+ classification and clinical device telemetry monitoring. employs FL on smartphone-based edge devices to support real-
+ • We propose Enhanced Gradient Sensing Federated Strat- time elderly activity and context monitoring. These studies
+ egy (Enhanced GSFS), a novel performance-aware feder- demonstrate the potential of FL to enhance privacy-preserving
+ ated learning mechanism that dynamically controls client intelligence in IoMT environments. Yet, they predominantly
+ participation using accuracy-based triggers, gradient- rely on conventional deep models rather than on transformernorm sensing, and priority-aware scheduling, reducing based LLMs, and they do not address prompt-level adaptation
+ communication overhead while improving latency and or performance-aware coordination across GPU-enabled edge
+ energy efficiency compared to FedAvg, FedOpt, and clients. The FLoRA framework [17] introduces heterogeneous
+ GSFS. low-rank adaptations to support efficient LLM fine-tuning with
+ • We develop a scalable, privacy-preserving FL–LLM ar- reduced bandwidth requirements, while OpenFedLLM [18]
+ chitecture for IoMT security that enables edge-level demonstrates decentralized LLM training with strong privacy
+ prompt adaptation and cloud coordination while protect- guarantees. Continual learning has also been considered, as
+ ing PHI and model-update integrity. Experiments on IoT- in [19], which applies federated continual adaptation to indus-
+ 23 and ToN IoT demonstrate their effectiveness under trial IoT tasks. Comprehensive surveys such as [20] further
+ non-IID conditions and reveal key trade-offs in accuracy, classify emerging FL–LLM techniques and identify critical
+ latency, and energy efficiency. challenges, including personalization, data heterogeneity, and
+ The remainder of this paper is structured as follows: Sec- edge resource constraints. Although these efforts push LLMs
+tion II reviews related work on federated learning, LLMs, toward decentralized intelligence, most lack empirical evaluand their applications in IoMT environments. Section III ation of latency, energy efficiency, and the feasibility of realintroduces the proposed LLM-FL hybrid framework, detailing world edge deployment, critical factors for IoT and IoMT
+its key components and adaptive learning strategies. Section IV environments.
+presents the performance analysis, comparing our approach Parallel efforts have examined semantic intelligence, trust,
+against baseline models. Finally, Section V concludes the pa- and zero-trust architectures in IoT security, where prompt
+per by summarizing our findings and outlining future research engineering and LLM-based reasoning are increasingly infludirections. ential. For instance, [21] introduces a cross-domain zero-trust
+ FL architecture that strengthens authentication and authorization but does not incorporate semantic reasoning via LLMs.
+ II. S TATE - OF - THE -A RT L ITERATURE R EVIEW The ZTFM framework [22] blends blockchain-backed identity
+ Recent advancements in FL, LLMs, and IoMT security have verification, trusted execution environments, and pre-trained
+accelerated the development of intelligent, privacy-preserving transformers to support trust evaluation, yet omits evaluation
+distributed systems. However, the rapid evolution of these on edge-limited hardware. Other works integrate blockchain or
+research directions has led to fragmented progress, with each physical-constraint checks to improve decision reliability [23],
+line of work addressing isolated components of the broader [24]. While these contributions enhance trustworthiness and
+challenge of deploying transformer-based models in hetero- adaptivity, they do not address real-time prompt optimization
+geneous, resource-constrained IoT environments. To situate or resource-sensitive inference, which are essential for LLMs
+our contributions within this landscape, this section synthe- to operate at the edge. Complementary research focuses on
+sizes the most relevant literature and highlights the gaps that generative IoT intelligence and emerging LLM-enhanced armotivate the design of our unified FL-LLM architecture. A chitectures. Surveys such as [25] highlight the promise of
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 3
+
+ TABLE I: Comparative Analysis of Recent FL+LLM Frameworks
+Work FL+LLM Context Client Device Type Optimization Strategy Comm. Efficiency GPU Edge Support
+FATE-LLM [8] Federated tuning of Server-grade clients Parameter-efficient tuning High ✗
+ GPT/LLaMA via PEFT (LoRA, adapters)
+FwdLLM [9] Transformer-based FL tun- General NLP clients Fine-tuning + pruning High ✗
+ ing (BERT, RoBERTa)
+KOALA [10] LLM distillation for FL on Resource-constrained Teacher–student distillation Moderate ✗
+ IoT IoT clients
+Ours FL with LLM prompt adap- GPU-based edge Enhanced GSFS + prompt High ✔
+ tation (17 models) (e.g., fog, gateways) adaptation
+
+generative AI for critical infrastructure while emphasizing capabilities, including GPU acceleration) and processes mediunresolved challenges, including energy constraints and ad- cal device telemetry, Electronic Health Record (EHR)- linked
+versarial robustness. More practical implementations, such system logs, and real-time clinical sensor data. It supports
+as the BERT-based FL intrusion detection system in [26], federated training, enabling distributed model updates while
+apply quantization and efficient training for 5G-enabled IoT preserving data privacy by keeping raw data local in line
+but evaluate only mid-sized transformers and omit latency with Health Insurance Portability and Accountability Act and
+or energy measurements. Recent efforts, such as [27], aim Personal Health Information Protection Act HIPAA/PHIPA
+to advance FL–LLM convergence by incorporating gradient requirements. To enhance efficiency and responsiveness, the
+sensing and Generative IoT (GIoT) orchestration; however, component leverages lightweight prompt tuning/LoRA-based
+they fall short of providing unified evaluations of performance, fine-tuning, as well as knowledge distillation, a technique in
+efficiency, and deployment complexity. These works reveal a which a smaller ”student” model is trained to replicate the
+clear need for a cohesive FL–LLM framework that operates behaviour of a larger, more complex ”teacher” model [30]. In
+on GPU-enabled edge platforms, supports dynamic prompt- our implementation, lightweight adaptation is achieved using
+based adaptation, and delivers verifiable efficiency gains under LoRA with adapter rank r = 8, applied to the transformer
+realistic IoT and IoMT constraints. To address these gaps, attention projection matrices (Query, Key, Value, and Output)
+our work contributes: (i) a unified architecture that integrates and to the feed-forward (MLP) layers. This configuration uptransformer-based LLMs with federated optimization and real- dates only a small fraction of the model parameters (typically
+time prompt adaptation; (ii) an Enhanced Gradient Sensing less than 1–2% of those in full fine-tuning), enabling efficient
+Federated Strategy (Enhanced GSFS) that provides adaptive on-device adaptation while preserving model performance in
+thresholding and priority-aware client coordination; and (iii) resource-constrained IoMT edge environments. This design
+an extensive empirical benchmark of 17 LLMs across two reduces training time and model footprint without signifirepresentative IoT datasets under practical GPU-enabled edge cantly compromising performance, enabling scalable, privacysettings. This unified perspective enhances the feasibility of preserving inference at the hospital network edge.
+deploying secure, scalable, and efficient LLMs across smart 2) Federated Learning Coordinator: Hosted in the cloud,
+gateways, industrial fog nodes, and emerging medical AI this module aggregates model updates from distributed edge
+platforms. nodes while ensuring data privacy and security. It leverages
+ secure aggregation mechanisms, including Differential Pri-
+ III. P ROPOSED F RAMEWORK vacy (DP-FedAvg) [31] and Gradient Compression, to reduce
+A. Architecture Overview communication overhead. Periodic synchronization facilitates
+ The proposed framework combines edge computing, feder- system-wide adaptability and mitigates the effects of non-IID
+ated learning, and cloud-based orchestration to enable a scal- data distributions.
+able, adaptive IoMT management architecture. It comprises 3) Communication Module: This module manages sethe following components: the Local LLM Training Mod- cure and efficient data exchange between edge and cloud
+ule, Federated Learning Coordinator, Communication Module, components. It incorporates adaptive data-compression tech-
+Prompt Management Module, Adaptive Feedback Loop, and niques to reduce communication overhead. It employs ex-
+Performance and Monitoring Dashboard. The details are as plicit bandwidth-allocation strategies, including dynamic rate
+follows: control and priority-based scheduling, to maintain reliable
+ 1) Local LLM Training Module: This component runs performance under varying network conditions. In addition,
+on edge devices, such as hospital gateways, which serve as it uses Transport Layer Security (TLS) encryption to ensure
+near-patient computational nodes that locally process medical data integrity and confidentiality during transmission [32].
+telemetry to minimize latency and preserve data locality [28]. 4) Prompt Management Module: This module dynamically
+In parallel, clinical fog nodes serve as an intermediate com- adapts prompts according to the capabilities of the executing
+puting tier between the edge and the cloud, providing higher node, including resource-constrained IoMT devices, hospital
+computational capacity for real-time analytics, data filtering, gateways, and GPU-enabled clinical fog servers. It further
+secure aggregation, and other latency-sensitive healthcare tasks accounts for the operational context, including current network
+[29]. This component runs on edge devices (e.g., hospital latency, available bandwidth, and node-level workload, as
+gateways and clinical fog nodes with moderate computational well as application-specific requirements, such as accuracy
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 4
+
+Fig. 1: Overview of the proposed model. The system integrates edge-level LLM training, cloud-based model aggregation, and
+ secure communication to enable scalable, low-latency, and privacy-preserving intelligence.
+
+targets and response-time constraints. The module interacts the federated IoMT environment. At each federated round t,
+with the Adaptive Feedback Loop to incorporate runtime the agent observes the system state:
+performance signals, including prompt effectiveness, tokenusage efficiency, and model response quality. Reinforcement st = {Acct , F 1t , Lt , Et , Bt , Ut }, (1)
+learning is employed to continuously refine prompt selection where Acct and F 1t denote the global accuracy and F1-
+and compression strategies based on observed rewards that score, Lt is inference latency, Et is energy consumption, Bt
+jointly capture task performance, latency, and token budget, is available bandwidth, and Ut represents the client update
+thereby enabling adaptation to changing network conditions frequency. Based on st , the agent selects an action:
+and clinical user requirements [33], [34]. To reduce inference
+cost while maintaining accuracy, the module incorporates at = {δt , Kt , ηt , ct }, (2)
+prompt compression and token-efficiency techniques [35].
+ where δt is the synchronization threshold, Kt is the number of
+In addition, aggregated insights from the Performance and
+ selected clients, ηt is the learning rate adjustment factor, and ct
+Monitoring Dashboard, including end-to-end inference latency,
+ denotes the prompt compression level. The reward function is
+token consumption, throughput, and resource utilization, are
+ defined to maximize prediction performance while minimizing
+used to further optimize prompt templates and runtime routing
+ latency and energy cost:
+decisions. Prompts are locally optimized at each edge client to
+reflect node-level context and workload conditions, and are not rt = αAcct + βF 1t − γLt − µEt , (3)
+globally aggregated. Federated learning is applied to model
+parameters (or lightweight LoRA adapters), while the RL where α, β, γ, and µ are weighting coefficients. The objective
+controller adjusts both synchronization thresholds and prompt is to learn an optimal policy π ∗ that maximizes the expected
+compression/selection policies based on runtime state variables discounted cumulative reward:
+ " T #
+(accuracy, latency, energy, bandwidth, and update frequency). X
+ ∗ t
+This design enables personalized prompt adaptation at the edge π = arg max E λ rt , (4)
+ π
+while maintaining global model consistency through federated t=1
+
+aggregation. where λ ∈ (0, 1) is the discount factor. This RL-based
+ 5) Adaptive Feedback Loop: This component continuously feedback mechanism enables dynamic adaptation of synchromonitors key indicators, including model accuracy, latency, nization and prompt strategies under heterogeneous IoMT
+energy consumption, and prompt-response quality. Reinforce- operating conditions.
+ment learning (RL) is used to adapt both prompt configurations Client selection is governed by a performance-aware policy
+and federated learning parameters. Formally, the adaptive that considers factors such as recent model improvements,
+feedback loop is modelled as an RL agent interacting with gradient-stability metrics, communication frequency, and the
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 5
+
+current resource availability of each participating node. The source telemetry (network traffic, system logs, and device
+loop functions as a control layer that generates optimiza- activity traces) that closely reflects the operational struction signals, covering learning-rate adjustments, aggregation- ture of IoMT ecosystems. Therefore, these datasets enable
+frequency updates, prompt-compression levels, and participa- reproducible evaluation of intrusion detection and anomaly
+tion priorities. It transmits them to both the Prompt Man- classification under realistic, non-IID, distributed conditions,
+agement Module and the Federated Learning Coordinator. which are central challenges in federated IoMT environments.
+Coordination occurs through an internal messaging interface To assess the robustness and generalizability of our prothat synchronizes these components, ensuring prompt adap- posed FL–LLM framework, we evaluate it on two widely
+tation and real-time, jointly tuned scheduling of federated used IoT security datasets: IoT-23 [36] and ToN IoT [37].
+updates, thereby enabling a closed-loop mechanism for con- These datasets provide complementary perspectives, includtinuous, system-wide self-optimization across the architecture. ing network-level intrusion traces and multi-source telemetry,
+This component continuously monitors key system metrics, enabling benchmarking across diverse threat scenarios. The
+including model accuracy, inference latency, energy consump- IoT-23 dataset contains labelled network traffic flows derived
+tion, and prompt-response quality. Based on these metrics, a from realistic malware activity on IoT devices. After removing
+reinforcement-learning–based controller adjusts both prompt missing values and resolving encoding inconsistencies through
+configurations and federated learning parameters. Client se- label encoding and normalization, we obtained a cleaned
+lection is performed using a performance-aware policy that dataset containing 48,003 samples, which were split into 70%
+prioritizes nodes with stable gradients, recent accuracy im- training, 20% validation, and 10% testing subsets (Table II).
+provements, sufficient resources, and acceptable communi- The ToN IoT dataset, developed by UNSW Sydney, integrates
+cation frequency. The feedback loop generates optimization network traffic, system logs, and telemetry collected from
+signals, including updates to the learning rate, adjustments heterogeneous IoMT and IIoT environments. We selected
+to the aggregation frequency, prompt compression levels, and the structured Train_Test_IoT subset, commonly used
+client participation priorities. These signals are communicated for anomaly and malware detection, which yielded 50,303
+through an internal coordination interface to both the Prompt cleaned samples, partitioned using the same ratio (Table III).
+Management Module and the Federated Learning Coordinator, To prepare both datasets for ingestion by transformer-based
+ensuring synchronized adaptation of local inference behaviour LLMs, we adopted a two-stage preprocessing pipeline. First,
+and global model aggregation. This closed-loop design enables categorical features were encoded using one-hot or label
+continuous, system-wide self-tuning across the federated IoMT encoding, and continuous variables were normalized via minarchitecture. max scaling. Then, structured records were serialized into
+ 6) Performance and Monitoring Dashboard: The dash- tokenized sequences using fixed formatting strategies and
+board provides a unified interface for system administrators, domain-specific embedding templates. This transformation enincluding hospital IT operators, clinical data engineers, and abled compatibility with text-based LLM architectures while
+security managers, to observe real-time system metrics, such preserving the semantic and structural properties of the origias model drift, training-convergence behaviour, latency pat- nal IoT telemetry and traffic data. These adaptations ensured
+terns, and detailed prompt-performance statistics, including uniformity across the FL-LLM training pipeline and supported
+response quality, failure frequency, and token consumption. consistent evaluation of predictive performance, inference la-
+These analytics are fed into the Adaptive Feedback Loop, tency, and energy consumption under federated constraints.
+enabling data-driven adjustments that refine prompt templates,
+update parameter schedules, and improve the relevance and TABLE II: IoT-23 Dataset Split into Training, Validation,
+efficiency of model behaviour across diverse IoMT workloads. and Testing Sets
+The dashboard provides a unified interface for system ad- Dataset Part Percentage (%) Number of Samples
+ministrators to observe real-time system metrics, including Training Set 70 33,602
+model drift, training convergence, latency patterns, and prompt Validation Set 20 9,601
+performance statistics (e.g., response quality, failure rates, and Testing Set 10 4,800
+token consumption). These analytics support data-driven adjustments through the Feedback Loop and help refine prompt
+templates over time, improving task relevance and efficiency. TABLE III: ToN IoT Dataset Split into Training, Validation,
+ and Testing Sets
+B. IoTM Datasets
+ Dataset Part Percentage (%) Number of Samples
+ Although these datasets are not collected directly from
+ Training Set 70 35,213
+hospital IoMT infrastructures, they serve as reliable proxies Validation Set 20 10,060
+because modern IoMT deployments share fundamental com- Testing Set 10 5,030
+munication and threat characteristics with general IoT systems,
+including distributed device telemetry, gateway-mediated traffic, heterogeneous log sources, and malware-driven intrusion C. Implementation Details
+behaviours. In particular, IoT-23 captures real malware-based The implementation follows a hierarchical execution flow
+IoT traffic flows that resemble medical device monitoring that begins at the edge, moves upward through fog coordiand remote-control scenarios, while ToN-IoT provides multi- nation, and ultimately integrates into cloud-level aggregation.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 6
+
+At the first stage, each edge device runs a Local Inference federated environments. FedOpt is a family of methods that
+and Adaptation Engine built on a size-optimized LLM. This extend FedAvg by using an adaptive optimizer on the server
+engine performs real-time functions, such as anomaly detec- side. Instead of simple averaging, the server updates the global
+ (t)
+tion, dynamic resource allocation, and predictive maintenance, model θglobal using certain rules, here, for instance, an Adamdirectly on the device, thereby reducing the need to transmit like rule:
+ N
+raw telemetry to the cloud. Executing these operations locally 1 X
+minimizes latency, reduces bandwidth usage, and improves gt = ∆θk,t . (7)
+ N
+ k=1
+energy efficiency, ensuring that time-sensitive IoMT decisions
+are made as close as possible to the data source. mt+1 = β1 mt + (1 − β1 )gt . (8)
+ 1) Edge Processing: Once edge-level inference and
+lightweight adaptation are complete, the system transitions to
+the federated learning phase, in which updates from multiple vt+1 = β2 vt + (1 − β2 )gt2 . (9)
+edge devices must be synchronized and aggregated. This
+ (t+1) (t) mt+1
+motivates the need for robust federated learning baselines to θglobal = θglobal − ηserver √ . (10)
+manage distributed optimization and ensure model consistency vt+1 + ϵ
+across heterogeneous IoMT nodes. The following subsection where mt and vt are first and second moment estimates,
+introduces the classical FL strategies used as benchmarks in similar to those used in Adam and β1 and β2 are exponential
+our framework. Each edge device is equipped with a Local decay coefficients that control how much past gradients influ-
+Inference and Adaptation Engine that leverages trained LLMs ence the first- and second-moment estimates, gt denotes the
+for real-time decision-making. This enables critical tasks such aggregated gradient update received from participating clients
+as dynamic resource allocation, predictive maintenance, and at round t, and ϵ is a small constant added for numerical
+anomaly detection without relying on cloud resources. By stability to avoid division by zero.
+performing computations locally, the framework minimizes 3) Gradient Sensing Federal Strategy: Classical federated
+latency, reduces bandwidth consumption, and enhances overall learning methods such as FedAvg require every client to upenergy efficiency, making it well-suited for IoT environments. load its full model update at the end of each training round, re-
+ 2) Classical Federated Learning Baselines: Classical fed- gardless of the update’s magnitude. This uniform and frequent
+erated learning methods, such as FedAvg, serve as a reference synchronization results in high communication overhead, infor evaluating the effectiveness of our proposed strategy. These creased latency, and inefficient use of bandwidth. These issues
+baseline algorithms represent the standard behaviour of feder- become more severe as the number of clients grows or devices
+ated optimization, uniform client participation, synchronous operate over constrained IoMT networks. GSFS addresses
+aggregation, and unweighted averaging, against which im- this limitation by allowing clients to asynchronously upload
+provements in convergence, communication efficiency, and updates only when meaningful local changes occur. Instead of
+accuracy can be measured. sending updates every round, each client monitors indicators
+ a) Federated Averaging (FedAvg): is one of the most such as gradient magnitude or performance variation and
+classical and widely used federated learning strategies. Each initiates an upload only when they exceed predefined threshclient k maintains a local model θk,t and updates it by running olds. This selective-update mechanism significantly reduces
+E local epochs of Stochastic Gradient Descent (SGD) on its unnecessary communication, lowers latency, and maintains
+private dataset Dk with learning rate η. Formally, after local convergence quality, making GSFS better suited for largetraining, each client has scale, bandwidth-limited IoMT environments.
+ Most classical federated learning algorithms (e.g., FedAvg)
+ θk,t+1 = θk,t − η ∇L(θk,t , Dk ). (5) require each client to upload its complete update (either model
+ parameters or gradients) to the central server after each local
+ repeated for E epochs. All participating edge or fog clients training round. The server then performs global aggregation
+then send their updated parameters (or gradients) to the central (e.g., simple or weighted averaging) and broadcasts the upserver, which performs a global aggregation. If there are N dated global model to all clients. This frequent and uniform
+clients in total and client k’s dataset size is |Dk |, a common synchronization results in high communication overhead and
+aggregation is the weighted average: increased latency, particularly when the number of participating devices is large or network bandwidth is constrained.
+ N
+ (t+1) 1 X The GSFS minimizes unnecessary communication by enabling
+ θglobal = PN |Dk | θk,t+1 . (6) clients to asynchronously trigger uploads in response to signifk=1 |Dk | k=1
+ icant locally observed changes. The core idea is to monitor the
+ Finally, the new global model is broadcast back to each magnitude of updates or performance shifts in local models
+client, completing one federated round. and initiate uploads only when a predefined threshold is
+ b) FedOpt.: FedAvg may converge slowly or become un- exceeded. The following section outlines the details of this
+stable when clients hold heterogeneous (non-IID) data. FedOpt approach from both the client and server perspectives.
+addresses this limitation by applying adaptive optimization on a) Client Side:
+the server, thereby improving convergence speed, enhancing To avoid unnecessary communication, each client must deterstability, and yielding more reliable global-model updates in mine whether its local model has changed enough to justify
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 7
+
+ TABLE IV: Federated Learning Hyperparameters Used performs a global aggregation step. Denoting by Kt the set
+ Parameter Value of clients whose updates are included at aggregation time t,
+ Number of clients (N ) 5 the form of the aggregation can be:
+ Federated rounds (T ) 50
+ Local epochs (E) 5  
+ Batch size (B) 32 (t+1) (t)
+ Client optimizer Adam θglobal = Aggregate θglobal , {∆θk,t : k ∈ Kt } . (17)
+ Client learning rate (η) 10−4
+ Server optimizer (FedOpt) Adam We adopt a common choice to the weighted sum of the
+ Server learning rate (ηserver ) 10−3 updates while using the submission frequency as the weights
+ FedAvg / FedOpt / GSFS / for calculation, for instance:
+ Aggregation strategy
+ Enhanced GSFS
+ (t+1) (t)
+ X
+ Aggregation threshold (GSFS-based) 60% of client updates θglobal = θglobal + αk ∆θk,t , (18)
+ k∈Kt
+
+sending an update to the server. A performance-based trigger where αk reflects the importance of client k (e.g., positively
+provides this decision mechanism by allowing the client to proportional to k’s submission frequency). After the server
+monitor its own progress and upload updates only when its aggregates the updates in the pool to form a new global model
+ (t+1)
+local performance meaningfully improves or deteriorates. This θglobal , it broadcasts this model to all clients simultaneously:
+ensures that communication occurs only when it is helpful for
+ (t+1) (t+1)
+global training, reducing bandwidth usage and synchronization Broadcast: ∀k, θk ← θglobal . (19)
+overhead. Each client k maintains a local model θk,t and a Each client receives the latest version of the global model,
+local validation dataset Dkval . After several local mini-batch ensuring download consistency. Clients will then reset their
+updates or at periodic intervals, the client evaluates its model (t+1)
+ local reference models (e.g., θk,tref ← θk ) for subsequent
+on Dkval to obtain a performance metric (e.g., accuracy, loss,
+ local training and trigger detection. Overall, the GSFS allows
+or F1 Score). Let M(θk,t ; Dkval ) denote the chosen metric for
+ each client to upload asynchronously upon detecting significlient k at time t. The client compares the current performance
+ cant changes (see 12). Still, the server consolidates those asyn-
+M(θk,t ; Dkval ) with the performance at the last upload referchronous updates into a single broadcast event. Regardless of
+ence point M(θk,tref ; Dkval ):
+ how frequently a client uploads, it always receives the latest
+ ∆Mk = M(θk,t ; Dkval ) − M(θk,tref ; Dkval ) . (11) global model at each broadcast iteration. This design reduces
+ communication overhead compared to forcing uniform uploads
+If ∆Mk exceeds an adaptive threshold δkperf , the client initiates from all clients after every local epoch.
+an asynchronous upload of its gradients updates to the server: c) Cloud Aggregation: The Federated Learning Coordinator
+ aggregates updates from edge devices using privacy-preserving
+ Trigger: ∆Mk > δkperf . (12) algorithms such as Federated Averaging. The global model
+ In addition to using performance metrics, clients can mon- leverages cloud computing for large-scale updates, ensuring
+itor the norm of local gradients or parameter changes across scalability and robustness. Communication between the central
+ (l)
+training steps. Denote by gk the aggregated gradient norm at server (or aggregator) and edge clients is a critical component
+ (l) of federated learning frameworks. It must handle model uplayer l of client k. A moving average (mean) µk and standard
+ (l) dates, client feedback, and synchronization signals robustly
+deviation σk can be maintained over recent training steps: and securely. In our system, we use a TCP/IP-based Transport
+ (l)
+ µk ← α µk
+ (l)
+ + (1 − α) ∥ gk ∥,
+ (l)
+ (13) Protocol, widely adopted for its simplicity and cross-platform
+ (l) (l) (l) (l)
+ compatibility. The central server and clients exchange model
+ σk ← α σk + (1 − α) ∥ gk ∥ − µk , (14) parameters over standard TCP sockets secured with TLS/SSL
+ to ensure data confidentiality and integrity.
+where α ∈ (0, 1) is a smoothing factor. An adaptive threshold
+ (l) 4) Optimization Strategies for Adaptive Synchronization:
+δk can then be defined for each layer: To further optimize our GSFS, we propose two innovative en-
+ δk
+ (l)
+ = µk
+ (l)
+ + β σk ,
+ (l)
+ (15) hancements focusing on communication efficiency and adaptive synchronization: a) Differential Threshold Adjustment:
+where β is a hyperparameter that controls sensitivity. If any Instead of using fixed thresholds for gradient norm triggers,
+ (l) (l)
+layer’s gradient norm ∥ gk ∥ exceeds δk , client k triggers an we introduce an adaptive threshold mechanism based on the
+upload. historical performance trends of local devices. Specifically,
+ (l)
+ b) Server Side each client dynamically adjusts its threshold δk using an
+When the central server receives a gradient update or param- exponentially weighted moving average of recent improveeter update ∆θk,t from client k, it stores it in an update pool ments in accuracy and communication frequency. Formally,
+along with metadata such as timestamp or training round: this threshold adjustment is defined as:
+ n o
+ (l) (l)
+ Pool = (∆θk,t , timek,t , k) . (16) δk,t = γ · δk,t−1 + (1 − γ) · (λ · ∆Mk + µ · ρk ), (20)
+
+ Once the number of distinct clients, |Pool|, reaches the where δk, t(l) is the threshold at round t for layer l and client
+threshold M (defaulting to 60% of all clients), the server k, γ is the smoothing parameter, ∆Mk is the recent accuracy
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 8
+
+improvement, ρk is the communication frequency, and λ, µ are such as smart traffic hubs, industrial gateways, healthcare monweighting coefficients. itoring units, and fog computing platforms, that increasingly
+ b) Prioritized Client Update Scheduling: In the original integrate mid-range GPUs to support advanced local intelli-
+GSFS, global aggregation occurs when a fixed proportion of gence. These edge nodes enable efficient on-site execution
+client updates are received. We enhance this by prioritizing of distilled or size-optimized LLMs, allowing for semantic
+updates based on clients’ historical contributions measured by reasoning, anomaly detection, and contextual decision-making
+model improvements. Formally, we define priority score Pk with reduced reliance on cloud services. The federated learning
+for client k as: process was orchestrated using the proposed Enhanced GSFS,
+ which adaptively regulates client participation based on real-
+ Pk = α · ∆Mk + β · (1/τk ), (21)
+ time performance metrics. Latency and energy efficiency are
+where ∆Mk is the moving average of accuracy improvements, reported for both tiers of the federated architecture. Specifi-
+τk is the average time between updates from client k, and cally, the central measurements are obtained from the cloud
+α, β are weighting parameters. Updates from clients with aggregation server equipped with an NVIDIA A100 GPU,
+higher Pk values are aggregated first. While the original whereas the client measurements are obtained from edge
+GSFS reduces communication overhead by triggering client devices equipped with NVIDIA RTX 3080 Ti GPUs. All
+uploads only when performance variation or gradient norms models and federated strategies were evaluated under the same
+exceed predefined thresholds, it still relies on fixed threshold- runtime and numerical-precision configuration to ensure a fair
+ing and does not explicitly prioritize clients based on their comparison. The experimental setup enabled a comprehensive
+historical contribution. In contrast, the proposed Enhanced assessment of the framework across key indicators, including
+GSFS introduces two key improvements: (i) adaptive threshold accuracy, precision, recall, F1-score, inference latency, and
+adjustment, where synchronization thresholds are dynamically energy efficiency. Both the IoT 23 and ToN IoT datasets were
+updated based on recent accuracy improvement and commu- used to benchmark system performance under heterogeneous,
+nication frequency (Eq. (16)), and (ii) priority-aware client realistic operating conditions. The main hyperparameters for
+scheduling, where clients are ranked using a priority score federated learning used in our experiments are summarized in
+reflecting their historical impact and update recency (Eq. (17)). Table IV.
+These enhancements allow Enhanced GSFS to further reduce
+redundant updates and improve synchronization efficiency IV. R ESULTS AND D ISCUSSION
+under heterogeneous IoMT environments. The proposed framework demonstrated significant improve-
+D. Experimental Setup ments in IoT management tasks. Edge processing reduced
+ latency by enabling real-time decision-making, while federated
+ To evaluate the proposed framework, we conducted experi- learning ensured data privacy and scalability. The adaptive
+ments on a two-tier federated platform that emulates realistic, feedback loop enhanced the system’s ability to adjust to
+compute-capable IoT deployment scenarios. The cloud tier dynamic IoT environments by leveraging continuous perfor-
+(central infrastructure) was provisioned with high-performance mance monitoring and feedback. The monitoring dashboard
+computing resources, including an AMD EPYC server running provided administrators with actionable insights, enabling
+Ubuntu 22.04 and equipped with an NVIDIA A100 GPU them to make quick adjustments and optimize system oper-
+(40 GB of VRAM), which handles global model aggregation ations. Additionally, the distributed architecture enhanced reand coordination. The edge tier comprised five independent silience to failures and demonstrated scalability as the number
+devices, each configured with 16 GB of system memory and of devices increased. Energy efficiency was significantly iman NVIDIA GeForce RTX 3080 Ti GPU (12 GB VRAM). proved through localized processing on edge devices, thereby
+The RTX 3080 Ti was selected to represent a cost-effective reducing reliance on cloud resources.
+yet compute-capable edge GPU that is representative of
+practical hospital gateway and fog node deployments. More A. Model Performance Evaluation
+advanced GPUs (e.g., RTX 4090 or A-series accelerators) can We begin by evaluating the predictive performance of 17
+also be deployed on-premises, which is expected to further transformer-based LLMs across two real-world IoT datasets:
+improve inference speed, increase throughput, and enable IoT-23 and ToN IoT. The performance benchmarking of the
+local execution and adaptation of larger LLM variants. This 17 LLMs is conducted under a consistent evaluation setting
+would benefit end users by enabling faster real-time decision- to enable fair comparison across model families. The impact
+making, reducing reliance on cloud connectivity, and im- of federated learning strategies, including Enhanced GSFS,
+proving responsiveness for latency-critical IoMT applications. is evaluated separately in Section IV-B, where the selected
+Similarly, the framework can scale down to lower-power edge base LLM model is trained under FedAvg, FedOpt, GSFS,
+accelerators (e.g., NVIDIA Jetson-class devices) by deploying and Enhanced GSFS for direct comparison. Although LLMs
+smaller LLM variants and applying lightweight adaptation are primarily designed for generative tasks, in this work,
+(e.g., LoRA/prompt tuning), thereby trading off model capac- they are adapted for sequence-level discriminative classifiity for reduced computational cost, lower energy consumption, cation by converting structured IoT/IoMT telemetry records
+and lower deployment cost. While such hardware exceeds the into text-like sequences using fixed templates. For encodercapabilities of traditional microcontroller-class IoT devices, it based models (e.g., BERT), classification is performed using a
+reflects the growing class of resource-rich edge environments, softmax head applied to the pooled representation, whereas for
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 9
+
+ (a) BERT Family models (b) GPT Family models (c) Google T5/FLAN models
+
+ (d) EleutherAI models (e) BigScience BLOOM models (f) Meta OPT models
+ Fig. 2: Classification metrics for different LLM families.
+
+decoder-based models (e.g., GPT), classification is achieved generalization even without task-specific fine-tuning. GPT-2-
+through prompt-based label generation. Model predictions are Medium (355M) yields the highest F1-score (0.8742) among
+compared against ground-truth labels, and performance is the group, reflecting its optimal balance between precision
+evaluated using accuracy, precision, recall, and F1-score. and recall. Interestingly, GPT-Neo, although architecturally
+ Fig. 2a illustrates the classification performance of five distinct and more recent, exhibits recall (0.8920) and F1-
+BERT-based models, BERT, ALBERT, ROBERTA, DE- score (0.8730) that are comparable to, though slightly lower
+BERTA, and XLNET, across four key metrics: Precision, Re- than, those of its GPT-2 counterparts. A key observation is
+call, F1-score, and Accuracy. All models exhibit consistently that scaling up the model size from 124M to 774M pahigh performance, with metric scores consistently exceeding rameters in GPT-2 does not yield a linear improvement in
+0.87, underscoring their robustness on the classification task. classification performance. The largest model, GPT-2-Large
+Among the evaluated models, ALBERT slightly outperforms (774M), achieves slightly lower F1-score (0.8726) and Precithe others in overall Precision (0.9073), Recall (0.9001), sion (0.9012) than GPT-2-Medium. This suggests diminishing
+and Accuracy (0.9015), indicating its efficiency despite its returns from larger model sizes for this task and dataset,
+parameter-reduction strategy. DEBERTA also delivers strong potentially due to overparameterization or sensitivity to inresults, achieving the highest F1 Score (0.8931), indicating put length and context window. Overall, the GPT Family
+a good balance between precision and recall. BERT and models demonstrate solid performance in text classification,
+XLNET, although earlier architectures, maintain stable per- with mid-sized models, such as GPT-2-Medium, offering an
+formance, affirming their reliability for general-purpose NLP effective trade-off between computational cost and accuracy.
+tasks. ROBERTA shows slightly lower F1-score (0.8625) and This finding is valuable for deployment in IoT environments,
+Accuracy (0.8710) than the others, which may be attributed to where model efficiency is critical. The performance comparits sensitivity to task-specific data distributions. These results ison shown in Fig. 2c highlights notable differences among
+highlight that while all BERT-family models are capable the Google T5/FLAN models. Both Google/flan-t5-base and
+performers, newer or optimized variants, such as ALBERT and Google/flan-t5-large demonstrate relatively low performance
+DEBERTA, offer marginal yet meaningful improvements. This across all classification metrics, precision, recall, F1-score,
+supports the motivation for refining and fine-tuning models, and accuracy, generally ranging between 0.60 and 0.73. This
+even within closely related Transformer architectures. Fig. 2b suggests that these models struggle to produce consistent prepresents the classification performance of the GPT Family dictions, particularly in recall, indicating a higher rate of false
+models, GPT-Neo, GPT-2 (124M), GPT-2-Medium (355M), negatives. In contrast, the PALM model achieves significantly
+and GPT-2-Large (774M), evaluated across four key metrics: superior results across the board, with all metrics consistently
+Precision, Recall, F1-score, and Accuracy. All models achieve above 0.89. This indicates that PALM offers substantially
+consistent scores in the range of 0.87-0.90, indicating strong better generalization, precision, and overall reliability than the
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 10
+
+ values in Precision (0.9172), Recall (0.9083), and F1-score
+ (0.8878), compared to 0.9065, 0.8904, and 0.8793, respectively, for OPT-350M. Accuracy for OPT-1.3b also reaches
+ 0.9054, compared to 0.8971 for the smaller counterpart. The
+ proximity of these scores indicates that both models maintain
+ strong generalization and robustness. The narrow gap between Precision and Recall across models implies that neither
+ overfitting nor underfitting is dominant. These results suggest
+ that the Meta OPT family, particularly the 1.3B-parameter
+ variant, is a highly reliable choice for classification tasks in
+ resource-rich deployments. Figs. 3 and 4 provide a comparison
+ of the response latency across various LLM families. The
+Fig. 3: Response Latency for BERT and GPT Family Models latency values reflect the time each model takes to generate a
+ prediction, which is critical for real-time or latency-sensitive
+ applications in edge or IoT environments. In Fig. 3, the
+earlier FLAN variants. The significant performance improve- BERT family exhibits moderate latency, with ROBERTA and
+ment highlights the impact of model size and architectural DEBERTA showing the highest latencies at 145.91 ms and
+enhancements introduced in PALM, making it more suitable 140.48 ms, respectively. ALBERT demonstrates the lowest
+for high-stakes classification tasks where precision and recall latency (110.62 ms), consistent with its lightweight, efficient
+are crucial. architecture. In addition, the GPT family shows a noticeable
+ Fig. 2d illustrates the classification metrics for increase in latency as model size scales. GPT-2-Large (774M)
+the EleutherAI models: EleutherAI/pythia-410M and records the highest latency (330.53 ms), while the smallest
+EleutherAI/pythia-1b. Both models exhibit strong and model, GPT-2 (124M), achieves a lower latency of 125.54 ms.
+consistent performance across all evaluated metrics, precision, GPT-Neo, despite being relatively lightweight, has a higher
+recall, F1-score, and accuracy, with values that are close latency (175.34 ms), likely due to architectural differences.
+to or exceed 0.90. Notably, EleutherAI/pythia-1b slightly As shown in Fig. 4, the Google T5/FLAN models exhibit a
+outperforms the 410M variant across all metrics, reflecting the wide range of latencies. The flan-t5-base variant performs sigadvantages of its larger model capacity. The differences, while nificantly better (95.48 ms) than flan-t5-large (165.96 ms) and
+modest, indicate improved generalization and robustness in PALM (165.83 ms). The increased latency of larger models is
+the pythia-1b model. This suggests that increasing the model attributable to their deeper, wider transformer layers. Similarly,
+size within the EleutherAI architecture enhances classification for EleutherAI models, pythia-1b incurs a considerably higher
+performance without compromising the balance between latency (280.62 ms) than pythia-410M (145.42 ms). This
+precision and recall. Overall, both models demonstrate high nearly twofold difference aligns with the increase in parameffectiveness and are well-suited for classification tasks in eter scale and confirms the impact of model complexity on
+performance-critical applications. response time. Moreover, BigScience BLOOM models follow
+ Fig. 2e presents the classification performance of the Big- a similar trend. The 1.1B model incurs a latency of 310.84
+Science BLOOM models: bloomz-560m and bloomz-1b1. ms, nearly double that of the smaller 560M variant (170.48
+Both models deliver strong and consistent results across ms). This disparity underscores the computational overhead
+the four evaluated metrics, precision, recall, F1-score, and introduced by larger model variants. Finally, for Meta OPT
+accuracy, with scores clustering around or slightly above models, OPT-1.3b reaches 215.36 ms, significantly higher than
+0.85. Between the two, bloomz-1b1 consistently outperforms OPT-350M (88.14 ms). Despite both models sharing the same
+bloomz-560m, albeit by a small margin. This performance architectural principles, the difference in parameter count digain highlights the benefits of increased model capacity, likely rectly affects inference speed. Overall, these figures emphasize
+due to improved contextual understanding and representation a consistent trade-off between model size and response latency
+learning in the larger model. The precision and accuracy met- across all families. Smaller models deliver faster predictions
+rics show particular strength, indicating that these models are and are better suited to edge deployment, whereas larger
+well calibrated to minimize false positives and deliver reliable models, although more accurate, require substantially higher
+overall predictions. The near balance between precision and latency budgets. This latency-performance balance is crucial in
+recall in both models suggests robustness across different class selecting an appropriate model for constrained environments.
+distributions. These characteristics make the BLOOM models Fig. 5 presents the energy efficiency of the evaluated
+viable candidates for multilingual or large-scale classification transformer-based models, measured in requests per minute
+tasks in diverse settings. Fig. 2f presents the classification (req/min). This metric is crucial in assessing the models’
+performance metrics for the Meta OPT models, specifically suitability for deployment in energy-constrained environments,
+OPT-350M and OPT-1.3b. Overall, both models demonstrate such as edge devices or large-scale production systems. As
+high and balanced performance across all four metrics, con- shown in Fig. 5, the BERT family demonstrates consistently
+sistently exceeding 0.87. OPT-1.3b outperforms OPT-350M high energy efficiency. ALBERT and BERT lead with 542.50
+across all metrics, reflecting the expected benefit of increased and 519.40 req/min, respectively, thanks to their lighter archimodel capacity. Notably, OPT-1.3b achieves slightly higher tectures and optimization strategies. DEBERTA and XLNET
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 11
+
+ Fig. 4: Response Latency for Google T5/FLAN Models,
+EleutherAI Models, BigScience BLOOM Models, and Meta Fig. 5: Energy Efficiency for BERT and GPT Family Models
+ OPT Models
+
+also maintain competitive throughput above 400 req/min,
+while ROBERTA lags slightly at 411.30 req/min. The GPT
+family demonstrates a sharp decline in efficiency as model size
+increases. GPT-2 (124M) achieves the highest efficiency within
+its family at 478.00 req/min, while GPT-2-Large (774M) drops
+drastically to 181.50 req/min. This decline underscores the
+computational overhead of large-scale autoregressive models during sequential token generation. Fig. 6 illustrates the
+energy efficiency of Google T5/FLAN Models, EleutherAI
+Models, BigScience BLOOM Models, and Meta OPT Models. The Google T5/FLAN family achieves the highest overall efficiency, with FLAN-T5-base reaching 628.60 req/min, Fig. 6: Energy Efficiency for for Google T5/FLAN Models,
+the peak among all models evaluated. However, efficiency EleutherAI Models, BigScience BLOOM Models, and Meta
+decreases for FLAN-T5-large and PALM, each stabilizing OPT Models
+around 361 req/min, indicating a steep trade-off associated
+with increased model capacity. EleutherAI models follow a communication overhead, highlighting the impact of adappredictable scale-based trend. The smaller Pythia-410M model tive feedback- and reinforcement-learning-driven control in
+achieves 412.60 req/min, significantly outperforming the larger federated coordination. In addition to latency and energy
+Pythia-1B, which records 213.80 req/min. For BigScience profiling, we quantify communication overhead by measuring
+BLOOM models, the 560M variant performs better, at 352.00 the total number of client uploads and the cumulative size of
+req/min, whereas the 1b1 model shows a notable drop to transmitted updates (MB) per federated round. This enables
+193.00 req/min, suggesting energy inefficiencies for larger direct comparison of synchronization cost across FedAvg,
+multilingual generation tasks. Finally, the Meta OPT models FedOpt, GSFS, and Enhanced GSFS. Although our evaluation
+demonstrate remarkable efficiency, with OPT-350M achieving is conducted on IoT-23 and ToN IoT, the proposed FL–LLM
+the highest throughput overall at 680.70 requests per minute. framework is not dataset-specific and can generalize to other
+This positions it as the most energy-efficient model in the IoT/IoMT security datasets, as it relies on serialized telemetry
+study. The larger OPT-1.3b model exhibits a reduced rate of representations and federated optimization. Consistent trends
+278.70 req/min, consistent with the observed inverse correla- across two heterogeneous datasets indicate the robustness of
+tion between model size and energy efficiency across families. Enhanced GSFS across varying data distributions. This section
+These results affirm that while larger models often offer also presents the quantitative results and evaluation curves
+superior accuracy and generalization, they incur significant used to select the base LLM model. To be more specific, two
+energy costs, which may limit their viability for real-time or of the performance metrics were defined as follows: Response
+large-scale deployment. Mid-sized models, particularly OPT- Latency: the average inference time required for the model to
+350M and FLAN-T5-base, offer an optimal balance between process the test set; and Energy Efficiency: the number of
+performance and computational cost. requests the model can handle within one minute.
+ Fig. 7a presents the classification accuracy of both the cen-
+B. Federated Learning Strategy Comparison tral and client models across four federated learning strategies:
+ To evaluate the benefits of our proposed Enhanced GSFS FedAvg, FedOpt, GSFS, and the proposed Enhanced GSFS.
+strategy, we compare it against multiple baseline methods, This evaluation on the IoT-23 dataset provides insight into
+including FedAvg, FedOpt, and the original GSFS. We an- the trade-offs between global model performance and local
+alyze their performance with respect to synchronization fre- client effectiveness. The FedAvg baseline achieves balanced
+quency, model convergence, latency, energy consumption, and performance, with the central model achieving 0.89 accuracy
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 12
+
+ (a) Accuracy on IoT-23 (b) Accuracy on ToN IoT
+ Fig. 7: Comparison of accuracy across IoT-23 and ToN IoT datasets using different federated learning strategies.
+
+ (a) F1-score on IoT-23 (b) F1-score on ToN IoT
+ Fig. 8: Comparison of F1-score across IoT-23 and ToN IoT datasets using different federated learning strategies.
+
+and the client model slightly lower at 0.87. While this indicates Fig. 7b illustrates the comparative accuracy of central and
+acceptable convergence, it also highlights minor client-level client models for four federated learning strategies on the
+degradation due to heterogeneous data distributions. FedOpt ToN IoT dataset. This dataset exhibits a distinct distribution
+improves the central model accuracy to 0.90 but suffers a and complexity profile compared with IoT-23, enabling assignificant drop in client accuracy to 0.85. This disparity sessment of generalizability across various IoT environments.
+suggests that while global optimization improves server-side The FedAvg strategy shows a modest central accuracy of
+performance, it may amplify model divergence across clients, 0.88 and a slightly lower client accuracy of 0.86. This gap
+particularly in non-IID environments such as IoT security indicates limited adaptation to client-specific data distributions
+datasets. The GSFS strategy delivers a more balanced ac- and potential challenges with model personalization. FedOpt
+curacy profile, achieving 0.90 and 0.89 for the central and achieves a marginally higher central accuracy of 0.89; howclient models, respectively. This narrow gap suggests enhanced ever, similar to the IoT-23 results, its client accuracy drops to
+synchronization between global and local updates, likely due 0.86. This again suggests that while optimization accelerates
+to GSFS’s gradient-sharing mechanism, which mitigates client global convergence, it may neglect local adaptability, espedrift. The proposed Enhanced GSFS further refines this be- cially in heterogeneous settings. Both GSFS and Enhanced
+haviour, maintaining a central accuracy of 0.90 and a client GSFS deliver a more balanced outcome. GSFS achieves an
+accuracy of 0.89. These results confirm that the enhancements accuracy of 0.89 for both the central and client models, underintroduced in our approach not only sustain high global per- scoring its stability and effectiveness in harmonizing gradient
+formance but also preserve robust client-side generalization. updates across the federation. Enhanced GSFS maintains this
+Overall, the Enhanced GSFS strategy demonstrates superior equilibrium, with a central accuracy of 0.89 and a slightly
+consistency and balance across the federated architecture, lower client accuracy of 0.87. The results demonstrate that
+making it more suitable for deployment in distributed IoT Enhanced GSFS consistently narrows the performance gap
+systems where equitable client performance is critical. between central and client models, improving generalization
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 13
+
+while maintaining robust performance for individual clients. models across the four federated learning strategies using the
+This is particularly crucial in practical federated IoT deploy- IoT-23 dataset. FedAvg incurs the highest latency, with central
+ments where model fairness and reliability across nodes are and client latencies recorded at 48.12s and 71.43s, respectively.
+essential. Fig. 8a presents the F1-score performance of central This substantial gap highlights FedAvg’s inefficiency in synand client models trained using the four federated learning chronous communication and aggregation, particularly from
+strategies on the IoT-23 dataset. F1-score, as the harmonic the client side. FedOpt improves on this, reducing latency to
+mean of precision and recall, provides a robust measure of 42.09 seconds (central) and 55.08 seconds (client), though the
+classification effectiveness for imbalanced datasets, which are disparity between the two remains significant. GSFS achieves
+common in cybersecurity-related IoT contexts. Both FedAvg lower latency, with central and client times of 37.74s and
+and GSFS achieve balanced F1 Scores of 0.88 between the 34.69s, respectively, indicating more balanced computational
+central and client models, indicating consistent predictive and communication overhead. The proposed Enhanced GSFS
+performance across the federation. However, FedOpt reveals further improves efficiency, yielding the lowest latencies of
+a slight central-client performance gap (0.86 vs. 0.87), re- 35.76 seconds (central) and 33.12 seconds (client). This
+flecting instability in local optimization dynamics. Enhanced demonstrates the benefit of the enhanced coordination and
+GSFS outperforms the baselines, achieving an F1-score of scheduling mechanisms embedded in our approach. In sum-
+0.89 on the central model and 0.88 on the clients. This mary, Enhanced GSFS outperforms all baseline methods in
+marginal yet consistent improvement underscores Enhanced latency minimization, particularly by narrowing the central-
+GSFS’s capacity to coordinate learning across heterogeneous client latency gap, which is critical for real-time IoT deployclients, ensuring generalizability without sacrificing individual ments. Fig. 9b illustrates the latency performance (in seconds)
+performance. These findings reinforce the utility of Enhanced of both central and client models across four federated learning
+GSFS in real-world federated scenarios, where both accuracy strategies evaluated on the ToN IoT dataset. A clear trend of
+and fairness are critical across diverse IoT devices. Fig. 8b improved communication efficiency is evident as we transition
+illustrates the F1-score performance of both central and client from traditional aggregation methods (FedAvg and FedOpt) to
+models for the four federated learning strategies, FedAvg, the proposed Enhanced GSFS. Specifically, FedAvg exhibits
+FedOpt, GSFS, and the proposed Enhanced GSFS, on the the highest latency, with the client-side latency peaking at
+ToN IoT dataset. FedAvg and FedOpt both achieve identical 68.20 seconds and central latency at 45.31 seconds. FedOpt
+F1 Scores of 0.87 and 0.85 for central and client models, slightly improves this latency profile, reducing the client and
+respectively, indicating a consistent performance gap of 0.02. central times to 52.67 and 39.42 seconds, respectively. The
+GSFS yields slightly better results, with F1 Scores of 0.88 GSFS strategy achieves notable latency reductions to 33.89
+and 0.86, indicating improved coordination between the central seconds (client) and 35.61 seconds (central), highlighting its
+and distributed models. Notably, the Enhanced GSFS strategy efficiency in reducing communication overhead. The proposed
+maintains the highest central-model F1 score of 0.88 and Enhanced GSFS achieves the lowest latency across both perachieves 0.86 at the client level. This marginal gain highlights spectives, with client latency dropping to 31.47 seconds and
+Enhanced GSFS’s ability to maintain high predictive perfor- central latency to 33.84 seconds, highlighting the strategy’s efmance while minimizing discrepancies between the central and fectiveness in minimizing response delays. This improvement
+local models. The results on the ToN IoT dataset confirm the is attributed to its optimized aggregation mechanism and inadvantage of Enhanced GSFS in federated learning environ- telligent scheduling, which collectively reduce synchronization
+ments by offering both stability and accuracy across model overhead. These results confirm that Enhanced GSFS not only
+deployments. maintains competitive accuracy and F1-score performance but
+ also significantly enhances communication efficiency, which
+C. Latency Profiling Evaluation is crucial for real-time applications in IoT environments.
+ In latency-sensitive IoMT environments, predictive accuracy
+alone is insufficient; deployment viability also depends on D. Energy Profiling Evaluation
+communication delay and system responsiveness. This sub- Energy efficiency is a critical metric for sustainable IoT syssection presents a detailed latency-profiling analysis of the tem design, particularly in federated settings where distributed
+four federated learning strategies: FedAvg, FedOpt, GSFS, training incurs nontrivial energy overhead. This subsection
+and the proposed Enhanced GSFS, evaluated on both the evaluates the energy performance of FedAvg, FedOpt, GSFS,
+IoT-23 and ToN IoT datasets. By comparing runtime latency and Enhanced GSFS, using the IoT-23 and ToN IoT datasets.
+on both central and client nodes, we assess each method’s By measuring throughput in requests per minute (Req/min),
+suitability for real-time IoMT applications and highlight the we assess the trade-offs between computational workload and
+improvements introduced by Enhanced GSFS. In this work, energy utilization, and demonstrate the impact of Enhanced
+latency is defined as the average inference time per sample GSFS on energy-aware federated learning. Fig. 10a compares
+measured over the full test set. Specifically, we measure the the energy efficiency of the central and client models across
+total wall-clock time required to process the entire test set four federated learning strategies on the IoT-23 dataset. The
+and divide it by the number of test samples. All models and proposed Enhanced GSFS approach significantly outperforms
+federated strategies are evaluated using the same execution the baseline methods in terms of requests per minute. Specifenvironment to ensure fair comparison. Fig. 9a presents la- ically, Enhanced GSFS achieves the highest energy efficiency
+tency measurements (in seconds) for both the central and client with 1.76 and 1.89 requests per minute for the central and
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 14
+
+ (a) Latency on IoT-23 (b) Latency on ToN IoT
+ Fig. 9: Comparison of latency across IoT-23 and ToN IoT datasets using different federated learning strategies.
+
+ (a) Energy efficiency on IoT-23 (b) Energy efficiency on ToN IoT
+ Fig. 10: Comparison of energy efficiency across IoT-23 and ToN IoT datasets using different federated learning strategies.
+
+client models, respectively. This indicates its capability to between computational performance and energy utilization
+maintain a high throughput while minimizing energy con- in distributed training environments. The results reveal that
+sumption. In contrast, traditional methods such as FedAvg Enhanced GSFS outperforms all other strategies, achieving the
+and FedOpt lag, with FedAvg exhibiting the lowest efficiency, highest energy efficiency: 1.84 Req/min for the central model
+particularly on the client side (0.84 requests per minute). and 1.96 Req/min for the client model. This improvement
+FedOpt demonstrates a moderate improvement, achieving rates is attributable to the strategy’s ability to minimize redundant
+of 1.43 and 1.09 requests per minute for the central and communication and optimize local updates, thereby reducing
+client models, respectively. GSFS outperforms these baseline idle time and improving throughput. Among the baseline
+methods, achieving 1.59 (central) and 1.73 (client) requests strategies, GSFS consistently shows higher energy efficiency
+per minute; however, it still falls short of Enhanced GSFS. than FedAvg and FedOpt, with central and client scores of
+The observed improvements can be attributed to the optimized 1.79 and 1.71 Req/min, respectively. This supports the effecgradient selection and synchronization scheme introduced in tiveness of global sparsity-based synchronization in conserving
+Enhanced GSFS, which reduces redundant computation and computational resources while maintaining performance. Concommunication. This leads to a more sustainable and scalable versely, FedAvg and FedOpt exhibit lower energy efficiency,
+FL deployment, especially relevant for energy-constrained IoT particularly in the client models, with FedAvg-client achieving
+environments. The consistent energy advantage across both the lowest at 0.95 Req/min. The central models under these
+central and client models confirms the robustness of the strategies also show relatively reduced values of 1.34 and 1.51
+proposed method in diverse deployment scenarios. Fig. 10b Req/min for FedAvg and FedOpt, respectively. This disparity
+presents the comparative analysis of energy efficiency, mea- indicates higher communication overhead and less optimized
+sured in requests per minute (Req/min), for central and training cycles.
+client models across four federated learning strategies, on The ablation results in Table V show that the proposed
+the ToN IoT dataset. This figure illustrates the key trade-offs enhancements mainly improve system efficiency while pre-
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 15
+
+ TABLE V: Performance Analysis of Enhanced GSFS Components on IoT-23 and ToN-IoT
+ Accuracy F1-score Latency (s) ↓ Energy (Req/min) ↑ Communication Cost ↓
+ Dataset Variant
+ Central Client Central Client Central Client Central Client Uploads/Round MB/Round
+ GSFS (base) 0.90 0.89 0.88 0.88 37.74 34.69 1.59 1.73 3.10 18.40
+ GSFS + AT only 0.90 0.89 0.88 0.88 36.80 33.95 1.66 1.80 2.85 16.90
+ IoT-23
+ GSFS + PS only 0.90 0.89 0.88 0.88 37.10 34.10 1.63 1.77 2.92 17.40
+ Enhanced GSFS (AT+PS) 0.90 0.89 0.89 0.88 35.76 33.12 1.76 1.89 2.60 15.20
+ GSFS (base) 0.89 0.87 0.88 0.86 35.61 33.89 1.71 1.79 3.00 17.60
+ GSFS + AT only 0.89 0.87 0.88 0.86 34.95 33.10 1.76 1.85 2.75 16.20
+ ToN-IoT
+ GSFS + PS only 0.89 0.87 0.88 0.86 35.20 33.35 1.74 1.83 2.82 16.70
+ Enhanced GSFS (AT+PS) 0.89 0.87 0.88 0.86 33.84 31.47 1.84 1.96 2.50 14.80
+
+serving predictive performance. For both IoT-23 and ToN-IoT isolating the individual contributions of adaptive thresholding
+datasets, the accuracy and F1-score remain almost unchanged and priority-aware client scheduling was not included.
+across all variants, indicating that Adaptive Thresholding (AT)
+and Priority Scheduling (PS) do not degrade the model’s R EFERENCES
+classification performance. At the same time, both AT and
+ [1] A. Brown, R. Singh, and Y. Zhang, “Heterogeneous iot systems:
+PS reduce latency and communication cost compared with Addressing diversity in devices and networks,” IoT Journal, vol. 8, no. 2,
+the original GSFS. On IoT-23, GSFS+AT achieves lower pp. 112–125, 2024.
+latency and communication overhead than the base GSFS, [2] Y. Otoum, P. Singh, and A. Nayak, “Advancing iomt defenses: Deep
+ collaborative learning for robust healthcare security,” in GLOBECOM
+while GSFS+PS also provides consistent improvements. A 2024-2024 IEEE Global Communications Conference. IEEE, 2024,
+similar trend is observed on ToN-IoT. This shows that each pp. 2966–2971.
+component contributes positively to synchronization efficiency. [3] H. Lee, M. Garcia, and S. Patel, “Integrating large language models
+ at the edge for iot applications,” ACM Transactions on Embedded
+The full Enhanced GSFS, which combines AT and PS, gives Computing Systems, vol. 23, no. 5, pp. 150–167, 2024.
+the best overall results on both datasets. It achieves the lowest [4] S. Patel and A. Kumar, “Energy-efficient iot: Balancing computational
+central and client latency, the highest energy efficiency, and workloads in edge-cloud architectures,” IEEE Internet of Things Journal,
+ vol. 11, no. 6, pp. 789–801, 2024.
+the lowest communication cost in terms of both uploads per
+ [5] M. Johnson and L. Zhao, “Critical iot applications: Overcoming latency
+round and transmitted data size. These results suggest that the and failure risks,” IEEE Transactions on Industrial Informatics, vol. 21,
+two components complement each other well. This confirms no. 1, pp. 78–89, 2025.
+that the gains of Enhanced GSFS come mainly from improved [6] Y. Otoum, A. Asad, and A. Nayak, “Llms meet federated learning for
+ scalable and secure iot management,” arXiv preprint arXiv:2504.16032,
+coordination and communication efficiency, while maintaining 2025.
+stable predictive performance. One limitation of the current [7] L. Jin, Y. Zhang, Y. Li, S. Wang, H. H. Yang, J. Wu, and M. Zhang, “Moe
+study is that the evaluation does not explicitly account for ˆ2: Optimizing collaborative inference for edge large language models,”
+ arXiv preprint arXiv:2501.09410, 2025.
+adversarial attacks in federated learning, such as poisoning [8] Z. Fang, Y. Zhang, L. Wang et al., “Fate-llm: An industrial-grade
+or backdoor manipulation by malicious clients. The present federated learning framework for large language models,” arXiv preprint
+experiments focus on standard non-IID federated conditions arXiv:2310.10049, 2023.
+ [9] M. Xu, P. Wang et al., “Fwdllm: Efficient federated fine-tuning of
+and system-level trade-offs in accuracy, latency, energy ef- large language models,” in USENIX Annual Technical Conference (ATC),
+ficiency, and communication cost. Evaluating the resilience 2024.
+of Enhanced GSFS under adversarial client behaviour is an [10] T. Zhao et al., “Koala: Federated knowledge distillation for resourceconstrained llm clients,” arXiv preprint arXiv:2407.05268, 2024.
+important direction for future work. [11] A. Alamleh, O. S. Albahri, A. A. Zaidan, A. S. Albahri, A. H. Alamoodi,
+ B. B. Zaidan, S. Qahtan, H. A. Alsatar, M. S. Al-Samarraay, and A. N.
+ V. C ONCLUSION Jasim, “Federated learning for iomt applications: A standardization and
+ This paper presents a scalable, privacy-preserving archi- benchmarking framework of intrusion detection systems,” IEEE Journal
+ of Biomedical and Health Informatics, vol. 27, no. 2, pp. 878–887, 2023.
+tecture for deploying LLMs in federated IoMT environ- [12] B. Bhasker, P. M. Rao, P. Saraswathi, S. G. K. Patro, J. K. Bhutto,
+ments that integrates edge-level fine-tuning at hospital gate- S. Islam, M. Kareemullah, and A. F. Emma, “Blockchain framework
+ways and clinical fog nodes, prompt adaptation, and cloud- with iot device using federated learning for sustainable healthcare
+ systems,” Scientific Reports, vol. 15, p. 26736, 2025.
+based coordination. The proposed framework addresses key [13] R. U. Z. Wani and O. Can, “Fed-ehr: A privacy-preserving federated
+challenges in latency, energy efficiency, and HIPAA/PHIPA- learning framework for decentralized healthcare analytics,” Electronics,
+aligned data privacy. Extensive experiments on IoT-23 and vol. 14, no. 16, p. 3261, 2025.
+ [14] F. R. Albogamy, “Federated learning for iomt-enhanced human activity
+ToN IoT demonstrate the effectiveness of Enhanced GSFS in recognition with hybrid lstm-gru networks,” Sensors, vol. 25, no. 3, p.
+improving inference performance across multiple transformer 907, 2025.
+families under realistic edge–cloud settings. Despite these [15] A. M. Almogadwy and A. A. Alqarafi, “Fused federated learning
+promising results, this work has three main limitations. First, framework for secure and decentralized patient monitoring in healthcare
+ 5.0 using iomt,” Scientific Reports, vol. 15, p. 24263, 2025.
+due to privacy restrictions and the limited availability of public [16] R. A. Alharbey and F. Jamil, “Federated learning framework for real-
+IoMT attack traces, our evaluation relies on the IoT-23 and time activity and context monitoring using edge devices,” Sensors,
+ToN IoT datasets as proxies. Second, robustness to adversarial vol. 25, no. 4, p. 1266, 2025.
+ [17] Z. Wang, Z. Shen, Y. He, G. Sun, H. Wang, L. Lyu, and A. Li, “Flora:
+threats in federated learning, such as poisoning and backdoor Federated fine-tuning large language models with heterogeneous lowattacks, was not explicitly evaluated. Third, an ablation study rank adaptations,” in Proceedings of NeurIPS 2024, 2024.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3689383
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS 16
+
+[18] R. Ye, W. Wang, J. Chai, D. Li, Z. Li, Y. Xu, Y. Du, Y. Wang,
+ and S. Chen, “Openfedllm: Training large language models on decentralized private data via federated learning,” arXiv preprint, vol.
+ arXiv:2402.06954, 2024.
+[19] H. Ding, Y. Yan, Y. Lu, J.-H. Xue, and H. Wang, “Fcllm-dt: Empowering
+ federated continual learning with large language models for industrial
+ iot,” IEEE Transactions on Circuits and Systems for Video Technology,
+ 2025.
+[20] X. Zhang, Y. Liu, Y. Kang, L. Li, T. Chen, M. Hong, and Q. Yang,
+ “Towards federated large language models: Motivations, methods, and
+ open challenges,” IEEE Transactions on Neural Networks and Learning
+ Systems, 2024.
+[21] X. Ma, F. Fang, and X. Wang, “Dynamic authentication and granularized
+ authorization with a cross-domain zero-trust architecture for federated
+ learning in large-scale iot networks,” arXiv preprint, vol. 2501.03601,
+ 2025.
+[22] K. Li, C. Li, X. Yuan, S. Li, S. Zou, S. S. Ahmed, W. Ni, D. Niyato,
+ A. Jamalipour, F. Dressler, and O. B. Akan, “Zero-trust foundation models: A new paradigm for secure and collaborative artificial intelligence
+ for internet of things,” arXiv preprint, vol. 2505.23792, 2025.
+[23] A. Sharma, S. Rani, and W. Boulila, “Blockchain-based zero-trust
+ networks with federated transfer learning for iot security in industry
+ 5.0,” PLOS ONE, vol. 20, no. 6, p. e0323241, 2025.
+[24] T. An, Y. Zhou, H. Zou, and J. Yang, “Iot-llm: Enhancing realworld iot task reasoning with large language models,” arXiv preprint
+ arXiv:2410.02429, 2024.
+[25] Y. Yigit, M. A. Ferrag, M. C. Ghanem, I. H. Sarker, L. A. Maglaras,
+ C. Chrysoulas, N. Moradpoor, N. Tihanyi, and H. Janicke, “Generative
+ ai and llms for critical infrastructure protection: Evaluation benchmarks,
+ agentic ai, challenges, and opportunities,” Sensors, vol. 25, no. 6, p.
+ 1666, 2025.
+[26] F. Adjewa, M. Esseghir, and L. Merghem-Boulahia, “Efficient federated
+ intrusion detection in 5g ecosystem using optimized bert-based model,”
+ in 2024 20th International Conference on Wireless and Mobile Computing, Networking and Communications (WiMob). IEEE, 2024, pp.
+ 62–67.
+[27] C. Mawela, C. B. Issaid, and M. Bennis, “A web-based solution for
+ federated learning with llm-based automation,” IEEE Internet of Things
+ Journal, 2025.
+[28] R. Mahmud, R. Kotagiri, and R. Buyya, “Fog computing: A taxonomy,
+ survey and future directions,” IEEE Internet of Things Journal, vol. 6,
+ no. 3, pp. 4048–4072, 2019.
+[29] N. Rathore et al., “Intelligent edge–fog interplay for healthcare informatics,” Computer Communications, 2024, ahead-of-print.
+[30] G. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a neural
+ network,” arXiv preprint arXiv:1503.02531, 2015.
+[31] Y. Otoum and A. Nayak, “Differential privacy-driven framework for
+ enhancing heart disease prediction,” in ICC 2025-IEEE International
+ Conference on Communications. IEEE, 2025, pp. 5456–5462.
+[32] T. Dierks and E. Rescorla, “The transport layer security (tls) protocol
+ version 1.2,” RFC 5246, Internet Engineering Task Force (IETF), 2008.
+ [Online]. Available: https://www.rfc-editor.org/rfc/rfc5246
+[33] M. Gao, B. Sun, Z. Fan, T. Zhang, and Z. Zheng, “Domain-aware
+ reinforcement learning for prompt optimization,” Mathematics, vol. 13,
+ no. 16, p. 2552, 2025.
+[34] M. Deng, J. Wang, C.-J. Hsieh, Y. Wang, H. Guo, T. Shu, M. Song,
+ E. P. Xing, and Z. Hu, “Rlprompt: Optimizing discrete text prompts
+ with reinforcement learning,” arXiv preprint arXiv:2205.12548, 2022.
+[35] H. Jiang, Q. Wu, C.-Y. Lin, Y. Yang, and L. Qiu, “Llmlingua: Compressing prompts for accelerated inference of large language models,”
+ in Proceedings of the 2023 Conference on Empirical Methods in Natural
+ Language Processing. Singapore: Association for Computational
+ Linguistics, 2023, pp. 13 358–13 376.
+[36] S. Garcia, A. Parmisano, and M. J. Erquiaga, “Iot-23: A labeled dataset
+ with malicious and benign iot network traffic,” (No Title), 2020.
+[37] M. Gharib, J. Hu, and M. Alazab, “Ton iot: A realistic and diverse
+ dataset for evaluating iot intrusion detection,” IEEE Internet of Things
+ Journal, vol. 8, no. 15, pp. 12 399–12 410, 2021.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

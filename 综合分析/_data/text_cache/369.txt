@@ -1,0 +1,144 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025                                                                   2647
+
+
+
+
+                  Augmentation and Fusion: Multi-Feature
+                  Fusion-Based Self-Supervised Learning
+                       Approach for Traffic Tables
+                               Xuan Zheng , Xiuli Ma , Lifu Xu , Yanliang Jin , and Chun Ke
+
+
+
+   Abstract—As modern networks face increasing demands                              traffic identification, Quality of Service provisioning, and
+for superior service and management, Encrypted Traffic                              so on.
+Classification (ETC) technology has become increasingly crucial.                       There is a lot of research on ETC methods. In the beginning,
+Considering that traffic data is easy to collect but hard to label,
+self-supervised ETC methods have attracted more and more                            the port-based method [1] was very effective because of the
+attention. Compared to popular methods based on traffic images                      simplicity of network. Since the dynamic port technology
+and text, traffic tables are simple to construct and more suitable                  was widely applied, the performance of this method has
+for the flow-packet structure. However, existing methods have two                   declined a lot. After that, Deep Packet Inspection [2] was
+problems: (1) The lack of data augmentation methods for tables                      put forward and once achieved great results. This method
+weakens the performance of self-supervised learning. (2) Most
+methods only focus on single feature and cannot make full use                       heavily relies on packet payloads, and as a result its effec-
+of distinct features of traffic tables, such as temporal feature. To                tiveness has also suffered a great decrease in a more complex
+solve these problems, we propose a multi-feature fusion method                      encrypted traffic environment. Hence, some research tries to
+based self-supervised learning approach for traffic tables. A                       use Machine Learning (ML) algorithms to do classification.
+new data augmentation method called Random Subsets Selection                        However, ML-based methods depend heavily on human-
+(RSS) is introduced alongside an effective fusion approach. In
+this way, temporal features can be successfully extracted and                       engineered features, which will limit their generalizability.
+concatenated with the latent representations of input traffic                          Due to the development of Deep Learning (DL) algorithms
+tables. Experimental results from two open datasets and one                         and their powerful feature extraction capabilities, a lot of
+self-collected dataset have shown that on imbalanced datasets,                      research has started applying them to the ETC problem.
+our method can effectively solve ETC problems even with a                           DL-based methods can be divided into two parts, data pro-
+small number of labeled data. Empirically, both classification
+performance and processing speed are improved. Specifically,                        cessing and classification algorithms. Considering that traffic
+compared to the state-of-the-art tabular self-supervised learning                   data is not a common datatype and cannot be directed used
+method, our method achieves the better classification results on                    by algorithms, data processing is necessary. Most methods
+all datasets while the processing speed increases by almost two                     first convert the raw traffic data into images or text, treat-
+times, from 1.83 tables per second to 3.76 tables per second.                       ing the ETC problem as an image classification problem
+   Index Terms—Encrypted traffic classification, self-supervised                    or text classification problem. A corresponding classification
+learning, contrastive learning, tabular data.                                       algorithm is then applied to get expected results. Recently,
+                                                                                    research has indicated that traffic tables are more suitable for
+                                                                                    solving ETC problems [3]. For raw traffic data, there are two
+                           I. I NTRODUCTION                                         basic relationships: (1) multiple packets compose one flow,
+        ITH the widespread use of smartphones and computers,                        (2) the fields of different protocols consist of one packet. This
+W       the network has expanded dramatically and become
+more sophisticated. Although it brings huge convenience to
+                                                                                    structure is very similar to tabular data, and both relationships
+                                                                                    can be easily obtained in one specific table. For these reasons,
+our life, it also puts forward higher demands on network                            raw traffic data are processed into traffic tables, whose rows
+management. As one of the network management methods,                               represent packets and columns represent the fields of the
+Encrypted Traffic Classification (ETC) technology has demon-                        packet header. A simple relationship between traffic tables and
+strated its importance in many aspects, such as malware                             traffic data is shown in Fig. 1.
+                                                                                       Traffic tables are important since they have three advan-
+  Received 2 May 2024; revised 19 October 2024 and 6 February 2025;                 tages. Firstly, compared to traffic images or text, one traffic
+accepted 20 March 2025. Date of publication 28 March 2025; date of current
+version 9 June 2025. The associate editor coordinating the review of this article   table can simultaneously reflect the field-packet relationship
+and approving it for publication was D. Pezaros. (Corresponding author: Xiuli       (columns) and the packet-flow relationship (rows). Therefore,
+Ma.)                                                                                it can best represent the characteristics of raw traffic data.
+  Xuan Zheng, Xiuli Ma, Lifu Xu, and Yanliang Jin are with the School of
+Communication and Information Engineering, Shanghai University, Shanghai            Secondly, traffic tables can avoid privacy invasion since only
+200444, China (e-mail: zx19821217030@gmail.com; xlma@shu.edu.cn;                    the packet header is used. Finally, temporal feature can be
+xulifu@shu.edu.cn; wuhaide@shu.edu.cn).                                             easily preserved by maintaining the order of packets. Based
+  Chun Ke is with H3C, Shanghai 200082, China (e-mail:
+ke.chun@h3c.com).                                                                   on the mentioned three merits, traffic tables are chosen to be
+  Digital Object Identifier 10.1109/TNSM.2025.3554824                               the research interest.
+                1932-4537 
+                          c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                       and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+2648                                                             IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 3, JUNE 2025
+
+
+
+                                                                                  2) An effective temporal feature extraction and fusion
+                                                                                      method is proposed. It can improve the model’s
+                                                                                      performance without introducing additional neural
+                                                                                      network modules.
+                                                                                  3) A new pretext task for tabular-based self-supervised
+                                                                                      learning is proposed, combining reconstruction and con-
+                                                                                      trastive tasks together. Compared to common methods, it
+                                                                                      improves both classification performance and processing
+                                                                                      speed.
+Fig. 1.   The relationship between traffic data and traffic tables.               The rest of this article is organized as follows: Section II
+                                                                               will introduce the related work. Section III will discuss the
+                                                                               used datasets and give the problem formulation. Section IV
+                                                                               will elaborate our methodology in detail, including the data
+   Considering that it is easy to collect traffic data but hard to             processing method and the network structure. Comprehensive
+label them, many studies try to leverage abundant unlabeled                    experiments have been conducted to evaluate the performance
+data to mitigate the dependence on labeled data. However,                      of the proposed method, which can be found in Section V.
+traffic tables lack data augmentation methods, which will                      What’s more, we do ablation study to further analyze the
+influence the performance. Besides, there are some special                     effectiveness of proposed strategies, presented in Section VI.
+features existing in traffic tables, such as the temporal feature.             At last, in Section VII, we will summarize our work and come
+How to make full use of these feature is also an urgent                        to a conclusion.
+problem.
+   To solve these problems, we propose a multi-feature fusion                                        II. R ELATED W ORK
+based self-supervised learning method for traffic tables. A                       ETC aims to classify traffic data according to their appli-
+new pretext task is proposed to learn latent representations of                cations or services. In this section, we will introduce the
+input traffic tables without labels, reducing the dependence on                related work in detail, and the overall differences of them are
+labeled data. It contains a reconstruction part and a contrastive              presented in Table I.
+part. Considering that contrastive learning requires various
+data augmentation methods to achieve great performance,                        A. Classification Methods Based on Statistical Features
+a new traffic tables augmentation method called Random
+Subsets Selection (RSS) is proposed to further augment traffic                    Most machine learning algorithms first manually extract
+tables. Specifically, input traffic tables are first divided into              statistical features of traffic data, and then use these statistical
+several sub-tables, and then some of them are randomly                         features to do classification. Auld et al. [4] first compre-
+selected to aggregate the latent representations. Secondly, the                hensively extracted 249 statistical features of network traffic
+random selection is applied again for the rest of the sub-tables.              and listed a features table. A Bayesian neural network was
+However, this time these sub-tables will be added noise and                    trained through these statistical features and achieved great
+used to aggregate the corrupted latent representations. After                  classification results [5]. Shen et al. [6] proposed to only use
+that, both latent representations are used for the reconstruction              packet length information to obtain a fine-grained webpage
+and the contrast tasks. Compared to common methods, our                        fingerprint. Recently, Xu et al. [24] proposed to construct a
+method can effectively find the informative sub-tables and give                traffic path with a session packet length sequence. It was
+them bigger weights. Moreover, an effective temporal features                  computed as a kind of distinct feature and then trained
+extraction and fusion method is also proposed. Specifically,                   regular ML models. Although machine learning methods
+after obtaining the reconstructed input, we use mean pooling                   have achieved great results, these methods heavily depend
+on each column and concatenate it to the latent representations.               on human-engineered features. Different encrypted techniques
+   From the experimental results, our method performs the best                 will change these features, which will limit these models’
+on two open datasets, ISCX VPN-nonVPN and ISCX Tor-                            generalization performance.
+nonTor datasets, and ranks the second on the self-collected
+dataset SHU-ET. The best representations of input traffic                      B. Classification Methods Based on Traffic Images
+tables can be learned and clustered through pretraining. In this                  Since DL algorithms have powerful feature extraction capa-
+way, great performance can be obtained with even a small                       bilities, they have been widely applied to research ETC.
+number of labeled samples. With addressing the mentioned                       Considering that there are a lot of powerful methods existing
+two problems, our method surpasses the state-of-the-art self-                  in Computer Vision (CV), a common strategy is constructing
+supervised tabular learning methods on both classification                     traffic images through traffic packets or flows. Wang et al. [7]
+performance and processing speed.                                              firstly proposed to generate traffic images by traffic packets.
+   The main contribution can be summarized as follows:                         After obtaining traffic images, image classification methods
+   1) A new tabular data augmentation method RSS is                            were directly used to classify them. Besides, Wang et al. [8]
+       proposed. It addresses the limitation of single data aug-               also compared the 1dCNN algorithm and 2dCNN algo-
+       mentation approach for traffic tables in self-supervised                rithm and found that 1dCNN was better for traffic images.
+       or contrastive learning.                                                Shapira and Shavitt [25] proposed a different way to construct
+ZHENG et al.: AUGMENTATION AND FUSION: MULTI-FEATURE FUSION                                                                         2649
+
+
+                                                             TABLE I
+                                                    S UMMARY OF R ELATED W ORK
+
+
+
+
+traffic images called FlowPic. It used packet lengths as values     almost all these methods used encrypted payload of packets
+and arrival time as parameters. Since traffic image constructing    which is greatly affected by the environment and user habits.
+strategies were s

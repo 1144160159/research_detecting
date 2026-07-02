@@ -1,0 +1,787 @@
+4572 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ Neural Collapse-Based Class-Incremental Learning
+ for Encrypted Traffic Classification
+ Qin Zeng , Dan Qu , Hao Zhang , and Yaqi Chen
+
+ Abstract—The rapid evolution of internet technologies has
+intensified network traffic dynamics due to the emergence of
+novel encryption protocols, posing significant challenges to traffic
+classification. Incremental learning, which enables continuous
+adaptation to emerging tasks, has emerged as a promising
+approach to enhance the sustainability of encrypted traffic
+classification. However, existing methods fail to address the
+substantial feature representation disparities across incremental
+tasks, resulting in suboptimal model adaptability. Inspired by
+the Neural Collapse (NC) phenomenon—which reveals that
+deep neural networks’ final-layer features collapse to class-mean
+vectors forming a Simplex Equiangular Tight Frame (ETF)
+with classifier weights, thereby constituting an optimal geometric structure for classification tasks—we propose NCIL-ETC,
+a Neural Collapse-based Incremental Learning framework for Fig. 1. Neural Collapse-guided Class-Incremental Learning Framework.
+Encrypted Traffic Classification. Our approach employs a pre- (a) Before incremental training, limited feature distribution disparity exists
+trained Mamba as the feature extraction backbone, leveraging between new and historical tasks, resulting in ambiguous boundaries that
+ challenge model discrimination. (b) After incremental training, novel class
+its linear-complexity computational properties to significantly
+ feature vectors converge toward a pre-allocated ETF classifier structure. This
+reduce resource overhead. Simultaneously, we introduce a pre- alignment induces Neural Collapse, where all categories form an optimal
+allocated ETF classifier that establishes an optimal classification classification geometry characterized by maximum inter-class separability and
+structure covering observed classes. Through feature-classifier uniform angular spacing.
+alignment constraints during incremental learning, our method
+promotes both new and historical class features to converge
+toward ETF vertices, thereby preserving globally optimal catencrypted traffic. While machine learning approaches rely on
+egory relationships. Extensive experimental evaluations on four manually engineered features, deep learning models - particpublic benchmarks demonstrate that NCIL-ETC achieves state- ularly pre-trained deep learning architectures - demonstrate
+of-the-art performance, surpassing baseline methods in both superior performance by automatically extracting features
+classification accuracy and incremental learning capability. from massive unsupervised data, achieving remarkable classification results.
+ Index Terms—Encrypted traffic classification, class incremental learning, neural collapse.
+ However, the continuous emergence of new network services and applications necessitates classifiers to adapt to
+ I. I NTRODUCTION novel traffic types, requiring retraining on newly collected
+ extended datasets. Retraining entire models is computationally
+W ITH the advancement of information technologies,
+ encrypted traffic classification has become a critical
+component in network management and cybersecurity [1], [2],
+ expensive and time-consuming, particularly for self-supervised
+ pre-trained frameworks [9], [10]. Such overhead limits the
+ scalability of comprehensive network traffic classification.
+[3]. The ultimate objective is to categorize encrypted traffic
+ Recent years have witnessed the application of classfrom diverse network services and applications, enabling idenincremental learning (CIL) in computer vision and related
+tification of application sources and user behaviors. Existing
+ domains [11], [12]. Built upon continual learning paradigms,
+traffic classification methodologies primarily fall into three
+ CIL enables models to incrementally adapt to new classes
+categories: plaintext-based, machine learning-based [4], [5],
+ while mitigating catastrophic forgetting of historical knowl-
+[6], and deep learning-based approaches [7], [8]. Plaintextedge. Although CIL has been explored in encrypted traffic
+based methods have become inefficient due to the opacity of
+ classification with promising results [13], [14], existing
+ Received 31 August 2025; revised 13 February 2026 and 30 March 2026; approaches address catastrophic forgetting through diverse
+accepted 24 April 2026. Date of publication 29 April 2026; date of current strategies including regularization, replay, and parameter isolaversion 15 May 2026. This work was supported by the National Natural tion. Regularization methods [15] constrain parameter changes
+Science Foundation of China (No.62171470) and Henan Province Major to preserve old knowledge but hinder new feature learn-
+Industrial “Challenge-Based Innovation” (No.251000210300). The associate
+editor coordinating the review of this article and approving it for publication
+ ing when inter-class correlations are weak. Replay-based
+was R. Zhang. (Corresponding author: Dan Qu.) approaches [16] mix stored or generated samples with incre-
+ Qin Zeng, Hao Zhang, and Yaqi Chen are with Information Engineer- mental data, though they require large memory buffers and
+ing University, Zhengzhou 450001, China (e-mail: zengqin2361@163.com; depend heavily on sample selection or generation quality.
+haozhang0126@163.com; chyaqi163@163.com). Parameter isolation techniques [17] increase model complexity
+ Dan Qu is with Information Engineering University, Zhengzhou 450001,
+China, and also with the Laboratory for Advanced Computing and Intelligence through task-specific parameters, leading to parameter accu-
+Engineering, Wuxi 214000, China (e-mail: qudan xd@163.com). mulation with incremental steps. Moreover, as illustrated in
+ Digital Object Identifier 10.1109/TNSM.2026.3688767 Fig. 1(a), these methods fail to account for significant feature
+ 1932-4537 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+ZENG et al.: NC-BASED CLASS-INCREMENTAL LEARNING FOR ENCRYPTED TRAFFIC CLASSIFICATION 4573
+
+representation disparities between old and new tasks, thereby scenarios due to their dependency on predefined feature
+failing to provide a systematic geometric bias for maintaining sets.
+consistent inter-task category relationships. Deep learning methods automate feature extraction from
+ To address this limitation, Neural Collapse [18] reveals raw traffic data, eliminating manual feature engineering.
+that final-layer features of deep neural networks collapse Wang et al. [22] transformed the first 784 bytes of traffic
+to class-mean vectors aligned with classifier prototypes, payloads into 28 × 28 grayscale images, applying 1D-CNNs
+forming a ETF structure characterized by maximum and for end-to-end classification. Building upon this visual repuniform inter-class separability. Inspired by this geometric resentation paradigm, FlowPic [23] introduced a generic
+insight, we propose NCIL-ETC —a Neural Collapse-based method for transforming encrypted traffic flows into image-
+Class-Incremental Learning framework for Encrypted Traf- like representations, enabling the application of powerful
+fic Classification, marking the first application of Neural convolutional neural networks for classification. Subsequently,
+Collapse in this domain to our knowledge. As shown in mini-FlowPic [24] proposed an image-enhanced representation
+Fig. 1(b), our approach introduces a pre-allocated ETF clas- method, further enhancing the practicality of visual-based
+sifier that establishes an optimal structure for all observed encrypted traffic classification. Liu et al. [25] introduced
+classes. Through feature replay strategies during incremental FS-Net, leveraging encoder-decoder architectures to capture
+training, we maintain cross-task optimal category relation- latent sequential patterns. Graph-based techniques include DEships. This method employs an incremental encrypted traffic GNN [26], which models traffic interaction graphs (TIGs),
+classification network architecture. First, a Mamba-based fea- and TFE-GNN [27], which constructs byte-level graphs for
+ture extraction module derives generalizable encrypted traffic structural feature learning. While effective, these supervised
+features. Then, a feature mapping module projects these methods require extensive labeled data.
+unified features into a ETF classifier, forming the optimal Pre-trained models have gained prominence by learning
+geometric configuration for classification tasks. latent representations from unlabeled traffic data. ET-BERT
+ The key contributions of this paper are as follows: [9] employs BERT to pre-train on traffic burst patterns, while
+ • To the best of our knowledge, this work represents the YaTC [10] uses masked autoencoding (MAE) with matrixfirst successful integration of Neural Collapse theory into form representations (MFR). Ginige et al. [28] enhanced
+ incremental encrypted traffic classification. By construct- open-set classification via TrafficGPT, a GPT-2-adapted feaing an optimal geometric structure for classification tasks ture extractor. Inspired by large language models, NetGPT [29]
+ based on this theory and incorporating a feature replay and Lens [30] developed foundational models for both traffic
+ strategy, our approach effectively mitigates catastrophic analysis and generation. However, these Transformer-based
+ forgetting and overfitting. methods suffer from quadratic computational complexity in
+ • We propose an innovative incremental encrypted traffic self-attention, limiting their efficiency for long sequences or
+ classification framework, devise a Mamba-based pre- real-time applications.
+ trained feature extractor aimed at efficiently extracting The Mamba architecture [31], a hardware-efficient state
+ generalized traffic features and introduce a ETF classifier space model (SSM), offers linear-time complexity for longto build an optimal structural classifier, guaranteeing the sequence modeling. Its success in vision tasks (e.g., Vision
+ capture of the most favorable category relationships in Mamba [32], VMamba [33]) has motivated adaptations
+ every learning process. for traffic analysis. NetMamba [34] and ET-Mamba [35]
+ • Extensive experimental results on four datasets demon- demonstrate Mamba’s potential for reducing parameters and
+ strate that our method outperforms the baseline in both computational overhead in traffic pre-training. Building on
+ basic classification capability and incremental capability, these advances, we propose a Mamba-based feature extracachieving remarkable performance. tor pre-trained with MAE to achieve efficient and scalable
+The structure of this paper is as follows: Section II encrypted traffic representation learning.
+reviews related work in encrypted traffic classification,
+class-incremental learning, and Neural Collapse. Section III B. Class-Incremental Learning
+introduces preliminary concepts. The proposed NCIL-ETC Class-incremental learning, a core paradigm of continual
+methodology is detailed in Section IV, followed by experi- learning, addresses catastrophic forgetting—the tendency of
+mental results. Section VI and VII concludes the paper with models to overwrite previously learned knowledge when
+discussion and future research directions. trained on new tasks. Existing methods can be categorized into
+ three groups: regularization, replay, and parameter isolation.
+ II. R ELATED W ORK 1) Regularization: Regularization-based methods prevent
+ the overwriting of old knowledge caused by overfitting to
+A. Encrypted Traffic Classification new tasks by constraining the update of model parameters.
+ Due to the opaque nature of encrypted traffic, most early Li et al. [36] proposed Learning without Forgetting (LwF),
+studies employ machine learning (ML) techniques that rely which uses predictions from the old model on new tasks as soft
+on manually designed statistical features. Kong et al. [19] labels, preserving old-task discriminability via distillation loss.
+extracted 41 IP traffic-related features for anomaly detection Elastic Weight Consolidation (EWC) [37] quantifies parameter
+using support vector machines (SVMs). Moore et al. [20], importance for old tasks using the Fisher information matrix,
+[21] developed a comprehensive set of 249 statistical fea- applying stronger regularization to critical parameters. Synaptures, achieving robust classification performance via Bayesian tic Intelligence (SI) [38] and Memory Aware Synapses (MAS)
+neural networks. Taylor et al. [5] proposed AppScanner, a [39] compute parameter sensitivity through loss gradients and
+random forest-based method for real-time smartphone app output variations, respectively, to guide regularization.
+identification from encrypted traffic. However, these feature- 2) Replay: Replay-based methods alleviate forgetting by
+engineered approaches face generalization challenges in novel storing samples from old tasks or generating pseudo-samples
+4574 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+to simulate joint training. iCaRL [40] combines nearest-mean factors such as datasets, network architectures, and optimizaclassification and knowledge distillation. It employs a memory tion algorithms. Consequently, Neural Collapse is applicable
+buffer to store samples from old classes, thereby balancing to almost all standard classification tasks.
+the influence of new and old samples. Building on iCaRL, Recently, some methods have induced Neural Collapse dur-
+Castro et al. [41] proposed the EEIL method, which achieves ing training by fixing the classifier [57] or designing specific
+end-to-end incremental learning. Chen et al. [42] introduced loss functions [58]. Moreover, the theory of Neural Collapse
+a framework called One vs Rest (OvR). This framework has also been applied in fields such as transfer learning [59],
+utilizes samples with a herding effect to automatically adjust open-set recognition [60], and incremental learning [61], [62],
+the dataset capacity while updating the classifier. Shin et al. leading to significant performance improvements.
+[43] put forward the Deep Generative Replay (DGR) method, Inspired by the aforementioned research, to the best of our
+which simulates old data using a generative model. He et al. knowledge, we are the first to apply the Neural Collapse theory
+[44] combined samples from old tasks with generated pseudo- to the field of encrypted traffic classification. By introducing a
+samples and proposed the ESGR method. This method frozen Equiangular Tight Frame classifier, we ensure that the
+leverages Generative Adversarial Networks (GANs) to gen- features satisfy the Neural Collapse theory after each training
+erate synthetic data and combines it with a small number of iteration, thereby obtaining an optimal classification structure.
+real samples to alleviate catastrophic forgetting.
+ 3) Parameter Isolation: Parameter-isolation-based methods offer dedicated space for acquiring new knowledge by III. P RELIMINARIES
+gradually expanding the network scale or increasing model A. Equiangular Tight Frame Classifier
+parameters, while ensuring that the previously learned infor-
+ Neural Collapse refers to the phenomenon where, after a
+mation remains undisturbed. Wang et al. [45] proposed a novel
+ model is trained on balanced data, the features in the model’s
+two-stage learning paradigm called FOSTER, which achieves a
+ last layer and the classifier form a specific geometric structure.
+balance between knowledge retention and new-class learning
+ This structure can be defined as follows:
+through dynamic module expansion and knowledge distilla-
+ Definition 1: A ETF refers to a matrix composed of K
+tion. Yan et al. [46] introduced a method named DER, which
+ vectors in the Rd space that satisfies the following conditions:
+enables class-incremental learning by dynamically expanding
+feature extraction, combined with weight augmentation and
+ r  
+ K 1 T
+a memory module. Zhou et al. [47] proposed the SimpleCIL E= U IK − 1K 1K (1)
+ K −1 K
+method, which utilizes frozen pre-trained models, and the Aper
+method, which efficiently fine-tunes pre-trained models and Let E = [e1 , . . . , eK ] ∈ R(d×K) , and U ∈ Rd×K allows for
+constructs classifier prototypes. Both methods make full use rotation and satisfies U T U = IK , where IK is the identity
+of the generalization ability of pre-trained models. matrix and 1K is the all-ones vector.
+ In recent years, some researchers have introduced incre- All column vectors in E have the same l2 norm, and the
+mental learning techniques into encrypted traffic classification. 1
+ inner product between any pair of vectors is − K−1 , that is:
+Chen et al. [19] prevented catastrophic forgetting by sampling and storing training samples to replay the knowledge K 1
+of old classes. Du et al. [17] extended the classifier for eTk1 ek2 = δk1 k2 − , ∀k1 , k2 ∈ [1, K] (2)
+ K −1 K −1
+class-incremental learning in network intrusion detection by
+designing a parameter-isolation approach with branched clas- such that δk1 k2 = 1 when k1 = k2 and δk1 k2 = 0 otherwise.
+sifiers. Cai et al. [48] addressed the issues of traffic ambiguity The phenomenon of Neural Collapse encompasses the foland data class imbalance in incremental encrypted classifi- lowing four characteristics:
+cation through pre-allocating vector prototypes and applying (NC1): The last-layer features belonging to the same class
+ P(k)
+knowledge distillation. will converge to the class mean, that is, the covariance W →
+ P(k)
+ The method proposed in this paper improves upon those
+ 
+ 0, where W = Avgi (µk,i − µk )(µk,i − µk )T , Here, µk,i
+based on replay and parameter isolation. By freezing the represents the feature of sample i in class k, and µk denotes
+feature extraction module and efficiently generating pseudo- the intra-class mean feature of class k.
+samples based on stored class vector prototypes for incre- (NC2): After global mean centering, the intra-class means
+mental learning training, it significantly reduces the spatial of each class will converge to the vertices of the simplex
+complexity associated with storing old samples. Moreover, due Equiangular Tight Frame described in Definition 1, satisfying
+ −µG
+to the introduction of a frozen ETF classifier in this paper, Eq. (2) for 1 ≤ k ≤ K. Here, µ̂k = k µµkk −µ Gk
+ , where µG
+it aims to maintain the optimal relationships among classes represents the global mean.
+without increasing model parameters during the incremental (NC3): After global mean centering, the intra-class means
+process. of each class will align (become parallel) with their corresponding classifier weights. This implies that the classifier
+C. Neural Collapse weights will converge to the same simplex Equiangular Tight
+ Neural Collapse [18] refers to the phenomenon where the Frame, i.e., µ̂k = k ω
+ ωk k , where 1 ≤ k ≤ K and ωk represents
+ k
+
+features in the last layer of a neural network and the classifier the weight vector for class k in the classifier.
+gradually converge during training, forming an Equiangular (NC4): When conditions (NC1)-(NC3) hold, the model’s
+Tight Frame. Practical research has demonstrated that Neural predictions based on logit values can be simplified to nearest-
+Collapse can be observed regardless of whether cross-entropy class-center classification, that is, argmaxk < µ, ωk >=
+loss [49], [50], [51], [52] or Mean Squared Error (MSE) argmink k µ − µk k , where < · > denotes the inner product
+loss [53], [54], [55], [56] is employed. This phenomenon is operator, and µ represents the last-layer feature of a sample
+prevalent in deep learning training and remains unaffected by used for prediction.
+ZENG et al.: NC-BASED CLASS-INCREMENTAL LEARNING FOR ENCRYPTED TRAFFIC CLASSIFICATION 4575
+
+Fig. 2. Overview of NCIL-ETC. The model architecture primarily consists of a feature extractor, a feature mapping module, and an ETF classifier. During
+the base step, the feature extractor is fine-tuned to adapt to downstream tasks, while it is frozen in each incremental learning step to ensure the generalization
+capability of the extracted features. The feature mapping module aligns the features with the optimal structure, satisfying the neural collapse properties. In
+the incremental learning step, it is fine-tuned through a feature replay strategy to continuously align with the prototypes of the ETF classifier.
+
+ Based on NC2 and NC3, neural collapse has already defined • Label Space: The labels in task t belong to a specific
+the optimal geometric structure for the model’s last-layer range:
+features and the classifier. Therefore, we directly fix the
+classifier by constructing it with a simplex equiangular tight yi ∈ {Kt−1 , Kt−1 + 1, . . ., Kt − 1} (4)
+frame structure to maintain this optimality. We introduce an where Kt represents the cumulative number of classes
+ETF classifier, initialized as a simplex ETF classifier, and observed up to task t.
+keep it unchanged during training. For newly added classes in • Task Disjointness: The class sets C1 , C2 , . . ., CT are
+incremental learning scenarios, we assign pre-reserved optimal mutually non-overlapping, such that Ci ∩ Cj = ∅ for any
+classification vectors as guidance to ensure the transfer of an i 6= j.
+optimally structured feature representation for each category
+ The ultimate goal is to maintain high classification accuracy
+throughout the learning process.
+ across all seen classes while mitigating catastrophic forgetting.
+ Consequently, after the t-th incremental session, the model is
+ IV. M ETHOD evaluated on the cumulative test set:
+ In this section, we first describe the incremental learn- t
+ (1:t)
+ [
+ing problem in Section IV-A. Then, Section IV-B mainly i
+ Dtest = Dtest (5)
+introduces the representation method for encrypted traffic. i=1
+Sections IV-C and IV-D respectively present the model architecture and the training approach. Fig. 2 provides an overview Based on traditional class-incremental learning methods,
+of the NCIL-ETC method. we assume that there is a pre-trained model available for
+ initializing the feature extractor f (·) and represent the linear
+ classifier as h(·).
+A. Problem Description
+ The objective of class incremental learning in encrypted B. Encrypted Traffic Representation
+traffic classification is to develop a model capable of continuously integrating new traffic categories. We formalize the In recent years, some studies have transformed raw network
+incremental learning process as a sequence of T tasks, with traffic into grayscale or RGB color images as traffic reprethe corresponding datasets denoted as: sentations, and these works have demonstrated the promising
+ prospects of encrypted traffic analysis methods that take
+ D = {D1 , D2 , . . ., DT } (3) images as input. However, most of the existing image rept resentation methods do not take into account the interaction
+For each task t ∈ {1, . . ., T }, the dataset D =
+ t t t relationships between packet headers and messages.
+{Dtrain , Dvalid , Dtest } is structured as follows:
+ In this section, we propose a simple yet effective traffic
+ t nt
+ • Training Set: Dtrain = {(xi , yi )}i=1
+ train
+ , where xi representation method that converts raw traffic bytes into
+ denotes the input traffic representation and yi is the label. grayscale images while preserving header and interaction
+4576 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ In the classifier part, we introduce ETF classifier as the
+ classifier to guide the optimization of feature representations.
+ The vectors in the classifier are defined by Eq. (1) and are
+ generated in advance during the base stage and then frozen.
+
+ D. Training Method
+ During the pre-training step, this paper adopts Masked
+ Autoencoder pre-training approach from the field of computer
+ vision for unsupervised pre-training, aiming to obtain generalized traffic feature representations. First, a high percentage
+Fig. 3. The process of converting raw traffic into grayscale images.
+ of random masking is applied to the input traffic grayscale
+ images, with only a very small portion of visible, unmasked
+information. We partition the traffic into bidirectional flows patches being fed into the model. The encoder strives to
+based on the five-tuple and filter out some network flows that learn effective features from the remaining patches, while the
+contain no valid information or are erroneous. The process of decoder reconstructs the masked parts of the grayscale images
+converting raw traffic bytes into grayscale images is illustrated using the encoder’s output and mask information. The prein Fig. 3. First, we take the first B0 bytes from the first M training is guided by a reconstruction loss, specifically the
+packets of each bidirectional flow. If a packet has insufficient Mean Squared Error (MSE) between the real pixels yreal and
+bytes, we pad it with zero bytes; otherwise, we truncate the the predicted pixels yrec :
+excess bytes. Next, we reshape the B0 bytes in each packet LP retrain = M SE(yreal , yrec ) (8)
+into a matrix ∈ Rh×W . Finally, we concatenate the samples
+to form a grayscale image ∈ R1×(M ×h)×W . For ease of After pre-training, we solely extract the encoder parameters
+processing, we typically set the image to be square, with to serve as the feature extractor for downstream classification
+W = H = M × h. Additionally, for security and privacy tasks and the incremental learning process. Since the opticonsiderations, we replace the MAC and IP addresses in the mization objective of the feature extractor during pre-training
+packets with all zeros. is the grayscale image reconstruction task, which differs from
+ the downstream encrypted traffic classification task, we finetune the feature extractor in the base stage to adapt it to the
+C. Model Architecture classification task and reduce the domain gap. Meanwhile, we
+ The model architecture of the proposed method in this paper freeze the feature extractor during the incremental learning
+consists of three main components: feature extractor, feature process to preserve its generalized feature representation.
+mapping module, and classifier. To enable the feature extractor to achieve a better feature
+ The feature extractor is implemented based on the Mamba distribution representation, we introduce a contrastive learning
+model. Mamba is a state space model. Compared to the loss to guide the training of the feature extractor in the base
+quadratic computational complexity of the Transformer’s stage:
+attention mechanism, it boasts efficient linear computational B X 0
+complexity. Moreover, by incorporating a selection mech- X esim(zi ,zj )/τ
+ LCL = − βij log P sim(zi ,zk )/τ 0
+ (9)
+anism, it can dynamically adjust the current input state k6=i e
+ i=1 j6=i
+and selectively propagate or ignore information. To process
+grayscale images with the Mamba model, we first partition where, B represents the batch size, βij is a binary indicator
+the image matrix x ∈ RH×W into two-dimensional patches that denotes whether zi and zj belong to the same class (1 for
+ 2
+xp ∈ RN ×P . Here, P is the patch size and N = HW/P 2 the same class and 0 otherwise), sim(·) calculates the cosine
+is the total number of patches. Subsequently, each patch xp is similarity, and τ is the temperature coefficient for contrastive
+linearly projected into a d-dimensional vector, and a positional learning.
+embedding Epos ∈ RN ×d is added to it, as shown below: To ensure structural alignment of the feature mapping
+ module and mitigate representation drift, we employ an
+ X0 = [x1p E0 ; x2p E0 ; . . . ; xN
+ p E0 ] + Epos (6) Equiangular Tight Frame (ETF) based classifier. The process
+ 2 is divided into the base stage and the incremental stages:
+where, xnp represents the n-th patch of x, and E0 ∈ RP ×d is
+ • Base Stage Allocation: In the initial stage, we prea learnable projection matrix.
+ allocate the ETF weights for the base classes as:
+ To make the model conform to the characteristics of neural
+collapse, we also need to guide the transformation of feature E1 = [e1 , e2 , . . ., eC1 ] ∈ Rd×C1 (10)
+representations towards specific classifier weights. Therefore,
+we introduce a Feature Mapping module (FM), denoted as By fixing these weights as geometric anchors, the model
+P (·). This module consists of two layers of Multi-Layer Per- prevents significant weight fluctuations, thereby guiding
+ceptrons (MLPs) and a batch normalization layer. Positioned the feature extractor to achieve optimal structural alignafter the feature extractor, the Feature Mapping module is used ment from the outset.
+to map features to the ETF classifier and align them with the • Incremental Expansion: During the t-th incremental
+pre-allocated prototypes in the ETF classifier: session, we assign new ETF weights to the emerging
+ classes while keeping the weights of previously learned
+ zi = f (xi ), z0i = P (zi ) (7) classes strictly fixed. For the second stage, the updated
+ classifier E2 is constructed as:
+where, zi and z0i represent the extracted and mapped features,
+respectively. E2 = [E1 ; eC1 +1 , . . ., eC1 +C2 ] ∈ Rd×(C1 +C2 ) (11)
+ZENG et al.: NC-BASED CLASS-INCREMENTAL LEARNING FOR ENCRYPTED TRAFFIC CLASSIFICATION 4577
+
+ This incremental assignment strategy ensures that the selecting a component k according to the mixing weights πc
+ newly added classes are integrated into the existing rigid and then sampling from the corresponding Gaussian compogeometric structure without interfering with the estab- nent:
+ K
+ lished class boundaries. c
+ X
+ Dgen ∼ πc,k N (µc,k , Σc,k ) (16)
+ Since, in NC4, the logits prediction of a model satisfying
+ k=1
+neural collapse is equivalent to the nearest-center prediction,
+we employ both the MSE loss and the Cross-Entropy (CE) loss This multi-modal replay strategy allows the model to better
+to guide the optimal structural alignment. Let z0i ∈ Rd be the preserve the diversity of previously learned knowledge and
+feature extracted from the i-th sample, and Wp ∈ Rd×d denote mitigates catastrophic forgetting in complex feature spaces.
+the weights of the feature mapping module. The mapped
+feature is denoted as ẑi = z0i Wp . Algorithm 1 NCIL-ETC Algorithm Implementation
+ The MSE loss aims to minimize the Euclidean distance Input: Dataset D, pre-trained model fθ , randomly initialbetween the mapped feature and its corresponding ETF vertex ized feature mapping module W , ETF classifier E
+ek ∈ Rd : Output: Encrypted traffic classifier
+ N
+ 1 X BASE T RAINING(D, fθ , W, E)
+ LM SE = ||ẑi − eyi ||22 (12)
+ N i=1 for epoch p = 1, 2, . . . do
+ for batch b = 1, 2, . . . do
+where yi ∈ {1, . . . , K} is the class label of the i-th sample. 1
+ Select samples from base session Dtrain
+ For the classification branch, we use the Fixed ETF matrix
+ Compute outputs using Eq. (7)
+E = [e1 ; . . . ; eK ] ∈ Rd×K as the classifier’s weights. The
+ end for
+logits for the i-th sample are computed as li = zˆi T E ∈ RK .
+The multi-class Cross-Entropy loss is then defined as: Update fθ and W via LBASE (Eq. (14))
+ ! end for
+ N
+ eli,yi
+ P
+ 1 X Save statistics: µ, of old classes
+ LCE = − log PK (13) Store parameters: fθ0 , W1
+ N i=1 j=1 e
+ li,j
+ I NCREMENTALT RAINING(D, fθ0 , Wi−1 , Ei )
+where li,yi is the logit corresponding to the ground-truth class. for session i = 2, 3,P. . . do
+No additional non-linear activation (e.g., Sigmoid or ReLU) Load Ei = E [: Ci , :]
+is applied to the logits before the Softmax operation. Load parameters: fθ0 , Wi−1
+ The final objective function of the model during the base
+ for epoch p = 1, 2, . . . do
+stage is expressed as: i
+ SPi−1 Ci−1 j
+ Select samples from Dtrain and j=1 Dgen
+ LBASE = LM SE + LCE + ξLCL (14) Compute outputs using Eq. (7)
+where, ξ is the hyperparameter for contrastive learning. Update Wi−1 via LCIL (Eq. (17))
+ Since the feature extractor is frozen during incremental end for P
+learning steps, it is necessary to supervise the feature mapping Update statistics: µ, of old classes
+process in the incremental step to ensure that the feature Store parameters: Wi
+transfer aligns with the characteristics of neural collapse. end for
+To address the catastrophic forgetting problem, we adopt a
+feature replay strategy, consistent with the approach in [62], by During the class-incremental learning step, the trainreplaying features from previous tasks during current training. ing data consists of the original training set Dtrain t
+ and
+ Specifically, we compute the parameters of the feature the replayed simulated feature sample set Dreplay t
+ =
+distribution for all existing classes extracted by the feature {(zi , yi )|yi ∈ 0, . . . , Kt−1 − 1}. The objective function is
+extractor for use in replay. The pre-trained model generates given by:
+highly generalizable representations. However, a single Gaus- LCIL = LM SE + LCE (17)
+sian distribution may fail to capture multi-modal structures
+or complex intra-class variations, even if NC1 is partially The incremental learning process described in this paper is
+satisfied. To provide a more flexible and precise density formalized as Alg. 1. During the base session, the ETF clasestimation, we model the feature distribution of each existing sifier is initialized with reserved classification vectors, while
+class as a Gaussian Mixture Model (GMM). feature extractor and feature mapping modules undergo fine-
+ For each class c, the distribution is represented as a weighted tuning. In subsequent sessions, the feature extractor parameters
+sum of K Gaussian components: are frozen, the ETF classifier is expanded, and stored prototype
+ K
+ vectors of old classes are used to generate synthetic old-
+ X class samples. These synthetic samples are combined with
+ p(f |c) = πc,k N (f |µc,k , Σc,k ) (15)
+ new-session data for mixed-domain training, during which the
+ k=1
+ feature mapping module parameters are loaded and updated.
+where πc,k , µc,k , and Σc,k denote the mixing coefficient,
+mean vector, and covariance matrix of the k-th component for V. E XPERIMENTS
+class c, respectively. These parameters are optimized using
+the Expectation-Maximization (EM) algorithm to maximize A. Dataset and Experiment Setup
+the log-likelihood of the extracted features. 1) Datasets: We utilize the ISCX-VPN [63],USTC-TFC
+ During incremental learning, instead of sampling from a [22],CIC-IDS2017 [64] and CSTNET-TLS 1.3 [9] datasets as
+unimodal distribution, we generate simulated samples by first benchmark datasets. The ISCX-VPN dataset consists of traffic
+4578 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ TABLE I 3) Evaluation Metrics: To quantitatively assess the perfor-
+ I MPLEMENTATION D ETAILS AND H YPERPARAMETERS mance and anti-forgetting capabilities of different methods,
+ following [17], we employ two typical metrics: accuracy (AC)
+ and F1 score, along with the performance degradation rate
+ (PD) to evaluate and compare model performance. PD is used
+ to measure the accuracy drop rate of the sessions, that is,
+ PD=A-B, where A is the accuracy of the base session, and B is
+ the accuracy of the last incremental session. Additionally, we
+ use normalized confusion matrices to specifically analyze the
+ classification capability of each class during the incremental
+ process.
+
+ B. Classification Capability Analysis
+ In this section, we will evaluate the classification performance of NCIL-ETC when incremental tasks are not
+ considered, treating it as an ordinary encrypted traffic classification task to test the fundamental capabilities of the
+ Mamba-based pre-trained model. To validate the effectiveness
+data collected through a Virtual Private Network (VPN) and of our approach, we selected the following five encrypted
+can be categorized into 6 classes based on different com- traffic classification algorithms as baselines for comparison:
+munication applications. The USTC-TFC dataset comprises AppScanner, BIND, ET-BERT, YaTC, and CLE-TFE. Table II
+malware and benign application traffic, including 10 classes presents the experimental results on the four datasets. The
+of malicious traffic and 10 classes of benign traffic. The CIC- results show that NCIL-ETC outperforms existing methods,
+IDS2017 dataset collects five days of network traffic, including achieving a classification accuracy of 99.15% on the ISCXbenign traffic and 11 types of malicious traffic. The CSTNET- VPN dataset, 99.47% on the USTC-TFC dataset, 99.26%
+TLS 1.3 dataset is collected under CSTNET, encompassing on the CIC-IDS2017 dataset and 94.26%. Compared to the
+120 applications based on the new encrypted protocol TLS baseline methods, the main advantage of our approach lies
+1.3. Each dataset provides Pcap files of the original traffic, in the optimal structural alignment based on neural collapse,
+which we process using the raw bytes from the Pcap files which constructs the best category relationships through the
+as described previously. The processing for each dataset is as ETF classifier.
+follows:
+ The ISCX-VPN dataset contains 6 classes in total, with
+the base session comprising four classes and the new session C. Incremental Learning Baseline Comparison
+including 2 classes, with 1 class per session. We compared our method with nine baseline approaches on
+ The USTC-TFC dataset contains a total of 20 classes, four datasets. The results are illustrated in Fig. 4, with detailed
+with the base session set to 12 classes and the new session information presented in Tables III and IV. The comparison
+containing 8 classes, with 4 classes per session. reveals that our method achieves the highest accuracy in each
+ The CIC-IDS2017 dataset contains a total of 12 classes, session round and has the lowest PD value, outperforming the
+with the base session set to 8 classes and the new session second-best baseline by 4.96%, 2.82%, 2.5% and 1.02% on
+containing 4 classes, with 2 classes per session. the four datasets, respectively.
+ The CSTNET-TLS 1.3 dataset contains a total of 120 The fine-tuning method faces severe catastrophic forgetting
+classes, with the base session set to 100 classes and the new during incremental learning because it only focuses on acquirsession containing 20 classes, with 10 classes per session. ing knowledge about new classes. EWC and LwF methods can
+ 2) Implementation Details: Each traffic session is repre- preserve the model’s class knowledge through regularization,
+sented using a fixed number of packets with a predefined but they restrict the model’s ability to learn new knowledge.
+payload size, and the detailed configuration is summarized OvR and iCaRL methods maintain a balance between old
+in Table I. For all four benchmark datasets, we adopt a and new class knowledge by retaining some old samples,
+single unified MAE-pretrained Mamba backbone for down- yet their effectiveness depends on the quality and quantity
+stream classification and incremental learning experiments. of the retained samples. FOSTER and SimpleCIL methods
+The backbone is pre-trained on the combined training sets keep parameters related to previous classes unchanged while
+of ISCX-VPN and USTC-TFC datasets with the settings in allocating new parameters in different forms, but they increase
+Table I, which is designed to verify the generalization and the number of parameters and do not consider the optimal
+sustainability of our method across different encrypted traffic relationships among classes. Although the NC-FSCIL and
+scenarios. No additional dataset-specific MAE pre-training is NC-PTM-CIL methods also adopt the incremental learning
+conducted for CIC-IDS2017 and CSTNET-TLS 1.3, ensuring framework based on neural collapse, they fail to obtain more
+the reproducibility of our experiments and the validity of superior feature representations in the base step and employ
+generalization claims. After pre-training, the encoder is used to a relatively simplistic feature replay process. Compared with
+initialize the backbone for contrastive base training. Both base the baseline methods, the advantage of our approach lies
+and incremental training sessions share the same optimizer in leveraging the incremental learning framework based on
+and training strategy, and early stopping is not applied to neural collapse and acquiring a favorable feature distribution
+ensure full convergence of replayed features. All experi- in the base step via contrastive learning. Our method surpasses
+ments are implemented using PyTorch under a unified Python the baseline methods on four encrypted traffic classification
+environment. datasets, achieving the best performance.
+ZENG et al.: NC-BASED CLASS-INCREMENTAL LEARNING FOR ENCRYPTED TRAFFIC CLASSIFICATION 4579
+
+ TABLE II
+ C OMPARATIVE R ESULTS OF E NCRYPTED T RAFFIC C LASSIFICATION A LGORITHMS . R ESULTS A RE IN THE F ORMAT
+ avg.(±std.) FOR 10 RUNS . B OLD VALUES I NDICATE THE B EST R ESULTS
+
+Fig. 4. Comparison of different incremental learning methods on four datasets.
+
+D. Forging Analysis the old classes maintain an accuracy of at least 94%, while
+ We employed normalized confusion matrices to conduct the new classes achieve an accuracy of at least 83%. On the
+a specific evaluation of NCIL-ETC’s incremental learning USTC-TFC dataset, apart from the Geodo and Neris classes,
+capability. Fig. 5 and Fig. 6 present the standardized confusion which experience a relatively pronounced decline in accuracy,
+matrices for these datasets. In the incremental sessions, bold all other original classes retain an accuracy of over 98%.
+blue lines are utilized to distinguish between the regions For the new classes, except for the Htbot class, the accuracy
+of base session classes and incremental classes from new of the remaining classes is above 80%. The relatively rapid
+sessions. In the confusion matrices, the x-axis denotes pre- decline in accuracy for some classes may be attributed to
+dicted values, while the y-axis represents true values, with the freezing of the pre-trained model, which results in similar
+the diagonal indicating the model’s prediction accuracy. As feature distributions between certain new and old classes. In
+illustrated in Fig. 5, by observing the confusion matrices of summary, our method demonstrates the ability to effectively
+the final results for both datasets using the Finetune and iCaRL classify new categories while preserving knowledge of old
+methods, it is evident that both methods suffer from significant classes after each incremental learning session.
+class knowledge forgetting, with a substantial number of old- Furthermore, we compare the per-class PD values across the
+class samples being misclassified as new classes. In contrast, four benchmark datasets in Fig. 7, where a smaller enclosed
+as shown in Fig. 6 (the confusion matrix of our proposed area corresponds to better performance stability of the method.
+method), our approach substantially alleviates catastrophic for- It can be observed that the NCIL-ETC method achieves stable
+getting. On the ISCX-VPN dataset, after incremental learning, and superior performance on all four datasets, with the most
+4580 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ TABLE III
+ C OMPARISON OF BASELINE M ETHODS ON ISCX-VPN AND USTC-TFC DATASETS . R ESULTS A RE IN THE F ORMAT
+ avg.(±std.) FOR 10 RUNS . B OLD VALUES I NDICATE THE B EST R ESULTS
+
+ TABLE IV
+ C OMPARISON OF BASELINE M ETHODS ON CIC-IDS2017 AND CSTNET-TLS 1.3 DATASETS . R ESULTS A RE IN THE F ORMAT
+ avg.(±std.) FOR 10 RUNS . B OLD VALUES I NDICATE THE B EST R ESULTS
+
+compact coverage area in the radar charts (indicated by the experiments. Specifically, we represented the class division
+purple solid line with circular markers). as ‘B-m Inc-n’, where m indicates the number of categories
+ In cybersecurity, False Positives (FPs) and False Nega- in the first step and n denotes the number of categories in
+tives (FNs) are critical for intrusion detection systems: high each incremental learning step. We set up five incremental
+FNs miss intrusions and risk data theft, while excessive FPs experiments on the USTC-TFC and CIC-IDS2017 datasets,
+increase human analysis costs. As shown in Fig. 8, NCIL-ETC while conducting experiments with both five and ten steps on
+achieves low False Negative Rates (FNRs): 2% (Session 1) the CSTNET-TLS 1.3 dataset. The results of these experiments
+and 4% (Session 2) on CIC-IDS2017, with a maximum of are illustrated in Fig. 9.
+4%. Benign samples are misclassified as Bot attacks at 6% The experimental results demonstrate that our method
+(Session 1) and 8% (Session 2). Thus, NCIL-ETC maintains achieves strong performance even under multiple rounds of
+robust classification after multiple incremental steps. class incremental learning, particularly in the USTC-TFC and
+ CIC-IDS2017 datasets, where the final accuracies reached
+ 92.37% and 96.44%, respectively. This outcome provides
+E. Multi-Step Class-Incremental Learning compelling evidence that the NCIL-ETC method effectively
+ To further analyze the incremental learning capability of our balances the retention of old class features with the learning
+method, we conducted multi-step class incremental learning of new class features.
+ZENG et al.: NC-BASED CLASS-INCREMENTAL LEARNING FOR ENCRYPTED TRAFFIC CLASSIFICATION 4581
+
+ Fig. 7. PD for each base step category comparison results.
+
+Fig. 5. The standardized confusion matrices of the final results for the
+Finetune and iCaRL methods on the two datasets.
+
+ Fig. 8. Normalized confusion matrices on the CIC-IDS2017 dataset between
+ two sessions.
+
+ TABLE V
+ A BLATION S TUDY ON THE P ROPOSED M ODULES . FT: F INE -T UNING
+ THE F EATURE E XTRACTOR , ETF: ETF C LASSIFIER , FM: F EATURE
+ √
+ M APPING M ODULE , OSA: O PTIMAL S TRUCTURE A LIGNMENT. :
+ M ODULE I S E NABLED , ×: M ODULE I S D ISABLED
+
+Fig. 6. The standardized confusion matrices of the final results for NCIL-ETC
+on the ISCX-VPN and USTC-TFC datasets.
+ datasets, respectively. This indicates that the ETF classifier can
+ substantially enhance the feature alignment between the pre-
+F. Ablation Analysis trained model and downstream tasks.
+ We conducted ablation experiments to analyze the effec- When the feature extractor is frozen and the feature mapping
+tiveness of different modules in the model, with the results module is employed, the PD value decreases by 2.63% and
+presented in Table V. For ease of representation, we define 1.91% on the ISCX-VPN and USTC-TFC datasets, respecfine-tuning the feature extractor, ETF classifier, feature map- tively. This demonstrates that the pre-trained model exhibits
+ping module, and optimal structure alignment as FT, ETF, FM, good generalization ability, and freezing the pre-trained model
+and OSA, respectively. can mitigate the forgetting of old classes. After introducing
+ By observing Table V, it can be seen that after incorporating optimal structure alignment, the PD value decreases by 2.16%
+the ETF classifier, the PD value decreases significantly, drop- and 0.81% on the ISCX-VPN and USTC-TFC datasets, respecping by 7.59% and 14.57% on the ISCX-VPN and USTC-TFC tively. This shows that optimal structure alignment can better
+4582 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 9. Performance comparison of class incremental learning methods with different incremental configurations.
+
+ We attribute this phenomenon to the optimization dynamics
+ of incremental learning. When the classifier is dynamically
+ updated, the model is forced to repeatedly search for new
+ convergence equilibria at each incremental stage, resulting
+ in increased optimization difficulty. In contrast, a fixed ETF
+ classifier provides a stable and consistent target for feature
+ learning, enabling both old and new class features to be aligned
+ within a unified and stable coordinate space. This design
+ effectively reduces feature drift and facilitates more stable
+ optimization, leading to improved performance in incremental
+ learning scenarios.
+
+ H. Comparison of Pre-Trained Models
+ We conducted a comparative analysis of the performance
+Fig. 10. Comparison of fixed vs. random initialization in ETF classifier. of different pretrained models within our incremental learning
+ framework, as shown in Fig. 11. The experimental results
+ demonstrate that the Mamba pretrained model performs excepguide the formation of optimal category relationships among tionally well across most datasets and stages, particularly
+class features. on the ISCX-VPN and CSTNET-TLS 1.3 datasets, where
+ its accuracy consistently leads. Although YaTC shows some
+G. ETF Classifier Re-Normalized Analysis advantage on the USTC-TFC dataset, its overall performance
+ fluctuates significantly. The line plot allows us to clearly
+ We conduct an experimental analysis to compare two observe the performance trends of the different methods across
+strategies for the ETF classifier during incremental learning: various stages, further supporting the superior performance of
+keeping the classifier fixed versus randomly reinitializing it at the Mamba model in incremental learning tasks.
+each incremental step. The results are illustrated in Fig. 10. It
+can be observed that maintaining a fixed ETF classifier consistently outperforms random reinitialization across all datasets. I. Complexity Analysis
+This performance gap becomes particularly pronounced on the We compared the floating-point operations (FLOPs) and
+CSTNET-TLS 1.3 dataset, which involves a larger number of the number of model parameters of different method models
+classes. under the condition of batch size = 16, with the results shown
+ZENG et al.: NC-BASED CLASS-INCREMENTAL LEARNING FOR ENCRYPTED TRAFFIC CLASSIFICATION 4583
+
+Fig. 11. Pre-trained model comparison for class incremental learning task.
+
+Fig. 12. Comparison of computational costs. Fig. 13. t-SNE visualization of the outputs from the feature extractor.
+
+in Fig. 12. By observation, it can be seen that our method,
+owing to the use of the Mamba module with linear complexity,
+has a lower computational load compared to the ET-BERT
+and YaTC models that employ transformers with quadratic
+complexity. Moreover, our method has the smallest number of
+parameters, demonstrating the high efficiency of our approach.
+ Regarding storage efficiency, unlike methods such as iCaRL
+that rely on storing raw samples, we adopt a generative
+replay strategy. By only retaining the statistical parameters
+of GMM for old-class features, the storage complexity is
+reduced from the sample-level O(N × d) to the class-level
+O(C × d), achieving an order-of-magnitude reduction in
+memory footprint. Furthermore, by freezing the pre-trained
+backbone network, fixing the ETF classifier, and only fine- Fig. 14. t-SNE visualization of the outputs from the feature extractor and
+tuning a lightweight feature mapping module, NCIL-ETC feature mapping module on ISCX-VPN dataset.
+does not introduce any new parameter structures during the
+incremental learning process.
+ VI. D ISCUSSION
+J. Visualization Analysis NCIL-ETC achieves excellent performance in encrypted
+ In this section, we perform t-SNE visualization analysis on traffic classification and incremental learning by leveraging the
+the output vectors of the feature extractor for the test sets geometric optimality of Neural Collapse. Mamba backbone
+of all classes in the final model, with the results shown in enables efficient feature extraction, while the ETF classifier
+Fig. 13. As shown in the figure, the feature extractor exhibits and NC-alignment transform incremental learning from weight
+a favorable initial feature distribution, which stems from the optimization to feature-to-geometry alignment, decoupling
+Mamba-based pre-trained model. The features of each class new class learning from old class preservation. Nevertheless,
+are relatively concentrated, which provides support for our critical limitations remain: (1) the fixed feature dimension d of
+use of GMM for sample replay. Furthermore, we also conduct the ETF classifier restricts the maximum number of classes to
+t-SNE visualization analysis on the output vectors of the fea- d+1, failing to maintain optimal geometric structure for ultrature extractor and the feature mapping module for the ISCX- large-scale classification; (2) freezing the Mamba backbone
+VPN test set. As shown in Fig. 14, due to the freezing of the mitigates catastrophic forgetting but causes feature ambiguity
+feature extractor, aliasing occurs among incremental classes, for new classes with high similarity to historical ones, as the
+while the feature mapping module can improve the feature shallow FM module cannot resolve deep feature aliasing; (3)
+distribution. validated only on traditional benchmarks, NCIL-ETC lacks
+4584 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+robustness verification on emerging encrypted protocols (e.g., [12] D.-W. Zhou, H.-J. Ye, L. Ma, D. Xie, S. Pu, and D.-C. Zhan, “Few-
+QUIC) and dynamic datasets (e.g., Tor), limiting its general- shot class-incremental learning by sampling multi-phase tasks,” IEEE
+ Trans. Pattern Anal. Mach. Intell., vol. 45, no. 11, pp. 12816–12831,
+ization to evolving network environments. Future research will Nov. 2023.
+focus on dynamic feature dimension expansion, parameter- [13] G. Bovenzi et al., “A first look at class incremental learning in deep
+efficient backbone fine-tuning, parallel FM module design, and learning mobile traffic classification,” in Proc. 5th Netw. Traffic Meas.
+validation on new-generation encryption standards to address Anal. Conf. (TMA), 2021.
+these issues. [14] W. Zhu, X. Ma, Y. Jin, and R. Wang, “Iletc: Incremental learning for
+ encrypted traffic classification using generative replay and exemplar,”
+ Comput. Netw., vol. 224, Jun. 2023, Art. no. 109602.
+ VII. C ONCLUSION [15] Y. Chen, Y. Tong, G. B. Hwee, Q. Cao, S. G. Razul, and Z. Lin,
+ “Encrypted mobile traffic classification with a few-shot incremental
+ In this paper, we simultaneously consider encrypted traffic learning approach,” in Proc. IEEE 18th Conf. Ind. Electron. Appl.
+classification and incremental learning, proposing an incre- (ICIEA), Aug. 2023, pp. 40–45.
+mental learning method for encrypted traffic classification [16] G. Sun, T. Chen, Y. Su, and C. Li, “Internet traffic classification based
+named NCIL-ETC. This method extracts efficient feature rep- on incremental support vector machines,” Mob. Netw. Appl., vol. 23,
+resentations based on a pre-trained Mamba module. It utilizes no. 4, pp. 789–796, 2018.
+optimal structure alignment to align traffic features with an [17] L. Du, Z. Gu, Y. Wang, L. Wang, and Y. Jia, “A few-shot classincremental learning method for network intrusion detection,” IEEE
+ETF classifier, thereby obtaining the optimal class relation- Trans. Netw. Service Manage., vol. 21, no. 2, pp. 2389–2401, Apr. 2024.
+ships. Building on this, it generates replay samples using the [18] V. Papyan, X. Y. Han, and D. L. Donoho, “Prevalence of neural
+saved mean and variance of old-class vector prototypes to collapse during the terminal phase of deep learning training,” 2020,
+alleviate the issue of catastrophic forgetting. Experiments on arXiv:2008.08186.
+four public encrypted traffic classification benchmark datasets [19] L. Kong, G. Huang, and K. Wu, “Identification of abnormal network
+ traffic using support vector machine,” in Proc. 18th Int. Conf. Parallel
+demonstrate that NCIL-ETC exhibits superior traffic classifi- Distrib. Comput., Appl. Technol. (PDCAT), Dec. 2017, pp. 288–292.
+cation capability and robust incremental learning performance [20] A. Moore, D. Zuev, and M. Crogan, “Discriminators for use in flowcompared with state-of-the-art methods. based classification,” Dept. Comput. Sci., Queen Mary Univ. London,
+ Notably, this work has not yet verified the robustness of London, U.K., Tech. Rep. RR-05-13, 2013.
+NCIL-ETC on emerging encrypted protocols (e.g., QUIC) and [21] T. Auld, A. W. Moore, and S. F. Gull, “Bayesian neural networks for
+ internet traffic classification,” IEEE Trans. Neural Netw., vol. 18, no. 1,
+dynamic anonymous traffic datasets (e.g., Tor), which are key pp. 223–239, Jan. 2007.
+challenges for encrypted traffic classification due to the con- [22] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+tinuous evolution of internet encryption technologies. Future classification using convolutional neural network for representation
+research will focus on addressing this limitation, along with learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2017, pp. 712–717.
+optimizing the ETF classifier for ultralarge-scale classification [23] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for
+ encrypted traffic classification and applications identification,” IEEE
+and resolving deep feature aliasing for similar new traffic Trans. Netw. Service Manage., vol. 18, no. 2, pp. 1218–1232, Jun. 2021.
+classes, to further enhance the practicality of NCIL-ETC in [24] E. Horowicz, T. Shapira, and Y. Shavitt, “A few shots traffic classifireal-world network management and cybersecurity scenarios. cation with mini-FlowPic augmentations,” in Proc. 22nd ACM Internet
+ Meas. Conf., Oct. 2022, pp. 647–654.
+ [25] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-net: A flow sequence
+ R EFERENCES network for encrypted traffic classification,” in Proc. IEEE INFOCOM
+[1] M. Abbasi, A. Shahraki, and A. Taherkordi, “Deep learning for network - IEEE Conf. Comput. Commun., Apr. 2019, pp. 1171–1179.
+ traffic monitoring and analysis (NTMA): A survey,” Comput. Commun., [26] X. Han et al., “DE-GNN: Dual embedding with graph neural network for
+ vol. 170, pp. 19–41, Mar. 2021. fine-grained encrypted traffic classification,” Comput. Netw., vol. 245,
+[2] E. Papadogiannaki and S. Ioannidis, “A survey on encrypted network May 2024, Art. no. 110372.
+ traffic analysis applications, techniques, and countermeasures,” ACM [27] H. Zhang et al., “TFE-GNN: A temporal fusion encoder using graph
+ Comput. Surveys, vol. 54, no. 6, pp. 1–35, Jul. 2022. neural networks for fine-grained encrypted traffic classification,” 2023,
+[3] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end arXiv:2307.16713.
+ encrypted traffic classification with one-dimensional convolution neural [28] J. Qu, X. Ma, and J. Li, “TrafficGPT: Breaking the token barrier for
+ networks,” in Proc. IEEE Int. Conf. Intell. Secur. Informat. (ISI), Jul. efficient long traffic analysis and generation,” 2024, arXiv:2403.05822.
+ 2017, pp. 43–48. [29] X. Meng, C. Lin, Y. Wang, and Y. Zhang, “NetGPT: Generative
+[4] B. Anderson, S. Paul, and D. McGrew, “Deciphering malware’s use of pretrained transformer for network traffic,” 2023, arXiv:2304.09513.
+ TLS (without decryption),” J. Comput. Virol. Hacking Techn., vol. 14, [30] X. Li et al., “Lens: A knowledge-guided foundation model for network
+ no. 3, pp. 195–211, Aug. 2018. traffic,” 2024, arXiv:2402.03646.
+[5] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “AppScanner: [31] A. Gu and T. Dao, “Mamba: Linear-time sequence modeling with
+ Automatic fingerprinting of smartphone apps from encrypted net- selective state spaces,” 2023, arXiv:2312.00752.
+ work traffic,” in Proc. IEEE Eur. Symp. Secur. Privacy, Mar. 2016, [32] L. Zhu, B. Liao, Q. Zhang, X. Wang, W. Liu, and X. Wang, “Vision
+ pp. 439–454. mamba: Efficient visual representation learning with bidirectional state
+[6] K. Al-Naami et al., “Adaptive encrypted traffic fingerprinting with bi- space model,” in Proc. 41st Int. Conf. Mach. Learn. (ICML), 2024,
+ directional dependence,” in Proc. 32nd Annu. Conf. Comput. Secur. pp. 62429–62442.
+ Appl., Dec. 2016, pp. 177–188. [33] J. Jiao et al., “VMamba: Visual state space model,” in Proc. Adv. Neural
+[7] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian, “Deep Inf. Process. Syst. 37, 2024, pp. 103031–103063.
+ packet: A novel approach for encrypted traffic classification using deep [34] T. Wang, X. Xie, W. Wang, C. Wang, Y. Zhao, and Y. Cui, “Netmamba:
+ learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, Feb. 2020. Efficient network traffic classification via pre-training unidirectional
+[8] P. Wang, F. Ye, X. Chen, and Y. Qian, “Datanet: Deep learning based mamba,” in Proc. IEEE 32nd Int. Conf. Netw. Protocols (ICNP), Oct.
+ encrypted network traffic classification in SDN home gateway,” IEEE 2024, pp. 1–11.
+ Access, vol. 6, pp. 55380–55391, 2018.
+ [35] J. Xu, L. Chen, W. Xu, L. Dai, C. Wang, and L. Hu, “Et-mamba: A
+[9] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+ mamba model for encrypted traffic classification,” Information, vol. 16,
+ contextualized datagram representation with pre-training transformers
+ no. 4, p. 314, 2025.
+ for encrypted traffic classification,” in Proc. ACM Web Conf., Apr. 2022,
+ pp. 633–642. [36] Z. Li and D. Hoiem, “Learning without forgetting,” in Proc. 14th Eur.
+[10] R. Zhao et al., “Yet another traffic classifier: A masked autoencoder Conf. Comput. Vis. (ECCV), vol. 9908, Oct. 2016, pp. 614–629.
+ based traffic transformer with multi-level flow representation,” in Proc. [37] J. Kirkpatrick et al., “Overcoming catastrophic forgetting in neural
+ 37th AAAI Conf. Artif. Intell., 2023, pp. 5420–5427. networks,” 2016, arXiv:1612.00796.
+[11] P. Mazumder, P. Singh, and P. Rai, “Few-shot lifelong learning,” in Proc. [38] F. Zenke, B. Poole, and S. Ganguli, “Continual learning through synaptic
+ AAAI Conf. Artif. Intell., 2021, vol. 35, no. 3, pp. 2337–2345. intelligence,” in Proc. Int. Conf. Mach. Learn., 2017, pp. 3987–3995.
+ZENG et al.: NC-BASED CLASS-INCREMENTAL LEARNING FOR ENCRYPTED TRAFFIC CLASSIFICATION 4585
+
+[39] R. Aljundi, F. Babiloni, M. Elhoseiny, M. Rohrbach, and T. Tuytelaars, [62] K. Wei, Z. Xu, and C. Deng, “Compress to one point: Neural collapse
+ “Memory aware synapses: Learning what (not) to forget,” in Proc. 15th for pre-trained model-based class-incremental learning,” in Proc. AAAI
+ Eur. Conf. Comput. Vision (ECCV), vol. 11207, 2018, pp. 144–161. Conf. Artif. Intell., 2025, pp. 21465–21473.
+[40] S.-A. Rebuffi, A. Kolesnikov, G. Sperl, and C. H. Lampert, “ICaRL: [63] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghor-
+ Incremental classifier and representation learning,” in Proc. IEEE Conf. bani, “Characterization of encrypted and VPN traffic using time-related
+ Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017, pp. 5533–5542. features,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, 2016,
+[41] F. M. Castro, M. J. Marin-Jimenez, N. Guil, C. Schmid, and K. Alahari, pp. 407–414.
+ “End-to-end incremental learning,” in Proc. Eur. Conf. Comput. Vis., [64] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward
+ 2018, pp. 241–257. generating a new intrusion detection dataset and intrusion traffic
+[42] Y. Chen, T. Zang, Y. Zhang, Y. Zhou, L. Ouyang, and P. Yang, characterization,” in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018,
+ “Incremental learning for mobile encrypted traffic classification,” in pp. 108–116.
+ Proc. ICC - IEEE Int. Conf. Commun., Jun. 2021, pp. 1–6. [65] H. Zhang, X. Xiao, L. Yu, Q. Li, Z. Ling, and Y. Zhang, “One train for
+[43] O. Salman, I. H. Elhajj, A. Kayssi, and A. Chehab, “A review on two tasks: An encrypted traffic classification framework using supervised
+ machine learning–based approaches for internet traffic classification,” contrastive learning,” 2024, arXiv:2402.07501.
+ Ann. Telecommun., vol. 75, nos. 11–12, pp. 673–710, Dec. 2020.
+[44] C. He, R. Wang, S. Shan, and X. Chen, “Exemplar-supported generative
+ reproduction for class incremental learning,” in Proc. Brit. Mach. Vis.
+ Conf. (BMVC), 2018, p. 98. Qin Zeng is currently pursuing the Ph.D. degree
+[45] F.-Y. Wang, D.-W. Zhou, H.-J. Ye, and D.-C. Zhan, “Foster: Feature in information and communication engineering with
+ boosting and compression for class-incremental learning,” in Proc. Eur. Information Engineering University, Zhengzhou,
+ Conf. Comput. Vis., 2022, pp. 398–414. China. His current research interests include network
+[46] S. Yan, J. Xie, and X. He, “DER: Dynamically expandable representation traffic classification and artificial intelligence.
+ for class incremental learning,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ Pattern Recognit. (CVPR), Jun. 2021, pp. 3013–3022.
+[47] D.-W. Zhou, Z.-W. Cai, H.-J. Ye, D.-C. Zhan, and Z. Liu, “Revisiting
+ class-incremental learning with pre-trained models: Generalizability and
+ adaptivity are all you need,” Int. J. Comput. Vis., vol. 133, no. 3,
+ pp. 1012–1032, Mar. 2025.
+[48] W. Cai, C. Hou, M. Cui, B. Wang, G. Xiong, and G. Gou, “Incremental
+ encrypted traffic classification via contrastive prototype networks,” Comput. Netw., vol. 250, Aug. 2024, Art. no. 110591.
+ Dan Qu was born in Jilin, China, in 1974. She
+[49] E. Weinan and S. Wojtowytsch, “On the emergence of simplex symmetry
+ received the B.S., M.S., and Ph.D. degrees in
+ in the final and penultimate layers of neural network classifiers,” 2020,
+ information and communication engineering from
+ arXiv:2012.05420.
+ Zhengzhou Information Science and Technology
+[50] J. Lu and S. Steinerberger, “Neural collapse with cross-entropy loss,”
+ Institute, Zhengzhou, China, in 2004, 2007, and
+ 2020, arXiv:2012.08465.
+ 2013, respectively. From 2016 to 2017, she was a
+[51] Z. Zhu et al., “A geometric analysis of neural collapse with uncon-
+ Visiting Scholar with the Computer Science Instistrained features,” in Proc. Adv. Neural Inf. Process. Syst. (NeurIPS),
+ tute, Carnegie Mellon University. She is currently a
+ 2021, pp. 29820–29834.
+ Professor with the College of Information System
+[52] W. Ji, Y. Lu, Y. Zhang, Z. Deng, and W. J. Su, “An unconstrained layer-
+ Engineering, Information Engineering University.
+ peeled perspective on neural collapse,” in Proc. 10th Int. Conf. Learn.
+ Her research interests include speech signal process-
+ Represent., 2022.
+ ing, pattern recognition, machine learning, and natural language processing.
+[53] D. G. Mixon, H. Parshall, and J. Pi, “Neural collapse with unconstrained
+ features,” 2020, arXiv:2011.11619.
+[54] J. Zhou, X. Li, T. Ding, C. You, Q. Qu, and Z. Zhu, “On the optimization
+ landscape of neural collapse under MSE loss: Global optimality with
+ unconstrained features,” in Proc. Int. Conf. Mach. Learn. (ICML), 2022,
+ Hao Zhang received the B.S. and master’s degrees
+ pp. 27179–27202.
+ in information and communication engineering from
+[55] X. Y. Han, V. Papyan, and D. L. Donoho, “Neural collapse under mse
+ loss: Proximity to and dynamics on the central path,” in Proc. 10th Int. Information Engineering University, Zhengzhou,
+ China, in 2019 and 2021, respectively, where he
+ Conf. Learn. Represent., 2022.
+ is currently pursuing the Ph.D. degree in speech
+[56] T. Tirer and J. Bruna, “Extended unconstrained features model for
+ translation (information system engineering). His
+ exploring deep neural collapse,” in Proc. Int. Conf. Mach. Learn.
+ research interests include automatic speech transla-
+ (ICML), 2022, pp. 21478–21505.
+ tion and machine translation.
+[57] S. Chen, X. Li, Z. Lin, D. Tao, L. Xie, and Y. Yang, “Inducing neural
+ collapse in imbalanced learning: Do we really need a learnable classifier
+ at the end of deep neural network?,” in Proc. Adv. Neural Inf. Process.
+ Syst., 2022, pp. 37991–38002.
+[58] L. Xie, Y. Yang, D. Cai, and X. He, “Neural collapse inspired
+ attraction–repulsion-balanced loss for imbalanced learning,” Neurocomputing, vol. 527, pp. 60–70, Mar. 2023. Yaqi Chen is currently pursuing the Ph.D. degree
+[59] T. Galanti, A. Gyorgy, and M. Hutter, “Generalization bounds in information and communication engineering with
+ for few-shot transfer learning with pretrained classifiers,” 2022, Information Engineering University, Zhengzhou,
+ arXiv:2212.12532. China. Her research interests include speech sig-
+[60] C. Li, E. Zhang, C. Geng, and S. Chen, “Unlocking better closed-set nal processing, continuous speech recognition, and
+ alignment based on neural collapse for open-set recognition,” in Proc. meta-learning.
+ AAAI Conf. Artif. Intell., 2025, pp. 18227–18235.
+[61] Y. Yang, H. Yuan, X. Li, Z. Lin, P. H. S. Torr, and D. Tao, “Neural collapse inspired feature-classifier alignment for few-shot class-incremental
+ learning,” in Proc. 11th Int. Conf. Learn. Represent., 2023.

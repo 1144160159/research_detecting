@@ -1,0 +1,142 @@
+                    This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025                                                                                                   1
+
+
+
+
+    DAIR-FedMoE: Hierarchical MoE for Federated
+    Encrypted Traffic Classification under Compound
+                          Drift
+    Shamaila Fardous, Kashif Sharif, Senior Member, IEEE, Fan Li, Member, IEEE, Ali Asghar Manjotho, and
+                                    Liehuang Zhu, Senior Member, IEEE
+
+
+
+   Abstract—Federated learning (FL) offers a decentralized,
+privacy-preserving framework for encrypted traffic classification
+(ETC), enabling network management and security. However,
+real-world deployment of federated ETC faces compound client-
+specific feature, concept, and label drift, which degrades model
+performance. Existing ETC methods under FL settings typi-
+cally address these drift types in isolation or partial combina-
+tions, overlooking their entanglement. Moreover, multiple-global
+model and personalized FL approaches are computational and
+communication expensive. To fill this gap, we propose DAIR-
+FedMoE, a Drift-Adaptive, Imbalance-Aware, RL-Managed Fed-
+erated Mixture-of-Experts framework to simultaneously handle
+the drift triad with single-global model while minimizing the
+computational and communication overhead. DAIR-FedMoE in-
+tegrates a GShard Transformer with a hierarchical Mixture-
+of-Experts (MoE) layer that routes encrypsted flows to either
+stable or drift-specialist experts based on per-client drift scores.
+Within each expert, entropy-guided loss reweighting empha-
+sizes low-confidence classes to address dynamic label imbalance.
+Additionally, a reinforcement learning-based policy dynamically                                                                                                           A B
+                                                                                                                                                                                A B
+manages the expert pool by spawning, pruning, and merging                                                                                                                             A B
+experts, enabling efficient adaptation to evolving traffic patterns.
+Experiments on federated splits of ISCX-VPN, ISCX-Tor, VNAT,
+and USTC-TFC2016 show that DAIR-FedMoE achieves supe-
+rior macro-F1, minority-class recall, and drift-recovery speed                                   Fig. 1: Drift entanglement scenario shown as drift event
+compared to state-of-the-art baselines, while preserving privacy                                 timeline and global parameter response in a federated setting.
+and communication efficiency. The source code is available at
+https://github.com/dairfedmoe/DairFM.
+   Index Terms—Federated Learning, Encrypted Traffic Classifi-                                   across edge clients without sharing raw data [20], [51]. Unlike
+cation, Distributed Concept Drift, Class Imbalance, Mixture-of-
+                                                                                                 typical FL tasks, federated ETC faces highly non-independent
+Expert, Reinforcement Learning.
+                                                                                                 and identically distributed (non-IID) and volatile traffic pat-
+                                                                                                 terns driven by diverse applications, encryption protocols, tem-
+                           I. I NTRODUCTION                                                      poral behaviors, and regional policies [28]. These factors lead
+     FFECTIVE identification of traffic types and security
+E    threats is essential for network management, intrusion
+detection, and quality of service enforcement, particularly
+                                                                                                 to simultaneous and distributed drift across clients, as shown
+                                                                                                 in Fig. 1, each of five clients records feature drifts ∆P (X )
+                                                                                                 (green circles), concept drifts ∆P (Y|X ) (brown squares),
+in modern IoT and edge computing environments [15]. In                                           and label drifts ∆P (Y) (purple diamonds) from t0 to t8 ;
+this context, federated learning has emerged as a promising                                      overlapping events (entanglement) are shaded in pink. The
+paradigm for ETC, offering a privacy-preserving alternative                                      Global Model row shows the aggregated parameter θ evolving
+to centralized training by enabling distributed model training                                   over time, with pronounced oscillations aligned to entangle-
+                                                                                                 ment intervals. Bottom panels illustrate schematic examples
+  The work of Fan Li was supported in part by the National Natural Sci-
+enceFoundation of China (NSFC) under Grant 62372045. Co-corresponding                            of each drift type: (1) feature drift, reflecting changes in
+authors: K. Sharif and F. Li.                                                                    the feature marginal P (X ) (evolving encryption patterns); (2)
+  S. Fardous, K. Sharif, and F. Li are with the school of Computer Science                       concept drift, as shifts in the conditional distribution P (Y|X )
+and Technology, Beijing Institute of Technology, China. (email: shamailafar-
+dous@bit.edu.cn, kashif@bit.edu.cn, fli@bit.edu.cn)                                              (changing semantics of traffic behavior); and (3) label drift,
+  A. Manjotho is with the department of Computer Systems Engineering,                            involving fluctuations in the label distribution P (Y) (varying
+Mehran University of Engineering and Technology, Jamshoro, Pakistan.                             traffic class distribution). Such complex, client-specific drift
+(email: ali.manjotho@faculty.muet.edu.pk)
+  L. Zhu is with the School of Cyberspace Science and Technology, Beijing                        undermines model robustness and remains a central obstacle
+Institute of Technology, Beijing, China (email: liehuangz@bit.edu.cn).                           in real-world federated ETC deployments.
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                 This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                            content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025                                                                                                2
+
+
+
+   Existing approaches in federated ETC have attempted to                                     TABLE I: Coverage of distributed drift types in existing
+tackle these challenges with partial or specialized solutions as                              federated learning literature.
+summarized in Table I. For instance, FedPacket [3] and FL-                                                                 Joint          Feature       Label        Concept
+ETC [51] apply FL protocols to encrypted packet features,                                     Study                        Drift           Drift        Drift          Drift         AC     TV
+but do not account for temporal drift or client imbalance.                                                               P (X , Y)        P (X )        P (Y)        P (Y|X )
+Other works like FedDrift [21] and FedCCFA [7] adapt general                                  FairFedDrift [40]               ✗               ✗            ✓              ✓           ✓     ✓
+FL frameworks to concept drift using confidence calibration                                   FedStream [12]                  ✗               ✗         Partial           ✓           ✓     ✓
+or entropy heuristics, yet they overlook label skew. Multi-                                   FAC-Fed [1]                     ✗               ✗            ✓              ✓           ✓     ✓
+global model frameworks [9], [21], [41] and personalized
+                                                                                              FedDrift [21]                   ✓               ✗            ✗              ✗           ✓     ✓
+federated ETC approaches [11], [13], [14] aim to improve
+client-specific adaptation by assigning dedicated models or                                   FedCCFA [7]                     ✗               ✗            ✓              ✓           ✓     ✗
+embedding personalized components, but they introduce sig-                                    ConceptFL [33]                  ✗               ✗         Partial           ✓           ✓     ✓
+nificant computational, communication, and storage overhead.                                  EnsembleFL [6]                  ✓               ✗            ✗              ✓           ✓     ✓
+To reduce this complexity, MoE models such as FedMoE-DA                                       FedMoE-DA [52]         ✓         ✓         ✗           ✓        ✓     ✓
+[52] leverages task-specific expert routing. However, they typ-                                AC: Across Clients, TV: Time Varying, ✓:Full support, ✗: No support.
+ically rely on static expert configurations, lacking mechanisms
+to grow, prune, or merge experts in response to evolving traffic.
+As a result, these models often fail to generalize across diverse                                The main contributions of the paper are:
+clients or collapse under overlapping drift conditions.                                          • We propose DAIR-FedMoE, a novel drift-resilient ar-
+   Despite prior efforts, federated ETC continues to face two                                      chitecture for federated ETC that concurrently addresses
+critical challenges: (1) real-world deployments frequently en-                                     feature, concept, and label drift distributed across time
+counter distributed and entangled drift (overlapping feature,                                      and clients. It incorporates a two-tier hierarchical MoE
+concept, and label drift across clients). Existing methods                                         within a GShard Transformer to route encrypted-flow
+typically address these drifts in isolation, failing to capture                                    tokens based on drift type, while entropy-based loss
+their simultaneous and distributed nature. This complicates                                        reweighting within each expert dynamically emphasizes
+targeted mitigation strategy and degrades model robustness,                                        low-confidence (often minority) classes to mitigate im-
+fairness, and accuracy over time. To date, no existing model                                       balance.
+has been proposed that explicitly detects and adapts to this                                     • We develop a reinforcement learning-driven expert man-
+entangled drift despite its frequent occurrence in federated                                       agement strategy that dynamically adjusts the expert pool
+ETC scenarios. Moreover, potential of MoEs in handling en-                                         in response to real-time drift and workload signals. A
+tangled drift has not been explored. (2) approaches that assign                                    server-side actor-critic policy learns to optimize model
+clients to separate global models or introduce personalized                                        capacity by monitoring expert usage, drift exposure, and
+components improve local adaptation but incur significant                                          performance trends, enabling efficient spawning, pruning,
+communication, storage, and coordination costs. These meth-                                        and merging of experts as traffic patterns evolve.
+ods often rely on drift-prone client clustering and suffer from                                  • We demonstrate effectiveness our unified framework
+reduced generalization, as each model is trained on a smaller                                      DAIR-FedMoE on federated splits of ISCX-VPN, ISCX-
+data subset.                                                                                       Tor, VNAT, and USTC-TFC2016, achieving significant
+   To address the multifaceted challenges of distributed drift                                     improvements in macro-F1, minority-class recall, and
+and system efficiency in federated ETC, we propose DAIR-                                           drift-recovery speed, while preserving privacy and com-
+FedMoE, a unified framework that jointly addresses feature,                                        munication efficiency.
+concept, and label drift while ensuring scalability and privacy.                                 The remainder of the paper is organized as follows. Sec-
+DAIR-FedMoE integrates a hierarchical Mixture-of-Experts                                      tion II reviews related works. Section III introduces prelimi-
+(HMoE) architecture within a GShard Transformer to perform                                    naries and background. Section IV describes the threat model.
+drift-aware expert routing, selectively isolating stable and                                  Section V presents the proposed DAIR-FedMoE method. Sec-
+drifting traffic patterns. It leverages confidence-guided loss                                tion VI provides experimental details and evaluation analysis.
+reweighting to adapt to dynamic label imbalance by upweight-                                  Section VII concludes the paper. Additional baseline config-
+ing uncertain classes based on expert entropy, improving                                      urations and metric definitions are included in Appendices A
+robustness without manual tuning. To maintain a compact and                                   and B, computational complexity and overhead analysis in
+responsive model, DAIR-FedMoE introduces a reinforcement                                      Appendix C, and extended discussion of limitations and future
+learning-based policy that dynamically adjusts the expert pool                                directions in Appendix D.
+by spawning new specialists or pruning underutilized ones in
+response to drift signals. These components work in concert to
+                                                                                                                             II. R ELATED W ORKS
+ensure targeted drift adaptation, balanced learning, and adap-
+tive capacity control, all within a single privacy-preserving                                 A. Encrypted Traffic Classification
+global model. To the best of our knowle

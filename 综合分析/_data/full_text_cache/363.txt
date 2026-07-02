@@ -1,0 +1,767 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025 3281
+
+An Unsupervised Malicious Web Request Detection
+ Based on Transformer and Contrastive Learning
+ Shiming He , Ying Zhang , Diqing Liang , and Pradip Kumar Sharma , Senior Member, IEEE
+
+ Abstract—The World Wide Web (Web) is a crucial part of
+the Internet. Web attacks are becoming more and more serious
+and complex. Malicious Web request detection aims to rapidly
+and accurately identify abnormal attacks on the network. Deep
+learning is being applied to malicious Web request detection,
+resulting in high detection performance. However, most deep
+learning-based methods are supervised and ignore special characters, which are hard to detect unknown malicious Web requests. Fig. 1. A malicious Web request.
+The labels of Web request are fewer and Web request data is
+insufficient. Therefore, we propose an unsupervised malicious
+Web request detection based on transformer and contrastive are becoming more and more serious and complex, often
+learning (UTCDetector). UTCDetector exploits preprocessing and endangering the security of cyberspace and causing great secu-
+2-gram word segmentationto preserve special characters, extracts rity risks to society. According to the “2022 Interconnection
+semantic feature by Transformer, and leverages hypersphere loss Security Report” [1] issued by the China National Internet
+function and contrastive learning to handle insufficient Web data
+without abnormal label. Since the public Web request datasets Emergency Center, Web attack incidents in China continued to
+(CSIC 2010, CSIC TORPEDA 2012, and ECML/PKDD 2007) maintain a high level in 2022, with an increase of nearly 30%
+were created before 2012, we collected Web requests from a compared to 2021. Web attack includes Web page tampering,
+university Web application server in 2023 to build a private drive-by download attack, malicious domain names, webpage
+dataset named School 2023. This dataset contains more modern impersonation, and website backdoors. These attacks expose
+and complex attacks. The experimental results on the four
+datasets demonstrate that our method achieves a higher F1-score user information such as usernames and passwords, disrupt the
+than other existing methods and ablation variants. normal website service, cause economic losses, and negatively
+ impact user experience. Malicious Web request detection aims
+ Index Terms—Malicious Web request, unsupervised, transformer, contrastive learning, special characters. at quickly and accurately identifying abnormal attacks in the
+ network [2]. Therefore, in the face of increasingly complex
+ and diverse Web attacks, an efficient and accurate malicious
+ Web request detection system is very important.
+ I. I NTRODUCTION
+ Web request mainly includes Uniform Resource Location
+ HE WORLD Wide Web (Web) is a crucial part of
+T the Internet and encompasses various Web applications
+that have changed our daily lives, including search engines,
+ (URL), request header, request body, and status information.
+ When a website is attacked, the attack behaviors may be
+ represented in Web request, such as request with unusual
+social networks, and online payment systems. Web attacks length, abnormal session cookies, abnormal response times,
+ or abnormal response states. To bypass firewalls and Web
+ Received 15 August 2024; revised 24 March 2025; accepted 11 April 2025.
+Date of publication 21 April 2025; date of current version 7 August 2025. This application protection systems, malicious actors often modify
+work is supported in part by the National Natural Science Foundation of China malicious requests by alternative representations that serve
+under Grants 62272062, the Science and Technology Innovation Program of the same purpose, which are termed Complex Malicious Web
+Hunan Province under Grant 2023RC3139, the Natural Science Foundation
+of Hunan Province 2025JJ50373, the Scientific Research Fund of Hunan Request (CMWR). For example, when attack requests undergo
+Provincial Transportation Department under Grant 202143. The associate coding and encryption, they frequently manage to bypass
+editor coordinating the review of this article and approving it for publication detection mechanisms. The reason is that code and encryption
+was Y. Miao. (Corresponding author: Ying Zhang.)
+ Shiming He and Diqing Liang are with the School of Computer Science introduce special characters to replace the original ones.
+and Technology and the Hunan Provincial Key Laboratory of Intelligent The attack information is hidden in these special characters.
+Processing of Big Data on Transportation, Changsha University of Science Fig. 1 illustrates a malicious Web request, which contains an
+and Technology, Changsha 410114, China (e-mail: smhe_cs@csust.edu.cn).
+ Ying Zhang is with the School of Computer Science and Technology and additional “>” symbol in the request section of the URL. It
+the Hunan Provincial Key Laboratory of Intelligent Processing of Big Data on belongs to the Cross-Site Scripting (XSS) attack. XSS attack
+Transportation, Changsha University of Science and Technology, Changsha involves the injection of malicious JavaScript code that can
+410114, China, and also with the Institute of Information Engineering, Hunan
+University of Science and Engineering, Yongzhou 425100, China (e-mail: exfiltrate user data, compromise user accounts, and even lead
+zhangying@stu.csust.edu.cn). to website backdoors in certain cases.
+ Pradip Kumar Sharma is with the Department of Computing Science, The traditional methods of malicious Web request detection
+University of Aberdeen, AB24 3UE Aberdeen, U.K. (e-mail: Pradip.sharma@
+abdn.ac.uk). can be divided into two categories: rule-based approaches [3]
+ Digital Object Identifier 10.1109/TNSM.2025.3563089 and behavior-based approaches [4]. The rule-based approaches
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+3282 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+establish a model based on known attack patterns and identify accurately. Manually labeling Web requests is both timepotential attacks by matching observed behaviors with corre- consuming and labor-intensive. Additionally, supervised
+sponding attack features. The behavior-based approaches, in methods are incapable of identifying new, unknown
+contrast, develop a profile of acceptable behavior and treat malicious requests.
+any deviation as an attack. In practice, updating rules for new • Special characters are ignored. Most existing works
+attacks is a labor-intensive and time-consuming task. Notably, divide the Web request string into a word sequence (token
+these methods require sufficient features and representations sequence) by special characters in preprocessing, where
+of abnormal or normal behaviors. Therefore, the detection the special characters are filtered. The filtered special
+effectiveness of malicious Web requests is not ideal. characters may include important attack information [20].
+ Deep learning and machine learning techniques have Most existing works capture the feature of individual
+revolutionized the field of data analysis and time series word, which ignores the relevance between words and the
+anomaly detection [5], [6], [7], [8], by enabling the auto- contextual semantic feature. It affects the detection effect
+matic extraction of intricate patterns, thereby facilitating the of malicious Web requests.
+accurate and efficient differentiation of diverse object types. • Web requests are insufficient. The number of public
+Therefore, various machine learning methods have been used and private Web datasets is fewer than that of computer
+to detect malicious Web requests, such as HTTP query string vision and NLP datasets in reality. Training a reasonable
+to numeric (HQTN) [9], Support vector machines (SVM) model with a large amount of data is neither practical nor
+optimization [10], and open-source one-class SVM [11]. These efficient. Therefore, it is necessary to train a model with
+methods manually select features, such as attribute name, less data.
+attribute value, attribute length, attribute character distribution, We note that Transformer can efficiently extract the longstructural inference, attribute order, and so on. Manual feature term dependencies and complex semantic relationships of
+selection relies on expert knowledge and consumes significant nature language. To overcome these problems, we protime and resources. pose an unsupervised malicious Web request detection
+ To automatically extract features, deep learning is applied based on transformer and contrastive learning (UTCDetector).
+in malicious Web request detection. Since the Web request UTCDetector exploits 2-gram, Transformer, unsupervised
+contains a lot of words, many methods use Natural hypersphere loss function, and contrastive learning to detect
+Language Processing (NLP) techniques such as N-Gram, Word malicious requests with no abnormal Web requests and fewer
+Embeddings [12], [13] to extract feature, and exploit Long normal Web requests. The following is a summary of our
+Short Term Memory (LSTM), Auto-Encoder, and Recurrent major contributions:
+Neural Network (RNN) [14] to detect abnormal behaviors, • To extract long-term dependencies and handle comsuch as ELSV [15], LogBERT-BiLSTM [16], DeepWAF [17], plex semantic relationships, UTCDetector combines
+Autoencoder [18], and MF [19]. Although these methods Word2vec and Transformer to effectively mine normal
+achieve high performance, malicious Web request detection request patterns.
+still faces the following problems. • To avoid the requirement of abnormal labels, an unsu-
+ • It is hard to detect unknown malicious Web requests. pervised hypersphere loss function is used to close the
+ Although most methods [15], [16], [17] based on deep features of normal request into a hypersphere.
+ learning consider the semantic feature, they are super- • To avoid filtering special characters, we propose a prevised and require abnormal label, which only identify processing method and capture the context information
+ known attacks. The unsupervised approach based on through 2-gram to improve the detection accuracy.
+ autoencoders [18] overlooks semantic features by treating • To handle insufficient Web data, UTCDetector exploits
+ URLs as character sequences based on ASCII codes. It contrastive learning to compare the feature similarity of a
+ achieves lower performance compared with the super- pair of normal requests. It is the first work on malicious
+ vised methods. Generally, malicious requests have a web request detection.
+ longer value length [9] due to the path, repetitive patterns • Since the public Web request datasets (CSIC 2010,
+ or periodic structures. It is necessary to tackle long CSIC TORPEDA 2012, and ECML/PKDD 2007) were
+ sequence data and mine the relationships in long sequence created before 2012, we collected Web requests from
+ data, named by long-term dependencies. However, most a university Web application server in 2023 to build a
+ existing methods exploit Convolutional Neural Network private dataset named School 2023.1 This dataset contains
+ (CNN) and LSTM. CNN model is hard to handle complex more modern and complex attacks. Our experiments on
+ semantic relationships. LSTM model is time-inefficient to the four datasets demonstrate that UTCDetector increases
+ extract the long-term dependencies due to its sequential the F1-score by 0.6% to 10.6% and 0.1% to 15.6%
+ processing nature. compared with the existing methods and ablation method.
+ • The labels of Web requests are fewer. Generally, normal The remainder of this paper is structured as follows.
+ and authorized access behavior generate a significant Section II reviews the related work. Section III defines the
+ volume of regular Web requests. The Web requests problem, while Section IV presents an overview and detailed
+ from both attackers and legitimate users exhibit simi- steps of the unsupervised malicious Web request detection.
+ larities, making it arduous for people lacking extensive
+ knowledge and experience to differentiate between them 1 https://github.com/AIOps-tech/School-2023-sample
+HE et al.: UNSUPERVISED MALICIOUS WEB REQUEST DETECTION 3283
+
+Subsequently, Section V presents the experimental results manner. Bronte et al. [25] propose a Web attack detection
+and the performance analysis. The paper concludes with method with three feature: cross entropy of parameters, values,
+Section VI. and data types. All the above machine learning methods
+ depend on manual feature selection. Mac et al. [18] employ
+ II. R ELATED W ORK an autoencoder to detect malicious patterns in HTTP/HTTPS
+ requests, which is a deep learning-based method. However,
+ We elaborate on related works in two aspects: malicious
+ this approach treats URLs as character sequences based on
+Web request detection and system log anomaly detection.
+ ASCII codes. Character sequences fail to capture the crucial
+System log anomaly detection shares many technologies with
+ semantic details embedded within URLs, resulting in weak
+malicious Web request detection.
+ detection performance. In contrast, our method captures contextual information through 2-gram and Word2vec, enabling
+A. Malicious Web Request Detection more accurate mining of semantic features.
+ Supervised learning and unsupervised learning, especially
+natural language processing are introduced to malicious Web B. System Log Anomaly Detection
+request detection. System logs contain computer-related terms, and the detec-
+ Methods based on supervised learning. Liu et al. [10] tion of system logs share the same technologies with malicious
+propose a Web intrusion detection system combining feature Web request detection. Wibisono and Kistijantoro [26] first
+analysis and SVM optimization, and establish an individual replace LSTM with Transformer to address the long-sequence
+model for each type of access request. This approach belongs log anomaly detection problem. Le and Zhang [27] propose
+to machine learning. With the development of deep learning, a log-based anomaly detection method without log parsing
+many researchers have applied Word2vec, BERT to extract (NeuralLog), which uses BERT to extract semantic feature and
+semantic feature and CNN, LSTM to detect malicious Web Transformer to detect log anomalies. Nedelkoski et al. [28]
+requests. Zhang et al. [21] use a specially designed CNN propose a classification-based method (Logsy), which comwith learnable word embedding to detect Web attacks in 2017. bines a new hypersphere loss function with an attention-based
+Wan et al. [15] propose an Ensemble Learning classification encoder model and exploits anomaly samples from auxiliary
+system with Semantic Vectorization (ELSV), which adopts log datasets to improve the accuracy of anomaly detection.
+Word2Vec and TextCNN to extract semantic feature and uses Guo et al. [29] propose LogBERT, which acquires the log
+XGBoost, LightGBM, and CatBoost as classification algo- sequence vectors using the Transformer encoder and inirithms to detect normal and anomaly requests. Ma et al. [22] tializes the log template IDs with random vectors. Finally,
+transform the original request into 8-dimensional request it combines two self-supervised training tasks, hypersphere
+vectors, and connect multiple requests of the same user in volume minimization and masked event prediction, to discover
+time sequence to form user session vectors, all of which patterns in normal log sequences and identify anomalies.
+are used as the input of LSTM to detect Web attacks. He et al. [30] propose a novel unsupervised log anomaly
+Ramos Júnior et al. [16] propose LogBERT-BiLSTM to detect detection method based on multi-feature (UMFLog), which
+possible attacks on HTTP requests, which use BERT to extract considers semantic features and statistical features to identify
+semantic feature and BiLSTM to classify the logs. Kuang et al. anomalies. He et al. [31] propose a parameter-efficient log
+[17] propose a model called DeepWAF, which combines anomaly detection scheme (LogBP-LORA) based on BERT
+LSTM and CNN to detect Web attacks. Yang et al. [23] design and Low-Rank Adaptation. Inspired by log anomaly detection,
+and apply the three-layer CNN-BiLSTM fusion attention we consider transform in Web request detection.
+mechanism model to the field of obfuscated malicious request
+detection for the first time, and consider special characters
+ III. P RELIMINARIES AND P ROBLEM D EFINITION
+to improve accuracy. Although most above methods based on
+deep learning consider the semantic feature, all these methods A. Web Request
+are supervised which require abnormal label and can not Users and Web server usually use HTTP(S) protocol to
+identify new unknown attacks. exchange information and data. HTTP requests include GET,
+ Methods based on unsupervised learning. SVM, random POST, PUT, DELETE, OPTIONS, HEAD, PATCH, and other
+forest, clustering, and autoencoder are used in malicious Web methods. The GET method in HTTP is primarily used for
+request detection. Epp et al. [11] propose a Web firewall by retrieving resources (such as Web pages, images, etc.) from
+specific Hypertext Transfer Protocol (HTTP) features from a server, and transmits a small amount of data through URL
+experts and one class SVM classifier. Cheng et al. [24] parameters. The POST method is mainly used for submitting
+exploit pattern-tree to learn the semantic structure of URL, and data (such as form data, file uploads, etc.) to a server,
+analyze the value of users’ input payloads (such as username, and transmits a large amount of data. We take GET and
+page number, delivery address, or product ID) by random POST methods as examples to illuminate the request formats.
+forest, decision tree, SVM, or K-Nearest Neighbor (KNN). Tan Fig. 2(a) and (b) show the GET and POST HTTP requests in
+and Van Hoai [9] propose an HTTP query string to numeric the CSIC 2010 [32] datasets, respectively.
+method, which transforms the problem of detecting “abnormal • GET request usually consists of two parts, namely, the
+requests” into “abnormal univariate data points” and solves request line and request header. The request line contains
+it by mean shift clustering algorithm in an unsupervised an HTTP-method ‘GET’, URL (scheme, host, port, path
+3284 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ TABLE I
+ C OMMON S IMPLE M ALICIOUS W EB R EQUEST ATTACKS
+
+ Fig. 3. The example of URL.
+
+ B. Existing Common Malicious Attacks
+ 1) Simple attack: Many attacks primarily target the URL.
+ Our target attacks are SQL Injection (SQLi), Cross-site
+ Scripting (XSS), Remote File Inclusion (RFI), Directory
+ traversal (DT), Server side include attack (SSI), XPath
+ Injection (XPathi), Ldap Injection (Ldapi), OS Commanding,
+ buffer overflow, information collection, file leakage, CRLF
+ injection (CRLFi), parameter tampering, Cookie Defacement,
+ Illegal Upload, Path Traversal, Server Information Disclosure,
+ Web Plug-in Vulnerability, and Web Server Vulnerability
+ attacks. We take four prevalent malicious Web request attacks,
+ namely SQLi, XSS, RFI, and DT, as examples to illustrate the
+Fig. 2. The example of Web HTTP request. attacks, as shown in Table I.
+ • SQL Injection [33] inserts malicious SQL statements into
+ an entry field for execution (e.g., to dump the database
+ contents to the attacker). For example, “’ or 1=1 –” lead
+ and query string) and HTTP-version. The request header to the request of all database, resulting in data leakage.
+ contains information such as Cookie and Connection. • XSS attack [34] enables attackers to inject client-side
+ • POST request usually consists of three parts, namely, scripts into Web pages viewed by other users and
+ the request line, request header, and request body. The bypass access controls. For example, “> < onload=
+ request line of POST request is similar as that of alert(‘test1’)>” is a malicious JavaScript code. In some
+ GET request without query string. The request header cases, XSS attack can lead to website backdoors.
+ is consistent with the GET method. The request body • RFI attack [35] enables attackers to manipulate a
+ contains the data to be posting or patching. Web server’s execution of files by constructing a
+ A request body is optional because there may be nothing path to executable code using an attacker-controlled
+to express in the body of some requests, such as resource variable. With RFI, the attacker gains the ability to
+retrievals using the GET method. determine which file is executed at runtime. For exam-
+ Numerous malicious Web requests target different com- ple, “www.badsite.com/a.php” contains the remote file
+ponents such as URLs, request headers, and request body. “a.php”, which introduces malicious behavior.
+Malicious Web requests can occur due to the uncontrolled user • DT attack [36] exploits weaknesses in Web applicainputs that are typically included in the HTTP GET query tions to bypass access control mechanisms and gain
+string and POST request body. They can be exploited by unauthorized access to files or directories stored on the
+attackers to create or manipulate requests to Web servers and Web server. This type of attack aims to obtain sensitive
+perform malicious actions. Therefore, we focus on the URL information or perform unauthorized actions. For examin GET request, and the URL and request body in POST ple, an attacker injects the directory traversal attack code
+request to detect the attacks. For simplicity, we still use URL “../../../ dir/pwd.txt” into the query string, which traverses
+to refer to the URL and request body for POST request. Fig. 3 to parent directory and access unauthorized “pwd.txt” file.
+shows a typical URL, which consists of scheme, host, port, 2) Complex attack: To bypass firewalls and Web application
+path, and query string. The query string includes key and protection systems, there are a large number of complex malivalue. cious Web request. We analyze the characteristics of complex
+HE et al.: UNSUPERVISED MALICIOUS WEB REQUEST DETECTION 3285
+
+ TABLE II
+ C OMMON C OMPLEX M ALICIOUS W EB R EQUEST ATTACKS
+
+malicious Web requests and classify them into seven types, IV. O UR U NSUPERVISED M ALICIOUS W EB
+namely case change, keyword duplication, URL encoding R EQUEST D ETECTION
+conversion, equivalent function replacement, Base64 encoding Firstly, we give the overview of UTCDetector, and then
+conversion, DES encryption, and variation. Their complex three steps are introduced in detail.
+types, definitions, and examples are shown in the following
+and Table II.
+ A. Overview
+ • Case obfuscation. Attackers mix the case of keywords,
+ thus bypassing some rules. For example: “eat”->“EaT”. To recognize unknown malicious Web requests and improve
+ • Keyword duplication. Attackers bypass filtering rules by the accuracy of attack detection with fewer data and withrepeatedly adding keywords. The malicious requests still out abnormal labels, we propose unsupervised malicious
+ work even if keywords are filtered by detection systems Web request detection based on transformer and contrastive
+ and attacks are launched. For example: “abc”->“ababcc”. learning. UTCDetector utilizes preprocessing and 2-gram to
+ • URL encoding conversion. Attackers use URL encoding retain special characters and extracts contextual semantic
+ to encode the requested content. For example, after features of Web requests. UTCDetector leverages Transformer
+ converting “plus sign” into “%2B”, it can avoid the instead of LSTM, which extracts long-term dependencies
+ detection of firewall or online WAF. and handles complex semantic relationships. UTCDetector
+ • Equivalent function replacement. Attackers replace some exploits hypersphere loss function to replace Cross entropy
+ easily recognizable functions with functions that are easy loss function, which avoids the requirement of abnormal
+ to hide or functions that normal websites need to use. labels. UTCDetector employs contrastive learning to compare
+ For example, the “substr()” function is replaced by the the feature similarity of paired normal requests and further
+ “left()” function. narrow down the features of normal requests. This allows
+ • Base64 encoding conversion. Attackers use Base64 the UTCDetector to achieve the same good effect as a
+ encoding to encode the requested content, which large amount of data, even with less data. UTCDetector
+ improves the compatibility of data in transmission. consists of three steps: preprocessing, feature extraction, and
+ For example, “user” ->“dXNlcm5hbWU9dXNlcg==”, malicious Web request detection. Fig. 4 is the framework of
+ “pass”->“cGFzc3dvcmQ9cGFzcw==”. UTCDetector.
+ • Encryption. Attackers use symmetric or asym- Preprocessing: to handle complex malicious Web requests,
+ metric encryption algorithms to encrypt malicious five procedures are used to preprocess the former five complex
+ Web requests. After receiving the requests, they attacks, while the latter two complex attacks (encryption and
+ decrypt and construct a payload to complete the combination) are comprehensively solved by UTCDetector.
+ network attack. For example, “1234567890123456”- Feature extraction: it extracts the feature representation of
+ >“fe34cd90fedcba9876543210abcdef”. URL. Based on 2-gram word segmentation, special characters
+ • Combination. Attackers combine several of the above are reserved and the correlation between two words is estabcomplex attack methods. For example, “hex(substr((select lished. The URL is converted into a word phrase sequence,
+ from), 1,1)) >1” is transformed into “ascii (sub- wherein word phrase consists of two adjacent tokens, that is,
+ str((sELeCt FroM), 1,1)) >1” by case obfuscation and special characters or words. Therefore, Si can be represented
+ function replacement.
+ i ], where a i is the jth word phrase in the
+ by [a1i , a2i , . . . , aN i j
+ ith URL, and Ni is the number of word phrases contained in
+ the URL. Word2vec is used to obtain the vector representation
+C. Problem Definition of word phrases, that is, every word phrase is converted into
+ Suppose a datasets D = {S1 , S2 , . . . , Sn } contains n URLs. a d-dimension vector aji ⇒ xji . A URL can be represented
+Inspired by the contrastive learning, these URLs are randomly by the vector sequence of word phrases segmented by 2-
+divided into two parts D1 and D2 with equal data amount, gram. Since the number of words contained in a URL may be
+where Si represents the ith URL in D1 and Sj represents the different, the word phrases generated by 2-gram may also be
+jth URL in D2 . The URLs of the datasets D are all normal. A different. Therefore, the URL is aligned to W word phrases by
+classifier c : Si → [0, 1] is trained to judge the newly arrived truncating or padding to fit the following Transformer model,
+URL, where 0 is normal and 1 is abnormal. i ].
+ which is represented by Xi = [x1i , x2i , . . . , xji , . . . , xW
+3286 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+Fig. 4. The framework of UTCDetector.
+
+ Transformer-based malicious Web request detection:
+Transformer is trained to extract the long-term dependencies in
+the word phrase sequence by endogenous self-attention mechanism. Hypersphere loss function makes normal request as
+close to the center of the hypersphere as possible. Contrastive
+learning compares the feature similarity of pairs of normal
+requests, in which the alignment loss aligns or shortens the
+distance of the same pair of features, and the uniform loss
+makes the features evenly distributed on the hypersphere,
+to identify complex unknown malicious requests with less
+data. Then, if a newly arrived URL is located far from the
+hypersphere center, it is considered abnormal. Fig. 5. Preprocessing.
+
+B. Preprocessing
+ To handle complex malicious Web requests and better 4) Decoding and restoring. It detects whether the Web
+support the subsequent detection, we use a variety of pro- request has undergone encoding conversion or not. If it has,
+cessing inspired by [23]. The whole preprocessing flow is the URL encoding or Base64 encoding is restored. In other
+shown in Fig. 5, including five procedures. “encryption” and words, it reverts the encoded Web request to its original form,
+“combination” will be comprehensively solved by exploring such as “%20” as a space, “%2B” as a plus sign, and “%3D”
+the semantic features between contexts through UTCDetector. as a “@”.
+ 1) Extracting parameters and combining requests. It extracts 5) Equivalent function matching [23]. It restores the comthe URL, query string, or request body of GET and POST mon equivalent functions in Web malicious requests as listed
+requests from Web requests, and then combines them into a in Table III, such as “ascii()” to “bin()”, and “left()” to
+brand-new Web request. At the same time, domain names in “substr()”.
+Web requests are excluded, because they have little influence
+on malicious detection of Web requests. C. Feature Extraction
+ 2) Case normalization. It makes consistent lowercase con- Word-level embedding may lose the semantic information
+version for all Web requests, such as adjusting “EaT” to “eat”. of Web requests. Malicious requests usually include common
+ 3) Filtering keyword duplication. It cleans up keyword special characters such as “?”, “&”, “.”, “=”, etc. When
+duplication in all Web requests by looping pairs, such as adopting special character segmentation, special characters are
+adjusting “ababcc” to “abc”. ignored, and only English words are preserved. Words are then
+HE et al.: UNSUPERVISED MALICIOUS WEB REQUEST DETECTION 3287
+
+ TABLE III
+ C OMMON E QUIVALENT F UNCTION vector sequence. Therefore, URL Si is transformed into a word
+ phrase vector sequence Xi , as shown in third block of Fig. 4.
+ Word2vec is exploited to obtain vector of word phrase
+ after 2-gram segmentation. However, the original Word2vec
+ vocabulary does not contain special characters. Therefore,
+ when training Word2vec model, we extend the vocabulary
+ to support special characters, which can effectively represent
+ different types of complex malicious requests.
+ Transformer only processes unified sequences with the same
+ length. However, the number in word phrases of URL is
+ different. Therefore, we manually set the number of word
+ phrases to be consistent, and truncate or fill the word phrase
+ vector sequence of URL with an appropriate window size W,
+ i ], where x i ∈ R represent
+ that is, Xi = [x1i , x2i , . . . , xji , . . . , xW j
+ the vector of the jth word phrase in the ith URL.
+
+ D. Transformer-Based Malicious Web Request Detection
+ Vaswani et al. [37] introduced the Transformer model in
+ 2017, a deep learning architecture used mainly for NLP
+ tasks. Diverging from conventional RNNs and LSTMs, the
+ Transformer model integrates a self-attention mechanism,
+ enabling simultaneous processing of all sequence positions.
+ This innovation not only bolsters training efficiency but also
+ enables the model to effectively capture extensive dependencies within the data. With its encoder-decoder framework,
+ the Transformer model adeptly tackles tasks such as machine
+ translation and text generation, solidifying its position as a
+Fig. 6. 2-gram word segmentation.
+ pivotal advancement in contemporary NLP research.
+ Therefore, we propose a semantic-based Transformer to
+ detect malicious Web requests, in which Transformer is used to
+converted into word vectors, but this process may result in the capture the long-distance dependencies and complex semantic
+loss of contextual semantic relationships, which can impact information of complex malicious Web requests. For example,
+the detection performance. Therefore, we exploit 2-gram and “union” and “select” are the characteristics of SQLi attacks.
+Word2vec to extract the context semantic features of Web They do not appear at the same time in normal Web requests. If
+requests. they appear at the same time, they can be judged as anomalies.
+ To obtain the comprehensive characteristics of URL, we Similarly, “< script >” and “alert” are the characteristics
+carry out word segmentation by 2-gram, preserve special of XSS attacks, and they can also be judged as anomalies.
+characters and establish the correlation between two tokens. Transformer reveals the strong semantic association between
+Word phrase consists of two special characters or words aji = them. At the same time, Transformer can also find long-
+[tji , tji+1 ], where tji and tji+1 represent the jth and (j + 1)th distance dependencies such as “dir”, “../” and “txt” of DT
+tokens of the ith URL, respectively. Therefore, the ith URL is attack in Table II, which are usually used for remote code execonverted into a word phrase sequence consisting of Ni word cution attacks that bypass the path. In addition, Transformer
+ i ], where a i is the jth
+phrases, that is, Si = [a1i , a2i , . . . , aN i j can also deeply mine the contextual semantic features and coword phrase in the ith URL, i ∈ [1, n], j ∈ (1, Ni ), and Ni is occurrence features in Web requests to deal with encryption
+the number of word phrases in the ith URL. Since the number and combination attacks. As shown in Fig. 7, Transformer
+of words contained in URL may be different, the number of extracts the semantic vector sequence Oi from the word phrase
+word phrases Ni is also different. vector sequence, and then the semantic vector sequence is
+ As shown in Fig. 6, special characters are reserved in 2- combined into deep feature vi to represent the URL.
+gram word segmentation. Taking the SQLi attack in Table I as The semantic vector sequence Oi is an output of the
+an example, “or 1=1 –” is segmented into “or”, “1”, “=”, “1”, Transformer Encoder, corresponding to Eq. (1), where Oi =
+“-”, “-” in 1-gram, and “or 1”, “1 =”, “= 1”,“1 -”, “- -” in 2- i ]. Transformer’s self-attention mech-
+ [o1i , o2i , . . . , oji , . . . , oW
+gram, respectively. 1-gram may not be able to understand the anism effectively strengthens the contribution of core word
+relationship, while 2-gram can capture the connection in the phrases. The core word phrases of normal Web requests, such
+context to identify the potential SQLi attack more accurately. as “index.php”, are enhanced by the attention mechanism, to
+ Then the word phrase in the word phrase sequence is better distinguish normal and malicious Web requests.
+converted into a corresponding vector, that is, aji ⇒ xji , and
+the word phrase sequence can be expressed as a word phrase Oi = Encoder (Xi ) (1)
+3288 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ Fig. 8. The core concept of contrastive learning.
+
+ where C is the center of the hypersphere, V1 and V2 are the
+Fig. 7. Transformer Encoder. set of deep features, and vi represents the deep features of the
+ ith URL.
+ 2) Contrastive Loss Function: Contrastive learning aims
+ After the semantic vector sequence is averaged, it is fed to at learning patterns by comparing similarities or differences
+the pooling layer, the dropout layer and the fully connected between two or more samples. As shown in Fig. 8, a normal
+layer to obtain the deep feature vi of the URL, as shown in sample X + and an abnormal sample X − are dissimilar,
+Eq. (2). while two normal samples are similar. Here, X + represents
+ a normal sample, and X − represents an abnormal sample.
+ vi = Linear (Dropout(Pooling(Mean(Oi )))) (2) Contrastive learning is usually used in target detection, image
+ classification, recommendation system and other fields. The
+where i represents the ith URL. advantage of contrastive learning is to maximize the distance
+ There are a share-weight Transformer-based detection for between positive and negative samples while minimizing the
+the two datasets, as shown in four block of Fig. 4. According intra-class distance within positive or negative samples, where
+to the share-weight model, we can obtain the deep feature set positive samples represent normal Web requests and negative
+V1 and V2 for datasets D1 and D2, respectively. The two deep samples represent abnormal Web requests. Therefore, samples
+feature sets are the basis of contrastive learning. of the same kind can be close, and samples of different
+ kinds can be far away. In order to assign similar features to
+ samples of the same kind and keep the feature distribution as
+E. Hypersphere and Contrastive Loss Function much as possible, we introduce alignment loss and uniformity
+ To cluster the deep features of normal URLs, align the loss. Alignment loss aligns or shortens the feature distance of
+pairs of semantic vector sequences and retain the maximum similar sample pairs, and uniformity loss makes the features
+information, the total loss function is constructed by mini- evenly distributed on the hypersphere.
+mizing hypersphere loss function and contrastive learning loss The alignment loss function is shown in Eq. (4).
+function (alignment loss and uniform loss). They collectively n/2 n/2
+   
+embody the most significant contribution of the entire article. Lossa = vi1 − vj2 22 (4)
+ 1) Hypersphere Loss Function [38]: Hypersphere loss is i=1 j =1
+first applied in computer vision, similar to one class SVM
+in NLP. As shown in Fig. 4, the hypersphere loss function where vi1 represents the deep feature of the URL in D1 , vj2
+adjusts the distribution of all normal log sequences. Therefore, represents the deep feature of the URL in D2 , n/2 represents
+the anomaly labels are not necessary. The motivation is that the number of URLs in D1 and D2 , and  · 2 represents the
+the normal URLs should be concentrated in the embedded Frobenius norm, respectively.
+space and as close as possible to the center of the hypersphere, We want the uniformity metric to be both asymptotically
+while the abnormal URLs should be as far away from the valid (i.e., the distribution that optimizes this metric should
+center of the hypersphere as possible. The best hypersphere converge to uniform distribution) and empirically plausible
+radius (decision boundary) can be obtained by a small amount with small number of points. To this end, we consider the
+of normal and abnormal verification data. Hypersphere loss Gaussian potential kernel (also known as the Radial Basis
+function is the mean square error sum of the distances between Function kernel) and define the uniformity loss as the logthe samples and the center, as shown in Eq. (3). arithm of the average pairwise Gaussian potential [39]. The
+ uniformity loss function is shown in Eq. (5).
+ 
+ Losss = vi − C 2 n/2 n/2
+     −2v 1 −v 2 2 
+ vi ∈V 1 V2 Lossu = log e i j 2 (5)
+ C = Mean(vi ) (3) i=1 j =1
+HE et al.: UNSUPERVISED MALICIOUS WEB REQUEST DETECTION 3289
+
+ TABLE IV
+ W EB DATASETS loopholes. The dataset consists of 8363 normal requests, 16459
+ abnormal requests, and 49311 malicious requests (43013 SQLi
+ and variants, 4818 XSS and variants, 412 buffer overflows,
+ 41 format strings, 74 LDAPi, 451 SSI, 175 XPath and 327
+ CRLFi).
+ ECML/PKDD 2007 [41]. It was put forward by the 18th
+ European Machine Learning Conference (ECML) and the 11th
+ European Conference on Knowledge Discovery in Database
+ (PKDD) in 2007. It is created by capturing actual traffic
+ and then processed to purify information, including requests
+ The definition of the total loss function is shown in Eq. (6). classified into seven different types of attacks. The datasets
+ include 35,006 requests categorized as normal and 15,110
+ Losssum = Losss + α1 ∗ Lossa + α2 ∗ Lossu (6) requests classed as attacks.
+where α1 and α2 are hyperparameters for balancing the three School 2023. We collected the access Web request from a
+loss functions. university Web application server in June 2023, which contains
+ According to the above steps, we can train UTCDetector. 99746 normal requests and 25000 malicious requests (includ-
+When a new URL arrives, it is also preprocessed and extracted ing ten types attacks: SQLi, XSS, RFI, OS Commanding,
+feature into a word phrase vector sequence, and then input Cookie Defacement, Illegal Upload, Path Traversal, Server
+into the trained Transformer model to obtain the deep feature. Information Disclosure, Web Plug-in Vulnerability, and Web
+UTCDetector can predict whether the URL is abnormal Server Vulnerability attacks ). We divide these Web requests
+according to the distance between the deep feature and the into three files, namely, normal training, normal testing and
+hypersphere center. abnormal testing files.
+ 2) Baselines: Our method is compared with other existing
+ V. P ERFORMANCE E VALUATION methods One-Class SVM [11], Pattern-tree [24], HQTN [9],
+ Autoencoder [18], OMRDetector [23].
+ In this section, we evaluate our model by answering the • One-Class SVM [11] uses the expert knowledge of
+following research questions (RQs): HTTP requests to manually build features and then uses
+ RQ1: How does our method perform in malicious Web a One-class SVM classifier to detect abnormal requests.
+request detection? • Pattern-tree [24] manually extracts key-value pair
+ RQ2: How about the ablation experiment? information and matches it through a pattern tree, and
+ RQ3: How sensitive is our method? then uses models such as random forest, decision tree, or
+ RQ4: How about attack case studies? support vector machine to detect anomalies.
+ • HQTN [9] converts the string of attribute names and
+A. Experimental Setup attribute values into numbers and then uses the mean
+ 1) Datasets: We conducted our experiments primarily on shift clustering algorithm to detect anomalies in an
+three public datasets, namely CSIC 2010, CSIC TORPEDA unsupervised way.
+2012, and ECML/PKDD 2007. Since the three public datasets • Autoencoder [18] tokenizes the URL and then uses
+are before 2012, we collected the Web requests from a autoencoder to calculate the reconstruction error of a
+university Web application server in 2023, called School 2023. given request, find the threshold, and judge whether it is
+The statistical information of four datasets is as shown in abnormal or not.
+Table IV. • OMRDetector [23] applies the three-layer CNN-
+ CSIC 2010 [32]. It was developed by the Institute BiLSTM to obtain the local characteristics and contextual
+of Information Security of the Spanish National Research semantic features of Web requests, and finally the detec-
+Council (CSIC), which contains thousands of automatically tion results of malicious requests are calculated by
+created Web requests. It can be utilized to test the Web Softmax classifier.
+attack protection systems. Because it is a Spanish Web As the existing methods are not open-source, we refer to their
+application, the datasets contains some Latin characters. This experimental results directly in our work and report their best
+dataset contains the traffic generated for e-commerce Web results.
+applications, in which users can use shopping carts to buy 3) Implementation and Environment: All experiments are
+goods and register by providing some personal information. run on the Google Colab cloud platform, which provides an
+This dataset contains 72,000 normal requests and more than online deep learning server supported by Intel Xeon Gold
+25,000 abnormal requests (including SQL Injection, buffer 6148 CPU, NVIDIA A100-SXM, and 85GB RAM with
+overflow, information collection, file leakage, CRLFi, XSS, eight cores. The word embedding dimension Emb_dim in
+server-side inclusion, parameter tampering, and other attacks). Word2vec is 300, and Transformer is a basic model, in
+ CSIC Torpeda 2012 [40]. It is constructed by TORPEDA which the dimension of Transformer’s hidden layer H =
+rules and artificially generated with the help of semi-automatic 128, the number of multi-head self-attention heads N=12,
+tools. All requests point to an e-commerce Web application, and the default experiment parameters are set as follows:
+which is developed for testing purposes and has obvious max _epoch=100, batch_size=64. The window size W is set
+3290 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ TABLE V
+ R ESULTS OF C OMPARISON W ITH E XISTING M ETHODS C. RQ2: How About the Ablation Experiment?
+ ON P UBLIC DATASETS
+ We conduct two ablation experiments from the aspects of
+ feature extraction, detection, and contrastive learning.
+ Firstly, our method is compared with three methods
+ with different feature extraction models and detection models: Word2vec-LSTM, BERT-Transformer, and BERT-LSTM.
+ Transformer is trained from scratch which is same as our
+ method, while BERT is a pre-trained model.
+ • Word2vec-LSTM converts words into vectors by
+ word2vec and then uses the LSTM model to detect
+ malicious Web request.
+ • BERT-Transformer converts words into vectors by an
+ off-the-shelf service BERT-as-service, and then exploits
+ the Transformer model to detect malicious Web request.
+ Although BERT can be fine-tuned, BERT is utilized
+ directly without fine-tuning.
+ • BERT-LSTM converts words into vectors by an offthe-shelf service BERT-as-service, and then exploits the
+ LSTM model to detect malicious Web request.
+ The performance on four datasets is shown in Table VI,
+to cover 90% URLs, which are 40, 20, 40 and 20 for four
+ in which all the results are taken from the average after five
+datasets, respectively.
+ experiments. The performance of Word2vec-LSTM, BERT-
+ 4) Metrics: This paper uses Precision, Recall, F1-score, Transformer, and BERT-LSTM is unstable. In the CSIC
+and training time for performance analysis. Precision repre- 2010 dataset, the F1-scores of BERT-Transformer and BERTsents the ratio of how many detected anomalies are true, and LSTM are over 0.95. In the CSIC TORPEDA 2012 dataset,
+Recall represents the ratio of how many reported anomalies the F1-scores of Word2vec-LSTM and BERT-Transformer
+are true. Finally, the F1-score is the harmonic average of the are over 0.95. However, in the ECML/PKDD 2007 dataset,
+accuracy and recall in the equation, as shown in Eq. (7), where the F1-scores of the three methods are under 0.78. In
+the best value is 1 and the worst value is 0. Training time School 2023 dataset, the F1-scores of BERT-Transformer
+refers to the time required to train the model. and BERT-LSTM are over 0.99. The reason is that LSTM
+ True Positive cannot effectively extract long-term dependencies of long
+ Precision = sequence data, and the off-the-shelf service BERT-as-service
+ True Positive + False Positive
+ True Positive is pre-trained by a general corpus which is not suitable
+ Recall = for URLs.
+ True Positive + False Negetive
+ 2 ∗ precision ∗ recall UTCDetector achieves the best F1-scores on the CSIC
+ F 1−score = (7) TORPEDA 2012, ECML/PKDD 2007 datasets, and School
+ precision + recall
+ 2023. UTCDetector exhibits a slight decrease compared to the
+ BERT-Transformer on the CSIC 2010 dataset, it is almost neg-
+B. RQ1: How Does Our Method Perform in Malicious Web ligible. The variance results prove that its robust performance
+Request Detection? across various datasets and attack scenarios is excellent. The
+ The performance comparison with the existing methods on main reasons are that the Word2vec in UTCDetector is suitable
+three public datasets is shown in Table V, where \ means that for both small and large datasets, and Transformer can take
+the original works do not provide the result of this metric. into account the semantic and relative position information of
+For CSIC 2010 and CSIC TORPEDA 2012 datasets, One- words.
+class SVM, Pattern-tree, and HQTN achieve low detection To demonstrate the efficiency of UTCDetector, we compare
+performance (0.89-0.99). They are machine learning methods the testing time of the four methods on the CSIC 2010 dataset.
+that depend on manual feature extraction. The F1-score of As shown in Table VII, it is evident that our method is the
+Autoencoder is only 0.9463. The reason is that it has poor fastest at detecting malicious web requests.
+generalization ability when the testing samples and training Secondly, to analyze the contributions of contrastive learnsamples have different distributions. For the ECML/PKDD ing, we compare the method with and without contrastive
+2007 dataset, we compare UTCDetector with a supervised learning. UTCDetector w/o CL represents UTCDetector withmethod (LogBERT-BiLSTM). LogBERT-BiLSTM [16] uses out contrastive learning loss function. The experimental results
+BERT to extract semantic feature and BiLSTM to classify the on four datasets are shown in Table VIII, where training data
+logs with labels. As shown in Table V, our method can achieve represents the number of training URLs. When the similar F1-
+a higher F1-score (0.98931) than LogBERT-BiLSTM (0.97) score are achieved, the required training data of UTCDetector
+without anomaly label, which greatly reduces the consumption is nearly half of that without contrastive learning. The reason
+of large amounts of labor and time. is that contrastive learning compares the feature similarity of a
+HE et al.: UNSUPERVISED MALICIOUS WEB REQUEST DETECTION 3291
+
+ TABLE VI
+ A BLATION E XPERIMENT ON A LL DATASETS
+
+ TABLE VII
+ T ESTING T IME OF A BLATION M ETHODS ON CSIC 2010 DATASET
+
+ TABLE VIII
+ T HE I MPACT OF C ONTRASTIVE L EARNING
+ Fig. 10. Impact of window size on CSIC 2010 datasets.
+
+ the larger n is, the more word phrases are included in the
+ vocabulary, which leads to an increase in the time required
+ to train the Word2vec model. Therefore, it is not necessarily
+ the case that a larger value of n yields superior performance.
+ To sum up, we choose the 2-gram word segmentation method
+ which can just balance the time and F1-score.
+ Impact of window size. The window size W is set from
+ 6 to 50. As shown in Fig. 10, with the change in window
+ size, the differences in the F1-score are not large. The best
+ F1-score (0.99682) is with a length of 40, which is longer than
+ 90% URL. If the window size is too small, attack information
+ may be lost due to truncation which leads to low performance.
+ If the window is too large, the word phrase vector sequence
+ is filled with lots of zero and becomes sparse, which affects
+ the detection performance. At the same time, the training
+ time increases linearly with the increase in the window size.
+Fig. 9. Impact of n on CSIC TORPEDA 2012 dataset.
+ The more word phrases are included in the window size, the
+ longer time it takes to train the model. However, the larger
+ the window size does not mean the higher the performance
+pair of normal requests and further close the feature of normal
+ according to Fig. 10. Therefore, we set the window size to 40
+requests [39].
+ which can obtain the best performance and take a relatively
+ short time.
+D. RQ3: How Sensitive Is Our Method? Impact of Word2vec embedding dimension. The
+ Four parameters are considered to analyze the robustness of Word2vec embedding dimension emb_dim is set from 24 to
+UTCDetector: window size, Word2vec embedding dimension, 960. As shown in Fig. 11, the Precision, Recall and, F1-score
+The dimension of the Transformer’s hidden layer, and the increase with the increase of the embedding dimension of
+number of Transformer heads. Word2ve. It reaches the peak at 300 (0.99682) and maintains
+ Impact of different n-gram. To verify the influence of the the level. Word2vec with more than 120 dimensions can
+size of n in n-gram on the experimental results, we set n to 0 capture sufficient semantic information and features, thereby
+to 3, where 0 means no special characters. As shown in Fig. 9, enhancing the model’s accuracy in distinguishing between
+with the increase of n, the F1-score also gradually increases. normal and abnormal requests.
+The greater the n, the more the number of adjacent words or Impact of the dimension of the Transformer’s hidcharacters in the text, the closer the context and the clearer the den layer. The dimension of the Transformer’s hidden layer
+semantics. Therefore, the detection effect is better. However, Hidden_layer is set from 32 to 2048. As shown in Fig. 12, the
+3292 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ TABLE IX
+ ATTACK C ASE S TUDIES ON ECML/PKDD 2007 DATASET
+
+Fig. 11. Impact of embedded dimension on CSIC 2010 datasets.
+ URL. All kinds of attacks can be detected by our method and
+ the detection ratio is 1, that is, all kinds of attacks can be
+ detected correctly.
+
+ VI. C ONCLUSION
+ Malicious Web request detection is very important to protect computer systems from malicious attacks. This paper
+ proposes the unsupervised malicious Web request detection
+ based on transformer and contrastive learning. It exploits
+ preprocessing and 2-gram to preserve special characters and
+ uses Transformer to extract complex semantic relationships.
+Fig. 12. Impact of the dimension of hidden layer on CSIC 2010 dataset.
+ Hypersphere and contrastive loss function are introduced
+ to identify unknown attacks instead of cross entropy loss
+ function, which facilitates unsupervised detection with less
+ training data. The experimental results on four Web datasets
+ show that our method is superior to the existing methods
+ in detecting malicious Web requests. In our future work, we
+ aim to integrate machine learning techniques with in-depth
+ cybersecurity expertise. We plan to evaluate our approach on a
+ more diverse range of datasets, with a particular focus on realworld modern Web traffic dynamics. Additionally, we intend
+ to explore the integration of our method into existing network
+Fig. 13. Impact of the number of heads on CSIC 2010 dataset.
+ security systems.
+
+ R EFERENCES
+Precision, Recall, and F1-score remain basically stable with [1] CNCERT. “2022 interconnection security report.” 2022. [Online].
+the increase of the dimension of the Transformer’s hidden layer Available: https://www.fisec.cn/
+and reach the peak at 64 (0.99682). [2] L. Yu et al., “Detecting malicious Web requests using an enhanced
+ textCNN,” in Proc. IEEE 44th Annu. Comput., Softw., Appl. Conf.
+ Impact of the number of Transformer heads. The (COMPSAC), 2020, pp. 768–777.
+dimension of the Transformer’s hidden layer Head _num [3] S. Axelsson, “Research in intrusion-detection systems: A survey,” Dept.
+is set from 6 to 30. As shown in Fig. 13, the Precision, Comput. Eng., Chalmers Univ. Technol., Gothenburg, Sweden, Rep. 98–
+ 17, 1998.
+Recall, and F1-score remain basically stable (0.99682) with [4] P. Garcia-Teodoro, J. Diaz-Verdejo, G. Maciá-Fernández, and
+the increase in the number of Transformer heads. The multi- E. Vázquez, “Anomaly-based network intrusion detection: Techniques,
+head attention mechanism excels at comprehensively capturing systems and challenges,” Comput. Secur., vol. 28, nos. 1–2, pp. 18–28,
+ 2009.
+feature information even with a limited number of heads. [5] S. He, G. Li, K. Xie, and P. K. Sharma, “Fusion graph structure
+The number of heads has little effect on the performance learning-based multivariate time series anomaly detection with strucimprovement. tured prior knowledge,” IEEE Trans. Inf. Forensics Security, vol. 19,
+ pp. 8760–8772, 2024.
+ [6] S. He, Q. Guo, G. Li, K. Xie, and P. K. Sharma, “Multivariate
+E. RQ4: How About Attack Case Studies? time series anomaly detection based on multiple spatio-temporal graph
+ convolution,” IEEE Trans. Instrum. Meas., vol. 74, pp. 1–14, 2025.
+ We use the detection ratio to evaluate the detection [Online]. Available: https://ieeexplore.ieee.org/document/10766359
+performance of different attacks on ECML/PKDD 2007. The [7] S. He et al., “Graph structure learning-based multivariate time series
+ anomaly detection in Internet of Things for human-centric condetection ratio is equal to the number of correctly identifying sumer applications,” IEEE Trans. Consum. Electron., vol. 70, no. 3,
+such attacks as anomalies divided by the total number of such pp. 5419–5431, Aug. 2024. [Online]. Available: https://ieeexplore.ieee.
+attacks. ECML/PKDD 2007 includes seven kinds of attacks: org/document/10547539
+ [8] J. Liu et al., “A generic framework for finding special quadratic elements
+SQLi, XSS, DT, SSI, XPathi, Ldapi, and OS Commanding, in data streams,” IEEE/ACM Trans. Netw., vol. 32, no. 4, pp. 3269–3284,
+where the latter four attacks are also mainly involved in the Aug. 2024.
+HE et al.: UNSUPERVISED MALICIOUS WEB REQUEST DETECTION 3293
+
+ [9] H. H. Tan and T. Van Hoai, “Web application anomaly detection based [32] C. T. Giménez, A. P. Villegas, and G. Á. Marañón, HTTP Data Set
+ on converting HTTP request parameters to numeric,” in Proc. 15th Int. CSIC 2010 Information Security Institute CSIC, vol. 64, Spanish Res.
+ Conf. Adv. Comput. Appl. (ACOMP), 2021, pp. 93–97. Nat. Council, Madrid, Spain, 2010.
+[10] C. Liu, J. Yang, and J. Wu, “Web intrusion detection system combined [33] OWASP. “SQL injection.” 2021. [Online]. Available: https://owasp.org/
+ with feature analysis and SVM optimization,” EURASIP J. Wireless www-community/attacks/SQL_Injection
+ Commun. Netw., vol. 2020, no. 1, Feb. 2020, Art. no. 5750646. [34] A. Hannousse, S. Yahiouche, and M. C. Nait-Hamoud, “Twenty-two
+[11] N. Epp, R. Funk, C. Cappo, and S. Lorenzo-Paraguay, “Anomaly- years since revealing cross-site scripting attacks: A systematic mapping
+ based Web application firewall using http-specific features and one-class and a comprehensive survey,” Comput. Sci. Rev., vol. 52, no. 1, pp. 1–52,
+ SVM,” in Proc. Workshop Regional de Segurança da Informação e de 2024.
+ Sistemas Computacionais, 2017, pp. 1–11. [35] OWASP. “Server-side includes (SSI) injection.” 2016. [Online].
+[12] J. Liang, W. Zhao, and W. Ye, “Anomaly-based Web attack detection: A Available: https://owasp.org/www-community/attacks/Server-Side_
+ deep learning approach,” in Proc. VI Int. Conf. Netw., Commun. Comput., Includes_(SSI)_Injection
+ 2017, pp. 80–85. [36] OWASP. “Path traversal.” 2016. [Online]. Available: https://owasp.org/
+[13] M. Zhang, S. Lu, and B. Xu, “An anomaly detection method based on www-community/attacks/Path_Traversal
+ multi-models to detect Web attacks,” in Proc. 10th Int. Symp. Comput. [37] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Conf. Neural
+ Intell. Design (ISCID), 2017, pp. 404–409. Inf. Process. Syst., vol. 30, 2017, pp. 1–11.
+[14] R. Tang et al., “Zerowall: Detecting zero-day Web attacks through [38] X. Han and S. Yuan, “Unsupervised cross-system log anomaly detection
+ encoder-decoder recurrent neural networks,” in Proc. INFOCOM IEEE via domain adaptation,” in Proc. 30th ACM Int. Conf. Inf. Knowl.
+ Conf. Comput. Commun., 2020, pp. 2479–2488. Manage., 2021, pp. 3068–3072.
+[15] W. Wan, X. Shi, J. Wei, J. Zhao, and C. Long, “ELSV: An effective [39] T. Wang and P. Isola, “Understanding contrastive representation learning
+ anomaly detection system from Web access logs,” in Proc. IEEE Int. through alignment and uniformity on the hypersphere,” in Proc. Int.
+ Perform., Comput., Commun. Conf. (IPCCC), 2021, pp. 1–6. Conf. Mach. Learn., 2020, pp. 9929–9939.
+[16] L. S. Ramos Júnior, D. Macêdo, A. L. Oliveira, and C. Zanchettin, [40] (ITI-CERT, Basel, Switzerland, Tampere Univ., Tampere, Finland).
+ “LogBERT-BiLSTM: Detecting malicious Web requests,” in Proc. Torpedo-Automated Framework for Exploit Generation. 2017. [Online].
+ 31st Int. Conf. Artif. Neural Netw. (ICANN), Bristol, U.K., 2022, Available: http://www.tic.itefi.csic.es/torpeda
+ pp. 704–715. [41] C. Raıssi, J. Brissaud, G. Dray, P. Poncelet, M. Roche, and M. Teisseire,
+[17] X. Kuang et al., “DeepWAF: Detecting Web attacks based on CNN and “Web analyzing traffic challenge: Description and results,” in Proc.
+ LSTM models,” in Proc. 11th Int. Symp. Cyberspace Saf. Secur. (CSS), ECML/PKDD, 2007, pp. 47–52.
+ Guangzhou, China, 2019, pp. 121–136.
+[18] H. Mac, D. Truong, L. Nguyen, H. Nguyen, H. A. Tran, and D. Tran,
+ “Detecting attacks on Web applications using autoencoder,” in Proc. 9th
+ Int. Symp. Inf. Commun. Technol., 2018, pp. 416–421.
+[19] S. He et al., “A joint matrix factorization and clustering scheme for
+ irregular time series data,” Inf. Sci., vol. 644, Oct. 2023, Art. no. 119220.
+[20] T. Ji et al., “Research on deep learning-powered malware attack and
+ defense techniques,” Chin. J. Comput., vol. 44, no. 4, pp. 669–695, 2021.
+[21] M. Zhang, B. Xu, S. Bai, S. Lu, and Z. Lin, “A deep learning method
+ to detect Web attacks using a specially designed CNN,” in Proc. 24th
+ Int. Conf. Neural Inf. Process. (ICONIP), Guangzhou, China, 2017,
+ pp. 828–836.
+[22] H. Ma, C. Wang, and H. Qi, “Anomaly Behavior detection for the Web Shiming He received the B.S. degree in information
+ application based on LSTM,” in Proc. IEEE Conf. Telecommun., Opt. security and the Ph.D. degree in computer science
+ Comput. Sci. (TOCS), 2021, pp. 553–559. and technology from Hunan University, China, in
+[23] X. Yang, G. Peng, Y. Luo, W. Song, J. Zhang, and 2006 and 2013, respectively.
+ F. Cao, “OMRDetector: A method for detecting obfuscated malicious She is currently a Professor with the School
+ requests based on deep learning,” Chin. J. Comput., vol. 45, no. 10, of Computer Science and Technology, Changsha
+ pp. 2167–2189, 2022. University of Science and Technology, Changsha,
+[24] Z. Cheng, B. Cui, T. Qi, W. Yang, and J. Fu, “An improved China. Her research interests include machine learnfeature extraction approach for Web anomaly detection based on ing, data analysis, and anomaly detection.
+ semantic structure,” Secur. Commun. Netw., vol. 2021, no. 1,
+ Feb. 2021, Art. no. 6661124.
+[25] R. Bronte, H. Shahriar, and H. Haddad, “Information theoretic anomaly
+ detection framework for Web application,” in Proc. IEEE 40th Annu.
+ Comput. Softw. Appl. Conf. (COMPSAC), 2016, pp. 394–399.
+[26] S. R. Wibisono and A. I. Kistijantoro, “Log anomaly detection using
+ adaptive universal transformer,” in Proc. Int. Conf. Adv. Inform.,
+ Concepts, Theory Appl. (ICAICTA), 2019, pp. 1–6.
+[27] V.-H. Le and H. Zhang, “Log-based anomaly detection without log
+ parsing,” in Proc. 36th IEEE/ACM Int. Conf. Autom. Softw. Eng. (ASE),
+ 2021, pp. 492–504.
+[28] S. Nedelkoski, J. Bogatinovski, A. Acker, J. Cardoso, and O. Kao,
+ “Self-attentive classification-based anomaly detection in unstruc-
+ Ying Zhang received the M.S. degree in computer
+ tured logs,” in Proc. IEEE Int. Conf. Data Min. (ICDM), 2020,
+ technology from the Changsha University of Science
+ pp. 1196–1201.
+ and Technology, China, in 2024.
+[29] H. Guo, S. Yuan, and X. Wu, “Logbert: Log anomaly detection via bert,”
+ She is currently working with the Institute
+ in Proc. Int. Joint Conf. Neural Netw. (IJCNN), 2021, pp. 1–8.
+ of Information Engineering, Hunan University of
+[30] S. He, D. Tuo, B. Chen, R. S. Sherratt, and J. Wang, “Unsupervised
+ Science and Engineering, Yongzhou, China. Her
+ log anomaly detection method based on multi-feature,” Comput., Mater.
+ research interests mainly include deep learning, data
+ Continua, vol. 99, no. 1, pp. 1–20, 2023.
+ analysis, and anomaly detection.
+[31] S. He, Y. Lei, Y. Zhang, K. Xie, and P. K. Sharma, “Parameter-efficient
+ log anomaly detection based on pre-training model and LORA,” in Proc.
+ IEEE 34th Int. Symp. Softw. Rel. Eng. (ISSRE), 2023, pp. 207–217.
+3294 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ Diqing Liang received the Ph.D. degree in computer Pradip Kumar Sharma (Senior Member, IEEE)
+ software and theory from Central South University, received the Ph.D. degree in CSE from the Seoul
+ China, in 2017. National University of Science and Technology,
+ He is currently a Senior Engineer with the South Korea, in August 2019.
+ Information Construction Management Department, He is an Assistant Professor of Cybersecurity with
+ Changsha University of Science and Technology, the Department of Computing Science, University of
+ Changsha, China. Research interests include artifi- Aberdeen, U.K. He also worked as a Postdoctoral
+ cial intelligence, big data, and cyberspace security. Research Fellow with the Department of Multimedia
+ Engineering, Dongguk University, South Korea. He
+ was a Software Engineer with MAQ Software, India,
+ and involved on variety of projects, proficient in
+ building largescale complex data warehouses, OLAP models, and reporting
+ solutions that meet business objectives and align IT with business. He has published many technical research papers in leading journals from IEEE, Elsevier,
+ Springer, and MDPI. Some of his research findings are published in the
+ most cited journals. His current research interests are focused on the areas of
+ cybersecurity, blockchain, edge computing, SDN, and IoT security. He is listed
+ in the world’s Top 2% Scientists for citation impact during the calendar year
+ 2019 by Stanford University. Also, he received a top 1% reviewer in computer
+ science by Publons Peer Review Awards 2018 and 2019, Clarivate Analytics.
+ He has been an expert reviewer for IEEE Transactions, Elsevier, Springer,
+ and MDPI journals and magazines. He has also been invited to serve as a
+ Technical Programme Committee Member and the Chair in several reputed
+ international conferences, such as IEEE DASC 2021, IEEE CNCC 2021,
+ CSA 20202, IEEE ICC2019, IEEE MENACOMM’19, and 3ICT 2019. He is
+ currently an Associate Editor of Peer-to-Peer Networking and Applications,
+ Human-centric Computing and Information Sciences, Electronics (MDPI), and
+ Journal of Information Processing Systems (JIPS). He has been serving as a
+ Guest Editor for international journals of certain publishers, such as IEEE,
+ Elsevier, Springer, MDPI, and JIPS.

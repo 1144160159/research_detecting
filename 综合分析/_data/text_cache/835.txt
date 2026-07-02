@@ -1,0 +1,150 @@
+2424                                                        IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOLUME 12, 2026
+
+
+
+
+UniNet: A Unified Multi-Granular Traffic Modeling
+        Framework for Network Security
+             Binghui Wu , Graduate Student Member, IEEE, Dinil Mon Divakaran, Senior Member, IEEE,
+                                 and Mohan Gurusamy , Senior Member, IEEE
+
+
+   Abstract—As modern networks grow increasingly complex—                        adoption of TLS [1]. Consequently, researchers have long
+driven by diverse devices, encrypted protocols, and evolving                     been exploring models from the domain of statistics, data
+threats—network traffic analysis has become critically important.                mining, and machine learning (ML) to address the challenges
+Existing machine learning models often rely only on a single
+representation of packets or flows, limiting their ability to                    in network traffic analysis [2], [3], [4], [5]. The advancement
+capture the contextual relationships essential for robust analysis.              in deep learning (DL) plays a crucial role in network traffic
+Furthermore, task-specific architectures for supervised, semi-                   analysis for security tasks. These models leverage the vast
+supervised, and unsupervised learning lead to inefficiencies in                  and complex features of network traffic to identify anomalies
+adapting to varying data formats and security tasks.                             and threats effectively. Additionally, with the advent of pro-
+   To address these gaps, we propose UniNet, a unified framework
+that introduces a novel multi-granular traffic representation (T-                grammable switches [6], there is potential for ML or partial
+Matrix) with rich contextual information, integrating session,                   ML logic to run directly on switches at terabits per second
+flow, and packet-level features to provide comprehensive contex-                 (Tbps) line rates [7], [8], promising real-time security capa-
+tual information. Combined with T-Attent, a specially designed                   bilities. The deep learning models, from convolutional neural
+lightweight attention-based model, UniNet efficiently learns latent              networks (CNNs) to autoencoders and the latest transformer
+embeddings for diverse security tasks. Extensive evaluations
+across four key network security and privacy problems—anomaly                    models [9] are able to learn from large datasets consisting
+detection, attack classification, IoT device identification, and                 of hundreds of features. This has led to the development
+encrypted website fingerprinting—demonstrate UniNet’s signifi-                   of several deep learning models for network anomaly detec-
+cant performance gain over state-of-the-art methods, achieving                   tion, botnet detection, attack classification, fingerprinting and
+higher accuracy, lower false positive rates, and improved scal-                  counter-fingerprinting of IoT devices and websites, traffic
+ability across various datasets. By addressing the limitations
+of single-level models and unifying traffic analysis paradigms,                  generation, and so on [10], [11], [12], [13], [14], [15].
+UniNet sets a new benchmark for modern network security.                            Despite these promising directions, a core challenge lies
+                                                                                 in data representation and formats. The common formats
+   Index Terms—Network security, network traffic analysis,
+anomaly detection, website fingerprinting, representation learn-                 for network data are: i) pcap that captures every packet
+ing, machine learning, multi-granular modeling, unified model.                   on the wire and details from the headers ii) flows (e.g.,
+                                                                                 NetFlow, IPFIX [16]) that capture coarser information from
+                                                                                 an aggregation of packets. Packet captures provide rich details
+                                                                                 but require substantial resources to store and process; flow-
+                          I. I NTRODUCTION
+                                                                                 based representations are more lightweight but lose important
+      VER the years, computer networks have evolved sig-
+O     nificantly due to the increase in network bandwidth,
+sophisticated network nodes (such as programmable switches),
+                                                                                 per-packet granularity. As a result, ML models must adapt
+                                                                                 to different levels of detail and data availability. Traditional
+                                                                                 intrusion detection systems (IDS) often focus on flows only,
+new device types (e.g., Internet of Things), changing network                    treating each flow as an isolated unit [17], [18]. However,
+protocols (e.g., DNS-over-HTTPS), new applications (e.g.,                        malicious behaviors rarely manifest in any single flow or
+ChatGPT), etc. With this evolution also comes the challenge                      packet in isolation. A single flow generally lacks conclu-
+of securing the networks from various threats and attacks.                       sive evidence, and a lone packet offers minimal context
+Traditional rule-based systems have limitations in catching                      unless considered within a broader temporal and relational
+up with new and unknown threats; moreover, payloads are                          environment. Therefore, recent efforts are shifting toward
+not available for deep packet inspection due to the increasing                   session-level representations, wherein flows sharing common
+   Received 12 March 2025; revised 30 April 2025 and 18 June 2025; accepted      attributes (e.g., source or destination IP addresses) within a
+23 June 2025. Date of publication 2 July 2025; date of current version           certain time window are grouped into sessions. Session-level
+29 December 2025. The associate editor coordinating the review of this article
+and approving it for publication was G. Han. (Corresponding author: Binghui
+                                                                                 analysis provides more context than flow-level or packet-level
+Wu.)                                                                             views alone. However, most research works focus exclusively
+   Binghui Wu and Mohan Gurusamy are with the Department of Electrical           on one granularity at a time, which can either overlook subtle
+and Computer Engineering, National University of Singapore, Singapore
+117576 (e-mail: binghuiwu@u.nus.edu; gmohan@nus.edu.sg).
+                                                                                 patterns critical for detecting sophisticated threats or demand
+   Dinil Mon Divakaran is with the Institute for Infocomm Research,              excessive computational resources, undermining scalability
+A*STAR, Singapore 138632, and also with the School of Computing,                 and real-time applicability.
+National University of Singapore, Singapore (e-mail: dinil_divakaran@i2r.a-
+star.edu.sg).                                                                       Recent research works have shown the ability to parse
+   Digital Object Identifier 10.1109/TCCN.2025.3585170                           packets at line-rates for security use cases, e.g., rule-based
+                2332-7731 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                       and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+WU et al.: UNINET: A UNIFIED MULTI-GRANULAR TRAFFIC MODELING FRAMEWORK FOR NETWORK SECURITY                                        2425
+
+
+
+
+Fig. 1.   Overview of UniNet framework.
+
+
+                               TABLE I                                                           TABLE II
+            E XTENDED C OMPARISON W ITH R ECENT N ETWORK             TASKS W E C ONSIDER FOR N ETWORK T RAFFIC A NALYSIS (S EE T HREAT
+                      T RAFFIC A NALYSIS M ODELS                         M ODEL D ESCRIPTION IN S ECTION V FOR F URTHER D ETAILS )
+
+
+
+
+                                                                     and packet level information; ii) T-Attent, A unified, self-
+DDoS detection and mitigation [8], [19]. Yet, representing all       attention-based feature extraction model capable of capturing
+packets (of a traffic session) in a model is challenging. Firstly,   contextual patterns from diverse data inputs; and iii) heads
+using full packet sequences as inputs to the model makes the         tailored to different learning paradigms, including supervised,
+model size too large to be trained efficiently. Additionally,        semi-supervised, and unsupervised tasks. Unlike previous
+longer input sequences increase the inference time and make          approaches that either focus on flows or packets in isolation,
+the system more vulnerable to certain attacks, e.g., DoS attacks     UniNet leverages these granularities in a single architecture,
+specifically targeting such models. ① Therefore, a key gap we        ensuring both fine-grained context and scalability. At the same
+identify in this domain is the lack of efficient and effective       time, its flexible architecture supports a variety of security
+representation that includes both packet-, flow- and session-        and privacy tasks, from anomaly detection and attack classifi-
+level features. Without such a representation, models are not        cation to device identification and website fingerprinting (see
+easily adaptable for deployment across various networks that         Table II).
+may have different traffic-capturing techniques and constraints,        The following summarizes our contributions:
+resulting in different data formats. ② Furthermore, another             1) T-Matrix: We develop a multi-granular representation
+critical gap is the uncertainty around the type of model                    for network traffic that is suitable for multiple data
+best suited to handle these challenges. A general model that                formats and their combinations (Section III). We carry
+can function effectively across different conditions is impor-              out comprehensive experiments to compare T-Matrix
+tant, as it ensures consistent performance despite variability              with single-level representations; the results show that
+in available features. Such a model must be capable of                      T-Matrix captures more detailed traffic patterns, leading
+integrating various learning paradigms, including supervised,               to improved performance in various traffic analysis
+semi-supervised, and unsupervised learning. ③ Beyond the                    tasks (Section V-D).
+need for a general representation and a unified model, there            2) T-Attent for Latent Embedding Learning: We develop a
+is also a challenge of dealing with limited data. In scenar-                unified attention-based architecture for network traffic
+ios where data is scarce, the ability to extract meaningful                 analysis that captures contextual information and sim-
+information and maintain robust performance becomes impor-                  plifies model selection (Section IV). T-Attent effectively
+tant. Table I presents a comparison with recent traffic analysis            handles supervised, semi-supervised, and unsupervised
+models.                                                                     learning by employing different “heads” (Section IV-B).
+   To address these limitations, we introduce UniNet, a                     This design greatly reduces the overhead of using sep-
+unified framework designed to integrate multi-granular rep-                 arate models for each task, making UniNet a powerful
+resentations and support a broad range of network traffic                   choice for diverse traffic analysis scenarios (Section V.
+analysis tasks. Figure 1 provides an overview of UniNet,                    Additionally, we adopt a lightweight variant of the
+highlighting its three main components: i) T-Matrix, A multi-               transformer encoder and a new segmentation strat-
+granular traffic representation that can integrate session, flow,           egy (Section IV-A), with reduced attention heads and
+2426                                               IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOLUME 12, 2026
+
+
+
+     embedding dimensions, which ensures computational               engineering. Traffic analysis systems typically operate by
+     efficiency without compromising performance.                    tapping traffic so that false positives (FPs), however low
+  3) Enhanced efficiency and performance: We evalu-                  their number, do not interrupt normal connections. A stream
+     ate UniNet on four common network security and                  of packets should be analyzed before decision-making. To
+     privacy tasks spanning three ML categories (unsu-               support efficient analysis under this constraint, UniNet adopts
+     pervised anomaly detection, supervised classification           a sliding window strategy. Rather than waiting for a full
+     of attacks and devices, and semi-supervised web-                traffic to complete, the system buffers packets within a fixed-
+     site fingerprinting), using multiple real-world datasets        size time window and extracts features from it. We define
+     (Section V). UniNet consistently outperforms existing           session as a finite aggregation of flows that are temporally
+     baselines in terms of detection rates and related metrics.      correlated and are contextualized by src/dst IP address. For
+     Furthermore, we highlight ability of UniNet to discover         example, a 15-minute traffic to and from one IP address
+     intrinsic patterns from limited data (Section V-C). The         forms a session. The separation of different sessions can be
+     self-attention mechanism in T-Attent shows significant          based on time (static) or based on inactivity (dynamic, e.g., ‘a
+     advantages in extracting information from informative           silence of 1-min breaks a session into two’). Each flow in a
+     sequences compared to baselines. We publish our code            session is a set of packets identified by the common 5-tuple of
+     base for supporting future research and reproducibility.1       src/dst IP address, src/dst ports, and protocol. Thus, a session
+                                                                     represents the behavior of, say, a user’s browsing activity
+                  II. U NI N ET F RAMEWORK                           over a short period of time; the flows in the session describe
+                                                                     the various connections, such as DNS query/response, HTTP
+   We present an overview of our proposal, UniNet. As
+                                                                     request/response to different servers for various resources to
+depicted in Fig. 1, UniNet operates in four key steps. i) The
+                                                                     load a webs

@@ -1,0 +1,641 @@
+1876 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+
+ An Unsupervised Learning Approach for Pavement
+ Distress Diagnosis via Siamese Networks
+ Ruiqi Ren , Peixin Shi , Pengjiao Jia, and Jinwoo Kim
+
+ Abstract— Accurate, automated diagnosis of pavement distress A commonly used pavement distress diagnosis system typis essential for effective roadway maintenance but presents ically includes a remote sensing module for digital image
+considerable challenges. Supervised learning methods are con- acquisition, a global positioning system (GPS), and a digital
+strained by limited labeled data, while existing unsupervised
+representation learning approaches are difficult to capture the image analysis system for recognition and segmentation. The
+fine-grained details needed for precise pixel-level segmentation early image analysis system heavily relies on hand-crafted
+in pavement images with similar backgrounds. To address features, including texture, gradient, and shape descriptors,
+these limitations, we propose a novel unsupervised approach to identify various distress types [5], [6], [7]. These traditional
+for pavement distress segmentation that employs a new pre- feature extraction methods have limited generalization capatext task within Siamese networks. Our method integrates an
+explicit prediction head and a high-dimensional cross-entropy bilities, struggling to accommodate the diverse and complex
+loss, enabling implicit class labeling and enhancing fine-grained nature of pavement images. Moreover, designing hand-crafted
+recognition of distress patterns. Additionally, vision transformers features is time-consuming, requiring meticulous engineering
+are employed to leverage self-attention mechanisms, facilitating efforts. There is a pressing need for advanced pavement disaccurate segmentation of foreground distress regions. Experimen- tress diagnosis techniques that can overcome these limitations
+tal results demonstrate that our approach outperforms existing
+unsupervised representation learning and anomaly detection and offer more robust, efficient solutions.
+methods. Notably, when used to pre-train backbone networks In recent years, deep learning has emerged as a promissuch as ResNet-50, our method yields higher accuracy and ing solution for pavement distress diagnosis [8], [9], [10],
+faster convergence on downstream supervised tasks compared [11], [12]. Compared to traditional methods, deep learning
+to pre-training on the labeled ImageNet dataset. The proposed is data-driven and can learn to automatically extract relevant
+method holds promise for advancing pavement maintenance
+decision-making and enhancing the performance of traditional features. It eliminates the requirement for laborious manual
+supervised deep learning models. feature engineering, making it more generalized and suitable
+ for a wide range of diagnosis tasks. Deep learning-based
+ Index Terms— Pavement distress, unsupervised deep learning,
+Siamese networks, vision transformers. methods represented by supervised learning train a network to
+ recognize pavement distress by feeding it images with manual
+ I. I NTRODUCTION labels. By sampling different distresses, a deep learning net-
+
+A CCURATE automatic pavement distress diagnosis is
+ crucial for efficient roadway maintenance while faces
+significant challenges [1]. Manual pavement distress diagnosis
+ work can be trained to identify cracks, potholes, rutting, and
+ other pavement distresses with high accuracy. However, one
+ of the major challenges of supervised learning is the availand maintenance often disrupt road traffic and cost significant ability of labeled data. Insufficient data may lead to network
+labors and time [2]. As a corollary, pavement management overfitting while manual labeling is very labor-intensive.
+must navigate a fine balance between maintenance costs, Deep representation learning offers a novel technique to
+potential serviceability losses, and structural health preserva- mitigate the reliance on manual annotations. Mainstream
+tion [3]. In recent decades, the emergence of fast, economical, approaches can be broadly categorized into generative learning
+and automated pavement distress detection technology has and contrastive learning. Generative learning leverages the
+provided an effective solution for pavement management. redundant characteristics of image information, allowing for
+Integrating a pavement distress diagnosis system onto an the generation of complete images from a subset of this
+inspection vehicle enables automatic diagnoses without dis- data, thereby facilitating the extraction of deep represenrupting traffic and saves cost [4]. tations inherent within the images [13], [14], [15], [16].
+ Contrastive learning focuses on maximizing the mutual infor-
+ Received 19 December 2023; revised 7 July 2024 and 30 October 2024;
+accepted 7 November 2024. Date of publication 27 November 2024; date of mation between different views of the same image, commonly
+current version 4 February 2025. This work was supported by the National employing Siamese networks [17], [18], [19]. Theoretically,
+Natural Science Foundation of China under Grant 52278405. The Associate the ability to learn deep representations from pavement images
+Editor for this article was Y. Hou. (Corresponding author: Peixin Shi.)
+ Ruiqi Ren, Peixin Shi, and Pengjiao Jia are with the School of holds the promise of extracting robust distress features with-
+Rail Transportation, Soochow University, Suzhou 215000, China (e-mail: out the necessity for manual annotations. However, practical
+20204046002@stu.suda.edu.cn; pxshi@suda.edu.cn). applications reveal several significant challenges. First, dis-
+ Jinwoo Kim is with the Department of Civil and Environmental Engineering,
+Hanyang University, Seoul 04763, South Korea. tress objects often exhibit unique characteristics, frequently
+ Digital Object Identifier 10.1109/TITS.2024.3500030 presenting elongated shapes. Consequently, when employing
+ 1558-0016 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+REN et al.: UNSUPERVISED LEARNING APPROACH FOR PAVEMENT DISTRESS DIAGNOSIS VIA SIAMESE NETWORKS 1877
+
+Fig. 1. Training schema of unsupervised siamese networks for pavement distress diagnosis (SiapaveNet).
+
+generative learning architectures with limited information, their variants for crack segmentation. For example, Yang et al.
+there is a substantial risk of overlooking critical foreground [23] proposed a U-Net variant with a pyramid and hierardistress targets, which undermines the learning of robust fea- chical boosting network for pavement crack segmentation.
+tures; Second, the existing pretext tasks designed for Siamese Xiang et al. [24] combined super-resolution image reconnetworks, which are based on the similarity or difference of struction with U-Net segmentation to enhance the accuracy
+images within batches, encounter difficulties when applied of low-pixel microcracks, while Zhang et al. [25] designed
+to pavement images that possess similar backgrounds and a non-symmetric U-Net architecture with a discriminator to
+small objects; Last, achieving unsupervised distress segmenta- effectively segment small cracks. Recently, transformer-based
+tion through deep representation learning remains a complex methods have emerged as the state-of-the-art for fine crack
+challenge that necessitates further exploration. Effectively segmentation, highlighting the potential of transformers in this
+addressing these limitations is crucial for unlocking the full field [26]. While current research efforts are mainly focused
+potential of unsupervised methods in pavement distress seg- on improving the accuracy of pavement distress segmentation
+mentation applications. through supervised learning, there has been very limited work
+ To address this issue, this study investigates the feasibility on completely unsupervised approaches. This research aims to
+of applying unsupervised learning to learn representations explore unsupervised pavement distress diagnosis as an alterdirectly from unlabeled pavement images. We propose a native, which has the potential to complement and enhance
+novel solution for pavement distress diagnosis, which uti- existing supervised learning solutions.
+lizes a predicting classification-based Siamese network with
+cross-entropy loss and high-dimensional output to provide
+ B. Anomaly Detection
+implicit class labels (SiapaveNet), as illustrated in Figure 1.
+It utilizes the self-attention mechanism of Vision Transformers Anomaly detection techniques, commonly utilized for iden-
+(ViTs) to achieve pixel-level segmentation. The proposed tifying human diseases and industrial defects, can also be
+framework can be employed to train commonly used backbone adapted to detect pavement distress, which serves as an
+networks such as ResNet-50 [20], and the performance is anomaly on healthy surfaces. While these methods often
+superior to ImageNet pre-trained backbone networks. It is employ unsupervised or semi-supervised approaches due to
+an innovative exploration of fully unsupervised pixel-level the unpredictable nature of anomalies [27], [28], [29], they still
+pavement distress diagnosis and may serve as a baseline for rely on weak labels, limiting their effectiveness. Solutions typfuture research in this field. ically involve transforming abnormal images into normal ones
+ for comparative analysis [30] and using various unsupervised
+ II. R ELATED W ORK techniques such as convolutional autoencoders [31], vector
+ quantized variational autoencoders (VQ-VAE), autoregressive
+ Currently, deep learning is probably the most prevalent and
+ transformers [32], and FastFlow [33]. Recent advancements,
+potent technique for pavement distress diagnosis. This section
+ such as the Learning Disentangled Priors (LDP) [34],
+provides an overview of existing deep learning-based methods
+ which combines model-driven low-rank representation with
+that may be used for pavement distress diagnosis to highlight
+ data-driven deep learning, have improved anomaly detection
+the significance and potential of the proposed method.
+ capabilities by effectively modeling both background and
+ anomalies through explicit and implicit priors. However, the
+A. Crack Segmentation non-standardized nature of pavement distress images and
+ Cracking is the most common form of pavement distress the influence of diverse field conditions present significant
+and crack segmentation has received intensive attention in challenges that necessitate the exploration of fully unsuperacademia. Most existing approaches employ CNNs such as vised feature extraction methods without reliance on weak
+U-Net [21] or Fully Convolutional Networks (FCNs) [22] and labels.
+1878 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+
+C. Unsupervised Representation Learning the momentum encoder. Then branch 2 network will predict
+ Unsupervised representation learning enables deep neural the output of branch 1 network by a predictor. The loss
+networks to be trained on large unlabeled visual datasets, function between the resulting vector z 1 = g( f (v1 )) and
+enhancing their ability to transfer knowledge to specific tasks. p2 = q(g( f (v2 ))) is cross-entropy:
+One approach involves generative learning methods, which L(z 1 , p2 ) = − p2 log z 1 (1)
+extract information from images by masking most regions and
+using the visible parts to reconstruct the hidden areas. For After each input of a pair of images, the network updates
+instance, Zhou et al. effectively applied Masked Autoencoders constantly. To ensure the efficacy of the proposed approach,
+(MAE) for medical imaging tasks [15], while Sun et al. the Siamese network is treated as a mutual binary classification
+introduced RingMo [35], which trains the remote sensing problem, i.e., to determine if the image input by the Siamese
+foundation model using masked image modeling. Hong et al. network is augmented by the same image. Therefore, the
+introduced SpectralGPT [16], a 3D generative pretrained output vector is softmax processed, modifying Equation (1)
+transformer specifically designed for spectral remote sensing as follows:
+images, optimizing the analysis of complex datasets. While
+ L(softmax(z 1 ), softmax( p2 )) (2)
+this technique has been adapted for fields like remote sensing
+and medical imaging, it faces challenges in pavement distress Since branch 1 no longer uses backpropagation to update
+images, where small targets may be obscured by similar its parameters, its gradient is no longer calculated. Therefore,
+backgrounds, leading to inadequate reconstruction. Another Equation (1) can be expressed as:
+common approach is the use of Siamese networks, which aim
+to place similar inputs close together in a shared embedding L(z 1 , stopgrad( p2 )) (3)
+space [36], [37], [38]. Dufumier et al. advanced this approach Furthermore, a centering operation for the parameters of
+by incorporating proxy metadata into their contrastive learning branch 1 is applied, which is a bias term c added to the
+framework [39], enhancing positive sampling and improv- network: g1 ( f (v)) ← g1 ( f (v)) + c. The center c is updated
+ing classification tasks in 3D brain MRI scans. Similarly, with an exponential moving average:
+Wang et al. proposed TransPath [19], a hybrid model that
+ B
+utilizes self-supervised learning on unlabeled histopathological 1 X
+images, achieving superior performance in downstream clas- c ← mc + (1 − m) N1 (xi ) (4)
+ B
+sification tasks. However, there is no clear agreement on the i=1
+
+best implementation practices, with some methods focusing where B is the batch size, and N1 is the Siamese network 1,
+on predicting outcomes and others on comparing similarities m is a rate parameter. The pseudo-code implementation of
+and differences between inputs. In data-limited areas such SiapaveNet is in Algorithm 1.
+as pavement distress diagnosis, it is crucial to thoroughly
+evaluate and choose the most effective unsupervised methods. B. Avoiding Collapse
+Integrating deep learning visual explanation methods such as
+Grad-CAM [40], Ablation-CAM [41], and Score-CAM [42] 1) Momentum Encoder: SiapaveNet incorporates the use of
+presents opportunities for enabling pixel-level distress diag- momentum encoders in branch 1 of the networks. The momennosis via unsupervised learning. However, challenges remain, tum encoder, introduced by [36], is a type of moving average
+including whether such methods can achieve fine-grained encoder that smoothens the data representations in contrastive
+segmentation for uniquely shaped distresses and whether com- learning algorithms by employing exponential moving average
+paratively small pavement datasets can sufficiently leverage over multiple mini-batches of the data representations during
+the potential of unsupervised learning. This study investigates the training phase, instead of updating each representation
+these challenges and explores potential solutions. after every mini-batch. This mechanism reduces variance and
+ prevents overfitting. The utilization of momentum encoders in
+ SiapaveNet ensures stability and contributes to the final output
+ III. P ROPOSED A PPROACH
+ result. SiapaveNet employs three networks, f , g, and q, which
+ This section describes how the proposed prediction-based all make use of the momentum encoder, as summarized by the
+Siamese network works and how does it achieve unsupervised following equation:
+pixel-level pavement distress diagnosis.
+ θt = αθt−1 + (1 − α)θt (5)
+A. Forward Propagation and Loss Functions where θ is the network parameter, t represents the iteration
+ The network architecture, as shown in Figure 1, first extracts step, and α is the smoothing parameter that controls the
+an image x from the dataset X , and obtains two different moving average of the momentum encoder.
+views v and v ′ through different data augmentation methods t 2) Stop-Gradient: The stop-gradient technique, commonly
+and t ′ , respectively. Then, v and v ′ are processed similarly. utilized in conjunction with the momentum encoder, helps
+They are first represented by the backbone network (e.g., in optimizing network by blocking gradients from flowing
+ResNet or ViT), and then projected by MLP layers. The through certain parts of the network during backpropagation.
+difference is that branch 1 of the Siamese network will not This helps prevent overfitting and stabilize the training process
+update the parameters through back propagation, but through by preventing updates to positive example representations and
+REN et al.: UNSUPERVISED LEARNING APPROACH FOR PAVEMENT DISTRESS DIAGNOSIS VIA SIAMESE NETWORKS 1879
+
+Algorithm 1 SiapaveNet Pseudo-Code, PyTorch-Like Dosovitskiy et al. [44]. The architecture is designed to handle
+ # f: backbone large-scale image data by transforming the input image into
+ # g: projection mlp a sequence of fixed-length vectors, which are then processed
+ # q: prediction mlp by a Transformer network. Self-attention block is a key com-
+ # tpp, tpz: temperature parameters ponent of the Transformer architecture, which enables ViT to
+ # C: center capture global information from the image input. Self-attention
+ is implemented by computing attention scores between all
+ # load a minibatch x with n samples vector tokens in the sequence, which can be represented
+ mathematically as:
+ for x in SiapaveN et:
+ QK T
+  
+ v1, v2 = aug(x), aug(x) # random augmentation Attention(Q, K , V ) = softmax √ V (6)
+ y1, y2 = f(v1), f(v2) # representations dk
+ z1, z2 = g(y1), g(y2) # projections where Q, K , and V are the query, key, and value matrices,
+ p2 = q(z2) # predictions respectively, and dk is the dimension of the key vectors. The
+ attention scores are then used to weigh the value vectors and
+ L(p2, z1).backward() # loss and back-propagate generate the output. This mechanism allows the network to
+ update(f, h) # SGD update attend to different regions of the image and effectively capture long-range dependencies. By combining the self-attention
+ def L(p, z): mechanism with the transformer architecture, ViT has achieved
+ z = z.detach() # stop-gradient state-of-the-art results on several benchmark datasets, demonstrating its effectiveness in large-scale image classification
+ p = softmax(p / tpp, dim=1) tasks. In the proposed method, the attention mechanism of
+ z = softmax((z - C) / tpz, dim=1) # centering ViT is aimed to utilize to segment pavement distress without
+ manual labeling. Specifically, the ViT is trained to attend to the
+ # cross entropy foreground of the input image, i.e., pavement distress, by calreturn - (p * log(z)).sum(dim=1).mean() culating the attention score of each patch of the input image.
+ Later experimental chapters will demonstrate the effectiveness
+ of this approach.
+smoothing data representations through exponential moving
+average, respectively. It is first introduced in by He et al. [36], D. Implement Details
+and the irreplaceable role of stop-gradient has been widely 1) Evaluation: The evaluation metrics utilized by Siarecognized, as demonstrated by Chen and He [38]. SiapaveNet paveNet include mean Dice (mDice), mean Intersection over
+also employs this optimization strategy for ensuring consis- Union (mIoU), mean Pixel Accuracy (mPA). These metrics
+tency across mini-batches and mitigating overfitting. are commonly used to evaluate the performance of image
+ 3) Centering: Inspired by SwAV [43], SiapaveNet employs segmentation models, providing a comprehensive assessment
+clustering centers to smooth the output. The clustering centers of the model accuracy and precision in classifying image
+serve as prototypes to represent clusters of similar data exam- pixels. The mDice is defined as the average Dice coefficient
+ples. This study calculates the average of the output of each over all classes, mIoU is the average Intersection over Union
+batch of branch 1 as the center. This center affects the output over all classes, and mPA is the average Pixel Accuracy over
+of branch 1 as a bias term. It can be regarded as self-adaption all classes, calculated as:
+normalization process. The specific operation of centering has PC
+been explained in Section III-A and Equation (5). 2 i=1 |GTi ∩ Pr edi |
+ m Dice = (7)
+ 4) Batch Normalization: Batch normalization is widely (|GTi | + |Pr edi |)/C
+acknowledged as a pivotal aspect to avoid collapse, as dis- PC
+ |GTi ∩ Pr edi |
+cussed by [37]. It is a normalization technique applied to m I oU = i=1 (8)
+ |GTi ∪ Pr edi |/C
+the activations of neural networks, which helps mitigate the PC
+internal covariate shift, i.e., the changes in activation distri- |GTi ∩ Pr edi |
+ m P A = i=1 (9)
+bution caused by weight updates during the training phase. |GTi |/C
+This technique stabilizes the training process and reduces the where C is the number of classes, GTi is the set of ground
+sensitivity of the network to the initial weight values. However, truth pixels for class i, and Pr edi is the set of predicted
+it can lead to a loss of discriminative information between pixels for class i. The Dice coefficient measures the overlap
+image pairs. This study shows its impact in Section V. between the predicted and ground truth segments, with a value
+ of 1 indicating perfect agreement.
+C. Unsupervised Distress Segmentation Mean Average Precision (mAP) is used as an evaluation
+ To achieve unsupervised segmentation of pavement dis- metric to assess the performance of downstream tasks. The
+tress, the proposed method utilizes a ViT backbone network mAP metric calculates the average performance of a detection
+(Figure 1), which is a transformer based architecture for system across multiple object classes by computing precision
+image classification tasks, proposed in the seminal work of and recall values for each class and averaging the results.
+1880 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+
+ TABLE I
+ C OMPARISON OF S IAPAVE N ET W ITH E XITING M ETHODS
+ ON C OPAVE DATASET
+
+ data during training, with an auto-encoder reconstructing
+Fig. 2. Examples of pavement distress images following Pre-processing.
+ images. When abnormal images are input, the auto-encoder
+ cannot reconstruct anomalous regions, enabling their detection.
+ 2) Dataset and Other Details: Two datasets are used to For this experiment, these baselines utilized only normal
+evaluate the pavement distress segmentation capability of the pavement images during training. Conversely, MAE and BEIT
+proposed method. One is the continuous pavement images are unsupervised representation learning approaches that learn
+dataset(copave dataset). It comprises of 1,000 large pavement effective image representations from unlabeled data. MAE
+images, acquired via a pavement inspection vehicle. As a pre- randomly masks out patches of the input image and is
+processing step, these images are cropped into 88,088 smaller trained to reconstruct the original unmasked image. BEIT
+images of size 256 × 256 pixels each. These images con- is a Transformer-based approach that learns representations
+tain various forms of pavement distress, including transverse by predicting both the masked image patches and the visual
+cracks, longitudinal cracks, oblique cracks, alligator cracks, tokens obtained by performing various image transformations.
+potholes, and other forms, as shown in Figure 2. Another is the 2) Results on Copave Dataset: Table I and Figure 3 demonpavementscapes dataset [45], we do the same pre-processing strate the superior performance of the proposed method for
+to ensure a comparable results. An A40 GPU is employed for pavement distress segmentation. It outperforms most unsuthe experiments, with a batch size of 64. AdamW is utilized pervised and semi-supervised methods, while requiring less
+as the optimization and the learning rate is set to 0.0005. The manual labeling effort. The method achieves an mDice of
+momentum parameter is set to 0.996. 0.523, mIoU of 0.366, and mPA of 0.807. Both mDice and
+ mIoU provide a balanced evaluation by considering the overlap
+ IV. E XPERIMENT AND R ESULTS between the predicted and ground truth masks, with mDice
+ being more sensitive to instances with small areas, while mIoU
+ In this section, two main outcomes of the proposed
+ can be more influenced by instances with larger areas. Meanapproach, known as SiapaveNet, are presented. These include
+ while, mPA computes the ratio of correctly classified pixels
+pavement distress segmentation and transfer learning on
+ averaged across instances, which may overestimate perfordownstream tasks. To this end, the SiapaveNet framework
+ mance for small targets due to the dominance of background
+is firstly employed to train a ViT network, utilizing its
+ pixels. In Table I, FastFlow obtains the highest mPA, but it
+self-attention mechanism for unsupervised segmentation. Subonly assumes that the image does not contain pavement dissequently, the SiapaveNet framework is utilized to train a
+ tress, and its effect is obviously inferior to that of SiapaveNet.
+ResNet-50 backbone, using it as a pre-trained network for
+ Figure 3 provides further visual evidence of the effectiveness
+completing downstream tasks. Notably, the training process
+ of the proposed method in achieving accurate pixel-level
+in the SiapaveNet approach is fully unsupervised.
+ pavement distress diagnosis. SiapaveNet can accurately locate
+ the distress pixels and differentiate pavement distress from the
+A. Pavement Distress Segmentation background. While other anomaly detection schemes such as
+ 1) Baselines: A comprehensive evaluation of the pro- f-AnoGAN and GANormaly can obtain the basic contour of
+posed SiapaveNet method was conducted in comparison pavement distress, they are weaker than SiapaveNet across
+to several state-of-the-art unsupervised and semi-supervised various metrics. MAE and BEIT are deep representation learntechniques with potential applications for pavement dis- ing methods using the same backbone network structure and
+tress segmentation. As few pavement distress diagnosis self-attention mechanism as the proposed method for segmenapproaches are based on unsupervised or semi-supervised tation. BEIT has shown better performance than other anomaly
+learning, a set of methods demonstrating promising results detection schemes but weaker than the proposed SiapaveNet.
+in fields like human disease detection, industrial defect iden- However, the masking patches and reconstructing of MAE
+tification, and other cutting-edge unsupervised representation may not be well-suited for small pavement distress instances,
+learning were selected. These included f-Anogan [27], Fast- resulting in bad performance and weaker than most baselines.
+Flow [33], GANormaly [29], MAE(Masked Autoencoders) These results suggest that the proposed SiapaveNet method is
+[13] and BEIT(Bidirectional Encoder representations from a highly effective approach for pavement distress segmentation
+Image Transformers) [14]. f-AnoGAN, GANormally, and Fast- and presents a viable alternative for semi-supervised anomaly
+Flow are anomaly detection methods that consider only normal detection methods.
+REN et al.: UNSUPERVISED LEARNING APPROACH FOR PAVEMENT DISTRESS DIAGNOSIS VIA SIAMESE NETWORKS 1881
+
+Fig. 3. Comparative analysis of SiapaveNet with existing approaches for pavement distress segmentation.
+
+Fig. 4. Comparison of Self-attention methods with visual explanation methods for pavement distress segmentation.
+
+ Compared with anomaly detection methods, SiapaveNet Figure 5 displays the specific attention of different selfis an unsupervised approach, which do not use image-level attention head. The brightness of the color serves as the
+labels. As a result, it cannot segment pavement distress via score of the attention head for that patch. The observaconverting abnormal images into normal ones. SiapaveNet tions reveal that not all self-attention heads can accurately
+uses a self-attention visualization scheme. It is compared focus on the foreground object (i.e., the pavement distress).
+with other visual explanation techniques in Figure 4, includ- Specifically, self-attention head 0 and 3 show more attention
+ing Grad-CAM and its variants. It is observed that the to the foreground object, while self-attention head 4 shows
+self-attention visualization scheme more accurately segments more attention to the background (i.e., the pavement). Selfpavement distress when ViT is used as the backbone net- attention head 1, 2 and 3 are ambiguous. This pattern is
+work of SiapaveNet. To investigate the performance of CNNs observed in all test images, leading to use self-attention
+without self-attention heads, experiments are conducted using head 3 as the primary tool for segmenting pavement dis-
+ResNet-50 and show regions of interest using Grad-CAM, tress. This finding specifically addresses the second challenge
+as illustrated in the last column of Figure 4. The results raised earlier, which is how to extract pavement distress
+indicate that CNNs can only focus on more obscure ranges, characteristics and distinguish foreground objects from the
+highlighting the advantages of self-attention and ViT. background.
+1882 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+
+Fig. 5. Visualization of Self-attention mechanism in pavement distress segmentation.
+
+ TABLE II tasks related to pavement distress diagnosis, namely pavement
+ C OMPARISON OF S IAPAVE N ET W ITH E XITING M ETHODS ON crack semantic segmentation, object detection, and instance
+ PAVEMENTSCAPES DATASET
+ segmentation. The pavement crack semantic segmentation task
+ entails segmenting cracks from pavement, while the object
+ detection task focuses on locating cracks on pavement. The
+ instance segmentation task aims to locate and roughly segment
+ the cracks on pavement.
+ These tasks are illustrated in Figure 6. To evaluate the performance of the proposed method, three different datasets are
+ used for each task: dataset I for semantic segmentation [23],
+ dataset II for object detection [46], and dataset III for instance
+ segmentation [47]. These datasets consist of 1896, 1538, and
+ 3) Results on Pavementscapes Dataset: We also evaluated 133 images, respectively with dimensions of 640 × 360,
+SiapaveNet against other methods using the pavementscapes 1612 × 1947, and 480 × 320. They are different from the
+dataset. The results are presented in Table II. Our proposed dataset used in pre-training.
+method outperforms other approaches across two evaluation 2) Results: The evaluations presented in Figures 7, 8, and 9
+metrics, demonstrating its advanced capabilities. Notably, demonstrate the effectiveness of the proposed approach in the
+traditional anomaly detection methods require manual clas- downstream tasks of semantic segmentation, object detection,
+sification of normal data, as the current dataset contains few and instance segmentation. The metrics used for semantic
+images of normal pavement. This process typically involves segmentation are mIoU, while mAP is used for both object
+manually labeling and training a deep learning classifier, which detection and instance segmentation. The results indicate that
+may not perfectly capture the normal class. While we strive the proposed method outperforms the training-from-scratch
+to exclude distress images from the training data, manual method in terms of both convergence speed and accuracy in all
+screening of large datasets is impractical, highlighting the three tasks. When compared to networks pre-trained on labels
+advantage of our proposed fully unsupervised learning scheme. and a larger dataset such as ImageNet, the proposed approach
+The results in Table II align with those in Table I, under- demonstrates a faster convergence speed and comparable
+scoring the consistency of the superior performance across accuracy in semantic segmentation and instance segmentation,
+different datasets. Existing anomaly detection methods con- while slightly lower performance in object detection. This
+tinue to perform poorly on this dataset, while BEIT achieves discrepancy in performance may be attributed to the larger
+the second-highest segmentation accuracy after our proposed image size and increased information content of the dataset
+SiapaveNet. used for object detection.
+
+B. Transfer Learning on Downstream Tasks V. A BLATION S TUDY
+ 1) Tasks and Datasets: This section presents the outcomes This section presents the results of comprehensive ablation
+of finetuning a pre-trained ResNet-50, acquired from the unsu- experiments that investigate the impact of different settings
+pervised SiapaveNet framework, on three distinct downstream on the performance of SiapaveNet. The aim is to analyze the
+REN et al.: UNSUPERVISED LEARNING APPROACH FOR PAVEMENT DISTRESS DIAGNOSIS VIA SIAMESE NETWORKS 1883
+
+ Fig. 8. Object detection evaluation.
+
+ Fig. 9. Instance segmentation evaluation.
+
+Fig. 6. Exploring three downstream tasks for pavement distress diagnosis: (a) Semantic segmentation, (b) Object detection, and (c) Instance
+segmentation. and BEiT. In this section, we compare various Siamese network methods that are conceptually similar to our proposed
+ approach, as illustrated in Figure 10. Specifically, we examine:
+ (1) MoCov3 [17]. It employs a prediction head and the
+ InfoNCE loss to compare the outputs of the Siamese network
+ branches;
+ (2) BYOL [37]. It utilizes a prediction head and the mean
+ squared error (MSE) loss to regress the output of one Siamese
+ network branch to the other;
+ (3) SimSiam [38]. It uses a prediction head and the negative
+ cosine similarity (NCS) loss, without a momentum encoder,
+ to measure the similarity between the output vectors of the
+ Siamese network branches;
+ (4) DINO [18]. It directly predicts the output of one Siamese
+ network branch from the other under cross entropy (CE) loss
+Fig. 7. Semantic segmentation evaluation. without employing a prediction head;
+ (5) SiapaveNet (Ours). It incorporates a prediction head to
+ predict a vector from one branch of the Siamese network based
+significance of each component of the system and how they on the other branch under CE loss.
+affect its overall performance. The results demonstrate that employing a prediction head
+ (predictor) combined with a cross-entropy loss function for the
+A. Comparison With Similar Methods classification task achieves the most effective performance as
+ Our primary objective is to investigate the potential of shown in Table III. The proposed SiapaveNet method outperunsupervised representation learning for pavement distress forms similar schemes across all evaluation metrics. Existing
+segmentation. Previously, we demonstrated that our proposed self-supervised learning methods face limitations in pavement
+scheme outperforms generative learning models such as MAE distress detection tasks due to the subtle differences between
+1884 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+
+ of probability distributions. While this enables complex relationship capture, its symmetric branch structure may limit
+ fine-grained feature separation. Our proposed SiapaveNet
+ addresses these challenges by employing an explicit prediction
+ head architecture with cross-entropy loss and high-dimensional
+ output. This approach provides implicit class labels and
+ detailed gradient information, enabling more detailed representation of subtle distress patterns. The cross-entropy loss
+ encourages the model to distinguish between different distress
+ classes, even when visually similar. The asymmetric Siamese
+ structure, combined with the prediction task, facilitates learning of invariant features while maintaining sensitivity to
+ fine-grained differences.
+
+ B. Different Settings on Predictor
+ 1) Number of MLP Layers: One crucial hyperparameter
+ of the multi-layer perceptron (MLP) used as the predictor is
+ the number of layers. This section evaluates the influence of
+ MLP depth on the performance of the model while keeping
+ the previously determined optimal settings fixed. The results,
+ presented in Table IV, indicate that the best performance is
+ achieved when employing a 3-layer MLP as the predictor.
+ 2) Output Dimension: Another crucial parameter is the
+ output dimension of the MLP prediction head, especially when
+ combined with the cross-entropy loss function. As demonstrated in Table V, a larger output dimension enables the model
+ to learn more detailed information, but at the cost of increased
+ computational overhead.
+ 3) Batch Normalization: While previous study [37] suggests that batch normalization is crucial for maintaining model
+ stability and enhancing performance, our findings indicate that
+ excluding batch normalization from the prediction head yields
+ better results for the proposed model, as shown in Table VI.
+
+ C. Loss Functions
+ As mentioned earlier, the results demonstrate that classification tasks employing a combination of a prediction head
+ (predictor) and a cross-entropy loss function yield the most
+ effective performance. However, the results also compare
+ the differences between various networks. In this section,
+ we utilize the exact same network architecture to evaluate
+Fig. 10. Training pipeline of different methods: (a) MoCo v3, (b) BYOL,
+(c) SimSiam, (d) DINO, and (e) SiapaveNet(ours). the impact of the loss function on the results. Specifically,
+ we compare three commonly used loss functions: InfoNCE
+ loss, negative cosine similarity (NCS) loss, and cross-entropy
+foreground objects and consistent backgrounds. MoCo v3 (CE) loss. Interestingly, when we fixed the optimal settings
+employs the InfoNCE loss, a contrastive learning function obtained in the previous section, only the CE loss and NCS
+that maximizes mutual information between different views loss enabled the model to function properly as shown in
+of the same image while minimizing it for different images. Table VII. InfoNCE failed to decrease the loss, resulting
+However, this approach struggles to capture fine-grained dis- in a collapse of the self-supervised mapping. This collapse
+tinctions when images within a batch are highly similar. BYOL manifested as each image patch exhibiting the same value,
+uses a regression-based loss, predicting the consistency of the indicating a failure in learning meaningful representations.
+output from other branch, which may lack the detail needed
+for distinguishing subtle distress. The NCS loss in SimSiam, D. Centering
+focusing on feature vector similarity, potentially provides Centering is an important technique that ensures stable
+insufficient supervision for subtle foreground differences. convergence of the network. For the predicting classification
+DINO utilizes high-dimensional outputs and implicit labels task of the proposed method, it is necessary to maintain suffivia softmax for cross-entropy loss, allowing direct comparison cient stability in the predicted network. In fact, the predicted
+REN et al.: UNSUPERVISED LEARNING APPROACH FOR PAVEMENT DISTRESS DIAGNOSIS VIA SIAMESE NETWORKS 1885
+
+ TABLE III
+ C OMPARISON W ITH OTHER S IMILAR M ETHODS
+
+ TABLE IV
+ C OMPARISON OF D IFFERENT N UMBER OF MLP L AYERS
+
+ TABLE V
+ C OMPARISON OF D IFFERENT O UTPUT D IMENSION
+
+ Fig. 11. Comparison of loss convergence between SGD and AdamW
+ optimizers.
+
+ decoupled weight decay (AdamW) optimizer. The results show
+ TABLE VI that the model does not converge when trained using SGD,
+ C OMPARISON ON BATCH N ORMALIZATION as evidenced by the non-decreasing trend in the loss curve
+ shown in Figure 11. This suggests that the choice of optimization algorithm has a significant impact on the performance of
+ the SiapaveNet. Compared to SGD, AdamW is found to be
+ more effective in optimizing the SiapaveNet, as indicated by
+ the decrease in loss over the course of training. This outcome
+ TABLE VII
+ is consistent with the findings of prior studies [48], [49],
+ C OMPARISON OF D IFFERENT L OSS F UNCTIONS
+ which have shown that Adam and its variants such as AdamW
+ and AMSGrad can outperform SGD in the training of visual
+ representations. This difference in performance is attributed
+ to the nature of the ViT network, which has been shown to
+ be less prone to overfitting. The faster convergence of the
+ network with AdamW may therefore be a result of its ability
+ TABLE VIII to reduce the loss more effectively in such a scenario. This
+ C OMPARISON ON C ENTERING hypothesis is further supported by the successful convergence
+ of the ResNet-50 when trained with SGD, as presented in
+ Section IV-B.2.
+
+ VI. D ISCUSSION
+ Unsupervised deep learning represents a promising direction
+network utilizes stop-gradient and centering techniques, and for the future advancement of pavement distress diagnosis.
+its parameters are updated through the momentum encoder. It has achieved significant success in natural language pro-
+This configuration significantly enhances performance of the cessing, general computer vision, and other fields due to
+model, as evidenced by the results presented in Table VIII. the scarcity of labeled data compared to the vast amount of
+ unlabeled data available. For the task of pavement distress
+ diagnosis, unsupervised learning is a critical tool to address
+E. Optimizer the challenge of expensive and limited labeling of pavement
+ This section aims to evaluate the performance of the distress types. This study makes an exploratory effort to assess
+proposed SiapaveNet when trained using stochastic gradi- the potential and limitations of unsupervised pavement distress
+ent descent (SGD) and adaptive moment estimation with diagnosis.
+1886 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+
+ An important aspect of this study is the effects of differ- datasets in other fields such as the COCO dataset [50], which
+ent techniques on the stable convergence and performance contains 330,000 images. Our work makes efforts to expand
+of unsupervised pavement distress diagnosis methods. The the dataset by using common data augmentation methods. And
+unique shape of the pavement distress object makes ensuring it is demonstrated that using artificially generated data with
+stable convergence a difficult problem. Technically, we aim weak labels is possible to expand datasets according to recent
+to identify specific measures within the Siamese network studies [18], [51], [52]. This may be an effective solution and
+framework to achieve better pavement distress segmentation our future research direction.
+performance. Comprehensive ablation experiments demon- Although pixel-level unsupervised deep learning is not yet
+strate that employing a predicting classification task using fully mature for direct application in real-world pavement
+a prediction head and cross-entropy loss function is more distress diagnosis projects due to its current limitations, it has
+suitable for this task compared to other existing methods. shown promising potential for improving downstream tasks.
+We posit that ensuring stable variation in the predicted branch Furthermore, even with limited evaluation, it can provide valuwhile maintaining flexibility in the predicting branch is a able insights for decision-making in pavement maintenance
+crucial element. This could explain why the predicting branch systems without relying on time-consuming manual labeling.
+requires a prediction head, needs to be updated by back- Moving forward, larger and more comprehensive datasets,
+propagation without batch normalization, while the predicted advanced data augmentation techniques, and more powerful
+branch should be kept as stable as possible, updated with a models are expected to significantly enhance the accuracy of
+momentum encoder, and incorporate stop-gradient and cen- pixel-level unsupervised deep learning in pavement distress
+tering techniques. Besides, we speculate that a larger output diagnosis.
+dimension of the prediction head incentivizes the network to
+learn more detailed information. We hypothesize that if the VII. C ONCLUSION
+classification task merely requires determining whether the This study proposes a novel self-supervised approach for
+predicting branch belongs to the same class as the predicted pixel-level pavement distress diagnosis, effectively addressbranch, the network may easily converge to suboptimal solu- ing the challenges of extracting fine-grained features in
+tions or learn shortcut strategies. In addition, it is observed complex and similar backgrounds. By employing a predicthat the AdamW optimizer performs better when training ViT tion task with an explicit prediction head and integrating
+networks, while the SGD optimizer performs better when ViTs with self-attention mechanisms, the method enables
+training CNN networks, similar to supervised learning. These precise distress segmentation without the need for labeled
+findings provide valuable insights for future unsupervised data. Extensive experimental results demonstrate the supepavement distress diagnosis methods. rior performance of this approach over existing unsupervised
+ It is a significant advantage that the unsupervised representation learning and anomaly detection baselines. Furlearning-based approach can identify rare types of distress that thermore, as a pre-training strategy, the proposed method
+are difficult to label beforehand, when faced with a small significantly enhances the accuracy and convergence speed of
+sample of tasks [27], [29], [30]. In addition, unsupervised backbone networks in downstream pavement distress diagnosis
+learning may have a greater advantage when dealing with tasks tasks compared to conventional supervised pre-training on
+with limited samples. The experimental results show that when ImageNet. This approach offers a promising pathway for
+trained with only 133 images over 5 epochs, the accuracy improving pavement maintenance decision-making through
+of the unsupervised pre-training model is more than double reliable unsupervised distress detection. It facilitates more
+that of the supervised pre-training model commonly used in effective identification and prioritization of repair needs,
+the field. Several studies [17], [36] have suggested that the thereby extending infrastructure longevity and reducing maindistribution of unsupervised and supervised learning differs tenance costs.
+significantly, with unsupervised learning having the ability to
+identify distinct clusters or patterns, which is advantageous R EFERENCES
+when dealing with the unusual form of pavement distress. This [1] T. F. Fwa, W. T. Chan, and K. Z. Hoque, “Multiobjective optimization for
+may also explain the results of the semantic segmentation task, pavement maintenance programming,” J. Transp. Eng., vol. 126, no. 5,
+as shown in Figure 7. When faced with the object detection pp. 367–374, Sep. 2000.
+ [2] C. Torres-Machi, E. Pellicer, V. Yepes, and A. Chamorro, “Towards a
+task in Figure 8, our results are not as good as those obtained sustainable optimization of pavement maintenance programs under budusing the supervised pre-training model based on ImageNet. getary restrictions,” J. Cleaner Prod., vol. 148, pp. 90–102, Apr. 2017.
+The large pixel size of the dataset for this task (nearly 50 times [3] W. Chen and M. Zheng, “Multi-objective optimization for pavement
+ maintenance and rehabilitation decision-making: A critical review
+that of the pre-training image), the substantial difference and future directions,” Autom. Construct., vol. 130, Oct. 2021,
+between the object detection and the object segmentation task, Art. no. 103840.
+and the presence of a specific target, pavement irrigation [4] K. C. Wang and W. Gong, “Real-time automated survey system of
+ pavement cracking in parallel environment,” J. Infrastruct. Syst., vol. 11,
+sewing, in the target dataset may be contributing factors. no. 3, pp. 154–164, Sep. 2005.
+ The dataset used in this study comprises pavement images [5] L. Ying and E. Salari, “Beamlet transform-based technique for pavement
+captured by continuous sections, totaling 88,000 small images, crack detection and classification,” Comput.-Aided Civil Infrastruct.
+which represents a significant improvement over previous Eng., vol. 25, no. 8, pp. 572–580, Nov. 2010.
+ [6] Q. Zou, Y. Cao, Q. Li, Q. Mao, and S. Wang, “CrackTree: Automatic
+methods in terms of the number of images that can be pro- crack detection from pavement images,” Pattern Recognit. Lett., vol. 33,
+cessed. However, there is still a considerable gap compared to no. 3, pp. 227–238, Feb. 2012.
+REN et al.: UNSUPERVISED LEARNING APPROACH FOR PAVEMENT DISTRESS DIAGNOSIS VIA SIAMESE NETWORKS 1887
+
+ [7] A. Cubero-Fernandez, F. J. Rodriguez-Lozano, R. Villatoro, J. Olivares, [29] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “GANomaly:
+ and J. M. Palomares, “Efficient pavement crack detection and classifi- Semi-supervised anomaly detection via adversarial training,” in Proc.
+ cation,” EURASIP J. Image Video Process., vol. 2017, no. 1, pp. 1–11, 14th Asian Conf. Comput. Vis., Dec. 2019, pp. 622–637.
+ Dec. 2017. [30] M. M. R. Siddiquee et al., “Learning fixed points in generative adver-
+ [8] Y. Hou et al., “MobileCrack: Object classification in asphalt pavements sarial networks: From image-to-image translation to disease detection
+ using an adaptive lightweight deep learning,” J. Transp. Eng., Part B, and localization,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+ Pavements, vol. 147, no. 1, Mar. 2021, Art. no. 04020092. Oct. 2019, pp. 191–200.
+ [9] Z. Qu, C. Cao, L. Liu, and D.-Y. Zhou, “A deeply supervised convo- [31] Y. Shi, J. Yang, and Z. Qi, “Unsupervised anomaly segmentation
+ lutional neural network for pavement crack detection with multiscale via deep feature reconstruction,” Neurocomputing, vol. 424, pp. 9–22,
+ feature fusion,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 9, Feb. 2021.
+ pp. 4890–4899, Sep. 2022. [32] W. Hugo Lopez Pinaya et al., “Unsupervised brain anomaly detection
+[10] Z.-X. Lan and X.-M. Dong, “MiniCrack: A simple but efficient convo- and segmentation with transformers,” 2021, arXiv:2102.11650.
+ lutional neural network for pixel-level narrow crack detection,” Comput. [33] J. Yu et al., “FastFlow: Unsupervised anomaly detection and localization
+ Ind., vol. 141, Oct. 2022, Art. no. 103698. via 2D normalizing flows,” 2021, arXiv:2111.07677.
+[11] H. Yao, Y. Liu, X. Li, Z. You, Y. Feng, and W. Lu, “A detection [34] C. Li, B. Zhang, D. Hong, X. Jia, A. Plaza, and J. Chanussot, “Learning
+ method for pavement cracks combining object detection and atten- disentangled priors for hyperspectral anomaly detection: A coupling
+ tion mechanism,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 11, model-driven and data-driven paradigm,” IEEE Trans. Neural Netw.
+ pp. 22179–22189, May 2022. Learn. Syst., vol. 3, no. 1, pp. 1–14, Apr. 2024.
+[12] H. Yao, Y. Liu, H. Lv, J. Huyan, Z. You, and Y. Hou, “Encoder– [35] X. Sun et al., “RingMo: A remote sensing foundation model with
+ decoder with pyramid region attention for pixel-level pavement crack masked image modeling,” IEEE Trans. Geosci. Remote Sens., vol. 61,
+ recognition,” Computer-Aided Civil Infrastructure Eng., vol. 39, no. 10, 2022, Art. no. 5612822.
+ pp. 1490–1506, May 2024. [36] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum
+[13] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked contrast for unsupervised visual representation learning,” in Proc.
+ autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020,
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 16000–16009. pp. 9729–9738.
+[14] H. Bao, L. Dong, S. Piao, and F. Wei, “BEiT: BERT pre-training of [37] J.-B. Grill et al., “Bootstrap your own latent-a new approach to selfimage transformers,” 2021, arXiv:2106.08254. supervised learning,” in Proc. 34th Int. Conf. Neural Inf. Process. Syst.,
+[15] L. Zhou, H. Liu, J. Bae, J. He, D. Samaras, and P. Prasanna, “Self 2020, pp. 21271–21284.
+ pre-training with masked autoencoders for medical image classification [38] X. Chen and K. He, “Exploring simple Siamese representation learning,”
+ and segmentation,” in Proc. IEEE 20th Int. Symp. Biomed. Imag. (ISBI), in Proc. IEEE Comput. Soc. Conf. Comput. Vision Pattern Recognit.,
+ Apr. 2023, pp. 1–6. Jun. 2021, pp. 15750–15758.
+[16] D. Hong et al., “SpectralGPT: Spectral remote sensing foundation [39] B. Dufumier et al., “Contrastive learning with continuous proxy metamodel,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 46, no. 8, data for 3D MRI classification,” in Proc. Int. Conf. Med. Image Comput.
+ pp. 5227–5244, Aug. 2024. Comput.-Assist. Intervent., 2021, pp. 58–68.
+[17] X. Chen, S. Xie, and K. He, “An empirical study of training self- [40] R. R. Selvaraju, M. Cogswell, A. Das, R. Vedantam, D. Parikh, and
+ supervised vision transformers,” in Proc. IEEE/CVF Int. Conf. Comput. D. Batra, “Grad-CAM: Visual explanations from deep networks via
+ Vis. (ICCV), Oct. 2021, pp. 9640–9649. gradient-based localization,” in Proc. IEEE Int. Conf. Comput. Vis.
+[18] M. Caron et al., “Emerging properties in self-supervised vision trans- (ICCV), Oct. 2017, pp. 618–626.
+ formers,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021, [41] S. Desai and H. G. Ramaswamy, “Ablation-CAM: Visual explanapp. 9650–9660. tions for deep convolutional network via gradient-free localization,”
+[19] X. Wang et al., “TransPath: Transformer-based self-supervised learning in Proc. IEEE Winter Conf. Appl. Comput. Vis. (WACV), Mar. 2020,
+ for histopathological image classification,” in Proc. Int. Conf. Med. pp. 972–980.
+ Image Comput. Comput.-Assist. Intervent., 2021, pp. 186–195. [42] H. Wang et al., “Score-CAM: Score-weighted visual explana-
+[20] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for tions for convolutional neural networks,” in Proc. IEEE/CVF Conf.
+ image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. Comput. Vis. Pattern Recognit. Workshops (CVPRW), Jun. 2020,
+ (CVPR), Jun. 2016, pp. 770–778. pp. 24–25.
+[21] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional net- [43] M. Caron, I. Misra, J. Mairal, P. Goyal, P. Bojanowski, and A. Joulin,
+ works for biomedical image segmentation,” in Proc. 18th Int. Conf. “Unsupervised learning of visual features by contrasting cluster assign-
+ Med. Image Comput. Comput.-Assist. Intervent., vol. 9351. Cham, ments,” in Proc. NIPS, Dec. 2020, pp. 9912–9924.
+ Switzerland: Springer, 2015, pp. 234–241. [44] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers
+[22] J. Long, E. Shelhamer, and T. Darrell, “Fully convolutional networks for image recognition at scale,” 2020, arXiv:2010.11929.
+ for semantic segmentation,” in Proc. IEEE Conf. Comput. Vis. Pattern [45] Z. Tong, T. Ma, J. Huyan, and W. Zhang, “Pavementscapes: A large-scale
+ Recognit. (CVPR), Jun. 2015, pp. 3431–3440. hierarchical image dataset for asphalt pavement damage segmentation,”
+[23] F. Yang, L. Zhang, S. Yu, D. Prokhorov, X. Mei, and H. Ling, “Feature 2022, arXiv:2208.00775.
+ pyramid and hierarchical boosting network for pavement crack detec- [46] R. Ren, F. Liu, P. Shi, H. Wang, and Y. Huang, “Preprocessing of crack
+ tion,” IEEE Trans. Intell. Transp. Syst., vol. 21, no. 4, pp. 1525–1535, recognition: Automatic crack-location method based on deep learning,”
+ Apr. 2020. J. Mater. Civil Eng., vol. 35, no. 3, Mar. 2023, Art. no. 04022452.
+[24] C. Xiang, W. Wang, L. Deng, P. Shi, and X. Kong, “Crack detection [47] X. Xu et al., “Crack detection and comparison study based on
+ algorithm for concrete structures based on super-resolution recon- faster R-CNN and mask R-CNN,” Sensors, vol. 22, no. 3, p. 1215,
+ struction and segmentation network,” Autom. Construction, vol. 140, Feb. 2022.
+ Aug. 2022, Art. no. 104346. [48] A. Kolesnikov, X. Zhai, and L. Beyer, “Revisiting self-supervised visual
+[25] K. Zhang, Y. Zhang, and H.-D. Cheng, “CrackGAN: Pavement crack representation learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ detection using partially accurate ground truths based on generative Recognit. (CVPR), Jun. 2019, pp. 1920–1929.
+ adversarial learning,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 2, [49] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+ pp. 1306–1319, Feb. 2021. for contrastive learning of visual representations,” in Proc. 37th Int.
+[26] H. Liu, X. Miao, C. Mertz, C. Xu, and H. Kong, “CrackFormer: Trans- Conf. Mach. Learn., vol. 119, Jul. 2020, pp. 1597–1607.
+ former network for fine-grained crack detection,” in Proc. IEEE/CVF [50] T. Lin et al., “Microsoft COCO: Common objects in context,” in Proc.
+ Int. Conf. Comput. Vis. (ICCV), Oct. 2021, pp. 3783–3792. Eur. Conf. Comput. Vis., 2014, pp. 740–755.
+[27] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and U. Schmidt- [51] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Self-
+ Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection with supervised learning for anomaly detection and localization,” in Proc.
+ generative adversarial networks,” Med. Image Anal., vol. 54, pp. 30–44, IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+ May 2019. pp. 9664–9674.
+[28] J. Huang, C. Li, Y. Lin, and S. Lian, “Unsupervised industrial [52] J. Kim, D. Kim, S. Lee, and S. Chi, “Hybrid DNN training using
+ anomaly detection via pattern generative and contrastive networks,” both synthetic and real construction images to overcome training data
+ 2022, arXiv:2207.09792. shortage,” Autom. Construct., vol. 149, May 2023, Art. no. 104771.
+1888 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+
+ Ruiqi Ren received the B.E. degree from Central Pengjiao Jia received the Ph.D. degree in geotechni-
+ South University, Changsha, China. He is currently cal engineering from Northeastern University. He is
+ pursuing the Ph.D. degree with the School of Rail currently an Associate Professor of geotechnical
+ Transportation, Soochow University, Suzhou, China. engineering with the School of Rail Transportation,
+ His research interests include the application of Soochow University (PRC). His research has been
+ deep learning and computer vision techniques for recognized by 56 technical articles and more than ten
+ infrastructure health monitoring, with a particular patents. His research interests include pipelines and
+ interest in developing efficient, automated methods trenchless technology, pipe jacking, and tunneling.
+ for pavement distress diagnosis, and structural health
+ assessment.
+
+ Jinwoo Kim received the Ph.D. degree in civil
+ and environmental engineering from Seoul National
+ Peixin Shi received the Ph.D. degree in civil and
+ University, South Korea. He is currently with
+ environmental engineering from Cornell University.
+ the Department of Civil and Environmental Engi-
+ He is currently a Full Professor with the School
+ neering, Hanyang University, South Korea, as an
+ of Rail Transportation, Soochow University. His
+ Assistant Professor. His long-term goal is to
+ research interests include tunneling and underground
+ realize human-centered digitalization and robotic
+ space technology, smart infrastructure systems for
+ automation in the construction industry. To this
+ underground environments, and lifeline earthquake
+ end, he researches how to leverage and integrate
+ engineering.
+ emerging artificial intelligence and automation technologies with long-established human theories and
+ knowledge.

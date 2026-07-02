@@ -1,0 +1,642 @@
+Computers & Security 132 (2023) 103371
+
+ Contents lists available at ScienceDirect
+
+ Computers & Security
+ journal homepage: www.elsevier.com/locate/cose
+
+A framework for threat intelligence extraction and fusionR,RR
+Yongyan Guo, Zhengyu Liu, Cheng Huang∗, Nannan Wang, Hai Min, Wenbo Guo, Jiayong Liu
+School of Cyber Science and Engineering, Sichuan University, Chengdu 610065, China
+
+a r t i c l e i n f o a b s t r a c t
+
+Article history: Cyber-attacks, with various emerging attack techniques, are becoming increasingly sophisticated and dif-
+Received 24 January 2022 ﬁcult to deal with, posing great threats to companies and every individual. Therefore, analyzing attack
+Revised 19 June 2023
+ incidents and tracing the attack groups behind them becomes extremely important. Threat intelligence
+Accepted 26 June 2023
+ provides a new technical solution for attack traceability by constructing Cybersecurity Knowledge Graph
+Available online 28 June 2023
+ (CKG). In this paper, we propose a framework for threat intelligence extraction and fusion, which is
+Keywords: able to extract, correlate and unify cybersecurity entity-relation triples from structured and unstructured
+Threat intelligence data. However, the existing entity and relation extraction for cybersecurity concepts uses the traditional
+Knowledge graph pipeline model that suffers from error propagation and ignores the connection between the two subtasks.
+Relation extraction To solve the above problem, we propose a joint entity and relation extraction model for cybersecurity
+Joint model concepts. We model the joint extraction problem as a multiple sequence labeling problem, generating
+Knowledge fusion
+ separate label sequences for different relations, which contain information about the involved entities
+ and the subject and object of that relation. Experimental results on Open Source Intelligence (OSINT)
+ data show that the F1 value of the joint model is 81.37%, which is better than the previous pipeline
+ model. For the knowledge fusion, we propose an improved Levenshtein distance to correlate the same
+ entities extracted from different data sources to construct a preliminary CKG, which is demonstrated in
+ the Experiments section.
+ © 2023 Elsevier Ltd. All rights reserved.
+
+1. Introduction tracking, and can even effectively deal with sophisticated cyberattacks (e.g., zero-day attacks, advanced persistent threat).
+ Nowadays, the damage and impact caused by malicious behav- The key step in constructing CKG is cyber threat intelligence
+iors in cyberspace such as hacker attacks, frauds, and rumors have extraction, which involves subtasks such as entity recognition, rebecome more serious. Therefore, how to effectively and accurately lation extraction, and event extraction. Currently, many research
+detect cyber attacks as early as possible, analyze attack incidents, groups have conducted research on the automated construction
+and trace the source of attackers and groups has become a severe and analysis of CKG (Gao et al., 2021; Husari et al., 2017; Jia et al.,
+problem for enterprises and countries. 2018; Milajerdi et al., 2019; Piplai et al., 2020a; 2020b; Zhao et al.,
+ The concept of Cyber Threat Intelligence (CTI) was developed 2020b). In terms of CTI information extraction, previous studies are
+supplying new theoretic support for cyber-attack source tracing, dedicated to extracting cybersecurity concepts (Liao et al., 2016;
+making it possible to trace the source of a wide range of attacks. Mittal et al., 2016; Zhu and Dumitras, 2018) and entities (Ghazi
+Therefore, many researchers extract and analyze different threat et al., 2018; Husari et al., 2018; Zhao et al., 2020a) from unstrucintelligence to generate the Cybersecurity Knowledge Graph (CKG). tured data. This extraction leads to a rich repository of cyberse-
+The CKG has the characteristic of strong timeliness and high ac- curity entity-relation triples that precisely delineate the relations
+curacy, which can timely and easily detect, respond and defend within the cybersecurity realm. For instance, consider the triple
+against speciﬁc targets, providing a new measure for attack source (“sqlite3 in versionc 3.26.0”, “hasVulnerability”, “CVE-2019-5018”).
+ Here, “sqlite3 in version 3.26.0” is the subject entity of type “soft-
+ R
+ This paper was presented in part at the Proceeding of the 23rd Interna- ware”, “hasVulnerability” is the relation, and “CVE-2019-5018” is
+tional Conference on Information and Communications Security (ICICS 2021) (Guo the object entity of type “vulnerability”. This triple clearly indicates
+et al.(2021)). that the software “sqlite3” in version 3.26.0 has a speciﬁc vulnera-
+RR
+ This work was supported in part by National Key Research and Development
+ bility referenced as “CVE-2019-5018”.
+Program of China (No. 2021YFB310 050 0), Sichuan Science and Technology Program
+(No. 2023YFG0162), and National Natural Science Foundation of China (61902265). The construction of CKG is inseparable from a large number of
+ ∗
+ Corresponding author. cybersecurity entity-relation triples from different sources. Threat
+ E-mail address: codesec@scu.edu.cn (C. Huang). intelligence comes from structured and unstructured data such as
+
+https://doi.org/10.1016/j.cose.2023.103371
+0167-4048/© 2023 Elsevier Ltd. All rights reserved.
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+audit logs, network traﬃc, security alerts, vulnerability databases, ple sources, links real-world entities or concepts, and provides
+security bulletins, hacker forums, and social media. These data search services through semantic retrieval. In the ﬁeld of cybersehave the characteristics of multisource, heterogeneous, polysemy, curity, correlating and fusing threat intelligence data from different
+and highly dependent on domain knowledge. Therefore it is diﬃ- sources to generate the CKG can provide new technical means for
+cult to effectively integrate data from different sources. More im- situational awareness and attack traceability.
+portantly, extracting cybersecurity entity-relation triples from un- In the area of automated construction and analysis of CKG, restructured data is a great challenge, and is the key step to con- searchers have also proposed several ideas and approaches in restructing CKG. Existing research on cybersecurity entity and rela- cent years (Gao et al., 2021; Husari et al., 2017; Jia et al., 2018; Mition extraction (Jones et al., 2015; Pingle et al., 2019) uses the tra- lajerdi et al., 2019; Piplai et al., 2020a; 2020b; Zhao et al., 2020b).
+ditional pipeline model, named entity recognition ﬁrst and then re- Jia et al. (2018) introduced a cybersecurity knowledge base and delation extraction, which leads to error propagation and losses sight duction rules based on a quintuple model. Gao et al. (2021) proof the relevance between entity recognition and relation extraction. posed ThreatRaptor, a system that facilitates threat hunting in
+ To solve the above problem, we propose a framework for threat computer systems using OSINT. The system uses an unsupervised,
+intelligence extraction and fusion which can extract and correlate lightweight, and accurate NLP pipeline to extract structured threat
+cybersecurity entity-relation triples from structured and unstruc- behaviors from unstructured OSINT text. Piplai et al. (2020b) detured data. For unstructured data, we propose a joint entity and re- scribed a system that extracts information from After Action Relation extraction model for cybersecurity concepts, which extracts ports (AARs) and represents the extracted information in a CKG.
+both cybersecurity entities and relations and generates cybersecu- Zhao et al. (2020b) demonstrated a threat intelligence framework
+rity triples. Speciﬁcally, we use a tagging scheme to convert the (HINTI). HINTI ﬁrst recognizes IOCs and models the interdependent
+joint extraction problem into a multiple sequence labeling prob- relations between IOCs using heterogeneous information networks
+lem by generating separate label sequences for different relations (HINs), and then proposes a threat intelligence computing framecontaining information about the related entities and the subject work based on graph convolutional networks to explore complex
+and object of that relation. The joint extraction model applies the security knowledge. Although these approaches have made initial
+pre-trained model, BERT, to generate word vectors. After extract- attempts and achieved good results in CKG construction, further
+ing semantic features by BiGRU, the model assigns higher weights research is needed in the key steps of knowledge graph constructo relation-related words in the sentences by an attention mech- tion.
+anism. Finally, BiGRU combined with CRF is used to decode and
+construct cybersecurity triples. Then, we fuse the entities extracted 2.2. Threat intelligence extraction
+from different data sources by an improved Levenstein distance to
+form a preliminary CKG. The construction of a knowledge graph can be divided into
+ In summary, the main contribution of this paper are as follows: three steps, including information extraction, knowledge fusion,
+ and knowledge reasoning. Among them, information extraction
+ • We propose a framework for threat intelligence extraction and
+ plays a decisive role in the quality of the generated knowledge
+ fusion that can extract and fuse cybersecurity entity-relation
+ graph. Information extraction for threat intelligence is divided into
+ triples from large-scale structured and unstructured data. These
+ several subtasks, including entity recognition (Ghazi et al., 2018;
+ triples can be used to construct the CKG.
+ Husari et al., 2018; Liao et al., 2016; Mittal et al., 2016; Zhao et al.,
+ • We present a joint entity and relation extraction model for cy-
+ 2020a; Zhu and Dumitras, 2018), relation extraction (Jones et al.,
+ bersecurity concepts. The model employs deep learning tech-
+ 2015; Pingle et al., 2019) and event extraction (Satyapanich et al.,
+ niques to extract entities and relations in sentences simulta-
+ 2020).
+ neously, avoiding the error propagation of traditional pipeline
+ In terms of cybersecurity entity and concept recognition,
+ models. The experimental results show that the joint model
+ Mittal et al. (2016) proposed a framework for extracting threat inoutperforms the traditional pipeline model with an F1 value of
+ telligence from Twitter, CyberTwitter, which automates the extrac-
+ 81.37%.
+ tion of security vulnerability concepts. Liao et al. (2016) introduced
+ • We design a lightweight cybersecurity entity fusion method
+ iACE for automatically extracting IOCs and their context in the
+ that is optimized for the features of the cybersecurity corpus
+ sentences of technical articles. Zhu and Dumitras (2018) designed
+ by fusing entities from different sources based on an improved
+ Chainsmith, an IOC extraction system that collects IOCs from secu-
+ Levenshtein distance.
+ rity articles and classiﬁes them according to the stages of the Kill
+ The rest of the paper is organized as follows: Section 2 dis- Chain. Ghazi et al. (2018) used natural language processing techcusses related work, and Section 3 presents our framework for niques to extract threat sources from unstructured web threat inthreat intelligence extraction and fusion. Section 4 provides the ex- formation sources and provided comprehensive threat reports in
+periments and analysis related to this work. Section 5 summarizes the STIX (2017) standard, which is used for the accurate and eﬃ-
+the conclusion and proposes future works. cient exchange of cyber threat intelligence.
+ Due to the lack of a well-labeled corpus for training, rela-
+2. Related work tively few studies have been conducted on cybersecurity relation
+ extraction and event extraction compared to entity recognition.
+ In this section, we ﬁrst review the methods for automated con- Pingle et al. (2019) proposed RelExt, a deep learning-based cystruction and analysis of CKG. Secondly, since the pivotal step of bersecurity relation extraction method for constructing CKGs. The
+CKG construction is threat intelligence extraction, we review the model uses a pipeline approach, ﬁrst identifying entities in the text
+work related to CTI extraction including entity recognition, rela- by an entity recognizer then classifying the relations by a deep
+tion extraction, and event extraction subtasks. Finally, we present learning model. Jones et al. (2015) implemented a semi-supervised
+the related research on relation extraction and knowledge fusion. cybersecurity relation extraction method based on a bootstrapping
+ algorithm to extract relations. Satyapanich et al. (2020) proposed
+2.1. Cybersecurity knowledge graph CASIE, a security event extraction system that uses deep neural
+ networks and can incorporate rich linguistic features and word
+ The Knowledge Graph (KG) was originally proposed by Google. embeddings for extracting security events related to cyber-attacks
+It is a knowledge base that integrates information from multi- and vulnerabilities.
+
+ 2
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+2.3. Relation extraction gies such as CVE, CCE, CVSS, CAPEC, CYBOX, KillChain, and
+ STUCCO.
+ As a subtask of information extraction, relation extraction has Existing entity alignment studies fall into two main cata long research history. The main approaches to relation extrac- egories, including similarity-based and embedding-based aption can be broadly divided into three categories, including early proaches. Similarity-based approaches use information such as
+rule-based approaches (Iria, 2005; McDonald et al., 2005); tradi- entity names, attributes, and relations to compute the similartional machine learning-based approaches (Culotta and Sorensen, ity of entity pairs. Lacoste-Julien et al. (2013) proposed a sim-
+20 04; Jiang and Zhai, 20 07); and deep learning-based approaches ple greedy matching algorithm that uses the structural informa-
+(Bekoulis et al., 2018; Miwa and Bansal, 2016; Wei et al., 2020; tion of the knowledge graph and the similarity metric between
+Zeng et al., 2014; Zheng et al., 2017). In recent years, the latest re- entity attributes to align entities on a large-scale knowledge base.
+search results in the ﬁeld of relation extraction have focused on Azevedo et al. (2019) proposed a method to connect different IoCs
+deep learning models (Dai et al., 2019; Fu et al., 2019; Sun et al., based on two similarity measures (the n-level correlation) in or-
+2018; Yuan et al., 2020). The advantage of deep learning meth- der to generate threat intelligence of quality in the form of enods is that they do not require manual extraction of features nor a riched IoCs. The embedding-based approach maps the triples in
+large amount of domain knowledge. the knowledge graph to the same vector space and aligns en-
+ Currently, there are two main approaches to relation extraction tities that are similar to each other by computing the distance
+based on deep learning: the pipeline approach and the joint ap- between entity vectors. Chen et al. (2016) improved the TransE
+proach. The pipeline approach performs relation classiﬁcation af- (Bordes et al., 2013) model by proposing MTransE, which encodes
+ter extracting all the entities. Zeng et al. (2014) ﬁrst applied CNN entities and relations for each language in a separate embedding
+to relation extraction to automatically extract lexical and sentence- space to achieve cross-language entity alignment. Since knowledge
+level features. Wei et al. (2020) proposed a novel cascaded binary graphs are in graph structure, some studies also use graph neuannotation framework (CASREL) that models relations as functions ral networks to embed the information of knowledge graphs, for
+that map subjects to objects in a sentence, which naturally handles example, Liu et al. (2020) improved the GNN-based entity alignthe overlapping triple problems. Although these methods achieve ment method by using an attributed value encoder and partition
+promising results, the pipeline architectures suffer from the prob- the KG into subgraphs to model various types of attribute triples.
+lem of error propagation. In addition, neglecting the relationship Nie et al. (2021) proposed jointly utilizing the global KG structure
+between the two tasks of entity recognition and relation extrac- and entity-speciﬁc relational triples to achieve entity alignment.
+tion for training can also affect the effectiveness of relation ex- In the construction of CKG, a lot of research has been contraction. Therefore, to construct the bridge between the two sub- ducted on the extraction of cybersecurity entities and concepts,
+tasks, building a joint model that extracts entities together with while research on cybersecurity relation extraction is still in its inrelations simultaneously has attracted much attention. Miwa and fancy. Existing approaches use traditional pipeline methods, which
+Bansal (2016) proposed a joint relation extraction model based on leads to error propagation and loses sight of the relevance beshared parameters, which captures both word sequences and de- tween entity recognition and relation extraction. Different from
+pendency tree substructure information for end-to-end relation ex- these above works, this paper proposes a joint entity and relation
+traction via LSTM. Bekoulis et al. (2018) propose a joint model extraction model for cybersecurity concepts, which extracts entithat uses a CRF layer to model the entity recognition task and ties and relations simultaneously, effectively avoiding the shortthe relation extraction task as a multi-headed selection problem. comings of the traditional pipeline model. In addition, our paper
+Zheng et al. (2017) proposed a new tagging scheme that can con- further fuses threat intelligence from different sources through a
+vert the joint extraction task to a sequence labeling problem. lightweight knowledge fusion algorithm.
+Yuan et al. (2020) proposed a relation-based attention network
+(RSAN) to jointly extract entities and relations using a relation- 3. Framework design
+aware attention mechanism.
+ In this section, we will introduce our proposed framework for
+2.4. Knowledge fusion threat intelligence extraction and fusion. The ontology of our cybersecurity knowledge graph references UCO 2.0 (Syed et al., 2016)
+ Due to the existence of duplicate and complementary informa- and STIX 2.0 STIX (2017).
+tion in data from different sources, knowledge fusion is proposed
+ • The main entity types include: Indicator, Threat Actor, Attack
+to study how the same entity or concept from multiple sources
+ Pattern, Malware, Tool, Campaign, Course of Action, Vulnerabilcan be fused to form a high-quality knowledge base (Zhao et al.,
+ ity, and Software.
+2020c). Its necessity has been explained in the recent relevant
+ • The main relation types include: hasProduct, hasVulnerability,
+studies (Alves et al., 2020; Gonzalez-Granadillo et al., 2021; Liu
+ uses, attributedTo, mitigates, and indicates.
+et al., 2022; Yuan et al., 2021). Knowledge fusion needs to be performed at two levels: at the ontology level, equivalence or similar Our framework is divided into four parts, as shown in Fig. 1. In
+classes, relations, and attributes between different ontologies need the data collection, threat intelligence data is collected from structo be found, i.e., ontology matching; at the entity level, the same tured data and unstructured data on the internet, and the frameobjects from different sources need to be correlated and combined, work processes these two types of data separately. For structured
+i.e., entity alignment. data such as STIX data, we directly obtain the entities or triples by
+ Ontology matching requires abstracting a myriad of concepts ontology matching, as described in Section 3.1. In the threat inteland complex relations in the cybersecurity domain into a seman- ligence extraction, we propose a joint entity and relation extractic network. Iannacone et al. (2015) proposed STUCCO, an ontology tion model to extract cybersecurity triples from unstructured data,
+for building CKGs, integrating 13 different formats of cybersecurity as described in Section 3.2. In the knowledge fusion, we design
+data sources. Building on this foundation, Syed et al. (2016) pro- an improved Levenshtein distance to fuse entities from different
+posed a Uniﬁed Cybersecurity Ontology (UCO). The UCO ontol- sources based on the characteristics of the cybersecurity corpus, as
+ogy provides a general understanding of the cybersecurity do- described in Section 3.3. Finally, our framework deposits the cybermain and, in addition to mapping to STIX, UCO extends sev- security triples extracted and fused from structured and unstruceral related cybersecurity standards, vocabularies, and ontolo- tured data into the neo4j database to form a preliminary CKG.
+
+ 3
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+ Fig. 1. The framework for threat intelligence information extraction and fusion.
+
+3.1. Data collection and structured data process the model constructs cybersecurity triples based on the label sequences predicted by the model, and these triples will eventually
+ The framework regularly collects raw data from various sources be used to construct CKG.
+such as existing attack and defense knowledge bases, intelligence
+sharing platforms, vulnerability databases, security bulletins, and 3.2.1. Data preprocess
+APT reports. These data include structured data and unstructured Unstructured threat intelligence data is usually stored in rich
+data, which are processed separately by the framework. The struc- text documents such as PDF, HTML/XML, JSON, and other formats.
+tured data only requires simple steps before importing into the First, we use various text parsing tools (e.g. HTMLParser, PDFLib)
+knowledge graph, while the unstructured data requires a more to extract the raw text from these documents. But the extracted
+complex model to extract the cybersecurity triples from it. raw text is not well-formatted. Therefore, we devised some data
+ There exist many structured threat intelligence data, including pre-processing procedures as follows.
+attack and defense knowledge bases (e.g., ATT&CK Strom et al., The ﬁrst step in preprocessing is data cleaning, where we re-
+2018) and intelligence sharing platforms (e.g., MISP, 2021; Unit 42, move non-ASCII characters from the text and whitespace charac-
+2021; WatcherLab, 2021), which are maintained by professional ters at the beginning and end of each sentence. It is worth notteams with high quality and rich content, usually in a structured ing that in some threat intelligence data, special types of entities
+form such as STIX. Collecting these structured data can quickly get are often rewritten to prevent readers from clicking on them by
+a large amount of reliable threat intelligence data. We store the en- mistake. For example, the IP address “136.244.119.85” is rewrittities and relations in these structured data directly into the neo4j ten as “136. 244.119[.]85”; the URL http://www.test.com is rewritdatabase after ontology matching. In addition, the data sources are ten to http://www.test.com ; the email address hacker@test.com is
+not limited to those platforms mentioned above. Structured data rewritten as hacker[at]test.com. We revert this rewritten form to
+from other sources can also be extended into our framework after its original form.
+ontology matching. The next step in preprocessing is special entity substitution. In
+ the ﬁeld of cybersecurity, some entities are very different in form
+3.2. Joint entity and relation extraction for unstructured data from the normal natural language, such as IP, MAC, Hash, URL,
+ Email, domain name, ﬁle name, and ﬁle path. We build regular ex-
+ To extract threat intelligence from unstructured data such as pressions to match these entities from text and replace them with
+vulnerability descriptions, security bulletins, APT reports, technol- natural language strings in the form of “sub type”, where “type” is
+ogy blogs, and hacker forums, we propose a joint entity and rela- the type of the special entity. For example, we would replace the
+tion extraction model for cybersecurity concepts. Our model can IP address “136.244.119.85” with “sub ip”.
+extract cybersecurity triples from unstructured data. We brieﬂy The last step in the preprocessing process is text segmentation,
+outline the overall strategy here before discussing details in the which is the process of converting text into sequences. We use the
+following subsections. The model takes unstructured threat intel- NLTK library for sentence segmentation and WordPiece for word
+ligence data collected from multiple sources as raw input. Then tokenization.
+the data undergoes a pre-processing process including data cleaning, sentence segmentation, and tokenization to obtain the training 3.2.2. Tagging scheme
+corpus, which will be fed into the joint extraction model subse- In this section, we will introduce the tagging schema for the
+quently (see Section 3.2.1 for details). We adopt the cybersecurity joint entity and relation extraction. In the ﬁeld of relation extracentities and relations deﬁned in the UCO 2.0 (Syed et al., 2016) on- tion, there has been related work (Dai et al., 2019; Yuan et al.,
+tology and model the joint entity and relation extraction problem 2020; Zheng et al., 2017) on the joint entity and relation extraction
+as a multiple sequence labeling problem by generating a sequence through the construction of a speciﬁc tagging schema. For cyberof labels for each relation through a speciﬁc tagging schema (see security concepts, the extracted relation usually suffers from the
+Section 3.2.2 for details). Each relation label sequence contains in- entity overlapping problem that different types of relations sharformation about the entities involved and the subject and object ing the same entities, so the tagging scheme has to overcome this
+of the relation. Our proposed multiple sequence labeling model is issue. Our model generates a sequence of labels for each relation
+structured into an embedding layer, an encoding layer, an attention in UCO 2.0 (Syed et al., 2016). In each tag sequence, we use the
+layer, and a decoding layer (see Section 3.2.3 for details). Finally, typical “BIO” signs to locate the entities in the sentence, where “B”
+
+ 4
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+ Fig. 2. An example for tagging scheme.
+
+represents the starting part of the entity, “I” represents the middle of polysemy, generating different word vectors for the same word
+part of the entity, and “O” is the non-entity part. At the same time, according to the context, which can better express the semantic
+we also label the entity as subject or object in the relation, with features of the words. This situation often occurs in the cyberse-
+“1” representing the subject in the triple and “2” representing the curity corpus. For a piece of software, when describing the vulobject in the triple. nerabilities that exist in that software, this entity should then be
+ Figure 2 shows an example of the tagging scheme. The ﬁrst la- recognized as a “Software” type, and the triple (“Software”, “hasVulbel sequence describes the “hasVulnerablity” relation, where “Mi- nerability”, “Vulnerability”) can be extracted. In another context, the
+crosoft VFP_OLE _Server ActiveX control” is an entity of type “Soft- software may be used as a tool by an attacker, at which point the
+ware”, as the subject of the “hasVulnerablity” relation; “CVE-2008- entity should be recognized as a “Tool” type, and the triple (“Threat
+0235” is an entity of type “Vulnerability”, as the object of the Actor”, “uses”, “Tool”) can be extracted. So, we use the BERT model
+“hasVulnerablity” relation. Through the label sequence, we can gen- to generate word embedding vectors in the embedding layer. For
+erate the triple (“Microsoft VFP_OLE_Server ActiveX control”, “hasVul- the input sentence X = {x1 , x2 , x3 , . . . , xn }, where xt is the tth word
+nerability”, “CVE-2008-0235”). Likewise, other label sequences can in the sentence. After the computation of the BERT pre-trained
+be used to generate triples of corresponding relations. If a rela- model, the word embedding vector E = {e1 , e2 , e3 , . . . , en } of the
+tion does not exist in a sentence, the label sequence for that rela- sentence is generated, where et is the word vector of the tth word
+tion will be all “O”. Besides, as we can see, the “attributedTo” and in the sentence.
+“uses” relations have the over-lapped entity “remote attackers”, and Encoder Compared with the traditional recurrent neural netthey can be extracted without conﬂict based on the separate label work (RNN), GRU consists of an update gate and a reset gate,
+sequences. which can alleviate the gradient disappearance or explosion problem that occurs during training. The GRU hidden state ht is gen-
+3.2.3. Multiple sequence labeling model erated by the previous hidden state ht−1 and the input et of the
+ Based on the tagging scheme above, we propose an end-to-end current state together. The GRU only calculates the correlation bemultiple sequence labeling model to jointly extract cybersecurity tween time step t and the previous time step. However, in the cyentities and relations. We take the sentence and a type of rela- bersecurity corpus, entities may constitute relations with the ention as input to the model, and the output sequence holds infor- tities before or after. So, for the word vectors generated by the
+mation about the subject and object entities involved in that rela- embedding layer, we further extract the semantic features of the
+tion. Thus, for a sentence, when we traverse all the relation types, sentences H = {h1 , h2 , h3 , . . . , hn } using BiGRU and then concatethe model generates a label sequence for each type of relation, re- nate the forward and backward GRU hidden states as the contexsulting in a joint extraction of entities and relations. Figure 3 gives tual word representation. The transformations are as follows:
+an overall structure of the model, which is divided into four parts. 
+ −−→ ←−−
+ 
+The embedding layer generates a word vector et for each word ht = GRU (et ), GRU (et ) (1)
+xt in sentence X. In the encoding layer, the embedding sentence
+is fed into the bi-directional Gated Recurrent Units (BiGRU) neu- Attention mechanism In the cybersecurity corpus, a sentence
+ral network to generate a hidden state representation ht . Then we usually contains many entities and complex relations. As shown in
+apply the attention mechanism to assign different weights to the Fig. 2, the sentence contains ﬁve different entities (“Vulnerability”,
+context words under different relations and construct a relation- “Software”, “Threat Actor”, “Campaign”, “Attack Pattern”) and three
+speciﬁc sentence representation lk . Finally, in the decoding layer, different relations (“hasVulnerability”, “attributedTo”, “uses”). Therewe use another BiGRU neural network and joined it with CRF for fore, it is necessary to assign different weights to the words in a
+decoding to obtain the label sequence and extract corresponding sentence according to different types of relations. For example, for
+entities under the speciﬁc relation. the “hasVulnerability” relation, the words in the sentence indicat-
+ Embedding ing a software name or identifying a speciﬁc vulnerability should
+ Given a sentence as a sequence of tokens, the word embed- be paid higher attention to. Thus, we have referred to the relationding layer is responsible to map each token to a word vector. based attention mechanism proposed by Yuan et al. (2020). The
+In this paper, we propose to use a pre-trained model to gener- attention mechanism can assign different weights to the words in
+ate word vectors. The pre-trained word embedding model converts a sentence under each relation, and the attention score can be calwords in natural language into dense vectors, and semantically culated as follows:
+similar words will have similar vector representations. The latest  
+pre-trained model BERT (Devlin et al., 2018) can solve the problem hg = avg h1 , h2 , h3 , . . . , hn (2)
+
+ 5
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+Fig. 3. The multiple sequence labeling model for joint entity and relation extraction. It receives the same sentence input and different relation rk to extract all triples in the
+sentence. et is the BERT embedding of the word, ht is the hidden vector of time step t, rk is the trainable embedding of the kth relation, lk is the attention weights under
+relation type rk . Under the given relation rk (Take hasVulnerability for example), the decoder extracts the corresponding entities of rk to generate triples (PCRE, hasVulnerability,
+Buffer overﬂow).
+
+   exp(score(Z, y ))
+etk = vT tanh Wr rk + Wg hg + Wh ht (3) p( y | Z ) =  (10)
+ (score(Z, y ))
+ y ∈YZ exp
+
+ exp (etk ) y∗ = arg max score(Z, y )
+atk = n   (4) y∈YZ
+ (11)
+ j=1 exp e jk
+ where A is the transition matrix between labels, score(Z, y ) is the
+where hg indicates the global representation of the sentence, rk is position score, and p(y | Z ) is the normalized probability function.
+the embedding of the k-th relation. v, Wr , Wg , and Wh are all train- Finally, the label sequence y∗ is generated.
+able parameters. The attention score generated reﬂects the importance of the sentence’s words in the context as well as relational 3.3. Knowledge fusion based on improved levenshtein distance
+expression in the current relation. The sentence representation lk
+under the rk relation is generated by the weighted sum of the sen- Knowledge fusion includes ontology-level fusion and entitytence words, which is calculated as shown in Eq. (5). The atten- level fusion. The ontology-level is only for structured data, and
+tion layer combines the generated lk and the sentence representa- most structured data exists in STIX format with equivalence classes
+tions output by the encoding layer as input to the decoding layer, and relations in the UCO ontology. This section focuses on the
+as shown in Eq. (6). entity-level, which aims to determine whether entities from difn ferent data sources are the same object in reality.
+lk = atk ht (5) The knowledge graph constructed from a single data source has
+ t=1 problems such as low information coverage and imperfect entity
+ attributes, which are not desirable for further application on downhtk = ht  lk (6) stream tasks. Entity-level fusion can fuse threat intelligence knowl-
+ Decoder The decoding layer generates the label sequences of edge from different sources to form a more complete CKG. Existing
+the sentences under the rk relation and returns the relational methods determine whether two entities are the same object by
+triples through the tagging scheme described in Section 3.2.2. the features extracted from the entities, attributes, and relations.
+We ﬁrst used another BiGRU to produce sentence representa- In addition to similarity-based approaches (Azevedo et al., 2019;
+tions H o = {ho1 , ho2 , ho3 , . . . , hon } and generate sequence scores Z = Lacoste-Julien et al., 2013), the mainstream approach in the gen-
+{z1 , z2 , z3 , . . . , zn }using features from the encoding and attention eral domain is embedding-based approaches (Bordes et al., 2013;
+layers. The calculation process is as follows, where W is the pa- Chen et al., 2016). However, since our framework aims to construct
+rameter: a preliminary CKG from scratch and mainly addresses threat in-
+ 
+ −−→ ←−−
+  telligence extraction, the extracted entities often have incomplete
+hto = GRU (htk ), GRU (htk ) (7) relations. Embedding-based methods generally perform knowledge
+ fusion on the mature knowledge graph, so they are not suitable in
+ the early stage of building CKG. Piplai et al. (2020b) used the Levzt = W hto (8)
+ enshtein distance to calculate the similarity of entity names to per-
+ Next, the sequence is decoded by the CRF layer, which is able form entity fusion when constructing a knowledge graph for malto obtain constrained rules from the training data, to ensure that ware after action reports. Although this method is effective for enthe predicted cybersecurity entity labels are valid. The decoding tity fusion with name distortion, misspellings, etc., there is a drawprocess is shown as follows: back that can lead to many incorrect results. For example, “APT28”
+ n n
+ and “APT29” are two different “Threat Actor” entities, but their Levscore(Z, y ) = Ayt ,yt+1 + Zt,yt (9) enshtein distance is only 1, which causes the entity fusion algorithm to consider them as the same entity mistakenly. There are
+ t=0 t=1
+
+ 6
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+many other similar cases, for example, two IP addresses with only Table 1
+ Comparison results with the pipeline model.
+one digit difference.
+ In order to perform knowledge fusion as accurately as possi- Models Precision Recall F1-score
+ble, we propose a knowledge fusion method based on an improved Pipeline model (Pingle et al., 2019) 57.04% 67.80% 61.69%
+Levenshtein distance for the characteristics of the cybersecurity Joint model 82.28% 80.48% 81.37%
+corpus. Compared to embedding-based knowledge fusion methods, this algorithm does not need to store entity embeddings and
+ Table 2
+model parameters. We ﬁnd that the above errors are mainly caused Comparison results with the joint model.
+by numbers which usually represent deterministic information in
+ Models Precision Recall F1-score
+entity naming. The Levenshtein distance is the minimum number
+of edit operations required to turn string a into string b. Editing NovelTag (Zheng et al., 2017) 54.34% 57.87% 56.05%
+ GraphRel (Fu et al., 2019) 65.26% 58.30% 61.59%
+operations include replace, insert and delete. In our improved Lev-
+ MultiHead (Bekoulis et al., 2018) 77.76% 65.14% 70.89%
+enshtein distance, a larger penalty weight of wnum is set for edit Our Model 82.28% 80.48% 81.37%
+operations on numbers, and edit operations on other characters
+remain a weight of wother , where wnum should be larger than the
+threshold, which avoids the errors caused by the traditional Lev-
+ 4.2. Evaluation metrics
+enshtein distance. We use the dynamic programming algorithm to
+calculate the improved Levenshtein distance as follows. For strings
+ We use standard Precision, Recall, and F1-score to measure the
+a and b with lengths n and m respectively, i and j are the subperformance. A triple is considered to be correctly extracted if and
+scripts indicating the position of the corresponding strings. First,
+ only if its relation type and both entities are correctly matched.
+the distance matrix is initialized as shown in Eq. (12). Then the
+distance of each position of the two strings is calculated iteratively
+as shown in Eq. (13). In addition, the weight function is shown in 4.3. Experimental settings
+Eq. (14).
+ To evaluate the effectiveness of the joint extraction model, we
+D ( 0, 0 ) = 0 design a set of experiments. In the comparison experiments with
+D(i, 0 ) = D(i − 1, 0 ) + W (ai ) (1 ≤ i ≤ n ) (12) the pipeline approach, we compare our model with the existing
+D ( 0, j ) = D ( 0, j − 1 ) + W ( b j ) (1 ≤ j ≤ m ) pipeline model RelExt (Pingle et al., 2019), where parameters that
+ ⎧ are not mentioned in the paper are set by default. Because an en-
+ ⎨D(i − 1, j ) + W (ai )
+ ⎪ tity may consist of many words, we generate word vectors for each
+ D(i, j − 1 ) + W (b j ) word and average these word vectors to obtain the ﬁxed dimen-
+D(i, j ) = min
+ ⎩D(i − 1, j − 1 ) + max(W (ai ), W (b j ))
+ ⎪ ( ai = b j ) sional embedding described in the RelExt paper. Besides, to fur-
+ D ( i − 1, j − 1 ) ( ai = b j ) ther analyze our proposed model, we compare the preprocessing
+ methods, the word embedding models and the choice of neural
+ (13)
+ networks. Also to test whether the model is effective on a smaller
+  training set, we experimented with different training set division
+ wnum if char is a number ratios. We use a 5-fold cross-validation to train the model. The size
+W (char ) = (14)
+ wother otherwise of the BERT word vector is 768 dimensions. The size of the BiGRU
+ hidden layer and relational embedding vector are both set to 300.
+ With the ﬁnal result D(n, m ), we set a distance threshold and
+ During the training process, the optimizer is RMSprop, the learnadd the “sameAs” relation between these two entities if their Leving rate is 0.0 0 01, and the batch_size is 64. we use the dropout
+enshtein distance is less than the threshold.
+ mechanism to avoid overﬁtting with a rate of 0.5.
+4. Experiments
+ 4.4. Joint entity and relation extraction experimental result
+4.1. Datasets
+ 4.4.1. Comparison with pipeline model
+ Our data is collected from publicly available open-source This section shows the results of the comparison between the
+intelligence (OSINT) data. It includes both structured and un- traditional pipeline approach and the joint model. From Table 1,
+structured data. The unstructured data comes from the CVE we can see that our joint model outperforms the pipeline model,
+vulnerability database (vulnerability descriptions) (MITRE, 2021), signiﬁcantly improving precision (82.28%), recall (80.48%), and F1-
+security bulletins and APT reports (CyberMonitor, 2021). score (81.37%). This indicates that the joint model extracts both en-
+Structured data comes from STIX format data provided by tities and relations, which avoids the error propagation between
+ATT&CK Strom et al. (2018), Unit 42 (2021), MISP (2021) and the two subtasks of the pipeline model and effectively improves
+WatcherLab (2021), etc. To train the joint extraction model, we the performance of entity-relation triples extraction.
+used the BRAT annotation platform (Stenetorp et al., 2012) to annotate the unstructured data, and further checked the annotation 4.4.2. Comparison with joint model
+of the dataset based on our previous work (Guo et al., 2021) to To corroborate the eﬃcacy of our proposed model, we benchimprove the annotation accuracy. We manually annotated 12,680 mark it against established joint models (Bekoulis et al., 2018; Fu
+sentences containing a total of 67,918 cybersecurity triples. Then, et al., 2019; Zheng et al., 2017). As presented in Table 2, our model
+we transform the annotated labels into the format described in displays a remarkable improvement over the compared models.
+Section 3.2.2 for futher training. In this paper, we take the “Threat This superior performance can be attributed to a meticulously pre-
+Actor” entity as an example to validate the knowledge fusion processing procedure, an effective word embedding approach, and
+algorithm. The knowledge fusion dataset we constructed is all a ﬁtting tagging scheme tailored for the cybersecurity corpus. For
+used to test the performance of the algorithm. We obtained a total a more thorough exploration and understanding of its capabilities,
+of 698 “Threat Actor” entities from different sources of STIX data we have carried out an array of detailed experiments, the results
+and manually annotated 560 “sameAs” relations between them. of which are discussed in Section 4.4.3.
+
+ 7
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+ Table 3 Table 4
+ Analysis results of the proposed model. Experimental results for different dataset splitting.
+
+ Models Precision Recall F1-score Train-test split Precision Recall F1-score
+
+ Our Model 82.28% 80.48% 81.37% 80%-20% 82.28% 80.48% 81.37%
+ Model-NoSub 79.55% 78.18% 78.86% 75%-25% 82.23% 79.87% 81.03%
+ Model-W2V 79.41% 71.73% 75.37% 66%-34% 81.20% 79.16% 80.17%
+ Model-LSTM 82.06% 79.70% 80.86% 50%-50% 81.16% 78.69% 79.90%
+ Model-NoAtt 81.71% 79.36% 80.52%
+
+ tion mechanism. From Table 3 (“Model-NoAtt”), we can tell that
+4.4.3. Analysis of the proposed model the attention mechanism slightly improve the performance by pro-
+ In the preprocessing approach experiments, as described in viding a better reﬂection on the importance of the tokens under
+Section 3.2.1, we replaced special entities such as IP, MAC, Hash, the speciﬁc relation.
+URL, Email, domain name, ﬁle name and ﬁle path. We experimented with the effect of not using this preprocessing method. 4.4.4. Experimental results with different dataset splitting
+As shown in Table 3 (“Model-NoSub”), the preprocessing approach In this section, we conduct experiments using different dataset
+of special information replacement is more effective, because spe- splitting, and the results show that the effectiveness of our model
+cial information replacement allows these entities with large dif- does not drop signiﬁcantly on a smaller training set ratio, as shown
+ferences to be replaced with a uniﬁed expression form, which is in Table 4. This is because the cybersecurity corpus has some simbeneﬁcial to the extraction of semantics. ilarities in writing style, syntax, and use of terminology. For ex-
+ In the word vector experiments, as the word vectors generated ample, CVE vulnerability descriptions use similar syntax, and difby the word embedding model serve as the input to the following ferent APT reports may use the same terminology. In addition, we
+model, the quality of the word vectors has an important impact on replace special entities with uniﬁed forms of expression in the prethe model performance. In this section, we experiment with two processing stage, which also mitigates the problem of high varirepresentative word embedding models, BERT (Devlin et al., 2018) ability between data from different sources.
+and Word2Vec (Mikolov et al., 2013), where the BERT model is the
+“cased L-12 H768 A-12” version, and the Word2Vec model is the 4.5. Knowledge fusion experimental results
+“GoogleNews- vectors-negative300” version. It can be seen from
+Table 3 (“Model-W2V”) that using BERT for word embedding has In this section, we take the “Threat Actor” entity as an exama certain improvement compared to Word2Vec. This is attributed ple. We set the distance threshold to 0, 1, 2, and 3 for each exto the fact that BERT can generate different word vectors for the periment. The wnum is set to 10 and the wother is set to 1. If the
+same word depending on the context thus making better use of distance between two entities is less than the threshold, we conthe contextual information of the text, while Word2Vec can only sider these two entities are the same entity. As shown in Fig. 4,
+generate a ﬁxed word vector representation for each word. the Improved Levenshtein distance (Fig. 4a) outperforms the tradi-
+ In the neural network model experiments, since we use neural tional Levenshtein distance (Fig. 4b). The performance of the tradinetworks in our model for the sequence labeling task, we investi- tional Levenshtein distance algorithm decreases signiﬁcantly as the
+gate the effect of different neural networks on the model perfor- threshold increases. This is because there are numbers involved in
+mance. Speciﬁcally, we experiment with the performance of LSTM cybersecurity entity names (as described in Section 3.3), causing
+and GRU neural networks in the joint extraction model. As shown the traditional Levenshtein distance to produce a large number of
+in Table 3 (“Model-LSTM”), we found that the GRU performed erroneous results. In addition, as shown in Fig. 4a, the algorithm is
+slightly better than the LSTM, and therefore we take GRU in our bound to introduce some false alarms as the threshold increases,
+model. so the threshold cannot be set too large, and it can be seen that
+ To demonstrate the role played by the attention mechanism in the best results are obtained when the threshold is set to 1. Alour model, we further explored the effect of not using the atten- though our algorithm does not consider more complex knowledge
+
+ Fig. 4. Experimental results of knowledge fusion.
+
+ 8
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+ Fig. 5. The effect of knowledge fusion.
+
+fusion cases, the algorithm can more accurately fuse entities in the intelligence extraction, we use the joint extraction model to extract
+process of constructing the CKG from scratch for naming distor- entities and relations in sentences. For example, the entities and
+tions, misspellings, etc. relations in the blue box of the right part of Fig. 5 are extracted
+ from the sentence at the bottom of the ﬁgure. In the knowledge
+4.6. Analysis and discussion fusion, the framework fuses the extracted entities and the existing entities in the knowledge graph using the algorithm described
+4.6.1. Relation extraction case study in Section 3.3. For example, the “APT28/Threat Actor” entity on the
+ In this section, we illustrate the advantages of the joint model right part of Fig. 5 is the same object as the “Threat Actor” enover the pipeline model by two examples, as shown in Ap- tity shown in the red box on the left part of Fig. 5. Above all, our
+pendix Table A1. In both examples, our proposed joint model pre- framework can fuse multi-source threat intelligence data to form a
+dicts all the triples in the sentences correctly. more comprehensive CKG.
+ For Case 1, although the pipeline model correctly predicts all
+“Software” entities in the entity recognition task, when predict- 5. Conclusion
+ing the relation between two “Software” entities, the model will
+combine the two “Software” entities into two entity pairs in dif- In this paper, we propose a framework for threat intelligence
+ferent orders and predict two wrong relations. This indicates that extraction and fusion, which extracts threat intelligence from
+the pipeline model does not take into account the connection be- structured and unstructured data sources, and fuses threat inteltween entity recognition and relation extraction tasks, while the ligence from different sources to form a preliminary CKG. For the
+joint model is able to predict the “hasProduct” relation between the unstructured data, we propose a joint entity and relation extractwo “Software” entities well. tion model for cybersecurity concepts, which can extract both en-
+ For Case 2, the pipeline model only recognizes the “zero- tities and relations in the cybersecurity corpus. Speciﬁcally, we use
+day vulnerabilities/Vulnerability” and “compromise victim sys- a tagging scheme to convert the joint extraction problem into a
+tems/Campaign” entity but misses the “apt28/Threat Actor” and multi-sequence labeling problem by generating separate label se-
+“spear phishing emails/Attack Pattern” entities, resulting in a null quences for different relations, which contain information about
+input to the relation extraction model that fails to predict the the related entities and the subject and object of that relation. In
+relation between them. This indicates that the pipeline model has addition, the model employs the BERT model, BiGRU neural netthe defect of error propagation, implying that if an entity is not work, and attention mechanism to extract the features of senpredicted or is incorrectly predicted, it will affect the subsequent tences. For the knowledge fusion, we propose an improved Levrelation extraction task. enshtein distance to fuse entities pointing to the same object from
+ different data sources. In the experimental section, our results on
+4.6.2. Knowledge fusion effect OSINT data demonstrate that the joint model achieves better re-
+ This section demonstrates the effect of knowledge fusion. As sults compared to the traditional pipeline approach. And the imdescribed in Section 3, the framework extracts cybersecurity triples proved knowledge fusion also works better than the traditional
+from structured and unstructured data and performs knowledge Levenshtein distance. The limitation of this study is that our framefusion. In the constructed knowledge graph, we query the data re- work is mainly for threat intelligence extraction and simple knowllated to the “APT28/Threat Actor”, as shown in Fig. 5. The left part edge fusion to construct a preliminary CKG. Therefore, to further
+is constructed from structured data of various existing attack and construct a more effective CKG, our future work will focus on endefense knowledge bases; the right part is a set of cybersecurity tity disambiguation, knowledge embedding, and knowledge infertriples extracted from unstructured data. Speciﬁcally, in the threat ence in cybersecurity.
+
+ 9
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+Declaration of Competing Interest References
+
+ The authors declare that they have no known competing ﬁnan- Alves, F., Andongabo, A., Gashi, I., Ferreira, P.M., Bessani, A., 2020. Follow the blue
+ bird: a study on threat data published on twitter. In: European Symposium on
+cial interests or personal relationships that could have appeared to Research in Computer Security. Springer, pp. 217–236.
+inﬂuence the work reported in this paper. Azevedo, R., Medeiros, I., Bessani, A., 2019. Pure: generating quality threat intelligence by clustering and correlating OSINT. In: 2019 18th IEEE International Conference On Trust, Security And Privacy In Computing And Communications/13th
+CRediT authorship contribution statement IEEE International Conference On Big Data Science And Engineering (Trust-
+ Com/BigDataSE). IEEE, pp. 483–490.
+ Bekoulis, G., Deleu, J., Demeester, T., Develder, C., 2018. Joint entity recognition and
+ Yongyan Guo: Conceptualization, Data curation, Methodology, relation extraction as a multi-head selection problem. Expert Syst. Appl. 114,
+Software, Writing – original draft. Zhengyu Liu: Conceptualization, 34–45.
+ Bordes, A., Usunier, N., Garcia-Duran, A., Weston, J., Yakhnenko, O., 2013. Trans-
+Data curation, Methodology, Software, Writing – original draft.
+ lating embeddings for modeling multi-relational data. In: Proceedings of the
+Cheng Huang: Conceptualization, Methodology, Validation, Writing 26th International Conference on Neural Information Processing Systems, vol.
+– review & editing. Nannan Wang: Data curation, Investigation, 2, pp. 2787–2795.
+Software. Hai Min: Data curation, Investigation, Software. Wenbo Chen, M., Tian, Y., Yang, M., Zaniolo, C., 2016. Multilingual knowledge graph embeddings for cross-lingual knowledge alignment. arXiv preprint arXiv:1611.03954
+Guo: Data curation, Investigation, Software. Jiayong Liu: Conceptu- Culotta, A., Sorensen, J., 2004. Dependency tree kernels for relation extraction. In:
+alization, Investigation, Methodology. Proceedings of the 42nd Annual Meeting of the Association for Computational
+ Linguistics (ACL-04), pp. 423–429.
+Data availability CyberMonitor, 2021. APT & cybercriminals campaign collection. https://github.com/
+ CyberMonitor/APT_CyberCriminal_Campagin_Collections.
+ Dai, D., Xiao, X., Lyu, Y., Dou, S., She, Q., Wang, H., 2019. Joint extraction of
+ Data will be made available on request. entities and overlapping relations using position-attentive sequence labeling.
+ In: Proceedings of the AAAI Conference on Artiﬁcial Intelligence, vol. 33,
+ pp. 6300–6308.
+Appendix A Devlin, J., Chang, M.-W., Lee, K., Toutanova, K., 2018. Bert: pre-training of deep
+ bidirectional transformers for language understanding. arXiv preprint arXiv:
+ 1810.04805
+ Fu, T.-J., Li, P.-H., Ma, W.-Y., 2019. Graphrel: modeling text as relational graphs for
+ joint entity and relation extraction. In: Proceedings of the 57th Annual Meeting
+ of the Association for Computational Linguistics, pp. 1409–1418.
+Table A1 Gao, P., Shao, F., Liu, X., Xiao, X., Qin, Z., Xu, F., Mittal, P., Kulkarni, S.R., Song, D.,
+The examples of the triples to the given sentences extracted by joint model and 2021. Enabling eﬃcient cyber threat hunting with cyber threat intelligence.
+pipeline model. In: 2021 IEEE 37th International Conference on Data Engineering (ICDE). IEEE,
+ pp. 193–204.
+ #Case 1 Ghazi, Y., Anwar, Z., Mumtaz, R., Saleem, S., Tahir, A., 2018. A supervised machine
+ learning based approach for automatically extracting high-level threat intelli-
+ Raw text CVE-2021-28967: The unoﬃcial MATLAB extension before gence from unstructured sources. In: 2018 International Conference on Frontiers
+ 2.0.1 for Visual Studio Code allows attackers to execute of Information Technology (FIT). IEEE, pp. 129–134.
+ arbitrary code via a crafted workspace because of lint Gonzalez-Granadillo, G., Faiella, M., Medeiros, I., Azevedo, R., Gonzalez-Zarzosa, S.,
+ conﬁguration settings. 2021. ETIP: an enriched threat intelligence platform for improving OSINT correlation, analysis, visualization and sharing capabilities. J. Inf. Secur. Appl. 58,
+ (’attackers’, ’crafted workspace’, ’Threat Actor/Attack
+ 102715.
+ Pattern/uses’)
+ Guo, Y., Liu, Z., Huang, C., Liu, J., Jing, W., Wang, Z., Wang, Y., 2021. Cyberrel: joint
+ (’attackers’, ’cve-2021-28967’, ’Threat
+ Joint model entity and relation extraction for cybersecurity concepts. In: International Con-
+ Actor/Vulnerability/uses’) ference on Information and Communications Security. Springer, pp. 447–463.
+ (’execute arbitrary code’, ’attackers’, ’Campaign/Threat Husari, G., Al-Shaer, E., Ahmed, M., Chu, B., Niu, X., 2017. Ttpdrill: automatic and
+ Actor/attributedTo’) accurate extraction of threat actions from unstructured text of CTI sources. In:
+ (’visual studio code’, ’unoﬃcial matlab extension’, Proceedings of the 33rd Annual Computer Security Applications Conference,
+ ’Software/Software/hasProduct’) pp. 103–115.
+ (’unoﬃcial matlab extension’, ’cve-2021-28967’, Husari, G., Niu, X., Chu, B., Al-Shaer, E., 2018. Using entropy and mutual information
+ ’Software/Vulnerability/hasVulnerablity’) to extract threat actions from cyber threat intelligence. In: 2018 IEEE Interna-
+ (’visual studio code’, ’cve-2021-28967’, tional Conference on Intelligence and Security Informatics (ISI). IEEE, pp. 1–6.
+ ’Software/Vulnerability/hasVulnerablity’) Iannacone, M., Bohn, S., Nakamura, G., Gerth, J., Huffer, K., Bridges, R., Ferragut, E.,
+ Goodall, J., 2015. Developing an ontology for cyber security knowledge graphs.
+ (’attackers’, ’crafted workspace’, ’Threat Actor/Attack In: Proceedings of the 10th Annual Cyber and Information Security Research
+ Pattern/uses’) Conference, pp. 1–4.
+ (’attackers’, ’cve-2021-28967’, ’Threat Iria, J., 2005. T-rex: a ﬂexible relation extraction framework. In: Proceedings of the
+ Pipeline model Actor/Vulnerability/uses’) 8th Annual Colloquium for the UK Special Interest Group for Computational Lin-
+ (’unoﬃcial matlab extension’, ’cve-2021-28967’, guistics (CLUK’05), vol. 6. Citeseer, p. 9.
+ ’Software/Vulnerability/hasVulnerablity’) Jia, Y., Qi, Y., Shang, H., Jiang, R., Li, A., 2018. A practical approach to constructing a
+ (’visual studio code’, ’cve-2021-28967’, knowledge graph for cybersecurity. Engineering 4 (1), 53–60.
+ ’Software/Vulnerability/hasVulnerablity’) Jiang, J., Zhai, C., 2007. A systematic exploration of the feature space for relation ex-
+ (’execute arbitrary code’, ’attackers’, ’Campaign/Threat traction. In: Human Language Technologies 2007: The Conference of the North
+ Actor/attributedTo’) American Chapter of the Association for Computational Linguistics; Proceedings
+ of the Main Conference, pp. 113–120.
+ (’visual studio code’, ’unoﬃcial matlab extension’,
+ Jones, C.L., Bridges, R.A., Huffer, K.M., Goodall, J.R., 2015. Towards a relation extrac-
+ ’Software/Software/uses’)
+ tion framework for cyber-security concepts. In: Proceedings of the 10th Annual
+ (’unoﬃcial matlab extension’, ’visual studio code’,
+ Cyber and Information Security Research Conference, pp. 1–4.
+ ’Software/Software/hasVulnerablity’) Lacoste-Julien, S., Palla, K., Davies, A., Kasneci, G., Graepel, T., Ghahramani, Z., 2013.
+ #Case 2 Sigma: simple greedy matching for aligning large knowledge bases. In: Proceed-
+ Raw text APT28 relies upon spear phishing emails or zero-day ings of the 19th ACM SIGKDD international conference on Knowledge discovery
+ vulnerabilities to initially compromise victim systems. and data mining, pp. 572–580.
+ Liao, X., Yuan, K., Wang, X., Li, Z., Xing, L., Beyah, R., 2016. Acing the IOC game: to-
+ (’apt28’, ’spear phishing emails’, ’Threat Actor/Attack ward automatic discovery and analysis of open-source cyber threat intelligence.
+ Joint model Pattern/uses’) In: Proceedings of the 2016 ACM SIGSAC Conference on Computer and Commu-
+ (’apt28’, ’zero-day vulnerabilities’, ’Threat nications Security, pp. 755–766.
+ Actor/Vulnerability/uses’) Liu, Z., Cao, Y., Pan, L., Li, J., Chua, T.-S., 2020. Exploring and evaluating at-
+ (’initially compromise victim systems’, ’apt28’, tributes, values, and structures for entity alignment. In: Proceedings of the 2020
+ ’Campaign/Threat Actor/attributedTo’) Conference on Empirical Methods in Natural Language Processing (EMNLP),
+ pp. 6355–6364.
+ Pipeline model Only entities found zero-day vulnerabilities/Vulnerability
+ Liu, Z., Su, H., Wang, N., Huang, C., 2022. Coreference resolution for cybersecurity
+ compromise victim systems/Campaign entity: towards explicit, comprehensive cybersecurity knowledge graph with
+
+ 10
+Y. Guo, Z. Liu, C. Huang et al. Computers & Security 132 (2023) 103371
+
+ low redundancy. In: International Conference on Security and Privacy in Com- Yuan, Y., Zhou, X., Pan, S., Zhu, Q., Song, Z., Guo, L., 2020. A relation-speciﬁc atmunication Systems. Springer, pp. 89–108. tention network for joint entity and relation extraction. In: International Joint
+McDonald, R., Pereira, F., Kulick, S., Winters, S., Jin, Y., White, P., 2005. Simple al- Conference on Artiﬁcial Intelligence 2020. Association for the Advancement of
+ gorithms for complex relation extraction with applications to biomedical IE. In: Artiﬁcial Intelligence (AAAI), pp. 4054–4060.
+ Proceedings of the 43rd Annual Meeting of the Association for Computational Zeng, D., Liu, K., Lai, S., Zhou, G., Zhao, J., 2014. Relation classiﬁcation via
+ Linguistics (ACL’05), pp. 491–498. convolutional deep neural network. In: Proceedings of COLING 2014, the
+Mikolov, T., Chen, K., Corrado, G., Dean, J., 2013. Eﬃcient estimation of word repre- 25th international conference on computational linguistics: technical papers,
+ sentations in vector space. arXiv preprint arXiv:1301.3781 pp. 2335–2344.
+Milajerdi, S.M., Gjomemo, R., Eshete, B., Sekar, R., Venkatakrishnan, V., 2019. Zhao, J., Yan, Q., Li, J., Shao, M., He, Z., Li, B., 2020. Timiner: automatically extracting
+ Holmes: real-time apt detection through correlation of suspicious informa- and analyzing categorized cyber threat intelligence from social data. Comput.
+ tion ﬂows. In: 2019 IEEE Symposium on Security and Privacy (SP). IEEE, Secur. 95, 101867.
+ pp. 1137–1152. Zhao, J., Yan, Q., Liu, X., Li, B., Zuo, G., 2020. Cyber threat intelligence modeling
+MITRE, 2021. Cvelist project. https://github.com/CVEProject/cvelist. based on heterogeneous graph convolutional network. In: 23rd International
+Mittal, S., Das, P.K., Mulwad, V., Joshi, A., Finin, T., 2016. Cybertwitter: using twit- Symposium on Research in Attacks, Intrusions and Defenses ({RAID} 2020),
+ ter to generate alerts for cybersecurity threats and vulnerabilities. In: 2016 pp. 241–256.
+ IEEE/ACM International Conference on Advances in Social Networks Analysis Zhao, X., Zeng, W., Tang, J., Wang, W., Suchanek, F., 2020. An experimental study of
+ and Mining (ASONAM). IEEE, pp. 860–867. state-of-the-art entity alignment approaches. IEEE Trans. Knowl. Data Eng. 34
+Miwa, M., Bansal, M., 2016. End-to-end relation extraction using LSTMs on se- (1), 1.
+ quences and tree structures. In: Proceedings of the 54th Annual Meeting Zheng, S., Wang, F., Bao, H., Hao, Y., Zhou, P., Xu, B., 2017. Joint extraction of entities
+ of the Association for Computational Linguistics (Volume 1: Long Papers), and relations based on a novel tagging scheme. In: Proceedings of the 55th Anpp. 1105–1116. nual Meeting of the Association for Computational Linguistics (Volume 1: Long
+MISP project, 2021. MISP threat sharing platform. https://www.misp-project.org/ Papers), pp. 1227–1236.
+ galaxy.html. Zhu, Z., Dumitras, T., 2018. Chainsmith: automatically learning the semantics of ma-
+Nie, H., Han, X., Sun, L., Wong, C.M., Chen, Q., Wu, S., Zhang, W., 2021. Global struc- licious campaigns by mining threat intelligence reports. In: 2018 IEEE European
+ ture and local semantics-preserved embeddings for entity alignment. In: Pro- Symposium on Security and Privacy (EuroS&P). IEEE, pp. 458–472.
+ ceedings of the Twenty-Ninth International Conference on International Joint
+ Conferences on Artiﬁcial Intelligence, pp. 3658–3664. Yongyan Guo received the B.Eng. degree in cyberspace security from Sichuan Uni-
+Pingle, A., Piplai, A., Mittal, S., Joshi, A., Holt, J., Zak, R., 2019. Relext: relation ex- versity, Chengdu, China, in 2020, where he is currently pursuing the masters degree
+ traction using deep learning approaches for cybersecurity knowledge graph im- with the School of Cyber Science and Engineering. His current research interests inprovement. In: Proceedings of the 2019 IEEE/ACM International Conference on clude Web security and artiﬁcial intelligence.
+ Advances in Social Networks Analysis and Mining, pp. 879–886.
+Piplai, A., Mittal, S., Abdelsalam, M., Gupta, M., Joshi, A., Finin, T., 2020. Knowledge
+ enrichment by fusing representations for malware threat intelligence and be- Zhengyu Liu is currently an undergraduate student studying at the School of Cyhavior. In: 2020 IEEE International Conference on Intelligence and Security In- ber Science and Engineering, Sichuan University. His current research interests foformatics (ISI). IEEE, pp. 1–6. cus on data-driven security, especially in applying machine learning with empirical
+Piplai, A., Mittal, S., Joshi, A., Finin, T., Holt, J., Zak, R., 2020. Creating cyberse- data measurements to solve cybersecurity problems, including cyber threat modelcurity knowledge graphs from malware after action reports. IEEE Access 8, ing, cyberattacks detection, etc.
+ 211691–211703.
+Satyapanich, T., Ferraro, F., Finin, T., 2020. CASIE: extracting cybersecurity event in- Cheng Huang received the Ph.D degree from Sichuan University, Chengdu, China,
+ formation from text. In: Proceedings of the AAAI Conference on Artiﬁcial Intel- in 2017. From 2014 to 2015, he was a visiting student at the School of Computer
+ ligence, vol. 34, pp. 8749–8757. Science, University of California, CA, USA. He is currently an Associate Professor at
+Stenetorp, P., Pyysalo, S., Topić, G., Ohta, T., Ananiadou, S., Tsujii, J., 2012. Brat: a the School of Cyber Science and Engineering, Sichuan University, Chengdu, China.
+ web-based tool for NLP-assisted text annotation. In: Proceedings of the Demon- His current research interests include Web security, attack detection, artiﬁcial intelstrations at the 13th Conference of the European Chapter of the Association for ligence.
+ Computational Linguistics, pp. 102–107.
+STIX. Structured threat information expression. https://oasis-open.github.io/ Nannan Wang is a prospective graduate student in the School of Cyber Science
+ cti-documentation/stix/intro. and Engineering, Sichuan University, China. His current main research areas include
+Strom, B.E., Applebaum, A., Miller, D.P., Nickels, K.C., Pennington, A.G., Thomas, C.B., artiﬁcial intelligence, data mining and attack detection.
+ 2018. MITRE ATT&CK: Design and Philosophy. Mitre Product MP. 18–0944
+Sun, C., Wu, Y., Lan, M., Sun, S., Wang, W., Lee, K.-C., Wu, K., 2018. Extracting
+ Hai Min is currently pursuing his bachelor’s degree in the School of Cyber Science
+ entities and relations with joint minimum risk training. In: Proceedings of
+ and Engineering, Sichuan University, China. His current research interests include
+ the 2018 Conference on Empirical Methods in Natural Language Processing,
+ fuzzing test, ﬁrmware security and artiﬁcial intelligence.
+ pp. 2256–2265.
+Syed, Z., Padia, A., Mathews, M.L., Finin, T., Joshi, A., et al., 2016. UCO: a uniﬁed
+ cybersecurity ontology. In: Proceedings of the AAAI Workshop on Artiﬁcial In- Wenbo Guo received the B.Eng. degree in cyberspace security from Sichuan Univertelligence for Cyber Security. sity, Chengdu, China, in 2020, where he is currently pursuing the masters degree
+Unit 42. 2021. Unit 42 playbook viewer. https://pan-unit42.github.io/playbook_ with the School of Cyber Science and Engineering. His current research interests
+ viewer/. include Web security and artiﬁcial intelligence.
+WatcherLab, 2021. Threat intelligence feed system. https://feed.watcherlab.com.
+Wei, Z., Su, J., Wang, Y., Tian, Y., Chang, Y., 2020. A novel cascade binary tagging Jiayong Liu received his B.Eng. degree in 1982, M. Eng. degree in 1989, and Ph.D.
+ framework for relational triple extraction. In: Proceedings of the 58th Annual degree in 2008 from Sichuan University, China. He is currently a professor in School
+ Meeting of the Association for Computational Linguistics, pp. 1476–1488. of Cyber Science and Engineering, Sichuan University, China. His research interests
+Yuan, L., Bai, Y., Xing, Z., Chen, S., Li, X., Deng, Z., 2021. Predicting entity relations include network information processing and information security, communications
+ across different security databases by using graph attention network. In: 2021 and network information system.
+ IEEE 45th Annual Computers, Software, and Applications Conference (COMP-
+ SAC). IEEE, pp. 834–843.
+
+ 11

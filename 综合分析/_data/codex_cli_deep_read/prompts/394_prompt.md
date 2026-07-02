@@ -1,0 +1,2379 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [394] Deep Graph Anomaly Detection: A Survey and New Perspectives
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：394
+题名：Deep Graph Anomaly Detection: A Survey and New Perspectives
+年份：2025
+DOI：10.1109/tkde.2025.3581578
+来源：IEEE Transactions on Knowledge and Data Engineering
+PDF：paper/10.1109_TKDE.2025.3581578.pdf
+已有粗分类：数据集、基准、综述与开源工具
+二级关联：图学习、知识图谱与威胁情报、其他AI安全与跨域异常检测
+相关性：弱相关，分数 3
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\394.txt
+- 原始字符数：127939
+- 本次发送字符数：127939
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+5106
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+Deep Graph Anomaly Detection: A Survey and New
+Perspectives
+Hezhe Qiao , Hanghang Tong, Fellow, IEEE, Bo An , Senior Member, IEEE, Irwin King , Fellow, IEEE,
+Charu Aggarwal , Fellow, IEEE, and Guansong Pang , Member, IEEE
+(Survey Paper)
+
+Abstract—Graph anomaly detection (GAD), which aims to identify unusual graph instances (e.g., nodes, edges, subgraphs, or
+graphs), has attracted increasing attention in recent years due to
+its significance in a wide range of applications. Deep learning approaches, graph neural networks (GNNs) in particular, have been
+emerging as a promising paradigm for GAD, owing to its strong
+capability in capturing complex structure and/or node attributes
+in graph data. Considering the large number of methods proposed
+for GNN-based GAD, it is of paramount importance to summarize
+the methodologies and findings in the existing GAD studies, so that
+we can pinpoint effective model designs for tackling open GAD
+problems. To this end, in this work we aim to present a comprehensive review of deep learning approaches for GAD. Existing GAD
+surveys are focused on task-specific discussions, making it difficult
+to understand the technical insights of existing methods and their
+limitations in addressing some unique challenges in GAD. To fill this
+gap, we first discuss the problem complexities and their resulting
+challenges in GAD, and then provide a systematic review of current
+deep GAD methods from three novel perspectives of methodology,
+including GNN backbone design, proxy task design for GAD, and
+graph anomaly measures. To deepen the discussions, we further
+propose a taxonomy of 13 fine-grained method categories under
+these three perspectives to provide more in-depth insights into the
+model designs and their capabilities. To facilitate the experiments
+and validation of the GAD methods, we also summarize a collection
+of widely-used datasets for GAD and empirical performance comparison on these datasets. We further discuss multiple important
+
+Received 6 November 2024; revised 12 April 2025; accepted 10 June 2025.
+Date of publication 23 June 2025; date of current version 24 July 2025. This
+work was supported in part by the National Research Foundation, Singapore and
+CyberSG R&D Programme Office under its Translation and Innovation under
+Grant CRPO-GC4-SMU-001, in part by the Ministry of Education, Singapore
+under its Tier 1 Academic Research Fund under Grant 24-SIS-SMU-008, and in
+part by the Lee Kong Chian Fellowship under Grant T050273. Recommended
+for acceptance by Guoren Wang. (Corresponding author: Guansong Pang.)
+Hezhe Qiao and Guansong Pang are with the School of Computing and
+Information Systems, Singapore Management University, Singapore 188065
+(e-mail: gspang@smu.edu.sg).
+Hanghang Tong is with the Department of Computer Science, University of
+Illinois at Urbana-Champaign, Champaign, IL 61801 USA.
+Bo An is with the College of Computing and Data Science, Nanyang Technological University, Singapore 639798.
+Irwin King is with the Department of Computer Science & Engineering,
+Chinese University of Hong Kong, Hong Kong.
+Charu Aggarwal is with IBM T. J. Watson Research Center, Yorktown Heights,
+NY 10598 USA.
+A continuously updated repository for GAD datasets, links to the codes of
+GAD algorithms, and empirical comparison is available at https://github.com/
+mala-lab/Awesome-Deep-Graph-Anomaly-Detection.
+This article has supplementary downloadable material available at
+https://doi.org/10.1109/TKDE.2025.3581578, provided by the authors.
+Digital Object Identifier 10.1109/TKDE.2025.3581578
+
+open research problems in GAD to inspire more future high-quality
+research in this area.
+Index Terms—Graph anomaly detection, graph neural networks, anomaly detection, graph representation learning.
+
+I. INTRODUCTION
+RAPH anomaly detection (GAD) aims to identify graph
+instances (e.g., node, edge, sub-graph, and graph) that
+do not conform with the normal regime. It has been an active
+research area with wide application in detecting abnormal instances in a variety of graph/network data, e.g., abusive user
+behaviors in online user networks, fraudulent activities in financial networks, and spams in social networks. Furthermore, since
+the relations between data samples can be modeled as similarity
+graphs, one can also use GAD methods to discover anomalies
+in any set of data objects (as long as an appropriate pairwise
+similarity function is available).
+Due to the complex structure of graphs, traditional anomaly
+detection methods cannot be directly applied to graph data. In
+recent years, graph neural networks (GNNs) have shown promising capabilities in modeling and learning the representation of
+graphs by capturing structural patterns, inspiring a large number
+of GNN-based approaches for GAD. However, the popular GNN
+designs, such as aggregation of node representations and optimization objectives, may lead to over-smoothing, indistinguishable representations of normal and abnormal graph instances,
+which significantly limits their applications in real-world use
+cases. Many novel GNN-based approaches specifically designed
+for GAD have been proposed to tackle the these challenges. In
+this work, to summarize the current methodologies and findings,
+we provide a systematic and comprehensive review of current
+deep GAD techniques and how they may tackle various types
+of challenges in GAD. We also propose several important open
+research problems in GAD to inspire more future research in
+this area.
+Related surveys: There have been several reviews on anomaly
+detection in recent years, e.g., [2], [4], [78], [87], [102], [112],
+but most of them are focused on non-deep-learning-based methods for GAD [2], [4], [102], or on general data rather than
+graph data [7], [87]. The studies [61], [78], [112] are on deep
+GAD, but the reviews are limited to a relatively narrow point
+of view. For example, Ma et al. [78] focus on task-specific
+discussions, with limited reviews on the technical development,
+
+G
+
+1041-4347 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+5107
+
+TABLE I
+A COMPARISON OF OUR WORK TO EXISTING SURVEYS ON ANOMALY DETECTION
+
+while Liu et al. [61] and Tang et al. [112] focus on establishing a
+performance benchmark for unsupervised and supervised GAD
+methods respectively. Although these surveys provide useful
+guidelines for the development of methods for GAD, it is difficult to understand the technical insights of existing methods
+and their limitations in addressing some unique challenges in
+GAD.
+Our work: To fill this gap, we aim to offer a distinctive
+review on GAD to discuss these insights, the limitations, and the
+future research opportunities in this crucial topic. Specifically,
+we start with the discussion on the problem complexities and
+their resulting unique challenges in GAD. We then provide a systematic review of current deep GAD methods from three novel
+perspectives of methodology, including GNN backbone design,
+proxy task design for GAD, and graph anomaly measures. To
+deepen the discussions, we further propose a taxonomy of 13
+fine-grained method categories under these three perspectives to
+provide more in-depth insights into the model designs and their
+capabilities. To facilitate the experiments and validation of the
+GAD methods, we also summarize a collection of widely-used
+datasets for GAD and empirical performance comparison on
+these datasets. A comparison of our work to these related surveys
+is summarized in Table I.
+In summary, our major contributions are as follows:
+r The survey provides important insights into the problem
+complexities and the resulting challenges that are unique
+for the task of GAD (Section II).
+r We introduce a novel taxonomy of current deep GAD methods, which offers in-depth understanding of the methods
+from three technical design perspectives, including GNN
+backbone design, proxy task design, and graph anomaly
+measures (Section III).
+r We then introduce 13 fine-grained method categories under
+these three perspectives to provide more in-depth insights
+into the model designs (i.e., key intuition, assumption,
+learning objectives, advantages and disadvantages) and
+their capabilities in addressing the unique challenges in
+GAD (Sections IV, V, and VI).
+r We further discuss multiple important future research directions that involve largely unsolved open problems in
+GAD. Solutions in these directions would open up new
+opportunities for addressing the unique challenges in GAD
+(Section VII).
+r We also summarize a large number of representative deep
+GAD methods from the 13 categories and a large collection
+
+of GAD benchmark datasets, and further provide quantitative comparison results on these datasets (Appendices A,
+B, and C).
+II. PROBLEMS AND CHALLENGES IN GAD
+This section discusses some unique complexities and challenges in GAD.
+A. Major Problem Complexities
+The complexities in GAD can be summarized in two
+ways. One source of the complexities lies in some inherent
+characteristics of graph data.
+r P1. Structural dependency: The samples are typically correlated/connected with each other instead of being independent. The connections are of different semantics, e.g.,
+it could be a purchase relationship in a social network, or a
+citation relationship in a citation network. The complexity
+of graph structure is reflected in connectivity patterns,
+dependency, or influence at different levels of graph data,
+which play a significant role in defining what is abnormal
+on graphs [4]. For example, different from i.i.d. data, where
+the anomalies are independent of the context, the anomalies
+in graphs often depend on the context of a graph data
+instance, e.g., the neighboring nodes of a node. Anomalies
+may be considered as normal in one context but abnormal
+in another.
+r P2. Diverse types of graph: There are many types of
+graphs in the real world, each serving different purposes
+and applications. Graphs can be categorized into static
+and dynamic types, depending on whether they change
+over time. It can also be divided into heterophilic and homophilic graphs according to the type of connection [150],
+[160]. The definition of anomaly in one type of graph can
+differ significantly from that in other types of graph. In
+particular, a graph instance (e.g., node/edge/graph) that is
+clearly abnormal in a dynamic graph at a specific time step
+(i.e., a static graph) can demonstrate strong normality when
+looking at the evolution of the graph; similarly, we can have
+opposite abnormality of a graph instance in a homophilic
+graph vs. in a heterophilic graph. Dealing with diverse
+types of graphs requires the GAD methods to adapt its
+learning strategy based on its unique properties of graphs.
+r P3. Computational complexity in handling large-scale
+graphs: With the increasing amount of online data, modern
+
+5108
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+applications can include very large-scale graph data with
+millions/billions of nodes and/or edges [41], [45], [97],
+[112], such as those in web-scale social networks, financial transaction networks, cyber networks, user-product
+e-commerce networks, and citation networks. To identify
+anomalies using global structural contexts, it is essential
+to consider the full graph structural information, or a large
+proportion of the structural relations. The key complexity
+here is to deal with the time and space complexities when
+loading such large-scale structural relation data.
+Another source is from the variety of graph abnormalities.
+r P4. Diverse graph anomaly instances: In contrast to
+anomaly detection in other forms of data, anomalies within
+graph data can arise from different components, such as
+nodes, edges, sub-graphs, or the entire graph [78]. Moreover, graph anomalies can manifest themselves in diverse
+ways, depending on the structure and attribute information
+of graph data. This highlights the need for GAD methods
+to incorporate a range of techniques focused on identifying
+irregular patterns across nodes, edges, subgraphs, and the
+entirety of the graph.
+r P5. Large variation in graph abnormality: Anomalies in
+graphs can manifest in different forms, including abnormality in graph attributes, graph structure, or the composition of graph attributes and structure [4]. Some exemplars
+include attribute anomalies (i.e., graph instances that are
+exceptional in a graph attribute set) [3], [87], structural
+anomalies (i.e., graph instances that connect different communities, forming dense connections with others) [18],
+[78], contextual anomalies (i.e., graph instances that have
+different attribute values compared to other nodes in the
+same community) [18], [78], and local affinity anomalies
+(i.e., graph instances that demonstrate significantly weak
+affinity to their connected instances compared to other
+instances [66], [97]). Also, graph abnormality may vary
+from a local context to a global context, e.g., the node
+attributes in a 1-hop neighborhood vs. that in the full
+graph. This can lead to a highly complex composition
+set of graph abnormalities, i.e., abnormality in attributes,
+structure, or both attributes and structure conditioned on
+a certain context, having very different definitions to the
+conventional anomaly types – point, conditional, and group
+anomalies [3], [11], [87] – in general AD.
+In addition, there are some complexities inherited from general AD but amplified in GAD:
+r P6. Unknowingness of abnormality: Many abnormalities
+remain unknown until they actually occur [87], in which no
+prior knowledge about the abnormality is available for the
+modeling. Further, one type of abnormality can show very
+different behaviors to the other types of abnormality in a
+single graph, e.g., the heterogeneous abnormality in graph
+attributes vs. that in graph structure, in a node set vs. in an
+edge or subgraph set, in a 1-hop local structure context vs.
+in a higher-order structural context. Thus, knowing one or
+more types of graph anomalies may not be generalize to
+the other types of anomalies.
+r P7. Data imbalance: Due to the rare occurrence of anomalies, there is typically a large sample imbalance between
+
+normal and anomaly classes [3], [11], [87]. This also
+applies to GAD, but this complexity is largely amplified
+in GAD due to potential long-tailed distributions in graph
+structure/attributes [2], [68], in addition to the imbalance
+in the class sample size.
+r P8. Abnormality camouflage: Bad actors may adjust their
+behaviors to camouflage the abnormality of the anomalous
+instances, making them difficult to detect using popular
+AD methods. The anomaly camouflage in GAD refers to
+the phenomenon where anomalous graph instances disguise themselves as normal within a local neighborhood
+or the global graph. This may be done through various
+mechanisms, e.g., attribute manipulation and structural
+manipulation in a graph [23], [70], [98], [136].
+B. Major Challenges
+The aforementioned problem complexities lead to the following largely unsolved challenges in GAD, which deep GAD
+approaches can tackle to various extent:
+r C1. Graph structure-aware GAD: As discuss in P1, graph
+anomalies are not solely determined by their own attributes
+but also by their structural context. Thus, the GAD methods
+are required to effectively capture those structural dependency in their anomaly scoring functions. The effect of
+this dependency in anomaly scoring may vary significantly
+from homophilic graphs to heterophilic graphs, and from
+static graphs to dynamic graphs (P2). On the other hand,
+oversmoothing is a common issue when modeling the
+graph structure information, which is referred to as a
+phenomenon in graph representation learning where the
+learned representations of different nodes become overly
+similar due to the iterative aggregation of representations
+of neighboring nodes to obtain the representations of the
+target nodes. In GAD, this can lead to node/subgraph representations that smooth out anomalies as well, making them
+indistinguishable between normal and abnormal graph instances [23], [97]. Therefore, it is challenging to model
+diverse structural influences in the anomaly scoring on
+graphs, while avoiding adverse effects like representation
+oversmoothing.
+r C2. GAD at scale: As discussed in P3, large-scale graphs
+with millions or even billions of nodes/edges presents a
+significant computational challenge to GAD methods that
+aim to model global or higher-order structure information [112]. Existing large-graph modeling methods are
+challenging to apply directly to GAD due to the extreme
+imbalance in the data (P7). While some subgraph and
+sampling techniques have been proposed to address this
+issue, they often fail to capture the full structural information, resulting in sub-optimal performance [23], [66],
+particularly for unsupervised GAD. Consequently, performing anomaly detection on large-scale graphs remains
+a long-standing challenge in the area.
+r C3. Generalization to different graph anomalies: As discussed in P4, there are various types of graph anomaly
+instances, making it hard to apply a one-for-all approach.
+Achieving this requires a combination of robust feature
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+extraction and versatile detection models. Further, the
+anomalies can manifest in various forms, ranging from
+attributes, structure and their composition (P5). However,
+most existing methods are designed for a specific type
+of anomaly in an unsupervised manner, which typically
+have a low recall rate [18], [66], [97]. The challenge is
+amplified when the training data does not illustrate every
+possible class of anomaly (P6), regardless of unsupervised
+or supervised methods [1], [16], [88], [89], [90], [119],
+[158].
+r C4. Balanced GAD: As discussed in P7, since the number of normal instances is significantly larger than that
+of abnormal instances, the models tend to bias towards
+the majority class during the training, i.e., they perceive
+the normal patterns more frequently. Consequently, the
+models might be overly specialized in recognizing normal
+instances while generalizing poorly on the anomalies. Often the detection decision thresholds are crucial for making
+predictions for some methods [23], [112], and poorly chosen thresholds can worsen the effects of data imbalance.
+Thus, the challenge is to avoid biased GAD.
+r C5. Robust and interpretable GAD: GAD in real applications needs to be robust against various adverse conditions,
+such as abnormality camouflage (P8) [23], [34], [112] and
+unknown anomaly contamination [97], [98]. Addressing
+the abnormality camouflage or anomaly contamination
+may require models that can capture subtle differences between normal graph instances and camouflaged instances,
+and complex relationships within the graph as well. Besides, an explanation of why a graph instance is detected as
+an anomaly can be crucial for the utility of the predictions
+in real applications [59], [105], [105], but it is a largely
+unexplored area. For example, in bank fraud detection, it
+is essential to provide a comprehensive explanation of the
+detected fraudulent activity for facilitating the subsequent
+investigation, but it is challenging to link the fraud to
+specific attributes of particular transactions (nodes) and
+their relations (edges) at a specific time period.
+III. CATEGORIZATION OF DEEP GAD
+A. Preliminaries
+GAD aims to recognize the anomaly instances in graph data
+that may vary from nodes, edges to subgraphs by learning an
+anomaly scoring function. Traditional GAD methods achieve
+anomaly detection using matrix decomposition and residual
+analysis [4]. However, their performance is often bottlenecked
+due to the lack of representation power to capture the rich
+structure-attribute semantics of the graph data and to handle
+high-dimensional node attributes. In recent years, GNNs have
+been widely used in GAD due to their powerful representation
+learning ability. Some representative GNNs like GCN [51],
+GraphSage [37], and GCL [135] attract much attention in node
+representation learning in graphs. These GNNs can be leveraged
+to learn the expressive representation of different graph instances
+for GAD.
+Definition and Notation: In this section, we introduce the
+definitions and notations used throughout the paper. We denote
+
+5109
+
+a graph by G = (V, E) where V and E denote the node set and
+edge set respectively. For the graph G, we use X ∈ RN ×M to
+denote the matrix of node attributes and xi ∈ RM is the attribute
+vector of vi ∈ V, and A ∈ {0, 1}N ×N is the adjacency matrix
+of G with Aij = 1 iff (vi , vj ) ∈ E, where N is the number of
+node.
+Problem Statement: GAD can be divided into anomaly detection at the node-level, edge-level, sub-graph level and graphlevel settings. The node-, edge- and subgraph-level AD tasks
+are typically performed within a single large graph G, where the
+input samples are nodes v ∈ G, edges e ∈ G, and subgraphs
+s ⊂ G, respectively. For the graph-level AD task, the input
+samples are a set of graphs G = {G1 , G2 , · · · }. For the sake
+of simplicity and generality across different levels of GAD, we
+uniformly denote the input samples as o, i.e., o can denote a
+node v, an edge e, a subgraph s, or a full graph G, depending on
+their use in specific algorithms or models. Then GAD aims to
+learn an anomaly scoring function f : {o1 , o2 , · · · } → R, such
+that f (o) < f (o ), ∀o ∈ On , o ∈ Oa , where On and Oa denote
+the set of normal and abnormal graph instances, respectively.
+Since anomalies are rare samples, it is typically assumed that
+|On |  |Oa |.
+B. Categorization of Deep GAD Methods
+In order to facilitate a comprehensive understanding of the research progress in GAD, we introduce a new taxonomy that categorizes current GAD methods into three main groups,including
+GNN backbone design, proxy GAD task design, and graph
+anomaly measures, depending on the insights offered by each
+method. This enables us to review the GAD methods from three
+different technical perspectives. To elaborate the insights in each
+perspective, we further categorize the methods into fine-grained
+13 groups. An overview of the taxonomy is shown in Fig. 1.
+More specifically, general GNNs can not be directly applied
+to GAD due to the aforementioned problem complexities, and
+thus, there is a group of studies that focus on designing suitable
+GNN backbones for GAD. The design of the GNN backbones
+can be divided into discriminative GNNs and generative GNNs
+according to the improvement of different modules in GNNs.
+The second main category of methods is on the GAD models
+constructed by optimizing a diverse set of well-crafted learning
+objective functions to form a proxy task that can guide the
+GAD models to capture diverse graph anomaly/normal patterns without the need for ground-truth labels. This category
+of methods can be further divided into five subcategories based
+on the modeling in the proxy tasks. Lastly, there is a group of
+methods that build GAD models based on anomaly measures
+that are designed specifically for graph data. These methods
+can be further grouped into four subcategories depending on
+the type of graph anomaly measures used. A summarization of
+representative algorithms for each type of GAD approaches is
+presented in Table 1 in Appendix A, available online.
+IV. GNN BACKBONE DESIGN
+This category of methods aims at leveraging GNNs to learn
+effective representations of graph instances for downstream
+
+5110
+
+Fig. 1.
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+Overview of the proposed taxonomy of deep GAD from three high-level and 13 fine-grained technical perspectives.
+
+anomaly detection tasks. Due to its strong capability to represent graph-structured data, GNNs can effectively obtain expressive node representations through aggregation among the connected nodes. However, unlike general node/graph classification
+datasets, GAD datasets are often extremely class-imbalanced,
+which prevents GNNs from being directly applied to GAD
+datasets. Therefore, several GNNs have been proposed to handle
+the imbalance problem for more effective GAD. Concretely, this
+type of methods can be roughly divided into discriminative- and
+generative-based GNNs for GAD.
+A. Discriminative GNNs
+Discriminative GNN-based GAD methods refer to a GNN architecture specifically designed for discriminating normal graph
+instances from the abnormal ones, where the discrimination is
+typically achieved through a supervised learning manner. Thus,
+the discriminative GNNs are typically trained on the labeled
+graph dataset containing examples of both normal and abnormal
+instances. The core idea in these methods is to adapt the conventional GNN backbones in a way so that the message passing in
+GNNs can capture the majority patterns or the deviation patterns
+better.
+
+Let hi be the feature representation of a graph instance oi
+that is obtained through l layers of feature aggregation (FAG)
+in a GNN, i.e., hi = FAG1 :l (oi , Ni ) where Ni represents the
+neighbor set of a graph instance oi , these methods are typically
+optimized via a general cross-entropy loss to train the discriminative GAD model.
+
+[yi log pi + (1 − yi ) log(1 − pi )],
+(1)
+Lcls = −
+oi ∈G
+
+where yi denotes the class label of the instance oi and pi =
+MLP1 :m (hi ) is the output of a mapping function that goes
+through m layers of multiple perceptrons (MLP) to project the
+feature hi to a probability of the sample being abnormal/normal.
+During inference, given a graph instance, oj , pj or its inverse
+1 − pj can be used as its anomaly score.
+Different GNN-based encoders can be used to obtain the
+feature representation h, such as graph convolutional networks
+(GCNs) [51], graph attention networks (GAT) [116], or GraphSage [37]. Depending on which part of the learning pipeline is
+focused, we group the existing methods in this category into
+two sub-categories, including the methods that focus on the
+GNN neighborhood aggregation design, i.e., FAG1 :l (oi , Ni ),
+and that focus on feature transformation with the raw attributes
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+or node embeddings as input, i.e., Transformation(hi ) or
+Transformation(xi ). Below we introduce each of them in
+detail.
+1) Aggregation Mechanism: As a simple and effective way
+to obtain the representation of nodes in GNNs, feature aggregation plays a crucial role in learning node representations by
+aggregating information from neighboring nodes in a graph.
+Thus, to create GNN-based methods for GAD, one principled
+approach is to craft suitable feature aggregation FAG designs
+that are sensible for graph anomaly instances.
+Assumption: The GAD methods in this line assume that the
+connected instances from the same class in graphs have similar
+characteristics, from which we can perform feature aggregation
+to obtain discriminative normality/abnormality patterns.
+A widely-used FAG mechanism is as follows [51]:
+
+
+
+
+(l)
+(l−1)
+(l−1)
++ AGG hj
+| o j ∈ Ni
+,
+hi = σ W(l) hi
+(2)
+(l)
+where hi is the feature representation of instance i in the
+l-th layer, σ is an activation function, and W(l) is the training
+parameters in the l-th layer. The graph instance oi is often set
+as a node vi , and Ni is typically the 1-hop neighborhood of the
+node vi . AGG(·) is implemented using sum or mean aggregation,
+which sums or averages the representations of neighbor features.
+More advanced aggregation methods, such as attention-based
+aggregation [29] and LSTM [149], are also widely used. However, due to the oversmoothing representation issue (C1 in
+Section II-B), directly applying such neighborhood aggregation
+mechanism can largely reduce the discriminability of of graph
+anomalies, especially for those whose abnormal behaviors are
+subtle (C3 in Section II-B). Therefore, a variety of methods were
+proposed to enforce distinguishable representations for normal
+and abnormal graph instances throughout a number of feature
+aggregation iterations. These methods can be summarized via
+the following principled framework:
+
+
+(l)
+(l−1)
+| oj ∈ Φ (Ni ) ∪ Ψ(V) ,
+ĥi = AGG hj
+
+
+
+(3)
+(l)
+(l−1)
+(l)
+,
+hi = σ W(l) hi
++ ĥi
+where Φ(·) and Ψ(·) represent a filtering function on the neighborhood set N and an edge synthesizer on the full node set V,
+respectively. Depending on how the methods specify the Φ or
+Ψ function, we further categorize them into two fine-grained
+groups – hard/soft edge selection and edge synthesis – to gain
+better insights into these existing methods.
+• Hard Edge Selection: Popular aggregation mechanisms in GNN methods are built upon a homophily assumption
+that connected nodes come from the same class.
+Thus, the existence of non-homophily edges (i.e., edges that
+connect nodes of different classes, also referred to as heterophily
+edges below) in a GAD dataset can greatly hinders the discriminability of the learned feature representations. As shown in
+Fig. 2(a), one popular strategy is to instantiate Φ(Ni ) that prune
+the heterophily edges w.r.t. the normal class, referred to as hard
+edge selection. Below we review the methods in this line.
+In order to enhance the homophily relations, CARE-GNN [23]
+devises a label-aware similarity measure to find informative
+
+Fig. 2.
+
+5111
+
+Three categories of aggregation mechanism.
+
+neighboring nodes during the aggregation where Φ(Ni ) is instantiated by a node selector that chooses the neighbors with
+high similarity. Moreover, a reinforcement learning module is
+also used in [23] to find the optimal amounts of neighbors to
+be selected. MITIGATE [12] implements Φ(Ni ) via a masked
+aggregation mechanism that utilizes the distance-based clustering algorithm to choose a subset of high-representative nodes,
+in which the nodes that are closest to the cluster centers are
+chosen. GmpaAD [79] takes a similar clustering-based approach
+as MITIGATE, but it uses a differential evolutionary algorithm
+to find the optimal mapping strategy and generate the representative nodes given the selected candidates from a clustering
+method. On the other hand, H2-FDetector [107] categorizes the
+edges into homophily and heterophily connections in the graph,
+and further designs a new information aggregation strategy to
+ensure that the homophily connections propagate similar information while the heterophily connections propagate different
+information.
+In addition to using distance, Φ can also be specified via
+meta learning or reinforcement learning. BLS [20] is the representative method that enhances the FAG mechanism under
+imbalanced and noisy scenarios by selecting important nodes
+via a meta-learning gradient of the learning loss. AO-GNN [43]
+employs a reinforcement learning method supervised by a surrogate reward based on AUC performance to prune the heterophily
+edges. NGS [99] takes a meta-graph learning approach that
+devises a differentiable neural architecture to determine a set
+of optimized message passing structures and then combines
+multiple searched meta-graphs in FAG.
+• Soft Edge Selection: Another research line is
+adopting an attention mechanism in GNNs by assigning the
+weights for each edge for soft edge selection for GAD, rather
+than hard edge selection, as demonstrated in Fig. 2(c). This
+weight is generally obtained through the relationship between
+node embeddings, which serves as an effective way to enforce
+the importance of some specific edge relations in the feature
+aggregation. GAT [116] is widely used as the basic backbone,
+on top of which a variety of designs is introduced in the methods
+of this category for GAD. Specifically, the general attention
+mechanism in GAT can be formulated as:
+⎞
+⎛
+
+(l)
+(l)
+(4)
+Φ (hi , hj ; θ) Whj ⎠ ,
+hi = σ ⎝
+oj ∈N(i)
+
+where Φ indicates a weight learning function with parameters θ
+applied on the embedding of a graph instance oi and its neighbors
+oj . It represents the contribution of relations/neighbors to the
+
+5112
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+target instance oi , where the instance oi is often specified as a
+node vi . For instantiating Φ, GraphConsis [70] reveals an inconsistency phenomenon in node connections that abnormal nodes
+can have a high likelihood of being connected to normal nodes
+to camouflage their abnormality. It then introduces a consistency
+scoring-based method based on node embedding similarities
+and a self-attention mechanism to assign weights for different
+connections in the aggregation in Φ. FRAUDRE [140] extends
+the inconsistency-based scoring method to include three types
+of graph inconsistencies in features, topology, and structural
+relations to consider the importance of different connections.
+On the other hand, PMP [162] introduces a partitioning message
+passing to independently handle the heterophily and homophily
+neighbors preventing the gradients in the optimization from
+being dominated by normal nodes. To achieve this, Φ is implemented by a weight generator function to adaptively adjust
+the influence of neighbors from different classes to the target
+node.
+• Edge Synthesis: The edge selection function Φ focuses on local structure only. Edge synthesis function Ψ can
+often be used to complement Φ in capturing more global patterns for GAD, as demonstrated in Fig. 2(b). For example,
+GHRN [33] prunes the inter-class edges by emphasizing and
+delineating the high-frequency components of the graph. Apart
+from edge reduction, the indirect link between nodes can also
+be beneficial for the normality representation learning [33]. To
+this end, GHRN introduces a global node selector Ψ(V) that
+chooses nodes beyond the neighboring nodes of the target node
+to introduce this information into the feature aggregation, which
+can be seen as an edge synthesizer that connects distant nodes to
+a target node. PCGNN [63] specifies Ψ(V) using a subgraph
+construction method consisting of class-label-balanced node
+and edge samplers to tackle potential issues arising from the
+skewed class distribution. To this end, it incorporates the label
+information into the sampling process to choose nodes and edges
+for its sub-graph construction. A distance function is also used
+to simplify the neighborhood in the sub-graphs. NSReg [119]
+leverages a novel normal structure regularization method where
+the normal-node-oriented relation is used to enforce strong
+normality into the representation learning to avoid overfitting
+to the labeled abnormal nodes.
+The relation representations are generated through a learnable transformation that fuses the representations of relevant
+nodes, which are subsequently used to optimize the normalnode-oriented relation prediction and the representation learner.
+Advantages: The key advantages of discriminative GNNbased GAD methods are as follows. (i) Treating anomaly detection as an end-to-end imbalanced classification task simplifies
+the GAD problem, allowing the use of available abnormal samples to detect known graph anomaly instances. (ii) This approach
+does not rely on the reconstruction of the graph structure, which
+significantly reduces memory usage and enhances its scalability
+for large-scale graphs.
+Disadvantages: They also have some major disadvantages. (i)
+Since these methods require some labeled graph data as supervision information, they become inapplicable or less effective
+in practical applications where such data is difficult to obtain.
+
+Fig. 3.
+
+Two categories of feature transformation.
+
+(ii) Edge selection may lead to the loss of important structure
+information while edge synthesis may introduce noise or some
+irrelevant structure information into the message passing in
+GNNs.
+Challenges Addressed: The tailored GNNs for GAD enable
+effective modeling of graph structure and its interaction with
+graph attribute information (C1). They may also be able to
+learn more discriminative features for detecting subtle anomalies
+that are similar to labeled abnormal samples (C3). Since these
+methods require local feature aggregation, they can often scale
+up to large graphs (C2).
+2) Feature Transformation: In addition to the efforts on
+the aggregation mechanism, another popular approach to obtain discriminative features for GAD is to perform feature
+transformation on either the graph instance representations
+from GNNs, i.e., Transformation(hi ), or raw attributes, i.e.,
+Transformation(xi ). This is crucial since datasets used in GAD
+can often contain a substantial proportion of feature information
+that is irrelevant, or even noisy, to GAD. There are two popular
+approaches to instantiate this Transformation(·) function: one
+is to use gradient information and another is to use spectral graph
+filters.
+Assumption: It is assumed that there is irrelevant or noisy
+information in the raw attributes or graph structure w.r.t. GAD,
+which should be discarded during feature aggregation.
+• Gradient-based Feature Scoring: Extracting
+class-related features specific to the characteristics of a particular class is one straightforward way to obtain discriminative features. Inspired by variable decomposition [30], gradient
+information-based methods have been emerging as one main approach to obtain discriminative representations from GNNs [75].
+The key idea here is to select features from the representation
+hi based on the gradient backpropagated from the softmax
+probability of being a specific class, as illustrated in Fig. 3(a).
+Let αkc be the gradient score of an anomaly class c w.r.t. a feature
+k, then it represents the contribution of this feature to anomaly
+detection, which can be formulated as follows:
+αkc =
+
+N
+1  ∂y c
+,
+N i=1 ∂hk,i
+
+(5)
+
+where y c is the predicted probability of being the anomaly class
+c and hk,i is the k-th feature of the representation of node i from
+a hidden layer. After obtaining a gradient score for each feature
+dimension, the top K features with the largest gradient scores
+are selected to represent the nodes in a reduced feature space.
+This gradient score-based approach is used in GDN [32] to select
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+abnormal and normal features in a supervised manner, and these
+features are found often to be invariant to structure distribution
+shift. It helps reduce the negative influence of irrelevant features
+while preserving the extracted abnormal/normal graph patterns,
+thus enhancing the overall performance of GAD. Similarly,
+GraphENS [92] determines the importance of each node feature
+via a gradient score-based method. Apart from gradient score,
+existing feature selection methods for anomaly detection or
+imbalanced classification [54], [84], [85], [86], [91] may be
+adapted for GAD.
+• Spectral Graph Filter: Spectral graph filter,
+which combines the strengths of spectral graph theory and
+GNNs, is widely applied to capture and analyze the structural
+properties of graphs for GAD tasks. This approach utilizes a
+set of graph filters to transform the raw attributes to latent
+space to extract discriminative graph representations, as illustrated in Fig. 3(b). Each graph filter assumes that normal nodes
+tend to have similar features with their neighbors, which can
+be regarded as low-frequency information, whereas abnormal
+nodes in the graph are characterized by deviations from the
+norm, which are often accompanied by high-frequency information since abnormal nodes often have different characteristics
+from surrounding nodes. The distinction between low-frequency
+and high-frequency information is closely related to the spectral properties of the graph. In particular, the low-frequency
+and high-frequency variations on the graph can be effectively
+captured by the lower and higher eigenvalues of the graph
+Laplacian matrix, respectively. To leverage this information for
+GAD, graph Fourier transformation [109] based graph filtering
+operation is often used. Formally, let L be the symmetrically
+normalized Laplacian, with eigen decomposition L = UΛUT ,
+where Λ = diag[λ1 , . . . , λn ], then a signal x ∈ Rn is transferred by using a graph filter g, Transformation(x) = g  x =
+Ug(Λ)UT x, and thus, the graph signal filtered by the k-th filter
+can be defined as
+hi,k = Ugk (Λ)UT xi = Udiag [gk (λ1 ) , . . . , gk (λn )] UT xi .
+(6)
+To better capture the feature separability, a set of multifrequency filters is often employed to learn the node representations [10]. Accordingly, the final representation hi of node vi
+can be obtained by
+
+
+hi =
+αi,k hi,k = U
+αi,k gk (Λ)UT xi ,
+(7)
+k
+
+k
+
+where αi,k is an important score for the graph filter gk (Λ).
+Various spectral graph filters utilizing the frequency at different level have been proposed for GAD. Specifically, AMNet [10]
+is an early work that adaptively integrates different graph signals
+with mixed frequency patterns via a multi-frequency graph
+filter group. It uses a restricted Bernstein polynomial parameterization method to approximate filters in multi-frequency
+groups. BWGNN [113] reveals a ‘right-shift’ phenomenon in
+GAD datasets with synthetic or real-world anomalies, i.e., lowfrequency energy is gradually transferred to the high-frequency
+part when the degree of anomaly becomes larger. According to
+this phenomenon, they justify the necessity of spectral localized
+
+5113
+
+band-pass filters in GAD. Current GNNs with adaptive filters
+cannot guarantee to be band-pass or spectral localized. Therefore, they build on top of Hammond’s graph wavelet theory [38]
+to develop a new GNN architecture with a Beta kernel to better
+detect higher-frequency anomalies.
+The aforementioned filters can be challenged by heterophily
+graphs since homophily graphs are assumed in these filters.
+To tackle this challenge, SEC-GFD [131] employs a hybrid
+band-pass filter to partition the graph spectrum into hybrid
+frequency bands, while SplitGNN [123] combines a band-pass
+graph filter with a tunable Beta Wavelet GNN to address the
+heterophily issue in node representation learning for GAD (C1
+in Section II-B).
+Advantages: (i) The feature transformation approach supports
+the extraction of discriminative features from data with various
+amount of irrelevant/noisy information. (ii) It can also provide
+rich and informative graph representations capturing beyond
+local graph properties, such as connectivity, centrality, and community structure, for more effective GAD.
+Disadvantages: (i) Depending on what criterion or spectral
+filter is used, this approach might overlook some important
+information in feature transformation that could be crucial for
+GAD, since one feature scoring criterion or filter often fails to
+capture all possible discriminative features. (ii) The approach
+may confined to a specific type of graph. For example, spectral
+GNNs are primarily designed for homogeneous graphs, and thus,
+it may not be suitable for a heterogeneous graph with different
+types of nodes.
+Challenges Addressed: The feature transformation approach
+enhances GNNs by focusing them on specific types of discriminative features, thereby providing effective solutions to the graph
+structure-aware anomaly detection problem (C1). Furthermore,
+this approach focuses on discriminative features and does not
+require costly graph structure reconstruction, and thus, it is often
+good for GAD on large-scale graph data (C2).
+B. Generative GNNs
+Generative GNN-based methods focus on synthesizing new
+graph instances to augment the existing graph data for enhancing
+model training on the new graph for GAD. This approach is
+motivated by the problem complexities like the scarcity of graph
+anomaly instances and their large variations (P5 and P7 in
+Section II-B). The underlying key idea in these GAD methods
+is to synthesize outliers that can simulate graph anomalies in
+some specific properties to provide pseudo anomaly information
+for training the GAD models. In general, these methods can be
+summarized by the following formulation:
+= gφ (oi , X, A; ),
+onew
+i
+
+(8)
+
+where oi is an existing graph instance, gφ is a graph instance
+generator with parameters φ that uses oi , existing attribute information X, graph structure information A, and some auxiliary
+.
+information  to generate the augmented graph instance, onew
+i
+It is then followed by a one-class or binary classification loss
+Lcls defined as
+
+Lgen =
+(Y, fθ (Xnew
+, Anew
+)),
+(9)
+i
+i
+
+5114
+
+Fig. 4.
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+Two categories of generative GNNs.
+
+where Xnew and Anew are the augmented version of X and
+A, Y represents the label set of the graph instances consisting
+of pseudo labels of the generated anomaly instances (and the
+labels in the original graph if any), and f is a GAD model.
+Depending on the source of  in gφ in (8), these methods can
+be categorized into feature interpolation and noise perturbation
+generation methods. The former focuses on specifying  using
+data from existing graphs, while the latter focuses on utilizing
+prior distribution to specify .
+1) Feature Interpolation: Feature interpolation is a commonly employed technique in imbalance learning for augmenting data, where the representations of synthesized graph instances are created by interpolating the representations of existing graph instances. It has been explored in popular algorithms
+like SMOTE [31] and Mixup [142] to oversample the minority
+classes or generate diverse, large-scale samples for training deep
+models. The approach can be generally formulated as follows:
+(j)
+
+hnew = (1 − λ) · h(i)
+a + λ · hb ,
+
+(10)
+
+where hnew is the representation of the generated graph instance
+using a convex combination of the representations of two existing graph instances from the same class, ha and hb , as illustrated
+in Fig. 4(a).
+Assumption: The interpolated feature representations between
+graph instances can well align with those of the instances from
+the anomaly class.
+GraphSMOTE [147], GraphMixup [124] and GraphENS [92]
+are representative methods that utilize feature interpolation to
+address the challenge of biased GAD (C4 in Section II-B). These
+methods are designed for imbalanced node classification, which
+can be considered as supervised GAD in a closed-set setting
+since they do not consider the detection of novel/unknown
+anomaly types that are not illustrated by the labeled training anomaly examples [1], [16], [88], [90], [119], [158]. In
+particular, GraphSMOTE [147] extends SMOTE to synthesize
+new nodes and edges in graph data. Different from generic
+data, generating new nodes in a graph requires the connections
+of these nodes to existing nodes. Thus, an edge generator is
+trained simultaneously in GraphSMOTE to model the relations
+between existing and new nodes when using the SMOTE-style
+approach to generate the new nodes. A similar work is done
+in AugAN [156] that performs interpolation on the feature
+representations of the nodes that are similar to labeled anomalies
+to increase the number of training anomaly examples. However, directly performing the interpolation may produce outof-domain samples due to the extreme sparsity of the minority
+
+classes. To alleviate this issue, GraphMixup [92] is introduced
+to construct semantic relation spaces that allow the interpolation
+to be performed at the semantic level. In GraphENS [92], the
+synthesized nodes are created using an adaptive interpolation
+rate that is determined by the distance between the minority and
+majority class nodes, and its neighborhood is built in a stochastic
+manner based on the distance between the ego-network nodes
+of a minority node and a target node. BAT [69] generates virtual
+nodes for each class as “shortcuts” connecting to the other nodes
+based on posterior likelihoods, where the representation of the
+generated nodes is generated based on a feature interpolation
+operation.
+Advantages: (i) Feature interpolation is a simple yet effective
+way to create more samples for the under-represented anomaly
+classes. (ii) Mixing up feature representations from different
+classes can diversify the training data, enhancing the training of
+a more generalized GAD model.
+Disadvantages: (i) Feature interpolation focuses on generating node representations but lacks the ability to generate graph
+structural information. Typically, the methods in this category
+require the incorporation of an additional local structure generator to address this limitation. (ii) Feature interpolation also has
+the risk of producing some ambiguous graph samples which may
+lead to harder separation between normal and anomaly classes.
+Challenges Addressed: Feature interpolation provides a simple but effective way to augment the anomaly data, which helps
+mitigate the bias due to data imbalance (C4). Further, it may generate abnormal graph instances that are dissimilar to the training
+anomaly instances, thereby improving the generalization ability
+of GAD models to some unknown anomalies (C3).
+2) Noise Perturbation: Unlike the feature interpolation
+methods that generate new graph instances based on interpolation between representations of existing instances, the noise
+perturbation generation methods aim to generate graph instances
+using prior-driven noise perturbation, as shown in Fig. 4(b).
+This approach can incorporate prior knowledge of the graph
+normality/abnormality into the generation process for more effective GAD. The generated graph samples as abnormal graph
+instances, combined with the given labels for existing nodes,
+can then be leveraged to guide the training of a discriminator for
+GAD.
+The approach can be generally formulated as follows
+Xnew , Anew = gφ (X, A; ),
+Lcls =
+
+N
+
+
+(yi , fθ (Xi , Ai ))
+
+i=1
+
++
+
+M
+
+
+(1, fθ (Xnew
+, Anew
+)) ,
+i
+i
+
+(11)
+
+i=1
+
+where  is noise perturbation typically generated from a probability distribution, such as a Gaussian distribution, gφ (·) is a
+generation function parameterized by φ, and M is the number
+of generated graph instances.
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+5115
+
+Assumption: Certain prior distributions can be used as a
+source of noise perturbation to generate pseudo-abnormal graph
+instances and/or diversify normal graph instances.
+One group of methods in this category [8], [14], [57], [98]
+takes a representation permutation approach, which focuses
+on applying permutation to graph representations to instantiate
+gφ (·), i.e., Permutation(Z). It first utilizes a GNN to obtain
+the representations from the original graph data X and A. Then
+it applies the permutation to the representations to generate the
+representation of anomalous samples, denoted as Z̃.
+Z̃ = Permutation(Z; ), Z = GN N (X, A)
+
+(12)
+Fig. 5.
+
+where  are the hyperparameters of permutation. For example,
+DAGAD [57] employs the permutation and concatenates on
+the representation learned from a limited number of labeled
+instances to generate the anomalous sample, thereby enriching
+the knowledge of anomalies captured in the training set. On
+the other hand, GGAD [98] aims to generate outlier nodes
+that assimilate anomaly nodes in both local structure and node
+representations by leveraging the two priors of anomaly nodes,
+including asymmetric local affinity and egocentric closeness,
+to impose constraints the representations. SDGG [8] takes a
+similar approach as GGAD, but it is focused on generating
+abnormal graphs that closely resemble fringe normal graphs,
+which are then used to train graph-level anomaly detectors.
+Unlike GGAD and SDGG that work on exclusively normal
+training data, ConsisGAD [14] focuses on unlabeled nodes. It
+creates a noise version of the unlabeled nodes by injecting noise
+into their representations to synthesize instances that maintain
+high consistency with the original instances while involving as
+much diversity as possible. This operation helps mitigate the
+scarcity of abnormal node instances while also enriching the
+diversity of normal nodes.
+Apart from the representation permutation-based generation,
+denoising diffusion probabilistic models (DDPMs) [40] have
+recently been emerging as another major approach to generate
+anomalous graph instances [62], [77]. The diffusion process is
+defined as a Markov chain that progressively adds a sequence of
+scheduled Gaussian noise to corrupt the original data x:
+Zs = Z0 + σ(s)ε, ε ∼ N(0, I),
+
+(13)
+
+where Z0 is the feature representations of the graph instances
+and the variance of the noise (the noise level) is exclusively
+determined by σ(s). The full denoising process is equivalent
+to a reverse Markov chain that attempts to recover the original
+data from noise. It iteratively denoises Ẑs to obtain Ẑsi−1 via
+denoising function. The estimated Ẑ0 is then fed into a graph
+instance generator to generate anomalous graphs for GAD. In
+particular, GODM [62] employs iterative denoising to synthesize
+pseudo anomalous graph instances that have close distribution
+with the real anomalies in a latent space. DIFFAD [77] leverages
+the generative power of denoising diffusion models to synthesize
+training samples that align with the original graph instance in
+egonet similarity. The generation of supplementary and effective
+training samples is utilized to mitigate the shortage of labeled
+anomalies.
+
+Five categories of proxy task design.
+
+Advantages: (i) The graph instance generation may allow the
+synthesis of novel anomalies that facilitate the identification of
+unseen anomalies. (ii) Noise perturbation generation can create
+more diversified training samples, making the trained models
+less sensitive to small changes in the input data. Disadvantages:
+(i) The generated instances can inevitably include some outof-domain examples, which may deviate from the optimization
+objective, rendering the detection models less effective. (ii)
+Determining the optimal level of noise in the noise perturbation
+can be challenging and may require extensive experimentation.
+Challenge Addressed: The generation of instances can enhance the generalization of detecting different graph anomalies
+(C3). It also helps achieve a balanced GAD by enhancing the
+training samples through the GAD-oriented generation (C4).
+V. PROXY TASK DESIGN
+The proxy task design-based approaches aim to capture diverse normal/abnormal graph patterns by optimizing a wellcrafted learning objective function that aids the detection of
+anomalies in the graph data without the use of human-annotated
+labels. One of the crucial challenges in proxy task design is
+to guarantee that i) the proxy task is associated with GAD,
+and ii) it can deal with rich structure information and complex
+relationships in graphs. We roughly divide the methods in this
+group into five categories according to the employed proxy
+tasks, including reconstruction, contrastive learning, knowledge
+distillation, adversarial learning, and score prediction. Their
+respective framework is shown in Fig. 5. Below we introduce
+each of them in detail.
+A. Graph Reconstruction
+Data reconstruction aims to learn low-dimensional feature
+representations of data for reconstructing given data instances,
+which is widely used in tabular data, and image/video data to detect anomalies [89]. Given that the normal samples often occupy
+most of the dataset, it helps guarantee that the representations can
+retain the normal information, and thus, normal samples will be
+reconstructed with a smaller reconstruction error than anomaly
+samples. As a commonly used technique in this category, Graph
+autoencoder (GAE) [39] consists of a graph encoder and a graph
+decoder and it is easy to implement the reconstruction process.
+
+5116
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+As shown in Fig. 5(a), given a graph with X and A, the graph
+reconstruction can be formulated as
+Z = GN Nenc (X, A; Θenc ) ,
+X = GN Ndec (Z, A; Θdec ) ,
+
+
+
+Aij = p Aij = 1 | zi , zj = sigmoid zi zTj ,
+
+(14)
+
+where the GNN encoder and decoder, which typically follow
+the general form of the FAG mechanism in (2), are designed to
+obtain the feature representation for each node by aggregating
+the representations of its neighbors. They are parameterized
+by ΘEnc and ΘDec respectively. Z are the representations of
+the nodes in the latent space. X̂ and A are the reconstructed
+attributes and graph structure respectively. The optimization
+objective of the methods in this group can be unified as follows
+Lreconstruction = R(A, A) + S(X, X)) + Φ(A, X; Θ), (15)
+where R(·) and S(·) are two reconstruction functions on graph
+attributes and structure respectively, and Φ(A, X; Θ) is an auxiliary optimization task to enhance the reconstruction for better
+GAD. A general assumption underlying the methods of this
+approach is as follows.
+Assumption: Normal graph instances can be well reconstructed while reconstructing the anomalies in terms of graph
+attributes and/or structure will lead to a large error.
+There have been many GAE-based GAD methods, among
+which early methods typically instantiate the encoder parameter
+Θenc and decoder parameter Θdec using different GNN models [5], [18], [29], [42], [55], [74], [94], [138]. DOMINANT [18]
+is among the seminal studies applying GAE to detect anomalies,
+in which both Θenc and Θdec are specified by a three-layer graph
+convolution. The optimization terms R and S are specified using
+the pointwise difference between matrices:
+Lreconstruction = (1 − α)||A − Â||2F + α||X − X̂||2F , (16)
+where α represents the adjustment ratio between attribute and
+structure reconstruction. The anomaly score is often defined by
+the mean squared errors (MSE):
+Score(vi ) = (1 − α)||ai − âi ||2 + α||xi − x̂i ||2 ,
+
+(17)
+
+where ai and âi are the original and reconstructed structure
+associated with node vi , xi and x̂i are the original and reconstructed attributes of node vi . Later studies explore the use of
+more advance GAE by incorporating attention, spectral information, etc [29], [74], [94]. For example, AnomalyDAE [29]
+and GUIDE [139] employ a graph attention network (GAT) or
+an attention module to evaluate the significance of neighbors
+to nodes to enhance the reconstruction of the specific nodes
+during the training. HO-GAT [42] develops a hybrid order
+GAT network to specify the Θenc that can detect abnormal
+nodes and motif instances simultaneously. Different from the
+focus on the importance of neighboring nodes, ComGA [74] is
+focused on enhancing node representations for more effective
+reconstruction. It achieves this by utilizing a community-aware
+GNN that propagates a community-specific representation of
+each node into the feature representations to encode and decode
+
+the modularity matrix of the graph. Besides node reconstruction,
+some methods explore node relation construction, e.g., GADNR [103] that aims to reconstruct the neighborhoods’ structure
+and attributes. GAE can also be extended to perform multi-view
+graph reconstruction for learning more expressive representations from heterogeneous attributes [94]. Despite their simplicity, such GAE-based methods have shown effective performance
+in not only anomalous node detection but also anomalous edge
+detection [24], [138].
+Another line of research is to complement the reconstruction loss with some auxiliary tasks, i.e., Φ(A, X; Θ) in (15),
+to capture additional information for GAD, since the reconstruction task is often too simple and vulnerable [49], [55],
+[81], [144]. In SpecAE [55], it integrates a density estimation into the reconstruction by leveraging Laplacian sharpening
+to amplify the distance between representations of anomalies
+and the majority of nodes. MSAD [49] employs a number
+of weighted meta-paths, e.g., unknown-anomaly-unknown and
+anomaly-unknown-unknown node paths, to extract contextaware information of nodes as an auxiliary task. In HimNet [81],
+hierarchical memory learning is incorporated via Φ(A, X; Θ),
+where the node-level and graph-level memory modules are
+jointly optimized to detect both locally and globally anomalous
+graphs. Netwalk [138] incorporates clustering as an auxiliary
+task in the reconstruction to learn the representation of nodes
+for streaming graph data. On the other hand, Φ(A, X; Θ) is
+specified using adversarial learning in DONE [5] to generate
+node embeddings with an objective to minimize the adverse
+effects from outlier nodes.
+Advantages: (i) Data reconstruction is a simple but effective
+way to detect anomalies in graph data. Meanwhile, it does not
+require labeled data for training. (ii) The data reconstruction
+models can be generalized to detect anomalies at different
+levels of graph instances, e.g., anomalous nodes, edges, and
+graphs.
+Disadvantages: (i) To perform the reconstruction of graph
+structure and attributes, it is necessary to load the entire graph,
+which may require significant computing resources. (ii) The
+reconstruction is vulnerable to noisy or irrelevant attributes. The
+presence of noisy or erroneous graph instances can disrupt the
+reconstruction process, resulting in false positives or diminished
+detection accuracy.
+Challenge Addressed: Reconstruction methods model the
+entire graph structure, capturing complex structural patterns for
+GAD (C1). Due to simplicity and straight intuition, they are also
+applicable to the detection of different levels of graph anomalies
+(C3).
+B. Graph Contrastive Learning
+Graph contrastive learning (GCL) aims to learn effective
+representations without human annotated labels so that similar
+graph instances are pulled together in the representation space,
+while dissimilar instances are far apart. A principled GCL
+framework for GAD is to devise a self-supervised contrastive
+learning task with suitable positive and negative pairs to learn the
+underlying dominant (normal) patterns in graph-structured data.
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+As shown in Fig. 5(b), the framework generally first utilizes a
+GNN network to learn the representations of graph instances and
+build the positive pair and negative pair based on the structure,
+and then employs a contrastive loss function Lc to maximize the
+similarity of the positive views while minimizing the similarity
+of the negative pairs [117]:
+hi = GN N (xi , X, A; Θ) ,
+si = P ositive(vi ,A,X;Ωp ),s̃i = N egative(vi ,A,X;Ωn ),
+Lc = E(X,A) [log D (hi , ˜si ) + log (1 − D (hi , s̃i ))] , (18)
+where hi is the representation of target node vi , si and s̃i
+are the graph instances generated from two sampling functions
+P ositive(·) and N egative(·) with parameters Ωp and Ωn that
+are used to sample the positive and negative sample pairs for
+the target node vi . One key assumption made in the GCL-based
+GAD methods is that non-neighboring nodes can be treated as
+‘anomalous’ graph instances relative to a target node:
+Assumption: Non-neighboring nodes to a target node are dissimilar, and thus, they can serve as effective negative (‘anomalous’) samples to the target node.
+This assumption works in that the datasets typically contain
+a substantial number of normal graph instances. Effective GCL
+training would enable the learning of the majority patterns on
+the deviated non-neighboring nodes w.r.t. the target nodes. Built
+upon this assumption, GCL-based methods are focused on how
+the positive and negative graph instances s and s̃ can be generated
+to be more aligned with the GAD task.
+One group of methods in this line aims to generate node-level
+contrastive sample pairs [13], [121]. In particular, motivated by
+the success of the popular GCL method DGI [117], DCI [121]
+formulates the GCL objective as the classification of the pairs of
+target nodes and the nodes under perturbation against the pairs of
+target nodes and cluster-based global representations. Unlike the
+cluster-based representation, GCCAD [13] specifies s using the
+neighbors of target normal nodes and s̃ using the representations
+of abnormal nodes. During inference, the anomaly score may be
+defined in various ways, e.g., via the classification probability [121] or similarity between the target node’s representation
+and the graph representation [13].
+In addition to the node-level contrasts, other methods use
+subgraphs as the target of contrastive learning to help the model
+learn better representations for GAD. CoLA [66] is an early
+GCL framework for GAD that learns the relations between each
+node and its neighboring substructures. Given a target node, s is
+a subgraph generated by a random walk around the target node,
+while the negative subgraph is generated using the random walk
+around the other nodes. Let hi and Ei be the representations of
+a target node and a subgraph, in which Ei is often obtained by
+a readout function as follows
+si = Readout (Ei ) =
+
+ni
+
+vk
+k=1
+
+ni
+
+,
+
+(19)
+
+where ni is the number of nodes in Ei , vk is the embedding
+of node k in the subgraph, then a Bilinear(·) function is often
+
+5117
+
+used to combine the representations of the node and the subgraphs [66], [151]:
+
+yi = Bilinear (hi , si ) = σ hi Wsi ,
+(20)
+ỹi = Bilinear (hi , sj ) = σ hi Wsj ,
+parameterized by W, in which yi and ỹi are the predicted results
+for positive pairs (hi , si ) and negative pairs (hi , sj ) (i.e., sj acts
+as s̃i here), respectively. The anomaly score in CoLA is defined
+as the difference between the positive and negative pairs:
+1
+Score (vi ) =
+(ỹi,r − yi,r ),
+R r=1
+R
+
+(21)
+
+where R is the number of node-subgraph pairs sampled during
+inference to obtain a stable anomaly score. This framework
+inspires a number of follow-up methods, including the use of
+prior knowledge of different anomaly types to generate the
+negative samples [133], supervised positive/negative subgraph
+pairs [154], and multi-view/scale subgraph generation [25], [48],
+[130], [151]. The above methods are focused on node-level
+anomaly detection in static graph data. Contrastive learning is
+also used in dynamic GAD or graph-level anomaly detection.
+For example, TADDY [67] applies a dynamic graph transformer
+that aggregates spatial and temporal knowledge simultaneously
+to learn the representations of edges. It specifies si and s̃i by
+constructing the positive edge using the existing edges in the
+training set and generates the anomalous edges via negative
+sampling. SIGNET [64] is designed for graph-level anomaly
+detection, which first constructs two different views using dual
+hypergraph transformation and then maximizes the mutual information between the bottleneck subgraph from two views.
+The estimated mutual information can be used to evaluate the
+graph-level abnormality.
+Advantages: (i) Many existing GCL approaches and theories
+may be adapted to enable GAD. (ii) The rich graph structure
+information provides flexible options to generate diverse positive/negative views for effective GAD. (iii) Since many methods
+rely on only local graph information in their training, they can
+handle very large graph data.
+Disadvantages: (i) Since GCL is focused on representation
+learning, it is crucial to develop an effective anomaly scoring method based on the learned representations. (ii) As GCL
+methods rely on GNNs without class information, the problem
+of over-smoothing between normal and abnormal instances remains prevalent. (iii) The subgraph generation in some methods
+may incur significant computational costs due to the need to
+traverse numerous nodes and edges.
+Challenge Addressed: Contrastive learning models can be
+designed to capture different levels of graph structure and graph
+anomalies (C1, C3). Without the need to load the full graph
+structure information, they can often scale up to large-scale
+graph data (C2).
+C. Graph Representation Distillation
+Knowledge Distillation (KD) [35] aims to train a simple
+model (student) that distills feature representations from a large
+(teacher) model while maintaining similar accuracy as the large
+
+5118
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+model. The key intuition of KD-based GAD is that the representation distillation can capture the majority patterns of graph
+instances and the difference in the distillation can be used to
+measure the abnormality of samples.
+Assumption: The graph representation distillation can be seen
+as a process of extracting the prevalent patterns of the graph
+instances, representing the normal patterns for GAD.
+As shown in Fig. 5(c), this category of methods learns the
+representation from a teacher model initialized by a GNN. Subsequently, a GNN-based student network is trained to replicate
+the representation outputs of the teacher model. The GNN-based
+teacher and student networks are formulated as follows
+hi = GN Nteacher (x
+ i , X, A; Θ),
+
+ĥi = GN Nstudent xi , X, A; Θ̂ ,
+
+(22)
+
+where Θ and Θ̂ are respectively the training parameters of
+student and teacher networks, hi and ĥi are the representations
+learned by the two networks respectively. Both representations
+are then integrated into the loss function which can be formulated
+as the following:
+N
+
+
+1 
+KD hi , hi ; Θ̂, Θ ,
+LKD =
+N i=1
+
+(23)
+
+where KD(·) is a distillation function that measures the difference between the two feature representations. Overall, the
+goal of the distillation-based GAD is to make the student model
+as close as possible in predicting the corresponding outputs
+of the teacher model that is built upon normal graph data.
+Therefore, the anomaly score can be defined as the difference in
+the representations between the teacher and student models.
+
+
+ 
+
+
+Score vi ; Θ̂, Θ = hi − hi  .
+(24)
+2
+
+GlocaKD [76] is an early framework, in which the teacher
+model GN Nteacher is implemented using a random GCN. Then
+the distillation function KD(·) is instantiated using KL divergence to minimize the graph- and node-level prediction errors of
+the representations yielded by the random GCN. The anomaly
+score in GlocaKD is defined as the prediction error at the graph
+and node levels. To support better distillation of the normal graph
+representations, several distillation models have been proposed
+for GAD with new architectures. For example, the dual-studentteacher model, called GLADST, consists of one teacher model
+and two student models [56], in which the teacher model, trained
+with a heuristic loss, is designed to make the representations
+more divergent. Unlike the traditional teacher-student model,
+GLADST trains the two student models on normal and abnormal
+graphs separately to capture the normality and abnormality
+better. Unlike GlocalKD that uses a random GNN to be the
+teach network, the approach FGAD uses a pre-trained anomaly
+detector as the teacher [9]. Then the student is designed with
+a graph isomorphism network (GIN) and a projection head to
+improve the robustness of GAD.
+Advantages: (i) The distillation from the teacher model into a
+simpler student model provides a new way to extract the normality of graph instances. (ii) Distillation enables the development
+
+of smaller, more efficient models by transferring knowledge
+from a larger model. This compression speeds up inference
+and reduces computational resource requirements for normality
+extraction. (iii) Distilling knowledge from a well-trained teacher
+model enables the student model to better generalize across
+various types of graphs and quickly adapt to new data or target
+domains.
+Disadvantages: (i) Choosing an appropriate teacher model
+can be challenging. If the teacher model is too complex or not
+well-suited to GAD, the knowledge distilled to the student model
+may not be optimal. (ii) The student model may fail to capture
+all the nuances and intricacies in the teacher model, which can
+impact the extraction of normality.
+Challenge Addressed: GNN-enabled knowledge distillation
+enhances the ability of addressing graph structure-aware GAD.
+(C1). By distilling knowledge from a well-trained teacher, the
+student gains improved generalization across different GAD
+scenarios, showcasing enhanced robustness in GAD (C5).
+D. Adversarial Graph Learning
+Generative adversarial learning (GAN) provides an effective
+solution to generate realistic synthetic samples, which can be
+used for normal pattern learning for GAD. The key intuition
+of this group of methods is to learn latent features that can
+capture the normality perceived in a generative GNN network.
+Specifically, the GANs employ a generator network aiming to
+generate samples that are statistically similar to the real data
+while the discriminator network learns to distinguish between
+real and generated graph instances [15], [17]. The normal data
+with a prior distribution can be easily captured by the generator
+network while the anomalies struggle to be simulated by the
+generator due to the nature of the distribution.
+It is worth mentioning that the purpose of generation is
+different from the noise perturbation generation in the generative
+GNNs in Section IV-B. The former mainly uses the graph structure information and interpolation operations in the latent space
+to generate new node representations without using adversarial
+learning process, while the latter is focused on generating node
+representations from a prior distribution through the adversarial
+learning to learn the latent normality.
+Assumption: A generator GNN can capture the majority of
+patterns in the graph data if it can generate instances that closely
+resemble the distribution of real graph instances.
+This group of methods (see Fig. 5(d)) typically employs
+GNNs to learn the representations of graph instances and a
+generator network for generating graph instances based on a
+prior. The discriminator is utilized to distinguish whether a graph
+instance comes from the generator or the original data. Formally,
+these methods follow the following framework:
+hi = GN N (xi , A, X; Θ) ,
+h̃i = G (z̃i ; ) , z̃i ∼ p(z̃),
+
+(25)
+
+where h is the feature representation of a node learned by GNN
+with parameter Θ, h̃ is the representation of a generated node,
+and p(
+z) is the prior distribution. The generator G(·) takes
+noises sampled from the prior distribution p(z̃) as the input and
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+generates synthetic pseudo abnormal graph instances via:
+
+5119
+
+predict the anomaly score
+
+min max Eh∼p(h) [log D(h)] + Ez̃∼p(z̃) [log(1 − D(G(z̃; )))],
+
+Score(si ) = fpred (xi , A, X; Θp ),
+
+(26)
+where the discriminator D(·) is often specified by a classifier
+that tries to distinguish whether an input is the representation
+of a normal node or a generated anomaly. The anomaly score is
+typically defined based on the output of the discriminator:
+
+where Θp is the training parameters of the score prediction
+network. DevNet [89] is a seminal work for score prediction
+network, which was originally proposed to identify anomalies
+in tabular data. It employs a Z-score-based deviation loss to learn
+the anomaly scores in an end-to-end manner:
+
+Score(si ) = 1 − D(hi ).
+
+Ldeviation = (1 − yi ) · |Dev(si )| + yi · max (0, m − Dev(si )) ,
+(29)
+where yi is the class label, m is a pre-defined margin based on
+the prior distribution, and Dev(si ) is defined as follows
+
+G
+
+D
+
+(27)
+
+AEGIS [17] and GAAN [15] are two representative works
+that apply GANs to GAD by generating node representations
+from Gaussian noise. The discriminator is trained to determine whether nodes are real or generated pseudo abnormal
+instances. Some graph adversarial learning methods are also
+proposed to address the multi-class imbalance problem at the
+node level [101], [108]. They incorporate adversarial training to
+make the model learn robust representations for both majority
+and minority classes, thereby benefiting the separation of the
+nodes from different classes. This graph adversarial learning is
+also applied to anomalous edge detection. GADY [73] employs
+an anomaly generator to generate abnormal interactions through
+input noise. The generated interactions are then combined with
+normal interactions as the input of a discriminator network
+trained to determine whether the interaction is normal or abnormal.
+Advantages: (i) GANs provide a distinctive method for learning structural normality by utilizing their graph structure-aware
+generation capability. (ii) Its adversarial training can generate
+realistic samples from noise, enabling the detection models to
+learn beyond the abnormal samples in the graph.
+Disadvantages: (i) It is difficult to generate samples that
+accurately simulate real graph instances in terms of both graph
+structure and attributes, and thus, the generated graph instances
+may impair the detection performance. (ii) The training of GANs
+is relatively less stable compared to the GNN training in other
+groups of methods.
+Challenge Addressed: GANs can model and generate different types of abnormal graph instances, facilitating the detection
+of different graph anomalies, e.g., anomalies that are unseen during training (C3). Also, GANs can generate extensive abnormal
+samples for more balanced GAD (C4).
+E. Score Prediction
+The score prediction based-methods focuses on how to make
+full use of labeled data to build an end-to-end anomaly score
+prediction model, as shown in Fig. 5(e). Unlike approaches that
+directly apply GNNs for classification with labeled abnormal
+and normal nodes, this method is designed for the scenarios
+where only some graph instances are known to be normal and
+abnormal instances.
+Assumption: The anomaly scores of normal graph instances
+follow a prior distribution while those for abnormal instances
+significantly deviate from the distribution.
+The score prediction-based methods refer to training a predictor fpred : G → R which is instantiated with GNNs to directly
+
+Dev (si ) =
+
+Score(si ) − μr
+,
+σr
+
+(28)
+
+(30)
+
+where μr and σr are the estimated mean and standard deviation
+of the anomaly scores based on the prior N(μ, σ).
+Meta-GDN [19] applies the deviation loss to the graph data
+that leverages a small number of labeled anomalies to enforce
+significant deviation of the anomaly scores of the normal nodes
+from the abnormal nodes. SAD [115] adapts DevNet to dynamic
+graph data, in which contrastive learning is also used to fully
+exploit the potential of labeled graph instances on evolving graph
+streams. In WEDGE [154], the deviation loss function is defined
+for at the subgraph level. By minimizing the deviation loss, the
+score network predictor will enforce a large positive deviation
+of the anomaly score of an anomalous subgraph from that of the
+prior-based reference scores.
+Advantages: (i) By integrating the prior distribution into the
+model’s learning process, it can produce more interpretable
+anomaly scores compared to other detection methods. (ii) The
+studied scenarios where some labeled normal and anomalous
+graph instances are available are often common in real-world
+applications.
+Disadvantages: (i) The performance of the score prediction
+model is dependent on the prior and the predefined margin used
+during training. (ii) The score prediction network is better suited
+for tabular data because the samples are independent, but a
+single prior distribution may not be able to effectively capture
+the dependent scores across the graph instances.
+Challenge Addressed: The score prediction provides a GNNbased end-to-end anomaly score learning framework for GAD,
+having good scalability to large-scale graph data (C1, C2). It
+also provides an effective way to achieve generalized GAD in
+the application scenarios where part of the graph instances are
+labeled (C3).
+VI. GRAPH ANOMALY MEASURES
+This category of methods aims to discuss GAD methods
+that focus on designing anomaly measures for evaluating the
+abnormality of instances in the graph. These methods generally
+perform anomaly scoring by incorporating some key abnormal
+graph characteristics. As shown in Fig. 6, they can be generally
+divided into four categories, including one-class distance measure, local affinity measure, community adherence measure, and
+graph isolation-based approaches.
+
+5120
+
+Fig. 6.
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+Four categories of graph anomaly measure.
+
+A. One-Class Classification Measure
+One-class classification measures refer to evaluating the distance between each instance and a one-class center of the instances for anomaly scoring [104]. This method can be applied
+to graph data, with the GNNs trained to minimize the volume
+of a hypersphere that encloses the representations of the graph
+instances. As illustrated in Fig. 6(a), the key intuition is that
+anomalous graph instances differ significantly from the normal
+ones, causing them to fall outside the hypersphere that encompasses most of the normal graph instances.
+Assumption: Normal graph instances exhibit similar patterns
+that can be encapsulated via a one-class hypersphere, from which
+anomalies show largely deviated patterns.
+The one-class classification on the graph can be generally
+formulated as the following
+1 
+||φ (Xi , Ai ; W) − c||2 + Φ(Θ), (31)
+N i=1
+N
+
+Lone−class =
+
+where c is the central representation of the one-class hypersphere, φ(Xi , Ai ; W∗ ) is the representation of graph instance
+si learned by GNN, and Φ(Θ) is a regularization term or auxiliary task which can benefit the one-class distance measure.
+Anomalies are expected to samples that have a large distance to
+the center. Thus, the anomaly score can be determined by the
+distance of a graph instance to the center of the hypersphere:
+Score(si ) = φ (Xi , Ai ; W∗ ) − c 2 ,
+
+(32)
+
+where W∗ are the parameters of the trained one-class model and
+c is the representation of the one-class center.
+There have been some methods that adopt this one-class
+classification approach for GAD [120], [157]. OCGNN [120]
+applies a one-class SVM to graphs, leveraging the powerful
+representation capabilities of GNNs. The objective of OCGNN
+is to generate node embeddings that are close to the center. Since
+the feature representations are crucial in one-class learning,
+various methods have explored the use of GNNs from different
+perspectives to enhance the representation learning for one-class
+GAD. For example, AAGNN [157] designs a subtractive aggregation [157] rather than the commonly used summation-based
+aggregation for one-class GNN learning. DOHSC [146] adds
+an orthogonal projection layer [146] to ensure the training data
+distribution is consistent with the decision hypersphere. Other
+
+methods optimize the one-class learning with some auxiliary
+tasks, such as node feature reconstruction [114], relation prediction [53], and self-supervision [100], to avoid notorious issues
+in this approach like model collapse.
+Advantages: (i) One-class classification does not require labeled anomaly data for training, making it suitable for the scenario where such data is scarce or unavailable. (ii) The one-class
+measure can handle isolated nodes well.
+Disadvantages: (i) Normal graph patterns can manifest in
+various ways, making it challenging for a one-class hypersphere
+to capture the full spectrum of normality. (ii) Learning the
+one-class hypersphere is prone to model collapse.
+Challenge Addressed: One-class classification with appropriate GNNs enables the learning of the majority structural pattern
+in the graph data (normal graph instances) (C1). This approach
+also does not require the full graph structure information during
+training, resulting in good scalability to large-scale graphs (C2).
+B. Community Adherence
+Community adherence-based GAD [138], [155] aims to identify the anomalies based on the adherence of instances to graph
+communities. The key intuition is that anomalies are not welldistributed and exhibit weak adherence to the communities,
+whereas normal graph instances typically have strong adherence
+to at least one community.
+Assumption: Normal instances adhere to at least one community, whereas anomalies are unfit to any community.
+This type of methods first leverages a mapping function to
+learn the representation of instances. A clustering or community
+discovery method is then applied to group the graph instances,
+as shown in Fig. 6(b), where the instances are grouped into three
+distinct clusters. Since anomalies generally exhibit significantly
+weaker community adherence, the anomaly score can be defined
+by the minimum distance to the centers of the communities.
+Score (si ) = min φ (xi , X, A; W∗ )−cj 22 , ∀j ∈ {1, . . . , p},
+(33)
+where p is the number of communities, cj is the center of
+community Cj , and W∗ is the optimal parameters of the mapping
+function.
+This approach is analogous to clustering-based anomaly detection in non-graph data [87], but here it needs to capture the
+graph characteristics for GAD. To this end, MHGL [155] utilizes
+GNNs and a multi-hypersphere learning objective to learn multiple groups of fine-grained normal patterns, enclosing each group
+using a corresponding hypersphere in the latent space while
+simultaneously pushing labeled anomalies far away from these
+hyperspheres. The anomaly score is defined as the Euclidean
+distance between a test instance and the nearest hypersphere
+center. Netwalk [138] is a method for both anomalous node and
+edge detection where k-means clustering was applied to group
+the existing node/edge into different groups. The anomaly score
+of node/edge is measured as its distance to the center of its closest
+cluster.
+Advantages: (i) By utilizing graph communities, the normality of data beyond one-hop graph structures can be more
+effectively captured. (ii) The community adherence enables
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+a fine-grained modeling of normal patterns, which could be
+important for identifying some types of graph anomalies that
+depend on the context of graph communities.
+Disadvantages: (i) Community adherence-based methods are
+sensitive to hyperparameters like the number of clusters. (ii)
+Community adherence measures rely heavily on the effectiveness of the community detection methods.
+Challenge Addressed: Graph communities can be useful for
+discovering important structural contexts (e.g., those beyond a
+fixed-hop neighborhood) to detect anomalies that deviate from
+the communities (C1). Community adherence can provide one
+way for interpreting anomalies based on deviations from expected community-based behaviors (C5).
+C. Local Affinity
+There are many graph properties that can be important for
+GAD, such as connectivity, degree distribution, and clustering
+coefficient. Local affinity is a graph property that integrates
+multiple properties for evaluating the normality and abnormality
+of graph instances. As shown in Fig. 6(c), the affinity may be
+defined in various ways, such as the number of connections
+of a graph instance to neighboring instances, the similarity
+with neighbors, or the clustering coefficient of the connected
+subgraphs. The key intuition is that the normal graph instances
+typically have a strong affinity with their neighbors, whereas an
+anomalous instance has a significantly weaker affinity with its
+neighbors. Thus, the local affinity can serve as the inverse of the
+anomaly score.
+Assumption: Normal instances are connected with other normal instances with similar attributes while anomalies are often
+graph instances that are less similar to their neighbors.
+Formally, the local affinity τ (si ) of an instance si can be
+defined based on its average similarity to its neighbors:
+
+1
+sim (hi , hj ) ,
+(34)
+τ (si ) =
+|N (si )|
+sj ∈N(si )
+
+where hi and hj are the representation of instance si and sj ,
+N(si ) represents the neighboring instance si .
+TAM [97] is a seminal work that introduces local affinity as an
+anomaly measure. It aims to learn tailored node representations
+for GAD by maximizing the local affinity of nodes to their neighbors. It is optimized on truncated graphs where non-homophily
+edges are removed iteratively to mitigate its adverse effects on
+the local affinity measure. The learned representations result in
+a significantly stronger local affinity for the normal nodes than
+the abnormal nodes. CLAD [50] instead measures the affinity
+based on the discrepancy between a node and its neighbors
+using Jenson-Shannon Divergence. The anomaly score is obtained from the affinity for each node in terms of both graph
+structure and attributes. PREM [83] eliminates the messagepassing propagation in regular GNNs by using an ego neighbor
+matching-based contrastive learning module. It aims to learn
+discriminative patterns between the local ego network and the
+neighboring instances. These GAD methods are focused on the
+anomaly score of a node based on its affinity to its neighboring
+nodes. Similar ideas have also been explored in very recent
+
+5121
+
+prompt tuning or in-context learning methods for GAD [65],
+[82], [96]. Exploring beyond the node-level affinity can be
+one potential approach for subgraph- or graph-level anomaly
+detection.
+Advantages: (i) The local affinity measure offers a novel way
+to quantify the abnormality of graph instances at a local scope.
+(ii) The measure provides a principled framework for evaluating
+the normality from both the graph structure and attributes. (iii)
+It can be more interpretable than those identified through task
+proxy-based GAD methods.
+Disadvantages: (i) Its effectiveness may vary if the affinity
+is specified differently. (ii) It is often designed based on predefined graph properties, making it difficult to generalize to the
+anomalies that do not conform to the properties.
+Challenge Addressed: Local affinity-based GAD methods can
+adapt to and leverage various structural properties for the detection of various types of anomalies (C1, C3), though the prior
+knowledge about the properties is required. Local affinity also
+provides a way to explain why a node is considered anomalous
+based on the local context, enhancing the interpretability of GAD
+(C5).
+D. Graph Isolation
+Isolation-based methods [58] is among the most popular
+methods for anomaly detection. Due to its general effectiveness
+across different datasets, it is also applied to identify anomalous
+graph instances [132], [161]. Its use for GAD is based on the
+isolation of graph instances in a feature representation space.
+Assumption: Anomalous graph instances can be isolated more
+easily than normal instances in the representation space.
+As shown in Fig. 6(d), the methods in this group need to first
+learn the representations of the instances using a graph encoder
+GN Nenc :
+hi = GN Nenc (si , X, A; Θenc ),
+
+(35)
+
+where hi is the representation of the graph instance si . An
+isolation mechanism is then applied on the representations,
+i.e., Isolation(hi ), where the split process is formulated as the
+following
+
+
+(j )
+P2k ← hi | hi k ≤ ηk , hi ∈ Pk ,
+
+
+(j )
+P2k+1 ← hi | hi k > ηk , hi ∈ Pk ,
+(36)
+where Pk is the node set of in the k-th binary partition tree and
+j is the dimension in h used to partition the feature space. The
+abnormality of a graph instance s is evaluated by the isolation
+difficulty in each tree of the tree set T:
+F (s | T) = Ωτi ∼T I (s | τi ) ,
+
+(37)
+
+where I(s | τi ) denotes a function to measure the isolation
+difficulty in tree τi and Ω denotes an integration function.
+DIF [132] presents a new representation scheme that combines data partition and deep representation learning to perform isolation in randomly projected deep representations for
+anomaly detection, showing good effectiveness in anomaly detection in various data types, including graph-level anomaly
+
+5122
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+detection. GCAD [161] uses isolation forest for anomalous
+node detection. It uses the node representations after subgraph
+normalization as the input to graph isolation. The anomaly score
+is defined using a depth-based weighted score that aggregates
+scores from various associated subgraphs. If we treat isolationbased measures as simpler alternatives to density estimation,
+there have been multiple other extensions [28], [28], [55], [148]
+that leverage the learned graph representations to estimate a
+density-based anomaly score for GAD.
+Advantages: (i) Graph isolation measures are built on well
+established isolation-based methodology for anomaly detection.
+(ii) Many existing isolation-based methods may be adapted to
+anomaly detection on graph data.
+Disadvantages: (i) The isolation measure operates on a continuous feature space, so its effectiveness relies on the learning of
+an expressive representation space. (ii) The heuristic of isolation
+is difficult to be incorporated into GNN-based representation
+learning, leading to less effective feature representations for the
+subsequent isolation mechanism.
+Challenge Addressed: This measure can adapt traditional
+anomaly measures to GAD with the power of GNN-based
+representation learning (C1). The isolation mechanism is highly
+efficient, allowing good scalability on large graphs (C2).
+VII. RESEARCH OPPORTUNITIES
+Despite the remarkable success of numerous existing GAD
+methods, there are a range of research opportunities that could
+be explored to tackle some largely unsolved GAD problems.
+Advanced Graph Anomaly Measures: Most GAD methods
+are built upon proxy tasks or focused on the GNN backbones
+using traditional non-graph anomaly measures, as summarized
+in Table 1 in Appendix A, available online. Consequently,
+they may fail to learn feature representations that encapsulate
+holistic graph structure and attributes specifically for GAD.
+Therefore, it is crucial to devise anomaly measures that go
+beyond traditional anomaly measures and proxy tasks, such as
+local node affinity [97], for developing more dedicated methods
+for GAD.
+GAD on Complex Graphs: Most existing GAD methods are
+focused on small-scale (e.g., less than millions of nodes/edges),
+static, or homogeneous graph data, as shown in Tables 2 and
+3 in Appendix B, available online. However, many realworld graphs can involve millions/billions of heterogeneous
+nodes/edges [53], such as real-life citation networks, social
+networks, and financial networks. The nodes/edges may appear
+in a streaming fashion, where the models can access to only
+limited graph data at one time step and may need to adapt to new
+normal/abnormal patterns as the graph evolves [102]. Current
+methods may be adapted to handle these graphs, but their performance would become less effective since their primary design
+do not consider those complexity. GAD methods designed for
+graphs with two or more of these complexities are required.
+Handling Anomaly Camouflage and Contamination: In GAD,
+anomalies might easily hide their abnormal characteristics by
+mimicking the structure and attributes of their neighboring instances. There have been some approaches for addressing this
+
+problem, e.g., via selecting relevant features, incorporating domain knowledge, or using adversarial training [23], [98], but they
+often rely on the prior knowledge about what specific features
+the attackers may use in the camouflage. A related problem is
+anomaly contamination in the training data. Current methods
+are mostly unsupervised, working on anomaly-contaminated
+training data, but the anomalous instances in the graph can
+largely bias the message-passing [97], leading to less expressive
+representations. Recent approaches, such as semi-supervised
+GAD on a small set of labeled normal instances [98] or training
+GNNs using truncated graph data [97], may offer effective
+methodologies for handling these issues.
+Interpretable GAD: As shown by the summarized detection
+performance results in Tables 4, 5, and 6 in Appendix C,
+available online, current GAD methods have shown impressive
+success in detecting anomalous graph instances, but they generally ignore the interpretability of their detection results. In
+addition to accurate detection, interpretable GAD also requires
+an explanation about why a graph instance is identified as
+anomalous within a given graph structure, making it different
+from explaining anomalies in non-graph data. Exploring information such as local graph structure, human feedback, and/or
+domain knowledge [64] would be some interesting directions
+for providing the structure-aware anomaly explanation. Also, the
+obtained anomaly explanation may in turn be further leveraged
+to improve the detection performance.
+Open-set Supervised GAD: As shown in Table 1 in Appendix A, available online, there have been many supervised
+GAD methods, most of which essentially tackle an imbalanced
+binary classification problem. Such formulation is often questionable since anomalies per se can draw from very different
+distributions and cannot be treated as from one concrete class.
+Open-set supervised GAD also trains the detectors with labeled
+normal and anomalous examples (i.e., seen anomalies), but it
+assumes an open set of anomaly classes (i.e., there are anomaly
+classes that are not illustrated by the training anomaly samples) rather than the closed-set assumption in most existing
+studies [119]. Thus, it is a more realistic supervised GAD
+setting. Methods for this setting have shown significantly better
+performance than unsupervised and fully supervised methods on
+visual data [1], [16], [134], [158] and tabular data [88], [89], [90].
+Recent studies also show similar advantages on graph data [119],
+[155]. Exploring better modeling of the normal patterns while
+fitting the seen anomalies could be an effective approach to avoid
+overfitting of the seen anomalies (i.e., reducing misclassification
+of the unseen anomalies as normal).
+Foundation Models for GAD: Leveraging foundation models
+(FMs) for downstream tasks has been emerging as one effective
+direction to empower the sample-efficient performance in the
+downstream tasks, including graph-related tasks [59], [110],
+[111], [128], owing to their superior generalization ability. Two
+main directions for the GAD task involve the training of graph
+foundation models (GFMs) for GAD and the exploitation of
+large language models (LLMs) for GAD. There have been a
+number of successful tuning of FMs for anomaly detection
+on image data [47], [152], [159] and video data [106], [125],
+[126], [127] via proper prompt crafting, prompt learning, or
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+in-context learning. Similar approaches may be explored for
+GAD. For example, inspired by [159], an in-context residual
+learning-based method is explored for few-shot GAD [65];
+general abnormality/normality graph patterns and prompts are
+learned for zero/few-shot cross-dataset GAD in [82], [96]. This
+new paradigm is plausible for GAD in several aspects, such as
+zero/few-shot detection on target graph data, inductive GAD,
+and interpretable GAD with text description.
+
+VIII. CONCLUSION
+In this survey, we first discuss the complexities and existing
+challenges in GAD. Then we present a novel taxonomy for deep
+GAD methods from three new perspectives, including GNN
+backbone design, proxy task, and graph anomaly measures.
+We further deepen the discussions in each perspective by discussing more fine-grained categories of methods. Along with
+each fine-grained methodology category, we not only review
+the associated GAD methods, but also analyze their general
+assumption, pros and cons, and their capabilities in addressing
+the unique challenges in GAD. We lastly discuss six important
+directions for future research on GAD. By tackling the problems
+in these six directions, we expect a more advanced generation
+of methods for solving real-life GAD tasks.
+
+REFERENCES
+[1] A. Acsintoae et al., “Ubnormal: New benchmark for supervised open-set
+video anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit., 2022, pp. 20 143–20 153.
+[2] C. Aggarwal and K. Subbian, “Evolutionary network analysis: A survey,”
+ACM Comput. Surv., vol. 47, no. 1, pp. 1–36, 2014.
+[3] C. C. Aggarwal, Outlier Analysis. Berlin, Germany: Springer, 2017.
+[4] L. Akoglu, H. Tong, and D. Koutra, “Graph based anomaly detection and
+description: A survey,” Data Mining Knowl. Discov., vol. 29, pp. 626–
+688, 2015.
+[5] S. Bandyopadhyay, L. N, S. V. Vivek, and M. N. Murty, “Outlier resistant
+unsupervised deep architectures for attributed network embedding,” in
+Proc. Int. Conf. Web Search Data Mining, 2020, pp. 25–33.
+[6] Y. Bei et al., “Reinforcement neighborhood selection for unsupervised
+graph anomaly detection,” in Proc. IEEE Int. Conf. Data Mining, 2023,
+pp. 11–20.
+[7] A. Boukerche, L. Zheng, and O. Alfandi, “Outlier detection: Methods,
+models, and classification,” ACM Comput. Surv., vol. 53, no. 3, pp. 1–37,
+2020.
+[8] J. Cai, Y. Zhang, and J. Fan, “Self-discriminative modeling for anomalous
+graph detection,” 2023, arXiv:2310.06261.
+[9] J. Cai, Y. Zhang, Z. Lu, W. Guo, and S.-K. Ng, “FGAD: Self-boosted
+knowledge distillation for an effective federated graph anomaly detection
+framework,” 2024, arXiv:2402.12761.
+[10] Z. Chai et al., “Can abnormality be detected by graph neural networks,”
+in Proc. Int. Joint Conf. Artif. Intell., 2022, pp. 23–29.
+[11] V. Chandola, A. Banerjee, and V. Kumar, “Anomaly detection: A survey,”
+ACM Comput. Surv., vol. 41, no. 3, 2009, Art. no. 15.
+[12] W. Chang, K. Liu, K. Ding, P. S. Yu, and J. Yu, “Multitask active learning
+for graph anomaly detection,” 2024, arXiv:2401.13210.
+[13] B. Chen et al., “GCCAD: Graph contrastive learning for anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 8, pp. 8037–8051,
+Aug. 2023.
+[14] N. Chen et al., “Consistency training with learnable data augmentation
+for graph anomaly detection with limited supervision,” in Proc. Int. Conf.
+Learn. Representations, 2023.
+[15] Z. Chen, B. Liu, M. Wang, P. Dai, J. Lv, and L. Bo, “Generative
+adversarial attributed network anomaly detection,” in Proc. Conf. Inf.
+Knowl. Manage., 2020, pp. 1989–1992.
+
+5123
+
+[16] C. Ding, G. Pang, and C. Shen, “Catching both gray and black swans:
+Open-set supervised anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2022, pp. 7388–7398.
+[17] K. Ding, J. Li, N. Agarwal, and H. Liu, “Inductive anomaly detection
+on attributed networks,” in Proc. Int. Joint Conf. Artif. Intell., 2021,
+pp. 1288–1294.
+[18] K. Ding, J. Li, R. Bhanushali, and H. Liu, “Deep anomaly detection on
+attributed networks,” in Proc. SIAM Int. Conf. Data Mining, SIAM, 2019,
+pp. 594–602.
+[19] K. Ding, Q. Zhou, H. Tong, and H. Liu, “Few-shot network anomaly
+detection via cross-network meta-learning,” in Proc. Web Conf., 2021,
+pp. 2448–2456.
+[20] L. Dong et al., “Bi-level selection via meta gradient for graph-based fraud
+detection,” in Proc. Int. Conf. Database Syst. Adv. Appl., Springer, 2022,
+pp. 387–394.
+[21] X. Dong, X. Zhang, Y. Sun, L. Chen, M. Yuan, and S. Wang,
+“SmoothGNN: Smoothing-based GNN for unsupervised node anomaly
+detection,” 2024, arXiv:2405.17525.
+[22] X. Dong, X. Zhang, and S. Wang, “Rayleigh quotient graph
+neural networks for graph-level anomaly detection,” 2023,
+arXiv:2310.02861.
+[23] Y. Dou, Z. Liu, L. Sun, Y. Deng, H. Peng, and P. S. Yu, “Enhancing graph
+neural network-based fraud detectors against camouflaged fraudsters,” in
+Proc. Conf. Inf. Knowl. Manage., 2020, pp. 315–324.
+[24] D. Duan, L. Tong, Y. Li, J. Lu, L. Shi, and C. Zhang, “AANE: Anomaly
+aware network embedding for anomalous link detection,” in Proc. IEEE
+Int. Conf. Data Mining, 2020, pp. 1002–1007.
+[25] J. Duan et al., “Graph anomaly detection via multi-scale contrastive
+learning networks with augmented view,” in Proc. Conf. Assoc. Advance.
+Artif. Intell., 2023, pp. 7459–7467.
+[26] J. Duan, B. Xiao, S. Wang, H. Zhou, and X. Liu, “ARISE: Graph
+anomaly detection on attributed networks via substructure awareness,”
+IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 12, pp. 18172–18185,
+Dec. 2024.
+[27] J. Duan et al., “Normality learning-based graph anomaly detection via
+multi-scale contrastive learning,” in Proc. ACM Int. Conf. Multimedia,
+2023, pp. 7502–7511.
+[28] M. Ester et al., “A density-based algorithm for discovering clusters in
+large spatial databases with noise,” in Proc. Int. Conf. Knowl. Discov.
+Data Mining, 1996, pp. 226–231.
+[29] H. Fan, F. Zhang, and Z. Li, “AnomalyDAE: Dual autoencoder for
+anomaly detection on attributed networks,” in Proc. Int. Conf. Acoust.
+Speech Signal Process., 2020, pp. 5685–5689.
+[30] S. Fan, X. Wang, C. Shi, K. Kuang, N. Liu, and B. Wang, “Debiased graph neural networks with agnostic label selection bias,” IEEE
+Trans. Neural Netw. Learn. Syst., vol. 35, no. 4, pp. 4411–4422, Apr.
+2024.
+[31] A. Fernández, S. Garcia, F. Herrera, and N. V. Chawla, “Smote for
+learning from imbalanced data: Progress and challenges, marking the
+15-year anniversary,” J. Artif. Intell. Res., vol. 61, pp. 863–905, 2018.
+[32] Y. Gao et al., “Alleviating structural distribution shift in graph anomaly
+detection,” in Proc. Int. Conf. Web Search Data Mining, 2023,
+pp. 357–365.
+[33] Y. Gao, X. Wang, X. He, Z. Liu, H. Feng, and Y. Zhang, “Addressing heterophily in graph anomaly detection: A perspective of graph spectrum,”
+in Proc. Web Conf., 2023, pp. 1528–1538.
+[34] Z. Gong et al., “Beyond homophily: Robust graph anomaly detection
+via neural sparsification,” in Proc. Int. Joint Conf. Artif. Intell., 2023,
+pp. 2104–2113.
+[35] J. Gou, B. Yu, S. J. Maybank, and D. Tao, “Knowledge distillation: A
+survey,” Int. J. Comput. Vis., vol. 129, no. 6, pp. 1789–1819, 2021.
+[36] R. Guo, M. Zou, S. Zhang, X. Zhang, Z. Yu, and Z. Feng, “Graph local
+homophily network for anomaly detection,” in Proc. Conf. Inf. Knowl.
+Manage., 2024, pp. 706–716.
+[37] W. Hamilton, Z. Ying, and J. Leskovec, “Inductive representation learning
+on large graphs,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2017,
+pp. 1025–1035.
+[38] D. K. Hammond, P. Vandergheynst, and R. Gribonval, “Wavelets on
+graphs via spectral graph theory,” Appl. Comput. Harmon. Anal., vol. 30,
+no. 2, pp. 129–150, 2011.
+[39] G. E. Hinton and R. R. Salakhutdinov, “Reducing the dimensionality of
+data with neural networks,” Science, vol. 313, no. 5786, pp. 504–507,
+2006.
+[40] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,”
+in Proc. Int. Conf. Neural Inf. Process. Syst., 2020, pp. 6840–6851.
+
+5124
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+[41] W. Hu, M. Fey, H. Ren, M. Nakata, Y. Dong, and J. Leskovec,
+“OGB-LSC: A large-scale challenge for machine learning on graphs,”
+2021, arXiv:2103.09430.
+[42] L. Huang et al., “Hybrid-order anomaly detection on attributed networks,”
+IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12249–12263,
+Dec. 2023.
+[43] M. Huang et al., “AUC-oriented graph neural network for fraud detection,” in Proc. Web Conf., 2022, pp. 1311–1321.
+[44] T. Huang, Y. Pei, V. Menkovski, and M. Pechenizkiy, “Hop-count based
+self-supervised anomaly detection on attributed networks,” in Proc. Joint
+Eur. Conf. Mach. Learn. Knowl. Discov. Databases, Springer, 2022,
+pp. 225–241.
+[45] X. Huang et al., “DGraph: A large-scale financial dataset for graph
+anomaly detection,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2022,
+pp. 22 765–22 777.
+[46] Y. Huang, L. Wang, F. Zhang, and X. Lin, “Are we really making much
+progress in unsupervised graph outlier detection? Revisiting the problem
+with new insight and superior method,” 2022, arXiv:2210.12941.
+[47] J. Jeong, Y. Zou, T. Kim, D. Zhang, A. Ravichandran, and O. Dabeer,
+“WinCLIP: Zero-/few-shot anomaly classification and segmentation,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2023, pp. 19 606–
+19 616.
+[48] M. Jin, Y. Liu, Y. Zheng, L. Chi, Y.-F. Li, and S. Pan, “Anemone: Graph
+anomaly detection with multi-scale contrastive learning,” in Proc. Conf.
+Inf. Knowl. Manage., 2021, pp. 3122–3126.
+[49] H. Kim, J. Kim, B. S. Lee, and S. Lim, “Deep semi-supervised
+anomaly detection with metapath-based context knowledge,”
+2023, arXiv:2308.10918.
+[50] J. Kim, Y. In, K. Yoon, J. Lee, and C. Park, “Class label-aware graph
+anomaly detection,” in Proc. Conf. Inf. Knowl. Manage., 2023, pp. 4008–
+4012.
+[51] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+convolutional networks,” 2016, arXiv:1609.02907.
+[52] X. Kong et al., “Federated graph anomaly detection via contrastive selfsupervised learning,” IEEE Trans. Neural Netw. Learn. Syst., vol. 36,
+no. 5, pp. 7931–7944, May 2025.
+[53] J. Li, G. Pang, L. Chen, and M.-R. Namazi-Rad, “HRGCN: Heterogeneous graph-level anomaly detection with hierarchical relationaugmented graph neural networks,” in Proc. IEEE 10th Int. Conf. Data
+Sci. Adv. Analytics, 2023, pp. 1–10.
+[54] J. Li et al., “Feature selection: A data perspective,” ACM Comput. Surv.,
+vol. 50, no. 6, pp. 1–45, 2017.
+[55] Y. Li, X. Huang, J. Li, M. Du, and N. Zou, “Specae: Spectral autoencoder
+for anomaly detection in attributed networks,” in Proc. Conf. Inf. Knowl.
+Manage., 2019, pp. 2233–2236.
+[56] F. Lin et al., “Discriminative graph-level anomaly detection via dualstudents-teacher model,” in Proc. Int. Conf. Adv. Data Mining Appl.,
+Springer, 2023, pp. 261–276.
+[57] F. Liu et al., “DAGAD: Data augmentation for graph anomaly detection,”
+in Proc. IEEE Int. Conf. Data Mining, 2022, pp. 259–268.
+[58] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. IEEE
+Int. Conf. Data Mining, 2008, pp. 413–422.
+[59] J. Liu et al., “Towards graph foundation models: A survey and beyond,”
+2023, arXiv:2310.11829.
+[60] J. Liu, X. Shang, X. Han, W. Zhang, and H. Yin, “Spatial-temporal
+memories enhanced graph autoencoder for anomaly detection in dynamic
+graphs,” 2024, arXiv:2403.09039.
+[61] K. Liu et al., “BOND: Benchmarking unsupervised outlier node detection
+on static attributed graphs,” in Proc. Int. Conf. Neural Inf. Process. Syst.,
+2022, pp. 27 021–27 035.
+[62] K. Liu, H. Zhang, Z. Hu, F. Wang, and P. S. Yu, “Data augmentation
+for supervised graph outlier detection with latent diffusion models,”
+2023, arXiv:2312.17679.
+[63] Y. Liu et al., “Pick and choose: A gnn-based imbalanced learning approach for fraud detection,” in Proc. Web Conf., 2021, pp. 3168–3177.
+[64] Y. Liu, K. Ding, Q. Lu, F. Li, L. Y. Zhang, and S. Pan, “Towards selfinterpretable graph-level anomaly detection,” in Proc. Int. Conf. Neural
+Inf. Process. Syst., 2024, pp. 8975–8987.
+[65] Y. Liu, S. Li, Y. Zheng, Q. Chen, C. Zhang, and S. Pan, “ARC:
+A generalist graph anomaly detector with in-context learning,”
+2024, arXiv:2405.16771.
+[66] Y. Liu, Z. Li, S. Pan, C. Gong, C. Zhou, and G. Karypis, “Anomaly
+detection on attributed networks via contrastive self-supervised learning,”
+IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2378–2392,
+Jun. 2022.
+
+[67] Y. Liu et al., “Anomaly detection in dynamic graphs via transformer,”
+IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12 081–12 094,
+Dec. 2023.
+[68] Z. Liu, Y. Li, N. Chen, Q. Wang, B. Hooi, and B. He, “A survey
+of imbalanced learning on graphs: Problems, techniques, and future
+directions,” 2023, arXiv:2308.13821.
+[69] Z. Liu et al., “Topological augmentation for class-imbalanced node
+classification,” 2023, arXiv:2308.14181.
+[70] Z. Liu, Y. Dou, P. S. Yu, Y. Deng, and H. Peng, “Alleviating the inconsistency problem of applying graph neural network to fraud detection,”
+in Proc. Int. ACM SIGIR Conf. Res. Develop. Informat. Retrieval, 2020,
+pp. 1569–1572.
+[71] Z. Liu, C. Cao, and J. Sun, “Mul-GAD: A semi-supervised graph
+anomaly detection framework via aggregating multi-view information,”
+2022, arXiv:2212.05478.
+[72] Z. Liu, C. Cao, F. Tao, and J. Sun, “Revisiting graph contrastive learning
+for anomaly detection,” 2023, arXiv:2305.02496.
+[73] S. Lou, Q. Zhang, S. Yang, Y. Tian, Z. Tan, and M. Luo,
+“GADY: Unsupervised anomaly detection on dynamic graphs,”
+2023, arXiv:2310.16376.
+[74] X. Luo et al., “ComGA: Community-aware attributed graph anomaly
+detection,” in Proc. Int. Conf. Web Search Data Mining, 2022, pp. 657–
+665.
+[75] J. Ma, P. Cui, K. Kuang, X. Wang, and W. Zhu, “Disentangled graph
+convolutional networks,” in Proc. Int. Conf. Mach. Learn., PMLR, 2019,
+pp. 4212–4221.
+[76] R. Ma, G. Pang, L. Chen, and A. van den Hengel, “Deep graph-level
+anomaly detection by glocal knowledge distillation,” in Proc. Int. Conf.
+Web Search Data Mining, 2022, pp. 704–714.
+[77] X. Ma, R. Li, F. Liu, K. Ding, J. Yang, and J. Wu, “New recipes for graph
+anomaly detection: Forward diffusion dynamics and graph generation,”
+2023.
+[78] X. Ma et al., “A comprehensive survey on graph anomaly detection with
+deep learning,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12012–
+12038, Dec. 2023.
+[79] X. Ma, J. Wu, J. Yang, and Q. Z. Sheng, “Towards graph-level anomaly
+detection via deep evolutionary mapping,” in Proc. Int. Conf. Knowl.
+Discov. Data Mining, 2023, pp. 1631–1642.
+[80] L. Meng, H. Mostafa, M. Nassar, X. Zhang, and J. Zhang, “Generative
+graph augmentation for minority class in fraud detection,” in Proc. Conf.
+Inf. Knowl. Manage., 2023, pp. 4200–4204.
+[81] C. Niu, G. Pang, and L. Chen, “Graph-level anomaly detection via hierarchical memory networks,” in Proc. Joint Eur.
+Conf. Mach. Learn. Knowl. Discov. Databases, Springer, 2023,
+pp. 201–218.
+[82] C. Niu, H. Qiao, C. Chen, L. Chen, and G. Pang, “Zero-shot generalist graph anomaly detection with unified neighborhood prompts,”
+2024, arXiv:2410.14886.
+[83] J. Pan, Y. Liu, Y. Zheng, and S. Pan, “PREM: A simple
+yet effective approach for node-level graph anomaly detection,”
+2023, arXiv:2310.11676.
+[84] G. Pang, L. Cao, L. Chen, D. Lian, and H. Liu, “Sparse modelingbased sequential ensemble learning for effective outlier detection in
+high-dimensional numeric data,” in Proc. Conf. Assoc. Advance. Artif.
+Intell., 2018, pp. 3892–3899.
+[85] G. Pang, L. Cao, L. Chen, and H. Liu, “Unsupervised feature selection
+for outlier detection by modelling hierarchical value-feature couplings,”
+in Proc. IEEE Int. Conf. Data Mining, 2016, pp. 410–419.
+[86] G. Pang, L. Cao Longbing, L. Chen, and H. Liu, “Learning homophily
+couplings from non-IID data for joint feature selection and noise-resilient
+outlier detection,” in Proc. Int. Joint Conf. Artif. Intell., 2017, pp. 2585–
+2591.
+[87] G. Pang, C. Shen, L. Cao, and A. V. D. Hengel, “Deep learning for
+anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2, pp. 1–
+38, 2021.
+[88] G. Pang, C. Shen, H. Jin, and A. van den Hengel, “Deep weaklysupervised anomaly detection,” in Proc. Int. Conf. Knowl. Discov. Data
+Mining, 2023, pp. 1795–1807.
+[89] G. Pang, C. Shen, and A. van den Hengel, “Deep anomaly detection with
+deviation networks,” in Proc. Int. Conf. Knowl. Discov. Data Mining,
+2019, pp. 353–362.
+[90] G. Pang, A. van den Hengel, C. Shen, and L. Cao, “Toward deep
+supervised anomaly detection: Reinforcement learning from partially
+labeled anomaly data,” in Proc. Int. Conf. Knowl. Discov. Data Mining,
+2021, pp. 1298–1308.
+
+QIAO et al.: DEEP GRAPH ANOMALY DETECTION: A SURVEY AND NEW PERSPECTIVES
+
+[91] G. Pang, H. Xu, L. Cao, and W. Zhao, “Selective value coupling learning
+for detecting outliers in high-dimensional categorical data,” in Proc. Conf.
+Inf. Knowl. Manage., 2017, pp. 807–816.
+[92] J. Park, J. Song, and E. Yang, “GraphENS: Neighbor-aware ego network
+synthesis for class-imbalanced node classification,” in Proc. Int. Conf.
+Learn. Representations, 2021.
+[93] Y. Pei, T. Huang, W. van Ipenburg, and M. Pechenizkiy, “ResGCN:
+Attention-based deep residual modeling for anomaly detection on attributed networks,” Mach. Learn., vol. 111, no. 2, pp. 519–541, 2022.
+[94] Z. Peng, M. Luo, J. Li, L. Xue, and Q. Zheng, “A deep multi-view
+framework for anomaly detection on attributed networks,” IEEE Trans.
+Knowl. Data Eng., vol. 34, no. 6, pp. 2539–2552, Jun. 2022.
+[95] T. Pourhabibi, K.-L. Ong, B. H. Kam, and Y. L. Boo, “Fraud detection: A systematic literature review of graph-based anomaly detection
+approaches,” Decis. Support Syst., vol. 133, 2020, Art. no. 113303.
+[96] H. Qiao, C. Niu, L. Chen, and G. Pang, “AnomalyGFM: Graph foundation
+model for zero/few-shot anomaly detection,” 2025, arXiv:2502.09254.
+[97] H. Qiao and G. Pang, “Truncated affinity maximization: One-class homophily modeling for graph anomaly detection,” in Proc. Int. Conf.
+Neural Inf. Process. Syst., 2024, pp. 49490–49512.
+[98] H. Qiao, Q. Wen, X. Li, E.-P. Lim, and G. Pang, “Generative semisupervised graph anomaly detection,” in Proc. Int. Conf. Neural Inf.
+Process. Syst., 2024, pp. 10–15.
+[99] Z. Qin, Y. Liu, Q. He, and X. Ao, “Explainable graph-based fraud detection via neural meta-graph search,” in Proc. Conf. Inf. Knowl. Manage.,
+2022, pp. 4414–4418.
+[100] C. Qiu, M. Kloft, S. Mandt, and M. Rudolph, “Raising the bar in graphlevel anomaly detection,” 2022, arXiv:2205.13845.
+[101] L. Qu, H. Zhu, R. Zheng, Y. Shi, and H. Yin, “ImGAGN: Imbalanced
+network embedding via generative adversarial graph networks,” in Proc.
+Int. Conf. Knowl. Discov. Data Mining, 2021, pp. 1390–1398.
+[102] S. Ranshous, S. Shen, D. Koutra, S. Harenberg, C. Faloutsos, and N. F.
+Samatova, “Anomaly detection in dynamic networks: A survey,” Wiley
+Interdiscipl. Rev.: Comput. Statist., vol. 7, no. 3, pp. 223–247, 2015.
+[103] A. Roy et al., “GAD-NR: Graph anomaly detection via neighborhood
+reconstruction,” in Proc. Int. Conf. Web Search Data Mining, 2024,
+pp. 576–585.
+[104] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+Learn., PMLR, 2018, pp. 4393–4402.
+[105] B. Sanchez-Lengeling et al., “Evaluating attribution for graph neural
+networks,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2020, pp. 5898–
+5910.
+[106] F. Sato, R. Hachiuma, and T. Sekii, “Prompt-guided zero-shot anomaly
+action recognition using pretrained deep skeleton features,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2023, pp. 6471–6480.
+[107] F. Shi, Y. Cao, Y. Shang, Y. Zhou, C. Zhou, and J. Wu, “H2-FDetector:
+A GNN-based fraud detector with homophilic and heterophilic connections,” in Proc. Web Conf., 2022, pp. 1486–1494.
+[108] M. Shi, Y. Tang, X. Zhu, D. Wilson, and J. Liu, “Multi-class imbalanced
+graph convolutional network learning,” in Proc. Int. Joint Conf. Artif.
+Intell., 2020, pp. 2879–2885.
+[109] D. I. Shuman, S. K. Narang, P. Frossard, A. Ortega, and P. Vandergheynst,
+“The emerging field of signal processing on graphs: Extending highdimensional data analysis to networks and other irregular domains,” IEEE
+Signal Process. Mag., vol. 30, no. 3, pp. 83–98, May 2013.
+[110] X. Sun, H. Cheng, J. Li, B. Liu, and J. Guan, “All in one: Multi-task
+prompting for graph neural networks,” in Proc. Int. Conf. Knowl. Discov.
+Data Mining, 2023, pp. 2120–2131.
+[111] J. Tang et al., “HiGPT: Heterogeneous graph language model,”
+2024, arXiv:2402.16024.
+[112] J. Tang, F. Hua, Z. Gao, P. Zhao, and J. Li, “GADBench: Revisiting and benchmarking supervised graph anomaly detection,”
+2023, arXiv:2306.12251.
+[113] J. Tang, J. Li, Z. Gao, and J. Li, “Rethinking graph neural networks
+for anomaly detection,” in Proc. Int. Conf. Mach. Learn., PMLR, 2022,
+pp. 21 076–21 089.
+[114] X. Teng, M. Yan, A. M. Ertugrul, and Y.-R. Lin, “Deep into hypersphere:
+Robust and unsupervised anomaly discovery in dynamic networks,” in
+Proc. Int. Joint Conf. Artif. Intell., 2018, pp. 2724–2730.
+[115] S. Tian et al., “SAD: Semi-supervised anomaly detection on dynamic
+graphs,” 2023, arXiv:2305.13573.
+[116] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Lio, and Y.
+Bengio, “Graph attention networks,” 2017, arXiv: 1710.10903.
+[117] P. Veličković, W. Fedus, W. L. Hamilton, P. Liò, Y. Bengio, and R. D.
+Hjelm, “Deep graph infomax,” 2018, arXiv: 1809.10341.
+
+5125
+
+[118] Q. Wang, G. Pang, M. Salehi, W. Buntine, and C. Leckie, “Cross-domain
+graph anomaly detection via anomaly-aware contrastive alignment,” in
+Proc. Conf. Assoc. Advance. Artif. Intell., 2023, pp. 4676–4684.
+[119] Q. Wang et al., “Open-set graph anomaly detection via normal structure
+regularisation,” in Proc. Int. Conf. Learn. Representations, 2025.
+[120] X. Wang, B. Jin, Y. Du, P. Cui, Y. Tan, and Y. Yang, “One-class graph
+neural networks for anomaly detection in attributed networks,” Neural
+Comput. Appl., vol. 33, pp. 12 073–12 085, 2021.
+[121] Y. Wang, J. Zhang, S. Guo, H. Yin, C. Li, and H. Chen, “Decoupling representation learning and classification for GNN-based anomaly detection,”
+in Proc. Int. ACM SIGIR Conf. Res. Develop. Informat. Retrieval, 2021,
+pp. 1239–1248.
+[122] Y. Wang et al., “Label information enhanced fraud detection against low
+homophily in graphs,” in Proc. Web Conf., 2023, pp. 406–416.
+[123] B. Wu, X. Yao, B. Zhang, K.-M. Chao, and Y. Li, “SplitGNN: Spectral
+graph neural network for fraud detection against heterophily,” in Proc.
+Conf. Inf. Knowl. Manage., 2023, pp. 2737–2746.
+[124] L. Wu, J. Xia, Z. Gao, H. Lin, C. Tan, and S. Z. Li, “GraphMixup:
+Improving class-imbalanced node classification by reinforcement mixup
+and self-supervised context prediction,” in Proc. Joint Eur. Conf. Mach.
+Learn. Knowl. Discov. Databases, Springer, 2022, pp. 519–535.
+[125] P. Wu et al., “Open-vocabulary video anomaly detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2024, pp. 18 297–18
+307.
+[126] P. Wu et al., “Weakly supervised video anomaly detection and localization
+with spatio-temporal prompts,” in Proc. ACM Int. Conf. Multimedia,
+2024, pp. 9301–9310.
+[127] P. Wu et al., “VadCLIP: Adapting vision-language models for weakly
+supervised video anomaly detection,” in Proc. Conf. Assoc. Advance.
+Artif. Intell., 2024, pp. 6074–6082.
+[128] L. Xia, B. Kao, and C. Huang, “OpenGraph: Towards open graph foundation models,” 2024, arXiv:2403.01121.
+[129] C. Xiao, X. Xu, Y. Lei, K. Zhang, S. Liu, and F. Zhou, “Counterfactual
+graph learning for anomaly detection on attributed networks,” IEEE
+Trans. Knowl. Data Eng., vol. 35, no. 10, pp. 10540–10553, Oct. 2023.
+[130] F. Xu, N. Wang, X. Wen, M. Gao, C. Guo, and X. Zhao, “Few-shot
+message-enhanced contrastive learning for graph anomaly detection,”
+2023, arXiv:2311.10370.
+[131] F. Xu, N. Wang, H. Wu, X. Wen, and X. Zhao, “Revisiting
+graph-based fraud detection in sight of heterophily and spectrum,”
+2023, arXiv:2312.06441.
+[132] H. Xu, G. Pang, Y. Wang, and Y. Wang, “Deep isolation forest for anomaly
+detection,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12591–
+12604, Dec. 2023.
+[133] Z. Xu, X. Huang, Y. Zhao, Y. Dong, and J. Li, “Contrastive attributed
+network anomaly detection with data augmentation,” in Proc. PacificAsia Conf. Knowl. Discov. Data Mining, Springer, 2022, pp. 444–457.
+[134] X. Yao, R. Li, J. Zhang, J. Sun, and C. Zhang, “Explicit boundary guided
+semi-push-pull contrastive learning for supervised anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2023, pp. 24
+490–24 499.
+[135] Y. You, T. Chen, Y. Sui, T. Chen, Z. Wang, and Y. Shen, “Graph contrastive
+learning with augmentations,” in Proc. Int. Conf. Neural Inf. Process.
+Syst., 2020, pp. 5812–5823.
+[136] H. Yu, Z. Liu, and X. Luo, “Barely supervised learning for graph-based
+fraud detection,” in Proc. Conf. Assoc. Advance. Artif. Intell., 2024, pp. 16
+548–16 557.
+[137] R. Yu, H. Qiu, Z. Wen, C. Lin, and Y. Liu, “A survey on social media
+anomaly detection,” ACM SIGKDD Explorations Newslett., vol. 18, no. 1,
+pp. 1–14, 2016.
+[138] W. Yu, W. Cheng, C. C. Aggarwal, K. Zhang, H. Chen, and W. Wang,
+“NetWalk: A flexible deep embedding approach for anomaly detection
+in dynamic networks,” in Proc. Int. Conf. Knowl. Discov. Data Mining,
+2018, pp. 2672–2681.
+[139] X. Yuan, N. Zhou, S. Yu, H. Huang, Z. Chen, and F. Xia, “Higher-order
+structure based anomaly detection on attributed networks,” in Proc. IEEE
+Int. Conf. Big Data, 2021, pp. 2691–2700.
+[140] G. Zhang et al., “FRAUDRE: Fraud detection dual-resistant to graph
+inconsistency and imbalance,” in Proc. IEEE Int. Conf. Data Mining,
+2021, pp. 867–876.
+[141] G. Zhang et al., “Dual-discriminative graph neural network for imbalanced graph-level anomaly detection,” in Proc. Int. Conf. Neural Inf.
+Process. Syst., 2022, pp. 24 144–24 157.
+[142] H. Zhang, M. Cisse, Y. N. Dauphin, and D. Lopez-Paz, “Mixup: Beyond
+empirical risk minimization,” 2017, arXiv: 1710.09412.
+
+5126
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 37, NO. 9, SEPTEMBER 2025
+
+[143] J. Zhang, S. Wang, and S. Chen, “Reconstruction enhanced multi-view
+contrastive learning for anomaly detection on attributed networks,”
+2022, arXiv:2205.04816.
+[144] L. Zhang, J. Yuan, Z. Liu, Y. Pei, and L. Wang, “A robust embedding
+method for anomaly detection on attributed networks,” in Proc. Int. Joint
+Conf. Neural Netw., 2019, pp. 1–8.
+[145] R. Zhang et al., “Generation is better than modification: Combating high class homophily variance in graph anomaly detection,”
+2024, arXiv:2403.10339.
+[146] Y. Zhang, Y. Sun, J. Cai, and J. Fan, “Deep graph-level orthogonal hypersphere compression for anomaly detection,” 2023, arXiv:2302.06430.
+[147] T. Zhao, X. Zhang, and S. Wang, “GraphSMOTE: Imbalanced node
+classification on graphs with graph neural networks,” in Proc. Int. Conf.
+Web Search Data Mining, 2021, pp. 833–841.
+[148] T. Zhao, B. Ni, W. Yu, Z. Guo, N. Shah, and M. Jiang, “Action sequence
+augmentation for early graph-based anomaly detection,” in Proc. Conf.
+Inf. Knowl. Manage., 2021, pp. 2668–2678.
+[149] P. Zheng, S. Yuan, X. Wu, J. Li, and A. Lu, “One-class adversarial nets
+for fraud detection,” in Proc. Conf. Assoc. Advance. Artif. Intell., 2019,
+pp. 1286–1293.
+[150] X. Zheng et al., “Graph neural networks for graphs with heterophily: A
+survey,” 2022, arXiv:2202.07082.
+[151] Y. Zheng, M. Jin, Y. Liu, L. Chi, K. T. Phan, and Y.-P. P. Chen, “Generative
+and contrastive self-supervised learning for graph anomaly detection,”
+IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12220–12233,
+Dec. 2023.
+[152] Q. Zhou, G. Pang, Y. Tian, S. He, and J. Chen, “AnomalyCLIP: Objectagnostic prompt learning for zero-shot anomaly detection,” in Proc. Int.
+Conf. Learn. Representations, 2024.
+[153] Q. Zhou et al., “Graph anomaly detection with adaptive node mixup,” in
+Proc. Conf. Inf. Knowl. Manage., 2024, pp. 3494–3504.
+
+[154] Q. Zhou, K. Ding, H. Liu, and H. Tong, “Learning node abnormality with
+weak supervision,” in Proc. Conf. Inf. Knowl. Manage., 2023, pp. 3584–
+3594.
+[155] S. Zhou, X. Huang, N. Liu, Q. Tan, and F.-L. Chung, “Unseen anomaly
+detection on networks via multi-hypersphere learning,” in Proc. SIAM
+Int. Conf. Data Mining, SIAM, 2022, pp. 262–270.
+[156] S. Zhou, X. Huang, N. Liu, H. Zhou, F.-L. Chung, and L.-K. Huang,
+“Improving generalizability of graph anomaly detection models via
+data augmentation,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+pp. 12721–12735, Dec. 2023.
+[157] S. Zhou, Q. Tan, Z. Xu, X. Huang, and F.-L. Chung, “Subtractive
+aggregation for attributed network anomaly detection,” in Proc. Conf.
+Inf. Knowl. Manage., 2021, pp. 3672–3676.
+[158] J. Zhu, C. Ding, Y. Tian, and G. Pang, “Anomaly heterogeneity learning
+for open-set supervised anomaly detection,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit., 2024, pp. 17 616–17 626.
+[159] J. Zhu and G. Pang, “Toward generalist anomaly detection via in-context
+residual learning with few-shot sample prompts,” in Proc. IEEE/CVF
+Conf. Comput. Vis. Pattern Recognit., 2024, pp. 17 826–17 836.
+[160] J. Zhu, Y. Yan, L. Zhao, M. Heimann, L. Akoglu, and D. Koutra, “Beyond
+homophily in graph neural networks: Current limitations and effective
+designs,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2020, pp. 7793–
+7804.
+[161] Z. Zhuang, K. M. Ting, G. Pang, and S. Song, “Subgraph centralization:
+A necessary step for graph anomaly detection,” in Proc. SIAM Int. Conf.
+Data Mining, SIAM, 2023, pp. 703–711.
+[162] W. Zhuo et al., “Partitioning message passing for graph fraud detection,”
+in Proc. Int. Conf. Learn. Representations, 2023.
+[163] D. Zou, H. Peng, and C. Liu, “A structural information guided hierarchical
+reconstruction for graph anomaly detection,” in Proc. Conf. Inf. Knowl.
+Manage., 2024, pp. 4318–4323.
+PAPER_TEXT

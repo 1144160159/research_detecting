@@ -1,0 +1,779 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025 3503113
+
+ Variational Graph Attention Networks With
+ Self-Supervised Learning for Multivariate
+ Time Series Anomaly Detection
+ Yu Gao , Jin Qi , Member, IEEE, Hongjiang Ye , Ying Sun , Member, IEEE, Xiaoxuan Hu ,
+ Zhenjiang Dong , and Yanfei Sun , Member, IEEE
+
+ Abstract— Cyber-physical systems (CPSs) are multidimen- I. I NTRODUCTION
+sional and complex systems that integrate computing, networking, and physical environment, including various sensors
+that can produce vast multivariate time series data. Recently,
+scholars have proposed many unsupervised anomaly detection
+ D UE to the development of informatization, many sensors
+ are deployed in complex cyber-physical systems (CPSs),
+ such as autonomous vehicles and water treatment plants,
+methods to monitor and alarm potential faults of CPSs. However, to produce vast multivariate time series data with different
+current methods still have some limitations. First of all, it is
+ characteristics, attributes, and scales [1]. CPSs are large-scale
+challenging to capture spatial-temporal relationships explicitly.
+In the second place, the anomaly detection model based on the and geographically dispersed. There may be implicit depenvariational autoencoder (VAE) may not use the latent variable dency relationships between sensors. The fault of a particular
+and often falls into a kind of collapse, which is encouraged by sensor can spread to other related devices, causing cascading
+the Kullback–Leibler (KL) divergence term. In the end, more failures of components or the entire system. Usually, detecting
+information about the anomalies is needed. This article proposes
+ abnormal time points from multivariate time series data helps
+a novel anomaly detection method called variational graph attention networks with self-supervised learning (VGATSL). We use monitor and discover potential risks, threats, and faults of
+stacked spatial-temporal graph attention (STGAT) networks to CPSs, avoiding business interruption and even casualties.
+capture the temporal and feature correlations. Next, a VAE is con- However, in the real world, anomalies are rare, and annotating
+structed based on bidirectional gated recurrent units (BiGRUs), data are expensive [2]. Based on this, unsupervised anomaly
+and the von Mises-Fisher (vMF) distribution is used as its latent
+space. Indeed, this distribution places latent representation on
+ detection has received widespread attention.
+the surface of a unit hypersphere to allow for uninformed Unsupervised anomaly detection aims to train a robust
+priors, thus preventing the model collapse. Additionally, self- model with generalized patterns using unlabeled historical
+supervised learning is introduced to simulate abnormal behaviors normal data. Once this model cannot fit the current obserand to help the model form more explicit normality bound- vation, it will alarm [3]. Recently, many methods have been
+aries. Extensive experiments on three public real-world datasets
+demonstrate that VGATSL outperforms the baseline methods.
+ developed [4], [5], [6]. Specifically, prediction-based methods
+We also illustrate that VGATSL has superior interpretability and focus on predicting multiple continuous values to discover
+flexibility. contextual anomalies, such as long- and short-term memory
+ Index Terms— Latent variable model, multivariate time (LSTM) [7] and temporal convolutional networks (TCNs) [8].
+series, self-supervised learning, spatial-temporal graph attention Reconstruction-based methods attempt to explore anomalies in
+(STGAT) network, unsupervised anomaly detection. the overall distribution of sub-sequences, including generative
+ adversarial networks (GANs) [9] and autoencoders (AEs) [10].
+ Received 19 August 2024; revised 9 October 2024; accepted 21 October Mainly, AEs use reconstruction error as the threshold. Some
+2024. Date of publication 20 November 2024; date of current version
+11 December 2024. This work was supported in part by the National Natural promising models have also been proposed, such as variational
+Science Foundation of China under Grant 62471252, Grant 62172235, and AE (VAE) [11] and convolutional AE (CAE) [12]. Addi-
+Grant 62402242; in part by the Primary Research & Development Plan tionally, transfer learning-based anomaly detection methods
+of Jiangsu Province under Grant BE2023025; and in part by the Natural
+Science Research Project of Jiangsu Higher Education Institutions under Grant have also attracted plenty of scholars to research, such as
+22KJB520028. The Associate Editor coordinating the review process was Dr. DAAN [13], AICDA [14], and FS-ADAPT [15]. Neverthe-
+Yang Song. (Corresponding author: Yanfei Sun.) less, these methods cannot capture the coupling relationship
+ Yu Gao is with the College of Automation and College of Artificial
+Intelligence, Nanjing University of Posts and Telecommunications, Nanjing between sensors, making it difficult for them to process non-
+210023, China (e-mail: gynj610@163.com). Euclidean data.
+ Jin Qi, Hongjiang Ye, Xiaoxuan Hu, and Yanfei Sun are with the School Fig. 1 shows an inspired example from the secure Water
+of Internet of Things, Nanjing University of Posts and Telecommunications,
+Nanjing 210003, China (e-mail: qijin@njupt.edu.cn; HJ.Yep@foxmail.com; Treatment System (SWaT) dataset [16]. This example provides
+xiaoxuanhu@njupt.edu.cn; sunyanfei@njupt.edu.cn). four sensor signals. Overall, sensor signals are time-dependent.
+ Ying Sun and Zhenjiang Dong are with the School of Computer Science and The value of the next timestamp is closely related to the
+Technology, Nanjing University of Posts and Telecommunications, Nanjing
+210023, China (e-mail: sunying@njupt.edu.cn; dongzhenjiang@njupt.edu.cn). trend of changes in the historical series. It can be observed
+ Digital Object Identifier 10.1109/TIM.2024.3502890 that the signal exhibits significant periodicity. Meanwhile,
+ 1557-9662 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+3503113 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ Fig. 2. Visualization of related challenges. (a) If the latent space is a Gaussian
+ distribution, the KL term will force the instance to move toward the prior
+ (centered at the origin). N (·) represents the Gaussian distribution. (b) Lack
+ of abnormal data leads to the model learning biased decision boundaries.
+
+Fig. 1. Illustrative example (from secure water treatment system dataset). The
+anomaly event is marked as yellow. Four sensors (FIT101, LIT101, MV101,
+and P101). 2) The VAE-based model is prone to collapse, which will
+ result in a local optimum. Probabilistic methods often
+ assume that the prior follows a Gaussian distribution.
+Fig. 1 shows an anomaly event (yellow span). This anomaly
+ Moreover, the Kullback–Leibler (KL) divergence term
+occurred on sensor LIT101 (set the water level above H) [16].
+ in the loss function will encourage the posterior toward
+During this period, the LIT101 value slowly increased, while
+ the prior, which makes model optimization difficult,
+FIT101 and MV101 remained uninfluenced, and P101 dropped
+ as indicated in Fig. 2(a).
+to a low-level value. The above situation fully demonstrates
+ 3) The lack of information about the anomalies. For
+the coupling relationship between LIT101 and P101, and
+ unsupervised anomaly detection, the model’s training
+they will interact. In addition, FIT101 and MV101 are not
+ process relies on unlabeled historical normal data, which
+useless, as they can also create an offsetting effect that changes
+ makes it unable to access abnormal knowledge and
+the dependency relationship with other sensors. Therefore,
+ then form inaccurate normality boundaries, as indicated
+it is challenging to identify anomaly events based on purely
+ in Fig. 2(b).
+temporal patterns. Learning the spatial correlation between
+multivariate time series is crucial. To address the abovementioned challenges, we propose a
+ Graph neural networks (GNNs) [17] have successfully pro- novel variational graph attention network with self-supervised
+cessed non-Euclidean data. The reason is that GNNs use a learning (VGATSL) for unsupervised anomaly detection. First,
+message-passing mechanism to extract contextual representa- VGATSL adopts a graph feature extractor to capture the temtions of nodes, which helps to learn spatial features of multi- poral and feature representations used for reconstruction. This
+variate time series. For example, graph convolutional network feature extractor consists of stacked spatial-temporal graph
+(GCN) [18] has the characteristic of permutation invariance attention (STGAT) networks. In the second place, VGATSL
+and can use fast localized convolutional filters to process non- uses the von Mises-Fisher (vMF) distribution as a substitute.
+Euclidean data. Graph deviation network (GDN) [19] uses vMF distribution places latent representation on the surface
+attention mechanisms to extract spatial information. Other of a unit hypersphere. So, KL divergence can be fixed as
+methods, such as MTAD-GAT [6] and STGAT-MAD [20], a constant, structurally preventing collapse and making the
+can jointly capture spatial-temporal correlations. However, model more robust. Last, VGATSL introduces self-supervised
+due to limitations of fitting, these methods cannot model the learning to simulate abnormal behaviors, which attempts to
+stochastic interrelationships. Recent work has also attempted perturb the normal data to synthesize compelling anomalies
+to combine GNNs with probabilistic methods, considering for the model.
+the randomness of multivariate time series, which helps to To summarize, the main contributions of this article are as
+reduce intrinsic information loss, such as the graph rela- follows.
+tional learning networks (GReLeN) [5] and variational graph 1) We propose a novel unsupervised anomaly detection
+convolutional recurrent networks (VGCRN) [21]. However, method, which utilizes the graph feature extractor to
+these methods cannot adaptively learn graph structures and learn spatial-temporal information and builds a VAE
+often lose discriminative dependencies in the time dimension. based on bidirectional gated recurrent units (BiGRUs)
+Researchers have introduced self-supervised learning into vari- to achieve the reconstruction task.
+ational GNNs, such as self-supervised variational graph AEs 2) We utilize the vMF distribution instead of the Gaus-
+(SS-VGAE) [22], and self-supervised multivariate KPIs sian distribution as latent space, which places the
+anomaly detection (MAD-STA) [23], to improve feature sepa- latent representation on the surface of a unit hyperrability or dynamic graph structures. Unfortunately, they can- sphere to allow for uninformed priors and thus avoid
+not access unknown abnormal knowledge and are difficult to KL collapse.
+optimize. In summary, the research mentioned above has made 3) We introduce self-supervised learning to address the
+substantial progress but still faces some critical challenges. lack of information about anomalies. Specifically, this
+ 1) It is difficult to capture spatial-temporal relationships module can generate different but realistic abnormal
+ explicitly. Detection performance will decrease if the instances to help the model obtain rich original inforimplicit information is lost. mation and learn more explicit normality boundaries.
+GAO et al.: VARIATIONAL GRAPH ATTENTION NETWORKS WITH SELF-SUPERVISED LEARNING 3503113
+
+ 4) Extensive experiments have been carried out on three Hence, this article attempts to use graph learning to address
+ public real-world datasets to prove the effectiveness and this problem.
+ progressiveness of VGATSL.
+ This article is organized as follows. Section II introduces the B. Transfer Learning-Based Anomaly Detection
+related work. Section III presents the preliminaries. Section IV Transfer learning is dedicated to transferring knowledge
+describes VGATSL in detail. Section V reports the experimen- from one field to another related field. It is widely applied
+tal results and discussions. Section VI presents the limitations in anomaly detection tasks like machine monitoring, predicand future work. Section VII draws the conclusions. tive maintenance, and energy management. Without loss of
+ generality, Transfer learning-based anomaly detection methods
+ II. R ELATED W ORK mainly include instance transfer, parameter transfer, mapping
+ We review the vital anomaly detection research for transfer, and domain-adversarial transfer [35], [36].
+multivariate time series. Meanwhile, we discuss transfer Intuitively, instance transfer assigns different weights to
+learning-based anomaly detection to help readers better under- source domain data. For example, Vincent et al. [37] selected
+stand current research hotspots. Considering that our method labeled instances with similar localized data distributions in
+relies on spherical latent space representation and self- the source and target domains and then transferred them to
+supervised learning, we summarize relevant work on these the target anomaly detection task. Parameter transfer starts
+topics. with pretrained model parameters and fine-tunes on the target task. For example, Wen and Keyes [38] proposed a
+A. Multivariate Time Series Anomaly Detection CNN-based transfer learning framework for anomaly detec-
+ Traditional methods are classified into statistical learning tion. This framework pretrains the model on synthetic normal
+(e.g., ARIMA [24]), clustering-based (e.g., OCSVM [25]), data and then fine-tunes its weights on unknown univariate or
+density-based (e.g., LOF [26]), and isolation-based methods multivariate abnormal data.
+(e.g., iForest [27]). Thanks to its powerful and robust feature The basic idea of mapping transfer is to learn the feature
+extraction capabilities, more and more unsupervised detection representations of the target domain and minimize the distritasks are adopting the deep learning paradigm. bution differences between the source and the target domains.
+ Prediction-based methods attempt to observe the current Typical measuring methods include Wasserstein distance [39],
+data point and alert for anomalies if its predicted value maximum mean discrepancy (MMD) [40], maximum mean
+deviates from the actual value. Recurrent neural networks square discrepancy [41], and variance discrepancy representa-
+(RNNs) and convolutional neural networks (CNNs) are the tion [42]. Qian et al. [42] proposed a vibration characteristiccore architectures of prediction-based models. Hundman et al. guided distribution alignment metric, which improves MMD.
+[28], proposed LSTM-NDT, which utilizes LSTM to achieve It can express variance information and enhance discrepancy
+accurate predictions and uses a nonparametric thresholding representation ability. Cao et al. [43] utilized generalized
+approach to evaluate residuals. This method has been validated normality learning to minimize the distribution gap between
+in detecting spacecraft anomalies. Kravchik and Shabtai [29] in-distributed and out-of-distribution normal samples.
+proposed an anomaly detection scheme based on the statistical Wang et al. [44] proposed an anomaly-aware contrastive
+deviation. Its core architecture is a different variant of CNNs. alignment model to align contrastive representations and
+Lai et al. [30] proposed the LSTNet, which uses CNNs or labeled normal representations. Qian et al. [14] proposed
+RNNs to extract time series’ local dependencies and trend an adaptive intermediate class-wise distribution alignment
+information. model, which aligns the global and class-wise distributions of
+ Reconstruction-based methods focus on compressing data different domains and adaptively achieves domain confusion.
+into implicit representations and using the reconstruction error Inspired by GANs [9], domain-adversarial transfer aims
+as the detection threshold. Currently, AE is the most popular to extract generalized features through adversarial trainmethod [10]. For example, Su et al. [1] developed a robust ing. For example, Mao et al. [13] proposed a novel deep
+anomaly detection scheme, which uses the stochastic variables one-class Transfer learning method based on domain adverconnection technique to learn the normal patterns and then sarial training, which adaptively transfers one-class detection
+uses reconstruction probabilities to locate anomalies. Addition- rules to improve end-to-end anomaly detection performance.
+ally, GANs have also been introduced [9]. MAD-GAN [3] sets Li et al. [15] proposed a Few-shot anomaly detection framedetection thresholds based on the discrimination and recon- work, which uses a dueling triplet network to address the
+struction errors. Chen et al. [31] proposed DAEMON, which constraints of unsupervised target information and learns
+uses adversarial strategies to regularize implicit variables and invariant features by adversarial training.
+reconstructed data for robust learning of normal patterns. It is In summary, transfer learning-based anomaly detection
+worth mentioning that other methods, such as the deep autoen- methods have attracted plenty of scholars to research.
+coding gaussian mixture model (DAGMM) [32], denoising AE We review these well-known works to help readers better
+(DAE) [33], and Deep convolutional autoencoding memory understand current research hotspots.
+networks (CAE-M) [34], have also achieved good results.
+ However, the above methods cannot capture the complex C. Graph Learning in Multivariate Time Series
+topological relationships between sensors, making it challeng- GNN has succeeded in modeling multivariate time
+ing to process non-Euclidean data with potential correlations. series [45], [46], [47], [48]. For example, GDN [19] adopts
+3503113 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+a flexible framework to construct graphs and uses attention method can address the lack of knowledge about anomalies
+mechanisms to encode information. MTAD-GAT [6] treats all and promote the model to learn more explicit normality
+timestamps and variables as different complete graphs and boundaries.
+jointly optimizes them. STGAT-MAD [20] uses multiscale
+STGAT networks to capture spatial-temporal correlations. E. Spherical Latent Space
+These methods cannot model the stochastic interrelation-
+ Probabilistic generative models (PGMs) have achieved
+ships during reconstruction, considering the limited fitting.
+ outstanding results in image classification, text translation,
+Researchers attempted to combine probabilistic methods with
+GNNs. Chen et al. [21], proposed VGCRN, which models the sequence prediction, and other fields [61], [62], [63]. PGMs
+channel dependence and randomness using the graph convo- often assume that the prior of the latent space follows a
+lutional recurrent network (GCRN). GReLeN [5] combined Gaussian distribution. This may lead to collapse. Researchers
+GNNs and stochastic relation learning mechanisms to capture attempt to introduce non-Euclidean latent spaces to explore
+sensor interdependence and established a composite metric. more flexible priors. For example, Nickel and Kiela [64]
+These methods have achieved impressive results, but they mapped data into an n-dimensional Poincaré space to capture
+cannot learn the evolutionary patterns of graph structures well hierarchical representations. Liu and Zhu [65] used Riemanand may lose discriminative dependencies in time dimension. nian manifolds as the latent space for inference models.
+Based on this, researchers introduced self-supervised learn- However, these methods still require prior information and
+ing into variational GNNs. For example, Zhang et al. [22] overlook the inherent spherical nature of some data. The vMF
+proposed a SS-VGAE method. It searches for the optimal distribution is another competitive choice, which places the
+center of the latent space, enhancing the separability of latent representation on the surface of a unit hypersphere to
+mean features. Chen et al. [23] proposed a self-supervised allow for uninformed priors [66], [67]. For example, Guu et al.
+multivariate anomaly detection method that combines adaptive [68] set the latent space of VAE as a vMF distribution and
+graph structure learning with improved graph attention net- applied it to sentence editing tasks. Davidson et al. [69]
+works (GAT). Hojjati et al. [49] used self-supervised learning replaced the Gaussian distribution with the vMF distributo map the adjacent partitions into similar representations, tion and extended the reparameterization trick for rejecting
+which helps the model learn discriminative features. However, sampling. Guan and Smith [70], Xu and Durrett [71], and
+these anomaly detection methods based on SS-VGAEs still Serban et al. [72] also reported superiorities of spherical latent
+cannot access abnormal knowledge and are prone to forming spaces, which inspired us.
+inaccurate normality boundaries. In this article, we use selfsupervised learning to simulate abnormal behaviors, which III. P RELIMINARIES
+helps to synthesize compelling anomalies for the model. This Here, we introduce the concepts of GAT, VAE, and vMF disis significantly different from the previous research. Addi- tribution and analyze the limitations of Gaussian distribution.
+tionally, existing variational graph AEs typically assume that
+the prior follows a Gaussian distribution, which makes model A. Graph Attention Networks
+optimization difficult and causes mode collapse. The proposed
+method uses the vMF distribution as latent space, which places Given a graph G(V, E) with d nodes, where V =
+the latent representation on the surface of a unit hypersphere {v1 , v2 , . . . , vd } is the node set. E is the edge set. Thus, the
+to allow for uninformed priors and thus avoid KL collapse. attention score [48] is calculated as
+It is worth mentioning that recent research has also introduced exp(δ(ω⊤ · (vi ⊕ v j )))
+ αi, j = P (1)
+ k∈Ni exp(δ(ω · (vi ⊕ vk )))
+theories such as discrete wavelet transform and adversarial ⊤
+learning into GNNs [50], [51], [52], [53].
+ where δ(·) is the LeakyReLU activation function; ω is the
+ learnable weight matrix; ⊕ is the concatenation operation;
+D. Self-Supervised Learning Ni is the set of neighboring nodes of node i; The output
+ representation of the ith node is
+ Researchers are committed to developing self-supervised  
+multivariate time series methods suitable for downstream X
+tasks [54], [55], [56], [57], [58], [59], [60]. For example, hi = σ  αi, j v j  (2)
+Eldele et al. [58] transformed the original time series data into j∈Ni
+multiple views and used temporal and contextual contrastive
+ where σ (·) is the Sigmoid activation function.
+learning to capture robust representations. Yue et al. [59]
+proposed TS2Vec, which adopts a hierarchical mechanism to
+perform contrastive learning and utilizes an aggregation oper- B. Variational Autoencoder
+ation to capture the sub-sequence representation. Nevertheless, The VAE is based on variational Bayesian inference [11].
+these pretext tasks still cannot provide information related to Let x ∈ X represent the observed vector and z ∈ Z represent
+anomalies, making it difficult to simulate real-world abnormal the continuous latent variable. The prior p(z) conforms to a
+behaviors. Xu et al. [60], used a series of perturbation oper- Gaussian distribution. Moreover, we use a neural network to
+ations to generate abnormal instances. These instances help parameterize the conditional distribution pθ (x|z) for modeling
+the model to obtain rich abnormal information. Indeed, this the data distribution. We will train VAE by maximizing
+GAO et al.: VARIATIONAL GRAPH ATTENTION NETWORKS WITH SELF-SUPERVISED LEARNING 3503113
+
+marginal log-likelihood log pθ (x). However, directly optimiz- where pdata is the real data distribution. We assume that
+ing log pθ (x) is complex. Therefore, a posterior distribution the distribution family for pθ (x|z) is flexible [74]. So, there
+pθ (z|x) is introduced. Specifically, we use a parameterized exists p ∗ in the distribution family that makes KL( pdata (x)
+variational posterior qφ (z|x) to approximate the true posterior. || p ∗ (x)) = 0. Based on this, we make pθ (z|x) = p ∗ and
+Based on this, marginal log-likelihood can be written as can obtain that the first term in (5) equals zero. When the
+ Z second term in (5) is also zero, we obtain the optimal ELBO.
+ log pθ (x) = qφ (z|x) log pθ (x) dz In this case, we can get pθ (z|x) = qφ (z|x) = p(z). The above
+ Z
+ situation demonstrates that the latent variable z provides no
+ pθ (x, z) qφ (z|x)
+ Z  
+ = qφ (z|x) log · dz information.
+ qφ (z|x) pθ (z|x)
+ ZZ
+ pθ (x, z)
+ = qφ (z|x) log dz
+ Z qφ (z|x) D. vMF Distribution
+ qφ (z|x)
+ Z
+ + qφ (z|x) log dz The vMF distribution [69] is placed on the (n − 1) dimen-
+ Z pθ (z|x) sional sphere Sn−1 . It is parameterized by a direction vector µ
+ = L(θ, φ; x) + KL qφ (z|x)|| pθ (z|x) .
+ 
+ (3) and a concentration parameter κ ≥ 0, where ∥µ∥ = 1.
+From this, the first term is called the evidence lower bound If κ = 0, the vMF is a Uniform distribution. The Proba-
+(ELBO). The second term is the KL divergence of the varia- bility Density Function of the vMF distribution for the unit
+tional posterior qφ (z|x) and the true posterior pθ (z|x). Hence, vector z is defined as
+we often use L(θ, φ; x) as the lower bound of marginal
+log-likelihood [73]. q(z; µ, κ) = Cn (κ)exp(κµ⊤ z) (6)
+ Thus, we can expand L(θ, φ; x) κ n/2−1
+ Cn (κ) = (7)
+ Z
+ pθ (x, z) (2π ) In/2−1 (κ)
+ n/2
+ L(θ, φ; x) = qφ (z|x) log dz
+ qφ (z|x) where I represents the modified Bessel function.
+ ZZ
+ p(z)
+ = qφ (z|x) log dz
+ Z q φ (z|x)
+ Z IV. P ROPOSED M ETHOD
+ + qφ (z|x) log pθ (x|z) dz
+ Z A. Problem Statement
+ = −KL(qφ (z|x)|| p(z)) + Eqφ (z|x) [log pθ (x|z)].
+ Given a multivariate time series X = {x1 , x2 , . . . , x T },
+ (4)
+ where xt ∈ Rm is the measurement value of m sensors at
+Intuitively, the first term encourages the variational posterior timestamp t. We use a sliding window with a step size of τ to
+qφ (z|x) to match the prior p(z). The second term is the divide it into the sub-sequence set S = {s1 , s1+τ , . . .}, where
+reconstruction loss. Since the Gaussian is a location-scale st = {xt , xt+1 , . . . , xt+l−1 } and l is the window size. This
+family of distributions, we can use reparameterization tricks article aims to reconstruct sub-sequences without accessing
+to approximate ELBO. label information, and it takes the deviation of reconstruction
+ and actual values as the anomaly score.
+C. Limitations of Gaussian Distribution
+ ELBO contains two gradient terms. One is the KL diver- B. Overview
+gence term. Another one is the data likelihood (reconstruction
+loss). When the parameterized neural networks are RNNs, Next, we describe VGATSL in detail. As indicated in
+the KL divergence term regularizes the variational posterior Fig. 3, the model comprises three sub-modules: graph feature
+qφ (z|x) toward the prior p(z) [71], [74]. Because RNNs are extractor, VAE with vMF distribution, and self-supervised
+universal approximators that can express arbitrary distribution learning module. Further, the workflow of this model is as
+and do not rely on latent variables. According to [63], the follows.
+variational posterior qφ (z|x) carries very little information, 1) Add perturbations to the original sub-sequence s; Genwhich forces the model to ignore latent variables (the model erate the abnormal instance s̃.
+considers latent variables as noise sources). Based on this, the 2) Graph feature extractor captures spatial-temporal informodel may fall into a local optimum, where qφ (z|x) = p(z), mation and obtains output representations h and h̃.
+which makes the KL divergence term in (4) equal to zero. 3) Establish a discriminator f c to classify output represen-
+In other words, this issue is KL collapse. tations h and h̃. It can help the model learn more explicit
+ Zhao et al. [74] provided theoretical explanations for the normality boundaries.
+above issue from the perspective of information preference. 4) Encoder f e maps the output representation h to a latent
+We rewrite (4) as [11] space H ∈ Rn . Meanwhile, the latent variable z ∈ Rn
+ conforms to the vMF distribution.
+ L(θ, φ; x) = −KL( pdata (x)|| pθ (x))
+ 5) Decoder f d reconstructs the sub-sequence based on the
+ − E pdata (x) [KL(qφ (z|x)|| pθ (z|x))] ≤ 0 (5) latent variable z.
+3503113 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 3. Structure of VGATSL. It consists of three sub-modules: graph Feature Extractor, VAE with vMF distribution, and self-supervised learning module.
+
+ Fig. 5. Graph Structures. (a) Feature-oriented graph structure. (b) Temporal-oriented graph structure.
+
+ relationships between sensors. So, we set the adjacent
+ matrix Aifeat
+ j = 1, where weight wi j , i; j ∈ [1, m].
+ Indeed, the dependency patterns between sensors are
+Fig. 4. Framework of graph feature extractor. symmetrical. Thus, the adjacent matrix Afeat should be
+ diagonal. In other words, we believe the nodes have
+ maximum connectivity, and each edge has a weight.
+C. Graph Feature Extractor Fig. 5(a) shows the structure.
+ This extractor aims to encode the spatial-temporal informa- 2) Temporal-Oriented Graph Structure: Meanwhile,
+tion of sub-sequences. It includes an embedding network and we treat all timestamps within a sliding window as
+stacked STGAT networks [20], as indicated in Fig. 4. a complete graph G tmp = (V tmp , E tmp ), where V tmp is
+ The Embedding Network extracts the unique characteristics the node set. Each node is a feature vector xt+c at the
+of each sensor [19]. Specifically, we use a 1-D CNN to timestamp t + c, and 0 ≤ c ≤ l − 1 represents
+transform the sub-sequence into a feature information matrix the time interval. E tmp is an edge set that reflects the
+ connection relationship between different timestamps.
+ u = σ (Conv1D(s, W) + b) (8)
+ Fig. 5(b) shows the structure. We believe there is a
+where Conv1D(·) represent 1-D convolution operation; W is connection between the past and current nodes [20].
+the weight; b is the bias. This operation enables the subsequent It is reasonable. A sensor signal is a collection of data
+stacked STGAT network to understand and process them. points arranged in time order. Random variables change
+ The stacked STGAT Networks use attention mechanisms to over time and have continuity. Thus, we set the adjacent
+ tmp tmp
+capture the sub-sequences causal relationships and temporal matrix Aab = 1, where a ≥ b. In contrast, Aab = 0,
+dependencies. We first construct graph structures in feature where a<b, and a; b ∈ [t, t + l − 1].
+and temporal dimensions. Then, we use the STGAT block to process feature-oriented
+ 1) Feature-Oriented Graph Structure: We treat the sub- and temporal-oriented graph-structured data, as indicated in
+ sequence st as a complete graph G feat = (V feat , E feat ), Fig. 4. Indeed, the STGAT block contains a feature GAT layer
+ where V feat = {v1 , v2 , . . . , vm } is the node set, and the and a temporal GAT layer. Specifically, we input the matrix u
+ sequence st(i) at sensor i represents node vi . E feat is the into the feature GAT layer to learn the spatial correlation,
+ edge set. A correlation relationship between any nodes i according to (1) and (2). The output representation r ϑ can be
+ and j must exist. There may be implicit dependency obtained, where ϑ represents the number of STGAT blocks.
+GAO et al.: VARIATIONAL GRAPH ATTENTION NETWORKS WITH SELF-SUPERVISED LEARNING 3503113
+
+Meanwhile, the same operation captures temporal correlation scheme [77] to sample ϖ ∈ [−1, 1] from the univariate
+in different timestamps. So, we can obtain the final output density g(ϖ |κ, n). According to [69], we can expand the
+representation h ϑ . univariate density g(ϖ |κ, n) as follows:
+ n  1 (n−3)
+ 2 π2 exp(κϖ ) 1 − ϖ 2 2
+D. VAE With vMF g(ϖ |κ, n) =  C n2 (10)
+ 0 n2 B 12 , 12 (n − 1)
+ 
+ Based on the above discussion, we adopt the VAE
+model [11] to achieve the reconstruction task and use where B(·) is the Beta function. Thus, we can calculate the
+BiGRUs as the encoder f e and decoder f d . Compared with latent variable z ′ ← (ϖ ; ((1 − ϖ 2 )1/2 )ε⊤ )⊤ under modal e1 .
+LSTM-based models, BiGRUs have fewer parameters, faster Finally, we use orthogonal transform U (µ) to obtain a latent
+convergence speed, and superior performance [75]. Addi- variable z that conforms to q(z|µ, κ). Specifically, we use
+tionally, we choose the vMF distribution as the prior and Householder reflection to implement this operation, as shown
+variational posterior to avoid KL collapse [63], [74]. in Algorithm 2.
+ Specifically, the encoder f e encodes the output representation h and obtains the latent variable z ∈ Rn . Here, we assume Algorithm 1 Sampling Process
+that the prior p(z) is a Uniform distribution on the hypersphere Require: Mean µ; Concentration κ;
+vMF(·, κ = 0). It is represented as one divided by the surface 1: Sample ε ∼ vMF(z|e1 , κ);
+area of a (n − 1) dimensional sphere 1/[2(π n/2 )/0(n/2)], 2: Sample ϖ √ ∼ g(ϖ |κ, n) ∝ exp(κϖ )(1 − ϖ 2 )(n−3)/2 ;
+where 0(·) is the Gamma function [69]. Meanwhile, we use 3: z ′ ← (ϖ ; ( 1 − ϖ 2 )ε ⊤ )⊤ ;
+the variational posterior qφ (z|x) = vMF(z; µ, κ) to approx- 4: U ← Householder(e1 , µ);
+imate the true posterior pθ (z|x), where the mean parameter return U z ′ ;
+µ is the output of the encoding neural network and the
+concentration parameter κ is a constant. According to (6)
+and (7), we can rewrite the KL divergence term in (4)
+ Algorithm 2 Householder Transform
+ KL(vMF(z; µ, κ)||vMF(·, 0)) Require: Mean µ; Modal vector e1 ;
+ = KL qφ (z|x)|| p(z) 1: ν ′ ∼ e1 − µ;
+ 
+ ν′
+ Z
+ qφ (z|µ, κ) 2: ν ← ∥ν ′ ∥ ;
+ = qφ (z|µ, κ) log dz 3: U ← I − 2νν ′ ;
+ p(z)
+ ZZ return U ;
+ qφ (z|µ, κ) log Cn (κ) + κµT z − log p(z) dz
+ 
+ =
+ Z " # On this basis, we utilize decoder f d to reconstruct the sub-
+ 2 π n/2
+ = log Cn (κ) + κµEq [z] + log sequence. Its input is latent variable z. The loss function is
+ 0(n/2)
+ n  n Lrec = Eqφ (z|s) [log pθ (s|z)]
+ = − 1 log κ − log(2π ) − log I n2 −1 (κ)
+ 2 2 − KL(vMF(µ, κ)||vMF(·, κ = 0)) (11)
+ I n2 (κ) n n 
+ +κ + log π + log 2 − log 0 . (9) where the first term is reconstruction loss, and the second term
+ I n2 −1 (κ) 2 2
+ is the KL divergence based on vMF distribution.
+It is evident that the modified KL divergence relies solely on
+the concentration κ, and not on the mean µ. KL divergence
+ E. Self-Supervised Learning
+is a function of hyperparameters n and κ, which can be
+precisely controlled [68]. Specifically, we consider κ as a This module uses pretext tasks to provide information about
+constant. Thus, the KL divergence term is also a constant, anomalies. Actually, we add tailored perturbations to normal
+and the KL collapse will not occur; there is qφ (z|x) ̸ = sub-sequences to simulate abnormal instances. These instances
+p(z). At this point, we believe the latent variable z provides help to learn more explicit decision boundaries. Specifically,
+rich information. However, when using Gaussian VAE, the contextual and collection transformations are adopted [60].
+value of KL divergence is constantly changing. It exhibits 1) Contextual Transformation: Randomly select dimena concentrated probability mass around the origin. In other sions of the last observation of the input sub-sequence;
+words, the Gaussian VAE habit pulls the posterior toward the Calculate the mean of the previous values; Add offset to
+prior [71]. In this case, the latent variable z does not provide the mean and obtain the contextual outlier; Replace the
+any information, which makes optimization difficult [76]. data values of the selected dimensions with contextual
+ Next, we introduce the details of sampling latent variable outliers. The offset is −0.5 or +0.5.
+z from the vMF distribution. We follow Wood’s rejection 2) Collection Transformation: Randomly select a group of
+sampling scheme [77], as illustrated in Algorithm 1. It is an dimensions; Randomly select a segment of the input
+improved Ulrich’s procedure [78]. Specifically, we sample ε sub-sequence (its length not exceeding 0.2 l); Take the
+from the distribution vMF(z|e1 , κ) with modal vector e1 = last observation as the endpoint of the segment; Use the
+(1, 0, . . . , 0), where ε is a unit vector tangent to the hyper- collection outliers to replace the values of the segment
+sphere. Second, we use an acceptance–rejection sampling in the selected dimension.
+3503113 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE I set is 11.97%. We downsample the SWaT dataset every
+ I NFORMATION OF DATASETS 10 seconds to speed up the training.
+ 2) Water Distribution Dataset (WADI) [79] is a simulated
+ large-scale urban water distribution system with more
+ realistic water treatment and distribution networks. The
+ system has been running for 16 days. In the first
+ 14 days, we collected 118 795 normal data for training—
+ the last 2 days in attack scenarios. Thus, we collected
+ To learn intrinsic representations from these transforma- 17 275 data for testing, of which 5.99% were abnortions, we use a discriminator f c to classify the output mal. The testbed consists of 127 sensors and actuators.
+representations h and h̃, as shown in Fig. 3. It helps deter- We also downsample the WADI dataset.
+mine whether the input sub-sequence is from the normal or 3) Wind Turbine Dataset (WTD) [20] is collected by ten
+abnormal data. So, this process can be formulated as sensors. The collection process lasts 1–2 years, with
+ a sampling interval of 10 min. Considering on-the-
+ Lssl = − ya log( f c (h)) + yb log f c h̃
+  
+ (12)
+ spot operation and maintenance records from wind farm
+where ya = 1 and yb = 0 are pseudo labels. Please note that operators, we labeled the data deviating from normal
+abnormal instances share the same pseudo labels. mode. The proportion of abnormal data in the test set
+ is 43.70%.
+F. Training and Inference Based on this, the data format is measured values with
+ timestamps, known as a multivariate time series. We use all
+ 1) Training: In summary, we combine reconstruction and
+ sensor records as input features for the model. Specifically,
+self-supervised losses to train the model. The final loss funcwe set sliding step τ = 1 and the sliding window size
+tion is
+ l = 5 under SWaT, l = 5 under WADI, and l = 60
+ L = Lrec + λLssl (13) under WTD. Totally, we obtain 47 511 training samples and
+ 44 982 test samples under SwaT (sample format is subwhere λ is a tradeoff coefficient. sequence, with feature size of 51 and length of 5),
+ 2) Inference: The VAE with vMF distribution attempts to 118 791 training samples and 17 271 test samples under WADI
+reconstruct the input sub-sequence. We use unlabeled his- (feature size of 127 and length of 5), and 24 074 training
+torical normal data to train the model. Thus, based on the samples and 28 598 test samples under WTD (feature size
+reconstruction error value, we can judge whether the test of 10 and length of 60). Please note that once a timestamp
+instance is normal or abnormal. in a sub-sequence exhibits abnormal behavior, we will label
+ First of all, we calculate the abnormal score as the entire sub-sequence as an abnormal sample. Furthermore,
+ 1 we apply the same data preprocessing to all methods, i.e.,
+ Score = ∥xt − x̂ t ∥2 (14) using Minimum-and-Maximum normalization to scale the
+ m
+ SWaT, WADI, and WTD datasets. We randomly divide 20%
+where x̂ t is the predicted value. Second, consistent with [20], of the training data as the validation set.
+we set a decision threshold based on expert knowledge. If the 2) Metrics: Consistent with [5], [6], and [19], we select Preabnormal score exceeds the threshold, the input is abnormal cision (Prec), Recall (Rec), and F1-Score (F1) as evaluation
+and vice versa. indicators.
+
+ V. E XPERIMENTAL E VALUATION
+A. Datasets and Metrics B. Comparison Methods
+ 1) Datasets: We evaluate and compare VGATSL on three VGATSL is compared with different popular and typical
+public and real-world datasets. As listed in Table I, we provide methods.
+helpful information such as dataset name and size, sample 1) PCA [80], which is used to find low-dimensional prodimension, and anomaly rate. jections to capture most of the variance in the data.
+ 1) Secure Water Treatment Dataset (SWaT) [16] comes 2) iForest [27], which isolates each data point to a termifrom a water treatment testbed with 51 sensors. nation node. The path length from the termination node
+ The system has been running for 11 days. Further, the to the root node is an anomaly measure.
+ system suffered 41 cyber and physical attacks in the 3) LSTM-AE [10], which is a reconstruction-based method.
+ last 4 days. These attacks have different intentions and We set the encoder and decoder as a double-layer LSTM.
+ durations. Please note that the collection is continuous. 4) USAD [81], which is a typical unsupervised anomaly
+ Therefore, we label the overall sequential data based on detection method that uses an adversarial training
+ each timestamp’s normal and abnormal behavior. In the scheme based on encoder–decoder architecture to learn
+ experiment, we use 47 515 normal data collected in the reconstruction errors.
+ first 7 days for training and 44 986 data collected in 5) MAD-GAN [3], which is a GAN-based method that uses
+ the last 4 days for testing. The anomaly rate in the test LSTM-RNN to capture temporal correlations.
+GAO et al.: VARIATIONAL GRAPH ATTENTION NETWORKS WITH SELF-SUPERVISED LEARNING 3503113
+
+ TABLE II
+ C OMPARISON OF D IFFERENT M ETHOD
+
+ 6) GDN [19], which learns the topological relationships
+ between sensors and utilizes attention mechanisms to
+ predict the future values of nodes.
+ 7) MTAD-GAT [6], which includes reconstruction and
+ prediction-based models, treating all timestamps and
+ variables in a multivariate time series as two complete
+ graphs to encode temporal and spatial correlations. Fig. 6. Confusion matrices on three datasets. (a) SWaT. (b) WADI. (c) WTD.
+ 8) STGAT-MAD [20], which uses stacked STGAT networks
+ to capture the temporal and feature correlations.
+ The network structure of VGATSL is as follows: 1) the The competitiveness of VGATSL can be attributed to these
+number of STGAT blocks is two; 2) encoder or decoder is aspects. First, we use advanced network structures to model
+BiGRUs with 150 neurons; 3) the dimension size of z is 15; multivariate time series, which compensate for the shortand 4) the discriminator is a double-layer, fully connected comings of existing methods in spatial-temporal information
+network. loss. Second, different signal transformations collaborate to
+ We train this model on an NVIDIA GeForce generate anomaly instances, which helps the model form
+RTX 4090 GPU. The Adam optimizer [82] is also selected, more explicit decision boundaries. Third, compared with the
+and the initial learning rate is 0.001. We set the hyper- Gaussian distribution, the vMF distribution learns stochastic
+parameter λ = 0.1, and κ = 25. interrelationships, which helps to eliminate the KL collapse
+ of the Encode–Decode.
+ Next, we plot VGATSL’s confusion matrices. As indicated
+C. Results and Analysis in Fig. 6, VGATSL can effectively identify the abnormal class.
+ Table II reports the results. VGATSL achieved the best For SWaT dataset, the actual negative rate is 99.52%. For
+results on all datasets. Compared with other methods, WADI dataset, the actual negative rate is 99.43%. For WTD
+VGATSL improves the F1-Score by 0.26% on SWaT dataset, dataset, the actual negative rate is 95.25%. The misclassifica-
+1.10% on WADI dataset, and 2.86% on WTD dataset. Overall, tion proportion is higher for normal data than for abnormal
+as the size of the dataset increases, there is less performance data. This can be attributed to:
+improvement. The main reasons are as follows. 1) We do not use the “Point Adjust” scheme in this
+ 1) Inaccurate label information. experiment.
+ 2) Data contains more noise. 2) We do not use the “Reduction,” which can confuse the
+ 3) Differences in data distribution. decision boundaries.
+ Because of the limitations of feature extraction techniques,
+traditional methods perform terribly on three datasets. In deep
+ D. Ablation Study
+learning methods, LSTM-AE and USAD are susceptible
+to noise interference, which makes identifying normality Meanwhile, ablation studies demonstrate the necessity of
+boundaries in large-scale datasets challenging. MAD-GAN different components. We set five variants.
+performed well on the SWaT dataset. However, it performs 1) Disable graph feature extractor (abbreviated as
+terribly on WADI and WTD datasets. Because the generative w/o GFE).
+ability of MAD-GAN is limited, it cannot capture all patterns 2) Disable vMF distribution (replace with Gaussian distriin complex data distributions. Graph learning methods, such bution, and abbreviated as w/o vMF, G-VAE).
+as GDN, MTAD-GAT, and STGAT-MAD, can extract spa- 3) Disable vMF distribution (replace with AE, abbreviated
+tial information, which helps improve detection performance. as w/o vMF, AE).
+However, these methods make it difficult to model the stochas- 4) Disable self-supervised learning module (abbreviated as
+tic interrelationships during reconstruction. w/o SSL).
+3503113 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE III
+ A BLATION R ESULTS
+
+ Fig. 7. Parameter sensitivity analysis on wind turbine Dataset. (a) SWaT.
+ (b) WADI. (c) WTD.
+
+ 5) Disable BiGRUs (replace with BiLSTM, and abbreviated as w/o BiGRUs).
+ Table III shows the results. After removing the graph
+feature extractor, we observe that the F1-Score decreases
+from 0.8855 to 0.8669. The feature extractor can encode
+spatiotemporal information, which helps the model capture the
+causal relationships and temporal dependencies. We also find
+ Fig. 8. Detailed analysis of the proposed method. (a) Graph attention
+that w/o SSL reduces performance. Indeed, this module helps network. (b) Self-supervised learning.
+the model learn more explicit normality boundaries.
+ The vMF distribution allows for uninformed priors, thus
+avoiding the KL collapse. After replacing the latent space Furthermore, we evaluated the performance of dimensions
+with Gaussian distribution, F1-Score decreased by 3.53%; for different latent variables n ∈ [5, 15, 25, 50, 100]. Here,
+After replacing the latent space with AE, F1-Score decreased we set the sliding window length to 60 and the tradeoff
+by 2.74%. It is because Gaussian VAE pulls the posterior parameter to 0.1. As indicated in Fig. 7(c), VGATSL is robust
+toward the prior. Moreover, BiGRUs are function approxi- to the latent dimensions, and the performance difference is
+mators that can fit any probability distribution and do not insignificant under different parameter settings. We find that
+rely on latent variables. AE’s performance is slightly better when n = 50, F1-Score decreases to 0.8288; When n = 100,
+than G-VAE. F1-Score reaches 0.9064.
+ If the BiLSTM backbone network was used, F1-Score
+decreased by 9.54% compared to the proposed method.
+ F. Detailed Analysis
+BiGRUs have fewer parameters, faster convergence speed, and
+a superior ability to capture time series features. Previous experiments have demonstrated the importance
+ of the graph feature extractor. In Fig. 8(a), we analyze the
+ performance of different attention layers (i.e., feature and
+E. Parameter Sensitivity Analysis temporal graph attention layer). The experiment is conducted
+ To better illustrate the impact of different parameters, we set on the WTD dataset. When only using the feature or temporal
+three configurations: sliding window length l, tradeoff param- graph attention layer, the F1-Score significantly decreases,
+eter λ, and dimensions of latent variables n. with an accuracy decrease of over 3%. This indicates that
+ This section provides a detailed performance comparison the relationship between the feature and the temporal graph
+of the WTD dataset. Fig. 7(a) shows the comparison results attention layers is complementary, playing a positive role
+of different sliding window lengths l ∈ [5, 30, 60, 100]. Here, in extracting spatial and temporal information. We find that
+we set the tradeoff parameter to 0.1 and the dimensions of under the same conditions, temporal-oriented graph attention
+latent variables to 15. The results indicate that the performance networks are superior to feature-oriented graph attention netgradually improves as the sliding window length increases. works. This is because industrial data usually has temporal
+When l = 100, F1-Score suddenly drops to 0.7797. This characteristics such as dynamism and nonstationarity, which
+is because a larger sliding window may not only provide contain the evolution laws and state information of industrial
+more temporal information to the model but also increase the systems and are more prominent than spatial characteristics
+difficulty of encoding temporal representations. such as coupling in topological relationships.
+ In Fig. 7(b), we compare the test results with different Fig. 8(b) shows the comparative performance analysis of
+tradeoff parameters λ ∈ [0.1, 0.4, 0.7, 1.0]. It can be observed different signal transformations. It can be observed that the
+that as the tradeoff parameter λ gradually increases, the overall signal transformation of “Contextual” is competitive. When the
+performance shows a downward trend. When λ = 0.7, the model only learns the enhanced data generated by the “Collecmodel achieves the lowest F1-Score. Self-supervised learning tion” signal transformation, its performance will significantly
+brings more raw anomaly information to the model. However, decrease. We believe the anomaly examples generated by the
+during training, a larger proportion of self-supervised learning transformation of “Collection” are relatively rare in realistic
+losses can affect the performance of other components and datasets. When the model is trained, its decision boundaries
+mislead the decision boundaries. will be blurred if all the enhanced data are such examples.
+GAO et al.: VARIATIONAL GRAPH ATTENTION NETWORKS WITH SELF-SUPERVISED LEARNING 3503113
+
+Fig. 9. Performance comparison under different percentage of anomaly.
+(a) F1-Score. (b) AUC-PR. Fig. 10. Case analysis on wind turbine dataset. (a) Multivariate time series.
+ (b) Anomaly score.
+
+However, when the model jointly learns the enhanced data
+generated by the transformation of two types of signals, it will
+achieve complementary performance and achieve the best
+detection results.
+
+G. Percentage of Anomaly
+ Next, we set the anomaly ratios on the test set to 5%, 10%, Fig. 11. Convergence of proposed method. (a) SWaT. (b) WADI. (c) WTD.
+15%, 20%, and 25% to simulate possible anomalies that may
+occur in the real world. We still use the WTD dataset as
+an example. In particular, we chose USAD and GDN as a
+comparison.
+ Fig. 9(a) shows the F1-Score under different anomaly
+ratios. Meanwhile, we plot the corresponding AUR-PR values, Fig. 12. Inference time of proposed method. (a) SWaT. (b) WADI. (c) WTD.
+as indicated in Fig. 9(b). Overall, the performance of VGATSL
+is superior to that of USAD and GDN. It is worth mentioning TABLE IV
+that when the ratio values are 15% and 20%, the performance M EASUREMENTS ON W IND T URBINE DATASET
+of GDN reaches its best. This experiment demonstrates that
+VGATSL has good stability and can address the problem of
+imbalanced datasets in real industrial scenarios.
+
+H. Case Studies
+ We provide cases to demonstrate the interpretability of
+VGATSL. Specifically, we use a downsampling technique Table IV lists the parameter sizes of different models
+to reduce the sequence length. As indicated in Fig. 10(a), to compare their corresponding spatial efficiency. GDN has
+we present test examples on the WTD dataset. The red the lowest number of parameters and model size. Additionarea represents the abnormal data we have detected. On this ally, VGATSL achieves the second-best spatial efficiency.
+basis, we calculate the average anomaly score, which helps to Compared with MAD-GAN, its model size has decreased
+locate the faulty sensor. To save space, we only analyze the by 0.3 MB; Compared with STGAT-MAD, its model size
+situation in region two. As shown in Fig. 10(b), darker colors decreased by 1.17 MB. Therefore, the proposed method also
+indicate higher average anomaly scores; therefore, wind speed has flexibility in practical applications.
+is considered the most likely sensor to fail. The anomaly is the
+cracking of the main bearing, and frequent changes in wind VI. L IMITATIONS AND F UTURE W ORK
+speed are the leading cause. Although the proposed method reduces computational
+ costs (memory consumption, FLOP, parameter count),
+I. Convergence and Complexity Analysis it takes 15.52 s (0.345 ms/sample) to infer SWaT,
+ Fig. 11 shows the training loss of VGATSL. For the SWaT 27.44 s (1.589 ms/sample) to infer WADI, and 1.87 s
+dataset, this method converges at the 50th epoch; For the (0.065 ms/sample) to infer WTD on NVIDIA GeForce
+WADI dataset, this method converges at the 80th epoch; For RTX 4090 GPU. We consider this to be due to multiple
+the WTD dataset, this method converges at the 500th epoch. spatiotemporal attention blocks in the network. In addition,
+In conclusion, VGATSL has convergence and stability and a solving the vMF distribution is relatively cumbersome, and
+fast convergence speed. using reparameterization techniques can reduce application
+ Next, we evaluate the inference time of various methods efficiency and feasibility.
+on different datasets. Here, we chose MAD-GAN, GDN, In the future, we will research: 1) we attempt to incorand STGAT-MAD as comparative methods. As indicated in porate prior knowledge into the proposed method to learn
+Fig. 12, VGATSL is competitive regarding time efficiency. intrinsic representations from mixed information sources and
+3503113 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+achieve fault localization, monitoring, and other activities in [13] W. Mao, G. Wang, L. Kou, and X. Liang, “Deep domain-adversarial
+more complex industrial systems and 2) we will develop anomaly detection with one-class transfer learning,” IEEE/CAA J.
+ Autom. Sinica, vol. 10, no. 2, pp. 524–546, Feb. 2023.
+more efficient and robust models and conduct comprehensive [14] Q. Qian, J. Luo, and Y. Qin, “Adaptive intermediate class-wise distheoretical analysis. tribution alignment: A universal domain adaptation and generalization
+ method for machine fault diagnosis,” IEEE Trans. Neural Netw. Learn.
+ Syst., early access, Mar. 21, 2024, doi: 10.1109/TNNLS.2024.3376449.
+ VII. C ONCLUSION [15] H. Li, W. Zheng, F. Tang, Y. Zhu, and J. Huang, “Few-shot timeseries anomaly detection with unsupervised domain adaptation,” Inf. Sci.,
+ This article proposes an unsupervised anomaly detection vol. 649, Nov. 2023, Art. no. 119610.
+method called variational graph attention networks with self- [16] J. Goh, S. Adepu, M. Tan, and Z. S. Lee, “Anomaly detection in cyber
+supervised learning. We have built a graph feature extractor physical systems using recurrent neural networks,” in Proc. IEEE 18th
+ Int. Symp. High Assurance Syst. Eng. (HASE), Jan. 2017, pp. 140–145.
+based on stacked STGAT networks to learn feature-oriented [17] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and S. Y. Philip, “A comand temporal-oriented topological structures. In particular, prehensive survey on graph neural networks,” IEEE Trans. Neural Netw.
+the relationship between the feature and the temporal graph Learn. Syst., vol. 32, no. 1, pp. 4–24, Mar. 2020.
+attention layers is complementary, playing a positive role in [18] M. Defferrard, X. Bresson, and P. Vandergheynst, “Convolutional neural
+ networks on graphs with fast localized spectral filtering,” in Proc. Adv.
+extracting spatial and sequential information. Additionally, Neural Inf. Process. Syst., vol. 29, 2016, pp. 3844–3852.
+the vMF distribution is selected as the latent space, which [19] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+places the latent representation on the surface of the unit in multivariate time series,” in Proc. AAAI Conf. Artif. Intell. (AAAI),
+ May 2021, pp. 4027–4035.
+hypersphere to allow for uninformed priors, thus preventing
+ [20] J. Zhan et al., “Stgat-mad : Spatial–temporal graph attention network
+the model from falling into the local optimum. We also find for multivariate time series anomaly detection,” in Proc. IEEE Int. Conf.
+that the performance of different signal transformations varies. Acoust., Speech Signal Process. (ICASSP), May 2022, pp. 3568–3572.
+The self-supervised learning module can simulate abnormal [21] W. Chen, L. Tian, B. Chen, L. Dai, Z. Duan, and M. Zhou, “Deep
+behaviors and help the model form more explicit decision variational graph convolutional recurrent network for multivariate time
+ series anomaly detection,” in Proc. Int. Conf. Mach. Learn., 2022,
+boundaries. Extensive experiments demonstrate that VGATSL pp. 3621–3633.
+outperforms the baseline methods and can be applied to actual [22] L. Zhang et al., “Self-supervised variational graph autoencoder for
+industrial scenarios. system-level anomaly detection,” IEEE Trans. Instrum. Meas., vol. 72,
+ pp. 1–11, 2023.
+ [23] N. Chen, H. Tu, H. Zeng, and Y. Ou, “Anomaly detection for
+ R EFERENCES key performance indicators by fusing self-supervised spatio-temporal
+ graph attention networks,” Knowl.-Based Syst., vol. 300, Sep. 2024,
+ [1] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly Art. no. 112167.
+ detection for multivariate time series through stochastic recurrent neural [24] Q. Yu, L. Jibin, and L. Jiang, “An improved ARIMA-based traffic
+ network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discovery Data anomaly detection algorithm for wireless sensor networks,” Int. J.
+ Mining, 2019, pp. 2828–2837. Distrib. Sensor Netw., vol. 12, no. 1, Jan. 2016, Art. no. 9653230.
+ [2] Y. Zhang, J. Wang, Y. Chen, H. Yu, and T. Qin, “Adaptive memory [25] J. Ma and S. Perkins, “Time-series novelty detection using one-class
+ networks with self-supervised learning for unsupervised anomaly detec- support vector machines,” in Proc. Int. Joint Conf. Neural Netw., vol. 3,
+ tion,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12068–12080, 2003, pp. 1741–1745.
+ Dec. 2023. [26] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+ [3] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, and S.-K. Ng, “MAD-GAN: density-based local outliers,” in Proc. ACM SIGMOD Int. Conf. Manage.
+ Multivariate anomaly detection for time series data with generative Data, 2000, pp. 93–104.
+ adversarial networks,” in Proc. Int. Conf. Artif. Neural Netw. Cham, [27] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 8th
+ Switzerland: Springer, 2019, pp. 703–716. IEEE Int. Conf. Data Mining, Oct. 2008, pp. 413–422.
+ [4] B. Zhou, S. Liu, B. Hooi, X. Cheng, and J. Ye, “BeatGAN: Anomalous [28] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and
+ rhythm detection using adversarially generated time series,” in Proc. T. Soderstrom, “Detecting spacecraft anomalies using LSTMs and non-
+ 28th Int. Joint Conf. Artif. Intell., Aug. 2019, pp. 4433–4439. parametric dynamic thresholding,” in Proc. 24th ACM SIGKDD Int.
+ [5] W. Zhang, C. Zhang, and F. Tsung, “GRELEN: Multivariate time series Conf. Knowl. Discovery Data Mining, 2018, pp. 387–395.
+ anomaly detection from the perspective of graph relational learning,” in [29] M. Kravchik and A. Shabtai, “Detecting cyber attacks in industrial
+ Proc. Int. Joint Conf. Artif. Intell. (IJCAI), 2022, pp. 2390–2397. control systems using convolutional neural networks,” in Proc. Workshop
+ [6] H. Zhao et al., “Multivariate time-series anomaly detection via graph Cyber-Phys. Syst. Secur. PrivaCy, Jan. 2018, pp. 72–83.
+ attention network,” in Proc. IEEE Int. Conf. Data Mining (ICDM), [30] G. Lai, W.-C. Chang, Y. Yang, and H. Liu, “Modeling long-and short-
+ Nov. 2020, pp. 841–850. term temporal patterns with deep neural networks,” in Proc. Int. ACM
+ [7] K. Greff, R. K. Srivastava, J. Koutník, B. R. Steunebrink, and Conf. Res. Devel. Inf. Retrieval (SIGIR), 2018, pp. 95–104.
+ J. Schmidhuber, “LSTM: A search space Odyssey,” IEEE Trans. Neural
+ [31] X. Chen et al., “DAEMON: Unsupervised anomaly detection and
+ Netw. Learn. Syst., vol. 28, no. 10, pp. 2222–2232, Oct. 2016.
+ interpretation for multivariate time series,” in Proc. IEEE 37th Int. Conf.
+ [8] C. Lea, M. D. Flynn, R. Vidal, A. Reiter, and G. D. Hager, “Tempo- Data Eng. (ICDE), Apr. 2021, pp. 2225–2230.
+ ral convolutional networks for action segmentation and detection,” in
+ [32] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsu-
+ Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017,
+ pervised anomaly detection,” in Proc. Int. Conf. Learn. Represent., 2018,
+ pp. 156–165.
+ pp. 1–19.
+ [9] I. J. Goodfellow et al., “Generative adversarial networks,” Commun.
+ ACM, vol. 63, no. 11, pp. 139–144, 2020. [33] P. Vincent, H. Larochelle, Y. Bengio, and P.-A. Manzagol, “Extracting
+ and composing robust features with denoising autoencoders,” in Proc.
+[10] P. Malhotra, A. Ramakrishnan, G. Anand, L. Vig, P. Agarwal, and
+ 25th Int. Conf. Mach. Learn. (ICML), 2008, pp. 1096–1103.
+ G. Shroff, “LSTM-based encoder–decoder for multi-sensor anomaly
+ detection,” 2016, arXiv:1607.00148. [34] Y. Zhang, Y. Chen, J. Wang, and Z. Pan, “Unsupervised deep anomaly
+[11] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” 2013, detection for multi-sensor time-series signals,” IEEE Trans. Knowl. Data
+ arXiv:1312.6114. Eng., vol. 35, no. 2, pp. 2118–2132, Feb. 2021.
+[12] M. Gutoski, N. M. R. Aquino, M. Ribeiro, A. E. Lazzaretti, and [35] V. Chandola, A. Banerjee, and V. Kumar, “Anomaly detection: A survey,”
+ H. S. Lopes, “Detection of video anomalies using convolutional autoen- ACM Comput. Surv., vol. 41, no. 3, pp. 1–58, Jul. 2009.
+ coders and one-class support vector machines,” in Proc. 13th Brazilian [36] V. Vercruyssen, W. Meert, and J. Davis, “Transfer learning for time series
+ Congr. Comput. Inteligence, Jan. 2018, pp. 1–12. anomaly detection,” in Proc. IAL@ PKDD/ECML, 2017, pp. 27–36.
+GAO et al.: VARIATIONAL GRAPH ATTENTION NETWORKS WITH SELF-SUPERVISED LEARNING 3503113
+
+[37] V. Vincent, M. Wannes, and D. Jesse, “Transfer learning for anomaly [59] Z. Yue et al., “Ts2vec: Towards universal representation of time series,”
+ detection through localized and unsupervised instance selection,” in in Proc. AAAI Conf. Artif. Intell., 2022, vol. 36, no. 8, pp. 8980–8987.
+ Proc. AAAI Conf. Artif. Intell., 2020, vol. 34, no. 4, pp. 6054–6061. [60] H. Xu, Y. Wang, S. Jian, Q. Liao, Y. Wang, and G. Pang, “Calibrated
+[38] T. Wen and R. Keyes, “Time series anomaly detection using convolu- one-class classification for unsupervised time series anomaly detectional neural networks and transfer learning,” 2019, arXiv:1905.13628. tion,” IEEE Trans. Knowl. Data Eng., vol. 36, no. 11, pp. 5723–5736,
+[39] J. Shen, Y. Qu, W. Zhang, and Y. Yu, “Wasserstein distance guided Nov. 2024.
+ representation learning for domain adaptation,” in Proc. AAAI Conf. [61] M. Tschannen, O. Bachem, and M. Lucic, “Recent advances in
+ Artif. Intell., 2018, vol. 32, no. 1, pp. 1–8. autoencoder-based representation learning,” 2018, arXiv:1812.05069.
+[40] E. Tzeng, J. Hoffman, N. Zhang, K. Saenko, and T. Darrell, [62] Y. Miao, L. Yu, and P. Blunsom, “Neural variational inference for text
+ “Deep domain confusion: Maximizing for domain invariance,” 2014, processing,” in Proc. 33rd Int. Conf. Mach. Learn. (ICML), vol. 48,
+ arXiv:1412.3474. Jun. 2016, pp. 1727–1736.
+[41] Q. Qian, Y. Wang, T. Zhang, and Y. Qin, “Maximum mean square [63] S. R. Bowman, L. Vilnis, O. Vinyals, A. M. Dai, R. Jozefowicz, and
+ discrepancy: A new discrepancy representation metric for mechanical S. Bengio, “Generating sentences from a continuous space,” 2015,
+ fault transfer diagnosis,” Knowl.-Based Syst., vol. 276, Sep. 2023, arXiv:1511.06349.
+ Art. no. 110748. [64] M. Nickel and D. Kiela, “Poincaré embeddings for learning hierarchical
+[42] Q. Qian, H. Pu, T. Tu, and Y. Qin, “Variance discrepancy representation: representations,” in Proc. Adv. Neural Inf. Process. Syst., vol. 30, 2017,
+ A vibration characteristic-guided distribution alignment metric for fault pp. 6341–6350.
+ transfer diagnosis,” Mech. Syst. Signal Process., vol. 217, Aug. 2024, [65] C. Liu and J. Zhu, “Riemannian stein variational gradient descent for
+ Art. no. 111544. Bayesian inference,” in Proc. AAAI Conf. Artif. Intell., 2018, vol. 32,
+[43] T. Cao, J. Zhu, and G. Pang, “Anomaly detection under distribution no. 1, pp. 1–8.
+ shift,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2023, [66] A. Banerjee, I. S. Dhillon, J. Ghosh, S. Sra, and G. Ridgeway, “Cluspp. 6488–6500. tering on the unit hypersphere using von Mises-Fisher distributions,” J.
+[44] Q. Wang, G. Pang, M. Salehi, W. Buntine, and C. Leckie, “Cross-domain Mach. Learn. Res., vol. 6, no. 9, 2005.
+ graph anomaly detection via anomaly-aware contrastive alignment,” in [67] R. A. Fisher, “Dispersion on a sphere,” Proc. Roy. Soc. London A, Math.
+ Proc. AAAI Conf. Artif. Intell., 2023, vol. 37, no. 4, pp. 4676–4684. Phys. Sci., vol. 217, no. 1130, pp. 295–305, 1953.
+[45] F. Xia et al., “Graph learning: A survey,” IEEE Trans. Artif. Intell., [68] K. Guu, T. B. Hashimoto, Y. Oren, and P. Liang, “Generating senvol. 2, no. 2, pp. 109–127, Apr. 2021. tences by editing prototypes,” Trans. Assoc. Comput. Linguistics, vol. 6,
+[46] J. Zhou et al., “Graph neural networks: A review of methods and pp. 437–450, Jul. 2018.
+ applications,” AI Open, vol. 1, pp. 57–81, Jan. 2020. [69] T. R. Davidson, L. Falorsi, N. De Cao, T. Kipf, and J. M. Tomczak,
+[47] T. N. Kipf and M. Welling, “Semi-supervised classification with graph “Hyperspherical variational auto-encoders,” 2018, arXiv:1804.00891.
+ convolutional networks,” 2016, arXiv:1609.02907. [70] H. Guan and W. A. P. Smith, “Structure-from-motion in spherical video
+[48] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and using the von Mises-Fisher distribution,” IEEE Trans. Image Process.,
+ Y. Bengio, “Graph attention networks,” 2017, arXiv:1710.10903. vol. 26, no. 2, pp. 711–723, Feb. 2017.
+[49] H. Hojjati, M. Sadeghi, and N. Armanfard, “Multivariate time-series [71] J. Xu and G. Durrett, “Spherical latent spaces for stable variational
+ anomaly detection with temporal self-supervision and graphs: Applica- autoencoders,” 2018, arXiv:1808.10805.
+ tion to vehicle failure prediction,” in Proc. Joint Eur. Conf. Mach. Learn. [72] I. V. Serban, A. G. Ororbia II, J. Pineau, and A. Courville, “Piece-
+ Knowl. Discovery Databases. Cham, Switzerland: Springer, 2023, wise latent variables for neural variational text processing,” 2016,
+ pp. 242–259. arXiv:1612.00377.
+[50] D. Grattarola, D. Zambon, L. Livi, and C. Alippi, “Change detection [73] X. Chen et al., “Variational lossy autoencoder,” 2016, arXiv:1611.02731.
+ in graph streams by learning graph embeddings on constant-curvature [74] S. Zhao, J. Song, and S. Ermon, “InfoVAE: Information maximizing
+ manifolds,” IEEE Trans. Neural Netw. Learn. Syst., vol. 31, no. 6, variational autoencoders,” 2017, arXiv:1706.02262.
+ pp. 1856–1869, Jun. 2020. [75] J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, “Empirical evaluation
+[51] P. Qi, D. Li, and S.-K. Ng, “MAD-SGCN: Multivariate anomaly of gated recurrent neural networks on sequence modeling,” 2014,
+ detection with self-learning graph convolutional networks,” in Proc. Int. arXiv:1412.3555.
+ Conf. Data Eng., 2022, pp. 1232–1244. [76] M. Abul Hasnat, J. Bohné, J. Milgram, S. Gentric, and L. Chen, “Von
+[52] J. Wang, S. Shao, Y. Bai, J. Deng, and Y. Lin, “Multiscale wavelet Mises-Fisher mixture model-based deep learning: Application to face
+ graph AutoEncoder for multivariate time-series anomaly detection,” verification,” 2017, arXiv:1706.04264.
+ IEEE Trans. Instrum. Meas., vol. 72, pp. 1–11, 2023. [77] A. T. A. Wood, “Simulation of the von Mises Fisher distribution,”
+[53] T. K. K. Ho and N. Armanfard, “Self-supervised learning for anomalous Commun. Statist.-Simul. Comput., vol. 23, no. 1, pp. 157–164, Jan. 1994.
+ channel detection in EEG graphs: Application to seizure analysis,” in [78] G. Ulrich, “Computer generation of distributions on the M-sphere,”
+ Proc. AAAI Conf. Artif. Intell., 2023, vol. 37, no. 7, pp. 7866–7874. J. Roy. Stat. Soc., Ser. C, vol. 33, no. 2, pp. 158–163, 1984.
+[54] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework [79] C. M. Ahmed, V. R. Palleti, and A. P. Mathur, “WADI: A water
+ for contrastive learning of visual representations,” in Proc. Int. Conf. distribution testbed for research in the design of secure cyber physical
+ Mach. Learn., 2020, pp. 1597–1607. systems,” in Proc. 3rd Int. Workshop Cyber-Physical Syst. Smart Water
+[55] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for Netw., 2017, pp. 25–28.
+ unsupervised visual representation learning,” in Proc. IEEE/CVF Conf. [80] M.-L. Shyu, S.-C. Chen, K. Sarinnapakorn, and L. W. Chang, “A novel
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020, pp. 9729–9738. anomaly detection scheme based on principal component classifier,” in
+[56] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked Proc. ICDM Found. New Direction Data Mining Workshop, Piscataway,
+ autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf. NJ, USA, 2003, pp. 172–179.
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 16000–16009. [81] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+[57] C.-C. Chiu, J. Qin, Y. Zhang, J. Yu, and Y. Wu, “Self-supervised learning “USAD: Unsupervised anomaly detection on multivariate time series,”
+ with random-projection quantizer for speech recognition,” in Proc. Int. in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+ Conf. Mach. Learn., 2022, pp. 3915–3924. 2020, pp. 3395–3404.
+[58] E. Eldele et al., “Time-series representation learning via temporal and [82] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+ contextual contrasting,” 2021, arXiv:2106.14112. 2014, arXiv:1412.6980.

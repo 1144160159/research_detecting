@@ -1,0 +1,788 @@
+This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 1
+
+TFDA: A Time-Frequency Domain Adaptive Model
+ for Multi-Source Multi-Task Anomaly Detection
+ and Localization in Distribution Systems
+ Yang Yu, Chensheng Liu, Senior Member, IEEE, Wenxuan Ma
+ Ruilong Deng, Senior Member, IEEE, Yang Tang, Fellow, IEEE, Feng Qian, Senior Member, IEEE
+
+ Abstract—Accurate anomaly detection and localization in dis- localization, data fusion, adaptive model
+tribution systems enable the timely event identiﬁcation and the
+implementation of appropriate response strategies, which could
+minimize potential damage. However, many existing methods rely I. I NTRODUCTION
+on extensive sensor data, requiring comprehensive measurement
+ HE stable operation of distribution systems is essential
+variables for data preprocessing and fusion, which limits their
+applicability in real-world scenarios. Moreover, prior methods
+often lack the necessary adaptive mechanisms to account for the
+ T to ensuring the reliability and security of power supply.
+ However, various anomalies such as short-circuit faults, cybervariability of anomalies, which lead to inconsistent performance attacks, and load jumps may occur during practical operations,
+across tasks. To address these challenges, we propose a datadriven time-frequency domain adaptive model (TFDA) that
+ which can signiﬁcantly impact the normal functioning of
+incorporates both time-domain and frequency-domain features, the distribution system [1]. Different types of anomalies reonly utilizing voltage magnitudes. The model introduces a spatial quire speciﬁc response strategies to minimize potential losses.
+patch embedding block, which integrates sensor spatial infor- Hence, real-time monitoring and localization of anomalies are
+mation as graph priors and processes time-series data through critical for operators to take prompt actions, which ensure the
+patch-based operations to mitigate the impact of multi-resolution
+data. In the frequency-domain block, an adaptive thresholding
+ reliable operation of distribution system. With advancements
+technique is applied to eliminate less informative parts of the in technology, distribution system have been increasingly
+frequency spectrum. In the time-domain block, an adaptive equipped with a variety of advanced measurement devices
+weighting is utilized to balance the contributions of inter- capable of providing abundant real-time data [2]. These data
+channel and intra-channel anomaly information. We perform present valuable opportunities for anomaly detection and localsimulations on hardware-in-the-loop testbed to generate data that
+closely approximates real-world scenarios and demonstrate the
+ ization, which enable effective data analysis to quickly identify
+superiority of our method over the baseline. and locate potential threats [3].
+ Initially, research on anomalies in distribution systems pre-
+ Index Terms—Distribution system, anomaly detection, anomaly
+ dominantly focused on addressing individual anomaly types.
+ Among these, fault detection and localization emerged as key
+ This work was supported in part by the National Natural Science Foundation research areas. For distribution systems with clear and simple
+of China under Grant 62293500, Grant 62293502; in part by the National structures, physics-based methods, such as impedance-based
+Natural Science Foundation of China (Basic Science Center Program) under
+Grant 61988101; in part by the Fundamental Research Funds for the Central approaches [4], as well as traveling wave and wavelet-based
+Universities under Grant 222202417006; in part by the Shanghai AI Labora- techniques [5], were proved to be highly effective in solving
+tory; in part by the Taishan Scholars Program under Grant tsqn202408241; in these challenges. However, as distribution systems became
+part by the General Program of Natural Science Foundation of Shandong
+Province under Grant ZR2025MS1020; in part by the Qilu University of more complex with modernization, the need for advanced
+Technology (ShandongAcademy of Sciences) Outstanding Young Talents analysis of measurement data became increasingly apparent.
+project under Grant Grant2025QZJH01, and in part by the Pairing Project To tackle these complexities, some studies developed speof Qilu University of Technology under Grant 2024JDJH06. (Corresponding
+authors: Chensheng Liu; Feng Qian.) cialized solutions for speciﬁc fault scenarios. For instance,
+ Yang Yu, Yang Tang and Feng Qian are with the State Key Laboratory of graph marking-based methods were proposed to localize
+Industrial Control Technology, Ministry of Education, and the Engineering feeder faults by integrating real-time data from fault indicators
+Research Center of Process System Engineering, Ministry of Education, East
+China University of Science and Technology, Shanghai 200237, China (e- (FIs) with topological search algorithms [6]. Specialized timemails: ecustyuyang@gmail.com, tangtany@gmail.com, fqian@ecust.edu.cn). domain techniques have been developed to localize faults by
+ Chensheng Liu is with the Key Laboratory of Computing Power Network exploiting the transformer saturation effects, utilizing low-pass
+and Information Security, Ministry of Education, Shandong Computer Science
+Center, Qilu University of Technology (Shandong Academy of Sciences), ﬁlters to extract the characteristic offset in phase currents for
+Jinan 250014, China, and also with the Shandong Provincial Key Laboratory diagnostic purposes [7]. Trindade et al. [8] proposed a method
+of Industrial Network and Information System Security, Shandong Funda- that leveraged power ﬂow calculations for data analysis. Key
+mental Research Center for Computer Science, Jinan 250014, China (e-mail:
+cliu@qlu.edu.cn). et al. [9] employed stacked denoising autoencoders to reliably
+ Wenxuan Ma and Ruilong Deng are with the State Key Laboratory discriminate transformer internal faults and Ngo et al. [10]
+of Industrial Control Technology and the College of Control Science and developed a hybrid 1-D convolutional graph attention network
+Engineering, Zhejiang University, Hangzhou 310027, China (emails: suremarvin@zju.edu.cn, dengruilong@zju.edu.cn). to capture spatio-temporal features from system measurements
+ for enhanced fault diagnostics. With the growing coupling
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 2
+
+of cyber and physical systems, researchers also increasingly However, it is important to note that most existing studies
+focused on cyber attacks. Li et al. [11] proposed an improved assumed the availability of a comprehensive set of sensor
+spectral clustering-based network partitioning method that ﬁrst variables, including voltage magnitude, voltage phase angle,
+estimated rough partitions and then determined precise loca- current magnitude, current phase angle, and frequency. These
+tions. Lin et al. [12] introduced a novel edge-based federated variables were typically processed through operations such as
+learning framework, which demonstrated signiﬁcant potential state estimation and feature expansion before performing subfor detecting attacks in scenarios with unknown system pa- sequent detection and localization tasks. When the available
+rameters. variables were incomplete, many data processing operations
+ However, the wide range of anomalies in distribution sys- became infeasible, rendering the methods unable to complete
+tems makes it insufﬁcient to focus solely on a single anomaly the intended tasks effectively. The comparative analysis betype to ensure system safety. Zhou et al. [13] considered tween these specialized power system methods, focusing on
+multiple anomalies, including voltage sags, motor starts, and data availability and anomaly types, is summarized in Table I.
+faults, and proposed a novel hidden-structure semi-supervised Furthermore, while advanced time-series models, includmachine (HSM). They also developed a parametric dual opti- ing FiLM [24], TimesNet [32], and ModernTCN [25], offer
+mization procedure to address the non-convex learning objec- powerful feature extraction, they predominantly rely on a
+tive. Gholami et al. [14] integrated faults, false data injection single informational domain (either temporal or spectral). In
+attacks, and distributed energy resources (DER) switching by distribution systems, however, different anomalies exhibit nondeveloping an ensemble method based on marginal bayesian uniform signatures; for instance, short-circuit faults cause
+maximum likelihood estimation (MB-MLE), which combined sharp time-domain transients, while stealthy cyber-attacks are
+the results of various base detectors to identify anomalous often more discernible through frequency-domain distortions.
+events. Aligholian et al. [15] addressed faults and load jumps By neglecting the synergistic integration of both domains,
+using an unsupervised graph representation learning method existing methods fail to capture the multi-dimensional charthat leveraged the relative positions of sensors. Guo et al. acteristics of diverse events. Moreover, without appropriate
+[16] constructed features that can reﬂect the speciﬁc physical adaptive mechanisms to dynamically weight these features,
+characteristics, and used convolutional neural networks (CNN) these methods exhibit unstable performance across heterogeto distinguish between faults and cyber attacks. Vosughi et neous localization tasks, thereby failing to meet the safety and
+al. [17] proposed a comprehensive algorithmic workﬂow for reliability standards required for distribution systems.
+analysing anomalied such as faults, DER switching, and To address the aforementioned issues, this work proposes
+load jumps. This workﬂow ﬁrst detected anomalies using a a Time-Frequency Domain Adaptive (TFDA) framework that
+prony-based dynamic window, classiﬁed them using koopman relies exclusively on voltage magnitude. By extracting synermode analysis (KMA), physical rules, and a weighted voting gistic features from both the time and frequency domains, the
+ensemble, and ﬁnally localized the anomalies using a weighted model effectively captures the multi-dimensional signatures of
+graph approach. Notably, most of the aforementioned studies diverse anomalies. To handle multi-source data with limited
+relied on phasor measurement unit (PMU) data due to its variables, we introduce a novel embedding approach. Furcomprehensive nature. thermore, dual-domain adaptive operations are incorporated
+ Given the cost constraints in distribution systems, the num- to ensure the framework meets the safety requirements for
+ber of measurement devices was often limited in practical various anomaly localization tasks.
+scenarios. Relying on a single type of information source did The main contributions of our work are as follows:
+not provide a comprehensive view of the distribution system. 1) We develop a time-frequency domain adaptive model
+Considering the wide variety of anomalies and the limited (TFDA) that enables highly reliable anomaly detection
+availability of sensors, integrating multi-source sensor data and localization utilizing only voltage magnitudes. This
+signiﬁcantly enhanced situational awareness in these systems. approach signiﬁcantly reduces the dependency on multi-
+Siamak et al. [18] proposed a sequential pattern mining variable data, overcoming the practical deployment limiapproach for anomaly detection by utilizing data from PMUs, tations faced by previous methods such as [20], [21].
+protection relays, and network event logs. Ahmed et al. [19] 2) To bridge the gap between heterogeneous sensor resocombined physical measurements from PMUs with network lutions, we propose a spatial patch embedding module.
+data from communication network logs. By merging these By shifting from point-based data to patch-based analysis
+datasets through a weighted adjacency matrix, they introduced while integrating graph-based spatial priors, this module
+a deep graph learning framework to extract spatiotemporal mitigates information imbalance and ensures the effective
+features, which enabled the identiﬁcation, localization, and aggregation of multi-source measurement data.
+classiﬁcation of cyber-physical events. Gholami et al. [20] 3) We introduce domain-speciﬁc adaptive mechanisms to
+aggregated PMUs and relay data using an ensemble extended handle the distinct characteristics of diverse anomalies.
+Kalman ﬁlter and performed classiﬁcation using hierarchi- The frequency-domain block employs an adaptive mask
+cal agglomerative clustering. Similarly, Ganjkhani et al. [21] to prioritize informative spectral components, while the
+utilized data from PMUs and protection relays to estimate time-domain block utilizes learnable weighting to balance
+unknown variables in order to expand data features. Sub- inter-variable topological relationships and intra-variable
+sequently, long short-term memory (LSTM) networks were trends. These mechanisms enable stable and robust perapplied to achieve anomaly detection and localization. formance across diverse localization tasks, overcoming
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 3
+
+ TABLE I: A comparison of our work with some of the latest research.
+ Utilized Data Considered Anomalies
+ Related Work
+ I II III IV Fault Relay Attack Inverter Attack DER Switching Load Jump
+ Gholami et al. [14] ✓ ✓ ✓ ✓
+ Aligholian et al. [15] ✓ ✓ ✓
+ Vosughi et al. [17] ✓ ✓ ✓ ✓
+ Ahmed et al. [19] ✓ ✓ ✓ ✓ ✓
+ Gholami et al. [20] ✓ ✓ ✓ ✓
+ Ganjkhani et al. [21] ✓ ✓ ✓ ✓ ✓
+ Ours ✓ ✓ ✓ ✓ ✓ ✓
+Note: I represents Voltage Magnitude from PMUs and Relays, II represents Complete Variables from PMUs, III represents Complete Variables from Relays,
+IV represents Network Data from Communication Network Logs.
+
+ Fig. 1: The framework for anomaly detection and localization in distribution systems.
+
+ the performance instabilities observed in single-domain sample with different time scale. Speciﬁcally, the PMU meamodels such as [24], [25]. surements sampled at a higher resolution Rh are denoted
+ The remainder of this article is organized as follows. Section as Vh = [Vh1 , Vh2 , Vh3 , . . . , Vhn ], where n represents the
+II introduces preliminaries. Section III presents the proposed number of PMUs. The relay measurements sampled at a lower
+TFDA. Section IV describes the setup of our case study. resolution Rl are denoted as Vl = [Vl1 , Vl2 , . . . , Vlm ], where
+Section V provides the experimental results and analysis. m represents the number of relays. The ﬁrst task of this
+Section VI concludes the paper with a summary of our work. work is to construct a mapping from the measurements to the
+ anomaly label La , followed by constructing a mapping from
+ II. P RELIMINARIES the measurements to the anomaly localization label Ll :
+ This section provides a brief introduction to the proposed La = fTFD (Vh , Vl ), La ∈ A (1)
+framework for anomaly detection and localization in distribution systems. It also describes the inputs, outputs, and types Ll = fTFDA(La ) (Vh , Vl ), L l ∈ L La . (2)
+of anomalies considered in this work. The models fTFD and fTFDA correspond to the two tasks,
+ representing the time-frequency domain model and the time-
+A. The Framework frequency domain adaptive model, respectively. A represents
+ The proposed framework is illustrated in Fig. 1. Mea- the set of anomaly events, and LLa denotes the set of localsurement values are collected from various sensors in the ization labels corresponding to the anomalies La . The speciﬁc
+distribution system and initially analyzed using the model experimental setup is described in the following sections.
+without adaptive mechanisms, which is called time-frequency
+domain model (TFD). This model acts as an operational mode C. Types of Anomaly
+detector, which produces anomaly detection labels. If the Building upon prior study, this work considers a more
+detected operational mode is normal, it indicates the absence comprehensive set of anomaly events to better validate the
+of anomalies, and localization module is not triggered. Data adaptive performance of our model across different situations.
+from subsequent time windows are continuously evaluated by Speciﬁcally, A includes six possible operational modes.
+the operational mode detector until an anomaly is identiﬁed. 1) Normal Operation: When the distribution system oper-
+Once an anomaly is detected, the data would be handled by ates under stable and normal conditions, it is assumed that
+the corresponding TFDA to determine the anomaly’s location no anomalies are present. Some prior works [17] included
+labels. an additional 0/1 anomaly detection step before anomaly
+ classiﬁcation. In this study, we perform anomaly detection and
+B. Input and Output classiﬁcation simultaneously, thereby enhancing the efﬁciency
+ This work only considers three-phase voltage magnitudes of safety monitoring in the distribution system. This state is
+collected by two types of sensors: PMUs and relays, which not associated with a localization label.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 4
+
+ 2) Fault: A short-circuit fault occurs when a segment of the transformed into tensor representations suitable for neural
+distribution system becomes shorted, which cause an instan- networks. The spatial patch embedding module is then aptaneous surge in current. This triggers the nearest protective plied to address the challenges posed by varying resolutions.
+relay to disconnect, which lead to a cascade of effects. In The processed data is subsequently passed through the timethis work, we assume that a short-circuit fault can occur on frequency domain module, which comprises two components:
+any branch. Thus, the localization labels for short-circuit faults the adaptive frequency block (as shown on the left) and the
+correspond to individual branch. adaptive temporal block (as shown on the right). Features from
+ 3) DER Switching: Sudden disconnection or connection of both blocks are combined and fed into the mixture convnet
+DER can cause signiﬁcant ﬂuctuations in the operational state for integration. After passing through multiple layers of the
+of a distribution network. Timely identiﬁcation of switching time-frequency domain adaptive module, the data is processed
+events allows relevant authorities to adjust scheduling deci- by the projection layer, which maps it to the appropriate
+sions and prevent more severe consequences. In this study, we dimensionality for the task.
+assume that switching events can occur at any DER connection
+point within the system. Therefore, the localization labels B. Spatial Patch Embedding
+correspond directly to the connection points of the DERs.
+ 4) Load Jump: Load jumps can also cause ﬂuctuations in The primary purpose of the spatial patch embedding is to
+voltage and frequency during the operation of a distribution aggregate data from multi-resolution inputs while incorporatnetwork. Signiﬁcant load changes may place additional stress ing graph priors. The patch operation allows the model to focus
+on switching equipment within the lines, potentially shortening not only on the information at individual time points but also
+their lifespan. In this study, the locations of variable loads are to aggregate content over a period of time, thereby alleviating
+used as the labels for load jump anomalies. the information imbalance caused by multi-resolution data.
+ 5) Inverter Attack: For attacks on inverters, the typical Since tensors from various resolutions cannot be directly
+approach is to tamper with the sensor measurements, which concatenated, we ﬁrst align the data with different resolutions
+in turn affects the controller, leading to incorrect control com- along the real-world timeline. Then, the missing data on
+mands and disrupting the operation of the inverter. Following the low-resolution timeline is ﬁlled in using the most recent
+the work [22], our attack model is set as follows: available data from the past relative to the target time point.
+ Afterward, the extended data is concatenated with the high-
+ MA = θ · M + ϵ (3) resolution measurements to obtain V ∈ R3Ns ×L , Here, Ns =
+ n + m represents the total number of sensors, 3 represents the
+where MA represents the attacked measurement values, while
+ three-phase measurements from each sensor, and L denotes
+M represents the original measurement values. θ is the multhe uniﬁed time window length.
+tiplicative factor matrix, and ϵ is the vector, both deﬁning
+the unknown attack weights, with compatible dimensions. We Then, we construct the adjacency matrix A ∈ RNs ×Ns
+assume that each inverter in the DERs may be subjected to an representing the relationships between different sensors. Based
+attack, and thus, the localization labels correspond one-to-one on the structure of the distribution system, we treat the location
+with the inverters at each location. of each sensor as a graph node. If two sensors are connected
+ 6) Relay Attack: In addition to attacks on inverters, this by a line, and no other sensors lie in between them, we
+study also considers the possibility of false data injection deﬁne that there is an edge between them. We incorporate
+attacks targeting protection relays. Tampering with relay mea- the prior graph information into the temporal data through a
+surements can cause noramlly operating inverters to detect graph convolutional network (GCN), as shown below:
+ YGCN = D− 2 (A + In ) D− 2 V θ
+ 1 1
+abnormal voltage values, leading to unintended relay trips. (4)
+Since the effects of such attacks are similar to those caused by
+short-circuit faults, it is crucial to distinguish between them. where In is a identity matrix, and D is the degree ma-
+In this study, the localization labels for this type of attack trix. Subsequently, we segment each time series into patches
+correspond to the locations of the protection relays. based on [23]. The data YGCN is divided into Np patches
+ [P1 , P2 , . . . , PNp ], where the size of each patch P is prede-
+ III. T IME -F REQUENCY D OMAIN A DAPTIVE M ODEL ﬁned. Meanwhile, the stride S is used to deﬁne the interval
+ between each patch. Additionally, we incorporate standard
+ This work involves two models, TFD and TFDA, designed operations for time series embedding, adding a learnable
+for anomaly detection and adaptive anomaly localization tasks, parameter Wpe ∈ RCSPE ×Np for positional embedding, where
+respectively. Since the TFD model is a simpliﬁed version CSPE is the number of output channels of this module. The
+of TFDA, with the adaptive mechanisms in both the time- ﬁnal output of the spatial patch embedding can be represented
+domain and frequency-domain modules removed, we focus on as follows:
+introducing the TFDA to maintain clarity and conciseness in
+the article. YSPE = femb ([P1 , P2 , . . . , PNp ]) + Wpe . (5)
+
+A. Overall Architecture C. Time-Frequency Domain Adaptive Module
+ The framework is depicted in the Fig. 2. The input consists The data is processed by the time-frequency domain adapof data at different resolutions, which is preprocessed and tive module, which serves as the core part of our model for
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 5
+
+ Fig. 2: The framework of time-frequency domain adaptive model.
+
+anomaly detection and localization. This module consists of new sequence of complex numbers F0 , F1 , . . . , FT −1 , while
+three components: the adaptive frequency block, the adaptive the IDFT performs the reverse operation.
+temporal block, and the mixture convnet. The time-frequency In this block, we ﬁrst obtain the frequency domain repredomain adaptive modules are connected sequentially, with the sentation F of XTFDB through the DFT operation. We then
+output of each layer serving as the input to the next. This data compute the power spectrum P = |F |2 , which serves as a
+ﬂow is formally deﬁned as: reference for the strength of different frequency components.
+ { We only process the portion of the frequency spectrum with
+ YSPE if i = 0 higher energy, as it contains more informative content, while
+ XTFDB,i = (6)
+ YTFDB,i−1 if i > 0 the lower-energy components, such as high-frequency noise,
+where XTFDB,i represents the input to the i-th layer, and are more likely to cause interference. We set a threshold γ as
+YTFDB,i−1 represents the output of the i − 1-th layer. For the boundary, and the corresponding mask can be expressed
+simplicity in subsequent explanations, the layer indices will as follows:
+be omitted. M ask = F ⊙ (P > γ) (9)
+ 1) Adaptive Frequency Block: First, we introduce the adap- where ⊙ represents element-wise multiplication. We deﬁne
+tive frequency block shown in green at the top left. We two forms of γ: one is a parameter that can be trained through
+employ a common operation, where the Discrete Fourier gradient descent, and the other is a ﬁxed parameter (which is
+Transform (DFT) is ﬁrst used to map the features into the directly set to 0 in our experiment). The former corresponds
+frequency domain for processing, followed by the Inverse to a local mask Madaptive , while the latter corresponds to a
+Discrete Fourier Transform (IDFT) to map them back to the global mask Mﬁxed . Both are element-wise multiplied by their
+time domain for subsequent analysis [24]. In practice, these corresponding learnable weights and then summed together,
+transforms are efﬁciently implemented using the Fast Fourier resulting in comprehensive and adaptive information Fsum ,
+Transform (FFT) algorithm and its inverse (IFFT). These two which can be expressed as:
+symmetric operations can be expressed as:
+ −1 Fsum = Madaptive ⊙ Wloacal + Mﬁxed ⊙ Wglobal . (10)
+ ∑
+ T
+ −j(2π/T )kt
+ Fk = Xt · e (7) Subsequently, the output of this block, YAFB , can be obtained
+ t=0
+ through the IFFT operation.
+ T −1
+ 1 ∑ 2) Adaptive Temporal Block: Our module also focuses
+ Xt = Fk · ej(2π/T )kt (8) on information in the time domain. Generally, time-domain
+ T
+ k=0 anomaly information can be categorized into two types:
+where indices k and t correspond to the frequency domain anomalies in the relationships between channels and anomaand time domain, respectively. For 0 ≤ k ≤ T − 1, the DFT lies in the trends of individual channels. Both types of
+transforms the complex numbers X0 , X1 , . . . , XT −1 into a anomaly information provide valuable insights for localization
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 6
+
+tasks. However, their impacts vary depending on the speciﬁc
+anomaly task, making it necessary to assign adaptive weights
+to achieve an optimal balance.
+ Based on the above idea, XTFDB is processed through
+feedforward neural network (FFN) along two separate directions. After reshaping to unify the dimensions, a weighted
+summation is conducted using the adaptive weight α, yielding
+the ﬁnal output YATB :
+ fFFN (·) = flinear (fact (flinear (·))) (11)
+ YATB = αfFFN1 (XTFDB ) + (1 − α)fFFN2 (XTFDB
+ T
+ ) (12)
+ where fFFN1 and fFFN2 correspond to independent FFN Fig. 3: Overview of the HIL-based simulation process and
+layers, each composed of simple linear layers flinear and the dataset construction.
+nonlinear activation functions fact . The superscript T denotes
+the transposition of the tensor along the channel and temporal TABLE II: Overview of the Dataset.
+dimensions. The adaptive weight α is initialized as a random
+ Anomaly Location Label Number
+value within the range [0, 1] and is constrained during training
+ DER Switching Bus 4, 18, 22, 33 16000
+to remain within this interval using the clamp operation. Load Jump Bus 3, 16, 24, 28 16000
+ 3) Mixure ConvNet: For the feature information obtained Fault All the branches 48000
+from the temporal and frequency domain blocks, we employ Inverter Attack Bus 4, 18, 22, 33 16000
+ Relay Attack Branches (1-2), (12-13), and (28-29). 14000
+depthwise convolution (DW-Conv) and pointwise convolution
+(PW-Conv) to comprehensively combine the feature information from both domains. In DW-Conv, each channel is Bureau of Meteorology Australia [26]. As mentioned in previprocessed with an individual convolutional kernel, ensuring ous work [27], the integration of renewable energy resources
+that the number of channels remains unchanged before and can affect the accuracy of anomaly detection. Therefore, we
+after the operation. In PW-Conv, a 1 × 1 convolutional kernel employed this wind speed data to create a more challenging
+is used, which maintain the feature dimensions throughout scenario. Protection relays were installed on branches (1-2),
+the process. This lightweight combination effectively captures (12-13), and (28-29), while PMUs were installed at buses 4,
+and integrates features [25]. The steps of this block can be 6, 11, 17, 21, 24, and 32. The data acquisition frequency for
+represented as follows: the protection relays, Rl , is 10 datapoints/second, while for
+ YDWC = fDWC ([YAFB , YATB ]) (13) the PMUs, Rh is 100 datapoints/second. The detailed original
+ system parameters are provided in [28].
+ YTFDB = fFFNC (YDWC ) = fPWC1 (fact (fPWC2 (YDWC ))) (14) For the various anomalies, we assume that short-circuit
+where fDWC and fPWC represent DW-Conv and PW-Conv, faults can occur on any branch in the system, DER switching
+respectively. Additionally, fFFNC organizes the PW-Conv in a events may occur at buses 14, 18, 22, and 33, and load jumps
+structure similar to a FFN. The output YTFDB from the ﬁnal are assumed to occur at buses 3, 16, 24, and 28. Additionally,
+layer of the time-frequency domain adaptive module is then we assume that the attacker only target one location at a time,
+passed to the projection layer, where it is mapped to the label with inverter attacks potentially occurring at buses 14, 18,
+dimension associated with the speciﬁc task. 22, and 33 and relay attacks on branches (1-2), (12-13), and
+ (28-29). A detailed breakdown of the anomaly types, their
+ speciﬁc locations, and the number of generated samples for
+ IV. E XPERIMENTAL P REPARATION
+ each category is provided in Table II.
+A. Datasets Based on the simulation scenario described above, we
+ We conduct experiments using a real-time Typhoon conduct experiments with a simulation step size of 400 µs.
+hardware-in-the-loop (HIL) testbed to validate the effective- Each simulation begins with ensuring the distribution sysness of the proposed method. As shown in Fig. 3, two HIL tem operates under normal conditions, after which a single
+602+ emulators are connected to the simulation environment anomaly is introduced by altering simulation variables. It is
+on a computer via USB/Ethernet. The automated simulation worth noting that simultaneous anomaly location classes are
+runs are implemented through TyphoonTest, which generates not included in our target classes, as our framework utilizes
+operational data for different anomaly scenarios. Subsequently, high-resolution data and operates on a small time window to
+a detailed description of the simulation setup is provided locate and classify anomalies. Given such a small timescale
+below. of our detection window, the probability of two independent
+ As shown in Fig. 4, the testing environment is based on the anomalies initiating at the exact same instant is considered
+original IEEE 33-node system with some modiﬁcations, based negligible. We collect 1.2 seconds of data for each simulation,
+on the work in [21]. Wind turbines were added to buses 14, 18, with the anomaly occurring at the midpoint. To better reﬂect
+22, 33, and energy storage systems were added to buses 18 and real-world scenarios where the exact location of anomalies
+33. The wind speed data used in this setup were sourced from is typically unknown, we segment the time series into 900-
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 7
+
+ Fig. 4: Modiﬁed IEEE 33-bus test feeder.
+
+millisecond windows, ensuring that the anomaly occurs within TABLE III: Performance Comparison of Recall(%), Precithe window but not too close to its edges. As shown in the sion(%), F1-Score(%), and Accuracy(%) for Anomaly Detec-
+ﬁgure, we construct the dataset for task 1 by pairing the tion
+time-windowed data with the anomaly labels, and for task 2 Method Precision Recall Accurracy F1-score
+by pairing time-windowed data, excluding normal operations, CNN [21] 91.09 93.92 93.93 92.48
+ LSTM [16] 90.70 95.21 94.17 92.90
+with the anomaly location labels. Dlinear [29] 89.20 92.36 92.57 90.75
+ Autoformer [30] 82.93 82.53 83.83 82.73
+ FiLM [24] 89.46 89.86 91.47 89.66
+B. Experimental Setting PatchTST [23] 88.68 90.04 91.33 89.35
+ 1) Baseline: In this experiment, we ﬁrst compare baselines SDE [9] 88.84 90.86 91.83 89.29
+ Crossformer [31] 93.03 93.59 94.50 93.31
+using recently proposed methods for anomaly detection and TimesNet [32] 95.18 96.33 96.40 95.75
+localization in power distribution systems, including LSTM GAT [10] 94.85 95.39 95.70 95.11
+[21] ,CNN [16], SDE [9] and GAT [10]. Additionally, we eval- ModernTCN [25] 94.94 94.93 94.17 94.93
+ TFD (Ours) 99.09 99.20 99.30 99.14
+uate time-series analysis methods that have gained signiﬁcant
+attention in recent top-tier computer science conferences, including DLinear [29], Autoformer [30], FiLM [24], PatchTST
+[23], Crossformer [31], TimesNet [32], and ModernTCN [25].
+Due to differences in experimental setups and the challenge where P represents the total number of samples, Q denotes
+to fully reproduce previous data integration methods with the number of classes, and y is the true class distribution,
+comprehensive variable data, we adopt the data integration represented in one-hot encoded format. ŷp,q represents the
+approach proposed in this work for comparison. predicted probability of the p-th sample belonging to the q-
+ 2) Metrics: We evaluate the performance of different meth- th class, obtained using the softmax function, satisfying the
+ ∑Q
+ods using four metrics: Recall, Precision, F1-score, and Accu- condition q=1 ŷp,q = 1.
+racy. Here, TP, TN, FP, and FN represent the number of true
+positives, true negatives, false positives, and false negatives, 4) Training Settings: Our experiments are implemented in
+respectively. These metrics are deﬁned as follows: Python 3.8.19 using pytorch 2.4.0 libraries on a PC equipped
+  TP with an Intel i7-8750H CPU, NVIDIA GTX 1060Ti GPU, and
+ 
+ 
+ Recall = TP+FN
+  TP
+ Precision = TP+FP
+ 16.0-GB RAM. We split the data set into three sections for
+ (15) training, validation, and testing with a ratio of 70:15:15. We
+ 
+ 
+ 2×TP
+ F1-score = 2×TN+FP+FN
+  TP+TN use the RAdam optimizer with an initial learning rate of 0.001
+ Accuracy = TP+TN+FP+FN for baselines and our method. We set the batch size to 32 and
+ 3) Loss Function: In this work, we use the cross-entropy maximum training epochs to 100, with a patience of 10 for
+loss function, which is commonly employed loss function for early stopping strategy. For our method, the dropout rate in
+classiﬁcation problems. The model’s optimal parameters are the model is set to 0.1. In the spatial patch embedding, the
+obtained by minimizing this loss through gradient descent. The size of each patch P is set to 10, and the stride S is set to 5.
+loss function can be expressed as follows: We conﬁgure the number of time-frequency domain adaptive
+ modules to be 4, with fact set to the GeLU activation function.
+ P ∑
+ ∑ Q
+ Loss(y, ŷ) = − yp,q log ŷp,q (16) In the mixture convnet, the hidden layer dimensions are set to
+ p=1 q=1
+ three times the input dimensions.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 8
+
+TABLE IV: Performance Comparison of Recall(%), Precision(%), F1-Score(%), and Accuracy(%) for Anomaly Localization
+ Metrics Average Performance The Best Performance The Worst Performance
+ Methods
+ Precision Recall Accurracy F1-score Precision Recall Accurracy F1-score Precision Recall Accurracy F1-score
+ CNN [21] 90.25 90.59 90.34 90.42 95.47 95.46 95.44 95.46 75.04 76.14 75.03 75.59
+ LSTM [16] 92.37 92.87 92.35 92.62 95.69 95.73 95.66 95.71 84.89 86.25 84.88 85.56
+ Dlinear [29] 89.28 89.92 89.28 89.59 95.52 95.60 95.50 95.56 83.42 85.12 83.53 83.26
+ Autoformer [30] 89.87 89.88 89.80 89.87 95.93 95.87 95.92 95.87 83.79 84.17 83.98 83.98
+ FiLM [24] 90.11 90.18 90.07 90.15 92.32 92.20 92.17 92.26 86.72 86.64 86.77 86.68
+ PatchTST [23] 90.96 91.14 90.88 91.05 96.34 96.28 96.28 96.31 80.54 81.46 80.50 81.00
+ Crossformer [31] 94.01 94.28 94.31 94.15 97.11 97.05 97.06 97.08 88.23 89.34 88.25 88.78
+ SDE [9] 92.15 92.87 92.23 92.42 97.11 97.14 97.10 97.13 86.75 88.87 86.72 87.80
+ TimesNet [32] 92.09 92.45 92.16 92.27 97.21 97.15 97.17 97.18 78.79 80.46 78.69 79.62
+ GAT [10] 95.66 94.84 94.70 94.70 96.73 96.81 97.02 96.77 91.95 92.35 91.91 92.04
+ ModernTCN [25] 95.19 95.17 95.19 95.18 96.77 96.70 96.72 96.73 93.19 93.22 93.38 93.20
+ TFDA (Ours) 97.94 97.90 97.95 97.92 99.16 99.17 99.16 99.16 97.19 97.08 97.09 97.10
+
+ The detailed per-subtask results in Fig. 5 provide further
+ insights into the robustness of our approach. Notably, the
+ performance proﬁle of our method consistently envelopes
+ those of all other baselines, demonstrating its broad superiority
+ across diverse anomaly types. Moreover, our approach exhibits
+ the smallest performance variance, with the narrowest gap
+ between best and worst cases, highlighting its exceptional
+ stability. Remarkably, even the worst-case performance of
+ our method remains competitive with or surpasses the bestcase performance of other methods, conﬁrming the practical
+ reliability and high lower-bound performance of our proposed
+ TFDA module.
+
+ B. Ablation Experiments
+ We conduct ablation studies to validate the necessity of
+ each module within the overall model. By removing speciﬁc
+Fig. 5: Comparison between models on different anomaly modules from the complete model, we observe the resulting
+localization tasks. performance degradation. We evaluate the performance of the
+ main modules, including spatial patch embedding, temporal
+ block, and frequency block, followed by the assessment of the
+ V. E XPERIMENTAL R ESULT two adaptive operations, temporal adaptation and frequency
+ adaptation. The key experimental results are shown in the ﬁg.
+A. Baseline Comparasion 6. The abbreviations "w/o SPE," "w/o TB," and "w/o FB"
+ represent the removal of the corresponding main modules,
+ We validate the effectiveness of the proposed TFD on the while "w/o TA" and "w/o FA" indicate the removal of the
+ﬁrst task, focusing on anomaly detection. The overall experi- corresponding adaptive operations.
+mental results are shown in Table III, where the bolded data It can be observed that the main modules have signiﬁcant
+represents the optimal results among the different methods, impacts on the model, with the data aggregation module
+while the underlined data represents the second-best results. It spatial patch embedding having the largest effect, which shows
+can be observed that our method outperforms the second-best a greater than 2% impact on all metrics. The experiments
+method, achieving improvements of 3.91%, 2.87%, 2.90%, with "w/o TA" and "w/o FB" also validate that the adaptive
+and 3.39% in Precision, Recall, Accuracy, and F1-score, operations play a crucial role. Furthermore, the longer error
+respectively. bars in the "w/o TA" and "w/o FB" experiments suggest that
+ We validate the effectiveness of the proposed TFDA module these adaptive operations contribute to the model’s stability
+on the second task, focusing on anomaly localization. The across various tasks.
+overall experimental results are summarized in Table IV. At the same time, we also validate that the inclusion of these
+Unlike the previous task, this task comprises multiple subtasks modules does not lead to a signiﬁcant increase in the number
+corresponding to different anomaly types. To provide a com- of parameter or inference time. The experimental results are
+prehensive evaluation, we report the average, best, and worst shown in Fig. 7. The number of parameters corresponds to the
+performance across these subtasks. Our method demonstrates a average value for each anomaly in the ablation study, while
+consistent average improvement over the second-best baseline, the inference time is measured with a batch size of 1000.
+achieving gains of 2.75% in Precision, 2.73% in Recall, 2.76% For clearer comparison, the radius of each circle representing
+in Accuracy, and 2.74% in F1-score. the model is proportional to the square of the number of
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 9
+
+ the model exhibits robustness under different hyperparameter
+ settings. This further proves that the superiority of our method
+ is not due to an increase in parameters, but rather because
+ of the clever architecture and feature design. In practical
+ applications, we can adopt the optimal hyperparameters based
+ on the experimental results to prevent model overﬁtting.
+ To explore the model’s adaptability to the anomaly localization task, we visualize the adaptive components using
+ heatmaps, as shown in Fig. 8. In the ﬁgure, part (a) depicts the
+ adaptive parameter γ in the frequency block, which represents
+ the energy spectrum threshold considered in the frequency
+ domain, while part (b) shows the adaptive parameter α in
+ the temporal block, which represents the weight ratio between
+ inter-channel information and single-channel information in
+Fig. 6: Visual comparison of performance metrics in ablation the time domain.
+experiments. First, we conduct a horizontal analysis of γ and α across
+ different layers within the same task. Overall, γ exhibits
+ larger values in the last two layers compared to the ﬁrst
+ two, suggesting that the later layers impose stricter constraints
+ on the information, enabling the extraction of more detailed
+ features than the earlier layers. For α, we observe signiﬁcant
+ differences across layers, with values ranging from near 0 to
+ near 1. This suggests that both types of anomaly information
+ in the time domain are explored to varying extents in different
+ layers.
+ Next, we perform a vertical analysis of the adaptive parameters across different tasks. We observe that the variations
+ in the adaptive parameters exhibit distinct characteristics for
+ each task. For instance, in the localization of inverter attacks,
+ the values of γ are relatively uniform, whereas in the DER
+ switching localization task, γ shows greater variation. In the
+ fault localization task, α tends to have higher values in the last
+ two layers, while in the inverter attack localization task, higher
+Fig. 7: Comparison regarding the model performance, inferring α values are observed in earlier layers. These ﬁndings indicate
+time, and the number of model parameters. that the adaptive parameters of the model vary across different
+ localization tasks, reﬂecting different emphases on anomaly
+ information. The adaptive operations enable the model to
+parameters. It can be observed that with the removal of maintain stable performance when dealing with various types
+each module, both the number of parameter and inference of anomalies, thereby better meeting the safety requirements
+time change within an acceptable range, without affecting the of the power distribution system.
+model’s deployability and practicality. This further validates
+the effectiveness of the individual modules.
+ D. Supplementary Validation
+C. Analysis and Visualization As shown in the table VI, we conducted additional vali-
+ We explore the impact of hyperparameters on model perfor- dation experiments by incorporating three-phase current meamance through experiments. The hyperparameters considered surements into our method, thereby enriching the information
+include the number of time-frequency domain adaptive mod- input. The results indicate that while the inclusion of current
+ules, patch size and stride in spatial patch embedding, and the data does lead to a modest improvement in performance,
+hidden layer dimension in the mixture convnet. The model the enhancement is not substantial. This outcome aligns with
+performance represents the average results of TFDA across our expectations, since the proposed method is speciﬁcally
+different anomaly localization tasks. The experimental results designed for scenarios with limited variable availability and
+are shown in the Table V, where the "hidden layer dimension thus does not deeply model inter-variable correlations. Conratio" represents the ratio of the hidden layer dimension to sequently, the addition of extra variables does not yield
+the input dimension. The table shows the standard deviation signiﬁcant gains. More importantly, these results demonstrate
+of results from multiple repeated experiments under speciﬁc that our approach maintains strong performance even under
+hyperparameters, rather than the standard deviation of differ- variable-constrained conditions, ensuring high reliability in
+ent task results from a single experiment. We observe that safety-critical applications.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 10
+
+ TABLE V: Impact of Hyperparameters on Model Performance
+ Hyperparameters Values Precision Recall Accurracy F1-score
+ 1 97.28 ± 0.03 97.28 ± 0.03 97.28 ± 0.04 97.28 ± 0.03
+ 2 97.16 ± 0.02 97.15 ± 0.03 97.18 ± 0.02 97.15 ± 0.03
+ Number of main modules 3 97.60 ± 0.05 97.59 ± 0.05 97.59 ± 0.05 97.60 ± 0.05
+ 4 97.94 ± 0.02 97.90 ± 0.03 97.95 ± 0.02 97.92 ± 0.02
+ 5 97.53 ± 0.02 97.54 ± 0.03 97.55 ± 0.02 97.53 ± 0.03
+ 5/3 95.94 ± 0.06 95.98 ± 0.07 95.97 ± 0.04 95.95 ± 0.06
+ 5/5 97.18 ± 0.02 97.25 ± 0.03 97.20 ± 0.05 97.22 ± 0.02
+ Patch size and stride
+ 10/5 97.94 ± 0.02 97.90 ± 0.03 97.95 ± 0.02 97.92 ± 0.02
+ 10/10 96.77 ± 0.05 96.82 ± 0.07 96.84 ± 0.06 96.78 ± 0.06
+ 1 97.41 ± 0.03 97.43 ± 0.02 97.44 ± 0.05 97.41 ± 0.02
+ Hidden layer dimension ratio 2 97.94 ± 0.02 97.90 ± 0.03 97.95 ± 0.02 97.92 ± 0.02
+ 3 97.11 ± 0.02 97.14 ± 0.04 97.14 ± 0.03 97.10 ± 0.03
+
+ capture the intricate stochasticity and measurement nonidealities inherent in real-world environments. Future
+ efforts will focus on collaborating with utility operators
+ to leverage real-world ﬁeld data for further validation and
+ ﬁne-tuning, thereby enhancing the model’s reliability and
+ facilitating its practical deployment.
+ 2) Concurrent Anomaly Resolution: Given the statistical improbability of multiple independent anomalies occurring
+ simultaneously within our timeframe, this study focuses
+ on identifying a single primary event per detection window. Consequently, the current framework is not explicitly designed to disentangle overlapping signatures of
+ concurrent events. However, recognizing the theoretical
+ importance of such scenarios, future research will focus
+ on extending the models capability through multi-label
+ learning architectures to handle rare but complex multianomaly interactions.
+ 3) Generalization to Low-Current and Unknown Anomalies: The proposed framework faces inherent challenges
+ in achieving high-precision localization for low-current
+ anomalies, such as high-impedance faults (HIFs). In our
+ variable-limited scenario, the current deviations induced
+ by HIFs are often too subtle to provide a distinct spatial
+ signature across the network. Furthermore, as the model
+ operates under a closed-set assumption, it is fundamentally unable to classify or localize unknown anomaly
+ types that were not present in the training distribution.
+ Fig. 8: Visualization of adaptive parameters in the model. Future research will explore the transition toward an
+ open-set recognition (OSR) paradigm. By incorporat-
+TABLE VI: Impact of Additional Measurements on Perfor- ing uncertainty estimation or self-supervised contrastive
+mance. learning, future iterations aim to enhance the detection
+ Method
+ With Current Without Current sensitivity to near-threshold signals and provide a more
+ Average Best Worst Average Best Worst robust situational awareness system.
+ Precision 97.97 99.19 97.19 97.94 99.16 97.19
+ Recall 97.95 99.20 97.15 97.90 99.17 97.08
+ Accuracy 97.99 99.20 97.13 97.95 99.16 97.09 VII. C ONCLUSION
+ F1-score 97.96 99.19 97.17 97.92 99.16 97.10 In this paper, we address the problem of adaptive anomaly
+ detection and localization in distribution systems using only
+ voltage magnitude. Speciﬁcally, we propose a data-driven
+ VI. L IMITATION time-frequency domain adaptive model. The model incorpo-
+ 1) Practical Data Constraints: A primary limitation of this rates a spatial patch embedding mechanism, which processes
+ study is the reliance on simulated datasets, necessitated time series data as patches, mitigating the impact of multiby the strict data conﬁdentiality and privacy constraints resolution information while integrating graph priors based on
+ associated with actual distribution networks. While the the relative positions of sensors. For frequency-domain inforsimulation environment was carefully designed to ap- mation, an adaptive threshold ﬁlters out low-energy compoproximate practical operating conditions, it may not fully nents in the spectrum, and for temporal information, adaptive
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 11
+
+weights balance inter-channel and intra-channel contributions. [19] A. Ahmed, S. Basumallik, A. Gholami, S. K. Sadanandan, M. H. N.
+Extensive experiments demonstrate the effectiveness of our Namaki, A. K. Srivastava, and Y. Wu, “Spatio-temporal deep graph
+ network for event detection, localization, and classiﬁcation in cyberapproach, and ablation studies validated the necessity of the physical electric distribution system,” IEEE Transactions on Industrial
+proposed innovative blocks. In the future, we aim to explore Informatics, vol. 20, no. 2, pp. 2397–2407, 2024.
+the model’s generalization to unseen anomalies and anomaly [20] A. Gholami and A. K. Srivastava, “Orca: Outage root cause analysis
+ in der-rich power distribution system using data fusion, hierarchical
+locations. clustering and fp-growth rule mining,” IEEE Transactions on Smart
+ Grid, vol. 15, no. 1, pp. 667–676, 2024.
+ [21] M. Ganjkhani, A. Gholami, J. Giraldo, A. K. Srivastava, and M. Parva-
+ R EFERENCES nia, “Multi-source data aggregation and real-time anomaly classiﬁcation
+ and localization in power distribution systems,” IEEE Transactions on
+ [1] S. Bu, L. G. Meegahapola, D. P. Wadduwage, and A. M. Foley, “Stability Smart Grid, vol. 15, no. 2, pp. 2191–2202, 2024.
+ and dynamics of active distribution networks with d-pmu technology: [22] S. Peng, M. Liu, L. Chai, and R. Deng, “Dst-gnn: A dynamic spa-
+ A review,” IEEE Transactions on Power Systems, vol. 38, no. 3, pp. tiotemporal graph neural network for cyberattack detection in grid-tied
+ 2791–2804, 2023. photovoltaic systems,” IEEE Transactions on Smart Grid, vol. 16, no. 1,
+ [2] P. M. Anderson, C. F. Henville, R. Rifaat, B. Johnson, and S. Meliopou- pp. 330–343, 2025.
+ los, Power system protection. New Jersey: Wiley-IEEE Press, 2022. [23] Y. Nie, N. H. Nguyen, P. Sinthong, and J. Kalagnanam, “A time series is
+ [3] L. Erhan, M. Ndubuaku, M. Di Mauro, W. Song, M. Chen, G. Fortino, worth 64 words: Long-term forecasting with transformers,” in Proceed-
+ O. Bagdasar, and A. Liotta, “Smart anomaly detection in sensor systems: ings of the 11th International Conference on Learning Representations,
+ A multi-perspective review,” Information Fusion, vol. 67, pp. 64–79, 2023, pp. 1–24.
+ 2021. [24] T. Zhou, Z. Ma, X. Wang, Q. Wen, L. Sun, T. Yao, W. Yin, and R. Jin,
+ [4] A. Borghetti, M. Bosetti, M. Di Silvestro, C. A. Nucci, and M. Paolone, “Film: frequency improved legendre memory model for long-term time
+ “Continuous-wavelet transform for fault location in distribution power series forecasting,” in Proceedings of the 36th International Conference
+ networks: Deﬁnition of mother wavelets inferred from fault originated on Neural Information Processing Systems, 2022, pp. 12 677–12 690.
+ transients,” IEEE Transactions on Power Systems, vol. 23, no. 2, pp. [25] D. Luo and X. Wang, “Moderntcn: A modern pure convolution structure
+ 380–388, 2008. for general time series analysis,” in Proceedings of the 12t International
+ [5] J. Mora-Florez, J. Meléndez, and G. Carrillo-Caicedo, “Comparison of Conference on Learning Representations, 2024, pp. 1–43.
+ impedance based fault location methods for power distribution systems,” [26] “Australian bureau of meteorology,” 2024. [Online]. Available:
+ Electric Power Systems Research, vol. 78, no. 4, pp. 657–666, 2008. http://www.bom.gov.au
+ [6] I. Daﬁ, R. A. Jabr, S. Henselmeyer, and T. Ðonlagi, “Fault location in [27] Y. Yu, C. Liu, L. Xiong, Y. Tang, and F. Qian, “Localization of false
+ distribution networks through graph marking,” IEEE Transactions on data injection attacks in smart grids with renewable energy integration
+ Smart Grid, vol. 9, no. 2, pp. 1345–1353, 2018. via spatiotemporal network,” IEEE Internet of Things Journal, vol. 11,
+ [7] S. K. Rastogi, S. S. Shah, B. N. Singh, and S. Bhattacharya, “Mode no. 23, pp. 37 571–37 581, 2024.
+ analysis, transformer saturation, and fault diagnosis technique for an [28] M. Baran and F. Wu, “Network reconﬁguration in distribution systems
+ open-circuit fault in a three-phase dab converter,” IEEE Transactions on for loss reduction and load balancing,” IEEE Transactions on Power
+ Power Electronics, vol. 38, no. 6, pp. 7644–7660, 2023. Delivery, vol. 4, no. 2, pp. 1401–1407, 1989.
+ [8] F. C. L. Trindade and W. Freitas, “Low voltage zones to support fault [29] A. Zeng, M. Chen, L. Zhang, and Q. Xu, “Are transformers effective for
+ location in distribution systems with smart meters,” IEEE Transactions time series forecasting?” in Proceedings of the 37th AAAI Conference
+ on Smart Grid, vol. 8, no. 6, pp. 2765–2774, 2017. on Artiﬁcial Intelligence, 2023, pp. 11 121–11 128.
+ [9] S. Key, G.-W. Son, and S.-R. Nam, “Deep learning-based algorithm for [30] H. Wu, J. Xu, J. Wang, and M. Long, “Autoformer: decomposition
+ internal fault detection of power transformers during inrush current at transformers with auto-correlation for long-term series forecasting,” in
+ distribution substations,” Energies, vol. 17, no. 4, p. 963, 2024. Proceedings of the 35th International Conference on Neural Information
+[10] Q.-H. Ngo, B. L. Nguyen, J. Zhang, K. Schoder, and T. Vu, “Graphical Processing Systems, 2021, pp. 22 419–22 430.
+ learning based fault detection and classiﬁcation in distribution systems,” [31] Y. Zhang and J. Yan, “Crossformer: Transformer utilizing crossin 2024 IEEE International Conference on Communications, Control, dimension dependency for multivariate time series forecasting,” in
+ and Computing Technologies for Smart Grids (SmartGridComm). IEEE, Proceedings of the 11th International Conference on Learning Repre-
+ 2024, pp. 588–593. sentations, 2023, pp. 1–21.
+[11] Q. Li, J. Zhang, J. Zhao, J. Ye, W. Song, and F. Li, “Adaptive hierarchical [32] H. Wu, T. Hu, Y. Liu, H. Zhou, J. Wang, and M. Long, “Timesnet:
+ cyber attack detection and localization in active distribution systems,” Temporal 2d-variation modeling for general time series analysis,” in
+ IEEE Transactions on Smart Grid, vol. 13, no. 3, pp. 2369–2380, 2022. Proceedings of the 11th International Conference on Learning Repre-
+[12] W.-T. Lin, G. Chen, and Y. Huang, “Incentive edge-based federated sentations, 2023, pp. 1–23.
+ learning for false data injection attack detection on power grid state
+ estimation: A novel mechanism design approach,” Applied Energy, vol.
+ 314, p. 118828, 2022.
+[13] Y. Zhou, R. Arghandeh, and C. J. Spanos, “Partial knowledge data-driven
+ event detection for power distribution networks,” IEEE Transactions on
+ Smart Grid, vol. 9, no. 5, pp. 5152–5162, 2018.
+[14] A. Gholami, A. Vosughi, and A. K. Srivastava, “Denoising and detection
+ of bad data in distribution phasor measurements using ﬁltering, clustering, and koopman mode analysis,” IEEE Transactions on Industry
+ Applications, vol. 58, no. 2, pp. 1602–1610, 2022.
+[15] A. Aligholian and H. Mohsenian-Rad, “Graphpmu: Event clustering via Yang Yu received the B.S. degree in School of
+ graph representation learning using locationally-scarce distribution-level Control Science and Engineering from East China
+ fundamental and harmonic pmu measurements,” IEEE Transactions on University of Science and Technology, Shanghai,
+ Smart Grid, vol. 14, no. 4, pp. 2960–2972, 2023. China, in 2022. He is currently pursuing the Ph.D.
+[16] L. Guo, J. Zhang, J. Ye, S. J. Coshatt, and W. Song, “Data-driven cyber- degree from East China University of Science and
+ attack detection for pv farms via time-frequency domain features,” IEEE Technology. His research interests include smart
+ Transactions on Smart Grid, vol. 13, no. 2, pp. 1582–1597, 2022. grid, deep learning, time series analysis and their
+[17] A. Vosughi, S. Pannala, and A. K. Srivastava, “Event detection, classi- applications.
+ ﬁcation and localization in an active distribution grid using data-driven
+ system identiﬁcation, weighted voting and graph,” IEEE Transactions
+ on Smart Grid, vol. 14, no. 3, pp. 1843–1854, 2023.
+[18] S. Siamak, M. Dehghani, and M. Mohammadi, “Dynamic gps spooﬁng
+ attack detection, localization, and measurement correction exploiting
+ pmu and scada,” IEEE Systems Journal, vol. 15, no. 2, pp. 2531–2540,
+ 2021.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Smart Grid. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TSG.2026.3699415
+
+ 12
+
+ Chensheng Liu (Senior Member, IEEE) received Yang Tang (Fellow, IEEE) received the B.S.
+ the Ph.D. degree in control science and engineer- and Ph.D. degrees in electrical engineering from
+ ing from Shanghai Jiao Tong University, Shanghai, Donghua University, Shanghai, China, in 2006 and
+ China, in 2018. He was a Postdoctoral Research 2010, respectively. From 2008 to 2010, he was a
+ Fellow with the University of Alberta, Edmonton, Research Associate with The Hong Kong Polytech-
+ AB, Canada, from 2018 to 2019. From 2019 to 2021, nic University, Hong Kong. From 2011 to 2015, he
+ he was a Postdoctoral Research Fellow (supported was a Post-Doctoral Researcher with the Humboldt
+ by the Initiative Postdocs Supporting Program) with University of Berlin, Berlin, Germany, and with
+ the East China University of Science and Tech- the Potsdam Institute for Climate Impact Research,
+ nology, Shanghai. He is currently a Professor with Potsdam, Germany. He is currently a Professor with
+ Shandong Computer Science Center, Qilu University East China University of Science and Technology,
+of Technology, Jinan, China. His research interests include security of artiﬁcial Shanghai. He has published more than 200 papers in international journals and
+intelligence, security of cyber-physical systems, control and optimization of conferences, including more than 160 papers in IEEE T RANSACTIONS and
+smart grid. 20 articles in IFAC journals. His current research interests include distributed
+ estimation/control/optimization, agentic AI, computer vision, reinforcement
+ learning, cyber-physical systems, hybrid dynamical systems, and their applications.
+ He was a recipient of the Alexander von Humboldt Fellowship. He is
+ a Co-Editors-in-Chief of IEEE T RANSACTIONS ON I NDUSTRIAL I NFOR -
+ MATICS , an Senior Area Editor of IEEE T RANSACTIONS ON C IRCUITS
+ AND S YSTEMS -I: R EGULAR PAPERS , and an Associate Editor of IEEE
+ T RANSACTIONS ON N EURAL N ETWORKS AND L EARNING S YSTEMS , IEEE
+ T RANSACTIONS ON C YBERNETICS , IEEE T RANSACTIONS ON I NDUSTRIAL
+ I NFORMATICS , IEEE/ASME T RANSACTIONS ON M ECHATRONICS , IEEE
+ T RANSACTIONS ON C IRCUITS AND S YSTEMS -I: R EGULAR PAPERS , IEEE
+ T RANSACTIONS ON C OGNITIVE AND D EVELOPMENTAL S YSTEMS , IEEE
+ T RANSACTIONS ON E MERGING T OPICS IN C OMPUTATIONAL I NTELLI -
+ GENCE , IEEE S YSTEMS J OURNAL , Engineering Applications of Artiﬁcial
+ Wenxuan Ma (Student Member, IEEE) received the
+ Intelligence (IFAC journal), Science China Information Sciences, Science
+ Honors B.Eng. degree from Chu Kochen Honors
+ China Technological Sciences and Acta Automatica Sinica. He has been
+ College, Zhejiang University, Hangzhou, China, in
+ awarded as best/outstanding Associate Editor in IEEE journals for seven times.
+ 2023, majoring in automation and minoring in ﬁ-
+ He is an IEEE Distinguished Lecturer from 2026-2027. He is a (leading) guest
+ nance. He is currently working toward the M.Eng.
+ editor for several special issues focusing on autonomous systems, robotics,
+ degree in control science and engineering with the
+ and industrial intelligence in IEEE T RANSACTIONS.
+ College of Control Science and Engineering, Zhejiang University, Hangzhou, China, under the supervision of Prof. Ruilong Deng. He is expected
+ to pursue the Ph.D. degree with the Department
+ of Electrical and Electronic Engineering, The Hong
+Kong Polytechnic University, Hong Kong, China, under the supervision of
+Prof. Chi Yung Chung. His research interests include applications of quantum
+computing and quantum communications in power systems.
+
+ Feng Qian (Senior Member, IEEE) received the
+ B.Sc. degree in chemical automation and meters
+ from the Nanjing Institute of Chemical Technology,
+ Nanjing, China, in 1982, and the M.S. and Ph.D.
+ degrees in automation from the East China Institute
+ of Chemical Technology, Shanghai, China, in 1988
+ and 1995, respectively. He was the Director of
+ the Automation Institute, East China University of
+ Science and Technology, from 1999 to 2001, and
+ Ruilong Deng (Senior Member, IEEE) received the
+ was the Head of the Scientiﬁc and Technical Depart-
+ B.Sc. and Ph.D. degrees both in Control Science and
+ ment from 2001 to 2006. He is currently the Vice
+ Engineering from Zhejiang University, Hangzhou,
+ President of the East China University of Science and Technology, the Director
+ Zhejiang, China, in 2009 and 2014, respectively. He
+ of the Key Laboratory of Smart Manufacturing in Energy Chemical Process,
+ was a Research Fellow with Nanyang Technological
+ Ministry of Education, Shanghai, and the Director of the Process System
+ University, Singapore, from 2014 to 2015; an AITF
+ Engineering Research Center, Ministry of Education, Shanghai. His current
+ Postdoctoral Fellow with the University of Alberta,
+ research interests include modeling, control, optimization, and integration of
+ Edmonton, AB, Canada, from 2015 to 2018; and
+ petrochemical complex industrial processes and their industrial applications,
+ an Assistant Professor with Nanyang Technological
+ neural network theory, and real-time intelligent control technology and its
+ University, from 2018 to 2019. Currently, he is a
+ applications to the ethylene, PTA, PET, and reﬁning industries. Prof. Qian is a
+ Professor with the College of Control Science and
+ member of the China Instrument and Control Society, the Chinese Association
+Engineering, Zhejiang University; and a Deputy Director of the State Key
+ of Higher Education, and Chinas PTA Industry Association. He is also an
+Laboratory of Industrial Control Technology. His research interests include
+ Academician of the Chinese Academy of Engineering.
+smart grid, cyber security, and control systems.
+ Dr. Deng serves/served as an Associate Editor for IEEE Transactions on
+Smart Grid, IEEE Power Engineering Letters, IEEE/CAA Journal of Automatica Sinica, and IEEE/KICS Journal of Communications and Networks, and a
+Guest Editor for IEEE Transactions on Cloud Computing, IEEE Transactions
+on Emerging Topics in Computing, IEEE Journal of Emerging and Selected
+Topics in Industrial Electronics, and IET Cyber-Physical Systems: Theory
+& Applications. He also serves/served as a Symposium Chair for IEEE
+SmartGridComm, IEEE ICPS, and IEEE GLOBECOM.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

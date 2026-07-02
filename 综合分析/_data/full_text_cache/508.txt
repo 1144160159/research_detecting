@@ -1,0 +1,875 @@
+Computer Networks 272 (2025) 111716
+
+ Contents lists available at ScienceDirect
+
+ Computer Networks
+ journal homepage: www.elsevier.com/locate/comnet
+
+PEZD: A practical and eﬀective zero-delay defense against website
+ﬁngerprinting
+Hengheng Xiong , Dapeng Man ∗, Huanran Wang , Jingwen Tan , Jiguang Lv, Wu Yang
+College of Computer Science and Technology, Harbin Engineering University, Harbin, 150001, Heilongjiang, China
+
+a r t i c l e i n f o a b s t r a c t
+
+Keywords: Website Fingerprinting (WF) enables an attacker to infer which website a user is visiting by analyzing the side-
+Privacy channel information of network traﬃc, posing a serious threat to anonymous systems such as Tor. To mitigate this
+Traﬃc analysis issue, numerous defenses have been proposed to resist WF attacks. However, many defenses incur high overhead,
+Anonymity system
+ impeding their deployment. Moreover, some defenses rely on the impractical assumption that the defender knows
+Website ﬁngerprinting defense
+ prior knowledge of which website the user visits. In this paper, we propose a practical and eﬀective lightweight
+ WF defense, named PEZD. It hinders attackers from recognizing a website’s unique patterns by adding dummy
+ packets with diverse distributions into traﬃc traces. In particular, PEZD is a website-agnostic defense that does
+ not require knowledge of the website users are visiting and incurs only moderate overhead to eﬀectively prevent
+ attacks. Extensive experiments demonstrate that PEZD reduces the accuracy of state-of-the-art attacks from 97 %
+ to 19 %–38 % while introducing zero latency overhead and only 48 % bandwidth overhead. Moreover, we show
+ that PEZD remains eﬀective for injecting dummy packets only on the client-side, simplifying the implementation
+ of the defense.
+
+1. Introduction variety of lightweight (moderate overhead) defenses. However, many
+ defenses [22–24,28,29] rely on the impractical assumption that the de-
+ An increasing number of people are using privacy-enhancing tools fender knows prior knowledge of which website the user visits, so that
+such as Tor [1] to access the Internet, aiming to seek protection against they can collect traﬃc traces from these websites to generate adversarthe potential risks associated with network surveillance. Tor is the most ial perturbations. The disadvantage of this type of defense is that it only
+famous anonymous networking service, with two million people using it protects speciﬁc websites and lacks defense generality. Some websiteevery day [2,3]. It relays user traﬃc through multiple volunteer nodes, agnostic lightweight defenses have been proposed [17,27,30–32], but
+such that attackers cannot capture both their identity and online activity several of these defenses [30,31] require to delay packet, resulting in posimultaneously. Nevertheless, many studies have shown that the privacy tential out-of-memory errors on Tor’s relays. Moreover, some defenses
+of Tor has been undermined by Website Fingerprinting (WF) attacks have been undermined by state-of-the-art WF attacks [9,10], such as
+[4–13]. In particular, WF attacks are traﬃc analysis attacks that allow WTF-PAD [17] and FRONT [27]. In particular, FRONT injects dummy
+an attacker to identify which websites a user visits by analyzing the side- packets according to a Rayleigh distribution to obfuscate the front of
+channel information of network traﬃc, i.e., directions, sizes, and timing network traﬃc since WF attacks rely on feature-rich trace fronts. We
+of packets. Such information can be utilized to build unique patterns for show that attackers can still identify the defended traﬃc traces by exa target website. The attacker identiﬁes which websites a user visits by ploiting the features present in the latter part of the traces, with the
+recognizing unique patterns in network traﬃc. Var-CNN attack [10] achieving an accuracy of 80%. Furthermore, even
+ To mitigate WF attacks, numerous defenses have been proposed when TBP [32] employs multiple ﬁxed distributions for dummy packet
+[4,6,14–28]. Speciﬁcally, WF defenses reshape network traﬃc by inject- injection, Var-CNN can still achieve 70% accuracy against it. These reing dummy network packets and/or delaying network packets. Among sults demonstrate the fundamental vulnerability of defenses using dethem, BuFLO [19], Tamaraw [20], and CS-BuFLO [21] mimic a constant terministic distributions.
+transmission rate, but they incur bandwidth and latency overheads sev- To address the aforementioned limitations, we propose PEZD, a praceral times higher than the original traﬃc, severely hindering their de- tical and eﬀective lightweight WF defense. The basic idea is to hinder
+ployment. To mitigate the high overhead, researchers have proposed a an attacker from discovering patterns common to intra-website traﬃc
+
+ ∗ Corresponding author.
+
+ E-mail addresses: xionghengheng@hrbeu.edu.cn (H. Xiong), mandapeng@hrbeu.edu.cn (D. Man), huanran.wang@hrbeu.edu.cn (H. Wang), ttt19@hrbeu.edu.cn
+(J. Tan), lvjiguang@hrbeu.edu.cn (J. Lv), yangwu@hrbeu.edu.cn (W. Yang).
+
+https://doi.org/10.1016/j.comnet.2025.111716
+Received 23 May 2024; Received in revised form 21 April 2025; Accepted 11 September 2025
+Available online 14 September 2025
+1389-1286/© 2025 Published by Elsevier B.V.
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+traces by injecting dummy packets with diverse distributions for each DNN with automatically extracted features: Deep neural netload. To the best of our knowledge, this paper shows for the ﬁrst time works have been widely applied to WF attacks. The DNN-based attacks
+that WF attacks can be undermined by injecting dummy packets with can automatically learn features from raw traﬃc traces.
+diverse distributions. Speciﬁcally, PEZD utilizes the unique nature of the AWF [11]: Rimmer et al. evaluated the performance of Stacked Dedistribution of outgoing packets from diﬀerent websites to construct the noising Auto Encoder (SDAE), Convolutional Neural Network (CNN),
+distribution of dummy packets so that the distribution of dummy pack- and Long Short-Term Memory (LSTM) models. The CNN among modets sent by the same website varies for each load. The diversity in the els performed best, with an accuracy of over 96 % in the closed-world
+distribution of dummy packets diversiﬁes the traﬃc traces of users on setting.
+each visit, resulting in the existence of fewer common traﬃc patterns on DF [9]: Sirinam et al. designed a better attack model. They achieved
+the same websites, which severely interferes with the learning process of 98.3 % accuracy in the closed-world setting and also achieved 0.95 TPR
+the attack model. The distribution of dummy packets can be generated and 0.007 FPR in the open-world setting. In addition, they also evalufrom the traﬃc trace of any website and therefore can be pre-generated ated the eﬀectiveness of the attack against WF defenses, signiﬁcantly unand applied to real-time traﬃc without prior knowledge of the website dermining WTF-PAD, achieving over 90 % accuracy in the closed-world
+the user is visiting. Furthermore, our defense is a lightweight solution setting.
+that introduces only a moderate bandwidth overhead without incurring Var-CNN [10]: Var-CNN used ResNet, the state-of-the-art CNN archilatency overhead. The practical, eﬀective, and lightweight nature of our tecture in computer vision proposed by He et al. [37], achieving 98.8 %
+defense allows it to be adopted by anonymous systems such as Tor. accuracy in the closed-world setting. In the open-world setting, Var-CNN
+ We summarize the contributions of this paper as follows: has a 0.98 Multi-TPR and a 0.003 FPR.
+
+ • We propose PEZD, a practical and eﬀective lightweight defense. It 2.2. WF defenses
+ breaks distinctive traﬃc patterns of the website by injecting diﬀerent
+ distributions of dummy packets for each load. PEZD is a website- WF defenses inject dummy packets and/or delay the original packagnostic defense that does not require prior knowledge of the website ets according to diﬀerent strategies to prevent attackers from identifying
+ the user is visiting, making the defense more practical. Furthermore, the target website, which introduces bandwidth and latency overheads.
+ PEZD is a lightweight defense that incurs only moderate bandwidth Existing WF defenses can be broadly divided into two classes: websiteoverhead and does not need to delay packets. speciﬁc defenses and website-agnostic defenses. We summarize the rep-
+ • We conduct extensive experiments to evaluate PEZD, and the re- resentative defenses in Table 1 in terms of bandwidth overhead, defense
+ sults show that it outperforms the previous WF defense, WTF-PAD assumptions, and defense performance.
+ [17], FRONT [27], and Surakav [30]. In the closed-world setting, it Website-speciﬁc defenses: These defenses require knowledge of the
+ reduces the accuracy of the state-of-the-art attack, Var-CNN, from traﬃc patterns of a speciﬁc website to generate defense information,
+ 97.56 % to 19.39 %, while FRONT only reduces it to 82.92 %, WTF- and accordingly, they assume that the defender has prior knowledge of
+ PAD to 93.93 %, and Surakav to 69.93 %. In the open-world setting, which websites the user visits to collect traﬃc patterns for those web-
+ PEZD provides high protection performance that reduces the recall sites.
+ to 0.26 and the precision to 0.54. In early WF defenses, some regularization-based defenses were pro-
+ • We show that PEZD still provides high defense performance even if posed that aim to ﬁt traces into pre-deﬁned patterns. Glove [14] and
+ dummy packets are injected only on the client-side. In addition, we Supersequence [6] cluster the websites by their features and compute a
+ also show that PEZD does not require signiﬁcant eﬀort to maintain uniform sending pattern for each group. When the websites that users
+ during deployment. visit are in a group, it will load the uniform pattern of the group so
+ that the websites in the group generate a similar traﬃc trace. W-T [28]
+ The rest of the paper is organized as follows. Section 2 provides a confuses the classiﬁer by making the traﬃc trace appear like another
+review of related work, then Section 3 outlines the threat model. Our website’s traﬃc trace through burst molding. To easily moldable burst
+proposed defense, PEZD, is presented in Section 4, and its evaluation is sequences, they modify the browser to half-duplex mode.
+in Section 5. We discuss related issues of PEZD in Section 6 and summa- Many WF defenses utilizing adversarial perturbations have been prorize the paper in Section 7. posed against WF attacks [18,22–25,29]. This type of defense exploits
+ the weaknesses of DNN models that can cause the misclassiﬁcation of
+ classiﬁers even using small perturbations. Mockingbird [18] and WF-
+2. Related work GAN [25] generate adversarial perturbations requiring the entire traﬃc
+ trace, which is unrealistic under the real scenario. Whereas the network
+2.1. WF attacks is in real-time, when the entire traﬃc sequence is captured, then the user
+ session has concluded. Nasr et al. [29]. proposed Blind that uses GAN to
+ The WF attack is a classiﬁcation problem in which an attacker col- address the limitation of protecting user traﬃc in real-time. Shan et al.
+lects traﬃc traces from targeted websites as instances to train a clas- [23] proposed Dolos, which leverages adversarial patches to resist WF
+siﬁer for identifying unknown traces. Existing WF attacks are broadly attacks. Dolos can inject adversarial patches anywhere in the real traﬃc
+divided into traditional machine learning with hand-crafted features since the adversarial patches have the location-agnostic property. Qiao
+and deep neural networks (DNNs) with automatically extracted features. et al. proposed Acup3 [34], a novel approach that employs a many-to-
+Traditional machine learning with hand-crafted features: WF at- one website imitation strategy to increase the similarity of traﬃc pattacks based on traditional machine learning needs hand-crafted features, terns across diﬀerent websites. Moreover, Gu et al. [38] employed the
+using Naïve-Bayes [12], random decision forests [7], k-Nearest Neigh- Grad-CAM algorithm to identify key segments for classiﬁcation and opbour [6], and Support Vector Machines (SVM) [4,5,8] as classiﬁers. We timized adversarial patch generation through segmentation and restricintroduce a well-known defense of this type. tion values. Although these defenses have low bandwidth overhead and
+ CUMUL [8]: Panchenko et al. proposed a novel feature represen- high protection performance, some limitations hinder their implementation method, using the accumulated sum of packet sizes as an ab- tation:
+stract representation, and sampling the accumulated sum of packet sizes
+by piecewise linear interpolation to obtain additional features. They • These defenses ignore the fact that Tor provides defenses for all webachieved over 91 % accuracy in the closed-world setting using the SVM sites, and users can access any website using Tor. These defenses can
+classiﬁer. only protect a few websites and lack defense generality.
+
+ 2
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+ Table 1
+ Comparison of representative WF defenses in terms of overhead, protection performance, and defense assumptions. Overhead deﬁnition: None is no overhead, Low is less than 30 % overhead, Medium is about 30–70 %, High is about 70–100 %,
+ and Very High is more than 100 %. We deﬁne a defense to be defeated is that an attack achieved with over 80 % accuracy
+ in the closed-world setting.
+ Bandwidth Lantency
+ Category Defense overhead overhead Defense assumptions Defeated by an attack
+
+ Glove [14] High None Prior knowledge of websites No
+ Supersequence [6] Very High High Prior knowledge of websites No
+ W-T [28] Medium Medium Prior knowledge of websites No
+ Mockingbird [18] Medium None Prior knowledge of traﬃc traces No
+ Website-speciﬁc
+ WF-GAN [25] Low None Prior knowledge of traﬃc traces No
+ Blind [29] Low None Prior knowledge of websites Yes [33]
+ Dolos [23] Low None Prior knowledge of websites No
+ Acup3 [34] Low None Prior knowledge of websites No
+
+ BuFLO [19] Very High Very High None No
+ Tamaraw [20] High Very High None No
+ Cs-BuFLO [21] Very High Very High None No
+ Decoy [26] High None None No
+ WTF-PAD [17] Medium None None Yes [9]
+ Website-agnostic FRONT [27] Medium None None Yes
+ FRONT-U [35] Medium None None Yes
+ Surakav [30] Medium Low None No
+ AAP [36] Medium Low None Yes
+ TBP [32] Medium Low None No
+ PEZD (our work) Medium None None No
+
+ • Even if only a few censored websites are protected, the websites may al. [35] ﬁnd that CNNs focus more on the transitions between uploads
+ vary across countries and regions, which makes these defenses hard and downloads. Consequently, they proposed an extension of FRONT,
+ to implement. called FRONT-U, which performs padding only on the client side to re-
+ • Due to frequent website content updates or Tor Browser Bundle duce overhead. In addition, Surakav [30] uses Generative Adversarial
+ (TBB) changes, the website patterns may change. As a result, these Networks (GANs) to generate diverse reference traces. The sending patwebsite-speciﬁc defenses may need to periodically update the de- terns of real packets follow these traces, ensuring diﬀerent traﬃc traces
+ fense information to ensure their eﬀectiveness, which consumes mas- for each user visit. A signiﬁcant drawback of employing GAN to generate
+ sive computing resources. reference traces is the substantial computational overhead. This signif-
+ • In addition, some of these defenses [24,29] lack the capability to icant computational burden may impede the practical deployment of
+ withstand non-DNN WF attacks that use statistical features such as this approach, especially in resource-constrained devices, such as when
+ packet counts and connection duration. users use access Tor via mobile devices.1 Moreover, Surakav requires
+ to delay packets, which engenders potential memory shortage problems
+ Website-agnostic defenses: Website-agnostic defenses do not rely for Tor’s relays [40]. Wang et al. [32] proposed a novel tree structure to
+on speciﬁc traﬃc trace patterns of the website, and so these defenses do describe the website browsing process. Based on this, they introduced a
+not require prior knowledge of websites users visit. Tree structure Burst-sequence Padding (TBP), which determines dummy
+ BuFLO [21], Tamaraw [22], and Cs-BuFLO [23] transmit at a con- burst sequences through multiple random distributions. However, mulstant rate to mask traﬃc features, which incur bandwidth and latency tiple determined distributions did not eﬀectively disrupt WF attacks, as
+overhead several times. Panchenko et al. [26] proposed Decoy, which Var-CNN can achieve 80 % accuracy.
+randomly loads a decoy website whenever a user visits a website to Other defenses: Recently, some WF defenses based on traﬃc splitobfuscate the classiﬁer, which requires about 100 % of the bandwidth ting have been proposed [41–43], where they split traﬃc over several
+overhead. sub-circuits in a random manner, which is slightly diﬀerent from our
+ To mitigate the high overhead, researchers have proposed mani- threat model. Therefore, we do not discuss these methods in this paper.
+fold lightweight defenses that aim to strike a balance between defense Overall, website-speciﬁc defenses have impractical assumptions that
+performance and overhead, such as FRONT [27], WTF-PAD [17], and hinder implementation, while website-agnostic defenses either incur
+Surakav [30]. WTF-PAD is a kind of Adaptive Padding (AP) [39] algo- high overhead, cannot provide high protection performance, or introrithm. WTF-PAD obtains a time 𝑡 by sampling the time of the loaded duce latency overhead.
+website. When the countdown of 𝑡 ends, a dummy network packet is
+sent. WTF-PAD aims to hide the excessive time interval between net- 3. Threat model
+work packets in the traﬃc. Moreover, Yang et al. [36] ﬁnd that rapidly
+consecutive requests and responses within a short time interval have 3.1. Attack model
+a signiﬁcant impact on traﬃc patterns. In response, they proposed an
+advanced adaptive padding (AAP) aimed at modifying the burst nature We consider the same threat model as existing WF attacks [4,6–11,
+of website traﬃc. However, WTF-PAD and AAP have been undermined 17,18,23,27]:
+by the state-of-the-art DF attack, achieving up to 80 % accuracy in the
+ • WF attacks assume an attacker, located between the user and the
+closed-world setting. Gong and Wang [27] ﬁnd that WF attacks depend
+ Tor entry node, sniﬀs users’ traﬃc, and the attack model is shown in
+on feature-rich trace fronts. Therefore, they proposed FRONT, which
+ Fig. 1. The attacker is passive, meaning they cannot drop, delay, or
+injects dummy packets according to Rayleigh distribution to obfuscate
+ modify network packets.
+the features of traﬃc trace fronts. However, FRONT provides insuﬃ-
+cient protection for the latter part of traﬃc traces. We ﬁnd that attackers can still identify the defended traﬃc traces by exploiting the 1 Tor Browser for Android has surpassed 10 million downloads on the Google
+
+features present in the latter part of the traces. Moreover, Attarian et Play Store.
+
+ 3
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+ 4.1. Motivation and intuition
+
+ We believe that defense meets deployability and should provide high
+ protection performance and defense generality while imposing only
+ moderate bandwidth overhead and no latency overhead. High protection performance means that the defense can resist state-of-the-art WF
+ attacks, and defense generality means that the defense can protect all
+ websites. A moderate bandwidth overhead indicates that a moderate
+ number of dummy packets are injected into the traﬃc. No latency overhead means that real packets are sent without delay.
+ Fig. 1. The WF attack model.
+ FRONT provides low protection against state-of-the-art WF attacks,
+ despite its defense generality, moderate bandwidth overhead, and zero-
+ •
+ delay. To have a deep understanding of the reasons why FRONT pro-
+ We consider the attacker has full knowledge of the defense method
+ vides low protection performance, we introduce an explainable artiﬁ-
+ implemented by Tor [6–11,17,18,23,27], which means the attacker
+ cial intelligence (XAI) framework to analyze it. An XAI framework is a
+ can collect the defended traﬃc to train a classiﬁer. We assume that
+ tool that generates reports on the model’s operation and makes an atthe attacker’s classiﬁer is trained using already defended traﬃc.
+ tempt to explain how it operates [46]. The XAI framework we use here is
+ Given that Tor is an open-source project, it is reasonable to assume
+ Locally Interpretable Model Agnostic Interpretation (LIME) [47]. LIME
+ that potential attackers would have access to the defended traﬃc
+ operates by generating perturbed samples around a target example and
+ traces and could use them to train more robust attack models.
+ • We consider WF in closed-world and open-world settings [8–11,17,
+ ﬁtting these samples with an interpretable linear model. This technique
+ enables us to identify the key features driving the model’s predictions,
+ 27]. In the closed-world setting, users visit only a subset of websites
+ eﬀectively making any classiﬁer’s decision-making process locally intrained by attackers, called monitored websites. However, this setterpretable, regardless of its underlying complexity. The interpretation
+ ting was criticized by Juarez et al. [44] as unrealistic since users can
+ process is shown in Eq. (1),
+ visit any website. The open-world setting is more realistic, and users
+ can visit unmonitored websites. It is a binary classiﬁcation setting. ( ) ( )
+ 𝜉 𝑥𝑖 = arg min𝐿 𝑓 , 𝑔, 𝜋𝑥 + Ω(𝑔) (1)
+ The attacker uses the trained classiﬁer to distinguish whether the 𝑔∈𝐺
+ website the user visits is monitored or unmonitored. ( ) ( )
+ • We consider the attacker to use only packet direction sequences
+ where 𝜉 𝑥𝑖 is the interpretable feature explained by LIME, 𝐿 𝑓 , 𝑔, 𝜋𝑥 is
+ loss function, 𝑓 is the black-box model, 𝑔 is the explainer, 𝜋𝑥 is the simas input to the model. This assumption is the same as many preilarity measure between data points 𝑥, and Ω(𝑔) is the penalty for the
+ vious attacks [9–11] and defenses [18,22–24,28,44,45]. Tor transcomplexity model 𝑔. LIME generates a list of explanations, with each
+ mits data in ﬁxed-size (512-byte) packets called cells. A sequence
+ explanation indicating the role of each feature in the forecast of a parof packets collected throughout the website load process constiticular data sample [47].
+ tutes a traﬃc trace. For example, the traﬃc trace of a web-
+ We use LIME to analyze which packets in undefended traﬃc and
+ site containing only packet directions can be denoted as 𝑇𝑝 =
+ [ 𝑝 𝑝 𝑝 𝑝 𝑝 𝑝 𝑝 ] FRONT play a more important role in WF attack models. We train the
+ 𝑂1 , 𝑂2 , 𝐼3 , 𝐼4 , 𝐼5 , 𝐼6 , 𝑂7 … 𝐼𝑛𝑝 , where 𝑂𝑖𝑝 is the 𝑖-th packet in the traf-
+ DF attack model on the DS-19 dataset (See Section 5 for more detail).
+ ﬁc trace, 𝑖 is the location of the packet, 𝑛 represents the number of
+ Typically, for WF attacks based on deep learning models, each packet
+ packets, 𝑂 represents the packet is an outgoing packet, 𝐼 means the
+ (denoted as 1 or -1) in a traﬃc trace serves as a feature. We randomly
+ packet is an incoming packet, and 𝑝 indicates classes of the website.
+ pick four classes (indexing 8, 21, 86, and 94 in the DS-19 dataset) with
+ In a traﬃc trace, outgoing packets are represented as 1, and incom-
+ 100 % attack accuracy to analyze their features since we want to anaing packets are represented as −1. Therefore, the input used by the
+ lyze why FRONT fails. Note that due to the model’s ﬁxed input, traﬃc
+ attacker is 𝑇𝑝 = [1, 1, −1, −1, −1, −1, 1, … , 1].
+ with less than 10,000 packets is padded with zeros. However, LIME also
+ generates an importance score. For intuition, we only show the impor-
+3.2. Defense model tance level of the real packets. Speciﬁcally, we conducted a statistical
+ analysis of the locations of the 1000 most important packets across 10
+ We assume that the defender has the following capabilities: traﬃc traces per class, for both the FRONT and undefended datasets.
+ The traﬃc trace is segmented into a series of intervals, with each inter-
+ • The defender can inject dummy network packets in real traﬃc but val having a ﬁxed length of 500 packets. We illustrate the number of
+ not discard, modify, or encrypt users’ network packets [4,6,14–28]. signiﬁcant packets within each interval, as shown in Fig. 2.
+ Defenders can inject bidirectional dummy packets (outgoing and in- For undefended traﬃc, we observe that the most important packets
+ coming) with the cooperation of both the Tor client and a node in are mostly distributed within the ﬁrst interval of 500, suggesting that
+ the Tor circuit. We consider the node in the Tor circuit to be the Tor the WF attack heavily relies on packets in the initial portion of traﬃc
+ bridge.2 traces. In contrast, for FRONT, we ﬁnd that the model relies more on the
+ • The defender has no prior knowledge of the website the user is visitfeatures towards the rear of the traﬃc. In other words, the model can
+ ing [17,19–21,26,27], which means that the defender cannot collect learn distinctive patterns in the latter part of the traﬃc. This is due to
+ traﬃc traces of the websites the user will visit in advance. the fact that FRONT adds more dummy packets to the front of the traﬃc
+ and fewer packets are added to the back, resulting in an incapability to
+4. PEZD robustly interfere with the back patterns of the traﬃc traces. In light
+ of the powerful learning capabilities of deep learning models, even if
+ In this section, we ﬁrst introduce the idea behind the PEZD in Sec- there are intra-website traces with a small number of shared patterns,
+tion 4.1. In Section 4.2, we describe PEZD in detail. they can still be learned. The analysis of the reasons for FRONT’s failure also sheds new light on the design of eﬀective defenses, where the
+ distribution of dummy packets should be diﬀerent for each traﬃc trace.
+ 2
+ Tor bridges are commonly used to evade censorship, and they are often used More speciﬁcally, to avoid the common patterns in intra-website traﬃc
+by WF defenses to generate dummy incoming packets to reshape traﬃc [17,18, traces, the distribution of dummy packets for each traﬃc trace should
+23,27] be distinct.
+
+ 4
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+Fig. 2. Visualization of the number of important features within intervals. The number of feature importance indicates how many signiﬁcant features fall within an
+interval, with each interval having a length of 500.
+
+ Next, we describe how to construct a distribution of dummy pack- tance, and ℎ is a smoothing bandwidth, which controls how smooth the
+ets. Intuitively, a probabilistic approach seems feasible. However, pre- estimated density curve is.
+vious research has shown that constructing eﬀective probability dis- Fig. 3 shows a visualization of the distribution of outgoing packets
+tributions for this purpose faces signiﬁcant challenges. For instance, of websites (website indexing 32, 39, 50, 55, 78, and 92 in the dataset),
+previous defense methods, such as FRONT, attempted to increase di- the dataset provided by Gong and Wang [27]. We observe signiﬁcant
+versity by employing various probabilistic parameters in the generation variations in the distribution of outgoing packets across various webof dummy packets. Nevertheless, Var-CNN demonstrated superior per- sites. Therefore, We can exploit the distribution of outgoing packets
+formance, achieving an accuracy of over 80 %. Even sophisticated tech- from diﬀerent websites to randomize the distribution of dummy packniques like TBP, which combined multiple probability distributions to ets. A greater divergence in the distribution of outgoing packets leads
+generate burst distributions, still remained fragile against attacks. Var- to greater variations in the distribution of dummy packets across diﬀer-
+CNN, for example, achieved an accuracy of over 70 % against TBP. A ent traﬃc traces of the same website. This makes it diﬃcult for intracritical reason for this vulnerability is the use of deterministic distribu- website traﬃc traces to have common patterns that can be learned by
+tions to generate dummy packets. In these approaches, the distribution an attacker.
+of dummy packets for each traﬃc trace is derived from one or a few
+ﬁxed distributions. This increases the similarity of dummy packet dis- 4.2. Defense design
+tributions across diﬀerent traﬃc traces. An ideal scenario would involve
+generating dummy packet distributions from diﬀerent distributions for In this section, we describe in detail how to exploit diﬀerences in the
+each traﬃc trace, thereby signiﬁcantly enhancing the diversity between location of outgoing packets from diﬀerent websites to obfuscate traﬃc
+traﬃc traces. In addition, Surakav uses a GAN to generate diverse ref- traces.
+erence traces. However, using a GAN signiﬁcantly increases computa- We add dummy packets according to the outgoing packet location
+tional overhead. This motivates us to seek a computationally eﬃcient information extracted from traﬃc traces, and a visual representation of
+way to generate diverse distributions of dummy packets for each traﬃc location information is shown in Fig. 4. Therefore, we are required to
+trace. collect a traﬃc trace pool including many traﬃc traces. Note that the
+ We observe that traﬃc inherently contains diverse distributions, traﬃc traces in the traﬃc trace pool can be any website. The diﬀerence
+which inspired us to leverage these natural patterns directly. Each web- in websites we utilize does not care which website it is. Therefore, PEZD
+site has unique patterns, including unique packet ordering, packet di- does not require any prior information for the websites users visit. We
+rections, and packet timing, which makes the traﬃc traces of diﬀerent describe the setting of the traﬃc trace pool in detail in Section 5.3.
+websites signiﬁcantly diﬀerent, which is also why the WF attacks are Next, we describe adding dummy packets according to the extracted
+successful. We observe signiﬁcant diﬀerences in the distribution and location information. For simplicity, we do not distinguish the adding
+number of outgoing packets in traﬃc traces of diﬀerent websites. We dummy packets’ direction (outgoing and incoming). Suppose we need
+use Kernel Density Estimation (KDE), a nonparametric model used for to protect a website 𝑤. We randomly select a traﬃc trace from the trafestimating probability distributions, to estimate such a distribution from ﬁc trace pool, which is called the non-source traﬃc trace. The locaa website. The KDE is shown in Eq. (2), tion information of all outgoing packets in the non-source traﬃc trace
+ is counted. Afterward, we add dummy packets in real traﬃc at the
+ (𝑥 − 𝑥 )
+ 1∑ ( 1 ∑
+ 𝑛 𝑛
+ ) 𝑖 same location as the outgoing packets of the non-source traﬃc trace.
+𝑓̂ℎ (𝑥) = 𝐾ℎ 𝑥 − 𝑥𝑖 = 𝐾 (2)
+ 𝑛 𝑖=1 𝑛ℎ 𝑖=1 ℎ The same location means that the outgoing packet is at the 𝑘-th in
+ the non-source traﬃc trace, and the inject dummy packet is also at
+where 𝑥𝑖 is identically distributed samples, and 𝐾(⋅) is a kernel function, the 𝑘-th in the real traﬃc. Note that we ignore the location of the
+which speciﬁes how to compute the probability density given the dis- ﬁrst packet from the non-source traﬃc trace since the client needs to
+
+ 5
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+ Fig. 3. Probability density function of outgoing packets from diﬀerent websites.
+
+ packet, and 𝑢 is the total number of dummy packets added. Fig. 5 shows
+ a padding process.
+ Since the number of outgoing packets accounts for a small proportion (about 10 %) of a traﬃc trace, adding such a number of dummy
+ packets does not signiﬁcantly impact real traﬃc patterns. Therefore, we
+ select multiple non-source traﬃc traces from the traﬃc trace pool to
+Fig. 4. A visual representation of location of packets. The number indicates the extract the location information of outgoing packets. Speciﬁcally, We
+location of the packet. set a number 𝐾 to determine the number of non-source traﬃc traces. A
+ larger 𝐾 means more non-source traﬃc traces are selected to extract the
+ location information of outgoing packets, which means more bandwidth
+ overhead.
+ In addition, we randomly oﬀset the extracted location information
+ to avoid the concentration of dummy packets in the front. Suppose we
+ select non-source traﬃc traces with fewer packets, which means smaller
+ location information for outgoing packets. The majority of the dummy
+ packets will be focused in front of real traﬃc, and none will be sent to
+ the back, as shown in Fig. 6. Therefore, we oﬀset a random value for
+ each location information extracted from the traﬃc traces to address
+ the possible imbalance in the distribution of dummy packet locations,
+ Fig. 5. Padding process of dummy packets. as shown in Fig. 7.
+ In the above description, we do not distinguish the direction of the
+ added dummy packets. In real networks, dummy packets can be injected
+send the ﬁrst packet to establish a connection with the server, and the bidirectionally. We set the parameters 𝐾𝑐 and 𝐾𝑠 to determine the num-
+ﬁrst packet cannot be a dummy packet. For example, we randomly se- ber of non-source websites selected by the Tor client and Tor bridge,
+ [ ] respectively. The bandwidth overhead is determined by 𝐾𝑐 + 𝐾𝑠 , as delect a non-source traﬃc trace 𝑇ℎ = 𝑂1ℎ , 𝑂2ℎ , 𝐼3ℎ , 𝐼4ℎ , 𝐼5ℎ , 𝐼6ℎ , 𝑂7ℎ , 𝐼8ℎ … 𝐼𝑏ℎ ,
+where ℎ can be any website. We extract the location information tailed in Section 5.3. The location information extracted from 𝐾𝑐 nonof outgoing packets of 𝑇ℎ denoted as 𝐿ℎ = {2, 7 …}. We assume a source traﬃc traces is placed in the client-side location information set
+ [ ] 𝐿𝑐 , and the location information extracted from 𝐾𝑠 non-source traﬃc
+traﬃc trace of the website 𝑤 is 𝑇𝑤 = 𝑂1𝑤 , 𝐼2𝑤 , 𝐼3𝑤 , 𝑂4𝑤 , 𝐼5𝑤 , 𝐼6𝑤 , … 𝐼𝑚𝑤 .
+ ′ traces is placed in the Tor bridge-side location information set 𝐿𝑠 .
+We
+[ inject dummy packets to 𝑇𝑤 according to 𝐿ℎ to get ] 𝑇𝑤 = Note that PEZD does not need to know the entire traﬃc trace. The
+ 𝑤 , 𝐼 𝑤 , 𝐼 𝑤 , 𝐼 𝑤 , 𝐷 , 𝑂𝑤 , 𝐼 𝑤 , 𝐼 𝑤
+ 𝑂1𝑤 , 𝐷2 , 𝐼2→3 3→4 4→5 5→6 7 6→8 7→9 8→10
+ 𝑤
+ , … 𝐼𝑚→𝑚+𝑢 , where
+ Tor client or bridge only requires to know the location information of
+𝑖 → 𝑗 means that a packet was 𝑖-th in the traﬃc trace, and after adding dummy packets to be sent. PEZD is very easy to implement and imdummy packets is the 𝑗-th, and 𝐷 represents the packet is a dummy plements the state machine shown in Fig. 8. For simplicity, we only
+
+ Fig. 6. The result of padding according to location information of multiple traces. 𝐿 is the set of dummy packet location information.
+
+ 6
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+ Fig. 7. Location information oﬀset and padding process.
+
+ represented as a tuple 𝑓𝑘 = ⟨𝑡𝑘 , 𝑑𝑘 ⟩, with 𝑡𝑘 being the packet timestamp
+ and 𝑑𝑘 indicating the packet direction.
+ DS-14 [6]: This dataset was collected by Wang in 2014 on Tor
+ Browser 3.5.1. It contains 100 websites as monitored websites with 90
+ traﬃc traces each, these websites were selected from sites blocked in
+ China, the UK, and Saudi Arabia. It also collected 9,000 websites as unmonitored websites with one traﬃc trace each. The traﬃc traces in this
+ dataset follow the same feature representation as DS-19.
+ We use the DS-19 and DS-14 datasets because they provide timestamps and directions of packets that can be used to simulate FRONT
+ and WTF-PAD defense. We follow Gong and Wang’s settings [27] to set
+ the length of the traﬃc trace length to 10,000 less than 10,000 ﬁlled
+ with 0.
+
+ 5.2. Evaluation metrics
+
+ In the closed-world setting, we use accuracy as the evaluation metric.
+ In the open-world setting, we use true positive rate (TPR), false positive
+ Fig. 8. The ﬁnite state machine of PEZD implementation on client-side. rate (FPR), precision, and recall as evaluation metrics. In particular, we
+ consider if it is classiﬁed as monitored with a probability above the
+ pre-deﬁned threshold, otherwise, a false negative (FN). A false positive
+describe the client-side state machine, and the Tor bridge operations (FP) is an unmonitored traﬃc trace incorrectly classiﬁed as monitored
+are symmetric. with a probability above the threshold, otherwise, a true negative (TN).
+ Start Mode. Starting in Start Mode, the client has obtained the lo- The bandwidth overhead is deﬁned as the ratio of the total number of
+cation information set 𝐿𝑐 and sets counter 𝐶 to 1. The defense waits for padded dummy packets to the number of real packets in the original
+the client to send an outgoing packet to establish a connection with the traﬃc sequence. Latency overhead is deﬁned as the ratio of the delay
+server. When the client sends a real packet, switch to Count Mode. time incurred by real packets to their original transmission time. For
+ Count Mode. In Count Mode, when the client receives or sends a statistical soundness, we conduct the experiment 10 times and computed
+packet, counter 𝐶 adds 1. The defense relies on counter 𝐶 to decide the mean value as the ﬁnal result.
+when to send a dummy packet. When set 𝐿𝑐 contains counter 𝐶, switch
+to Padding Mode. 5.3. Parameters setting
+ Padding Mode. In Padding Mode, the client injects a dummy packet
+into the traﬃc sequence. After padding, the defense returns to Count The size of the traﬃc traces pool: PEZD requires selecting non-
+Mode to continue counting the number of packets. When the connection source websites from the traﬃc trace pool to extract location informaends, switch to Start Mode, and the defense ends. tion. In our experiments, we set the websites in the traﬃc trace pool
+ not to overlap with the defended websites, which is a more realistic scenario since PEZD does not have prior knowledge of the websites visited
+5. Evaluation by users. In the closed-world setting, we use 10,000 unmonitored websites as the traﬃc trace pool. In the open-world setting, we select 2000
+5.1. Dataset unmonitored websites as the traﬃc trace pool. We evaluate the impact
+ of the size of the traﬃc trace pool on the WF attack performance in
+ DS-19 [27]: This dataset was collected by Gong and Wang to evalu- Section 5.4.
+ate FRONT and was collected between February to April 2019, utilizing The range of random oﬀset values: PEZD needs random oﬀsetting
+Tor Browser 8.5a7 running on Tor 0.4.0.1-alpha. Data collection was au- of dummy packet locations to address the concentration of dummy packtomated through command-line interactions with the Tor Browser. They ets in the front. To set the appropriate random oﬀset range, we counted
+collected Alexa [48] top 100 websites as monitored websites with 100 the number of packets in traﬃc traces. More than 90 % of traﬃc traces
+traﬃc traces each, which means there are 100 classes (each website have fewer than 10,000 packets, and more than 70 % of traﬃc traces
+represents a class) with 100 samples per class. Additionally, they col- have fewer than 6000 packets. Therefore, we set the oﬀset value in the
+lected 10,000 other websites from Alexa as unmonitored websites with range [-10000,10000]. Note that this is the randomly selected oﬀset
+one traﬃc trace each. These unmonitored websites were used to evalu- values range, not the range of dummy packets added to the traﬃc trace.
+ate the performance in an open-world scenario. Each traﬃc trace in the The setting of 𝐾: In the PEZD design, the parameter 𝐾 represents the
+dataset consists of a sequence of packet features, where each packet is total number of non-source traﬃc traces selected from the traﬃc trace
+
+ 7
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+ Table 2 Table 3
+ The defense parameters in DS-19 and DS-14 datasets. Accuracy and overhead of WF defense against attack in the closed-world scenario.
+ Defense Parameters Dataset
+ DS-19 Overhead
+ Dataset Defenses Var-CNN DF CUMUL
+ WTF-PAD 𝑛𝑜𝑟𝑚𝑎𝑙_𝑟𝑐𝑣 DS-14
+ Latency Bandwidth
+ 𝑁𝑐 = 𝑁𝑠 = 2500, 𝑊min = 1s, 𝑊max = 14s DS-19
+ FRONT
+ 𝑁𝑐 = 𝑁𝑠 =1700, 𝑊min = 1s, 𝑊max = 14s DS-14 No defense 0 0 97.56 % 96.36 % 95.96 %
+ DS-19 WTF-PAD 0 29.97 % 93.93 % 93.07 % 70.86 %
+ Tamaraw 𝐿 = 100, 𝜌𝑜𝑢𝑡 = 0.04, 𝜌min = 0.012 DS-14
+ FRONT 0 44.01 % 82.92 % 68.0 % 30.73 %
+ DS-19
+ Surakav 𝛿 = 0.2, 𝜌 = 40ms DS-14 Tamaraw 171.15 % 71.05 % 16.14 % 10.22 % 16.54 %
+ 𝑁𝑐 = 5000, 𝑁𝑠 = 0, 𝑊min = 1s, 𝑊max = 14s DS-19 Random 0 47.3 % 94.53 % 94.99 % 93.38 %
+ FRONT-U DS-19
+ 𝑁𝑐 = 2500, 𝑁𝑠 = 0, 𝑊min = 1s, 𝑊max = 14s DS-14 Surakav 12.1 % 44.61 % 69.93 % 70.0 % 48.77 %
+ 𝑁 = 4000, 𝑄 = 0.4 DS-19 FRONT-U 0 43.72 % 91.55 % 79.82 % 62.88 %
+ AAP AAP 0 50.94 % 80.26 % 86.78 % 53.82 %
+ 𝑁 = 2000, 𝑄 = 0.4 DS-14
+ 𝑃 =5000, 𝐿𝑚𝑎𝑥 =20, 𝐿𝑚𝑖𝑛 =2 DS-19 TBP 0 45.39 % 70.7 % 65.34 % 35.75 %
+ TBP PEZD 0 43.39 % 19.39 % 37.88 % 21.45 %
+ 𝑃 =2000, 𝐿𝑚𝑎𝑥 =20, 𝐿𝑚𝑖𝑛 =2 DS-14
+ 𝐾𝑐 = 9, 𝐾𝑠 = 2 DS-19 No defense 0 0 81.53 % 92.18 % 91.17 %
+ PEZD
+ 𝐾𝑐 = 12, 𝐾𝑠 = 3 DS-14 WTF-PAD 0 47.69 % 69.76 % 79.20 % 58.03 %
+ FRONT 0 69.20 % 61.26 % 60.48 % 25.12 %
+ Tamaraw 78.31 % 92.13 % 12.55 % 16.46 % 13.81 %
+ Random 0 47.32 % 83.75 % 86.81 % 83.65 %
+ DS-14
+ Surakav 5.1 % 76.96 % 42.98 % 54.28 % 37.18 %
+ FRONT-U 0 52.26 % 84.46 % 76.46 % 61.77 %
+ AAP 0 45.52 % 61.37 % 65.68 % 38.91 %
+ TBP 0 44.74 % 56.07 % 56.94 % 39.68 %
+ PEZD 0 48.73 % 21.51 % 33.20 % 29.70 %
+
+ injecting dummy packets only on the client-side or server-side. Next, we
+ evaluate the impact of the size of the traﬃc trace pool on the protection
+ performance of PEZD. Finally, We evaluate the eﬀect of the parameters
+ 𝐾𝑐 and 𝐾𝑠 .
+
+ 5.4.1. Evaluation against WF attacks
+ We evaluate the protection performance of defenses on the DS-
+Fig. 9. The bandwidth overhead of DS-19 and DS-14 datasets for the selected 19 and DS-14 datasets. We compare with eight representative WF denumbers of non-source traﬃc trace 𝐾. fenses: WTF-PAD, FRONT, Tamaraw, Surakav, and Random. WTF-PAD,
+ FRONT, FRONT-U, AAP, and TBP are zero-delay lightweight defenses.
+ Surakav is a lightweight defense that incurs low latency overhead.
+pool, which determines the bandwidth overhead of PEZD. A larger 𝐾 Tamaraw is a heavyweight defense. Random is a more common ranindicates a larger number of selected non-source traces. Since dummy domization method that randomly adds dummy packets to traﬃc traces
+packets are injected based on the location of the outgoing packets in the according to the uniform distribution. We consider three state-of-thenon-source traﬃc traces, this incurs higher bandwidth overhead. Fig. 9 art attacks, Var-CNN, DF, and CUMUL, to evaluate these defenses. Varshows the bandwidth overhead corresponding to the number of 𝐾 for CNN and DF are DNN attacks, and CUMUL is a non-DNN attack. Note
+DS-19 and DS-14 datasets. We observe that the bandwidth overhead that we compute the overhead for monitored websites and unmonitored
+gradually increases as 𝐾 increases. The bandwidth overhead is less than websites separately for all defenses since only monitored websites are
+30 % when 𝐾 is less than 7 and greater than 70 % when 𝐾 is greater included in the closed-world setting.
+than 17. In general, PEZD has a moderate bandwidth overhead when Table 3 lists experiment results, showing that PEZD oﬀers higher pro-
+𝐾 is in the interval [7, 17]. We try to compare the performance of vari- tection than WTF-PAD, Random, FRONT, Surakav, FRONT-U, TBP, and
+ous defenses for the same bandwidth overhead (WTF-PAD and FRONT AAP. Speciﬁcally, Var-CNN achieves over 80 % accuracy for WTF-PAD,
+claim a bandwidth overhead of about 40 % ), and we thus set 𝐾 = 11 in FRONT, FRONT-U, AAP, and Random. TBP performed slightly better,
+the DS-19 dataset (43 % bandwidth overhead) and 𝐾 = 15 in the DS-14 but Var-CNN still attained an accuracy of over 70 %. In contrast, the
+dataset (48 % bandwidth overhead). In addition, We deﬁne 𝐾𝑐 and 𝐾𝑠 accuracy of PEZD was only 19.39 %. Moreover, compared to Surakav,
+to represent the number of traﬃc traces selected from the traﬃc trace PEZD shows 40 % lower attack accuracy against Var-CNN. We observe
+pool by the client and the server, respectively. We discuss the eﬀect of that FRONT, Surakav, AAP, and TBP only have a favorable performance
+the 𝐾𝑐 and 𝐾𝑠 parameters on performance in Section 5.4. for resisting the non-DNN attack. For instance, for FRONT, CUMUL only
+ Defense parameters setting: For the parameter setting of WTF- achieves 30.73 % accuracy. Furthermore, we ﬁnd that Random does not
+PAD, FRONT, and Tamaraw, we follow the default experimental param- provide eﬀective defense for either DNN attacks or non-DNN attacks,
+eters in their papers. To ensure a fair comparison, we tuned the defense and WF attacks achieve over 80 % accuracy. A key factor is that adding
+parameters for Surakav, FRONT-U, AAP, and TBP on the experiment dummy packets with the same distribution to traﬃc from the same webdataset to achieve a low latency overhead while maintaining a compa- site does not introduce signiﬁcant distinctions between them. From a
+rable bandwidth overhead to our defense. We summarize the defense distributional perspective, we posit that traﬃc from the same website
+parameters in Table 2. follows a speciﬁc distribution. Since we generate dummy packets from
+ the same distribution, the distribution of the dummy packets in diﬀerent
+5.4. Closed-world evaluation traﬃc is also similar, which allows the ﬁnal protected traﬃc from the
+ same website to still maintain a substantially similar distribution.
+ In this section, we evaluate the eﬀectiveness of PEZD in the closed- Tamaraw is eﬀective against WF attacks, and it reduces Var-CNN acworld setting. First, we make a comprehensive comparison of PEZD with curacy to 16.14 %. However, it incurs over 171 % latency overhead and
+state-of-the-art defenses. Then, we evaluate the performance of PEZD in 71 % bandwidth overhead, while PEZD requires only 43 % of bandwidth
+
+ 8
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+ Table 4
+ Defense performance of PEZD for client-side, Tor bridge-side, and bidirectional injection of dummy packets.
+ Dataset Packet direction Bandwidth overhead Var-CNN DF CUMUL
+
+ Client-side 43.43 % 23.16 % 46.71 % 28.63 %
+ DS-19 Tor bridge-side 41.31 % 92.19 % 91.42 % 82.09 %
+ Two-way 43.39 % 19.39 % 37.87 % 21.45 %
+ Client-side 48.88 % 20.26 % 38.81 % 36.64 %
+ DS-14 Tor bridge-side 48.50 % 84.11 % 81.25 % 73.20 %
+ Two-way 48.72 % 21.51 % 33.20 % 29.70 %
+
+overhead to reduce Var-CNN attack accuracy to 19.39 %. In addition,
+we ﬁnd that DF is more robust to PEZD than Var-CNN and CUMUL,
+achieving 37.88 % accuracy. Surprisingly, Var-CNN is more fragile than
+CUMUL for PEZD, despite its more complex structure and higher classi-
+ﬁcation accuracy for other lightweight defenses.
+
+5.4.2. Impact of dummy packet directions
+ Fig. 10. Impact of the traﬃc trace pool size for the performance of PEZD. Three
+ The aforementioned experiments consider the injection of bidirecstate-of-the-art attacks, DF, Var-CNN, and CUMUL, are chosen to evaluate the
+tional dummy packets to reshape the traﬃc, which requires coopera- performance of PEZD under diﬀerent sizes of the traﬃc trace pool.
+tion between the client and the Tor bridge. This approach inherently increases the complexity of deployment. In contrast, implementing PEZD
+solely on either the client-side or server-side oﬀers easier deployment stable even when traﬃc traces are reduced. Even with only 1,000 traﬃc
+and many potential advantages. For instance, implementation only on traces in the traﬃc trace pool, the protection performance of PEZD does
+the server-side would minimize modiﬁcations required on the client- not degrade signiﬁcantly. In more detail, the accuracy of the Var-CNN
+side, and vice versa. Moreover, Client-side deployment signiﬁcantly re- attack is 18.69 % with 1000 traﬃc traces and 19.39 % with 10,000 trafduces the computational and bandwidth requirements for Tor bridges, ﬁc traces. The slight change in accuracy is potentially due to the higher
+particularly beneﬁcial for overload nodes. Furthermore, the Tor bridge bandwidth overhead at 1000 traﬃc traces than at 10,000 traﬃc traces.
+and client cooperation may pose privacy issues, as some users may An essential factor in the ability of our defenses to withstand the impact
+not wish the Tor bridge to access their browsing history directly [24]. of reduced traﬃc traces is that we apply a random oﬀset to the extracted
+In addition, the deployment of other privacy-enhancing technologies, location information. Even if diﬀerent traﬃc traces of a website select
+such as virtual private networks (VPNs), is impeded by the imperative the same non-source traﬃc trace, a random oﬀset value will make the
+that clients and remote endpoints cooperate to reshape traﬃc [49]. For location of the dummy packets diﬀerent.
+client-side defense, we set the defense parameters for the DS-19 and DS-
+14 datasets as 𝐾𝑐 = 11 and 15, respectively, with 𝐾𝑠 set to zero for both 5.4.4. Impact of 𝐾𝑐 and 𝐾𝑠 on accuracy
+datasets. Conversely, for server-side defense, we set the parameters as The parameters 𝐾𝑐 and 𝐾𝑠 represent the number of traﬃc traces
+𝐾𝑠 = 11 and 15 for these two datasets, while maintaining 𝐾𝑐 at zero. selected from the traﬃc trace pool by the client and the server, respec-
+ We compare the defense performance of injecting dummy packets tively. To investigate the impact of diﬀerent values of 𝐾𝑐 and 𝐾𝑠 on the
+only on the client-side or Tor bridge-side and injecting dummy packets defense performance, we adjust the quantities of 𝐾𝑐 and 𝐾𝑠 for a given
+in both directions, and the results are shown in Table 4. PEZD defense setting of 𝐾 = 11.
+performance does not signiﬁcantly reduce for dummy packets injected Fig. 11 shows the eﬀect of diﬀerent numbers of 𝐾𝑐 on the defense
+only on the client-side. For instance, the accuracy of the Var-CNN at- performance for given 𝐾 = 11 in the DS-19 dataset. CUMUL, Var-CNN,
+tack increased by less than 4 %, and the accuracy of the CUMUL attack and DF have the lowest attack accuracy for 𝐾𝑐 values of 6, 8, and 9,
+increased by about 8 % in the DS-19 dataset. The highest attack accu- respectively, resulting in accuracies of 18.61 %, 19.05 %, and 37.88 %.
+racy for the three attacks is 46.71 % for the client-side, indicating that The percentage of dummy outgoing packet overhead to total dummy
+the client-side deployment of PEZD eﬀectively resists WF attacks. Sur- packets bandwidth overhead is 61.5 %, 77.8 %, and 85.6 % for 𝐾𝑐 values
+ ( )
+prisingly, adding only incoming packets is extremely fragile and Var- of 6, 8, and 9, respectively. We deﬁne 𝛼 = 𝐾𝑐 ∕ 𝐾𝑐 + 𝐾𝑠 , which is the
+CNN achieves over 90 % accuracy. One possible explanation is that the proportion of non-source traces selected by the client-side. PEZD has
+model assigns lower weights to incoming packet features while still ef- an acceptable defense performance for the three attacks when 𝐾𝑐 is set
+fectively identifying websites by unperturbed outgoing packet features to 9. The optimum 𝛼 value is around 0.8. Therefore, we recommend
+with higher weights, consistent with ﬁndings from previous research maintaining this value of 𝛼 in the defense for optimal performance.
+[24]. This comparison provides strong evidence that adding dummy outgoing packets yields more eﬀective protection. 5.5. Open-world evaluation
+
+5.4.3. Impact of traﬃc trace pool size on accuracy We compare the performance of defenses in the more realistic open-
+ Next, we evaluate the impact of the traﬃc trace pool size on the world setting. We use the DF attack to evaluate defenses in the DS-19
+protection performance of PEZD. In the above experiment, our traﬃc dataset since DF has better performance for defenses. As we have shown
+trace pool contains 10,000 traﬃc traces. The fewer traﬃc traces in the the eﬀectiveness and high overhead of Tamaraw in the closed-world settraﬃc pool will have a higher chance of selecting the same non-source ting, we exclude it here and focus comparisons on lightweight defenses.
+traﬃc traces, which may make the distribution of dummy packets less We follow the previous hypothesis to include unmonitored websites in
+diverse and pose lower protection performance. To investigate the eﬀect the training dataset, known as the standard model [6–9]. Following
+of this factor, we vary the number of traﬃc traces in the traﬃc trace the DF attack, we use prediction probabilities to distinguish between
+pool from 1,000 to 10,000. The experiment is conducted on the DS-19 monitored and unmonitored websites. A traﬃc trace is considered a
+dataset. true positive if it is classiﬁed as a monitored website and its maximum
+ The results are shown in Fig. 10. PEZD can withstand reduced traﬃc prediction probability exceeds the threshold. Otherwise, it is classiﬁed
+traces in the traﬃc trace pool. The defense performance of PEZD remains as an unmonitored website. To ensure comprehensive evaluation, we
+
+ 9
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+Fig. 11. The eﬀect of diﬀerent numbers of 𝐾𝑐 on the defense performance for
+given 𝐾 = 11. The overhead ratio is the ratio of dummy outgoing packages to
+total bandwidth overhead. The optimal number of 𝐾𝑐 is indicated by a larger
+symbol in each subplot.
+
+ Fig. 13. Open-world scenario: ROC curve.
+
+ both precision and recall for the undefended traﬃc, while PEZD provides high protection performance that reduces the recall to 0.26 and
+ the precision to 0.54. Surakav, FRONT-U, and FRONT provide weaker
+ protection compared to PEZD, with Surakav reducing the recall to 0.51
+ and the precision to 0.73, FRONT reducing the recall to 0.64 and the
+ precision to 0.68, and FRONT-U reducing the recall to 0.67 and the
+ precision to 0.81. In contrast, TBP oﬀers slightly improved defense performance, with DF achieving a recall of 0.43 and a precision of 0.71.
+ WTF-PAD and AAP provide lower protection performance, and DF can
+ achieve the precision and the recall up to 0.8.
+ Fig. 13 shows the ROC curves for the PEZD, FRONT, WTF-PAD,
+ Surakav, FRONT-U, AAP, TBP, and undefended traﬃc. PEZD provides a
+ more robust protection performance than FRONT, Surakav, WTF-PAD,
+ FRONT-U, AAP, and TBP, achieving lower TPR and higher FPR. At the
+ Fig. 12. Open-world scenario: Precision-Recall curve.
+ same FPR, the TPR of PEZD is always smaller than FRONT, WTF-PAD,
+ Surakav, FRONT-U, AAP, and TBP. For instance, at an FPR of approxiimplement multiple threshold values in line with the DF attack. In our
+ mately 0.07, the TPR of PEZD is 0.26, 0.23, 0.6, 0.5, 0.6, and 0.2 lower
+open-world evaluation, the training set contains 13,000 traﬃc traces
+ compared to FRONT, Surakav, WTF-PAD, FRONT-U, AAP, and TBP, re-
+(9000 from monitored websites and 4000 from unmonitored websites),
+ spectively. The results show that WTF-PAD provides poor protection
+and the testing set includes 5000 traﬃc traces (1000 from monitored
+ performance, and the DF attack achieves a TPR of 0.98 and an FPR of
+websites and 4000 from unmonitored websites). The test set contains
+ 0.06.
+more unmonitored websites because the size of the set of unmonitored
+websites is usually larger than the set of monitored websites, which is
+more in line with the real situation [9,17]. For PEZD, the traﬃc trace 6. Discussion
+pool contains only the remaining 2000 traﬃc traces from unmonitored
+websites. For unmonitored websites in the open-world setting, PEZD, 6.1. Analysis
+FRONT, WTF-PAD, Surakav, FRONT-U, TBP, and AAP incur bandwidth
+overheads of 41 %, 47 %, 30 %, 49 %, 56 %, 59 %, and 53 %, respec- PEZD has signiﬁcant advantages over the lightweight defenses WTFtively. Moreover, Surakav incurs 12.33 % latency overhead. PAD, FRONT, FRONT-U, AAP, TBP, and Surakav, especially for DNN
+ As mentioned in Section 3, in the open-world setting, the attacker attacks DF and Var-CNN. In the closed-world setting, PEZD is at least
+distinguishes whether the website the user visits is monitored or un- 20 % less accurate than FRONT, WTF-PAD, FRONT-U, AAP, TBP, and
+monitored. If the traﬃc trace is identiﬁed as a monitored website, the Surakav for the DF attack, and for the Var-CNN attack, this advanattacker can use the multi-class classiﬁer trained in the closed-world tage is more signiﬁcant. In the open-world setting, PEZD achieves
+to predict the class of the traﬃc trace. We assess each defense’s perfor- lower precision and recall at any threshold than FRONT, WTF-PAD, and
+mance in the open-world setting by examining its TPR and FPR. Further- Surakav.
+more, we also use precision and recall as evaluation metrics following One of the questions our study raises is why PEZD performs so well.
+the recommendations of WF studies [8,9,17]. In our evaluation, we plot First, PEZD signiﬁcantly increases the diﬀerence among intra-website
+precision-recall curves and ROC curves. traﬃc traces by adding dummy packets with distinct distributions into
+ Fig. 12 shows precision-recall curves for PEZD, FRONT, FRONT-U, each trace. This renders attackers facing challenges in learning common
+WTF-PAD, Surakav, AAP, TBP, and undefended traﬃc. PEZD outper- patterns within the website. Furthermore, PEZD introduces signiﬁcant
+forms other defenses at any threshold. We observe that the recall of confusion between diﬀerent website categories, posing substantial chal-
+PEZD is smaller than FRONT, FRONT-U, AAP, TBP, and WTF-PAD for lenges to website recognition.
+the same precision, which means that PEZD makes the attacker miss We apply Cosine similarity to analyze intra-similarity, where the Comore monitored websites. Speciﬁcally, DF achieves more than 0.9 for sine distance is calculated for diﬀerent traﬃc traces at the same website.
+
+ 10
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+ Table 5
+ Impact of historical datasets as the traﬃc trace pool on the accuracy
+ of WF attacks.
+ Traﬃc trace pool Bandwidth Var-CNN DF CUMUL
+
+ DS-19 dataset 43.39 % 19.39 % 37.88 % 21.45 %
+ DS-14 dataset 44.54 % 24.86 % 46.83 % 25.69 %
+
+ dated regularly to ensure the eﬀectiveness of the defense during deployment. Intuitively, PEZD leverages the diﬀerences between diﬀerent
+ websites, and these diﬀerences do not change after they are collected.
+ Therefore, it still provides good protection performance over time. To
+ validate our idea, we use the DS-14 dataset as the traﬃc trace pool and
+ the DS-19 dataset as user traﬃc. These two datasets were collected approximately ﬁve years apart.
+ Table 5 shows the evaluation results. PEZD’s protection success rate
+ dropped by less than 5 % for the CUMUL attack. Even against stateof-the-art DNN attacks, the PEZD defense success rate dropped by less
+ than 10 %. This suggests that PEZD does not require signiﬁcant eﬀort to
+ update traﬃc traces during deployment regularly. Our explanation for
+ the degraded performance of PEZD is that the diﬀerence in traﬃc traces
+Fig. 14. Calculate intra-similarity for undefended, WTF-PAD, FRONT, FRONT-
+U, Surakav, AAP, TBP, and PEZD datasets based on the Cosine distance. in the DS-14 dataset is smaller than in the DS-19 dataset. We calculate
+ Cosine distances of 0.76 and 0.69 for the DS-19 and DS-14 datasets,
+The Cosine similarity is shown in Eq. (3),
+ respectively. The smaller diﬀerences between traﬃc traces may lead to
+ 𝐴⋅𝐵 smaller diﬀerences in the distribution of dummy packets. Note that we
+similarity = cos(𝜃) =
+ ‖𝐴‖‖𝐵‖ calculate the diﬀerence between unmonitored websites since we select
+ ∑𝑛
+ 𝑖=1 𝐴𝑖 × 𝐵𝑖
+ (3) unmonitored websites as the traﬃc trace pool.
+ = √ √
+ ∑𝑛 ( )2 ∑𝑛 ( )2
+ 𝑖=1 𝐴𝑖 × 𝑖=1 𝐵𝑖 6.3. Implementation
+where 𝐴 and 𝐵 are vectors. Cosine distance 𝐷 = 1 - 𝑆(𝐴, 𝐵), where 𝑆 is
+Cosine similarity. A larger Cosine distance represents a larger diﬀerence In this section, we will discuss potential problems in the implemenfor a given pair of traﬃc traces. We randomly select one hundred pairs of tation and give explanations.
+traﬃc traces from a website to calculate the Cosine distance and average Traﬃc trace pool: PEZD implementation defense requires the assisit as the Cosine distance of the website. We average the Cosine distance tance of a traﬃc trace pool, which, with its size of a few tens of MB,
+of all websites as a ﬁnal diﬀerence representation for undefended, WTF- can be placed in the Tor directory server. When a user requests relay
+PAD, FRONT, Surakav, and PEZD datasets. The DS-19 dataset is used for information from the Tor directory server, the location information of
+the experiments. Cosine distances are shown in Fig. 14. the dummy packet is sent to the user along with the relay information.
+ The cosine distance between traﬃc traces of the same website for Alternatively, the traﬃc trace pool can be placed within clients and Tor
+PEZD is larger than for FRONT, WTF-PAD, AAP, TBP, FRONT-U, and bridges to generate dummy packet location information. In addition, we
+Surakav. Speciﬁcally, the cosine distance of PEZD is 0.16, 0.17, 0.18, can utilize existing tools such as Tor Browser Selenium [51], which is a
+0.14, 0.11, and 0.07 higher than that of FRONT, WTF-PAD, AAP, TBP, Python library that allows for automated operation of the Tor Browser
+FRONT-U, and Surakav, respectively. Signiﬁcant diﬀerences between using selenium drivers. Furthermore, collecting these traﬃc traces does
+traﬃc traces of the website can hinder attackers from discovering unique not impose a signiﬁcant network burden on the Tor network. Tor is used
+patterns in the website. by millions of people every day, and some websites need to handle mil-
+ In addition, we use the non-linear dimensionality reduction algo- lions of requests, while we only need to collect 10,000 traﬃc traces.
+rithm t-SNE [50] to visualize the eﬀect of defenses on the inter-websites. Furthermore, our study also shows that these collected traces do not
+T-SNE embeds high-dimensional features into a low-dimensional space. need to be updated frequently.
+We map each traﬃc trace to a 2D space, as shown in Fig. 15. We can Implementation cost: PEZD only needs to use less than 2 KB of data
+observe that website categories are clearly separated for the undefended to describe the extracted location information, which is very feasible for
+traﬃc, and traﬃc traces from the same website exhibit cohesion. In con- Tor. Tor client needs to load about 8 MB of data when starting up Tor for
+trast, PEZD greatly disrupts the clustering of the same website, with a relay discovery [28]. In addition, we calculate that the computational
+haphazard distribution of traﬃc traces. On the other hand, WTF-PAD, cost required to extract all dummy packet location information on a CPU
+FRONT, Surakav, AAP, TBP, and FRONT-U fail to disperse the traf- (Intel(R) Core(TM) i7-12700H laptop) is about 0.06 milliseconds. Note
+ﬁc traces completely, and some traﬃc traces from the same website that the Tor directory server can generate location information before
+continue to exhibit aggregation. Speciﬁcally, for WTF-PAD, Surakav, the user requests it, which does not add latency. In contrast, Surakav re-
+FRONT, and TBP, the traﬃc traces of label 32 demonstrate cohesion. quires some 186 milliseconds to generate reference traﬃc traces on the
+Furthermore, for Surakav, traﬃc traces labeled 50, and 78 exhibit strong same CPU. In terms of computational overhead, PEZD is 3000× lower
+cohesion. While for FRONT, it is more obvious that traﬃc traces from than Surakav. In addition, the generation and removal of dummy packthe same category are aggregated. ets operate at the network layer. In practical implementation, this pro-
+ To understand how PEZD aﬀects the feature importance in the clas- cess can be facilitated by leveraging obfs4proxy [52], a pluggable transsiﬁer’s decision-making process, we conducted a LIME analysis (see Ap- port [53] protocol provided by Tor. It is important to note that these
+pendix A). dummy packets do not impact real network communication.
+
+6.2. PEZD traﬃc trace pool maintenance 6.4. Limitations and future work
+
+ PEZD requires collecting traﬃc traces to generate defense informa- With the application of DNN models to WF attacks, most DNN-based
+tion, whether the traﬃc traces in the traﬃc trace pool need to be up- attacks use only the packet direction sequences as the input to models.
+
+ 11
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+Fig. 15. T-SNE visualization for undefended, WTF-PAD, FRONT, Surakav, AAP, TBP, FRONT-U, and PEZD. Each color represents one website class. The number
+indicates the label in the dataset.
+
+This also leads most defenses to focus only on the direction of packets, PEZD oﬀers better protection performance than FRONT, WTF-PAD, and
+ignoring packet timing information [18,22–25,28,29,45]. Some recent Surakav with similar overhead. In the closed-world setting, it reduces
+works [10,13] utilize the timing features of packets to identify the web- the accuracy of the state-of-the-art attack, Var-CNN, from 97.56 % to
+sites visited by users. Intuitively, PEZD injection of dummy packets does 19.39 %, while FRONT only reduces it to 82.92 %, WTF-PAD to 93.93 %
+destroy the timing features of traﬃc traces. However, PEZD cannot gen- and Surakav to 69.93 %. In the open-world setting, PEZD also shows
+erate accurate dummy packet timestamps. As a result, it cannot be evalu- lower precision and recall than FRONT, WTF-PAD, and Surakav. Furated for its eﬀectiveness in defending against WF attacks that use timing thermore, PEZD supports the injection of dummy packets only on the
+features. Although our current defense cannot be directly applied to WF client-side for eﬀective defense. In addition, we also show that PEZD
+attacks utilizing timing features, extensions to address such attacks can does not require signiﬁcant eﬀort to maintain during deployment.
+be developed by optimizing the transmission timing of dummy packets or by incorporating the Adaptive Padding [39] algorithm to disrupt CRediT authorship contribution statement
+timing features. Future work will investigate the joint perturbation of
+packet direction and timing features. Hengheng Xiong: Data curation, Conceptualization, Formal analy-
+ Additionally, some traditional attacks also use burst features as the sis, Methodology; Dapeng Man: Supervision; Huanran Wang: Writing
+feature set [6]. While not explicitly designed to do so, PEZD does impact – review & editing; Jingwen Tan: Writing – review & editing; Jiguang
+burst features to some extent. The addition of dummy packets increases Lv: Writing – review & editing; Wu Yang: Supervision.
+the size of existing bursts in the original traﬃc and creates new burst
+features. For stronger perturbation burst features, we can extend our Data availability
+approach to disrupt the feature by modifying a previous single dummy
+packet location to send dummy packets at successive locations in the Data will be made available on request.
+same direction.
+ Finally, although previous probability-based methods for generating Declaration of competing interest
+dummy packets with diﬀerent distributions have not been signiﬁcantly
+successful, this does not preclude the possibility that probability can The authors declare that they have no known competing ﬁnancial
+be used in conjunction with or in place of our method to further en- interests or personal relationships that could have appeared to inﬂuence
+hance defense performance. We remain open to exploring probabilistic the work reported in this paper.
+approaches in our future work.
+ Acknowledgements
+7. Conclusion
+ This project was supported by National Key R&D Program of China
+ In this paper, we propose PEZD, a practical and eﬀective zero-delay (Grant No. 2021YFB3101401), Natural Science Foundation of Heidefense. PEZD aims to hinder attackers from discerning a website’s longjiang Province of China (Grant No. TD2022F001), Joint Funds of
+unique patterns by injecting dummy packets with diverse distributions the National Natural Science Foundation of China (Grant No. U2003206,
+into the traﬃc. It exploits the distribution of outgoing packets from dif- No. U20B2048, No. U21B2019, No. U22A2036), National Natural Sciferent websites to randomize the distribution of added dummy packets. ence Foundation of China (Grant No. 62272127).
+
+ 12
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+Fig. A.1. Visualization of the number of important features within intervals. The number of feature importance indicates how many signiﬁcant features fall within
+an interval, with each interval having a length of 1000.
+
+Appendix A. Analyzing PEZD Using LIME [8] A. Panchenko, F. Lanze, J. Pennekamp, T. Engel, A. Zinnen, M. Henze, K. Wehrle,
+ Website ﬁngerprinting at internet scale, in: 23rd Annual Network and Distributed
+ System Security Symposium, NDSS 2016, San Diego, California, USA, February 21-
+ We randomly selected six samples from category 8 to showcase the 24, 2016, The Internet Society, 2016.
+LIME results. For each traﬃc trace, we considered individual packets [9] P. Sirinam, M. Imani, M. Juarez, M. Wright, Deep ﬁngerprinting: undermining
+(+1 or −1) as features and analyzed the range of the top 100 most website ﬁngerprinting defenses with deep learning, in: Proceedings of the 2018
+ ACM SIGSAC Conference on Computer and Communications Security, CCS 2018,
+important features, as shown in Fig. A.1. Toronto, ON, Canada, October 15-19, 2018, ACM, 2018, pp. 1928–1943. https:
+ The LIME analysis reveals a stark contrast between undefended and //doi.org/10.1145/3243734.3243768
+PEZD-defended traﬃc. For undefended traﬃc, 80 % of the most im- [10] S. Bhat, D. Lu, A. Kwon, S. Devadas, Var-CNN: a data-eﬃcient website ﬁngerprinting attack based on deep learning, Proc. Priv. Enhancing Technol. 2019 (4) (2019)
+portant features are concentrated within the ﬁrst 1000 packets. This 292–310. https://doi.org/10.2478/POPETS-2019-0070
+observation clearly indicates that website ﬁngerprinting attacks pre- [11] V. Rimmer, D. Preuveneers, M. Juarez, T. van Goethem, W. Joosen, Automated webdominantly rely on the header features of the traﬃc. In contrast, traﬃc site ﬁngerprinting through deep learning, in: 25th Annual Network and Distributed
+ System Security Symposium, NDSS 2018, San Diego, California, USA, February 18-
+defended by PEZD shows no discernible trend of dependence on speciﬁc
+ 21, 2018, The Internet Society, 2018.
+features. The distribution of the most important features varies signif- [12] D. Herrmann, R. Wendolsky, H. Federrath, Website ﬁngerprinting: attacking popuicantly across diﬀerent traﬃc traces. This reﬂects the eﬀectiveness of lar privacy enhancing technologies with the multinomial naïve-bayes classiﬁer, in:
+PEZD from the side, that is, it is diﬃcult for the model to learn the Proceedings of the First ACM Cloud Computing Security Workshop, CCSW 2009,
+ Chicago, IL, USA, November 13, 2009, ACM, 2009, pp. 31–42. https://doi.org/10.
+speciﬁc features of traﬃc to generalize to other traﬃc sequences in the 1145/1655008.1655013
+same category. [13] M.S. Rahman, P. Sirinam, N. Mathews, K.G. Gangadhara, M. Wright, Tik-Tok: the
+ utility of packet timing in website ﬁngerprinting attacks, Proc. Privacy Enhanc.
+ Technol. 2020 (3) (2020) 5–24. https://doi.org/10.2478/POPETS-2020-0043
+References [14] R. Nithyanand, X. Cai, R. Johnson, Glove: a bespoke website ﬁngerprinting defense,
+ in: Proceedings of the 13th Workshop on Privacy in the Electronic Society, WPES
+ [1] R. Dingledine, N. Mathewson, P.F. Syverson, Tor: the second-generation onion 2014, Scottsdale, AZ, USA, November 3, 2014, ACM, 2014, pp. 131–134. https:
+ router, in: Proceedings of the 13th USENIX Security Symposium, August 9-13, 2004, //doi.org/10.1145/2665943.2665950
+ San Diego, CA, USA, USENIX, 2004, pp. 303–320. [15] C.V. Wright, S.E. Coull, F. Monrose, Traﬃc morphing: an eﬃcient defense against
+ [2] A. Mani, T. Wilson-Brown, R. Jansen, A. Johnson, M. Sherr, Understanding tor usage statistical traﬃc analysis, in: Proceedings of the Network and Distributed System
+ with privacy-preserving measurement, in: Proceedings of the Internet Measurement Security Symposium, NDSS 2009, San Diego, California, USA, 8th February - 11th
+ Conference 2018, IMC 2018, Boston, MA, USA, October 31 - November 02, 2018, February 2009, The Internet Society, 2009.
+ ACM, 2018, pp. 175–187. [16] X. Luo, P. Zhou, E.W.W. Chan, W. Lee, R.K.C. Chang, R. Perdisci, HTTPOS: sealing
+ [3] Tor Project, Users - tor metrics, https://metrics.torproject.org/userstats-relay- information leaks with browser-side obfuscation of encrypted ﬂows, in: Proceedcountry.html, Last accessed on 2023-05-06. ings of the Network and Distributed System Security Symposium, NDSS 2011, San
+ [4] X. Cai, X.C. Zhang, B. Joshi, R. Johnson, Touching from a distance: website ﬁnger- Diego, California, USA, 6th February - 9th February 2011, The Internet Society,
+ printing attacks and defenses, in: Proceedings of the 2012 ACM Conference on Com- 2011.
+ puter and Communications Security, CCS ’12, Association for Computing Machinery, [17] M. Juarez, M. Imani, M. Perry, C. Díaz, M. Wright, Toward an eﬃcient website
+ New York, NY, USA, 2012, p. 605–616. https://doi.org/10.1145/2382196.2382260 ﬁngerprinting defense, in: Computer Security - ESORICS 2016 - 21st European Sym-
+ [5] T. Wang, I. Goldberg, Improved website ﬁngerprinting on Tor, in: Proceedings of posium on Research in Computer Security, Heraklion, Greece, September 26-30,
+ the 12th annual ACM Workshop on Privacy in the Electronic Society, WPES 2013, 2016, Proceedings, Part I, 9878 of Lecture Notes in Computer Science, Springer, 2016,
+ Berlin, Germany, November 4, 2013, ACM, 2013, pp. 201–212. https://doi.org/10. pp. 27–46. https://doi.org/10.1007/978-3-319-45744-4_2
+ 1145/2517840.2517851 [18] M.S. Rahman, M. Imani, N. Mathews, M. Wright, Mockingbird: defending against
+ [6] T. Wang, X. Cai, R. Nithyanand, R. Johnson, I. Goldberg, Eﬀective attacks and prov- deep-learning-based website ﬁngerprinting attacks with adversarial traces, IEEE
+ able defenses for website ﬁngerprinting, in: Proceedings of the 23rd USENIX Security Trans. Inf. Forensics Secur. 16 (2021) 1594–1609. https://doi.org/10.1109/TIFS.
+ Symposium, San Diego, CA, USA, August 20-22, 2014, USENIX Association, 2014, 2020.3039691
+ pp. 143–157. [19] K.P. Dyer, S.E. Coull, T. Ristenpart, T. Shrimpton, Peek-a-boo, I still see you: why
+ [7] J. Hayes, G. Danezis, k-Fingerprinting: a robust scalable website ﬁngerprinting tech- eﬃcient traﬃc analysis countermeasures fail, in: IEEE Symposium on Security and
+ nique, in: 25th USENIX Security Symposium, USENIX Security 16, Austin, TX, USA, Privacy, SP 2012, 21-23 May 2012, San Francisco, California, USA, IEEE Computer
+ August 10-12, 2016, USENIX Association, 2016, pp. 1187–1203. Society, 2012, pp. 332–346. https://doi.org/10.1109/SP.2012.28
+
+ 13
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+[20] X. Cai, R. Nithyanand, T. Wang, R. Johnson, I. Goldberg, A systematic approach [42] S. Henri, G. Garcia-Aviles, P. Serrano, A. Banchs, P. Thiran, Protecting against
+ to developing and evaluating website ﬁngerprinting defenses, in: G. Ahn, M. Yung, website ﬁngerprinting with multihoming, Proc. Privacy Enhanc. Technol. 2020 (2)
+ N. Li (Eds.), Proceedings of the 2014 ACM SIGSAC Conference on Computer and (2020) 89–110. https://doi.org/10.2478/POPETS-2020-0019
+ Communications Security, Scottsdale, AZ, USA, November 3-7, 2014, ACM, 2014, [43] M. Wang, A. Kulshrestha, L. Wang, P. Mittal, Leveraging strategic connection
+ pp. 227–238. https://doi.org/10.1145/2660267.2660362 migration-powered traﬃc splitting for privacy, Proc. Privacy Enhanc. Technol. 2022
+[21] X. Cai, R. Nithyanand, R. Johnson, CS-BuFLO: a congestion sensitive website ﬁn- (3) (2022) 498–515. https://doi.org/10.56553/POPETS-2022-0083
+ gerprinting defense, in: Proceedings of the 13th Workshop on Privacy in the Elec- [44] M. Juarez, S. Afroz, G. Acar, C. Díaz, R. Greenstadt, A critical evaluation of webtronic Society, WPES 2014, Scottsdale, AZ, USA, November 3, 2014, ACM, 2014, site ﬁngerprinting attacks, in: Proceedings of the 2014 ACM SIGSAC Conference on
+ pp. 121–130. https://doi.org/10.1145/2665943.2665949 Computer and Communications Security, Scottsdale, AZ, USA, November 3-7, 2014,
+[22] A.M. Sadeghzadeh, B. Tajali, R. Jalili, AWA: adversarial website adaptation, IEEE ACM, 2014, pp. 263–274. https://doi.org/10.1145/2660267.2660368
+ Trans. Inf. Forensics Secur. 16 (2021) 3109–3122. https://doi.org/10.1109/TIFS. [45] A. Abusnaina, R. Jang, A. Khormali, D. Nyang, D. Mohaisen, DFD: adversarial
+ 2021.3074295 learning-based approach to defend against website ﬁngerprinting, in: 39th IEEE Con-
+[23] S. Shan, A.N. Bhagoji, H. Zheng, B.Y. Zhao, Patch-based defenses against web ﬁnger- ference on Computer Communications, INFOCOM 2020, Toronto, ON, Canada, July
+ printing attacks, in: AISec@CCS 2021: Proceedings of the 14th ACM Workshop on 6-9, 2020, IEEE, 2020, pp. 2459–2468. https://doi.org/10.1109/INFOCOM41043.
+ Artiﬁcial Intelligence and Security, Virtual Event, Republic of Korea, 15 November 2020.9155465
+ 2021, ACM, 2021, pp. 97–109. https://doi.org/10.1145/3474369.3486875 [46] G. Srivastava, R.H. Jhaveri, S. Bhattacharya, S. Pandya, Rajeswari, P.K.R. Mad-
+[24] D. Li, Y. Zhu, M. Chen, J. Wang, Minipatch: undermining DNN-based website ﬁn- dikunta, G. Yenduri, J.G. Hall, M. Alazab, T.R. Gadekallu, XAI for cybersecugerprinting with adversarial patches, IEEE Trans. Inf. Forensics Secur. 17 (2022) rity: state of the art, challenges, open issues and future directions, CoRR (2022).
+ 2437–2451. https://doi.org/10.1109/TIFS.2022.3186743 https://doi.org/10.48550/ARXIV.2206.03585
+[25] C. Hou, G. Gou, J. Shi, P. Fu, G. Xiong, WF-GAN: ﬁghting back against website [47] M.T. Ribeiro, S. Singh, C. Guestrin, “Why should I trust you?”: Explaining the pre-
+ ﬁngerprinting attack using adversarial learning, in: IEEE Symposium on Comput- dictions of any classiﬁer, in: Proceedings of the 22nd ACM SIGKDD International
+ ers and Communications, ISCC 2020, Rennes, France, July 7-10, 2020, IEEE, 2020, Conference on Knowledge Discovery and Data Mining, San Francisco, CA, USA, Aupp. 1–7. https://doi.org/10.1109/ISCC50000.2020.9219593 gust 13-17, 2016, ACM, 2016, pp. 1135–1144. https://doi.org/10.1145/2939672.
+[26] A. Panchenko, L. Niessen, A. Zinnen, T. Engel, Website ﬁngerprinting in onion rout- 2939778
+ ing based anonymization networks, in: Proceedings of the 10th Annual ACM Work- [48] Alexa, The Web Information Company, https://www.alexa.com, Last accessed on
+ shop on Privacy in the Electronic Society, WPES 2011, Chicago, IL, USA, October 2024-10-21.
+ 17, 2011, ACM, 2011, pp. 103–114. https://doi.org/10.1145/2046556.2046570 [49] J. Smith, L. Dolﬁ, P. Mittal, A. Perrig, QCSD: a QUIC client-side website-
+[27] J. Gong, T. Wang, Zero-delay lightweight defenses against website ﬁngerprinting, ﬁngerprinting defence framework, in: 31st USENIX Security Symposium, USENIX
+ in: 29th USENIX Security Symposium, USENIX Security 2020, August 12-14, 2020, Security 2022, Boston, MA, USA, August 10-12, 2022, USENIX Association, 2022,
+ USENIX Association, 2020, pp. 717–734. pp. 771–789.
+[28] T. Wang, I. Goldberg, Walkie-Talkie: an eﬃcient defense against passive web- [50] L. van der Maaten, G. Hinton, Visualizing data using t-SNE, J. Mach. Learn. Res. 9
+ site ﬁngerprinting attacks, in: 26th USENIX Security Symposium, USENIX Secu- (86) (2008) 2579–2605.
+ rity 2017, Vancouver, BC, Canada, August 16-18, 2017, USENIX Association, 2017, [51] G. Acar, M. Juarez, i. contributors, tor-browser-selenium - Tor Browser automation
+ pp. 1375–1390. with Selenium, 2023, (https://github.com/webfp/tor-browser-selenium).
+[29] M. Nasr, A. Bahramali, A. Houmansadr, Defeating DNN-based traﬃc analysis sys- [52] Yawning Angel, obfs4 - The obfourscator, https://github.com/Yawning/obfs4, Last
+ tems in real-time with blind adversarial perturbations, in: 30th USENIX Security accessed on 2024-10-21.
+ Symposium, USENIX Security 2021, August 11-13, 2021, USENIX Association, 2021, [53] Tor Project, pluggable transports, https://support.torproject.org/glossary/
+ pp. 2705–2722. pluggable-transports/, Last accessed on 2024-10-21.
+[30] J. Gong, W. Zhang, C. Zhang, T. Wang, Surakav: generating realistic traces for
+ a strong website ﬁngerprinting defense, in: 43rd IEEE Symposium on Security
+ and Privacy, SP 2022, San Francisco, CA, USA, May 22-26, 2022, IEEE, 2022,
+ pp. 1558–1573. https://doi.org/10.1109/SP46214.2022.9833722 Hengheng Xiong is currently pursuing the Ph.D. degree with
+[31] J.K. Holland, N. Hopper, RegulaTor: a straightforward website ﬁngerprinting de- the College of Computer Science and Technology, Harbin Enfense, Proceedings on Privacy Enhancing Technologies 2022 (2) (2022) 344–362. gineering University. His main research interests include nethttps://doi.org/10.2478/POPETS-2022-0049 work security and artiﬁcial intelligence security.
+[32] Y. Wang, Y. Wang, J.J. Huang, Y. Chen, TBP: tree structure burst-sequence padding
+ defense against website ﬁngerprinting, in: 2023 IEEE International Performance,
+ Computing, and Communications Conference (IPCCC), IEEE, 2023, pp. 99–108.
+[33] N. Mathews, J.K. Holland, S.E. Oh, M.S. Rahman, N. Hopper, M. Wright, SoK: a critical evaluation of eﬃcient website ﬁngerprinting defenses, in: 44th IEEE Symposium
+ on Security and Privacy, SP 2023, San Francisco, CA, USA, May 21-25, 2023, IEEE,
+ 2023, pp. 969–986. https://doi.org/10.1109/SP46215.2023.10179289
+[34] L. Qiao, B. Wu, S. Yin, H. Li, W. Yuan, X. Luo, Resisting DNN-based website ﬁngerprinting attacks enhanced by adversarial training, IEEE Trans. Inform. Forensics
+ Secur. 18 (2023) 5375–5386. https://doi.org/10.1109/TIFS.2023.3304528
+[35] T. Dahanayaka, G. Jourjon, S. Seneviratne, Dissecting traﬃc ﬁngerprinting CNNs
+ Dapeng Man received the B.S. and M.S. and Ph.D. degrees
+ with ﬁlter activations, Comput. Netw. 206 (2022) 108770. https://doi.org/10.
+ in computer science and technology from Harbin Engineering
+ 1016/J.COMNET.2022.108770
+ University in 2003, 2007 and 2009. He is currently an pro-
+[36] Z. Yang, X. Xiao, B. Zhang, G. Hu, Q. Li, Q. Liu, AAP: defending against website
+ fessor in Harbin Engineering University. His main research
+ ﬁngerprinting through burst obfuscation, in: International Conference on Advanced
+ interests include mobile computing security and IoT security.
+ Data Mining and Applications, Springer, 2023, pp. 107–121.
+ He is a Member of CCF.
+[37] K. He, X. Zhang, S. Ren, J. Sun, Deep residual learning for image recognition, in:
+ 2016 IEEE Conference on Computer Vision and Pattern Recognition, CVPR 2016,
+ Las Vegas, NV, USA, June 27-30, 2016, IEEE Computer Society, 2016, pp. 770–778.
+ https://doi.org/10.1109/CVPR.2016.90
+[38] X. Gu, B. Song, W. Lan, M. Yang, An online website ﬁngerprinting defense based
+ on the non-targeted adversarial patch, Tsinghua Sci. Technol. 28 (6) (2023)
+ 1148–1159. https://doi.org/10.26599/TST.2023.9010062
+[39] V. Shmatikov, M. Wang, Timing analysis in low-latency mix networks: attacks and
+ defenses, in: Computer Security - ESORICS 2006, 11th European Symposium on
+ Research in Computer Security, Hamburg, Germany, September 18-20, 2006, Pro- Huanran Wang received the bachelor’s degree from the
+ ceedings, 4189 of Lecture Notes in Computer Science, Springer, 2006, pp. 18–33. School of Information Science and Technology, Southwest
+ https://doi.org/10.1007/11863908_2 Jiaotong University, Chengdu, China, in 2011, and the mas-
+[40] M Perry, G Kadianakis, Circuit padding developer documentation, https://github. ter’s degree from the School of Computer Science and Techcom/torproject/tor/blob/main/doc/HACKING/CircuitPaddingDevelopment.md, nology, Harbin Institute of Technology, Harbin, China, in
+ Last accessed on 2023-05-06. 2016. He is currently an associate professor in Harbin Engi-
+[41] W. De la Cadena, A. Mitseva, J. Hiller, J. Pennekamp, S. Reuter, J. Filter, T. En- neering University, Harbin Engineering University, Harbin,
+ gel, K. Wehrle, A. Panchenko, TraﬃcSliver: ﬁghting website ﬁngerprinting attacks China. His main research interests include social networks,
+ with traﬃc splitting, in: CCS ’20: 2020 ACM SIGSAC Conference on Computer and privacy preserving and representation learning.
+ Communications Security, Virtual Event, USA, November 9-13, 2020, ACM, 2020,
+ pp. 1971–1985. https://doi.org/10.1145/3372297.3423351
+
+ 14
+H. Xiong et al. Computer Networks 272 (2025) 111716
+
+ Jingwen Tan is currently pursuing the Ph.D. degree with the Wu Yang received a Ph.D. degree in Computer System Ar-
+ College of Computer Science and Technology, Harbin Engi- chitecture Specialty of Computer Science and Technology
+ neering University. Her main research interests include en- School from Harbin Institute of Technology. He is currently
+ crypted traﬃc classiﬁcation and website ﬁngerprinting. a professor and doctoral supervisor of Harbin Engineering
+ University. His main research interests include wireless sensor network, peer-to-peer network and information security.
+ He is a Member of ACM and Senior Member of CCF.
+
+ Jiguang Lv received the M.S. and Ph.D. degrees in computer
+ science and technology from Harbin Engineering University
+ in 2014 and 2018. He is currently an associate professor in
+ Harbin Engineering University. His main research interests
+ include mobile computing security and IoT security. He is a
+ Member of CCF.
+
+ 15

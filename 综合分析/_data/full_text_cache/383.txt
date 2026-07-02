@@ -1,0 +1,1021 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025 1955
+
+ Class Incremental Website Fingerprinting Attack
+ Based on Dynamic Expansion Architecture
+ Yali Yuan , Yangyang Du , and Guang Cheng , Member, IEEE
+
+ Abstract—Encrypted traffic on anonymizing networks is still at technique that identifies a specific website a user is visiting
+risk of being exposed to the Website Fingerprinting (WF) attack. by monitoring the user’s Internet traffic. Even if the traffic
+This attack can seriously threaten the online privacy of users of is encrypted, an attacker can infer which website a user is
+anonymity networks such as Tor. While deep-learning-based WF
+attacks achieve high accuracy in controlled experimental settings, visiting by the patterns and characteristics of the traffic.
+they cannot continuously learn after deployment. In real-world WF attacks are essentially multi-classification tasks.
+environments, new websites are constantly emerging, requiring Attackers collect traffic traces for each website, analyze
+attackers to expand their monitoring scope continuously. This features, and train classifiers. Traditional methods for WF
+necessitates attack models capable of continuous learning and attacks rely on manual feature extraction [8], [9], [10], [11],
+expanding classification capabilities. In this paper, we explore
+how attackers can leverage incremental class learning techniques requiring researchers to identify critical Web traffic features for
+to continuously learn new classes while retaining the ability to training classifiers. These manual methods are time-consuming
+distinguish old ones. This approach mitigates the catastrophic and do not cover all possible features, limiting their usability in
+forgetting problem in dynamic, open-world scenarios. We intro- practical applications. In contrast, deep learning methods [12],
+duce a new WF attack, Class Incremental Fingerprinting (CIF), [13], [14], [15] can automatically learn feature representations
+which employs a scalable architecture enabling Class Incremental
+Learning (CIL) with limited resources. We evaluate this attack in from data without manual feature selection and adjustment,
+various scenarios, such as learning 100, 200, and 500 monitored providing greater flexibility and improved generalization.
+website classes across 5 and 10 incremental tasks, achieving an Deep learning-based WF attacks have achieved high
+average accuracy of 97.8% and above. Additionally, we assess performance in classical experimental scenarios. However,
+the CIF attack’s effectiveness in open-world multi-classification they still face challenges in practical applications, and their
+scenarios and test it in few-shot settings using the proposed
+data augmentation method, Mixtam, achieving an average task real-world effectiveness has been questioned by some critiaccuracy of 87.6% and above with only 30 samples per class. cisms [16], [17], [18]. Enhancing the real-world applicability
+ of WF attacks and reducing reliance on idealized conditions
+ Index Terms—Tor, privacy, website fingerprinting, deep learning, class incremental learning. have emerged as critical focal points for research. Multi-tab
+ WF attacks [16], [19], [20] aim to overcome the single-page
+ assumption by addressing scenarios where users open multiple
+ I. I NTRODUCTION tabs within a short period, generating overlapping traffic traces.
+ ITH the rapid development of the Internet, the privacy Few-shot WF attacks [21], [22], [23] address the dependency
+W protection of users has become increasingly important.
+Over the past few decades, various anonymous communication
+ on large training datasets. Some related researches [24], [25]
+ focus on enhancing the robustness of the model to real-world
+systems have emerged, among which Onion Routing (Tor) [1] challenges.
+is the most popular. According to Tor’s metrics [2], three to According to the Tor Metric [26], the official metric tool
+five million active users utilize Tor to protect their privacy of the Tor Project, approximately 30,000 hidden services are
+every day. The Tor network employs multi-layer encryption published to the Tor network daily. As the number of weband relay switching to protect user privacy. User data passes sites a victim may visit increases, attackers must frequently
+through multiple relay nodes in the Tor network, each of expand their monitored websites, requiring WF attacks to
+which can only decrypt a single layer of information, making demonstrate continuous learning capabilities. However, current
+user identity and activities difficult to trace. However, the research has not addressed how to enhance WF attack models’
+Website Fingerprinting (WF) attack [3], [4], [5], [6], [7] is a continuous learning and adaptation in real-world open-world
+ settings, especially when adapting to new websites under
+ Received 13 May 2024; revised 4 November 2024 and 29 January 2025; limited computational and storage resources. Conventional
+accepted 31 January 2025. Date of publication 20 February 2025; date of
+current version 22 April 2025. This work was supported in part by the
+ deep learning-based WF attacks [12], [13], [15] use pre-
+Natural Science Foundation of Jiangsu Province (Grant No. SBK2023041256) collected data from a large set of target websites to train
+and in part by the National Natural Science Foundation of China (Grant a complex model capable of recognizing all sample classes
+No. 62302097). The associate editor coordinating the review of this article
+and approving it for publication was M. Conti. (Corresponding author: Guang
+ simultaneously. However, such a model can only generalize to
+Cheng.) known classes.
+ The authors are with the School of Cyber Science and Engineering, Updating the model with data from new classes results in
+Southeast University, Nanjing 211189, China (e-mail: chengguang@
+seu.edu.cn).
+ catastrophic forgetting [27], which erodes the discriminative
+ Digital Object Identifier 10.1109/TNSM.2025.3538895 power of previously learned classes. Re-training the model
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+1956 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+from scratch incurs significant time and storage costs. Class
+incremental learning (CIL) in deep learning is uniquely suited
+to processing continuous information streams in real-world
+scenarios. It effectively absorbs new knowledge while adeptly
+retaining and optimizing previously acquired knowledge. With
+CIL, the attack model can acquire the ability to categorize
+ Fig. 1. The threat model of WF attacks.
+traffic from new websites without compromising its discriminative power over existing website classes. as well as information about related work in Section III. We
+ In this paper, we based on a dynamically scaling archi- describe the proposed method in detail in Section IV and evaltecture [28], [29], [30], [31] propose a new WF attack uate the proposed method experimentally in multiple scenarios
+method, Class Incremental Fingerprinting (CIF). Our method- in Section V. In Section VI, we discuss the limitations of
+ology enables attackers to enhance their attack model’s the study as well as future directions. Finally, the work is
+generalization capacity progressively. By retraining on new summarized in Section VII.
+class traffic samples without retaining complete datasets of
+previous classes, this process prevents catastrophic forgetting II. T HREAT M ODEL
+of previously learned knowledge. Consequently, the model can
+adapt effectively to real-world, open, and evolving network Tor is a widely used anonymous communication network.
+environments, even under limited computational and storage Users access the Onion Network through the free Onion
+resources. Browser to browse websites while protecting their personal
+ Previous WF studies have not considered dynamically information. However, attackers can still compromise users’
+expanding site set scenarios. These methods are generally privacy by collecting traffic from monitored websites and
+evaluated in closed-world and open-world settings, neither utilizing Website Fingerprinting (WF) attack techniques to
+of which can simulate the dynamic, open-world environ- identify the websites users visit. As depicted in Fig. 1, akin to
+ments of real-world scenarios or evaluate the incremental site earlier WF attacks [8], [13], [32], within this threat model, the
+fingerprinting attack methods we propose. In response, we attacker is regarded as a localized passive observer. Positioned
+introduce two novel scenario settings: dynamic closed-world between the Tor client and the Tor ingress node (the access
+and dynamic open-world. point to the Tor network), this attacker is capable of monitoring
+ The main contributions of our work are: and logging network traffic without making any modifications
+ • We investigate the problem of WF attacks lacking
+ or injections. The attacker’s goal is to identify the specific
+ continuous expansion learning capabilities in real open websites visited by Tor users. Although traffic is encrypted
+ environments. To address this issue, we introduced through multiple layers of the Tor network, a WF attacker can
+ a class incremental learning method to enhance the still infer user behavior by analyzing features like timestamps
+ attack model’s practical application ability. This approach and packet sizes using machine learning.
+ enables attackers to continuously expand their monitoring Closed-world and open-world scenarios are frequently
+ scope across target websites without triggering catas- employed to evaluate WF attack methods [12], [32], [33]. The
+ trophic forgetting, while simultaneously not requiring a closed-world scenario restricts the user’s access to a subset of
+ significant increase in computational or memory resource websites defined by the attacker, constituting the monitored
+ consumption. sites. This scenario significantly differs from real-world con-
+ • We propose two new and more challenging scenarios
+ ditions, but it provides a simplified and effective environment
+ for evaluating CIF attacks: Dynamic closed-world and for analyzing and evaluating WF attack capabilities. The open-
+ Dynamic open-world. In these scenarios, the attacker can world scenario is more realistic, assuming a user can access
+ continuously expand the set of monitored sites to update both the monitored sites and those outside the attacker’s
+ the model’s identification and classification capabilities. scope, which form a substantial set of non-monitored sites. In
+ • We propose a new attack, Class Incremental
+ the open-world multi-classification scenario, the attacker must
+ Fingerprinting (CIF), for more realistic scenario determine if a traffic trace is part of the monitored set. If so, the
+ applications. Our attack employs the Dynamic Extension attacker must pinpoint the specific site within the monitored
+ Architecture (DEA) for CIL, which achieves an average set that the trace matches.
+ of 97.8% and above accuracy in dynamic closed-world Neither scenario allows dynamic scaling of monitored
+ incremental learning tasks and demonstrates effectiveness websites to simulate a real open environment. Therefore,
+ in open-world environments. we propose two scenarios, dynamic closed-world, and open-
+ • We evaluated the performance of the CIF attack through
+ world, to evaluate evolving WF attack scenarios.
+ a series of experiments. The experimental results show
+ that the CIF attack not only remains effective in dynamic III. BACKGROUND AND R ELATED W ORK
+ open-world scenarios but also effectively addresses the In the Tor network, messages are transmitted in fixed-size
+ challenge of few-shot incremental learning by combining units (512 bytes) and are padded with zeros if insufficient
+ with our proposed Mixtam data augmentation method. data is available [15], [16]. An attacker can analyze Tor’s
+ The rest of this paper is organized as follows: we introduce traffic patterns and extract features such as interval time
+the threat model in Section II and provide background and (IPD), direction, and packet size. These extracted features
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE 1957
+
+can then serve as inputs for training classifiers to identify then used to train a k-NN classifier for WF classification.
+the websites visited by users. Broadly, WF attack methods Experimental results demonstrate that the method performs
+discussed in the literature are categorized into two groups well with limited data and is transferable by re-training the
+based on feature extraction techniques: traditional WF attacks k-NN classifier with a new dataset. Zhou et al. [23] proposed
+that involve manual feature extraction and WF attacks that the Clustered WF Attack (CWFA) method, which utilizes the
+utilize deep learning for automated feature extraction. cluster assumption to efficiently perform the attack in the
+ Traditional website fingerprinting attack methods. presence of limited training data. NetCLR [39] employs self-
+The earliest related research was conducted by Herrmann supervised contrastive learning to augment Tor network traces,
+et al. (2009) [34], achieving an accuracy of merely 2.96%. achieving robust WF accuracy and high transferability without
+Wang et al. [11] proposed a WF attack based on a man- relying on extensive labeled data.
+ually extracted feature set, applying a k-NN classifier with Data augmentation techniques can also reduce reliance on
+feature weighting to emphasize the most important features. large labeled datasets. Chen et al. [22] put forward a harmo-
+Pachinko et al. [33] introduced the CUMUL method, which nized data augmentation (HDA) method. This method utilizes
+accumulates Tor unit-sampling features and uses a Support both within-sample and between-sample transformations to
+Vector Machine (SVM) classifier to achieve a higher accuracy expand small training datasets. Additionally, Chen et al.
+( 91.38%) in a closed-world setting. Moreover, Hayes and [40] introduced the TForm-RF algorithm, which generates
+Danezis [32] created the k-fingerprinting ( k-FP) technique. augmented traffic traces by extracting and randomizing traffic
+This technique integrates a random decision forest and a patterns from cell sequences, outperforming HDA in effectivekkk-nearest neighbor k-NN classifier to make use of a substan- ness.
+tial collection of statistical features, showing high accuracy. Several studies have explicitly addressed the challenge of
+While these traditional approaches based on machine learning mixing multi-Web page traffic in WF attacks. These works
+techniques, such as SVM, (k-NN), and Random Forest, have [6], [19], [20], [41], [42] propose methods for segmenting and
+achieved notable success, their reliance on hand-designed identifying traffic that combines tags from multiple Web pages.
+features and the lack of effective interaction between feature Additionally, Cherubin et al. [18] introduced a novel threat
+representation and classifier models have constrained their model that evaluates the practical effectiveness of WF attacks
+overall performance. on the Tor network. This model leverages real Tor exit node
+ Deep website fingerprinting attack methods. Researchers traffic data and employs the TF approach to simulate more
+have explored applying deep learning to WF attacks, inspired realistic attack scenarios.
+by its success in computer vision, natural language process- Website fingerprinting Defenses. In addressing the chaling, and other fields. Deep learning methods enable direct lenge of WF attacks, the research community has explored and
+end-to-end feature learning from raw data, removing the developed a variety of defense methods [3], [35], [43], [44],
+need for manual feature engineering. Rimmer et al. [12] [45], [46], [47].
+employed only directional sequences from traffic traces as One defense strategy actively modifies the temporal and
+inputs and utilized three types of deep networks (SDAE, quantitative characteristics of communication traffic to com-
+CNN, and LSTM) to achieve 96% classification accuracy plicate the correlation with specific website activities. Early
+in a closed-world scenario. Sirinam et al. [13] put forward attempts, such as BuFLO [48], CS-BuFLO [46], and Tamaraw
+the Deep Fingerprinting (DF) attack approach relying on a [3], were effective in creating barriers to WF attacks but
+more intricate CNN structure DF also used only directional incurred significant bandwidth and time overheads due to
+sequences as inputs, achieving 98% accuracy in closed-world fixed-rate packet delivery, adversely affecting user experience.
+scenarios and effectively bypassing WTF-PAD defenses [35]. Subsequent research has sought to balance overhead reduc-
+Bhat et al. [36] developed the Var-CNN model using Dilated tion with defense effectiveness. For example, WTF-PAD [35]
+Causal Convolutions on ResNets, demonstrating superior utilizes an adaptive approach to insert virtual packets during
+performance with few-shot training samples compared to DF. natural gaps in the actual data transmission, achieving a
+Deng et al. [37] proposed Holmes, a model using tempo- defense with zero time overhead. Front [49] also employs
+ral and spatial distribution analysis to enhance WF attacks a zero-latency design that utilizes timestamps generated by
+on partial traffic, achieving notable improvements in early- the Rayleigh distribution to guide the embedding of the
+stage traffic recognition under dynamic network conditions. virtual packets. Walkie-Talkie [50] innovatively employs a
+Attarian et al. [38] proposed a method that focuses on the first half-duplex communication model, where the target-site data
+part of the tracked packets, achieving high preprocessing and packets are mixed with non-target-site data, increasing the
+classification efficiency while highlighting the critical role of difficulty of identification for attackers. RegulaTor [51] minidirectional information in website detection. mizes time and bandwidth overheads through a well-designed
+ Few-shot website fingerprinting attack methods. Many packet-peaking adjustment strategy while maintaining defense
+researchers have proposed few-shot learning methods to efficiency. TrafficSliver [52] offers another approach by
+overcome the limitation of requiring large labeled training reconfiguring network architecture or employing client-side
+datasets and enhance the effectiveness of WF attacks in real- multiplexing, which reduces traffic exposure at single obserworld scenarios. Siriam proposed the Triplet Fingerprinting vation points without directly consuming bandwidth or time
+(TF) [21] attack, which first trains a CNN model for feature resources. More recent defenses, such as Surakav [53] and
+extraction using a large dataset. The extracted features are Palette [54], enhance protection by leveraging dynamic traffic
+1958 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+patterns and clustering techniques. Surakav employs GANs to the label sets at different steps are mutually exclusive, i.e.,
+generate adaptive, realistic traffic patterns, while Palette clus- Wi ∩ Wj = ∅ for any i = j . The model learns all class
+ters similar traffic patterns into uniform groups, obfuscating knowledge over T steps. At step T, the incoming training
+traffic within each cluster and reducing identification risks. dataset is Dt = {(x1t , y1t ), . . . , (xnt , ynt )}, where xit denotes the
+ In addition to these traffic obfuscation approaches, adversar- i-th input traffic trace, yit ∈ Wt is its corresponding label, and
+ial perturbations present another class of defense mechanisms. n is the number of training samples. The goal of the model is
+By introducing carefully crafted noise into the data, these to accurately predict all classes in W. This requires learning
+methods aim to mislead deep learning models and hinder new class knowledge from step T data Dt while retaining
+accurate classification. Typically, they [55], [56], [57], [58], previously learned knowledge from {D1 , . . . , Dt−1 }.
+[59] employ specialized loss functions to reshape distances in To achieve this, our approach adopts a rehearsal stratthe feature space, offering alternative insights into the design egy [27], [74], which saves representative class samples as a
+of effective defenses. However, such approaches often require memory Mt within a fixed-size budget for subsequent training
+full trace data to compute the necessary perturbations and tasks. An iterative method selects samples based on the mean
+have shown limited effectiveness against adversarially trained of the class feature space, ensuring an even distribution across
+models [60]. the dataset and retaining representative samples for each class.
+ Class incremental learning. Class incremental learn- In contrast, the non-rehearsal setting prohibits using data from
+ing (CIL) is a crucial branch of artificial intelligence that previous tasks.
+addresses the challenges of learning new classes. This
+approach ensures continuous knowledge accumulation without B. Class Incremental Learning Architecture
+forgetting previous information. In recent years, incremental
+ We propose a model architecture tailored for increlearning has achieved remarkable results in diverse fields,
+ mental learning of WF attacks, inspired by previous
+including computer vision [61], [62], [63], natural language
+ works [28], [29], [30]. The dynamic expansion framework
+processing [64], [65], and robotics [66], [67]. With rapid
+ (CIF) incrementally adds feature extractors and classifiers to
+development, numerous approaches have emerged and can be
+ handle progressively increasing classification tasks. At each
+classified into three categories: data-centric, model-centric, and
+ incremental learning stage, feature extractors generate feature
+algorithm-centric.
+ maps, which are enhanced through a fusion module employing
+ Data-centric approaches for mitigating forgetting rely heavthe SE (Squeeze and Excitation) mechanism to highlight
+ily on additional data. For instance, GDumb [68] enables
+ critical features selectively. To address forgetting, CIF employs
+data replay to retain previous knowledge, while EWC [69]
+ knowledge distillation to integrate newly learned and existing
+applies regularization to restrict parameter updates and
+ knowledge. Furthermore, CIF uses a re-scoring mechanism
+ensure retention of learned tasks. FOSTER [70] uses model
+ to dynamically adjust classifier outputs, ensuring balanced
+extension strategies, dynamically adding new modules to
+ performance between new and old classes. Finally, the loss
+slow catastrophic forgetting, while integrating methods to
+ function combines cross-entropy loss, knowledge distillation
+reduce redundancy. Parameter regularization techniques like
+ loss, and re-scoring loss to ensure effective learning of new
+LWF [71] maintain performance on old tasks while acquiring
+ tasks while retaining previously acquired knowledge.
+new knowledge through customized loss functions.
+ It is shown in Fig. 2. The architecture is roughly divided
+ Algorithm-centric approaches focus on knowledge transfer
+ into two phases in each CIL step:
+and model-tuning techniques. LUCIR [72] uses old model
+ • First phase. The data for the current task is input into
+predictions as soft labels for knowledge distillation, reducing
+ the feature extractor to generate the corresponding feature
+forgetting. In contrast, DER++ [73] combines replay buffermaps. During subsequent learning steps, these feature
+ing and knowledge distillation to optimize the update process,
+ maps are fused with those produced by the old feature
+significantly suppressing forgetting.
+ extractor. This fusion effectively integrates new and old
+ task knowledge, ensuring a comprehensive representation
+ IV. CIF ATTACK M ETHOD that supports subsequent classification and recognition
+ This section details the proposed CIF attack. We first tasks.
+introduce the WF CIL problem setup and provide an overview • Second phase. Feature maps are processed by the SE
+of the methodology. Next, we describe the dynamic extension attention model, which automatically learns feature chanarchitecture for CIL, including the feature extractor, attention nel weights to enhance informative features and suppress
+module, and knowledge distillation mechanism. Finally, we irrelevant ones. Following this, the classifier re-scoring
+explain the data enhancement technique used in the few-shot mechanism refines the ordering and scores of the clas-
+CIL scenario. sifier outputs, improving the model’s output quality and
+ adaptability to diverse task requirements.
+ Basic Architecture. The initial feature extractor F1 and
+A. Problem Setup and Method Overview classifier Clf1 are trained on CIF following standard incremen-
+ In the WF scenario, the CIL process assumes T batches of tal learning methods [28], [75]. During the first step, only the
+traffic fingerprint data {D1 , . . . , DT }. The label space of the classification loss Lclf , computed using cross-entropy, is used
+model at step T is defined as W t = t Wi , where Wi to train both the feature extractor and the classifier. Assuming a
+ i=1
+represents all labels in the dataset Di at step i. Additionally, total of n CIL steps, at each incremental step t ∈ {2, . . . , N }, a
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE 1959
+
+Fig. 2. An illustrative framework of the proposed CIF. It incrementally adds task-specific feature extractors and classifiers, enhances features using the SE
+mechanism, and balances new and old task performance via knowledge distillation and a re-scoring mechanism.
+
+new feature extractor Ft and classifier Clft are introduced. The the arg max function is used to select the website class label
+parameters of the existing feature extractors {F1 , . . . , Ft−1 } with the highest probability as the prediction result ŷ.
+and the previous classifier Clft−1 remain unchanged, while Knowledge Distillation (KD). Knowledge distillation
+Clft is initialized using Clft−1 . (KD) [29], [76] is an effective technique for supporting incre-
+ For each incremental step, the newly added feature extractor mental learning tasks. In our approach, KD is applied to
+Ft learns knowledge from the current training data Dt and prevent catastrophic forgetting of previously acquired knowlthe fused features vt−1 derived at step t−1 via knowledge edge while accommodating new information, thus facilitating
+distillation. Specifically, the fusion feature vt for traffic trace the accumulation and integration of knowledge across distinct
+x (where x ∈ {D1 , . . . , Dt }) is obtained by concatenating fea- tasks. KD consists of two components: feature-level and logitture vectors from all feature extractors. For a given x, features level knowledge distillation. These components are applied
+are extracted from all feature extractors and concatenated to to the new feature extractor Ft and classifier Clft at each
+produce vt , as shown below: incremental step to help them better differentiate between old
+ and new classes and consolidate knowledge from previous
+ vt = [F1 (x ), . . . , Ft (x )]. (1) tasks.
+ Feature-level knowledge distillation guides the training of
+ For the fused features vt , the feature fusion module St , the new feature extractor Ft by using the traffic trace and the
+based on the SE attention mechanism, enhances significant old feature extractor Ft−1 in the retained sample memory Mt
+features to obtain a stronger feature representation ftse . This as the teacher model. This strategy minimizes the difference
+enhanced representation is passed into the new classifier Clft , between the output features of Ft−1 and Ft , enabling Ft
+which produces the output logits lt (x ). During this process, to capture critical feature representations related to previous
+knowledge distillation guides Clft in preserving knowledge of tasks, rather than relying solely on data from new tasks. We
+the old classes. calculate the distance between the output features of Ft−1 and
+ A classifier re-scoring module is employed to avoid the Ft as the feature-level knowledge distillation loss:
+possibility that the newly introduced classifier Clft may be
+biased against the old classes during inference (since it is 
+  d 
+primarily trained using samples from the new class). This  (j ) 2
+ L (x ) = 
+ (j )
+ f F (x ) − F (x ) .
+ t t−1 (3)
+module mitigates class imbalance by adjusting the weight
+ j =1
+distributions between old and new classes at the end of each
+training step.
+ Finally, the re-scored logits lt (x ) are passed through a Logit-level knowledge distillation is performed by comsoftmax function to produce the final classification result ŷ for paring, for each traffic trace, the logits outputs lt (x ) and
+the traffic trace x. lt−1 (x ) from the classifiers Clft and Clft−1 , respectively. The
+ Kullback-Leibler (KL) divergence [76] is employed to measure
+ ŷ = arg max(Softmax(lt (x ))), (2) the discrepancy between the outputs of the two classifiers,
+1960 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+acting as the loss function to be minimized Excitation operation), which is achieved by utilizing the ReLU
+ activation function and another fully connected layer:
+ W̃t−1
+  pw (x )
+ Ll (x ) = pw (x ) log , (4) Fex (z , W ) = σ(W2 δ(W1 z )), (7)
+ qw (x )
+ w =1
+ l̂w (x )/T lw (x )/T
+ where W1 and W2 are the weight matrices of the MLP, δ
+where, qw (x ) = ŵet−1 l̂ (x )/T , pw (x ) = ŵet−1 l (x )/T , represents the ReLU activation function, and σ denotes the
+ j =1 ej j =1 ej
+ sigmoid activation function.
+T is the temperature scalar, which controls the decision-
+ Finally, the output feature map is weighted by channel-wise
+making process of the model so that it balances between
+ multiplication through the sigmoid function and combined
+determinism and stochasticity. l̂w (x ) is an component
+ with the original input feature map using a residual structure.
+of lt−1 (x ). The vector lt−1 (x ) defined as lt−1 (x ) =
+ The overall feature fusion process of the SE attention module
+(l̂1 (x ), . . . , l̂w̃t−1 (x ))T , represents the logits of the clasis described as:
+sifier Clft−1 . lw (x ) is an element of lt (x ), lt (x ) =
+(l1 (x ), . . . , lw̃t−1 (x ), lw̃t−1 +1 (x ), . . . , lw̃t (x ))T denotes the fse (ut ) = σ(W2 δ(W1 z )) ⊗ ut + ut , (8)
+logits of the classifier Clft .
+ This process encourages Clft to closely replicate the proba- where ⊗ represents element-wise multiplication.
+bility distribution of the old class outputs generated by Clft−1 . The SE module enables the class incremental architecture
+By achieving this, knowledge transfer from the old tasks is to adaptively adjust the response of each channel, effectively
+facilitated, and the retention of previously learned knowledge enhancing the representation of useful features while suppressis preserved, effectively mitigating the effects of catastrophic ing irrelevant ones. This improves the feature expression and
+forgetting. Consequently, a feature-level knowledge distillation the ability to generalize the class incremental architecture.
+loss Lf (x ) and a logit-level knowledge distillation loss Ll (x ) Classifier Re-scoring (CR). In incremental learning, the
+are introduced, forming the overall dynamically balanced model tends to focus excessively on novel classes, resulting
+knowledge distillation loss Ld−kd : in output logits biased towards these newer classes. This bias
+  adversely impacts the model’s generalizability and its ability
+ epoch
+ Ld-kd = w1 Lf (x ) × min 1, to effectively transfer knowledge. To mitigate this issue, we
+ wwarm up employ the Classifier Re-scoring approach [78] to adjust the
+ x ∈R
+ 
+ +w2 Ll (x ), (5) scores assigned to both old and new classes. This mechanism
+ x ∈R∪Dt
+ begins by computing the weight norms of the classifier for
+ existing and newly introduced classes:
+where epoch denotes the current training epoch, and wwarmup   
+defines the duration of the warm-up phase. The feature-based    
+loss Lf (x ) increases in importance as training progresses, normold = tr θ1 θ1 , . . . , tr θW θ
+ t−1 Wt−1
+ ,
+with its contribution controlled by a dynamic weighting  
+mechanism that adjusts its influence based on the training normnew = 
+ tr θW θ ,...,
+epoch. In contrast, the logit-based loss Ll (x ) is applied t−1 +1 Wt−1 +1
+
+consistently throughout the training process, ensuring stability   
+in knowledge transfer across both current and past tasks. tr  θ
+ θW , (9)
+ t Wt
+This combined loss function updates the parameters of the
+feature extractors and classifiers during training, facilitating
+ Using the above norms, we compute the reweighting coefinformation propagation between old and new tasks. It enables
+ ficient γ for classifier re-scoring:
+the model to better distinguish the differences between classes
+in both the old and new tasks. Mean(normold )
+ γ= , (10)
+ SE Module (Squeeze-and-Excitation). Considering that Mean(normnew )
+the old feature extractor {F1 , . . . , Ft−1 }, trained before the
+new learning step, cannot effectively extract features for traffic where Mean(·) represents the mean value of the elements in
+traces from the new step {t, . . . , T }, the quality of extracted the vector. By applying the reweighting factor γ, the logits
+features is affected. To address this issue, we adopt the SE are adjusted to align the mean norm of the novel classes with
+attention module [77] to optimize the feature representation. that of the old classes. The logits l(x) of Clft are expressed
+Given the fused feature map ut ∈ RC ×H ×W as input, the SE as l (x ) = (lt−1 (x), lt (x)[W̃t−1 + 1, . . . , W̃t ]). The rectified
+attention mechanism first applies global average pooling (i.e., logits lre (x ) are then given by:
+the Squeeze operation) to compress the spatial dimensions and
+ lre (x ) = (lold (x ), γ · lnew (x )). (11)
+obtain the compressed feature vector z:
+ z = AvgPool(ut ). (6) Loss Function. The total training loss for WF CIL consists
+ of three components: the classification loss Lclf , computed
+ The compressed feature vector undergoes processing via using cross-entropy, the dynamically balanced knowledge
+a fully connected layer (MLP) to reduce its dimensionality. distillation loss Ld-kd , and the multi-class auxiliary loss LMH .
+This is succeeded by dimensionality enhancement (namely the The auxiliary loss LMH is inspired by previous CIL work [28]
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE 1961
+
+and is specifically designed to distinguish between old and
+new classes. It is defined as follows:
+   
+ 1  exp w y  · Ft (x )
+ LMH = − log |Y |+1 . (12)
+ |Dt | t
+ exp(w · Ft (x ))
+ x ∈Dt k =1 k
+
+ This formula guides the feature extractor Ft (x ) to learn
+discriminative features for both new and old classes. Here,
+Dt is the current training dataset, combining new data and Fig. 3. Mixtam Data Augmentation Workflow for Few-shot CIL Scenarios.
+memory data. The weight vector w y  corresponds to the
+adjusted label y  , where new classes retain their original labels D. Feature Extractor
+and old classes are mapped to a unified old class label. We use RF [25] as a feature extractor in a dynamically scal-
+The Softmax normalization term in the denominator ensures able architecture for WF attacks. The RF model is specifically
+the output is probabilistic. This loss term helps mitigate designed based on the CNN architecture, targeting the TAM
+catastrophic forgetting by encouraging the feature extractor to traffic representation method. Leveraging the construction of
+preserve knowledge from previous tasks while adapting to new TAM and a multi-level convolutional network structure, the
+ones. model effectively extracts local features in both the temporal
+ The total loss is formulated as: and spatial dimensions of the traffic flow. Furthermore, it
+ L = Lclf + Ld-kd + LMH . (13) refines robust features capable of resisting various defense
+ strategies.
+ Convolutional Blocks. In the model, 2D convolutional
+C. Data Representation blocks are initially applied to process the two-dimensional
+ Our approach utilizes a Traffic Aggregation Matrix input data, namely the TAM. The TAM contains information
+(TAM) [25], which differs from most prior deep learning- about the number of data packets in different directions
+based WF attack methods that primarily focus on sequences (upload, download) within time slots during network comof direction information in Tor traffic data. TAM aggregates munication, reflecting the interaction between clients and
+multidimensional information, including direction, volume, servers and the variability of traffic patterns. Through two
+and timing, providing a more comprehensive and robust set of 2D convolutional layers, the model captures and extracts local
+features. and intermediate spatiotemporal features. These layers are
+ The network traffic trace related to a website visit can be combined with the ReLU activation function to enhance nonexpressed as w = (s1 , s2 , . . . , sl ), where l denotes the length linear expressiveness, BatchNormalization layers to ensure
+of the trace. We set l = +∞ to account for all packets. Let stable convergence during training and prevent overfitting, and
+si = ti , di be a pair consisting of the packet timestamp and MaxPooling layers for downsampling. The TAM is then fused
+its direction. Here, ti and di signify the arrival time and the into a 1D feature map using a 2×2 maximum pooling layer,
+direction of the i-th packet, respectively. It should be noted that further reducing the feature dimensionality while preserving
+di ∈ {±1, 0}, with +1 denoting the outgoing packet direction essential information. To extract higher-level features, the
+and −1 representing the incoming packet direction. model reduces the number of channels and reshapes the
+ The specific implementation of TAM involves partitioning output to expand the feature map size, followed by two 1D
+the network traffic into multiple fixed-length time slots and convolutional blocks for deeper feature mining.
+counting the number of outgoing and incoming packets within Global Average Pooling (GAP). To avoid overfitting
+each slot. Let M be the TAM of trace W, with N being the caused by the excessive number of parameters introduced
+count of time slots taken into account in the TAM. Given by traditional fully connected layers, the model adopts the
+that the length of each time slot is s, the maximum load time GAP [79] layer as an alternative. The GAP layer does not
+T encompassed by a trace can be computed as T/s. In the introduce additional parameters but directly computes the
+resulting two-dimensional matrix M, each row represents the average of each feature map, reducing the model’s complexity
+packet counts for either the outgoing or incoming direction, and enhancing its generalization ability. Finally, by flattening
+while the columns correspond to different time windows. Each the vector obtained from averaging each feature map and
+element mij records the cumulative count of packets in the passing it through the softmax function, the model generates a
+respective direction within the time interval from (j − 1) × s probability distribution for different website classes, completto j × s seconds. ing the classification task.
+ TAM captures intermediate granularity information by
+aggregating outgoing and incoming packet counts per time
+slot, thereby enhancing robustness against various defense E. Data Augmentation
+mechanisms. Furthermore, compared to using direction In practical WF attack scenarios, obtaining sufficient websequences alone as a traffic representation, TAM captures site traffic samples for model training can be challenging,
+a richer set of traffic characteristics, improving the model’s particularly in rapidly evolving network environments where
+generalization capabilities. This aids in maintaining model timely collection of large volumes of data for model updates
+performance during incremental learning processes. becomes an issue [21], [22], [40], [80]. In the few-shot
+1962 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+CIL scenario, we have devised a novel data augmentation various experimental scenarios. Traditional deep learning
+technique, Mixtam, tailored for the TAM matrix-based repre- methods [12], [13], [14], [15], [36], [38] must be retrained
+sentation of website traffic. from scratch to satisfy the attacker’s need to dynamically
+ Mixtam employs a stochastic mixing [81], [82] enhance- expand the set of monitoring sites. Moreover, no prior WF
+ment mechanism based on random sampling from a Beta attack methods have considered similar scenarios for experidistribution. Specifically, this method selects two distinct mental evaluation. Recent WF attack methods [19], [22], [23],
+samples from within the same category label of multiple traffic [24], [25], [40], [85], [86] also fail to address the lack of
+sequences. It then linearly interpolates these paired samples continuous learning capability in attack models, making them
+using a mixing coefficient λ drawn from a Beta distribution. unsuitable for CIL scenarios.
+This fusion process generates new, mixed traffic samples. As In the absence of methods specifically designed for increillustrated in Fig. 3, a linear interpolation method is applied mental learning in WF attacks, we conduct comparative
+to two samples T  o1 and T o2 of the same website to compute experiments using TF [21], DF [13], Var-CNN [36], and
+the new virtual sample seed T  oi : NetCLR [39] under the same experimental setup. As a classic
+ T oi = λT o1 + (1 − λ)T o2 , (14) few-shot WF attack method, the TF attack exhibits certain
+ transfer properties, enabling classification on an expanded
+where λ is chosen as in [81], using a random variable drawn set of websites by retraining the k-NN classifier. Similarly,
+from a Beta distribution β(α, α), with α set to 0.1 after several NetCLR leverages fine-tuning to adapt to new website sets,
+tests. demonstrating transferability across different data distribu-
+ If the relative change introduced by this mixing exceeds tions.
+a predefined threshold, it indicates that data within that time The deep learning-based WF attack model Var-CNN [36]
+window requires adjustment. Upon detecting deviations above achieves superior performance compared to DF [13] by
+this threshold, our approach probabilistically decides—based employing extended causal convolution but lacks direct supon the inherent characteristics of the raw data—whether to port for incremental learning. To address this, we modified
+retain the augmented data values or revert to the original data both DF and Var-CNN by incorporating a k-NN classifier,
+values for filling. Let the original traffic TAM be represented enabling them to classify an expanded set of websites through
+by O, and the enhanced, synthetically generated TAM be retraining. These modified models are referred to as DF* and
+designated as T. For each arbitrary time slot indexed by i, we Var-CNN*, respectively. Although TF, DF*, Var-CNN*, and
+determine the rates of change in the number of outgoing data NetCLR can adapt to classification tasks on new website sets,
+packets and the volume of incoming traffic, yielding values they lack support for direct incremental learning. Each requires
+Δin and Δout . These derived rates are then compared against fine-tuning with data from both new and stored old classes,
+a predetermined local variation threshold δ: making them sensitive to the distribution similarity between
+ |T (i ) − Oin (i )| the pre-training and test datasets. To evaluate these methods
+ Δin (i ) = in (15)
+ |Oin (i )| + 1 under different data distributions, we set up experiments
+ |Tout (i ) − Oout (i )| comparing TF-Syn vs. DF-Syn and TF-Div vs. DF-Div. For
+ Δout (i ) = . (16) Var-CNN* and NetCLR, results are presented based on pre-
+ |Oout (i )| + 1
+ training and fine-tuning within the same data distribution.
+ The Kolmogorov-Smirnov (K-S) test [83], [84] is then uti- We conduct CIF evaluations under four settings:
+lized to assess whether the augmented data (Tam ) statistically dynamic closed-world, dynamic open-world, few-shot Class
+conforms to the distribution of the original data (Otam ). It Incremental Learning, and adversarial defense measures.
+computes the K-S statistic and its corresponding p-value for
+the two sample sets:
+ D = sup|Tor (x ) − Tau (x )|. (17) A. Dataset
+ x The Wang dataset [11], AWF dataset [12], and DF
+ If the p-value falls below a predetermined significance level dataset [13], which are publicly available, are used for experof 0.05, this suggests a significant difference between the imental evaluation of CIF attacks. The following provides an
+distributions of the augmented and original datasets. In such overview of these datasets:
+cases, the augmented samples undergo further randomized Wang dataset. Referred to as Wang100, this dataset is
+adjustments to better align their distribution with the original composed of a group of websites chosen from a list of sites
+data. that are blocked in several countries. Each website within it
+ In few-shot CIL, we utilize the Mixtam algorithm to has 90 examples.
+generate virtual trace samples and combine these virtual AWF dataset. Built in 2016, the AWF dataset comprises
+samples with the original samples to form a training set, both monitored and unmonitored websites, all of which are
+thereby enhancing the model’s robustness in situations where picked from the top-ranked sites in the Alexa rankings. The
+collecting a significant amount of training samples is not following subsets are involved in our experiments:
+feasible. • AWF 100: Comprises the top 100 monitored websites in
+ the Alexa rankings, and each of these websites supplies
+ V. E XPERIMENTAL E VALUATIONS 2500 data instances.
+ In this section, we conduct a series of experimental eval- • AWF 200: Contains an additional 200 monitored webuations to investigate the performance of CIF attacks under sites, with each having 2500 instances.
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE 1963
+
+ TABLE I TABLE III
+ H YPERPARAMETER S ELECTION FOR CIF M ODEL T HE I MPACT OF M AX T RAFFIC T RACE L ENGTH ON CIF ACCURACY (%)
+
+ TABLE II
+ T HE I MPACT OF TAM T IME S LOT ( MS ) ON CIF ACCURACY (%)
+
+ Fig. 4. Accuracy Changes in 5-Step CIL for dynamic Closed-World 100
+ Websites.
+
+ • AWF 775: Includes 775 more monitored websites, and
+ each provides 2500 instances. 5,000. Additionally, previous studies on website fingerprint-
+ • AWF 400K: An open-world dataset containing 9000 ing [12], [21], [36] commonly set the maximum length to
+ unmonitored websites selected from the Alexa rankings, 5,000. Therefore, we adopt a maximum length of 5,000.
+ with one example per website. Training Epochs. We set the training epochs to 100 and
+ DF dataset. The DF dataset consists of websites selected employed early stopping to prevent overfitting. The validation
+from the top Alexa rankings. It includes both undefended loss is monitored, with the initial best loss set to infinity and
+and defense-protected traffic traces for 95 monitored websites. a patience value of 5. If the current loss is lower than the best
+Each website provides 1000 examples. loss, we update the best loss and reset the counter; otherwise,
+ we increment it. Early stopping is triggered when the counter
+ reaches 5, terminating the training.
+B. Hyperparameter of CIF
+ To select our model’s hyperparameters, we searched within C. Dynamic Closed-World Scenario
+the hyperparameter space, tuning parameters for both the We first evaluate CIF attacks in a dynamic closed-world
+dynamic closed-world and adversarial defense scenarios, using scenario, where attackers can dynamically add new websites
+average accuracy as the performance metric. The search ranges of interest to the set of monitored websites. Unlike the
+and final values of the primary hyperparameters are summa- traditional closed-world setting, where a fixed training dataset
+rized in Table I. We also investigate key CIF hyperparameters, of monitored websites is used to train the model, the number
+including the maximum length of traffic traces, the time slot of monitored websites in the dynamic closed-world gradually
+of TAM, and the number of training epochs. increases. This requires the gradual input of training data
+ Time Slot of TAM. Table II shows the impact of time slot from different website classes into the model for training.
+duration on accuracy in the dynamic closed-world and under We tested the CIL scheme in three scenarios, with the total
+adversarial defenses such as WTF-PAD, Front, and Walkie- number of dynamically monitored sites set to 100, 200, and
+Talkie. The results indicate that accuracy initially increases 500, respectively.
+with larger time slots, then declines. A small time slot makes Performance Metric. The experiments for the CIL
+the TAM too sparse for effective feature extraction, while a scheme [28], [29], [87] evaluate the model’s performance
+large time slot reduces the TAM’s ability to represent the based on changes in accuracy over the incremental learning
+website loading process in detail. Balancing space efficiency steps, including the First, Last, and average accuracy per
+and accuracy, we set the time slot to 44 ms. step. These metrics are used consistently as evaluation criteria
+ Maximum Length. Longer website traffic traces generally across all scenarios in our experiments.
+contain more information, enhancing WF attack performance. Experimental Setup. We conducted incremental learning
+As shown in Table III, accuracy improves with increased experiments using the AWF100, AWF200, and AWF775
+maximum length, although the growth plateaus beyond datasets. For each dataset, we trained all classes from scratch
+1964 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+Fig. 5. Accuracy Changes in 10-Step CIL for dynamic Closed-World 100 Fig. 7. Accuracy Changes in 10-Step CIL for dynamic Closed-World 200
+Websites. Websites.
+
+ TABLE IV
+ ACCURACY AT F IRST S TEP, L AST S TEP, AND AVERAGE ACROSS 5 AND 10
+ I NCREMENTAL TASKS IN DYNAMIC C LOSED -W ORLD W ITH 100
+ M ONITORED W EBSITES
+
+Fig. 6. Accuracy Changes in 5-Step CIL for dynamic Closed-World 200
+Websites.
+
+with task splits in two incremental learning steps of 5 and
+10. Samples from each website were partitioned into training,
+validation, and test data at 80%, 10%, and 10%, respectively.
+ For both TF and NetCLR, the AWF775 dataset was used for
+model pre-training, followed by fine-tuning with new website
+traffic traces from the current task. DF* and Var-CNN* follow
+a similar approach to TF, where the k-NN classifier is retrained
+with new traffic traces to adapt to the updated set of monitored
+websites. Specifically, for TF and DF, we evaluated two
+scenarios: (1) dynamic monitoring datasets with distributions
+similar to AWF775 for retraining, labeled as TF-Syn and DF- Fig. 8. Accuracy Changes in 5-Step CIL for dynamic Closed-World 500
+Syn; and (2) datasets with differing distributions, labeled as Websites.
+TF-Div and DF-Div.
+ Results. Figs. 3–4, 5–6, and 7–8 present accuracy variation
+curves for incremental steps of 5 and 10 in tasks with 100, 500 monitored websites, CIF’s average accuracy surpasses that
+200, and 500 monitored websites, respectively. Tables IV, V, of TF, DF*, and Var-CNN* by over 3% and maintains this
+and VI summarize accuracy for First, Last, and Average steps lead in the final incremental phase. In scenarios with five
+in CIL. Results demonstrate that the CIF attack is highly incremental tasks, CIF consistently outperforms NetCLR. For
+effective in dynamic closed-world scenarios, achieving an ten tasks, CIF’s final accuracy is slightly lower than NetCLR,
+average accuracy exceeding 97.8% across all settings. For but the gap diminishes as the number of monitored websites
+100 monitored websites with 5 incremental tasks, CIF achieves grows.
+an average accuracy of 99.35%, maintaining 99.04% accuracy TF exhibits the lowest performance due to its reliance on
+in the final step. complex pairing and ternary constructions, limiting its ability
+ In all incremental learning scenarios, CIF consistently to utilize large training datasets effectively. TF-Syn and DFoutperforms TF, DF*, Var-CNN*, and NetCLR in terms of Syn perform significantly better than TF-Div and DF-Div,
+average accuracy. As the total number of monitored web- highlighting the impact of distributional differences between
+sites increases, CIF’s advantage becomes more evident. For pre-training and target task datasets. Additionally, TF, DF*,
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE 1965
+
+ TABLE VII
+ ACCURACY AT F IRST S TEP, L AST S TEP, AND AVERAGE ACROSS TASKS IN
+ F EW-S HOT CIL W ITH AND W ITHOUT P RE -T RAINING
+ AND M IXTAM AUGMENTATION
+
+Fig. 9. Accuracy Changes in 10-Step CIL for dynamic Closed-World 500
+Websites.
+
+ TABLE V
+ ACCURACY AT F IRST S TEP, L AST S TEP, AND AVERAGE ACROSS
+ 5 AND 10 I NCREMENTAL TASKS IN DYNAMIC C LOSED -W ORLD
+ W ITH 200 M ONITORED W EBSITES
+
+ Fig. 10. No Pre-training: Accuracy Changes in 5-Step CIL with Few-shot
+ Samples, with and without Mixtam Augmentation.
+
+ TABLE VI to evaluate its effectiveness in few-shot CIL tasks across 100
+ ACCURACY AT F IRST S TEP, L AST S TEP, AND AVERAGE ACROSS
+ 5 AND 10 I NCREMENTAL TASKS IN DYNAMIC C LOSED -W ORLD dynamically monitored websites.
+ W ITH 500 M ONITORED W EBSITES Experimental Setup. The AWF100 dataset was used as the
+ experimental data. In addition to conducting the same 5-step
+ incremental learning experiments as in the dynamic closedworld scenario, we also designed a pre-training scenario for
+ limited samples. In the pre-training scenario, the model was
+ first trained on 50 classes, with the remaining 50 classes
+ divided into 5 and 10-step incremental learning tasks. In realworld environments, attackers may have abundant training data
+ for the initial set of monitored websites but lack sufficient
+ time to collect data for newly monitored websites. Therefore,
+ the pre-trained model’s initial 50 classes were trained using
+ sufficient data, selecting 800 samples per website. For the
+ remaining classes, few-shot samples (10, 20, or 30 per website)
+Var-CNN*, and NetCLR require all samples of each category were selected and expanded to 1,500 samples using the
+for retraining, along with retaining all prior samples, making Mixtam algorithm.
+them less suitable for resource-constrained scenarios. Results. To evaluate Mixtam’s impact on CIF performance,
+ we conducted comparative experiments under conditions with
+ and without Mixtam augmentation, denoted by AU-FS and FS,
+D. Few-Shot Class Incremental Learning respectively. Figs. 10 and 11 illustrate the accuracy variation
+ In real-world WF attacks, attackers may not always be able over CIL steps for scenarios without and with pre-training.
+to fully collect training data from each website. Frequently, Table VII presents the first, last, and per-step average accurathe attacker needs to update the attack model promptly but cies under both conditions.
+lacks sufficient time to gather enough training data. In such In the no-pre-training scenario, CIF performance without
+cases, the model must perform effectively with only a few-shot Mixtam resulted in an average accuracy below 10% for 10-
+sample. shot settings and approximately 20% for 30-shot settings.
+ We tested both CIL scenarios, with and without pre- With Mixtam augmentation, average accuracies increased to
+training, employing the Mixtam data augmentation algorithm 56.76%, 83.75%, and 87.60% for 10, 20, and 30 samples,
+1966 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+ TABLE VIII
+ BANDWIDTH AND T IME OVERHEAD OF D EFENSES M ETHODS (PART 1)
+
+ TABLE IX
+ BANDWIDTH AND T IME OVERHEAD OF D EFENSES M ETHODS (PART 2)
+
+Fig. 11. With Pre-training: Accuracy Changes in 5-Step CIL with Few-shot
+Samples, with and without Mixtam Augmentation. TABLE X
+ ACCURACY C HANGES OF CIF AND VAR -CNN* ACROSS 5 I NCREMENTAL
+ TASKS ON D EFENDED T RAFFIC T RACES
+
+respectively, achieving a maximum improvement of over
+66%. In the pre-training scenario, CIF accuracies for 20-shot
+and 30-shot settings were 63.56% and 71.00%, respectively,
+without Mixtam. When Mixtam was applied, these accuracies
+increased to 91.47% and 93.51%, representing improvements
+exceeding 20%.
+ These results demonstrate that Mixtam data augmentation
+significantly enhances CIF attack accuracy, especially in cases
+with limited training samples.
+
+E. CIF Attack Against Defense
+ In this section, we evaluate the performance of the proposed
+CIF model on defense-processed traffic traces. For this
+experiment, we selected several defense methods, including WTF-PAD [35], Walkie-Talkie [50], TrafficSliver [52],
+FRONT [49], RegulaTor [51], Surakav [53], and Palette [54],
+to assess the performance of WF attacks on defended traffic. incremental learning steps (5 and 10 steps, respectively). For
+We conducted comparative experiments with Var-CNN* for TrafficSliver [52], we selected the two best network layer
+this evaluation. splitting strategies: By Direction (BD) and Batched Weighted
+ The selected defense methods employ various techniques Random (BWR). The bandwidth and time overhead settings
+to disrupt traffic patterns. WTF-PAD (WTP) and FRONT for each defense are shown in Table VIII and Table IX.
+insert virtual packets to alter traffic patterns, leveraging natural Results. Tables X and XI illustrate the accuracy variation
+gaps and Rayleigh distribution timing, respectively, to enhance curves for the two incremental steps (5 and 10), while
+anonymity. Walkie-Talkie (WT) introduces half-duplex com- Table XII shows the accuracy for the first, last, and average
+munication to increase obfuscation and strengthen the defense steps in each configuration. The results are based on experieffect. RegulaTor (RegTor) controls packet transmission to ments using Var-CNN* (denoted as Var-) and CIF (denoted as
+maintain high efficiency while limiting resource consumption, CIF-) for each configuration.
+creating barriers to traffic tracking. Palette standardizes traffic The results indicate that CIF maintains strong performance
+patterns within the same cluster to prevent attackers from even under multiple defenses such as WTF-PAD (WTP),
+identifying specific websites based on distinct traffic features. Walkie-Talkie (WT), Splitting-Traffic-BD (BD), and Front.
+Surakav utilizes GANs to diversify transmission patterns and For both incremental learning steps, the average accuracy
+modulate data transmission, effectively resisting WF attacks. exceeds 90%. Compared to Var-CNN*, our CIF method
+TrafficSliver focuses on traffic segmentation, dispersing data demonstrates significant advantages. CIF leverages TAM to
+flows through network architecture adjustments to reduce the effectively capture traffic features, enabling it to count the
+risk of single-point monitoring information leakage. number of incoming and outgoing packets at finer time
+ Experimental Setup. For the closed-world evaluation, we intervals. This preserves key characteristics and outperforms
+used the DF95 dataset, which contains 95 websites, each traditional sequence- or burst-based defenses (e.g., WTF-PAD
+with 1,000 undefended traces. The corresponding defense and Walkie-Talkie).
+traces were generated using scripts and simulators provided The Front strategy introduces more bandwidth overhead on
+by the defense authors. We tested two scenarios, where the the Tor connection, significantly reducing Var-CNN* accuracy,
+task division of all classes was trained from scratch in two but CIF maintains high accuracy. Traffic-Sliver-BD utilizes
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE 1967
+
+ TABLE XI
+ ACCURACY C HANGES OF CIF AND VAR -CNN* ACROSS 10 I NCREMENTAL TASKS ON D EFENDED T RAFFIC T RACE
+
+ TABLE XII
+separate circuits for packet reception and transmission, allow- F IRST S TEP, L AST S TEP, AND AVERAGE ACCURACY ACROSS 5 AND 10
+ing attackers to capture packets in only one direction. Both I NCREMENTAL TASKS AGAINST T RAFFIC D EFENSES
+Var-CNN* and CIF can leverage packet timing characteristics,
+resulting in minimal accuracy degradation. BWR employs a
+weighting strategy to select protection nodes for Tor messages,
+increasing the time intervals between message batches and
+reducing inter-message correlation. In contrast, Surakav uses
+GANs to generate diversified transmission patterns, combining
+burst adjustments and random responses to effectively minimize the leakage of timing and packet features. Under both
+defenses, CIF still achieves an average accuracy of nearly 80%,
+significantly higher than Var-CNN*‘s 30%.
+ Palette introduces traffic feature obfuscation and randomness, making it difficult for both Var-CNN* and CIF to extract
+stable features, leading to a significant drop in accuracy for
+both models.
+
+F. Dynamic Open-World Scenario
+ In previous experiments, we investigated the impact of TABLE XIII
+CIF attacks on performance in multiple scenarios within the ACCURACY AT F IRST S TEP, L AST S TEP, AND AVERAGE ACROSS 5 AND 10
+ I NCREMENTAL TASKS IN DYNAMIC O PEN -W ORLD
+dynamic closed-world. However, real-world network environments often involve users visiting websites beyond the
+monitored ones. To address this, we evaluated the CIF attack in
+a more realistic dynamic open-world setting. This evaluation
+involves classifying whether a traffic trace belongs to the set of
+monitored websites and, if so, further identifying the specific
+website within the monitored set.
+ Experimental Setup. We conduct experimental tests in a
+fairly large open-world environment, a scenario in which users
+have access to 100,000 non-monitored sites in addition to the
+websites in the monitored sites. We take 99 monitored websites
+in the AWF100 dataset as the 99 classes in the open-world
+multi-classification, with 1,500 samples per website. We take class of non-monitored websites to be the same as the total
+the 100,000 non-monitored websites in the AWF400K dataset number of samples in the test set for all the remaining classes.
+as a class of non-monitored websites in the Open-World multi- In this scenario, we compared CIF with TF, DF*, Varclassification, with one sample per website. For these 100 CNN*, and NetCLR [39]. Due to minimal performance
+websites, we consider CIL in two steps (5 and 10). For this differences in TF across datasets with similar distributions,
+scenario, we set the number of samples in the test set for the only one result for TF is presented.
+1968 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+ VI. D ISCUSSION
+ In this section, we explore the proposed CIF attack and
+ suggest potential directions for future work.
+ The CIF model, leveraging a dynamic scaling architecture, is capable of continuously acquiring new information
+ from emerging website classes without the need for complete retraining, thereby exhibiting remarkable scalability. This
+ innovative CIF attack approach addresses the limitations of
+ prior WF attack methods, which lacked continuous learning
+ capabilities in open environments. As a result, CIF effectively
+ satisfies the requirements of attackers for expanding surveillance scopes and updating models in dynamic settings.
+Fig. 12. Accuracy Changes in 5-Step CIL for dynamic Open-World. While our designs, including DF*, Var-CNN*, and TF,
+ can be adapted for website expansion tasks through classifier retraining, their performance is heavily constrained by
+ the similarity of dataset distributions. Significant discrepancies between pre-trained data and new task data often lead
+ to pronounced declines in accuracy. Furthermore, TF and
+ NetCLR exhibit severe performance degradation under highly
+ dynamic open-world scenarios. Unlike CIF, these methods
+ rely on the continuous storage of all samples across classes
+ and necessitate the reprocessing of the entire dataset during
+ each retraining cycle, making them impractical for resourceconstrained environments.
+ CIF has consistently demonstrated outstanding performance
+ across a variety of experimental scenarios. Nonetheless, further
+ research is essential to address the complexities inherent in
+Fig. 13. Accuracy Changes in 10-Step CIL for dynamic Open-World.
+ more challenging real-world applications.
+ Higher Few-shot Performance. Facing the rapidly chang-
+ Results. Figs. 12 and 13 depict the accuracy curves for 5 ing network environment, attackers must efficiently collect the
+and 10 incremental steps, respectively. Table XIII summarizes latest network traffic traces and promptly update their attack
+the accuracy in the First, Last, and Average across steps. models. This requirement highlights the necessity for CIF
+ The results demonstrate that the CIF attack remains effective attacks to possess robust few-shot learning capabilities. In real
+in open-world scenarios, achieving an average accuracy of over scenarios, we may only be able to collect limited data for some
+96.7%. For the 5-step incremental setup, it achieves an average websites in a short period (e.g., less than 10 training samples
+accuracy of 98.31% and maintains 97.88% accuracy in the last per class). Therefore, in addition to the data enhancement
+step, exceeding the performance of other methods by more methods already designed, we need to explore how we can
+than 6%. In the 10-step setup, CIF maintains a performance better adapt to the few-shot scenario in the CIF framework
+advantage of over 4% in the last step compared to the other species.
+methods. Fine-Grained website fingerprinting. Current research on
+ Notably, the CIF attack exhibits a more pronounced WF attacks often focuses exclusively on the homepage traffic
+performance advantage in the dynamic open-world compared of a website as a representative identifier for the entire site.
+to the dynamic closed-world. In the open-world, TF, DF*, This simplification overlooks the diversity of subpages, which
+and Var-CNN* are more susceptible to factors such as uneven is inconsistent with the complexity of real-world Web browsdata distribution, feature space variation, and inter-class sim- ing environments. Subpages of the same website typically
+ilarity. In contrast, CIF’s dynamic tuning and memorization share similar layout structures, follow consistent encryption
+mechanisms are better equipped to handle these challenges. protocols, and use comparable parameter configurations. These
+TF and NetCLR, in particular, perform poorly in this sce- similarities result in high convergence in the characteristics
+nario. TF struggles with effectively utilizing the extensive and client-server interaction patterns of the Web traffic they
+training data from non-monitored classes, leading to severe generate.
+class imbalance and reduced accuracy. Similarly, NetCLR’s Exploring fine-grained Web fingerprinting techniques is
+reliance on NETAUGMENT and contrastive learning makes essential for accurately modeling real-world scenarios and
+it vulnerable to disruptions from the diverse traffic data in uncovering more profound insights into user privacy. Our
+the non-monitored category, degrading the quality of its initial research will focus on advancing the development of finelearning and subsequent fine-tuning, resulting in significant grained CIF attack techniques to better align with the practical
+accuracy drops. demands of real-world applications.
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE 1969
+
+ VII. C ONCLUSION [10] J. Yan and J. Kaur, “Feature selection for website fingerprinting,” in
+ Proc. Privacy Enhanc. Technol., 2018, pp. 200–219. [Online]. Available:
+ In this study, we investigate implementing WF attack meth- https://api.semanticscholar.org/CorpusID:46940494
+ods with continuous learning capability through incremental [11] T. Wang, X. Cai, R. Nithyanand, R. Johnson, and I. Goldberg,
+class learning. This approach addresses the limitations of “Effective attacks and provable defenses for website fingerprinting,” in
+ Proc. USENIX Security Symp., 2014, pp. 143–157. [Online]. Available:
+existing attack models, which lack continuous learning for https://api.semanticscholar.org/CorpusID:1208527
+more challenging real-world application scenarios. We propose [12] V. Rimmer, D. Preuveneers, M. Juarez, T. van Goethem,
+CIF attacks based on a dynamically scaling architecture that and W. Joosen. “Automated website fingerprinting
+ through deep learning.” 2017. [Online]. Available:
+continuously learns knowledge from new classes without https://api.semanticscholar.org/CorpusID:263798765
+catastrophic forgetting. This design enables the attack model to [13] P. Sirinam, M. Imani, M. Juárez, and M. K. Wright, “Deep
+scale and adapt to dynamically open real-world environments. fingerprinting: Undermining website fingerprinting defenses
+To gain insight into the performance of CIF attacks in reality, with deep learning,” in Proc. ACM SIGSAC Conf. Comput.
+ Commun. Security, 2018, pp. 1928–1943. [Online]. Available:
+we have recently set up dynamic closed-world and open-world https://api.semanticscholar.org/CorpusID:44736663
+scenarios. The experimental results indicate that the CIF attack [14] S. E. Oh, S. Sunkam, and N. Hopper, “p1-FP: Extraction, classification,
+achieves high accuracy during the CIL process, maintaining and prediction of website fingerprints with deep learning,” in Proc.
+ Privacy Enhanc. Technol., 2017, pp. 191–209. [Online]. Available:
+an average accuracy above 97.8% in the dynamic closed- https://api.semanticscholar.org/CorpusID:4542558
+world and remaining effective in the dynamic open-world with [15] M. S. Rahman, P. Sirinam, N. Mathews, K. G. Gangadhara, and
+an average accuracy exceeding 96.7%. In addition, we also M. K. Wright, “TIK-TOK: The utility of packet timing in website fingerprinting attacks,” in Proc. Privacy Enhanc. Technol., 2019, pp. 5–24.
+demonstrate that the CIF attack achieves good performance [Online]. Available: https://api.semanticscholar.org/CorpusID:62841503
+when faced with few-shot scenarios. According to these [16] T. Wang and I. Goldberg, “On realistically attacking ToR with website
+findings, attackers can utilize new data update models to cope fingerprinting,” in Proc. Privacy Enhanc. Technol., 2016, pp. 21–36.
+with dynamically open real-world environments with limited [Online]. Available: https://api.semanticscholar.org/CorpusID:264
+ 13501
+resources. [17] M. Juárez, S. Afroz, G. Acar, C. Díaz, and R. Greenstadt, “A
+ critical evaluation of website fingerprinting attacks,” in Proc. ACM
+ SIGSAC Conf. Comput. Commun. Security, 2014, pp. 263–274. [Online].
+ ACKNOWLEDGMENT Available: https://api.semanticscholar.org/CorpusID:5762455
+ [18] G. Cherubin, R. Jansen, and C. Troncoso, “Online website fingerprinting:
+ The authors thank their shepherd and the anonymous Evaluating website fingerprinting attacks on ToR in the real world,” in
+reviewers for their constructive comments. Based on their Proc. USENIX Security Symp., 2022, pp. 753–770. [Online]. Available:
+suggestions, this paper was greatly improved. https://api.semanticscholar.org/CorpusID:252972246
+ [19] X. Deng et al., “Robust multi-tab website fingerprinting
+ attacks in the wild,” in Proc. IEEE Symp. Security
+ Privacy (SP), 2023, pp. 1005–1022. [Online]. Available:
+ R EFERENCES https://api.semanticscholar.org/CorpusID:260002990
+ [20] Q. Yin et al., “An automated multi-tab website fingerprinting
+ [1] R. Dingledine, N. Mathewson, and P. F. Syverson,
+ attack,” IEEE Trans. Depend. Secure Comput., vol. 19,
+ “ToR: The second-generation onion router,” in Proc.
+ no. 6, pp. 3656–3670, Nov./Dec. 2022. [Online]. Available:
+ USENIX Security Symp., 2004, p. 12. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:238790397
+ https://api.semanticscholar.org/CorpusID:263541988
+ [2] “Users—ToR metrics.” 2023. [Online]. Available: [21] P. Sirinam, N. Mathews, M. S. Rahman, and M. K. Wright,
+ https://metrics.torproject.org/userstats-relay-country.html “Triplet fingerprinting: More practical and portable website fingerprinting with N-shot learning,” in Proc. ACM SIGSAC Conf.
+ [3] X. Cai, R. Nithyanand, T. Wang, R. Johnson, and I. Goldberg,
+ Comput. Commun. Security, 2019, pp. 1131–1148. [Online]. Available:
+ “A systematic approach to developing and evaluating website
+ https://api.semanticscholar.org/CorpusID:207960329
+ fingerprinting defenses,” in Proc. ACM SIGSAC Conf. Comput.
+ Commun. Security, 2014, pp. 227–238. [Online]. Available: [22] M. Chen, Y. Wang, Z. Qin, and X. Zhu, “Few-shot website
+ https://api.semanticscholar.org/CorpusID:5725039 fingerprinting attack with data augmentation,” Security Commun.
+ [4] A. H. Lashkari, G. Draper-Gil, M. S. I. Mamun, and A. A. Ghorbani, Netw., vol. 2021, Sep. 2021, Art. no. 2840289. [Online]. Available:
+ “Characterization of ToR traffic using time based features,” in Proc. Int. https://api.semanticscholar.org/CorpusID:238585994
+ Conf. Inf. Syst. Security Privacy, 2017, pp. 253–262. [Online]. Available: [23] Q. Zhou, L. Wang, H. Zhu, and T. Lu, “Few-shot website
+ https://api.semanticscholar.org/CorpusID:38122314 fingerprinting attack with cluster adaptation,” Comput. Netw.,
+ [5] S. Chen, R. Wang, X. Wang, and K. Zhang, “Side-channel leaks in vol. 229, Jun. 2023, Art. no. 109780. [Online]. Available:
+ Web applications: A reality today, a challenge tomorrow,” in Proc. https://api.semanticscholar.org/CorpusID:258297158
+ IEEE Symp. Security Privacy, 2010, pp. 191–206. [Online]. Available: [24] Y. Wang, H. Xu, Z. Guo, Z. Qin, and K. Ren, “SNWF: Website
+ https://api.semanticscholar.org/CorpusID:7918770 fingerprinting attack by ensembling the snapshot of deep learning,” IEEE
+ [6] A. Kwon, M. Alsabah, D. Lazar, M. Dacier, and S. Devadas, “Circuit fin- Trans. Inf. Forensics Security, vol. 17, pp. 1214–1226, 2022. [Online].
+ gerprinting attacks: Passive deanonymization of ToR hidden services,” in Available: https://api.semanticscholar.org/CorpusID:247374010
+ Proc. USENIX Security Symp., 2015, pp. 287–302. [Online]. Available: [25] M. Shen, K. Ji, Z. Gao, Q. Li, L. Zhu, and K. Xu, “Subverting
+ https://api.semanticscholar.org/CorpusID:7444216 website fingerprinting defenses with robust traffic representation,” in
+ [7] W. Cui, T. Chen, C. Fields, J. Chen, A. Sierra, Proc. USENIX Security Symp., 2023, pp. 607–624. [Online]. Available:
+ and E. Chan-Tin, “Revisiting assumptions for website https://api.semanticscholar.org/CorpusID:260777568
+ fingerprinting attacks,” in Proc. ACM Asia Conf. Comput. [26] “Servers—ToR metrics.” 2023. [Online]. Available:
+ Commun. Security, 2019, pp. 328–339. [Online]. Available: https://metrics.torproject.org/networksize.html
+ https://api.semanticscholar.org/CorpusID:195848639 [27] G. I. Parisi, R. Kemker, J. L. Part, C. Kanan, and S. Wermter,
+ [8] X. Cai, X. C. Zhang, B. Joshi, and R. Johnson, “Touching from a dis- “Continual lifelong learning with neural networks: A review,” J. Int.
+ tance: Website fingerprinting attacks and defenses,” in Proc. ACM Conf. Neural Netw. Soc., vol. 113, pp. 54–71, May 2019. [Online]. Available:
+ Comput. Commun. Security, 2012, pp. 605–616. [Online]. Available: https://api.semanticscholar.org/CorpusID:73497737
+ https://api.semanticscholar.org/CorpusID:2465850 [28] S. Yan, J. Xie, and X. He, “DER: Dynamically expandable representation
+ [9] T. Wang and I. Goldberg, “Improved website fingerprinting on ToR,” in for class incremental learning,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ Proc. 12th ACM Workshop Privacy Electron. Soc., 2013, pp. 201–212. Pattern Recognit. (CVPR), 2021, pp. 3013–3022. [Online]. Available:
+ [Online]. Available: https://api.semanticscholar.org/CorpusID:7411247 https://api.semanticscholar.org/CorpusID:232427923
+1970 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+[29] B. Huang, Z. Chen, P. Zhou, J. Chen, and Z. Wu, “Resolving task [48] K. P. Dyer, S. E. Coull, T. Ristenpart, and T. Shrimpton, “Peek-a-boo, i
+ confusion in dynamic expansion architectures for class incremental still see you: Why efficient traffic analysis countermeasures fail,” Proc.
+ learning,” in Proc. AAAI Conf. Artif. Intell., 2022, pp. 908–916. [Online]. IEEE Symp. Security Privacy, 2012, pp. 332–346. [Online]. Available:
+ Available: https://api.semanticscholar.org/CorpusID:255340983 https://api.semanticscholar.org/CorpusID:861248
+[30] K. Zhu, W. Zhai, Y. Cao, J. Luo, and Z. Zha, “Self-sustaining [49] J. Gong and T. Wang, “Zero-delay lightweight defenses
+ representation expansion for non-exemplar class-incremental against website fingerprinting,” in Proc. USENIX
+ learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Security Symp., 2020, pp. 717–734. [Online]. Available:
+ Recognit. (CVPR), 2022, pp. 9286–9295. [Online]. Available: https://api.semanticscholar.org/CorpusID:211569921
+ https://api.semanticscholar.org/CorpusID:247447482 [50] T. Wang and I. Goldberg, “Walkie–talkie: An efficient defense
+[31] Z. Li, C. Zhong, S. Liu, R. Wang, and W. Zheng, “Preserving earlier against passive website fingerprinting attacks,” in Proc. USENIX
+ knowledge in continual learning with the help of all previous feature Security Symp., 2017, pp. 1375–1390. [Online]. Available:
+ extractors,” 2021, arxiv.abs/2104.13614. https://api.semanticscholar.org/CorpusID:12311676
+[32] J. Hayes and G. Danezis, “k -fingerprinting: A robust [51] J. K. Holland and N. Hopper, “RegulaTor: A straightscalable website fingerprinting technique,” in Proc. USENIX forward website fingerprinting defense,” in Proc. Privacy
+ Security Symp., 2015, pp. 1187–1203. [Online]. Available: Enhanc. Technol., 2022, pp. 344–362. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:2119577 https://api.semanticscholar.org/CorpusID:235359233
+[33] A. Panchenko et al., “Website fingerprinting at Internet scale,” in Proc. [52] W. D. la Cadena et al., “TrafficSliver: Fighting website fingerprint-
+ Netw. Distrib. Syst. Security Symp., 2016, pp. 1–9. [Online]. Available: ing attacks with traffic splitting,” in Proc. ACM SIGSAC Conf.
+ https://api.semanticscholar.org/CorpusID:15302617 Comput. Commun. Security, 2020, pp. 1971–1985. [Online]. Available:
+[34] D. Herrmann, R. Wendolsky, and H. Federrath, “Website https://api.semanticscholar.org/CorpusID:222244849
+ fingerprinting: Attacking popular privacy enhancing technologies [53] J. Gong et al., “SuraKAV: Generating realistic traces for a
+ with the multinomial Naïve Bayes classifier,” in Proc. Cloud strong website fingerprinting defense,” in Proc. IEEE Symp.
+ Comput. Security Workshop, 2009, pp. 1–8. [Online]. Available: Security Privacy (SP), 2022, pp. 1558–1573. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:8479479 https://doi.org/10.1109/SP46214.2022.9833722
+[35] M. Juárez, M. Imani, M. Perry, C. Díaz, and M. K. Wright, “WTF- [54] M. Shen et al., “Real-time website fingerprinting
+ PAD: Toward an efficient website fingerprinting defense for ToR,” 2015, defense via traffic cluster anonymization,” in Proc.
+ arxiv.abs/1512.00524. IEEE Symp. Security Privacy (SP), 2024, pp. 263–263.
+[36] S. Bhat, D. Lu, A. Kwon, and S. Devadas, “Var-CNN: A data- [Online]. Available: https://doi.org/10.1109/SP54263.2024.
+ efficient website fingerprinting attack based on deep learning,” in Proc. 00247
+ Privacy Enhanc. Technol., 2019, pp. 292–310. [Online]. Available: [55] M. Jiang, B. Cui, J. Fu, T. Wang, L. Yao, and B. K. Bhargava,
+ https://api.semanticscholar.org/CorpusID:198229348 “RUDOLF: An efficient and adaptive defense approach against web-
+[37] X. Deng, Q. Li, and K. Xu, “Robust and reliable early-stage website site fingerprinting attacks based on soft actor–critic algorithm,” IEEE
+ fingerprinting attacks via spatial–temporal distribution analysis,” 2024, Trans. Inf. Forensics Security, vol. 19, pp. 7794–7809, 2024. [Online].
+ arxiv.abs/2407.00918. Available: https://api.semanticscholar.org/CorpusID:271658360
+[38] R. Attarian and A. Keshavarz-Haddad, “Effective website finger-
+ [56] D. Li, Y. Zhu, M. Chen, and J. Wang, “Minipatch: Undermining DNNprinting attack based on the first packet direction only,” Comput.
+ based website fingerprinting with adversarial patches,” IEEE Trans. Inf.
+ Netw., vol. 231, Jul. 2023, Art. no. 109811. [Online]. Available:
+ Forensics Security, vol. 17, pp. 2437–2451, 2022. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:258655562
+ https://api.semanticscholar.org/CorpusID:250321282
+[39] A. Bahramali, A. Bozorgi, and A. Houmansadr, “Realistic website fin-
+ [57] Z. Ling, G. Xiao, W. Wu, X. Gu, M. Yang, and X. Fu,
+ gerprinting by augmenting network traces,” in Proc. ACM SIGSAC Conf.
+ “Towards an efficient defense against deep learning based
+ Comput. Commun. Security, 2023, pp. 1035–1049. [Online]. Available:
+ website fingerprinting,” in Proc. IEEE Conf. Comput. Commun.
+ https://doi.org/10.1145/3576915.361663
+ (IEEE INFOCOM), 2022, pp. 310–319. [Online]. Available:
+[40] Y. Chen, Y. Wang, L. Yang, Y. Luo, and M. Chen, “TFormhttps://api.semanticscholar.org/CorpusID:249909706
+ RF: An efficient data augmentation for website fingerprinting
+ attack,” in Proc. IEEE Int. Perform. Comput. Commun. [58] M. S. Rahman, M. Imani, N. Mathews, and M. K. Wright,
+ Conf. (IPCCC), 2022, pp. 169–178. [Online]. Available: “MockingBird: Defending against deep-learning-based website finhttps://api.semanticscholar.org/CorpusID:252891854 gerprinting attacks with adversarial traces,” IEEE Trans. Inf.
+[41] Z. Jin, T. Lu, S. Luo, and J. Shang, “Transformer-based model for Forensics Security, vol. 16, pp. 1594–1609, 2019. [Online]. Available:
+ multi-tab website fingerprinting attack,” in Proc. ACM SIGSAC Conf. https://api.semanticscholar.org/CorpusID:158047102
+ Comput. Commun. Security, 2023, pp. 1050–1064. [Online]. Available: [59] A. M. Sadeghzadeh, B. Tajali, and R. Jalili, “AWA:
+ https://api.semanticscholar.org/CorpusID:265352560 Adversarial website adaptation,” IEEE Trans. Inf. Forensics
+[42] Z. Guan, G. Xiong, G. Gou, Z. Li, M. Cui, and C. Liu, Security, vol. 16, pp. 3109–3122, 2020. [Online]. Available:
+ “BAPM: Block attention profiling model for multi-tab website https://api.semanticscholar.org/CorpusID:229340376
+ fingerprinting attacks on ToR,” in Proc. 37th Annu. Comput. [60] N. Mathews, J. K. Holland, S. E. Oh, M. S. Rahman,
+ Security Appl. Conf., 2021, pp. 248–259. [Online]. Available: N. Hopper, and M. K. Wright, “SoK: A critical evaluation of
+ https://api.semanticscholar.org/CorpusID:244910441 efficient website fingerprinting defenses,” in Proc. IEEE Symp.
+[43] A. A. Abusnaina, R. Jang, A. Khormali, D. Nyang, and D. A. Mohaisen, Security Privacy (SP), 2023, pp. 969–986. [Online]. Available:
+ “DFD: Adversarial learning-based approach to defend against https://api.semanticscholar.org/CorpusID:254587110
+ website fingerprinting,” in Proc. IEEE Conf. Comput. Commun. [61] B. Pfülb and A. R. T. Gepperth, “A comprehensive, application-oriented
+ (IEEE INFOCOM), 2020, pp. 2459–2468. [Online]. Available: study of catastrophic forgetting in DNNs,” 2019, arxiv.abs/1905.08101.
+ https://api.semanticscholar.org/CorpusID:216077208 [62] J.-M. Pérez-Rúa, X. Zhu, T. M. Hospedales, and T. Xiang, “Incremental
+[44] K. Al-Naami et al., “BiMorphing: A bi-directional bursting defense few-shot object detection,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ against website fingerprinting attacks,” IEEE Trans. Depend. Secure Pattern Recognit. (CVPR), 2020, pp. 13843–13852. [Online]. Available:
+ Comput., vol. 18, no. 2, pp. 505–517, Mar./Apr. 2021. [Online]. https://api.semanticscholar.org/CorpusID:212645695
+ Available: https://api.semanticscholar.org/CorpusID:226861280 [63] F. Cermelli, M. Mancini, S. R. Bulò, E. Ricci, and B. Caputo,
+[45] M. Nasr, A. Bahramali, and A. Houmansadr, “Defeating DNN-based “Modeling the background for incremental learning in semantic
+ traffic analysis systems in real-time with blind adversarial perturbations,” segmentation,” Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ in Proc. USENIX Security Symp., 2021, p. 12. [Online]. Available: Recognit. (CVPR), 2020, pp. 9230–9239. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:231878132 https://api.semanticscholar.org/CorpusID:211011110
+[46] X. Cai, R. Nithyanand, and R. Johnson, “CS-BuFLO: A congestion [64] F.-K. Sun, C.-H. Ho, and H. Y. Lee, “LAMOL: Language
+ sensitive website fingerprinting defense,” in Proc. 13th Workshop modeling for lifelong language learning,” in Proc. Int.
+ Privacy Electron. Soc., 2014, pp. 121–130. [Online]. Available: Conf. Learn. Rep., 2019, pp. 1–9. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:16029997 https://api.semanticscholar.org/CorpusID:209475822
+[47] M. Jiang, B. Cui, J. Fu, T. Wang, and Z. Wang, “KimeraPAD: A novel [65] P. Gupta, Y. Chaudhary, T. A. Runkler, and H. Schütze,
+ low-overhead real-time defense against website fingerprinting attacks “Neural topic modeling with continual lifelong learning,” in
+ based on deep reinforcement learning,” IEEE Trans. Netw. Service Proc. Int. Conf. Mach. Learn., 2020, p. 9. [Online]. Available:
+ Manag., vol. 21, no. 3, pp. 2944–2961, Jun. 2024. https://api.semanticscholar.org/CorpusID:219955694
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE 1971
+
+[66] T. Lesort, V. Lomonaco, A. Stoian, D. Maltoni, D. Filliat, and Yali Yuan received the Ph.D. degree from Göttingen
+ N. Díaz-Rodríguez, “Continual learning for robotics: Definition, frame- University, Göttingen, Germany, in 2018. She joined
+ work, learning strategies, opportunities and challenges,” Inf. Fusion, vol. the School of Cyber Science and Engineering,
+ 58, pp. 52–68, Jun. 2020. Southeast University, Nanjing, China, as an Assistant
+[67] R. C. Julian, B. Swanson, G. S. Sukhatme, S. Levine, C. Finn, and Professor in 2021. Her research interests include
+ K. Hausman, “Efficient adaptation for end-to-end vision-based robotic network traffic security analysis, network attack and
+ manipulation,” 2020, arxiv.2004.10190. defense, and privacy protection.
+[68] A. Prabhu, P. H. S. Torr, and P. K. Dokania, “GDumb: A simple
+ approach that questions our progress in continual learning,” in Proc.
+ Eur. Conf. Comput. Vis., 2020, pp. 524–540. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:221088423
+[69] J. Kirkpatrick et al., “Overcoming catastrophic forgetting in neural
+ networks,” in Proc. Nat. Acad. Sci. USA, vol. 114, 2016, pp. 3521–3526.
+ [Online]. Available: https://api.semanticscholar.org/CorpusID:4704285
+[70] F. L. Wang, D.-W. Zhou, H.-J. Ye, and D. C. Zhan, “FOSTER:
+ Feature boosting and compression for class-incremental learning,” 2022,
+ arxiv.abs/2204.04662.
+[71] Z. Li and D. Hoiem, “Learning without forgetting,” IEEE Trans. Pattern
+ Anal. Mach. Intell., vol. 40, no. 12, pp. 2935–2947, Dec. 2018. [Online].
+ Available: https://api.semanticscholar.org/CorpusID:4853851
+[72] S. Hou, X. Pan, C. C. Loy, Z. Wang, and D. Lin, “Learning a unified
+ classifier incrementally via rebalancing,” in Proc. IEEE/CVF Conf.
+ Comput. Vis. Pattern Recognit. (CVPR), 2019, pp. 831–839. [Online].
+ Available: https://api.semanticscholar.org/CorpusID:195453293
+[73] P. Buzzega, M. Boschini, A. Porrello, D. Abati, and S. Calderara, “Dark
+ experience for general continual learning: A strong, simple baseline,”
+ 2020, arxiv.abs/2004.07211.
+[74] M. D. Lange et al., “Continual learning: A comparative study on how
+ to defy forgetting in classification tasks,” 2019, arxiv.abs/1909.08383.
+[75] P. Dhar, R. V. Singh, K.-C. Peng, Z. Wu, and R. Chellappa,
+ “Learning without memorizing,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ Pattern Recognit. (CVPR), 2018, pp. 5133–5141. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:53776855 Yangyang Du received the bachelor’s degree in
+[76] N. Passalis, M. Tzelepi, and A. Tefas, “Probabilistic knowledge transfer information security from Zhengzhou University in
+ for lightweight deep representation learning,” IEEE Trans. Neural Netw. 2022. He is currently pursuing the master’s degree
+ Learn. Syst., vol. 32, no. 5, pp. 2030–2039, May 2021. [Online]. with the School of Cyberspace Security, Southeast
+ Available: https://api.semanticscholar.org/CorpusID:219169868 University. His research interests include traffic anal-
+[77] J. Hu, L. Shen, S. Albanie, G. Sun, and E. Wu, “Squeeze-and- ysis and privacy protection.
+ excitation networks,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ Pattern Recognit., 2017, pp. 7132–7141. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:140309863
+[78] B. Zhao, X. Xiao, G. Gan, B. Zhang, and S. Xia,
+ “Maintaining discrimination and fairness in class incremental
+ learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ Recognit. (CVPR), 2019, pp. 13205–13214. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:208139404
+[79] M. Lin, Q. Chen, and S. Yan, “Network in network,” 2013,
+ arxiv.abs/1312.4400.
+[80] M. Chen, Y. Wang, and X. Zhu, “Few-shot website
+ fingerprinting attack with Meta-bias learning,” Pattern Recognit.,
+ vol. 130, Oct. 2022, Art. no. 108739. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:248487907
+[81] H. Zhang, M. Cissé, Y. Dauphin, and D. Lopez-Paz, “MIXUP: Beyond
+ empirical risk minimization,” 2017, arxiv.abs/1710.09412.
+[82] L. Zhang, Z. Deng, K. Kawaguchi, A. Ghorbani, and J. Y. Zou,
+ “How does mixup help with robustness and generalization?” 2020,
+ arxiv.abs/2010.04819.
+[83] A. Kolmogorov-Smirnov, A. N. Kolmogorov, and
+ M. Kolmogorov. “Sulla determinazione empírica di
+ uma legge di distribuzione.” 1933. [Online]. Available:
+ https://api.semanticscholar.org/CorpusID:222427298
+[84] N. V. Smirnov, “Table for estimating the goodness of fit of empirical distributions,” Ann. Math. Stat., vol. 19, pp. 279–281, Jun. 1948. [Online].
+ Available: https://api.semanticscholar.org/CorpusID:120842954
+[85] B. Gulmezoglu, “XAI-based microarchitectural side-channel Guang Cheng (Member, IEEE) received the
+ analysis for website fingerprinting attacks and defenses,” B.S. degree in traffic engineering from Southeast
+ IEEE Trans. Depend. Secure Comput., vol. 19, no. University, Nanjing, China, in 1994, the M.S. degree
+ 6, pp. 4039–4051, Nov./Dec. 2022. [Online]. Available: in computer application from the Hefei University
+ https://api.semanticscholar.org/CorpusID:244323044 of Technology in 2000, and the Ph.D. degree in
+[86] C. Wang, J. Dani, X. Li, X. Jia, and B. Wang, “Adaptive fingerprinting: computer network from Southeast University in
+ Website fingerprinting over few encrypted traffic,” in Proc. 11th ACM 2003, where he is a Full Professor with the School
+ Conf. Data Appl. Security Privacy, 2021, pp. 149–160. [Online]. of Cyber Science and Engineering. He has authored
+ Available: https://api.semanticscholar.org/CorpusID:233194725 or co-authored seven monographs and more than
+[87] A. Douillard, M. Cord, C. Ollion, T. Robert, and E. Valle, “PODNet: 100 technical papers, including top journals and top
+ Pooled outputs distillation for small-tasks incremental learning,” in conferences. His research interests include network
+ Proc. Eur. Conf. Comput. Vis., 2020, pp. 86–102. [Online]. Available: security, network measurement, and traffic behavior analysis. He is a Senior
+ https://api.semanticscholar.org/CorpusID:220665451 Member of CCF.

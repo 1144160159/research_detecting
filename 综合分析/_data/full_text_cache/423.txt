@@ -1,0 +1,870 @@
+Received 18 September 2024; revised 12 March 2025; accepted 22 April 2025.
+ Date of publication 28 April 2025; date of current version 12 May 2025.
+ The associate editor coordinating the review of this article and approving it for publication was M. Jaber.
+ Digital Object Identifier 10.1109/TMLCN.2025.3564587
+
+ Evolving ML-Based Intrusion Detection:
+ Cyber Threat Intelligence for Dynamic
+ Model Updates
+ YING-DAR LIN1 (Fellow, IEEE), YI-HSIN LU1 , REN-HUNG HWANG 2 (Senior Member, IEEE),
+ YUAN-CHENG LAI 3 , DIDIK SUDYANA 4 , AND WEI-BIN LEE 5 (Senior Member, IEEE)
+ 1 Department of Computer Science, National Yang Ming Chiao Tung University, Hsinchu 300025, Taiwan
+ 2 College of Artificial Intelligence, National Yang Ming Chiao Tung University, Tainan 711010, Taiwan
+ 3 Department of Information Management, National Taiwan University of Science and Technology, Taipei 106335, Taiwan
+ 4 Computer and Network Center, National Cheng Kung University, Tainan 701401, Taiwan
+ 5 Hon Hai Research Institute, New Taipei 236401, Taiwan
+
+ CORRESPONDING AUTHOR: D. SUDYANA (didik@gs.ncku.edu.tw)
+
+ ABSTRACT Existing Intrusion Detection System (IDS) relies on pre-trained models that struggle to keep
+ pace with the evolving nature of network threats, as they cannot detect new types of network attacks until
+ updated. Cyber Threat Intelligence (CTI) is analyzed by professional teams and shared among organizations
+ for collective defense. However, due to its diverse forms, existing research often only analyzes reports and
+ extracts Indicators of Compromise (IoC) to create an IoC Database for configuring blocklists, a method
+ that attackers can easily circumvent. Our study introduces a unified solution named Dynamic IDS with CTI
+ Integrated (DICI), which focuses on enhancing IDS capabilities by integrating continuously updated CTI.
+ This approach involves two key AI models: the first serves as the IDS Model, detecting network traffic,
+ while the second, the CTI Transfer Model, analyzes and transforms CTI into actionable training data. The CTI
+ Transfer Model continuously converts CTI information into training data for IDS, enabling dynamic model
+ updates that improve and adapt to emerging threats dynamically. Our experimental results show that DICI
+ significantly enhances detection capabilities. Integrating the IDS Model with CTI in DICI improved the F1
+ score by 9.29% compared to the system without CTI, allowing for more effective detection of complex threats
+ such as port obfuscation and port hopping attacks. Furthermore, within the CTI Transfer Model, involving
+ the ML method led to a 30.92% F1 score improvement over heuristic methods. These results confirm that
+ continuously integrating CTI within DICI substantially boosts its ability to detect and respond to new types
+ of cyber attacks.
+
+ INDEX TERMS Intrusion detection, cyber threat intelligence, sighting, machine learning, online learning.
+
+I. INTRODUCTION Typically, ML-based IDS is an offline model that under-
+
+T HE significance of Intrusion Detection Systems (IDS)
+ has become crucial as network attacks continue to
+increase in frequency and sophistication. Traditional IDS
+ goes periodic updates to maintain its effectiveness against
+ new threats. However, if a new attack occurs before the next
+ update, the behavior deviates from previous patterns and
+relies on signature-based methods to detect attacks. How- becomes difficult to predict, posing challenges in establishing
+ever, these methods often fail to identify novel or evolving reliable behavioral norms. This raises concerns about the
+threats. Consequently, the need for Machine Learning-based lifespan of learning models [2]. Consequently, ML-based IDS
+Intrusion Detection Systems (ML-based IDS) has become may exhibit defense gaps, rendering it unable to identify new
+apparent. ML-based IDS can outperform traditional IDS by types of network attacks promptly.
+learning to recognize patterns and anomalies in network traf- To address these challenges, integrating Cyber Threat
+fic, which allows them to detect both known and unknown Intelligence (CTI) with ML-based IDS is essential. CTI
+attacks more effectively [1]. encompasses up-to-date information on cyber threats,
+ 2025 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+ For more information, see https://creativecommons.org/licenses/by/4.0/
+VOLUME 3, 2025 605
+as analyzed by professional teams. In the field of CTI, • Existing CTI utilization is typically limited to static IoC
+‘sighting’ refers to real-world network observations such databases, which lack dynamic learning capabilities [3],
+as network flows and system logs [3]. When new network [4], [5]. We introduce an online learning-based CTI
+attacks occur, they are typically promptly identified by CTI, Transfer Model, which processes structured CTI reports
+which also provides Indicators of Compromise (IoC) of the to enable adaptive updates in ML-based IDS. Unlike
+attackers. These IoCs are shared on the CTI platform, and if prior approaches, which rely on predefined threat indicaused to reinforce ML-based IDS, early prevention of attacks tors [6], [7], [8], our method automates the integration of
+becomes feasible. Many research works focus on analyzing sighting data with CTI, ensuring real-time intelligence
+IoC from CTI reports to establish an IoC database [3], processing and minimizing manual effort in updating
+[4], [5] for blocklist purposes. However, relying solely on IDS models.
+blocklists and IoC databases can be insufficient as attackers • The lack of comparative analysis between rule-based
+can circumvent these constraints, for example, by using proxy CTI processing and ML-driven intelligence correlation
+servers. remains an open research gap. Our study evaluates the
+ To address this need, our research introduces DICI benefits of ML in CTI processing by comparing an
+(Dynamic IDS with CTI Integrated), a solution focused on ML-based CTI Transfer Model against a traditional ruleintegrating CTI to enhance ML-based IDS. DICI utilizes two based approach.
+ML models to achieve this integration. The first is an IDS This study is guided by three key research questions to
+pre-trained model designed to detect network traffic, while evaluate the effectiveness of integrating CTI into ML-based
+the second model, the CTI Transfer Model, analyzes CTI IDS and the role of the CTI Transfer Model in enhancing
+data to generate training datasets for the IDS Model. Given threat intelligence processing.
+the complexity of CTI reports, which aggregate data from
+various sources, ML techniques within DICI are essential • Does integrating CTI improve IDS performance?
+for analyzing and converting this information into effective To assess the impact of CTI, we compare an IDS with
+training data. CTI integration against a standalone IDS without CTI as
+ During the inference phase, DICI integrates these two ML the baseline. Traditional IDS models operate indepenmodels to operate cohesively. The IDS Model is responsible dently and lack real-time intelligence updates, making
+for traffic detection, identifying whether traffic flows are them vulnerable to evolving threats. This evaluation
+benign or malicious. When it encounters outlier traffic–traffic determines whether CTI enhances detection capabilities
+that cannot be definitively classified–the system performs a and improves adaptability to emerging cyber threats.
+ • How does the CTI Transfer Model compare to a
+CTI lookup using IoCs extracted from the outlier to retrieve a
+structured CTI report from the CTI platform. The CTI Trans- traditional IoC database?
+fer Model within DICI then analyzes this report and converts This question examines whether the CTI Transfer
+it into training data for the IDS Model, thereby enabling Model, which dynamically processes structured CTI
+dynamic model updates and adaptation to new threats. reports, provides advantages over a static IoC database.
+ This approach differs from others that primarily focus on The baseline for this evaluation is an IDS integrated
+analyzing IoCs from CTI reports [6], [7], [8] to create IoC with a precompiled IoC database. By leveraging realdatabases for configuring firewall blocklists. Instead, we uti- time intelligence, we evaluate whether the CTI Transfer
+lize the CTI Transfer Model to generate targeted training Model enhances IDS effectiveness compared to convendata for the IDS Model, ensuring it continuously incorporates tional IoC-based approaches.
+ • Is an ML-based CTI Transfer Model better than a
+the latest threat information. This method transforms the
+IDS Model from a static, pre-trained system into a dynamic rule-based approach?
+one that evolves in response to new threats through ongoing To assess the benefits of machine learning in CTI analinteraction with CTI. ysis, we compare an ML-based CTI Transfer Model
+ In relation to existing research, this paper addresses key against a rule-based approach, with the latter serving as
+open challenges in ML-based IDS and CTI integration by the baseline. While rule-based systems rely on predemaking the following contributions: fined conditions, ML techniques enable adaptive pattern
+ • Traditional ML-based IDS often struggle with defense
+ recognition and correlation of complex threat indicators.
+ gaps due to their reliance on static models that fail to This evaluation determines whether ML-based intelliadapt to emerging threats. To address this, we propose gence processing improves threat assessment, detection
+ DICI, an IDS framework that integrates real-time CTI accuracy, and adaptability.
+ updates to enhance threat detection capabilities. Unlike The work is organized into seven sections. Section II proconventional ML-based IDS, which suffer from delayed vides background information and related work on sighting
+ model updates [2], our approach leverages continuously and CTI integration. Section III formulates the problem,
+ updated intelligence, improving adaptability and ensur- including notations and problem statements. Section IV
+ ing the detection of evolving malicious activities within outlines the proposed solutions and details the system archinetwork environments. tecture. Section V describes the system implementation.
+
+606 VOLUME 3, 2025
+Lin et al.: Evolving ML-Based Intrusion Detection: Cyber Threat Intelligence for Dynamic Model Updates
+
+TABLE 1. Survey on recent research in the CTI field.
+
+Section VI presents experimental results, comparing the per- helps organizations predict, prevent, and respond to threats by
+formance of IDS with CTI. Finally, Section VII concludes the encompassing key components: CTI Collection, Inference,
+work and discusses future research directions. Sharing, and Defending. CTI Collection gathers data from
+ various sources such as threat feeds, open-source intelli-
+II. BACKGROUND AND RELATED WORKS gence, internal logs, and dark web monitoring. CTI Inference
+A. INTRUSION DETECTION SYSTEM (IDS) processes this data to identify patterns, trends, and IoCs,
+In the realm of cybersecurity, IDS plays a pivotal role in turning raw data into actionable intelligence. CTI Sharmaintaining network integrity by monitoring hosts and net- ing disseminates this intelligence within organizations and
+work traffic to identify and counter security breaches. IDS with external partners, enhancing collective knowledge. CTI
+can be categorized into misuse detection, which uses a Defending implements strategies based on these insights,
+signature-based approach with a low false alarm rate but a such as updating security protocols, deploying new technolohigh missed alarm rate and only detects known attacks, and gies, conducting training, and developing incident response
+anomaly detection, which employs an ML approach with a plans, ensuring preparedness and swift response to incidents.
+low missed alarm rate but a high false alarm rate, capable of Despite significant research on CTI extraction and analydetecting both known and unknown attacks [1]. Enhancing sis, applying ML to interpret and reformulate these narratives
+the false alarm rate in ML-based methods could significantly into structured data remains underexplored. This transforimprove detection performance. mation allows structured information to be shared among
+ Integrating ML into IDS has introduced various algo- intelligence platforms, enabling IT security practitioners to
+rithms, such as Support Vector Machines (SVM), Naïve investigate IoCs and tailor defensive strategies methodically.
+Bayes, Decision Trees, and Clustering techniques. The trend However, exploring ML’s capacity to analyze CTI and its
+is towards ensemble or hybrid models, which combine the correlation with sightings data to reinforce IDS is still needed.
+strengths of individual algorithms to develop more sophisti- CTI platforms such as Threat Miner, GREYNOISE, and
+cated and accurate intrusion detection capabilities. Research VirusTotal facilitate threat intelligence collection, inference,
+shows that these models generally outperform single algo- and sharing. These platforms gather CTI from multiple
+rithms [1]. Additionally, online learning, or incremental sources, provide results indicating attacker activities, and
+learning, has emerged as a strategy to adapt to the evolving offer functionalities to help organizations combat cyber
+nature of cyber threats. Despite challenges like data scarcity, threats. They improve cybersecurity defenses and provide
+our research aims to leverage real-time sightings and CTI data APIs for integration with defensive systems. Analyzing these
+to enhance the efficacy and flexibility of IDS in addressing platforms’ functionalities, advantages, and applications in
+contemporary cybersecurity challenges. academic papers would enhance understanding of CTI’s significance and how CTI platforms can bolster organizational
+B. CYBER THREAT INTELLIGENCE (CTI) cybersecurity.
+In modern cyber security, CTI is crucial, providing essen- Prior research has used ML techniques to analyze CTI and
+tial insights into emerging and existing cyber threats. CTI generate IoCs for IoC databases. However, simply creating
+
+VOLUME 3, 2025 607
+TABLE 2. Notations.
+
+blocklists of domains and IP addresses is insufficient for iden- In the area of CTI Collection, researchers such as [8], [9],
+tifying all cyber threats. This limitation highlights the need and [10] focused on gathering CTI from various sources,
+for advancing defensive strategies and exploring alternative including blogs, social media platforms, and the dark web.
+approaches beyond relying solely on IoC databases. Notably, These studies used ML techniques, such as NLP and CNN,
+no existing study has explored the advantage of continuously to transform unstructured CTI into structured data, making
+training an ML-based IDS using the IoC database, which it more useful for cybersecurity applications. However, these
+promises continuous enhancements in IDS efficacy. works primarily dealt with static data sources, without incorporating dynamic IoC updates or real-time adaptability. For
+C. RELATED WORKS CTI Inference, [11] and [12] developed methods to analyze
+The field of CTI has been the focus of extensive research collected CTI data. Reference [11] focused on knowledge
+aimed at fortifying defense mechanisms against cyber threats. assessment by analyzing red team tactics, while [12] built
+Recent literature has often segmented studies into four pri- a CTI knowledge graph using Named Entity Recognition
+mary categories: CTI Collection, CTI Inference, CTI Sharing, (NER) to map relationships between threats. Though these
+and CTI Defense. These categories represent key aspects of methods provided useful insights into potential attack trajec-
+CTI, each addressing a distinct component of understanding, tories, they did not leverage real-time sighting data or support
+analyzing, and counteracting cyber threats. Table 1 com- continuous learning through online methods.
+pares the methodologies and objectives of these works across In CTI Sharing, [4] explored ways to enhance the effiseveral dimensions, such as automated integration, threat dis- ciency of CTI exchange among organizations. Their research
+covery, sighting-CTI correlation, online learning capability, focused on standardizing the sharing process to enable more
+and adaptability to new IoCs. Automated integration refers effective collaboration across cybersecurity teams. However,
+to the ability to seamlessly incorporate CTI into a system, their approach did not involve real-time data or adaptability
+reducing manual intervention and enhancing real-time threat to new IoCs, limiting its capacity to address rapidly evolving
+intelligence processing. Threat discovery highlights whether threats. In CTI Defense, [3], [5], and [13] worked on applying
+a solution can identify previously unknown attacks. Sighting- CTI to strengthen defense mechanisms. Reference [5] devel-
+CTI correlation evaluates the ability to combine internal oped a framework for generating intrusion detection datasets
+network observations (sightings) with external threat intelli- using CTI, while [13] proposed a threat-hunting framework to
+gence for more accurate detection. Online learning indicates detect unknown threats. Reference [3] worked on augmenting
+the solution’s capacity to continuously adapt by learning from CTI with real-time assessments to improve defense strategies.
+new data, while new IoC adaptability measures how well Although these works made significant contributions, they
+the system adjusts to newly discovered attack patterns and relied on traditional data sets and lacked the flexibility of
+indicators. continuous learning and adaptability.
+
+608 VOLUME 3, 2025
+Lin et al.: Evolving ML-Based Intrusion Detection: Cyber Threat Intelligence for Dynamic Model Updates
+
+ FIGURE 1. System architecture.
+
+ Our proposed solution, DICI, addresses the limitations Additionally, since it is necessary to correlate with Sightings,
+observed in prior research by introducing a system that sup- the IP addresses within the CTI dataset are also designated as
+ports continuous online learning and real-time adaptability IoCs. This ensures a comprehensive alignment between CTI
+to new IoCs. Unlike previous approaches that rely on static and Sightings, enhancing the accuracy and effectiveness of
+IoC databases or pre-trained models, DICI integrates both threat intelligence analysis.
+sighting data and real-time CTI, enabling the IDS system The last category is ML. This category primarily defines
+to dynamically update and refine its detection capabilities. two models: one tailored for the IDS Model and another
+This ensures that DICI can not only recognize known threats for the CTI Transfer Model. Each model includes its own
+but also adapt to new and emerging attack patterns. By uti- optimized ML algorithms and configurations. These models
+lizing multiple CTI sources, analyzing them with the ML will be instrumental in elucidating the issues and formulating
+model, and continuously adapting to new IoCs, DICI offers effective solutions in the following sections.
+a more flexible and comprehensive defense mechanism than
+traditional CTI-based systems, which often struggle to keep B. PROBLEM OVERVIEW
+pace with evolving cyber threats. Through its integration of The objective of this study is to develop an evolving
+advanced ML techniques and real-time updates, DICI sets ML-based IDS that automates CTI integration and enhances
+itself apart as a robust solution capable of addressing both threat detection through continuous learning. Figure 1 illuscurrent and emerging cybersecurity challenges. trates the system architecture, where network traffic, denoted
+ as x S , is processed by the IDS Model to classify activities as
+III. PROBLEM FORMULATION benign, malicious, or outlier traffic that cannot be confidently
+In this section, the problem formulation is divided into two categorized.
+parts: firstly, the notations for defining the problem as a For outlier traffic, the system performs a CTI lookup,
+consistent symbol set, and secondly, the problem statements, retrieving structured CTI reports from a CTI platform. The
+which utilize these notations to articulate the issues at hand. CTI Transfer Model, denoted as M C , analyzes the retrieved
+ data, extracts relevant features, and determines whether the
+A. NOTATIONS IoCs OC are associated with known threats. This refined
+These notations delineate two categories, as referenced in intelligence is then incorporated into the IDS training dataset,
+Table 2. The first category is a dataset, which represents the enabling real-time model updates.
+sighting and CTI datasets. The sighting dataset comprises the This feedback loop ensures that the IDS Model conactual collection of network traffic flow by a threat intel- tinuously learns from newly observed threats, improving
+ligence firewall, providing labels accordingly. These traffic detection accuracy and adaptability. The approach focuses on
+flows are segmented into subsets designated for training optimizing the integration between the IDS Model and the
+and testing. To correlate with cyber threat intelligence, each CTI Transfer Model, analyzing them as distinct components
+source IP address associated with a traffic flow is considered to identify the most effective learning strategy. The perforan IoC. This facilitates the association of network traffic with mance of the integrated system is evaluated using the F1
+potential threats and aids in identifying and mitigating cyber score, ensuring a balance between precision and recall.
+risks.
+ Furthermore, the CTI dataset utilizes IP addresses as IoCs C. PROBLEM STATEMENT
+acquired from sightings for CTI lookup within the CTI Plat- The goal of this study is to develop the IDS Model M S with
+form, thereby obtaining structured CTI reports. These reports a CTI Transfer Model M C to maximize detection accuracy
+are similarly partitioned into subsets for training and testing. while efficiently utilizing CTI resources. Specifically, the
+
+VOLUME 3, 2025 609
+ FIGURE 2. Solution overview.
+
+objective is to improve the F1 score of M S , which consists process, while Figure 3 breaks down how threat intelligence
+of supervised M0S and unsupervised M1S classifiers, using is processed.
+both sighting data DS and structured CTI reports DC , while A. SOLUTION OVERVIEW
+maintaining efficiency under resource constraints for CTI
+ Our proposed solution, DICI, enhances the IDS Model by
+queries. The formal problem definition is as follows:
+ integrating the CTI Transfer Model, enabling continuous
+ • Input online learning. This integration allows the IDS to dynam-
+ – Sighting dataset: DS ically gather, process, and utilize CTI-based training data,
+ – CTI dataset: DC ensuring that the model adapts to emerging threats in real-
+ – ML algorithms: ML n time.
+ • Output Figure 2 illustrates the overall solution overview. The IDS
+ ′
+ – Optimized IDS Model M S and CTI Transfer Model Model, denoted as M S , consists of two components, M0S and
+ M C M1S , which classify network traffic flows x S as benign, malicious, or outliers–where outliers represent traffic that cannot
+ • Objective
+ ′
+ be confidently classified. Section V provides further details
+ – Maximize F1 score on M S , incorporating sighting on the IDS Model.
+ T
+ data DS and CTI data DC . T
+ When the IDS Model encounters outlier traffic, it extracts
+ • Constraints IoCs OS from these flows and performs a CTI Lookup on a
+ – Limited CTI query resources CTI platform to retrieve structured threat intelligence reports
+ x C . The CTI Transfer Model, denoted as M C , is responsible
+ The CTI Transfer Model serves as the key component for
+ for processing this data. First, M C analyzes and extracts
+integrating external threat intelligence into the IDS, enhancrelevant features from the CTI reports to determine whether
+ing its detection capabilities. By optimizing both models, the
+ the IoCs OC are benign or malicious, improving the IDS
+goal is to create an IDS that is adaptable, scalable, and capable
+ Model’s detection accuracy.
+of continuously learning from real-time intelligence, ensuring
+ Next, M C performs a sighting lookup, referencing original
+proactive and effective intrusion detection.
+ network traffic records associated with OC to validate the
+ information provided by the CTI report x C . This correlation
+IV. DICI: DYNAMIC IDS WITH CTI INTEGRATED
+ enhances the accuracy and reliability of the training data.
+SOLUTION
+ Finally, since raw CTI report data is not directly suitable for
+This section is divided into two main parts to thoroughly
+ IDS training, the inference results yC from M C undergo furexplain our proposed solution. First, we provide an overview
+ ther processing through sighting lookups. This step ensures
+of the DICI solution, including its key components: the IDS
+ that the IDS Model is updated with validated and meaningful
+Model and the CTI Transfer Model. Then, we delve into the
+ threat intelligence, allowing it to continuously improve and
+specifics of the CTI Transfer Model, detailing its functions
+ adapt to evolving attack patterns.
+and how it integrates with the overall system.
+ We have also included multiple figures to illustrate the B. CTI TRANSFER MODEL
+proposed solution. Figure 1 provides a system overview, The CTI Transfer Model is a critical component in the DICI
+showing the integration of the IDS Model with the CTI solution because it addresses the limitations of traditional
+Transfer Model. Figure 2 details the inference and training IoC databases, which may miss new or evolving IoCs from
+
+610 VOLUME 3, 2025
+Lin et al.: Evolving ML-Based Intrusion Detection: Cyber Threat Intelligence for Dynamic Model Updates
+
+ FIGURE 3. Detailed procedure of the CTI transfer model.
+
+attackers due to their reliance on static data. By integrating relationships between seemingly unrelated IoCs, detecting
+sighting information with real-time CTI data, the CTI Trans- patterns that signal emerging threats. This real-time intelfer Model enables the IDS Model to detect recurring or new ligence processing enhances the IDS’s ability to respond
+forms of attacks, ensuring that the system remains effective proactively, ensuring that the system remains effective in an
+in a constantly changing threat landscape. ever-changing cybersecurity landscape.
+ The CTI Transfer Model plays a critical role in process- The detailed procedure of the CTI Transfer Model is illusing structured CTI reports. Some CTI platforms that can trated in Figure 3. The process begins with the sighting
+provide such reports include VirusTotal, ThreatMiner, and phase, where the IDS Model detects outlier traffic that cannot
+GreyNoise. These platforms aggregate threat intelligence be clearly classified. From this outlier traffic, IoCs OS are
+from multiple cybersecurity vendors and public feeds, pro- extracted. These IoCs are used to perform a CTI Lookup
+viding data across multiple timelines and sources. However, via an API on a CTI platform, retrieving structured CTI
+in our experiments, we use only VirusTotal due to its broader reports x C .
+threat intelligence coverage, higher API query limits, and Once these reports are obtained, they are accumulated as
+ability to provide structured reports aligned with our CTI CTI data X C = {x1C , x1C , . . . , xRC
+ C } within the CTI Transfer
+
+processing requirements. The detailed justification for this C
+ Model M . This model uses machine learning to analyze the
+selection is provided in Section V-B. structured CTI reports, determining if the IoCs OC within
+ While these reports offer valuable insights, they often come these reports are benign or malicious. The machine learning
+with significant challenges. Many cybersecurity vendors pro- component is crucial because it allows for the nuanced analyvide an initial assessment of an IP’s threat status based on a sis of complex data sets that include varied IoC characteristics
+specific incident, but this status may not be updated if the IP and threat indicators from multiple CTI sources.
+becomes benign at a later time. This creates inconsistencies When the number of accumulated CTI reports n exceeds a
+and potential gaps in threat intelligence over time. predetermined threshold p, the model initiates online learning
+ The complexity and volume of structured CTI reports make to refine its detection algorithms based on the most current
+ML essential for processing and analysis in the CTI Transfer data. As new CTI reports are analyzed, each IoC OC within
+Model. ML automates the extraction of meaningful patterns a report undergoes inference to produce an inference result
+from diverse data sources, handling variations in report struc- yC . These IoCs OC are also used for a sighting lookup to
+tures and formats that would be difficult to process with retrieve relevant sighting data x S from the original network
+traditional heuristic methods. By leveraging both historical traffic records, categorizing this data as yS to indicate whether
+data and real-time inputs, ML enhances the system’s adapt- it is benign or malicious.
+ability to new and evolving threats. The training data generated from this analysis, consisting
+ Unlike rule-based approaches that rely on predefined con- of sighting data x S and the CTI Transfer Model inference
+ditions, ML enables more flexible and nuanced analysis. results yS , is then accumulated as sighting training data
+Instead of being restricted to fixed sets of features, the X S = {x1S , x2S , . . . , xRS
+ S }. Exceeding another threshold q
+
+ML model learns from multiple data points across different with this training data triggers online learning for the IDS
+sources and timeframes, improving the accuracy of threat Model M S , allowing it to continuously update and enhance its
+assessments. This capability is especially critical for identify- capabilities.
+ing attack vectors that evolve over time, allowing the system Through this online learning process, we enable the IDS
+to refine its understanding dynamically rather than depending Model to adapt continuously by utilizing real-time threat
+on static rule sets. intelligence and the inference results from the CTI Transfer
+ Additionally, ML strengthens the CTI Transfer Model’s Model. This method not only enhances the detection capabilability to correlate various threat indicators. By contin- ities of the IDS system but also ensures it remains dynamic
+uously learning from new data, the model can uncover and effective in a rapidly evolving threat landscape.
+
+VOLUME 3, 2025 611
+ FIGURE 4. IDS Model with hybrid approach.
+
+V. IMPLEMENTATION Conversely, if the unsupervised model alone flags traffic as
+This section is organized into three main sections to detail the malicious while the supervised model does not, the hybrid
+implementation of our work. Firstly, we explain the hybrid system categorizes the traffic as an outlier. This approach
+ML approach in the IDS Model. Secondly, we introduce acknowledges that while the unsupervised model may have
+the CTI API. Thirdly, we discuss the open-source tools and a higher rate of false positives, its detection signals potential
+libraries, focusing on data processing tools and ML libraries ambiguity in the traffic’s nature, suggesting it may neither be
+selected for their extensive support and alignment with our clearly benign nor malicious. Such outlier traffic flows are
+research objectives. Lastly, we present detailed information earmarked for further analysis via the CTI Transfer Model,
+on the datasets utilized. accommodating the unsupervised model’s greater adaptability without prematurely labeling the traffic.
+A. IDS MODEL In ML-based IDS, hybrid models have been shown to be
+This approach aims to achieve the highest F1 score for the more effective than single classifiers [1]. Selecting appropri-
+IDS Model, considering the complexity and diversity of the ate supervised and unsupervised learning algorithms within
+traffic flow. Supervised learning offers the advantage of high the hybrid framework is essential for achieving optimal perprecision but lacks adaptability; thus, it may fail to recognize formance.
+attack patterns with rich variations. On the other hand, unsu- For the supervised component, Support Vector Machines
+pervised learning performs exceptionally well in adaptability (SVM) has been chosen due to its effectiveness in hanbut tends to have higher false positives. Moreover, according dling high-dimensional data and classification tasks. While
+to [1], ensemble and hybrid classifiers tend to outperform tree-based models have demonstrated strong performance in
+single classifiers. By combining these two types of ML algo- IDS [14], [15], they come with limitations such as node depth
+rithms, we can create a more robust model. Thus, in this constraints and the need for pruning to prevent overfitting,
+work, we integrate supervised and unsupervised learning into particularly in online learning environments. SVM, on the
+a hybrid model, leveraging the strengths of both methods to other hand, provides a more efficient and robust approach
+enhance performance. by defining optimal decision boundaries while avoiding
+ Figure 4 illustrates the proposed IDS Model with a hybrid excessive complexity [16]. These characteristics make SVM
+algorithm approach. In this proposed solution, called a hybrid well-suited for online learning in IDS applications.
+model, there are two types of ML models for prediction: For the unsupervised component, K-means clustering is
+supervised model M1S , which produces results denoted as S1, widely used for anomaly detection in network traffic [17],
+and unsupervised model M2S , which produce results denoted [18]. K-means is particularly beneficial in online learning as
+as S2. Subsequently, a hybrid decision is employed to amal- it continuously updates cluster centers, allowing it to adapt to
+gamate decisions from both types of models, predicting the evolving traffic patterns in real time. Its ability to self-adjust
+final output of yS . based on new data distributions makes it an effective choice
+ Based on Figure 4, the hybrid model operates on the con- for enhancing the adaptability of ML-based IDS.
+sensus of its constituent supervised and unsupervised models. By combining SVM for precise classification and K-means
+If both models classify traffic flow as malicious, the hybrid for dynamic anomaly detection, the hybrid IDS model effecmodel similarly labels it as malicious. Likewise, if both mod- tively balances detection accuracy and adaptability, making it
+els agree the traffic is benign, the hybrid system classifies it as a robust approach for identifying both known and emerging
+benign, reflecting the consistency in their assessments. This threats.
+design leverages the equivalent inference results of the two Furthermore, to prevent outliers from being misclassimachine learning approaches for clear-cut decisions. fied as inliers, detected outliers undergo a CTI lookup to
+ However, discrepancies between the models trigger a dif- verify their threat status before being incorporated into the
+ferent protocol. If the supervised model identifies traffic as model. The CTI Transfer Model processes structured intellimalicious but the unsupervised model does not, the hybrid gence reports to ensure that only validated threats contribute
+model still deems the traffic malicious, valuing the higher to training, reducing the risk of incorrect classifications.
+reliability typically associated with supervised learning. Additionally, the hybrid IDS model mitigates overfitting,
+
+612 VOLUME 3, 2025
+Lin et al.: Evolving ML-Based Intrusion Detection: Cyber Threat Intelligence for Dynamic Model Updates
+
+ Whois details, last analysis date, ownership data, and aggregated security assessments from multiple sources. In this
+ study, we utilize IP addresses as input to acquire structured
+ CTI reports, extract relevant features, and analyze critical
+ threat information to enhance IDS detection accuracy.
+
+ C. OPEN-SOURCE TOOLS AND LIBRARIES
+ Table 4 details the open-source tools and libraries utilized
+ in this work. Nfdump [24] played a crucial role in capturing
+ NetFlow records directly from the router and processing the
+FIGURE 5. Example of a structured CTI report. Sensitive
+ data for subsequent analysis. This method facilitated effiinformation has been obscured for privacy reasons.
+ cient collection and in-depth examination of NetFlow data,
+ allowing us to gain a deeper understanding of network traffic
+ patterns and behaviors. Additionally, we used Imbalancedas the combination of SVM and K-means clustering prelearn and Scikit-learn to develop the ML models, and Seaborn
+vents the system from becoming too specialized in detecting
+ and Matplotlib to visualize the data.
+only certain attack patterns. While SVM effectively handles
+high-dimensional traffic data, K-means clustering enhances
+adaptability by identifying new attack behaviors without rely- D. DATASET
+ing solely on predefined labels. This hybrid approach also In this section, we introduce the datasets utilized in this study.
+helps counteract bias by continuously integrating real-time Our research leverages two primary datasets: the Sighting
+CTI updates, ensuring the model does not become overly Dataset D0 , which captures actual network traffic in a real
+focused on specific attack types but remains responsive to network as sighting, and the CTI Dataset D1 , designed to
+evolving threats. address contemporary IoCs. Each dataset serves a specific
+ purpose and is integral to our experimental framework.
+B. CTI API
+The CTI API facilitates automated threat intelligence lookups 1) Sighting Dataset
+by retrieving structured reports from CTI platforms. Our The sighting dataset is used to train the IDS models by
+study evaluates various CTI platforms to select the most incorporating real-world IoCs obtained through CTI lookups.
+comprehensive source for integration. Table 3 compares sev- However, publicly available intrusion detection datasets often
+eral platforms based on their capabilities, supported IoC exclude IP information due to privacy concerns, making them
+types, and API query limits, including Shodan [19], Mal- unsuitable for CTI integration. While some public datasets,
+wareBazaar [20], Threat Miner [21], GREYNOISE [22], and such as CIC-IDS-2017, do contain IP information within the
+VirusTotal [23]. PCAP files, they represent historical snapshots of network
+ Each platform has distinct functionalities. Shodan [19] traffic rather than real-time threat intelligence. Since CTI
+specializes in querying internet-connected devices, making platforms continuously update their databases with the latest
+it more suitable for reconnaissance tasks rather than direct indicators of compromise (IoCs), querying a CTI platform
+CTI correlation. MalwareBazaar [20] only supports hash- with IPs from an outdated dataset may not yield meaningful
+based queries, limiting its usefulness for network-based threat intelligence. Many of these IPs may no longer be relevant
+detection. While Threat Miner [21] and GREYNOISE [22] or lack available information in CTI platforms because they
+support IP lookups, their restrictive API query limits reduce originate from local IP addresses within controlled testbed
+their practicality for large-scale correlation analysis. Virus- environments. This temporal limitation makes it impractical
+Total [23], on the other hand, provides broader capabilities to effectively integrate CTI with public datasets for real-time
+with higher API limits, making it the most suitable platform threat intelligence evaluation. To address this, we use a profor our CTI lookups. prietary threat intelligence firewall to collect NetFlow traffic
+ VirusTotal [23] offers an extensive repository of threat data over two periods: January 6, 2023, to June 31, 2023, and
+intelligence, integrating multiple security tools, including October 1, 2023, to October 31, 2023, totaling eight months.
+antivirus engines and file analysis tools, within a single The dataset, processed with Nfdump, contains 2,774,241
+interface. With real-time updates and a large global cyberse- traffic flows with a total size of 137.3 MB. The firewall’s
+curity community, VirusTotal provides valuable insights into built-in threat intelligence mechanisms label traffic as benign
+emerging threats, vulnerabilities, and attack patterns, allow- or malicious, with network traffic features summarized in
+ing organizations to strengthen their cybersecurity defenses. Table 5.
+ The CTI API from VirusTotal enables seamless integration The dataset underwent comprehensive preprocessing to
+into security infrastructures through RESTful HTTP requests, ensure quality and suitability for analysis. Missing valsuch as the GET method. Figure 5 presents an example of ues were handled through a combination of imputation
+a structured CTI report, containing key information such as and removal of records exceeding a predefined threshold.
+
+VOLUME 3, 2025 613
+TABLE 3. Threat intelligence platform comparison.
+
+TABLE 4. Open source tool and library. relevant ones. The extracted CTI features include network
+ information, last analysis date, ownership details, security
+ vendor assessments, reputation scores, country, and total
+ votes for malicious or harmless classifications, amounting to
+ a total of 105 features. While IP addresses were initially used
+ to map CTI records to their corresponding labels, they were
+ excluded from the ML model’s training process, ensuring that
+ the model learns meaningful behavioral patterns rather than
+ relying on static IoC indicators.
+ To ensure quality and suitability for analysis, the dataset
+ underwent comprehensive preprocessing. Missing values
+ were handled through imputation and removal of records
+ with excessive missing data. Categorical variables were transformed using one-hot encoding to integrate them effectively
+To prevent dependency on specific network identifiers, meta- into machine learning models. The dataset was standardized
+data fields such as time_start, time_end, src_ip, dest_ip, and for uniform feature scaling, improving model performance
+src_port were removed. Categorical variables were encoded and interpretability. Additionally, undersampling was applied
+using one-hot encoding for seamless integration into ML to address the class imbalance and mitigate potential biases
+models, while feature standardization ensured consistent in model training. These preprocessing steps enhance the
+scaling, improving model performance and interpretability. reliability and robustness of the dataset for threat intelligence
+Class imbalance was addressed using undersampling tech- analysis.
+niques to reduce bias in model training. These preprocessing The structured CTI reports obtained from the VirusTosteps were carefully implemented to enhance the reliability tal CTI API allow for consistent and reliable experimental
+and robustness of the dataset. evaluations. By providing a wide range of extracted threat
+ The sighting dataset provides a detailed view of network intelligence features, the dataset facilitates an in-depth analtraffic, making it valuable for intrusion detection and security ysis of the impact of different CTI attributes on ML-based
+analysis. Retaining essential traffic characteristics allows for IDS. Additionally, by leveraging well-defined preprocessmeaningful correlation between network activity and IoCs, ing steps, the dataset maintains high-quality inputs, ensuring
+enabling more effective CTI integration. The dataset supports valid and reproducible research findings. The dataset is also
+advanced intrusion detection by facilitating nuanced behav- used for comparison between the CTI Transfer Model and an
+ioral analysis and identifying emerging security threats. IoC database approach, as IP addresses and vendor analysis
+ results are utilized for blocklisting.
+2) CTI Dataset
+The CTI dataset ensures the reproducibility of our experi- VI. RESULTS AND ANALYSIS
+ments by incorporating structured CTI reports downloaded This section begins with a description of the parameter conlocally, as CTI information undergoes continual changes over figuration for all classifiers that we used. The remainder of
+time. We utilized the VirusTotal CTI API to perform lookups this section presents the experimental results addressing the
+on all IPs in the sighting dataset, storing a total of 2,112 struc- key issues under investigation. Specifically, we examine the
+tured CTI reports with a file size of 48.4 MB. By using locally following: (1) the comparative performance of the IDS Model
+stored CTI reports, the dataset provides consistent results over with and without CTI integration, to assess the impact of CTI
+multiple experiments, ensuring that repeated CTI lookups on IDS effectiveness; (2) the defensive capabilities of inteyield stable and reproducible evaluations. The CTI dataset grating the IDS Model with the CTI Transfer Model versus
+includes all extracted properties from structured CTI reports using an IoC database, to evaluate which method provides
+as features. During training, the model assigns higher weights superior threat detection and mitigation; and (3) the overall
+to important features while reducing the influence of less performance of the CTI Transfer Model when applied with
+
+614 VOLUME 3, 2025
+Lin et al.: Evolving ML-Based Intrusion Detection: Cyber Threat Intelligence for Dynamic Model Updates
+
+TABLE 5. Description of dataset features.
+
+ML techniques against the rule-based method, to analyze its TABLE 6. Hyperparameter settings.
+effectiveness in real-world scenarios.
+
+A. PARAMETER SETTINGS
+In this research, the proposed IDS Model used a hybrid
+approach that combines SVM for supervised learning and
+K-means clustering for unsupervised learning. The SVM
+component allows us to classify traffic flow patterns accurately, leveraging the power of supervised learning to detect
+known threats. Meanwhile, K-means clustering provides the
+ability to detect outliers and emerging anomalies, which
+may not conform to known attack patterns, thus augmenting the system with unsupervised learning capabilities. This the choice of algorithms is based on their specific learnhybrid framework enables the IDS Model to effectively ing environments and data characteristics. Optimizing the
+identify both known threats and emerging anomalies with hyperparameters for both K-means++ and K-means is a
+precision. crucial step to ensure the efficiency and accuracy of both
+ For the development of the CTI Transfer Model, models.
+we employed K-means++, a variant of K-means clustering. To this end, we embarked on exhaustive grid searches, sys-
+The key difference between K-means and K-means++ lies tematically exploring various hyperparameter combinations.
+in how the initial centroids are determined. K-means++ This meticulous process allowed us to pinpoint the configuraselects the initial centroids at the start of the algorithm, while tion that yields the most favorable performance metrics. The
+K-means does not. Since the CTI Transfer Model begins with culmination of these efforts is showcased in Table 6, where
+an empty dataset and progressively learns through online we present the meticulously tuned hyperparameter settings
+learning, it is crucial to establish an initial feed to make the pertinent to our models.
+model’s learning process controllable and structured, which Furthermore, the experiments were conducted on a system
+is why we require K-means++. In contrast, the IDS Model equipped with an AMD Ryzen 7 PRO 7840U processor with
+is pre-trained offline, so the initial setup of centroids is not as Radeon 780M Graphics and 64GB of RAM. Additionally,
+critical, allowing us to use the traditional K-means clustering to assess the effectiveness of IDS with CTI integration, we use
+algorithm. the F1 score, which balances precision and recall. This metric
+ Moreover, the input data types for the IDS and CTI Trans- is widely used in IDS research to measure how well a system
+fer Models are different, and therefore, there is no strict can correctly identify attacks while minimizing false posirequirement that both models use the same algorithm. The tives and false negatives. By using the F1 score, we ensure a
+CTI Transfer Model handles unlabelled CTI data, while comprehensive evaluation of detection performance, demonthe IDS Model processes network traffic flows. These two strating the impact of CTI on improving threat intelligence
+AI models solve different problems independently, and processing and overall IDS effectiveness.
+
+VOLUME 3, 2025 615
+B. IDS WITH CTI VS. IDS WITHOUT CTI
+The empirical findings regarding the integration of CTI into
+the IDS Model for online learning reveal significant performance improvements. As illustrated in Figure 6, the blue line
+represents the ML-based IDS with CTI integration, which
+dynamically updates using real-time threat intelligence, while
+the red and green lines correspond to the ML-based IDS and
+DL-based IDS without CTI, operating as an offline model
+without continuous updates.
+ Online learning enables the model to update its parameters based on newly received data points iteratively. With
+each iteration, the model adapts in real-time, improving its
+detection capabilities. The figure clearly demonstrates that as
+online learning progresses, the F1 score of the IDS with the
+CTI Transfer Model steadily improves. In contrast, the IDS
+without CTI does not exhibit the same level of enhancement. FIGURE 6. Comparison of F1 scores over iterations for IDS
+ model with CTI transfer model.
+After ten iterations, the IDS with CTI achieved an F1 score
+of 89.52%, whereas the offline IDS without CTI stagnated
+at 80.22%. This 9.29% increase in performance underscores system enhances its ability to detect evolving threats while
+the effectiveness of incorporating CTI into the IDS learning minimizing the limitations of individual models.
+process, allowing for a more adaptive and responsive cyber- Additionally, Figure 6 also presents a comparative evaluasecurity defense. tion between ML-based IDS and DL-based IDS, both with
+ This experiment shows that integrating CTI into an IDS and without CTI integration. For DL models, we use an
+significantly enhances its efficiency and adaptability. Con- LSTM-based IDS from [29]. The results show that while
+tinuous CTI updates keep the IDS current with emerging both ML and DL models benefit from CTI, ML gains signifithreats, improving detection accuracy. The F1 score increase cantly more from CTI integration. This is because ML models
+highlights its enhanced threat identification, making detec- can effectively learn from small sample sizes, and with the
+tion more reliable. Results confirm that real-time CTI is additional intelligence provided by CTI, they can contincrucial for maintaining high IDS performance in dynamic uously refine their detection capabilities without requiring
+environments and strengthening resilience against sophisti- massive datasets. In contrast, DL models typically require
+cated cyber attacks. large datasets to generalize well, making them less efficient
+ Further analysis of detection performance highlights how in scenarios where labeled attack data is limited and costly
+the hybrid IDS model handles attack identification. The com- to collect. The CTI-enhanced ML model exhibits stronger
+bination of supervised (SVM) and unsupervised (KMeans) adaptability, leveraging real-time intelligence updates to conmodels ensures balanced detection, with KMeans capable tinuously improve performance, whereas the DL model
+of flagging previously unseen threats, albeit at the cost of benefits less from CTI due to its higher dependence on
+increased false positives. In our evaluation, SVM achieved a extensive training data. These results highlight that MLfalse positive rate of 7.70% and a false negative rate of 4.95%, based IDS, when integrated with CTI, is more effective in
+while KMeans exhibited a significantly higher false positive real-world cybersecurity applications where data availability
+rate of 42.78% and a false negative rate of 34.69%. While is constrained.
+KMeans has a higher false positive rate, its broad anomaly Figure 7 presents a comparison of training time, memdetection scope helps identify novel attack patterns that SVM ory consumption, and CPU utilization between ML-IDS and
+might miss. However, the primary cause of missed detec- DL-IDS. The results clearly demonstrate that ML-IDS is
+tions stems from KMeans failing to classify certain malicious significantly more resource-efficient than DL-IDS. In terms
+traffic as anomalous rather than incomplete feedback to the of training time, ML-IDS completes training in 3.22 sec-
+SVM. onds, whereas DL-IDS requires 59.30 seconds, indicating
+ To address this, our hybrid IDS model introduces an outlier that deep learning models demand significantly longer comcategory, ensuring that uncertain traffic flagged by KMeans putational time due to their complex architectures and
+does not go unexamined. Instead of directly classifying such iterative optimizations. Similarly, in terms of memory contraffic as benign, it undergoes further analysis using the CTI sumption, ML-IDS uses only 17.43 MB, while DL-IDS
+Transfer Model, which queries real-time threat intelligence to consumes 65.14 MB, as deep learning models typically
+validate its threat status. This process helps refine detection require large parameter sets and activations, leading to
+accuracy by allowing CTI to verify ambiguous cases, pro- higher memory overhead. Additionally, CPU utilization for
+viding a mechanism for re-labeling previously misclassified ML-IDS remains at 36.6%, while DL-IDS consumes 79.5%,
+flows based on new intelligence. By continuously updat- further emphasizing the lightweight nature of ML-based
+ing training data and incorporating feedback from CTI, our approaches.
+
+616 VOLUME 3, 2025
+Lin et al.: Evolving ML-Based Intrusion Detection: Cyber Threat Intelligence for Dynamic Model Updates
+
+ Those findings highlight a key advantage of using ML-IDS
+over DL-IDS in real-world cybersecurity applications, where
+computational efficiency is crucial for deployability, scalability, and responsiveness. Given that network intrusion
+detection systems often operate in resource-constrained environments, ML-IDS presents a more practical solution by
+maintaining strong detection performance while ensuring
+minimal resource consumption.
+ While evaluating computational efficiency is essential,
+analyzing the complexity trade-offs between an IDS with and FIGURE 7. Comparison of ML-IDS and DL-IDS in terms of
+without CTI integration presents additional challenges. Com- resource utilization.
+plexity can be interpreted in different ways, often referring
+to time or space complexity in an algorithmic sense (big-O
+notation). However, comparing an online learning IDS with
+CTI and a traditional offline IDS is not straightforward due
+to fundamental differences in their training paradigms.
+ An offline IDS undergoes periodic large-scale training,
+incurring a one-time overhead when retrained with new data,
+whereas an online IDS updates incrementally as new threats
+emerge. Since these models operate differently, direct time
+complexity comparisons do not fully capture real-world performance. Additionally, inference complexity remains the
+same for both systems, as they rely on the same ML models
+such as SVM and K-Means. The primary computational overhead in an IDS with CTI arises when outlier traffic triggers a
+CTI lookup and an incremental model update. However, these FIGURE 8. Comparison of F1 score for different types of sighting.
+
+updates run asynchronously, ensuring that real-time classification remains unaffected. Moreover, CTI updates occur
+only for uncertain (outlier) traffic, reducing unnecessary pro- generated from different sightings. Figure 8 shows the
+cessing overhead. Although CTI lookups introduce additional F1 score performance for six different sighting categories:
+processing, this cost is offset by enhanced detection accuracy Benign, Malicious, Outlier, Benign and Malicious, Benign
+and adaptability in handling evolving threats. and Outlier, Malicious and Outlier, and all categories com-
+ The scalability of continuous CTI updates depends on bined (Benign, Malicious, Outlier).
+the frequency of outlier detections and the volume of IoCs From the figure, it is evident that the outlier-only category
+retrieved. To mitigate potential delays, our implementation scores the highest with an F1 score of 89.52%. In contrast,
+leverages caching mechanisms to reduce redundant queries although other categories and combinations also enable the
+for previously analyzed IoCs. The incremental update mech- CTI Transfer Model to generate training data that can enhance
+anism ensures that the IDS remains responsive, as updates the IDS Model, the training data generated from outlier
+are localized to new threat intelligence rather than requir- sightings most significantly improves its performance. This
+ing full dataset reprocessing. Furthermore, our evaluation is because the IDS Model has a certain level of recognition
+includes resource usage metrics such as CPU consumption, capability for benign and malicious types of sightings. Therememory utilization, and update time, demonstrating that fore, while the training data generated by the CTI Transfer
+the approach maintains efficient real-time operation without Model can enhance the model’s capabilities, the effect is not
+excessive computational burden. as strong as that of outliers.
+ Similarly, space complexity varies depending on imple- Outliers are initially difficult for the IDS Model to accumentation. An offline IDS stores training datasets on disk and rately classify as benign or malicious, indicating a weaker
+loads them when retraining, while an online IDS processes recognition ability for these types. However, through the
+data incrementally, reducing peak memory usage but requir- enhancement provided by the CTI Transfer Model, the preing multiple updates over time. CTI lookups may introduce viously uncertain outlier sightings can be classified more
+additional storage overhead when caching threat intelligence accurately. The combination of all categories (Benign, Malidata, but this depends on implementation-specific factors cious, and Outlier) performs the worst because it includes
+such as database retention policies and memory management too many types of sightings, resulting in excessive diversity
+strategies. in the training data. This reduces the model’s performance
+ Furthermore, in order to understand which types of sight- in identifying specific types of events. Due to the incluings can produce better quality training data for the CTI sion of too many types, the model struggles to learn and
+Transfer Model, we explored the impact of training data recognize all types effectively, which instead decreases the
+
+VOLUME 3, 2025 617
+ FIGURE 10. Case of port obfuscation attack.
+
+FIGURE 9. Case of training data generation through CTI Transfer
+Model.
+
+overall performance of the model. These results suggest that
+the model’s detection effectiveness seems to improve when
+incorporating the outlier category, possibly due to the more FIGURE 11. Case of port hopping attack.
+distinct characteristics of outlier instances.
+ Lastly, we perform the experiment with a case study that
+involves generating training data for the IDS Model. This case traffic, they cannot alter extracted features post-capture withstudy showcases the CTI data we obtained, and the training out compromising the IDS or its processing pipeline. Since
+data produced using our solution, DICI. ML-based IDS extracts features before analysis, adversarial
+ As shown in Figure 9, a structured CTI report for an research often assumes that attacks occur at the feature level,
+IoC of outlier sighting is obtained via CTI Lookup. Sub- which is unrealistic without direct control over the IDS.
+sequently, by utilizing the CTI Transfer Model to analyze Instead, real-world adversarial tactics are more likely to
+the features extracted by the structured CTI report, we can involve host-based perturbations, where attackers modify
+confirm whether this IoC in the structured CTI report is their behavior at the command level rather than tampering
+benign or malicious. In other words, the IoC originally iden- with extracted network features. These host-based perturbatified as an outlier by the IDS Model would be classified as tions can alter network behavior, making the ML-based IDS
+benign or malicious by the DICI solution. Next, we use the fail to detect attacks because the behavioral shift does not
+IoC classified as malicious to perform a lookup in sighting match its training data. However, by integrating real-time CTI
+records, identifying all sightings associated with this IoC. updates, DICI can detect attacks even if the initial packet or
+These sightings are then labeled as malicious, and the data is flow was classified as benign. CTI provides contextual intelused to train the IDS model. Through this process, the model ligence beyond raw traffic analysis, allowing the system to
+learns attack patterns associated with malicious IoCs. recognize attack patterns linked to known adversarial tactics.
+ Adversarial attacks pose a significant challenge to ML- In this work, we evaluate DICI’s performance against
+based IDS, particularly gradient-based adversarial attacks, host-based perturbations, using port obfuscation and port
+which manipulate extracted features to evade detection [30], hopping attacks as representative techniques. Port obfusca-
+[31]. While it is theoretically possible for attackers to manip- tion involves dynamically altering source ports to disguise
+ulate packet data to reshape packet-level features, modifying malicious traffic, making it difficult for traditional IDS modpacket content while maintaining the attack’s effectiveness els to recognize attack patterns. Similarly, port hopping
+is highly challenging, especially in limited-knowledge attack allows attackers to frequently switch communication ports,
+scenarios. Most adversarial research assumes that attackers bypassing firewall rules and predefined detection thresholds.
+modify extracted network features rather than raw packet Since ML-based IDS relies on static training data, these
+data. If an attacker alters only the packet data, the IDS may behavioral shifts cause the IDS to misclassify attacks as the
+process a modified version of the traffic, but the network new patterns deviate from its training data. By leveraging
+attack itself could fail due to protocol inconsistencies or real-time CTI updates, DICI continuously adapts to evolving
+unintended disruptions. This makes feature-based adversarial threats, mitigating the risk of adversarial evasion.
+attacks more viable, as they allow attackers to evade IDS Figures 10 and 11 demonstrate the effectiveness of our
+detection while still successfully executing their attacks–a proposed solution, DICI, in detecting these attack stratestrategy known as a double attack. gies. These results were achieved through the integration of
+ However, modifying extracted features post-capture CTI with the IDS Model, which enabled the generation of
+requires privileged access to IDS devices, routers, or network enhanced training data. In conventional IDS models, these
+probes, making such attacks impractical unless the attacker techniques often go undetected due to the lack of real-time
+controls the IDS itself [32]. While an attacker can send crafted updates. However, by integrating CTI, DICI can identify
+
+618 VOLUME 3, 2025
+Lin et al.: Evolving ML-Based Intrusion Detection: Cyber Threat Intelligence for Dynamic Model Updates
+
+ it demonstrated a 7.16% improvement in F1 score and a
+ substantial 12.61% increase in recall. These results highlight that the IDS Model with the CTI Transfer Model not
+ only enhances the detection of genuine network attacks but
+ also significantly outperforms the IDS Model with the IoC
+ database, underscoring its effectiveness in bolstering IDS
+ capabilities.
+
+ D. ML ON CTI TRANSFER MODEL
+ In our CTI Transfer Model, we combine ML and heuristic
+ methods to evaluate the analytical capabilities of CTI. We
+ use the rule-based approach as the baseline because, to the
+ best of our knowledge, this is the first study to process and
+FIGURE 12. Performance metrics for IDS Model with CTI analyze structured CTI reports using an ML model. The
+approaches.
+ rule-based classifier follows predefined heuristics to determine whether an IoC is malicious or benign based on static
+ rules derived from CTI reports. This approach is commonly
+IoCs associated with changing port numbers, continuously used in traditional CTI processing, where security policies or
+learning from new intelligence to maintain updated detection thresholds define how intelligence is applied for detection.
+capabilities. This approach allows DICI to effectively detect However, it lacks adaptability to evolving threats since it
+port obfuscation and port hopping attacks, ensuring that cannot generalize beyond predefined conditions. Since no
+adversaries cannot exploit static detection rules to evade clas- prior ML-based methods exist for structured CTI processing,
+sification. The dynamic learning mechanism enhances the comparing our model to a rule-based classifier provides a
+IDS’s resilience against evolving attack techniques, prevent- meaningful evaluation of its effectiveness in dynamically
+ing adversarial tactics from bypassing detection. Sensitive IP adapting to real-time threat intelligence.
+information in the figures has been masked in response to Furthermore, we extract all available information from
+privacy concerns. structured CTI reports to determine the most effective automated approach for their analysis. Since CTI evaluation lacks
+C. CTI TRANSFER MODEL Vs. IoC DATABASE labels, we perform sighting lookups on IoCs within the CTI
+In this section, we evaluate the defensive effectiveness of and use labels derived from these sightings as external indiintegrating the IDS Model with either the CTI Transfer Model cators to assess the model’s performance.
+or the IoC database. Figure 13 presents the performance Figure 13 compares the performance of KMeans++
+metrics of four different configurations: IDS Model with CTI and KMeans against a rule-based classifier for analyzing
+Transfer Model, IDS Model with IoC Database, standalone CTI reports. The x-axis represents the number of features
+IDS Model, and IoC Database alone, with the vertical axis extracted from structured CTI reports. The primary intention
+representing percentages and the horizontal axis representing of this figure is to illustrate the impact of feature selection
+various performance metrics. on model performance and to emphasize that increasing the
+ The IDS Model integrated with the CTI Transfer Model number of features does not necessarily improve the F1 score.
+achieved an F1 score of 89.52%, outperforming the IDS Notably, we observe a performance degradation when
+Model with the IoC database, standalone IDS Model, and fewer than five features are used, suggesting that the model
+IoC database. In terms of precision, the standalone IDS requires a sufficient number of features to learn meaningful
+Model achieved a score of 94.46%. However, integrating patterns effectively. Furthermore, while the dataset contains
+the IDS Model with the IoC database reduced the precision 110 features, using all of them does not provide additional
+to 93.06%, and further integration with the CTI Transfer benefits. These results highlight that simply increasing the
+Model resulted in a slight decrease to 92.67%. This approx- number of features does not inherently enhance performance.
+imate 1% reduction in precision can be attributed to the Instead, it underscores the importance of feature quality over
+IoC database’s partial inaccuracies in capturing real-world quantity in CTI reports, as high-quality features contribute
+attacks, as reflected by its own precision of 81.26%. more significantly to meaningful threat intelligence analysis.
+ Despite the minor decline in precision, the recall metrics Therefore, CTI platforms should focus on enhancing the
+showed notable improvement. The integration of the IDS quality of key features in CTI reports. Additionally, the
+Model with the CTI Transfer Model led to a substantial rule-based classifier employs a consistent and transparent set
+15.95% increase in recall. This significant enhancement in of predefined rules applied uniformly across all CTI reports.
+recall indicates a greater ability to detect real threats. This approach ensures that evaluation criteria remain con-
+ In summary, while the IDS Model with the CTI Trans- stant, reducing the potential for subjective bias or algorithmic
+fer Model experienced a slight 0.39% decrease in precision inconsistencies, thus providing robust and reliable analysis
+compared to the ML-based IDS with the IoC database, that can be systematically replicated.
+
+VOLUME 3, 2025 619
+ FIGURE 14. F1 score variation with batch size across different
+ epochs.
+FIGURE 13. F1 score of ML on CTI transfer model.
+
+ Furthermore, KMeans++ improves the average F1 score
+by 30.92% compared to the rule-based classifier, indicating
+that KMeans++ offers a more effective approach for analyzing CTI reports and identifying potential threats compared to
+traditional heuristic methods. As the features and characteristics of structured CTI reports evolve or new ML methods
+emerge, future research can build on this work to further
+enhance CTI report analysis.
+ Lastly, we employed a rigorous grid search technique for
+both KMeans++ and KMeans models, carefully configuring
+relevant parameters such as model initialization to ensure a
+thorough exploration of the parameter space. For the rule- FIGURE 15. Loss variation with batch size across different
+based classifier, we developed specific rules based on key epochs.
+features within the CTI reports to automate the classification
+process. These rules were derived from expert insights, allow- combined with a higher number of training iterations often
+ing for efficient analysis of CTI data and the identification of proves to be the most effective strategy for achieving a higher
+potential threats. F1 score.
+ Figure 14 illustrates the relationship between batch size
+E. BATCH SIZE AND MODEL PERFORMANCE and the F1 score. The horizontal axis represents the batch
+The online learning capability of the IDS Model means size, and the vertical axis represents the F1 score, with each
+that training data is continuously updated and processed in line corresponding to a different number of epochs. The
+batches, rather than all at once, as in traditional offline learn- analysis reveals that for batch sizes below 224, increasing
+ing. This incremental learning process enables the model to the number of epochs consistently improves the F1 score.
+adapt to new data in real-time. However, it also introduces Similarly, larger batch sizes also contribute to higher F1
+challenges in determining the optimal batch size and number scores. However, when the batch size exceeds 224, further
+of epochs required for training. These configurations directly increases in both batch size and the number of epochs fail to
+affect the trade-off between model performance, computa- yield improvements. This suggests that for practical applicational resource usage, and the dynamic nature of the incoming tions, identifying an optimal batch size is essential to avoid
+data. Balancing these parameters is essential to ensuring both unnecessary computational costs while still ensuring suffithe effectiveness and efficiency of the IDS in real-world cient training iterations to enhance model performance.
+applications. Additionally, Figure 15 explores the relationship between
+ Smaller batch sizes can limit the model’s overall perfor- batch size and model loss. As batch size increases, the loss
+mance, as they may not provide sufficient data for effective function steadily decreases, reflecting the model’s improving
+learning in each iteration. Conversely, larger batch sizes ini- ability to minimize errors. The loss function reaches its lowest
+tially improve performance but demand significantly more point at a batch size of 224, indicating optimal performance
+computational resources. However, after a certain point, fur- at this size. Beyond this threshold, further increases in batch
+ther increases in batch size yield diminishing returns, where size and epochs do not lead to significant reductions in loss,
+additional resources do not result in proportional perfor- suggesting a saturation point where further fine-tuning results
+mance gains. As a result, selecting a moderate batch size in minimal gains. This observation highlights the importance
+
+620 VOLUME 3, 2025
+Lin et al.: Evolving ML-Based Intrusion Detection: Cyber Threat Intelligence for Dynamic Model Updates
+
+of careful parameter selection during training, as the appro- [6] Y. Kurogome et al., ‘‘EIGER: Automated IOC generation for accurate and
+priate batch size can significantly impact the model’s overall interpretable endpoint malware detection,’’ in Proc. 35th Annu. Comput.
+ Secur. Appl. Conf., Dec. 2019, pp. 687–701.
+performance and efficiency. [7] A. Niakanlahiji, L. Safarnejad, R. Harper, and B.-T. Chu, ‘‘IoCMiner:
+ Automatic extraction of indicators of compromise from Twitter,’’ in Proc.
+VII. CONCLUSION AND FUTURE WORKS IEEE Int. Conf. Big Data (Big Data), Dec. 2019, pp. 4747–4754.
+ [8] S. Fujii, N. Kawaguchi, T. Shigemoto, and T. Yamauchi, ‘‘CyNER:
+In this study, we proposed an approach that integrates CTI Information extraction from unstructured text of CTI sources with nonto enhance ML-based IDS, enabling dynamic model updates contextual IOCs,’’ in Proc. Int. Workshop Secur., Jan. 2022, pp. 85–104.
+and improved threat detection. Our results revealed that the [9] R. Basheer and B. Alkhatib, ‘‘Threats from the dark: A review over dark
+integration of the IDS Model with the CTI Transfer Model web investigation research for cyber threat intelligence,’’ J. Comput. Netw.
+ Commun., vol. 2021, pp. 1–21, Dec. 2021.
+achieved a 9.29% higher F1 score compared to the IDS [10] J. Zhao, Q. Yan, J. Li, M. Shao, Z. He, and B. Li, ‘‘TIMiner: Automatically
+Model solely. We also observed that increasing the number extracting and analyzing categorized cyber threat intelligence from social
+of features in CTI reports did not enhance the F1 score, data,’’ Comput. Secur., vol. 95, Aug. 2020, Art. no. 101867.
+emphasizing the importance of feature quality. Notably, [11] A. Berady, M. Jaume, V. V. T. Tong, and G. Guette, ‘‘From TTP to IoC:
+ Advanced persistent graphs for threat hunting,’’ IEEE Trans. Netw. Service
+KMeans++ clustering improved the F1 score by 30.92% Manag., vol. 18, no. 2, pp. 1321–1333, Jun. 2021.
+compared to rule-based methods, underscoring the effective- [12] N. Rastogi, S. Dutta, A. Gittens, M. J. Zaki, and C. Aggarwal, ‘‘TINKER:
+ness of machine learning for analyzing complex data. A framework for open source cyberthreat intelligence,’’ in Proc. IEEE Int.
+ Conf. Trust, Secur. Privacy Comput. Commun. (TrustCom), Dec. 2022,
+ These findings underscore the value of integrating CTI into pp. 1569–1574.
+IDS, especially in enabling the capability of dynamic model [13] A. H. Nursidiq and C. Lim, ‘‘Cyber threat hunting to detect unknown
+updates through online learning environments, where both threats in the enterprise network,’’ in Proc. IEEE Int. Conf. Cryptogr.,
+ Informat., Cybersecur. (ICoCICs), Aug. 2023, pp. 303–308.
+security and efficiency are critical. The results also emphasize
+ [14] R. Panigrahi et al., ‘‘A consolidated decision tree-based intrusion detecthe need for careful selection of machine learning algorithms tion system for binary and multiclass imbalanced datasets,’’ Mathematics,
+to optimize threat detection. vol. 9, no. 7, p. 751, Mar. 2021. [Online]. Available: https://www.mdpi.
+ While our results demonstrate the effectiveness of using com/2227-7390/9/7/751
+ [15] T.-T.-H. Le, H. Kim, H. Kang, and H. Kim, ‘‘Classification and expla-
+CTI to enhance ML-based IDS, there are several directions nation for intrusion detection system based on ensemble trees and SHAP
+for further exploration. First, developing algorithms that method,’’ Sensors, vol. 22, no. 3, p. 1154, Feb. 2022. [Online]. Available:
+enable ML-based IDS to evolve autonomously, minimizing https://www.mdpi.com/1424-8220/22/3/1154
+manual intervention. This includes enhancing the unsuper- [16] C. Anthony, W. Elgenaidi, and M. Rao, ‘‘Intrusion detection system for
+ autonomous vehicles using non-tree based machine learning algorithms,’’
+vised component of the IDS model with advanced anomaly Electronics, vol. 13, no. 5, p. 809, Feb. 2024. [Online]. Available: https://
+detection techniques or deep clustering models to improve www.mdpi.com/2079-9292/13/5/809
+its ability to identify subtle or highly sophisticated attack [17] P.-S. Lin, Y.-C. Lai, M.-L. Liao, S.-P. Chiu, and J.-L. Chen, ‘‘Hybrid
+ clustering mechanisms for high-efficiency intrusion prevention,’’ in Proc.
+patterns that traditional clustering methods may overlook. 26th Int. Conf. Adv. Commun. Technol. (ICACT), Feb. 2024, pp. 1–6.
+Second, future research should explore the integration of [18] B. Xie, X. Dong, and C. Wang, ‘‘An improved K-means clustering intrusion
+multiple CTI platforms dynamically to enhance threat intel- detection algorithm for wireless networks based on federated learning,’’
+ Wireless Commun. Mobile Comput., vol. 2021, no. 1, pp. 1–15, Jan. 2021.
+ligence coverage, improve detection accuracy, and reduce
+ [19] Shodan API. (2024). Shodan. [Online]. Available: https://developer.
+reliance on a single source. By leveraging diverse CTI data, shodan.io
+IDS models can achieve a more comprehensive understand- [20] MalwareBazaar API. (2024). MalwareBazaar. [Online]. Available: https://
+ing of evolving attack patterns and improve adaptability to bazaar.abuse.ch/api/
+emerging threats. Finally, privacy-preserving methods for [21] ThreatMiner API. (2024). ThreatMiner. [Online]. Available: https://www.
+ threatminer.org/api.php
+data sharing are crucial for enabling the correlation between [22] Shadon API. (2024). Shadon. [Online]. Available: https://www.
+sightings and CTI without compromising sensitive informa- greynoise.io/features/product-feature-api
+tion. Developing these methods will facilitate more effective [23] Virustotal API. (2023). Virustotal. [Online]. Available: https://docs.
+ virustotal.com/reference/overview
+analysis while ensuring user privacy is maintained.
+ [24] phaag. (2023). Phaag/nfdump. [Online]. Available: https://github.com/
+ phaag/nfdump
+REFERENCES [25] G. Lemaître, F. Nogueira, and C. K. Aridas, ‘‘Imbalanced-learn:
+ [1] A. Halbouni, T. S. Gunawan, M. H. Habaebi, M. Halbouni, M. Kartiwi, A Python toolbox to tackle the curse of imbalanced datasets in machine
+ and R. Ahmad, ‘‘Machine learning and deep learning approaches for learning,’’ J. Mach. Learn. Res., vol. 18, no. 17, pp. 1–5, 2017.
+ cybersecurity: A review,’’ IEEE Access, vol. 10, pp. 19572–19585, 2022. [26] F. Pedregosa et al., ‘‘Scikit-learn: Machine learning in Python,’’
+ [2] N. Shone, T. N. Ngoc, V. D. Phai, and Q. Shi, ‘‘A deep learning approach to J. Mach. Learn. Res., vol. 12, pp. 2825–2830, Nov. 2011.
+ network intrusion detection,’’ IEEE Trans. Emerg. Topics Comput. Intell., [27] M. Waskom, ‘‘Seaborn: Statistical data visualization,’’ J. Open Source
+ vol. 2, no. 1, pp. 41–50, Feb. 2018. Softw., vol. 6, no. 60, p. 3021, Apr. 2021.
+ [3] P.-C. Lin et al., ‘‘Correlation of cyber threat intelligence with sightings [28] J. D. Hunter, ‘‘Matplotlib: A 2D graphics environment,’’ Comput. Sci. Eng.,
+ for intelligence assessment and augmentation,’’ Comput. Netw., vol. 228, vol. 9, no. 3, pp. 90–95, 2007.
+ Jun. 2023, Art. no. 109736. [29] Y. Imrana, Y. Xiang, L. Ali, and Z. Abdul-Rauf, ‘‘A bidirectional LSTM
+ [4] T. D. Wagner, K. Mahbub, E. Palomar, and A. E. Abdallah, ‘‘Cyber threat deep learning approach for intrusion detection,’’ Expert Syst. Appl.,
+ intelligence sharing: Survey and research directions,’’ Comput. Secur., vol. 185, Dec. 2021, Art. no. 115524, doi: 10.1016/j.eswa.2021.115524.
+ vol. 87, Nov. 2019, Art. no. 101589. [30] D. Han et al., ‘‘Evaluating and improving adversarial robustness of
+ [5] R. Mills, A. K. Marnerides, M. Broadbent, and N. Race, ‘‘Practical intru- machine learning-based network intrusion detectors,’’ IEEE J. Sel.
+ sion detection of emerging threats,’’ IEEE Trans. Netw. Service Manage., Areas Commun., vol. 39, no. 8, pp. 2632–2647, Aug. 2021, doi:
+ vol. 19, no. 1, pp. 582–600, Mar. 2022. 10.1109/JSAC.2021.3087242.
+
+VOLUME 3, 2025 621
+[31] Y.-D. Lin et al., ‘‘ELAT: Ensemble learning with adversarial training YUAN-CHENG LAI received the Ph.D. degree
+ in defending against evaded intrusions,’’ J. Inf. Secur. Appl., vol. 71, from the Department of Computer and Informa-
+ Dec. 2022, Art. no. 103348, doi: 10.1016/j.jisa.2022.103348. tion Science, National Chiao Tung University,
+[32] G. Apruzzese, M. Andreolini, L. Ferretti, M. Marchetti, and M. Colajanni, in 1997. He joined a Faculty Member with the
+ ‘‘Modeling realistic adversarial attacks against network intrusion detection Department of Information Management, National
+ systems,’’ Digit. Threats, Res. Pract., vol. 3, no. 3, pp. 1–19, Feb. 2022, doi: Taiwan University of Science and Technology,
+ 10.1145/3469659. in August 2001; and has been a Distinguished
+ Professor, since June 2012. His research interests
+ include performance analysis, software-defined
+ YING-DAR LIN (Fellow, IEEE) received the networking, wireless networks, and the IoT
+ Ph.D. degree in computer science from the Univer- security.
+ sity of California at Los Angeles (UCLA) in 1993.
+ He was a Visiting Scholar at Cisco Systems, San
+ Jose, from 2007 to 2008; CEO at Telecom Technology Center, Taiwan, from 2010 to 2011; and the
+ Vice President of National Applied Research Labs
+ (NARLabs), Taiwan, from 2017 to 2018. He is
+ currently a Chair Professor of computer science
+ at National Yang Ming Chiao Tung University
+(NYCU), Taiwan. He co-founded L7 Networks Inc., in 2002 and O’Prueba DIDIK SUDYANA received the Ph.D. degree
+Inc., in 2018. His research interests include cybersecurity, wireless communi- from the Department of Electrical Engineering and
+cations, network softwarization, and machine learning for communications. Computer Science (EECS), National Yang Ming
+He served or is serving on the editorial boards for several IEEE journals and Chiao Tung University (NYCU), in 2024. He is
+magazines, including the Editor-in-Chief for IEEE COMMUNICATIONS SURVEYS currently an Assistant Professor at the Computer
+AND TUTORIALS, from 2017 to 2020. and Network Center, National Cheng Kung University (NCKU), Taiwan. His research interests
+ include cybersecurity, machine learning, and net-
+ YI-HSIN LU received the master’s degree in work design and optimization.
+ cybersecurity from National Yang Ming Chiao
+ Tung University (NYCU) in 2024. His research
+ interests include network security, intrusion detection, and cyber threat intelligence.
+
+ WEI-BIN LEE (Senior Member, IEEE) received
+ REN-HUNG HWANG (Senior Member, IEEE) the Ph.D. degree from National Chung Cheng
+ received the Ph.D. degree in computer science University in 1997. He was a Professor at the
+ from the University of Massachusetts at Amherst, Department of Information Engineering and Com-
+ Amherst. He is currently the Dean of the College of puter Science, Feng Chia University. He was also a
+ Artificial Intelligence, National Yang Ming Chiao Visiting Professor at Carnegie Mellon University,
+ Tung University (NYCU), Taiwan. Before join- USA, and The University of British Columbia,
+ ing NYCU, he was with National Chung Cheng Canada. Since 2021, he has been the CEO of the
+ University, Taiwan, from 1993 to 2022. He has Hon Hai Research Institute and the Director of
+ published more than 250 international journals and the Information Security Research Center. Before
+ conference papers. He was the Dean of the College joining Hon Hai Research Institute, CEO Wei-Bin Lee held important
+of Engineering from 2014 to 2017. His current research interests include deep positions in Taipei City Government, Taipei Fubon Bank, Fubon Financial
+learning, wireless communications, network security, and cloud/edge/fog Holdings, and Feng Chia University. His research interests include network
+computing. He received the IEEE Best Paper Award from IEEE UbiMedia security, cryptography, digital rights management, and privacy/security man-
+2018, IEEE SC2 2017, and IEEE IUCC 2014. agement and governance.
+
+622 VOLUME 3, 2025

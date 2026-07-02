@@ -1,0 +1,146 @@
+8478                                                           IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+
+          IHUD-BERT: A Large-Scale Network Traffic
+          Classification Method Based on Pre-Training
+            Transformers and Knowledge Distillation
+                           Yahui Hu, Tiancun Deng , Junping Song , Pengfei Fan, and Xu Zhou
+
+
+
+   Abstract—Accurate and efficient classification of large-scale                                          I. I NTRODUCTION
+network traffic is fundamental to ensuring network Quality
+of Service (QoS) and security. However, existing methodolo-
+gies face critical challenges. While payload-based pre-trained
+models have achieved success, they often rely on memoriz-
+ing session-specific encryption artifacts, leading to catastrophic
+                                                                               T     RADITIONAL network traffic classification methods,
+                                                                                     including port-based and Deep Packet Inspection (DPI),
+                                                                               have been challenged by dynamic port allocation and the
+performance degradation under realistic “inter-flow” splitting                 proliferation of end-to-end encryption [1]. While conventional
+scenarios. Furthermore, the scarcity of labeled samples and the                Machine Learning(ML) approaches to bypass payload depen-
+high computational cost of large models hinder their practical                 dency, they still struggle with feature engineering costs and
+deployment. To address these limitations, this paper proposes an               the evolving nature of encrypted protocol [2].
+integrated framework, IHUD-BERT, which integrates robust fea-                     To overcome the constraints of feature engineering, research
+ture representation with knowledge distillation. We first introduce
+the IP Header Unit (IHU) scheme, applying a sliding window over                focus shifted to Deep Learning (DL) techniques such as Con-
+IP packet headers. Unlike payload-based approaches, this method                volutional and Recurrent Neural Networks (CNNs and RNNs),
+captures invariant behavioral patterns that remain consistent                  which can automatically learn hierarchical feature representa-
+across encrypted sessions, ensuring robustness against encryption              tions from raw traffic data [3]. Building on this foundation, and
+randomization while augmenting limited training data. Subse-                   inspired by successes in Natural Language Processing (NLP)
+quently, a pre-trained Transformer (IHU-BERT) is constructed as                [4], pre-trained models based on the Transformer architecture
+a teacher model, and its comprehensive knowledge is transferred                have been introduced to the field [5], [6]. These models
+to a lightweight student model (IHUD-BERT) via hierarchical
+knowledge distillation. Comprehensive evaluations on multiple                  learn generic “behavioral paradigms” from vast, unlabeled
+datasets validate our approach. The results demonstrate that                   traffic datasets and can be fine-tuned to achieve state-of-the-
+while payload-based baselines collapse under strict inter-flow                 art performance on specific downstream tasks. Despite the
+evaluation on encrypted traffic, our method maintains high                     remarkable capabilities of existing pre-trained models, their
+accuracy. Notably, the lightweight IHUD-BERT achieves only                     application to network traffic classification faces three critical
+a marginal performance degradation compared to its teacher                     challenges that hinder practical deployment.
+counterpart while delivering millisecond-level inference latency.
+                                                                                  First, the validity of payload-based feature extraction is
+These results establish the proposed framework as a robust,
+high-precision, and efficient solution for modern encrypted traffic            fundamentally compromised by modern encryption protocols.
+classification.                                                                While existing studies often report high accuracy [5], our
+                                                                               empirical analysis reveals that these results are largely inflated
+   Index Terms—Traffic classification, pre-training, knowledge
+distillation, IP header, sliding window.
+                                                                               by “session artifacts” rather than stemming from generalized
+                                                                               feature learning. This overestimation is critically dependent on
+   Received 24 August 2025; revised 19 December 2025, 22 March 2026,
+                                                                               the sample processing strategy employed. Conventional “intra-
+and 9 May 2026; accepted 15 May 2026. Date of publication 22 May 2026;         flow” (packet-level) splitting randomly partitions packets from
+date of current version 29 May 2026. This work was supported by the            the same session across both training and testing sets. This
+the 2026 Enhancement of Independent Innovation - Disciplinary Interdisci-      overlap allows models to memorize session-specific encryption
+plinary Innovation Project through the project Construction of Multi-mode
+Fusion Communication Platform for Mine Leaky Cable (81001203A56), the          patterns (e.g., ephemeral keys) found in both sets. In sharp
+Fundamental Research Funds for the Central Universities (2025ZKPYZN02),        contrast, strict “inter-flow” (session-level) splitting enforces a
+the National Key R&D Program of China (2024YFB2908700), the                    hard boundary where complete sessions are assigned exclu-
+Youth Innovation Promotion Association of Chinese Academy of Sciences
+(2021168), and Guoneng Zhishen Control Technology Co., Ltd. through
+                                                                               sively to either the training or testing set. This ensures that
+the project Research and Development of Boundary-aware Intelligent Coal        the testing data consists of entirely unseen flows with dif-
+Sorting Technology Using Weakly Supervised Training. The associate editor      ferent encryption parameters, faithfully simulating real-world
+coordinating the review of this article and approving it for publication was   deployment. As illustrated in Fig. 1a, while payload-based
+E. Oki. (Corresponding author: Tiancun Deng.)
+   Yahui Hu and Tiancun Deng are with China University of Mining and           models thrive under the permissive intra-flow setting, their
+Technology-Beijing, Beijing 100083, China (e-mail: huyahui@cumtb.edu.cn;       performance collapses significantly under the realistic inter-
+dengtiancun.cumtb@gmail.com).                                                  flow protocol, exposing the inherent inapplicability of payload
+   Junping Song, Pengfei Fan, and Xu Zhou are with the Computer Network        features for encrypted traffic.
+Information Center, Chinese Academy of Sciences, Beijing 100190, China
+(e-mail: songjunping@cnic.cn; fanpengfei@cnic.cn; zhouxu@cnic.cn).                When evaluating the payload-based ET-BERT [5]
+   Digital Object Identifier 10.1109/TCCN.2026.3695843                         on encrypted data, its accuracy precipitates from
+             2332-7731 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+HU et al.: IHUD-BERT: A LARGE-SCALE NETWORK TRAFFIC CLASSIFICATION METHOD                                                                                  8479
+
+
+
+
+Fig. 1. The impact of encryption artifacts on model generalization. (a) Limitations of intra-flow classification: A conceptual illustration showing how payload-
+based models memorize ephemeral session keys (visualized as distinct textures) during intra-flow training. This results in “data leakage,” where the model
+fails to generalize to unseen flows (Inter-flow inference) due to domain shifts caused by new encryption keys. (b) Empirical validation: Experimental results
+on the encrypted CIC200 dataset confirm a performance collapse for ET-BERT under strict inter-flow splitting. However, the high accuracy on the plaintext
+Modbus-15* dataset proves that this failure is induced specifically by encryption. Crucially, our header-based approach (IHU) remains robust in all settings,
+demonstrating that header behaviors are consistent and encryption-agnostic.
+
+
+
+97.89%(intra-flow) to approximately 13.76%(inter-flow)                           work hardware such as routers, switches, and Internet of
+as empirically verified in Figure 1b. In contrast, our header-                   Things(IoT) gateways. This creates a significant gap between
+based approach maintains superior robustness across all                          high-performance academic models and the industrial demand
+scenarios, proving its resilience to encryption randomization.                   for low-cost, high-efficiency solutions.
+To confirm that this degradation is attributable to encryption                      To address these challenges, we propose a systematic frame-
+rather than the inherent complexity of the inter-flow task, we                   work that synergizes robust feature representation with model
+conducted a control experiment using the Modbus-15.1 As                          compression. Capitalizing on the insight that packet header
+shown in Figure 1b, payload-based models generalized well                        behaviors remain unencrypted and highly consistent across
+on plaintext Modbus traffic even under inter-flow splitting.                     sessions even when payloads are randomized, we introduce the
+This isolates encryption as the root cause of the performance                    IP Header Unit (IHU) as a robust and session-invariant feature
+degradation in CIC200. This is because IP header is plaintext                    input, which effectively captures consistent behavioral patterns
+and header-based models can learn traffic behavior patterns                      across different encrypted sessions. Furthermore, to bridge
+from the header (e.g., specific service requests often send                      the gap between high-performance pre-training and practical
+initial packets of a fixed size, or follow a particular sequence                 deployment on resource-constrained devices, we employ a
+of message exchanges). Since these behavioral patterns are                       knowledge distillation strategy to derive a lightweight student
+characteristics of the application itself, and not products of                   model, IHUD-BERT(IHU Distilled-BERT), from a large-scale
+the session key, they maintain consistency and robustness                        pre-trained teacher IHU-BERT.
+across different sessions (i.e., under strict Inter-flow splitting).                The main contributions of this paper are as follows:
+   Second, there is a data scarcity problem. The immense                            First, we propose the IHU scheme, which employs a strate-
+cost and difficulty of collecting and labeling large-scale, real-                gic sliding window mechanism exclusively over IP packet
+world network data across hundreds of application classes                        headers. This mechanism serves as an effective data augmen-
+mean most public datasets are limited in either variety or                       tation technique to mitigate the scarcity of labeled data. Unlike
+sample volume [8]. This data deficiency, combined with a lack                    payload-based methods that are vulnerable to session-specific
+of effective data augmentation techniques, results in models                     encryption artifacts, our approach captures invariant behavioral
+with low accuracy and poor usability, presenting a major                         features. Consequently, it maintains high accuracy even under
+hurdle for both academia and industry [9]. Third, pre-trained                    strict inter-flow splitting scenarios where traditional payload-
+models suffer from excessive computational complexity [5].                       based baselines experience significant performance collapse.
+Their powerful representational capabilities are supported by                       Second, we design a two-stage “pre-training and knowledge
+enormous parameter counts and high computational costs,                          distillation” framework to achieve lightweight deployment.
+which prohibit their deployment on resource-constrained net-                     By transferring comprehensive knowledge from the high-
+                                                                                 performance teacher (IHU-BERT) to the streamlined student
+  1 To isolate the impact of encryption, we employed the unencrypted CIC         (IHUD-BERT), we effectively solve the deployment bottle-
+Modbus Dataset 2023 [7] as a control group. We constructed the Modbus-           neck. This distillation-based approach ensures that the student
+15 dataset by extracting the first 10,000 packets from each flow across 15       model retains the teacher’s representational power while meet-
+categories. Its consistent plaintext payload allows us to confirm that the
+performance degradation observed in other datasets is specifically induced       ing the stringent efficiency requirements of edge network
+by encryption artifacts.                                                         devices.
+8480                                                 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+   Finally, comprehensive evaluations on multiple large-scale      shift in traffic classification. DL models can automatically
+datasets validate the superiority of our framework. The results    learn hierarchical features from raw or minimally processed
+demonstrate that our teacher model surpasses existing state-of-    traffic data, thereby reducing the reliance on manual feature
+the-art methods, while the lightweight IHUD-BERT achieves          engineering [3]. This has enabled DL models to achieve state-
+an optimal trade-off, maintaining near-teacher accuracy while      of-the-art performance in various traffic classification tasks.
+significantly accelerating inference speed.                        However, deep learning methods also face their own set of
+   The remainder of this paper is organized as follows. Sec-       challenges. First, DL models typically require large labeled
+tion II reviews related work on network traffic classification,    datasets for training, which are often scarce or expensive to
+pre-trained models applied in this domain, and knowledge           acquire in the networking domain. Second, they are prone
+distillation techniques. Section III elaborates on our proposed    to learning biased representations from imbalanced data and
+model design, including the IHU representation method, the         may struggle to adapt to new or unseen traffic patterns
+core IHU-BERT pre-training architecture, and the IHUD-             without retraining [12]. Furthermore, many early DL methods
+BERT knowledge distillation framework for generating the           still relied on payload data, thereby inheriting some of the
+lightweight model. Section IV presents the experim

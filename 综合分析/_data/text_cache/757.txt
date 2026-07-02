@@ -1,0 +1,144 @@
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026                                                                       3723
+
+
+
+
+   Multivariate Time Series Anomaly Detection Using
+     Learnable Spatial-Temporal Graph Ordinary
+             Differential Equations Network
+                  Shiming He , Qingqing Guo , Keyao Feng, Diqing Liang , Kun Xie , Member, IEEE,
+                                  and Pradip Kumar Sharma , Senior Member, IEEE
+
+
+   Abstract—Multivariate time series anomaly detection (MTSAD)                        Index Terms—Multivariate time series, graph neural networks,
+plays a critical role in the Internet of Things (IoT) by identifying               IoT security, anomaly detection, spatial-temporal graph ordinary
+malfunctions and attacks. Graph Neural Networks (GNNs) have                        differential equation network, graph structure learning.
+been widely employed in MTSAD to capture spatial features but
+require predefined and explicit graph structures. Graph Structure
+Learning (GSL) addresses this limitation by jointly learning the                                               I. INTRODUCTION
+graph structure and downstream tasks. However, existing GSL-
+based MTSAD methods fail to effectively leverage prior knowledge                       N THE Internet of Things (IoT), attacks can cause physical
+and struggle with insufficient GNN depth, limiting their ability
+to capture long-range dependencies. To address these challenges,
+we propose a multivariate time series anomaly detection method
+                                                                                   I   damages to life-dependent physical processes. IoT attack de-
+                                                                                   tection approaches typically analyze three primary data sources:
+based on a learnable spatio-temporal graph ordinary differential                   sensor data [1], network traffic [2], [3], [4], and Supervisory
+equation network (STGODE), named MAD-ODE. Our approach                             Control and Data Acquisition (SCADA) execution context [5].
+leverages hybird graph learning, which includes two types of graph                 Among these, sensor data directly reflects deviations in observed
+structures: a static similarity graph and a learnable graph. The                   physical states from expected behaviors, making it a critical
+static similarity graph is constructed using prior knowledge and
+provides a stable, interpretable representation of sensor depen-
+                                                                                   resource for detecting anomalies. Various sensors continuously
+dencies. In contrast, the learnable graph captures complex re-                     generate large volumes of time series data to monitor the critical
+lationships between sensors by optimizing its structure through                    infrastructures. This data, collected from multiple sensors, is
+backpropagation. This hybird graph learning effectively incorpo-                   referred to as multivariate time series (MTS). Abnormal changes
+rates both prior knowledge and learned dependencies, ensuring                      in MTS often indicate not only system attacks but also equip-
+robust and flexible modeling of sensor relationships. Furthermore,
+we design a STGODE predictor, which operates on both graph
+                                                                                   ment failures. If these anomalies are not detected and mitigated
+structures and employs continuous graph convolutional networks,                    promptly, they can lead to catastrophic system failures, resulting
+enabling it to capturing long-range spatio-temporal dependencies                   in significant economic losses [6], [7]. Given the importance of
+for forecasting the next timestamp. Extensive experiments con-                     timely anomaly detection, this paper focuses on sensor data, as
+ducted on five datasets demonstrate that MAD-ODE achieves the                      it offers a direct and reliable means of monitoring deviations in
+best average performance and maintains stable results compared
+to existing methods.
+                                                                                   physical processes.
+                                                                                      For example, the Secure Water Treatment (SWaT) testbed
+                                                                                   consists of six interconnected processes (P1–P6): raw wa-
+                                                                                   ter supply and storage, chemical dosing, ultrafiltration (UF),
+   Received 20 March 2025; revised 23 November 2025; accepted 30 Novem-            dechlorination, reverse osmosis (RO), and RO permeate trans-
+ber 2025. Date of publication 4 December 2025; date of current version 12          fer and UF backwash, as shown in Fig. 1. Each process is
+March 2026. This work was supported in part by the National Natural Science
+Foundation of China under Grant 62025201 and Grant 62272062, in part by the        equipped with several sensors, which are named based on their
+Science and Technology Innovation Program of Hunan Province under Grant            corresponding functions and processes. For instance, the sen-
+2023RC3139, and in part by the Natural Science Foundation of Hunan Province        sor AIT-202 monitors the level of contaminants in the water.
+under Grant 2025JJ50373. (Corresponding author: Kun Xie.)
+   Shiming He, Qingqing Guo, Keyao Feng, and Diqing Liang are with                 Initially, the value of AIT-202 exceeded 7.05. However, at
+the School of Computer Science and Technology and the Hunan Provin-                12:04:10 on 28 June 2015, an attacker manipulated the sen-
+cial Key Laboratory of Intelligent Processing of Big Data on Trans-                sor value and set it to 6. This malicious action caused the
+portation, Changsha University of Science and Technology, Changsha
+410114, China (e-mail: smhe_cs@csust.edu.cn; guoqingqing@stu.csust.edu.cn;         chemical dosing pump P-203 to shut down, thereby disrupting
+kyfeng@stu.csust.edu.cn).                                                          the chemical dosing process and adversely impacting water
+   Kun Xie is with the College of Computer Science and Electronics Engineering,    quality. Therefore, multivariate time series anomaly detection
+the Ministry of Education Key Laboratory of “Fusion Computing of Supercom-
+puting and Artificial Intelligence,”, Hunan University, Changsha 410082, China     (MTSAD) plays an essential role in ensuring the reliability and
+(e-mail: xiekun@hnu.edu.cn).                                                       security of IoT systems [8].
+   Pradip Kumar Sharma is with the Department of Computing Sci-                       In IoT systems, sensors are interdependent and interact with
+ence, University of Aberdeen, AB24 3FX Aberdeen, U.K. (e-mail:
+Pradip.sharma@abdn.ac.uk).                                                         one another. Recently, graph neural networks (GNNs) [9] have
+   Digital Object Identifier 10.1109/TDSC.2025.3640165                             been introduced into MTSAD to capture the relationships
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+3724                                                    IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+
+
+
+Fig. 1. Example of an IoT anomaly on a Water Treatment System. The Secure Water Treatment (SWaT) testbed consists of six interconnected processes (P1–P6).
+Each process is equipped with several sensors, which are named based on their corresponding functions and processes. For instance, the sensor AIT-202 monitors
+the level of contaminants in the water. Initially, the value of AIT-202 exceeded 7.05. However, at 12:04:10 on 28 June 2015, an attacker manipulated the sensor
+value and set it to 6. This malicious action caused the chemical dosing pump P-203 to shut down, thereby disrupting the chemical dosing process and adversely
+impacting water quality.
+
+
+
+between sensors. However, GNNs require an explicit graph                               node representations by merely increasing the number
+structure, which is typically constructed using domain knowl-                          of layers. Practical evidence shows that GCNs typically
+edge. Existing GNN-based anomaly detection methods, such as                            achieve their best performance with just two layers, as
+MTAD-TF [10], MTAD-GAT [11], Arvalus [12], MDGAT [13],                                 deeper GCNs suffer from the over-smoothing problem.
+DVGCRN [14], and GReLeN [15], rely on fixed graph structures                           Over-smoothing causes all node representations to
+designed by experts. Unfortunately, in real-world scenarios, sen-                      converge to the same value, rendering deeper GCNs
+sor dependencies or graph structures are often hidden, difficult                       ineffective. These limitations severely restrict the depth
+to infer, or expensive to acquire.                                                     of GCNs, making it challenging to capture rich spatial
+   Graph Structure Learning (GSL) [16] offers a promising solu-                        features and long-distance dependencies, ultimately
+tion for these challenges when expert knowledge is unavailable,                        hindering anomaly detection performance.
+sensor dependencies are unknown, or access costs are pro-                           To address these challenges, we propose MAD-ODE, a
+hibitive [17]. GSL learns an optimal graph structure to capture                  novel framework to enhance MTSAD by dynamically learning
+the dependencies between sensors and align with downstream                       graph structures and modeling long-distance dependencies using
+anomaly detection tasks. Although GSL-based methods have                         spatio-temporal GCNs based on ordinary differential equations
+shown potential in learning sensor relationships [18], existing                  (ODEs). The key contributions of MAD-ODE are summarized
+GSL-based MTSAD methods [19], [20], [21], [22], [23], [24],                      as follows:
+[25], [26], [27], [28], [29], [30], [31], [32], [33] face the follow-               r Enhanced representation through hybrid graph learning:
+ing challenges:                                                                        To better capture and enrich the dependencies between
+    r Existing methods focus solely on graph structure learn-                          sensors, we exploit two kinds of graph structures: a static,
+      ing and fail to utilize partial known information: Current                       knowledge-driven similarity graph and a fully parame-
+      GSL-based anomaly detection methods primarily rely on                            terized learnable graph. This hybrid graph learning sig-
+      unknown graph structures during the learning process,                            nificantly enhances the model’s representational capacity,
+      ignoring the potential benefits of incorporating partially                       leveraging both learned and prior knowledge.
+      known information. As a result, these methods engage                          r Capturing long-distance spatio-temporal dependencies:
+      in a largely blind learning process, leading to suboptimal                       We introduce spatio-temporal graph ODE network
+      outcomes.                                                                        (STGODE) instead of discrete GCNs, which operates on
+    r Existing methods suffer from insufficient depth in                               both the static similarity graph and the learned graph for
+      graph neural networks, limiting their ability to                                 prediction and anomaly detection. This approach effec-
+      capture long-distance dependencies between sensors:                              tively captures long-distance spatio-temporal dependen-
+      Most GSL-based anomaly detection methods employ                                  cies with continuous-time model, improving the model’s
+      spatio-temporal prediction models that separately model                          resilience and enabling more accurate and robust multi-
+      spatial and temporal patterns without accounting for                             variate time series predictions.
+      their interactions, which significantly limits their                          r Extensive evaluation on real-world datasets: We con-
+      representational capacity. Furthermore, Graph Convo-                             ducted comprehensive experiments on five publicly avail-
+      lutional Networks (GCNs) struggle to achieve deep                                able real-world datasets. MAD-ODE achieves the best
+HE et al.: MULTIVARIATE TIME SERIES ANOMALY DETECTION USING LEARNABLE SPATIAL-TEMPORAL GRAPH ORDINARY                            3725
+
+
+
+      average performance and maintains stable results com-             Beyond LSTM, other recurrent neural networks (RNNs) are
+      pared to existing methods. This underscores the robustness     also applied in MTSAD. For example, OmniAnomaly [39]
+      and reliability of MAD-ODE across diverse datasets and         aims to learn the normal representation of time series data,
+      anomaly detection tasks. The code of this work is publicly     and then calculate reconstruction errors to effectively identify
+      available at https://github.com/AIOps-tech/MAD-ODE.            anomalous points that deviate from the normal patterns, while
+   The rest sections of this paper are arranged as fol-              DAGMM [40] combines a deep self-encoding mechanism with
+lows. Section II provides an overview of the related work.           a Gaussian Mixture Model (GMM) to generate low-dimensional
+Section III introduces some preliminary knowledge and defines        representations and reconstruction errors for anomaly detection.
+the problem. Section IV explains our proposed approach in               Neural ordinary differential equations (ODEs) [41] define a
+detail, including a general overview and the functionality of in-    vector field, enabling the continuous transformation of hidden
+dividual components. In Section V, we analyze the performance        states. As an emerging family of neural networks, Neural ODEs
+and efficiency of the model through extensive experiments.           have demonstrated significant potential in modeling the dynam-
+Finally, our work is concluded with a summary of our findings        ics of temporal data. Motivated by this, models such as LSTM-
+and a discussion on future work in Section VI.                       ODE and latent-ODE [42] integrate the strengths of LSTM,
+                                                                     VAE, and Neural ODEs to effectively detect anomalies in MTS
+                                                                     data, addressing challenges posed by sparsity and irregularity.
+                      II. RELATED WORK                                  Recently, diffusion models have gained attention in MTS
+   In addition to MTS sensor data, network traffic and SCADA         anomaly detection due to their generative capabilities. For in-
+execution context are also utilized to enhance the safety and        stance, MadSGM [43] utilizes the probability flow ODEs of
+securit

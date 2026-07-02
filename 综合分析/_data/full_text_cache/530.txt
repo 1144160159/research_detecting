@@ -1,0 +1,823 @@
+11744 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ S AURON E YES: Disentangling Voluminous Logs to
+ Unveil Camouflaged Attack Intentions
+ Wei Qiao , Weiheng Wu, Song Liu, Yebo Feng , Zehui Wang, Junrong Liu , Teng Li , Bo Jiang ,
+ Zhigang Lu, and Baoxu Liu
+
+ Abstract—Advanced Persistent Threats (APTs) pose escalat- interactions. S AURON E YES thus boasts heightened sensitivity
+ing risks to large enterprises and institutions. While current and granular detection capabilities. Finally, S AURON E YES reconresearch has predominantly focused on data source analysis structs the attack chain at the node level and presents an
+for identifying known attack patterns or anomalous behaviors, attack-chain that is more accessible for security analysis. Our
+three critical challenges remain inadequately addressed: 1) APTs evaluations in real-world scenarios and simulated attack envidemonstrate sophisticated concealment capabilities, embedding ronments demonstrate that S AURON E YES achieves outstanding
+malicious operations within legitimate business activities; 2) The accuracy, with an average detection rate of 99%.
+sparse nature of APT attacks leads to low-frequency malicious
+activities that prove exceptionally challenging to detect within Index Terms—Advanced persistent threats (APT) detection,
+massive log datasets; 3) APTs employ multi-stage attack chains, graph neural network (GNN), provenance graph, intrusion detecwhereas existing solutions exhibit limitations in reconstructing tion system (IDS).
+complete attack pathways to enable effective forensic analysis. In this paper, we address the detrimental effects of the
+sparsity of malevolent interactions and attack intent camou- I. I NTRODUCTION
+flaging on anomaly detection by introducing S AURON E YES, the
+pioneering APT detection system tailored to resolve these challenges. S AURON E YES constructs audit logs into both knowledge
+and interaction views, disentangling these to learn representa-
+ A N ADVANCED Persistent Threat (APT) is a long-term,
+ targeted cyberattack conducted by skilled attackers who
+ stealthily infiltrate a system, often through phishing or by
+tions through graph learning enhanced with an attention-based exploiting vulnerabilities [1]. Once they gain access, they
+neighbor allocation mechanism. Additionally, we incorporate deploy advanced malware and backdoors to remain undeself-supervised contrastive learning to discern the subtle similarities and distinctions among disentangled samples, facilitating tected while moving through the network to gain control
+a deeper understanding of the inherent structures within system [2]. APTs typically aim to steal sensitive data or disrupt
+ operations, posing a severe threat to large organizations and
+ Received 2 April 2025; revised 2 August 2025, 31 August 2025, government systems. Consequently, achieving full-cycle attack
+and 23 September 2025; accepted 24 September 2025. Date of publication attribution has become an urgent need. However, unlike
+6 October 2025; date of current version 6 November 2025. This work traditional attacks, APTs feature a multi-stage attack chain
+was supported in part by the National Key Research and Development
+Program of China under Grant 2023YFC2206402; in part by the Strate- (e.g., reconnaissance, lateral movement, data exfiltration),
+gic Priority Research Program of Chinese Academy of Sciences under making it difficult for conventional single-point event detection
+Grant XDA0460100; in part by the Open Foundation of Key Labora- methods to establish a complete contextual relationship of
+tory of Cyberspace Security, Ministry of Education of China under Grant
+KLCS20240206; in part by the Program of Key Laboratory of Network the attack. Additionally, APTs incorporate disguised benign
+Assessment Technology; in part by Chinese Academy of Sciences; in part by behaviors within their attack chain, exhibiting a high degree
+the Program of Beijing Key Laboratory of Network Security and Protection of stealth that renders detection through traditional feature-
+Technology; in part by the National Natural Science Foundation of China
+under Grant 62272370; in part by the Natural Science Basic Research Program matching methods ineffective. Moreover, APTs have long
+of Shaanxi under Grant 2025JC-JCQN-073; in part by the Young Elite dormancy periods and utilize low-frequency communication,
+Scientists Sponsorship Program by CAST under Grant 2022QNRC001; in causing traditional threshold-based anomaly detection models
+part by the Qinchuangyuan Scientist + Engineer Team Program of Shaanxi
+under Grant 2024QCY-KXJ-149; and in part by the Songshan Laboratory to fail. These characteristics of APTs present challenges that
+under Grant 241110210200. The associate editor coordinating the review of render conventional intrusion detection systems ineffective, as
+this article and approving it for publication was Dr. Ming Li. (Wei Qiao they struggle to address low-frequency and complex attack
+and Weiheng Wu contributed equally to this work.) (Corresponding authors:
+Junrong Liu; Teng Li.) strategies, resulting in higher rates of false positives and
+ Wei Qiao, Weiheng Wu, Song Liu, Zehui Wang, Junrong Liu, Bo Jiang, false negatives. Therefore, there is a need to propose a high-
+Zhigang Lu, and Baoxu Liu are with the Institute of Information Engineering, accuracy APT detection solution that maintains a low false
+Chinese Academy of Sciences, Beijing 100045, China, and also with the
+School of Cyber Security, University of Chinese Academy of Sciences, positive rate while consuming minimal resources without
+Beijing 101408, China (e-mail: qiaowei@iie.ac.cn; wuweiheng@iie.ac.cn; compromising system performance. In response, the research
+liusong@iie.ac.cn; wangzehui@iie.ac.cn; liujunrong@iie.ac.cn; jiangbo@ community has employed data provenance techniques for
+iie.ac.cn; luzhigang@iie.ac.cn; liubaoxu@iie.ac.cn).
+ Yebo Feng is with Nanyang Technological University, Singapore 639798 executing APT detection [3], [4], [5], [6], [7], [8], [9], [10],
+(e-mail: yebo.feng@ntu.edu.sg). [11], [12], [13]. These techniques transform system audit logs
+ Teng Li is with the School of Cyber Engineering, Xidian University, Xi’an into provenance graphs, utilizing rich contextual information
+710126, China, and also with the Songshan Laboratory, Zhengzhou 450018,
+China (e-mail: litengxidian@gmail.com). for fine-grained causal analysis to detect intrusions and deduce
+ Digital Object Identifier 10.1109/TIFS.2025.3618381 security vulnerabilities. Existing research partially relies on
+ 1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+QIAO et al.: SAURONEYES: DISENTANGLING VOLUMINOUS LOGS TO UNVEIL CAMOUFLAGED ATTACK INTENTIONS 11745
+
+Rule-based methods [14], [15], [16], which employ typical cally addresses APT characteristics through three innovations:
+or specific attack patterns to construct rules and match audit 1) A graph disentanglement algorithm that isolates interactive
+records with known attack rules. However, this approach noise in multi-dimensional entity attributes while revealing
+heavily depends on prior knowledge and is costly to develop latent behavioral intentions; 2) A multi-view contrastive learnin environments with frequent new variations, making it chal- ing mechanism applied to the disentangled graph, which
+lenging to detect common zero-day issues in APT scenarios. enhances discriminative feature learning through dynamic
+Alternatively, some studies utilize Statistics-based methods positive/negative sampling, effectively reducing false positives
+[17], [18], [19] to detect threats by mapping the rarity of ele- while amplifying subtle attack patterns; 3) During attack
+ments from various sources in provenance graphs, quantifying detection, malicious interaction scores are used to distinguish
+the tendency for attacks. The limitation of this approach is between benign and malicious entities, and critical intents
+its focus only on direct connections (low-order information) (attributes and relationships) among infected entities are prewithin the graphs, which leads to overlooking a vast amount served to intuitively reconstruct attack scenarios, thereby
+of deeper intents hidden in complex system entity interactions. providing hierarchical forensic evidence for security analysts.
+Most recent research has shifted towards Learning-based SauronEyes comprises four collaborative modules for
+methods [6], [7], [8], [9], [10], [11], [12], [13]. These methods efficient anomalous edge detection and attack chain reconleverage various deep learning techniques to model APT struction: (1) Graph Construction constructs an Interaction
+behaviors or patterns, classify anomalous samples, and detect Knowledge Graph (KG) capturing entity attributes (IP, paths,
+deviations, enabling the detection of unknown attacks. parent-child relationships) and a Graph (IG) reflecting entity
+ Traditional non-learning methods (e.g., rule-based match- interactions (processes, files, sockets), initializing aspect
+ing, statistical analysis) exhibit inherent limitations in mod- embeddings through gate units coupled with specific aspects.
+eling complex entity relationships and dynamic behavioral (2) View Disentanglement employs an attention-based neighpatterns due to reliance on predefined knowledge bases’ bor allocation mechanism into path-aware GNNs for KG
+completeness. While large language models enhance con- disentanglement, while integrating an focused lightweight
+textual reasoning via chain-of-thought mechanisms, their GCN (LightGCN) to disentangle IG. (3) Contrastive Learndesign paradigms fundamentally misalign with APT attribution ing enhances representation learning through intra-view and
+requirements. Large models’ data/compute demands clash inter-view contrastive mechanisms, mitigating data sparsity.
+with scarce APT samples and dynamic threats, while their (4) Threat Detection & Attack Reconstruction predicts edge
+opacity hinders pinpointing initial breaches and lateral move- maliciousness via multi-aspect fusion, constructs compact
+ments, causing dual failures in path inference and forensic summary graphs by considering overlapping attack behaviors
+clarity. In contrast, graph neural network (GNN)-based prove- across events.
+nance frameworks model network entities as heterogeneous We have implemented S AURON E YES and evaluated its
+provenance graph structures that explicitly preserve attack effectiveness and efficiency on the DARPA Transparent Compropagation topology and temporal-causal dependencies. This puting (TC) E3 dataset [20], StreamSpot dataset [21] and the
+approach achieves optimal balance across detection accuracy, Unicorn Wget dataset [6]. The DARPA dataset includes realresource efficiency, and explainability. world attacks, while the StreamSpot and Unicorn dataset can
+ While provenance graph-based graph learning methods have simulate attacks in a controlled environment. Experimental
+achieved promising results, they still face inherent challenges results show that S AURON E YES can efficiently capture real
+in handling APT attacks: 1) Camouflage: Attackers construct attack intents and distinguish between benign and malicious
+semantically coherent pseudo-normal contexts by blending system entity interactions with high precision and recall rates.
+malicious operations with massive benign behaviors (e.g., Moreover, S AURON E YES matches or exceeds the performance
+masquerading as legitimate process invocations or routine of state-of-the-art detection methods. Finally, S AURON E YES
+file access), causing traditional anomaly detection models accurately reconstructs attack chains.
+to suffer from feature confusion; 2) Low-frequency: APT In summary, we make the following contributions:
+events exhibit extremely low signal-to-noise ratios, with malicious fragments (often < 0.01%) concealed in long-term • We propose S AURON E YES, an APT detection method
+TB-scale operation logs—the extreme sparsity allows normal suitable for environments with high sparsity of malicious
+high-frequency nodes to dominate graph neural networks’ interactions, capable of detecting deep attack intents in
+neighborhood aggregation, while existing loss functions strug- massive log data. It also constructs an attack chain that
+gle to capture long-tailed malicious patterns under class is easier to analyze.
+imbalance ratios exceeding 104 : 1; 3) Multi-stage: APT • We capture deep attack intentions by disentangling the
+attacks follow multi-phase tactics spanning hundreds of enti- camouflaged graphs and model system entity interaction
+ties and dozens of stages, yet current methods relying on tendencies through disentangled representation learning,
+fixed-hop subgraph sampling (e.g., 3-hop truncation) fail to thus preventing the detection model from being misled
+model cross-stage long-range dependencies, ultimately hinder- by surface intent-induced representations.
+ing complete attack graph reconstruction. • We introduce a novel self-supervised contrastive learning
+ To address these challenges, we propose S AURON E YES, an framework that learns disentangled representations of
+advanced APT detection framework integrating graph disen- system entities from knowledge views and interaction
+tanglement algorithms and contrastive learning. It systemati- views and enhances inter-view and intra-view compar-
+11746 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE I
+ O BSTACLES T HAT L IMIT THE P ERFORMANCE OF P ROVENANCE -BASED
+ APT D ETECTION M ODELS . I NDICATE T HAT T HEY C AN S OLVE OR
+ H AVE T HIS A BILITY, W HILE ◦ I NDICATE THE O PPOSITE
+
+Fig. 1. Abstract diagram sourced from DARPA E3-CADETS, depicting a
+backdoor attack activity.
+
+ isons, providing an effective solution for the high sparsity
+ of malicious entities in real-world log data.
+ • We conduct extensive experimental evaluations on widely
+ used datasets, demonstrating the high effectivenes.
+
+ II. BACKGROUND & M OTIVATION C. Challenge to Existing Solutions
+ In this section, we use APT attacks from DARPA [20] to Previous studies on threat detection have demonstrated
+illustrate the challenges in existing threat detection solutions. remarkable performance in the field of APT detection.
+ Nevertheless, persistent challenges hinder the effectiveness
+A. Motivating Example of provenance-based detection models when deployed in
+ As shown in Fig. 1, this is a real Nginx backdoor attack from increasingly complex real-world environments. These critical
+the DARPA Transparent Computing Engagement 3 [20]. The limitations, which will be elaborated in subsequent sections,
+attacker 81.49.200.166 launched two cyber attacks against are systematically summarized in TABLE I.
+the CADETS system by exploiting an Nginx backdoor. During 1) Rule-Based Methods: Rule-based detection frameworks
+the initial attack, the perpetrator successfully connected to [14], [15], [16] incorporate expert knowledge to construct
+the vulnerable Nginx server running on CADETS. Through attack-matching patterns through known attack reports and
+shell commands, they downloaded a malicious payload to the meticulously designed attack chain scoring mechanisms based
+/tmp/vUgefal directory and successfully escalated privileges on ATT&CK. While this expert-driven approach effectively
+for the vUgefal process to root level. After exfiltrating reduces false positive rates, the excessive reliance on manual
+sensitive information, the attacker attempted to infect the sshd expertise results in slow pattern updates when confronting
+process with the malicious payload, which ultimately caused sophisticated APT attack vectors and evolving cyberspace
+a system crash before completion. Subsequently, the attacker landscapes, ultimately leading to significant detection latency
+initiated a second assault by creating the malicious process in rule-based methodologies.
+XIM and establishing a persistent test process designed to 2) Statistics-Based Methods: Statistical-based approaches
+maintain long-term connectivity while conducting port scan- [17], [18], [19] detect anomalies by calculating occurrence
+ning operations across the local network (128.5.12.*:*). probabilities of system behaviors and assigning anomaly
+ scores based on their rarity (operating under the assumption
+B. Attack Intent Camouflaging that rare entities are more likely to be malicious). However,
+ Intent refers to the normal interactive behaviors of system these shallow statistical measurements fail to capture the
+entities themselves, as well as the objectives of malicious genuine intent behind system behaviors. As demonstrated in
+behaviors orchestrated by APT attackers [22], [23]. Attack our motivating example (Fig. 1), the test process conduct-
+Intent Camouflaging describes a critical detection challenge ing multiple port scans across different IP addresses would
+where an attacker deliberately mixes malicious operations with be misclassified as benign due to its high frequency, while
+a large volume of legitimate, benign system activities. By overlooking its critical association with the malicious Nginx
+embedding malicious behavior within normal workflows, the entity. Moreover, initial low-frequency benign activities like
+attacker’s hostile intent becomes mixed with routine opera- file writes by python often trigger false positives. These
+tional intents, effectively camouflaging the attack. This tactic limitations originate from conventional statistical approaches’
+makes it exceptionally difficult to discern the true purpose failure to holistically capture entity attributes and interaction
+behind a series of actions. For instance, a single process might semantics in provenance graphs.
+execute both legitimate and malicious tasks simultaneously, 3) Learning-Based Methods: Deep learning-based APT
+which obscures its overall intent from traditional detection detection leverages large-scale system behavioral data
+systems. The Nginx backdoor attack in the DARPA dataset for model training, yet faces fundamental constraints.
+serves as a concrete example of Attack Intent Camouflaging. KAIROS [13] adopts graph neural network encoder-decoder
+QIAO et al.: SAURONEYES: DISENTANGLING VOLUMINOUS LOGS TO UNVEIL CAMOUFLAGED ATTACK INTENTIONS 11747
+
+Fig. 2. The framework of S AURON E YES consists of: i) generating initial embeddings from knowledge graphs and interaction graphs; ii) dual-view disentangling
+by LightGCN and Path-aware GNN respectively; iii) contrastive learning within and between views and iv) threat detection and attack chain reconstruction.
+
+architectures for attack chain reconstruction. UNICORN [6] behaviors; and (3) providing complete alert graphs with conconstructs contextual provenance graphs for stealthy attack textualized relationships to streamline security analysts’ alert
+detection but suffers from coarse-grained alerting. SHADE- verification and attack investigation processes.
+WATCHER [12] reformulates APT detection as entity preference prediction via bipartite graph modeling, lacking full-chain IV. OVERVIEW
+attack reconstruction. MAGIC [24] employs masked graph S AURON E YES is an innovative provenance-based APT
+representation learning to abstract benign system patterns, detection scheme that utilizes graph disentangling algorithms
+while THREATRACE [10] implements GraphSAGE-based and graph contrastive learning. It enables fine-grained identifientity aggregation for host-centric threat detection. Current cation of system anomalies in audit logs, providing a concise
+approaches remain fundamentally constrained by severe data and complete attack chain. Fig. 2 illustrates the architecture
+imbalance between benign logs and sparse APT patterns, with of S AURON E YES, which consists of four major components:
+inadequate mitigation strategies exacerbating false positives. O1 Graph Construction and Initialization For the host
+ logs of different systems, S AURON E YES models system
+ behavior by focusing on the interactions between system enti-
+ III. T HREAT M ODEL AND D ESIGN G OAL ties and the multiple information flows and attribute features of
+A. Threat Model these entities. S AURON E YES extracts interaction relationships
+ (e.g., Process → File) and entity attributes (e.g., Socket →
+ We assume attackers infiltrate hosts via networks to steal IP segment) from the logs, which are then converted into two
+data or manipulate devices, leaving reconstructable audit types of graph structures: knowledge graphs (KG) and intertraces. Aligned with prior models [6], [16], [25], [27], our TCB action graphs (IG). The system entity features are initialized
+includes OS kernels and audit frameworks, excluding hardware as vector embeddings through element-wise gating units.
+trojans/evasion attacks beyond kernel auditing [5], [28]. Audit O2 Disentangling Module once the initial embeddings
+data integrity is ensured via tamper-resistant logging [29], [30]. are obtained, the disentangling module begins the process of
+ disentangling the knowledge graph (KG) and the interaction
+ graph (IG). For the KG, the module uses a path-aware GNN
+B. Design Goal
+ to encode the multi-faceted attribute information of individual
+ S AURON E YES models audit logs to extract behavioral pat- system entities. An attention-based neighbor allocation mechaterns by disentangling entity attributes and relationship types, nism is employed for each aspect. For the IG, the disentangling
+enabling precise identification of genuine behavioral intents module focuses on separating each system entity’s interactions
+across diverse entity activities. The system aims to achieve with multiple entities (or aspects) and applies a lightweight
+three key objectives for effective APT detection: (1) generating graph convo-lutional network (LightGCN) for aggregation.
+edge-grained granular alerts from massive log volumes to Similarly, an attention-based mechanism is used to filter
+ensure fine-grained threat visibility; (2) maintaining low false subsets of neighbors, aggregating more valuable neighbor
+positives through intent disentanglement to isolate malicious attributes
+11748 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ O3 Contrastive Learning Module After obtaining the TABLE II
+disentangled entity feature embeddings, the contrastive learn- S UMMARY OF K EY N OTATIONS AND T ERMS
+ing module applies within-view contrastive learning to the
+embeddings of KG and IG. This module introduces random
+noise into the embeddings to add perturbations for contrastive
+enhancement. For any system entity within a view, a pair of
+augmented embeddings under the same aspect is treated as
+a positive pair, while representations from different aspects
+form negative pairs. Once the positive and negative pairs
+are determined, contrastive loss is calculated separately for
+both views. Subsequently, the module performs contrastive
+learning between the two views to align the system entity
+representations within them.
+ O4 Threat Detection and Reconstruction Leveraging
+multi-view embeddings, S AURON E YES calculates intent prediction scores for interactions by combining inner products
+across distinct intent dimensions of system entities. When an
+anomaly score exceeds a predefined threshold, the interaction
+is flagged as malicious and incorporated into the alert chain.
+To generate compact attack summary graphs for analysts,
+S AURON E YES employs overlapping community detection to
+automatically aggregate discrete alerts into coherent attack
+events, ensuring both interpretability and structural integrity
+of reconstructed attack scenarios.
+
+ V. D ESIGN
+ In this section, we introduce S AURON E YES, whose purpose is to disentangle the knowledge graph and interaction
+graph and extract deep-seated intentions, then use contrastive
+learning to study the intrinsic structural information of entities,
+ultimately detecting malicious interactions hidden among system entity interactions. TABLE II provides detailed definitions
+of key concepts and parameters.
+ TABLE III
+ S YSTEM B EHAVIORS E XTRACTED F ROM AUDIT L OGS
+A. Graph Construction and Initialization
+ 1) Graph Construction: SauronEyes extracts system entities including subjects (processes), objects (processes, files,
+network flows, etc.), and attributes (IP addresses, commandline arguments) from audit logs (TABLE III). After we obtain
+these four types of entities relationships, we will map the
+necessary behavioral relationships into attribute relationships
+between nodes in the KG graph to assist in building attribute partition ID embeddings into K chunks [31], we employ
+edges. The knowledge graph is defined as a set of triples: element-wise self-gating units to regulate information flow
+KG = {(e, r, v) | e ∈ E, r ∈ R, v ∈ V}, where E denotes system from ID embeddings to each aspect:
+entities(including subject and object), R represents the relationship between entities and attribute values. Subsequently, we ee,k = fgate
+ k
+ (ee ) = ee σ(Wk ee + bk ), (1)
+enrich the graph by embedding entity attributes and interaction
+relationships. We abstract the interactions between system where ee is the ID embedding of entities e, ee,k is the initial
+entity pairs with causal relationships into a unified interaction embedding of entities e for the k-th aspect, Wk ∈ Rd×d and
+graph. Each interaction reflects a causal exchange between two bk ∈ Rd are learnable parameters, denotes element-wise
+system entities within a specific timestamp. The interaction multiplication, and σ is the sigmoid function. Similarly, we
+graph is formally defined as: IG = {(s, o) | s ∈ Subject, o ∈ initialize aspect-specific embeddings e s,k , eo,k , er,k and ev,k
+Object}, where each pair (s, o) indicates that subject s has for subject s, object o, relations r and attribute values v,
+interacted with object o. respectively.
+ 2) Embeddings Initialization: Prior to graph disentangling, The self-gating mechanism adaptively learns non-linear
+we initialize multi-aspect embeddings for entities. Formally, gates to modulate ID embeddings across different aspects
+we assume there are K distinct aspects. Unlike methods that at element-wise granularity through dimension re-weighting.
+QIAO et al.: SAURONEYES: DISENTANGLING VOLUMINOUS LOGS TO UNVEIL CAMOUFLAGED ATTACK INTENTIONS 11749
+
+This approach offers greater flexibility compared to naively in three interactions, where capturing both direct and transipartitioning embeddings into fixed chunks. tive collaboration patterns is critical. We obtain collaborative
+ information by modeling these connections.
+B. Disentangling Module We adopt LightGCN, which employs simple message passing and aggregation mechanisms without feature transforma-
+ After constructing the audit logs into KG and IG, and
+ tion or nonlinear activation, thereby improving computational
+initializing the embeddings through gating units, we explore
+ efficiency in graph structures constructed from real-world audit
+the disentangling of the two views(KG and IG) in the disentanlogs. However, similar to KG disentanglement, we observe that
+gling module. This process differentiates the various aspects
+ for key nodes equivalent to “traffic hubs” (e.g., Nginx), they
+between system entity interactions and system entity attributes,
+ may engage in interactions across multiple distinct aspects.
+aiming to obtain embeddings with clearer expressive power.
+ Aggregating all neighbors under a single aspect during disen-
+ 1) Disentangling Knowledge Graph: The purpose of this
+ tanglement is clearly suboptimal.
+component is to learn disentangled knowledge-aware repre-
+ For example, as previously mentioned, the relationships
+sentations that distinguish various aspects of system entity
+ and entities in the attack provenance aspect are the primary
+attributes. For example, in the Knowledge Graph (KG), for
+ causes of the Nginx server’s operations and associations with
+the entity node Nginx, its connected node 200.36.109.214
+ /tmp/vUgefal, while interactions from other aspects are not.
+reflects IP information, /var/log/nginx-*.log indicates
+ Therefore, we utilize an attention-based neighbor allocation
+storage path information, and /etc/group represents the
+ mechanism to refine the IG by inferring the importance of
+Received objects of Nginx. Inspired by [32], we use a patheach interaction under different aspects. For the interaction
+aware GNN to encode this information. The path-aware GNN
+ (s, o) under the k-th aspect, its attention score is calculated as
+aggregates L-hop neighborhood information through deep
+aggregation while preserving path information (i.e., long-range exp(e>s,k xkg
+ o,k )
+connectivity). αk(s,o) = P kg
+ . (5)
+ >
+ k0 ∈K exp(e s,k0 xo,k0 )
+ However, in KG disentanglement tasks, we cannot aggregate
+all neighbors because only a subset of neighbors is highly In the l-th layer at the k-th aspect, the aggregation result can
+relevant to their corresponding aspects. For instance, the IP be represented as:
+information 200.36.109.214 directly caused the compromise 1 X k (l)
+of Nginx and is strongly correlated with the “attack source” e(l+1)
+ s,k =ˇ ˇ α(s,o) eo,k ,
+ ˇ ig ˇ
+ ˇN s ˇ o∈Nsig
+aspect, while /var/log/nginx-*.log and /etc/group are
+weakly relevant. To better capture the affinity between target 1 X k (l)
+ e(l+1)
+ o,k =ˇ ˇ α(s,o) e s,k , (6)
+entities and their neighbors, we choose similarity-based atten- ˇ ig ˇ
+ ˇNo ˇ s∈Noig
+tion with the assumption that the more similar entity node e
+is to its neighbor v in the k-th aspect, and the relation is r, the where N sig and Noig represent sets of system entities s’s and
+better the representation of node e in that aspect. The attention o’s neighbors in the interaction graph. Then representations at
+score is represented as different layers are summed up as the collaborative represenexp(e>e,k (er,k ev,k )) tations of the k-th aspect, as follows:
+ αk(e,r,v) = P . (2)
+ >
+ k0 ∈K exp(ee,k0 (er,k0 ev,k0 )) xig (0) (L)
+ s,k = e s,k + · · · + e s,k , xig (0) (L)
+ o,k = eo,k + · · · + eo,k , (7)
+Then, the aggregation at the l-th layer of the k-th aspect can where where e(0) (0)
+ s,k and eo,k represent the initial embeddings of
+be represented as: system entities s and o at the k-th aspect.
+ 1 X
+ e(l+1)
+ e,k = ˇ ˇ αk(e,r,v) er,k e(l)
+ v,k , (3)
+ ˇ kg ˇ
+ kg
+ C. Contrastive Learning Module
+ ˇNe ˇ (r,v)∈Ne
+ Contrastive learning has enhanced representation learning
+l specifically refers to the l-th convolutional layer of the GNN, by minimizing the distance between similar sample pairs
+which is conceptually equivalent to the l-hop neighborhood and maximizing the distance between dissimilar sample pairs,
+from the central node. Finally, we aggregate the represen- addressing the issue of data sparsity caused by the scarcity
+tations from all layers to obtain the knowledge attribute of key samples. S AURON E YES does not require labels at all
+representation at the k-th aspect: in the contrastive learning stage, but automatically generates
+ xkg (0) (L) pseudo labels based on the structure of the data itself.
+ e,k = ee,k + · · · + ee,k . (4)
+ 1) Embedding Augmentation: It has been demonstrated in
+where e(0)
+ e,k represent the initial embeddings of system entities [33] that, for graph contrastive learning, the key factor is
+e at the k-th aspect. the contrastive loss (CL), rather than the augmentation of
+ 2) Disentangling Interaction Graph: The purpose of this the graph itself. Therefore, this component designs a rancomponent is to learn multi-aspect representations of system dom noise-based embedding augmentation method, adding
+entity interactions. The Interaction Graph (IG) empha- perturbations to the node embeddings for contrastive learning.
+sizes collaborative signals between entities. For instance, Specifically, noise is randomly added to the disentangled
+in the interaction sequence Nginx → tmp/test (and → embeddings at the k-th aspect. We add noise to each embed-
+/etc/passwd and → tmp/vUgefal), four entities participate ding in the opposite direction, i.e., the two augmented
+11750 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+embeddings are slightly stretched in opposite directions and D. Threat Detection and Attack Reconstruction Module
+slightly shifted, which is expected to improve the linear separa- 1) Threat Detection: After obtaining the contrastive loss
+bility in the projection space. A set of augmented embeddings for disentangled representations on both the knowledge graph
+for the k-th aspect can be represented as and interaction graph views, we proceed to threat prediction,
+ (
+ 1
+ e = e + (k1 erand k2 × η) sign(e) specifically categorizing system entity interactions into benign
+ f (e) = 2 (8) and malicious interactions. Given any interaction (u,r,v) with
+ e = e − (k2 erand k2 × η) sign(e)
+ k-th dimension, we combine the embeddings (zu,k and zv,k )
+where k · k2 represents L2 normalization, 1 erand and 2 erand are from both views and apply the inner product to represent the
+random embeddings that are uniformly distributed on [0, 1). prediction score ŷk (u, v) for the interaction between system
+By normalizing 1 erand and 2 erand , we can convert them into entities u and v being malicious. The specific formula is as
+unit length in the projection space. We set a hyperparameter follows:
+η to control the intensity of the embedding augmentation,
+ z s,k = zig
+ s,k , zo,k = zkg ig
+ o,k ⊕ zo,k (13)
+to prevent excessive noise from making the model unable to
+differentiate between similar samples. ŷ (s, o) = (z s,k ) zo,k .
+ k T
+ (14)
+ 2) Intra-View Contrastive Learning: Our goal is to explore Considering that each interaction may be related to different
+the weak dependencies between the disentangled represen- aspects differently, we adopt a careful fusion of prediction
+tations. We aim to achieve comprehensive disentangling to scores from different aspects with βk(u,v) as the attention weight
+obtain more information. We utilize contrastive learning to obtain the final result ŷ(u, v), as follows:
+between the disentangled Kg and IG to perform independent
+representation learning. The steps are as follows: First, we exp((h s ⊕ ho )T (z s,k ⊕ zo,k ))
+ βk(s,o) = P (15)
+define positive and negative sample pairs. For any embedding 0 exp((h s ⊕ ho )T (z s,k0 ⊕ zo,k0 ))
+ Xk ∈K
+in the view, we select a pair of augmented embeddings from ŷ(s, o) = βk(s,o) ŷk (s, o). (16)
+the same aspect to form a positive pair and calculate their k∈K
+self-similarity, then choose augmented embeddings from two
+ Given the focus of the simple contrastive loss on the
+different aspects to form a negative pair. We use the optimized
+ intrinsic distribution structure of the sample space, we apply a
+contrastive loss InfoNCE, which learns more unified entity
+ multi-task learning strategy to jointly train the pairwise BPR
+representations and implicitly alleviates popularity bias. The
+ loss and the contrastive loss, in order to more comprehensively
+contrastive loss for the disentangled Knowledge graph can be
+ achieve system entity prediction. As shown below:
+expressed as:
+ 1 X
+ XX kg kg
+ e s(zv,k ,zv,k )/τ LBPR = − ln S igmoid(ŷ(s,o) − ŷ(s0 ,o0 ) ), (17)
+ Lkg |R|
+ intra = − log P kg kg , (9) (s,o,s ,o )∈E
+ 0 0
+
+ v∈E,V k∈K k0 ∈K e s(zv,k ,zv,k0 )/τ
+ ŷ(s,o) and ŷ(s0 ,o0 ) are both prediction scores, where (s0 , o0 ) corwhere s(·) represents the calculation of cosine similarity, and responds to a different pair of nodes from (s, o), R represents
+τ represents the temperature parameter. In a similar manner, the set of interactions sampled in each mini-batch.
+we can derive the contrastive loss for the interaction graph as By combining intra-view and inter-view contrastive losses
+follows: with BPR loss, we minimize the following objective function
+ ig ig
+ ig
+ XX e s(zn,k ,zn,k )/τ to learn the model parameters:
+ Lintra = − log P . (10)
+ s(zig ig
+ n,k ,zn,k0 )/τ
+ n∈s,o k∈K k0 ∈K e L f inal = LBPR + λ1 Lintra + λ2 Linter + λ3 kΘk22 . (18)
+The total intra-view contrastive loss is the sum of the two Here, θ represents the set of model parameters, λ1 and λ2
+contrastive losses mentioned above: are hyperparameters controlling the weights of the intra-
+ Lintra = Lkg ig view and inter-view contrastive losses, respectively, λ3 is the
+ intra + Lintra . (11)
+ hyperparameter controlling the L2 regularization term.
+Through this learning, we achieve independent contrastive 2) Attack Reconstruction: In the process of intent dislearning within each of the two views. entangling and threat detection, S AURON E YES extracts
+ 3) Inter-View Contrastive Learning: We also aim to inves- comprehensive attack intents and behaviors. However, the
+tigate the relationship between the KG and IG views. resulting anomaly graph remains a complex and large node
+Specifically, our goal is to align the embeddings of IG and KG graph. To further reduce the burden on security analysts,
+and perform contrastive learning between their representations. S AURON E YES implements attack chain construction. Unlike
+For an entity in one view (e.g., Process, File, or Socket), we existing approaches that use the Louvain algorithm [7], [13],
+extract the embeddings of the same entity learned in the other [34], we considered the phenomenon of overlapping commuview as a positive sample pair, and select the embeddings of nities in attack division. As shown in Fig. 4, when nodes
+different entities from the other view as negative sample pairs. belong to multiple clusters simultaneously, communities in
+The inter-view contrastive loss can be expressed as the network overlap, and some behaviors may contribute to
+ kg ig different attack communities. The Louvain algorithm, based
+ XX e s(zi,k ,zi,k )/τ
+ Linter = − log P (12) on modularity partitioning, cannot detect this issue. We
+ s(zkg ,zig )/τ kg ig
+ i∈E k∈K i0 ∈E (e
+ i0 ,k i,k + e s(zi,k ,zi0 ,k )/τ ) devised an overlapping community detection method based
+QIAO et al.: SAURONEYES: DISENTANGLING VOLUMINOUS LOGS TO UNVEIL CAMOUFLAGED ATTACK INTENTIONS 11751
+
+ VI. E VALUATION
+ We assessed S AURON E YES from the following Seven
+ perspectives:
+ RQ1: How effective is S AURON E YES in detecting APTs
+ compared to current state-of-the-art appraoches?
+ RQ2: Are the key components in our S AURON E YES framework really improving the overall performance?
+ RQ3: How do hyperparameters affect S AURON E YES’
+ efficacy?
+ RQ4: What is the performance overhead of S AURON E YES
+ when handling large-scale data in real-world scenarios?
+ RQ5: Can S AURON E YES accurately reconstruct attack
+Fig. 3. An example shows the composition of knowledge graph and behavior from the original provenance graph?
+interaction graph. It can be seen that knowledge graph has multi-faceted RQ6: How resilient is S AURON E YES to adversarial attacks?
+attribute knowledge.
+ RQ7: How is the generalization ability of S AURON E YES
+ when confronting concept drift?
+
+ A. Experimental Settings
+ 1) Datasets: S AURON E YES was evaluated using three
+ authoritative open-source datasets: The StreamSpot dataset
+ [1] employs six experimental scenarios (five benign, one
+ drive-by download attack) to assess rapid attack detection.
+ The Unicorn Wget dataset [2] contains 150 CamFlow logs
+ Fig. 4. The Overlapping Phenomenon of Attack Clusters.
+ (125 benign/25 covert supply-chain attacks) simulating killchain obfuscation tactics, challenging systems to discern
+on Non-negative Matrix Factorization (NMF) [35], which malicious patterns mimicking legitimate workflows. The
+explicitly models the membership strength of each node to DARPA-E3 dataset [3] from real adversarial engagements
+each community. We assign a non-negative latent factor to combines APT activities with benign operations in an entereach node-community pair, indicating the degree of the node’s prise network, reflecting Advanced Persistent Threats’ stealth
+affiliation with the community. The probability of an edge characteristics. Their complementary designs – controlled
+existing between a pair of nodes in the network is then experiments (StreamSpot/Unicorn) and operational realism
+modeled as a function of their shared community affiliations. (DARPA-E3) – ensure comprehensive evaluation of detection
+Based on the node affiliation model, community structures accuracy, anti-evasion robustness, and practical applicability.
+are identified by maximizing the affiliation strength between 2) Metrics: (1) To evaluate SauronEyes’ anomaly detecnodes. tion capability, we use two evaluation metrics based on IDS
+ To accomplish this, S AURON E YES extracts a subgraph G p ThreaTrace [10] and Unicorn [6]. We perform graph-level and
+containing malicious activities (edges) from the interaction node-level anomaly detection on both system entity logs and
+graph, where G p serves as the input graph for attack recon- batch logs. We use Accuracy, Precision, Recall and F1-score
+struction. The community detection in B IG CLAM [35] is for evaluation. (2) To evaluate attack community overlap, we
+performed by leveraging the affiliation strength Auv between use Normalized Mutual Information (NMI) to measure the
+nodes u and v. similarity of community partitions and ensure the algorithm
+ K
+ X accurately reflects the true structure. The Jaccard similarity
+ Auv = Fu · Fv = Fuk × Fvk (19) coefficient assesses node set overlap, while the F1 score
+ k=1 measures precision and recall. This provides a comprehen-
+Here, Fu and Fv are the community attribute vectors of nodes sive evaluation of S AURON E YES’ performance in identifying
+u and v, respectively. By maximizing the affiliation strength communities and avoiding errors.
+between node pairs while considering the actual connections in The Jaccard similarity coefficient is defined as:
+the network, overlapping community partitioning is achieved. |U ∩ V|
+The optimization function is: J(U, V) = (21)
+ |U ∪ V|
+ X  X
+ log 1 − exp(−Auv ) − Auv . (20) where U represents the groundtruth community and V rep-
+ (u,v)∈E (u,v)<E resents the detected partitioned community. NMI is defined
+ To the best of our knowledge, S AURON E YES is the first as
+ 2 · MI(U, V)
+to address the issue of overlapping attack communities. For N MI(U, V) = (22)
+instance, Hercule [7] and Kairos [13] also utilize community H(U) + H(V)
+detection but do not consider that attack nodes may simulta- where MI(U, V) is the mutual information and H(U), H(V)
+neously belong to multiple anomalous behavior communities. are the entropies.
+11752 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE V
+ C OMPARISON OF D ETECTION R ESULTS B ETWEEN S AURON E YES AND
+ OTHER S TATE - OF - THE - ART S OLUTIONS
+
+ Fig. 5. ROC curves on all datasets.
+
+ TABLE IV
+ OVERVIEW OF THE ROW E XPERIMENTAL DATASETS
+
+ 3) Implementation: We implemented the S AURON E YES
+prototype using Python 3.11. We used PyTorch [36] to implement the model. For the hyperparameters in S AURON E YES,
+we set all embedding dimensions to 64, the learning rate
+to 0.001, and the L2 regularization parameter to 0.0001.
+We chose a batch size of 1024 for log detection in our separates malicious behaviors from benign activities at edge
+experiments. We used the Adam [37] optimizer to opti- granularity, enhancing stealthy attack identification. For entitymize the model. While these hyperparameters might have level log in DARPA E3, Log2vec detects anomalies in logs
+other potential choices, in Section VI-D, we discuss the within graphs using node embeddings and clustering methimpact of hyperparameter settings on the final performance of ods, aggregating information from node neighbors. However,
+S AURON E YES. All experiments were performed on a server Log2vec’s nodes are logs rather than system entities, makrunning Ubuntu 22.04.5 LTS with an Intel(R) Xeon(R) Silver ing it naturally inferior to provenance graph-based detection.
+4208 CPU (14 cores, 14 threads, base frequency 2.10 GHz) DeepLog, being a log-level detector, cannot capture the conand 256 GB of RAM. textual information in system entity interactions, making it
+ difficult to detect anomalies within these interactions. As
+B. Detection Performance (RQ1) node-level detector, ThreaTrace and FLASH are comparable
+ 1) Detection Results: Experimental results demonstrate that to SauronEyes in all aspects, but is significantly inferior
+S AURON E YES achieves robust performance across diverse to precision and F1-score in THEIA. Compared to the latoperational scenarios, with comprehensive evaluations con- est LLM-integrated prompt engineering solutions, although
+ducted on both batch processing logs and entity-level system OMNISEC [38] incorporates expert knowledge to achieve
+logs (TABLE V). Furthermore, the ROC curves presented in lower false positives, its recall rate is significantly lower than
+Fig. 5 validate the model’s superior classification accuracy S AURON E YES. Its missed detections of attacks could make the
+under varying operational conditions, confirming its adapt- system more vulnerable to being compromised by attackers.
+ability and detection effectiveness in heterogeneous logging
+environments. C. Ablation Study (RQ2)
+ 2) SauronEyes Vs. State-of-the-Art: In batch log analy- In this section, we discuss the effectiveness of individsis, S AURON E YES achieved near-perfect detection on the ual components in S AURON E YES and investigate whether
+Streamspot dataset with simple attack patterns, while conven- removing or modifying these components impacts the final
+tional graph-level baselines suffered notable degradation on performance. The performance results are shown in Fig. 7.
+the complex, highly camouflaged attacks in Unicorn Wget. In Fig. 6, we select logs around the attack periods from
+Though node-level methods like Threatrace maintained decent E3-CADETS and used t-SNE to plot 2D visualized node
+accuracy, S AURON E YES reduced false positives significantly representations after different disentanglement scenarios in the
+via edge-level intent-disentanglement detection. This approach ablation experiments of the disentanglement module.
+QIAO et al.: SAURONEYES: DISENTANGLING VOLUMINOUS LOGS TO UNVEIL CAMOUFLAGED ATTACK INTENTIONS 11753
+
+Fig. 6. 2D visualization of node representations on E3-CADETS using t-SNE. Red nodes indicate anomalous entities, while blue nodes indicate benign
+entities.
+
+ TABLE VI
+ C OMPARISON OF D ETECTION R ESULTS B ETWEEN S AURON E YES
+ ( ORIGINAL ) AND S AURON E YES ( ABLATION )
+
+Fig. 7. Effects of Different Modules on the Detection Performance of
+S AURON E YES.
+
+ 1) Removing Disentanglement: To validate the necessity of not only lost the self-supervised ability to capture the structural
+disentanglement mechanisms, we conducted ablation studies relationships of system entities within themselves but also
+by replacing key modules in the knowledge and interaction could not transfer information between the views.
+views(see Fig. 7). For knowledge disentanglement, removing 3) Removing Multi-View: To study the significance of the
+the module and substituting it with a Graph Convolutional respective disentangling operations and dual-view contrastive
+Network (GCN) caused precision to drop to 75%. This phe- learning in dual views, we replaced the original S AURON E YES
+nomenon suggests that GCN alone fails to deeply capture design with a combination of ‘PG construction + PG disthe intricate relationships among system calls, impeding the entanglement + contrastive learning + threat detection‘. The
+model’s ability to uncover malicious behavioral logic and decoupling operation is modified to aggregate PG using
+resulting in frequent false positives. For interaction disentan- LightGCN with a multi-attention mechanism, and contrastive
+glement, replacing the module with a Multilayer Perceptron learning is to upsample positive and negative sample pairs
+(MLP) led to a more pronounced degradation (67% precision), from different aspects of the same node on PG. As shown in
+underscoring the critical role of disentangling dynamic inter- TABLE VI, the ablated version of SauronEyes has a significant
+action patterns. When all decoupling modules were replaced performance degradation on various datasets, which reveals the
+with the traditional scheme, the final model performance importance of multi-view decoupling and contrastive learning
+significantly declined, with Precision at only 55%. This occurs in revealing the deep intentions of APT.
+because GCN+MLP encoding fails to disentangle entities’
+multifaceted intentions, allowing misleading signals to distort
+their authentic behavioral patterns. D. Hyperparameter Impact on Performance (RQ3)
+ 2) Removing Contrastive Learning Module: We removed In this section, we independently modify specific hyperpathe contrastive loss component within and between views. rameters to reflect their impact on the detection of APTs by
+From Fig. 7, it can be seen that removing this module also S AURON E YES and provide interpretable explanations for these
+reduced detection performance. This is because the two views impacts. We selected StreamSpot at the batch log level (Fig. 8)
+11754 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Fig. 8. Impact of different hyperparameters on detection performance on StreamSpot(Batch-level log).
+
+ Fig. 9. Impact of Hyperparameter Variations on Detection Performance in DARPA E3-CADETS(Entity-level log).
+
+and DARPA E3-CADETS at the system entity level (Fig. 9) TABLE VII
+as the experimental subjects for hyperparameter analysis. C OMPUTATIONAL OVERHEAD P ROFILING
+ 1) Impact of Disentangling Dimension K: The disentangling dimension K concretely represents the degree of
+disentangling of different aspects of a single system entity
+in the two views. We analyzed the range [1, 2, 3, 4, 5]. We
+observe that increasing the disentangling dimensions can
+enhance attack detection accuracy, as it allows S AURON E YES
+to capture system entity interaction tendencies from a broader
+perspective and more diverse aggregation levels. However,
+excessively high K values result in too much dimension sep- E. Performance Overhead (RQ4)
+aration, compromising the independence of each dimension’s
+ S AURON E YES is designed to achieve detection with low
+attributes of the system entities. We found that when K = 2,
+ and reasonable overhead. We tested the time and peak
+the model performs best across all datasets.
+ memory overhead of S AURON E YES at different stages,
+ 2) Impact of Contrastive Loss Weights: The contrastive loss including (1)Graph Construction, (2)Training, and (3)Testweight parameters λ1 and λ2 control the impact of intra-view ing. We provide specific runtime performance overheads of
+and inter-view contrastive learning on the final loss for the S AURON E YES on CADETS-E3. It is worth noting that, GPUs
+knowledge view and the interaction view, respectively. We are generally lacking in real production environments, we
+varied λ1 and λ2 within the range [0.001, 0.01, 0.1, 1]. When cannot require large-scale hosts in the industry to use GPUs
+λ1 = 0.01 and λ2 = 0.01, S AURON E YES performs optimally for threat detection, with CPU being the dominant resource
+on each dataset. The reason is: excessively high contrastive when GPUs are unavailable, our experiments mainly focus on
+learning losses may cause the model to focus too much on the CPU-based testing. During the graph construction phase, we
+relative distances between samples, neglecting the main task measured the total time taken by S AURON E YES to construct
+loss. Conversely, setting the contrastive learning loss weights a usable graph from the preprocessed dataset, as well as the
+too low, meaning the contrastive learning loss occupies too memory changes before and after the process. In the training
+small a proportion in the overall loss function. phase, we assessed the training overhead by measuring the
+ 3) Impact of Embedding Size: The embedding operation time required for S AURON E YES to generate the complete
+maps node features to edge embeddings, specifically repre- model, and the peak memory usage during this process was
+senting edges in a graph as low-dimensional vectors that recorded. In the final testing phase, we recorded the duration
+retain the original graph structure and attribute information. of APT predictions made by the trained model on input system
+From the results: As the embedding size increases, the entities, as well as the peak memory consumption.
+model accuracy improves significantly and gradually stabilizes TABLE VII presents the complete performance overhead
+(20 epochs for StreamSpot and 40 for CADETS), reaching of S AURON E YES. As shown, S AURON E YES has very low
+near-perfect accuracy (close to 1.0). In both datasets, the model time overhead, and its memory overhead remains within the
+with an embedding size of 64 performs best and has the highest range that can be tolerated by real-world threat detection
+final accuracy. hosts. S AURON E YES shows significant advantages in practical
+QIAO et al.: SAURONEYES: DISENTANGLING VOLUMINOUS LOGS TO UNVEIL CAMOUFLAGED ATTACK INTENTIONS 11755
+
+ Fig. 10. Case Study: An Example of a Multi-Stage Complex Attack with Overlapping Attack Activities.
+
+threat detection. For example, the dataset used for testing in
+CADETS-E3 takes almost two days to collect and amounts
+to approximately 4GB of log data, whereas S AURON E YES
+completes the prediction in just 27 seconds. The training
+overhead primarily stems from multiple rounds of iteration
+over millions of nodes and edges: each round involves multilayer neighbor aggregation in the GNN and the computation
+of a complex objective function comprising the BPR loss and
+two types of contrastive losses (intra-view and cross-view). Fig. 11. Attack Reconstruction Performance of SauronEyes.
+
+F. Attack Reconstruction (RQ5)
+ The ultimate goal of S AURON E YES is to provide security address 156.251.67.239. The website hosted a form
+analysts with a comprehensive and concise attack chain. In the asking for name, e-mail address, and password. In the
+context of the attack chain, we believe that O 1 a single attack third step, the user unfortunately clicked on the link,
+chain should encompass the entirety of an attack activity, entered the requested information, and submitted it.
+O2 the attack behavior should effectively indicate the attack The results were sent back to www.fake.com, address
+stages, thereby creating a directed flow of attack information, 10.207.125.7. The attacker now has access to victim’s
+and O 3 this approach aims to expedite analyst feedback and e-mail account, including contact information for other
+the handling of false positives (FP). company employees.
+ We simulated multiple attacks by an adversar, completing a As illustrated in Fig. 10(b), overlapping attack communities
+sophisticated APT campaign. This showcases S AURON E YES’ emerge when distinct attack activities share common entry
+capability to segment and reconstruct different attack events, points, challenging the reconstruction framework in Section
+ensuring the attack chain remains concise and complete. V-C.3. Conventional community detection methods (e.g., Lou-
+Fig. 10(b) presents an overview of the attack scenario tracing, vain algorithm adopted by Kairos and Hercules) fail to
+where the attacker initiated the campaign with a phishing resolve such overlaps, causing incomplete attack chain extracemail, leading to two distinct attack campaigns. tion in aggregated community assignments. S AURON E YES
+ • In the first campaign depicted in Fig. 10(a), the attacker overcomes this limitation through overlapping community
+ begins by crafting a simple message in a phishing detection, effectively distinguishing interdependent attack
+ email, enticing the recipient to download a file from chains from shared entry points. This enables precise reconthe email. In the second step, once the recipient clicks struction of two distinct attack chains (Figs. 10(a)(c)) that
+ on the Word document in the email, the attacker traditional approaches would erroneously merge.
+ exploits CVE-2017-11882, triggering a stack overflow As shown in Fig. 11b, S AURON E YES demonstrates outin the EQNEDT32 module, which then initiates a reverse standing performance across various metrics, enabling a more
+ TCP connection to the C&C server at IP address comprehensive reconstruction of attack chains. Additionally,
+ 10.207.125.63. In the third step, the attacker starts as illustrated in Fig. 11a, S AURON E YES significantly reduces
+ performing port scans for internal reconnaissance and the number of items that investigators need to review through
+ establishes a stealthy connection between the target host its attack reconstruction capabilities. This facilitates a more
+ and the attacker. efficient and targeted attack analysis, allowing for precise
+ • In the second campaign depicted in Fig. 10(c), the identification of attack stages, and simplifies the analysis of
+ attacker embeds a phishing link within the Word doc- false positives and feedback mechanisms.
+ ument attached to the initial phishing email. In the first Using DARPA detection examples, we demonstrate how
+ step, the phishing email entices the recipient to download attack reconstruction significantly reduces security analysts’
+ the file from the email. In the second step, the report.doc alert processing time. We illustrate this with both a false
+ included a link to a website hosted at www.gov.cn, positive and a genuine attack alert. Fig. 12(a) shows a
+11756 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE VIII
+ P ERFORMANCE OF C ONCEPT D RIFT
+
+ Fig. 12. Alert Generation Graph.
+
+ decreases. This phenomenon has also been noted in FLASH
+ [26]. This occurs because the continuous addition of benign
+ nodes causes a shift in the node distribution learned by our
+ model. This change leads to an increase in the anomaly score,
+ which in turn helps to separate the camouflaged events from
+ Fig. 13. Resilience Against Adversarial Attacks. the truly malicious ones.
+
+malicious mail process conducting a port scan across H. Concept Drift (RQ7)
+6000 ports. The massive number of raw alert nodes makes
+ S AURON E YES is designed as a periodic training and nearit difficult for analysts to identify the core system event. The
+ real-time detection system, rather than a pure real-time online
+reconstructed attack graph in Figure 11 effectively reveals the
+ learning system. However, adapting to environmental changes
+event logic. Similarly, Fig. 12(b) depicts Wget communicating
+ is an important challenge commonly faced by IDS, such
+with multiple IPs for downloads. This behavior structurally
+ as concept drift. To verify the concept drift robustness of
+resembles malicious scanning, triggering a false positive alert.
+ SauronEyes, we randomly generate edges in different time
+Here again, hundreds of disconnected alert nodes obscure the
+ periods of its training set, and add edge drift to the nodes
+event context, while the structured visualization in Fig. 12
+ in the target time window according to the timestamp. For
+enables analysts to quickly identify and filter it. Attack chains
+ example, we select time windows in CADETS with an interval
+dramatically reduce the number of items analysts must review,
+ of one hour as the benchmark to generate edge relationships.
+as they are far fewer than individual anomaly nodes.
+ To ensure that the randomly sampled interaction relationships
+ meet the characteristics of sparse attacks, the randomly sam-
+G. Robustness Against Adversarial Attacks (RQ6) pled edge relationships are only selected from common edge
+ S AURON E YES is a provenance-based detection system. connections such as “read”, “open”, “close”, and “write”. We
+Goyal [39] et al. noted that intrusion detection systems (IDS) use CADETS as the experimental target, calculate the KL
+with graph-level granularity, such as Unicorn [6], StreamSpot divergence between the sampled new graph and the original
+[21] and ProvDetector [27] are highly sensitive to “adversarial graph, and determine whether the new graph has produced
+attacks”. These adversarial attacks initiate evasion attacks concept drift according to the criteria of [32]. Experiments are
+by manipulating the distribution graph encoding, aiming to conducted on the new and old training sets and fixed test sets.
+create misleading similarities between the node neighborhood The results are shown in TABLE VIII. The detection accuracy
+distribution of the attack graph and that of the benign source and precision decrease slightly, proving that SauronEyes has
+graph. To assess the robustness of S AURON E YES against obvious concept drift robustness. The current design in our
+adversarial attacks, we modifyed the node neighborhood in paper does not include an online learning mechanism. In
+the attack graph to mimic that in the benign source graph. practice, the most feasible way to adapt to environmental
+ Fig. 13 shows the anomaly scores (min/avg/max, y-axis) changes and new threats is to periodically retrain the model
+of attack nodes as benign edges (x-axis) are added. While with new log data.
+some node scores decrease slightly with benign structures, they
+remain above the detection threshold. Although a few nodes VII. R ELATED W ORK
+evade detection, the stable average score ensures persistent
+event alerts. S AURON E YES maintains robustness by leverag- A. Provenance Detection
+ing a decoupling module to discern structural nuances and Advanced Persistent Threat (APT) attacks exhibit prolonged
+contrastive learning to amplify node similarity patterns. incubation periods, necessitating enterprises to maintain oper-
+ It is worth mentioning that, after inserting more camouflage ational logs for over six months - a requirement that
+events, the effectiveness of the adversarial attack surprisingly imposes significant storage overhead and highlights the
+QIAO et al.: SAURONEYES: DISENTANGLING VOLUMINOUS LOGS TO UNVEIL CAMOUFLAGED ATTACK INTENTIONS 11757
+
+critical challenge of provenance graph reduction and com- [2] A. Sharma, B. B. Gupta, A. K. Singh, and V. K. Saraswat,
+pression. References [15] and [24] have proposed viable “Advanced persistent threats (APT): Evolution, anatomy, attribution and
+ countermeasures,” J. Ambient Intell. Humanized Comput., vol. 14, no. 7,
+solutions addressing both graph simplification and semantic pp. 9355–9381, Jul. 2023.
+preservation. Furthermore, contemporary provenance detection [3] A. Gehani and D. Tariq, “SPADE: Support for provenance auditing
+methodologies can be broadly categorized into three principal in distributed environments,” in Proc. ACM/IFIP/USENIX Int. Conf.
+ Distrib. Syst. Platforms Open Distrib. Process., 2012, pp. 101–120.
+approaches: statistical analysis [17], [18], [19], specification- [4] Y. Ji et al., “RAIN: Refinable attack investigation with on-demand
+based detection [9], [11], [40], and learning-driven prediction inter-process information flow tracking,” in Proc. ACM SIGSAC Conf.
+[6], [7], [8], [9], [10], [11], [12], [13], [41], as comprehensively Comput. Commun. Secur., Dallas, TX, USA, Oct. 2017, pp. 377–390.
+ [5] A. Bates, D. Tian, R. B. K. Butler, and T. Moyer, “Trustworthy wholediscussed in Section II. system provenance for the Linux kernel,” in Proc. USENIX Conf. Secur.
+ Symp. (SEC), Austin, TX, USA, Aug. 2015, pp. 319–334.
+ [6] X. Han, T. Pasquier, A. Bates, J. Mickens, and M. Seltzer, “Unicorn:
+B. Disentangled Representation Learning Runtime provenance-based detector for advanced persistent threats,” in
+ Proc. Netw. Distrib. Syst. Secur. Symp., 2020.
+ Disentangled representation learning aims to separate the [7] K. Pei et al., “HERCULE: Attack story reconstruction via community
+underlying factors of data by embedding objects from multiple discovery on correlated log graph,” in Proc. Annu. Conf. Comput.
+perspectives [42], [43]. It has been applied to various fields Security Appl. (ACSAC), 2016, pp. 583–595.
+ [8] Y. Shen, E. Mariconti, P.-A. Vervier, and G. Stringhini, “Tiresias:
+such as text [44], image [45] and knowledge graph embedding Predicting security events through deep learning,” in Proc. ACM SIGSAC
+[46]. Efforts have also been made in disentangled representa- Conf. Comput. Commun. Security (CCS), 2018, pp. 592–605.
+tion learning for predictive classification. DGCF [47] performs [9] A. Alsaheel et al., “Atlas: A sequence-based learning approach for attack
+ investigation,” in Proc. 30th USENIX Secur. Symp. (USENIX Secur.),
+disentangled representation learning on embedded segmenta- 2021, pp. 3005–3022.
+tion graph neural networks based on intent disentanglement. [10] S. Wang et al., “THREATRACE: Detecting and tracing host-based
+ threats in node level through provenance graph learning,” IEEE Trans.
+ Inf. Forensics Security, vol. 17, pp. 3972–3987, 2022.
+C. Contrastive Learning [11] Z. Li, X. Cheng, L. Sun, J. Zhang, and B. Chen, “A hierarchical approach
+ for advanced persistent threat detection with attention-based graph neural
+ As an efficient self-supervised learning method, contrastive networks,” Secur. Commun. Netw., vol. 2021, pp. 1–14, May 2021.
+learning (CL) has achieved significant advancements in com- [12] J. Zengy et al., “SHADEWATCHER: Recommendation-guided cyber
+ threat analysis using system audit records,” in Proc. IEEE Symp. Secur.
+puter vision [48] and natural language processing [49]. The Privacy (SP), May 2022, pp. 489–506.
+idea of contrastive learning is to pull positive samples together [13] Z. Cheng et al., “Kairos: Practical intrusion detection and investigation
+and push negative samples apart in the embedding space. using whole-system provenance,” in Proc. IEEE Symp. Secur. Privacy
+ (SP), May 2024, pp. 3533–3551.
+Researchers have found that applying contrastive learning to [14] W. U. Hassan, A. Bates, and D. Marino, “Tactical provenance analysis
+graph representation learning yields excellent performance. for endpoint detection and response systems,” in Proc. IEEE Symp.
+Velickovic et al. [50] proposed Deep Graph Infomax (DGI) by Secur. Privacy (SP), May 2020, pp. 1172–1189.
+ [15] N. Hossain et al., “SLEUTH: Real-time attack scenario reconstruction
+maximizing the consistency between node representations and from COTS audit data,” in Proc. 26th USENIX Secur. Symp. (USENIX
+graph representations in a local-global contrastive paradigm. Secur.), 2017, pp. 487–504.
+ [16] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. N. Venkatakrishnan, “HOLMES: Real-time APT detection through correlation of
+ VIII. C ONCLUSION suspicious information flows,” in Proc. IEEE Symp. Secur. Privacy (SP),
+ May 2019, pp. 1137–1152.
+ The escalating sophistication of APT attacks and the [17] W. U. Hassan et al., “NoDoze: Combatting threat alert fatigue with
+dynamic evolution of network environments have rendered automated provenance triage,” in Proc. Netw. Distrib. Syst. Secur. Symp.,
+ 2019.
+existing detection schemes inadequate for uncovering gen- [18] Y. Liu et al., “Towards a timely causality analysis for enterprise
+uine attack patterns beneath adversaries’ complex activities. security,” in Proc. Netw. Distrib. Syst. Secur. Symp., 2018.
+To address this challenge, we present S AURON E YES- an [19] W. U. Hassan et al., “This is why we can’t cache Nice
+ things: Lightning-fast threat hunting using suspicion-based hierarchical
+innovative APT detection system that employs graph disen- storage,” in Proc. Annu. Comput. Security Appl. Conf. (ACSAC), 2020,
+tanglement algorithms and contrastive learning to effectively pp. 165–178.
+decouple intricate interaction patterns within massive audit [20] (2020). Darpa Transparent Computing Program Engagement 3 Data
+ Release. [Online]. Available: https://github.com/darpa-i2o/Transparentlogs(Camouflage), while resolving the inherent issue of Computing
+sparse malicious interactions(Low-frequency). Our solution [21] (2016). The Streamspot Dataset. [Online]. Available: https://github.com/
+further implements hierarchical attack-chain reconstruction to sbustreamspot/sbustreamspot-data
+reveal comprehensive threat scenarios(Multi-stage). Extensive [22] H. Yue, T. Li, D. Wu, R. Zhang, and Z. Yang, “Detecting
+ APT attacks using an attack intent-driven and sequenceevaluations across multiple datasets and detection scenarios based learning approach,” Comput. Secur., vol. 140, May 2024,
+demonstrate that S AURON E YES achieves exceptional opera- Art. no. 103748.
+tional performance, attaining an average detection accuracy of [23] H. Li et al., “MIRDETECTOR: Applying malicious intent representation
+ for enhanced APT anomaly detection,” Comput. Secur., vol. 157, Oct.
+99%. These results significantly advance the state-of-the-art in 2025, Art. no. 104588.
+APT detection capabilities. [24] Z. Jia, Y. Xiong, Y. Nan, Y. Zhang, J. Zhao, and M. Wen, “MAGIC:
+ Detecting advanced persistent threats via masked graph representation
+ learning,” in Proc. 33rd USENIX Secur. Symp. (USENIX Secur.), 2023,
+ R EFERENCES pp. 5197–5214.
+ [25] S. M. Milajerdi, B. Eshete, R. Gjomemo, and V. N. Venkatakrishnan,
+[1] E. J. Khaleefa and D. A. Abdulah, “Concept and difficulties of advanced “POIROT: Aligning attack behavior with kernel audit records for cyber
+ persistent threats (apt): Survey,” Int. J. Nonlinear Anal. Appl., vol. 13, threat hunting,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur.,
+ no. 1, pp. 4037–4052, 2022. Nov. 2019, pp. 1795–1812.
+11758 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+[26] M. Ur Rehman, H. Ahmadi, and W. Ul Hassan, “Flash: A comprehensive [39] A. Goyal, X. Han, G. Wang, and A. Bates, “Sometimes, you aren’t
+ approach to intrusion detection via provenance graph representation what you do: Mimicry attacks against provenance graph host intrusion
+ learning,” in Proc. IEEE Symp. Secur. Privacy (SP), May 2024, detection systems,” in Proc. Netw. Distrib. Syst. Secur. Symp., 2023.
+ pp. 3552–3570. [40] F. Liu, Y. Wen, D. Zhang, X. Jiang, X. Xing, and D. Meng, “Log2vec:
+[27] Q. Wang et al., “You are what you do: Hunting stealthy malware via A heterogeneous graph embedding based approach for detecting cyber
+ data provenance analysis,” in Proc. Netw. Distrib. Syst. Secur. Symp., threats within enterprise,” in Proc. ACM SIGSAC Conf. Comput. Com-
+ 2020. mun. Secur., Nov. 2019, pp. 1777–1794.
+[28] T. Pasquier et al., “Practical whole-system provenance capture,” in Proc. [41] G. Wang, N. Ivanov, B. Chen, Q. Wang, T. Nguyen, and Q. Yan, “Graph
+ Symp. Cloud Comput., Sep. 2017, pp. 405–418. learning for interactive threat detection in heterogeneous smart home rule
+[29] R. Paccagnella et al., “Custos: Practical tamper-evident auditing of data,” in Proc. ACM Manage. Data, 2023, vol. 1, no. 1, pp. 1–27.
+ operating systems using trusted execution,” in Proc. Netw. Distrib. Syst. [42] Y. Bengio, A. Courville, and P. Vincent, “Representation learning: A
+ Secur. Symp., 2020. review and new perspectives,” IEEE Trans. Pattern Anal. Mach. Intell.,
+[30] R. Paccagnella, K. Liao, D. Tian, and A. Bates, “Logging to the danger vol. 35, no. 8, pp. 1798–1828, Aug. 2013.
+ zone: Race condition attacks and defenses on system audit frameworks,” [43] F. Locatello et al., “Challenging common assumptions in the unsuperin Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Oct. 2020, vised learning of disentangled representations,” in Proc. Int. Conf. Mach.
+ pp. 1551–1574. Learn. (ICML), 2019, pp. 4114–4124.
+[31] X. Wang, H. Jin, A. Zhang, X. He, T. Xu, and T.-S. Chua, “Disentangled [44] V. John, L. Mou, H. Bahuleyan, and O. Vechtomova, “Disentangled
+ graph collaborative filtering,” in Proc. 43rd Int. ACM SIGIR Conf. Res. representation learning for non-parallel text style transfer,” in Proc. 57th
+ Develop. Inf. Retr., Jul. 2020, pp. 1001–1010. Annu. Meeting Assoc. Comput. Linguistics, 2019, pp. 424–434.
+[32] G. I. Webb, R. Hyde, H. Cao, H. L. Nguyen, and F. Petitjean, [45] X. Chen, Y. Duan, R. Houthooft, J. Schulman, I. Sutskever, and
+ “Characterizing concept drift,” Data Mining Knowl. Discovery, vol. 30, P. Abbeel, “InfoGAN: Interpretable representation learning by informano. 4, pp. 964–994, Jul. 2016. tion maximizing generative adversarial nets,” in Proc. Adv. Neural Inf.
+[33] J. Yu, H. Yin, X. Xia, T. Chen, L. Cui, and Q. V. H. Nguyen, “Are Process. Syst., 2016.
+ graph augmentations necessary?: Simple graph contrastive learning for [46] J. Wu et al., “DisenKGAT: Knowledge graph embedding with disentanrecommendation,” in Proc. 45th Int. ACM SIGIR Conf. Res. Develop. gled graph attention network,” in Proc. 30th ACM Int. Conf. Inf. Knowl.
+ Inf. Retr., Jul. 2022, pp. 1294–1303. Manage., Oct. 2021, pp. 2140–2149.
+[34] V. D. Blondel, J.-L. Guillaume, R. Lambiotte, and E. Lefebvre, “Fast [47] X. Wang et al., “Learning intents behind interactions with knowlunfolding of communities in large networks,” J. Stat. Mech., Theory edge graph for recommendation,” in Proc. Web Conf., Apr. 2021,
+ Exp., vol. 2008, no. 10, Oct. 2008, Art. no. P10008. pp. 878–887.
+[35] J. Yang and J. Leskovec, “Overlapping community detection at scale: A [48] R. D. Hjelm et al., “Learning deep representations by mutual information
+ nonnegative matrix factorization approach,” in Proc. 6th ACM Int. Conf. estimation and maximization,” in Proc. Int. Conf. Learn. Represent.,
+ Web Search Data Mining, Feb. 2013, pp. 587–596. 2018.
+[36] A. Paszke et al., “PyTorch: An imperative style, high-performance deep [49] T. Mikolov, I. Sutskever, K. Chen, G. S. Corrado, and J. Dean,
+ learning library,” in Proc. Adv. Neural Inf. Process. Syst., 2019. “Distributed representations of words and phrases and their
+[37] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” compositionality,” in Proc. Adv. Neural Inf. Process. Syst., vol. 26,
+ 2014, arXiv:1412.6980. 2013, pp. 3111–3119.
+[38] W. Cheng et al., “Omnisec: LLM-driven provenance-based intrusion [50] P. Veličković, W. Fedus, W. L. Hamilton, P. Lió, Y. Bengio, and
+ detection via retrieval-augmented behavior prompting,” Available SSRN R. D. Hjelm, “Deep graph infomax,” in Proc. ICLR (Poster), 2018,
+ J., 2025. p. 4.

@@ -1,0 +1,1895 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [549] Spatio-Temporal Anomaly Detection for 5G-Clusters: A Multi-Scale Fuzzy Contrastive Learning Approach
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：549
+题名：Spatio-Temporal Anomaly Detection for 5G-Clusters: A Multi-Scale Fuzzy Contrastive Learning Approach
+年份：2025
+DOI：10.1109/ton.2025.3540091
+来源：IEEE Transactions on Networking
+PDF：paper/10.1109_TON.2025.3540091.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：入侵检测与网络异常检测、时序、日志、KPI 与云原生异常检测
+相关性：弱相关，分数 4
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\549.txt
+- 原始字符数：72320
+- 本次发送字符数：72320
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+1588
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 33, NO. 4, AUGUST 2025
+
+Spatio-Temporal Anomaly Detection for
+5G-Clusters: A Multi-Scale Fuzzy Contrastive
+Learning Approach
+Luo Chao , Member, IEEE, Li Yinghua, Ding Fengqian, and Shao Rui
+Abstract— Anomaly detection is an important data-mining
+task closely related to specific applications. In recent years,
+spatio-temporal data deriving from various networks has been
+collected from many real-world scenarios, but how to detect
+anomalies in such data is still an open problem. In this article,
+we propose a novel anomaly detection framework, Multi-scale
+Fuzzy Contrastive Anomaly Detection (MFCAD), by capturing
+anomalous patterns of data from multiple spatio-temporal scales
+so as to learn distinguishable feature representations. Different
+from conventional reconstruction- or prediction-based anomaly
+detection methods, this approach is not concerned with the
+consistency of the encoded representation of the implicit layer
+and the discriminability of the implicit layer of the anomalies.
+MFCAD implements a more discriminative representation using
+fuzzy contrastive learning and explicitly performs anomaly detection in the potential space by measuring the distance between
+outliers and implicit values. This proposed method has been
+applied for the anomaly detection of 5G mobile network clusters
+(5G-MNCs) in China Mobile. Furthermore, in order to validate
+the generalizability of the proposed method, it is further tested
+on public datasets and experiment results show the promising
+performance.
+Index Terms— Anomaly detection, fuzzy contrastive learning,
+graph learning, spatio-temporal modeling.
+
+I. I NTRODUCTION
+
+A
+
+NOMALY detection aims to discover anomalous
+points/patterns from data that do not match normal
+patterns. Anomaly detection plays a key role in many realworld applications, such as network intrusion detection [1],
+financial fraud detection [2], equipment failure detection [3],
+health monitoring [4], and so on. Mobile networks are the
+current infrastructure for wireless communication. In recent
+years, 5G mobile networks are gradually replacing 3G/4G
+networks. The millimeter wave band of 5G technology brings
+Received 8 January 2024; revised 5 August 2024; accepted 2 February 2025;
+approved by IEEE T RANSACTIONS ON N ETWORKING Editor D. Pei. Date of
+publication 17 February 2025; date of current version 20 August 2025. This
+work was supported in part by the National Natural Science Foundation of
+China under Grant 62172264 and in part by Shandong Provincial Natural
+Science Foundation under Grant ZR2019MF020. (Corresponding author:
+Luo Chao.)
+Luo Chao is with the School of Information Science and Engineering,
+Shandong Normal University, Jinan 250014, China, and also with Shandong
+Provincial Key Laboratory for Novel Distributed Computer Software Technology, Jinan 250014, China (e-mail: luochao@sdnu.edu.cn).
+Li Yinghua is with the School of Information Science and Engineering,
+Shandong Normal University, Jinan 250014, China.
+Ding Fengqian is with the School of Information Science and Engineering,
+Shandong University, Qingdao 266237, China.
+Shao Rui is with the Center of Network Optimization, China Mobile
+Shandong Company Ltd., Jinan 250014, China.
+Digital Object Identifier 10.1109/TON.2025.3540091
+
+greater bandwidth and low latency, but it also leads to a
+significant increase in the number of wireless base stations.
+By the end of June 2023, China has more than 2,937,000
+5G base stations for commercial operation and 676 million
+5G users. Facing such a huge number of base stations, how
+to effectively and timely detect anomalies has become a key
+issue in daily operations.
+5G mobile network clusters (5G-MNCs) can be defined
+as collaborative regional systems within a specific coverage
+area formed by a group of highly correlated base stations.
+For instance, an example of 5G-MNC is shown in Fig.1,
+where each node represents a base station, and the edge
+represents the correlation between two base stations. It can
+be observed that even within the same cluster, the degree of
+mutual influence between base stations varies due to geographical distance. Maintaining the correlation between wireless
+base stations is essential for ensuring continuous coverage
+and efficient load distribution, facilitating signal switching
+and load balancing as users move. To achieve these goals,
+collaboration and virtualization techniques are employed to
+enable resource sharing and dynamic scheduling within clusters. As a result, data generated by 5G-MNCs exhibits inherent
+both spatial and temporal dependencies [5]. Due to the
+aforementioned spatio-temporal characteristics, it significantly
+increases the complexity of anomaly detection for 5G-MNC
+data.
+In the field of anomaly detection in mobile networks,
+conventional approaches manually set fixed thresholds for
+Key Performance Indicators (KPIs) of different base stations,
+which requires the experience of domain experts [6]. Furthermore, these methods are designed for univariate sequences,
+which means that each base station is monitored individually.
+However, multiple base stations in 5G-MNCs interact with
+each other due to the cooperation in a specific coverage
+area. Consequently, it is unable to capture the spatio-temporal
+synchronization correlations existing in the 5G-MNC data and
+cannot reflect the overall state of the system well [5].
+Recently, the efficacy of deep learning-based techniques
+for anomaly detection has been well-established [7], [8],
+[9]. Particularly, Thill et al. [10] introduced an auto-encoder
+(AE) model based on temporal convolution, effectively applying it to anomaly detection in electrocardiogram (EEG)
+recordings. Li et al. [11] devised a superimposed variational autoencoder (VAE) model employing graphical neural
+networks (GNNs) for time series anomaly detection. Deng
+and Hooi [12] proposed a predictive model based on GNN,
+
+2998-4157 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+CHAO et al.: SPATIO-TEMPORAL ANOMALY DETECTION FOR 5G-CLUSTERS
+
+Fig. 1.
+
+An example of 5G-MNCs.
+
+leveraging the discrepancy between predicted and actual values
+to detect anomalies. He and Zhao [13] harnessed Temporal
+Convolutional Networks (TCNs) for anomaly detection, utilizing prediction errors to compute anomaly scores. These
+methodologies primarily ascertain whether a sample is abnormal by evaluating reconstruction or prediction errors, since
+they assumed the model would fail to reconstruct or forecast the unseen abnormal samples. Nonetheless, their focus
+primarily rested on reconstruction or prediction performance,
+potentially overlooking the distinction between representations
+of anomalous and normal samples. As a result, even anomalous
+data might be well reconstructed or fitted [14]. Recently,
+by possessing the ability to obtain discriminative features,
+contrastive learning was also applied in temporal data anomaly
+detection [15], [16]. However, existing works did not take into
+account spatial factors and the multi-scale characteristics of
+data in real applications. Furthermore, these approaches did
+not readily apply to anomaly detection within 5G-MNC environments, as commercial 5G networks often exhibit intricate
+dynamic temporal-spatial traits.
+In this study, we have discovered that anomaly detection can be effectively carried out within the latent space
+by measuring the representation distances between outliers
+and normal data. Notably, this approach is achieved without
+reliance on reconstruction or prediction models. Because the
+latent representations are relatively low-dimensional compared
+with the original 5G-MNC data with high dimensionality and
+complicated structure. Performing anomaly detection on the
+compact latent representations helps to concentrate solely on
+the features that distinguish normal and anomalous. Based on
+this idea, we propose a novel framework named MFCAD,
+designed to tackle the challenge of anomaly detection in 5GMNCs. Firstly, we elaborate on an effective data augmentation
+method for specific KPI time series in 5G-MNCs, where
+fuzzy mechanism is involved for the nonlinear data processing.
+And, a multi-scale fuzzy contrastive module is designed to
+extract temporal and spatial features from raw data. To capture
+anomalous behaviors at different scales, our proposed framework employs two GCN-based models that simultaneously
+conduct node-level and subgraph-level contrastive learning.
+Subsequently, the data is projected from the temporal and
+spatial modules into distinct representations within the latent
+space. Considering that KPI time series are often influenced
+
+1589
+
+by external factors and exhibit subtle pattern variations across
+different periods, fuzzy C-means (FCM) [17] is applied to
+cluster the learned representations from various time steps.
+This process aims to derive corresponding prototypes. Finally,
+the distances between the representations and their corresponding prototypes are utilized for anomaly inference, thereby
+enhancing the robustness of detection performance.
+The main contributions of this work are summarized as
+follows:
+• A novel framework for spatio-temporal anomaly detection is proposed, which not only is notably suitable for 5G
+mobile networks in real-world scenario, but also exhibits
+good performance on other public datasets.
+• A multi-scale contrastive learning is first proposed to
+capture anomalous patterns by obtaining temporal and
+spatial features at different scales, where differences in
+normal and abnormal features at diverse data granularity
+are utilized.
+• To better generalize the generated positive and negative
+samples, intuitionistic fuzzy information is involved in
+data augmentation, which combines with multivariate
+dynamic time warping (MDTW) to achieve robustly
+metric among samples.
+• The real 5G-MNC datasets and two sensor datasets are
+used for validation. Experimental results demonstrate the
+capability of the method to achieve anomaly detection in
+real-world scenarios.
+II. R ELATED W ORK
+A. Anomaly Detection in Multivariate Time Series
+In many scenarios, spatio-temporal data is presented in
+the form of multidimensional time series. Existing researches
+on anomaly detection in multivariate time series can generally be divided into two categories: prediction-based [12],
+[13] and reconstruction-based methods [10], [18], [19], [20].
+Prediction-based models detect anomalies by comparing the
+deviation between predicted values and actual values. For
+instance, Deng and Hooi [12] proposed a method that combines a graph structural learning module with Graph Neural
+Networks (GNN) to detect anomalies based on the deviation between predicted and actual values. He and Zhao [13]
+applied a temporal convolutional network for anomaly detection, where the prediction errors are fitted into a multivariate
+Gaussian distribution and used to compute anomaly scores.
+Reconstruction-based models typically utilize auto-encoders
+(AE) or variational auto-encoders (VAE) [10], [19], [20] to
+learn representations from normal data and perform anomaly
+detection based on the reconstruction error between real samples and reconstructed samples. Thill et al. [10] proposed a
+temporal AE architecture for anomaly detection, where the
+reconstruction error is used as an indicator of anomalous
+data. Su et al. [19] introduced a recursive neural network for
+anomaly detection in multivariate time series data, utilizing
+reconstruction probability to identify anomalies. Xu et al. [6]
+proposed an unsupervised algorithm based on a variational
+auto-encoder for anomaly detection in seasonal KPI data.
+Zong et al. [20] designed a deep auto-encoder and Gaussian
+
+1590
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 33, NO. 4, AUGUST 2025
+
+Framework of the proposed MFCAD.
+
+mixture model called DAGMM for modeling the density distribution of multi-dimensional data. However, these methods
+typically focused solely on anomalies in either the temporal
+or spatial aspect. As data with spatio-temporal features often
+exhibits interdependencies and mutual influences, previous
+methods may overlook underlying influences.
+Recently, temporal and spatial dimensions in multivariate
+time series have been explored [21], [22], [23], [24], [25], [26].
+For instance, Tian et al. [21] introduced an anomaly detection
+network that incorporated temporal and spatial information,
+aiming to enhance the differentiation between normal and
+anomalous instances by reconstructing the prediction error.
+STDTB-AD [22] extracted features from trajectory data by
+computing motion statistics within spatio-temporal units to
+handle the heterogeneity of behaviors. Hu et al. [24] proposed
+an anomaly detection algorithm based on the fusion of target
+spatio-temporal context to fully leverage the spatio-temporal
+contextual information of the targets for anomaly detection.
+3G-Net [25], an end-to-end deep learning framework, was
+proposed for detecting anomalies in spatio-temporal data in
+the Internet of Things. Wang et al. [26] proposed a framework for anomaly detection based on spatio-temporal graph
+neural network, utilizing spatio-temporal graph neural network
+technique to extract feature data from information graphs
+containing spatial and temporal features.
+Both time and space can be divided into different scales.
+For example, the difference in sampling frequency on the
+temporal dimension leads to differences in the details of
+data fluctuation features. And, the differences in the scope
+of data aggregation at the spatial scale will affect the learning
+of relevant features of adjacent data. However, the existing
+methods commonly did not consider the impact on multiple
+spatio-temporal scales. And, most methods also relied on the
+reconstruction or prediction. Here, we incorporate multi-scale
+spatio-temporal features into contrastive learning and perform
+
+the anomaly detection in a compact latent space without
+relying on reconstruction or prediction models.
+B. Multi-Scale Contrastive Learning
+Contrastive learning is a self-supervised approach. It has
+achieved significant performance in the fields of computer
+vision (CV) [27] and natural language processing (NLP)
+[28]. The objective of contrastive learning is to learn better
+feature representations of unlabeled data through unsupervised
+learning, maximizing the consistency between samples and
+their augmentations, thereby facilitating their application in
+downstream tasks [29]. Many researchers have explored the
+application of contrastive learning in representation learning
+for time series data [30], [31], [32]. Tonkaboni et al. [30] proposed a self-supervised framework for learning a generalized
+representation of non-stationary time series. Eldele et al. [31]
+designed an unsupervised learning framework that leverages
+time and context for contrastive learning, learning representations of time series. Zhong et al. [32] applied contrastive
+learning to clustering to increase inter-class differences and
+reduce intra-class differences. However, these methods overlook the complex relationships among spatio-temporal data.
+In recent years, researchers in the field of graph anomaly
+detection have adopted multi-scale contrastive methods [33],
+[34], [35], [36], [37]. For example, Jin et al. [33] proposed
+ANEMONE, a framework based on multi-scale contrastive
+learning that captures richer anomaly information through
+node-level and context-level contrasts. Zheng et al. [34]
+introduced a self-supervised learning framework called SLGAD. This approach utilized multi-scale contrastive methods
+to construct different contextual views, allowing for the capture of anomalies in structural space and enabling graph
+anomaly detection. Zhang et al. [35] integrated multi-view
+contrastive learning and attribute reconstruction-based models
+to address anomaly detection in attribute networks. However,
+
+CHAO et al.: SPATIO-TEMPORAL ANOMALY DETECTION FOR 5G-CLUSTERS
+
+these existing methods did not fully exploit the intrinsic
+relationships among spatio-temporal data.
+Recently, temporal data anomaly detection employing contrastive learning is attracting the attention of researchers. For
+instance, in 2023, MGCLAD [15] adopted contrastive learning to capture multiple dependencies of signals to enhance
+the discriminative power of feature representations. Meanwhile, DCdetector [16] introduced a dual-attention asymmetric
+design that utilized contrastive learning to learn features
+obtaining an invariant representation. Both of the above studies
+achieved relatively competitive performance in time series
+anomaly detection by utilizing contrastive learning. However,
+there are still some open problems. Firstly, existing works
+mainly focused on temporal data. But, as to spatial-temporal
+data, more complex correlations and mutual influence existing
+in both temporal and spatial dimensions. In this case, how can
+one implement anomaly detection applying contrastive learning to obtain discriminative feature learning? Secondly, both
+temporal and spatial dimensions essentially have multi-scale
+characteristics, and obtaining various features from different
+scales is meaningful. But existing works still extracted features
+from temporal data based on a single scale, often neglecting
+the learning of multi-scale spatial features.
+Motivated by this insight, this study transforms
+spatio-temporal data into corresponding graph structures and
+applies multi-scale contrastive methods from both temporal
+and spatial perspectives to capture more comprehensive
+anomaly information. Through contrastive learning, the
+learned latent representations can effectively distinguish
+outliers from normal values.
+III. M ETHOD
+The proposed MFCAD framework is illustrated in Fig. 2.
+The data augmentation module is used to generate enhanced
+positive and negative samples for subsequent feature learning
+from the raw 5G-MNC data. Subsequently, the spatio-temporal
+data is transformed into corresponding graph structures. Correspondingly, multi-scale contrastive learning is then performed
+from temporal and spatial perspectives. And, two graph attention networks are involved, as GAT has the inherent capacity
+for relational modeling and the contrastive loss ensures the
+discriminability of representations in the latent space. The
+following sections provide more detailed information.
+A. Problem Formulation
+In this article, we transform the problem into an anomaly
+detection task for spatio-temporal data with multiple variables.
+The anomalous behaviors of neighboring nodes are to be
+captured by converting the spatio-temporal features into graph
+structures. Each univariate sequence represents a specific Key
+Performance Indicator (KPI) sequence generated by a base station in 5G-MNCs. The KPI data in mobile networks typically
+exhibit temporal correlations within each dimension sequence
+(i.e., periodicity of sequences generated by a particular base
+station) and spatial correlations between different dimension
+sequences (i.e., collaborative relationships among base stations in a specific coverage area). We consider a dataset Ω
+
+1591
+
+Fig. 3.
+
+Framework of the designed data augmentation method.
+
+containing observations of 5G-MNCs as Ω = {X1 , X2 , . . . ,Xt ,
+Xt = [Xt,1 , X t,2 , . . . , X t,B ], Xt,i ∈ RN ×T (e.g.Xt,1 =
+[ 1t , 2t , . . . , Tt ]), where Xt covers one time period, such as an
+hour, a day, or a week. Xt is divided into B segments (denoted
+as Xt,i ) and each segment occupies T samples (denoted as
+xTt ). N is the amount of the observed base stations. The
+objective of this task is to design a learning framework to
+learn discriminative representations for distinguishing normal
+and anomalous behaviors, thus achieving anomaly detection
+in spatio-temporal data.
+B. Data Augmentation
+Generally, contrastive learning frameworks aim to maximize
+the similarity between positive pairs, which are samples and
+their augmentations. Therefore, applying appropriate data augmentation is crucial in contrastive learning. Considering that
+the KPI time series generated by 5G-MNCs typically exhibit
+periodic patterns that occur regularly, we propose a specific
+data augmentation method that treats data from the same time
+period as positive samples and data from different time periods
+as negative samples. The motivation behind this method is that
+the patterns during the time period from 9:00 to 10:00 differs
+from the one from 23:00 to 24:00, but which is similar to
+the patterns during the identical time period on the previous
+day. Because people’s behaviors may vary across different
+time periods. The abstract framework of the designed data
+augmentation method is illustrated in Fig. 3.
+Specifically, given a batch of data, and the batch covers
+only one period, which can be an hour, a day, or a week.
+Here, the batch covers one day. For each batch, its previous
+M batches are considered as its candidate batches. It is worth
+noting that there are also slight differences between the same
+time in different cycles. For example, people’s behaviors on
+Monday morning may differ from those on Sunday morning.
+
+1592
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 33, NO. 4, AUGUST 2025
+
+To alleviate this phenomenon, multivariate dynamic time warping (MDTW) [35] is applied to select the top augmented
+batches that are most similar to the current batch from the
+M candidates. Specifically, the augmentation set selected for
+Xt is as follows:
+
++ VX′t (Xt,i ) −v X′j (Xj,i )
+
+dist,j = M DT W (Xt , Xj ) , j = 1, 2, . . . , M
+φaug
+= {Xk | k ∈ arg sort(dist, ) [: K]}
+t
+
+(1)
+(2)
+
+where dist, represents the MDTW distance of batch Xt
+with the other M candidate batches, and φaug
+denotes the
+t
+augmentation set for Xt with K augmentation batches. The
+samples with the same index from the current batch and
+its augmentation batches are considered as positive samples,
+while those with different indexes as negative samples. To be
+specific, for Xt,i in the current batch, its positive sample in the
+k-th augmentation segment is Xk,i , and for all Xk,j (j ̸= i)
+are its negative samples.
+The data collected in real scenes is often affected by noise
+and external interference. To improve the robustness of detection, the generated positive and negative samples need to have
+generality. In this article, intuitionistic fuzzy set is introduced
+into data augmentation, based on which MDTW distances are
+calculated [39], [40]. Specifically, given a segment of data
+Xt,i , it passes through a fuzzy operator to generate the output
+data. First, the membership degree is calculated as follows:
+t,i −µt,i
+σt,i +ξ
+
+X
+
+U (Xt,i ) = e
+
+2
+
+ 21
+(5)
+
+
+The distance between X′t and X′j is d X′t , X′j . And it satisfies
+the following properties:
+
+(1) 0 ≤ d X′t , X′j ≤ 1;
+′
+(2) d(Xt , X′j ) = d(X′t , X′j );
+′
+(3) d(Xt , X′j ) = 0, if and only if X′t = X′j .
+The Hamming distance formula and the cosine similarity
+function are also explored to compute the distance between
+two fuzzy sets for measuring the closeness of their relationship. The Hamming distance formula is as follows:
+
+d X′t , X′j
+
+
+{[U (Xt,i ) , V (Xt,i )] , . . . , [U (Xt,B ) , V (Xt,B )]} ,
+=d
+{[U (Xj,i ) , V (Xj,i )] , . . . , [U (Xj,B ) , V (Xj,B )]}
+B
+1 Xn
+=
+|UX′t (Xt,i ) − UX′j (Xj,i ) |
+B i=1
+o
++ |VX′t (Xt,i ) − VX′j (Xj,i ) |
+(6)
+And the cosine similarity function is as follows (7), as
+shown at the bottom of the next page.
+In the experimental section, we conducted an investigation
+of three different calculation methods. The experiment proved
+that utilizing the Euclidean distance for calculating the distance between two intuitionistic fuzzy sets works better.
+
+2
+
+(3)
+
+where µt,i is the mean of Xt,i , σt,i is the standard deviation
+of Xt,i , ξ belongs a very small decimal set to prevent zero in
+the denominator.
+Considering the uncertainty of membership degrees, hesitation [41] indicates a greater degree of uncertainty. To adapt
+to fluctuations in sequence data, refer to [41], the hesitation
+degree can be obtained online based on Femi formula as
+follows:
+1
+V (Xt,i ) =
++ ϵu(Xt,i )
+(4)
+1 + exp (u(Xt,i ))
+where ϵ is the interference value, which is set to 0.25 based
+on discussion in the experimental section.
+As a result, each segment is converted into the intuitionistic
+fuzzy set that encompasses both membership degrees and
+′
+hesitations as follows: Xt,i
+= [U (Xt,i ) , V (Xt,i )] , X′t =
+{[U (Xt,1 ) , V (Xt,1 )] , . . . , [U (Xt,B ) , V (Xt,B )].
+Thus, MDTW distance is to calculate the distance between
+two intuitionistic fuzzy sets. Here, three distance methods are
+applied, i.e. the Euclidean distance, Hamming distance and
+the cosine similarity. The calculation method of Euclidean
+distance between two intuitionistic fuzzy sets is as follows:
+
+d X′t , X′j
+
+
+{[U (Xt,i ) , V (Xt,i )] , . . . , [U (Xt,B ) , V (Xt,B )]} ,
+=d
+{[U (Xj,i ) , V (Xj,i )] , . . . , [U (Xj,B ) , V (Xj,B )]}
+(
+B 
+2
+1 X
+=
+UX′t (Xt,i ) − UX′j (Xj,i )
+B i=1
+
+C. Multi-Scale Contrastive Modules
+Spatio-temporal data typically exhibit intrinsic correlations
+in both temporal and spatial dimensions. Consequently, data
+with spatio-temporal characteristics often display interdependence and mutual influence. From the perspective of spatial
+features, taking 5G-MNC data as an example, one can naturally obtain a graph structure as shown in Fig.1. Therefore,
+given that graph neural networks have demonstrated strong
+capabilities in processing graph-structured data, we choose to
+convert spatio-temporal data into graph structures and utilize
+graph learning methods for anomaly detection. Furthermore,
+the dependencies within spatio-temporal data are typically
+nonlinear and exhibit different characteristics across various
+temporal and spatial scales. Therefore, single-scale analysis
+methods are often insufficient for comprehensively revealing
+anomaly patterns in the data. To capture the comprehensive
+anomaly information present in spatio-temporal data, a multiscale spatio-temporal contrastive module is designed. This
+module enhances the ability to detect anomalies by learning
+consistency information at different scales. Based on this
+intuition, we develop a multi-scale spatio-temporal contrastive
+module that integrates temporal and spatial features to capture
+more anomaly information.
+The multi-scale spatio-temporal contrastive module includes
+two main components: the multi-scale module and the Graph
+Attention Network (GAT) module. In the multi-scale module,
+it mainly includes a node-subgraph contrastive network and a
+subgraph-subgraph contrastive network.
+In the node-subgraph contrastive network, the primary
+objective is to capture anomalous information by comparing
+
+CHAO et al.: SPATIO-TEMPORAL ANOMALY DETECTION FOR 5G-CLUSTERS
+
+1593
+
+the temporal encoder Etemp is Xitemp . The feature extraction
+formula is as follows:
+
+i
+Fspat
+= conv Xispat
+(8)
+
+i
+i
+Ftemp = conv Xtemp
+(9)
+
+Fig. 4.
+
+An example of the temporal subgraph construction process.
+
+the consistency between node information and its neighboring
+information. Node-level anomalies can cause their neighboring nodes to exhibit abnormal patterns, meaning that local
+anomalies can also trigger global anomalies. By learning the
+consistency of local and global information, the model can
+capture potential anomalous features. Specifically, the target
+node and the corresponding subgraph need to be mapped
+into the same embedding space. For subgraph embeddings,
+node features are propagated and aggregated through GCN,
+followed by obtaining the final embedding representation via
+an average readout function. The target node is mapped to
+the same embedding space as the subgraph through a Multilayer Perceptron (MLP). To measure the consistency between
+subgraph embeddings and target node embeddings, a bilinear
+function is used for calculation. The subgraph-subgraph contrastive network has a similar structure to the node-subgraph
+network. It primarily captures anomalies by comparing different subgraphs, identifying differences and irregularities in the
+data.
+For example, consider base stations that record network performance indicators (KPIs) at different time points. These base
+stations can be taken as nodes in the graph, with edges between
+nodes representing their geographical proximity. To detect
+anomalies, we first generate subgraphs from different time
+segments. The node-subgraph contrastive network learns the
+features of each base station in different time segments and
+checks whether these features are consistent with those of its
+neighboring base stations. The subgraph-subgraph contrastive
+network captures anomalous information between entire subgraphs. When cross effects of multiple base stations within
+a certain time segment exhibit abnormal patterns, that time
+segment might have a global anomaly. For the segment Xt,1 =
+[ 1t , 2t , . . . , Tt ], 1t ∈ RN ×1 the procedure of constructing
+temporal subgraphs is shown in Fig. 4.
+Before entering the multi-scale module, two parallel
+1D convolution operations are initially applied to extract
+high-level features from both temporal and spatial perspectives. Typically, given an input sample X i ∈ RN ×T , the
+input to the spatial encoder Espat is Xispat and the input to
+
+cosin = Dot X′t , X′j
+
+i
+i
+where Fspat
+and Ftemp
+are the high-level features of the spatial
+and temporal views of the augmentation data, respectively.
+1) Node-Subgraph Contrastive Network: Specifically, in the
+node-subgraph contrastive network, the subgraphs are used as
+inputs, and graph convolutional networks (GCN) are employed
+for learning. GCN is a deep learning model based on graph
+structures, which allows for the propagation and aggregation
+of node features on graphs. First, the l-th node embedding in
+the subgraph obtained through GCN is as follows:
+
+
+]
+ℓs
+ℓs
+ℓs
+Hspat = GCN Aspat Mspat Wspat
+!
+− 12
+− 12
+]
+^
+ℓs ^
+ℓs
+ℓs
+ℓs
+A
+D
+M
+W
+(10)
+=σ D
+spat
+
+spat
+
+ℓt
+= GCN
+Htemp
+
+
+
+spat
+
+spat
+
+^
+ℓt
+ℓt
+A
+temp Mtemp Wtemp
+
+^
+ℓt
+=σ D
+temp
+
+− 12
+
+^
+^
+ℓt
+ℓt
+A
+temp Dtemp
+
+spat
+
+
+
+− 12
+
+!
+ℓt
+Mtemp
+Wtemp
+
+(11)
+
+where ℓs and ℓt are the ℓ-th node in the spatial and temporal
+ls
+subgraphs respectively. Mspat
+is the ℓ-th node feature matrix
+
+
+]
+ℓs
+= Aℓs + I is the adjacency
+in the spatial subgraph. A
+spat
+
+spat
+
+^
+ℓs
+matrix added self-loop. D
+spat is the degree matrix. Wspat is
+the weight matrix of the GCN layer. σ (· ) is the activation
+function, here the ReLU activation function is used.
+ℓs
+ℓt
+Then, Hspat
+and Htemp
+are mapped to an embedding space
+using an embedding function f (·), resulting in embedding
+representations. The embedding representations are obtained
+as:
+
+
+ℓs
+s
+= f Hspat
+(12)
+Zℓspat
+
+
+ℓt
+t
+Zℓtemp
+= f Htemp
+(13)
+The final representations of the subgraphs are then computed by a Readout function, and here we use the average
+function.
+sub
+
+sub
+Zspat
+= AvgReadout
+
+spat
+s
+
+
+X
+Zℓspat
+s
+Zℓspat
+=
+sub
+
+ℓs =1
+
+(14)
+
+spat
+
+sub
+
+sub
+Ztemp
+= AvgReadout
+
+
+
+t
+Zℓtemp
+
+
+
+=
+
+temp
+t
+X
+Zℓtemp
+
+ℓt =1
+
+sub
+temp
+
+(15)
+
+
+PB
+
+=r
+
+i=1 {[U (xt,i ) · U (Xj,i )] + [V (xt,i ) · V (Xj,i )]}
+n
+o rP
+n
+n
+o
+PB n
+2
+2
+B
+2
+2
+[U
+(X
+)]
++
+[V
+(X
+)]
+×
+[U
+(X
+)]
++
+[V
+(X
+)]
+t,i
+t,i
+j,i
+j,i
+i=1
+i=1
+
+(7)
+
+1594
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 33, NO. 4, AUGUST 2025
+
+sub
+where sub
+spat and temp are the numbers of nodes in the spatial
+and temporal subgraphs respectively.
+For the target node, we use multilayer perceptron (MLP)
+to map it into the same embedding space as the subgraph.
+The time step node embedding is similarly to the target
+node. The feature matrix of the target node is denoted as
+node
+Mspat
+. The calculation process of MLP is as follows:
+
+
+node
+node
+node
+Zspat
+= M LP Mspat
+Wspat = σ Mspat
+Wspat
+(16)
+
+
+node
+node
+node
+Ztemp = M LP Mtemp Wtemp = σ Mtemp Wtemp (17)
+
+3) Advanced Feature Extraction: To fully utilize the spatial
+and temporal structure information of the graph network to
+detect anomalous behaviors, two parallel GAT layers with
+multi-head attention mechanisms are used to capture the
+relationships between nodes. For a general graph with n nodes,
+i.e., {h1 , h2 , . . . ,hn }, adj is the adjacency matrix constructed
+from the nodes. The output of the GAT layer is as follows:
+
+Here, the weight is shared with the GCN.
+To measure the consistency between the subgraph embedding and the target node embedding, a bilinear function is
+utilized to calculate the similarity between them.
+
+After that, a global maximum pooling operation is used to
+extract the key features.
+
+n−s
+sub
+node
+sub
+node
+Sspat
+= Bilinear(Zspat
+, Zspat
+) = Zspat
+WBiliner Zspat
+
+(18)
+n−s
+sub
+node
+sub
+node
+Stemp
+= Bilinear(Ztemp
+, Ztemp
+) = Ztemp
+WBiliner Ztemp
+
+(19)
+where WBiliner is the weight matrix of the bilinear function.
+2) Subgraph-Subgraph
+Contrastive
+Network:
+The
+subgraph-subgraph contrastive network is similar in
+structure to the node-subgraph contrastive network. The
+final embedding representations of the subgraphs obtained in
+the subgraph-subgraph contrastive network are as follows:
+
+ X sub Zℓs
+spat
+spat
+sub
+s
+Zspat
+= AvgReadout Zℓspat
+=
+sub
+ℓs =1
+
+spat
+
+ X sub′ Zℓs
+′
+spat
+spat
+sub
+s
+Zspat
+= AvgReadout Zℓspat
+=
+sub′
+ℓs =1
+spat
+
+ X sub Zℓt
+temp
+temp
+sub
+t
+Ztemp
+= AvgReadout Zℓtemp
+=
+sub
+ℓt =1
+temp
+′
+ℓ
+t
+
+
+sub
+X
+Z
+temp
+temp
+sub′
+t
+Ztemp
+= AvgReadout Zℓtemp
+=
+′
+sub
+ℓt =1
+temp
+
+(20)
+(21)
+(22)
+(23)
+
+′
+
+sub
+to denote the embedding representation of
+Here, we use Zspat
+′
+another subgraph and sub
+spat to denote the number of nodes in
+another subgraph.
+Next, the same bilinear function is used to compute their
+similarity.
+
+
+
+
+′
+
+
+
+sub
+sub′
+Ztemp
+, Ztemp
+
+′
+
+s−s
+sub
+sub
+sub
+′
+sub
+Sspat
+= Bilinear Zspat
+, Zspat
+= Zspat
+WBiliner
+Zspat
+
+(24)
+s−s
+Stemp
+= Bilinear
+
+
+
+sub
+′
+sub′
+= Ztemp
+WBiliner
+Ztemp
+
+(25)
+Finally, the results of the node-subgraph contrastive network
+and the subgraph-subgraph contrastive network are concatenated using a concatenation operation to serve as the inputs
+for the next step.
+
+n−s
+s−s
+i
+Sspat
+= concat Sspat
+, Sspat
+(26)
+
+n−s
+s−s
+i
+Stemp = concat Stemp , Stemp
+(27)
+
+i
+Gispat = GatConv(Sspat
+, adj)
+
+(28)
+
+i
+Gitemp = GatConv(Stemp
+, adj)
+
+(29)
+
+i
+Pspat
+= GlobalM axP ool(Gispat )
+
+(30)
+
+i
+Ptemp
+= GlobalM axP ool(Gitemp )
+
+(31)
+
+The fully connected layer is then used to obtain the most
+representative feature representations.
+i
+i
+rspat
+= Dense(Pspat
+)
+
+(32)
+
+i
+i
+rtemp
+= Dense(Ptemp
+)
+
+(33)
+
+Finally, a project layer fproj is used to obtain a fused
+representation:
+i
+i
+Zi = fproj (rspat
+⊕ rtemp
+)
+
+(34)
+
+The obtained fusion results are called time-slice embeddings
+(TSEs) because they represent the embedded potential representations in a certain time slice.
+4) Loss Function: To ensure that time slice embeddings
+(TSEs) from different time slices are distinguishable in potential space, a customized loss of contrast is designed. TSEs with
+the same indices from the current batch and its augmentation
+batch are considered positive samples, while TSEs with different indices are considered negative samples. Let Xt denote
+the current batch and Xk denote its k-th augmentation batch.
+Then Xt,i ∈ Xt and Xk,i ∈ Xk are form a positive input
+′
+sample pair, and zt,i and zk,i
+are the corresponding learned
+TSEs. The loss of contrast between the current batch and its
+k-th augmented batch can be expressed as:
+
+
+. 
+′
+exp sim zt,i , zk,i
+τ
+XB
+
+
+. 
+Lk = −
+log P
+B
+i=1
+′
+τ
+j=1 I[i̸=j] exp sim zt,i , zk,j
+(35)
+where I[i̸=j]∈{0,1} is an indicator function and is 1 when i̸= j,
+0 otherwise. τ is a temperature parameter. The total loss is the
+weighted sum of the current batch and its corresponding K
+augmented batches, as follows:
+XK βk
+L=
+Lk
+(36)
+k=1 B
+where βk is the coefficient between the current batch and its
+k-th augmentation batch, and its formula is:
+dist,k
+βk = PK
+u=1 dist,u
+
+(37)
+
+The training procedure of the proposed method is summarized
+in Algorithm 1.
+
+CHAO et al.: SPATIO-TEMPORAL ANOMALY DETECTION FOR 5G-CLUSTERS
+
+Algorithm 1 Training Algorithm of the Proposed Method
+Input: Training set Ω = {X1 , X2 , . . . , Xt }, where
+Xt = [Xt,1 , Xt,2 , . . . , Xt,B ].
+M : The number of candidate batches.
+K : The number of augmented batches.
+Output: A trained MFCAD model with parameters sets Θ.
+for each iteration do
+for current batch Xt in Ω do
+Step1: Select M candidate batches for Xt .
+Step2: For each Xt,i in Xt fuzzy the data into an
+intuitive fuzzy set containing membership degrees and
+hesitation degrees:
+Xt′ =
+{[U (Xt,1 ) , V (Xt,1 )] , . . . , [U (Xt,B ) , V (Xt,B )]}.
+Step3: Calculate the MDTW distance between current
+batch and its candidate augmented batches to obtain the
+top-K candidates so as to form augmentation setφaug
+.
+t
+Step4: Feed Xt and its augmented batches from φaug
+t
+into the multi-scale spatio-temporal contrastive model
+to obtain the generated TSEs for forming sample pairs.
+Step5: Calculate the batch loss using Eq. (36).
+Step6: Use optimizer to train the model.
+end for
+end for
+
+D. Anomaly Detection
+To achieve anomaly detection in latent space, a clustering
+method is applied for each group of TSEs, where the clustering
+centers are regarded as the corresponding prototypes. To this
+end, the FCM clustering method is utilized. Given a group of
+TSEs Zt = {zt,1 , zt,2 , . . . , zt,B }, where zt,i denotes the i-th
+learned TSE from the t-th group. Calculating the clustering
+centers can be achieved by minimizing the following problem.
+XC XB
+2
+minJ =
+um
+rp (zt,i − ct,r )
+r=1
+i=1
+XC
+s.t.
+um
+∀i = 1, 2, . . . , B
+(38)
+ri = 1,
+r=1
+
+where C is the number of centers for a group, ct,r is the r-th
+center for the t-th TSE group, um
+ri is the membership degree
+of sample i belonging to the r-th center, and m is a weighted
+index. The ℓ2 distance between the TSE and its corresponding
+prototypes is used to measure the inference score:
+
+st,i = min ∥zt,i − ct,1 ∥2 , ∥zt,i − ct,2 ∥2 , . . . , ∥zt,i − ct,C ∥2
+(39)
+where st,i is the inference score for the i-th TSE which
+calculates the minimum ℓ2 distance between the TSE and
+its corresponding prototypes. An input sample is considered
+anomalous if its TSE is distant from all the corresponding prototypes. Specifically, we identify an anomaly if the inference
+score is larger than a threshold, where the Drift Peak Over
+Threshold (DPOT) [44] is adopted to choose the threshold
+dynamically.
+IV. E XPERIMENTS
+In this section, the datasets and experimental settings are
+introduced. Subsequently, the performances of MFCAD are
+assessed using real-world 5G-MNC data and public datasets.
+
+1595
+
+An interpretation analysis is then presented, followed by conducting ablation studies and sensitivity analyses. Additionally,
+ablation studies and sensitivity analyses are carried out. Lastly,
+the model’s generalizability is validated by applying it to an
+industrial dataset.
+A. 5G-MNC Dataset Description
+To evaluate the effectiveness of the proposed method, the
+real-world 5G-MNC datasets are used. The datasets are collected by China Mobile Communication, and they contain the
+KPI records from two 5G-MNCs. Wherein, MNC 1 contains
+11 base stations, and MNC 2 contains 4 base stations. The
+selected KPI for performing anomaly detection is the number
+of Radio Resource Control (RRC) connection establishment
+requests, and the KPI data is aggregated every 15 minutes.
+The time period is from 3rd Sep 2021 to 3rd Jan 2022, and
+the first two months of historical records are used as a training
+set and validation set, and the rest serves as a test set. The
+statistics of the two MNCs are shown in Table I.
+In practical scenarios, anomalies within a 5G-MNC generally manifest in a continuous manner. Consequently, for two
+datasets, the anomalies are annotated segment-wise, i.e., if a
+segment contains an anomalous pattern, the entire segment
+is annotated as anomalous. The annotation of anomaly labels
+is carried out by domain experts from China Mobile. Two
+illustrative examples are provided in Fig. 5. In the green area of
+Fig. 5(a), there is an obvious boost in a base station. However,
+sudden changes in a certain base station do not mean anomalies in the whole network system. While in Fig. 5(b), one
+can find that the areas marked in red demonstrate anomalous
+patterns compared to the other areas, which indicates there are
+anomalies occurring in the system.
+B. Experimental Settings
+1) Evaluation Metric: To measure and evaluate the performance of the method, three common metrics, precision, recall,
+and F1-score are utilized. These metrics are derived from the
+following expressions:
+TP
+(40)
+TP + FP
+TP
+Recall =
+(41)
+TP + FN
+2 · P recision · Recall
+F 1 − score =
+(42)
+P recision + Recall
+where TP is the true positives, FP represents the false
+positives, and FN stands for the false negatives. In real
+applications, the anomalies generally occur in a continuous
+manner, thus we do not care about the point-wise metrics.
+Following the same evaluation strategy as [17], we mark the
+whole segment as positive if any anomalous observation is in
+this segment.
+2) Baselines: We compare the proposed method with stateof-the-art anomaly detection methods, which are AE [45],
+VAE [46], Local Outlier Factor (LOF) [47], Isolation Forest
+(IF) [48], LSTM-VAE [49], DAGMM [20], MGCLAD [15],
+and DCdetector [16]. Specifically, all the baselines follow the
+P recision =
+
+1596
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 33, NO. 4, AUGUST 2025
+
+TABLE I
+DATASET S TATISTICS
+
+Fig. 6. Two clusters of 5G-MNCs (each marker denotes a base station) and
+corresponding heat maps of weighted adjacency matrixes.
+
+is computed based on the distances among base stations in the
+mobile networked cluster. The weighted adjacency matrix can
+be formed as:
+!
+
+2
+2
+
+ exp − ηij , i ̸= j and exp(− ηij ) ≥ ò
+σ2
+σ2
+aij =
+
+
+0,
+otherwise.
+(43)
+
+Fig. 5.
+
+Examples of 5G-MNC data.
+
+architecture proposed in the original articles. Since not all
+the anomaly detection methods are designed for 5G-MNC
+anomaly detection, we performed all possible thresholds for
+every model and reported the experimental results according
+to the highest F1-score.
+3) Implementation Details: The proposed method is implemented in Tensorflow Library and is trained on a 64-bit
+Intel core i7-6700CPU@ 3.40GHz/16GB RAM configuration
+computer. The Adam optimizer with learning rate is used for
+training, and the training epochs are set to 50. The time slice
+length T is set to 8, which means each time slice contains two
+hours for sampling.
+C. Data Preprocessing
+Generally, there are often missing values and huge spike
+values involved in the original data. Since the ratio of these
+values is less than 5% in each series, just as in [50], we simply
+remove the data that deviates the most from the mean value
+and replace them with their neighboring normal observations.
+Besides, we perform data normalization on both training and
+testing sets to improve the robustness of the proposed method.
+Furthermore, same as [51], the adjacency matrix of a 5G-MNC
+
+where aij is the weight of the edge, and it is determined by
+ηij , which is the distance between base station i and j. σ 2 and
+ò are the thresholds to control the distribution and sparsity of
+adjacency matrix, and they are set to 1e-5 and 0.3 in this work.
+The two selected 5G-MNCs and corresponding heat maps of
+weighted adjacency matrixes are shown as Fig. 6.
+D. Parameter Comparison
+During the experiment, we found that setting a suitable
+interference value when calculating the hesitation degree can
+better reflect the uncertainty. By setting different interference
+values for exploration, the experimental results show that the
+model’s performance is best when the interference value is set
+to 0.25. That is to say, the experimental performance metrics,
+including recall, precision, and f1 score, are relatively high
+when the interference value is set to 0.25. This can be visually
+presented in Fig. 7.
+An appropriate distance formula is needed to measure the
+similarity between two fuzzy sets when calculating the MDTW
+distance. In this paper, we explore three distance formulas
+including Euclidean distance, Hamming distance, and cosine
+similarity function. The experimental results demonstrate that
+using Euclidean distance yields the best performance compared to the Hamming distance and cosine similarity function.
+This can be observed in Fig. 8.
+E. Experimental Results
+In this subsection, we conduct experiments on real-world
+5G-MNC datasets to evaluate the effectiveness of MFCAD.
+
+CHAO et al.: SPATIO-TEMPORAL ANOMALY DETECTION FOR 5G-CLUSTERS
+
+1597
+
+TABLE II
+P ERFORMANCE OF WADI AND SWAT DATASETS ON D IFFERENT BASELINES
+
+Fig. 7.
+
+Experimental effects at different interference values.
+
+anomaly detection method, like DAGMM, tries to predict the
+values based on historical data and performs anomaly detection according to the forecasting errors. However, some data
+are inherently unpredictable due to various internal/external
+factors, especially complex, dynamic mobile network data.
+Therefore, normal observations would be easily mistakenly
+detected by DAGMM and cause a false positive. In the
+proposed MFCAD, the spatio-temporal patterns of the original
+data at different time intervals in a cycle are fully explored.
+Moreover, MFCAD detects anomalies in latent space, which
+does not require reconstruction or prediction of features. This
+further mitigates the potential errors introduced by the model
+itself. Therefore, MFCAD achieves the best performance compared with other methods.
+F. Visualized Explanation
+
+Fig. 8.
+
+Experimental effects of using different distance formulas.
+
+The overall experimental results of MFCAD with six methods
+are demonstrated in Table II, where the best F1-score achieved
+is in bold.
+IF and LOF achieve the lowest F1-score since they are both
+unsupervised anomaly detection methods that do not capture
+temporal and spatial information. However, the information
+hidden in the raw data is critical for anomaly detection.
+AE, VAE, and LSTM-VAE are reconstruction-based anomaly
+detection methods, which use sequential data as input so
+that the temporal information can be retained. Nonetheless,
+reconstruction-based anomaly detection methods mainly focus
+on the performance of sample reconstruction, and do not care
+about the distinguishability of the encoded features for abnormal and normal samples. Thus, it would cause even abnormal
+data to be well reconstructed. Moreover, the prediction-based
+
+To explain the performance of the proposed method on 5GMNC data, the TSEs from the same time slice generated
+by MNC 1 in different cycles are visualized in Fig. 9.
+From the figure, one can see that most TSEs are gathered
+together indicating normal patterns, while the abnormal TSEs
+are farther apart. To validate this phenomenon, we show the
+original data corresponding to several of these TSEs. Upon
+observation, one can see that the TSEs of A and E behave
+abnormally, while the others behave normally.
+Furthermore, to demonstrate the relationships between different TSEs, we also project all the learned TSEs into 2D
+embedding space for visualization. The t-SNE plot is shown in
+Fig. 10 where each colored point denotes an embedding vector
+of TSE from a different time slice and different colored star
+symbols represent the corresponding prototypes for each group
+of TSEs. From the figure, one can see that the TSEs have a
+significant aggregation phenomenon. It indicates that the TSEs
+from the same time slices share similar patterns, while the
+TSEs from different time slices share distinct patterns.
+G. Ablation Study
+In this subsection, the MNC 1 dataset is used for analyzing
+the influence of different modules in the model. Detailly,
+
+1598
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 33, NO. 4, AUGUST 2025
+
+Fig. 9. A t-SNE plot of the TSEs from same time slice and the time patterns
+corresponding to five of these TSEs.
+
+The designed data augmentation method enables a robust
+contextual representation for each time slice in a cycle, therefore, a performance decrease is observed after disabling data
+augmentation. Performing anomaly detection by the distance
+between two TSEs of adjacent cycles uses only local information, while global information cannot be utilized, thus the
+variant without clustering performs poorly. In conclusion, the
+ablation of any of the modules in the designed architecture
+leads to poorer performance. The variant without a multi-scale
+contrastive module solely captures anomalies from a single
+scale. This restricts its capacity to capture anomalous patterns
+in neighboring time or space. As a result, its performance is
+diminished. In summary, the removal of any module within the
+architectural design can result in a decline in performance.
+H. Sensitivity Analysis
+
+Fig. 10. A t-SNE plot of different TSEs. Each color represents a different
+time slice of a cycle, and the star symbols indicate the prototypes of each
+group of TSEs.
+TABLE III
+C OMPARISON W ITH D IFFERENT VARIANTS
+
+TABLE IV
+P ERFORMANCE OF THE P ROPOSED M ODEL AND BASELINES
+
+we perform an ablation study by disabling a certain module
+of MFCAD. Wherein, w/o spatial denotes the variant without
+spatial GAT layer, and w/o temporal denotes the variant
+without temporal GAT layer. We also compare MFCAD with
+the variant that simply uses the last consecutive cycle as an
+augmentation set and it is denoted by w/o data augmentation.
+The variant denoted by w/o clustering performs anomaly
+detection by using the distance between the two TSEs of
+adjacent cycles to analyze the effect of the cluster module. w/o
+multi-scale denotes the variant without multi-scale contrastive
+module. The results are shown in Table III, from which one can
+see that all the above modules of MFCAD are indispensable.
+The variant without temporal or spatial module extracts
+features from only one view, which prevents the full exploration of the spatial and temporal correlation of the data.
+
+In this subsection, experiments using the MNC 1 dataset to
+analyze the sensitivity of MFCAD have been done. Specifically, the dimension of TSEs D, the candidate augmentation
+set size M , and the top-K augmentation set size K are utilized
+for analysis. Fig. 11(a) shows the impact of a key hyperparameter D. Increasing the dimension of TSEs can improve
+the capability of representation. However, a larger dimension
+can harm performance as it adds redundant information.
+Therefore, we empirically set the value of D to 18. Fig. 11(b)
+demonstrates the results of varying M and K in a range since
+they are used jointly to control the size of the data augmentation. According to the results, the F1 score shows an upward
+trend with the increase of M and K and tend to flatten out at
+the end. Such results demonstrate that applying an appropriate
+size of data augmentation can improve the performance, while
+excessive augmented data cannot guarantee the robustness of
+the learned representations and further increase the burden of
+training. Therefore, in practice, K is set to 3 and M is set
+to 7.
+Furthermore, in anomaly detection of multivariate time
+series, the window size has an important impact on the
+performance of the model. Different window sizes affect the
+model’s ability to capture anomalies and its detection accuracy.
+Therefore, we explore the effect of window size on model
+performance using the 5G-MNC datasets. The experimental
+results are shown in Fig. 12. The performance is relatively
+good when the window size is around 12. And too large or
+too small size will make the model performance decrease.
+I. Industrial Data Applications
+1) Datasets: To further verify the generality of the proposed
+method, two sensor datasets based on water treatment physical
+testbed systems SWaT and WADI are used for validation.
+The SWaT dataset is derived from a water treatment testbed
+coordinated by the Public Utilities Board of Singapore, which
+is a dataset used for cybersecurity field research based on a
+dataset of actual water treatment systems. The SWaT dataset
+consists of 11 days of continuous operation, of which 7 days
+of data were collected under normal operation, while 4 days
+of data were collected through attack scenarios. WADI is
+an extension of SWaT that absorbs some of the reverse
+
+CHAO et al.: SPATIO-TEMPORAL ANOMALY DETECTION FOR 5G-CLUSTERS
+
+Fig. 11.
+
+Sensitive experiments on partial hyper-parameters.
+
+Fig. 12.
+
+The effect of window size on the performance of model.
+
+osmosis permeate and raw water from SWaT, thereby forming a complete and authentic water treatment, storage, and
+distribution network. The WADI dataset consisted of 14 days
+of continuous normal operation and 2 days of data collection
+based on attack scenarios. The statistics for the two datasets
+are shown in Table IV. The two datasets are available at
+https://itrust.sutd.edu.sg/itrust-labs_datasets/ .
+2) Baselines:
+• KNN: Categories are determined by majority vote or
+weighted average based on the distance between the
+sample to be tested and the individual samples in the
+training set [52].
+• FB: The input signal is decomposed into a number of
+subbands of different frequencies and a different filter is
+applied to each subband for feature extraction [53].
+• AE: The basic structure consists of an encoder and
+decoder that learns a compressed representation of the
+input data by minimizing the reconstruction error. Anomaly
+detection is performed based on the reconstruction [54].
+• DAGMM: Combine a self-encoder with a Gaussian
+mixture model. Learning the representation of the data
+
+1599
+
+through the self-encoder and then using Gaussian mixture
+models to model the normal data [20].
+• LSTM-VAE: It Combines LSTM and variational selfencoder. By learning the temporal dependencies and
+latent spatial representations of the data, anomalous
+samples may exhibit different sequence patterns than
+normal samples, allowing anomaly detection by comparing the distribution of reconstruction errors or latent
+variables [49].
+• MAD-GAN: It is a multi-class anomaly detection method
+based on generative adversarial networks. By training
+generators and discriminators, MAD-GAN can generate
+normal samples and distinguish abnormal samples [55].
+• GDN: This approach combines graph neural networks
+and graph structure learning to identify anomalies by
+leveraging graph attention-based prediction errors [12].
+• STADN: Spatio-temporal information is combined and
+anomaly detection is performed using GAT and Long
+Short-Term Memory (LSTM) networks [21].
+• MGCLAD: MGCLAD utilizes a multi-view graph
+contrastive learning approach. It considers both the
+intra-signal graph structure and the relationship between
+different signals to improve the performance of anomaly
+detection [15].
+• DCdetector: DCdetector is a state-of-the-art contrastive
+learning-based anomaly detection method. It designs a
+dual-branch attention structure based on contrastive learning to learn a permutation-invariant representation and
+guides the learning process by using contrastive loss [16].
+3) Effectiveness Assessment: We compare the precision,
+recall, and F1 score of the proposed method MFCAD with the
+baseline, and the results are presented in Table V. Based on the
+experimental data, one can observe that MFCAD outperforms
+all baseline methods in terms of F1 scores on both datasets,
+showing significant improvement. F1 scores peak at 0.98 and
+0.98, respectively. In addition, MFCAD improves the recall
+to 97.43% and 99.78%. Higher recall value indicates that the
+model can cover almost all anomalous samples. This proves
+the effectiveness of MFCAD in anomaly detection tasks, as it
+is able to capture the vast majority of anomalous samples.
+And, ablation experiments are conducted on the WADI and
+SWaT datasets shown in Table VI, which further verify the
+effectiveness of each module to the model performance.
+To comprehensively evaluate the proposed method, we further incorporate AUROC and AUPRC metrics. AUROC
+measures the balance between the true positive rate and the
+false positive rate at different thresholds and is commonly used
+to assess the performance of classification models. The closer
+the value is to 1, the better the model’s performance. AUPRC
+focuses on the balance between precision and recall, with
+higher values indicating better model performance. We compare the proposed method with two state-of-the-art models.
+As shown in the table VII, the proposed method performs
+well on most of the datasets.
+J. Complexity and Robustness Analysis
+The time complexity of the proposed method is primarily
+contributed by the fuzzy data augmentation method and the
+
+1600
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 33, NO. 4, AUGUST 2025
+
+TABLE V
+DATA FOR TWO P UBLIC DATASETS
+
+TABLE VI
+R ESULTS OF A BLATION E XPERIMENTS W ITH WADI
+AND SWAT DATASETS
+
+TABLE VII
+AUROC AND AUPRC M ETRICS FOR 4 DATASETS
+ON D IFFERENT M ODELS
+
+Fig. 13.
+
+multi-scale spatio-temporal contrastive encoder. The data augmentation method involves similarity computation and sorting,
+e n )·log( n )), where n denotes
+with a complexity of O(n2 ·D+(
+B
+B
+e
+time series length, D denotes the feature dimension, B denotes
+batch size. And, the time complexity of the spatio-temporal
+e Furthermore, we evaluate
+contrastive encoder is O(n2 ·D).
+the efficiency of the proposed method by calculating the
+average running time and memory usage. The experiments
+run on a computer with a 64-bit Intel Core i7-6700 CPU @
+3.40GHz and 16GB RAM configuration, implemented using
+Python 3.6. Four datasets of different sizes are applied to
+fully evaluate the performance, and the datasets are described
+
+Experiments on complexity analysis.
+
+Fig. 14. An example. Light blue line represents the original time series
+data and the red part shows the changed data with different characteristics
+distribution.
+
+in Table I and Table IV. We also compared the proposed
+method with two other methods based on contrastive learning.
+The results are shown in Fig. 13. When the data size and
+
+CHAO et al.: SPATIO-TEMPORAL ANOMALY DETECTION FOR 5G-CLUSTERS
+
+1601
+
+correlations existing in temporal features at different scales
+also have valuable information to the construction of graph
+structures. Therefore, in the future work, we would like to
+find an effective way to further integrate multi-scale temporal
+features on the basis of priori spatial features for graph
+structure construction in the application of anomaly detection.
+R EFERENCES
+
+Fig. 15. Comparative experimental results between original data and changed
+data.
+
+dimensionality are small (e.g., MNC1, MNC2), the difference
+in the running time of all methods is insignificant. When the
+data size and dimension are large (e.g., WADI and SWaT), the
+proposed method outperforms the other methods in terms of
+both runtime and memory consumption.
+To explore the model performance under longer and evolving environment, we further introduce intervention into the
+datasets to simulate evolving network conditions by changing the characteristics of data distribution, as exemplified in
+Fig. 14. And, in four datasets, we compare the results of the
+proposed model between the original data and the changed
+data, where the experimental results are shown in Fig. 15.
+One can observe that data drift in characteristics distribution
+does not significantly degrade the performance of the proposed
+model, which still maintains a robust performance. These
+experiments indicates that the model has the capability to
+adapt to different environments in applications with long-term
+deployment.
+V. C ONCLUSION
+We propose a novel universal anomaly detection model,
+namely Multi-scale Fuzzy Contrastive-based Anomaly Detection (MFCAD), which is capable of detecting anomalies
+in multivariate time series with spatio-temporal features.
+MFCAD utilizes multi-scale contrastive learning to obtain
+more discriminative representations and performs explicit
+anomaly detection in the latent space by measuring the
+distance between outliers and inliers. Our ablation experiments demonstrate that the spatio-temporal contrastive
+model, data augmentation method, and multi-scale mechanism significantly enhance the anomaly detection performance
+of MFCAD. Experimental results on real-world 5G-MNC
+datasets demonstrate that MFCAD outperforms state-of-theart methods, achieving the best performance. Furthermore,
+the effectiveness of MFCAD is further validated using an
+industrial dataset. As a result, the proposed MFCAD model
+holds practical value in rapidly and accurately diagnosing
+anomalies.
+How to effectively construct graph structure is an important
+issue to the performance of anomaly detection with graph
+learning. In this article, spatial features of data are mainly
+applied to construct graph structures, which is a typical and
+reasonable approach. However, from a data-driven perspective,
+
+[1] Z. Ahmad, A. Shahid Khan, C. Wai Shiang, J. Abdullah, and F. Ahmad,
+“Network intrusion detection system: A systematic study of machine
+learning and deep learning approaches,” Trans. Emerg. Telecommun.
+Technol., vol. 32, no. 1, p. 4150, Jan. 2021.
+[2] R. Li, Z. Liu, Y. Ma, D. Yang, and S. Sun, “Internet financial fraud
+detection based on graph learning,” IEEE Trans. Computat. Social Syst.,
+vol. 10, no. 3, pp. 1394–1401, Jun. 2023.
+[3] J. Viola, Y. Chen, and J. Wang, “FaultFace: Deep convolutional generative adversarial network (DCGAN) based ball-bearing failure detection
+method,” Inf. Sci., vol. 542, pp. 195–211, Jan. 2021.
+[4] S. P. Chatrati et al., “Smart home health monitoring system for predicting
+type 2 diabetes and hypertension,” J. King Saud Univ.-Comput. Inf. Sci.,
+vol. 34, no. 3, pp. 862–870, Mar. 2022.
+[5] X. Wang et al., “Adaptive multi-receptive field spatial–temporal graph
+convolutional network for traffic forecasting,” in Proc. IEEE Global
+Commun. Conf. (GLOBECOM), Dec. 2021, pp. 1–7.
+[6] H. Xu et al., “Unsupervised anomaly detection via variational
+auto-encoder for seasonal KPIs in web applications,” in Proc. World
+Wide Web Conf., 2018, pp. 187–196.
+[7] C. Zhang et al., “A deep neural network for unsupervised anomaly
+detection and diagnosis in multivariate time series data,” in Proc. AAAI
+Conf. Artif. Intell., 2019, vol. 33, no. 1, pp. 1409–1416.
+[8] A. Abdulaal, Z. Liu, and T. Lancewicki, “Practical approach to asynchronous multivariate time series anomaly detection and localization,”
+in Proc. 27th ACM SIGKDD Conf. Knowl. Discovery Data Mining,
+Aug. 2021, pp. 2485–2494.
+[9] Y. Liu et al., “Anomaly detection in dynamic graphs via transformer,”
+IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12081–12094,
+Dec. 2023.
+[10] M. Thill, W. Konen, H. Wang, and T. Bäck, “Temporal convolutional
+autoencoder for unsupervised anomaly detection in time series,” Appl.
+Soft Comput., vol. 112, Nov. 2021, Art. no. 107751.
+[11] W. Li, W. Hu, T. Chen, N. Chen, and C. Feng, “StackVAE-G: An
+efficient and interpretable model for time series anomaly detection,”
+2021, arXiv:2105.08397.
+[12] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+in multivariate time series,” in Proc. AAAI Conf. Artif. Intell. (AAAI),
+May 2021, vol. 35, no. 5, pp. 4027–4035.
+[13] Y. He and J. Zhao, “Temporal convolutional networks for anomaly
+detection in time series,” J. Phys., Conf., vol. 1213, no. 4, Jun. 2019,
+Art. no. 042050.
+[14] N. Huyan, D. Quan, X. Zhang, X. Liang, J. Chanussot, and L. Jiao,
+“Unsupervised outlier detection using memory and contrastive learning,”
+IEEE Trans. Image Process., vol. 31, pp. 6440–6454, 2022.
+[15] S. Qin, L. Chen, Y. Luo, and G. Tao, “Multi-view graph contrastive
+learning for multivariate time series anomaly detection in IoT,” IEEE
+Internet Things J., vol. 10, no. 24, pp. 22401–22414, Dec. 2023.
+[16] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: Dual
+attention contrastive representation learning for time series anomaly
+detection,” in Proc. 29th ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining (KDD), 2023, pp. 3033–3045.
+[17] T. C. Havens, J. C. Bezdek, C. Leckie, L. O. Hall, and M. Palaniswami,
+“Fuzzy c-Means algorithms for very large data,” IEEE Trans. Fuzzy
+Syst., vol. 20, no. 6, pp. 1130–1146, Dec. 2012.
+[18] Y. Zhang, J. Wang, Y. Chen, H. Yu, and T. Qin, “Adaptive memory
+networks with self-supervised learning for unsupervised anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12068–12080,
+Dec. 2023.
+[19] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+detection for multivariate time series through stochastic recurrent neural
+network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discovery Data
+Mining, 2019, pp. 2828–2837.
+[20] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsupervised anomaly detection,” in Proc. Int. Conf. Learn. Represent., 2018,
+pp. 1–19.
+
+1602
+
+[21] Z. Tian, M. Zhuo, L. Liu, J. Chen, and S. Zhou, “Anomaly detection
+using spatial and temporal information in multivariate time series,” Sci.
+Rep., vol. 13, no. 1, p. 4400, Mar. 2023.
+[22] W. Yu and Q. Huang, “A deep encoder–decoder network for anomaly
+detection in driving trajectory behavior under spatio-temporal context,”
+Int. J. Appl. Earth Observ. Geoinf., vol. 115, Dec. 2022, Art. no. 103115.
+[23] J. Mulerikkal, S. Thandassery, V. Rejathalal, and D. M. D. Kunnamkody,
+“Performance improvement for metro passenger flow forecast using
+spatio-temporal deep neural network,” Neural Comput. Appl., vol. 34,
+no. 2, pp. 983–994, Jan. 2022.
+[24] C. Hu, L. Zhu, and S. Lai, “Spatio-Temporal-based context fusion for
+video anomaly detection,” in Proc. Int. Conf. Pattern Recognit., Mach.
+Vis. Intell. Algorithms (PRMVIA), Mar. 2023, pp. 187–192.
+[25] S. Zhang, J. Chen, X. Chen, Q. Jiang, and H. Huang, “Spatio-temporal
+data anomaly detection using 3G-net in IoT,” in Proc. IEEE 28th Int.
+Conf. Parallel Distrib. Syst. (ICPADS), Jan. 2023, pp. 770–777.
+[26] Y. Wang, H. Peng, G. Wang, X. Tang, X. Wang, and C. Liu, “Monitoring
+industrial control systems via spatio-temporal graph neural networks,”
+Eng. Appl. Artif. Intell., vol. 122, Jun. 2023, Art. no. 106144.
+[27] L. Jing and Y. Tian, “Self-supervised visual feature learning with deep
+neural networks: A survey,” IEEE Trans. Pattern Anal. Mach. Intell.,
+vol. 43, no. 11, pp. 4037–4058, Nov. 2021.
+[28] X. Liu et al., “Self-supervised learning: Generative or contrastive,” IEEE
+Trans. Knowl. Data Eng., vol. 35, no. 1, pp. 857–876, Jan. 2023.
+[29] J.-Y. Franceschi, A. Dieuleveut, and M. Jaggi, “Unsupervised scalable
+representation learning for multivariate time series,” in Proc. Adv. Neural
+Inf. Process. Syst., vol. 32, 2019, pp. 4650–4661.
+[30] S. Tonekaboni, D. Eytan, and A. Goldenberg, “Unsupervised representation learning for time series with temporal neighborhood coding,” 2021,
+arXiv:2106.00750.
+[31] E. Eldele et al., “Time-series representation learning via temporal and
+contextual contrasting,” 2021, arXiv:2106.14112.
+[32] H. Zhong, C. Chen, Z. Jin, and X.-S. Hua, “Deep robust clustering by
+contrastive learning,” 2020, arXiv:2008.03030.
+[33] M. Jin, Y. Liu, Y. Zheng, L. Chi, Y.-F. Li, and S. Pan, “ANEMONE:
+Graph anomaly detection with multi-scale contrastive learning,” in Proc.
+30th ACM Int. Conf. Inf. Knowl. Manage., Oct. 2021, pp. 3122–3126.
+[34] Y. Zheng, M. Jin, Y. Liu, L. Chi, K. T. Phan, and Y. P. Chen, “Generative
+and contrastive self-supervised learning for graph anomaly detection,”
+IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12220–12233,
+Dec. 2023.
+[35] J. Zhang, S. Wang, and S. Chen, “Reconstruction enhanced multi-view
+contrastive learning for anomaly detection on attributed networks,” 2022,
+arXiv:2205.04816.
+[36] H. Lee, Y. Kim, and S.-G. Lee, “Multi-scale contrastive learning for
+complex scene generation,” in Proc. IEEE/CVF Winter Conf. Appl.
+Comput. Vis. (WACV), Jan. 2023, pp. 764–774.
+[37] Z. Zhao et al., “MMGL: Multi-scale multi-view global–local contrastive
+learning for semi-supervised cardiac image segmentation,” in Proc. IEEE
+Int. Conf. Image Process. (ICIP), Oct. 2022, pp. 401–405.
+[38] A. Javed, B. S. Lee, and D. M. Rizzo, “A benchmark study on time series
+clustering,” Mach. Learn. Appl., vol. 1, Sep. 2020, Art. no. 100001.
+[39] Z. Xu and M. Xia, “Distance and similarity measures for hesitant fuzzy
+sets,” Inf. Sci., vol. 181, no. 11, pp. 2128–2138, Jun. 2011.
+[40] G. Wei, R. Lin, and H. Wang, “Distance and similarity measures for
+hesitant interval-valued fuzzy sets,” J. Intell. Fuzzy Syst., vol. 27, no. 1,
+pp. 19–36, 2014.
+[41] C. Luo, N. Zhang, and X. Wang, “Time series prediction based
+on intuitionistic fuzzy cognitive map,” Soft Comput., vol. 24, no. 9,
+pp. 6835–6850, May 2020.
+[42] R. Sawhney, S. Agarwal, A. Wadhwa, T. Derr, and R. R. Shah, “Stock
+selection via spatiotemporal hypergraph attention network: A learning to
+rank approach,” in Proc. AAAI Conf. Artif. Intell., 2021, vol. 35, no. 1,
+pp. 497–504.
+[43] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+Process. Syst., vol. 30, 2017, pp. 5998–6008.
+[44] A. Siffer, P.-A. Fouque, A. Termier, and C. Largouet, “Anomaly detection in streams with extreme value theory,” in Proc. 23rd ACM SIGKDD
+Int. Conf. Knowl. Discovery Data Mining, Aug. 2017, pp. 1067–1075.
+[45] C. C. Aggarwal and C. C. Aggarwal, An Introduction to Outlier Analysis.
+Berlin, Germany: Springer, 2017.
+[46] J. An and S. Cho, “Variational autoencoder based anomaly detection
+using reconstruction probability,” Special Lecture IE, vol. 2, pp. 1–18,
+Dec. 2015.
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 33, NO. 4, AUGUST 2025
+
+[47] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+density-based local outliers,” in Proc. ACM SIGMOD Int. Conf. Manage.
+Data, 2000, pp. 93–104.
+[48] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 8th
+IEEE Int. Conf. Data Mining, Dec. 2008, pp. 413–422.
+[49] D. Park, Y. Hoshi, and C. C. Kemp, “A multimodal anomaly detector for
+robot-assisted feeding using an LSTM-based variational autoencoder,”
+IEEE Robot. Autom. Lett., vol. 3, no. 3, pp. 1544–1551, Jul. 2018.
+[50] Z. Li, Y. Zhao, R. Liu, and D. Pei, “Robust and rapid clustering of KPIs
+for large-scale anomaly detection,” in Proc. IEEE/ACM 26th Int. Symp.
+Quality Service (IWQoS), Jun. 2018, pp. 1–10.
+[51] B. Yu, H. Yin, and Z. Zhu, “Spatio-temporal graph convolutional
+networks: A deep learning framework for traffic forecasting,” 2017,
+arXiv:1709.04875.
+[52] F. Angiulli and C. Pizzuti, “Fast outlier detection in high dimensional
+spaces,” in Proc. Eur. Conf. Princ. Data Mining Knowl. Discovery.
+Berlin, Germany: Springer, 2002, pp. 15–27.
+[53] A. Lazarevic and V. Kumar, “Feature bagging for outlier detection,” in
+Proc. 11th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+Aug. 2005, pp. 157–166.
+[54] C. C. Aggarwal et al., Data Mining: The Textbook, vol. 1. Berlin,
+Germany: Springer, 2015.
+[55] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, and S.-K. Ng, “MAD-GAN:
+Multivariate anomaly detection for time series data with generative
+adversarial networks,” in Proc. Int. Conf. Artif. Neural Netw. (ICANN).
+Munich, Germany: Springer, 2019, pp. 703–716.
+
+Luo Chao (Member, IEEE) received the Ph.D.
+degree in computer science from Dalian University
+of Technology, China, in 2013. He is currently a Professor with the School of Information Science and
+Engineering, Shandong Normal University, China.
+He has published more than 60 refereed articles. His
+research interests include machine learning, complex
+systems, and time series analysis.
+
+Li Yinghua received the B.E. degree from Shandong
+University of Finance and Economics, Jinan, China,
+in 2021. She is currently pursuing the M.E.
+degree with the School of Information Science
+and Engineering, Shandong Normal University. Her
+research interests include anomaly detection and
+spatio-temporal data analysis.
+
+Ding Fengqian received the M.S. degree from
+Shandong Normal University, Shandong, China,
+in 2022. He is currently pursuing the Ph.D. degree
+with the School of Information Science and Engineering, Shandong University, Qingdao, China. His
+research interests are application of time series analysis and machine learning.
+
+Shao Rui received the master’s degree in computer software and theory from Shandong University.
+He is currently employed by China Mobile Communications Group Shandong Company Ltd., mainly
+engaged in wireless network optimization and planning work for 5G/4G networks. His current main
+research directions are 5G communication network planning, strategy optimization, SON, anomaly
+recognition, and network structure optimization.
+PAPER_TEXT

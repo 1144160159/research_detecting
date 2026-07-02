@@ -1,0 +1,859 @@
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026 1205
+
+ Explainable Anomaly Detection in Network Traffic
+ Using Normalizing Flows
+ Lior Shafir , Raja Giryes , and Avishai Wool
+
+ Abstract—Anomaly detection in network traffic is critical for Network Intrusion Detection Systems (NIDSs) detect
+identifying deviations from normal behavior—including sophis- attacks via signature- or anomaly-based inspection of network
+ticated cyber threats and previously unseen attacks—especially traffic [2], [3]. Recent progress in machine learning (ML)
+when anomalous examples are absent from the training data. The
+escalating complexity of cyber-attacks necessitates developing has opened new opportunities for improving the accuracy of
+methods that not only identify low-likelihood traffic but also traffic classification tasks, including the detection of anomaprovide insights into its anomalous nature and deviations from lous or malicious activity. However, ML-based NIDS still face
+normal behavior, enabling effective response and troubleshooting. substantial challenges due to the complexity of modern ML
+In this work, we leverage the unique capabilities of normalizing models and the need to process high-dimensional or timeflows (NF), a state-of-the-art reversible generative model for exact
+density estimation, to detect anomalies using only normal traffic. series network data [4].
+Our approach fundamentally differs from previous methods by Supervised ML approaches, in particular, face several limutilizing NF’s exact likelihood computation for unsupervised itations in this context: Firstly, they require large amounts of
+detection and combining it with Shapley values to introduce a labeled anomalous data for training, which is often unavailnovel feature selection framework for guiding the selection of able. Secondly, they encounter challenges with extreme class
+discriminative features in anomaly detection, while also providing
+statistically grounded enhanced explanations for detected anoma- imbalance, which further degrades detection accuracy, skewing
+lies, pinpointing potential root causes. Through experiments on model learning towards majority classes and hindering the
+CICIoT-2023, ISCXTor2016, and CICIDS2017, we demonstrate identification of minority traffic classes. Lastly, collecting
+that our NF-based approach outperforms existing state-of-the- anomalous traffic data is a costly and time-consuming task
+art methods for unsupervised anomaly detection. Notably, on due to its elusive and sporadic nature.
+the CICIoT-2023 dataset, we achieve an accuracy of 0.9951,
+comparable or higher than supervised methods, despite being To address the lack of anomalous data for training, some
+trained solely on normal data. approaches have explored the use of deep generative models,
+ such as Generative Adversarial Networks [5] (GANs), to
+ Index Terms—DDoS attacks, intrusion detection system, flowbased network intrusion detection, network flow. synthetically create anomaly samples [6]. However, while
+ generative neural methods like GANs and Variational Autoen-
+ I. I NTRODUCTION coders [7] (VAEs) have demonstrated prominent performance
+ results on tasks like learning the distribution of natural images,
+W ITH the exponential growth of connected devices,
+ particularly in the Internet of Things (IoT) domain,
+the cyber threat landscape has evolved significantly. According
+ neither of them allows for exact computation of the probability
+ density of new data points.
+to Cisco [1], the proliferation of IoT devices is expected to In this work, we propose a novel approach leveraging
+reach hundreds of billions by 2030. This surge in connectivity Normalizing Flows (NF) [8] for anomaly detection. NF is a
+presents a vast attack surface, increasing the complexity and reversible generative model framework that produces tractable
+frequency of potential cyber threats. Consequently, the number distributions, where both sampling and density-estimation
+of types of anomalous network traffic that threaten the internet directions (i.e., the generative and normalizing directions,
+is larger than ever before. Hence, with such a broad spectrum respectively) can be efficient and exact.
+of low-likelihood network traffic, anomaly detection remains NF learn an invertible mapping between a simple base
+a critical challenge. distribution and a complex data distribution, enabling exact
+ Anomalous traffic may refer to malicious attacks but it can likelihood computation. By training the flow solely on
+also include benign deviations—such as infrequent legitimate normal network traffic data, anomalies can be detected
+variations in traffic or undesired behaviors stemming from as low-likelihood samples under the learned distribution,
+regulatory compliance, privacy constraints, or capacity limi- eliminating the need for labeled anomaly examples during
+tations. training.
+ While NF have generative abilities, we leverage its density
+ Received 16 January 2025; revised 10 August 2025; accepted 8 Septem- estimation capability rather than its generative direction. Our
+ber 2025; approved by IEEE T RANSACTIONS ON N ETWORKING Editor
+E. Bertino. Date of publication 13 October 2025; date of current version approach fundamentally differs from other anomaly detection
+5 January 2026. (Corresponding author: Lior Shafir.) works that employ generative methods such as GANs, AEs,
+ The authors are with the School of Electrical Engineering, Tel Aviv
+University, Tel Aviv 6997801, Israel (e-mail: lior.shafir@gmail.com).
+ and even NF in that we do not generate synthetic anomalies
+ Digital Object Identifier 10.1109/TON.2025.3617580 followed by training a supervised classifier.
+ 2998-4157 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+1206 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+ Such models are inherently sensitive to the proportion and or higher than supervised methods, despite being trained
+authenticity of anomalies present in the training set. Firstly, solely on normal data.
+the generated synthetic anomalies do not overlap well with
+real anomaly samples [9], which may lead to suboptimal II. R ELATED W ORK
+training, and reduce the model’s detection effectiveness in Anomaly-Based Intrusion Detection. Anomaly detection
+real-world scenarios. Secondly, according to [9], the model’s in network traffic has been extensively studied over the past
+performance decreases when the anomaly-to-normal sample few decades, cf. [14], [15]. In recent years, deep learningratio is modified. This indicates that the model’s efficacy based methods have gained significant traction, offering
+is closely tied to specific sample ratios, which may not be improved accuracy and robustness. Proposed methods include
+feasible to predict in real-world scenarios where the rate of Support Vector Machines (SVM), Convolutional or Recurrent
+anomalies can be unpredictable. Neural Networks (CNN/RNN), and more, cf. [16].
+ Feature selection is a critical challenge in anomaly detec- More recently, the application of generative models such
+tion, particularly in unsupervised settings, where including as VAEs and GANs for anomaly-based detection has been
+irrelevant or redundant features can obscure the essential thoroughly investigated. Zavrak and Iskefiyeli [17] employ
+characteristics of normal traffic and degrade the model’s both Autoencoders (AEs) and VAEs in a semi-supervised
+performance. To address this, we propose a novel Shapley- learning framework to identify unknown attacks based on
+based [10] feature selection framework that leverages NF’s flow features extracted from network traffic. Another work
+probability-based evaluation function. This approach enables by Min et al. [18] explores the use of a memory-augmented
+us to identify and rank discriminative features effectively, over- deep autoencoder for network anomaly detection. It focuses on
+coming the limitations of traditional feature selection methods leveraging deep learning techniques, specifically AE, enhanced
+that often struggle in unsupervised contexts. Additionally, our with memory components to improve anomaly detection accuuse of Shapley values enhances the interpretability of detection racy in network traffic data. Azmin and Islam [19] combine a
+results, providing statistically grounded explanations for why variational Laplace AE (VLAE) with a deep neural network
+a particular traffic sample is anomalous and how it deviates (DNN) to enhance intrusion detection accuracy.
+from normal patterns. GANs [5] have also been used for adversarial traffic gen-
+ We evaluate our method on three benchmarks: CICIoT- eration and anomaly-based intrusion detection. E.g., NetShare
+2023 [11], ISCXTor2016 [12], and CICIDS2017 [13]. While [20] is a GAN-based framework for generating synthetic IP
+two of these datasets contain comprehensive and diverse sets header traces, Gadot [21] is a GAN-based framework aimed at
+of attack scenarios, we also extend our evaluation to the enhancing the detection of DDoS attacks, and NIDSGAN [22]
+ISCXTor2016 dataset, which focuses on encrypted network is a GAN-based framework for generating realistic adversarial
+traffic and includes both Non-Tor and Tor network traffic network traffic flows.
+across seven different application categories. Notably, the Wang et al. [23] present Def-IDS, an ensemble-based
+recent CICIoT-2023 dataset encompasses 33 distinct attacks defense mechanism designed to protect deep learning-based
+across seven attack categories. To the best of our knowledge, network intrusion detection systems from adversarial attacks.
+our work is the first study to evaluate this dataset using only Peng et al. [24] also propose a framework where a GAN is
+normal traffic. used to generate adversarial network traffic, which is then used
+ Our contributions may be summarized as follows: to train the NIDS. The GAN-generated adversarial examples
+ • We introduce a novel anomaly detection method that help the NIDS to better identify and mitigate potential threats.
+ leverages NF’s exact density estimation capabilities to While various studies employed VAEs and GANs for
+ model normal network traffic and identify anomalies as anomaly detection, they face challenges like intractable
+ low-likelihood samples. marginal likelihoods and mode collapse. Additionally, GANs
+ • We integrate the NF probability-based evaluation function require a large amount of training data to generate network
+ with Shapley values [10] to propose a novel wrapper fea- traffic samples. Thus, the acquisition of malicious samples is
+ ture selection method tailored for unsupervised learning, still a challenging task.
+ demonstrating its efficacy through extensive experiments. Another category of unsupervised learning approaches
+ Additionally, through simulations and real attack exam- includes classical algorithms such as Isolation Forest (IF)
+ ples, we demonstrate the explainability benefits of using and more recent self-supervised methods based on contrastive
+ Shapley values with NF to provide statistically grounded learning. These techniques are trained without access to labels
+ explanations for detected anomalies. and aim to identify structural irregularities in the data. For
+ • We evaluate our method on three publicly available example, Zhang et al. [25] propose an online IF-based model
+ datasets: two from the DDoS and IDS cyber-attacks for malicious traffic detection in SD-WAN environments,
+ domain, and one from the encrypted traffic classification where the model is trained on a mixture of benign and attack
+ domain. We show that our flow-based approach outper- traffic without using labels. Similarly, Li et al. [26] present
+ forms existing state-of-the-art anomaly detection methods a self-supervised contrastive learning framework that learns
+ for binary classification tasks. Perhaps most strikingly, representations for intrusion detection using data augmentaon the recent CICIoT-2023 dataset, which contains 33 tions and contrastive loss, without label supervision during
+ attacks across 7 different categories, we demonstrate that the pretraining stage. However, unlike our approach, these
+ our method achieves a detection accuracy comparable methods are typically trained on a mixture of normal and
+SHAFIR et al.: EXPLAINABLE ANOMALY DETECTION IN NETWORK TRAFFIC USING NORMALIZING FLOWS 1207
+
+anomalous samples, relying on their presence in the training
+data to identify structural irregularities. In contrast, our model
+is trained exclusively on clean benign traffic.
+ Normalizing Flows for Anomaly Detection. NF have
+received attention in the field of anomaly detection, particularly due to their capability to model complex probability
+distributions. Various studies in fields other than network
+traffic detection have utilized NF for anomaly detection, producing promising outcomes. Gudovskiy et al. [27] proposed Fig. 1. NF Key Idea Illustration. The left figure is the density function of the
+CFLOW-AD, which employs conditional NF for anomaly source pZ (z). The right figure is the density function of the target distribution
+ pX (x).
+detection with localization. CFLOW-AD characterizes the
+distribution of normal network-based features and calculates
+precise data likelihoods of the examined features, demonstrat- are a powerful framework in ML for constructing flexible
+ing faster and more compact performance compared to earlier probability distributions by transforming a simple base dismodels. Yet, it requires a specialized design that is distinct tribution through a series of invertible mappings.
+from standard conditional NF models. While in the past, flow-based generative models have gained
+ Yu et al. [28] introduced FastFlow, a detection technique that less attention in the research community compared to GANs
+extends conventional NF to two-dimensional space. Initially, a and VAEs, they have become popular recently [32], and have
+feature extractor gathers visual features from normal samples, been used in various applications such as speech processing
+which are then input into a 2D flow model to estimate the prob- (e.g., NVIDIA WaveGlow [33]), image generation (e.g., Opeability distribution. FastFlow shows enhanced accuracy and nAI Glow [34]), and reinforcement learning [35].
+efficiency over previous methods. Dias et al. [29] developed The key idea is to represent a complex target distribution
+an unsupervised density estimation approach for trajectory pX (x) as the result of applying a series of invertible transforanomaly detection using NF. They applied RealNVP and mations to a simple base distribution pZ (z), such as a standard
+Masked Autoregressive Flow (MAF) to model trajectory data normal distribution (see Figure 1).
+and identify anomalies, with their experimental results show- Consider a random variable x ∈ RD with a complex
+ing that NF outperform traditional density-based methods such distribution pX (x) that we aim to model. NF construct a
+as Local Outlier Factor (LOF) and Gaussian Mixture Models mapping f such that x = f (z), where z is a latent variable
+(GMM). Ryzhikov et al. [30] proposed a model-agnostic with a known and simple distribution pZ (z). The mapping f
+anomaly detection process based on NF, addressing class- is chosen to be invertible, with an inverse f −1 , allowing us to
+imbalanced classification by integrating existing anomalous express z as z = f −1 (x). To compute the density pX (x) under
+samples during training and reconfiguring one-class classifi- the transformation f , we use the change of variables formula.
+cation as two-class classification. The experimental findings Thus, we get
+indicated that NFAD surpassed existing anomaly detection  −1 
+methods. ∂f (x)
+ pX (x) = pZ (z) det . (1)
+ Concurrently to us, Dang et al. [9] proposed a three-stage ∂x
+framework that uses only normal traffic data to generate
+pseudo-anomaly samples. Their approach also involves the use Since z = f −1 (x), we can rewrite this as:
+of NF to generate synthetic anomalous samples, and training 
+ ∂f (z)
+  −1
+a supervised classifier to distinguish between normal and pX (x) = pZ (f −1 (x)) det . (2)
+ ∂z
+pseudo-anomaly samples. They show state-of-the-art performance on several datasets. However, calculating the Jacobian determinant of f −1 directly
+ Our work differs from [9] in several key aspects. Firstly, can be challenging. Thus, we use the fact that:
+while their research addresses encrypted traffic binary classifi-  −1    −1
+cation, our work addresses network intrusion detection of more ∂f (x) ∂f (z)
+ det = det . (3)
+than 35 different attacks across two IDS and DDoS datasets. ∂x ∂z
+Secondly, their method uses full packet information, including To facilitate computation, especially in a ML context, it is
+payload data, whereas we rely solely on flow header statistics. common to work with the natural logarithm of the densities,
+Thirdly, their approach incorporates a supervised classifier for which transforms the products into sums, simplifying the
+detecting anomalies, whereas we utilize the log probability of gradients computation. Thus, the log-density is given by:
+NF to identify anomalous traffic. For a fair comparison we  
+also employed the Tor dataset used by [9] and we provide a −1 ∂f (z)
+ log pX (x) = log pZ (f (x)) − log det . (4)
+comparative analysis of the results. ∂z
+ NF are typically constructed by composing multiple simple
+ III. P RELIMINARIES
+ invertible transformations, each contributing to the overall
+ Normalizing flows, which gained prominence through the flexibility of the model. Let
+work of Rezende and Mohamed [8] in variational inference,
+and Dinh et al. [31] for their application in density estimation, f = fK ◦ fK−1 ◦ · · · ◦ f1 (5)
+1208 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+be a composition of K invertible transformations fk . The log- local explanations to understand why certain anomalies deviate
+density transformation through a sequence of flows is then from normal traffic patterns. By focusing on local Shapley
+given by: values, we can pinpoint the specific features that contribute
+ K   most significantly to an anomaly, enhancing our ability to
+ X ∂fk (zk−1 ) diagnose and respond to unusual network behaviors.
+ log pX (x) = log pZ (z0 ) − log det , (6)
+ ∂zk−1 IV. P ROPOSED M ETHOD
+ k=1
+ −1
+where zk = fk (zk−1 ) for k = 1, . . . , K and z0 = f (x). We propose a novel approach using bidirectional NF to
+ In practice, the choice of transformations fk is critical for learn the distribution of normal network traffic, and then use
+ensuring that the flow is both expressive and computationally its normalizing direction, which is essentially a probability
+efficient. Common choices include affine coupling layers, density function, to distinguish between traffic anomalies and
+autoregressive flows, and more complex neural network-based normal behavior.
+transformations. Each transformation must be designed to A. Data Processing and Formulation
+allow efficient computation of the determinant of the Jacobian For all input network traffic data, we consider only the
+and its inverse. header information at the flow level. The features we use
+ By leveraging these transformations, NF can model highly are aggregated flow statistics such as duration, packet size
+complex data distributions while maintaining tractable density statistics, inter-arrival times (IAT), and network and transport
+estimation and sampling capabilities. This makes them partic- layers characteristics (e.g., flag counts and window size) for
+ularly well-suited to tasks such as anomaly detection, where each direction of the flow traffic. The data is then represented
+exact likelihood evaluation is crucial. as a two-dimensional matrix X with N rows and D columns,
+ Shapley values. Based on cooperative game theory, Shapley X = (x1 , x2 , . . ., xN )> , where each row xi ∈ RD is a vector
+values [10] provide a way to fairly distribute the “payout” (in of D features representing a flow sample. Each sample has a
+our context, feature importance) among the features of a model label yi where yi ∈ {0, . . . , C}, with 0 representing a normal
+based on their contribution to the model’s predictions. They traffic label, and yi representing an anomaly class (e.g., attack
+are used to interpret complex ML models by assigning an vector or traffic category depending on the classification task).
+importance value to each feature reflecting its contribution to Since our model relies only on normal traffic to estimate the
+the prediction. likelihood function, our classifier is trained only with samples
+ The Shapley value for a feature is calculated as the average where yi = 0. Thus, class imbalance issues, which exist in all
+marginal contribution of that feature across all possible subsets datasets that we evaluate, do not impact our proposed model’s
+of features. This ensures a fair distribution of importance, operation. We later show how we handle the class imbalance
+adhering to properties such as efficiency (the total importance in the testing phase. We also remove any features related to
+is distributed among features), symmetry (features that con- ports, IP addresses, or absolute timestamps, as they might be
+tribute equally receive equal values) and additivity (the sum dependent on the setup on which the dataset was created or
+of the individual contributions equals the total contribution of might have artifacts with the flow label.
+the features) [36]. Feature Normalization. NF require feature normalization.
+ Formally, the Shapley value for a feature i in a model with We use z-score normalization, where the features are norn features is defined as the weighted average of the marginal malized to have a mean of zero and a standard deviation of
+contributions of i across all possible subsets of features. Let one. It is given by zi = (xi − µ)/σ where µ and σ are the
+S be a subset of features not including i, and v(S) represent mean and standard deviation of the features, respectively. This
+the value function (e.g., model output) for the subset S. The normalization method is chosen over alternatives such as min-
+Shapley value φi for feature i is given by: max scaling or max-abs scaling due to its effectiveness in
+ X |S|!(n − |S| − 1)! handling outliers and its common use in statistical modeling.
+ φi = [v(S ∪ {i}) − v(S)] ,
+ n!
+ S⊆N \{i}
+ B. Using NF for Anomaly Detection
+where N is the set of all features, n = |N |, and v(S ∪ {i}) − Training Phase. During the training phase, the input data
+v(S) quantifies the contribution of i when added to subset S. is the matrix X that contains a set of normal network traffic
+This formulation ensures fairness by adhering to the properties samples only. The NF framework optimizes and learns the
+mentioned above. Due to the exponential complexity of calcu- parameters of the transformation that suit the normal traffic
+lating Shapley values for all subsets, efficient approximations data distribution we are trying to model, with the objective
+are often employed in practice. of maximizing the log-likelihood of the input X, as given by
+ Shapley values can provide both global and local explana- Equation (6).
+tions. Global explanations offer an overall importance ranking Loss Function. The equivalent minimization problem to
+of features for the entire dataset, helping to understand which maximizing the log-likelihood can be formulated as minimizfeatures are generally most influential. Local explanations, on ing the negative log-likelihood. Therefore, the loss function
+the other hand, provide feature importance for individual pre- for training our NF model is defined as:
+dictions, offering insights into why a specific prediction was N
+made by highlighting which features had the most influence X
+ L=− log pX (xi ), (7)
+on that particular outcome. We are particularly interested in
+ i=1
+SHAFIR et al.: EXPLAINABLE ANOMALY DETECTION IN NETWORK TRAFFIC USING NORMALIZING FLOWS 1209
+
+Algorithm 1 Anomaly Detection Using NF been found to be unsuitable and, in certain cases, even
+ counterproductive.
+ Our aim is not to provide an exhaustive theoretical or empirical study on the use of Shapley values in feature selection.
+ Instead, we propose an approach that leverages Shapley values
+ to guide feature selection while avoiding the computational
+ burden of an exhaustive search through the entire model space
+ of 2F subsets.
+ Feature Selection Approaches. Our technique focuses on
+ local feature Shapley values, computed using small subsets of
+ samples, rather than relying on global Shapley values across
+ the entire model. We explore two distinct feature selection
+ approaches tailored to different settings:
+ Few-Shots: This semi-supervised method for feature selection leverages a limited set of labeled anomalies. Using this
+ set, we compute the Shapley values for each sample prediction
+ on a trained NF model. The marginal contribution of a feature
+ is evaluated based on its impact on the detection score (log
+ probability) for anomaly samples compared to normal samples.
+ Intuitively, an effective discriminative feature should exhibit a
+ negative marginal contribution to anomaly detection scores and
+ a positive marginal contribution to normal detection scores.
+ We employ the following forward feature selection procedure to evaluate features in the dataset:
+ 1) Initialize a base set of features S.
+ 2) For each feature f ∈ F \ S:
+ • Train a Normalizing Flow detection model N Ff =
+ N F (S ∪ {f }) using the training set.
+ • Compute Cf = contribution(f, N Ff , aset , nset ).
+ 3) Select the top k features based on their Cf scores.
+ Here, aset refers to the limited set of anomalies, and nset
+ is a similarly sized set of normal samples. We experimented
+where N is the number of samples in X, and xi is the with various initial sets S and contribution metrics to evaluate
+feature vector of the i-th sample. This loss function encourages the distribution of Shapley values across aset and nset . To
+the model to increase the probability of observing the given determine the most appropriate S and contribution metric, we
+samples under the modeled distribution, effectively fitting the analyzed the correlation between Shapley-based contribution
+normal traffic profile, as outlined in the T RAIN F LOW function scores and the NF model’s detection performance on a valiof Algorithm 1. dation set, measured using the AUROC metric.
+ As detailed in Section V, selecting S with one or more
+C. Feature Selection discriminative features hindered comparisons of marginal con-
+ Feature selection techniques can be categorized into two tributions for tested features. The primary issue is that the
+main groups: Shapley values of tested features are obscured by interactions
+ • Wrapper Methods: These evaluate subsets of features by with existing features in S. In such cases, each trained NF
+ training and validating models on different combinations, model effectively represents a different “game” with unique
+ optimizing performance metrics. characteristics, in which the Shapley values are not necessarily
+ • Filter Methods: These rely on statistical properties, such comparable. Consequently, Shapley values vary significantly
+ as correlation or mutual information, to rank and select across normal and anomaly samples and across trained models.
+ features. To address this, we tested S containing a single “dummy”
+ We have developed and examined several novel wrapper feature with controlled distributions. As demonstrated in our
+feature selection techniques that integrate Shapley values with results, using a random noise feature in S and training NF
+the log-likelihood function, which serves as the evaluation models with the noise feature alongside the tested feature
+metric for our NF model. While Shapley values have become provides a method that clearly distinguishes good and poor
+a cornerstone in the field of explainable artificial intelligence discriminative features.
+(XAI), their typical application is to attribute feature impor- Transductive: In this approach, we take an untagged samtance for a given model or to explain individual predictions, pling of both normal and anomaly samples, without their
+rather than being explicitly used as a tool for feature selection. labels. By combining the log-likelihood function with Shap-
+Furthermore, as discussed in some studies [36], the use of ley values, we identify features that exhibit high variance
+Shapley-based attribution methods for feature selection has in Shapley value distributions. A discriminative feature will
+1210 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+ TABLE I
+ L IST OF ATTACKS AND N UMBER OF S AMPLES IN CICI OT-2023 DATASETS
+
+typically show both relatively high and low Shapley values, TABLE II
+indicating significant impacts on the likelihood computations L IST OF ATTACKS AND N UMBER OF F LOW I NSTANCES IN THE
+for anomalies compared to normal traffic. For each feature, CICIDS2017 DATASET
+we compute the mean absolute Shapley value for all samples
+in the set. This overall score, termed the Transductive Shapley
+Value, is expected to be relatively high for features that can
+effectively separate normal samples from anomalies:
+ N
+ 1 X
+ Transductive Shapley Valuei = |φi,j |,
+ N j=1
+
+where φi,j is the Shapley value of the i-th feature for the j-th
+sample and N is the total number of samples. Feature selec- TABLE III
+tion experiments results for both Few-Shots and Transductive S UMMARY OF T OR VS N ON -T OR IN ISCXT OR 2016
+approaches are provided in Section V.
+
+D. Likelihood-Based Detection
+ Once the NF model is trained using normal network traffic,
+we utilize the corresponding likelihood function to distinguish
+between unseen anomalies and normal samples. The key idea
+ sification.1 This diverse selection allows us to compare our
+is that normal samples should have high likelihoods under
+ work with a broader set of state-of-the-art anomaly detection
+the learned distribution, while anomalies should have low
+ methods including various generative models.
+likelihoods.
+ CICIoT-2023: The CICIoT-2023 [11] dataset is designed
+ During the detection phase, we calculate the log-likelihood
+ to evaluate intrusion detection systems (IDS) within IoT enviof each incoming network traffic sample using the trained
+ ronments. The dataset provides more than 45 million attack
+model. The decision to classify a sample as normal or anomaflows and more than one million normal traffic flows, capturing
+lous is based on a predefined threshold. The detection function
+ a wide variety of attacks categorized into seven classes:
+f is defined as:
+ ( Distributed Denial of Service (DDoS), Denial of Service
+ Normal log pX (x) > threshold (DoS), Reconnaissance, Web-based, Brute Force, Spoofing,
+ f (x) = and Mirai. More details about the specific attacks included
+ Anomalous log pX (x) ≤ threshold
+ in the dataset can be found in Table I. All state-of-the-art
+The threshold value is an important parameter that determines classification methods evaluated on this dataset in the literature
+the sensitivity of the detection system. It can be selected are supervised.
+based on the desired trade-off between false positive and false
+negative rates, often determined through empirical analysis or 1 Throughout this paper, we refer to anomalous samples that are labeled
+validation on a labeled dataset. as malicious in the dataset as “attacks.” Our anomaly detector is trained
+ exclusively on traffic deemed “normal” — typically the benign or majority
+ V. E VALUATION class — and flags deviations from this distribution. In the CICIDS2017
+ and CICIoT-2023 datasets, the training set consists of benign traffic, and
+A. Datasets anomalous samples correspond to labeled attacks. In the ISCXTor2016 dataset,
+ the model is trained on Non-Tor traffic, and Tor traffic is treated as anomalous.
+ We incorporate two datasets focused on intrusion detection, While some anomalies may be benign in practice (e.g., rare but legitimate
+along with an additional dataset for encrypted traffic clas- activity), our terminology reflects dataset-specific labeling conventions.
+SHAFIR et al.: EXPLAINABLE ANOMALY DETECTION IN NETWORK TRAFFIC USING NORMALIZING FLOWS 1211
+
+ ISCXTor2016: The ISCXTor2016 [12] dataset focuses on In these considerations, we follow similar balancing and
+the classification of encrypted traffic, particularly Tor network sampling schemes used for testing by other works that evaluate
+traffic. This dataset includes both Tor and non-Tor traffic their binary classification models using CICIoT-2023 [11],
+(see Table III), capturing various internet activities such as [37], CICIDS2017 [18], and ISCXTor2016 [9]. This approach
+browsing, streaming, and file transfers. It contains detailed ensures proper baselines for comparing the performance and
+labels indicating the type of application, allowing for the accuracy results of our method to these state-of-the-art classievaluation of traffic classification methods in an encrypted fication models.
+context. The dataset emphasizes the challenge of identifying We conducted experiments five times using different random
+and classifying traffic when encryption is used to obfuscate seeds and reported the mean Area Under the Receiver Operthe data. ating Characteristic Curve (AUROC). Additionally, for the
+ Using time-based features such as flow duration and inter- CICIoT-2023 dataset, we compared our method to supervised
+arrival times, ISCXTor2016 aids in distinguishing between methods. Therefore, we also reported the F1 score, Recall,
+different types of traffic. This focus on temporal character- Precision, and Accuracy, using a threshold that maximizes
+istics is crucial for the effective analysis and classification of the True Positive Rate (TPR) minus the False Positive Rate
+encrypted traffic, where traditional packet inspection methods (FPR).
+are not feasible. For AUROC-based evaluations, no threshold tuning is
+ CICIDS2017: The CICIDS2017 [13] dataset is a compre- required. However, when reporting threshold-dependent methensive benchmark for evaluating intrusion detection systems. rics such as Precision, Recall, F1-score, and Accuracy, we
+This dataset captures a wide range of attack scenarios, includ- select the decision threshold using a separate validation set.
+ing DoS, DDoS, brute force, XSS, SQL injection, infiltration, This validation set is completely disjoint from both the
+port scans, and botnet attacks as detailed in Table II. Collected training and test sets and contains 1,000 normal and 1,000
+over five days, the dataset includes detailed labels and meta- anomaly samples—–amounting to 10% of the test set size.
+data for each instance, facilitating a thorough evaluation of The final metrics are then computed on the fully held-
+IDS techniques. out test set comprising 10,000 normal and 10,000 anomaly
+ The dataset contains both raw network traffic and extracted flows.
+features, facilitating different levels of analysis. Flow-based We also validated that performance metrics remained confeatures include metrics such as duration, packet sizes, and sistent when evaluated on the full datasets. However, for
+various counts of flags and protocol-specific characteristics. consistency and comparability with prior works, we report
+This extensive set of features, combined with the variety performance on downsampled test sets as described.
+of attack types, makes CICIDS2017 a valuable resource for Implementation Details. We train our NF model using
+developing and testing advanced intrusion detection systems. PZFlow [38]. The models are trained for 100 epochs with
+While the CICIDS2017 dataset has been extensively evaluated a batch size of 1024. XGBoost [39] classifiers which we
+and studied, there are limited results evaluating this dataset use as benchmarks (See Section V-D), are trained with
+using a binary classifier trained solely on normal traffic. To learning rate of 0.1, using 10 trees, each has a 10 depth
+compare our method with state-of-the-art techniques, we eval- limit. To estimate Shapley values for any model, we make
+uate DoS/DDoS attacks (Wednesday traffic, i.e., DoS Hulk, use of the open-source code provided by the authors of
+DoS Goldeneye, Slowloris, and Slowhttptest) similar to the [10].
+evaluation in [18] which utilized a semi-supervised, memory- We release an implementation of our proposed method. The
+augmented auto-encoder approach for anomaly detection on code is available at: https://github.com/lshafir/NF-anomaly-
+CICIDS2017, and we compare our results to their approach. detection
+
+B. Testing Methodology
+ We consider a binary classification model that classifies C. Feature Selection Experiments Results
+each input flow as Normal or Anomalous. The datasets we Here we present experimental results for the two Shapley
+use are highly imbalanced. In CICIoT-2023, there are signifi- based feature selection approaches introduced in Section IV-C.
+cantly more attack flow instances than benign flows, while in Few Shots (Semi-Supervised) Approach. Given a dataset
+ISCXTor2016 and CICIDS2017, there are significantly more and an input set of features, the Few Shots feature selection
+Non-Tor and benign flow instances than Tor and attack flows, technique leverages a limited number of anomaly samples and
+respectively. Shapley value distributions to identify features with strong
+ While class imbalance does not impact the training phase, discriminative power.
+it does affect testing. For each dataset, we combine all normal We experimented with the wrapper forward feature selection
+traffic together and all malicious traffic together (in the case of procedure using different combinations of base features S and
+attack datasets; for the Tor dataset, we combine all Tor traffic various Shapley distribution contribution metrics.
+applications), then shuffle them. For each dataset, we randomly To evaluate this procedure, we analyzed the correlation
+sampled 20,000 normal flows and 10,000 anomalous flows. We between Shapley value contributions on anomaly and normal
+then split the normal flows into training (10,000 samples) and samples with the detection performance of the trained models.
+testing (10,000 samples) sets. For each experiment, we followed these steps:
+1212 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+ 1) Select a base set of features S. TABLE IV
+ 2) For each feature not in S, train a NF model N Ff using S PEARMAN C ORRELATION B ETWEEN THE AUROC S CORE AND THE
+ S ∪ {f }. 90 TH P ERCENTILE OF SHAP VALUE D ISTRIBUTIONS ACROSS T ESTED
+ F EATURES IN CICIDS2017. T HE R ESULTS C OMPARE T WO
+ 3) Compute Shapley value distributions on small sample BASE F EATURE C ONFIGURATIONS : A S YNTHETIC R ANDOM
+ sets of k anomaly samples and k normal samples. N OISE F EATURE V ERSUS A D ISCRIMINATIVE F EATURE
+ 4) Evaluate the detection performance of N Ff on the full (P acket Length V ariance) U SED AS THE BASE S ET S
+ testing set to obtain an AUROC score.
+ 5) Compare the observed Shapley value distributions with
+ the detection AUROC scores of the models.
+ We set k = 20 in the following experiments. This
+choice reflects the few-shot learning approach, which typically
+involves learning or making inferences from a very limited
+number of examples (commonly 1 to 100 samples per class).
+The goal is to evaluate whether a model or interpretability method can extract meaningful information from scarce
+labeled data. This value is supported by an ablation study we
+conducted, evaluating the impact of different few-shot sample
+sizes, as described later in §V-E.3. notably different results. For this experiment, we selected S
+ Note that the NF models are trained solely on normal as a single random noise feature sampled uniformly between
+samples and use a probability (likelihood) score during detec- −1 and 1, adding it to the training/testing sets and the
+tion. A feature’s Shapley value for an individual prediction limited sets of 20 anomaly (attack) and normal (benign)
+represents the impact of that feature on the output detection samples.
+score. Thus, an effective discriminative feature should exhibit Figures 2 and 4 present the results of this experiment using
+a negative marginal contribution to anomaly sample detections the 20 anomaly and 20 normal samples, respectively. Similar
+and a positive marginal contribution to normal sample detec- to the earlier setup, we tested over 50 features and provide
+tion scores. results for the 10 features with the highest AUROC detection
+ While we explored various initial subsets of features, our scores (rightmost) and the 10 features with the lowest AUROC
+results revealed that including both strong and weak discrim- detection scores (leftmost). As shown in Figure 2, features
+inative features in the base set S caused varying interactions with relatively high AUROC results exhibit significantly negwith tested features, obscuring their individual contributions. ative Shapley value distributions (on the 20 anomaly samples),
+We experimented with several absolute and relative metrics for with negative median values. In contrast, features associated
+evaluating Shapley distributions but observed that interactions with relatively low AUROC results either displayed positive
+among features in S significantly affected the interpretability Shapley value distributions for anomaly samples (indicating
+of results. insufficient discrimination) or exhibited no significant contri-
+ As an example, Figure 3 shows results from an experiment bution compared to the random noise feature. This suggests
+where we selected a single feature, Packet Length Variance, that these features have minimal negative or positive impact on
+as the base set S. We tested over 50 other features from the detection.
+CICIDS2017 dataset, each trained alongside the base feature. Importantly, the random noise feature maintained an
+The box plot illustrates the 10 features with the highest insignificant Shapley value distribution (centered around zero
+AUROC scores (rightmost) and the 10 features with the lowest with low standard deviation), enabling meaningful compar-
+AUROC scores (leftmost). For each feature, the AUROC score isons between the Shapley value distributions of the tested
+of the corresponding model is presented above the feature features.
+name. The Shapley value distributions for the base feature and To quantify this observation, we computed the Spearman
+the tested feature are displayed in the top and bottom areas of correlation between the AUROC score of models trained
+the plot, respectively. with each feature and the 90th percentile of its SHAP value
+ From the results, we observed two key findings: (i) the distribution, across sets of k = 20 samples. We performed
+Shapley value distribution of the base feature varied signifi- this analysis on both normal and anomaly samples from the
+cantly across trained models, even when evaluated on the same CICIDS2017 dataset.
+set of anomaly (attack) samples, and (ii) no clear correlation Table IV summarizes the correlation results for using the
+was observed between the Shapley value distributions of the random noise as the base feature versus using a discriminative
+tested features and the model detection performance. feature such as Packet Length Variance as the base feature.
+ Given these results, we sought a “neutral” feature to serve As shown, there is a significant positive correlation between
+as a baseline for evaluating the Shapley value contributions SHAP distributions and classifier performance when using the
+of other features. We experimented with a single “dummy” random noise baseline.
+feature with controlled distributions. While a random feature We observed similar results when performing the same
+with a normal distribution exhibited similar behavior to the experiment on the ISCXTor2016 dataset, with the random
+earlier experiments, using a random noise feature produced noise feature as the base feature (see Figure 5).
+SHAFIR et al.: EXPLAINABLE ANOMALY DETECTION IN NETWORK TRAFFIC USING NORMALIZING FLOWS 1213
+
+Fig. 2. The box plot visualizes the distribution of marginal Shapley values computed on 20 anomaly samples for various features from the CICIDS2017
+dataset, each trained alongside a random noise feature. The plot demonstrates a clear correlation between features with predominantly negative Shapley value
+distributions and detection performance on the full testing set. The rightmost ten features have the highest AUROC scores, while the leftmost ten features
+have the lowest AUROC scores. In total, over 50 different features were evaluated.
+
+Fig. 3. The box plot visualizes the distribution of marginal Shapley values computed on 20 anomaly samples for various features from the CICIDS2017
+dataset, each trained alongside the ‘Packet Length Variance’ feature. The plot illustrates how the marginal Shapley values of ‘Packet Length Variance’ interact
+differently with the tested features across various trained models.
+
+Fig. 4. The box plot visualizes the distribution of marginal Shapley values computed on 20 benign samples for various features from the CICIDS2017 dataset,
+each trained alongside a random noise feature. The plot illustrates how well each feature aligns with and represents the benign traffic characteristics in the
+trained models.
+
+ These results support the use of summary statistics of anomaly and normal samples—as a practical criterion for
+SHAP value distributions—computed on a small number of ranking features. For example, we found that the 90th quantile
+1214 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Fig. 5. The box plot visualizes the distribution of marginal Shapley values
+computed on 20 anomaly samples for various features from the ISCXTor2016
+dataset, each trained alongside a random noise feature. The plot demonstrates a
+clear correlation between features with predominantly negative Shapley value
+distributions and AUROC score on the full testing set.
+
+of SHAP values for anomaly and benign samples correlates Fig. 6. AUROC value of the ROC curve of each NF model that was trained
+ on a pair of features using the ISCXTor2016. The ROC curve of the ‘Bwd
+strongly with the AUROC scores of corresponding models. IAT Std’ and ‘Active Max’ features achieves the best AUROC score of 0.85.
+This enables effective identification of discriminative features
+for anomaly detection, and facilitates the exclusion of features TABLE V
+that exhibit minimal or misleading contributions to the detec- O UR S HAPLEY S CORES FOR D IFFERENT F EATURES
+tion task.
+ Transductive Approach. In the second approach, we have
+a mixed set of random samples without their labels. Since
+we do not know their labels, we cannot compare Shapley
+values of anomalies and normal samples across this set. For
+each feature, we compute the mean absolute Shapley value
+for all samples in the set. This overall score, termed the
+Transductive Shapley Value, is expected to be relatively high
+for features that can effectively separate normal samples from capturing the underlying characteristics of the data, even
+anomalies: without labeled anomalies.
+ N
+ Figure 6 illustrates the ROC curves for various pairs of
+ 1 X features. The AUROC values for each pair are annotated
+ Transductive Shapley Valuei = |φi,j |
+ N j=1 in the legend. Notably, the pair (‘Bwd IAT Std’, ‘Active
+ Max’) achieves the highest AUROC score of 0.85. This
+where: aligns with our Shapley score analysis, further validating
+ • φi,j is the Shapley value of the i-th feature for the j-th the effectiveness of these features in distinguishing norsample. mal traffic from Tor traffic. Other pairs, such as (‘Flow
+ • N is the total number of samples. Packets/s’, ‘Bwd IAT Std’) and (‘Idle Min’, ‘Bwd IAT
+ Std’), also show strong performance with AUROC scores of
+ Here, we demonstrate the performance of our feature
+ 0.80.
+selection approach on the ISCXTor2016 dataset. We selected
+ Our analysis using the Transductive approach suggests that
+a set of five features: ‘Bwd IAT Std’, ‘Active Max’,
+ some features (e.g., ‘Bwd IAT Std’ and ‘Active Max’) have the
+‘Flow Packets/s’, ‘Idle Min’, ‘Flow IAT Max’ which are
+ potential to contribute significantly to effective anomaly detecnot highly correlated, and tested the AUROC results of
+ tion in the ISCXTor2016 dataset. The ROC curves strengthen
+training a normalizing flow model using combinations of
+ these findings, demonstrating high AUROC scores for pairs of
+two features out of this set. The results are shown in
+ features that include ‘Bwd IAT Std’.
+Figure 6.
+ Additionally, we trained a NF model using these five features, and calculated both Transductive Shapley scores, with a D. Performance Evaluation Results
+random sampling of 100 Tor samples and 100 non-Tor samples ISCXTor2016: In Table VI, we compare the AUROC
+out of the testing sets. of our method with various state-of-the-art methods on the
+ The Transductive Shapley Scores are presented in Table V. ISCXTor2016 dataset. We compare our results against state-
+The feature ‘Bwd IAT Std’ stands out with the highest score of-the-art anomaly detection methods, including distribution
+of 1.44, followed by ‘Flow IAT Max’ with a score of 1.04. learning-based methods [43], [44], [45], reconstruction-based
+This approach confirms the importance of these features in methods [40], [44], knowledge distillation-based methods [41],
+SHAFIR et al.: EXPLAINABLE ANOMALY DETECTION IN NETWORK TRAFFIC USING NORMALIZING FLOWS 1215
+
+Fig. 7. Our NF detection method results in histograms showing the distribution of normal and anomaly samples in the testing sets of the three datasets we
+evaluated.
+
+ TABLE VI TABLE VII
+AUROC C OMPARISON AGAINST S TATE - OF - THE -A RT A NOMALY D ETEC - AUROC P ERFORMANCE OF O UR M ETHOD AGAINST S TATE - OF - THE -A RT
+ TION M ETHODS [9] ON THE ISCX T OR AND N ON -T OR DATASETS M ETHODS ON CICIDS2017 DATASET
+
+ an ensemble of two NF models. The first model is trained
+ using the ‘Flow IAT Std’ and ‘Flow Bytes/s’ features, while
+ the second model is trained using the ‘Flow Packets/s’ and
+ ‘Bwd IAT Max’ features. When using an ensemble of more
+ than one NF-based classifier, a flow is classified as an anomaly
+[47], normalization flow-based methods [27], [28], and mem- only if all classifiers in the ensemble detect it as an anomaly.
+ory matching-based methods [42] as reported by Dang et To calculate the joint ROC and the corresponding AUROC,
+al. [9]. In addition, we compare our results with Kitsune we normalize the detection thresholds and select the minimum
+[48] by replicating their method using the publicly available score for each sample. It is noteworthy that the best AUROC
+implementation provided by the authors. result for a single NF classifier is 0.851, achieved using only
+ As shown in Table VI, our method achieves the highest the ‘Bwd IAT Std’ and ‘Active Mean’ features.
+AUROC of 0.8731, significantly outperforming the state-of- CICIDS2017: To evaluate the effectiveness of our approach
+the-art methods. Specifically, our method outperforms the on the CICIDS2017 dataset, we compare our results against
+recent work by Dang et al. [9], which also utilizes NF for several competitive methods, including OCSVM (one-class
+the generation of synthetic anomalies. Note that both flow- SVM), AE (autoencoder), MemAE [18] (memory-augmented
+based methods of [9] and our method exceed the highest autoencoder), SparseMemAE [18], and Kitsune [48] (ensemresult among the other state-of-the-art methods by 8.12% and ble of AEs). It is important to note that OCSVM, AE
+11.6%, respectively. A visual representation of the anomaly and Kitsune are trained using only normal samples, while
+score distribution of our method on ISCXTor2016 appears MemAE and SparseMemAE utilize a limited number of
+in Figure 7b. Here, the non-Tor and Tor classes are less attack samples, employing a semi-supervised approach. The
+separated than the normal and attack traffic on CICIoT-2023 comparison results are presented in Table VII. As shown,
+(see Figure 7a). However, these results are still better than the OCSVM model exhibits low AUROC performance against
+those achieved by other methods. DDoS attacks, while the AE-based models demonstrate overall
+ Our method’s best results are even higher, with an AUROC high performance. Our proposed method outperforms the AEof 0.932, when using only two features, one of which is the based methods, achieving an AUROC of 0.93 for DDoS attack
+‘Protocol Type’ field of the flow. However, since we found this detection on the CICIDS2017 dataset.
+feature as highly correlated with the Tor class, we focused on Our best results were obtained using a NF model trained
+experiments excluding the ‘Protocol Type’ feature to ensure on a set of five features: ‘Bwd Packet Length Mean’, ‘Fwd
+unbiased evaluation. The best reported results are achieved by Packets/s’, ‘ACK Flag Count’, ‘Total Length of Bwd Packets’,
+1216 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+ TABLE VIII TABLE IX
+P ERFORMANCE OF O UR M ETHOD AGAINST S TATE - OF - THE -A RT M ETH - D ETECTION P ERFORMANCE W HEN T RAINING AND T ESTING ON D IFFER -
+ ODS ON CICI OT-2023 DATASET. O UR M ETHOD I S U NSUPERVISED , ENT C OMBINATIONS OF CICIDS2017 (B ENIGN AND C YBERATTACKS
+ T RAINED U SING N ORMAL T RAFFIC O NLY, W HILE THE C OMPARED T RAFFIC DATASET ) AND CICDD O S2019 (B ENIGN AND DD O S
+ M ETHODS A RE S UPERVISED M ETHODS ATTACKS ) DATASETS
+
+ While the CICIoT-2023 and CICIDS2017 datasets both
+ include benign samples, their underlying feature sets differ
+ significantly. Therefore, we conduct cross-dataset generalizaand ‘Flow Duration’. These features encompass TCP flag tion experiments using two datasets with comparable feature
+counts, packet length distribution in the downstream direction, sets: CICIDS2017 — one of the three datasets evaluated in
+and attack packets’ rate in the upstream direction. this work — and CICDDoS2019, an additional dataset with
+ CICIoT-2023: In Table VIII, we present the performance a comparable feature set. Specifically, we train the model on
+of our method compared to various state-of-the-art methods the benign traffic of one dataset and evaluate it on the benign
+on the CICIoT-2023 dataset. To the best of our knowledge, traffic of the other, ensuring that the testing benign samples
+our method is the first to evaluate the CICIoT-2023 dataset are entirely unseen during training.
+using only normal traffic data for training. Thus, all compared Table IX presents the results across different combinabaseline methods are supervised. tions of training and testing datasets. As shown, performance
+ Ghorbani et al. [11] applied several ML methods to eval- slightly degrades when generalizing across datasets compared
+uate the CICIoT-2023 dataset. Their results indicated that to within-dataset evaluation. However, the detection results
+supervised methods like Adaboost, Random Forest (RF), and remain consistently high, demonstrating that our method is
+Deep Neural Network (DNN) achieved high performance, robust in distinguishing between attacks and previously unseen
+with accuracy metrics exceeding 98%. Additionally, Khan et benign traffic.
+al. [37] reported high detection performance using Logistic 2) Using Additional XAI Methods: To evaluate the gener-
+Regression (LR). However, it is important to note that our NF ality of our proposed XAI-based feature selection framework,
+model, despite being unsupervised, achieves comparable or we investigate whether the few-shot approach—–originally
+higher results than these supervised methods. Furthermore, we formulated with SHAPLEY-based explainer—–can be applied
+implemented an XGBoost [39] classifier and trained it on two with other explanation methods.
+random sets of 10,000 benign samples (the same training set as In this experiment, we replace Shapley values
+our method) and 10,000 attack samples (supervised method). with LIME [49] (Local Interpretable Model-agnostic
+We then evaluated its performance using the same testing sets Explanations)—another widely used XAI method—and
+used in our experiments. repeat the few-shot feature selection procedure. Specifically,
+ In addition to the quantitative results, we also provide a we compute the importance scores of features for each
+visual representation of our method’s performance. As shown anomaly sample and analyze their relationship with classifier
+in Figure 7a, the histogram of the detection results illustrates performance. As in our original SHAPLEY-based method,
+the excellent capability of our NF model in distinguishing each feature is tested by training NF model on it alongside
+between normal and anomaly traffic on the CICIoT-2023 a neutral baseline feature (random noise), and the 90th
+dataset. percentile of its marginal importance values over a small set
+ Our NF model stands out as a highly effective unsupervised of 20 attack or normal samples is recorded. We then measure
+anomaly detection method. The results demonstrate that it the correlation between these values and the AUROC of the
+can achieve or exceed the performance of leading supervised classifier trained using each feature.
+methods, making it a valuable tool for intrusion detection in As shown in Table X, both SHAP and LIME yield sta-
+IoT environments. tistically significant positive correlations between importance
+ values and detection performance when the baseline is a
+ random noise feature. Conversely, when using a discriminative
+E. Ablation Study feature such as Packet Length Variance as the baseline, the
+ 1) Generalizing Across Datasets: In realistic network correlations become insignificant, indicating the impact of
+deployments, anomaly detection models are likely to encounter feature interactions on XAI-based comparisons. These results
+benign traffic patterns that were not present during training. To are consistent with the SHAPLEY analysis in §V-C.
+assess the robustness of our approach in such scenarios, we In addition, Figure 8 visually demonstrates that LIME yields
+evaluate its ability to distinguish malicious anomalies from similar explanation patterns to SHAP: features associated with
+previously unseen or rare benign traffic. high AUROC scores tend to have negative importance values
+SHAFIR et al.: EXPLAINABLE ANOMALY DETECTION IN NETWORK TRAFFIC USING NORMALIZING FLOWS 1217
+
+ TABLE X
+C OMPARISON B ETWEEN F EW-S HOTS F EATURE S ELECTION A PPROACH
+ U SING THE SHAP AND LIME XAI I MPORTANCE ATTRIBUTION
+ M ETHODS . W E C ALCULATE THE S PEARMAN C ORRELATION
+ B ETWEEN THE 90 TH Q UANTILE D ISTRIBUTIONS OF M ARGINAL
+ SHAP/LIME VALUES C OMPUTED ON 20 ATTACK S AMPLES
+ FOR E ACH F EATURE AND THE AUROC S CORE OF THE
+ C LASSIFIER U SING T HAT F EATURE
+
+ Fig. 9. Stability of few-shots feature selection results across varying sample
+ sizes.
+
+ Table XI and Figure 9 present the correlation results across
+ the different sample sizes. As shown, all evaluated values
+ of k, including the smallest sizes (e.g., k = 10), yield
+ consistently high and statistically significant correlations when
+ the base feature is a random noise feature. Conversely, when
+ using a strong discriminative feature such as Packet Length
+ Variance as the baseline, the correlations become negligible
+ or insignificant, regardless of sample size.
+ These findings confirm that our few-shots feature selection
+ framework remains effective even when applied to small sets
+ of labeled examples.
+
+ VI. E XPLAINABILITY
+ In this work, we are interested not only in enhancing
+ detection performance, but also in understanding what makes
+ a low likelihood sample an anomaly and how it deviates from
+Fig. 8. The box plot shows the distribution of marginal LIME values for 20 normal behavior. Thus, we combine the NF classifier with
+anomaly samples from CICIDS2017, each trained alongside a random noise
+feature. As in Fig. 2 (SHAP-based), features with predominantly negative
+ Shapley values, to provide statistically grounded explanations
+LIME value distributions correlate with high AUROC scores. for detected anomalies, potentially improving the root-cause
+ analysis of anomalous traffic.
+ While Shapley values can be used with a variety of methods,
+across the anomaly samples, while weak features exhibit such as Random Forests, Gradient Boosting Machines, and
+dispersed or positive distributions. This behavior supports our Neural Networks, treating them as models with unknown
+hypothesis that discriminative features produce more consis- internal logic, it attributes to each feature the change in the
+tent and interpretable attribution patterns when evaluated in expected model prediction when conditioning on that feature.
+isolation with a controlled baseline. This means that Shapley values essentially explain the model
+ 3) Ablating Few-Shots Sample Size: The Few-Shots feature prediction but not necessarily why a sample deviates from a
+selection technique leverages a limited number of anomaly set of samples statistically. Furthermore, the Shapley values
+samples and their corresponding SHAPLEY value distribu- are influenced by the internal mechanisms and nature of the
+tions to identify features with strong discriminative power. In model, meaning that the explanations may reflect the model’s
+this subsection, we ablate the size of the anomaly and normal complexity rather than the true cause of the deviation.
+sample sets used in this procedure to evaluate the impact of Here, we leverage the statistical nature of the NF likelihood
+different few-shot sample sizes on the stability and reliability predictions with Shapley values. This approach provides a staof the feature selection results. tistical importance measure to the Shapley values, producing
+ To this end, we repeat the procedure described in §V-C explanations that elucidate why a particular traffic sample is
+using varying sample sizes k ∈ {10, 20, 50, 100, 200} for both anomalous and how it deviates from normal patterns.
+anomaly and normal samples, drawn from the CICIDS2017 Simulation. We start with a comparison of using Shapdataset. For each value of k, we compute the Spearman and ley values with NF and two other methods: one supervised
+Pearson correlations (along with their associated p-values) (XGBoost) and another unsupervised (OCSVM). We create a
+between the AUROC score of each feature and the 90th simple simulation of normal and anomaly samples with two
+percentile of the marginal XAI values computed using SHAP. features: F1 and F2 .
+In addition, we replicate the same experiment using the LIME Figure 10 illustrates a set of normal samples (blue points)
+method as described in §V-E.2. and anomaly samples (red points). For a comparison, we
+1218 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+ TABLE XI
+C ORRELATION VALUES AND P -VALUES B ETWEEN THE 90 TH P ERCENTILE OF THE I MPORTANCE VALUE D ISTRIBUTIONS (F ROM SHAP AND LIME)
+ AND AUROC C LASSIFICATION S CORE , FOR T WO N EUTRAL F EATURES (R ANDOM N OISE AND PACKET L ENGTH VARIANCE ) ACROSS VARYING
+ S AMPLE S IZES
+
+ TABLE XII
+ C OMPARISON OF S HAPLEY VALUES ACROSS T HREE D IFFERENT M ETH -
+ ODS : XGB OOST, OCSVM, AND NF. T HE S HAPLEY VALUES I NDICATE
+ THE C ONTRIBUTION OF E ACH F EATURE TO THE P REDICTION OF
+ T HREE S AMPLES : P1 , P2 , AND P3 (S EE F IGURE 10), E ACH
+ W ITH T WO F EATURES , F1 AND F2 . P OSITIVE S HAPLEY
+ VALUES I NDICATE T HAT THE F EATURE C ONTRIBUTES
+ P OSITIVELY TO THE P REDICTION (N ORMAL ), W HILE
+ N EGATIVE VALUES I NDICATE A N EGATIVE C ON -
+ TRIBUTION (A NOMALY )
+
+Fig. 10. A simulation of normal and anomaly samples with two features.
+
+ this particular example, also affects the Shapley values of
+train two unsupervised classifiers (NF and OCSVM) on the anomalous samples.
+blue samples only, and an additional XGBoost classifier is On the other hand, the Shapley values computed by the
+trained on both blue and red samples (supervised). Then, XGBoost model do not attribute any contribution to F2 for
+we select three points: P1 , P2 , and P3 and compute their any of the points, failing to recognize the significance of F2 in
+corresponding Shapley values using the three methods. Note differentiating between normal and anomalous samples (indithat P1 , P2 deviate from the majority of normal samples more cating that XGBoost operates solely on F1 ). This highlights
+pronouncedly in F2 than in F1 . Additionally, P1 has an F1 the limitations of using XGBoost for this particular anomaly
+value lower than the minimum F1 value of all normal samples. detection task. NF, however, offers a more nuanced explanation
+P3 deviates mostly in F1 . by assigning different Shapley values to F1 and F2 for each
+ For a binary classifier, Shapley values represent the con- point, which reflects the true nature of their deviations.
+tribution of each feature to the model’s output. The sign of Using Real-World Attack Samples. Next, we analyze
+the Shapley value indicates whether the feature’s presence Shapley values with NF on attack samples from CICIoT-2023.
+increases or decreases the likelihood of the sample being Two classifiers were trained using five features: ‘HTTPS’,
+classified as an anomaly. ‘Protocol Type’, ‘Magnitude’, ‘Variance’, and ‘fin count’. Our
+ Table XII presents the Shapley values for points P1 , P2 , and NF model was trained on 10,000 normal samples, while the
+P3 as computed by the three different models: NF, OCSVM, XGBoost baseline used the same 10,000 normal samples plus
+and XGBoost. It is evident from the table that while OCSVM 10,000 attack samples (supervised).
+was trained on the same data as NF, its corresponding Shapley To obtain test anomalies with expected explanations serving
+values do not provide any useful explanation for P1 and P2 . as ground truth, we constructed subsets of attack samples
+Specifically, both features F1 and F2 have the same Shapley termed X-Feature Deviant Attack Samples. In each subset,
+value of −0.89 for these points. While OCSVM is designed four features follow the distribution of normal samples, while
+to find a boundary that encloses the majority of the data one feature (‘X’) takes values unlikely under the normal
+points of the learned class, a few points within the training distribution. To quantify this deviation, we compute the mean
+data might affect the placement of the boundary, which in likelihood of each feature using the normal training set (10,000
+SHAFIR et al.: EXPLAINABLE ANOMALY DETECTION IN NETWORK TRAFFIC USING NORMALIZING FLOWS 1219
+
+ nant feature for all ground-truth samples. In the ‘fin count’
+ ground-truth subset, the XGBoost mean Shapley value even
+ has a positive sign, indicating that this feature increases the
+ likelihood of being detected as normal despite the very low
+ likelihood of this feature across the normal samples (0.002).
+ On the other hand, the NF Shapley values clearly highlight
+ the “deviant” feature as the one causing the test sample
+ to be detected as an anomaly, underscoring the significant
+ improvement in explainability when using our method.
+ Our analysis demonstrates the potential of combining NF
+ with Shapley values to enhance network traffic anomaly
+Fig. 11. CICIoT-2023 ‘fin count’ feature deviant attack samples illustration.
+We plot the normalized distributions of five features over 10,000 normal detection explainability. While our findings include anecdosamples. The points represent the feature values of the attack samples. tal evidence and specific case studies, the promising results
+ indicate a significant opportunity for future work to further
+ TABLE XIII validate and expand upon this approach in broader contexts.
+C OMPARISON B ETWEEN S HAPLEY VALUES U SING O UR NF M ODEL V S .
+ XGB OOST ON R EAL -W ORLD CICI OT-2023 ATTACK S AMPLES . A S VII. C ONCLUSION
+ A G ROUND -T RUTH W E U SE S UBSETS OF ATTACK S AMPLES , IN
+ W HICH O NLY O NE F EATURE E XHIBITS VALUES T HAT A RE In this study, we demonstrated the efficacy of NF for
+ U NLIKELY TO B E P RESENT IN THE N ORMAL D ISTRIBUTION . anomaly detection in network traffic. By leveraging the den-
+ N OTE T HAT L OW NF S HAPLEY VALUES C ORRELATE
+ W ITH THE D EVIANT F EATURES sity estimation capabilities of NF, our approach effectively
+ identifies low-likelihood samples, marking them as potential
+ anomalies. This method avoids the need for labeled anomaly
+ data during training, which is a significant advantage in realworld scenarios where such data is often unavailable.
+ Our experiments on the CICIoT-2023, ISCXTor2016, and
+ CICIDS2017 datasets show that our model achieves high
+ accuracy, outperforms existing state-of-the-art methods for
+ unsupervised anomaly detection, and, when combined with
+ Shapley values, supports feature selection and provides valuable explanations for detected anomalies. While our method
+ effectively models the distribution of normal traffic within
+ each dataset, we note that performance slightly degrades when
+ training on one dataset and evaluating on another, reflecting
+ distribution shifts between environments. Addressing such
+ generalization challenges is an important direction for future
+ work, for example through self-supervised pretraining techniques. Overall, our results indicate that NF offer a powerful
+samples). Likelihoods are estimated with Gaussian Kernel and interpretable solution for anomaly detection in network
+Density Estimation (Gaussian KDE), a non-parametric method traffic.
+for probability density estimation.
+ As an example, Figure 11 shows the distribution of each
+ R EFERENCES
+feature in the normal training set (10,000 samples). For each
+attack sample in the ‘fin count’ deviant subset, the normalized [1] E. Bout, V. Loscri, and A. Gallais, “How machine learning changes
+ the nature of cyberattacks on IoT networks: A survey,” IEEE Commun.
+feature value is placed on the corresponding distribution curve. Surveys Tuts., vol. 24, no. 1, pp. 248–279, 1st Quart., 2021.
+The ‘fin count’ values exhibit very low likelihood, whereas the [2] A. Sperotto, G. Schaffrath, R. Sadre, C. Morariu, A. Pras, and B. Stiller,
+other four features remain relatively likely. “An overview of IP flow-based intrusion detection,” IEEE Commun.
+ Surveys Tuts., vol. 12, no. 3, pp. 343–356, 3rd Quart., 2010.
+ We then examine the Shapley values obtained from these [3] Z. Ahmad, A. Shahid Khan, C. Wai Shiang, J. Abdullah, and F. Ahmad,
+two classifiers. For each such ground-truth sample, we expect “Network intrusion detection system: A systematic study of machine
+that the Shapley value will attribute a relatively high value learning and deep learning approaches,” Trans. Emerg. Telecommun.
+ Technol., vol. 32, no. 1, p. 4150, Jan. 2021.
+to the feature that deviates from the normal distribution, [4] S. Gopalakrishnan, N. Tuptuk, and S. Hailes, “Machine learningwith a negative sign indicating that this feature decreases the based intrusion detection systems: Deployment guidelines for industry,”
+likelihood of the sample being detected as normal. Table XIII PETRAS National Centre of Excellence for IoT Systems Cybersecurity, London, U.K., Tech. Rep., 2023, doi: 10.14324/000.rp.10190465.
+shows the results on two subsets of feature deviant attacks (i.e., [Online]. Available: https://discovery.ucl.ac.uk/id/eprint/10190465/
+‘Variance’ with 91 samples and ‘fin count’ with 10 samples), [5] I. Goodfellow et al., “Generative adversarial nets,” in Proc. NIPS, 2014,
+together with the computed likelihood which is used as a pp. 2672–2680.
+ [6] A. S. Dina, A. B. Siddique, and D. Manivannan, “Effect of balancing
+ground-truth measure. data using synthetic data on the performance of machine learning
+ As shown in Table XIII, the XGBoost Shapley values classifiers for intrusion detection in computer networks,” IEEE Access,
+always attribute the ‘Magnitude’ feature as the most domi- vol. 10, pp. 96731–96747, 2022.
+1220 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+[7] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” 2013, [28] J. Yu et al., “FastFlow: Unsupervised anomaly detection and localization
+ arXiv:1312.6114. via 2D normalizing flows,” 2021, arXiv:2111.07677.
+[8] D. J. Rezende and S. Mohamed, “Variational inference with normalizing [29] M. L. D. Dias, C. L. C. Mattos, T. L. C. da Silva, J. A. F. de Macêdo, and
+ flows,” in Proc. Int. Conf. Mach. Learn., 2015, pp. 1530–1538. W. C. P. Silva, “Anomaly detection in trajectory data with normalizing
+[9] Z. Dang, Y. Zheng, X. Lin, C. Peng, Q. Chen, and X. Gao, “Semi- flows,” in Proc. Int. Joint Conf. Neural Netw. (IJCNN), Jul. 2020,
+ supervised learning for anomaly traffic detection via bidirectional pp. 1–8.
+ normalizing flows,” 2024, arXiv:2403.10550. [30] A. Ryzhikov, M. Borisyak, A. Ustyuzhanin, and D. Derkach,
+[10] S. M. Lundberg and S. Lee, “A unified approach to interpreting “Normalizing flows for deep anomaly detection,” 2019,
+ model predictions,” in Proc. 31st Int. Conf. Neural Inf. Process. Syst. arXiv:1912.09323.
+ (NeurIPS), I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus, [31] L. Dinh, J. Sohl-Dickstein, and S. Bengio, “Density estimation using
+ S. Vishwanathan, and R. Garnett, Eds., 2017, pp. 4765–4774. real NVP,” 2016, arXiv:1605.08803.
+[11] E. C. P. Neto, S. Dadkhah, R. Ferreira, A. Zohourian, R. Lu, and [32] S. Zhai et al., “Normalizing flows are capable generative models,” 2024,
+ A. A. Ghorbani, “CICIoT2023: A real-time dataset and benchmark arXiv:2412.06329.
+ for large-scale attacks in IoT environment,” Sensors, vol. 23, no. 13, [33] R. Prenger, R. Valle, and B. Catanzaro, “Waveglow: A flowp. 5941, Jun. 2023. based generative network for speech synthesis,” in Proc. IEEE
+[12] A. Habibi Lashkari, G. Draper Gil, M. S. I. Mamun, and A. A. Ghorbani, Int. Conf. Acoust., Speech Signal Process. (ICASSP), May 2019,
+ “Characterization of tor traffic using time based features,” in Proc. 3rd pp. 3617–3621.
+ Int. Conf. Inf. Syst. Secur. Privacy, 2017, pp. 253–262. [34] OpenAI. (Jul. 2018). Glow: Better Reversible Generative Models.
+[13] I. Sharafaldin, A. Habibi Lashkari, and A. A. Ghorbani, “Toward [Online]. Available: https://openai.com/index/glow
+ generating a new intrusion detection dataset and intrusion traffic [35] P. N. Ward, A. Smofsky, and A. J. Bose, “Improving exploration in softcharacterization,” in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018, actor-critic with normalizing flows policies,” 2019, arXiv:1906.02771.
+ pp. 108–116. [36] D. Fryer, I. Strumke, and H. Nguyen, “Shapley values for feature
+[14] L. Feinstein, D. Schnackenberg, R. Balupari, and D. Kindred, “Statistical selection: The good, the bad, and the axioms,” IEEE Access, vol. 9,
+ approaches to DDoS attack detection and response,” in Proc. DARPA pp. 144352–144360, 2021.
+ Inf. Survivability Conf. Expo., Apr. 2003, pp. 303–314. [37] M. M. Khan and M. Alkhathami, “Anomaly detection in IoT-based
+[15] P. D. Bojović, I. Bašičević, S. Ocovaj, and M. Popović, “A practical healthcare: Machine learning for enhanced security,” Sci. Rep., vol. 14,
+ approach to detection of distributed denial-of-service attacks using a no. 1, p. 5872, Mar. 2024.
+ hybrid detection method,” Comput. Electr. Eng., vol. 73, pp. 84–96, Jan. [38] J. F. Crenshaw, Z. Yan, and V. Doster, “jfcrenshaw/pzflow:
+ 2019. V3.1.2 (v3.1.2),” Zenodo, CERN, Tech. Rep., 2024, doi: 10.5281/
+[16] S. Naseer et al., “Enhanced network anomaly detection based on deep zenodo.10636848.
+ neural networks,” IEEE Access, vol. 6, pp. 48231–48246, 2018. [39] T. Chen and C. Guestrin, “XGBoost: A scalable tree boosting system,”
+[17] S. Zavrak and M. Iskefiyeli, “Anomaly-based intrusion detection from in Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+ network flow features using variational autoencoder,” IEEE Access, Aug. 2016, pp. 785–794.
+ vol. 8, pp. 108346–108358, 2020. [40] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon,
+[18] B. Min, J. Yoo, S. Kim, D. Shin, and D. Shin, “Network anomaly “GANomaly: Semi-supervised anomaly detection via adversarial
+ detection using memory-augmented deep autoencoder,” IEEE Access, training,” in Proc. Asian Conf. Comput. Vis., Dec. 2018,
+ vol. 9, pp. 104695–104706, 2021. pp. 622–637.
+[19] S. Azmin and A. M. A. A. Islam, “Network intrusion detection system [41] G. Wang, S. Han, E. Ding, and D. Huang, “Student-teacher feature
+ based on conditional variational Laplace autoencoder,” in Proc. 7th Int. pyramid matching for anomaly detection,” 2021, arXiv:2103.04257.
+ Conf. Netw. Syst. Security, 2020, pp. 82–88. [42] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+[20] Y. Yin, Z. Lin, M. Jin, G. Fanti, and V. Sekar, “Practical GAN-based “Towards total recall in industrial anomaly detection,” in Proc.
+ synthetic IP header trace generation using NetShare,” in Proc. ACM IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+ SIGCOMM Conf., Aug. 2022, pp. 458–472. pp. 14298–14308.
+[21] M. Abdelaty, S. Scott-Hayward, R. Doriguzzi-Corin, and D. Siracusa, [43] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM:
+ “GADoT: GAN-based adversarial training for robust DDoS attack A patch distribution modeling framework for anomaly detection
+ detection,” in Proc. IEEE Conf. Commun. Netw. Secur. (CNS), Oct. 2021, and localization,” in Proc. Int. Conf. Pattern Recognit., 2020,
+ pp. 119–127. pp. 475–489.
+[22] B.-E. Zolbayar et al., “Generating practical adversarial network traffic [44] V. Zavrtanik, M. Kristan, and D. Skočaj, “Draem—A discrimflows using NIDSGAN,” 2022, arXiv:2203.06694. inatively trained reconstruction embedding for surface anomaly
+[23] J. Wang, J. Pan, I. AlQerm, and Y. Liu, “Def-IDS: An ensemble detection,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., Oct. 2021,
+ defense mechanism against adversarial attacks for deep learning-based pp. 8330–8339.
+ network intrusion detection,” in Proc. Int. Conf. Comput. Commun. [45] N. A. Ahuja, I. Ndiour, T. Kalyanpur, and O. Tickoo, “Probabilistic mod-
+ Netw. (ICCCN), Jul. 2021, pp. 1–9. eling of deep features for out-of-distribution and adversarial detection,”
+[24] Y. Peng, G. Fu, Y. Luo, J. Hu, B. Li, and Q. Yan, “Detecting adversarial 2019, arXiv:1909.11786.
+ examples for network intrusion detection system with GAN,” in Proc. [46] S. Akcay, D. Ameln, A. Vaidya, B. Lakshmanan, N. Ahuja, and U. Genc,
+ IEEE 11th Int. Conf. Softw. Eng. Service Sci. (ICSESS), Oct. 2020, “Anomalib: A deep learning library for anomaly detection,” 2022,
+ pp. 6–10. arXiv:2202.08341.
+[25] P. Zhang et al., “Real-time malicious traffic detection with online [47] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+ isolation forest over SD-WAN,” IEEE Trans. Inf. Forensics Security, one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ vol. 18, pp. 2076–2090, 2023. Recognit. (CVPR), Jun. 2022, pp. 9737–9746.
+[26] L. Li, Y. Lu, G. Yang, and X. Yan, “End-to-end network intrusion detec- [48] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An
+ tion based on contrastive learning,” Sensors, vol. 24, no. 7, p. 2122, ensemble of autoencoders for online network intrusion detection,” 2018,
+ Mar. 2024. arXiv:1802.09089.
+[27] D. Gudovskiy, S. Ishizaka, and K. Kozuka, “CFLOW-AD: Real-time [49] M. T. Ribeiro, S. Singh, and C. Guestrin, “‘Why should i trust you?’:
+ unsupervised anomaly detection with localization via conditional nor- Explaining the predictions of any classifier,” in Proc. 22nd ACM
+ malizing flows,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. SIGKDD Int. Conf. Knowl. Discovery Data Mining (KDD), 2016,
+ (WACV), Jan. 2022, pp. 98–107. pp. 1135–1144.

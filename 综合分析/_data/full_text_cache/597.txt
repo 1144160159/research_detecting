@@ -1,0 +1,838 @@
+IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026 7893
+
+ Adaptive Latent Distribution Modeling for
+ Industrial Time Series Anomaly Detection
+ Yu Liu , Yifan Song , Shaolong Shu , Senior Member, IEEE, Feng Lin , Life Fellow, IEEE,
+ Jun Wang , Senior Member, IEEE, and Yafeng Guo
+
+ Abstract—Anomaly detection is critical for ensuring the relia- Index Terms—Anomaly detection, cyber-physical systems, fault
+bility of industrial cyber-physical systems. Identifying anomalies diagnosis, time series analysis, unsupervised learning.
+based on data distribution is regarded as a promising approach.
+However, inherent noise in data collection and complex dependencies within the underlying structure can lead to class ambiguity. I. I NTRODUCTION
+This ambiguity obscures the boundary between normal data and
+anomalies, thereby degrading the accuracy of distribution modeling. To address this issue, we shift the distribution modeling from
+ S ECURITY monitoring is essential for maintaining modern
+ infrastructures. Deep-learning-based models enhance the
+ efficiency of monitoring and provide timely alerts for potential
+the data space to a latent space to mitigate ambiguity and then
+propose a label free anomaly detection network, named ALDM. anomalies, thereby preventing damage from escalating. It is
+In ALDM, a contrastive-based methods is designed to facilitate widely adopted in various domains, including healthcare, smart
+the construction of a latent space, where the margin between buildings, and industrial monitoring [1], [2]. Among these
+normal data and anomalies has been expanded. Anomalies are scenarios, industrial cyber-physical systems (CPS) are charthen discerned through embeddings using a flow-based process. acterized by their extensive use of sensors to monitor system
+Recognizing the importance of distance metrics in contrastivebased methods, we propose an adaptive approach to obtain the behavior [3]. This generates complex, multivariate dynamics,
+optimal distance metric during network training instead of pre- thereby making anomaly detection more challenging [4].
+setting a fixed formula. Furthermore, to accommodate anomalies Traditional anomaly detection methods depend on staof varying durations, we propose another event-wise performance tistical analysis, which assumes linearity, stationarity, or
+index for evaluation. Extensive evaluations on three widely used specific distributions [5]. These methods often struggle with
+benchmarks and a newly constructed dataset demonstrate that
+ALDM achieves state-of-the-art detection performance across high-dimensional data or complex temporal dependencies.
+both conventional metrics and our proposed index. Considering the robust capability in handling high-dimensional
+ data, AI-based methods have been developed to improve the
+ Note to Practitioners—Accurately detecting faults (anomalies) reliability of various industrial CPS [6].
+in industrial systems, such as factories or power grids, is vital
+to prevent costly downtime. However, noisy data and complex In the scope of AI-based methods, due to the scarcity of
+interactions make it challenging. Our solution, ALDM, tackles labeled anomaly data, anomaly detection is typically studied
+this by learning a clearer representation of system’s data where in an unsupervised manner. Some previous methods exploit
+normal and abnormal patterns are easier to distinguish. ALDM unlabeled time series data and treat anomaly detection as
+employs an adaptive projection to aid in anomaly detection, a one-class classification (OCC) problem. Many predictionwhich minimizes expert tuning and enhances uptime. This
+approach improves detection accuracy, leading to enhanced based methods and reconstruction-based methods are proposed
+system reliability and fewer unplanned stoppages. Although to achieve anomaly detection under the OCC setting [7], [8].
+ALDM requires sufficient training data for reliable detection, The basic assumption of the OCC setting is that the training
+its label-free methodology provides a practical solution for more dataset covers all possible normal samples that can be easily
+robust monitoring in industrial systems. obtained [9]. This premise is hard to hold in the real world,
+ and its application requires additional calibration [10], [11].
+ Due to the typically sparse density of anomalies compared
+ Received 8 August 2025; revised 30 January 2026; accepted 11 March 2026. to normal instances, density-based methods have been widely
+Date of publication 16 March 2026; date of current version 16 April 2026.
+This article was recommended for publication by Associate Editor B. Lacevic explored for anomaly detection. These approaches transform
+and Editor L. Moench upon evaluation of the reviewers’ comments. This the problem into estimating the likelihood that a given instance
+work was supported in part by the National Key Research and Development belongs to the normal data distribution. Anomalies are then
+Program under Grant 2022YFB3305300 and in part by the National Natural
+Science Foundation of China under Grant 62473289. (Corresponding author: detected as instances with a low probability of being normal.
+Shaolong Shu.) Density estimation involves calculating the probability of
+ Yu Liu is with the School of Computer Science and Technology, Tongji an observed data vector. Common techniques for this task
+University, Shanghai 201804, China (e-mail: liu y@tongji.edu.cn).
+ Yifan Song, Shaolong Shu, Jun Wang, and Yafeng Guo are with the College include energy-based models (EBMs), undirected probabilistic
+of Electronics and Information Engineering, Tongji University, Shanghai graphical models (UPGMs), autoregressive models (ARMs),
+201804, China (e-mail: shushaolong@tongji.edu.cn). and normalizing flow (NF) models [12], [13]. However,
+ Feng Lin is with the Department of Electrical and Computer Engineering,
+Wayne State University, Detroit, MI 48202 USA (e-mail: flin@wayne.edu). EBMs and UPGMs typically yield only approximate density
+ Digital Object Identifier 10.1109/TASE.2026.3674236 estimates, limiting their suitability for anomaly detection.
+ 1558-3783 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+7894 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ Fig. 2. Underexplored aspects of F1 score and AUROC in performance
+ evaluation of anomaly detection.
+
+ like F1-score and AUROC focus solely on point-wise assessment, making them inadequate for event-level evaluation.
+ Figure 2 illustrates this limitation: While Method 1 detects
+ more anomaly points (yielding higher point-wise scores), it
+ identifies only one anomaly event. Method 2 detects fewer
+Fig. 1. Anomaly scores of existing methods on SWaT dataset. All moments points but captures all three events. To address this gap,
+are normal. Vertical drift occurs in the blue area. The moment with a higher we propose a new metric for the auxiliary of performance
+anomaly score is more likely to be identified as an anomaly.
+ evaluation at the event level.
+ Extensive experiments are conducted on three widely used
+Similarly, ARMs suffer from computational inefficiency due benchmarks and a newly constructed dataset. All these datasets
+to their inherently fixed sequential structure. Consequently, are sourced from representative industrial CPSs. ALDM
+research in density-based anomaly detection has increasingly demonstrates superior detection performance, outperforming
+focused on normalizing flow (NF) models [14], which have existing methods on both established point-wise metrics and
+demonstrated superior performance in industrial applications. our proposed event-level evaluation metric.
+NF models capture complex, high-dimensional data distribu- Compared with existing works, the contributions of this
+tions by applying a learnable, invertible transformation to a paper are summarized as follows:
+simple base distribution (or prior) and leveraging the change of • We propose ALDM, a novel unsupervised model for
+variables formula. Building upon this, conditional normalizing multivariate anomaly detection. To the best of our knowlflow models [10] have been developed to exploit evolving edge, this represents the first flow-based method explicitly
+mutual information within the data. focused on modeling latent distributions within this
+ In industrial CPS, inherent noise and bias in data trans- context.
+mission and collection lead to data drifts [15], causing the • We design an adaptive latent distribution projection
+distributions of normal and abnormal data to overlap. This method. This innovation employs a decomposition-based
+overlap gives rise to the class ambiguity problem [16], [17], learnable distance metric to construct an optimized latent
+obscuring the boundary between different classes in the current space, effectively expanding the margin between normal
+data space. However, existing methods often overlook this and anomalous distributions.
+issue and proceed to model the data distribution directly, which • We propose a new event-level performance evaluation
+limits further improvement in detection performance. Figure 1 metric to address limitations of point-wise assessment.
+shows the anomaly detection in an industrial water treatment • We comprehensively validate the effectiveness of ALDM
+plant. Existing methods tend to increase the anomaly score on three public industrial CPS datasets and a newly
+in the blue area during data drift, leading to false alarms. To constructed dataset.
+address this issue, we propose an Adaptive Latent Distribution The rest of this article is organized as follows. Section II
+Model (ALDM). ALDM incorporates a contrastive objective reviews related work on industrial CPS anomaly detection.
+to adaptively reweight the loss function, guiding the model Section III details the proposed ALDM network. Section IV
+to learn a latent space optimized for distribution modeling. comprehensively validates the effectiveness of ALDM through
+Within this space, negative data pairs are pushed apart while extensive experiments across four datasets and three perforpositive pairs are pulled closer, thereby intrinsically increasing mance metrics. Finally, Section V concludes the paper.
+the inter-class margin.
+ The distance metric plays a crucial role in the contrastive II. R ELATED W ORK
+process of ALDM. While recent contrastive methods [18] use
+a fixed metric for assignments, they fail to enhance separabil- A. Anomaly Detection in Industrial CPS
+ity between normal and anomalous distributions. This preset Industrial Cyber-Physical Systems (CPS) generate highmetric is often suboptimal and adversely impacts learning the dimensional data with complex structures. These structures
+projection from data space to latent space. To address this, involve nonlinear dynamics and intricate spatiotemporal
+ALDM proposes a learnable, decomposition-based approach dependencies. Traditional anomaly detection methods [20]
+that adaptively optimizes the distance metric during training, struggle with this complexity. They often fail to capture the
+eliminating reliance on predefined fixed formulations. necessary patterns, leading to poor detection performance.
+ In terms of performance evaluation, anomalies in industrial Deep neural networks provide a solution to this challenge.
+CPS exhibit variable durations [19], necessitating event-level They excel at modeling the spatiotemporal features of multianalysis for many applications. However, established metrics dimensional time series. This capability enables a shift from
+LIU et al.: ADAPTIVE LATENT DISTRIBUTION MODELING FOR INDUSTRIAL TIME SERIES ANOMALY DETECTION 7895
+
+shallow statistical models to deep representation learning for tions using neural networks [26]. DGMs are mainly grouped
+anomaly detection. by how they handle the likelihood function: approximate
+ Labeled anomaly data is scarce in practice. Therefore, most likelihood models and exact likelihood models.
+deep learning approaches for this task are unsupervised. These Approximate likelihood models (e.g., Variational Autoenmethods fall into three main categories: prediction-based, coders (VAE) [27], Generative Adversarial Networks (GAN)
+reconstruction-based, and density-based approaches. [28], and Diffusion Models [29]) do not provide direct access
+ Prediction-based and reconstruction-based methods share a to the exact likelihood. Instead, they optimize lower bounds or
+core idea: they learn representations of normal time series alternative objectives via variational inference and adversarial
+patterns. Anomalies are detected by measuring the differ- training to indirectly approximate the true data distribution.
+ence between actual observations and the model’s output In contrast, exact likelihood models (e.g., Normalizing
+(either predictions or reconstructions). The core module of Flows (NF) [30] and Autoregressive Models (ARM) [31]) can
+these methods typically employs Transformer as the feature calculate the exact probability density for any data point. Their
+extractor to process time series data. Li et al. developed a core principle involves decomposing complex distributions
+hierarchical multi-attention block to better reconstruct normal into simpler, tractable base distributions. This is achieved using
+time series [21]. Belay et al. proposed to leverage Transformer reversible transformations or the chain rule of probability. This
+architectures and optimal truncated singular value decompo- paradigm offers key benefits, including theoretical soundness,
+sition for anomaly detection [22]. While these methods have better training stability, and improved interpretability. Typical
+advanced time series anomaly detection research, they face applications include density estimation and data compression.
+a limitation. They typically require the training data to be Density estimation is a major task for exact likelihood modcompletely free of anomalies. This allows the model to learn els. It learns how data is generated to quantify the probability
+an accurate representation of “normal” behavior. But in real of any data point occurring. Recently, this capability has been
+industrial settings, ensuring perfectly clean training data is applied to time series anomaly detection. Compared to ARM,
+often challenging. This requirement limits the practical use NF avoids the sequential computation constraints. This offers
+of prediction and reconstruction methods. NF significant computational efficiency advantages, especially
+ To overcome these limitations and better use inherent with high-dimensional data. As a result, recent research has
+data properties, researchers developed density-based meth- increasingly focused on using NF for time series anomaly
+ods. These approaches rely on a key observation: abnormal detection [25], [32], [33].
+instances usually lie in low probability density regions
+compared to normal data. Among density-based techniques, III. M ETHODOLOGY
+Normalizing Flow (NF) stands out as particularly promising. It
+offers theoretical guarantees, flexible architecture, and precise A. Overview of Anomaly Detection Framework
+density estimation. Consider a multivariate time series collected from an indus-
+ The development of NF for industrial CPS anomaly detec- trial CPS that includes N sensors. The time series data D =
+tion has evolved over time. Dinh et al. pioneered NF for [d1 , d2 , · · · , dL ]> ∈ RL×N consists of L observations, where
+general density estimation [23]. Later, Trippe and Turner intro- dt ∈ RN represents the system state observed at timestamp t.
+duced Conditional Normalizing Flow (CNF) [24], enabling Note that N sensors are viewed as N variables. To prepare
+conditioning on relevant variables. Recognizing the dynamic training samples, we partition D into segments using a sliding
+nature of industrial CPS data, Zhou et al. further advanced window of length T and stride S . The resulting dataset is
+CNF. They explicitly modeled the evolving structure of mutual denoted X = {x1 , x2 , · · · , x M }, where M represents the the
+dependencies [10]. Building on this progress, Li et al. explored total number of segments. We have M = b L−T S c + 1, where
+a CNF-based approach specifically for industrial CPS anomaly b·c is the floor operation. The anomaly detection task is to
+detection [25]. The core principle uniting these NF-based determine whether any given segment x ∈ X originating from
+methods is explicit. They learn a direct model of the data the same CPS exhibits anomalous behavior.
+distribution. Anomalies are then identified as data points To address this task, we propose the Adaptive Latent
+residing in areas of exceptionally low probability density under Distribution Modeling (ALDM) network, an unsupervised
+this learned model. anomaly detection framework illustrated in Fig. 3. ALDM
+ comprises three core modules: context learning, adaptive latent
+B. Distribution Modeling distribution projection, and anomaly determination.
+ Detecting anomalies by modeling the data distribution is The context learning module generates spatio-temporal conpromising. This approach has succeeded in various areas like ditioning signals to guide subsequent distribution modeling. It
+image, audio, and time series analysis. Traditional time series explicitly captures both the mutual dependencies among sysdistribution modeling often assumes the whole series follows tem variables (via self-attention) and the temporal correlations
+a single, static distribution (e.g., Gaussian or Poisson). How- within the context (via recurrent neural networks) [10], [14].
+ever, this rigid assumption hurts performance. Probabilistic Graph convolution then integrates these elements to produce
+models built on it often perform poorly with non-stationary unified conditioning features.
+sequences [9]. The Adaptive Latent Distribution Projection Module maps
+ Modern distribution modeling uses deep generative models input segments into a latent space and estimates their prob-
+(DGMs). Their core idea is to model complex data distribu- ability density. This process unfolds through four sequential
+7896 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+Fig. 3. Overview of ALDM. Within each detection window xc , the time series data is first processed to generate conditional information (Cc ) and temporal
+embeddings (H c ). This temporal embedding H c is then used to compute a distance measure Dc . Based on Dc , soft assignments are calculated. These assignments
+directly form the basis for the adaptive soft contrastive loss (LAdSCL ). Minimizing LAdSCL optimizes the parameters of the latent encoding network. This
+optimized network transforms the input data into a latent representation rc . Crucially, rc becomes the explicit target for the subsequent normalizing flow to
+model. After the normalizing flow adaptively models the distribution of rc , the anomaly score is finally derived from the estimated likelihood.
+
+steps: 1. Adaptive Distance Computation: A learnable distance The attention score acij (normalized influence of node i on j)
+metric is first initialized randomly and then optimized during and the resulting adjacency matrix Ac are:
+the training process. 2. Soft Assignments: Using this optimized 2 c
+ a11 · · · ac1N
+ 3
+ c
+metric, the module computes soft labels for each data point. exp(ei j )
+ acij = PN , Ac = 4 ... ..
+ .
+ .. 7 .
+ . 5 (3)
+ 6
+3. Latent Encoding: Guided by these soft assignments, a c
+ k=1 exp(eik ) c c
+projection function then maps the input segments into their aN1 · · · aNN
+latent representations, denoted as r. 4. Distribution Projec- Note that this adjacency matrix represents the learned graph
+tion: Finally, Normalizing Flows (NFs) model the probability structure for each input segment. It is randomly initialized and
+density of the latent vectors r. These NFs are conditioned subsequently refined through attention mechanisms. Specifon the spatio-temporal features derived from the Context ically, the edge weight between two nodes is determined
+Learning Module. Specifically, the NFs utilize fully connected by the temporal similarity of their respective time series,
+layers to parameterize invertible transformations, converting computed through self-attention. This allows the model to
+the complex distribution of r into a tractable base distribution, capture context-dependent, non-linear relationships that evolve
+such as a Gaussian. over time.
+ Finally, the anomaly determination module establishes a To capture temporal dynamics, we employ recurrent neural
+detection threshold using the Interquartile Range (IQR) rule networks (RNNs; e.g., LSTM or GRU). For each timestep t
+applied to the estimated log-likelihoods of the latent rep- in xc , the hidden state Ht ∈ RN×dh is updated as:
+resentations. A segment x is flagged as anomalous if its
+log-likelihood falls below this threshold. Ht = RNN(xct , Ht−1 ), (4)
+ ALDM takes a segment x as input and outputs a binary
+ where dh is the hidden state dimension. The segment-level
+label ŷ ∈ 0, 1, where 0 indicates normality and 1 indicates
+ contextual embedding Hc is derived by aggregating all hidden
+an anomaly. The entire network trains on X without labels.
+ states:
+Implementation and training specifics are detailed in the
+ Hc = fc([H1 , · · · , HT ]> ). (5)
+following section.
+ where fc denotes a fully connected layer.
+B. Context Learning Finally, we fuse spatial and temporal information using the
+ learned graph structure. Given that explicitly feeding Ht−1
+ Consider data segment xc , a multivariate time series of into the fusion operation establishes a more direct and stable
+length T comprising N variables. The data at timestep t is “shortcut connection” for modeling the critical short-term
+denoted xct ∈ RN , while the time series of the i-th variable is dynamics between adjacent steps [34], we integrating Ht−1 in
+xc,i ∈ RT . We model these N variables as nodes in a graph the fusion to enhance condition learning. The spatio-temporal
+whose structure is learned via attention mechanisms. representation Ct at time t is computed via:
+ For each node i, we compute its query and key vectors as:  
+ Ct = ReLU Ac Ht W 1 + Ht−1W 2 W 3 , (6)
+ qc,i = xc,i W Q , kc,i = xc,i W K , (1) „ ƒ‚ … „ ƒ‚ …
+ spatial temporal
+where W , W ∈ R
+ Q K T ×T
+ are learnable weight matrices. The
+ where the weight matrices transform features between dimenpairwise relationship ecij between nodes i and j is then:
+ sions. W 1 ∈ Rdh ×d f transforms spatial features. W 2 ∈ Rdh ×d f
+ (qc,i )(kc, j )> transforms temporal features. W 3 ∈ Rd f ×do enhances represenecij = √ . (2) tational capacity. Note that d f is the fused feature dimension
+ T
+LIU et al.: ADAPTIVE LATENT DISTRIBUTION MODELING FOR INDUSTRIAL TIME SERIES ANOMALY DETECTION 7897
+
+and do is the output dimension. The full spatio-temporal where θ denotes trainable parameters. The encoder fθAdSCL conembedding is Cc = [C1 , · · · , CT ]> ∈ RT ×N×do . sists of three components, including an input projection layer, a
+ timestamp masking module, and a dilated convolutional neural
+C. Adaptive Latent Distribution Projection network (CNN) module.
+ Specifically, for each input segment xc ∈ RT ×N , the pro-
+ The adaptive latent distribution projection module concessing pipeline is as follows:
+sists of four components: adaptive distance computation, soft
+assignment, latent encoding, and distribution projection. In 1) Input Projection: A fully connected layer maps each
+this module, adaptive distance computation and soft assign- timestamp observation xc,t ∈ RN to a high-dimensional
+ment collaboratively guide the latent encoding network in latent vector rc,t ∈ Rd :
+mapping input data to representations within a latent space.
+ rc,t = fc(xc,t )
+Subsequently, the distribution projection component builds a
+transformation chain that maps complex latent distributions 2) Timestamp Masking: This module randomly selects
+onto simple base distributions. We formalize this process timestamps and masks their corresponding vectors to
+below. generate augmented context views. Note that the mask-
+ 1) Adaptive Distance Computation: We define a posi- ing operates on latent representations rather than raw
+tive semi-definite distance metric matrix M via Cholesky temporal indices. We choose to mask latent vectors
+decomposition: instead of raw values. This decision is based on the fact
+ M = L> ΛL, (7) that time series data can be unbounded (R), and thus
+where L ∈ RE×E is a lower triangular matrix and Λ ∈ RE×E is lacks a natural masking token.
+a diagonal matrix. Both L and Λ are initialized randomly and 3) Dilated CNN: A 10-block residual network processes
+optimized using gradient descent during training. This decom- the sequence {rc,1 , . . ., rc,T }. Each block contains two
+position ensures numerical stability and mitigates overfitting 1-D convolutional layers with exponentially increasing
+compared to direct learning of M. dilation rates: for the l-th block (l ∈ {1, . . ., 10}), the
+ Unlike prior approaches that compute distances directly dilation parameter is 2l .
+from raw data, we propose to compute contextual distance The latent encoding network enhances separability between
+between temporal embeddings. Let Hc = [h1 , . . ., hT ]> ∈ RT ×E normal and anomalous patterns. The encoder parameters θ
+denote the temporal embeddings from RNN in context learn- are optimized through a composite contrastive loss function
+ing. The distance matrix Dc ∈ RT ×T is computed as: containing two complementary components:
+ (1) Instance-level loss promotes segment discrimination: Let
+ p
+ Dc [t][t0 ] = (ht − ht0 )> M(ht − ht0 ) (8)
+ p c be the index of the input time series segment, t be the
+ = (ht − ht0 ) L ΛL(ht − ht0 ),
+ > > (9) timestamp, rc,t c,t c
+ + and r− be the representation of x+ and
+ c (c,t)
+where ht , ht0 ∈ RE are temporal embeddings at timesteps t and x− for the timestamp t, LI is denoted as
+t0 . Equation (8) represents the Mahalanobis distance, which
+ exp rc,t c,t
+ 
+generalizes Euclidean distance (obtained when M = I) by (c,t) − · r+
+ LI = − log B h
+incorporating covariance structure. This learnable formulation
+    i
+ j,t j,t
+ exp rc,t c,t
+ P
+ − · r+ + I[c, j] exp r− · r−
+adapts to data distributions, overcoming limitations of preset j=1
+metrics in prior work. (12)
+ 2) Soft Assignment: From Dc , we compute a soft assign- where B is the batch size, and I is the indicator function.
+ment matrix Wc ∈ RT ×T : LI measures the similarity of segments, guiding the
+ model to learn robust representations through instance-
+ Wc [t][t0 ] = 2σ −τT · Dc [t][t0 ] ,
+ 
+ (10)
+ wise contrast.
+where τT > 0 controls distribution sharpness and σ is the (2) Temporal loss captures contextual relationships:
+sigmoid function. Soft assignments provide adaptive similarity
+measures that capture the correlation of temporal embeddings, L(c,t)
+ T = − log p+
+ c (t, t) − AdL(c, t) (13)
+enhancing the flexibility of the contrastive process.
+ where
+ 3) Latent Encoding: Given a batch of K time series segments X = {x1 , . . ., xK }, where each xc ∈ RT ×N (c ∈ [1, K]), T
+ X
+we generate augmented views as follows: For each segment, AdL(c, t) = WT (t, t0 )(log p+ 0 − 0
+ c (t, t ) + log pc (t, t ))
+we sample two overlapping intervals [a1 , b1 ] and [a2 , b2 ] t0 =1,t0 ,t
+satisfying 0 < a1 ≤ a2 ≤ b1 ≤ b2 ≤ T . The augmented
+ 0
+ exp(rc,t c,t
+ − · r+ )
+ c (t, t ) = P
+ p+ 0
+views xc+ and xc− are created by masking all elements outside c,t c,s c,t c,s
+ s∈Ω (exp(r− · r+ ) + I[s,t] exp(r− · r− ))
+[a1 , b1 ] and [a2 , b2 ], respectively. This yields augmented pairs c,t0
+{(x1+ , x1− ), . . ., (x+
+ K
+ , x−K )}. exp(rc,t
+ − · r− )
+ p−c (t, t0 ) = P c,t c,s c,t c,s
+ A feature extractor fθAdSC projects segments to latent s∈Ω (exp(r− · r+ ) + I[s,t] exp(r− · r− ))
+representations:
+ Note that Ω denotes timestamps in the augmented views’
+ rc = fθAdSC (xc ) ∈ RT ×N , (11) overlap region.
+7898 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ The composite contrastive loss is: Algorithm 1 Training Procedure for ALDM
+ K T Input: Training Data: Dtrain = {xi }i=1 N1
+ ; Learning Rate: α; Total
+ 1 X X  (c,t) 
+ Epochs: E; Batch Size: B; Loss Weight: λ; Networks: fθCL
+ LAdSCL = LT + L(c,t)
+ I . (14) 1
+ ,
+ KT fθAdSC , f NF
+ .
+ c=1 t=1 2 θ3
+ Output: Trained model parameters θ1 , θ2 , θ3 .
+where K is the number of instances, T is the sequence length.
+ 1: epoch ← 0 .Initialize epoch counter
+ 4) Distribution Projection: This component utilizes nor-
+ 2: while epoch < E do
+malizing flows to transform the complex high-dimensional
+ 3: idx1 ← 0 .Reset batch index for each epoch
+data distribution pX (x) into a simple base distribution πU (u)
+ 4: while idx1 < dN1 /Be do .Iterate over batches
+through a series of learnable, invertible affine transformations.
+ 5: xc ← SampleBatch(Dtrain , idx1 , B) .Sample mini-batch
+Following established approaches [34], we incorporate spatioxc of size B
+temporal correlations as conditioning information to enhance
+ 6: Cc ← fθCL (xc ) .Compute spatio-temporal condition Cc
+density estimation. This is formalized through a conditional 1
+ 7: rc , W(t, t0 ) ← fθAdSC (xc ) .Learn latent embeddings rc
+normalizing flow: 2
+ and adaptive assignments W
+ u = fθ (x | C) (15)
+ 8: ûc ← fθNF 3
+ (rc , Cc ) .Estimate latent density
+where C represents the spatio-temporal conditioning variable, 9: LAdSCL ← LAdSCL (rc , W(t, t0 )) .Compute adaptive soft
+ fθ : X → U is a parametric, bijective transformation. θ denotes contrastive loss
+the parameters of fθ , and u ∼ πU (u) with πU (u) typically 10: LMLE ← LMLE (ûc , rc ) .Compute maximum likelihood
+chosen as a standard Gaussian distribution. estimation loss
+ Unlike previous work that estimates density in the data 11: LALDM ← (1 − λ) · LMLE + λ · LAdSCL .Compute
+space (pX (x)), we propose modeling the density of learned rep- combined loss
+resentations r = fθAdSC (x) in latent space. To our knowledge, 12: θ1 ← θ1 − α · ∇θ1 LALDM .Update GL parameters
+this represents the first flow-based method explicitly focused 13: θ2 ← θ2 − α · ∇θ2 LALDM .Update AdSCL parameters
+on modeling latent distributions within this context. 14: θ3 ← θ3 − α · ∇θ3 LALDM .Update NF parameters
+ The formal density estimation process is as follows: Given 15: idx1 ← idx1 + 1 .Increment batch index
+a segment xc ∼ pX (x) and its associated condition Cc , we first 16: end while
+obtain the latent representation rc = fθAdSC (xc ). The density of 17: epoch ← epoch + 1 .Increment epoch counter
+rc is then given by: 18: end while
+
+ ∂ fθ (rc | Cc ) ˇˇ
+ ˇ ˇ
+ pR (rc | Cc ) = πU ( fθ (rc | Cc )) ˇˇdet
+ ˇ
+ (16)
+ ∂rc ˇ where rc,n denotes the n-th dimension of the embedding
+ ˇ ˇ vector rc .
+where πU (·) = N (µ, I) and the Jacobian determinant ˇ ∂∂rfθ ˇ
+ ˇ ˇ
+ Directly thresholding the anomaly score S c to label anomaaccounts for the volume change under the transformation. lies has been shown to increase anomaly detection interference
+ During training, the conditional normalizing flow (CNF) [35]. To mitigate this, we compute the anomaly scores S c for
+is optimized jointly with the context learning module via the entire training set. The detection threshold is then robustly
+maximum likelihood estimation. The objective function is: set using the Interquartile Range (IQR) method:
+ LMLE = − log pR (rc | Cc ) Threshold = Q3 + 1.5 × (Q3 − Q1 ) (19)
+ K N
+ ∂ fθ ˇˇ
+  ˇ ˇ
+ 1 XX where Q1 and Q3 represent the 25th and 75th percentiles of
+ =− log πU fθ (rn | Cn ) ˇdet c ˇ
+ c c ˇ
+ ˇ
+ NK ∂rn the anomaly scores S c observed in the training data.
+ c=1 n=1
+ K N
+ ∂ fθ ˇ
+  ˇ ˇ
+ 1 XX 1 c E. Joint Optimization
+ kûn − µn k22 + log ˇˇdet c ˇˇ
+ ˇ
+ ≈ (17)
+ NK 2 ∂rn The proposed model employs joint optimization of the
+ c=1 n=1
+ context learning module and the adaptive latent distribution
+ This MLE objective LMLE will integrate with contrastive
+ projection network to enhance training stability. The overall
+loss LAdSCL to form the complete optimization target.
+ objective function for ALDM is formulated as:
+
+D. Anomaly Determination LALDM = (1 − λ) · LMLE + λ · LAdSCL (20)
+ An anomaly is flagged when the representation vector rc where λ ∈ [0, 1] is a hyperparameter balancing the contribution
+falls within a low-density region of the learned distribution. of each loss component (λ = 0.5 by default). The loss terms
+This position indicates that the original input xc is more likely LAdSCL and LMLE are defined by Equations (14) and (17),
+to be anomalous. The anomaly score S c for c-th sample is respectively.
+computed as the mean negative log-likelihood across all N Algorithm 1 details the ALDM training procedure.
+dimensions of its embedding rc :
+ IV. E XPERIMENTS AND A NALYSIS
+ N
+ 1 X This section first introduces the proposed event-level aux-
+ Sc = − log PR (rc,n ) (18)
+ N iliary metric and a new anomaly detection dataset. We then
+ n=1
+LIU et al.: ADAPTIVE LATENT DISTRIBUTION MODELING FOR INDUSTRIAL TIME SERIES ANOMALY DETECTION 7899
+
+ The base TEP models a plant-wide chemical process featuring
+ five major unit operations: reactor, product condenser, vaporliquid separator, recycle compressor, and product stripper. The
+ TEPE dataset contains 53 process variables, including flow
+ rates, pressures, temperatures, levels, and chemical component
+ concentrations. It incorporates 20 distinct anomaly types,
+ simulating 180 artificial anomaly events at 1-minute sampling
+ intervals over 360 operational days. Fig. 4 shows the piping
+ and instrumentation diagram.
+
+ B. Experimental Setup
+ 1) Datasets and Baselines: Apart from the proposed new
+Fig. 4. Piping and instrumentation diagram of the TEPE. dataset TEPE, three additional datasets are evaluated:
+ • SWaT (Secure Water Treatment) [37]: Originating from
+ a scaled-down version of an industrial water treatment
+detail the experimental setup, present comparative results
+ plant, the SWaT dataset is used for research in cyberacross four datasets using three evaluation metrics, and consecurity and anomaly detection in critical infrastructure
+duct ablation studies to validate the effectiveness of the
+ systems. SWaT collects 51 sensor data from a real-world
+proposed modules.1
+ industrial water treatment plant, at a frequency of one
+ second. The dataset provides ground truths of 41 attacks
+A. Auxiliary Metric and New Dataset launched during 4 days.
+ 1) Event-Level Auxiliary Metric: As shown in Fig. 2, clas- • MSL (Mars Science Laboratory rover) [38]: This dataset
+sic metrics exhibit limitations in capturing event-level anomaly originates from the Mars Science Laboratory rover,
+characteristics. To address this, we propose an auxiliary metric specifically the Curiosity rover. It includes telemetry
+based on anomaly event recall. Adopting the standard time data used to detect anomalies in the rover’s operational
+series definition, an anomaly event is a contiguous sequence of parameters during its mission on Mars.
+anomalous points, while a prediction segment is a contiguous • PSM (Pooled Server Metrics) [39]: This dataset aggreset of points flagged as anomalous by the model. gates performance metrics from multiple server nodes
+ We define the true positive predictions TPE as the number managed by eBay. It is utilized to identify outliers, indiof ground truth (GT) events that fully or partially overlap with cating potential issues in server performance or security
+one prediction segment or more. The false negative predictions breaches.
+FNE is the number of GT events that do not overlap with any For the baseline methods, we used publicly available impleprediction segment. Event recall (RE ) is computed as: mentations under the contaminated training setting. These
+ TPE methods include DeepSAD [40], DeepSVDD [41], USAD
+ RE = (21) [42], DAGMM [43], GANF [34], MTGFlow [10], FITS [44],
+ TPE + FNE
+ and CrossAD [45]. We retained their original network and
+ Event precision (PE ) incorporates point-level false positives
+ trained them follows the best hyperparameter reported in their
+with a normalization factor:
+ paper.
+ TP FP
+ PE = × λFE , λFE = 1 − (22) 2) Implementation Details: All experiments were con-
+ TP + FP N ducted on an Ubuntu Linux 64-bit operating system, with
+where TP/FP denote point-level true/false positives, and N is the support of Python 3.8 environment and Pytorch platform.
+the total normal points. The event-level F1 score is: The hardware configuration is listed as follows: an Intel Core
+ 2 · PE · RE i9-13900KF CPU @5.8 GHz, a 32 GB memory card, and an
+ F1E = (23) NVIDIA RTX 4090 @24 GB GPU.
+ PE + RE
+ In the comparison study, we set the anomaly detection
+ Alongside F1E , we report classic point-level F1 score and window size to 60 and the stride size to 10 for all experiments.
+AUROC for comprehensive evaluation. The total number of training epochs is 40 (TEPE), 100
+ 2) TEPE Simulation Dataset: As illustrated in Fig. 2, we (SWaT), 250 (PSM), and 250 (MSL). For the batch size, we
+would like to perform an event-level analysis for anomaly used 512 for the SWaT dataset and 256 for the other datasets.
+detection. However, existing public datasets contain a rela- Adaptive Moment Estimation with Weight Decay (AdamW)
+tively small number of anomaly events (e.g., 35 in SWaT, is chosen as the optimizer, and the learning rate scheduler is
+72 in PSM, 36 in MSL). To overcome this limitation, we OneCycleLR with a percentage start of 0.2, an initial learning
+developed a new simulation dataset TEPE (Tennessee Eastman rate of 0.002, and a maximum learning rate of 0.004. Detailed
+Process Extension), extending the benchmark Tennessee East- parameter settings of our model are provided in Table I.
+man Process (TEP) [36] to include diverse anomaly events. For the parameter selection of our model, we aligned the
+ 1 The source code of ALDM and the proposed TEPE dataset are available general parameters such as window size, stride size, weight
+at https://github.com/YuLiu-61/ALDM decay, batch size, threshold ratio, and block size with those
+7900 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ TABLE I
+ E XPERIMENTAL PARAMETERS OF ALDM IN C OMPARATIVE E XPERIMENTS
+
+ TABLE II (0.7403), respectively. It is noteworthy that the suboptimal
+ E XPERIMENTAL R ESULTS OF ALDM AND B ENCHMARK M ETHODS model on the F1E score significantly differs from the point-
+ ON AUROC(%) level indicator (F1/AUROC). For example, DeepSVDD ranks
+ second in the F1E of TEPE, but its F1 score is lower than that
+ of MTGFlow. This verifies the difference between event-level
+ indicators and point-level indicators: the former requires the
+ model to have the ability to identify the temporal continuity
+ of abnormal events, while the latter focuses on the detection
+ accuracy of individual points. This finding confirms the supplementary value of the F1E score to the existing evaluation
+ metrics.
+ To visualize the benefits of ALDM, Fig. 5 presents the ROC
+ curves for four datasets. In these curves, ALDM consistently
+ outperforms the baseline methods, highlighting its robustness
+of the open-sourced state-of-the-art density-based method and effectiveness in anomaly detection tasks.
+MTGFlow, as detailed in Table I. With these parameters set, Fig. 6 uses a point plot to compare the anomaly predictions
+we further optimized the remaining tunable hyperparameters of the proposed ALDM and the second-ranked MTGFlow.
+through extensive experimentation. Time indices are on the x-axis, and anomaly scores per
+ data segment are on the y-axis. Red backgrounds highlight
+C. Performance Evaluation of ALDM ground-truth anomalies. ALDM consistently assigns higher
+ scores to anomalies (within red regions) and lower scores
+ The results across the four datasets on three metrics are
+ to normal data compared to MTGFlow. It also exhibits
+presented in Tables II and III. Bold and underlined numbers
+ sharper score changes at anomaly boundaries (beginnings/ends
+denote the optimal and suboptimal values, respectively.
+ of red region), indicating more precise boundary detection.
+ As shown in Table II, the ALDM model proposed in
+ Besides, ALDM achieves a significantly lower mean anomaly
+this paper exhibits the best AUROC performance across all
+ score for normal periods, demonstrating superior false alarm
+scenarios, including cyber-physical attacks in SWaT and PSM,
+ suppression.
+as well as system-level faults in TEPE and MSL. Notably,
+on the SWaT dataset, the AUROC of ALDM reaches 0.905,
+marking a 5.7 percentage point improvement over the sub-
+ D. Result Verification
+optimal model MTGFlow. MTGFlow ranks second overall,
+with its AUROC value (0.811) on the TEPE dataset slightly Recall that the core problem comes from the observation
+lower than the USAD model by 0.5 percentage points. In terms that inherent noise and bias in data transmission and collection
+of standard deviations, ALDM shows stable performance on induce data drifts. These drifts cause the distributions of nordatasets with low anomaly ratios but relatively higher variance mal and abnormal data to overlap. The overlap gives rise to the
+on datasets with more anomalies. This instability stems from class ambiguity problem, where the boundary between classes
+its density-based framework and latent encoding, which may becomes obscured in the current data space. In the following,
+inadvertently incorporate prevalent anomalous patterns into the we evaluate the effectiveness of ALDM in addressing the
+learned latent structure, biasing the likelihood estimation and above issue.
+affecting the detection threshold. In practice, this effect can be We first employ the Augmented Dickey-Fuller (ADF) test
+effectively mitigated by collecting more normal data. statistics [46] to measure the extent of data drifts. The results
+ Table III presents a comparison on F1 and F1E scores. in Table IV reveal clear differences in time series stationarity
+The proposed ALDM persists the superior F1 score across across the four datasets. SWaT (ADF = −0.780, p = 0.83)
+all datasets, with a particularly notable performance on the and MSL (ADF = −1.228, p = 0.66) show high p-values,
+SWaT, where it outperforms the second-ranked model by 0.12 indicating strong non-stationarity and significant data drift. In
+(0.68 vs 0.56). The F1E score indicates that ALDM still contrast, TEPE (ADF = −9.48, p = 0.01) is clearly stationary,
+delivers the best performance. The suboptimal F1E for SWaT, while PSM (ADF = −6.060, p = 0.05) sits near the con-
+PSM, MSL, and TEPE are achieved by DAGMM (0.7734), ventional significance threshold, suggesting mild or borderline
+MTGFlow (0.6743), MTGFlow (0.4949), and DeepSVDD non-stationarity.
+LIU et al.: ADAPTIVE LATENT DISTRIBUTION MODELING FOR INDUSTRIAL TIME SERIES ANOMALY DETECTION 7901
+
+ TABLE III
+ E XPERIMENTAL R ESULTS OF ALDM AND B ENCHMARK M ETHODS ON F1E AND F1 S CORE . P OINT A DJUSTMENT N OT A PPLIED
+
+Fig. 5. The AUROC curves of the SWaT, PSM, MSL, and TEPE datasets.
+
+Fig. 6. Point plot of the anomalies prediction of MTGFlow and ALDM on SWaT (left 2 columns) and TEPE (right 2 columns). The x-axis denotes time
+points, and the y-axis denotes the anomaly score. The red region is ground truth anomalies.
+
+ These findings align with the observed performance gains. effective in scenarios with pronounced non-stationarity and
+ALDM delivers larger AUROC improvements on SWaT associated data drift.
+(+ 5.7%) and MSL (+ 2.9%), i.e., the two most non-stationary Next, we analyzed the probability density distributions.
+datasets, where data drift likely causes greater class ambiguity. Fig. 7 presents probability density plots comparing the dis-
+On the more stationary datasets (PSM and TEPE), where drift tributions of anomaly scores for “Normal” and “Abnormal”
+is limited, the gains are smaller (+ 1.1% and + 1.4%, respec- data segments. The x-axis represents the anomaly score, while
+tively). This supports the hypothesis that ALDM is particularly the y-axis shows the corresponding probability density of
+7902 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+Fig. 7. Probability density plots of MTGFlow (up) and ALDM (bottom) on SWaT (a), PSM (b), MSL (c), and TEPE (d).
+
+ TABLE IV 0 to 1. In contrast, ALDM compresses the anomaly scores
+S TATIONARITY A SSESSMENT U SING AUGMENTED D ICKEY-F ULLER of most normal segments tightly around 0.02, demonstrating
+ (ADF) T EST S TATISTICS excellent separation from abnormal segments.
+ In summary, ALDM shows better performance across all
+ test conditions, especially in reducing the overlap between
+ normal and abnormal data and improving the accuracy of
+ anomaly detection.
+
+segments. As expected, normal data segments are skewed
+ E. Ablation Study
+towards lower anomaly scores (left side), while anomalies are
+skewed towards higher scores (right side). The overlap metric To assess the validity of each designed module, we conquantifies the area where these two distributions overlap, ducted several ablation experiments on the proposed methods.
+serving as an indicator of how effectively a method separates 1) Module Effectiveness: The ablation experiments prenormal and abnormal cases. Better separation manifests as less sented in Table V provide insights into the contributions of
+overlap. The first row of subfigures in Fig. 7 displays results context learning (CL), adaptive distance computation (ADC),
+achieved by MTGFlow on the four datasets, while the second and soft assignment (SA) to the performance of various
+row shows results from the proposed ALDM. models across different datasets. The results indicate that
+ Regarding the overlap metric: MTGFlow exhibits over- incorporating SA significantly enhances model performance,
+lap values of 0.28, 0.44, 0.33, and 0.09 across subfigures as evidenced by the substantial improvements when comparing
+(a), (b), (c), and (d), respectively. Crucially, ALDM demon- M0 (which lacks all three components) with M1 (which
+strates smaller overlap areas than MTGFlow across all includes only SA). For instance, on the SWaT dataset, the
+datasets. This reduction in overlap indicates that ALDM AUROC increases from 73.5±4.3 to 88.5±0.9, the F1 score
+achieves superior performance in distinguishing between nor- rises from 0.3206 to 0.6592, and the F1E score increases
+mal and abnormal data, resulting in a clearer boundary. from 0.4267 to 0.9790. Further enhancements are observed
+ Regarding the distribution shape: In all subfigures, ALDM’s when ADC is added (M2), suggesting that both SA and ADC
+distribution for normal data (blue) exhibits a smaller mean play crucial roles in improving model accuracy. The inclusion
+value, while its distribution for abnormal data (red) exhibits a of CL (as seen in M3 and M0) also contributes positively,
+larger mean value compared to MTGFlow. This increased sep- although its impact is less pronounced compared to SA and
+aration between the means further confirms ALDM’s enhanced ADC. The final model, ALDM, which integrates all three
+ability to identify anomalies. components, achieves the highest performance across most
+ Regarding the range of anomaly scores: Compared to datasets, demonstrating that the combination of CL, ADC,
+MTGFlow, ALDM compresses the range of anomaly scores and SA is essential for optimal results. This comprehensive
+across all datasets. For instance, considering subfigure analysis underscores the importance of these components in
+(a): MTGFlow assigns normal segments scores ranging from enhancing the model’s ability to learn contextual information,
+LIU et al.: ADAPTIVE LATENT DISTRIBUTION MODELING FOR INDUSTRIAL TIME SERIES ANOMALY DETECTION 7903
+
+ TABLE V
+ A BLATION E XPERIMENTS ON C ONTEXT L EARNING (CL), A DAPTIVE D ISTANCE C OMPUTATION (ADC), AND S OFT A SSIGNMENT (SA)
+
+ TABLE VI
+ A BLATION E XPERIMENTS ON S TATIC D ISTANCE M ETRICS AND A DAPTIVE D ISTANCE C OMPUTATION (ADC)
+
+compute distances adaptively, and assign labels softly, leading that the combined components effectively improve the comto superior detection performance. pleteness of anomaly event detection. SA provides significant
+ 2) Impact of Distance Metrics: To further evaluate the boost to event-level performance. For instance, on SWaT,
+benefits of adaptive distance computation, we present a adding SA (M0 vs. M1) improves F1E from 0.4267 to 0.8790.
+comprehensive comparison between static distance metrics Stable gains are observed on other datasets, indicating SA’s
+(TD, COS, DTW) and the Adaptive Distance Computation crucial role in reducing missed detections for continuous
+(ADC) method across four datasets in Table VI. The eval- events. Building upon SA, ADC further refines event detection.
+uation metrics include AUROC, F1 score, and F1E score, Comparing M1 (w/o ADC) to M2 (w/ ADC), F1E improves on
+which collectively offer insights into the models’ capabilities SWaT (0.8790 to 0.8979) and PSM (0.6770 to 0.7026). This
+in distinguishing normal from anomalous instances, balanc- suggests ADC helps better delineate event boundaries through
+ing point-wise precision/recall, and addressing event-wise learned similarity. The impact of CL is dataset-dependent.
+anomaly detection, respectively. ADC consistently outper- While it offers a large gain on SWaT (M0 vs. M3: 0.4267
+forms the static distance metrics across nearly every evaluation to 0.7702), its effect is more modest or slightly negative on
+measure and dataset. These observations suggest that ADC others (e.g., TEPE). This implies its utility is tied to the
+not only provides superior discrimination power but also specific contextual nature of anomalies in the data. The full
+ensures better precision-recall trade-off and enhanced event- combination (CL+ADC+SA) yields the best overall eventwise detection capability. Furthermore, the relatively smaller level performance. Notably, adding ADC to the CL+SA setup
+standard deviations achieved by ADC indicate its stability and (M4 vs. ALDM) leads to substantial gains on PSM (0.6916 to
+robustness across different configurations. In contrast, while 0.7516) and MSL (0.4953 to 0.5303), confirming ADC’s key
+TD, COS, and DTW exhibit varying degrees of effectiveness role in synthesizing context and soft assignment for superior
+depending on the dataset, none of them can universally out- event detection.
+match ADC. This evidence shows the advantage of employing 4) Analysis of Soft Assignment: Based on the ablation
+adaptive mechanisms in distance calculation for improving the studies (Table V), the soft assignment (SA) mechanism delivaccuracy and reliability of anomaly detection systems. ers largest performance gains. Its most significant impact is
+ We also validated the effectiveness of Cholesky decom- observed on the SWaT dataset, where introducing SA alone
+position in ADC by comparing it with two alternatives: (M0 vs. M1) boosts AUROC by 15.0 points and F1-score by
+eigenvalue clipping and directly learning the metric matrix 0.3386. When integrated with the context learning module (M3
+M. Directly learning M caused immediate training failure vs. M4), SA provides further improvements, such as increasing
+due to NaN loss, underscoring the need to enforce positive the F1-score on SWaT by 0.1018. These quantitative results
+semi-definiteness. Eigenvalue clipping required costly projec- confirm the importance of SA in enhancing the model’s
+tions onto the positive semi-definite cone after each iteration, discriminative power. By generating soft labels to guide the
+leading to computational overhead (283 seconds/epoch vs. latent encoding, SA significantly refines the estimation of
+30 seconds for Cholesky on SWaT) and potential optimization data probabilities, leading to more accurate anomaly detection
+instability. across multiple benchmarks. We also performed a t-SNE
+ 3) Impact on Event-Wise Index: The complete model visualization of the latent vector following SA-guided latent
+(ALDM) achieves the best event-level F1E scores across all projection, as shown in Fig. 8. The figure illustrates the
+four datasets (SWaT, PSM, MSL, TEPE). This demonstrates distribution of latent vectors at 1, 30, 60, and 100 epochs. It is
+7904 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+Fig. 8. The t-SNE visualization of the latent vector on SWaT after 1, 30, 60, and 100 epochs, from left to right. The blue and red points correspond to
+normal and anomalous samples, respectively.
+
+ TABLE VII TABLE VIII
+ T RAINING T IME OF ALDM AND BASELINES ON W HOLE T EST T IME OF ALDM AND BASELINES ON W HOLE
+ DATASET (M IN ) DATASET (S EC )
+
+evident that the boundary between normal and abnormal samples becomes increasingly clear, indicating that the SA-guided requirements for most time series monitoring applications. We
+latent projection effectively helps to separate the distributions also compared the training time and inference time of ALDM
+of normal and abnormal data. and other baselines on whole dataset. The results are shown
+ Reviewing the ablation studies presented in Tables V in Tables VII and VIII.
+and VI, the following conclusions can be drawn: 1) The ALDM shows a trade-off between improved performance
+proposed ALDM consistently improves performance across and increased computation. During training, ALDM takes
+experiments. This validates the underlying motivation that much longer than all baseline methods on every dataset. For
+increasing the margin between normal data and anomalies example, on SWaT, ALDM requires 38.34 minutes-about 6
+through contrastive latent encoding is effective. 2) The best times longer than FITS (6.41 min) and over 13 times longer
+static distance metric varies depending on the dataset, sug- than the top competitor MTGFlow (2.86 min). Similar gaps
+gesting that different variable dependencies favor different appear on PSM (6.74 vs. 1.01 min for FITS), MSL (6.09
+metrics. Crucially, the proposed ADC module addresses this vs. 0.61 min for GANF), and TEPE (18.31 vs. 4.55 min for
+by adaptively learning the optimal metric, enabling ALDM GANF). The longer training time is attributed to the synergistic
+to consistently achieve state-of-the-art (SOTA) performance. impact of the latent encoding and contextual learning modules
+3) The context learning module further enhances ALDM’s within the ALDM. This collaboration necessitates additional
+effectiveness. This demonstrates that context information is epochs for the model to effectively map data to a suitable
+valuable not only for modeling data distributions but also for latent distribution. Although ALDM requires a longer training
+modeling latent distributions. duration compared to other benchmark models, the training
+ completion time remains on the minute level (less than an
+ hour), which is still acceptable.
+F. Computational Complexity At test time, however, ALDM is more efficient. Though
+ The computational complexity of ALDM is approximately slower than lightweight models like DeepSVDD and USAD,
+223 MFLOPs (i.e., 2.23 × 108 floating-point operations) per its inference speed is still practical for real-time inference.
+inference, measured in single-precision (FP32) arithmetic. On SWaT, ALDM processes the full test set in 9.36 seconds-
+This level of computational demand is well within the capa- much faster than FITS (74.49s) and only 2-3 times slower than
+bilities of modern edge devices and mobile platforms. For MTGFlow (4.84s). This trend continues on other datasets, with
+instance, on the NVIDIA Jetson Nano, a modest embedded test times of 2.59s (PSM), 2.46s (MSL), and 7.58s (TEPE).
+platform with 141 GFLOPs, the model is estimated to achieve The reasonable inference cost, despite the model’s complexity,
+a latency of 20–50 ms per inference. This satisfies real-time means that once trained, ALDM can compute representations
+LIU et al.: ADAPTIVE LATENT DISTRIBUTION MODELING FOR INDUSTRIAL TIME SERIES ANOMALY DETECTION 7905
+
+Fig. 9. Sensitivity analysis of window size (up), latent dimension (mid), and loss balance weight (down) in SWaT, PSM, MSL, and TEPE.
+
+and density estimates efficiently. This balance makes ALDM can often be fixed to a moderate value without significant
+viable for applications where offline training is acceptable and performance loss.
+detection accuracy is prioritized.
+ H. Limitations
+ While ALDM demonstrates strong performance in unsu-
+G. Parameter Sensitivity Analysis
+ pervised anomaly detection, several limitations are worth
+ To better understand the robustness of ALDM and facilitate discussing. First, when abundant and diverse normal data
+its practical deployment, we conduct sensitivity analysis on that covers all typical scenarios is available (semi-supervised),
+three key hyperparameters: window size (T ), latent dimen- reconstruction-based or forecasting-based methods may outsion (d), and loss balancing weight (λ). We evaluate their perform ALDM’s density estimation approach. These methods
+impact across four datasets using AUROC, F1 score, and explicitly learn the decision boundary of normal data, whereas
+F1E score. The experiments are performed in the range of ALDM does not directly utilize the presence of clean training
+T ∈ [40, 100], d ∈ [120, 512] and λ ∈ [0.2, 0.8]. samples.
+ The experimental results are shown in Fig. 9. It can be Second, the anomaly threshold is determined heuristically
+observed that window size has a significant effect on anomaly via the IQR rule on log-likelihoods. While unsupervised and
+detection performance, especially on the SWaT and PSM parameter-free, this approach assumes that the majority of
+datasets, where AUROC and F1E peak when the window training data is normal (a common but not universal assumpsize is between 60–80. This indicates that an appropriate tion). In scenarios with high contamination rates (>25%
+context length helps capture anomaly patterns, but overly long anomalies in training data), the IQR-based threshold may be
+windows introduce redundant information, reducing detection biased, resulting in degraded generalization.
+accuracy. The impact of latent dimension is relatively smaller, Third, while Normalizing Flows provide exact likelihood
+but excessively high dimensions (such as 512) can lead to a estimation, their representational capacity is constrained by
+slight performance drop, suggesting a potential risk of overfit- the architecture of the invertible transformations. This architing. Therefore, it is recommended to use moderate dimensions tectural limitation may yield inadequate approximations of
+(such as 256–320). Additionally, the loss balance weight is highly multimodal or intricately structured latent distributions,
+also critical for model performance. On most datasets, AUROC potentially causing false positives/negatives.
+and F1E show the best performance when the weight is set to These limitations point to promising directions for future
+0.5, indicating that the effective balance between contrastive work, such as incorporating robust thresholding mechanisms
+loss and distribution projection loss is crucial. or replacing NFs with more flexible generative priors.
+ These findings underscore that reasonable hyperparameter selection is necessary for high-performance time series V. C ONCLUSION
+anomaly detection. In particular, window size and loss weight- This study addressed the class ambiguity problem in indusing require dataset-specific tuning, whereas latent dimension trial time series anomaly detection by proposing a novel latent
+7906 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+distribution modeling approach. Our key finding demonstrates [18] S. Lee, T. Park, and K. Lee, “Soft contrastive learning for time series,”
+that shifting the distribution modeling objective from the raw in Proc. Int. Conf. Learning Represent., 2024, pp. 1–14.
+ [19] W. Cho, Y. Kim, and J. Park, “Hierarchical anomaly detection using a
+data space to a latent space effectively enlarges the margin multioutput Gaussian process,” IEEE Trans. Autom. Sci. Eng., vol. 17,
+between normal and abnormal patterns, thereby enhancing no. 1, pp. 261–272, Jan. 2020.
+the discrimination capability of density-based anomaly detec- [20] K. Yamanishi and J.-I. Takeuchi, “A unifying framework for detecting
+ outliers and change points from non-stationary time series data,” in Proc.
+tors. Furthermore, the proposed adaptive distance computation 8th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, 2002,
+mechanism actively separates representations of normal and pp. 676–681.
+anomalous segments, making the proposed ALDM well-suited [21] M. Li et al., “SA2E-AD: A stacked attention autoencoder for anomaly
+ detection in multivariate time series,” ACM Trans. Knowl. Discovery
+for the anomaly detection task. The efficacy and generality of Data, vol. 18, no. 7, pp. 1–15, Jun. 2024.
+the proposed latent space transformation principle suggest its [22] M. A. Belay, A. Rasheed, and P. S. Rossi, “MTAD: Multiobjective
+potential for adapting and improving existing density-based transformer network for unsupervised multisensor anomaly detection,”
+ IEEE Sensors J., vol. 24, no. 12, pp. 20254–20265, Jun. 2024.
+anomaly detection methods. While this work successfully [23] L. Dinh, D. Krueger, and Y. Bengio, “NICE: Non-linear independent
+employed a contrastive method for latent encoding, future components estimation,” 2014, arXiv:1410.8516.
+research could explore alternative projection techniques to [24] B. L. Trippe and R. E. Turner, “Conditional density estimation with
+ Bayesian normalising flows,” 2018, arXiv:1802.04908.
+optimize latent space separability and model performance. [25] R. Li, Z. Liu, X. Zhu, L. Li, and X. Cao, “Detecting multivariate time
+ series anomalies with cascade decomposition consistency,” IEEE Trans.
+ Instrum. Meas., vol. 74, pp. 1–14, 2025.
+ R EFERENCES [26] S. Bond-Taylor, A. Leach, Y. Long, and C. G. Willcocks, “Deep generative modelling: A comparative review of VAEs, GANs, normalizing
+[1] F. Quan, X. Sun, H. Zhao, Y. Li, and G. Qin, “Detection of rotating flows, energy-based and autoregressive models,” IEEE Trans. Pattern
+ stall inception of axial compressors based on deep dilated causal Anal. Mach. Intell., vol. 44, no. 11, pp. 7327–7347, Nov. 2022.
+ convolutional neural networks,” IEEE Trans. Autom. Sci. Eng., vol. 21, [27] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” 2013,
+ no. 2, pp. 1235–1243, Apr. 2024. arXiv:1312.6114.
+[2] J. Fang et al., “A new particle swarm optimization algorithm for outlier [28] I. J. Goodfellow et al., “Generative adversarial nets,” in Proc. Adv.
+ detection: Industrial data clustering in wire arc additive manufacturing,” Neural Inf. Process. Syst., vol. 27, 2014, pp. 2672–2680.
+ IEEE Trans. Autom. Sci. Eng., vol. 21, no. 2, pp. 1244–1257, Apr. 2024. [29] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,”
+[3] D. Meli, “Explainable online unsupervised anomaly detection for cyber- in Proc. Adv. Neural Inf. Process. Syst., vol. 33, 2020, pp. 6840–6851.
+ physical systems via causal discovery from time series*,” in Proc. IEEE [30] L. Dinh, J. Sohl-Dickstein, and S. Bengio, “Density estimation using
+ 20th Int. Conf. Autom. Sci. Eng. (CASE), Aug. 2024, pp. 4120–4125. real NVP,” in Proc. Int. Conf. Learning Represent., 2017, pp. 1–12.
+[4] M. Yao, D. Tao, P. Qi, and R. Gao, “Rethinking discrepancy [31] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer:
+ analysis: Anomaly detection via meta-learning powered dual-source Time series anomaly detection with association discrepancy,” 2021,
+ representation differentiation,” IEEE Trans. Autom. Sci. Eng., vol. 22, arXiv:2110.02642.
+ pp. 8579–8592, 2025. [32] B. Yu, Y. Yu, G. Xiang, and R. Lin, “Triple attention: An integrated
+[5] V. Barnett et al., Assessment of Outliers in Statistical Data Analysis, approach for interpretable anomaly detection in temporal and association
+ vol. 3. Hoboken, NJ, USA: Wiley, 1994. dimensions,” IEEE Trans. Instrum. Meas., vol. 73, pp. 1–12, 2024.
+[6] S. He, Z. Li, J. Wang, and N. N. Xiong, “Intelligent detection for [33] H. Liu, W. Luo, L. Han, P. Gao, W. Yang, and G. Han, “Anomaly
+ key performance indicators in industrial-based cyber-physical systems,” detection via graph attention networks-augmented mask autoregressive
+ IEEE Trans. Ind. Informat., vol. 17, no. 8, pp. 5799–5809, Aug. 2021. flow for multivariate time series,” IEEE Internet Things J., vol. 11,
+[7] A. S. Raihan and I. Ahmed, “A Bi-LSTM autoencoder framework for no. 11, pp. 19368–19379, Jun. 2024.
+ anomaly detection—A case study of a wind power dataset,” in Proc. [34] E. Dai and J. Chen, “Graph-augmented normalizing flows for anomaly
+ IEEE 19th Int. Conf. Autom. Sci. Eng. (CASE), Aug. 2023, pp. 1–6. detection of multiple time series,” in Proc. Int. Conf. Learning Repre-
+[8] S. Liu et al., “Time series anomaly detection with adversarial recon- sent., 2022, pp. 1–12.
+ struction networks,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 4, [35] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+ pp. 4293–4306, Apr. 2023. in multivariate time series,” in Proc. AAAI Conf. Artif. Intell. (AAAI),
+[9] L. Ruff et al., “A unifying review of deep and shallow anomaly May 2021, pp. 4027–4035.
+ detection,” Proc. IEEE, vol. 109, no. 5, pp. 756–795, May 2021. [36] J. J. Downs and E. F. Vogel, “A plant-wide industrial process control
+[10] Q. Zhou, S. He, H. Liu, J. Chen, and W. Meng, “Label-free multivariate problem,” Comput. Chem. Eng., vol. 17, no. 3, pp. 245–255, Mar. 1993.
+ time series anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 36, [37] J. Goh, S. Adepu, K. N. Junejo, and A. Mathur, “A dataset to support
+ no. 7, pp. 3166–3179, Jul. 2024. research in the design of secure water treatment systems,” in Proc.
+[11] H. Xu, Y. Wang, S. Jian, Q. Liao, Y. Wang, and G. Pang, “Calibrated 11th Int. Conf. Crit. Inf. Infrastruct. Secur. Cham, Switzerland: Springer,
+ one-class classification for unsupervised time series anomaly detection,” 2017, pp. 88–99.
+ IEEE Trans. Knowl. Data Eng., vol. 36, no. 11, pp. 5723–5736, Nov. [38] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Soder-
+ 2024. strom, “Detecting spacecraft anomalies using LSTMs and nonparametric
+[12] A. B. Nassif, M. A. Talib, Q. Nasir, and F. M. Dakalbab, “Machine dynamic thresholding,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl.
+ learning for anomaly detection: A systematic review,” IEEE Access, Discovery Data Mining, Jul. 2018, pp. 387–395.
+ vol. 9, pp. 78658–78700, 2021. [39] A. Abdulaal, Z. Liu, and T. Lancewicki, “Practical approach to asyn-
+[13] G. Papamakarios, E. Nalisnick, D. J. Rezende, S. Mohamed, and chronous multivariate time series anomaly detection and localization,”
+ B. Lakshminarayanan, “Normalizing flows for probabilistic modeling in Proc. 27th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug.
+ and inference,” J. Mach. Learn. Res., vol. 22, no. 57, pp. 1–64, 2021. 2021, pp. 2485–2494.
+[14] L. Zhang et al., “Spatial–temporal graph conditionalized normalizing [40] L. Ruff et al., “Deep semi-supervised anomaly detection,” 2019,
+ flows for nuclear power plant multivariate anomaly detection,” IEEE arXiv:1906.02694.
+ Trans. Ind. Informat., vol. 20, no. 11, pp. 12945–12958, Nov. 2024. [41] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+[15] X. Wang, Q. Kang, M. Zhou, L. Pan, and A. Abusorrah, “Multiscale drift Learn., 2018, pp. 4393–4402.
+ detection test to enable fast learning in nonstationary environments,” [42] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+ IEEE Trans. Cybern., vol. 51, no. 7, pp. 3483–3495, Jul. 2021. “USAD: Unsupervised anomaly detection on multivariate time series,”
+[16] A. Abanda, U. Mori, and J. A. Lozano, “A review on distance based time in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Disc. Data Min., 2020,
+ series classification,” Data Mining Knowl. Discovery, vol. 33, no. 2, pp. 3395–3404.
+ pp. 378–412, Mar. 2019. [43] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsu-
+[17] X. Yao, R. Li, J. Zhang, J. Sun, and C. Zhang, “Explicit boundary guided pervised anomaly detection,” in Proc. Int. Conf. Learn. Represent., 2018,
+ semi-push-pull contrastive learning for supervised anomaly detection,” pp. 1–14.
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jul. 2023, [44] Z. Xu, A. Zeng, and Q. Xu, “FITS: Modeling time series with 10k
+ pp. 24490–24499. parameters,” in Proc. Int. Conf. Learn. Represent., 2024.
+LIU et al.: ADAPTIVE LATENT DISTRIBUTION MODELING FOR INDUSTRIAL TIME SERIES ANOMALY DETECTION 7907
+
+[45] B. Li et al., “CrossAD: Time series anomaly detection with cross-scale Feng Lin (Life Fellow, IEEE) received the B.Eng.
+ associations and cross-window modeling,” in Proc. 39th Annu. Conf. degree in electrical engineering from Shanghai Jiao
+ Neural Inf. Process. Syst., 2025, pp. 1–14. Tong University, Shanghai, China, in 1982, and the
+[46] D. A. Dickey and W. A. Fuller, “Distribution of the estimators for M.A.Sc. and Ph.D. degrees in electrical engineerautoregressive time series with a unit root,” J. Amer. Stat. Assoc., vol. 74, ing from the University of Toronto, Toronto, ON,
+ no. 366, pp. 427–431, Jun. 1979. Canada, in 1984 and 1988, respectively. He was
+ a Post-Doctoral Fellow with Harvard University,
+ Cambridge, MA, USA, from 1987 to 1988. Since
+ 1988, he has been with the Department of Electrical
+ and Computer Engineering, Wayne State University,
+ Detroit, MI, USA, where he is currently a Professor.
+ Yu Liu was born in Hubei, China, in 1997. He
+ He authored a book entitled Robust Control Design: An Optimal Control
+ received the B.Eng. degree in automatic control from
+ Approach. His current research interests include discrete event systems, hybrid
+ China University of Petroleum, Shandong, China,
+ systems, neural networks, robust control, and their applications in alternative
+ in 2019. He is currently pursuing the Ph.D. degree
+ energy, biomedical systems, machine learning, and automotive control. He
+ with the School of Electronics and Information Engihas co-authored a paper that received the George Axelby Outstanding Paper
+ neering, Tongji University, Shanghai, China. His
+ Award from the IEEE Control Systems Society. He was an Associate Editor
+ main research interests include anomaly detection,
+ of IEEE T RANSACTIONS ON AUTOMATIC C ONTROL.
+ complex event recognition, and control of discrete
+ event systems and cyber-physical systems.
+
+ Jun Wang (Senior Member, IEEE) received the
+ Ph.D. degree in control engineering from the University of Leeds, Leeds, U.K., in 2003. He was
+ Yifan Song received the B.Eng. degree in mechan- the General Chair of IAVSD 2025, organized by
+ ical design, manufacturing and automation from the International Association for Vehicle System
+ China Agricultural University, Beijing, China, in Dynamics. He is currently a Professor of con-
+ 2019. He is currently pursuing the Master of trol engineering with Tongji University, Shanghai,
+ Engineering degree in electronic and information China. He is the Director of the Enterprise Digengineering with the School of Electronics and Infor- ital Technology Engineering Research Center of
+ mation Engineering, Tongji University, Shanghai, the Ministry of Education of China. His research
+ China. His main research interests include time interests include smart sensing, intelligent control,
+ series anomaly detection. and autonomous vehicles. He is a Board Member of Shanghai Association of
+ Automation and Shanghai Association of Artificial Intelligence.
+
+ Shaolong Shu (Senior Member, IEEE) received the Yafeng Guo received the B.Sc. degree in automatic
+ B.Eng. degree in automatic control and the Ph.D. control and the M.Sc. degree in control theory
+ degree in control theory and control engineering and control engineering from Xiamen University,
+ from Tongji University, Shanghai, China, in 2003 in 2001 and 2004, respectively, and the Ph.D.
+ and 2008, respectively. Since July 2008, he has been degree in control theory and control engineering
+ with the School of Electronics and Information Engi- from Shanghai Jiao Tong University, in 2009. In
+ neering, Tongji University, where he is currently a 2009, he joined the Department of Control Sci-
+ Full Professor. From August 2007 to February 2008 ence and Engineering, Tongji University. He is
+ and from April 2014 to April 2015, he was a Vis- currently an Associate Professor with Tongji Univeriting Scholar with Wayne State University, Detroit, sity. His research interests include principle-guided
+ MI, USA. His main research interests include state neural networks, autonomous vehicle, and stochastic
+estimation and control of discrete event systems and cyber-physical systems. systems.

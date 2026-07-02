@@ -1,0 +1,676 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [422] ETGuard: Malicious Encrypted Traffic Detection in Blockchain-Based Power Grid Systems
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：422
+题名：ETGuard: Malicious Encrypted Traffic Detection in Blockchain-Based Power Grid Systems
+年份：2025
+DOI：10.1007/978-981-97-9412-6_40
+来源：Communications in Computer and Information Science
+PDF：paper/10.1007_978-981-97-9412-6_40.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：恶意流量、暗网与攻击检测、联邦学习、隐私保护与分布式协同
+相关性：强相关，分数 14
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\422.txt
+- 原始字符数：29142
+- 本次发送字符数：29142
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+ETGuard: Malicious Encrypted Traffic Detection
+in Blockchain-based Power Grid Systems
+
+arXiv:2408.10657v1 [cs.CR] 20 Aug 2024
+
+Peng Zhou1 , Yongdong Liu2,⋆ , Lixun Ma2 , Weiye Zhang2 , Haohan Tan2 ,
+Zhenguang Liu2 , and Butian Huang2
+1
+
+State Grid Zhejiang Electric Power Company, LTD. Information and
+Communication Branch, China
+2
+Zhejiang University, Hangzhou, Zhejiang Province, China
+{malx}@zju.edu.cn
+
+Abstract. The escalating prevalence of encryption protocols has led
+to a concomitant surge in the number of malicious attacks that hide
+in encrypted traffic. Power grid systems, as fundamental infrastructure,
+are becoming prime targets for such attacks. Conventional methods for
+detecting malicious encrypted packets typically use a static pre-trained
+model. We observe that these methods are not well-suited for blockchainbased power grid systems. More critically, they fall short in dynamic
+environments where new types of encrypted attacks continuously emerge.
+Motivated by this, in this paper we try to tackle these challenges from
+two aspects: (1) We present a novel framework that is able to automatically detect malicious encrypted traffic in blockchain-based power grid
+systems and incrementally learn from new malicious traffic. (2) We mathematically derive incremental learning losses to resist the forgetting of
+old attack patterns while ensuring the model is capable of handling new
+encrypted attack patterns. Empirically, our method achieves state-ofthe-art performance on three different benchmark datasets. We also constructed the first malicious encrypted traffic dataset for blockchain-based
+power grid scenario. Our code and dataset are available at https://github.
+com/PPPmzt/ETGuard, hoping to inspire future research.
+Keywords: Blockchain · Network security · Malicious encrypted traffic
+detection · Incremental learning.
+
+1
+
+Introduction
+
+The immutable and decentralized nature of blockchain has led to applications
+such as Bitcoin, decentralized crowdfunding, and cross-industry finance [31].
+While research often focuses on system and software issues like consensus mechanisms [29], smart contracts [18], and virtual machines, cybersecurity challenges,
+particularly malicious traffic attacks, are often neglected.
+In blockchain-based power systems, critical national infrastructure, malicious
+traffic poses severe risks such as widespread power outages and energy data
+⋆
+
+Yongdong Liu is the corresponding author.
+
+2
+
+P. Zhou, Y. Liu, et al.
+
+breaches. Although encryption protocols are widely adopted to secure data, they
+can be exploited by attackers to hide malicious activities. Detecting malicious
+encrypted traffic in power systems involves distinguishing attack patterns from
+benign packets [15]. Research in this area generally follows two approaches: one
+[12,7,9] uses decryption analysis to reveal clues in encrypted sequences, while another [22,23] examines statistical differences using deep learning. Current methods face two main issues: poor performance on blockchain-based power grids,
+leading to a significant drop in F1 scores, and difficulties with novel attack sequences due to reliance on static models.
+To address these challenges, we propose a novel approach incorporating incremental learning to adapt to new attacks. Our method involves training a model
+with self-supervised learning to extract detailed packet features and deriving
+incremental learning losses to preserve old data while learning new attack patterns. We update the model using replayed samples combined with these losses.
+Additionally, we introduce the GridET-2024 dataset, which includes real-world
+traffic data from the State Grid of China, to evaluate detection in blockchainbased power grid scenarios. To evaluate our method, we conducted extensive
+experiments on three benchmark datasets, as well as ablation studies to assess key components. Our method demonstrates state-of-the-art performance on
+these datasets. In summary, our contributions are as follows:
+• We propose ETGuard, a novel framework for detecting malicious encrypted
+traffic in blockchain-based power grids. It is the first method to automatically
+identify these attacks and adapt to new traffic patterns incrementally.
+• We derive a loss function for effective incremental learning, supported by
+rigorous theoretical analysis, to manage new attack patterns while mitigating catastrophic forgetting. Additionally, we introduce a sample buffer for
+efficient storage and replay of representative traffic samples.
+• We have collected real-world data from blockchain-based power grid systems
+and created the GridET-2024 dataset, the first of its kind for detecting malicious encrypted traffic in this context. Our method achieves state-of-the-art
+performance on several benchmark datasets.
+
+2
+
+Problem Statement
+
+Problem formulation. Given a sequence of encrypted packets s = {p1 , p2 , . . . , pn },
+we are interested in developing a fully automated model to determine whether
+the packet sequence is malicious. Put differently, we aim to estimate the label
+ŷ for each encrypted packet sequence s, where ŷ = 1 represents s is a malicious
+sequence, and ŷ = 0 indicates that s is benign.
+
+3
+
+Method
+
+Method Overview The detailed architecture of our proposed framework is
+outlined in Fig. 1. Overall, the framework consists of three key components:
+
+ETGuard
+
+3
+
+• Data Preprocessing: Raw packets are cleaned and processed, ensuring that
+the packets from an individual client are sorted into a packet sequence and
+are separated from the packets of other clients. To extract features from these
+sequences, we use an unsupervised auto-encoder with stacked bi-GRUs.
+• Incremental Learning Module: To adapt to novel attacks while preventing
+catastrophic forgetting, we introduce an incremental learning module and
+mathematically derive the incremental learning losses.
+• Detection Module: The detection module learns the feature distinctions between benign and malicious sequences to continuously identify potential attacks. The learning process is supervised by the classification loss and incremental learning losses.
+In what follows, we will elaborate on the details of these components one by one.
+
+Fig. 1: The framework of ETGuard.
+
+3.1
+
+Data Preprocessing
+
+The preprocessing module aims to clean and process raw packet data into distinct
+sequences for different clients. Since packet sequences cannot be directly input
+into a network, we employ an unsupervised auto-encoder with stacked bi-GRUs
+to extract features from each client’s packet sequence.
+Specifically, raw traffic data consists of packets organized by a five-tuple (i.e.,
+source and destination IP addresses, source and destination ports, and transport
+layer protocol). We group packets with the same five-tuple into sequences s and
+sort them chronologically. Irrelevant packet information, such as IP addresses
+and port numbers, is removed from each sequence.
+The resulting sequences, sinput , are formatted with components l, d, and
+tm , where: l = {b1 , b2 , . . . , bn } denotes the packet length sequence, d = tn − t1
+represents the duration of sinput , tm is the mean time interval between packets.
+
+4
+
+P. Zhou, Y. Liu, et al.
+
+The feature extractor uses an auto-encoder with multiple bi-directional Gated
+Recurrent Units (bi-GRUs) [8], serving as both encoder and decoder. The encoder transforms the input sequence into a feature vector, which the decoder
+uses to reconstruct the sequence. A multi-layer perceptron in the reconstruction
+layer restores the original embedded sequence. The encoder learns an accurate
+representation of encrypted network traffic by minimizing reconstruction loss
+during training.
+Compared to traditional methods [2,3,16] that focus on specific versions of
+TLS handshake metadata or message types [23], our approach captures the finegrained behavior of network traffic more effectively.
+3.2
+
+Mathematical Derivation of Incremental Learning Objectives
+
+In this subsection, we introduce the incremental learning module, and provide
+the key mathematical derivations of incremental learning objectives within this
+module.
+We use the incremental learning method based on empirical replay [24,6,27]
+with targeted modifications for encrypted traffic scenarios to realize the incremental update of the model when facing new types of traffic attack. Specifically,
+we maintain a sample buffer to store representative traffic samples. When new
+malicious encrypted traffic arises, we incrementally update the model through
+a anti-forgetting loss function to detect new attack patterns. The new traffic
+samples are updated into the buffer using a reservoir sampling algorithm [28],
+serving as a representative sample set for subsequent incremental model updates.
+Sample Buffer The sample buffer is used to store representative traffic samples to achieve experience replay during incremental learning. When the model
+learns new traffic patterns, it replays previous samples from the sample buffer
+to effectively prevent catastrophic forgetting. We implement the update of the
+sample buffer using the reservoir sampling algorithm. When new traffic samples arrive, the sample buffer is dynamically updated to ensure diversity and
+representativeness.
+Incremental Learning Loss Function The goal of the incremental learning
+module is to detect the ongoing emergence of new malicious traffic attacks. To
+enable the model to learn from new datasets, the loss function and optimization
+objectives are defined as follows:
+min Lce = E(x,y)∼D [ℓ(fθ (x), y)],
+θ
+
+(1)
+
+where θ denotes the model parameters, Lce represents the loss function using
+cross-entropy, D denotes the dataset, fθ (x) denotes the detection model, and y
+denotes the true target of the sample.
+To mitigate catastrophic forgetting, we introduce a new loss function aimed
+at balancing the learning between new and old data. We use the past data on the
+
+ETGuard
+
+5
+
+updated model to obtain an output fθ (x) that closely approximates the output
+of the pre-update model trained on past traffic data, denoted as fθ∗t .
+Lil = αE(x,z)∼M [DKL (softmax(z)||fθ (x))] .
+
+(2)
+
+In the above equation, z represents the output logits of the model on the past
+traffic data. In order to reduce the resource consumption, we use z to replace the
+model output fθ∗t . The logits z are softmaxed to obtain the probability vector,
+which is used to calculate the KL scatter with the model output fθ (x).
+Theorem 1. If two logits output by the model are similar, the KL divergence
+between them can be approximated as the Euclidean distance.
+Proof. Assume logits z1 and logits z2 are two close vectors, we set the sample
+space of logits z, R = {1, ..., n}, n is the dimension of logits z, so we can express
+z2 as:
+z2 = z1 + ϵ∆z,
+(3)
+for some small ϵ > 0 and perturbation vector ∆z = [∆z(1) · · · ∆z(n)]T . Next,
+we approximate the KL divergence locally.
+
+
+X
+z1 (i)
+.
+(4)
+DKL (z1 ∥z2 ) =
+z1 (i) log
+z2 (i)
+i∈R
+
+Substituting z2 (i) = z1 (i) + ϵ∆z(i) into the KL divergence formula gives:
+
+
+X
+z1 (i)
+DKL (z1 ∥z2 ) =
+z1 (i) log
+.
+z1 (i) + ϵ∆z(i)
+
+(5)
+
+i∈R
+
+Applying the second-order Taylor approximation to log
+DKL (z1 ∥z2 ) =
+
+
+
+z1 (i)
+z1 (i)+ϵ∆z(i)
+
+ϵ2 X ∆z(i)2
++ o(ϵ2 ).
+2
+z1 (i)
+
+
+
+:
+(6)
+
+i∈R
+
+This implicitly assumes z1 (i) > 0 for all i ∈ R. Introducing the weighted Euclidean norm, the KL divergence becomes:
+DKL (z1 ∥z2 ) =
+
+ϵ2
+∥∆z∥2z1 + o(ϵ2 ) = ∥z1 − z2 ∥.
+2
+
+(7)
+
+Thus, under the local approximation, the KL divergence approximates a weighted
+Euclidean distance.
+By Theorem 1, Lil can be simplified to:
+h
+i
+2
+Lil = αE(x,z)∼M ∥z ′ − g(x′ )∥2 .
+
+(8)
+
+6
+
+P. Zhou, Y. Liu, et al.
+
+To handle significant changes in new attack patterns and avoid bias towards
+previous patterns, we introduce a smoothness loss function:
+Llb = βE(x′′ ,y′′ ,z′′ )∼M [ℓ(y ′′ , h(x′′ ))] .
+
+(9)
+
+To balance the contributions of Lil and Llb , we use a coefficient k:
+k = 0.5 + softmax(Lil · γ).
+The final loss function is:
+h
+i
+2
+Lce + αE(x′ ,y′ ,z′ )∼M ∥z ′ − g(x′ )∥2 + kαE(x′′ ,y′′ ,z′′ )∼M [ℓ(y ′′ , h(x′′ ))] .
+3.3
+
+(10)
+
+(11)
+
+Detection Module
+
+Due to the substantial volume of traffic data and the high traffic rate in the
+blockchain-based power grid scenario, the real-time performance and resource
+consumption of the model are critically demanding. The MLP model architecture, being relatively simple, requires lower computing resources and offers faster
+training speeds. It is capable of monitoring traffic data in real time, and experiments have demonstrated that the MLP model is sufficient to meet the task
+requirements. Therefore, the MLP model is chosen to detect malicious traffic.
+
+4
+
+Evaluations
+
+In this section, we conduct extensive experiments on multiple malicious encrypted traffic detection datasets to evaluate our framework. Next, we introduce
+the experimental setup, followed by presenting the comprehensive empirical results.
+4.1
+
+Experimental Setup
+
+Datasets
+• CIRA-CIC-DoHBrw-2020 (DoHBrw) [21]: The DoHBrw dataset provides a mix of benign and malicious DNS-over-HTTPS (DoH) traffic, all data
+is encrypted traffic. The normal traffic is generated by querying benign DNS
+servers using the DoH protocol. Tunneling tools such as dns2tcp, DNSCat2,
+and Iodine are used to generate malicious DoH traffic.
+• CIC-AndMal2017 (CIC) [14]: CIC collected a rich variety of malicious
+attacks from several sources. The malicious traffic samples come from 42
+unique malware families, which can be classified into four categories: Adware,
+Ransomware, Scareware, and SMS Malware.
+• GridET-2024 (GridET): To better detect the encrypted attacks of realworld blockchain-based power grid scenario, we create the dataset GridET2024. Benign traffic samples are collected by capturing power grid system
+interaction traffic data. Malicious traffic data samples are sourced from
+malware-traffic-analysis.net and USTC-TFC2016 dataset to ensure the diversity of malicious traffic attack patterns.
+
+ETGuard
+
+7
+
+Implementation Details We implement our detection framework and all baselines by using Python 3.8.5. We run these models on a Linux server with NVIDIA
+GeForce RTX 3090 GPU. We list all the parameters used by our framework in
+Table 2. In particular, we set n = 50 and d = 32 to make a better capability of
+capturing fine-grained behaviors of network traffic. Then, we apply Grid Search
+to find the appropriate values for α and γ. The values of α and γ are 0.5 and
+10, respectively. In particular, buffer size is a hyperparameter manually tuned to
+best fit the specific scenario. We conduct comprehensive experiments to evaluate
+the performance of ETGuard with various buffer sizes.
+Table 1: Statistics of Datasets
+Dataset Normal Malicious
+DoHBrw 688,489
+CIC
+894,367
+GridET 43,611
+
+6,112
+62,972
+27,141
+
+Table 2: Parameter Settings of ETGuard
+Module
+
+Para. Value
+
+Description
+
+Feature Extraction
+
+n
+V
+H
+B
+
+50
+32
+8
+2
+
+Number of used head packets
+Embedding size of GRU-AE
+Hidden size of each GRU layer
+Number of GRU layers
+
+Incremental Learning
+
+α
+γ
+
+0.5
+Coefficient of loss L2
+10 Coefficient to balance loss L2 and loss L3
+
+Evaluation Metrics We use ACC and F1 Score as metrics to evaluate the
+malicious traffic detection and incremental learning performance of ETGuard.
+4.2
+
+Performance on Malicious Encrypted Traffic Detection
+
+In this section, we benchmark our method against state-of-the-art malicious
+encrypted traffic detection methods for two public dataset and one power grad
+scenario dataset GridET.
+In public dataset evaluations, we train and test methods on DoHBrw, and
+CIC, respectively. Fig. 2 presents public dataset comparison results. From Fig. 2,
+we observe that our method is capable of consistently outperforming existing
+methods on all five benchmarks. For example, the F1 score of our method is
+0.92 on DoHBrw while the state-of-the-art detection method RAPIER [23] is
+0.88. The F1 score of our method is also outperformed FS [17] in all datasets. In
+addition, we also use the CoinFlip algorithm and PacketLen algorithm, which
+simulate randomly guess and only utilize packet length, respectively, to detect
+encrypted traffic.
+Table 3: F1 scores of Malicious Encrypted Traffic Detection Methods
+Dataset RAPIER FS CoinFlip PacketLen ETGuard (Ours)
+DoHBrw
+CIC
+GridET
+
+0.88
+0.84
+0.83
+
+0.76
+0.71
+0.73
+
+0.28
+0.27
+0.31
+
+0.56
+0.46
+0.49
+
+0.92
+0.86
+0.94
+
+The blockchain-based power grid scenario malicious traffic detection is more
+challenging for existed detection methods. To evaluate the detection abilities
+of the methods on this scenario, we train and test the models on the GridET
+
+8
+
+P. Zhou, Y. Liu, et al.
+
+dataset. Table 3 demonstrate the state-of-the-art malicious encrypted traffic detection methods still suffer from relatively low F1 score on the GridET dataset,
+which reveals that such methods are fall short to extract the critical features of
+traffic sample in the blockchain-based power grid scenario.
+
+Fig. 2: Performance on Malicious Encrypted Traffic Detection.
+Overall, our method achieves state-of-the-art general scenarios and blockchainbased power grid scenario malicious encrypted traffic detection performance. For
+general scenarios comparisons, our method improves the F1 score on DoHBrw
+from 0.88 to 0.92, and on CIC from 0.84 to 0.86. In contrast with general scenarios methods, our method also attains 0.94 F1 score on GridET, outperforming
+the current state-of-the-art method RAPIER.
+4.3
+
+Performance on Incremental Learning
+
+To evaluate the performance of our method on incremental learning, we create a
+new dataset DoHBrw/CIC. Specifically, we combine all benign samples from the
+DoHBrw dataset with a selection of malicious samples from the CIC dataset.
+We further divide the datasets into six sub-datasets {A0 , A1 , A2 , A3 , A4 , A5 }. In
+each of these sub-datasets, the benign traffic is all of the same type DoHBrw,
+while the malicious traffic all consists of different types of malicious attacks.
+We use A0 for pre-training the model, while the other sub-datasets are used for
+incremental updates to the model. We established a separate test set for each
+round, where the test set for round i includes all attack types observed from
+rounds 0 to i.
+We compare ETGuard against five incremental learning methods (ER [25],
+DER [6], DER++ [6], GSS [1], SI [30]) on DoHBrw/CIC. To assess the efficacy of the incremental learning module within our approach, we extracted this
+component from ETGuard, resulting in a variant dubbed ETGuard-V. We then
+evaluated the performance of ETGuard-V to conduct an ablation study. We
+further provide an upper bound given by training all attack samples (FULL).
+
+ETGuard
+
+9
+
+Fig. 3: The Performance of Incremental Learning Methods.
+Fig. 3 reports performance in terms of average accuracy across all rounds.
+Experimental evidence ETGuard achieve state-of-the-art performance in almost
+all settings.
+
+Fig. 4: The Performance of Incremental Learning Methods in Different Round.
+At the same time, we observe that the performance of ETGuard is almost
+always better than that of ETGuard-V. And as the number of rounds increases,
+the gap in detection performance between ETGuard-V and ETGuard gradually widens, which further proves the effectiveness of our incremental learning
+module.
+
+5
+
+Related Work
+
+5.1
+
+Malicious Encrypted Traffic Detection
+
+Traditional malicious encrypted traffic detection mainly uses signature-based
+methods [12,7,9] to detect malicious encrypted traffic. However, the method
+
+10
+
+P. Zhou, Y. Liu, et al.
+
+relies heavily on the quality of decryption operations and rules for traffic [13,4].
+With the growth of artificial intelligence technology[26,19], machine learning
+is increasingly being adopted for detecting malicious encrypted traffic. Machine
+learning enhances detection by extracting statistical features from traffic, offering
+faster and more accurate results compared to traditional methods. For example,
+Fu et al, utilized frequency domain features for real-time detection [11]. Barradas
+et al, detect attacks by applying random forests [5]. In addition to traditional
+traffic detection or packet inspection [20,3], Fang et al. [10], on the other hand,
+detects TLS traffic by collecting features of the traffic communication channel
+(packets consisting of the same destination IP and destination port) and uses
+Random Forest (RF) to enhance malware traffic detection performance. All these
+methods are not effective in detecting attacks on new encrypted traffic.
+5.2
+
+Incremental Learning
+
+The core challenge of incremental learning is to balance the conflict between
+remembering information about old tasks and absorbing information about new
+tasks, the so-called catastrophic forgetting problem. To overcome this problem,
+existing methods fall into two main categories: replay-based methods and parameter optimization-based methods. Replay-based methods mitigate Catastrophic
+Forgetting by replaying some samples of old tasks while learning new ones. The
+replayed samples can be real historical data, i.e., empirical replay. It can also
+be pseudo-samples generated by generative models (e.g., Generative Adversarial
+Networks, GAN), i.e., generative replay. iCaRL [24] is a representative of the
+empirical replay-based approach, which combines knowledge distillation methods to update the model parameters on a representative sample pool. However,
+iCaRL updates the parameters of old tasks and therefore suffers from overfitting
+to old data.
+
+6
+
+Conclusion
+
+In this paper, we try to tackle the malicious encrypted traffic detection problem
+from two aspects: (1) We propose a novel framework termed ETGuard, which
+to our knowledge is the first approach tailored for automatically identifying
+malicious traffic attacks in blockchain-based power grid systems. (2) We lay the
+mathematical foundation for establishing an incremental learning model that can
+effectively adapt to new types of attacks. We utilized real data collected from
+the State Grid and constructed the malicious encrypted traffic dataset GridET.
+We extensively evaluated the proposed method on three benchmark datasets.
+Empirical results show that our method consistently delivers state-of-the-art
+performance on malicious encrypted traffic detection across general scenarios
+and the blockchain-based power grid scenario.
+Acknowledgments. This work was supported by State Grid Zhejiang Electric Power
+Company, LTD. Information and Communication Branch, China (Grant number 5211XT
+24000D).
+
+ETGuard
+
+11
+
+References
+1. Aljundi, R., Lin, M., Goujaud, B., Bengio, Y.: Gradient based sample selection for
+online continual learning. Advances in neural information processing systems 32
+(2019)
+2. Anderson, B., McGrew, D.: Identifying encrypted malware traffic with contextual
+flow data. In: Proceedings of the 2016 ACM workshop on artificial intelligence and
+security. pp. 35–46 (2016)
+3. Anderson, B., McGrew, D.: Machine learning for encrypted malware traffic classification: accounting for noisy labels and non-stationarity. In: Proceedings of the
+23rd ACM SIGKDD International Conference on knowledge discovery and data
+mining. pp. 1723–1732 (2017)
+4. Azeez, N.A., Bada, T.M., Misra, S., Adewumi, A., Van der Vyver, C., Ahuja, R.:
+Intrusion detection and prevention systems: an updated review. Data Management,
+Analytics and Innovation: Proceedings of ICDMAI 2019, Volume 1 pp. 685–696
+(2020)
+5. Barradas, D., Santos, N., Rodrigues, L., Signorello, S., Ramos, F.M., Madeira,
+A.: Flowlens: Enabling efficient flow classification for ml-based network security
+applications. In: NDSS (2021)
+6. Buzzega, P., Boschini, M., Porrello, A., Abati, D., Calderara, S.: Dark experience
+for general continual learning: a strong, simple baseline. Advances in neural information processing systems 33, 15920–15930 (2020)
+7. Chiba, Z., Abghour, N., Moussaid, K., Omri, A.E., Rida, M.: Newest collaborative
+and hybrid network intrusion detection framework based on suricata and isolation
+forest algorithm. In: Proceedings of the 4th international conference on smart city
+applications. pp. 1–11 (2019)
+8. Chung, J., Gulcehre, C., Cho, K., Bengio, Y.: Empirical evaluation of gated recurrent neural networks on sequence modeling. arXiv preprint arXiv:1412.3555 (2014)
+9. Dong, C., Lu, Z., Cui, Z., Liu, B., Chen, K.: Mbtree: Detecting encryption rats
+communication using malicious behavior tree. IEEE Transactions on Information
+Forensics and Security 16, 3589–3603 (2021)
+10. Fang, Y., Li, K., Zheng, R., Liao, S., Wang, Y.: A communication-channel-based
+method for detecting deeply camouflaged malicious traffic. Computer Networks
+197, 108297 (2021)
+11. Fu, C., Li, Q., Shen, M., Xu, K.: Realtime robust malicious traffic detection via
+frequency domain analysis. In: Proceedings of the 2021 ACM SIGSAC Conference
+on Computer and Communications Security. pp. 3431–3446 (2021)
+12. Gupta, A., Sharma, L.S.: A categorical survey of state-of-the-art intrusion detection
+system-snort. International Journal of Information and Computer Security 13(34), 337–356 (2020)
+13. Khraisat, A., Gondal, I., Vamplew, P., Kamruzzaman, J.: Survey of intrusion detection systems: techniques, datasets and challenges. Cybersecurity 2(1), 1–22 (2019)
+14. Lashkari, A.H., Kadir, A.F.A., Taheri, L., Ghorbani, A.A.: Toward developing
+a systematic approach to generate benchmark android malware datasets and
+classification. In: 2018 International Carnahan conference on security technology
+(ICCST). pp. 1–7. IEEE (2018)
+15. Li, Y., Guo, H., Hou, J., Zhang, Z., Jiang, T., Liu, Z.: A survey of encrypted
+malicious traffic detection. In: 2021 International Conference on Communications,
+Computing, Cybersecurity, and Informatics (CCCI). pp. 1–7. IEEE (2021)
+
+12
+
+P. Zhou, Y. Liu, et al.
+
+16. Liu, C., Cao, Z., Xiong, G., Gou, G., Yiu, S.M., He, L.: Mampf: Encrypted traffic
+classification based on multi-attribute markov probability fingerprints. In: 2018
+IEEE/ACM 26th International Symposium on Quality of Service (IWQoS). pp.
+1–10. IEEE (2018)
+17. Liu, C., He, L., Xiong, G., Cao, Z., Li, Z.: Fs-net: A flow sequence network for
+encrypted traffic classification. In: IEEE INFOCOM 2019-IEEE Conference On
+Computer Communications. pp. 1171–1179. IEEE (2019)
+18. Liu, Z., Qian, P., Yang, J., Liu, L., Xu, X., He, Q., Zhang, X.: Rethinking smart
+contract fuzzing: Fuzzing with invocation ordering and important branch revisiting.
+IEEE Transactions on Information Forensics and Security (TIFS) 18, 1237–1251
+(2023). https://doi.org/10.1109/TIFS.2023.3237370
+19. Liu, Z., Wu, S., Xu, C., Wang, X., Zhu, L., Wu, S., Feng, F.: Copy motion from
+one to another: Fake motion video generation. In: IJCAI. pp. 1223–1231 (2022).
+https://doi.org/10.24963/IJCAI.2022/171
+20. Mirsky, Y., Doitshman, T., Elovici, Y., Shabtai, A.: Kitsune: an ensemble of autoencoders for online network intrusion detection. arXiv preprint arXiv:1802.09089
+(2018)
+21. MontazeriShatoori, M., Davidson, L., Kaur, G., Lashkari, A.H.: Detection
+of doh tunnels using time-series classification of encrypted traffic. In: 2020
+IEEE Intl Conf on Dependable, Autonomic and Secure Computing, Intl
+Conf on Pervasive Intelligence and Computing, Intl Conf on Cloud and
+Big Data Computing, Intl Conf on Cyber Science and Technology Congress
+(DASC/PiCom/CBDCom/CyberSciTech). pp. 63–70. IEEE (2020)
+22. Ni, J., Chen, W., Tong, J., Wang, H., Wu, L.: High-speed anomaly traffic detection
+based on staged frequency domain features. Journal of Information Security and
+Applications 77, 103575 (2023)
+23. Qing, Y., Yin, Q., Deng, X., Chen, Y., Liu, Z., Sun, K., Xu, K., Zhang, J., Li,
+Q.: Low-quality training data only? a robust framework for detecting encrypted
+malicious network traffic. arXiv preprint arXiv:2309.04798 (2023)
+24. Rebuffi, S.A., Kolesnikov, A., Sperl, G., Lampert, C.H.: icarl: Incremental classifier
+and representation learning. In: Proceedings of the IEEE conference on Computer
+Vision and Pattern Recognition. pp. 2001–2010 (2017)
+25. Riemer, M., Cases, I., Ajemian, R., Liu, M., Rish, I., Tu, Y., Tesauro, G.: Learning
+to learn without forgetting by maximizing transfer and minimizing interference.
+arXiv preprint arXiv:1810.11910 (2018)
+26. Shuai, C., Zhong, J., Wu, S., Lin, F., Wang, Z., Ba, Z., Liu, Z., Cavallaro, L., Ren,
+K.: Locate and verify: A two-stream network for improved deepfake detection. In:
+ACM MM. pp. 7131–7142 (2023). https://doi.org/10.1145/3581783.3612386
+27. Van de Ven, G.M., Siegelmann, H.T., Tolias, A.S.: Brain-inspired replay for continual learning with artificial neural networks. Nature communications 11(1), 4069
+(2020)
+28. Vitter, J.S.: Random sampling with a reservoir. ACM Transactions on Mathematical Software (TOMS) 11(1), 37–57 (1985)
+29. Yadav, A.K., Singh, K., Amin, A.H., Almutairi, L., Alsenani, T.R., Ahmadian, A.:
+A comparative study on consensus mechanism with security threats and future
+scopes: Blockchain. Computer Communications 201, 102–115 (2023)
+30. Zenke, F., Poole, B., Ganguli, S.: Continual learning through synaptic intelligence.
+In: International conference on machine learning. pp. 3987–3995. PMLR (2017)
+31. Zheng, Z., Xie, S., Dai, H.N., Chen, X., Wang, H.: Blockchain challenges and
+opportunities: A survey. International journal of web and grid services 14(4), 352–
+375 (2018)
+PAPER_TEXT

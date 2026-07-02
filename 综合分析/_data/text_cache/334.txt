@@ -1,0 +1,157 @@
+                             Received 26 September 2024; revised 9 March 2025 and 12 May 2025; accepted 22 July 2025.
+                                        Date of publication 31 July 2025; date of current version 5 August 2025.
+                       The associate editor coordinating the review of this article and approving it for publication was E. Bou-Harb.
+                                                        Digital Object Identifier 10.1109/TMLCN.2025.3594659
+
+
+
+
+           A Data-Driven Approach to Mitigate Evolving
+              Volumetric Attacks in Programmable
+                           Networks
+                                 MUHAMMAD SAQIB 1 (Graduate Student Member, IEEE),
+                                    HALIMA ELBIAZE 1 (Senior Member, IEEE), AND
+                                     ROCH H. GLITHO 2 (Life Senior Member, IEEE)
+                          1 Department of Computer Science, Université du Québec à Montréal, Montreal, QC H3C 3J7, Canada
+                     2 Concordia Institute of Information Systems Engineering, Concordia University, Montreal, QC H3G 1M8, Canada
+
+                                    CORRESPONDING AUTHOR: M. SAQIB (saqib.muhammad@courrier.uqam.ca)
+
+
+
+
+          ABSTRACT         In-network machine learning (ML) offers a cutting-edge approach for promptly detecting
+          malicious traffic. Existing methods often rely on one-size-fits-all ML models that fail to adapt to evolving
+          attack traffic patterns, leading to a time-consuming and labor-intensive process for updating ML model from
+          the control to the data plane. To address these limitations, we propose an automated, data-driven method for
+          identifying novel malicious traffic patterns and updating ML model seamlessly in programmable networks.
+          The proposed method sets drift detection thresholds based on baseline performance from historical (i.e., train-
+          ing) data and uses these thresholds to detect anomalies in unseen (i.e., testing) data. We continuously adjust
+          the thresholds to accommodate data distribution changes and in-network inference results while minimizing
+          sensitivity to minor fluctuations. We evaluate the proposed method using two intrusion detection datasets,
+          CICIDS2017 and UNSW-NB15. The experimental results demonstrate its efficacy in safeguarding against
+          evolving volumetric attacks. Additionally, we compare the conventional model performance-based drift
+          detection method with an adaptive monitoring window-based approach, highlighting the latter’s advantage in
+          balancing drift detection efficacy and minimizing its adaptation impact, i.e., disruptions to normal network
+          traffic are reduced by an average of 20%. The adaptive method dynamically adjusts the drift monitoring
+          window size to adapt to the characteristics of the unseen traffic patterns.
+
+          INDEX TERMS         Network intrusion detection, machine learning, programmable networks, P4.
+
+
+
+I. INTRODUCTION                                                                       and inference phases between the control and data planes for
+
+M        ACHINE learning (ML) has proven to be a valuable
+         tool for traffic classification and network security [1].
+Network-oriented ML tasks are traditionally executed on
+                                                                                      efficient network security.
+                                                                                         In-network inference is a key enabler for developing
+                                                                                      efficient and accurate attack detection solutions [6], [7]. How-
+servers or middleboxes [2]. However, recent advancements in                           ever, the evolving landscape of malicious activities introduces
+programmable data planes (PDP) have introduced new possi-                             variations in the network traffic patterns using different pro-
+bilities for cost-effective, flexible, high-performance network                       tocols, attack vectors, and the data distribution of malicious
+security [3]. Network administrators can directly program                             traffic [8]. Such dynamic movement of network traffic prop-
+packet processing logic using network programming lan-                                erties causes concept drift [9], which can be a sign of anoma-
+guages, such as Programming Protocol-independent Packet                               lies because it represents a departure from the established
+Processors (P4) [4], enabling the offloading of ML opera-                             patterns and statistical properties on which an ML model has
+tions to the network data plane. This approach allows for                             been trained [10]. As the data distribution shifts over time,
+in-network ML [5], which strategically divides the training                           it may indicate the emergence of new or unusual patterns,
+
+
+                                       2025 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+                                               For more information, see https://creativecommons.org/licenses/by/4.0/
+VOLUME 3, 2025                                                                                                                                    883
+affecting the relevance of input features (i.e., port number and     the network maintains detection accuracy even as attack pat-
+statistical properties of packet size) of a trained ML model         terns evolve.
+and their classification decision boundaries. Such a shift in           We first validate the existence of drifts and their impli-
+data distribution may ultimately lead to decreased accuracy          cations using two intrusion detection datasets: CICIDS2017
+because the model must adapt to evolving patterns in the data        [19] and UNSW-NB15 [20]. Subsequently, we evaluate the
+for accurate prediction [11]. Therefore, adaptive ML models          efficacy - the ability to detect drifts under defined conditions -
+that recognize and respond to changing traffic patterns are          of the proposed data-driven method. The experimental results
+crucial for an effective threat defense [12].                        reveal the efficacy of the adaptive method for safeguard-
+   One of the major limitations of existing in-network attack        ing against evolving volumetric attacks. We further compare
+detection methods is the one-shot learning of ML models [6],         the conventional model performance-based drift detection
+[7], [13], [14], [15], [16], [17]. The mapping rules of these        method with that enabled by an adaptive monitoring window,
+models are initially defined based on historical data at the         emphasizing the latter’s superiority in balancing the efficacy
+control counterpart following preprocessing and hyperparam-          of drift detection and its adaptation impact on the disruption
+eter tuning. The resulting rules are then mapped onto the data       of normal network traffic. This balance is achieved by dynam-
+plane for online inference. Because the entire ML operation is       ically adjusting the drift monitoring window size to better
+strategically divided into control and data planes, monitoring       adapt to the characteristics of the unseen data.
+individual instances of malicious activity, identifying previ-          The key contributions of this work are as follows.
+ously unseen malicious traffic patterns using preprocessing            • We propose a self-adaptive traffic classification method
+and hyperparameter tuning, and updating the ML model from                that detects and responds to evolving volumetric attacks.
+the control to the data plane are infeasible in such a prag-             By continuously monitoring traffic feature distributions
+matic framework. These results in frequent updates to the                and detecting concept drift, the system updates the ML
+ML model, which can cause significant network overhead                   model to maintain classification effectiveness in pro-
+and disrupt normal network traffic. In addition, in-network              grammable networks.
+ML updates are more complex than server-based ML, and                  • The framework leverages the interplay between the
+conducting a hitless update process with minimal impact on               control and data planes for efficient adaptation. The
+normal packet forwarding performance is challenging [18].                data plane extracts traffic features and logs performance
+Therefore, it is essential to integrate the functionalities of the       degradation, while the control plane verifies drift using
+control and data planes to execute in-network ML updates                 statistical methods and updates the ML model to refine
+that address emerging anomalies with minimal disruption                  classification rules. This design helps balance adaptation
+caused by the updates. However, existing works still need to             with operational overhead.
+address the challenge of detecting and seamlessly adapting to          • To further optimize adaptation, we introduce an
+unseen malicious traffic patterns in programmable networks               adaptive windowing strategy that dynamically adjusts
+to protect against evolving attacks.                                     the frequency of retraining. This mechanism ensures
+   This study aims to automate drift detection and adaptive              that updates occur only when necessary, reducing
+ML model updates in a programmable network, ensuring                     unnecessary retraining while maintaining detection
+seamless adaptation to changing traffic patterns and miti-               performance.
+gating evolving volumetric attacks. The framework employs
+a statistical drift detection mechanism that monitors feature           The remainder of this paper is organized as follows. Sec-
+distribution shifts in network traffic, triggering adaptation        tion II provides an overview of the related work. Section III
+process from the control plane to the data plane. Specifically,      introduces the proposed method. Section IV discusses the
+drift detection and adaptation logic are distributed across the      validation methodology, and Section V presents the experi-
+control and data planes. The control plane trains the ML             mental results. Finally, Section VI concludes the study.
+model on historical data and loads the resulting decision
+rules into the Match-Action Tables (MATs) of the PDP for             II. RELATED WORK
+real-time inference. The data plane employs a lightweight            This section comprehensively provides an overview of
+monitoring sketch for real-time feature extraction from traf-        the current volumetric attack detection approaches in pro-
+fic flows. The extracted features are utilized for in-network        grammable networks.
+inference, where the system applies ML rules using MATs.                We position our approach with state-of-the-art in Table 1.
+When inference performance deteriorates, the data plane logs         Our method is designed to meet the following key require-
+the extracted features to the control plane for drift verifica-      ments: learning-based traffic classification, line-rate pro-
+tion and adaptation. The control plane subsequently applies          cessing, drift detection, and runtime updates. These design
+drift detection method to assess distribution shifts. If drift is    requirements are essential for building an adaptive method
+detected, it initiates ML model update, refines classification       that addresses the dynamic nature of volumetric attacks in
+rules, and loads them into the MATs without significantly            programmable networks.
+disrupting normal network processing. This approach enables             The first category of prior art consists of methods that
+efficient, real-time adaptation to concept drift, ensuring that      extract valuable flow information in the data plane to support
+
+884                                                                                                                       VOLUME 3, 2025
+Saqib et al.: Data-Driven Approach to Mitigate Evolving Volumetric Attacks
+
+
+
+TABLE 1. Summary of the related work.
+
+
+
+
+broader applications. For example, Othmane et al. [22] and                   model architecture that performs dynamic packet analysis at
+FlowLens [21] use programmable switches to collect flow-                     near-line rate, meeting both learning-based classification and
+distribution information, which is subsequently used by the                  line-rate processing requirements. Furthermore, these meth-
+control plane for learning-based traffic classification. While               ods enable real-time updates of ML model directly within the
+these methods meet the need for learning-based classifica-                   data plane, enhancing adaptability to evolving traffic patterns.
+tion, they rely on the control plane for decision-making,                       Other recent works on in-switch inference include
+limiting their ability to process data at line speed and respond             IIsy [28], a hybrid approach that maps ML-based classifi-
+to real-time network conditions.                                             cation models to programmable switches using tree-based
+   The second category includes Poseidon [23] and                            classifiers and a backend-assisted decision-making process to
+Jaqen [24], both of which adopt designs similar to                           reduce computational overhead on the switch. Additionally,
+FlowLens [21]. However, the collected flow information is                    a learning-based ransomware mitigation system [26] lever-
+directly processed in the data plane to identify volumetric                  ages Random Forest models within programmable switches
+attacks at the line rate. These approaches fulfill the line-rate             for detecting and mitigating ransomware activity without
+processing requirement but rely on threshold-driven filters                  relying on deep packet inspection. The In-Network Classifi-
+rather than adaptable learning-based models, making them                     cation (INC) method [27] extends this paradigm by incorpo-
+less effective in scenarios where handcrafted filters cannot                 rating a bagging ensemble to detect botnet infections in real-
+accurately represent traffic analysis logic.                                 time within Tbps traffic flows, forwarding identified threats
+   The third category of prior art takes a step further to realize           to a controller for further clustering and inference.
+intelligence in the data plane. The concept is referred to as                   One of the primary areas for improvement of the current art
+in-switch inference, which brings remarkable benefits to the                 is the one-shot learning of ML models. Existing approaches
+network, i.e., reducing latency and increasing throughput [3].               involve experimentally defining mapping rules for substantial
+As a result, there has been growing interest in integrating the              historical data through preprocessing and hyperparameter
+output of ML algorithms into the data plane for the classifi-                tuning, after which the learned rules are mapped to the data
+cation of network traffic at an early stage. Ding et al. [25]                plane for online inference. However, the attacking traffic
+propose an in-network DDoS victim identification method                      landscape is continually evolving, which can compromise
+using a sketch-based data structure that estimates the per-     

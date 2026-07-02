@@ -1,0 +1,1257 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [799] Secure Federated Maximum Entropy Classifier for Intrusion Detection in IoT Consumer Electronics
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：799
+题名：Secure Federated Maximum Entropy Classifier for Intrusion Detection in IoT Consumer Electronics
+年份：2026
+DOI：10.1109/tce.2026.3665219
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2026.3665219.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：IoT、车联网、工业互联网与边缘安全、联邦学习、隐私保护与分布式协同
+相关性：强相关，分数 11
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\799.txt
+- 原始字符数：58495
+- 本次发送字符数：58495
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+4246
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+Secure Federated Maximum Entropy Classifier for
+Intrusion Detection in IoT Consumer Electronics
+Mohit Dey , Shachi Sharma , Senior Member, IEEE, Ashok Kumar Das , Senior Member, IEEE,
+Sunil Prajapat , Member, IEEE, and Youngho Park , Member, IEEE
+
+Abstract—The rapid proliferation of connected consumer electronics within the Internet of Things (IoT) ecosystem has enabled
+a wide range of smart applications, but it has also exposed devices
+and networks to significant cybersecurity threats. Conventional
+intrusion detection systems based on centralized data collection
+suffer from critical limitations in terms of privacy preservation,
+scalability, and latency when deployed in large-scale IoT environments. To address these challenges, this paper proposes a
+Secure Federated Maximum Entropy Classifier (SFMEC) for IoT
+intrusion detection. The proposed SFMEC framework leverages
+federated learning to collaboratively train intrusion detection
+models across IoT gateways and edge servers, thereby enhancing
+scalability while preserving data privacy. Raw data generated
+by registered IoT devices is encrypted using agreed session
+keys and transmitted to their associated gateways, where local
+models are trained using a maximum entropy classifier. To
+improve security and robustness, both local and global models are
+protected using symmetric-key encryption and compressed using
+the ZIP algorithm to prevent parameter leakage and mitigate
+adversarial manipulation during model communication between
+IoT gateways and edge servers. Extensive experiments conducted
+on benchmark IoT intrusion detection datasets demonstrate that
+SFMEC consistently achieves higher detection accuracy and
+lower false-positive rates compared to existing approaches. The
+results highlight that combining entropy-based learning with
+secure federated optimization provides resilience against evolving threats and communication overheads; therefore, SFMEC
+enhances the security posture of next-generation IoT ecosystems.
+Index Terms—IoT, federated learning, intrusion detection,
+maximum entropy classifier, security, performance analysis.
+
+I. I NTRODUCTION
+
+O
+
+NE of the fast-growing and transformative field today
+is IoT, which seamlessly interconnects billions of
+
+Received 30 October 2025; revised 14 January 2026 and 7 February
+2026; accepted 12 February 2026. Date of publication 16 February 2026;
+date of current version 2 June 2026. This work was supported by the
+National Research Foundation of Korea (NRF) grant funded by Korean
+Government (Ministry of Science and ICT) under Grant RS-2024-00450915.
+(Corresponding authors: Shachi Sharma; Ashok Kumar Das; Youngho Park.)
+Mohit Dey and Shachi Sharma are with the Department of Computer
+Science and Engineering, South Asian University, New Delhi 110068, India
+(e-mail: deymohit92@gmail.com; shachi@sau.int).
+Ashok Kumar Das is with the Center for Security, Theory and Algorithmic Research, International Institute of Information Technology, Hyderabad
+500032, India, and also with the Department of Computer Science and
+Engineering, College of Informatics, Korea University, Seongbuk-gu, Seoul
+02841, South Korea (e-mail: iitkgp.akdas@gmail.com).
+Sunil Prajapat is with the Department of Computer Engineering AI and Big
+Data, Marwadi University, Rajkot 360003, India (e-mail: sunilprajapat645@
+gmail.com).
+Youngho Park is with the School of Electronics Engineering, Kyungpook National University, Daegu 41566, Republic of Korea (e-mail:
+parkyh@knu.ac.kr).
+Digital Object Identifier 10.1109/TCE.2026.3665219
+
+heterogeneous devices, including consumer electronics [1],
+[2]. By enabling real-time data acquisition, intelligent automation, and context-aware decision-making, IoT drives innovation across critical domains, including smart cities, precision
+agriculture, intelligent transportation, healthcare, smart homes,
+and advanced manufacturing [3], [4]. IoT consumer electronics are the Internet-connected devices that are designed to
+enhance convenience, efficiency, and control in everyday life.
+Some common examples include smart home devices (such as
+lights, thermostats, and security systems), wearable technology
+(like smartwatches and fitness trackers), and smart appliances.
+These IoT-enabled smart devices collect and exchange data,
+often leveraging edge computing, to support features such as
+remote control, automation, and personalized user experiences.
+Besides numerous useful applications, the IoT consumer electronics present substantial security and privacy risks due to
+weak authentication mechanisms, insecure data transmission,
+and outdated software. These devices frequently collect large
+volumes of sensitive information, which can be exposed to
+breaches, misuse, or unauthorized access if not adequately
+protected, leading to vulnerabilities in the network [5]. These
+issues become difficult to handle due to the highly distributed
+and resource-constrained nature of IoT infrastructure, and the
+presence of heterogeneous traffic [6], [7].
+Traditional Intrusion Detection Systems (IDS), which rely
+heavily on centralized data collection and model training
+using machine learning algorithms, are not well-suited to
+IoT environments. Centralized approaches increase latency,
+incur high communication overhead, and expose raw data to
+privacy risks. Furthermore, IoT networks are characterized
+by heterogeneous devices and imbalanced traffic patterns,
+which degrade the effectiveness of conventional IDS solutions
+[8]. These limitations necessitate the development of decentralized, privacy-preserving, and adaptive intrusion detection
+frameworks tailored to IoT. To address these challenges,
+the emerging Federated Learning (FL) provides a promising
+paradigm by enabling collaborative model training across
+distributed IoT devices without sharing raw data [9]. However, standard FL frameworks remain vulnerable to inference
+attacks, model poisoning, and biases introduced by skewed
+data distributions [10]. Additionally, the focus in FL-based
+IDS remains on expensive deep learning approaches, such
+as FedAvg. However, other classifiers like the one based
+on the maximum entropy principle offer a mathematically
+grounded approach to robust classification under uncertainty,
+reducing overfitting as well as training time and improving
+generalization across diverse IoT data. When integrated with
+
+1558-4127 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+DEY et al.: SFMEC FOR INTRUSION DETECTION IN IoT CONSUMER ELECTRONICS
+
+secure aggregation mechanisms, this combination enables the
+design of a Secure Federated Maximum Entropy Classifier
+(SFMEC), which ensures privacy, resilience, and scalability
+in IoT intrusion detection. However, such an approach has
+not been investigated in the literature yet, in spite of entropybased identification of Distributed Denial of Service (DDoS)
+attacks in IoT [11] as well as entropy-based feature selection
+for intrusion detection [12].
+
+4247
+
+in Section III. The new SFMEC framework is presented in
+Section IV. The two model aggregation algorithms (average
+and voting) are also outlined. The security analysis of the
+proposed scheme against various attacks is provided in Section V. The details and results of performance analysis are
+provided in Section VI. The last section (Section VII) contains
+the conclusion and future directions of this research work.
+II. BACKGROUND
+
+A. Threat Model
+We consider three adversarial threat models [13]: the
+Dolev–Yao (DY) threat model [14], the Canetti–Krawczyk
+(CK) threat model [15], and the Honest-but-Curious (HBC)
+model [16].
+Under the DY threat model, the adversary has complete
+control over the public communication channels and can intercept, modify, delete, replay, and fabricate messages exchanged
+between network entities. The adversary can also impersonate
+any entity and initiate actions on its behalf. Moreover, entities
+may participate in multiple concurrent protocol executions
+initiated by the adversary.
+In the CK threat model, the adversary retains all capabilities
+of the DY adversary and, in addition, can compromise sessionspecific secrets by accessing or hijacking session states during
+protocol execution.
+In the HBC threat model, the adversary is assumed to be
+a legitimate participant who follows the protocol correctly
+but attempts to learn additional information by analyzing the
+messages exchanged during the protocol execution.
+In addition, some IoT devices may be physically compromised because they are not continuously monitored (24 × 7),
+as is often the case in wireless sensor networks [17]. Consequently, an adversary can easily extract all credentials stored
+in the memory of these compromised devices.
+B. Research Contributions
+The major contributions of the paper include the following:
+• A novel secure federated maximum entropy classifier is
+proposed, integrating entropy-based learning with federated optimization for IoT intrusion detection.
+• The amount of data while exchanging models is reduced
+by applying appropriate compression mechanisms.
+• The secure aggregation is performed to safeguard model
+updates against inference attacks and mitigate risks of
+model poisoning during communication.
+• Extensive experiments on benchmark IoT intrusion detection datasets are conducted to demonstrate that SFMEC
+outperforms state-of-the-art federated IDS methods in
+terms of detection accuracy, false positive rate, and
+resilience to adversarial threats.
+C. Paper Outline
+The paper is organized into six sections. Some background
+literature that helps readers to follow the rest of the paper is
+contained in Section II. The related literature highlighting gaps
+and motivation for the proposed research work is summarized
+
+A. Federated Learning
+FL is a distributed machine learning framework that enables
+multiple participants to collaboratively train a shared model
+while preserving data privacy and security [9]. In contrast
+to conventional centralized learning approaches, FL allows
+data owners to retain their data locally and perform training on their private datasets. Instead of sharing raw data,
+participants communicate only model updates, such as parameters or gradients, to a trusted aggregation server, which
+integrates these updates to construct a global model. The
+objective of the federated model is to achieve performance
+comparable to that of a centrally trained model that has
+access to the combined data from all participants. By leveraging locally trained updates from distributed data sources,
+federated learning aims to minimize the performance gap
+between the federated model and its centralized counterpart
+while ensuring data confidentiality. In FL terminology, data
+owners are commonly referred to as “nodes” or “clients”. FL
+is broadly categorized into two paradigms - horizontal FL,
+where clients share identical feature spaces but hold distinct
+data samples, and vertical FL, where clients possess disjoint
+feature sets across overlapping samples. The seminal algorithm
+FedAvg [9] pioneered the training of deep neural networks in
+a federated setting by simple averaging of weights sent by
+clients.
+Building on FedAvg, subsequent research has sought to optimize communication efficiency, reduce indirect data leakage,
+and improve model convergence under non-IID conditions.
+Most existing studies emphasize deep neural networks and
+supervised learning. However, some advancements have begun
+broadening the scope of FL. For example, Gupta and Sharma
+[18] proposed FedCLUS, a single-shot federated clustering
+algorithm for distributed unlabeled data, and introduced FedCI,
+a cluster validity index specifically tailored for FL environments [19]. In the IoT domain, Sharma et al. [20] developed a
+federated decision tree learning algorithm capable of handling
+dynamic data streams, thereby enabling adaptive intelligence
+at the network edge.
+At the same time, increasing attention has been devoted
+to secure federated learning, given the risks of inference
+attacks, model poisoning, and gradient leakage in adversarial
+environments. Approaches such as secure aggregation protocols [21], homomorphic encryption [22], and Differential
+Privacy (DP) [23] have been integrated into FL frameworks
+to safeguard model updates and preserve client confidentiality. More recently, robust aggregation mechanisms (e.g.,
+Krum, Trimmed Mean, and Median-based defenses) have been
+investigated to mitigate the impact of poisoned updates from
+
+4248
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+compromised clients. While these techniques enhance privacy and resilience, they often incur significant computational
+and communication overhead, making them less practical for
+resource-constrained IoT devices. This gap highlights the need
+for lightweight, secure, and generalizable FL frameworks,
+motivating the exploration of entropy-based models in IoT
+intrusion detection.
+B. Maximum Entropy (MaxEnt) Classifier
+The MaxEnt classifier, based on information theory, is a
+probabilistic model that constructs the least biased distribution
+consistent with known constraints. According to Jaynes’ maximum entropy principle, when multiple distributions satisfy the
+same constraints, the one with the highest entropy should be
+chosen to avoid unwarranted assumptions [24]. This property
+makes MaxEnt particularly effective in IDS, where malicious
+behaviors are diverse, dynamic, and often underrepresented
+in training data. In intrusion detection, MaxEnt models the
+conditional probability of a class label given an input feature
+vector, enabling flexible classification without assuming feature independence. Unlike rule-based or deterministic models,
+MaxEnt can adapt to high-dimensional, sparse, and imbalanced datasets, which are common in network security. Its
+probabilistic output also allows IDS to adjust decision thresholds, balancing between true positive rates and false alarms, a
+critical factor in large-scale deployments.
+N
+Let D = (xn , yn )n=1
+with xn ∈ X , yn ∈ 1, . . ., M be the
+data points and class label respectively, and empirical input
+distribution p̂(x). Define feature functions f j (x, y), j = 1, . . ., m,
+and empirical constraints
+X
+X
+p̂(x)
+P(y | x) f j (x, y) = Ê[ f j ], j = 1, . . ., m,
+(1)
+x
+
+y
+
+PN
+f j (xn , yn ). The maximum entropy
+where Ê[ f j ] = N1 n=1
+principle selects the conditional distribution P(y | x) that
+maximizes the conditional entropy
+X
+X
+H(P) = −
+p̂(x)
+P(y | x) log P(y | x)
+(2)
+x
+
+y
+
+subject to thePmoment-matching constraints (1) and per-x
+normalization y P(y | x) = 1 constraint. When optimization
+is carried out using Lagrange’s multiplier method, the result
+turns out to be
+!
+m
+X
+1
+∗
+θi fi (x, y) ,
+(3)
+Pθ (y | x) = ∗ exp
+Zθ (x)
+i=1
+
+where θ = (θ1 , . . ., θm ) are Lagrange multipliers and
+!
+m
+X
+X
+∗
+Zθ (x) =
+exp
+θi fi (x, y0) .
+y0∈Y
+
+(4)
+
+i=1
+
+In the training phase, the parameters θi , i = 1, . . ., m, are
+estimated from the data.
+Traditional deep learning IDS often demands significant
+computational power, making it impractical at the edge. MaxEnt, by contrast, is computationally efficient and capable of
+learning unbiased decision boundaries even from fragmented
+or incomplete IoT datasets. When integrated with federated
+
+learning, MaxEnt enables collaborative training of intrusion
+detection models while preserving the privacy of device-level
+data, making it a promising option for building scalable and
+secure IoT IDS.
+III. R ELATED W ORK
+The related literature has been organized into two subsections to bring more clarity.
+A. MaxEnt Classifier and IDS
+The MaxEnt classifier has been widely explored in the
+design of IDS for computer networks due to its ability
+to model conditional class distributions under uncertainty
+without imposing strong independence assumptions. One of
+the earliest known works on the application of entropy in
+intrusion detection is by Lee and Xiang [25]. Afterwards,
+Gu et al. [26] proposed a new entropy-based metric, called
+intrusion detection capability, for measuring the performance
+of IDS. Later, Gu et al. [27] refined distribution-based anomaly
+detection using normalized entropy metrics, establishing its
+robustness against evolving traffic behaviors. Li et al. [28]
+applied a maximum entropy model to the KDD’99 dataset,
+showing that MaxEnt classifiers can achieve competitive classification performance in distinguishing normal and malicious
+traffic, particularly in cases of overlapping or imbalanced
+feature distributions. More recent studies integrated entropy
+analysis with machine learning classifiers for specific attack
+types, such as Distributed Denial-of-Service (DDoS) detection,
+where entropy features of packet flows significantly improved
+detection accuracy and reduced false alarms [29]. Entropy has
+also been leveraged as a classification head in hybrid intrusion
+detection frameworks. For instance, Yan et al. [30] utilized
+entropy within a transfer-learning architecture enabling adaptive network traffic classification across domains with shifting
+distributions.
+In recent years, the problem of authenticated key agreement
+has received significant attention in the field of consumer
+electronics [31], [32], [33], [34], [35]. In the IoT security
+domain, entropy-driven approaches have also gained particular
+attention due to the heterogeneous and resource-constrained
+nature of IoT devices. Recently, A host-based light-weight
+IDS for IoT network has been proposed utilizing entropy and
+information related to packet transmission as features [36]. In
+another work, entropy-based uncertainty filtering is used to
+enhance the efficiency of classifiers in transfer learning based
+IoT IDS [37]. An IoT-IE approach combining information
+entropy of IoT traffic features is proposed to detect traffic
+anomalies in [38]. On a similar idea, a method to identify
+DDoS attacks in IoT is also proposed by analyzing the
+variation in entropy of traffic features [11]. This work also
+compares the performance of various generalized measures of
+entropy with Shannon’s. In a recent work by Zhu et al. [39], a
+normalized Shannon entropy, quantifying the class imbalance
+at the client, is used to decide the contribution of a client in
+the aggregated global server in the FL server. Their proposed
+method is used to detect intrusions in IoT. In another work,
+Talpini et al. [40] utilized entropy of class labels to group IoT
+
+DEY et al.: SFMEC FOR INTRUSION DETECTION IN IoT CONSUMER ELECTRONICS
+
+devices for training a global model in an FL environment for
+IoT intrusion detection. However, the study of the federated
+entropy classifier remains unexplored in their scheme.
+B. FL-Based IDS in IoT
+With the rapid acceptance of FL because of its built-in
+advantages, efforts have been made to utilize it for designing
+effective intrusion detection methods in IoT. A notable early
+work is by Nguyen et al. who introduced DÏoT, a federated self-learning anomaly detector at security gateways for
+learning device-specific normal behavior locally. Only model
+updates were shared with a global service server for aggregation. DIoT was evaluated on more than 30 devices (including
+Mirai infections) and reported 95.6% detection accuracy with
+257 ms latency. Following this work, a federated deep learning
+scheme called DeepFed was proposed by Li et al. [41] for
+detecting threats in IoT networks using Convolutional Neural
+Networks (CNNs) and Gated Recurrent Units (GRUs). Zhang
+et al. [42] developed a FedIoT platform that implemented the
+FedDetect algorithm utilizing the Adam optimizer to detect
+anomalies across devices and validated its feasibility on a real
+IoT setup. After this, Rahman et al. [43] conducted a comparative study of centralized, distributed, and federated learning
+approaches for IoT intrusion detection. It was demonstrated
+that FL achieves performance close to centralized learning
+while outperforming traditional distributed methods. These
+studies underscore FL’s viability as a scalable and privacyconscious alternative for IDS in the IoT ecosystem.
+Efforts also started to explore the efficiency of FL-driven
+IDS in specific application areas of IoT. Friha et al. proposed FELIDS, a targeted agricultural-IoT IDS, with three
+deep learning variants, viz. CNN, Recurrent Neural Network
+(RNN), and Deep Neural Network (DNN) for examining
+privacy-preserving gains on domain datasets [44]. The results
+showed better performance of FELIDS over centralized IDS.
+Belabri et al. emphasized pre-training to mitigate non-IID
+skew and class imbalance arising due to inherent heterogeneity
+of IoT traffic [45]. The results indicated that pre-trained global
+models significantly increase the F1-score over naive FedAvg.
+In a similar direction, another work worth mentioning is by
+Sun et al. who proposed FedMADE, a dynamic aggregation
+method that clusters clients by traffic patterns and weighs
+updates by contribution to global performance [46]. It was
+shown that FedMADE improved minority-attack detection by
+up to 71% with 4.7% extra per-round latency. A FL-based IDS
+utilizing knowledge distillation for improving computational
+efficiency was presented in [47]. In another work, Dey and
+Sharma proposed a change point detection-based method on
+activities of IoT devices to identify DDoS attacks [48].
+Recently, Bouzinis et al. presented the StatAvg method,
+where clients share statistics like mean and variance of features
+of local data with the server, which, after aggregation, sends
+them back to all clients. The clients then use aggregated
+statistics for universal normalization [49]. It is to be highlighted that StatAvg can be applied before any FL method.
+A federated contrastive learning method, FeCO, has been
+proposed for more accurately identifying the benign class
+[50]. Lu et al. developed a personalized federated learning
+
+4249
+
+approach using self-labeling for heterogeneous IoT intrusion
+detection, enabling each client to train personalized models
+despite diverse statistical distributions adaptively. Peng et al.
+[51] integrated FL with knowledge distillation for efficient
+training of a global model to detect IoT intrusion detection.
+Karunamurthy et al. [52] applied the Chimp optimization
+algorithm for selection of optimal features and CNN for training a global model in FL based framework of IoT intrusion
+detection.
+Research Gap and Novelty: The decentralized nature of
+the IoT system makes it vulnerable to various attacks, such as
+model poisoning, where the malicious participants can manipulate their local models in order to compromise the global
+model’s integrity. As a result, countermeasures, such as using
+a central server to identify and filter out anomalous participants
+based on their model performance, can help mitigate such kind
+of threats. A comparison of some prominent existing research
+is presented in Table I. Even though there is evidence of using
+entropy for IoT intrusion detection, its integration into federated and secure learning frameworks remains underexplored to
+the best of our knowledge, which leaves open opportunities for
+lightweight, privacy-preserving, and scalable IDS solutions. To
+mitigate these issues, we propose a secure federated maximum
+entropy classifier for intrusion detection in an IoT network.
+IV. SFMEC: T HE P ROPOSED C LASSIFIER
+A. Federated Maximum Entropy Classifier
+The conditional maximum entropy model in (3) and (4)
+discussed in Section II-B can also be written in a compact
+form as
+
+exp θ> f(x, y)
+,
+Pθ (y | x) =
+Z (x)
+X θ
+
+exp θ> f(x, y0 ) .
+(5)
+Zθ (x) =
+y0 ∈Y
+
+The parameters θ can be fitted by minimizing the regularized
+negative log-likelihood
+J(θ) =
+
+N
+ λ
+1 X
+− log Pθ (yi | xi ) + kθk2
+N
+2
+
+=−
+
+i=1
+N
+X
+
+1
+N
+
+i=1
+
+(6)
+
+N
+
+θ> f(xi , yi ) +
+
+1 X
+log Zθ (xi )
+N
+i=1
+
+λ
++ kθk2
+2
+
+(7)
+
+where the last term is for regularization to minimize overfitting
+of data, and λ is the regularization parameter. The gradient can
+be computed as
+∇J(θ) = −
+
+N
+
+N
+
+i=1
+
+i=1
+
+1 X
+1 X
+f(xi , yi ) +
+E pθ (y|xi ) [f(xi , y)]
+N
+N
+
++ λθ.
+
+(8)
+
+The parameters θ can be computed by equating (8) to zero.
+In an FL environment, the data is partitioned across K
+clients. Each client k has data Dk of size Nk such that
+
+4250
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+TABLE I
+C OMPARISON OF E XISTING S CHEMES ON I NTRUSION D ETECTION IN I OT
+
+N =
+to
+
+P
+
+k Nk . The global objective function then decomposes
+
+J(θ) =
+
+K
+X
+Nk
+
+Jk (θ), and
+N
+ λ
+1 X
+Jk (θ) =
+− log Pθ (y | x) + kθk2 ,
+Nk
+2
+k=1
+
+(9)
+
+(x,y)∈Dk
+
+changing gradient (8) to
+∇J(θ) =
+
+K
+X
+Nk
+k=1
+
+N
+
+∇Jk (θ).
+
+(10)
+
+Therefore, the θ for the global model can be computed by
+taking a weighted average of the parameters from local models
+at the aggregation server.
+B. Compression and Security Methods
+The proposed SFMEC applies both compression/
+decompression methods and secure communications among
+the network entities.
+1) Compression and Decompresssion: For compression of
+data, we use the ZIP algorithm that mainly uses the DEFLATE
+compression method. DEFLATE combines two techniques: 1)
+LZ77 and 2) Huffman coding. On the other hand, we use the
+UNZIP algorithm for decompression of the data. ZIP supports
+encryption of the data (for example, symmetric encryption
+using the Advanced Encryption Standard (AES-256) algorithm
+that produces 128-bit ciphertext on a 128-bit plaintext message
+using a 256-bit symmetric key), in order to secure the data
+inside the archive.
+
+2) Registration Phase: The registration phase contains the
+registration of all the deployed IoT devices, IoT gateway node,
+and edge server node in the network. This is a one-time process
+that is performed by a Trusted Registration Authority (TRA)
+before deployment of the nodes in the IoT network.
+*IoT Devices Registration: The following steps are essential to register an IoT device, say Di , associated with an IoT
+gateway node, GW j :
+Step 1: The T RA selects unique and district identity IDDi , a
+primary secret key MKDi of Di , and a temporal identity T IDDi .
+Step 2: The T RA stores the registration information
+{IDDi , T IDDi , MKDi } into Di ’s memory, and also securely
+sends these credentials to the GW j .
+*IoT Gateway and Edge Server Registration: The following steps are needed to register an IoT gateway node, GW j ,
+and an edge server, say ES l :
+Step 1: The T RA selects a unique and district identity
+IDGW j , and a random shared (symmetric) secret key S KGW j ,ES l
+between GW j and ES l .
+Step 2: The T RA also selects a unique and district identity
+IDES l .
+Step 3: The T RA sends the registration information
+{IDGW j , S KGW j ,ES l } securely to GW j , while it also the registration credentials {IDES l , S KGW j ,ES l } securely to the ES l .
+3) Secure Communication Between IoT Devices and Gateway: The following steps outline the procedure for establishing a session key S KDi ,GW j between an IoT device and
+a gateway:
+Step 1: The IoT device Di generates a random secret
+nonce rnDi and retrieves the current timestamp CT Di . It then
+computes Ai = rnDi ⊕ h(MKDi ||CT Di ). Next, Di transmits the
+message hAi , CT Di i to the gateway GW j .
+
+DEY et al.: SFMEC FOR INTRUSION DETECTION IN IoT CONSUMER ELECTRONICS
+
+4251
+
+Fig. 1. Three-tier architecture with 10-step workflow for training SFMEC for intrusion detection in IoT.
+
+Step 2: Upon receiving the message, GW j first verifies
+its freshness by checking the timestamp condition: |CT D∗ i −
+CT Di | ≤ 4T , where 4T represents the maximum permissible
+transmission delay and CT D∗ i denotes the reception time of the
+message. If the timestamp is valid, GW j generates its own
+random secret nonce rnGW j and current timestamp CTGW j . It
+then computes the following:
+rnDi = Ai ⊕ h(MKDi ||CT Di ),
+Bi = h(rnGW j ||S KGW j ,ES l ) ⊕ h(MKDi ||CTGW j ),
+S KGW j ,Di = h(rnDi ||h(rnGW j ||S KGW j ,ES l )
+||MKDi ||CT Di ||CTGW j ),
+and its verifier S KV = h(S KGW j ,Di ||CTGW j ). Finally, GW j
+sends the message hBi , S KV, CTGW j i to Di .
+Step 3: After receiving hBi , S KV, CTGW j i, Di verifies the
+timestamp CTGW j . If valid, it computes
+h(rnGW j ||S KGW j ,ES l ) = Bi ⊕ h(MKDi ||CTGW j ),
+S KDi ,GW j = h(rnDi ||h(rnGW j ||S KGW j ,ES l )
+||MKDi ||CT Di ||CTGW j ),
+S KV 0 = h(S KDi ,GW j ||CTGW j ).
+If S KV 0 = S KV, both Di and GW j have successfully established the same session key S KDi ,GW j = S KGW j ,Di , which is
+then used for secure communication. Note that this established
+session key also connects the association with the edge server.
+4) Secure Communication Between IoT Gateway and Edge
+Server: For secure communication between GW j and ES l ,
+they will use the pre-shared symmetric key S KGW j ,ES l .
+C. SFMEC for IoT Intrusion Detection
+The proposed SFMEC comprises a federated maximum
+entropy classifier with secure compression and decompression
+as outlined in the previous two subsections. It can be applied
+
+for intrusion detection in IoT by adopting a three-tier architecture consisting of the IoT devices layer, gateway layer, and
+edge server as illustrated in Fig. 1. For ensuring the scalability
+of the solution and considering the resource-constrained nature
+of consumer electronics, the data from devices is collected and
+stored at the IoT gateways securely. The gateways act as clients
+in the FL environment and train local models. The model
+training consists of a 10-step process along with a trusted edge
+server as an aggregator.
+1) IoT Device Layer: The first tier comprises heterogeneous IoT consumer devices such as smartphones, wearable
+sensors, VR headsets, and embedded monitoring units.
+• Step 1: The data is generated by these devices. These
+are tiny resource-constrained devices and cannot perform
+complex computation. The task of an IoT device Di is to
+collect data and transmit it securely using the established
+session key S KDi ,GW j to the IoT gateway GW j . Later,
+the GW j decrypts the received data using the established
+session key S KGW j ,Di and then sends the encrypted data
+using the pre-shared symmetric key S KGW j ,ES l to its
+associated edge server ES l .
+2) IoT Gateways Layer: The second tier serves as an
+intermediate processing unit between the IoT devices and the
+edge server.
+• Step 2: The data from multiple IoT devices within a specific geographic or logical domain is securely collected
+and aggregated at the gateway.
+• Step 3: A local MaxEnt classifier is trained on the aggregated dataset, enabling near-real-time analytics without
+transferring raw data to the cloud.
+• Step 4: The trained model parameters are compressed
+to reduce communication overhead and encrypted using
+the pre-shared symmetric key with the global server to
+protect confidentiality during transmission.
+
+4252
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+• Step 5: Finally, the encrypted model updates are transmitted securely to the edge server.
+3) Edge Server: The third tier consists of a trusted edge
+server. This server manages and updates the global model.
+• Step 6: The edge server decrypts the received model
+updates from all participating IoT gateways.
+• Step 7: The federated MaxEnt aggregation algorithm is
+employed to integrate these updates into a unified global
+model, ensuring improved generalization across diverse
+data distributions.
+• Step 8: The updated global model is again secured. The
+model is encrypted using the pre-shared symmetric key
+shared with the gateway ES l .
+• Step 9: The secured model is disseminated back to the
+IoT gateways for subsequent training rounds, completing
+the collaborative learning cycle.
+• Step 10: Edge server transmits the updated global model
+to its corresponding IoT gateways, where the gateway
+replaces its current model with the newly received
+updated version to maintain synchronization with the
+global learning framework.
+Steps 4 to 10 are repeated till model convergence is
+achieved,
+The three-tier architecture effectively combines the advantages of edge computing and FL. Besides the averaging
+method of SFMEC, we have also implemented a votingbased aggregation of θ at the server for better comparison. It
+is pertinent to mention that voting is a simple and popular
+technique of combining models in ensemble learning. The
+step-wise process is also outlined in Algorithm 1.
+V. S ECURITY A NALYSIS
+Based on the threat model defined in Section I-A, we show
+that the proposed scheme can resist the following attacks in
+an IoT environment.
+1) Replay Attack
+A replay attack is an attack in which an adversary captures
+a legitimate data transmission during the communications and
+later retransmits it to deceive a system into authorizing an
+unauthorized action.
+The messages exchanged during the secure communication
+between an IoT device Di and gateway GW j include hAi , CT Di i
+and hBi , S KV, CTGW j i. Even if these messages are intercepted
+by an adversary, say A, and resent by the adversary A to
+the intended receivers, both Di and GW j can easily detect
+them by simply validating the freshness of the timestamps
+(CT Di and CTGW j ) attached in the messages. In this way, these
+messages are simply dumped by Di and GW j . As a result, the
+attached current timestamps safeguard against replay attacks
+in the proposed scheme.
+2) Man-in-the-Middle Attack
+A Man-in-the-Middle (MitM) attack is an active attack in
+which an adversary covertly intercepts and potentially alters
+communication between two communicating entities, which
+
+Algorithm 1 Secure Federated Maximum Entropy Classifier
+for IoT Intrusion Detection
+Require: Dataset D, label column L
+Ensure: Global Averaged, and Global Voting models
+[SFMEC- Client side at IoT gateways]
+1: Initialize: Load dataset D
+2: Preprocessing of the dataset
+3: Train MaxEnt classifier on the data
+4: Extract weights θ
+5: Compress and secure weights using steps in Section IV-B4
+6: Send weights to edge server [SFMEC- Server side at
+edge server]
+7: for each client i do
+8:
+Securely decompress the weights as explained in Section IV-B4
+9: end for
+10: [Global Average Model]
+11: Calculate the average of weights of all clients in θavg
+12: Compute and store metrics (Only for performance analysis)
+13: Securely compress the weights as explained in Section
+IV-B4
+14: Send θavg toallclients
+[Global Voting Model (only for performance analysis)]
+15:
+Count the number of positive, negative, and zero values
+across clients
+16: Assign weight + 1, −1, or 0 based on the majority sign
+17: return voting-based weights θvote
+18: Compute and store metrics
+
+cause them to believe they are communicating directly with
+each other.
+Assume that an adversary A intercepts the messages
+hAi , CT Di i and hBi , S KV, CTGW j i, and attempts to modify these
+messages on the fly during the communication. To modify
+the message hAi , CT Di i, the adversary A can generate a new
+timestamp, say CT D0 i , and a random nonce rn0Di . However,
+without having the secret MKDi , A can not compute the modified legal component A0i = rn0Di ⊕ h(MKDi ||CT D0 i ). Similarly, A
+will fail to modify other message hBi , S KV, CTGW j i without
+the secrets MKDi as well as S KGW j ,ES l . Thus, the man-in-themiddle attacks are resisted in the proposed scheme.
+3) Impersonation Attack
+An impersonation attack is a form of active attack in which
+a malicious entity (attacker) pretends to be a trusted individual,
+organization, or service to deceive victims into disclosing sensitive information or granting unauthorized access to systems.
+In order to generate a valid message hAi , CT Di i on behalf of
+the IoT device Di , an adversary A must possess the secret key
+MKDi . Similarly, to generate the message hBi , S KV, CTGW j i
+on behalf of GW j , A must possess the secret keys MKDi
+and S KGW j ,ES l . It is then clear that A can not create forged
+messages on behalf of either Di or GW j . Therefore, the
+proposed scheme is secure against IoT device impersonation
+attacks as well as gateway impersonation attacks.
+
+DEY et al.: SFMEC FOR INTRUSION DETECTION IN IoT CONSUMER ELECTRONICS
+
+4253
+
+TABLE II
+D ETAILS OF DATASETS
+
+4) Physical IoT Device Capture Attack
+According to our threat model in Section I-A, if an IoT
+device Di is physically captured, all the credentials stored in
+its memory can be extracted using the power analysis attacks
+[53]. In that case, an adversary will have the secret credentials
+{IDDi , T IDDi , MKDi } of the compromised Di . However, it is
+noted that these credentials are distinct and unique for every
+IoT device that is generated during the registration process.
+This means that the adversary Di can only compromise the
+secure communication between the compromised Di and its
+gateway, but not the secure communications among the noncompromised IoT devices and gateway. Thus, the proposed
+scheme provides unconditional security against node capture
+attacks [17], [54].
+
+5) ESL Attack Under CK-Adversary Model
+The Ephemeral Secret Leakage (ESL) attack in the CanettiKrawczyk (CK) adversary model represents a serious security
+threat in which an adversary A compromises temporary session secrets (ephemeral keys) and leverages them to infer
+long-term private keys or session keys. In the proposed
+scheme, the session key is constructed by both Di and GW j as
+S KGW j ,Di = h(rnDi ||h(rnGW j ||S KGW j ,ES l )||MKDi ||CT Di ||CTGW j ),
+where the ephemeral secrets are rnDi and rnGW j , and the
+long-term secrets are S KGW j ,ES l and MKDi . Thus, even if the
+ephemeral secrets are compromised using the CK-adversary
+model, the adversary A can not compute the session key
+S KGW j ,Di without having the long-term secrets. Hence, the
+proposed scheme is secure against an ESL attack under the
+CK-adversary model.
+VI. P ERFORMANCE A NALYSIS
+This section contains the results of extensive performance
+analysis of the proposed SFMEC for IoT intrusion detection.
+We have chosen five widely used datasets from the related literature. The description of the datasets is provided in Table II.
+Each dataset is processed following the steps outlined in Fig. 2.
+For benchmarking, we have also compared the SFMEC with
+a federated logistic regression classifier that was presented in
+[55] and with the popular FedAvg algorithm.
+
+Fig. 2. Flow of data processing in experiments.
+
+A. Metrics
+The performance of SFMEC is assessed using five evaluation metrics for each dataset. In classification tasks, a
+confusion matrix is constructed, which serves as the basis
+for computing these metrics. Among them, accuracy is the
+most widely used. It represents the ratio of correctly predicted
+instances to the total number of predictions. Formally, accuracy is expressed as:
+Accuracy =
+
+True positives + True negatives
+.
+Total number of predictions
+
+(11)
+
+A high accuracy score reflects that the model correctly
+classifies a large proportion of instances. Accuracy is most
+appropriate when the dataset has a balanced class distribution
+and when the cost of different types of errors is comparable.
+However, in imbalanced datasets where one class significantly
+outweighs the others, accuracy alone can be misleading. In
+such scenarios, alternative metrics such as precision, recall,
+and F1-score offer a more reliable evaluation of model performance. The mathematical expression of the F1-score metric
+is
+2
+F1-score =
+,
+(12)
+1/Precision + 1/Recall
+
+4254
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+Fig. 3. Variation in accuracy with number of clients, i.e., IoT gateways for
+CIC dataset.
+
+Fig. 4. Variation in accuracy with number of clients, i.e., IoT gateways for
+IOT-IDS dataset.
+
+where
+True positives
+,
+True positives + False positives
+
+(13)
+
+True positives
+.
+True positives + False negatives
+
+(14)
+
+Precision =
+and
+Recall =
+
+The F1-score ranges between zero and one, where a value
+of one represents perfect precision (i.e., Type 1 errors) and
+recall (i.e., Type II errors). This measure is especially wellsuited for applications in which misclassification costs are
+high or unevenly distributed across error types. Accordingly,
+it is frequently employed in problem domains such as fraud
+detection and intrusion detection.
+To enable a more detailed assessment of classification
+performance, log-loss, commonly referred to as cross-entropy
+loss, is frequently utilized. In contrast to metrics such as accuracy, precision, recall, and the F1-score, which evaluate only
+the correctness of predicted class labels, log-loss incorporates
+the full class probability estimates produced by the model.
+This metric assigns higher penalties to incorrect predictions
+made with high confidence, while less certain errors incur
+smaller penalties, thereby offering a more informative characterization of predictive behavior. The log-loss metric is...
+log-loss = −y log p + (1 − y) log(1 − p)
+
+Fig. 5. Variation in accuracy with number of clients, i.e., IoT gateways for
+SDN dataset.
+
+(15)
+
+where y signifies the true binary label and p designates
+the probability of the predicted class. Lower values of logloss correspond to improved predictive performance, with
+the optimal value of zero achieved when the estimated class
+probabilities align exactly with the ground-truth labels.
+B. Results and Discussion
+The experimental results comparing the proposed SFMEC
+with the federated logistic regression classifier are illustrated
+in Figs. 3–7, showing the variation of the accuracy metric
+(11) with respect to the number of clients (i.e., IoT gateways
+in the considered architecture described in Fig. 1). It can be
+noted that the accuracy of SFMEC remains consistently higher
+than that of the federated logistic regression classifier and is
+the same as the FedAvg classifier. This validates the efficacy
+of the proposed SFMEC. When compared with deep neural
+
+Fig. 6. Variation in accuracy with number of clients, i.e., IoT gateways for
+RAJ-24 dataset.
+
+network-based FedAvg, the SFMEC offers advantages as it
+can provide better training over a small dataset and requires
+less training time.
+With an intention to strengthen the performance of SFMEC,
+the values of accuracy, F1-score, and log-loss metrics for varying clients are shown in Tables III-VII comparing aggregation
+of SFMEC using averaging and voting methods. One limitation of voting-based aggregation, compared with averaging, is
+its tendency to yield higher log-loss values as the number of
+participating clients increases. Further, the performance results
+are strengthened statistically using the Analysis of Variance
+
+DEY et al.: SFMEC FOR INTRUSION DETECTION IN IoT CONSUMER ELECTRONICS
+
+4255
+
+TABLE V
+R ESULTS OF SFMEC P ERFORMANCE ON SDN DATASET
+
+Fig. 7. Variation in accuracy with number of clients, i.e., IoT gateways for
+WUSTL dataset.
+TABLE III
+R ESULTS OF SFMEC P ERFORMANCE ON CIC DATASET
+
+TABLE VI
+R ESULTS OF SFMEC P ERFORMANCE ON R AJ -24 DATASET
+
+TABLE IV
+R ESULTS OF SFMEC P ERFORMANCE ON I OT-IDS DATASET
+
+TABLE VII
+R ESULTS OF SFMEC P ERFORMANCE ON WUSTL DATASET
+
+(ANOVA) test by constructing the null hypothesis
+H0 : µAlgo1 = µAlgo2
+and the alternative hypothesis
+H1 : µAlgo1 , µAlgo2 ,
+where Algo1 and Algo2 can be SFMEC, FedAvg, or LR
+(Logistic Regression). The results of this test are presented
+in Table VIII. For the majority of pairwise algorithm comparisons, the null hypothesis is rejected, indicating a statistically
+significant difference in mean performance at the 95% confidence level. In a limited number of cases, the performance
+of FedAvg and the proposed SFMEC method is found to
+be statistically the same. The values of lower and upper
+Confidence Interval (CI) are also included in Table VIII.
+
+Unlike traditional federated models that suffer degradation
+in accuracy due to data heterogeneity and communication
+noise, SFMEC maintains stability by optimizing the decision
+boundary through a maximum entropy principle. This leads
+to more balanced model updates from heterogeneous clients,
+thereby improving global model convergence. Additionally,
+the secure aggregation mechanism integrated within SFMEC
+ensures that sensitive device-level data remains confidential,
+preserving privacy without compromising model performance.
+The scalability of SFMEC is evident from its steady accuracy
+gains with an increasing number of clients. This suggests that
+the entropy-driven regularization promotes robustness against
+statistical diversity among IoT gateways. Furthermore, the
+
+4256
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+TABLE VIII
+R ESULTS OF S TATISTICAL ANOVA T EST
+
+leakage and reduces communication overhead, making the system practical for large-scale IoT environments. Experimental
+evaluations on benchmark IoT datasets of intrusion detection,
+along with comparison with popular FedAvg and federated
+logistic regression, demonstrate that SFMEC achieves the
+same or superior detection accuracy and lower false-positive
+rates even in identifying multiple types of attacks.
+The SFMEC can establish a scalable, privacy-preserving,
+and resilient solution for next-generation IoT intrusion detection, offering a strong foundation for secure and trustworthy
+IoT network management. The performance of SFMEC in
+real IoT setups can be evaluated in the future. Further, the
+dynamic entropy tuning mechanisms, allowing the classifier
+to automatically adjust entropy regularization based on data
+heterogeneity and client reliability, can also be explored.
+ACKNOWLEDGMENT
+This article was edited for grammar using “Grammarly”.
+The authors thank the associate editor and anonymous reviewers for insightful comments that significantly improved the
+technical quality and presentation of the manuscript.
+R EFERENCES
+[1]
+
+results indicate that SFMEC requires fewer communication
+rounds to achieve convergence compared to the baseline, highlighting its efficiency in resource-constrained IoT networks.
+The findings thus validate the effectiveness of SFMEC as
+a privacy-preserving, scalable, and accurate intrusion detection framework for consumer IoT devices. By integrating
+security and entropy-aware learning within a federated setup,
+SFMEC bridges the gap between local model reliability
+and global network security, offering a promising direction
+for next-generation distributed intrusion detection systems in
+large-scale IoT ecosystems.
+VII. C ONCLUSION
+The paper has presented a secure federated maximum
+entropy classifier for intrusion detection in an IoT consumer
+electronics network. The proposed framework combines federated learning with the maximum entropy principle to overcome
+limitations of centralized intrusion detection systems, particularly those related to data privacy, scalability, and class
+imbalance. By enabling IoT gateways to train local models
+securely and collaboratively without sharing raw data, SFMEC
+ensures privacy preservation while maintaining high detection
+performance, besides making IDS scalable. The entropy-based
+learning approach enhances robustness against data heterogeneity and uncertainty, leading to more balanced decision
+boundaries. In addition, the integration of secure aggregation
+and model compression mechanisms prevents information
+
+W. Lu et al., “Stones from other hills: Intrusion detection in statistical
+heterogeneous IoT by self-labeled personalized federated learning,”
+IEEE Internet Things J., vol. 12, no. 10, pp. 14348–14361, May 2025.
+[2] S. Sharma, S. Kapoor, B. Srinivasan, and M. S. Narula, “HiCHO:
+Attributes based classification of ubiquitous devices,” in Proc. Mobile
+Ubiquitous Syst., Comput., 2012, pp. 113–125.
+[3] P. Sun, S. Shen, Y. Wan, Z. Wu, Z. Fang, and X.-Z. Gao, “A survey of
+IoT privacy security: Architecture, technology, challenges, and trends,”
+IEEE Internet Things J., vol. 11, no. 21, pp. 34567–34591, Nov. 2024.
+[4] S. Sharma, R. Kothari, and O. Ghaswi, “Data stream clustering using
+embedding dimension at edge gateway,” in Proc. IEEE Int. Conf. Adv.
+Netw. Telecommun. Syst. (ANTS), Dec. 2022, pp. 213–218.
+[5] M. Shafiq, R. Yadav, A. R. Javed, and S. A. H. Mohsan, “CoopGBFS:
+A federated learning and game-theoretic-based approach for personalized security, recommendation in 5G beyond IoT environments for
+consumer electronics,” IEEE Trans. Consum. Electron., vol. 70, no. 1,
+pp. 2648–2656, Feb. 2024.
+[6] S. Sharma and P. D. Bhatt, “Performance analysis of Gamma/M/1 model
+for IoT-based sensor data traffic,” IEEE Wireless Commun. Lett., vol. 10,
+no. 11, pp. 2430–2434, Nov. 2021.
+[7] S. Sharma and P. Datt Bhatt, “Performance modeling of IoT-cloud
+gateway under diverse traffic characteristics,” IEEE Trans. Netw. Service
+Manage., vol. 22, no. 1, pp. 691–701, Feb. 2025.
+[8] B. B. Zarpel ao, R. S. Miani, C. T. Kawakani, and S. C. D. Alvarenga,
+“A survey of intrusion detection in Internet of Things,” J. Netw. Comput.
+Appl., vol. 84, pp. 25–37, Apr. 2017.
+[9] J. Konečný, H. Brendan McMahan, F. X. Yu, P. Richtárik, A. Theertha
+Suresh, and D. Bacon, “Federated learning: Strategies for improving
+communication efficiency,” 2016, arXiv:1610.05492.
+[10] P. Kairouz et al., “Advances and open problems in federated learning,”
+Foundations Trends Mach. Learn., vol. 14, nos. 1–2, pp. 1–210, 2020.
+[11] N. Pandey and P. K. Mishra, “Performance analysis of entropy variationbased detection of DDoS attacks in IoT,” Internet Things, vol. 23, Oct.
+2023, Art. no. 100812.
+[12] Z. Raeisi, H. R. Maleki, and R. Akbari, “An entropy-based multiobjective feature selection method for network intrusion detection,”
+Cluster Comput., vol. 28, no. 12, p. 790, Nov. 2025.
+[13] A. Vangala, R. Maheshwari, A. K. Das, and S. Pal, “Cloud-assisted
+security framework for drone-enabled offshore communications,” in
+Proc. IEEE Conf. Comput. Commun. Workshops (INFOCOM WKSHPS),
+May 2023, pp. 1–6.
+[14] D. Dolev and A. Yao, “On the security of public key protocols,” IEEE
+Trans. Inf. Theory, vol. 29, no. 2, pp. 198–208, Mar. 1983.
+[15] R. Canetti and H. Krawczyk, “Universally composable notions of
+key exchange and secure channels,” in Proc. Int. Conf. Theory Appl.
+Cryptograph. Techniques Adv. Cryptol. (EUROCRYPT), Amsterdam,
+The Netherlands, 2002, pp. 337–351.
+
+DEY et al.: SFMEC FOR INTRUSION DETECTION IN IoT CONSUMER ELECTRONICS
+
+[16] A. Paverd, A. Martin, and I. Brown. (2014). Modelling and Automatically Analysing Privacy Properties for Honest-but-Curious Adversaries. Accessed: Jun. 2025. [Online]. Available: https://ajpaverd.org/
+publications/casper-privacy-report.pdf
+[17] A. K. Das, “A random key establishment scheme for multi-phase
+deployment in large-scale distributed sensor networks,” Int. J. Inf. Secur.,
+vol. 11, no. 3, pp. 189–211, Jun. 2012.
+[18] S. Gupta and S. Sharma, “Fedclus: Federated clustering from distributed
+homogeneous data,” in Proc. Int. Conf. Soft Comput. Eng. Appl., 2022,
+pp. 29–41.
+[19] S. Sharma and S. Gupta, “Evaluating the performance of FedCLUS
+algorithm using FedCI: A new federated cluster validity metric,” Social
+Netw. Comput. Sci., vol. 5, no. 4, p. 332, Mar. 2024.
+[20] S. Sharma, K. Arora, and P. S. P. Thakur, “Horizontal federating decision
+tree learning from data streams: Building intelligence in IoT edge
+networks,” in Proc. IEEE 8th World Forum Internet Things (WF-IoT),
+Oct. 2022, pp. 1–6.
+[21] K. Bonawitz et al., “Practical secure aggregation for privacy-preserving
+machine learning,” in Proc. ACM SIGSAC Conf. Comput. Commun.
+Secur., Oct. 2017, pp. 1175–1191.
+[22] L. T. Phong, Y. Aono, T. Hayashi, L. Wang, and S. Moriai, “Privacypreserving deep learning via additively homomorphic encryption,” IEEE
+Trans. Inf. Forensics Security, vol. 13, no. 5, pp. 1333–1345, May 2018.
+[23] R. C. Geyer, T. Klein, and M. Nabi, “Differentially private federated
+learning: A client level perspective,” 2017, arXiv:1712.07557.
+[24] A. Golan and D. K. Foley, “Understanding the constraints in maximum
+entropy methods for modeling and inference,” IEEE Trans. Pattern Anal.
+Mach. Intell., vol. 45, no. 3, pp. 3994–3998, Mar. 2023.
+[25] W. Lee and D. Xiang, “Information-theoretic measures for anomaly
+detection,” in Proc. IEEE Symp. Secur. Privacy. SP, May 2000,
+pp. 130–143.
+[26] G. Gu, P. Fogla, D. Dagon, W. Lee, and B. Skorić, “Measuring intrusion
+detection capability: An information-theoretic approach,” in Proc. ACM
+Symp. Inf., Comput. Commun. Secur., Mar. 2006, pp. 90–101.
+[27] G. Gu, P. Porras, V. Yegneswaran, M. Fong, and W. Lee, “BotHunter:
+Detecting malware infection through IDS-driven dialog correlation,” in
+Proc. 16th USENIX Secur. Symp., 2007, p. 12.
+[28] Y. Li, B.-X. Fang, Y. Chen, and L. Guo, “A lightweight intrusion
+detection model based on feature selection and maximum entropy
+model,” in Proc. Int. Conf. Commun. Technol., Nov. 2006, pp. 1–4.
+[29] S. Dong and M. Sarem, “DDoS attack detection method based on
+improved KNN with the degree of DDoS attack in software-defined
+networks,” IEEE Access, vol. 8, pp. 5039–5048, 2020.
+[30] F. Yan, G. Zhang, D. Zhang, X. Sun, B. Hou, and N. Yu, “TL-CNN-IDS:
+Transfer learning-based intrusion detection system using convolutional
+neural network,” J. Supercomput., vol. 79, no. 15, pp. 17562–17584,
+Oct. 2023.
+[31] T. Zhang, J. Shen, H. Yang, P. Vijayakumar, B. B. Gupta, and V. Arya,
+“Sustainable authentication and key agreement protocol using chaotic
+maps for industry 5.0,” IEEE Trans. Consum. Electron., vol. 70, no. 1,
+pp. 1580–1589, Feb. 2024, doi: 10.1109/TCE.2023.3339818.
+[32] M. F. Ayub, X. Li, K. Mahmood, S. Shamshad, M. A. Saleem, and
+M. Omar, “Secure consumer-centric demand response management
+in resilient smart grid as industry 5.0 application with blockchainbased authentication,” IEEE Trans. Consum. Electron., vol. 70, no. 1,
+pp. 1370–1379, Feb. 2024, doi: 10.1109/TCE.2023.3320974.
+[33] S. K. Behera, P. Kumar, D. P. Dogra, and P. P. Roy, “A robust biometric
+authentication system for handheld electronic devices by intelligently
+combining 3D finger motions and cerebral responses,” IEEE Trans.
+Consum. Electron., vol. 67, no. 1, pp. 58–67, Feb. 2021.
+[34] M. F. Ayub, S. Shamshad, K. Mahmood, S. H. Islam, R. M. Parizi, and
+K.-K.-R. Choo, “A provably secure two-factor authentication scheme for
+USB storage devices,” IEEE Trans. Consum. Electron., vol. 66, no. 4,
+pp. 396–405, Nov. 2020.
+[35] I. Ul Haq, J. Wang, and Y. Zhu, “An efficient authenticated key agreement scheme for consumer USB MSDs resilient to unauthorized file
+decryption,” IEEE Trans. Consum. Electron., vol. 65, no. 1, pp. 80–89,
+Feb. 2019.
+
+4257
+
+[36] Y. Katsura, A. Endo, I. Arai, and K. Fujikawa, “Efficient IDS for IoT
+networks using host-based data aggregation and multi-entropy analysis,”
+IEEE Access, vol. 13, pp. 125406–125419, 2025.
+[37] B. Alturki and A. A. Alsulami, “Semi-supervised learning with entropy
+filtering for intrusion detection in asymmetrical IoT systems,” Symmetry,
+vol. 17, no. 6, p. 973, Jun. 2025.
+[38] Y. Sun, J. Yu, J. Tian, Z. Chen, W. Wang, and S. Zhang, “IoT-IE:
+An information-entropy-based approach to traffic anomaly detection in
+Internet of Things,” Secur. Commun. Netw., vol. 2021, pp. 1–13, Dec.
+2021.
+[39] X. Zhu et al., “PFLSE: A personalized federated learning framework
+based on Shannon entropy metric for intrusion detection in IIoT,” IEEE
+Internet Things J., vol. 13, no. 2, pp. 2936–2955, Jan. 2026.
+[40] J. Talpini, F. Sartori, and M. Savi, “A clustering strategy for enhanced
+FL-based intrusion detection in IoT networks,” 2023, arXiv:2307.14268.
+[41] B. Li, Y. Wu, J. Song, R. Lu, T. Li, and L. Zhao, “DeepFed: Federated deep learning for intrusion detection in industrial cyber–physical
+systems,” IEEE Trans. Ind. Informat., vol. 17, no. 8, pp. 5615–5624,
+Aug. 2021.
+[42] Y. Zhang, B. Li, B. Liu, Y. Hu, and H. Zheng, “A privacy-aware
+PUFs-based multiserver authentication protocol in cloud-edge IoT
+systems using blockchain,” IEEE Internet Things J., vol. 8, no. 18,
+pp. 13958–13974, Sep. 2021.
+[43] S. A. Rahman, H. Tout, C. Talhi, and A. Mourad, “Internet of Things
+intrusion detection: Centralized, on-device, or federated learning?,”
+IEEE Netw., vol. 34, no. 6, pp. 310–317, Nov. 2020.
+[44] O. Friha, M. A. Ferrag, L. Shu, L. Maglaras, K.-K.-R. Choo, and
+M. Nafaa, “FELIDS: Federated learning-based intrusion detection system for agricultural Internet of Things,” J. Parallel Distrib. Comput.,
+vol. 165, pp. 17–31, Jul. 2022.
+[45] O. Belarbi, T. Spyridopoulos, E. Anthi, I. Mavromatis, P. Carnelli,
+and A. Khan, “Federated deep learning for intrusion detection in IoT
+networks,” 2023, arXiv:2306.02715.
+[46] S. Sun, P. Sharma, K. Nwodo, A. Stavrou, and H. Wang, “FedMADE:
+Robust federated learning for intrusion detection in IoT networks using
+a dynamic aggregation method,” in Proc. Int. Conf. Inf. Secur., 2024,
+pp. 286–306.
+[47] R. Benameur, A. Dahane, S. Souihi, and A. Mellouk, “A novel federated
+learning based intrusion detection system for IoT networks,” in Proc.
+ICC - IEEE Int. Conf. Commun., Jun. 2024, pp. 2402–2407.
+[48] M. Dey and S. Sharma, “Identification of DDoS attack using activity
+pattern of IoT devices preserving data privacy,” in Proc. 3rd Asian Conf.
+Innov. Technol. (ASIANCON), Aug. 2023, pp. 1–6.
+[49] P. S. Bouzinis et al., “StatAvg: Mitigating data heterogeneity in federated learning for intrusion detection systems,” IEEE
+Trans. Netw. Service Manage., vol. 22, no. 4, pp. 2944–2955,
+Aug. 2025.
+[50] N. Wang, S. Shi, Y. Chen, W. Lou, and Y. T. Hou, “FeCo: Boosting intrusion detection capability in IoT networks via contrastive learning,” IEEE
+Trans. Dependable Secure Comput., vol. 22, no. 4, pp. 4215–4230, Jul.
+2025.
+[51] H. Peng, C. Wu, and Y. Xiao, “FD-IDS: Federated learning with knowledge distillation for intrusion detection in non-IID IoT environments,”
+Sensors, vol. 25, no. 14, p. 4309, Jul. 2025.
+[52] A. Karunamurthy, K. Vijayan, P. R. Kshirsagar, and K. T. Tan, “An optimal federated learning-based intrusion detection for IoT environment,”
+Sci. Rep., vol. 15, no. 1, p. 8696, Mar. 2025, doi: 10.1038/s41598-02593501-8.
+[53] T. S. Messerges, E. A. Dabbish, and R. H. Sloan, “Examining smartcard security under the threat of power analysis attacks,” IEEE Trans.
+Comput., vol. 51, no. 5, pp. 541–552, May 2002.
+[54] M. Wazid, A. K. Das, S. Kumari, X. Li, and F. Wu, “Design of an
+efficient and provably secure anonymity preserving three-factor user
+authentication and key agreement scheme for TMIS,” Secur. Commun.
+Netw., vol. 9, no. 13, pp. 1983–2001, Sep. 2016.
+[55] (2020). Federated Logistic Regression. [Online]. Available:
+https://fate.readthedocs.io/en/develop/buildtemp/python/federatedml/
+linearmodel/logisticregression/README.html
+PAPER_TEXT

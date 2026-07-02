@@ -1,0 +1,137 @@
+4362                                                      IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+
+
+
+            A Moving Target DDoS Defense Approach in
+                     Consortium Blockchain
+              Keke Gai , Guolei Zhang, Peng Jiang, Member, IEEE, Liehuang Zhu , Senior Member, IEEE,
+                              and Kim-Kwang Raymond Choo , Senior Member, IEEE
+
+
+   Abstract—Although consortium blockchain has an identification                   threatening the security of blockchain [4], [5], [6], [7]. Existing
+mechanism, the captured internal clients are potentially threat-                   Internet DDoS defense methods focus on defending large-scale
+ening internal blockchain nodes. Internal Distributed Denial-of-                   malicious traffic requests on the Internet. However, due to the
+Service (DDoS) attacks threaten the specific nodes in consortium
+blockchain, e.g., the executor, consensus, and committer nodes.                    limited number of participating nodes, the nodes inside each
+Typical attack methods may include SYN Flooding and ACK                            organization are public for internal clients to call functions, but
+Flooding and deny normal transaction service by sending many                       internal clients are probably compromised by attackers, which
+invalid transactions and blocks. In this work, we have proposed                    cannot be defended by existing Internet DDoS defense methods.
+an organization collaboration-based DDoS defense approach and                         In the typical consortium blockchain, the authorized internal
+a Deep Q-learning (DQN)-based Moving Target Defense (MTD)
+for changing attack surface of victims in consortium blockchain.                   clients have permission to obtain the node’s information and
+On one hand, contracts are used to synchronize attack information                  smart contracts. Most consortium blockchains (e.g., Hyper-
+obtained from organizations, e.g., bots’ IP addresses and public                   ledger Fabric [8]) implement built-in rate restrictions mainly tar-
+keys. On the other hand, we have developed a DQN-based MTD                         gets transaction processing speed or block generation frequency
+defense mechanism for organizations to change the attack surface                   to mitigate DDoS attacks, encompassing limits on a variety
+of victims in order to mitigate the malicious traffic, in the case
+of missing detections of bots. Our approach applies a multi-stage                  of aspects, such as the number of peers and orderors, overall
+game to reflect interactions between attackers and defenders. The                  query capacity, concurrency thresholds, and batch timeouts.
+evaluation results have demonstrated that our approach could                       However, the traditional setting encounters a failure in defending
+effectively mitigate DDoS attacks in consortium blockchain.                        internal DDoS attacks, since an internal DDoS attacker is able
+  Index Terms—Consortium blockchain, DDoS, moving target                           to not only launch typical DDoS attacks (e.g., SYN Flood or
+defense, deep Q-network.                                                           ACK Flood) but also compromise internal clients to implement
+                                                                                   different internal attacks at the application layer, threatening the
+                            I. INTRODUCTION                                        execution, consensus, and block committing of transactions [9].
+                                                                                   Therefore, these built-in rate limitations cannot mitigate the
+     EMPORARILY, Distributed-Denial-of-Service (DDoS)
+T    attacks are common threats to majority of applications
+running on the Internet. A variety of new DDoS attacks have
+                                                                                   target DDoS attacks considered in this work. The challenge
+                                                                                   issue is that the internal attacks make various types of nodes
+                                                                                   ignore current identity authentication rather than evading Inter-
+brought new challenges to existing DDoS defense technologies,                      net DDoS defense [10]. A typical internal DDoS attack scenario,
+including consortium blockchain [1], [2], [3]. Even though                         for example, is that DDoS attackers may create a large number
+blockchain presents services in a decentralized manner, which                      of invalid transactions (e.g., incorrect signatures) to block the
+implies a higher-level defense capability, the DDoS attack still is                execution of normal transactions for targeting executor nodes,
+                                                                                   as the blockchain network allows anyone to freely send trans-
+   Received 17 May 2023; revised 16 February 2025; accepted 23 February            actions [11]. In addition, when attacking consensus nodes, the
+2025. Date of publication 28 February 2025; date of current version 11 July
+2025. This work was supported in part by the National Key Research and             attacker can send a large number of endorsed transactions until
+Development Program of China under Grant 2021YFB2701300, in part by                the node’s transaction pool is filled with malicious transactions.
+National Natural Science Foundation of China under Grant 62232002, Grant           Attackers can also attack committer nodes by initiating a large
+U24B20146, and Grant 62372044, and in part by Beijing Municipal Science and
+Technology Commission Project under Grant Z241100009124008. The work of            number of empty blocks, unsigned blocks, or blocks containing
+Kim-Kwang Raymond Choo was supported by the Cloud Technology Endowed               conflict transactions to block the storage of normal blocks. The
+Professorship. (Corresponding author: Keke Gai.)                                   bots controlled by the attacker can rationally arrange attack
+   Keke Gai, Peng Jiang, and Liehuang Zhu are with the School of Cyberspace
+Science and Technology, Beijing Institute of Technology, Beijing 100081, China     resources in different organizations.
+(e-mail: gaikeke@bit.edu.cn; pengjiang@bit.edu.cn; liehuangz@bit.edu.cn).             However, there are rare works focusing on the DDoS defense
+   Guolei Zhang is with the School of Computer Science and Tech-                   inside the consortium blockchain. We have investigated the typ-
+nology, Beijing Institute of Technology, Beijing 100081, China (e-mail:
+3220201004@bit.edu.cn).                                                            ical DDoS defense approaches and analyzed the defense effect
+   Kim-Kwang Raymond Choo is with the Department of Information Systems            on consortium blockchain, including traffic filtering, Software-
+and Cyber Security and Department of Electrical and Computer Engineering,          defined Networking (SDN) [12], Network Function Virtualiza-
+University of Texas at San Antonio, San Antonio, TX 78249 USA (e-mail:
+raymond.choo@fulbrightmail.org).                                                   tion (NFV) [13], Moving Target Defense (MTD) [14], [15], [16]
+   Digital Object Identifier 10.1109/TDSC.2025.3546625                             and collaborative defense approach [17], [18], [19], [20]. The
+
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN                                                                  4363
+
+
+
+                                                                                 that the independent organizations have a broader scope of
+                                                                                 knowledge about attacks compared to a centralized-based
+                                                                                 defense setting.
+                                                                             3) This work utilizes blockchain smart contracts to collect
+                                                                                 and record the attack feature data in order to provide
+                                                                                 sufficient and qualified training data for DQN. Due to
+                                                                                 the collaborative defense setting, combining with smart
+                                                                                 contracts can facilitate a higher-level efficiency when ad-
+                                                                                 versaries appear a dynamic attacking manner.
+                                                                             The advantages of our proposed approach in this paper, com-
+                                                                          pared to other methods, are: (i) Focus on Consortium Blockchain
+Fig. 1.   The architecture of proposed DDoS defense approach.             Security: Most existing work focuses on public blockchain,
+                                                                          despite DDoS attacks posing a greater threat to consortium
+filtering method generally performs well in most situations, but          blockchain systems. Consortium blockchains have fewer nodes
+the method can hardly handle the moving attackers due to its              centralized within specific organizations, making them easier
+inflexibility limitations [21]. SDN-based and NFV-based meth-             targets for attackers. In contrast, public blockchains have a
+ods present higher-level flexibility but generally cause a longer         vast, globally distributed network, requiring more resources to
+latency [22]. The MTD is one of the important active defense              disrupt [24], [25]. Additionally, consortium blockchains rely on
+approaches, but resource consumption and uncertainty lead to              cryptographic-based consensus (e.g., PBFT or RAFT), which
+the MTD strategy not being applied in consortium blockchain               can be severely impacted by attacking a few key nodes. Public
+directly. The collaborative defense is a suitable approach for            blockchains use more robust mechanisms (e.g., PoW or PoS)
+defending against DDoS attacks inside consortium blockchain,              that are more resistant to such attacks. Furthermore, consor-
+which can not only fit the architecture of consortium blockchain          tium blockchain nodes are easier to identify and target due to
+but also enhance DDoS defense of single organizations.                    their limited anonymity, whereas public blockchain nodes are
+    Combining Contract-based Collaborative Defense with MTD               anonymous. Node management rules in consortium blockchains
+is a better way to mitigate DDoS attacks in consortium                    mitigate malicious attacks using Sybil accounts and other stealth
+blockchain. MTD avoids being attacked by malicious traffic                strategies, serving as prerequisites for moving target defense.
+while ensuring normal blockchain service and changes the At-              (ii) Attack Data Sharing: Existing defense methods do not
+tack Surface (AS) for preventing persistent attacks. Besides,             effectively leverage blockchain’s data sharing capabilities. Our
+reinforcement learning [23] provides MTD strategy generation              approach combines the distributed ledger characteristics of
+with continuous solutions that fully utilize smart contracts to           blockchain with deep reinforcement learning to create defensive
+collect DDoS attack information concerning attack features for            methods. The consortium blockchain provides the necessary
+every node.                                                               conditions for implementing our approach and the infrastructure
+    In this work, we have proposed a two-stage DDoS defense               for data sharing, enabling each node to store a complete dataset
+approach for consortium blockchains. The architecture of pro-             and generate effective defense solutions using synchronized
+posed defense approach consists of four parts as shown in Fig. 1,         attack data.
+including malicious traffic detection and filtering, attacks data            The rest of this paper is organized by the followings. Section II
+synchronization contract, DQN-based MTD action generation,                presents the threat model and defines the proposed problem. Sec-
+and MTD execution module. The traffic detection and filtering             tions III and IV explain smart contract-based collaborative de-
+module filters malicious traffics by using the attack data stored         fense mechanism and DQN-based model, respectively. The eval-
+in the distributed ledger through the contract. When the attacker         uation and main findings are given in Section V. Finally, we re-
+is recorded in the ledger, the traffic is directly filtered by the fil-   view related work and draw conclusions in Sections VI and VII.
+tering module. There are some persistent malicious traffics, and
+each node in the organization uses MTD module to change its                             II. CENCEPTS AND THE DEFINITIONS
+own environment for mitigating the attacks. The MTD method in
+each node comes from the DQN. Attack data required by DQN                 A. Threat Model
+model derives from the data stored in the distributed ledger.                Our attack vector assumes that rational attackers can compro-
+    The main contributions of this paper are as follows:                  mise internal nodes in the consortium blockchain with public
+    1) We have explored using an MTD-based mechanism to                   information to achieve maximum profit. The goal of internal
+        defend DDoS attacks in the consortium blockchain. In              attackers launching DDoS attacks is to make the consortium
+        order to construct an adoptable solution, we have at-             blockchain unable to provide normal services, without gen-
+        tempted to apply a DQN to generate MTD strategies in              erating direct benefits, but will appear indirectly in the form
+        each organization.                                                of external benefits, such as disrupting or extorting competing
+    2) We have developed a smart contract-based collaborative             organizations within the consortium blockchain, or driven by
+        defense method in consortium blockchain. The proposed             economic interests. Rational attackers will terminate their at-
+        method allows the organizations in consortium blockchain          tacks when the cost and benefits of launching attacks are unequal
+        to share information on collected malicious traffics, so          or even less. In contrast, compromised bots are authenticated to
+4364                                              IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+
+
+access internal information of consortium blockchain, e.g., types        attacks by sending invalid transactions at a small cost. These
+of nodes, deployed contracts of different nodes, and addresses

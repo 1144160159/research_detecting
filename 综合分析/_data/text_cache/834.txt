@@ -1,0 +1,150 @@
+2802                                                                                           IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+
+
+
+             Unified Anomaly Detection via Multi-Scale
+                        Contrasted Memory
+                             Loı̈c Jézéquel , Jean Beaudet, Aymeric Histace , and Ngoc-Son Vu
+
+   Abstract—Deep anomaly detection aims to provide robust and
+efficient classifiers for zero-shot (unsupervised, UNS) and few-
+shot (imbalanced supervised, IMS) settings. However, current
+models still struggle on edge-case normal samples and are often
+unable to keep high performance over different scales of anoma-
+lies. Additionally, there is a lack of a unified framework that
+efficiently addresses both UNS and IMS settings. To address these
+limitations, we present a novel two-stage method which leverages
+multi-scale normal prototypes during training to compute an
+anomaly deviation score. First, we employ a novel memory-
+augmented contrastive learning to jointly learn representations
+and memory modules across multiple scales. This allows us to                    Fig. 1. Comparison of AnoMem with SoTA methods on CIFAR-100 with
+effectively capture subtle features of normal data while adapting               different anomaly ratio γ. AnoMem is the first unified model to perform well
+to varying levels of anomaly complexity. Then, we train an                      in both UNS and IMS settings. The so-called unified method here exhibits
+efficient anomaly distance-based detector that computes spatial                 rather random performance for the UNS setting.
+deviation maps between the learned prototypes and incoming
+observations. Our model outperforms the SoTA on a wide range
+of anomalies, including object, style, and local anomalies, as well                To date, no efficient unified AD framework has been able
+as industrial inspection and face anti-spoofing, while being on                 to seamlessly address both UNS and IMS detection. Existing
+par with SoTa out-of-distribution detectors. Notably, it stands as              methods typically perform only within their original design
+the first model capable of maintaining exceptional performance
+across both settings.                                                           settings, as can be seen in Fig. 1. Indeed, these methods
+                                                                                employ different specialized approaches with distinct sets of
+   Index Terms—Anomaly detection, industrial inspection, face                   hyperparameters. The addition of anomalies into the training
+anti-spoofing, out-of-distribution, unified model, contrastive
+learning, differentiable memory, Hopfield network, unsupervised,                leads to a substantial overhaul of the AD algorithms. This
+imbalanced supervised settings.                                                 impracticality becomes apparent in real-world applications,
+                                                                                especially when only normal samples are initially available
+                       I. I NTRODUCTION                                         (UNS), and the acquisition of anomaly samples occurs at a
+                                                                                later stage (IMS).
+D     ETECTING deviations from a normal baseline is a piv-
+      otal challenge in machine learning and computer vision.
+However, collecting and annotating anomalous data can be
+                                                                                   Apart from the lack of a unified method, existing AD models
+                                                                                suffer from additional limitations. First, there exists a hard
+prohibitively expensive. Thus, unsupervised anomaly detection                   trade-off between remembering edge-case normal samples and
+(UNS-AD) has gained significant attention [1], [2], [3], [4].                   maintaining generalizability toward anomalies, leading to a
+UNS-AD methods train models exclusively with anomaly-free                       lack of normal sample memorization and high false reject
+images to detect unseen anomalies, also termed one-class or                     rates on harder samples. Second, these models often focus
+zero-shot AD. Yet, in many real-world scenarios, a small set of                 on either local low-scale anomalies or global object-oriented
+anomaly samples may become available over time, prompting                       anomalies but fail to combine both (see Table I). Furthermore,
+the need for their inclusion to improve AD performance. Con-                    current models tend to be highly dataset-dependent and do not
+sequently, we transition from UNS to imbalanced supervised                      explicitly utilize multi-scaling.
+(IMS) or few-shot settings. In this context, available anomaly                     To overcome these limitations, we present a novel two-stage
+samples are often intricate, incomplete, and ill-defined, leading               AD model, dubbed AnoMem. Our approach improves the AD
+to a significant departure of AD from conventional binary                       landscape by incorporating multi-scale normal class prototypes
+classification.                                                                 within its training phase to compute anomaly deviation scores
+                                                                                across various scales. Unlike previous memory bank equipped
+   Received 8 October 2024; revised 18 July 2025; accepted 26 January 2026.
+Date of publication 24 February 2026; date of current version 18 March 2026.    methods [5], [6], AnoMem leverages normal memory layers
+The associate editor coordinating the review of this article and approving it   spanning multiple scales, thereby augmenting both anomaly
+for publication was Dr. Weiying Xie. (Corresponding author: Ngoc-Son Vu.)       detection efficacy and the quality of learned representations.
+   Loı̈c Jézéquel and Jean Beaudet are with Idemia Identity and Security
+France, 95520 Osny, France.                                                     Moreover, by employing modern and backpropagable Hop-
+   Aymeric Histace is with ETIS Laboratory - ENSEA, CYU, CNRS, 95000            field layers for memorization, our method surpasses the
+Cergy, France.                                                                  efficiency of nearest neighbor anomaly detectors [7], [8].
+   Ngoc-Son Vu is with LIST3N, Université de Technologie de Troyes (UTT),
+10300 Troyes, France (e-mail: son.vu@utt.fr).                                   While the mentioned detectors require retaining the entire
+   Digital Object Identifier 10.1109/TIP.2026.3663923                           normal set, our model adeptly learns the most representative
+             1941-0042 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+JÉZÉQUEL et al.: UNIFIED ANOMALY DETECTION VIA MULTI-SCALE CONTRASTED MEMORY                                                                  2803
+
+
+
+                                                                         TABLE I
+OVERVIEW OF A NO M EM ’ S P ERFORMANCE . A NO M EM D EMONSTRATES E XCEPTIONAL C APABILITIES FOR I MAGE -L EVEL AD W ITH D IFFERENT T YPES
+  OF A NOMALY. C ATEGORIZATION I S A PPROXIMATE : “ CLASSIC ” AD ARE O BJECT-A NOMALY D ETECTORS B ETWEEN 2019 AND 2021 (E XCEPT
+     MSC [9] IN 2023), “IAD” D ENOTES M ORE R ECENT M ETHODS O RIENTED T OWARDS I NDUSTRIAL I NSPECTION . P ERFORMANCE L EVELS
+        ARE Q UANTIZED AND D ENOTED AS F OLLOWS : ? ? ?: E XCELLENT (S OTA), ??: G OOD (C OMPARABLE TO S OTA), ?: P OOR TO
+           AVERAGE , G RAYED -O UT: C ANNOT B E A PPLIED , -: R ESULTS N OT AVAILABLE OR C ANNOT B E A PPLIED . R ESULTS IN B LUE
+               W ERE R E -E VALUATED . “EK” I NDICATES M ETHODS W HICH G ET H ELP F ROM E XTERNAL K NOWLEDGE , S UCH AS
+                  P RE -T RAINED M ODELS OR E XTRA DATASETS . E CENT VLM-BASED AD M ETHODS ARE M ULTIMODAL AND
+                  EK-D EPENDENT, T YPICALLY E VALUATED ON I NDUSTRIAL B ENCHMARKS . A LTHOUGH L ABELED AS Z ERO -
+                           S HOT, T HESE M ETHODS M AY I MPLICITLY E NCODE A NOMALY K NOWLEDGE T HROUGH T HEIR
+                                                P RETRAINED M ODALITIES (S EE S ECTION II-B)
+
+
+
+
+samples within a fixed size. Through extensive experiments,                    minimal error when presented with a partial or corrupted input.
+we demonstrate that our method significantly outperforms all                   Memory modules will vary based on their capacity to mem-
+previous memory-equipped anomaly detectors.                                    orize data given a model size and the average reconstruction
+  Our main contributions are the following:                                    error.
+  • We propose to integrate backpropagable memory modules                         A simple memory module is the nearest neighbor queue
+     into contrastive learning (CL) to learn normal class pro-                 (non-differentiable memory). Given a maximum size M, it
+     totypes during training. In the first stage, we jointly learn             stores the last M samples representations in the queue. To
+     representations and memory modules using CL, allowing                     remember an incomplete input x, it retrieves the nearest
+     for effective memorization of normal prototypes.1 In the                  neighbor from the queue.
+     second stage, we learn to detect anomalies using the                         A more powerful and expressive form of memory, known
+     learned prototypes. When anomalies are available, we                      as the modern differentiable Hopfield layer [17], significantly
+     train a detector on the spatial deviation maps between                    extends classical Hopfield networks. It represents memory as
+     learned prototypes and observations. AnoMem is the first                  a learnable weight matrix X ∈ Rd×NMem , where each column ξi
+     working well in both UNS and IMS settings with a few                      denotes a prototype pattern in a d-dimensional space. Retrieval
+     anomalies (unified method).                                               is performed via the iterative update:
+  • AnoMem is further improved by using multi-scale normal                                      ξ(t+1) = softmax β ξ(t) X X> ,
+                                                                                                                         
+                                                                                                                                           (1)
+     prototypes for representation learning and AD. We intro-
+     duce a novel way to efficiently memorize 2D features                      where ξ(0) is the input query vector input, and β is the inverse
+     maps spatially. This enables our model to accurately                      temperature that controls the sharpness of the attention. Itera-
+     detect low-scale, texture-oriented anomalies and higher-                  tion continues until convergence, i.e., |ξ(t+1) − ξ(t) | < , where
+     scale, object-oriented anomalies (generic detector).                      the variable t denotes the iteration step. This update is formally
+  • The efficiency of AnoMem, was validated through exten-                     equivalent to the self-attention mechanism in Transformers, but
+     sive experiments with no external knowledge, including                    is reapplied recursively, enabling convergence to fixed-point
+     different types of anomalies (object, subtle style, local,                attractors. This allows the Hopfield layer to function as both
+     fine-grained), two real-world applications (industrial                    an associative memory and an attention mechanism.
+     inspection and face anti-spoofing), and OOD detection.                       Key advantages of the Hopfield layer include its exponen-
+     We improve detection with up to 50% error relative                        tially large memory capacity, efficient convergence in a few
+     improvement on object anomalies and 14% on face                           steps, and low redundancy in learned patterns due to softmax-
+     anti-spoofing.                                                            based retrieval. It supports diverse attractors (e.g., global, local,
+                                                                               or specific patterns) and integrates seamlessly into modern
+                        II. R ELATED W ORK                                     deep architectures. Henceforth, we refer to this module as
+                                                                               a Hopfield layer of size NMem , referring to the number of
+A. Memory Modules                                                              memory vectors it contains.
+  A memory module should achieve two main operations:
+¬ writing inside a memory from a given set of samples, and                     B. Anomaly Detection
+­ retrieving the most similar sample from its memory with
+                                                                                  1) Overview of AD: Due to its importance, AD has received
+  1 Unlike coreset algorithm, which stores samples directly, we leverage the   significant attention, leading to a wide variety of proposed
+modern Hopfield network to learn and represent prototypes of normal samples.   methods. For comprehensive surveys of deep AD techniques,
+2804                                                                           IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+
+
+we refer readers to [18], [19], while this section focuses on      methods [7], [8] use a nearest neighbor queue for anomaly
+approaches most relevant to our work.                              scoring. Density estimation methods estimates the normal dis-
+   Recent advances have increasingly explored the use of           tribution using deep density estimators like normalizing-flows
+vision-language models (e.g., CLIP [20]) for zero-shot AD.         [32], variational models [33] or diffusion models [34], [35].
+These models inherently rely on EK, such as pre-trained            Reconstruction methods measure the reconstruction error of
+multimodal embeddings, and will be discussed in more detail        a bottleneck encoder-decoder, trained with denoising autoen-
+later. Such developments complement the three major families       coders [36], [37] or two-way GANs [38], [39], [40]. Some
+of AD techniques—pre-trained feature adaptation, discrimi-         incorporate memory in the latent space of an auto-encoder [5],
+native, and generative methods—as categorized in [18]. In          [6] during training for optimal reconstruction. More recently,
+addition to methodological categories, AD approaches can be        knowledge distillation methods have been adapted to AD
+further classified by their supervision levels, depending on the   by using the representation discrepancy of anomalies in the
+availability and granularity of anomaly annotations. Common        teacher-student model [41], [42].
+settings include unsupervised (UNS), imbalanced supervised            IMS-AD mainly revolves around two-stage methods and
+(IMS), semi-supervised, and open-set detection. For example,       anomaly distance methods. Some recent work has tried to
+semi-supervised AD leverages partially labeled data, w

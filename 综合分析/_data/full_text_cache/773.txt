@@ -1,0 +1,697 @@
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+ IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS 1
+
+ Physics-Informed Multi-Scale Adaptive
+ Graph Learning for Unified Event Detection,
+Localization, and Classification in Power System
+ Wenxia Sima , Member, IEEE, Jingsong Wang , Student Member, IEEE,
+ Ming Yang , Senior Member, IEEE, and Xiaohan Li, Student Member, IEEE
+
+ Abstract—This article proposes a physics-informed introduces emerging operational risks. As a result, power system
+multi-scale adaptive graph neural network (PI-MSA) for events such as temporary faults, line trips, load fluctuations,
+rapid event detection, localization, and classification (ED- and cyber-physical incidents are becoming more frequent and
+L-C) of single and multi-source coupling events in power
+systems to prevent large-scale failures. Prior work decom- diverse [1], [2]. These events can propagate rapidly across
+poses ED-L-C tasks into separate classification subtasks. interconnected networks, potentially leading to grid failures
+Instead, this work frames ED-L-C as a unified regression and widespread system disruptions [3]. As demonstrated in
+problem through a spatial-aware and task-coupled three- Table I, multi-source events worldwide have precipitated sigdimensional target formulation, enabling one-shot infernificant blackouts and economic losses in recent years. Many
+ence of all abnormal events and their class probabilities
+at both node and edge levels. By incorporating physi- of these major blackouts stem from minor incidents that were
+cal grid topology and shortest-path admittance encoding exacerbated by delayed and inaccurate event analysis. To enable
+through parallel multi-scale networks, this unified one- timely intervention, rapid and accurate event detection [4], lostage pipeline enables joint optimization and learning of calization [5], and classification (ED-L-C) [6] capabilities has
+shared graph features as well as progressive inter-task
+ become crucial for maintaining system stability and preventing
+dependencies. Experimental validation on five power systems of varying scales and configurations demonstrates catastrophic failures in modern power grids [7], [8].
+that PI-MSA achieves over 75% mean average precision Recent advances in measurement technologies, particularly
+and 90% localization accuracy across various scenarios, the widespread deployment of distribution-level phasor meaoutperforming traditional methods by over 40% and ex- surement units (D-PMUs), have enhanced system observability
+ceeding state-of-the-art methods by at least 5%. The model
+ [9], [10], [11]. These devices sample at 30–120 Hz, capturing
+maintains robust and accurate event analysis under topology changes and reduced observability conditions while system dynamics with high temporal resolution through synachieving computational efficiency at 225 frames per sec- chronized measurements. This rich data stream theoretically
+ond, enabling real-time monitoring and analysis for modern enables more accurate ED-L-C analysis [12], [13], [14]. Howpower systems. ever, extracting actionable insights from these high-dimensional,
+ Index Terms —Event detection localization and classifi- heterogeneous data poses significant computational and methodcation, modern power system, multi-source events, multi- ological challenges, necessitating an efficient and unified framescale adaptive graph network, physics-informed. work capable of real-time multi-source complex event analysis
+ in increasingly dynamic power systems [15].
+ I. INTRODUCTION
+A. Background and Motivation B. Literature Review and Technical Challenges
+ ODERN power systems face a structural evolution
+M driven by the integration of renewable energy sources
+(RES), harmonic load, and smart grid technologies, which
+ To address the analytical challenges, extensive research efforts have been devoted to ED-L-C tasks in recent years [6],
+ [13], [16]. The methodology for ED-L-C has evolved from
+heighten operational variability and uncertainty. This increased physics-based models to data-driven approaches, and more recomplexity renders the grid more vulnerable to disturbances and cently toward physics-informed data-driven frameworks, driven
+ by the increasing complexity of modern grids and the availability
+ of high-resolution measurement data from D-PMUs.
+ Received 28 January 2026; revised 13 March 2026; accepted 3 April Physics-based ED-L-C methods are built upon fundamental
+2026. This work was supported by the Key Program of National Natural physical laws of power systems and achieve event analysis
+Science Foundation of China under Grant 52337007. Paper no. TII-26-
+0914. (Corresponding author: Ming Yang.) through the establishment of mathematical models that describe
+ The authors are with the State Key Laboratory of Power Trans- electromagnetic transient processes [17]. The modeling process
+mission Equipment Technology, Chongqing University, Chongqing typically involves system parameter identification, equivalent
+400044, China (e-mail: cqsmwx@cqu.edu.cn; song@stu.cqu.edu.cn;
+cqucee@cqu.edu.cn; lixh@stu.cqu.edu.cn). circuit modeling, and differential equation solving, followed
+ Digital Object Identifier 10.1109/TII.2026.3682628 by time-frequency domain analysis of electrical quantities to
+1941-0050 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+ Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+ for more information.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+2 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS
+
+ TABLE I
+ NOTABLE MAJOR POWER SYSTEM ACCIDENTS TRIGGERED BY MULTI-SOURCE EVENTS (2021–2025) ∗
+
+support ED-L-C tasks. While these methods provide strong (2) jointly modeling multi-scale spatial dependencies and temtheoretical foundations and interpretability, their dependence poral dynamics under complex scenarios remains non-trivial; (3)
+on precise system parameters and simplified assumptions limits further exploiting the synergy between circuit-theoretic princitheir effectiveness in modern distribution networks with high ples and graph-structured learning could enhance interpretabilrenewable penetration and dynamic loads. ity and physical consistency in safety-critical scenarios.
+ To address the limitations of physics-based methods in
+complex modern grids, data-driven methods have emerged as C. Contributions
+promising alternatives for ED-L-C tasks, with deep learning To address the technical challenges above, this article protechniques showing particular effectiveness in complex pattern poses a physics-informed multi-scale adaptive (PI-MSA) graph
+recognition. These methods employ various network architec- neural network with a novel ED-L-C framework for enhanced
+tures such as convolutional neural networks, recurrent neural power system event analysis. Rather than treating the three
+networks, or attention-based Transformer networks [18], [19], subtasks independently, the proposed framework unifies EDcombined with supervised [20], [21], weakly-supervised [22], L-C into a one-stage regression problem via a spatial-aware
+semi-supervised [23], or unsupervised learning [24] strategies three-dimensional (3-D) output tensor, enabling efficient and
+according to data characteristics and task requirements. By accurate multi-source event analysis under complex scenarios.
+learning effective feature representations from event data, these The main contributions of this article are summarized as follows.
+approaches demonstrate superior performance in event analysis. 1) This study develops a PI-MSA graph neural network for
+However, data-driven methods depend on high-quality historical precise spatial-temporal feature learning from complex
+data and offer limited physical interpretability, raising reliability multi-source event patterns. The method employs paralconcerns in critical decision-making scenarios. lel architectures where physical grid topology captures
+ To leverage the complementary strengths of both paradigms local spatial dependencies and shortest-path admittance
+while addressing their respective limitations, physics-informed encoding extracts global spatial relationships, enabling
+data-driven methods have emerged as a promising research adaptive modeling of multi-scale dynamic interactions
+direction that integrates domain knowledge into learning frame- between system nodes.
+works to ensure both event analysis accuracy and physical 2) This study introduces a spatial-aware and task-coupled
+consistency [25]. These approaches primarily operate through 3-D output structure that frames ED-L-C as a unified onethree mechanisms: constraint-based methods that incorporate stage regression problem, where spatial indices inherently
+physical laws such as Kirchhoff’s laws and power balance equa- encode event locations and classification is structurally
+tions as regularization terms in loss functions [26], architecture- conditioned on detection confidence. This formulation
+informed designs that embed topological and physical priors enables one-shot inference for all spatially separated abdirectly into network structures such as graph neural networks normal events and their class probabilities at both node
+[27], [28], [29], [30], and knowledge-guided learning frame- and edge levels. The framework eliminates the need for
+works that utilize domain expertise such as impedance character- defining new classes for coupled waveform patterns and
+istics and power equipment parameters to direct feature extrac- avoids error accumulation between subtasks.
+tion and model training processes [31]. These hybrid approaches 3) The proposed model and ED-L-C framework is syshave demonstrated improved generalization capabilities and re- tematically evaluated on five test systems with varying
+duced data requirements compared to purely data-driven meth- scales and voltage levels. Comparative studies demonods. However, they still face significant challenges in balancing strate the effectiveness of PI-MSA in processing complex
+the trade-offs between physical constraints and learning flexibil- multi-source events, while robustness and generalization
+ity. Specifically, three open challenges remain: (1) most ED-L-C analysis validate its adaptability under diverse operating
+frameworks treat subtasks independently, leading to error accu- conditions and grid configurations. Ablation studies furmulation in sequential processing or insufficient inter-subtask ther verify the contribution of each designed module to
+dependency modeling, leaving room for unified formulations; the overall performance.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+SIMA et al.: PHYSICS-INFORMED MULTI-SCALE ADAPTIVE GRAPH LEARNING 3
+
+Fig. 1. H-PMU measurements for a C-G fault event at fundamental
+phasor versus at third and fifth harmonic phasor measurements.
+ (a)
+ The rest of this article is organized as follows. Section II
+presents a description of ED-L-C problems. Section III describes the details of the proposed PI-MSA model. Section IV
+outlines the training and inference phase. Section V introduces
+the experimental setup. Section VI presents and discusses the
+obtained results from different case studies. Finally, Section VII
+concludes this article.
+
+ II. PRELIMINARIES AND PROBLEM FORMULATION
+ This section presents basic definitions, the challenges posed
+by multi-source event scenarios, and the problem formulation
+for power system multi-source events spatial-temporal analysis.
+
+A. Basic Definitions and Assumptions
+ Definition 1 (Power Grid Graph): Let G = (V, E, A) repre- (b)
+sent the power grid, where V = {v1 , . . . , vn } denotes the set
+of nodes and |V| = N . E = {e1 , . . . , em } represents the set of Fig. 2. (a) Spatial locations and temporal intervals of eight event
+edges and A ∈ RN ×N is the adjacency matrix. sources in the IEEE 34-node system. (b) Three-phase voltage and
+ current waveforms from 9 D-PMUs under an eight-sources event sce-
+ Definition 2 (Graph Signal Matrix): At each time step t, the nario. Background colors indicate event coupling levels: isolated (green),
+D-PMU measurements across all nodes form a graph signal overlapping (purple), coupled (blue), and highly coupled (orange).
+Xt = (x1,t , x2,t , . . . , xn,t ) ∈ RN ×C , where C is the number
+of feature channels. For all nodes across the full-time window, to the waveform segments in Fig. 2(b). For instance, events 1,
+X = [X1 , X2 , . . . , Xt ] ∈ RN ×C×T is represented as the graph 2, and 3 (orange) in Fig. 2(a) correspond to the orange-shaded
+signal feature matrix, where T is the time window length. In waveforms segments on the left side of Fig. 2(b). As shown
+this study, features include voltage magnitudes Vφmag , current in Fig. 2(b), the measured waveforms within this observation
+magnitudes Iφmag , and power factors P Fφ for each phase φ ∈ window exhibit complex patterns due to multiple event sources.
+{A, B, C}, with 120 Hz reporting rate. The key challenges are summarized as follows.
+ Assumption 1 (Harmonic Phasor Measurement): In this 1) Variable Event Sources: The number of event sources
+study, D-PMUs are assumed to be extended to harmonic phasor varies across samples and is unknown a priori, requiring the
+measurement units (H-PMUs) [5], which can selectively mea- model to autonomously detect, localize, and classify all events.
+sure odd harmonics in addition to the fundamental frequency, as 2) Temporal Coupling: Events overlap in time (e.g., Events
+illustrated in Fig. 1. When higher-order harmonics are consid- 1–3 occur nearly simultaneously around 0.11–0.18 s), causing
+ered, the measured phasors are concatenated as follows: superimposed signatures that evolve dynamically as events start
+ Xhar = [Xhar,1  Xhar,3  Xhar,5 ], (1) and end throughout the observation window.
+ N ×3C×T 3) Spatial Propagation: Each event propagates beyond its
+where Xhar ∈ R represents the concatenation matrix
+ source location, affecting upstream and downstream buses.
+of the odd harmonics, Xhar,1 , Xhar,3 , and Xhar,5 denote the
+ Moreover, events occur at both node level and edge level,
+fundamental, third, and fifth harmonic phasor measurements
+ requiring simultaneous ED-L-C at two topological levels.
+captured by the H-PMUs, respectively.
+ 4) Same-Class Discrimination: This example contains three
+ C-G faults (Events 1, 5, 6) at different locations, which must be
+B. Multi-Source Events and Challenges
+ identified as separate sources rather than a single event.
+ Fig. 2 presents an example scenario with eight-sources event These challenges, combined with the requirement for realcaptured from nine spatially distributed D-PMUs in the IEEE time situational awareness, necessitate the development of an ef-
+34-node system. Fig. 2(a) shows the spatial locations and tem- fective graph feature learning and unified framework that jointly
+poral intervals of each event, with color coding corresponding addresses ED-L-C task for complex multi-source scenarios.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+4 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS
+
+Fig. 3. Overview of the PI-MSA framework and developed multi-source event detection, localization, and classification framework.
+
+C. Problem Statement (TGC) networks, which combine causal convolution with gated
+ linear units to model the complex temporal patterns inherent
+ For a power grid G with graph signal matrix X, the multi- (,l)
+source ED-L-C task can be viewed as a joint learning problem in multi-source scenarios. Given the temporal features xi ∈
+ T ×C
+that integrates graph signal measurements with power system R of node i at the l-th TGC layer in the -th STMS-Block,
+physical information to analyze anomalous events at both node the causal convolution can be expressed as:
+ Tconv,(,l) (,l) Tconv,(,l) (,l)
+and edge levels over graph time series, formulated as: xi,1 = T1 (Γ1 ∗ xi ), xi,2 ), = T2 (Γ2 ∗ xi
+ F : (G, X, Z) → (Enum , {(Eidet , Eiloc , Eicls )}E (3)
+ i=1 ), (2)
+ num
+
+ where Γ1 , Γ2 ∈ RK×C ×CT are learnable temporal convolution
+where Z is the physical parameter matrix of power system. kernels, C and CT denotes the input and output feature chan-
+Enum ∈ [0, Emaxnum ] denotes the number of detected active events: nels, K is the 1-D causal convolution kernel size, and T1 (·),
+normal operation (Enum = 0), single-source event (Enum = 1), T2 (·) are parallel causal convolution operations ensuring no
+multi-source event (Enum ∈ [2, Emax num ]) with multiple concurrent future information is used. Each convolution reduces the temevents.Eidet , Eiloc and Eicls indicate the event detection, localiza- Tconv,(,l)
+ poral length by K − 1 without padding. The output xi,1/2
+tion, and classification results for the i-th event source among
+ ∈ R(T −K+1)×CT are then processed through a gating unit:
+the current Enum events, respectively.
+ (,l+1) Tconv,(,l) Tconv,(,l) (,l)
+ xi = σsigmoid (xi,1 )  (xi,2 + xi ), (4)
+ III. METHODOLOGY where σsigmoid (·) denotes the sigmoid function,  represents the
+A. Overview of Proposed PI-MSA Framework Hadamard product. The gating unit controls feature importance,
+ while the residual connection facilitates training.
+ As illustrated in Fig. 3, PI-MSA is built on a spatial-temporal
+multi-scale learning block (STMS-Block) with a temporal-
+ C. Spatial Feature Learning in Power Systems
+spatial-temporal architecture, processing input features through
+three stages: (1) a shared temporal layer captures evolving Event propagation in power systems exhibits strong spatial
+dynamics across all nodes; (2) three parallel graph convolution dependencies governed by physical connectivity and electrical
+pathways extract spatial dependencies using physical grid topol- characteristics between buses. To capture these, we employ
+ogy, adaptive adjacency, and a physics-informed shortest-path Chebyshev graph convolution on the normalized Laplacian maadmittance matrix; (3) each pathway applies independent tem- trix L = IN − D−1/2 AD−1/2 , where D ∈ RN ×N is the degree
+poral learning, followed by multi-head attention for multi-scale matrix with Dii = Σj Aij . Given the spatial input features
+ Xt ∈ RN ×CT at time t after temporal processing, the graph
+ ()
+feature aggregation and an ED-L-C prediction head. Multiple STMS-Blocks are stacked to enable hierarchical extraction convolution in the -th STMS-Block can be expressed as:
+of both fine-grained local event signatures and coarse-grained 
+ K−1
+ gt
+ () () 
+ θk Pk (L)X
+ ()
+ t +b ,
+global system patterns. = ()
+ (5)
+ k=0
+B. Temporal Feature Learning in Power Systems
+ where θk ∈ RCT ×CS are trainable polynomial coefficients,
+ ()
+
+ Temporal feature learning captures the evolving dynamics of b() ∈ RCS is the learnable bias term, and Pk (x) are Chebyshev
+power system events. We employ temporal gated convolution polynomials computed recursively as P0 (x) = 1, P1 (x) = x,
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+SIMA et al.: PHYSICS-INFORMED MULTI-SCALE ADAPTIVE GRAPH LEARNING 5
+
+Pk (x) = 2xPk−1 (x) − Pk−2 (x). k is the order of polynomials. A  basic  Dline , where Dline ∈ RN ×N stores the line
+  distance = A
+Here, L = (2L/λmax ) − IN scales the Laplacian matrix L to distances:
+[-1, 1], where λmax is the largest eigenvalue of L. SP = Dijkstra(A  distance ). (11)
+ To reduce computational complexity of the Laplacian matrix
+ For each node pair (i, j), SPij stores the shortest path and
+calculation in large-scale systems, we adopt first-order Cheby-
+ |SPij | denotes the number of edges along this path. The admitshev approximation, which localizes the convolution within
+ tance representation is then encoded as:
+immediate node neighborhoods:
+ |SPij |
+ () () () ()  () 1  1
+ g ≈ θ X + θ LX . (6) z ij = zij,n Φ
+ t 0 t 1 t ij,n , pij = , (12)
+ |SPij | n=1 z ij
+ The reparameterization θ 0 = θ0 − θ1 and θ 1 = 2θ1 /λmax ,
+combined with the parameter constraint θ 0 = −θ 1 and λmax ≈ where zij = [R1 , X1 , R0 , X0 ] ∈ R4 contains the positive- and
+2 (λmax typically ranges from 1.94 to 2.00 for power systems), zero-sequence physical resistance R1/0 and reactance X1/0
+leads to the simplified graph convolution form: of the n-th edge, and Φ ij,n ∈ R
+ 4×CS
+ is a learnable projec-
+    
+ tion matrix. The final shortest path admittance representation
+ ≈ σReLU θ() IN + D−1/2 AD−1/2 Xt , (7)
+ Gconv,() ()
+ Xt
+ pij ∈ RCS between nodes i and j is obtained by taking the
+where θ() serves as a single trainable parameter control- reciprocal of encoded impedance representation z ij ∈ RCS .
+ling the aggregation weights of neighboring node information. Finally, this encoded admittance vector pij explicitly gates the
+ Gconv,() adaptive graph:
+σReLU (·) is the rectified linear unit (ReLU) function. Xt ∈  
+RN ×CS is the output of graph convolution layer. apij = σReLU (β) + aadapt pij , (13)
+ ij
+
+D. Physics-Informed Multi-Scale Adaptive Graph where β is a learnable parameter and aadapt ij dynamically mod-
+Learning ulates the admittance encoding A  physics
+ = [apij ]T ×N ×N ×C . In
+ S
+
+ Since a single adjacency relationship in (7) cannot fully practice, this formulation ensures strong connections are only
+capture power system spatial dependencies, PI-MSA employs formed between nodes exhibiting both high statistical datathree distinct adjacency pathways from different physical per- correlation and tight physical electrical coupling.
+spectives, as illustrated Fig. 3.
+ Scale 1. Physical Grid Topology: First, the predefined physi- E. Multi-Scale Graph Feature Fusion
+cal grid topology matrix A  basic ∈ RN ×N constrains information The STMS-Block computation process can be expressed as:
+flow strictly to directly connected local neighbors:    
+ (,2) () (,1)
+ X+1 = TΓ σReLU Gθ TΓ (X() ) , (14)
+ Abasic = [aij ]N ×N , where aij ∈ {0, 1}, (8)
+ where X(+1) ∈ R(T −2(K−1))×N ×CT , and TΓ (·) and
+ (,1)
+where aij = 1 if nodes i and j are connected. otherwise aij = 0.
+ (,2)
+ Scale 2. Spatial-Temporal Adaptive Graph Learning: The TΓ (·) denote the first and second temporal feature learning
+ ()
+system topology can shift due to contingencies, and effective dis- layers in the -th STMS-Block, Gθ (·) represents the multi-scale
+tances between nodes may vary during events. To capture such spatial graph feature learning layer. Then, the outputs from
+time-varying dependencies, an adaptive adjacency relationship three scales are concatenated to form H = [H1 ||H2 ||H3 ] ∈
+is introduced that learns from node features: R(T −2||(K−1))×N ×3CT , and multi-head attention (MHA) is
+ aadapt
+ ij,t = σLReLU (w · sim(xi,t , xj,t ) + b), (9) employed to adaptively fuses the graph features:
+   
+ 
+ Q (K )
+ xi,t · (xj,t )
+ i i
+ MHA (H) = n1 σsoftmax √ Vi W O , (15)
+ sim(xi,t , xj,t ) = , (10) dhead
+ xi,t 2 · xj,t 2
+where σLReLU (·) denotes the LeakyReLU activation function, where Qi = HWiQ , Ki = HWiK , Vi = HWiV are query, key
+w, b ∈ R are trainable weight and bias, respectively. xi,t , xj,t ∈ and value matrices, WiQ , WiK , WiV ∈ R3CT ×dhead are learnable
+RCS and sim(xi,t , xj,t ) computes similarity between nodes i projection matrices, WO ∈ R(n×dhead )×C is the output projection
+and j at time t,  · 2 denotes the L2 norm. Thus, A  adapt = matrix. ||n1 represents matrix concatenation from head i to n.
+ adapt
+[aij,t ]T ×N ×N captures the instantaneous connection strength
+that evolve with system dynamics. F. Computational Complexity Analysis
+ Scale 3. Physics-Informed Adaptive Graph Learning: Data- The computational complexity of PI-MSA is analyzed
+driven correlations of Scale 2 may yield physically inconsistent component-wise. Let N denote the number of nodes, C the
+relationships, particularly for edge events whose signals attenu- feature dimension, T the temporal length, and |E| the number
+ate along transmission lines and require consistent multi-sensor of edges. 1. TGC Layer has complexity: OTGC (N C 2 T ); 2. The
+analysis. To address this challenge, a physics-informed adaptive three parallel graph convolution layers have: 1) Grid Topoladjacency matrix A  physics is constructed by combining shortest- ogy: O(|E|CT + N C 2 T ) ≈ OGrid (N C 2 T ) since |E| ≈ O(N )
+path admittance encoding with adaptive learning A  adapt . First, for sparse power grids; 2) Adaptive: Oadapt (N C 2 T ) using Ts =
+the shortest paths between all node pairs are computed using 6(Ts T ) sampled points with top-4 neighbors; 3) Physics-
+Dijkstra’s algorithm on the distance-weighted adjacency matrix informed: OPI (N C 2 T ) by reusing the adaptive adjacency with
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+6 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS
+
+ TABLE II
+ (a) (c) TEST SYSTEMS SUMMARY
+
+ (b)
+
+Fig. 4. Spatial-aware and task-coupled 3-D output structure for unified
+ED-L-C task.
+ TABLE III
+ EVENT CLASS DEFINITIONS
+O(N ) additional cost. 3. Multi-scale fusion: MHA on N×3C×d
+features has complexity OMHA (N Cd2 ). Therefore, the overall
+complexity is OPI− MSA = OSTMS + OMHA ≈ OPI− MSA (N C 2 T ) and
+when C ≈ d T . The model scales approximately linearly
+with N, making it scalable to grids ranging from dozens to
+thousands of nodes.
+
+ IV. TRAINING AND INFERENCE PHASE FOR ED-L-C TASK
+A. Multi-Source ED-L-C Task-Aware Loss Design
+ probabilities and ground truth for event class ω between node
+ The model outputs a 3-D tensor of shape [N, N, 1+M] that
+ i and j. The hyperparameters α1 , α2 , γ1 , and γ2 balance the
+extends the adjacency matrix concept, as shown in Fig. 4.
+ contributions of positive and negative examples in both detection
+Diagonal elements (i, i) represent node events, off-diagonal
+ and classification tasks, preventing the loss computation from
+elements (i, j) represent edge events, and only the lower tribeing dominated by background negative examples.
+angular part is computed due to graph symmetry. The first channel [gray, Fig. 4(b)] represents anomaly detection confidence
+scores, while subsequent channels [lighter shades, Fig. 4(c)] B. Reasoning Process for Multi-Source ED-L-C Task
+indicate event class probabilities. As illustrated in Fig. 4(a), For inference phase, the detection channel serves as a gating
+task dependencies are embedded explicitly in the label de- mechanism that filters out locations with low confidence scores,
+sign: when event class ω occurs at node i, both Channel and classification is performed only on the remaining candidates.
+1 (detection) and Channel (1+ω) (classification) at position This explicitly models the conditional probability chain in a
+(i, i) are labeled as 1, thereby coupling detection confidence single forward pass. The final prediction score for each potential
+and classification probability within the same structure during location (i, j) is computed as:
+training. This design enables the model to localize events spascorei,j = I (yij > τ ) ×yij × max Pr (clsω |event )i,j , (19)
+tially through tensor indices, while the predicted event class is    ω∈1,...,M   
+determined by ranking probabilities across all channels, with pos/neg
+ Iij ρij,ω
+
+classification conditioned on detection confidence. The loss
+ \fontsize{9}{9.5} \fontsize{9}{9.5} where Pr(clsω |event) repfunction is designed to balance the contributions of positive and
+ resents the conditional probability distribution over M event
+negative examples:
+ classes, and I(yij > τ ) denotes locations with confidence scores
+ Ltotal = α1 Lanomaly
+ pos + α2 Lanomaly
+ neg pos + γ2 Lneg , (16)
+ + γ1 Lclass class
+ below threshold τ are filtered out.
+where the anomaly detection loss is computed as:
+ 
+ N −1 
+ i V. EXPERIMENTAL SETUP
+ pos/neg
+ Lanomaly
+ pos/neg = Iij (yij − ŷij )2 , (17)
+ A. Test Power Systems and Event Scenarios
+ i=0 j=0
+and the event classification loss is defined as: The proposed framework is evaluated on five IEEE bench-
+ 
+ N −1  i M
+  mark systems spanning different scales, voltage levels, and
+ pos/neg
+ Lclass
+ pos/neg = Iij (ρij,ω − ρ̂ij,ω )2 . (18) topological characteristics to comprehensively assess its geni=0 j=0 ω=0 eralization capability. Table II summarizes the test systems and
+ pos/neg their corresponding event configurations. The node numbering
+ Here, Iij denotes the indicator function for posi- and system configurations are consistent with [32].
+ pos
+tive/negative examples, Iij = 1 for nodes/edges with events, The event class (E1–E19) included in Table II are defined
+ neg
+Iij = 1 for nodes/edges without events. yij and ŷij are the in Table III, covering fault events, harmonic load switching
+predicted anomaly scores and ground truth between node i and events, RES-related events, and transmission-specific events at
+j, respectively, while ρij,ω and ρ̂ij,ω correspond to the predicted both node and edge levels.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+SIMA et al.: PHYSICS-INFORMED MULTI-SCALE ADAPTIVE GRAPH LEARNING 7
+
+B. Monte Carlo Based Multi-Source Events Generation
+ Algorithm 1: Monte Carlo Randomized Multi-Source Event
+ The multi-source events generation process is demonstrated Data Generation.
+using the IEEE 34-node system as an example. The Monte Carlo Input: Stable system operation starting at time tstart
+method is employed to generate 13 different classes of events. Output: Multi-source event graph time-series dataset
+The detailed generation procedure is presented in Algorithm 1. 1. Sample tinterval ∼ Uniform[0.5, 1.0] seconds
+ All measurements are recorded at 120 Hz with a 1-s sliding 2. Set event generation interval: [tstart , tend ], where
+window. As the power system operates, samples are updated tend = tstart + tinterval
+through sliding windows. Each sample represents a graph time- 3. Sample Enum ∼ Uniform{1, 2, 3, 4, 5, 6, 7, 8}
+ 4. Initialize candidate location set Eloc
+series data X ∈ RN ×C×T , where unmeasured nodes and phases
+ 5. Sample Enum locations from Eloc without
+are zero-padded to indicate the absence of active electrical replacement
+activity. The historical data samples are manually annotated 6. For each edge event location do
+with labels in the format described in Section IV-A. Unless 7. Sample αline ∼ Uniform(0, 1)
+otherwise specified, all experiments assume full observability. 8. Set position at αline · L (L=line length)
+Each system supports up to 8 event sources per observation 9. End for
+window, except for the 906-node system which supports up to 16 10. For each selected location E(i) do
+to further evaluate scalability. Each dataset contains 4000–8000 11. Randomly select event class from event set:
+event samples and 400–1000 normal samples. Ecls = {E1, . . . , E13}
+ 12. if E(i) is a fault event then
+ 13. Sample Rbase ∈ {0.01, 0.1, 1, 5, 15, 20}Ω,
+C. Implementation Details αfault ∼ Uniform[0.8, 1.2]
+ The dataset is split chronologically into training (70%), vali- 14. Compute Rfault = Rbase × αfault
+ 15. End if
+dation (10%), and test (20%) sets to prevent information leakage, (i)
+ 16. Sample ttrigger ∼ Uniform(tstart , tend ) and
+with training samples shuffled before feeding to the model. The
+model checkpoint with the best performance on the validation αduration ∼ Uniform(−1, 1)
+ (i) (i)
+set is saved for evaluation. The proposed model contains 2 17. Calculate tend = tstart + ttrigger + Δt(i) ,
+STMS-Block, where spatial and temporal kernel sizes are set Δt(i) = (3 + αduration )/fsystem
+to 3, with 64 temporal convolution kernels and 16 spatial graph 18. End for
+convolution kernels. The final temporal learning layer employs Return: Randomized graph time-series events data
+convolution kernels of length 3, followed by a 3-head MHA
+layer with one head per pathway, fusing the features learned
+across the three pathways, and a stack of linear layers mapping based on both event classification and topological distance:
+the fused representations to the target ED-L-C output tensor.
+ The model is trained using Adam optimizer (weight decay TP = {predi |I(clsi = gti ) × I(Dn−hop (Loci , gtLoci ))} .
+1.0e-4) with a MultiStepLR learning rate scheduler. The learning (21)
+rate starts at 0.002 and decreases by half at epochs [1, 50, 90]. When calculating AP, we require exact location matching
+Gradient clipping (3.0) and dropout regularization (rate 0.5) are where: I(D0−hop (Loci , gtLoci )) → I(Loci = gtLoci ). The AP
+employed to ensure stable training. The loss function α1 , α2 , γ1 , of each event class and mAP across all classes are defined as:
+and γ2 are set to [1.0, 0.5, 1.0, 0.7]. The model is trained for M
+100 epochs with a batch size of 64. All hyperparameters were 1  1
+ mAP = APω , AP = P (R) dR, (22)
+determined through empirical and experimental tuning. M ω=1 0
+
+ where P(R) represents the precision P = TP/(TP+FP) at recall
+D. Baseline Methods and Evaluation Metrics level R = TP/(TP+FN).
+ Evaluation Metrics: To comprehensively evaluate the model Furthermore, three topology-aware metrics are introduced:
+performance, this study adopts Correct Localization (CorLoc), mean Average Precision for node events (mAPN ), mean Average
+Average Precision (AP) and mean Average Precision (mAP) Precision for edge events (mAPE ), and One-hop mean Average
+metrics. The CorLoc is defined as the percentage of system Precision (mAPOH ). The mAPOH relaxes the exact matching
+events that are correctly localized: requirement by accepting predictions within one-hop of the
+ ground truth I(D1−hop (Loci , gtLoci )), allowing us to assess
+ 1 
+ E num
+ ED-L-C performance on approximate event localization.
+ CorLoc = I(Loci = gtLoci ), (20) Baselines Models: For fair comparison, we select a wealth of
+ Enum i=1
+ baseline models with publicly available official implementations
+where Enum is the total number of detected events, I(·) denotes [33] that have been validated for spatial-temporal modeling, inthe indicator function that equals 1 when predicted localization cluding conventional time series models (LSTM, MLP(Linear),
+Loci matches the ground truth gtLoci , and 0 otherwise. For joint and NBeats), classic graph-based models (STGCN, DCRNN,
+evaluation of ED-L-C performance, True Positive (TP) is defined Graph WaveNet, and AGCRN), and recent state-of-the-art time
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+8 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS
+
+ TABLE IV
+ COMPARISON OF DIFFERENT METHODS ON MULTI-SOURCE ED-L-C TASK PERFORMANCE OF 34-NODE AND 123-NODE SYSTEMS
+
+series models (PatchTST, iTransformer, TimesNet, and Cross- 2) Performance Under Different Number of Event Sources:
+former). We only added a uniform ED-L-C prediction head To evaluate PI-MSA under multi-source scenarios, trained modto each model without any other modifications. It is worth els are tested on eight datasets containing 1–8 event sources,
+noting that ED-L-C tasks require end-to-end fast processing with results presented in Fig. 5. For (1-2)-sources events (Fig.
+capabilities, as discussed in Section IV. Hence, we focus on 5(a1)), the model performs better on the 34-node system due to
+deep learning baselines readily adaptable to our unified ED-L-C simpler topology. For 3–8 sources (Fig. 5 (a/b 2-4)), the 123-
+task formulation. All models were developed with Pytorch, PyG, node system yields superior results, as its larger spatial domain
+and EasyTorch, conducting training on an NVIDIA A40 48 GB better separates overlapping propagation patterns. Specifically,
+GPU for 100 epochs. the model maintains CorLoc around 92% across all scenarios
+ with mAP above 79% even under eight concurrent events (Fig.
+ 5(b4)), attributed to multi-scale graph learning with MHA that
+ VI. EXPERIMENTAL RESULTS AND ANALYSIS effectively discriminates wave propagation nodes from event
+ This section evaluates the proposed PI-MSA framework in source nodes under increased spatial-temporal dependencies.
+four parts: 1) overall performance evaluation on power grid of 3) Scalability to Large-Scale Power System: To further valivarying scales, 2) robustness analysis under challenging condi- date scalability, we evaluate PI-MSA on the European 906-node
+tions including reduced observability, topology variations, and system, increasing the maximum number of event sources from
+imperfect data quality, 3) generalization validation on trans- 8 to 16 per observation window, with 16.1% of test events
+mission and RES-integrated systems, and 4) model analysis occurring at previously unseen locations. PI-MSA achieves
+including ablation studies and computational efficiency. 96.42% mAP and 98.79% CorLoc overall. As shown in Fig.
+ 6, per-class AP across seen and unseen locations shows a gap
+ of only 0.23% (96.26% vs. 96.03% mAP), demonstrating effec-
+A. Overall ED-L-C Performance Evaluation tive spatial generalization stemming from the unified ED-L-C
+ 1) Baseline Comparison: Table IV compares ED-L-C per- training objective and adaptive graph learning, which guide
+formance on the 34-node and 123-node systems. PI-MSA the model to learn transferable structural patterns rather than
+achieves 81.21% and 84.62% mAP on the two systems, ex- location-specific mappings.
+ceeding the best baselines by 5.02% and 4.4%, respectively.
+This consistent improvement is attributed to the physics-aligned
+multi-scale architecture of PI-MSA, which facilitates feature B. Robustness Analysis of PI-MSA
+extraction across local-to-global topology. 1) Robustness Under Reduced Observability: Fig. 7 illus-
+ The comparison also reveals a clear performance hierarchy: trates ED-L-C performance as D-PMU coverage decreases from
+Most graph-based models outperform non-graph-based models 100% to 12% on the 34-node system. Baseline methods like
+while requiring fewer parameters, as explicit physical topology DCRNN and STGCN that rely on static graph structures exprovides valuable structural priors for joint node and edge hibit degradation exceeding 40%, as sparse sensor deployment
+event analysis. In contrast, Transformer-based models strug- disrupts message passing paths along the physical topology. In
+gle to resolve overlapping waveform patterns from spatially contrast, PI-MSA maintains 54.45% mAP and 73.13% CorLoc
+distributed sources without explicit structural guidance. Basic at minimal 12% coverage (adequate for operational monitoring).
+models (MLP, LSTM) perform poorly overall, as they lack the This robustness stems from the multi-scale architecture intespatial-temporal synergy essential for multi-source ED-L-C. grating adaptive and shortest-path admittance-based physics-
+ Notably, most models exhibit lower mAPE than mAPN , with informed graph learning, which provides alternative message
+performance gaps primarily concentrated in edge events. This passing paths based on feature similarity and electrical distance
+is because node events captured by co-located sensors with when observed nodes are physically non-adjacent.
+higher signal fidelity, and certain harmonic load switching events 2) Robustness Under Topology Variations: We evaluate roexhibit distinctive signatures that facilitate recognition. bustness under high-frequency network reconfiguration on the
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+SIMA et al.: PHYSICS-INFORMED MULTI-SCALE ADAPTIVE GRAPH LEARNING 9
+
+Fig. 5. AP and confusion matrices of PI-MSA under different number of event source scenarios. (a) IEEE 34-node system. (b) IEEE 123-node
+system. In each 2×2 panel, subfigures (1)–(4) correspond to scenarios with 1–2, 3–4, 5–6, and 7–8 event sources, respectively.
+
+Fig. 6. Per-class AP on seen and unseen locations.
+ Fig. 9. Robustness to Missing and Delayed D-PMU Measurements.
+
+ higher mAP than the best baseline and maintains CorLoc above
+ 91%, attributed to the adaptive graph learning mechanism that
+ dynamically adjusts inter-node connection strengths regardless
+ of the pre-defined physical topology.
+ 3) Robustness to Missing and Delayed Measurements: We
+ evaluate PI-MSA under missing data, delayed measurements,
+ and their combination on the 906-node system. Missing data
+ scenarios apply segment-based dropout (10–60 time steps, ˜83–
+Fig. 7. Impact of different number of sensors on ED-L-C task perfor- 500 ms) to randomly selected D-PMU nodes; delayed nodes
+mance across different methods. hold the last valid measurement and progressively recover to
+ real-time flow. As shown in Fig. 9, under a 30% ratio, mAP drops
+ by only 2.66% for missing data (96.42%→93.76%) and 1.47%
+ for delays, the latter preserving temporal continuity. Under
+ 20% missing and 20% delay combined, the model maintains
+ 89.76% mAP with CorLoc above 93%. This robustness stems
+ from the spatial-temporal adaptive graph learning mechanism,
+ which dynamically leverages unaffected neighboring nodes to
+ compensate for corrupted measurements.
+
+Fig. 8. Performance comparison under dynamic topology conditions.
+ C. Generalization to Different Grid Configurations
+123-node system, where five three-phase breakers at node pairs 1) Generalization to Meshed Transmission Grid: As shown
+(60–160), (197–97), (151–300), (13–152), and (54–94) switch in Fig. 10, the proposed method achieves 86.13% mAP on
+states at random intervals of 33–67 ms. From 2,000 generated the meshed high-voltage 39-node transmission system, with
+samples, 1,000 are combined with static topology data from Sec- fault events (E1–E10) averaging 85.48% and operational events
+tion VI-A 1) for training and 1000 for testing, with a predefined (E17–E19) averaging 87.94%. In particular, Generator Trip and
+adjacency matrix used throughout to simulate undetected topol- Line Trip events achieve 97.89% and 90.16% AP respectively,
+ogy changes. As shown in Fig. 8, PI-MSA achieves over 6.5% the latter despite introducing dynamic topology changes.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+10 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS
+
+ Fig. 13. Comparison of mAP and CorLoc for events E1–E10 at RESadjacent and non-RES-adjacent locations.
+
+Fig. 10. Overall ED-L-C performance of PI-MSA on the New England
+39-node transmission system.
+
+ Fig. 14. ED-L-C performance comparison between without (w/o) har-
+Fig. 11. Comparison with baseline methods across different systems.
+ monics and with (w/) harmonics on ED-L-C tasks.
+
+ Despite these challenges, PI-MSA achieves 85.02% mAP
+ and 90.18% CorLoc on this system. As shown in Fig. 13,
+ events at RES-adjacent and non-RES-adjacent locations achieve
+ 87.52% and 86.72% mAP respectively, a gap of less than 1%.
+ Together with 80.67% mAP for RES-disconnection events, this
+ confirms that multi-scale adaptive learning effectively extracts
+ event signatures invariant to RES-induced interference.
+
+ D. Model Analysis
+
+Fig. 12. Modified IEEE 33-node system with RES integration.
+ 1) Impact of Harmonic Measurement (H-PMU): To investigate the impact of harmonic information on ED-L-C performance, we extend experiments to include third and fifth
+ As shown in Fig. 11, PI-MSA consistently outperforms all harmonic components on the 123-node system. As shown in
+baselines across distribution and transmission systems, exceed- Fig. 14, PI-MSA achieves a 1.6% mAP improvement and maining the best baseline by over 8.5% in mAP. Time-series models taining the highest performance among all methods. While most
+(e.g., TimesNet and NBeats) exhibit pronounced degradation methods benefit from harmonic features that capture distinctive
+on meshed transmission grids, while graph-based methods with spatial-temporal event patterns, some models (e.g., AGCRN
+adaptive learning (e.g., AGCRN and Graph WaveNet) remain and PatchTST) show marginal or no improvement, indicating
+relatively stable. This is attributed to two factors: the physics- difficulty in exploiting high-dimensional harmonic features.
+informed design encodes shortest-path impedance priors, orga- This contrast highlights the advantage of PI-MSA in effectively
+nizing meshed multi-path connectivity into physically mean- leveraging harmonic information.
+ingful representations with adaptive topology handling; and the 2) Ablation Studies: To validate the effectiveness of each
+unified ED-L-C formulation jointly optimizes detection, local- component in PI-MSA, we conduct ablation studies on the
+ization, and classification under a single structured objective, IEEE 123-node system, including single-scale, dual-scale, and
+enabling precise events pinpointing under complex and dynamic component-removal settings. As shown in Fig. 15(a), Adaptive
+grid conditions. learning achieves the best single-scale performance (81.33%
+ 2) Generalization to RES-Integrated Power Grid: The mod- mAP), followed by Physics (78.93%) and Grid Topology
+ified IEEE 33-node system is integrated with RES under PQ (75.62%). The Physics scale outperforms Grid Topology by
+control mode, as illustrated in Fig. 12. RES integration intro- 3.3%, as admittance encoding provides finer-grained electrical
+duces increased waveform complexity, including cross-phase distance than binary connectivity. Fig. 15(b) shows that Adapdisturbances and noticeable harmonic distortion. tive+Physics yields the best dual-scale result (83.71% mAP),
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+SIMA et al.: PHYSICS-INFORMED MULTI-SCALE ADAPTIVE GRAPH LEARNING 11
+
+ guided by relative electrical distance enhances spatial feature
+ learning, while the multi-scale architecture captures spatialtemporal event dynamics across different resolutions. Experimental results on systems with different voltage levels and grid
+ topologies demonstrate that PI-MSA achieves over 5% mAP improvement compared with state-of-the-art methods. The model
+ exhibits strong generalization and robustness, with less than
+ 1% performance gap across seen versus unseen locations and
+ RES-adjacent versus non-adjacent scenarios, while maintaining
+ (a) (b) (c) real-time inference at D-PMU reporting rates up to 120 Hz.
+ Furthermore, incorporating third and fifth harmonic phasors
+Fig. 15. Ablation study results for different modules of PI-MSA. (a) yields an additional 1.6% mAP improvement, demonstrating
+Single-scale. (b) Dual-scale combination. (c) Component analysis with
+key modules removed. the capability of proposed model to leverage richer frequencydomain signatures for enhanced event analysis.
+ The proposed unified ED-L-C formulation features a simple
+ yet effective design that can be easily transferred to different
+ deep learning backbones, enabling practitioners to leverage
+ future advances in graph learning or time-series modeling.
+ Moreover, the ED-L-C framework extends naturally to other
+ graph-structured industrial event analysis scenarios, such as
+ transportation incidents and cyber security incidents.
+ Despite these advantages, the current framework shows performance degradation when events are spatially adjacent and
+ temporally highly coupled. Therefore, the future work will focus
+ on: 1) refining the ED-L-C output structure with higher spatial
+ resolution for dense event scenarios in compact grids, and 2)
+Fig. 16. Computational efficiency (runtime, memory, and ED-L-C perextending the framework to the cyber layer for ED-L-C of comformance) comparison across methods and system scales. munication events and cyber-attacks, thereby further enhancing
+ power system security and stability.
+with 2.6% mAPE gain over Adaptive-only in multi-source sce- REFERENCES
+narios. The complete model further improves to 84.62% mAP.
+ [1] A. Ahmed et al., “Spatio-temporal deep graph network for event detec-
+As shown in Fig. 15(c), removing MHA degrades performance, tion, localization, and classification in cyber-physical electric distribution
+and the proposed loss function outperforms BCE by 2.3% by system,” IEEE Trans. Ind. Inf., vol. 20, no. 2, pp. 2397–2407, Feb. 2024.
+better balancing event and background examples. [2] O. Boyaci, M. R. Narimani, K. R. Davis, M. Ismail, T. J. Overbye, and E.
+ Serpedin, “Joint detection and localization of stealth false data injection
+ 3) Computational Efficiency: Key Baseline Comparison and
+ attacks in smart grids using graph neural networks,” IEEE Trans. Smart
+Scalability Analysis: Fig. 16 demonstrates the computational Grid, vol. 13, no. 1, pp. 807–819, Jan. 2022.
+efficiency and scalability of PI-MSA. As system size increases [3] S. Agarwal and R. Sodhi, “A novel attack path detection framework
+ considering cascading failures in an interdependent cyber–physical power
+from 33 to 906 nodes, memory consumption grows modestly system,” IEEE Trans. Ind. Inf., vol. 21, no. 10, pp. 7621–7631, Oct. 2025.
+from 0.55 MB to 4.38 MB while maintaining real-time in- [4] H. Yin et al., “Anomaly identification of synchronized voltage waveform
+ference speeds (72–299 FPS), benefiting from the compact for situational awareness of low inertia systems,” IEEE Trans. Smart Grid,
+ vol. 16, no. 3, pp. 2416–2428, May 2025.
+STMS-Block design with efficient convolutional operations. [5] Z.-J. Ye, M. Izadi, M. Farajollahi, and H. Mohsenian-Rad, “A remedy to
+Compared with top-performing baselines on the 123-node sys- losing time synchronization at D-PMUs, H-PMUs, and WMUs in event
+tem, NBeats achieves high speed but at the cost of significantly location identification in power distribution systems,” IEEE Trans. Smart
+ Grid, vol. 15, no. 1, pp. 641–654, Jan. 2024.
+more parameters and memory. In contrast, PI-MSA requires [6] A. Ahmed, S. K. Sadanandan, S. Pandey, S. Basumallik, A. K. Srivastava,
+only 0.26M parameters and 1.01 MB memory while achieving and Y. Wu, “Event analysis in transmission systems using spatial temporal
+superior ED-L-C performance. This lightweight design enables graph encoder decoder (STGED),” IEEE Trans. Power Syst., vol. 38, no. 6,
+ pp. 5329–5340, Nov. 2023.
+an inference speed of 225 FPS, supporting real-time online event [7] N. Ehsani, F. Ahmadi-Gorjayi, Z.-J. Ye, A. McEachern, and H. Mohseniananalysis across different D-PMU reporting rates (30–120 Hz). Rad, “Event detection and characterization in continuous recording of
+ synchro-waveforms: Field experiments and data analytics,” IEEE Trans.
+ Ind. Inf., vol. 21, no. 11, pp. 8430–8441, Nov. 2025.
+ VII. CONCLUSION [8] A. Gholami et al., “Detection and classification of anomalies in power
+ distribution system using outlier filtered weighted least square,” IEEE
+ This study proposed a novel PI-MSA graph neural net- Trans. Ind. Inf., vol. 20, no. 5, pp. 7513–7523, May 2024.
+work for power system event analysis, unifying ED-L-C into [9] W. Xu, Z. Huang, X. Xie, and C. Li, “Synchronized waveforms – A frontier
+an end-to-end framework that naturally supports multi-source of data-based power system and apparatus monitoring, protection, and
+ control,” IEEE Trans. Power Del., vol. 37, no. 1, pp. 3–17, Feb. 2022.
+event analysis without predefined event combination patterns, [10] H. Mohsenian-Rad and W. Xu, “Synchro-waveforms: A window to the
+simultaneously performing node, and edge-level event analysis future of power systems data analytics,” IEEE Power Energy Mag., vol. 21,
+in one-shot inference. The physics-informed graph learning no. 5, pp. 68–77, Sep./Oct. 2023.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+12 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS
+
+[11] A. Ahmed, S. Basumallik, A. K. Srivastava, Y. Wu, and S. Choudhury, [31] C. Gao, Z. Wang, Y. Guo, H. Wang, and H. Yi, “MPINet: Multiscale
+ “Federated synchrophasor data prediction, aggregation and inference using physics-informed network for bearing fault diagnosis with small samples,”
+ deep learning: A case of proactive control for short-term stability,” IEEE IEEE Trans. Ind. Inf., vol. 20, no. 12, pp. 14371–14380, Dec. 2024.
+ Trans. Power Del., vol. 39, no. 2, pp. 823–834, Apr. 2024. [32] “Resources - IEEE PES Test Feeder,” Accessed: Aug. 2, 2025. [Online].
+[12] S. Das and B. K. Panigrahi, “A PMU-based data-driven approach for Available: https://cmte.ieee.org/pes-testfeeders/resources/
+ enhancing situational awareness in building a resilient power systems,” [33] Z. Shao et al., “Exploring progress in multivariate time series forecasting:
+ IEEE Trans. Ind. Inf., vol. 18, no. 7, pp. 4773–4784, Jul. 2022. Comprehensive benchmarking and heterogeneity analysis,” IEEE Trans.
+[13] A. Ahmed, K. S. Sajan, A. Srivastava, and Y. Wu, “Anomaly detection, Knowl. Data Eng., vol. 37, no. 1, pp. 291–305, Jan. 2025.
+ localization and classification using drifting synchrophasor data streams,”
+ IEEE Trans. Smart Grid, vol. 12, no. 4, pp. 3570–3580, Jul. 2021.
+[14] A. Vosughi, S. K. Sadanandan, and A. K. Srivastava, “Synchrophasorbased event detection, classification, and localization using koopman, Wenxia Sima (Member, IEEE) was born in
+ transient energy matrix, best worth method, and dynamic graph,” IEEE Henan, China, in 1965. She received the B.S.
+ Trans. Power Del., vol. 37, no. 3, pp. 1986–1996, Jun. 2022. and Ph.D. degrees in electrical engineering
+[15] S. Peng, M. Liu, L. Chai, and R. Deng, “DST-GNN: A dynamic spatiotem- from Chongqing University, Chongqing, China,
+ poral graph neural network for cyberattack detection in grid-tied photo- in 1988 and 1994, respectively.
+ voltaic systems,” IEEE Trans. Smart Grid, vol. 16, no. 1, pp. 330–343, She is a Professor with the State Key Labora-
+ Jan. 2025. tory of Power Transmission Equipment and Sys-
+[16] R. Yadav, A. K. Pradhan, and I. Kamwa, “Real-time multiple event tem Security and New Technology, Chongqing
+ detection and classification in power system using signal energy transfor- University. Her research interests include commations,” IEEE Trans. Ind. Inf., vol. 15, no. 3, pp. 1521–1531, Mar. 2019. plex disturbances analysis in modern power
+[17] G. Cheng, Y. Lin, A. Abur, A. Gómez-Expósito, and W. Wu, “A survey system, insulation and overvoltage protection of
+ of power system state estimation using multiple data sources: PMUs, transmission and distribution apparatuses.
+ SCADA, AMI, and Beyond,” IEEE Trans. Smart Grid, vol. 15, no. 1,
+ pp. 1129–1151, Jan. 2024.
+[18] Y. Zhu, Y. Zhou, W. Wei, P. Li, and W. Huang, “GNNs’ generalization
+ improvement for large-scale power system analysis based on physics- Jingsong Wang (Student Member, IEEE) reinformed self-supervised pre-training,” IEEE Trans. Power Syst., vol. 40, ceived the B.S. degree in electrical engineering
+ no. 5, pp. 4145–4157, Sep. 2025. and automation from the School of Electrical En-
+[19] Z. Cui, W. Hu, G. Zhang, Q. Huang, Z. Chen, and F. Blaab- gineering and Electronic Information, Xihua Unijerg, “Knowledge-informed deep learning method for multiple oscil- versity, Chengdu, China, in 2021. He is currently
+ lation sources localization,” IEEE Trans. Power Syst., vol. 40, no. 3, working toward the Ph.D. degree in electrical
+ pp. 2811–2814, May 2025. engineering with the State Key Laboratory of
+[20] A. K. Pandey, N. Kishor, S. R. Mohanty, and P. Samuel, “Intelligent fault Power Transmission Equipment and System Sedetection and classification for an unbalanced network with inverter-based curity and New Technology, School of Electrical
+ DG units,” IEEE Trans. Ind. Inf., vol. 20, no. 5, pp. 7325–7334, May 2024. Engineering, Chongqing University, Chongqing,
+[21] D. Chanda and N. Y. Soltani, “A heterogeneous graph-based multi-task China.
+ learning for fault event diagnosis in smart grid,” IEEE Trans. Power Syst., His current research interests include graph representation learning,
+ vol. 40, no. 2, pp. 1427–1438, Mar. 2025. event analysis for industrial cyber-physical systems, and online monitor-
+[22] G. Tanoni, E. Principi, and S. Squartini, “Multilabel appliance classifica- ing of smart grids.
+ tion with weakly labeled data for non-intrusive load monitoring,” IEEE
+ Trans. Smart Grid, vol. 14, no. 1, pp. 440–452, Jan. 2023.
+[23] F. Yang, Z. Ling, Y. Zhang, X. He, Q. Ai, and R. C. Qiu, “Event detection,
+ localization, and classification based on semi-supervised learning in power Ming Yang (Senior Member, IEEE) received the
+ grids,” IEEE Trans. Power Syst., vol. 38, no. 5, pp. 4080–4094, Sep. 2023. B.S. and Ph.D. degrees in electrical engineering
+[24] A. Aligholian, A. Shahsavari, E. M. Stewart, E. Cortez, and H. Mohsenian- from Chongqing University, Chongqing, China,
+ Rad, “Unsupervised event detection, clustering, and use case exposition in 2009 and 2014, respectively.
+ in micro-PMU measurements,” IEEE Trans. Smart Grid, vol. 12, no. 4, He was a Postdoctoral Fellow with the New
+ pp. 3624–3636, Jul. 2021. York University Tandon School of Engineering,
+[25] D. Dwivedi, P. K. Yemula, and M. Pal, “Dynamo PMU: A physics informed Brooklyn, NY, USA, from 2016 to 2018. He is
+ anomaly detection, clustering, and prediction method using nonlinear currently a Professor with the State Key Laboradynamics on µ PMU measurements,” IEEE Trans. Instrum. Meas., vol. 72, tory of Power Transmission Equipment and Sys-
+ 2023, Art. no. 3536309. tem Security and New Technology, Chongqing
+[26] G. Lu and S. Bu, “Online dynamic security assessment: Using hybrid University, Chongqing, China. His research inphysics-guided deep learning models,” IEEE Trans. Ind. Inf., vol. 20, terests include electromagnetic transient simulation, overvoltage in
+ no. 11, pp. 13190–13200, Nov. 2024. power systems, high-precision data measurement, and data acquisition.
+[27] T. Wu, I. L. Carreño, A. Scaglione, and D. Arnold, “Spatio-temporal
+ graph convolutional neural networks for physics-aware grid learning algorithms,” IEEE Trans. Smart Grid, vol. 14, no. 5, pp. 4086–4099, Sep. 2023.
+[28] H. Ma, X. Lei, Z. Li, S. Yu, B. Liu, and X. Dong, “Deep-learning
+ based power system events detection technology using spatio-temporal Xiaohan Li (Student Member, IEEE) received
+ and frequency information,” IEEE J. Emerg. Sel. Topics Circuits Syst., the B.S. and M.S. degrees in electrical engivol. 13, no. 2, pp. 545–556, Jun. 2023. neering from Hubei University of Technology,
+[29] A. Aligholian and H. Mohsenian-Rad, “GraphPMU: Event clustering via Wuhan, China, in 2020 and 2023, respectively.
+ graph representation learning using locationally-scarce distribution-level She is currently working toward the Ph.D. defundamental and harmonic PMU measurements,” IEEE Trans. Smart Grid, gree in electrical engineering with Chongqing
+ vol. 14, no. 4, pp. 2960–2972, Jul. 2023. University, Chongqing, China.
+[30] Y. Yuan, Z. Wang, and Y. Wang, “Learning latent interactions for event Her research interests include flexible direct
+ classification via graph neural networks and PMU data,” IEEE Trans. current transmission technology and modular
+ Power Syst., vol. 38, no. 1, pp. 617–629, Jan. 2023. multi-level converters.

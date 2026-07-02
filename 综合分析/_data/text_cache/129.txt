@@ -1,0 +1,116 @@
+                                           Detecting Unknown Encrypted Malicious Traffic in
+                                            Real Time via Flow Interaction Graph Analysis
+                                                                                            Chuanpu Fu∗ , Qi Li†‡ , Ke Xu∗‡
+                                                                       ∗ Department of Computer Science and Technology, Tsinghua University
+                                                             † Institute for Network Sciences and Cyberspace, Tsinghua University ‡ Zhongguancun Lab
+
+
+                                             Abstract—Nowadays traffic on the Internet has been widely         existing malicious traffic detection methods. Different from
+                                         encrypted to protect its confidentiality and privacy. However,        plain-text malicious traffic, the encrypted traffic has similar
+                                         traffic encryption is always abused by attackers to conceal their     features to benign flows and thus can evade existing machine
+                                         malicious behaviors. Since the encrypted malicious traffic has        learning (ML) based detection systems as well [2], [3], [62].
+                                         similar features to benign flows, it can easily evade traditional     Particularly, the existing encrypted traffic detection methods
+                                         detection methods. Particularly, the existing encrypted malicious
+arXiv:2301.13686v1 [cs.CR] 31 Jan 2023
+
+
+
+
+                                         traffic detection methods are supervised and they rely on the prior
+                                                                                                               are supervised, i.e., relying on the prior knowledge of known
+                                         knowledge of known attacks (e.g., labeled datasets). Detecting        attacks, and can only detect attacks with known traffic patterns.
+                                         unknown encrypted malicious traffic in real time, which does not      They extract features of specific known attacks and use labeled
+                                         require prior domain knowledge, is still an open problem.             datasets of known malicious traffic for model training [2],
+                                                                                                               [3], [76]. Thus, they are unable to detect a broad spectrum
+                                             In this paper, we propose HyperVision, a realtime unsuper-
+                                                                                                               of attacks with encrypted traffic [39], [41], [64], [77], which
+                                         vised machine learning (ML) based malicious traffic detection
+                                         system. Particularly, HyperVision is able to detect unknown           are constructed with unknown patterns [22]. Besides, these
+                                         patterns of encrypted malicious traffic by utilizing a compact in-    methods are incapable of detecting both attacks constructed
+                                         memory graph built upon the traffic patterns. The graph captures      with and without encrypted traffic and unable to achieve
+                                         flow interaction patterns represented by the graph structural         generic detection because features of encrypted and non-
+                                         features, instead of the features of specific known attacks. We de-   encrypted attack traffic are significantly different [2], [3].
+                                         velop an unsupervised graph learning method to detect abnormal
+                                         interaction patterns by analyzing the connectivity, sparsity, and         In a nutshell, the existing methods cannot achieve unsuper-
+                                         statistical features of the graph, which allows HyperVision to de-    vised detection and they are unable to detect encrypted mali-
+                                         tect various encrypted attack traffic without requiring any labeled   cious traffic with unknown patterns. In particular, the encrypted
+                                         datasets of known attacks. Moreover, we establish an information      malicious traffic has stealthy behaviors, which cannot be cap-
+                                         theory model to demonstrate that the information preserved by         tured by these methods [2], [76] that detect attacks according
+                                         the graph approaches the ideal theoretical bound. We show the         to the patterns of a single flow. However, it is still feasible to
+                                         performance of HyperVision by real-world experiments with 92          detect such attack traffic because these attacks involve multiple
+                                         datasets including 48 attacks with encrypted malicious traffic. The   attack steps with different flow interactions among attackers
+                                         experimental results illustrate that HyperVision achieves at least    and victims, which are distinct from benign flow interactions
+                                         0.92 AUC and 0.86 F1, which significantly outperform the state-
+                                         of-the-art methods. In particular, more than 50% attacks in our
+                                                                                                               patterns [24], [26], [39], [46], [61]. For example, the encrypted
+                                         experiments can evade all these methods. Moreover, HyperVision        flow interactions between spam bots and SMTP servers are
+                                         achieves at least 80.6 Gb/s detection throughput with the average     significantly different from the legitimate communications [61]
+                                         detection latency of 0.83s.                                           even if the single flow of the attack is similar to the benign one.
+                                                                                                               Thus, this paper explores utilizing interaction patterns among
+                                                                I.   I NTRODUCTION                             various flows for malicious traffic detection.
+                                             Traffic encryption has been widely adopted to protect the             To the end, we propose HyperVision, a realtime detection
+                                         information delivered on the Internet. Over 80% websites              system that aims to capture footprints of encrypted malicious
+                                         adopted HTTPS to prevent data breach in 2019 [16], [62].              traffic by analyzing interaction patterns among flows. In par-
+                                         However, the cipher-suite for such protection is double-edged.        ticular, it can detect encrypted malicious flows with unknown
+                                         In particular, the encrypted traffic also allows attackers to con-    footprints by identifying abnormal flow interactions, i.e., the
+                                         ceal their malicious behaviors, e.g., malware campaigns [2],          interaction patterns that are distinct from benign ones. To
+                                         exploiting vulnerabilities [64], and data exfiltration [77]. The      achieve this, we build a compact graph to capture various
+                                         ratio of encrypted malicious traffic on the Internet is growing       flow interaction patterns so that HyperVision can perform
+                                         significantly [2], [3], [76] and exceeds 70% of the entire            detection on various encrypted traffic according to the graph.
+                                         malicious traffic [16].                                               The graph allows us to detect attacks without accessing packet
+                                                                                                               payloads, while retaining the ability of detecting traditional
+                                             However, encrypted malicious traffic detection is not well
+                                                                                                               (known) attacks with plain-text traffic. Therefore, HyperVision
+                                         addressed due to the low-rate and diverse traffic patterns [2],
+                                                                                                               can detect the malicious traffic with unknown patterns by
+                                         [39], [77]. The traditional signature based methods that lever-
+                                                                                                               learning the graph structural features. Meanwhile, by learning
+                                         age deep packet inspection (DPI) are invalid under the at-
+                                                                                                               the graph structural features, it realizes unsupervised detection,
+                                         tacks with the encrypted payloads [34]. Table I compares the
+                                                                                                               which does not require model training with labeled datasets.
+                                         Network and Distributed System Security (NDSS) Symposium 2023             However, it is challenging to build the graph for realtime
+                                         27 February - 3 March 2023, San Diego, CA, USA
+                                         ISBN 1-891562-83-5                                                    detection. We cannot simply use IP addresses as vertices and
+                                         https://dx.doi.org/10.14722/ndss.2023.23080                           traditional four-tuple of flows [19], [36] as edges to construct
+                                         www.ndss-symposium.org                                                the graph because the resulting dense graph cannot maintain
+                               TABLE I.         T HE COMPARISON WITH THE EXISTING METHODS OF MALICIOUS TRAFFIC DETECTION .
+                                                                                   Data for Detection          Design Goals       Detection Performance
+        Data Source
+                             Data Sources             Typical Methods            Unlabeled Multi-Flow Generic Realtime Unknown     Low          High
+         Categories
+                                                                                 Datasets    Features Detection Detection Attacks Latency Throughput
+                                                   TLS Extensions [16]               ×              ×              ×            ×             ×           ×             X
+                           Protocol Headers
+                                                    HTTPS Headers [3]                ×              ×              ×            ×             ×           ×             ×
+   Encrypted Traffic                                 Time Series [76]                ×              ×              ×            ×             ×           ×             ×
+                             Related Flows         TLS Handshakes [2]                ×              ×              ×            ×             ×           ×             ×
+                                                    Flow Statistics [90]             X              ×              ×            X             ×           ×             X
+                                                   Intrusion Events [20]             X              ×              ×            ×             X           ×             ×
+                             Network Logs
+                                                 Sampled Connections [8]             X              X1             ×            X             ×           ×             X
+    Plain-text and
+                                                 Per-Packet Features [56]            X              ×              ×            ×             X           X             ×
+   Encrypted Traffic
+                            Traffic Features       Per-Flow Features [5]             ×              ×              ×            X             ×           X             ×
+                                                 Flow Interaction Graph              X              X              X            X             X           X             X
+    1
+        Existing multi-flow features can only represent the features of specific flows, which cannot be used to represent complicated interaction patterns among various flows.
+
+interaction patterns among various flows, e.g., incurring the                                     We prototype HyperVision1 with Intel’s Data Plane De-
+dependence explosion problem [87]. Inspired by the study of                                   velopment Kit (DPDK) [37]. To extensively evaluate the
+the flow size distribution [25], [84], i.e., most flows on the                                performance of the prototype, we replayed 92 attack datasets
+Internet are short while most packets are associated with long                                including 80 new datasets collected in our virtual private
+flows, we utilize two strategies to record different sizes of                                 cloud (VPC) with more than 1,500 instances. In the VPC, we
+flows, and process the interaction patterns of short and long                                 collected 48 typical encrypted malicious traffic, including (i)
+flows separately in the graph. Specifically, it aggregates the                                encrypted flooding traffic, e.g., flooding target links [41]; (ii)
+short flows based on the similarity of massive short flows                                    web attacks, e.g., exploiting web vulnerabilities [64]; (iii) mal-
+on the Internet, which reduces the density of the graph, and                                  ware campaigns, including connectivity testing, dependency
+performs distribution fitting for the long flows, which can                                   update, and downloading. In the presence of the background
+effectively preserve flow interaction information.                                            traffic by replaying the backbone network traffic [80], Hyper-
+                                                                                              Vision achieves 13.9% ∼ 36.1% accuracy improvements over
+    We design a four-step lightweight unsupervised graph                                      five state-of-the-art methods. It detects all encrypted malicious
+learning approach to detect encrypted malicious traffic by                                    traffic in an unsupervised manner with more than 0.92 AUC,
+utilizing the rich flow interaction information maintained on                                 0.86 F1, where 44 of the real-world stealthy traffic cannot be
+the graph. First, we analyze the connectivity of the graph by                                 identified by all the baselines, e.g., an advanced side-channel
+extracting the connected components and identify abnormal                                

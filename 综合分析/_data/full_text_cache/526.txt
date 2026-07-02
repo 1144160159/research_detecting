@@ -1,0 +1,1411 @@
+Robustifying ML-powered Network
+ Classifiers with PANTS
+ Minhao Jin and Maria Apostolaki, Princeton University
+https://www.usenix.org/conference/usenixsecurity25/presentation/jin-minhao
+
+ This paper is included in the Proceedings of the
+ 34th USENIX Security Symposium.
+ August 13–15, 2025 • Seattle, WA, USA
+ 978-1-939133-52-6
+
+ Open access to the Proceedings of the
+ 34th USENIX Security Symposium is sponsored by USENIX.
+ Robustifying ML-powered Network Classifiers with PANTS
+
+ Minhao Jin Maria Apostolaki
+ Princeton University Princeton University
+
+ Abstract ML-based solutions [23, 50], MNCs are vulnerable to adversarial inputs, that is, inputs meticulously perturbed to deceive
+ Multiple network management tasks, from resource
+ the MNC. Attackers can exploit this to compromise critical
+allocation to intrusion detection, rely on some form of
+ network infrastructure by subtly perturbing traffic charac-
+ML-based network traffic classification (MNC). Despite their
+ teristics like packet sizes and inter-arrival times, leading to
+potential, MNCs are vulnerable to adversarial inputs, which
+ security breaches or downtime. Beyond being dangerous,
+can lead to outages, poor decision-making, and security
+ these attacks are particularly practical in the networking
+violations, among other issues.
+ domain, where multiple entities have access to network traffic.
+ The goal of this paper is to help network operators assess
+and enhance the robustness of their MNC against adversarial What is critically lacking is a systematic framework for
+inputs. The most critical step for this is generating inputs that network operators and MNC designers to enhance the robustcan fool the MNC while being realizable under various threat ness of MNCs against attackers. This involves identifying
+models. Compared to other ML models, finding adversarial in- adversarial inputs, meaning perturbations on original packet
+puts against MNCs is more challenging due to the existence of sequences that deceive the target MNC into misclassifying
+non-differentiable components e.g., traffic engineering and the them. Operators can then use these inputs to: (i) refine and
+need to constrain inputs to preserve semantics and ensure reli- optimize the MNC by exploring different models, architecability. These factors prevent the direct use of well-established tures, or features; (ii) assess the attack surface of their MNCs,
+gradient-based methods developed in adversarial ML (AML). understand the potential consequences and plan accordingly;
+ and (iii) use them to strengthen MNCs against realistic
+ To address these challenges, we introduce PANTS, a
+ threat models through re-training or fine-tuning. Critically,
+practical white-box framework that uniquely integrates
+ operators will not use or take the framework seriously if the
+AML techniques with Satisfiability Modulo Theories (SMT)
+ generated adversarial inputs are (i) not realizable, meaning
+solvers to generate adversarial inputs for MNCs. We also
+ they do not fall within a realistic attacker’s capabilities, or
+embed PANTS into an iterative adversarial training process
+ (ii) do not retain the semantics of the original sequence,
+that enhances the robustness of MNCs against adversarial
+ meaning the ground-truth label of the perturbed inputs has
+inputs. PANTS is 70% and 2x more likely in median to
+ changed. More importantly, we show that adversarial inputs
+find adversarial inputs against target MNCs compared to
+ that are non-realizable or non-semantics-preserving can hurt
+state-of-the-art baselines, namely Amoeba and BAP. PANTS
+ the model’s accuracy when used in training.
+improves the robustness of the target MNCs by 52.7%
+(even against attackers outside of what is considered during While there are numerous tools for generating adversarial
+robustification) without sacrificing their accuracy. samples in the Adversarial Machine Learning (AML)
+ literature [12, 14, 24, 37, 56] they are not directly applicable
+1 Introduction to MNCs. First, AML tools are built for systems that are
+ end-to-end differentiable, which makes them unsuitable for
+Managing networks involves tasks such as performance typical MNCs that include a feature engineering module to
+routing, load balancing, and intrusion detection and is transform packet sequences into feature vectors before they
+extremely challenging due to the highly diverse, heavy-tailed, are fed to the ML model. Although AML tools can generate
+and unpredictable inputs, i.e., network traffic. ML-based adversarial feature vectors, there is no guarantee these vectors
+network-traffic classification (MNCs) provides a compelling can be reverse-engineered into valid packet sequences. Even
+alternative for handling these complex tasks more effi- if a valid packet sequence exists, the perturbations needed
+ciently [17, 18, 26, 29, 30, 32, 47, 48, 61]. However, like other to convert the original sequence into an adversarial one may
+
+USENIX Association 34th USENIX Security Symposium 7291
+exceed what a realistic attacker could achieve. Second, it is (e.g., feature engineering). Importantly, PANTS enhances
+uncertain whether AML-generated samples are preserving MNCs’s robustness against both white-box and black-box
+the semantics of the original packet sequence while deceiving attackers, even when their capabilities differ from or exceed
+the MNC. Although AML techniques often incorporate a per- those considered during the robustification process.
+turbation budget (expressed as a norm), this concept does not We will open source PANTS and our evaluation materials
+translate well to networking traffic. For example, perturbing to facilitate further research and MNCs robustness (cf. 6).
+a VoIP flow (packet sequence) to resemble web browsing by
+delaying packets might deceive a traffic classifier but degrades 2 Motivation & Limitations of Existing Work
+the original flow’s performance, making the call unusable.
+Critically, adversarially training an MNC with non-realizable
+or non-semantics-preserving samples (i.e., directly using what 100
+AML generates) will degrade the MNC’s accuracy without Unprotected MLP
+
+ Vulnerability (%)
+ 80 PANTS-robustified MLP
+significantly improving robustness as we show in §5.2. Adversarially-trained MLP
+
+ Learning-based approaches such as Amoeba [35] use 60
+ Unprotected TF
+reinforcement learning to directly generate adversarial traffic 40 Better PANTS-robustified TF
+ Adversarially-trained TF
+sequences. Being black-box approaches, such tools are great
+ 20 Unprotected CNN
+for attackers to fool ML-powered applications. However, PANTS-robustified CNN
+the lack of diversity in adversarial samples, their instability, 0 Adversarially-trained CNN
+ 0 20 40 60 80
+and training hardness make them less effective for assessing Accuracy (%)
+and enhancing the robustness of MNCs from the network
+operator’s perspective, as we show in our evaluation. Figure 1: MNCs are vulnerable to adversarial inputs (circles).
+ To address these shortcomings, this paper presents PANTS, Traditional adversarial training sacrifices accuracy to reduce
+a framework to generate Practical Adversarial Network vulnerability (star). PANTS iterative adversarial-training
+Traffic Samples that are realizable for various threat models reduces the vulnerability without hurting accuracy (cross).
+and semantic-preserving. PANTS also enhances the target
+MNC through a novel iterative augmentation training process To highlight the need for a framework that generates
+that leverages these samples. PANTS integrates traditional adversarial inputs to help operators assess and mitigate the
+methods for generating adversarial samples (AML), such vulnerabilities of their MNCs, we present a specific use case:
+as Projected Gradient Descent (PGD) [37] or Zeroth-order an ML-based classifier that exposes the network to a range of
+Optimization (ZOO) [14], with formal methods, concretely exploits, from giving attackers an unfair advantage to causing
+a Satisfiability Modulo Theories (SMT) solver. The AML outages, regardless of the exact implementation of the MNC.
+perturbs the original inputs (packet sequences or features) in We then outline the essential properties required for such a
+a manner that maximizes their distance (e.g., loss for MLP) framework and explain why existing solutions are insufficient.
+from the original decision boundaries with a consistently
+high success rate. The SMT solver finds packet sequences
+ 2.1 Motivating use case
+that do not diverge too much from the AML’s output but are
+realizable, consistent with the threat model and preserve the Consider a network operator that uses an ML-based traffic
+semantics of the original packet sequence. To achieve this, we classifier to distinguish real-time applications (e.g., online
+encode the feature engineering, the threat model, and other gaming). The operator uses this information to optimize
+networking constraints needed for semantic preservation into routing: real-time applications use fast but low-bandwidth netlogical formulas. Among other optimizations, PANTS itera- work paths. This is one of the multiple network management
+tively adds and removes constraints that come from the AML, tasks for which network operators could use an ML-based
+prioritizing those that have a substantial effect on confusing traffic classifier (built with Multilayer Perceptron-MLP,
+the classifier. Finally, we integrate this generative process into Random Forest, Transformers [10, 18, 26, 34, 48]) and benefit
+an interactive training process that enhances the target MNC. from its ability to learn complex patterns directly from
+ We evaluated PANTS against three distinct ML-powered data. While highly useful, this MNC exposes the network
+network classifiers, each implemented with different models to various exploits. Two representative examples include
+and processing pipelines. PANTS finds adversarial, realizable attackers controlling (i) the end hosts of the communication
+and semantic-preserving samples with 35.31% success rate in or (ii) an in-network component. In the former case, a
+median, that is 70% and 2x higher than two SOTA methods. malicious (or simply “rational”) application developer could
+Despite being a white-box approach, PANTS works well manipulate the traffic generated by her application to be
+with gradient (e.g., transformer encoder) and non-gradient misclassified as gaming by the network’s MNC, hence
+(e.g., random forest) models and various processing pipelines, gaining an unfair performance advantage over competitors.
+including those containing non-differentiable components This could be achieved by subtly altering the size of some
+
+7292 34th USENIX Security Symposium USENIX Association
+packets or delaying specific packets without significantly altering their semantics. In other words, each adversarial
+impacting the overall performance of her application’s traffic. input should still represent the same underlying meaning or
+In the latter case, a malicious or compromised router in-path class as the original, which is described as a set of constraints
+can increase the volume of traffic routed through the fast on the adversarial input. The closest notion of semantics
+but low-bandwidth path by subtly altering the non-real-time in the image domain is the perturbation budget, which
+traffic to cause the MNC to misclassify it as real-time. These sets a maximum allowable distance between the original
+perturbations would result in congestion in the low-bandwidth and perturbed image [37]. However, such a metric doesn’t
+path, leading to delays or even downtime for actual real-time translate directly to the networking domain, where there are
+traffic, which is vital for the network’s profitability. dependencies across packets or features of each input, which
+ML network classifiers are vulnerable to adversarial in- perturbations should respect. We assume that semantics can
+puts. Fig. 1 illustrates the likelihood of an attacker controlling be expressed as constraints on the variables of the input (not
+end hosts (e.g., a malicious app developer) to successfully only as a distance between the adversarial and the original),
+manipulate their traffic to cause an MNC to misclassify it (pre- and the framework should provide the means to respect them.
+dict a favorable for the attacker label). The results show that, Realizability. The framework should provide mechanisms
+despite the high accuracy of the models during testing, the to constrain the generated adversarial inputs according to
+attacker can deceive classifiers implemented with MLP, CNN, domain-specific rules and a configurable threat model, which
+and a transformer with success rates of 81.12%, 94.25% and the operator will consider reasonable. Concretely, adversarial
+99.80%, respectively. While we identified these manipulations samples must represent valid packet sequences — for exam-
+(adversarial inputs), hence the vulnerability of the MNCs us- ple, TCP should never acknowledge a packet before it is sent.
+ing PANTS, which is a white-box approach with complete ac- Further, each adversarial input must be created by applying
+cess to the MNC’s implementation, this does not diminish the perturbations that are within the capabilities of the threat
+significance of the risk they pose. First, security through ob- model to an original input. Optimizing the model by training
+scurity is never a sound strategy, and network operators should it on unrealizable inputs that it will never encounter is not only
+be prepared for (or at least aware of) the worst-case scenario wasteful but can also degrade its performance on common inwhere an attacker has complete knowledge of their system. puts, as we show in §5.2. For instance, an in-network attacker
+Second, black-box approaches [35] are also able to find ex- cannot alter an encrypted packet in a way that evades detecamples that fool MNCs, albeit with less likelihood. That is to tion, so examining such scenarios would be unproductive.
+show that adversarial examples are not random bugs but stem
+from learning from non-robust features, i.e., relying on unre- Generality. The framework needs to be able to work in
+lated co-occurrences in data instead of true correlations [28]. various classification pipelines. Unlike the image domain,
+ where end-to-end neural network-based (NN-based) models
+Adversarial training trades accuracy for vulnerability.
+ play a dominant role in various tasks, networking applica-
+Fig. 1 also shows the trade-off between inaccuracy and vulnertions employ a wide spectrum of classification models and
+ability in MNCs. Indeed, an operator could leverage authentic
+ pipelines. Concretely, the framework needs to work for typical
+(off-the-shelf) adversarial training to shield an MNC against
+ MNCs, which include non-differentiable and non-invertible
+adversarial inputs. However, by doing so, she will sacrifice the
+ feature engineering modules to extract statistical features from
+accuracy of the MNC, meaning the baseline performance of
+ the given packet sequence, followed by a differentiable or
+the MNC in more common inputs will degrade. By authentic
+ non-differentiable ML model such as Multi-layer perception
+adversarial training, we refer to training a robustified model
+ (MLP) or Random Forest (RF) for classification. The framewith the help of PGD [37]. During model training, the origiwork should also work for MNCs that directly encode the
+nal training samples are substituted with their PGD-generated
+ packet sequence into a sequence of packet length, packet direcadversarial counterparts in each training iteration.
+ tion, and inter-arrival times only. In the latter case, the encoded
+ sequence is fed into deep learning models such as Transformer
+2.2 Requirements (TF) or convolutional neural network (CNN) for classification.
+Next, we elaborate on the requirements of a framework
+that generates adversarial samples and use them to enhance 2.3 Limitations of existing work
+the robustness of MNCs before we explain why existing
+approaches fall short. Having described the requirements of a framework that aims
+Adversariness & Semantic preservation . The framework to help network operators, we explain why various lines of
+needs to generate inputs that are adversarial, meaning that work that generate synthetic or adversarial networking inputs
+they are capable of misleading MNCs into producing an fail to satisfy them. We elaborate on works that generate
+incorrect classification. To ensure that the classification is in- adversarial images (i.e., AML) in §3.2.
+deed incorrect, these inputs should be created by meticulously Synthetic data generation Networking-specific generative
+applying perturbations to the original labeled samples without models, such as NetShare [62] and NetDiffusion [31], have
+
+USENIX Association 34th USENIX Security Symposium 7293
+demonstrated strong potential in generating synthetic traffic. feature space. More importantly, though, certified robustness
+However, synthetic traffic is not adversarial—i.e., it should cannot match the empirical robustness using adversarial trainnot mislead the downstream applications such as an MNC. ing [40, 57], which is, in fact, more indicative of the real risk.
+In fact, such works aim to generate samples that match the
+original distribution (per the fidelity definition), whereas 3 Overview
+adversarial samples’ distribution is typically different from
+the training distribution [12]. This distinction is critical, as Our goal is to build a framework that generates adversarial
+training with adversarial samples has been shown to produce samples that can be used to assess and improve the robustness
+more robust models compared to merely increasing the of an MNC while fulfilling the requirements in §2.2. After
+size of the training dataset [37]. As a result, NetShare [62] we formulate our problem, we elaborate on the opportunities
+is 92%(99%, 92%) less effective in robustifying RF (TF, and challenges of traditional AML in solving it. Finally, we
+CNN) compared to PANTS and cannot robustify MLP, unlike explain the insights that drove our design.
+PANTS, as we show in Fig. 9 and Fig. 14. These works
+may also face a semantics preservation issue: synthetically
+ Dataset Feature engineering
+generated traces from original malicious traces (e.g., shrew
+attacks) might not achieve the malicious intent (e.g., cause Threat model
+ AML SMT
+an outage); hence might not be truly malicious.
+Black-box RL-based techniques While useful for aspiring Network & semantics
+ Model constraints
+attackers, black-box RL-based approaches [22] for generating PANTS
+adversarial examples against MNCs are incapable of meeting
+ Robustified Adversarial
+our requirements. Amoeba [35], for example, trains an agent model dataset
+ Model Assessment
+to perturb each packet to maximize the likelihood that the altered flow will deceive the MNC. Amoeba fulfills the general- Model Fine-tuning
+ity requirement as it is black-box, and can fulfill realizability if
+trained with the right actions. Still, Amoeba’s outputs are not Figure 2: Overview of PANTS workflow. PANTS generates
+always semantic-preserving and adversarial because there is adversarial inputs that are also used to iteratively train the
+no way to guarantee those during inference. Also, as we show target MNC. PANTS receives the implementation of a MNC
+in our evaluation, Amoeba’s generated adversarial inputs are together with a training dataset and a couple of rules that
+less effective in robustifying MNCs during adversarial train- constrain the generated inputs. At its core, PANTS features
+ing, possibly because it (over)exploits a vulnerability rather an AML component that collaborates with an SMT solver.
+than trying to find new ones. Ultimately, this strategy benefits
+attackers but not operators seeking to enhance the MNC.
+White-box gradient-based techniques Excluding AML, 3.1 Problem formulation
+which is discussed in detail in §3.3, BAP [41] stands out
+as a notable white-box approach for adversarial generation, Consider an ML model f used to implement a network
+particularly due to its focus on networking inputs. BAP classifier f : R n → Y where Y represents the set of possible
+adversarially trains a generator to create perturbation on labels. We define x ∈ R n as the input to f . This can be the
+every single packet of a packet sequence (e.g., delay, add result of a feature engineering function, denoted as φ on
+dummy bytes) such that the distance (e.g., loss) between the a sequence of packets p= {p1 , p2 , ... , pk } from the set P
+predicted label and the ground truth is maximized. Because where each pi is a packet arrived at time i or a subset of the
+BAP uses gradient for maximizing the distance, it does not sequence of packets p. Each packet can be represented by
+work for non-end-to-end differentiable MNCs, hence failing various attributes, including its size flags, direction etc. We
+the generality requirement. Further, by perturbing each assume that for every MNC, the following dataset D exists.
+packet independently, BAP cannot enforce semantics, which Let D = {(xi , yi )}m n
+ i=1 be the dataset, where xi ∈ R are the
+can be flow-wide. We compare against BAP in §5. feature vectors obtained by applying φ to raw network data
+ and yi ∈Y are the corresponding label.1
+Robustness certification Ideally, network operators would re-
+ We define a threat model as a set of perturbations, δ
+sort to robustness certification [33,51,55,58,60] to understand
+ (δ : P → P) on the original packet sequences, po , to generate
+the vulnerability of their MNCs. Applying such techniques in
+ adversarial packet sequences pa , (pa = δ(po )). δ(po ) is
+networking is not trivial, BARS [53], for instance, considers
+ adversarial if f (φ(δ(po ))) ̸= f (φ(po )), meaning that the
+the robustness guarantee for perturbations at the feature level
+ perturbed flow will be misclassified by f and δ(po ) preserves
+instead of the guarantee at the packet level and hence canthe semantics of po . Semantics are flow-level constraints on
+not incorporate threat models. Indeed, a small perturbation
+in the flow, such as injecting a dummy packet in a small in- 1 Applying f directly on a truncated packet sequence is possible and a
+
+terarrival time, can easily exceed its robustness region in the simplification of the problem we describe.
+
+7294 34th USENIX Security Symposium USENIX Association
+xo i.e., constraints that can be dependent on the whole packet 3.3 Adversarial ML limitations
+sequence, not just each packet independently.
+ Our goal is to design a framework that generates packet se- While AML can generate an adversarial sample and generalquences pa from po such that pa are adversarial to f , semantic- ize at least across some models, AML does not provide realizpreserving to po , and are within the capabilities of a threat ability and semantics preservation. At a high level, the root
+model. The framework requires white-box access to f , hence cause of the problem is that AML finds adversarial inputs usis suitable for clouds and ISPs who develop tailored MNC so- ing backward reasoning (i.e., targets a change in the predicted
+lutions in-house to eliminate the need to share sensitive infor- label), but semantics preservation and realizability require formation externally (e.g., AT&T [5], Azure [45]) or third parties ward reasoning, i.e., are defined on the input [16,20]. In the imdeveloping MNCs (e.g., Cisco [8], Juniper Networks [6]). age domain, this is not a problem as classifiers are end-to-end
+ differentiable: images are directly fed into the ML model for
+ classification, which is typically neural network-based. AML
+ Network flow
+ Feature modifies input pixels directly and independently from each
+ ML classifier Result
+ Engineering other (as they do not need to adhere to any rules beyond being
+ … in a range) to increase the loss informed by the gradient. Such
+ techniques also include a budget to constrain just the pixel-
+ - Delay
+ - Add a dummy packet after to-pixel distance from the original with no other obligation.
+ -…
+ However, in the networking domain, the traffic is often pro-
+ …
+ cessed by the feature engineering module, which generates
+ Adversarial flow feature vectors that are fed to the ML model. While gradient
+ information can still guide the modification of each feature to
+Figure 3: Given a network flow p, the perturbation δ is increase loss, it is unclear how to map modifications to the feaapplied to generate an adversarial flow δ(p), which causes ture vector into the corresponding packet sequence as the feathe ML model to return a wrong output. ture engineering is non-differential and non-invertible. In fact,
+ there is no guarantee that a perturbed feature vector would
+ have a corresponding valid packet sequence as AML changes
+3.2 The promise of Adversarial ML each feature independently, making contradicting decisions.
+ For example, suppose an ML-powered intrusion detection
+At first glance, adversarial ML (AML) seems to be the system whose feature set includes both minimum and maxright approach for our problem definition and requirements. imum packet inter-arrival times (min_iats, max_iats). Since
+First, AML generates adversarial inputs against ML-based AML does not understand the two features are dependent,
+systems, typically in the image domain. Concretely, given in other words, that min_iat ≤ max_iats must always hold, it
+a trained ML classifier with model parameters θ, an orig- is possible for AML to decrease the value of max_iats and
+inal image sample x with its ground truth label y, PGD increase min_iats such that min_iats > max_iats. In this case,
+perturbs x to be an adversarial sample by iteratively running while the generated feature vector might be adversarial in that
+xt+1 = Πx+S (xt +αsgn(∇x L(θ,xt ,y))), x0 = x. L(·) is the it might be misclassified by the intrusion detection system,
+target loss function, measuring the distance of the predicted it is not a realizable sample, i.e., there is no packet sequence
+label of xt and y, and Πx+S represents the capability of attack, that would ever result in this feature set. In short, using the
+which is usually defined as ℓ∞ -ball distance around x. The perturbed feature vectors is like defending against an impossiperturbation starts from the original sample x. In each iter- ble attack. While one can try to use a mask [44] to only allow
+ation, the sample xt is moved by α following the direction of AML to change a subset of the features that are not depenthe gradient of L. After modification, the intermediate value dent, that would reduce the inputs that AML can find. Indeed,
+is projected to be within the attack capability by clipping it to while AML can run with as few as a single feature there is no
+a predefined ℓ∞ -ball distance around x. In each iteration, we guarantee that the generated sample would be adversarial.
+expect L(θ,xt+1 ,y) > L(θ,xt ,y) to have higher possibility to be Even if the target model does not use (non-differentiable)
+misclassified. Second, AML is quite general, despite using feature engineering or if one somehow finds a packet
+gradient. In fact, there are AML methods that do not rely sequence that is consistent with the AML adversarial feature
+on a gradient or whose gradient information is inaccessible vector, the packet sequence might still fall outside the capabilto the attacker, such as ZOO [14]. ZOO uses a combination ities of the threat model or violate any network constraints, or
+of techniques, such as coordinate descent and importance break the semantics of the original flow. For example, suppose
+sampling, to estimate the gradient for getting adversarial the threat model only allows injecting dummy packets (but
+samples. Although it was initially designed for black-box not removing), and flow duration f1 and packets per second f2
+attacks against NN-based models, it can be extended to attack are two features extracted by the feature engineering module.
+other models such as Random Forest and XGBoost [1, 2, 9]. The number of packets can be derived from #packets = f1 / f2 .
+
+USENIX Association 34th USENIX Security Symposium 7295
+ Selected
+ PANTS features
+
+ Original packet
+ Adversarial ④ [ , ] ⑤
+ sequence
+ Features features Feature engineering
+ … ② AML
+ (PGD/ZOO)
+ ③ Feature SMT Solver
+ [ , , …, ] [ , , …, ] Is there a pkt sequence Threat model
+ Perturb features to Selector for the features?
+ maximize loss Network & semantics
+ ① Yes constraints
+ ⑥
+ Feature
+ Engineering ML Model
+ Adversarial and
+ Adversarial? Realizable packet
+ If Yes sequence
+ Features ⑧ …
+ Predicted
+ [ , , …, ]
+ label Realizable packet
+ ⑦ sequence
+ …
+
+Figure 4: PANTS combines AML with an SMT solver to generate adversarial and realizable samples (flows), which are used
+to assess and enhance robustness.
+
+If #packets derived from the adversarial features is less than timization loop containing an AML component (e.g., PGD or
+the number of packets in the original flow, even though one ZOO), an SMT solver, and the target MNC, which iteratively
+can find an adversarial packet sequence consistent with the checks whether a subset of the AML-produced adversarial
+adversarial features, it still falls outside the capabilities of features (or perturbations) can result in a realizable packet
+the threat model. Similarly, for a deep NN that is directly sequence until enough adversarial and realizable samples are
+accepting the packet sequence as input, the AML-generated collected. Instead of trying every possible subset of features,
+adversarial sequence could change the interarrivals in a way our third insight is to identify the most vulnerable adversarial
+that is impossible for any congestion control algorithm or in features i.e., those that are both easy to tweak based on the
+a way that makes the corresponding application unusable. threat model and important enough for the target ML model
+ to affect its output. Critically, though, PANTS might opt out
+ of constraints that make the generated samples adversarial
+3.4 PANTS: Adversarial ML for networking but not constraints that make samples realizable or semantics
+ preserving, which are always satisfied.
+To address the inherent challenges in applying AML to
+MNCs, we integrate a formal-method component to ensure 4 Design
+the realizability and semantics-preservation of the produced
+adversarial samples. Our first insight is to use logical formulas 4.1 PANTS end-to-end view
+to model the feature-engineering process that turns packet
+sequences into feature vectors and sequence-level constraints We provide an end-to-end view of how PANTS generates
+for MNCs with no feature-engineering, effectively encoding adversarial packet sequences, shown in Fig. 4. The procedure
+input dependencies. Further, we encode threat-model capa- includes 8 steps, starting from feeding in the original packet
+bilities, networking rules and semantics into flow-wide or sequence to getting the adversarial and realizable packet
+packet-level constraints and ask an SMT (Satisfiability Mod- sequence returned by PANTS.
+ulo Theories) solver to find a packet sequence that satisfies Step ⃝:
+ 1 Given an original packet sequence, we use the feathem. If the answer is “UNSAT”, the adversarial features are ture engineering module in the target application to extract its
+not realizable under the given threat model, semantic, and net- features. Step ⃝:
+ 2 After getting the features, PANTS uses the
+working constraints. Observe that SMT supports both forward canonical AML methods (PGD, ZOO) to generate an adversarand backward reasoning, hence can connect the requirements ial feature vector (sample). The generation process interacts
+for adversariness with realizability and semantics. Critically, with the ML classifier to ensure the adversariness of the genthis makes PANTS extensible to any definition of semantics. erated sample. Note that the generated adversarial features are
+ As feature engineering modules and semantics definition not strictly required to be within a predefined ℓ∞ -ball distance
+can be arbitrarily convoluted, a naive serial combination of around the original features since the capability of the attacker
+AML with SMT will also fail because most of the AML- (threat models) for the networking applications is different
+generated samples would not have a corresponding packet from the image domain described in §3.2. Step ⃝: 3 Given the
+sequence that is realizable. Our second insight to address this generated adversarial feature, PANTS runs an iterative process
+challenge is that not all AML-generated features need to be to find (multiple) adversarial and realizable packet sequences
+honored for the sample to be adversarial. We design an op- using a feature selector and an SMT solver. The feature selec-
+
+7296 34th USENIX Security Symposium USENIX Association
+tor first determines the importance of each feature in keeping the appended payload for p+ +
+ 1 and p3 . The perturbed
+ −
+the generated features adversarial. Step ⃝: 4 The feature selec- flow p’ can be formulated as p’= { p̄+ +
+ 1 , p2 , p̄3 } =
+tor begins to construct a selected feature list by considering ′ ′ + − ′ ′ +
+ {(∆t1 + ∆t1 ,l1 + l1 ) ,(∆t2 ,l2 ) ,(∆t3 + ∆t3 ,l3 + l3 ) }. Then,
+one new feature each time, starting by appending the most the formula for the SMT solver is
+important feature and proceeding in descending importance
+ (∆t1 +∆t1′ +∆t2 +∆t3 +∆t3′ )/3 = k
+ 
+order. Step ⃝:5 Given the selected features, we encode these 
+  (1)
+features’ dependencies, threat model constraints, and network- (∆t1 +∆t1′ = m)∨(∆t2 = m)∨(∆t3 +∆t3′ = m)
+ 
+ (2)
+ 
+ 
+ 
+ing constraints into formulas and query the SMT solver to find
+ 
+ (∆t1 +∆t1′ ≤ m)∧(∆t2 ≤ m)∧(∆t3 +∆t3′ ≤ m)
+ 
+ (3)
+ 
+ 
+a packet sequence to satisfy them. Step ⃝: 6 If the SMT solver 
+returns “UNSAT”, i.e., it cannot find a packet sequence, the (l1 +l1′ +l2 +l3 +l3′ )/3 = k (4)
+ ∆t1′ ≥ 0∧∆t3′ ≥ 0∧l1′ ≥ 0∧l3′ ≥ 0
+ 
+feature selector pops out the latest appended feature from the (5)
+ 
+ 
+ 
+ 
+selected feature list. The iterative process continues to step ⃝4 l1 +l1′ ≤ 1500∧l3 +l3′ ≤ 1500
+ 
+ (6)
+ 
+ 
+ 
+to append the next most important feature and repeat step ⃝ 5
+ 
+  ′
+ ∆t1 +∆t3′ ≤ 0.2×(∆t1 +∆t2 +∆t3 )
+ 
+ (7)
+and ⃝ 6 until the first k most important features are considered.
+Step ⃝:7 The packet sequence(s) found by the SMT solver
+ Equation (1), (2), (3) and (4) force the generated packet
+are guaranteed to be realizable since the threat models are
+ sequences to be adversarial by being consistent with the averencoded into the satisfiable formulas. Finally, we need to conage (equation (1)), maximum (equation (2),(3)) inter-arrival
+firm the adversariness of these realizable packet sequences.
+ times and the average of packet length (equation (4)) that
+We feed these packet sequences into the feature engineering
+ AML specification. Equation (5) ensures that the packet semodule again to get the corresponding feature vectors. Step
+ quence complies with the threat model, which includes delay-
+⃝:
+ 8 We feed these feature vectors into the ML classifier to get
+ ing and appending dummy payload to the forward packets.
+the predicted label. We compare the prediction result with the
+ Equation (6) and (7) formulate the network and semantics
+ground truth label of the original packet sequence. If they are
+ constraints.
+different, the realizable packet sequences found by the SMT
+solver are adversarial, and the feature vectors correspond to
+realizable packet sequences. Note that these packet sequences 4.3 Adversarial packet sequence identification
+are very likely to be adversarial, given that the feature selector
+prioritizes the use of the most important features. Feature importance determination(line 1 - line 5 in Alg. 1).
+ Adhering to all features in the adversarial feature vector that
+ the AML specified could be too computationally expensive
+4.2 SMT formulations for the SMT solver or even infeasible. Critically, though, not
+PANTS incorporates an SMT solver for generating adversarial all features are equally important in keeping the packet seand realizable packet sequences. Concretely, the SMT solver quences adversarial. For instance, given an adversarial vector
+encapsulates constraints for feature dependencies, the threat of two concrete values generated by the AML component,
+model, networking rules, and semantics, determining their sat- there is often a packet sequence that adheres to only one of
+isfiability, i.e., whether a sample satisfying these constraints them while still being adversarial. Building on this insight,
+exists. we design a feature importance ranking algorithm that helps
+ To provide a clearer illustration of this encoding, let’s PANTS identify feature subsets that play a more important
+consider a concrete example. Consider an original network role in the sample’s adversariness, thereby streamlining and
+flow that only has three packets, p= {p+ − + accelerating the search process. Since AML methods are de-
+ 1 , p2 , p3 } where
+ {+,−} signed to perturb features to maximize the chance that they
+pi = (∆ti , li ){+,−} . {+,−} represents the direction of
+ will be misclassified, the features that have been changed the
+the packet, where + means packets sending from the connecmost play a more important role in adversariness. Thus, after
+tion initiator to the receiver (forward packet) and − vice versa.
+ normalizing all the features, the importance of each feature is
+ti and li represent the inter-arrival time and packet length for
+ determined by the difference between the adversarial and the
+each packet pi . For this example, let us assume that the adveroriginal value of that feature. Using this importance ranking,
+sarial features generated by the AML component specify the
+ we can prioritize adversarial-feature constraints, which are
+following: the average inter-arrival time is k, the maximum
+ crucial to keeping the flow adversarial.
+inter-arrival time is m, and the average packet length is j. Assume that the threat model includes delaying and appending
+dummy payload to forward packets, but to preserve the se- Find adversarial and realizable packet sequences using
+mantics meaning of the flow, the accumulative delay cannot iterative testing (line 19 - line 28 in Alg. 1). After quantiexceed 20% of the original duration. fying feature importance, PANTS leverages this information
+ For this example, we thereby define four variables to maximize the likelihood of quickly identifying adversarial
+∆t1′ , ∆t3′ , l1′ and l3′ . They are representing the delay and and realizable samples. Rather than starting with the full set
+
+USENIX Association 34th USENIX Security Symposium 7297
+of adversarial-features constraints or testing random permu- Algorithm 1 find adv pkt sequences with iterative testing
+tations—both of which would significantly increase compu- Require: original_sample ▷The original and benign packet sequence
+ Require: adv_features ▷Adversarial features generated by AML
+tational overhead in the SMT solver—PANTS employs the Require: k ▷Configured number of important features
+following algorithm to optimize the process. Ensure: solutions_set
+ 1: function F EATURE _R ANK(original_sample, adv_features)
+ 2: original_feature = feature_engineer(original_sample)
+ 80
+ MLP 30 3: sorted_feature_list = sort(abs(adv_features - original_features))
+ RF 4:
+ ASR (%)
+
+ ASR (%)
+ MLP return sorted_feature_list ▷Sorted by importance descending order
+ 20
+ 60 RF 5: end function
+ 10 6:
+ 40
+ 0 7: function SMT_S OLVER(selected_features, original_sample)
+ 5 10 15 20 5 10 15 20
+ Number of most important features (k) Number of most important features (k)
+ 8: if SMT can find solutions consistent with selected_features then
+ 9: return solutions
+ (a) End-host attacker (b) In-path attacker 10: else
+ 11: return null
+ 12: end if
+Figure 5: The impact of k in ASR (i.e., in PANTS ability to 13: end function
+ 14:
+generate examples) against MLP and RF. The ASR increases 15: sorted_feature_list ← ()
+with k, but levels off once k reaches a certain threshold. 16: selected_features ← ()
+ 17: solutions_set ← ()
+ 18: sorted_feature_list ← Feature_Rank(original_sample, adv_features)
+ Starting with an empty feature list, we iteratively test 19: for i in 1:k do
+ 20: selected_features.append(sorted_feature_list[i])
+whether adding the formulas of the next most important 21: solution ← SMT_Solver(selected_features, original_sample)
+(not already explored) feature fi results in a conforming 22: if solution is null then
+ 23: selected_features.remove(sorted_feature_list[i])
+packet sequence output from the SMT solver. If it does, fi is 24: else
+appended to the selected features list. Otherwise, the feature 25: solutions_set.append(solution)
+ 26: Check adversariness for this solution
+is not selected. By adding more and more features, the found 27: end if
+packet sequences are more likely to be adversarial. Even after 28: end for
+the SMT solver finds a packet sequence that is adversarial, the
+algorithm continues appending more features until it appends
+k features, to cover a wider spectrum of adversarial examples. mechanism, network flow chunking, and parallelization.
+The exact value of k can be set and easily fine-tuned by We first set a time budget for the SMT solver. If the SMT
+the user. Concretely, PANTS finds more diverse adversarial solver cannot find packet sequences within a timeout window,
+examples as one increases k (up to a point), as we observe in we decrease the computation complexity by dividing a flow
+Fig. 5, but will also take longer to compute them. In practice, into several chunks evenly. The SMT solver is used to find
+one only needs to avoid setting k too low, making half the the packet sub-sequences for each chunk. Since each chunk
+number of features a reasonable default. has fewer packets than the whole flow, it is more likely that
+ Thanks to these two key logics, PANTS is able to iden- the SMT solver will be able to find solutions within the
+tify adversarial packet sequences. The algorithm details are timeout limits. After splitting a flow into multiple chunks,
+depicted in Alg. 1. some features are difficult to formulate strictly. For example,
+ when working on a complete flow, it is easy to formulate
+4.4 PANTS’ SMT optimizations the maximum packet length feature. After splitting the
+ flow into multiple chunks, the maximum packet length can
+While preferentially enforcing subsets of adversarial fea- appear in any chunk. Strictly formulating this feature would
+tures improves scalability, there are scenarios where the SMT require a complicated algorithm, which is in conflict with
+solver’s limitations become a more difficult bottleneck. For our motivation to decrease computation complexity and is
+example, there will be cases in which finding an adversarial unnecessary for our use case. To solve this problem, we
+example requires adhering to all feature constraints or cases consider three different types of features. For the first type
+where the most significant feature constraint is so complex of features, satisfying their formulas for each sub-sequence
+that the solver struggles. The complexity depends on many will likely result in satisfied formulas for the whole sequence.
+factors, such as the length of the packet sequence, the formu- For example, such features are {max, mean, median, min,
+lation of capabilities, the number of features to be solved, and std} of {interarrival times, packet length} and number of
+the difficulty of solving each feature. In this section, we focus {packets, bytes} per second. For these features, SMT solves
+on optimizing the packet sequence length and the formulation their formulas per chunk. For the second feature type, the
+of capabilities. accumulation of each chunk’s feature values is equal to that
+Network flow chunking and parallelization. A longer of the whole flow. One typical example is the total duration.
+packet sequence requires more variables to formulate, which For these features, the SMT solver is finding sub-sequences in
+ f eature
+implies a much larger search space for the SMT solver. each chunk consistent with #chunks . For other features which
+We address this problem with a combination of a timeout exhibit convoluted correlations between the sub-sequences
+
+7298 34th USENIX Security Symposium USENIX Association
+and the whole sequence, such as the number of unique also find in §5.2 that this training methodology improves
+packet lengths, we are not aiming to be consistent with the robustness without hurting the model’s accuracy.
+whole-flow formulas when finding the sub-sequences for For robustification, PANTS generates multiple adversarial
+each chunk. The number of chunks has minimal impact on samples for each benign counterpart in total to cover diverse
+ASR. Indeed, we found that even doubling their number adversarial samples. Using PANTS, we generate around 1.16-
+(from 10 to 20 chunks) changes ASR by 3%. That is because 180 samples for each benign sample during robustification
+once the solver is able to find sub-sequences for each chunk, based on different threat models, applications and ML models.
+continuing to split into smaller chunks does not improve ASR. Along with adversarial samples, we include non-adversarial
+ Finally, PANTS’ use of the solver is highly parallelizable, ones generated by PANTS. This is beneficial for training
+facilitating further speed ups. Indeed, the solver for each because the non-adversarial samples are closer to the decision
+original input, chunk, and even set of adversarial features of boundary compared to their benign counterpart, despite being
+a given instance can run independently. correctly classified. Including those samples can help form a
+Inefficient formulation of capabilities can be simplified. more refined decision boundary.
+Unfortunately, not all the capabilities can be formulated
+efficiently. The capability to inject packets at any position is 5 Evaluation
+one of them. The underlying reason is that multiple dummy
+packets can be injected at any position. Each combination In this section, we evaluate PANTS in two ways. First, we
+requires an invocation of the SMT solver. For example, evaluate PANTS’ capability in generating adversarial realizgiven a flow with four packets, f = [p+ − + − able and semantic-preserving flows and compare it with two
+ 1 ,p2 ,p3 ,p4 ], injecting
+ ∗+ + − + − ∗+
+packet p5 by [p1 , p2 , p3 , p4 , p5 ] or [p+ − + ∗+ − baselines, Amoeba [35] and BAP [41]. We find that PANTS
+ 1 , p2 , p3 , p5 , p4 ]
+ ∗+
+can cause different solutions on p5 when asking the is 70% more likely to find such flows compared to Amoeba
+packet sequence to comply with the features of backward in median and 2x more likely compared to BAP. Second,
+flow interarrival times. Suppose a threat model that allows we evaluate the effectiveness of PANTS-generated samples
+injecting at most j packets and the packet sequence length is in improving the robustness of the targeted MNCs. We find
+k; formulating this capability into formulas requires SMT to that PANTS is 142% more effective in improving robustness
+ j
+run ∑m=0 m+k times to cover all combinations. Therefore, compared to Amoeba without sacrificing the model accuracy.
+ m
+packet injection at any position is very inefficient, and we con- Interestingly, we empirically find PANTS enhances the
+sider simplifying the formulation to increase the generation model’s robustness even against attackers that have different
+speed. Although packet injection at any position requires the (and even strictly more) capabilities than what was assumed
+SMT solver to find packet sequences multiple times, injecting during sample generation. We begin by introducing the
+packets at the end of the flow is efficient since there is only evaluation setup before discussing some key findings.
+one injection position. Thereby, the SMT solver only needs
+to run once. We leverage the flow chunking and simplify the 5.1 Setup
+implementation of any-position injection by injecting only at
+the end of each chunk. As we increase the number of chunks, Applications & Datasets. We evaluate PANTS in three
+the number of packets per chunk is decreased and the final MNCs with diverse objectives, flow statistical patterns, and
+effect is closer to packet injection at any place. classification granularity, providing a representative sample
+ Fig. 12 shows the sample generation speed after the of networking applications. We evaluate several implemendiscussed optimizations. PANTS generates ~1.7 samples/sec, tations of each MNC, including the exact implementation
+which is efficient, considering MNCs are rarely re-trained. described in the paper from which each dataset is sourced.
+ VPN: VPN traffic detection aims at identifying flows
+ that are VPN among encrypted traffic flows [18, 21, 38, 43].
+4.5 Iterative Adversarial Training with PANTS
+ ISCXVPN2016 [18] is one of the commonly used labeled
+Adversarial training is often used to enhance the robustness datasets and includes both VPN and non-VPN traffic. The
+of ML models. During authentic adversarial training, an dataset contains more than 20 million packets grouped into
+AML method (e.g., PGD) replaces each benign sample with 8,577 bi-directional flows. Of those, 71% are non-VPN, and
+an adversarial one for the insufficiently trained version of the the rest are VPN flows.
+model. While useful, this method can hurt the accuracy of APP: Application identification aims at predicting the
+an ML model [25, 46] and only applies to NN-based models. application that given traffic serves and is useful for network
+To avoid these shortcomings, we design an alternative way of management tasks such as anomaly detection and resource aladversarial training, in which we augment the training dataset location [26, 36, 39, 52, 54]. UTMobileNetTraffic2021 [26] is
+with adversarial samples generated for the sufficiently trained a commonly used dataset that includes mobile traffic from 18
+model to fine-tune it. This methodology is model-agnostic, popular applications (e.g., Dropbox, Google Drive, Facebook).
+meaning that it can work with any processing pipeline. We The selected dataset contains 7,134 bi-directional flows.
+
+USENIX Association 34th USENIX Security Symposium 7299
+ QoE: Quality of Experience inference aims at inferring Amoeba [35] is an RL-based proposal to attack ML-
+QoE metrics like resolution and video bitrate from packet based censorship. Although designed for a different goal,
+traces [13, 27, 42, 48, 59]. QoE inference is useful for stake- Amoeba also generates adversarial samples against applicaholders, such as ISPs and service providers, due to the rise tions that are end-to-end differentiable and that include a
+in the use of Video Conferencing Applications (VCAs). non-differential or non-invertible module. Amoeba supports
+VCAML [48] is the dataset that contains a large number packet delay, dummy payload appending, and packet split into
+of single-directional video conferencing flows in a per-second multiple ones. For a fair comparison, we extend Amoeba’s
+granularity from Google Meet, Microsoft Teams, and Cisco capability to comply with the two evaluated threat models.
+Webex. The total number of samples is 37,274, which includes We also train Amoeba’s agent to respect the flow’s semantics.
+11 different resolutions, such as 720p, 360p. We explain the details of our extension in the Appendix in §D.
+ The features extracted by the feature engineering module BAP [41] is to train a generator to create perturbations for
+for different applications are listed in the Appendix in §B. each packet. Since BAP does not support applications that
+ include non-differential and non-invertible components, we
+Application implementations. For each application, we
+ only consider it for TF and CNN (i.e., not with MLP and
+train four commonly used ML classifiers independently. They
+ RF). The original implementation of BAP can only support
+are Multilayer Perceptron (MLP), Random Forest (RF), Transperturbing every packet, so we extend BAP by adding a mask
+former (TF) and Convolutional Neural-Network (CNN) to
+ during training and inference to ensure reliability (e.g., only
+cover multiple ML approaches, and processing pipelines (i.e.,
+ act on forward packets). Although BAP supports per-packet
+end-to-end differentiable or not). The details of the hyperpaconstraints, it does not support flow-wide constraints such
+rameters used for each model are explained in the Appendix
+ as those needed for semantics preservation.
+in §C. Table 1 shows the performance of these three MNCs.
+ NetShare [62] is a GAN-based synthetic data generator
+For each dataset, the training set (Dtrain ) and the testing set
+ specialized in producing high-fidelity network packet traces.
+(Dtest ) are following a 80%:20% random split. ML models are
+ After NetShare is trained on raw packet sequences, it can
+trained on Dtrain , and the performance is evaluated on Dtest .
+ generate synthetic ones that closely match the distribution
+ of the original data. NetShare can successfully match the
+ Accuracy Accuracy
+ Application convoluted data distribution from backbone traces such as
+ (Vanilla) (In-path/End-host robustified)
+ APP [0.7666, 0.8206] [0.7400, 0.8136]
+ CAIDA [4] and data center traces such as UNI1 [11].
+ VPN [0.8902, 0.9400] [0.8596, 0.9375] Success Metric. To quantify the robustness of MNCs, we
+ QOE [0.7819, 0.8221] [0.7898, 0.8173] report the Attack Success Rate (ASR), defined as the ratio
+ of realizable, semantic-preserving adversarial samples to the
+Table 1: Performance of vanilla ML classifiers for each total original samples for each technique, following standard
+application. Our trained models demonstrate reasonably practice [12]. ASR provides a meaningful measure of
+good accuracy for each application. After robustification via robustness, as it directly evaluates a system’s resilience under
+PANTS, the robustified ones’ accuracy doesn’t drop. stress and adversarial conditions. We also report accuracy
+ for completeness and to assess performance under typical
+Attacker’s capability. We evaluate two threat models that
+ conditions. Accuracy refers to the proportion of successful
+correspond to attackers located at the end host and in-path.
+ classifications on the original test set (not adversarial),
+The attackers at the end host (i.e., server or client) can delay
+ which is drawn from the same data source (hence the same
+packets, inject packets, and append dummy payload to the
+ distribution) as the training set.2
+existing packets of one direction. To preserve the flow’s
+semantics, we consider that the end-host attacker can only Testbed. Appendix §E details the used CPU/GPU machines.
+delay the flow up to 20% of the original flow’s duration,
+inject at most 20 packets, and append dummy payload to 5.2 Key Findings
+at most 20% of the packets. The in-path attackers can only
+delay packets of one direction at most 20% of the original
+flow’s duration. We selected these two models because Finding 1: PANTS is 70% more likely to find adversarial
+they represent realistic and rational attackers, but thanks to samples compared to Amoeba in median and 2x more likely
+PANTS flexibility one can easily add more threat models by compared to BAP.
+adding the relevant constraints as we do in Fig. 11. We compare PANTS with Amoeba and BAP in their ability
+Baselines. Since there is no related framework that aims to generate adversarial flows under two threat models against
+to help the operator assess and enhance the robustness of three MNCs implemented with four models and report the
+MNCs, we compare PANTS against the SOTA adversarial 2 High ASR is orthogonal to high accuracy. MNCs can both have high
+generation methods, Amoeba and BAP and a synthetic data accuracy and ASR, meaning that they perform well under standard conditions
+generator, NetShare. (high accuracy), but are susceptible to attacks (high ASR).
+
+7300 34th USENIX Security Symposium USENIX Association
+ PANTS Amoeba BAP
+
+ 100
+ 75
+ 75
+ ASR (%)
+
+ ASR (%)
+
+ ASR (%)
+ 50 50
+ 50
+ 25 25
+
+ 0 0 0
+ MLP RF TF CNN MLP RF TF CNN MLP RF TF CNN
+
+ (a) APP End-host attacker (b) VPN End-host attacker (c) QOE End-host attacker
+ 30 20 60
+ ASR (%)
+
+ ASR (%)
+
+ ASR (%)
+ 20 40
+ 10
+ 10 20
+
+ 0 0 0
+ MLP RF TF CNN MLP RF TF CNN MLP RF TF CNN
+
+ (d) APP In-path attacker (e) VPN In-path attacker (f) QOE In-path attacker
+
+Figure 6: The attack success rate (ASR) of PANTS, Amoeba and BAP for various ML models, applications and threat models.
+PANTS has a much higher ASR compared to Amoeba and BAP, demonstrating its ability to effectively generate adversarial
+samples, which can be used for debugging, fine-tuning, and robustness assessment.
+
+ASR. As we observe in Fig. 6, PANTS clearly outperforms fluctuations affecting the SMT solver’s computation speed.
+baselines in all cases. More specifically, PANTS achieves
+a 35.31% ASR (median across all cases), whereas Amoeba Finding 2: Iterative augmentation with adversarial, realand BAP achieve 19.57% and 10.31%, respectively. BAP’s izable, and semantics-preserving samples improves the
+inefficiency stems from its inability to incorporate semantic robustness of an MNC without hurting its accuracy.
+constraints, e.g., flow-level constraints. Amoeba outperforms
+BAP (despite being a black-box approach), but PANTS is still To evaluate our iterative adversarial, we compare four ap-
+51% more likely than Amoeba to identify adversarial samples proaches for robustifying MNCs. First, we include authentic
+under the end-host threat model (median) and 2x more likely adversarial training, which integrates PGD into the training
+under the in-path threat model. This highlights that while process. Next, we include three versions of our iterative aug-
+Amoeba is effective at uncovering adversarial examples mentation explained in §4.5, where adversarial examples are
+in scenarios with abundant opportunities (i.e., for stronger generated by PGD, PANTS, and Amoeba. Examples generattackers), it struggles when such examples are less apparent. ated by PANTS and Amoeba are also semantic-preserving.
+ Fig. 7 shows the accuracy and ASR of the robustfied ML
+ Further, PANTS’s ASR is more consistent across runs in models against end-host attackers under the application APP.
+all the test cases. This is important as an operator is unlikely Authentic adversarial training enhances the robustness of the
+to trust the assessment of a tool that reports a different ASR models against attacks from PANTS (Fig. 7a) and Amoeba
+in every run i.e., varying levels of vulnerability for a given Fig. 7b, but hurts their accuracy. In contrast, iterative augmen-
+MNC. Concretely, the average standard deviation across all tation (our approach) maintains the models’ high accuracy (as
+the test cases is 0.77 for PANTS, while for Amoeba 3.12 and shown in Table 1) and could improve robustness subject to the
+for BAP 2.61. For some cases, specifically, Amoeba and BAP quality of the generated samples. Concretely, when samples
+show much higher fluctuations in ASR compared to PANTS. are generated by PGD, iterative augmentation does not help in
+For example, Amoeba’s ASR on attacking TF ranges from robustifying the targeted models. When samples are generated
+76.15% to 93.45% and BAP is from 43.89% to 54.25% by Amoeba, iterative augmentation robustifies models against
+while PANTS’ ASR only ranges from 99.75% to 100.0% samples generated by Amoeba. Finally, when samples are
+as we observe in Fig. 6a. The large variance in Amoeba’s generated by PANTS (i.e., as in the complete PANTS frameresults stems from a well-known problem in RL: its inherent work), iterative augmentation makes models robust against
+instability of training. BAP also struggles with instability both PANTS and Amoeba. Fig. 8 and Fig. 16 offer a more
+when training the perturbation generator but is better than detailed view of this result by plotting the improvement of
+Amoeba. For PANTS, randomness is limited only stemming ASR as a MNC is under the iterative robustification process.
+from (i) PGD restarts used in MLP and RF [37]; and (ii) CPU clearly, ASR decreases more dramatically when samples are
+
+USENIX Association 34th USENIX Security Symposium 7301
+ Unprotected MLP Unprotected RF Unprotected TF Unprotected CNN
+ PANTS-robustified MLP PANTS-robustified RF PANTS-robustified TF PANTS-robustified CNN 80 60
+
+ Accuracy (%)
+ Amoeba-robustified MLP Amoeba-robustified RF Amoeba-robustified TF Amoeba-robustified CNN
+
+ ASR (%)
+ PGD-robustified MLP ZOO-robustified RF PGD-robustified TF PGD-robustified CNN
+ Adversarially-trained MLP Adversarially-trained TF Adversarially-trained CNN 70 40
+
+ 100 100 60 NetShare 20 NetShare
+ PANTS PANTS
+ 80 80 50 0
+ X1 X44 X59 X66 X1 X44 X59 X66
+ASR (%)
+
+ ASR (%)
+ 60 60 Number of samples Number of samples
+
+ 40 40 (a) Accuracy of RF (b) Vulnerability of RF
+ 100
+ 20 20 80
+
+ Accuracy (%)
+ 75
+
+ ASR (%)
+ 0 0 70
+ 0 20 40 60 80 0 20 40 60 80 50
+ Accuracy (%) Accuracy (%) NetShare
+ 60 NetShare
+ 25
+ PANTS PANTS
+ (a) Attacked by PANTS (b) Attacked by Amoeba 50 0
+ X1 X40 X60 X73 X1 X40 X60 X73
+ Number of samples Number of samples
+Figure 7: The accuracy and ASR for the vanilla and
+robustified models using different ways of robustification. (c) Accuracy of CNN (d) Vulnerability of CNN
+PANTS-robustified models are robust against both PANTS
+ Figure 9: Accuracy and ASR when training two APP
+and Amoeba without sacrificing model accuracy.
+ implementations with synthetic data generated by NetShare
+ 100
+ MLP
+ 30 MLP and adversarial data by PANTS. NetShare cannot improve
+ RF
+ 80 RF
+ TF
+ the robustness of MNCs. Similar results for the other two
+ TF 20
+ ASR (%)
+ ASR (%)
+
+ 60 CNN CNN implementations are reported in Fig. 14 in the Appendix.
+ 40
+ 10
+ 20
+ or BAP to find adversarial samples from the vanilla, PANTS,
+ 0 0
+ Vanilla S1 S2 S3 S4 S5 Vanilla S1 S2 S3 and Amoeba robustified models for the end-host threat model
+ (refer to Fig. 15 for the in-path threat model). These results
+ (a) Robustified for defending (b) Robustified for defending
+ show that PANTS-robustified models are generally robust
+ end-host attackers. in-path attackers.
+ against the attack from PANTS, Amoeba and BAP, while
+Figure 8: ASR calculated by PANTS while the MNC is Amoeba-robustified models are only robust against Amoeba.
+trained for the i-th time leveraging a dataset augmented with Table 2 shows the robustness improvement when robustified
+adversarial samples produced by PANTS. MNCs are getting by PANTS and Amoeba and evaluated with PANTS, Amoeba
+more robust against adversarial inputs over time. For the and BAP. PANTS-robustified models are 52.72% more robust
+results using Amoeba’s samples for augmentation, please on average than the vanilla ones while Amoeba-robustified
+refer to Fig. 16 in the Appendix. ones are only 21.76% more robust. PANTS-robustified
+ models outperform Amoeba-robustified by 142%.
+ We also compare PANTS’s ability to robustify MNCs
+generated by PANTS compared to Amoeba. with NetShare, which (similar to PANTS) generates synthetic data, albeit non-adversarial. Fig. 9 and Fig. 14 show
+Finding 3: PANTS improves the robustness tested MNCs APP’s accuracy and ASR for end-host threat model im-
+142% more than Amoeba and ~40X more than NetShare. plemented with PANTS when using the same amount of
+ data generated by PANTS and NetShare for robustification.
+ Attacked
+ PANTS-robustified models have slightly lower accuracy than
+ by PANTS Amoeba BAP NetShare-robustified ones. However, the accuracy of PANTS-
+ Robusified by robustified models is still high, meaning that they are accurate
+ PANTS 57.65% 49.98% 50.52% enough against common inputs and they are more robust
+ Amoeba 20.89% 36.89% 7.50% against adversarial perturbation than NetShare-robustified
+ ones. NetShare can hardly improve the models’ robustness.
+Table 2: Average robustness improvement. PANTSrobustified models are 142% more robust on average Finding 4: PANTS can improve the robustness of MNCs
+compared to Amoeba-robustified ones. even against threat models outside those used during
+ adversarial training.
+ After robustification, we use again PANTS, Amoeba and
+BAP to re-attack (spawn adversarial inputs for) the robustified We evaluate PANTS ability to robustify MNCs against
+models M ′ to re-evaluate models’ vulnerability. We train a more diverse set of attackers, including attackers that are
+ ′
+a new agent for Amoeba on Dtrain to fool each robustified strictly stronger than what was used during robustification. To
+ ′
+model M . Fig. 10 shows the ASR using PANTS, Amoeba, this end, we construct 16 attackers, shown in Fig. 11, which
+
+7302 34th USENIX Security Symposium USENIX Association
+ Unprotected (vanilla) Robustified by PANTS Robustified by Amoeba
+
+ 100
+ 75
+ 75
+ ASR (%)
+
+ ASR (%)
+
+ ASR (%)
+ 50
+ 50 50
+ 25 25
+
+ 0 0 0
+ MLP RF TF CNN MLP RF TF CNN MLP RF TF CNN
+
+ (a) APP Attacked by PANTS (b) VPN Attacked by PANTS (c) QOE Attacked by PANTS
+
+ 75 20 60
+ ASR (%)
+
+ ASR (%)
+
+ ASR (%)
+ 50 40
+ 10
+ 25 20
+
+ 0 0 0
+ MLP RF TF CNN MLP RF TF CNN MLP RF TF CNN
+
+ (d) APP Attacked by Amoeba (e) VPN Attacked by Amoeba (f) QOE Attacked by Amoeba
+ 20
+ 40 40
+ ASR (%)
+
+ ASR (%)
+ ASR (%)
+
+ 10
+ 20 20
+
+ 0 0 0
+ TF CNN TF CNN TF CNN
+
+ (g) APP Attacked by BAP (h) VPN Attacked by BAP (i) QOE Attacked by BAP
+
+Figure 10: ASR for the vanilla, PANTS-robustified and Amoeba-robustified models for the end-host threat model. PANTSrobustified’s ASR is the lowest. Similar results for in-path threat model are reported in Fig. 15 in the Appendix.
+
+vary on the attacker’s access to the model and their capabil- While PANTS-robustified models demonstrate considerities. The notation w(b) refers to the white-box(black-box) able robustness improvement against PANTS, Amoeba and
+attacker, while the (α, β, γ, δ) represents an attacker who can BAP (as discussed in Findings 3 and 4), we do not claim that
+delay packets with at most α%, append payload for at most PANTS-robustified models are robust against any possible
+β% packets, inject at most γ packets, and split at most δ% attacks. First, the ASR for PANTS-robustified models doesn’t
+packets.3 Fig. 11 reports the ASR for MLP and CNN for drop to 0, meaning that these attack methods can still find
+the application APP before and after each model has been adversarial samples against the robustified models, albeit less.
+robustified by PANTS. Observe that all models are robusti- Second, PANTS assessment is empirical and does not provide
+fied against the end-host attackers described in §5.1 (i.e., a theoretical guarantees that the robustified models are robust
+(20, 20, 20, 0) attacker), meaning that many of the attackers against the full spectrum of perturbation.
+tested are stronger. Importantly, PANTS is able to improve
+the robustness of these models even against strictly stronger
+ Finding 5: PANTS is practical and efficient to use, generatattackers. For instance, PANTS-robustified MLP is 72% more
+ ing ~1.7 samples/sec, which is 8X faster than Amoeba.
+robust than the vanilla version against an attacker that can
+delay, inject and append twice the amount of the attacker used Thanks to PANTS optimizations for improving the scalafor robustification and can also split packets. This happens be- bility of the SMT solver, including chunking, parallelization,
+cause during adversarial training, even assuming a weaker or and capability approximations as discussed in §4.4, PANTS
+different adversary, the model is guided away from non-robust is both practical and efficient. Fig. 12 shows the generation
+features (i.e., features that are not strongly correlated with speed for PANTS and Amoeba under our two threat models
+the output but rather coincidental or dataset-specific) towards and all applications and implementations. PANTS generates
+meaningful and resilient features which encapsulate genuine ~1.7 samples/sec, that is 8X faster than Ameoba which genersemantics [28]. ates ~0.2 samples/sec. We acknowledge that this comparison
+ 3 For each packet, we only allow to split at most once to prevent a packet is nuanced, as (unlike PANTS) Amoeba requires training a
+split into too many small fragments. model prior to generating adversarial samples. To ensure fair-
+
+USENIX Association 34th USENIX Security Symposium 7303
+ 4
+
+ generation speed
+ before PANTS
+ MLP CNN
+
+ (samples/sec)
+ after Amoeba
+
+ w(20, 20, 20, 0) 2
+ w(40, 40, 40, 0)
+ w(39, 6, 8, 0)
+ 0
+ w(28, 19, 36, 0)
+ MLP RF TF CNN
+ w(34, 38, 19, 0)
+ w(28, 25, 0, 0) (a) End-host attacker
+ w(40, 40, 40, 40)
+
+ generation speed
+ PANTS
+
+ (samples/sec)
+ w(21, 5, 25, 15)
+ 4 Amoeba
+ w(16, 40, 19, 20)
+ b(20, 20, 20, 0)
+ 2
+ b(40, 40, 40, 0)
+ b(1, 25, 30, 0) 0
+ b(24, 22, 19, 0) MLP RF TF CNN
+ b(30, 6, 18, 0)
+ (b) In-path attacker
+ b(3, 6, 12, 0)
+ b(40, 40, 40, 40)
+ Figure 12: The generation speed for PANTS and Amoeba
+ b(4, 23, 29, 24)
+ under different ML models, threat models and applications.
+ b(20, 11, 1, 6)
+ PANTS is 8X faster than Ameoba when generating samples.
+ 0 50 0 100 100
+ ASR (%) MLP 36.34% 32.86% 74.2% 81.12%
+ 80
+ Generated against
+
+ Transferability (%)
+Figure 11: The ASR of two APP implementations for various
+threat models, before and after they were robustified by RF 36.52% 41.8% 66.5% 95.54%
+ 60
+PANTS against our end-host attacker (20,20,20,0). PANTS
+improves the robustness of MNCs against threat models TF 87.76% 99.8% 67.05% 91.96% 40
+that are different or even stronger than what was considered
+during robustification. 20
+ CNN 94.25% 100.0% 70.44% 93.08%
+
+ 0
+ CNN TF RF MLP
+ness, we report the amortized time, for generating adversarial Adversarial for
+examples for as many inputs as there are in each dataset and
+we run experiments in exactly the same machines (described Figure 13: Transferability results for end-host threat model
+in Appendix in §E). While the overall speed of PANTS clearly for the application APP using PANTS’ generated adversarial
+outperforms Amoeba, we observe that PANTS’s speed for samples. Most of the ASR are higher than 50%, indicating
+MLP and RF under the in-path threat model is relatively slow that the adversarial samples generated for one implementation
+(~0.3 samples/sec). This is because the in-path threat model, of an MNC are adversarial for others.
+together with complex feature engineering, introduces a more
+complex set of constraints and narrows the range of potential
+solutions. uate the transferability of the adversarial samples generated
+ ′
+ from MA to MB , we first construct the test set Xtest_A_B ⊆ Xtest
+Finding 6: Transferability provides an opportunity to that both MA and MB can correctly classify. Then we use
+robustify a MNC without white-box access. PANTS to generate adversarial samples for Xtest_A_B′ using
+ MA and evaluate its adversariness against MB . Fig. 13 shows
+ There are use cases in which a network operator will not
+ the transferability result between MLP, RF, TF and CNN for
+have access to the MNC, e.g., because the MNC is designed
+ end-host threat model tested for the application APP. Most of
+by a third party and its details are secret. While this is not our
+ the ASR (outside the diagonal) is above 50%, showing that
+target setting, thanks to the transferability of adversarial sam-
+ PANTS can be useful even without full access to the MNC
+ples PANTS might be able to help the network operator e.g.,
+ implementation. To benefit from it, the operator would need
+by providing examples in which the target MNC misclassified.
+ to train a proxy model and find adversarial samples against it
+ Transferability is the fraction of adversarial samples,
+ using PANTS. According to Fig. 13, the adversarial samples
+crafted for one implementation of a MNC, that successfully
+ against the proxy model are likely to be adversarial against
+deceive another implementation. Concretely, suppose we evalthe target one.
+
+7304 34th USENIX Security Symposium USENIX Association
+6 Conclusion References
+This paper presents PANTS, a practical framework to help [1] Adversarial-robustness-toolbox for scikit-learn randomnetwork operators evaluate and enhance the robustness forestclassifier. https://github.com/Trusted-AI/
+of ML-powered networking classifiers. PANTS combines adversarial-robustness-toolbox/blob/main/n
+canonical AML methods, such as PGD, with an SMT solver otebooks/classifier_scikitlearn_RandomFore
+to generate adversarial, realizable, and semantic-preserving stClassifier.ipynb.
+packet sequences with a high success rate. Our comprehensive
+evaluation in three MNCs across multiple implementations [2] Adversarial-robustness-toolbox for xgboost.
+shows that PANTS outperforms baselines in generating https://github.com/Trusted- AI/advers
+adversarial samples by 70% and 2X in ASR. Importantly, arial-robustness-toolbox/blob/main/noteboo
+by integrating PANTS in an iterative adversarial training ks/classifier_xgboost.ipynb.
+pipeline, we find that PANTS can robustify MNCs against
+various attack methodologies by 52.72% on average. [3] azure. https://azure.microsoft.com/.
+
+ [4] The caida ucsd anonymized internet traces.
+ https://www.caida.org/catalog/datasets
+Acknowledgement /passive_dataset. Accessed: 2022-01-30.
+
+We thank the anonymous reviewers for their informative and [5] Harnessing data and ai for business value.
+insightful feedback. This work was supported by the National https://about.att.com/innovationblog/2
+Science Foundation (NSF) through Grants CNS-2442625, 022/data-ai-part-1.html.
+CNS-2319442 and a Princeton NextG Innovation Award. [6] Mist ai and cloud. https://www.juniper.net/us/e
+ n/products/mist-ai.html.
+
+Ethics Considerations [7] scikit-learn. https://scikit-learn.org/stable/.
+
+ [8] Solution overview artificial intelligence/machine
+We evaluate PANTS and all baselines on public datasets avoid- learning for intent-based networking – primer.
+ing any privacy concerns. PANTS and other baselines are not https://www.cisco.com/c/en/us/solutions/co
+used to perturb live network traffic or an online system, thus llateral/enterprise-networks/digital-netwo
+avoiding ethical concerns. Our primary goal in proposing rk-architecture/nb-06-cisco-dna-ai-ml-pri
+PANTS is to assist network operators in evaluating and en- mer-cte-en.html.
+hancing the robustness of MNCs to defend against adversaries.
+ [9] Shahad Alahmed, Qutaiba Alasad, Maytham M.
+ Hammood, Jiann-Shiun Yuan, and Mohammed Alawad.
+ Mitigation of black-box attacks on intrusion detection
+Open Science systems-based ml. Computers, 11(7), 2022.
+
+ [10] Nagender Aneja, Sandhya Aneja, and Bharat Bhargava.
+We release all artifacts. Ai-enabled learning architecture using network traffic
+ First, we release all code and scripts from data process- traces over iot network: A comprehensive review.
+ing, MNC training and inference, and PANTS (SMT, AML, Wireless Communications and Mobile Computing,
+including integration with PGD and ZOO) via both Zenodo 2023:8658278, Feb 2023.
+(https://zenodo.org/records/14728507) and GitHub
+(https://github.com/jinminhao/PANTS). In terms of [11] Theophilus Benson, Aditya Akella, and David A Maltz.
+secondary artifacts, we share all parameters and configura- Network traffic characteristics of data centers in the wild.
+tions used for MNC training and PANTS. We also release the In Proceedings of the 10th ACM SIGCOMM conference
+trained MNC models, including both vanilla and robustified on Internet measurement, pages 267–280, 2010.
+versions.
+ [12] Nicholas Carlini and David Wagner. Towards evalu-
+ Furthermore, we provide adversarial samples generated
+ ating the robustness of neural networks. In 2017 ieee
+by PANTS for each application and model as references. Any
+ symposium on security and privacy (sp), pages 39–57.
+artifacts related to the model and data are shared via Zenodo.
+ Ieee, 2017.
+ We already use public datasets to ensure reproducibility,
+and the references to these datasets are provided in the paper. [13] Giovanna Carofiglio, Giulio Grassi, Enrico Loparco,
+That said, we also release the dataset after pre-preprocessing. Luca Muscariello, Michele Papalini, and Jacques
+
+USENIX Association 34th USENIX Security Symposium 7305
+ Samain. Characterizing the relationship between Proceedings of the 18th ACM Workshop on Hot Topics
+ application qoe and network qos for real-time services. in Networks, HotNets ’19, page 85–92, New York, NY,
+ In Proceedings of the ACM SIGCOMM 2021 Workshop USA, 2019. Association for Computing Machinery.
+ on Network-Application Integration, NAI’21, page
+ 20–25, New York, NY, USA, 2021. Association for [23] Ian J Goodfellow, Jonathon Shlens, and Christian
+ Computing Machinery. Szegedy. Explaining and harnessing adversarial
+ examples. arXiv preprint arXiv:1412.6572, 2014.
+[14] Pin-Yu Chen, Huan Zhang, Yash Sharma, Jinfeng Yi,
+ and Cho-Jui Hsieh. Zoo: Zeroth order optimization [24] Ian J Goodfellow, Jonathon Shlens, and Christian
+ based black-box attacks to deep neural networks Szegedy. Explaining and harnessing adversarial
+ without training substitute models. In Proceedings of examples. arXiv preprint arXiv:1412.6572, 2014.
+ the 10th ACM workshop on artificial intelligence and
+ [25] Julia Grabinski, Paul Gavrikov, Janis Keuper, and
+ security, pages 15–26, 2017.
+ Margret Keuper. Robust models are less over-confident.
+[15] Jacob Devlin. Bert: Pre-training of deep bidirectional Advances in Neural Information Processing Systems,
+ transformers for language understanding. arXiv preprint 35:39059–39075, 2022.
+ arXiv:1810.04805, 2018.
+ [26] Yuqiang Heng, Vikram Chandrasekhar, and Jeffrey G.
+[16] Edsger Wybe Dijkstra. A Discipline of Programming. Andrews. Utmobilenettraffic2021: A labeled public
+ Prentice Hall PTR, USA, 1st edition, 1997. network traffic dataset. IEEE Networking Letters,
+ 3(3):156–160, 2021.
+[17] Rohan Doshi, Noah Apthorpe, and Nick Feamster.
+ Machine learning ddos detection for consumer internet [27] Md. Faisal Murad Hossain, Mahasweta Sarkar, and
+ of things devices. In 2018 IEEE Security and Privacy Syed Hassan Ahmed. Quality of experience for video
+ Workshops (SPW), pages 29–35, 2018. streaming: A contemporary survey. In 2017 13th
+ International Wireless Communications and Mobile
+[18] Gerard Draper-Gil, Arash Habibi Lashkari, Moham- Computing Conference (IWCMC), pages 80–84, 2017.
+ mad Saiful Islam Mamun, and Ali A. Ghorbani.
+ Characterization of encrypted and vpn traffic us- [28] Andrew Ilyas, Shibani Santurkar, Dimitris Tsipras,
+ ing time-related features. In Proceedings of the Logan Engstrom, Brandon Tran, and Aleksander Madry.
+ 2nd International Conference on Information Sys- Adversarial examples are not bugs, they are features.
+ tems Security and Privacy, pages 407–414, 2016. Advances in neural information processing systems, 32,
+ https://doi.org/10.5220/0005740704070414. 2019.
+
+[19] Dmitry Duplyakin, Robert Ricci, Aleksander Maricq, [29] Junchen Jiang, Rajdeep Das, Ganesh Ananthanarayanan,
+ Gary Wong, Jonathon Duerig, Eric Eide, Leigh Stoller, Philip A Chou, Venkata Padmanabhan, Vyas Sekar,
+ Mike Hibler, David Johnson, Kirk Webb, Aditya Akella, Esbjorn Dominique, Marcin Goliszewski, Dalibor
+ Kuangching Wang, Glenn Ricart, Larry Landweber, Kukoleca, Renat Vafin, et al. Via: Improving internet
+ Chip Elliott, Michael Zink, Emmanuel Cecchet, telephony call quality using predictive relay selection.
+ Snigdhaswin Kar, and Prabodh Mishra. The design In Proceedings of the 2016 ACM SIGCOMM Conference,
+ and operation of CloudLab. In 2019 USENIX Annual pages 286–299. ACM, 2016.
+ Technical Conference (USENIX ATC 19), pages 1–14,
+ Renton, WA, July 2019. USENIX Association. [30] Junchen Jiang, Vyas Sekar, Henry Milner, Davis
+ Shepherd, Ion Stoica, and Hui Zhang. Cfa: A practical
+[20] Robert W Floyd. Assigning meanings to programs. In prediction system for video qoe optimization. In NSDI,
+ Program Verification: Fundamental Issues in Computer pages 137–150, 2016.
+ Science, pages 65–81. Springer, 1993.
+ [31] Xi Jiang, Shinan Liu, Aaron Gember-Jacobson, Ar-
+[21] Ping Gao, Guangsong Li, Yanan Shi, and Yang Wang. jun Nitin Bhagoji, Paul Schmitt, Francesco Bronzino,
+ Vpn traffic classification based on payload length and Nick Feamster. Netdiffusion: Network data augmensequence. In 2020 International Conference on tation through protocol-constrained traffic generation.
+ Networking and Network Applications (NaNA), pages Proc. ACM Meas. Anal. Comput. Syst., 8(1), feb 2024.
+ 241–247, 2020.
+ [32] Rakesh Kumar, Mayank Swarnkar, Gaurav Singal, and
+[22] Tomer Gilad, Nathan H. Jay, Michael Shnaiderman, Neeraj Kumar. Iot network traffic classification using
+ Brighten Godfrey, and Michael Schapira. Robustifying machine learning algorithms: An experimental analysis.
+ network protocols with adversarial examples. In IEEE Internet of Things Journal, 9(2):989–1008, 2022.
+
+7306 34th USENIX Security Symposium USENIX Association
+[33] Linyi Li, Tao Xie, and Bo Li. Sok: Certified robustness [43] Ali Parchekani, Salar Nouri, Vahid Shah-Mansouri,
+ for deep neural networks. In 2023 IEEE symposium and Seyed Pooya Shariatpanahi. Classification of
+ on security and privacy (SP), pages 1289–1310. IEEE, traffic using neural networks by rejecting: a novel
+ 2023. approach in classifying vpn traffic. arXiv preprint
+ arXiv:2001.03665, 2020.
+[34] Xinjie Lin, Gang Xiong, Gaopeng Gou, Zhen Li,
+ Junzheng Shi, and Jing Yu. Et-bert: A contextualized [44] Xiao Peng, Weiqing Huang, and Zhixin Shi. Addatagram representation with pre-training transformers versarial attack against dos intrusion detection: An
+ for encrypted traffic classification. In Proceedings of improved boundary-based method. In 2019 IEEE
+ the ACM Web Conference 2022, pages 633–642, 2022. 31st International Conference on Tools with Artificial
+ Intelligence (ICTAI), pages 1288–1295, 2019.
+[35] Haoyu Liu, Alec F. Diallo, and Paul Patras. Amoeba:
+ [45] Olga Poppe, Tayo Amuneke, Dalitso Banda, Aritra De,
+ Circumventing ml-supported network censorship via ad-
+ Ari Green, Manon Knoertzer, Ehi Nosakhare, Karthik
+ versarial reinforcement learning. In Proceedings of the
+ Rajendran, Deepak Shankargouda, Meina Wang,
+ 13th International Conference on emerging Networking
+ et al. Seagull: An infrastructure for load prediction
+ EXperiments and Technologies (CoNEXT), 2023.
+ and optimized resource allocation. arXiv preprint
+[36] Manuel Lopez-Martin, Belen Carro, Antonio Sanchez- arXiv:2009.12922, 2020.
+ Esguevillas, and Jaime Lloret. Network traffic classifier [46] Hadi Salman, Andrew Ilyas, Logan Engstrom, Ashish
+ with convolutional and recurrent neural networks for Kapoor, and Aleksander Madry. Do adversarially robust
+ internet of things. IEEE Access, 5:18042–18050, 2017. imagenet models transfer better? Advances in Neural
+ Information Processing Systems, 33:3533–3545, 2020.
+[37] Aleksander Madry, Aleksandar Makelov, Ludwig
+ Schmidt, Dimitris Tsipras, and Adrian Vladu. Towards [47] Rahul Anand Sharma, Ishan Sabane, Maria Apostolaki,
+ deep learning models resistant to adversarial attacks. Anthony Rowe, and Vyas Sekar. Lumen: a framework
+ arXiv preprint arXiv:1706.06083, 2017. for developing and evaluating ml-based iot network
+ anomaly detection. In Proceedings of the 18th Interna-
+[38] Yongwei Meng, Tao Qin, Haonian Wang, and Zhouguo tional Conference on emerging Networking EXperiments
+ Chen. Tpipd: A robust model for online vpn traffic and Technologies, pages 59–71, 2022.
+ classification. In 2022 IEEE International Conference
+ on Trust, Security and Privacy in Computing and [48] Taveesh Sharma, Tarun Mangla, Arpit Gupta, Junchen
+ Communications (TrustCom), pages 105–110, 2022. Jiang, and Nick Feamster. Estimating webrtc video
+ qoe metrics without using application headers. In
+[39] Andrew W. Moore and Denis Zuev. Internet traffic Proceedings of the 2023 ACM on Internet Measurement
+ classification using bayesian analysis techniques. SIG- Conference, pages 485–500, 2023.
+ METRICS Perform. Eval. Rev., 33(1):50–60, June 2005.
+ [49] Payap Sirinam, Mohsen Imani, Marc Juarez, and
+[40] Jay Nandy, Sudipan Saha, Wynne Hsu, Mong Li Lee, Matthew Wright. Deep fingerprinting: Undermining
+ and Xiao Xiang Zhu. Towards bridging the gap between website fingerprinting defenses with deep learning.
+ empirical and certified robustness against adversarial In Proceedings of the 2018 ACM SIGSAC conference
+ examples. arXiv preprint arXiv:2102.05096, 2021. on computer and communications security, pages
+ 1928–1943, 2018.
+[41] Milad Nasr, Alireza Bahramali, and Amir Houmansadr.
+ [50] Robin Sommer and Vern Paxson. Outside the closed
+ Defeating DNN-Based traffic analysis systems in
+ world: On using machine learning for network intrusion
+ Real-Time with blind adversarial perturbations. In 30th
+ detection. In 2010 IEEE Symposium on Security and
+ USENIX Security Symposium (USENIX Security 21),
+ Privacy, pages 305–316, 2010.
+ pages 2705–2722. USENIX Association, August 2021.
+ [51] Vincent Tjeng, Kai Xiao, and Russ Tedrake. Evaluating
+[42] Ashkan Nikravesh, David Ke Hong, Qi Alfred Chen, robustness of neural networks with mixed integer
+ Harsha V. Madhyastha, and Z. Morley Mao. Qoe programming. arXiv preprint arXiv:1711.07356, 2017.
+ inference without application control. In Proceedings
+ of the 2016 Workshop on QoE-Based Analysis and [52] Petr Velan, Milan Cermák, Pavel Čeleda, and Martin
+ Management of Data Communication Networks, Drašar. A survey of methods for encrypted traffic
+ Internet-QoE ’16, page 19–24, New York, NY, USA, classification and analysis. International Journal of
+ 2016. Association for Computing Machinery. Network Management, 25:355 – 374, 2015.
+
+USENIX Association 34th USENIX Security Symposium 7307
+[53] Kai Wang, Zhiliang Wang, Dongqi Han, Wenqi Chen, A Robustification via synthetic data augmen-
+ Jiahai Yang, Xingang Shi, and Xia Yin. Bars: Local tation
+ robustness certification for deep learning based traffic
+ analysis systems.
+ 80
+
+ Accuracy (%)
+ 75
+[54] Pan Wang, Xuejiao Chen, Feng Ye, and Zhixin Sun.
+
+ ASR (%)
+ 70 NetShare
+ 50
+ A survey of techniques for mobile service encrypted NetShare
+ PANTS
+ 60 25
+ traffic classification using deep learning. IEEE Access, PANTS
+ 7:54024–54033, 2019. 50 0
+ X1 X44 X59 X66 X1 X44 X59 X66
+ Number of samples Number of samples
+
+[55] Shiqi Wang, Huan Zhang, Kaidi Xu, Xue Lin, Suman (a) Accuracy of MLP (b) Vulnerability of MLP
+ Jana, Cho-Jui Hsieh, and J Zico Kolter. Beta-crown: 80 100
+
+ Accuracy (%)
+ Efficient bound propagation with per-neuron split
+
+ ASR (%)
+ 70
+ constraints for neural network robustness verification. 50
+ 60 NetShare NetShare
+ Advances in Neural Information Processing Systems, PANTS PANTS
+ 34:29909–29921, 2021. 50
+ X1 X44 X81 X116 X147 X168
+ 0
+ X1 X44 X81 X116 X147 X168
+ Number of samples Number of samples
+
+[56] Yulong Wang, Tong Sun, Shenghong Li, Xin Yuan, Wei (c) Accuracy of TF (d) Vulnerability of TF
+ Ni, Ekram Hossain, and H Vincent Poor. Adversarial
+ attacks and defenses in machine learning-empowered Figure 14: Model (MLP and TF) accuracy and ASR when
+ communication systems and networks: A contemporary using synthetic data by NetShare and adversarial samples by
+ survey. IEEE Communications Surveys & Tutorials, PANTS for robustification.
+ 2023.
+ Fig. 14 shows the accuracy and vulnerability of MLP and
+[57] Eric Wong, Leslie Rice, and J Zico Kolter. Fast is better
+ transformer when robustifying using synthetic data generated
+ than free: Revisiting adversarial training. arXiv preprint
+ by NetShare.
+ arXiv:2001.03994, 2020.
+
+[58] Kaidi Xu, Zhouxing Shi, Huan Zhang, Yihan Wang, B Features used in different applications
+ Kai-Wei Chang, Minlie Huang, Bhavya Kailkhura,
+ Xue Lin, and Cho-Jui Hsieh. Automatic perturbation Different features are extracted from the feature engineering
+ analysis for scalable certified robustness and beyond. module among applications. Table 3 presents a summary
+ Advances in Neural Information Processing Systems, of the features employed for each dataset. The selection of
+ 33:1129–1141, 2020. features is following the corresponding paper or the given
+ script from the released dataset.
+[59] Suying Yan, Yuchun Guo, Yishuai Chen, Feng Xie,
+ Chenguang Yu, and Y. Liu. Enabling qoe learning
+ and prediction of webrtc video communication in wifi C Hyperparemeters of ML models
+ networks. 2015.
+ To simplify the application setup, for each kind of ML
+[60] Greg Yang, Tony Duan, J Edward Hu, Hadi Salman, classifier, we use the same architecture and hyperparameters
+ Ilya Razenshteyn, and Jerry Li. Randomized smoothing for all the applications. The MLP is set with 4 hidden
+ of all shapes and sizes. In International Conference on layers with 200 neurons each. It is trained with 500 epochs,
+ Machine Learning, pages 10693–10705. PMLR, 2020. and the optimizer is SGD. Since VPN detection is binary
+ classification, a sigmoid function is used as the last activation
+[61] Zhiyuan Yao, Yoann Desmouceaux, Mark Townsley, layer, and the loss function is defined as binary cross entropy.
+ and Thomas Heide Clausen. Towards intelligent load Other applications are multi-class classification, hence we are
+ balancing in data centers. CoRR, abs/2110.15788, 2021. using softmax function and the loss function is cross entropy.
+ RF is implemented by Scikit-learn [7]. The maximum depth
+[62] Yucheng Yin, Zinan Lin, Minhao Jin, Giulia Fanti, and of trees is set as 12 and other parameters are set as default.
+ Vyas Sekar. Practical gan-based synthetic ip header The TF is borrowed from the idea of BERT [15]. It has 4
+ trace generation using netshare. In Proceedings of the attention heads, 2 hidden layers and the intermediate size is
+ ACM SIGCOMM 2022 Conference, SIGCOMM ’22, 256. The CNN is derived from DF [49] which is previously
+ page 458–472, New York, NY, USA, 2022. Association designed for website fingerprinting. It has four sequential
+ for Computing Machinery. blocks where each includes two convolution layers and one
+
+7308 34th USENIX Security Symposium USENIX Association
+ Application Features
+ {sum, min, max, mean} of {bi-directional, forward, backward} flow interarrival times
+ VPN Detection (VPN) {min, max, mean, std} of {active, idle} durations
+ Number of {packets, bytes} per second
+ {sum, min, max, mean, std} of {forward, backward} flow interarrival times
+ Application
+ {sum, min, max, mean, std} of packet length of the {forward, backward} flow
+ Identification (APP)
+ Number of total {forward, backward} packets
+ {min, max, mean, median, std} of {packet length, interarrival times}
+ VCAs QoE
+ Number of {bytes, packets}
+ Inference (QOE)
+ Number of {unique packet length, microbursts}
+
+Table 3: Description of the used dataset and features extracted by the feature engineering module for each application. An active
+duration is defined as the amount of time that flow is active before going to idle. An idle duration is defined vice versa [18].
+A flow is active when the interarrival times are less than a threshold (0.1s in our case).
+
+max pooling layer, followed by three fully-connected layers. Cloudlab machines [19]. Each machine has two Intel Xeon
+For both TF and CNN, only the first 400 packets for each Silver 4114 10-core CPUs at 2.20 GHz and 192GB ECC
+packet sequence are encoded into the input. Packet sequences DDR4-2666 memory. The rest of the experiments related
+whose length are less than 400 will be padded with 0 for input to Amoeba rely on GPU training, which is running on two
+format consistency. Both of them are trained with 200 epochs. Azure machines [3]. Each one uses 16 vCPUs from AMD
+ EPYC 7V12(Rome) CPU, 110GB memory, and an Nvidia
+ Tesla T4 GPU with 16 GB GPU memory. Please note that the
+D Capability extension of Amoeba
+ training and inference of Amoeba is on the CPU machines
+For a fair comparison, we extend Amoeba’s capability to com- (same as PANTS) when comparing the computation overhead
+ply with the two evaluated threat models. First, we identify with PANTS.
+perturbable packets. Since the attacker’s capability can only
+perturb a single direction of packets instead of bi-direction, we F Robustness of the PANTS- and Amoebamodify the action function to work on either forward or back- robustified models
+ward packets. Then, we extend the action space of Amoeba to
+support more perturbations. The original action space has two Fig. 15 shows the robustness of using PANTS, Amoeba
+features, representing the delay and the modified packet length and BAP to attack PANTS- and Amoeba-robustified models
+of the given packet. We extend it by adding an integer to repre- under the in-path threat model.
+sent the number of injected packets after this packet. When the
+threat model assumes an end-host attacker, this newly added
+feature executes after each packet. We find that most of the
+adversarial samples generated by Amoeba are in conflict with
+the semantics constraints such as constraint of accumulative
+delay and maximum number of injected packets. We just add
+a hard budget to force the agent not to break this constraints.
+We found that this would help to improve Amoeba’s ASR
+compared to simply dropping all the adversarial sequences
+which break these flow-wise constraints. Further, for the applications that require multi-class classification, we modify the
+reward function. Amoeba’s original reward function only considers binary classification. Therefore, when targeting multiclass classification, we changed the reward function to crossentropy. The agent can get a large reward when perturbing
+the original sample to cause misclassification.
+
+E Testbed specification
+For consistent evaluation, all the experiments using PANTS
+to generate adversarial samples are running on the cluster of
+
+USENIX Association 34th USENIX Security Symposium 7309
+ Unprotected (vanilla) Robustified by PANTS Robustified by Amoeba
+
+ 30 20 60
+ ASR (%)
+
+ ASR (%)
+
+ ASR (%)
+ 20 40
+ 10
+ 10 20
+
+ 0 0 0
+ MLP RF TF CNN MLP RF TF CNN MLP RF TF CNN
+
+ (a) APP Attacked by PANTS (b) VPN Attacked by PANTS (c) QOE Attacked by PANTS
+ 30
+ 10
+ 1.0
+ ASR (%)
+
+ ASR (%)
+
+ ASR (%)
+ 20
+ 5 0.5
+ 10
+
+ 0 0 0.0
+ MLP RF TF CNN MLP RF TF CNN MLP RF TF CNN
+
+ (d) APP Attacked by Amoeba (e) VPN Attacked by Amoeba (f) QOE Attacked by Amoeba
+
+ 6 2 4
+ ASR (%)
+
+ ASR (%)
+
+ ASR (%)
+ 4
+ 1 2
+ 2
+
+ 0 0 0
+ TF CNN TF CNN TF CNN
+
+ (g) APP Attacked by BAP (h) VPN Attacked by BAP (i) QOE Attacked by BAP
+
+Figure 15: ASR for the vanilla, PANTS-robustified and Amoeba-robustified models for the in-path threat model. Similar to the
+observations in fig. 10, PANTS-robustified’s ASR is lower, demonstrating PANTS’s ability to generate adversarial samples that
+effectively robustify target models. For the dataset QOE, using Amoeba for robustification is skipped since it cannot effectively
+generate enough adversarial samples.
+
+ 80 30
+
+ 60 MLP
+ 20
+ ASR (%)
+
+ ASR (%)
+
+ RF
+ 40 TF MLP
+ CNN 10 RF
+ 20 TF
+ CNN
+ 0 0
+ Vanilla S1 S2 S3 S4 S5 Vanilla S1 S2 S3
+
+ (a) Robustified for defending (b) Robustified for defending
+ end-host attackers in-path attackers
+
+Figure 16: ASR by using Amoeba to attack the ML model
+when it is in iterative Amoeba-robustification process.
+
+7310 34th USENIX Security Symposium USENIX Association

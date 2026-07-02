@@ -1,0 +1,3222 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [677] Extended Traffic Interaction Graph:An Efficient Framework for Malicious Encrypted Web Traffic Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：677
+题名：Extended Traffic Interaction Graph:An Efficient Framework for Malicious Encrypted Web Traffic Detection
+年份：2026
+DOI：10.2139/ssrn.6544057
+来源：未识别
+PDF：paper/10.2139_ssrn.6544057.pdf
+已有粗分类：图学习、知识图谱与威胁情报
+二级关联：恶意流量、暗网与攻击检测
+相关性：强相关，分数 14
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\677.txt
+- 原始字符数：85721
+- 本次发送字符数：85721
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+ev
+iew
+ed
+
+Graphical Abstract
+Extended Traffic Interaction Graph: An Efficient Framework for Malicious Encrypted Web Traffic
+Detection
+Wenhao Li, Weidong Zhou, Yuan Zhao, Tianbo Wang, Ying Li, Jian Jiao
+Burst Feature Extractor
+
+Traffic Preprocessor
+
+-65
+wireshark
+
+Burst1
+
+-98
+
+XTIG Construction
+
+Flow Feature
+Sequence
+
+TCPdump
+
+78
+
+78
+
+-65
+
+-65
+
+Kitsune
+NFstream
+Raw Traffic
+
+time out
+Threshold
+Parameter
+Configuration file
+
+51
+
+78
+
+457
+
+457
+
+Burst1
+
+Feature Extract
+
+Flow
+Sequence
+
+51
+
+213
+
+Burst2
+
+Direction
+Length
+
+Time
+Interval
+Transmission
+Freq
+
+Direction
+Switch Freq
+Duration
+
+Burst Interaction
+Feature Extraction
+
+GraphSAGE
+
+a packet
+
+Burst1
+
+213
+
+Burst2
+
+Cross-burst Dependency
+Connection
+
+SQLi
+XSS
+Commend inject
+...
+
+a burst
+
+Pr
+
+ep
+
+rin
+t
+
+no
+
+tp
+ee
+rr
+
+a flow
+
+457
+
+51
+
+-98
+
+-98
+
+213
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+ev
+iew
+ed
+
+Extended Traffic Interaction Graph: An Efficient Framework for
+Malicious Encrypted Web Traffic Detection
+Wenhao Lia , Weidong Zhoub , Yuan Zhaoc , Tianbo Wangd , Ying Lie and Jian Jiaoa,∗
+a School of Computer Science, Beijing Information Science and Technology University, Beijing, 102206, China
+
+b Beijing Key Laboratory of Satellite Network Application Technology, China Satellite Network Application Co., Ltd., Beijing, 100160, China
+c Beijing Key Laboratory of Network Technology, Beihang University, Beijing, 100191, China
+d School of Cyber Science and Technology, Beihang University, Beijing, 100191, China
+e Shenzhen Enrigin Technology Co., Ltd., Shenzhen, China
+
+ABSTRACT
+
+Keywords:
+Malicious encrypted traffic detection
+Extended traffic interaction graph
+Burst features
+GraphSAGE
+
+Detecting malicious encrypted Web traffic through communication behavior modeling has become a
+mainstream research paradigm. A burst is defined as a sequence of packets transmitted consecutively
+in the same direction. Under encryption, bursts serve as the smallest behavioral units that still
+preserve interaction semantics. However, existing burst-based modeling methods remain limited.
+For behavior entity modeling, current approaches often ignore fine-grained features within bursts,
+such as temporal rhythms and sending frequencies. As a result, the intrinsic temporal characteristics
+of bursts cannot be effectively captured. For interaction modeling, existing methods assume that
+dependencies between bursts are only sequential and are conveyed through the start and end packets.
+This assumption limits the representation of multi-dimensional cross-burst dependencies. To address
+these problems, we propose a Web malicious encrypted traffic detection framework based on
+an EXtended Traffic Interaction Graph (XTIG). First, temporal statistical features including burst
+duration, sending frequency, and inter-packet intervals are integrated to enhance the discriminability of
+behavioral entities. Second, a cross-burst fully connected structure is introduced to strengthen packetlevel associations between adjacent bursts. In addition, a lightweight anomaly filtering mechanism is
+adopted to reduce computational overhead. GraphSAGE is employed to perform multi-class encrypted
+Web attack detection, as it aligns well with the structural characteristics of XTIG. Experimental
+results show that the proposed framework outperforms existing baselines, achieving an average multiclass accuracy improvement of approximately 3.75%. Moreover, the framework demonstrates efficient
+detection performance in real high-throughput network environments.
+
+tp
+ee
+rr
+
+ARTICLE INFO
+
+1. Introduction
+
+Pr
+
+ep
+
+rin
+t
+
+no
+
+Web malicious encrypted traffic has become the primary
+vehicle for cyber-attack activities. From October 2023 to
+September 2024, a total of 32.1 billion encrypted threat
+incidents were intercepted, representing a year-over-year
+increase of 10.3%. Among these, cross-site scripting (XSS)
+attacks surged by 110.2%. Web exploit activities increased
+by 35%, with a staggering 87.2% of attacks executed through
+encrypted channels (Zscaler ThreatLabz, 2023). This trend
+has amplified the scale, stealth, and complexity of Web
+attacks, placing heightened demands on existing security
+detection and analysis technologies.
+The core challenge of encrypted Web attacks lies in
+the invisibility of their payload content, rendering detection methods reliant on plaintext semantic parsing difficult
+to apply directly. In recent years, deep learning-based encrypted traffic detection methods have emerged as a research
+hotspot (Zhu et al., 2024; He et al., 2023). These approaches
+typically model traffic behavior to detect encrypted Web
+traffic. However, from the perspective of attack behavior representation, existing methods still exhibit two shortcomings:
+∗ Corresponding author
+
+2023020629@bistu.edu.cn (W. Li); zhouwd@buaa.edu.cn (W. Zhou);
+zhaoyuan_@buaa.edu.cn (Y. Zhao); wangtb@buaa.edu.cn (T. Wang);
+vivian.li@enrigin.com.cn (Y. Li); jiaojian@bistu.edu.cn (J. Jiao)
+ORCID (s): 0000-0003-3546-1045 (J. Jiao)
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+On one hand, modeling traffic behavior entities as packetlevel or flow-level bursts loses the key temporal information
+during the attack process to some extent, making it difficult
+to fully characterize the dynamic features of Web attacks. On
+the other hand, the modeling of interactions between traffic
+entities remains relatively limited, making it difficult to
+effectively capture the complex dependencies within multistage Web attack processes.
+In terms of behavioral entity modeling, existing studies
+abstract network traffic at different granularities, including
+individual packets (Anyfantis et al., 2025), time windows(Li
+et al., 2025) and bursts (Wang et al., 2025). Single-packetbased approaches preserve low-level information in its entirety; however, their excessive granularity hinders the formation of stable and discriminative high-level behavioral
+representations. Time-window-based approaches partition
+network traffic into fixed temporal intervals, yielding a regular entity structure; nevertheless, these partitions often fail
+to align with the semantic units of real-world Web interactions. Burst-based approaches treat unidirectional packet
+sequences as behavioral entities, achieving a moderate level
+of hierarchy and granularity. A unidirectional packet sequence also preserves relatively complete interaction semantics. However, such approaches often overlook fine-grained
+behavioral characteristics within bursts, including temporal
+rhythms, local fluctuations, and packet transmission frequency patterns. As shown in the left panel of Figure 1,
+Page 1 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+ev
+iew
+ed
+
+and preserves the complete attack behavior chain within
+the graph structure. Based on the above enhancements,
+a more discriminative XTIG is constructed. It combines
+feature enhancement and structural enhancement within the
+traffic interaction graph, providing input representations that
+jointly capture structural information and behavioral features
+for subsequent graph neural network–based classification
+models. Finally, we employ GraphSAGE, a model with
+inductive learning capabilities, to classify multi-category
+Web attacks with XTIG, achieving efficient detection.
+We summarize the main contributions of this paper as
+follows:
+• We propose WAD framework. It models traffic behavior using a traffic interaction graph that combines
+feature enhancement and structural enhancement, enabling efficient detection of multiple types of Web
+malicious encrypted traffic with good engineering efficiency.
+
+no
+
+tp
+ee
+rr
+
+unlike normal traffic exhibiting sparse arrival patterns, automated SQL injection attack traffic often displays pronounced
+high-frequency temporal bursts. This distinction offers clear
+differentiation from normal user behavior traffic, yet existing
+methods have not sufficiently modeled or leveraged this
+characteristic (Shi et al., 2025; Chen et al., 2025).
+In terms of entity interaction modeling, literature (Liu
+et al., 2024) models interactions between behavioral entities
+using sequential edges or linear connections. This design
+only captures the temporal order between adjacent entities. It cannot represent richer relationships, such as causal
+dependencies or protocol-level correlations. The studies in
+(Makinde, 2025; Bakhshi and Ghita, 2021) construct only
+local connections between adjacent traffic bursts. For example, they link the start and end nodes of consecutive bursts or
+adopt sparse graph structures to describe burst interactions.
+Such modeling strategies easily overlook latent correlations
+among non-adjacent bursts. The methods in (Seok and Sohn,
+2024; Huoh et al., 2023; Sufrianto et al., 2022) attempt to
+expand graph structures by introducing mechanisms such as
+global attention. However, these approaches are still constrained by assumptions of local connectivity or limitations
+on sequence length. As a result, they fail to fully capture
+cross-stage interaction dependencies that are common in
+encrypted Web attacks (Wang et al., 2017).
+As illustrated on the right side of Figure 1, in a crossburst command injection scenario, an attacker injects a malicious payload disguised as a benign command parameter
+in Burst 1 during the request phase. This allows the attack to
+bypass server-side security checks. In Burst 2, the server returns sensitive environment variables or the execution results
+of the injected command. Currently, an increasing number
+of Web attacks deliberately distribute data injection and
+data exfiltration across different time periods and interaction
+rounds. Relying only on burst boundary associations or
+analyzing the context within a single burst makes it difficult
+to identify such latent cross-burst correlations. Based on
+the above analysis, this paper aims to address the following
+challenges:
+
+rin
+t
+
+• How to characterize packet-level temporal relationships?
+• How to construct relationships between cross-burst
+packets?
+
+Pr
+
+ep
+
+In order to address the aforementioned problems, we propose a Web MAlicious Encrypted Traffic Detection Framework (WAD) based on XTIG. In behavioral entity modeling, we introduce temporal features, including timestamps,
+burst duration, local transmission frequency, and direction
+switching patterns, into the original traffic interaction graph
+node representation. These features enable a more comprehensive characterization of the internal temporal rhythm
+and frequency variations within each burst. In interaction
+modeling, we introduce a fully connected structure across
+bursts to address the difficulty of existing methods in modeling cross-burst dependencies. This design explicitly captures long-range dependencies in multi-stage Web attacks
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+• We introduce an extended traffic interaction graph. It
+models bursts as traffic behavioral entities and represents each burst by integrating multi-dimensional temporal features. It introduces a fully connected entity
+interaction construction strategy to model cross-burst
+dependencies. These dual enhancements significantly
+improve the temporal and structural representation
+capabilities for Web malicious encrypted traffic.
+• We conduct experiments on four datasets to evaluate
+the performance of the WAD framework. The experimental results demonstrate that WAD achieves clear
+advantages in detection performance compared with
+existing classical methods.
+
+2. WAD Framework
+The overall system framework workflow is illustrated
+in Figure 2, primarily comprising four core modules: traffic preprocessor, burst feature extractor, XTIG construction, and graph classification. These modules collaboratively
+form a layered processing mechanism, enabling efficient and
+stable classification of malicious traffic.
+Traffic Preprocessor: The framework first preprocesses
+raw network traffic by continuously monitoring network
+interfaces to capture packets in real time. Packets are aggregated based on quintuple information, forming an ordered
+flow sequence.
+Burst Feature Extractor: After obtaining the flow sequence, the framework divides each stream into bursts. This
+module segments continuous interactions into multiple burst
+fragments based on packet arrival times and directional
+changes. Within each burst, multidimensional statistical features are extracted using packets as the basic unit. These
+include direction, length, packet-to-packet time intervals,
+transmission frequency, and burst duration all temporal characteristics forming a burst-level feature sequence. This stage
+does not involve graph structure modeling and solely characterizes behavioral patterns within bursts.
+Page 2 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+Scene 1 Automated SQL
+Injection
+
+Scene 2 Command Injection
+
+Server
+
+Time
+Burst1
+P1
+
+P2
+
+Apart from the differences in
+direction and length, the features
+related to time intervals can also
+distinguish normal traffic from
+malicious traffic.
+
+Q1: How to characterize
+packet-level temporal
+relationships?
+
+Attack Traffic
+（scanning)
+
+PUT /uploads/avatar.jpg HTTP/1.1
+Host: victim-server.com ……
+<?php // IMAGE_HEADER_END
+$debug = true;
+$log = "/var/log/syslog";
+if ($debug) {
+echo "[IMG_PROC_INIT] Decoding stream...\n";
+system("cat /proc/self/environ | base64");
+echo "\n[IMG_PROC_DONE] Size: 24kb";
+} ?>
+
+ev
+iew
+ed
+
+Client
+
+Normal Traffic
+
+P3
+P4
+
+Burst2
+
+HOSTNAME=prod-api-node-01
+AWS_ACCESS_KEY_ID=AKIAITM2TZ6U5K5
+AWS_SECRET_ACCESS_KEY=r8n2jhf98h2……
+DB_PASSWORD=Sup3rS7cr3t!!!
+LANG=en_US.UTF-8
+
+P5
+
+...
+
+Q2: How to construct
+relationships between
+cross-burst packets?
+
+Time
+
+Figure 1: Challenges in Detecting Malicious Encrypted Web Traffic.
+Burst Feature Extractor
+-65
+wireshark
+
+TCPdump
+
+XTIG Construction
+
+tp
+ee
+rr
+
+Traffic Preprocessor
+
+Burst1
+
+-98
+
+Flow Feature
+Sequence
+
+78
+
+78
+-65
+
+-65
+
+Kitsune
+
+NFstream
+Raw Traffic
+
+time out
+Threshold
+
+51
+
+457
+
+51
+
+Direction
+Length
+
+Time
+Interval
+Transmission
+Freq
+
+457
+
+Burst1
+
+Direction
+Switch Freq
+Duration
+
+213
+Burst2
+
+Burst Interaction
+Feature Extraction
+
+a flow
+
+457
+
+51
+
+GraphSAGE
+
+-98
+
+-98
+
+213
+
+Feature Extract
+
+Flow
+Sequence
+
+Parameter
+Configuration file
+
+78
+
+a packet
+
+Burst1
+
+213
+Burst2
+
+Cross-burst Dependency
+Connection
+
+SQLi
+XSS
+Commend inject
+...
+
+a burst
+
+no
+
+Figure 2: The proposed WAD system framework comprises four main stages: traffic preprocessor, burst feature extractor, XTIG
+construction and graph classification. Raw traffic is first processed by NFstream into flow sequences; multidimensional burst
+interaction features are then extracted;Finally, the XTIG is constructed and fed into the GraphSAGE model to detect attack types
+such as SQL injection and XSS.
+
+Pr
+
+ep
+
+rin
+t
+
+XTIG Construction: After burst feature extraction, the
+system constructs the XTIG. This module preserves the
+temporal connection relationships between packets within
+bursts while introducing cross-burst node interaction modeling. It unifies multiple bursts from the same flow into a
+holistic graph structure. This construction method explicitly
+captures latent dependencies between bursts, preventing interaction semantics from being fragmented at burst boundaries. This enables a more comprehensive representation of
+encrypted Web traffic behavior patterns.
+Graph Classification: After XTIG construction, each
+suspicious flow is represented as a structured graph input.
+GraphSAGE is adopted as the graph classification model.
+Through neighborhood sampling and multi-layer feature
+aggregation, structural and behavioral information of nodes
+is progressively integrated to obtain a graph-level representation of packet interactions, which is then used to classify
+encrypted malicious Web traffic.
+
+2.1. Traffic Preprocessor
+As the data entry point for the WAD framework, the traffic preprocessing module transforms high-throughput raw
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+network data into structured stream-level sequences. This
+module integrates underlying traffic collection toolchains,
+directly attaching TCPdump and Wireshark to network interfaces to enable real-time capture and parsing of raw
+network traffic. Collected data is subsequently fed into the
+framework’s core NFStream flow reconstruction engine for
+processing.
+DFStream maintains a dynamic flow table based on the
+five-tuple (srcIP, dstIP, srcPort, dstPort, protocol). Through
+a state-tracking mechanism, packets belonging to the same
+session are aggregated into bidirectional flow sequences.
+This process hides the complexity caused by packet fragmentation at the data ingestion stage and produces semantically consistent flow-level representations.
+In order to adapt to dynamic network environments and
+improve flow segmentation accuracy, NFStream is centrally
+controlled by an external parameter configuration file, in
+which key parameters include the flow timeout threshold.
+To handle common scenarios such as long-lived connection reuse and abnormal interruptions, the system monitors the inter-arrival time of adjacent packets and applies a
+timeout-based truncation mechanism to terminate inactive
+Page 3 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+Client
+
+78 457 213
+
+51
+
+Figure 3: Client-Server Interaction Behavior.
+
+flows in a timely manner. In addition, a head–tail packet
+detection strategy is introduced to further constrain flow
+boundaries. This ensures that the resulting flow sequences
+are structurally complete and semantically consistent, providing high-quality input for subsequent feature extraction
+and modeling.
+
+tp
+ee
+rr
+
+2.2. Burst Feature Extractor
+
+2.2.2. Multidimensional Temporal Features
+Although Web encryption technology effectively obscures the content of data payloads, the interaction patterns
+and temporal sequences during communication cannot be
+completely concealed. Statistical characteristics at the transport layer and below still reveal the interaction logic between
+communicating parties. Through in-depth analysis of typical
+Web attack behaviors, this section identifies two distinct
+attack characteristics that remain highly distinguishable even
+in encrypted environments: micro-level burstiness in attack
+payload timing and macro-level asymmetry in multi-stage
+interactions. Building upon foundational burst characteristics, this section further introduces targeted timing and
+interaction enhancement features designed to capture subtle
+differences in attack traffic across varying granularities.
+(1)Timing burstiness and rhythmic differences of attack
+payloads.
+Automated Web attack tools (such as SQLMap, DirBuster, Wapiti, etc.) exhibit significant timing burstiness and
+machine-generated rhythmic patterns when performing vulnerability scanning or fuzz testing. This behavior stems from
+program logic constraints and the objective of maximizing
+efficiency. Existing research indicates that unlike the random
+reading pauses and relatively smooth traffic requests generated by normal users browsing pages, automated tools tend
+to concentrate high-density requests within short timeframes
+or exhibit strict periodic pulse characteristics (Thang et al.,
+2018).
+In order to address these characteristics, we introduce
+the following three statistical features to quantify microtemporal rhythms at the burst granularity level:
+Burst Duration: Let a burst 𝑏 consist of an ordered packet
+sequence 𝑏 = {𝑝1 , 𝑝2 , … , 𝑝𝑛𝑏 }, where each packet 𝑝𝑖 has a
+timestamp 𝑡𝑖 . The burst duration is defined as the difference
+between the timestamps of the first and last packets within
+the burst:
+
+ev
+iew
+ed
+
+-65 -98
+
+Server
+
+This module receives flow sequences from the traffic
+preprocessor module. It then converts them into a flow
+feature sequence composed of burst features. Each burst
+feature consists of two parts: a set of basic burst features and
+a set of temporal features.
+
+no
+
+2.2.1. Burst Basic Features
+Taking a typical client-server flow sequence as an example (as shown in Figure 3), the communication process can
+be fundamentally described through the length and direction
+characteristics of data packets. Specifically, the transmission
+direction of each packet is first defined and jointly incorporated with the packet length sequence to introduce directionaware features. As shown in Eq. 1, a flow consisting of 𝑁
+packets can be represented as 𝐹 = {𝑠𝑛 }, where each element
+𝑠𝑛 is defined as the product of the packet length 𝑙𝑛 and its
+corresponding direction coefficient 𝑑𝑖𝑟𝑛 , i.e., 𝑠𝑛 = 𝑙𝑛 ⋅ 𝑑𝑖𝑟𝑛 .
+
+rin
+t
+
+𝐹 = {𝑠𝑛 } = {𝑙𝑛 ⋅ 𝑑𝑖𝑟𝑛 }𝑁
+𝑛=1
+
+{
+−1, if uplink (client to server)
+𝑑𝑖𝑟𝑛 =
+1, if downlink (server to client)
+
+(1)
+
+(2)
+
+Pr
+
+ep
+
+Based on the aforementioned fundamental behavioral
+representations, the module segments burst sequences according to packet transmission direction and temporal continuity. A burst refers to a sequence of packets continuously
+transmitted by the same communication party within a short
+timeframe, maintaining consistent transmission direction.
+Since a burst corresponds to continuous interactions initiated
+by the same party, no uplink–downlink direction switching
+occurs within a burst. By using bursts as the basic interaction
+units, this partitioning strategy organizes the original linear
+packet sequence into a hierarchical behavioral representation, which is more suitable for characterizing interaction
+patterns at different stages of communication.
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+𝐷𝑏 = 𝑡𝑛𝑏 − 𝑡1
+
+(3)
+
+This feature effectively distinguishes brief automated probing behaviors from sustained normal resource loading.
+Observations from our self-constructed dataset show that
+scanning-type attacks rapidly traverse targets, resulting in
+significantly shorter burst durations than normal Web page
+access involving static resources (e.g., images, scripts).
+Transmission Frequency: Based on the burst duration, the
+transmission frequency is defined as the ratio of the number
+of packets in a burst to its duration:
+𝐹𝑏 =
+
+𝑛𝑏
+𝐷𝑏
+
+(4)
+
+where 𝑛𝑏 denotes the number of packets contained in burst 𝑏.
+This metric quantifies the traffic density per unit time. Experiments indicate that traversal attacks and high-frequency injection activities often exhibit abnormally high transmission
+frequencies. In contrast, normal users, due to pauses caused
+by human operation and page rendering, demonstrate relatively low and highly fluctuating transmission frequencies.
+Page 4 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+Δ𝑡𝑖 = 𝑡𝑖+1 − 𝑡𝑖 ,
+
+(5)
+
+𝑖 = 1, … , 𝑛𝑏 − 1
+
+The mean and variance of these intervals are computed as:
+𝜇𝑏 =
+
+𝑛𝑏 −1
+1 ∑
+Δ𝑡 ,
+𝑛𝑏 − 1 𝑖=1 𝑖
+
+𝜎𝑏2 =
+
+𝑛𝑏 −1
+1 ∑
+(Δ𝑡𝑖 − 𝜇𝑏 )2 (6)
+𝑛𝑏 − 1 𝑖=1
+
+51
+
+457
+
+-98
+
+Burst1
+
+213
+
+Burst2
+
+Figure 4: Structure of XTIG.
+
+2.3. XTIG Construction
+
+The construction of the XTIG mainly consists of two
+steps. First, burst interaction feature extraction models burst
+interactions as an interaction graph. Second, cross-burst interaction connections are added between intermediate packets of adjacent bursts to enrich cross-burst interaction relationships.
+
+2.3.1. Burst Interaction Feature Extraction
+In Web page loading scenarios, traffic exhibits pronounced segmentation and burst characteristics. Significant
+variations in traffic volume across different information
+types enable effective differentiation of traffic types based
+on statistical features and burst patterns. To more precisely
+characterize interactions within malicious encrypted traffic,
+this section constructs a graph structure representing interburst relationships based on the proposed burst features.
+Drawing inspiration from Shen’s work, the resulting graph
+is termed the Traffic Interaction Graph (TIG). TIG is a
+data representation method that transforms discrete network
+traffic sequences into topological graph structures. Within
+this structure, each packet in the data stream is typically
+abstracted as a graph node, with packet attributes such as size
+and direction mapped as node properties. Simultaneously,
+edges within the graph connect nodes that are temporally
+adjacent or logically associated. Through this modeling
+approach, TIG overcomes the linear constraints of traditional
+sequential data, explicitly preserving the interactive logic
+between packets during communication. This enables the
+capture of complex malicious attack patterns.
+
+Pr
+
+ep
+
+rin
+t
+
+no
+
+tp
+ee
+rr
+
+These statistics capture the inherent temporal fingerprints of
+automated tools. Prior studies (Thang et al., 2018) indicate
+that automated scripts typically adopt fixed execution logic
+or timeout retry mechanisms, leading to packet arrival intervals with low variance. In contrast, normal human-computer
+interaction traffic, influenced by network fluctuations and
+user randomness, exhibits significantly greater dispersion in
+its time interval distribution.
+(2)Asymmetry and Directional Shifts in Multi-Stage Interactions.
+Micro-level timing characteristics alone are insufficient
+to describe the complete attack process. Complex Web
+attacks often involve macro-level interaction logic. For
+instance, SQL blind injection and stored XSS attacks typically comprise multiple logically related interaction stages,
+exhibiting specific asymmetry and directional shift patterns between requests and responses. Taking SQL blind
+injection as an example, attackers infer database content
+through Boolean logic, leading to frequent small-requestsmall-response bidirectional switching that exhibits intense
+directional oscillation. In contrast, data exfiltration attacks
+manifest as sustained unidirectional transmission of small
+requests paired with large responses (Zhang and Paper,
+2019). These interaction pattern differences remain unaffected by encryption protocols and reliably reflect attack
+intent.
+In order to capture this macro-level interaction logic
+between bursts, we introduce a key interaction metric:
+Direction Switching Frequency: Defined as the total number of times packet transmission direction changes (from
+upstream to downstream or vice versa) within a stream
+interaction sequence, quantifying the intensity of “dialogue”
+between communicating parties. Research indicates direction change frequency is a key indicator for classifying
+encrypted traffic (Al-Naami et al., 2019). Control-based
+and injection-based attacks require frequent command interactions, exhibiting significantly higher direction switching
+frequencies than ordinary file downloads or streaming media
+playback. By incorporating this feature, the model effectively distinguishes complex interactive attacks from simple
+data transfer activities.
+Furthermore, to enhance overall system efficiency, we
+introduce a lightweight autoencoder cluster based on Kitsune at this stage for unsupervised anomaly screening of traffic, thereby reducing computational overhead in subsequent
+graph modeling and inference phases.
+
+78
+-65
+
+ev
+iew
+ed
+
+Time Interval Statistics: To capture fine-grained temporal
+patterns within a burst, the arrival interval between consecutive packets is defined as:
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+2.3.2. Cross-burst Dependency Connection
+In order to more concretely characterize interaction behaviors within malicious encrypted traffic, we constructs
+them into a graph structure representation. Through the form
+of nodes, edges, and the graph as a whole, the structural relationships within the traffic can be revealed more intuitively.
+This structure is referred to as the XTIG, and its basic form
+is illustrated in Figure. 4.
+Nodes: To better describe client–server interactions, we
+construct a graph using individual data packets as nodes.
+Each node not only contains packet size information but
+also records the transmission direction and timestamp. Extracting these details as node features facilitates a more
+comprehensive modeling of bidirectional communication—
+capturing data sequence structures, length variation trends,
+and temporal evolution relationships.
+Page 5 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+rin
+t
+
+no
+
+tp
+ee
+rr
+
+ev
+iew
+ed
+
+Algorithm 1 Traffic Interaction Graph Construction
+Edges: Since sequential packet sequences alone cannot
+fully describe state transitions between interactions, we clasInput: Packet sequence 𝐿 = (𝑙1 , … , 𝑙𝑛 ), direction sesify edges into intra-burst edges and inter-burst edges. For
+quence 𝐷 = (𝑑1 , … , 𝑑𝑛 ), timestamp sequence 𝑇 =
+intra-burst edges, adjacent nodes are connected sequentially
+(𝑡1 , … , 𝑡𝑛 )
+based on packet timestamps—for example, a sequence may
+Output: Graph 𝐺 = (𝑉 , 𝐸)
+link two packet nodes with a single edge. For inter-burst 1 Initialize node set 𝑉 and edge set 𝐸 as empty; initialize burst
+edges, connections are established between all nodes across
+set 𝐵 and current burst 𝐵current as empty 𝑐𝑢𝑟𝑟𝑒𝑛𝑡f lag ←
+adjacent bursts to capture cross-burst interactions.
+None
+The algorithm for constructing an expanded traffic in- 2 for each packet 𝑙𝑖 ∈ 𝐿 with direction 𝑑𝑖 ∈ 𝐷 and timestamp
+teraction graph is shown in Algorithm 1. When interactions
+𝑡𝑖 ∈ 𝑇 do
+between clients and servers are represented solely by packet 3
+if 𝑐𝑢𝑟𝑟𝑒𝑛𝑡f lag is None or 𝑐𝑢𝑟𝑟𝑒𝑛𝑡f lag = 𝑑𝑖 then
+sequences, it becomes challenging to effectively character- 4
+Add node 𝑣𝑖
+= Node(𝑙𝑖 , 𝑑𝑖 , 𝑡𝑖 ) to 𝐵current
+ize different types of malicious traffic features, particularly
+𝑐𝑢𝑟𝑟𝑒𝑛𝑡f lag ← 𝑑𝑖
+revealing significant shortcomings in modeling burst be- 5
+end
+havior. Attack traffic often exhibits significant variations 6
+else
+in the time intervals and transmission frequencies within 7
+Add 𝐵current to 𝐵 Initialize 𝐵current and add node
+bursts, providing critical discriminative information. There𝑣𝑖 = Node(𝑙𝑖 , 𝑑𝑖 , 𝑡𝑖 ) to 𝐵current 𝑐𝑢𝑟𝑟𝑒𝑛𝑡f lag ← 𝑑𝑖
+fore, we integrate packet direction, sequence characteristics, 8
+end
+and timestamp information during graph construction to
+9 end
+build a more discriminative interaction graph structure.
+10 Add 𝐵current to 𝐵
+Traditional modeling approaches typically only capture
+11 for each burst 𝑏𝑖 ∈ 𝐵 do
+sequential relationships between bursts, assuming attack
+12
+if |𝑏𝑖 | > 1 then
+behavior progresses linearly along the timeline. This fails
+13
+for each adjacent node pair 𝑣𝑘 , 𝑣𝑘+1 ∈ 𝑏𝑖 in order
+to reflect the nonlinear characteristics common in encrypted
+do
+Web attacks, such as multi-round interactions. For instance,
+14
+Add edge (𝑣𝑘 , 𝑣𝑘+1 ) to 𝐸
+in attacks like reflective command injection, malicious pay15
+end
+loads are often embedded within normal response streams.
+16
+end
+Relying solely on connecting the start and end points of
+17 end
+adjacent bursts makes it difficult to detect such cross-stage,
+concealed payloads. By establishing a fully connected struc- 18 for each pair of adjacent bursts 𝑏𝑖 , 𝑏𝑖+1 ∈ 𝐵 do
+if |𝑏𝑖 | = 1 and |𝑏𝑖+1 | = 1 then
+ture between adjacent bursts, the model explicitly preserves 19
+20
+Add edge (𝑣𝑖 , 𝑣𝑖+1 ) to 𝐸
+potential interaction paths between arbitrary burst nodes.
+21
+end
+This creates tighter semantic associations between requestelse
+response behaviors across different phases within the graph 22
+23
+for each 𝑣𝑝 ∈ 𝑏𝑖 and 𝑣𝑞 ∈ 𝑏𝑖+1 do
+structure, preventing fragmentation of behavioral chains due
+24
+Add edge (𝑣𝑝 , 𝑣𝑞 ) to 𝐸
+to connection simplification. This structural design aids in
+end
+characterizing dependency patterns within the multi-stage 25
+end
+evolution of Web attacks, providing more comprehensive 26
+structural information for subsequent graph-level discrimi- 27 end
+⋃
+28 Set 𝑉 =
+𝑏𝑖 , 𝑏𝑖 ∈ 𝐵
+nation.
+29 return Graph 𝐺 = (𝑉 , 𝐸)
+
+2.4. Graph Classification
+
+Pr
+
+ep
+
+Considering that fully connected strategies may introduce issues with edge growth, this section introduces
+GraphSAGE’s local neighborhood sampling and aggregation mechanism at the model level. This ensures node representations rely solely on a finite-scale sampled neighborhood, effectively suppressing noise propagation and computational overhead caused by redundant edges while preserving key interaction relationships. This design balances
+structural expressiveness with computational efficiency and
+model stability in real-world scenarios. To validate the
+performance of the selected model, this section conducts
+theoretical analysis and experimental evaluation of four
+commonly used graph neural network architectures: GCN,
+GAT, traditional message-passing GNN, and GraphSAGE.
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+2.4.1. Theoretical Analysis of Model Selection
+Regarding graph classification model selection, we systematically evaluate four commonly used graph neural network architectures: GAT, GNN, GCN, and GraphSAGE,
+comparing dimensions including feature representation capability, computational complexity, real-time inference performance, and inductive generalization ability.
+First, analyzing GCN, its node updates are implemented
+via the following normalized convolution operation:
+(
+)
+∑
+1
+(𝑙)
+(𝑙)
+(𝑙+1)
+ℎ𝑢 𝑊
+(7)
+ℎ𝑣
+=𝜎
+√
+| (𝑣)| | (𝑢)|
+𝑢∈ (𝑣)∪{𝑣}
+The model employs a fixed mean normalization aggregation method, featuring a simple structure. However, its
+Page 6 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+0.90
+0.85
+0.80
+0.75
+0.70
+
+0.9503
+
+ev
+iew
+ed
+
+0.95
+
+0.9365
+
+0.8719
+
+0.8228
+
+GCN
+
+GraphSAGE
+
+GAT
+
+GNN
+
+Figure 5: Performance Comparison of Models.
+
+tp
+ee
+rr
+
+This approach requires a complete traversal of all neighboring nodes. Consequently, in high-density substructures,
+it faces computational expansion issues similar to those of
+GCNs. The inference time is significantly influenced by the
+scale of the neighborhood, making it difficult to guarantee
+stable latency in online encrypted traffic environments.
+GAT assigns differentiated weights to neighboring nodes
+through an attention mechanism, with attention coefficients
+calculated as:
+(
+(
+))
+exp LeakyReLU 𝐚⊤ [𝑊 ℎ𝑣 ‖𝑊 ℎ𝑢 ]
+(9)
+𝛼𝑣𝑢 =
+( )
+∑
+𝑘∈ (𝑣) exp 𝑒𝑣𝑘
+
+1.00
+
+Average Test Accuracy
+
+single-layer computational complexity 𝑂(𝑑𝑣 ⋅ 𝐷 ⋅ 𝐹 ) scales
+linearly with the node degree 𝑑𝑣 . In the XTIG, the formation
+of locally dense neighborhoods due to intra-burst connections and cross-burst associations results in a significant
+increase in node degrees at peak positions. Consequently,
+the inference overhead of GCN escalates drastically with
+density, making it difficult to satisfy the strict latency requirements of real-time detection scenarios.
+Although traditional message-passing GNNs possess
+stronger expressive capabilities, their general form is given
+by:
+(
+)
+(𝑙)
+ℎ(𝑙+1)
+= UPDATE ℎ(𝑙)
+𝑣
+𝑣 , AGG{ℎ𝑢 ∣ 𝑢 ∈  (𝑣)} (8)
+
+rin
+t
+
+no
+
+This mechanism enables a more fine-grained characterization of critical interaction patterns within bursts. However, the calculation of attention weights requires evaluating
+all neighbor pairs, resulting in a complexity approaching
+𝑂(𝑑𝑣2 ⋅ 𝐹 ) in practical implementations. In the locally dense
+regions frequently appearing in the XTIG, the inference cost
+rises steeply, making it challenging to maintain real-time
+performance in high-speed encrypted traffic scenarios.
+After a comprehensive comparison, GraphSAGE demonstrates overall advantages that are better suited to the XTIG
+structure. GraphSAGE adopts an inductive learning framework and introduces fixed-size neighborhood sampling. Its
+node update method is defined as:
+(
+)
+ℎ(𝑙+1)
+= 𝜎 𝑊 (𝑙) ⋅ AGG{ℎ(𝑙)
+(10)
+𝑣
+𝑢 ∣ 𝑢 ∈ 𝑆 (𝑣) }
+
+Pr
+
+ep
+
+where 𝑆 (𝑣) represents a fixed number of nodes sampled
+from the neighborhood (|𝑆| = 𝑘). This sampling mechanism
+results in a computational complexity of [insert formula],
+which is decoupled from the actual neighborhood size. This
+fundamentally avoids the computational explosion problem
+faced by GCN, conventional GNNs, and GAT in highdensity neighborhoods. Meanwhile, through optional aggregation functions such as mean and max-pooling, GraphSAGE achieves a favorable balance between expressive capability and computational efficiency, effectively adapting
+to the burst sequence structure and cross-burst dependency
+patterns within the XTIG.
+GraphSAGE achieves robust generalization capabilities
+through inductive learning. Unlike traditional transductive
+methods, it learns a function applicable to unseen vertices,
+generating effective embeddings for these new nodes. This
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+property is particularly crucial in cryptographic traffic scenarios with variable packet counts, while ensuring the model
+can be extended to diverse graph structures—even interaction graphs not encountered during training. Furthermore,
+GraphSAGE employs a fixed-size neighbor sampling strategy for local aggregation, focusing solely on a vertex’s
+immediate neighbors. This naturally aligns with the local
+dependency patterns inherent in network interactions. By
+capturing key behavioral features while avoiding redundant
+noise, it provides a theoretical foundation for efficient and
+accurate multi-class Web attack classification.
+
+2.4.2. Experimental Evaluation of Model Selection
+In order to validate the selected model’s performance,
+we evaluate different models using the same dataset. As
+shown in Figure 5, GraphSAGE achieves optimal classification performance while ensuring minimal inference latency, significantly outperforming GCN, GAT, and traditional GNN models. Considering computational efficiency,
+structural adaptability, inductive generalization capability,
+and system deployment feasibility, GraphSAGE is ultimately
+selected as the core graph neural network model for the
+WAD framework.
+
+2.5. Theoretical Complexity Analysis
+This section conducts a theoretical complexity analysis of the proposed method, covering both time and space
+complexity, to demonstrate the computational efficiency of
+WAD.
+
+2.5.1. Time Complexity Analysis
+In the data preprocessing stage, the algorithm performs
+feature extraction and graph construction for 𝑁 raw traffic
+samples. Since the flow sequence length of each sample
+is truncated to a constant 𝑀, and both burst segmentation
+and feature computation are implemented via a single linear
+scan, the time complexity of this stage is 𝑂 (𝑁 ⋅ 𝑀). During
+the model training and inference stages, benefiting from
+Page 7 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+the efficient aggregation mechanism of the GraphSAGE
+operator, the computational cost of a single convolution layer
+scales linearly with the graph size, i.e., 𝑂 (|𝑉 | + |𝐸|). As
+the preprocessing step ensures that the number of nodes
+in each graph satisfies |𝑉 | ≤ 𝑀 and the graph structure
+is sparse, the inference latency per sample remains low
+and constant.( The overall
+) time complexity of the training
+process is 𝑂 𝐸poch ⋅ 𝑁 , where 𝐸poch denotes the number
+of training epochs.
+
+3. Experimental Evaluation
+
+Figure 6: Traffic Preprocessor Architecture of the Selfconstructed Web Attack Dataset.
+
+aiming to enhance the modeling capability for complex
+traffic patterns.
+FS-Net(Liu et al., 2019): An end-to-end encrypted traffic
+classification model composed of an encoder, a decoder,
+a classifier, and a reconstruction layer. It performs classification by learning features from original flow sequences
+while simultaneously utilizing a reconstruction mechanism
+to approximate the original sequence, thereby enhancing
+feature discriminability.
+DeepPacket(Lotfollahi et al., 2020): This method uses an
+end-to-end deep learning model to automatically extract
+features from individual data packets to achieve encrypted
+traffic classification.
+Fast-DistilBERT(Park et al., 2024): A multi-task learning
+model based on DistilBERT that simultaneously accomplishes encapsulation type, category, and application classification for encrypted traffic.
+The above methods represent different feature modeling
+and learning paradigms, providing comprehensive baseline
+references for the performance comparison and analysis of
+the proposed method.
+
+tp
+ee
+rr
+
+2.5.2. Space Complexity Analysis
+The space overhead of the proposed framework mainly
+consists of two components: dataset storage and runtime
+GPU memory consumption. In terms of data storage, an
+in-memory dataset construction strategy is adopted, where
+the graph structures of all 𝑁 samples (including a 23dimensional node feature matrix and adjacency lists) are
+loaded into memory at once. The corresponding space
+complexity is 𝑂 (𝑁 ⋅ 𝑀 ⋅ 𝐹 ), where 𝐹 denotes the feature dimensionality. During model execution, the designed
+lightweight graph neural network contains a small number
+of parameters, and the GPU memory consumption in the
+inference stage scales linearly with the batch size, i.e.,
+𝑂 (Batch ⋅ 𝑀 ⋅ 𝐹 ).
+
+ev
+iew
+ed
+
+Expert Systems With Applications
+
+rin
+t
+
+no
+
+This section conducts systematic experiments and ablation studies across four datasets—including one selfconstructed dataset and three public benchmark datasets—to
+validate the effectiveness of the WAD framework. First,
+Section 4.1-4.3 introduces the experimental setup, including
+baseline methods, dataset details, and evaluation metrics.
+Subsequently, Section 4.4 evaluates the framework’s overall
+performance and operational efficiency through comparative
+experiments with existing mainstream methods and engineering complexity analysis. Finally, to validate the superiority of key submodules within the framework, Section 4.5
+conducts in-depth ablation experiments analyzing the feature enhancement strategy and graph structure improvement
+mechanism.
+
+3.1. Baseline Methods
+
+Pr
+
+ep
+
+In order to verify the effectiveness of the proposed
+method, five representative encrypted traffic classification
+methods were selected as baseline models, covering mainstream approaches such as statistical feature modeling, deep
+learning, pre-training, and reconstruction enhancement. A
+brief overview of each method follows:
+GraphDApp(Shen et al., 2021b): A method that constructs
+traffic interaction graphs based on basic features such as
+packet length and flow direction, utilizing graph neural
+networks to classify encrypted traffic.
+ET-BERT(Lin et al., 2022): This method introduces Masked
+BURST and Same-origin BURST prediction tasks within a
+pre-training framework. It leverages the Transformer-based
+ET-BERT model to achieve encrypted traffic classification,
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+3.2. Experimental Environment and Datasets
+In order to comprehensively evaluate WAD’s detection capabilities in encrypted traffic environments, we conduct experimental assessments using four representative encrypted attack scenarios. These include three publicly available cybersecurity datasets USTC-TFC2016, CICIDS2017,
+and CICMalAnal2017 alongside a self-constructed Web
+attack dataset.
+Self-constructed Web Attack:Addressing limitations in existing encrypted Web attack datasets regarding attack category coverage and traffic organization, we construct a dataset
+tailored for multi-category detection tasks. In the experimental environment, two typical Web vulnerability targets
+BWAPP and DVWA were deployed on the Web server side
+and operated under HTTPS encrypted communication. Subsequently, multiple mainstream automated attack and fuzz
+testing tools (including Burp Suite, Wapiti, and OWASP
+ZAP) were used to launch attacks against the server, simulating real-world Web attack behaviors. The experimental
+architecture is shown in Figure 6.
+In order to ensure the accuracy of sample annotation and
+the interpretability of attack behaviors, each traffic stream
+was restricted to correspond to only one attack type during
+Page 8 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+Attack Type
+CSRF
+Command Injection
+SQL Injection
+Directory Traversal
+File Upload
+XSS
+Total
+
+Sample Count
+2,360
+2,154
+2,150
+1,566
+1,194
+1,182
+10,606
+
+Pre =
+
+Percentage
+22.25%
+20.31%
+20.27%
+14.77%
+11.26%
+11.14%
+100.00%
+
+𝑇𝑃
+𝑇𝑃 + 𝐹𝑃
+
+ev
+iew
+ed
+
+Table 1
+Distribution of Samples
+
+𝑇𝑃
+𝑇𝑃 + 𝐹𝑁
+
+(13)
+
+2 × 𝑃 𝑟𝑒 × 𝑅𝑒𝑐𝑎𝑙𝑙
+𝑃 𝑟𝑒 + 𝑅𝑒𝑐𝑎𝑙𝑙
+
+(14)
+
+Recall =
+
+F1 =
+
+3.4. Overall Performance
+
+This section aims to establish the model configuration
+and evaluate its overall performance. First, key hyperparameters are determined through experiments to obtain their optimal values. Then, the detection performance of the model
+is evaluated using multiple metrics, including accuracy and
+recall. In addition, a complexity analysis is conducted from
+an engineering efficiency perspective to examine the time
+overhead and resource consumption of the model in realtime traffic processing.
+
+ep
+
+rin
+t
+
+no
+
+tp
+ee
+rr
+
+collection. Under these conditions, six common Web attack
+behaviors were implemented: Cross-Site Scripting (XSS),
+SQL Injection (SQLi), Command Injection, Cross-Site Request Forgery (CSRF), Directory Traversal, and File Upload
+attacks. The number of traffic samples corresponding to each
+attack type is shown in Table 3.
+USTC-TFC2016(Wang et al., 2017): Released by the University of Science and Technology of China, this dataset
+primarily supports deep learning-based network traffic classification and anomaly detection research. This dataset contains diverse malware traffic collected from real network
+environments between 2011 and 2015, including Cridex,
+Geodo, Htbot, Miuref, and Neris, covering a wide range of
+communication patterns.
+CICIDS2017(Sharafaldin et al., 2018): Released by the
+Canadian Institute for Cybersecurity in 2017, this serves
+as one of the benchmark datasets for intrusion detection
+system research. It encompasses typical attack scenarios
+including FTP/SSH brute-force attacks, Denial-of-Service
+(DoS) attacks, Heartbleed exploitations, and Web attacks.
+Timestamp information preserves the temporal characteristics of attack behaviors.
+CICMalAnal2017(Habibi Lashkari et al., 2018): Primarily focuses on analyzing malware communication behavior,
+encompassing multiple malware families such as adware and
+ransomware. Benign traffic is generated by the B-Profile
+system simulation, enabling a relatively realistic reflection of
+network communication characteristics in complex business
+environments.
+To ensure comparability across different datasets and
+to highlight the goal of encrypted traffic detection, all raw
+PCAP files are uniformly preprocessed. Specifically, packet
+filtering is applied to remove traffic unrelated to encrypted
+traffic analysis, such as ARP, DNS, and ICMP packets.
+Duplicate and invalid traffic is discarded. The remaining
+packets are segmented into flows, while the original fivetuple information (source IP, destination IP, source port,
+destination port, and protocol) is preserved to support subsequent feature extraction and detection model training.
+
+(12)
+
+Pr
+
+3.3. Evaluation Metrics
+In this paper, we employ four metrics to evaluate performance: Accuracy (ACC), Precision (Pre), Recall (Recall),
+and F1 score (F1), calculated as follows:
+ACC =
+
+𝑇𝑃 + 𝑇𝑁
+𝐹𝑃 + 𝐹𝑁 + 𝑇𝑃 + 𝑇𝑁
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+(11)
+
+3.4.1. Hyperparameter Analysis
+The purpose of the hyperparameter analysis experiment
+is to examine the impact of graph scale on the system’s classification performance and computational overhead, thereby
+providing parameter selection guidelines for WAD’s practical deployment in real-time detection scenarios. The analysis
+focuses on the trade-off between classification accuracy and
+processing latency when varying the maximum number of
+nodes per traffic interaction graph, aiming to verify that the
+system can meet real-time computational efficiency requirements while maintaining detection accuracy.
+We conduct comparative analysis of model performance
+under different node upper limit configurations. Experimental evaluations demonstrate that the number of nodes in the
+traffic interaction graph significantly impacts both model
+performance and computational overhead. As the number
+of nodes increases, the graph structure captures richer interaction information, leading to an upward trend in model
+classification accuracy. However, the time costs associated
+with graph construction, feature extraction, and model training also increase significantly, primarily due to the higher
+computational burden introduced by more complex graph
+structures.
+As shown in Figure 7, when the number of nodes is
+small, the model’s classification performance is relatively
+low due to limitations in the graph structure’s expressive
+power. As the number of nodes gradually increases, the improvement in classification accuracy flattens while computational overhead continues to grow. Balancing classification
+accuracy and processing efficiency, we ultimately set the
+upper limit for nodes in each traffic interaction graph to 40.
+This configuration ensures high recognition accuracy while
+effectively controlling computational complexity, meeting
+the stringent processing latency requirements of real-time
+detection scenarios.
+Page 9 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+111
+111
+111
+111
+111
+111
+111
+111
+111
+111
+1
+111
+
+111
+192
+111
+190
+111
+111
+188
+111
+111
+186
+111 0
+
+20
+
+40
+
+60
+
+Node Numbers
+
+80
+
+100
+
+0.96
+0.94
+
+Accuracy
+
+Training Time(s)
+
+111
+200
+111
+111
+198
+111
+196
+111
+111
+194
+111
+
+0.92
+0.90
+
+0.88
+0.86
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Node Numbers
+
+Figure 7: Impact of Node Number on Training Time and
+Detection Accuracy.
+
+no
+
+tp
+ee
+rr
+
+Under this parameter configuration, the model’s overall
+runtime during offline graph construction, feature extraction,
+and training phases is controlled within hundreds of seconds.
+The online detection phase involves only graph construction
+and graph neural network inference, significantly reducing
+computational overhead. This demonstrates the method’s
+feasibility and lightweight characteristics for practical deployment scenarios.
+In order to prevent interference from other model parameters on node count analysis results, we fixed the GraphSAGE network architecture and training configuration during hyperparameter experiments. Specifically, the model
+employs three layers of GraphSAGE convolutions to extract
+node features, with channel counts set to 32, 64, and 128
+respectively, using ReLU activation functions. Overfitting
+is mitigated through global average pooling and Dropout
+(0.025). During training, the Adam optimizer was employed
+with a learning rate of 0.001, a batch size of 128, and a maximum of 100 training epochs. An early stopping strategy was
+implemented to prevent overfitting. The cross-entropy loss
+function was selected, with classification accuracy serving
+as the evaluation metric. All experiments were conducted on
+an NVIDIA RTX 2060 GPU using the PyTorch framework,
+with results based on the optimal model trained on the test
+set.
+
+On the USTC-TFC2016 and CICIDS2017 datasets, the
+framework also delivered outstanding performance, achieving accuracy rates of 90.96% and 94.97%, respectively.
+These results surpassed the second-best model, Fast-DistilBERT,
+by approximately 3.61% and 3.00%.
+On the CICMalAnal2017 dataset, WAD achieved an
+average classification accuracy of 92.15%. While its overall
+performance significantly outperformed most comparison
+methods like FS-NET and GraphDApp, it fell slightly short
+of the ET-BERT model (by approximately 1.07%). Further
+analysis reveals this discrepancy stems from the presence of
+samples with short durations and sparse packet counts in the
+dataset. This results in smaller graph structures during the
+graph construction phase, limiting the comprehensive modeling of inter-node relationships and the global propagation
+of features. Consequently, the discriminative performance
+of the graph neural network in this scenario is partially
+constrained.
+In order to further validate the classification accuracy
+of the WAD framework across different encrypted traffic
+environments, we analyzed the four datasets involved in the
+experiment using a confusion matrix heatmap, as shown in
+Figure 8.
+(1) As illustrated in Figure 8(a), the model demonstrates
+outstanding performance on typical interactive attacks such
+as command injection, SQL injection, and directory traversal, achieving detection accuracy rates exceeding 99%. This
+performance advantage primarily stems from the fully connected layers and feature enhancement strategy employed
+in the XTIG architecture, which effectively captures the
+behavioral patterns of such attacks during both probing and
+execution phases. For file upload attacks, 4.19% of samples were misclassified as benign traffic. Further analysis
+indicates that the encrypted traffic signatures of certain file
+upload processes closely resemble those of legitimate static
+resource submissions, leading to local overlap in the graph
+representation space.
+(2) As shown in Figure 8(b), this dataset focuses on distinguishing communication behaviors across different malware families. The proposed method demonstrates strong
+discriminative power on families with pronounced periodic
+communication patterns (e.g., Virut and Htbot), achieving
+accuracies of 97.44% and 95.94%, respectively. The results validate that the temporal features introduced by the
+model, such as transmission frequency and packet intervals,
+effectively capture the automated control rhythms of malware. However, within the Shifu family, 12.50% of samples
+were misclassified as other families, indicating that relying
+solely on traffic structural features remains challenging when
+different malware families share similar encrypted HTTP
+fingerprints or C&C communication patterns.
+(3) As shown in Figure 8(c), the model maintains exceptionally high detection rates for various threats including
+Heartbleed, DoS, and XSS. Brute-force attacks achieved
+a 91.56% identification rate, though some samples were
+misclassified as Dropbox traffic. Analysis suggests that for
+interaction patterns characterized by low frequency and long
+
+ev
+iew
+ed
+
+11111111
+
+Pr
+
+ep
+
+rin
+t
+
+3.4.2. Detection Performance
+In order to comprehensively validate the effectiveness
+of the proposed framework in multi-classification tasks for
+encrypted traffic, we conduct extensive comparative experiments across four datasets: Self-constructed Web Attack,
+USTC-TFC2016, CICIDS2017, and CICMalAnal2017. All
+datasets were randomly split into training and testing sets
+at an 8:2 ratio. Detailed experimental results are shown in
+Table 2, and the average multi-class classification accuracy
+improves by approximately 3.75%.
+On the Self-constructed Web Attack, WAD demonstrated significant advantages, achieving both accuracy and
+F1 scores of 97.93%. Compared to the best baseline model
+ET-BERT (88.48%), our framework improved accuracy by
+9.45%, proving its ability to effectively extract fine-grained
+features from Web attack traffic.
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+Page 10 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+Baseline
+
+AC(%)
+
+Self-constructed Web Attack
+
+FS-NET
+GraphDApp
+ET-BERT
+DeepPacket
+Fast-DistilBERT
+WAD
+
+72.78
+85.56
+88.48
+76.41
+87.84
+97.93
+
+USTC-TFC2016
+
+FS-NET
+GraphDApp
+ET-BERT
+DeepPacket
+Fast-DistilBERT
+WAD
+
+78.39
+82.66
+85.73
+79.83
+87.35
+90.96
+
+CICIDS2017
+
+FS-NET
+GraphDApp
+ET-BERT
+DeepPacket
+Fast-DistilBERT
+WAD
+
+74.48
+82.96
+82.29
+84.21
+91.97
+94.97
+
+CICMalAnal2017
+
+FS-NET
+GraphDApp
+ET-BERT
+DeepPacket
+Fast-DistilBERT
+WAD
+
+73.29
+82.49
+93.22
+89.21
+90.56
+92.15
+
+PR(%)
+
+RC(%)
+
+F1(%)
+
+69.15
+73.43
+81.32
+87.33
+86.23
+97.94
+
+66.29
+71.89
+80.53
+75.76
+88.26
+96.92
+
+70.27
+75.13
+82.12
+76.89
+89.83
+97.93
+
+73.79
+75.11
+81.88
+84.34
+86.39
+91.27
+
+72.24
+73.26
+81.62
+78.75
+82.52
+90.41
+
+76.91
+77.92
+82.39
+79.82
+86.13
+92.85
+
+68.94
+77.31
+75.85
+87.13
+89.79
+93.41
+
+66.21
+73.76
+74.22
+82.51
+90.76
+90.35
+
+70.86
+75.68
+76.89
+75.26
+90.96
+92.86
+
+71.29
+74.82
+90.35
+84.21
+89.23
+91.47
+
+71.85
+73.56
+89.89
+89.29
+90.33
+91.52
+
+74.54
+77.87
+91.12
+91.85
+91.91
+91.53
+
+tp
+ee
+rr
+
+Dataset
+
+ev
+iew
+ed
+
+Table 2
+Evaluation of WAD and baseline frameworks for multi-classification on the Self-constructed Web Attack, USTC-TFC2016,
+CICIDS2017, and CICMalAnal2017 datasets
+
+rin
+t
+
+no
+
+intervals, the fixed node upper limit in the graph construction
+strategy may result in the loss of some long-range contextual
+information.
+(4) As shown in Figure 8(d), the model maintains high
+stability in detecting ransomware and scareware. However,
+the detection accuracy for SMSMalware drops to 89.70%.
+This is primarily because such traffic typically involves a
+very small number of packets and short interaction durations, resulting in sparse XTIG nodes. This sparsity limits
+the feature aggregation capability of the GraphSAGE neighborhood sampling mechanism.
+
+Pr
+
+ep
+
+3.4.3. Engineering Complexity Analysis
+Given the rapid fluctuations of network traffic in realworld environments, high detection latency can delay alarm
+responses and degrade system availability. Therefore, a
+hybrid testing environment is constructed for validation.
+Specifically, encrypted Web attack traffic from the selfconstructed Web Attack Dataset is injected into background
+normal traffic captured in real time from the server network
+interface at random time intervals. This setup simulates an
+actual operational scenario under attack.
+As shown in Figure 9, the anomaly detection component processed experiments within 1 ms to 0.8 ms, while
+the multi-classification model averaged between 0.185 s and
+0.195 s. Given the minimal proportion of malicious traffic,
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+even higher classification processing times did not cause an
+overall increase in latency trends.
+To further validate the real-time performance of the
+system, we compared the packet ingress rate under default
+operating conditions with the maximum processing rate
+of the proposed framework. As shown in Figure 10, the
+reported packet reception rate corresponds to a smoothed
+curve obtained via temporal averaging to reduce fluctuations. Under normal conditions, the packet ingress rate
+generally hovers around 300 pkt/s, and even during peak periods, it consistently remains below 3000 pkt/s. Meanwhile,
+the detection framework maintains an average processing
+rate of approximately 4200 pkt/s. These results demonstrate
+that the system possesses sufficient processing capacity to
+meet the requirements of real-time traffic detection.
+Simultaneously, we evaluate resource consumption. Figure 11 illustrates the memory usage of processes within
+the detection framework from startup to entering normal
+detection state. Experimental results demonstrate that the
+anomaly detection framework maintains consumption below
+2 GB during operation, enabling efficient extraction and
+classification of interactive behaviors from real-time traffic.
+To reduce memory usage, we maintain a clocked stream
+table that promptly clears expired streams. Furthermore,
+segmented loading and traffic batch processing mechanisms
+are employed to further control memory peaks while ensuring real-time performance and detection accuracy.
+Page 11 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+0.68%
+
+0.00%
+
+csfr
+
+0.18%
+
+dir
+
+0.13%
+
+0.06%
+
+0.00%
+
+0.06%
+
+0.26%
+
+99.49%
+
+0.00%
+
+0.67%
+
+0.08%
+
+4.19%
+
+0.08%
+
+1.01%
+
+0.00%
+
+93.97%
+
+0.09%
+
+0.00%
+
+99.91%
+
+0.00%
+
+0.00%
+
+0.00%
+
+0.09%
+
+0.46%
+
+0.07%
+
+98.69%
+
+0.46%
+
+0.05%
+
+40
+
+Virut
+
+20
+
+0.00%
+
+0.00%
+
+0.00%
+
+0.00%
+
+1.79%
+
+95.94%
+
+0.16%
+
+2.11%
+
+0.00%
+
+0.00%
+
+0.00%
+
+0.00%
+
+0.00%
+
+0.00%
+
+91.34%
+
+8.66%
+
+0.00%
+
+0.00%
+
+0.00%
+
+0.00%
+
+0.00%
+
+4.66%
+
+0.29%
+
+90.68%
+
+0.44%
+
+0.00%
+
+3.93%
+
+0.00%
+
+0.00%
+
+0.07%
+
+0.00%
+
+5.01%
+
+94.15%
+
+0.00%
+
+0.78%
+
+0.00%
+
+0.00%
+
+1.39%
+
+0.00%
+
+12.50%
+
+0.00%
+
+86.11%
+
+0.00%
+
+0.00%
+
+0.00%
+
+0.85%
+
+0.00%
+
+1.20%
+
+0.51%
+
+0.00%
+
+97.44%
+
+ex
+
+G
+
+C
+
+eo
+
+rid
+
+lo
+up
+e_
+fil
+
+97.62%
+
+0.85%
+
+0.85%
+
+0.42%
+
+0.17%
+
+0.00%
+
+0.08%
+
+0.00%
+
+Dos
+
+0.46%
+
+97.89%
+
+0.69%
+
+0.46%
+
+0.23%
+
+0.00%
+
+0.23%
+
+0.05%
+
+Sqli
+
+2.09%
+
+1.26%
+
+94.10%
+
+0.42%
+
+1.26%
+
+0.63%
+
+XSS
+
+0.09%
+
+0.00%
+
+0.05%
+
+99.40%
+
+0.23%
+
+0.09%
+
+Dropbox
+
+1.08%
+
+0.32%
+
+0.65%
+
+0.22%
+
+92.58%
+
+2.15%
+
+Botnet ARES
+
+0.58%
+
+0.17%
+
+0.12%
+
+0.00%
+
+2.91%
+
+90.79%
+
+Port scan
+
+0.65%
+
+0.16%
+
+4.06%
+
+0.16%
+
+1.62%
+
+0.24%
+
+Brute Force
+
+1.61%
+
+0.40%
+
+0.80%
+
+0.24%
+
+3.22%
+
+0.96%
+
+Benign
+
+90.19%
+
+5.25%
+
+0.00%
+
+0.00%
+
+0.14%
+
+0.00%
+
+1.94%
+
+1.08%
+
+4.56%
+
+80
+
+80
+
+tp
+ee
+rr
+0.25%
+
+0.00%
+
+adware
+
+2.80%
+
+92.99%
+
+0.00%
+
+3.03%
+
+1.17%
+
+60
+
+60
+
+Ransomware
+
+2.19%
+
+1.95%
+
+95.33%
+
+0.00%
+
+0.53%
+
+40
+
+40
+
+4.08%
+
+1.34%
+
+91.07%
+
+2.03%
+
+1.21%
+
+91.56%
+
+scareware
+
+0.00%
+
+2.41%
+
+3.28%
+
+94.31%
+
+0.00%
+
+20
+
+20
+
+SMSMalware
+
+5.33%
+
+3.20%
+
+0.00%
+
+1.78%
+
+89.70%
+
+e
+
+e
+SM
+
+sc
+
+SM
+
+al
+
+w
+
+ar
+
+ew
+ar
+
+om
+
+an
+s
+
+R
+
+Br
+
+ar
+
+ar
+e
+
+0
+
+w
+
+ad
+w
+
+ar
+
+e
+
+gn
+
+ni
+
+Be
+
+Fo
+
+ut
+
+Po
+
+e
+
+rt
+
+sc
+
+rc
+
+e
+
+an
+
+ES
+
+Bo
+
+tn
+et
+
+AR
+
+ox
+
+S
+
+ro
+pb
+D
+
+XS
+
+Sq
+
+li
+
+os
+D
+
+tb
+le
+ed
+
+0
+
+ea
+r
+
+20
+
+(d) CICMalAnal2017 Dataset
+
+Heartbleed
+
+H
+
+40
+
+0
+
+ad
+
+r
+di
+
+fr
+cs
+
+m
+m
+
+ni
+
+co
+
+gn
+
+li
+
+be
+
+xs
+
+sq
+
+s
+
+0
+
+(c) CICIDS2017 Dataset
+
+80
+
+60
+
+Shifu Nsis-ay Neris
+
+comm
+
+0.00%
+
+file_upload
+
+60
+
+6.78%
+
+t
+
+2.54%
+
+0.00%
+
+Vi
+ru
+
+0.51%
+
+0.93%
+
+ifu
+
+95.01%
+
+92.29%
+
+ay
+
+0.42%
+
+0.00%
+
+Sh
+
+0.85%
+
+80
+
+0.00%
+
+is
+
+0.05%
+
+1.95%
+
+si
+s-
+
+0.09%
+
+0.00%
+
+N
+
+0.14%
+
+0.00%
+
+ef
+
+0.05%
+
+0.00%
+
+er
+
+0.14%
+
+5.52%
+
+N
+
+99.30%
+
+0.00%
+
+iu
+r
+
+0.23%
+
+92.53%
+
+ev
+iew
+ed
+
+0.00%
+
+ot
+
+0.17%
+
+M
+
+0.42%
+
+tb
+
+0.17%
+
+H
+
+0.68%
+
+do
+
+0.85%
+
+Miuref Htbot Geodo Cridex
+
+xss
+
+97.72%
+
+sqli
+
+(b) USTC-TFC2016 Dataset
+
+benign
+
+(a) Self-constructed Web Attack Dataset
+
+Prediction Time (s)
+
+1.2
+
+1.0
+0.8
+0
+
+250
+
+500
+
+750
+
+1250
+1000
+Packet Index
+
+1500
+
+0.195
+0.19
+
+0.185
+1750
+
+2000
+
+ep
+
+Figure 9: Detection Latency of WAD Framework.
+
+Pr
+
+The real-time classification framework maintains stable
+processing under sustained high-speed traffic input, with no
+noticeable data backlog or system congestion. This demonstrates the framework’s robust real-time detection capabilities, enabling timely identification and classification of encrypted Web attacks in authentic high-throughput network
+environments.
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+Packets per second
+
+1.4
+
+4500
+0.2
+Prediction Time (s)
+
+Processing Time (raw)
+Processing Time (smoothed)
+
+rin
+t
+
+Processing Time (ms)
+
+1.6
+
+no
+
+Figure 8: Confusion Matrices of Classification Results on Four Datasets.
+
+4000
+3500
+
+Real-world traffic rate (pkt/s)
+System max throughput (pkt/s)
+
+3000
+2500
+2000
+1500
+1000
+
+0
+
+20
+
+40
+
+Time (s)
+
+60
+
+80
+
+100
+
+Figure 10: Packet Throughput of WAD Framework.
+
+3.5. Ablation Studies
+In order to validate the effectiveness of the proposed
+feature enhancement strategy and traffic interaction graph
+structure improvement mechanism in multi-classification
+tasks for encrypted Web attacks, this section designs ablation experiments. By removing burst-time features and the
+
+Page 12 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+Used Memory (MB)
+
+Used Memory (MB)
+
+Features
+Basic Features
++Time Interval
++Duration
++Local Frequency
++Directional Frequency
+WAD
+
+1200
+
+1000
+
+800
+
+600
+0
+
+10
+
+20
+
+30
+Time (s)
+
+40
+
+50
+
+60
+
+Figure 11: Memory Consumption of WAD Framework.
+
+75
+
+75
+
+75
+
+50
+
+50
+
+50
+
+25
+
+25
+
+25
+
+25
+
+0
+
+0
+
+0
+
+0
+
+-25
+
+-25
+
+-25
+
+-25
+
+-50
+
+-50
+
+-50
+
+-50
+
+-75
+
+-75
+
+-75
+
+-75
+
+-75 -50 -25-75 0 -5025 -2550 075 25
+
+(a) Original Features
+
+50 -75
+75
+
+-50
+
+Precision
+80.25%
+93.72%
+89.20%
+91.15%
+87.85%
+96.71%
+
+Recall
+77.38%
+94.71%
+88.45%
+90.30%
+86.90%
+95.98%
+
+F1-score
+74.71%
+94.39%
+86.90%
+89.50%
+84.20%
+96.08%
+
+Table 4
+Precision Comparison Before and After Graph Structure Improvement
+Method
+Single Connection
+Full Connection
+
+Precision
+93.90%
+96.17%
+
+In order to validate the effectiveness of the multidimensional temporal features for detecting encrypted Web
+attacks, we designed feature ablation experiments. Building
+upon a baseline model retaining only basic features (statistical features), we sequentially introduced four sets of
+features: direction switching frequency, burst duration, local
+transmission frequency, and temporal interval statistics. The
+experimental results are presented in Table 3.
+The results show that all feature groups positively contribute to detection performance, with inter-arrival time
+statistics providing the most significant improvement, indicating that timing regularities induced by machine-driven
+attack behaviors serve as strong discriminative cues in encrypted traffic. The inclusion of burst duration and local
+frequency features further enhances performance by capturing traffic intensity and transmission rhythms, effectively
+distinguishing high-frequency attack bursts from smoother
+human-driven browsing behaviors and reducing false positives. In addition, incorporating the direction switching
+frequency increases the F1-score to 84.20%, highlighting
+interaction density as a key factor for differentiating short
+request–response attacks from sustained unidirectional flows
+such as data exfiltration. When all feature groups are jointly
+integrated, the WAD framework achieves the best overall performance, confirming that temporal, directional, and
+frequency-related features are complementary rather than redundant, and that their joint modeling yields a more comprehensive representation of encrypted Web attack behaviors.
+
+tp
+ee
+rr
+
+75
+50
+
+ev
+iew
+ed
+
+Table 3
+Ablation Analysis of Feature Enhancement Strategies
+
+1400
+
+-75 0 -50 25-25 50 0 7525
+-25
+
+50
+
+75
+
+(b) Enhanced Temporal Features
+
+Figure 12: t-SNE Distribution Visualization Before and After
+Feature Enhancement.
+
+cross-burst fully-connected structure, we compare changes
+in model performance across different configurations.
+
+Pr
+
+ep
+
+rin
+t
+
+no
+
+3.5.1. Ablation Analysis of Feature Enhancement
+Strategies
+In order to evaluate the impact of the introduced burst
+temporal and frequency features on the discriminative capability of the model, six common types of Web attack
+traffic together with benign traffic are selected as the test set.
+We compare the t-SNE (t-distributed Stochastic Neighbor
+Embedding) visualizations obtained using only basic packet
+features (packet length and direction) with those obtained
+after incorporating burst temporal features.
+As shown in Figure 12(a), when only packet length
+sequences and direction features are used, different traffic
+categories exhibit significant overlap in the low-dimensional
+space, with blurred boundaries between classes. However,
+after incorporating temporal features such as burst duration,
+transmission frequency, and time intervals (as shown in Figure 12(b)), the distribution of attack traffic across categories
+becomes more concentrated in the embedded space, with
+significantly clearer inter-class boundaries. This indicates
+that the added features effectively enhance the separability
+of the graph representation.
+Furthermore, statistical analysis of similarity distributions for identical Web attack types within the XTIG representation space reveals that incorporating temporal features
+markedly enhances consistency among same-type samples
+in the embedding space. Distinctiveness between different
+attack types is significantly improved, further validating the
+effectiveness of the feature enhancement strategy in capturing fine-grained differences in attack behaviors.
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+3.5.2. Ablation Analysis of Graph Structure
+Improvement Mechanisms
+In order to validate the role of cross-burst fully connected
+structures in modeling multi-stage interaction dependencies
+of Web attacks, we further compare two graph configurations: the single-connection structure linking adjacent burst
+heads and tails, and the cross-burst fully connected structure.
+Under consistent node features, graph scale, and classification models, we conduct comparative analysis of classification performance across different structural configurations.
+Page 13 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+4. Related Work
+
+This section provides a comprehensive review of related
+studies. It summarizes the current research on behavioral
+entity modeling and graph structure modeling for malicious
+encrypted Web traffic addressed in this paper.
+
+4.1. Behavioral Entity Modeling
+
+ev
+iew
+ed
+
+contrast, burst-based modeling has gradually become the
+mainstream approach due to its stronger robustness against
+encryption-induced perturbations and its closer alignment
+with client–server interaction semantics. Recent works construct behavioral entities by segmenting traffic into directional bursts and perform classification based on burst-level
+representations (Shen et al., 2021a; Wang et al., 2023).
+Nevertheless, most existing methods mainly rely on packet
+length sequences or simple statistical descriptors (e.g., average packet length and direction ratios) when constructing burst-level features, while the internal temporal rhythm
+of bursts is largely overlooked.However, existing methods
+mostly rely only on packet length sequences or simple statistics (e.g., average packet length, direction ratio) when constructing node features, paying insufficient attention to the
+temporal rhythm within the burst. High-discrimination features such as local transmission frequency fluctuations, direction switching counts, burst duration distribution, and
+relative time intervals are often ignored. These temporal
+features exhibit significant differences in typical Web attacks
+such as SQL injection multi-round probing, XSS payload
+fragmentation, and CSRF rapid verification. However, they
+have not yet been fully modeled and utilized, resulting in the
+behavioral rhythm of different attack stages being difficult
+to express effectively, thereby limiting the separability of
+multi-class Web attacks. Existing research on encrypted
+traffic classification mainly adopts three types of behavioral
+entity modeling strategies: single-packet–based modeling,
+time-window–based modeling, and burst-based modeling,
+where a burst is defined as a sequence of consecutive packets
+transmitted in the same direction (Wang et al., 2017; Sirinam
+et al., 2018). Different entity granularities exhibit distinct
+trade-offs in terms of information preservation, modeling
+complexity, and robustness to network perturbations.
+
+tp
+ee
+rr
+
+The ablation results from both the feature and structural
+perspectives show that combining feature enhancement and
+structural improvement significantly improves the model’s
+representation ability for encrypted Web attacks.
+Specifically, the temporal feature enhancement strategy
+focuses on fine-grained modeling. By introducing directionswitching statistics and burst-level features, it improves
+the model’s ability to recognize short-period and highfrequency interaction behaviors, such as scanning and probing activities.In contrast, the cross-burst fully connected
+structure emphasizes global associations. It effectively mitigates the semantic fragmentation problem that occurs in
+long-period and complex attacks, such as file upload operations.Experimental results confirm that the combination
+of these two strategies provides graph neural networks with
+input representations that capture both local details and
+global context. This multi-dimensional information fusion
+mechanism alleviates the feature sparsity issue caused by
+a single perspective and achieves the best detection performance in the final multi-class classification task.
+
+Pr
+
+ep
+
+rin
+t
+
+no
+
+Existing research on encrypted traffic classification mainly
+adopts three types of behavioral entity modeling strategies:
+single-packet–based modeling, time-window–based modeling, and burst-based modeling, where a burst is defined
+as a sequence of consecutive packets transmitted in the
+same direction (Wang et al., 2017; Sirinam et al., 2018).
+Different entity granularities exhibit distinct trade-offs in
+terms of information preservation, modeling complexity,
+and robustness to network perturbations.
+Early approaches predominantly relied on single packets
+as the basic modeling unit, focusing on packet-level statistical features such as packet length and transmission direction.
+Representative methods extract these low-level features to
+construct traffic fingerprints for encrypted application identification or user activity inference in encrypted environments
+(Taylor et al., 2016; Li et al., 2022). Although packet-level
+modeling can preserve fine-grained information, it is highly
+sensitive to noise and network jitter, making it difficult to
+robustly capture complete interaction behaviors.
+In order to balance computational efficiency and privacy
+preservation, subsequent studies adopt fixed time windows
+or flow-level statistical features to model encrypted traffic
+(Zaki et al., 2022; Lotfollahi et al., 2020). These methods aggregate packet sequences within predefined temporal windows and leverage machine learning or deep learning models to improve classification performance. However, fixed window partitioning is often misaligned with
+real Web interaction semantics, which may fragment coherent behavioral patterns and weaken semantic consistency.In
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+4.2. Graph Structure Modeling
+In recent years, graph-based representation learning has
+shown strong potential for encrypted traffic classification.
+The key idea of graph-based approaches is to transform
+traffic data into graph structures and leverage graph representation learning techniques to extract relational features.
+Owing to their rich structural properties, graphs are well
+suited for modeling dependencies among traffic instances,
+where samples are inherently correlated rather than independent. As a result, the independence assumptions commonly
+adopted by traditional machine learning methods no longer
+hold for graph-structured traffic data (Wu et al., 2020).
+Graph embedding techniques have been demonstrated
+to be effective in learning low-dimensional representations
+from graph-structured data while preserving both node attributes and structural information (Li et al., 2020; Zhang
+et al., 2021). Building upon these advances, recent studies increasingly adopt Graph Neural Networks (GNNs) to
+model encrypted traffic and perform traffic classification or
+malicious behavior detection (Jiang et al., 2022; Sun et al.,
+2020).Existing graph-based encrypted traffic analysis methods construct graphs from communication behaviors and
+Page 14 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Expert Systems With Applications
+
+ev
+iew
+ed
+
+Z. Chen, X. Wei, and Y. Wang. Encrypted traffic classification encoder
+based on lightweight graph representation. Scientific Reports, 15:28564,
+2025.
+Z. Fu, M. Liu, Y. Qin, J. Zhang, Y. Zou, Q. Yin, Q. Li, and H. Duan.
+Encrypted malware traffic detection via graph-based network analysis.
+In Proceedings of the 25th International Symposium on Research in
+Attacks, Intrusions and Defenses (RAID), pages 495–509. ACM, 2022.
+A. Habibi Lashkari, A. F. A. Kadir, L. Taheri, and A. A. Ghorbani.
+Toward developing a systematic approach to generate benchmark android malware datasets and classification. In Proceedings of the IEEE
+International Carnahan Conference on Security Technology (ICCST),
+2018.
+H. He, Y. Lai, Y. Wang, et al. A data skew-based unknown traffic
+classification approach for tls applications. Future Generation Computer
+Systems, 138:1–12, 2023.
+T. L. Huoh, Y. Luo, P. Li, and T. Zhang. Flow-based encrypted network
+traffic classification with graph neural networks. IEEE Transactions on
+Network and Service Management, 20(2):1224–1237, 2023.
+M. Jiang, Z. Li, P. Fu, et al. Accurate mobile-app fingerprinting using flowlevel relationship with graph neural networks. Computer Networks, 217:
+109309, 2022.
+J. Li, S. Wu, H. Zhou, X. Luo, T. Wang, Y. Liu, and X. Ma. Packet-level
+open-world app fingerprinting on wireless traffic. In Proceedings of the
+Network and Distributed System Security Symposium (NDSS), 2022.
+K. Li, G. Luo, Y. Ye, et al. Adversarial privacy-preserving graph embedding
+against inference attack. IEEE Internet of Things Journal, 8(8):6904–
+6915, 2020.
+Z. Li, H. Zhao, J. Zhao, Y. Jiang, and F. Bu. Sat-net: a staggered attention
+network using graph neural networks for encrypted traffic classification.
+Journal of Network and Computer Applications, 233:104069, 2025.
+X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu. Et-bert: A contextualized
+datagram representation with pre-training transformers for encrypted
+traffic classification. In Proceedings of the ACM Web Conference
+(WWW), pages 633–642, 2022.
+C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li. Fs-net: A flow sequence network
+for encrypted traffic classification. In Proceedings of IEEE INFOCOM,
+pages 1171–1179, 2019.
+M. Liu, Q. Yang, W. Wang, and S. Liu. Semi-supervised encrypted
+malicious traffic detection based on multimodal traffic characteristics.
+Sensors, 24(20):6507, 2024.
+M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, and
+M. Saberian. Deep packet: A novel approach for encrypted traffic
+classification using deep learning. Soft Computing, 24(3):1999–2012,
+2020.
+O. Makinde. Graph neural networks for anomaly detection in encrypted
+network traffic flows. International Journal on Science and Technology,
+2025.
+J.-T. Park, C.-Y. Shin, U.-J. Baek, and M.-S. Kim. Fast and accurate
+multi-task learning for encrypted network traffic classification. Applied
+Sciences, 14(7):3073, 2024.
+B. Seok and K. Sohn. Adversarial attacks on pre-trained deep learning
+models for encrypted traffic analysis. Journal of Web Engineering, 23
+(6):749–768, 2024.
+I. Sharafaldin, A. Habibi Lashkari, and A. A. Ghorbani. Toward generating
+a new intrusion detection dataset and intrusion traffic characterization. In
+Proceedings of the 4th International Conference on Information Systems
+Security and Privacy (ICISSP), 2018.
+M. Shen, Z. Gao, L. Zhu, and K. Xu. Efficient fine-grained website
+fingerprinting via encrypted traffic analysis with deep learning. In
+Proceedings of the IEEE/ACM International Symposium on Quality of
+Service (IWQoS), 2021a.
+M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du. Accurate decentralized application identification via encrypted traffic analysis using graph neural
+networks. IEEE Transactions on Information Forensics and Security,
+16:2367–2380, 2021b.
+Q. Shi, D. Shi, L. He, Q. Xiao, L. Zheng, J. Ma, J. He, and Q. Zhang.
+Transgraphnet: robust detection of malicious encrypted network traffic
+via transformer and graph neural models. PeerJ Computer Science,
+
+tp
+ee
+rr
+
+exploit correlations among traffic flows to improve detection
+performance. Some approaches integrate flow-level statistical features with graph topology information to identify malicious encrypted traffic, demonstrating that relational modeling can significantly enhance detection capability (Wang
+et al., 2020; Zheng et al., 2022). Other studies further incorporate temporal or spatiotemporal characteristics into
+graph representations, enabling more expressive modeling
+of traffic dynamics and improving classification robustness
+(Fu et al., 2022).Despite their effectiveness, most existing
+methods focus primarily on graph topology and coarsegrained flow statistics, while the fine-grained behavioral
+patterns within encrypted Web interactions remain insufficiently explored. In particular, how to jointly model burstlevel temporal dynamics and interaction semantics within a
+graph framework has not been fully addressed, which limits
+the applicability of current graph-based methods to finegrained and multi-class encrypted Web attack classification.
+
+5. Summary
+
+no
+
+In this paper, we address the challenge of identifying
+encrypted Web attacks by constructing a Web malicious
+encrypted traffic detection framework based on an extended
+traffic interaction graph. The framework treats bursts as
+traffic behavioral entities, integrating multidimensional temporal rhythm features into entity modeling to enhance expressiveness, while introducing a cross-burst fully connected
+mechanism in entity interactions to capture long-range dependencies. Experimental results on multiple mainstream
+public datasets demonstrate that this approach improves
+detection performance for encrypted Web attack traffic, particularly against automated scanning and complex injectionbased Web traffic. Future research will further explore strategies for achieving high-precision classification under data
+imbalance conditions.
+
+CRediT authorship contribution statement
+
+ep
+
+rin
+t
+
+Wenhao Li: Writing – review & editing, Writing – original draft, Methodology, Investigation, Data curation, Conceptualization. Weidong Zhou: Writing – review & editing,
+Supervision, Methodology. Yuan Zhao: Validation, Formal
+analysis. Tianbo Wang: Validation, Formal analysis. Ying
+Li: Validation, Resources. Jian Jiao: Writing – review &
+editing, Validation, Resources, Funding acquisition.
+
+References
+
+Pr
+
+K. Al-Naami, S. Chandra, A. Mustafa, et al. Adaptive encrypted traffic
+fingerprinting with bi-directional dependence. In Proceedings of the
+35th Annual Computer Security Applications Conference (ACSAC),
+pages 177–189, 2019.
+G. Anyfantis, I. Castell-Uroz, and P. Barlet-Ros. Graph neural networks
+for graph-level anomaly detection in network intrusion detection. In
+Proceedings of the 9th Network Traffic Measurement and Analysis Conference (TMA), pages 1–4. IEEE, 2025.
+T. Bakhshi and B. Ghita. Anomaly detection in encrypted internet traffic
+using hybrid deep learning. Security and Communication Networks,
+page 5363750, 2021.
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+Page 15 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+
+Pr
+
+ep
+
+rin
+t
+
+no
+
+tp
+ee
+rr
+
+2025. DOI: 10.7717/peerj-cs.3353.
+P. Sirinam, M. Imani, M. Juarez, and M. Wright. Deep fingerprinting:
+Undermining website fingerprinting defenses with deep learning. In
+Proceedings of the ACM SIGSAC Conference on Computer and Communications Security (CCS), 2018.
+S. Sufrianto, L. Harudin, A. O. W. Alomairi, and M. A. J. Maktoof. A
+graph neural network approach for identifying decentralized applications
+in encrypted traffic. In Proceedings of the 13th International Conference
+on Applied Innovations in IT (ICAIIT), 2022.
+B. Sun, W. Yang, M. Yan, et al. An encrypted traffic classification method
+combining graph convolutional network and autoencoder. In Proceedings of the 2020 IEEE 39th International Performance Computing and
+Communications Conference (IPCCC), pages 1–8. IEEE, 2020.
+V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic. Appscanner:
+Automatic fingerprinting of smartphone apps from encrypted network
+traffic. In Proceedings of the IEEE European Symposium on Security
+and Privacy (EuroS&P), 2016.
+T. Thang, H. Nguyen, V. Nguyen, et al. Distinguishing between web
+attacks and vulnerability scans based on behavioral characteristics. In
+Proceedings of the 10th International Conference on Management of
+Digital EcoSystems, pages 169–176. ACM, 2018.
+L. Wang, X. Ma, N. Li, Q. Lv, Y. Wang, W. Huang, and H. Chen.
+Tgprint: Attack fingerprint classification on encrypted network traffic
+based graph convolution attention networks. Computers & Security, 135:
+103466, 2023.
+R. Wang, J. Zhao, H. Zhang, L. He, H. Li, and M. Huang. Network traffic
+analysis based on graph neural networks: a scoping review. Big Data
+and Cognitive Computing, 9(11):270, 2025.
+W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang. End-to-end encrypted
+traffic classification with one-dimensional convolution neural networks.
+In Proceedings of the IEEE International Conference on Intelligence and
+Security Informatics (ISI), 2017.
+W. Wang, Y. Shang, Y. He, et al. Bot mark: Automated botnet detection
+with hybrid analysis of flow-based and graph-based traffic behaviors.
+Information Sciences, 511:284–296, 2020.
+Z. Wu, S. Pan, F. Chen, et al. A comprehensive survey on graph neural networks. IEEE Transactions on Neural Networks and Learning Systems,
+32(1):4–24, 2020.
+F. Zaki, F. Afifi, S. Abd Razak, A. Gani, and N. B. Anuar. Grain: Granular
+multi-label encrypted traffic classification using classifier chain. Computer Networks, 213:109084, 2022.
+H. Zhang and G. Paper. Sdsiot: An sql injection attack detection and
+stage identification method based on outbound traffic. IEEE Access, 7:
+163390–163404, 2019.
+K. Zhang, Z. Tian, Z. Cai, et al. Link-privacy preserving graph embedding
+data publication with adversarial learning. Tsinghua Science and
+Technology, 27(2):244–256, 2021.
+J. Zheng, Z. Zeng, and T. Feng. Gcn-eta: High-efficiency encrypted
+malicious traffic detection. Security and Communication Networks,
+pages 1–11, 2022.
+P. Zhu, G. Wang, J. He, Y. Dong, and Y. Chang. An encrypted traffic
+identification method based on multi-scale feature fusion. Array, page
+100338, 2024.
+Zscaler ThreatLabz.
+2023 threatlabz state of encrypted attacks report.
+Online, 2023.
+URL https://www.zscaler.com/campaign/
+threatlabz-encrypted-attacks-report.
+
+ev
+iew
+ed
+
+Expert Systems With Applications
+
+Wenhao Li et al.: Preprint submitted to Elsevier
+
+Page 16 of 16
+
+This preprint research paper has not been peer reviewed. Electronic copy available at: https://ssrn.com/abstract=6544057
+PAPER_TEXT

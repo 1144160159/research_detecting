@@ -1,0 +1,162 @@
+                                                   i An update to this article is included at the end
+
+
+
+
+                                                                    Computer Networks 235 (2023) 109965
+
+
+                                                                  Contents lists available at ScienceDirect
+
+
+                                                                      Computer Networks
+                                                        journal homepage: www.elsevier.com/locate/comnet
+
+
+
+
+FastTraffic: A lightweight method for encrypted traffic fast classification
+Yuwei Xu a,b,c ,∗, Jie Cao a,c , Kehui Song c,d , Qiao Xiang e , Guang Cheng a,b,c
+a
+  School of Cyber Science and Engineering, Southeast University, Nanjing, 211189, China
+b
+  Purple Mountain Laboratories, Nanjing, 211111, China
+c
+  Jiangsu Province Engineering Research Center of Security for Ubiquitous Network, Nanjing, 211189, China
+d
+  College of Computer Science, NanKai University, Tianjin, 300071, China
+e School of Informatics, Xiamen University, Xiamen, 361005, China
+
+
+
+
+ARTICLE                 INFO                             ABSTRACT
+
+Keywords:                                                Nowadays, most Internet communications have adopted encrypted network access technology for privacy
+Encrypted traffic classification                         protection, so encrypted traffic classification (ETC) has become a crucial research point to support network
+Lightweight model                                        management and ensure cyberspace security. Meanwhile, off-the-shelf deep learning (DL)-based approaches
+N-gram feature
+                                                         suffer from long preprocessing time, large input size, and a trade-off between model complexity and accuracy.
+Deep learning
+                                                         There is a tough challenge to deploy them on mainstream network devices and achieve fast and accurate traffic
+                                                         classification. In this paper, we design FastTraffic, a lightweight DL-based method for ETC on low-configuration
+                                                         network devices. To speed up processing, we set an IP packet as the granularity of FastTraffic, truncate the
+                                                         informative parts in packets as inputs, and utilize a text-like packet tokenization method. For a lightweight
+                                                         and effective model, we propose an N-gram feature embedding method to represent structured and sequential
+                                                         features of packets and design a three-layer MLP to complete fast classification. We compare FastTraffic with
+                                                         eight state-of-the-art ETC methods on three public benchmark datasets. The experimental results show that
+                                                         FastTraffic obtains better classification performance than the other seven methods with only 0.43M model
+                                                         parameters. Besides, it can also achieve high throughput on low-configuration devices and consume a small
+                                                         amount of computing and storage resources. Therefore, FastTraffic is a lightweight ETC method capable of
+                                                         large-scale deployment on Internet devices.
+
+
+
+1. Introduction                                                                               guaranteeing the quality of service (QoS), QoE, and network security
+                                                                                              provision [2].
+    With the awakening of security awareness, Internet users realize the                          As aforementioned, encrypted network environments pose signifi-
+importance of privacy protection and gradually use encrypted network                          cant challenges to traditional traffic classification methods, including
+communication tools or protocols for network access. Studies from Fire-                       port-based traffic identification methods and deep packet inspection
+fox [1] reportedly counted that the percentage of U.S. users leveraging                       (DPI) technology. Port-based identification methods utilize the corre-
+the SSL/TLS security protocol rose from 55% in 2017 to 93% in 2022.                           spondence between ports and protocols for traffic classification but
+In addition, Virtual Private Network (VPN) and The Onion Router (Tor)                         become ineffective due to the widespread use of port forwarding and
+are also widely employed by users to ensure the anonymity of network                          dynamic port negotiation techniques. DPI identifies specific protocol
+communications. While improving communication privacy, users also                             and application data by analyzing the entire IP packet. Since it cannot
+hope to obtain a high-quality network experience. Internet service
+                                                                                              parse encrypted packet payloads, DPI cannot achieve encrypted traffic
+providers (ISPs) are responsible for charging users based on the quality
+                                                                                              classification [3].
+of experience (QoE) provided. However, the introduction of encryption
+                                                                                                  So far, researchers have proposed many methods to classify en-
+technology protects the confidentiality of transmitted data, while the
+                                                                                              crypted traffic by leveraging artificial intelligence technologies. There
+adoption of obfuscation technology increases the difficulty of traffic
+                                                                                              are two categories: machine learning (ML)-based and deep learning
+identification. It is difficult for ISPs to identify various types of en-
+crypted traffic on network devices. In this context, the encrypted traffic                    (DL)-based. ML-based methods usually use statistical patterns of traffic
+classification (ETC) technique is envisioned as the critical enabler of                       to construct traffic features, like packet path signature [4], packet
+
+
+
+    ∗ Corresponding author at: School of Cyber Science and Engineering, Southeast University, Nanjing, 211189, China.
+    E-mail addresses: xuyw@seu.edu.cn (Y. Xu), cao_jie@seu.edu.cn (J. Cao), songkehui@nankai.edu.cn (K. Song), qiaoxiang@xmu.edu.cn (Q. Xiang),
+chengguang@seu.edu.cn (G. Cheng).
+
+https://doi.org/10.1016/j.comnet.2023.109965
+Received 6 March 2023; Received in revised form 1 June 2023; Accepted 2 August 2023
+Available online 6 August 2023
+1389-1286/© 2023 Elsevier B.V. All rights reserved.
+Y. Xu et al.                                                                                                               Computer Networks 235 (2023) 109965
+
+
+arrival time and size [5], and cumulative packet sizes (CUMUL) [6],                    on high-configuration and low-configuration devices. The results
+the best-performing classifier is then chosen to classify them. The main               show that FastTraffic obtains high classification performance and
+research topic and also a dilemma of ML-based methods is that they                     excellent operational efficiency. It is suitable for large-scale de-
+must accomplish feature engineering to select optimal features for                     ployment on mainstream network devices, achieving fast and
+each specific encrypted traffic protocol or tool. This work is highly                  accurate traffic classification.
+dependent on domain expert knowledge, and the selected features are
+commonly less generalization [7]. However, in real network scenarios,                 The rest of this paper is organized as follows. In Section 2, we
+it is time-consuming and prohibitive to train and implement different             introduce previous work and show the motivation of FastTraffic. In
+ML-based ETC methods for various encrypted traffic generated by                   Section 3, three public datasets are described first, and then the com-
+different tools or protocols.                                                     prehensive workflow of the data preprocessing method is elaborated.
+    Given the powerful representation capability of deep neural net-              The design of our classification model and its complexity analysis are
+works, researchers put forward numerous DL-based methods for clas-                arranged in Section 4. We introduce the experimental setup in Section 5
+sifying encrypted traffic [8]. The merit of DL is that the model can              and verify the classification performance and operational efficiency of
+directly input raw traffic data and automatically perform feature ex-             FastTraffic through comparative experiments in Section 6. Finally, we
+traction and representation during the supervised training process, thus          conclude our work in Section 7.
+eliminating the requirement for feature engineering and expert knowl-
+edge in ML. The DL-based method is naturally suitable for early ETC               2. Related work
+scenarios, which signifies a clear difference from ML-based approaches
+that depend on complete flow or session. However, there are two short-               In this section, we review the existing works in ETC and underline
+comings of existing DL-based methods. Firstly, they did not explore               the motivation of our work.
+the input size of the classification model by analyzing packet format.
+In previous work, the researchers often set the input size according              2.1. ML-based method
+to the maximum transmission unit (MTU). The unreasonable values
+increase preprocessing time overhead and cause a waste of resources on                ML-based methods are proposed to tackle the problem that tra-
+devices. Secondly, many DL-based methods pursued superior classifica-             ditional traffic classification methods cannot cope with dynamic port
+tion performance at the expense of operational efficiency. To explore             negotiation and encrypted payload. Feature selection and optimization
+the feature of encrypted traffic, the model structure adopted by ETC              play a vital role in ML-based methods, thus researchers proposed lots
+methods shifted from a single Convolutional Neural Network (CNN) [9]              of features based on the statistical pattern of the traffic, and selected
+or Recurrent Neural Network (RNN) [10] to a stack of CNNs and                     the appropriate ML classifiers, such as support vector machine, random
+RNNs [11,12]. Recently, Transformer [13] has also been introduced                 forest, etc., to classify them.
+into the ETC field owing to its outstanding performance in NLP and                    In [17], the authors proposed to use only the uplink’s packet timing
+CV. Although these complex models can achieve excellent classification            information to measure VPN traffic. The cumulative packet sizes feature
+performance on high-configuration workstations, mainstream network
+                                                                                  (CUMUL) was first proposed in [6] to produce the Tor website finger-
+devices on the Internet cannot provide the same hardware resources,
+                                                                                  printing and was widely used by subsequent researchers. NetScope [24]
+especially high-performance graphics cards (GPUs). With the research
+                                                                                  was proposed to infer both Android and iOS device users’ activities
+trend of adopting complex network models, DL-based methods occupy
+                                                                                  based on traffic behaviors transfer rates, packet exchanges, etc. In [18],
+more and more hardware resources. Once deployed on network devices
+                                                                                  the authors proposed a video download feature called Bit-Per-Peak,
+with limited resources, they will affect regular network functions,
+                                                                                  which is the total number of bits in a peak. Shen et al. [15] combined
+which goes against the original intention of guaranteeing QoS and
+                                                                                  the CUMUL with the packet position on the uplink-dominant stage to
+QoE [14].
+                                                                                  construct a novel fine-grained website fingerprinting. ETC-PS [4] con-
+    To deploy on mainstream network devices on the Internet and
+                                                                                  structed the traffic path between the encrypted communication client
+achieve fast and accurate traffic classification, we propose FastTraffic, a
+                                                                                  and the server via the session packet length sequence, and extracted
+lightweight ETC method, including a traffic preprocessing method and
+                                                                                  path signature features based on this path.
+a classification model. The main contributions of our work lie in the
+                                                                                      Table 1 provides a summary of ML-based methods, and their com-
+following three aspects.
+                                                                                  monality is that their granularity is flow or session because achieving
+    • Firstly, we propose a traffic preprocessing method. A suitable and          the pattern of communication and extracting statistical features need
+      reasonable packet truncation length, 50 bytes, is determined via            to observe the entire flow or session i.e. it is infeasible to implement
+      protocol analysis and experiments. Besides, we perform tokeniza-            early ETC, which is time consuming. At the same time, ML-based
+      tion with one byte of hexadecimal characters as one word to                 methods were all employed at the foundation of feature engineering,
+      reduce the input size. With this method, we effectively preprocess          which relied on expert knowledge. Nevertheless, researchers’ feature
+      the encrypted traffic and thus lay the groundwork for subsequent            selection efforts focused on specific encryption tools or protocols, and
+      data representation and reduce the time overhead from the outset.           these selected feature sets lacked generalization ability. Hence, ML-
+    • Secondly, we design a lightweight classification model. In the              based methods cannot rapidly select uniform features for classifying
+      packet embedding part, we propose N-gram feature embedding to               encrypted traffic and are not suitable for real network scenarios where
+      extract the structural and sequential information in the raw bytes,         traffic types and sources are variable.
+      aiming to provide a better packet representation. In the classifica-
+      tion network part, we use a three-layer MLP to reduce the number            2.2. DL-based method
+      of model parameters. In addition, we 

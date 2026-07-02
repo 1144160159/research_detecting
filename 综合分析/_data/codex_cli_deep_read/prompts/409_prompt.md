@@ -1,0 +1,2339 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [409] Edge-featured multi-hop attention graph neural network for intrusion detection system
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：409
+题名：Edge-featured multi-hop attention graph neural network for intrusion detection system
+年份：2024
+DOI：10.1016/j.cose.2024.104132
+来源：Computers & Security
+PDF：paper/10.1016_j.cose.2024.104132.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：图学习、知识图谱与威胁情报、IoT、车联网、工业互联网与边缘安全
+相关性：强相关，分数 11
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\409.txt
+- 原始字符数：74188
+- 本次发送字符数：74188
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+Computers & Security 148 (2025) 104132
+
+Contents lists available at ScienceDirect
+
+Computers & Security
+journal homepage: www.elsevier.com/locate/cose
+
+Edge-featured multi-hop attention graph neural network for intrusion
+detection system
+Ping Deng, Yong Huang ∗
+College of Computer Science, Sichuan Normal University, Chengdu, China
+
+ARTICLE
+
+INFO
+
+Keywords:
+Multi-hop attention
+Graph neural networks
+Intrusion detection
+Internet of Things
+
+ABSTRACT
+With the development of the Internet, the application of computer technology has rapidly become widespread,
+driving the progress of Internet of Things (IoT) technology. The attacks present on networks have become
+more complex and stealthy. However, traditional network intrusion detection systems with singular functions
+are no longer sufficient to meet current demands. While some machine learning-based network intrusion
+detection systems have emerged, traditional machine learning methods cannot effectively respond to the
+complex and dynamic nature of network attacks. Intrusion detection systems utilizing deep learning can
+better enhance detection capabilities through diverse data learning and training. To capture the topological
+relationships in network data, using graph neural networks (GNNs) is most suitable. Most existing GNNs for
+intrusion detection use multi-layer network training, which may lead to over-smoothing issues. Additionally,
+current intrusion detection solutions often lack efficiency. To mitigate the issues mentioned above, this paper
+proposes an Edge-featured Multi-hop Attention Graph Neural Network for Intrusion Detection System (EMAIDS), aiming to improve detection performance by capturing more features from data flows. Our method
+enhances computational efficiency through attention propagation and integrates node and edge features, fully
+leveraging data characteristics. We carried out experiments on four public datasets, which are NF-CSE-CICIDS2018-v2, NF-UNSW-NB15-v2, NF-BoT-IoT, and NF-ToN-IoT. Compared with existing models, our method
+demonstrated superior performance.
+
+1. Introduction
+As the Internet of Things (IoT) advances, numerous IoT devices
+have been integrated into the Internet platform. Although IoT devices make our lives increasingly convenient, the risk of cyber attacks on these devices also increases (Peng et al., 2021). Cyber attacks have become more complex, with Advanced Persistent Threats
+(APTs) and botnets being predominant. Intrusions targeting devices
+such as firewalls, routers, printers, and cameras have become critical
+in breaching defense lines (He et al., 2023). Currently, network intrusion detection systems (NIDS) (Heidari and Jabraeil Jamali, 2023)
+can be implemented using two main schemes: traditional rule-based
+signature detection and machine learning-based methods. Rule-based
+detection systems require pre-set filtering rules, which are inadequate
+for today’s rapidly evolving network environment. In contrast, machine
+learning-based intrusion detection systems can learn the characteristics
+of various attacks, making them more intelligent and efficient.
+Many well-known machine learning methods have been applied
+in network intrusion detection systems, such as SVM, random forest,
+
+decision tree, and XGBoost (Thakkar and Lohiya, 2022). These traditional machine learning algorithms initially played an excellent role in
+intrusion detection but heavily relied on feature extraction engineering.
+With the successful application of deep learning methods in the fields
+of natural language processing and image recognition (Sajjad et al.,
+2022; Treviso et al., 2023; Xu et al., 2023; Bayoudh, 2023), network
+intrusion detection systems have also started to incorporate classic
+deep learning methods, such as CNN, LSTM, and RNN, to enhance
+recognition accuracy and efficiency.
+Traditional deep learning algorithms use feature statistics and protocol fields to construct classifiers for network traffic (Yi et al., 2023), but
+such methods do not fully utilize the topological relationships in network space. In recent years, Graph Neural Networks (GNNs) have been
+widely used (Shao et al., 2024), as they have significantly contributed
+to breakthroughs in the pharmaceutical and medical technology industries. GNNs are particularly prevalent in applications such as molecular
+linkage prediction (Torres et al., 2023) and knowledge graph mining (Zhong et al., 2023), where they capture objects’ spatial topology.
+Similarly, data flows can be viewed as directed graphs composed of IP
+
+∗ Corresponding author.
+
+E-mail addresses: dpenging@stu.sicnu.edu.cn (P. Deng), huangyong@sicnu.edu.cn (Y. Huang).
+https://doi.org/10.1016/j.cose.2024.104132
+Received 11 June 2024; Received in revised form 29 August 2024; Accepted 20 September 2024
+Available online 26 September 2024
+0167-4048/© 2024 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+
+2. Related work
+
+addresses and ports in network security. Therefore, employing Graph
+Neural Networks in network intrusion detection systems can be highly
+beneficial.
+In Network Intrusion Detection Systems (NIDS), the main focus
+is processing various data streams (such as NetFlow). NetFlow data
+streams contain source IP, port, destination IP, port, protocol fields,
+and packet data (Sarhan et al., 2022). By deploying NIDS with machine
+learning models, it becomes possible to detect the data flowing through
+in real-time, eliminating the hassle of manually configuring specific
+filtering rules as done previously. Graph Neural Networks (GNNs)
+have begun to be applied in network intrusion detection. One of the
+most well-known classic models is the E-GraphSAGE model proposed
+by Lo et al. (2022), which uses GraphSAGE (Hamilton et al., 2017)
+for training. This model aggregates edge information to predict the
+categories of adjacent node edges. However, GraphSAGE is merely an
+extension of Graph Convolutional Networks (GCN) (Wu et al., 2019).
+Although it alleviates some drawbacks of GCN in handling large-scale
+graphs, it still does not focus on the influence of neighboring nodes
+on the current node when aggregating node features. Therefore, Graph
+Attention Networks (GAT) have emerged.GAT (Velickovic et al., 2017)
+utilizes an attention mechanism, allowing each node to dynamically
+learn the importance of neighboring nodes and calculate attention
+weights based on the similarity between neighboring nodes. In the
+context of Network Intrusion Detection Systems (NIDS), some attempts
+have been made to use GAT to address issues. For instance, Nguyen
+and Kashef (2023) proposed a self-supervised model using GAT, significantly improving the detection accuracy. However, typical graph
+neural networks integrate and update node and edge features in the
+graph structure through domain aggregation and message passing.
+Additionally, single-layer graph neural networks only focus on onehop neighboring nodes. Compared to convolutional networks, graph
+neural networks can only stack a few layers; otherwise, issues like
+over-smoothing and over-squashing may occur (Qureshi et al., 2023).
+Therefore, the common practice is to set up GNNs with two layers.
+While some studies stack GNNs multiple times (Li et al., 2021), excessively increasing the model layers are inefficient in practice, and the
+resulting accuracy improvement is minimal.
+To address these issues and improve the detection accuracy and
+efficiency of Network Intrusion Detection Systems (NIDS), we propose
+a novel Edge-featured Multi-hop Attention Graph Neural Network. By
+utilizing multi-hop attention, our model enables nodes to focus on
+the features of neighboring nodes and obtain global information. Our
+approach simplifies the model structure and considers local and global
+node information, capturing the entire network topology. In summary,
+this paper makes the following three contributions:
+
+2.1. ML-based NIDSs
+In recent years, machine learning techniques have been extensively
+applied in Network Intrusion Detection Systems (NIDS). Numerous
+researchers have concentrated on integrating machine learning models
+into NIDS. Churcher et al. (2021) studied the detection performance
+of various machine learning algorithms in NIDS, including naive Bayes
+(NB), k-nearest neighbors (KNN), decision trees (DT), support vector
+machines (SVM) and random forests (RF). Their experimental results
+indicated that KNN achieved the best performance. Sarhan et al. (2021)
+provided several NetFlow-based datasets to assess the generalization
+ability of machine learning models. These datasets are now widely recognized as benchmarks for evaluating the effectiveness of AI techniques
+in NIDS (Network Intrusion Detection Systems). Lawal et al. (2020)
+employed the XGBoost algorithm to propose an anomaly mitigation
+framework for anomaly detection, demonstrating excellent detection
+performance. Balyan et al. (2022) employed Random Forest combined
+with EGA-PSO methods to address the overfitting problem caused by
+data imbalance, thereby enhancing feature extraction and detection accuracy. In Gu and Lu (2021) and Al-Yaseen (2019), the SVM algorithm
+was used for different tasks to detect anomalous traffic, which also
+enhanced the detection robustness of Intrusion Detection Systems (IDS).
+Jin et al. (2020) proposed a SwiftIDS model, which efficiently processes network traffic data and performs well on large-scale datasets.
+When introduced as AI methods into intrusion detection systems, these
+previous classical machine learning methods opened a new door for
+the field. They demonstrated that intrusion detection can benefit from
+machine learning support, becoming more intelligent in addition to
+signature-based rule methods.
+2.2. DL-based NIDSs
+Deep learning is also widely applied as a branch of machine learning. Given the complexity of feature engineering, deep learning is
+used in various tasks. Deep learning-based IDS are now prevalent, as
+deep learning can learn more features through multiple hidden layers.
+These methods are trained using both supervised and unsupervised
+approaches. Convolutional Neural Networks (CNN), initially utilized
+for image recognition, have now been extensively studied for anomaly
+detection (ElSayed et al., 2021; Kanna and Santhi, 2021; Sun et al.,
+2020; Zhang et al., 2020). These methods extract spatial features from
+data using CNNs or integrating CNNs with Long Short-Term Memory
+(LSTM) networks. Researchers have used LSTM models (Greff et al.,
+2016; Laghrissi et al., 2021; Imrana et al., 2021) to effectively leverage
+spatial features for classifying network data, achieving higher accuracy, fewer errors, and better classification metrics on public datasets
+(UNSW-NB15, ISCX-IDS, and NSL-KDD). Recurrent Neural Networks
+(RNNs) (Shi et al., 2017) are extensively used in NIDS. They are
+specifically designed to process sequential data, including text and time
+series. Their internal structure includes recurrent connections, enabling
+the model to capture temporal dependencies within the sequences.
+In Sohi et al. (2021), Sohi et al. were the first to demonstrate that using
+RNNs helps generate new, unseen attack variants and synthetic signatures from state-of-the-art malware, thus improving intrusion detection
+rates. Haghighat and Li (2021) introduced a voting-based deep learning
+framework incorporating a voting engine to select the most accurate
+prediction candidates during the prediction phase, effectively reducing false positives in anomaly detection. Devendiran and Turukmane
+(2024) recently developed a Gated Attention Dual Long Short-Term
+Memory Network (Dugat-LSTM) for attack classification, showcasing
+excellent accuracy and robustness. In Rani et al. (2024), Talukder
+et al. (2024) and Turukmane and Devendiran (2024), various deep
+learning models were presented, employing normalization or principal
+component analysis (PCA) to standardize data. The experimental results
+consistently demonstrated that these approaches enhanced detection
+accuracy.
+
+∙ We propose a novel graph neural network model called EMA-IDS
+for network intrusion detection. This method uses local and global
+attention to effectively aggregate node features and combine
+them with edge features, resulting in a smaller model size while
+enhancing detection accuracy and operational efficiency.
+∙ Unlike existing anomaly detection algorithms, our proposed
+model with multi-hop attention effectively utilizes both node
+and edge features. As far as we know, this is the first instance
+where multi-hop attention has been applied to network intrusion
+detection.
+∙ We conducted extensive experiments and compared our model
+with existing models on four publicly available datasets. The
+results show that our approach surpasses existing Graph Neural
+Network models.
+The rest of the paper is structured as follows: Section 2 surveys
+related work in network intrusion detection. Section 3 provides the
+essential background information. Section 4 explains the proposed
+model in detail. Section 5 outlines the experimental setup and presents
+the results. Section 6 concludes the paper and discusses future work.
+2
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+
+2.3. GNN-based NIDSs
+Relevant research has already emerged in 2022. Lo et al. (2022)
+were the first to apply Graph Neural Networks (GNNs) to intrusion detection systems. Their approach involved using the GraphSAGE model
+to construct graphs from datasets and predict the edge types between
+adjacent nodes using a Multi-Layer Perceptron (MLP). This method
+is both efficient and innovative. However, it has some drawbacks:
+randomly generating nodes before graph construction can improve
+generalization performance but at the cost of losing the authenticity
+of public datasets. Additionally, their method’s effectiveness could
+weaken when dealing with large-scale data. Caville et al. (2022) modified the E-GraphSAGE model and proposed the DGI model. Although it
+introduced a self-supervised module, the overall process of the model is
+relatively cumbersome and lacks simplicity. Therefore, in 2023, Nguyen
+and Kashef (2023) proposed a traffic-aware self-supervised model. This
+model uses a linear classifier to determine whether a node is anomalous, with the criterion for anomaly being that a node is considered
+anomalous if its traffic is above the average. While leveraging traffic
+awareness is a good idea, this method also has a high false positive rate.
+Xu et al. (2024) introduced a new NEGSC model, which also employed
+a self-supervised approach. In terms of detection performance, this
+model outperformed previous baseline models. Duan et al. (2024)
+proposed a Continuous Temporal Graph Convolutional (CTG) detection
+framework to address the challenge of detecting new connected entities
+in fixed topologies, particularly in the context of 5G/B5G networks.
+Rehman et al. (2024) employed a Word2Vec-based semantic encoder
+to capture key semantic attributes in provenance graphs and designed
+a lightweight classifier that combines Graph Neural Networks (GNN)
+and Word2Vec (Grohe, 2020) embeddings. Their approach also demonstrated robustness and scalability. This represents another avenue of
+exploration.
+
+Fig. 1. Depicts nodes in cyberspace identified by IP and port numbers, with edges
+representing requests sent from the source node to the target node. The edge data
+includes in_pkts, out_pkts, duration, and other attributes. Black edges indicate normal
+requests, while red dashed edges represent various attacks.
+
+3. Background
+In this section, we present some fundamental concepts utilized in
+our research. Firstly, we define  = (, ) as a directed graph, where 
+denotes the collection of edges in graph , and  denotes the collection
+of nodes in graph . 𝐄 = {𝑒𝑢𝑣 ∣ ∀𝑢𝑣 ∈ } denotes the edge feature
+matrix, and 𝐗 = {𝑥𝑖 ∣ 𝑖 ∈ 𝑁} denotes the node feature matrix. We
+use 𝑁 = || to indicate the number of nodes. Let 𝐃 be the diagonal
+degree matrix of 𝐀, and 𝐀 be the adjacency matrix of . The symmetric
+normalized adjacency matrix is denoted as 𝐀sym = 𝐃−1∕2 𝐀𝐃−1∕2 , and
+̂ be any
+the random walk matrix is denoted as 𝐀rw = 𝐀𝐃−1 . Let 𝐀
+transition matrix, including 𝐀sym , 𝐀rw , or other matrices representing
+message passing. We use 𝐌𝑖∶ and 𝐌𝑗∶ to represent the 𝑖th and 𝑗th
+rows of matrix 𝐌, respectively. Additionally, let [[0, 𝐾]] denote the set
+{0, 1, … , 𝐾}.
+
+2.4. Over-smoothing issue on GNN
+
+3.1. Multi-hop graph attention networks
+
+The use of Graph Neural Networks (GNNs) has become increasingly
+popular in the field of network intrusion detection. However, the oversmoothing phenomenon has also impacted the accuracy of detection
+tasks. As the number of layers increases, the performance of the model
+becomes unstable, primarily because deep GNN models tend to lose
+local information (Qureshi et al., 2023; Chen et al., 2020; Xhonneux
+et al., 2020). Many recent studies have aimed at addressing this issue.
+Xu et al. (2018) proposed JK-Net, which improves performance by
+adding connections between layers, aggregating information from each
+layer to the final layer and ensuring that low-dimensional information
+is retained, leading to remarkable performance in related experiments.
+Sun et al. (2019) introduced another model, Adagcn, which iteratively
+integrates feature embeddings from each layer using the Adaboost
+algorithm, bringing low-order features into the deep layers and accumulating node predictions from all layers. In Chen et al. (2023), a
+new graph structural layer called GEL was proposed, which uses residual connections and embedding aggregation structures to aggregate
+high-quality node representations from neighboring nodes through an
+improved Adaboost algorithm. Manocchio et al. (2024) implemented
+a Transformer-based network intrusion detection system, though it did
+not fully utilize the network topology information as it was entirely
+based on Transformers. Currently, Graph Transformers are gaining
+traction. Unlike conventional GATs, Graph Transformers combine the
+advantages of Transformers and graph structures, enabling them to
+handle complex relational structures in graph data. Huang et al. (2024)
+proposed Subtree Attention effectively mitigated the over-smoothing
+issue, improving performance while reducing time complexity. This
+situation motivates us to explore the application of Graph Transformers
+in network intrusion detection.
+
+Standard graph neural networks typically perform message passing
+and neighborhood aggregation once per layer. Recently, diffusionbased models and some graph neural networks have begun implementing multi-hop message passing within a single layer (Chien et al.,
+2021; Zhao et al., 2021). One of the most representative models in this
+context is the decoupled GCN (Wu et al., 2019), which alleviates the
+over-smoothing problem in GCNs caused by the coupling of neighborhood aggregation and feature transformation. Decoupled GCNs execute
+feature transformation and neighborhood aggregation separately. Each
+hop has its aggregation weights, and multiple hops are used to achieve
+effective message passing. However, this method also has a problem:
+when the number of hops becomes too large, it inevitably leads to the
+over-smoothing phenomenon. In recent work, there have been some
+attention-based methods that utilize multi-hop information. Chen et al.
+(2022) began using 𝐾-hop representation aggregation and employed a
+Transformer model to process 𝐾-step message propagation. Although
+this method performs well, it still relies on 𝐾-step propagation to
+gather multi-hop information prior to incorporating the attention mechanism, leading to the problem. Therefore, incorporating the attention
+mechanism into the propagation phase might be a better choice.
+The global self-attention computation is performed by projecting the
+node features into three subspaces and calculating a weighted sum at
+each position. We use SA(⋅, ⋅, ⋅) to represent the global self-attention
+function, with the projected subspaces 𝐐, 𝐊, and 𝐕 represented as
+follows:
+(1)
+
+𝐐 = 𝐗𝐖𝑄 , 𝐊 = 𝐗𝐖𝐾 , 𝐕 = 𝐗𝐖𝑉
+R𝑑×𝑑𝐾 , 𝐖𝐾
+
+R𝑑×𝑑𝐾 , and 𝐖𝑉
+
+R𝑑×𝑑𝑉
+
+where 𝐖𝑄 ∈
+∈
+∈
+are learnable
+transformation matrices. By performing the computation, we obtain the
+3
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+
+new representation for the 𝑖th node as follows:
+∑𝑁
+𝑗=1 𝑠𝑖𝑚(𝐐𝑖∶ , 𝐊𝑗∶ )𝐕𝑗∶
+𝑆𝐴(𝐐, 𝐊, 𝐕)𝑖∶ = ∑𝑁
+𝑗=1 𝑠𝑖𝑚(𝐐𝑖∶ , 𝐊𝑗∶ )
+
+the weight parameter 𝐖𝑘 is applied to the newly formed node embedding, and the result is passed through a nonlinear activation function
+to obtain the new node embedding. The specific formula is as follows:
+))
+(
+(
+𝑘
+(5)
+𝐡𝑘𝑣 = 𝜎 𝐖𝑘 ⋅ 𝐶𝑂𝑁𝐶𝐴𝑇 𝐡𝑘−1
+𝑣 , 𝐡 (𝑣)
+
+(2)
+
+where sim(⋅, ⋅) ∶ R𝑑 × R𝑑 → R is a function that assesses the similarity
+between the query and the key, a standard computation method. Huang
+et al. (2024) used a more efficient algorithm, employing a messagepassing mechanism to achieve multi-hop attention computation. They
+call this algorithm subtree attention, the same as the multi-hop attention we use here. Letting keys and values travel along the edges reduced
+the algorithm’s complexity to linear time. Additionally, this approach
+also reduces space complexity. Traditional attention mechanisms in̂ 𝑘 , which can consume excessive
+volve storing the transition matrix 𝐀
+GPU memory. The attention weight for the 𝑖th node in the 𝑘th layer is
+as follows:
+∑
+𝑇
+̂𝑘
+𝜙(𝐐𝑖∶ ) 𝑁
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) 𝐕𝑗∶
+𝑀𝐻𝐴𝑘 (𝐐, 𝐊, 𝐕)𝑖∶ =
+(3)
+∑𝑁 ̂ 𝑘
+𝜙(𝐐𝑖∶ ) 𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ )𝑇
+
+The above describes the main logic of the E-GraphSAGE algorithm.
+4. Methodology
+In this section, we will discuss the data preprocessing steps, followed
+by an explanation of the motivation behind our proposed model. Then,
+we will detail the technical aspects of the model and demonstrate the
+relevant algorithms.
+4.1. Pre-processing
+Network data structure. In this study, we utilize network traffic
+(such as NetFlow) to construct the backend environment for a Network Intrusion Detection System (NIDS). These traffic records capture
+source and destination communications information, along with other
+metadata such as flow duration, the number of bytes, and the number
+of packets sent. As shown in Fig. 1, we treat the nodes formed by
+IP addresses and port numbers as unique entities in cyberspace, with
+requests between the source and destination nodes viewed as edges
+between these nodes. The request information serves as edge features,
+including the request duration, the number of packets in the request,
+and the number of packets in the response.
+Feature extraction. We used all data flow fields (such as total
+bytes/flows/packets, incoming/outgoing traffic packet counts, incoming/outgoing traffic bytes, and duration) as edge features. Invalid data
+or NaN values were set to 0, and data exceeding the 32-bit range were
+discarded. Node features were extracted using target and count encoding to capture the ratio and frequency of nodes as source/destination
+endpoints across different label groups. Nguyen and Kashef (2023)’s
+work has indicated that these extracted node features benefit network intrusion detection tasks through this method. The StandardScaler
+method was applied to standardize both node and edge features.
+
+𝑀𝐻𝐴𝑘 refers to the attention weights between 𝑘-hop neighbors,
+where a feature mapping 𝜙 is used instead of sim(⋅, ⋅). According to
+our current understanding, the algorithm 𝜙(𝑥) = elu(𝑥) + 1 proposed by
+Katharopoulos et al. (2020) performs comparably to softmax attention.
+Based on this algorithm, 𝑀𝐻𝐴 attempts to integrate the messagepassing mechanism into the full attention architecture, acting as a
+propagation module for keys and values. For more details on Eq. (3),
+please refer to Appendix B.
+3.2. Edge-featured graph neural network
+We know that in the field of network intrusion detection based
+on flow data, when using GNNs, a typical graph construction method
+is to form a graph based on the source IP, port, and destination IP,
+port, with other information as edge attributes. At this point, determining the type of request becomes one of the classification tasks:
+identifying whether a request is abnormal is a binary classification
+task; identifying the type of request is a multi-class classification task.
+In Edge-featured Graph Neural Networks, as far as we know, the EGraphSAGE algorithm (Lo et al., 2022) is a well-known algorithm
+in network intrusion detection. Compared to the original GraphSAGE
+algorithm (Hamilton et al., 2017), the E-GraphSAGE proposed by Lo
+et al. differs in its input, output, and message propagation functions.
+{
+}
+Their propagation function incorporates edge features 𝐞𝑢𝑣 , ∀𝑢𝑣 ∈ 
+for message passing, which is the primary distinction from the original
+GraphSAGE. In network intrusion detection, where most information is
+concentrated on the edges, and node information is relatively sparse,
+their algorithm primarily targets edge features, specifically network
+flow data. To facilitate message passing, the algorithm initializes node
+features by uniformly assigning the feature vector 𝐱𝑣 = {1, … , 1} to
+each node, ensuring that the dimensions of the node features match
+those of the edge features. Since edge features are used for neighborhood aggregation, they proposed a new aggregation function to
+aggregate edge features over 𝑘-layer neighborhood information. The
+formula is as follows:
+({
+})
+𝐡𝑘 (𝑣) = 𝐴𝐺𝐺𝑘 𝐡𝑘−1
+∥ 𝐞𝑘−1
+(4)
+𝑢
+𝑢𝑣 , ∀𝑢 ∈  (𝑣), 𝑢𝑣 ∈ 
+
+4.2. Motivations
+Owing to the constraints of traditional intrusion detection techniques, signature-based detection models are no longer suitable for
+complex and dynamic network attacks. In contrast, deep learningbased anomaly detection techniques can handle more sophisticated
+attack scenarios. Using graph neural networks in intrusion detection
+systems allows for capturing the topological relationships of network
+data, making it an excellent solution to these challenges. However,
+conventional GNN models have certain drawbacks, including oversmoothing in GCNs and the computational overhead in GATs. Current
+research has moved beyond simply applying GNNs, focusing instead on
+combining the strengths of GNNs and transformers to optimize existing
+models (Gonçalves and Zanchettin, 2024). Our study aims to explore
+the application of graph transformers in intrusion detection, alleviating
+potential issues such as over-smoothing and instability in detection
+performance associated with conventional GNN models.
+
+where 𝐞𝑘−1
+represents the edge feature 𝑢𝑣 from the neighborhood
+𝑢𝑣
+ (𝑣) of node 𝑣 at layer 𝑘 − 1, and 𝐡𝑘−1
+denotes the embedding of
+𝑢
+𝑘−1
+the neighboring node. By concatenating 𝐞𝑘−1
+𝑢𝑣 and 𝐡𝑢 , a new node
+representation is formed.
+Subsequently, based on the 𝑘-hop edge features, the node embedding 𝐡𝑣 at layer 𝑘 is computed, with the neighbor node embeddings
+composed of the neighboring edge features. Therefore, the new feature
+representation 𝐡𝑘 (𝑣) integrates the neighborhood feature information,
+
+4.3. The proposed EMA-IDS model
+To address the issues mentioned above, we propose a new model
+called an Edge-featured Multi-hop Attention Graph Neural Network for
+Intrusion Detection System (EMA-IDS). EMA-IDS comprises three main
+components: a node encoding module, an edge encoding module, and
+an MLP module.
+Fig. 2 illustrates the overall architecture of our model. First, the data
+is preprocessed and then fed into the model. The data flows through
+
+which is then concatenated with the current node feature 𝐡𝑣𝑘−1 . Next,
+
+4
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+
+Fig. 2. Illustrates the main structure and data flow of the EMA-IDS model. The raw data is processed to obtain node features 𝐗, the adjacency matrix 𝐀, and edge features 𝐄.
+We randomly sample data to form mini-batches of input subgraphs, each containing 𝐗𝑚 , 𝐀𝑚 , and 𝐄𝑚 . 𝐗𝑚 and 𝐀𝑚 are fed into the node encoding module, where 𝐗𝑚 is projected
+to generate 𝐐, 𝐊, and 𝐕. After performing multi-hop attention propagation on the subgraph, new hidden representations 𝐇 are generated. 𝐇, 𝐀𝑚 , and 𝐄𝑚 are then input into the
+edge encoding module, where 𝐇 is concatenated with the weighted 𝐄𝑚 and undergoes a linear transformation during message passing. Finally, a shallow multi-layer perceptron
+(MLP) is applied to obtain the edge embeddings.
+
+the node encoding module, the edge encoding module, and the MLP
+module, and finally, the loss is computed.
+Node Encoding. This part mainly focuses on node features. We
+followed the work of Huang et al. (2024) for node encoding, and
+We observed that the linear outputs of 𝐖𝑄 and 𝐖𝐾 can be kept
+minimal as long as the output of 𝐖𝑉 remains appropriate for downstream tasks. This approach can significantly reduce the model’s GPU
+memory usage without affecting classification accuracy by minimizing
+the linear outputs of 𝐖𝑄 and 𝐖𝐾 . Node Encoding consists of three
+steps: node feature transformation, multi-hop attention computation,
+and multi-hop attention aggregation. First, the node features are linearly transformed to an appropriate dimension and then projected into
+subspaces 𝐐, 𝐊, and 𝐕 using Eq. (1). We apply the feature mapping
+function 𝜙 proposed by Katharopoulos et al. (2020) to process the
+queries 𝐐 and keys 𝐊.
+Next, we compute the multi-hop attention. Note that in Eq. (3),
+∑
+∑𝑁 ̂ 𝑘
+𝑇
+𝑇
+̂𝑘
+there are two summations: 𝑁
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) 𝐕𝑗∶ and
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) .
+These two summations can be viewed as a form of message passing.
+This means that we first compute 𝜙(𝐊𝑖∶ ) and 𝜙(𝐊𝑖∶ )𝑇 𝐕𝑖∶ . Next, we
+perform 𝑘 steps of message passing with 𝜙(𝐊𝑖∶ ) and 𝜙(𝐊𝑖∶ )𝑇 𝐕𝑖∶ . Finally,
+we combine the node’s own 𝜙(𝐐𝑖∶ ) with the aggregated keys and values
+∑𝑁 ̂ 𝑘
+∑𝑁 ̂ 𝑘
+𝑇
+𝑇
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) 𝐕𝑗∶ and
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) to complete the computation
+of 𝑀𝐻𝐴𝑘 (𝐐, 𝐊, 𝐕)𝑖∶ . Fig. 3 illustrates the computation process of multihop attention for a single node. We use 𝐀rw as the transition matrix,
+enabling the propagation of keys and values along the edges. This
+process can be viewed as a random walk on the graph.
+Then, all level results are aggregated using Eq. (6). The specific
+AGGR function can be sum, concat, attention-based readout (Chen
+et al., 2022), or GPR-like aggregation (Chien et al., 2021). Eq. (6) is
+as follows:
+(
+)
+𝑀𝐻𝐴(𝐐, 𝐊, 𝐕)𝑖∶ = 𝐴𝐺𝐺 {MHA𝑘 (𝐐, 𝐊, 𝐕)𝑖∶ ∥ 𝑘 ∈ [[0, 𝐾]]}
+(6)
+
+Fig. 3. Illustrates the computation process of 𝐾-hop attention for the 𝑖th node. We
+)
+∑𝑁 ̂ 𝐾
+∑𝑁 ̂ 𝐾 (
+𝑇
+need to compute 𝑗=1 𝐀
+𝑖𝑗 𝐌𝑗∶ and
+𝑗=1 𝐀𝑖𝑗 𝜙 𝐊𝑗∶ , where 𝐌𝑗∶ = 𝜙(𝐊𝑗∶ ) 𝐕𝑗∶ . After
+computing 𝑀𝐻𝐴1 , we can directly use the results of 𝑀𝐻𝐴1 when computing 𝑀𝐻𝐴2 ,
+thus avoiding redundant computations. This process continues until 𝑀𝐻𝐴𝐾 , where
+each step utilizes the results from the previous 𝐾 − 1 computations. Therefore, the
+computation of {𝑀𝐻𝐴𝑘 }𝑘∈[[1,𝐾]] is a nested process.
+
+can better adjust the influence of different edges on the nodes. The edge
+feature attention computation is as follows:
+𝛼 𝑘 = 𝑠𝑜𝑓 𝑡𝑚𝑎𝑥(𝐿𝑒𝑎𝑘𝑦𝑅𝑒𝐿𝑈 (𝑊𝑒𝑘 ⋅ 𝑒𝑘−1
+𝑢𝑣 ))
+
+(7)
+
+By multiplying the edge feature 𝑒𝑘−1
+𝑢𝑣 with the weight parameter
+𝑊𝑒𝑘 , we obtain a weighted edge feature. Then, the edge feature is
+processed using the LeakyReLU activation function to obtain the attention coefficient 𝛼 𝑘 . Finally, the attention coefficient 𝛼 𝑘 is normalized
+using the softmax operation. The obtained attention coefficient is then
+multiplied by the edge feature, resulting in an edge feature weighted
+by the attention mechanism. This process better captures the important
+information on the edges. The specific formula is as follows:
+({
+})
+𝑘
+ℎ𝑘 (𝑣) = 𝐴𝐺𝐺 ℎ𝑘−1
+∥ (𝑒𝑘−1
+(8)
+𝑢
+𝑢𝑣 ⋅ 𝛼 ), ∀𝑢 ∈  (𝑣), 𝑢𝑣 ∈ 
+where ℎ𝑘 (𝑣) represents the aggregated information from the neighboring nodes. As described in Eq. (5), a new feature representation is
+obtained by merging the neighbor node features with the node’s own
+features and applying an activation function.
+MLP. The feature representations generated by the edge encoding
+need to be processed through a shallow MLP. In this case, we set the
+
+Edge Encoding. We input the embeddings processed by the node
+encoding module and the edge features into the edge encoding module.
+Before calculating with Eq. (8), we perform attention computation on
+the edge features. The features calculated with attention parameters
+5
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+Table 1
+Classes and samples of four datasets.
+
+MLP to have two layers. After the MLP, a specific READOUT function
+is applied to obtain the edge embeddings. The transformation of node
+embeddings to edge embeddings can be expressed as follows:
+)
+(
+(9)
+𝐳𝑢𝑣 = 𝑅𝐸𝐴𝐷𝑂𝑈 𝑇 𝐳𝑢 , 𝐳𝑣 , 𝑢𝑣 ∈ 
+where 𝑅𝐸𝐴𝐷𝑂𝑈 𝑇 (⋅, ⋅) can be any readout function, such as concatenation operator, L1, L2, or Hadamard. In our proposed method, we choose
+concatenation as the readout function.
+Note that our edge encoding performs only one step of message
+passing, meaning 𝑘 = 1 in the edge encoding module. We observed
+that a single integration of edge features and node features is sufficient
+to capture the spatial topology of the graph. algorithm 1 illustrates all
+the above processes and the training flow of our model.
+
+Dataset
+
+Classes
+
+Samples
+
+NF-BoT-IoT
+
+Benign
+DDoS
+Theft
+DoS
+Reconnaissance
+
+13,859
+56,844
+1 909
+56,833
+470,655
+
+NF-ToN-IoT
+
+xss
+password
+ransomware
+scanning
+mitm
+Benign
+backdoor
+injection
+ddos
+dos
+
+99,944
+156,299
+142
+21,467
+1 295
+270,279
+17,247
+468,539
+326,345
+17,717
+
+NF-CSE-CIC-IDS2018-v2
+
+Benign
+Bot
+BruteForce
+DDOS
+DoS
+Infiltration
+Web Attacks
+
+16,635,567
+143,097
+120,912
+1,390,270
+483,999
+116,361
+3 502
+
+NF-UNSW-NB15-v2
+
+Analysis
+Backdoor
+Benign
+DoS
+Exploits
+Worms
+Fuzzers
+Reconnaissance
+Shellcode
+Generic
+
+2 299
+2 169
+2,295,222
+5 794
+31,551
+164
+22,310
+12,779
+1 427
+16,560
+
+Algorithm 1: The EMA-IDS algorithm
+Input:
+• A graph  = (, )
+{
+}
+• Input node features 𝐗 = 𝑥𝑖 ∣ 𝑖 ∈ 𝑁
+{
+
+• Input edge features 𝐄 = 𝑒𝑢𝑣 ∣ ∀𝑢𝑣 ∈ 
+
+}
+
+• Parameters: multi-hop 𝐾
+{
+
+Output: Edge embeddings 𝐙 = 𝑧𝑢𝑣 ∣ ∀𝑢𝑣 ∈ 
+1 for each iteration do
+
+}
+
+/* node encoding */
+2
+
+𝐐 = 𝐗𝐖𝑄 , 𝐊 = 𝐗𝐖𝐾 , 𝐕 = 𝐗𝐖𝑣
+
+3
+
+𝜙(𝐐) = elu(𝐐) + 1, 𝜙(𝐊) = elu(𝐊) + 1
+
+4
+
+foreach 𝑘 = 1, 2, … , 𝐾 do
+𝑁
+𝑁
+∑
+̂ 𝑘 𝜙(𝐊𝑗∶ )𝑇
+̂ 𝑘 𝜙(𝐊𝑗∶ )𝑇 𝐕𝑗∶ ∕𝜙(𝐐𝑖∶ ) ∑ 𝐀
+𝐀
+𝜙(𝐐𝑖∶ )
+𝑖𝑗
+𝑖𝑗
+
+5
+
+𝑀𝐻𝐴𝑘 (𝐐, 𝐊, 𝐕)𝑖∶ =
+
+6
+
+(
+)
+𝑀𝐻𝐴(𝐐, 𝐊, 𝐕)𝑖∶ = AGG {𝑀𝐻𝐴𝑘 (𝐐, 𝐊, 𝐕)𝑖∶ | 𝑘 ∈ [[0, 𝐾]]}
+
+𝑗=1
+
+7
+
+𝑗=1
+
+end
+
+/* edge encoding */
+8
+9
+10
+
+𝛼 1 = 𝑠𝑜𝑓 𝑡𝑚𝑎𝑥(𝐿𝑒𝑎𝑘𝑦𝑅𝑒𝐿𝑈 (𝑊𝑒1 ⋅ 𝑒0𝑢𝑣 ))
+({
+})
+ℎ1 (𝑣) = 𝐴𝐺𝐺 ℎ0𝑢 ||(𝑒0𝑢𝑣 ⋅ 𝛼 1 ), ∀𝑢 ∈  (𝑣), 𝑢𝑣 ∈ 
+(
+(
+))
+𝐡1𝑣 = 𝜎 𝐖1 ⋅ 𝐶𝑂𝑁𝐶𝐴𝑇 𝐡0𝑣 , 𝐡1 (𝑣)
+
+data volume of 18,893,708. The large-scale data volume also better
+evaluates the model’s performance when dealing with vast data.
+After preprocessing the four datasets, we obtained eight preprocessed files corresponding to binary and multi-class classification tasks
+for each of the four datasets. Table 2 presents the basic graph data
+information for these eight preprocessed files, including the number
+of nodes, edges, node and edge feature dimensions, and labels. Additionally, we provided scatter plots of node degrees for the graphs
+constructed from the four datasets, as shown in Fig. 4.
+
+/* edge embeddings readout */
+11
+12
+
+(
+)
+𝐳𝑢𝑣 = READOUT 𝐳𝑢 , 𝐳𝑣 , 𝑢𝑣 ∈ 
+
+end
+
+5. Experiments
+In this section, we evaluate our proposed EMA-IDS model through
+experiments on four benchmark datasets. We begin by outlining the
+experimental setup. Next, we compare our approach against five benchmark models to assess the performance of EMA-IDS in both binary and
+multi-class classification tasks. Finally, we analyze the results of our
+method on these datasets.
+
+5.2. Baselines
+In this experiment, we will evaluate our proposed method against
+five baseline models, which are considered state-of-the-art in network
+intrusion detection, utilizing both deep learning (DL) and machine
+learning (ML) techniques.
+
+5.1. Datasets
+
+∙ KNN (Zhang et al., 2017) is a widely adopted ML algorithm for
+anomaly detection. Its main advantages include simplicity and
+ease of use, no training process required, and applicability to
+various data types.
+∙ GAT (Velickovic et al., 2017) comprises attention mechanismbased graph neural networks. It allows nodes to dynamically
+adjust their attention to other nodes during the message-passing
+process, thereby better capturing local and global information
+within the graph structure.
+∙ E-GraphSAGE (Lo et al., 2022) is a GNN-based approach that alters the traditional message-passing mechanism by relying solely
+on edge features instead of node features. This method has
+demonstrated superior performance compared to other machine
+learning and deep learning techniques and is recognized as one
+of the pioneering approaches to utilize graph neural networks for
+network intrusion detection. However, E-GraphSAGE cannot run
+
+We employ the NetFlow dataset (Sarhan et al., 2021, 2022), which
+comprises four benchmark subsets: NF-CSE-CIC-IDS2018-v2, NF-UNSWNB15-v2, NF-BoT-IoT, and NF-ToN-IoT. These subsets are derived
+from the original CSE-CIC-IDS2018, UNSW-NB15, BoT-IoT, and ToNIoT datasets, respectively. Each subset offers two types of labels for
+prediction: one type with two categories to indicate whether the traffic
+is normal or under attack, and the other with multiple categories to
+represent different attack types.
+Table 1 shows the data categories contained in the four datasets.
+NF-BoT-IoT is a relatively small dataset with five types, including
+586,241 (97.69%) attack data. NF-ToN-IoT contains more data than NFBoT-IoT, with ten types. NF-UNSW-NB15-v2 is an updated version of
+NF-UNSW-NB15 with a larger overall data volume than the former. NFCSE-CIC-IDS2018-v2 is the largest dataset among the four, with a total
+6
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+Table 2
+Information of eight graphs derived from the four datasets.
+Dataset
+Type
+Nodes
+Edges
+Node Feat. Dim.
+Edge Feat. Dim.
+Labels
+
+NF-BoT-IoT
+Binary
+77,177
+600,100
+8
+8
+2
+
+Multi-cls.
+77,177
+600,100
+32
+8
+5
+
+NF-ToN-IoT
+Binary
+169,562
+1,379,274
+8
+8
+2
+
+NF-CSE-CIC-IDS2018-v2
+
+Multi-cls.
+169,562
+1,379,274
+72
+8
+10
+
+Binary
+9,686,040
+18,893,708
+8
+39
+2
+
+Multi-cls.
+9,686,040
+18,893,708
+112
+39
+15
+
+NF-UNSW-NB15-v2
+Binary
+1,090,451
+2,390,275
+8
+39
+2
+
+Multi-cls.
+1,090,451
+2,390,275
+72
+39
+10
+
+Fig. 4. Scatter plots of node degrees based on the graphs constructed from the four datasets.
+Table 3
+Partitions of four datasets.
+
+on large-scale data because it attempts to input all data into the
+GPU simultaneously, exceeding GPU memory limits. Therefore,
+we retained the E-GraphSAGE model’s code but used mini-batch
+training for data input.
+∙ Anomal-E (Caville et al., 2022) is an enhanced method built upon
+E-GraphSAGE, integrating a self-supervised technique (DGI) to
+maximize the local–global mutual information of the graph by
+randomly shuffling edge features. After training, the encoder produces edge embeddings used as inputs for standard anomaly detection methods (e.g., HBOS, CBLOF, PCA, and IF). However, because its detectors depend on unsupervised learning algorithms,
+a direct evaluation against our proposed method is not feasible. Thus, we utilize the refined E-GraphSAGE encoder from the
+Anomal-E framework to generate edge embeddings, which are
+then input into an XGBoost (Chen and Guestrin, 2016) classifier
+to detect attacks. Similarly, mini-batch training is used for data
+input.
+∙ TS-IDS (Nguyen and Kashef, 2023) is a recent and innovative
+method in intrusion detection. It improves data classification accuracy by employing a high-throughput self-supervised approach
+to focus on anomalous nodes, assisting the model in identifying abnormal nodes. As a GNN-based method, it is a valuable
+reference in intrusion detection.
+
+Dataset
+NF-BoT-IoT
+NF-ToN-IoT
+NF-CSE-CIC-IDS2018-v2
+NF-UNSW-NB15-v2
+
+No. data
+
+Train
+
+Val
+
+Test
+
+600,100
+1,379,274
+18,893,708
+2,390,275
+
+360,060
+827,564
+11,336,226
+1,434,165
+
+120,020
+275,855
+3,778,741
+478,055
+
+120,020
+275,855
+3,778,741
+478,055
+
+training on large-scale data. The input features for KNN will be the
+same as those used for E-GraphSAGE and Anomal-E. The setup for the
+GAT method will be the same as our proposed method.
+We will use cross-validation to evaluate the models’ performance
+and stability. In this experiment, we choose to perform five-fold crossvalidation. The dataset is divided into training, validation, and test sets
+for each fold, making up 60%, 20%, and 20% of the entire dataset,
+respectively. Table 3 shows the sizes of these sets for each dataset after
+division.
+We implemented our proposed model and training process using
+Python (Van Rossum and Drake, 1995), PyTorch (Paszke et al., 2019),
+PyTorch-Geometric (Fey and Lenssen, 2019), DGL (Wang, 2019), and
+PyTorch-Lightning.4 We conducted the experiments using an NVIDIA
+Tesla V100 GPU with 16 GB of memory. Additionally, due to its large
+scale, we used a separate NVIDIA Tesla V100 GPU with 32 GB of
+memory for tasks on the NF-CSE-CIC-IDS2018-v2 dataset. We set the
+learning rate to a value within the range [10−3 , 10−2 ] and utilized
+early stopping based on validation set accuracy during model training.
+Additional hyperparameters are detailed in Table 4. It is also worth
+mentioning that feature preprocessing was performed for each fold
+based on the training and validation datasets before being applied to
+the entire dataset.
+The work related to this paper is available at https://github.com/
+topsecd/EMA-IDS.
+
+We also propose variants of EMA-IDS, named EMA-IDS-M and EMAIDS-E. These models contain only the node encoding module and
+only the edge encoding module, respectively. By evaluating these two
+models, we can better assess the performance of the EMA-IDS model
+across various datasets.
+5.3. Parameter settings
+Since the original method by the authors inherently supports minibatch training, TS-IDS1 will be set up strictly as the authors implemented it. For the baselines Anomal-E2 and E-GraphSAGE,3 we will
+adopt the original model architecture and hyperparameters provided
+by the authors. Due to GPU memory constraints, the input data will be
+processed in mini-batches instead of all at once, allowing for efficient
+
+5.4. Evaluation metrics
+We used the trained models to evaluate performance on the test
+set. The following evaluation metrics were employed, where TN, FN,
+FP, and TP represent True Negative, False Negative, False Positive, and
+True Positive, respectively.
+
+1
+
+https://github.com/hoangntc/TS-IDS.
+https://github.com/waimorris/Anomal-E.
+3
+https://github.com/waimorris/E-GraphSAGE.
+2
+
+4
+
+7
+
+https://lightning.ai.
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+Table 4
+The settings for the hyperparameters in our experiment.
+Hyperparameter
+
+Value
+
+Optimizer
+Loss function
+Dropout
+Batch size
+Learning rate
+Max epochs
+No. multi-hop
+No. hidden
+No. 𝑑𝐾
+
+Adam
+CE
+0.2
+30,000
+[10−3 , 10−2 ]
+500
+[1–3]
+64
+[1,2,4]
+
+5.5.2. Multi-class classification results
+For the multi-class classification experiment, we use weighted recall
+and weighted F1 to evaluate the model’s performance. Table 6 presents
+the results of the multi-class classification experiments. For more details
+on our model’s performance across multiple attack types, please refer
+to Appendix A.
+From the experimental data, our model achieved the best metrics
+across all datasets. For traditional machine learning methods, KNN
+performed very well on most datasets except for NF-ToN-IoT, where
+its performance was slightly weaker. KNN’s performance demonstrates
+that traditional ML methods can still be sufficient in some scenarios if
+extreme performance is not required.
+For EGraphSAGE and AnomalE, EGraphSAGE outperformed
+AnomalE on the NF-BoT-IoT and NF-UNSW-NB15-v2 datasets, while the
+opposite was true for the other two datasets. Since AnomalE is based
+on E-GraphSAGE, their similar performance is expected.
+TS-IDS performed better than GAT on all four benchmark datasets,
+supporting the authors’ claim that their proposed approach improves
+the model’s detection capability. Our proposed EMA-IDS method outperformed TS-IDS by 3% on the NF-BoT-IoT dataset and 4% on the NFToN-IoT dataset, indicating that multi-hop attention positively impacts
+multi-class classification tasks.
+On the large-scale NF-CSE-CIC-IDS2018-v2 dataset, all models performed similarly, which suggests that the abundance of information can
+benefit the learning process with large datasets, making the choice of
+ML method less critical.
+
+∙ Accuracy(ACC):
+𝐴𝐶𝐶 =
+
+𝑇𝑃 + 𝑇𝑁
+𝑇𝑃 + 𝐹𝑃 + 𝑇𝑁 + 𝐹𝑁
+
+(10)
+
+∙ Area Under the Curve (AUC): includes the False Positive Rate
+(FPR) and the True Positive Rate (TPR).
+𝑇𝑃𝑅 =
+
+𝑇𝑃
+𝑇𝑃 + 𝐹𝑁
+
+(11)
+
+𝐹𝑃𝑅 =
+
+𝐹𝑃
+𝐹𝑃 + 𝑇𝑁
+
+(12)
+
+∙ F1-score: is composed of Recall and Precision.
+𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 =
+
+𝑇𝑃
+𝑇𝑃 + 𝐹𝑃
+
+(13)
+
+𝑅𝑒𝑐𝑎𝑙𝑙 =
+
+𝑇𝑃
+𝐹𝑁 + 𝑇𝑃
+
+(14)
+
+𝐹1 = 2 ×
+
+𝑅𝑒𝑐𝑎𝑙𝑙 × 𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛
+𝑅𝑒𝑐𝑎𝑙𝑙 + 𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛
+
+(15)
+
+5.5.3. Ablation study
+To evaluate the impact of multi-hop attention on the model, we
+proposed two variants of the EMA-IDS model: EMA-IDS-M and EMAIDS-E. EMA-IDS-M includes the node encoding module but not the edge
+encoding module, while EMA-IDS-E includes only the edge encoding
+module. We observed that EMA-IDS-E outperforms EMA-IDS-M in most
+scenarios. Still, EMA-IDS-M performed slightly better in the multi-class
+classification on the NF-ToN-IoT dataset and the binary classifications
+on the NF-CSE-CIC-IDS2018-v2 and NF-UNSW-NB15-v2 datasets. The
+full EMA-IDS model, which incorporates both modules, outperforms
+these variant models, indicating that the contributions of both modules
+positively impact the final model. For detailed results, please refer to
+Tables 5 and 6.
+In the following discussion, 𝐾 represents the value of multi-hop
+attention propagation, and 𝐿 represents the number of convolution
+layers.
+Study on the comparison of 𝑲-hop propagation and 𝑳-layer
+convolution. Since traditional GCN mainly processes node features and
+does not handle edge features, we used our EMA-IDS-E for experimental observation to utilize edge features effectively. In this study, we
+executed 𝐾-hop attention propagation on EMA-IDS, while performing
+𝐿-layer convolution on EMA-IDS-E, with 𝐾 and 𝐿 ranging from 1 to
+10. We selected the weighted F1 as the evaluation metric. The four
+datasets’ experimental results for multi-class tasks are shown in the line
+chart of Fig. 5. Except for NF-CSE-CIC-IDS2018-v2, where performance
+fluctuates significantly in the latter half, EMA-IDS demonstrates stable
+performance in other cases. These observations provide strong evidence
+that multi-hop attention propagation offers robustness and efficiency.
+We did not observe a drastic performance drop for EMA-IDS-E after
+multiple convolutional layers. Instead, the performance gradually decreased as the number of layers increased. Upon analyzing the model’s
+code, unlike traditional node classification tasks that only involve node
+features, when a dataset includes edge features, the hidden representations are combined with edge features during each round of message
+passing and aggregation. This method of handling message passing and
+aggregation might be the reason for this phenomenon and represents
+a key difference between edge classification tasks in network intrusion
+detection and other tasks.
+
+5.5. Experimental results
+5.5.1. Binary classification results
+We used ACC, AUC, weighted F1, macro recall, and macro precision as evaluation metrics for the binary classification task. Table 5
+presents the outcomes of each comparison model on the four benchmark datasets.
+From the experimental data, our model performs exceptionally well
+in most metrics. However, on the NF-CSE-CIC-IDS2018-v2 dataset, the
+AUC, Precision, and Recall metrics are slightly weaker compared to
+other models, which indicates that while the original E-GraphSAGE and
+AnomalE models could not run on the large NF-CSE-CIC-IDS2018-v2
+dataset, their performance is still outstanding when using mini-batch
+inputs. On the NF-UNSW-NB15-v2 dataset, our model also achieved the
+best results in ACC and F1 metrics. Interestingly, KNN had the highest
+Precision, demonstrating that traditional ML methods still perform well
+in anomaly detection.
+GAT and TS-IDS, in contrast, showed moderate performance in this
+binary classification task. Comparing their results, we found that GAT
+slightly outperformed TS-IDS in some metrics. Upon analyzing the TSIDS code from preprocessing to model structure, we discovered that
+TS-IDS includes an auxiliary label extraction process. These auxiliary
+labels are used to learn whether a node is an anomalous endpoint.
+The extracted auxiliary labels are not always accurate compared to the
+true labels, potentially leading to the learning of incorrect information.
+Nevertheless, using high-throughput attention on endpoints is a novel
+approach, and it will still perform excellently on large-scale data in
+real-world scenarios. EMA-IDS-E shows slightly weaker performance
+than EMA-IDS-M on the NF-UNSW-NB15-v2 dataset, but their binary
+classification performance is similar on the other three datasets.
+8
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+Table 5
+Experimental results of binary classification. Underlined for best performance.
+Dataset
+
+Metric
+
+KNN
+
+EGraphSAGE
+
+AnomalE
+
+GAT
+
+TS-IDS
+
+EMA-IDS
+
+EMA-IDS-M
+
+EMA-IDS-E
+
+NF-BoT-IoT
+
+ACC
+AUC
+F1
+Recall
+Precision
+
+0.9478
+0.8542
+0.9595
+0.8542
+0.6333
+
+0.9102
+0.9415
+0.9376
+0.9415
+0.6006
+
+0.9144
+0.9362
+0.9401
+0.9362
+0.6081
+
+0.9205
+0.9518
+0.9439
+0.9518
+0.6115
+
+0.9151
+0.9515
+0.9406
+0.9515
+0.6065
+
+0.9522
+0.9653
+0.9636
+0.9653
+0.6613
+
+0.9297
+0.9245
+0.9492
+0.9245
+0.6178
+
+0.9265
+0.9526
+0.9475
+0.9526
+0.6180
+
+NF-ToN-IoT
+
+ACC
+AUC
+F1
+Recall
+Precision
+
+0.9427
+0.9578
+0.9450
+0.9578
+0.8883
+
+0.9799
+0.9755
+0.9800
+0.9755
+0.9620
+
+0.9849
+0.9887
+0.9851
+0.9887
+0.9657
+
+0.9888
+0.9928
+0.9889
+0.9928
+0.9733
+
+0.9923
+0.9937
+0.9923
+0.9937
+0.9824
+
+0.9988
+0.9976
+0.9988
+0.9976
+0.9985
+
+0.9933
+0.9943
+0.9934
+0.9943
+0.9850
+
+0.9938
+0.9954
+0.9938
+0.9954
+0.9855
+
+NF-CSE-CIC-IDS2018-v2
+
+ACC
+AUC
+F1
+Recall
+Precision
+
+0.9956
+0.9828
+0.9955
+0.9828
+0.9960
+
+0.9948
+0.9791
+0.9948
+0.9791
+0.9963
+
+0.9953
+0.9933
+0.9953
+0.9933
+0.9847
+
+0.9911
+0.9769
+0.9911
+0.9769
+0.9806
+
+0.9915
+0.9769
+0.9915
+0.9769
+0.9827
+
+0.9958
+0.9915
+0.9958
+0.9915
+0.9886
+
+0.9954
+0.9918
+0.9954
+0.9918
+0.9865
+
+0.9950
+0.9917
+0.9951
+0.9917
+0.9849
+
+NF-UNSW-NB15-v2
+
+ACC
+AUC
+F1
+Recall
+Precision
+
+0.9956
+0.9963
+0.9957
+0.9963
+0.9511
+
+0.9947
+0.9964
+0.9949
+0.9964
+0.9422
+
+0.9933
+0.9948
+0.9936
+0.9948
+0.9294
+
+0.9908
+0.9804
+0.9911
+0.9804
+0.9140
+
+0.9888
+0.9939
+0.9894
+0.9939
+0.9301
+
+0.9956
+0.9973
+0.9957
+0.9973
+0.9501
+
+0.9916
+0.9952
+0.9920
+0.9952
+0.9129
+
+0.9905
+0.9919
+0.9910
+0.9919
+0.9070
+
+Table 6
+Experimental results of multi-class classification. Underlined for best performance.
+Model
+
+KNN
+EGraphSAGE
+AnomalE
+GAT
+TS-IDS
+EMA-IDS
+EMA-IDS-M
+EMA-IDS-E
+
+NF-BoT-IoT
+
+NF-ToN-IoT
+
+NF-CSE-CIC-IDS2018-v2
+
+NF-UNSW-NB15-v2
+
+Recall
+
+F1
+
+Recall
+
+F1
+
+Recall
+
+F1
+
+Recall
+
+F1
+
+0.8353
+0.8223
+0.7819
+0.7860
+0.8153
+0.8397
+0.8257
+0.8298
+
+0.8389
+0.7931
+0.7840
+0.7739
+0.8134
+0.8519
+0.8022
+0.8304
+
+0.5484
+0.5748
+0.6608
+0.6543
+0.6699
+0.7158
+0.6839
+0.6505
+
+0.4797
+0.5064
+0.6466
+0.6322
+0.6303
+0.6741
+0.6688
+0.6323
+
+0.9956
+0.9755
+0.9961
+0.9971
+0.9972
+0.9974
+0.9969
+0.9971
+
+0.9945
+0.9668
+0.9955
+0.9969
+0.9970
+0.9972
+0.9967
+0.9969
+
+0.9871
+0.9834
+0.9762
+0.9710
+0.9730
+0.9874
+0.9801
+0.9827
+
+0.9870
+0.9831
+0.9728
+0.9708
+0.9670
+0.9875
+0.9783
+0.9812
+
+Fig. 5. The multi-class classification results after EMA-IDS and EMA-IDS-E perform 𝐾-hop propagation or 𝐿-layer convolution, respectively. The x-axis of each line chart represents
+𝐾-hop propagation and 𝐿-layer convolution, while the y-axis represents the evaluation metric, F1 Score.
+
+Study on EMA-IDS with 𝑳-layer convolution. By default, the
+edge encoding module contains only one convolution layer. To further
+explore the optimal model structure, we conducted additional experiments. We set the 𝐾-hop propagation value for the node encoding
+module, 𝐾, to 3 and performed extensive experiments with 𝐿 ranging
+from 1 to 10 layers. As shown in Fig. 6 of the multi-class classification
+results across all datasets, We observed a slight improvement in performance with multiple convolution layers on the NF-CSE-CIC-IDS2018-v2
+and NF-UNSW-NB15-v2 datasets, although there was a downward trend
+in performance on the NF-BoT-IoT and NF-ToN-IoT datasets.
+From these comparisons, we found that varying the multi-hop values offers better stability compared to stacking convolution layers.
+Based on our best practice, we recommend setting 𝐾 to 3 and 𝐿 to
+1.
+
+5.5.4. Time complexity
+Our proposed model consists of three components: the node encoding module, the edge encoding module, and the MLP. Since the time
+complexity of the MLP is mainly related to the parameter ‘‘No. Hidden’’,
+the analysis of our model’s time complexity will focus primarily on the
+node encoding module and the edge encoding module.
+For the node encoding module, the computation of 𝑀𝐻𝐴𝑘 is
+divided into three steps. Firstly, it requires computing 𝜙(𝐊𝑖∶ ) and
+𝜙(𝐊𝑖∶ )𝑇 𝐕𝑖∶ , with time complexities of (𝑁𝑑𝑘 ) and (𝑁𝑑𝑘 𝑑𝑣 ), respectively. Then, for 𝑀𝐻𝐴𝑘 , there are 𝑘 propagations, and the time
+complexities for propagating 𝜙(𝐊𝑖∶ ) and 𝜙(𝐊𝑖∶ )𝑇 𝐕𝑖∶ once are (𝑑𝑘 )
+and (𝑑𝑘 𝑑𝑣 ), respectively. Considering the propagation occurs along
+edges and is repeated 𝑘 times, the total time complexity for this step
+9
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+
+Fig. 6. The multi-class classification results after EMA-IDS performs 𝐿-layer convolution. The x-axis of each line chart represents 𝐿-layer convolution, while the y-axis represents
+the evaluation metric, F1 Score.
+Table 7
+Comparison of running time between EMA-IDS and baseline methods. Underline indicates the shortest runtime.
+Running time
+
+Model
+
+NF-CSE-CIC-IDS2018-v2
+
+NF-UNSW-NB15-v2
+
+Binary
+
+NF-BoT-IoT
+Multi-class
+
+Binary
+
+NF-ToN-IoT
+Multi-class
+
+Binary
+
+Multi-class
+
+Binary
+
+Multi-class
+
+Training time (min)
+
+EGraphSAGE
+AnomalE
+GAT
+TS-IDS
+EMA-IDS
+
+1.1806
+1.9683
+18.4217
+8.5648
+3.0300
+
+1.3281
+1.7489
+27.6757
+9.7312
+4.5481
+
+1.6919
+3.1921
+5.9037
+7.7155
+6.0614
+
+2.5203
+6.4984
+17.3592
+7.3297
+3.4652
+
+16.6455
+91.5806
+205.8706
+199.6631
+14.1144
+
+92.1796
+140.2054
+311.6746
+282.9110
+72.1318
+
+12.3458
+9.9577
+49.9093
+39.4220
+11.9954
+
+32.3921
+23.3067
+59.9794
+53.1973
+25.3894
+
+Epoch time (s)
+
+EGraphSAGE
+AnomalE
+GAT
+TS-IDS
+EMA-IDS
+
+0.6381
+1.1466
+4.4749
+3.4958
+1.2201
+
+0.7378
+1.2492
+4.6908
+3.6492
+1.3509
+
+2.4170
+2.8165
+7.2290
+5.3210
+2.6546
+
+4.2005
+4.6417
+8.1371
+6.1941
+4.4237
+
+23.7793
+25.2057
+119.9246
+108.9071
+22.2858
+
+70.9074
+77.1773
+207.7831
+209.5637
+65.5743
+
+4.7484
+4.4256
+20.7956
+16.6572
+5.2154
+
+12.3008
+11.1872
+20.3320
+21.5665
+11.9013
+
+is (𝑘||𝑑 + 𝑘||𝑑𝑘 𝑑𝑣 ). Finally, for each node, it needs to compute
+∑𝑁 ̂ 𝑘
+∑𝑁 ̂ 𝑘 𝑘
+𝑇
+𝑇
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) , with time complexities of
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) 𝐕𝑗∶ and
+(𝑁𝑑𝑘 𝑑𝑣 ) and (𝑁𝑑𝑘 ), respectively. Thus, the complexity of computing
+𝑀𝐻𝐴𝑘 is (2𝑁𝑑𝑘 + 2𝑁𝑑𝑘 𝑑𝑣 + 𝑘||𝑑𝑘 + 𝑘||𝑑𝑘 𝑑𝑣 ).
+Next, analyzing the time complexity of 𝑀𝐻𝐴, when the height of
+the root subtree is 𝐾, the computation of {𝑀𝐻𝐴𝑖 }𝑖∈[[1,𝐾]] is a nested
+process, so its time complexity can be represented as ((𝐾 + 1)𝑁𝑑𝑘 +
+(𝐾 +1)𝑁𝑑𝑘 𝑑𝑣 +𝐾||𝑑𝑘 +𝐾||𝑑𝑘 𝑑𝑣 ). We can consider the time complexity
+of the node embedding module to be (𝐾||𝑑𝑘 𝑑𝑣 ).
+For the edge encoding module, it is much simpler compared to the
+node encoding module. The primary task is to combine edge features
+with node features, with a time complexity of (||).
+Consequently, our method has a time complexity of (𝐾||𝑑𝑘 𝑑𝑣 ).
+
+We implemented a node encoding module with multi-hop attention
+and an edge encoding module to compute edge attention, reducing
+overfitting and enhancing detection performance. From the comparative experiments in this paper, we observed that our proposed method
+outperforms existing ML and GNN methods.
+Despite demonstrating some improvements, our model still has
+room for enhancement. Therefore, exploring capturing network data
+features in real-world scenarios is worthwhile.
+The first limitation is that the model is divided into node encoding
+and edge encoding modules. Future work could focus on directly integrating edge features into the node module, making the method more
+efficient and reducing time and space complexity.
+The second point is the rise of large language models (LLMs), which
+offer more options for network intrusion detection. Combining LLMs
+with the approach could improve anomaly detection in the future.
+Additionally, this study did not address the issues of data imbalance
+and the temporality of attacks. These factors are crucial in intrusion
+detection. With the increasing prevalence of APT attacks, the context
+of these attacks should receive more attention. Research in this area
+would be precious.
+
+5.5.5. Running time
+In this subsection, we report the training time (in minutes) and the
+average time per epoch (in seconds) of our proposed method compared
+to baseline methods across different tasks. Since the time consumption
+for the KNN method mainly occurs during the prediction phase, we
+compare EMA-IDS with other deep learning methods. Many factors influence training duration, so we standardized these factors (e.g., batch
+size, learning rate, early stopping configuration) to ensure objectivity
+and fairness. As seen in Table 7, EGraphSAGE performs exceptionally
+well in most scenarios. Although EMA-IDS is not the fastest in some
+scenarios, its training speed is close to the best results. In contrast,
+GAT and TS-IDS take longer to train, especially on the NF-CSE-CICIDS2018-v2 dataset, where the time consumption is higher than other
+methods. This comparative experiment demonstrates that our method
+is relatively efficient.
+
+CRediT authorship contribution statement
+Ping Deng: Writing – original draft, Software, Methodology. Yong
+Huang: Writing – review & editing, Supervision.
+Declaration of competing interest
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to
+influence the work reported in this paper.
+
+6. Conclusion
+This study investigated the use of graph neural networks (GNNs) for
+network intrusion detection. We introduced the EMA-IDS model, which
+better captures network topology information. This model combines
+node and edge features, making better use of the data characteristics.
+
+Data availability
+links to the public data is included in the manuscript.
+10
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+Table A.1
+Multi-class classification results for NF-BoT-IoT.
+Class name
+
+No. samples
+
+Precision
+
+Recall
+
+F1
+
+56,844
+56,833
+13,859
+470,655
+1,909
+
+0.4654
+0.3413
+0.9224
+0.9822
+0.9833
+𝟎.𝟖𝟕𝟐𝟓
+
+0.4348
+0.5498
+0.5234
+0.9323
+0.6546
+𝟎.𝟖𝟑𝟗𝟕
+
+0.4496
+0.4211
+0.6679
+0.9566
+0.7860
+𝟎.𝟖𝟓𝟏𝟗
+
+DDoS
+DoS
+Benign
+Reconnaissance
+Theft
+Weighted average
+
+conventional softmax function as follows:
+)
+(
+𝐐𝑖∶ 𝐊𝑇𝑗∶
+𝑠𝑖𝑚(𝐐𝑖∶ , 𝐊𝑗∶ ) = exp
+√
+𝑑𝐾
+
+Recent research has proposed alternatives to this algorithm to reduce time complexity, such as Kernelized Softmax (Huang et al., 2024;
+Katharopoulos et al., 2020). By replacing the traditional similarity
+computation algorithm, we can rewrite 𝑠𝑖𝑚(⋅, ⋅) as sim(𝐐𝑖∶ , 𝐊𝑗∶ ) =
+𝜙(𝐐𝑖∶ )𝜙(𝐊𝑗∶ )𝑇 , where 𝜙 represents the feature map. Thus, Eq. (2) can
+be rewritten as follows:
+∑𝑁
+𝑇
+𝑗=1 𝜙(𝐐𝑖∶ )𝜙(𝐊𝑗∶ ) 𝐕𝑗∶
+(B.2)
+𝑆𝐴(𝐐, 𝐊, 𝐕)𝑖∶ = ∑𝑁
+𝑇
+𝑗=1 𝜙(𝐐𝑖∶ )𝜙(𝐊𝑗∶ )
+
+Table A.2
+Multi-class classification results for NF-ToN-IoT.
+Class name
+
+No. samples
+
+backdoor
+Benign
+ddos
+ransomware
+dos
+password
+mitm
+injection
+scanning
+xss
+Weighted average
+
+17,247
+270,279
+326,345
+142
+17,717
+156,299
+1,295
+468,539
+21,467
+99,944
+
+Precision
+
+Recall
+
+F1
+
+0.9772
+0.9984
+0.8733
+0.2857
+0.2535
+0.3228
+0.5303
+0.6066
+0.0000
+0.7500
+𝟎.𝟕𝟏𝟓𝟒
+
+0.9895
+0.9891
+0.7269
+0.0833
+0.0098
+0.2425
+0.1346
+0.9145
+0.0000
+0.0004
+𝟎.𝟕𝟏𝟓𝟖
+
+0.9833
+0.9937
+0.7934
+0.1290
+0.0190
+0.2769
+0.2147
+0.7294
+0.0000
+0.0009
+𝟎.𝟔𝟕𝟒𝟏
+
+To continue simplifying the formula, we obtain the following:
+∑
+𝑇
+𝜙(𝐐𝑖∶ ) 𝑁
+𝑗=1 𝜙(𝐊𝑗∶ ) 𝐕𝑗∶
+𝑆𝐴(𝐐, 𝐊, 𝐕)𝑖∶ =
+(B.3)
+∑
+𝑇
+𝜙(𝐐𝑖∶ ) 𝑁
+𝑗=1 𝜙(𝐊𝑗∶ )
+̂ is also
+When calculating 𝑀𝐻𝐴𝑘 (𝐐, 𝐊, 𝐕)𝑖∶ , the transition matrix 𝐀
+involved in balancing and normalizing the weights of neighboring
+nodes, which leads to Eq. (3). Each hop of attention propagation
+essentially corresponds to message passing on the graph, where the
+∑𝑁 ̂ 𝑘
+∑
+𝑇
+𝑇
+̂𝑘
+values 𝑁
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) are computed. Finally,
+𝑗=1 𝐀𝑖𝑗 𝜙(𝐊𝑗∶ ) 𝐕𝑗∶ and
+the attention from each hop is aggregated through Eq. (6) to obtain the
+final hidden representations.
+
+Table A.3
+Multi-class classification results for NF-CSE-CIC-IDS2018-v2.
+Class name
+Brute Force -XSS
+Brute Force -Web
+Bot
+Benign
+DoS attacks-Slowloris
+DoS attacks-SlowHTTPTest
+DoS attacks-Hulk
+DoS attacks-GoldenEye
+DDoS attacks-LOIC-HTTP
+DDOS attack-LOIC-UDP
+DDOS attack-HOIC
+Infilteration
+SQL Injection
+SSH-Bruteforce
+FTP-BruteForce
+Weighted average
+
+No. samples
+
+Precision
+
+Recall
+
+F1
+
+927
+2,143
+143,097
+16,635,567
+9,512
+14,116
+432,648
+27,723
+307,300
+2,112
+1,080,858
+116,361
+432
+94,979
+25,933
+
+0.9677
+0.9636
+0.9992
+0.9978
+0.9908
+0.9993
+0.9999
+0.9856
+0.9997
+1.0000
+0.9973
+0.8967
+1.0000
+0.9999
+0.9975
+𝟎.𝟗𝟗𝟕𝟐
+
+0.1840
+0.1235
+1.0000
+0.9994
+0.9702
+1.0000
+1.0000
+0.9957
+0.9997
+0.9746
+1.0000
+0.6866
+0.0714
+0.9996
+1.0000
+𝟎.𝟗𝟗𝟕𝟒
+
+0.3093
+0.2190
+0.9996
+0.9986
+0.9804
+0.9997
+0.9999
+0.9906
+0.9997
+0.9871
+0.9986
+0.7777
+0.1333
+0.9998
+0.9988
+𝟎.𝟗𝟗𝟕𝟐
+
+References
+Al-Yaseen, W.L., 2019. Improving intrusion detection system by developing feature
+selection model based on firefly algorithm and support vector machine. IAENG
+Int. J. Comput. Sci. 46 (4), 534–540.
+Balyan, A.K., Ahuja, S., Lilhore, U.K., Sharma, S.K., Manoharan, P., Algarni, A.D.,
+Elmannai, H., Raahemifar, K., 2022. A hybrid intrusion detection model using
+ega-pso and improved random forest method. Sensors 22 (16), 5986.
+Bayoudh, K., 2023. A survey of multimodal hybrid deep learning for computer vision:
+Architectures, applications, trends, and challenges. Inf. Fusion 102217.
+Caville, E., Lo, W.W., Layeghy, S., Portmann, M., 2022. Anomal-E: A self-supervised
+network intrusion detection system based on graph neural networks. Knowl.-Based
+Syst. 258, 110030.
+Chen, J., Gao, K., Li, G., He, K., 2022. Nagphormer: Neighborhood aggregation graph
+transformer for node classification in large graphs. CoRR abs/2206.04910.
+Chen, T., Guestrin, C., 2016. Xgboost: A scalable tree boosting system. In: Proceedings
+of the 22nd Acm Sigkdd International Conference on Knowledge Discovery and
+Data Mining. pp. 785–794.
+Chen, D., Lin, Y., Li, W., Li, P., Zhou, J., Sun, X., 2020. Measuring and relieving
+the over-smoothing problem for graph neural networks from the topological view.
+In: Proceedings of the AAAI Conference on Artificial Intelligence. Vol. 34, pp.
+3438–3445.
+Chen, Z., Wu, Z., Lin, Z., Wang, S., Plant, C., Guo, W., 2023. AGNN: Alternating graphregularized neural networks to alleviate over-smoothing. IEEE Trans. Neural Netw.
+Learn. Syst..
+Chien, E., Peng, J., Li, P., Milenkovic, O., 2021. Adaptive universal generalized PageRank graph neural network. In: 9th International Conference on
+Learning Representations, ICLR 2021, Virtual Event, Austria, May 3-7, 2021.
+OpenReview.net.
+Churcher, A., Ullah, R., Ahmad, J., Ur Rehman, S., Masood, F., Gogate, M., Alqahtani, F., Nour, B., Buchanan, W.J., 2021. An experimental analysis of attack
+classification using machine learning in IoT networks. Sensors 21 (2), 446.
+Devendiran, R., Turukmane, A.V., 2024. Dugat-LSTM: Deep learning based network
+intrusion detection system using chaotic optimization strategy. Expert Syst. Appl.
+245, 123027.
+Duan, G., Lv, H., Wang, H., Feng, G., Li, X., 2024. Practical cyber attack detection with
+continuous temporal graph in dynamic network system. IEEE Trans. Inf. Forensics
+Secur..
+ElSayed, M.S., Le-Khac, N.-A., Albahar, M.A., Jurcut, A., 2021. A novel hybrid model
+for intrusion detection systems in SDNs based on CNN and a new regularization
+technique. J. Netw. Comput. Appl. 191, 103160.
+Fey, M., Lenssen, J.E., 2019. Fast graph representation learning with PyTorch
+geometric. arXiv preprint arXiv:1903.02428.
+Gonçalves, L., Zanchettin, C., 2024. Detecting abnormal logins by discovering
+anomalous links via graph transformers. Comput. Secur. 103944.
+Greff, K., Srivastava, R.K., Koutník, J., Steunebrink, B.R., Schmidhuber, J., 2016. LSTM:
+A search space odyssey. IEEE Trans. Neural Netw. Learn. Syst. 28 (10), 2222–2232.
+
+Table A.4
+Multi-class classification results for NF-UNSW-NB15-v2.
+Class name
+Analysis
+Backdoor
+Benign
+Worms
+Shellcode
+Reconnaissance
+Generic
+Fuzzers
+Exploits
+DoS
+Weighted average
+
+(B.1)
+
+No. samples
+
+Precision
+
+Recall
+
+F1
+
+2,299
+2,169
+2,295,222
+164
+1,427
+12,779
+16,560
+22,310
+31,551
+5,794
+
+0.1631
+0.5106
+0.9975
+0.0000
+0.8604
+0.9042
+0.9350
+0.7986
+0.7887
+0.4152
+𝟎.𝟗𝟖𝟗𝟏
+
+0.7903
+0.0543
+0.9984
+0.0000
+0.6367
+0.7685
+0.7446
+0.7512
+0.8265
+0.1199
+𝟎.𝟗𝟖𝟕𝟒
+
+0.2703
+0.0982
+0.9979
+0.0000
+0.7318
+0.8309
+0.8290
+0.7742
+0.8072
+0.1860
+𝟎.𝟗𝟖𝟕𝟓
+
+Appendix A. Classification results of attack types
+
+See Tables A.1–A.4.
+
+Appendix B. Formula supplement
+
+As shown in Eq. (2), computing 𝑆𝐴(𝐐, 𝐊, 𝐕)𝑖∶ requires evaluating the similarity between queries and keys, which involves using a
+11
+
+Computers & Security 148 (2025) 104132
+
+P. Deng and Y. Huang
+
+Sohi, S.M., Seifert, J.-P., Ganji, F., 2021. RNNIDS: Enhancing network intrusion
+detection systems through deep learning. Comput. Secur. 102, 102151.
+Sun, P., Liu, P., Li, Q., Liu, C., Lu, X., Hao, R., Chen, J., 2020. DL-IDS: Extracting
+features using CNN-LSTM hybrid network for intrusion detection system. Secur.
+Commun. Netw. 2020, 1–11.
+Sun, K., Zhu, Z., Lin, Z., 2019. Adagcn: Adaboosting graph convolutional networks into
+deep models. arXiv preprint arXiv:1908.05081.
+Talukder, M.A., Islam, M.M., Uddin, M.A., Hasan, K.F., Sharmin, S., Alyami, S.A.,
+Moni, M.A., 2024. Machine learning-based network intrusion detection for big
+and imbalanced data using oversampling, stacking feature embedding and feature
+extraction. J. Big Data 11 (1), 33.
+Thakkar, A., Lohiya, R., 2022. A survey on intrusion detection system: feature selection,
+model, performance measures, application perspective, challenges, and future
+research directions. Artif. Intell. Rev. 55 (1), 453–563.
+Torres, L.H., Ribeiro, B., Arrais, J.P., 2023. Few-shot learning with transformers via
+graph embeddings for molecular property prediction. Expert Syst. Appl. 225,
+120005.
+Treviso, M., Lee, J.-U., Ji, T., Aken, B.v., Cao, Q., Ciosici, M.R., Hassid, M., Heafield, K.,
+Hooker, S., Raffel, C., et al., 2023. Efficient methods for natural language
+processing: A survey. Trans. Assoc. Comput. Linguist. 11, 826–860.
+Turukmane, A.V., Devendiran, R., 2024. M-MultiSVM: An efficient feature selection
+assisted network intrusion detection system using machine learning. Comput. Secur.
+137, 103587.
+Van Rossum, G., Drake, Jr., F.L., 1995. Python tutorial.
+Velickovic, P., Cucurull, G., Casanova, A., Romero, A., Lio, P., Bengio, Y., et al., 2017.
+Graph attention networks. Statistics 1050 (20), 10–48550.
+Wang, M.Y., 2019. Deep graph library: Towards efficient and scalable deep learning on
+graphs. In: ICLR Workshop on Representation Learning on Graphs and Manifolds.
+Wu, F., Souza, A., Zhang, T., Fifty, C., Yu, T., Weinberger, K., 2019. Simplifying graph
+convolutional networks. In: International Conference on Machine Learning. PMLR,
+pp. 6861–6871.
+Xhonneux, L.-P., Qu, M., Tang, J., 2020. Continuous graph neural networks. In:
+International Conference on Machine Learning. PMLR, pp. 10432–10441.
+Xu, K., Li, C., Tian, Y., Sonobe, T., Kawarabayashi, K.-i., Jegelka, S., 2018. Representation learning on graphs with jumping knowledge networks. In: International
+Conference on Machine Learning. PMLR, pp. 5453–5462.
+Xu, R., Wu, G., Wang, W., Gao, X., He, A., Zhang, Z., 2024. Applying self-supervised
+learning to network intrusion detection for network flows with graph neural
+network. Comput. Netw. 248, 110495.
+Xu, M., Yoon, S., Fuentes, A., Park, D.S., 2023. A comprehensive survey of image
+augmentation techniques for deep learning. Pattern Recognit. 137, 109347.
+Yi, T., Chen, X., Zhu, Y., Ge, W., Han, Z., 2023. Review on the application of deep
+learning in network attack detection. J. Netw. Comput. Appl. 212, 103580.
+Zhang, S., Li, X., Zong, M., Zhu, X., Wang, R., 2017. Efficient kNN classification with
+different numbers of nearest neighbors. IEEE Trans. Neural Netw. Learn. Syst. 29
+(5), 1774–1785.
+Zhang, J., Ling, Y., Fu, X., Yang, X., Xiong, G., Zhang, R., 2020. Model of the intrusion
+detection system based on the integration of spatial-temporal features. Comput.
+Secur. 89, 101681.
+Zhao, J., Dong, Y., Ding, M., Kharlamov, E., Tang, J., 2021. Adaptive diffusion in graph
+neural networks. Adv. Neural Inf. Process. Syst. 34, 23321–23333.
+Zhong, L., Wu, J., Li, Q., Peng, H., Wu, X., 2023. A comprehensive survey on automatic
+knowledge graph construction. ACM Comput. Surv. 56 (4), 1–62.
+
+Grohe, M., 2020. Word2vec, node2vec, graph2vec, x2vec: Towards a theory of
+vector embeddings of structured data. In: Proceedings of the 39th ACM
+SIGMOD-SIGACT-SIGAI Symposium on Principles of Database Systems. pp. 1–16.
+Gu, J., Lu, S., 2021. An effective intrusion detection approach using SVM with naïve
+Bayes feature embedding. Comput. Secur. 103, 102158.
+Haghighat, M.H., Li, J., 2021. Intrusion detection system using voting-based neural
+network. Tsinghua Sci. Technol. 26 (4), 484–495.
+Hamilton, W., Ying, Z., Leskovec, J., 2017. Inductive representation learning on large
+graphs. Adv. Neural Inf. Process. Syst. 30.
+He, D., Gu, H., Zhu, S., Chan, S., Guizani, M., 2023. A comprehensive detection method
+for the lateral movement stage of apt attacks. IEEE Internet Things J..
+Heidari, A., Jabraeil Jamali, M.A., 2023. Internet of Things intrusion detection systems:
+a comprehensive review and future directions. Cluster Comput. 26 (6), 3753–3780.
+Huang, S., Song, Y., Zhou, J., Lin, Z., 2024. Tailoring self-attention for graph via rooted
+subtrees. Adv. Neural Inf. Process. Syst. 36.
+Imrana, Y., Xiang, Y., Ali, L., Abdul-Rauf, Z., 2021. A bidirectional LSTM deep learning
+approach for intrusion detection. Expert Syst. Appl. 185, 115524.
+Jin, D., Lu, Y., Qin, J., Cheng, Z., Mao, Z., 2020. SwiftIDS: Real-time intrusion detection
+system based on LightGBM and parallel intrusion detection mechanism. Comput.
+Secur. 97, 101984.
+Kanna, P.R., Santhi, P., 2021. Unified deep learning approach for efficient intrusion
+detection system using integrated spatial–temporal features. Knowl.-Based Syst.
+226, 107132.
+Katharopoulos, A., Vyas, A., Pappas, N., Fleuret, F., 2020. Transformers are rnns: Fast
+autoregressive transformers with linear attention. In: International Conference on
+Machine Learning. PMLR, pp. 5156–5165.
+Laghrissi, F., Douzi, S., Douzi, K., Hssina, B., 2021. Intrusion detection systems using
+long short-term memory (LSTM). J. Big Data 8 (1), 65.
+Lawal, M.A., Shaikh, R.A., Hassan, S.R., 2020. An anomaly mitigation framework for
+iot using fog computing. Electronics 9 (10), 1565.
+Li, G., Müller, M., Ghanem, B., Koltun, V., 2021. Training graph neural networks
+with 1000 layers. In: International Conference on Machine Learning. PMLR, pp.
+6437–6449.
+Lo, W.W., Layeghy, S., Sarhan, M., Gallagher, M., Portmann, M., 2022. E-graphsage: A
+graph neural network based intrusion detection system for iot. In: NOMS 2022-2022
+IEEE/IFIP Network Operations and Management Symposium. IEEE, pp. 1–9.
+Manocchio, L.D., Layeghy, S., Lo, W.W., Kulatilleke, G.K., Sarhan, M., Portmann, M.,
+2024. Flowtransformer: A transformer framework for flow-based network intrusion
+detection systems. Expert Syst. Appl. 241, 122564.
+Nguyen, H., Kashef, R., 2023. TS-IDS: Traffic-aware self-supervised learning for IoT
+network intrusion detection. Knowl.-Based Syst. 279, 110966.
+Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J., Chanan, G., Killeen, T.,
+Lin, Z., Gimelshein, N., Antiga, L., et al., 2019. Pytorch: An imperative style,
+high-performance deep learning library. Adv. Neural Inf. Process. Syst. 32.
+Peng, K., Li, M., Huang, H., Wang, C., Wan, S., Choo, K.-K.R., 2021. Security challenges
+and opportunities for smart contracts in Internet of Things: A survey. IEEE Internet
+Things J. 8 (15), 12004–12020.
+Qureshi, S., et al., 2023. Limits of depth: Over-smoothing and over-squashing in GNNs.
+Big Data Min. Anal. 7 (1), 205–216.
+Rani, B.S., Vairamuthu, S., Subramanian, S., 2024. Archimedes fire Hawk optimization
+enabled feature selection with deep maxout for network intrusion detection.
+Comput. Secur. 103751.
+Rehman, M.U., Ahmadi, H., Hassan, W.U., 2024. FLASH: A comprehensive approach
+to intrusion detection via provenance graph representation learning. In: 2024 IEEE
+Symposium on Security and Privacy. SP, IEEE Computer Society, p. 139.
+Sajjad, H., Durrani, N., Dalvi, F., 2022. Neuron-level interpretation of deep nlp models:
+A survey. Trans. Assoc. Comput. Linguist. 10, 1285–1303.
+Sarhan, M., Layeghy, S., Moustafa, N., Portmann, M., 2021. Netflow datasets for
+machine learning-based network intrusion detection systems. In: Big Data Technologies and Applications: 10th EAI International Conference, BDTA 2020, and 13th
+EAI International Conference on Wireless Internet, WiCON 2020, Virtual Event,
+December 11, 2020, Proceedings 10. Springer, pp. 117–135.
+Sarhan, M., Layeghy, S., Portmann, M., 2022. Towards a standard feature set for
+network intrusion detection system datasets. Mobile Netw. Appl. 1–14.
+Shao, Y., Li, H., Gu, X., Yin, H., Li, Y., Miao, X., Zhang, W., Cui, B., Chen, L., 2024.
+Distributed graph neural network training: A survey. ACM Comput. Surv. 56 (8),
+1–39.
+Shi, H., Xu, M., Li, R., 2017. Deep learning for household load forecasting—A novel
+pooling deep RNN. IEEE Trans. Smart Grid 9 (5), 5271–5280.
+
+Ping Deng received his bachelor’s degree. He is currently a postgraduate in Electronic
+Information at the College of Computer Science, Sichuan Normal University, China. His
+research interests include network security and deep learning.
+
+Yong Huang, Ph.D., Senior Engineer, graduated from the University of Electronic
+Science and Technology of China. His research interests include network security, information security, and open-source intelligence analysis. He has been dedicated to the
+research and practice of information security technology and product industrialization
+for many years. He holds 17 national invention patents and has led and guided teams
+to develop over 30 network security products. He has received three provincial and
+ministerial science and technology progress awards and has led or participated in over
+10 provincial and ministerial information security industrialization projects.
+
+12
+PAPER_TEXT

@@ -1,0 +1,959 @@
+7448 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ Evolving Intelligent Network Attack Classifier
+ Under Label Distribution Shift
+ Miru Kim , Mugon Joe , and Minhae Kwon , Senior Member, IEEE
+
+ Abstract—The next-generation internet is being reshaped by connectivity simultaneously introduces the frequency of netthe growing intelligence and connectivity of artificial intelligence work intrusions [1]. When successful, these intrusions can result
+of things (AIoT) devices. This evolution emphasizes the impor- in significant privacy breaches and substantial financial losses.
+tance of AI-enabled network intrusion detection systems (NIDS)
+in intelligent network environments. Two major technical chal- To preserve network security, the development of intelligent
+lenges in developing such systems are addressing class imbalance NIDS capable of accurately classifying attack types is critical
+and adapting to label distribution shifts after deployment. Class to secure highly connected environments [2], [3], [4], [5], [6],
+imbalance, caused by the dominance of normal traffic and the [7]. Consequently, attack type classification models have gained
+scarcity and uneven distribution of attack types, often results considerable attention, and extensive research has focused on
+in low performance for minority attack type classes. In addition, evolving attack patterns necessitate efficient and continuous improving their effectiveness for intrusion detection [8], [9],
+model post-training, despite the limited and unlabeled data avail- [10], [11], [12], [13], [14]. Despite these efforts, three key
+able in the post-deployment phase. This study proposes a unified challenges continue to impede the performance of these models.
+training framework consisting of a two-step pre-training scheme The first challenge arises during the pre-training phase before
+and an adaptive post-training scheme. In Step I of pre-training, the model is deployed, where the dataset often exhibits a signifbalanced contrastive pair selection is performed to account for
+class imbalance, while Step II refines the representations of hard- icant class imbalance. In such cases, some major classes have
+to-distinguish samples located near decision boundaries using exceedingly more samples than other minor classes, leading to
+latent features. In the post-training phase, the framework lever- a skewed data distribution [15]. This imbalance causes models
+ages both model outputs and latent representations to generate to become biased toward the majority class, resulting in poor
+reliable pseudo-labels for learning. A key insight of this work is detection rates for the minority classes, which are often critithat a well-structured latent representation space enables reliable
+pseudo-labeling during post-training. Extensive simulations across cal intrusion types. Consequently, many studies have explored
+eight online label shift scenarios with three datasets demonstrate methods for improving the representation of minority classes
+that the proposed method achieves up to an 8.6% improvement in the latent space [16], [17], which focus on enhancing the
+in accuracy and F1-score over eight state-of-the-art approaches, learning process for these underrepresented classes, e.g., synalong with a significant reduction in post-training complexity. thetic minority oversampling technique (SMOTE) [18] and con-
+ Index Terms—Contrastive learning, label shift, online learning, trastive learning. However, existing approaches mainly balance
+imbalanced dataset, low-rank adaptation, network intrusion sample distributions without explicitly addressing intrinsically
+detection systems. hard-to-distinguish samples, which limits their effectiveness in
+ improving fundamental discrimination performance. In contrast,
+ our method directly tackles this limitation by focusing on per-
+ I. INTRODUCTION
+ formance enhancement for such challenging samples.
+ HE rapid evolution of AIoT networks has profoundly im-
+T pacted industries by integrating a diverse array of devices,
+leading to enhanced efficiency in areas such as automation,
+ Even with well-trained models, dynamic real-world networks
+ present the second challenge: online label shift. As the label
+ distribution of traffic types changes over time, it may diverge
+real-time monitoring, and management. However, this increased from the training data, potentially causing significant drops in the
+ model performance [19]. While model post-training has become
+ necessary, the lack of labeled data in real-time environments
+ Received 1 November 2025; revised 4 January 2026; accepted 28 January
+2026. Date of publication 3 March 2026; date of current version 19 March poses a considerable obstacle [20]. Recent studies have explored
+2026. This work was supported by the National Research Foundation of Korea the post-training of models without true labels using techniques
+funded by the Korean Government (MSIT) under Grant RS-2025-02214082 and such as pseudo-labeling, in which the model generates labels
+Grant RS-2023-00278812. Recommended for acceptance by Dr. Weiting Zhang.
+(Miru Kim and Mugon Joe are co-first authors.) (Corresponding author: Minhae based on predictions from a pre-trained model [21], [22]. How-
+Kwon.) ever, without proper validation, incorrect pseudo-labels may
+ Miru Kim and Minhae Kwon are with the Department of Electrical and degrade the model performance during additional training. This
+Computer Engineering, Sungkyunkwan University, Suwon 16419, Republic of
+Korea (e-mail: miru.kim@skku.edu; minhae.kwon@skku.edu). highlights the need for confidence measures to assess their
+ Mugon Joe is with the Department of Intelligent Semiconductors, Soongsil reliability, ensuring that only dependable pseudo-labels are used
+University, Seoul 06978, Republic of Korea (e-mail: mugon@soongsil.ac.kr). for post-training.
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TNSE.2026.3669948, provided by the authors. While ensuring pseudo-label reliability is essential, efficiency
+ Digital Object Identifier 10.1109/TNSE.2026.3669948 during the post-training phase is also critical. To minimize the
+
+ 2327-4697 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT 7449
+
+ balanced contrastive learning pairs and the use of Mahalanobis distance in the latent space.
+ r We design an efficient and lightweight LoRA-based posttraining mechanism that adaptively triggers model updates
+ only when both high uncertainty and significant label shift
+ are observed. We also propose a pseudo-labeling method
+ based on entropy and distance-based confidence.
+ r We conduct extensive simulations on three popular NIDS
+ datasets, covering four online label shift scenarios, five
+ ablation studies, and performance comparisons against
+ eight state-of-the-art algorithms. Additionally, we analyze
+ parameter sensitivity, robustness to the imbalance factor,
+ and the impact of the number of post-training samples.
+ The remainder of this paper is organized as follows. Section II
+ reviews related works, and Section III presents the system setup
+ for NIDS in a label shift environment. Section IV details the
+ proposed pre-training methods, and Section V describes the
+ post-training methods. Section VI presents the simulation setup,
+ and Section VII, and Section VIII provide simulation results for
+Fig. 1. Overview of the proposed AIoT network attack classification system. pre-training and post-training, respectively. Finally, Section IX
+The diagram illustrates the processes to address the class imbalance problem in concludes the paper.
+pre-training and efficient post-training with a small amount of unlabeled data
+over an online label shift environment.
+ II. RELATED WORKS
+ In this section, we review existing literature on the three key
+ areas relevant to our study. Table I summarizes the comparison
+computational burden, additional training must be performed
+ between our proposed method and existing approaches, outlinonly when necessary [23]. Moreover, with limited data available
+ ing the key challenges and techniques employed in each work.
+in the post-training phase, the training must also be sampleefficient. To achieve this, we employ LoRA [24],which reduces
+ A. Network Attack Classification
+the number of training parameters such that the model can be
+optimized with minimal and enhances sample efficiency without Network attack classification is an essential step in building a
+fully updating the model. Nevertheless, conventional LoRA- NIDS because identifying intrusion types can lead to an approbased methods still perform updates at every time step, leading priate response. A challenge arises from the varying amount
+to unnecessary overhead. In contrast, our scheme adaptively of data collected for each intrusion type, resulting in class
+triggers post-training only when the cosine similarity between imbalance. This imbalance can bias models toward majority
+consecutive outputs indicates substantial changes in distribution, classes, making it difficult to classify minority classes [25], [26].
+thereby enabling more efficient adaptation without sacrificing Traditional methods for addressing class imbalance typically
+accuracy. involve oversampling methods. Random oversampling increases
+ To address these challenges, this study proposes a the number of minority class samples to balance the dataset but
+novel framework that jointly integrates three contributions: often leads to overfitting by replicating data without introducing
+i) contrastive learning designed to improve performance on variability [27], [28]. SMOTE generates synthetic samples in
+hard-to-distinguish samples for class imbalance, ii) reliable the minority class, thereby rebalancing the data distribution to
+pseudo-label generation using latent representations for online mitigate the dominance of majority classes [18]. Borderlinelabel shift, and iii) adaptive LoRA-based post-training triggered SMOTE refines this approach by creating synthetic samples
+by distributional change for efficient adaptation. Together, these near decision boundaries where the classification uncertainty
+components provide a unified solution for robust and efficient is higher [29]. Another approach is focal loss [30], which
+model adaptation in dynamic network environments. Fig. 1 modifies the standard cross-entropy loss function to reduce the
+illustrates an overview of this system. impact of easily classified samples. Despite their widespread
+ Our contributions are summarized as follows. use in network intrusion classification, these methods often fail
+ r We propose a two-stage framework explicitly designed to to yield meaningful diversity in the latent space, resulting in
+ handle real-world AIoT challenges, including the perfor- insufficiently discriminative embeddings.
+ mance enhancement of minor-but-critical attack classes To address these challenges, contrastive learning has emerged
+ and evolving label distributions after deployment. as an effective method for constructing well-defined latent
+ r To tackle class imbalance in the training dataset, we in- spaces for class imbalance. Using label information, the model
+ troduce a novel borderline sample refinement technique is trained to bring samples of the same class closer while far
+ that improves representations near decision boundaries. apart samples from different classes, which helps reduce the
+ This includes inverse probability sampling for selecting bias toward majority classes [16], [31]. Contrastive learning
+7450 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE I
+ COMPARISON OF THE PROPOSED METHOD WITH EXISTING APPROACHES
+
+enhances the quality of feature representations, thereby allowing but struggles in highly dynamic environments because of its
+the model to capture subtle differences between classes [32]. fixed learning rate and limited adaptability to rapid changes.
+Studies on contrastive learning emphasize borderline samples A significant contribution in this field is the adapting to label
+near decision boundaries, which are particularly challenging shift (ATLAS) [36] algorithm, which uses an online ensemble
+to classify. By focusing on these difficult cases, contrastive approach with multiple base learners, each with a different step
+loss functions help the model learn a well-represented feature size. This meta-algorithm dynamically combines learners based
+space. In addition, distance-based criteria are used to identify on the intensity of the label distribution shifts to achieve optimal
+informative pairs and improve the ability of the model to classify dynamic regret bounds without requiring prior knowledge of
+minority classes [33]. non-stationarity.
+ The selection of informative pairs remains a key challenge Recent studies have also used pseudo-labeling methods to
+in contrastive learning [34]. The proposed method addresses adapt models when labeled data are scarce. Pseudo-labeling
+this issue by prioritizing samples from minority classes. Subse- utilizes model predictions as labels for further training, thereby
+quently, it applies a distance-based criterion to select borderline allowing continuous post-training without explicit labels [41].
+samples. By refining these processes, the model enhances its In [42], a training system refined the predictions by selectability to distinguish between classes, thereby improving the ing high-confidence pseudo-labels, ensuring that only reliable
+classification of minor classes. data were used for post-training. Similarly, [43] proposed a
+ confidence-based training method that adjusts the learning pro-
+B. Online Label Shift cess based on prediction certainty. Moreover, [44] applied
+ pseudo-labeling in online label shift scenarios using model
+ Online label shift occurs when the distribution of labels outputs to adapt continuously as label distributions evolved.
+changes over time. This is common in dynamic environments, This approach is effective in dynamic environments, including
+where intrusion types evolve continuously [39]. A significant AIoT networks [21], [41]. However, the quality of pseudo-labels
+challenge arises when the label distribution in the post-training remains crucial because poorly generated labels can harm the
+differs from that of the training data, leading to a decline in the model performance, particularly under significant label shifts.
+model performance. Our system utilizes information from a pre-trained model to
+ Several methods have been proposed to address online label align the pseudo-labeling process during post-training. Moreshift [35], [36], [40]. The follow the leader (FTL) strategy was over, we only use pseudo-labels that satisfy the reliability reextended with the follow the history (FTH) [35] algorithm, quirements. This approach ensures that the model adapts accuwhich averages the label distributions observed up to the current rately and maintains robust performance, even when the label
+time step. This method assumes that previous distributions can distributions shift significantly.
+inform future distributions, making them effective for gradual
+shifts. For dynamic scenarios, follow the fixed window history (FTFWH) [35] approach adapts more quickly by focus- C. Low-Rank Matrix Adaptation
+ing on recent data within a fixed window. It prioritizes recent When a pre-trained model is deployed in the real world, addiobservations, offering responsiveness to rapid shifts but can tional training is often required to post-train the model and maxbe sensitive to the chosen window size. Another approach, imize its performance in the test environment. LoRA [45] has
+the unbiased online gradient descent (UOGD) [36] algorithm, emerged as a promising parameter-efficient fine-tuning (PEFT)
+builds on the classic online gradient descent (OGD) using an solution because it reduces the number of trainable parameters
+unbiased risk estimator, allowing continuous updates without and allows for more efficient post-training. LoRA decomposes
+labeled data. UOGD is effective in relatively stable environments a large weight matrix into two low-rank matrices and updates
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT 7451
+
+ TABLE II
+ NOTATION TABLE
+
+ TABLE III
+ SUMMARY OF THRESHOLD SYMBOLS AND THEIR CORRESPONDING ROLES
+
+only these low-rank matrices, thereby significantly reducing the security threats. Building a high-accuracy classifier is impornumber of parameters that require adjustment. This approach is tant, as accurate identification of the intrusion type can support
+particularly effective in scenarios where post-training data are actions such as selecting an appropriate mitigation strategy,
+scarce. adjusting security policies, or prioritizing alerts based on the
+ In [38], LoRA was applied to a NIDS, enabling the model to severity or characteristics of the detected attack. A compremaintain a high detection accuracy even with fewer parameters hensive notation summary, defining all symbols and parameters
+to be updated. Similarly, [37] demonstrated that LoRA reduces associated with the proposed NIDS and the traffic classification
+the number of parameters required for model updates while al- process, is presented in Tables II and III.
+lowing the system to adapt effectively to dynamic environments. Suppose that the traffic type classifier at time t employs a
+Given its ability to reduce the number of parameters requiring neural network model θt with L layers. The input of the model
+ t
+updates while maintaining performance, we also incorporate at time t is the network traffic stream Xt = {xti }N i=1 , where
+LoRA in the final layer of the pre-trained model to ensure xti denotes i-th sample at time t, which has multiple features,
+efficient post-training with limited post-training data. and N t denotes the number of samples at time t. The output
+ of the model for the input xti is denoted by qxti (c; θt ), which is
+ the predicted probability over a set of classes c ∈ C, where C
+ III. SYSTEM SETUP denotes the set of class indices and |C| denotes the number of
+ We consider a NIDS for AIoT systems that includes a traf- classes. Here, θt represents the entire set of parameters of the
+fic type classifier. The NIDS monitors incoming traffic from neural network model at time t. We denote θ:lt (xti ) for 1 ≤ l ≤ L
+AIoT devices and uses a classification model to classify traf- as the output of the l-th layer of the model when xti is the input.
+fic types such as normal, attack type 1, attack type 2, etc. Note that θlt is the weight parameter of the l-th layer, whereas θ:lt
+The system operates in real-time to quickly detect potential refers to the parameters from the first layer up to the l-th layer.
+7452 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+The model θt undergoes two training phases: pre-training with Algorithm 1: Pre-Training Phase.
+a pre-collected dataset and online post-training using real-time 0 0
+ Require: Dataset X0 = {x0i }N 0 0 N
+ i=1 , y = {yi }i=1 , mean
+data samples.
+ vectors {μc }c∈C , covariance matrices {Σc }c∈C ,
+ First, the model undergoes a pre-training phase at time t = 0.
+ borderline threshold φborder
+The pre-training dataset (X0 , y0 ) is labeled, containing traffic
+ 0 Ensure: Trained model θ0
+type information y0 = {yi0 }N i=1 as the true labels corresponding 1: // Step I: Imbalance-aware Training
+to X0 . The label yi0 ∈ C denotes the class index for the data
+ 2: for i = 1 to N do
+sample x0i . For each data sample x0i , we define the true class
+ 3: Select the first sample (x0i , yi0 )
+probability px0i (c) using the Dirac delta function as follows.
+ 4: Sample the second sample (x0j , yj0 ) with yj0 ∼ Ψ0 (c)
+ 
+ 1, if c = yi0 5: Compute Lpre (x0i , x0j , yi0 , yj0 ; θ0 ) in (6)
+ px0i (c) = (1) 6: Update model θ0 ← θ0 − η∇Lpre (x0i , x0j , yi0 , yj0 ; θ0 )
+ 0, otherwise
+ 7: end for
+ The pre-training dataset (X0 , y0 ) is imbalanced, as the ma- 8: // Step II: Borderline Sample Refinement
+jority of traffic samples are normal, while attack samples are 9: for i = 1 to N do
+rare. Even among attack classes, the number of samples for 10: Compute DMD (x0i , yi0 , μc , Σc ; θ:L 0
+ ¯)
+ 0 0 0
+each class varies significantly because some attack types are 11: ¯ ) > φborder then
+ if DMD (xi , yi , μc , Σc ; θ:L
+more common than others. Consequently, the label distribution 12: Assign (x0i , yi0 ) as the borderline sample
+of the pre-training dataset is highly skewed. In this pre-training
+ 0
+ (x0b,c , yb,c )
+phase, the model θ0 is trained in a supervised manner using the 13: end if
+true label, i.e., 14: end for
+ 15: for c ∈ C do
+ θ0 ← θ0 − η∇Lpre (·), (2) 16: Select anchor sample (x0a,c , ya,c 0
+ ) based on (13)
+ 17: for all borderline samples in class c do
+where Lpre (·) denotes the loss function and η is the learning rate
+ 18: 0
+ Compute Lpre (x0a,c , x0b,c , ya,c 0
+ , yb,c ; θ0 ) in (6)
+for the pre-training phase. The primary challenge in this phase is
+ 19: Update model
+addressing imbalanced data, which makes a model biased toward
+ θ0 ← θ0 − η∇Lpre (x0a,c , x0b,c , ya,c 0 0
+ , yb,c ; θ0 )
+majority classes.
+ 20: end for
+ Once the model is fully trained, it is deployed in the real world.
+ 21: end for
+The model then enters the post-training phase at time 1 ≤ t ≤ T ,
+where T is the total time. In this phase, the model is fine-tuned
+with a few online samples. Model post-training is necessary labels are unavailable during the post-training phase. A pseudowhen a shift in the label distribution occurs, which leads to label ỹit must be generated to train the model via supervised
+a higher occurrence of minority class samples. Although the learning. We denote p̃xti (c) as the class probability based on
+pre-training phase attempts to address the imbalanced dataset, the pseudo-label ỹit , which is similar to (1). Another challenge
+the model may still have low accuracy for minority class sam- is that the training method for the post-training phase must be
+ples. These label distribution shifts frequently occur in NIDS sample-efficient because only a few data samples are available.
+because newly developed attack types may be underrepresented In this post-training phase, if the post-training condition is
+in the pre-training dataset but become prevalent once the model satisfied, the model θt is updated as follows, where Lpost (·) is
+is deployed. the loss function during the post-training phase.
+ The label distribution changes over time in the real world.
+This shift is modeled as a label distribution, i.e., θt ← θt − η∇Lpost (·) (4)
+   Our goal is to maximize both the classification accuracy and
+ Ωt (c) = 1 − αt ω1 (c) + αt ω2 (c), (3)
+ training sample efficiency in this online label distribution shift
+where ω1 (c) and ω2 (c) represent the initial and final class environment. To achieve this, we propose a contrastive learningdistributions, respectively, and αt controls the transition.1 At based pre-training method specifically designed to enhance the
+ t
+each time t, it receives an unlabeled dataset Xt = {xti }N i=1 minority class performance. In addition, we design post-training
+consisting of N t samples. Note that the number of data samples criteria, a pseudo-labeling method, and a LoRA-based efficient
+in the post-training phase is considerably smaller than that in the training method that can enhance the model by updating fewer
+pre-training phase, i.e., N t  N 0 . parameters, thereby requiring fewer samples for post-training.
+ To minimize the computational burden, post-training is
+activated only when necessary. We first assess whether the IV. CONTRASTIVE LEARNING BASED PRE-TRAINING
+post-training condition is satisfied, and if so, proceed with the
+ In this section, we introduce the pre-training phase of the
+post-training. However, a significant challenge arises when true
+ proposed system, which consists of two steps: imbalance-aware
+ training and borderline sample refinement. The pre-training
+ 1 In Section VI-B, we provide four types of αt settings, including linear, phase aims to improve the accuracy of the minor class with
+square, sine, and Bernoulli. better feature representation by incorporating both cross-entropy
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT 7453
+
+Fig. 2. Overview of the proposed system. The figure illustrates the pre-training and post-training phases.
+
+and contrastive loss functions. During this phase, the model parameter that balances the two objectives. The cross-entropy
+alternates between two steps for each epoch. These two steps loss Lcross (x0i , yi0 ; θ0 ) is defined as follows.
+are illustrated in Fig. 2, and the pseudocode is presented in 
+Algorithm 1. Lcross (x0i , yi0 ; θ0 ) = − px0i (c) log qx0i (c; θ0 ) (7)
+ c∈C
+
+A. Step I: Imbalance-Aware Training The objective of (7) is to minimize the gap between the probability of the true label px0i (c) and the model output qx0i (c; θ0 ).
+ In this step, the goal is to address the class imbalance prob-
+ Next, the contrastive loss Lcont (x0i , x0j , yi0 , yj0 ; θ:0L̄ ) in (6) is
+lem using a contrastive learning system. To employ contrastive
+learning, we first select a pair of data samples (x0i , x0j , yi0 , yj0 ). computed in the latent space, that is the output of the L̄-th layer
+The first sample (x0i , yi0 ) is determined sequentially, i.e., ∀x0i ∈ for 1 < L̄ < L.2
+X0 , ∀yi0 ∈ y0 , leading to follow the label distribution of the pre- Lcont (x0i , x0j , yi0 , yj0 ; θ:0L̄ ) (8)
+training Ω0 (c), i.e., yi0 ∼ Ω0 (c). The second sample (x0j , yj0 ) is   0 0 
+ 0 0
+selected according to the probability of Ψ0 (c), i.e., yj0 ∼ Ψ0 (c), = I{yi0 =yj0 } θ:L ¯ (xj ) 2
+ ¯ (xi ) − θ:L (9)
+which provides a higher selection probability for the minor   0 0 0 0
+ 
+classes and a lower selection probability for the major classes. + I{yi0 =yj0 } max 0,  − θ:L ¯ (xj ) 2
+ ¯ (xi ) − θ:L
+Ψ0 (c) is defined as follows. (10)
+ 1 − Ω0 (c) Here, (9) encourages the model to minimize the distance
+ Ψ0 (c) =  0
+ (5)
+ c ∈C [1 − Ω (c )] between same class samples, whereas (10) maintains the mini-
+  mum  distance to separate different class samples. To measure
+ In (5), c ∈C [1 − Ω0 (c )] serves as a normalization factor,
+ the distance in the latent space, we use the Euclidean distance
+ensuring that the resulting values form a valid probability dis-
+ · 2 . The margin hyperparameter  ≥ 0 controls the separatribution. This results in a balanced i and j pair between the
+ tion between different class samples. The indicator function
+majority and minority classes.
+ I{condition} is defined as follows.
+ In the first step, the pre-training loss Lpre (·) for (2) is defined
+ 
+as follows. 1, if the condition is true
+    I{condition} = (11)
+Lpre (x0i , x0j , yi0 , yj0 ; θ0 ) = λ Lcross x0i , yi0 ; θ0 0, otherwise
+  
+ + Lcross x0j , yj0 ; θ0 The model θ0 is updated in a supervised manner based on (2)
+   using the proposed pre-training loss Lpre (x0i , x0j , yi0 , yj0 ; θ0 ) in
+ + (1 − λ)Lcont x0i , x0j , yi0 , yj0 ; θ:0L̄
+ (6) 2 The contrastive representation layer L̄ is chosen at the middle layer of
+ the model, which is the end of the feature extraction and the beginning of
+ It is a combination of the cross-entropy loss Lcross (·) and classification. In Section VII-A, we explore the choice of L̄ and report the
+contrastive loss Lcont (·). Here, λ for (0 ≤ λ ≤ 1) is a scaling corresponding performance.
+7454 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+(6). After this step, the model moves on to the next borderline
+sample refinement step.
+
+B. Step II: Borderline Sample Refinement
+ In this step, we focus on the feature representations of borderline samples that are difficult to classify, aiming to pull them toward the corresponding class centroid in the latent space through
+the contrastive loss function (8). To identify such borderline
+samples, we employ the Mahalanobis distance (MD) at the L̄-th
+layer [46], [47]. MD normalizes the distance for each class to Fig. 3. An illustration of selection criteria for anchor and borderline samples.
+have unit variance, making it suitable for imbalanced data with The visualization is presented in MD space with unit variance across all classes.
+varying numbers of samples and different dispersions for each
+class.3 follows.
+ 0
+ Let DMD (x0i , yi0 , μc , Σc ; θ:L
+ ¯ ) be the MD of c class sample  
+ 0 0
+(xi , yi ) at the output of L̄-th layer. It measures a normalized
+ 0
+ Lcont x0a,c , x0b,c , ya,c 0
+ , yb,c ; θ:0L̄ = θ:L
+ 0 0 0
+ ¯ (xa,c ) − θ:L
+ 0
+ ¯ (xb,c ) 2
+distance from the centroid as follows. (14)
+ 0
+ DMD (x0i , yi0 , μc , Σc ; θ:L
+ ¯)
+ Note that (10) is ignored because this borderline sample refinement step has no different class pairs. In (14), the contrastive
+  0 0 T  0 0 
+ = ¯ (xi ) − μc
+ θ:L Σ−1
+ c ¯ (xi ) − μc
+ θ:L (12) loss minimizes the distance between the anchor and borderline
+ samples. This allows refinement of the representation of border-
+ 0 0 0
+Here, μc = E[θ:L ¯ (xi ) | c = yi ] denotes the mean vector of c line samples, which helps enhance classification performance.
+class samples, and Σc = E[(θ:L 0 0 0
+ ¯ (xi ) − μc )(θ:L
+ 0
+ ¯ (xi ) − μc ) |
+ T The model θ0 is updated in a supervised manner
+ 0
+c = yi ] denotes the covariance matrix of class c. based on (2) using the proposed pre-training loss
+ Next, we determine an anchor sample (x0a,c , ya,c 0
+ ) for each 0
+ Lpre (x0a,c , x0b,c , ya,c 0
+ , yb,c ; θ0 ) in (6). Once this step is completed,
+ 0 0
+class c ∈ C and borderline samples (xb,c , yb,c ) that need refine- the model returns to the first step. By alternating these two
+ment. Note that the goal of this step is to pull the borderline steps, the model progressively improves its ability to classify
+samples toward the anchor sample. An anchor sample (x0a,c , ya,c 0
+ ) both majority and minority classes.
+is selected as the sample with the smallest MD for each class c,
+i.e., V. EFFICIENT MODEL POST-TRAINING WITH PSEUDO-LABELS
+ x0a,c = arg min
+ 0
+ DMD (x0i , yi0 , μc , Σc ; θ:0L̄ ). (13) Once the model is fully trained, it is deployed in the real world.
+ xi ∈X0 In this environment, the data label distribution often differs from
+ Because there is one anchor per class, there are |C| an- that of the pre-training dataset, with a higher occurrence of
+chor samples. We determine the borderline sample (x0b,c , yb,c 0
+ ) minority class samples. This can lead to degraded classifica-
+ 0 0 0 tion accuracy, making post-training necessary. The post-training
+if DMD (xb,c , yb,c , μc , Σc ; θ:L̄ ) exceeds a borderline threshold
+ phase fine-tunes the model using only a few online unlabeled
+φborder , i.e., DMD (x0b,c , yb,c0
+ , μc , Σc ; θ:0L̄ ) > φborder .4 An illustra- samples.
+tive example of a borderline sample is presented in Fig. 3. To minimize the computational burden, post-training is ac-
+ In the second step, the pre-training loss Lpre (·) for (2) is the tivated only when necessary. In this section, we address two
+same as Lpre (x0a,c , x0b,c , ya,c0 0
+ , yb,c ; θ0 ) defined in (6), but the pair challenges: unlabeled online data and the limited number of sam-
+ 0 0 0 0
+of samples (xa,c , xb,c , ya,c , yb,c ) is determined as an anchor and ples for updating the model. To tackle these issues, we introduce
+a borderline one for the same class. Since there is only the same a pseudo-labeling method and a LoRA-based sample-efficient
+class pair (i.e., I{yi0 =yj0 } = 1 and I{yi0 =yj0 } = 0), the contrastive update method. The proposed post-training phase is shown in
+ 0
+loss Lcont (x0a,c , x0b,c , ya,c 0
+ , yb,c ; θ:0L̄ ) in (8) can be simplified as Fig. 2, and the pseudocode is presented in Algorithm 2.
+
+ A. Conditional Post-Training
+ 3 In class-imbalanced environments, different classes often exhibit varying
+degrees of dispersion in the latent space. Under such conditions, classical The post-training is activated if the uncertainty level of the
+distance metrics like Euclidean distance become inappropriate, as they can yield model prediction exceeds φent and the similarity between the
+inconsistent distance scales across classes. For example, if class A is widely
+spread, the distance between a borderline sample and its class center can be predicted label distribution of Xt and Xt−1 is smaller than φcos .
+large, whereas in a compact class B, the same type of distance may be much We first define the uncertainty level as the entropy h(xti ; θt ),
+smaller. To enable a unified distance based criterion for identifying borderline which quantifies the uncertainty in the model predictions.
+samples across classes, we adopt the MD, which normalizes distances within
+each class to have unit variance.
+ 
+ 4 In Fig. 4 of Section VII-A, our empirical analysis suggests that a borderline h(xti ; θt ) = − qxti (c; θt ) log qxti (c; θt ) (15)
+threshold of φborder = 3 performs best. This choice can be theoretically justi- c∈C
+fied. Under the assumption of a multivariate normal distribution, a MD of 3
+corresponds to the 99.7% confidence interval, a commonly accepted threshold If h(xti ; θt ) exceeds the threshold φent , indicating a higher
+for detecting statistical outliers. degree of uncertainty, the model must be fine-tuned to improve
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT 7455
+
+ Algorithm 2: Post-Training Phase. When model entropy h(xti ; θt ) exceeds φpred , we cannot rely
+ t on the model’s prediction. In this case, we leverage the feature
+ Require: Model θt , Dataset Xt = {xti }N i=1 ,
+ N t−1 representation at L̄-th layer by measuring the distance to the
+ Xt−1 = {xt−1 } , thresholds φ ent φcos
+ ,
+ i i=1
+ centroid of all classes. Let M be a set of MD for a sample
+ Ensure: Updated model θt+1
+ (xti , yit ) for all classes.
+ 1: Compute similarity s(Xti , Xt−1 i ;θ )
+ t
+  
+ 2: for i = 1 to N do t M = DMD (xti , yit , μc , Σc ; θt )|c ∈ C (18)
+ 3: Compute entropy h(xti ; θt )
+ The set M contains |C| elements. A straightforward approach
+ 4: if h(xti ; θt ) ≥ φent and s(Xti , Xt−1 i ; θ ) < φcos then
+ t
+ t is to assign a pseudo-label to the class with the smallest distance,
+ 5: Generate pseudo-label ỹi based on (17)
+ i.e., ỹit = arg minc∈C DMD (xti , μc , Σc ; θt ). To ensure a more
+ 6: if ỹit is generated then
+ reliable pseudo-label, we further assess the confidence measure
+ 7: Compute Lpost (xti , ỹit ; θt , {A, B}) based on (20)
+ ΔMD , which represents the distance gap between the first and
+ 8: Update final layer
+ second closest class centroids.
+ {A, B} ← {A, B} − η∇Lpost (xti , ỹit ; θt ,
+ {A, B}) ΔMD = min (M \ {min(M)}) − min(M) (19)
+ 9: θLt
+ ← θL t
+ + BA Here, min(·) returns the element with the minimum value in
+ 10: end if the set and \ denotes the set difference. We employ the smallest
+ 11: end if distance class as a pseudo-label only if the confidence measure
+ 12: end for ΔMD exceeds φMD . If any of these conditions are not met, we
+ avoid pseudo-labeling and exclude the sample from the postthe prediction confidence. Next, we measure the similarity of training process.
+predicted label distribution between Xt and Xt−1 . If the similarity is below the threshold φcos , this suggests potential shifts in C. LoRA-Based Sample-Efficient Post-Training
+the label distribution, making post-training necessary. We denote After determining the pseudo-labels, we finally update the
+the similarity s(Xt , Xt−1 ; θt ) as the cosine similarity between model. Because of a very limited number of samples for this
+the outputs of the current data Xt and previous data Xt−1 . phase, i.e., N t  N 0 , we update only the final layer of the
+ model [48], [49], [50]. In addition, we employ LoRA to reduce
+ s(Xt , Xt−1 ; θt )
+ the number of trainable parameters.
+ 
+ c∈C (qxt (c; θ ) · qxt−1 (c; θ ))
+ t t The post-training loss function Lpost (·) in (4) is defined as a
+ =   (16) cross-entropy loss with a pseudo-label.
+ t 2 t 2
+ c∈C (qxt (c; θ )) · c∈C (qxt−1 (c; θ ))  
+ Lpost xti , ỹit ; θt , {A, B}
+ The model adapts when both the uncertainty and similarity   
+conditions are satisfied, thereby ensuring that it responds effec- =− p̃xti (c) log qθ:L−1
+ t (xti ) (c; θL + BA)
+ t
+ (20)
+tively. c∈C
+
+ The matrix B ∈ RdL−1 ×r and matrix A ∈ Rr×C are low-rank
+B. Pseudo-Labeling
+ matrices that significantly reduce the post-training complexity
+ To update the model in a supervised manner using (4), a compared to updating the entire layer. At the beginning of the
+reliable pseudo-label must be generated. An inaccurate pseudo- post-training phase, B is set to all zero matrices, whereas A is
+label can degrade the accuracy of the model. The pseudo-label ỹit initialized using Gaussian random values. The product BA starts
+is assigned based on both the entropy h(xti ; θt ) and confidence at zero, ensuring that there is no initial impact on the model. As
+measure ΔMD , ensuring that reliable pseudo-labels are generated the post-training progresses, B and A are updated, enhancing
+only if certain conditions are satisfied. the classification accuracy and efficient post-training.
+ ⎧ Finally, the model is updated as follows.
+ ⎪
+ ⎪ ŷ t , if h(xti ; θt ) < φpred  
+ ⎪ i
+ ⎪ {A, B} ← {A, B} − η∇Lpost xti , ỹit ; θt , {A, B}
+ ⎨arg min DMD (xt , y t , μc , Σc ; θt ), if h(xt ; θt ) ≥ φpred (21)
+ i i i
+ỹit = c∈C
+ ⎪
+ ⎪ and Δ MD ≥ φMD
+ t
+ θL ← θL
+ t
+ + BA (22)
+ ⎪
+ ⎪
+ ⎩
+ No pseudo-labeling, otherwise Here, the term BA is continuously merged into the base pat
+ (17) rameter θL after each update step, rather than being applied
+ only once after training. This continuous write-back follows
+ If the entropy h(xti ; θt ) is below the threshold φpred , the the standard LoRA update mechanism [45], [51], [52], ensuring
+model is confident in its prediction.5 Here, we directly use the t
+ that the effective weight θL + BA is directly optimized during
+prediction ŷit as the pseudo-label, i.e., ỹit = ŷit . post-training.
+
+ 5 Here, the entropy threshold φ
+ pred serves a different purpose from φent used
+ VI. SIMULATION SETUPS
+in deciding to perform post-training. While φent determines when to initiate
+post-training by evaluating the uncertainty of the incoming data, φpred decides In this section, the simulation environment used to evaluate the
+whether the model prediction is reliable enough to be used as a pseudo-label. proposed system is described. Our experiments are conducted
+7456 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+on multiple datasets, simulating online label shift scenarios to r Sine Shift (Sin): αt = sin( √tπ ) introduces cyclical varia-
+ T
+test the adaptability and robustness of our approach compared tions, capturing periodic shifts in the distribution.
+to several baseline algorithms. r Bernoulli Shift (Ber): αt retains its previous value αt−1
+ with probability √1T , or flips to 1 − αt−1 . This setup cap-
+A. Datasets tures stochastic
+ √ variations, ensuring class prior changes
+ We utilized three well-known network intrusion classification scale with T .
+datasets that are commonly used to evaluate intrusion detection The visualizations of αt across scenarios are presented in
+systems. These datasets provide a comprehensive range of nor- Appendix C, available online.
+mal traffic and attack classes, making them suitable for testing We categorize the online label distribution settings into Dythe dynamic post-training mechanisms. namic Setting I and Dynamic Setting II, based on how the
+ r NSL-KDD [53]: An improved version of the KDD Cup 99 initial distribution ω1 (c) and the final distribution ω2 (c) are
+ dataset [54], NSL-KDD addresses issues such as redundant defined. In Dynamic Setting I, ω1 (c) is set to a uniform class
+ records and includes 41 features across approximately distribution, whereas ω2 (c) is set to a Dirac delta distribution,
+ 125,973 records. It is divided into five classes: Normal, which values zero, except for the most minor class of the
+ DoS, Probe, R2L, and U2R. pre-training phase. This setting allows for an extreme label
+ r UNSW-NB15 [55]: A hybrid dataset combining real and shift scenario, where the class with the lowest proportion in
+ synthetic network traffic. It contains 49 features for each the pre-training phase becomes the most prevalent during the
+ connection and a total of 2,540,044 records, covering 10 post-training phase [35], [36], [57]. Although Dynamic Setting
+ different classes, including various types of attacks like I is the most popular setting in literature, it only partially
+ exploits, fuzzers, and worms. mirrors real-world conditions because configuring the initial
+ r ToN-IoT [56]: Designed for cybersecurity research in distribution as a uniform distribution fails to account for class
+ IoT networks, ToN-IoT comprises 46 features and over imbalance. As the final distribution converges to a single class,
+ 22,339,021 records, spanning nine classes such as normal the model achieves the lowest loss by consistently predicting this
+ traffic and several types of attacks like DoS, DDoS, and class, making the task easier than in settings with diverse class
+ scanning. inclusion.
+ The dataset was partitioned into pre-training and post-training To consider a more realistic setting, we propose a novel online
+sets with a fixed ratio of 8:2. Within the pre-training set, data shift setting, Dynamic Setting II. In this setting, we configure the
+were further divided into training and validation subsets at a ratio initial setting ω1 (c) as a non-uniform distribution to account for
+of 3:1. All datasets were preprocessed using z-score normaliza- class imbalance and establish a final setting ω2 (c) to include
+tion, where each feature was standardized based on the mean diverse classes. The setup for ω1 (c) includes normal traffic
+and standard deviation calculated from the pre-training data. samples selected to exceed N t /|C|, ensuring that normal data
+At each post-training time step t(1 ≤ t ≤ 100), 100 distinct are the majority. The remaining attack classes are then randomly
+post-training sets are independently drawn from post-training selected with counts below N t /|C|. For ω2 (c), normal traffic
+sets according to the label distribution Ωt (c). The performance also maintains the majority, but the least frequent attack class
+of the model is evaluated using post-training sets at every time from pre-training is set as the most common attack class, with
+step t, and we report the average performance across all steps. counts between those of normal traffic and other attack classes.
+This evaluation setting is aligned with standard practices in the The other attack classes are selected randomly to remain below
+label distribution shift literature [35], [36], [57]. N t /|C|. Unlike in Dynamic Setting I, the specific attack classes
+ included in ω1 (c) and ω2 (c) vary with each random seed, allowing for a more realistic consideration of the label distribution
+B. Online Label Shift
+ environment. For each dataset, the initial and final distributions
+ As defined in (3), the online label distribution shift is de- for Setting I and Setting II can be found in Appendix C, available
+termined by the initial distribution ω1 (c), the final distribution online, along with numerical values.
+ω2 (c), and a time-dependent parameter αt , which controls the While the two settings differ in how the initial and final label
+distribution shift over time. Here, αt is typically configured in distributions are defined, the degree of imbalance in each setting
+the following four ways under online label distribution shift can be quantitatively characterized by the imbalance factor (IF),
+scenarios [35], [36], [57]. which is widely used in the literature to measure class imbalance.
+ r Pre-trained Model Performance (Pre): The accuracy eval- The imbalance factor is defined as IF = N Nmin , where Nmax and
+ max
+
+ uated, before any label distribution shift is applied. This Nmin denote the maximum and minimum number of samples
+ baseline assesses the model’s initial classification perfor- among all classes, respectively. A larger IF indicates a more
+ mance under the same class distribution as the pre-training severe skew in the class distribution.
+ data.
+ r Linear Shift (Lin): αt = t provides a gradual, linear tran-
+ T
+ sition from ω1 (c) to ω2 (c), ensuring a smooth evolution in C. Baseline Algorithms
+ the label distribution. To benchmark the performance of the proposed method,
+ r Square Shift (Squ): αt toggles between 0 and 1 every √T /2 we compared it with several baseline models tailored for preiterations. This creates abrupt, periodic changes in the class training and post-training. All models use the same architecture
+ distribution. as ours, ensuring a fair comparison across different training
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT 7457
+
+mechanisms. The detailed hyperparameter settings are provided most current observations. Although this method responds
+in Appendix A, available online. to rapid label shifts, it struggles with the confidence-based
+ 1) Pre-Training Baseline Algorithms: selective post-training employed in our approach, which
+ r Base: This method trains a classifier solely with cross- may reduce its effectiveness in complex scenarios.
+ entropy loss. It serves as the simplest baseline without any r Unbiased Online Gradient Descent (UOGD) [36]: An exmodifications to the data or learning process. Unlike our tension of OGD, UOGD uses an unbiased risk estimator to
+ method, it does not incorporate any techniques for handling adapt continuously without labeled data. However, it does
+ class imbalance. not apply confidence measures for pseudo-label selection,
+ r Ours: The proposed method integrates cross-entropy loss, which might hinder its performance when faced with rapid
+ contrastive loss, class imbalance handling, and borderline distribution changes.
+ sample refinement to jointly training classification and r Adapting to Label Shift (ATLAS) [36]: ATLAS maintains
+ representation. an ensemble of models, each tuned with different learning
+ r Random Oversampling [27]: A simple approach that ran- rates to adjust to label shifts. It dynamically selects the
+ domly duplicates samples from minority classes to balance most suitable model based on current conditions. It does
+ the dataset. The model is trained solely with cross-entropy not leverage a confidence-based post-training mechanism
+ loss on the resampled dataset. Unlike our method, it does or low-rank updates, which may affect its adaptability and
+ not generate new representations but merely increases the efficiency under dynamic shifts.
+ presence of existing minority class instances, potentially All simulation results are averaged over ten random seeds with
+ leading to overfitting. one standard deviation. Accuracy and F1-score are used as the
+ r Synthetic Minority Oversampling Technique (SMOTE) evaluation metric. For performance comparison, the improve-
+ [18]: This method generates synthetic samples to balance ment of the proposed method over the best-performing baseline
+ the dataset before training, using interpolation between is expressed as a relative improvement rate, as shown below.
+ existing instances. The model is then trained solely with Metricproposed − Metricbest baseline
+ cross-entropy loss on the augmented dataset. However, un- Improvement (%) = × 100
+ Metricbest baseline
+ like our method, SMOTE does not refine class boundaries (23)
+ dynamically or leverage contrastive learning for improved
+ feature representation. VII. SIMULATION RESULTS FOR PRE-TRAINING
+ r Borderline-SMOTE [29]: An advanced version of SMOTE
+ that focuses on generating synthetic samples near the In this section, we present the simulation results of the prodecision boundary of minority classes. The model trains posed system. We evaluate the proposed pre-training method
+ solely with cross-entropy loss after augmentation. While it through three analyses. First, we conduct a parameter sensiimproves class separability compared to standard SMOTE, tivity study to examine the impact of different hyperparameter
+ it struggles with the joint optimization of classification and settings. Second, we perform an ablation study on Step I and
+ representation learning that our method integrates. Step II of the proposed pre-training method to assess their
+ r Focal Loss [30]: A loss function designed to address class individual contributions. Finally, we compare our approach with
+ imbalance by assigning higher weights to hard-to-classify baseline pre-training algorithms to validate its effectiveness. The
+ instances. It helps mitigate the dominance of majority convergence behavior of the pre-training phase is presented in
+ classes by reducing the contribution of well-classified sam- the loss curves shown in Appendix B, available online.
+ ples. However, unlike our method, it does not incorporate
+ contrastive learning or explicit sample refinement mecha- A. Parameter Sensitivity Analyses
+ nisms to enhance representation learning. To examine the engineering trade-offs underlying the pro-
+ 2) Post-Training Baseline Algorithms: posed framework, we perform a parameter sensitivity study by
+ r Base (no post-training): This model uses the pre-trained varying key design parameters. All evaluations are performed
+ model without post-training. It serves as a lower bound to on a validation dataset with a uniform label distribution [35],
+ highlight the improvements achieved through post-training [36], [57], which provides a consistent basis for isolating the
+ strategies. effects of individual design choices. The results are summarized
+ r Ours: This is the proposed method that integrates a in Fig. 4.
+ confidence-based mechanism with a LoRA. It dynamically L̄ determines the network layer at which the contrastive
+ generates pseudo-labels based on the confidence of the constraint is enforced. Enforcing contrastive loss at early layers
+ model and selectively updates the model to optimize both preserves general feature characteristics but provides limited
+ accuracy and efficiency. class discrimination, whereas applying it at very late layers
+ r Follow the History (FTH) [35]: This algorithm averages yields diminishing returns, as the representations become inlabel distributions across the entire history, assuming that creasingly specialized for classification. As shown in Fig. 4(a),
+ past data can inform future patterns. It does not use performance improves as L̄ moves toward intermediate layers,
+ confidence-based pseudo-labeling, which may limit its re- where the contrastive objective can effectively shape the feature
+ sponsiveness to abrupt changes. space without interfering with class-specific decision boundr Follow the Fixed Window History (FTFWH) [35]: FTFWH aries. Beyond this point, further increasing L̄ offers no additional
+ adapts using a fixed window of recent data, focusing on the benefit, indicating that intermediate feature layers provide the
+7458 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ λ therefore provides a well-balanced contribution from the two
+ losses.
+
+ B. Ablation Studies
+ In the pre-training phase, the proposed system performs two
+ key steps: imbalance-aware training (Step I), which addresses
+ data imbalance issues, and borderline sample refinement (Step
+ II), which helps classify samples near decision boundaries within
+ the latent space. The ablation study analyzes how each step
+ affects the initial performance after pre-training and how this
+ initial performance influences the post-training results under the
+ same conditions. The results are summarized in Table IV. The
+ cases are defined as follows:
+ r Case 1: Neither Step I nor Step II is performed. This
+ corresponds to a vanilla contrastive learning baseline where
+ sample pairs are selected randomly without considering
+ class imbalance or borderline sample refinement.
+ r Case 2: Only Step I is performed, where contrastive pairs
+ are selected with higher probability for minority classes to
+Fig. 4. Parameter sensitivity analysis results. The subfigures illustrate the im- address class imbalance, but no borderline sample refinepact of varying key parameters on the performance of our proposed pre-training
+method: (a) the constant L̄ indicates the hidden layer number, (b) the margin ment is done.
+parameter  for contrastive learning, (c) the threshold φborder used for selecting r Ours: Both Step I and Step II are performed. The model
+borderline samples, and (d) scaling parameter λ used to balance two objectives. applies imbalance-aware training and further refines borderline samples near class decision boundaries.
+ When comparing the initial performance of Case 1 and Case 2,
+most effective balance between representation robustness and we observe that including Step I leads to improved initial perfordiscriminability. mance, demonstrating that imbalance-aware training effectively
+ The contrastive margin parameter  controls how strongly addresses data imbalance issues. Furthermore, a comparison
+samples from different classes are separated in the learned between Case 2 and Ours reveals that Ours achieves superior
+feature space. An insufficient margin fails to enforce meaningful initial performance. This suggests that while imbalance-aware
+separation between minority classes, limiting discriminability, training mitigates data imbalance, samples near decision boundwhereas an excessively large margin can distort the feature aries continue to pose classification challenges. By applying borgeometry and destabilize representation learning. As shown in derline sample refinement in Step II, the classification accuracy
+Fig. 4(b), increasing  initially improves performance by pro- improves for these challenging samples, leading to a better initial
+moting clearer class separation. Beyond a moderate range, how- performance. An analysis of the impact of initial performance
+ever, further enlarging the margin yields diminishing returns, on the post-training phase shows that post-training results are
+indicating that once adequate separation is achieved, additional achieved when initial performance is higher.
+margin constraints no longer contribute to more informative
+representations.
+ C. Performance Comparisons
+ The threshold φborder is employed during pre-training to identify borderline samples, allowing the model to focus on instances Table V presents a comparison of various methods across
+that are difficult to classify. As illustrated in Fig. 4(c), a threshold multiple datasets. Our proposed method consistently outperof φborder ≈ 3 yields the best performance across three datasets. forms all baselines, achieving an average improvement of 6.0%
+Theoretically, an MD of 3 corresponds to the 99.7% confidence in accuracy and F1-score over the best-performing comparison
+interval under the assumption of a multivariate normal distri- algorithm across all datasets. Traditional resampling techniques,
+bution. Therefore, our empirical findings are well supported such as SMOTE [18] and Borderline-SMOTE [29], improve
+by a widely accepted statistical criterion for detecting outliers, performance by increasing the presence of minority class samsuggesting an initial setting of φborder = 3, followed by tuning ples. However, these methods rely on synthetic data interpobased on empirical results. lation, limiting their ability to capture the full complexity of
+ The scaling parameter λ balances the two objectives in the real-world variations. Loss reweighting approaches, including
+pre-training loss. As shown in Fig. 4(d), the accuracy increases Focal Loss [30], further enhance performance by focusing on
+sharply as λ rises to around 0.4, where the contributions of the hard-to-classify samples. While effective, these methods depend
+cross-entropy and contrastive losses are better balanced. Beyond on predefined weighting strategies, which may not generalize
+this point, the performance gradually decreases toward λ = 1, well across different data distributions.
+indicating that assigning excessive weight to either objective This result suggests that our approach effectively captures
+does not further improve feature discriminability. A moderate intricate class relationships, enabling superior generalization
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT 7459
+
+ TABLE IV
+ PRE-TRAINED MODEL PERFORMANCE AND ITS ABLATION STUDIES
+
+ TABLE V
+ PERFORMANCE COMPARISON OF PRE-TRAINED MODEL ACROSS MULTIPLE DATASETS (ACCURACY [%] AND F1-SCORE [%])
+
+in diverse and dynamic environments. Unlike augmentationbased methods, our system learns more discriminative feature
+representations, leading to significant improvements in network
+intrusion detection.
+ These results highlight the limitations of traditional techniques and the advantages of the proposed method, demonstrating its robustness in handling imbalanced and complex data
+scenarios.
+
+ VIII. SIMULATION RESULTS FOR POST-TRAINING
+ We evaluate the proposed post-training method through a Fig. 5. Parameter sensitivity analysis results of proposed post-training method:
+series of analyses. First, we conduct a parameter sensitivity study (a) the threshold φpred for determining entropy confidence and (b) the threshold
+to examine the impact of different hyperparameter settings. φMD for determining MD confidence.
+Second, we perform an ablation study on the three key components of post-training—reliable pseudo-labeling, LoRA, and
+conditional post-training—to assess their individual contribu- level and the feature level. This design introduces an inherent
+tions. Additionally, we analyze the computational complexity of trade-off between pseudo-label reliability and adaptation cov-
+LoRA to evaluate its efficiency in resource-constrained environ- erage, which is controlled through the entropy threshold φpred
+ments. We further conduct a robustness evaluation of the overall and the Mahalanobis distance threshold φMD . We examine the
+system and pseudo-labeling method to assess stability under impact of these parameters through a sensitivity analysis, as
+varying data conditions. Finally, we compare the performance of summarized in Fig. 5.
+our approach with baseline post-training algorithms to validate The entropy threshold φpred controls how strictly prediction
+its effectiveness. uncertainty is filtered during pseudo-labeling. Prediction entropy reflects the concentration of the softmax output, where low
+ entropy indicates a dominant class probability and high entropy
+A. Parameter Sensitivity Analyses indicates ambiguous predictions. When φpred is set to a small
+ To regulate model adaptation during post-training, the value, pseudo-labels are assigned only to highly confident preproposed framework relies on confidence-based pseudo-label dictions, which preserves label reliability but limits adaptation
+selection to prevent performance degradation caused by unreli- by excluding most samples. As φpred increases, predictions with
+able supervision. In particular, pseudo-labels are generated only less concentrated softmax outputs are progressively included,
+when sufficient confidence is established at both the prediction expanding adaptation coverage. However, overly permissive
+7460 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE VI
+ POST-TRAINING PERFORMANCE, PROCESS TIME, AND ITS ABLATION STUDIES
+
+thresholds admit predictions with ambiguous class probabili- confidence and data similarity with the previous timestep,
+ties, increasing the likelihood of incorrect pseudo-labels and ensuring efficient post-training.
+degrading post-training performance. As shown in Fig. 5(a), Without reliable pseudo-labeling in Case 3, there is the most
+the observed performance trend reflects this trade-off between significant performance drop and a slight increase in the proprediction-level reliability and adaptation coverage. cessing time. This indicates that inaccurate labeling significantly
+ The Mahalanobis distance threshold φMD provides a feature- affects performance. For computational efficiency, we observed
+level confidence criterion for samples that are not directly that when reliable pseudo-labeling was not employed, the model
+pseudo-labeled based on prediction entropy. For a given sample, exhibited a decrease in prediction confidence owing to inaccuthe confidence measure ΔMD is defined as the difference be- rate labeling. This drop in confidence triggers more frequent
+tween the smallest and second smallest Mahalanobis distances conditions for conditional post-training, leading to an increase
+to class-wise feature distributions. A small ΔMD indicates that in the number of post-training events. The absence of reliable
+the sample lies close to multiple class clusters and is therefore pseudo-labeling resulted in a higher frequency of conditional
+difficult to assign reliably, whereas a large value suggests clear post-training triggers, thereby necessitating additional training
+association with a single class. A smaller threshold admits and longer processing times.
+ambiguous samples and increases adaptation coverage, while a Excluding LoRA in Case 4 results in both performance degralarger threshold restricts pseudo-labeling to samples with clear dation and an increase in computational cost. Since post-training
+class separation, improving reliability at the cost of reduced is performed on a limited number of samples, updating all
+adaptability. As shown in Fig. 5(b), post-training performance parameters in the target layers becomes ineffective due to inis shaped by how this balance between feature-level reliability sufficient sample size. These results confirm that LoRA enables
+and adaptation coverage is resolved. computationally efficient post-training by reducing the number
+ of updated parameters without sacrificing model effectiveness.
+ When examining the results of Case 5 and Ours, both ap-
+B. Ablation Studies proaches exhibit similar performance levels. However, Case 5
+ requires a significantly longer processing time. This indicates
+ To analyze the impact of each component within the post- that performing post-training at every timestep is inefficient,
+training phase on the model performance and computational while conditional post-training allows for efficient adjustments
+time, we conduct an ablation study on each component individ- by triggering post-training only when necessary, achieving perually. The results of the ablation study are presented in Table VI. formance comparable to adapting at all timesteps.
+ a) Reliable pseudo-labeling addresses the issue of inaccurate
+ pseudo-labels degrading model accuracy using the entropy
+ h(xti ; θt ) and the confidence measure ΔMD . C. Analyses of Low-Rank Adaptation
+ b) LoRA reduces the number of parameters to be up- To analyze the impact of LoRA on post-training, we comdated, enabling sample-efficient post-training with limited pare accuracy and wall time between cases with LoRA and
+ samples. non-LoRA, as illustrated in Fig. 6. The figure shows that when
+ c) Conditional post-training determines whether to pro- the number of post-training samples is small, LoRA not only
+ ceed with post-training based on the current prediction outperforms the non-LoRA method in accuracy but also exhibits
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT 7461
+
+ TABLE VII
+ PERFORMANCE COMPARISON OF POST-TRAINING PERFORMANCE IN DYNAMIC SETTING I
+
+ greater robustness. As the number of post-training samples
+ increases, the accuracy gap between LoRA and non-LoRA
+ narrows. In the N t = 1000 case, they achieve comparable accuracy. However, LoRA requires significantly less adaptation time,
+ indicating a notable computational efficiency when scaling to
+ larger sample sizes.
+ We further investigate the computational complexity implications of using LoRA for updating only the final layer of the
+ model, as summarized in Table VIII. When non-LoRA is applied, the number of parameters that require updates during posttraining increases substantially, leading to higher computational
+ demands. Specifically, updating the full weight matrix incurs
+ a computational complexity of O(C · dL−1 ) per step, where C
+ denotes the number of classes and dL−1 is the dimension of
+ the hidden layer preceding the final layer. In contrast, LoRA decomposes the update into two low-rank matrices, A ∈ Rr×C and
+ B ∈ RdL−1 ×r , reducing the complexity to O(r · (C + dL−1 )).
+ Since the rank r satisfies r  min(C, dL−1 ), this approach
+ substantially decreases computational costs while maintaining
+ comparable model performance.
+
+ D. Robustness of Post-Training Performance Over Imbalance
+ Factor
+
+Fig. 6. Performance analysis across different datasets: (a), (c), (e) accuracy and
+ To assess the robustness of both the post-training performance
+(b), (d), (f) wall time for three datasets under different number of post-training and the pseudo-labeling method, we confirm accuracy across
+samples N t . different imbalance factors, as shown in Fig. 7. The imbalance
+ factor controls the degree of class imbalance in the pre-training
+ TABLE VIII
+THE NUMBER OF UPDATED PARAMETERS AND COMPUTATIONAL COMPLEXITY
+ data, allowing us to systematically analyze performance degradation under different imbalance data distributions.
+ The results indicate that as the imbalance factor increases,
+ both overall accuracy and pseudo-label accuracy exhibit a gradual decline across all datasets. However, the pseudo-labeling
+ method consistently maintains higher accuracy than the overall
+7462 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE IX
+ PERFORMANCE COMPARISON OF POST-TRAINING PERFORMANCE IN DYNAMIC SETTING II
+
+ E. Performance Comparisons
+ We conducted a performance comparison between state-ofthe-art post-training methods and our proposed system. We
+ evaluated performance using multiple datasets, different label
+ shift scenarios, and settings, as presented in Tables VII and IX.
+ 1) Dynamic Setting I: This setting is the most popular shift
+ setting in post-training research, where the distribution shifts
+ from a uniform distribution to a Dirac delta function that consists of only a single class [35], [36], [57]. The results show
+ that the proposed method consistently surpasses all baseline
+ approaches, highlighting its adaptability and effectiveness. For
+ all datasets and scenarios, the proposed method achieves the
+ highest accuracy and F1-score across all shift types, with an
+ average improvement of 7.7% over the best-performing baseline
+ in Table VI. This improvement indicates the effectiveness of
+ our strategy in addressing both class imbalance and dynamic
+ shifts.
+ 2) Dynamic Setting II: The performance of the proposed
+Fig. 7. Robustness of pseudo-label and overall system across imbalance factor method is evaluated in realistic network scenarios, incorpoof pre-training data under Squ shift.
+ rating more complex and non-uniform shifts in label distributions. Despite the increased complexity of these scenarios,
+classification performance, suggesting that the pseudo-labeling our method consistently demonstrates high accuracy, surpassing
+process remains reliable even under severe class imbalance. the baseline models while effectively adapting to variability in
+This indicates that while the model experiences performance the label distributions. For all datasets, the proposed method
+degradation due to data imbalance, the pseudo-labeling mecha- consistently achieved the highest accuracy and F1-score across
+nism preserves a relatively stable structure, mitigating excessive all shift types, showing an average improvement of 9.56%
+performance drops. over the best-performing baseline. Furthermore, while the best-
+ Furthermore, the performance gap between pseudo-label ac- performing comparison method, ATLAS, experienced a greater
+curacy and overall accuracy remains consistent across different performance drop between Dynamic Setting I and Dynamic
+datasets, demonstrating the robustness of the proposed pseudo- Setting II, the proposed method showed a comparatively smaller
+labeling method. These findings highlight the effectiveness of decrease.
+our approach in handling imbalanced data and ensuring stable Therefore, the proposed approach achieved an average imlearning even under highly skewed distributions. The results for provement of 8.6% in accuracy and F1-score across the two
+the various shift types are presented in Appendix D, available dynamic settings. This indicates the ability of our system to
+online. effectively handle diverse and dynamic conditions.
+KIM et al.: EVOLVING INTELLIGENT NETWORK ATTACK CLASSIFIER UNDER LABEL DISTRIBUTION SHIFT 7463
+
+ IX. CONCLUSION [12] O. Al-Jarrah, O. Alhussein, P. Yoo, S. Muhaidat, K. Taha, and K. Kim,
+ “Data randomization and cluster-based partitioning for botnet intrusion
+ In this work, we propose an efficient post-training system detection,” IEEE Trans. Cybern., vol. 46, no. 8, pp. 1796–1806, Aug. 2016.
+to enhance classification performance in dynamic network in- [13] H. Kye and M. Kwon, “Partial federated learning based network intrusion
+ system for mobile devices,” in Proc. ACM Int. Symp. Mobile Ad Hoc Netw.
+trusion scenarios. The method combines contrastive learning- Comput., Oct. 2022, pp. 283–284.
+based pre-training with conditional post-training guided by [14] Z. Almahmoud, P. Yoo, O. Alhussein, I. Farhat, and E. Damiani, “A holistic
+confidence-based pseudo-labeling and LoRA adaptation. In the and proactive approach to forecasting cyber threats,” Sci. Rep., vol. 13,
+ no. 1, May 2023, Art. no. 8049.
+pre-training phase, the model incorporates imbalance-aware [15] M. Dib, S. Torabi, E. Bou-Harb, N. Bouguila, and C. Assi, “EVOLIoT: A
+sampling and focuses on borderline samples, while during de- self-supervised contrastive learning framework for detecting and characployment, it selectively adapts to new data using confidence terizing evolving IoT malware variants,” in Proc. ACM Comput. Commun.
+ Secur., May 2022, pp. 452–466.
+signals. This framework effectively enhances the model’s adapt- [16] Y. Yue, X. Chen, Z. Han, X. Zeng, and Y. Zhu, “Contrastive learning
+ability and discriminative power under dynamic and imbal- enhanced intrusion detection,” IEEE Trans. Netw. Serv. Manage., vol. 19,
+anced conditions, leading to more robust and reliable intrusion no. 4, pp. 4232–4247, Dec. 2022.
+ [17] Y. Jiao, K. Yang, D. Song, and D. Tao, “TimeAutoAD: Autonomous
+detection in real-world network environments. This effective- anomaly detection with self-supervised contrastive loss for multivariate
+ness arises because the refined representations learned during time series,” IEEE Trans. Netw. Sci. Eng., vol. 9, no. 3, pp. 1604–1619,
+pre-training provide a more stable basis for generating reliable May/Jun. 2022.
+ [18] D. Elreedy and A. Atiya, “A comprehensive analysis of synthetic minority
+pseudo-labels in the post-training stage. Experimental results oversampling technique (SMOTE) for handling class imbalance,” Inf. Sci.,
+show that our method consistently outperforms state-of-the-art vol. 505, pp. 32–64, Dec. 2019.
+post-training techniques, with an average improvement of 8.6% [19] M. Kim, M. Joe, and M. Kwon, “OASIS: Open-world adaptive selfsupervised and imbalanced-aware system,” in Proc. 34th ACM Int. Conf.
+in accuracy and F1-score across multiple network datasets. Inf. Knowl. Manage., Nov. 2025, pp. 1375–1385.
+These findings demonstrate the effectiveness of the proposed [20] H. Park, M. Joe, M. Kim, and M. Kwon, “ASAP: Unsupervised postapproach and suggest its practical value for intrusion detection training with label distribution shift adaptive learning rate,” in Proc. 34th
+ ACM Int. Conf. Inf. Knowl. Manage., 2025, pp. 5094–5098.
+in evolving AIoT environments. It is also worth noting that [21] M. Kim, H. Park, and M. Kwon, “Personalized split federated learning
+in settings with ample data and computational resources, full with early-exit: Pre-training and online learning against label shifts,” IEEE
+fine-tuning may be a more suitable adaptation strategy than Internet Things J., vol. 12, no. 22, Nov. 2025.
+ [22] S. Amalapuram, B. Tamma, and S. Channappayya, “SPIDER: A semi-
+LoRA updates. Future research could explore adaptive confi- supervised continual learning-based network intrusion detection system,”
+dence mechanisms and cross-domain extensions of the proposed in Proc. IEEE Conf. Comput. Commun., May 2024, pp. 571–580.
+framework to enhance its applicability in large-scale, real-time [23] Z. Yang et al., “MLoRA: Multi-domain low-rank adaptive network for
+ CTR prediction,” in Proc. 18th ACM Conf. Recommender Syst., Oct. 2024,
+intrusion detection across diverse network environments. pp. 287–297.
+ [24] A. Agiza, M. Neseem, and S. Reda, “MTLoRA: Low-rank adaptation
+ REFERENCES approach for efficient multi-task learning,” in Proc. IEEE/CVF Conf.
+ Comput. Vis. Pattern Recognit., Jun. 2024, pp. 16196–16205.
+ [1] D. Chao, D. Xu, F. Gao, C. Zhang, W. Zhang, and L. Zhu, “A system- [25] T. Mehedi, A. Anwar, Z. Rahman, K. Ahmed, and R. Islam, “Dependatic survey on security in anonymity networks: Vulnerabilities, attacks, able intrusion detection system for IoT: A deep transfer learning based
+ defenses, and formalization,” IEEE Commun. Surv. Tut., vol. 26, no. 3, approach,” IEEE Trans. Ind. Informat., vol. 19, no. 1, pp. 1006–1017,
+ pp. 1775–1829, thirdquarter 2024. Jan. 2023.
+ [2] Z. Yang, M. Chen, W. Saad, C. S. Hong, and M. Shikh-Bahaei, [26] Z. Liu, D. Ye, L. Tang, Y. Zhang, J. Deng, and W. Kuang, “TEAM:
+ “Energy efficient federated learning over wireless communication net- Temporal adversarial examples attack model against network intrusion
+ works,” IEEE Trans. Wireless Commun., vol. 20, no. 3, pp. 1935–1949, detection system applied to RNN,” IEEE Trans. Netw. Sci. Eng., vol. 12,
+ Mar. 2021. no. 4, pp. 3400–3415, Jul./Aug. 2025.
+ [3] W. Wu et al., “AI-Native network slicing for 6G networks,” IEEE Wireless [27] J. Leevy, T. Khoshgoftaar, R. Bauder, and N. Seliya, “A survey on
+ Commun., vol. 29, no. 1, pp. 96–103, Feb. 2022. addressing high-class imbalance in Big Data,” J. Big Data, vol. 5, no. 1,
+ [4] H. Kye, M. Kim, and M. Kwon, “Hierarchical autoencoder for network pp. 1–30, Jan. 2018.
+ intrusion detection,” in Proc. IEEE Int. Conf. Commun., May 2022, [28] A. Fernandez, S. Garcia, F. Herrera, and N. Chawla, “SMOTE for learning
+ pp. 2700–2705. from imbalanced data: Progress and challenges, marking the 15-year
+ [5] X. Shen, J. Gao, W. Wu, M. Li, C. Zhou, and W. Zhuang, “Holistic network anniversary,” J. Artif. Intell. Res., vol. 61, pp. 863–905, Jan. 2018.
+ virtualization and pervasive network intelligence for 6G,” IEEE Commun. [29] E. Elyan, F. Moreno, and C. Jayne, “CDSMOTE: Class decomposition
+ Surv. Tut., vol. 24, no. 1, pp. 1–30, Firstquarter 2021. and synthetic minority class oversampling technique for imbalanced-data
+ [6] X. Shen et al., “AI-assisted network-slicing based next-generation wireless classification,” Neural Comput. Appl., vol. 33, pp. 2839–2851, Apr. 2021.
+ networks,” IEEE Open J. Veh. Technol., vol. 1, pp. 45–66, 2020. [30] S. Prakosa, M. Faisal, and J. Leu, “Using optimized focal loss for imbal-
+ [7] M. Joe, M. Kim, and M. Kwon, “Contrastive learning based network attack anced dataset on network intrusion detection system,” in Proc. IEEE Veh.
+ classifier for imbalanced data,” J. Commun. Netw., vol. 28, no. 1, pp. 86–97, Technol. Conf., Jun. 2022, pp. 1–7.
+ Feb. 2026. [31] X. Liu et al., “Self-supervised learning: Generative or contrastive,” IEEE
+ [8] H. Feng et al., “Multi-domain collaborative two-level DDoS detec- Trans. Knowl. Data Eng., vol. 35, no. 1, pp. 857–876, Jan. 2023.
+ tion via hybrid deep learning,” Comput. Netw., vol. 242, Apr. 2024, [32] W. Ma, X. Wang, J. Dong, M. Hu, and Q. Zhou, “A lightweight method
+ Art. no. 110251. for botnet detection in Internet of Things environment,” IEEE Trans. Netw.
+ [9] M. Kim, M. Joe, and M. Kwon, “Improving network attack classification Sci. Eng., vol. 12, no. 4, pp. 2458–2427, Jul./Aug. 2025.
+ on imbalanced real-world intrusion incident datasets,” in Proc. ACM Int. [33] D. Lee, S. Kim, I. Kim, Y. Cheon, M. Cho, and W. Han, “Contrastive
+ Conf. Mobile Sys. Appl. Serv., Sep. 2025, pp. 591–592. regularization for semi-supervised learning,” in Proc. IEEE/CVF Conf.
+[10] K. Miao, M. Zhang, F. Guo, R. Lu, and X. Guan, “Detection of false data Comput. Vis. Pattern Recognit., Jun. 2022.
+ injection attacks in smart grids: An optimal transport-based reliable self- [34] Y. Yang et al., “ASTREAM: Data-stream-driven scalable anomaly detectraining approach,” IEEE Trans. Inf. Forensics Secur., vol. 20, pp. 709–723, tion with accuracy guarantee in IIoT environment,” IEEE Trans. Netw. Sci.
+ 2025. Eng., vol. 10, no. 5, pp. 3007–3016, Sep./Oct. 2023.
+[11] H. Park, M. Kim, and M. Kwon, “Personalized federated sensing for [35] R. Wu, C. Guo, Y. Su, and K. Weinberger, “Online adaptation to label
+ heterogeneous environment,” IEEE Sensors Lett., vol. 9, no. 4, Apr. 2025, distribution shift,” in Proc. Adv. Neural Inf. Process. Syst., Dec. 2021,
+ Art. no. 6004004. pp. 11340–11351.
+7464 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+[36] Y. Bai, Y. Zhang, P. Zhao, M. Sugiyama, and Z. Zhou, “Adapting to online Miru Kim received the B.S. degree from the
+ label shift with provable guarantees,” in Proc. Adv. Neural Inf. Process. School of Electronic Engineering, Soongsil Univer-
+ Syst., Dec. 2022, pp. 29960–29974. sity, Seoul, Republic of Korea, in 2022, and the
+[37] Y. Liang and W. Li, “InfLoRA: Interference-free low-rank adaptation M.S. degree from the Department of Intelligent Semifor continual learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern conductors, Soongsil University, Seoul, Republic of
+ Recognit., Jun. 2024, pp. 23638–23647. Korea, in 2024. He is currently working toward the
+[38] S. He, Y. Lei, Y. Zhang, K. Xie, and P. Sharma, “Parameter-efficient log Ph.D. degree with the Department of Electrical and
+ anomaly detection based on pre-training model and LoRA,” in Proc. IEEE Computer Engineering, Sungkyunkwan University,
+ Int. Symp. Softw. Rel. Eng., Nov. 2023, pp. 207–217. Suwon, Republic of Korea. His research interests in-
+[39] Z. Zhou, L. Guo, L. Jia, D. Zhang, and Y. Li, “ODS: Test-time adaptation clude integrating artificial intelligence into distributed
+ in the presence of open-world data shift,” in Proc. Int. Conf. Mach. Learn., network systems, with a particular focus on federated
+ Jul. 2023, pp. 42574–42588. and online learning techniques that address data heterogeneity, resource con-
+[40] J. Xu and S. Huang, “A joint training-calibration framework for test-time straints, and dynamic distribution shifts. He was the recipient of the AI SeoulTech
+ personalization with label shift in federated learning,” in Proc. 32nd ACM Graduate Scholarship from the Seoul Scholarship Foundation and the Best Paper
+ Int. Conf. Inf. Knowl. Manage., Oct. 2023, pp. 4370–4374. Award from the HFR Paper Competition.
+[41] M. Wang et al., “Joint adversarial domain adaptation with structural graph
+ alignment,” IEEE Trans. Netw. Sci. Eng., vol. 11, no. 1, pp. 604–612,
+ Jan./Feb. 2024.
+[42] G. Prasad, A. Pandey, and S. Kumar, “Domain adaptation for localization
+ using combined autoencoder and gradient reversal layer in dynamic IoT
+ environment,” IEEE Trans. Netw. Sci. Eng., vol. 11, no. 1, pp. 685–695,
+ Jan./Feb. 2024.
+[43] V. Silva, L. Carvalho, J. Lloret, and M. Proença, “f-AnoGAN for unsupervised attack detection in SDN environment,” IEEE Trans. Netw. Sci. Eng.,
+ vol. 12, no. 4, pp. 3271–3285, Jul./Aug. 2025.
+[44] M. Hashemi and E. Keller, “General domain adaptation through proportional progressive pseudo labeling,” in Proc. IEEE Int. Conf. Big Data,
+ Dec. 2020, pp. 155–162. Mugon Joe received the B.S. degree from the
+[45] H. Edward et al., “LoRA: Low-rank adaptation of large language models,” School of Electronic Engineering, Soongsil Univerin Proc. Int. Conf. Learn. Representations, Apr. 2022. sity, Seoul, South Korea, in 2024, and the M.S. degree
+[46] H. Kye, M. Kim, and M. Kwon, “Hierarchical detection of network from the Department of Intelligent Semiconductors,
+ anomalies: A self-supervised learning approach,” IEEE Signal Process. Soongsil University, Seoul, South Korea, in 2026. His
+ Lett., vol. 29, pp. 1908–1912, 2022. research interests include artificial intelligence for
+[47] Y. Liu, Y. Gu, X. Shen, Q. Liao, and Q. Yu, “MSCA: An unsupervised network systems, with a particular focus on anomaly
+ anomaly detection system for network security in backbone network,” detection and post-training techniques that address
+ IEEE Trans. Netw. Sci. Eng., vol. 10, no. 1, pp. 223–238, Jan./Feb. 2023. data imbalance, resource constraints, and dynamic
+[48] Z. Ding and Y. Fu, “Deep transfer low-rank coding for cross-domain learn- distribution shifts. He was the recipient of the Masing,” IEEE Trans. Neural Netw. Learn. Syst., vol. 30, no. 6, pp. 1768–1779, ter’s Student Research Fellowship from the National
+ Jun. 2019. Research Foundation of Korea (NRF) and the Best Paper Award from the HFR
+[49] W. Zhao, C. Xu, Z. Guan, and Y. Liu, “Multiview concept learning via deep Paper Competition.
+ matrix factorization,” IEEE Trans. Neural Netw. Learn. Syst., vol. 32, no. 2,
+ pp. 814–825, Feb. 2021.
+[50] W. Zhang, J. Wu, W. Zhao, H. Deng, and Y. Yang, “Hierarchical one-class
+ model with subnetwork for representation learning and outlier detection,”
+ IEEE Trans. Cybern., vol. 53, no. 10, pp. 6303–6316, Oct. 2023.
+[51] J. Kim, J. Kim, and E. K. Ryu, “LoRA training provably converges to a
+ low-rank global minimum or it fails loudly (but it probably won’t fail),”
+ in Proc. Int. Conf. Mach. Learn., Jul. 2025.
+[52] M. Eskandar, T. Imtiaz, D. Hill, Z. Wang, and J. Dy, “Star: Stabilityinducing weight perturbation for continual learning,” in Proc. Int. Conf.
+ Learn. Representations, Apr. 2025. Minhae Kwon (Senior Member IEEE) received the
+[53] Y. Ding and Y. Zhai, “Intrusion detection system for NSL-KDD dataset B.S., M.S., and Ph.D. degrees in 2011, 2013, and
+ using convolutional neural networks,” in Proc. Int. Conf. Comput. Sci. 2017, respectively, from Ewha Womans University,
+ Artif. Intell., Dec. 2018, pp. 81–85. Seoul, Republic of Korea. She was a Postdoctoral
+[54] M. Tavallaee, E. Bagheri, W. Lu, and A. Ghorbani, “A detailed analysis Researcher with the Department of Electrical and
+ of the KDD CUP 99 data set,” in Proc. IEEE Symp. Comput. Intell. Secur. Computer Engineering with Rice University and was
+ Defense Appl., Dec. 2009, pp. 1–6. also with the Department of Neuroscience, Baylor
+[55] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for College of Medicine, Houston, TX, USA. She was
+ network intrusion detection systems (UNSW-NB15 network data set),” in an Associate Professor with Soongsil University. She
+ Proc. IEEE Mil. Commun. Inf. Syst. Conf., Oct. 2015, pp. 1–6. is currently an Associate Professor with the De-
+[56] A. Sharma, S. Rani, S. Shah, R. Sharma, F. Yu, and M. Hassan, “An efficient partment of Electrical and Computer Engineering,
+ hybrid deep learning model for denial of service detection in cyber physical Sungkyunkwan University (SKKU), Suwon, Republic of Korea. She was the
+ systems,” IEEE Trans. Netw. Sci. Eng., vol. 10, no. 5, pp. 2419–2428, recipient of the Minister’s Award and the Excellence Award for Young Scientists
+ Sep./Oct. 2023. from the Korean Government, Global Ph.D. Fellowship, Women Techmakers
+[57] C. Ye, R. Tsuchida, L. Petersson, and N. Barnes, “Label shift estimation Fellowship from Google Inc., Qualcomm Innovation Award from Qualcomm
+ for class-imbalance problem: A Bayesian approach,” in Proc. IEEE/CVF Inc., Best Paper Award from the IEEE Consumer Electronics Society, and the
+ Winter Conf. Appl. Comput. Vis., Jan. 2024, pp. 1073–1082. KICS Academic Excellence Award and the KICS Haedong Best Paper Award.

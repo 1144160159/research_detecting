@@ -1,0 +1,1042 @@
+6066 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ RLpatch: A Robust Low-Overhead Website
+ Fingerprinting Defense Method Based on
+ Reinforcement Learning Within Sensitive Regions
+ Shuangwu Chen , Member, IEEE, Siyang Chen , Yuxing Wei, Dong Jin , Xiaobin Tan , Member, IEEE,
+ Xiaofeng Jiang, and Jian Yang , Senior Member, IEEE
+
+ Abstract—Website Fingerprinting (WF) attacks have posed Tor [2] and VPN [3], to encrypt the transmission content
+a serious threat to the anonymity of the onion router (Tor) and conceal communication relationships when browsing the
+communication system, as attackers can passively pry into the website. Although these PETs reduce privacy threats to some
+encrypted traffic and infer the website visited by users. To defend
+against WF, recent studies focus on adversarial perturbations. extent, a local attacker can still pry into which website the
+However, most of them suffer from a high bandwidth overhead user is visiting via the website fingerprinting (WF) attack
+and a low defense performance. To address this problem, our [4], which poses a significant challenge to the anonymity of
+basic idea is to generate perturbation only on the sensitive users’ browsing activities. Recently, Deep Neural Networks
+regions, which can effectively mask the website’s fingerprint, thus (DNNs) based WF attack models have achieved remarkable
+misleading the WF attack models and reducing the bandwidth
+overhead. In this paper, we formulate a joint optimization effectiveness in website identification [5]. It is necessary to
+problem of perturbation position and magnitude by confining the develop an effective defense method against DNN-based WF
+perturbations within sensitive regions, which is rarely considered attacks.
+in the literature. We propose a robust low-overhead WF defense Previous defenses are mainly divided into obfuscation
+method based on reinforcement learning (RL), named RLpatch. and regularization defenses. Obfuscation defenses mislead
+RLpatch identifies the common sensitive regions of various
+surrogate models and adjusts perturbation according to the attackers by randomly injecting dummy packets and padding
+query result from a query WF model. It further employs the time delay [6], [7]. Regularization defenses interfere with
+positional frequency of perturbations to generate a common attackers by shaping traffic traces into a fixed pattern to
+perturbation paradigm for different traces of a same website. conceal traffic characteristics [8]. However, these defenses
+Experimental results show that RLpatch achieves higher defense induce a high bandwidth overhead and introduce extra time
+performance, lower bandwidth overhead and better robustness
+against adversarial training compared to the state-of-the-art delay. Recently, adversarial learning based WF defenses have
+methods. revealed that adding tiny adversarial perturbations to the
+ original traffic traces could confuse the DNN-based WF attack
+ Index Terms—Traffic analysis, website fingerprinting, reinforcement learning, adversarial defense. models [4], [9]. Compared to the previous defenses, they
+ achieve a high defense performance and a low bandwidth overhead. To achieve real-time defense, some recent adversarial
+ I. I NTRODUCTION learning based WF defenses like [10] dynamically determine
+ O MITIGATE the threats of online monitoring and exam- packet injection based on each ongoing packet. However,
+T ination, an increasing number of Internet users are relying
+on using privacy-enhancing technologies (PETs) [1], such as
+ they need to determine the perturbations in time, which may
+ degrade the user’s browsing experience. Moreover, existing
+ adversarial learning based WF defenses have rarely considered
+ Received 10 February 2025; revised 24 June 2025 and 17 August 2025; the generalization capability of the defense model. As a
+accepted 22 August 2025. Date of publication 26 August 2025; date of current
+version 5 December 2025. This work was supported by the National Natural
+ result, these defenses may be effective against the known
+Science Foundation of China (Grant No. U23A20275) and the Open Project WF attack models used for training, but may struggle to
+Program of Guangxi Key Laboratory of Digital Infrastructure (Grant No. maintain the performance when facing unseen WF attack
+GXDIOP2024001). The associate editor coordinating the review of this article
+and approving it for publication was P. Yu. (Corresponding authors: Dong
+ models.
+Jin; Jian Yang.) To overcome the existing drawbacks, we aim to develop
+ Shuangwu Chen, Siyang Chen, Xiaobin Tan, Xiaofeng Jiang, and an effective WF defense method that can achieve real-time
+Jian Yang are with the Department of Automation, University of
+Science and Technology of China, Hefei 230026, China (e-mail:
+ defense with a low bandwidth overhead but also ensure strong
+chensw@ustc.edu.cn; csy1366@mail.ustc.edu.cn; xbtan@ustc.edu.cn; generalization capability across different WF attack models.
+jxf@ustc.edu.cn; jianyang@ustc.edu.cn). We have an insight that WF attack models tend to pay
+ Yuxing Wei is with the Guangxi Key Laboratory of Digital Infrastructure,
+Guangxi Zhuang Autonomous Region Information Center, Nanning 530028,
+ more attention to some sensitive regions of a traffic trace for
+China (e-mail: weiyustar@163.com). website identification, which often represent the distinctive
+ Dong Jin is with the Institute of Artificial Intelligence, Hefei fingerprints of a website. By introducing perturbations in the
+Comprehensive National Science Center, Hefei, 230088, China (e-mail:
+kingdon@ustc.edu.cn).
+ common sensitive regions of multiple WF attack models,
+ Digital Object Identifier 10.1109/TNSM.2025.3602964 it is possible to reduce overall bandwidth overhead and
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD 6067
+
+deceive unseen models. We can further offline train a common effectiveness and robustness of our method. Section VII
+perturbation paradigm specifically tailored for each website discusses the deployment issues and limitations of our defense.
+and apply the perturbation to all the live traffic of the The conclusion is drawn in Section VIII.
+website.
+ In light of the above idea, we propose a robust lowoverhead WF defense method, named RLpatch. By analyzing II. R ELATED W ORK
+the impact of different regions of traffic traces on the WF A. WF Attacks
+attack models’ decisions, RLpatch can pinpoint the sensitive WF attacks in the early stage leveraged expert knowledge
+regions. Afterwards, RLpatch employs reinforcement learning to analyze the unique statistical features of different target
+(RL) to adjust the positions and magnitude of the adversarial websites, and employed machine learning classifiers such as
+perturbations according to the query results from a query KNN [11], random forest [12], and improved support vector
+model. Rather than querying indiscriminately all positions of machine [13] to identify target websites. Hermann et al.
+the entire trace, RLpatch focuses its query and generate pertur- [14] were the first to propose the concept of WF attacks,
+bations just on the sensitive regions. To enhance the robustness which utilized the frequency distribution of packet lengths
+against adversarial training, we introduce a disturbance fac- to classify websites. However, due to the fixed size (512
+tor, which is unknown to the attackers, into the reward to bytes) of Tor cells, the recognition accuracy was still far
+increase the diversity of the perturbations. Finally, RLpatch from satisfactory. Wang et al. [11] combined various features
+aggregates multiple perturbations of a website into a common including packet ordering, the number of incoming/outgoing
+perturbation paradigm, which serves as a defense strategy packets, and burst count into a multidimensional feature vector,
+for all traffic traces of the corresponding website. Based on and utilized a KNN classifier to identify the network traffic.
+the injection positions and the number of dummy packets To make a step forward, Hayes and Danezis [12] analyzed
+specified by the perturbation paradigm, RLpatch can achieve the importance of different statistical features using random
+real-time defense for the traffic traces of the corresponding forests, significantly reducing the number of input features.
+website. Penchenko et al. [13] proposed CUMUL, which extracted a
+ • We devise a perturbation generator which confines fixed number of cumulative packet length features from traffic
+ the perturbations within the sensitive regions that are traces and identified website using an RBF kernel-based SVM.
+ most critical for website identification of multiple Recent WF attacks usually achieved high recognition accusurrogate models. Injecting perturbations in these sen- racy by utilizing deep learning methods to learn the sequence
+ sitive regions can effectively deceive the closed-box features of target websites automatically with side-channel
+ WF attack model and reduce the bandwidth over- information. Rimmer et al. [15] employed three types of DNN
+ head, which however is rarely considered in the architectures, namely SDAE, CNN, and LSTM, for website
+ literature. fingerprinting. Afterwards, Sirinam et al. [16] developed a
+ • We propose an RL-based framework to learn the optimal more complex CNN based WF model, which further improved
+ perturbation position and magnitude under the guidance the attack accuracy. They also examined the effectiveness
+ of reward signal from a glass-box query model. To of the proposed model against WF defense. Bhat et al.
+ enhance the robustness against adversarial training, we [17] designed a complex Var-CNN architecture to extract the
+ introduce a random disturbance factor into the reward, temporal information of traffic traces as meta-features, which
+ which could induce diverse perturbations even for the were fused with sequence features. Shen et al. [18] proposed
+ same website. a traffic aggregation matrix (TAM) based WF method by
+ • We develop a perturbation aggregation method to find combining temporal features with sequential features.
+ a common perturbation paradigm for different traces Moreover, several recent studies have extended traditional
+ of the same website, which enables us to conduct WF attacks to specific scenarios. Yuan et al. [19] introduced
+ real-time dummy packet injection. By aggregating var- class incremental learning into WF attacks, enabling the attack
+ ious perturbations, this paradigm further enhances the model to continuously expand its monitoring scope by learning
+ defense performance against closed-box WF attack new website classes. Zou et al. [20] proposed Deep Quadruplet
+ models. Fingerprinting (DQF), which combines metric learning and
+ • We conduct extensive experiments using two widely meta-learning techniques to effectively tackle the few-shot
+ used datasets to evaluate the performance. Experimental learning problem in WF attacks. Meng et al. [21] have begun
+ results show that RLpatch achieves a lower attack success to address the challenges of the multi-tab WF attacks.
+ rate, lower bandwidth overhead and stronger robustness
+ against adversarial training compared to the state-of-theart methods. B. WF Defenses
+ The remainder of this paper is organized as follows. To defeat WF attackers, defenders employ strategies such
+Section II briefly reviews the related work. Section III as adding dummy packets and delaying packets to alter the
+describes the preliminaries and challenges. Our motivation traffic patterns generated during website visits, thus confusing
+is introduced in Section IV. Section V gives the details of the attacker’s classifier. We divide WF defense methods into
+our proposed adversarial WF defense method. Section VI three categories: obfuscation defenses, regularization defenses
+presents some comparative experiments to demonstrate the and adversarial defenses.
+6068 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ TABLE I
+ OVERVIEW OF N OTABLE WF D EFENSE
+
+ Fig. 1. The threat model of WF attack and defense.
+
+ evaluate each coming packet, leading to significant computational overhead and time delays.
+ (1) Obfuscation Defenses: The obfuscation defenses To enable flexible real-time perturbation injection,
+attempted to confuse attackers’ classifiers by introducing Dolos [28] proposed generating a universal perturbation for
+uncertainty. By injecting random number of dummy packets each website. This perturbation is pre-calculated offline and
+or padding random delay between packets, they could ensure applied online to indicate where and how many dummy
+that the traffic patterns generated by different users even when packets should be injected. However, a limitation of Dolos
+visiting the same website were different. The representative was that it required glass-box access to the attacker’s model
+method was WTF-PAD, an adaptive defense system proposed architecture and parameters, which may not be a realistic
+by Juarez et al. [6], which filled in idle segments of traffic assumption in practical scenarios. To address the glass-box
+with packets to disrupt the burst characteristics of traffic traces. assumption, AWA [29] introduced a transfer-based adversarial
+Gong and Wang [7] observed that the initial portion of a approach. In this approach, a glass-box model was used as
+traffic trace was critical for WF classification, so they inserted surrogate model to generate universal perturbations, which
+random packets into the heads of traffic traces to increase are then transferred to unknown WF attack models for
+the difficulty for attackers to identify the traffic. However, performance evaluation. Specifically, AWA randomly selected
+the research in [16] has shown that deep learning based WF two websites and trained a GAN network to minimize
+methods exhibit a certain degree of immunity against the the distributional differences between the two websites.
+obfuscation defense. Due to poor defense accuracy of transfer-based approach,
+ (2) Regularization Defenses: The basic idea of regulariza- Minipatch [30] introduced a query-based approach to generate
+tion defenses were designed to match the traffic pattern of adversarial perturbations, assuming that the defender can
+a target website with that of another pre-defined website. query the output of the attackers’ WF model for given inputs.
+Some regularization defenses, such as CS-BUFLO [22] and It utilized a simulated annealing algorithm and queried to
+Tamaraw [23] aimed to hide fine-grained traffic features find appropriate perturbation positions and sizes, offering
+by shaping all website traffic into a unified pattern. Other better bandwidth efficiency and defense performance than
+regularization defenses like W-T [24] and Palette [25] clus- previous methods. However, Minipatch was ineffective against
+tered similar traffic into groups and generated similar traffic WF attacks involving retraining the classifier. Acup3 [31]
+patterns within the clusters, making it difficult for attackers and Kimerapad [32] were proposed to attempt to solve this
+to distinguish between websites in the same cluster. However, problem, and achieved some success, but they could not strike
+regularization defenses could result in extremely high time and a good balance between bandwidth overhead and defense
+bandwidth overhead, making them impractical for deployment performance.
+in Tor. In summary, by comparing the advantages and disadvan-
+ (3) Adversarial defenses: Adversarial defenses represented tages of previous works, we found that these methods are
+a new direction in WF defense design, exploiting the inherent either limited by high computational and bandwidth overvulnerabilities of deep neural networks. By injecting small head or by the adaptability in real-world deployment. Our
+adversarial perturbations into the traffic, these defenses aimed approach aims to achieve good defense performance with low
+to mislead WF models, often with minimal bandwidth over- bandwidth overhead while meeting the requirements of realhead compared to previous WF defense methods. time injection, closed-box effectiveness, and robustness against
+ The earliest adversarial approach in WF defense scenario, adversarial learning in real-world scenarios. We compare the
+named Mockingbird, was proposed in [26]. It generated key properties of WF defense methods against the challenges
+perturbations by minimizing the distance between the traffic mentioned in Section III-D to our proposed method in Table I.
+trace of the original website and that of a target website.
+However, this method lacked adaptability for real-time traffic,
+ III. P RELIMINARIES AND C HALLENGES
+as it required the complete traffic trace until the session ended
+to generate the perturbations. To address this issue, Nasr et al. A. Threat Model
+introduced Blind [27], which generated real-time perturbations Fig. 1 illustrates a typical WF attack and defense scenario.
+by determining whether to inject perturbations based on the Users access a website using the Tor network to conceal
+current traffic trace and injecting appropriate perturbations their browsing activities. We follow the same assumption
+while meeting network traffic constraints. However, Blind also as in prior works [14], [15], [16], where the attackers are
+lacked feasibility during real-time injection, as it needed to local eavesdroppers positioned between the user and the Tor
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD 6069
+
+ TABLE II
+ C APABILITIES OF ATTACKERS AND D EFENDERS B. Traffic Representation
+ In the Tor network, all packets are padded to a fixed size for
+ encryption and transmission. Accordingly, the original traffic
+ trace is denoted as a direction sequence p = [p1 , p2 , . . . , pn ],
+ where pi = 1 indicates an outgoing packet and pi =
+ −1 indicates an incoming packet. The defenders may inject
+ dummy packet both in the client side and in the Tor entry side
+ to break the sequential patterns. However, injecting oppositedirection dummy packets, e.g., a dummy incoming packet
+ between two outgoing packets or a dummy outgoing packet
+ between two incoming packet, may interrupt the transmission
+ process and cause an additional time delay, thus degrading the
+ quality of users’ browsing experience. To avoid this problem,
+ defenders prefer to inject same-direction dummy packets at the
+ tail of a traffic burst (i.e., continuous packets with the same
+ direction) [26], [30], [33]. The original traffic trace can be
+ represented as a burst sequence x = [b1 , b2 , . . . , bl ], where |bi |
+ indicates the packets number and the sign of bi indicates the
+ packet direction of the i-th traffic burst. Here, bi > 0 represents
+ outgoing burst and bi < 0 represents incoming burst. Fig. 2
+ shows an example of packet injection for burst sequence.
+Fig. 2. An example of perturbation injection for burst sequence. The injected dummy packets have the same direction as the
+ burst, ensuring that the communication between users and the
+ website is not disrupted.
+
+entry node. They can passively capture the encrypted traffic
+ C. Adversarial Perturbation Based WF Defense
+generated by the users’ website browsing but cannot actively
+modify, discard, or decrypt the packets. Potential attackers Existing adversarial WF defenses are all inspired by
+might be network eavesdroppers, local network operators, or adversarial learning, where adding small, well-designed per-
+ISPs (Internet Service Providers). By analyzing side-channel turbations into the correctly classified input can mislead
+information from the traffic traces, such as packet size, DNN-based classifier. Given a clean burst sequence x , its
+timestamp and direction, the attackers can pry into which corresponding ground-truth label, denoted as y, belongs to the
+website the users are visiting. monitored set Y = {1, 2, . . . , K }. Let f b denote the closed-
+ Before launching the WF attack, the attackers operate their box WF attack model, both the structure and parameters of
+own Tor client to collect the traffic of each website in the which are unknown to the defenders. The aim of WF attackers
+monitored set. Then the attackers train a classifier based on is to map the burst sequence x to its correct label y, i.e.,
+their collected traffic. Once the classifier is well-trained, the fb : x → y. Conversely, the defenders aim to generate a
+attackers monitor and collect users’ traces and use the classifier perturbed sequence x adv to deceive the attack model f b , i.e.,
+to identify them as belonging to the websites in the monitored f b (x adv ) = y, where x adv is defined as:
+set. x adv = x + q  δ, (1)
+ On the defense side, we assume the defenders know the
+set of sensitive websites the users wish to protect (aligned where q = [q1 , . . . , ql ] is a binary mask sequence with the
+with the attackers’ monitored set), and can collect traffic traces same length as x , indicating the actual injection position of the
+accordingly. The defenders have access to public glass-box perturbations. If a perturbation is added behind the i-th burst,
+WF models for generating perturbation paradigms, and can qi = 1. Otherwise, qi = 0. δ = [δ1 , . . . , δl ] determines the
+inject dummy packets into live traffic without delaying original magnitude of perturbations, where each element δi specifies
+packets. They have the prior knowledge of which website the the number of dummy packets injected behind the i-th burst.
+users are accessing but they can only observe current traffic q  δ represents the perturbation sequence inserted into x ,
+bursts and not future patterns. where  denotes the Hadamard product.
+ To ensure a rigorous evaluation, we adopt the widely used By jointly optimizing q and δ, we aim to maximize the
+single-tab and closed-world setting where users only visit a misclassification probability of the attack model f b while
+website in the monitored set at a time. As this assumption keeping a low bandwidth overhead. Formally, the optimization
+benefits the attacker, it sets a higher bar for the defense. If problem can be formulated as:
+our method performs well under such strict conditions, it is  
+expected to be more robust in real-world scenarios with multi- x ∗ = arg max E(x ,y) ∈D L f b (x adv ), y , (2)
+ q δ 1 <β
+tab and open-world setting where attacks are inherently more
+difficult. In this scenario, the capabilities of the attacker and where the constraint q  δ1 < β ensures that the total
+defender are summarized in Table II. amount of injected dummy packets does not exceed a
+6070 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+predefined budget β. D is the set of traffic traces that
+are protected from WF attack. L(·) measures the deviation
+between the predicted label of f b (x adv ) and the actual
+label y.
+
+D. Challenges
+ To solve the above problem, several realistic challenges
+must be addressed:
+ • Zero Delay and Low Overhead (C1): During the WF
+ defense, padding dummy packets may increase the band- Fig. 3. Heatmaps of two burst sequences for different WF attack models.
+ width overhead, while delaying the transmission packets
+ may increase the time overhead. In the Tor network,
+ since users still have a high expectation for smooth
+ can actually affect the decision-making of WF attacks. As
+ network experiences, bandwidth and time overheads are
+ shown in Fig. 3, we employ the Grad-CAM method [35] to
+ crucial considerations in the design of WF defense
+ generate a heatmap that highlights the contribution of different
+ mechanisms. However, most existing defense methods,
+ regions of a burst sequence on the decision-making of WF
+ such as [22] and [24], insert perturbation throughout the
+ attack models. The regions with warm colors, i.e., red or
+ traffic traces, which may cause intolerable delays and
+ yellow, have a great impact on the WF model’s decision,
+ significant bandwidth overhead. Thereby, a practical WF
+ while the regions with cool colors, i.e., blue, have a small
+ defense solution is expected to achieve zero delay and
+ impact. Fig. 3 reveals that the WF attacks may focus on
+ keep a low bandwidth overhead, that is, β in Eq. (2) is
+ several critical regions of the burst sequence, which play a
+ expected to be small.
+ more important role in WF than other regions. These regions
+ • Effectiveness under Closed-Box Setting (C2): In a
+ are usually associated with the loading of website styles
+ practical scenario, the attackers may employ diverse
+ (i.e., CSS, JavaScript, fonts, · · ·), the response of specific
+ tactics for conducting WF attacks, i.e., the structure
+ user requests, and the transmission of specific resources,
+ and parameters of the attack model f b in Eq. (2), are
+ which often represent the unique fingerprint of a specific
+ unknown to the defenders. It is challenging to generwebsite. Injecting perturbations into these regions can erase
+ ate an effective adversarial perturbations against such
+ the distinctive fingerprint of the traffic trace and mislead
+ a closed-box attack model. Existing defense researches,
+ the WF attack model. That is, these regions may be highly
+ such as [26] and [31], directly transfer the adversarial
+ sensitive to perturbations, where even a small perturbation
+ perturbation generated from a given glass-box model to
+ can lead to a significant change of the WF model’s decision.
+ a closed-box attack model. However, due to the discrep-
+ These finding inspires us to apply perturbations only on a few
+ ancies in attack models, the transferability of adversarial
+ sensitive regions, rather than on the entire trace, which could
+ perturbations across different models is often limited,
+ significantly reduce the number of dummy packets as well as
+ resulting in a poor defense performance under closed-box
+ the bandwidth overhead, thus addressing C1.
+ setting.
+ From Fig. 3, we also find that different websites may have
+ • Robustness against Adversarial Training (C3): The
+ different sensitive regions, but different WF attack models may
+ WF defense methods are mostly implemented through
+ share some common sensitive regions for the same website.
+ pluggable transports (PT) [34] to adapt to Tor network.
+ These common sensitive regions are very likely to be crucial
+ Attackers can collect defense traffic traces using the
+ for various WF attack models, even for the unknown closedsame defense settings as users and retrain their attack
+ box WF attack models. This findings inspire us to injecting
+ models to penetrate the established WF defenses.
+ perturbations into the common sensitive regions for enhancing
+ Yet, current methods such as [27] and [30], are
+ the defense performance against the closed-box WF attack
+ not robust enough to adversarial training, because
+ models, thus addressing C2.
+ they lack a user isolation policy to ensure that
+ In Fig. 3, if we not only erase the distinctive fingerprint
+ users visiting the same website are assigned different
+ of website1 in the region between the 360th and 420th burst,
+ perturbations.
+ but also add perturbations in the region between the 100th
+ In summary, the above challenges necessitate that the
+ and 200th burst, we can make the perturbed sequence of
+WF defense method should be low-overhead, effective and
+ website1 look like website2, so as to deceive the potential WF
+robust.
+ attackers. Here, website2 is the imitation target. In practice,
+ to enhance the robustness of defense model, different users
+ IV. M OTIVATION may randomly choose their own imitation targets, which
+ Existing studies typically assume that each region of a traffic are usually not available to the attackers. In this way, even
+trace has an equal impact on the decision-making of WF when the attackers use the same defense model to collect
+attack model. As a result, the perturbations have to act on the the perturbation samples for adversarial training, they can
+entire traffic trace, greatly increasing the bandwidth overhead. hardly get the same adversarial samples as the defenders, thus
+However, we have an insight that only a few sensitive regions addressing C3.
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD 6071
+
+Fig. 4. An overview of RLpatch.
+
+ V. M ETHODOLOGY B. Training Stage
+A. System Overview 1) Design of Perturbations Generator: For a given sen-
+ In light of the above insights, we develop a WF defense sitive region, the generator is responsible for crafting an
+framework named RLpatch which aims to achieve good adversarial perturbation. Suppose a sensitive region starts from
+real-time defense performance within sensitive regions under position c with a length of k, i.e., the c-th to (c + k − 1)-
+closed-box setting. The workflow of RLpatch is illustrated th burst of the raw sequence x. Accordingly, the binary mask
+in Fig. 4, which can be divided into two stages: training sequence for such sensitive region is denoted by
+stage and implementation stage. In the training stage, the 
+ 1 if c ≤ i < c + k
+collected traffic traces of target websites in the monitored set q c [i ] = (3)
+ 0 otherwise.
+are represented as burst sequences, which are used for defense
+model training. The RL agent is designed for locating the According to Eq. (1), the perturbed sequence is x +q c δ. The
+sensitive regions where the perturbations should be applied on, remaining problem is to determine the perturbation magnitudes
+and the generator is responsible for determining how to inject δ within the sensitive region. To achieve this, an intuitive idea
+the perturbation within the given sensitive region. Here, we is to explore every possible perturbation at each position of
+can choose a strongest glass-box WF attack model we know the sensitive region. However, the vast search space makes it
+as the query model to defeat. The query model assesses the almost impracticable to apply in practice.
+effectiveness of the crafted perturbations and drives the RL To address this problem, we employ the gradient feedback
+agent to improve the defense performance. During the training, from a glass-box surrogate WF attack model, whose structure
+the RL agent can learn an optimal perturbation policy through and parameters are accessible, to guide the direction of
+numerous rounds of interactions with the query model. perturbation generation, rather than blindly trying all possible
+ In the implementation stage, we can generate an adver- perturbation magnitudes. Because the gradient of surrogate
+sarial perturbation for each samples of a website using the WF attack models actually represents the direction that can
+well-trained RL agent. Accordingly, we can get different increase the deviation between the predicted result and the
+perturbation sequences for the same website. The common ground-truth result. Adding perturbations along the gradient
+perturbation paradigm generator is designed for producing direction may induce great errors in WF attack model’s
+a uniform perturbation paradigm for a website. Once the predicted results, thus deceiving the WF attackers. Meanwhile,
+common perturbation paradigms are generated, the real-time to enhance the generalization ability of the defense model
+injection phase no longer requires the involvement of the against C2, we can synthesize the gradients from n surrogate
+RL agent, as these common perturbation paradigms can WF attack models which are different from the query model to
+serve as a fixed configuration deployed to the PT proxy find a common direction that can effectively deceive a broader
+of both the user and Tor entry node. In this way, the range of attack models. Let fis denote the i-th surrogate WF
+PT proxy can dynamically switch the perturbation paradigm model. The normalized gradient is defined as
+ n  s 
+just according to the website that users are visiting. Every
+ i=1 ρi ∇δ L
+ 
+ fi (x + q c  δ), y
+  ,
+time the user or the Tor entry node has a packet burst to g = n (4)
+  i=1 ρi ∇δ L fis (x + q c  δ), y 1
+send, the PT proxy can directly determine the number of
+dummy packets for injecting according to the selected pertur- where ρi denotes the weight of the i-th surrogate model and
+bation paradigm and the current burst position. Afterwards, ∇δ L(·) denotes the gradient of deviation function L(·) with
+the dummy packets are injected to the tail of the current respect to the perturbation magnitude δ. As the surrogate
+packet burst and sent together with the real packets until model is glass-box, the value of ∇δ L(·) is calculable.
+the website is loaded, thus achieving zero-delay perturbation In practice, we can obtain the optimal perturbation
+injection. magnitude through an iterative way. Here, we leverage
+6072 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ 2) Design of RL Agent: Since different positions may
+ require different perturbations, we have to optimize the perturbation position and magnitude jointly. To achieve this, we
+ employ RL to learn the optimal perturbation policy under the
+ guidance of reward signal from the strongest glass-box query
+ model f q . For a burst sequence x , the RL agent gives an
+ action of perturbation position c and size , and the generator
+ then produces an adversarial perturbation sequence x adv . By
+ interacting with the query model, we can acquire the corresponding reward, i.e., the defense performance. Afterwards,
+ we can fine tune the parameters of RL agent to steer the
+Fig. 5. Design of RL agent. selection of c and  towards the direction of maximizing the
+ reward.
+ The related state, action and reward are defined as follows.
+the Momentum Iterative Fast Gradient Sign Method (MI-
+ State: The state s represents the burst sequence x inputted
+FGSM) [36] to iteratively adjust the perturbation. Let t denote
+ to the RL agent.
+the iteration round. Initially, both the perturbation δ 0 and
+ Action: The action a = (c, ) is defined as the perturbation
+gradient g 0 are set to 0. During the iteration, we adopt the
+ position and step size. The RL agent has to learn two policies:
+accumulated gradient to smooth the fluctuation of gradient,
+ position policy and size policy.
+which is updated as follows:
+ The position policy decides where to add the perturbation
+ g t = μ · g t−1 + g t , (5) in the burst sequence can mislead the closed-box WF model.
+ As depicted in Fig. 5, we employ an autoencoder-like strucwhere g t is the feedback gradient at the t-th interaction with ture [37] named WFUnet, whose shape is like a ‘U’, to learn
+the surrogate models, which can be calculated by Eq. (4), and the position policy WFUnet utilizes an encoder composed
+μ represents the attenuation coefficient, which is used to adjust of convolution layers and max-pooling layers to extract the
+the impact of the previous gradients on the current gradient. high-level features of input burst sequences and a decoder
+ Along the gradient direction, we accordingly adjust the composed of upsampling layers and convolution layers to
+perturbation by: output the feature map. Each element in the feature map
+ δ t = δ t−1 +  · sign(
+ g t ), (6) measures the contribution of corresponding burst on decisionmaking of WF attack. The length of feature map is same with
+where sign(·) represents the gradient direction, and  is the input burst sequence. We employ the decoder of WFUnet
+the perturbation step size. For a given sensitive region, the to generate a separate feature map Mi for each surrogate model
+perturbation magnitude δ is determined by the step size . fis , providing different insights into the sensitivity of each
+In particular, a large  may induce excessive dummy packet position. The overlapped sensitive regions of all feature maps
+injections, but a small  leads to too many iterations. represent the distinctive fingerprint of a specific website, which
+ Notably, the direction of the generated perturbation may could be also used for WF recognition by other closed-box
+be opposite from the direction of the raw burst sequence. models. By aggregating all feature maps, we can calculate the
+Such inconsistency may interrupt the actual data transmission mean sensitivity of each position as follows:
+and introduce extra delay as aforementioned in Section III-B.
+Thereby, we should further calibrate the perturbation by n
+ 1
+dropping the opposite-direction perturbation as follows: Ppos = softmax(Mi ), (9)
+  n
+ i=1
+ 0 if δ t [j ] < 0 and x [j ] > 0,
+ δ t [j ] = (7)
+ 0 if δ t [j ] > 0 and x [j ] < 0.
+ where softmax(·) normalize the feature map to [0,1]. A greater
+ The perturbed sequence is then given by: Ppos [j ] indicates that adding perturbation in j-th position of
+ x adv = x + q c  δt . (8) burst sequence x is more likely to mislead the WF attack
+ t
+ model. Therefore, such position should have a higher likeli-
+Afterwards, we have to input x adv
+ t into the surrogate models hood to be selected as the start position of sensitive region.
+to get g t+1 for a next iteration. The above iteration process We can utilize a categorical distribution function to model the
+would be continued until the gradient g t remains relatively position policy, as it is well-suited for representing the agent’s
+unchanged or the maximum number of iterations is reached, probabilistic choices over a discrete set of positions. In this
+when the generated perturbation is considered optimal. way, the start position c of sensitive regions can be sampled
+ The sensitive regions c and perturbation size  determine from c ∼ Cat(Ppos ). The length of a sensitive region depends
+where to add perturbation and how many dummy packets to on the number of continuous elements in the feature map
+inject, respectively. For a specific combination of c and , greater than a specific threshold. As different surrogate models
+we can generate an x adv by iteratively interacting with the have different impacts on the gradient, we need to pay more
+surrogate models. Thereby, the remaining crucial problem is attention to the surrogate models that exhibit higher sensitivity
+to figure out optimal c and , which would be discussed below. to the burst sequence. The weight ρi defined in Eq. (4) is set
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD 6073
+
+to nMi , where Mi is the mean value of all elements in Afterwards, the RL agent would refine its perturbation policy
+ j =1 Mj
+the feature map fis . denoted by πθ where θ is the parameter set of RL agent. The
+ With such feature map, we further employ a fully connected aim of RL agent is to learn a set of optimal parameters θ∗ to
+network (FC) to learn a perturbation size policy, which maximize the expected reward, which is formulated as:
+establishes a mapping relationship between the perturbation θ∗ = arg maxJ (θ), (12)
+positions and the perturbation size. Specifically, the perturba- θ
+tion step size  is selected from a series of discrete values. where J (θ) = Eπθ [R(s, a)] represents the expected reward
+The probability distribution of selecting different step sizes is based on state s and action a under the current policy
+represented as: πθ . To maximize J (θ), we have to figure out the policy
+   gradient ∇θ J (θ), which provides the direction for parameters
+ Psize = softmax FC(Ppos ) . (10)
+ updating. Here, we employ the Monte Carlo Method [38] to
+Similarly, we employ the categorical distribution function to approximate ∇θ J (θ) by averaging the rewards over different
+model the magnitude policy. The step size  can be sampled actions for the current policy πθ . Specifically, we sample N
+from  ∼ Cat(Psize ). actions {a1 , a2 , . . . , aN } from the policy πθ and obtain the
+ Reward: The agent is trained to identify sensitive regions corresponding rewards {R1 , R2 , . . . , RN } through the query
+within the input burst sequence x, where perturbations can be model, thus forming a series of state-action-reward tuples
+generated and applied to maximize the likelihood of causing (s, a1 , R1 ), (s, a2 , R2 ), . . . , (s, aN , RN ). The policy gradient
+misclassification of the query model. is estimated by:
+ To achieve this, we define the reward R based on the
+ N
+misclassification probability of the perturbation. Due to 1
+ ∇θ J (θ) ≈ ∇θ log πθ (ai |s)Ri . (13)
+the existence of C3, the attackers and defenders may use N
+ i=1
+the same reward function to generate similar perturbation
+samples and penetrate the defense via adversarial training. In where ∇θ log πθ (ai |s) is calculated using the back propagaparticular, if directly applying the output of query model, i.e., tion algorithm since the policy πθ is estimated by the WFUnet
+L(f q (x adv , y)), as the reward, when the attackers query the and FC network.
+same WF model as the defenders, they can easily penetrate With such policy gradient, the agent can update its policy
+the defense through adversarial training. parameters θ using the gradient ascent method. θ is updated by
+ To address the problem, we should introduce randomness θ ← θ+α·∇θ J (θ), where α denotes the learning rate. A large
+into the reward function to create diverse perturbations for gradient ∇θ J (θ) may result in a large reward R, indicating that
+the same burst sequence. Specifically, we multiply the output such perturbation would mislead the WF attack model towards
+of query model by a disturbance factor, which is randomly the direction away from the ground-truth label. In this way,
+initialized by the defenders. The reward is defined as: updating the parameters along the policy gradient direction
+   would increase the reward during the training process. The
+ R= ηi · f q x adv , yi , (11) above training process would be continued until the gradient
+ yi ∈Y ,yi =y ∇θ J (θ) remains relatively unchanged, when the perturbation
+ policy is considered to be optimal. The complete process of
+where ηi ∈ (0, 1] is the disturbance factor, and f q (x adv , yi )
+ policy update is presented in Algorithm 1.
+denotes the output probability that the query model misclassified the perturbed sequence x adv with a ground-truth label
+y as the label yi . Each defender may set its own disturbance C. Implementation Stage
+factor, which is usually unknown to the attackers. Varying the The well-trained RL agent cannot be directly deployed in
+disturbance factor may change the misclassification results as practice. Because the decision making of RL agent requires
+well as the direction of perturbation generation. In this way, a prior knowledge of the complete traffic sequence x , which
+the defenders can generate diverse perturbations for the same however cannot be obtained in advance especially for an
+raw sequence, thus addressing C3. ongoing session where the proxy and the client are interacting
+ In some specific scenarios, the defenders may specify a with each other. In other words, we can know which website
+target website label ŷ (ŷ = y), that is, make the attack model the client is visiting but cannot know the complete traffic trace
+misclassify the sequence x to a certain target label ŷ. In for a real-time defense scenario. Actually, even visiting the
+this case, the defenders can generate distinct perturbations same website may induce different samples of traffic traces,
+by selecting different ŷ, which is generally not accessible to due to the diversity of user behavior and the dynamic of
+the attackers, ensuring the robustness against the attackers’ network condition. In particular, with such well-trained RL
+adversarial training. Thereby, the reward can be defined as agent, we craft an adversarial perturbation sequence v =
+R = f q (x adv , ŷ) for the targeted scenario. x adv − x for each individual sample x in the training set. We
+ 3) Policy Update: During model training, for each raw traf- can accordingly acquire a series of various perturbations for
+fic sequence x , the generator crafts an adversarial perturbation the same website w denote by V w = {v w 1 , v 2 , . . .}. The prew
+x adv based on the action a = (c, ) of the RL agent. By generated perturbations designed for one trace may not work
+interacting with the query model, we can evaluate the effective- well on other traces of the same website. A straightforward
+ness of such perturbation using the reward defined in Eq. (11). idea is to overlay all perturbation sequences from website w.
+6074 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Algorithm 1 Crafting Adversarial Perturbation Algorithm 2 Perturbation Paradigm Generation
+Input: burst sequence x , truth label y, query model f q , Input: Perturbation sequence set V w , surrogate models
+ surrogate models fis (i = 1, 2, ...n), maximum number of fi (i = 1, 2, ...n), accuracy threshold λ
+ query Z, number of samples N, learning rate α Output: The Perturbation Paradigm U w of website w
+ 1: Initialization policy parameter θ; 1: Initialize U w by 0;
+ 2: for each burst sequence x do 2: Calculate Freiw for each position i by Eq. (14)
+ 3: for z = 1, 2, . . . , Z do 3: Rank all positions in descending order of Freiw and select
+ 4: Calculate feature maps M; the top H positions to form a list B w
+ 5: Calculate position policy and perturbation size policy 4: Calculate the average perturbation size D w
+ using Eq. (9), (10); 5: Initialize the accuracy E = 1
+ 6: for i = 1, 2, . . . , N do 6: for each position i ∈ B w do
+ 7: Sample actions a = (c, ); 7: Update U w [i ] = D w [i ]
+ 8: Calculate binary mask q c by Eq. (3) 8: Evaluate the accuracy Eb of current U w in all the
+ 9: Calculate x adv by Eq. (5), (6), surrogate models
+ (7), (8); 9: if E − Eb > λ then
+10: Calculate reward Ri ; 10: E = Eb ;
+11: end for 11: else
+12: Calculate policy gradient ∇θ J (θ) by Eq. (13); 12: U w [i ] = 0;
+13: Update the agent parameter θ = θ + α · ∇θ J (θ); 13: end if
+14: if(f q (x adv ) = y) then break; 14: end for
+15: end for
+16: end for
+ these characteristic positions, thus enhancing the performance
+ against C2.
+This method may achieve a high defense performance, as Perturbation aggregation: We can aggregate all perturbait covers a wide range of vulnerabilities within the model. tions of all samples in v w as follows:
+However, it may also result in a very high bandwidth ⎧ w
+overhead. ⎨ |V | w
+ j =1 vj [i]
+ To address this issue, in the implementation stage, we
+ w
+ D [i ] = Freiw , if i ∈ B w , (15)
+ ⎩ 0, otherwise,
+attempt to find a common perturbation paradigm for a website
+which could be effective across different traffic traces for the
+same website, rather than generate a perturbation for each which is actually the average perturbation at these top-ranking
+single traffic trace. Our basic idea is to aggregate different positions. Actually, injecting perturbation at all position in
+perturbations for the same website based on their positional v w may still cause a high bandwidth overhead. Thereby, we
+frequency. The procedure of our method consists of three employ an iterative method to further sift out a common pertursteps: bation paradigm U w . U w is initialized by 0. In each iteration,
+ Frequency calculating: Intuitively, if the well-trained RL we select a position i from the list B w based on the frequency
+agent decides to pad perturbation at the same position for most order and retrieve the corresponding perturbation size from
+of the samples in V w , such position would be the vulnerable D w . Append D w [i ] to U w , i.e., U w [i ] = D w [i ]. Afterwards,
+point for website w. In light of this, we employ a frequency we can evaluate the effectiveness of current U w by padding
+metric Freiw to quantify how often a perturbation is added at the perturbation U w into all samples in v w and assessing
+a specific position i, which is defined as: their defense performance with the surrogate models. If the
+ decrease of the attack success rate induced by the perturbation
+ |V w | U w exceeds a threshold λ, retain U w [i ]; otherwise, drop it.
+ Freiw = I (vjw [i ]), (14) The main procedure of perturbation paradigm generation is
+ j =1 described in Algorithm 2. The above process iterates over the
+ list B w .
+where I (·) is an indicator function. If vjw [i ] = 0, I (·) = 1, In the real-world implementation, the defenders need to
+otherwise I (·) = 0. A larger Freiw indicates that the position gather traffic traces of each monitored website, and offline
+i is more likely to induce successful perturbation. generate the common perturbation paradigms using RLpatch.
+ Perturbation sort: We rank all positions according to Afterwards, these perturbation paradigms are deployed on
+its frequency Fre w in a descending order and only retain the PT proxies of both the client side and Tor entry node.
+the top H positions with the highest frequency, which form The PT proxies can select corresponding the perturbation
+a list B w . These positions in B w represent the common paradigms according to the website visited by the clients.
+sensitive regions for all samples of website w, which are most As the perturbation paradigms give which positions and how
+commonly associated with successful perturbation. Padding many dummy packets to inject, the PT proxy add perturbation
+perturbation only at these positions is more likely to deceive to the live Tor traffic in the corresponding burst position until
+unknown WF attack model which may also concentrate on the session ends.
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD 6075
+
+ TABLE III
+ VI. E XPERIMENT R ESULTS AND A NALYSIS P ERFORMANCE FOR D IFFERENT D EFENSE M ETHODS
+ In this section, we conduct extensive experiments to verify
+the effectiveness of RLpatch. For performance comparison, we
+compare RLpatch with state-of-the-art (SOTA) WF defense
+methods in terms of defense performance, bandwidth overhead
+and robustness. To make our work reproducible, we have made
+our code publicly available on Github.1
+
+A. Experimental Settings
+ WF Dataset: We select the public available Siranam
+dataset [16] and Rimmer dataset [15] for performance evaluation, as done in most previous studies. The Siranam dataset
+consists of directional sequences from 95 monitored websites,
+each of which contains 1000 instances, chosen from the top
+100 Alexa-ranked websites. The Rimmer dataset includes
+100 monitored websites, each with 2500 examples. Similar
+to [26], we preprocess the data by removing instances with
+fewer than 50 packets or starting with incoming packets. After
+filtering, 460 instances per website are retained in Siranam
+dataset, and 1000 instances per website in Rimmer dataset.
+Since the traffic traces collected by the attackers and defenders
+may differ, we divide the datasets into three parts: defenders’
+training set, attackers’ training set, and testing set. Specifically, from the categories of obfuscation defenses and regularization
+in the Siranam dataset, 200 instances per website are used to defenses respectively. Additionally, we choose five adversarial
+train the defenders’ surrogate and query models, another 200 defense methods. Among them, AWA [29] and Dolos [28]
+for the attackers’ model, and the remaining 60 for testing. In are pioneering works on adversarial WF defense, which use
+the Rimmer dataset, 400 instances per website are used for universal perturbations to meet the real-time requirements
+both training sets, and 200 for testing. and reduce the BWO to an acceptable level. Minipatch [30]
+ Attack Models: To evaluate the effectiveness and other achieves a high defense performance under glass-box setting
+properties of RLpatch on different DNNs-based WF attack but struggles with unseen closed-box WF model and advermodels, we adopt four representative DNN-based WF attack sarial training. Acup3 [31] and KimeraPAD [32] focus on
+models, namely AWF [15], DF [16], VarCNN [17], and enhancing robustness against adversarial training. We use ASR
+TF [39], which have been widely used in the existing studies and BWO to measure the defense capability under various
+of WF defense. Note that the defense should be effective to practical scenarios.
+various models the attacker may adopt in real-world scenarios. To ensure a fair comparison, we conduct experiments using
+Therefore, it is realistic for the defenders to choose multiple the same training and testing datasets and the same attackers’
+surrogate models to enhance the generalization capability of WF models. In the offline training phase, we generate perthe perturbations. turbation paradigms using the defenders’ training dataset for
+ Evaluation Metrics: We employ two metrics: attack success each website. In the testing phase, we apply the perturbations
+rate (ASR) and the bandwidth overhead (BWO) to evaluate to each trace in the testing dataset using different defense
+the performance of defense methods. ASR refers to the clas- methods. In this way, we can obtain a corresponding perturbed
+sification accuracy of the perturbed sequence on the attacker’s testing dataset for each defense method. Meanwhile, we use
+WF model. The decline in ASR before and after applying the attackers’ training dataset to train different attack models.
+defense represents the strength of the defense. Overall, a These models are used to evaluate the ASR and the BWO in
+lower ASR indicates stronger defense effectiveness. BWO is each perturbed testing dataset.
+defined as the ratio of the additional bandwidth, caused by
+the injected dummy packets introduced by the defense, to the B. Comparison With Baselines
+original bandwidth of the real packets. Furthermore, we use Overall Performance under Glass-Box Setting. We comthe average number of queries (ANQ) as the metric to pare the ASR and BWO of our method with other defense
+assess the query counts required for our method to generate methods when the defenders have prior knowledge of the WF
+appropriate perturbations. attack models frequently used by the attackers. This scenario
+ Baselines: To comprehensively evaluate the defense represents the upper bound of defense performance. We
+performance of RLpatch, we compare it with seven SOTA generate perturbations on known glass-box surrogate models
+WF real-time defense methods. Specifically, we select two and evaluate the accuracy of the perturbed samples on the same
+representative methods, i.e., WTF-PAD [6] and Palette [25] attackers’ target WF attack models. Specifically, we first use
+ the defenders’ training dataset to train the surrogate models
+ 1 https://github.com/chenxiailian/RLpatch-WF and the query models. Afterwards, for each trace in the testing
+6076 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+dataset, we add the corresponding perturbation generated by
+each defense method to the trace to obtain a new perturbed
+trace, thus generating the perturbed testing dataset specific to
+the method. Finally, we use the target WF attack models to
+test the ASR and the BWO of each perturbed testing dataset.
+The final results are shown in Table III.
+ From the results, we can observe that WTF-PAD has the
+worst defense performance because its random perturbations
+fail to disrupt the attacker’s classification patterns. Moreover,
+we can find that the camouflage defense Palette has an ASR
+similar to some adversarial defense methods, but because it
+needs to pad the traffic trace into a similar pattern, it has
+a higher BWO. Adversarial defense methods AWA, Dolos,
+Acup3, and KimeraPAD have similar ASR and BWO levels,
+indicating that their defense performances are comparable.
+We find that Minipatch even reduces the ASR on AWF to
+6.2%, with a lower bandwidth overhead than the previous
+methods. By limiting the size and number of perturbations,
+Minipatch forces the perturbations to be added only in the
+positions that significantly affect the model’s decision-making,
+thus reducing bandwidth overhead. Furthermore, we also find
+that our proposed RLpatch outperforms all the aforementioned
+methods, including Minipatch, in terms of ASR on the Siranam
+and Rimmer datasets. RLpatch strategically focuses its perturbation on sensitive regions that are consistently identified
+across various surrogate models, enabling RLpatch to generate
+effective perturbations with fewer dummy packet injections.
+RLpatch not only refines the perturbation in the sensitive
+region but aggregates different perturbation patterns for the
+same website, thus enhancing the effectiveness of the defense.
+Furthermore, by comparing the results on the Siranam and Fig. 6. The ASR against different closed-box WF models.
+Rimmer dataset, we find that the defense performance on the
+Rimmer dataset is not as good as that on the Siranam dataset. in previous experiment where the attack model is known to
+This may be due to the larger size of the Rimmer dataset, the defenders. The above result indicates that the disparity
+which favors DL-based attack methods and enhances their between the actual attackers’ and the training models may
+classification capabilities. induce the decline of defense performance. We also observe
+ Overall Performance under closed-box setting. To evaluate that Minipatch achieves the highest ASR among these defense
+the effectiveness of well-trained defense models under a methods. This result reveals that Minipatch can only generate
+closed-box setting, we ensure that the surrogate and query effective perturbation against the query model. When the
+models used for training are different from the attack model attackers’ model differs from the query model, the defense
+used for evaluation. In this setting, the defenders have no performance drops sharply. In contrast, the defense methods
+knowledge of the attackers’ target model. This scenario including AWA, Acup3, KimeraPAD and Dolos rely on gradirepresents the lower bound of defense effectiveness. We do ent information of surrogate model to generate perturbations.
+not use WTF-PAD and Palette in this experiment because Since this gradient direction may exhibit some similarities
+their mechanisms are model-agnostic. In this experiment, for across different WF models, these methods perform slightly
+RLpatch, we select two out of the four available WF attack better against unseen models than Minipatch through transfermodels as the surrogate models, use another one as the query ability. Compared to these approaches, RLpatch utilizes the
+model, and treat the remaining one as the unseen closed-box weighted gradients from multiple surrogate models to generate
+model. Specifically, we generate perturbations in the glass- perturbations in the identified sensitive regions. This shared
+box setting using the surrogate model and query model. Once perturbation direction enhances the generalization capability of
+these perturbations are generated, we apply them in the testing the perturbations to deceive unseen models, thereby achieving
+dataset to create perturbed dataset and employ a target WF the lowest ASR in the closed-box WF models.
+attack model that is unseen during training to test the ASR. Combined with the previous results, we can conclude that
+The experiments are conducted on both the Siranam and our defense method effectively improves the performance
+Rimmer datasets for all adversarial defense methods. under both glass-box and closed-box settings, demonstrating
+ Fig. 6 presents the ASR under closed-box settings. We its effectiveness and generalization capability across different
+find the ASRs in this experiment are all lower than those attack models.
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD 6077
+
+ TABLE IV
+ P ERFORMANCE AGAINST A DVERSARIAL T RAINING
+
+ (a)
+Untargeted scenario (b) Targeted scenario
+
+ Fig. 7. ASR and BWO by varying c,  and ρ.
+ Robustness to Adversarial Training. As mentioned in
+C3, the attackers may have the ability to retrain their WF
+attack models by generating perturbed traffic traces using the
+same defense models. However, the configuration parameters of Minipatch. Our results show that RLpatch achieves lower
+of the defense models are not accessible to the attackers. ASR at a lower BWO than the evaluated methods in both the
+To penetrate the defense, the attackers could set different targeted and untargeted scenarios, demonstrating a more effivariants of configuration parameters to conduct adversarial cient overhead and effective defense performance. Therefore,
+training. Specifically, the attackers can retrain their WF models RLpatch can effectively mislead the attackers’ classifier while
+based on the perturbation traces generated using different incurring minimal additional communication overhead. The
+configuration parameters. attackers can hardly select the same target label or the same
+ We conduct an experiment to simulate adversarial training disturbance factor as the defenders, making it challenging to
+and test the ASR of defense methods against DF attacks. generate the same perturbation traces. Although the attackers
+we vary the configuration parameters to obtain various per- may penetrate our defense by introducing enough configuturbation traces for adversarial training. Since WTF-PAD, ration variants, excessive configuration variants significantly
+Palette and Dolos may introduce additional bursts, we focus on escalate the cost of the attack, as attackers need to expend more
+AWA, KimeraPAD, Acup3, Minipatch, and RLpatch for this time and resources to collect and process the traffic traces for
+experiment. Specifically, in the targeted scenario, we randomly model training. Consequently, RLpatch still presents a barrier
+select the cluster head for Acup3 and change the target label to WF attackers.
+for AWA and RLpatch. In the untargeted scenario, we use
+different random seeds for Minipatch and KimeraPAD, while
+selecting different disturbance factors for RLpatch. For the C. Ablation Study
+testing set, we apply a unique configuration parameter of Performance on Different Surrogate Models. To evaluate
+the defense method to generate a perturbed testing dataset. For the impact of different surrogate models on RLpatch, we
+the attackers’ training datasets, we apply multiple configura- compare the performance for a single surrogate model to that
+tion parameters to generate multiple perturbed datasets, which for multiple surrogate models in Siranam Dataset. We choose
+are used for retraining the attackers’ target WF model. We one of the WF models as the target WF model and test the
+evaluate the ASR and BWO when the attackers’ target WF ASR when the perturbations, generated by either a single or
+model is trained with varying numbers of perturbed datasets. multiple surrogate models, are applied to the testing dataset.
+The experimental results are shown in Table IV. Table V presents the defense performance under different
+ We can observe that the ASR in the targeted scenario is target WF models. We find that generating perturbations using
+generally higher than that in the untargeted scenario. This multiple surrogate models generally achieves better defense
+result indicates that changing the target label could increase performance than using a single surrogate model. Due to
+the randomness of perturbation, thereby enhancing robustness the diversity of models, different WF attack models may
+against adversarial training. As the number of configuration have different decision boundaries and sensitive regions. The
+variants used for adversarial training increases, it is intuitive sensitive regions identified by multiple WF models are more
+to find an increasing trend in ASR. Since more configuration likely critical for the classification decisions of WF target
+variants usually indicate more diverse perturbation traces for model than those identified by a single model, leading to
+model retraining, the attackers are more likely to learn the a lower ASR. However, these regions may need to inject
+perturbation pattern that is possibly employed by the defend- more perturbations to deceive the multiple WF attack models,
+ers. Moreover, we find that the ASR of Minipatch exceeds which causes a higher bandwidth overhead, but still within an
+96.1%, exhibiting the poorest robustness when the number acceptable range (below 15%). Moreover, we also find that
+of configuration variants exceeds 2. This is because attackers complex models, such as VarCNN and TF, are more resistant
+can still generate similar perturbation traces as defenders even to RLpatch. In contrast, the simple model AWF can be easily
+when using different random seeds to bypass the defense defeated even when using a single surrogate model.
+6078 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ TABLE V
+ P ERFORMANCE C OMPARISON A MONG D IFFERENT S URROGATE M ODELS
+
+1 The former number represents the recognition accuracy of surrogate model, while the later number represents the recognition accuracy of attackers’ model.
+
+ generations of different sensitive regions are as follows: ①
+ We randomly select a trace from each website’s traces and
+ generate a common perturbation paradigm of the website
+ using its sensitive region. ② We cover all sensitive regions
+ of the training traces of the same website by overlaying their
+ perturbation positions and taking the maximum perturbation
+ magnitude at each position. ③ RLpatch aggregates the sensitive regions based on positional frequency to construct a
+ common perturbation paradigm for each website. We apply
+ these generated perturbation paradigms to testing dataset,
+ which consists of previously unseen traffic traces of the
+ same website, and evaluate their ASR and BWO against
+ the target DF model. The comparison results are shown in
+ Fig. 8. It can be seen that although adding perturbation on all
+Fig. 8. ASR and BWO of different sensitive regions. ①: the sensitive regions
+of a randomly selected trace. ②: the sensitive regions of all traces ③: the sensitive regions can significantly reduce the ASR to 1.5%,
+sensitive regions aggregated by RLpatch. it may lead to an unacceptable BWO of 184.6%. In contrast,
+ covering the sensitive regions of a single trace yields poor
+ defense performance, achieving a much higher ASR of 16.4%,
+ but a lower BWO of 14.7%. Due to variations in network
+ Performance on Different Policy. To verify the effec- environments and user behavior, the sensitive regions often
+tiveness of each policy, we conduct experiments by adding differ across traces of the same website, and perturbations
+each component individually. We select the DF as the target tailored to one trace may not generalize effectively. Whereas,
+WF attack model to defeat in an untargeted scenario. First, RLpatch slightly increases the ASR to 7.6%, but significantly
+we assign the same model weights to each of multiple reduces the BWO to 14.1%, demonstrating its effectiveness
+models and set the perturbation step size to 0.2 to test the and practicality for real-world deployment. By retaining only
+defense performance when applying only the position policy c. some key sensitive regions, RLpatch achieves strong defense
+Next, we adjust the model weight parameter ρ according to performance across diverse traffic traces of the same website
+feature maps while keeping the perturbation step size constant. while maintaining a low BWO.
+Finally, we incorporate the perturbation policy  into the overall learning process. The results in Fig. 7 show that when only
+position policy is applied, the ASR is 5.7% with a BWO of D. Effects of Hyperparameters
+15.1%. Both the ASR and BWO decrease after incorporating We investigate the impact of key parameters on RLpatch,
+the model weight parameter ρ for adjustment, indicating that including the disturbance factor η, learning rate α and threshadjusting ρ effectively enhances defense performance. With old λ.
+the addition of the perturbation magnitude policy, we observe Disturbance factor η. It controls the perturbation genera further reduction in both the ASR and BWO, underscoring ator to create diverse perturbations for different clients. To
+the importance of the perturbation magnitude  to the overall evaluate the impact of the disturbance factor on the defense
+defense performance. performance, we randomly generate five different vectors
+ Performance for different sensitive regions. To verify for η. We use DF as the target model and run RLpatch
+the effectiveness of the perturbation aggregation method, we with each η to generate corresponding perturbations. The
+conduct experiments by covering different sensitive regions to experimental results are presented in Table VI. We can observe
+apply perturbations. For each website, we add perturbations that the ASRs are all below 5% while the BWOs are all below
+by ① covering the sensitive regions of a randomly selected 13.2% for all disturbance factors. Moreover, all the ASRs and
+trace; ② covering the sensitive regions of all traces; ③ covering BWOs vary by less than 2% across all disturbance factors.
+the sensitive regions aggregated by RLpatch. Specifically, the This variation indicates that RLpatch’s defense performance is
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD 6079
+
+ TABLE VI
+ T HE I MPACT OF D ISTURBANCE FACTORS AND L EARNING R ATE
+
+ Fig. 10. Performance for different number of training samples.
+
+ TABLE VII
+ P ERFORMANCE C OMPARISON B ETWEEN U NDIRECTIONAL
+ AND B IDIRECTIONAL PADDING
+
+Fig. 9. ASR and BWO vary with threshold λ.
+ E. Implementation Results
+ We further discuss additional properties of our defense
+largely unaffected by choice of disturbance factor η, thereby when deployed in real scenarios, including the effects of
+demonstrating its robustness and reducing the need for fine- unidirectional padding, training sample counts and open-world
+grained hyperparameter tuning. setting.
+ Learning rate α. The learning rate α is weight coefficient Performance on Undirectional Padding. We conduct experto control the magnitude of the policy gradient change. To iments to assess the viability of RLpatch’s padding deployment
+explore the effects of different learning rates on the defense strategy. When implementing unidirectional padding, we
+performance, we design five sets of experiments with α adjust the corresponding constraints in the process of crafting
+ranging from 10−4 to 10−2 . We use DF as the target model adversarial perturbations. Specifically, in the outgoing-padding
+and run RLpatch with each α to generate corresponding scenario, the values at even positions of the adversarial
+perturbations. The corresponding perturbation results against perturbation sequence are set to zero, while in the incomingthe DF attacks are presented in Table VI. As we can observe, padding scenario, the values at odd positions are set to zero.
+by setting the learning rate to be 10−3 , RLpatch achieves We choose the DF as the target model for evaluation and
+the testing best defense performance against the DF model. show the results in Table VII. The results indicate that the
+Moreover, the results also reveal that RLpatch is well resistant ASR of unidirectional padding is higher than that of bidirecto each attack model across different learning rates, since the tional padding, especially for incoming-padding. In contrary,
+overall variation in performance remains relatively modest. we find that padding only in the outgoing direction yields
+This indicates that RLpatch is not overly sensitive to the exact results similar to the bidirectional padding, indicating that
+choice of learning rate α and can maintain effective defense the outgoing-padding primarily contributes to the perturbation
+within a reasonable range. effect. The above results demonstrate that RLpatch can still
+ Threshold λ. It determines whether a candidate perturbation work well when only deploying RLpatch on the user side.
+should be retained based on its contribution to reducing the Performance on Data Efficiency. We investigate the impact
+ASRs of surrogate models during the perturbation aggregation of the number of training samples during the reinforcement
+process. A higher λ results in more stringent filtering, allowing learning process on defense performance, which may directly
+only perturbations in sensitive regions with stronger defense affect the training time and the effectiveness of adversarial
+effects to be preserved. We fix the other parameters of RLpatch perturbations. We use the DF, AWF, VarCNN, TF as target WF
+and increase λ from 0 to 0.1. We observe that RLpatch models to defeat respectively, and run RLpatch with different
+demonstrates an escalation in ASR and a decline in BWO numbers of training samples. The experimental results are
+across all models as λ increases. As the threshold λ is set shown in Fig. 10. We can observe that the ASR of RLpatch
+higher, RLpatch is more likely to retain only the perturbation decreases while the BWO increases as the number of training
+with strong effects on defense performance, while dropping the samples increases from 10 to 70. This occurs because a
+perturbations with weak effects, which may lead to a decline larger training sample size allows RLpatch to identify sensitive
+in ASR. In contrast, the corresponding BWO diminishes as regions more accurately for crafting adversarial perturbations,
+λ rises due to fewer retained perturbations. Therefore, an thereby reducing the ASR. Moreover, since the same website
+appropriate threshold should be selected to balance ASR and may produce different traffic traces, RLpatch requires to
+BWO. inject additional dummy packets for modification. This further
+6080 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ open-world and multi-tab setting, RLpatch further lowers the
+ average ASR to just 6.1%. These results demonstrate that
+ RLpatch not only excels in closed-world and single-tab setting
+ but also maintains strong defense performance under complex
+ real-world conditions.
+
+ VII. D ISCUSSION
+ A. Practical Deployment
+ The defense requires the cooperation of both sides of the
+ network connection (for Tor, the client and the entry node).
+ Here, RLpatch assumes that a pluggable transport (PT) proxy
+ is deployed at both the client and the Tor entry node, with
+ synchronized perturbation paradigms to ensure that dummy
+Fig. 11. ASR Comparison under closed-world & single-tab setting and open- packets are injected at both ends. If potential synchronization
+world & multi-tab setting.
+ failures occur, one of the PT proxies cannot filter out the
+ dummy packets, leading to connection error.
+ However, two practical challenges remain to be addressed.
+misleads the attacker’s WF model but inevitably leads to an The first challenge is to determine how to correctly remove
+increase in bandwidth overhead. dummy packets to recover normal communication. In our
+ Performance on Real-world Scenarios. In the above work, since we add the dummy packets at the end of each
+evaluation experiment, we have demonstrated that RLpatch burst, the receiving side can discard them based on the
+outperforms state-of-the-art defenses in the closed-world and shared perturbation paradigm. However, if the transmission
+single-tab setting, where WF attacks are trained as multi- path changes during delivery, packet reordering may occur. In
+class classification models over a fixed set of monitored such cases, blindly removing packets at the end of a burst
+websites. Although this setting is favorable to attackers and could result in discarding legitimate data, triggering retransrepresents a challenging scenario for defenders, it does not missions and introducing additional delays. As a supplement,
+fully reflect the complexity of real-world usage patterns. To we can employ a link-padding layer between the transport
+further validate the practicality and robustness of RLpatch, and application layers to mark the dummy packets using a
+we evaluate its performance in a real-world scenario, where defined flag in the protocol header. This flag can assist in the
+users may visit websites outside the monitored set and operate identification and removal of dummy packets, thereby reducing
+multiple browser tabs simultaneously, that is, on the open- the risk of misinterpretation and ensuring robust delivery even
+world and multi-tab setting. Specifically, we select 50 websites under unstable network conditions. The second challenge is
+from the Rimmer dataset as the monitored set and another to determine when to start injecting dummy packets, as the
+50 websites as the unmonitored set. We first generate the PT proxy cannot know the length of the current burst in
+perturbed traces from the monitored set based on the original advance. If the client/server stops sending real packets for a
+traces and the corresponding common perturbation paradigm. time interval, the current burst is considered to be ended and
+We then construct a multi-tab trace by merging a perturbed we can start inserting dummy packets.
+trace from the monitored set with an unperturbed trace
+from the unmonitored set. In this way, we create a testing
+dataset that simulates the open-world and multi-tab browsing B. Training and Deployment Cost Analysis
+behavior. Similarly, we generate a new testing dataset without We evaluate the computational costs associated with training
+perturbations to serve as a baseline for comparison. and implementation in real-world settings. Firstly, defenders
+ The experimental results are shown in Fig. 11. Without any need to collect traffic traces to generate perturbations. Each
+defense, WF models can achieve high ASR in the closed- traffic trace is approximately 40 KB in size on average.
+world and single-tab setting, ranging from 94.4% of AWF Assuming that the defenders intend to protect 100 websites and
+to 98.4% of DF. However, in the open-world and multi-tab collect 30 traces for each website, the total storage requirement
+setting, the average ASR drops to 30.5% across four different would be approximately 40 KB × 100 × 30 = 120 MB.
+WF attacks, indicating that concurrent browsing and visits Afterwards, we measure the average training time, GPU
+to unmonitored websites inherently increase the difficulty of memory usage, and CPU utilization during both the training
+WF attacks. This is because multi-tab traffic traces become and implementation stages. When using a single CPU core,
+interwoven, generating mutual noise among website sessions. RLpatch requires approximately 15 minutes of training time
+Such overlapping traffic patterns obscure site-specific features, and 3000 MB of GPU memory on the Sirinam dataset to
+making it challenging for WF models to accurately extract generate a common perturbation paradigm for one monitored
+clean and distinctive characteristics. After applying RLpatch, website. On the Rimmer dataset, the training time increases
+we observe a substantial reduction in ASR across all WF attack slightly to around 20 minutes with similar GPU memory.
+models. In the closed-world and single-tab setting, RLpatch Since training is performed offline, this time cost is considered
+reduces the average ASR to 8.9%. More importantly, in the acceptable for practical use.
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD 6081
+
+ Finally, defenders need to deploy the generated common [4] P. Krämer et al., “ProFi: Scalable and efficient website fingerprintperturbation paradigms to both the PT proxy on the client ing,” IEEE Trans. Netw. Service Manag., vol. 21, no. 1, pp. 1271–1286,
+ Feb. 2024.
+side and the Tor entry node. Each perturbation paradigm file [5] B. Gao, W. Liu, G. Liu, F. Nie, and J. Huang, “Multi-level resourceis approximately 6 KB in size per website. Their lightweight coherented graph learning for website fingerprinting attacks,” IEEE
+nature enables rapid updates and scalability, making it feasible Trans. Inf. Forensics Security, vol. 20, pp. 693–708, 2025.
+ [6] M. Juarez, M. Imani, M. Perry, C. Díaz, and M. Wright, “Toward an
+to support a large number of monitored websites without efficient website fingerprinting defense,” in Proc. 21st ESORICS, 2016,
+imposing significant storage or transmission burdens on the pp. 27–46.
+defenders’ infrastructure. Consequently, the deployment of [7] J. Gong and T. Wang, “Zero-delay lightweight defenses against website
+RLpatch remains practical and manageable even in resource- fingerprinting,” in Proc. USENIX Secur. Symp. (USENIX Secur.), 2020,
+ pp. 717–734.
+constrained environments. [8] K. P. Dyer, S. E. Coull, T. Ristenpart, and T. Shrimpton, “Peek-a-boo,
+ I still see you: Why efficient traffic analysis countermeasures fail,” in
+C. Limitation Proc. IEEE Symp. Security Privacy (SP), 2012, pp. 332–346.
+ [9] J. Huang, W. Liu, G. Liu, B. Gao, and F. Nie, “WF-A2D: Enhancing
+ While most state-of-the-art WF attacks operate on packet privacy with asymmetric adversarial defense against website fingerprintdirection sequences, some recent works have demonstrated that ing,” IEEE Trans. Inf. Forensic Security, vol. 20, pp. 4739–4754, 2025.
+comparable classification performance can also be achieved [10] M. Jiang, B. Cui, J. Fu, T. Wang, L. Yao, and B. K. Bhargava,
+ “RUDOLF: An efficient and adaptive defense approach against website
+using packet timestamps. However, our current defense mech- fingerprinting attacks based on soft actor-critic algorithm,” IEEE Trans.
+anism is not designed to address attacks that rely primarily Inf. Forensic Security, vol. 19, pp. 7794–7809, 2024.
+on timing features. RLpatch focuses on modifying direction- [11] T. Wang, X. Cai, R. Nithyanand, R. Johnson, and I. Goldberg, “Effective
+ attacks and provable defenses for website fingerprinting,” in Proc.
+based bursts by injecting dummy packets, but does not USENIX Secur. Symp. (USENIX Secur.), 2014, pp. 143–157.
+manipulate packet timing characteristics such as inter-packet [12] J. Hayes and G. Danezis, “k-fingerprinting: A robust scalable website
+delays or burst intervals. To defend against timing-based WF fingerprinting technique,” in Proc. USENIX Secur. Symp. (USENIX
+ Secur.), 2016, pp. 1187–1203.
+attacks, future extensions of RLpatch may jointly optimize [13] A. Panchenko et al., “Website fingerprinting at Internet scale,” in Proc.
+direction and time features in future work. Moreover, RLpatch Annu. Netw. Distrib. Syst. Secur. Symp. (NDSS), 2016, Art. no. 23477.
+focuses on adding tiny perturbation to mislead DNN-based [14] D.Herrmann, R. Wendolsky, H. Federrath, “Website fingerprinting:
+WF attacks. Non-DNN traffic analysis techniques that use Attacking popular privacy enhancing technologies with the multinomial
+ naïve-bayes classifier,” in Proc. ACM Cloud Comput. Secur. Workshop
+statistical features (e.g., packet counts, traffic volumes, and (CCSW), 2019, pp. 31–42.
+connection duration) may not be protected by our defense. [15] V. Rimmer, D. Preuveneers, M. Juárez, T. Van Goethem, and W. Joosen,
+ “Automated website fingerprinting through deep learning,” in Proc.
+ Annu. Netw. Distrib. Syst. Secur. Symp. (NDSS), 2017, pp. 1–15.
+ VIII. C ONCLUSION
+ [16] P. Sirinam, M. Imani, M. Juárez, and M. Wright, “Deep fingerprinting:
+ This paper introduces RLpatch, a robust low-overhead Undermining website fingerprinting defenses with deep learning,” in
+defense method against WF attacks based on RL, which Proc. ACM SIGSAC Conf. Comput. Commun. Secur. (CCS), 2018,
+ pp. 1928–1943.
+focuses on generating perturbation within sensitive regions to [17] S. Bhat, D. Lu, A. Kwon, and S. Devadas, “Var-CNN: A data-efficient
+reduce the bandwidth overhead while keeping the effective- website fingerprinting attack based on deep learning,” in Proc. Privacy
+ness to mislead the WF attack models. RLpatch employs a Enhanc. Technol. (PETs), 2019, pp. 292–310.
+ [18] M. Shen, K. Ji, Z. Gao, Q. Li, L. Zhu, and K. Xu, “Subverting
+novel RL-based adversarial perturbation generation method to website fingerprinting defenses with robust traffic representation,” in
+identify the common sensitive regions of various surrogate Proc. USENIX Secur. Symp. (USENIX Secur.), 2023, pp. 607–624.
+models and adjust perturbation to fit the traffic trace by a query [19] Y. Yuan, Y. Du, and G. Cheng, “Class incremental website fingerprinting
+ attack based on dynamic expansion architecture,” IEEE Trans. Netw.
+WF model for the feedback. By aggregating the perturbations Service Manag., vol. 22, no. 2, pp. 1955–1971, Apr. 2025.
+from the same website based on positional frequency, RLpatch [20] H. Zou, J. Su, Z. Wei, S. Chen, C. Yang, and M. Chen,
+can generate a common perturbation paradigm to prevent the “Toward an effective few-shot website fingerprinting attack with
+traffic traces of the website from being accurately identified quadruplet networks and deep local fingerprinting features,” IEEE
+ Trans. Dependable Secur. Comput., early access, Apr. 22, 2025,
+by attackers. Experiments demonstrate that RLpatch can out- doi: 10.1109/TDSC.2025.3563389.
+perform other baseline WF defense methods on bandwidth [21] W. Meng, C. Ma, M. Ding, C. Ge, Y. Qian, and T. Xiang, “Beyond
+overhead and defense performance against SOTA WF attacks. single tabs: A transformative few-shot approach to multi-tab website
+ fingerprinting attacks,” in Proc. ACM Web Conf., 2025, pp. 1068–1077.
+For future work, we will focus on designing an adaptive [22] X. Cai, R. Nithyanand, and R. Johnson, “Cs-BuFLO: A congestion
+defense mechanism to ensure that the defense remains effec- sensitive website fingerprinting defense,” in Proc. ACM Workshop
+tive even as Web traffic trace changes over time. Privacy Electron Soc., 2014, pp. 121–130.
+ [23] X. Cai, R. Nithyanand, T. Wang, R. Johnson, and I. Goldberg, “A
+ systematic approach to developing and evaluating website fingerprinting
+ R EFERENCES defenses,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur. (CCS),
+ [1] D. Harborth, S. Pape, and K. Rannenberg, “Explaining the technology 2014, pp. 227–238.
+ use behavior of privacy-enhancing technologies: The case of Tor [24] T. Wang and I. Goldberg, “Walkie-talkie: An efficient defense against
+ and JonDonym,” in Proc. Privacy Enhanc. Technol (PETs), 2020, passive website fingerprinting attacks,” in Proc. USENIX Secur. Symp.
+ pp. 111–128. (USENIX Secur.), 2017, pp. 1375–1390.
+ [2] X. Deng, R. Zhao, Y. Wang, M. Zhan, Z. Xue, and Y. Wang, [25] M. Shen et al., “Real-time website fingerprinting defense via traffic
+ “Countmamba: A generalized website fingerprinting attack via coarse- cluster anonymization,” in Proc. IEEE Symp. Secur. Privacy (SP), 2024,
+ grained representation and fine-grained prediction,” in Proc. IEEE Symp. pp. 3238–3256.
+ Security Privacy (SP), 2025, pp. 1363–1381. [26] M. S. Rahman, M. Imani, N. Mathews, and M. Wright, “Mockingbird:
+ [3] A. Maghsoudlou, L. Vermeulen, I. Poese, and O. Gasser, “Characterizing Defending against deep-learning-based website fingerprinting attacks
+ the VPN ecosystem in the wild,” in Proc. Conf. Passive Active Meas., with adversarial traces,” IEEE Trans. Inf. Forensics Security, vol. 16,
+ 2023, pp. 18–45. pp. 1594–1609, 2021.
+6082 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+[27] M. Nasr, A. Bahramali, and A. Houmansadr, “Defeating DNN-based Yuxing Wei received the bachelor’s degree in comtraffic analysis systems in real-time with blind adversarial pertur- puter science and technology from the Guangxi
+ bations,” in Proc. USENIX Secur. Symp. (USENIX Secur.), 2021, University for Nationalities in July 2013. He is
+ pp. 2705–2722. currently affiliated with the Information Center of
+[28] S. Shan, A. N. Bhagoji, H. Zheng, and B. Y. Zhao, “Patch-based defenses Guangxi Zhuang Autonomous Region. His research
+ against Web fingerprinting attacks,” in Proc. ACM Workshop Artif. Intell. interests include cloud computing, government
+ Secur., 2021, pp. 97–109. network systems, and network and data security.
+[29] A. M. Sadeghzadeh, B. Tajali, and R. Jalili, “AWA: Adversarial website
+ adaptation,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 3109–3122,
+ 2021.
+[30] D. Li, Y. Zhu, M. Chen, and J. Wang, “Minipatch: Undermining DNNbased website fingerprinting with adversarial patches,” IEEE Trans. Inf.
+ Forensics Security, vol. 17, pp. 2437–2451, 2022.
+[31] L. Qiao, B. Wu, S. Yin, H. Li, W. Yuan, and X. Luo, “Resisting
+ DNN-based website fingerprinting attacks enhanced by adversarial
+ training,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 5375–5386,
+ 2023. Dong Jin received the B.S. degree in automa-
+[32] M. Jiang, B. Cui, J. Fu, T. Wang, and Z. Wang, “KimeraPAD: A novel tion from the Hefei University of Technology,
+ low-overhead real-time defense against website fingerprinting attacks Hefei, China, in 2018, and the Ph.D. degree
+ based on deep reinforcement learning,” IEEE Trans. Netw. Service in electronic information from the University of
+ Manag., vol. 21, no. 3, pp. 2944–2961, Jun. 2024. Science and Technology of China, Hefei, in 2023.
+[33] C. Hou, G. Gou, J. Shi, P. Fu, and G. Xiong, “WF-GAN: Fighting back He is currently an Associate Research Fellow
+ against website fingerprinting attack using adversarial learning,” in Proc. with the Institute of Artificial Intelligence, Hefei
+ IEEE Symp. Comput. Commun. (ISCC), 2020, pp. 1–7. Comprehensive National Science Center, Hefei. His
+[34] M. H. M. Soleimani, M. Mansoorizadeh, and M. Nassiri, “Real-time research interests include network optimization,
+ identification of three Tor pluggable transports using machine learning industrial Internet, and AI-aided network intrusion
+ techniques,” J. Supercomput., vol. 74, no. 10, pp. 4910–4927, 2018. detection.
+[35] B. Zhou, A. Khosla, A. Lapedriza, A. Oliva, and A. Torralba, “Learning
+ deep features for discriminative localization,” in Proc. IEEE. Conf.
+ Comput. Vis. Pattern Recognit. (CVPR), 2016, pp. 2921–2929.
+[36] Y. Dong et al., “Boosting adversarial attacks with momentum,” in
+ Proc. IEEE. Conf. Comput. Vis. Pattern Recognit. (CVPR), 2018,
+ pp. 9185–9193.
+[37] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional Xiaobin Tan (Member, IEEE) received the B.S.
+ networks for biomedical image segmentation,” in Proc. Med. Image and Ph.D. degrees from the University of Science
+ Comput. Comput.-Assist. Interv., 2015, pp. 234–241. and Technology of China, China, in 1996 and 2003,
+[38] D. Zhou, S. Gao, and F. Long, “Research on intrusion detection based on respectively, where he is currently an Associate
+ Markov chain monte carlo method,” in Proc. Int. Conf. Cloud Comput, Professor with the Department of Automation,
+ Big Data Appl. Softw. Eng., 2023, pp. 184–189. School of Information Science and Technology.
+[39] Q. Zhou, L. Wang, H. Zhu, T. Lu, and V. S. Sheng, “WF-Transformer: His research interests include future Internet
+ Learning temporal features for accurate anonymous traffic identification architecture, information security, and multimedia
+ by using transformer networks,” IEEE Trans. Inf. Forensics Security, communication.
+ vol. 19, pp. 30–43, 2024.
+
+ Shuangwu Chen (Member, IEEE) received the Xiaofeng Jiang received the B.S. and Ph.D. degrees
+ B.S. and Ph.D. degrees from the University of in information science and technology from the
+ Science and Technology of China, Hefei, China, University of Science and Technology of China,
+ in 2011 and 2016, respectively, where he is cur- Hefei, China, in 2008 and 2013, respectively, where
+ rently an Associate Professor with the Department he is currently an Associate Professor with the
+ of Automation, School of Information Science School of Information Science and Technology.
+ and Technology. His research interests include His recent research interests include discrete-event
+ multimedia communications, future network, and dynamic system, tensor analysis and big data, future
+ stochastic optimization. network, and cognitive communications.
+
+ Siyang Chen received the B.S. degree in Jian Yang (Senior Member, IEEE) received the B.S.
+ information science and technology from the and Ph.D. degrees from the University of Science
+ University of Science and Technology of China, and Technology of China, Hefei, China, in 2001
+ Hefei, China, in 2019, where he is currently pursuing and 2006, respectively, where he is currently a
+ the Ph.D. degree. His research interests include Professor with the School of Information Science
+ network security and traffic analysis. and Technology. His research interests include future
+ networks, distributed system design, modeling and
+ optimization, multimedia over wired and wireless
+ networks, and stochastic optimization.

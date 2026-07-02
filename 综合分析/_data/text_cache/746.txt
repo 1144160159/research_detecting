@@ -1,0 +1,159 @@
+Li et al. Cybersecurity  (2026) 9:112                                                                                                                     Cybersecurity
+https://doi.org/10.1186/s42400-025-00522-x
+
+
+
+
+ RESEARCH                                                                                                                                                Open Access
+
+MTDecipher: robust encrypted malicious
+traffic detection via multi‑task graph neural
+networks
+Fan Li1,2, Xi Luo3, Weihong Han2, Binxing Fang1* and Lihua Yin3*
+
+
+
+  Abstract
+  The widespread adoption of encrypted traffic protocols has significantly increased the challenge of detecting
+  malicious traffic. Existing detection methods based on deep learning typically rely on fine-grained features of data
+  packets, such as length sequences and intra-flow interaction graphs. However, these features are highly susceptible
+  to disruption by diverse network environments and traffic obfuscation. This paper proposes MTDecipher, a robust
+  method for detecting encrypted malicious traffic based on multi-task Graph Neural Network (GNN). MTDecipher
+  employs a bidirectional attentive sequence encoder to mitigate the impact of diverse network environments and traf-
+  fic obfuscation on packet length sequences, along with an edge-block dual sampling method and a multi-task GNN
+  model to mitigate the training bias introduced by the unbalanced distribution of traffic. In the bidirectional attentive
+  sequence encoder, a combination of a Bi-GRU layer and an attention pooling layer is utilized to enhance the bidirec-
+  tional encoding by generating weights for each element in the sequence, thereby obtaining robust encrypted traffic
+  sequence features. In the edge-block dual sampling method, two rounds of sampling are involved to generate more
+  evenly distributed subgraphs as training data, which reduces the local structural bias resulting from the aggregation
+  of malicious flows. In the multi-task GNN model, the losses for both edge and node classification tasks are simultane-
+  ously optimized, thereby minimizing the homogeneity of adjacent edges. Experimental results on two real-world
+  datasets with traffic obfuscation demonstrate that MTDecipher outperforms eight existing methods in terms of effec-
+  tiveness in detecting encrypted malicious traffic.
+  Keywords Encrypted traffic detection, Malicious traffic detection, Sequence encoder, Subgraph sampling, Multi-task
+  GNN
+
+
+                                                                                         Introduction
+                                                                                         As awareness of privacy protection among Internet users
+                                                                                         continues to increase, the adoption of encryption proto-
+                                                                                         cols to protect traffic content has become increasingly
+*Correspondence:                                                                         widespread. Protocols such as Transport Layer Security
+Binxing Fang                                                                             (TLS), Hypertext Transfer Protocol Secure (HTTPS),
+fangbx@cae.cn                                                                            Internet Protocol Security (IPsec), and Domain Name
+Lihua Yin
+yinlh@gzhu.edu.cn                                                                        System (DNS) over HTTPS (DoH), effectively miti-
+1
+  School of Computer Science and Technology, Harbin Institute                            gate privacy risks associated with the exposure of user
+of Technology (Shenzhen), Shenzhen 518071, Guangdong, China                              traffic and personal data on the Internet. In this con-
+2
+  Department of New Networks, Peng Cheng Laboratory,
+Shenzhen 518000, Guangdong, China                                                        text, Google, as one of the largest browser providers,
+3
+  Cyberspace Institute of Advanced Technology, Guangzhou University,                     announced its commitment to implement full encryp-
+Guangzhou 510006, Guangdong, China                                                       tion across all its products and services, achieving the
+
+
+                                       © The Author(s) 2026. Open Access This article is licensed under a Creative Commons Attribution 4.0 International License, which
+                                       permits use, sharing, adaptation, distribution and reproduction in any medium or format, as long as you give appropriate credit to the
+                                       original author(s) and the source, provide a link to the Creative Commons licence, and indicate if changes were made. The images or
+                                       other third party material in this article are included in the article’s Creative Commons licence, unless indicated otherwise in a credit line
+                                       to the material. If material is not included in the article’s Creative Commons licence and your intended use is not permitted by statutory
+                                       regulation or exceeds the permitted use, you will need to obtain permission directly from the copyright holder. To view a copy of this
+                                       licence, visit http://​creat​iveco​mmons.​org/​licen​ses/​by/4.​0/.
+Li et al. Cybersecurity   (2026) 9:112                                                                          Page 2 of 21
+
+
+
+
+completion of 96% by 2024 (Google Transparency                  graph (MTIG) (Yang et al. 2024), rendering the methods
+Report 2025). Although such initiatives have garnered           ineffective.
+user approval for enhancing Internet security, they have           Despite the fact that network fluctuations and traf-
+also introduced new security challenges. Attackers are          fic obfuscation diminish the reliability of fine-grained
+exploiting encryption protocols to conceal malicious            features, communication between attackers and victims
+activities. According to the Zscaler Zero Trust Exchange        remains unavoidable, and such interactions are typically
+platform, encrypted traffic accounted for more than             resilient to network fluctuations. This insight reveals the
+85.9% of malicious traffic in 2023, with the total number       potential for malicious intent leakage through inter-flow
+of encrypted attacks increasing by 24.3% compared to the        interaction features, which helps to detect encrypted
+previous year (Zscaler ThreatLabz 2023). The payloads of        malicious traffic. Graph neural networks (GNNs) are
+this encrypted malicious traffic are invisible to traditional   extensively utilized for processing inter-flow interaction
+firewall and rule-based security systems, which are una-        graphs, where nodes represent IP addresses and edges
+ble to filter them effectively. Moreover, decryption-based      represent flows. However, strong correlation and unbal-
+approaches are limited due to their high cost and poten-        anced distribution of malicious traffic can introduce sig-
+tial violations of user privacy (Orchestrator 2024; Yang        nificant bias into edge classification tasks performed by
+et al. 2024; Wang et al. 2025).                                 GNNs. On the one hand, existing methods usually over-
+   Malicious traffic detection systems based on deep            look the potential influence of the node class on edge
+learning techniques have been extensively studied (Xue          classification. The malicious behavior exhibited by attack-
+and Zhu 2024). These methods typically input high-              ers is intrinsically associated with specific IP addresses.
+dimensional traffic features into carefully designed deep       Prior studies have demonstrated that inter-flow interac-
+learning models, achieving notable success in plaintext         tion behaviors can assist in identifying command and
+malicious traffic detection. This success has inspired sev-     control (C&C) nodes within botnets, thereby facilitating
+eral studies to adapt deep learning models for encrypted        the detection of malicious traffic originating from these
+traffic detection, aiming to decipher and extract mean-         nodes (Zhou et al. 2020). On the other hand, the homo-
+ingful information from encrypted traffic. A key gap            geneity assumption adopted by GNNs does not hold true
+between the two domains is that encryption protocols            for inter-flow interaction graphs with unbalanced mali-
+alter the range of features available for traffic classifica-   cious flows. Traditional GNNs utilize a message-passing
+tion. For instance, although the content payload is obfus-      mechanism that promotes feature homogeneity among
+cated after encryption, Barut et al. demonstrated that          adjacent nodes or edges, operating under the assump-
+packet header bytes can still be leveraged for classifying      tion that neighboring nodes and edges are more likely to
+encrypted traffic (Barut et al. 2022). In addition, flow        belong to the same class (Zhu et al. 2020). However, this
+statistics, such as packet length sequences, have been          assumption is inconsistent with empirical observations.
+utilized to uncover encrypted traffic patterns (Liu et al.      As illustrated in Fig. 1, in the MCFP dataset (Stratosphere
+2019). Many researchers have emphasized packet inter-           Laboratory Datasets 2015), IP addresses 10.0.2.110 and
+actions within a network flow, which are considered as          8.8.8.8 are connected to a substantial number of mali-
+fingerprints for encrypted traffic detection (Yang et al.       cious edges. This may lead to the erroneous conclusion
+2024). However, existing methods tend to overly rely            that edges connected to specific nodes are necessarily
+on fine-grained features of captured packets, which are         malicious, introducing local structural bias (Dong et al.
+inherently unreliable. In the Transmission Control Pro-         2022) in GNNs. Such bias can result in information leak-
+tocol (TCP), for example, packet length and sequence            age and misclassification of edges associated with these
+are significantly influenced by diverse network envi-           IP addresses as malicious, consequently inflating the
+ronments. Since the sequence numbers of data packets            accuracy of the model. Additionally, this bias introduces
+are often encrypted, the packet sequence used in these          errors in edge classification near IP address 224.0.0.252,
+studies is typically based on packet arrival times. How-        which is associated with benign and malicious edges,
+ever, network fluctuations, such as TCP packet replay,          with the malicious edges predominating. Network fluc-
+merging, and reconstruction (Xie et al. 2023), and traf-        tuations further obscure the classification boundaries
+fic obfuscation, such as website fingerprinting (WF)            between benign and malicious edges, exacerbating local
+defenses (Gong and Wang 2020, Wang and Goldberg                 structural bias in GNNs and diminishing their effective-
+2017), can drastically alter the order and size of packets,     ness and robustness.
+leading to changes in flow statistics. Similarly, network          To address these challenges, we propose MTDeci-
+fluctuations can induce structural changes in intra-flow        pher, a robust method for detecting encrypted mali-
+interaction graphs, such as traffic interaction graph           cious traffic based on a multi-task GNN. First, we select
+(TIG) (Shen et al. 2020) or malicious traffic interaction       datasets collected from the real world to preserve the
+Li et al. Cybersecurity   (2026) 9:112                                                                    Page 3 of 21
+
+
+
+
+  Fig. 1 Inter-flow Interaction Graph in MCFP Dataset
+
+
+
+
+actual network fluctuations. Moreover, we simulate the      • We implement a prototype of MTDecipher and con-
+traffic obfuscation from the attacker by incorporating        duct performance tests. The results indicate that
+website fingerprinting defenses into the original pcap        MTDecipher outperforms eight existing methods
+file. The raw data packets are then preprocessed to           across two public datasets with website fingerprint-
+generate robust sequential and non-sequential embed-          ing defenses.
+dings, which are aggregated into edge and node fea-
+tures. Balanced subgraphs for each batch are obtained
+using the edge-block dual sampling method. Finally, we    Background and related work
+employ a multi-task GNN for training and classifica-      In this section, we provide an overview of the encrypted
+tion, which enhances the detection of encrypted mali-     malicious traffic and discuss the methods employed to
+cious traffic. Our contributions are as follows:          detect malicious activities within such encrypted flows,
+                                                          with a particular focus on techniques that utilize GNNs.
+  • We propose a robust flow-to-edge approach based       Additionally, we highlight their inherent limitations in
+    on a bidirectional attentive sequence encoder. This   diverse network environments.
+    method constructs edge and node features within
+    inter-flow interaction graphs under conditions of     Malicious traffic detection
+    unknown network fluctuations.                         In recent years, deep learning has emerged as a robust
+  • We introduce an edge-block dual sampling method       paradigm for malicious traffic detection, overcoming the
+    that samples balanced subgraphs from inter-flow       limitations of traditional rule-based systems and machine
+    interaction graphs exhibiting unbalanced edge         learning methods when tackling complex and evolving
+    distributions, thereby mitigating training bias in    network threats. For instance, Hassn et al. (2025) pro-
+    multi-class GNNs.                                     posed a novel one-dimensional (1D) Convolutional Neu-
+  • We present a multi-task GNN framework that            ral Network (CNN) for malicious traffic detection. While
+    simultaneously performs high-accuracy node and        this approach exhibits strong capabilities in local feature
+    edge classification within inter-flow interaction     extraction and generalization, it is inherently limited in
+    graphs of encrypted traffic, enabling multi-class     capturing long-range temporal dependencies. Recurrent
+    identification of malicious encrypted flows.          Neural Networks (RNNs) and their variants (e.g., Long
+

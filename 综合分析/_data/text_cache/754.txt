@@ -1,0 +1,142 @@
+IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026                                                                                                               1133
+
+
+
+
+          Multimodal Industrial Anomaly Detection via
+          Attention-Enhanced Memory-Guided Network
+       Shuaibo Liu , Graduate Student Member, IEEE, Xiaoli Luan , Senior Member, IEEE, and Yueyang Li
+
+
+   Abstract—Anomaly detection is a key technology in quality                        Such methods are usually trained only on a large set of nor-
+control for automated production lines. Currently, 2D-based                         mal samples and the target samples are detected in the inference
+anomaly detection methods fail to identify geometric structure                      stage. Currently, the majority of industrial anomaly detection
+anomalies in products. To address this limitation, this paper
+proposes a multimodal anomaly detection model using 3D                              methods [9], [10], [11], [12], [13] are still based on RGB image
+point clouds and RGB images. To ensure the single-domain                            analysis. However, in many industrial scenarios, relying only
+inference capability of each modality, we design an attention-                      on color images makes it difficult to accurately identify anoma-
+enhanced dual memory bank to separately store local point                           lies [14]. Different lighting conditions may lead to false de-
+cloud features and RGB features. The attention mechanism                            tections, while anomalies of geometric structure types may not
+enhances the informativeness and discriminability of the feature
+descriptors, significantly improving the data quality in the                        present variations in color. Therefore, effectively leveraging the
+memory bank. During the inference phase, the local point cloud                      synergy between RGB and 3D information is crucial for improv-
+features in the dual memory bank guide the RGB features in                          ing the AD performance. However, using multimodal data for
+calculating anomaly scores in the 2D modality. This memory-                         AD also presents several challenges. First, different modalities
+guided approach strengthens the correlation between information                     may provide conflicting information. An RGB image may show
+across different modalities. Moreover, to improve the overall
+segmentation precision of the model, we propose an anomaly                          a color anomaly, while the 3D data indicates that the geometric
+scoring scheme based on a weight map of signed distance values.                     structure is normal. Such inconsistencies can make it difficult
+The final anomaly detection results are obtained by integrating                     for the model to accurately identify anomalies. Moreover, dif-
+the advantages of point cloud data in geometric structure anomaly                   ferent modalities are affected by different factors. RGB images
+detection and RGB data in color anomaly detection. Extensive                        can be influenced by lighting conditions, while 3D data may
+experiments demonstrate that the proposed method achieves
+superior segmentation precision compared to other advanced                          suffer from noise or missing points. These quality differences
+methods on the MVTec 3D-AD and Eyecandies datasets.                                 may cause multimodal data to fail in accurately representing
+                                                                                    anomalies.
+  Index Terms—Anomaly detection, point cloud, signed distance
+values, multimodal learning.
+                                                                                       The recently released MVTec 3D-AD dataset [15], as a bench-
+                                                                                    mark resource, has greatly advanced the field of multimodal
+                                                                                    anomaly detection [16], [17], [18]. AST [19] reduces the over-
+                            I. INTRODUCTION                                         generalization of anomalous samples by using an asymmetric
+          ITH the development of artificial intelligence technol-                   teacher-student network, but it relies on the role of RGB in-
+W         ogy, anomaly detection (AD) in multimedia data has
+been widely applied in fields such as medical image analy-
+                                                                                    formation and does not fully leverage the detection advantages
+                                                                                    of 3D data, which limits its detection performance. To lever-
+sis [1], [2], industrial defect detection [3], [4], security monitor-               age the inferential advantages of each modality, MIAD [20]
+ing [5], [6], and autonomous driving [7]. AD is a critical aspect                   achieves anomaly detection by comparing the differences be-
+of industrial quality control, aiming at identifying anomalies in                   tween the features mapped through two cross-modal mapping
+a product to ensure the quality and reliability of the product [8].                 functions and those learned by the feature extractor. In addi-
+Since abnormal samples are scarce and difficult to collect in                       tion, MIAD obtains three variants, MIAD-M, MIAD-S, and
+real-world manufacturing, unsupervised methods are primarily                        MIAD-T, by pruning the network layers of the feature extractor.
+employed to identify anomalies within industrial environments.                      However, they require designing complex training goals sep-
+                                                                                    arately for each modality. Memory bank-based methods have
+   Received 23 December 2024; revised 14 April 2025; accepted 8 May 2025.           gained significant attention, as these approaches only need to
+Date of publication 14 November 2025; date of current version 6 March 2026.         store features of normal samples during training without requir-
+This work was supported by the National Natural Science Foundation of China
+under Grant 61991402. The associate editor coordinating the review of this
+                                                                                    ing complex training designs. BTF [14] attempts to improve
+article and approving it for publication was Vania Vieira Estrela. (Corresponding   the utilization of multimodal data by connecting features from
+author: Xiaoli Luan.)                                                               two modalities into a memory bank. Nevertheless, directly con-
+   Shuaibo Liu and Xiaoli Luan are with the Key Laboratory of Advanced
+Process Control for Light Industry (Ministry of Education), Jiangnan Uni-
+                                                                                    necting multimodal features overlooks potential interference be-
+versity, Wuxi 214122, China (e-mail: liushuaibo@stu.jiangnan.edu.cn; xl-            tween them, which can significantly impact detection perfor-
+luan@jiangnan.edu.cn).                                                              mance. M3DM [21] adopts a hybrid fusion scheme to alleviate
+   Yueyang Li is with the College of Internet of Things Engineering, Jiangnan
+University, Wuxi 214122, China (e-mail: lyueyang@jiangnan.edu.cn).
+                                                                                    the problem of interference among modalities. It constructs three
+   Digital Object Identifier 10.1109/TMM.2025.3632646                               memory banks for each modality and fusion feature separately to
+
+      1520-9210 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+1134                                                                                       IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026
+
+
+
+strengthen the single-domain inference capability of the model.           The rest of this paper is organized as follows: Section II pro-
+Nonetheless, this approach results in substantial memory costs.        vides a review of related works. Section III presents our method.
+Shape-guided [22] reduces memory usage by constructing a dual          Section IV conducts the experiments. Finally, Section V con-
+memory bank with two expert models. However, the direct guid-          cludes the paper and discusses the limitations of the proposed
+ance approach between the expert models does not ensure the            methods.
+quality of the features stored in the memory bank, which directly
+impacts the final detection performance.                                                     II. RELATED WORK
+   To alleviate the issue of data quality in the memory bank,
+we use attention-enhanced memory guidance to construct a               A. 2D Industrial Anomaly Detection
+dual memory bank. Specifically, we use attention mechanism                The public availability of the MVTec AD dataset [23]
+to strengthen connections between multimodal data. The 3D              has significantly contributed to the development of 2D in-
+features guide the attention-enhanced RGB features, together           dustrial anomaly detection research. Common approaches in-
+forming the dual memory bank. Although 3D features provide             clude reconstruction-based [24], [25], [26], [27] and feature
+geometric structural information about objects, in RGB images,         embedding-based [28], [29], [30], [31] methods. For recon-
+color variations in certain regions may exhibit more anomaly           struction methods, regions where the reconstructed image dif-
+potential than changes in 3D geometry. The attention mecha-            fers significantly from the input image are considered as the
+nism effectively enhances the feature representation of these re-      location of the real anomalies. On this basis, in order to en-
+gions. The design provides two advantages. First, the attention        able the model to learn anomalous features during training, re-
+mechanism enhances the informativeness and distinctiveness of          searchers employ data augmentation techniques [32], [33] that
+feature descriptors, significantly improving data quality within       introduce pseudo-anomalies into normal images. Knowledge
+the memory bank. Second, it increases pixel-level alignment ac-        distillation [34], [35] is based on a teacher model to train stu-
+curacy between modalities, which is crucial for detecting sub-         dent networks for image reconstruction or feature extraction.
+tle anomalies. Meanwhile, we design a weighted map anomaly             Anomaly localization is achieved by comparing the representa-
+scoring scheme based on signed distance values for point cloud         tion differences across the networks. Feature embedding meth-
+data and a cosine similarity scoring scheme for RGB data. The          ods aim to transform the original data into a new represen-
+above design ensures the single-domain inference capability of         tation space that facilitates anomaly detection. Normalization
+each modality. For the final anomaly localization, we first map        flows [28] employ invertible transformations to map data fea-
+the RGB score distribution to align with the 3D score distribu-        tures to a normal distribution. This process allows normal and
+tion, and then select the larger value at each pixel location as the   anomalous samples to exhibit distinguishable probability den-
+final pixel-level anomaly score. The above operation effectively       sity distributions in the embedding space. Visual-language mod-
+combines the detection advantages from different modalities.           els identify anomalies by calculating the similarity between im-
+It is noteworthy that our method shows superior anomaly de-            ages and textual descriptions [36]. The use of learnable prompts
+tection and segmentation performance on the MVTec 3D-AD                can effectively enhance model performance [37], [38]. Methods
+benchmark, maintaining competitive results even at low false           based on pre-trained networks and memory banks [39] often
+positive rate (FPR) settings.                                          face memory issues and computational burdens. PatchCore [12]
+   The contributions of this study can be summarized as follows:       stores local features of normal samples in a memory bank and
+    r This study proposes an unsupervised multimodal industrial
+                                                                       then locates anomalies by comparing the similarity between the
+      anomaly detection method based on an attention-enhanced          target sample and the stored features. Inspired by this approach,
+      memory-guided network. The method effectively com-               we applied the memory bank method to multimodal anomaly
+      bines the advantages of RGB and 3D data for anomaly              detection tasks and achieved excellent performance.
+      detection, addressing the performance limitations inherent
+      in single-modality approaches.
+    r This study employs attention mechanism to improve the            B. Multimodal Industrial Anomaly Detection
+      data quality in the memory bank, thereby enhancing the              Research [14] shows that effectively combining RGB and 3D
+      pixel-level correspondence accuracy between multimodal           information leads to significantly better anomaly detection per-
+      data during the memory-guided process.                           formance than using only RGB data. With the release of the
+    r An anomaly scoring scheme based on a weight map of               MVTec 3D-AD dataset [15], 3D industrial anomaly detection
+      signed distance values is proposed in this paper, which          has become a new research focus. The study that published the
+      effectively solves the problem of poorly localized regions       dataset also offered baseline models based on GAN, AE, and
+      with weakly expressed anomalies. This greatly improves           variational models, each trained on 3D data represented by voxel
+      the final detection and segmentation precision of the model.     grids or depth maps. 3D-ST [18] proposes a student-teacher
+    r To the best of our knowledge, the proposed method                framework, where the teacher network encodes local geomet-
+      achieves state-of-the-art performance in anomaly segmen-         ric descriptions from patches to locate geometric anomalies in
+      tation on the MVTec 3D-AD dataset and Eyecandies                 point cloud data. BTF [14] examines the role of 3D information
+      dataset. Even under high precision requirements, it still        in anomaly detection tasks, revealing the potential advantages of
+      demonstrates leading segmentation results.                       combining RGB and 3D information for anomaly localization.
+LIU et al.: MULTIMODAL INDUSTRIAL ANOMALY DETECTION VIA ATTENTION-ENHANCED MEMORY-GUIDED NETWORK                                                                 1135
+
+
+
+
+Fig. 1. Diagram of the inference process. The proposed method consists of three main parts: (1) 3D signed distance function model predicts the signed distance
+values of the local features in the point cloud, generating an anomaly score map for the 3D data. PointNet is a pre-trained 3D feature extractor, and the NIF model is
+a multi-layer perceptron 

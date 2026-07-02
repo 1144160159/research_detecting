@@ -1,0 +1,1653 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [758] Multiview Spatial–Temporal Interaction Attention- Based Multivariate Time Series Anomaly Detection for Distributed Industrial Control Networks
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：758
+题名：Multiview Spatial–Temporal Interaction Attention- Based Multivariate Time Series Anomaly Detection for Distributed Industrial Control Networks
+年份：2025
+DOI：10.1109/ton.2025.3614179
+来源：IEEE Transactions on Networking
+PDF：paper/10.1109_TON.2025.3614179.pdf
+已有粗分类：时序、日志、KPI 与云原生异常检测
+二级关联：入侵检测与网络异常检测、其他AI安全与跨域异常检测
+相关性：中相关，分数 7
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\758.txt
+- 原始字符数：75874
+- 本次发送字符数：75874
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+1005
+
+Multiview Spatial–Temporal Interaction AttentionBased Multivariate Time Series Anomaly Detection
+for Distributed Industrial Control Networks
+Kai Cui , Liangbin Gao , Xianjun Deng , Senior Member, IEEE, Shenghao Liu , Member, IEEE,
+Lingzhi Yi , Shibo He , Senior Member, IEEE, and Hongwei Lu
+
+Abstract—Artificial Intelligence-empowered Industrial Control
+Networks coordinate massive heterogeneous devices and contain multi-node spatial-temporal information. Multivariate Time
+Series Anomaly Detection (MTS-AD) can discover data-fault
+behaviors for ensuring the security of distributed networks.
+However, existing studies tend to rely heavily on single temporal features or neglect the rich spatial-temporal correlations,
+which leads to the serious underutilization of interactive embeddings between the time and space domains. In this article, a
+novel Multiview Spatial-Temporal Interaction Attention Network
+(MSTIA-Net) scheme is proposed for the unsupervised MTSAD task to better tackle these challenges. MSTIA-Net focuses
+on jointly modeling the comprehensive spatial-temporal dependencies by means of incorporating complex interactive contents
+and dynamic relations from multiview patterns. To fully leverage
+the content-oriented interactions, a spatial-temporal interactions
+aggregation module is presented to explicitly learn content-aware
+representations with a parallel-attention mechanism and a lowrank bilinear fusion manner. Simultaneously, considering the
+potential correlations among different variables as contextual
+cues, a spatial-temporal correlations learning module is developed
+Received 21 March 2025; revised 17 July 2025 and 3 September 2025;
+accepted 11 September 2025; approved by IEEE T RANSACTIONS ON N ETWORKING Editor R. Zhang. Date of publication 8 October 2025; date
+of current version 5 January 2026. This work was supported in part by
+the National Key Research and Development Program of China under
+Grant 2022YFE0138600; in part by the National Natural Science Foundation of China under Grant U24B20153, Grant 62272182, Grant 62472442,
+Grant 62202181, and Grant 62202197; in part by Hubei Provincial Natural
+Science Foundation of China under Grant 2023AFB998; in part by the
+Fundamental Research Funds for the Central Universities, Huazhong University of Science and Technology (HUST) under Grant 2025JYCXJJ060;
+and in part by Shenzhen Science and Technology Program under Grant
+JCYJ20220530161004009. (Kai Cui and Liangbin Gao are co-first authors.)
+(Corresponding author: Xianjun Deng.)
+Kai Cui and Liangbin Gao are with Hubei Key Laboratory of Distributed
+System Security, Hubei Engineering Research Center on Big Data Security,
+School of Cyber Science and Engineering, Huazhong University of Science
+and Technology, Wuhan 430074, China (e-mail: cuikai eric@hust.edu.cn;
+lgao24@hust.edu.cn).
+Xianjun Deng, Shenghao Liu, and Hongwei Lu are with Hubei Key
+Laboratory of Distributed System Security, Hubei Engineering Research
+Center on Big Data Security, School of Cyber Science and Engineering,
+Huazhong University of Science and Technology, Wuhan 430074, China,
+and also with Shenzhen Huazhong University of Science and Technology
+Research Institute, Shenzhen 518057, China (e-mail: dengxj615@hust.edu.cn;
+liushenghao@hust.edu.cn; luhw@hust.edu.cn).
+Lingzhi Yi is with the School of Information Engineering, Zhongnan
+University of Economics and Law, Wuhan 430073, China (e-mail:
+lzyi@zuel.edu.cn).
+Shibo He is with the State Key Laboratory of Industrial Control Technology,
+Zhejiang University, Hangzhou 310027, China (e-mail: s18he@zju.edu.cn).
+Digital Object Identifier 10.1109/TON.2025.3614179
+
+to adaptively capture the relevant context for relation-aware
+representations. On this basis, both types of aware clues are
+further integrated by the dual attention-enhanced contrastive
+reconstruction, which can enrich the cross-aware fusion representations and generate the local and global outputs through a
+cross-view contrastive learning strategy. Experiments conducted
+on six benchmark datasets demonstrate the superiority of our
+MSTIA-Net over state-of-the-art baselines.
+Index Terms—Anomaly detection, distributed industrial control networks, multivariate time series, spatial-temporal dependency learning, parallel-attention mechanism.
+
+I. I NTRODUCTION
+
+D
+
+RIVEN by the continuous progress [1], [2], [3] in
+intelligent manufacturing systems, the deep integration
+of massive terminal devices and the widespread deployment
+of diverse industrial applications have facilitated an explosive
+growth of multi-source data. Based on a type of distributed
+architecture, the Industrial Control Networks [4] can coordinate the sensing data and instructions among multiple nodes.
+To achieve device interconnection and data sharing, the Industrial Control Systems (ICS) [5] have gradually evolved into a
+core paradigm of distributed networks, which is capable of
+monitoring industrial data and managing production equipment in the infrastructure scenarios, such as the smart nuclear
+power plants. Typically, the ICS architecture incorporates
+enormous amounts of sensory devices from physical, control,
+supervisory, and corporate layers, as shown in the upper
+part of Fig. 1. However, some anomalous behaviors in the
+industrial time-series data may pose the potentially serious
+threats to the reliability services and new quality security
+of intelligent systems. Towards the heterogeneous multi-node
+data generated from ICS operations, Multivariate Time Series
+Anomaly Detection (MTS-AD) [6], [7], [8] as an unsupervised
+learning task aims to accurately identify abnormal samples
+and node malfunctions, which is crucial for maintaining the
+application security of distributed networks.
+Currently, many pioneering studies have made remarkable
+progress in the MTS-AD task based on deep learning methods, and explored the spatial-temporal information from the
+following perspectives. 1) Most studies mainly attempted to
+model the single-domain temporal or spatial dependencies.
+For example, Su et al. [9] proposed a stochastic Recurrent
+Neural Network (RNN) to learn the robust representations of
+
+2998-4157 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+1006
+
+Fig. 1. Illustration of main challenges of the MTS-AD task towards distributed
+industrial control networks.
+
+temporal dependence. Besides, Deng and Hooi [10] adopted a
+Graph Neural Network (GNN) to model the spatial relations
+among multiple variables. These methods heavily rely on the
+single-domain feature and ignore the interactions of spatialtemporal clues to model the complete feature dependencies.
+2) A lot of efforts have also been made to initially explore
+mining rich spatial-temporal interactions. For instance, Qin
+et al. [11] presented a multiview contrastive learning scheme
+to model intra-signal and inter-signal relations, but seriously
+lacks the exploration of cross-view correlation patterns. Additionally, Ding et al. [12] developed a graph structure learning
+mechanism to capture the spatial-temporal correlations, and
+Kang and Kang [13] exploited a variable temporal Transformer
+to model the spatial-temporal dependencies. However, they
+were unable to leverage content-aware and relation-aware
+dependencies in a unified model.
+Despite the promising previous works [14], [15], [16], there
+are still certain limitations that need to be addressed. Existing
+studies often ignore the deep mining of multi-node relations, and fail to effectively capture the rich spatial-temporal
+dependencies between different sensing nodes. Considering
+that massive time-series data are generally obtained from
+multiple sensing nodes in the ICS platforms, the heterogeneous
+data distribution tends to show a certain degree of spatial
+or temporal inconsistency. Due to complex changes in the
+external distributed environment, it is a tough challenge to
+fully learn the spatial-temporal correlations of multi-node data.
+On this basis, we aim to explore an adaptive multi-dependency
+inference structure to enhance the interactive perception of
+spatial-temporal clues from each node. The lower part of Fig. 1
+illustrates our major motivation, which is to design a dualchannel correlations learning strategy for capturing dynamic
+dependencies of time-domain and space-domain variables.
+In this work, we concentrate on jointly mining the
+spatial-temporal dependencies of contents and relations from
+multiview feature patterns, which especially considers the
+following issues. 1) In general, multivariate local and global
+information in different positions of sequences can reflect
+diverse abnormal behavior patterns, and it is necessary to
+explore uniformly modeling more comprehensive representa-
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+tions from multiple perspectives. 2) MTS data concurrently
+depend on the inherent characteristics of both the time-domain
+and space-domain, so how to fully integrate the spatialtemporal interactive features is critical to better learn the
+content-based dependency. 3) Since the potential relationships among different variables are relatively dynamic, it can
+be considered as the contextual clues of the relation-based
+dependency to adaptively capture spatial-temporal correlations. Accordingly, the core solution for ICS platform is to
+simultaneously ensure that the two perceptual embeddings are
+aggregated in a parallel learning strategy.
+To address these aforementioned challenges, in this article,
+we present a MTS-AD approach based on a Multiview SpatialTemporal Interaction Attention Network (MSTIA-Net). As
+depicted in Fig. 1, our objective is to model the overall spatialtemporal dependencies of the interactive contents and dynamic
+relations from the multiview feature patterns in a collaborative
+manner. In particular, multiview feature extraction module is
+first utilized to characterize temporal patterns for the local and
+global features. To jointly explore the rich spatial-temporal
+information, we then introduce a spatial-temporal interactions
+aggregation module using a parallel self-attention Transformer
+and a low-rank fusion method, and simultaneously exploit
+a spatial-temporal correlations learning module by stacking
+multilayer Graph Attention Network (GAT). Ultimately, the
+obtained content-aware and relation-aware representations are
+both further fused through the local-global cross-attention
+mechanism, and dual attention-enhanced contrastive reconstruction is developed to generate the dual-stream outputs via a
+cross-view contrastive learning strategy as an auxiliary means.
+In summary, the main contributions can be listed as follows:
+• A novel MSTIA-Net scheme is proposed to detect
+anomalies of time-series data in the distributed industrial
+networks. MSTIA-Net explicitly models the spatialtemporal dependencies of multiview patterns and learns
+the interactions between local-global contents and relations.
+• To uniformly integrate content-aware representations,
+a spatial-temporal interactions aggregation module is
+constructed with the parallel-attention mechanism and
+low-rank fusion manner. Meanwhile, a spatial-temporal
+correlations learning module is designed to adaptively
+capture the dynamic relations among time and variable
+sequences.
+• The dual attention-enhanced contrastive reconstruction is
+further built to refine cross-aware representation and generate dual-stream outputs through constractive learning.
+• Extensive experiments are conducted to evaluate MSTIANet model on six real-world datasets, and results
+demonstrate that MSTIA-Net achieves significant performance compared to several state-of-the-art methods.
+II. R ELATED W ORK
+Recently, benefiting from the powerful ability of deep
+learning in feature representation and model generalization,
+MTS-AD task based on the unsupervised deep learning frameworks have received widespread research attention. Existing
+works on deep learning-based MTS-AD models can be broadly
+
+CUI et al.: MULTIVIEW SPATIAL–TEMPORAL INTERACTION ATTENTION-BASED MTS-AD
+
+categorized into two paradigms: prediction-based methods
+[10], [17], [18] and reconstruction-based methods [9], [19],
+[20]. The basic idea is how to use the learned normal temporal
+features to predict future data or reconstruct the original timeseries, and the deviation of predicted or reconstructed data
+from the actual data represents the MTS anomaly degree.
+Prediction-based methods predicts future time series data
+from past data and identifies anomalies based on the prediction errors. For instance, Hundman et al. [17] presented an
+Long Short-Term Memory (LSTM) based network to forecast
+future data of input time series in a non-parametric dynamic
+thresholding manner. Besides, Graph Deviation Network [10]
+(GDN) designed an attention-based GNN model to learn the
+relationships and predict the future behaviors of each variable
+for detecting anomalies in MTS data by temporal deviation.
+Reconstruction-based methods reconstructs the original
+data in a latent space and detects anomalies based on reconstruction errors. For example, Park et al. [21] proposed an
+LSTM-based Variational Autoencoder (LSTM-VAE) to project
+the temporal dependencies and reconstruct data distributions.
+Li et al. [22] combined the Generative Adversarial Network
+(GAN) and LSTM-RNN models to learn latent interactions.
+CAE-AD [23] introduced the multi-grained contrastive AE
+scheme to learn dynamic behaviors of time and frequency
+domains. Different from the AE-based methods, it can be further divided into the graph-based and attention-based models.
+For instance, Shi et al. [24] adopted a Graph Convolutional
+Network (GCN) method to capture the temporal correlations
+between different variables by an LSTM-based reconstruction.
+In addiction, He et al. [25] presented a variate associated
+domain adaptation method based on the GDN model to alleviate the cross-domain distribution shift. As for attention-based
+models, Bai et al. [26] designed a dual attention Transformer
+scheme to capture the temporal relevancies from global and
+local patterns. Ma et al. [27] designed a multi-patch Transformer structure, which can model the contextual patterns of
+both inter-patch and intra-patch view via contrastive learning.
+Besides, Lin et al. [28] developed a hierarchical context
+representation learning method to extract the spatial-temporal
+relations and generate robust multi-scale representations. Qiu
+et al. [29] presented a unified detection benchmark, which
+integrates deep learning models on multiple domains.
+However, they ignore the multiview interactions of comprehensive spatial-temporal dependencies. In contrast, we are
+committed to fully learn spatial-temporal representations from
+interactive contents and dynamic relations in a unified manner.
+III. P RELIMINARIES
+A. Problem Formulation and Notations
+The MTS data generated from Industrial Control Networks
+can be defined as T = {x1 , x2 , · · · , xN }, which is a sequence
+of consecutive observations with length N collected at equalspaced time samples. Generally, the ICS platforms involve
+multiple sensors, and each time series can contain a variety
+of signal features from different devices. Given a set of time
+T
+series metadata TT = {xt }t=1 ∈ RM ×T , where T is the
+sequence length of TT and M is the total number of variables.
+
+1007
+
+TABLE I
+S UMMARY OF THE M AIN N OTATIONS
+
+
+xt = x1t , x2t , · · · , xM
+∈ RM is an M -dimensional vector,
+t
+which indicates the observation with M variable values at time
+point t. Considering the dependence of a data point t at a time
+sample, we use the sliding windows of set value w to obtain a
+fixed-length input, denoted as Xt = {xt−w+1 , · · · , xt−1 , xt }.
+For each t < w, we use replication padding manner at the end
+of window Xt to ensure that the length of each window is
+w. The original long-range sequence TT is transformed into a
+sub-sequence set as X = {X1 , X2 , · · · , XNs }, and each slice
+is taken as training inputs, where Ns is the number of subsets.
+Definition 1 (MTS Anomaly Detection): Given a training
+set Xtrain ∈ RM ×T and a testing set Xtest ∈ RM ×T̂ , the goal
+of anomaly
+ detection is to predict an anomaly outputs vector
+ytest = y1 , y2 , · · · , yT̂ ∈ RT̂ , where yt denotes the anomaly
+label of each data point t. Here, for an unseen observation xt ,
+we can use a binary label yt ∈ {0, 1} to determine whether the
+t-th time stamp is anomalous or not, where yt = 1 indicates
+the data point is an anomaly, and yt = 0 otherwise. Due to the
+scarcity of anomaly labels in ICS data, the MTS-AD is usually
+regarded an unsupervised task, and we adopt the training set
+without ground-truth labels for unsupervised learning.
+Definition 2 (MTS Anomaly Diagnosis): Given the above
+training and testing sets, anomaly diagnosis is a qualitative
+analysis of each dimension based on the detected results.
+To analyze the severity of anomaly in each anomalous time
+period,
+we need to produce the diagnostic outputs Ytest =
+
+M
+y1 , y2 , · · · , yT̂ ∈ RM ×T̂ , where yt ∈ {0, 1} represents
+which specific modes of the t-th time stamp are anomalous.
+In this work, we aim to tackle unsupervised MTS anomaly
+detection with an automatic encoder-decoder model P, which
+is capable of fully leveraging the complex spatial-temporal
+clues to generate the reconstructed time series as follows:
+X̂t = P(Xt |Θ) = φd {φe (Xt ; Θe ) ; Θd } ,
+
+(1)
+
+where X̂t denotes the reconstructed outputs, and Θ refers to
+the set of to-be-learned model parameters. Meanwhile, our
+unsupervised basic model P combines an encoding network
+φe and a decoding network φd parameterized by Θe and Θd .
+Table I summarizes the descriptions of the main notations.
+B. Time Series Data Preprocessing
+In real-world industrial scenarios, the collected data is often
+interfered by some noise due to extreme events. Considering
+
+1008
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+diverse noise data, we choose a common data preprocessing
+process with reference to previous works [7], [30] for fair.
+1) Data Normalization: To enable our model against noise
+to be robust, we initially normalize the time-series data, both in
+the training and testing phases. Formally, the specific process
+of data normalization can be formulated as follows:
+x̃t ←
+
+xt − min(T )
+,
+max(T ) − min(T ) + 
+
+(2)
+
+where min(T ) and max(T ) are the minimum and maximum
+vectors in the original time series T , respectively. In addition,
+ denotes the small constant vector introduced to prevent the
+zero-division operation. Notably, we normalize the entire input
+data to get it within the range of [0, 1).
+2) Handling Noisy Data: Inspired by randomly adding the
+Gaussian noise for data augmentation [31], we also use the
+same noise, which is conformed to multi-type time-series data.
+To simulate the interference effect of actual noisy data on
+model generality, we then add the Gaussian white noise with
+a Signal-to-Noise Ratio (SNR) of 50 dB, which can ensure
+the presence of noise and overall signal high quality within
+the typical SNR range of [45, 55] dB. Accordingly, to improve
+the robustness and generalization of our model, we process the
+standardized data with the appropriate noise interference and
+convert it into the sliding time-series windows as follows:
+PN
+(
+(x̃t )2
+SNR (dB) = 10 log10 Pi=1
+N
+2 ,
+i=1 (t )
+(3)
+t
+xt = x̃t + 100 ,
+where x̃t and t denote the signal and noise vectors, respectively. N is the total number of samples in the MTS data.
+IV. P ROPOSED M ETHODOLOGY
+A. Overall Framework
+To jointly learn the spatial-temporal dependencies of contents and correlations, we aim to develop the spatial-temporal
+interactive encoding and local-global contrastive decoding
+structure. The architecture of MSTIA-Net scheme is illustrated
+in Fig. 2, which involves the following reasoning modules:
+• Multiview Feature Extraction: It obtains the local and
+global temporal features of time-series data using two
+types of independent temporal convolutional structures.
+• Spatial-Temporal Interactions Aggregation: It initially
+learns the content-oriented relevant interactions between
+spatial and temporal dependency embeddings based on a
+parallel self-attention Transformer structure, and further
+aggregates the spatial-temporal content-aware representations through a low-rank interaction fusion manner.
+• Spatial-Temporal Correlations Learning: It leverages
+multiple spatial-temporal GAT blocks to adaptively capture dynamic correlations among time and variable series
+for the spatial-temporal relation-aware representations.
+• Dual Attention-Enhanced Contrastive Reconstruction:
+It refines the local-branch and global-branch results via
+cross-attention mechanism, and then adds the contrastive
+learning strategy as an auxiliary means to generate the
+cross-aware fusion embeddings for reconstructed outputs.
+
+B. Multiview Feature Extraction
+To characterize multi-scale temporal patterns of time-series
+data from diverse perspectives, we exploit the dual structures
+of Temporal Convolutional Network (TCN) [32] to extract the
+local and global temporal features. This module includes two
+types of TCNs, i.e., causal convolutions as local extractor and
+dilated convolutions as global extractor. Notably, we construct
+a skip-layer connection to return the outputs of local branch.
+The two main principles of TCN model are to maintain the
+length of the outputs generated by network equal to the inputs,
+and to prevent information leakage from the past to the future.
+To ensure the above two points, the TCN employs the 1D fully
+convolutional network with regularization operations and pads
+the input tensor with zeros. Specifically, for each input of MST
+sub-sequence Xt ∈ RM ×w , the basic function of single-layer
+temporal convolution Fkr (t) can be defined as follows:
+(
+Xrt = Weight-Norm(Conv1Drk,step (Wcr , Xr−1
+) + brc ),
+t
+Fkr (t) = Dropout(LeakyReLU(Xrt )), r ∈ {1, · · · , R},
+(4)
+where Xrt is the hidden temporal feature of the r-th layer, and
+Conv1Drk,step denotes 1-dimensional convolution operation
+with the kernel size of k and the convolution step of step = 1.
+Wcr and brc are the learnable weight matrix and bias term.
+Besides, LeakyReLU (·) denotes the LeakyReLU activation
+function, and R is the number of hidden TCN layers.
+1) Local Feature Encoder: Benefiting from the potential of
+short-term time-series forecast, we adopt causal convolutions
+with each hidden layers of the same length and the zero
+padding of length (k − 1) to learn the local temporal trends.
+Formally, the local temporal feature ZLoc
+extracted via the
+t
+causal convolutional network can be expressed as follows:
+FkrC (t) = (xt ∗ f )(t) =
+
+kX
+C −1
+
+f (i) · x(t − i),
+
+(5)
+
+i=0
+
+where * stands for the convolution operation, f (i) represents
+the i-th filter, and kC is the size of causal convolution kernel.
+2) Global Feature Encoder: For high-level temporal feature
+of long-range sequence as global detection, we apply dilated
+convolutions to expand the receptive field of each layer and
+maintain the encoding causality without increasing model
+complexity. To enhance global feature integration, we design a
+feedback mechanism via skip-layer connections to re-transmit
+the local reconstructed outputs predefined as x̂Loc
+t , which can
+be regarded as implicit clues of inputs xt . Formally, we can
+obtain the global temporal feature ZGlob
+as follows:
+t
+FkrD (t) = ((xt ⊕ x̂loc
+t ) ∗d f )(t) =
+
+kX
+D −1
+
+f (i) · x(t−d · i),
+
+i=0
+
+(6)
+where d is the dilation factor, ⊕ denotes the element-wise addition operation, and kD is the filter size of dilated convolutions.
+In particular, d determines the previous index, and is equivalent
+to the fixed step length for skipping between two adjacent
+filter taps. It corresponds to the j-th power of 2, denoted as
+d = 1, 2, 4, · · · , 2j . Generally, we set the size of receptive field
+
+CUI et al.: MULTIVIEW SPATIAL–TEMPORAL INTERACTION ATTENTION-BASED MTS-AD
+
+1009
+
+Fig. 2. Overview of MSTIA-Net contains four key modules: (a) Multiview feature extraction, (b) Spatial-temporal interactions aggregation, (c) Spatial-temporal
+correlations learning, and (d) Dual Attention-enhanced contrastive reconstruction.
+
+Fig. 3. Illustration of spatial-temporal parallel-attention mechanism, containing (a) Temporal Self-attention transformer and (b) Spatial self-attention
+transformer architectures.
+
+p to the input length n and the kernel size to k, and solve the
+number of layers r required for its complete coverage. Under
+the above conditions, solution process is defined as follows:
+p = 1 + r · (k − 1),
+
+r = d(n − 1)/(k − 1)e .
+
+(7)
+
+where d·e refers to the rounding up operation. The width of
+receptive field increases by d·(k−1) with each additional layer,
+and is based on the b-exponential expansion, where d = br−1 .
+For the brevity of this paper, we uniformly use Zft ∈ Rw×M
+to represent the multiview temporal features of Xt , where f ∈
+{Loc, Glob} denotes the local and global temporal features.
+C. Spatial-Temporal Interactions Aggregation
+Considering the fact that the MTS data depends on various
+relevant characteristics in the time-domain and space-domain,
+we present a spatial-temporal interactions aggregation module
+to simultaneously learn the time-oriented and space-oriented
+dependencies with a parallel-attention mechanism, and further
+combine these embeddings in a low-rank fusion manner.
+Similar to Transformer [33] model, the structure of spatialtemporal parallel-attention mechanism is illustrated in Fig. 3.
+
+Notably, given the temporal feature of inputs Zft ∈ Rw×M , the
+corresponding spatial feature in the spatial encoder can be first
+converted into its transposed matrix, denoted as Zfs ∈ RM ×w .
+To maintain the temporal position order of entire time-series
+data and enrich long-term coherent dependencies, we introduce
+the positional encoding operation, which is incorporated into
+the original sequence as an additional input. Concretely, the
+initial temporal embedding is an early combination of input
+Zft and positional embedding PE(t) as follows:
+
+
+
+pos
+
+PE
+=
+sin
+,
+
+(pos,2i)
+2i/dh
+10000
+
+
+
+pos
+(8)
+,
+PE
+=
+cos
+(pos,2i+1)
+2i/d
+h
+10000
+
+
+
+Z̃ft = Zft + PEpos (L{T,S} , dh ),
+where Z̃ft is the encoded input matrix, PEpos (·, dh ) ∈ Rw×M
+denotes the embedding matrix of position index in time-series,
+and L{T,S} corresponds to the input length of the temporal or
+spatial features. Besides, i and dh are the dimensions of input
+sub-sequences and the hidden layers in the PE encoding.
+1) Spatial-Temporal Self-Attention Transformer: The parallel attention mechanism contains two types of forms, and
+we take the temporal attention as an example. The Temporal
+Self-Attention Transformer is constructed to model the timedomain interactions using the Multi-Head Attention (MHA)
+structure, and each self-attention head is obtained as follows:
+
+
+
+T
+T KT
+Self-Attn (Z̃f ) = softmax Q√
+VT , h ∈ {1, · · · , H},
+h
+t
+dk
+
+f
+Q
+f
+K
+QT = Z̃t WT , KT = Z̃t WT , VT = Z̃ft WTV ,
+(9)
+where Self-Attnh (Z̃ft ) ∈ Rw×dmodel is the time-oriented dependency embedding of the h-th head, and H is the number of
+attention heads. softmax(·) is the Softmax activation function.
+WTQ ∈ RM ×dq , WTK ∈ RM ×dk , and WTV ∈ RM ×dv are the
+learnable projection matrices of the Queries, Keys, and Values,
+
+1010
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+respectively. In our case, dq , dk and dv denote the dimensions
+of corresponding projection, where dq = dk = dv = dmodel .
+By integrating multiple attention heads, the spatial-temporal
+parallel-attention mechanism can be formulated as follows:
+SpatTemp-Attn(Z̃ft ) = Multi-Head-Attn(Z̃ft )
+O
+= Concat(SA1 , · · · , SAh , · · · , SAH )WSA
+,
+
+(10)
+
+O
+where WSA
+∈ RH∗dmodel ×M is the projection matrix, SAh
+denotes the h-th head, and Concat(, ) is concatenation operation. The self-attention outputs are fed into the residual
+connection and position-wise Feed-Forward Network (FFN)
+as follows:
+(
+Hft = Layer-Norm(Spat&Temp − Attn(Z̃ft ) + Z̃ft ),
+Eft = Layer-Norm(Feed-Forward(Hft ) + Hft ),
+(11)
+
+where Eft ∈ Rw×M is the time-oriented dependency embedding, and Hft is the hidden temporal embedding. Furthermore,
+Feed-Forward(·) denotes the FFN with two Fully-Connected
+(FC) layers, expressed as FFN(x) = ReLU(xW1 + b1 )W2 +
+b2 , where ReLU(·) denotes the ReLU activation function.
+Layer-Norm(·) is layer normalization operation for outputs.
+In the above progress of Temporal Transformer, it targets to
+learn the temporal dependencies between multiple variables.
+As for the Spatial Transformer, the input feature Zfs ∈ RM ×w
+is transformed from a transposed form of Zft ∈ Rw×M , and
+we can also derive the space-oriented dependency embedding
+Efs ∈ RM ×w in this similar manner as shown in Fig. 3.
+2) Intermediary Feature-Level Fusion: Due to the heterogeneous contents of spatial-temporal information, we devote
+to exploring an intermediary feature-level aggregation strategy
+via uniformly integrating multiple types of the spatial-temporal
+cues in a common space. Low-Rank Bilinear Pooling (LRBP)
+[34] can explicitly model the higher-order interactions fusion
+between features and reduce computational complexity by
+means of low-rank constraints. Specifically, time-dependent
+embedding Eft and space-dependent embedding Efs are unified
+to obtain the dual-fused results, the content-aware process is
+implemented through the LRBP fusion manner as follows:
+h
+i
+Rft = PT tanh (UT Eft ) (VT Efs ) + B,
+(12)
+where Rft ∈ Rw×M is the spatial-temporal content-aware
+representation. U ∈ Rw×du and V ∈ RM ×dv are two lowrank matrices used to align the two types of the time-oriented
+and space-oriented embeddings. P ∈ Rdu ×w and B ∈ Rw×M
+are the learnable parameters of FC network with a hyperbolic
+activation function tanh(·). du and dv are the dimensions of
+factorized matrices, where du = dv is preset in our condition,
+and denotes the element-wise multiplication operation.
+D. Spatial-Temporal Correlations Learning
+Since there are dynamic associations between various time
+series, we coherently explore spatial-temporal correlations as
+context cues. Inspired by a GAT [35] structure based on the
+MHA mechanism, we construct a spatial-temporal correlations
+learning module with multiple stacked GAT blocks to capture
+deeper relevant dependencies in both space and time domains.
+
+1) Spatial Graph Attention Layer: In terms of the space
+dimension, the given inputs with M variables at time point t
+can be formulated as a spatial graph Gxt (Vs , Es ), where the
+variable set Vs ∈ RM ×w = {vm |m ∈ [1, M ]} is the node set
+and the set of spatial relation edges Es ∈ RM ×M reflects the
+interactive relation among different variables. In particular, we
+regard the reformulated matrix of spatial feature Zfs ∈ RM ×w
+as the initial node feature matrix, and each node is denoted
+as vi ∈ Rw in our case. Generally, for spatial GAT layer, the
+attention coefficient of each variable node can be produced via
+propagating interactive correlations from neighbors as follows:
+
+
+
+f
+f
+f
+T
+
+)
+,
+,
+v
+=
+LeakyReLU
+W
+·
+Concat(v
+e
+
+S
+j
+i
+ ij
+f
+(13)
+exp(eij )
+f
+
+,
+
+αij = P
+f
+k∈Ni exp(eik )
+f
+where αij
+is the correlative degree of the node i to j, WS ∈
+2w×1
+R
+is the learnable transformation matrix, and Ni denotes
+the set of neighbor nodes for node i in a spatial graph.
+Subsequently, to better aggregate the context cues of neighbor nodes through multi-level dynamic relations, we can
+adaptively update the outputs of each graph node by continuously stacking multiple spatial GAT layers as follows:
+
+
+
+K
+X
+X
+1
+k,l,f
+Sigmoid 
+gil,f =
+αij
+WSk,l,f vjl−1,f  ,
+K
+k=1
+
+j∈Ni
+
+(14)
+where gil,f ∈ Rw is the hidden contextual embedding of the
+l-th GAT layer, l ∈ {1, · · · , L}, and L is the total number of
+stacked GAT blocks. WSk,l,f ∈ Rw×w is the learnable weight
+matrix, Sigmoid(·) denotes the Sigmoid activation function,
+and K is the number of GAT attention heads. Consequently,
+we can obtain the space-domain contextual embedding matrix
+l,f T
+Gl,f
+= [g1l,f , · · · , gil,f , · · · , gM
+] ∈ RM ×w , which is
+s
+regarded as the inputs of the next sequential temporal graph
+layer in the same spatial-temporal GAT block.
+2) Temporal Graph Attention Layer: To adaptively capture
+temporal correlations across different time periods, we define a
+temporal graph as Gxs (Vt , Et ) with the set of time nodes Vt ∈
+Rw×M and the set of temporal relation edges Et ∈ Rw×w ,
+where each node {zt−w0 |w0 ∈ [0, w − 1]} corresponds to the
+input time sub-sequence Xt and Et represents the connections
+between different time nodes at the current moment t and only
+the other previous moments. Specifically, similar to the above
+update method of spatial graph, the function of temporal GAT
+network with multiple stacked GAT layers FTl emp GAT (t) can
+be formally performed as follows:
+f
+l,f
+l
+l,f T
+Gl,f
+t = FT emp GAT [αT WT (Gs ) ],
+
+(15)
+
+where Gl,f
+∈ Rw×M is the time-domain contextual embedt
+ding matrix of the l-th GAT layer. αTf and WTl,f ∈ RM ×M
+are the correlative degree and the learnable weight matrix
+of temporal GAT layer. To simplify the notation of spatialtemporal relation-aware representation with multi-layer GAT
+adaptive updating, we can use Gft ∈ Rw×M to represent the
+(L),f
+outputs Gt
+of the final GAT block.
+
+CUI et al.: MULTIVIEW SPATIAL–TEMPORAL INTERACTION ATTENTION-BASED MTS-AD
+
+1011
+
+for cross-view contrastive learning Lccl can be defined as
+follows:
+
+)
+) · vec(FGlob
+vec(FLoc
+
+j
+i
+Loc
+Glob
+
+
+sim(Fi , Fj ) = kvec(FLoc )kkvec(FGlob )k ,
+j 
+i
+(20)
+Loc
+Glob
+exp
+sim(F
+,
+F
+)/τ
+
+c
+i
+j
+
+
+,
+Lccl = − log PNb
+Loc , FGlob )/τ
+c
+j
+j=1 exp sim(Fi
+where sim(·, ·) is the cosine similarity function, vec(·) denotes
+the flattening operation, and τc is the temperature parameter.
+F. Training and Inference
+Fig. 4. Illustration of local-global cross-attention mechanism.
+
+E. Dual Attention-Enhanced Contrastive Reconstruction
+The content-aware and relation-aware information can sufficiently provide high-level spatial-temporal dependency clues,
+a dual attention-enhanced contrastive reconstruction module
+is developed to further ensure the comprehensive fusion representation and dual-stream reconstruction outputs from local
+and global perspectives, which is refined via the cross-attention
+mechanism and cross-view contrastive learning strategy.
+1) Local-Global Attention-Based Reconstruction: To fully
+aggregate two types of perceptual representations, we devise a
+local-global cross-attention mechanism, which is illustrated in
+Fig. 4. The cross-attention block is used to learn cross-aware
+interactions, and each co-attention head is obtained as follows:
+
+
+
+T
+R KG
+Cross-Attn (Rf ; Gf ) = softmax Q√
+VG ,
+h
+t
+t
+dk
+
+Q
+K
+V
+QR = Rft WR
+, KG = Gft WG
+, VG = Gft WG
+,
+(16)
+where Cross-Attnh (Rft ; Gft ) ∈ Rw×dmodel is the cross-aware
+Q
+K
+∈ RM ×dk ,
+embedding of the h-th head. WR
+∈ RM ×dq , WG
+M ×dv
+V
+are the learnable projection matrices.
+and WG ∈ R
+
+The overall goal is to train our MSTIA-Net model with the
+reconstruction error and cross-view contrastive terms, and then
+infer anomaly score based on the predicted and actual values.
+1) Objective Function: Given the input time series Xt , the
+model produces dual reconstructed results X̂Loc
+and X̂Loc
+t
+t . We
+introduce the Mean Square Error (MSE) between the predicted
+and ground-truth values of two streams in a certain proportion,
+and reconstruction loss function Lrec is formulated as follows:
+Lrec
+=
+
+1 X
+2
+Glob 2
+(λkXt − X̂Loc
+kF ),
+t kF + (1 − λ)kXt − X̂t
+|X |
+Xt ∈X
+
+(21)
+where λ ∈ (0, 1) is the hyper-parameter to control the weights
+of local and global flows, and k · kF indicates Frobenius norm.
+Accordingly, to jointly optimize the MSTIA-Net, we can
+present the total objective function Ltotal by combining the
+Eq. (20), Eq. (21), and regularization terms as follows:
+Ltotal = Lrec + µLccl + γkΘk22 ,
+
+(22)
+
+where µ and γ are the trade-off parameters to balance the
+contributions of different losses, and k · k2 denotes L2 -norm.
+2) Meta Learning: To alleviate the model underfitting on
+Consequently, we combine multiple co-attention heads, and
+the
+limited data of real-world scenarios, we utilize the Modellocal-global attention mechanism is described as follows:
+Agnostic Meta Learning (MAML) [36] method to perform
+LocGlob-Attn(Rft ; Gft ) = Multi-Head-Attn(Rft ; Gft )
+data enhancement. In each training phase, for the model P(Θ)
+with parameters Θ in each random batch task Ti , the total
+= Concat(CA1 , · · · , CAh , · · · , CAH )WO
+,
+(17)
+CA
+(
+gradient update of multiple tasks can be expressed as follows:
+f
+f
+f
+f
+Ct = Layer-Norm(Loc&Glob − Attn(Rt ; Gt ) + Rt ),
+
+0
+
+Θi = Θ − α∇Θ LTX
+Fft = Layer-Norm(Feed-Forward(Cft ) + Cft ),
+i (P(Θ))),
+(23)
+Θ
+=
+Θ
+−
+β∇
+LTi (P(Θ0i )),
+(18)
+Θ
+
+
+Ti ∼P(T )
+where Fft ∈ Rw×M is the cross-aware fusion representation.
+Ultimately, for multiview fusion representations, we employ where α is the learning rate, and β is the meta-step size. The
+the FFN with two linear layers through a residual connection detailed model training process is summarized in Algorithm 1.
+3) Anomaly Scoring: In the anomaly inference phase, each
+to generate the reconstructed outputs X̂ft ∈ RM ×w as follows:
+sample xt ∈ Xtest is input into a well-trained model. Formally,
+X̂ft = Sigmoid(Feed-Forward(Fft ) + Fft ),
+(19) anomaly score of the t-th time stamp can be defined as follows:
+
+where Sigmoid activation is utilized to generate outputs within
+the range of [0, 1] for matching the normalized input window.
+2) Cross-View Contrastive Learning: As an auxiliary
+supervised means, our contrastive learning aims to achieve
+cross-view alignment between local-global fusion representations, thereby maximizing the consistency of representations
+across multiple perspectives.
+Specifically, for the batch size of
+
+Nb
+Nb local-global pairs (FLoc
+, FGlob
+) i=1
+, the loss function
+i
+i
+
+M
+
+score(t) = kxt − x̂Glob
+k2 =
+t
+
+1 Xp m
+2
+(xt − x̂m
+t ) ,
+M m=1
+
+(24)
+
+where score(t) is the reconstruction error-based anomaly score
+at time point t. Since the local representation is regarded as an
+additional clue for the global representation, we only utilize
+the global outputs for anomaly scoring. The complete inference process of MSTIA-Net model is shown in Algorithm 2.
+
+1012
+
+Algorithm 1 The Training Procedure of MSTIA-Net
+
+Algorithm 2 The Testing Procedure of MSTIA-Net
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+TABLE II
+S TATISTICS OF S IX R EAL -W ORLD B ENCHMARK DATASETS
+
+structure to encode the local and global temporal features. For
+an input MTS sequence of shape (T, M ), the time complexity
+of local-global TCNs is O(T · R · Kmax · M ), where T is the
+length of time series, M is the number of variables, R denotes
+the number of TCN layers, and Kmax = max{kC , kD } is
+the maximum value of convolution kernels. In the interactions
+aggregation phase, single-view temporal feature is refined by
+spatial-temporal parallel-attention mechanism, resulting in the
+complexity of O(H ·(T 2 ·M +T ·M 2 )) per Transformer model,
+and the low-rank bilinear pooling strategy adds the complexity
+of O(D · (T + M ) + T · D2 ), where H is the number of
+attention heads, and D is the dimension of embedding. In the
+correlations learning phase, the relation-aware representation
+is captured by spatial-temporal GAT with the complexity of
+O(L · K · (|Vs | · T 2 + |Es | · T + |Vt | · M 2 + |Et | · M )), where L
+denotes the number of stacked GAT blocks, K is the number of
+GAT attention heads, |Vs | and |Vt | are the numbers of variables
+and time nodes, |Es | and |Et | are the numbers of spatial and
+temporal relation edges. In the contrastive reconstruction stage,
+the cross-aware representation is fused by dual cross-attention
+mechanism with the complexity of O(H · (T 2 · M + T · M 2 )).
+Therefore, the overall computational complexity of MSTIANet model is O(T · R · Kmax · M + H · (T 2 · M + T · M 2 ) + D ·
+(T +M )+T ·D2 +(L·K·(|Vs |·T 2 +|Es |·T +|Vt |·M 2 +|Et |·M )),
+which simplifies to O((L·K ·|Vs |+H ·M )·T 2 +(L·K ·|Vt |+
+H ·T )·M 2 +T ·D2 ). This highlights quadratic dependencies on
+T , M , and D due to attention mechanism and GAT structure.
+V. E XPERIMENTS
+A. Datasets
+
+The inference is to calculate the anomaly score for the inputs
+processed by the current sliding window, and identify the time
+point as abnormal label if its score exceeds a certain threshold.
+We apply the Peak Over Threshold (POT) [37] approach to
+automatically select anomaly threshold on the validation set.
+G. Computational Complexity Analysis
+To clearly assess our algorithm performance, we analyze the
+time complexity of MSTIA-Net based on the data flow. In multiview feature extraction stage, we adopt a dual-branch TCN
+
+To evaluate our proposed MSTIA-Net, we adopt six widelyused datasets for anomaly detection. Table II summarizes the
+statistics of benchmark datasets. The training set contains only
+normal data, and abnormal data are labeled in the testing set.
+1) MIT-BIH Supraventricular Arrhythmia Database (MBA)
+[38]: It is a popular large-scale dataset for ventricular arrhythmia research, derived from electrical signal recordings in 25
+selectively chosen partitions of four patients.
+2) Mars Science Laboratory (MSL) Dataset [17]: It is a
+collection of sensor and actuator data with 55 features using
+the Mars rover itself extracted from the abnormal events of
+monitoring systems. Notably, we use only the three non-trivial
+sequences (A4, C2 and T1) identified in the work [8].
+3) Soil Moisture Active Passive (SMAP) Dataset [17]:
+It is an expert-labeled database of satellite mission, which
+comprises the observation data with 25 dimensions.
+
+CUI et al.: MULTIVIEW SPATIAL–TEMPORAL INTERACTION ATTENTION-BASED MTS-AD
+
+4) Secure Water Treatment (SWaT) Dataset [39]: It is
+obtained from 51 senors in the water treatment plant operating
+for 11 consecutive days, including 7 days of normal operations
+and 4 days of abnormal conditions under attack scenarios.
+5) Water Distribution (WADI) dataset [40]: It is a 123dimensional sensor dataset collected from water distribution
+networks. Notably, we assign zero values to the missing values.
+6) Server Machine Dataset (SMD) [9]: It is a 5-week
+dataset provided by an Internet company, containing resource
+utilizations from a compute cluster. We utilize only the four
+non-trivial sequences (machine-1-1, 2-1, 3-2 and 3-7).
+In our experiments, we divided the training time-series data
+into the training set (80%) and validation set (20%). For a fair
+comparison, we used the same data preprocessing operations
+as described in preliminaries for all baseline methods.
+B. Evaluation Metrics
+1) Anomaly Detection: To measure the detection performance, we adopted the Precision (Prec), Recall (Rec),
+F1-Score (F1) and AUC value (the Area Under the ROC
+Curve) as our main evaluation metrics. For clarity, the values
+of Prec, Rec, and F1 are calculated as follows:
+TP
+2 × Prec × Rec
+TP
+, Rec =
+, F1 =
+,
+Prec =
+TP+FP
+TP+FN
+Prec+Rec
+(25)
+where TP, FP, and FN are the number of true positive, false
+positive, and false negative results, respectively. Besides, we
+also employed a common point-adjust [41] method to calculate
+evaluation metrics. To further verify model performance under
+limited scale dataset, we also measure the AUC and F1 scores
+with the same data splitting ratio by training all models with
+only 20% of the training data, termed as ACU∗ and F1∗ .
+2) Anomaly Diagnosis: To estimate the diagnosis performance, we adopted two main evaluation metrics: HitRate@P%
+and NDCG@P% [9]. The former is to determine how many
+ground-truth dimensions are hit in the top-ranked candidates
+via ranking the anomaly scores predicted by model, and the
+latter is to measure the Normalized Discounted Cumulative
+Gain (NDCG) considered with the same number of top
+predicted candidates. Notably, P% denotes the percentage of
+ground-truth dimensions for each timestamp.
+C. Implementation Details
+For the local feature encoder, we applied a causal convolutional network, where the number of hidden TCN layers is
+set as R = 3 and the kernel size is kC = 3. As for the global
+feature encoder, we employed a dilated convolutional network
+with three hidden layers, dilation factor d ∈ {1, 2, 4} and
+convolution kernel kD = 5. We used the grid-search strategy
+to determine the optimal values for all hyper-parameters. In the
+spatial-temporal self-attention and local-global cross-attention
+mechanism, we both adopted the MHA mechanism, where
+the number of attention heads is set as H = 3, and the
+dimension of projection space is set as dmodel = 64. In
+the correlations learning stage, we constructed the multi-level
+stacked spatial-temporal GAT blocks, where the numbers of
+layers and attention heads are set as L = 4 and K = 4. For all
+
+1013
+
+datasets, we set the size of sliding window as w = 10, and the
+dropout operation with a fixed value of 0.2. All experiments
+are implemented by PyTorch-1.11.0 framework and performed
+on the environment with a single NVIDIA RTX 3090 GPU.
+For the optimization of our proposed MSTIA-Net model,
+we employed the AdamW method as training optimizer with
+an initial learning rate of 1e−2 for SMAP and SWaT, 1e−3 for
+MBA and MSL, 1e−4 for WADI and SMD, the meta learning
+rate of α = 2e−2 , and the weight decay of γ = 1e−5 . The stepscheduler strategy is used to adjust the optimizer with step size
+of 5 and learning decay rate of 0.9. As for the loss function,
+the trade-off parameters of reconstruction loss in Eq. (21) and
+total objective function in Eq. (22) are experimentally set as
+λ = 0.7 and µ = 1e−3 , and the fixed parameter of cross-view
+contrastive learning in Eq. (20) is empirically set as τc = 0.5.
+In training process, we use an early-stopping criteria to prevent overfitting and the batch size is 256. For POT parameters,
+the coefficient is set as 1e−4 for all datasets, and low quantile
+is set as 7e−2 for SMAP, 1e−2 for MSL, and 1e−3 for others.
+D. Comparison With State-of-the-Art Methods
+To validate the effectiveness of our proposed MSTIA-Net
+scheme on the both anomaly detection and diagnosis tasks, we
+mainly compared our model with the following state-of-theart baselines, including the prediction-based, reconstructionbased, graph-based, and attention-based methods.
+• LSTM-NDT [17]: An LSTM-based network that interprets predictions with a dynamic error threshold strategy.
+• DAGMM [42]: An autoencoding method that combines
+the Deep AE and Gaussian Mixture Model to estimate the
+density of representations in the low-dimensional space.
+• OmniAnomaly [9]: A RNN-based model that uses the
+VAE and GRU to generate reconstruction probabilities.
+• MSCRED [19]: A ConvLSTM-based network that captures the temporal patterns and inter-sensor correlations
+from multi-scale signature matrices in different statuses.
+• MAD-GAN [22]: An LSTM-based method that integrates
+the GAN model to learn the temporal distributions using
+the prediction errors and discriminator loss.
+• USAD [43]: An autoencoding-based approach that
+employs two independent AEs and GAN model to
+enhance performance and stable with adversarial training
+strategy.
+• MTAD-GAT [7]: A graph-based framework that utilizes
+two parallel GATs to capture correlations between different timestamps and signals through multi-task learning.
+• CAE-M [31]: An autoencoding method that builds
+a convolutional AE and memory network with the
+attention-based BiLSTM method and an autoregressive
+model.
+• GDN [10]: A graph-based model that uses a GNN model
+to learn pairwise correlations between multiple sensors
+by graph attention mechanism and then detects anomalies
+according to the predicted deviations from node relations.
+• TranAD [44]: An attention-based network that incorporates Transformer with the adversarial training and
+self-conditioning process to improve the model stability.
+
+1014
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+TABLE III
+P ERFORMANCE C OMPARISON OF O UR MSTIA-N ET W ITH S TATE - OF - THE -A RT M ETHODS ON THE S IX C OMPLETE DATASET. T HE B EST R ESULTS OF
+AUC AND F1 S CORE A RE H IGHLIGHTED IN B OLD , W HILE S UBOPTIMAL R ESULTS A RE U NDERLINED
+
+• MUTANT [24]: A graph-based model that learns the correlations and each importance between variables via the
+temporal GCN and LSTM-based attention reconstruction.
+• DCdetector [45]: An attention-based model that designs
+dual attention contrastive representation learning scheme.
+• DTAAD [30]: An attention-based method that adopts dual
+TCN and Transformer models to capture the multi-scale
+temporal dependences with a meta-learning strategy.
+1) Analysis of Anomaly Detection: Table III shows the
+performance comparison of state-of-the-art methods on the
+six complete datasets. Notably, all baseline methods use the
+same data splits for a fair comparison. From these tables,
+we have the following observations: MSTIA-Net outperforms
+other baselines on most MTS datasets, which demonstrates
+the superiority of our method in effectively leveraging the
+spatial-temporal dependencies from multiview feature patterns.
+The prediction-based methods, i.e., LSTM-NDT and GDN
+obtain relatively poor results, which may be attributed to the
+inherent nature of prediction models in dealing with long-term
+sequences. Obviously, the reconstruction-based methods, i.e.,
+DAGMM, OmniAnomaly, MSCRED, MAD-GAN and USAD
+adopt the deep AE models and show a certain degree of
+performance gap. MSCRED gets satisfactory results compared
+to OmniAnomaly, which indicates the sufficiency of capturing
+the spatial-temporal patterns from multi-scale features. MADGAN and USAD achieve more promising results, reflecting the
+
+positive effect of generative adversarial leaning for temporal
+distributions. The graph-based methods, i.e., MTAD-GAT and
+MUTANT both perform relatively worse than our MSTIA-Net.
+One possible explanation is that they only focus on modeling
+spatial-temporal dependencies but ignore the potential multicue interactions. The attention-based methods, i.e., CAE-M,
+TranAD, DCdetector, and DTAAD gain competitive results,
+which confirms the advantage of modeling complete spatialtemporal dependencies through the Transformer structure.
+2) Analysis of Anomaly Diagnosis: Table IV provides the
+diagnosis performance comparison of other baseline methods
+on the SMD for the sake of brevity. As shown in the table,
+our MSTIA-Net model remains significantly superior to others,
+verifying that our model is highly capable of MTS anomaly
+diagnosis and the parallel-attention mechanism enables it more
+suitable for the inter-correlated anomalies. Specifically, this
+task aims to distinguish the abnormality from each dimension,
+and our proposed MSTIA-Net can effectively learn the spatialtemporal dependencies from local-global interactive patterns to
+accurately diagnose multi-dimensional anomalies.
+3) Analysis of Model Efficiency: We also further compared
+the model performance on the scale-restricted training sets and
+model computational cost. Table V shows the performance
+comparison under the data-constrained conditions, and implies
+that our model achieves the excellent results thanks to the
+meta-learning strategy. Fig. 5 illustrates the comparison results
+
+CUI et al.: MULTIVIEW SPATIAL–TEMPORAL INTERACTION ATTENTION-BASED MTS-AD
+
+1015
+
+TABLE IV
+
+TABLE V
+
+D IAGNOSIS P ERFORMANCE C OMPARISON OF O UR MSTIA-N ET W ITH
+BASELINE M ETHODS ON THE SMD
+
+P ERFORMANCE C OMPARISON OF O UR MSTIA-N ET W ITH BASELINE
+M ETHODS ON 20% OF THE T RAINING S ETS
+
+Fig. 5. Performance comparison of computational complexity and model
+convergence on the SMAP and SMD.
+
+• w/o STIA: We eliminated the influence of SpatialTemporal Interactions Aggregation (STIA) module without generating the content-aware representations.
+• w/o STCL: We eliminated the influence of SpatialTemporal Correlations Learning (STCL) module without
+generating the relation-aware representations.
+• w/o DACR: We disabled the impact of Dual Attentionenhanced Contrastive Reconstruction (DACR) without
+cross-attention mechanism and contrastive learning.
+• w/o Spatial / Temporal MSA: We disabled the influence
+of spatial or temporal self-attention Transformer by only
+using the single domain dependency embedding.
+• w/o LRBP: We eliminated the impact of LRBP fusion
+strategy via a direct concatenation manner.
+• w/o Spatial / Temporal GAT: We disabled the influence
+of spatial or temporal GAT layer by using the single
+domain contextual embedding.
+• w/o Callback: We removed the effect of local reconstruction outputs without a skip-layer feedback mechanism.
+
+of computational complexity and model convergence, and
+demonstrates the efficiency of our method against suboptimal
+baseline methods. From the figures, we can find that our
+MSTIA-Net gets an acceptable range of training and inference
+time consumption and moderate number of model parameters.
+Due to the multi-node interactions of graph networks, the
+graph-based methods typically have higher time complexity
+than the attention-based methods. Notably, our method also
+exhibits a faster convergence rate, achieving better performance and model stability in fewer training epochs.
+Overall, compared to the graph-based and attention-based
+methods, our significant strengths are that the MSTIA-Net can
+jointly learn spatial-temporal content-aware and relation-aware
+interactions in a multiview parallel-attention manner, thereby
+improving detection performance to varying degrees.
+
+E. Ablation Analysis
+To verify the contribution of each component in the MSTIANet model, we compared the performance of multiple ablation
+schemes by removing the relevant components as follows:
+• w/o Local / Global TCN: We removed the effect of local
+or global temporal features by using single view feature.
+
+Table VI shows the performance comparison of different
+ablation schemes, we can see that all variants consistently
+show inferior performance compared to overall MSTIA-Net
+model, which illustrates significant effectiveness of each component. In detail, the w/o Local or Global TCN performs
+worse than other schemes, demonstrating that modeling the
+multi-scale patterns of MTS data from multiview features can
+
+1016
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Fig. 6. Performance comparison with different values of parameters in our proposed MSTIA-Net on the MBA and SMD.
+TABLE VI
+P ERFORMANCE C OMPARISON OF D IFFERENT C OMPONENT
+C ONFIGURATIONS ON THE S IX DATASETS
+
+performance. The LRBP enhances interaction in the feature
+space to achieve refined encoding. MSTIA-Net achieves the
+best results, which can be attributed to the relevance of spatialtemporal patterns.
+F. Parameter Sensitivity Analysis
+
+effectively characterize temporal information. w/o STIA and
+w/o STCL both obtain unsatisfactory results, which implies the
+necessity of learning the content-oriented interactions based
+on parallel-attention mechanism and capturing the dynamic
+correlations via stacked GAT blocks. Notably, w/o DACR also
+gets poor performance due to the insufficient reconstruction
+means and missing auxiliary strategies for generating dualstream outputs. Similar to the w/o Spatial or Temporal MSA,
+the w/o Spatial or Temporal GAT obviously drops compared to
+MSTIA-Net. The main reason is that both temporal and spatial
+information have certain content and correlation dependencies,
+which are beneficial to jointly construct fusion embedding.
+Limited by the capability of early fusion and implicit clues
+mining, both w/o LRBP and w/o Callback show poor
+
+To investigate the influence of spatial-temporal and localglobal Transformer, we considered changing the number of
+attention heads (i.e., H) by ranging H from 1 to 5. Fig. 6
+(a) shows the performance with different numbers of heads in
+the Transformer, we can find that the results show significant
+fluctuations and the best performance is gained when H = 3.
+Possible explanation is that MHA mechanism not only assists
+spatial-temporal contents interaction and multi-view patterns
+integration, but also causes a certain degree of negative noise.
+Furthermore, we explored the impact of spatial-temporal GAT
+blocks by varying the number of GAT layers (i.e., L) and MHA
+heads (i.e., K), which both range from 1 to 5. Fig. 6 (b) and (c)
+show the results with different numbers of layers and heads
+in the STCL module. From the figures, our model achieves
+the optimal performance when L = 4 and K = 4, while also
+exhibits strong volatility. This can be attributed to the fact that
+the dynamic correlations of spatial-temporal domains can be
+effectively captured as the number of GAT layers increases, but
+excessively deep GAT layers lead to certain negative effects.
+We also studied the influence of λ and µ in the total objective function Ltotal , which are used to control reconstruction
+and cross-view contrastive loss terms. Fig. 6 (d) and (e) show
+the results with different values of trade-off parameters λ and
+µ, which are selected for the optimal parameters via a heuristic
+grid-search strategy with the same interval ranging from
+{0.1, 0.3, 0.5, 0.7, 0.9} and {1er |r ∈ −4, · · · , 0}, respectively.
+From the figures, we can find that the best results are obtained
+when λ = 0.7 and µ = 1e−3 . Nevertheless, µ exhibits stronger
+sensitive properties than λ, indicating the significance of crossview contrastive learning strategy for the fusion embeddings.
+Fig. 6 (f) and (g) show the results with different values of
+batch size (i.e., B) and feature dimension (i.e., dmodel ) by ranging from {32, 64, 128, 256, 512} and {16, 32, 64, 128}. The
+optimal results are obtained when B = 256 and dmodel = 64,
+and our model exhibits a certain degree of stability. In addition,
+
+CUI et al.: MULTIVIEW SPATIAL–TEMPORAL INTERACTION ATTENTION-BASED MTS-AD
+
+1017
+
+Fig. 7. Parameter sensitivity studies of the sliding window size and training
+dataset ratio on the six benchmark datasets.
+
+we verify the impact of noise signals at different proportions
+on model performance in the simulated industrial scenarios.
+Fig. 6 (h) shows the performance with different SN R values
+of Gaussian white noise by ranging from {35, 40, 45, 50, 55}
+dB, and our model has a certain degree of robustness against
+interference from noisy data of varying intensity.
+We further explored the impact of sliding window size and
+training set ratio. Fig. 7 shows the averaged results with different values of w and Ratio (%), which are selected by varying
+from {5, 10, 15, 20, 25} and {20%, 40%, 60%, 80%, 100%}.
+The observations can be made: our model obtains the optimal
+results when w = 10, and the size of window has a certain
+impact on model performance. It may be that smaller windows
+are difficult to learn the global temporal feature, while local
+anomalies are hidden in the multiple points for larger windows.
+Obviously, under different conditions of limited-scale training
+set, our MSTIA-Net demonstrates strong model robustness.
+
+Fig. 8. Diagnosis visualization of anomaly prediction among multiple
+dimensions on the SMD testing set using MSTIA-Net and other ablation
+strategies. The time series with ground-truth values and reconstruction results
+are provided, and anomaly labels marked in purple are also presented for
+comparison. The predicted anomalous segments are highlighted in red.
+
+G. Case Study
+To intuitively understand the effect of MSTIA-Net model
+on anomaly detection, we conduct the following case analysis
+of our model and other schemes on the testing set of SMD.
+1) Anomaly Diagnosis Study: Fig. 8 illustrates the visualization of anomaly diagnosis on multiple dimensions of testing
+samples with the MSTIA-Net and ablation methods, where the
+latter two only use single-view temporal feature. As shown in
+the Fig. 8, we can find that MSTIA-Net performs well overall
+on the MTS-AD task, which is able to diagnose the anomalous
+sequences based on the predicted anomaly scores. There are
+the associated abnormal points between dimensions #0 and #2
+with relevant inter-relations, where anomalous behavior in one
+dimension may lead to a chain of events causing abnormalities
+in others. Similarly, the ablation schemes based on single-view
+features also exhibit specific detection effects in #3 and #4. It
+can be seen that the prediction results of local-global features
+are broadly consistent with anomaly labels, and discrepancy
+can be avoided by the point adjustment strategy. This validates
+that our model fully integrates the interactions of local-global
+temporal patterns, thus assisting in locating abnormal data.
+2) Multiview Interaction Study: We also explored the
+impacts of multiview temporal features and dual crossattention mechanism. Fig. 9 shows the T-SNE visualization
+of various temporal features. The MSTIA-Net with multiview
+feature obviously reduces the overlap between normal and
+abnormal sample embeddings. Both global and local temporal
+patterns also exhibit specific discriminability with clearer
+
+Fig. 9. T-SNE visualization of different temporal features before reconstruction learned by (a) multiview fusion, (b) only global-patterns, and (c) only
+local-patterns on the testing set of SMD. The dots with same color indicate
+the same label.
+
+Fig. 10. Cross-Attention visualization of (a) Local-Branch and (b) GlobalBranch attention matrices on the SMD. The coordinate axes represent the size
+of sliding window.
+
+boundaries, we can find that multiview fusion features enhance
+discriminative representations in complex distributions. Fig. 10
+shows the heatmap visualization of cross-attention matrix in
+the local and global perspectives, and implies that it has the
+ability to capture correlative interactions from different view
+features.
+
+1018
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+VI. C ONCLUSION AND F UTURE W ORK
+In this study, we focus on jointly model the spatial-temporal
+dependencies of time-series in the distributed ICS, and propose
+a novel MTS-AD approach called MSTIA-Net, which consists
+of a spatial-temporal interactive encoder and a dual-stream
+contrastive decoder. Specifically, the STIA module is presented
+to learn spatial-temporal dependencies by a parallel-attention
+mechanism and aggregate content-aware representations with
+a low-rank fusion manner. In addition, the STCL module is
+designed to adaptively capture dynamic correlations by stacked
+GAT blocks. Conclusively, the cross-aware fusion embedding
+is further enhanced for generating dual-stream outputs through
+the DACR module. Extensive experimental results verify the
+superiority of our model and the effectiveness of each module.
+In future work, we plan to exploit the powerful knowledge
+reasoning capability of Large Language Models (LLMs) to
+further explore more efficient solutions based on MSTIA-Net.
+Towards the demands of real industrial scenarios, our MSTIANet still has limitations in terms of high model complexity, so
+we will improve and deploy our model in a lightweight manner
+on the nuclear power industrial network for data management.
+R EFERENCES
+[1]
+
+B. Lampe and W. Meng, “Intrusion detection in the automotive domain:
+A comprehensive review,” IEEE Commun. Surveys Tuts., vol. 25, no. 4,
+pp. 2356–2426, 2023.
+[2] J. Li, Y.-A. Tan, X. Liu, W. Meng, and Y. Li, “Interpretable adversarial
+example detection via high-level concept activation vector,” Comput.
+Secur., vol. 150, Mar. 2025, Art. no. 104218.
+[3] S. Li, B. Li, B. Sun, and Y. Weng, “Towards visual-prompt temporal
+answer grounding in instructional video,” IEEE Trans. Pattern Anal.
+Mach. Intell., vol. 46, no. 12, pp. 8836–8853, Dec. 2024.
+[4] H. Yu, R. Xu, H. Zhang, Z. Yang, and H. Liu, “EV-FL: Efficient
+verifiable federated learning with weighted aggregation for industrial
+IoT networks,” IEEE/ACM Trans. Netw., vol. 32, no. 2, pp. 1723–1737,
+Apr. 2024.
+[5] J. Shi, M. Sha, and Z. Yang, “Distributed graph routing and scheduling
+for industrial wireless sensor-actuator networks,” IEEE/ACM Trans.
+Netw., vol. 27, no. 4, pp. 1669–1682, Aug. 2019.
+[6] T.-A. Nguyen et al., “Federated PCA on Grassmann manifold for
+IoT anomaly detection,” IEEE/ACM Trans. Netw., vol. 32, no. 5,
+pp. 4456–4471, Oct. 2024.
+[7] H. Zhao et al., “Multivariate time-series anomaly detection via graph
+attention network,” in Proc. IEEE Int. Conf. Data Mining (ICDM), Nov.
+2020, pp. 841–850.
+[8] T. Nakamura, M. Imamura, R. Mercer, and E. Keogh, “MERLIN:
+Parameter-free discovery of arbitrary length anomalies in massive time
+series archives,” in Proc. IEEE Int. Conf. Data Mining (ICDM), Nov.
+2020, pp. 1190–1195.
+[9] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+detection for multivariate time series through stochastic recurrent neural
+network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining, Jul. 2019, pp. 2828–2837.
+[10] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+in multivariate time series,” in Proc. AAAI Conf. Artif. Intell., 2021,
+vol. 35, no. 5, pp. 4027–4035.
+[11] S. Qin, L. Chen, Y. Luo, and G. Tao, “Multi-view graph contrastive
+learning for multivariate time series anomaly detection in IoT,” IEEE
+Internet Things J., vol. 10, no. 24, pp. 22401–22414, Dec. 2023.
+[12] C. Ding, S. Sun, and J. Zhao, “MST-GAT: A multimodal
+spatial–temporal graph attention network for time series anomaly
+detection,” Inf. Fusion, vol. 89, pp. 527–536, Jan. 2023.
+[13] H. Kang and P. Kang, “Transformer-based multivariate time series
+anomaly detection using inter-variable attention mechanism,” Knowl.Based Syst., vol. 290, Apr. 2024, Art. no. 111507.
+[14] Z. Li et al., “Multivariate time series anomaly detection and interpretation using hierarchical inter-metric and temporal embedding,” in Proc.
+27th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug. 2021,
+pp. 3220–3230.
+
+[15] X. Zhou, C. Dai, W. Wang, and T. Qiu, “Global–local association
+discrepancy for multivariate time series anomaly detection in IIoT,”
+IEEE Internet Things J., vol. 11, no. 7, pp. 11287–11297, Apr. 2024.
+[16] P. Qi, D. Li, and S.-K. Ng, “MAD-SGCN: Multivariate anomaly
+detection with self-learning graph convolutional networks,” in Proc. Int.
+Conf. Data Eng., Jul. 2022, pp. 1232–1244.
+[17] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Soderstrom, “Detecting spacecraft anomalies using LSTMs and nonparametric
+dynamic thresholding,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl.
+Discovery Data Mining, Jul. 2018, pp. 387–395.
+[18] X. Qiu et al., “TFB: Towards comprehensive and fair benchmarking of
+time series forecasting methods,” in Proc. VLDB Endow., vol. 17, 2024,
+pp. 2363–2377.
+[19] C. Zhang et al., “A deep neural network for unsupervised anomaly
+detection and diagnosis in multivariate time series data,” in Proc. AAAI
+Conf. Artif. Intell., 2019, vol. 33, pp. 1409–1416.
+[20] X. Qiu, X. Wu, Y. Lin, C. Guo, J. Hu, and B. Yang, “DUET: Dual
+clustering enhanced multivariate time series forecasting,” in Proc. 31st
+ACM SIGKDD Conf. Knowl. Discovery Data Mining V.1, Jul. 2025,
+pp. 1185–1196.
+[21] D. Park, Y. Hoshi, and C. C. Kemp, “A multimodal anomaly detector for
+robot-assisted feeding using an LSTM-based variational autoencoder,”
+IEEE Robot. Autom. Lett., vol. 3, no. 3, pp. 1544–1551, Jul. 2018.
+[22] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, and S.-K. Ng, “MAD-GAN:
+Multivariate anomaly detection for time series data with generative
+adversarial networks,” in Proc. Int. Conf. Artif. Neural Netw. (ICANN),
+2019, pp. 703–716.
+[23] H. Zhou, K. Yu, X. Zhang, G. Wu, and A. Yazidi, “Contrastive
+autoencoder for anomaly detection in multivariate time series,” Inf. Sci.,
+vol. 610, pp. 266–280, Sep. 2022.
+[24] Y. Shi, B. Wang, Y. Yu, X. Tang, C. Huang, and J. Dong, “Robust
+anomaly detection for multivariate time series through temporal GCNs
+and attention-based VAE,” Knowledge-Based Syst., vol. 275, Sep. 2023,
+Art. no. 110725.
+[25] Y. He et al., “Variate associated domain adaptation for unsupervised multivariate time series anomaly detection,” ACM Trans. Knowl. Discovery
+from Data, vol. 18, no. 8, pp. 1–24, Sep. 2024.
+[26] N. Bai, X. Wang, R. Han, Q. Wang, and Z. Liu, “PAFormer: Anomaly
+detection of time series with parallel-attention transformer,” IEEE Trans.
+Neural Netw. Learn. Syst., vol. 36, no. 2, pp. 3315–3328, Feb. 2025.
+[27] S. Ma, J. Nie, S. Guan, Z. He, and M. Gao, “MPFormer: Multipatch transformer for multivariate time-series anomaly detection
+with contrastive learning,” IEEE Internet Things J., vol. 11, no. 23,
+pp. 38221–38237, Dec. 2024.
+[28] C. Lin, B. Du, L. Sun, and L. Li, “Hierarchical context representation
+and self-adaptive thresholding for multivariate anomaly detection,” IEEE
+Trans. Knowl. Data Eng., vol. 36, no. 7, pp. 3139–3150, Jul. 2024.
+[29] X. Qiu et al., “TAB: Unified benchmarking of time series anomaly detection methods,” in Proc. VLDB Endow., vol. 18, 2025, pp. 2775–2789.
+[30] L.-R. Yu, Q.-H. Lu, and Y. Xue, “DTAAD: Dual TCN-attention networks
+for anomaly detection in multivariate time series data,” Knowl.-Based
+Syst., vol. 295, Jul. 2024, Art. no. 111849.
+[31] Y. Zhang, Y. Chen, J. Wang, and Z. Pan, “Unsupervised deep anomaly
+detection for multi-sensor time-series signals,” IEEE Trans. Knowl. Data
+Eng., vol. 35, no. 2, pp. 2118–2132, Feb. 2023.
+[32] C. Lea, M. D. Flynn, R. Vidal, A. Reiter, and G. D. Hager, “Temporal
+convolutional networks for action segmentation and detection,” in
+Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017,
+pp. 156–165.
+[33] K. Han, A. Xiao, E. Wu, J. Guo, C. Xu, and Y. Wang, “Transformer
+in transformer,” in Proc. Adv. Neural Inf. Process. Syst., 2021,
+pp. 15908–15919.
+[34] Z. Yu, J. Yu, J. Fan, and D. Tao, “Multi-modal factorized bilinear pooling
+with co-attention learning for visual question answering,” in Proc. IEEE
+Int. Conf. Comput. Vis. (ICCV), Oct. 2017, pp. 1839–1848.
+[35] X. Wang, X. He, Y. Cao, M. Liu, and T. Chua, “KGAT: Knowledge graph
+attention network for recommendation,” in Proc. 25th ACM SIGKDD
+Int. Conf. Knowl. Discovery Data Mining (KDD). Anchorage, AK, USA:
+ACM, Aug. 2019, pp. 950–958.
+[36] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for
+fast adaptation of deep networks,” in Proc. 34th Int. Conf. Mach. Learn.,
+vol. 70, Aug. 2017, pp. 1126–1135.
+[37] A. Siffer, P.-A. Fouque, A. Termier, and C. Largouet, “Anomaly detection in streams with extreme value theory,” in Proc. 23rd ACM SIGKDD
+Int. Conf. Knowl. Discovery Data Mining, Aug. 2017, pp. 1067–1075.
+
+CUI et al.: MULTIVIEW SPATIAL–TEMPORAL INTERACTION ATTENTION-BASED MTS-AD
+
+[38] G. B. Moody and R. G. Mark, “The impact of the MIT-BIH arrhythmia
+database,” IEEE Eng. Med. Biol. Mag., vol. 20, no. 3, pp. 45–50, Mar.
+2001.
+[39] A. P. Mathur and N. O. Tippenhauer, “SWaT: A water treatment testbed
+for research and training on ICS security,” in Proc. Int. Workshop CyberPhys. Syst. Smart Water Netw. (CySWater), Apr. 2016, pp. 31–36.
+[40] C. M. Ahmed, V. R. Palleti, and A. P. Mathur, “WADI: A water
+distribution testbed for research in the design of secure cyber physical
+systems,” in Proc. 3rd Int. Workshop Cyber-Physical Syst. Smart Water
+Netw., Apr. 2017, pp. 25–28.
+[41] H. Xu et al., “Unsupervised anomaly detection via variational autoencoder for seasonal KPIs in Web applications,” in Proc. World Wide
+Web Conf., 2018, pp. 187–196.
+[42] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsupervised anomaly detection,” in Proc. Int. Conf. Learn. Represent., 2018,
+pp. 1–19.
+[43] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+“USAD: UnSupervised anomaly detection on multivariate time series,”
+in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+Aug. 2020, pp. 3395–3404.
+[44] S. Tuli, G. Casale, and N. R. Jennings, “TranAD: Deep transformer
+networks for anomaly detection in multivariate time series data,” Proc.
+VLDB Endowment, vol. 15, no. 6, pp. 1201–1214, Feb. 2022.
+[45] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: Dual
+attention contrastive representation learning for time series anomaly
+detection,” in Proc. 29th ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining (KDD), 2023, pp. 3033–3045.
+Kai Cui received the B.S. degree from the School
+of Electrical Engineering, University of South China,
+Hengyang, China, in 2020, and the M.S. degree from
+the School of Electrical and Information Engineering, Tianjin University, Tianjin, China, in 2023. He is
+currently pursuing the Ph.D. degree with the School
+of Cyber Science and Engineering, Huazhong University of Science and Technology (HUST), Wuhan,
+China. His research interests include the industrial
+Internet of Things security, data and information
+content security, multimodal disinformation analysis,
+and social network security.
+
+Liangbin Gao received the B.S. and M.S. degrees
+from the Ira A. Fulton Schools of Engineering,
+Arizona State University, Tempe, AZ, USA, in 2021
+and 2022, respectively. He is currently pursuing the
+Ph.D. degree with the School of Cyber Science and
+Engineering, Huazhong University of Science and
+Technology (HUST), Wuhan, China. His research
+interests include the industrial Internet of Things
+security, video harmful content detection, multimodal disinformation analysis, and social network
+security.
+
+Xianjun Deng (Senior Member, IEEE) received the
+Ph.D. degree from the School of Electronic Information and Communications, Huazhong University
+of Science and Technology, Wuhan, China, in 2014.
+He is currently a Professor with the School of Cyber
+Science and Engineering, Huazhong University of
+Science and Technology. He has published more
+than 100 technical papers in international top journals and conferences. His current research interests
+include the industrial Internet of Things security
+and reliability, data and information content security,
+artificial intelligence (AI) security, and social network security. He received
+the IEEE TCSC Early Career Award and the IEEE SCSTC Middle Career
+Award.
+
+1019
+
+Shenghao Liu (Member, IEEE) received the B.S.
+and Ph.D. degrees from the School of Electronic
+Information and Communications, Huazhong University of Science and Technology (HUST), Wuhan,
+China, in 2016 and 2021, respectively. He is currently an Associate Professor with the School of
+Cyber Science and Engineering, HUST. His research
+interests include data and information content security, recommender systems, social network security,
+and deep learning and neural networks. He received
+the IEEE SCSTC Early Career Award.
+
+Lingzhi Yi received the B.S. and M.S. degrees in
+civil engineering and the Ph.D. degree in safety science and engineering from the University of South
+China, Hengyang, China, in 2005, 2008, and 2018,
+respectively. She is currently a Professor with the
+School of Information Engineering, Zhongnan University of Economics and Law, Wuhan, China. Her
+research interests include the artificial intelligence of
+things (AIoT), data and information content security,
+and coverage reliability in the IoT.
+
+Shibo He (Senior Member, IEEE) received the
+Ph.D. degree in control science and engineering
+from Zhejiang University, Hangzhou, in 2012. From
+November 2010 to November 2011, he was a
+Visiting Scholar with the University of Waterloo,
+Waterloo. He was an Associate Research Scientist
+and a Post-Doctoral Scholar with Arizona State
+University, Tempe, AZ, USA, from March 2014
+to May 2014 and from May 2012 to February
+2014, respectively. He is currently a Professor with
+Zhejiang University. His research interests include
+the IoT, crowdsensing, and big data analysis.
+
+Hongwei Lu received the B.Sc., M.Sc., and Ph.D.
+degrees from Huazhong University of Science and
+Technology (HUST), Wuhan, China. He is currently
+a Professor with the School of Cyber Science and
+Engineering, Huazhong University of Science and
+Technology. His research interests include security
+and privacy in ubiquitous computing and electronic
+commerce, with a focus on security protocol analysis, access control, and trust negotiation.
+PAPER_TEXT

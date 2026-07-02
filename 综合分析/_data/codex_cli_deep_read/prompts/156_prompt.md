@@ -1,0 +1,926 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [156] A Discrepancy Aware Framework for Robust Anomaly Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：156
+题名：A Discrepancy Aware Framework for Robust Anomaly Detection
+年份：2023
+DOI：10.1109/tii.2023.3318302
+来源：IEEE Transactions on Industrial Informatics
+PDF：paper/10.1109_TII.2023.3318302.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：其他AI安全与跨域异常检测
+相关性：中相关，分数 8
+已有代码状态：已下载；DAF -> source\DAF
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\156.txt
+- 原始字符数：47600
+- 本次发送字符数：47600
+- 是否截断：False
+
+代码包：
+- 仓库：DAF
+  - URL：https://github.com/caiyuxuan1120/DAF
+  - 状态：downloaded
+  - 本地目录：source\DAF
+  - 顶层结构：.python-version、README.md、data/、framework.png、logger/、losses/、model/、pytorch_msssim/、requirements.txt、test.py、test_DAF.sh、train.py、trainer/、utils/、warmup_scheduler/
+  - 主要语言：Python:20、Shell:1、JSON:1
+  - README 标题：DAF、Datasets、Install、Training、Evaluate、TODO List、Citation、DAF、Datasets、Install
+  - README 运行线索：pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 --extra-index-url https://download.pytorch.org/whl/cu113；pip install -r requirements.txt；python train.py --root_path '/YourMVTecPath' --source_path '/YourDTDPath' --batch_size 8 --lr 2e-4 --defect_cls bottle；bash test_DAF.sh；pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 --extra-index-url https://download.pytorch.org/whl/cu113；pip install -r requirements.txt；python train.py --root_path '/YourMVTecPath' --source_path '/YourDTDPath' --batch_size 8 --lr 2e-4 --defect_cls bottle；bash test_DAF.sh
+  - 关键文件：{"依赖环境": ["requirements.txt"], "推理/演示入口": ["warmup_scheduler/run.py"], "训练入口": ["train.py", "trainer/trainer.py"], "评估/测试入口": ["test.py", "test_DAF.sh", "utils/test_funcs.py"]}
+  - 数据集线索：MVTec、Smap、Tor、cert、dapt、mvtec、tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+3986
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+
+A Discrepancy Aware Framework for Robust
+Anomaly Detection
+Yuxuan Cai , Dingkang Liang , Graduate Student Member, IEEE, Dongliang Luo , Xinwei He ,
+Xin Yang , Member, IEEE, and Xiang Bai , Senior Member, IEEE
+
+Abstract—Defect detection is a critical research area in
+artificial intelligence. Recently, synthetic data-based selfsupervised learning has shown great potential on this task.
+Although many sophisticated synthesizing strategies exist,
+little research has been done to investigate the robustness
+of models when faced with different strategies. In this article, we focus on this issue and find that existing methods are highly sensitive to them. To alleviate this issue,
+we present a discrepancy aware framework (DAF), which
+demonstrates robust performance consistently with simple
+and cheap strategies across different anomaly detection
+benchmarks. We hypothesize that the high sensitivity to
+synthetic data of existing self-supervised methods arises
+from their heavy reliance on the visual appearance of synthetic data during decoding. In contrast, our method leverages an appearance-agnostic cue to guide the decoder in
+identifying defects, thereby alleviating its reliance on synthetic appearance. To this end, inspired by existing knowledge distillation methods, we employ a teacher-student network, which is trained based on synthesized outliers, to
+compute the discrepancy map as the cue. Extensive experiments on two challenging datasets prove the robustness
+of our method. Under the simple synthesis strategies, it
+outperforms existing methods by a large margin. Furthermore, it also achieves the state-of-the-art localization performance.
+Index Terms—Artificial intelligence, robustness, selfsupervised learning.
+
+Manuscript received 19 February 2023; revised 23 June 2023 and
+23 August 2023; accepted 13 September 2023. Date of publication 4
+October 2023; date of current version 23 February 2024. This work was
+supported in part by the Young Scientists Fund of the National Natural
+Science Foundation of China under Grant 62302188, and in part by the
+National Science Fund for Distinguished Young Scholars of China under
+Grant 62225603. Paper no. TII-23-0558. (Corresponding author: Xinwei
+He.)
+Yuxuan Cai, Dingkang Liang, and Xiang Bai are with the School of
+Artificial Intelligence and Automation, Huazhong University of Science
+and Technology, Wuhan 430074, China (e-mail: cyx_hust@hust.edu.cn;
+dkliang@hust.edu.cn; xbai@hust.edu.cn).
+Dongliang Luo and Xin Yang are with the School of Electronic
+Information and Communications, Huazhong University of Science
+and Technology, Wuhan 430074, China (e-mail: ldl@hust.edu.cn;
+xinyang2014@hust.edu.cn).
+Xinwei He is with the College of Informatics, Huazhong Agriculture
+University, Wuhan 430070, China (e-mail: xwhe@mail.hzau.edu.cn).
+Code is available at: https://github.com/caiyuxuan1120/DAF.
+Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TII.2023.3318302.
+Digital Object Identifier 10.1109/TII.2023.3318302
+
+I. INTRODUCTION
+MAGE anomaly detection plays an important role in many
+safety-critical areas, e.g., industrial manufacturing systems [1], [2], surveillance systems [3], and medical image analysis [4]. However, in these areas, acquiring sufficient high-quality
+anomaly images is generally difficult or even impossible. This
+limitation hinders the effectiveness of training deep-learning
+models through supervised methods. As a result, it has induced
+growing research interest [5], [6], [7] in exploring approaches
+that focus on training anomaly detection models solely on
+normal images. Nevertheless, the lack of anomaly data during
+training poses significant challenges in extracting discriminative
+features for unseen anomaly data during inference.
+Recently, some researchers have assumed that models trained
+on normal data may fail to reconstruct anomaly patterns, and
+have proposed identifying anomaly regions based on reconstruction failures. However, these reconstruction-based methods may
+be easily misled in practice because of the identical shortcut
+issue [8]. Another promising research direction is based on
+self-supervision [9], [10], [11]. Generally, the typical framework
+follows an encoder-decoder architecture (Fig. 2(a)). Normal
+data is first distorted to generate realistic and diverse outlier
+data. Subsequently, the framework is trained to differentiate
+normal and synthesized abnormal images. Such a strategy of
+exposing models to the synthesized outliers has demonstrated
+better empirical results, dominating current research in anomaly
+detection. The success of these models heavily relies on generating diverse and close-to-real anomaly images, and much effort
+has been endeavored to improve anomaly synthesis strategies.
+For instance, DRÆM [10] uses Perlin noise to generate irregular
+shapes, simulating the shape of real anomalies. NSA [11] integrates Poisson image editing [12] to eliminate discontinuous
+borders of anomalous patterns, making the anomalies more
+natural.
+Despite great success, few attempts have been made to
+study the robustness of current methods to different synthesis
+strategies. However, it has been noted [11] in the community
+that the decoder tends to overfit to the synthetic anomaly appearance during the training phase. As a result, the decision
+boundary tends to generalize poorly to real anomalies during
+inference. Moreover, the anomaly patterns generally show large
+variances across datasets. Therefore, the synthesis strategy customized for one dataset may not be well-suited to another. As
+shown in Fig. 1(b), a carefully-tuned synthesis strategy for
+
+I
+
+1551-3203 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+CAI et al.: DISCREPANCY AWARE FRAMEWORK FOR ROBUST ANOMALY DETECTION
+
+Fig. 1. (a) Detection performance comparison. (b) Real versus Synthetic images. (c) Localization performance under diverse synthetic
+strategies.
+
+3987
+
+an anomaly image, the teacher and the student will demonstrate
+discrepancy in every nonnormal region, while the segmentation
+probability map generated by the decoder will display a clear
+decision boundary for identifying anomalies.
+To the best of our knowledge, we are the first to investigate the
+robustness of current frameworks to different anomaly synthesis
+techniques. Compared with existing self-supervised methods,
+our method has the following desired properties. First, our
+framework incorporates the teacher-student network into the
+self-supervised paradigm, enhancing its capacity to produce
+discrepant features for anomaly regions. Second, our method
+encodes nonnormal regions derived from the discrepancy map
+rather than the nonnormal appearance. This approach reduces
+overfitting problems for the decoder during training, thus eliminating the heavy reliance on carefully-tuned anomaly synthesis techniques. As shown in Fig. 1(c), our method reaches
+strong performance even with a simple synthesis strategy. Besides, our method also achieves significant performance improvements over existing methods, surpassing them by a large
+margin in terms of localization capability on MVTecAD [13].
+It also achieves the state-of-the-art detection performance on
+DAGM [14].
+In summary, the main contributions of this article are as
+follows: 1) we introduce a simple and robust self-supervised
+framework named DAF for image anomaly detection and localization, which eliminates the practical need for the complicated tuning steps for synthesis; and 2) we propose to combine
+the teacher-student network with the self-supervised paradigm,
+which utilizes abundant synthesized anomaly images to learn
+the discrepancy features, alleviating the overfitting problem to
+the nonnormal appearance.
+II. RELATED WORK
+
+Fig. 2.
+
+Overview of existing self-supervised methods and ours.
+
+MVTecAD [13] generates unnatural synthetic data for
+DAGM [14], which may help explain the dramatic performance
+degradation of NSA [11] on DAGM (Fig. 1(a)). Besides, our
+preliminary experiments on two representative self-supervisionbased methods, i.e., NSA [11] and DRÆM [10], also indicate
+their high sensitivity to different synthesis strategies (Fig. 1(c)).
+To tackle the above issues, in this article, we present a discrepancy aware framework (DAF) [Fig. 2(b)], which can maintain
+strong performance consistently across various existing anomaly
+synthesis techniques. The core idea behind our method is releasing the decoder from the constraint of the synthetic anomaly
+appearance. To accomplish this, we leverage the appearanceagnostic discrepancy map derived from a teacher-student network as guidance for the decoder. Since the discrepancy map
+is computed based on extracted high-level features, it is less
+affected by the synthetic appearance. Moreover, by processing
+the discrepancy directly, the decoder will focus on discriminating the normal and nonnormal regions. During inference, given
+
+Early approaches [15], [16] to image anomaly detection typically work by first extracting the feature descriptors or statistical
+information and then, calculating the anomaly scores.
+Recently, with remarkable progress in deep learning, image
+anomaly detection based on deep learning has become a dominant direction. Below, we mainly review the deep learningbased approaches, which can be roughly grouped into three
+categories: 1) reconstruction-based; 2) self-supervision-based;
+and 3) knowledge distillation-based approaches.
+A. Reconstruction-Based Approaches
+These approaches [17], [18] assume that anomalies are difficult to be reconstructed by models trained only on normal
+images. Thus, the anomaly regions can be spotted by examining
+regions with larger reconstruction errors. In these methods, autoencoders are frequently adopted as reconstruction models. For
+instance, Baur et al. [19] introduced deep spatial autoencoding
+architectures, which were trained by a pixel-wise reconstruction
+loss and an adversarial loss to improve the construction quality.
+Besides, generative adversarial networks [20], [21] are also
+attractive models for reconstructing the input image. However,
+the assumption behind the reconstruction methods might not
+
+3988
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+
+TABLE I
+SYMBOL DESCRIPTION
+
+always be valid, as neural networks sometimes generalize to
+anomalies well and yield good reconstruction results.
+B. Self Supervision-Based Approaches
+Driven by the success of self-supervised learning in visual representation learning [22], [23], approaches under this paradigm
+have emerged rapidly and advanced the state-of-the-art. For
+instance, [24] trains an autoencoder to reconstruct the masked
+image to the original one first, and then uses the reconstruction error as the anomaly score. Different from [24], which
+constructs masks on images, SSPCAB [25] applies the idea of
+masking in convolution blocks. In this way, it can be integrated
+into any CNN architecture.
+Recent works [10], [11] proved that anomaly detection benefits from synthesized defects that are close to real ones. These
+works carefully design synthetic data strategies, then train segmentation models such as U-Net [26] for pixel-level prediction,
+ensuring that the segmentation model can learn a suitable decision boundary between normal and abnormal regions. However,
+the segmentation model is likely to be ineffective when there
+is a significant difference between the distribution of synthetic
+defects and actual ones. Even though DRÆM [10] tries to
+prevent the model from overfitting to the synthetic data by
+introducing anomaly-free reconstruction, as mentioned above,
+the reconstruction model will also fail to restore the anomalous
+region to normal one during inference if the anomaly manifold
+is unseen during training. Moreover, SPD [27] shifts its focus
+to self-supervised pretraining. Specifically, it proposes a novel
+augmentation strategy to encourage models to be locally sensitive, making the representations more suitable for the defect
+detection task.
+
+sensitivity of the reconstruction model to anomalies, enabling
+effective identification and classification of abnormal patterns.
+However, all the aforementioned knowledge distillationbased methods assume training models using clean data. Recently, SoftPatch [30] has addressed the scenario where the training data is contaminated with real defect data. They proposed a
+patch-level denoising strategy to improve the robustness of the
+model.
+Different from previous knowledge distillation-based methods, our method incorporates the teacher-student model into a
+synthetic data-based self-supervised framework. It is designed
+to distinguish between normal patterns and abnormal ones.
+This objective enables our method to establish a discriminative decision boundary. Furthermore, unlike previous arts that
+focus on using the discrepancy for defect localization, our
+method leverages the teacher-student model to incorporate an
+appearance-agnostic cue into the self-supervised framework,
+thereby improving its robustness to synthetic anomaly images.
+
+C. Knowledge Distillation-Based Approaches
+This group of approaches detects anomalies by reflecting
+images to different representation spaces, assuming that the representations of normal regions in different spaces are identical
+while those of abnormal regions will differ. The teacher-student
+framework is adopted to achieve the different-space reflection.
+For instance, prior works [5], [6], [28] train the student network
+to mimic the pre-trained teacher on normal images. As a result,
+the student and the teacher tend to hold consistency on normal
+regions and display discrepancies on anomalies. In the STAD [5]
+framework, multiple students with the same structure are trained
+to regress the teacher network. The discrepancies between the
+teacher and students, along with the variance of students, are
+adopted to represent the anomaly score. MKDAD [28] and
+STPM [6] proposed distilling features from various layers of
+the teacher to the corresponding layers of the student. RDAD [7]
+utilized reverse distillation to prohibit comparable anomaly representations in different feature spaces. SSMRKD [29] further
+incorporated reverse distillation with the masking strategy and
+constructs a two-stage framework. In the first stage, it uses reverse distillation to construct a reconstruction network, enabling
+the student model to accurately reconstruct normal patterns. In
+the second stage, the masking strategy is applied to enhance the
+
+III. OUR METHOD
+A. Overview
+The framework consists of a teacher-student network, a segmentation decoder, and a series of auxiliary heads, as shown in
+Fig. 3. For clarity and ease of reference, Table I summarizes
+essential symbols and their corresponding descriptions utilized
+in the following text. Given an input image, the teacher-student
+network (T -S) is expected to demonstrate discrepancies on
+nonnormal regions. To accomplish this, the student is trained
+to maintain consistency with the teacher on normal regions
+during training. The discrepancy maps yielded by the T -S
+are subsequently fed into the segmentation head, along with
+representations of synthesized data, to localize anomalies. Finally, auxiliary heads are employed to further supervise the
+student model to derive more discriminative representations for
+anomalous regions.
+B. Teacher-Student Network
+In practice, anomalies occur in various, sometimes unconstrained formats. Some can be easily discerned by their distinct
+textures or colors from normal patterns, while others may require
+
+CAI et al.: DISCREPANCY AWARE FRAMEWORK FOR ROBUST ANOMALY DETECTION
+
+Fig. 3.
+
+3989
+
+(a) Overview of our method. (b) The fusion process.
+
+contextual information to be localized. Therefore, both low-level
+and high-level representations are vital for accurately localizing anomalies in such challenging scenarios. In our design,
+the teacher-student framework follows a multiscale knowledge
+distillation paradigm to represent anomalies at different levels
+of granularity.
+Following existing knowledge distillation methods [5], [6],
+we adopt a powerful convolutional neural network, pre-trained
+on a large-scale dataset ImageNet [31], to initialize the teacher.
+As for the student, we choose the same architecture, but initialize
+it randomly. Note that any off-the-shelf pretrained networks
+could be adopted. Here, we use ResNet18 [32], following
+STPM [6]. For the multiscale knowledge distillation, we transfer
+the knowledge of three-stage features from the teacher to the
+student. The distillation process is elaborated as follows.
+1) Training Strategy: Given an anomaly-free training set
+D = {Im }N
+m=1 , we first distort each Im ∈ D to obtain the synthetic anomaly image Pm using predefined anomaly strategies.
+The teacher network takes the anomaly-free image Im as input,
+while the student network takes the corresponding synthetic
+anomaly image Pm as input. During training, we keep the teacher
+frozen and train the student to mimic the responses of the teacher
+on normal regions.
+Following previous works [6], [28], cosine similarity is applied to measure the consistency between the representations of
+the teacher and the student. The cosine similarity loss is defined
+as
+
+Lcos =
+
+3
+
+
+⎛
+⎝1 −
+
+i=1
+
+1
+Nneg
+
+
+Ωneg
+
+⎞
+Vti · Vsi ⎠
+||Vti || · ||Vsi ||
+
+(1)
+
+where i denotes the ith stage. Ωneg represents the normal regions
+and Nneg indicates the total number of pixels in normal regions.
+Vti and Vsi represent the feature vectors yielded by the teacher
+and the student, respectively.
+However, the cosine similarity only constrains each feature
+vector in isolation, disregarding local contextual information.
+Thus, we further introduce structural similarity (SSIM ) loss
+for compensation by considering neighboring vectors. The structural similarity is formulated as
+SSIM (p, q) =
+
+(2μp μq + λ1 )(2σpq + λ2 )
+(μ2p + μ2q + λ1 )(σp2 + σq2 + λ2 )
+
+(2)
+
+where μ and σ represent the mean and variance, and λ1 and λ2
+are adopted for numerical stability.1 The SSIM is in the range
+of [–1,1]. In particular, when p is the same as q, SSIM (p, q)
+is equal to 1. Based on SSIM , the structural similarity loss is
+formulated as follows:
+LSSIM =
+
+3
+
+
+(1 − SSIM (fti , fsi )) ,
+
+(3)
+
+i=1
+
+where fti and fsi represent the ith stage feature maps of the
+teacher and the student, respectively. Note that we only constrain
+fti and fsi on normal regions. Finally, we combine the above
+two losses to form the training objective of the teacher-student
+framework
+Lkd = Lcos + LSSIM
+
+(4)
+
+2) Discrepancy Map: Compared with existing knowledge
+distillation methods [6], [7], rather than directly taking the
+discrepancy map as the anomaly localization result, we serve
+it as an additional robust cue for the segmentation task. Taken
+a test image Im ∈ RH×W ×3 as input, where H and W denote
+the height and width, respectively. The teacher and the student
+output corresponding feature representations fti and fsi . Then,
+the discrepancy between fti and fsi is measured by cosine and
+structural similarities. Specifically, the discrepancy map at location (x, y) is defined as
+i
+M(x,y)
+=2−
+
+Vti · Vsi
+− SSIM (fti , fsi )(x,y)
+||Vti || · ||Vsi ||
+
+(5)
+
+where SSIM (·)(x,y) represents the structural similarity of the
+feature patches centered at (x, y), and the patch size is set to
+11 × 11 in practice. The discrepancy map of each layer M i is
+then upsampled to H × W and summed together as the final
+discrepancy map M ∈ RH×W .
+Feeding the discrepancy map into the following segmentation
+head brings two desirable merits. On the one hand, the segmentation head can yield more discriminative representations
+under this strong guidance, thereby localizing anomalies more
+accurately. On the other hand, the discrepancy map releases the
+segmentation head from being only constrained by the synthetic
+appearance, enhancing its perception of unseen anomalies. Such
+a strategy can greatly boost the robustness of our method under various simple and cheap synthesis strategies, making our
+method easy to use in practice.
+1 λ , λ are empirically set to 1e-1, 9e-4 to avoid division by zero, respectively.
+1 2
+
+3990
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+
+C. Segmentation Head
+
+The final anomaly score map is formulated as
+
+The segmentation head aims at identifying the anomaly regions. As illustrated in Fig. 3(a), the segmentation head takes
+both the discrepancy map (i.e., M ) and anomaly features (i.e.,
+{fsi }3i=1 ) as the input, where the discrepancy map indicates the
+location of anomalies while the anomaly features carry both
+low-level textual and high-level semantic information.
+The detailed fusion process of the discrepancy map and
+anomaly features is shown in Fig. 3(b). The segmentation module processes them progressively in a coarse-to-fine manner via
+the three blocks, which is formulated as
+c fs3 )
+c fs2 )
+c fs1 )
+MS = Seg3 (Seg2 (Seg1 (M 
+
+(6)
+
+where Seg1 , Seg2 , Seg3 denote the three blocks of the segmenc denotes concatenation.
+tation module, and 
+We apply the binary cross-entropy (BCE) loss as the segmentation loss. Note that the anomaly (positive) pixels are much
+fewer than normal (negative) pixels. To overcome the imbalance
+of positive and negative pixels, a hard negative mining strategy is
+adopted. Mathematically, the segmentation loss Lseg is defined
+as
+
+yi logxi + (1 − yi )log(1 − xi )
+(7)
+Lseg =
+i∈Sub
+
+where Sub is a subset sampled from MS , xi is the predicted
+anomaly probability in Sub, and yi is its corresponding label.
+D. Auxiliary Supervision
+In the teacher-student framework, the student is trained to
+regress representations of the teacher on normal regions. However, there is no constraint for the student on anomalous regions,
+which hinders the student from providing discriminative representations for the segmentation head Seg.
+To enhance the discrimination capability of the student on
+anomalous regions, we add an auxiliary head after each student
+layer, as shown in Fig. 3(b). Each head Auxi takes its corresponding anomaly feature fsi as input, and outputs the probability map of the corresponding size. The training strategy is the
+same as that of the segmentation head, meaning that we adopt
+the BCE loss and hard mining strategy as the discriminative loss
+Ldis . Note that auxiliary heads are discarded during inference,
+incurring no extra cost.
+E. Anomaly Localization
+During inference, we localize the anomalous regions from
+two aspects. First, since the segmentation head Seg is trained to
+distinguish the normal distribution from that of the abnormal, the
+segmentation probability map is expected to localize anomalies
+accurately. Second, the discrepancy map between the teacher and
+the student can also localize anomalies, since the student is likely
+to demonstrate inconsistency with the teacher on anomalous
+patterns. Since the discrepancy map is irrelevant to the synthetic
+appearance, combining it and the segmentation probability map
+desires both accurate and robust properties.
+In summary, the anomalies are located by incorporating the
+discrepancy map M with the segmentation probability map MS .
+
+MScore = G(M + λMS ).
+
+(8)
+
+The G means Gaussian smooth. λ is set to 3 in practice.
+IV. EXPERIMENTS
+A. Experimental Setup
+1) Datasets: MVTecAD [13] contains 5354 images, including ten object categories and five texture categories. The training
+set has 3629 normal images, while the testing set contains
+1725 images, covering both normal and anomaly images. Pixel
+annotations are provided for the anomaly areas.
+DAGM [14] includes ten categories of texture images. The
+training set contains anomaly images, and weak annotations
+are provided for anomalous regions. During training, we only
+use normal images. Since the annotations are coarse, we do not
+evaluate the localization performance on DAGM.
+2) Model Training: All the images are resized to 256 × 256.
+The weights of the teacher are frozen, and the remaining components are trained using AdamW for 1200 epochs. The batch size
+is set to 8, and the weight decay is set to 1e−5. The learning rate
+is gradually increased to 2e−4 in 50 epochs and multiplied by
+0.2 after 700 and 1000 epochs. We first follow the synthetic
+strategies in DRÆM [10] and NSA [11] and then, adopt a
+series of simple synthetic approaches to further investigate the
+effectiveness of our method. Note that DRÆM [10] introduces
+an external dataset (i.e., DTD [33]) for synthesizing.
+3) Evaluation Metrics: Following Salehi et al. [28], we evaluate the performance of anomaly detection and localization
+by image-level AUC (I-AUC) and pixel-level AUC (P-AUC),
+respectively. Meanwhile, following [13] and [10], we also
+focus on the Per-Region-Overlap (P-PRO) and mean Average
+Precision (P-mAP) to further evaluate localization accuracy.
+4) Baselines: We mainly compare DAF with knowledge
+distillation-based methods and self-supervision-based methods.
+For ease of description, we abbreviate these two methods in the
+following tables as KD and Self-Sup, respectively, and are as
+follows.
+1) Knowledge distillation-based methods: STAD [5], STPM
+[6], MKDAD [28], RDAD [7]: These methods compare
+activations of the teacher and student, where features of
+anomaly regions are distinct.
+2) Self-supervision-based methods: CutPaste [9], DRÆM
+[10], NSA [11]: These methods introduce extra supervision through synthetic anomalies to help proxy tasks
+such as segmentation.
+
+B. Evaluation on MVTecAD Using Complicated
+Strategies
+1) Quantitative Analysis: Table II reports the detection and
+localization performance on the MVTecAD [13] dataset2 . In our
+method, the image-level score is acquired by the mean of the top
+50 values of the anomaly score map MScore .
+2 ∗ represents the reproduced result using the official code. † denotes the
+reproduced results using the unofficial code.
+
+CAI et al.: DISCREPANCY AWARE FRAMEWORK FOR ROBUST ANOMALY DETECTION
+
+3991
+
+TABLE II
+PERFORMANCE COMPARISON ON MVTECAD
+
+method. Both DRÆM and our method are trained using the
+DRA strategy. It can be observed that RDAD can roughly
+localize anomalies, but the localization areas tend to be larger
+than the ground truth (Row 3, Columns 2,4,5,6). DRÆM can
+sometimes deliver clear decisions for normal and abnormal areas
+(Row 4, Column 5), but it also fails in some cases (Row 4,
+Columns 1–4). The last row suggests that our method achieves
+the most accurate localization, performing well across various
+anomalies and closely matching the ground truth.
+
+C. Evaluation on MVTecAD Using Simple Strategies
+
+Fig. 4.
+
+Visualization of localization results.
+
+Compared with knowledge distillation methods, our method
+achieves a comparable result of 97.6% I-AUC with RDAD [7]
+on the detection task. In terms of the localization task, benefiting
+from the discriminative capacity of the segmentation head Seg,
+our approach surpasses RDAD by 1.1% P-AUC and 14.0%
+P-mAP. Compared with self-supervised methods, while using
+the synthesis strategy of N SAB , we exceed NSA [11] by 1.5%
+I-AUC and 7.3% P-mAP, respectively. Furthermore, compared
+with DRÆM [10], our method achieves significant improvements of 13.0% I-AUC and 20.1% P-mAP. Notably, when using
+the synthesis strategy of DRA, our detection performance is
+slightly lower than DRÆM [10] by 0.4%. However, our localization performance exceeds it by 0.8% P-AUC. Please note that
+the computation complexity (FLOPS), the model size (#param),
+and the FPS of DRÆM are much higher than ours. When training
+with synthetic data, the supervised method TSDD [34] obtains
+relatively poor performance, indicating that the distribution gap
+with real anomalies may hurt its generalization.
+2) Qualitative Analysis: Fig. 4 shows localization results
+of the existing state-of-the-art knowledge distillation method
+RDAD [7], the self-supervised method DRÆM [10], and our
+
+Simple Texture means that the textures of the synthetic anomalies are random colors, rather than natural textures sampled from
+the DTD dataset [33]. Simple Shape indicates that the shapes
+of synthetic anomalies are rectangles, in contrast to irregular
+shapes. Simple Texture-Shape replaces shapes and textures with
+rectangles and randomly sampled colors.
+1) Quantitative Analysis: Table III reports the results. Under
+the Simple Texture strategy, it can be observed that our method
+achieves competitive results of 97.8% P-AUC, 91.9% P-PRO
+and 62.2% P-mAP, while DRÆM [10] and NSA [11] perform
+relatively lower. Specifically, compared with DRÆM, we bring
+5.2% (97.8% vs. 92.6%) P-AUC and 5.7% (62.2% vs. 56.5%)
+P-mAP gains, and outperform NSA by 13.4% P-AUC and 19.3%
+P-mAP. Similarly, compared with these two prior arts, we also
+achieve significant improvements under the Simple Texture and
+Simple Texture-Shape strategies. These results demonstrate the
+superior robustness of our framework.
+2) Discussions: NSA [11] carefully designs a synthesis
+strategy to simulate natural images. Since the optimization
+process is only influenced by the anomalous appearance, the
+model is likely to overfit to the synthetic anomalies. Hence, it
+can perform well if the real anomalies are similar to the synthetic
+ones. However, it is challenging to localize anomalies when there
+is a distribution discrepancy between them. DRÆM [10] attempts to solve the overfitting issue by jointly using the synthetic
+anomaly data and anomaly-free reconstruction. However, the
+reconstruction model also suffers from the overfitting problem,
+failing to restore anomalies when unseen anomalies occur. Our
+method benefits from the discrepancy map, which inherently
+
+3992
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+
+TABLE III
+LOCALIZATION PERFORMANCE COMPARISON UNDER SIMPLE AND CHEAP SYNTHESIS STRATEGIES
+
+TABLE IV
+DETECTION PERFORMANCE ON DAGM [14] UNDER DIFFERENT SYNTHESIS STRATEGIES
+
+indicates the location of anomaly regions, providing strong evidence for the segmentation head. This alleviates its dependence
+on the synthetic appearance. Moreover, the supplement of the
+discrepancy map can further promote robustness.
+D. Evaluation on DAGM
+Table IV shows the detection performance on DAGM [14].
+The two knowledge distillation methods RDAD [7] and
+STPM [6] achieve comparable performance (90.2% versus
+90.7%). When training with DRA, the self-supervised methods
+DRÆM [10] and NSA [11] outperform knowledge distillation
+methods by a large margin. Our method obtains the state-ofthe-art performance of 99.2%. We assume that DRA can synthesize anomalies that match real ones during training, helping
+
+the self-supervised methods to yield clear decision boundaries
+to classify the normal and abnormal regions. However, these
+methods demonstrate unsatisfactory results when the synthetic
+strategies are simpler, e.g., Simple Texture and Simple Shape.
+In contrast, our method demonstrates strong robustness to these
+synthesis strategies. The improvement is thanks to the discrepancy map, which reveals the location of anomalies, releasing
+the segmentation task from the constraint of the anomaly appearance. Additionally, the supplement of the discrepancy map
+during inference has further enhanced robustness.
+E. Ablation Study
+For simplicity and fairness, we conduct all the ablation studies
+on MVTecAD [13].
+
+CAI et al.: DISCREPANCY AWARE FRAMEWORK FOR ROBUST ANOMALY DETECTION
+
+TABLE V
+ABLATION STUDY ON THE EFFECTIVENESS OF EACH COMPONENT
+
+3993
+
+TABLE VII
+IMPACT OF THE DISCREPANCY MAP M ON SEGMENTATION
+
+TABLE VI
+ABLATION STUDY ON THE DISCREPANCY MAP
+TABLE VIII
+ABLATION STUDY ON THE HYPERPARAMETER UNDER DRA STRATEGY
+
+TABLE IX
+COMPARISON WITH THE MODEL ENSEMBLE
+
+1) Effectiveness of Different Components: Table V displays
+the impacts of different components. Only T -S indicates that
+only the teacher-student framework remains, and only the discrepancy map is employed for evaluation. We also only keep
+the student and the segmentation head to build a segmentation
+network (Only Seg). To demonstrate the effectiveness of the
+auxiliary heads, we remove them from the pipeline (W/O Aux).
+Compared with only Seg, only T -S shows its advantage in
+P-AUC and P-PRO. In contrast, only Seg brings higher P-mAP.
+W/O Aux brings gains in both detection and localization. By
+incorporating the auxiliary heads during training (Ours), we
+achieve the best localization performance. This observation
+indicates that the auxiliary heads promote the student to yield
+more discriminative representations for anomalies.
+2) Effectiveness of the Discrepancy Map: We further conduct several settings to prove that the discrepancy map M is
+a useful supplement to the segmentation probability map MS .
+Table VI shows that with M , we have observed 2.6% P-AUC,
+14.6% P-PRO, and 1.4% P-mAP improvements under the DRA
+strategy. It can also be observed that the combination of the
+discrepancy map M and the segmentation probability map MS
+brings significant increases in both detection and localization
+performance under the simple strategies.
+3) Influence of the Discrepancy Map on Segmentation: To
+investigate the influence of the discrepancy map on the segmentation task, we remove it from the input of the segmentation
+head Seg. As shown in Table VII, the performance suffers
+from degradation when the discrepancy map is not incorporated.
+For instance, under the Simple Texture strategy, the detection
+performance drops from 97.5% to 96.5%, while the localization
+P-mAP reduces by 2.1%. We hypothesize that our improvements
+lie in the discrepancy map, which provides an effective cue for
+the segmentation task. This alleviates the segmentation head
+from the limitation of the synthetic appearance, thereby enhancing its capacity to identify previously unseen anomalies.
+
+4) Influence of the Hyperparameter in the Synthesis Strategy: Following DRÆM [10], we evaluate how the hyperparameter β impacts the performance of our method. The result is
+reported in Table VIII, where DTD and Perlin noise are utilized
+to simulate the appearance and shape of anomalies in the DRA
+strategy. β controls the opacity in blending. Compared with
+DRÆM, our method is more robust on β. We keep the same
+P-mAP as DRÆM, but show advantages in I-AUC (97.6% versus
+97.4%) and P-AUC (97.8% versus 95.0%) when training via
+strategy DRA without β.
+5) Model Ensemble versus End-to-End: Table IX reports the
+performance of the model ensemble (Ensem.). Here we train the
+teacher-student (T -S), and a segmentation model with auxiliary
+heads alone, then add the discrepancy and the segmentation
+probability map for evaluation. Compared with Ensem., we
+achieve improvements in both anomaly detection and localization. The result suggests that with the guidance of the discrepancy map, our end-to-end framework could distinguish normal
+and abnormal regions more accurately.
+6) Influence of Initialization for the Student: Table X studies
+the impact of parameter initialization on the student S. As
+shown, the student initialized randomly performs better, indicating that pre-trained parameters hinder S from yielding disparate
+representations from the teacher on anomalies. We assume that
+the discrepancy map derived from T -S provides only limited cue
+for the segmentation head Seg in this case, resulting in reduced
+robustness of Seg.
+
+3994
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+
+TABLE X
+IMPACT OF INITIALIZATION FOR THE STUDENT
+
+TABLE XI
+ABLATION STUDY ON THE LOSSES IN THE T-S FRAMEWORK
+
+7) Influence of the Distillation Loss: Table XI shows the
+effectiveness of the SSIM loss. Since the cosine similarity loss
+solely distills knowledge at each position in isolation, we introduce SSIM loss to consider neighboring vectors. The study
+reveals the effectiveness of the SSIM loss. DAF achieves the
+best results when the cosine similarity and SSIM are adopted
+simultaneously.
+8) Limitations: While synthesized anomalies boost performance, the training time increases due to the computationally expensive synthesizing steps. Although adopting simple and cheap
+ones accelerates the process, it is still slower than unsupervised
+methods that are solely trained on normal images.
+9) Future Work: In future work, investigating lightweight
+architectures and developing real-time approaches will be important for industrial applications. Moreover, integrating the rich
+knowledge derived from large models such as CLIP [35] into our
+method will be helpful for further enhancing the generalization
+capacity.
+
+V. CONCLUSION
+In this article, we have observed that the existing selfsupervised methods are susceptible to the quality of synthetic
+data. To improve the robustness of the prior arts, we have
+proposed a simple yet effective framework, named DAF. DAF
+introduces the teacher-student model to yield the discrepancy
+map and serves it as an additional cue that reveals the location of anomalies to the segmentation decoder, alleviating the
+decoder’s reliance on the appearance of synthetic data. Meanwhile, the complement of the discrepancy map for segmentation
+contributes significantly to robustness as well. Extensive experiments have shown that DAF surpasses previous self-supervised
+methods significantly when faced with simple synthetic strategies in anomaly detection and localization, demonstrating its
+excellent robustness.
+
+REFERENCES
+[1] X. Ni, Z. Ma, J. Liu, B. Shi, and H. Liu, “Attention network for rail
+surface defect detection via consistency of intersection-over-union(IoU)guided center-point estimation,” IEEE Trans. Ind. Inform., vol. 18, no. 3,
+pp. 1694–1705, Mar. 2022.
+[2] D. Carrera, F. Manganini, G. Boracchi, and E. Lanzarone, “Defect detection in SEM images of nanofibrous materials,” IEEE Trans. Ind. Inform.,
+vol. 13, no. 2, pp. 551–561, Apr. 2017.
+[3] D. Gong et al., “Memorizing normality to detect anomaly: Memoryaugmented deep autoencoder for unsupervised anomaly detection,” in
+Proc. IEEE/CVF Int. Conf. Comput. Vis., 2019, pp. 1705–1714.
+[4] Y. Cai, H. Chen, X. Yang, Y. Zhou, and K. Cheng, “Dual-distribution
+discrepancy for anomaly detection in chest X-rays,” in Proc. Med. Image
+Comput. Comput. Assist. Interv., 2022, pp. 584–593.
+[5] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed
+students: Student-teacher anomaly detection with discriminative latent
+embeddings,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2020,
+pp. 4183–4192.
+[6] G. Wang, S. Han, E. Ding, and D. Huang, “Student-teacher feature pyramid
+matching for anomaly detection,” in Proc. Brit. Mach. Vis. Conf., 2021,
+pp. 1–14.
+[7] H. Deng and X. Li, “Anomaly detection via reverse distillation from oneclass embedding,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.,
+2022, pp. 9737–9746.
+[8] Z. You et al., “A unified model for multi-class anomaly detection,” in Proc.
+Neural Inf. Process. Syst., 2022, pp. 4571–4584.
+[9] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “Cutpaste: Self-supervised
+learning for anomaly detection and localization,” in Proc. IEEE Conf.
+Comput. Vis. Pattern Recognit., 2021, pp. 9664–9674.
+[10] V. Zavrtanik, M. Kristan, and D. Skocaj, “Draem - A discriminatively
+trained reconstruction embedding for surface anomaly detection,” in Proc.
+IEEE/CVF Int. Conf. Comput. Vis., 2021, pp. 8330–8339.
+[11] H. M. Schlüter, J. Tan, B. Hou, and B. Kainz, “Natural synthetic anomalies
+for self-supervised anomaly detection and localization,” in Proc. IEEE Eur.
+Conf. Comput. Vis., 2022, pp. 474–489.
+[12] P. Pérez, M. Gangnet, and A. Blake, “Poisson image editing,” in ACM
+SIGGRAPH Papers, 2003, pp. 313–318.
+[13] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTEC ad–A
+comprehensive real-world dataset for unsupervised anomaly detection,” in
+Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2019, pp. 9592–9600.
+[14] M. Wieler and T. Hahn, “Weakly supervised learning for industrial optical inspection,” 2007. Accessed: Jan. 10, 2023. [Online].
+Available: https://hci.iwr.uni-heidelberg.de/content/weakly-supervisedlearning-industrial-optical-inspection
+[15] Ž. Hocenski, S. Vasilic, and V. Hocenski, “Improved canny edge detector
+in ceramic tiles defect detection,” in Proc. IEEE 32nd Annu. Conf. Ind.
+Electron., 2006, pp. 3328–3331.
+[16] W.-C. Li and D. Ming Tsai, “Defect inspection in low-contrast LCD images
+using hough transform-based nonstationary line detection,” IEEE Trans.
+Ind. Inform., vol. 7, pp. 136–147, 2011.
+[17] W. Liu et al., “Towards visually explaining variational autoencoders,” in
+Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2020, pp. 8642–8651.
+[18] S. Venkataramanan, K.-C. Peng, R. V. Singh, and A. Mahalanobis, “Attention guided anomaly localization in images,” in Proc. IEEE Eur. Conf.
+Comput. Vis., 2020, pp. 485–503.
+[19] C. Baur, B. Wiestler, S. Albarqouni, and N. Navab, “Deep autoencoding
+models for unsupervised anomaly segmentation in brain MR images,” in
+Proc. Int. MICCAI Brainlesion Workshop, 2018, pp. 161–169.
+[20] H. Yang, Q. Zhou, K. Song, and Z. Yin, “An anomaly feature-editing-based
+adversarial network for texture defect visual inspection,” IEEE Trans. Ind.
+Informat., vol. 17, no. 3, pp. 2220–2230, Mar. 2021.
+[21] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and U. SchmidtErfurth, “F-ANOGAN: Fast unsupervised anomaly detection with generative adversarial networks,” Med. Image Anal., vol. 54, pp. 30–44,
+2019.
+[22] K. He, X. Chen, S. Xie, Y. Li, P. Doll’ar, and R. B. Girshick, “Masked
+autoencoders are scalable vision learners,” in Proc. IEEE Conf. Comput.
+Vis. Pattern Recognit., 2021, pp. 15979–15988.
+[23] K. He, H. Fan, Y. Wu, S. Xie, and R. B. Girshick, “Momentum contrast for
+unsupervised visual representation learning,” in Proc. IEEE Conf. Comput.
+Vis. Pattern Recognit., 2019, pp. 9726–9735.
+[24] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting for visual anomaly detection,” Pattern Recognit., vol. 112, 2021,
+Art. no. 107706.
+
+CAI et al.: DISCREPANCY AWARE FRAMEWORK FOR ROBUST ANOMALY DETECTION
+
+[25] N. Ristea et al., “Self-supervised predictive convolutional attentive block
+for anomaly detection,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2022, pp. 13566–13576.
+[26] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional networks
+for biomedical image segmentation,” in Proc. Med. Image Comput. Comput. Assist. Interv., 2015, pp. 234–241.
+[27] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spot-the-difference
+self-supervised pre-training for anomaly detection and segmentation,” in
+Proc. IEEE Eur. Conf. Comput. Vis., 2022, pp. 392–408.
+[28] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee,
+“Multiresolution knowledge distillation for anomaly detection,” in Proc.
+IEEE Conf. Comput. Vis. Pattern Recognit., 2021, pp. 14902–14912.
+[29] G. Tong, Q. Li, and Y. Song, “Two-stage reverse knowledge distillation
+incorporated and self-supervised masking strategy for industrial anomaly
+detection,” Knowl.-Based Syst., vol. 273, 2023, Art. no. 110611.
+[30] X. Jiang et al., “Softpatch: Unsupervised anomaly detection with noisy
+data,” in Proc. Neural Inf. Process. Syst., 2022, pp. 15433–15445.
+[31] J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and L. Fei-Fei, “ImageNet:
+A large-scale hierarchical image database,” in Proc. IEEE Conf. Comput.
+Vis. Pattern Recognit., 2009, pp. 248–255.
+[32] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2016,
+pp. 770–778.
+[33] M. Cimpoi, S. Maji, I. Kokkinos, S. Mohamed, and A. Vedaldi, “Describing textures in the wild,” in Proc. IEEE Conf. Comput. Vis. Pattern
+Recognit., 2014, pp. 3606–3613.
+[34] J. Božič, D. Tabernik, and D. Skočaj, “End-to-end training of a two-stage
+neural network for defect detection,” in Proc. Int. Conf. Pattern Recognit.,
+2021, pp. 5619–5626.
+[35] A. Radford et al., “Learning transferable visual models from natural language supervision,” in Proc. Int. Conf. Mach. Learn., 2021, pp. 8748–8763.
+
+Yuxuan Cai received the M.S. degree in electronics information, in 2022, from the School
+of Electronic Information and Communications,
+Huazhong University of Science and Technology (HUST), Wuhan, China, where she is currently working toward the Ph.D. degree in artificial intelligence with the School of Artificial
+Intelligence and Automation.
+Her research interests include visual anomaly
+detection.
+
+Dingkang Liang (Graduate Student Member,
+IEEE) is currently working toward the Ph.D. degree in artificial intelligence with the School of
+Artificial Intelligence and Automation, Huazhong
+University of Science and Technology, Wuhan,
+China.
+He has served as a Reviewer for several top
+journals and conferences such as IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, IEEE TRANSACTIONS ON IMAGE PROCESSING, Conference on Computer Vision and
+Pattern Recognition (CVPR), International Conference on Computer
+Vision (ICCV), and European Conference on Computer Vision (ECCV).
+His research interests include computer vision.
+
+Dongliang Luo received the B.S. degree in
+electronics and information engineering, in
+2020, from the Huazhong University of Science
+and Technology (HUST), Wuhan, China, where
+he is currently working toward the Ph.D. degree
+in information and communication engineering
+with the School of Electronic Information and
+Communications.
+His main research interests include anomaly
+detection and OCR.
+
+3995
+
+Xinwei He received the Ph.D. degree in electronics and information engineering from the
+Huazhong University of Science and Technology (HUST), Wuhan, China, in 2020.
+He is currently an Associate Professor with
+the College of Informatics, Huazhong Agricultural University, Wuhan. His research interests
+include visual anomaly detection, image captioning, 3-D shape analysis, and 3-D object detection.
+
+Xin Yang (Member, IEEE) received the Ph.D.
+degree from the Department of Electrical Computer Engineering, University of California,
+Santa Barbara (UCSB), CA, USA, 2013.
+She has authored or coauthored more than
+90 technical papers and holds 12 patents. She
+is currently a Professor with the Department
+of Electronic Information and Communications,
+Huazhong University of Science and Technology, Wuhan, China. Her research interests include medical image analysis and 3-D vision.
+Dr. Yang was the recipient of the National Natural Science Fund of
+China for Excellent Youth Scholar and China Society of Image and
+Graphics Qingyun Shi Female Scientist Award. She is an Associate Editor for IEEE TRANSACTIONS ON MEDICAL IMAGING and Multimedia System,
+an Area Chair of MICCAI’19–21 and ACM MM’18, and a PC member of
+CVPR, ECCV, and ICCV. She is also a Reviewer for top journals such as
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE,
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS,
+MedIA, etc.
+
+Xiang Bai (Senior Member, IEEE) received
+the B.S., M.S., and Ph.D. degrees from the
+Huazhong University of Science and Technology (HUST), Wuhan, China, in 2003, 2005, and
+2009, respectively, all in electronics and information engineering.
+He is currently a Professor with the School
+of Artificial Intelligence and Automation, HUST.
+He is also the Vice Director of the National
+Center of AntiCounterfeiting Technology, HUST.
+His research interests include object recognition, shape analysis, scene text recognition and intelligent systems. He
+is an Associate Editor for Pattern Analysis and Machine Intelligence,
+Pattern Recognition, Pattern Recognition Letters, Neurocomputing, and
+Frontiers of Computer Science.
+PAPER_TEXT

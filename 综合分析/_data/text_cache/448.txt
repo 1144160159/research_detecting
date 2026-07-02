@@ -1,0 +1,140 @@
+4532                                                IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 3, MARCH 2025
+
+
+
+
+Fuzzy State-Driven Cross-Time Spatial Dependence
+      Learning for Multivariate Time-Series
+                Anomaly Detection
+                            Kun Zhu , Pengyu Song , and Chunhui Zhao , Senior Member, IEEE
+
+    Abstract— Cross-time spatial dependence (i.e., the interaction              C1 , C2 , and C3     Desired dimensions of output channel.
+between different variables at different time points) is indispens-             λ1 , λ2 , λ3         Tradeoff coefficients.
+able for detecting anomalies in multivariate time series, as certain
+anomalies may have time delays in their propagation from one                    ω1 , ω2              Tradeoff coefficients.
+variable to another. However, accurately capturing cross-time                   φscore               Anomaly score.
+spatial dependence remains a challenge. Specifically, real-world                η                    Threshold to estimate anomalies.
+time series usually exhibits complex and incomprehensible evo-                  xt                   Values of N variables at time point t.
+lutions that may be compounded by multiple temporal states                        n
+                                                                                x1:T                 Values of T time points of variable n.
+(i.e., temporal patterns, such as rising, fluctuating, and peak).
+These temporal states mix and overlap with each other and                       X 1:T                Input sample sequence.
+exhibit dynamic and heterogeneous evolution laws in different                   X̃ 1:T               Reconstructed values for input sample
+time series, making the cross-time spatial dependence extremely                                      sequence.
+intricate and mutable. Therefore, a cross-time spatial graph                    x̂ T                 Predicted values of time series at time
+network with fuzzy embedding is proposed to disentangle latent                                       point T.
+and mixing temporal states and exploit it to meticulously learn
+cross-time spatial dependence. First, considering that temporal                 ŷ t                 Anomaly label.
+states are diversiform and their mixing modes are unknown,                      fmvnt                Membership vector.
+we introduce a fuzzy state set to uniformly characterize potential              FEX1:T               Fuzzy embedding data for input sample
+temporal states and adaptively generate corresponding member-                                        sequence.
+ship degrees to depict how these states mix. Further, we propose                CTSGt:t+1            Cross-time spatial graph.
+a cross-time spatial graph, quantifying similarities among fuzzy
+states and sensing their dynamic evolutions, to flexibly learn                  At:t+1               Normalized adjacency matrix.
+mutable cross-time spatial dependence. Finally, we design state
+diversity and temporal proximity constraints to ensure the                                             I. I NTRODUCTION
+differences among fuzzy states and the evolution continuity of
+fuzzy states. Experiments on real-world datasets show that the
+proposed model outperforms the state-of-the-art models.                        M       ULTIVARIATE time-series anomaly detection has been
+                                                                                       extensively developed and researched across diverse
+                                                                               domains, aiming at finding abnormal conditions to ensure
+  Index Terms— Anomaly detection, cross-time spatial depen-
+dence, fuzzy state, multivariate time series, temporal state.
+                                                                               system security and reduce financial loss [1]. Since anomaly
+                                                                               data are rare and difficult to gather, a popular and promising
+                         N OMENCLATURE                                         paradigm in multivariate time-series anomaly detection is to
+ N                Number of variables.                                         leverage unsupervised methods to learn specific patterns of
+ T                Number of time points.                                       time series to recognize underlying anomalies [2]. Nowadays,
+ ϑ                Convolution kernels.                                         various unsupervised methods have been proposed and real-
+ MFqn             Membership function.                                         ized fruitful progress, such as Gaussian mixture model [3] and
+ mdnt,q           Membership degree.                                           isolation forest (IF) [4].
+ µqn and σqn      Center and width of membership function.                        However, the above methods remain limited ability because
+ W, b             Weight parameter and bias.                                   they do not consider crucial spatiotemporal dependencies in
+ LV               State diversity constraint.                                  multivariate time series [5], [6]. Unlike other data (e.g., image
+ LC               Temporal proximity constraint.                               and text), spatiotemporal dependencies are the distinguishing
+ LR               Reconstruction constraint.                                   characteristic of multivariate time series [7]. As shown in
+ LP               Prediction constraint.                                       Fig. 1(a), spatiotemporal dependencies are extremely com-
+  Manuscript received 15 July 2023; revised 27 November 2023;                  plicated because they contain three parts, dubbed temporal
+accepted 25 February 2024. Date of publication 8 March 2024; date of current   dependence (cross-time interactions within the same variable),
+version 1 March 2025. This work was supported in part by the National          spatial dependence (interactions between different variables at
+Natural Science Foundation of China under Grant 62125306, in part by the
+Zhejiang Key Research and Development Project under Grant 2024C01163,          the same time point), and cross-time spatial dependence (inter-
+and in part by the Guangdong Basic and Applied Basic Research Foundation       actions between different variables at different time points).
+under Grant 2022A1515240003. (Corresponding author: Chunhui Zhao.)             Vast studies have shown that accurately capturing spatiotem-
+  The authors are with the College of Control Science and Engineering,
+Zhejiang University, Hangzhou 310027, China (e-mail: chhzhao@zju.edu.cn).      poral dependencies is vital to learning specific patterns of time
+  Digital Object Identifier 10.1109/TNNLS.2024.3371109                         series for detecting anomalies [8], [9].
+                      2162-237X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+ZHU et al.: FUZZY STATE-DRIVEN CROSS-TIME SPATIAL DEPENDENCE LEARNING                                                                        4533
+
+
+
+                                                                              In comparison, state 3 (fluctuating) influences more when
+                                                                              encountering unstable airflow (roughly located at t1 ). More-
+                                                                              over, it can also be found that temporal states exhibit dynamic
+                                                                              and heterogeneous evolution laws in different time series (e.g.,
+                                                                              from mixing mode 1 to mixing mode 2 in variable 1 and
+                                                                              from mixing mode 3 to mixing mode 4 in variable 2), thus
+                                                                              making cross-time spatial dependence complex and mutable
+                                                                              and further increasing its modeling difficulty.
+                                                                                 In complex real scenarios, temporal states are usually
+                                                                              diversiform and their mixing modes are often unknown (the
+                                                                              influences from temporal states on time-series evolutions
+                                                                              are difficult to quantify by precise and hard binary values).
+                                                                              In light of this, we extend the analysis of time series from
+                                                                              a 1-D space to a high-dimensional fuzzy space, aiming to
+                                                                              construct a fuzzy state set (containing multiple fuzzy states)
+                                                                              to uniformly characterize diversiform temporal states and
+                                                                              generate soft membership degrees to portray their mixing
+                                                                              modes. Through this manner, we can break the bottleneck of
+                                                                              limited representation ability of 1-D time series and disentan-
+Fig. 1. Example of complex spatiotemporal dependencies and latent temporal    gle mixing temporal states, which helps to sense the mutability
+states of time series. (a) Three different dependencies in spatiotemporal     of cross-time spatial dependence and facilitate its fine-grained
+dependencies. (b) Multiple temporal states mix and overlap with each other,
+and present dynamic and heterogeneous evolution laws.
+                                                                              modeling, thus boosting the ability to discover time-delay
+                                                                              anomalies.
+                                                                                 Technically, we propose a novel cross-time spatial graph
+   To this end, various deep learning-based studies have been                 network with fuzzy embedding (FE-CTSNet), which consists
+proposed to mine spatiotemporal dependencies and gained                       of a fuzzy embedding method called time series to membership
+remarkable momentum [10], [11]. For instance, transformer                     vector (TS2MVec), and a cross-time spatial graph (CTSG).
+model [1], [12] and long short-term memory (LSTM) net-                        TS2MVec constructs multiple fuzzy states and each of them
+work [13] focus on capturing temporal dependence across the                   represents a type of temporal state. Then, each time-series
+time dimension, while graph neural network (GNN) [14], [15]                   data point is transformed into a membership vector containing
+aims at explicitly modeling spatial dependence across the vari-               a series of membership degrees, where each membership
+able dimension. Unfortunately, these studies may suffer from                  degree indicates the degree to which the corresponding fuzzy
+false negative problems as the captured temporal dependence                   state influences time-series evolutions. Based on the gener-
+and spatial dependence are ineffective for detecting certain                  ated membership degrees, CTSG can quantify the similarity
+latent time-delay anomalies. In real-world industrial processes,              between fuzzy states of any two time-series data points,
+the time-delay phenomenon in the propagation of anomalies                     thereby flexibly learning cross-time spatial dependence. More-
+is common because the effect of one entity (e.g., device or                   over, membership degrees can adaptively change along with
+machine) may take a certain time to spread to another. One                    dynamic evolutions of time series, thereby enabling CTSG to
+decent scheme for detecting time-delay anomalies is to exploit                sense the mutability of cross-time spatial dependence. Finally,
+the cross-time spatial dependence because it can effectively                  to strengthen the ability of fuzzy states to characterize potential
+reflect the intervariable influences at different time points, thus           temporal states, we design state diversity and temporal prox-
+helping to model the propagation mechanism of time-delay                      imity constraints, which not only make different fuzzy states
+anomalies.                                                                    have differences, but also ensure the evolution continuity of
+   However, modeling cross-time spatial dependence is still                   fuzzy states.
+a challenging task as its intricateness and mutability. These                    The main contributions of this study are threefold.
+characteristics may be induced by multiple temporal states                       1) We propose a TS2MVec to construct a fine-grained
+hidden in time-series evolutions. Specifically, as shown in                          fuzzy state set to uniformly characterize latent temporal
+Fig. 1(b), time series of variable 1 and variable 2 present                          states and adaptively generate corresponding member-
+complex and incomprehensible evolutions, where multiple                              ship degrees to depict their mixing modes. To the best
+temporal states (or referred to temporal patterns) mix and                           of authors’ knowledge, it is the first time to realize the
+overlap with each other, e.g., state 1 (rising), state 2 (falling),                  disentanglement for mixing temporal states from a fuzzy
+state 3 (fluctuating), and state 4 (peak) [16], [17]. It can be                      embedding perspective.
+seen that latent temporal states show the specific mixing mode                   2) We propose a CTSG to meticulously learn the cross-time
+in each evolution phase of time series, in which different                           spatial dependence. Different from the existing graph
+temporal states have different influence degrees on time-series                      structures, it not only realizes flexible representations
+evolutions. For example, assuming that variable 1 represents                         for cross-time spatial dependence, but also senses its
+the altitude of an airplane, state 1 (rising) may exert larger                       mutability by capturing dynamic evolutions of fuzzy
+influences during the take-off phase (roughly located at t2 ).                       states.
+4534                                       IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 3, MARCH 2025
+
+
+
+                            TABLE I                                spatial dependence and used it to discover anomalies, such as
+       D IFFERENCES B ETWEEN FE-CTSN ET AND OTHER M ETHODS         GNN-based models [26] and autoencoder-based models [27],
+                                                                   [28]. Further, some other studies [29], [30], [31], [32] simul-
+                                                                   taneously considered the ab

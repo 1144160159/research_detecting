@@ -1,0 +1,1407 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [601] Advancing Pre-Trained Teacher: Towards Robust Feature Discrepancy for Anomaly Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：601
+题名：Advancing Pre-Trained Teacher: Towards Robust Feature Discrepancy for Anomaly Detection
+年份：2026
+DOI：10.1109/tip.2026.3683277
+来源：IEEE Transactions on Image Processing
+PDF：paper/10.1109_TIP.2026.3683277.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：其他AI安全与跨域异常检测
+相关性：中相关，分数 9
+已有代码状态：已下载；AAND -> source\AAND
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\601.txt
+- 原始字符数：68023
+- 本次发送字符数：68023
+- 是否截断：False
+
+代码包：
+- 仓库：AAND
+  - URL：https://github.com/Hui-design/AAND
+  - 状态：downloaded
+  - 本地目录：source\AAND
+  - 顶层结构：README.md、datasets/、models/、requirements.txt、scripts/、test.py、train.py、utils/、vit_version/
+  - 主要语言：Python:27
+  - README 标题：Overview、Author、News、🔧  Installation、It is recommended to create a new environment、Install packages and other dependencies、💾 Dataset、Preprocessing、🚅 Training、⛳ Testing
+  - README 运行线索：bash # It is recommended to create a new environment；conda create -n AAND python==3.8；conda activate AAND；pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113；pip install -r requirements.txt；bash python scripts/fore_extractor.py --data_path <your_path>/<dataset_name>/ --aux_path <your_path>/dtd/images/ # the <dataset_name> is mvtec, VisA, or mvtec3d；bash cd experiments/3DMatch；python demo.py
+  - 关键文件：{"依赖环境": ["requirements.txt"], "模型定义": ["vit_version/clip/model.py", "vit_version/clip_rar/model.py"], "训练入口": ["train.py", "vit_version/train_vit.py"], "评估/测试入口": ["test.py", "vit_version/test_vit.py"]}
+  - 数据集线索：MVTec、MvTec、Quic、Tor、dapt、mvtec、ton、tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+4509
+
+Advancing Pre-Trained Teacher: Towards Robust
+Feature Discrepancy for Anomaly Detection
+Canhui Tang , Sanping Zhou , Member, IEEE, Yizhe Li , Yonghao Dong ,
+and Le Wang , Senior Member, IEEE
+
+Abstract—With the wide application of knowledge distillation
+between an ImageNet pre-trained teacher model and a learnable
+student model, unsupervised anomaly detection has witnessed
+a significant achievement in the past few years. The success
+of this framework mainly relies on how to keep the feature
+discrepancy between the teacher and student model, in which it
+has two underlying sub-assumptions: (1) The teacher model can
+represent two separable distributions for the normal and abnormal patterns, while (2) the student model can only reconstruct
+the normal distribution. However, it still remains a challenging
+issue to maintain these ideal assumptions in practice. In this
+paper, we propose a simple yet effective two-stage industrial
+anomaly detection framework, termed AAND, which sequentially
+performs Anomaly Amplification and Normality Distillation to
+enhance the two assumptions. In the first anomaly amplification
+stage, we propose a novel Residual Anomaly Amplification (RAA)
+module to advance the pre-trained teacher encoder with synthetic
+anomalies. It generates adaptive residuals to amplify anomalies
+while maintaining the feature integrity of pre-trained model.
+It mainly comprises a Matching-guided Residual Gate and an
+Attribute-scaling Residual Generator, which can determine the
+residuals’ proportion and characteristic, respectively. In the
+second normality distillation stage, we further employ a reverse
+distillation paradigm to train a student decoder, in which a
+novel Hard Knowledge Distillation (HKD) loss is built to better
+facilitate the reconstruction of normal patterns. Comprehensive
+experiments on the MvTecAD, VisA, and MvTec3D-RGB datasets
+show that our method achieves state-of-the-art performance. Our
+code is available at https://github.com/Hui-design/AAND
+Index Terms—Industrial anomaly detection, teacher-student
+model, knowledge distillation.
+
+I. I NTRODUCTION
+NDUSTRIAL Anomaly Detection (IAD) is a crucial task
+that focuses on detecting and localizing anomalies in
+images of industrial products. The scarcity of anomaly samples
+poses a challenge, leading IAD to be typically approached as
+
+I
+
+Received 3 May 2024; revised 3 February 2025, 29 May 2025, 8 October
+2025, and 6 January 2026; accepted 4 April 2026. Date of publication 17 April
+2026; date of current version 30 April 2026. This work was supported in
+part by the National Science and Technology Major Project under Grant
+2023ZD0121300; in part by the National Natural Science Foundation of
+China (NSFC) under Grant 62572384, Grant U24A20325, Grant 62125305,
+and Grant 62503384; and in part by the Key Research and Development
+Plan of Shaanxi Province under Grant 2024PT-ZCK-80. The associate editor
+coordinating the review of this article and approving it for publication was
+Prof. Xinchao Wang. (Corresponding author: Sanping Zhou.)
+The authors are with the National Key Laboratory of Human-Machine
+Hybrid Augmented Intelligence, National Engineering Research Center for
+Visual Information and Applications, Institute of Artificial Intelligence and
+Robotics, Xi’an Jiaotong University, Xi’an, Shaanxi 710049, China (e-mail:
+spzhou@mail.xjtu.edu.cn).
+Digital Object Identifier 10.1109/TIP.2026.3683277
+
+Fig. 1. Illustration of teacher-student feature discrepancy, whose success relies
+on how to keep the feature discrepancy between teacher and student model.
+This line of methods has two underlying assumptions that have not been well
+addressed: (1) The teacher model can represent two separable distributions
+for the normal and abnormal patterns; while (2) the student decoder can only
+reconstruct the normal distribution.
+
+an unsupervised problem that relies solely on normal samples
+for training. Moreover, industrial anomalies are hard to detect
+and localize due to their diverse and uncertain nature, which
+can range from subtle texture changes to significant structural
+defects. In practice, feature extractors pre-trained on ImageNet
+[1] have been widely applied in the IAD task [2], [3], [4],
+in which they are utilized to generate representations for
+the diverse normal and abnormal patterns. By capturing and
+modeling the distribution of pre-trained features for normal
+samples, subsequent anomaly detection can be achieved by
+identifying deviations from the learned distribution.
+Recent advances [3], [5], [6], [7], [8] often adopt knowledge
+distillation to take advantage of the pre-trained model, which
+involves a multi-scale feature reconstruction of the pre-trained
+features. As shown in Fig. 1, it solves the anomaly detection
+problem by focusing on the “teacher-student discrepancy”, i.e.,
+the feature discrepancy between a fixed pre-trained teacher
+encoder and a learnable student decoder. To make the “teacherstudent discrepancy” hypothesis more robust, particularly
+ensuring larger discrepancies when anomalies are presented,
+two underlying sub-assumptions need to be satisfied: (1) The
+teacher model can represent two separable distributions for
+the normal and abnormal patterns, while (2) the student
+decoder can only reconstruct the normal distribution. However, these ideal assumptions are hard to meet in practice,
+which requires researchers to improve them from different
+perspectives.
+For the first assumption, it is important yet has been overlooked in current methods. As shown in Table I, we measure
+
+1941-0042 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+4510
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+TABLE I
+C OMPARISON R ESULTS OF T EACHER M ODEL ON THE V IS A [9] DATASET.
+“ ” I NDICATES THE A SSUMPTION I S N OT F ULLY G UARANTEED , AND
+“IC D ISTANCE ” R EPRESENTS THE I NTER -C LASS C OSINE D IS TANCES OF M ULTI -L AYER F EATURES (1/2/3 LAYERS ). F OR
+FAIR C OMPARISON , THE S TUDENT M ODEL I S
+S ET C ONSISTENT
+
+the cosine distance of multi-layer teacher features between
+normal patches and abnormal patches. We can observe a
+significant reduction in inter-class distance and a performance
+(I-AUC) drop when the teacher model is randomly initialized
+in the well-known RD [3] framework. Although the pre-trained
+model can alleviate this issue, it still remains a challenging
+issue to generate discriminative features in solving the IAD
+problem. To the best of our knowledge, the challenge mainly
+arises from two aspects: (1) Difference between task objectives.
+In pre-training on ImageNet, models aim to discriminate
+between different object categories; while in the IAD task,
+models need to discriminate between normal and abnormal
+instances within a single object category. (2) Scarcity of abnormal data. Abnormal objects are far less common than normal
+objects in the real world, therefore the models have fewer
+opportunities to learn representations of anomalies during pretraining. Due to these factors, the pre-trained embeddings may
+become over-compressed and learn some irrelevant semantics
+to the IAD task, which limits the pre-trained teacher model’s
+ability to discriminate between normal and abnormal industrial
+instances. When it comes to the second assumption, earlier
+methods [3], [6] give a natural constraint, i.e., anomalies
+cannot reconstruct abnormal representations since they are
+absent in the training process. To guarantee the student model
+consistently outputs normal patterns, some recent works [7],
+[8] impose stronger constraints on the student model to suppress anomaly signals. Despite these, less attention has been
+drawn to the reconstruction capacity of the student decoder
+in dealing with challenging normal patterns, such as the finegrained normal textures and rare normal patterns.
+To this end, we consider how to extend the teacher
+encoder’s discrimination capacity and how to enhance the
+student decoder’s normality distillation ability. In this paper,
+we propose a two-stage framework to achieve robust feature
+discrepancy between the teacher and student model. Specifically, it consists of an anomaly amplification stage and a
+normality distillation stage, which address the first and second
+assumptions, respectively. In the first stage, we propose a
+novel Residual Anomaly Amplification (RAA) module to
+advance the fixed teacher with the exposure of synthetic
+anomalies. Instead of proposing pioneering operators [10],
+[11], the primary novelty of our RAA lies in building a
+robust anomaly amplification mechanism that enhances the
+pre-trained teacher’s discrimination ability using synthetic
+anomalies. Pre-trained features have learned a universal distribution of normal patterns, while over-reliance on synthetic
+anomalies may lead to catastrophic forgetting [12] of this pretrained knowledge. To address this, our RAA module employs
+an adaptive residual learning mechanism. This module comprises two components: a matching-guided residual gate and
+an attribute-scaling residual generator, which determine the
+proportion and characteristics of residuals, respectively. This
+model effectively amplifies the sensitivity to anomalies while
+maintaining the feature integrity of pre-trained model. In
+the second stage, we employ a reverse distillation paradigm
+to train a student decoder that can only reconstruct normal
+representations, in which a novel hard knowledge distillation
+(HKD) loss is built to better facilitate the reconstruction of
+normal patterns. Without losing generality, the teacher-student
+discrepancy is utilized for anomaly detection during inference.
+Comprehensive experiments on the MvTecAD, VisA, and
+MvTec3D-RGB datasets demonstrate the effectiveness of our
+method.
+Our main contributions are as follows:
+• We design a novel two-stage anomaly detection framework based on the two underlying assumptions of
+knowledge distillation, which can obtain robust feature
+discrepancy between the teacher and student model.
+• We design a novel residual anomaly amplification module
+in the anomaly amplification stage, which can enhance
+the discrimination capacity of the vanilla teacher encoder
+with the help of synthetic anomalies.
+• We design a novel hard knowledge distillation loss in
+the normality distillation stage, which can enhance the
+reconstruction capability of the student decoder in dealing
+with challenging normal patterns.
+The rest of this paper is organized as follows. We review
+the related work in Section II. Section III describes the
+technical details of our proposed AAND. Section IV presents
+the experiment details and results. Finally, we summarize the
+paper in Section V.
+II. R ELATED W ORK
+In this section, we review some related works on IAD.
+The current works can be categorized into four types:
+reconstruction-based, synthesis-based, embedding-based, and
+distillation-based methods.
+A. Reconstruction-Based Methods
+As anomaly detection is typically treated as an unsupervised
+problem, reconstruction-based methods have emerged as a
+natural approach. It aims to reconstruct normal inputs and
+assumes that the reconstruction error is larger for anomalies.
+Early methods often employ GAN [13], AE [14], [15], [16],
+[17], [18], or VAE [19], [20] to train reconstruction models. To
+make the anomaly pixels more difficult to reconstruct, RIAD
+[21] proposes a reconstruction-by-inpainting approach, which
+removes partial pixels to reconstruct the images. Inspired by
+the ability of latent diffusion model [22], [23] in generating high-quality and diverse images, more and more recent
+approaches [24], [25], [26], [27] utilize diffusion models to
+
+TANG et al.: ADVANCING PRE-TRAINED TEACHER: TOWARDS ROBUST FEATURE DISCREPANCY
+
+model the image reconstruction as a denoising process. Nevertheless, the pixel-level reconstruction methods may easily
+generalize to anomalies, resulting in the well-reconstruction
+of some anomalies. To address this issue, some research
+has focused on exploring knowledge distillation, with a shift
+towards reconstructing inputs at the feature level.
+B. Synthesis-Based Methods
+Due to the lack of abnormal samples in training, it is
+challenging for the IAD task to find the boundary between normality and anomaly. Thus, synthesis-based methods propose to
+synthesize anomalies by introducing noises into normal images
+[28], [29], [30], [31]. For example, in the case of DRAEM
+[28], textures are sampled from an external texture dataset
+[32], and Perlin [33] noise is employed to generate random
+anomaly masks for creating anomalies. Besides, Cutpaste
+[29] randomly selects augmented regions from an image and
+pastes it onto other random regions of the image. NSA [30]
+innovatively employs Poisson image editing to seamlessly
+blend patches of varying sizes from different images, which
+provides an excellent anomaly synthesis method. Additionally,
+some methods synthesize noise at the feature level, such as
+SimpleNet [34] and DSR [35]. However, real-world anomalies
+exhibit a wide range of patterns and uncertainties that cannot
+be fully covered. Consequently, over-reliance on synthetic
+anomalies may overfit the seen anomalies, while getting bad
+performance on unseen anomalies. In our method, we utilize
+synthetic anomalies to amplify the sensitivity of the pre-trained
+model to anomalies, while keeping its original discrimination
+ability on some unseen anomalies. To the best of our knowledge, we are the first to enhance the pre-trained teacher model
+with synthetic anomalies in solving the IAD problem.
+
+4511
+
+involve a student model to reconstruct the multi-scale pretrained embeddings of a teacher model on normal samples.
+The mainstream methods can be roughly categorized into
+forward distillation and reverse distillation methods. In particular, the forward distillation approaches [5], [6] often adopt
+similar networks between student and teacher models to
+train the distillation process. Nevertheless, they suffer from
+the similarity of student and teacher architecture, where the
+abnormal data is mapped closely, resulting in an undesirably
+small feature discrepancy for anomalies. To address this issue,
+RD [3] adopts a reverse distillation paradigm. Rather than
+directly receiving raw images, the student network takes the
+one-class embedding of the teacher model as input, to restore
+the teacher’s multi-scale representations. Besides, AST [44]
+proposes a framework comprising a pre-trained encoder and
+two decoders, in which a normalizing flow decoder serves
+as a teacher for density estimation, while a conventional
+feed-forward network acts as a student. To guarantee the
+student network consistently outputs normal patterns, recent
+methods impose stronger constraints on the student network.
+For example, RD++ [7] introduces multi-scale projection
+layers and incorporates several loss constraints, so as to facilitate the student model in suppressing abnormal signals from
+pseudo-abnormal regions. Besides, DeSTSeg [8] introduces a
+denoising stage to train a denoising student that reconstructs
+the normal patterns both for normal and abnormal inputs.
+However, most distillation-based methods solely focus on
+the student model, while overlooking the limited discrimination ability of the teacher model. Unlike previous methods, we
+both focus on enhancing the teacher model’s discrimination
+capacity and the student model’s normality distillation ability.
+III. M ETHOD
+
+C. Embedding-Based Methods
+Thanks to the development of models pre-trained on extensive external datasets, such methods [36], [37] can effectively
+represent both normal and abnormal patterns for anomaly
+detection. In practice, the embedding-based methods usually
+utilize ImageNet pre-trained models to encode normal samples
+into high-dimensional feature spaces. For example, Padim [38]
+calculates the inverse covariance matrix to model the normal
+distribution, Patchcore [2] stores representative features in
+memory banks, and M3DM [39] constructs multiple memory
+banks to store features from different modalities. What’s
+different, some methods [4], [40], [41], [42] employ additional
+decoders to learn the distribution of normal samples using
+normalizing flows [43]. For example, CS-Flow [41] proposes a
+simple framework that jointly processes multiple feature maps
+of different scales. Besides, CFlow [4] models a conditional
+normalizing flow with a position encoding, and adopts a multiscale generative decoder to estimate the likelihood of encoded
+features. Since these methods largely rely on the pre-trained
+model, their performances are limited by the discrimination
+capacity of pre-trained model.
+D. Distillation-Based Methods
+This line of methods can combine the advantages of both
+reconstruction-based and embedding-based methods, which
+
+In the context of unsupervised industrial anomaly detection,
+let X train = {In1 , In2 . . . , InN } be a training set containing only
+normal images, and X test = {It1 , It2 . . . , ItM } be a test set
+including both normal and abnormal images. The goal of
+anomaly detection is to train a model to identify and localize
+anomalies in the test images.
+A. Revisiting Teacher-Student Discrepancy
+Knowledge Distillation (KD) [3], [7], [8] has achieved
+promising results in the industrial anomaly detection task.
+They solve the anomaly detection problem by focusing on
+the “teacher-student discrepancy”, i.e., the feature discrepancy
+between a fixed pre-trained teacher encoder and a learnable
+student decoder, which can be formulated as follows:
+D(FT , FS ) = 1 − s(FT , FS ),
+
+(1)
+
+where s(, ) denotes the cosine similarity. FT and FS represent
+the teacher features and student features, respectively. It is
+hypothesized that anomalies have larger discrepancies than
+normal samples as follows:
+D(FaT , FS ) > D(FnT , FS ),
+
+(2)
+
+where the superscript n and a represent normal and abnormal
+samples, respectively. To make the hypothesis work, as shown
+
+4512
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+Fig. 2. Overview of our proposed AAND. I. Anomaly amplification Stage for enhancing Assumption I (Ass. I): the vanilla teacher model encodes the input
+image into K-level features FT k , and then these features are advanced to FAk through our proposed Residual Anomaly Amplification module (RAA). The
+RAA module generates adaptive residuals, effectively amplifying anomalies and preserving the integrity of the pre-trained model. It comprises a matchingguided residual gate and an attribute-scaling residual generator, which determine the proportion and characteristics of the residuals, respectively. II. Normality
+Distillation Stage for enhancing Assumption II (Ass. II): a student model decodes features FS k , and these features are trained to distill the representation of
+advanced teacher only on normal samples, where “BN” denotes a bottleneck module and LHKD represents our proposed Hard Knowledge Distillation loss.
+During inference, the “teacher-student discrepancy” is used for anomaly detection.
+
+in Fig. 1, two underlying sub-assumptions are required in
+the recent KD-based frameworks. (1) Assumption I: The
+teacher encoder can represent two separable distributions for
+normal and abnormal patterns, which is implicitly satisfied
+by employing an ImageNet pre-trained encoder. (2) Assumption II: The student decoder is designed to reconstruct only the
+normal distribution, which is indirectly achieved by training
+exclusively on normal samples. If the two assumptions were
+satisfied, the abnormal teacher features FaT would fall outside
+the boundary of the normal features FnT , thereby exceeding
+the reconstruction capabilities of the student network FS . As
+a result, anomalies would exhibit larger discrepancies than
+normal samples, which would lead to a robust “teacher-student
+discrepancy” as illustrated in Eq. (2).
+However, these ideal assumptions are hard to meet in
+practice, which motivates us to enhance them from various
+perspectives. As shown in Fig. 2, we propose a simple yet
+effective two-stage anomaly detection framework, which comprises an Anomaly Amplification Stage (Stage I) to address
+Assumption I and a Normality Distillation Stage (Stage II) to
+address Assumption II.
+B. Anomaly Amplification Stage
+ImageNet pre-trained encoders are widely used [2], [3],
+[7] in the industrial anomaly detection task, where the pretrained embedding is directly used as teacher representation
+without any adaption. However, as outlined in Table. I, the gap
+between ImageNet pretraining and IAD task poses significant
+challenges in fulfilling Assumption I. To mitigate this issue,
+we introduce an anomaly amplification stage to increase the
+teacher model’s ability to discriminate between normal and
+
+anomalous patterns. Moreover, we propose an RAA module
+with adaptive residual generation to amplify anomaly and
+preserve the pre-trained model’s generalizability. The training
+within this stage incorporates synthetic anomalies.
+Anomaly synthesis. Given the normal images from the
+training set X train , we use a widely used anomaly generator
+[28] to generate abnormal masks and images. First, Perlin
+noise [33] is generated and binarized into an anomaly mask
+a
+M ∈ {0, 1}H×W to determine the locations of anomalies. Then,
+texture samples are obtained from the source texture dataset
+[32] to serve as the content for these locations. For a normal
+image In ∈ RC×H×W , the corresponding synthetic abnormal
+image is denoted as Ia ∈ RC×H×W . Considering the anomalies
+are typically on the foreground object, we follow [45] to
+f
+extract a foreground mask M ∈ {0, 1}H×W with grayscale
+binary thresholding algorithms. The resulting pseudo-anomaly
+mask M is then obtained by taking the intersection of the two
+masks.
+During the first-stage training, we take the corrupted image
+Ia as input of the teacher encoder. The encoder extracts
+K-level features FTk ∈ RCk ×Hk ×Wk . At the k-th level of feature
+extraction, a total of Hk × Wk patches are obtained. By
+subsampling the anomaly mask at the same scale, denoted as
+Mk , and using it to label the normal and abnormal locations,
+these patches can be divided into Nkn normal patches and Nka
+abnormal patches. The corresponding features are denoted as
+n
+a
+FnTk ∈ RNk ×Ck and FaTk ∈ RNk ×Ck respectively.
+Residual Anomaly Amplification. Considering overreliance on synthetic anomalies may lead to catastrophic
+forgetting [12] of pre-trained knowledge, we propose a novel
+RAA module, which utilizes an adaptive residual learning
+
+TANG et al.: ADVANCING PRE-TRAINED TEACHER: TOWARDS ROBUST FEATURE DISCREPANCY
+
+4513
+
+as wnk j , j ∈ {1, 2, . . . , L}, and the anomaly weights, denoted as
+wak j , j ∈ {1, 2, . . . , L}, are derived as follows:
+wnki j =
+
+Fig. 3. Illustration of our proposed RAA module. It utilizes an adaptive
+residual learning mechanism to amplify anomalies while maintaining the
+integrity of pre-trained model.
+
+exp(s(qik , mnk j ))
+Z
+
+where wak ∈ [0, 1]Hk ×Wk represents the anomaly weights predicted by the residual gate, and ∆ak ∈ RCk ×Hk ×Wk is the residual
+signals generated by the residual generator.
+1) Matching-Guided Residual Gate: This module aims to
+regulate the proportion of residuals, which functions as a
+robust binary classifier that predicts the weight of residuals.
+This prediction is informed by the matching results between
+the queries and the learned memory items.
+As illustrated in Fig. 2, we take the feature map FTk ∈
+RCk ×Hk ×Wk extracted from the frozen teacher block as input.
+The input is first added with a position encoding pc [41], and
+then passed through an MLP, Φkθ1 (·), for projection:
+qik = Φkθ1 (FiTk + pic ),
+
+(4)
+
+where FiTk ∈ RC and pic ∈ RC are the input feature and position
+encoding at the i-th patch, respectively. In addition, qik ∈ RC
+represents the projected feature. To represent the memory of
+normality and anomaly, we configure a normal memory Mnk =
+{mnk1 , mnk2 , . . . , mnkL } containing L learnable normal embeddings, and an anomaly memory Mak = {mak1 , mak2 , . . . , makL }
+containing L learnable anomaly embeddings. These embeddings are initialized with a Gaussian distribution N (0, 1).
+Subsequently, a matching process is conducted between the
+query and memories, which involves computing their cosine
+similarity and normalizing the similarity scores using the
+softmax function. Consequently, the normal weights, denoted
+
+Z
+
+,
+
+(5)
+
+where
+Z represents
+the normalization factor, ensuring that
+PL
+PL
+n
+a
+w
++
+w
+j=1 ki j
+j=1 ki j = 1. When presented with an abnormal
+patch query qak , it has a higher affinity to the anomaly memory.
+Conversely, for a normal patch query qnk , it has a higher
+affinity to the normal memory. Afterwards, the sum of anomaly
+weights is taken as the outputs of the residual gate:
+waki =
+
+mechanism to enhance anomaly detection without compromising the integrity of the pre-trained model. This module
+comprises two critical components: a matching-guided residual
+gate and an attribute-scaling residual generator. As shown
+in Fig. 3, the residual gate suppresses residuals on normal samples to maintain the integrity of pre-trained model
+while encouraging residuals on synthetic inputs to promote
+deviations. Additionally, the residual generator is designed
+to adaptively learn the characteristics of residuals, which
+directly influence the distribution of emergent abnormal features. By embedding these RAA modules into the pre-existing
+framework, we have successfully crafted an advanced teacher
+encoder that robustly enhances anomaly detection capabilities.
+The extracted feature at the k-th block of the advanced
+teacher model, denoted as FAk ∈ RCk ×Hk ×Wk , is calculated as
+follows:
+FAk = FTk + wak · ∆ak ,
+(3)
+
+exp(s(qik , mak j ))
+
+, waki j =
+
+L
+X
+
+waki j = 1 −
+
+j=1
+
+L
+X
+
+wnki j ,
+
+(6)
+
+j=1
+
+where the anomaly weight waki ∈ [0, 1] represents the anomaly
+probability of inputs. To supervise the anomaly weight, we
+adopt the well-known focal loss [46]. The ground truth waki ∈
+{0, 1} is from the pseudo-anomaly mask Mk , which equals to 1
+when it is a synthetic abnormal patch, while equaling to 0
+when it is a normal patch. Under binary label supervision, the
+discriminative ability of the residual gate is guaranteed. As
+for diversity, by matching with varied normal and synthetic
+abnormal features, the dual memories will implicitly learn the
+diverse feature distributions. Within the RAA module, the role
+of memory is to control the proportion of adaptive residual
+generation for a robust teacher-student discrepancy. Given that
+the module constitutes only a part of our AAND framework,
+we do not impose further constraints to maintain its simplicity.
+2) Attribute-Scaling Residual Generator: Due to the influence of residual characteristics on the distribution of new
+abnormal features, we address this challenge by introducing
+an attribute-scaling residual generator. The residual noise aims
+to emphasize the attributes that are relevant to anomalies
+while diminishing those irrelevant attributes. Specifically, the
+key designs are the channel weight module and the anomaly
+amplification loss.
+As illustrated in Fig. 2, we initiate the process by projecting
+FiTk using another MLP, denoted as Φkθ2 (·). Subsequently, each
+channel of the projected feature is mapped to the range (−1,1)
+through a tanh function, yielding scaling weights Σik ∈ RC
+for each channel. Finally, the generated residual ∆ak i ∈ RC
+is calculated by multiplying the channel weights and input
+features as follows:
+∆ak i = Tanh(Φkθ2 (FiTk ))
+
+FiTk ,
+
+(7)
+
+where
+denotes element-wise multiplication. To obtain the
+updated features and avoid interfering with the parameters of
+the residual gate, we replace the predicted anomaly weights
+ŵai with the ground truth anomaly weights wai during training
+as follows:
+FnAik = FnTik + 0 · ∆ak i ,
+
+FaAik = FaTik + 1 · ∆ak i ,
+
+(8)
+
+where the superscripts ai and ni denote the abnormal and
+normal patches, respectively. Here, FaAik represents the learnable
+features updated by the residuals, while FaTik , FnAik , and FnTik
+remain frozen. This ensures that the optimization is confined
+
+4514
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+exclusively to the synthetic anomaly features, specifically on
+the residual ∆ak i .
+To supervise the residuals, we propose an anomaly amplification loss to push the abnormal features outside the
+boundaries of normality. Unlike traditional contrastive learning
+employing both “push” and “pull” actions, our method focuses
+solely on pushing anomalies away from normal samples using
+a dynamic margin, enhancing discriminability while preserving pre-trained priors. The loss is calculated as follows:
+Nka
+
+Nkn
+
+1 XX
+n
+f
+max(s(FaAik , FTkj ), Sre
+LA = a n
+ki j ),
+Nk Nk
+
+(9)
+
+i=1 j=1
+
+f
+where Sre
+∈ RNk ×Nk is a dynamic margin matrix calculated
+k
+based on the similarity matrix produced by the vanilla teacher
+model, which is denoted as follows:
+a
+
+n
+
+n
+
+f
+ai
+j
+Sre
+ki j = s(FT k , FT k ) − α,
+
+(10)
+
+where α is a hyper-parameter to control the degree of reduction. It is noteworthy that the loss function LA is specifically
+designed to reduce the similarity between abnormal and normal features. For normal samples, we utilize the residual gate
+to suppress the residuals instead of pulling them as in standard
+contrastive learning. This approach preserves the integrity of
+the pre-trained model, thereby preserving its ability to capture
+a diverse representation of normal samples.
+The overall loss of this stage is summarized as follows:
+L1 = L f ocal + LA ,
+
+Fig. 4. Illustration of our proposed HKD loss. It facilitates the reconstruction
+on challenging normal patterns by selecting the Kh normal patches with the
+highest distillation loss for further training.
+
+(11)
+
+where the focal loss and anomaly amplification loss supervise the anomaly weight wak and the residual signals ∆ak ,
+respectively. Under the supervision, the abnormal features are
+trained to be pushed outside the boundaries of normality. As a
+result, Stage I enhances Assumption I, i.e., the teacher model
+can represent two separable distributions for the normal and
+abnormal patterns.
+It should be noted that even if Stage I provides a good foundation, the “teacher-student discrepancy” of unseen anomalies
+is still hard to guarantee. Thus, we need Stage II to model
+the distribution of normal features, allowing anomalies to be
+naturally identified as deviations from the learned distribution.
+C. Normality Distillation Stage
+Upon enhancing the discrimination capabilities of the
+teacher encoder, our objective shifts to training a student
+decoder, designed to reconstruct only the normal distribution.
+To accomplish this, we employ a reverse distillation paradigm
+[3] to train the student decoder. Within this framework,
+we introduce a hard knowledge distillation loss, specifically
+designed to improve the reconstruction of normal patterns.
+In this stage, the advanced teacher is fixed and only receives
+normal samples. Its output normal features FnAk ∈ RCk ×Hk ×Wk
+are then passed to a one-class bottleneck embedding module
+[3], which aggregates the multi-scale embeddings to obtain
+a compact representation. Subsequently, the learnable student
+decoder predicts multi-scale features FnS k ∈ RCk ×Hk ×Wk , which
+
+is trained to fit the target features from the teacher model using
+a knowledge distillation loss:
+n
+
+n
+
+LKD = 1 − s(F̃Ak , F̃S k ),
+n
+F̃Ak
+
+(12)
+
+n
+F̃S k
+
+where the features
+∈ RCk Hk Wk and
+∈ RCk Hk Wk are
+n
+n
+obtained by flattening the features FAk and FS k through vectorization, respectively.
+Furthermore, considering the difficulty in accurately reconstructing the features of certain fine-grained normal textures
+and rare normal patterns, we propose a hard knowledge
+distillation loss as follows:
+Kh
+
+LHKD =
+
+1 X
+(1 − s(FnAdk .FnSdk )),
+Kh
+
+(13)
+
+d=1
+
+where Kh represents the number of selected hard samples,
+while FnAdk and FnAdk denote the selected features. As illustrated
+in Fig. 4, the HKD loss specifically emphasizes the distillation
+of the top-Kh hard normal instances, which helps the student
+decoder to achieve a more accurate reconstruction of these
+challenging patterns.
+The overall loss function for the normality distillation stage
+is formulated as follows:
+L2 = LKD + LHKD .
+
+(14)
+
+By exclusively training with normal samples and leveraging
+the compact embedding design of reverse distillation [3], the
+student decoder will be effectively constrained to reconstruct
+only the normal distribution. With the HKD loss, the normality
+recall ability towards challenging normal patterns is further
+strengthened. As a result, Stage II enhances Assumption II,
+i.e., the student decoder can only reconstruct the normal
+distribution. To summarize the two-stage training procedure
+of our AAND, we show the pseudo-code in Algorithm 1.
+D. Inference
+During inference, the anomaly detection is based on the
+feature discrepancy between the advanced teacher model and
+the student model. Given a test image It , the advanced teacher
+encoder extracts K-level features FAk , then the student decoder
+
+TANG et al.: ADVANCING PRE-TRAINED TEACHER: TOWARDS ROBUST FEATURE DISCREPANCY
+
+Algorithm 1 Pseudo-Code of AAND Training
+
+4515
+
+AD. It not only contains multiple instances of a single object
+category but also has different types of Printed Circuit Boards
+(PCB) with complex structures.
+3) MVTec3D-RGB: It is a multi-modal dataset that comprises 2,656 training 2D-3D pairs and 1,197 testing 2D-3D
+pairs. Some anomalies are more significant in geometry while
+having subtle changes in appearance, making it particularly
+challenging to detect anomalies based solely on the visual
+appearance of RGB images. Considering the computational
+cost with point cloud data, we follow the recent work [45]
+to employ only the RGB images for anomaly detection and
+localization.
+B. Implementation Details
+
+aggregates the features and reconstructs the multi-scale features FS k . The feature discrepancy, denoted as D(FAk , FS k ), is
+calculated using the negative cosine similarity as follows:
+D(FAk , FS k ) = 1 − s(FAk , FS k ).
+
+(15)
+
+The advanced teacher model is capable of generating discriminative features for both normal and abnormal inputs,
+whereas the student network is tailored to reconstruct only the
+normal features. This configuration results in a minor feature
+discrepancy in normal samples, while a pronounced discrepancy when anomalies are present. To effectively localize
+anomalies, anomaly maps are generated across the K network
+blocks. These maps are then upsampled and aggregated to
+obtain an anomaly score for each pixel:
+K
+X
+ŜA =
+Upk (D(FAk , FS k )),
+(16)
+l=1
+
+where ŜA is the predicted anomaly score map, and Upk (·)
+denotes the bi-linear up-sampling. A higher score in the
+anomaly map indicates a higher likelihood of anomaly at
+that position, and the maximum value in the anomaly map
+is considered as the image-level anomaly score.
+IV. E XPERIMENTS
+A. Dataset
+To assess the effectiveness of the proposed method, we
+conduct comprehensive experiments on three datasets: MVTec
+AD [47], Visa [9] and MVTec3D-RGB [48].
+1) MVTec AD: It is a well-studied benchmark for anomaly
+detection and localization. It consists of 3,629 anomaly-free
+training images, and 1,725 testing images, which include both
+normal and abnormal samples. The dataset has been widely
+explored with the results almost reaching saturation.
+2) VisA: It is a large industrial anomaly detection dataset
+that is composed of 10,821 high-resolution color images of
+12 objects. The anomaly type covers both surface and
+structural defects. The dataset is more challenging than MvTec
+
+1) Experimental Settings: We utilize the WideResNet50
+[36] encoder as the backbone with the output embeddings
+from three layers (K = 3). During training, images are resized
+into 256 × 256, batch size is set to 16, and Adam is used
+as the optimizer with a learning rate of 0.005. We train the
+first stage for 100 epochs and then train the second stage for
+another 120 epochs. Besides, the hyper-parameters α, L, and
+Kh are set to 0.3, 50, and 10, respectively. For the synthetic
+anomalies, we follow [42] to extract foreground masks with
+grayscale binary thresholding algorithms to control the noise
+only in the foreground, which brings the synthesis closer to
+real conditions.
+2) Evaluation Metrics: We evaluate the AD performance
+using the area under the receiver operator curve (AUROC)
+based on the generated anomaly scores. We utilize image-level
+AUROC (I-AUC) to evaluate anomaly detection performance,
+while pixel-based AUROC (P-AUC) and the PRO metric [49]
+were employed to assess anomaly localization. Unlike P-AUC,
+the PRO metric is not influenced by the size of the anomaly
+regions. As a result, it can more effectively reflect the model’s
+performance in detecting hard samples with subtle anomalies.
+C. Main Results
+We conduct a comprehensive comparison of the performance of anomaly detection and localization. We mainly
+compare the Knowledge Distillation-based (KD) methods
+[3], [5], [7], [8] and other popular paradigms for anomaly
+detection, such as reconstruction-based approaches [45], [47],
+synthesis-based methods [28], [34], and embedding-based
+methods [2], [4]. For the MvTec AD dataset [47], reported
+results are directly obtained from the published papers. For the
+newly published VisA [9] and MVTec3D-RGB [48] datasets,
+due to some anomaly detection methods have not yet been
+evaluated on these datasets, we re-train them using their opensource code and evaluate their performance on both datasets.
+Table II shows the comparison results of anomaly detection
+and localization on the MVTec AD, VisA, and MVTec3DRGB benchmarks. In the widely studied MVTec AD dataset,
+our method slightly outperforms the current state-of-the-art
+methods. Since the anomalies of this dataset are relatively
+easier to identify, the current methods have already achieved
+a high level of performance, leaving limited potential for
+substantial advancements. In the VisA and MVTec3D datasets,
+
+4516
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+TABLE II
+A NOMALY D ETECTION AND L OCALIZATION P ERFORMANCE ON THE MVT EC AD [47], V IS A [9] AND M V T EC 3D-RGB [48] DATASET. S INCE THE
+MVT EC AD B ENCHMARK H AS A PPROACHED SATURATION , O UR M ETHOD S HOWS O NLY S LIGHT ENHANCEMENTS . W HEN A PPLIED TO THE
+M ORE C HALLENGING V IS A AND MVT EC 3D-RGB DATASETS , M ORE S IGNIFICANT I MPROVEMENTS C AN B E O BSERVED . C OMPARED TO
+P-AUC, THE PRO M ETRIC O FFERS A M ORE E FFECTIVE R EFLECTION OF THE M ODEL ’ S A BILITY TO D ETECT H ARD S AMPLES
+
+TABLE III
+E VALUATION OF A NOMALY D ETECTION AND L OCALIZATION P ERFORMANCE OF A LL O BJECT C ATEGORIES ON THE C HALLENGING V IS A DATASET
+
+TABLE IV
+E VALUATION OF D ETECTION AND L OCALIZATION P ERFORMANCE OF A LL O BJECT C ATEGORIES ON THE C HALLENGING MVT EC 3D-RGB DATASETS
+
+our method surpasses the current state-of-the-art approaches
+significantly. Compared to the well-known method PatchCore
+[2], our method takes advantage of the enhanced feature
+encoder and robust knowledge distillation paradigm, leading to better performances. Compared to the synthesis-based
+method SimpleNet [34], our approach achieves comparable
+results on the MvTec dataset, while demonstrating significant improvements on the more challenging Visa and
+Mvtec3D-RGB datasets. This observation indicates the robustness of our method in handling more complex industrial
+datasets. Compared with our baseline RD, our proposed
+method improves the image-level AUROC and pixel-level PRO
+by 1.0%, 1.0% on MvTec AD, 1.9%, 1.4% on VisA, 2.1%,
+0.8% on Mvtec3D-RGB.
+Thanks to the enhanced discrimination capability of our
+advanced teacher model, our method demonstrates the ability to effectively detect previously undetectable anomalies.
+Table III and Table IV present the anomaly detection
+and localization performance for each object in VisA and
+
+MVTec3D-RGB datasets, respectively. These two datasets
+contain difficult anomaly instances, such as candle, macaroni2, tire, and chewing-gum, that exhibit subtle variations in
+appearance compared to normal instances, posing significant
+challenges to anomaly detection. Remarkably, our method
+achieves a 2.4% I-AUC improvement in the “candle” category,
+a 4.6% I-AUC improvement in the “macarnoni2” category, a
+5.0% I-AUC improvement in the “tire” category, and a 2.9%
+PRO improvement in the chewing-gum category. These results
+highlight the effectiveness of our approach in overcoming
+the limited discrimination capacity of pre-trained models and
+effectively identifying challenging anomalies.
+D. Ablation Study
+1) Ablation of Main Components: In this part, we conduct
+an ablation study on the main components of our model:
+RAA module proposed in the first stage and HKD loss
+proposed in the second stage. In detail, RAA comprises a
+
+TANG et al.: ADVANCING PRE-TRAINED TEACHER: TOWARDS ROBUST FEATURE DISCREPANCY
+
+4517
+
+TABLE V
+
+TABLE VII
+
+A BLATION S TUDY OF M AIN M ODULES OF O UR F RAMEWORK . MRG AND
+ARG A RE THE S UB -M ODULES OF RAA P ROPOSED IN THE F IRST
+S TAGE . LHKD I S THE H ARD K NOWLEDGE D ISTILLATION L OSS
+P ROPOSED IN THE S ECOND S TAGE
+
+A BLATION OF O UR T WO -S TAGE T RAINING A PPROACH . T HE P ERFOR MANCES D ENOTE THE I-AUC ON THE M V T EC , V IS A, AND MVT EC
+3D-RGB DATASETS
+
+TABLE VIII
+A NALYSIS OF THE R ESIDUAL P ROPERTIES IN THE ARG M ODULE
+TABLE VI
+C OMPARISON OF A LTERNATIVE D ESIGNS FOR THE RAA M ODULE
+
+Matching-based Residual Gate (MRG) and Attribute-scaling
+Residual Generator (ARG). We utilize the RD [3] as the baseline and compare the following settings: (a) directly utilizing
+the predicted anomaly weight from MRG as the anomaly
+score, (b) blindly generating residuals using ARG without
+considering the anomaly weight from MRG, (c) incorporating
+both MRG and ARG, i.e., the RAA module, (d) solely introducing the HKD loss to the baseline, and (e) employing all the
+components. As shown in Table V (a)-(d), the integration of
+MRG and ARG is essential for the advancement of the vanilla
+teacher model to achieve better performance. Solely relying
+on MRG leads to overfitting to synthetic anomalies, while
+replacing ARG with learnable residuals degrades performance.
+These will be further discussed in the subsequent ablation
+study (Tables VI and VIII). Besides, without MRG (Exp. (c)),
+generating an equal proportion of residuals for both normal
+and abnormal samples disrupts the discrimination ability of the
+pre-trained model, resulting in an ambiguous representation
+space. The results of (d) and (f) show the effectiveness of the
+hard knowledge distillation loss, which enhances the student’s
+ability to accurately reconstruct the features of certain finegrained normal textures and rare normal patterns. By using
+all the components, our method can not only extend the pretrained teacher’s representation ability but also enhance the
+student’s normal distillation ability, which satisfies the first
+and second assumptions in the distillation-based methods.
+2) Comparison of Different Alternative Methods: Our
+framework augments the discrimination capacity of the pretrained teacher model by leveraging synthetic anomalies. We
+compare our proposed method with alternative discriminationbased approaches. In experiments (1)-(4) of Table VI, we
+
+fix the proposed synthetic anomaly generation method and
+replace the RAA module with several alternative designs:
+(1) a conventional contrastive learning module to refine the
+pretrained features; (2) directly using MRG to predict the
+anomaly score; and (3) replacing MRG with a U-Net as
+a binary segmentation network. These alternatives all lead
+to performance degradation. The main reason is that these
+methods may overfit to the specific patterns of synthetic
+anomalies and fail to generalize to diverse real-world anomalies. In contrast, our RAA module avoids this pitfall through
+its adaptive residual learning mechanism, which suppresses
+residuals on normal samples to maintain the feature integrity
+of the pre-trained model. In experiments (5)-(6), we use
+the anomaly synthesis method proposed by NSA, replace
+its encoder-decoder reconstruction framework with ours, and
+achieve improved performance, demonstrating the effectiveness and generalization of our method. In experiments (7)-(8),
+we integrate the memory bank of PatchCore into our AAND.
+Results show “PatchCore+Ours” also outperforms PatchCore
+but underperforms our original version, as PatchCore’s nonlearnable nature prevents it from benefiting from synthetic
+anomaly learning.
+3) Ablation of the Two-Stage Framework: In this part, we
+conduct an ablation study on our two-stage framework. As
+shown in Table VII, using Stage I alone leads to subpar
+performance as it cannot detect unforeseen anomalies, which
+requires Stage II to remember normality. Instead, integrating
+the two-stage training methodology fulfills the two underlying
+assumptions of the KD framework, culminating in optimal
+performance. We also explore the possibility of joint training for the two stages, simultaneously optimizing both the
+advanced teacher and the student model. However, it yields
+poorer performances, which can be attributed to the continuous
+fluctuations in the teacher’s feature space during training.
+These ongoing changes created significant challenges for the
+training of the student model, making it difficult to learn a
+stable normal feature distribution. All in all, our two-stage
+training approach proves to be both reasonable and effective.
+
+4518
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+TABLE IX
+P ERFORMANCE C OMPARISON OF CNN-BASED AND T RANSFORMER BASED F RAMEWORKS . T HE P ERFORMANCES D ENOTE THE I-AUC ON
+THE M V T EC , V IS A, AND M V T EC 3D-RGB DATASETS
+
+Fig. 5. Quantitative Experiments for the verification of the second assumption.
+
+4) Quantitative Verification of Assumption II: To verify the
+second assumption in our paper, we analyze the student’s distillation loss, as shown in Fig. 5. Adding the HKD loss to the
+baseline reduces the distillation loss of normal patches by 0.02
+(10.5%), indicating that the student is better able to reconstruct
+normal features. With our two-stage AAND method, normal
+and abnormal features are more clearly separated due to the
+fulfillment of the first assumption, making it harder for the
+student to reconstruct abnormal features.
+5) Analysis of Residual Properties: To understand the
+impact of different residual characteristics in the ARG module,
+we conduct ablation studies that are shown in Table VIII. It
+involves (a) replacing the residuals in Eq. (7) with learnable
+residuals, and (b) replacing the tanh function in Eq. (7) with a
+sigmoid function. The utilization of learnable residuals without
+explicit scale restrictions can potentially result in excessive
+residuals and the disruption of the pre-trained model’s prior
+knowledge. In contrast to scaling the residuals to the range
+(0, 1) using the sigmoid function, we employ the tanh function
+to project the residuals to the range of (−1, 1). This choice
+leads to moderate perturbations to the original features, thus
+improving the performance effectively.
+6) Ablation of Backbone: To our knowledge, no prior
+work has explored transformer-based architectures within the
+reverse distillation [3] framework. As a pilot exploration,
+we replace the original pre-trained Wide-Resnet50-2 encoder
+with a pre-trained CLIP-ViT-B/16 encoder and transform
+the decoder from convolutions to ViT blocks. Under the
+same training setting, the experimental results are shown in
+Tabel IX. Whether using CNN-based or Transformer-based
+architectures, our method achieves significant improvements
+over the Baseline RD, demonstrating the effectiveness of
+our approach. However, the performance of the Transformerbased architecture currently lags behind that of the CNN-based
+method within the KD-based framework. This may be because
+the downsample-upsample structure of the CNN-based RD
+framework aligns more closely with the concept of reverse
+distillation. Addressing this issue may require a specialized
+design for the transformer decoder, which could be explored
+in future work.
+7) Model Complexity Analysis: We compare the inference
+speed and number of parameters between our approach and
+existing distillation-based methods. The experiment is conducted on a Nvidia GeForce GTX 2080ti GPU with Intel(R)
+Xeon(R) CPU E5-2680 and the batch size is set to 1 during
+testing. As shown in Table VII, our method introduces a
+marginal increase in inference time compared to RD and
+possesses fewer parameters than RD++. In comparison to
+
+TABLE X
+C OMPARATIVE A NALYSIS OF M ODEL E FFICIENCY (F L OP S ) AND C OMPU TATIONAL P ERFORMANCE (M V T EC / V IS A / M V T EC 3D-RGB)
+
+the one-stage baseline RD, our two-stage framework solely
+incorporates the lightweight RAA modules, resulting in a
+slight computational overhead but a remarkable enhancement
+in performance. We further evaluate computational efficiency
+in terms of FLOPs, as shown in Table X. Compared to RD++,
+our method introduces 1.3 GFLOPs overhead but achieves
+performance improvements on challenging benchmarks (VisA:
++2.1%, MvTec3D-RGB: +2.4%). Additionally, we offer a
+lightweight variant Ours* that uses 2-layer MLPs instead of
+3-layer MLPs in the RAA module, reducing computational
+cost by 4.83 GFLOPs while retaining gains (VisA: +1.8%,
+MvTec3D-RGB: +2.1%). These results demonstrate that our
+approach achieves a favorable efficiency-accuracy trade-off,
+obtaining superior performance with lower computational cost.
+8) Hyper-Parameter Sensitivity: There are two important
+hyper-parameters in our method: the number of memory items
+L in MRG module, and the number of the selected hard sample
+Kh in the hard knowledge distillation loss. We evaluate the
+sensitivity of our model to the two parameters on the MvTec
+AD [47] and VisA [9] datasets. We first fix Kh at 10 to change
+L, and then fix L to the best value to change Kh , where L = 0
+means that we use MLP as a classifier instead of MRG. As
+shown in Fig. 8, MRG demonstrates robustness concerning
+the memory size L. Appropriately increasing the memory size
+helps to capture the diversity of normality and anomaly, where
+the best performance is achieved when the memory size is
+set to 50. For the number of hard samples Kh , compared to
+not selecting hard samples (i.e., Kh = 0), selecting different
+numbers of hard samples can improve performance. The best
+performance is achieved when Kh = 10. Insufficient hard
+samples lack representativeness of challenging patterns, while
+an excessive amount of hard samples hinders the model’s focus
+on the most challenging patterns.
+E. Visualization Analysis
+1) Qualitative Results for Anomaly Localization: We
+present qualitative anomaly localization results in Fig. 6.
+
+TANG et al.: ADVANCING PRE-TRAINED TEACHER: TOWARDS ROBUST FEATURE DISCREPANCY
+
+4519
+
+Fig. 6. Qualitative results for anomaly localization, where “A-score” denotes the maximum value in the anomaly score map. Compared to RD [3] and RD++
+[7], our method can accurately localize anomalies even in some challenging cases where the abnormal region is extremely small or the appearance of the
+anomaly is very similar to normal data.
+
+Fig. 7. Comparison of feature distribution between the vanilla teacher model and our advanced teacher model, visualized using t-SNE [50].
+Figure (a)-(f) represent specific industrial product categories from the benchmark datasets. Our method demonstrates an enhanced discrimination capacity
+between real normal and abnormal inputs while preserving the integrity of pre-trained normal representation. The red circle marks out the optimized anomaly
+features.
+
+Compared to RD and RD++, our method can accurately
+localize anomalies even in some challenging cases, where
+
+the abnormal region is extremely small or the appearance of
+the anomaly is very similar to normal data. When dealing
+
+4520
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+noise is kept minimal for normal samples, thereby preserving
+the pre-trained model’s fidelity to normal instances. Conversely, the residuals on abnormal inputs exhibit an increasing
+trend, amplifying the distinctions between anomalies and
+normal instances.
+V. C ONCLUSION
+Fig. 8. Hyper-parameter sensitivity analysis for the number of memory items
+L and the number of hard samples Kh .
+
+Fig. 9. The variation of the intensity of residuals with respect to training
+epochs. The blue line indicates the residual variation on normal samples,
+while the red line indicates the residual variation on anomaly samples.
+
+with these cases, the vanilla teacher model in RD and RD++
+maps abnormal inputs to a normal representation, in which
+the student also constructs the normality. As a result, some
+defective products cannot be successfully detected due to the
+unreliable teacher-student feature discrepancy. Unlike these
+methods, our advanced teacher model can generate more discriminative features, which better fulfills the first assumption
+in distillation-based anomaly detection methods. In practice,
+detecting these challenging anomalies helps manufacturers
+identify problems promptly and ensures that consumers receive
+satisfactory products.
+2) Visualization of Feature Distribution: To demonstrate
+the enhanced discrimination capacity of our anomaly amplification stage, we present the visualization of feature distribution
+in Fig. 7. Without the introduced stage, the feature distribution
+of the vanilla teacher exhibits ambiguity between normal
+and abnormal features. In our advanced teacher space, the
+feature distribution is significantly more separated than that
+in the vanilla teacher, which proves the effectiveness of our
+Stage I. Moreover, real anomalies can be well distinguished
+from normal ones, demonstrating that synthetic anomalies can
+approximate a majority of real anomalies. Additionally, the
+shape of the normal distribution does not undergo significant
+changes before and after Stage I training. This is because our
+residual gate suppresses residuals on normal samples, preserving the generalizability towards diverse normal patterns.
+3) Visualization of Residual Variation: Our proposed RAA
+module suppresses the residuals on normal features while
+encouraging residuals for abnormal features. To demonstrate this, we present visualizations of residual variations
+during training in Fig. 9. We define the intensity of residual noises
+for normal samples and
+samples as
+PN n P
+PN a anomaly
+PC
+C
+1
+1
+n 2
+a 2
+(∆
+)
+and
+(∆
+n
+a
+i=1
+j=1
+i=1
+j=1
+ij
+i j ) , respecN ×C
+N ×C
+tively. During the training process, the intensity of residual
+
+In this paper, we propose a novel two-stage industrial
+anomaly detection framework, which sequentially performs
+anomaly amplification and normality distillation to obtain
+robust feature discrepancy. In the first anomaly amplification
+stage, we propose a novel residual anomaly amplification
+module to advance the teacher model with the exposure of
+synthetic anomalies. It effectively amplifies anomalies via
+residual generation while maintaining the integrity of the
+pre-trained model. In the second normality distillation stage,
+we design a novel hard knowledge distillation loss, which
+enhances the reconstruction capability of the student decoder
+in dealing with challenging normal patterns. Comprehensive
+experiments on the MvTecAD, VisA, and MvTec3D-RGB
+dataset demonstrate the effectiveness of our method.
+Limitation and future work: Some hard anomalies are
+still difficult to detect solely from RGB images. Combining
+knowledge from other modalities, such as point clouds and
+natural language, may lead to better detection results. Besides,
+synthesizing anomaly data that closely resembles real-world
+anomalies is crucial for better advancing pre-trained models.
+In addition, decomposing pretrained teacher model into taskspecific factor networks [51] is also a promising direction.
+These will be explored in our future work.
+R EFERENCES
+[1]
+
+J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and L. Fei-Fei, “ImageNet:
+A large-scale hierarchical image database,” in Proc. IEEE Conf. Comput.
+Vis. Pattern Recognit., Jun. 2009, pp. 248–255.
+[2] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+“Towards total recall in industrial anomaly detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+pp. 14318–14328.
+[3] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2022, pp. 9727–9736.
+[4] D. Gudovskiy, S. Ishizaka, and K. Kozuka, “CFLOW-AD: Real-time
+unsupervised anomaly detection with localization via conditional normalizing flows,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis.
+(WACV), Jan. 2022, pp. 1819–1828.
+[5] G. Wang, S. Han, E. Ding, and D. Huang, “Student–teacher feature
+pyramid matching for anomaly detection,” 2021, arXiv:2103.04257.
+[6] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee,
+“Multiresolution knowledge distillation for anomaly detection,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2021, pp. 14902–14912.
+[7] T. D. Tien et al., “Revisiting reverse distillation for anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2023, pp. 24511–24520.
+[8] X. Zhang, S. Li, X. Li, P. Huang, J. Shan, and T. Chen, “DeSTSeg:
+Segmentation guided denoising student-teacher for anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2023, pp. 3914–3923.
+[9] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spotthe-difference self-supervised pre-training for anomaly detection and
+segmentation,” in Proc. Eur. Conf. Comput. Vis. Cham, Switzerland:
+Springer, 2022, pp. 392–408.
+[10] X. Yang and X. Wang, “Kolmogorov–Arnold transformer,” 2024,
+arXiv:2409.10594.
+
+TANG et al.: ADVANCING PRE-TRAINED TEACHER: TOWARDS ROBUST FEATURE DISCREPANCY
+
+[11] X. Yang and X. Wang, “Neural metamorphosis,” in Proc. Eur. Conf.
+Comput. Vis., 2024, pp. 1–19.
+[12] J. Kirkpatrick et al., “Overcoming catastrophic forgetting in neural
+networks,” Proc. Nat. Acad. Sci. USA, vol. 114, no. 13, pp. 3521–3526,
+2017.
+[13] A. Creswell, T. White, V. Dumoulin, K. Arulkumaran, B. Sengupta, and
+A. A. Bharath, “Generative adversarial networks: An overview,” IEEE
+signal Process. Mag., vol. 35, no. 1, pp. 53–65, Jan. 2018.
+[14] M. Rudolph, B. Wandt, and B. Rosenhahn, “Structuring autoencoders,”
+in Proc. IEEE/CVF Int. Conf. Comput. Vis. Workshop (ICCVW),
+Oct. 2019, pp. 615–623.
+[15] D. Gong et al., “Memorizing normality to detect anomaly: Memoryaugmented deep autoencoder for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019,
+pp. 1705–1714.
+[16] L. Wang, J. Tian, S. Zhou, H. Shi, and G. Hua, “Memory-augmented
+appearance-motion network for video anomaly detection,” Pattern
+Recognit., vol. 138, Jun. 2023, Art. no. 109335.
+[17] J. Hou, Y. Zhang, Q. Zhong, D. Xie, S. Pu, and H. Zhou, “Divideand-assemble: Learning block-wise memory for unsupervised anomaly
+detection,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+Oct. 2021, pp. 8791–8800.
+[18] S. Lu, W. Zhang, H. Zhao, H. Liu, N. Wang, and H. Li, “Anomaly
+detection for medical images using heterogeneous auto-encoder,” IEEE
+Trans. Image Process., vol. 33, pp. 2770–2782, 2024.
+[19] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” 2013,
+arXiv:1312.6114.
+[20] J. Li, Q. Huang, Y. Du, X. Zhen, S. Chen, and L. Shao, “Variational
+abnormal behavior detection with motion consistency,” IEEE Trans.
+Image Process., vol. 31, pp. 275–286, 2022.
+[21] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting
+for visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021,
+Art. no. 107706.
+[22] R. Rombach, A. Blattmann, D. Lorenz, P. Esser, and B. Ommer,
+“High-resolution image synthesis with latent diffusion models,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+pp. 10684–10695.
+[23] J. Ho, “Denoising diffusion probabilistic models,” in Proc. Adv. Neural
+Inf. Process. Syst., vol. 33, 2024, pp. 6840–6851.
+[24] J. Wyatt, A. Leach, S. M. Schmon, and C. G. Willcocks, “AnoDDPM:
+Anomaly detection with denoising diffusion probabilistic models using
+simplex noise,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+Workshops (CVPRW), Jun. 2022, pp. 649–655.
+[25] Y. Teng, H. Li, F. Cai, M. Shao, and S. Xia, “Unsupervised
+visual defect detection with score-based generative model,” 2022,
+arXiv:2211.16092.
+[26] F. Lu, X. Yao, C.-W. Fu, and J. Jia, “Removing anomalies as noises for
+industrial defect localization,” in Proc. IEEE/CVF Int. Conf. Comput.
+Vis., Oct. 2023, pp. 16166–16175.
+[27] X. Zhang, N. Li, J. Li, T. Dai, Y. Jiang, and S.-T. Xia, “Unsupervised
+surface anomaly detection with diffusion probabilistic model,” in Proc.
+IEEE/CVF Int. Conf. Comput. Vis., Oct. 2023, pp. 6782–6791.
+[28] V. Zavrtanik, M. Kristan, and D. Skočaj, “DRAEM—A discriminatively trained reconstruction embedding for surface anomaly
+detection,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., Oct. 2021,
+pp. 8330–8339.
+[29] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Selfsupervised learning for anomaly detection and localization,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+pp. 9664–9674.
+[30] H. M. Schlüter, J. Tan, B. Hou, and B. Kainz, “Natural
+synthetic anomalies for self-supervised anomaly detection and
+localization,” in Proc. Eur. Conf. Comput. Vis. (ECCV), 2022,
+pp. 474–489.
+[31] M. Z. Zaheer, J.-H. Lee, A. Mahmood, M. Astrid, and S.I. Lee, “Stabilizing adversarially learned one-class novelty detection
+using pseudo anomalies,” IEEE Trans. Image Process., vol. 31,
+pp. 5963–5975, 2022.
+[32] M. Cimpoi, S. Maji, I. Kokkinos, S. Mohamed, and A. Vedaldi,
+“Describing textures in the wild,” in Proc. IEEE Conf. Comput. Vis.
+Pattern Recognit., Jun. 2014, pp. 3606–3613.
+[33] K. Perlin, “An image synthesizer,” ACM SIGGRAPH Comput. Graph.,
+vol. 19, no. 3, pp. 287–296, Jul. 1985.
+[34] Z. Liu, Y. Zhou, Y. Xu, and Z. Wang, “SimpleNet: A simple network
+for image anomaly detection and localization,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jun. 2023, pp. 20402–20411.
+
+4521
+
+[35] V. Zavrtanik, M. Kristan, and D. Skočaj, “DSR—A dual subspace reprojection network for surface anomaly detection,” in Proc. Eur. Conf.
+Comput. Vis. Cham, Switzerland: Springer, 2022, pp. 539–554.
+[36] S. Zagoruyko and N. Komodakis, “Wide residual networks,” 2016,
+arXiv:1605.07146.
+[37] L. Zanella, W. Menapace, M. Mancini, Y. Wang, and E. Ricci,
+“Harnessing large language models for training-free video anomaly
+detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2024, pp. 18527–18536.
+[38] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM:
+A patch distribution modeling framework for anomaly detection
+and localization,” in Proc. Int. Conf. Pattern Recognit., 2021,
+pp. 475–489.
+[39] Y. Wang, J. Peng, J. Zhang, R. Yi, Y. Wang, and C. Wang,
+“Multimodal industrial anomaly detection via hybrid fusion,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2023,
+pp. 8032–8041.
+[40] M. Rudolph, B. Wandt, and B. Rosenhahn, “Same same but DifferNet: Semi-supervised defect detection with normalizing flows,” in
+Proc. IEEE Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2021,
+pp. 1906–1915.
+[41] M. Rudolph, T. Wehrbein, B. Rosenhahn, and B. Wandt, “Fully
+convolutional cross-scale-flows for image-based defect detection,” in
+Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2022,
+pp. 1088–1097.
+[42] X. Yao, R. Li, J. Zhang, J. Sun, and C. Zhang, “Explicit boundary guided
+semi-push-pull contrastive learning for supervised anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2023, pp. 24490–24499.
+[43] D. J. Rezende and S. Mohamed, “Variational inference with normalizing flows,” in Proc. Int. Conf. Mach. Learn. (ICML), vol. 37, 2015,
+pp. 1530–1538.
+[44] M. Rudolph, T. Wehrbein, B. Rosenhahn, and B. Wandt, “Asymmetric
+student-teacher networks for industrial anomaly detection,” in Proc.
+IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2023,
+pp. 2592–2602.
+[45] X. Yao, R. Li, Z. Qian, Y. Luo, and C. Zhang, “Focus the
+discrepancy: Intra-and inter-correlation learning for image anomaly
+detection,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., Sep. 2023,
+pp. 6803–6813.
+[46] T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár, “Focal loss for
+dense object detection,” in Proc. IEEE Int. Conf. Comput. Vis. (ICCV),
+Oct. 2017, pp. 2980–2988.
+[47] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A
+comprehensive real-world dataset for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2019, pp. 9592–9600.
+[48] P. Bergmann, X. Jin, D. Sattlegger, and C. Steger, “The MVTec 3D-AD
+dataset for unsupervised 3D anomaly detection and localization,” 2021,
+arXiv:2112.09045.
+[49] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed
+students: Student–teacher anomaly detection with discriminative latent
+embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2020, pp. 4183–4192.
+[50] L. Van der Maaten and G. E. Hinton, “Visualizing data using
+t-SNE,” J. Mach. Learn. Res., vol. 9, no. 86, pp. 2579–2605,
+2008.
+[51] X. Yang, J. Ye, and X. Wang, “Factorizing knowledge in neural
+networks,” in Proc. Eur. Conf. Comput. Vis. Cham, Switzerland:
+Springer, 2022, pp. 73–91.
+
+Canhui Tang received the B.S. degree in artificial
+intelligence from Xi’an Jiaotong University, Xi’an,
+China, in 2023, where he is currently pursuing the
+M.S. degree. His research interests include anomaly
+detection, point cloud registration, and multimodal
+large language model.
+
+4522
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+Sanping Zhou (Member, IEEE) received the Ph.D.
+degree from Xi’an Jiaotong University, Xi’an, China,
+in 2020. From 2018 to 2019, he was a Visiting Ph.D.
+Student with the Robotics Institute, Carnegie Mellon
+University. He is currently a Professor with the Institute of Artificial Intelligence and Robotics, Xi’an
+Jiaotong University. His research interests include
+machine learning, computer vision, and embodied
+intelligence, with a focus on meta learning, multitask learning, object detection, multi-target tracking,
+trajectory prediction, medical image segmentation,
+visual navigation, and visual grasping.
+
+Yizhe Li received the B.S. degree in control science
+and engineering from Xi’an Jiaotong University,
+Xi’an, China, in 2022, where he is currently pursuing
+the M.S. degree in artificial intelligence. His research
+interests include computer vision and multi-object
+tracking.
+
+Yonghao Dong received the B.S. degree in measurement control technology and instrument from
+East China University of Science and Technology,
+Shanghai, China, in 2018, and the M.S. degree in
+electrical and computer engineering from the University of Illinois Chicago, Chicago, IL, USA, in
+2019. He is currently pursuing the Ph.D. degree with
+the Institute of Artificial Intelligence and Robotics,
+Xi’an Jiaotong University. His research interests
+include computer vision, image/video processing,
+analysis, and understanding.
+
+Le Wang (Senior Member, IEEE) received the B.S.
+and Ph.D. degrees in control science and engineering
+from Xi’an Jiaotong University, Xi’an, China, in
+2008 and 2014, respectively. From 2013 to 2014, he
+was a Visiting Ph.D. Student with Stevens Institute
+of Technology, Hoboken, NJ, USA. From 2016 to
+2017, he was a Visiting Scholar with Northwestern University, Evanston, IL, USA. He is currently
+a Professor with the Institute of Artificial Intelligence and Robotics, Xi’an Jiaotong University. His
+research interests include computer vision, pattern
+recognition, and machine learning.
+PAPER_TEXT

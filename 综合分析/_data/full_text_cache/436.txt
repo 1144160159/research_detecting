@@ -1,0 +1,801 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 5, MAY 2025 7931
+
+Federated Graph Anomaly Detection via Contrastive
+ Self-Supervised Learning
+ Xiangjie Kong , Senior Member, IEEE, Wenyi Zhang , Hui Wang , Mingliang Hou , Xin Chen ,
+ Xiaoran Yan , Member, IEEE, and Sajal K. Das , Fellow, IEEE
+
+ Abstract— Attribute graph anomaly detection aims to identify N OMENCLATURE
+nodes that significantly deviate from the majority of nor-
+ G = (V, E, X) Attribute network.
+mal nodes, and has received increasing attention due to the
+ubiquity and complexity of graph-structured data in various real- V Node set.
+world scenarios. However, current mainstream anomaly detection E Edge set.
+methods are primarily designed for centralized settings, which X ∈ Rn× f Attribute matrix.
+may pose privacy leakage risks in certain sensitive situations. A ∈ Rn×n Adjacency matrix.
+Although federated graph learning offers a promising solution
+ xi ∈ R f Attribute vector of the ith node.
+by enabling collaborative model training in distributed systems
+while preserving data privacy, a practical challenge arises as Pi = (vi , Gi , yi ) Contrastive instance pair.
+each client typically possesses a limited amount of graph data. vi Target node of Pi .
+Consequently, naively applying federated graph learning directly Gi Local subgraph of Pi .
+to anomaly detection tasks in distributed environments may lead yi ∈ {0, 1} Label of Pi .
+to suboptimal performance results. We propose a federated graph
+ Ai ∈ Rc×c Adjacency matrix of Gi .
+anomaly detection framework via contrastive self-supervised
+learning (CSSL) [federated CSSL anomaly detection frame- Tc Number of training epochs of
+work (FedCAD)] to address these challenges. FedCAD updates FedAD.
+anomaly node information between clients via federated learning Ei ∈ Rc×d Embedding matrix of Gi .
+(FL) interactions. First, FedCAD uses pseudo-label discovery lg
+ ei ∈ R d
+ Embedding vector of Gi .
+to determine the anomaly node of the client preliminarily.
+Second, FedCAD employs a local anomaly neighbor embedding eitn ∈ Rd Embedding vector of vi .
+aggregation strategy. This strategy enables the current client si Predicted score of Pi .
+to aggregate the neighbor embeddings of anomaly nodes from W(ℓ) ∈ R(ℓ−1) × d (ℓ) Learnable parameter of the ℓth
+other clients, thereby amplifying the distinction between anomaly layer of GCN module.
+nodes and their neighbor nodes. Doing so effectively sharpens W(d) ∈ Rd×d Learnable parameter of discriminathe contrast between positive and negative instance pairs within
+contrastive learning, thus enhancing the efficacy and precision of tor module.
+anomaly detection through such a learning paradigm. Finally, the M Number of clients.
+efficiency of FedCAD is demonstrated by experimental results on Tfc Rounds of communication between
+four real graph datasets. the client and the server.
+ Index Terms— Anomaly detection, attributed networks, con- Tfcd Number of training epochs of local
+trastive self-supervised learning (CSSL), federated learning (FL). discriminator module in federated
+ contrastive self-supervised learning
+ Manuscript received 14 September 2022; revised 2 April 2023 and 9 April anomaly detection framework (Fed-
+2024; accepted 10 June 2024. Date of publication 20 June 2024; date of CAD).
+current version 5 May 2025. This work was supported in part by the National GCi = (VCi , ECi , XCi ) Subgraph owned by client Ci .
+Natural Science Foundation of China under Grant 62072409, in part by the
+Zhejiang Provincial Natural Science Foundation under Grant LR21F020003, Ȳ Pseudo labels.
+and in part by the Zhejiang Lab under Grant 2022NF0AC01. The work of UCi Neighbor embedding matrix of
+Sajal K. Das was supported by the U.S. National Science Foundation (NSF) client Ci .
+under Award CNS-2008878, Award SaTC-2030624, Award OAC-2104078,
+and Award EPCN-2319995. (Corresponding author: Xiaoran Yan.)
+ Xiangjie Kong and Wenyi Zhang are with the College of Computer Science
+and Technology, Zhejiang University of Technology, Hangzhou 310023, China I. I NTRODUCTION
+(e-mail: xjkong@ieee.org; wyzhang98@outlook.com).
+ Hui Wang, Mingliang Hou, and Xin Chen are with the School
+of Software, Dalian University of Technology, Dalian 116620, China
+(e-mail: wanghui.sd@outlook.com; teemohold@outlook.com; xin.chen.jx@
+ A NOMALY, a fundamental research problem in machine
+ learning, has been extensively explored across various
+ domains, such as image and time series analysis [1]. Its
+outlook.com).
+ Xiaoran Yan is with the Research Institute of Artificial Intelligence, Zhejiang primary goal is to identify data points or entities that exhibit
+Lab, Hangzhou 311100, China (e-mail: yanxr@zhejianglab.com). unexpected behavior or do not conform to typical patterns. Tra-
+ Sajal K. Das is with the Department of Computer Science, Missouri ditional anomaly detection methods have mainly focused on
+University of Science and Technology, Rolla, MO 65409 USA (e-mail:
+sdas@mst.edu). single-dimensional data or simple relationships. However, the
+ Digital Object Identifier 10.1109/TNNLS.2024.3414326 importance of attribute graph anomaly detection has become
+ 2162-237X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+7932 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 5, MAY 2025
+
+increasingly evident with the advent of complex relational data tion is to support computation over encrypted data using
+in areas such as social networks, IoT, and biological networks. cryptography-based techniques, such as homomorphic encryp-
+ Attribute graphs represent complex data structures that tion. While providing a solid security guarantee, these
+include nodes, edges, and various attribute information techniques have a substantial computational overhead, making
+attached to each node and edge. In contrast to conventional them an inappropriate choice. FedCAD solves this challenge
+graphs that only represent interactions between nodes, attribute by designing federated parameter aggregation and anomaly
+graphs incorporate rich feature information for each node, information updates between clients based on federated
+allowing for the modeling of more intricate interaction sys- learning (FL) without heavy cryptographic operations. First,
+tems [2]. Anomaly detection on attribute graphs involves FedCAD indirectly obtains the graph structure of other clients
+identifying abnormal nodes, edges, or substructures within through federated parameter aggregation and integrates it into
+this more complex context. Unlike single-dimensional or its client graph structure. Second, FedCAD does not directly
+tabular data, anomaly detection on attribute graphs poses share node features but obtains the neighbor subgraph of
+more significant challenges. The detection of abnormal nodes the target node through contrastive learning sampling and
+in attribute graphs holds significant implications for vari- embeds the subgraph into the low-dimensional embedding
+ous security-related applications and has become an urgent vector before sharing. Meanwhile, the server only uploads the
+research topic in recent years. Examples include social abnormal node neighborhood subgraph embeddings, but not
+network analysis, financial fraud detection, and cyberse- the normal node neighborhood subgraph embeddings. These
+curity. With the advancements in graph neural networks two points ensure data privacy security.
+(GNNs), attribute graph anomaly detection has made signifi- For the second challenge, that the client-side subgraphs are
+cant progress and has demonstrated promising performance in small in size, an evident approach is to scale-up the data per
+many real-world complex scenarios [2], [3]. client, with the company or organization augmenting the scale
+ Despite the progress made by conventional centralized of the dataset through other channels. However, expanding the
+anomaly detection methods, they often require direct access scale of the dataset is costly. Another method is to perform
+to potentially sensitive user data, raising serious privacy data enhancement. However, most current data enhancement
+concerns [3]. The following is an example of a common methods are suitable for computer vision (CV) and natural
+scenario. Considering the practical problems of the financial language processing (NLP) fields. Because graphs are comindustry, for a variety of reasons, urban residents visit differ- plicated and non-Euclidean, few data enhancement techniques
+ent banks. Therefore, their customer information, transaction are available for graph data. In addition, the data generated by
+network, and default history are only stored in the banks they data augmentation are mostly negative examples, degrading
+visit. A robust anomaly detection model to perform efficient the model performance in anomaly detection tasks. FedCAD
+inference across the customer network, which contains all solves this challenge by using a local anomaly neighbor
+subgraphs from different banks, is a key requirement for embedding aggregate mechanism, which enables the current
+banks wishing to collaborate to conduct comprehensive credit client to aggregate the anomaly node neighbor embeddings
+assessments of their customers and identify a common industry of other clients, expands the difference between the anomaly
+blacklist. Concerns about user privacy and conflicts of interest, node and its neighbor nodes, and makes the difference between
+it is difficult for all banks to share the customer network for positive instances pairs and negative instances pairs in contraining anomaly detection models. Two challenges arise in the trastive learning obvious, to improve the effectiveness of
+above situation. The first challenge is data privacy protection. subsequent contrastive learning anomaly detection.
+How do we train anomaly detection models in a distributed In this article, we propose FedCAD. The following is a
+system while protecting data privacy? The second challenge summary of our major contributions.
+is the small client subgraph. In a distributed system, the data 1) We propose FedCAD, a federated graph anomaly detecscale of each client is small, and the data between clients may tion framework. FedCAD can collaborate on distributed
+overlap. How do we increase the data scale of each client to graph data to train high-quality graph anomaly detection
+improve the effect of anomaly detection? models while protecting data privacy.
+ Federated graph learning emerges as a compelling alterna- 2) We propose an anomaly information update strategy that
+tive to this issue by facilitating collaborative model training enables each client to aggregate anomaly node neighbor
+across distributed systems without compromising the privacy embeddings from other clients during federated processof individual data owners [4]. It does so by allowing clients to ing. By doing so, it expands the difference between
+maintain their data locally and only share model parameters the anomaly node and its neighbor nodes, and makes
+or encrypted gradients. However, when directly applied to the difference between positive instances pairs and neganomaly detection tasks in distributed environments where ative instances pairs in contrastive learning obvious,
+each client holds a relatively small portion of the overall graph to improve the effectiveness of subsequent contrastive
+data, federated graph learning may suffer from performance learning anomaly detection.
+degradation due to the lack of comprehensive data exposure 3) We evaluate the proposed FedCAD on four datasets. The
+during the learning process [5]. results verify the performance of the algorithm and its
+ In this article, we propose FedCAD, a federated graph superiority over baseline methods.
+anomaly detection framework that integrates the ideas of The structure of the remainder of this article is as follows.
+federated graph learning and anomaly detection. For the We analyze the related work in Section II. The preliminary
+first challenge of data privacy protection, a standard solu- definitions, notations, and problem statements are explained
+KONG et al.: FEDERATED GRAPH ANOMALY DETECTION VIA CONTRASTIVE SELF-SUPERVISED LEARNING 7933
+
+in Section III. We illustrate the technical details of FedCAD DGI constructs contrastive instance pairs by pairing a node’s
+in Section IV. We show and analyze the experimental results in representation with a graph-level summary vector, exploiting
+Section V. We make a conclusion of this article in Section VI. graph corruption to generate negative samples and thereby
+ enabling the node representation learning in an unsupervised
+ II. R ELATED W ORK setting [17]. Graph contrastive coding (GCC) initializes GNNs
+ In this section, we outline the most related work: anomaly by pretraining on universal graph datasets, using a strategy
+detection on attributed networks, contrastive self-supervised that involves sampling two subgraphs per node as a positive
+learning (CSSL), and federated graph learning. instance pair and utilizing the information noise contrastive
+ estimation (InfoNCE) loss function for representation learn-
+A. Anomaly Detection on Attributed Networks ing [18]. Graphical mutual information (GMI) focuses on
+ Due to the wide application of attribute networks in complex optimizing the agreement between a node’s embeddings and
+system modeling, attribute network anomaly detection has the raw attributes of its neighbors and between the embeddings
+gradually emerged in recent years. Some shallow methods of connected nodes [19]. However, most CSSL approaches
+are used for attribute network anomaly detection. Perozzi do not directly target anomaly detection despite their efficacy
+and Akoglu [6] detect anomalies on the attribute network in learning data representations. To adapt to anomaly detecby extracting the self-network information of each node. tion, CSSL framework for anomaly detection on attributed
+Peng et al. [7] add CUR decomposition to the residual analysis network (CoLA) adapts the entire contrastive learning frameto perform anomaly detection on the attribute network to work to calculate anomaly scores for individual nodes [15].
+alleviate the adverse effect of noise features on anomaly Recognizing that conventional instance pair definitions might
+detection. Unfortunately, because of the limitations of shallow inadequately capture node anomalies, CoLA proposes a new
+mechanisms, these models cannot capture complex interac- form of contrastive instance pair tailored for graph contrastive
+tions between different information patterns, especially when learning. This novel design emphasizes local information of
+the dimensionality of the features is high [8]. each node over global properties. While extensive research
+ GNNs are a class of deep neural networks [9] specif- has demonstrated the broad applicability of graph contrastive
+ically designed to model relational patterns inherent in learning, the challenge of applying it to anomaly detection
+non-Euclidean graph-structured data. Subsequently, a succes- in attributed networks in distributed environments remains a
+sion of spectral-based GNN variants emerged, harnessing filter novel and complex research problem.
+from graph signal processing viewpoint [10]. Among these,
+graph convolutional network (GCN) stands out by implement- C. Federated Graph Learning
+ing a localized first-order approximation of the spectral graph Federated learning is a novel distributed learning paradigm
+convolution operations [11]. This strategic approach enables that can jointly model with multiple clients [20], [21]. Fedthe efficient extraction of meaningful node representations. erated learning has been extensively studied in many fields,
+Due to the rapid development of deep learning-based anomaly for instance, image recognition [22], vehicle localization [23],
+detection, researchers have also proposed anomaly detection machinery fault diagnosis [24], wireless communication [25],
+methods on attribute networks. Ding et al. [8] calculated and edge computing [26]. Federated graph learning is a direcanomalies based on the reconstruction error of the adjacency tion of federated learning and has received extensive attention.
+matrix and attribute matrix by an autoencoder with a GCN Federated graph learning is an emerging technology that
+layer. Fan et al. [12] propose a framework that learns the can jointly train machine learning models on graph datasets
+cross-modal interaction between the network structure and distributed to multiple clients to ensure user privacy [27].
+node attributes. Li et al. [13] employ a spectrogram autoen- Caldarola et al. [28] use GCN to model interdomain intercoder to extract each node’s latent embedding and a Gaussian actions and study cross-domain heterogeneity in FL. He et al.
+mixture model (GMM) to detect each node. Yu et al. [14] [29] propose a general federation framework suitable for graph
+employ random walk sampling and an autoencoder model to embedding algorithms. Jiang et al. [30], Chen et al. [31],
+dynamically learn network embedding and use a cluster-based and Wu et al. [32] study the privacy issue of federated
+detector to detect anomalies. Liu et al. [15] overcome the GNNs. Wang et al. [33] introduce model-agnostic metashortcomings of autoencoders that cannot fully utilize data learning (MAML) into graph FL to maintain model generality
+and cannot operate on large-scale network data. It uses a while dealing with non-independent and identically distributed
+CSSL-based anomaly detection framework to capture the con- (IID) graph data. Zhang et al. [34] study the missing neighbor
+nection between the target node and its adjacent substructures. synthesis issue in the subgraph FL context. Xie et al. [35] study
+The anomaly node is detected statistically by measuring the graph classification to reduce heterogeneity in the structure and
+consistency of each instance pair with its output score through features of graphs owned by local systems. Peng et al. [36]
+contrastive learning. focus on research to strengthen the privacy protection of
+ federated learning and study the use of differential privacy
+B. Contrastive Self-Supervised Learning for federated knowledge graph embedding.
+ CSSL is a pivotal branch of self-supervised learning in
+which models are trained to discern similarities and dis- III. P RELIMINARIES
+similarities among nodes without explicit labels [16]. The A. Notations and Definitions
+remarkable achievements of CSSL in CV have spurred its The notations are summarized in Nomenclature. For notaprogressive adoption within graph-based learning paradigms. tion, we use bold lowercase representing a vector (e.g., x),
+7934 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 5, MAY 2025
+
+Fig. 1. Overall framework of FedCAD. First, the node anomaly score was calculated by the local anomaly detection model, and the client uploaded the
+local anomaly detection model parameters W to the server. Second, the server performs global model parameter aggregation and sends W to each client to
+complete the local anomaly detection model parameter update and repeat Tfc times. Finally, the pseudo label Ȳ was discovered according to the confidence
+threshold λ. Each client uploads the pseudo label Ȳ and the neighbor embedding matrix of the abnormal node U to the server. The server updates the neighbor
+embedding of the abnormal node and sends the updated neighbor embedding matrix set U of the abnormal node to each client. The client obtains the final
+node anomaly score through the local discriminator model.
+
+bold uppercase representing a matrix (e.g., X), and calligraphy client Ck , the goal is to train an anomaly score function f
+letter denoting a set (e.g., V). in distributed systems. The anomaly nodes can be detected by
+ Definition 1 (Attributed Networks): G = (V, E, X) is ranking each node according to its anomaly score. We employ
+denoted as an attributed network, where V is the node set, E is an unsupervised anomaly detection method. In the training
+the edge set, and X ∈ Rn× f is the attribute matrix. The ith row phase, we only give the attribute network G containing abnorvector xi ∈ R f of the attribute matrix represents the attribute mal nodes and do not give the abnormal labels of the nodes.
+vector of the ith node. The structure of the attribute network In this work, we aim to propose a federated anomaly
+is represented as a binary adjacency matrix A ∈ Rn×n , where detection framework on attributed networks, which can colthe existence of a link between nodes vi and v j is represented laboratively learn on isolated subgraphs in different clients to
+by Ai, j = 1, otherwise Ai, j = 0. An attributed network can train a high-quality anomaly detection model while protecting
+also be denoted as G = (A, X). data privacy.
+ Definition 2 (Federated Learning Client Subgraph): We
+have a server and M clients in the FL system. GCi = IV. D ESIGN OF F ED CAD
+(VCi , ECi , XCi ) is a subgraph of client Ci , for Ci ∈ [M].
+ A. Overall Architecture
+Note that there are certain differences in the number of nodes
+and graph structure of each client, but there are also some We propose FedCAD, a novel federated CSSL anomaly
+overlapping nodes between the clients. That is, for any graph detection framework on attributed networks, as shown in
+GCk , there exits k ̸ = t, so that VCk ∩ VCt ̸ = ∅. This setup Fig. 1.
+conforms to the distribution of graph data in the real world. First, we adopt an anomaly detection framework on
+ attributed networks, which can model the relationship between
+ the target node and its partial neighboring substructure by
+B. Problem Statement training a contrastive learning model, revealing various anoma-
+ 1) Node Anomaly Detection in Distributed Systems: Sup- lies in the graph. Second, we integrate the anomaly detection
+pose there are M clients, GCk denotes the data owned by the algorithm into the federated learning framework to implement
+KONG et al.: FEDERATED GRAPH ANOMALY DETECTION VIA CONTRASTIVE SELF-SUPERVISED LEARNING 7935
+
+Fig. 2. Framework of the local anomaly detection. Here we assume that node v1 is an abnormal node and the others are normal nodes. Node v3 is the
+anomaly evaluation target node. First, taking v3 as the target node, positive instance pairs and negative instance pairs are obtained by multiple sampling. The
+GCN-based contrastive learning model then computes the prediction score for each instance pair. Finally, the anomaly score of node v3 was calculated through
+the anomaly score calculation module.
+
+a common federated graph anomaly detection framework, Algorithm 1 Overall Procedure of the Local Anomaly Deteccalled FedAD. It simply combines the local anomaly detec- tion Module
+tion model with the classic federated learning algorithm Input: The attributed network: G, The training epochs: Tc ,
+Fedavg [37], allows the local client to upload the parame- The batch size: B, The sampling rounds: R.
+ters of the anomaly detection model, performs the average Output: Anomaly score function: f (·).
+aggregation of the parameters in the server to update the 1: Initialize the contrastive learning model parameters
+parameters, and finally sends the updated parameters to each (W(0) , . . . , W(d) ).
+client. Third, based on FedAD, we propose FedCAD. FedCAD 2: // The train stage.
+employs federated learning to upload the vector embedding 3: for t = 1, 2, . . . , Tc do
+of the neighbor subgraph of the target node sampled by 4: Initialize the batches B.
+contrastive learning in the client to the server. The server 5: Sample positive instance pairs (P1(+) , . . . , PB(+) ).
+aggregates abnormal information between clients and sends 6: Sample negative instance pairs (P1(−) , . . . , PB(−) ).
+the aggregated vector embedding set to each client. The 7: Calculate the scores (s1(+) , . . . , s B(+) , s1(−) , . . . , s B(−) ) by
+client performs average aggregation, thereby improving the Eq. 7.
+difference in the relationship between the target node and 8: Calculate Lcml by Eq. 8.
+the neighbor subgraph in contrastive learning and improving 9: Update the parameters (W(0) , . . . , W(d) ) of conthe effectiveness of local anomaly detection. trastive learning model via back propagation.
+ 10: end for
+B. Local Anomaly Detection Module 11: // The inference stage.
+ 12: for vi ∈ V do
+ Inspired by CoLA [15], we adopt an anomaly detection (+) (+)
+module, which is shown in Fig. 2. The overall procedure is 13: Sample positive instance pairs (Pi,1 , . . . , Pi,R ).
+ (−) (−)
+depicted in Algorithm 1. 14: Sample negative instance pairs (Pi,1 , . . . , Pi,R ).
+ (+) (+) (−) (−)
+ 1) Instance Pair Sampling: We adopt a contrastive instance 15: Calculate the scores (si,1 , . . . , si,R , si,1 , . . . , si,R ) by
+ pair. The first element is a single node called the Eq. 7.
+ “target node.” The target node randomly traverses every 16: Calculate the anomaly score f (vi ) by Eq. 10.
+ node on the graph in an epoch. The second element 17: end for
+ is a subgraph sampled from the “target node.” Node
+ anomalies in attribute networks are usually reflected as
+ inconsistencies between the target node and its local In positive instance pair, the target node and the subneighbors. graph are connected. In negative instance pair, the target
+ 2) GCN-Based Contrastive Learning Model: The instance node and the subgraph are not connected.
+ pair Pi can be denoted as follows: First, the local subgraph is fed into GCN to obtain
+ the local subgraph embedding. The GCN model can be
+ Pi = (vi , Gi , yi ) (1)
+ written as follows:
+ where vi is the target node, and Gi is the subgraph  −1 −1
+ 
+ sampled from vi . Gi can be denoted as Ei = φ eDi 2 e Di 2 Xi W(0)
+ Ai e (4)
+ Gi = (Ai , Xi ) (2) where D̃ i is the degree matrix of the local subgraph,
+ and yi is the label of Pi . yi can be denoted as follows: Xi is the attribute matrix, and Ei is the embeddings of
+ ( subgraph nodes.
+ 1, Pi is a positive instance pair Then, the embeddings of subgraph nodes Ei are transyi = (3) lg
+ 0, Pi is a negative instance pair. formed into a local subgraph embedding vector ei by
+7936 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 5, MAY 2025
+
+ the average pooling method. Specifically, the method is
+ written as follows:
+ nXi −1
+ lg (Ei )k
+ ei = (5)
+ k=0
+ ni
+ where n i is the number of nodes in the subgraph Gi .
+ We also map the target node to the same embedding
+ space to compare them
+ eitn = φ xvi W(0)
+ 
+ (6)
+ where W(0) is the mapping weight matrix of GCN. xvi
+ is the attribute vector of target node, and eitn is the target
+ node embedding. Fig. 3. Overall framework of FedAD. In the communication between the
+ lg client and server in round t, each client uploads local anomaly detection model
+ We evaluate the final prediction score by comparing ei parameters W0t to the server, and the server performs global model parameter
+ tn
+ and ei aggregation and sends WGt+1 to each client to complete the local anomaly
+  
+ detection model parameter update.
+ si = σ ei W(d) eitn⊤
+ lg
+ (7)
+
+ where W(d) is the discriminator weight matrix, and σ (·) Algorithm 2 Algorithm of FedAD
+ is the logistic sigmoid function. Input: Attributed network: {GCk = (VCk , ECk , XCk )}CM−1
+ k =0
+ , The
+ As the objective function, we use standard binary cross rounds of communication between the client and the
+ entropy (BCE) loss. Concretely, the objective function server: T f c .
+ is denoted as follows: Output: Anomaly score function: f (·).
+ XB 1: The server initializes global model parameters WG0 , dis-
+ Lcml = − yi log(si ) + (1 − yi ) log(1 − si ). (8) tributing them to each client.
+ i=1 2: while not converge and t f c <= T f c do
+ 3) Anomaly Score Computation: Typically, well-trained 3: // Client: local model training.
+ GNN models tend to capture the matching patterns of 4: Run the train stage of Algorithm 1.
+ t
+ normal samples more effectively, as they make up a 5: Upload WCfkc to the server.
+ large proportion of the training data and have distinct 6: // Server: global model aggregation.
+ regularities and features. Conversely, abnormal samples t +1
+ 7: Update global model WGf c by Eq. 12.
+ present a greater challenge due to their variety and 8: Distribute WG
+ t f c +1
+ to each client.
+ irregularity, making it harder for the model to fit their 9: t f c ← t f c + 1.
+ patterns. Ideally, for a normal node, the predicted score 10: end while
+ of its positive pair si(+) should approximate 1, while the
+ negative one si(−) approaches 0. For an abnormal node,
+ the discrimination between the predicted scores of its C. FedAD Algorithm
+ positive and negative pairs would be lower since the
+ model is not able to distinguish its matching pattern well. McMahan et al. [37] proposed FedAvg. The FedAvg is the
+ With the properties mentioned above, we can define the first basic FL algorithm. We integrate the anomaly detection
+ anomaly score for each node as simply the difference algorithm into the federated learning framework to implement
+ between its negative and positive scores. This score is a simple federated graph anomaly detection framework, called
+ negative for normal nodes, whereas it is close to 0 for FedAD, as shown in Fig. 3. Specifically, suppose there are M
+ abnormal nodes. Hence, the higher the anomaly score, clients, GCk denotes the data owned by the client Ck , and WCk
+ the greater the probability of the node being anomalous. denotes the local anomaly detection module trained on the
+ The anomaly score for each node vi is written as follows: client Ck . WG denotes the global model on the server. A total
+ of Tc rounds of communication between the client and the
+ f (vi ) = si(−) − si(+) (9) server. The overall procedure is depicted in Algorithm 2. The
+ where si(+) is the predicted score of the positive pair, FedAD algorithm process is the following steps.
+ and si(−) is the predicted score of the negative pair. 1) Initialization: The server initializes hyperparameters and
+ However, a single-sampled local subgraph of the target the local anomaly detection module parameters WG0 , and
+ node cannot describe the entire neighborhood distribu- so on, and distributes them to each client.
+ tion, which causes the performance to decrease. To solve 2) Local Anomaly Detection Module Training: After
+ this problem, we repeatedly run multiple rounds to cal- receiving the local anomaly detection parameters from
+ culate the average prediction scores. The final anomaly the server, each client trains the local anomaly detecscore for each node is written as follows: tion model and updates the local anomaly detection
+ P R  (−) (+)
+ 
+ parameters using local data. For the client Ck , the tth
+ s
+ r =1 i,r − si,r
+ f (vi ) = (10) communication is
+ R
+ WCt k = WCt k − α∇ L GCk WCt k
+ 
+ where R is the sampling round. (11)
+KONG et al.: FEDERATED GRAPH ANOMALY DETECTION VIA CONTRASTIVE SELF-SUPERVISED LEARNING 7937
+
+ where α is the learning rate, and the updated local model Algorithm 3 Algorithm of FedCAD
+ parameters WCt k are uploaded to the server. Input: Attributed network: {GCk = (VCk , ECk , XCk )}CM−1 , The
+ k =0
+ 3) Global Model Parameters Update: The server aggre- rounds of communication between the client and the server:
+ gates the parameters of the updated local model T f c , The number of training epochs of Local Discriminator
+ uploaded by each client to generate the updated global Module: T f cd , The confidence threshold for determining the
+ model parameters WGt+1 . The formula is pseudo label: λ.
+ M−1 Output: Anomaly score function: f (·).
+ GCk
+ Server initialize global model parameters WG0 , distributing
+ X
+ WGt+1 = P M−1 WCt k (12)
+ Ck =0 Ck =0 GCk them to each client.
+ Run the Algorithm 2.
+ where |GCk | represents the number of samples of the
+ while not converge and t f c ∈ 1, 2, . . . , T f c do
+ client Ck . The updated global model parameters WGt+1
+ // Client: Calculate the pseudo labels and extract the
+ are distributed to each client to continue the next round
+ neighbor embedding matrix.
+ of training.
+ Run the inference stage of Algorithm 1.
+The whole process will repeat steps 2) and 3) until the Calculate the pseudo labels Ȳ Ck by Eq. 13.
+global model converges or reaches the maximum number of Extract the neighbor embedding matrix UCk .
+communications. Upload Ȳ Ck and UCk to the server.
+ FedAD combines the local anomaly detection model with // Server: local anomaly neighbor embedding aggregate.
+the classic federated learning algorithm FedAvg. First, FedAD Aggregate the local anomaly neighbor embedding
+is an integral part of our proposed federated anomaly detection matrix by Eq. 14.
+FedCAD, providing FedCAD with the anomaly node score, C
+ Distribute UCk = {UCC0k , UCC1k , . . . , UCCkk , . . . , UCkM−1 } to
+the target node embedding vector, and the neighbor node client Ck .
+embedding matrix. Second, FedAD is an ablation version of // Client: local discriminator module training.
+FedCAD, which is used to verify the effectiveness of pseudo- // Training phase.
+label discovery, local anomaly neighbor embedding aggregate, Average the aggregated neighbor embedding matrices
+and local discriminator module. by Eq. 15.
+ for not converge and t f cd ∈ 1, 2, . . . , T f cd do
+D. Anomaly Information Update Between Clients Calculate the predicted scores si of vi by Eq. 16.
+Based on FL Calculate L f in by Eq. 17.
+ In graphs, connections may generally exist between nodes Update the local discriminator module parameters
+ t
+and their neighbors. Conversely, an anomaly usually occurs WCfkc via back propagation.
+when there is a mismatch between the target node and its end for
+neighbors, violating the network’s original matching pattern. // Inference phase.
+ Contrastive learning, with its intrinsic discriminative mech- Calculate the predicted scores si of vi by Eq. 16.
+anism, is adept at capturing abnormal mismatch patterns. Calculate the anomaly score f (vi ) by Eq. 9.
+However, the limited scale of data within each client presents end while
+practical challenges for our study. In the context of banking
+operations, for example, bank branches are typically distributed throughout the country, with some branches located thus improving the effectiveness of contrastive anomaly detecin sparsely populated areas possessing relatively small user tion. We first design a pseudo-label discovery on clients and
+data. This scarcity of graph data leads to an overabundance of local anomaly node embedding update on the server. Then,
+duplicate nodes when forming positive and negative instance we feed the obtained results into the discriminator to get the
+pairs. Consequently, when contrastive learning samples neg- final abnormal node score S. The algorithm of the FedCAD
+ative instance pairs from such limited data, the neighboring framework is depicted in Algorithm 3.
+nodes in these pairs are highly likely to overlap with those
+in the positive instance pairs. As a result, this leads to incon- E. Pseudo-Label Discovery
+spicuous distinctions between positive and negative instance
+ Based on the anomaly node score of FedAD, we try to
+pairs, ultimately diminishing the effectiveness of contrastive
+ discover pseudo labels of the anomaly node. To get the pseudo
+learning. Despite our attempts to mitigate this issue through
+ labels, we specifically extract these prediction scores from the
+repeated execution of R rounds of contrast instance pair
+ final anomalous node score S. For the prediction results from
+sampling in the local anomaly detection module, this approach
+ Sk of the ith node in S, if the predicted score is higher than
+fails to address the problem comprehensively.
+ the threshold, then it is a pseudo label
+ To solve the problem, we propose FedCAD. FedCAD (
+extra aggregates the neighbor node embeddings of anomalous k 1, if (Sk > λ)
+nodes from other clients during the federated learning process. Ȳ Ci = (13)
+ 0, otherwise
+This strategy enlarges the difference between abnormal nodes
+and their neighboring counterparts, rendering the contrast where Ȳ Ck i is the pseudo label of the kth target node of the
+between positive and negative instance pairs more apparent, client Ci , and λ ∈ (−1, 0) is the confidence threshold for
+7938 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 5, MAY 2025
+
+ of coincident abnormal node pseudo labels YCi =
+ {Ȳ Ci ∩ Ȳ C0 , . . . , Ȳ Ci ∩ Ȳ C j , . . . , Ȳ Ci ∩ Ȳ C M−1 } =
+ C C
+ {Ȳ CCi0 , . . . , Ȳ Cij , . . . , Ȳ CiM−1 }.
+ 2) We copy M copies of the neighbor embedding matrix
+ UCi of the target node, and then replace the neighbor
+ embedding matrix UCi with the neighbor embedding
+ matrix UC j of other clients according to the obtained
+ C
+ coincident abnormal node pseudo label set Ȳ Cij , which
+ is written as follows:
+  
+ C C C
+ UCij = I − Ȳ Cij ⊙ UCi + Ȳ Cij ⊙ UC j (14)
+
+ where I is the identity matrix and ⊙ is the Hadamard
+ product, i.e., the multiplication of the corresponding
+ positions of the two matrices. We then obtain the
+ aggregated neighbor embedding matrix set UCi =
+ C C
+ {UCCi0 , . . . , UCij , . . . , UCiM−1 }.
+ 3) The server repeatedly executes the above process for
+ each neighbor embedding uploaded by each client.
+ 2) Local Discriminator Module: Fig. 5 shows the process
+ of the local discriminator module. We send the aggregated
+ neighbor embedding matrix set to their respective clients.
+ Each client averages the set of aggregated neighbor embedding
+ matrices, which enlarges the difference between the anomalous
+Fig. 4. Illustrative process of local anomaly neighbor embedding aggregate.
+ target node and its neighbors
+Ȳ Ci and Ȳ C j are the pseudo labels of client Ci and client C j , and UCi and UC j M−1
+are the abnormal node neighbor embedding matrices of client Ci and client C j . 1 X Cj
+ UCi = U (15)
+In the local abnormal neighbor embedding aggregation, when Ȳ Ck i = Ȳ Ck j = 1, M C =0 Ci
+let the neighbor embedding vector UCk 0 = UCk j of the corresponding abnormal j
+
+ C lg
+node to obtain UCij . where UCi is the averaged neighbor embedding matrix. ui
+ denotes the averaged neighbor embedding vector of the ith
+determining the pseudo label. Then, we extract the neighbor node. Then, we obtain the target node embedding vector
+ lg
+node embedding matrix UCi of all target nodes, which consists eitn , which is generated by (6). Next, we feed ui and eitn
+ lg lg into the local discriminator module for training. The local
+of the local subgraph embedding vector ei . ei is converted
+from the readout module in FedAD, which is shown in (5). discriminator module also uses a sample bilinear scoring
+We set the vector in UCk i with Ȳ Ck i = 0 as the 0 vectors. function, which is written as follows:
+There are two main reasons. First, it can effectively protect
+    
+ si = Discriminator ui , eitn = σ ui W(d) eitn⊤ .
+ lg lg
+ (16)
+data privacy. Only uploading the abnormal node neighbor
+embedding vector can effectively protect data privacy from Here, we attempt to maximize similarities between the
+being leaked. Second, it greatly reduces the communication ground-truth label yi and the prediction result si . Therefore,
+overhead of federated learning. The proportion of abnormal we adopt the standard BCE loss as our objective function
+nodes is small, and only uploading the neighbor embedding B
+vector of abnormal nodes can save a lot of communication
+ X
+ Lfin = − yi log(si ) + (1 − yi ) log(1 − si ). (17)
+overhead. In the final step, each client uploads U and Ȳ to the i=1
+server.
+ 1) Local Anomaly Neighbor Embedding Aggregate: After Finally, we compute the local anomaly score using the
+the server receives U and Ȳ from each client update, the anomaly score calculation formula, as shown in (9).
+server obtains the pseudo label of the abnormal node that
+coincides with each client and other clients. After that, the F. Complexity Analysis
+server aggregates the abnormality neighbor embeddings of all In FedCAD, we analyze the time complexity of this frameclients according to the pseudo label of the coincident node. work considering two main components: FedAD and the
+The process of local anomaly neighbor embedding aggregate anomaly information update between clients based on FL.
+is shown in Fig. 4. For the sake of illustration, consider an In FedAD, we consider two main components: the local
+arbitrary client Ci among a total of M clients. Here, C j , where anomaly detection module and FedAvg. For the local anomaly
+i ̸ = j, represents any other distinct client from the set of all detection module, the time complexity of each RWR subgraph
+clients. sampling is O(cδ), where c is the number of sampled neighbor
+ 1) The pseudo label Ȳ Ci takes the intersection with the nodes and δ is the mean degree of the network. We run
+ pseudo label Ȳ C j of other clients to obtain the set R rounds of sampling for each node, then the total time
+KONG et al.: FEDERATED GRAPH ANOMALY DETECTION VIA CONTRASTIVE SELF-SUPERVISED LEARNING 7939
+
+Fig. 5. Illustrative process of local discriminator module. The client aggregates the abnormal node neighbor embedding matrix set sent by the server on
+ lg
+average, and then feeds the embedding vector ui of the neighbor nodes and the embedding vector eitn of the target node into the discriminator, and obtains
+the prediction score of the node through contrastive learning, and finally obtains the abnormal score of the node.
+
+ TABLE I represents the citation relationship between the papers.
+ S TATISTICS OF THE DATASETS The attribute vector is represented by bag-of-words.
+ 2) Wiki: Wiki is a web page link network derived from
+ the English Wikipedia website. Each node is a web
+ page explaining the term. The edge is as hyperlink
+ reference between web pages. The content of web pages
+ is transformed into bag-of-words representations of the
+ initial node features.
+ 3) BlogCatalog: BlogCatalog is a blog sharing website.
+complexity becomes O(cnδ R), where n is the number of
+ Each node represents the users of websites. The edge
+graph nodes in the client. The time complexity of the GCN
+ represents the following relationships between users.
+module is O(c2 n R). The time complexity of the local anomaly
+ Node attributes consist of a list of user tags.
+detection module is O(cn R(c + δ)). For FedAvg, it consists
+ 4) Flickr: Flickr is an image hosting and sharing website.
+of two components: client and server. For the client, all
+ Each node represents the users of websites. The edge
+clients run in parallel for each epoch, with the same time
+ represents the following relationships between users.
+complexity as the local anomaly detection module. For the
+ Node attributes consist of a list of user tags and photo
+server, only the average aggregation operation of local paramtags.
+eters is performed, and the time complexity is O(M). The
+rounds of communication between the client and the server The aforementioned datasets lack ground-truth anomalies,
+are Tfc . Therefore, the overall time complexity of FedAD hence to evaluate them, artificial anomalies must be injected
+is O(Tfc (cn R(c + δ) + M)). For the anomaly information into the attribute network. We refer to the node attribute
+updates between clients based on FL, the time complexity anomalies injection method that has been used in the previous
+is mainly generated by the local anomaly node embedding research [15] to generate node attribute anomalies for each
+update, which is O(M 2 ). The overall time complexity of dataset. We randomly pick a node vi as the target node. Then,
+FedCAD is O(Tfc (cn R(c + δ) + M 2 )). we select another n nodes V = (v1 , v2 , . . . , vn ) as a candidate
+ To reduce the communication complexity, when the client set. Here, we set n = 50. For each v j ∈ V , between the
+uploads the neighbor node embedding matrix, FedCAD only attribute vectors of xi and x j we compute their Euclidean
+uploads the abnormal node neighbor embedding vector, and distance. Then, we pick the node v j with the largest Euclidean
+the normal node neighbor embedding vector is not uploaded. distance from the node vi as the anomaly node. We change xi
+Since the proportion of abnormal nodes is small, it can save to x j .
+a lot of communication overhead. We ultimately obtain the perturbed network using the abovementioned injection technique, the number of abnormal nodes
+ V. E XPERIMENTS is shown in Table I. In our experiments, all class labels are
+ removed and the anomaly labels yi are only visible in the
+A. Datasets
+ inference stage.
+ We employ four datasets that are commonly used to detect
+anomalies in attributed networks, with the basic information
+shown in Table I. B. Experimental Settings
+ 1) Cora: Cora is an academic citation network. The In this section, we outline the critical aspects of our
+ node represents the published paper, and the edge experimental setup. This includes presenting the comparative
+7940 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 5, MAY 2025
+
+baselines, discussing the evaluation metrics used, and detailing The ROC curves of the client containing 50%, 60%, 70%,
+the parameter setting in our framework. and 80% of the data size are shown in Figs. 6–9, respectively.
+ 1) Baselines: We compare our proposed FedCAD frame- Table II displays the AUC results for the four benchmark
+work with the following commonly used methods for anomaly datasets for comparison by computing the area under the
+detection. ROC curves. FedCAD significantly outperformed FedAD and
+ 1) DOMINANT [8]: In DOMINANT, the adjacency matrix also extremely surpassed other baselines. For the experimental
+ and the attribute matrix are concurrently reconstructed results, we conducted the following analysis.
+ using an autoencoder. By calculating the reconstruction FedCAD performs better than other baselines. There are two
+ error, it evaluates the abnormality of each node. main reasons.
+ 2) AnomalyDAE [12]: AnomalyDAE is an anomaly detec- 1) Federated learning cooperates with multiple clients to
+ tion framework via dual autoencoders, which learns the learn together, potentially increasing data size for model
+ cross-modal interactions during node attribute recon- training. An anomaly detection model learned from
+ struction by taking attribute embeddings as inputs to cooperative learning has better performance than a
+ attribute decoders. It detects anomalies by measuring the model trained using only the data of each client alone.
+ reconstruction error. 2) The proposed local anomaly node embedding update can
+ 3) CoLA [15]: CoLA is an anomaly detection frame- expand the difference between abnormal nodes and their
+ work to catch the connections between the target node neighbors. It improves the contrastive learning perforand its adjacent substructures based on CSSL in an mance and further improves the FedCAD performance.
+ unsupervised manner. The anomaly of each node is esti- Compared with FedAD, FedCAD first uses pseudo-label
+ mated statistically by measuring the consistency of each discovery to infer abnormal nodes. Then use pseudo labels
+ instance pair with its output score through contrastive to perform local anomaly node embedding updates to expand
+ learning. the difference between abnormal nodes and their neighbors,
+ 4) FedAD: FedAD combines the localized model utilizing improve the quality of the instance pairs, and obtain a
+ the weighted-average approach to obtain the global high-quality anomaly detection model.
+ model. This method is an ablation version of FedCAD,
+ which is used to verify the effectiveness of pseudo-label
+ discovery, local anomaly neighbor embedding aggregate, D. Parameter Study
+ and local discriminator module. In this section, we explore the effect of three critical
+ 2) Evaluation Metrics: We adopt receiver operating parameters on the performance of the proposed framework: the
+characteristic-area under the curve (ROC-AUC) as an eval- data size of clients, the number of clients, and the confidence
+uation metric to evaluate the performance of our proposed threshold. We perform these experiments on the four datasets.
+framework. ROC-AUC is commonly used as an evaluation 1) Data Size of Client: In this experiment, our goal is to
+metric for anomaly detection frameworks [7], [8]. The ROC explore the effect of data sizes on FedCAD. While keeping all
+curve consists of a false positive rate (FPR) and a true other experimental parameters constant, we investigated two
+positive rate (TPR). The ground-truth labels and the results different scales of client configurations. Initially, we explored a
+of the anomaly detection are used to calculate TPR and FPR. setup involving three clients. Within this scenario, we designed
+The closer the AUC is to 1, the better the performance of three sets of experimental schemes. In these experiments, the
+the method. proportion of data nodes held by each client (referred to as
+ 3) Parameter Settings: We set the number of nodes in the the sampling ratio) was specifically set as follows: the first
+sampling graph as 4. We fixed the embedding dimension as 64. group utilized [20%, 30%, 40%], the second group employed
+We fixed the batch size B = 256. We use the Adam to train [20%, 40%, 60%], and the third group used [30%, 50%, 70%].
+the model. We set train epochs as 400 on the BlogCatalog and Subsequently, we increased the number of clients to five,
+Flickr. We set train epochs as 100 on the Cora and Wiki. We set ensuring that all other conditions unrelated to the sampling rate
+the learning rate as 0.001 on Cora, Wiki, and Flickr. We set the remained unchanged. We assigned a different sampling ratio
+learning rate as 0.003 on the BlogCatalog. The learning rate for for these five clients as [20%, 40%, 50%, 70%, 90%]. The
+the local discriminator module in FedCAD is 0.05. For Cora, purpose of these adjustments was to systematically observe
+Wiki, BlogCatalog, and Flickr, the confidence threshold for and analyze the impact on the overall performance of changes
+determining the pseudo label is −0.3, −0.5, −0.5, and −0.4, in the number of clients and their respective proportions of data
+respectively. For each dataset, we sample 256 rounds during nodes. The experimental results are shown in Table III. For the
+the inference phase to obtain accurate detection results. experimental results, we conducted the following analysis.
+ 1) It can be observed from [20%, 30%, 40%] that FedCAD
+C. Anomaly Detection Results can still achieve the best results even if the data size
+ The graph data of each client is obtained using random of each client is small. This is mainly attributed to
+sampling results of experimental datasets with various scales to that the local anomaly neighbor embedding aggregate
+imitate the graph data distribution in the actual world. We set module in FedCAD can enlarge the difference between
+up four clients whose data proportions are [50%, 60%, 70%, the anomalous target node and its neighbors.
+80%], respectively. We repeated the experiment five times to 2) FedCAD still performs better than FedAD in most cases,
+ensure that the framework is authentic and reliable. especially below [20%, 40%, 50%, 70%, 90%], which
+KONG et al.: FEDERATED GRAPH ANOMALY DETECTION VIA CONTRASTIVE SELF-SUPERVISED LEARNING 7941
+
+Fig. 6. ROC curves comparison for clients with 50% data volume on four benchmark datasets. (a) Cora. (b) Wiki. (c) BlogCatalog. (d) Flickr.
+
+Fig. 7. ROC curves comparison for clients with 60% data volume on four benchmark datasets. (a) Cora. (b) Wiki. (c) BlogCatalog. (d) Flickr.
+
+Fig. 8. ROC curves comparison for clients with 70% data volume on four benchmark datasets. (a) Cora. (b) Wiki. (c) BlogCatalog. (d) Flickr.
+
+Fig. 9. ROC curves comparison for clients with 80% data volume on four benchmark datasets. (a) Cora. (b) Wiki. (c) BlogCatalog. (d) Flickr.
+
+ indicates that the proposed local anomaly neighbor choosing a suitable λ value can continuously improve the
+ embedding aggregate effectively enlarges the difference final AUC value. From the results, [−0.3, −0.5] is a desirable
+ between anomaly nodes and their neighbors, and learns interval.
+ a high-quality FedCAD model.
+ 3) Compared with Table II, FedCAD can still achieve good 3) Number of Clients: In the FedCAD framework, the
+ results and maintain its advantages despite the different number of clients is a crucial parameter significantly affecting
+ number of clients and data size. performance and scalability. In this experiment, we aim to
+ investigate the impact of the number of clients on FedCAD.
+ 2) Confidence Threshold: Next, we study the impact of con- We evaluate the performance of FedCAD on four datasets,
+fidence threshold λ on our proposed FedCAD framework. The keeping other parameters constant while varying the number
+confidence threshold λ in (13) is used to control the number of clients from 4 to 20. Notably, we also include FedAD as
+of pseudo labels. To study how λ affects the performance of a baseline method for comparative analysis. As illustrated in
+FedCAD, we tune λ ∈ [−0.1, −0.9] with step size 0.1. The Fig. 11, the results show that FedCAD consistently demonresults are shown in Fig. 10. As can be seen from the result, strates substantial performance improvements over FedAD
+7942 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 5, MAY 2025
+
+ TABLE II
+ AUC VALUES C OMPARISON ON F OUR B ENCHMARK DATASETS AT F OUR C LIENTS
+
+ TABLE III
+ AUC VALUES C OMPARISON ON F OUR B ENCHMARK DATASETS U NDER THE D IFFERENT N UMBERS OF C LIENTS AND DATA S IZE
+
+Fig. 10. AUC value under different confidence threshold λ. (a) Cora.
+(b) Wiki. (c) BlogCatalog. (d) Flickr.
+
+ Fig. 11. AUC value under different client number. (a) Cora. (b) Wiki.
+on all datasets, demonstrating robustness to variations in the (c) BlogCatalog. (d) Flickr.
+number of clients. However, as the number of clients reaches
+higher values, there is some degradation in the average per- VI. C ONCLUSION
+formance between different clients, observed in both FedCAD
+and FedAD. This trend primarily arises due to the growing In this article, we design FedCAD for the task of disdisparity in graph data distribution across clients, leading to tributed graph anomaly detection. First, FedCAD utilizes
+more pronounced non-IID challenges. Nevertheless, FedCAD federated learning and does not require centralized client
+continues to exhibit relatively more minor performance data for training. Furthermore, the sampling neighbor subfluctuations than FedAD, effectively demonstrating the scal- graph of the target node obtained by contrastive learning is
+ability of the proposed FedCAD method. embedded in the low-dimensional embedding vector before
+KONG et al.: FEDERATED GRAPH ANOMALY DETECTION VIA CONTRASTIVE SELF-SUPERVISED LEARNING 7943
+
+ TABLE IV
+ AUC VALUES C OMPARISON FOR G LOBAL G RAPH A NOMALY D ETECTION ON F OUR B ENCHMARK DATASETS
+
+being uploaded to the server. Second, FedCAD proposes a R EFERENCES
+client-side abnormal neighbor aggregation mechanism based [1] G. Li and J. J. Jung, “Deep learning for anomaly detection in multivariate
+on contrastive learning. Specifically, each client aggregates the time series: Approaches, applications, and challenges,” Inf. Fusion,
+sampled neighbor subgraph embedding vectors of the other vol. 91, pp. 93–102, Mar. 2023.
+ [2] C. Xiao, X. Xu, Y. Lei, K. Zhang, S. Liu, and F. Zhou, “Counterfactual
+clients’ abnormal nodes on average, improving local anomaly graph learning for anomaly detection on attributed networks,” IEEE
+detection performance. This mechanism achieves the effect of Trans. Knowl. Data Eng., vol. 35, no. 10, pp. 10540–10553, Oct. 2023.
+data enhancement and solves the challenge of the data scale [3] A. D. Pazho, G. A. Noghre, A. A. Purkayastha, J. Vempati, O. Martin,
+ and H. Tabkhi, “A survey of graph-based deep learning for anomaly
+of each client being small. Experimental results demonstrate detection in distributed systems,” IEEE Trans. Knowl. Data Eng.,
+that FedCAD outperforms a range of baseline methods. vol. 36, no. 1, pp. 1–20, Jan. 2023.
+ Despite FedCAD exhibiting superior performance, many [4] R. Liu, P. Xing, Z. Deng, A. Li, C. Guan, and H. Yu, “Federated graph
+areas can still be improved. The first area that can be improved neural networks: Overview, techniques, and challenges,” IEEE Trans.
+ Neural Netw. Learn. Syst., early access, pp. 1–17, Feb. 2024.
+is additional communication costs. The communication costs [5] B. Dong, D. Chen, Y. Wu, S. Tang, and Y. Zhuang, “FADngs: Federated
+are high due to frequent parameter transfers between the learning for anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst.,
+federated learning client and server. In FedCAD, the transfer early access, pp. 1–15, Jan. 2024.
+ [6] B. Perozzi and L. Akoglu, “Scalable anomaly ranking of attributed
+of vector embedding also increases communication costs. The neighborhoods,” in Proc. SIAM Int. Conf. Data Min., 2016, pp. 207–215.
+second area that can be improved is to apply FedCAD to [7] Z. Peng, M. Luo, J. Li, H. Liu, and Q. Zheng, “Anomalous: A joint
+heterogeneous graphs. FedCAD can only be applied to the modeling approach for anomaly detection on attributed networks,” in
+ Proc. IJCAI, 2018, pp. 3513–3519.
+homogeneous graph. Due to the different types of nodes and
+ [8] K. Ding, J. Li, R. Bhanushali, and H. Liu, “Deep anomaly detection
+links in the heterogeneous graph, the relationships between the on attributed networks,” in Proc. SIAM Int. Conf. Data Mining, 2019,
+nodes have various meanings. Therefore, FedCAD cannot be pp. 594–602.
+directly applied to heterogeneous graph. Future work can focus [9] Y. LeCun, Y. Bengio, and G. Hinton, “Deep learning,” Nature, vol. 521,
+ no. 7553, pp. 436–444, 2015.
+on appropriately reducing communication costs and applying [10] N. M. Foumani, L. Miller, C. W. Tan, G. I. Webb, G. Forestier, and
+it to the heterogeneous graph. M. Salehi, “Deep learning for time series classification and extrinsic
+ regression: A current survey,” ACM Comput. Surv., vol. 56, no. 9,
+ pp. 1–45, Oct. 2024.
+ A PPENDIX [11] H. T. Phan, N. T. Nguyen, and D. Hwang, “Aspect-level sentiment
+ G LOBAL G RAPH A NOMALY D ETECTION W ITH analysis: A survey of graph convolutional network methods,” Inf. Fusion,
+ F EDERATED L EARNING vol. 91, pp. 149–172, Mar. 2023.
+ [12] H. Fan, F. Zhang, and Z. Li, “Anomalydae: Dual autoencoder for
+ We performed the global graph anomaly detection with anomaly detection on attributed networks,” in Proc. IEEE Int. Conf.
+federated learning on the server and obtained the results of the Acoust., Speech Signal Process. (ICASSP), May 2020, pp. 5685–5689.
+ [13] Y. Li, X. Huang, J. Li, M. Du, and N. Zou, “SpecAE: Spectral
+model trained on the global graph. Note that it is often very autoencoder for anomaly detection in attributed networks,” in Proc. 28th
+difficult to gather data together in the real world due to privacy ACM Int. Conf. Inf. Knowl. Manage., 2019, pp. 2233–2236.
+security and industry competition. It is designed specifically [14] W. Yu, W. Cheng, C. C. Aggarwal, K. Zhang, H. Chen, and W. Wang,
+ “NetWalk: A flexible deep embedding approach for anomaly detection
+for the academic experiment to test the performance of global in dynamic networks,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl.
+graph anomaly detection with federated learning. The global Discovery Data Mining, Jul. 2018, pp. 2672–2681.
+graph data is collected from each client. Global graph anomaly [15] Y. Liu, Z. Li, S. Pan, C. Gong, C. Zhou, and G. Karypis, “Anomaly
+detection with federated learning can approach or even exceed detection on attributed networks via contrastive self-supervised learning,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6,
+the performance of centralized training models by collecting pp. 2378–2392, Jun. 2022.
+data from clients. [16] B. Xu, J. Wang, Z. Zhao, H. Lin, and F. Xia, “Unsupervised anomaly
+ Table IV displays the AUC results for the four benchmark detection on attributed networks with graph contrastive learning for
+ consumer electronics security,” IEEE Trans. Consum. Electron., vol. 70,
+datasets for comparison by computing the area under the no. 1, pp. 4062–4072, Feb. 2024.
+ROC curve. Our proposed FedAD achieves the best anomaly [17] P. Veličković, W. Fedus, W. L. Hamilton, P. Liò, Y. Bengio, and
+detection performance in all four datasets. The main reason is R. D. Hjelm, “Deep graph infomax,” 2018, arXiv:1809.10341.
+ [18] J. Qiu et al., “GCC: Graph contrastive coding for graph neural network
+that due to the particularity of graph data, each client’s graph pre-training,” in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discovery
+data can be regarded as a sample of the larger graph data, Data Mining, 2020, pp. 1150–1160.
+so there are overlapping nodes between clients. Each client [19] Z. Peng et al., “Graph representation learning via graphical mutual
+uses the sampled graph data to train a local model, which information maximization,” in Proc. Web Conf., 2020, pp. 259–270.
+ [20] X. Kong, W. Zhang, Y. Qu, X. Yao, and G. Shen, “FedAWR: An interamounts to data augmentation during training and therefore active federated active learning framework for air writing recognition,”
+outperforms the baseline using a single graph data. IEEE Trans. Mobile Comput., vol. 23, no. 5, pp. 6423–6436, May 2024.
+7944 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 5, MAY 2025
+
+[21] L. Wang, H. Zhou, Y. Bao, X. Yan, G. Shen, and X. Kong, “Horizontal Hui Wang received the B.Sc. degree in cyber
+ federated recommender system: A survey,” ACM Comput. Surv., vol. 56, engineering from the Shandong Jianzhu University,
+ no. 9, pp. 1–42, Oct. 2024. Jinan, China, in 2020. He is currently pursuing the
+[22] X. Kong et al., “A federated learning-based license plate recognition master’s degree with the School of Software, Dalian
+ scheme for 5G-enabled Internet of Vehicles,” IEEE Trans. Ind. Informat., University of Technology, Dalian, China.
+ vol. 17, no. 12, pp. 8523–8530, Dec. 2021. His current research interests include feder-
+[23] X. Kong, H. Gao, G. Shen, G. Duan, and S. K. Das, “FedVCP: ated learning, graph neural networks, and edge
+ A federated-learning-based cooperative positioning scheme for social computing.
+ Internet of Vehicles,” IEEE Trans. Computat. Social Syst., vol. 9, no. 1,
+ pp. 197–206, Feb. 2022.
+[24] J. Du, N. Qin, D. Huang, Y. Zhang, and X. Jia, “An efficient federated
+ learning framework for machinery fault diagnosis with improved model Mingliang Hou received the B.Sc. degree from
+ aggregation and local model training,” IEEE Trans. Neural Netw. Learn. Dezhou University, Dezhou, China, in 2012, and
+ Syst., early access, pp. 1–24, Feb. 2023. the M.Sc. degree from Shandong University, Jinan,
+[25] X. Wu, X. Yao, and C.-L. Wang, “FedSCR: Structure-based communi- China, in 2016. He is currently pursuing the Ph.D.
+ cation reduction for federated learning,” IEEE Trans. Parallel Distrib. degree with the School of Software, Dalian Univer-
+ Syst., vol. 32, no. 7, pp. 1565–1577, Jul. 2021. sity of Technology, Dalian, China.
+[26] Z. Wu et al., “FedICT: Federated multi-task distillation for multi-access His research interests include graph learning, city
+ edge computing,” IEEE Trans. Parallel Distrib. Syst., vol. 35, no. 6, science, and social computing.
+ pp. 1107–1121, Jun. 2023.
+[27] H. Jamali-Rad, M. Abdizadeh, and A. Singh, “Federated learning with
+ taskonomy for non-IID data,” IEEE Trans. Neural Netw. Learn. Syst.,
+ vol. 34, no. 11, pp. 8719–8730, Nov. 2022.
+[28] D. Caldarola, M. Mancini, F. Galasso, M. Ciccone, E. Rodola, and Xin Chen received the B.Sc. degree in informa-
+ B. Caputo, “Cluster-driven graph federated learning over multiple tion security from Harbin Engineering University,
+ domains,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Harbin, China, in 2020. He is currently pursuing the
+ Workshops (CVPRW), Jun. 2021, pp. 2749–2758. master’s degree with the School of Software, Dalian
+ University of Technology, Dalian, China.
+[29] C. He et al., “FedGraphNN: A federated learning system and benchmark
+ His research interests include spatiotemporal graph
+ for graph neural networks,” 2021, arXiv:2104.07145.
+ learning, urban science, and social computing.
+[30] M. Jiang, T. Jung, R. Karl, and T. Zhao, “Federated dynamic GNN with
+ secure aggregation,” 2020, arXiv:2009.07351.
+[31] C. Chen et al., “Vertically federated graph neural network for privacypreserving node classification,” 2020, arXiv:2005.11903.
+[32] C. Wu, F. Wu, Y. Cao, Y. Huang, and X. Xie, “FedGNN: Federated
+ graph neural network for privacy-preserving recommendation,” 2021, Xiaoran Yan (Member, IEEE) received the B.S.
+ arXiv:2102.04925. degree in computer science from Zhejiang Uni-
+[33] B. Wang, A. Li, H. Li, and Y. Chen, “GraphFL: A federated learning versity, Hangzhou, China, in 2007, and the Ph.D.
+ framework for semi-supervised node classification on graphs,” 2020, degree in computer science from The University of
+ arXiv:2012.04187. New Mexico, Albuquerque, NM, USA, in 2013.
+[34] K. Zhang, C. Yang, X. Li, L. Sun, and S. M. Yiu, “Subgraph federated From 2013 to 2015, he was a Postdoctoral
+ learning with missing neighbor generation,” in Proc. Adv. Neural Inf. Research Associate at the University of Southern
+ Process. Syst., vol. 34, 2021, pp. 6671–6682. California Information Sciences Institute, Marina del
+[35] H. Xie, J. Ma, L. Xiong, and C. Yang, “Federated graph classification Rey, CA, USA. He was an Assistant Research Scienover non-IID graphs,” in Proc. Adv. Neural Inf. Process. Syst., vol. 34, tist at Indiana University Network Science Institute,
+ 2021, pp. 18839–18852. Bloomington, IN, USA, from 2015 to 2021. Since
+[36] H. Peng, H. Li, Y. Song, V. Zheng, and J. Li, “Differentially private 2021, he has been with the Research Institute of Artificial Intelligence,
+ federated knowledge graphs embedding,” in Proc. 30th ACM Int. Conf. Zhejiang Lab, Hangzhou, as a Research Expert (PI). He has authored
+ Inf. Knowl. Manag., Oct. 2021, pp. 1416–1425. multiple journal and conference papers, and codirected NIH and IMLS
+[37] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. Y. Arcas, grants. His research interests include network science, swarm intelligence,
+ “Communication-efficient learning of deep networks from decentralized statistical machine learning, and their transdisciplinary applications in social,
+ data,” in Proc. 20th Int. Conf. Artif. Intell. Statist., vol. 54, 2017, communications, and biomedical networks.
+ pp. 1273–1282. Dr. Yan served as a Program Committee Member for major organizations
+ such as IEEE and Association for the Advancement of Artificial Intelligence
+ Xiangjie Kong (Senior Member, IEEE) received the (AAAI).
+ B.Sc. and Ph.D. degrees from Zhejiang University,
+ Hangzhou, China, in 2004 and 2009, respectively. Sajal K. Das (Fellow, IEEE) is currently a Professor
+ He was an Associate Professor with the School of of computer science and the Daniel St. Clair
+ Software, Dalian University of Technology, Dalian, Endowed Chair at Missouri University of Science
+ China. He is currently a Professor with the College and Technology, Rolla, MO, USA. He has coauof Computer Science and Technology, Zhejiang Uni- thored four books and holds five U.S. patents.
+ versity of Technology, Hangzhou. He has authored His research interests include wireless sensor netover 160 scientific papers in international jour- works, mobile and pervasive computing, UAVs,
+ nals and conferences. His research interests include cyber-physical systems, the IoT, smart environments,
+ mobile computing, network science, and data distributed and cloud computing, cyber security, and
+ science. social networks. He has made fundamental contributions to these areas and published extensively in
+ Wenyi Zhang received the B.S. degree from the
+ these areas.
+ College of Science, Jiangxi University of Science
+ Dr. Das was a recipient of 12 best paper awards at prestigious conferences,
+ and Technology, Ganzhou, China, in 2020. He is
+ IEEE Computer Society’s Technical Achievement Award for pioneering concurrently pursuing the M.E. degree in computer
+ tributions to sensor networks, and University of Missouri System President’s
+ science and technology with the School of Com-
+ Award for Sustained Career Excellence. His H-index is 96 with more than
+ puter Science, Zhejiang University of Technology,
+ 37 100 citations according to Google Scholar. He is the Founding Editor-in-
+ Hangzhou, China.
+ Chief of Pervasive and Mobile Computing journal, and an Associate Editor of
+ His research interests include gesture recognition,
+ IEEE T RANSACTIONS ON D EPENDABLE AND S ECURE C OMPUTING, IEEE
+ mobile edge computing, and federated learning.
+ T RANSACTIONS ON M OBILE C OMPUTING, ACM/IEEE T RANSACTIONS ON
+ N ETWORKING, and ACM Transactions on Sensor Networks.

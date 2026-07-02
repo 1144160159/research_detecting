@@ -1,0 +1,1608 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [421] ERFS: Efficient Feature Graph Representation for Intrusion Detection Based on Flow Semantic Association
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：421
+题名：ERFS: Efficient Feature Graph Representation for Intrusion Detection Based on Flow Semantic Association
+年份：2025
+DOI：10.1109/tccn.2025.3543357
+来源：IEEE Transactions on Cognitive Communications and Networking
+PDF：paper/10.1109_TCCN.2025.3543357.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：图学习、知识图谱与威胁情报
+相关性：强相关，分数 13
+已有代码状态：已下载；ERFS -> source\ERFS
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\421.txt
+- 原始字符数：82085
+- 本次发送字符数：82085
+- 是否截断：False
+
+代码包：
+- 仓库：ERFS
+  - URL：https://github.com/sixteen23333/ERFS
+  - 状态：downloaded
+  - 本地目录：source\ERFS
+  - 顶层结构：attention.py、data.zip、train.py
+  - 主要语言：Python:2
+  - README 标题：
+  - README 运行线索：
+  - 关键文件：{"训练入口": ["train.py"]}
+  - 数据集线索：tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+3711
+
+ERFS: Efficient Feature Graph Representation for
+Intrusion Detection Based on Flow
+Semantic Association
+Yiqing Luo , Mingshu He , Member, IEEE, and Xiaojuan Wang
+
+Abstract—The detection of network threats remains a fundamental task in cyberspace defense. Graphs are capable of
+capturing rich structural information and retaining content
+information. They are widely applicable in the field of threat
+detection. However, existing graph-based threat detection methods are computationally complex and challenging to apply
+in real-world network scenarios, where topologies may be
+incomplete or invisible. To address this, we propose ERFS,
+an efficient feature graph representation method for intrusion
+detection based on flow semantic correlation. This method aims
+to enhance the feature representation of network behavior. The
+proposed method first constructs a semantic correlation graph
+to depict the inherent semantic relationships within and between
+network flows. This is followed by the use of a messaging
+network to update and learn the information of graph nodes.
+The updated nodes are then aggregated into flow-level semantic
+feature representations for node classification, thereby achieving
+threat detection. The key innovation of this approach lies in
+graph construction and learning. The semantic correlation graph
+is constructed based on contextual correlation features and does
+not rely on topological information. It addresses the existing
+dependency issue of traditional graph construction methods on
+network topology. On the other hand, it introduces a smallwindow learning mechanism and a global sharing mechanism for
+edge weights. These mechanisms enable graph learning within
+a small-window range while globally sharing representations
+of identical nodes and edge weight values. It also addresses
+challenges in current graph construction methods, such as high
+computational complexity and low efficiency. Furthermore, the
+evaluation results indicate that this method achieved classification
+accuracies of 99.99%, 98.81%, 100%, 97.87%, and 99.64% on five
+public datasets (CIC IDS2017, CIC DOS2017, CIC DDoS2019,
+USTC-TFC2016, and ISCX VPN-nonVPN), respectively. These
+results surpass those of existing advanced models. The code is
+available on: https://github.com/sixteen23333/ERFS.
+Index Terms—Threat detection, high efficiency, semantic association graphs, global sharing mechanisms.
+
+Received 2 October 2024; revised 18 December 2024 and 11 February
+2025; accepted 13 February 2025. Date of publication 18 February 2025;
+date of current version 10 December 2025. This work was supported by the
+National Natural Science Foundation of China under Grant 62402053 and
+62227805. The associate editor coordinating the review of this article and
+approving it for publication was C.-H. Lee. (Corresponding author: Mingshu
+He.)
+Yiqing Luo is with the School of Electronic Engineering, Beijing University
+of Posts and Telecommunications, Beijing 100876, China (e-mail: luoyiqing@bupt.edu.cn).
+Mingshu He and Xiaojuan Wang are with the School of Cyberspace
+Security, Beijing University of Posts and Telecommunications, Beijing
+100876, China (e-mail: hemingshu@bupt.edu.cn; wj2718@bupt.edu.cn).
+Digital Object Identifier 10.1109/TCCN.2025.3543357
+
+I. I NTRODUCTION
+YBERSPACE has become the second realm of human
+existence. Its security concerns have emerged as a new
+focal point of national interests. With the rapid advancement
+of the Internet and the widespread adoption of information
+technology, businesses, organizations, and individuals are
+increasingly confronted with cybersecurity threats. These
+threats include a wide range of malicious activities, such
+as hacker intrusions, phishing attempts, malware infections,
+data breaches, among others. These activities result in significant financial and reputational damage for the victims.
+As a result, detecting and uncovering threat behaviors is
+crucial to safeguarding cyberspace. Within the vast data flow
+carried by network activities, a notable characteristic is its
+immense scale, extensive temporal and spatial spans, and
+widespread distribution. At the same time, malicious behaviors
+use encryption, fragmentation, obfuscation, and disguise to
+deeply hide within this massive data deluge. This makes it
+exceedingly difficult to directly identify threatening behaviors
+through raw network flow data analysis.
+To effectively differentiate between normal and abnormal
+network traffic, feature extraction and application have become
+essential. Features serve as crucial indicators for determining
+the normalcy of network traffic. They can also accurately
+identify abnormal patterns, malicious behaviors, and potential
+threats, thereby providing a solid foundation for threat detection. Feature extraction converts complex raw data into a more
+representative and easily processed form. This significantly
+enhances the efficiency of threat behavior recognition and
+detection. Among these, graph-based network behavior feature
+representation methods are widely used in the field of threat
+detection. By representing the internal semantic relationships
+of network flows as a graph structure, behavior can be
+analyzed accordingly. Compared to raw data, graph structures
+provide a more robust and abstract system view, making
+it more difficult for attackers to evade detection. Moreover,
+graphs provide richer semantics than raw data by preserving
+valuable relational information.
+The current methods for representing network behavior
+using graph structures still face certain limitations in terms
+of both graph construction and scope. In the compositional
+approach, existing graph-based flow detection methods focus
+on learning node representations and aggregating messages
+in networks with known topologies [1], [2], [3]. However,
+in practical applications, network topologies are often not
+
+C
+
+c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+2332-7731 
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+3712
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+readily available [4]. For instance, social networks may have
+incomplete or unmeasurable structures. Regarding the composition range, current methods typically involve constructing
+a graph for the entire database [5], [6], [7], [8], [9]. This
+approach facilitates better extraction of global features at the
+spatial level. Nevertheless, it also presents challenges related to
+computational complexity and time consumption, particularly
+due to the large number of edges.
+In summary, we face two key challenges: (1) How to
+construct graph structures that represent behavioral association
+relationships in the presence of incomplete network topologies. (2) How to improve learning and testing efficiency of
+approaches that construct graphs based on entire databases.
+To effectively tackle the task of threat detection and
+address the aforementioned challenges, this paper focuses
+on improving the composition method and graph learning
+approach. Regarding composition, a consistent correlation
+between network flow data and network behavior has been
+observed across various scenarios. The content correlation
+within flow data reflects underlying behavioral patterns,
+regardless of topological transmission information. Therefore,
+we aim to reduce reliance on the topological information of
+graph structure and instead explore network flow behavior
+characteristics through dimensions such as contextual relevance and semantic features. In terms of graph learning,
+current methods often require recalculating node information
+during testing. This adds complexity, consumes time, and
+leads to poor generalization. To address this, our efforts focus
+on facilitating information sharing between the training and
+testing processes. This allows the knowledge acquired from
+training nodes to be generalized to testing nodes without the
+need for recalculation during the testing phase. As a result,
+efficiency is improved and application costs are reduced.
+Building on the ideas outlined above, this paper proposes an
+intrusion detection method based on flow semantic correlation.
+Unlike existing approaches that focus solely on connection
+information, this method starts with the original flow data and
+treats it as a specialized language. By analyzing the structural
+similarity between flow data and text data, we construct a
+semantic association graph to reveal underlying behavioral
+patterns in the network flow. Based on the constructed semantic association graph, this study aims to address the issues
+of complex calculations and low efficiency in existing graph
+learning methods. To achieve this, we design a global sharing
+mechanism for edge weights and a small-window learning
+mechanism. The global sharing mechanism enables the sharing
+of node representations and edge weights, eliminating the need
+for recalculation during testing. Furthermore, by treating each
+flow as a window unit, graph learning and updating unfold on
+a smaller scale based on messaging networks.
+The main contributions of this paper are as follows.
+• This paper proposes an efficient feature graph representation method for intrusion detection based on the semantic
+correlation of network flows. Drawing on the similarity
+between network flow data and natural language, the
+concept of semantic analysis is applied to network threat
+detection. Using semantic features as the foundation,
+the method learns and analyzes the semantic correlation
+
+between flows. The proposed correlation features reveal
+the behavioral semantic characteristics of each type of
+network flow, which can serve as “fingerprints” to differentiate them. Unlike existing graph construction methods
+that focus on connection information during transmission,
+this method emphasizes the semantic feature representation of flow data. As a result, it reduces dependency on
+network topology and is suitable for real-world scenarios
+where topology is either invisible or incomplete.
+• To address the issues of low efficiency in existing graph
+construction methods, we propose a global sharing mechanism for edge weights and a learning mechanism for a
+small window. This approach involves globally sharing
+the representations and edge weights of identical nodes
+and generating a graph structure for each network flow.
+Additionally, it connects byte nodes within a smaller
+window in the flow data, rather than directly and fully
+connecting all byte nodes in the database. Evaluation
+results demonstrate that this method achieves high accuracy rates with minimal iterative training requirements. It
+also ensures fast iteration training processes.
+• This method has been evaluated on five public datasets,
+which include data from the Internet, the Internet of
+Things (IoT), and the encrypted Internet. The results
+demonstrate its ability to effectively detect threats in
+various scenarios. It exhibits exceptional performance
+in the IoT detection scenario, achieving a remarkable
+detection accuracy of 100%. Furthermore, the extracted
+semantic correlation features exhibit a distinctive recognition capability for various network threat behaviors. Each
+of these behaviors has unique behavioral and spatiotemporal characteristics. These threat behaviors include brute
+force, HULK, DoS, DDoS, and other types of attacks.
+The remainder of the paper is organized as follows.
+Section II outlines the motivation, contributions, and model
+design considerations for adopting semantic analysis ideas in
+threat detection. Section III describes the overall architecture
+and design of the semantic association graph-based behavior analysis model. Section IV evaluates and validates the
+proposed model and discusses and analyzes the experimental
+structure. Section V presents the conclusions and discusses
+future work.
+
+II. BACKGROUND AND R ELATED W ORK
+A. Background
+In existing cyberspace, it can be divided into public
+networks and dedicated networks for different scenarios based
+on the visibility of network flows, as shown in Fig. 1. The
+topology structure of the nodes in the private networks is
+invisible, and the private networks are connected to each other
+through the topology nodes of the public networks. In such a
+scenario, the detection and discovery of network threats can
+only be achieved by collecting and detecting flows on the
+public network topology path, and then tracing the source to
+find the initial threat effector node to contain and block the
+spread and development of threats.
+
+LUO et al.: ERFS: EFFICIENT FEATURE GRAPH REPRESENTATION
+
+Fig. 1.
+
+3713
+
+The application scenarios and motivational ideas of this method.
+
+Due to the invisibility of dedicated networks and the
+potential topological incompleteness, obtaining transmission
+information such as IP addresses and ports poses a significant
+challenge. However, the majority of existing graph-based
+threat detection methods rely on network topology structures
+that encompass IP addresses and port details. While IP
+address and port information offer robust behavioral indicators
+for distinguishing network traffic from diverse sources and
+destinations, they may not effectively fulfill threat detection
+tasks in scenarios where acquiring topological information
+proves challenging. For example, Zhang et al. [9] constructed
+a traffic trajectory map with traffic as nodes, with the edges
+being a combination of IP addresses and ports; Ge et al. [10]
+constructed a traffic behavior graph and defined nodes based
+on tuples of target IP and ports; Deng et al. [11] transformed
+the topological structure of flows into graphical representations
+for graph learning.
+Therefore, graph based threat detection methods need to
+break away from the dependence on topological information
+and mine network behavior as features from another dimension. Simultaneously, endeavors are imperative to enhance
+graph computation and learning methodologies in order to
+bolster efficiency and mitigate the cost associated with method
+application.
+From the initial network flow data, we have observed a
+consistent correlation between network flow data and network
+behavior across various scenarios. The intrinsic correlation
+within the flow data itself and among different flows reflects
+underlying behavioral patterns, independent of topological
+transmission information. Building upon this observation, our
+study aims to investigate the correlational features present
+within and between the original flow data. Time and spatial characteristics have been widely proven to have good
+representativeness for behavior. In terms of time series, we
+attempt to explore the correlation between data within each
+flow to describe the semantic composition structure of each
+
+flow. As for space, considering the effectiveness and efficiency
+of graph learning, we seek to use edge weight sharing to assign
+global information to the data node representation in each
+flow, thereby obviating the necessity for recalculating node
+representations during testing while maximizing effectiveness
+and efficiency. By learning the semantic association graph
+constructed in this way, we can obtain the representation of
+each byte, and then restore the semantic representation of each
+network flow to determine behavior.
+
+B. Related Work
+1) Research on Network Flow Detection Based on Context
+Features: Network threats are often not isolated, but rather
+associated with a series of related events or behaviors.
+By extracting contextual features from network flows, the
+correlation and dependency between these events or behaviors can be revealed, thus providing a more comprehensive
+representation of network behavior. In existing research on
+context-based network flow detection, based on the method of
+feature extraction, it can be divided into two categories: using
+specific methods to extract features and using specific model
+algorithms to extract features.
+Some studies have utilized text analysis techniques, such
+as N-Gram, TF-IDF, and PMI, for network flow detection to extract contextual features. Wang et al. [12], [13]
+employed the N-Gram word segmentation method for extracting semantic features in classification, demonstrating effective
+identification of malicious flows with minimal false alarms.
+AlEroud and Karabatis [14] incorporated time and location information in flow analysis to establish semantic links
+between suspicious activities and generate a semantic link
+network for preliminary prediction of suspicious nodes.
+However, the aforementioned research still exhibits limitations
+in terms of granularity and breadth of contextual feature
+learning; for instance, AlEroud et al.’s study is constrained by
+
+3714
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+a narrow scope of feature extraction focused on network flows
+transmitted between the same nodes, resulting in coarse feature
+granularity that fails to capture complete flow information.
+In addition, several studies employ specific machine learning and deep learning models or algorithms to analyze time
+series data and uncover contextual features, such as RNN
+and LSTM. Dai et al. [15] proposed a novel cross-modal
+fusion model CMFTC that achieves superior performance
+through the integration of packet-level features, context, and
+flow-level patterns, with the extraction of contextual features
+based on packet-level features using stacked extractors consisting of multiple blocks. Gao et al. [16] addressed the
+anomaly detection issue in IoT scenarios by introducing
+a memory mechanism to suppress the model’s generalization ability and designing a memory-enhanced time series
+autoencoder (TSMAE), which incorporates long short-term
+memory (LSTM) for decoding and encoding time series data
+to obtain contextual features. Li et al. [17] obtained initial
+feature representations of payloads based on word embedding
+methods and subsequently proposed a network flow context
+learning algorithm for payload detection. Ling et al. [18] and
+Wu et al. [19] utilized image transformation of network flow
+data to conduct a comprehensive analysis of semantic relationships within the graph. Their experiments demonstrated
+that models incorporating graph semantic relationships outperformed those focusing solely on graph structural information.
+Ling et al. [18] employed hierarchical learning to represent
+executable files by capturing the structural semantics of each
+function, while Wu et al. [19] applied BERT and Graph
+Isomorphism Network (GIN-JK) to capture both semantic
+and structural characteristics of control flow graphs. Although
+these representations effectively capture local behavioral patterns over time, they may overlook spatial global information
+in network behavior analysis.
+In conclusion, the context features offer a more comprehensive representation of online behaviors. Nevertheless, current
+feature extraction methods still possess certain limitations in
+terms of the scope and dimensionality of features. Some studies solely concentrate on the contextual features of individual
+online flows, with feature dimensions restricted to time while
+disregarding spatial global information.
+2) Research on Graph-Based Network Flow Detection:
+Graphs often provide a good description of the global relationships in hierarchical structures. In graph-based methods, most
+of them construct heterogeneous relationship graphs based
+on the topological structure between network flow, and use
+graph learning models to train and classify heterogeneous
+graphs, as shown in Table I. Considering the focal points
+of existing research, we will analyze from two perspectives:
+graph embedding features and graph learning methods.
+In terms of graph embedding features, effectively inputting
+high-dimensional graph structures into neural networks
+and other learning models is challenging. Therefore,
+existing research designs graph embedding to discover
+low-dimensional vector representations of high-dimensional
+graphs, achieving dimensionality reduction and representation
+of the graph structure by extracting features such as the
+overall structure of the graph and relationships between nodes.
+
+Some studies are dedicated to examining the overall characteristics and structural properties of graphs. Cao et al. [20]
+and Duan et al. [21] simultaneously consider the embedding features of graph structure in both time and space
+dimensions. In their study, Cao et al. [20] utilized data
+plane programmable SDN and in-band network telemetry to
+sample and perceive the state of switches. They inputted
+this network state into a spatiotemporal graph convolutional
+detection model to accurately identify the switches through
+which DDoS attacks pass. Duan et al. [21] proposed a semisupervised intrusion detection method utilizing the dynamic
+line graph neural network to transform the network flow into
+a sequence of spatio-temporal graphs. This approach employs
+Dynamic GNN to extract spatial information from individual
+discrete snapshots and capture the contextual evolution of
+communication between IP pairs across consecutive snapshots.
+Hu et al. [22] proposed a novel early network intrusion
+detection method, Graph2vec+RF, which is based on graph
+embedding technology. This approach involves constructing a
+flow graph for each bidirectional network flow from initial
+interactive packets and utilizing graph embedding technology
+to learn vector representations of the flow graphs, followed
+by classification using random forest. Wang et al. [23]
+proposed a hybrid analysis model BotMark for detecting
+zombie networks, which extracted 15 statistical flow-based
+traffic features and 3 graph-based features. The behaviour was
+analyzed through a combination of detection results based
+on similarity score, stability score, and anomaly score. In
+addition, some studies focus on the relationship between
+nodes to form graph embeddings. Zhao et al. [6] specifically
+focused on the detection of robots and constructed a multiattribute heterogeneous graph by modeling IP, response, and
+other network flow objects. They employed a node embedding
+method based on weight learning to understand the interaction
+patterns among robots and incorporated them into a weighted
+similarity graph. Finally, the heterogeneous graph was input
+into a graph convolutional model for learning.
+As for graph learning methods, the traditional GCN model
+is still one of the mainstream learning models. Current
+research focuses on improving classic models and combining multiple models to embed node and topological
+structure information more effectively. Zheng et al. [5]
+developed a modified GCN model for detecting encrypted
+malicious traffic, utilizing IP addresses as nodes and flows
+as edges to construct a traffic trajectory graph. They also
+employed an enhanced GCN to effectively capture and learn
+the structural and attribute information within the graph.
+Chen et al. [24], Chen et al. [25], and Shen et al. [26]
+combined multiple neural network models to jointly extract
+graph structure features. Chen et al. [24] utilized a transformerbased architecture for automatic learning of graph structures,
+graph convolutions, and modeling time-dependent relationships. They introduced influence-propagation convolution in
+graph learning and proposed multi-branch attention techniques
+to enhance inference speed. Chen et al. [25] introduced
+a novel flow-graph expression model WFF, which involves
+the transformation of bidirectional flows into graphs based
+on Markov properties within flows. The proposed model
+
+LUO et al.: ERFS: EFFICIENT FEATURE GRAPH REPRESENTATION
+
+3715
+
+TABLE I
+A NALYSIS OF E XISTING G RAPH BASED T HREAT D ETECTION M ETHODS
+
+implements WFF-based classification using graph convolution
+networks, gated graph neural networks, and capsule graph
+neural networks, respectively. Shen et al. [26] developed traffic
+interaction graphs using bidirectional client-server interaction
+features and employed multilayer perceptrons to construct
+GNN-based classifiers.
+In summary, the majority of current graph-based flow
+detection methods commence from the perspective of flows
+and packets, analyzing the spatiotemporal relationships of
+observed flows in the network over a period of time and
+representing flows as graph structures. With regards to graph
+embedding, existing methods predominantly rely on spatiotemporal features for identifying flows, which is somewhat
+reliable but entails computing statistical features for each
+individual flow, resulting in a limited effective range for flow
+detection. In terms of graph learning, current methods often
+utilize unimproved classic graph learning models such as
+GCN, which tends to exhibit high complexity issues.
+
+the representation of x after learning updates by the messaging
+network. During the training and testing process, separate
+semantic correlation graphs will be constructed for the training
+data and testing data. In the training phase, this approach
+involves inputting the constructed semantic correlation graph
+into an information propagation network for learning, and
+saving the updated byte node representations and byte-byte
+edge weight information in shared representation matrices
+and shared weight matrices. During the testing phase, the
+semantic correlation graph constructed for the test data will
+acquire corresponding information from the shared representation matrices and shared weight matrices as initial node
+representations and edge weights. These will then be input into
+an information propagation network for learning, aggregating
+the updated byte node representations into a flow-level feature
+representation for classification. The overall system diagram
+and flowchart are shown in Fig. 3.
+A. Unified Data Representation
+
+III. M ETHODOLOGY
+The model mainly comprises a semantic association graph
+and messaging network, as shown in Fig. 2. This method
+performs a unified and standardized semantic field-slicing
+process on the network flow based on the characteristics of
+its original semantic structure. Then, for each network flow,
+a graph structure containing semantic association relations
+is constructed with the smallest unit, the byte, as the granularity and the packet as the feature extraction unit. The
+node representation and edge weights are shared through a
+global sharing mechanism. Subsequently, the message passing
+mechanism (MPM) is used to update and learn the graph
+node feature information, and the self-attention tool is used to
+aggregate the updated node features into flow-level semantic
+feature representations, thereby completing behavior detection
+and recognition. In Fig. 2, nodes of different colors represent
+additional semantic data of network traffic, the solid black
+lines between nodes are byte data edges, and R(x) represents
+
+Based on semantic analysis, certain pre-processing operations must first be performed on the network flow data to
+realize treating the flow data as text data and then classifying
+them based on their semantic association features.
+According to the heavy-tailed feature of Internet traffic, we
+use the data from the previous part of each flow to analyze the
+data effectively. Therefore, in this method, we plan to use the
+first 500 bytes of data in each flow to make the technique more
+efficient while ensuring the validity of the data. In similarity to
+the procedures followed by Wang et al. [13] and Li et al. [17],
+we will adopt the strategy of directly utilizing the original
+flow hexadecimal number sequence data to maintain the data’s
+semantic and content integrity. For graph structures, when the
+length of a flow data exceeds or equals 500 bytes, we will
+truncate it and directly capture the first 500 bytes of data.
+Data that is more minor than 500 bytes will not be processed
+at this time. Additionally, to further simulate scenarios with
+incomplete network topology in real networks, we removed
+
+3716
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+Fig. 2.
+
+Model architecture.
+
+Fig. 3.
+
+Overall system diagram and flowchart.
+
+the MAC address information in the data link layer and the
+IP address information in the IP layer to achieve anonymity.
+The traditional view of network traffic examines packets as
+a collection of higher-level headers such as IP, TCP, and UDP.
+Each header has semantic fields, such as IP time to live, TCP
+port number, and UDP length fields. The standard semantic
+representation of network traffic collects these semantic fields
+into a single representation. We propose a data slicing method
+to make semantic analysis more applicable in network threat
+detection. This method preserves the original semantics of
+the network flows, maximizing the possibility of maintaining
+the original data structure while standardizing the processing
+of the flow data structure, as shown in Fig. 4. To better
+characterize the semantic structure of the network flow, we
+retain the original semantic structure of the packet headers
+and perform the word separation process accordingly, and for
+the payload content, we slice and dice using a fixed window
+size Wd .
+B. Semantic Association Map
+Combining the limitations of existing graph-based threat
+detection methods in feature construction, we first consider
+
+avoiding connection features in network flow transmission and
+instead start from raw flow data to represent the persistent data
+correlation between network behaviors using a graph structure.
+Based on the similarity between text data structure and flow
+data structure, we use text analysis ideas to construct the
+graph.
+Based on the inherent correlation between network flow
+and behaviour, it is observed that flows within the same
+behaviour category exhibit certain similarities at the data level.
+Considering the structural characteristics of flow data, we
+propose to employ semantic analysis methods to investigate
+the correlation between data. Text analysis is a method used
+in the fields of natural language processing and computational
+linguistics, with the goal of achieving a comprehensive understanding and interpretation of textual data through techniques
+such as statistics, pattern recognition, and machine learning.
+Previous studies have utilized text analysis methods to explore
+features related to behavioural relationships [12], [13], [27],
+[28]. Recent studies have uncovered a significant resemblance
+between flow protocol data, mobile flow data, and natural
+language [13], [27]. The n-gram word sequences in flow
+exhibit highly skewed frequency rank distributions similar to
+those found in natural language [13]. As a result, it is viable
+
+LUO et al.: ERFS: EFFICIENT FEATURE GRAPH REPRESENTATION
+
+Fig. 4.
+
+3717
+
+Unified expression form for network flow data (payload slice with fixed window size N=2 for example).
+
+to consider flow data as text data for the purpose of text analysis, enabling extraction of fine-grained semantic information
+contained within the flow for behaviour identification. For
+instance, features such as transmission time and packet length
+can be derived from packet header data, while behavioural
+content features can be extracted from the overall structure of
+payload data.
+For each network flow, based on its smallest unit, bytes, we
+model the entire corpus of flow data and construct a semantic
+association graph with byte data as nodes and their contextual
+association relations as edges, using the flow as a unit.
+Each byte in a packet is treated as a node, and edges are
+constructed between adjacent nodes. Furthermore, to address
+the poor scalability and high complexity of traditional graph
+learning models, we globally share exact node representations
+and edge weights. Boundaries with fewer than k occurrences
+in the training set are evenly mapped to a “common” edge,
+enabling full parameter training. Finally, the constructed graph
+is represented as G = (V, E), where V is the set of nodes and
+E is the set of edges, as follows:
+V = {vi |i ∈ [1, l ]}.
+
+
+E = eij |i ∈ [1, l ], j ∈ [i − p, i + p] .
+
+(1)
+(2)
+
+where vi is the i-th byte data node, l is the number of byte
+data in that network flow, eij is the edge between nodes vi
+and vj , and p denotes the number of adjacent words connected
+to each word in the graph.
+
+C. Messaging Network
+The message passing paradigm is a paradigm that aggregates neighboring node information to update central node
+information, extending the convolutional operator to the
+domain of irregular data and connecting graphs with neural
+networks. Due to its powerful information propagation and
+integration capabilities, as well as its flexible and efficient
+characteristics, the message passing paradigm has been widely
+applied in fields such as social networks, bioinformatics, and
+finance. Based on this, this method adopts the message passing
+mechanism proposed by Gilmer et al. [29] to learn and update
+graph structures.
+MPM initially gathers information from neighboring nodes
+and adjusts its representation based on both its original data
+
+and the gathered information. The process of message-passing
+can be formulated as follows:
+Mn = maxp ean va .
+
+(3)
+
+vn = (1 − ωn )Mn + ωn vn .
+
+(4)
+
+a∈Nn
+
+Mn is the message received by node n from its neighbors;
+max is a reduction function that combines the maximum
+values in each dimension to form a new vector as the output.
+p
+Nn denotes the node with the p words closest to n in the
+original text. ean is the edge weight from node a to node n,
+which can be updated during training; vn denotes the previous
+representation of node n. ωn is the node n which is a trainable
+variable that indicates how much vn information should be
+retained. vn denotes the updated representation of node n.
+The MPM mechanism causes a node’s representation to
+be influenced by its neighbors, meaning that the representation can bring information from the surrounding context.
+Therefore, the semantic meaning of the same data byte
+can be determined by the weighted information from the
+neighbors. Additionally, the parameters of the text-level graphs
+are extracted from a globally shared matrix, meaning that these
+representations can also encode global information like other
+graph-based models.
+After being updated sufficiently, the graph nodes are
+aggregated into flow-level semantic representations using a
+self-attentive mechanism. The concept behind this is that each
+data byte plays a role in characterizing part of the semantics
+in the network flow, while the critical node data should have
+a more explicit contribution. Ultimately, the representation of
+all nodes in a flow is used to predict behavioral labels:
+⎛
+⎛
+⎞⎞
+
+vn + b ⎠⎠.
+(5)
+yi = softmax ⎝Relu ⎝W
+n∈Ni
+
+where W is the matrix that maps the vectors to the output
+space, Ni is the set of nodes of the network flow, and b is the
+deviation.
+Algorithm 1 describes the training and testing stages of this
+method.
+IV. E VALUATION
+The proposed method was evaluated using five publicly available datasets: CIC IDS2017, CIC DOS2017, CIC
+DDoS2019, USTC TFC2016, and ISCX VPN-nonVPN. One
+
+3718
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+Algorithm 1 Training and Testing Phase
+Input: Training Graph Gtrain (Vtrain , Etrain ), Nodes a, n ∈
+Vtrain , Training labels {Yi , i is the sample of the training
+set}; Testing graph Gtest (Vtest , Etest ), Nodes b, m ∈
+Vtest , Testing labels {Yj , j is the sample of the testing
+set}; L is the loss function
+Output: Prediction Results {yi , i is the sample of the training
+set}, {yj , j is the sample of the testing set}
+1: for epoch = 1, 2, · · · do
+2:
+for n ∈ Ni do
+3:
+Mn ← maxa∈Nnp ean va
+4:
+vn ← (1 − ωn )Mn + ωn vn
+5:
+end for
+6:
+yi = softmax (Relu(W n∈Ni vn + b))
+7:
+L = −Yi × log(yi ) − (1 − Yi ) × log(1 − yi )
+8:
+Update {ean , a, n ∈ Vtrain }, {vn , n ∈ Vtrain },
+{ωn , n ∈ Vtrain }
+9: end for
+10: for Batch b in Vtest do
+11:
+for m ∈ Nj do
+12:
+ebm ← ean
+Vm ← Vn
+13:
+14:
+ωm ← ωn
+15:
+Mm ← maxa∈Nmp ebm vb
+ ← (1 − ω )M + ω v
+16:
+vm
+m
+m
+m m
+end for
+17:
+ + b))
+18:
+yj = softmax (Relu(W m∈Nj vm
+19: end for
+
+dataset consists benign traffic and multiple types of malicious
+traffic in an Internet scenario, two datasets contain various
+types of DoS and DDoS attacks in an IoT scenario, and the
+remaining dataset includes encrypted and unencrypted raw
+traffic in the encrypted Internet scenario.
+
+A. Evaluation Setup
+1) Dataset: We validated the method using the CIC
+IDS2017, CIC DOS2017, CIC DDoS2019, USTC TFC2016,
+and ISCX VPN-nonVPN datasets. The detailed information of
+the dataset is shown in Table II.
+CIC IDS2017 dataset contains both benign and up-to-date
+common attack data, with mild background traffic generated
+by the Canadian Institute for Cyber Security using the BProfile system to characterize abstract behaviors of human
+interactions, constructed for 25 users based on HTTP, HTTPS,
+FTP, SSH, and email protocols. The attack behavior data
+include Brute Force FTP, Brute Force SSH, DoS, Heartbleed,
+Web Attack, Infiltration, Botnet, DDoS, etc.
+CIC DOS2017 dataset used different tools to make four
+attacks on the ten web servers with the highest connections
+in the ISCX dataset. It obtained eight separate application
+layer DoS attack tracks, with a total size of 4.6 GB. DoS
+attacks are one of the common attacks in IoT networks, and
+the CIC DOS2017 dataset validates the possible application
+of this model in IoT scenarios.
+
+CIC DDoS2019 dataset contains benign traffic and the
+most up-to-date common DDoS attacks (volumetric and application: low volume, slow rate), resembling real-world data.
+This dataset includes modern reflective DDoS attacks such as
+PortMap, NetBIOS, LDAP, MSSQL, UDP, UDP-Lag, SYN,
+NTP, DNS, and SNMP. DDoS attacks are also one of the
+common attacks in IoT networks, and the CIC DDoS2019
+dataset validates the possible application of this model in IoT
+scenarios.
+USTC TFC2016 dataset contains ten types of malicious
+traffic under eight kinds of applications, including Zeus,
+Virus, Tinba, etc. This dataset consists of two parts, including
+encrypted and unencrypted raw traffic. The first part contains
+2015 types of malicious software traffic from public websites
+collected by researchers at the Czech Technical University
+(CTU) from a natural network environment from 10 years to
+2011. The second part contains ten types of regular traffic
+collected using the network traffic simulation device IXIA
+BPS. The addition of the USTC TFC2016 dataset can help
+verify the potential application of this model in encrypted
+Internet scenarios.
+ISCX VPN-nonVPN dataset is widely used in encrypted
+network flow classification. This data set captures a regular
+and a VPN-based session for each traffic type. Therefore,
+it includes seven kinds of normal encrypted traffic, such as
+VoIP, VPN-VoIP, P2P, VPN-P2P, and seven types of protocolencapsulated traffic, totaling 28GB. The ISCX VPN-nonVPN
+dataset validates the possible application of this model in
+encryption scenarios.
+2) Parameter Setting: We provided training and testing sets
+for all datasets, with the training set randomly split into a
+7:3 ratio for training and validation. The performance on
+the validation set was adjusted based on hyperparameters,
+including setting the initial learning rate of Adam optimizer to
+0.0005, L2 weight decay to 0.0001, neighborhood connectivity
+parameter p to 3, and weight threshold parameter k to 2.
+3) Evaluating Metrics: In this work, we used accuracy,
+precision, recall, and F1-score to evaluate the classification
+ability of the proposed method. These indicators are defined
+as follows:
+Accuracy (ACC) is the ratio of the correctly labeled subjects
+to the whole pool of subjects, i.e.,
+TP + TN
+.
+(6)
+Accuracy =
+TP + FP + FN + TN
+Precision (PRE) is the ratio of the correctly positive labeled
+subject to all positive labeled subjects, i.e.,
+TP
+Precision =
+.
+(7)
+TP + FP
+Recall (REC) is the ratio of the correctly positive labeled
+to all who are positive in reality, i.e.,
+TP
+.
+(8)
+Recall =
+TP + FN
+F1 score (F1) is the harmonic mean (average) of precision
+and recall, and we use a microscopic approach to this calculation, i.e., Macro-F1.
+2 ∗ Recallm ∗ Precisionm
+(9)
+F 1 − Score =
+Recallm + Precisionm
+
+LUO et al.: ERFS: EFFICIENT FEATURE GRAPH REPRESENTATION
+
+3719
+
+TABLE II
+DATASET D ETAILS
+
+TABLE III
+A NALYSIS OF THE R ANGE OF DATA E XPRESSION
+
+TABLE IV
+A NALYSIS OF PACKET H EADER DATA E XPRESSION S LICING M ETHODS
+
+Precisionm =
+Recallm =
+
+n
+i=1 Precisioni
+
+n
+n
+i=1 Recalli
+n
+
+(10)
+(11)
+
+B. Evaluation Results
+We used the Python language for the evaluations Pytorch
+for the network framework, and all evaluations were run
+on an NVIDIA GeForce RTX 2080 Ti graphics card. The
+experiment is divided into five parts: data representation
+analysis, parameter optimization analysis, overall comparison
+analysis, learning efficiency analysis, and application scenario
+analysis. The first two parts explore the possibility of model
+optimization in terms of data and parameters, while the latter
+three mainly focus on model performance and analyze from
+the aspects of overall comparison, model efficiency, and model
+application scenarios.
+1) Data Expression Analysis: The representation of data
+plays a crucial role in behavior characterization. The effectiveness of language association graphs in representing behavior is
+directly influenced by different data ranges and segmentation
+methods. Therefore, this section begins with the standardized
+expression of data and examines the efficacy of data representation range and segmentation method, encompassing both the
+data packet header and payload. The objective is to identify
+the optimal approach for data representation and investigate
+the impact of various data representation methods on behavior
+characterization.
+
+a) Analysis of the range of data expression: The raw
+network flow data is organized into packets, each comprising a
+header and payload. Following the application of our proposed
+method for unified representation of network flow data processing, we specifically selected three types of data ranges:
+packet headers, payloads, and complete contents encompassing
+both headers and payloads. The model’s detection performance
+was assessed on various datasets for each corresponding
+data range as presented in Table III. It is important to note
+that when evaluating the detection performance of a specific
+segment of the data representation range, other factors such as
+data segmentation methods and model parameters were kept
+consistent to control variables.
+Overall, the payload data possesses a greater capacity for
+expressing behavioral information compared to the header
+
+3720
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+TABLE V
+A NALYSIS OF PAYLOAD DATA E XPRESSION S LICING M ETHODS
+
+data. There exists a significant differentiation between standard
+and malicious behaviors in terms of packet transmission
+content, which can be leveraged to enhance the identification
+of network behaviors through the construction of a semantic
+correlation graph aimed at characterizing its data features.
+b) Analysis of data representation cuts: The data packet
+header contains packet-level statistics, including timestamps
+and lengths. Following the unified representation proposed
+in this method, we selected segmentation windows of 2, 4,
+8, and 16 to assess the model’s detection performance on
+various datasets with different packet header segmentation
+methods, as presented in Table IV. It is important to note
+that when examining the detection performance of a specific
+data segmentation method, other factors such as data range
+and model parameters are kept constant to ensure controlled
+variables.
+Table IV Illustrates that the header has a specific data
+expression structure. Although fixed window sizes of 2 and
+4 provide more fine-grained data analysis, they also destroy
+the original data expression structure, which can lead to poor
+detection results. In the unified expression of the header data,
+each field contains specific semantic information, most of
+which is statistical numerical information, such as storage
+length, timestamp high and low bits, etc. Slicing them according to a specific fixed-size window will not directly change
+the information difference between the data, and the network
+behavior can still be identified by the statistical characteristics
+between the data. Therefore, the impact of different slicing
+window sizes on the semantic slicing of data is limited. In the
+comprehensive representation of header data, each field contains specific semantic information, predominantly comprising
+statistical numerical data such as storage length and timestamp
+high and low bits. Slicing these fields according to a fixed-size
+
+window does not significantly alter the informational variance
+between the data, and the behavior can still be identified by the
+statistical characteristics between the data. Thus, the impact
+of varying slicing window sizes on semantic data slicing is
+minimal.
+The payload of a data packet refers to the specific content
+being transmitted across the network. To investigate the impact
+of different data segmentation methods on packet payload data,
+we utilized the unified representation proposed in this method
+to process network flow data. Subsequently, we selected four
+distinct segmentation windows (2, 4, 8, and 16) and assessed
+the model’s detection performance on various datasets using
+different packet payload segmentation methods, as presented
+in Table V. It is important to note that when examining
+the detection performance of a particular data segmentation
+method, other factors such as data range and model parameters
+are kept consistent to control variables.
+Overall, in comparison to header, the size of the payload
+slicing window can significantly impact the effectiveness
+of detecting network behavior. Although payload data lacks
+a specific structural expression, its detection accuracy is
+enhanced through a more fine-grained data slicing approach. In
+a unified representation of payload, the original transmission
+content is processed using a minimum grain size window 2,
+similar to previous research by [12], [27], which involves analyzing payload content and extracting statistical and content
+features for classifying and identifying network behavior. For
+instance, attacks such as DDoS and DoS exhibit significant
+feature information in both temporal and spatial dimensions
+of the payload; therefore, load feature information can be
+extracted with maximum granularity through semantic slicing
+of payload information.
+2) Parameter Optimization Analysis: A crucial aspect of
+training graph neural networks involves fine-tuning the
+hyperparameters to balance variance, bias, and classification
+performance. Therefore, this section focuses on analyzing the
+number of neighboring words (p) connected to each word in
+the semantic association graph and the weight threshold (k)
+associated with shared edges. The model effect is analyzed
+explicitly by setting the magnitude of the values of the
+different parameters and adopting precision as a performance
+metric.
+The network flow classification effects under different
+numbers of neighborhood connections parameter p and other
+weight threshold parameter k are shown in Fig. 5(a) and
+Fig. 5(b). The findings suggest that optimal byte co-occurrence
+information is achieved with a neighborhood connection window size of 3. A window size that is too small fails to capture
+sufficient global word co-occurrence information, while a window size that is too large may introduce connections between
+nodes with weak associations. Furthermore, the weighting
+threshold assigned to joint edges can be effectively balanced
+for training the learning center of gravity when set at 2, thereby
+enhancing learning efficiency without compromising feature
+learning effectiveness.
+3) Baseline Comparative Analysis: This section presents
+a comparison of the proposed method with several classical
+machine learning models, including CNN, Lenet, Resnet, and
+
+LUO et al.: ERFS: EFFICIENT FEATURE GRAPH REPRESENTATION
+
+Fig. 5.
+
+3721
+
+Analysis of model effects under different parameters.
+
+TABLE VI
+C OMPARATIVE A NALYSIS R ESULTS B ETWEEN T HIS M ODEL AND
+BASELINE M ODELS
+
+RNN. Following parameter tuning, the learning rate for all
+baseline models is set to 0.01, with a batch size of 200.
+The network depths for the CNN, Lenet, Resnet, and RNN
+models are determined to be 7, 5, 18, and 2 respectively.
+It is important to note that the original network flow data
+utilized by both this method and all baseline models for
+comparison remains consistent. The experimental results are
+detailed in Table VI. Based on the experimental results, it
+is evident that this model demonstrates superior detection
+
+performance compared to various other models across all three
+datasets. The detection accuracy reaches 99.99%, 98.81%,
+100%, 97.87%, and 99.64% for the CIC IDS2017, CIC
+DOS2017, CIC DDoS2019, USTC-TFC2016, and ISCX VPNnonVPN datasets, respectively.
+Overall, the CNN and Lenet models utilize convolutional
+kernels for information extraction from images, while the
+Resnet model incorporates skip connections within the CNN
+architecture to facilitate learning of residual mappings. The
+RNN model is capable of exploring both temporal and semantic information in the data.
+The baseline models, such as CNN, Lenet, and Resnet,
+aim to map the original network flow data to a new data
+space in order to analyze the differences in feature dimensions
+between normal and abnormal network flows. These models
+use convolutional layers to extract feature representations with
+spatial characteristics, while RNN models use recurrent layers
+to extract feature representations with temporal characteristics.
+Similarly, this method also maps the data to a new feature
+space but differs from the baseline methods by extracting
+semantic features containing temporal relationships and transmission content through constructing a semantic association
+graph. Subsequently, it updates graph information through
+message passing networks to extract feature representations
+with spatial characteristics. This detection mechanism allows
+for simultaneous extraction of time and space dimension
+data feature representations, providing a more comprehensive
+pattern representation.
+4) Comparative Analysis of Other Methods: To further
+investigate the efficacy of this approach, in addition to the
+baseline model, this section compares it with several advanced
+network threat detection methods. The original network flow
+data used for comparison remains consistent, and parameters
+such as learning rate and batch size are set according to the
+optimal parameters proposed by the model. The experimental
+results are presented in Table VII.
+From the presented results, it can be observed that the
+detection performance of this model across all five datasets
+exceeds that of all other evaluated models. As a whole, threat
+detection models can be divided into three parts: data, feature
+
+3722
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+TABLE VII
+C OMPARATIVE A NALYSIS R ESULTS B ETWEEN T HIS M ODEL AND S TATE - OF - THE -A RT M ODELS
+
+selection, and feature learning, and most of these models
+have some similarity with the present method in one or two
+aspects. Below, a comparative analysis will be conducted from
+four aspects: detection mechanism, data, feature selection, and
+feature extraction.
+In terms of detection mechanism, analysis of existing
+advanced models reveals that these models aim to transform
+the original flow data into a new space in order to investigate
+the disparities in feature dimensions between normal and
+abnormal flows. Similar to these models, this method also
+seeks to map the data into a new feature space. In contrast
+to existing methods that extract temporal and associative
+features for analysis, this approach extracts semantic features
+containing temporal relationships and transmission content
+by constructing a semantic association graph. Subsequently,
+it updates the graph information through message passing
+networks to extract feature representations with spatial characteristics. This detection mechanism enables this method to
+concurrently extract data feature representations in both time
+and space dimensions, thereby providing a more comprehensive pattern representation.
+
+On the data side, existing state-of-the-art research has also
+focused on mining feature information from raw network
+flow data to characterize the flow using data slicing. Xu and
+Zhou [30] constructed vocabularies for feature extraction and
+payload embedding on a single-byte basis based on raw flow
+data. DID [31] uses the flow’s basic content bytes as input
+to effectively differentiate content-based attacks. PBCNN [32]
+automatically extracts abstract features from packet bytes
+in the raw Pcap file, with a subsequent stage constructing
+representations from packets in the flow or session to fully
+leverage fundamental data information. METC [42] uses the
+raw packet data to input the CNN model. Zhao et al. [46]
+divides the basic network flow into sessions and the packets
+within each session into 784-byte slices, using the sliced
+data to describe the flow. Compared with these methods, this
+approach utilizes the original flow data. It expresses the data
+at a uniformly fine-grained level based on the semantic idea,
+retaining as much complete information as possible while
+describing the behavior at a deeper level.
+Regarding feature selection, some existing advanced
+research starts from the relationship between individual
+
+LUO et al.: ERFS: EFFICIENT FEATURE GRAPH REPRESENTATION
+
+network flows and behaviors, extracts relationship feature
+information, and expresses it in graph form. For instance,
+GraphDDoS [33] transforms flow data into an endpoint traffic
+graph that encapsulates details about packet relationships
+(within a single flow) as well as burst and periodic information
+across multiple flows. Similarly, Pujol-Perich et al. [35] have
+captured individual flow features and inter-flow relationship
+features, presenting them through graphical representations.
+Sun et al. [2] constructed a K-nearest neighbor (KNN) traffic
+graph containing flow similarity information to represent the
+flow data structure. They used an autoencoder to form the
+self representation of the flow data. GCN-TC [1] combines
+traffic statistical features and traffic tracking maps in the
+GCN model. ICLSTM [47] converts flow data into ordinary
+grayscale images and extracts key features using the constructed ICLSTM neural network. Compared with the above
+research, this method focuses more on the feature information
+of the network flow itself. By mining the internal structural
+relationships of the flow data, a semantic association graph
+is constructed with byte data as nodes and its contextual
+relationships as edges.
+For feature extraction, graph neural networks are commonly used to process graph-structured data by their strong
+information aggregation ability. Liu et al. [45] converted the
+flow data into a single-channel grayscale image, which was
+then fed into a GAN to achieve the learning of the original
+flow features. Izadi et al. [48] combined CNN, Ant-Lion
+Heuristic Algorithm (ALO), and Self-Organizing Maps (SOM)
+for encrypted flow identification. Lin et al. [49] proposed
+a network structure based on CNN and RNN to learn spatiotemporal features of encrypted flow data. Compared with
+the above studies, this method focuses more on aggregating
+neighborhood information. It can use a reduction function
+to effectively recombine the information in the nodes for
+update and aggregate it into a semantic representation at the
+flow level using a self-attention mechanism. The neighborhood information aggregation can help the model capture the
+contextual information of the nodes better, while the selfattention mechanism allows for precise aggregation, enabling
+more accurate prediction results.
+5) Generalization Ability Analysis: In the face of the intricate and constantly evolving network environment, diverse
+traffic from various backgrounds, varied network topologies,
+extensive business scenarios, and evolving attack patterns, it
+is imperative to generalize models. To verify and enhance the
+generalization of network security methods, this section selects
+different datasets for cross-testing validation. These datasets
+exhibit variations in terms of network environment, topology,
+and business scenarios. By applying the trained model to
+datasets distinct from the training set, we can assess its
+performance in new environments and conditions. This process
+aids in testing the model’s capability to identify unknown or
+unseen network traffic and attack patterns. During the evaluation process, the parameters of the model remain consistent
+across all evaluation experiments, as detailed in the section on
+parameter settings.
+The effectiveness of this method in detecting various
+datasets used as training and testing data sources is illustrated
+
+3723
+
+Fig. 6.
+
+Classification accuracy of training models on different datasets.
+
+in Figure 6. Generally, the detection performance improves
+when the business scenarios of the training and testing datasets
+are more similar. For instance, CIC DOS2017 dataset primarily consists of dos attacks while CIC DDoS2019 dataset
+mainly contains DDoS attacks, both causing depletion of
+key resources through a large volume of requests or data to
+the target system. These datasets share similarities in attack
+principles, methods, and impact. Consequently, they contain
+similar attack features and based on traffic characteristics in
+the training dataset, the model can recognize behaviors in the
+testing dataset as well.
+In the event of substantial disparities between the business
+scenarios in the training and testing datasets, our method
+still achieves a detection accuracy of over 65%. For instance,
+while the CIC IDS2017 dataset encompasses common Internet
+attacks such as Brute Force FTP, Brute Force SSH, and DoS,
+the ISCX VPN-nonVPN dataset comprises 7 types of regular
+encrypted traffic and 7 types of protocol encapsulated flow.
+The visibility and features of normal network flow differ
+significantly from those of encrypted flow. The model trained
+on the ids2017 dataset encounters challenges in applying its
+learned flow features to the ISCX VPN-nonVPN dataset due
+to these differences. Moreover, commonly used payload features are ineffective in characterizing encrypted flows because
+they cannot access packet payload content. In this scenario,
+packet header features and overall distribution characteristics
+play a crucial role in identifying encrypted flows, such as
+packet length and timing. While semantic correlation graphs
+constructed using our method are effective only for part of
+the packet header data when it comes to encrypted flows;
+their effectiveness is limited which results in poorer detection
+performance.
+6) Learning Efficiency Analysis: The primary innovation
+of this approach in terms of model efficiency lies in the
+proposal of a global weight sharing mechanism for edges and
+a small window learning mechanism. This eliminates the need
+to calculate edge weights during the testing phase, allowing for
+graph learning and updating on a smaller scale. Consequently,
+this section conducts an analysis of the overall complexity
+
+3724
+
+Fig. 7.
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+Analysis of learning efficiency of this method on various datasets.
+TABLE VIII
+C OMPARISON OF L EARNING E FFICIENCY B ETWEEN T HIS M ETHOD AND OTHER G RAPH L EARNING M ETHODS ON VARIOUS DATASETS
+
+and learning efficiency of the method and compares it with
+graph learning methods such as GCN and Transformer in
+terms of efficacy. During the evaluation process, consistent
+data was used, and after constructing the same semantic
+correlation graph, different graph learning methods such as
+GCN and Transformer were applied to learn from the semantic
+correlation graph. Following parameter tuning, the baseline
+models were configured with a learning rate set to 0.01, batch
+size at 200, and network depths for GCN, Transformer, MLP,
+and GGNN models established at 2, 12, 3, and 7 respectively.
+
+In terms of model complexity, we initially conducted a
+theoretical analysis of the time and space complexity of this
+approach. The space complexity primarily hinges on the size
+of the constructed semantic correlation graph, which is directly
+linked to the number of nodes and edges. Following definitions
+from previous methods for semantic correlation graphs, its
+space complexity can be denoted as O(Vtrain ∗ p + Vtest ∗ p).
+Here, Vtrain represents the training node set, Vtest denotes the
+testing node set, and p signifies the neighborhood connection
+quantity. With regards to time complexity, we analyze it
+
+LUO et al.: ERFS: EFFICIENT FEATURE GRAPH REPRESENTATION
+
+across three dimensions: constructing semantic graphs, graph
+learning, and aggregating node representations. The time complexity for constructing a semantic correlation graph depends
+on the number of nodes and has a complexity of O(Vtrain +
+Vtest ). During graph learning based on message passing
+networks, its time complexity is related to the number of node
+updates and can be represented as O((Vtrain + Vtest ) ∗ 2).
+After updating learning for testing nodes, it is necessary to use
+self-attention mechanism to aggregate updated node features
+into flow-level feature representation; this part has a time
+complexity of O((Vtest )2 ).
+The training and testing accuracy of this method under
+different iterations is shown in Fig. 7. It can be observed that
+this method only requires a small amount of iterative training
+to achieve high accuracy, and each iteration requires less time
+for training, thereby enhancing the overall efficiency of method
+deployment.
+The efficiency comparison analysis between this method
+and other graph learning methods is shown in Table VIII.
+Compared with this method, the compared method adopts a
+unified composition method, but adopts different graph learning methods. To better display performance differences, other
+graph learning models do not incorporate global edge weight
+sharing mechanisms and small window learning mechanisms.
+The hyperparameter settings for all methods remain consistent.
+Analysis shows that this method has significant advantages in
+learning efficiency. The byte nodes in this method are only
+connected to adjacent byte nodes in the network flow data,
+while other graph learning models connect nodes within a
+relatively large window. Furthermore, the global sharing of
+edge weights obviates the necessity for recalculating weight
+relationships between nodes during the testing process, thereby
+reducing computational overhead. We also found that this
+method performs better than other graph learning models.
+Based on the semantic association graph composition method,
+the GCN model connects graph nodes within a large window,
+which cannot distinguish the importance between different
+byte nodes. In contrast, our proposed method incorporates a
+self-attention mechanism to enable differential expression of
+byte data in various network flows. Additionally, the edge
+weight global sharing mechanism facilitates training of each
+byte data node across the entire corpus containing all network
+flow data with consistent configuration.
+7) Application Scenario Analysis: The evaluation of this
+model utilized five public datasets, which can be classified into
+three types of real network detection scenarios: Internet, IoT,
+and encrypted Internet. Specifically, the CIC IDS2017 dataset
+represents Internet scenarios, while the CIC DOS2017 and
+CIC DDoS2019 datasets represent IoT scenarios. The USTCTFC2016 and ISCX VPN-nonVPN datasets are indicative of
+encrypted Internet scenarios. The model demonstrated strong
+detection performance across five datasets. However, notable
+variations in detection performance were observed among the
+different datasets. Given that these datasets represent diverse
+application scenarios, a comprehensive analysis of the model’s
+specific detection performance in various application scenarios
+is essential. Therefore, this section conducts an in-depth
+examination of the model’s specific detection performance on
+
+3725
+
+each dataset representing distinct application scenarios and
+investigates its ability to detect various threats across different
+datasets, as illustrated in Figure 8.
+In the context of the Internet, the CIC IDS2017 dataset
+encompasses malicious traffic such as Botnet, Brute Force,
+DDoS, FTP, GoldenEye, Heartbleed, Hulk, infiltration,
+PortScan, and others. As depicted in Fig. 8, this method
+demonstrates effective identification of most attacks including
+Brute Force, HULK, infiltration and Slowloris. These attacks
+all have prominent behavioral characteristics in the time
+dimension. Their primary behavioral disparities stem from
+their varied methods of attack: Brute Force involves attempting
+weak passwords to gain unauthorized access; HULK generates
+numerous falsified network flows on the web server to directly
+target its resource pool; infiltration employs a comprehensive
+array of tactics for network penetration; and Slowloris utilizes
+slow HTTP requests to maliciously occupy server connections
+without releasing them. These attacks present significant variations in flow data content and are better characterized by
+semantic features based on network flow content.
+In the IoT scenario, the CIC DOS2017 dataset encompasses
+eight types of DoS attacks and benign traffic, while the CIC
+DDoS2019 dataset comprises seven common types of DDoS
+attacks and mild traffic. Malicious behavior consumes network
+bandwidth and resources by sending numerous packets and
+forging the source address of packets, ultimately paralyzing
+hosts and network systems. In this scenario, denial of service
+attacks such as DoS and DDoS have obvious spatiotemporal
+characteristics, with behaviors that possess unique semantic
+representations. By extracting co-occurrence information to
+characterize the semantics of traffic behavior, benign network
+flows can be effectively distinguished from abnormal ones.
+For the encrypted Internet scenario, the USTC TFC2016
+dataset contains ten types of malicious flows across eight
+kinds of applications, and the ISCX VPN-nonVPN dataset
+includes seven types of regular encrypted flows and seven
+types of protocol encapsulated flows. Unlike regular network
+flows, encrypted network flows conceal their payload contents.
+Most existing methods for identifying encrypted flows rely
+on statistical features such as packet length and packet time,
+which have been proven to be effective [50], [51]. For some
+simple encrypted malicious traffic, this method has a good
+detection effect, such as Zeus, Virut, Tinba, etc. However,
+its effectiveness is somewhat reduced for Neris and Cridex
+attacks. This may be due to the fact that the core features of
+these attacks are not fully captured in flow data. Specifically,
+the Neris attack operates as a spam zombie network primarily
+using port 25, making characteristics such as port number,
+transmission time, and packet quantity crucial. The Cridex
+attack spreads through removable drives and implants itself in
+infected systems by modifying registry key values.
+To further investigate the representativeness of raw flow data
+on behavior, we conducted attention visualization experiments
+on flow data using the CIC DDoS2019 dataset. Taking a
+denial-of-service attack as an example, our method achieved a
+detection accuracy of 93.41% on the CIC DDoS2019 dataset
+after 50 training iterations, as shown in Fig. 9. Due to
+limitations in data length, only the initial 30 bytes of data were
+
+3726
+
+Fig. 8.
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+The classification performance of this method in different application scenarios.
+
+extracted. As the raw network flow data passes through the
+attention layer of the message passing network, it demonstrates
+varying role weights. Notably, in IoT scenarios, the highweighted attention values primarily focus on payload data,
+with increased emphasis on recurring data content. Combined
+with the principle and process of a DDoS attack, this method
+can more effectively uncover behavioral patterns by capturing semantic content relationships within the raw flow
+data.
+V. C ONCLUSION
+This study presents a novel threat detection method based
+on semantic association graphs. In this method, flow data is
+
+treated as a specific language and semantic correlation graphs
+are constructed to capture the inherent semantic correlations
+within the flow data. To enhance the effectiveness of our
+method, we have designed a global sharing mechanism that
+enables the sharing of node representations and edge weights.
+Utilizing a messaging network facilitates small-scale graph
+learning and updating, which are then aggregated into flowlevel semantic representations for threat detection and behavior
+recognition. The final evaluation results demonstrate the effectiveness of our method in extracting flow data features across
+various scenarios, achieving high classification accuracies of
+99.99%, 98.81%, 100%, 97.87%, and 99.64% on the CIC
+IDS2017, CIC DOS2017, CIC DDoS 2019, USTC TFC2016,
+and ISCX VPN-non VPN datasets.
+
+LUO et al.: ERFS: EFFICIENT FEATURE GRAPH REPRESENTATION
+
+Fig. 9.
+
+Attention Visualization of flow Data in CIC DDoS2019 Dataset.
+
+This method is currently only suitable for more straightforward encrypted Internet scenarios, but it has some ability to
+detect encrypted network threats. In future research, we plan
+to create a model specifically for encrypted network traffic
+scenarios to meet different threat detection needs. We will also
+focus on tracking and tracing threats to strengthen defense
+capabilities and improve security strategies.
+R EFERENCES
+[1] J. Zheng and D. Li, “GCN-TC: Combining trace graph with statistical
+features for network traffic classification,” in Proc. IEEE Int. Conf.
+Commun. (ICC), 2019, pp. 1–6.
+[2] B. Sun, W. Yang, M. Yan, D. Wu, Y. Zhu, and Z. Bai, “An encrypted
+traffic classification method combining graph convolutional network and
+autoencoder,” in Proc. IEEE 39th Int. Perform. Comput. Commun. Conf.
+(IPCCC), 2020, pp. 1–8.
+[3] L. Zhang, H. Shi, K. Zhang, H. Sun, and W. Zhang, “GraphMAL:
+A network malicious traffic identification method based on graph
+neural network,” in Proc. Int. Conf. Netw. Netw. Appl. (NaNA), 2023,
+pp. 262–267.
+[4] Y. Zhang, Y. Li, W. Deng, K. Huang, and C. Yang, “Complex networks
+identification using Bayesian model with independent laplace prior,”
+Chaos, vol. 31, no. 1, 2021, Art. no. 13107.
+[5] J. Zheng, Z. Zeng, T. Feng, and L. Maglaras, “GCN-ETA: Highefficiency encrypted malicious traffic detection,” Security Commun.
+Netw., vol. 2022, no. 1, pp. 1–11, Jan. 2022.
+[6] J. Zhao, X. Liu, Q. Yan, B. Li, M. Shao, and H. Peng, “Multi-attributed
+heterogeneous graph convolutional network for BOT detection,” Inf. Sci.,
+vol. 537, pp. 380–393, Oct. 2020.
+[7] N. Okui, Y. Akimoto, A. Kubota, and T. Yoshida, “A graph construction
+method for anomalous traffic detection with graph neural networks using
+sets of flow data,” in Proc. IEEE 47th Annu. Comput. Softw. Appl. Conf.
+(COMPSAC), 2023, pp. 1017–1018.
+[8] X. Zhong and G. Wan, “Six-graphsecurity: Industrial Internet intrusion
+detection based on graph neural network,” in Proc. IEEE 7th Inf.
+Technol. Mechatron. Eng. Conf. (ITOEC), vol. 7, 2023, pp. 1340–1344.
+[9] L. Zhang, L. Tan, H. Shi, H. Sun, and W. Zhang, “Malicious traffic
+classification for IoT based on graph attention network and long shortterm memory network,” in Proc. 24st Asia–Pac. Netw. Oper. Manag.
+Symp. (APNOMS), 2023, pp. 54–59.
+[10] R. Ge, Y. Zhang, C. Si, G. Zhou, and W. Zhou, “MateGraph: Toward
+mobile malware detection through traffic behavior graph,” in Proc. IEEE
+24th Int. Conf. High Perform. Comput. Commun. 8th Int. Conf. Data
+Sci. Syst. 20th Int. Conf. Smart City 8th Int. Conf. Depend. Sensor
+Cloud Big Data Syst. Appl. (HPCC/DSS/SmartCity/DependSys), 2022,
+pp. 801–809.
+[11] X. Deng, J. Zhu, X. Pei, L. Zhang, Z. Ling, and K. Xue, “Flow
+topology-based graph convolutional network for intrusion detection in
+label-limited IoT networks,” IEEE Trans. Netw. Service Manag., vol. 20,
+no. 1, pp. 684–696, Mar. 2023.
+
+3727
+
+[12] S. Wang, Q. Yan, Z. Chen, B. Yang, C. Zhao, and M. Conti, “Detecting
+android malware leveraging text semantics of network flows,” IEEE
+Trans. Inf. Forensics Security, vol. 13, no. 5, pp. 1096–1109, May 2018.
+[13] S. Wang et al., “TextDroid: Semantics-based detection of mobile
+malware using network flows,” in Proc. IEEE Conf. Comput. Commun.
+Workshops (INFOCOM WKSHPS), 2017, pp. 18–23.
+[14] A. F. AlEroud and G. Karabatis, “Queryable semantics to detect cyberattacks: A flow-based detection approach,” IEEE Trans. Syst., Man,
+Cybern., Syst., vol. 48, no. 2, pp. 207–223, Feb. 2016.
+[15] J. Dai, X. Xu, H. Gao, and F. Xiao, “CMFTC: Cross modality fusion efficient multitask encrypt traffic classification in IIoT environment,” IEEE
+Trans. Netw. Sci. Eng., vol. 10, no. 6, pp. 3989–4009, Nov./Dec. 2023.
+[16] H. Gao, B. Qiu, R. J. D. Barroso, W. Hussain, Y. Xu, and X. Wang,
+“TSMAE: A novel anomaly detection approach for internet of things
+time series data using memory-augmented autoencoder,” IEEE Trans.
+Netw. Sci. Eng., vol. 10, no. 5, pp. 2978–2990, Sep./Oct. 2023.
+[17] Y. Li, Y. Wang, L. Cheng, and H. Xu, “Word embedding-based contextsensitive network flow payload anomaly detection,” in Proc. IEEE 3rd
+Int. Conf. Appl. Mach. Learn. (ICAML), 2021, pp. 191–194.
+[18] X. Ling et al., “MalGraph: Hierarchical graph neural networks for robust
+windows malware detection,” in Proc. IEEE Conf. Comput. Commun.
+(IEEE INFOCOM), 2022, pp. 1998–2007.
+[19] B. Wu, Y. Xu, and F. Zou, “Malware classification by learning semantic
+and structural features of control flow graphs,” in Proc. IEEE 20th
+Int. Conf. Trust Security Privacy Comput. Commun. (TrustCom), 2021,
+pp. 540–547.
+[20] Y. Cao, H. Jiang, Y. Deng, J. Wu, P. Zhou, and W. Luo, “Detecting
+and mitigating DDoS attacks in SDN using spatial-temporal graph
+convolutional network,” IEEE Trans. Depend. Secure Comput., vol. 19,
+no. 6, pp. 3855–3872, Nov./Dec. 2022.
+[21] G. Duan, H. Lv, H. Wang, and G. Feng, “Application of a dynamic
+line graph neural network for intrusion detection with semisupervised
+learning,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 699–714,
+2023.
+[22] X. Hu, W. Gao, G. Cheng, R. Li, Y. Zhou, and H. Wu, “Toward
+early and accurate network intrusion detection using graph embedding,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 5817–5831,
+2023.
+[23] W. Wang, Y. Shang, Y. He, Y. Li, and J. Liu, “BotMark:
+Automated BotNet detection with hybrid analysis of flow-based
+and graph-based traffic behaviors,” Inf. Sci., vol. 511, pp. 284–296,
+Feb. 2020.
+[24] Z. Chen, D. Chen, X. Zhang, Z. Yuan, and X. Cheng, “Learning
+graph structures with transformer for multivariate time-series anomaly
+detection in IoT,” IEEE Internet Things J., vol. 9, no. 12, pp. 9179–9189,
+Jun. 2022.
+[25] Z. Chen, G. Cheng, D. Niu, X. Qiu, Y. Zhao, and Y. Zhou, “WFF-EGNN:
+Encrypted traffic classification based on weaved flow fragment via
+ensemble graph neural networks,” IEEE Trans. Mach. Learn. Commun.
+Netw., vol. 1, pp. 389–411, 2023.
+[26] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized application identification via encrypted traffic analysis using
+graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+pp. 2367–2380, 2021.
+[27] X. Yun, Y. Wang, Y. Zhang, and Y. Zhou, “A semantics-aware approach
+to the automated network protocol identification,” IEEE/ACM Trans.
+Netw., vol. 24, no. 1, pp. 583–595, Feb. 2016.
+[28] Y. Liu, N. Xi, and Y. Zhi, “NLEU: A semantic-based taint analysis for
+vetting apps in Android,” in Proc. Int. Conf. Netw. Netw. Appl. (NaNA),
+2021, pp. 327–333.
+[29] J. Gilmer, S. S. Schoenholz, P. F. Riley, O. Vinyals, and G. E. Dahl,
+“Neural message passing for quantum chemistry,” in Proc. 34th Int.
+Conf. Mach. Learn. (ICML), 2017, pp. 1263–1272.
+[30] T. Xu and P. Zhou, “Feature extraction for payload classification: A
+byte pair encoding algorithm,” in Proc. IEEE 8th Int. Conf. Comput.
+Commun. (ICCC), 2022, pp. 1–5.
+[31] M. Soltani, M. J. Siavoshani, and A. H. Jahangir, “A content-based
+deep intrusion detection system,” Int. J. Inf. Security, vol. 21, no. 3,
+pp. 547–562, Jun. 2022.
+[32] L. Yu et al., “PBCNN: Packet bytes-based convolutional neural network
+for network intrusion detection,” Comput. Netw., vol. 194, Jul. 2021,
+Art. no. 108117.
+[33] Y. Li et al., “GraphDDoS: Effective DDoS attack detection using graph
+neural networks,” in Proc. IEEE 25th Int. Conf. Comput. Supported
+Cooper. Work Design (CSCWD), 2022, pp. 1275–1280.
+
+3728
+
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 11, NO. 6, DECEMBER 2025
+
+[34] R. Doriguzzi-Corin, S. Millar, S. Scott-Hayward, J. Martínez-del Rincón,
+and D. Siracusa, “LUCID: A practical, lightweight deep learning
+solution for DDoS attack detection,” IEEE Trans. Netw. Service Manag.,
+vol. 17, no. 2, pp. 876–889, Jun. 2020.
+[35] D. Pujol-Perich, J. Su’arez-Varela, A. Cabellos-Aparicio, and P. BarletRos, “Unveiling the potential of graph neural networks for robust
+intrusion detection,” ACM SIGMETRICS Perform. Eval. Rev., vol. 49,
+no. 4, pp. 111–117, 2021.
+[36] H. S. Ilango, M. Ma, and R. Su, “A feedforward–convolutional neural
+network to detect low-rate dos in IoT,” Eng. Appl. Artif. Intell., vol. 114,
+Sep. 2022, Art. no. 105059.
+[37] Z. Deng et al., “SequenceShield: A robust and accurate DDoS detection
+method via serializing the traffic with direction information,” in Proc.
+IEEE 24th Int. Conf. High Perform. Comput. Commun. 8th Int. Conf.
+Data Sci. Syst. 20th Int. Conf. Smart City 8th Int. Conf. Depend. Sensor
+Cloud Big Data Syst. Appl. (HPCC/DSS/SmartCity/DependSys), 2022,
+pp. 499–507.
+[38] Z. Wu, H. Zhang, P. Wang, and Z. Sun, “RTIDS: A robust transformerbased approach for intrusion detection system,” IEEE Access, vol. 10,
+pp. 64375–64387, 2022.
+[39] M. S. Elsayed, N.-A. Le-Khac, S. Dev, and A. D. Jurcut, “DDoSNet: A
+deep-learning model for detecting network attacks,” in Proc. IEEE 21st
+Int. Symp. World Wireless Mobile Multimedia Netw. (WoWMoM), 2020,
+pp. 391–396.
+[40] Y. Jia, F. Zhong, A. Alrawais, B. Gong, and X. Cheng, “FlowGuard: An
+intelligent edge defense mechanism against IoT DDoS attacks,” IEEE
+Internet Things J., vol. 7, no. 10, pp. 9552–9562, Oct. 2020.
+[41] W. Xu, J. Jang-Jaccard, T. Liu, F. Sabrina, and J. Kwak, “Improved
+bidirectional GAN-based approach for network intrusion detection using
+one-class classifier,” Computers, vol. 11, no. 6, p. 85, 2022.
+[42] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapé, “Mobile encrypted
+traffic classification using deep learning: Experimental evaluation,
+lessons learned, and challenges,” IEEE Trans. Netw. Service Manag.,
+vol. 16, no. 2, pp. 445–458, Jun. 2019.
+[43] Y. Zeng, H. Gu, W. Wei, and Y. Guo, “deep − full − range: A
+deep learning based network encrypted traffic classification and intrusion
+detection framework,” IEEE Access, vol. 7, pp. 45182–45190, 2019.
+[44] M. He, X. Wang, J. Zhou, Y. Xi, L. Jin, and X. Wang, “Deep-featurebased autoencoder network for few-shot malicious traffic detection,”
+Security Commun. Netw., vol. 2021, no. 6, pp. 1–13, Mar. 2021.
+[45] Liu et al., “A weakly-supervised method for encrypted malicious traffic
+detection,” in Proc. Int. Symp. Grids Clouds PoS(ISGC), 2022, pp. 1–9.
+[46] G. Zhao, Z. X. Wang, and Z. Yang, “An encrypted traffic classification
+model based on the raw traffic and spatiotemporal characteristics,”
+in Proc. 6th Int. Conf. Electron. Inf. Technol. Comput. Eng., 2022,
+pp. 1208–1213.
+[47] B. Lu, N. Luktarhan, C. Ding, and W. Zhang, “ICLSTM: Encrypted
+traffic service identification based on inception-LSTM neural network,”
+Symmetry, vol. 13, no. 6, p. 1080, 2021.
+[48] Izadi, M. Ahmadi, and R. Nikbazm, “Network traffic classification using
+convolutional neural network and ant-lion optimization,” Comput. Elect.
+Eng., vol. 101, Jul. 2022, Art. no. 108024.
+[49] C. Y. Lin, B. Chen, and W. Lan, “An efficient approach for encrypted
+traffic classification using CNN and bidirectional GRU,” in Proc. 2nd Int.
+Conf. Consum. Electron. Comput. Eng. (ICCECE), 2022, pp. 368–373.
+[50] T. Shapira and Y. Shavitt, “FlowPIC: A generic representation for
+encrypted traffic classification and applications identification,” IEEE
+Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1218–1232, Jul. 2021.
+[51] W. Chen, F. Lyu, F. Wu, P. Yang, G. Xue, and M. Li, “Sequential
+message characterization for early classification of encrypted Internet
+traffic,” IEEE Trans. Veh. Technol., vol. 70, no. 4, pp. 3746–3760,
+Apr. 2021.
+
+Yiqing
+Luo
+is currently pursuing the
+Doctoral degree with the School of Electronic
+Engineering, Beijing University of Posts and
+Telecommunications, China. Her research interests
+include behavior recognition, anomaly detection,
+and deep learning.
+
+Mingshu He (Member, IEEE) received the Ph.D.
+degree from the Beijing University of Posts
+and Telecommunications, Beijing, China, in 2022,
+where he is currently an Assistant Professor with
+the School of Cyberspace Security. His research
+interests include network security, anomaly detection, and machine learning.
+
+Xiaojuan Wang received the Ph.D. degree in electronic science and technology from the Beijing
+University of Posts and Telecommunications, where
+she is currently an Associate Professor with
+the School of Cyberspace Security. Her research
+interests include deep learning, complex networks,
+and human gesture recognition.
+PAPER_TEXT

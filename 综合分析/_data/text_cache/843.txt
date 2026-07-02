@@ -1,0 +1,148 @@
+4480                                                                                                 IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+
+
+
+          When Pre-Training Meets Contrast Learning:
+           Few-Shot Encrypted Traffic Classification
+                   With Novelty Detection
+                                              Lixin Zhao , Changhao Wu, and Aimin Yu
+
+
+   Abstract—Encrypted traffic classification plays an important                TLS 1.3, VPN, Tor) also allows malware and unauthorized
+role on network security and network management. However,                      services to evade detection, presenting significant challenges
+existing methods face two key limitations: they require large                  to traditional classification methods.
+volumes of labeled data and are typically designed under the
+                                                                                  To address the issue of encrypted traffic classification,
+closed-world assumption. This paper presents a novel approach
+combining pre-training techniques with contrast learning                       research has shifted from early machine learning (ML) with
+to address the challenges of open-world encrypted traffic                      handcrafted features [4], [31] [32], [33], [42] to deep learning
+classification. Our method utilizes a BERT-based pre-training                  (DL) models that automatically extract patterns from raw
+model to learn generic traffic representations from large-scale                traffic [26], [38] [39]. While effective, DL models typically
+unlabeled encrypted traffic. In this stage, two pre-training                   require massive labeled datasets, which are difficult to obtain
+tasks, the Masked BURST Model (MBM) and BURST Context                          due to the need for expert knowledge and the rapid evolution
+Prediction (BCP), are introduced to capture both structural
+and contextual features of the traffic. Following this, a contrast             of traffic patterns.
+learning strategy is applied on a small labeled dataset to learn                  In recent years, pre-training techiques have gained great
+a discriminative feature space, where traffic from the same                    success on the fields of natural language processing [8]
+category is clustered closely, and traffic from different categories           and computer vision [10]. The pre-training based methods
+is largely separated. This strong discriminative property enables              usually use unlabeled data to learn general knowledge in a
+high-accuracy classification of known traffic categories while                 self-supervised learning way and then fine-tuning on limited
+detecting novel ones. Experimental results on five encrypted
+traffic classification tasks demonstrate that: 1) under full data              amount of labeled data to adapt the specific down-stream
+conditions, our approach outperforms state-of-the-art methods                  tasks. Some attempts, such as PERT [18], ET-BERT [25], and
+with up to an 11.60% improvement in F1 score in both closed-                   YaTC [51] etc. have been made in traffic classification based
+and open-world scenarios; 2) even when working in a few-shot                   on pre-training techniques. However, these existing works
+mode, our method achieves the best performance in three                        only explore the traffic representation ability provided by pre-
+out of five tasks in the closed-world setting and consistently                 training techniques in closed-world setting, that means all the
+outperforms the best methods by up to 9.99% in terms of F1
+score in the open-world scenario.
+                                                                               categories of the downstream tasks are known and fixed. As
+                                                                               a matter of fact, due to the openness of the real world, new
+  Index Terms—Encrypted traffic classification, pre-training,                  encrypted traffic categories will constantly emerge (e.g. newly
+contrast learning, open-world classification.                                  released applications with traffic encryption technology).
+                                                                               Therefore, in order to accommodate the real-world scenarios,
+                       I. I NTRODUCTION                                        the encrypted traffic classification system should be (1) built
+                                                                               on limited labeled traffic data (i.e., few-shot condition) and (2)
+N     ETWORK traffic classification, which identifies traffic
+      types originating from different applications and web
+services, serves as a cornerstone for managing and securing
+                                                                               performs high-precision classification for known traffic cate-
+                                                                               gories and (3) has the ability to detect novel traffic categories.
+networks. It underpins critical functions such as intrusion                       Existing works have explored few-shot learning and novel
+detection [11], quality of service (QoS) optimization [36], user               class detection, such as FC-Net [46] and TrafficGPT [15], but
+experience enhancement [9], and overall network visibility                     address only isolated aspects of network traffic analysis. FC-
+[1]. However, the widespread adoption of encryption (e.g.,                     Net targets few-shot classification for intrusion detection in
+                                                                               closed-world settings, leveraging small samples but failing to
+  Received 13 February 2025; revised 14 September 2025 and 15 January          handle unseen classes, limiting its applicability to dynamic net-
+2026; accepted 12 March 2026; approved by IEEE T RANSACTIONS ON
+N ETWORKING Editor S. Magnusson. Date of publication 16 March 2026; date       work environments where new applications or threats emerge
+of current version 1 April 2026. This work was supported by the Project of     frequently. Similarly, TrafficGPT leverages GPT-2 for open-
+Cloud Information Security Protection Technology under Grant E4GZ030302.       world encrypted traffic classification, demonstrating improved
+(Corresponding author: Aimin Yu.)
+  Lixin Zhao and Aimin Yu are with the Institute of Information Engi-
+                                                                               generalization to unknown traffic types. However, its effective-
+neering, Chinese Academy of Sciences, Beijing 100085, China (e-mail:           ness depends on large-scale training data and lacks dedicated
+zhaolixin@iie.ac.cn; yuaimin@iie.ac.cn).                                       few-shot learning mechanisms. Thus, the primary motivation
+  Changhao Wu is with the Institute of Information Engineering, Chinese        of our work is to address the dual challenge of classifying
+Academy of Sciences, Beijing 100085, China, and also with the School of
+Cyber Security, University of Chinese Academy of Sciences, Beijing 100049,     encrypted traffic with limited labeled data (few-shot) while
+China (e-mail: wuchanghao@iie.ac.cn).                                          detecting unseen classes in open-world scenarios, a combina-
+  Digital Object Identifier 10.1109/TON.2026.3674624                           tion not fully addressed by existing methods.
+             2998-4157 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+ZHAO et al.: WHEN PRE-TRAINING MEETS CONTRAST LEARNING: FEW-SHOT ENCRYPTED TRAFFIC CLASSIFICATION                                   4481
+
+
+
+   The core insight of our work is that effective few-shot open-          separation, which is theoretically justified to reduce the
+world encrypted traffic classification necessitates a protocol-           open-world classification risk.
+aware hierarchical representation, rather than treating traffic         • Theoretical Foundation: We provide a theoretical anal-
+as generic byte streams. Unlike prior Transformer-based                   ysis (Proposition 1) that quantifies how the quality of
+approaches that treat traffic as flat token sequences (e.g.,              the learned embedding space bounds the performance
+ET-BERT [25]), we explicitly model the inherent hierarchi-                of the nearest mean novelty detector, offering insights
+cal structure of network traffic. In protocols such as TLS                into the method’s effectiveness.
+1.3 or complex tunneling schemes (VPN/Tor), semantically                • Extensive Validation: We conduct comprehensive eval-
+meaningful units (BURSTs, defined as consecutive packets in               uations across five encrypted traffic classification tasks.
+the same direction) naturally correspond to application-layer             Results show that our approach consistently outperforms
+request/response transactions. This structural prior acts as a            state-of-the-art methods in both closed-world and open-
+critical inductive bias, enabling robust generalization under             world scenarios, particularly under few-shot constraints.
+few-shot and open-world conditions.
+   To materialize this insight, we introduce a synergistic pre-
+training framework centered on the BURST concept. Our                                      II. R ELATED W ORK
+framework jointly optimizes two complementary objectives:
+the Masked BURST Model (MBM) task, which captures intra-              A. Encrypted Traffic Classification
+BURST syntactic patterns, and the BURST Context Prediction               Existing encrypted traffic classification methods can be
+(BCP) task, which learns inter-BURST semantic relationships.          divided into two main categories: ML-based methods and DL-
+This hierarchical modeling strategy yields a robust represen-         based methods. Table I provides a summary and comparison
+tation foundation that serves as a strong initialization for          of existing traffic classification methods, with detailed descrip-
+downstream adaptation. Furthermore, to address the theoret-           tions presented in the following section.
+ical gap in open-world traffic classification, we refine these           ML-based methods. The dominant ML-based methods
+representations through a theoretically grounded supervised           [4], [31] [32], [33], [42] commonly employ algorithms such
+contrastive learning (SCL) stage. As analyzed in Proposition 1,       as SVM, KNN, and Naive Bayes to classify encrypted traffic.
+this explicitly optimizes the intra-class compactness and inter-      They typically rely on manually extracted features, such
+class separation in the embedding space, thereby minimizing           as packet count, packet size, and packet inter-arrival time
+the open-world risk bound.                                            etc. Recent work like [47] employs advanced handcrafted
+   We evaluate the performance of our approach on five                path signature features for encrypted traffic analysis,
+encrypted traffic classification tasks. Experimental results          demonstrating the ongoing potential of feature engineering.
+demonstrate that: (1) under full data conditions, our approach        The performance of these approaches hinges on the ability
+outperforms existing methods across all five tasks, achieving         to extract discriminative features that effectively capture the
+improvements of 11.60%, 0.92%, 8.83%, 5.60% and 2.16%                 differences among traffic categories. However, this feature
+in F1 score in the closed-world scenario, and 11.74%, 6.44%,          extraction process is heavily dependent on domain expertise,
+8.04%, 15.96% and 13.91% in the open-world scenario; (2) in           posing challenges to the scalability and adaptability. Whisper
+the few-shot setting, our method achieves the best performance        [12] detects malicious traffic, including zero-day attacks, by
+on the GEAC, ETCV, and EACT tasks, with only a marginal               leveraging frequency domain features. However, from a traffic
+gap compared to state-of-the-art methods, which operate under         classification perspective, while it can identify novel classes,
+full data conditions, on the EMC and EAC-1.3 tasks in                 its capability is limited to binary classification rather than
+the closed-world scenario. Notably, compared to specialized           fine-grained multi-class classification. FOSS [23] employs
+few-shot traffic classification approaches, our method yields         a tree-based framework for fine-grained unknown attack
+a maximum improvement of 49.32% across all five tasks.                detection in open-world network intrusion scenarios, but it
+Furthermore, in the open-world scenario, our approach (i.e., in       cannot effectively adapt to few-shot scenarios.
+few-shot condition) consistently outperforms the best existing           DL-based methods. DL-based methods automatically learn
+methods (i.e., in full data condition) by 3.22%, 2.22%, 0.50%,        complex feature patterns from the raw traffic and perform
+9.99% and 0.69% respectively in F1 score.                             classification. Multiple deep learning models are adopted by
+   In summary, the contributions of this paper are as follows:        different studies, including CNN-based models [29], [38],
+   • Integrated Framework for Open-World Analysis: We                 [40], RNN-based models [26], [41] and GNN-based models
+      explore the synergy between pre-training techniques and         [20], [39]. Besides, some works [7], [28], [50] also solve the
+      contrast learning to address the dual challenges of few-        problem of open-world traffic classification based on deep
+      shot classification and novel class detection in encrypted      learning techniques. Although DL-based methods eliminate
+      traffic.                                                        tedious feature engineering, they depend on a large amount of
+   • Hierarchical Pre-training Scheme: We design two                  labeled traffic data for model training to learn valid features.
+      domain-specific pre-training tasks to capture intra-            However, it is time-consuming and error-prone to perform
+      BURST structural patterns and inter-BURST contextual            large-scale traffic labeling. It should be noted that some
+      logic, respectively. Their joint optimization yields a robust   DL-based methods [46], [48], [49] focus on few-shot traffic
+      foundation for few-shot adaptation.                             classification, a scenario that aligns with our focus. However,
+   • Optimized Metric Space via SCL: We customize a                   these studies lack novelty detection ability. In contrast, our
+      supervised contrastive learning (SCL) strategy that explic-     approach performs open-world traffic classification without
+      itly enforces intra-class compactness and inter-class           requiring large amounts of labeled data.
+4482                                                                                   IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+
+                                                               TABLE I
+                               C OMPARISON OF THE E XISTING N ETWORK T RAFFIC C LASSIFICATION M ETHODS
+
+
+
+
+B. Pre-Training Techniques                                         

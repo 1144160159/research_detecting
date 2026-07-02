@@ -1,0 +1,160 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026                                                                             2403
+
+
+
+
+     LLMBA: Efficient Behavior Analytics via Large
+       Pretrained Models in Zero Trust Networks
+             Senming Yan , Graduate Student Member, IEEE, Lei Shi , Graduate Student Member, IEEE,
+               Wei Wang , Senior Member, IEEE, Jing Ren , Member, IEEE, Ying Li, and Limin Sun
+
+
+   Abstract—Guided by the principle of “Never Trust, Always                                                I. I NTRODUCTION
+Verify”, Zero Trust Architecture (ZTA) mandates continuous
+monitoring and analysis of users and entities, highlighting the
+critical role of behavior analytics. However, the growing volume
+of audit data and its complex contextual information render
+many existing behavior analytics methods insufficient. Moreover,
+most approaches rely on high-quality labeled data for supervised
+                                                                                 M        ODERN information technologies, such as cloud com-
+                                                                                          puting, the Internet of Things (IoT), and generative
+                                                                                 artificial intelligence (GenAI), are being widely adopted but
+training, limiting their effectiveness against previously unseen                 also introduce new cybersecurity threats. These technologies
+malicious behaviors. To address these challenges, we propose
+the Large Language Model for Behavior Analytics (LLMBA)                          have become targets of emerging attacks, including ran-
+framework. LLMBA leverages a Large Language Model (LLM)                          somware, advanced persistent threats (APTs), and supply chain
+to analyze behavioral patterns of internal users and entities,                   attacks [1], [2], [3]. Conventional defense systems typically
+capitalizing on the LLM’s strong ability to model sequential                     rely on perimeter-based security architectures to mitigate such
+data. We introduce a multi-level behavior encoding scheme to                     threats [4], [5], [6]. However, due to the prevalence of insider
+capture both contextual and temporal information from behavior
+records, producing rich input representations for the LLM-                       threats and unknown attacks, perimeter-based defenses are
+enhanced model. The LLM is fine-tuned using self-supervised                      increasingly ineffective, which has driven growing interest
+learning, enabling the detection of unknown malicious behaviors.                 in Zero Trust Architecture (ZTA) [7], [8]. Guided by the
+To reduce the computational and storage overhead inherent                        principle of “Never Trust, Always Verify” [9], ZTA does not
+in LLMs, we apply knowledge distillation to compress the                         implicitly trust any user or entity; instead, it continuously
+model while maintaining high detection performance. Extensive
+experiments on the CERT Insider Threat dataset demonstrate                       evaluates all access requests.
+that LLMBA outperforms state-of-the-art baselines in detection                      A core technology for realizing ZTA is User and Entity
+accuracy. Furthermore, the compressed student model achieves                     Behavior Analytics (UEBA), which identifies anomalous
+superior performance compared with existing methods under                        behavior patterns of users and entities based on the analysis
+comparable runtime constraints, making LLMBA highly suitable                     of their behavior records, thereby strengthening zero trust
+for real-world deployment.
+                                                                                 networks [10], [11]. In UEBA systems, operations performed
+   Index Terms—Cyber security, behavior analytics, threat detec-                 by users and entities are recorded in audit logs and contin-
+tion, large language models, knowledge distillation.                             uously monitored, reducing the risks posed by both insider
+                                                                                 and external threats. By automatically analyzing audit logs
+   Received 9 July 2025; revised 19 January 2026; accepted 12 February 2026.
+Date of publication 19 February 2026; date of current version 4 March 2026.      to detect abnormal behaviors, UEBA minimizes the need for
+This work was supported in part by the Major Key Project of Pengcheng            manual inspection. Once potentially malicious users or entities
+Laboratory under Grant PCL2024A03, in part by the National Natural Science       are identified, ZTA can trigger appropriate response actions to
+Foundation of China under Grant 92467201 and Grant U20A20156, in part by
+the Key Research Project of Chinese Academy of Sciences under Grant RCJJ-        mitigate security risks.
+145-24-17, and in part by Beijing Natural Science Foundation underL234033.          Existing UEBA methods have incorporated modern data-
+An earlier version of this paper was presented at the IEEE International         driven techniques, including classical Machine Learning (ML)
+Conference on Acoustics, Speech, and Signal Processing (ICASSP’26). The
+associate editor coordinating the review of this article and approving it for    and Deep Learning (DL) models, to enhance the feature
+publication was Dr. Jason (Minhui) Xue. (Corresponding author: Wei Wang.)        representation of audit logs [12], [13], [14]. Despite achiev-
+   Senming Yan and Limin Sun are with the Institute of Information Engi-         ing strong detection performance, these methods still face
+neering, Chinese Academy of Sciences, Beijing 100085, China, and also with
+the School of Cyber Security, University of Chinese Academy of Sciences,         several significant challenges. First, as behavioral records
+Beijing 100085, China (e-mail: yansenming@iie.ac.cn; sunlimin@iie.ac.cn).        become increasingly large and complex, existing approaches
+   Lei Shi is with the School of Integrated Circuits (School of Electronic       struggle to extract discriminative information that effectively
+Information and Electrical Engineering), Shanghai Jiao Tong University,
+Shanghai 200240, China (e-mail: shi.lei@sjtu.edu.cn).                            distinguishes anomalous behaviors from normal ones. Second,
+   Wei Wang and Ying Li are with the Department of Strategic and Advanced        although both contextual and temporal features are critical
+Interdisciplinary Research, Peng Cheng Laboratory, Shenzhen 518055, China        for modeling behavior patterns, they are not fully exploited,
+(e-mail: wei wang@ieee.org; liying8800@163.com).
+   Jing Ren is with the Department of Strategic and Advanced Interdisciplinary   limiting the ability of current methods to capture complex
+Research, Peng Cheng Laboratory, Shenzhen 518055, China, and also with           behavioral patterns. Third, many existing methods rely on
+the School of Information and Communication Engineering, University of           labeled data for behavior classification, which hampers their
+Electronic Science and Technology of China, Chengdu 610054, China (e-
+mail: renjing@uestc.edu.cn).                                                     ability to detect previously unseen or unknown malicious
+   Digital Object Identifier 10.1109/TIFS.2026.3666459                           activities. Finally, the additional runtime overhead introduced
+              1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+2404                                                         IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+
+
+by DL-based approaches is often overlooked, reducing their
+practicality for deployment in real-world environments.
+   To address these challenges, we propose Large Language
+Model for Behavior Analytics (LLMBA), an LLM-based
+behavior analytics framework designed to enhance zero trust
+networks through systematic evaluation of behavior records.
+Unlike traditional methods that rely on expert knowledge
+to extract features or employ classic serialization modeling
+techniques, our goal is to model the distribution of nor-
+mal behaviors under highly heterogeneous, evolving, and
+open-world conditions, where attacks manifest as semantic
+deviations rather than sequential or statistical anomalies. From
+this perspective, to effectively capture implicit behavioral
+information, we introduce a multi-level behavior encoding
+scheme that generates vectorized representations incorporating
+both temporal and contextual features. Building on these rep-      Fig. 1. An example of behavior records generated by a red-team user in
+                                                                   the CERT r4.2 dataset. The usernames, timestamps, hosts, and activities are
+resentations, we fine-tune a Llama-2–based behavior learning       recorded in a structured format.
+model to exploit the rich semantic information embedded
+in the encoded vectors. The LLM serves as a pretrained
+semantic representation backbone that captures rich contextual     based behavior learning model, the knowledge distillation-
+and temporal dependencies across events. Owing to the strong       based compression method, and our behavior analytics
+representation and generalization capabilities of LLMs, the        algorithm. We present the experiment settings in Section IV.
+proposed model can effectively model normal behavioral pat-        We propose the main research questions and analyze the
+terns and accurately detect anomalies. Furthermore, to improve     evaluation results in Section V. Finally, conclusions and future
+computational and storage efficiency, we employ a knowledge        work directions are presented in Section VI.
+distillation strategy to transfer learned knowledge from the
+LLM-based model to a lightweight student model. We conduct                                 II. R ELATED W ORK
+extensive experiments on the CERT Insider Threat dataset, and         To implement behavior analytics in ZTA, the behavior
+the results demonstrate that the proposed LLMBA framework          history of users and entities needs to be recorded. Fig. 1 shows
+consistently outperforms existing methods in detection perfor-     an example of preprocessed behavior audit logs, containing
+mance, highlighting the effectiveness and practicality of the      behavior records generated by a red-team user from the CERT
+LLM-enhanced approach.                                             r4.2 dataset. As users generate massive behavior records over
+   To summarize, we have made the following contributions          time, which are hardly processed by human experts, ML and
+in this work:                                                      DL techniques are leveraged for automatically analyzing this
+  • We propose LLMBA, an LLM-enhanced behavior ana-                structured data.
+      lytics framework that fine-tunes the LLaMA-2 foundation         The core idea of behavior analytics is to distinguish the
+      model for accurate, efficient behavior learning and          patterns between normal and abnormal behaviors. To this end,
+      anomaly detection. To the best of our knowledge,             different behavioral features and various advanced techniques
+      LLMBA represents the first effort to adapt large language    are used in previous works. Some of the existing methods use
+      models for behavior analytics in zero trust networks.        statistical features from behavior records to detect anomalies.
+  • We introduce a novel Multi-Level Behavior Encod-               Le and Zincir-Heywood [15] propose to extract numerical
+      ing (MLBE) scheme for LLMBA that preserves both              features from behavior logs and employ an ensemble of ML-
+      contextual and temporal information from behavior            based models for insider threat detection. Lv et al. [12] propose
+      records, enabling a more comprehensive understanding of      a hybrid framework that leverages an ensemble of Isolation
+      behavioral patterns.                                         Forest and Markov models to learn both numerical and tem-
+  • By leveraging self-supervised fine-tuning, LLMBA can           poral features. Xu et al. [16] propose to extract numerical
+      effectively detect previously unseen malicious behaviors,    features of log events and parameters and use the Principal
+      making it well-suited for real-world environments char-      Component Analysis (PCA) algorithm to detect anomalies.
+      acterized by unpredictable and evolving threats.             These methods heavily rely on feature extraction methods,
+  • To mitigate the runtime overhead of the proposed LLM-          which are limited by the predefined rules, making them less
+      enhanced framework, we employ a knowledge distillation       effective in processing evolving attacks.
+      strategy to compress the LLM-based model while largely          Since behavior records are essentially sequential, structured
+      preserving its detection performance.                        data, they can be processed in a similar way to natural
+   The remainder of this paper is organized as follows. In         language. Therefore, in addition to statistical features, some
+Section II, we thoroughly present and compare the exist-           recent works use DL-based sequential models to learn con-
+ing research works. In Section III, we introduce the key           textual information. Meng et al. [13] propose an end-to-end
+components proposed in the LLMBA framework in detail,              framework that uses the Long Short Term Memory (LSTM)
+including the multi-level behavior encoding method, the LLM-       network to model the sequential behavior patterns and classify
+YAN et al.: LLMBA: EFFICIENT BEHAVIOR ANALYTICS VIA LARGE PRETRAINED MODELS                                                         2405
+
+
+
+
+                                        Fig. 2. The pipeline of our proposed LLMBA framework.
+
+
+
+behavior records. The classification-based approach requires        B. Problem Definition
+manually labeled categories for training. Different from classi-       Behavior analytics aims to determine whether a set of
+fication, some researchers design DL-based behavior analytics       behavior records is normal or abnormal, which can be formu-
+approaches in a self-supervised manner to reduce the need           lated as a binary classification problem. Formally, we denote
+for labeled data. DeepLog [17] is an LSTM-based method              a set of original behavior records as S , where
+for log anomaly detection, which identifies outlier patterns
+by making predictions on the following events. Transformer                                   S = (a1 , a2 , . . . , al ),           (1)
+models have shown their advantages in processing sequential
+data. Huang et al. [14] propose the ITDBERT framework com-          where l is the length of the behavior records and ai denotes
+bining BERT-based encoders with LSTM models for threat              the i-th activity. Therefore, the goal of the behavior analytics
+detection. With the rapid development of Large Language             task is to determine whether S is normal or not.
+Models (LLMs), some researchers also employ LLMs for                   To fit the LLM-based models, the original sequence is
+analyzing behavior records. Song et al. [18] use the Chain- 

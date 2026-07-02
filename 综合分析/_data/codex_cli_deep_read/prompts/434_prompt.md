@@ -1,0 +1,1021 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [434] Federated-Boosting: A Distributed and Dynamic Boosting-Powered Cyber-Attack Detection Scheme for Security and Privacy of Consumer IoT
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：434
+题名：Federated-Boosting: A Distributed and Dynamic Boosting-Powered Cyber-Attack Detection Scheme for Security and Privacy of Consumer IoT
+年份：2024
+DOI：10.1109/tce.2024.3499942
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2024.3499942.pdf
+已有粗分类：联邦学习、隐私保护与分布式协同
+二级关联：IoT、车联网、工业互联网与边缘安全、恶意流量、暗网与攻击检测
+相关性：中相关，分数 6
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\434.txt
+- 原始字符数：41590
+- 本次发送字符数：41590
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+6340
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+Federated-Boosting: A Distributed and Dynamic
+Boosting-Powered Cyber-Attack Detection Scheme
+for Security and Privacy of Consumer IoT
+Izhar Ahmed Khan , Member, IEEE, Dechang Pi , Shaharyar Kamal , Mohammed Alsuhaibani ,
+and Bandar Mzel Alshammari
+
+Abstract—Consumer Internet of Things (CIoT) is an emerging
+technology that took the traditional consumer electronics to next
+level with smarter devices and higher connectivity. However, the
+rapid boom of this technology has captured a great deal of
+hacker’s attention in the past decade. Due to resource restricted
+nature of CIoT devices and limited computational abilities,
+security professionals are unable to strengthen the security
+and privacy measures. Since the existing security methods
+suffers from data imbalance and overfitting issues, this paper
+proposes a distributed and dynamic weighted boosting method
+named Federated-Boosting for the accurate and timely detection
+of cyber-attacks in CIoT. Specifically, a weighting strategy is
+designed to overcome the data imbalance issue by dynamically
+adjusting the weights of weaker class samples. Additionally, a
+regularized loss function is designed that helps in controlling
+the overfitting of the model and provide enhance performance
+and generalization. Finally, a time-based and performancebased dynamic aggregation scheme is designed using distributed
+training model that keeps the privacy of the CIoT devices intact to
+the local server. Extensive experiments on two real-world datasets
+validates the superior performance of Federated-Boosting model
+against state-of-the-art detection models.
+Index Terms—Security and privacy, cyber-attacks, consumer
+IoT, intrusion detection.
+
+I. I NTRODUCTION
+A. Consumer Electronics
+HE WORLD has witnessed significant advancements in
+the Consumer Electronics (CEs) products by adopting
+revolutionary technologies and tools, such as Internet-ofThings (IoT), cloud computing, Machine Learning (ML), etc.
+With this emergence and adaption, the U.S. Consumer Tech
+Industry reports that CEs revenues are expected to exceed
+
+T
+
+Received 2 July 2024; revised 15 August 2024 and 2 October 2024;
+accepted 13 November 2024. Date of publication 14 November 2024;
+date of current version 14 August 2025. This work was supported by
+National Science and Technology Major Project under Grant 2021ZD0113103.
+(Corresponding author: Izhar Ahmed Khan.)
+Izhar Ahmed Khan and Dechang Pi are with the College of Computer
+Science and Technology, Nanjing University of Aeronautics and Astronautics,
+Nanjing 210016, China (e-mail: izhar@nuaa.edu.cn; dc.pi@nuaa.edu.cn).
+Shaharyar Kamal is with the Department of Electrical Engineering,
+University of Chile, Santiago 8330111, Chile (e-mail: skamal@ing.uchile.cl).
+Mohammed Alsuhaibani is with the Department of Computer Science,
+College of Computer, Qassim University, Buraydah 52571, Saudi Arabia
+(e-mail: m.suhibani@qu.edu.sa).
+Bandar Mzel Alshammari is with the Department of Information
+Systems, Jouf University, Sakakah 72388, Saudi Arabia (e-mail:
+bmalshammari@tcc-ict.com).
+Digital Object Identifier 10.1109/TCE.2024.3499942
+
+500 billion USD in the next few years [1]. Traditionally, CEs
+products are standalone which rarely connect to other devices
+or Internet. However, the next generation CEs market has been
+based products that have higher connectivity and enhanced
+intelligence as compared to traditional CE products. Hence,
+Consumer IoT emerged as a next level technology in the CEs
+field and studies [1] shows dramatic increase of IoT devices
+usage in different fields of CE products such as smart homes,
+healthcare, fintech, etc.
+B. Consumer IoT in Healthcare
+The urge to upgrade the conventional healthcare network
+(HCN) in to smart one is inevitable. Even though the concept
+of smart healthcare system has been talked about for decades,
+the existing HCN is faced with significant challenges, such as
+medical errors, lack of medical workers, and high cost [2].
+Taking Europe and USA as example, where 10% and 20% of
+GDP is devoted to healthcare domain, respectively [3], which,
+yet, unable to avoid errors in medical decisions. In addition, it
+is projected that by 2030, the shortage of healthcare workers
+will reach to 18 million [3]. To overcome these challenges,
+the traditional CEs-based HCN are augmented and equipped
+with the IoT and Internet of Medical Things (IoMT)-based
+devices to enable enhanced communication characteristics
+and provide better healthcare services. This incorporation has
+revolutionized the typical CEs into the next-generation devices
+having sophisticated intelligence with enhanced connectivity
+measures. Thereby improving the automatic control and availability of data in the CE system through the connectivity
+of devices such as sensors, actuators, and other different
+consumer devices [2]. Nonetheless, these next generation CE
+devices are capable to be remotely accessed and controlled at
+any time, and from anywhere in the world.
+C. Threat Significance
+The market of CEs devices has remarkably progressed
+over the past decade. A study report shows that the user
+domain of CEs sector will reach up to 2, 873.1 million by
+2025 with average revenue up to 317.10 billion USD [4].
+Nowadays, each equipment or appliance may generate and
+communicate data online, leading to the expansion of CEs
+devices. The typical complex architecture of Internet connectivity faces challenges to acclimate to these modern-day
+
+c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+1558-4127 
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+KHAN et al.: FEDERATED-BOOSTING: A DISTRIBUTED AND DYNAMIC BOOSTING
+
+Consumer Internet of Things (CIoT) devices and networks due
+to their dynamic nature. Thus, resulting in ineffective usage
+of resources, and ultimately exposing the network to diverse
+kinds of cyber-attacks [5]. Moreover, it is evident from the
+literature (please see Table I for example cyber-attacks) that
+CIoT-based smart systems are subject to numerous attacks,
+such as DoS, brute force, and botnets etc. [4].
+D. Contribution
+Federated learning (FL) concepts has emerged and shown
+advantageous provisions for delivering better security and
+privacy of intelligent medical systems [10], [11]. FL overcome
+the shortcomings of traditional centralized learning by offering
+distributed training models without accessing data of participating clients. Consequently, mitigating the privacy risks of
+sensitive user information and improves the learning process
+through shared computational resources, which might not be
+conceivable through centralized learning model. An intrusion
+detection system (IDS) could serve as the security backbone for
+the next-generation CIoT network, since it can easily detect the
+presence of malicious activities and attacks [8]. However, due
+to the specific requirements of CIoT networks (i.e., mobility,
+limited power and memory, and low) for real-time threat
+detection, the existing IDS faces significant design challenges.
+Additionally, the attack surface of threats is increasing day-byday, which is why contemporary IDSs are incapable to identify
+unseen or zero-day attacks. Hence, a dynamic and adaptable
+security solution is needed for timely and accurate detection
+against evolving cyber-attacks in CIoT systems.
+Therefore, this research work proposes a distributed
+boosting-based intrusion detection method for the security and
+privacy of CIoT. In summary, the proposed method improve
+the security domain in following ways:
+• We design and develop an efficient Federated-Boosting
+model for security and privacy of CIoT networks that is
+capable of detecting zero-day attacks.
+• We design an adaptive weighted boosting mechanism to
+accurately identify complex attack vectors that assign
+dynamic weights to overcome data imbalance issue.
+• We design loss function regularization to eliminate the
+issue of over-fitting.
+• We design a distributed IDS model using dynamic aggregation strategy to preserve the privacy of participating
+CIoT clients.
+The remaining sections of this work are organized in
+following manner. The related work and research gap is
+presented in Section II. The details of proposed design is
+outlined in III. The experimental evaluations and results are
+presented in Section IV, while conclusion is presented in
+Section V.
+II. R ELATED W ORK
+A. Literature Review
+The literature has reported a plethora of research work
+contributed towards the security of CIoT networks against
+a disseminated range of insider and outsider threats [12],
+[13], [14], [15]. For example, the authors of [16] developed a
+
+6341
+
+security model deep learning-based method to detect common
+security threats like DoS1 and port-based attacks. The authors
+reported high accuracy rates, however their proposed model
+is computationally expensive to be applied in restricted IoT
+networks. Similarly, the authors of [17] designed a Stacked
+Deep learning model that uses bio-inspired Spider Monkey
+optimization method. The model is capable of detecting
+various kinds of attacks such as DoS, probe, R2L2 and
+U2R3 attacks with high accuracy. However, they evaluate their
+model with an outdated (NSL-KDD) dataset that does not
+represent the complex attack vectors in the contemporary IoT
+framework.
+To detect DDoS4 attacks in IoT environments, the writers
+of [18] developed a benchmarking of several ML classifiers.
+Although they used both new and old datasets to evaluate
+their model, but they neglected the applicability of their model
+in real-world IoT networks. The authors of [19] developed a
+blockchain-based deep model for the security and privacy of
+IoMT networks. Specifically, they used autoencoder for the
+privacy and LSTM for security purpose. However, the use of
+blockchain technology makes it not feasible for CIoT-based
+healthcare networks because of obvious drawbacks such as
+high consumption and lack of clarity regarding the ownership
+of data. Similarly, the authors of [20] also developed a threat
+detection model using blockchain and deep learning for the
+security of industrial IoT networks. However, they did not
+consider the limitations of IoT devices in their developed
+model.
+In view of federated learning [21], the literature also
+reported distributed learning methods for security of medical
+networks. For example, the authors of [22] developed a method
+named SecFedNIDS using federated learning to guard IoT
+against poisoning attacks. However, their method required a
+lot of human effort in the application stage. Similarly, the
+authors of [23] also proposed federated learning-based model
+for security enhancement of IoMT networks. In an effort to
+enhance privacy of the IoMT systems, the authors of [24]
+developed a model named FL-BETS to preserve the privacy
+and detect data frauds at local fog level nodes and remote
+cloud nodes. However, the detection of unknown attacks were
+not considered during the development phase which makes it
+inapplicable to detect zero-day attacks.
+B. Research Gap and Motivation
+It is evident from the literature review that most of the
+existing methods focuses on security aspect and neglected the
+privacy issue. Similarly, the performance and access control
+are the key driven factors of existing methods; hence, they lack
+deploy ability in CIoT environments. Additionally, the threat
+of maleficent clients in the aggregation mechanism posed a
+significant danger to the security and privacy of critical CIoT
+networks. Also, a tailored security mechanism is required to
+cope with the challenges raised by the heterogeneous devices
+1 Denial-of-Service.
+2 Remote-to-Local.
+3 User-to-Root.
+4 Distributed Denial-of-Service.
+
+6342
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+TABLE I
+C YBER -ATTACK I NCIDENTS R EPORTED IN D IFFERENT C OUNTRIES
+
+Fig. 1.
+
+General overview of proposed Federated-Boosting IDS model for CIoTs.
+
+in the modern CIoT. To address these gaps, this paper put
+forward an end-to-end security design that does not only
+offer robust security and privacy scheme but also provide
+a dynamic aggregation system for malicious clients in the
+distributed architecture of CIoT environments. To the best of
+our knowledge, there is no such study that offer cyber-attack
+detection mechanism for security and privacy of CIoT using
+federated architecture.
+We applied federated learning because of its distinct benefits
+such as: it allows the model training with multiple data sources
+while protecting data privacy; it decreases the need for largescale data transfers between clients and servers, which is
+essential in bandwidth-constrained environments for example
+IoT/CIoT; it doesn’t incur a large computation overhead
+compared to training a model in a conventional way which
+increases performance factor; and It offers scalability by
+handling large number of devices or entities.
+
+III. P ROPOSED F EDERATED -B OOSTING D ESIGN
+
+powerful detection/defensive system against evolving cyberattacks. On the other hand, federated architecture provides a
+global perspective of the entire network with unified controlling abilities, making distributed network flow obtainability
+easier. As shown in Figure 1, the proposed model has a combination of central global server having several local servers
+where each local server represents a distinct CIoT network.
+The global server manages the weight and parameter updates,
+dynamic client list, aggregation mechanism and distribution
+of global models. The proposed model is placed on the
+global server for significant reasons such as: i) changing
+functionality and improved adaptability. ii) flexibility between
+the linked local servers and CIoT devices. and iii) governing
+capability to control the entire network as a sole an intelligent
+decision engine. This global view of entire distributed network
+and devices provides a combination of security and privacy
+and thus develop an efficient cyber-attack detection system
+to defend against malicious actions. The Federated-Boosting
+model is flexible to fit more devices by simply updating the
+parameters to the global server.
+
+A. Model Overview
+In traditional or central networks, only the local state of
+a network can be perceived through central learning. Thus,
+it is challenging to create an overall design of a distributed
+structure and even harder for an IDS method to design a
+
+B. Preprocessing
+Preprocessing is an important stage in Machine Learning
+as the data quality and the extracted meaningful information
+can directly affects the capability of a learning model; hence,
+
+KHAN et al.: FEDERATED-BOOSTING: A DISTRIBUTED AND DYNAMIC BOOSTING
+
+it is very important to preprocess the input data before it is
+feed to the detection model. The Federated-Boosting model
+comprises the following preprocessing techniques:
+1) Feature Reduction: This step is applied since CIoT
+devices generates high-dimensional and heterogeneous data.
+The aim of this application is to remove noisy and less relevant
+features from the input data as it can effectively helps in
+reducing the size and computational cost of the detection
+model. Since we intend to design a lightweight model for
+restricted CIoT network, it is vital to reduce the feature set
+to achieve several advantages like faster training time, low
+memory consumption, and less computational requirements.
+The Federated-Boosting model incorporates ICA5 technique
+to reduce the feature set, which is defined below by:
+id = N c + m
+
+(1)
+
+where the k-dimensional feature of the input data denoted by
+id, the m-dimensional independent components are denoted
+by c, the matrix for mixing constant k × m with k ≥ m and m
+shows noise, is denoted by the N . Suppose the medical data
+is generated and labeled in noise-free environment, then the
+ICA method is shown below by:
+id = N c
+
+(2)
+
+c = U id
+
+(3)
+
+and
+
+where the matrix for un-mixing is represented by U , to project
+id to c.
+These independently shown components are reflected as the
+best feature space as it can provide higher estimates N and c
+having id with non-Gaussian data (which is standard practice
+in existing CIoT networks) optimizing constraint. Ultimately,
+the optimizing constraint of non-Gaussian data to decrease the
+shared information (SI) between m variables (cj , where j =
+1, 2, . . . , m), is represented below to solve Eq. (4).
+  
+SI(c1 , c2 , v3 , . . . , ck ) =
+E cj − E(ce )
+(4)
+j
+
+where E shows the differential entropy. We chose ICA over
+other methods because it can support to isolate mixed signals
+into their original independent components, making it easier
+to comprehend the underlying dynamics of data. Additionally,
+this method is selected because the CIoT devices generates
+non-Gaussian structure data and the devices and networks are
+assumed to be independent.
+2) Feature Normalization: Since the proposed model is
+dependent on trees and weights, the high range of feature values can induce a bias in the learning system which eventually
+may cause some feature weights to update faster as compared
+to other features. Hence, it is important to address this issue
+by utilizing a statistical normalization method such as, the
+Z-score technique, as given below:
+ZS (j) =
+
+id(j) − μ
+σ
+
+5 Independent Component Analysis.
+
+(5)
+
+6343
+
+where σ denotes the denotes standard deviation, and the mean
+values of m for a particular feature (id(j) (j ∈ 1, 2, . . . , m)) is
+shown by μ.
+C. Weighted Boosting Method
+Boosting is an ensemble training strategy in which the
+outcomes of several training models (aka base models) is
+integrated to predict a cyber threat. In this work, two modified
+functions are applied to the boosting strategy, i.e., weight function (WF) and regularized learning objective or regularized
+loss function RLF). The WF helps in rectification of gradient
+deviation problem while the RLF term assists in avoiding
+the over-fitting issue by smoothing the final learnt weights
+and assist in the process of detecting zero-day attacks. This
+is done through the addition of penalty/regularization term
+to the usual loss function that demoralizes complex training
+methods having heavy weights. This is achieved through the
+regularization parameter in the training process in order to
+discourage the model for being too complex and therefore
+avoiding over-fitting issue. Additionally, this method enhances
+the generalization ability of the proposed model when executed
+on test data.
+This weighting strategy effectively treat the data imbalanced
+problem by appropriately assigning large weights to minority
+or weak labels to bring out the best of classification results.
+Similarly, the over-fitting issue is addressed through the RLF
+strategy that tries to reduce the complexity of the model unlike
+other algorithms such as KNN,6 RF,7 NN,8 etc. However, to
+strongly learn every feature the model comprises of a large
+number of regression trees since the training data is skewed
+in nature. Let N denotes the tree count, and M denotes the
+records in training set, then the prediction outcome of pm and
+N th tree for input data record is given by:
+N−1
++ ntN (bm ) tn ∈ T
+pN
+m = pm
+
+(6)
+
+N−1 represents the outcome of previous tree, which is
+where pm
+added to tn (bm ) that represents the newly constructed tree and
+produce the pN
+m prediction result, m denotes the learning rate,
+and T represents the collection of probable trees. Here we
+can optimize the objective function to minimize the prediction
+error as shown below:
+
+OF N =
+
+M
+
+
+
+1
+2
+L xm , pN
+m + γ trc + λwe
+2
+
+(7)
+
+m=1
+
+where OF N represents the objective function, the correct value
+for mth sample class is denoted by xm , λ and γ represents
+the parameters of regularization that are employed to control
+the tree pruning and complexity, respectively, trc denotes the
+number of terminal nodes, and we represents weight of each
+leaf in tree. The boosting model utilized in this work try to
+optimize OF N via second-order estimates for the gradients of
+loss function to accurately learn about attack-related samples.
+However, the proposed method could estimate wrong gradients
+6 k-nearest neighbors.
+7 Random forest.
+8 Neural network.
+
+6344
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+if the intrusions are inserted by hacker/invader at the rare nodes
+resulting in imbalance issue. Therefore, a WF is designed that
+allocates the CW class-weights to the corresponding classes,
+as shown by:
+
+
+Rtn
+(8)
+CW = 2 ×
+Rc
+where Rc denotes the total number of training records and
+Rtn denotes each class records. In this was the training error
+is minimized by assigning large weight to minority class and
+less weight to majority class. Then the updated OF N with
+CW is computed as:
+OF N =
+
+M 
+
+
+
+
+
+N−1
+CW m L xm , pm
++ tn (bm )
+
+m=1
+
+1
++γ trc + λcw2
+2
+
+(9)
+
+Then, to further optimize the OF N the second-order Taylor
+estimation is calculated as:
+
+M 
+
+1
+N
+2
+CW m grm tn (bm ) + hm tn (bm )
+OF =
+2
+m=1
+
+1
++γ trc + λcw2
+2
+where h denotes the hessian (hm ) =
+
+(10)
+δ 2 L(xm ,pN−1
+m )
+,
+δ 2 pm
+
+and gr
+
+δ L(xm ,pN−1
+m )
+. Using these equations
+denotes the gradients grm =
+δpm
+
+an efficient and strong tree splitting strategy can be applied for
+enhanced training of each feature and CW weights allocated
+to each link. Initially, since every tree is a leaf, therefore T =
+t(b) = CW s(b) denotes a leaf-node record. If the records of
+this leaf-node is denoted as Ji = r | s (br ) = i via substituting
+to Equation (10), we attain the following:
+OF N ∼
+=
+
+
+tr 
+
+1
+CW m Gi cwi + (Hi + λ) cw2i
++ γ trc (11)
+2
+i=1
+
+where Hi =
+r∈Ji hm and Gi =
+r∈Ji grm . Suppose a
+fixed size tree structure, then the optimum weight value can
+be calculated via OF N to 0, and the cw value denoted as
+i
+. To explore all appropriate splits, alternatively
+cw = − HGi +λ
+we employed greedy algorithm to pick the most valuable split
+in each tree for the generation of weighted quantiles which
+are most applied in multi-trees splitting. Initially for each
+tree, the gain (G) is calculated, then a quantile is selected
+based on maximum value of G since it represent the best split.
+Ultimately, the value of G is calculated for every tree using
+its right (Rb) and left (Lb) branch as below:
+2
+2
+GRb
+GLb
+1
+(GLb + GRb )2
++
+−
+G=
+− γ (12)
+2 HLb + λ HRb + λ HLb + HRb + λ
+
+Throughout the training step this whole process is repeated
+for all existing sub-trees until all the hyper parameters and
+OF N are optimized to develop an effective IDS model that
+precisely distinguish between normal and malicious labels.
+
+D. Dynamic Federation and Aggregation Strategy
+The distributed and collaborative client-based architecture
+of federated learning design makes it perfect fit for use in
+CIoT/IoMT networks since they contain private and sensitive
+data. The learning process is done both at the local client side
+and global server side. Each client then shares their model
+updates with the server though an aggregation mechanism
+(for example, federated averaging) after which the server
+generates the global model and distribute it to the local clients.
+This aggregation and updation process is repeated through
+iterations/communication rounds until a threshold performance
+is achieved. A brief explanation of this federated process is
+summarized as follows:
+• Initialize and distribute the global model (if exist) as
+GM0I .
+• If it does not exist, then initialize the training process at
+the server and distribute the global model as GMcr
+I .
+cr
+• The local server receives the global model GMI and
+swap it with the local model (if exist) denoted as LMcr
+n
+where n represents local server/client and cr represents
+the communication round. The local server trains its
+own model using its local data and tries to optimize via
+reducing the loss function represented as LL(LMcr
+n ). The
+optimized weights and parameters are sent as updates to
+the global server for aggregation purposes. The loss is
+calculated as:
+
+
+
+
+cr
+(13)
+LL LMcr
+n = arg mincr LL LMn
+LMn
+
+kn
+
+
+1 
+=
+LL LMcr
+(ti − f (ri ))2
+n
+kn
+
+(14)
+
+i=1
+
+where the number of training records is represented by
+kn , the specific training record is shown by ri and its label
+is shown as ti , and the final output of LMcr
+n model is
+shown by f (ri ).
+• The global server generates a list of dynamic participating
+clients for aggregation procedure. This dynamic aggregation client list is dependent on two factors; accuracy and
+time. The model results of only those local servers/clients
+will be aggregated which meets the aggregation strategy
+(such as achieved threshold accuracy performance and
+reply with updated parameter weights in certain amount
+of time). After receiving the updates, the global server
+by training and
+generates the global model as GMcr+1
+I
+loss minimization and optimization. This (global loss
+GL(GMcr
+I )) process is shown as:
+K
+
+
+
+
+1
+=
+LL LMcr
+GL GMcr
+I
+n
+K
+
+(15)
+
+j
+
+•
+
+The global server update the global model GMI(cr+1)
+from the participating client lists as:
+(cr+1)
+
+GMI(m)
+
+= GMcr
+I(m)
++
+
+1
+
+s
+
+|DS n |LMcr
+n(m)
+
+|DS n |
+LMcr
+n=1
+n(m)  =0
+
+(16)
+
+KHAN et al.: FEDERATED-BOOSTING: A DISTRIBUTED AND DYNAMIC BOOSTING
+
+6345
+
+TABLE II
+D ETAILS OF E XPERIMENTAL S ETTINGS
+
+TABLE III
+N UMERICAL R ESULTS OF F EDERATED -B OOSTING M ETHOD
+U SING B OTH DATASETS
+
+where the total number of dataset records at client n is
+represented by |DS n |, the total participating clients is
+denoted by s, and the count of non zero gradients transferred by the clients is denoted by LMcr =0 |DS n |.
+n(m)
+All these above-mentioned steps are executed through communication rounds until the global model converge and attain
+desirable accuracy.
+
+2) ToN_IoT Dataset: This dataset was generated through
+mimic testbed architecture of IoT and IIoT systems [26].
+This dataset contains data from heterogeneous types of CIoT
+devices (such as Fridge, GPS, Motion Light, Thermostat, etc.)
+to collect telemetry data of IoT services, network traffic and
+different attack scenarios were implemented such as DoS,
+Ransomware, and Backdoor etc. This dataset consists of 22
+features and 156, 119 abnormal records and 245, 000 normal
+records.
+
+IV. E VALUATION AND R ESULTS
+A. Experimental Settings
+The performance evaluation of Federated-Boosting model is
+done through extensive experiments conducted on a workstation (details of which are specified in Table II). The booster
+is set as gbtree, the importance_type is set as gain, the
+learning rate is 1, with maximum depth is set as 10, with
+max_delta_step as 0, subsample ratio of the training instances
+is set as 0.5, refresh_leaf as 1, num_parallel_tree is 1, and
+sampling_method is set as gradient_based.
+B. Datasets
+The proposed model is primarily evaluated using two
+datasets from different CIoT domain to assess its performance
+and generalizability. The basic motivation for applying these
+datasets are: They are created from real-world CIoT-based
+networks; and They realistically represent medical data and
+the operations of consumer IoT (since there is a deficiency
+of realistic CIoMT datasets to evaluate machine learning
+algorithms for cyber security purposes).
+1) EHMS-2020 Dataset: The EHMS9 dataset was generated through a real-time medical system testbed [25] by
+collecting both patient’s biometrics and the network flow data.
+The total number of features in this dataset are 44 out of
+which 8 are related to biometrics of patients and 35 are
+related to network flow. Data were collected for different CIoT
+sensors such as Electrocardiogram, Blood Oxygen Saturation,
+temperature, and blood pressure sensors. The total number
+of records in this dataset are 16, 318 out of which 14, 272
+(87.5%) are normal records and 2, 046 (12.5%) are abnormal
+records and hence this ratio represents imbalance nature of this
+dataset. The abnormal records were generated using various
+attack vectors such as data injection, spoofing, and man-inthe-middle attacks.
+9 Enhanced Healthcare Monitoring System.
+
+C. Detection Results
+This work employed well known metrics for the
+performance evaluation of proposed model such as Precision,
+F-Score, Recall, and Accuracy. The experiments were conducted by dividing the dataset into training and testing sets
+where the training data contained 80% records and testing
+set contained 20% records. The numerical results of the
+experiments are presented in Table III, which shows that
+the Federated-Boosting model achieved 99.749% Precision,
+99.741% F-Score, 99.516% Recall, 99.742% AUC/ROC and
+99.745% Accuracy for the EHMS dataset and 99.563%
+Precision, 99.546% F-Score, 99.156% Recall, 99.549%
+AUC/ROC and 99.554% Accuracy for the ToN_IoT dataset.
+These results also indicates the learning ability and robustness
+of the proposed model against zero-day attacks by proficiently
+identifying numerous types of complex attack vectors in
+an imbalanced datasets. Even though the ToN_IoT dataset
+contain a large number of complex cyber-attacks, the proposed
+boosting model is able to learn the underlying patterns in the
+CIoT data by successfully distinguishing them.
+Furthermore, we conducted additional experiments using
+CIC-IDS-2018 [4] and WUSTL-IIOT-2021 [12] datasets to
+assess the performance of proposed model via traditional
+CEs data. It is worth mentioning that our model managed to
+achieved 99.291% and 99.434% accuracy for CIC-IDS-2018
+and WUSTL-IIOT-2021 datasets, respectively.
+D. Comparative Analysis and Discussion
+We conducted extensive experiments (in terms of accuracy
+metric) to compare the performance of Federated-Boosting
+model with the SOTA methods.10 The parameter settings of
+these methods are taken from their respective papers and the
+10 State-of-the-art.
+
+6346
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+Comparison of AUC performance on all four datasets.
+
+TABLE IV
+C OMPARISON OF SOTA AND F EDERATED -B OOSTING M ETHOD U SING
+ACCURACY M ETRIC ON B OTH DATASETS
+
+The aggregation mechanism is designed by dynamically selecting contributing clients in the federation strategy to deal
+with malicious clients. The proposed model is tested with
+two publically available datasets and proved to have good
+performance (accuracy = 99.74% for EHMS dataset, 99.54%
+for ToN_IoT dataset) using imbalanced data. This security
+design can serve as a starting point for security professionals
+and critical organizations to secure their infrastructure against
+cyber-attacks.
+R EFERENCES
+
+numerical outcomes are shown in Table IV. It is observed
+from this comparison that the Federated-Boosting model outperformed all the other detection methods by achieving high
+accuracy rate using both datasets. The proposed FederatedBoosting model shows an average improvement of 5.686% and
+6.151% as compare to other methods on EHMS dataset and
+ToN_IoT dataset, respectively. These results reflect the advantage of dynamic aggregation strategy design to adapt to the
+dynamic behaviors of the contemporary CIoT networks. The
+use of weighted boosting design also significantly improves
+the detection performance as compare to other SOTA methods.
+The reason for enhanced performance of proposed model is
+that it is based on dynamic ensembles and boosting mechanism
+which assists in dealing and smoothing with the “biasvariance” trade-off. The proposed model has the potential to fit
+in small-scale platforms such as CIoT because of light-weight
+architecture and less computational requirements.
+To summarize, the Federated-Boosting model is a
+lightweight and reliable security system for CIoT platforms.
+However, it entails a high volume data to achieve desired
+performance. In future, we plan to integrate few-shot training
+mechanism in the proposed model with incremental learning
+approach to overcome this limitation.
+V. C ONCLUSION
+Existing cyber-attacks detection and defensive methods are
+proven to be ineffective against the complex and evolving
+nature of threats. This paper proposes an effective intrusion
+detection method for efficient detection of cyber-attacks in
+CIoT networks. The proposed model is developed using
+dynamic and adaptive boosting design in a privacy preserved
+manner by keeping intact the local data on the client side.
+
+[1] C. K. Wu, C.-T. Cheng, Y. Uwate, G. Chen, S. Mumtaz, and K. F. Tsang,
+“State-of-the-art and research opportunities for next-generation consumer electronics,” IEEE Trans. Consum. Electron., vol. 69, no. 4,
+pp. 937–948, Nov. 2023.
+[2] H. Zhu et al., “Smart healthcare in the era of Internet-of-Things,” IEEE
+Consum. Electron. Mag., vol. 8, no. 5, pp. 26–30, Sep. 2019.
+[3] H. R. Chi, M. de Fátima Domingues, H. Zhu, C. Li, K. Kojima, and
+A. Radwan, “Healthcare 5.0: In the perspective of consumer Internetof-Things-based fog/cloud computing,” IEEE Trans. Consum. Electron.,
+vol. 69, no. 4, pp. 745–755, Nov. 2023.
+[4] D. Javeed, M. S. Saeed, I. Ahmad, P. Kumar, A. Jolfaei, and M. Tahir,
+“An intelligent intrusion detection system for smart consumer electronics
+network,” IEEE Trans. Consum. Electron., vol. 69, no. 4, pp. 906–913,
+Nov. 2023.
+[5] M. Yamauchi, Y. Ohsita, M. Murata, K. Ueda, and Y. Kato, “Anomaly
+detection in smart home operation from user behaviors and home
+conditions,” IEEE Trans. Consum. Electron., vol. 66, no. 2, pp. 183–192,
+May 2020.
+[6] S. T. Argaw et al., “Cybersecurity of hospitals: Discussing the challenges
+and working towards mitigating the risks,” BMC Med. Informat. Decis.
+Mak., vol. 20, pp. 1–10, Dec. 2020.
+[7] T. B. Slayton, “Ransomware: The virus attacking the healthcare industry,” J. Legal Med., vol. 38, no. 2, pp. 287–311, 2018.
+[8] S. Steffen, Hackers Hold German Hospital Data Hostage, Deutsche
+Welle, Bonn, Germany, 2016.
+[9] S. Aymé et al., “Benefits and risks of using health data for research,”
+Ph.D. dissertation, Paris Brain Inst.-ICM, Paris, France, Sorbonne Univ.,
+Paris, France, 2023.
+[10] I. A. Khan, D. Pi, M. Z. Abbas, U. Zia, Y. Hussain, and H. Soliman,
+“Federated-SRUs: A federated-simple-recurrent-units-based IDS for
+accurate detection of cyber attacks against IoT-augmented industrial control systems,” IEEE Internet Things J., vol. 10, no. 10, pp. 8467–8476,
+May 2023.
+[11] I. A. Khan, N. Moustafa, D. Pi, Y. Hussain, and N. A. Khan, “DFFSC4N: A deep federated defence framework for protecting supply chain
+4.0 networks,” IEEE Trans. Ind. Informat., vol. 19, no. 3, pp. 3300–3309,
+Mar. 2023.
+[12] S. I. Popoola, A. L. Imoize, M. Hammoudeh, B. Adebisi, O. Jogunola,
+and A. M. Aibinu, “Federated deep learning for intrusion detection in
+consumer-centric Internet of Things,” IEEE Trans. Consum. Electron.,
+vol. 70, no. 1, pp. 1610–1622, Feb. 2024.
+[13] M. Al-Hawawreh and M. S. Hossain, “Federated learning-assisted
+distributed intrusion detection using mesh satellite nets for autonomous
+vehicle protection,” IEEE Trans. Consum. Electron., vol. 70, no. 1,
+pp. 854–862, Feb. 2024.
+
+KHAN et al.: FEDERATED-BOOSTING: A DISTRIBUTED AND DYNAMIC BOOSTING
+
+[14] A. Alzahrani and M. Z. Asghar, “Maintaining user security in consumer
+electronics-based online recommender systems using federated learning,” IEEE Trans. Consum. Electron., vol. 70, no. 1, pp. 2657–2665,
+Feb. 2024.
+[15] M. Zubair Islam, Shahzad, R. Ali, A. Haider, and H. Kim,
+“IoTactileSim: A virtual testbed for tactile Industrial Internet of Things
+services,” Sensors, vol. 21, no. 24, p. 8363, 2021.
+[16] X.-H. Nguyen, X.-D. Nguyen, H.-H. Huynh, and K.-H. Le, “Realguard:
+A lightweight network intrusion detection system for IoT gateways,” Sensors, vol. 22, no. 2, p. 432, 2022.
+[17] Y. Otoum, D. Liu, and A. Nayak, “DL-IDS: A deep learning–based intrusion detection framework for securing IoT,” Trans. Emerg. Telecommun.
+Technol., vol. 33, no. 3, 2022, Art. no. e3803.
+[18] R. Ahmad, I. Alsmadi, W. Alhamdani, and L. Tawalbeh, “A comprehensive deep learning benchmark for IoT IDS,” Comput. Secur., vol. 114,
+Mar. 2022, Art. no. 102588.
+[19] M. A. Almaiah, A. Ali, F. Hajjej, M. F. Pasha, and M. A. Alohali, “A
+lightweight hybrid deep learning privacy preserving model for FC-based
+Industrial Internet of Medical Things,” Sensors, vol. 22, no. 6, p. 2112,
+2022.
+[20] P. Kumar, R. Kumar, G. P. Gupta, R. Tripathi, and G. Srivastava, “P2tif:
+A blockchain and deep learning framework for privacy-preserved threat
+intelligence in Industrial IoT,” IEEE Trans. Ind. Informat., vol. 18, no. 9,
+pp. 6358–6367, Sep. 2022.
+[21] R. Ali, Y. B. Zikria, S. Garg, A. K. Bashir, M. S. Obaidat, and H. S. Kim,
+“A federated reinforcement learning framework for incumbent technologies in beyond 5G networks,” IEEE Netw., vol. 35, no. 4, pp. 152–159,
+Jul./Aug. 2021.
+[22] Z. Zhang, Y. Zhang, D. Guo, L. Yao, and Z. Li, “SecFedNIDS: Robust
+defense for poisoning attack against federated learning-based network
+intrusion detection system,” Future Gener. Comput. Syst., vol. 134,
+pp. 154–169, Sep. 2022.
+[23] M. N. Hossen, V. Panneerselvam, D. Koundal, K. Ahmed, F. M. Bui,
+and S. M. Ibrahim, “Federated machine learning for detection of
+skin diseases and enhancement of Internet of Medical Things (IoMT)
+security,” IEEE J. Biomed. Health Inform., vol. 27, no. 2, pp. 835–841,
+Feb. 2023.
+[24] A. Lakhan et al., “Federated-learning based privacy preservation and
+fraud-enabled blockchain IoMT system for healthcare,” IEEE J. Biomed.
+Health Inform., vol. 27, no. 2, pp. 664–672, Feb. 2023.
+[25] A. A. Hady, A. Ghubaish, T. Salman, D. Unal, and R. Jain, “Intrusion
+detection system for healthcare systems using medical and network data:
+A comparison study,” IEEE Access, vol. 8, pp. 106576–106584, 2020.
+[26] A. Alsaedi, N. Moustafa, Z. Tari, A. Mahmood, and A. Anwar,
+“TON_IoT telemetry dataset: A new generation dataset of IoT and
+IIoT for data-driven intrusion detection systems,” IEEE Access, vol. 8,
+pp. 165130–165150, 2020.
+[27] P. Radoglou-Grammatikis et al., “Modeling, detecting, and mitigating
+threats against industrial healthcare systems: A combined software
+defined networking and reinforcement learning approach,” IEEE Trans.
+Ind. Informat., vol. 18, no. 3, pp. 2041–2052, Mar. 2022.
+[28] P. Kumar, G. P. Gupta, and R. Tripathi, “An ensemble learning and fogcloud architecture-driven cyber-attack detection framework for IoMT
+networks,” Comput. Commun., vol. 166, pp. 110–124, Jan. 2021.
+[29] O. Samuel et al., “IoMT: A COVID-19 healthcare system driven by
+federated learning and blockchain,” IEEE J. Biomed. Health Inform.,
+vol. 27, no. 2, pp. 823–834, Feb. 2023.
+[30] S. Manimurugan, S. Al-Mutairi, M. M. Aborokbah, N. Chilamkurti,
+S. Ganesan, and R. Patan, “Effective attack detection in Internet
+of Medical Things smart environment using a deep belief neural
+network,” IEEE Access, vol. 8, pp. 77396–77404, 2020.
+
+Izhar Ahmed Khan (Member, IEEE) received the
+B.Sc. degree from the University of Engineering
+and Technology, Pakistan, the master’s degree in
+computer science from Mid Sweden University,
+Sweden, and the Ph.D. degree in computer science
+from the Nanjing University of Aeronautics and
+Astronautics (NUAA), China. He was a Postdoctoral
+Research Fellow with NUAA, where he is currently working as Faculty Member with the College
+of Computer Science and Technology. His current
+research interests include machine learning, cyber
+security, IoT, and intrusion/anomaly detection systems.
+
+6347
+
+Dechang Pi received the B.Eng. and M.Eng. degrees
+and the Ph.D. degree in mechatronic engineering
+from the Nanjing University of Aeronautics and
+Astronautics, Nanjing, China, in 1994, 1997, and
+2002, respectively, where he is currently a Professor
+and a Ph.D. Supervisor. He has authored over
+100 journals and conference papers. His research
+interests include data mining and privacy, intelligent optimization methods, and security issues
+about moving objects. He presided over 30 research
+projects of the National Natural Science Foundation
+of China, the National 863 Program, the National Technical Foundation, the
+Civil Aerospace Foundation, and the Aviation Science Foundation.
+
+Shaharyar Kamal received the M.S. degree in
+computer engineering from Mid Sweden University,
+Sweden, and the Ph.D. degree from the Department
+of Radio and Electronics Engineering, Kyung Hee
+University, Republic of Korea. He is an Assistant
+Professor with the Department of Electrical
+Engineering, University of Chile. His research
+interests includes B5G, IoT, and mmWave radar for
+human activity recognition. He has been rewarded
+as a Pakistani Scientist ranked among the world’s
+two percent according to the Stanford list published
+in 2020.
+
+Mohammed Alsuhaibani received the degree in
+advance computer science and the Ph.D. degree in
+computer science from The University of Liverpool,
+U.K. He is currently an Associate Professor and
+the Head of the Department of Computer Science,
+College of Computer, Qassim University, Saudi
+Arabia. His research interests include artificial intelligence, machine learning, computational linguistics,
+and natural language processing fields.
+
+Bandar Mzel Alshammari received the B.S.
+degree from the School of Information Technology,
+University of Canberra, Australia, and the master’s
+degree in computer and communications engineering
+and the Ph.D. degree in software security engineering from the Queensland University of Technology,
+Australia, in 2012. He is an Associate Professor
+of Software Engineering with the Department of
+Information Systems, Jouf University, Saudi Arabia.
+Before his current affiliations, he served in several
+positions, including the Vice President for academic
+affairs, the acting Vice President for graduate studies and research, and the
+Dean of Admission and Registration with the University of Aljouf. He has
+published several papers in the area of software security and AI security.
+PAPER_TEXT

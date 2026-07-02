@@ -1,0 +1,150 @@
+   CoLD: Collaborative Label Denoising Framework
+          for Network Intrusion Detection
+                       Shuo Yang† , Xinran Zheng‡ , Jinze Li† , Jinfeng Xu† and Edith C. H. Ngai†∗
+                                      † The University of Hong Kong, Hong Kong SAR, China
+                                       ‡ University College London, London, United Kingdom
+
+
+
+   Abstract—Label noise presents a significant challenge in net-       Untrusted
+work intrusion detection, leading to erroneous classifications and      Internet
+                                                                                                                 Pipeline of IDS
+decreased detection accuracy. Existing methods for handling
+noisy labels often lack deep insight into network traffic and
+blindly reconstruct the label distribution to filter samples with
+noisy labels, resulting in sub-optimal performance. In this paper,                                         Router             Detection
+we reveal the impact of noisy labels on intrusion detection
+models from the perspective of causal associations, attributing
+performance degradation to local consistency of features across                                            Feature
+categories in network traffic. Motivated by this, we propose                                              Extractor                Model
+CoLD, a Collaborative Label Denoising framework for network
+intrusion detection. CoLD partitions the original feature set into                 IDS         User
+multiple subsets and employs Local Joint Learning to disrupt                                 Interface    Labeling             Training
+local consistency, compelling the encoder to learn fine-grained
+and robust representations. It further applies Causal Collabo-
+rative Denoising to detect and filter noisy labels by analyzing                                                       Noise
+                                                                        Trusted
+causal divergences between multiple representations and their           Network
+potentially true label, yielding a purified dataset for training
+a noise-resilient classifier. Experiments on several benchmark         Fig. 1: The overview of IDS with data-driven models in noisy
+datasets demonstrate that CoLD effectively improves classifica-        environments.
+tion performance and robustness to label noise, highlighting its
+potential for enhancing network intrusion detection systems in
+noisy environments.
+                                                                       performance and manage alerts. The general IDS pipeline
+                       I. I NTRODUCTION                                includes a feature extractor, a labeling module, and a data-
+                                                                       driven model used during both training and detection phases.
+   In the field of network security, Intrusion Detection Systems       In this pipeline, the labeling process is fundamental to dataset
+(IDS) are critical for identifying and mitigating malicious            quality. However, it is prone to noise due to human bias,
+activities [1]. As network traffic continues to grow in both           labeling error, and the dynamic nature of evolving network
+complexity and volume [2], [3], the need for accurate and              environments [12], [13]. For example, a full attack sequence
+reliable IDS becomes increasingly urgent [4], [5], [6]. Modern         may initially resemble benign activity [14], as adversaries of-
+IDSs predominantly rely on data-driven models trained on               ten use low-rate stealth attacks or encryption techniques [15],
+labeled data [7], [8], [9], where high-quality labels are essen-       [16] to mimic normal patterns. Advanced malware, including
+tial for learning effective representations of network behavior.       polymorphic and metamorphic variants [17], [18], further blurs
+However, in real-world environments, obtaining clean labels            the distinction between benign and malicious behaviors. As a
+is always challenging [10], [11], and the performance of IDS           result, network traffic flows are frequently mislabeled. IDS
+models is severely constrained by the quality of training data.        models trained on such noisy datasets tend to perform poorly,
+   As illustrated in Fig. 1, an IDS safeguards trusted internal        generating false positives for benign actions and failing to
+networks and operates in conjunction with firewalls to defend          detect critical threats [11]. This undermines system reliability
+against threats originating from untrusted external sources.           and imposes a heavy burden on security teams [19], [20].
+The user interface allows administrators to monitor system                Existing approaches for handling noisy labels generally fall
+   ∗ Corresponding Author. chngai@eee.hku.hk, shuoyang.ee@gmail.com.   into two categories: robust training and dataset purification.
+                                                                       Robust training methods attempt to make models resilient to
+                                                                       noise by modifying loss functions [21], [22], [23], [24] or
+                                                                       adjusting training strategies [25], [26], [27], [28]. However,
+                                                                       they often rely on assumptions such as prior knowledge
+                                                                       of label reliability [27], [28] or access to clean validation
+Network and Distributed System Security (NDSS) Symposium 2026
+23-27 February 2026, San Diego, CA, USA                                data [24], which are often unrealistic in network intrusion
+ISBN 979-8-9919276-8-0                                                 detection tasks. In contrast, dataset purification seeks to di-
+https://dx.doi.org/10.14722/ndss.2026.231950
+www.ndss-symposium.org
+rectly detect and correct mislabeled instances. Approaches                mance and robustness to label noise, outperforming ex-
+based on metric learning [13], [29], [30], [31], [32] and active          isting baselines and state-of-the-art methods.
+learning [33] have made progress in reducing label noise.              • We demonstrate the effectiveness of CoLD by evaluating
+Nevertheless, many of these approaches rely on distance-based             it in realistic enterprise networks. The results indicate
+measurements, which struggle to differentiate between clean               that CoLD can operate in challenging environments and
+and noisy samples in the presence of local consistency. Local             enhance the performance of intrusion detection systems.
+consistency refers to the phenomenon where features from               The remainder of this paper is organized as follows: Sec-
+different categories share similar distributions in the feature     tion II reviews related work on noisy label learning and robust
+space. In such cases, mislabeled and correctly labeled samples      intrusion detection. Section III analyzes the impact of noisy
+may appear deceptively similar. This may result in the removal      labels on detection performance from a causal perspective and
+of underrepresented or ambiguous samples, leading to the            outlines our motivations. Section IV describes CoLD in detail.
+loss of valuable information. In addition, the mechanisms by        Section V presents comparative experiments on benchmark
+which label noise influences model learning in network traffic      datasets against state-of-the-art methods. Section VI reports
+remain poorly understood, hindering the development of more         the initial deployment and evaluation of CoLD in realistic
+effective solutions.                                                enterprise networks. Section VII discusses the findings and
+   To address these challenges, we introduce CoLD, a                future directions. Finally, Section VIII concludes the paper.
+Collaborative Label Denoising framework for network intru-
+sion detection. CoLD is built upon an in-depth investigation                             II. R ELATED W ORK
+into noisy label learning on traffic datasets, revealing that       A. Noisy Label Learning
+performance degradation is largely driven by spurious asso-            Noisy label learning methods related to our work can
+ciations induced by local consistency across traffic categories.    be broadly categorized into two groups: robust training and
+Specifically, local features from different categories often        dataset purification. Robust training methods aim to mitigate
+share similar distributions, making it difficult for models to      the impact of incorrectly labeled training data on model
+distinguish between them. While a high-performing IDS model         performance. Some works design robust loss functions [21],
+should extract distinct representations of traffic categories       [22], [23], [34] and training strategies [25], [26], [27], [28],
+in latent space, noisy labels disrupt this process by intro-        [35], [36], [37] to ensure performance despite mislabeled
+ducing spurious associations between erroneous labels and           samples. Other methods apply the label transition matrix [38],
+features [11]. This misguidance forces the model to learn naive     [39], [40], which records the probability of a category be-
+patterns from locally consistent features, ultimately blurring      ing mislabeled into another category, to rectify loss values
+true decision boundaries and impairing detection accuracy.          impacted by noisy labels. These methods generally rely on
+   The proposed CoLD comprises three main components:               specific assumptions that are difficult to meet in network in-
+Feature Reordering, Local Joint Learning, and Causal Col-           trusion detection. Dataset purification methods aim to identify
+laborative Denoising. Feature Reordering enhances semantic          and correct mislabeled samples during training. The widely
+relevance by rearranging the feature set based on Pearson           adopted option is the training loss, assessing the disparity
+correlation coefficients. Local Joint Learning partitions the       between the model prediction and given labels [18], [41], [42],
+reordered features into multiple subsets and applies self-          [43], with higher loss indicating incorrect labels. In addition,
+supervised training to disrupt local consistency, encouraging       some methods design measurement functions [31], [44], [45],
+the model to learn fine-grained and robust representations.         [46] to distinguish between clean and noisy labels. Although
+Causal Collaborative Denoising purifies the dataset by using a      these methods have proven effective in image recognition or
+Gaussian Mixture Model (GMM) to analyze the divergence of           natural language processing, they are challenging to generalize
+causal associations between multiple representations and their      to network intrusion detection tasks due to a lack of deep
+potential true labels. This process identifies and filters noisy    insight into network traffic.
+samples, resulting in a purified dataset for training a noise-
+resilient classifier.                                               B. Robust Intrusion Detection
+   In summary, this paper makes the following contributions:            Advances in deep learning have significantly improved the
+   • We investigate the influence of noisy labels from the          capabilities of intrusion detection systems [47], [48], [49].
+      perspective of causal associations and attribute it to the    These models are capable of learning complex representations
+      local consistency across categories in network traffic.       from raw traffic data due to their strong capacity for pattern
+   • We propose CoLD, a collaborative label denoising frame-        fitting. However, most existing research has been conducted
+      work that integrates self-supervised representation learn-    in closed-world settings, which limits the generalization abil-
+      ing and causal inference to effectively identify and filter   ity of these models in diverse or evolving real-world en-
+      noisy labels, enabling a purified dataset for training a      vironments [50], [51]. This constraint results in decreased
+      noise-resilient classifier.                                   performance when such models are deployed in practical
+   • We conduct extensive experiments on benchmark datasets         scenarios [33]. To overcome this limitation, recent studies have
+      to evaluate the effectiveness of CoLD. The results show       explored the development of more robust intrusion detection
+      that CoLD significantly improves classification perfor-       methods. For example, Diallo et al. [5] proposed supervised
+                                                                                                  X
+adaptive clustering techniques to learn cluster centers that
+
+                                                                                     �                        Y
+improve robustness against outliers and enhance generaliza-
+tion. Yue et al. [6] applied data augmentation and contrastive
+
+                                                                                            ��        ��
+learning to extract semantic relationships between samples,
+further strengthening model robustness. Other works [52],
+[53], [54] developed adaptive intrusion detection techniques
+to address the challenge of concept drift, which is caused by      Fig. 2: Causal Graph via SGM. Each traffic flow X comprises
+evolving attack patterns.                                          causal features Xc and non-causal features Xn . Note that only
+   Nevertheless, the success of intrusion detection models is      the causal feature Xc determines the ground truth label Y .
+closely tied to the quality of the training data, and label
+noise still poses a major challenge. Qing et al. [55] utilized
+distribution differences between benign and malicious traffic to   lead traditional models. Unlike distance- or confidence-based
+estimate potential labels, but their method is limited to binary   approaches, CoLD employs self-supervised multi-view repre-
+classification and assumes a balanced dataset. Zhao et al. [33]    sentation learning and causal divergence analysis to identify
+designed an effective online anomaly detection framework           and filter noisy labels, achieving superior performance in high-
+that relies on security experts to relabel samples based on        noise environments.
+uncertainties predicted by quality and classification models,
+at the cost of increased manual labor. Wu et al. [18] intro-       III. M OTIVATING C O LD: C AUSAL A NALYSIS AND L OCAL
+duced a semi-supervised learning framework that integrates                              C ONSISTENCY
+robust training by leveraging early-epoch loss magnitude to          In this section, we introduce the motivation behind the
+distinguish clean from noisy labels. They identified noisy         CoLD, emphasizing that it arises from a causal analysis of
+samples and treated them as unlabeled data used for repre-         noisy label learning and key observations on network traffic
+sentation learning. While they demonstrated the effectiveness      data. Our analysis reveals how noisy labels introduce spurious
+on malware classification tasks, their method’s reliance on a      causal associations and mislead the model’s learning through
+predefined label splitting ratio constrains its flexibility and    local consistency, thereby providing both theoretical insights
+limits its applicability across varying noise levels. Yuan et      and practical foundations for our approach.
+al. [13] combined d

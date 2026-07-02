@@ -1,0 +1,1191 @@
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026 4385
+
+ Graph Neural Networks for Graphs With
+ Heterophily: A Survey
+ Xin Zheng , Yi Wang , Yixin Liu , Ming Li , Member, IEEE, Miao Zhang , Di Jin ,
+ Philip S. Yu , Fellow, IEEE, and Shirui Pan , Senior Member, IEEE
+
+ (Survey Paper)
+
+ Abstract—Recent years have witnessed fast developments of I. INTRODUCTION
+graph neural networks (GNNs) that have benefited myriad graph
+ RAPHS are pervasively structured data and have been
+analytic tasks and applications. Most GNNs rely on the homophily
+assumption that nodes belonging to the same class are more likely to
+be connected. However, as a ubiquitous graph property in numer-
+ G widely used in many real-world scenarios, such as social
+ networks [1], [2], knowledge bases [3], traffic networks [4],
+ous real-world scenarios, heterophily, i.e., nodes with different la- and recommendation systems [5], [6]. Recently, graph neural
+bels tend to be linked, significantly limits the performance of tailormade homophilic GNNs. Hence, GNNs for heterophilic graphs are
+ networks (GNNs) have achieved remarkable success with powgaining increasing research attention to enhance graph learning erful learning ability and become prevalent models to tackle
+with heterophily. In this paper, we provide a comprehensive review various graph analytical tasks, such as node classification, link
+of GNNs for heterophilic graphs. Specifically, we propose a sys- prediction, and graph classification [3], [7], [8], [9].
+tematic taxonomy that governs existing heterophilic GNN models, While a large number of GNNs with diverse architectures
+along with general summaries and detailed analyses. Furthermore,
+we discuss the relationship between heterophily and various graph
+ have been designed [10], [11], [12], [13], [14], [15], the majority
+research domains, aiming to facilitate the development of more of them follow the homophily assumption, i.e., nodes with
+effective GNNs across a spectrum of practical applications and similar features or same class labels are linked together. For
+learning tasks in the graph research community. In the end, we example, in citation networks, a study usually cites reference
+point out potential directions to advance and inspire future research papers from the same research area [16]. However, real-world
+and applications on heterophilic graph learning with GNNs.
+ graphs do not always obey the homophily assumption but show
+ Index Terms—Graph neural networks, heterophily, graph an opposite property, i.e., heterophily that linked nodes have
+representation learning, message passing. dissimilar features and different class labels [17], [18], [19], [20],
+ [21]. For instance, in online transaction networks, fraudsters
+ Received 28 May 2025; revised 14 March 2026; accepted 29 March 2026. are more likely to build connections with customers instead of
+Date of publication 2 April 2026; date of current version 2 June 2026. The
+work of Shirui Pan was supported in part by the Australian Research Council other fraudsters [22]; in dating networks, most people prefer
+(ARC) under Grant FT210100097 and Grant DP240101547. The work of Yixin to date with people of the opposite gender [23]; in molecular
+Liu was supported in part by the Australian Research Council (ARC) under networks, protein structures are more likely composed of dif-
+Grant DE260101172. The work of Yi Wang was supported by the Research
+Grants Council of Hong Kong CityU under Grant 11301224. The work of ferent types of amino acids that are linked together [24]. The
+Ming Li was supported from National Natural Science Foundation of China examples of homophilic and heterophilic graphs are provided
+under Grant 62536006. The work of Philip S. Yu was supported in part by in Fig. 1 to illustrate their difference visually. Importantly,
+NSF under Grant III-2106758 and Grant POSE-2346158. Recommended for
+acceptance by S. Whang. (Xin Zheng and Yi Wang contributed equally to this such heterophily restricts the learning ability of existing howork.) (Corresponding authors: Ming Li; Shirui Pan.) mophilic GNNs on general graph-structural data, resulting in
+ Xin Zheng is with the School of Computing Technologies, RMIT University, significant performance degradation on heterophilic graphs [23],
+Melbourne, VIC 3000, Australia (e-mail: xin.zheng2@rmit.edu.au).
+ Yi Wang is with the Department of Mathematics, City University of Hong [24], [25].
+Kong, Hong Kong, SAR, China (e-mail: ywan72@cityu.edu.hk). Core Challenges of GNNs for Heterophily: We attribute
+ Yixin Liu and Shirui Pan are with the School of Information and Communi- the performance degradation to the uniform message passing
+cation Technology, Griffith University, Southport, QLD 4215, Australia (e-mail:
+yixin.liu@griffith.edu.au; s.pan@griffith.edu.au). framework under the homophily setting. The procedure of this
+ Ming Li is with the Zhejiang Key Laboratory of Intelligent Education Tech- framework can be summarized as: first aggregating the mesnology and Application, Zhejiang Normal University, Jinhua 321004, China sages extracted from local neighbor nodes, then updating the
+(e-mail: mingli@zjnu.edu.cn).
+ Miao Zhang is with the School of Computer Science and Technology, final ego node (the current central node itself) representations
+Harbin Institute of Technology (Shenzhen), Shenzhen 518055, China (e-mail: with aggregated neighbor messages. Nevertheless, due to the
+zhangmiao@hit.edu.cn). heterophily property of graphs, this mechanism poses significant
+ Di Jin is with the School of Computer Science and Technology, Tianjin
+University, Tianjin 300072, China (e-mail: jindi@tju.edu.cn). challenges for the development of heterophilic GNNs, primarily
+ Philip S. Yu is with the Department of Computer Science, University of Illinois manifesting in two aspects:
+at Chicago, Chicago, IL 60607 USA (e-mail: psyu@uic.edu). r Challenge-1. Undiscovered Non-local Neighbors: Guided
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TKDE.2026.3680353, provided by the authors. by homophily, neighbor aggregation in homophilic GNNs
+ Digital Object Identifier 10.1109/TKDE.2026.3680353
+
+ 1041-4347 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+4386 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+ numerous challenges need to be tackled for designing
+ heterophilic GNN models with expressive performance,
+ robustness, and generalization ability. The advancement
+ of heterophilic GNNs is pivotal for unlocking the full potential of heterophilic graph analysis in addressing various
+ practical graph learning tasks covering both heterophilic
+ node representations and graph structures.
+ r Adapting with versatility in heterophilic GNN development: As heterophilic graphs exist prevalently and show
+Fig. 1. Examples of homophilic and heterophilic graphs (Left: (a) a citation close connections with various graph research domains,
+network; Right: (b) an online transaction network). e.g., over-smoothing and anomaly detection. Hence, developing specialized heterophilic GNN architectures and
+ learning techniques would be pivotal in expanding the verrestricts information extraction to the proximal local satility and adaptability of GNN models, unleashing power
+ topology of graphs. When applied to graphs with het- of heterophilic GNNs in cross graph research domains and
+ erophily, it fails to explore non-local topology, where het- applications.
+ erophilic nodes of the same class are typically situated Distinctions from Existing Surveys: This study constitutes
+ at long-term distances. This poses a significant challenge an expansion of the domain survey initially released on arXiv
+ in identifying and learning informative nodes with high (preprint 2202.07082v1), the first comprehensive review in this
+ structural and semantic similarities on heterophilic graphs. field. Notably, since the publication of this seminal survey in
+ r Challenge-2. Indistinguishable Node Representation 2022, we have witnessed exponential growth in related research.
+ Learning: Homophilic GNNs employ uniform local Available statistics indicate that the volume of new literature
+ neighbor aggregation and update the central node generated between 2022 and 2024 exceeded fivefold compared
+ representation when they are typically similar and share to the preceding five-year period. While several review artithe same labels. Consequently, on heterophilic graphs, cles [32], [33], [34] have emerged during this timeframe, our
+ the discrepancy between similar non-local neighbors work demonstrates distinctive value through the following diand dissimilar local neighbors can not be effectively mensions:
+ captured. This results in critical challenges in learning r In contrast to the prior efforts by Zhu et al. [32] and
+ discriminative node representations with distinguishable Gong et al. [33] largely limited to pre-2023 methods, our
+ heterophily information through diverse customized survey presents three key advances: (1) systematic integramessage passing. tion of cutting-edge developments through March 2025,
+ In light of these challenges, recently, an increasing number (2) proposal of a more explicit taxonomy for heterophily
+of researchers have started turning their attention to the study GNNs with independent significance in categorization,
+of GNNs with heterophily. The research focus is sufficiently and (3) complementary technical visualizations including
+broad, from heterophilic graph data exploration [26], [27], [28] schematic framework diagrams and inductive mathematito various technical algorithm development [17], [19], [21], cal formulations.
+[25], [29], [30], [31]. r While the recent domain handbook by Luan et al. [34]
+ Importance of Developing Heterophilic GNNs: Heterophilic provides broad literature coverage, including many 2024
+graph learning with GNNs is becoming an upward trending studies (primarily ArXiv preprints), our survey reveals tworesearch topic and it shows closely tied connections with di- fold differentiation:
+verse domains in graph research. The compelling significance (1) classification clarity – contrasting their simplified listof GNN development for heterophilic graphs is underscored by ing paradigm, we establish a clear hierarchical classificathe following aspects: tion taxonomy; (2) temporal completeness - extending ber Enhancing the understanding of complex and diverse het- yond their Q2-2024 cutoff, our survey incorporates critical
+ erophily graphs: Graph-structure data with the heterophilic March 2025 advancements.
+ property presents great complexity and diversity, and it is In this paper, we present a comprehensive and systematic
+ prevalent across various real-world application scenarios, review of GNNs for heterophilic graphs, aiming to provide a genranging from daily-life personal relationships to scientific eral blueprint of heterophilic graph research. It can be beneficial
+ chemical molecular study. A thorough and ongoing ex- to establish connections and make comparisons among different
+ ploration of heterophily graph data would significantly heterophilic GNN methods, leading to an in-depth understandenhance the understanding of complex and diverse het- ing of how different methods tackle the challenges of heterophily
+ erophily graphs, thereby providing valuable guidance for learning. We are expecting that our survey will significantly
+ the development of GNN models and advancements in inspire and facilitate the development of heterophilic graphs1 .
+ heterophily graph learning. The contributions of our work are summarized as follows:
+ r Advancing heterophilic graph analysis and learning: Heterophilic graph analysis and learning tasks are still open 1 Our preprint of this article [35] has attracted more than 420 citations, showing
+ and promising research topics in development, while a strong uptrend of this research topic.
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4387
+
+ r Comprehensive Overview: We provide a comprehensive B. Graph Neural Networks
+ overview of current heterophilic GNNs in terms of data,
+ Generally, GNNs adopt the message passing mechanism,
+ algorithms, and applications. We provide detailed descrip- where each node representation is updated by aggregating the
+ tions of each model type, along with the necessary commessages from local neighbor representations, and then comparison and the gist summary.
+ r Systematic Taxonomy: We provide a systematic taxonomy bining the aggregated messages with its ego representation [10].
+ The updating process of the l-th GNN layer for each node v ∈ V
+ of heterophilic GNNs and categorize existing methods into
+ can be described as:
+ three classes, i.e., non-local neighbor extension methods,  
+ GNN architecture refinement methods, and hybrid meth- m(l)
+ v = AGGREGATE
+ (l)
+ {h(l−1)
+ u : u ∈ N (v)} ,
+ ods.
+ r Thorough Discussion: We provide a thorough discussion  
+ h(l)
+ v = UPDATE
+ (l)
+ h(l−1)
+ v , m(l)
+ v , (1)
+ of the correlation between graph heterophily and various
+ graph research domains, including the relation between (l) (l)
+ graph heterophily and model robustness, over-smoothing, where mv and hv stand for the message vector and the
+ and graph anomaly detection. representation vector of node v at the l-th layer, respectively. And
+ r Future Directions: We suggest promising future research AGGREGATE(·) and UPDATE(·) are aggregation function
+ directions and discuss the limitations of existing het- (e.g., mean, LSTM, and max pooling) and update function (e.g.,
+ erophilic GNNs from multiple perspectives, namely inter- linear-layer combination) [8], respectively. Given the input of
+ pretability, robustness, scalability, and heterophilic graph the first layer as H(0) = X, the learned node representations
+ (l)
+ data exploration. at each layer of L-layer GNN can be denoted as H(l) = [hv ]
+ The remainder of this article is organized as follows. Section II for v = (1, . . . , |V|) and l = (1, . . . , L). For node classification
+defines the related concepts and provides notations used in task, the final node representation H(L) would be fed into a
+this survey. Section III describes the framework of heterophilic classifier network (e.g., a fully-connected layer) to generate the
+GNNs and provides the taxonomy. Sections IV–VI review three predictions for classes.
+categories of heterophilic GNNs methods respectively. Section VII discusses heterophily GNNs on diverse graphs and C. Spectral Graph Convolution
+the correlation between heterophily and diverse graph research
+domains. Section VIII analyzes the unexplored challenges and A graph convolution operation is defined in the Fourier dopotential future directions. Section IX concludes this article in main such that
+the end. More details of real-world heterophilic graph dataset   
+ f1 ∗ f2 = U (UT f1 )  UT f2 , (2)
+benchmarks, open-source codes, and the overall development
+timeline of heterophilic GNNs can be found in the Appendix, where  is the element-wise product, and f1 /f2 are two signals
+online available. defined on nodes. It follows that a node signal f2 = X is filtered
+ by spectral signal fˆ1 = UT f1 = g as
+
+ II. PRELIMINARY h(l)
+ v = g(L̃)hv
+ (l−1)
+ = U[g(Λ)  (UT h(l−1)
+ v )] = Ug(Λ)UT h(l−1)
+ v ,
+A. Notations (3)
+ where g is known as frequency response function. Therefore,
+ Let G = (V, E) be an undirected, unweighted graph where the objective of spectral methods is to learn a function g(·). In
+V = {v1 , . . . , v|V| } is the node set and E ∈ V × V is the edge simpler terms, g(·) can be seen as a way to re-weight signals
+set. The neighbor set of node v is denoted as N (v) = {u : of different frequencies (or eigenvalues). Eigenvalues represent
+(v, u) ∈ E}. The node features are represented by a feature the smoothness or frequency of the corresponding eigenvectors.
+matrix X ∈ R|V|×d , where the i-th row xi ∈ Rd is the feature Consequently, assigning greater weight to smaller eigenvalues
+vector of node vi and d is the number of feature dimensions. Con- retains more low-frequency information, while assigning greater
+nectivity is represented by the adjacency matrix A ∈ {0, 1}n×n . weight to larger eigenvalues retains more high-frequency infor-
+For any matrix A, we use Auv to refer to the scalar value at the mation. In general, FLP = I + D−1/2 AD−1/2 = ( + 1)I −
+(u, v) location. The graph Laplacian is defined as L = D − A, L is a low-pass filter, while FHP = I − D−1/2 AD−1/2 =
+where D ∈ Rn×n is the diagonal degree matrix. Due to its ( − 1)I + L denotes high-pass filter.
+generalization ability [36], the symmetric normalized Laplacian
+is often used, which is defined as L̃ = D−1/2 LD−1/2 . Another
+option is random walk normalization: L̃ = D−1 L. Note that nor- D. Measure of Heterophily & Homophily
+malization could also be applied to the adjacency matrix. Their In general, heterophily and homophily of a graph G = (V, E)
+relationship can be derived as L̃ = I − Ã, where I is the identity can be measured by following metrics: node homophily [37],
+matrix. Through eigendecomposition, L can be expressed as edge homophily [24], class homophily [27], adjusted ho-
+L̃ = UΛUT , where each column of U ∈ Rn×n represents an mophily [38], and unbiased homophily [39].
+eigenvector of L, Λ is the diagonal matrix whose diagonal Node homophily and edge homophily are two essential meaelements are the corresponding eigenvalues (i.e., Λii = λi ). sures. Concretely, the node homophily is the average proportion
+4388 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+of the neighbors with the same class of each node:
+ 1  |{u ∈ N (v) : yv = yu }|
+ Hnode = . (4)
+ |V| |N (v)|
+ v∈V
+
+The edge homophily is the proportion of edges connecting two
+nodes with the same class:
+ |{(v, u) ∈ E : yv = yu }|
+ Hedge = . (5)
+ |E|
+ Fig. 2. Categorization of heterophily GNNs.
+To alleviate the sensitivity issue of Hnode and Hedge on the
+node class number, the class homophily measures the average
+proportion of neighbors with the same class across all nodes F. Mainstream Heterophily Learning Task
+of each class while taking into account the constraint of class
+proportions, that is The main objective learning task of heterophily GNNs is semisupervised node classification. In this task, we have a training
+ 1  v:yv=c |{u ∈ N (v) : yv = yu }|
+ C
+ nc graph G = (X, A, Y), where X ∈ RN ×d denotes N nodes with
+Hclass = − ,
+ C − 1 c=1 v:yv =c |N (v)| |V| d-dimensional features, and A ∈ RN ×N denotes the adjacency
+ +
+ (6) matrix indicating the edge connection. Assuming each node v
+where nc = |{u : yu = c}| denotes the node number of class c. belongs to one out of C classes, only a part of nodes are provided
+ Platonov et al. [38] and Mironov et al. [39] have progressively with labels as Yv ∈ YL = {1, . . . , C} in the training node set.
+advanced homophily measurement by introducing metrics that The goal of the task is to predict the classes of nodes whose
+fulfill an increasing number of desirable properties. Their first labels are not given.
+study [38] proposed adjusted homophily, that is Concretely, given a heterophily GNN model parameterized
+  2 by θ, denoting as GNNθ (·). For semi-supervised node class
+ Hedge − c=1 C classification task, the cross-entropy loss is minimized to learn
+ v:yv =c |N (v)|/(2|E|)
+ Hadj =  2 , (7) the optimal GNN parameters θ over all labeled nodes as:
+ 1− C c=1 v:yv =c |N (v)|/(2|E|)  
+ min Lcross-entropy Ŷ, Y , where Ŷ = GNNθ (X, A), (9)
+which is comparable across datasets with varying class statistics. θ
+And recent research [39] introduced unbiased homophily
+ √ where Ŷ = [Ŷv ]v∈V denotes GNN predicted node labels and
+ i<j ( cii cjj − cij ) Y = [Yv ]v∈V is the ground-truth node labels.
+ Hun = √ , (8)
+ i<j ( c ii c jj + c ij )
+where cii = |{(v, u) ∈ E : yv = yu = i}|/|E| and cij = III. GNNS WITH HETEROPHILY: FRAMEWORK AND
+|{(v, u) ∈ E : {yv , yu } = {i, j}}|/(2|E|) for i = j. This metric TAXONOMY
+is designed for reliable application across differing label
+ In this section, we provide a unified framework of heterophilic
+distributions that satisfies the vast majority of these properties.
+ GNNs, and further categorize it from the lens of the message
+ Remark: Node homophily Hnode and edge homophily Hedge
+ passing mechanism.
+are still popular measurement methods among recent works.
+
+E. Real-World Benchmarks A. Framework of Heterophilic GNNs
+ Benchmark datasets are fundamental for evaluating model Following the general message passing principle for GNN
+performance. The field was initially shaped by Pei et al. [37], model design, heterophilic GNNs focus on customizing the
+who introduced six benchmark heterophilic graphs—Cornell, neighborhood aggregation and feature update schemes that
+Texas, Wisconsin, Chameleon, Squirrel, and Actor—that remain specifically model the heterophily property. In contrast to hothe most widely adopted in current literature, despite their gen- mophilic GNNs, heterophilic GNNs exhibit distinct charactererally small scale. Building upon these, Lim et al. [26], [27] istics in three key design principles:
+proposed a series of large-scale datasets, including ArXiv-Year, P1. Non-locality of Neighbor Sets: Incorporating information
+Snap-Patents, Penn94, Pokec, Genius, Deezer-Europe, Twitch- from non-local neighbors that may share the same class label as
+Gamers, and YelpChi. More recently, work in [40] identified the central node;
+limitations such as small scale, class imbalance, and class P2. Class Distinguishability: Ensuring the aggregation proleakage in earlier widely-used datasets, and subsequently intro- cess to effectively distinguish the class labels from both local
+duced five high-quality alternatives: Roman-Empire, Amazon- and non-local neighbors;
+Ratings, Minesweeper, Tolokers, and Questions. A detailed P3. Depth Fusion of Multi-layer Information: Integrating
+description of these datasets is provided in Appendix B, online hierarchical messages from different inter layers of GNNs for
+available. capturing comprehensive heterophily property.
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4389
+
+B. Taxonomy of GNNs With Heterophily
+ According to the above three-fold design principles in heterophily instructed neighbor aggregation and feature updating,
+heterophilic GNNs can be categorized into three groups, including:
+ (1) Non-local neighbor extension methods ← P1.
+ (2) GNN architecture refinement methods ← P2 & P3.
+ (3) Hybrid methods ← P1, P2 & P3.
+ More fine-grained categorizations of these methods are briefly
+discussed below and shown in Fig. 2. Fig. 3. Schematic diagram of high-order neighbor mixing method and potential neighbor discovery method.
+ Non-Local Neighbor Extension Methods attempt to improve
+node representation by incorporating higher-order neighbor
+nodes that share labels during the message-passing process. This refinement methods focus on mitigating the impact of local hetkind of methods break the locality limitations of N (v) in (1) by erophilic information during the message passing process. This
+reconstructing the non-local neighbor set from two perspectives: primarily involves further refinement of message aggregation
+high-order neighbor mixing and potential neighbor discovery. and feature updates for the heterophilic design. However, the
+Specifically, these methods focus on discovering appropriate challenge lies in how to customize the heterophilic message
+neighbors from multi-hops nodes and redefining neighbor sets as passing mechanism with only a limited number of observable
+Np (v) = {u : dist(u, v) ≤ p} in the message aggregation stage homophilic or heterophilic relationships. Hybrid methods comin (1), where dist(u, v) denotes the distance method to measure bine the advantages of both non-local neighbor extension and
+the distance between nodes u and v. p is a threshold to limit the GNN architecture refinement. Nevertheless, a major challenge is
+number of neighbors. In particular, Np (v) can be degenerated devising a strategy for seamlessly integrating these approaches
+into N (v) when the metric function dist(·) is the shortest path into the message-passing process.
+distance and p = 1.
+ GNN Architecture Refinement Methods boost the expressive IV. HETEROPHILIC GNNS WITH NON-LOCAL NEIGHBOR
+ability of GNNs by facilitating message passing that distin- EXTENSION
+guishes between similar and dissimilar neighbors or by deeply
+ Under the uniform message passing framework of homophilic
+fusing multi-layer information. Specifically, focusing on the
+ GNNs, the neighborhood is usually defined as the set of all
+crafted architecture design of message aggregation and feature
+ neighbors one-hop away (e.g., GCN), which means only mesupdates, these methods are categorized into identifiable messages from proximal nodes in a graph are aggregated. However,
+sage aggregation methods and inter-layer combination methsuch a local neighborhood definition might not be appropriate
+ods. Among these, identifiable message aggregation methods
+ for heterophilic graphs, where nodes belonging to the same
+have gained significant attention. Their objective is to allocate
+ class exhibit high structural similarity but can be farther away
+appropriate weights in the message aggregation process, aiming
+ from each other. In light of these, current heterophilic GNNs
+to strengthen the fusion of homophilic information while mitiattempt to extend the local neighbors to non-local ones primarily
+gating the fusion of heterophilic information. With a focus on
+ through two schemes: high-order neighbor mixing and potential
+weight assignment schemes from various perspectives, existing
+ neighbor discovery. As a result, the representation ability of
+methods can be further classified into three types: edge-related
+ heterophilic GNNs can be improved significantly by capturing
+weight, feature-related weight, and hybrid weight.
+ the important features from distant and informative nodes. The
+ Hybrid Methods can be taken as the combination of non-local
+ pipelines of two example methods are given in Fig. 3, and a
+neighbor extension methods and GNNs architecture refinement
+ summary of the non-local neighbor extension works is illustrated
+methods. Typically, hybrid methods first construct an appropriin Table I.
+ate neighbor set through non-local neighbor extension, and then
+refine the GNN architectures from two perspectives: (1) locallevel incorporation, that focuses on intra-layer heterophily- A. High-Order Neighbor Mixing
+guided message passing, and (2) global-level incorporation, that Higher-order neighbor mixing allows the ego node to receive
+enhances effective inter-layer heterophily information transfer latent representations from their local one-hop neighbors and
+throughout the entire GNN architecture. from further k-hop neighbors, so that the heterophilic GNNs
+ Discussion: Different heterophilic GNNs exhibit distinct can mix latent information from neighbors at various distances.
+properties. The fundamental concept of non-local neighbor Formally, the k-hop neighbor set is defined as
+extension methods is quite straightforward and simple to implement, as it directly models and captures the similarity re- Nk (v) = {u : dist(u, v) = k}, (10)
+lationships between nodes to enhance the homophily of local neighborhoods; however, for large-scale graphs, it can be where dist(u, v) measures the shortest path distance between
+memory-intensive to traverse the entire graph in order to model nodes u and v. In addition, how to mix the information from the
+the similarity between each pair of nodes. GNN architecture different k-hop neighbor sets is an important research point of
+ higher-order neighbor mixing methods.
+4390 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+ TABLE I
+ SUMMARY OF NON-LOCAL NEIGHBOR EXTENSION METHODS. ‘STRUCTURE-BASED DISTANCE’, ‘FEATURE-BASED DISTANCE’, AND ‘HYBRID DISTANCETANCE’
+ TAKE THE STRUCTURE-BASED SCHEME, FEATURE-BASED SCHEME, AND HYBRID SCHEME AS THE DISTANCE METRIC FOR POTENTIAL NEIGHBOR DISCOVERY,
+ RESPECTIVELY.
+
+ TABLE II
+ SUMMARY OF GNN ARCHITECTURE REFINEMENT METHODS. ‘FEATURE-RELATED’, ‘EDGE-RELATED’ AND ‘HYBRID’ RESPECTIVELY
+ √ REPRESENT WEIGHT
+ASSIGNMENT SCHEMES THAT WORK ON NODE FEATURE, EDGES, AND BOTH OF THEM FOR ADAPTIVE MESSAGE AGGREGATION. ‘ ’ AND ‘✗’ INDICATE WHETHER
+ TO INCLUDE THE ACCORDING SCHEMES, RESPECTIVELY.
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4391
+
+ TABLE III
+ SUMMARY OF HYBRID EXTENSION METHODS. ‘HN’ AND ‘PN’ MEAN ‘HIGH-ORDER NEIGHBORS MIXING’ AND ‘POTENTIAL NEIGHBORS DISCOVERY’,
+ RESPECTIVELY. ‘IA’ AND ‘IC’ MEAN ‘IDENTIFIABLE MESSAGE AGGREGATION’ AND ‘INTER-LAYER COMBINATION’, RESPECTIVELY. ‘LOCAL-LEVEL’ AND
+ ‘GLOBAL-LEVEL’ INDICATE WHETHER THE GNN ARCHITECTURE REFINEMENT METHOD, INCORPORATING NEIGHBOR EXTENSION TECHNOLOGY, PRIMARILY
+ FOCUSES ON HETEROPHILIC DESIGN WITHIN THE MESSAGE-PASSING LAYER OR ENHANCES EFFECTIVE INTER-LAYER INFORMATION TRANSFER THROUGHOUT
+ THE ENTIRE NETWORK ARCHITECTURE, RESPECTIVELY.
+
+ Typically, MixHop [41] is a representative method that ag- objective is to alleviate the impact of local heterophily by
+gregates messages from multi-hop neighbors. Apart from one- incorporating richer homophilic information from higher-order
+hop neighbors, MixHop also considers two-hop neighbors for neighborhoods.
+message propagation. After that, the messages acquired from
+different hops are encoded by different linear transformations
+ B. Potential Neighbor Discovery
+and then mixed by concatenation. The l-th layer of MixHop for
+each node v ∈ V can be described as Compared to high-order neighbor mixing methods directly
+   utilizing the inherent structural information from graphs, po-
+ (l)
+ mv,k = AGGREGATE(l) h(l−1) u : u ∈ Nk (v) ,
+ tential neighbor discovery methods reconsider the definition of
+   neighbors in heterophilic graphs and build innovative structural
+ (l) (l)
+ hv,k = UPDATE(l) h(l−1)v , mv,k , neighbors through the entire topology exploration with het-
+ (l) erophily. Apart from the original neighbor set, these methods
+ h(l)
+ v = k=2 hv,k , (11) construct a new potential neighbor set that can be further forwhere k=2 means column-wise combination of information malized as
+from 2-hop neighbors. It can be noted that cross-level information fusion of MixHop is performed after the feature aggregation Nρ (v) = {u : dist(v, u) < ρ}, (13)
+and updating among the same hop neighbors.
+ Another perspective for cross-level information fusion is to where dist(u, v) is a metric function that measures the distance
+merge cross-hop neighbors before the feature aggregation stage, between nodes u and v in a specifically defined latent space and
+and then aggregate and update multi-hop neighbors’ features si- ρ is a threshold to limit the number of neighbors. It is evident
+multaneously. The most representative method is TDGNN [42], that distance measurement plays a pivotal role in identifying
+which uses a tree decomposition method to disentangle neigh- suitable potential neighbors. Current methods can be categorized
+borhood information in different layers and focus on adjusting into three main types based on the focal variables of distance
+the aggregation stage in (1) to promote information fusion measurement: structure-based distance, feature-based distance,
+among different layers, modeled as and hybrid distance.
+   1) Structure-Based Distance: Structure-based distance
+ K
+ (l)
+ mv = AGGREGATE (l) (l−1)
+ hu :u∈ Nk (v) , methods typically search for potential neighbors that meet
+ k=1
+ measurement criteria within the geometric relationship latent
+ (12) space, which is defined by prior information about the graph
+where K is the highest-hop setting the collection neighbor sets. topology. Typically, Geom-GCN [37] maps the input graph to a
+ Recently, Ordered GNN [43] proposes to order the messages continuous latent space and defines the geometric relationships,
+passing into the node representation, with specific blocks of i.e., split 2D Euclidean geometry locations, as the criteria to
+neurons targeted for message passing within specific hops. This discover potential neighbors. Apart from inherent neighbors
+is achieved by aligning the hierarchy of the rooted-tree of a in original input graphs, neighbors that conform to the
+central node with the ordered neurons in its node representation. defined geometric relationships also participate in the message
+Based on simple design in the spectral domain, EvenNet [44] aggregation of GCN. Specifically, based on the graph and latent
+discards messages from odd-order neighbors inspired by balance space, a structural neighborhood is built as ({N (v), Nρ (v)}, τ )
+theory, deriving a graph filter with only even-order terms, which underlying the relational operator τ , where N (v) is the set of
+can be generalized to graphs of different homophily. adjacent nodes of v in the graph, Nρ (v) is the set of potential
+ In summary, the high-order neighbor mixing methods neighbors from which the distance to v is less than a pre-given
+straightforwardly include higher-order neighbors in local neigh- parameter ρ in the latent space, described as
+bor sets and devise an appropriate combination scheme to effectively integrate multi-order neighborhood information. Its Nρ (v) = {u : hu − hv 2 < ρ}, (14)
+4392 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+where hu and hv are the representations for nodes u and v. · 2 node structural entropy distribution. It increases the connectivity
+is the Euclidean norm to measure relative positions between two among nodes with larger uncertainty in lower-level communinodes. ρ is determined from zero until the average cardinality ties. GraphTU [86] offers a probabilistic approach to exploring
+of Ns (v) equals that of N (v), ∀v ∈ V, that is, when the average potential neighbors. A key observation in this research is that
+neighborhood sizes in the graph and latent spaces are the same. the statistical variances based features and topology information
+ 2) Feature-Based Distance: Different from the structure- within local neighborhoods can be effectively harnessed to exbased distance methods that use structural information to deter- tend the training distribution, creating novel potential neighbor
+mine potential neighbor nodes, feature-based distance methods sets through a non-parametric method. This approach is particudetermine connection relationships based on feature similarity. larly valuable for addressing heterophily within the entire graph,
+For instance, U-GCN [45] and SimP-GCN [46] choose top k especially in the case of minor class nodes. To reveal attribute
+similar node pairs in terms of feature-level cosine similarity for relationships among nodes in the entire graph, GOAL [21]
+each ego node to construct the neighbor set through the kNN augments the existing graph by constructing a fully connected
+algorithm. The potential neighbor set for this method can be graph through a graph completion process. This augmentation
+built as considers two modes: homophilic connections and heterophilic
+ connections. An important aspect involves developing a method
+ NK (v) = {u : TopK(Cos(hu , hv ), K)}, (15)
+ to distinguish between connections that reflect a tendency for
+where Cos(·, ·) is usually defined the cosine similarity function, homophily and those that indicate heterophily. This distinction
+K is the number of nearest neighbors set manually, TopK(·) is made based on the Connected Structure Difference (CSD)
+denotes a pooling operation for discovering potential neighbors computed between connected node pairs and randomly selected
+with K highest similarity. The recent work HES-GSL [47] still node pairs, ultimately facilitating the optimization of the comdetermines relationships of node pairs through cosine similarity, plemented graph.
+and further designs homophily-enhanced self-supervision to In summary, potential neighbor discovery methods focus on
+provide more supervision for similarity learning. identifying homophilic neighbors among high-order neighbors
+ 3) Hybrid Distance: Recent works increasingly emphasize and incorporating them into local neighbor sets to enhance
+the comprehensive consideration of structural and node feature homophilic message-passing. By measuring the similarity of
+information in potential neighbor discovery. These methods node features with different distance calculation schemes, potenfocus more on the potential message passing among global tial neighbor discovery methods are able to effectively identify
+homophily neighbors in the graph. Typically, HOG-GCN [52] potential homophilic neighbors that share the same class labels.
+and GloGNN [53] design similarity calculation modules to
+capture the correlations between global nodes through both V. HETEROPHILIC GNN ARCHITECTURE REFINEMENT
+topological and attribute information. Specifically, HOG-GCN
+ General GNN architectures in (1) contain two essential comconstructs a homophily degree matrix with the label propagation
+ ponents: the aggregation function AGGREGATE(·) to intetechnique to explore the extent to which a pair of nodes belong
+ grate information from the discovered neighbors, and the upto the same class in the entire heterophilic graph from the
+ date function UPDATE(·) to combine the learned neighbor
+perspective of topology space. By involving the class-aware
+ messages with the initial ego representation. Given the original
+information during the propagation process, intra-class nodes
+ local neighbors and the extended non-local neighbors on hetwith higher heterophily (i.e., lower homophily degree) would
+ erophilic graphs, existing GNN architecture refinement methods
+contribute more to the neighbor aggregation than underlying
+ contribute to fully exploiting the neighbor information from the
+inter-class nodes. More simplified than HOG-GCN, GloGNN
+ following aspects by accordingly revising AGGREGATE(·)
+directly measures potential correlations between global nodes
+ and UPDATE(·): (1) Identifiable message aggregation discrimin terms of both feature attribute similarity and topology simiinates and enhances the messages of similar neighbors from
+larity by further regularizing node representations with nodes’
+ dissimilar ones; (2) Inter-layer combination emphasizes the
+multi-hop reachabilities. In general, the potential neighbors set
+ effect of different propagation ranges (i.e., the number of GNN
+can be defined as
+ layers) on node representation learning. All these two aspects
+ N (v) = NT (v) ∩ NS (v), (16) come to the same destination: boosting the expressive ability of
+ GNNs for heterophilic graphs by encouraging distinguishable
+where NT (v) = {u : h̃u h̃T
+ v = 0} and NS (v) = {u : ĥu ĥv <
+ T
+ and discriminative node representations. A summary of the GNN
+ρ} are potential neighbor sets defined by measuring node correarchitecture refinement works is illustrated in Table II.
+lations in terms of topology similarity and feature similarity, ∩
+is the intersection operation, and h̃u and ĥu are representations
+of node u through topology structure information (i.e., A) and A. Identifiable Message Aggregation
+node attribute information (i.e., X), respectively. Given the neighbors to be aggregated, the key of integrating
+ Furthermore, SE-GSL [55] offers an effective measure of beneficial messages on heterophilic graphs is distinguishing
+the information embedded in an arbitrary graph and structural the information of similar neighbors (likely in the same class)
+diversity (where NT (v) is characterized by both the kNN struc- from that of dissimilar neighbors (likely in different classes).
+ture and the original topology structure) and presents a novel To make node representations on heterophilic graphs more dissampling-based mechanism for restoring the graph structure via criminative, identifiable message aggregation methods alter the
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4393
+
+Fig. 4. Illustration of identifiable message passing with edge-related weight and feature-related weight assignment schemes in GNN architecture refinement
+methods.
+
+aggregation operation AGGREGATE(·) by imposing adaptive using a relation-based frequency adaptive mechanism. This
+ (l) mechanism takes into account higher-order contextual inforedge-aware weights auv for node pair (u, v) at the l-th layer as:
+   mation compared to FAGCN. It precisely defines edge-aware
+ m(l)
+ v = AGGREGATE (l)
+ {a (l) (l−1)
+ uv uh : u ∈ N (v)} . weights for a specific relation. Specifically, the edge-aware
+ (17) weight of (l + 1)-order information between nodes u and v for
+ (l) (l) (l)
+ relation k is described as auvk = tanh (qT lk [hU K ; hvk ]), where
+In this way, different methods develop various weight
+ (l)
+assignment schemes for auv to model the importance of qlk is the attention coefficient for relation k in the l-th iteration.
+similar and dissimilar neighbors during aggregation. In the Apart from low-pass and high-pass filters, ACM [59] further
+following, we provide the details of weight assignment schemes involves the identity filter, which is the linear combination of
+adopted by existing methods, which respectively work on node low-pass and high-pass filters, i.e.,
+feature and edge related weights. Fig. 4 provides the pipelines    
+of two weight assignment schemes. a(l)
+ uv = Softmax a(l,LP
+ uv
+ ) (l,IP ) (l,HP )
+ , auv , auv /τ Wuv (l)
+ ,
+ 1) Edge-Related Weight: In general, edge-related methods (19)
+simultaneously focus on spectral domain and the spatial domain. (l)
+ where τ indicates a temperature parameter and Wuv ∈ R1×3
+To be concrete, spectral GNNs leverage the theory of graph is used to learn which filters is important or not for each
+signal processing to design graph filters, and spatial GNNs (l,LP ) (l,IP ) (l,HP )
+ node. auv , auv and auv respectively denotes low-pass,
+focus on the graph structural topology to develop aggregation
+ identity and high-pass edge-aware weights, which learn from
+strategies.
+ 3 channels features. AutoGCN [68] captures the full spectrum
+ Spectral Perspective: In contrast to Laplacian smoothing [87]
+ of graph signals and automatically update the bandwidth of
+and low-pass filtering [88] to approximate graph Fourier transgraph convolutional filters. In addition, Mid-GCN [70] contains
+formation on homophilic graphs, spectral GNNs on heterophilic
+ a mid-pass filter determined by both low-pass and high-pass
+graphs involve both low-pass and high-pass filters to adaptively
+ filters. The robustness of signals passing through this mid-pass
+extract low-frequency and high-frequency graph signals. The
+ filter is theoretically guaranteed by their analyses.
+essential intuition behind this lies in that low-pass filters mainly
+ In this way, ACM, AutoGCN and Mid-GCN could adaptively
+retain the commonality of node features, while high-pass filters
+ exploit beneficial neighbor information from different filter
+capture the difference between nodes.
+ channels for each node; Meanwhile, their identity or mid-pass
+ Typically, FAGCN [25] adopts a self-gating attention mechfilters could guarantee less information loss of the input signal.
+anism to learn the proportion of low-frequency and high-
+ (l) Spatial Perspective: Heterophilic GNNs in the spatial domain
+frequency signals by splitting the auv into two components, i.e., require the diverse topology-based aggregation of neighbors
+ (l,LP ) (l,HP )
+auv and auv , corresponding to low-pass and high-pass from the same or different classes guided by the heterophily.
+filters, respectively. Through adaptive frequency signal learn- Therefore, the edge-aware weights of neighbors should be asing, FAGCN could achieve expressive performance on different signed according to the spatial graph topology and node labels.
+types of graphs with homophily and heterophily. Formally, Taking node attributes as weak labels, DMP method [29] con-
+ (l)
+adaptive edge-aware weights auv are defined in FAGCN as siders node attribute heterophily for diverse message passing
+ (l,LP ) (l,HP ) and specifies every attribute propagation weight on each edge.
+ auv − auv (l)
+ a(l)
+ uv = √ , (18) Furthermore, instead of the scalar weight auv that aggregates
+ du dv
+ all the node attributes with the same weight at the node level,
+where du and dv respectively denote the degree of node u and v, (l)
+ (l,LP ) (l,HP )
+ DMP extends the weight to a vector auv through operating in
+auv − auv is the coefficient learned through a shared self- the attribute dimension, and this vector can be calculated by
+gating mechanism tanh (qT [hu ; hv ]), from which [; ] denotes either relaxing GAT [9] weights to real values or allowing an
+the concatenation operation, g can be seen as a shared convolu- element-wise average of neighbor weights.
+tional kernel, tanh (·) is the hyperbolic tangent function, which Moreover, certain methods learn edge-aware weights based on
+ (l,LP ) (l,HP )
+can naturally limits the value of auv − auv in [−1, 1]. In node labels. For instance, Chen et al. [89] introduce the concept
+a similar fashion, RFA-GNN [67] captures edge-aware weights of graph decoupling attention Markov networks (GDAMNs).
+4394 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+This approach incorporates variational inference to model edge where Sinkhorn-Knopp denotes the Sinkhorn-Knopp algo-
+ (l)
+uncertainty and employs both hard and soft attention mecha- rithm proposed in [91], which is to ensure that βv is doubly
+nisms on node labels to improve the learning of edge-aware stochastic. Bv denotes an enhanced belief matrix for node
+weights, represented as v, depending on a training mask matrix and a prior belief.
+ (l−1)
+ Going beyond the uniform GCN aggregation, NLGNN [92]
+ ahard
+ uv exp δuv
+ a(l)
+ uv = N (l−1)
+ , (20) and GPNN [93] consider the sequential aggregation where
+ hard
+ v=1 auv exp δuv
+ the neighbors are ranked based on the class similarity (i.e.,
+ a homophily/heterophily prior belief) in order. A regular 1Duv = Auv · ỹ wuv ỹ is the hard attention with label
+where ahard T
+ convolution layer is applied to extract the affinities between
+ (l−1) (l−1) (l−1)
+similarity and δuv = − Cos(hu , hv ) denotes the soft the sequential nodes whether the nodes are close or distant
+attention with feature dissimilarity. In general, the hard attention in heterophilic graphs. GIND [63] extends the linear isotropic
+is learned on labels for a refined graph structure with fewer diffusion to a more expressive nonlinear diffusion mechanism,
+inter-class edges so that the aggregation’s negative disturbance which learns nonlinear flux features between node pairs before
+can be reduced. The soft attention aims to learn the aggregation aggregation. This design of the nonlinear diffusion ensures that
+weights based on features over the refined graph structure to more information can be aggregated from similar neighbors and
+ (l)
+enhance information gains during message passing. less from dissimilar neighbors by learning βv , making node
+ Recent research has shown a growing interest in the effi- features less likely to over-smooth.
+ciency of computing edge-aware weights for large-scale graphs. Attention-Based: The majority of research focuses on devel-
+CGP [90] introduces a graph pruning paradigm during training, (l)
+ oping diverse attention mechanisms for learning βv . A straightenabling the discovery of high-performing sparse GNNs within a forward approach involves learning attribute similarity and utisingle training process. Additionally, a global graph transformer lizing this similarity to determine attention on node features.
+model has been proposed for large-scale heterophilic node clas- CGCN [28] uses the cosine similarity to send signed neighbor
+sification tasks, known as GOAT [69]. GOAT samples potential features under certain constraints of relative node degrees. In
+neighbors for each node from its k-hop neighbors. To distinguish this way, the messages are allowed to be optionally multiplied
+between neighbors based on topology information during the by a negative sign or a positive sign, i.e., for node v, its message
+propagation process, GOAT further incorporates a global atten- is described as
+tion module designed to learn attention scores between potential   
+ (l) (l) (l)
+neighbors and source nodes. h(l+1)
+ v = σ β 0 h̃ v + β 1 s (l)
+ v,pos  A (l)
+ v h̃(l)
+ v
+ 2) Feature-Related Weight: Apart from the adaptive edge- 
+ (l)
+aware weight learning, there is another solution working on + β2 (s(l) (l)
+ v,neg  Av )h̃v
+ (l)
+ , (22)
+ (l−1)
+the neighbor representation learning by revising hu in
+ (l) (l) (l−1) (l) (l) (l) (l)
+AGGREGATE ({auv hu : u ∈ N (v)}). Conventionally, where β0 , β1 , and β2 are the l-th layer learned scalars. su,pos
+the above-mentioned methods mainly utilize the contextual (l)
+ and su,neg respectively indicate positive matrix and negative
+node representations of neighbors; In contrast, this solution matrix, which are split from the matrix with sign information.
+ (l−1)
+transforms contextual node embeddings hu to other node- Intuitively, signed messages consist of the negated messages
+level properties that reflect the heterophily. In this way, het- sent by neighbors of the opposing classes, and the positive
+ (l)
+erophilic GNNs learn node-level attention βv , which is shared messages sent by neighbors of the same class. Similarly,
+with each u ∈ N (v), to capture the beneficial information Du et al. [60] propose a method for defining positive and
+of heterophily for distinguishable node representation learn- negative correlation weights when modeling the similarity and
+ing. As a result, the aggregation progress can be redefined as dissimilarity between node features. They introduce a novel
+ (l) (l−1)
+AGGREGATE(l) ({βv hu : u ∈ N (v)}). Existing meth- GNN model called GBK-GNN, which is based on a bi-kernel
+ (l) feature transformation and a selection gate. The two kernels
+ods mainly learn βv through two schemes based on homophily/heterophily prior knowledge and homophily attributes capture homophily and heterophily information, and the gate
+attention. is used to determine which kernel should be applied to a
+ Prior-Based: The prior-based method considers the incorpo- specific pair of nodes. Formally, the gate signal is described
+ (l) (l−1) (l−1) (l−1)
+ration of homophily/heterophily prior knowledge in the process as βv = u∈N (v) Sigmoid(MLP(hv , hu ; Wv )),
+of feature transformation, primarily estimating the assignment where MLP(·) is a multilayer perceptron. MMP [94] decouples
+ (l)
+weight βv through class information. Typically, instead of the messages into two parts, i.e., memory for propagation and
+propagating original node feature representations, CPGNN [23] self-embedding for discrimination. The memory for propagation
+propagates a prior belief estimation based on a compatibility aims to endow each node with a memory cell and sends messages
+matrix, so that it can capture both heterophily and homophily by from the memory cell instead of hidden self-embedding.
+modeling the likelihood of connections between nodes in dif- After propagation, each node can leverage a learnable control
+ (l−1) mechanism to adaptively update its self-embedding and memory
+ferent classes. The feature-aware weight of embeddings hv
+with prior belief is defined as cell according to their recent states. CAGNNs [95] investigates
+ the feature aggregation of inter-class edges from an entire
+ βv(l) = Sinkhorn-Knopp (yv , Av , Bv ) , (21) neighbor identifiable perspective by a new metric based on von
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4395
+
+ (l) long-term global topology. Hence, combining intermediate rep-
+Neumann entropy. Using an importance score βv obtained by a
+mixer combines discriminant feature and neighbor information, resentations from each layer contributes to leveraging different
+ (l−1) neighbor ranges with the consideration of both local and global
+which are decoupled from embedding hv . To overcome the
+limitations of traditional messaging methods, NCGNN [66] structural properties, resulting in powerful heterophilic GNNs.
+represents nodes as collections of node-level capsules. Each Fig. 5 shows the formulation and illustrations of the closely
+capsule is responsible for extracting distinct features from its related methods.
+associated node. For each node-level capsule, a novel dynamic The prior idea first comes from JK-Net [84] which flexibly
+routing procedure is implemented to intelligently select the most captures better structure-aware representation with different
+suitable capsules for aggregation from a subgraph identified neighborhood ranges. The combination of features among difby the designed graph filter. NCGNN exclusively aggregates ferent layers is described as
+  
+advantageous capsules while constraining irrelevant messages
+ ĥv = LA h(1) , h(2) , . . . , h(L) , (23)
+to prevent excessive feature mixing among interacting nodes. As
+a result, this approach mitigates the problem of oversmoothing where LA(·) denotes the layer aggregation, such as column-wise
+and enables the learning of effective node representations in combination, max pooling, attention with LSTM, etc.
+graphs characterized by either homophily or heterophily. Compared with the methods using all previous intermediate
+ 3) Hybrid Weight: Hybrid methods aim to calculate edge representations, GCNII [96] only integrates the first layer’s node
+weights guided by node features and edge information simul- embedding at each layer with the initial residual connection,
+taneously. A typical method is MWGNN [62], which mod- defined as
+els the node local distribution from node feature, topological
+structure, and positional identity aspects with the meta-weight. h(l) (0)
+ v = αhv +AGGREGATE ({(1−α)hv
+ (l) (l−1)
+ : u ∈ N (v)}),
+Then, based on the meta-weight, an adaptive graph convolution (24)
+is derived to conduct node-specific weighted aggregation for where α is a hyperparameter that maintains a balance between
+boosted node representation learning. the node embedding of the first layer and the representation of
+ Remark: On heterophilic graphs, an ego node is likely to be the current layer.
+dissimilar with its neighbors in terms of class labels. Hence, Instead of using the simple concatenation operation, GPRencoding ego-node representations separately from the aggre- GNN [30] further assigns learnable weights to combine the repgated representations of neighbor nodes would benefit distin- resentations of each layer adaptively via the Generalized PageRguishable node embedding learning. In detail, ego-neighbor sep- ank (GPR) technique. PowerEmbed [85] employs an inception
+aration methods detach self-loop connections of the ego nodes network to learn the rich representations that interpolate from
+in AGGREGATE(·). Meanwhile, they alter the UPDATE(·) local message-passing features to global spectral information.
+as the non-mixing operations, e.g., concatenation, instead of the Hence, inter-layer combination methods are able to conduct
+mixing operation, e.g., “average” in vanilla GCN. H2GCN [24] topological feature exploration and benefit from informative
+first proposes to exclude the self-loop connection and points multi-round propagation, making node features of heterophilic
+out that the non-mixing operations in the update function ensure graphs distinguishable.
+that expressive node representations would survive over multiple
+rounds of propagation without becoming prohibitively similar. VI. HYBRID METHODS
+Besides, WRGNN [97] imposes different mapping functions on
+the ego-node embedding and its neighbor aggregated messages, Recently, researchers have recognized that simultaneously
+while GGCN [28] simplifies the mapping functions to learnable expanding the non-local neighbor set and refining heterophilyscalar parameters to separately learn ego-neighbor representa- guided GNN architectures, can significantly facilitate hettions. Moreover, ACM [59] adopts the identity filter to separate erophilic graph representation learning. Generally, existing hythe ego embedding and then conducts the channel-level combi- brid methods can be categorized into two groups: (1) local-level
+nation with its neighbor information in the update function. incorporation, which designs intra-layer heterophilic GNN message passing with the neighbor extension; and (2) global-level
+ incorporation, which enhances effective inter-layer information
+B. Inter-Layer Combination transfer of heterophilic GNNs with the neighbor extension. The
+ Different from identifiable message aggregation methods fo- diagram of two types of hybrid methods is presented in Fig. 6
+cusing on the fine-grained intra-layer design of GNN architec- and a summary of the hybrid methods is illustrated in Table III.
+tures with heterophily, inter-layer combination methods con- The majority of methods fall into the category of local-level
+sider layer-wise operations to boost the representation power of incorporation, typically following a two-step process. First, they
+heterophilic GNNs. The intuition behind this strategy is that in establish a graph topology that emphasizes local homophily,
+the shallow layers of GNNs, they collect local information, e.g., and then they design a message aggregation method based on
+one-hop neighbor locality in two-layer vanilla GCN, when the this homophilic topology. For instance, WRGNN [97] employs
+layers go deeper, GNNs gradually capture global information the degree sequence of neighbor nodes as a metric for meaimplicitly via multiple rounds of neighbor propagation. Due to suring structural similarity between ego nodes. This is used to
+the heterophily characteristic, neighbors with similar informa- reconstruct a multi-relational graph that captures homophily in
+tion, i.e., class labels, might locate in both local geometry and relational edges, followed by relational aggregation with explicit
+4396 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+Fig. 5. Illustration of typical inter-layer combination methods: (1) GPR-GNN [30]; (2) JK-Net [84]; and (3) GCNII [96].
+
+ design elements. These include the separation of egoand neighbor-embedding, higher-order neighborhoods, and
+ incorporation of intermediate representations into a graph
+ neural network. These design choices collectively enhance the
+ model’s capacity to learn from the graph structure, especially
+ when dealing with heterophilic relationships. Furthermore,
+ NLGNN [92] employs the attention mechanism to guide the
+ sorting of non-local neighbors based on their importance. The
+ entire architecture achieves efficient node classification on a
+ heterogeneous graph using only two steps: straightforward
+ attention-guided sorting and non-local aggregation.
+ Significance: Sections IV–VI discuss heterophilic GNNs,
+ which are essential for applications like fraud detection [102],
+ [103], where anomalous nodes deliberately connect with benign ones to evade homophilic models (e.g., GCN). While
+Fig. 6. A diagram of two types of hybrid methods: Local-level incorporation
+and global-level incorporation. heterophily-specific designs generally outperform homophilic
+ GNNs, recent studies urge a re-evaluation of early empirical
+ results. Specifically, [40] identifies critical flaws (e.g., class
+link weights. Additionally, BM-GCN [99] constructs a novel imbalance, data leakage) in existing datasets and introduces rignetwork topology using a block similarity matrix. This approach orous new benchmarks. Furthermore, [38] notes that traditional
+allows it to explore block-guided neighbors and perform classi- metrics hinder cross-dataset comparisons, proposing “label infied aggregation with distinct aggregation rules for homophilic formativeness” to transcend the simple homophily-heterophily
+and heterophilic nodes. RAW-GNN [98] employs breadth-first dichotomy. Moreover, [59], [104] show that well-tuned GCNs
+random walk searches to capture homophily information and can succeed on certain heterophilic graphs, delineating strict
+depth-first searches to gather heterophily information. Instead of boundary conditions; [104] explains that GCNs primarily fail
+traditional neighborhoods, it utilizes path-based neighborhoods when neighborhood distributions across distinct classes beand introduces a new path-based aggregator based on Recurrent come indistinguishable. Collectively, these insights reflect a
+Neural Networks. GPNN [93] leverages a pointer network to broader shift from empirical trial-and-error toward theoretically
+rank the potential neighbor nodes according to the attention grounded design and robust generalization. Accordingly, we
+scores or the relevant relationships to the ego node. In this way, encourage evaluating future methods on reliable, high-quality
+potential neighbors that are most similar to the ego node in datasets. Following this standard, Appendix C (online available)
+heterophilic graphs can be discovered and selected. Deformable provides our additional comparisons,.
+GCN, as presented in the recent work by Park et al. [100],
+dynamically conducts convolution in multiple latent spaces, VII. DISCUSSION
+enabling it to capture both short and long-range dependencies
+between nodes. In this approach, the model also learns the A. Heterophily GNNs on Diverse Graph Types
+positional embeddings (coordinates) of nodes to infer the re- Current research predominantly focuses on heterophily modlationships between nodes in an end-to-end manner. Depending eling in single-relational static graphs, yet real-world applicaon the position of a node, the convolution kernels are deformed tions (e.g., traffic flow dynamics and user-item hypergraph cousing deformation vectors and make distinct transformations purchasing relationships [105], [106], [107]) typically involve
+being applied to neighbors. diverse graph structures like dynamic graphs and hypergraphs.
+ The global-level incorporation method, which is intended While recent studies [108], [109], [110] have initiated concepts
+to establish effective homophilic guidance within the graph for heterophilic dynamic graphs and hypergraphs, this expansion
+network framework. A typical example of such a method also brings forth a set of unique challenges for heterophilic
+is H2GNN [24], which incorporates a set of crucial GNNs to address.
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4397
+
+ 2) Heterophily GNNs on Hypergraphs: Fig. 7(b) illustrates
+ a heterophilic hypergraph using a social network as an example.
+ Each node represents a social user, and the hyperedge connects
+ all users in the same community. It is common for users within
+ the same community to have different identity backgrounds
+ but be connected by attributes such as interests and hobbies,
+ resembling the concept of heterophily in graphs. Recently, heterophily has been demonstrated in [113] to be a more prevalent
+ phenomenon in hypergraphs compared to graphs. This is due to
+Fig. 7. Examples of (a) heterophilic dynamic graph and (b) heterophilic the challenge of expecting all nodes within a large hyperedge
+hypergraph.
+ to share a common label. Li et al. [109] are the first to focus
+ on heterophilic hypergraph learning (HHL), paving the way for
+ 1) Heterophily GNNs on Dynamic Graphs: As a typical dy- HHL by addressing key gaps from multiple perspectives: meanamic graph instantiation, spatial-temporal graph data is often surement, dataset diversity, and baseline model development.
+inherently heterophilic. Zhou et al. [108] recently aimed to Consequently, recent research on hypergraph neural network
+validate this assertion by exploring spatial-temporal graphs in methods has shifted its focus towards highlighting their excepvarious real-world scenarios, such as traffic control, climate tional performance on heterophilic hypergraphs.
+early-warning, and social networks. As depicted in Fig. 7(a), Inspired by hypergraph diffusion algorithms, ED-HNN [110]
+observations in these scenarios tend to change over time, leading has been developed as a novel hypergraph neural network (HNN)
+to dynamic and time-varying characteristics in the correlation architecture that can effectively approximate any continuous
+between nodes. The challenge posed by these dynamic and time- equivariant hypergraph diffusion operators. These operators
+varying characteristics is termed “topology-task discordance” have the capability to model a wide array of higher-order rein [108]. This challenge arises when employing homophilic lations. In this research, it is asserted that predicting node labels
+graph neural networks for node-level regression tasks on spatial- in heterophilic hypergraphs is more intricate than in graphs since
+temporal graphs. It refers to the utilization of a pre-defined a hyperedge may consist of nodes from multiple categories.
+fixed topology for message passing on spatial-temporal graphs Therefore, the research further analyzes its learnable equivariant
+with diverse node-wise relations, resulting in the aggregation of diffusion operator and demonstrates its superiority in predicting
+neighbors that deviate from the intended target. heterophilic node labels on four hypergraphs: Congress [114],
+ To formally measure spatial-temporal heterophily, two types Senate [114], Walmart [115], and House [116].
+of homophily measurements are introduced: “intra-graph spatial However, based on our review of related works, there is
+homophily”, capturing node correlations within the same graph currently no established characterization or algorithmic design
+frames, and “inter-graph transition homophily” which extracts for specific heterophilic hypergraphs. The primary challenges
+temporal evolution between adjacent temporal frames. The revolve around accurately describing the heterophily of hyperstudy further investigates the average homophily ratios for four graphs and developing architecture refinement methods that capreal-world dynamic graphs: Metr-LA [111], PeMS-Bay [111], ture the local homophily of hypergraphs. This research direction
+KnowAir [112], and Temperature [112]. The homophily ratios is still promising but in its early stages of development.
+within intra-graph frames and across temporally adjacent frames 3) Heterophily GNNs on Heterogeneous Graphs: Recent
+are observed to be low. This suggests that physically connected years have witnessed growing scholarly attention to heterophily
+nodes may not necessarily share similar observations or exhibit characterization in heterogeneous graph analysis. Pioneering
+the same directional variations. work by Lin et al. [117] made dual contributions: not only did
+ Furthermore, adapting existing homophily theories to address they systematically demonstrate the coexistence of heterophilic
+the topology-task discordance based on the spatial-temporal patterns in homogeneous graphs and homophilic structures in
+characteristics of node-wise relationships remains a challeng- heterogeneous graphs across real-world applications, but they
+ing endeavor. The primary hurdles can be summarized as also introduced the H2 ˜GB benchmark dataset, effectively
+follows: addressing critical gaps in standardized evaluation protocols.
+ r Determining which pairs of nodes belong to homophily In parallel, Shen et al. [118] tackled heterophily challenges
+ components in the absence of categorical labels. through an unsupervised perspective, formally defining the conr Incorporating target information to reconstruct node- cept of semantic heterophily and developing LatGRL—a latent
+ wise correlations, thereby enabling improved and target- graph-guided reinforcement learning framework for hierarchioriented aggregations. cal feature disentanglement. Despite these advancements, curr Leveraging dynamic local neighborhood environments for rent research exhibits limitations, such as available benchmark
+ personalized high-order propagation. datasets suffer from limited scale and scenario coverage. These
+ These three aspects are expected to be key challenges in the unresolved issues necessitate coordinated efforts in developstudy of heterophilic GNNs on dynamic graphs. This research ing theoretically grounded measurement systems, constructing
+direction will continue to demand the dedicated efforts of a large-scale multi-domain testbeds, and exploring cross-layer
+significant number of researchers. heterophily propagation mechanisms.
+4398 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+ provide support for the effectiveness of technologies represented by FAGCN [25].
+ These theoretical convergences enable unified frameworks
+ achieving performance improvement across heterophilic benchmarks while maintaining stable higher layer performance
+ - resolving the depth-performance trade-off in conventional
+ GNNs.
+Fig. 8. Small, adversarial perturbations of the graph structure and node features lead GNN to misclassify target u. 3) Relation Between Graph Heterophily and Graph Anomaly
+ Detection: Fraud detection, as a specialized anomaly detection
+ task, increasingly focuses on heterophilic patterns in graph-
+B. Unveiling the Correlation Between Graph Heterophily and structured financial data [103], [126], [127], [128]. As visualized
+Other Research Problems in Fig. 10, fraudulent nodes typically form minority clusters sur-
+ 1) Relation Between Graph Heterophily and Adversarial rounded by normal nodes, exhibiting higher heterophily ratios
+Robustness: Adversarial robustness in GNNs addresses model than legitimate entities [103].
+vulnerability to imperceptible structural perturbations, critical Conventional graph anomaly detection (GAD) methods prefor trustworthy AI systems. While early studies focused on ho- dominantly optimize homophilic message passing, inadvermophilic graphs [119], [120], recent work recognizes structural tently amplifying heterophily-induced noise during aggregaattacks inherently exhibit heterophily (Fig. 8), driving defense tion [102]. This manifests as significant performance degradastrategies: tion in real-world fraud detection benchmarks. Recent advances
+ r GNNGUARD [121]: Detects feature-structure correlations address this through:
+ to filter adversarial heterophilic edges, ensuring robust r Structural Adaptation: Gong et al. [103] develop graph
+ message propagation. sparsification techniques that selectively prune hetr GARNET [122] & ATDGIA [123]: Treat heterophilic con- erophilic edges while preserving homophilic dependennections as adversarial edges, embedding anti-interference cies.
+ mechanisms. r Distribution Alignment: Gao’s SDS framework [126] mitr Theoretical Foundations [124]: Establishes homophily- igates structural distribution shifts between imbalanced
+ heterophily dynamics under structural attacks, proving classes via adversarial topology regularization.
+ heterophily-aware designs inherently enhance robustness. r Spectral Decoupling: Hybrid approaches [127], [129] dy-
+ Current research converges on dual defense paradigms: namically combine low/high-frequency signals, achievexplicit adversarial filtering and implicit robustness through ing high precision in identifying heterophilic anomalies
+heterophily-adaptive architectures. through adaptive graph filtering.
+ Robustness and the interplay between homophily and het- These methodologies establish heterophily suppression as
+erophily in structural attacks on GNNs are key areas of investi- critical for robust fraud detection systems, with spectral-graph
+gation in these studies, with implications for improving robust fusion strategies demonstrating performance improvements over
+GNN model designs. conventional GAD baselines.
+ 2) Relation Between Graph Heterophily and Over- 4) Relation Between Graph Heterophily and Uncertainty
+Smoothing: Contemporary GNNs face dual challenges: Modeling: Uncertainty quantification in graph-structured data
+heterophily violating homophily assumptions and over- has become pivotal for reliable decision systems [86], [130],
+smoothing eroding feature distinctiveness. As Fig. 9 [131], [132]. Under graph heterophily where nodes exhibit diillustrates, these phenomena exhibit intrinsic connections - verse connections (Fig. 11), topological uncertainty arises from
+heterophilic aggregation leads to information dissipation in heterogeneous relationship intensities that complicate informadeep architectures [125]. Additionally, emerging studies reveal tion propagation.
+an intrinsic duality between these challenges: novel architectures Node-level analysis reveals real-world graphs often interdesigned for heterophilic graphs (e.g., FAGCN [25], mix homophilic/heterophilic connections, exposing GNNs’ in-
+NLGNN [92]) exhibit inherent anti-over-smoothing properties, herent bias toward homophilic patterns - models trained on
+whereas certain over-smoothing mitigation strategies conversely semi-homophilic graphs show accuracy drops on purely hetenhance heterophilic learning [96]. erophilic subsets [131]. This bias-stability dilemma necessitates
+ Theoretical unification reveals: uncertainty-aware solutions:
+ r Sheaf-Theoretic Foundation: Cellular sheaf theory [54] r Uncertainty Debiasing: Liu’s framework [131] employs
+ demonstrated underlying sheaf structure of the graph is epistemic uncertainty estimation to identify heterophilic
+ intimately linked with both heterophily and oversmoothing nodes, preserving reliable predictions while rectifying
+ that influence the performance of GNNs. high-uncertainty cases.
+ r Signed Message Explanation: Yan et al. [28] and Bod- r Topology Augmentation: Gao et al. [86] propose GraphTU,
+ nar et al. [54] found evidence supporting the benefits of a probabilistic method exploiting neighborhood varinegatively signed edges in GNNs, albeit with different ance to enhance minor class representation through nonmathematical justifications. These theoretical findings also parametric topology perturbation.
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4399
+
+Fig. 9. Illustration of the connection between the heterophily property (Left) and the over-smoothing issue (Right) on GNNs.
+
+ Furthermore, it executes contrastive learning by sampling homophily neighbors as positive examples, offering innovative
+ insights for the design of heterophilic GNNs. To address the
+ limitations imposed by the strong homophily assumption and
+ label dependency, Li et al. [134] introduced a novel multi-task
+ model named PairE with a contrastive learning method. This
+ model is designed to preserve information pertaining to both
+ homophily and heterophily by transcending the localized node
+ view. It achieves this by harnessing higher-level entities with
+Fig. 10. A toy graph for anomaly detection. The average homophily and
+ more expressive power, enabling the representation of feature
+heterophily for anomalies and normals are presented. signals beyond homophily. In a similar vein and motivated by
+ comparable considerations, Liu et al. [31] propose an innovative
+ self-supervised Graph Representation Learning method called
+ Edge Heterophily Discriminating (GREET). By discriminating
+ edges, GREET obtains contrastive views with both homophilic
+ and heterophilic edges, leveraging them to learn expressive
+ representations.
+
+ VIII. FUTURE DIRECTIONS
+ GNNs for heterophilic graphs are fast developing in the past
+ few years. Beyond current research, there still remain several
+Fig. 11. Illustration of the uncertainty of connections in a graph. open challenges and opportunities worthy of further attention
+ and exploration. In this section, we discuss the following directions to stimulate future research.
+ These advances establish heterophily-uncertainty interdepen- Interpretable Heterophilic GNNs: Interpretability is a crudence as crucial for developing robust GNNs, offering new cial aspect of GNN models in risk-sensitive or privacy-related
+directions for social network analysis to biomedical discovery. application fields, e.g., healthcare and cybersecurity. Although
+ Other Promising Heterophily Explorations: Recently, re- there are several studies on the interpretability [135], [136],
+searchers have sought to extend the design of heterophilic [137] for homophilic GNNs, how to explain the predictions of
+GNNs beyond the semi-supervised paradigm, focusing on self- heterophilic GNNs is still under-explored. Heterophily makes
+supervised heterophilic GNNs [31], [133], [134]. It is note- interpretability more challenging than homophily: since most
+worthy that He et al. [133] identified commonalities between local neighbor nodes are not in the same class as the ego nodes,
+the establishment of the Graph Contrastive Learning (GCL) extracting explainable subgraphs from highly heterophilic graph
+framework and the design of heterophilic GNNs. In the GCL data is much harder, where both proximal and distant topological
+framework, the task involves identifying additional positive structures are required to be discovered and exploited. For insamples belonging to the same class, while in the design of stance, ShapeGGen [137] typically proposed a dataset generator
+heterophilic GNNs, the objective is to identify other intra-class that can automatically generate a variety of benchmark datasets
+neighbors for each node. Recognizing this similarity, they inte- (e.g., varying graph sizes, degree distributions, homophilic and
+grated the GCL sampling strategy with homophily discrimina- heterophilic graphs), accompanied by ground-truth explanations
+tion, creating a novel contrastive learning framework to address From the data-centric view of heterophilic graphs, how to extract
+these crucial challenges. This framework draws inspiration from explainable subgraphs under complex similarity relationships
+homophily, breaking traditional data enhancement strategies and between ego nodes and their potential neighbors on heterophilic
+providing a fresh perspective on establishing a GCL framework. graphs for interpretability is an open question. Moreover, from
+4400 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+the model-centric view of heterophilic GNNs, how to explain to predict links. Therefore, accurately predicting links with
+the model’s predictions on graphs with different degrees of heterophilic attributes, determined by specific potential similar
+heterophily also deserves further exploration. factors, poses a significant challenge. DisenLink identifies the
+ Scalable Heterophilic GNNs: Current heterophilic GNNs are challenges of link-level tasks on heterophilic graphs, but there
+generally trained on relatively small graphs, which significantly are still significant open questions in this domain. These include
+limits their ability to model large-scale data and explore more the development of reasonable heterophilic benchmark datasets
+complicated heterophilic patterns. Although possible solutions and the refinement of GNN architectures for link-level tasks.
+to tackle scalability can be borrowed from the mainstream graph Additionally, similar open questions exist for graph-level tasks,
+sampling strategies [138], [139] for homophilic GNNs, the indicating that further exploration is needed in these areas.
+connections and relationships of heterophilic nodes would be Broader Scope of Practical Applications: In the real world,
+undermined by sampling only mini-batches, especially when heterophilic relationships are pervasive and exist widely in
+similar and dissimilar neighbors contribute differently to learn- various graph-structured data [142], [143], [144], [145], [146],
+ing the ego-node representations. LINKX [27] recently verifies [147], [148], [149]. However, current research on heterophilic
+that even a simple MLP-based model could outperform GNNs GNNs predominantly focuses on specific strong heterophilic
+for mini-batch training on large-scale heterophilic graphs. More- graphs, such as social networks [145] and web page netover, HopGNN [56] introduces a hop interaction paradigm to works [146]. Other fields, such as biomedicine [147] and chemaddress the scalability and over-smoothing problem of GNNs istry [148], [149], which also naturally exhibit the heterophilic
+simultaneously, where its core idea is to convert the interaction property, deserve more explorations. For instance, in proteintarget among nodes to pre-processed multi-hop features inside protein interaction networks, proteins with interactions often
+each node. Hence, addressing the scalability problem of het- belong to different gene ontologies. Moreover, in the field of drug
+erophilic graphs requires exploring more relationships between discovery, DCMGCN [149] verifies the heterophily property of
+ego-neighbor node features and multi-hop information. How the drug-drug networks and proposed a combination of interto keep the inherent heterophily unchanged when conducting mediate representations, and high-similarity neighborhoods, to
+sampling on heterophilic graphs is still an open question. boost GCN learning on the heterophily and sparse drug-drug
+ Theoretical Heterophily Exploration: Despite the notable networks. Besides, in the field of fraud detection, fraudsters
+achievements of heterophilic GNNs across diverse tasks and tend to be more connected to regular users represented by fraud
+datasets, their efficacy lacks a solid theoretical foundation to networks. And some existing research, e.g., DRAG [150] and
+substantiate their impact on enhancing graph representation GAGA [151], solved the problem by conducting the binary hetlearning. Presently, many methods are predominantly designed erophilic graph classification task. This highlights the untapped
+based on intuition and evaluated through empirical experiments. potential of heterophilic GNNs in a broader range of application
+Notably, a recent breakthrough by Ma et al. [104] has unveiled areas. There is an expectation to extend the use of heterophilic
+that, under specific conditions, GCN can exhibit remarkable GNNs to various fields, including financial networks, network
+performance on heterophilic graphs. This discovery has been security, community detection, biomedicine, and chemistry.
+supported by comprehensive theoretical validation, outlining
+the distinctive characteristics and conditions under which het- IX. CONCLUSION
+erophilic graphs can excel with GCN. The elucidation of these
+theoretical findings poses a significant challenge to the current This paper presents a comprehensive overview of graph neural
+rationale underlying the design of heterophilic GNNs. Conse- networks for heterophilic graphs. We introduce a systematic
+quently, there arises a critical need for intensified theoretical taxonomy categorizing existing methods into three classes: nonexploration in the future. This exploration should delve into local neighbor extension, GNN architecture refinement, and
+aspects such as the impact of heterophily on altering the trends of hybrid approaches. The study surveys current research progress
+generalization bounds. Bridging this explanatory gap is crucial and challenges in heterophilic graph learning, and discusses the
+for comprehending the extent to which heterophily influences relevance of graph heterophily to various domains such as model
+the performance constraints of homophilic GNNs. robustness, over-smoothing, and graph anomaly detection. In the
+ Diverse Heterophily Learning Tasks: The research on het- end, we shared our insights into future research opportunities and
+erophilic GNNs has primarily demonstrated success in node- directions that can contribute to the advancement of heterophilic
+level tasks, covering both semi-supervised [41], [60], [69] and GNNs.
+unsupervised scenarios [31], [133], [140]. A recent study by
+Zhou et al. [141] introduces a novel heterophilic framework REFERENCES
+named DisenLink, specifically designed for addressing link- [1] J. Tang, J. Sun, C. Wang, and Z. Yang, “Social influence analysis in
+level tasks on heterophilic graphs. In heterophilic graphs, Disen- large-scale networks,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov.
+ Data Mining, 2009, pp. 807–816.
+Link reveals that link formation is influenced by numerous latent [2] H. Peng, R. Zhang, S. Li, Y. Cao, S. Pan, and P. Yu, “Reinforced,
+factors, causing linked nodes to share similarity in certain factors incremental and cross-lingual event detection from social messages,”
+while being dissimilar in others. This results in an overall low IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 1, pp. 980–998,
+ Jan. 2023.
+similarity between linked nodes. Many existing link prediction [3] S. Vashishth, S. Sanyal, V. Nitin, and P. Talukdar, “Composition-based
+approaches operate under the homophily assumption, using multi-relational graph convolutional networks,” in Proc. Int. Conf. Learn.
+similarity-based heuristics or representation learning methods Representations, 2019, pp. 5250–5265.
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4401
+
+ [4] Z. Wu, S. Pan, G. Long, J. Jiang, X. Chang, and C. Zhang, “Connecting the [27] D. Lim et al., “Large scale learning on non-homophilous graphs: New
+ dots: Multivariate time series forecasting with graph neural networks,” benchmarks and strong simple methods,” in Proc. Int. Conf. Neural Inf.
+ in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2020, Process. Syst., 2021, pp. 20887–20902.
+ pp. 753–763. [28] Y. Yan, M. Hashemi, K. Swersky, Y. Yang, and D. Koutra, “Two sides
+ [5] R. Ying, R. He, K. Chen, P. Eksombatchai, W. L. Hamilton, and J. of the same coin: Heterophily and oversmoothing in graph convolutional
+ Leskovec, “Graph convolutional neural networks for web-scale recom- neural networks,” 2021, arXiv:2102.06462.
+ mender systems,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data [29] L. Yang et al., “Diverse message passing for attribute with heterophily,”
+ Mining, 2018, pp. 974–983. in Proc. Int. Conf. Neural Inf. Process. Syst., 2021, pp. 4751–4763.
+ [6] J. Ma, C. Zhou, P. Cui, H. Yang, and W. Zhu, “Learning disentangled [30] E. Chien, J. Peng, P. Li, and O. Milenkovic, “Adaptive universal genrepresentations for recommendation,” in Proc. Int. Conf. Neural Inf. eralized PageRank graph neural network,” in Proc. Int. Conf. Learn.
+ Process. Syst., 2019, pp. 5711–5722. Representations, 2021, pp. 16138–16161.
+ [7] T. N. Kipf and M. Welling, “Semi-supervised classification with graph [31] Y. Liu, Y. Zheng, D. Zhang, V. C. Lee, and S. Pan, “Beyond
+ convolutional networks,” in Proc. Int. Conf. Learn. Representations, smoothing: Unsupervised graph representation learning with edge het-
+ 2017, pp. 2713–2726. erophily discriminating,” in Proc. AAAI Conf. Artif. Intell., 2023,
+ [8] W. L. Hamilton, R. Ying, and J. Leskovec, “Inductive representation pp. 4516–4524.
+ learning on large graphs,” in Proc. Int. Conf. Neural Inf. Process. Syst., [32] J. Zhu, Y. Yan, M. Heimann, L. Zhao, L. Akoglu, and D. Koutra,
+ 2017, pp. 1025–1035. “Heterophily and graph neural networks: Past, present and future,” IEEE
+ [9] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and Y. Data Eng. Bull., vol. 47, no. 2, pp. 10–32, 2023.
+ Bengio, “Graph attention networks,” in Proc. Int. Conf. Learn. Repre- [33] C. Gong et al., “A survey on learning from graphs with heterophily:
+ sentations, 2018, pp. 2920–2931. Recent advances and future directions,” 2024, arXiv:2401.09769.
+ [10] K. Xu, W. Hu, J. Leskovec, and S. Jegelka, “How powerful are graph [34] S. Luan et al., “The heterophilic graph learning handbook: Benchneural networks?,” in Proc. Int. Conf. Learn. Representations, 2019, marks, models, theoretical analysis, applications and challenges,”
+ pp. 9104–9120. 2024, arXiv:2407.09618.
+ [11] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and S. Y. Philip, “A [35] X. Zheng, Y. Liu, S. Pan, M. Zhang, D. Jin, and P. S. Yu, “Graph neural netcomprehensive survey on graph neural networks,” IEEE Trans. Neural works for graphs with heterophily: A survey,” 2022, arXiv:2202.07082.
+ Netw. Learn. Syst., vol. 32, no. 1, pp. 4–24, Jan. 2021. [36] B. Bollobás, Extremal Graph Theory. North Chelmsford, MA, USA:
+ [12] S. Zhu, S. Pan, C. Zhou, J. Wu, Y. Cao, and B. Wang, “Graph geometry Courier Corporation, 2004.
+ interaction learning,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2020, [37] H. Pei, B. Wei, K. C.-C. Chang, Y. Lei, and B. Yang, “Geom-GCN:
+ pp. 7548–7558. Geometric graph convolutional networks,” in Proc. Int. Conf. Learn.
+ [13] Y. Liu, K. Ding, Q. Lu, F. Li, L. Y. Zhang, and S. Pan, “Towards self- Representations, 2020, pp. 10247–10258.
+ interpretable graph-level anomaly detection,” in Proc. Int. Conf. Neural [38] O. Platonov, D. Kuznedelev, A. Babenko, and L. Prokhorenkova, “Char-
+ Inf. Process. Syst., 2023, pp. 8975–8987. acterizing graph datasets for node classification: Homophily-heterophily
+ [14] X. Zheng, M. Zhang, C. Chen, Q. V. H. Nguyen, X. Zhu, and S. Pan, dichotomy and beyond,” in Proc. Int. Conf. Neural Inf. Process. Syst.,
+ “Structure-free graph condensation: From large-scale graphs to con- 2023, pp. 523–548.
+ densed graph-free data,” in Proc. Int. Conf. Neural Inf. Process. Syst., [39] M. Mironov and L. Prokhorenkova, “Revisiting graph homophily mea-
+ 2023, pp. 6026–6047. sures,” in Proc. Learn. Graphs Conf., 2024, pp. 1–22.
+ [15] X. Zheng, M. Zhang, C. Chen, S. Molaei, C. Zhou, and S. Pan, [40] O. Platonov, D. Kuznedelev, M. Diskin, A. Babenko, and L.
+ “GNNEvaluator: Evaluating GNN performance on unseen graphs with- Prokhorenkova, “A critical look at the evaluation of GNNs under hetout labels,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2023, erophily: Are we really making progress?,” in Proc. Int. Conf. Learn.
+ pp. 33606–33623. Representations, 2023, pp. 18738–18752.
+ [16] V. Ciotti, M. Bonaventura, V. Nicosia, P. Panzarasa, and V. Latora, [41] S. Abu-El-Haija et al., “MixHop: Higher-order graph convolutional ar-
+ “Homophily and missing links in citation networks,” EPJ Data Sci., chitectures via sparsified neighborhood mixing,” in Proc. Int. Conf. Mach.
+ vol. 5, pp. 1–14, 2016. Learn., 2019, pp. 21–29.
+ [17] X. Zheng, M. Zhang, C. Chen, Q. Zhang, C. Zhou, and S. Pan, “Auto- [42] Y. Wang and T. Derr, “Tree decomposed graph neural network,” in Proc.
+ HeG: Automated graph neural network on heterophilic graphs,” in Proc. ACM Int. Conf. Inf. Knowl. Manage., 2021, pp. 2040–2049.
+ ACM Web Conf., 2023, pp. 611–620. [43] Y. Song, C. Zhou, X. Wang, and Z. Lin, “Ordered GNN: Ordering
+ [18] J. Xu, E. Dai, X. Zhang, and S. Wang, “HP-GMN: Graph memory net- message passing to deal with heterophily and over-smoothing,” in Proc.
+ works for heterophilous graphs,” in Proc. IEEE Int. Conf. Data Mining, Int. Conf. Learn. Representations, 2023, pp. 35954–35971.
+ 2022, pp. 1263–1268. [44] R. Lei, Z. Wang, Y. Li, B. Ding, and Z. Wei, “EvenNet: Ignoring odd-hop
+ [19] Y. Liu, Y. Zheng, D. Zhang, H. Chen, H. Peng, and S. Pan, “Towards neighbors improves robustness of graph neural networks,” in Proc. Int.
+ unsupervised deep graph structure learning,” in Proc. ACM Web Conf., Conf. Neural Inf. Process. Syst., 2022, pp. 4694–4706.
+ 2022, pp. 1392–1403. [45] D. Jin et al., “Universal graph convolutional networks,” in Proc. Int. Conf.
+ [20] X. Zheng, M. Zhang, C. Chen, C. Li, C. Zhou, and S. Pan, “Multi- Neural Inf. Process. Syst., 2021, pp. 10654–10664.
+ relational graph neural architecture search with fine-grained message [46] W. Jin, T. Derr, Y. Wang, Y. Ma, Z. Liu, and J. Tang, “Node similarity
+ passing,” in Proc. IEEE Int. Conf. Data Mining, 2022, pp. 783–792. preserving graph convolutional networks,” in Proc. ACM Int. Conf. Web
+ [21] Y. Zheng, H. Zhang, V. Lee, Y. Zheng, X. Wang, and S. Pan, “Finding Search Data Mining, 2021, pp. 148–156.
+ the missing-half: Graph complementary learning for homophily-prone [47] L. Wu, H. Lin, Z. Liu, Z. Liu, Y. Huang, and S. Z. Li, “Homophilyand heterophily-prone graphs,” in Proc. Int. Conf. Mach. Learn., 2023, enhanced self-supervision for graph structure learning: Insights and
+ pp. 42492–42505. directions,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 9,
+ [22] S. Pandit, D. H. Chau, S. Wang, and C. Faloutsos, “NetProbe: A fast and pp. 12358–12372, Sep. 2024.
+ scalable system for fraud detection in online auction networks,” in Proc. [48] D. Li, B. Qi, J. Gao, H. Xiong, B. Gu, and X. Chen, “MPformer: Ad-
+ ACM Web Conf., 2007, pp. 201–210. vancing graph modeling through heterophily relationship-based position
+ [23] J. Zhu et al., “Graph neural networks with heterophily,” in Proc. AAAI encoding,” in Proc. Int. Conf. Learn. Representations, 2024. [Online].
+ Conf. Artif. Intell., 2021, pp. 11168–11176. Available: https://openreview.net/forum?id=C4s9CAvqyg
+ [24] J. Zhu, Y. Yan, L. Zhao, M. Heimann, L. Akoglu, and D. Koutra, [49] H. Sun, X. Li, Z. Wu, D. Su, R.-H. Li, and G. Wang, “Breaking the
+ “Beyond homophily in graph neural networks: Current limitations and entanglement of homophily and heterophily in semi-supervised node
+ effective designs,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2020, classification,” in Proc. IEEE Int. Conf. Data Eng., 2024, pp. 2379–2392.
+ pp. 7793–7804. [50] S. Rey, M. Navarro, V. M. Tenorio, S. Segarra, and A. G. Marques, “Re-
+ [25] D. Bo, X. Wang, C. Shi, and H. Shen, “Beyond low-frequency information designing graph filter-based GNNs to relax the homophily assumption,”
+ in graph convolutional networks,” in Proc. AAAI Conf. Artif. Intell., 2021, in Proc. IEEE Int. Conf. Acoust. Speech Signal Process., 2025, pp. 1–5.
+ pp. 3950–3957. [51] K. Goyal, S. Samanta, V. Goyal, and M. Mohania, “PathLens: Structurally
+ [26] D. Lim, X. Li, F. Hohne, and S.-N. Lim, “Large scale learning on non- enhancing heterophilic graphs for GNNs,” in Proc. ACM Int. Conf. Inf.
+ homophilous graphs: New benchmarks and strong simple methods,” in Knowl. Manage., 2025, pp. 729–739.
+ Adv. Neural Inf. Process. Syst., 2021, pp. 20887–20902.
+4402 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+ [52] T. Wang, R. Wang, D. Jin, D. He, and Y. Huang, “Powerful graph con- [77] J. Li, R. Zheng, H. Feng, M. Li, and X. Zhuang, “Permutation equivariant
+ volutioal networks with adaptive propagation mechanism for homophily graph framelets for heterophilous graph learning,” IEEE Trans. Neural
+ and heterophily,” in Proc. AAAI Conf. Artif. Intell., 2022, pp. 4210–4218. Netw. Learn. Syst., vol. 35, no. 9, pp. 11634–11648, Sep. 2024.
+ [53] X. Li et al., “Finding global homophily in graph neural networks [78] W. Bi, L. Du, Q. Fu, Y. Wang, S. Han, and D. Zhang, “Make heterophilic
+ when meeting heterophily,” in Proc. Int. Conf. Mach. Learn., 2022, graphs better fit GNN: A graph rewiring approach,” IEEE Trans. Knowl.
+ pp. 13242–13256. Data Eng., vol. 36, no. 12, pp. 8744–8757, Dec. 2024.
+ [54] C. Bodnar, F. Di Giovanni, B. Chamberlain, P. Liò, and M. Bronstein, [79] C. Huang et al., “Flow2GNN: Flexible two-way flow message passing
+ “Neural sheaf diffusion: A topological perspective on heterophily and for enhancing GNNs beyond homophily,” IEEE Trans. Cybern., vol. 54,
+ oversmoothing in GNNs,” in Proc. Int. Conf. Neural Inf. Process. Syst., no. 11, pp. 6607–6618, Nov. 2024.
+ 2022, pp. 18527–18541. [80] Z. Zou, L. Shen, Y. Li, Y. Lu, J. Liu, and X. Liu, “RETAIN: Re-
+ [55] D. Zou et al., “SE-GSL: A general and effective graph structure learning liable topology augmentation for both heterophilic and homophilic
+ framework through structural entropy optimization,” in Proc. ACM Web graphs,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process., 2025,
+ Conf., 2023, pp. 499–510. pp. 1–5.
+ [56] J. Chen, Z. Li, Y. Zhu, J. Zhang, and J. Pu, “From node interaction to hop [81] Y. Wang, C. Huang, M. Li, T. Cai, Z. Zheng, and X. Huang, “All roads
+ interaction: New effective and scalable graph learning paradigm,” in Proc. lead to rome: Exploring edge distribution shifts for heterophilic graph
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2023, pp. 7876–7885. learning,” in Proc. Int. Joint Conf. Artif. Intell., 2025, pp. 6487–6495.
+ [57] Z. Yu, B. Feng, D. He, Z. Wang, Y. Huang, and Z. Feng, “LG-GNN: Local- [82] H. Liu et al., “Global structure-aware and feature-augmented graph neural
+ global adaptive graph neural network for modeling both homophily and network for heterophilic graphs,” ACM Trans. Inf. Syst., vol. 44, 2025,
+ heterophily,” in Proc. Int. Joint Conf. Artif. Intell., 2024, pp. 2515–2523. Art. no. 33.
+ [58] D. Su, X. Li, Z. Li, Y. Liao, R.-H. Li, and G. Wang, “DiRW: Path-aware [83] Z. Zheng, Y. Yang, Z. Guan, W. Zhao, and W. Lu, “Enhancing
+ digraph learning for heterophily,” in Proc. ACM Int. Conf. Inf. Knowl. homophily-heterophily separation: Relation-aware learning in hetero-
+ Manage., 2025, pp. 2771–2780. geneous graphs,” in Proc. ACM SIGKDD Conf. Knowl. Discov. Data
+ [59] S. Luan et al., “Revisiting heterophily for graph neural networks,” in Mining, 2025, pp. 4050–4061.
+ Proc. Int. Conf. Neural Inf. Process. Syst., 2022, pp. 1362–1375. [84] K. Xu, C. Li, Y. Tian, T. Sonobe, K.-I. Kawarabayashi, and S. Jegelka,
+ [60] L. Du et al., “GBK-GNN: Gated bi-kernel graph neural networks for “Representation learning on graphs with jumping knowledge networks,”
+ modeling both homophily and heterophily,” in Proc. ACM Web Conf., in Proc. Int. Conf. Mach. Learn., 2018, pp. 5453–5462.
+ 2022, pp. 1550–1558. [85] N. T. Huang et al., “From local to global: Spectral-inspired graph neural
+ [61] L. Wei, H. Zhao, and Z. He, “Designing the topology of graph neural networks,” in Proc. NeurIPS 2022 Workshop: New Frontiers Graph
+ networks: A novel feature fusion perspective,” in Proc. ACM Web Conf., Learn., 2022.
+ 2022, pp. 1381–1391. [86] J. Gao, J. Li, K. Zhang, and Y. Kong, “Topology uncertainty modeling
+ [62] X. Ma, Q. Chen, Y. Ren, G. Song, and L. Wang, “Meta-weight graph for imbalanced node classification on graphs,” in Proc. IEEE Int. Conf.
+ neural network: Push the limits beyond global homophily,” in Proc. ACM Acoust. Speech Signal Process., 2023, pp. 1–5.
+ Web Conf., 2022, pp. 1270–1280. [87] Q. Li, Z. Han, and X.-M. Wu, “Deeper insights into graph convolutional
+ [63] Q. Chen, Y. Wang, Y. Wang, J. Yang, and Z. Lin, “Optimization-induced networks for semi-supervised learning,” in Proc. AAAI Conf. Artif. Intell.,
+ graph implicit nonlinear diffusion,” in Proc. Int. Conf. Mach. Learn., 2018, pp. 3538–3545.
+ 2022, pp. 3648–3661. [88] F. Wu, A. Souza, T. Zhang, C. Fifty, T. Yu, and K. Weinberger, “Simpli-
+ [64] S. Chanpuriya and C. Musco, “Simplified graph convolution with fying graph convolutional networks,” in Proc. Int. Conf. Mach. Learn.,
+ heterophily,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2022, 2019, pp. 6861–6871.
+ pp. 27184–27197. [89] J. Chen, S. Chen, M. Bai, J. Pu, J. Zhang, and J. Gao, “Graph decoupling
+ [65] D. Tortorella and A. Micheli, “Leave graphs alone: Addressing over- attention markov networks for semisupervised graph node classification,”
+ squashing without rewiring,” in Proc. Learn. Graphs Conf., 2022, pp. 1–8. IEEE Trans. Neural Netw. Learn. Syst., vol. 34, no. 12, pp. 9859–9873,
+ [66] R. Yang, W. Dai, C. Li, J. Zou, and H. Xiong, “NCGNN: Node-level Dec. 2023.
+ capsule graph neural network for semisupervised classification,” IEEE [90] C. Liu et al., “Comprehensive graph gradual pruning for sparse training in
+ Trans. Neural Netw. Learn. Syst., vol. 35, no. 1, pp. 1025–1039, Jan. 2024. graph neural networks,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35,
+ [67] L. Wu et al., “Beyond homophily and homogeneity assumption: Relation- no. 10, pp. 14903–14917, Oct. 2024.
+ based frequency adaptive graph neural networks,” IEEE Trans. Neural [91] R. Sinkhorn and P. Knopp, “Concerning nonnegativematrices and dou-
+ Netw. Learn. Syst., vol. 35, no. 6, pp. 8497–8509, Jun. 2024. bly stochastic matrices,” Pacific J. Math., vol. 21, no. 2, pp. 343–348,
+ [68] Z. Wu, S. Pan, G. Long, J. Jiang, and C. Zhang, “Beyond low-pass 1967.
+ filtering: Graph convolutional networks with automatic filtering,” IEEE [92] M. Liu, Z. Wang, and S. Ji, “Non-local graph neural networks,” IEEE
+ Trans. Knowl. Data Eng., vol. 35, no. 07, pp. 6687–6697, Jul. 2023. Trans. Pattern Anal. Mach. Intell., vol. 44, no. 12, pp. 10270–10276,
+ [69] K. Kong, J. Chen, J. Kirchenbauer, R. Ni, C. B. Bruss, and T. Goldstein, Dec. 2022.
+ “GOAT: A global transformer on large-scale graphs,” in Proc. Int. Conf. [93] T. Yang, Y. Wang, Z. Yue, Y. Yang, Y. Tong, and J. Bai, “Graph pointer
+ Mach. Learn., 2023, pp. 17375–17390. neural networks,” in Proc. AAAI Conf. Artif. Intell., 2022, pp. 8832–8839.
+ [70] J. Huang, L. Du, X. Chen, Q. Fu, S. Han, and D. Zhang, “Robust mid-pass [94] J. Chen, W. Liu, and J. Pu, “Memory-based message passing: Decoupling
+ filtering graph convolutional networks,” in Proc. ACM Web Conf., 2023, the message for propagation from discrimination,” in Proc. IEEE Int.
+ pp. 328–338. Conf. Acoust. Speech Signal Process., 2022, pp. 4033–4037.
+ [71] Y. Yan et al., “From trainable negative depth to edge heterophily [95] J. Chen, S. Chen, J. Gao, Z. Huang, J. Zhang, and J. Pu, “Exploiting neighin graphs,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2023, bor effect: Conv-agnostic GNN framework for graphs with heterophily,”
+ pp. 70162–70178. IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 10, pp. 13383–13396,
+ [72] L. Liang, X. Hu, Z. Xu, Z. Song, and I. King, “Predicting global label Oct. 2024.
+ relationship matrix for graph neural networks under heterophily,” in Proc. [96] M. Chen, Z. Wei, Z. Huang, B. Ding, and Y. Li, “Simple and deep
+ Int. Conf. Neural Inf. Process. Syst., 2023, pp. 10909–10921. graph convolutional networks,” in Proc. Int. Conf. Mach. Learn., 2020,
+ [73] Z. Wen et al., “Homophily-related: Adaptive hybrid graph filter for pp. 1725–1735.
+ multi-view graph clustering,” in Proc. AAAI Conf. Artif. Intell., 2024, [97] S. Suresh, V. Budde, J. Neville, P. Li, and J. Ma, “Breaking the limit of
+ pp. 15841–15849. graph neural networks by improving the assortativity of graphs with local
+ [74] B. Li, E. Pan, and Z. Kang, “PC-Conv: Unifying homophily and het- mixing patterns,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data
+ erophily with two-fold filtering,” in Proc. AAAI Conf. Artif. Intell., 2024, Mining, 2021, pp. 1541–1551.
+ pp. 13437–13445. [98] D. Jin et al., “RAW-GNN: Random walk aggregation based graph neural
+ [75] F. Shi et al., “VR-GNN: Variational relation vector graph neural network network,” in Proc. Int. Joint Conf. Artif. Intell., 2022, pp. 2108–2114.
+ for modeling homophily and heterophily,” World Wide Web, vol. 27, 2024, [99] D. He, C. Liang, H. Liu, M. Wen, P. Jiao, and Z. Feng, “Block modeling-
+ Art. no. 32. guided graph convolutional neural networks,” in Proc. AAAI Conf. Artif.
+ [76] R. Duan et al., “Unifying homophily and heterophily for spectral graph Intell., 2022, pp. 4022–4029.
+ neural networks via triple filter ensembles,” in Proc. Int. Conf. Neural [100] J. Park, S. Yoo, J. Park, and H. J. Kim, “Deformable graph convolutional
+ Inf. Process. Syst., 2024, pp. 93540–93567. networks,” in Proc. AAAI Conf. Artif. Intell., 2022, pp. 7949–7956.
+ZHENG et al.: GNNS FOR GRAPHS WITH HETEROPHILY: A SURVEY 4403
+
+[101] L. Siqi, H. Dongxiao, Y. Zhizhi, J. Di, F. Shiyong, and W. Zhang, [126] Y. Gao, X. Wang, X. He, Z. Liu, H. Feng, and Y. Zhang, “Alleviating
+ “Integrating co-training with edge discrimination to enhance graph neural structural distribution shift in graph anomaly detection,” in Proc. ACM
+ networks under heterophily,” in Proc. AAAI Conf. Artif. Intell., 2025, Int. Conf. Web Search Data Mining, 2023, pp. 357–365.
+ pp. 18960–18968. [127] F. Shi, Y. Cao, Y. Shang, Y. Zhou, C. Zhou, and J. Wu, “H2-FDetector:
+[102] X. Ma et al., “A comprehensive survey on graph anomaly detection A GNN-based fraud detector with homophilic and heterophilic connecwith deep learning,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, tions,” in Proc. ACM Web Conf., 2022, pp. 1486–1494.
+ pp. 12012–12038, Dec. 2023. [128] J. Pan et al., “A label-free heterophily-guided approach for unsuper-
+[103] Z. Gong et al., “Beyond homophily: Robust graph anomaly detection vised graph fraud detection,” in Proc. AAAI Conf. Artif. Intell., 2025,
+ via neural sparsification,” in Proc. Int. Joint Conf. Artif. Intell., 2023, pp. 12443–12451.
+ pp. 2104–2113. [129] Y. Gao, X. Wang, X. He, Z. Liu, H. Feng, and Y. Zhang, “Addressing het-
+[104] Y. Ma, X. Liu, N. Shah, and J. Tang, “Is homophily a necessity for graph erophily in graph anomaly detection: A perspective of graph spectrum,”
+ neural networks?,” in Proc. Int. Conf. Learn. Representations, 2022, in Proc. ACM Web Conf., 2023, pp. 1528–1538.
+ pp. 26342–26369. [130] X. Tang et al., “Prediction-uncertainty-aware decision-making for au-
+[105] F. Luo, J. Z. Wang, and E. Promislow, “Exploring local community tonomous vehicles,” IEEE Trans. Intell. Veh., vol. 7, no. 4, pp. 849–862,
+ structures in large networks,” in Proc. IEEE/WIC/ACM Int. Conf. Web Dec. 2022.
+ Intell., 2006, pp. 233–239. [131] Y. Liu, X. Ao, F. Feng, and Q. He, “UD-GNN: Uncertainty-aware
+[106] Y. Ding, E. Yan, A. Frazho, and J. Caverlee, “PageRank for ranking debiased training on semi-homophilous graphs,” in Proc. ACM SIGKDD
+ authors in co-citation networks,” J. Amer. Soc. Inf. Sci. Technol., vol. 60, Int. Conf. Knowl. Discov. Data Mining, 2022, pp. 1131–1140.
+ no. 11, pp. 2229–2243, 2009. [132] D. Chen et al., “Bayesian hierarchical graph neural networks with uncer-
+[107] G. Xiao et al., “A hybrid visualization model for knowledge mapping: Sci- tainty feedback for trustworthy fault diagnosis of industrial processes,”
+ entometrics, SAOM, and SAO,” IEEE Trans. Intell. Transp. Syst., vol. 25, IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 12, pp. 18635–18648,
+ no. 3, pp. 2208–2221, Mar. 2024, doi: 10.1109/TITS.2023.3327266. Dec. 2024.
+[108] Z. Zhou et al., “GReTo: Remedying dynamic graph topology-task discor- [133] D. He et al., “Contrastive learning meets homophily: Two birds with one
+ dance via target homophily,” in Proc. Int. Conf. Learn. Representations, stone,” in Proc. Int. Conf. Mach. Learn., 2023, pp. 12775–12789.
+ 2023, pp. 6694–6720. [134] Y. Li, B. Lin, B. Luo, and N. Gui, “Graph representation learning beyond
+[109] M. Li et al., “When hypergraph meets heterophily: New bench- node and homophily,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 5,
+ mark datasets and baseline,” in Proc. AAAI Conf. Artif. Intell., 2025, pp. 4880–4893, May 2023.
+ pp. 18377–18384. [135] R. Ying, D. Bourgeois, J. You, M. Zitnik, and J. Leskovec, “GNNEx-
+[110] P. Wang, S. Yang, Y. Liu, Z. Wang, and P. Li, “Equivariant hypergraph plainer: Generating explanations for graph neural networks,” in Proc.
+ diffusion neural operators,” in Proc. Int. Conf. Learn. Representations, Int. Conf. Neural Inf. Process. Syst., 2019, pp. 9244–9255.
+ 2023, pp. 16983–17006. [136] D. Luo et al., “Parameterized explainer for graph neural network,” in
+[111] Y. Li, R. Yu, C. Shahabi, and Y. Liu, “Diffusion convolutional recurrent Proc. Int. Conf. Neural Inf. Process. Syst., 2020, pp. 19620–19631.
+ neural network: Data-driven traffic forecasting,” in Proc. Int. Conf. Learn. [137] C. Agarwal, O. Queen, H. Lakkaraju, and M. Zitnik, “Evaluating ex-
+ Representations, 2018, pp. 2079–2094. plainability for graph neural networks,” Sci. Data, vol. 10, no. 1, 2023,
+[112] S. Wang, Y. Li, J. Zhang, Q. Meng, L. Meng, and F. Gao, “PM2.5- Art. no. 144.
+ GNN: A domain knowledge enhanced graph neural network for PM2.5 [138] W.-L. Chiang, X. Liu, S. Si, Y. Li, S. Bengio, and C.-J. Hsieh, “Clusterforecasting,” in Proc. ACM Int. Conf. Adv. Geographic Inf. Syst., 2020, GCN: An efficient algorithm for training deep and large graph convolupp. 163–166. tional networks,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data
+[113] N. Veldt, A. R. Benson, and J. Kleinberg, “Higher-order homophily is Mining, 2019, pp. 257–266.
+ combinatorially impossible,” 2022, arXiv:2103.11818. [139] H. Zeng, H. Zhou, A. Srivastava, R. Kannan, and V. Prasanna, “Graph-
+[114] J. H. Fowler, “Legislative cosponsorship networks in the US house and SAINT: Graph sampling based inductive learning method,” in Proc. Int.
+ senate,” Social Netw., vol. 28, no. 4, pp. 454–465, 2006. Conf. Learn. Representations, 2020, pp. 1979–1997.
+[115] I. Amburg, N. Veldt, and A. Benson, “Clustering in graphs and hyper- [140] T. Xiao, Z. Chen, Z. Guo, Z. Zhuang, and S. Wang, “Decoupled selfgraphs with categorical edge labels,” in Proc. ACM Web Conf., 2020, supervised learning for graphs,” in Proc. Int. Conf. Neural Inf. Process.
+ pp. 706–717. Syst., 2022, pp. 620–634.
+[116] P. S. Chodrow, N. Veldt, and A. R. Benson, “Hypergraph clustering: From [141] S. Zhou, Z. Guo, C. Aggarwal, X. Zhang, and S. Wang, “Link predicblockmodels to modularity,” Sci. Adv., vol. 7, 2021, Art. no. eabh1303. tion on heterophilic graphs via disentangled representation learning,”
+[117] J. Lin, X. Guo, S. Zhang, D. Zhou, Y. Zhu, and J. Shun, “When heterophily 2022, arXiv:2208.01820.
+ meets heterogeneity: New graph benchmarks and effective methods,” [142] Z. Du, J. Liang, J. Liang, K. Yao, and F. Cao, “Graph regulation network
+ 2024, arXiv:2407.10916. for point cloud segmentation,” IEEE Trans. Pattern Anal. Mach. Intell.,
+[118] Z. Shen and Z. Kang, “When heterophily meets heterogeneous graphs: vol. 46, no. 12, pp. 7940–7955, Dec. 2024.
+ Latent graphs guided unsupervised representation learning,” IEEE Trans. [143] S. Wang et al., “Multi-domain graph foundation models: Robust knowl-
+ Neural Netw. Learn. Syst., vol. 36, no. 6, pp. 10283–10296, Jun. 2025, edge transfer via topology alignment,” in Proc. Int. Conf. Mach. Learn.,
+ doi: 10.1109/TNNLS.2025.3540063. 2025, pp. 64806–64821.
+[119] L. Sun et al., “Adversarial attack and defense on graph data: A survey,” [144] S. Wang, S. Huang, J. Yuan, Z. Shen, and Z. Kang, “Cooperation of
+ 2018, arXiv:1812.10528. experts: Fusing heterogeneous information with large margin,” in Proc.
+[120] H. Wu, C. Wang, Y. Tyshetskiy, A. Docherty, K. Lu, and L. Zhu, Int. Conf. Mach. Learn., 2025, pp. 63169–63185.
+ “Adversarial examples for graph data: Deep insights into attack and [145] A. Mele, “A structural model of homophily and clustering in sodefense,” in Proc. Int. Joint Conf. Artif. Intell., 2019, pp. 4816–4823. cial networks,” J. Bus. Econ. Statist., vol. 40, no. 3, pp. 1377–1389,
+[121] X. Zhang and M. Zitnik, “GNNGUARD: Defending graph neural net- 2022.
+ works against adversarial attacks,” in Proc. Int. Conf. Neural Inf. Process. [146] Y. Choi, J. Choi, T. Ko, H. Byun, and C.-K. Kim, “Finding heterophilic
+ Syst., 2020, pp. 9263–9275. neighbors via confidence-based subgraph matching for semi-supervised
+[122] C. Deng, X. Li, Z. Feng, and Z. Zhang, “GARNET: Reduced-rank node classification,” in Proc. ACM Int. Conf. Inf. Knowl. Manage., 2022,
+ topology learning for robust and scalable graph neural networks,” in Proc. pp. 283–292.
+ Learn. Graphs Conf., 2022, pp. 1–23. [147] B.-M. Liu, Y.-L. Gao, F. Li, C.-H. Zheng, and J.-X. Liu, “SLGCN:
+[123] Y. Chen et al., “Understanding and improving graph injection attack by Structure-enhanced line graph convolutional network for predictpromoting unnoticeability,” in Proc. Int. Conf. Learn. Representations, ing drug-disease associations,” Knowl.-Based Syst., vol. 283, 2024,
+ 2022, pp. 15404–15445. Art. no. 111187.
+[124] J. Zhu, J. Jin, D. Loveland, M. T. Schaub, and D. Koutra, “How does [148] S. Maekawa et al., “Beyond real-world benchmark datasets: An empirical
+ heterophily impact the robustness of graph neural networks? Theoretical study of node classification with GNNs,” in Proc. Int. Conf. Neural Inf.
+ connections and practical implications,” in Proc. ACM SIGKDD Int. Conf. Process. Syst., 2022, pp. 5562–5574.
+ Knowl. Discov. Data Mining, 2022, pp. 2637–2647. [149] H. Chen, Y. Lu, Y. Yang, and Y. Rao, “A drug combination prediction
+[125] H. Pei et al., “Multi-track message passing: Tackling oversmoothing and framework based on graph convolutional network and heterogeneous
+ oversquashing in graph learning via preventing heterophily mixing,” in information,” IEEE/ACM Trans. Comput. Biol. Bioinf., vol. 20, no. 3,
+ Proc. Int. Conf. Mach. Learn., 2024, pp. 40078–40091. pp. 1917–1925, May/Jun. 2023.
+4404 IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 7, JULY 2026
+
+[150] H. Kim, J. Choi, and J. J. Whang, “Dynamic relation-attentive graph Miao Zhang received the PhD degree from the Unineural networks for fraud detection,” 2023, arXiv:2310.04171. versity of Technology Sydney (UTS), Australia. He
+[151] Y. Wang et al., “Label information enhanced fraud detection against low is currently a professor with the Harbin Institute of
+ homophily in graphs,” in Proc. ACM Web Conf., 2023, pp. 406–416. Technology (Shenzhen), Shenzhen, China. Before
+ that, he was an assistant professor with Aalborg
+ University, Aalborg, Denmark. His major research
+ interests include AutoML, model compression, and
+ continual learning.
+ Xin Zheng received the PhD degree in computer
+ science from Monash University, Australia, in 2024.
+ She is a lecturer with the School of Computing Technologies, RMIT University, Australia. Her research
+ interests include data-centric graph machine learning
+ and automated graph MLOps. To date, she has published research papers in top-tier journals and confer-
+ Di Jin received the PhD degree in computer science
+ ences, including International Journal of Computer
+ from Jilin University, Changchun, China, in 2012.
+ Vision, Pattern Recognition, NeurIPS, ICLR, ICML,
+ He was a research scholar with DMG, UIUC during
+ and Web Conference.
+ 2019 to 2020. He is currently a full professor with the
+ College of Intelligence and Computing, Tianjin University, Tianjin, China. His research interests include
+ graph data mining and graph machine learning, especially on community detection, network embedding
+ Yi Wang received the PhD degree in computer sci- and GNNs. To date, he has published more than 100
+ ence and technology from Zhejiang Normal Uni- research papers in top-tier journals and conferences,
+ versity, Jinhua, China, in 2025. She is presently a including IEEE Transactions on Knowledge and Data
+ postdoctoral fellow with the City University of Hong Engineering, IEEE Transactions on Neural Networks and Learning Systems,
+ Kong. She has published several papers in top-tier IEEE Transactions on Cybernetics, AAAI, IJCAI, ICML, NeurIPS, and WWW.
+ journals and conferences, inclusing IEEE Transac- He serves as the associate editor of Information Sciences, action editor of
+ tions on Cybernetics, Pattern Recognition, Neural Neural Networks, PC board member of IJCAI 2022–2024, and Senor PCs in
+ Networks, ICML, AAAI, IJCAI. Her research in- IJCAI/AAAI. He was the recipient of the Best Paper Award Runner-Up of
+ terests include graph neural networks, hypergraph WWW 2021, Best Paper Student Paper Runner-Up of ICDM 2021, and Rising
+ computing, graph data mining, etc. Star Award of ACM Tianjin at 2018.
+
+ Yixin Liu received the bachelor’s and master’s degrees from Beihang University, China, and the PhD Philip S. Yu (Fellow, IEEE) received the BS degree
+ degree in Artificial Intelligence (AI) from Monash in electrical engineering from National Taiwan Uni-
+ University, Australia. He is a lecturer and ARC DE- versity, and the MS and PhD degrees in electrical
+ CRA fellow with Griffith University. His research engineering from Stanford University, in 1978. He is a
+ concentrates on data mining, machine learning, graph distinguished professor with the University of Illinois
+ analytics, and anomaly detection. To date, he has at Chicago and Tsinghua University. He holds more
+ published more than 30 research papers in top-tier than 300 US patents, is ACM fellow, is editor-in-chief
+ journals and conferences, including IEEE Transac- of ACM Transactions on Knowledge Discovery from
+ tions on Knowledge and Data Engineering, IEEE Data, and has been awarded several awards by IBM
+ Transactions on Neural Networks and Learning Sys- and the IEEE. His research interests are in the fields
+tems, NeurIPS, KDD, AAAI, and Web Conference. He is a recipient of Google of data mining, social network, privacy preserving
+PhD fellowship, in 2022. data publishing, data stream, database systems, and Internet applications and
+ technologies. He is an ISI Highly Cited Researcher. According to Google
+ Scholar, his H-index is among the ten highest in computer science.
+
+ Ming Li (Member, IEEE) received the PhD degree Shirui Pan (Senior Member, IEEE) received the PhD
+ from the Department of Computer Science and Infor- degree in computer science from the University of
+ mation Technology, La Trobe University, Australia, Technology Sydney (UTS), Ultimo, NSW, Australia.
+ in 2017. After that, he completed two postdoctoral He is a professor with the School of Information
+ fellowship positions with the Department of Mathe- and Communication Technology, Griffith University,
+ matics and Statistics, La Trobe University, Australia, Australia. Prior to this, he was a senior lecturer with
+ and the Department of Information Technology in the Faculty of IT with Monash University. His re-
+ Education, South China Normal University, China, search interests include data mining and machine
+ respectively. He is currently a ‘Shuang Long Scholar’ learning. To date, he has published more than 200
+ distinguished professor with Zhejiang Key Labora- research papers in top-tier journals and conferences,
+ tory of Intelligent Education Technology and Appli- including IEEE Transactions on Pattern Analysis and
+cation, Zhejiang Normal University, China. His research interests include hy- Machine Intelligence, IEEE Transactions on Knowledge and Data Engineering,
+pergraph/graph neural networks, graph machine learning, hypergraph learning, IEEE Transactions on Neural Networks and Learning Systems, ICML, NeurIPS,
+etc. To date, he has published more than 150 research papers in top-tier journals and KDD. His research received the 2024 CIS IEEE TNNLS Outstanding
+and conferences, including IEEE Transactions on Pattern Analysis and Machine Paper Award and the 2020 IEEE ICDM Best Student Paper Award. He has
+Intelligence, Artificial Intelligence, IEEE Transactions on Knowledge and Data been recognised as one of the AI 2000 AAAI/IJCAI Most Influential Scholars
+Engineering, IEEE Transactions on Neural Networks and Learning Systems, in Australia since 2021. He is an ARC future fellow and a fellow of the
+IEEE Transactions on Cybernetics, ICML, AAAI etc. He is an associate editor Queensland Academy of Arts and Sciences (FQA). He is an associate editor of
+of Pattern Recognition, Neural Networks, and an editorial board member of Neural Networks, Knowledge and Information Systems, IEEE Transactions on
+Machine Learning. He is the recipient of the AAAI 2026 Outstanding Paper Cognitive and Developmental Systems, and IEEE Transactions on Cybernetics
+Award. (TCYB).

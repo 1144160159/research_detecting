@@ -1,0 +1,1539 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [397] Detecting Multivariate Time Series Anomalies With Cascade Decomposition Consistency
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：397
+题名：Detecting Multivariate Time Series Anomalies With Cascade Decomposition Consistency
+年份：2025
+DOI：10.1109/tim.2025.3547479
+来源：IEEE Transactions on Instrumentation and Measurement
+PDF：paper/10.1109_TIM.2025.3547479.pdf
+已有粗分类：时序、日志、KPI 与云原生异常检测
+二级关联：无
+相关性：中相关，分数 6
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\397.txt
+- 原始字符数：68095
+- 本次发送字符数：68095
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+2511614
+
+Detecting Multivariate Time Series Anomalies With
+Cascade Decomposition Consistency
+Ruoheng Li , Zhongyao Liu , Xi Zhu , Lin Li , and Xianbin Cao , Senior Member, IEEE
+Abstract— Multivariate time series anomaly detection is crucial
+in sensitive domains such as cybersecurity and grid monitoring, significantly contributing to the reliability and safety
+of system operation. However, current methods suffer from
+inadequate utilization of decomposed time series, insufficient
+mining of contextual dependencies within the time series, and
+limited robustness against anomalies during training. To address
+these limitations, we propose the consistency-enhanced normalizing flow (ConFlow) model, which utilizes the consistency of
+decomposed time series and contextual temporal embedding
+to enhance the discriminative ability of the flow model. First,
+to refine the extraction of time series components, we propose
+a cascade decomposition and mixing module that iteratively
+decouples the time series. Second, these components are mapped
+to Gaussian distributions through the context-aware normalizing
+flow, incorporating both inter- and intra-series information into
+the density estimation. Third, the density consistency among
+decomposed time series is measured to reweight the estimation,
+while highly inconsistent series are viewed as anomalies and
+masked during training to improve model robustness. Finally,
+anomalies are detected using reweight density estimation. Experiments on five widely used datasets in the time series anomaly
+detection field demonstrate the superiority of our method over
+state-of-the-art (SOTA) approaches.
+Index Terms— Consistency measurement, density estimation,
+normalizing flow, time series anomaly detection, time series
+decomposition.
+
+I. I NTRODUCTION
+
+T
+
+IME series exist in various forms in different domains,
+such as electroencephalogram (EEG) recordings [1],
+industrial sensor outputs [2], and flight trajectories [3]. The
+ability to detect anomalies in time series data is paramount for
+ensuring operational efficiency and reliability [4]. For example, in motor fault diagnosis [5], time series anomaly detection
+facilitates the early identification of irregular motor behaviors,
+preventing unexpected downtime and reducing maintenance
+Received 1 August 2024; revised 30 October 2024; accepted 10 November
+2024. Date of publication 3 March 2025; date of current version 13 March
+2025. This work was supported in part by Beijing Natural Science Foundation
+under Grant 4254101 and in part by the National Natural Science Foundation
+of China under Grant 62373029. The Associate Editor coordinating the review
+process was Dr. Mahnoosh Tajmirriahi. (Corresponding author: Xi Zhu.)
+Ruoheng Li, Zhongyao Liu, Xi Zhu, and Xianbin Cao are with the School of
+Electronic and Information Engineering, Beihang University, Beijing 100191,
+China, also with the Key Laboratory of Advanced Technology of Near Space
+Information System, Ministry of Industry and Information Technology of
+China, Beijing 100191, China, also with the National Engineering Laboratory
+for Comprehensive Transportation Big Data Application Technology, Beijing
+100191, China, and also with the State Key Laboratory of CNS/ATM, Beijing
+100191, China (e-mail: ruohengli@buaa.edu.cn; zhongyaoliu@buaa.edu.cn;
+zhuxi@buaa.edu.cn; xbcao@buaa.edu.cn).
+Lin Li is with the National Computer Network Emergency Response
+Technical Team, Coordination Center of China, Beijing 100029, China
+(e-mail: lilin@cert.org.cn).
+Digital Object Identifier 10.1109/TIM.2025.3547479
+
+costs through predictive maintenance. Similarly, in healthcare,
+the early detection of anomalies in heart rate variability, blood
+glucose levels, and respiratory patterns can be lifesaving for
+patients, facilitating timely medical interventions [6].
+The early methods of anomaly detection relied on statistical techniques such as extreme value theory [9] and
+statistical tests [4], [10]. However, as data has become
+high-dimensional and non-stationary, these statistical methods
+have become less effective due to their strict assumptions about
+data distribution. To overcome these drawbacks, predictionbased [11], [12] and reconstruction-based methods [13] that
+are empowered by deep learning methods have emerged. These
+techniques rely on clean data to learn normal representations
+and identify data with significant prediction or reconstruction errors as anomalies. However, labeled data is costly,
+and clean datasets are often difficult to obtain, which limits
+the adaptability of these methods. In contrast, density-based
+methods are less dependent on labels and quality of training
+data, identifying data distributed in the sparse regions as
+anomalies through density estimation. Nevertheless, classical
+techniques in this category, such as kernel density estimation
+(KDE) [10] and Gaussian mixture models (GMMs) [14],
+face challenges in effectively managing high-dimensional
+time series.
+In recent years, density-based approaches have turned to
+normalizing flow models, a type of deep generative model
+that enables flexible density estimation through an invertible
+transformation [16], [17]. Normalizing flows were first introduced for time series anomaly detection by GANF [18], which
+augments the flow model with a directed acyclic graph to better
+capture temporal dependencies, thus improving the accuracy
+of the estimation. However, GANF estimated the density for
+all series using a unified distribution, ignoring the specific
+characteristics of individual series. To address this limitation,
+MTGFLOW [19] was proposed, mapping different time series
+into distinct Gaussian distributions. However, MTGFLOW
+overlooked intra-series temporal information, limiting the estimation accuracy of the normalizing flow. The above methods
+still share some limitations that need improvement.
+1) Insufficient utilization of decomposed time series: Time
+series can be decomposed into low-frequency trend
+and high-frequency seasonal components (as shown in
+Fig. 1) [20], offering detailed and diverse views for
+temporal analysis [21]. However, effectively utilizing
+decomposed components to enhance anomaly representation in density-based methods remains under-explored.
+2) Insufficient mining of contextual dependencies in time
+series: Anomalies typically exhibit different correlations
+
+1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+2511614
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 1. Original time series as well as the trend and seasonal components
+extracted from it through seasonality-trend decomposition [7]. Both of the
+original series are selected from the PSM dataset [8].
+
+This article is organized as follows. Section II reviews
+the related work on time series decomposition and anomaly
+detection. Section III details our findings on the density
+inconsistency of anomalous time series and provides some
+background information on the normalizing flow models.
+Section IV presents a detailed description of the proposed
+model, followed by extensive experiments that demonstrate
+the performance of the proposed model in Section V. Finally,
+Section VI summarizes this article and presents some limitations of our work.
+II. R ELATED W ORKS
+
+with their adjacent time points [22]. Current anomaly
+detection methods primarily focused on modeling temporal correlation between different series but overlooked
+the contextual information within individual time series,
+degrading the accuracy of density estimation and
+anomaly detection.
+3) Limited robustness against anomalies during model
+training: Normalizing flows do not depend heavily on
+a clean training set. However, a training set with many
+abnormal time series may cause models to misinterpret
+frequent anomalous patterns as normal. Therefore, the
+strategy should be designed to enhance model tolerance
+against anomalies.
+To address the above challenge, we propose consistencyenhanced normalizing flow (ConFlow). Compared with
+previous works that based on the normalizing flow
+model [18], [19], we further utilize time series decomposition
+and find that abnormal decomposed time series often show
+poor consistency in density estimation (details elaborated in
+Section III). We utilize this generalizable characteristic of
+anomalies and design a consistency-mask loss reweight module to enhance model robustness and discriminative ability.
+Additionally, we encode contextual relevance within individual
+time series using self-attention, which captures subtle variations in time series so as to help anomaly detection. Overall,
+our model contains three key innovative components. First,
+a cascade decomposition and mixing module to iteratively
+refine the discriminative decomposed components. Second,
+context-aware normalizing flow that embeds both inter- and
+intra-series correlation for accurate density estimation. Third,
+a consistency-mask loss reweight module that utilizes the
+consistency of decomposed components to enhance model
+robustness and discriminative ability.
+Our main contributions can be summarized as follows.
+1) We propose an enhanced normalizing flow model that
+utilizes cascade decomposition consistency and contextual dependencies within time series to improve
+detection accuracy and robustness.
+2) We incorporate a self-attention mechanism to capture
+contextual correlations and design a loss reweight and
+mask module that utilizes the density inconsistency of
+anomalies to enhance model performance.
+3) We validated the effectiveness of our approach on
+five benchmark datasets, demonstrating superior performance compared to eight state-of-the-art (SOTA) time
+series anomaly detection methods.
+
+Considering that time series decomposition serves as the
+foundation of ConFlow, we survey the approaches of time
+series decomposition before reviewing the time series anomaly
+detection methods.
+A. Time Series Decomposition
+Time series typically consist of multiscale periods and
+diverse underlying patterns [20]. Decomposition techniques
+can help to separate these patterns [23], thereby improving
+data utility and feature representation quality. In recent years,
+decomposition has become integral to various time series tasks
+such as forecasting, classification, and anomaly detection,
+contributing to several SOTA methods like TimeMixer [24]
+and FEDformer [25].
+Commonly used time series decomposition methods include
+discrete wavelet transformation [26] and seasonality-trend
+decomposition [27], both of which divide time series into
+high-frequency seasonal components and low-frequency trend
+components [28]. Wu proposed a seasonality-trend decomposition block [7] using moving average pooling to separate trend
+and seasonal components. This method is simple to implement
+and integrate with deep learning models, offering a fast and
+scalable solution for time series decomposition.
+Recently, the time series decomposition module has been
+incorporated into several prediction-based and reconstructionbased time series anomaly detection methods, such as
+MEGA [20] and TimesNet [29], achieving improved performance by combining anomaly scores across different decomposed components. However, effectively utilizing decomposed
+time series in density-based anomaly detection methods
+remains a challenge. Decomposition often leads to varying
+density estimations and inconsistent anomaly scores, as shown
+in Fig. 2. Simply combining derived anomaly scores from the
+original series and its decomposed components can produce
+confounded results and achieve poor anomaly discriminative
+ability [as shown in Fig. 2(d)]. Thus, exploring a generalizable anomaly representation of decomposed series is
+essential to enhance the discriminative ability of density-based
+methods [30].
+B. Time Series Anomaly Detection
+Generally, time series anomaly detection models can be
+classified into supervised and unsupervised ones. Supervised models rely on high-cost human labels, thus making
+
+LI et al.: DETECTING MULTIVARIATE TIME SERIES ANOMALIES WITH CASCADE DECOMPOSITION CONSISTENCY
+
+2511614
+
+Fig. 2. Normalized anomaly scores on PSM test set [8] achieved by the MAF [15] for (a) original, (b) trend, and (c) seasonal time series. (d) Score
+accumulation depicts the normalized score sum of (a)–(c). The overlap (magenta) between the normal (indigo) and abnormal (salmon) histograms indicates
+the discriminative ability of the model.
+
+unsupervised methods preferable in most cases. Specifically, unsupervised methods can be broadly classified into
+three types.
+1) Prediction or reconstruction-based methods, which aim
+to learn representations of normal sequences and identify
+anomalies based on prediction [31] or reconstruction
+errors [32], [33]. Recent advanced architectures like
+Transformer enhance these methods with improved
+global and local perception ability on time series,
+thereby boosting anomaly detection performance. Examples include TranAD [34] and DTADD [35]. Generative
+models, such as autoencoder [20], [33], [36] and generative adversarial network (GAN) [37], [38], [39], also
+demonstrate their strong ability in representation learning and reconstruction. However, these models often
+rely on a training set without anomalies to learn normal representation [37], which can reduce the general
+applicability of these methods.
+2) Distance-based methods, such as local outlier factors
+(LOFs) [40] and isolation forests [41], which identify
+anomalies by high pairwise distances between series
+features. However, these methods struggle to handle
+complex, high-dimensional data due to the curse of
+dimensionality. As the dimensionality increases, the
+pairwise distance between any two points becomes
+nearly equal, making it difficult to distinguish between
+normal and anomalous points. Although some methods,
+such as DeepSVDD [42] and DeepSAD [43], extend the
+traditional distance-based approaches by incorporating
+deep learning methods, they still face challenges in
+handling extremely high-dimensional spaces and need
+a relative clean training set to learn a hypersphere to
+separate anomalies from normal data.
+3) Density-based methods, which identify anomalies as
+observations with low density by density estimation. These approaches do not impose restrictions on
+data distribution and offer high adaptability. Classical
+density-based methods such as kernel density estimate [10] and GMMs [44] struggle with complex,
+high-dimensional data. DAGMM [14] improves the
+GMMs by combining it with autoencoder but still has
+limitations when applied to multivariate time series.
+Normalizing flows can address these issues [17], leveraging reversible and differentiable transformations to
+
+map complex distributions into standard ones, thereby
+facilitating density estimation and anomaly detection [18], [19]. However, the performance of normalizing flow on time series detection has not been fully
+exploited. Further efforts should be made by exploring
+more temporal features of series and improving model
+robustness.
+III. P RELIMINARY
+In this section, we present our experiments and findings
+on the consistency feature of anomalies within decomposed
+series and provide some background information about normalizing flow.
+A. Consistency Among Decomposed Time Series
+We measured the density consistency among time series
+and their decomposed components. The density was estimated
+using masked autoregressive flows (MAFs) [15], a variant of
+normalizing flow. Specifically, we first progressively decomposed the series in each detection window (set to 60 timestep)
+into trend and seasonal components using average pooling [7].
+The original series and their decomposed components were
+input into MAF to map distributions. We used the trained
+model to estimate the density of both the original and decomposed series. We then calculated the Kullback–Leibler (KL)
+divergence between their density estimation, with higher KL
+divergence indicating lower consistency. Experiments were
+conducted on five datasets: PSM [8], SWaT [45], WADI [46],
+MSL [31], and SMD [32].
+We applied the bootstrap method [47] to calculate 95%
+confidence intervals (CIs) of the KL divergence sum of normal
+and abnormal series. The number of bootstrap samples was set
+to align with the number of specific series. We recorded the
+CIs, means, and medians of the KL divergence sums in Table I.
+Additionally, Fig. 3 provides a comparative visualization for
+normal and abnormal series. The scatterplot compares detailed
+KL divergence between the different components. The boxplot
+compares the KL divergence sum between normal and abnormal series.
+Overall, the results show that the density consistency
+for normal time series is significantly higher than that for
+anomalous series. As shown in Table I and Fig. 3, normal time series generally exhibit lower KL divergence with
+
+2511614
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+TABLE I
+S TATISTIC OF KL D IVERGENCE S UM A MONG D ECOMPOSED T IME S ERIES
+
+Fig. 3. Comparison of KL divergence among normal and abnormal decomposed series on PSM, SWaT, SMD, MSL, and WADI datasets. The 3-D scatterplot
+shows the KL divergence of density estimation between trend/original, seasonal/original, and seasonal/trend series. Boxplot compares the KL divergence sum
+for normal (blue) and abnormal (orange) series, with extreme outliers filtered out and box width proportional to the number of series. (a) PSM. (b) SWaT.
+(c) SMD machine-1-1. (d) MSL. (e) WADI.
+
+narrower CIs, indicating higher density consistency. For example, in the PSM dataset, the mean of KL divergence sum
+for normal series is 0.226, with 95% CI of 0.208–0.245,
+while the mean for anomalous series shows a significant
+increase as 5.017, with 95% CI as 3.248–7.134. Similar
+trends are observed in the SWaT, SMD, MSL, and WADI
+datasets. In some datasets, the mean of KL divergence for
+anomalous series can be significantly affected by extreme
+outliers, resulting in a high mean value while the median
+remains much lower. For instance, the median for anomalous
+series in MSL is 0.086, similar to that of normal series
+(0.081). This occurs because anomaly labels are applied
+to entire windows of multivariate series instead of individual series. As shown in Fig. 4(a), several series (such as
+Features 2, 3, 4, 5, and 7) are labeled as anomalous but display
+the same pattern and exhibit low KL divergence.
+We also find that density consistency has limitations in helping discriminate anomalies within the datasets where normal
+series exhibit inconsistent patterns. For instance, in Fig. 4(b),
+Feature 6 is a normal series but displays inconsistent spikelike patterns, resulting in high KL divergence among the
+
+data density distribution of its decomposed components.
+In these cases, the decomposed components of a normal
+series may also show low-density consistency due to their
+inherent instability, which reduces the effectiveness of using
+density consistency as a distinguishing factor of an anomaly.
+Despite this limitation, density consistency can differentiate frequency variations of the spike-like signals, measuring
+13.82 for the higher-frequency spike [Feature 6 in Fig. 4(a)]
+and 8.18 for the lower-frequency spike [Feature 6 in Fig. 4(b)].
+This also indicates the effectiveness of density consistency
+in detecting frequency-related anomalies within spike-like
+signals.
+To conclude, although using density consistency among
+decomposed series to represent anomalies has certain limitations, it remains a valuable and generalizable representation
+to identify anomalies.
+B. Normalizing Flow Models
+Density-based methods identify anomalies as data points
+with low density in the data distribution. Normalizing flow
+
+LI et al.: DETECTING MULTIVARIATE TIME SERIES ANOMALIES WITH CASCADE DECOMPOSITION CONSISTENCY
+
+2511614
+
+Fig. 4. Illustration of (a) abnormal and (b) normal series selected from MSL dataset, with KL divergence sum among their decomposed series marked above
+figures. In MSL, the time series are named by features, labeled as Feature 1, Feature 2, Feature 3, Feature 4, and so on, corresponding to different sensor
+measurements.
+
+w and trend components x w . These
+Fig. 5. Overview of ConFlow. Time series in a detection window xow are first decomposed and mixed to extract seasonal xmh
+ml
+components are then processed to encode conditional information Csw between and within series, followed by MAF that is used for mapping distributions.
+s ∈ {o, ml, mh} represents the original, trend, and seasonal components, and Agg. denote aggregate information from different series. After that, density
+consistency among decomposed series is measured and used for loss reweight and training mask, where the reweight loss represents anomaly scores.
+
+models facilitate this process by mapping data from complex distribution x ∈ R D into simpler standard distribution
+z ∈ R D , resulting in more straightforward density estimation [48] and easier anomaly detection. By normalizing flow,
+we can transform the observed data and compute its likelihood
+using the change of variable formula
+PX (x) = PZ (z) det
+
+∂ fθ
+∂xT
+
+(1)
+
+where PZ (z) is the target distribution, z = f θ (x) is the
+transformation function, and | det(∂ f θ /∂ x T )| is the Jacobian
+determinant of the transformation. Anomalies can be detected
+when the likelihood PX (x) falls below a threshold ζ
+PX (x) = PZ (z) det
+
+∂ fθ
+<ζ
+∂xT
+
+(2)
+
+where ζ is chosen based on the expected density of normal
+data.
+IV. P ROPOSED M ODEL
+A. Problem Statement
+We focus on unsupervised multivariate time series anomaly
+detection. The dataset consists of multiple unlabeled time
+series X = [X 1 , X 2 , . . . , X K ], where K denotes the number
+
+of series. No restrictions are placed on the training data.
+Detection is performed on a detection window of size T ,
+sliding with a step size of S. If any point within the sliding
+window w is anomalous, the window is marked as anomalous. Our goal is to learn the conditional normalizing flow
+F : (X |C) → Z (C is the conditional information) to estimate
+the density of time series. The estimated density is used for
+anomaly detection.
+B. Overall Structure
+Fig. 5 illustrates the proposed model, comprising three
+primary components.
+1) Cascade decomposition and mixing module: This module aims to extract refined trend and seasonal time series
+components from the original time series xow ∈ R K ×T .
+It first decomposes xow into trend and seasonal components through a multilevel decomposition. Then, the
+decomposed trend and seasonal time series at different
+decomposition levels are combined to represent each
+component.
+2) Context-aware normalizing flow model: This module
+aims to encode information and mapping distributions
+for time series. First, the temporal embedding of series is
+
+2511614
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+encoded through a long short-term memory (LSTM) network. The series relationship is then quantified by their
+similarity, constructing a graph that is used for aggregating inter-series information. Next, a self-attention
+mechanism is applied to the temporal embedding to
+extract intra-series contextual information. Finally, this
+information is integrated as the conditional input for
+MAF, used for mapping Gaussian distributions Z o , Z ml ,
+and Z mh .
+3) Consistency-mask loss reweight module: This module
+aims to utilize the density inconsistency of anomalies
+to enhance model robustness and discriminative ability.
+Since anomalous time series shows lower density consistency among its decomposed components, consistency
+is directly used for loss reweight to enhance representation of anomalies. Additionally, series with extremely
+high inconsistency scores are masked during training to
+enhance model tolerance against anomalies.
+The detailed descriptions of these modules are provided as
+follows.
+C. Time Series Cascade Decomposition and Mixing
+Inspired by Autoformer [7], in each detection window w,
+we decompose the series xow into trend and seasonal components using average pooling. This process separates the
+low-frequency trend and high-frequency seasonality, formulated as
+
+xlw = Avg Pool Padding xow
+(3)
+x hw = xow − xlw .
+(4)
+Here, xlw and x hw represent the trend and seasonal components, Avg Pool(·) denotes average pooling, Padding(·)
+represents reflection padding, which handles boundary conditions by mirroring edge values.
+We perform a cascade decomposition to distill more
+nuanced information. Specifically, low-frequency series are
+decomposed to yield smoother patterns, while high-frequency
+series are further decomposed to extract more fluctuating
+patterns
+
+xlwi = Avg Pool Padding xlwi−1
+(5)
+
+w
+w
+w
+x h i = x h i−1 − Avg Pool Padding x h i−1
+(6)
+where xlwi and x hwi represent the trend and seasonal components
+achieved at the ith decomposition level. The decomposed
+components across different levels are finally combined to
+represent the specific components
+
+D. Context-Aware Normalizing Flow
+After decomposition, time series and their decomposed
+components are processed through context-aware normalizing
+flow, which first captures information between and within time
+series. The embedded information is then input into MAF to
+map distributions.
+For each detection window w, LSTM is first applied on
+series to obtain a temporal encoding
+
+w
+w
+w
+.
+(9)
+Hs,t
+= LSTM xs,t
+, Hs,t−1
+w
+Hs,t
+∈ R K ×D represents the temporal encoding at t, with
+s ∈ {o, ml, mh} representing the original, trend, and seasonal
+time series, t ∈ {1, 2, . . . , T } representing the time step, and
+D representing the hidden dimension.
+To quantify the relationships among multivariate series,
+we follow MTGFLOW [49] and model series as nodes and
+similarities between nodes as directed edges, which composes
+a directed graph allowing for self-loops. For each pair of series
+w
+xs,i
+, xs,w j ∈ RT (where i, j ∈ {1, 2, . . . , K }), the similarity
+directed from node i to node j is given by
+
+⊤ √ 
+ w
+w
+exp xs,i Ms,i xs, j Ms, j / T
+w
+
+(10)
+es,i
+=
+ w
+⊤ √ 
+j
+PK
+w
+/ T
+k=1 exp x s,i Ms,i x s,k Ms,k
+
+where Ms,i , Ms, j , Ms,k ∈ RT ×T are learnable matrices for
+linear projection, and T is for numerical stability. The function
+exp(·) transforms the similarity scores into positive values,
+w
+facilitating normalization. The similarity values es,i
+j form the
+adjacency matrix of the graph
+
+ w
+w
+w
+es,11
+es,12
+· · · es,1K
+w
+w
+w
+
+ es,21
+es,22
+· · · es,2K
+
+
+w
+.
+(11)
+As =  .
+.
+.
+.
+..
+..
+.. 
+
+ ..
+w
+w
+w
+es,K
+es,K
+· · · es,K
+K
+1
+2
+We use the adjacency matrix to aggregate temporal information from high-related series, defined as
+w
+C gws,t = Aw
+s Hs,t .
+
+(12)
+
+Considering anomalies typically exhibit different correlation
+with their adjacent timesteps compared with the normal ones,
+a self-attention mechanism is applied on the window-level
+temporal embedding Hsw ∈ R K ×T ×D to capture the intra-series
+contextual information within each series. For series k, its
+contextual information can be formulated as
+ w w ⊤ !
+w
+w
+H
+Q
+Hs,k K s
+s
+s,k
+w
+C hws,k = softmax
+Hs,k
+Vsw
+(13)
+√
+D
+
+i=1
+
+w
+w
+D×D
+where Q w
+are the learnable matrices of
+s , K s , Vs ∈ R
+linear transformation, and D is the model dimensionality and
+used for numerical stability.
+The final conditional information at time t is obtained by
+integrating the above information
+
+w
+w
+Cs,t
+= ReLU C gws,t Ws,1 + Hs,t−1
+Ws,2 + C hws,t Ws,3 Ws,4 (14)
+
+where α = 1/c represents the weighting factor for each level,
+and c is the number of decomposition levels.
+
+w
+where Cs,t
+∈ R K ×T ×D , and Ws,1 , Ws,2 , Ws,3 , Ws,4 ∈
+D×D
+R
+represent the weights for inter-series aggregation,
+
+w
+xml
+=
+
+w
+xmh
+=
+
+c
+X
+i=1
+c
+X
+
+αxlwi
+
+(7)
+
+αx hwi
+
+(8)
+
+LI et al.: DETECTING MULTIVARIATE TIME SERIES ANOMALIES WITH CASCADE DECOMPOSITION CONSISTENCY
+
+temporal information, intra-series information, and sum of the
+embedding, respectively.
+Based on the conditional encoding, we stack MAF models
+to map distribution for each series. The density estimation for
+series k in detection window w is given by
+w
+PX s,k (xs,k
+)=
+
+T
+Y
+
+
+
+w
+PZ s,k,t f θs,k xs,k,t
+| Cs,k,t · Js,k,t
+
+(15)
+
+t=1
+
+!
+
+∂ f θs,k
+
+Js,k,t = det
+
+w
+∂ xs,k,t
+
+⊤
+
+.
+
+(16)
+
+Here, f θs,k represents the autoregressive function of MAF,
+Js,k,t is the Jacobian determinant of f θs,k , and Cs,k,t represents
+the conditional information for series k at t. Z s,k is the target
+mapping distribution that follows a normal distribution:
+Z s,k ∼ N (µs,k , I ),
+
+µs,k ∼ N (0, 1)
+
+(17)
+
+with mean µs,k sampled from a standard normal distribution,
+and I representing the identity covariance matrix.
+E. Consistency-Mask Loss Reweight
+The training objective of flow models is to maximize the
+joint probability of observed data, aligning the generative
+distribution closer to the true distribution. Therefore, the basic
+loss function in each mini-batch can be formulated as
+N
+
+min Ls (ϑ) =
+ϑ
+
+K
+
+
+1 XX
+w
+− log PX s,k xs,k
+N K w=1 k=1
+
+(18)
+
+where s ∈ {o, ml, mh}, ϑ represents all model parameters, N is
+the batch size, and K is the number of multivariate series.
+For each detection window, we get three density estimations
+w
+(original, trend, and seasonal). Density consistency for xo,k
+is
+measured by summing the KL divergences between the density
+estimations of original, trend, and seasonal components
+X
+
+
+w
+w
+KL PX i,k xi,k
+PX j,k x wj,k . (19)
+Lkl (xo,k
+)=
+i, j∈{o,ml,mh}
+i̸= j
+
+Since anomalous decomposed series often exhibit inconsistent density estimation, consistency is directly used for loss
+reweight, penalizing inconsistency and enhancing the anomaly
+score. The reweight loss function can be denoted as
+N
+
+minLr w (ϑ) =
+ϑ
+
+K
+
+
+
+1 XX
+w
+w
+.
+− log PX o,k xo,k
++ Lkl xo,k
+N K w=1 k=1
+(20)
+
+Even though flow models can be built with contaminated
+training data, we found that clean training data can still
+improve the performance of the model with one-class classification [49]. To mitigate the impact of extremely anomalous
+samples during training, we propose a mask strategy based on
+the density inconsistency of anomalies. In each mini-batch,
+w
+series with high consistency loss Lkl (xo,k
+) are masked during
+training to reduce their impact. The masking threshold β
+can be set as a fixed value or percentile value. Specifically,
+
+2511614
+
+Algorithm 1 Training Process of ConFlow
+N
+Input: Training set {X }i=1
+, window size T , stride size S,
+decomposition level c, learning rate η, mask
+threshold β, and epoch_num;
+Output: Optimized parameters θ and anomaly scores for
+each detection window;
+Initialize: Parameters θ; detection windows (based on T
+and S);
+for e ∈ [1, epoch_num] do
+1) Use cascade decomposition and mixing module to
+w
+w
+generate time series set {xow , xml
+, xmh
+} via Eqs.(3)
+to (8);
+2) Encode inter- and intra-series information using
+the context-aware encoder for time series via Eqs.(9)
+to (14);
+3) Generate the density estimations PX o , PX ml , and
+PX mh for time series using MAF via Eqs.(15) to (17);
+4) Measure the consistency Lkl among the density
+estimations based on Eq.(19);
+5) Reweight the loss Lo with Lkl based on Eq.(20).
+The reweight loss serves as the anomaly score;
+6) Mask series with Lkl exceeds the threshold β, and
+update the model parameters θ;
+
+a Boolean tensor Mb is generated to mask series with a
+consistency score exceeding β during training.
+Therefore, in each mini-batch, the final loss can be formulated as
+N
+K
+
+
+1 XX
+w
+w
+min L f (ϑ) =
+Mb −log PX o,k xo,k
++Lkl xo,k
+.
+ϑ
+N K w=1 k=1
+(21)
+F. Training and Testing
+The training process of ConFlow can be summarized in
+Algorithm 1.
+The anomaly score of each series at time t is measured by
+its reweight density
+
+
+w
+w
+w = − log P
+Sxk,t
++ Lkl xo,k,t
+.
+(22)
+X o,k x o,k,t
+The anomaly score for each detection window is the average
+of the series involved
+K
+
+
+1 X
+w
+w
+− log PX o,k xo,k
+Sw =
++ Lkl xo,k
+.
+(23)
+K k=1
+Anomalies can be identified by setting a threshold ζ . The
+series with scores exceeding ζ are classified as anomalies. ζ is
+determined based on the overall scores of the training series,
+for instance, by using the interquartile range (IQR) method,
+setting ζ as Q 3 + 1.5 × (Q 3 − Q 1 ). Q 3 and Q 1 represent the
+75th and 25th percentiles of the overall score, respectively.
+G. Complexity Analysis
+We measure the asymptotic upper bound of computational
+complexity for each detection window using big O notation [50], represented by a function of the input and omitting
+
+2511614
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+constant factors and lower order terms. For each detection
+window, the input of the model is related to the number of
+series K , the window size T , and the model dimension D.
+We first analyze the time complexity of ConFlow, denoted
+as T (K , T, D). The cascade decomposition and mixing
+module has a time complexity linear with the input
+time series, represented as O(K × T ). The context-aware
+encoding module encompasses several operations having
+certain time complexity: temporal encoding by LSTM
+O(K × T × D 2 ) [51], graph construction via similarity calculation O(K 2 × T × D), inter-series information
+aggregation O(K 2 × T × D), and intra-series correlation
+using self-attention O(K × T 2 × D) [52]. Subsequently, the
+MAF maps the distributions with a time complexity of
+O(K × T × D 2 ) [53]. The consistency-mask loss reweight
+module involves: mask generation O(K × T × log(K T ))
+and loss reweight operations O(K × T ). The dominant terms
+in the time complexity depend on the relative sizes of
+K , T , and D, and can be denoted as: T (K , T, D) =
+O(max(K × T 2 × D, K 2 × T × D, K × T × D 2 )).
+Space complexity measures the storage usage
+as the input increases. The cascade decomposition
+and mixing module requires O(K × T ) space. The
+context-aware encoding module involves: temporal
+encoding by LSTM O(K × T × D) [51], graph
+construction O(K 2 × T × D), inter-series information
+aggregation O(K × T × D), and intra-series correlation
+calculation O(K × T 2 × D). The MAF module utilizes
+O(K × T × D) space. Both the mask generation and
+the loss reweight module require O(K × T ) space. The
+dominant terms in the space complexity also depend on the
+relative sizes of K , T , and D, which can be denoted as:
+S(K , T, D) = O(max(K × T 2 × D, K 2 × T × D)).
+V. E XPERIMENTS
+This section presents various experiments that answer the
+following questions about our model ConFlow.
+Q1: Accuracy: How accurately does our method detect
+anomalies compared to other baselines? Can our model
+pinpoint anomalous portions of the time series?
+Q2: Robustness: How robust is our model when dealing
+with contaminated data with different ratios? How do
+different hyperparameters impact model performance?
+Q3: Explainability: How and why do the modules designed
+in our model improve anomaly discriminative ability?
+A. Experimental Details
+We begin by detailing our experimental setup, covering
+dataset configurations, baseline models, and related settings
+in experiments.
+1) Dataset Setup: We selected five publicly available
+datasets to evaluate model performance. SWaT [45] measures
+51 sensors from a real-world industrial water treatment facility.
+PSM [8] comprises 25 distinct features of server nodes from an
+eBay application. MSL [31] consists of data from 55 sensors
+on NASA’s Mars rover. SMD [32] contains 38 small-scale
+
+TABLE II
+DATASET I NFORMATION
+
+datasets collected from 38 machines within an internet company. WADI [46] includes data from 123 actuators in a water
+distribution testbed.
+Instead of using the conventional clean training set in
+most previous work [22], we followed the dataset partitioning
+strategy proposed by GANF [18] to obtain a contaminated
+but realistic training set. Specifically, we divided the original
+test set into training, validation, and testing sets by a ratio
+of 6:2:2. In this way, all datasets contain both normal and
+abnormal sequences, better reflecting real-world scenarios.
+Detailed statistics on the training and testing datasets, including timestamps and anomaly ratios, are provided in Table II.
+2) Baselines: To assess the performance of ConFlow,
+we compared it against eight SOTA methods commonly used
+in multivariate time series anomaly detection. These baselines
+were selected to represent three core categories of anomaly
+detection techniques mentioned in Section II: distance-based,
+reconstruction-based, and density-based methods. Specifically,
+DeepSVDD and DeepSAD are distance-based methods that
+map normal time series into a hypersphere, identifying the
+data outside the hypersphere as anomalies. ALOCC, USAD,
+and FITS are reconstruction-based methods that trained on
+clean data to learn normal representations, detecting anomalies by reconstruction errors. Lastly, DAGMM, GANF, and
+MTGFLOW are density-based methods that align closely
+with ConFlow by identifying the data points distributed in
+low-density regions as anomalies. These methods were chosen
+for their representativeness and evaluated under a unified
+dataset setting.
+A brief introduction to each baseline is as follows.
+1) DeepSVDD [42]: A distance-based method that maps
+normal data into a predefined hypersphere using a deep
+neural network, with data outside this boundary detected
+as anomalies.
+2) DeepSAD [43]: An extension of DeepSVDD utilizes
+labeled data to enhance anomaly detection performance.
+3) ALOCC [54]: A reconstruction-based approach uses
+GANs to reconstruct time series so that anomalies are
+identified based on reconstruction error.
+4) USAD [55]: A reconstruction-based method employs a
+two-phase autoencoder architecture, detecting anomalies
+based on reconstruction deviations.
+5) FITS [56]: A reconstructed-based methods that empowered by representation ability of frequency interpolation.
+6) DAGMM [14]: A density-based method that combines
+a deep autoencoder with a GMM to enhance the density
+estimation ability.
+
+LI et al.: DETECTING MULTIVARIATE TIME SERIES ANOMALIES WITH CASCADE DECOMPOSITION CONSISTENCY
+
+2511614
+
+TABLE III
+E XPERIMENTAL PARAMETERS OF C ON F LOW IN C OMPARATIVE E XPERIMENTS
+
+7) GANF [18]: A density-based model that integrates
+Bayesian Networks with flow models, identifying data
+in low-density regions as anomalies.
+8) MTGFLOW [19]: An improved variant of GANF, mapping different time series into different distributions to
+improve detection accuracy.
+3) Experimental Setting: All experiments were conducted
+on an Ubuntu 20.04.5 LTS server with 192 GB of memory,
+an Intel Xeon Gold 6242R CPU at 3.10 GHz, and a GeForce
+RTX 3090 graphics card. In the comparison study, we set
+the anomaly detection window size to 60 and the stride size
+to 10 for all experiments. Our model was implemented in
+PyTorch version 1.7.1 with CUDA 12.4. Each model was
+trained for 40 epochs using the Adam optimizer with a learning
+rate of 0.002 and a weight decay of 0.0005. The hidden
+dimension for all modules was set to 32. For the batch size,
+we used 512 for the SWaT dataset and 256 for the other
+datasets. Similarly, the decomposition level was set to 3 for
+both SWaT and WADI datasets, and to 2 for the others.
+Detailed parameter settings of our model are provided in
+Table III. For the baseline methods, we used publicly available
+implementations under the contaminated training setting. The
+code for DeepSVDD, DeepSAD, ALOCC, and GANF was
+obtained from [57], while the code for USAD, DAGMM,
+FITS, and MTGFLOW was obtained from [58], [59], [60],
+and [61], respectively. We retained their original network
+parameters and trained them for 40 epochs to ensure a fair
+comparison.
+For the parameter selection of our model, we aligned
+the general parameters such as window size, stride size,
+learning rate, weight decay, batch size, block size, and
+hidden dimension with those of the SOTA density-based
+method MTGFLOW (as recorded in Table III). After fixing
+these parameters, we treated others, such as decomposition level and mask ratio, as tunable hyperparameters,
+whose values are optimized through extensive experiments.
+Specifically, we evaluated decomposition levels from the set
+{1, 2, 3, 4} on all datasets, while the mask ratio was chosen
+from {Q 2 , Q 3 , Q 3 + 1.5 × IQR} for each mini-batch. The
+optimal decomposition levels identified were 3 for SWaT and
+WADI, and 2 for PSM, MSL, and SMD. The best mask
+ratio was consistently found to be Q 3 + 1.5 × IQR for all
+datasets. Besides, in our parameter study, we show how block
+size, window size, decomposition level, and mask ratio affect
+performance of our model.
+4) Evaluation Metrics: We assessed model performance
+using the area under the receiver operating characteristic curve
+
+(AUC-ROC), precision (P), recall (R), and F1 score (F1),
+evaluating different aspects of model performance. AUC-ROC
+captures the trade-off between true positive and false positive
+rates across different thresholds, with higher values indicating
+better discriminative performance. AUC-ROC is evaluated
+based on the anomaly scores assigned by the model. Following
+the methodology of MTGFLOW [19], we reported the average
+and standard deviation of AUC-ROC over five random seed
+settings.
+In contrast, precision (P), recall (R), and F1 score (F1)
+evaluate model detection performance based on a specific
+point-level threshold. A detection window is classified as
+abnormal if any timestep within the window exceeds the
+threshold. Consistent with MTGFLOW [19], we set the threshold as Q 3 + 1.5 × (Q 3 − Q 1 ) of the anomaly scores from the
+training sets. Point-adjusted strategy was employed [20], [56]
+when evaluating P, R, and F1.
+B. Performance Comparison
+1) Performance Analysis: We compared ConFlow with
+eight baselines, and the results are recorded in Table IV
+(AUC-ROC) and Table V (P, R, and F1 scores). ConFlow
+consistently outperformed all baselines in AUC-ROC across all
+datasets, achieving improvements over the second-best method
+(MTGFLOW) of 5.5% on SWaT, 2.6% on PSM, 1.1% on
+MSL, 1.0% on SMD, and 0.7% on WADI. ConFlow also
+demonstrated stable performance across five random experiments, with the standard deviation of AUC-ROC remaining at
+a low level. In terms of F1 score (Table V), ConFlow achieved
+competitive performance against the best-performing baselines
+(FITS and MTGFLOW), with improvements of 6.03% on
+SWaT, 0.75% on MSL, 0.32% on SMD, and 1.14% on
+WADI. ConFlow attained the best recall across all datasets
+by leveraging the inconsistency feature of anomalies, without
+sacrificing much precision.
+We further analyzed the performance of the models according to their categories. First, distance-based methods such
+as DeepSVDD and DeepSAD showed poor performance on
+all metrics across datasets because they lacked mechanisms
+to encode temporal dependencies. Moreover, DeepSVDD
+requires clean datasets to learn a hypersphere that surrounds
+normal representations. However, the contaminated training
+sets in our setting disrupted the construction of a discriminative hypersphere. Second, reconstruction-based methods
+like ALOCC and USAD also exhibited poor performance as
+they lacked the ability to capture subtle variations among
+time series. Conversely, FITS outperformed ALOCC and
+
+2511614
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+TABLE IV
+C OMPARISON OF AUC-ROC (%) B ETWEEN C ON F LOW AND BASELINE M ODELS
+
+TABLE V
+C OMPARISON OF P RECISION (%), R ECALL (%), AND F1 S CORES (%) B ETWEEN C ON F LOW AND MTGFLOW
+
+Fig. 6. Comparison of anomaly scores rated by MTGFLOW and ConFlow for four selected series segments. True classification consists of the segments
+of true positive and true negative. Anomaly thresholds for ConFlow (blue) and MTGFLOW (black) are marked in each sub-figure. (a) SWaT Segment 1.
+(b) SWaT Segment 2. (c) PSM Segment 1. (d) PSM Segment 2.
+
+USAD by leveraging the robust representation capabilities
+of frequency interpolation, achieving the highest F1 score
+on the PSM dataset. However, its discriminative ability on
+different thresholds (AUC-ROC) remained unsatisfactory, primarily because a contaminated training set compromised its
+discriminative performance. Third, density-based methods,
+with the exception of DAGMM, showed good discriminative
+performance (AUC-ROC). The unsatisfactory performance of
+DAGMM was mainly due to its shortcomings in capturing
+relationships between time series. GANF and MTGFLOW
+exhibited threshold-invariant discriminative ability since they
+assign anomaly scores based on the probability of the time
+series. However, these methods had limitations in exploring
+the generalizable and contextual features of anomalies, degrading the detection ability. ConFlow outperformed GANF and
+MTGFLOW on both F1 scores and AUC-ROC across all five
+datasets, attributed to its utilization of cascade decomposition
+consistency and contextual information embeddings. Furthermore, ConFlow demonstrated consistent performance across
+
+five different random seeds (standard deviation of AUC-ROC
+decreases 0.9% on SMD compared with MTGFLOW), primarily due to the consistency-mask strategy that enhance model
+robustness.
+We further visualized the normalized anomaly scores rated
+by ConFlow and MTGFLOW in selected time segments,
+as illustrated in Fig. 6. In each sub-figure, the true anomalous segments are highlighted with a red background. The
+blue and black dashed lines represent the anomaly scores
+from MTGFLOW and ConFlow, with horizontal dashed lines
+denoting the anomaly thresholds. False positives and false
+negatives are marked in orange and red for MTGFLOW,
+and yellow and brown for ConFlow. As shown in Fig. 6(a),
+ConFlow was more sensitive to anomalies with more true
+positives and true negatives, which is due to the contextual
+embedding that models intra-series dependency. MTGFLOW
+had a higher false positive rate and a false negative rate [as
+shown in Fig. 6(b) and (c)] due to the lack of representation
+of anomalies.
+
+LI et al.: DETECTING MULTIVARIATE TIME SERIES ANOMALIES WITH CASCADE DECOMPOSITION CONSISTENCY
+
+Fig. 7. Performance comparison of AUC-ROC between MTGFLOW and
+ConFlow under different training contamination ratios. Line represents the
+mean value and shadow represents the standard deviation. (a) SWaT. (b) PSM.
+
+2) Robustness Comparison Under Different Contaminated
+Ratios: We divided the training data of SWaT and PSM into
+training sets with varying contamination ratios to evaluate the
+model’s robustness under different contamination rates, while
+keeping the testing set fixed. The training set anomaly ratio
+for SWaT ranges from 5.2% to 17.6%, and for PSM, it ranges
+from 23.2% to 38.7%. The anomaly ratios of the testing sets
+are 5.2% for SWaT and 30.2% for PSM.
+We compared the model performance of ConFlow with
+MTGFLOW under training set with different contamination ratios. The results are shown in Fig. 7. The shaded
+areas in the figures indicate the standard deviations of
+model performance across five random seeds. Generally, ConFlow demonstrates more robust and superior performance.
+Compared to MTGFLOW, our model consistently maintains
+higher AUC-ROC scores. In the SWaT dataset [Fig. 7(a)],
+as the contamination ratio increases, the standard deviation of
+MTGFLOW shows an increasing trend, while that of ConFlow
+remains low. In PSM dataset [Fig. 7(b)], the performance of
+ConFlow is more stable compared to MTGFLOW, with the
+standard deviation consistently remaining at a low level.
+C. Result Visualization
+Anomalies can be traced back to individual sensors based
+on anomaly scores. We selected six sensors in SWaT and
+visualized their anomaly scores and corresponding original
+time series (Fig. 8). The thresholds are marked on the right
+side of each subplot. Notably, some sensors exhibited similar
+responses to the same anomaly. For example, AIT502 and
+FIT504 showed related analogous reactions. This similarity
+may suggest that these sensors were highly connected to
+each other and experienced cascade failures. Additionally,
+anomalies do not occur across all sensors. For example,
+LTT101 shows an anomalous pattern on the first and fourth
+true labels, while others do not. LIT301 shows an anomalous
+pattern on the last true label, whereas other sensors remain
+unaffected.
+D. Module Ablation and Visualization
+In this section, we perform an ablation study to evaluate the
+effectiveness of the module design.
+1) Module Ablation: We evaluated the effectiveness of
+the modules designed in ConFlow by testing various combinations on the PSM and SWaT datasets. The modules
+include context-aware encoding (C), loss reweight (L), and
+consistency-mask (M). ConFlow without specific modules
+is denoted as ConFlow/(module abbreviation). For example,
+
+2511614
+
+ConFlow/(C, L, M) indicates the model without all three
+modules.
+The ablation results are presented in Table VI. The base
+model, ConFlow/(C, L, M), achieved performances of 84.7%
+on SWaT and 85.3% on PSM. Among the individual modules,
+incorporating only the loss reweight module [ConFlow/(C,
+M)] provided the most significant improvement, enhancing
+performance by 3.5% on SWaT and 1.7% on PSM. This
+indicates that the loss reweight module (L) is the most effective
+single module, especially on the SWaT dataset. Combining the
+loss reweight module with the context-aware encoding module
+[ConFlow/(M)] resulted in further improvements, achieving
+a 4.6% increase on SWaT and 2.1% on PSM. Including
+all modules (ConFlow) yielded the best performance, with
+improvements of 5.6% on SWaT and 3.0% on PSM compared to the base model. These results demonstrate that
+the loss reweight module significantly enhances performance,
+and combining it with other modules leads to further gains,
+particularly on the SWaT dataset.
+2) Visualization of Context-Aware Encoding Module: We
+visualized the intra-series contextual encoding of four selected
+series (Series 1, Series 2, Series 3, and Series 24) from
+the PSM dataset, as shown in Fig. 9. For each detection
+window, the attention embeddings were calculated using the
+normalized sum of the attention scores. As depicted in the
+figure, different segments of the time series exhibited distinct
+patterns, and their contextual embeddings evolved over time.
+Notably, the context-aware encoding for anomalies displayed
+different patterns.
+Specifically, for Series 1, both the time series values and
+the attention embeddings showed a relatively stable pattern
+most of the time. However, the attention scores significantly increased during certain time intervals (i.e., timestamps
+13 000–14 000, 16 000–17 000, and 28 000–29 000), where a
+potential contextual and point anomalies appeared during these
+periods. Similarly, Series 2, 3, and 24 also exhibit unique
+attention embeddings when anomalies occur.
+E. Parameter Study
+We tested different hyperparameters to evaluate the robustness of the model.
+1) Decomposition Level, Window Size, and Flow Block:
+We analyzed the impact of various hyperparameters, including
+decomposition level, window size, and the number of flow
+model blocks.
+First, we fixed the window size at 60 and varied the
+decomposition levels and the number of flow blocks to assess
+their effects on model performance. The results are shown
+in Table VII. A larger model (with more flow blocks) may
+lead to overfitting and does not necessarily improve detection
+performance, especially when the number of blocks exceeds
+two. Moreover, a higher decomposition level does not always
+enhance model performance, and the optimal decomposition
+level varies across datasets. Specifically, with a fixed number
+of flow blocks, a two-level decomposition is optimal for the
+PSM dataset, while a three-level decomposition is best for the
+SWaT dataset.
+
+2511614
+
+Fig. 8.
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Six series selected from SWaT and their corresponding anomaly scores.
+
+TABLE VI
+S TUDY OF M ODULE A BLATION
+
+TABLE VII
+PARAMETER S TUDY OF B LOCK N UMBER AND D ECOMPOSITION L EVEL
+
+TABLE VIII
+PARAMETER S TUDY OF B LOCK N UMBER AND W INDOW S IZE
+
+Fig. 9. Four series selected from PSM test set and corresponding attention
+embedding.
+
+Next, we fixed the decomposition level (3 for SWaT and
+2 for PSM) and conducted experiments with various detection
+window sizes and number of flow blocks to assess model
+robustness. The results are presented in Table VIII. For the
+PSM dataset, detection performance degrades as the window
+size increases, whereas for the SWaT dataset, performance
+improves with larger window sizes. Specifically, PSM achieves
+
+the best performance with four flow blocks and a window size
+of 40, while SWaT demonstrates optimal performance with
+two flow blocks and a window size of 100. These findings
+suggest that selecting an appropriate window size is crucial
+and should be tailored to the characteristics of each specific
+dataset.
+2) Consistency-Mask Ratio Analysis: We further evaluated
+the model’s performance using different consistency mask
+ratios (Table IX). Q 2 represents the 50th percentile of the
+consistency score in each mini-batch, while Q 3 represents the
+
+LI et al.: DETECTING MULTIVARIATE TIME SERIES ANOMALIES WITH CASCADE DECOMPOSITION CONSISTENCY
+
+TABLE IX
+PARAMETER S TUDY OF M ASK R ATIO
+
+75th percentile. For both datasets, increasing the mask ratio (in
+other words, lowering the mask threshold) does not improve
+model performance. The model achieves the best performance
+when the mask threshold is set at Q 3 +1.5 × (Q 3 − Q 1 ). This
+phenomenon may be attributed to the contamination ratio of
+the original training set. The training set contamination ratio is
+23.1% for PSM and 17.7% for SWaT. A high mask ratio may
+reduce the proportion of normal series in training, leading to
+performance degradation.
+VI. C ONCLUSION
+In this work, we proposed ConFlow, an unsupervised
+anomaly detection approach for multivariate time series. ConFlow is a density-based approach that utilizes the density
+inconsistency and contextual features of anomalies to enhance
+the discriminative ability of the Flow model. Extensive
+experiments demonstrate that our method outperforms other
+baselines in detecting anomalies in multivariate time series.
+ConFlow can accurately pinpoint anomalous positions within
+time series and maintains stable performance across varying
+contamination ratios.
+While ConFlow demonstrates good performance across
+most datasets, we identified a limitation when applied ConFlow to datasets where normal time series exhibit inconsistent
+patterns (such as spike-like signals in MSL). Future work will
+focus on enhancing the model’s robustness to such natural
+inconsistencies. Additionally, we are exploring methods for
+detecting early anomalies which are similar with normal
+behavior.
+R EFERENCES
+[1] X. Chen et al., “Removal of muscle artifacts from the EEG: A review
+and recommendations,” IEEE Sensors J., vol. 19, no. 14, pp. 5353–5368,
+Jul. 2019.
+[2] R. Huang, J. Li, W. Li, and L. Cui, “Deep ensemble capsule network
+for intelligent compound fault diagnosis using multisensory data,” IEEE
+Trans. Instrum. Meas., vol. 69, no. 5, pp. 2304–2314, May 2020.
+[3] J. Chen et al., “Deep reinforcement learning based resource allocation
+in multi-UAV-aided MEC networks,” IEEE Trans. Commun., vol. 71,
+no. 1, pp. 296–309, Jan. 2023.
+[4] V. Barnett and T. Lewis, Outliers in Statistical Data, vol. 3, no. 1.
+New York, NY, USA: Wiley, 1994.
+[5] G. Niu, X. Dong, and Y. Chen, “Motor fault diagnostics based on
+current signatures: A review,” IEEE Trans. Instrum. Meas., vol. 72,
+pp. 1–19, 2023.
+[6] H. Cui, C. Li, A. Liu, R. Qian, and X. Chen, “A dual-branch interactive
+fusion network to remove artifacts from single-channel EEG,” IEEE
+Trans. Instrum. Meas., vol. 73, pp. 1–12, 2024.
+[7] H. Wu, J. Xu, J. Wang, and M. Long, “Autoformer: Decomposition
+transformers with auto-correlation for long-term series forecasting,” in
+Proc. NIPS, vol. 34, Dec. 2021, pp. 22419–22430.
+
+2511614
+
+[8] A. Abdulaal, Z. Liu, and T. Lancewicki, “Practical approach to asynchronous multivariate time series anomaly detection and localization,”
+in Proc. 27th ACM SIGKDD Conf. Knowl. Discovery Data Mining,
+Singapore, Aug. 2021, pp. 2485–2494.
+[9] L. Haan and A. Ferreira, Extreme Value Theory: An Introduction, vol. 3.
+Cham, Switzerland: Springer, 2006.
+[10] M. Rosenblatt, “Curve estimates,” Ann. Math. Statist., vol. 42, no. 6,
+pp. 1815–1842, Dec. 1971.
+[11] H. Pang et al., “Asymptotic consistent graph structure learning for multivariate time-series anomaly detection,” IEEE Trans. Instrum. Meas.,
+vol. 73, pp. 1–10, 2024.
+[12] K. Guo, N. Wang, D. Liu, and X. Peng, “Uncertainty-aware LSTM based
+dynamic flight fault detection for UAV actuator,” IEEE Trans. Instrum.
+Meas., vol. 72, pp. 1–13, 2023.
+[13] Z. Zhang et al., “STAD-GAN: Unsupervised anomaly detection on multivariate time series with self-training generative adversarial networks,”
+ACM Trans. Knowl. Discovery Data, vol. 17, no. 5, pp. 1–18, Oct. 2023.
+[14] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsupervised anomaly detection,” in Proc. Int. Conf. Learn. Represent.,
+Feb. 2018, pp. 1–11.
+[15] G. Papamakarios, T. Pavlakou, and I. Murray, “Masked autoregressive
+flow for density estimation,” in Proc. Adv. Neural Inf. Process. Syst.,
+vol. 30, Dec. 2017, pp. 2338–2347.
+[16] C. Horvat and J.-P. Pfister, “Denoising normalizing flow,” in Proc. Adv.
+Neural Inf. Process. Syst., vol. 34, Dec. 2021, pp. 9099–9111.
+[17] I. Kobyzev, S. J. Prince, and M. A. Brubaker, “Normalizing flows: An
+introduction and review of current methods,” IEEE Trans. Pattern Anal.
+Mach. Intell., vol. 43, no. 11, pp. 3964–3979, Nov. 2021.
+[18] E. Dai and J. Chen, “Graph-augmented normalizing flows for anomaly
+detection of multiple time series,” in Proc. Int. Conf. Learn. Represent.,
+Jan. 2022, pp. 1–20.
+[19] Q. Zhou, J. Chen, H. Liu, S. He, and W. Meng, “Detecting multivariate
+time series anomalies with zero known label,” in Proc. AAAI Conf. Artif.
+Intell., Jun. 2023, vol. 37, no. 4, pp. 4963–4971.
+[20] J. Wang, S. Shao, Y. Bai, J. Deng, and Y. Lin, “Multiscale wavelet
+graph AutoEncoder for multivariate time-series anomaly detection,”
+IEEE Trans. Instrum. Meas., vol. 72, pp. 1–11, 2023.
+[21] L. Shen, Z. Yu, Q. Ma, and J. T. Kwok, “Time series anomaly detection
+with multiresolution ensemble decoding,” in Proc. AAAI Conf. Artif.
+Intell., May 2021, vol. 35, no. 11, pp. 9567–9575.
+[22] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer: Time
+series anomaly detection with association discrepancy,” in Proc. Int.
+Conf. Learn. Represent., Jan. 2021, pp. 1–17.
+[23] Z. Li, H. Yan, F. Tsung, and K. Zhang, “Profile decomposition based
+hybrid transfer learning for cold-start data anomaly detection,” ACM
+Trans. Knowl. Discovery Data, vol. 16, no. 6, pp. 1–28, Dec. 2022.
+[24] S. Wang et al., “TimeMixer: Decomposable multiscale mixing for
+time series forecasting,” in Proc. 12th Int. Conf. Learn. Represent.,
+May 2024, pp. 1–7. [Online]. Available: https://openreview.net/forum?
+id=7oLshfEIC2
+[25] T. Zhou, Z. Ma, Q. Wen, X. Wang, L. Sun, and R. Jin, “FedFormer:
+Frequency enhanced decomposed transformer for long-term series forecasting,” in Proc. Int. Conf. Mach. Learn., 2022, pp. 27268–27286.
+[26] Z. Chen, Y. Lou, P. He, P. Xu, and X. Zhang, “Magnetic anomaly
+detection based on attention-Bi-LSTM network,” IEEE Trans. Instrum.
+Meas., vol. 73, pp. 1–11, 2024.
+[27] Q. Wen, J. Gao, X. Song, L. Sun, H. Xu, and S. Zhu, “RobustSTL: A robust seasonal-trend decomposition algorithm for long time
+series,” in Proc. AAAI Conf. Artif. Intell., vol. 33, no. 1, Jul. 2019,
+pp. 5409–5416.
+[28] Z. Wang, X. Xu, W. Zhang, G. Trajcevski, T. Zhong, and F. Zhou,
+“Learning latent seasonal-trend representations for time series forecasting,” in Proc. Adv. Neural Inf. Process. Syst., vol. 35, 2022,
+pp. 38775–38787.
+[29] H. Wu, T. Hu, Y. Liu, H. Zhou, J. Wang, and M. Long, “TimesNet:
+Temporal 2D-variation modeling for general time series analysis,” in
+Proc. Int. Conf. Learn. Represent., Jan. 2022, pp. 1–8.
+[30] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: Dual
+attention contrastive representation learning for time series anomaly
+detection,” in Proc. 29th ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining (KDD), 2023, pp. 3033–3045.
+[31] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and
+T. Söderström, “Detecting spacecraft anomalies using LSTMs and nonparametric dynamic thresholding,” in Proc. 24th ACM SIGKDD Int.
+Conf. Knowl. Disc. Data Min., Jul. 2018, pp. 387–395.
+
+2511614
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+[32] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+detection for multivariate time series through stochastic recurrent neural
+network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Disc. Data
+Min., Anchorage, AK, USA, Jul. 2019, pp. 2828–2837.
+[33] Z. Li, Y. Sun, L. Yang, Z. Zhao, and X. Chen, “Unsupervised machine
+anomaly detection using autoencoder and temporal convolutional network,” IEEE Trans. Instrum. Meas., vol. 71, pp. 1–13, 2022.
+[34] S. Tuli, G. Casale, and N. R. Jennings, “TranAD: Deep transformer
+networks for anomaly detection in multivariate time series data,” Proc.
+VLDB Endow., vol. 15, no. 6, pp. 1201–1214, Feb. 2022.
+[35] L.-R. Yu, Q.-H. Lu, and Y. Xue, “DTAAD: Dual TCN-attention networks
+for anomaly detection in multivariate time series data,” Knowl.-Based
+Syst., vol. 295, Jul. 2024, Art. no. 111849.
+[36] X. Huang, F. Zhang, R. Wang, X. Lin, H. Liu, and H. Fan, “KalmanAE:
+Deep embedding optimized Kalman filter for time series anomaly
+detection,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–11, 2023.
+[37] S. Liu et al., “Time series anomaly detection with adversarial reconstruction networks,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 4,
+pp. 4293–4306, Apr. 2023.
+[38] B. Du, X. Sun, J. Ye, K. Cheng, J. Wang, and L. Sun, “GAN-based
+anomaly detection for multivariate time series using polluted training
+set,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12208–12219,
+Dec. 2023.
+[39] H. Liang, L. Song, J. Du, X. Li, and L. Guo, “Consistent anomaly detection and localization of multivariate time series via cross-correlation
+graph-based encoder–decoder GAN,” IEEE Trans. Instrum. Meas.,
+vol. 71, pp. 1–10, 2022.
+[40] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+density-based local outliers,” in Proc. ACM SIGMOD Int. Conf. Manage.
+Data, 2000, pp. 93–104.
+[41] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 8th
+IEEE Int. Conf. Data Min., Aug. 2008, pp. 413–422.
+[42] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf.
+Mach. Learn., 2018, pp. 4393–4402.
+[43] L. Ruff et al., “Deep semi-supervised anomaly detection,” in Proc. Int.
+Conf. Learn. Represent., Jan. 2019, pp. 1–9.
+[44] D. A. Reynolds, “Gaussian mixture models,” Encyclopedia Biometrics,
+vol. 741, nos. 659–663, pp. 1–5, 2009.
+[45] J. Goh, S. Adepu, K. N. Junejo, and A. Mathur, “A dataset to support
+research in the design of secure water treatment systems,” in Proc. Int.
+Conf. Crit. Inf. Infrastruct. Secur., vol. 10242, G. Havarneanu, R. Setola,
+H. Nassopoulos, and S. Wolthusen, Eds., Cham, Switzerland: Springer,
+2017, pp. 88–99.
+[46] C. M. Ahmed, V. R. Palleti, and A. P. Mathur, “WADI: A water
+distribution testbed for research in the design of secure cyber physical
+systems,” in Proc. Int. Workshop CySWater, Apr. 2017, pp. 25–28.
+[47] T. Hesterberg, “Bootstrap,” Wiley Interdiscipl. Rev., Comput. Statist.,
+vol. 3, no. 6, pp. 497–526, 2011.
+[48] J. Ren et al., “Likelihood ratios for out-of-distribution detection,” in
+Proc. Adv. Neural Inf. Process. Syst., vol. 32, Jan. 2019, pp. 1–9.
+[49] Q. Zhou, S. He, H. Liu, J. Chen, and W. Meng, “Label-free multivariate
+time series anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 36,
+no. 7, pp. 3166–3179, Jul. 2024.
+[50] I. Chivers, J. Sleightholme, I. Chivers, and J. Sleightholme, “An introduction to algorithms and the big O notation,” in Introduction to
+Programming With Fortran: With Coverage of Fortran 90, 95, 2003,
+2008 and 77. Cham, Switzerland: Springer, 2003, pp. 359–364.
+[51] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural
+Comput., vol. 9, no. 8, pp. 1735–1780, 1997.
+[52] F. D. Keles, P. M. Wijewardena, and C. Hegde, “On the computational
+complexity of self-attention,” in Proc. Int. Conf. Algorithmic Learn.
+Theory, Jan. 2022, pp. 597–619.
+[53] G. Papamakarios, E. Nalisnick, D. J. Rezende, S. Mohamed, and
+B. Lakshminarayanan, “Normalizing flows for probabilistic modeling
+and inference,” J. Mach. Learn. Res., vol. 22, no. 57, pp. 1–64,
+Jan. 2021.
+[54] M. Sabokrou, M. Fathy, G. Zhao, and E. Adeli, “Deep end-to-end oneclass classifier,” IEEE Trans. Neural Netw. Learn. Syst., vol. 32, no. 2,
+pp. 675–684, Feb. 2021.
+[55] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+“USAD: Unsupervised anomaly detection on multivariate time series,”
+in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Disc. Data Min., 2020,
+pp. 3395–3404.
+
+[56] Z. Xu, A. Zeng, and Q. Xu, “FITS: Modeling time series with
+10k parameters,” in Proc. Int. Conf. Learn. Represent. (ICLR), 2024,
+pp. 1–17.
+[57] E. Dai and J. Chen. (2022). GANF. [Online]. Available: https://github
+.com/EnyanDai/GANF
+[58] M. A. Z. F. Galati and J. Audibert. (2020). USAD—Unsupervised
+Anomaly Detection on Multivariate Time Series. [Online]. Available:
+https://github.com/manigalati/usad
+[59] D. S. Tan and Y. Li. (2018). Deep Autoencoding Gaussian Mixture
+Model for Unsupervised Anomaly Detection in PyTorch. [Online]. Available: https://github.com/EnyanDai/GANF
+[60] Z. Xu. (2024). FITS: Frequency Interpolation Time Series Analysis
+Baseline. [Online]. Available: https://github.com/VEWOXIC/FITS
+[61] Q. Zhou, S. He, H. Liu, J. Chen, and W. Meng. (2023). MTGFLOW.
+[Online]. Available: https://github.com/username/repository_name
+Ruoheng Li received the B.S. degree from Nanjing University of Aeronautics and Astronautics,
+Nanjing, China, in 2020, the B.S. degree from the
+Royal Melbourne Institute of Technology University,
+Melbourne, VIC, Australia, in 2020, and the M.S.
+degree with Nanjing University of Aeronautics and
+Astronautics, in 2023. She is currently pursuing
+the Ph.D. degree with Beihang University, Beijing,
+China.
+Her current research interests include data science
+and intelligent transportation.
+Zhongyao Liu received the B.E. degree from
+the School of Mechanical and Power Engineering,
+Zhengzhou University, Zhengzhou, China, in 2024.
+He is currently pursuing the Ph.D. degree with the
+School of Electronic and Information Engineering,
+Beihang University, Beijing, China.
+His current research interests include deep
+learning.
+
+Xi Zhu received the B.E. degree in electronic and
+information engineering and the M.E. degree in control science and engineering from Beijing University
+of Technology, Beijing, China, in 2010 and 2013,
+respectively, and the Ph.D. degree in signal and
+information processing from Beihang University,
+Beijing, in 2018.
+He is currently an Associate Researcher with the
+School of Electronic and Information Engineering,
+Beihang University. His research interests include
+multivariate time series analysis, spatiotemporal data
+mining, and target behavior cognition.
+Lin Li received the Ph.D. degree in electronic
+science and technology from Beihang University,
+Beijing, China, in 2018.
+He is currently a Senior Engineer with CNCERT,
+Beijing. His current research interests include AI and
+network information security.
+
+Xianbin Cao (Senior Member, IEEE) received the
+B.E. and M.E. degrees in computer applications and
+information science from Anhui University, Hefei,
+China, in 1990 and 1993, respectively, and the Ph.D.
+degree in information science from the University of
+Science and Technology of China, Hefei, in 1996.
+He is currently a Professor with the School of
+Electronic and Information Engineering, Beihang
+University, Beijing, China. His current research
+interests include intelligent transportation systems,
+air traffic management, and intelligent computation.
+PAPER_TEXT

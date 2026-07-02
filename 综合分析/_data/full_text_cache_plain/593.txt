@@ -1,0 +1,1483 @@
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+1
+
+ACHILLES: A Machine Learning Framework for
+Explainable and Generalized Automotive
+Intrusion Detection System
+Nishat I. Mowla , Member, IEEE, Kyi Thar , Member, IEEE, Sarder Fakhrul Abedin , Senior Member, IEEE,
+Aamir Mahmood , Senior Member, IEEE, Zhu Han , Fellow, IEEE, Mikael Gidlund , Fellow, IEEE,
+Kabir Fahria, Konstantinos Giapantzis, Antonios Lalas, Joakim Rosell , and Mahshid Helali Moghadam
+
+Abstract—This paper addresses the need for an explainable
+and generalized intrusion detection system (IDS) for the invehicle networks (IVNs). While machine learning (ML)-based
+IDS solutions show promising performance, there are still some
+challenges, such as the lack of trustworthiness and scarcity of
+attack representing data, hindering their adoption in the automotive cybersecurity. To address these issues, this paper proposes a
+centralized ML model training and decentralized execution-based
+framework, namely ACHILLES, that facilitates an explainable
+and generalizable automotive IDS. Under ACHILLES, different
+ML models can be trained centrally to enhance decentralized
+and onboard intrusion detection performance with multiple
+automotive datasets. In addition, we generate standard feature
+formats to assess the ML model’s generalization efficacy, where
+the quality of generalization and explainability is evaluated
+with SHapley Additive exPlanations (SHAP) by identifying the
+importance of the feature. We also propose a meta-learning
+scheme to construct suitable ML models trained by the proposed
+standard feature formats. The proposed feature format exhibits
+significant performance gain during ML model training and
+Received 26 February 2023; revised 6 January 2024, 10 May 2024, 27 June
+2025, and 28 October 2025; accepted 17 April 2026. This work was supported
+in part by the VINNOVA Fordonsstrategisk Forskning och Innovation (FFI)
+Project MAGIC-Meeting Automotive Liability Challenges through Forensics
+Soundness under Grant 2024-03687, in part by the Vinnova INTelligent
+sEcuRity SoluTIons for Connected vEhicles (INTERSTICE) Project under
+Grant 2024-00661, in part by the EU H2020 SHOW-SHared automation
+Operating models for Worldwide adoption under Grant 875530, and in part
+by the European Union and Interreg Aurora project TRUST. The Associate
+Editor for this article was R. Rajamani. (Corresponding author: Nishat
+I. Mowla.)
+Nishat I. Mowla, Sarder Fakhrul Abedin, and Kabir Fahria are with the
+Department of Industrial Systems and the Department of Computer Science,
+RISE Research Institutes of Sweden, 16440 Stockholm, Sweden (e-mail:
+nishat.mowla@ri.se; sarder.fakhrul.abedin@ri.se; fahria.kabir@ri.se).
+Kyi Thar, Aamir Mahmood, and Mikael Gidlund are with the Department of
+Computer and Electrical Engineering (DET), Mid Sweden University, 85170
+Sundsvall, Sweden (e-mail: kyi.thar@miun.se; aamir.mahmood@miun.se;
+mikael.gidlund@miun.se).
+Zhu Han is with the Department of Electrical and Computer Engineering, University of Houston, Houston, TX 77004 USA (e-mail:
+hanzhu22@gmail.com).
+Konstantinos Giapantzis and Antonios Lalas are with the Centre
+for Research and Technology—Hellas, Information Technologies Institute (CERTH/ITI), 57001 Thessaloniki, Greece (e-mail: kostasgiap@iti.gr;
+lalas@iti.gr).
+Joakim Rosell is with the School of Information Technology, Halmstad
+University, 301 18 Halmstad, Sweden (e-mail: joakim.rosell@hh.se).
+Mahshid Helali Moghadam is with the Cloud and Embedded Platform
+Domian, Traton AB, 151 36 Södertälje, Sweden (e-mail: mahshid.helali.
+moghadam@scania.com).
+Digital Object Identifier 10.1109/TITS.2026.3688299
+
+testing with four state-of-the-art controller area network (CAN)bus datasets containing real, advanced attacks. The experimental
+results indicate that developing ML models using the generated
+generalized features and the meta learning-based model building
+process leads to enhanced performance. In particular, under
+the dataset cross train-test setting, the proposed feature format
+enhances the average accuracy by 40.1% for the baseline model,
+32.4% for the meta-learned DNN, and 23.6% for the metalearned Random Forest, compared with the baseline feature
+format.
+Index Terms—In-vehicle networks (IVNs), automotive intrusion detection, generalizability, explainable AI (XAI).
+
+I. I NTRODUCTION
+
+A
+
+S CONNECTED vehicles proliferate, safety and security
+risks are rising sharply. With cyberattacks projected to
+cost the sector $505 billion by 2024 and 84.5% of remote
+attacks in 2021 [1], scalable IDS solutions are essential
+to enhance cyber threat detection for connected vehicles.
+Modern vehicles host many ECUs (e.g., PCM, CCM, BMS,
+TCU [2]) operating as distributed systems; once an internal
+network is breached, severe malfunctions and critical safety
+issues can follow [3], [4]. The attacks may originate from
+various entry points including sensors, infotainment systems,
+telematics units, or direct physical interfaces. Recent work
+reverse-engineering Kia’s IVI uncovered major software flaws
+enabling CAN-bus manipulation across affected models [5].
+The evolving threats and the advancement of attack methods highlight the need for adaptive intrusion detection and
+response systems. Machine learning (ML) solutions show high
+potential to address this challenge by enabling the IDS to learn
+from the data representing the state of the vehicle, identify
+patterns, and adapt to new threats. Thus, a trustworthy IDS
+must address two aspects: (1) explainability of decisions and
+(2) achieving generalizability for comprehensive and adaptive
+detection. However, the data representing the state of the
+vehicle under attack is scarce as not all potential attack
+scenarios are known, and even among those known, practical
+implementation on test vehicles is still limited, due to safety
+concerns, cost and resource limitations, and ethical considerations. OEMs also limit disclosure of internal network designs
+[6]. If the IDSs are trained using aggregated or vendor-agnostic
+statistical features, as shown in [3] and [7], they can work
+
+© 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+For more information, see https://creativecommons.org/licenses/by/4.0/
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+2
+
+and make inference without using proprietary layouts—which
+can promote generalizability across brands/models and also
+promote preserving the confidentiality of proprietary data.
+Following this line, we use CAN telemetry statistics (timing,
+frequency) instead of raw frames, reducing dependence on
+OEM-specific content and lowering fleet deployment costs.
+Guidance from ENISA, NHTSA [8], [9], ISO/SAE 21434
+[10], and UNECE WP.29 [11] further supports interoperable,
+lifecycle-oriented security. By leveraging high-level statistical CAN features (e.g., frequency and timing patterns of
+message IDs), the proposed IDS is able to detect threats
+without using proprietary CAN content, aligning with industry and regulatory trends toward unified, scalable security
+measures.
+A. Motivation and Challenges
+Although many ML-based IDSs have been proposed,
+deployment in automotive settings still requires investigation
+[12], [13], [14]. Common models (RF, ANN, SVM) behave
+as black-boxes [15], [16], making false-positive diagnosis and
+breach forensics difficult—especially in multi-vendor contexts
+[17], [18], [19], [20]. We address this with a generalized
+framework that supports multiple vendors while improving
+explainability and cross-dataset generalization [21]. Figure 1
+contrasts traditional vs. generalized IDS and motivates two
+core challenges:
+• Challenge I: Scalability and Vendor Specificity. Standalone, vendor-tailored feature engineering hinders reuse
+across datasets. Our approach standardizes inputs and
+applies meta-learning to stay proprietary specifics of
+individual vendors-agnostic while preserving accuracy.
+• Challenge II: Transparency and Justifiability. Black-box
+decisions erode trust. We integrate XAI (SHAP) to provide consistent, dataset-wide and per-window attributions,
+enabling validation and debugging of IDS behaviour.
+A key determinant of ML-based automotive IDS generalizability is deployment. A hybrid design, for example,
+cloud-based centralized training with on-vehicle inference
+mitigates the limits of cloud-only or vehicle-only IDS. In this
+case, the ECUs on the CAN bus host the inference model,
+while a cybersecurity service provider operates centralized
+feature engineering and meta-learning–based model building.
+This enables training with more data and compute, then distributing explainable updates to decentralized onboard models
+across vendors for tailored yet generalized performance. The
+model updates follow distributed learning practices [22] and
+can be delivered periodically or fetched opportunistically by
+the onboard IDS. There are also a number of automotive
+standards proposing integration of cryptographic primitives
+at the network layer to complement IDS functionality [3],
+[23], [24], [25], [26]. For explainability, SHAP is modelagnostic, efficient, and provides a global view by aggregating
+per-sample effects, aiding robust tuning and audit across
+models [17] unlike local-only methods such as LIME [27]
+or counterfactuals. We therefore pair SHAP with standardized
+features and meta-learning to couple local fidelity with global
+interpretability in a generalized IDS. ACHILLES uses centralized training with decentralized deployment of inference
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+model: a vendor-agnostic baseline runs fleet-wide on gateway
+ECUs. The centrally trained model generalizes across vehicle
+types and can be deployed directly, giving immediate coverage without per-model data collection. The new patterns
+learned on any automotive brand are pushed to all vehicles.
+The timing/frequency features avoid OEM payload disclosure,
+enabling collaboration. Besides, SHAP on a shared feature
+space provides consistent, auditable explanations across vehicles. Therefore, the proposed framework scales well when
+vehicle-specific data are scarce.
+B. Summary of Contributions
+We develop an ML-based automotive IDS that unifies
+explainability and generalizability for centrally supported,
+multi-vendor fleets. Our key contributions are:
+• First, we propose a centralized training + decentralized
+execution IDS for vehicles. We use SHAP to provide
+model- and feature-level explanations, enabling transparent diagnosis and tuning across vendors.
+• Second, we propose a centralized meta-learning process
+selects effective IDS configurations (DNN/RF and hyperparameters), which are then deployed to on-board units
+for on-vehicle detection.
+• We design standardized, vendor-agnostic CAN features
+and show, via theory and experiments, that the resulting
+IDS improves robustness and scalability across heterogeneous vehicles and attack types.
+We organize our paper as follows. Section II discusses
+the related works. In Section III, we describe our proposed
+framework. In Section IV, we derive the evaluation results.
+Finally, Section VI concludes the paper.
+II. R ELATED W ORKS
+We group related studies into automotive IDS, explainable
+AI (XAI) for IDS, and generalizability, and summarize remaining gaps for a deployable, generalizable, and explainable
+automotive IDS. A. Automotive Intrusion Detection: CANbased IVNs lack native security, motivating IDS deployment
+[3]. Prior work spans: 1) Frequency/Timing IDS: Packet-rate
+and inter-arrival analysis detect anomalies efficiently [28], [29]
+but struggle with evolving attacks and cross-vehicle data,
+2)Deep Models: Fine-tuned DNNs on real/synthetic CAN
+traces improve accuracy [30] yet act as black-boxes for stakeholders, and 3) Hybrid/Advanced: Signature+anomaly hybrids
+[31] and attention CNN/LSTM models [32] boost detection,
+but explanations remain limited. Two gaps persist: (i) explainability for safety/audit, and (ii) multi-vendor generalization.
+Our framework targets both via XAI and standardized, vendoragnostic features across datasets. B. Explainable AI and IDS:
+XAI has been applied to IDS for local/global insight using
+SHAP/LIME and toolkits like AIX360 [33], [34], [35], [36].
+Hybrid rule+ML systems and tree ensembles with SHAP
+improve interpretability and efficiency [37], [38]. Recent work
+underscores XAI’s value for automotive IDS [17], [39]. We
+adopt SHAP to provide consistent local/global attributions
+for RF/DNN while coupling them with generalized features
+and meta-learning for model selection. Generalizability and
+IDS: Early generate-and-test signature generalization [40] can
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+MOWLA et al.: ACHILLES: ML FRAMEWORK FOR EXPLAINABLE AND GENERALIZED AUTOMOTIVE IDS
+
+Algorithm 1 Meta Learning-Based Model Building Process
+1: Input: Model searching and environment Meta-Data (i.e.,
+J , f (.), Marc , M, µmin , µmax , νmin , νmax , W, W 0 .)
+2: Output: Optimized trained model for IDS
+3: /* Initialization Process */
+4: Initialized learning models as meta-learning agents j ∈
+J and those models with configurations Θ are randomly
+assigned based on model_archi_DB.
+5: /* Competition and Evolution Process */
+6: for Each competition Round r = 1, . . . , R do
+7:
+Train j ∈ J in parallel or sequential based on the server
+performance.
+8:
+Update the f ( j) values of j ∈ J in Meta Learner’s
+Hierarchical Q-Tables.
+9:
+Generate random competition pairs jk ∈ J f irst ⊂
+J,∀j ∈ J.
+10:
+for Each jk ∈ Jfirst do
+11:
+Determine j0k and j00k for each pair jk ∈ Jfirst based on
+f (.).
+12:
+j00k ← Apply Alg. 2 Evolution( j0k , j00k )
+13:
+Update survivor list W ← j0k ∪ W and non-survivor
+list W 0 ← j00k ∪ W 0 .
+14:
+Eliminating Survivors(|W|):
+15:
+while |W| , n do
+16:
+Generate elimination stage competition among pairs
+in W randomly.
+17:
+Update W0 ← j00k ∪ W0.
+18:
+W ←Apply Alg. 2 Evolution (W, W 0 )
+19:
+Update W ← W\W0.
+20:
+end while
+21:
+end for
+22: end for
+23: /* Model Selection Process */
+24: Choose the model j∗ = arg maxθ∈Θ f (θ, J ) which is basedon appropriate metrics (e.g., accuracy, precision).
+
+miss novel attacks and scale poorly. Standardizing features
+improves cross-dataset comparability and robustness (e.g.,
+NetFlow formats) [21]; new datasets (IDSAI) further target
+ML generalization [41]. Foundational work also highlights
+the difficulty of generalization in neural networks [42]. Our
+approach advances this line by enforcing vendor-agnostic
+CAN features and centralized meta-learning, then deploying
+selected models on-vehicle to improve cross-dataset performance with explainable reasoning.
+III. P ROPOSED ACHILLES F RAMEWORK FOR
+AUTOMOTIVE IDS
+The proposed intrusion detection framework has three main
+parts: a) data preprocessing, b) IDS model building, and
+c) automotive IDS explanation and generalization approach.
+A. Data Preprocessing
+Most CAN bus messages arrive at fixed frequencies, and
+attackers often inject anomalous frames that disrupt these
+patterns [28], [29]. To detect such deviations, we adopt a
+
+3
+
+Algorithm 2 Evolution Process for Model Building
+0
+1: Input: ( j0k , j00
+k ) or (W, W )
+2: Output: Newly generated model for competition
+3: Evolution(Input):
+4: if rand(0,1) >  then
+5:
+/* Generating evolved model */
+6:
+j00k ← Exploit and construct the evolved model of j0k
+with optimal θ∗ = arg maxθ∈Θ f (θ, W)
+7: else
+8:
+/* Generating random model */
+9:
+j00k ← Explore randomly and construct learning model
+with random θ based on model_archi_DB.
+10: end if
+11: Return j00
+k
+time- and frequency-based preprocessing strategy, as shown
+in the Data Preprocessing block of Fig. 2. First, the raw
+CAN logs are parsed by a microcontroller and then cleaning,
+balancing, and scaling is conducted to produce aggregated
+features. Using four public datasets (described in detail in
+Section IV-A), we apply a sliding window approach [43] with
+a window size of n = 10, which has been shown to be effective
+in capturing timing and frequency trends. Each window of n
+consecutive messages, shifted by one message at a time, yields
+overlapping windows that preserve local context and increase
+data volume. This uniform method is applied across all
+datasets. Each window produces features in two categories. In
+Table I, first, standard CAN fields include timestamps (t), data
+bytes (D0–D7), and message IDs (ID_n). Second, we compute
+a set of custom and generalized metrics such as inter-arrival
+times (dt_n, dt_ID_n), frequency counts of the most/least
+frequent message IDs (cmafid, cmifid) and payloads
+(cmafpl, cmifpl), counts of unique IDs/payloads (uidc,
+nuidc, uplcw, nuplc), and the mean inter-frame gap
+(wmdt). These features are designed to highlight anomalies
+caused by message injection or manipulation. Each window is
+labeled as attack or normal based on the presence of malicious
+messages, yielding a supervised learning dataset. Compared
+to [43], our method incorporates new, tailored features with
+higher importance to test model generalizability and explainability. By standardizing feature construction and focusing
+on temporal-frequency signals, the framework supports robust
+IDS model development and facilitates XAI techniques (e.g.,
+SHAP) to trace model decisions to CAN-level indication for
+malicious behavior.
+B. IDS Model Building
+The IDS Model Building block of the ACHILLES framework in Fig. 2 involves finding the appropriate ML model
+configurations for a given set of the model architecture March .
+Therefore, the proposed meta-learning approach searches for
+the best configurations θ∗ for DNN and RF models. The model
+building stage is comprised of two algorithms, model-building
+(i.e., Alg. 1) and model evolution process (i.e., Alg. 2).
+1) Model-Building Algorithm: In Alg. 1, the meta-learning
+approach consists of three main steps: initialization, competition and evolution, and model selection. The meta-learning
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+4
+
+Fig. 1. Comparison between the traditional and generalized approach for
+automotive IDS development.
+
+Fig. 2. Proposed ACHILLES framework with explainablility phases for IDS
+construction and understanding IDS decisions for generalizability.
+
+algorithm is set up and initialized during the initialization step
+with default parameters (i.e., model’s type, model’s configuration, initialized model’s weights with the help of normal
+distribution) from a given model architecture and configuration
+database, model_archi_DB (lines 1 − 4, in Alg. 1). The
+initialized learning models are considered as a set of metaagents J , and the performance of the agents is evaluated
+with a fitness/reward function f (.). In the case of DNN, the
+objective of Alg. 1 is to find the model-specific meta-data,
+such as minimum (µmin ) and maximum (µmax ) number of
+hidden layers, minimum (νmin ) and maximum (νmax ) number
+of neurons in the hidden layers (line 1, in Alg. 1). During
+the competition and evolution processes, the survivor/winner
+and non-survivor/rejected model pairs are stored in the sets
+W and W 0 , respectively. The competition process involves
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+running multiple iterations of the first and elimination stage
+competitions and evolution, using different configurations for
+each iteration (lines 5 − 22, in Alg. 1). Finally, in the model
+selection step, the algorithm selects the model configuration that performed the best during the competition step
+(lines 23−24, in Alg. 1). The number of competition rounds R
+is finite, where at each round r, the competition and evolution
+processes involve finding the optimized trained model and
+configuration for the automotive IDS (line 6, in Alg. 1). Therefore, the meta-learning agents in J are trained in parallel,
+where the performance of each j ∈ J is evaluated through
+the fitness function f ( j) (line 7, in Alg. 1). The performance
+value is then updated during each r and stored in the metalearners’ hierarchical Q-table (line 8, in Alg. 1). Through
+random exploration of J , the random competition pairs jk
+are generated and stored in a J f irst ⊂ J (line 9, in Alg. 1).
+Based on model fitness value f (.), the survivor model j0k and
+non-survivor model j00k are determined for each competition
+pair jk ∈ J f irst (lines 10 − 11, in Alg. 1). Using j0k and j00k ,
+the evolution process is applied through Alg. 2 within the
+competition round r of model building (line 12, in Alg. 1).
+2) Model Evolution Process: In Alg. 2, the exploration
+and exploitation operations within the evolution process are
+performed to generate either an evolved model or a random
+one (lines 3 − 10, in Alg. 2). If the random value between
+[0, 1] is greater than a probability threshold , the exploitation
+operation generated evolved models in j00k with the best known
+searching path based on the meta-learner’s hierarchical Qtable and constructs the evolved model of j0k with optimal
+configuration θ∗ (lines 4 − 6, in Alg. 2). Otherwise, the model
+evolution is done through random exploration operation where
+the searching path is explored randomly to construct and
+update the learning models j00k with random configuration θ
+based on initially given model architecture (lines 7 − 9, in
+Alg. 2). Once the model configurations are determined for
+the model pairs in J f irst , the survivor and non-survivor lists,
+W and W 0 are updated (line 13, in Alg. 1). The elimination
+from the survivor list W is done to achieve a fixed number of
+models (n) from |W| and their configurations (lines 14 − 20, in
+Alg. 1). In the elimination stage, the non-survivor list W 0 is
+updated by determining the eliminated winner j00k from pairs in
+W based on f (.) (lines 16 − 17, in Alg. 1). At this point, using
+W and W 0 , the evolution process is applied again through
+Alg. 2 to find the model configurations and the final survival
+list W (lines 17 − 18, in Alg. 1). With fixed W, the model
+selection process results in a suitable configured model with
+appropriate model performance evaluation metrics such as
+model accuracy and precision (lines 23 − 24, in Alg. 1). A
+detailed discussion of the evaluation metrics is provided later
+in Section IV-B. The configured trained model from the IDS
+model building phase is deployed at the vehicles’ OBU for onvehicle decision-making at the IDS Model Deployment phase
+in Fig. 2.
+C. Automotive IDS Explanation and Generalization
+Approach
+A typical IDS model development involves preprocessing
+raw data that undergoes several steps, such as data cleaning,
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+MOWLA et al.: ACHILLES: ML FRAMEWORK FOR EXPLAINABLE AND GENERALIZED AUTOMOTIVE IDS
+
+data balancing, data scaling, feature engineering, and data
+partitioning. The IDS model is often hard to explain and
+is evaluated against standard evaluation metrics. In this proposal, as shown in Fig. 2, we add the Model and Dataset
+Explanation block for IDS construction, which supports the
+IDS model building by going through stages of pre-modeling
+(i.e., dataset explanation), model building (i.e., model’s configuration explanation), and post-modeling (i.e., explanation
+of relations between inputs, models and decisions). This
+approach allows a more reliable evaluation of the ML models
+that are otherwise blackbox systems. The model and dataset
+explanation can be helpful for AI experts focusing on model
+interpretability to achieve performance explanation and trust.
+Also, data experts interested in model visualization and tuning
+can better evaluate task and model performance. AI novices
+(including traditional cybersecurity analysts using AI techniques) can benefit from algorithmic transparency, trust in the
+detection systems, bias mitigation, and privacy awareness for
+better task performance. In addition, the traditional ML models
+generate specific predictions after receiving some features as
+input. However, following the ML-based IDS model training,
+the user can have questions such as why the model predicts
+the input as attack or non-attack, when the model succeeds
+in detecting attacks, and when it fails, when it can be
+trusted, and how can an error be corrected. Therefore, the
+model’s explainability significantly impacts ML applications
+especially in safety-critical scenarios such as automotive systems. Besides debugging, directing feature engineering, data
+collection, decision-making, and building trust, a model’s
+explainability can also support creating a generalized model
+that will fit well to multiple datasets from multiple vendors
+by providing the contributions of the involved features. The
+models can be explained using a variety of methods such
+as LIME, SHAP, counterfactual explanation [35]. This paper
+considers SHAP (SHapley Additive exPlanations) values as the
+method can be essentially leveraged to compute the contribution of each feature to the prediction, which aids the process of
+coming up with a set of generalized features. Moreover, SHAP
+allows a simpler evaluation of Shapley values with fewer
+coalition samples than the other explainable AI approaches.
+In this work, the contribution of each attack prediction can
+be measured using the input features by utilizing SHAP
+values in the ML model explanation under the automotive
+IDS framework. Some advantages of using SHAP values over
+other SOTA techniques for automotive IDS include: 1) the
+identification of additive CAN bus data feature importance
+measures contributing to an attack prediction for vehicles,
+2) guarantee of a unique attack detection outcome with a set of
+relevant properties, 3) better compliance to the understanding
+of cybersecurity and automotive expert intuitions, and 4) efficient computational complexity in terms of achieving fast
+convergence and discriminating among prediction outcomes
+for automotive IDS. In a typical linear model, the prediction
+for a single data point x can be represented as
+fˆ(x) = ξ0 + ξ1 x1 + . . . + ξ J x J , 1 ≤ j ≤ J,
+
+(1)
+
+where each x j is represented as feature value, ξ0 denotes the
+initial weight, and ξ j denotes the weight corresponding to a
+
+5
+
+feature j. Using (1), the contribution Φ j of the jth feature on
+the prediction fˆ(x) is calculated as [44],
+Φ j ( fˆ) = ξ j x j − ξ j E(X j ),
+
+(2)
+
+where E(ξ j X j ) is the mean effect estimate for feature j. In (2),
+the feature contribution, Φ j ( fˆ), is measured by subtracting the
+average effect from the feature effect. By using (2), the sum
+of all the feature contributions for one instance is defined as,
+J
+X
+j=1
+
+Φ j ( fˆ) =
+
+J
+X
+(ξ j x j − E(ξ j X j ))
+j=1
+
+0
+= @ξ0 +
+
+J
+X
+
+1
+
+0
+
+ξ j x j A − @ξ0 +
+
+j=1
+
+= fˆ(x) − E( fˆ(X)).
+
+J
+X
+
+1
+E(ξ j X j )A
+
+j=1
+
+(3)
+
+To capture the marginal contribution of a feature j in a
+prediction outcome, we apply the Shapley value as [45],
+X
+|S|!(J − |S| − 1)!
+Φ j (ν) =
+J!
+S⊆{1,··· ,J}\{ j}
+
+(ν(S ∪ { j}) − ν(S)).
+
+(4)
+
+Here S is a subset of the features used in the model that
+excludes the feature j in the prediction where x represents
+the feature values of the instance to be explained. In other
+words, the Shapley value of a feature indicates its contribution
+to the prediction outcome that is weighted and summed over
+all possible feature value combinations where J is the number
+of features. Using (4), the feature contributions of a single
+prediction outcome for any ML model can be defined via a
+value function ν of feature set S. Therefore, ν x (S) denotes a
+prediction for feature values that are marginalized over the
+features that are not included in set S and calculated as,
+Z
+fˆ(x1 , . . . , x J )dQ x<S − EX ( fˆ(X)),
+(5)
+ν x (S) =
+where Q is a set of features that does not include the feature
+instance1 x ∈ S.
+When these datasets2 are sent to the cloud, each dataset
+goes through the preprocessing phases before being trained
+by the machine learning detection models. Our proposal considers preprocessing datasets with standard feature formats, as
+discussed in Section III-A, to facilitate dataset generalization.
+To verify the generalization of the feature formats, we employ
+the training with one vehicle dataset and validate with another.
+As a result, a set of possible test combinations are generated
+whose results are then compared. The generalization of the
+test combination results is further evaluated with the abovedescribed XAI technique by extracting the associated feature
+importance in each test case. It is worth noting that our
+proposed framework is fundamentally designed to be modular
+1 Equation (5) can be extended to perform the prediction, ν (S), for more
+x
+than one features that are not included in set S by applying multiple integration
+operation.
+2 Different publicly available CAN datasets are originally sourced from
+various vehicle models. While they are typically anonymized or open-sourced
+via research institutions (not directly by OEMs), these publicly available
+datasets are from vehicles with heterogeneous specifications.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+6
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+and scalable, leveraging state-of-the-art ML technologies. It
+can be seamlessly integrated into any ML-based automotive IDS that utilizes current leading-edge machine learning
+models. Specifically, our framework employs a standardized
+feature format based on CAN bus data, which is ubiquitous in
+automotive systems. This standardization ensures that as new
+ML models emerge, they can be easily incorporated by simply
+adjusting the input features to fit this established format.
+Furthermore, the meta-learning component of our framework
+is designed to optimize hyperparameters dynamically, which
+is essential for adapting to new ML models that might have
+different requirements or capabilities. This approach allows
+for continuous learning and adaptation without the need for
+extensive manual reconfiguration. To assess and ensure the
+generalizability and explainability of these new models within
+our framework, we employ SHAP which provides a consistent
+and robust method to evaluate the impact of features in ML
+models. These properties of SHAP make it an invaluable
+tool for maintaining transparency and understanding in IDS
+applications as model technologies evolve while the modelagnostic nature of SHAP allows it to be applied consistently
+across different types of machine learning models.
+
+TABLE I
+S UMMARY OF F EATURES
+
+D. Complexity Analysis
+Computing SHAP on large datasets and complex models
+can be costly; we therefore summarise the dominant terms for
+our IDS. For a DNN with H hidden layers and N neurons
+per layer, the SHAP computation scales as O(H N M) for
+M samples—linear in M but increasing with depth/width
+[46], [47]. For a Random Forest with |S | features and T
+trees, training is O(M |S | log |S |) and SHAP is O(M |S | T )
+[48]. These complexities are practical on our target platforms
+and align with prior scalability studies in high-dimensional
+IDS settings [39]. In short, while cost grows with data size
+and model capacity, the DNN/RF choices and SHAP-based
+explanations remain tractable for automotive IDS and provide
+transparent, defensible decisions.
+IV. P ERFORMANCE E VALUATION
+A. Datasets
+We evaluate on four public in-vehicle CAN datasets:
+• Survival Analysis Dataset (SAD) [49]: Normal driving plus three real injection attacks (DoS/flooding,
+fuzzing, malfunction) from Hyundai Sonata, Kia Soul,
+and Chevrolet Spark. Attacks last 25–100 s with 5 s bursts.
+Limitation: few, relatively simple attack types.
+• Real ORNL Automotive Dynamometer Dataset (ORNL)
+[50]: Physically verified CAN attacks (e.g., fuzzing, fabrication, masquerade) and two advanced non-fabrication
+attacks. Logs captured on-road and on a chassis
+dynamometer; vehicle identity (make/model/region) is
+anonymized via metadata redaction.
+• CAN intrusion detection dataset (CAN-IDS) [51]: Normal
+traffic plus synthetic DoS, fuzzing, and impersonation
+(masquerade) with labeled records (Timestamp, ID, DLC,
+DATA[0–7]). Masquerade relies on spoofed remote-frame
+
+behavior; utility may depend on IDS use of that protocol
+aspect; injection timing details are coarse.
+• Car Hacking: Attack & Defense Challenge 2020 Dataset
+(CAR-HACK) [52]: Normal and four real attack types
+(DoS/flooding, fuzzing, replay, spoofing) across preliminary/submission/final rounds (the last stationary for
+safety). Rich captures with many instances per attack;
+fields include Timestamp, Arbitration ID, DLC, Data,
+Class, SubClass.
+We chose SAD, ROAD, CAN-IDS, and CAR-HACK for
+(i) attack diversity (fuzzing, replay, fabrication, masquerade,
+etc.), (ii) realistic vs. simulated coverage (ROAD includes both
+physically verified and simulated attacks), and (iii) community
+adoption for benchmarking. Cross-dataset validation mitigates
+overfitting to any single source, and our explainable metalearning aims to detect anomalies that generalize beyond
+dataset-specific artifacts.
+B. Performance Analysis of the Proposed Approach
+The performance of the proposed framework was evaluated
+on a machine with 128 GB RAM, an Intel Core i7-6850K CPU
+@ 3.60 GHz (6 cores, 12 threads), and two NVIDIA TITAN
+X GPUs (Pascal architecture, GP102, 12 GB VRAM each).
+The test combinations generated for generalization evaluation
+are tested with a baseline neural network [53], achieving
+high performance in automotive IDS evaluation compared
+with meta-learning-based DNN and meta-learning-based RF.
+The choice of the selected models also allows evaluating
+both the shallow learning and deep learning method. The
+hyperparameters are tuned with the adopted meta-learning
+approach. The meta-learning-based DNN model configuration
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+MOWLA et al.: ACHILLES: ML FRAMEWORK FOR EXPLAINABLE AND GENERALIZED AUTOMOTIVE IDS
+
+7
+
+TABLE II
+BASELINE M ODEL [53] G ENERALIZATION A NALYSIS W ITHOUT M ETA -L EARNING P ERFORMANCE
+
+TABLE III
+P ROPOSED DNN M ODEL G ENERALIZATION A NALYSIS W ITH M ETA -L EARNING P ERFORMANCE
+
+among the constructed DNN configuration results in a model
+having an input layer with 256 neurons, dense layers with 128
+and 64 neurons, and a final output layer with two neurons. For
+random forest-based automotive IDS, the meta-learning-based
+model configuration consists of 100 estimators (i.e., RF). We
+tested the models with a training size of 0.2, i.e., 20% of the
+data, and a test size of 0.8, i.e., 80% of the data, as it is an
+effective approach to testing the generalization of a model,
+especially when a smaller amount of data is available [54].
+We consider the original datasets, as ORNL, SAD, CAN-IDS,
+CAR-HACK, respectively. ORNLproposed , SADproposed , CANIDSproposed ,and CAR-HACKproposed are the datasets containing
+the new features discussed in Table I.
+Table II presents the baseline model’s [53] performance
+comparison without the proposed meta-learning model search
+between the identical and cross-dataset train and test data
+scenarios. The analysis includes metrics like accuracy, precision, recall, F1 score, Cohen’s kappa, ROC AUC, and average
+inference time per model (in seconds) measured over the
+testing dataset. Specifically, we calculate on-average how long
+each IDS model requires to process a given CAN frame or
+
+batch of frames during inference. This metric provides insight
+into each model’s computational efficiency under realistic
+conditions, complementing the accuracy-related performance
+metrics (accuracy, precision, recall, F1, Cohen’s kappa, and
+ROC AUC). The performance is compared across different
+training and testing datasets, including ORNL, SAD, CANIDS, and CAR-HACK. In the case of identical dataset (ORNL,
+SAD, CAN-IDS, and CAR-HACK) scenarios, the average
+performance in terms of accuracy is approximately 0.9679.
+This performance indicates a high level of overall effectiveness
+when the baseline model is trained and tested on the same
+dataset. More specifically, the identical ORNL train and test
+data scenario exhibits the highest accuracy of 0.9980. Like
+ORNL, the CAR-HACK dataset in baseline model displayed
+significant performance gain (i.e., the accuracy of 0.9942),
+indicating robust learning from this dataset. The performance
+with proposed ORNL and SAD dataset enhancements with the
+generalized feature depicts improvements in accuracy (0.9800
+and 0.9995), showcasing the effectiveness of the proposed
+dataset enhancements. Similarly, considerable improvements
+are visible in the proposed CAR-HACK scenario, where
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+8
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+TABLE IV
+P ROPOSED RF M ODEL G ENERALIZATION A NALYSIS W ITH M ETA -L EARNING P ERFORMANCE
+
+accuracy increased to 0.9987. There was a slight degradation in performance for proposed CAN-IDS dataset (0.8930)
+compared to original CAN-IDS data (0.8069) in identical
+train-test setup which could be caused by baseline feature
+set becoming highly tuned. However, proposed CAN-IDS
+showed better generalizability in cross train-test (0.7763 and
+0.6540) compared to original CAR-HACK cross train-test
+(0.6185 and 0.4785). In the case of efficiency and response
+time, the model maintains a similar response time across both
+original and proposed features in identical and cross traintest scenarios, with average times within the range of 4.31
+to 4.43 seconds, indicating its efficiency in processing. The
+baseline model consistently performed well in identical scenarios, indicating a strong fit to specific dataset characteristics,
+the generalization challenges remain for the baseline method
+without the meta-learning. In particular, the decreases in
+performance in cross-dataset scenarios highlight the baseline
+model’s difficulties in generalizing its learning to new, unseen
+datasets.
+Table III presents a comparative performance analysis of
+the proposed DNN model with meta-learning, focusing on
+proposed meta-learning and proposed generalizable feature
+capabilities for model inference. The highest performance
+across all metrics is observed when training and testing are
+done on the same dataset and especially with proposed feature
+formatted datasets. For instance, in the proposed ORNL and
+SAD datasets, almost all metrics are close to 1 (99.97%
+accuracy, 100% precision, 99.95% recall, etc.). This trend
+is also seen in the proposed CAR-HACK dataset (99.97%)
+but there is a similar drop in the proposed CAN-IDS dataset
+(89.3%) compared to original CAN-IDS dataset (94.9%) in
+the identical train-test scenario but the performance of the
+proposed DNN model in both cases is better than the baseline
+model in Table II. Moreover. proposed CAN-IDS performs
+better (79.3% and 67.5%) than original CAN-IDS (69.2% and
+48.2%) in the cross train-test scenario. The cross train-test
+dataset performance degradation is also visible in the proposed
+DNN model with original datasets and a performance gain
+with proposed datasets. For example, when the origical ORNL
+
+dataset is tested on the original SAD datset, the accuracy
+drops to 49.1%, and similarly, the original SAD dataset tested
+on original ORNL dataset shows a 52.2% accuracy. This
+indicates a challenge in generalizing across different datasets,
+even though the proposed models generally show significant
+improvement. For example, comparing the original CAN-IDS
+dataset tested on itself (94.9% accuracy) with the proposed
+CAN-IDS dataset (89.3% accuracy), there’s a slight decrease
+in performance. However, when tested on CAR-HACK, the
+proposed dataset shows a substantial improvement (from
+69.2% to 79.3% accuracy), indicating better generalization.
+This indicates a 10.1% increase in accuracy, showcasing the
+effectiveness of the proposed model in adapting to different
+data types. High Cohen’s kappa and ROC AUC values in the
+proposed datasets (especially in homogeneous training and
+testing scenarios) indicate strong reliability and the ability
+to distinguish between classes effectively. For instance, the
+proposed CAR-HACK dataset has a Cohen’s kappa of 0.9995
+and a ROC AUC of 0.9998 when tested on its own. In the
+case of efficiency and response time, the model maintains
+a reasonable response time similar to the baseline model
+across scenarios, with average times ranging between 4.58 to
+4.82 seconds, indicating its consistent efficiency in processing. Overall, Meta-learned DNNs outperform the baseline in
+three of four averaged settings which are, identical train–test,
+proposed-identical train–test, and cross train–test. The results
+demonstrate the effectiveness of the meta-learning modelbuilding process and the proposed generalized feature for
+cross-dataset generalization. These gains indicate a more
+robust, adaptable DNN for complex datasets.
+Table IV presents an extensive evaluation of the Proposed
+RF model enhanced with meta-learning. In the case of identical train-test scenarios, the original ORNL data achieves
+top-tier performance with an accuracy of 0.9982, precision of
+0.9965, and recall at 1.0000. Similarly, significant performance
+gains in terms of accuracy are observed in SAD, CANIDS, and CAR-HACK (i.e., 0.9990, 0.9782, and 0.9999).
+The proposed datasets performance for ORNL and SAD are
+also significantly high (i.e., 0.9997 and 1.0000) compared
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+MOWLA et al.: ACHILLES: ML FRAMEWORK FOR EXPLAINABLE AND GENERALIZED AUTOMOTIVE IDS
+
+9
+
+Fig. 3. Performance evaluation of the deep neural network (DNN) and random forest (RF) model building stage of the proposed ACHILLES framework.
+
+to the original datasets in the proposed RF model and
+both original and proposed datasets in the baseline model.
+There is a slight performance degradation in the CAN-IDS
+dataset as observed before in both baseline and proposed
+DNN model. The performance in the proposed CAR-HACK
+(0.9997) remains relatively same with very slight change as
+original CAR-HACK (0.9999). In the case of cross-dataset
+scenarios, the model faces the expected challenge with a drop
+in performance. For example, a drop in original ORNL-SAD
+accuracy to 0.5048 and zero precision and recall, indicating
+difficulty in applying learnings from ORNL to SAD. However,
+the original SAD-ORNL case displays better adaptability with
+an accuracy of 0.5807. In the case of CAN-IDS - CARHACK, the accuracy is moderate at 0.7093 and CAR-HACK CAN-IDS, there is a significant drop to 0.4467. However,
+all these four results are higher compared to the base line
+model (i.e., 0.4835, 0.5480, 0.6185, and 0.4785). In the
+case of the proposed datasets on the proposed RF model,
+there is also significant improvement in all four cases (i.e.,
+0.7991, 0.7531, 0.5154, and 0.7023). The proposed SAD to
+proposed ORNL (0.7991) and the proposed CAR-HACK to
+proposed CAN-IDS (0.7023) in the proposed RF model is
+also higher than the base line model corresponding cross
+train-test scenario (i.e., 0.7471 and 0.6540, respectively). In
+the case of efficiency and response time, the model not
+only demonstrates high accuracy but also maintains a rapid
+response time across scenarios, with times ranging from
+0.03 to 0.04 seconds, indicating its efficiency in processing.
+Overall, the proposed RF models with meta-learning show
+performance gain on three out of four average dataset tests,
+i.e., identical train-test dataset (average), proposed identical train-test dataset (average), and cross train-test dataset
+(average), compared to the baseline model further confirming
+the effectiveness of the meta-learning-based model-building
+
+process and generalization capability of the proposed generalized features.
+A comparative performance analysis among the baseline
+model without meta-learning, the proposed DNN with metalearning, and the proposed RF models with meta-learning are
+revealed through the detailed Table II, Table III and Table IV,
+respectively. It is clear from all the three tables that, in general,
+the highest performance gain (i.e., the numbers in bold) is
+achieved with the proposed feature formatted datasets that
+are trained and tested with the identical datasets. Moreover,
+the average accuracy of proposed cross train-test datasets is
+higher (0.7456 with Baseline, 0.7238 with DNN using metalearning, 0.6925 with RF using meta-learning) than the average
+accuracy of original cross train-test datasets (0.5321 with
+Baseline, 0.5468 with DNN using meta-learning, 0.5604 with
+RF using meta-learning). Regarding cross-dataset generalization, the accuracy of the ORNL for train data and SAD for
+test data scenario is 0.4835 in Table II. On the other hand,
+in Table III, the proposed DNN model with meta-learning
+with proposed ORNL train data and proposed SAD test data
+demonstrates an accuracy of 0.708, which is a significant performance gain of 46.43% than the baseline method in Table II.
+Such performance gain underscores the proposed DNN model
+with meta-learning’s enhanced capability in cross-dataset generalization with proposed generalized feature enhancement
+in the standard ORNL and SAD datasets, as depicted in
+Table III. Furthermore, in Table III, the proposed DNN
+model with meta-learning demonstrates an average accuracy
+of approximately 0.9853 across identical dataset scenarios.
+This represents an improvement of around 1.79% compared to
+the baseline model without meta-learning’s average accuracy
+of 0.9679 in Table II. This performance gain in Table III
+demonstrates the DNN model with meta-learning’s enhanced
+consistency and reliability across various metrics in identical
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+10
+
+dataset conditions. Similar performance gain is also evident
+in the case of the proposed RF model with meta-learning
+in Table IV. In the case of identical dataset scenarios, the
+average accuracy is approximately 0.9938, and relative to the
+baseline model without meta-learning in Table II, this indicates
+a 2.68% increase in accuracy. Besides, the RF model with
+meta-learning in Table IV shows even greater consistency
+and performance than the DNN model with meta-learning in
+Table III in identical scenarios, suggesting significant adaptation to the dataset characteristics. However, regarding the
+consistency across performance metrics, both the DNN and
+RF models with meta-learning maintain a higher performance
+level across various metrics (precision, recall, F1 score) in
+identical dataset scenarios. This contrasts the baseline model
+without meta-learning in Table II, which, while showing high
+accuracy, does not consistently maintain high levels across
+all metrics. The goal of the proposed dataset generalization is to prevent single-environment over-tuning observed in
+the baseline on CAN-IDS. Therefore, feature standardization
+(e.g., cmafid, nuidc) promotes cross-dataset generalization
+but down-weights dataset-specific micro-patterns, which can
+reduce accuracy. This effect is strongest on CAN-IDS: performance dropped in the original cross train–test yet improved
+under the proposed cross train–test (Tables II–IV). The metalearning DNN and RF add another layer of generalization
+that further suppresses micro-patterns, contributing to lower
+accuracy on the proposed cross train–test (avg). The intended
+objective is consistency rather than peak accuracy, and the
+results are validated across scenarios. Both DNN and RF
+models with meta-learning outperform the baseline on three
+of four average settings: identical train–test (avg), proposedidentical train–test (avg), and the original cross train–test
+(avg), confirming the value of meta-learning and the generalized feature for cross-dataset generalization. In the proposed
+cross train–test (avg), their scores can be lower than the baseline, yet they consistently exceed the original cross train–test
+averages (Tables II–IV), reflecting a substantial trade-off that
+favors robustness across datasets over tuning to a single
+split. Overall, meta-learning typically improves generalization,
+with gains dependent on the proposed generalization feature,
+and the dataset enhancement with preprocessing/augmentation
+while enhancing model adaptability.
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+indicates the efficacy of the proposed meta-learning-based
+model-building process that optimizes the RF model for IDS
+operations. Besides, the meta-learning with DNN computation
+time outliers are relatively higher, which indicates the computing time spikes dramatically. It can be explained further
+as the DNN model requires a substantially higher number of
+neurons (i.e., mean 200 units in Fig. 3b) and has more hidden
+layers (i.e., mean 6 hidden layers in Fig. 3c) compared to the
+RF model’s depth (i.e., mean tree depth 25 in Fig. 3d) and
+the number of trees (i.e., mean number of trees in RF 100
+in Fig. 3e). However, despite the higher mean and median,
+the DNN model’s mean does not appear to be excessively
+influenced by the outliers since it aligns with the median. As
+a result, the DNN model’s typical computing time is reliable
+with occasional spikes rather than consistently high across all
+model-building operations. The presence of these outliers in
+the DNN model indicates that the model faces computational
+scenarios that are innately more demanding, a common characteristic in DNN tasks that involve large datasets. Overall,
+the RF model is more suitable for tasks that require fast and
+consistent processing times, whereas the DNN model is more
+suitable for complex tasks where higher computing times are
+acceptable and expected. This comparative analysis assesses
+the raw computing times and reflects on the nature of tasks
+each model is likely tackling. It is also noteworthy to mention
+that the optimized DNN model with meta-learning, despite
+its slower performance, can deal with operations beyond the
+optimized RF with meta-learning capabilities, justifying the
+additional computation time requirements. The RF model’s
+validation accuracy is stable, maintaining above 90% throughout the modeling process, indicating a reliable and consistent
+model. On the other hand, the DNN model shows higher
+variability in performance, with accuracy dipping below 85%
+at times but also reaching peaks that surpass the RF model’s
+accuracy. This suggests that the DNN model may be more
+sensitive to the specificity of the validation data and could
+potentially yield higher performance gains in certain scenarios.
+Within ACHILLES, the RF model is fast, stable, and reliable
+as it is well-suited to consistent, time-critical workloads. On
+the other hand, the DNN is relatively slower with models
+richer structure and can achieve higher accuracy in some
+cases. Overall, the meta-learning of ACHILLES exploits these
+complementary strengths to improve IDS performance.
+
+C. Evaluation of DNN and RF Model Building Process With
+Proposed Meta-Learning
+
+D. Feature Analysis With SHAP and Generalizibility
+
+Fig. 3 illustrates the impact of the proposed meta-learningbased model-building stages for the DNN and RF models
+within the ACHILLES framework. In Fig. 3a, the RF model
+demonstrates a narrow interquartile range (IQR), indicating
+less variability in computation time. Specifically, the IQR
+occupies about 16.67% of the RF model’s computing time
+scale, suggesting a stable performance, which is crucial for
+systems like IDS that require consistent processing times.
+The DNN model, while having a similar proportion of IQR,
+registers higher absolute values in computation time, with its
+minimum exceeding the median of the RF model. This suggests that the RF performance under the proposed ACHILLES
+framework is quite stable and predictable. Such consistency
+
+The evaluation of generated feature formats with SHAP
+for the RF and DNN models are shown in Fig. 4, and in
+Fig. 6, respectively. We first analyzed the results shown in
+Figs. 4a and 4c for RF, and Figs. 6a and 6c to understand
+the global contribution of each SOTA SAD feature to classify
+non-attack (N-Attack) or attack (Attack). As shown in Figs. 4c,
+and Figs. 6c, dt_ID feature contributed the most to making
+the final classification decision, where we observe that it is
+possible to be attacked when the dt_ID values are high for
+both RF and DNN models. Besides, it is likely an attack when
+the ID values are small. Figs. 4b and 4d, and Figs. 6b and 6d
+provide the realization of the global contribution of each
+proposed SAD feature to classify non-attack (N-Attack) or
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+MOWLA et al.: ACHILLES: ML FRAMEWORK FOR EXPLAINABLE AND GENERALIZED AUTOMOTIVE IDS
+
+11
+
+Fig. 4. Evaluation of generated feature formats with SHapley additive exPlanations (SHAP) for random forest model.
+
+attack (Attack). As shown in Fig. 4d and Fig. 6d, the cmafid
+feature contributed the most to making the final classification
+decision, where we observe, it is possible to be attacked when
+the cmafid along with the nuidc, cmafpl values are high.
+As for the upic and uidc, it is possible to be attacked when
+the upic and uidc values are small. Therefore, the users can
+easily understand the decision of the Proposed SAD RF and
+DNN models based on Figs. 4b and 4d, and Figs. 6b and 6d,
+respectively. Then, we analyzed the results shown in Figs. 4e
+and 4g, and Figs. 6e and 6g to illustrate the global contribution
+of each SOTA ROAD feature to classify non-attack (N-Attack)
+or attack (Attack). As shown in Fig. 4g, and Fig. 6g, we
+can see that the d3 contributed the most to make the final
+classification decision, where we can see that it is possible to
+be attacked when the d3 along with the d1, d0 values are
+high. Therefore, the decision of the SOTA ROAD RF, as well
+as DNN models, can be easily explained based on Figs. 4e
+and 4g, and Figs. 6e and 6g, respectively. Finally, we analyzed
+the results shown in Figs. 4f and 4h, and Figs. 4f and 4h to
+understand the global contribution of each Proposed ROAD
+feature to classify non-attack non-attack (N-Attack) or attack
+(Attack). As shown in Figs. 4h, we can see that the ID_2
+contributed the most to make the final classification decision,
+where we can see similar to Fig. 6h. Based on the Figs. 4f
+and 6f, it is possible to be attacked when the cmafid along
+with the nuidc, cmafpl values are high. As for the ID_2
+and ID_3, ID_0 and dt_ID_1, it is possible to be attacked
+when those values are small. Again, the relevant users can
+
+easily understand the decision of the Proposed ROAD RF as
+well as DNN models based on Figs. 4f and 4h, and Figs. 6f
+and 6h. Fig 5 and 7 provide a comparison of SHAP value
+analyses for Random Forest (RF) and Deep Neural Network
+(DNN) models on CAN-IDS and CAR-HACK datasets. They
+offer a clear view of how each feature influences the model’s
+predictions for both non-attack and attack classifications.
+Fig 5a shows the global SHAP values for the SOTA CANIDS RF model. The distribution for non-attack and attack
+classifications suggests that certain features like d0 and d1
+have SHAP values that significantly influence the model’s
+predictions, extending past 0.25 for attacks. Fig 5c emphasizes
+feature importance, with the highest SHAP value for nonattacks at approximately 0.383 for ID, indicating its significant
+impact on the RF model. Fig 7a for the CAN-IDS DNN model
+reveals that features such as d6 and d5 display SHAP values
+with wide distributions for both non-attack and attack classes,
+indicating a variable impact on the model’s predictions. Fig 7c
+highlights feature importance for CAN-IDS DNN, with the
+highest SHAP value for attacks at roughly 0.368 for nuic,
+which shows its critical role in the DNN model. Fig 5e presents
+a tightly clustered distribution of SHAP values for the SOTA
+CAR-HACK RF, suggesting a more consistent feature impact
+across predictions. Fig 5g shows a strong feature importance
+for non-attacks, with d7 having a SHAP value of about 0.199,
+making it highly influential in the RF model. Fig 7e for the
+CAR-HACK DNN model indicates a wider spread of SHAP
+values for features like d7 and d3, highlighting their variable
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+12
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+Fig. 5. Evaluation of generated feature formats with SHapley additive exPlanations (SHAP) for random forest model.
+
+Fig. 6. Evaluation of generated feature formats with SHapley additive exPlanations (SHAP) for DNN model.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+MOWLA et al.: ACHILLES: ML FRAMEWORK FOR EXPLAINABLE AND GENERALIZED AUTOMOTIVE IDS
+
+13
+
+Fig. 7. Evaluation of generated feature formats with SHapley additive exPlanations (SHAP) for DNN model.
+
+influence on the model’s predictions. Fig 7g displays the
+highest SHAP value for non-attacks at approximately 0.282
+for nuic, underlining its paramount importance in the DNN
+model.
+1) Generalizability Analysis: After recognizing the feature
+characteristics utilized to make final classification decisions, we examine why the generalizability of the proposed
+approaches outperforms SOTA SAD and SOTA ROAD in
+terms of generalization performance. First, we analyze Figs. 4a
+and 4e to understand the decisions made by SOTA SAD
+RF and SOTA ROAD RF. As shown in the figure, common
+features such as d0, d5, d7 have opposite contributions to
+the model’s decision. Second, we analyze Figs. 6a and 6e to
+understand the decisions made by SOTA SAD DNN and SOTA
+ROAD DNN. As shown in the figure, common features such
+as dt_ID, d3, 5 have opposite contributions to the model’s
+decision. Third, we analyze Figs. 4b and 4f to understand the
+decisions made by Proposed SAD RF and Proposed ROAD
+RF. As shown in the figure, tailored features such as cmafid,
+nuidc, uidc and dt_ID_0 have similar contributions to
+the model’s decision. Fourth, we analyze Figs. 6b and 6f
+to understand the decisions made by Proposed SAD RF and
+Proposed ROAD RF. Tailored features such as nuidc and
+uidc contribute similarly to the model’s decision. Therefore,
+if the global SHAP values have similar contributions, we
+observe that the models indicate significant performance gain
+for cross-data. Meanwhile, in the case of Fig. 5 and Fig. 7, the
+high importance of a few features, such as ID, indicates that
+
+the RF model’s decision-making is significantly influenced
+by these features, which may affect generalizability when
+the importance of these features is specific to the CAN-IDS
+training data as shown in Figs. 5a–5d. On the other hand, the
+DNN model results in Figs. 7a–7d show a wider spread of
+SHAP values, indicating a more complex interaction between
+features and the model’s predictions. This signifies better
+generalizability as the model does not rely on a small set of
+features. The consistent importance of features like d7 across
+non-attack and attack classes suggests the RF model may
+generalize well when these features hold similar significance
+in unseen CAR-HACK data, as shown in Figs. 5e–5h. In
+the case of the DNN model with the CAR-HACK dataset in
+Figs. 7e–7h, the model’s SHAP values are more spread out,
+potentially reflecting a model that has learned a richer set of
+patterns that could generalize well to new data. The dt_ID
+feature holds particular importance as it appears prominently
+across the SHAP value plots for both the RF and DNN models
+on CAN-IDS and CAR-HACK datasets. In the SOTA CANIDS RF model in Fig. 5c, dt_ID demonstrates substantial
+importance for non-attack classifications with a SHAP value
+of 0.383, making it one of the top predictors. In the CANIDS DNN model (Fig. 7c), dt_ID also shows up as a key
+feature for attacks, with a SHAP value of 0.160, indicating its
+significant role in the DNN’s classification process. For the
+proposed CAN-IDS DNN model (Fig. 7d), dt_ID continues
+to be an important feature but is less dominant compared to
+the SOTA model.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+14
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+V. D ISCUSSION
+ACHILLES targets deployment via centralized training and
+decentralized on-vehicle inference where the proposed metalearning runs off-board to select compact models and only
+final weights are pushed to minimize ECU load. As shown
+in Section IV-B, RF achieves ∼0.03–0.04,s per evaluation
+window, enabling real-time use on gateway/security ECUs
+(e.g., C400-class). The inference is windowed (n=10 frames)
+and non-blocking on the gateway/security ECU. The measured
+∼40 ms per-window inference does not introduce blocking
+latency for actuators. Instead, it bounds the time to detect
+and respond at the CAN bus level (e.g., filtering/rate-limiting
+an offending ID or isolating a sender at the gateway) without delaying nominal ECU processing. Prior work supports
+lightweight embedded IDS, which is, RF on real CAN attacks
+[55] and compact DNNs with sub-ms latency [56]. Crossvehicle testing is the stress test: standardized timing/frequency
+features enable a vendor-agnostic IDS to scale across mixed
+fleets, share abstract statistics instead of proprietary payloads,
+push central updates rapidly, and keep SHAP explanations
+consistent. All heavy computation (meta-search/retraining)
+remains off-board, preserving portability and transparency.
+VI. C ONCLUSION
+This paper proposes an explainable and generalizable framework for an automotive IDS that leverages centralized machine
+learning model training for decentralized model deployment.
+We have generated augmented features and developed a metalearning algorithm for automotive IDS model building. The
+proposed ACHILLES improves the generalizability of the
+models that are tested with multiple feature sets using deep
+neural networks and random forest models leveraging metalearning-based model building and evolution process. Also, the
+proposed framework is evaluated using the XAI technique to
+identify the most contributing feature sets. Our XAI evaluation
+validate the explanation of the generalization and create trust
+in the automotive IDS by demonstrating that the proposed
+features lead to improved performance in a variety of tests and
+evaluation metrics. The performance evaluation shows that,
+under ACHILLES, the proposed generalized feature format
+together with tuned model parameters jointly improves crossdataset automotive attack classification. While ACHILLES
+demonstrates clear gains in cross-vehicle generalisation and
+explainability, our feature set is CAN-centric. In future,
+we will extend the feature-normalisation pipeline to mixedprotocol logs to extend the protocol scope for IVN. We
+also plan to investigate adversarial poisoning and federated
+defenses.
+R EFERENCES
+[1]
+
+[2]
+
+[3]
+
+N. Topman and A. Adnane, “Mobile applications for connected cars:
+Security analysis and risk assessment,” in Proc. IEEE/IFIP Netw. Operations Manage. Symp., Apr. 2022, pp. 1–6.
+S. Shirvani, Y. Baseri, and A. Ghorbani, “Evaluation framework for
+electric vehicle security risk assessment,” IEEE Trans. Intell. Transp.
+Syst., vol. 25, no. 1, pp. 33–56, Jan. 2024.
+W. Wu et al., “A survey of intrusion detection for in-vehicle networks,”
+IEEE Trans. Intell. Transp. Syst., vol. 21, no. 3, pp. 919–933, Mar. 2020.
+
+[4]
+
+S. Rajapaksha, H. Kalutarage, M. O. Al-Kadri, A. Petrovski,
+G. Madzudzo, and M. Cheah, “AI-based intrusion detection systems for
+in-vehicle networks: A survey,” ACM Comput. Surveys, vol. 55, no. 11,
+pp. 1–40, Feb. 2023.
+[5] G. Costantino and I. Matteucci, “Reversing Kia motors head unit to
+discover and exploit software vulnerabilities,” J. Comput. Virol. Hacking
+Techn., vol. 19, no. 1, pp. 33–49, May 2022.
+[6] S. Checkoway et al., “Comprehensive experimental analyses of automotive attack surfaces,” in Proc. 20th USENIX Secur. Symp., 2011, p. 6.
+[7] S. J. Pan and Q. Yang, “A survey on transfer learning,” IEEE Trans.
+Knowl. Data Eng., vol. 22, no. 10, pp. 1345–1359, Oct. 2009.
+[8] European Union Agency for Cybersecurity (ENISA). (2019). Good
+Practices for Security of Smart Car. [Online]. Available: https://
+www.enisa.europa.eu/publications/smart-cars
+[9] Cybersecurity Best Practices for the Safety of Modern Vehicles,
+N. H. T. S. Administration, Washington, DC, USA, 2020.
+[10] G. Macher, C. Schmittner, O. Veledar, and E. Brenner, “ISO/SAE DIS
+21434 automotive cybersecurity standard-in a nutshell,” in Computer
+Safety, Reliability, and Security. SAFECOMP 2020 Workshops. Cham,
+Switzerland: Springer, Sep. 15, 2020, pp. 123–135.
+[11] G. Costantino, M. De Vincenzi, and I. Matteucci, “A comparative
+analysis of UNECE WP.29 R155 and ISO/SAE 21434,” in Proc. IEEE
+Eur. Symp. Secur. Privacy Workshops, Jun. 2022, pp. 340–347.
+[12] M. Abdel-Basset, V. Chang, H. Hawash, R. K. Chakrabortty, and
+M. Ryan, “Deep-IFS: Intrusion detection approach for industrial Internet
+of Things traffic in fog environment,” IEEE Trans. Ind. Informat.,
+vol. 17, no. 11, pp. 7704–7715, Nov. 2021.
+[13] S. Latif et al., “Intrusion detection framework for the Internet of Things
+using a dense random neural network,” IEEE Trans. Ind. Informat.,
+vol. 18, no. 9, pp. 6435–6444, Sep. 2022.
+[14] M. M. Alani and A. I. Awad, “An intelligent two-layer intrusion
+detection system for the Internet of Things,” IEEE Trans. Ind. Informat.,
+vol. 19, no. 1, pp. 683–692, Jan. 2023.
+[15] A. K. Mishra and S. Paliwal, “Mitigating cyber threats through integration of feature selection and stacking ensemble learning: The LGBM
+and random forest intrusion detection perspective,” Cluster Comput.,
+vol. 26, no. 4, pp. 2339–2350, Aug. 2023.
+[16] U. Haider, M. Waqas, M. Hanif, H. Alasmary, and S. M. Qaisar,
+“Network load prediction and anomaly detection using ensemble learning in 5G cellular networks,” Comput. Commun., vol. 197, pp. 141–150,
+Jan. 2023.
+[17] N. I. Mowla, J. Rosell, and A. Vahidi, “Dynamic voting based explainable intrusion detection system for in-vehicle network,” in Proc. 24th
+Int. Conf. Adv. Commun. Technol. (ICACT), Feb. 2022, pp. 406–411.
+[18] R. Dwivedi et al., “Explainable AI (XAI): Core ideas, techniques, and
+solutions,” ACM Comput. Surveys, vol. 55, no. 9, pp. 1–33, Sep. 2023.
+[19] V. Chamola, V. Hassija, A. R. Sulthana, D. Ghosh, D. Dhingra, and
+B. Sikdar, “A review of trustworthy and explainable artificial intelligence
+(XAI),” IEEE Access, vol. 11, pp. 78994–79015, 2023.
+[20] O. Markouh, A. Adadi, and M. Berrada, “Blockchain and explainable
+AI for trustworthy autonomous vehicles,” in Explainable Artificial
+Intelligence for Intelligent Transportation Systems. Boca Raton, FL,
+USA: CRC Press, 2023, pp. 241–254.
+[21] M. Sarhan, S. Layeghy, and M. Portmann, “Evaluating standard feature
+sets towards increased generalisability and explainability of ML-based
+network intrusion detection,” Big Data Res., vol. 30, Nov. 2021, Art.
+no. 100359.
+[22] H. B. McMahan, E. Moore, D. Ramage, S. Hampson, and
+B. A. Y. Arcas, “Communication-efficient learning of deep networks
+from decentralized data,” in Artificial Intelligence and Statistics. Cadiz,
+Spain: Proceedings of Machine Learning Research (PMLR), 2016,
+pp. 1273–1282.
+[23] AUTOSAR Consortium. (Nov. 2020). AUTOSAR Protection
+of Communication (SecOC) Protocol Specification. [Online].
+Available:
+https://www.autosar.org/fileadmin/standards/R20-11/FO/
+AUTOSARPRSSecOcProtocol.pdf
+[24] H. Schweppe, “Security and privacy in automotive on-board networks,”
+Ph.D. dissertation, École Doctorale Informatique, Télécommunication et
+Électronique (EDITE), Télécom ParisTech, Palaiseau, France, 2012.
+[25] N. Nowdehi, A. Lautenbach, and T. Olovsson, “In-vehicle CAN message
+authentication: An evaluation based on industrial criteria,” in Proc. IEEE
+86th Veh. Technol. Conf. (VTC-Fall), Sep. 2017, pp. 1–7.
+[26] M. J. Dworkin, “Recommendation for block cipher modes of operation:
+The CMAC mode for authentication,” Nat. Inst. Standards Technol.
+(NIST), Gaithersburg, MD, USA, Tech. Rep. NIST Special Publication
+(SP) 800-38B,, 2016.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+MOWLA et al.: ACHILLES: ML FRAMEWORK FOR EXPLAINABLE AND GENERALIZED AUTOMOTIVE IDS
+
+[27] M. T. Ribeiro, S. Singh, and C. Guestrin, “‘Why should i trust
+you?’ Explaining the predictions of any classifier,” in Proc. 22nd
+ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, 2016,
+pp. 1135–1144.
+[28] C. Young, H. Olufowobi, G. Bloom, and J. Zambreno, “Automotive
+intrusion detection based on constant CAN message frequencies across
+vehicle driving modes,” in Proc. ACM Workshop Automot. Cybersecurity, Mar. 2019, pp. 9–14.
+[29] A. Taylor, N. Japkowicz, and S. Leblanc, “Frequency-based anomaly
+detection for the automotive CAN bus,” in Proc. World Congr. Ind.
+Control Syst. Secur. (WCICSS), Dec. 2015, pp. 45–49.
+[30] D. Basavaraj and S. Tayeb, “Towards a lightweight intrusion detection
+framework for in-vehicle networks,” J. Sensor Actuator Netw., vol. 11,
+no. 1, p. 6, Jan. 2022.
+[31] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered hybrid
+intrusion detection system for Internet of Vehicles,” IEEE Internet
+Things J., vol. 9, no. 1, pp. 616–632, Jan. 2022.
+[32] P. Cheng, M. Han, A. Li, and F. Zhang, “STC-IDS: Spatial–temporal correlation feature analyzing based intrusion detection system for intelligent
+connected vehicles,” Int. J. Intell. Syst., vol. 37, no. 11, pp. 9532–9561,
+Aug. 2022.
+[33] M. Wang, K. Zheng, Y. Yang, and X. Wang, “An explainable machine
+learning framework for intrusion detection systems,” IEEE Access,
+vol. 8, pp. 73127–73141, 2020.
+[34] S. Mane and D. Rao, “Explaining network intrusion detection system
+using explainable AI framework,” 2021, arXiv:2103.07110.
+[35] V. Arya et al., “AI explainability 360 toolkit,” in Proc. 3rd ACM India
+Joint Int. Conf. Data Sci. Manage. Data, 2020, pp. 376–379.
+[36] A. Heuillet, F. Couthouis, and N. Dı́az-Rodrı́guez, “Explainability in
+deep reinforcement learning,” Knowl.-Based Syst., vol. 214, Feb. 2021,
+Art. no. 106685.
+[37] T. Dias, N. Oliveira, N. Sousa, I. Praça, and O. Sousa, “A
+hybrid approach for an interpretable and explainable intrusion detection system,” in Proc. Int. Conf. Intell. Syst. Design Appl., 2022,
+pp. 1035–1045.
+[38] T.-T.-H. Le, H. Kim, H. Kang, and H. Kim, “Classification and explanation for intrusion detection system based on ensemble trees and SHAP
+method,” Sensors, vol. 22, no. 3, p. 1154, Feb. 2022.
+[39] H. Lundberg et al., “Experimental analysis of trustworthy in-vehicle
+intrusion detection system using explainable artificial intelligence
+(XAI),” IEEE Access, vol. 10, pp. 102831–102841, 2022.
+[40] J. C. Reynolds, J. Just, L. Clough, and R. Maglich, “On-line intrusion
+detection and attack prevention using diversity, generate-and-test, and
+generalization,” in Proc. 36th Annu. Hawaii Int. Conf. Syst. Sci., Sep.
+2003, pp. 1–8.
+[41] G.-P. Fernando, A.-A.-H. Brayan, A. M. Florina, C.-B. Liliana, A.M. Héctor-Gabriel, and T.-S. Reinel, “Enhancing intrusion detection
+in IoT communications through ML model generalization with a new
+dataset (IDSAI),” IEEE Access, vol. 11, pp. 70542–70559, 2023.
+[42] D. H. Wolpert, “Constructing a generalizer superior to NETtalk via
+a mathematical theory of generalization,” Neural Netw., vol. 3, no. 4,
+pp. 445–452, Jan. 1990.
+[43] J. Rosell, C. Englund, A. Vahidi, N. Mowla, A. Magazinius, and E. Jarpe
+et al., “A frequency-based data mining approach to enhance in-vehicle
+network intrusion detection,” in Proc. Fast Zero’ 21, Soc. Automotive
+Eng. Japan, 2021, pp. 1–6.
+[44] S. Lundberg and S. Lee, “A unified approach to interpreting
+model predictions,” in Proc. Adv. Neural Inf. Process. Syst., 2017,
+pp. 4768–4777.
+[45] S. F. Abedin, A. K. Bairagi, M. S. Munir, N. H. Tran, and C. S. Hong,
+“Fog load balancing for massive machine type communications: A game
+and transport theoretic approach,” IEEE Access, vol. 7, pp. 4204–4218,
+2019.
+[46] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. Cambridge,
+MA, USA: MIT Press, 2016.
+[47] R. Lee and I.-Y. Chen, “The time complexity analysis of neural network
+model configurations,” in Proc. Int. Conf. Math. Comput. Sci. Eng.
+(MACISE), Jan. 2020, pp. 178–183.
+[48] K. Hassine, A. Erbad, and R. Hamila, “Important complexity reduction
+of random forest in multi-classification problem,” in Proc. 15th Int. Wireless Commun. Mobile Comput. Conf. (IWCMC), Jun. 2019, pp. 226–231.
+[49] M. L. Han, B. I. Kwak, and H. K. Kim, “Anomaly intrusion detection method for vehicular networks based on survival analysis,” Veh.
+Commun., vol. 14, pp. 52–63, Oct. 2018.
+[50] M. E. Verma et al., “A comprehensive guide to CAN IDS data &
+introduction of the ROAD dataset,” 2020, arXiv:2012.14600.
+
+15
+
+[51] H. Lee, S. H. Jeong, and H. K. Kim, “OTIDS: A novel intrusion
+detection system for in-vehicle network by using remote frame,” in Proc.
+15th Annu. Conf. Privacy, Secur. Trust (PST), Aug. 2017, pp. 1–18.
+[52] H. M. Song, J. Woo, and H. K. Kim, “In-vehicle network intrusion
+detection using deep convolutional neural network,” Veh. Commun.,
+vol. 21, Jan. 2020, Art. no. 100198.
+[53] J. Zhang, F. Li, H. Zhang, R. Li, and Y. Li, “Intrusion detection
+system using deep learning for in-vehicle security,” Ad Hoc Netw.,
+vol. 95, Dec. 2019, Art. no. 101974. [Online]. Available: https://
+www.sciencedirect.com/science/article/pii/S1570870519304354
+[54] D. Menotti et al., “Deep representations for iris, face, and fingerprint
+spoofing detection,” IEEE Trans. Inf. Forensics Security, vol. 10, no. 4,
+pp. 864–879, Apr. 2015.
+[55] D. Caivano, C. Catalano, M. De Vincentiis, A. Lako, and A. Pagano,
+“Marea: Multi-class random forest for automotive intrusion detection,”
+in Proc. Int. Conf. Product-Focused Softw. Process Improvement. Cham,
+Switzerland: Springer, 2023, pp. 23–34.
+[56] S. Khandelwal, E. Wadhwa, and S. Shreejith, “Deep learning-based
+embedded intrusion detection system for automotive CAN,” in Proc.
+IEEE 33rd Int. Conf. Appl.-Specific Syst., Jul. 2022, pp. 88–92.
+
+Nishat I. Mowla (Member, IEEE) received the B.S.
+degree in computer science from Asian University
+for Women, Chittagong, Bangladesh, in 2013, and
+the M.S. and Ph.D. degrees in computer science and
+engineering from Ewha Womans University, Seoul,
+South Korea, in 2016 and 2020, respectively. She
+is currently a Senior Researcher at the Industrial
+Systems Department, RISE, Sweden. Her research
+interests include intelligent network security and
+cyber-physical systems. She awarded the best paper
+award at the Qualcomm Paper Awards 2017, Seoul.
+
+Kyi Thar (Member, IEEE) received the bachelor’s
+degree in computer technology from the University
+of Computer Studies, Yangon, Myanmar, in 2007,
+and the Ph.D. degree in computer science and engineering from Kyung Hee University, South Korea,
+in 2020. Currently, he is an Assistant Professor
+with the Department of Computer and Electrical Engineering (DET), Mid Sweden University,
+Sweden. His research interests include machine
+learning, explainable AI, and edge computing.
+
+Sarder Fakhrul Abedin (Senior Member, IEEE)
+received the B.S. degree in computer science from
+Kristianstad University, Sweden, in 2013, and the
+Ph.D. degree in computer engineering from Kyung
+Hee University, South Korea, in 2020, supported by
+the President Scholarship and the Brain Korea (BK)
+21+ Program. He is currently a Researcher with
+the Connected Intelligence Unit, RISE Research
+Institutes of Sweden, Stockholm, Sweden, and previously served as a Senior Lecturer in computer
+engineering at Mid Sweden University, Sweden. He
+has led multiple AI/ML-driven research projects, holds several patents, and
+has authored over 50 peer-reviewed articles. His research interests include
+wireless networking, edge computing, network intelligence, and trustworthy
+AI. He actively contributes to standardization efforts, including the IEEE
+P1955 Standard for the 6G-Robo Working Group, and engages with the IEEE
+Communications Society’s Technical Community on Intelligent Informatics
+and Computer Communications. He also serves as a Section Board Member
+for MDPI Sensors.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+16
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+Aamir Mahmood (Senior Member, IEEE) received
+the B.E. degree in electrical engineering from NUST,
+Pakistan, in 2002, and the M.Sc. and D.Sc. degrees
+in communications engineering from the School of
+Electrical Engineering, Aalto University, Finland,
+in 2008 and 2014, respectively. He worked as a
+Research Intern with the Nokia Research Center,
+Finland, in 2014, as a Visiting Researcher with Aalto
+University, and as a Post-Doctoral Researcher with
+Mid Sweden University, Sweden, from 2015 to 2018,
+where he has been an Assistant Professor since 2019.
+His research interests include radio resources and network management for
+(critical) IoT networks.
+
+Zhu Han (Fellow, IEEE) received the B.S. degree
+in electronic engineering from Tsinghua University in 1997 and the M.S. and Ph.D. degrees in
+electrical and computer engineering from the University of Maryland, College Park, in 1999 and
+2003, respectively. He is a John and Rebecca
+Moores Professor with the Electrical and Computer
+Engineering Department and the Computer Science
+Department, University of Houston, TX, USA. His
+research interests include wireless resource allocation and management, wireless communications and
+networking, game theory, big data analysis, security, and smart grid. He has
+been an AAAS fellow since 2019, and an ACM distinguished Member since
+2019. He received the NSF Career Award in 2010, the Fred W. Ellersick Prize
+of the IEEE Communication Society in 2011, the EURASIP Best Paper Award
+for the Journal on Advances in Signal Processing in 2015, the IEEE Leonard
+G. Abraham Prize in the field of Communications Systems (best paper award
+in IEEE JSAC) in 2016, and several best paper awards in IEEE conferences.
+He also won the 2021 IEEE Kiyo Tomiyasu Award for outstanding early to
+mid-career contributions to technologies that promise innovative applications.
+He was an IEEE Communications Society Distinguished Lecturer from 2015
+to 2018.
+
+Mikael Gidlund (Fellow, IEEE) received the Licentiate of Engineering degree in radio communication
+systems from the KTH Royal Institute of Technology, Sweden, in 2004, and the Ph.D. degree in
+electrical engineering from Mid Sweden University,
+Sweden, in 2005. From 2008 to 2015, he was a
+Senior Principal Scientist and a Global Research
+Area Coordinator of wireless technologies with ABB
+Corporate Research, Sweden. From 2007 to 2008, he
+was a Project Manager and a Senior Specialist with
+Nera Networks AS, Norway. From 2006 to 2007, he
+was a Research Engineer and a Project Manager with Acreo AB, Hudiksvall,
+Sweden. Since 2015, he has been a professor at Mid Sweden University.
+His current research interests include wireless communication and networks,
+wireless sensor networks, access protocols, and security.
+
+Kabir Fahria received the B.S. degree in computer science from Asian University for Women,
+Chittagong, Bangladesh, in 2013, and the M.S.
+degree in human–computer interaction and social
+media from Umeå University, Umeå, Sweden, in
+2016. They currently works as a Research Engineer at the Computer Science Department, RISE,
+Sweden. Their research interest includes machine
+intelligence and natural language processing.
+
+Konstantinos Giapantzis received the M.Sc. degree
+in applied informatics from the University of
+Macedonia, Greece, in 2022. He is currently pursuing the Ph.D. degree with the Department of Digital
+Systems, University of Piraeus, Athens, Greece. He
+is a Research Associate at the Centre for Research
+and Technology—Hellas, Information Technologies
+Institute (CERTH/ITI). He is involved in developing
+AI tools for cybersecurity.
+
+Antonios Lalas received the Diploma and Ph.D.
+degrees from the Department of Electrical and
+Computer Engineering, Aristotle University of
+Thessaloniki (AUTH), Thessaloniki, Greece, in
+2006 and 2012, respectively. He is a PostDoctoral Researcher with the Centre for Research
+and Technology—Hellas, Information Technologies
+Institute (CERTH/ITI). His research interests include
+V2X, AI, autonomous vehicles, counter-UAV, and
+cybersecurity.
+
+Joakim Rosell received the M.Sc. and Ph.D. degrees
+from the Department of Physics, Lund University, Sweden, in 2005 and 2016, respectively. He
+has worked as a Subject Matter Expert and a
+Research Engineer for automotive LiDAR sensors
+at Volvo GTT and is currently a Senior Researcher
+at the Department of Mobility and Systems, RISE,
+Sweden. His research interests include machine
+learning, perception, sensors, and computer vision.
+
+Mahshid Helali Moghadam received the B.Sc.
+degree in software engineering and the M.Sc. degree
+in AI from Iran University of Science and Technology (IUST), Tehran, Iran, in 2008 and 2011,
+respectively, and the Ph.D. degree in computer science from Mälardalen University, Sweden, in 2022,
+where her research focused on intelligence-driven
+software performance assurance. She is currently a
+Senior Data Scientist and a Researcher at Scania
+Research and Development (TRATON), Sweden.
+Previously, she was a Researcher and the Project
+Lead at RISE Research Institutes of Sweden. Her research interests include
+machine learning testing, ML-driven software testing, automotive cybersecurity, and anomaly detection.

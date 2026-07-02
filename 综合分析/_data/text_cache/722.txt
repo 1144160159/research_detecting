@@ -1,0 +1,148 @@
+           IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026                                                               903
+
+
+
+
+            Learning With Noisy Labels for Industrial
+                Time Series Outlier Detection: A
+              Transformer-Embedded Contrastive
+                     Learning Framework
+       Jingzhong Fang , Member, IEEE, Zidong Wang , Fellow, IEEE, Weibo Liu , Member, IEEE,
+      Nianyin Zeng , Senior Member, IEEE, Yimeng He , Yu Cao, Linwei Chen , and Xiaohui Liu
+
+
+   Abstract—In many real-world industrial scenarios, ac-                     in WAAM outlier detection under both low and high noise
+quiring accurately labeled data are often challenging due                    ratios.
+to limited resources or unexpected errors. Learning with
+noisy labels (LNL) has emerged as a significant research                       Index Terms—Industrial time series analysis, learning
+topic, aiming to develop reliable deep learning mod-                         with noisy labels (LNL), outlier detection, weakly super-
+els using noisy-labeled training data. In this article, a                    vised learning.
+novel Transformer-embedded LNL framework with fuzzy-
+clustering-assisted contrastive learning is developed for
+industrial time series outlier detection under noisy labels.
+Specifically, a fuzzy-clustering-assisted contrastive learn-                                            I. INTRODUCTION
+ing strategy is proposed to enhance the robustness of the                           EEP learning (DL) has been extensively studied in recent
+Transformer encoder against noisy labels by leveraging
+the intrinsic characteristics of raw data. Furthermore, a
+dynamic two-stage training scheme is introduced to train
+                                                                             D      years due to its remarkable ability to process large-scale
+                                                                             data and its superior performance in feature extraction [17].
+the outlier detector. In the first training stage, the Trans-                In DL, the quality of training data are crucial in determining
+former encoder is pretrained through data reconstruction                     the overall effectiveness of DL models. The accuracy of la-
+to improve feature extraction capabilities for industrial time               bels within the training dataset is of paramount importance, as
+series. In the second stage, the outlier detector is jointly
+trained with the Transformer encoder, incorporating a joint
+                                                                             mislabeled data (commonly referred to as noisy labels) may
+learning strategy. Furthermore, a label-consistency regu-                    introduce misleading information during training, thereby im-
+larization term is designed to enhance the robustness of                     pairing the model’s generalization ability and degrading overall
+the outlier detector against noisy labels by minimizing the                  performance in real-world applications.
+discrepancy between the outputs of the outlier detector                         To mitigate the adverse effects of noisy labels on DL models,
+and the clustering algorithm. The proposed framework is
+applied to industrial time series data collected from a real-
+                                                                             learning with noisy labels (LNL) has recently been investigated
+world wire arc additive manufacturing (WAAM) process. Ex-                    extensively, leading to the proposal of numerous approaches [9],
+perimental results demonstrate that the developed frame-                     [11], [15], [23], [33], [36]. Among existing LNL methods,
+work outperforms selected representative LNL approaches                      sample selection, label correction, and robust training have been
+                                                                             recognized as three prominent categories due to their satisfactory
+   Received 10 August 2025; revised 13 September 2025; accepted 22           performance and ease of implementation. Specifically, sample
+September 2025. Date of publication 22 October 2025; date of current         selection and label correction approaches aim to enhance the
+version 5 February 2026. This work was supported in part by the Inde-
+pendent Innovation Foundation of AECC under Grant ZZCX-2023-005,             quality of training labels by identifying correctly labeled sam-
+in part by the Natural Science Foundation for Distinguished Young            ples and rectifying noisy labels, respectively. Meanwhile, robust
+Scholars of the Fujian Province of China under Grant 2023J06010, in          training approaches focus on developing noise-robust training
+part by the National Key Research and Development Program of China
+under Grant 2024YFC3407000, in part by the Royal Society of the U.K.,        strategies or model architectures to mitigate the influence of
+and in part by the Alexander von Humboldt Foundation of Germany.             noisy labels during model training.
+Paper no. TII-25-5427. (Corresponding author: Zidong Wang.)                     It should be noted that sample selection approaches may lead
+   Jingzhong Fang, Zidong Wang, Weibo Liu, Yu Cao, Linwei Chen,
+and Xiaohui Liu are with the Department of Computer Science, Brunel          to the exclusion of potentially valuable data, thereby reducing
+University London, UB8 3PH Uxbridge, U.K. (e-mail: Zidong.Wang@              the diversity and completeness of the training set. Meanwhile,
+brunel.ac.uk).                                                               label correction approaches can introduce further errors if the
+   Nianyin Zeng is with the Department of Instrumental and Electri-
+cal Engineering, Xiamen University, Xiamen 361102, China (e-mail:            corrected labels are inaccurate, ultimately misleading the train-
+zny@xmu.edu.cn).                                                             ing process and potentially reinforcing incorrect patterns in the
+   Yimeng He is with the State Key Laboratory of Industrial Con-             model. Furthermore, each data point in an industrial time series
+trol Technology, College of Control Science and Engineering, Zhe-
+jiang University, Hangzhou 310027, China Digital Object Identifier           contains essential intrinsic and structural information, which is
+10.1109/TII.2025.3616850                                                     critical for accurately identifying outliers, preserving temporal
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+   Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+                                                                 for more information.
+904                                                          IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+
+
+dependencies, and maintaining feature integrity in the presence        thereby providing valuable insights. As such, beyond determin-
+of noisy labels [9].                                                   ing positive and negative sample pairs, the partitions generated
+   To establish a reliable outlier detection model based on robust     by the FCM algorithm can also be leveraged for model regular-
+training approaches, the extraction of inherent patterns and           ization, further enhancing the model’s generalization ability and
+features from industrial data is of critical importance. As a          overall performance.
+powerful family of feature extraction techniques, encoder-based           Motivated by the above discussions, this article proposes
+methods have been widely employed in robust training-based             a novel Transformer-embedded LNL framework with fuzzy-
+LNL approaches due to their capability of capturing complex            clustering-assisted contrastive learning (TFCCL) for outlier de-
+data representations [2], [25]. Among encoder-based methods,           tection in industrial time series data with noisy labels. Specif-
+the Transformer has been particularly effective in handling time       ically, a fuzzy-clustering-assisted contrastive learning (FCCL)
+series data, primarily due to its self-attention mechanism [27].       approach is developed to train the Transformer encoder, where
+The Transformer encoder allows multivariate time series to be          the UMAP-based FCM (UFCM) algorithm is introduced to
+processed simultaneously while capturing dependencies across           determine positive and negative sample pairs for contrastive
+different dimensions, thereby eliminating the need for data            learning based on clustering results. A dynamic two-stage
+preprocessing [29].                                                    scheme is formulated for training the outlier detector. In the
+   It is worth mentioning that the standard training scheme of the     first training stage, the Transformer encoder is pretrained to
+Transformer encoder typically follows a supervised approach,           enhance its feature extraction capability on industrial time se-
+which is susceptible to the adverse effects of noisy labels.           ries data through data reconstruction. In the second stage, the
+In contrast, self-supervised learning (SSL) has emerged as a           outlier detector is trained jointly with the Transformer encoder,
+viable alternative, as it does not rely on label information during    while the UFCM algorithm is dynamically updated throughout
+training. Among SSL techniques, contrastive learning has been          the training process. Furthermore, a joint learning strategy is
+particularly effective, as it aims to bring similar (i.e., positive)   proposed for the second training stage, incorporating a label-
+samples closer together while pushing dissimilar (i.e., negative)      consistency regularization term to minimize the discrepancy
+samples further apart. To date, contrastive learning has been          between outputs from the outlier detector and the UFCM algo-
+widely adopted in robust training-based LNL approaches for             rithm, thereby improving the model’s robustness against noisy
+constructing reliable encoders [14], [25].                             labels.
+   Existing LNL approaches based on contrastive learning iden-            The main contributions of this article are summarized as
+tify positive and negative sample pairs through data augmen-           follows.
+tation [13], [20]. Nevertheless, conventional data augmenta-               1) A novel FCCL strategy is proposed for training the Trans-
+tion methods often fail to capture the intricate characteristics               former encoder, where the UFCM algorithm is designed
+of time series data and tend to increase computational costs,                  to process high-dimensional features and identify positive
+particularly when handling large-scale datasets. To overcome                   and negative sample pairs for contrastive learning.
+these limitations, clustering algorithms, which group similar              2) A dynamic two-stage training scheme is introduced for
+data points into distinct clusters based on inherent features,                 the outlier detector, where the Transformer encoder is
+have been successfully employed for selecting positive and                     pretrained in the first stage via data reconstruction, and
+negative sample pairs in contrastive learning [4]. Recognized as a             in the second stage, the outlier detector is jointly trained
+well-established clustering algorithm, the fuzzy C-means (FCM)                 with the Transformer encoder.
+algorithm enables data points to belong to multiple clusters               3) A joint learning strategy is developed, incorporating
+with varying degrees of membership, leveraging fuzzy logic                     a label-consistency regularization term to improve the
+principles. Compared with hard clustering algorithms, FCM is                   model’s generalization ability and robustness against
+not only easier to implement but also offers greater flexibility in            noisy labels by minimizing the discrepancy between out-
+handling complex data distributions. However, its performance                  puts from the outlier detector and the UFCM algorithm.
+may degrade when applied to high-dimensional data, primarily               4) The proposed TFCCL framework is applied to outlier
+due to the presence of sparse and redundant features extracted                 detection in real-world industrial time series data with
+by the Transformer encoder [8].                                                noisy labels, specifically collected from a wire arc ad-
+   A seemingly natural solution for clustering high-dimensional                ditive manufacturing (WAAM) pilot line. Experimental
+data is to adopt the uniform manifold approximation and projec-                results validate the effectiveness of the proposed TFCCL
+tion (UMAP) method, which serves as a competitive manifold-                    framework.
+learning-based dimensionality reduction technique, in order to            The rest of this article is organized as follows. Section II
+obtain a low-dimensional embedding from the high-dimensional           discusses the background of LNL and WAAM while presenting
+input [1], [30]. The extracted low-dimensional representation          the relevant preliminaries. In Section III, the proposed TFCCL
+can then serve as the input for the FCM algorithm, improving           framework and the training scheme are introduced. Experi-
+clustering effectiveness while mitigating the impact of irrele-        mental results for WAAM outlier detection under noisy labels
+vant features. It is noticeable that clustering algorithms have        are presented in Section IV. Finally, Section V concludes this
+been widely utilized in outlier detection as they are capable of       article and provides discussions on potential future research
+uncovering the intrinsic structures and relationships within data,     directions.
+FANG et al.: LEARNING WITH NOISY LABELS FOR INDUSTRIAL TIME SERIES OUTLIER DETECTION                                                  905
+
+
+
+                       II. BACKGROUNDS                                 developed to detect outliers, aiming to improve the WAAM
+                                                                       process and ensure high-quality production [5], [12], [19]. For
+A. Related Work
+                                                                       instance, in [5], a transfer learning approach has been introduced
+    1) Learning With Noisy Labels: Existing LNL approaches             for outlier detection in WAAM data under different operational
+can be broadly classified into two main categories: improving          states. Furthermore, in [19], a semi-supervised method has been
+the quality of training data and mitigating the impact of noisy        proposed to enable real-time anomaly detection in WAAM using
+labels during the training process.                                    current and voltage data, further enhancing the reliability and
+   The first category of LNL approaches focuses on selecting           stability of the manufacturing process.
+training samples that are likely to have correct labels (i.e., clean
+samples) or on correcting noisy labels within the dataset. For
+                                                                       B. Preliminaries
+instance, in [11], a classic approach known as coteaching has
+been proposed, where a Siamese network structure is employed,             In an M -class classification task involving noisy lab

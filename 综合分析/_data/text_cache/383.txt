@@ -1,0 +1,152 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025                                                                 1955
+
+
+
+
+     Class Incremental Website Fingerprinting Attack
+       Based on Dynamic Expansion Architecture
+                                Yali Yuan , Yangyang Du , and Guang Cheng , Member, IEEE
+
+
+
+   Abstract—Encrypted traffic on anonymizing networks is still at              technique that identifies a specific website a user is visiting
+risk of being exposed to the Website Fingerprinting (WF) attack.               by monitoring the user’s Internet traffic. Even if the traffic
+This attack can seriously threaten the online privacy of users of              is encrypted, an attacker can infer which website a user is
+anonymity networks such as Tor. While deep-learning-based WF
+attacks achieve high accuracy in controlled experimental settings,             visiting by the patterns and characteristics of the traffic.
+they cannot continuously learn after deployment. In real-world                    WF attacks are essentially multi-classification tasks.
+environments, new websites are constantly emerging, requiring                  Attackers collect traffic traces for each website, analyze
+attackers to expand their monitoring scope continuously. This                  features, and train classifiers. Traditional methods for WF
+necessitates attack models capable of continuous learning and                  attacks rely on manual feature extraction [8], [9], [10], [11],
+expanding classification capabilities. In this paper, we explore
+how attackers can leverage incremental class learning techniques               requiring researchers to identify critical Web traffic features for
+to continuously learn new classes while retaining the ability to               training classifiers. These manual methods are time-consuming
+distinguish old ones. This approach mitigates the catastrophic                 and do not cover all possible features, limiting their usability in
+forgetting problem in dynamic, open-world scenarios. We intro-                 practical applications. In contrast, deep learning methods [12],
+duce a new WF attack, Class Incremental Fingerprinting (CIF),                  [13], [14], [15] can automatically learn feature representations
+which employs a scalable architecture enabling Class Incremental
+Learning (CIL) with limited resources. We evaluate this attack in              from data without manual feature selection and adjustment,
+various scenarios, such as learning 100, 200, and 500 monitored                providing greater flexibility and improved generalization.
+website classes across 5 and 10 incremental tasks, achieving an                   Deep learning-based WF attacks have achieved high
+average accuracy of 97.8% and above. Additionally, we assess                   performance in classical experimental scenarios. However,
+the CIF attack’s effectiveness in open-world multi-classification              they still face challenges in practical applications, and their
+scenarios and test it in few-shot settings using the proposed
+data augmentation method, Mixtam, achieving an average task                    real-world effectiveness has been questioned by some criti-
+accuracy of 87.6% and above with only 30 samples per class.                    cisms [16], [17], [18]. Enhancing the real-world applicability
+                                                                               of WF attacks and reducing reliance on idealized conditions
+   Index Terms—Tor, privacy, website fingerprinting, deep learn-
+ing, class incremental learning.                                               have emerged as critical focal points for research. Multi-tab
+                                                                               WF attacks [16], [19], [20] aim to overcome the single-page
+                                                                               assumption by addressing scenarios where users open multiple
+                         I. I NTRODUCTION                                      tabs within a short period, generating overlapping traffic traces.
+       ITH the rapid development of the Internet, the privacy                  Few-shot WF attacks [21], [22], [23] address the dependency
+W      protection of users has become increasingly important.
+Over the past few decades, various anonymous communication
+                                                                               on large training datasets. Some related researches [24], [25]
+                                                                               focus on enhancing the robustness of the model to real-world
+systems have emerged, among which Onion Routing (Tor) [1]                      challenges.
+is the most popular. According to Tor’s metrics [2], three to                     According to the Tor Metric [26], the official metric tool
+five million active users utilize Tor to protect their privacy                 of the Tor Project, approximately 30,000 hidden services are
+every day. The Tor network employs multi-layer encryption                      published to the Tor network daily. As the number of web-
+and relay switching to protect user privacy. User data passes                  sites a victim may visit increases, attackers must frequently
+through multiple relay nodes in the Tor network, each of                       expand their monitored websites, requiring WF attacks to
+which can only decrypt a single layer of information, making                   demonstrate continuous learning capabilities. However, current
+user identity and activities difficult to trace. However, the                  research has not addressed how to enhance WF attack models’
+Website Fingerprinting (WF) attack [3], [4], [5], [6], [7] is a                continuous learning and adaptation in real-world open-world
+                                                                               settings, especially when adapting to new websites under
+  Received 13 May 2024; revised 4 November 2024 and 29 January 2025;           limited computational and storage resources. Conventional
+accepted 31 January 2025. Date of publication 20 February 2025; date of
+current version 22 April 2025. This work was supported in part by the
+                                                                               deep learning-based WF attacks [12], [13], [15] use pre-
+Natural Science Foundation of Jiangsu Province (Grant No. SBK2023041256)       collected data from a large set of target websites to train
+and in part by the National Natural Science Foundation of China (Grant         a complex model capable of recognizing all sample classes
+No. 62302097). The associate editor coordinating the review of this article
+and approving it for publication was M. Conti. (Corresponding author: Guang
+                                                                               simultaneously. However, such a model can only generalize to
+Cheng.)                                                                        known classes.
+  The authors are with the School of Cyber Science and Engineering,               Updating the model with data from new classes results in
+Southeast University, Nanjing 211189, China (e-mail: chengguang@
+seu.edu.cn).
+                                                                               catastrophic forgetting [27], which erodes the discriminative
+  Digital Object Identifier 10.1109/TNSM.2025.3538895                          power of previously learned classes. Re-training the model
+               1932-4537 
+                         c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                      and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+1956                                                IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+
+
+from scratch incurs significant time and storage costs. Class
+incremental learning (CIL) in deep learning is uniquely suited
+to processing continuous information streams in real-world
+scenarios. It effectively absorbs new knowledge while adeptly
+retaining and optimizing previously acquired knowledge. With
+CIL, the attack model can acquire the ability to categorize
+                                                                    Fig. 1.   The threat model of WF attacks.
+traffic from new websites without compromising its discrimi-
+native power over existing website classes.                         as well as information about related work in Section III. We
+   In this paper, we based on a dynamically scaling archi-          describe the proposed method in detail in Section IV and eval-
+tecture [28], [29], [30], [31] propose a new WF attack              uate the proposed method experimentally in multiple scenarios
+method, Class Incremental Fingerprinting (CIF). Our method-         in Section V. In Section VI, we discuss the limitations of
+ology enables attackers to enhance their attack model’s             the study as well as future directions. Finally, the work is
+generalization capacity progressively. By retraining on new         summarized in Section VII.
+class traffic samples without retaining complete datasets of
+previous classes, this process prevents catastrophic forgetting                              II. T HREAT M ODEL
+of previously learned knowledge. Consequently, the model can
+adapt effectively to real-world, open, and evolving network            Tor is a widely used anonymous communication network.
+environments, even under limited computational and storage          Users access the Onion Network through the free Onion
+resources.                                                          Browser to browse websites while protecting their personal
+   Previous WF studies have not considered dynamically              information. However, attackers can still compromise users’
+expanding site set scenarios. These methods are generally           privacy by collecting traffic from monitored websites and
+evaluated in closed-world and open-world settings, neither          utilizing Website Fingerprinting (WF) attack techniques to
+of which can simulate the dynamic, open-world environ-              identify the websites users visit. As depicted in Fig. 1, akin to
+ments of real-world scenarios or evaluate the incremental site      earlier WF attacks [8], [13], [32], within this threat model, the
+fingerprinting attack methods we propose. In response, we           attacker is regarded as a localized passive observer. Positioned
+introduce two novel scenario settings: dynamic closed-world         between the Tor client and the Tor ingress node (the access
+and dynamic open-world.                                             point to the Tor network), this attacker is capable of monitoring
+   The main contributions of our work are:                          and logging network traffic without making any modifications
+   • We investigate the problem of WF attacks lacking
+                                                                    or injections. The attacker’s goal is to identify the specific
+      continuous expansion learning capabilities in real open       websites visited by Tor users. Although traffic is encrypted
+      environments. To address this issue, we introduced            through multiple layers of the Tor network, a WF attacker can
+      a class incremental learning method to enhance the            still infer user behavior by analyzing features like timestamps
+      attack model’s practical application ability. This approach   and packet sizes using machine learning.
+      enables attackers to continuously expand their monitoring        Closed-world and open-world scenarios are frequently
+      scope across target websites without triggering catas-        employed to evaluate WF attack methods [12], [32], [33]. The
+      trophic forgetting, while simultaneously not requiring a      closed-world scenario restricts the user’s access to a subset of
+      significant increase in computational or memory resource      websites defined by the attacker, constituting the monitored
+      consumption.                                                  sites. This scenario significantly differs from real-world con-
+   • We propose two new and more challenging scenarios
+                                                                    ditions, but it provides a simplified and effective environment
+      for evaluating CIF attacks: Dynamic closed-world and          for analyzing and evaluating WF attack capabilities. The open-
+      Dynamic open-world. In these scenarios, the attacker can      world scenario is more realistic, assuming a user can access
+      continuously expand the set of monitored sites to update      both the monitored sites and those outside the attacker’s
+      the model’s identification and classification capabilities.   scope, which form a substantial set of non-monitored sites. In
+   • We propose a new attack, Class Incremental
+                                                                    the open-world multi-classification scenario, the attacker must
+      Fingerprinting (CIF), for more realistic scenario             determine if a traffic trace is part of the monitored set. If so, the
+      applications. Our attack employs the Dynamic Extension        attacker must pinpoint the specific site within the monitored
+      Architecture (DEA) for CIL, which achieves an average         set that the trace matches.
+      of 97.8% and above accuracy in dynamic closed-world              Neither scenario allows dynamic scaling of monitored
+      incremental learning tasks and demonstrates effectiveness     websites to simulate a real open environment. Therefore,
+      in open-world environments.                                   we propose two scenarios, dynamic closed-world, and open-
+   • We evaluated the performance of the CIF attack through
+                                                                    world, to evaluate evolving WF attack scenarios.
+      a series of experiments. The experimental results show
+      that the CIF attack not only remains effective in dynamic                 III. BACKGROUND AND R ELATED W ORK
+      open-world scenarios but also effectively addresses the          In the Tor network, messages are transmitted in fixed-size
+      challenge of few-shot incremental learning by combining       units (512 bytes) and are padded with zeros if insufficient
+      with our proposed Mixtam data augmentation method.            data is available [15], [16]. An attacker can analyze Tor’s
+   The rest of this paper is organized as follows: we introduce     traffic patterns and extract features such as interval time
+the threat model in Section II and provide background and           (IPD), direction, and packet size. These extracted features
+YUAN et al.: CLASS INCREMENTAL WF ATTACK BASED ON DYNAMIC EXPANSION ARCHITECTURE                                                1957
+
+
+
+can then serve as inputs for training classifiers to identify       then used to train a k-NN classifier for WF classification.
+the websites visited by users. Broadly, WF attack methods           Experimental results demonstrate that the method performs
+discussed in the literature are categorized into two groups         well with limited data and is transferable by re-training the
+based on feature extraction techniques: traditional WF attacks      k-NN classifier with a new dataset. Zhou et al. [23] proposed
+that involve manual feature extraction and WF attacks that          the Clustered WF Attack (CWFA) method, which utilizes the
+utilize deep learnin

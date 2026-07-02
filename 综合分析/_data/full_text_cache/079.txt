@@ -1,0 +1,1109 @@
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 1
+
+ IEEE Copyright Notice
+ Copyright © 2021 IEEE. Personal use of this material is permitted. Permission from IEEE must be obtained for all
+ other uses, in any current or future media, including reprinting/republishing this material for advertising or promotional
+ purposes, creating new collective works, for resale or redistribution to servers or lists, or reuse of any copyrighted
+arXiv:1908.01656v2 [cs.LG] 28 Jul 2021
+
+ component of this work in other works.
+
+ Distributed Deep Convolutional Neural Networks for the Internet-of-Things
+ Simone Disabato∗
+ Manuel Roveri∗
+ Cesare Alippi∗‡
+
+ ∗ Dipartimento di Elettronica, Informazione e Bioingegneria, Politecnico di Milano, Milan, Italy
+ ‡ Faculty of Informatics, Università della Svizzera Italiana (USI), Lugano, Switzerland.
+
+ Published in IEEE Transactions on Computers.
+ The code of the paper is available at https://github.com/simdis/distributedCNNs.
+
+ Please cite as:
+ S. Disabato, M. Roveri and C. Alippi, "Distributed Deep Convolutional Neural Networks for
+ the Internet-of-Things," in IEEE Transactions on Computers, vol. 70, no. 8, pp. 1239-1252, 1
+ Aug. 2021, doi: 10.1109/TC.2021.3062227.
+
+ BibTex
+ @article{disabato2021distributed,
+ title={Distributed deep convolutional neural networks
+ for the internet-of-things},
+ author={Disabato, Simone and Roveri, Manuel and Alippi, Cesare},
+ journal={IEEE Transactions on Computers},
+ year={2021},
+ volume={70},
+ number={8},
+ pages={1239-1252},
+ doi={10.1109/TC.2021.3062227},
+ publisher={IEEE}
+ }
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 2
+
+Distributed Deep Convolutional Neural Networks
+ for the Internet-of-Things
+ Simone Disabato, Manuel Roveri, Senior Member, IEEE, and Cesare Alippi, Fellow, IEEE
+
+ Abstract—Severe constraints on memory and computation characterizing the Internet-of-Things (IoT) units may prevent the execution
+ of Deep Learning (DL)-based solutions, which typically demand large memory and high processing load. In order to support a real-time
+ execution of the considered DL model at the IoT unit level, DL solutions must be designed having in mind constraints on memory and
+ processing capability exposed by the chosen IoT technology. In this paper, we introduce a design methodology aiming at allocating the
+ execution of Convolutional Neural Networks (CNNs) on a distributed IoT application. Such a methodology is formalized as an
+ optimization problem where the latency between the data-gathering phase and the subsequent decision-making one is minimized,
+ within the given constraints on memory and processing load at the units level. The methodology supports multiple sources of data as
+ well as multiple CNNs in execution on the same IoT system allowing the design of CNN-based applications demanding autonomy, low
+ decision-latency, and high Quality-of-Service.
+
+ Index Terms—Deep Learning, Convolutional Neural Networks, Internet-of-Things.
+
+ ✦
+
+1 I NTRODUCTION becoming more and more relevant from both the scientific
+ and technological perspective and solutions present in the
+Deep learning (DL) represents the state-of-the-art in many
+ literature address such a problem at different levels (i.e., adrecognition/classification applications [1], [2], [3], [4] and
+ hoc hardware, approximation techniques, off-loading of DL
+is characterized by processing architectures organized in a
+ and distributed DL). Despite the growing research interest,
+pipeline of layers providing a hierarchical representation [5].
+ the problem of assigning a distributed DL solution on a net-
+However, such solutions are also characterized by a high
+ work of IoT embedded devices is still open in the literature.
+computational load and memory occupation [6], [7], [8]
+ In this research direction, this paper introduces a
+and, for this reason, their use is mostly restricted to highmethodology that receives technological constraints associperformance computing platforms [9], [10], [11].
+ ated with (possibly heterogeneous) IoT units and the DL
+ For this reason, Internet-of-Things (IoT) systems, whose
+ trained architectures, and provides the optimal distributed
+computational units are mostly constrained by limited proassignment of the DL computation (layers) to the IoT units
+cessing, memory and energy capacities, have been rarely by minimizing the data gathering to decision latency. In
+considered a viable technological solution for DL. In fact, particular, the methodology has been tailored to Convolucurrently, IoT units are generally considered as simple datational Neural Networks (CNNs), representing the state-ofcollectors acquiring and transmitting data to the Cloud for
+ the-art in image and video processing. Interestingly, these
+DL processing [12], with very few solutions (mostly based
+ CNNs can operate sequentially on the processing pipeline
+on approximation techniques) proposing machine learning
+ (all layers are executed up to the final classification) [4],
+and (most rarely) deep learning for embedded systems [8], [16], [17] or can decide the processing path at run-time
+[13], [14]. Unfortunately, the request for a remote processing (skipping the execution of some layers) according to the
+to make decisions limits the effectiveness of the system as
+ information content brought by the input [18], [19]. Both
+the “data production to decision making”-latency might not
+ cases are considered in the proposed methodology that, in
+satisfy real-time constraints. The system closed-loop stabiladdition, can be used with multiple CNNs running on the
+ity may even be compromised when remote connectivity
+ same network of IoT embedded devices (possibly sharing
+between IoT units and Cloud is unavailable or limited in processing layers).
+bandwidth [15]. Hence, applications requesting a (quasi) With respect to the literature, the main novel aspects of
+real-time decision/actuation cannot take advantage of re- the proposed methodology can be summarized as:
+mote Cloud-based processing of DL solutions.
+ The problem of reducing the complexity of DL solutions • the methodology is able to take into account comto match the technological constraints of IoT systems is munication and computation capabilities as well as
+ memory constraints of the IoT units;
+ • the methodology can support CNNs whose process-
+• Simone Disabato and Manuel Roveri are with the Dipartimento di
+ Elettronica, Informazione e Bioingegneria, Politecnico di Milano, 20133 ing pipeline depends on the specific input image;
+ Milano, Italy. E-mail: {simone.disabato, manuel.roveri}@polimi.it. • multiple CNNs (possibly sharing processing layers)
+• Cesare Alippi is with the Dipartimento di Elettronica, Informazione e can be executed on the same network of IoT units.
+ Bioingegneria, Politecnico di Milano, 20133 Milano, Italy, and also with
+ the Università della Svizzera Italiana, 6900 Lugano, Switzerland. E-mail: The proposed methodology has been validated both on simcesare.alippi@polimi.it.
+ ulations and a real-world technological scenario, while the
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 3
+
+related code is made available to the scientific community1 . e.g., [36] where the classification/pattern recognition tasks
+The paper is organized as follows: the related literature is of a wearable device are partially offloaded to other comanalysed in Section 2, the research problem is formulated in puting units (e.g., mobile phones). Similarly to our vision,
+Section 3, whereas the proposed methodology is described here the priority in the offloading is to move code at first to
+in Section 4. Results are detailed in Sections 5 and 6, while the closest mobile devices and, then, if needed, to the Cloud.
+conclusions are drawn in Section 7. The problem of distributing DL solutions has been recently addressed in the field of edge and fog computing. [37]
+2 R ELATED L ITERATURE introduced a distributed framework for CNNs operating in
+In the related literature, the problem of reducing the compu- edge computing platforms, with the possibility of distributtational and memory demand of DL solutions to match the ing the CNNs computation, mostly restricted to the Cloud,
+technological constraints of IoT systems can be addressed also to edge or local devices. Unfortunately, the usage of the
+at different levels. At the hardware level, the best techno- Cloud is predominant in this work. In [15], [37] emerged the
+logical performances with minimum power consumption need to completely re-design the DL solutions to take into
+are achieved by ad-hoc hardware computing platforms account hardware and physical constraints at application
+for DL as specific processors [20], or configurable FPGA design-time, to make IoT systems a viable technological
+solutions [21], [22]. As also pointed out by [23], such so- solution for DL. Such an approach is considered in some
+lutions require high design-skills and cannot be easily re- recent works addressing the problem of distributing maused. Another approach, that has shown a significant drop chine/deep learning solutions onto a network of IoT/Edge
+in computation time, is the adoption of GPUs [10], [16], devices [14], [38], [39], [40], [41]. In particular, [14] organizes
+TPUs [24], or neural hardware. However, both custom hard- the computation tasks by partitioning the convolutional
+ware and GPU/TPU solutions cannot be easily considered layers vertically, with the possibility of sharing the comin pervasive IoT systems. puted features among parallel tasks. [40], instead, proposed
+ The reduction of DL solutions complexity can be a dynamic scheduler to assign the layers to edge units and
+achieved by considering approximation techniques. Such reduce the communication data by relying on autoencoders.
+an approach allows to reduce the memory and/or com- Unfortunately, almost all these solutions rely on approxputational demand at the expense of a decrease in the imations of the original ML or DL solution to match the
+accuracy. [25], [26], [27] proposed compression techniques hardware and physical constraints of the devices. In addion already trained CNNs, by compressing the weights, by tion, the processing pipelines of the machine/deep learning
+pruning whole or part of layers, and by adopting Huffman solutions introduced in these works are fixed at design-time,
+coding. Another approach is the quantization of layers’ hence not being able to modify their execution at run-time
+weights [28], up to binary weights, also during the training according to the information content brought by the input.
+phase [29], [30], [31]. Similarly, [8] introduced task-dropping Finally, the proposed solutions are not meant to be executed
+and precision-scaling mechanisms to design application- on low-power embedded systems (e.g., STM32 or Arduino).
+specific approximated CNNs able to be executed in off-theshelf embedded systems, but not in distributed IoT systems.
+ 3 P ROBLEM F ORMULATION
+[32], instead, studied approximation to reduce inference on
+pooling and normalization layers. An approach to reduce The IoT system comprises a set of C data-acquisition units
+the inference time is those of Adaptive Early Exit CNNs [18] {s1 , . . . , sC } mounting cameras and providing the images to
+or Gate-Classification CNNs [19], where the classification be classified by the C CNNs (each CNN processes data comoutput can be provided also at intermediate layers, skipping ing from one data-acquisition unit), a set NN = {1, . . . , N }
+the remaining computation. of N possibly heterogeneous IoT units implementing code
+ A different point of view is provided by the off-loading execution, and one target unit f receiving all the C CNNs’
+techniques for distributed computing systems. Here, the outcomes to make a decision or activate a reaction. Without
+goal is not to reduce DL solutions’ complexity but to move any loss of generality, the C data-acquisition units are
+computationally-intensive processing to high-performing assumed to only acquire images and do not participate in
+units of the distributed system. For instance, a framework the computation. The i-th IoT unit i ∈ NN is characterized
+to optimally offload code in a pervasive system comprising by its own constraints w.r.t. maximum memory capacity m̄i
+mobile units is proposed in [33], by either minimizing the and available computation c¯i .
+total communication latency or the overall energy consump- The IoT system is modeled as a graph G(V, E) of nodes
+tion. Differently, [34] proposed a high-level programming V = {NN ∪ {s1 , . . . , sC , f }} and arcs E . An arc ei1 ,i2
+language to design applications meant for Fog-Computing between unit i1 and i2 exists in E if i2 is within the range
+Sensor Networks able to hide the heterogeneity of comput- of the transmission technology the IoT unit i1 is equipped
+ing nodes and their position in space. [35] proposed a low- with2 . Let di1 ,i2 , for each i1 , i2 ∈ V , be the hop-distance
+complexity scheduler that increases the throughput in IoT between units i1 and i2 of V defined as the number of hops
+clusters by relying on tasks duplication and splitting by tak- (communication steps), data need to take to reach i2 from i1 .
+ing into account communication and computation capabili- In other terms, distance di1 ,i2 is the shortest communication
+ties, but not IoT units memory constraints. Very few works
+ 2. All the units in V are assumed to share the same transmission
+present in the literature encompass the code-offloading of
+ technology with a fixed transmission data-rate. If the IoT units i1 and
+machine learning-based applications in pervasive systems, i2 adopt two different transmission technologies such that i2 is within
+ the transmission range of i1 , but i1 is not inside the one of i2 , then
+ 1. The code is available at https://github.com/simdis/distributedCNNs. di1 ,i2 = 1 6= di2 ,i1 (loss of symmetry property).
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 4
+
+path between units i1 and i2 within the graph G. Following number of layers among the considered C CNNs (i.e., the
+the definition of shortest path in a graph, if no path between maximum depth of all CNNs).
+unit i1 and i2 exists, then di1 ,i2 = +∞. We also assume that Without loss of generality, the distances di1 ,i2 , for each
+no isolated node exists, i.e., di1 ,i2 < ∞, for each i1 , i2 ∈ V . i1 , i2 ∈ V , can be precomputed, allowing us to define
+ Let Mu , for each u ∈ NC = {1, . . . , C}, be the number an integer quadratic optimization problem on variables
+of layers characterizing the u-th CNN. Each layer j of CNN αu,i,j s. As detailed in Section 3, {s1 , . . . , sC } and f do
+u, for each j ∈ {1, . . . , Mu } and u ∈ NC , is characterized not participate in the optimization problem since their task
+by a given memory demand mu,j and computation cu,j . is to acquire images and receive the final classification,
+More specifically, the memory complexity mu,j (in Bytes) respectively. This assumption can be easily removed by
+is defined as the number of weights that layer j of CNN considering additional IoT computing units in the same
+u has to store multiplied by the size of the data type positions of si s and f .
+used to represent those parameters (typically the floating- The objective function to be minimized models the lapoint type occupying 4 Bytes), while the computational tency in making a decision by the C CNNs placed on the IoT
+load cu,j is measured as the number of multiplications to units, defined as the time occurring between images acquibe executed by that layer [8]. Let Ku,j , for each u ∈ NC sition by sensor unit su s (size Ku,s ) and final classifications
+and j ∈ {1, . . . , Mu }, be the memory occupation of the Ku,Mu s are transmitted to unit f :
+intermediate representation transmitted from layer j to the
+ N X
+ C X N M−1
+subsequent layer j+1 of CNN u, and Ku,s and Ku,Mu be the X X Ku,j
+memory occupation of the input image of CNN u transmit- αu,i,j · αu,k,j+1 · pu,j+1 · · di,k
+ u=1 i=1 k=1 j=1
+ ρ
+ted from source su to the unit executing the first layer of the
+ N
+u-th CNN and the final classification provided by layer Mu X (p)
+sent to the target unit f , respectively. In particular, Ku,Mu is + ti + ts + tf , (3)
+ i=1
+either the classification label or the posterior probability of
+the classes resulting from the softmax layer. such that
+ When the processing path of a CNN depends on the M
+ C X
+ X
+information content, such as in Adaptive [18] or Gate- ∀i ∈ NN αu,i,j ≤ L (4)
+Classification CNNs [19], classification completes as soon u=1 j=1
+as enough confidence is achieved (the execution of the M
+ C X
+ X
+remaining layers is aborted). To achieve this goal, Early- ∀i ∈ NN αu,i,j · mu,j ≤ m̄i (5)
+Exit CNNs (EX-CNNs) are endowed with intermediate exit u=1 j=1
+points, creating multiple paths within the CNNs each of M
+ C X
+ X
+which is characterized by a probability of being traversed. ∀i ∈ NN αu,i,j · cu,j ≤ c̄i (6)
+More formally, given a Mu -layer EX-CNN, let pu,j ∈ [0, 1] be u=1 j=1
+the probability that the j -th layer of the u-th CNN processes N
+ (
+ X 1 if j ≤ Mu
+the input image3 and let gu,j ∈ [0, 1], for each u ∈ NC and ∀u ∈ NC , ∀j ∈ NM αu,i,j = (7)
+ 0 otherwise
+j ∈ {1, . . . , Mu }, be the probability that the computation i=1
+ends at layer j of the u-th CNN is and where
+ (
+ N
+ C X
+ pu,j − pu,j+1 if j < Mu X Ku,s
+ gu,j = PMu −1 . (1) ts = αu,i,1 · pu,1 · · ds,i (8)
+ 1 − v=1 gu,v if j = Mu ρ
+ u=1 i=1
+The addressed problem is the optimal placement of the C (p)
+ XC X M
+ cu,j
+CNNs layers on the N IoT units to minimize the latency in ti = αu,i,j · pu,j · (9)
+ ei
+transmitting decisions about the images gathered by the C u=1 j=1
+sources to the target unit f . N X
+ C X M
+ X Ku,Mu
+ tf = αu,i,j · gu,j · · di,f (10)
+ u=1 i=1 j=1
+ ρ
+4 T HE P ROPOSED M ETHODOLOGY
+ The objective function in Eq. (3) comprises four different
+This section introduces the proposed methodology for the
+ components of the latency:
+optimal placement of CNNs on the IoT system. Such a
+ (i) The source time ts , defined in Eq. (8), required to
+methodology has been reformulated as a decision-making
+latency minimization optimization problem aiming at opti- transmit the images from the sources su s to the IoT units
+mally assigning the layers of the C CNNs to the N IoT units. executing the first layer of the CNNs. Although the first
+ layer is always reached, i.e., pu,1 = 1 for each u ∈ NC , the
+This optimization problem relies on the CN M variables
+ term pu,1 has been added to Eq. (8) to provide homogeneity
+αu,i,j defined as:
+ ( in the formalization.
+ 1 if IoT unit i executes layer j of CNN u (ii) The transmission time of intermediate representa-
+ αu,i,j = , (2) tions among the IoT units processing the CNN layers.
+ 0 otherwise
+ More precisely, the transmission time of the intermediate
+for each u ∈ NC , for each i ∈ NN and for each j ∈ NM = representation of the j -th layer of the u-th CNN from unit i
+{1, . . . , M }, being M = max{M1 , . . . , Mu } the maximum to k is
+ Ku,j
+ 3. The probabilities pu,j s can be estimated during CNN learning. · di,k , (11)
+ ρ
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 5
+
+where ρ is the data-rate of the considered transmission If a layer is shared among k CNNs, the Eqs. (13), (14),
+technology and di,k is the hop-distance between unit i and and (15) need to take into account k−1 out of the k variables
+k as defined in Section 3. In Eq. (3) the transmission time corresponding to the shared layer.
+is weighted by the probability pu,j+1 that layer j + 1 is The considered class of optimization problems, i.e., the
+executed right after layer j . integer quadratic programs, is NP-complete. More specif-
+ (p) ically, since the αu,i,j s are binary variables, it is possible
+ (iii) The processing time ti of the CNN layers on the
+IoT units. Specifically, the processing time of layer j of to convert it to a binary linear program, which is one
+CNN u on the i-th IoT unit is approximated as the ratio of Karp’s 21 NP-complete problems [42]. In the proposed
+between the computational demand cu,j that layer requires methodology, the optimization problem is solved through
+and the number of multiplications ei the IoT unit i is able the Gurobi solver5 .
+to carry out in one second4 . In Eq. (9), the processing time is The optimization problem outcome is the optimal placeweighted by the probability pu,j that the layer j of CNN u ment αu,i,j s of the C CNNs’ layers to the N IoT units
+is executed. minimizing the delay in making a classification. In the event
+ (iv) The sink time tf required to transmit the final that the optimization provides more than one solution, the
+classification Ku,Mu , for each u ∈ NC , from the IoT units optimal placement is any feasible solution with minimal lataking these decisions to the target unit f . It is noteworthy to tency. In the rest of this section, the methodology is tailored
+point out that Eq. (10) takes into account all feasible output to three specific configurations of the DL solution, followed
+paths from node i to the target unit f , suitably weighted by by some comments about the open points.
+the probability gu,j that the classification is made at layer j
+of CNN u in execution on IoT unit i. 4.1 The configuration with a single CNN
+ The constraint in Eq. (4) ensures that each IoT unit
+ The presence of a single CNN (C = 1) allows us to rely on
+contains at most L layers, being L an additional user-
+ N M binary variables αi,j , determining whether layer j of
+defined model hyper-parameter. In particular, when L = 1,
+ the CNN is assigned to unit i of the IoT system.
+at most one layer can be assigned to an IoT unit, while (
+L > 1 implies that up to L layers (also belonging to 1 if IoT unit i executes CNN layer j
+different CNNs) can be assigned to a particular IoT unit. αi,j = , (16)
+ 0 otherwise
+The constraints in Eq. (5) and (6) are meant to take into
+account the technological limits about memory usage and for each i ∈ NN and j ∈ NM . The objective function in
+computational load characterizing each IoT unit. Finally, Eq. (3) modelling the latency in making a decision to be
+the constraint in Eq. (7) ensures that each layer j , for each minimized is reformulated as:
+j ∈ NM , is assigned to exactly one node and, at the same N M−1
+ N X N
+ X X Kj X (p)
+time, manages the possibility that the C CNNs might be αi,j · αk,j+1 · · di,k + ti + ts + tf . (17)
+characterized by a different number Mu ≤ M of layers, for i=1 k=i j=1
+ ρ i=1
+each u ∈ NC . In fact, in those cases (i.e., when Mu < M ), Then, the constraints in Eqs. (4), (5), (6) and (7) become:
+the unneeded αu,i,j s are set to 0.
+ M
+ When the j1 -th layer of CNN u1 and the j2 -th layer of X
+CNN u2 are shared between the two CNNs, the following ∀i ∈ NN αi,j ≤ L, (18)
+constraint is added to the optimization problem j=1
+ M
+ X
+ ∀i ∈ NN αu1 ,i,j1 = αu2 ,i,j2 , (12) ∀i ∈ NN αi,j · mj ≤ m̄i , (19)
+ j=1
+to ensure that the shared layer is placed on the same IoT M
+unit. In addition, the constraints on the maximum number
+ X
+ ∀i ∈ NN αi,j · cj ≤ c̄i , (20)
+of layers placed on a IoT unit - Eq. (4) - and the memory j=1
+usage and computational load constraints - Eqs (5) and (6) - N
+ X
+are modified as follows to count the shared layer only once: ∀j ∈ NM αi,j = 1, (21)
+ M
+ C X i=1
+ X
+ ∀i ∈ NN αu,i,j ≤ L + αu2 ,i,j2 , (13) while
+ u=1 j=1 N
+ X Ks
+ M
+ C X ts = αi,1 · · ds,i , (22)
+ ρ
+ X
+ ∀i ∈ NN αu,i,j · mu,j ≤ m̄i + αu2 ,i,j2 · mu2 ,j2 , i=1
+ u=1 j=1 M
+ (p)
+ X cj
+ (14) ti = αi,j · , (23)
+ M
+ C X j=1
+ ei
+ X
+ ∀i ∈ NN αu,i,j · cu,j ≤ c̄i + αu2 ,i,j2 · cu2 ,j2 . (15) N
+ X KM
+ u=1 j=1 tf = αi,M · · di,f , (24)
+ i=1
+ ρ
+ 4. The ei s encompass the number of available cores, the type of
+pipeline such cores implement to approach one operation per clock 5. The solver is able to find a solution with a error less than 2% with
+cycle, the presence or not of a GPU allowing to parallelize CNN respect to the optimal placement in less than 2 seconds and a negligible
+operations (e.g., the convolutions) and all the delays resulting from memory occupation in all the considered IoT scenarios described in
+the processing system and memory management. Section 5.
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 6
+
+ (L1) 5x5 conv, 32 (L2) 5x5 conv, 64
+ I 2x2 max-pool, /2 2x2 max-pool, /2
+ (L3) FC 384 (L4) FC 192 (L5) FC 10
+
+ (a) The architecture of the considered 5-layer CNN, where I is the input image.
+
+ n08 n08
+
+ n07 n03 n07 n03
+
+ s, f s, f
+ n06 n06 L5
+ n09 n11 n09 n11
+
+ n05 n05 L1
+ n01 n01 L4
+
+ n04 L2 n04 L3
+ n10 n02 n10 n02
+
+(b) An example of IoT system with STM32H7 (circles) and Rasp- (c) An example of the methodology outcome where the layers
+berry 3B+ (squares). The source s and the sink f share the same L1,. . . , L5 of the 5-layer CNN in Figure 1a are placed on the IoT
+IoT unit. The dotted circle refers to the transmission range, equal units of the system shown in Figure 1b, when setting L = 1.
+for all the IoT units.
+ n01 n02 n03 n04 n05 n06 n07 n08 n09 n10 n11
+ L1 0 0 0 0 1 0 0 0 0 0 0
+ L2 0 0 0 0 0 0 0 0 0 1 0
+ L3 0 0 0 1 0 0 0 0 0 0 0
+ L4 1 0 0 0 0 0 0 0 0 0 0
+ L5 0 0 0 0 0 1 0 0 0 0 0
+
+ (d) The variables αu,i,j s representing the methodology outcome for the solution shown in Figure 1c, with u = 1.
+
+ Fig. 1: The methodology is applied to a 5-layer CNN (i.e., C = 1).
+
+account for the transmission time between the source s the pu,j s and gu,j s are simplified as pj and gj , for each j ∈
+and the IoT unit running the first layer of the CNN, the NM , as detailed in Section 4.2.
+processing time on all unit is, and the transmission time The objective function modelling the latency in decision
+between the unit running the M -th layer of the CNN and making defined in Eq (3) is tailored as follow:
+the sink f , respectively. N M−1
+ N X N
+ In this configuration, the methodology has been applied
+ X X Kj X (p)
+ αi,j · αk,j+1 · pj+1 ·
+ · di,k + ti + ts + tf ,
+to the 5-layer CNN described in Figure 1a, characterized i=1 k=i j=1
+ ρ i=1
+by M = 5 layers and whose details are in Table 2a. The (25)
+considered IoT system is the one described in Figure 1b with constraints as in Eqs. (18), (19), (20), and (21), and
+comprising N = 11 IoT units and being s and f the same (p)
+ where the source time ts , the processing time ti , and the
+unit. The IoT units belong to two different technological sink time tf have been modified as follows:
+families, i.e., STM32H7 (round nodes) and Raspberry Pi 3B+
+ N
+(squared nodes), whose memory m̄i and computational c̄i X Ks
+ ts = αi,1 · p1 · · ds,i , (26)
+constraints are detailed in Table 3. An example of the op- ρ
+ i=1
+timization problem outcome in this technological scenario M
+with L = 1 is given in Figure 1c, whose corresponding (p)
+ X cj
+ ti = αi,j · pj · , (27)
+αi,j s are detailed in Figure 1d. In the optimal placement, j=1
+ ei
+involving three STM32H7 units (nodes n05 , n01 , and n06 ) M
+ N X
+and two Raspberry Pi 3B+ (nodes n10 , and n04 ), the layer
+ X KM
+ tf = αi,j · gj · · di,f . (28)
+L3 of the CNN has been assigned to a Raspberry Pi 3B+ IoT i=1 j=1
+ ρ
+unit (i.e., n04 ) since its execution on STM32H7 would violate
+the memory constraint. A 6-layer EX-CNN is shown, as an example, in Figure 2a
+ and detailed in Section 5.1–Table 2a, where M = 6 and the
+ Early Exit is at layer j = 2, with a probability ν = 0.99
+4.2 The configuration with a single early-exit CNN of taking the final classification. Hence, p1 = p2 = 1 and
+This configuration refers to the case where a single EX-CNN p3 = p4 = p5 = 0.01, with the gj s different from zero only
+(C = 1) has to be placed on the IoT system. Here, the pu,j s at the Early-Exit (g2 = 0.99) and the last layer (g6 = 0.01).
+and gu,j s are simplified as pj and gj , for each j ∈ NM , In Figure 2, the proposed methodology is applied to this
+defining the probabilities that layer j is executed and that CNN and the IoT system already described in Figure 1b. The
+the final classification is made at layer j (i.e., the direct path methodology outcome is particularly interesting showing
+from j to the sink is traversed), respectively. that the Early-Exit layer (j = 2), being particularly demand-
+ More specifically, the problem variables are simplified ing in terms of memory, is assigned to the Raspberry Pi 3B+
+into N M binary variables αi,j defined in Eq. (16). Instead, n04 unit. When enough confidence is achieved at Early-Exit
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 7
+
+(j = 2), the decision is directly sent from n04 to the sink f common processing layers, operating in the IoT system
+through n06 . Otherwise, the processing is forwarded from depicted in Figure 1b and with L = 1. Interestingly, the outn04 to n01 to complete the processing up to n08 . come of the methodology, depicted in Figure 3a, shows that
+ the placement of both CNNs represent the optimal solution
+4.3 The configuration with multiple CNNs of the single-CNN configuration. Moreover, the methodology has been applied to the case where the convolutional
+An interesting application scenario is the one with multiple
+ layers L1 and L2 are shared between the two CNNs. This
+CNNs, either without or with shared processing layers. EXsolution is inspired by the transfer learning paradigm where
+CNNs have not been considered here, hence pu,j = 1, for
+ two CNNs might share low-level representation processing
+each u ∈ NC and j ∈ {1, . . . , Mu }.
+ layers, while high-level ones are specific for each CNN. As
+ In this configuration, the objective function modelling
+ described in Section 4, the following constraints need to be
+the latency in decision making becomes:
+ added to the optimization problem:
+ N X
+C X N M−1 N
+X X Ku,j X (p) ∀i ∈ NN α1,i,1 = α2,i,1 , (38)
+ αu,i,j ·αu,k,j+1 · ·di,k + ti +ts +tf ,
+u=1 i=1 k=i j=1
+ ρ i=1 ∀i ∈ NN α1,i,2 = α2,i,2 , (39)
+ (29)
+with constraints defined in Eqs. (4), (5), (6) and (7), and and the constraints Eq. (13), (14) and (15) have to be
+ (p) redefined accordingly. The methodology outcome in this
+where the source time ts , the processing time ti , and the
+sink time tf are modified as follow: scenario is interesting showing that common layers L1 and
+ L2 have been placed in IoT units n06 and n01 , respectively,
+ N
+ C X
+ X Ku,s while, after n01 , the processing takes two different paths.
+ ts = αu,i,1 · · ds,i , (30)
+ u=1 i=1
+ ρ
+ C X M 4.4 Open Points
+ (p)
+ X cu,j
+ ti = αu,i,j · , (31) Currently, the proposed methodology neither takes into
+ u=1 j=1
+ ei
+ account the energy status of IoT units nor network fail-
+ N
+ C X ures [43]. The energy status can be managed by introducing
+ X Ku,Mu
+ tf = αu,i,Mu · · di,f . (32) a constraint for each IoT unit depending on the remaining
+ u=1 i=1
+ ρ
+ energy value, e.g., forcing the variables α·,i,· s of a low-
+ Finally, to deal with shared layers, the constraint defined energy node i to zero or introducing penalties for assigning
+in Eq. (12) is introduced per each shared layer, whereas the a layer to those nodes. The network failures could be manconstraints in Eqs. (4), (5), and (6) are modified accordingly, aged by modifying the transmission time defined in Eq. (11)
+as detailed in Section 4 with Eqs. (13), (14), and (15). As an as (1 + ξ i,j ) · Ku,j /ρ · di,k taking into account a probability
+example, it is provided the complete extension to deal with of retransmission ξ i,j for each pair of nodes (i, j).
+the two first shared layers for the case shown in Figure 3b. It is noteworthy to point out that, thanks to the transfer
+The additional constraints are defined in Eqs. (38) and (39) learning paradigm, the hierarchy of layers of the CNNs
+to ensure that the shared layers j = 1 and j = 2 (of CNNs can be considered as general feature extractors [44]. For
+u = 1 and u = 2) are assigned to the same node i. Then, the this reason, the deployed CNNs can be easily reconfig-
+Eqs. (4), (5), and (6) are modified as follow: ured to address a different image-classification problem by
+ M
+ C X replacing only upper layers. Moreover, this optimization
+ phase can be scheduled periodically or when needed to
+ X
+ ∀i ∈ NN αu,i,j ≤ L + α1,i,1 + α1,i,2 , (33)
+ u=1 j=1 manage variations in the IoT network configuration (e.g.,
+ M
+ C X due to the removal or insertion of IoT units). This is a
+ crucial aspect in the scenario of mobile IoT units, a case
+ X
+ ∀i ∈ NN αu,i,j · mu,j ≤ m̄i + m̂, (34)
+ u=1 j=1 that is not considered in this paper. In fact, thanks to the
+ M
+ C X transfer learning approach and by periodically recomputing
+ X
+ ∀i ∈ NN αu,i,j · cu,j ≤ c̄i + ĉ. (35) the CNN allocation, the methodology could be applied to
+ u=1 j=1 units changing their position in the environments they are
+ operating in.
+where
+ m̂ = α1,i,1 · m1,1 + α1,i,2 · m1,2 (36)
+ 5 E XPERIMENTAL R ESULTS
+ ĉ = α1,i,1 · c1,1 + α1,i,2 · c1,2 (37)
+ The proposed methodology has been validated on five
+ It is noteworthy to point out that there is no difference CNNs and four families of off-the-shelf IoT devices in a
+in defining Eqs. (33), (34), and (35) with the variables of the synthetic scenario of distributed image classification for the
+CNN u = 2, instead of those of CNN u = 1, as done here. control of a critical area (e.g., recognition of the presence of
+It is indeed sufficient to relax the constraints with k − 1 target objects in a given area through image classification).
+variables out of k , where k represents the number of CNNs The monitored area is assumed to be a 30m square and the
+a layer is shared among, in order to count that shared layer positions of the IoT units as well as those of the sources su s
+only once. and the sink f are randomly selected following a uniform
+ The proposed methodology has been applied to two distribution. The hyper-parameter L, setting the maximum
+instances of the 5-layer CNN described in Figure 1a without number of CNN layers per IoT unit, ranges from 1 to 5.
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 8
+
+ (L1) 5x5 conv, 64
+ p1 = 1.00, g1 = 0.00
+ L6
+ I 2x2 max-pool, /2 n08
+
+ n07 n03 L5
+ (L2, GC)
+ p2 = 1.00, g2 = 0.99
+ FC 384,192,10
+ s, f
+ n06
+ ν = 0.01 L4
+ n09 n11
+ (L3) 5x5 conv, 64
+ 2x2 max-pool, /2
+ p3 = 0.01, g3 = 0.00 L1
+ n05
+ ν = 0.99
+ p4 = 0.01, g4 = 0.00 n01 L3
+ (L4) FC 384
+ (L5) FC 192 p5 = 0.01, g5 = 0.00
+ (L6) FC 10 n04 GC
+ p6 = 0.01, g6 = 0.01 n02
+ n10
+ y
+(a) The 6-layer EX-CNN archicture with its pi s and gi s, for each (b) The methodology outcome on the 6-layer EX-CNN on the IoT
+i ∈ NN . I is the input image. system shown in Figure 1b.
+Fig. 2: The methodology applied to a 6-layer EX-CNN, with L = 1. Note that dn04 ,f = 2, thus n04 requires an intermediate
+hop, i.e., the node n06 , to send the final classification.
+
+ L12 L52
+ n08 n08
+
+ n07 n03 L22 n07 n03 L42
+ L11
+
+ s, f s, f
+ L1
+ n06 L52 n06
+ n09 L21 n11 L32 n09 n11 L32
+ n05 L51 n05 L51
+ n01 2
+ L4 n01 L2
+
+ L31 n04 L41 L41 n04 L31
+ n10 n02 n10 n02
+
+(a) The methodology outcome, with no shared layer between the (b) The methodology outcome, with the first two layer shared
+two 5-layer CNNs (shown in Figure 1a). between the two 5-layer CNNs.
+
+ Fig. 3: The methodology applied to two 5-layer CNNs and the IoT system in Figure 1b with L = 1.
+
+ The rest of the section is organized as follows. Section 5.1 are present after the first, second and fifth convolutional
+details the considered CNNs, Section 5.2 describes the fam- layers. An Early-Exit variant of the AlexNet [19] has been
+ilies of considered off-the-shelf IoT units and their trans- considered where the Early-Exit is placed after the second
+mission technologies, and Section 5.3 describes the figure of maximum pooling layer and is composed of three fullymerit. Sections 5.4 and 5.5 describe the experimental results connected layers with 128, 64 and 2 neurons, respectively.
+in two different IoT systems. The fifth considered CNN is the ResNet 101 [4], whose
+ details are given in Table 1. This CNN works on 224x224
+ RGB images and is composed by a sequence of Bottleneck
+5.1 The considered CNNs
+ blocks (i.e., a sequence of a 1x1 convolution, a 3x3 convolu-
+The first two CNNs are the 5-layer CNN and the 6-layer tion, and a 1x1 convolution with 4 times filters w.r.t to the
+EX-CNN shown in Figures 1a and 2a, respectively. These other two convolutions) of increasing number of filters. The
+two CNNs, whose values of mj s, cj s, and Kj s are detailed last two layers are an average pooling and a fully-connected.
+in Table 2a, receive in input a 28x28 RGB image and have In all the considered CNNs, the ReLUs, the batch northe following processing layers: two convolutional (with malization, and the softmax layers have not been explicitly
+64 5x5 filters) followed by a 2x2 maximum pooling with mentioned since they have no parameter to store and neglistride 2, and three fully-connected layers with 384, 192 and gible computational demands.
+10 neurons, respectively. In the 6-layer EX-CNN, the Early-
+Exit is after the first pooling layer and is composed by three
+fully-connected layers with 384, 192 and 10 neurons. 5.2 The considered IoT Units
+ The third CNN is the AlexNet [16], whose details are In this experimental section we considered four families of
+given in Table 2b. Such CNN works on 227x227 RGB images IoT units, whose technological details are given in Table 3:
+and is endowed with 5 convolutional layers (with 96 11x11, the STM32H7, a simple IoT unit endowed with a 400 MHz-
+256 5x5, 384 3x3, 384 3x3 and 256 3x3 filters, respectively) Cortex M7 and 1 MB of RAM; the Raspberry Pi 3B+, a more
+and 3 fully-connected layers with 4096, 4096 and 2 neurons. powerful IoT units endowed with a 1.4GHz 64-bit quad-core
+In addition, 3x3 maximum pooling layers with stride 2 processor and 1GB of RAM; the OrangePi Zero, endowed
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 9
+
+TABLE 1: The memory demand mj , the computational load TABLE 2: The memory demand mj , the computational load
+cj , and the memory Kj required to store the intermediate cj , and the memory Kj required to store the intermediate
+representations of the ResNet 101 [4], with a 4B data type. representations of four (EX–)CNNs, with a 4B data type and
+When there are two values for mj and cj in repeated se- the Early-Exit layer marked with an asterisk. In that layer,
+quence of layers, the former one refers to the first repetition, Kj represents the dimensions of the representation sent to
+the latter to all the subsequent repetitions. the layer j + 1 when the classification is not taken at layer j .
+ Layer (j ) mj (KB) cj (106 mult.) Kj (KB) (a) The 5-layer CNN and the 6-layer EX-CNN.
+ s Source (Im. 224x224x3) - - 602.12 Layer (j ) mj (KB) cj (106 mult.) Kj (KB)
+ 11 7x7 conv, 64, /2 37.63 118.01 3 211.26
+ s Source (Im. 28x28x3) - - 9.41
+ 12 3x3 max pool, /2 - 1.81 802.82
+ 
+ 16.38–65.54 12.85–51.38 802.82 11 5x5 conv, 64 19.20 3.76 200.70
+ 1x1 conv, 64
+ 
+ 2 3x 3x3 conv, 64 147.46 115.61 802.82 12 2x2 pool, /2 - 0.05 50.18
+ 65.54 51.38 3 211.26
+ 
+ 1x1 conv, 256
+ 2* gc1 (fc 384,192,10) 19 570.18 4.89 50.18
+ 786.43 616.56 3 211.26
+  31 5x5 conv, 64 409.60 20.07 50.18
+ 1x1 conv, 128
+  131.07–262.14 25.69–51.38 401.41 32 2x2 pool, /2 - 0.01 12.54
+ 3 4x 3x3 conv, 128 65.54 115.61 401.41
+ 262.14 51.38 1 605.63 4 fc 384 4 816.90 1.20 1.54
+ 
+ 1x1 conv, 512
+
+ 2228.2 757.86 1 605.63 5 fc 192 294.91 0.07 0.77
+  6 fc 10 7.68 2 · 10−3 0.04
+ 1x1 conv, 256
+  524.29–1 048.58 25.69–51.38 200.71
+ 4 5x 3x3 conv, 256 2 359.30 115.61 200.71
+ 1 048.58 51.38 800.82 (b) The AlexNet [16] and its Early-Exit version [19].
+ 
+ 1x1 conv, 1024
+
+ 21 757.95 950.53 800.82 Layer (j ) mj (KB) cj (106 mult.) Kj (KB)
+ 
+ 1x1 conv, 256
+  1 048.58 51.38 200.71
+ 5,6,7 6x 3x3 conv, 256 2 359.30 115.61 200.71 s Source (Im. 227x227x3) - - 618.35
+ 1 048.58 51.38 800.82
+ 
+ 1x1 conv, 1024
+ 11 11x11 conv, 96, /4 139.78 105.42 1161.60
+ 26 738.69 1 156.06 800.82 12 3x3 pool, /2 - 0.31 279.94
+ 
+ 1x1 conv, 512
+  2 097.15–4 194.30 25.69–51.38 100.35 21 5x5 conv, 256 1 229.82 223.95 746.50
+ 8 3x 3x3 conv, 512 9 437.18 115.61 200.71 22 3x3 pool, /2 - 0.39 173.06
+ 4 194.30 51.38 800.82
+ 
+ 1x1 conv, 2048
+
+ 51 380.22 629.41 800.82 3* gc1(fc 128,64,2) 22185.22 5.55 173.06
+
+ 91 7x7 avg pool - 0.10 8.19 4 3x3 conv, 384 3 540.48 149.52 259.58
+ 92 fc 1000 8 388.61 2.08 4 5 3x3 conv, 384 2 655.74 112.14 259.58
+ 61 3x3 conv, 256 1 770.50 74.76 173.06
+ 62 3x3 pool, /2 - 0.08 36.86
+ 7 fc 4096 151 011.39 37.75 16.38
+with a 800MHz to 1.2GHz quad-core Cortex-A7 and 256 MB 8 fc 4096, 2 67 158.02 16.78 0.01
+of RAM; and the BeagleBone AI having a 1.5GHz dual-core
+ARM Cortex–A15 and 1GB of RAM.
+ The maximum memory usage m̄i s has been defined
+as half of the available RAM memory, i.e., 512KB for the computation, t is split into the transmission tt and the
+STM32H7, 128MB for the OrangePi Zero, and 512MB for processing tp terms. The former term refers to the sum of
+the both the BeagleBone AI and the Raspberry Pi3B+. The all transmission times (from a source to IoT units, between
+number of multiplications per second ei s has been defined IoT units, or from IoT units to the target unit f ); the latter
+as a tenth of the clock cycles (per number of cores). Hence, sums the processing times on the IoT units. These terms
+e = 40 for the STM32H7, e = 300 for the BeagleBone AI (150 are computed as defined in Section 4, whereas additional
+per core), e = 480 for the OrangePi Zero (120 per core, if we sources of delays, such as transmission handshakes or reconsider the maximum frequency of 1.2GHz), and e = 560 peated transmissions (due to failures) have been neglected.
+for the Raspberry 3B+ (140 per core). The constraints on the For each setting, transmission technology, and configuracomputational load c̄i s have not been considered since they tion, the evaluated figure of metric is the mean ± standard
+are application-specific. deviation of each latency term, i.e., t, tt , and tp , computed
+ The transmission technologies the IoT units are on 500 randomly generated IoT systems. It is noteworthy
+equipped with are the Wi-Fi 4 (standard IEEE 802.11n) to point out that the accuracy has not been considered as a
+and Wi-Fi HaLow (standard IEEE 802.11n). The transmission metric since the proposed method does not introduce any
+range is dt = 7.5m (a tenth of the minimum indoor range). approximation w.r.t the original CNN, hence there is no
+The Wi-Fi 4 data-rate is ρ = 72.2 Mb/s, that corresponds accuracy loss due to placement of the CNN layers.
+to the single-antenna scenario with 64-QAM modulation
+on the 20 MHz channel [45], whereas the Wi-Fi HaLow 5.4 The First IoT System: 30 IoT Units and Two Technoone is ρ = 7.2 Mb/s with a single-antenna and 64-QAM logical Families
+modulation on the 2 MHz channel [46]. The first IoT system comprises N = 30 IoT units belonging
+ to two technological families, i.e., the STM32H7 and the
+ Raspberry Pi 3B+, with three settings for the IoT units
+5.3 Figures of Merit
+ partitioning, i.e., 10%–90%, 50%–50% and 90%–10%.
+The proposed methodology is evaluated on the “data production to decision making”-latency t defined as the time 5.4.1 Single-CNN Configuration
+between image acquisition and classification reception at f . This configuration encompasses a single CNN, either with
+To further clarify the effects of data communication and or without an Early-Exit, to be placed on the considered IoT
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 10
+
+TABLE 3: The maximum memory usage m̄i (defined as half This consideration is no longer valid with the Wi-Fi HaLow,
+of the available RAM), and the million (106 ) multiplications where the two terms are comparable, especially when
+per second ei s (defined as a tenth of the clock cycles per- L = 1. The methodology cannot indeed always achieve the
+formed in one second) of a few off-the-shelf IoT units. minimum experimental processing latency, but sometimes it
+ Node (i) m̄i (KB) ei (106 mult.) has to rely on nearby STM32H7 units, as highlighted by the
+ non-null standard deviation of the tp , in the configurations
+ S1 STM32H7 512 40
+ B1 BeagleBone AI 524 288 360 with at least 50% of Raspberry Pi 3B+ units. Interestingly,
+ O1 OrangePi Zero 131 072 480 despite the data-rate of the Wi-Fi 4 is ten times greater than
+ R1 Raspberry Pi 3B+ 524 288 560
+ that of Wi-Fi HaLow, the latency t in the harsher case with
+ 90% of STM32H7 units is similar for both the transmission
+ technologies, with a maximum increment of 20% with L = 1
+system. The methodology is tested with L ∈ {1, 2, 3, 4} and
+ and no shared layers.
+compared to the Cloud approximation (L = 5, referred to as
+ Finally, in all cases with L ≥ 2 (L > 2 with Wi-Fi HaLow)
+L = C ), where all the computation can be placed on a single
+ the total latency t is comparable to the case (L = 5), as
+node, i.e., it can be seen as an approximation of sending data
+ in Single-CNN configuration (Section 5.4.1). It is crucial to
+directly to the Cloud and then receiving back the result.
+ point out the importance of this result because distributing
+ The results are shown in Table 4, in the partition setting
+ the CNN processing on various IoT units with a negligible
+50%–50%. Interesting results arise. First of all, the expected
+ increment in latency t will allow defining a pipeline in
+processing time tp is significantly reduced when the Early
+ processing sequence of images. Indeed, when a unit has
+Exit is employed, as expected and studied in [18], [19]
+ carried out the processing of CNN layers is designed to and
+for both the considered CNNs6 . In the case of 6-layer EXsent the computed representation to the subsequent node,
+CNN, the Early-Exit allows to save about 75-84% (45 to
+ it is ready to operate on the next image, as in processor
+80% with Wi-Fi HaLoW) of the latency t, whereas on the
+ pipelines. Hence, the throughput of CNN processing can be
+AlexNet 34 to 50%. After that, with Wi-Fi 4 transmission
+ significantly increased by processing images in a pipeline,
+technology the transmission latency tt is significantly lower
+ with bottleneck the IoT unit responsible for the highest
+than the processing one tp , thus it is reasonable to assume
+ processing time.
+that the achieved tp is the minimum feasible in this IoT
+system. However, with Wi-Fi HaLow, the minimum experimental latency (tp = 44.93ms for the 5-layer CNN and 5.5 The Second IoT System: 50 IoT Units and Three
+tp = 1257.71ms for the AlexNet) cannot be achieved and, Technological Families
+in particular, the AlexNet processing with L = 1 requires A second IoT system is considered with N = 50 units
+more than 3 seconds (instead of 1.46s with the Wi-Fi 4 belonging to three different technological families equipped
+transmission technology), a latency that might be unfeasible with the Wi-Fi 4 transmission technology and partitioned as
+in many real applications. The third crucial comment is follows: 45% of OrangePi Zero, 45% of BeagleBone AI, and
+about the L = C case. The latency t of this case and those of 10% of Raspberry Pi 3B+. An example of this IoT system
+corresponding ones having L ≥ 2 (L > 2 with Wi-Fi HaLow) is shown in Figure 4a, where the OrangePi Zero units are
+are almost equal (10% increment with L = 1)and Wi-Fi represented by a circle, the BeagleBone AI units by a square,
+4), showing the capability of the proposed methodology the Raspberry Pi 3B+ units by a diamond, the sources by an
+of distributing the CNN computation among units with asterisk, and the target unit by a circled cross.
+negligible latency increments.
+ The scenario is interesting because the most powerful
+ IoT units in terms of both memory and computation ca-
+5.4.2 Multi-CNN Configuration
+ pabilities, i.e., the Raspberry Pi 3B+, are just a few (about
+In this configuration, two 5-layer CNNs have to be placed 5 in each simulated IoT system), whereas the remaining
+on the considered IoT system, with and without the first IoT units are characterized by contrasting peculiarities: on
+two layers shared. Results are presented in Table 5, for all one hand the BeagleBone AI units have the same memory
+the configurations and transmission technologies. Several capability of the Raspberry Pi 3B+ but only 54% of the
+comments arise. At first, in the configurations 90%–10%, computation one; on the other hand the OrangePi Zero have
+the methodology has to often rely on STM32H7 nodes, almost the same computation capability of the Raspberry Pi
+hence the processing time is significantly increased (the 3B+ (85%, 160% if compared to BeagleBone AI), but only
+computation capability e of a Raspberry is 14 times greater a fourth of the memory capability. It is worth noting that
+than that of an STM32H7). This result is even more evident both the Raspberry Pi 3B+ and BeagleBone AI can store
+when there are shared layers since the methodology can all the layers of the considered CNNs, whereas being the
+place less computation on STM32H7s. OrangePi Zero units with 128 MB of RAM they cannot store
+ The Wi-Fi 4 guarantees transmission latencies tt s negli- all the layers of the ResNet and the (EX–)AlexNet CNNs. As
+gible w.r.t. the processing time tp , that represents more than a consequence, balancing between the faster OrangePi Zero
+85% of latency t (up to 96-99% with L ≥ 2). Interestingly, units (in terms of computation capability) and the slower
+the processing time is always equal to 89.9ms, that is the but with higher memory capacity BeagleBone AI units is
+experimental minimum achievable value in this IoT system. expected in this IoT system (at least after all the Raspberry
+ Pi 3B+ units have been considered, if enough closer).
+ 6. The latency t and its terms tt and tp , are defined as an expected
+value with EX-CNNs, by weighting their values up to each layer j of In addition to the figures of merit presented in Sec-
+CNN u with the probability gu,j of providing the classification. tion 5.3, the number of considered nodes ηx is taken into
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 11
+
+TABLE 4: Single-(EX–)CNN configuration results with N = 30 STM32H7 and Raspberry Pi 3B+ units in the 50%-50%
+scenario. The figure of merit (mean ± std) is the latency t, i.e., the transmission time tt plus the processing time tp .
+ (a) The results with the Wi-Fi 4 as adopted transmission technology.
+ Latency t (ms) Latency t (ms)
+ L tt tp t = tt + tp L tt tp t = tt + tp
+ 1 7.49 ± 0.36 44.93 ± 0.00 52.42 ± 0.36 1 203.06 ± 36.85 1257.71 ± 0.00 1460.77 ± 36.85
+ 5-layer CNN
+
+ 2 1.78 ± 0.21 44.93 ± 0.00 46.71 ± 0.21 2 127.81 ± 28.49 1257.71 ± 0.00 1385.52 ± 28.49
+
+ AlexNet
+ 3 0.48 ± 0.14 44.93 ± 0.00 45.41 ± 0.14 3 98.75 ± 26.63 1257.71 ± 0.00 1356.46 ± 26.63
+ 4 0.37 ± 0.11 44.93 ± 0.00 45.30 ± 0.11 4 95.82 ± 26.54 1257.71 ± 0.00 1353.53 ± 26.54
+ C 0.28 ± 0.11 44.93 ± 0.00 45.21 ± 0.11 C 72.49 ± 24.08 1257.71 ± 0.00 1330.20 ± 24.08
+ 1 5.87 ± 0.27 7.27 ± 0.00 13.14 ± 0.27 1 129.42 ± 28.29 598.92 ± 81.81 728.35 ± 86.17
+
+ EX-AlexNet
+ 6-layer EX-CNN
+
+ 2 0.34 ± 0.10 7.27 ± 0.00 7.61 ± 0.10 2 93.70 ± 24.49 596.19 ± 0.00 689.89 ± 24.49
+ 3 0.29 ± 0.10 7.27 ± 0.00 7.57 ± 0.10 3 72.10 ± 22.08 596.19 ± 0.00 668.29 ± 22.08
+ 4 0.28 ± 0.10 7.27 ± 0.00 7.55 ± 0.10 4 72.07 ± 22.08 596.19 ± 0.00 668.26 ± 22.08
+ C 0.28 ± 0.10 7.27 ± 0.00 7.55 ± 0.10 C 71.84 ± 22.07 596.19 ± 0.00 668.03 ± 22.07
+
+ (b) The results with the Wi-Fi HaLow as adopted transmission technology.
+ Latency t (ms) Latency t (ms)
+ L tt tp t = tt + tp L tt tp t = tt + tp
+ 1 74.82 ± 3.94 45.16 ± 0.57 119.98 ± 4.06 1 2042.48 ± 401.64 1265.89 ± 141.47 3308.37 ± 432.91
+ 5-layer CNN
+
+ 2 17.75 ± 2.08 44.93 ± 0.00 62.68 ± 2.08 2 1298.23 ± 332.66 1263.16 ± 115.58 2561.39 ± 361.81
+
+ AlexNet
+ 3 4.49 ± 0.89 45.08 ± 0.46 49.57 ± 1.03 3 1009.79 ± 334.87 1260.44 ± 81.77 2270.22 ± 351.10
+ 4 3.64 ± 0.87 44.93 ± 0.00 48.57 ± 0.87 4 976.71 ± 317.48 1263.16 ± 115.58 2239.87 ± 348.56
+ C 2.80 ± 0.88 44.93 ± 0.00 47.73 ± 0.88 C 750.02 ± 322.44 1260.44 ± 81.77 2010.46 ± 339.52
+ 1 58.72 ± 2.47 7.27 ± 0.01 65.99 ± 2.47 EX-AlexNet 1 1304.74 ± 310.87 598.93 ± 81.91 1903.66 ± 324.56
+ 6-layer EX-CNN
+
+ 2 3.53 ± 1.15 7.27 ± 0.00 10.80 ± 1.15 2 947.04 ± 258.12 596.19 ± 0.00 1543.23 ± 258.12
+ 3 3.04 ± 1.10 7.27 ± 0.00 10.31 ± 1.10 3 728.19 ± 221.12 596.19 ± 0.00 1324.38 ± 221.12
+ 4 2.90 ± 1.10 7.27 ± 0.00 10.17 ± 1.10 4 727.87 ± 221.10 596.19 ± 0.00 1324.06 ± 221.10
+ C 2.88 ± 1.10 7.27 ± 0.00 10.16 ± 1.10 C 725.53 ± 220.95 596.19 ± 0.00 1321.72 ± 220.95
+
+account, where x is a technological family of IoT units, i.e. can be placed on the same IoT unit due to L = M 7 . Several
+x can be R, O, or B , representing the Raspberry Pi 3B+, the comments arise. First of all, the latency t of 1 AlexNet is
+OrangePi Zero, and the BeagleBone AI units, respectively. higher than that in the IoT system comprising only Raspberry Pi 3B+ and STM32H7 (see Section 5.4): this is justified
+ by the fact that in this IoT system the probability that an
+5.5.1 Single-CNN Configuration
+ IoT unit is a Raspberry is 10%, instead of 50%, and both the
+In this configuration, 1 ResNet CNN has to be placed in this OrangePi Zero and the BeagleBone AI units have a smaller
+IoT system. computation capability.
+ The results are shown in Table 6. The processing latency Second, the latency t of 3 AlexNet is close to that
+tp of a ResNet CNN is extremely high but proportional with 1 AlexNet multiplied by 3. In fact, the difference in
+to the number of operations required by such CNN to percentage ranges from 0.6% to 3.5% (L = C to L = 1)8 .
+process a single image, i.e., about 7.5 times than those of When 4 AlexNet CNNs are employed, the range is slightly
+the AlexNet. The methodology indeed does not encompass higher, i.e., 1 to 5% on the same values of L. This result is
+any optimization in processing the convolutions or any very interesting, showing the effectiveness of the proposed
+other optimization unless one re-compute the number of methodology in placing the CNNs in the given IoT system.
+required operations accordingly. Since the latency t is almost Moreover, by observing the values of ηR , ηO , ηB it is clear
+only composed by the processing tp (97 to 99% of t), the that whenever possible the methodology relies on the fastest
+methodology relies only on the IoT units having the highest units, as expected by the fact that the transmission latency tt
+computation capability, as highlighted by the values of ηB is, in all the cases, significantly smaller than the processing
+that are close to zero in almost all the cases. tp one. Finally, as commented in Section 5.4.2, the latency t
+ with L = 1 and L = 2 is close to that with L = C , with
+ an increment ranging from 13% to 18%, and from 6% to 9%,
+5.5.2 Multi-CNN Configuration with 1 and 4 AlexNet CNNs, respectively, allowing us to
+In this bunch of experiments, 1, 3, or 4 AlexNet CNNs have
+ 7. It is worth nothing that with L = C , the layers of an (EX–)AlexNet
+to be placed in the IoT system. It is worth noting that in the CNN can be placed on a single node if and only if Raspberry Pi 3B+ or
+latter case, when L = 1, 32 nodes out of 50 have to be used, BeagleBone AI IoT units are employed. If an OrangePi unit is selected
+allowing us to in-depth analyze the best placements. by the methodology, at least another IoT unit has to be considered to
+ place all the layers, also in this configuration.
+ The results are shown in Table 7, with the hyper-
+ 8. The error percentage between the latency t3A of placing 3 AlexNet
+parameter L ranging from 1 to 4 and the case L = C CNNs and the latency tA of placing 1 AlexNet multiplied by 3 is
+simulating the Cloud, i.e., when all the layers of a CNN computed as follows: (t3A − 3 · tA )/t3A .
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 12
+
+TABLE 5: The multi CNN configuration results with N = 30 STM32H7 and Raspberry Pi 3B+ units and two 5-layer CNNs,
+in the three scenarios, with the Wi-Fi 4 and Wi-Fi Halow transmission technologies. The figure of merit (mean ± std) is the
+latency t, i.e., the transmission time tt plus the processing time tp and is summed over all the CNNs.
+ (a) The results with the Wi-Fi 4 as adopted transmission technology.
+ 10 – 90 Latency t (ms) 50 – 50 Latency t (ms) 90 – 10 Latency t (ms)
+ L tt tp t = tt + tp tt tp t = tt + tp tt tp t = tt + tp
+ 1 14.7 ± 0.3 89.9 ± 0.0 104.6 ± 0.3 15.6 ± 1.1 89.9 ± 0.1 105.4 ± 1.1 19.4 ± 5.5 634.4 ± 417.0 653.8 ± 413.6
+ 2 3.4 ± 0.1 89.9 ± 0.0 93.3 ± 0.1 3.8 ± 0.6 89.9 ± 0.0 93.6 ± 0.6 10.2 ± 5.0 317.1 ± 401.5 327.3 ± 399.7
+ No shared
+ 3 0.9 ± 0.1 89.9 ± 0.0 90.7 ± 0.1 1.1 ± 0.4 89.9 ± 0.0 90.9 ± 0.4 4.0 ± 2.9 198.0 ± 240.0 201.9 ± 242.4
+ layers
+ 4 0.7 ± 0.1 89.9 ± 0.0 90.6 ± 0.1 0.8 ± 0.3 89.9 ± 0.0 90.7 ± 0.3 4.0 ± 4.5 119.8 ± 67.0 123.7 ± 71.2
+ 5 0.5 ± 0.1 89.9 ± 0.0 90.4 ± 0.1 0.7 ± 0.3 89.9 ± 0.0 90.5 ± 0.3 3.0 ± 2.8 105.1 ± 34.1 108.1 ± 36.6
+ 1 14.6 ± 0.1 89.9 ± 0.0 104.5 ± 0.1 15.4 ± 1.2 89.9 ± 0.1 105.3 ± 1.2 23.4 ± 9.0 452.8 ± 470.8 476.2 ± 467.4
+ First two 2 3.4 ± 0.1 89.9 ± 0.0 93.3 ± 0.1 3.7 ± 0.5 89.9 ± 0.0 93.5 ± 0.5 9.6 ± 8.6 250.6 ± 389.8 260.2 ± 388.0
+ layers 3 2.0 ± 0.0 89.9 ± 0.0 91.9 ± 0.0 2.2 ± 0.4 89.9 ± 0.0 92.1 ± 0.4 7.1 ± 5.2 115.9 ± 63.1 122.9 ± 65.8
+ shared 4 0.8 ± 0.0 89.9 ± 0.0 90.7 ± 0.0 0.9 ± 0.3 89.9 ± 0.0 90.8 ± 0.3 2.3 ± 1.6 90.5 ± 1.3 92.8 ± 2.2
+ 5 0.8 ± 0.0 89.9 ± 0.0 90.6 ± 0.0 0.8 ± 0.2 89.9 ± 0.0 90.7 ± 0.2 2.0 ± 1.4 90.2 ± 0.6 92.2 ± 1.7
+
+ (b) The results with the Wi-Fi HaLow as adopted transmission technology.
+ 10 – 90 Latency t (ms) 50 – 50 Latency t (ms) 90 – 10 Latency t (ms)
+ L tt tp t = tt + tp tt tp t = tt + tp tt tp t = tt + tp
+ 1 147.2 ± 2.3 89.9 ± 0.3 237.2 ± 2.3 154.4 ± 11.5 91.2 ± 6.1 245.6 ± 14.1 187.0 ± 41.4 624.6 ± 416.9 811.6 ± 394.1
+ 2 34.5 ± 1.5 89.9 ± 0.0 124.4 ± 1.5 37.4 ± 5.3 90.0 ± 0.6 127.4 ± 5.4 95.3 ± 44.4 301.7 ± 383.1 397.0 ± 372.3
+ No shared
+ 3 8.8 ± 1.2 89.9 ± 0.3 98.8 ± 1.3 9.9 ± 2.7 90.4 ± 0.9 100.3 ± 3.0 32.9 ± 28.8 188.1 ± 228.8 221.0 ± 254.2
+ layers
+ 4 7.0 ± 1.0 89.9 ± 0.0 96.9 ± 1.0 8.1 ± 2.6 89.9 ± 0.0 98.0 ± 2.6 37.5 ± 42.6 116.6 ± 64.0 154.1 ± 105.1
+ 5 5.3 ± 0.9 89.9 ± 0.0 95.2 ± 0.9 6.4 ± 2.7 89.9 ± 0.0 96.3 ± 2.7 28.6 ± 27.0 103.5 ± 32.6 132.1 ± 57.2
+ 1 146.6 ± 1.6 89.9 ± 0.3 236.5 ± 1.7 152.3 ± 9.8 90.7 ± 1.2 243.1 ± 10.1 223.7 ± 63.6 454.4 ± 459.1 678.0 ± 434.8
+ First two 2 34.1 ± 0.7 89.9 ± 0.2 124.0 ± 0.8 36.0 ± 4.3 90.2 ± 0.9 126.2 ± 4.5 85.4 ± 72.2 252.5 ± 389.8 338.0 ± 381.7
+ layers 3 20.4 ± 0.7 89.9 ± 0.2 110.3 ± 0.7 21.9 ± 3.9 90.1 ± 0.6 112.1 ± 4.0 65.3 ± 46.3 117.0 ± 62.8 182.3 ± 97.5
+ shared 4 8.4 ± 0.3 89.9 ± 0.2 98.3 ± 0.4 9.0 ± 2.2 90.2 ± 0.9 99.2 ± 2.4 17.9 ± 14.1 92.1 ± 1.5 110.0 ± 14.4
+ 5 7.6 ± 0.3 89.9 ± 0.2 97.5 ± 0.3 8.2 ± 2.2 90.0 ± 0.5 98.2 ± 2.2 17.1 ± 14.1 91.0 ± 0.7 108.0 ± 14.2
+
+TABLE 6: The single CNN configuration results with N = 50 OrangePi Zero, BeagleBone AI, and Raspberry Pi 3B+
+units (with probability 45%-45%-10%) and 1 ResNet CNN. The figures of merit (mean ± std) are the latency t, i.e., the
+transmission time tt plus the processing time tp , and the number η of IoT units used.
+ Latency t (ms) Node usage η
+ L tt tp t = tt + tp ηR ηO ηB
+ 1 361.85 ± 60.77 12059.62 ± 430.32 12421.47 ± 406.82 4.92 ± 1.84 4.05 ± 1.84 0.03 ± 0.17
+ 2 249.47 ± 69.22 11723.26 ± 319.91 11972.72 ± 313.71 3.59 ± 0.90 1.49 ± 0.95 0.01 ± 0.10
+ 3 183.34 ± 87.14 11645.13 ± 259.90 11828.47 ± 267.93 2.80 ± 0.55 0.55 ± 0.86 0.00 ± 0.06
+ 4 138.99 ± 85.02 11620.58 ± 236.18 11759.57 ± 252.58 2.14 ± 0.50 0.88 ± 0.55 0.00 ± 0.07
+ C 127.85 ± 94.81 11602.91 ± 215.07 11730.76 ± 237.14 0.99 ± 0.11 0.08 ± 0.34 0.00 ± 0.00
+
+define processing pipelines in the considered IoT system, to 6 P ORTING A CNN TO A REAL I OT S YSTEM
+further reduce the latency t.
+ The methodology has been also applied to the placement
+ In Table 8, the same IoT scenario is investigated with of the 5-layer CNN described in Section 4.1 and depicted
+1, 3, and 4 EX-AlexNet to be placed. The latency t and its in Fig. 1(a) on a real technological scenario comprising
+components tp and tt are defined as an expected value, by two STM32H7s and one Raspberry Pi 3B+. The transmission
+weighting the latency of each possible path within the EX- technology is the Wi-Fi 4 and the connectivity is provided
+CNN by its probability. The mean numbers of nodes used locally by the GL.iNet GL-MT300N-V2 router. The goal of
+ηR , ηO , and ηB are instead computed on the longest path this experiment is to compare the figures of merit t, tt , and
+within the EX-CNN. tp of the CNN placement provided by the methodology
+ The trend in the results is analogous to the case with with those of the real CNN placement in the considered
+AlexNet CNNs, with smaller errors. The difference in per- technological scenario. With L = 4 and the nodes equally
+centage between placing 3 and 4 EX-AlexNet and 1 EX- spaced (each at distance 1 from each other), the method-
+AlexNet multiplied by 3 and 4 ranges from 0.2% to 2.5% ology assigned the first four layers of the CNN to the
+and from 0.4% to 3.7% (L = C to L = 1), respectively. Raspberry and the fifth layer to one of the two STM32H7s.
+Interestingly, the values of ηB are higher in this group The measured transmission and processing times, shown
+of experiments, showing that the methodology more often in Table 9, are particularly interesting, showing that the
+relies on closer BeagleBone AI units to place part of the EX- experimental transmission time tt is almost equal to the
+AlexNet computation, reasonably on the less probable path. methodology estimation, whereas the experimental process-
+The OrangePi Zero units are more often used in this scenario ing time tp is 30% larger. This is justified by the fact the
+as well. model considered only the multiplications. In particular, the
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 13
+
+TABLE 7: The multi CNN configuration results with N = 50 OrangePi Zero, BeagleBone AI, and Raspberry Pi 3B+ units
+(with probability 45%-45%-10%) and 1 to 4 AlexNet (A) CNNs. The figures of merit (mean ± std) are the latency t, i.e., the
+transmission time tt plus the processing time tp , and the number η of IoT units used.
+ Latency t (ms) Node usage η
+ L tt tp t = tt + tp ηR ηO ηB
+ 1 206.22 ± 26.04 1 390.95 ± 54.58 1 597.17 ± 54.33 3.97 ± 1.51 4.01 ± 1.48 0.02 ± 0.15
+ 2 151.25 ± 30.93 1 344.36 ± 56.70 1 495.61 ± 60.89 3.00 ± 0.87 1.43 ± 1.08 0.01 ± 0.12
+ 1 AlexNet 3 125.55 ± 33.97 1 328.63 ± 51.73 1 454.19 ± 62.16 2.47 ± 0.63 0.64 ± 0.74 0.01 ± 0.12
+ 4 119.76 ± 34.24 1 323.49 ± 47.45 1 443.25 ± 59.89 1.96 ± 0.50 0.51 ± 0.73 0.01 ± 0.09
+ C 97.88 ± 39.57 1 311.71 ± 44.03 1 409.58 ± 66.63 1.00 ± 0.11 0.17 ± 0.45 0.01 ± 0.09
+ 1 578.58 ± 50.35 4 390.39±104.53 4 968.97±119.87 5.07 ± 2.01 17.89±1.72 1.05 ± 1.24
+ 2 410.26 ± 43.87 4 211.45±148.26 4 621.71±142.12 5.05 ± 1.97 7.72 ± 1.95 0.11 ± 0.38
+ 3 AlexNet 3 350.06 ± 45.97 4 108.70±154.98 4 458.76±152.25 4.84 ± 1.71 4.65 ± 1.98 0.04 ± 0.26
+ 4 349.40 ± 54.44 4 035.36±146.02 4 384.76±147.68 4.46 ± 1.34 3.13 ± 1.86 0.04 ± 0.26
+ C 306.24 ± 76.75 3 947.47±106.77 4 253.71±144.39 2.86 ± 0.46 0.90 ± 1.33 0.02 ± 0.21
+ 1 772.23 ± 54.88 5 960.88±138.87 6 733.11±156.94 5.22 ± 2.20 21.73±2.80 5.04 ± 2.99
+ 2 521.34 ± 36.80 5 718.77±181.19 6 240.11±175.43 5.22 ± 2.20 11.62±2.20 0.19 ± 0.55
+ 4 AlexNet 3 437.76 ± 50.07 5 572.27±206.36 6 010.03±196.11 5.17 ± 2.12 7.47 ± 2.34 0.07 ± 0.40
+ 4 441.12 ± 59.81 5 458.45±213.15 5 899.57±201.50 4.99 ± 1.85 5.25 ± 2.36 0.10 ± 0.38
+ C 401.83 ± 77.75 5 288.65±150.73 5 690.48±183.33 3.64 ± 0.74 1.81 ± 1.93 0.04 ± 0.30
+
+TABLE 8: The multi CNN configuration results with N = 50 OrangePi Zero, BeagleBone AI, and Raspberry Pi 3B+ units
+(with probability 45%-45%-10%) and 1 to 4 EX-AlexNet CNNs. The figures of merit (mean ± std) are the latency t, i.e., the
+transmission time tt plus the processing time tp , and the number η of IoT units used.
+ Latency t (ms) Node usage η
+ L tt tp t = tt + tp ηR ηO ηB
+ 1 117.54 ± 17.66 666.38 ± 33.56 783.92 ± 36.27 4.08 ± 1.46 3.79 ± 1.45 0.13 ± 0.34
+ 2 93.87 ± 24.95 643.84 ± 34.46 737.71 ± 40.10 3.09 ± 0.82 1.51 ± 1.00 0.07 ± 0.25
+ 1 AlexNet 3 77.03 ± 25.44 641.06 ± 34.80 718.09 ± 41.04 2.66 ± 0.58 0.44 ± 0.67 0.02 ± 0.13
+ 4 74.56 ± 24.62 640.61 ± 33.94 715.17 ± 40.58 1.98 ± 0.49 0.44 ± 0.71 0.00 ± 0.06
+ C 68.15 ± 24.14 639.05 ± 34.41 707.20 ± 42.28 1.00 ± 0.06 0.24 ± 0.49 0.01 ± 0.08
+ 1 335.42 ± 21.31 2 078.03 ± 54.60 2 413.45 ± 59.52 4.95 ± 2.08 17.26±1.72 1.79 ± 1.29
+ 2 268.92 ± 38.28 1989.59 ± 72.05 2258.52 ± 72.76 4.91 ± 2.03 8.36 ± 1.82 0.55 ± 0.78
+ 3 AlexNet 3 222.56 ± 39.05 1971.77 ± 75.12 2194.33 ± 75.51 4.79 ± 1.90 4.84 ± 2.22 0.17 ± 0.59
+ 4 222.98 ± 39.87 1946.47 ± 73.10 2169.45 ± 76.50 4.37 ± 1.43 3.37 ± 2.00 0.11 ± 0.36
+ C 211.27 ± 42.69 1914.79 ± 64.03 2126.06 ± 75.80 2.87 ± 0.51 1.08 ± 1.36 0.03 ± 0.17
+ 1 452.33 ± 29.81 2803.39 ± 67.85 3255.73 ± 78.62 4.95 ± 2.17 21.52±2.72 5.53 ± 2.56
+ 2 346.37 ± 43.73 2689.37 ± 94.61 3035.74 ± 93.17 4.95 ± 2.17 12.39±1.79 1.19 ± 1.35
+ 4 AlexNet 3 284.80 ± 46.16 2666.04 ± 100.07 2950.84 ± 96.52 4.93 ± 2.13 8.07 ± 2.15 0.72 ± 1.05
+ 4 289.94 ± 44.66 2619.44 ± 103.84 2909.38 ± 102.62 4.79 ± 1.89 5.59 ± 2.24 0.25 ± 0.68
+ C 281.67 ± 50.74 2558.70 ± 98.07 2840.36 ± 105.54 3.63 ± 0.95 1.86 ± 2.12 0.12 ± 0.51
+
+first four layers on Raspberry Pi 3B+ took 68.29 ms instead TABLE 9: Experimental benchmark results with equally
+of 44.93 ms, whereas the fifth layer on STM32H7 176 µs (32 spaced nodes and a 5-layer CNN. The figure of merit is the
+µs with code optimization) instead of 50 µs. latency t (transmission tt plus processing tp ).
+ It is worth nothing that the measured processing time L Case Wi-Fi 4 Latency (ms)
+tp of the AlexNet on the Raspberry Pi 3B+ (median over tt tp t = tt + tp
+100 runs) is 1119.47 ms, whereas the one provided by the
+ Model 0.37 44.98 45.35
+methodology is 1257.71 ms, showing that the approximation 4
+ Experimental 0.42 68.47 68.89
+given in Section 4 well describe this technological scenario.
+
+ deal with communications failures and mobile units as well
+7 C ONCLUSIONS
+ as improve the performance by exploiting the resources that
+The aim of this paper was to introduce a novel effective are made available by early-exit mechanisms.
+methodology for the optimal placement of CNNs on IoT
+systems. Such a methodology is general enough to be applied to multiple sources of data and multiple CNNs oper- R EFERENCES
+ating in the same IoT system and has been formalized as
+an optimization problem where the latency between image [1] Z. Zhang, J. Geiger, J. Pohjalainen, A. E.-D. Mousa, W. Jin, and
+acquisitions and the decision making is minimized. Future B. Schuller, “Deep learning for environmentally robust speech
+ recognition: An overview of recent developments,” ACM Transworks will encompass the extension of the methodology actions on Intelligent Systems and Technology (TIST), vol. 9, no. 5, pp.
+with dynamic scheduling and routing algorithms for IoT to 1–28, 2018.
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 14
+
+ (a) The IoT system. (b) The outcome with L = 1 and 3 EX-A. (c) The outcome with L = 2 and 3 EX-A.
+
+ (d) The outcome with L = 1 and 3 A. (e) The outcome with L = 2 and 3 A. (f) The outcome with L = C and 3 (EX–)A.
+
+Fig. 4: An example of the methodology outcome on a IoT system comprising N = 50 IoT units, i.e. Raspberry Pi 3B+,
+OrangePi Zero, and BeagleBone AI (10%, 45%, and 45% the probability of each kind of unit) and three (EX–)AlexNet CNNs
+to be placed. The sources are indicated by a star, whereas the target unit by a circled cross. The transmission range is
+indicated only for the sources and the target and is equal for all nodes. When EX–AlexNet CNNs (EX–A) are employed,
+the path with probability 0.772 is indicated by the thicker line, whereas the full path continues with the thin one.
+
+[2] R. D. Hof, “10 breaktrough technologies 2013: Deep learning,” MIT IEEE 16th International Symposium on Network Computing and Ap-
+ Technology Review, 2013. plications (NCA). IEEE, 2017, pp. 1–8.
+[3] C. Szegedy, W. Liu, Y. Jia, P. Sermanet, S. Reed, D. Anguelov, [12] M. Mohammadi, A. Al-Fuqaha, S. Sorour, and M. Guizani, “Deep
+ D. Erhan, V. Vanhoucke, and A. Rabinovich, “Going deeper with learning for iot big data and streaming analytics: A survey,” IEEE
+ convolutions,” in Proceedings of the IEEE conference on computer Communications Surveys & Tutorials, vol. 20, no. 4, pp. 2923–2960,
+ vision and pattern recognition, 2015, pp. 1–9. 2018.
+[4] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for [13] S. Disabato and M. Roveri, “Incremental on-device tiny machine
+ image recognition,” in The IEEE Conference on Computer Vision and learning,” in Proceedings of the 2nd International Workshop on Chal-
+ Pattern Recognition (CVPR), June 2016. lenges in Artificial Intelligence and Machine Learning for Internet of
+[5] Y. LeCun, Y. Bengio, and G. Hinton, “Deep learning,” nature, vol. Things, 2020, pp. 7–13.
+ 521, no. 7553, pp. 436–444, 2015. [14] Z. Zhao, K. M. Barijough, and A. Gerstlauer, “Deepthings: Distributed adaptive deep learning inference on resource-constrained
+[6] K. Simonyan and A. Zisserman, “Very deep convolutional
+ iot edge clusters,” IEEE Transactions on Computer-Aided Design of
+ networks for large-scale image recognition,” arXiv preprint
+ Integrated Circuits and Systems, vol. 37, no. 11, pp. 2348–2359, 2018.
+ arXiv:1409.1556, 2014.
+ [15] C. Alippi and M. Roveri, “The (not) far-away path to smart cyber-
+[7] K. He and J. Sun, “Convolutional neural networks at constrained physical systems: An information-centric framework,” Computer,
+ time cost,” in Proceedings of the IEEE conference on computer vision vol. 50, no. 4, pp. 38–47, 2017.
+ and pattern recognition, 2015, pp. 5353–5360.
+ [16] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “ImageNet classi-
+[8] C. Alippi, S. Disabato, and M. Roveri, “Moving convolutional fication with deep convolutional neural networks,” in Proceedings
+ neural networks to embedded systems: the alexnet and vgg-16 of the 25th International Conference on Neural Information Processing
+ case,” in 2018 17th ACM/IEEE International Conference on Informa- Systems - Volume 1, ser. NIPS ’12, vol. 1. Curran Associates Inc.,
+ tion Processing in Sensor Networks (IPSN). IEEE, 2018, pp. 212–223. 2012, pp. 1097–1105.
+[9] J. Dean, G. Corrado, R. Monga, K. Chen, M. Devin, M. Mao, [17] J. Redmon, S. Divvala, R. Girshick, and A. Farhadi, “You Only
+ M. Ranzato, A. Senior, P. Tucker, K. Yang et al., “Large scale Look Once: Unified, Real-Time Object Detection,” in 2016 IEEE
+ distributed deep networks,” in Advances in neural information pro- Conference on Computer Vision and Pattern Recognition (CVPR), ser.
+ cessing systems, 2012, pp. 1223–1231. CPVR ’16. IEEE, jun 2016, pp. 779–788.
+[10] H. Cui, H. Zhang, G. R. Ganger, P. B. Gibbons, and E. P. Xing, [18] T. Bolukbasi, J. Wang, O. Dekel, and V. Saligrama, “Adaptive
+ “Geeps: Scalable deep learning on distributed gpus with a gpu- neural networks for efficient inference,” in Proceedings of the 34th
+ specialized parameter server,” in Proceedings of the Eleventh Euro- International Conference on Machine Learning-Volume 70, 2017, pp.
+ pean Conference on Computer Systems, 2016, pp. 1–16. 527–536.
+[11] C. Hardy, E. Le Merrer, and B. Sericola, “Distributed deep learning [19] S. Disabato and M. Roveri, “Reducing the computation load of
+ on edge-devices: feasibility via adaptive compression,” in 2017 convolutional neural networks through gate classification,” in
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 70, NO. 8, AUGUST 2021 15
+
+ 2018 International Joint Conference on Neural Networks (IJCNN). learning model for intelligent video surveillance systems with
+ IEEE, 2018, pp. 1–8. edge computing,” IEEE Transactions on Industrial Informatics, 2019.
+[20] B. Moons, R. Uytterhoeven, W. Dehaene, and M. Verhelst, “14.5 [40] D. Hu and B. Krishnamachari, “Fast and accurate streaming cnn
+ envision: A 0.26-to-10tops/w subword-parallel dynamic-voltage- inference via communication compression on the edge,” in 2020
+ accuracy-frequency-scalable convolutional neural network proces- IEEE/ACM Fifth International Conference on Internet-of-Things Design
+ sor in 28nm fdsoi,” in 2017 IEEE International Solid-State Circuits and Implementation (IoTDI). IEEE, 2020, pp. 157–163.
+ Conference (ISSCC). IEEE, 2017, pp. 246–247. [41] Z. Tao and Q. Li, “esgd: Communication efficient distributed deep
+[21] C. Zhang, P. Li, G. Sun, Y. Guan, B. Xiao, and J. Cong, “Optimiz- learning on the edge,” in {USENIX} Workshop on Hot Topics in Edge
+ ing fpga-based accelerator design for deep convolutional neural Computing (HotEdge 18), 2018.
+ networks,” in Proceedings of the 2015 ACM/SIGDA International [42] R. M. Karp, “Reducibility among combinatorial problems,” in
+ Symposium on Field-Programmable Gate Arrays, 2015, pp. 161–170. Complexity of computer computations. Springer, 1972, pp. 85–103.
+[22] N. Suda, V. Chandra, G. Dasika, A. Mohanty, Y. Ma, S. Vrudhula, [43] L. Farhan, S. T. Shukur, A. E. Alissa, M. Alrweg, U. Raza, and
+ J.-s. Seo, and Y. Cao, “Throughput-optimized opencl-based fpga R. Kharel, “A survey on the challenges and opportunities of the
+ accelerator for large-scale convolutional neural networks,” in Pro- internet of things (iot),” in 2017 Eleventh International Conference on
+ ceedings of the 2016 ACM/SIGDA International Symposium on Field- Sensing Technology (ICST). IEEE, 2017, pp. 1–5.
+ Programmable Gate Arrays, 2016, pp. 16–25. [44] J. Yosinski, J. Clune, Y. Bengio, and H. Lipson, “How transferable
+[23] L. Cavigelli and L. Benini, “Origami: A 803-gop/s/w convo- are features in deep neural networks?” in Advances in neural
+ lutional network accelerator,” IEEE Transactions on Circuits and information processing systems, 2014, pp. 3320–3328.
+ Systems for Video Technology, vol. 27, no. 11, pp. 2461–2475, 2016. [45] Y. Xiao, “Ieee 802.11 n: enhancements for higher throughput in
+ wireless lans,” IEEE Wireless Communications, vol. 12, no. 6, pp.
+[24] G.-Y. Wei, D. Brooks et al., “Benchmarking tpu, gpu, and cpu
+ 82–91, 2005.
+ platforms for deep learning,” arXiv preprint arXiv:1907.10701, 2019.
+ [46] T. Adame, A. Bel, B. Bellalta, J. Barcelo, and M. Oliver, “Ieee 802.11
+[25] S. Han, H. Mao, and W. J. Dally, “Deep compression: Compressing ah: the wifi approach for m2m communications,” IEEE Wireless
+ deep neural networks with pruning, trained quantization and Communications, vol. 21, no. 6, pp. 144–152, 2014.
+ huffman coding,” arXiv preprint arXiv:1510.00149, 2015.
+[26] Y. He, X. Zhang, and J. Sun, “Channel pruning for accelerating
+ very deep neural networks,” in The IEEE International Conference
+ on Computer Vision (ICCV), Oct 2017.
+[27] S. Lin, R. Ji, C. Chen, D. Tao, and J. Luo, “Holistic cnn compression
+ via low-rank decomposition with knowledge transfer,” IEEE transactions on pattern analysis and machine intelligence, vol. 41, no. 12, pp.
+ 2889–2905, 2018.
+[28] Z. Cai, X. He, J. Sun, and N. Vasconcelos, “Deep learning with
+ low precision by half-wave gaussian quantization,” in Proceedings
+ of the IEEE Conference on Computer Vision and Pattern Recognition,
+ 2017, pp. 5918–5926.
+[29] E. L. Denton, W. Zaremba, J. Bruna, Y. LeCun, and R. Fergus,
+ “Exploiting linear structure within convolutional networks for
+ efficient evaluation,” in Advances in Neural Information Processing
+ Systems, 2014, pp. 1269–1277.
+[30] M. Courbariaux, Y. Bengio, and J.-P. David, “Binaryconnect: Training deep neural networks with binary weights during propagations,” in Advances in neural information processing systems, 2015,
+ pp. 3123–3131.
+[31] M. Rastegari, V. Ordonez, J. Redmon, and A. Farhadi, “Xnornet: Imagenet classification using binary convolutional neural
+ networks,” in European conference on computer vision. Springer,
+ 2016, pp. 525–542.
+[32] D. Li, X. Wang, and D. Kong, “Deeprebirth: Accelerating deep
+ neural network execution on mobile devices,” in Thirty-second
+ AAAI conference on artificial intelligence, 2018.
+[33] C. Shi, V. Lakafosis, M. H. Ammar, and E. W. Zegura, “Serendipity: Enabling remote computing among intermittently connected
+ mobile devices,” in Proceedings of the Thirteenth ACM International
+ Symposium on Mobile Ad Hoc Networking and Computing, ser. Mobi-
+ Hoc ’12. New York, NY, USA: ACM, 2012, pp. 145–154.
+[34] K. Hong, D. Lillethun, U. Ramachandran, B. Ottenwälder, and
+ B. Koldehofe, “Mobile fog: A programming model for large-scale
+ applications on the internet of things,” in Proceedings of the Second
+ ACM SIGCOMM Workshop on Mobile Cloud Computing, ser. MCC
+ ’13. New York, NY, USA: ACM, 2013, pp. 15–20.
+[35] D. Hu and B. Krishnamachari, “Throughput optimized scheduler
+ for dispersed computing systems,” in 2019 7th IEEE International
+ Conference on Mobile Cloud Computing, Services, and Engineering
+ (MobileCloud). IEEE, 2019, pp. 76–84.
+[36] Z. Cheng, P. Li, J. Wang, and S. Guo, “Just-in-time code offloading
+ for wearable computing,” IEEE Transactions on Emerging Topics in
+ Computing, vol. 3, no. 1, pp. 74–83, 2015.
+[37] S. Teerapittayanon, B. McDanel, and H.-T. Kung, “Distributed
+ deep neural networks over the cloud, the edge and end devices,”
+ in 2017 IEEE 37th International Conference on Distributed Computing
+ Systems (ICDCS). IEEE, 2017, pp. 328–339.
+[38] K. Bhardwaj, C.-Y. Lin, A. Sartor, and R. Marculescu, “Memoryand communication-aware model compression for distributed
+ deep learning inference on iot,” ACM Transactions on Embedded
+ Computing Systems (TECS), vol. 18, no. 5s, pp. 1–22, 2019.
+[39] J. Chen, K. Li, Q. Deng, K. Li, and S. Y. Philip, “Distributed deep

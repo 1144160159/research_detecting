@@ -1,0 +1,811 @@
+3646 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ DM-IDS—A Network Intrusion Detection Method
+ Based on Dual-Modal Fusion
+ Chao Zha , Zhiyu Wang , Yifei Fan, Bing Bai , Yinjie Zhang , Sainan Shi , and Ruyun Zhang
+
+ Abstract—The machine learning-based approach to network the integrity, confidentiality, and security of interconnected
+intrusion detection presents a groundbreaking research systems. These vulnerabilities not only compromise critical
+paradigm, positioned to replace traditional rule-based and data and services, but also pose substantial risks to broader
+signature-based methods. However, prior research methodologies
+have predominantly focused on flow-based approaches, which infrastructures, including those in the industrial, governmental,
+may not be effective in detecting all types of attacks at a and financial sectors [2], [3], [4], [5], [6].
+granular level. In this study, we introduce DM-IDS, an attention- Traditional intrusion detection approaches include signaconvolution architecture model for bimodal network intrusion ture detection, statistical analysis, and rule-based packet
+detection in both flow and payload modalities, using bilinear inspection [7]. Signature detection identifies specific patterns
+fusion. Notably, we present a novel method for constructing
+binary-form feature vectors under the payload modality, with or signatures of known attacks created by cybersecurity
+the goal of extracting additional security semantic features. To experts. Statistical analysis uses statistical methods to analyze
+facilitate this, we independently develop a feature generation network traffic, packet frequencies, system resource usage,
+tool named Beeman. Finally, we conduct a series of comparative and other parameters to detect patterns inconsistent with
+and ablation experiments on two publicly available datasets, statistical models and reveal abnormal behavior. Rule-based
+CICIDS-2017 and CICIoT-2023, achieving state-of-the-art model
+performance. packet inspection uses known attack patterns or abnormal
+ behavior to create rule sets [8]. However, traditional methods
+ Index Terms—Intrusion detection, flow modal, payload modal, require the expertise of professionals, which could require
+bilinear fusion, semantic.
+ the participation of security experts to provide the prior
+ knowledge required. Furthermore, these approaches exhibit
+ limited adaptability to dynamic network environments and
+ I. I NTRODUCTION demand continual updates of models or rules, presenting
+ HE METHODOLOGIES employed in network intru-
+T sion are constantly evolving, characterized by increased
+sophistication and stealth. As global expansion of the Internet
+ notable drawbacks [9].
+ With the emergence of machine learning and deep learning,
+ modern intrusion detection systems are favoring methods
+fosters extensive network interconnectivity [1], it facilitates based on these technologies [10], [11], [12], [13], [14]. These
+seamless information sharing and collaboration across diverse approaches typically involve collecting various types of data
+domains. However, this enhanced connectivity introduces such as network traffic, system logs, and event records,
+increased exposure to potential intrusions, making networks incorporating datasets with instances of normal activity and
+more susceptible to sophisticated attack vectors. Even a single known attacks. Following data collection, relevant features are
+system vulnerability can trigger cascading effects, affecting carefully selected, and machine learning or neural network
+ models are chosen on the basis of the problem’s nature and
+ Received 13 December 2024; revised 15 April 2025; accepted 26
+April 2025. Date of publication 29 April 2025; date of current version
+ data characteristics. Finally, well-trained models are deployed
+7 August 2025. This work is supported by the Key Research and Development for proactive monitoring and detection of network data [15].
+Program of Zhejiang Province (No. 2024SSYS0001). The associate editor Current state-of-the-art methods typically utilize flow feacoordinating the review of this article and approving it for publication was
+L. Cui. (Corresponding author: Ruyun Zhang.) tures [16], [17], [18], where a flow consists of a series of
+ Chao Zha is with the Institute of Computing Technology, Chinese packets that share the same five-tuple information (source IP,
+Academy of Sciences, Beijing 100190, China, also with the Intelligent destination IP, source port, destination port, protocol value).
+Computing Infrastructure Innovation Center, Zhejiang Lab, Hangzhou 311500,
+Zhejiang, China, also with the University of Chinese Academy of Sciences, These features, derived from flow information, such as packet
+Beijing 100049, China, and also with the School of Intelligent Science length and transmission rate, have contributed to the success of
+and Technology, Hangzhou Institute for Advanced Study, UCAS, Hangzhou network intrusion detection systems. However, these methods
+311500, Zhejiang, China (e-mail: zhachao21@mails.ucas.ac.cn).
+ Zhiyu Wang, Yifei Fan, Bing Bai, Yinjie Zhang, and Ruyun might struggle with certain types of attack due to the potential
+Zhang are with the Intelligent Computing Infrastructure Innovation lack of prominent flow features, which impacts model training.
+Center, Zhejiang Lab, Hangzhou 311500, Zhejiang, China (e-mail: Research using payload features for intrusion detection
+wangzhy@zhejianglab.org; yffan@zhejianglab.org; baibing@zhejianglab.org;
+zyj19961126@zhejianglab.org; zcor2021@gmail.com). has also yielded promising results [15], [19], [20], [21],
+ Sainan Shi is with the Institute of Computing Technology, Chinese [22]. However, certain types of attacks exhibit minimal
+Academy of Sciences, Beijing 100190, China, and also with the Intelligent distinguishable patterns in their payload content, making it
+Computing Infrastructure Innovation Center, Zhejiang Lab, Hangzhou 311500,
+Zhejiang, China (e-mail: shisainan22@mails.ucas.ac.cn). challenging to rely solely on payload features for effective
+ Digital Object Identifier 10.1109/TNSM.2025.3565614 differentiation. Consequently, recent studies have begun to
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+ZHA et al.: DM-IDS—A NETWORK INTRUSION DETECTION METHOD BASED ON DUAL-MODAL FUSION 3647
+
+ TABLE I
+ C OMPARISON OF R ECENT I NTRUSION D ETECTION T ECHNIQUES
+
+explore the integration of flow and payload modalities to method with three state-of-the-art methods, demonstrating
+complement each other’s shortcomings [23], [24], [25], [26]. significant progress.
+Existing methods primarily employ early-fusion or late-fusion The primary contributions of this paper are summarized as
+strategies for this integration. Early Fusion combines features follows:
+at an initial stage, but this approach often introduces additional 1) We present a dual-modal feature generation tool implenoise and does not fully exploit the complementary nature of mented in C++, capable of producing feature vectors for
+the two modalities [23], [25], [26]. On the other hand, Late both flow and payload modalities. Furthermore, in the pay-
+Fusion, which focuses on decision-level integration, disregards load modality, we suggested employing binary representation
+the critical interdependencies between flow and payload data, to extract payload content, anticipating improved model
+limiting its ability to capture their interactions effectively [24]. performance.
+ To address above challenges, we introduce DM-IDS, a 2) We propose a dual-branch Attention-CNN framework for
+dual-modal approach employing flow and payload features extracting and fusing flow and payload features in network
+through bilinear fusion. Initially, like traditional meth- traffic, which better reflects the distinct modality-shared and
+ods [16], [17], [27], we formulate a FlowNet with an attention modality-specific features.
+mechanism as the core module for extraction of flow fea- 3) We conduct comprehensive experiments on two public
+tures. Subsequently, diverging from traditional approaches, we datasets, CICIDS-2017 [28] and CICIoT-2023 [29], which
+devise a PayloadNet, using convolution as the primary module included performance analysis and a series of ablation
+for the extraction of payload characteristics. We argue that experiments. These experiments validated the state-of-theencoding payload content in binary form enhances its semantic art performance of our network intrusion detection and the
+representation, albeit confronting challenges of significant rationality of our framework design.
+dimensionality expansion. Convolution helps to mitigate this The remainder of the paper is organized as follows.
+issue by reducing dimensionality. Ultimately, leveraging the Section II introduces related work on current intrusion detectrained FlowNet and PayloadNet, we perform bilinear fusion tion. Section III presents the representation of the data set and
+on the extracted features for intrusion detection classification. the process of extracting features from two different modal-
+ In the experimental section, we performed comprehen- ities. Section IV shows the detailed designs of our method.
+sive experiments on two public datasets, CICIDS-2017 [28] In Section V, we experimentally evaluate the performance.
+and CICIoT-2023 [29]. First, we analyzed our intrusion Section VI discusses some experimental results and methods
+detection performance, focusing on known attack detection, presented in this paper. Section VII presents some future work.
+which demonstrated significant effectiveness. Secondly, we Finally, we conclude this paper in Section VIII.
+evaluated the impact of payload features by comparing
+the detection performance of the bilinear fusion method
+with the single-modal flow feature method. Subsequently, II. R ELATED W ORK
+we compared the performance of different fusion methods In this section, we summarize related work on AI-based
+and selected the bilinear fusion method. Finally, we per- intrusion detection systems (IDS) across different modalities,
+formed two sets of experiments on 0-day attacks, achieving comparing existing studies to highlight current limitations.
+outstanding performance. Furthermore, we compared our Unlike traditional IDS [30], [31], AI-based systems show
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+3648 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+improved performance in zero-day detection; however, certain for the detection of malicious traffic at packet level based on
+challenges remain, as summarized in Table I. deep learning, capable of learning traffic features from raw
+ Flow-Based Methods. Most contemporary network intru- packet data.
+sion detection methods are based on flow features. For Dual-Modal Methods. In recent years, researchers have
+example, Wu et al. [32] introduced a network intrusion begun to explore the use of dual-modal data for intrudetection algorithm that combines fuzzy rough sets, gener- sion detection. For example, Farrukh et al. [23] proposed
+ative adversarial networks (GAN), and convolutional neural a framework that combines flow-level and packet-level data
+networks (CNN) designed to extract big data in edge networks. into a heterogeneous graph structure, using a heterogeneous
+Shone et al. [33] proposed a network intrusion detection graph neural network (HGNN) for graph-level classificamethod grounded in unsupervised feature learning using tion to analyze network traffic and intrusion detection. This
+a symmetric deep autoencoder (NDAE). Verkerken et al. framework also integrates large language models (LLMs) to
+[34] presented a multistage hierarchical intrusion detection generate detailed, human-readable explanations and recomapproach. The first stage filters out malicious samples using mended remediation measures. Kiflay et al. [24] introduced
+an autoencoder (AE) and a one-class support vector machine an approach in which two random forest models separate
+(OC-SVM), the second stage then employs a random forest the flow-based features and payloads of the protocol, and
+(RF) and a neural network (NN) to classify the samples the final classification of network traffic is achieved by
+identified as malicious in the first stage into known attack aggregating the predictions of both models using a soft
+categories, and the third stage repurposes the first stage’s voting method. Min et al. [25] suggested transforming the
+anomaly scores to mitigate false positives. Duan et al. [35] payloads of network traffic into continuous vector represenintroduced a semi-supervised learning intrusion detection tations using word embedding techniques, then extracting
+method based on dynamic linear graph neural networks features using Text-CNN, and finally combining these with
+(DLGNN). Shafiq et al. [36] devised a method for feature flow statistics for classification using a random forest model.
+filtering using the Area Under the Curve (AUC) metric to Premkumar et al. [26] developed a context-sensitive network
+select features for the chosen ML algorithm, thereby enhancing intrusion detection system based on graph representation
+detection performance. Wang et al. [27] proposed a cloud learning (GRL), modeling entities and their relationships in
+intrusion detection system based on Stacked Compressed network traffic using graph structures. Using the CIC-IDS2017
+Autoencoders (SCAE) and the Support Vector Machine classi- dataset, they explored two methods to represent NIDS data at
+fication algorithm. King et al. [12] introduced an origin graph the flow and packet levels and employed graph neural networks
+analysis method for end-to-end anomaly-based intrusion detec- and graph embedding algorithms to create low-dimensional
+tion system. Yang et al. [16] proposed a two-stage network vector representations as a complement to traditional network
+intrusion detection method, where the first stage seeks a score features, thus developing an effective intrusion detection
+measure to minimize the risk of empirically misclassifying approach.
+known attacks, and the second stage finds another score Table I provides a summary of related work in five key
+measure to minimize the risk of inferring unknown attacks. points: data modality, false positive rate (specifically, the rate
+Yang et al. [17] proposed a multilayer hybrid IDS, combining of benign misclassified as attack), fine-grained classification
+signature-based IDS and anomaly-based IDS to detect both and zero-day attack detection. Traditional anomaly-based or
+known and unknown attacks in vehicular networks. signature-based methods perform well in recognizing known
+ Packet-Based Methods. Research on network intrusion attacks and offer good interpretability, yet they often struggle
+detection based on packet features is less extensive compared with unknown attacks and tend to exhibit high false positive
+to that focused on flow features. Notable studies in this domain rates [30], [31]. Flow-based intrusion detection methods have
+include Fu et al. [19], who introduced a machine learning- achieved significant success in recent studies, although some
+based real-time malicious traffic detection system. This system suffer from high false positive rates [12], [27], [32], [35], while
+employs frequency domain feature representation of sequential others are similarly ineffective against unknown attacks [12],
+information to achieve bounded information loss, enhancing [27], [32], [33], [35], [36]. Only three studies have managed
+detection accuracy while constraining feature dimensionality to balance low false positive rates, fine-grained detection, and
+and improving detection throughput. Holland et al. [15] zero-day detection simultaneously [16], [17], [34]. However,
+proposed an automated traffic analysis approach, making we observed that flow-based methods underperform in clasmachine learning techniques more accessible for a wider sifying certain types of attacks because their distinguishing
+range of traffic analysis tasks. Marin et al. [20] explored the characteristics lie in payload data, where flow features might
+capabilities of deep learning models in addressing specific resemble benign traffic. Packet-based intrusion detection methissues related to the detection and classification of malicious ods have received comparatively less attention, mainly because
+software network flows. They directly considered raw mea- flow feature extraction is simpler and better suited to real-time
+surement values from monitored byte streams as input to scenarios. Existing packet-based approaches generally show
+evaluate differences in various representations of raw traffic average performance in terms of false positive rates and zerofeatures proposed by the model. Zhang et al. [21] integrated an day detection, which we believe is due to challenges similar
+improved structure of the LeNet-5 and LSTM neural networks, to those in traditional anomaly-based and signature-based
+simultaneously learning the spatial and temporal features of methods [30], [31]. Specifically, the inability to recognize
+flows. Wang et al. [22] introduced a deep hierarchical network unfamiliar attack patterns and the limited transferability of
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+ZHA et al.: DM-IDS—A NETWORK INTRUSION DETECTION METHOD BASED ON DUAL-MODAL FUSION 3649
+
+Fig. 1. Beeman introduces the process of generating two major modal features based on the content of network data, including the flow feature modality
+and the payload feature modality. (a) Beeman. (b) Binary Vector Generation.
+
+payload features are significant limitations for these methods processing and image processing, proves impractical. Instead,
+in detecting unknown attacks. an imperative arises to amalgamate techniques specifically
+ Methods combining flow and packet modalities have gained attuned to the nuanced context of cybersecurity. Subsequent
+attention in recent years [23], [24], [25], [26], overcoming sections will explain the manifestations of data representation
+some of the limitations outlined above. However, we identify in Section III-A, followed by a detailed exposition of our
+several remaining challenges. First, when using payload data approach to data preprocessing in Section III-B.
+as features, these methods often rely on natural language
+processing techniques, such as word embedding. However, A. Data Representation
+domain-specific data, such as code, encoded, or encrypted Network packets constitute the fundamental entities transcontent, differ from natural language, as observed in certain mitted within computer networks, encapsulating information
+studies [37]. Second, in terms of feature fusion strategies, we originating from the source host and destined for the target
+categorize fusion methods into three types: Early, Intermediate, host [40]. In this context, a succinct examination of the packet
+and Late Fusion. For example, [23], [25], [26] employs Early format will be presented, using it as a foundational elucidation
+Fusion by integrating raw features directly, while [24] utilizes for our proposed data representation approach. The structure of
+Late Fusion, making decisions via a voting mechanism. network packets is conventionally contingent upon the specific
+ We advocate for Intermediate Fusion, as it allows each protocol in use, yet it can be generally depicted, as illustrated
+modality to retain an independent processing flow, allowing in Fig. 1(a).
+features in each modality to be learned separately without forc- Primarily, data packets encapsulate attributes pertaining to
+ing early integration. Compared to Early Fusion, Intermediate the data link layer, the network layer, and the transport
+Fusion can capture higher-level features from each modality layer. These attributes include crucial information, such as
+via deep networks before merging, thereby reducing noise and source and destination MAC addresses, IP addresses, and
+enhancing critical information. In addition, intermediate fusion ports. Furthermore, these packets integrate distinctive fields
+incorporates intermodal interactions in the intermediate layers that capture key aspects of the network environment, including
+of the model, strengthening the model’s ability to capture but not limited to window size, SYN, ACK, FIN, and RST
+multimodal associations. This approach also offers greater flags, among others. Second, data packets include payload
+adaptability and transferability. If data from one modality are content, commonly denoting information from the presentation
+unavailable, the model can still achieve comprehensive feature layer. This may manifest itself as the request or response
+fusion and prediction based on the remaining modality. Its content in protocols such as HTTP.
+improved transferability makes Intermediate Fusion particu- The utilization of pertinent fields from the data link layer,
+larly effective in detecting unknown attacks. network layer, and transport layer, specifically IP addresses
+ and port numbers, is not deemed an appropriate method for
+ III. DATASETS feature extraction in our approach. Instead, we advocate for
+ In the realm of deep learning and machine learning a more favorable strategy centered around these fields. This
+research [38], [39], the appropriate representation of data is approach aligns with established research methodologies, in
+of paramount importance in improving model performance. which a key is established for a flow based on source IP,
+Nonetheless, within the domain of cybersecurity, the treat- destination IP, source port, destination port, and the transport
+ment of data representation poses a distinctive challenge. layer protocol value. Subsequently, various statistical analyses
+At times, the adoption of processing methods identical to are applied to this flow, encompassing parameters such as
+those employed in some fields, such as natural language forward and backward packet length, forward and backward
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+3650 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+packet byte counts, flow duration, and statistics pertaining The multithreaded architecture significantly boosts the effito network environment identification fields. In this context, ciency of our data processing, offering the flexibility to
+our methodology is influenced by previous studies that have configure the number of threads based on available compudemonstrated the significant impact of such data on the tational resources. The code for this component has been
+effectiveness of intrusion detection [16], [17], [27], [32]. We compiled into a dynamic library, streamlining the deployment
+intend to integrate these features as a modality input for of model training and prediction in collaboration with the
+training and prediction within our model. Python language in subsequent stages.
+ Moreover, our objective is to harness the payload content. Following the generation of the aforementioned dual-modal
+The payload content typically lacks structured characteristics, feature vectors, we conducted min-max normalization on
+primarily comprising information intended for transmission. the flow feature vectors. This process aims to alleviate the
+Although from a certain perspective, it may bear resem- influence of disparate scales among features, expedite model
+blance to natural language, it inherently harbors elements of convergence speed, and enhance overall model stability. The
+potentially malicious content. This content not only encap- normalization procedure is delineated in Eq. (1):
+sulates semantics expressible in natural language but also
+ X − Xmin
+involves cybersecurity semantics. In this regard, we refrain Xn = (1)
+from employing methodologies akin to those utilized in Xmax − Xmin
+natural language processing for segmenting the payload con- Here, X is the original data, Xn is the normalized data,
+tent into features. Instead, we opt to transform the payload Xmin and Xmax represent the minimum and maximum values
+content into binary form, considering binary as the fun- of the feature in the original dataset, respectively.
+damental language at the lowest computational level. Our
+aspiration is for the model to acquire additional seman- IV. M ETHODOLOGY
+tic knowledge built upon this binary representation. This
+innovative approach will function as an alternative modality In this section, we present the methodology of DM-IDS,
+input for both the training and prediction phases within our i.e., the overall architecture and the design of three main
+model. modules in DM-IDS.
+ In conclusion, our final data representation methodology
+will incorporate two modalities: the flow feature modality and A. Overall Architecture
+the packet payload feature modality. We envisage undertak- Fig. 2 depicts the training process and the dual modal fusion
+ing feature fusion to augment the effectiveness of intrusion process proposed in this paper for network intrusion detection
+detection. problems.
+ Our method performs detail fusion on two primary inputs:
+ Flow Net (FNet) and Payload Net (PNet). The comprehensive
+B. Pre-Processing
+ training procedure is delineated as follows:
+ We have developed a feature generation tool in C++ (g++ • Feature Generation and Normalization: Initially, we used
+9.4.0) that generates dual-modal feature vectors as inputs for our developed tool, Beeman, for both feature generation
+our model, namely Beeman. These vectors encompass both and data normalization. This encompassed the creation of
+flow feature vectors and payload feature vectors. Utilizing dual-modal feature vectors, specifically the flow feature
+a multi-threaded architecture, we conducted packet content vector Vfi and the payload feature vector Vpi .
+parsing and computed diverse flow-related features, including • Feature Extraction: Subsequently, the dual-modal feature
+statistics on forward and backward packet lengths, counts vectors were individually input into the Flow Net and
+for both directions, and TCP flag field statistics, among Payload Net to execute feature encoding, resulting in
+others. The statistical analysis employed in this process was feature vectors Vfo and Vpo .
+referenced from CICFlowMeter [28]. • Feature Fusion: Following the encoding process, we
+ Furthermore, the payload content underwent transformation applied Bi-Linear Feature Fusion to vectors Vfo and
+into binary vectors and was subsequently associated with Vpo .
+the corresponding flows. The length of payload content is • Classification with Fully Connected Classifier:
+typically indeterminate. In this context, we have imposed Ultimately, the fused feature vector was classified through
+specific constraints, such as truncating the payload to the initial a classifier that included fully connected layers. In this
+128 or 256 bytes, for the generation of payload feature vectors. stage, we utilized the Cross-Entropy Loss Function to
+The vector length remains adjustable. minimize the classification error, defined as follows:
+ The Fig. 1(b) illustrates the process of converting hex-
+ C
+ 
+adecimal payload content into a binary vector. Firstly, each
+byte content is converted into an 8-bit binary representation. CrossEntropyLoss = − yi · log(pi ) (2)
+ i=1
+Then, it is represented as 8 channels, with each binary bit
+corresponding to one channel. Therefore, assuming an L-byte Here, assuming there are C categories, yi represents
+hexadecimal payload content will be converted into an L * 8 the true class of the sample (a one-hot encoded vector
+channel binary vector representation. Finally, it is reshaped as indicating that the sample belongs to class i), and pi
+needed for training purposes. denotes the model’s predicted probability for class i.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+ZHA et al.: DM-IDS—A NETWORK INTRUSION DETECTION METHOD BASED ON DUAL-MODAL FUSION 3651
+
+Fig. 2. Overall Architecture of Our Proposed Methods (The Feature Generation module harnessed Beeman for the creation of bimodal feature vectors.
+The Feature Extraction module, we employed an Attention-Convolution architecture to derive salient features from the bimodal feature vectors, with the
+objective of more effectively delineating nuances among distinct data categories. The Feature Fusion stage employed a Bi-Linear Fusion method to seamlessly
+amalgamate the vectors obtained post feature extraction. The Classification component is composed of a fully connected classifier).
+
+Fig. 3. The Overall Structure of the Feature Extraction (The Flow Net consists of N multi-head attention blocks, each comprising a multi-head attention
+sub-layer and a feed-forward neural network sub-layer. The Payload Net is composed of M convolution blocks, each containing multiple parallel convolutional
+layers with different kernel sizes, a 1x1 convolutional layer, and a pooling layer).
+
+B. Flow Net Subsequently, the process of the Flow Net can be repre-
+ The Flow Net is composed of identical attention blocks N, sented by the following set of equations:
+as shown in Fig. 3(a), each consisting of two stacked sub- Fattn = LayerNorm(Vfi + Attention(Vfi , Vfi , Vfi )) (4)
+layers: a Multi-Head Attention Layer and a Feed-Forward
+ Vfo = LayerNorm(Fattn + FFN (Fattn , Fattn , Fattn )) (5)
+Neural Network Layer [41]. The Multi-Head Attention Layer
+encompasses a multi-head attention neural network, a residual Here, LayerNorm represents the layer normalization operaconnection, and layer normalization. Similarly, the Feed- tion and FFN denotes the neural network that is transmitted.
+Forward Neural Network Layer incorporates a feedforward
+neural network, a residual connection, and layer normalization. C. Payload Net
+ The input to Flow Net is a flow feature vector Vfi with a The Payload Net consists of M identical Convolutional
+shape of [B, 1, m], where B denotes the batch size, and m Blocks, as illustrated in Fig. 3(b). Each Convolutional Block
+represents the number of flow features. After passing through comprises three parallel convolutional layers with kernel sizes
+the Flow Net, an encoded vector Vfo of the same shape is of 3x3, 7x7, and 11x11, and padding values of 0, 2, and 4,
+obtained. The attention function can be represented by the respectively [42], [43]. We aim to extract multidimensional
+following formula: features of the payload content through convolutions with
+  
+ Vfi · VfiT different receptive fields. The vectors outputted by these three
+ Attention(Vfi , Vfi , Vfi ) = softmax √ · Vfi (3) parallel convolutional layers have the same shape. Following
+ dk
+ these layers is a 1x1 convolution to facilitate the interaction of
+where dk represents the dimension of the input vector Vfi . information across the three different channels. Subsequently,
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+3652 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+a sigmoid activation layer and an average pooling layer are Here, FC denotes a full-connected layer with parameters W
+applied to the feature vectors, serving to reduce dimensionality. and β, where (m, k), (j, k), and (1, k), respectively, indicate the
+ The feature vectors of the payload modality, derived from shapes of the corresponding parameter matrices,  detotes the
+binary encoding, frequently confront challenges related to element-wise multiplication, LayerNorm represents the layer
+excessive dimensionality, prompting the need for dimen- normalization operation.
+sionality reduction. Convolutional operations are effective in Moreover, we have explored two fusion methods: a
+addressing this issue. Furthermore, the utilization of various Concatenation Fusion approach and an Attention-Based
+convolutional kernel sizes to define different receptive fields Fusion technique [45], [46]. The Concatenation Fusion
+is used to extract multidimensional features. This approach method combines feature vectors from distinct modaliensures that our model can capture a more extensive range of ties through elementary operations like concatenation and
+information. weighted summation. These straightforward operations min-
+ The input to the Payload Net is a payload feature vector imize interparameter dependencies, and subsequent network
+Vpi with a shape of [B, C, n, n], where B is the batch size, C layers naturally adapt to such operations. Conversely, the
+is the number of channels and [n, n] represents the shape of an Attention-Based Fusion method accomplishes fusion by
+individual feature vector. Three parallel convolutional process learning correlations between feature vectors from various
+can be expressed using the following formula: modalities.
+  
+ Aipi = Conv Vpi i i
+  W(3,3) , βAi
+ (6) E. Training
+  
+ i i i i
+ Bpi = Conv Vpi  W(7,7) , βB (7) In summary, following the aforementioned description, our
+   training procedure includes the following steps: Initially, we
+ i i i i
+ Cpi = Conv Vpi  W(11,11) , βC (8) parsed the raw data through Beeman, yielding dual-modal feature vectors Vfi and Vpi . Subsequently, Vfi and Vpi underwent
+ Here, Conv denotes a convolutional layer with parameters additional feature extraction in Flow Net and Payload Net,
+W and β, i represents the i-th channel,  denotes the which produced feature vectors Vfo and Vpo , respectively.
+element-wise multiplication, where (3, 3), (7, 7), and (11, Subsequently, bi-linear feature fusion was applied to Vfo
+11), respectively, indicate the shapes of the corresponding and Vpo , producing a fused feature vector Vfusion . Lastly, a
+convolutional kernel parameter matrices. classifier consisting of fully connected layers was utilized, with
+ Following this, a 1x1 convolution is applied to the outputs the classification results subjected to minimizing the Crossi , and C i of three parallel convolutional layers. The
+Aipi , Bpi pi Entropy Loss Function.
+process can be represented as follows: Especially notable is that during our training process, we
+  
+ used the Adam optimizer and implemented a warm-up
+ Vpo = Cat Aipi , Bpi i i
+ , Cpi (9)
+ strategy for the learning rate. The specific warmup strategy
+where i represents the i-th channel, Cat denotes the 1x1 can be expressed by the following formula:
+convolution. step
+ lr =  ∗ W ,
+ base_lr  step ≤ W (13)
+ train _step−step
+ max 0, max(1,train _step−W ) , step > W
+D. Feature Fusion
+ After the feature extraction from two distinct modalities Here, base_lr represents the initial value of the learning
+using separate encoders, two feature vectors, Vpo and Vfo , rate, step indicates the current step, train_step represents the
+of disparate dimensions are generated, Vpo and Vfo . In this total training steps, and W is a predefined threshold parameter.
+paper, we introduce a Bi-Linear Fusion Method for modality The specific training procedures for DM-IDS are summaintegration [44], this part of the work is illustrated in Fig. 2. rized in Algorithm 1.
+Specifically, Vpo and Vfo undergo individual processing
+through Fully-Connected Layers to produce feature vectors F. Computational Complexity Analysis
+of uniform dimensionality. Subsequently, the Element-wise As shown in Algorithm 1, DM-IDS involves three main
+Multiplication of the resulting vectors produces a fused vector modules: FNet, PNet, and Feature Fusion. In this section,
+Vfusion , followed by the application of Layer Normalization. we will perform a computational complexity analysis of these
+ We assume that the dimensions of Vfo and Vpo are three core modules.
+[B , 1, m  ] and [B , 1, j  ], where B denotes the batch size, m  FNet consists of multiple attention modules, each comprisand j  represent the dimensions of flow features and packet ing a multi-head self-attention layer, two residual connections
+features after feature extraction, respectively. After fusion, with layer normalization, and a feedforward neural network
+the dimension becomes [B, 1, k]. The fusion process can be layer. As described in Section IV-B, the input dimension of
+represented by the following set of equations: FNet is [B, 1, m]. Consequently, the algorithmic complexity
+   of the FNet in each batch can be detailed as follows:
+ Ffo = FC Vfo · W(m,k) , β(1,k) (10) 1) Multi-head self-attention layer.
+  
+ a) Linear transformation to generate Q, K, and V:
+ Fpo = FC Vpo · W(j,k) , β(1,k) (11)
+   O(B · m 2 ).
+ Vfusion = LayerNorm Ffo  Fpo (12) b) Calculation of attention weights QK T : O(B · m).
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+ZHA et al.: DM-IDS—A NETWORK INTRUSION DETECTION METHOD BASED ON DUAL-MODAL FUSION 3653
+
+ TABLE III
+Algorithm 1 Training DM-IDS F EATURES U SED IN O UR E XPERIMENTS
+Input: Raw data and labels Y.
+Output: Classifier.
+ 1: Vfi , Vpi ← Beeman.
+ 2: Vfi , Vpi ← Eq. (1).
+ 3: for ep: = 1, 2, ..., epoch_num do
+ 4: for batch: = 1, 2, ..., batch_num do
+ 5: Vfo ← use Eq. (3), Eq. (4) and Eq. (5).
+ 6: Vpo ← use Eq. (6), Eq. (7), Eq. (8) and Eq. (9).
+ 7: Vfusion ← use Eq. (10), Eq. (11) and Eq. (12).
+ 8: Py ← Classifier(Vfusion ).
+ 9: loss ← use Eq. (2).
+10: lr ← use Eq. (13).
+11: Classifier ← Classifier − lr · ∇Classifier · loss
+12: end for
+13: end for
+
+ TABLE II
+ H ARDWARE AND S OFTWARE D EVICE D ETAILS OF THE
+ E XPERIMENTAL S ERVER
+
+ Feature Fusion consists of two fully connected layers, an
+ c) Softmax operation: O(B · m). element-wise multiplication and a layer normalization layer.
+ d) Linear transformation after concatenating multiple As described in Section IV-D, the input dimension of Feature
+ heads: O(B · m 2 ). Fusion is [B , 1, m  ] and [B , 1, j  ], and the output dimension
+ 2) Residual connection and layer normalization. of Feature Fusion is [B , 1, k ]. Therefore, the algorithmic
+ a) Residual connection (addition of input and output): complexity of Feature Fusion for each batch can be expressed
+ O(B · m). as follows:
+ b) Layer normalization (calculation of mean, standard 1) Fully connected layer: O(B · m  · k ) + O(B · j  · k ).
+ deviation, and normalization): O(B · m). 2) Element-wise multiplication: O(B · k ).
+ 3) Feedforward neural network layer. 3) Layer normalization: O(B · k ).
+ a) First linear transformation (maps [B, 1, m] to [B, Accordingly, the overall algorithmic complexity of Feature
+ 1, f ], where f = 2m): O(B · m 2 ). Fusion is O(B · m  · k ) + O(B · j  · k ) + O(B · k ) + O(B · k ),
+ b) Activation function: O(B · m). which simplifies to O(B · k 2 ), where m  ≈ j  ≈ k .
+ c) Second linear transformation (maps [B, 1, f ] to [B,
+ 1, m], where f = 2m): O(B · m 2 ).
+ Accordingly, the overall algorithmic complexity of FNet is V. E XPERIMENTAL D ESIGN AND R ESULTS
+O(B · m 2 ) + O(B · m) + O(B · m 2 ), which simplifies to In this section, we elaborate on our experimental findings
+O(B · m 2 ). and undertake a comprehensive analysis to elucidate the strides
+ PNet consists of three parallel convolutional layers and a made in our research endeavors. Using a meticulous experi-
+1 ∗ 1 convolutional layer for concatenation. As described in mental methodology, our primary objective is to underscore
+Section IV-C, the input dimension of PNet is [B , C , n, n]. the efficacy and preeminence of the proposed approach.
+Therefore, the algorithmic complexity of PNet for each batch
+can be expressed as follows:
+ 1) Parallel convolutions. A. Experimental Setting
+ a) Convolution layer (3 ∗ 3 kernel): O(B · 9 · C · n 2 ). In the pursuit of advancing our proposed network intrusion
+ b) Convolution layer (7 ∗ 7 kernel): O(B · 49 · C · n 2 ). detection method, we used a combination of the C++ and
+ c) Convolution layer (11 ∗ 11 kernel): O(B · 121 · C · Python programming languages. Complementing our developn 2 ). ment efforts, we harnessed well-established libraries, including
+ 2) Concatenation layer (1 ∗ 1 kernel): O(B · 3C · n 2 ). pandas, numpy, and pytorch. The orchestration of our com-
+ Accordingly, the overall algorithmic complexity of PNet is putational tasks was facilitated by a hardware ensemble
+O(B · 9 · C · n 2 ) + O(B · 49 · C · n 2 ) + O(B · 121 · C · n 2 ) + comprising 2 NVIDIA A100-PCIE-40GB GPUs, each with
+O(B · 3C · n 2 ), which simplifies to O(B · C · n 2 ). detailed specifications meticulously presented in Table II.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+3654 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ TABLE IV
+ DATASET PARTITION S ETTINGS
+
+ TABLE V
+B. Datasets T RAFFIC D ETAILS OF T WO P UBLICLY DATASETS
+ In our experimentation, we opted for the use of two publicly
+accessible datasets, namely CICIDS-2017 [28] and CICIoT-
+2023 [29] (details of the features used in the dataset can be
+found in Table III). The CICIDS-2017 dataset encapsulates
+benign activities, as well as contemporary and prevalent
+attacks, faithfully emulating real-world data in the form of
+PCAPS. Data acquisition for this dataset spans a period
+of 5 days, encompassing a spectrum of incidents including
+Brute-Force FTP, Brute-Force SSH, Denial of Service (DoS),
+Web-Based Attacks, and Distributed Denial of Service (DDoS),
+among other categories. The CICIoT-2023 dataset, on the
+other hand, stands out as an innovative repository of Internet
+of Things (IoT) attack data. This compilation incorporates
+a diverse array of attacks, including, but not limited to
+Distributed Denial of Service (DDoS), Reconnaissance, Brute-
+Force, Deceptive Maneuvers, and instances of notorious Mirai
+malware.
+ In previous research endeavors, numerous investigations
+have adopted a proportional random split methodology to
+segregate datasets into training and testing sets. We posit that
+such a partitioning strategy may culminate in the convergence of data distributions between training and testing sets,
+potentially engendering inflated experimental outcomes. Our
+proposed partitioning approach adheres to the prevalent 7:3
+ratio for training and testing sets. However, we introduce a
+temporal order based on timestamps, allocating the initial 70%
+of the data for training and the subsequent 30% for testing.
+Moreover, we have categorized each dataset into two subsets, extracted training set and the data set are precisely delineated
+with specific partitioning intricacies elucidated in Table IV. in Table V.
+ In the second stage, experiments were carried out on two
+ datasets, which is equivalent to four runs (with two settings
+C. Evaluation on Public Datasets for each dataset). The classification results are depicted in the
+ In the first stage, we deployed our proposed feature gener- confusion matrices presented in Fig. 4, where the horizontal
+ation tool, Beeman, to extract around 80 flow features from labels denote predicted categories and the vertical labels
+two publicly accessible datasets, namely CICIDS-2017 and denote true categories.
+CICIoT-2023. Additionally, Beeman generated binary payload The experimental findings underscore the significantly
+feature vectors, enforcing a length constraint of 256 bytes for advanced performance of our model. In the Setting 1 of the
+the payload component. To implement the length constraint CICIDS-2017 dataset, we achieved recall rates of nearly 99%
+strategy effectively, we computed length statistics for all or higher across predictions for 8 distinct classes. Similarly,
+packets. Consequently, we conducted tests within this length in the Setting 2 of the CICIDS-2017 dataset, we consistently
+range to optimize available data for validation, excluding maintained recall rates of 99% or higher in the majority of
+packets that did not meet this criterion. categories.
+ Furthermore, we excluded features such as five-tuples and Turning our attention to the CICIoT-2023 dataset Setting 1,
+timestamps from all data. In this testing environment, we assert we achieved recall rates exceeding 96% in four categories,
+that five-tuples and timestamps may exhibit a significant corre- with the remaining two at 53% and 72%. Similarly, in the
+lation with category labels [47], [48]. However, our proposed CICIoT-2023 dataset Setting 2, we also achieved recall rates
+method does not require time series features. The details of the that exceeded 96% in four categories, with the remaining two
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+ZHA et al.: DM-IDS—A NETWORK INTRUSION DETECTION METHOD BASED ON DUAL-MODAL FUSION 3655
+
+Fig. 4. Normalized Confusion Matrix of the Our Method.
+
+at 47% and 58%. Both experiments consistently showcased from 3.86% to 72.08%, a remarkable improvement of nearly
+the superior performance of our proposed method on this 70 percentage points. Furthermore, substantial improvements
+dataset. Additionally, we will validate the effectiveness of in precision and F1 score were observed. In CICIoT-2023-
+payload features in network intrusion detection, as elaborated Setting 2, similar enhancements were observed across the five
+in Section V-D. label categories, with recall rates for SqlInjection and DDoS-
+ ICMP-Fragment attacks increasing by 4 to 6 percentage points.
+ Furthermore, compared to the single-modal payload feature
+D. Evaluation of Payload Features method, the bilinear fusion method demonstrated superior
+ We evaluated the enhancement of payload features in performance.
+our proposed DM-IDS using the CICIDS-2017 dataset and In CICIDS-2017-Setting1, our proposed bilinear fusion
+CICIoT-2023 dataset in two settings: single-modal with method achieved recall, precision, and F1 scores of over
+flow features (Flow Stream), single-modal with payload fea- 99% across all categories. In contrast, the performance of the
+tures (Payload Stream) and dual-modal with bilinear fusion model in the Flow Stream and Payload Stream experiments
+(Bilinear Fusion). The model parameters remained consistent was not as good as bilinear fusion method, with recall
+for all three methods. Table VI presents the experimental ranging from 90% to 98%, and precision and F1 scores
+results, with metrics highlighted in red and bold indicating the even slightly lower. Similarly, this trend was observed in
+improvement achieved by the bilinear fusion method over the CICIDS-2017-Setting2.
+single-modal flow feature method. From the above results, it is evident that our proposed
+ In CICIoT-2023-Setting 1, our bilinear fusion method multimodal fusion method outperforms flow-based methods.
+showed performance improvements in all five label cate- This can be attributed to the incorporation of semantic payload
+gories compared to the single-modal flow feature method. information into our model, which enhances our detection
+Particularly notable was the significant enhancement in detect- performance. Further discussion on the choice of fusion
+ing Mirai-Greeth-Flood attacks, with the recall rate increasing methods will be presented in Section V-E.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+3656 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ TABLE VI
+ C OMPARISON B ETWEEN S INGLE -M ODAL AND D UAL -M ODAL M ETHOD
+
+E. Evaluation of Different Fusion Method
+ To compare the impact of different fusion methods on model
+performance, we conducted experiments on the CICIDS-2017
+dataset using three distinct fusion methods: simple concatenation, attention-based fusion, and bilinear fusion. Throughout
+the subsequent discussions, we abbreviate them as “concat
+fusion”, “attn fusion”, and “bilinear fusion”, respectively. The
+model architecture and parameters remained consistent across
+all three experiments, except for the fusion method. The
+outcomes are outlined in Table VII, where the experimental
+data in the leading position are highlighted in bold.
+ Analyzing the data presented in Table VII reveals that, in
+the CICIDS-2017-Setting1 dataset, we show leadership in 6 of
+the 8 distinct categories while achieving parity in the remaining 2 categories. Likewise, on the CICIDS-2017-Setting2
+dataset, we lead in 7 categories. Based on experimental data, it
+is shown that the bilinear fusion method emerges as the most Fig. 5. Traffic Details of Unknown Datasets.
+effective in our network intrusion detection application.
+ For example, DDoS-Slowloris, DDoS-PShack-Flood, and
+F. Evaluation of Zero-Day Detection DDoS-SynonymousIP all fall under the DDoS category,
+ To evaluate our proposed DM-IDS method for detecting which is also present in the known attack set. However,
+unknown attacks, we conducted four experiments on the these attacks differ in their specific mechanisms and do
+CICIoT-2023 dataset. First, we select 9 types of attack traffic not belong to the same type of DDoS attack.
+not present in the CICIoT-2023 dataset Setting 1 and Setting 2 • The attacks have entirely different mechanisms comas our unknown attacks, as detailed in Fig. 5. When selecting pared to known attacks. For example, Recon-OSScan,
+the zero-day attack samples, we followed two key principles: Recon-HistoryDiscovery, and Recon-Portscan are all
+ • The attacks exhibit some similarities to known attacks reconnaissance attacks, but these types are not present in
+ in terms of mechanism but are not exactly the same. either Setting 1 or Setting 2 of the CICIoT-2023 dataset.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+ZHA et al.: DM-IDS—A NETWORK INTRUSION DETECTION METHOD BASED ON DUAL-MODAL FUSION 3657
+
+ TABLE VII
+ C OMPARING TO D IFFERENT F USION M ETHOD
+
+ TABLE VIII TABLE IX
+ E VALUATION OF Z ERO -DAY D ETECTION (B ILINEAR F USION ) E VALUATION OF Z ERO -DAY D ETECTION (F LOW S TREAM )
+
+ By using these two distinct approaches, our objective is Stream model. The results are presented in Table IX.
+to comprehensively evaluate the performance of our model For the model trained on the Setting 1 dataset, the
+in detecting unknown attacks. Furthermore, we consider them detection results for unknown attacks show significant
+correctly predicted if they were identified as attacks during the improvements in recall rate for attacks such as Uploadingprediction. The experimental results are shown in Table VIII Attack, DDoS-PShack-Flood, DDoS-SynonymousIP-Flood,
+and Table IX, where we labeled the two models trained in the Backdoor, Recon-HostDiscovery, and Recon-PortScan. In
+CICIoT-2023 dataset as Setting 1 and Setting 2, respectively. addition, notable improvements were observed in precision
+ Table VIII shows that DM-IDS has better detection capa- and F1 score. Similarly, for the model trained on the Setting
+bility for unknown attacks in Setting 1, the recall rates for 2 dataset, the recall rate for unknown attacks, including
+the seven unknown attack types are greater than 84%, with Uploading-Attack, Recon-OSScan, DDoS-SynonymousIPthree exceeding 90%. In Setting 2, DM-IDS performs slightly Flood, Backdoor, Recon-HostDiscovery, and Recon-PortScan,
+worse for zero-day attacks, with recall rates above 87% for exhibited substantial increases. The enhancements in precision
+three attack types, around 50% for four others, and below and F1 score metrics mirrored those observed in the first set of
+50% for the remaining three. Our method excels not only experiments.
+in detecting known attacks, but also in detecting zero-day These two experiments further substantiate that DM-IDS
+attacks, particularly in Setting 1. This is due to our model achieves considerable improvements compared to the model
+capturing more potential features of attack types, such as flow trained on the flow modal. By incorporating packet modaland payload features, which contribute significantly to our ity and using a binary vectorization approach for packet
+performance in attack detection. payloads, rather than treating them as natural language,
+ To demonstrate the improved performance of DM-IDS the model demonstrates enhanced capability in capturing
+over the unimodal model in detecting unknown attacks, attack features, which is a key factor behind its superior
+we conducted two additional experiments under the Flow performance.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+3658 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ TABLE X
+ C OMPARING TO S TATE OF THE A RT
+
+Fig. 6. Performance Test in the CICIDS-2017 Dataset.
+
+G. Comparing to State-of-the-Art dataset, our proposed method, DM-IDS, notably excels in
+ Our proposed approach is compared with three categories such as FTP-Patator, DoS-Slowloris, DDoS, Bot,
+state-of-the-art methods, including RF-Vote-Based [24], MTH- Brute-Force, Portscan, demonstrating significant performance
+IDS [17] and CVAE-EVT [16]. For a fair comparison, the improvements. Furthermore, we maintain nearly identical
+experimental results regarding these state-of-the-art models leading results in various other categories. This indicates
+were obtained by combining our dataset with the deployment that DM-IDS can better capture payload feature information,
+code provided by the respective authors. The comparative enhancing the model’s ability to conduct significant detection
+results for all models are presented in Table X (we have with increased sensitivity. We will delve further into the
+highlighted the significantly leading metrics in bold). discussion of the experiments in the Discussion section.
+ As shown in Table X, considering all three performance
+metrics, our proposed DM-IDS model clearly outperforms all H. Performance Test
+state-of-the-art methods. RF-Vote-Based method demonstrated Fig. 6 presents the evaluation of the detection latency of
+strong performance in the CICIDS-2017 data set, achieving DM-IDS in three critical modules - FNet, PNet, and Fusion–
+a recall rate that exceeded 98% in most categories. However, using the CICIDS-2017 dataset. Fig. 6 (a) illustrates the
+DM-IDS outperformed RF-Vote-Based in recall rate for spe- latency density distribution for FNet, with the majority of
+cific attack types such as Benign, SSH-Patator, and Bot, as latency concentrated within 0–10 microseconds and a maxiwell as in precision and F1 score metrics. Compared with mum latency of approximately 15 microseconds, although the
+CVAE-EVT, DM-IDS demonstrates highly competitive exper- density in this upper range is relatively low. Fig. 6 (b) shows
+imental results, achieving comprehensive leadership across the latency density distribution for PNet, primarily within
+nearly all categories. Although MTH-IDS exhibits commend- 0 to 50 microseconds, with a maximum latency of around
+able performance in the two settings of the CICIDS-2017 200 microseconds, which also demonstrates a low density.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+ZHA et al.: DM-IDS—A NETWORK INTRUSION DETECTION METHOD BASED ON DUAL-MODAL FUSION 3659
+
+Finally, Fig. 6 (c) shows the latency density distribution for in meaningful results. However, there are still several pressing
+the Fusion module, which exhibits extremely low latency, challenges in IDS research that remain to be addressed and
+predominantly below 1 microsecond. will form an important part of our future work.
+ As shown in the latency density distributions of the • We acknowledge that the ultimate goal of intrusion
+three different modules in Fig. 6, the introduction of PNet detection is to thwart attacks, which first requires accurate
+results in an increase in detection latency compared to FNet. identification and interpretation of malicious behavior.
+However, this latency remains relatively low, primarily under Although traditional methods often perform well in this
+50 microseconds, with the average latency skewed closer to regard, deep learning-based approaches have yet to fully
+0. We attribute this increase to the larger feature dimensions achieve this objective. In addition, encrypted traffic, parin the payload modality, which leads to higher computational ticularly SSL-encrypted data, remains a major challenge
+complexity. In general, the total detection latency of DM- for intrusion detection.
+IDS is expected to remain within 60 microseconds. By • Extracting more effective features is in fact a key compoincorporating a parallel mechanism, where PNet and FNet nent of IDS research, such as evaluating the contribution
+perform detection simultaneously before merging modalities, of features and eliminating redundant features. These
+the overall detection latency could be further reduced. Such steps can play a critical role in improving detection
+low latency is well suited to achieve real-time performance in performance as well as improving real-time efficiency.
+practical deployment scenarios. • Model generalization is a crucial aspect of classification
+ tasks, and this is equally important in IDS research.
+ VI. D ISCUSSION Our work is carried out under a static assumption,
+ where the distribution of network traffic features remains
+ Enhancement in Recall Performance: In contrast to
+ unchanged over a certain period. Although this assumpcurrent state-of-the-art (SOTA) methods, we have achieved
+ tion holds in the short term, concept drift and other
+a notable improvement in the recall rates for detecting Bot,
+ phenomena may occur over time, necessitating contin-
+Brute-Force, and Dos-Slowloris attacks. Bot attacks involve
+ uous model updates to maintain strong generalization
+malicious activities executed on a target system through autoperformance [14]. Addressing this challenge represents
+mated programs, commonly known as bots. The payload may
+ an important direction for future IDS research.
+include malicious operations, data, or instructions executed
+by the automated program controlled by the attacker during
+the attack. Conversely, Brute-Force attacks employ trial-and- VIII. C ONCLUSION
+error methods in which attackers seek unauthorized access or
+ In this study, we introduce a network intrusion detection
+information by testing all feasible password, key, or credential
+ method grounded in bilinear fusion, with the primary objective
+combinations. The payload content typically encompasses the
+ of improving the performance of intrusion detection systems.
+targets that attackers attempt to decipher, often passwords,
+ Our initial step involved the autonomous development of
+keys, or other credentials. It is evident that the payload content
+ a specialized feature extractor named Beeman, proficient in
+of these attacks exhibits distinctive features. Our approach is
+ extracting features from both flow and payload modalities.
+designed to extract the payload features of the attacks and
+ Subsequently, capitalized on the dual utilization of these
+integrate them with flow modal features to more effectively
+ modalities, we crafted a Flow Net incorporating attention
+fulfill the detection task.
+ mechanisms and a Payload Net structured around multiple
+ Fusion Method Selection: Our investigation into differparallel convolutional blocks. The culmination of our approach
+ent fusion methods revealed varied performance outcomes.
+ involved bilinear fusion and subsequent classification applied
+Initially, the concatenation fusion method combines two modal
+ to the encoded feature space. Throughout our comprehensive
+feature vectors by adding them row-wise or column-wise.
+ experiments, we systematically assessed the impact of various
+However, this method often falls short in capturing the corfusion methods on model performance, concluding that bilinrelations between the two modal features. Subsequently, the
+ ear fusion stands out as the optimal solution. Furthermore,
+attention-based fusion method acknowledges the correlations
+ we conducted rigorous comparisons with several state-ofbetween the two modal features. Nevertheless, its implementhe-art approaches, thus accentuating the advancements and
+tation suggests a potential bias towards favoring one modality
+ superiorities inherent in our proposed method within the
+after fusion, potentially diminishing the influence of the other.
+ domain of network intrusion detection.
+Finally, the bilinear fusion method that we adopted shares
+similarities with the attention-based fusion method in implementation, but differs in key aspects. Notably, it avoids biased R EFERENCES
+selection towards either modality, a characteristic evident in
+ [1] W. A. Al-Khater, S. Al-Maadeed, A. A. Ahmed, A. S. Sadiq, and
+our experimental results. M. K. Khan, “Comprehensive review of cybercrime detection techniques,” IEEE Access, vol. 8, pp. 137293–137311, 2020.
+ [2] M. Frustaci, P. Pace, G. Aloi, and G. Fortino, “Evaluating critical
+ VII. F UTURE W ORK security issues of the IoT world: Present and future challenges,” IEEE
+ In recent years, significant strides have been made in deep Internet Things J., vol. 5, no. 4, pp. 2483–2495, Aug. 2018.
+ [3] N. Lukas, A. Salem, R. Sim, S. Tople, L. Wutschitz, and
+learning research for network intrusion detection, and we have S. Zanella-Béguelin, “Analyzing leakage of personally identifiable
+invested substantial time and effort in this domain, resulting information in language models,” 2023, arXiv:2302.00539.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+3660 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 4, AUGUST 2025
+
+ [4] Y. Zou, J. Zhu, X. Wang, and L. Hanzo, “A survey on wireless security: [26] A. Premkumar, M. Schneider, C. Spivey, J. Pavlik, and N. D. Bastian,
+ Technical challenges, recent advances, and future trends,” Proc. IEEE, “Graph representation learning for context-aware network intrusion
+ vol. 104, no. 9, pp. 1727–1765, Sep. 2016. detection,” in Proc. Artif. Intell. Mach. Learn. Multi-Domain Oper. Appl.
+ [5] W. Li, W. Meng, and L. F. Kwok, “Surveying trust-based collaborative V, 2023, pp. 82–92.
+ intrusion detection: State-of-the-art, challenges and future directions,” [27] W. Wang, X. Du, D. Shan, R. Qin, and N. Wang, “Cloud intrusion
+ IEEE Commun. Surveys Tuts., vol. 24, no. 1, pp. 280–305, 1st Quart., detection method based on stacked contractive auto-encoder and sup-
+ 2021. port vector machine,” IEEE Trans. cloud Comput., vol. 10, no. 3,
+ [6] F. Wang, Q. Shan, F. Teng, Z. He, Y. Xiao, and Z. Wang, “Distributed pp. 1634–1646, Jul.–Sep. 2022.
+ secondary control strategy against bounded FDI attacks for microgrid [28] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+ with layered communication network,” Front. Energy Res., vol. 10, Jun. a new intrusion detection dataset and intrusion traffic characterization,”
+ 2022, Art. no. 914132. in Proc. ICISSP, vol. 1, 2018, pp. 108–116.
+ [7] V. Kumar, D. Sinha, A. K. Das, S. C. Pandey, and R. T. Goswami, “An [29] E. C. P. Neto, S. Dadkhah, R. Ferreira, A. Zohourian, R. Lu, and
+ integrated rule based intrusion detection system: Analysis on UNSW- A. A. Ghorbani, “CICIoT2023: A real-time dataset and benchmark
+ NB15 data set and the real time online dataset,” Clust. Comput., vol. 23, for large-scale attacks in IoT environment,” Sensors, vol. 23, no. 13,
+ pp. 1397–1418, Jun. 2020. p. 5941, 2023.
+ [8] R. Mitchell and R. Chen, “Behavior-rule based intrusion detection [30] Z. Wang et al., “Themis: Ambiguity-aware network intrusion detection
+ systems for safety critical smart grid applications,” IEEE Trans. Smart based on symbolic model comparison,” in Proc. ACM SIGSAC Conf.
+ Grid, vol. 4, no. 3, pp. 1254–1263, Sep. 2013. Comput. Commun. Security, 2021, pp. 3384–3399.
+ [9] B. Dong and X. Wang, “Comparison deep learning method to traditional [31] Y. Wu et al., “Paradise: Real-time, generalized, and
+ methods using for network intrusion detection,” in Proc. 8th IEEE Int. distributed provenance-based intrusion detection,” IEEE Trans.
+ Conf. Commun. Softw. Netw. (ICCSN), 2016, pp. 581–585. Dependable Secure Comput., vol. 20, no. 2, pp. 1624–1640,
+[10] P. Mishra, V. Varadharajan, U. Tupakula, and E. S. Pilli, “A detailed Mar./Apr. 2023.
+ investigation and analysis of using machine learning techniques for [32] Y. Wu, L. Nie, S. Wang, Z. Ning, and S. Li, “Intelligent intrusion detecintrusion detection,” IEEE Commun. Surveys Tuts., vol. 21, no. 1, tion for Internet of Things security: A deep convolutional generative
+ pp. 686–728, 1st Quart., 2018. adversarial network-enabled approach,” IEEE Internet Things J., vol. 10,
+[11] Z. Hang, Y. Lu, Y. Wang, and Y. Xie, “Flow-MAE: Leveraging no. 4, pp. 3094–3106, Feb. 2023.
+ masked AutoEncoder for accurate, efficient and robust malicious traffic [33] N. Shone, T. N. Ngoc, V. D. Phai, and Q. Shi, “A deep learning approach
+ classification,” in Proc. 26th Int. Symp. Res. Attacks, Intrusions Defenses, to network intrusion detection,” IEEE Trans. Emerg. Topics Comput.
+ 2023, pp. 297–314. Intell., vol. 2, no. 1, pp. 41–50, Feb. 2018.
+[12] I. J. King, X. Shu, J. Jang, K. Eykholt, T. Lee, and H. H. Huang, [34] M. Verkerken et al., “A novel multi-stage approach for hierarchical
+ “EdgeTorrent: Real-time temporal graph representations for intrusion intrusion detection,” IEEE Trans. Netw. Service Manag., vol. 20, no. 3,
+ detection,” in Proc. 26th Int. Symp. Res. Attacks, Intrusions Defenses, pp. 3915–3929, Sep. 2023.
+ 2023, pp. 77–91. [35] G. Duan, H. Lv, H. Wang, and G. Feng, “Application of a dynamic
+[13] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted mali- line graph neural network for intrusion detection with semisupervised
+ cious traffic in real time via flow interaction graph analysis,” 2023, learning,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 699–714,
+ arXiv:2301.13686. 2022.
+ [36] M. Shafiq, Z. Tian, A. K. Bashir, X. Du, and M. Guizani, “CorrAUC:
+[14] C. Zha et al., “A-NIDS: Adaptive network intrusion detection system
+ A malicious bot-IoT traffic detection method in IoT network using
+ based on clustering and stacked CTGAN,” IEEE Trans. Inf. Forensics
+ machine-learning techniques,” IEEE Internet Things J., vol. 8, no. 5,
+ Security, vol. 20, pp. 3204–3219, 2025.
+ pp. 3242–3254, Mar. 2021.
+[15] J. Holland, P. Schmitt, N. Feamster, and P. Mittal, “New directions
+ [37] H. He et al., “Code is not natural language: Unlock the power
+ in automated traffic analysis,” in Proc. ACM SIGSAC Conf. Comput.
+ of semantics-oriented graph representation for binary code similarity
+ Commun. Security, 2021, pp. 3366–3383.
+ detection,” in Proc. 33rd USENIX Security Symp. (USENIX Security),
+[16] J. Yang, X. Chen, S. Chen, X. Jiang, and X. Tan, “Conditional 2024, pp. 1759–1776.
+ variational auto-encoder and extreme value theory aided two-stage [38] J. Yosinski, J. Clune, Y. Bengio, and H. Lipson, “How transferable are
+ learning approach for intelligent fine-grained known/unknown intrusion features in deep neural networks?” in Proc. Adv. Neural Inf. Process.
+ detection,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 3538–3553, Syst., vol. 27, 2014, pp. 3320–3328.
+ 2021. [39] A. S. Razavian, H. Azizpour, J. Sullivan, and S. Carlsson, “CNN features
+[17] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered off-the-shelf: An astounding baseline for recognition,” in Proc. IEEE
+ hybrid intrusion detection system for Internet of Vehicles,” IEEE Internet Conf. Comput. Vis. Pattern Recognit. Workshops, 2014, pp. 806–813.
+ Things J., vol. 9, no. 1, pp. 616–632, Jan. 2022. [40] D. Clark, “The design philosophy of the DARPA Internet protocols,” in
+[18] C. Zha et al., “SKT-IDS: Unknown attack detection method based Proc. Commun. Archit. Protocols Symp., 1988, pp. 106–114.
+ on sigmoid kernel transformation and encoder–decoder architecture,” [41] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+ Comput. Security, vol. 146, Nov. 2024, Art. no. 104056. Process. Syst., vol. 30, 2017, pp. 1–15.
+[19] C. Fu, Q. Li, M. Shen, and K. Xu, “Realtime robust malicious traffic [42] Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner, “Gradient-based
+ detection via frequency domain analysis,” in Proc. ACM SIGSAC Conf. learning applied to document recognition,” Proc. IEEE, vol. 86, no. 11,
+ Comput. Commun. Security, 2021, pp. 3431–3446. pp. 2278–2324, Nov. 1998.
+[20] G. Marín, P. Casas, and G. Capdehourat, “Deep in the dark-deep [43] C. Szegedy et al., “Going deeper with convolutions,” in Proc. IEEE
+ learning-based malware traffic detection without expert knowl- Conf. Comput. Vis. Pattern Recognit., 2015, pp. 1–9.
+ edge,” in Proc. IEEE Security Privacy Workshops (SPW), 2019, [44] N. Huang, Y. Yang, D. Zhang, Q. Zhang, and J. Han, “Employing
+ pp. 36–42. bilinear fusion and saliency prior information for RGB-D salient object
+[21] Y. Zhang, X. Chen, L. Jin, X. Wang, and D. Guo, “Network intrusion detection,” IEEE Trans. Multimedia, vol. 24, pp. 1651–1664, 2022.
+ detection: Based on deep hierarchical network and original flow data,” [45] C. Zhang, Z. Yang, X. He, and L. Deng, “Multimodal intelli-
+ IEEE Access, vol. 7, pp. 37004–37016, 2019. gence: Representation learning, information fusion, and applications,”
+[22] B. Wang, Y. Su, M. Zhang, and J. Nie, “A deep hierarchical network IEEE J. Sel. Topics Signal Process., vol. 14, no. 3, pp. 478–493,
+ for packet-level malicious traffic detection,” IEEE Access, vol. 8, Mar. 2020.
+ pp. 201728–201740, 2020. [46] J. Chen and C. M. Ho, “MM-ViT: Multi-modal video transformer for
+[23] Y. A. Farrukh, S. Wali, I. Khan, and N. D. Bastian, “XG-NID: Dual- compressed video action recognition,” in Proc. IEEE/CVF winter Conf.
+ modality network intrusion detection using a heterogeneous graph neural Appl. Comput. Vis., 2022, pp. 1910–1921.
+ network and large language model,” 2024, arXiv:2408.16021. [47] G. Engelen, V. Rimmer, and W. Joosen, “Troubleshooting an intrusion
+[24] A. Kiflay, A. Tsokanos, M. Fazlali, and R. Kirner, “Network intrusion detection dataset: The CICIDS2017 case study,” in Proc. IEEE Security
+ detection leveraging multimodal features,” Array, vol. 22, Jul. 2024, Privacy Workshops (SPW), 2021, pp. 7–12.
+ Art. no. 100349. [48] L. D’Hooge, M. Verkerken, B. Volckaert, T. Wauters, and F. De Turck,
+[25] E. Min, J. Long, Q. Liu, J. Cui, and W. Chen, “TR-IDS: Anomaly- “Establishing the contaminating effect of metadata feature inclusion
+ based intrusion detection through text-convolutional neural network in machine-learned network intrusion detection models,” in Proc. Int.
+ and random forest,” Security Commun. Netw., vol. 2018, no. 1, 2018, Conf. Detect. Intrusions Malware, Vulnerability Assessment, 2022,
+ Art. no. 4943509. pp. 23–41.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.
+ZHA et al.: DM-IDS—A NETWORK INTRUSION DETECTION METHOD BASED ON DUAL-MODAL FUSION 3661
+
+ Chao Zha is currently pursuing the Ph.D. degree in Yinjie Zhang received the M.S. degree in comcomputer science and technology with the Institute munication engineering from Harbin Engineering
+ of Computing Technology, Chinese Academy of University. He is currently employed with the
+ Sciences, Beijing, China, under the supervision of Intelligent Computing Infrastructure Innovation
+ Prof. R. Zhang. His research interests include arti- Center, Zhejiang Lab. His research interests include
+ ficial intelligence for cyberspace security, malware natural language processing, adversarial samples,
+ detection, and intrusion detection. and large language models.
+
+ Zhiyu Wang received the B.S. and Ph.D. degrees
+ in automatic control from the College of Control
+ Science and Engineering, Zhejiang University,
+ Hangzhou, China, in 2016 and 2021, respectively.
+ He is currently with the Zhejiang Laboratory,
+ Hangzhou. His research interests include industrial
+ control systems and their security.
+ Sainan Shi received the B.S. degree from Central
+ South University in 2022. She is currently pursuing the M.S. degree in electronic information with
+ the Institute of Computing Technology, Chinese
+ Academy of Sciences. Her research interests include
+ artificial intelligence security.
+
+ Yifei Fan received the M.S. degree in mathematica applicata from Columbia University. He is a
+ Research Engineer with the Intelligent Computing
+ Infrastructure Innovation Center, Zhejiang Lab,
+ working on artificial intelligence applications and
+ artificial intelligence security.
+
+ Bing Bai received the M.S. degree in com- Ruyun Zhang received the Ph.D. degree in commuputer science and technology from the National nications and information systems in 2011. Having
+ University of Defense Technology. He is cur- been a Researcher and a Ph.D. Supervisor for years,
+ rently working as an Associate Investigator with he is currently working as the Deputy Director of
+ the Intelligent Computing Infrastructure Innovation the Intelligent Computing Infrastructure Innovation
+ Center, Zhejiang Lab. His research interests include Center, Zhejiang Lab. His research interests include
+ communication networks and security. communication networks and security.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on April 01,2026 at 01:50:21 UTC from IEEE Xplore. Restrictions apply.

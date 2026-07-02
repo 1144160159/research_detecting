@@ -1,0 +1,1315 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+5009013
+
+Pixel-Level Contrastive Pretrainer for
+Industrial Image Representation
+Bingke Zhu , Yingying Chen , Ming Tang , Member, IEEE, and Jinqiao Wang , Member, IEEE
+
+Abstract— Industrial quality inspection aims to identify
+defective parts in industrial production processes. Commonly
+used methods for industrial quality inspection rely on feature
+representations that have been pretrained on natural image
+datasets, such as ImageNet. However, these pretrained models
+are not specifically tailored for industrial scenarios and therefore
+do not transfer well to downstream industrial tasks. In this
+study, we have curated a large-scale industrial production
+dataset called Ind-2M, which is specifically collected from
+industrial scenarios. This dataset serves to enhance the industrial
+representation of pretraining models. Additionally, we propose a
+Pixel-level COntrastive (PiCO) pretrainer for industrial image
+representation. PiCO not only improves the global industrial
+representation through industrial production classification, but
+also enhances the local industrial representation through pixellevel self-supervision. Experimental results demonstrate that
+PiCO effectively transfers to downstream industrial tasks,
+such as multilabel defect classification and anomaly detection,
+outperforming existing pretrained methods. We hope PiCO can
+initiate a new paradigm for industrial image pretraining.
+Index Terms— Ind-2M, industrial image representation, Pixellevel COntrastive (PiCO), pixel-level contrastive learning,
+pretrainer.
+
+I. I NTRODUCTION
+
+I
+
+NDUSTRIAL quality inspection is a critical endeavor that
+seeks to identify and evaluate defects within the realm
+of industrial manufacturing [1]. Nonetheless, this process
+is confronted with inherent limitations, such as a scarcity
+of proficient inspectors and the substantial time investment
+required to thoroughly examine industrial productions. Consequently, there is a pressing need for automated systems capable
+of detecting defects within industrial contexts. Furthermore,
+Manuscript received 6 October 2023; revised 10 December 2023;
+accepted 24 December 2023. Date of publication 29 January 2024; date
+of current version 31 January 2024. This work was supported in part by
+the National Key Research and Development Program of China under Grant
+2021ZD0114600; and in part by the National Natural Science Foundation of
+China under Grant 62276260, Grant 62206283, and Grant 62176254. The
+Associate Editor coordinating the review process was Dr. Wenqiang Liu.
+(Corresponding author: Yingying Chen.)
+Bingke Zhu, Yingying Chen, and Ming Tang are with the Foundation
+Model Research Center, Institute of Automation, Chinese Academy
+of Sciences, Beijing 100190, China (e-mail: bingke.zhu@nlpr.ia.ac.cn;
+yingying.chen@nlpr.ia.ac.cn; tangm@nlpr.ia.ac.cn).
+Jinqiao Wang is with the Foundation Model Research Center, Institute
+of Automation, Chinese Academy of Sciences, Beijing 100190, China, also
+with the School of Artificial Intelligence, University of Chinese Academy of
+Sciences, Beijing 100049, China, also with the Wuhan AI Research, Wuhan
+430073, China, and also with the Peng Cheng Laboratory, Shenzhen 518066,
+China (e-mail: jqwang@nlpr.ia.ac.cn).
+Digital Object Identifier 10.1109/TIM.2024.3353860
+
+Fig. 1. Pretraining paradigm for industrial image representations. (a) Existing
+natural image pretraining paradigm learns the common representations from
+the natural image dataset and transfers to the downstream industrial tasks
+directly. (b) PiCO pretraining paradigm learns the image-level industrial
+representations from the large-scale industrial dataset Ind-2M and the
+pixel-level representations from the fused images, and then transfers to the
+downstream industrial tasks.
+
+automated industrial quality inspection represents a crucial
+research area within the instruments and measurements field.
+It plays a significant role in facilitating the advancement
+of surface defect detection technologies, such as Strip Steel
+Surface Defect [2], [3], [4], [5], glass defect detection [6],
+[7], pavement defect detection [8], [9], [10], LED defect
+detection, as well as improve industrial anomaly detection
+technologies [11], [12], [13]. This leads to the overall
+improvement of various industrial quality inspection practices.
+In recent years, the field of industrial defect detection has
+garnered significant attention, as evidenced by the growing
+body of research exploring various approaches. These include
+supervised defect detection and segmentation techniques [14],
+[15], unsupervised anomaly detection methods [16], [17],
+and self-supervised anomaly generation approaches [18], [19].
+Although considerable advancements have been made in
+defect detection methods over the past few decades, it is
+noteworthy that existing techniques commonly rely on feature
+representations pretrained on ImageNet [20], a natural image
+dataset. These pretrained features are then directly transferred
+to downstream industrial tasks, as depicted in Fig. 1(a).
+The pretraining of features using natural image datasets
+may not adequately capture the representation needed for
+industrial applications for several reasons. First, natural image
+datasets lack images from real industrial production settings,
+which hinder their ability to effectively represent industrial
+scenarios. Second, critical features required for tasks such as
+defect detection or anomaly detection in industrial settings
+
+1557-9662 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+5009013
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Examples of Ind-2M dataset. Left: image examples of industrial products. Right: image examples of industrial defects.
+
+are often localized and small, whereas features in natural
+image datasets tend to be global and large in scale. This
+disparity poses a challenge in utilizing natural image datasets
+for industrial representation. Third, in industrial products, the
+regions exhibiting defects are often similar in appearance to
+the regions without defects, making it difficult to distinguish
+between defective and non-defective features. On the other
+hand, natural image datasets typically consist of objects that
+are more easily distinguishable.
+To address the aforementioned challenges associated with
+pretraining models for industrial applications, we have curated
+a comprehensive dataset called Ind-2M. This dataset has been
+specifically collected from the industrial scenarios, as depicted
+in Fig. 2. Ind-2M comprises a vast collection of 2.2 million
+industrial images, sourced from both publicly available
+industrial datasets and data obtained through web crawling.
+The dataset encompasses 1.6 million images of non-defective
+industrial products, as well as 0.6 million images depicting
+various defects found in industrial settings. By leveraging the
+Ind-2M dataset, our objective is to facilitate the advancement
+of industrial representation through pretraining models.
+We additionally propose a Pixel-level COntrastive (PiCO)
+pretrainer for enhancing industrial image representation,
+as illustrated in Fig. 1(b). PiCO is designed to acquire comprehensive industrial representations by performing classification
+tasks on industrial products. The labels for these tasks are
+obtained either from data gathered from the internet or from
+the product types within the dataset. Furthermore, given that
+the Ind-2M dataset includes 0.6 million defect images obtained
+from internet sources, PiCO is capable of learning defectrelated features through the classification of industrial defect
+images.
+Moreover, acquiring a sufficient number of defective
+product images can be challenging. To address this issue,
+we present a heuristic data generation approach that allows us
+to generate a substantial quantity of defective product images.
+This method leverages the classification activation mapping
+(CAM) [21] for product and defect classification within PiCO.
+By utilizing CAM, we can extract the approximate regions
+of both the products and defects. Subsequently, we employ
+Poisson Blending [22] to seamlessly merge these product
+
+regions with the corresponding defective regions, resulting in
+realistic defective product images.
+In order to obtain the defective regions using the
+CAM technique, our proposed method, PiCO, incorporates
+a hybrid triplet mining loss to constrain the pixel-level
+representation. This constraint is achieved through supervised
+feature learning. Specifically, when the same defect is inserted
+into different industrial product images, the feature distance
+between defects within these images should be smaller than
+the feature distance between defects and industrial products.
+During the pretraining of the convolutional neural network
+(CNN) model, we modify the architecture by abandoning
+the last stride of the CNN and instead using the dilated
+CNN approach, as proposed by [23]. This modification
+allows us to recover the receptive field, thereby enabling
+the industrial feature representations to retain more detailed
+features. PiCO can be also applied to vision transformer
+(ViT) [24] without modification. Furthermore, we constrain
+the pixel-level representation of the features obtained from
+either the dilated CNN or ViT.
+In our experimental evaluation, we assess the performance
+of PiCO on downstream industrial tasks, specifically multilabel
+defect classification and anomaly detection. Our results
+demonstrate that PiCO surpasses existing pretrained methods
+in terms of performance. Notably, pretraining method PiCO
+with the large-scale industrial dataset Ind-2M yields a
+significant improvement compared to previous pretrained
+models based on ImageNet.
+The primary motivation driving this research stems from
+the inadequacy of existing pretraining methods for industrial
+intelligent quality inspection. Consequently, we address this
+issue by introducing the Ind-2M dataset, a comprehensive
+large-scale dataset specifically designed for pretraining largescale industrial models. Furthermore, we propose PiCO,
+a novel approach tailored for pretraining these models.
+In summary, the main contributions of this work can be
+summarized as follows.
+1. We have curated a large-scale industrial dataset, Ind-2M,
+specifically designed to capture real-world industrial
+scenarios. To the best of our knowledge, Ind-2M
+represents the first comprehensive industrial dataset for
+
+ZHU et al.: PIXEL-LEVEL CONTRASTIVE PRETRAINER FOR INDUSTRIAL IMAGE REPRESENTATION
+
+pretraining industrial image models. Ind-2M dataset is
+available at https://github.com/BingkeZhu/Ind-2M.
+2) In this work, we introduce PiCO, a pixel-level
+contrastive pretrainer that aims to enhance industrial
+image representations. PiCO incorporates both global
+and local representations, employs a heuristic data
+generation approach, and leverages pixel-level features.
+Notably, PiCO is model-agnostic, capable of benefiting
+both CNN and ViT models, thereby facilitating improved
+industrial representations and enhancing performance on
+downstream industrial tasks.
+3) Through extensive experimentation, we demonstrate that
+both the Ind-2M dataset and the PiCO pretrainer yield
+significant improvements in industrial representations
+compared to previous models pretrained on ImageNet.
+We believe that the introduction of the Ind-2M dataset
+and the PiCO pretrainer marks the beginning of
+a new era in industrial image pretraining, fostering
+advancements in this domain.
+II. R ELATED W ORK
+A. Industrial Defect Detection
+Industrial quality inspection is an important step in
+industrial production. Automatic industrial defect detection
+can reduce time costs and labor costs effectively, and thus
+receives much research attention. Feature collection and
+compression network [25] adopt the compressed multiscale
+feature merging for real-time defect detection. The attentionguided segmentation network [14] combines UNet and
+biConvLSTM to improve the pixel-level welding defect
+detection performance. An encoder–decoder structure [26]
+is proposed to fuse multibranch and multiscale features
+for surface defect detection. Also, a fake-to-real domain
+transformation GAN is used to transform the rendered samples
+from the fake domain into the real defect domain. DCAMNet [27] proposes a rapid detection network based on
+deformable convolution and attention mechanism. It introduces
+CLAHE for data augmentation, an EDE-block for capturing
+complex and irregular defects, and a CA module for improved
+defect localization. MANet [8] utilizes the encoder–decoder
+architecture with MobileNet as the backbone network
+for feature extraction. Multiscale convolution kernels are
+employed in depthwise separable convolution (DSConv)
+layers, and a hybrid attention mechanism is incorporated
+to infer spatial points and interchannel relationship features.
+NDP-Net [28] utilizes an encoding module to extract
+multiscale discriminative features and incorporates artificial
+defects and a pixel-level defect perception loss to enhance
+defect detection. Additionally, a reference-based attention
+module and a multiscale defect segmentation module are
+introduced for precise defect detection and segmentation.
+MRD-Net [29] is a multiscale feature enhancement fusion and
+reverse attention network for real-time and end-to-end defect
+segmentation.
+In the past, these industrial defect detection methods were
+based on fine-tuning a network pretrained on ImageNet using
+specific industrial defect detection task data. However, this
+
+5009013
+
+article questions the suitability of this ImageNet pretraining
+approach for industrial defect detection tasks. To address this
+issue, this article proposes a large-scale pretraining dataset
+specifically designed for industrial defect detection tasks.
+Additionally, a pixel-level contrastive learning-based pretraining method is introduced for this dataset, aiming to enhance
+the model’s pretraining feature representation capability for
+industrial defect detection tasks and consequently improve
+accuracy in downstream industrial defect detection tasks.
+B. Anomaly Detection
+Recently, anomaly detection has raised a large amount of
+interest for unsupervised defect detection [16], [30], [31].
+Anomaly detection trains only on the normal images, and
+detects the defects on the anomaly images, thus reduces the
+labeling costs. PatchCore [16] uses a maximally representative
+memory bank of nominal patch features. PaDim [17] makes
+use of a pretrained CNN for patch embedding, and of
+multivariate Gaussian distributions to get a probabilistic
+representation of the normal class. SSPCAB [32] proposes
+to integrate the reconstruction-based functionality into a selfsupervised predictive architectural building block. Reverse
+distillation [33] proposes a T–S model consisting of a teacher
+encoder and a student decoder and introduce a simple yet
+effective “reverse distillation” paradigm accordingly. Recently,
+uniAD [30] is proposed to accomplish anomaly detection
+for multiple classes with a unified framework with a
+novel transformer-based decoder. OTB-AAE [34] proposes
+an anomaly detection framework based on adversarial
+autoencoder (AAE) to capture the normality distribution
+of high-dimensional images in industry and introduces the
+output-turn-back structure (OTB) and combine L1 loss and
+structural similarity (SSIM) loss functions to enhance the
+discriminant capability of the discriminator. SMCC [35]
+utilizes a pretrained model for feature extraction and employs
+a Gaussian mixture model to cluster and obtain cluster
+centers. This enables better discrimination between normal
+and abnormal sample features, as normal sample features are
+tightly distributed around the cluster centers. By leveraging
+competition among different tasks in a self-supervised
+multitask setting, MTHM [36] learns compact and efficient
+representations for detection tasks. Additionally, introducing
+other semantic tasks allows the shared encoder to learn beyond
+image reconstruction, improving the model’s reconstruction
+capability for anomalies.
+Similar to industrial defect detection tasks, these industrial
+anomaly detection methods also rely on models pretrained
+on ImageNet. They extract features from the ImageNet
+pretrained models for feature transformation, enabling the
+identification of abnormal regions. It is worth noting that
+ImageNet pretrained features are particularly important in
+anomaly detection tasks. Fine-tuning the pretrained ImageNet
+portion of the model can lead to a drastic decrease in
+performance [30]. Therefore, designing a pretraining method
+specifically suitable for industrial anomaly detection tasks is of
+great research significance in order to improve the performance
+of industrial anomaly detection models.
+
+5009013
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+C. Network Pretraining
+ImageNet [20] pretraining is the most common network
+pretraining method for image representation [37], [38], [39],
+[40], [41]. Recently, the contrastive learning-based selfsupervised methods like MoCos [42], [43] have attracted much
+attention. Also, the mask reconstruction-based self-supervised
+methods like MAE [44] improve the image representations
+of ViT largely. SimCLR [45] simplifies contrastive selfsupervised learning algorithms without requiring specialized
+architectures or a memory bank. SimSiam [46] provides
+a hypothesis on the implication of stop-gradient, and
+further shows proof-of-concept experiments. SimMIM [47]
+simplifies MAE-based methods without special designs such
+as blockwise masking and tokenization via discrete VAE or
+clustering.
+The existing network pretraining methods are designed for
+general object recognition tasks. However, these methods do
+not take into account the characteristics of industrial defect
+detection tasks. For example, these methods are pretrained
+on the ImageNet dataset, resulting in features that lack
+understanding of industrial products and defects, such as the
+inability to understand scratches. Additionally, these methods
+are focused on large target areas with prominent features in
+the images. However, they may not yield significant results
+for industrial defects that are less obvious in the image,
+such as cracks. Therefore, there is a need to research a
+pretraining method specifically tailored for industrial feature
+representation tasks.
+Existing methods have failed to address the pretraining
+paradigms that are suitable for intelligent quality inspection
+in industrial settings for the following reasons: first,
+obtaining industrial data is challenging because the production
+environment typically contains a substantial number of normal
+samples to ensure production quality, but lacks defect samples.
+Second, the defect area in industrial images is often small
+compared to the entire image, whereas commonly used general
+intelligence recognition datasets like ImageNet primarily
+consist of images where the target occupies a significant
+area. Lastly, current methods primarily focus on training the
+entire image and do not incorporate pixel-level differential
+contrastive learning, which poses difficulties in accurately
+identifying defects. In contrast to previous approaches, our
+work specifically targets industrial scenarios. To address the
+issue of difficult access to industrial data, we introduce a largescale Ind-2M dataset and propose a synthetic defect generation
+method to augment a large number of defect training samples.
+To tackle the problems of small defect areas and the lack of
+pixel-level differential constraints, this article introduces pixellevel contrastive learning as a solution.
+III. M ETHOD
+Fig. 3 provides an overview of the PiCO framework, which
+encompasses three distinct stages in each iteration, namely the
+image classification stage, the image blending stage, and the
+pixel-level representations stage.
+In image classification stage, PiCO classifies the product
+images and defect images with predefined product and defect
+
+categories. Then, we can obtain the CAM for product regions
+and defect regions. In image blending stage, PiCO fuses the
+industrial product images and defect images using Poisson
+Blending, and the previous CAM can be used to guide the
+blending process. In pixel-level representations stage, the
+previous classifying CNN removes the last striding, and uses
+dilation convolution [23] to remedy the receptive field. Then,
+PiCO optimizes the pixel-level representations by the proposed
+hybrid triplet mining.
+In this section, we will first elaborate on the large-scale
+industrial image dataset, Ind-2M dataset. Then, we will
+introduce three stages of PiCO, respectively. Finally, we will
+present the overall pipeline of PiCO.
+A. Ind-2M Dataset
+In order to acquire robust image representations for
+industrial applications, we have curated a comprehensive
+dataset known as Ind-2M. This dataset is specifically tailored
+for industrial scenarios and comprises a vast collection of
+2.2 million industrial images. The images within Ind-2M are
+sourced from both publicly available industrial datasets and
+data obtained through web crawling. Notably, the dataset
+consists of 1.6 million product images and 0.6 million defect
+images.
+As shown in Table I, the Ind-2M dataset consists
+of 18 publicly available datasets, 31 web-crawled industrial product scene data, and 30 web-crawled industrial
+defect scene data. The open-source datasets include SewerML [15], Aluminum Profile [48], Kylberg [49], NEU
+surface defect database [2], Severstal [50], DAGM 2007 [51],
+RSDDs [52], KTH-TIPS [53], PKU-Market-PCB [54],
+AITEX [55], elpv-dataset [56], KolektorSDD [57], DeepPCB [58], SDNET2018 [59], Fabric Defect [60], Insulator
+Defect Image Dataset [61], BSData [62], and TILDA
+Textile Texture-Database [63] datasets. These datasets cover
+11 different scenes including pipeline damage, aluminum
+profiles, textile industry, steel strip, magnetic tiles, railway
+tracks, concrete, printed circuit boards, solar panels, metal,
+and wires. Each dataset typically focuses on a specific product
+category. To enable PiCO classification, we annotate the
+images in each dataset with their corresponding product
+category labels.
+Additionally, we employ web crawling techniques to acquire
+industrial product images from the internet. We meticulously
+amassed a comprehensive dataset of 221 062 images sourced
+from a variety of industrial e-commerce websites, industrial
+image websites, and similar platforms. These images were
+acquired by employing 31 carefully selected keywords,
+including height gauge, caliper, gloves, safety helmet, light
+bulb, lighting fixture, cable, clock, shoe covers, screen,
+sensor, chemicals, personal protective equipment, transformer,
+inverter, security products, locator, mirror, pipe inspection
+device, syringe, laboratory equipment, power supply, instruments, tools, electrical distribution equipment, cleaning tools,
+electrical and electronic tools, projector, and socket. The
+aggregation of these images forms our dataset, which focuses
+specifically on industrial products. Consequently, the obtained
+
+ZHU et al.: PIXEL-LEVEL CONTRASTIVE PRETRAINER FOR INDUSTRIAL IMAGE REPRESENTATION
+
+5009013
+
+TABLE I
+C OMPOSITION OF THE I ND -2M DATASET. T HE I ND -2M DATASET C ONSISTS OF 18 P UBLICLY AVAILABLE I NDUSTRIAL DATASETS , 31 W EB -C RAWLED
+I NDUSTRIAL P RODUCT S CENE I MAGES , AND 30 W EB -C RAWLED I NDUSTRIAL D EFECT S CENE I MAGES
+
+industrial product images are associated with specific product
+category labels, facilitating subsequent PiCO classification
+tasks.
+Furthermore, we have created the Ind-2M dataset, which
+encompasses a staggering 0.6 million industrial defect
+images meticulously obtained through web crawling. Our
+comprehensive web crawling process allowed us to aggregate
+a total of 614 002 images, guided by 30 carefully selected
+keywords. These keywords include cracks, repairs, dents,
+protrusions, deformations, defects, cuts, holes, fractures, oil
+stains, wrinkles, loose threads, contamination, extrusions,
+
+punctures, worn areas, misalignments, bubbles, blemishes,
+collapses, scratches, burn marks, adhesions, cracks, looseness,
+pitting, decay, peelings, mold, and impurities. This extensive
+collection of images forms our industrially focused defect
+dataset, encompassing a wide range of defect categories found
+within the industrial domain.
+In order to guarantee the integrity and validity of the
+collected data through web crawling, we implemented a
+rigorous validation process. Following the accumulation of a
+substantial volume of industrial product and defect images,
+we enlisted the expertise of ten highly skilled data engineers
+
+5009013
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+who possessed professional training in the domain. These
+individuals were tasked with meticulously reviewing and
+filtering the crawled data. Their extensive knowledge and
+understanding of industrial products and defects enabled them
+to identify and eliminate images that did not align with the
+designated product names or correspond to the specified defect
+categories. By employing such manual filtering, we ensured
+the data’s accuracy and adherence to the intended industrial
+context, contributing to the overall validity of our dataset.
+B. Industrial Image Classification
+The image classification stage serves two purposes in the
+PiCO pretrainer. First, it facilitates the acquisition of global
+semantic understanding capabilities by pretrained models,
+akin to previous supervised pretraining methods employed
+in deep learning models. Second, it leverages CAM to
+obtain approximate positions of industrial products and
+defects, establishing a positional foundation for the subsequent
+blending of industrial defect images.
+During the industrial image classification stage, the CNN or
+ViT models are employed to classify the predefined industrial
+product categories and industrial defect categories using both
+the industrial product images and defect images. For this
+purpose, PiCO utilizes two fully connected layers, one for
+product classification and the other for defect classification.
+Notably, PiCO ensures that the product images are classified
+without considering the defect categories, and vice versa.
+Subsequently, the CAM can be obtained for both the product
+regions and defect regions by multiplying the category weights
+with the corresponding feature representations.
+Formally, given the input industrial product image I P and
+industrial defect image I D , the classification process can be
+represented as
+X i = F(Ii ), i ∈ {D, P}
+Ci = f ci (X i ), i ∈ {D, P}
+
+(1)
+(2)
+
+where X i denotes the feature representations, F denotes the
+CNN or transformer networks, f c denotes the fully connected
+layers, and C denotes the classification categories.
+C. Industrial Image Blending
+The industrial image blending stage is capable of
+synthesizing a substantial number of industrial defect images,
+thereby alleviating the scarcity and challenges associated with
+acquiring such images. Moreover, it generates masks that
+facilitate the subsequent learning of pixel-level representations.
+In the image blending stage, PiCO employs Poisson
+blending to fuse industrial product images and defect images.
+Guided by the previous CAM, the defects are randomly pasted
+onto the product regions. Initially, the top 50% challenging
+samples, denoted as S D , are selected from the defect images
+in each batch based on the previous defect classification
+loss L CE (C D , gt D ). Subsequently, the defect CAM S D is
+normalized and binarized using a threshold of 0.5 to generate
+defect masks. The paste product locations are then randomly
+chosen based on the normalized CAM probability S P . For
+
+Algorithm 1 PiCO
+Input: Product Image I A , Product Image I B , Defect Image IC ,
+Random Initialized Model F, Iterative Time T
+Output: Pre-trained Model F
+1: for t = 1 : T do
+2:
+if t%2 == 0 then
+3:
+Inputing I A , I B , IC to model F, update the model
+parameters with cross entropy loss.
+4:
+Calculating the CAM of products and defects,
+obtaining S A , S B , SC .
+5:
+else
+6:
+Fusing I A and IC using CAM S A and SC , with
+Poisson Blending, as well as I B and IC , obtaining
+I AC and I BC .
+7:
+Using dilated CNN or ViT to obtain the pixel-level
+representations, and using defect masks to split the
+product and defect regions.
+8:
+Updating model using hybrid triplet mining loss.
+9:
+end if
+10: end for
+
+each challenging defect image, the defects are pasted onto
+the selected locations of two product images using Poisson
+blending. The fusion consistency of the divergence field is
+optimized during this process, expressed as follows:
+ZZ
+min
+|∇ f − v|2 , with f |∂Ω = f ∗ ∂Ω
+(3)
+f
+
+Ω
+
+where f is the fused image, ∇ f is the gradient of f , Ω
+denotes the defect image, and v is the gradient of defect image,
+while f ∗ denotes the product image.
+D. Industrial Pixel-Level Representation
+The industrial pixel-level representation stage employs
+contrastive learning techniques to enhance the discrimination
+of local detailed features at the pixel level. This enables
+pretrained models to effectively distinguish industrial products
+and defects, thereby establishing a strong foundation for
+downstream industrial intelligent defect detection.
+In the pixel-level representation stage, when employing a
+CNN model for pretraining, the final striding of the CNN
+is eliminated, and dilation convolution [23] is employed to
+address the receptive field. Alternatively, when utilizing a ViT
+as backbone, the vanilla transformer can be used for pixel-level
+representations, as the total striding of the ViT is 16. It should
+be noted that the model in the pixel-level representation stage
+shares weights with the image classification stage.
+Both CNN and ViT architectures play crucial roles in
+industrial applications. Consequently, we propose a pixellevel representation pretraining approach for both CNN
+and ViT. In CNN architectures, which typically involve
+five downsampling operations in the spatial dimensions,
+removing a downsampling operation leads to a reduction in
+the receptive field for subsequent convolutional operations.
+To tackle this issue, we employ dilated convolutions in each
+convolutional layer following the removal of a downsampling
+
+ZHU et al.: PIXEL-LEVEL CONTRASTIVE PRETRAINER FOR INDUSTRIAL IMAGE REPRESENTATION
+
+5009013
+
+Fig. 3. Framework of PiCO. In image classification stage, both of industrial product images and defect images are used to image classification, and
+obtain the categories of products as well as defects. In image blending stage, industrial product images and defect images are fused using CAM-guided
+Poisson blending. In pixel-level representations stage, the blended images are sent into the shared weights dilated CNN or transformer to learn pixel-level
+representations, optimized by the proposed hybrid triplet mining.
+
+operation to effectively enlarge their receptive fields. For more
+comprehensive details, please refer to the Deeplab [23]. On the
+other hand, in the case of ViT, there are no downsampling
+operations in the spatial dimensions, eliminating the need
+to remove downsampling operations or employ dilated
+convolutions to compensate for the receptive field.
+Then, PiCO optimizes the pixel-level representations by the
+proposed hybrid triplet mining. That is, the distance of same
+defects from different images is smaller than that of defects
+and products. Formally, given the defective product features
+FA,C and FB,C , we use the blended mask MC1 and MC2 to
+split the features, respectively. Then, we constrain the product
+feature R A , R B , and defect feature RC1 , RC2 with hybrid triplet
+mining, represented as follows:
+L tri1 = [d(RC1 , RC2 ) − d(R A , RC1 ) + α]+
+L tri2 = [d(RC1 , RC2 ) − d(R B , RC1 ) + α]+
+L tri3 = [d(RC1 , RC2 ) − d(R A , RC2 ) + α]+
+L tri4 = [d(RC1 , RC2 ) − d(R B , RC2 ) + α]+
+
+(4)
+(5)
+(6)
+(7)
+
+where d(·, ·) is the L2 distance between features, and α is
+the hyperparameter for triplet loss, which set to 1 by default.
+Thus, the hybrid triplet loss can be represented as
+L hybrid = λ1 · L tri1 + λ2 · L tri2 + λ3 · L tri3 + λ4 · L tri4 .
+
+(8)
+
+In Fig. 4, we illustrate the process of pixel-level representation. We adopt a pixel-wise separation approach in the
+deep feature space for the same industrial defect observed on
+two different industrial products. This involves extracting the
+distinct product features, denoted as R A and R B , respectively.
+
+Fig. 4. Illustration of industrial pixel-level representation. For the same
+industrial defect and two industrial products, we perform pixel-wise separation
+in the deep feature space, extracting the product features R A and R B . The
+defect features RC1 and RC2 of the same defect on the two products are then
+obtained. We use the hybrid triplet loss to ensure the consistency of RC1 and
+RC2 features, while keeping them far apart from the R A and R B features.
+
+Furthermore, we obtain the defect-specific features, RC1 and
+RC2 , corresponding to the same defect across the two products.
+To ensure the consistency of these defect features, while
+simultaneously maintaining their separation from the product
+features, we employ the hybrid triplet loss strategy. This
+loss function effectively preserves the similarity between RC1
+and RC2 , reinforcing their alignment, while simultaneously
+enforcing a substantial distance between them and the productrelated features, R A and R B . By employing this approach,
+
+5009013
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+we aim to effectively enhance the discriminative power of
+the extracted features, enabling accurate classification and
+differentiation of industrial defects on various products within
+the deep feature space.
+E. Overall Pipeline
+The complete algorithm of PiCO is depicted in Algorithm 1.
+In each iteration, the model parameters are updated alternatively through classification and hybrid triplet mining.
+The iterations involve the processes of image classification,
+image blending, and pixel-level representation. The product
+classification and defect classification contribute to the
+learning of global and local representations, while the hybrid
+triplet mining aids in acquiring pixel-level representations.
+It is worth noting that PiCO is a model-agnostic pretraining
+method that can be utilized for both CNN and ViT
+models. By incorporating PiCO into the model pretraining
+process, better feature representations can be obtained.
+Rather than proposing a complex neural network architecture,
+our approach focuses on enhancing the transferability of
+features through global and local feature learning in the
+pretraining pipeline. This approach allows for significant
+performance improvements in downstream industrial tasks
+without introducing additional model parameters, thereby
+preserving computational efficiency.
+IV. E XPERIMENTS
+In this section, we will first introduce the datasets and
+implementation details. Then, we will conduct ablation studies
+to validate the effectiveness of each main component of PiCO.
+Finally, we will report the quantitative comparisons on several
+downstream industrial benchmarks.
+A. Experimental Settings
+1) Dataset and Evaluation Metric: We study the effectiveness of PiCO on the multilabel defect classification dataset,
+SewerML [15], and the downstream anomaly detection and
+localization dataset, MVTec-AD [1]. For evaluation metric,
+we use the F1normal score and F2CIW defect score following
+SewerML [15]. While on MVTec-AD dataset, we use AUC
+score as evaluation metric for both of anomaly detection and
+anomaly localization.
+SewerML benchmark evaluates the model performance
+using two metrics incorporating domain knowledge, based on
+the Fβ metric [64]
+
+Prc × Rcll
+(9)
+Fβ = 1 + β 2 × 2Prc
+β
++ Rcll
+where Prc and Rcll are the precision and recall of the classifier,
+respectively, and β is weighting of recall, such that the recall
+β times more important that precision.
+False negatives in sewer inspections have greater economic
+consequences than false positives. This is because false
+negatives can result in undetected faulty pipes, whereas human
+verification of predicted classes precedes any renovation
+decisions. Hence, to incorporate this domain knowledge into
+the evaluation, SewerML benchmark sets β = 2 when
+
+evaluating the annotated classes. Then, SewerML benchmark
+introduces F2CIW metrics to measure the performance using
+class-importance weights (CIWs)
+PC
+F2c × CIWc
+(10)
+F2CIW = c=1
+PC
+c=1 CIWc
+where CIWc and F2c are the CIW and F2-score for class c,
+respectively.
+To assess the ability of the tested methods to handle the
+absence of classes and avoid solely maximizing the F2CIW
+score by continuously predicting classes, SewerML benchmark
+also utilizes the F1-score for normal pipes (F1normal ), where
+we set β = 1 to evaluate the performance of normal class.
+The F2CIW computation excludes normal pipes as the normal
+case lacks a CIW.
+AUC stands for “Area under the ROC curve.” That is, AUC
+measures the entire 2-D area underneath the entire ROC curve.
+2) SewerML: dataset focuses on the multilabel defect
+classification problem and contains 1.3 million images
+collected over a nine year period. The data are split into a
+preset training, validation, and test split, containing 1 million,
+130k, and 130k images each [25]. The defect classification
+problem consists of 17 different classes as well as the implicit
+normal class.
+3) MVTec-AD: dataset is a comprehensive, multiobject, multidefect industrial anomaly detection dataset with
+15 classes. For each anomalous sample in the test set,
+the ground truth includes both image label and anomaly
+segmentation.
+4) Implementation Details: We implement PiCO on Ind-2M
+dataset with 200 epoch.1 Following the ImageNet pretraining,
+we randomly resize images with a ratio of [0.75, 1.25],
+and crop the images into size of 224 × 224. Random
+horizontal flipping is used for data augmentation. Also,
+RandAugment is used for color jittering and geometry
+augmentation. For SewerML fine-tuning, we follow the data
+augmentation introduced in SewerML paper, i.e., resizing to
+224 × 224, random horizontal flipping, as well as random
+color jittering. For the downstream task anomaly detection on
+MvTec AD dataset, we follow the configuration of uniAD [30],
+fixing the backbone model, and only training the transformer
+decoder. The images are resized to 224 × 224 without data
+augmentation, and the anomaly location can be obtained by
+the difference between output features and the fixing backbone
+features. To ensure a fair comparison between the pretraining
+methods of ImageNet and SewerML, we have ensured that all
+hyperparameters in the experiments remain consistent.
+B. Ablation Studies
+1) Pretrained Dataset: In the present study, we aim to
+explore the influence of utilizing different pretrained datasets
+for the purpose of industrial image representations. The
+obtained experimental findings, as outlined in Table II,
+effectively demonstrate that the adoption of the Ind-2M dataset
+1 The epoch here is different from the common definition. We define one
+epoch as the maximum between the length of product images and the one of
+defect images.
+
+ZHU et al.: PIXEL-LEVEL CONTRASTIVE PRETRAINER FOR INDUSTRIAL IMAGE REPRESENTATION
+
+5009013
+
+TABLE II
+
+TABLE IV
+
+E XPERIMENTS A RE C ONDUCTED W ITH ResN ET-50 TO V ERIFY THE
+I MPACT OF P RETRAINED DATASET. W E P RETRAIN M ODEL ON
+VARIOUS DATASET, AND F INE -T UNE M ODEL ON
+S EWER ML VALIDATION S ET
+
+E XPERIMENTS A RE C ONDUCTED W ITH ResN ET-50 TO V ERIFY THE
+I MPACT OF P IXEL -L EVEL R EPRESENTATIONS . W E P RETRAIN M ODEL
+ON VARIOUS P IXEL -L EVEL S ETTINGS ON I ND -2M, AND
+F INE -T UNE M ODEL ON S EWER ML VALIDATION S ET
+
+TABLE III
+E XPERIMENTS A RE C ONDUCTED W ITH ResN ET-50 TO V ERIFY THE
+I MPACT OF C LASSIFICATION C ATEGORIES . W E P RETRAIN M ODEL ON
+VARIOUS C ATEGORIES ON I ND -2M, AND F INE -T UNE M ODEL ON
+S EWER ML VALIDATION S ET
+
+for pretraining purposes leads to significantly enhanced performance when compared to alternative pretraining datasets,
+such as ImageNet and Sewer-ML. Notably, the model that
+is pretrained on the Ind-2M dataset exhibits noteworthy
+improvements of 1.37% and 0.31% in relation to the F1normal
+and F2CIW metrics, respectively, when compared to the model
+that is pretrained on ImageNet. Furthermore, in terms of the
+F1normal and F2CIW metrics, the model that is pretrained on
+Ind-2M outperforms the model that is pretrained on Sewer-ML
+by 2.67% and 1.02%, respectively.
+2) Classification Categories: In our study, we investigate
+the influence of classification categories on industrial image
+representations, as presented in Table III. The experimental
+results reveal that the defect categories have a more significant
+impact compared to the product categories. Specifically, when
+both classification categories are utilized for pretraining, the
+model demonstrates superior performance. More specifically,
+the model pretrained with both product and defect categories
+exhibits a significant improvement over the model pretrained
+with product categories alone. This improvement is reflected in
+the performance metrics F1normal and F2CIW , where the former
+increases by 2.5% and the latter by 0.78%. This indicates
+that incorporating both product and defect categories during
+pretraining enables the model to better capture the underlying
+patterns and features associated with the industrial images.
+Furthermore, the model pretrained with both product and
+defect categories also outperforms the model pretrained with
+defect categories alone. The improvement is evident in the
+performance metrics F1normal and F2CIW , which increase by
+1.46% and 0.73% respectively. This suggests that the inclusion
+of product categories in addition to defect categories enhances
+the model’s ability to discriminate between different types of
+defects and accurately classify industrial images. Our findings
+highlight the importance of considering both product and
+defect categories in the pretraining phase of industrial image
+analysis models.
+3) Pixel-Level Representations: In this study, we explore
+the impact of pixel-level representations on industrial image
+representations, as depicted in Table IV. The experimental
+
+TABLE V
+E XPERIMENTS A RE C ONDUCTED W ITH ResN ET-50 TO V ERIFY THE
+I MPACT OF THE WAY OF I MAGE B LENDING . W E P RETRAIN M ODEL
+ON VARIOUS WAYS OF I MAGE B LENDING ON I ND -2M, AND
+F INE -T UNE M ODEL ON S EWER ML VALIDATION S ET
+
+TABLE VI
+E XPERIMENTS A RE C ONDUCTED W ITH ResN ET-50 TO V ERIFY THE
+I MPACT OF D ILATED CNN. W E P RETRAIN M ODEL ON VARIOUS
+P IXEL -L EVEL S ETTINGS ON I ND -2M, AND F INE -T UNE M ODEL
+ON S EWER ML VALIDATION S ET
+
+TABLE VII
+E XPERIMENTS A RE C ONDUCTED W ITH ResN ET-50 TO V ERIFY THE
+I MPACT OF H YBRID T RIPLET L OSS . W E P RETRAIN M ODEL ON
+VARIOUS P IXEL -W ISE L OSS S ETTINGS ON I ND -2M, AND
+F INE -T UNE M ODEL ON S EWER ML VALIDATION S ET
+
+findings reveal that the model exhibits remarkable performance
+in multilabel classification when trained using pixel-level
+supervision. Notably, the model trained with pixel-level
+supervision surpasses the performance of the model trained
+without such supervision by 0.77% and 1.5% in terms
+of F1normal and F2CIW , respectively. The results highlight
+the significance of incorporating pixel-level information in
+the training process, as it enables the model to capture
+fine-grained details and spatial relationships within the
+images. By leveraging pixel-level supervision, the model
+becomes more adept at distinguishing subtle differences and
+accurately identifying various defects or anomalies present in
+industrial images. These findings underscore the importance
+of considering pixel-level representations when developing
+models for industrial image analysis tasks.
+4) Image Blending: In order to investigate the impact
+of different image blending techniques on industrial image
+representations, we conducted a comparative analysis as
+presented in Table V. The evaluated blending methods
+include copy-paste, Poisson blending, and CAM-guided
+
+5009013
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+TABLE VIII
+E XPERIMENTS A RE C ONDUCTED TO V ERIFY THE E FFECTIVENESS
+OF PiCO ON VARIOUS BACKBONES . W E P RETRAIN M ODEL
+ON VARIOUS BACKBONES W ITH D IFFERENT P RETRAINED
+M ETHODS , AND F INE -T UNE M ODEL ON
+S EWER ML VALIDATION S ET
+
+Fig. 5. Curves of the variation of hyperparameter λ1 , λ2 , λ3 , and λ4 under
+various settings. (a) Curves of the variation of hyperparameter λ1 . We compare
+the performance curves of ResNet-50 and VGG-16 under different
+λ1 hyperparameter settings, while keeping λ2 = λ3 = λ4 = 1. (b) Curves
+of the variation of hyperparameter λ2 . We compare the performance curves
+of ResNet-50 and VGG-16 under different λ1 hyperparameter settings,
+while keeping λ1 = λ3 = λ4 = 1. (c) Curves of the variation of
+hyperparameter λ3 . We compare the performance curves of ResNet-50
+and VGG-16 under different λ1 hyperparameter settings, while keeping
+λ1 = λ2 = λ4 = 1. (d) Curves of the variation of hyperparameter
+λ4 . We compare the performance curves of ResNet-50 and VGG-16 under
+different λ1 hyperparameter settings, while keeping λ1 = λ2 = λ3 = 1.
+
+Poisson blending. Our experimental results demonstrate that
+CAM-guided Poisson blending exhibits superior performance
+compared to both direct copy-paste and Poisson blending
+techniques. Specifically, the model pretrained with CAMguided Poisson blending achieves notable improvements over
+the model pretrained with copy-paste in terms of F1normal
+and F2CIW , with gains of 0.84% and 1.43%, respectively.
+Furthermore, the model pretrained with CAM-guided Poisson
+blending also outperforms the model pretrained with Poisson
+blending, yielding enhancements of 0.19% and 0.03% in
+F1normal and F2CIW , respectively. These findings emphasize
+the significance of the image blending method in enhancing
+the performance of industrial image representations. The
+superiority of CAM-guided Poisson blending in comparison to
+alternative techniques underscores its potential for improving
+the quality and effectiveness of pretrained models in industrial
+image analysis tasks.
+5) Dilated CNN: We also explore the impact of dilated
+CNNs, as presented in Table VI. By employing dilated
+convolutions and eliminating the last striding operation in the
+CNN architecture, the resulting features are able to preserve
+more fine-grained information. Our experiments demonstrate
+that the utilization of dilated CNNs can significantly enhance
+the performance of pixel-level representations. Specifically,
+we observe improvements of 0.85% and 1.62% in F1normal
+and F2CIW , respectively, when employing dilated convolution
+in the pretrained model. These findings underscore the
+effectiveness of dilated CNNs in capturing and leveraging
+detailed information for industrial image analysis.
+6) Pixel-Wise Loss: In order to evaluate the impact of
+the hybrid triplet loss on industrial image representations,
+we conducted experiments as presented in Table VII. While
+it may seem intuitive to directly employ the Softmax cross
+
+TABLE IX
+E XPERIMENTS A RE C ONDUCTED W ITH ViT-B TO C OMPARE THE
+P RETRAINED M ETHODS . W E P RETRAIN M ODEL W ITH VARIOUS
+P RETRAINED M ETHODS , AND F INE -T UNE M ODEL ON
+S EWER ML VALIDATION S ET
+
+entropy loss for pixel-level supervision, this approach faces
+challenges in effectively distinguishing between intrinsic
+defects in the product images and blended defects. To address
+this issue, we opted to utilize the triplet loss as an
+indirect means of supervising the pixel-level representations.
+The experimental results demonstrate a significant drop in
+performance when employing the Softmax cross entropy loss
+for supervision. This can be attributed to the inherent limitation
+of classifying intrinsic defects as belonging to the normal
+class. On the other hand, models pretrained with the hybrid
+triplet loss exhibit superior performance compared to those
+pretrained with the Softmax cross entropy loss, achieving
+improvements of 2.47% and 2.29% in terms of F1normal
+and F2CIW scores, respectively. These findings highlight
+the effectiveness of the hybrid triplet loss in enhancing
+the representation learning process for industrial image
+analysis.
+7) Hyperparameter λ: As shown in Fig. 5, we compared
+the various of the hyperparameter λ in loss weight under
+different settings. First, as shown in Fig. 5(a), we fixed
+λ2 = λ3 = λ4 = 1 and conducted experimental comparisons
+with different λ1 values for VGG-16 and ResNet-50. Through
+the comparative experiments, we found that for VGG-16,
+the best performance accuracy can be obtained when λ1 =
+0.5, while for ResNet-50, λ1 = 1.0 yields the best results.
+Similarly, VGG-16 and ResNet-50 also have different optimal
+hyperparameters for λ2 , λ3 , and λ4 . Therefore, different
+networks may have different optimal hyperparameters. For
+simplicity, we maintained the setting of λ1 = λ2 = λ3 =
+λ4 = 1 throughout all other experiments.
+
+ZHU et al.: PIXEL-LEVEL CONTRASTIVE PRETRAINER FOR INDUSTRIAL IMAGE REPRESENTATION
+
+C. Quantitative Evaluation
+1) Backbones Comparison: In order to evaluate the
+performance of the PiCO and ImageNet pretrained models,
+we conducted experiments using different backbones, namely
+ResNet-18, ResNet-50, ResNet-101, VGG-16, MobileNetV3,
+and ViT-B. The results of these experiments are summarized
+in Table VIII. The findings indicate that the PiCO pretrained
+model consistently outperforms the ImageNet pretrained
+model across all backbones and evaluation metrics. This
+suggests that PiCO has the ability to learn superior industrial
+representations on the Sewer-ML dataset, regardless of the
+specific backbone architecture employed.
+2) Comparison of Pretrained Methods: As presented in
+Table IX, we conducted a comprehensive evaluation to
+compare the performance of PiCO with other pretrained
+methods, namely ImageNet, MAE, and MoCo v3. The
+evaluation was performed on the Sewer-ML dataset, aiming to
+assess the effectiveness of PiCO in learning industrial image
+representations. The experimental results clearly demonstrate
+that PiCO surpasses the other pretrained methods in terms
+of performance. This suggests that PiCO has the ability
+to acquire superior representations for industrial images,
+surpassing the capabilities of other pretrained methods trained
+on natural image datasets. Specifically, when compared to
+ImageNet pretraining, PiCO achieves an improvement of
+0.58% and 1.5% in terms of F1normal and F2CIW scores,
+respectively. Moreover, in comparison to MAE pretraining,
+PiCO exhibits enhancements of 0.47% and 1.79% in F1normal
+and F2CIW scores, respectively. Lastly, when compared to
+MoCo v3 pretraining, PiCO demonstrates improvements of
+0.15% and 1.38% in F1normal and F2CIW scores, respectively.
+These results provide strong evidence that PiCO outperforms
+other pretrained methods across various evaluation metrics,
+highlighting its effectiveness in learning representations for
+industrial images.
+In addition, we also compared the training efficiency
+of our pretraining method with other pretraining methods,
+as presented in Table IX. It can be observed that the training
+duration of PiCO is slightly increased compared to ImageNet
+pretraining, while the training efficiency is similar to that of the
+MoCo v3 pretraining method. However, the MAE pretraining
+method requires a larger number of epochs to achieve better
+pretraining results, resulting in significantly longer training
+time compared to the PiCO pretraining method.
+3) MvTec AD Detection: In Table X, we present a comparative analysis of PiCO’s performance in the downstream task of
+anomaly detection. The experimental results demonstrate that
+PiCO exhibits the capability to enhance the performance of the
+uniAD method. Notably, the feature representations employed
+in uniAD are pretrained using conventional recognition tasks,
+thereby prompting our belief that PiCO has the potential
+to acquire superior industrial representations in comparison
+to the ImageNet pretrained models. Remarkably, the uniAD
+model pretrained with PiCO surpasses its ImageNet-pretrained
+counterpart by 1.62% in terms of the AUC metric, thereby
+underscoring the substantial improvement achieved through
+
+5009013
+
+TABLE X
+E XPERIMENTS A RE C ONDUCTED W ITH ResN ET-101 TO V ERIFY THE
+E FFECTIVENESS OF PiCO ON D OWNSTREAM I NDUSTRIAL TASK ,
+A NOMALY D ETECTION . W E F IX THE M ODEL R EPRESENTATIONS
+AND U SE UNI AD FOR A NOMALY D ETECTION ON
+MVT EC -AD DATASET
+
+TABLE XI
+E XPERIMENTS A RE C ONDUCTED W ITH ResN ET-101 TO V ERIFY
+THE E FFECTIVENESS OF PiCO ON D OWNSTREAM I NDUSTRIAL
+TASK , A NOMALY L OCALIZATION . W E F IX THE M ODEL R EPRESEN TATIONS AND U SE UNI AD FOR A NOMALY L OCALIZATION
+ON MVT EC -AD DATASET
+
+the utilization of PiCO in learning representations tailored
+specifically for industrial anomaly detection tasks.
+4) MvTec AD Localization: In order to assess the effectiveness of PiCO in the downstream task of anomaly localization,
+we conducted a comparative analysis, the results of which
+are presented in Table XI. The experimental findings clearly
+demonstrate that the utilization of PiCO leads to a notable
+enhancement in the performance of the uniAD framework.
+It is worth noting that the feature representations employed
+in uniAD remain fixed throughout the anomaly detection
+process. However, we posit that PiCO has the capacity to
+acquire more refined representations specifically tailored for
+industrial scenarios, surpassing the capabilities of ImageNet
+pretrained models. Remarkably, when uniAD is pretrained
+with PiCO, it achieves a superior performance compared
+to its counterpart pretrained with ImageNet, exhibiting an
+improvement of 1.57% in terms of the AUC metric. This
+substantial advancement further substantiates the efficacy of
+PiCO in learning representations that are particularly wellsuited for the task of industrial anomaly detection.
+V. C ONCLUSION
+In this article, we present the collection of a largescale industrial production dataset, namely Ind-2M, aimed
+at facilitating the pretraining of more effective industrial
+image representations. Ind-2M is specifically curated from
+industrial scenarios, thereby emphasizing the relevance of
+the dataset to pretraining models in the industrial domain.
+Additionally, we introduce a novel pixel-level contrastive
+pretraining method called PiCO, which is designed to
+learn industrial image representations. PiCO enhances the
+global industrial representation through industrial production
+classification, while simultaneously improving the local
+industrial representation through a pixel-level self-supervised
+approach. Experimental results demonstrate the effectiveness
+of both Ind-2M and PiCO in enhancing industrial image
+representations. When pretrained on the Ind-2M dataset, PiCO
+
+5009013
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+exhibits strong transferability to tasks such as multilabel defect
+classification, anomaly detection, and anomaly localization.
+R EFERENCES
+[1] P. Bergmann, K. Batzner, M. Fauser, D. Sattlegger, and C. Steger, “The
+MVTec anomaly detection dataset: A comprehensive real-world dataset
+for unsupervised anomaly detection,” Int. J. Comput. Vis., vol. 129, no. 4,
+pp. 1038–1059, Apr. 2021.
+[2] Y. He, K. Song, Q. Meng, and Y. Yan, “An end-to-end steel surface
+defect detection approach via fusing multiple hierarchical features,”
+IEEE Trans. Instrum. Meas., vol. 69, no. 4, pp. 1493–1504, Apr. 2020,
+doi: 10.1109/TIM.2019.2915404.
+[3] X. Cheng and J. Yu, “RetinaNet with difference channel attention
+and adaptively spatial feature fusion for steel surface defect detection,” IEEE Trans. Instrum. Meas., vol. 70, pp. 1–11, 2021, doi:
+10.1109/TIM.2020.3040485.
+[4] J. Yu, X. Cheng, and Q. Li, “Surface defect detection of steel strips
+based on anchor-free network with channel attention and bidirectional
+feature fusion,” IEEE Trans. Instrum. Meas., vol. 71, pp. 1–10, 2022,
+doi: 10.1109/TIM.2021.3136183.
+[5] C.-C. Yeung and K.-M. Lam, “Efficient fused-attention model for
+steel surface defect detection,” IEEE Trans. Instrum. Meas., vol. 71,
+pp. 1–11, 2022, doi: 10.1109/TIM.2022.3176239.
+[6] Y. Chen, J. Pan, J. Lei, D. Zeng, Z. Wu, and C. Chen, “EEENet: Efficient edge enhanced network for surface defect detection of
+glass,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–13, 2023, doi:
+10.1109/TIM.2023.3320746.
+[7] W. Yang, Y. Zhang, Y. Dong, D. Xu, and T. Pan, “Development of
+machine vision system for off-line inspection of fine defects on glass
+screen surface,” IEEE Trans. Instrum. Meas., vol. 71, pp. 1–8, 2022,
+doi: 10.1109/TIM.2022.3190052.
+[8] J. Chen, Y. Wen, Y. A. Nanehkaran, D. Zhang, and A. Zeb, “Multiscale
+attention networks for pavement defect detection,” IEEE Trans. Instrum.
+Meas., vol. 72, pp. 1–12, 2023, doi: 10.1109/TIM.2023.3298391.
+[9] J. Feng, Q. Li, Q. Xiao, and G. Wang, “A method of Rayleigh wave
+combined with coil spatial pulse compression technique for crack defects
+detection,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–11, 2023, doi:
+10.1109/TIM.2023.3244850.
+[10] W. Ding et al., “An ensemble of one-stage and two-stage detectors
+approach for road damage detection,” in Proc. IEEE Int. Conf. Big Data
+(Big Data), Dec. 2022, pp. 6395–6400.
+[11] S. Wang, C. Lv, Z. Zhang, and X. Wei, “Dual-branch learning with
+prior information for surface anomaly detection,” IEEE Trans. Instrum.
+Meas., vol. 72, pp. 1–11, 2023, doi: 10.1109/TIM.2023.3300458.
+[12] K. Xiao, J. Cao, Z. Zeng, and W.-K. Ling, “Graph-based active
+learning with uncertainty and representativeness for industrial anomaly
+detection,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–14, 2023, doi:
+10.1109/TIM.2023.3279422.
+[13] M. Xu, X. Zhou, X. Gao, W. He, and S. Niu, “Discriminative
+feature learning framework with gradient preference for anomaly
+detection,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–10, 2023, doi:
+10.1109/TIM.2022.3228007.
+[14] L. Yang, S. Song, J. Fan, B. Huo, E. Li, and Y. Liu, “An automatic
+deep segmentation network for pixel-level welding defect detection,”
+IEEE Trans. Instrum. Meas., vol. 71, pp. 1–10, 2022.
+[15] J. B. Haurum and T. B. Moeslund, “Sewer-ML: A multi-label sewer
+defect classification dataset and benchmark,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, pp. 13451–13462.
+[16] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+“Towards total recall in industrial anomaly detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+pp. 14298–14308.
+[17] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A
+patch distribution modeling framework for anomaly detection and
+localization,” in Proc. Int. Conf. Pattern Recognit., Nov. 2020,
+pp. 475–489.
+[18] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Selfsupervised learning for anomaly detection and localization,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+pp. 9664–9674.
+[19] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “SPotthe-difference self-supervised pre-training for anomaly detection and
+segmentation,” 2022, arXiv:2207.14315.
+
+[20] O. Russakovsky et al., “ImageNet large scale visual recognition
+challenge,” Int. J. Comput. Vis., vol. 115, no. 3, pp. 211–252, Dec. 2015.
+[21] B. Zhou and A. Khosla, “Learning deep features for discriminative
+localization,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., Las
+Vegas, NV, USA, Jun. 2016, pp. 2921–2929.
+[22] P. Pérez, M. Gangnet, and A. Blake, “Poisson image editing,” ACM
+Trans. Graph, vol. 22, no. 3, pp. 313–318, 2003.
+[23] L.-C. Chen, G. Papandreou, I. Kokkinos, K. Murphy, and A. L. Yuille,
+“DeepLab: Semantic image segmentation with deep convolutional nets,
+atrous convolution, and fully connected CRFs,” IEEE Trans. Pattern
+Anal. Mach. Intell., vol. 40, no. 4, pp. 834–848, Apr. 2018.
+[24] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers
+for image recognition at scale,” in Proc. 9th Int. Conf. Learn. Represent.
+(ICLR), May 2021, pp. 3–7.
+[25] Y. Gao, J. Lin, J. Xie, and Z. Ning, “A real-time defect detection method
+for digital signal processing of industrial inspection applications,” IEEE
+Trans. Ind. Informat., vol. 17, no. 5, pp. 3450–3459, May 2021.
+[26] J. Cao, G. Yang, and X. Yang, “A pixel-level segmentation convolutional
+neural network based on deep feature fusion for surface defect
+detection,” IEEE Trans. Instrum. Meas., vol. 70, pp. 1–12, 2021.
+[27] H. Chen, Y. Du, Y. Fu, J. Zhu, and H. Zeng, “DCAM-Net: A rapid
+detection network for strip steel surface defects based on deformable
+convolution and attention mechanism,” IEEE Trans. Instrum. Meas.,
+vol. 72, pp. 1–12, 2023, doi: 10.1109/TIM.2023.3238698.
+[28] W. Luo, H. Yao, and W. Yu, “Normal reference attention and
+defective feature perception network for surface defect detection,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–14, 2023, doi:
+10.1109/TIM.2023.3268658.
+[29] P. Lu, J. Jing, and Y. Huang, “MRD-Net: An effective CNN-based segmentation network for surface defect detection,” IEEE Trans. Instrum.
+Meas., vol. 71, pp. 1–12, 2022, doi: 10.1109/TIM.2022.3200361.
+[30] Z. You et al., “A unified model for multi-class anomaly detection,” in
+Proc. Adv. Neural Inf. Process. Syst., vol. 35, 2022, pp. 4571–4584.
+[31] Z. Gu, B. Zhu, G. Zhu, Y. Chen, M. Tang, and J. Wang, “AnomalyGPT:
+Detecting industrial anomalies using large vision-language models,”
+2023, arXiv:2308.15366.
+[32] N.-C. Ristea et al., “Self-supervised predictive convolutional attentive
+block for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis.
+Pattern Recognit. (CVPR), Jun. 2022, pp. 13566–13576.
+[33] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2022, pp. 9737–9746.
+[34] X. Li, J. Jing, J. Bao, P. Lu, Y. Xie, and Y. An, “OTB-AAE: Semisupervised anomaly detection on industrial images based on adversarial
+autoencoder with output-turn-back structure,” IEEE Trans. Instrum.
+Meas., vol. 72, pp. 1–14, 2023, doi: 10.1109/TIM.2023.3280508.
+[35] Y. Liu, X. Gao, J. Z. Wen, and H. Luo, “Unsupervised image anomaly
+detection and localization in industry based on self-updated memory and
+center clustering,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–10, 2023,
+doi: 10.1109/TIM.2023.3271754.
+[36] C. Zhang, Y. Wang, and W. Tan, “MTHM: Self-supervised multitask
+anomaly detection with hard example mining,” IEEE Trans. Instrum.
+Meas., vol. 72, pp. 1–13, 2023, doi: 10.1109/TIM.2023.3276529.
+[37] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2016, pp. 770–778.
+[38] J. Fang, B. Zhu, Y. Chen, J. Wang, and M. Tang, “Explicit attention
+modeling for pedestrian attribute recognition,” in Proc. IEEE Int. Conf.
+Multimedia Expo. (ICME), Jul. 2023, pp. 2075–2080.
+[39] Y. Zhu, B. Zhu, Y. Chen, and J. Wang, “Uncertainty-aware boundary
+attention network for real-time semantic segmentation,” in Proc. Chin.
+Conf. Pattern Recognit. Comput. Vis. (PRCV). Cham, Switzerland:
+Springer, 2023, pp. 388–400.
+[40] B. Zhu, Y. Chen, M. Tang, and J. Wang, “Progressive cognitive human
+parsing,” in Proc. AAAI Conf. Artif. Intell., vol. 32, no. 1, 2018,
+pp. 7607–7614.
+[41] B. Zhu, Y. Chen, J. Wang, S. Liu, B. Zhang, and M. Tang, “Fast deep
+matting for portrait animation on mobile phone,” in Proc. 25th ACM Int.
+Conf. Multimedia, Oct. 2017, pp. 297–305.
+[42] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for
+unsupervised visual representation learning,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020, pp. 9726–9735.
+[43] X. Chen, S. Xie, and K. He, “An empirical study of training selfsupervised vision transformers,” in Proc. IEEE/CVF Int. Conf. Comput.
+Vis. (ICCV), Oct. 2021, pp. 9620–9629.
+
+ZHU et al.: PIXEL-LEVEL CONTRASTIVE PRETRAINER FOR INDUSTRIAL IMAGE REPRESENTATION
+
+[44] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked
+autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 16000–16009.
+[45] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple
+framework for contrastive learning of visual representations,” in Proc.
+Int. Conf. Mach. Learn., 2020, pp. 1597–1607. [Online]. Available:
+http://proceedings.mlr.press/v119/chen20j.html
+[46] X. Chen and K. He, “Exploring simple Siamese representation learning,”
+in Proc. IEEE Comput. Soc. Conf. Comput. Vision Pattern Recognit.,
+Jun. 2021, pp. 15750–15758.
+[47] Z. Xie et al., “SimMIM: A simple framework for masked image
+modeling,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2022, pp. 9643–9653.
+[48] Tianchi. (2016). Aluminum Profile Dataset. [Online]. Available:
+https://tianchi.aliyun.com/dataset/dataDetail?dataId=140666
+[49] G. Kylberg. The Kylberg Texture Dataset V. 1.0. [Online]. Available:
+https://kylberg.org/kylberg-texture-dataset-v-1-0
+[50] Kaggle. Severstal: Steel Defect Detection. Accessed: Dec. 2023.
+[Online]. Available: https://kaggle.com/competitions/severstal-steeldefect-detection
+[51] Kaggle. (2007). Dagm 2007 Competition Dataset. [Online].
+Available: https://www.kaggle.com/datasets/mhskjelvareid/dagm-2007competition-dataset-optical-inspection
+[52] J. Gan, Q. Li, J. Wang, and H. Yu, “A hierarchical extractor-based
+visual rail surface inspection system,” IEEE Sensors J., vol. 17, no. 23,
+pp. 7935–7944, Dec. 2017.
+[53] Kth-Tips Dataset. Accessed: Dec. 2023. [Online]. Available:
+https://www.csc.kth.se/cvap/databases/kth-tips/credits.html
+[54] PKU-Market-PCB. Accessed: Dec. 2023. [Online]. Available:
+https://robotics.pkusz.edu.cn/resources/dataset/
+[55] Aitex Fabric Image Database. Accessed: Dec. 2023. [Online]. Available:
+https://www.kaggle.com/datasets/nexuswho/aitex-fabric-image-database
+[56] L. Pratt, J. Mattheus, and R. Klein, “A benchmark dataset for defect
+detection and classification in electroluminescence images of PV
+modules using semantic segmentation,” Syst. Soft Comput., vol. 5,
+Dec. 2023, Art. no. 200048.
+[57] D. Tabernik, S. Šela, J. Skvarč, and D. Skočaj, “Segmentation-based
+deep-learning approach for surface-defect detection,” J. Intell. Manuf.,
+vol. 31, no. 3, pp. 759–776, May 2019.
+[58] S. Tang, F. He, X. Huang, and J. Yang, “Online PCB defect detector on
+a new PCB defect dataset,” 2019, arXiv:1902.06197.
+[59] M. Maguire, S. Dorafshan, and R. Thomas. SDNET2018: A
+Concrete Crack Image Dataset for Machine Learning Applications. Accessed: Jan. 2019. [Online]. Available: [Online]. Available:
+https://digitalcommons.usu.edu/all/48
+[60] Tianchi. (2020). Smart Diagnosis of Cloth Flaw Dataset. [Online].
+Available: https://tianchi.aliyun.com/dataset/dataDetail?dataId=79336
+[61] X. Tao, D. Zhang, Z. Wang, X. Liu, H. Zhang, and D. Xu, “Detection
+of power line insulator defects using aerial images analyzed with
+convolutional neural networks,” IEEE Trans. Syst. Man, Cybern. Syst.,
+vol. 50, no. 4, pp. 1486–1498, Apr. 2020.
+[62] T. Schlagenhauf, M. Landwehr, and J. Fleischer, “Industrial machine
+tool component surface defect dataset,” 2021, arXiv:2103.13003.
+[63] I. Andersen. (Oct. 2021). Tilda Fabric Dataset. [Online]. Available:
+https://universe.roboflow.com/irvin-andersen/tilda-fabric
+[64] C. J. van Rijsbergen, Information Retrieval. London, U.K.: Butterworth,
+1979.
+[65] K. Simonyan and A. Zisserman, “Very deep convolutional networks for
+large-scale image recognition,” 2014, arXiv:1409.1556.
+[66] A. Howard et al., “Searching for MobileNetV3,” in Proc. IEEE/CVF Int.
+Conf. Comput. Vis., Oct. 2019, pp. 1314–1324.
+
+5009013
+
+Bingke Zhu received the B.E. degree from the
+Beijing University of Chemical Technology, Beijing,
+China, in 2016, and the Ph.D. degree from
+the University of Chinese Academy of Sciences,
+Beijing, in 2021.
+He is currently an Assistant Professor of pattern recognition and intelligence systems with
+the Foundation Model Research Center, Institute
+of Automation, Chinese Academy of Sciences,
+Beijing. His current research interests include pattern
+recognition and machine learning, image and video
+processing, semantic segmentation, and visual anomaly detection.
+
+Yingying Chen received the B.S. degree from the
+Communication University of China, Beijing, China,
+in 2013, and the Ph.D. degree from the University
+of Chinese Academy of Sciences, Beijing, in 2018.
+She is currently an Associated Professor of
+pattern recognition and intelligence systems with
+the Foundation Model Research Center, Institute
+of Automation, Chinese Academy of Sciences,
+Beijing. Her current research interests include
+pattern recognition and machine learning, image and
+video processing, and intelligent video surveillance.
+
+Ming Tang (Member, IEEE) received the B.S.
+degree in computer science and engineering and
+the M.S. degree in artificial intelligence from
+Zhejiang University, Hangzhou, China, in 1984 and
+1987, respectively, and the Ph.D. degree in pattern
+recognition and intelligent systems from the Chinese
+Academy of Sciences, Beijing, China, in 2002.
+He is currently a Professor with the Institute of
+Automation, Chinese Academy of Sciences. His
+current research interests include computer vision
+and machine learning.
+
+Jinqiao Wang (Member, IEEE) received the B.E.
+degree from the Hebei University of Technology,
+Tianjin, China, in 2001, the M.S. degree from
+Tianjin University, Tianjin, in 2004, and the
+Ph.D. degree in pattern recognition and intelligence
+systems from the National Laboratory of Pattern
+Recognition, Chinese Academy of Sciences, Beijing,
+China, in 2008.
+He is currently a Professor with the National Laboratory of Pattern Recognition, Chinese Academy
+of Sciences. His research interests include pattern
+recognition and machine learning, large multimodel model, and image and
+video analysis.

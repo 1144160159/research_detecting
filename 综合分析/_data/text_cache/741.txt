@@ -1,0 +1,129 @@
+                    This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3699521
+
+                                                                                                                                                                                               1
+
+
+
+
+         Mitigating Membership Inference and Model
+        Inversion in 6G Federated Anomaly Detection
+      M. Junaid Gul, Member, IEEE, Anal Paul, Member, IEEE, and Keshav Singh, Senior Member, IEEE
+
+
+
+
+    Abstract—In sixth-generation (6G) networks, federated learn-                                 through model inversion attacks (MInvA) [1], [2]. Simulta-
+ing (FL) enables collaborative anomaly detection across dis-                                     neously, the stringent quality-of-service (QoS) requirements
+tributed edge devices without exposing raw data; however,                                        across ultra-reliable low-latency communications (URLLC)
+exchanged gradients can leak privacy via membership inference
+attacks (MIA) and model inversion attacks (MInvA). Meanwhile,                                    requiring sub-millisecond latency, enhanced mobile broadband
+6G network slicing imposes heterogeneous quality-of-service                                      (eMBB) demanding high throughput, and massive machine-
+(QoS) requirements across ultra-reliable low-latency commu-                                      type communications (mMTC) serving billions of internet-of-
+nications (URLLC), enhanced mobile broadband (eMBB), and                                         things (IoT) devices demand slice-aware defense strategies that
+massive machine-type communications (mMTC), where uniform                                        balance privacy, robustness, and communication efficiency [3],
+defenses often incur 30–60% accuracy loss. We propose a
+slice-aware, defense-in-depth framework that calibrates three                                    [4]. These slices have fundamentally conflicting operational
+coordinated layers: Layer 1 statistical screening with thresh-                                   constraints that a single privacy defense parameter cannot
+olds τURLLC =4.5, τeMBB =5.0, and τmMTC =6.0; Layer 2 slice-                                     satisfy.
+aware differential privacy with Gaussian noise σURLLC =0.001,                                       Existing defense mechanisms for FL primarily focus on
+σeMBB =0.05, and σmMTC =0.10, where URLLC uses lightweight                                       individual techniques, such as statistical screening for ma-
+perturbation to preserve stringent latency while stronger formal
+differential privacy is concentrated in eMBB/mMTC; and Layer                                     licious updates, differential privacy (DP) to mask sensitive
+3 adversarial retraining using the fast gradient sign method                                     information, or adversarial retraining to harden models against
+(FGSM). Coordinating these layers yields complementary bene-                                     inversion attacks, but often neglect the interplay among these
+fits: screening reduces attack surface, differential privacy masks                               layers within a multi-slice environment [5], [6]. Statistical
+leakage, and adversarial retraining hardens models. Experiments                                  screening filters anomalous updates but provides no formal pri-
+on CICIDS2017 and N-BaIoT show 95.2% utility retention with
+82.15% accuracy, a +16.7% macro-F1 improvement, 91–94%                                           vacy guarantees, leaving membership inference attacks viable.
+communication reduction, MIA success reduced from 78.3% to                                       Differential privacy provides formal privacy bounds but causes
+52.1%, model inversion error increased by 34.7%, and an overall                                  30–60% accuracy degradation when applied uniformly across
+privacy accounting budget ϵtotal ≤ 2.1.                                                          all slices, with mMTC slices achieving only 47.98% accuracy
+  Index Terms—6G, Network Slicing, FL, Anomaly Detection,                                        on CICIDS2017 (baseline 83.84%), a 35.86 percentage-point
+Membership Inference, Model Inversion, Differential Privacy,                                     loss that creates security blind spots for detecting distributed
+Defense-in-Depth.                                                                                IoT botnets. Adversarial retraining using fast gradient sign
+                                                                                                 method (FGSM) improves robustness to gradient inference but
+                        I. I NTRODUCTION                                                         does not prevent membership inference attacks, with success
+
+F    EDERATED learning (FL) has emerged as a transforma-
+     tive paradigm for enabling collaborative model training
+across distributed devices without exposing raw data, making
+                                                                                                 rates remaining at 63.5% compared to 52.1% when all three
+                                                                                                 layers are coordinated. Most critically, existing approaches
+                                                                                                 do not adapt defense parameters to slice-specific require-
+it particularly suited for privacy-sensitive applications in next-                               ments: URLLC slices requiring sub-millisecond latency cannot
+generation wireless networks. However, in Sixth-Generation                                       tolerate heavy privacy perturbation, yet without multi-layer
+(6G) networks, federated anomaly detection faces a critical                                      coordination they become high-value attack targets, while
+challenge: attackers observing gradient exchanges can infer                                      mMTC slices can benefit from stronger privacy but may
+membership in training datasets through membership infer-                                        suffer utility collapse under uniform defenses. This creates
+ence attacks (MIA) or reconstruct private training samples                                       a false dichotomy where practitioners must choose between
+                                                                                                 accepting privacy risks or sacrificing utility in latency-critical
+   The work of A. Paul was supported by the National Science and Technology
+Council of Taiwan under Grant NSTC 114-2222-E-155-005. The work of K.                            services [7]–[9].
+Singh was supported by the National Science and Technology Council of                               To address this gap, we propose a framework that coordi-
+Taiwan under Grants NSTC 114-2218-E-110-005 and NSTC 115-2923-E-110-                             nates defense layers and adapts to slice-specific requirements.
+003-MY3, and the Sixth Generation Communication and Sensing Research
+Center funded by the Higher Education SPROUT Project, the Ministry of                            This paper proposes a defense-in-depth hybrid framework tai-
+Education of Taiwan. (Corresponding authors: Keshav Singh; Anal Paul)                            lored for federated anomaly detection in 6G network slices by
+   M. J. Gul is with the Department of Information and Communication                             coordinating three defense layers and calibrating parameters
+Engineering, Yeungnam University, Gyeongsan, Gyeongbuk 38541, Republic
+of Korea (e-mail: drmalik@yu.ac.kr).                                                             to slice-specific QoS requirements. The framework comprises
+   A. Paul is with the Department of Computer Science and Engineering, Yuan                      (i) slice-calibrated statistical update screening using per-slice
+Ze University, Taoyuan 320315, Taiwan (e-mail: apaul@saturn.yzu.edu.tw).                         thresholds to filter anomalous contributions while preserving
+   K. Singh is with the Institute of Communications Engineering, Na-
+tional Sun Yat-sen University, Kaohsiung 804201, Taiwan (e-mail: ke-                             signal in latency-critical slices, (ii) selective Gaussian per-
+shav.singh@mail.nsysu.edu.tw).                                                                   turbation with advanced composition accounting for formal
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+                                           content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3699521
+
+                                                                                                                                                                                           2
+
+
+
+(ϵ, δ)-DP guarantees while respecting latency constraints, and                               and global patterns in system logs through multi-head atten-
+(iii) adversarial retraining using FGSM-generated adversarial                                tion mechanisms, achieving state-of-the-art performance on
+examples to smooth loss landscapes and reduce gradient leak-                                 benchmark datasets including HDFS, BGL, and Thunderbird
+age vulnerability. Because DP strength scales with the noise                                 [13]. While the hierarchical design aligns conceptually with
+magnitude, URLLC employs intentionally lightweight pertur-                                   defense-in-depth approaches, the framework focuses on cen-
+bation to preserve strict latency, while the strongest formal                                tralized settings without considering FL constraints or privacy
+DP contribution is concentrated in the less latency-constrained                              attack scenarios. Pre-trained transformer models have been
+eMBB/mMTC slices and reinforced by the overall defense-in-                                   leveraged in the Loader framework [14] for enhanced sequence
+depth coordination. By coordinating these layers rather than                                 understanding in log anomaly detection, demonstrating supe-
+applying them independently, the framework creates emergent                                  rior performance with F1-scores exceeding 95% on multiple
+benefits: screening reduces attack surface dimensionality, dif-                              datasets. The framework emphasizes contextual understanding
+ferential privacy masks remaining information leakage, and                                   in log analysis, which proves crucial for accurate anomaly
+adversarial training hardens models against inference attacks.                               detection in complex network environments. However, the cen-
+Our approach dynamically adapts to slice-specific privacy–                                   tralized approach fails to address the distributed nature of 6G
+utility trade-offs and stringent service-level objectives. Ex-                               networks or associated privacy concerns. Hybrid architectures
+perimental results on CICIDS2017 and N-BaIoT demonstrate                                     combining transformers with complementary deep learning
+95.2% utility retention, a +16.7% macro-F1 improvement, 91–                                  techniques have emerged as promising solutions. Integration of
+94% communication reduction, reduced MIA success (from                                       transformer attention mechanisms with temporal convolutional
+78.3% to 52.1%), increased model inversion error (+34.7%),                                   networks [15] enables capture of both long-term dependencies
+and an overall DP accounting budget of ϵtotal ≤ 2.1 under                                    and local temporal patterns in log sequences, achieving notable
+slice-calibrated noise.                                                                      improvements in detection accuracy while reducing computa-
+                                                                                             tional complexity compared to pure transformer models. The
+                                                                                             hybrid approach demonstrates the effectiveness of combining
+                      II. R ELATED W ORK
+                                                                                             multiple architectural components, analogous to multi-layered
+   FL represents a promising approach for distributed anomaly                                defense strategies.
+detection while preserving data privacy. The FedLog frame-
+work [10] addresses communication and computation over-                                      A. Multi-Feature Extraction and Robustness
+heads in IoT systems through customizable federated anomaly                                     Comprehensive feature extraction represents a fundamen-
+detection, achieving 98.7% accuracy with 60% reduction in                                    tal requirement for robust anomaly detection systems. The
+communication overhead compared to centralized approaches.                                   AllInfoLog framework [16] extracts and utilizes all available
+However, the approach focuses primarily on IoT environments                                  log features, including semantic content, parameter values,
+without addressing the specific challenges of 6G network                                     and temporal information, demonstrating that comprehensive
+slicing or sophisticated privacy attacks such as membership                                  feature utilization significantly improves detection robustness
+inference and model inversion. Cloud threat forensics has                                    with over 97% accuracy across diverse anomaly types. The
+been enhanced through interpretable federated transformer                                    multi-feature approach parallels defense-in-depth frameworks
+architectures [11] that leverage attention mechanisms to iden-                               that integrate multiple protection layers for comprehensive
+tify malicious log patterns across distributed environments.                                 security. Hierarchical contrastive learning has been applied
+The framework combines FL with transformer-based sequence                                    to enhance the robustness of anomaly detection [17] through
+modeling to enable privacy-preserving threat detection while                                 discriminative representations that remain resilient to noise and
+maintaining model interpretability, achieving 94.3% precision                                adversarial perturbations. The hierarchical structure enables
+and 92.1% recall on real-world cloud security datasets. While                                feature capture at multiple abstraction levels, improving gen-
+demonstrating the effectiven

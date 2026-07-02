@@ -1,0 +1,1779 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [610] Ano2Rule: Rule-Based Global Interpretation for Unsupervised Anomaly Detection in Security
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：610
+题名：Ano2Rule: Rule-Based Global Interpretation for Unsupervised Anomaly Detection in Security
+年份：2026
+DOI：10.1109/tdsc.2026.3667688
+来源：IEEE Transactions on Dependable and Secure Computing
+PDF：paper/10.1109_TDSC.2026.3667688.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：其他AI安全与跨域异常检测
+相关性：中相关，分数 8
+已有代码状态：候选不可访问；UADRule-Extraction
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\610.txt
+- 原始字符数：95823
+- 本次发送字符数：95823
+- 是否截断：False
+
+代码包：
+- 仓库：UADRule-Extraction
+  - URL：https://github.com/Ruoyu-Li/UADRule-Extraction
+  - 状态：failed
+  - 本地目录：source\UADRule-Extraction
+  - 顶层结构：
+  - 主要语言：
+  - README 标题：
+  - README 运行线索：
+  - 关键文件：{}
+  - 数据集线索：
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+6685
+
+Ano2Rule: Rule-Based Global Interpretation for
+Unsupervised Anomaly Detection in Security
+Ruoyu Li , Member, IEEE, Yu Zhang , Qing Li , Senior Member, IEEE, Nengwu Wu ,
+Yong Jiang , Member, IEEE, Weizhi Meng , Senior Member, IEEE, and Laizhong Cui , Senior Member, IEEE
+
+Abstract—In the realm of cybersecurity, unsupervised anomaly
+detection models have emerged as pivotal tools for identifying
+novel threats in dynamic and evolving environments. However,
+the opaque nature of these black-box models presents a significant
+barrier to their adoption in high-stakes applications, where modelinterpretability is essential for trust and deployment. This paper
+presents a rule-based approach called Ano2Rule that enhances the
+interpretability of unsupervised anomaly detection. First, we propose the concept of distribution decomposition rules that decompose
+the complex distribution of normal data into multiple compositional distributions. To find such rules, we design an unsupervised
+Interior Clustering Tree that incorporates the model prediction
+into the splitting criteria. Then, we propose the Compositional
+Boundary Exploration (CBE) algorithm to obtain the boundary
+inference rules that estimate the decision boundary of the original
+model on each compositional distribution. By merging these two
+types of rules into a rule set, we can present the inferential process
+of the unsupervised black-box model in a human-understandable
+way, and build a surrogate rule-based model for online deployment
+at the same time. We validate Ano2Rule through extensive experiments on diverse real-world datasets, including network intrusion
+detection and IoT security, demonstrating superior fidelity and
+robustness compared to baseline methods. The results show that
+Ano2Rule achieves high fidelity with the original model’s predictions while providing human-understandable insights.
+Index Terms—Anomaly detection, network security, explainable
+AI, unsupervised learning, intrusion detection.
+
+Received 20 July 2025; revised 8 January 2026; accepted 15 February 2026.
+Date of publication 24 February 2026; date of current version 12 May 2026.
+This work was supported in part by the National Natural Science Foundation of
+China under Grant 62502324, Grant U23B2026, and Grant 62372305, and in
+part by Guangdong Basic and Applied Basic Research Foundation under Grant
+2026A1515011368 and Grant 2024B1515040012. (Ruoyu Li and Yu Zhang
+contributed equally to this work.) (Corresponding author: Laizhong Cui.)
+Ruoyu Li and Laizhong Cui are with the College of Computer Science and
+Software Engineering, Shenzhen University, Shenzhen 518061, China (e-mail:
+liry@szu.edu.cn; cuilz@szu.edu.cn).
+Yu Zhang is with Tsinghua University, Beijing 100190, China, and also with
+Shanghai Artificial Intelligence Laboratory, Shanghai 200232, China (e-mail:
+yu-zhang23@mails.tsinghua.edu.cn).
+Qing Li is with the Department of Strategic and Advanced Interdisciplinary Research, Peng Cheng Laboratory, Shenzhen 518066, China (e-mail:
+liq@pcl.ac.cn).
+Nengwu Wu is with the School of Computer Science and Engineering,
+University of Electronic Science and Technology of China, Chengdu 610054,
+China (e-mail: wnw2597@gmail.com).
+Yong Jiang is with Shenzhen International Graduate School, Tsinghua University, Shenzhen 100190, China, and also with the Department of Strategic
+and Advanced Interdisciplinary Research, Peng Cheng Laboratory, Shenzhen
+518066, China (e-mail: jiangy@sz.tsinghua.edu.cn).
+Weizhi Meng is with the School of Computing and Communications, Lancaster University, LA1 4YW Lancaster, U.K. (e-mail: weizhi.meng@ieee.org).
+Digital Object Identifier 10.1109/TDSC.2026.3667688
+
+I. INTRODUCTION
+N RECENT years, with the rapid development of machine
+learning (ML) and deep learning (DL) in the field of anomaly
+detection, the capability to detect malicious behaviors in security applications has been significantly enhanced. This includes
+applications such as intrusion detection [1], [2], [3], malware
+identification [4], [5], system monitoring [6], [7], and Internet of
+Things (IoT) network surveillance [8], [9], [10]. These technologies demonstrate superior performance in terms of accuracy and
+generalization capabilities. Among these studies, unsupervised
+anomaly detection exhibits greater potential because it detects
+potential malicious activities by identifying deviations from
+normal behavior. Compared to supervised anomaly detection
+methods, this kind of approach is particularly suitable for detecting unknown attacks and novel threats, offering the following
+advantages in network security applications:
+1) During the training process, unsupervised anomaly detection requires minimal labeled attack or malicious data,
+which are typically more sparse and difficult to obtain.
+2) Unsupervised anomaly detection does not rely on any
+known threat patterns, thereby performing exceptionally well when facing unknown attacks and novel
+threats.
+However, despite the excellent performance of these models,
+many machine learning approaches, particularly deep learningbased unsupervised models, often exhibit a “black-box” nature,
+leading to a lack of interpretability and raising widespread
+trust issues. Many local explanation methods [11], [12], [13],
+[14], [15] attempt to interpret the models by presenting feature
+importance for individual decision points. While these local
+explanations can provide valuable insights for specific instances,
+they may not fully meet the needs of certain security applications. These fields typically require a more comprehensive understanding of how the model behaves across the entire decision
+space to detect complex or unknown attacks in a timely manner.
+In contrast, global explanations, particularly those utilizing rule
+extraction to describe the overall decision boundaries, may be
+more ideal in security systems. This is especially important as
+they offer the following benefits (illustrated in Fig. 1):
+Enhancing Trust in High-Risk Scenarios: In high-risk fields
+such as network intrusion detection, security operators tend to
+rely more on interpretable rules rather than the intuitive outputs
+of black-box models. Compared to complex prediction scores,
+interpretable rules are easier to understand and trust, which can
+
+I
+
+1545-5971 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+6686
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+Fig. 1. Motivation of interpreting black-box anomaly detection models into
+rules in security domains.
+
+effectively reduce false positives and mitigate potential security
+risks.
+Improving Online Defense Capabilities: By converting the
+outputs of black-box models into high-fidelity rules, it becomes
+possible to seamlessly integrate with most rule-driven defense
+tools (e.g., iptables [16] and Snort [17]), ensuring efficient
+deployment of online defenses and efficiency in handling highvolume network traffic.
+Most existing global ML/DL explanation approaches have
+been developed for supervised models, with limited research
+focused on explaining unsupervised anomaly detection. This
+area presents several unique challenges:
+Unlabeled One-class Data (CH1): Supervised explanation
+methods [18], [19], [20] require labeled data from both positive
+and negative classes to determine the decision boundaries of
+black-box models. However, this requirement conflicts with the
+nature of unsupervised anomaly detection, which does not rely
+on labeled attack data—one of its primary advantages. This lack
+of labeled abnormal data adds complexity to determining the
+model’s decision boundaries.
+Lack of Surrogate Models (CH2): Global explanation methods typically use interpretable models, such as decision
+trees [19], [20] or linear models [21], to approximate the behavior of black-box models. However, there is a lack of suitable
+surrogate models in the unsupervised domain that can provide
+both interpretability and high performance, particularly in highstakes security applications.
+Accuracy Loss (CH3): A common issue with global methods
+is the loss of accuracy in the surrogate model due to simplifications made in replicating the original model [22]. While these
+methods can offer interpretability, they may fail to meet the
+high detection accuracy requirements necessary for real-time
+deployment in security applications.
+We observe that simple surrogate models often struggle to
+effectively replicate the complexity of black-box models when
+dealing with high-dimensional data. Such instances belonging to the same class may contain multiple underlying distributions, with the overall distribution composed of several
+sub-distributions. For example, the normal activities of a host
+may involve multiple services (such as web services, database
+services), each exhibiting distinctly different characteristics in
+
+feature space. This diversity makes it challenging for simple
+surrogate models to fully capture the complex behaviors of
+black-box models, thereby reducing the interpretability and
+accuracy of the model.
+Conclusion: To this end, this paper proposes a divide-andconquer method called Ano2Rule to extract global rules from
+black-box unsupervised anomaly detection models, aiming to
+provide interpretable, accurate, and robust explanations. The
+implementation of Ano2Rule relies on two core components:
+the Interior Clustering Tree (IC-Tree) and the Compositional
+Boundary Exploration (CBE) algorithm. The IC-Tree is an unsupervised decision tree model that extends the traditional Classification And Regression Tree (CART) by incorporating the
+predictions of black-box models to determine data splits. It partitions the high-dimensional data space into smaller, more manageable subspaces, capturing complex distributions and identifying normal behavior patterns, thereby laying the foundation for
+explaining the black-box model. Within each IC-Tree subspace,
+the CBE algorithm generates boundary inference rules. Starting
+from initial hypercube-shaped rules, CBE gradually optimizes
+the decision boundaries through an approximate gradient ascent
+method, accurately capturing the black-box model’s complex
+boundaries. By combining the rule sets generated by the IC-Tree
+and CBE, Ano2Rule fully presents the global decision logic of
+the black-box model, ensuring high fidelity of the explanatory
+rules.
+Beyond providing global explanations, Ano2Rule also exhibits strong extensibility to other types of model interpretation, such as local explanation and counterfactual explanation.
+This flexibility is rooted in the explicit, human-understandable
+characterization of normal boundaries from the perspective of
+the black-box model. Specifically, for local explanation (i.e.,
+assessing feature importance for individual predictions), the
+significance of each feature can be quantified by measuring the
+distance between a sample’s feature values and the boundaries
+defined by its matched rule. For counterfactual explanation (i.e.,
+determining how an anomalous sample could be modified to
+be classified as normal), our method can project the anomaly
+onto the closest region defined by the rules and optimize the
+necessary feature changes accordingly, thereby generating informative counterfactuals. These extensions enable our approach
+to support a versatile suite of explanation tasks with unified
+technical foundations.
+For evaluation, we used four unsupervised anomaly detection
+models and trained them on five benchmark datasets. To comprehensively assess the effectiveness of our method, we compared it
+with five baseline explanation methods. The experimental results
+show that Ano2Rule not only can extract highly interpretable and
+precise rules from black-box models but also outperforms existing methods in multiple metrics, including fidelity, robustness,
+true positive rate (TPR), and true negative rate (TNR), meeting
+the demand of improving human trust in black-box models and
+maintaining high detection accuracy for online deployment. We
+also validate the extensibility of Ano2Rule by demonstrating
+its capability to provide local and counterfactual explanations.
+Specifically, we show that our rule-based approach enables
+quantifiable local feature importance and generates actionable
+
+LI et al.: ANO2RULE: RULE-BASED GLOBAL INTERPRETATION FOR UNSUPERVISED ANOMALY DETECTION IN SECURITY
+
+counterfactuals for anomalous samples, further illustrating the
+versatility and practical value of the proposed method. Our
+source code is available at https://github.com/Ruoyu-Li/UADRule-Extraction.
+The remainder of this paper is structured as follows: Section II
+reviews related work on anomaly detection and model interpretability. Section III outlines the objectives of the proposed
+method. Sections IV detail the core algorithms of Ano2Rule.
+Section V presents the theoretical analysis of the proposed
+method. Section VI elaborates on the extensibility of AnoRule
+to other types of explanation. Section VII describes the experimental setup and result analysis. Section VIII concludes the
+paper and suggests future directions.
+II. RELATED WORK
+A. Anomaly Detection in Security
+Anomaly detection is a cornerstone technique in the field of
+cybersecurity, supporting a wide range of applications including
+network intrusion detection [1], [2], [3], malware detection [4],
+[5], [23], and IoT security [8], [9], [24], [25]. The primary
+objective is to identify rare or previously unseen events—often
+corresponding to malicious activities—that deviate from the established patterns of normal system behavior. This is especially
+important in modern security environments, where the diversity
+and sophistication of threats continue to evolve rapidly, making
+it impractical to enumerate all possible attack types in advance.
+Traditional signature-based detection systems rely on predefined patterns and can only recognize known threats. In contrast,
+anomaly detection offers the ability to discover novel or zeroday attacks by flagging deviations as potential anomalies. In
+practical settings, the abundance of benign data and the scarcity
+of labeled attack samples further motivate the adoption of unsupervised anomaly detection models, which can learn normal
+behavior from unlabeled data without requiring explicit attack
+labels. Recent years have witnessed significant progress in unsupervised anomaly detection methods for security applications.
+Representative approaches include one-class classifiers such as
+One-Class SVM (OCSVM) [26], [27], [28], tree-based models
+like Isolation Forest (iForest) [29], [30], and neural networkbased techniques such as autoencoders (AE) and variational
+autoencoders (VAE) [31].
+Despite these advances, the widespread adoption of anomaly
+detection in high-stakes security contexts remains hindered by
+the lack of interpretability and transparency in modern machine
+learning models. Security operators must be able to understand
+and trust the decisions made by automated systems, especially
+when incorrect predictions could result in substantial operational
+or financial losses [15]. As a result, enhancing the interpretability
+of anomaly detection models has become a research priority in
+both academia and industry.
+B. Model Interpretation
+To address this issue, explainable artificial intelligence (XAI)
+has gradually been introduced into the anomaly detection [32],
+[33], [34], [35]. In this section, we review representative works
+along four lines: model-specific explanation, model-agnostic
+
+6687
+
+local attribution, counterfactual approaches, and global surrogate/rule extraction. Table I summarizes their capabilities along
+dimensions that are especially relevant to unsupervised security
+deployments, where reliable attack labels are scarce and explanations must be both faithful and operationally useful.
+1) Model-Specific Explanation: Some studies attempt to integrate explainability directly into model architectures to enhance interpretability. For example, Kauffmann et al. proposed
+a decomposition method for explaining one-class support vector
+machine (SVM) anomaly detection [32], breaking down the
+model’s decision-making process into comprehensible components. Aguilar et al. proposed an interpretable autoencoder
+based on decision trees, which provides a natural explanation
+for experts in the application area [35]. Feng et al. utilized a
+k-dimensional (KD) tree to classify DDoS sources at an IP-level
+fine granularity, outputting explanatory information that enables
+easy inspection of detection results [36].
+Discussion: Model-specific methods often yield strong, faithful explanations within their targeted architectures; however,
+they are tightly coupled with particular model families and thus
+offer limited portability to arbitrary black-box detectors. In security practice, anomaly detectors are frequently selected based
+on operational constraints and may vary across deployments,
+which motivates model-agnostic explanation mechanisms that
+generalize across detectors.
+2) Local Explanation: Unlike model-specific methods that
+require internal access to model structures or parameters, modelagnostic techniques treat the target model as a closed box and
+seek to explain its predictions solely based on input-output
+behavior. Local explanation, as a representative approach, aims
+to interpret a model’s prediction for a specific input by quantifying the importance of each feature in the decision-making
+process. Among the most prominent local explanation frameworks are LIME (Local Interpretable Model-agnostic Explanations) [11] and SHAP (SHapley Additive exPlanations) [12].
+These methods operate by constructing simple, interpretable
+surrogate models—such as sparse linear regressors or decision
+trees—in the vicinity of the input instance under consideration.
+For example, LIME perturbs the features of a sample to generate
+synthetic neighbors and fits a local model to approximate the
+original black-box model’s behavior around that point. These
+methods have been applied to explain various unsupervised
+models [37], [38], [39].
+In the security domain, local explanations have proved valuable for investigating individual alerts or suspicious activities
+detected by anomaly detection systems. For instance, Guo
+et al. leveraged local interpretable models to analyze malware
+classification results, offering actionable insights for analysts
+to prioritize incident response [14]. Similarly, Sipple applied
+integrated gradients [40], a local explanation technique, to trace
+root causes in IoT device failures [41].
+Discussion: While local attribution provides instance-level
+evidence, it can be sensitive to neighborhood definition and
+perturbation strategies, leading to unstable attributions in highdimensional feature spaces. More importantly, local explanations alone do not summarize the detector’s system-level decision logic, which is crucial for auditing and proactive defense
+
+6688
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+TABLE I
+COMPARISON OF EXPLANATION METHODS FOR ANOMALY DETECTION; ∗ LOCAL METHODS MAY PROVIDE LIMITED COUNTERFACTUAL SAMPLES VIA SAMPLING
+OR PERTURBATION, BUT ARE NOT DESIGNED FOR MINIMAL CHANGES; (  ) INDICATES PARTIAL OR LIMITED SUPPORT
+
+in security operations. This motivates approaches that produce
+global, human-auditable rules while retaining the ability to
+derive instance-level evidence.
+3) Counterfactual Explanation: The central idea of counterfactual explanation is to answer “what if” questions by identifying the minimal changes needed to an input instance in
+order to alter the model’s prediction. For instance, in anomaly
+detection, a counterfactual explanation provides insight into how
+an anomalous instance could be transformed into a normal one,
+offering clear and actionable guidance to analysts.
+The general methodology for generating counterfactuals involves solving an optimization problem to find the closest data
+point whose predicted class is different from the original. This
+paradigm was formalized by Wachter et al. who proposed counterfactual explanations as a means to interpret automated decisions while treating the underlying model as a black box [42].
+Extensions to this idea have focused on generating diverse counterfactuals for greater coverage and robustness, as demonstrated
+by DiCE [43]. Counterfactual methods are also developed for
+complex data structures, such as graphs [44] and recommender
+systems [45].
+In the field of security and anomaly detection, counterfactual
+explanations are emerging as a valuable tool for operational
+transparency and actionable insight. For example, Guzman et al.
+explored counterfactual explanations for detecting SQL injection attacks, helping analysts understand how an attack instance
+might be altered to avoid detection or be classified as benign [46].
+Similarly, counterfactuals can provide interpretable recommendations for revising loan applications in a security-critical financial context [47].
+Discussion: Despite their promise, counterfactual methods
+are often developed for supervised classification and implicitly
+assume well-defined class boundaries and access to labeled outcomes. In unsupervised anomaly detection, decision boundaries
+are induced by normal-only training and can be difficult to
+query with label-guided objectives, making validity and realism
+constraints harder to satisfy.
+4) Global Explanation: Global methods are designed to provide a comprehensive, human-understandable summary of a
+model’s overall decision-making process across the entire input
+space. Global interpretability is particularly important for security operators, who must not only investigate individual alerts
+but also understand and audit system-wide detection logic to
+ensure reliable deployment, compliance, and risk mitigation.
+A common strategy for global explanation is to approximate
+the black-box model with an inherently interpretable surrogate,
+such as decision trees [19], [20], [49], symbolic rules [18], sparse
+
+linear models [21], and decision lists [50], to approximate and
+explain the predictions of any well-trained model. In related research, authors have constructed global explanations in the form
+of decision trees to provide insight into black-box models [19].
+The framework proposed by Jacobs et al. generates tree models
+using existing machine learning models and training datasets to
+explain security-related decisions [20].
+However, most of these global explanation approaches have
+been developed in supervised learning settings, where labeled
+examples of both normal and anomalous data are available. This
+limits their direct applicability to the unsupervised anomaly
+detection scenarios, where only normal data is typically used for
+training. Additionally, while some works can extract rules from
+unsupervised anomaly detection models [48], they still assume
+that the training dataset contains sufficient outliers to determine
+decision boundaries, which may not hold true in practice due to
+the model’s generalization capabilities.
+Recent studies have also attempted to aggregate multiple local
+explanation models to provide nearly global explanations [51],
+[52], [53]. However, these approaches incur high computational
+costs when processing large-scale data and require a trade-off
+between fidelity and coverage. Although techniques such as
+knowledge distillation can reduce complexity and enhance explainability through model transformation [54], [55], their primary goal remains model compression and accuracy assurance,
+rather than providing high-fidelity explanations of the original
+models. Consequently, achieving comprehensive interpretability for unsupervised anomaly detection while maintaining high
+detection performance remains a challenge.
+Summary and gap: Overall, existing methods address complementary facets of interpretability—instance-level attribution,
+actionable recourse, or global decision summaries—but often
+rely on assumptions that are misaligned with unsupervised
+anomaly detection in security (e.g., access to high-quality labels
+or abundant outliers). This leaves an important gap: producing
+faithful global rules for normal-only trained detectors while
+still enabling instance-level evidence and actionable guidance
+in a unified manner. As summarized in Table I, Ano2Rule is
+designed to fill this gap by extracting high-fidelity global rules
+from black-box unsupervised detectors and supporting local
+and counterfactual explanations derived from the same rule
+representation.
+III. OVERVIEW
+To tackle the interpretability challenges in unsupervised
+anomaly detection within security contexts, we introduce a novel
+
+LI et al.: ANO2RULE: RULE-BASED GLOBAL INTERPRETATION FOR UNSUPERVISED ANOMALY DETECTION IN SECURITY
+
+6689
+
+Definition 2. (Global Explanation by Rule Extraction):
+Given a trained model f with its anomaly threshold ϕ and
+the training set X, we obtain an in-distribution rule set C =
+{C1 , C2 , . . .} that explains how the model f profiles the distribution of normal data. A rule C = . . . ∧ (xi  υi ) ∧ . . . ∧
+(xj  υj ) is a conjunction of several axis-aligned constraints
+on a subset of the feature space, where υi is the bound for the
+i-th dimension and  ∈ {≤, >}.
+Let x ∈ C indicate that a data sample satisfies a rule. From
+C, we can build a surrogate model hC (x), whose inference is to
+regard a data sample that cannot match any of the extracted rules
+as anomalous:
+hC (x) = ¬(x ∈ C1 ) ∧ ¬(x ∈ C2 ) ∧ . . ., Ci ∈ C.
+
+(1)
+
+Design Goal: We expect the extracted rules to have a high
+fidelity to the original model, that is, a similar coverage of normal
+data (i.e., true negative rate), and a similar detection rate of
+anomalies (i.e., true positive rate). We formulate our objective
+as follows:
+arg min LX ∼D (C, f, ϕ) + LX D (C, f, ϕ).
+C
+
+(2)
+
+B. Methodology Overview
+
+Fig. 2. A high-level illustration of Ano2Rule; small circles are unlabeled
+normal data; dashed curves are the decision boundary of the black-box model;
+vertical/horizontal lines are extracted rules at each step.
+
+framework called Ano2Rule, which is designed to extract interpretable, rule-based explanations that align closely with the
+original anomaly detection model, enhancing transparency and
+operational efficacy. As shown in Fig. 2, it leverages an Interior
+Clustering Tree (IC-Tree) for feature space partitioning and
+a Compositional Boundary Exploration (CBE) algorithm for
+precise decision boundary inference.
+A. Problem Definition
+Let X ⊆ Rd be the variable space of d-dimensional features;
+x and xi denote a data sample and its i-th dimension of features.
+We give the following definitions for the rest of the paper:
+Definition 1. (Unsupervised Anomaly Detection): Given unlabeled negative (normal) data X sampled from a stationary
+distribution D for training, an unsupervised model estimates
+the probability density function f (x) ≈ PX ∼D (x), and detects
+an anomaly via a low probability f (x) < ϕ, where ϕ > 0 is a
+threshold determined by the model itself or by humans.
+It is noted that the threshold ϕ is a non-zero value, meaning
+that the model inevitably generates false positives, which is a
+common setting in most of the works [1], [2], [3] even though
+the false positive rate can be very low. Besides, the normal data
+may occasionally be contaminated or handled with errors. We
+consider the anomaly detection tolerant of noisy data, but their
+proportion in the training dataset is small and we do not have
+deterministic labels of the training data.
+
+To minimize the first item in (2), suppose the training data X
+can well represent the distribution D, a straightforward approach
+is to find the bound of X as rules, such as using a hypercube
+to enclose the data samples which can easily achieve the minimization of the partial loss Lx∈X (C, f, ϕ) = 0. However, as D
+is not a prior distribution and we do not have labeled abnormal
+samples, the second item LX D (C, f, ϕ) is neither deterministic
+nor estimable unless we create sufficient random samples and
+query f , which is challenging given the high-dimensional space
+of X .
+As prior studies [25], [41] suggest, normal data are typically
+multimodal, i.e., the overall distribution is formed by multiple
+compositional distributions. For example, a server supports
+multiple services such as web, email and database. The representations of these services can be disparate and located in
+different regions in feature space with little transition between
+the regions, making it infeasible to find a uniform rule set to
+accurately estimate the original model.
+Based on this intuition, Ano2Rule adopts a divide-andconquer approach, as shown in Fig. 2. First, we propose an
+Interior Clustering Tree (IC-Tree) to find the distribution decomposition rules, which cut the feature space into subspaces
+so that each subspace contains data belonging to the same
+compositional distribution. Then, we design a Compositional
+Boundary Exploration algorithm (CBE) to explore the decision
+boundary on each compositional distribution. Particularly, the
+algorithm starts from the minimal hypercube that encloses all
+data of the distribution, and finds the boundary by recursively extending the boundary following the optimal direction guided by
+a gradient approximation. Upon obtaining the decision boundary
+of a distribution, the corresponding boundary inference rule can
+be extracted. Last, the final rule set can be obtained by merging
+the distribution decomposition rule and the boundary inference
+
+6690
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+rule of each compositional distribution. We formally define the
+distribution decomposition rule and the boundary inference rule
+as follows:
+Definition 3. (Distribution Decomposition Rule): Denoted
+by CkI that decomposes the overall distribution of normal
+data D into K compositional distributions, i.e., PX ∼D (x) =
+K
+I
+k=1 φk · PX ∼Dk (x|x ∈ Ck ) where φk denotes the weight of
+each compositional distribution, so that a data sample x ∼ Dk
+has significantly small probability of belonging to other distributions.
+Definition 4. (Boundary Inference Rule): Denoted by CkE
+that estimates the decision boundary of the original model
+for each distribution Dk , i.e., arg minCkE LX ∼Dk (CkE , f, ϕ) +
+LX Dk (CkE , f, ϕ).
+With the definition of these two types of rules, we translate
+the objective in (2) to the following objective as our intuition
+indicates.
+Proposition 1: The original objective can be estimated by
+finding the union of the conjunction of distribution decomposition rules and boundary inference rules for each compositional
+distribution:
+K
+
+k=1
+
+arg min LX ∼Dk (Ck , f, ϕ) + LX Dk (Ck , f, ϕ),
+
+splitting criteria, enabling it to work in a completely unsupervised manner. This decomposition approach provides a clearer
+understanding of how different regions of the feature space
+correspond to the model’s decision-making logic, enhancing
+both transparency and interpretability.
+Node Splitting: Given the data N at a tree node, we first obtain
+the output of the anomaly detection model f (x) for x ∈ N .
+Similar to decision trees, the node of an IC-Tree finds a splitting
+point s = (i, bi ) that maximizes the gain:
+s = arg max I(N ) −
+s
+
+|N l |
+|N r |
+I(N l ) −
+I(N r ),
+|N |
+|N |
+
+where bi is the splitting value for the i-th dimension, N l and N r
+are the data split to the left and right child nodes, |N | denotes
+the number of data samples, and I is a criterion function such
+as Gini index I = 2p(1 − p) for binary classification with the
+probability of p. Specifically, we let p be the average output of
+the anomaly detection model, which can be interpreted as the
+expectation of the probability that the data belong to the same
+distribution:
+1 
+f (x).
+(5)
+p = Ex∈N [PX ∼D (x)] =
+|N |
+x∈N
+
+(3)
+
+Ck
+
+where Ck = CkI ∧ CkE .
+IV. DESIGN DETAILS
+A. Interior Clustering Tree
+To derive the distribution decomposition rules and partition
+the feature space into distinct subspaces, it is essential to first define the compositional distribution Dk . In unsupervised anomaly
+detection, the lack of labeled data makes it challenging to directly
+infer decision boundaries. By defining Dk , we can decompose the complex overall distribution D into interpretable subdistributions, enabling a rule-based description of the model’s
+decision-making process. Although labeled data is unavailable,
+the estimation of the overall distribution D from the outputs of
+the black-box model can serve as a basis for this decomposition.
+Suppose two data samples x(i) and x(j) belong to the same
+distribution Dk . In that case, the difference in their probabilities
+of belonging to the overall distribution D will be less than a
+small constant . Based on the definition of the distribution
+decomposition rules and compositional distributions, if these
+two data samples belong to the same distribution Dk , their
+probability of belonging to any other distribution PX∼Dl (x)
+(where l = k) is nearly zero. Consequently, the probability of
+these samples belonging to the overall distribution PX∼D (x),
+which is a weighted sum of the probabilities across all compositional distributions, is approximately equal to their probability
+of belonging to PX∼Dk (x).
+Based on this, we propose a tree-based model dubbed Interior
+Clustering Tree (IC-Tree), which extends the CART decision
+tree [56]. The main difference between IC-Tree and CART is
+that, rather than splitting data based on ground truth labels,
+IC-Tree uses the probability output by the original model as
+
+(4)
+
+An IC-Tree continues to split nodes until it satisfies one of
+the following conditions: i) the number of data samples at
+the node |N | = 1; ii) for any two of the data samples at the
+node ∀x(i) , x(j) ∈ N , |f (x(i) ) − f (x(j) )| < ; iii) it reaches
+a maximum depth τ , which is a hyperparameter. The IC-Tree
+focuses on the subset of features that contribute the most to the
+variability of anomaly scores at each split, thereby ensuring a
+more accurate separation of data distribution.
+Distribution Decomposition Rule Extraction: A trained ICTree that has K leaf nodes (K ≤ 2τ ) represents K distributions
+separated from the overall distribution D. Suppose the k-th leaf
+node has a depth of τ . A distribution decomposition rule that
+describes the k-th compositional distribution can be extracted
+by the conjunction of the splitting constraints from the root to
+the leaf node:
+CkI = (xi 1 bi |s1 = (i, bi )) ∧ . . . ∧ (xj τ bj |sτ = (j, bj )),
+(6)
+where  is “≤” if the decision path goes left or “>” if the decision path goes right. Each rule set CkI describes the conditions
+of the k-th sub-distribution in the feature space. These rules
+enable the accurate classification of new data points into their
+corresponding sub-distributions.
+B. Compositional Boundary Exploration
+Following the generation of distinct subspaces by the IC-Tree,
+we propose the Compositional Boundary Exploration (CBE)
+algorithm (described in Algorithm 1) to precisely define and
+refine the decision boundaries within each subspace. The CBE
+algorithm uses the minimal hypercube that encloses the normal
+data of each compositional distribution as a starting point.
+Further, we refer to adversarial attacks [57] and propose a
+method to approximate the optimal direction to explore the
+
+LI et al.: ANO2RULE: RULE-BASED GLOBAL INTERPRETATION FOR UNSUPERVISED ANOMALY DETECTION IN SECURITY
+
+decision boundary, which makes the algorithm more efficient
+and accurate to estimate the decision boundary.
+Starting from Hypercube (line 1): Let X k denote the training
+data falling into the k-th leaf node of an IC-Tree that represents a compositional distribution. Recall the definition of
+boundary inference rules that target min LX ∼Dk (CkE , f, ϕ) +
+LX Dk (CkE , f, ϕ). We use the minimal hypercube Hk as a starting point of boundary inference rules to bound every dimension
+of the data samples in X k judged by the original model as
+normal, which obviously achieves Lx∈X k (Hk , f, ϕ) = 0. The
+minimal hypercube is enclosed by 2 × d axis-aligned hyperplanes, which can be characterized by the following rule:
+Hk = (υ1− ≤ x1 ≤ υ1+ ) ∧ . . . ∧ (υd− ≤ xd ≤ υd+ ),
+
+(7)
+
+where υi− = min(xi |f (x) > ϕ, x ∈ X k ) and υi+ = max(xi |f
+(x) > ϕ, x ∈ X k ).
+Explorer Sampling (line 4∼6): The CBE algorithm explores
+the decision boundary of the original model by estimating the
+bound of one feature dimension at a time. For i-th dimension, we uniformly sample Ne data points on each hyperplane
+of the hypercube, i.e., e(1) , . . ., e(Ne ) ∈ Hk ∧ (xi = υi ), υi ∈
+{υi− , υi+ }, which are called the initial explorers for this hyperplane. For an initial explorer e, we further sample Ns auxiliary
+explorers near it from a truncated multivariant Gaussian distribution denoted by N (e, Σ, i). Particularly, the center of sampling
+is the explorer e and the radius of sampling is constrained by
+the sampling matrix Σ = diag(ρ|υ1+ − υ1− |, . . ., ρ|υd+ − υd− |),
+where ρ is a hyperparameter, and the sampling on i-th dimension is half-truncated to only keep the distribution outside the
+hypercube as we desire to extend the boundary. With Ne × Ns
+auxiliary explorers in total, we query the original model and use
+Beam Search to select Ne samples with the minimal probability
+of being normal as the candidate explorers for the next iteration.
+Gradient Approximation (line 7∼9): Though we have obtained Ne candidate explorers in the previous step, using them
+directly for the next iteration does not guarantee the optimal direction of movement towards the decision boundary. To find the
+optimal direction, we utilize the Fast Gradient Sign Method [57]
+that employs gradient ascent to find the direction of feature
+perturbation. However, we do not know the loss function of
+the original model in black-box scenarios. To deal with it, given
+a selected auxiliary explorer ê that is sampled around an initial
+explorer e on the i-th dimension hyperplane, we approximate the
+i-th dimension of the model gradient (i.e., the partial derivative)
+by the slope of a linear model across the two data points, and use
+the midpoint with its i-th dimension minus the approximation
+as the new explorer for the next iteration:
+ei + êi
+− η · sign(∇i ),
+2
+∂f (x)
+f (e) − f (ê)
+∇i =
+≈
+,
+∂xi
+ei − êi
+
+ei, next =
+
+6691
+
+TABLE II
+COMPUTATIONAL COMPLEXITY OF ANO2RULE
+
+Rule Acquisition (line 12): Once the iteration stops, boundary
+constraints are generated for each dimension.If the iteration
+stops due to the first condition, we produce a boundary constraint
+for each dimension using the coordinate of êext that extends
+the boundary of the hypercube, i.e., ci = (xi  êext,i ), where
+ is “≤” if êext,i is greater than υi+ , or “>” if êext,i is less
+than υi− . If the iteration stops due to the second condition, it
+means the algorithm encounters difficulties in moving towards
+the decision boundary by perturbing this feature dimension. We
+calculate the difference between the model prediction of the
+last auxiliary explorer and that of the initial explorers on the
+hyperplane. If the difference is smaller than a threshold δ, we
+decide that this feature dimension is a contour line, i.e., it has no
+significant correlation with the model prediction. In this case,
+we do not produce any constraints for this dimension. If the
+difference is greater than the threshold, we produce constraints
+in the same way as those produced under the first condition. The
+final boundary inference rule is the disjunction of the hypercube
+and the constraints on each dimension.
+C. Merging Final Rule Set
+When the stopping condition is met, we merge the distribution
+decomposition rules and boundary inference rules on each compositional distribution by their conjunction, and the final rule set
+is the union of the extracted rules:
+C=
+
+K
+
+
+Ck , where Ck = CkI ∧ CkE .
+
+(10)
+
+k=1
+
+We present the complete process of Ano2Rule in Algorithm 2.
+Generally, the extracted rules serve as an “allowlist”, describing
+the range of multiple features that can be considered normal and
+judging others as anomalies, such as:
+If xj1 < θ1 and xj2 ≥ θ2 , then normal
+
+V. THEORETICAL ANALYSIS
+A. Design Rationale and Theoretical Insights
+
+(8)
+(9)
+
+where sign(·) is the sign function, and η is a hyperparameter to
+control the stride of one iteration. The iteration stops when i) an
+auxiliary explorer êext that satisfies f (êext ) < ϕ is found, or ii)
+it reaches the maximum number of iterations.
+
+1) Divide-and-Conquer Validity: One of the key claims that
+lay the theoretical foundation for our method is Proposition 1,
+which employs a divide-and-conquer approach by translating
+the objective in (2) to (3). We will prove that such an approach
+is feasible: the extracted rules will have a high fidelity to the original model, that is, a similar coverage of normal data (i.e., true
+negative rate, TNR), and a similar detection rate of anomalies
+(i.e., true positive rate, TPR).
+
+6692
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+Proof: The sum of the minimum losses on each of the compositional distributions is calculated by an iteratively cumulative
+process. Let Lj be the sum of the minimum losses on each of
+the compositional distributions at the j-th iteration:
+
+Algorithm 1: Compositional Boundary Exploration.
+
+Lj =
+
+j
+
+
+min(LX ∼Dk (Ck , f, ϕ) + LX Dk (Ck , f, ϕ)). (12)
+
+k=1
+
+
+Let X ∼ jk=1 Dk represent a variable belonging to any of the
+compositional distributions D1 , . . ., Dj , which is the same as the
+overall distribution X ∼ D. We prove the Loop Invariant of Lj
+during the iteration, which always satisfies:
+Lj = min(LjT N R + LjT P R ) − ψ,
+ j
+
+where LjT N R = LX ∼j Dk
+Ck , f, ϕ ,
+k=1
+k=1
+ j
+
+j
+Ck , f, ϕ
+LT P R = L X   j D k
+k=1
+
+k=1
+
+(13)
+
+1) For the first iteration,
+L1 = min LX ∼D1 (C1 , f, ϕ) + LX D1 (C1 , f, ϕ)
+= min LX ∼D (C, f, ϕ) + LX D (C, f, ϕ) − ψ
+
+(14)
+
+obviously holds where ψ = 0.
+2) Suppose the (13) holds at the j-th iteration. For the (j + 1)th iteration, we have the following derivations:
+Algorithm 2: Rule Extraction Process of Ano2Rule.
+
+Lj+1 = min(LjT N R + LjT P R ) − ψ
++ min(LX ∼Dj+1 (Cj+1 , f, ϕ)+LX Dj+1 (Cj+1 , f, ϕ))
+j+1
+= min(Lj+1
+T N R + LT P R ) − ψ
+j+1
+
++ LX ∼j Dk ∩Dj+1
+Ck , f, ϕ
+k=1
+k=1
+j+1
+
+Ck , f, ϕ ,
++ LX j Dk ∩Dj+1
+k=1
+
+k=1
+
+We prove the following lemma equivalent to Proposition 1:
+Lemma 1: If the distribution decomposition rules and the
+inference boundary rules that minimize the loss on each of the
+compositional distributions are found, the sum of the minimum
+losses on each of the compositional distributions can estimate
+the minimum loss on the overall distribution with a significantly
+small error ψ, i.e.,
+
+=
+
+k=1
+
+k=1
+
+j+1
+Lj+1 = min(Lj+1
+T N R + LT P R ) − ψ,
+
+min(LX ∼Dk (Ck , f, ϕ) + LX Dk (Ck , f, ϕ)) + ψ,
+
+k=1
+
+where Ck = CkI ∧ CkE , ψ ≥ 0.
+
+
+where j+1
+between
+k=1 Dk ∩ Dj+1 represents the overlap area
+the conjunction of the compositional distributions j+1
+k=1 Dk
+and the (j + 1)-th compositional distribution Dj+1 . Recall the
+definition of the compositional distributions that a data sample
+belonging to one compositional distribution has a significantly
+small probability of belonging to other compositional distributions, meaning that the overlap area between the compositional
+distributions is significantly small. Therefore, the loss with
+respect to the overlap area is also significantly small, given the
+data samples belonging to the area are significantly rare. Let
+
+j+1
+Ck , f, ϕ
+ψ = ψ + LX ∼j Dk ∩Dj+1
+k=1
+k=1
+
+j+1
++ LX j Dk ∩Dj+1
+Ck , f, ϕ ,
+(16)
+and we can get the final result of Lj+1 :
+
+min LX ∼D (C, f, ϕ) + LX D (C, f, ϕ)
+K
+
+
+(15)
+
+(11)
+
+(17)
+
+which proves the loop invariant in (13). When j = K, as the
+overall distribution is equal to 
+the conjunction of the compositional distributions, i.e., D = K
+k=1 Dk , we prove (11) holds
+and Lemma 1 is correct.
+
+LI et al.: ANO2RULE: RULE-BASED GLOBAL INTERPRETATION FOR UNSUPERVISED ANOMALY DETECTION IN SECURITY
+
+2) Why IC-Tree Enables Unsupervised Decomposition: Although the black-box detector operates in a high-dimensional
+feature space, its scalar output f (x) can be viewed as a compressed statistic of the semantic evidence used by the detector
+to assess normality. We formalize this by treating f (x) as an
+approximate sufficient summary for partitioning normal behavior: there exists an (unknown) partition {Dk }K
+k=1 of the overall
+distribution D such that samples from the same component
+induce similar normality scores, i.e.,
+∀x(i) , x(j) ∼ Dk , |f (x(i) ) − f (x(j) )| ≤ ,
+
+(18)
+
+for a small . Under this score-compactness assumption, a desirable decomposition is one that minimizes the within-node score
+
+
+1
+¯ 2 denote
+dispersion. Let Varf (N ) = |N
+x∈N f (x) − fN
+|
+the empirical variance of scores in node N . Then a split s that
+reduces Varf yields a partition closer to the latent components in
+(18). In IC-Tree, maximizing the gain based on I(·) is a surrogate
+objective that favors separating nodes with heterogeneous score
+distributions, which empirically reduces Varf in child nodes and
+thus produces subspaces where f (x) is approximately constant.
+Consequently, the stopping criterion |f (x(i) ) − f (x(j) )| < 
+naturally identifies subspaces that are close to score-compact
+components, making subsequent rule inference feasible without
+labels.
+3) Why CBE Improves Subspace Fidelity: Fix a leaf k produced by IC-Tree and consider the black-box decision restricted
+to this subspace. CBE starts from the minimal hypercube Hk ,
+which encloses all normal samples in X k judged by the blackbox model. Therefore, Hk is a feasible initialization that satisfies
+[f (x) > ϕ] = 1 for all x ∈ X k while x |= Hk , implying zero
+empirical loss on observed normal data. CBE then refines the
+boundary by probing the black box near the current axis-aligned
+faces and updating one dimension at a time toward the decision
+boundary. Importantly, the update always moves the corresponding face outwards until a boundary-crossing is detected (or the
+dimension is identified as a contour line), which makes the
+covered normal region monotonically non-decreasing across
+iterations. As a result, CBE progressively reduces false negatives
+caused by an overly conservative enclosure, and the final rule
+CkE tends to lie close to the true decision boundary within the
+leaf, leading to improved leaf-level fidelity of CkE .
+B. Computational Complexity
+Table II summarizes the computational complexity of
+Ano2Rule in both the rule-extraction phase and the execution
+phase. We further break down the dominant terms to clarify
+the dependence on the feature dimension, tree structure, and
+black-box query budget.
+IC-Tree: The IC-Tree construction follows the standard
+CART-style procedure: at each internal node, candidate split
+thresholds for each feature are evaluated based on an impurity criterion computed from the black-box outputs. With presorting per feature, the split search at a node can be done
+in O(d · |N | log |N |), and summing over all nodes yields an
+overall complexity of O(d · n log n) in the typical setting, where
+d is the feature size and n is the sample number. The tree depth
+
+6693
+
+is bounded by the hyperparameter τ , so the number of leaves
+is upper bounded by the number of leaf nodes K ≤ 2τ , and in
+practice the stopping criterion based on score consistency further
+limits the number of splits.
+CBE: For each leaf node k, CBE refines an axis-aligned
+boundary rule by exploring one feature dimension at a time. On
+the i-th dimension, each iteration samples Ne initial explorers
+on the current hyperplane and Ns auxiliary explorers around
+each initial explorer, resulting in Ne · Ns candidate queries to
+the black-box model per iteration. Let T denote the maximum
+number of iterations used for one dimension (bounded by the
+algorithm’s stopping criterion). Then the total number of blackbox queries for one leaf is O(d · T · Ne · Ns ), and the total
+CBE complexity over all leaves is O(K · d · T · Ne · Ns ). In
+addition to black-box queries, beam search introduces an extra
+sorting/selection cost of O(Ne · Ns log(Ne · Ns )) per iteration;
+however, since model queries dominate the runtime in our setting, we report the query-dominated complexity in Table II and
+observe that it matches empirical runtimes.
+Execution: At inference time, Ano2Rule first routes a sample
+down the IC-Tree to identify its leaf (cost O(τ )), and then
+evaluates the corresponding boundary rule. If each rule contains
+on average m̄ effective predicates (i.e., dimensions with finite
+constraints), rule evaluation takes O(m̄). Therefore, the overall
+execution complexity is O(τ + m̄) when using the matched leaf
+rule, and is upper bounded by O(|C| · m̄) if one evaluates all
+extracted rules. Overall, both training and execution scale linearly with the feature dimension d, consistent with the empirical
+efficiency that will be reported in the experiments.
+VI. FRAMEWORK EXTENSIBILITY
+The proposed rule extraction approach is not only effective for
+global explanation, but also exhibits remarkable extensibility to
+other forms of interpretability that are vital in practical security
+applications. By providing explicit and human-understandable
+characterizations of normal data boundaries, Ano2Rule offers a
+flexible foundation for supporting multiple interpretability tasks
+within a unified paradigm. This versatility enables the same set of
+extracted rules to serve as the basis for local explanations—such
+as feature attribution for individual predictions—as well as counterfactual reasoning, wherein actionable recourse or remediation
+steps can be systematically generated for anomalous samples.
+A. Local Explanation Via Rule-Based Feature Attribution
+Given an input sample x ∈ Rd , our framework provides
+instance-level interpretability by leveraging the explicit, axisaligned boundaries of the rule C in the rule set C that
+covers x. Suppose the matched rule C is defined as C =
+li ≤ xi ≤ ui , , ∀i = 1, . . . , d, where li and ui denote the lower
+and upper bounds for the i-th feature. For each feature i, we
+define the attribution score wi for x as
+⎧
+if xi ∈ [li , ui ]
+⎨0,
+wi = xi − ui , if xi > ui
+(19)
+⎩
+li − xi , if xi < li
+
+6694
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+This formulation quantifies the extent to which each feature
+of x deviates from the corresponding boundary of C. If xi lies
+within the bounds [li , ui ], it is considered to contribute nothing to
+the anomaly for this rule. If xi exceeds the upper or lower bound,
+the distance to the closest boundary is taken as its contribution
+to the model’s decision.
+For samples classified as normal (i.e., xi ∈ [li , ui ] for all i),
+we further characterize the feature-wise “tightness” of C by
+considering the interval width: a smaller width ui − li implies
+greater sensitivity of the model’s decision to changes in xi . One
+may define a potential importance score for such features as
+wi = 1/(ui − li ).
+In summary, this rule-based attribution provides a local explanation of how each feature of x influences the model’s
+prediction, allowing analysts to clearly identify which feature
+deviations are most responsible for the detection result.
+
+verify the advantages of this method in terms of rule extraction
+accuracy, robustness, and interpretability.
+A. Experimental Setup
+
+VII. EVALUATION
+
+In this study, we employ four widely used unsupervised
+anomaly detection models as black-box models, including Autoencoders (AE) [1], Variational Autoencoders (VAE) [58],
+One-Class Support Vector Machines (OCSVM) [59], and Isolation Forests (iForest) [8]. The experiments are conducted
+using five benchmark network traffic datasets: CIC-IDS2017,
+CSE-CIC-IDS20181 [60], TON-IoT [61], CIC-IoT [62], and
+RT-IoT2022 [63]. These datasets cover different feature dimensions and attack-to-normal traffic ratios, facilitating a comprehensive evaluation of the framework across multiple scenarios.
+Each dataset is represented in tabular format, with each row
+corresponding to a network traffic record and each column representing a statistical feature, such as the mean packet size and
+inter-arrival time intervals. Additionally, each dataset includes
+multiple attack types; for instance, the CIC-IDS2017 dataset
+contains attacks such as DDoS, DoS, and others.
+The datasets are randomly divided into training, validation,
+and testing sets with a 6:2:2 ratio. Only normal traffic data is
+used to train the anomaly detection models and calibrate their
+hyperparameters. The dataset statistics (including #Attack and
+#Benign) and the performance of the trained anomaly detectors
+are summarized in Table III, where we report AUC as well as
+the TPR/TNR metrics for each black-box model.
+Baselines: We employ five prior explanation methods as
+baselines: 1) We use [48] that extracts rules from unsupervised
+anomaly detection (UAD); 2) For other global methods, we use
+the estimated greedy decision tree (EGDT) proposed by [19],
+and Trustee [20] that specifically explains security applications;
+3) We also consider one method LIME [11] that can use a
+Submodular Pick algorithm to aggregate local explanations
+into global explanations, and a knowledge distillation (KD)
+method [55] that globally converts a black-box model to a
+self-explained decision tree.
+For a fair and reproducible comparison, we follow the hyperparameter recommendations in the original papers (or their
+official implementations) for all baseline methods. Specifically,
+for EGDT, we follow the evaluation protocol in their paper by
+using a decision tree of size 31 and a query budget of n = 1000
+for estimating split criteria on tabular data. For TRUSTEE, we
+adopt the recommended starting-point configuration with S =
+10 outer iterations, N = 50 inner iterations, the training subset
+size M = 0.3|D|, and the branch-pruning parameter k = 10.
+For LIME, we generate N = 15000 perturbed samples to fit the
+local surrogate and report the top-K = 10 important features;
+the kernel width is selected following the standard practice suggested in the original work. For REDT, we use the default mixing
+coefficient α = 0.2 suggested as a generally effective choice in
+their paper, with the remaining tree-related settings following the
+authors’ implementation. Note that all baselines are restricted to
+
+This section evaluates the performance and effectiveness of
+the rule extraction method proposed for unsupervised anomaly
+detection models. Through experiments on five datasets, we
+
+1 We use the corrected versions of these two datasets as released by recent
+studies [60] to address known labeling issues.
+
+B. Counterfactual Explanation Via Rule-Based Projection
+Given an anomalous sample x ∈ Rd not covered by any rule in
+the set C, our framework constructs counterfactual explanations
+by minimally modifying x so that the altered sample xcf falls
+strictly inside the boundary of at least one rule C ∈ C. To ensure
+that the counterfactual sample is robustly accepted as normal
+(i.e., not exactly on the boundary), we introduce a small margin
+δ for each feature, proportional to the width of the rule’s interval.
+Formally, for a given rule C = li ≤ xi ≤ ui , ∀i = 1, . . . , d,
+we define δi = γ · (ui − li ) where γ > 0 is a margin factor, e.g.,
+γ = 0.05. The counterfactual for each feature is then computed
+as:
+⎧
+⎨li + δi , if xi < li
+ui − δi , if xi > ui
+(20)
+xcf
+=
+i
+⎩
+xi ,
+if xi ∈ [li , ui ]
+To select the most plausible counterfactual, we evaluate candidates for all C ∈ C and minimize the following cost function:
+L(x, xcf ) = α · |x − xcf |1 + (1 − α) · S(x, xcf )
+
+(21)
+
+where | · |1 denotes the 1 distance, and S(x, xcf ) is the sparsity
+term defined as the number of features for which xi = xcf
+i . Here,
+α is a weighting coefficient balancing proximity and sparsity and
+we set α = 0.5.
+The optimal counterfactual explanation is then given by
+xcf∗ = arg cf min
+
+x ∈P(C,x)
+
+L(x, xcf )
+
+(22)
+
+where P(C, x) is the set of all margin-adjusted projections of x
+into rules C ∈ C that yield a normal prediction. This approach
+ensures that the generated counterfactuals are both actionable
+(few and small changes) and robust (strictly inside the rule),
+providing clear, operational guidance for remediation in security
+applications.
+
+LI et al.: ANO2RULE: RULE-BASED GLOBAL INTERPRETATION FOR UNSUPERVISED ANOMALY DETECTION IN SECURITY
+
+6695
+
+TABLE III
+SUMMARY OF DATASETS AND PERFORMANCE OF TRAINED ANOMALY DETECTION MODELS (AUC, TPR, AND TNR)
+
+the same training manners as ours, i.e., they can only access
+the predominantly normal training data for rule extraction. In
+particular, for methods that are originally designed to leverage
+labeled data (e.g., TRUSTEE), we still follow this constraint and
+train their surrogate procedure using the training set with only
+benign labels, without introducing additional anomaly labels.
+Metrics: We refer to the metrics outlined in [22] to evaluate
+rule extraction methods. The following key evaluation metrics
+are presented in this section: Fidelity (FD) refers to the proportion of samples where the predictions of the original model
+and the surrogate model are consistent. This metric reflects the
+trustworthiness of the explanation. Robustness (RB) measures
+the ability of the surrogate model to maintain the same prediction
+as the original model when the input undergoes small perturbations, indicating the method’s stability. True Positive Rate (TPR)
+and True Negative Rate (TNR) evaluate the method’s ability to
+detect positive and negative class samples, respectively. These
+metrics indicate whether a method meets the requirements for
+global interpretation and helps avoid alarm fatigue caused by
+false positives in highly imbalanced security applications [64].
+B. Quantitative Analysis of Interpretability
+In our comprehensive performance evaluation (as shown in
+Table IV), Ano2Rule demonstrates superior performance across
+various anomaly detection models and datasets. First, it consistently achieves high levels of True Positive Rate (TPR) and True
+Negative Rate (TNR). For example, on the TON-IoT dataset, all
+detection models reach a TPR of 1.00, while the lowest TNR
+is as high as 0.9715. This highlights that our method not only
+accurately detects anomalous data but also effectively identifies
+normal data, significantly reducing false positives and false negatives. Moreover, Ano2Rule exhibits outstanding performance
+in terms of Fidelity (FD) and Robustness (RB). The Fidelity
+scores across all datasets exceed 0.95, with more than half of
+them surpassing 0.99. This indicates that our method can accurately replicate the predictions of the black-box models, ensuring
+the correctness of global explanations. The RB scores range
+between 0.9890 and 1.00 across all datasets, demonstrating
+that the method maintains stable performance even under data
+noise and variations, thereby ensuring its reliability in real-world
+deployments.
+The baseline methods typically exhibit considerable variability in metrics across different datasets. In contrast, on the
+CIC-IDS2017 dataset, Ano2Rule improves Fidelity by approximately 0.45 (from 0.533 to 0.9835) and TNR by about 0.16
+(from 0.9947 to 0.9915) compared to EGDT. On the TON-IoT
+
+dataset, Ano2Rule achieves perfect TPR and TNR values of
+1.00, substantially outperforming LIME and KD. These results
+demonstrate that our method not only excels across different
+datasets but also offers highly reliable explanations for security
+applications. We note that this behavior is expected for labeldependent extraction methods such as Trustee, whose fidelity
+optimization typically assumes access to high-quality labeled
+data (including representative samples from different classes);
+under the unsupervised anomaly detection setting where only
+benign training data is available, such methods are inherently
+limited in learning a faithful surrogate and thus may yield
+lower-fidelity rules.
+Notably, although Ano2Rule may not be the top performer
+on every individual metric, it delivers highly consistent and
+robust results: for example, Ano2Rule achieves a score above
+0.95 on 50 out of 64 (78.1%) evaluation settings, covering all
+datasets, black-box models, and metrics. In contrast, some baseline methods exhibit larger fluctuations, with high scores only
+on certain datasets but significant drops elsewhere. This level
+of stability and balanced performance underlines the practical
+value of Ano2Rule in real-world applications, where dependable
+interpretability across a variety of conditions is often more
+important than isolated peak results.
+Considering that obtaining a “clean” training set requires
+huge manual effort in reality [65], we also assess the efficacy
+of Ano2Rule under varying percentages of “noisy” data. We
+evaluate the fidelity of extracted rules using two approaches for
+the injection of noisy data: 1) random noise; 2) mislabeled data
+from other classes, i.e., attack data. The results are shown in
+Fig. 3. We find that the impact of the noisy data proportion is
+not significant: 36 of 40 fidelity scores in the table preserve over
+0.95, and the variation of fidelity scores is not obvious with
+the increase of noisy data for most of the models. This shows
+that our rule extraction method can retain similar performance
+to the black-box model that it extracts from. Nonetheless, the
+results of iForest also reveal that a sufficiently large proportion
+of noisy data may cause a certain negative impact on the rule
+extraction for certain models. Overall, our method achieves
+high-quality rule extraction for anomaly detection models by
+balancing sensitivity and specificity. This capability makes it a
+highly reliable solution in noisy environments.
+To assess the usability of the rules, we evaluated three metrics:
+Number of Rules, Average Rule Length (effective constraints
+per rule), and Top-10 Coverage (benign samples covered by the
+top-10 rules). As shown in Table V, the framework consistently
+extracts compact rule sets. For instance, on the TON-IoT dataset,
+the rule counts remain low (21–28) across all black-box models.
+
+6696
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+TABLE IV
+PERFORMANCE OF RULE EXTRACTION ON DIFFERENT DATASETS
+
+While generative models (AE/VAE) generally require moderate complexity to approximate non-linear manifolds, OCSVM
+demonstrates significant adaptability, yielding the most concise
+set (12 rules) on the RT-IoT2022 dataset despite its higher
+count on TON-IoT. Crucially, the average rule length (≈ 12) is
+significantly lower than the total feature dimension (e.g., nearly
+80 for CIC-IDS2017), indicating that Ano2Rule effectively
+identifies critical feature subsets. This manageable complexity
+(≤ 35 rules) falls well within human cognitive limits, facilitating
+rapid manual auditing. Furthermore, even on the complex RTIoT2022 dataset, the Top-10 Coverage remains consistently high
+(> 87%). This confirms that a small, interpretability-friendly
+
+core of rules effectively encapsulates the vast majority of normal
+behaviors, ensuring efficiency for rule-based filtering systems.
+C. Understanding Model Decisions: Case Study
+To demonstrate that the rules obtained by our method are in
+line with human understanding, we use OCSVM as an example
+of black-box models to provide several explanations. We extract
+rules from a well-trained model and use these rules to predict
+four typical types of attack data, including Distributed Denialof-Service (DDoS) attacks, XSS attacks, password attacks, and
+ransomware attacks. Table VI presents the features of the rules
+
+LI et al.: ANO2RULE: RULE-BASED GLOBAL INTERPRETATION FOR UNSUPERVISED ANOMALY DETECTION IN SECURITY
+
+Fig. 3.
+data.
+
+Fidelity of extracted rules under varying percentages of noisy training
+
+TABLE V
+QUANTITATIVE EVALUATION OF INTERPRETABILITY METRICS ACROSS
+DATASETS AND BLACK-BOX MODELS
+
+extracted from normal data that cannot be matched by the
+attack data and explains how humans can interpret the model’s
+decisions. Such explanation results are obtained by the following
+steps:
+1) For a reported anomaly x, we use the IC-Tree to pinpoint
+the rule of normality that judges x as anomalous. It is
+realized by inputting x into the tree and recursively finding
+the leaf node. The rule is denoted by Cx .
+
+6697
+
+2) For each constraint of features in Cx , we compare the
+corresponding feature value of x with the constraint.
+3) For the feature values outside the range of the constraints,
+the Rules of Normality, Feature Values, and Feature Meaning (i.e., the three columns in Table VI) along with the raw
+data sample will be sent as the explanation to the security
+expert for further analysis.
+4) The security expert will analyze the data sample to determine the type of attack (i.e., the Attack column in Table VI)
+and give her/his understanding of the important attributes
+that make her/him identify the attack (i.e., the Human
+Understanding column in Table VI).
+5) If there is a huge gap between the provided explanation
+and expert understanding, it indicates that the anomaly
+detector may not be trustworthy.
+For instance, the data of DDoS attacks fails to match the
+rules in three feature dimensions: the mean of packet sizes,
+the mean of packet inter-arrival time, and the duration of a
+connection. Specifically, the rule “psmean > 101.68” is unmet,
+as the mean packet size in attack data is only 57.33, indicating
+that the packet size in DDoS attacks is significantly smaller.
+Similarly, the rule “iatmean > 0.063” is unmet, with the attack
+value being merely 0.00063, demonstrating extremely short
+inter-arrival times between packets. The rule “dur > 12.61” is
+also unmet, as the attack value is only 0.00126, reflecting the
+short connection durations characteristic of DDoS attacks. Such
+results are easy to interpret: the purpose of DDoS attacks is to
+overwhelm the victim’s resources, and attackers achieve this by
+consuming resources asymmetrically (i.e., using small packets),
+sending packets at an extremely high rate (i.e., low inter-arrival
+time), and establishing as many useless connections as possible
+(i.e., short connection durations). These explanations align with
+how humans recognize DDoS attack behaviors.
+These results clearly demonstrate that our extracted rules
+align with human understanding of attack patterns, showing that
+our method can provide precise, human-readable insights into
+black-box anomaly detection models. Besides, we note that the
+gap between the provided explanation and human understanding
+may not only occur when the anomaly detector makes erroneous decisions but also when the anomaly detector correctly
+detects an attack sample by unreasonable features, which is
+called “spurious correlation” or “shortcut learning” [66]. For
+example, the most obvious attribute of a DoS attack is typically
+its high rate of forwarding packets in order to overwhelm the
+victim, while the provided explanation might suggest that IP
+address is an important feature. Specifically, unreliable decisions
+could be made due to inappropriate testbed settings during the
+collection of training data, such as the DoS attack being launched
+from one separate host address while all other normal traffic is
+from other host addresses. Therefore, our explanation can also
+verify whether the detectors are correctly trained before they are
+deployed.
+D. Ablation Study
+To evaluate the contributions of each component in Ano2Rule,
+including the IC-Tree and the CBE algorithm, we conducted
+
+6698
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+TABLE VI
+EXAMPLES OF EXPLANATION ON FOUR TYPES OF ATTACKS
+
+are difficult to express through axis-aligned rules, leading to poor
+interpretability and deployability. In contrast, our method (ICTree + CBE) not only achieves higher fidelity but also enhances
+the model’s interpretability and deployment potential through
+clear rule representation. In summary, these experimental results
+validate the contributions of each component and demonstrate
+the advantages of Ano2Rule.
+E. Computational Cost
+
+Fig. 4. (a) Ablation study evaluating the contribution of each component to
+overall performance; (b) Average training and prediction time per sample for
+different feature sizes.
+
+ablation experiments with the following configurations: 1) replacing the IC-Tree with the K-Means clustering algorithm;
+2) using only the CBE algorithm; and 3) replacing the CBE
+algorithm with directly using hypercubes as rules. As shown in
+Fig. 4(a), our method (IC-Tree + CBE) outperforms the other
+methods in terms of fidelity (FD) on both datasets.
+For instance, in the comparison between using only CBE and
+the combination of IC-Tree + CBE, the fidelity on the CICIDS2017 dataset increased from 0.9735 to 0.9856, an improvement of 1.24%. On the TON-IoT dataset, the fidelity improved
+from 0.9784 to 0.9840, an increase of 0.57%. These results
+indicate that incorporating IC-Tree significantly enhances the
+model’s fidelity across different datasets. Furthermore, in the
+ablation experiments, although using K-Means (e.g., k = 10 or
+k = 5) achieved comparable fidelity results, its clustering results
+
+We also evaluate the computational cost of Ano2Rule with respect to training and prediction. Since the CIC-IDS2017 dataset
+has 80 features in total, we train the model using the first 20,
+40, 60, and 80 features of 4000 samples to investigate the
+influence of feature sizes. The results are shown in Fig. 4(b),
+which demonstrates the average training and prediction time of
+our method. The experimental results indicate that training time
+increases linearly with the number of features. This is because
+Ano2Rule adopts a feature-by-feature strategy to explore the
+decision boundary of the model. As data complexity increases,
+each additional feature expands the data space, forcing the model
+to learn a higher-dimensional representation, thus extending the
+training time. Nevertheless, the training time is around 1 minute,
+which is acceptable and practical for large-scale training.
+Regarding prediction time, Ano2Rule is highly efficient, with
+each inference taking only microseconds. This demonstrates that
+our method, as a rule-based approach, can achieve real-time
+execution for online applications. Furthermore, since the prediction phase relies on a set of predefined rules derived from
+the tree’s decision paths and boundary delineations, the computational process remains lightweight, making it well-suited
+for real-time scenarios. It is worth noting that the runtime was
+measured entirely based on Python implementation. In practice,
+the prediction time could be further reduced with more efficient
+code implementations.
+F. Hyperparameter
+We perform a sensitivity analysis of several hyperparameters
+on their influence on the rule extraction. We present four major
+hyperparameters in Fig. 5, including the maximum depth τ of an
+IC-Tree, Ne number of explorers, the coefficient ρ of sampling,
+and the factor η that controls the stride of an iteration.
+
+LI et al.: ANO2RULE: RULE-BASED GLOBAL INTERPRETATION FOR UNSUPERVISED ANOMALY DETECTION IN SECURITY
+
+Fig. 5.
+
+Sensitivity experiments of hyperparameters.
+
+Fig. 6.
+
+Comparing Ano2Rule as a local explanation method to LIME.
+
+Fig. 7.
+
+Comparing Ano2Rule as a counterfactual explanation method to DiCE.
+
+Maximum tree depth: A deeper IC-Tree creates more leaf
+nodes, which allows for finer decomposition of distributions,
+easing the difficulty of rule extraction. However, excessive depth
+can lead to overfitting, reducing generalization capability. As
+shown in Fig. 5(a), τ = 15 provides the best balance between
+performance and complexity. This result underscores the importance of selecting an appropriate tree depth to avoid redundancy
+while ensuring sufficient resolution in feature space.
+Number of Explorers: The number of explorers Ne in Beam
+Search determines the number of nodes evaluated per iteration.
+This parameter significantly affects algorithmic efficiency and
+accuracy. While a higher Ne helps explore multiple local optima,
+it can also introduce redundancy, as shown in Fig. 5(b). An optimal range of 6 to 8 explorers is recommended, ensuring robust
+performance without unnecessary computational overhead.
+Coefficient of sampling: The sampling coefficient ρ determines the radius of sampling within a multivariate Gaussian
+distribution. Larger values of ρ enhance the CBE algorithm’s
+ability to identify the decision boundary effectively by enabling
+
+6699
+
+a broader search radius, as illustrated in Fig. 5(c). This capability is crucial for ensuring accurate rule extraction, particularly in high-dimensional spaces where decision boundaries are
+complex.
+Factor of iteration stride: The iteration stride factor η controls
+the step size in boundary exploration. Larger values of η improve
+convergence speed and rule quality by facilitating more significant adjustments during each iteration. Fig. 5(d) demonstrates
+that higher values lead to better performance, suggesting that a
+balance between stride length and convergence stability is key
+for optimizing exploration.
+
+G. Extensibility
+To further demonstrate the versatility of Ano2Rule, we evaluate its effectiveness as a local and counterfactual explanation method, in comparison with specialized state-of-the-art
+approaches.
+
+6700
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+Local Explanation: To assess the effectiveness of Ano2Rule
+as a local explanation method, we compare its feature attribution capability with the widely used model-agnostic framework
+LIME [11]. We use the Negative Flipping Rate (NFR) as the
+evaluation metric, which quantifies the proportion of originally
+normal samples that are reclassified as anomalous by the blackbox model after the top-K most important features—identified
+by the explanation method—are set to zero. A higher NFR at
+smaller K values indicates that the explanation method is more
+accurate in pinpointing the features most critical to the model’s
+decision.
+The comparative results are shown in Fig. 6. Across most
+benchmark datasets, Ano2Rule achieves a higher or comparable
+NFR with fewer features flipped, and the NFR curve rises more
+rapidly as K increases. For example, on the TON-IoT dataset,
+Ano2Rule achieves a 100% flipping rate with fewer than five
+features altered, whereas LIME requires more features to reach
+the same flipping ratio. On some datasets, the two methods
+perform similarly, reflecting that our global rule extraction can
+match the local interpretability provided by LIME.
+Counterfactual Explanation: We further evaluate the counterfactual explanation capability of Ano2Rule by comparing it
+against DiCE [43], a widely adopted model-agnostic counterfactual generation approach. For each detected anomaly, both
+methods are used to generate multiple candidate counterfactual
+samples. We assess their performance using three metrics: Validity (the proportion of generated counterfactuals classified as
+normal by the original model), Proximity (the average featurewise distance between each counterfactual and the original
+anomalous sample, indicating the extent of modification), and
+Success Rate (the proportion of anomalous samples for which
+at least one valid counterfactual is found).
+The comparative results are presented in Fig. 7. Across all
+evaluated datasets, Ano2Rule consistently achieves higher validity and success rates than DiCE, indicating that our rule-based
+approach is more effective at generating actionable recourse that
+leads to a change in model prediction. Notably, the proximity
+scores of Ano2Rule counterfactuals are lower on average, meaning that the modifications suggested by our method are not only
+more likely to succeed, but also require less perturbation to the
+original sample.
+Overall, these results demonstrate that Ano2Rule, though
+originally designed for global explanation, can be readily extended to other types of explanation while preserving similar
+effectiveness to the specialized methods of these types. In addition, as it requires no iterative sampling or surrogate model
+training, our rule-based approach achieves higher explanation
+efficiency, making it more practical for large-scale or real-time
+applications.
+VIII. CONCLUSION AND FUTURE WORK
+This paper presented a novel method called Ano2Rule for providing global explanations of black-box unsupervised anomaly
+detection models. The method combines the Internal Clustering
+Tree (IC-Tree) with a Boundary Exploration Algorithm (CBE)
+to efficiently extract rules and offer transparent explanations
+
+for anomaly detection. IC-Tree recursively partitions the feature
+space to capture the hierarchical structure of data distributions,
+while CBE further explores decision boundaries within each
+subspace to enhance detection accuracy. Ano2Rule not only
+ensures global interpretability but also provides fine-grained
+local detection capabilities, offering comprehensive and intuitive explanations of the anomaly detection model’s reasoning process. Experimental results demonstrated that Ano2Rule
+outperforms existing approaches across multiple key metrics,
+including fidelity, robustness, true positive rate, and true negative
+rate, providing robust support for security applications.
+Although Ano2Rule exhibits excellent global interpretability
+and high fidelity, there are still some limitations, which provide
+multiple avenues for future research. First, we are curious if it is
+possible to extend the method to other data modalities, such as
+raw image data. This may require integrating deep models with
+spatial awareness capabilities, such as Convolutional Neural
+Networks (CNNs) and Vision Transformers (ViTs), to extract
+high-level semantic features, thereby enhancing the method’s
+adaptability for cross-domain applications. Second, to better
+balance interpretability and fitting capacity, we will explore
+alternative models and algorithms, such as more complex surrogate models, to accommodate the intricate shapes of decision
+boundaries in high-dimensional feature spaces. Lastly, given
+the method’s generalizability, we will explore its application in
+other domains requiring interpretable anomaly detection, such
+as medical diagnostics, manufacturing monitoring, and criminal
+investigation analysis. These research directions will further
+enhance the applicability and practicality of Ano2Rule, providing robust support for its widespread use in various high-risk
+multi-domain scenarios.
+REFERENCES
+[1] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An ensemble of autoencoders for online network intrusion detection,” in Proc. Netw.
+Distrib. Syst. Secur. Symp. (NDSS), 2018.
+[2] R. Tang et al., “ZeroWall: Detecting zero-day web attacks through encoderdecoder recurrent neural networks,” in Proc. IEEE Conf. Comput. Commun., 2020, pp. 2479–2488.
+[3] C. Fu, Q. Li, M. Shen, and K. Xu, “Realtime robust malicious traffic
+detection via frequency domain analysis,” in Proc. ACM SIGSAC Conf.
+Comput. Commun. Secur., 2021, pp. 3431–3446.
+[4] R. Perdisci, W. Lee, and N. Feamster, “Behavioral clustering of HTTPbased malware and signature generation using malicious network traces,”
+in Proc. USENIX Symp. Netw. Syst. Des. Implementation, 2010, pp. 391–
+404.
+[5] E. C. R. Shin, D. Song, and R. Moazzezi, “Recognizing functions in
+binaries with neural networks,” in Proc. USENIX Secur. Symp., 2015,
+pp. 611–626.
+[6] M. Villarreal-Vasquez, G. Modelo-Howard, S. Dube, and B. Bhargava,
+“Hunting for insider threats using LSTM-based anomaly detection,”
+IEEE Trans. Dependable Secure Comput., vol. 20, no. 1, pp. 451–462,
+Jan./Feb. 2023.
+[7] W. Fan et al., “Lightweight and identifier-oblivious engine for cryptocurrency networking anomaly detection,” IEEE Trans. Dependable Secure
+Comput., vol. 20, no. 2, pp. 1302–1318, Mar./Apr. 2023.
+[8] Y. Dong et al., “Horuseye: Realtime IoT malicious traffic detection framework with programmable switches,” in Proc. USENIX Secur. Symp., 2023,
+pp. 571–588.
+[9] L. Xi, D. Miao, M. Li, R. Wang, H. Liu, and X. Huang, “Adaptivecorrelation-aware unsupervised deep learning for anomaly detection
+in cyber-physical systems,” IEEE Trans. Dependable Secure Comput.,
+vol. 21, no. 4, pp. 2888–2899, Jul./Aug. 2024.
+
+LI et al.: ANO2RULE: RULE-BASED GLOBAL INTERPRETATION FOR UNSUPERVISED ANOMALY DETECTION IN SECURITY
+
+[10] A. Alsaedi, Z. Tari, R. Mahmud, N. Moustafa, A. Mahmood, and A. Anwar,
+“USMD: Unsupervised misbehaviour detection for multi-sensor data,”
+IEEE Trans. Dependable Secure Comput., vol. 20, no. 1, pp. 724–739,
+Jan./Feb. 2023.
+[11] M. T. Ribeiro, S. Singh, and C. Guestrin, “‘Why should i trust you?’:
+Explaining the predictions of any classifier,” in Proc. ACM SIGKDD Int.
+Conf. Knowl. Discov. Data Mining, 2016, pp. 1135–1144.
+[12] S. M. Lundberg and S. Lee, “A unified approach to interpreting model predictions,” in Proc. Annu. Conf. Neural Inf. Process. Syst., 2017, pp. 4765–
+4774.
+[13] M. T. Ribeiro, S. Singh, and C. Guestrin, “Anchors: High-precision modelagnostic explanations,” in Proc. AAAI Conf. Artif. Intell., 2018, pp. 1527–
+1535.
+[14] W. Guo et al., “LEMNA: Explaining deep learning based security applications,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2018,
+pp. 364–379.
+[15] D. Han et al., “DeepAID: Interpreting and improving deep learning-based
+anomaly detection in security applications,” in Proc. ACM SIGSAC Conf.
+Comput. Commun. Secur., 2021, pp. 3197–3217.
+[16] netfilter project, “iptables,” 2024. [Online]. Available: https://www.
+netfilter.org/projects/iptables/index.html
+[17] snort, “Snort ids,” 2024. [Online]. Available: https://www.snort.org/
+[18] M. W. Craven and J. W. Shavlik, “Using sampling and queries to extract
+rules from trained neural networks,” in Proc. Int. Conf. Mach. Learn.,
+1994, pp. 37–45.
+[19] O. Bastani, C. Kim, and H. Bastani, “Interpreting blackbox models via
+model extraction,” 2017, arXiv:1705.08504.
+[20] A. S. Jacobs, R. Beltiukov, W. Willinger, R. A. Ferreira, A. Gupta, and L.
+Z. Granville, “AI/ML for network security: The emperor has no clothes,” in
+Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2022, pp. 1537–1551.
+[21] J. H. Friedman and B. E. Popescu, “Predictive learning via rule ensembles,”
+Ann. Appl. Statist., vol. 2, no. 3, pp. 916–954, 2008.
+[22] G. Vilone, L. Rizzo, and L. Longo, “A comparative analysis of rule-based,
+model-agnostic methods for explainable artificial intelligence,” in Proc.
+Ir. Conf. Artif. Intell. Cogn. Sci., 2020.
+[23] M. Du, F. Li, G. Zheng, and V. Srikumar, “Deeplog: Anomaly detection
+and diagnosis from system logs through deep learning,” in Proc. ACM
+SIGSAC Conf. Comput. Commun. Secur., 2017, pp. 1285–1298.
+[24] R. Li, Q. Li, J. Zhou, and Y. Jiang, “ADRIoT: An edge-assisted anomaly
+detection framework against IoT-based network attacks,” IEEE Internet
+Things J., vol. 9, no. 13, pp. 10576–10587, Jul. 2022.
+[25] R. Li, Q. Li, Y. Huang, W. Zhang, P. Zhu, and Y. Jiang, “IoTEnsemble:
+Detection of botnet attacks on Internet of Things,” in Proc. Eur. Symp. Res.
+Comput. Secur., 2022, pp. 569–588.
+[26] B. Schölkopf, J. C. Platt, J. Shawe-Taylor, A. J. Smola, and R. C.
+Williamson, “Estimating the support of a high-dimensional distribution,”
+Neural Comput., vol. 13, no. 7, pp. 1443–1471, 2001.
+[27] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+Learn., 2018, pp. 4393–4402.
+[28] S. Itani, F. Lecron, and P. Fortemps, “A one-class classification decision
+tree based on kernel density estimation,” Appl. Soft Comput., vol. 91, 2020,
+Art. no. 106250.
+[29] F. T. Liu, K. M. Ting, and Z. Zhou, “Isolation forest,” in Proc. IEEE Int.
+Conf. Data Mining, 2008, pp. 413–422.
+[30] H. Xu, G. Pang, Y. Wang, and Y. Wang, “Deep isolation forest for anomaly
+detection,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12591–
+12604, Dec. 2023.
+[31] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in Proc.
+Int. Conf. Learn. Representations, 2014.
+[32] J. Kauffmann, K.-R. Müller, and G. Montavon, “Towards explaining
+anomalies: A deep taylor decomposition of one-class models,” Pattern
+Recognit., vol. 101, 2020, Art. no. 107198.
+[33] D. Kazhdan, B. Dimanov, M. Jamnik, and P. Liò, “MEME: Generating
+RNN model explanations via model extraction,” 2020, arXiv:2012.06954.
+[34] P. Liznerski, L. Ruff, R. A. Vandermeulen, B. J. Franks, M. Kloft, and
+K. Müller, “Explainable deep one-class classification,” in Proc. Int. Conf.
+Learn. Representations, 2021.
+[35] D. L. Aguilar, M. A. Medina-Pérez, O. Loyola-González, K.-K. R.
+Choo, and E. Bucheli-Susarrey, “Towards an interpretable autoencoder: A
+decision-tree-based autoencoder and its application in anomaly detection,”
+IEEE Trans. Dependable Secure Comput., vol. 20, no. 2, pp. 1048–1059,
+Mar./Apr. 2023.
+[36] Y. Feng, J. Li, D. Sisodia, and P. Reiher, “On explainable and adaptable
+detection of distributed denial-of-service traffic,” IEEE Trans. Dependable
+Secure Comput., vol. 21, no. 4, pp. 2211–2226, Jul./Aug. 2024.
+
+6701
+
+[37] Z. Kong and K. Chaudhuri, “Understanding instance-based interpretability
+of variational auto-encoders,” in Proc. Annu. Conf. Neural Inf. Process.
+Syst., 2021, pp. 2400–2412.
+[38] J. Crabbé and M. V. D. Schaar, “Label-free explainability for unsupervised
+models,” in Proc. Int. Conf. Mach. Learn., 2022, pp. 4391–4420.
+[39] O. Eberle, J. Büttner, F. Kräutli, K. Müller, M. Valleriani, and G. Montavon,
+“Building and interpreting deep similarity models,” IEEE Trans. Pattern
+Anal. Mach. Intell., vol. 44, no. 3, pp. 1149–1161, Mar. 2022.
+[40] M. Sundararajan, A. Taly, and Q. Yan, “Axiomatic attribution for deep
+networks,” in Proc. Int. Conf. Mach. Learn., 2017. pp. 3319–3328.
+[41] J. Sipple, “Interpretable, multidimensional, multimodal anomaly detection
+with negative sampling for detection of device failure,” in Proc. Int. Conf.
+Mach. Learn., 2020, pp. 9016–9025.
+[42] S. Wachter, B. D. Mittelstadt, and C. Russell, “Counterfactual explanations
+without opening the black box: Automated decisions and the GDPR,”
+Harvard J. Law & Technol., vol. 31, no. 2, pp. 841–887, 2018.
+[43] R. K. Mothilal, A. Sharma, and C. Tan, “Explaining machine
+learning classifiers through diverse counterfactual explanations,” in
+Proc. Conf. Fairness, Accountability, Transparency, Barcelona, 2020,
+pp. 607–617.
+[44] M. Bajaj et al., “Robust counterfactual explanations on graph neural networks,” in Proc. Annu. Conf. Neural Inf. Process. Syst., 2021,
+pp. 5644–5655.
+[45] K. H. Tran, A. Ghazimatin, and R. S. Roy, “Counterfactual explanations
+for neural recommenders,” in Proc. ACM SIGIR Conf. Res. Develop. Inf.
+Retrieval, 2021, pp. 1627–1631.
+[46] B. A. Cumi-Guzman, A. D. Espinosa-Chim, M. G. Orozco-del-Castillo,
+and J. A. Recio-Garcıá, “Counterfactual explanation of a classification
+model for detecting SQL injection attacks,” in Proc. Workshops at 32nd
+Int. Conf. Case-Based Reasoning, 2024, pp. 49–64.
+[47] R. McGrath et al., “Interpretable credit application predictions with counterfactual explanations,” 2018, arXiv:1811.05245.
+[48] A. Barbado, O. Corcho, and R. Benjamins, “Rule extraction in unsupervised anomaly detection for model explainability: Application to oneclass
+SVM,” Expert Syst. Appl., vol. 189, 2022, Art. no. 116100.
+[49] D. Han et al., “Rules refine the riddle: Global explanation for deep learningbased anomaly detection in security applications,” in Proc. ACM SIGSAC
+Conf. Comput. Commun. Secur., 2024, pp. 4509–4523.
+[50] B. Letham, C. Rudin, T. H. McCormick, and D. Madigan, “Interpretable
+classifiers using rules and Bayesian analysis: Building a better stroke
+prediction model,” Ann. Appl. Statist., vol. 9, no. 3, pp. 1350–1371,
+2015.
+[51] I. V. D. Linden, H. Haned, and E. Kanoulas, “Global aggregations of local
+explanations for black box models,” 2019, arXiv:1907.03039.
+[52] M. Setzu, R. Guidotti, A. Monreale, F. Turini, D. Pedreschi, and F.
+Giannotti, “Glocalx - from local to global explanations of black box AI
+models,” Artif. Intell., vol. 294, 2021, Art. no. 103457.
+[53] Q. Li, R. Cummings, and Y. Mintz, “Optimal local explainer aggregation
+for interpretable prediction,” in Proc. AAAI Conf. Artif. Intell., 2022,
+pp. 12000–12007.
+[54] N. Frosst and G. E. Hinton, “Distilling a neural network into a soft decision
+tree,” 2017, arXiv:1711.09784.
+[55] Y. Li, J. Bai, J. Li, X. Yang, Y. Jiang, and S. Xia, “Rectified decision trees:
+Exploring the landscape of interpretable and effective machine learning,”
+2020, arXiv:2008.09413.
+[56] L. Breiman, J. H. Friedman, R. A. Olshen, and C. J. Stone, Classification
+and Regression Trees. London, U.K.: Chapman and Hall, 1984.
+[57] I. J. Goodfellow, J. Shlens, and C. Szegedy, “Explaining and harnessing adversarial examples,” in Proc. Int. Conf. Learn. Representations,
+2015.
+[58] X. Xu, J. Li, Y. Yang, and F. Shen, “Toward effective intrusion detection
+using log-cosh conditional variational autoencoder,” IEEE Internet Things
+J., vol. 8, no. 8, pp. 6187–6196, Apr. 2021.
+[59] A. Binbusayyis and T. Vaiyapuri, “Unsupervised deep learning approach
+for network intrusion detection combining convolutional autoencoder
+and one-class SVM,” Appl. Intell., vol. 51, no. 10, pp. 7094–7108,
+2021.
+[60] L. Liu, G. Engelen, T. M. Lynar, D. Essam, and W. Joosen, “Error
+prevalence in NIDS datasets: A case study on CIC-IDS-2017 and CSECIC-IDS-2018,” in Proc. 10th IEEE Conf. Commun. Netw. Secur., 2022,
+pp. 254–262.
+[61] T. M. Booij, I. Chiscop, E. Meeuwissen, N. Moustafa, and F. T. H. D.
+Hartog, “Ton_IoT: The role of heterogeneity and the need for standardization of features and attack types in IoT network intrusion data sets,” IEEE
+Internet Things J., vol. 9, no. 1, pp. 485–496, Jan. 2022.
+
+6702
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+[62] S. Dadkhah, H. Mahdikhani, P. K. Danso, A. Zohourian, K. A. Truong, and
+A. A. Ghorbani, “Towards the development of a realistic multidimensional
+IoT profiling dataset,” in Proc. 19th Annu. Int. Conf. Privacy, Secur. Trust,
+2022, pp. 1–11.
+[63] B. S. Sharmila and R. Nagapadma, “Quantized autoencoder (QaE) intrusion detection system for anomaly detection in resource-constrained
+IoT devices using RT-IoT2022 dataset,” Cybersecurity, vol. 6, 2023,
+Art. no. 41.
+[64] B. A. AlAhmadi, L. Axon, and I. Martinovic, “99% false positives: A
+qualitative study of SOC analysts’ perspectives on security alarms,” in
+Proc. USENIX Secur. Symp., 2022, pp. 2783–2800.
+[65] G. Apruzzese, P. Laskov, and A. Tastemirova, “SoK: The impact of
+unlabelled data in cyberthreat detection,” in Proc. IEEE Eur. Symp. Secur.
+Privacy, 2022, pp. 20–42.
+[66] D. Arp et al., “Dos and don’ts of machine learning in computer security,”
+in Proc. USENIX Secur. Symp., 2022, pp. 3971–3988.
+
+Ruoyu Li (Member, IEEE) received the BS degree in
+information security from the Huazhong University
+of Science and Technology, China, in 2017, the MS
+degree in computer science from Columbia University, USA, in 2019, and the PhD degree in computer
+science and technology from Tsinghua University,
+China, in 2024. He is currently an assistant professor
+with the College of Computer Science and Software
+Engineering, Shenzhen University, China. His research interests include data-driven network security,
+IoT security, programmable networking, trustworthy
+AI, and agentic system security.
+
+Yu Zhang is currently working toward the graduation
+degree with Tsinghua University, Beijing, China. His
+research interests include large model reasoning and
+AI security, with an emphasis on exploring reliable
+reasoning mechanisms of large language models and
+developing effective defense strategies against AIrelated security threats.
+
+Qing Li (Senior Member, IEEE) received the BS degree in computer science and technology from Dalian
+University of Technology, Dalian, China, in 2008, and
+the PhD degree in computer science and technology
+from Tsinghua University, Beijing, China, in 2013.
+He is currently a research fellow with the Peng Cheng
+Laboratory, Shenzhen, China. His research interests
+include reliable and scalable routing of the Internet, software-defined networking, network function
+virtualization, in-network caching/computing, edge
+computing, traffic transmission control, and video
+delivery.
+
+Nengwu Wu is currently working toward the graduation degree in computer technology with the University of Electronic Science and Technology of China.
+His research interests include federated learning,
+incentive-aware federated learning, interpretable machine learning, and mixture-of-experts models, particularly interested in efficient and trustworthy learning mechanisms for distributed intelligent systems.
+
+Yong Jiang (Member, IEEE) received the BS and
+PhD degrees from Tsinghua University, Beijing,
+China, in 1998 and 2002, respectively. He is currently a full professor with the Division of Information Science and Technology, Tsinghua Shenzhen
+International Graduate School, Shenzhen, China, and
+the Department of Mathematics and Theories, Peng
+Cheng Laboratory, Shenzhen. His research interests
+include future internet architecture, the Internet of
+Things, edge computing, and AI for networks.
+Weizhi Meng (Senior Member, IEEE) received the
+PhD degree in computer science from the City University of Hong Kong. He is currently a full professor
+with the School of Computing and Communications,
+Lancaster University, U.K. His primary research interests include blockchain technology, cyber security
+and artificial intelligence in security including intrusion detection, blockchain applications, smartphone
+security, biometric authentication, and IoT security.
+He was the recipient of the Hong Kong Institution
+of Engineers (HKIE) Outstanding Paper Award for
+Young Engineers/Researchers in 2014 and 2017 and IEEE ComSoc Best Young
+Researcher Award for Europe, Middle East, & Africa Region (EMEA) in 2020.
+He is the general chair for various international conferences such as ACM CCS
+2023 and ESORICS 2022.
+Laizhong Cui (Senior Member, IEEE) received the
+BS degree from Jilin University, Changchun, China,
+in 2007 and the PhD degree in computer science
+and technology from Tsinghua University, Beijing,
+China, in 2012. He is currently a professor with the
+College of Computer Science and Software Engineering, Shenzhen University, China. He led more than 10
+scientific research projects, including National Key
+Research and Development Plan of China, National
+Natural Science Foundation of China, Guangdong
+Natural Science Foundation of China, and Shenzhen
+Basic Research Plan. He has authored or coauthored more than 100 papers,
+including IEEE Transactions on Networking, IEEE Journal on Selected Areas in
+Communications, IEEE Transactions on Mobile Computing, IEEE Transactions
+on Computers, IEEE Transactions on Parallel and Distributed Systems, IEEE
+Transactions on Knowledge and Data Engineering, IEEE Transactions on
+Dependable and Secure Computing, IEEE Transactions on Services Computing,
+IEEE Transactions on Multimedia, IEEE INFOCOM, ACM MM, AAAI, IEEE
+ICNP, and IEEE ICDCS. His research interests include future internet architecture and protocols, edge computing, multimedia systems and applications,
+blockchain, internet of things, cloud computing, and federated learning. He is
+an associate editor or a member of the Editorial Board for several international
+journals, including IEEE Internet of Things Journal, IEEE Transactions on
+Cloud Computing, IEEE Transactions on Network and Service Management,
+and International Journal of Machine Learning and Cybernetics. He is a
+Distinguished Member of the CCF.
+PAPER_TEXT

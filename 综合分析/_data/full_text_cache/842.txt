@@ -1,0 +1,374 @@
+When Handshakes Tell the Truth: Detecting Web Bad Bots via
+ TLS Fingerprints
+ Ghalia Jarad∗ Kemal Bıçakcı∗
+ jarad23@itu.edu.tr kemalbicakci@itu.edu.tr
+ Istanbul Technical University Istanbul Technical University
+ Istanbul, Turkey Istanbul, Turkey
+
+ Abstract the implementation and configuration choices of a TLS stack not
+ Automated traffic continued to surpass human-generated traffic what it sends. This work investigates whether the characteristics
+ on the web, and a rising proportion of this automation was ex- observed in the TLS ClientHello packet during the handshake can
+ distinguish malicious bots from human traffic. For this purpose, it
+arXiv:2602.09606v1 [cs.CR] 10 Feb 2026
+
+ plicitly malicious; they increasingly rely on AI so AI augmented
+ evasive bots could pretend to be real users, even solve Captchas and examines how well machine learning techniques capture these difmimic human interaction patterns. This work explores a less intru- ferences and tests the use of JA4 fingerprints for web bot detection
+ sive, protocol-level method: using TLS fingerprinting with the JA4 on a real dataset, besides a practical discussion of its limits.
+ technique to tell apart bots from real users. Two gradient-boosted
+ machine learning classifiers (XGBoost and CatBoost) were trained 2 Related Work
+ and evaluated on a dataset of real TLS fingerprints (JA4DB) after
+ Web bot detection seeks to improve accuracy while enhancing user
+ feature extraction, which derived informative signals from JA4 finexperience, CAPTCHA which stands for Completely Automated
+ gerprints that describe TLS handshake parameters. The CatBoost
+ Public Turing test to Tell Computers and Humans Apart, remains
+ model performed better, achieving an AUC of 0.998 and an F1 score
+ the most popular choice for bot detection. Although CAPTCHA
+ of 0.9734. It was accurate 0.9863 of the time on the test set. The
+ is simple and effective against basic bots, it can interrupt real
+ XGBoost model showed almost similar results. Feature significance
+ users, and recent advancements in AI have enabled bots to solve
+ analyses identified JA4 components, especially ja4_b, cipher_count,
+ CAPTCHA with impressive accuracy [2, 7, 30, 34]. Another method
+ and ext_count, as the most influential on model effectiveness. Fuof bot detection involves the use of crawling traps, like those by
+ ture research will extend this method to new protocols, such as
+ [8, 11], referred to as honeypots. This method is designed to differ-
+ HTTP/3, and add additional device-fingerprinting features to test
+ entiate between human visitors and web bots by creating specific
+ how well the system resists advanced bot evasion tactics.
+ links that only bots would follow, such as hyperlinks that match
+ the background color. These strategies are quite effective, but they
+ CCS Concepts
+ can be easily navigated around if the creators of web bots are aware
+ • Security and privacy → Network security. of them (or can detect them by analyzing relevant web pages) [11].
+ After mouse movements and keystroke dynamics achieved great
+ Keywords success in identity authentication, researchers looked into their
+ TLS Fingerprinting, Bot Detection, JA4 Fingerprints, Machine Learn- application for bot detection [1, 10, 12, 13, 20, 21, 23–25, 29]. Deing, Gradient Boosting spite the significant benefits of these methods in bot detection,
+ they also have a number of drawbacks and difficulties, particularly
+ 1 Introduction as more complex evasion techniques become available [6, 32, 33].
+ Attackers and fraudsters employ various techniques to circumvent Advanced bots are now using machine learning to mimic human beconventional defenses. Methods such as cookie spoofing, fake User- havior, making detection increasingly difficult. These bots produced
+ Agent strings, automated bots, scraping tools, and VPNs or proxies realistic synthetic behaviors by employing Generative Adversarare used to obscure identity and generate fraudulent sessions. These ial Networks (GANs), statistical techniques, and diffusion models
+ tactics undermine the reliability of many higher layer signals for [27, 28]. The generated data can then be used by these bots to
+ bot detection; on the other hand, protocol-layer TLS fingerprints are more realistically simulate human behavior [1, 21]. Consequently,
+ difficult to manipulate and provide a privacy-preserving approach identifying these web bots is still a complex task, even when deto prioritizing suspicious connections for further investigation [22]. tection systems know of their strategy [1, 21]. Furthermore, there
+ Transport Layer Security (TLS) fingerprinting is a passive network are significant vulnerabilities in the data collection of biometric
+ analysis technique used to identify or classify client and server soft- behaviors due to the extensive reliance on JavaScript to track mouse
+ ware based on observable characteristics of their TLS handshakes. movements and keystroke dynamics, which raises serious security
+ Rather than decrypting the encrypted session payload, the method concerns. If a malicious actor stops the script from running [20], it
+ turns visible parts of unencrypted handshake metadata, primarily can limit data collection efforts. Although most researchers report
+ the Client Hello messages, such as cipher lists, extension sets, and great laboratory results in behavior based bot detection, to date,
+ their order, ALPN, and version preferences, into compact signatures there is no explicitly documented evidence in the literature that
+ like JA3 or JA4, which are called a “fingerprint” that represents mouse movement or keystroke-based web bot detection methods
+ have been evaluated on truly in-the-wild bot traffic. The majority
+ ∗ Both authors contributed equally to this research. of studies investigate detection efficacy using bots that are either
+ 1
+tested against bots designed to mimic human like behavior in a con- “fingerprint” that represents the implementation and configuration
+trolled setting or constructed from known bot frameworks [1, 14]. of a TLS stack.
+Recent studies suggest that by combining various signals such as the
+subtle nuances of mouse movements with detailed web logs,we can
+greatly decrease false positives and bolster defenses against highly 3.1 TLS Fingerprinting Methods
+sophisticated bots that cleverly seek to avoid detection [20, 28]. A Transport Layer Security fingerprinting captures repeatable, visibot may be able to avoid detection in one way, but it is much more ble choices made during the TLS handshake to identify client and
+difficult to appear human-like in several behavioral aspects at once. server software without decrypting traffic. Client-side JA3 creates
+ TLS fingerprinting is like listening to the way a client and a a compact signature from fields in the Client Hello so it recognizes
+server greet each other, providing insight into their initial interac- an application’s consistent “way of saying hello.” Server-side aption rather than decoding their subsequent messages, so in their proaches like JA3S and the newer JA4+ record how servers reply in
+handshake process, both sides make small, repeatable choices, such the Server Hello and related messages[3, 4], improving accuracy by
+as selecting cipher lists, ordering extensions, and specifying ALPN matching server behavior to the client that invoked it [22]. These
+(Application-Layer Protocol Negotiation) preferences, that reveal techniques were developed because common identifiers such as
+how their TLS stacks are configured without requiring decryp- IP addresses, domains, or certificates easily change or are spoofed;
+tion of the traffic [19]. One of these TLS fingerprinting methods instead of depending on those shifting values, fingerprinting turns
+is JA3, which creates a short signature from a ClientHello mes- the stable, repeatable handshake choices into short signatures that
+sage that encapsulates the typical greeting of an application, while let analysts spot the same program, library, or malware even when
+server-side methods like JA3S and JA4+ do the same for ServerHello it connects to different sites or uses different certificates.
+responses [15]. Crucially, JA4+ strengthens this approach by taking
+into account that a server’s response depends on the Client Hello
+it receives: the same server may produce different Server Hellos 3.2 TLS Fingerprinting For Distinguishing
+for different clients, but it will reply consistently to the same client Between Humans and Bots
+every time, so pairing client and server fingerprints raises confi- Bots often exhibit TLS configuration that deviate from those of
+dence when attributing sessions to particular applications or threat legitimate users which makes it easy to distinguish them through
+families while keeping payloads and session privacy intact [15]. Re- analysis of TLS fingerprints, these unusual patterns appear as folcent research has investigated new methods for detecting harmful lows:
+online activities by analyzing specific connection patterns known
+as JA3S fingerprints combined with machine learning techniques to • Attacks and fraud use many tricks that break conventional
+spot malicious servers [31]. One of the benefits of using handshake defenses: cookie spoofing and proxy chains hide identity, try
+fingerprints is that they provide a more reliable way to link specific to fake User-Agent strings, bots and scraping tools generate
+type of fingerprints to particular software or malware [17], on the fraudulent sessions, and VPNs/proxies mask origin. These
+contrary of traditional identifiers, such as IP addresses, which can behaviors make many higher-layer signals unreliable; by
+frequently change or be faked, these fingerprints remain consistent contrast, protocol-layer TLS fingerprints are hard to fake
+even if the connection is established from different locations or at scale and offer a privacy-preserving way to prioritize
+through various IP addresses. suspicious connections for investigation[22].
+ • Automation frameworks and bot tools can show up in
+ TLS handshakes as many lightweight scrapers and agents
+3 TLS Fingerprinting (Scrapy) use different TLS libraries or configurations and
+Transport Layer Security (TLS) is the standard protocol that protects therefore emit distinctive Client Hello patterns—specific cimost internet traffic today [16], and its current stable version is pher lists, extension sets, ordering. Those low level, imple-
+TLS 1.3. A TLS connection begins with a cleartext handshake: the mentation dependent artifacts are reproducible and can be
+client sends a TLS Client Hello that advertises supported protocol summarized into compact fingerprints such as JA3 [3], for
+versions, cipher suites, and extensions, and the server replies with a example, linked a single JA3 value to many Dyre malware
+TLS Server Hello that selects options from the client’s list. Because samples, showing this method can group related malware
+those Hello messages are exchanged before encryption begins, the even when IPs, domains, or certificates change [22].
+Client Hello reveals repeatable implementation choices tied to the • Browsers follow consistent TLS habits—stable cipher prefapplication or underlying libraries, and the Server Hello is shaped erences, characteristic extension order, and current protoby the Client Hello it receives. After the negotiation phase finishes col versions—whereas automated or malicious clients often
+and keys are derived, the connection moves to the encrypted phase advertise outdated ciphers, deprecated protocols (such as
+in which application data flows using the negotiated algorithms SSL 3.0), or odd extension orders. Those handshake anomand keys. Transport Layer Security (TLS) fingerprinting is a passive alies, combined with client–server fingerprint pairs, pronetwork analysis technique used to identify or classify client and vide a clear, privacy-preserving method, actionable indicaserver software based on observable characteristics of their TLS tors of non-human traffic suitable for modern bot-detection
+handshakes. Rather than decrypting the encrypted session payload, pipelines[19].
+the method analyses unencrypted handshake metadata, primarily • Legitimate browsers show internal consistency: the
+the Client Hello and Server Hello messages, to derive a unique User-Agent string (application, version, OS, device class)
+ 2
+ normally matches the TLS Client Hello characteristics ob- • Header Spoofing: It protects against bots that rotate "Userserved—extension sets, cipher-suite order and protocol ver- Agent" strings or IP addresses. Since JA4 fingerprints the
+ sion. When a client claims to be “Chrome on iOS” but its TLS underlying cryptographic stack (TLS Client Hello), simply
+ handshake reflects a different library or cipher ordering, that changing the User-Agent header or using a proxy does not
+ inconsistency is a strong sign of impersonation or automa- change the JA4 fingerprint, allowing the defender to identify
+ tion [19]. Empirical work [5] shows that different browsers the bot despite these evasions.
+ produce noticeably different TLS message sequences and • Malicious bots that use non-standard TLS libraries or conlengths for the same page, yielding roughly 30–35% dissimi- figurations which result in unique, known-bad fingerprints
+ larity across browsers; they attribute much of this variation (e.g., C2 beacons, specific vulnerability scanners).
+ to differences in the cipher-suite list and resulting hand- The boundary of protection is equally important: the method cannot
+ shake behavior. In practice, this means a spoofed User-Agent distinguish a human from an automated actor in following cases:
+ backed by a mismatched Client Hello is detectable with • Full Stack Emulation: that uses a real browser engine
+ high confidence by comparing expected TLS patterns for (Puppeteer/Playwright/Selenium driving an actual Chrome
+ the claimed platform against the observed handshake to flag binary). Because the bot is using the real browser’s network
+ impersonation, bots, or other spoofing attempts reliably. stack, the JA4 fingerprint is identical to a legitimate user
+ • JA4H_ab is an application-level fingerprint [22] that ties to- [18].
+ gether TLS characteristics and HTTP request features for a • Advanced TLS Spoofing: it is also ineffective against sospecific HTTP method: it records the TLS client hello profile phisticated adversaries using specialized libraries designed
+ (cipher suites, extensions, version preferences) together with to mimic browser fingerprints. These tools intentionally conwhich HTTP headers are present, their order, and charac- struct TLS Client Hello packets to bitwise-match legitimate
+ teristic values when a client issues that particular method, browser fingerprints.
+ producing a compact signature unique to that application
+ In short, as shown in Table 1, JA4 is a robust signal for client
+ and usage pattern. Because libraries and runtimes (for exapplication identification and opportunistic bot mitigation, but it is
+ ample Python, Java) tend to generate consistent TLS and
+ not a standalone authentication or attribution mechanism and must
+ header shapes, JA4H_ab values cluster by implementation,
+ be combined with other signals when facing full stack emulation
+ while custom clients (VPNs, game clients, desktop apps) proor advanced TLS spoofing.
+ duce distinct JA4H_ab signatures. A straightforward, practical heuristic for spotting non-human traffic is the absence
+ of an Accept-Language header in the HTTP portion of the
+ 4.2 Dataset Description and Analysis
+ JA4H_ab fingerprint: interactive browsers and human-driven The dataset used in this study, JA4DB [15], is a communityclients normally include Accept-Language to express locale maintained repository of JA4 fingerprints collected through two
+ preferences, so its omission is a strong signal that the client primary strategies: active submission and passive network monitorwas scripted or automated rather than human-operated. ing. 1. Active submission (controlled environment): Researchers and
+ developers produce labeled fingerprints by running JA4+ scanner
+4 Methodology tools against isolated, well-characterized client instances (for example, specific browser builds, bot scripts, or scraping tool samples)
+In this study, we are applying practical machine learning methods
+ in laboratory conditions, so these controlled captures supply the
+to see if we can effectively distinguish between harmful automated
+ ground-truth labels required for later real traffic monitoring and
+traffic came from web bots and genuine human traffic using TLS
+ collection. 2. Passive Network Monitoring (Real-World Data Obserfingerprints in the JA4 format, since manipulating these fingerprints
+ vations): Previously collected labeled fingerprints used to observer
+is hard for bots, even if they use various tactics like changing their IP,
+ their appearance in live real traffic when clients send handshake
+it will not be effective to evade detection. The strategy capitalizes
+ packets to communities’ servers. The JA4DB dataset reflects both
+on the sophisticated challenges that bots face in their ongoing
+ the cryptographic characteristics of client implementations and
+attempts to deploy evasion techniques such as IP rotation. This
+ their actual occurrence in real traffic while preserving the precision
+complexity positions JA4 fingerprints as a powerful and trusted
+ of lab-derived labels and anchoring them to real world patterns.
+signal for identifying bot activity.
+ After analysis and validation, the dataset had 227,404 records,
+ covering benign human traffic, well-known benign crawlers, and a
+4.1 Threat Model large set of malicious web bot traffic.
+This work protects against bots by identifying client software
+through JA4 TLS fingerprints, and therefore succeeds when adver- 4.3 Labeling Dataset
+saries rely on non-browser network stacks or make only apparent The main data source for experiments was the JA4DB repository
+evasions; specifically, it reliably detects the following kinds of bots: [15]. After initial analysis, the dataset included 227,404 records.
+ • Automated scripts and Scrapers: The method effec- These records covered benign human traffic, well-known benign
+ tively detects automated scripts (e.g., Python ‘requests‘, stan- crawlers, and a large group of malicious bot traffic. The dataset was
+ dard ‘curl‘) that do not attempt to mask their TLS handshake. labeled following a set of consistent guidelines. Traffic records with
+ These tools have distinct fingerprints that differ significantly application or user_agent_string features that included well-known
+ from standard web browsers (Chrome, Firefox, Safari). crawler identifiers such as Googlebot, Bingbot, or LinkedInBot were
+ 3
+ Table 1: JA4 Protection Capabilities Against Bot and Spoofing Activities
+
+ Feature of Bot JA4 Protection Capa- Explanation
+ bility
+ Automated Scripts and Web Scrapers High Distinct TLS stacks vs browsers.
+ Header Spoofing (User-Agent/IP Rotation) High JA4 uses TLS handshake, not headers.
+ Full Stack Emulation via Browser Automation Low / None Share the same TLS stack as real browser.
+ Sophisticated TLS Fingerprint Spoofing Medium Specialized tools can mimic browser TLS handshakes.
+
+classified as “good bots” and excluded from the training data. For 6 Findings and Results
+the rest of the traffic, entries were marked as “bad bots” if the Both models were evaluated on test data using accuracy, precision,
+application field included the term “bot”; otherwise, they were cat- recall, F1 score and confusion matrices.
+egorized as benign. In the dataset, after removing the good bots,
+ • The confusion matrix summarises model predictions by
+there were approximately 50,212 records of bad bots, accounting
+ counting true positives, true negatives, false positives, and
+for 22.08% of the total, alongside 148,610 records identified as befalse negatives; it provides a direct view of how many bad-bot
+nign, which made up 65.35%, while the remaining 32,007 good bot
+ and benign instances were correctly or incorrectly classified
+records were excluded. The data was then divided into training
+ and is the foundation for most derived metrics.
+and test sets in an 80/20 ratio, utilizing a fixed random seed to
+ • Accuracy is the proportion of correctly classified samples
+ensure consistency, and then evaluating various models on this
+ (across both classes) and provides a single-number measure
+naturally imbalanced dataset, which accurately mirrors the uneven
+ of overall performance; while intuitive, it can be misleaddistributions commonly found in real-world traffic scenarios.
+ ing on imbalanced datasets because it weights both classes
+ equally, regardless of their importance.
+ • Precision (also called positive predictive value) measures
+4.4 Feature extraction the fraction of predicted bad-bot instances that are actually
+Raw JA4 strings in the dataset contain useful information that can bad bots; high precision means the model makes few false
+be parsed and extracted to form structured features for classifier positive errors.
+training, as shown in the Figure 1. These key features include • Recall (also called sensitivity or true positive rate) measures
+protocol, TLS version, SNI presence, cipher count, extension count, the fraction of actual bad-bot instances that the model cor-
+ALPN code, JA4_B (cipher suite hash), JA4_C (extension/signature rectly identifies; high recall means the model misses few
+hash), as well as meta features from the dataset, such as applica- malicious cases.
+tion, OS, device, verified flag, and observation count. By combining • The F1-score is the harmonic mean of precision and recall
+these features, the ability to accurately classify regular clients and and provides a single balanced metric that penalises extreme
+spot the suspicious bot traffic will be enhanced, by converting the imbalance between the two; it is especially useful when
+categorical fields within the JA4 string into stable integer codes, the there is a need to balance avoiding false positives and false
+implementation used a specific list of categorical columns, such as negatives.
+protocol, TLS version, ALPN code, ja4_b hash, ja4_c hash, applica- • ROC curve and AUC: The receiver operating characteristion, os, and device. The labelEncoder applies an encoding process tic (ROC) curve plots true positive rate versus false posto each feature for a more effective and streamlined process. itive rate across thresholds, and the area under the ROC
+ curve (AUC) quantifies the model’s ability to rank positive
+ instances higher than negatives; AUC is threshold independent and useful for comparing classifiers, though it can be
+5 Models and Experimental Setup
+ overly optimistic on highly skewed datasets.
+Two gradient-boosted tree models were trained and compared:
+ 6.1 Results of XGBoost Classifier
+ • XGBoost: XGBoost classifier [9] was trained with 500 boost- The XGBoost classifier demonstrates strong discriminative perforing trees, a maximum depth of 8, a learning rate of 0.05, a mance. Its confusion matrix in Table 2 reports 28,699 true negatives
+ subsample of 0.8, and a colsample of 0.8, with Logloss as the and 9,840 true positives, with only 338 false positives and 203 false
+ loss function, training used a 80/20 split and a fixed random negatives. The corresponding evaluation metrics in Table 3 are as
+ seed, without synthetic oversampling. follows: precision = 0.9668, recall = 0.9798, F1-score = 0.9732, and
+ • CatBoost: CatBoost classifier [26] was trained with 500 it- accuracy = 0.9862. These results indicate that XGBoost reliably
+ erations, a depth of 8, a learning rate of 0.05, Logloss as the classifies benign traffic and maintains a high detection rate for bot
+ loss function, and a fixed random seed, where the categori- instances, with a minimal number of misclassifications.
+ cal features were supplied directly to CatBoost’s Pool data Figure 2 presents the Receiver Operating Characteristic (ROC)
+ structure so there will be no need for manual encoding and curve for the XGBoost classifier, where the Area Under the Curve
+ the algorithm could handle them. (AUC) is 0.998, which means the model can almost perfectly tell
+ 4
+ Figure 1: JA4 TLS client fingerprint structure [22]
+
+ Table 2: Confusion Matrix of XGBoost Classifier
+
+ Predicted: Benign Predicted: Bot Total
+ Actual Benign True Negative = 28699 False Positive = 338 29037
+ Actual Bot False Negative = 203 True Positive = 9840 10043
+ Total 28902 10178 39080
+
+ Table 3: Evaluation metrics for XGBoost Classifier ciphers and extensions) are strong protocol level indicators of automated versus human traffic. Medium ranked features such as ja4_c,
+ Metric Benign (class 0) Bot (class 1) Overall alpn_code, os, sni_flag, and tls_version further confirm that subtle
+ variations in TLS composition and client implementation details
+ Precision 0.9930 0.9668 -
+ meaningfully contribute to detection. For example, ALPN_code
+ Recall 0.9884 0.9798 -
+ (Application-Layer Protocol Negotiation) is useful because bots
+ F1 score 0.9907 0.9732 -
+ may use outdated or rare protocols.
+ Accuracy - - 0.9862
+ 6.2 Results of CatBoost Classifier
+ The CatBoost classifier gives almost the same results, but with
+apart bot and benign traffic on the test set. This result shows strong slight improvements as reflected in training log (Figure 4).
+discriminative power for TLS-based fingerprints. The XGBoost Its confusion matrix (Table 4) shows 28,701 true negatives, 9,842
+model places the greatest weight on ja4_b, indicating that this true positives, 336 false positives, and 201 false negatives. Table 5
+JA4 fingerprint component captures the single most discriminative lists precision at 0.9670, recall at 0.9800, F1-score at 0.9734, and
+signal for separating bots from benign clients (See Figure 3); im- accuracy at 0.9863. CatBoost finds a few more true bots while keepmediately following are cipher_count and ext_count, which show ing false alarms just as low, which is clear when comparing the
+that the structure and richness of the TLS handshake (number of confusion matrices.
+ 5
+ Table 4: Confusion Matrix of CatBoost Classifier
+
+ Predicted: Benign Predicted: Bot Total
+ Actual Benign True Negative = 28701 False Positive = 336 29037
+ Actual Bot False Negative = 201 True Positive = 9842 10043
+ Total 28902 10178 39080
+
+ Table 5: Evaluation metrics for CatBoost Classifier
+
+ Metric Benign (class 0) Bot (class 1) Overall
+ Precision 0.9930 0.9670 -
+ Recall 0.9884 0.9800 -
+ F1 score 0.9907 0.9734 -
+ Accuracy - - 0.9863
+
+ slightly fewer false negatives (201 compared to 203) and false
+ positives (336 compared to 338).
+ • Precision is almost the same for both models, showing they
+ are equally reliable in positive predictions. CatBoost has a
+ slightly higher recall, so it finds more true positives.
+ • The F1 scores and overall accuracy are very close for both
+ models, but CatBoost has a small advantage in both.
+Figure 2: Receiver Operating Characteristic curve for the • In practice, either model can be used because both perform
+XGBoost classifier. well. If it is important to catch as many positive cases as
+ possible without losing precision, CatBoost is slightly better.
+
+ 8 Conclusion & Future Work
+ This research provides both a conceptual and practical foundation
+ for using protocol based fingerprints, especially TLS fingerprints
+ from the JA4 family, which are practical and reliable for distinguishing malicious bots from real human traffic. By focusing on low-level
+ TLS handshake features that are hard to fake, the study finds that
+ standard gradient boosting classifiers like XGBoost and CatBoost
+ perform well on real-world labeled data. The results support the
+ main idea: JA4-based features reveal patterns that attackers struggle
+ to manipulate or fake, and machine learning models can use these
+ patterns to separate bots from humans with few mistakes. Also, the
+ dataset and labeling methods rely on the types of bots in the JA4
+ repository [15]. If attackers adapt their fingerprints or use advanced
+ Figure 3: Feature importance for XGBoost Classifier. mimicry, the models may not work as well. So, another important
+ future step could be making adversarial tests against simulated bots
+ that change TLS stacks; to see how hard it is to avoid detection.
+ The results show that machine learning models using JA4 based
+ features perform well, with high precision and recall, and are resistant to IP address changes by bots. This approach also gives a
+ lasting advantage in the fight against automated, AI-powered bots.
+ Figure 4: Training log of CatBoost Classifier.
+ References
+ [1] Alejandro Acien, Aythami Morales, Julian Fierrez, and Ruben Vera-Rodriguez.
+ Becaptcha-mouse: Synthetic mouse trajectories and improved bot detection.
+7 Discussion Pattern Recognition, 127:108643, May 2020. URL: https://arxiv.org/pdf/2005.00890,
+ doi:10.1016/j.patcog.2022.108643.
+ • Both models have low numbers of false negatives and false [2] Luis Von Ahn, Manuel Blum, Nicholas J. Hopper, and John Langford. Captcha:
+ positives compared to the size of the dataset. CatBoost has Using hard ai problems for security. In Lecture Notes in Computer Science, volume
+ 6
+ 2656, pages 294–311. Springer, Berlin, Heidelberg, 2003. URL: https://link.springer. [20] Christos Iliou, Theodoros Kostoulas, Theodora Tsikrika, Vasilis Katos, Stefanos
+ com/chapter/10.1007/3-540-39200-9_18, doi:10.1007/3-540-39200-9_18. Vrochidis, and Ioannis Kompatsiaris. Detection of advanced web bots by
+ [3] John Althouse. Ja4+ network fingerprinting, 9 2023. URL: https://blog.foxio.io/ combining web logs with mouse behavioural biometrics. Digital Threats: Reja4+-network-fingerprinting. search and Practice, 2(3), 2021. URL: https://dl.acm.org/doi/pdf/10.1145/3447815,
+ [4] John Althouse. Tls fingerprinting with ja3 and ja3s - salesforce engineering blog, doi:10.1145/3447815.
+ 2025. URL: https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and- [21] Christos Iliou, Theodoros Kostoulas, Theodora Tsikrika, Vasilis Katos, Stefanos
+ ja3s-247362855967/. Vrochidis, and Ioannis Kompatsiaris. Web bot detection evasion using generative
+ [5] Sandhya Aneja and Nagender Aneja. Fingerprinting browsers in encrypted adversarial networks. In Proceedings of the 2021 IEEE International Conference
+ communications, 2024. Preprint / Technical report. URL: https://datatracker.ietf. on Cyber Security and Resilience (CSR), pages 115–120. IEEE, July 2021. doi:
+ org/doc/html/rfc2660. 10.1109/CSR51186.2021.9527915.
+ [6] Babak Amin Azad, Oleksii Starov, Pierre Laperdrix, and Nick Nikiforakis. Web [22] Fox IO. Fox io, ja4+, 8 2025. URL: https://foxio.io/ja4.
+ runner 2049: Evaluating third-party anti-bot services. In Lecture Notes in Computer [23] Javier Martínez Llamas, Koen Vranckaert, Davy Preuveneers, and Wouter Joosen.
+ Science, volume 12223, pages 135–159. Springer, 2020. URL: https://link.springer. Balancing security and privacy: Web bot detection, privacy challenges, and
+ com/chapter/10.1007/978-3-030-52683-2_7. regulatory compliance under the gdpr and ai act. Open Research Europe, 5, 2025.
+ [7] Elie Bursztein, Romain Beauxis, Hristo Paskov, Daniele Perito, Celine Fabry, and doi:10.12688/openreseurope.19347.1.
+ John Mitchell. The failure of noise-based non-continuous audio captchas. In IEEE [24] Hongfeng Niu, Jiading Chen, Zhaozhe Zhang, and Zhongmin Cai. Mouse dy-
+ Symposium on Security and Privacy, pages 19–31, 2011. URL: https://www.ieee- namics based bot detection using sequence learning. In Lecture Notes in Comsecurity.org/TC/SP2011/PAPERS/2011/paper002.pdf. puter Science, vol. 12878, pages 49–56. Springer, 2021. doi:10.1007/978-3-030-
+ [8] Hanlin Chen, Hongmei He, and Andrew Starr. An overview of web robots 86608-2_6.
+ detection techniques. In International Conference on Cyber Security and Protection [25] Hongfeng Niu, Yuxun Zhou, Jiading Chen, and Zhongmin Cai. Performance
+ of Digital Services, pages 1–6. IEEE, 2020. evaluation of lightweight network-based bot detection using mouse movements.
+ [9] Tianqi Chen and Carlos Guestrin. Xgboost: A scalable tree boosting system. Engineering Applications of Artificial Intelligence, 135, September 2024. doi:
+ In Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge 10.1016/j.engappai.2024.108801.
+ Discovery and Data Mining, pages 785–794, 2016. URL: https://arxiv.org/pdf/1603. [26] Liudmila Prokhorenkova et al. Catboost: Unbiased boosting with categorical
+ 02754, doi:10.1145/2939672.2939785. features. In Advances in Neural Information Processing Systems, pages 6638–6648.
+[10] Zi Chu, Steven Gianvecchio, and Haining Wang. Bot or human? a behavior-based Curran Associates, Inc., 2017. URL: https://arxiv.org/pdf/1706.09516.
+ online bot detection system. In Lecture Notes in Computer Science, vol. 11170, [27] August See, Adrian Westphal, Cornelius Weber, and Mathias Fischer. Detectpages 432–449. Springer, 2018. doi:10.1007/978-3-030-04834-1_21. ing web bots via keystroke dynamics. In IFIP Advances in Information and
+[11] Baptiste David, Maxence Delong, and Eric Filiol. Detection of crawler traps: Communication Technology, volume 710 of IFIP AICT, pages 423–436. Springer,
+ formalization and implementation-defeating protection on internet and on the 2024. URL: https://link.springer.com/chapter/10.1007/978-3-031-65175-5_30,
+ tor network. Journal of Computer Virology and Hacking Techniques, 17:185–198, doi:10.1007/978-3-031-65175-5_30.
+ 2021. doi:10.1007/s11416-021-00380-4. [28] August See, Tatjana Wingarz, Matz Radloff, and Mathias Fischer. Detecting
+[12] Daniel DeAlcala, Aythami Morales, Ruben Tolosana, Alejandro Acien, Julian web bots via mouse dynamics and communication metadata. In IFIP Advances
+ Fierrez, Santiago Hernandez, Miguel A. Ferrer, and Moises Diaz. Statistical in Information and Communication Technology, volume 679 of IFIP AICT, pages
+ keystroke synthesis for improved bot detection. arXiv preprint arXiv:2207.13394, 73–86. Springer, 2024. doi:10.1007/978-3-031-56326-3_6.
+ July 2022. URL: https://arxiv.org/pdf/2207.13394. [29] Vasvi Sharma and Siddhartha Chauhan. Web bot detection using keyboard
+[13] Vivek Dhakal, Anna Maria Feit, Per Ola Kristensson, and Antti Oulasvirta. Ob- behavioural analysis. In Proceedings of 2nd International Conference on Emerging
+ servations on typing from 136 million keystrokes. In Proceedings of the 2018 CHI Applications of Artificial Intelligence, Machine Learning and Cybersecurity, AIJR
+ Conference on Human Factors in Computing Systems. Association for Computing Proceedings, pages 79–90. AIJR Books, March 2025. Online ISSN 2582-3922.
+ Machinery, April 2018. URL: https://dl.acm.org/doi/pdf/10.1145/3173574.3174220, URL: https://books.aijr.org/index.php/press/catalog/book/178/chapter/3401, doi:
+ doi:10.1145/3173574.3174220. 10.21467/PROCEEDINGS.178.10.
+[14] Santiago Escuder Folch, Albert Calvo Ibanez, Nil Ortiz Rabella, and Josep Escrig [30] Suphannee Sivakorn, Iasonas Polakis, and Angelos D. Keromytis. I am robot:
+ Escrig. Web bot detection using mouse movement. In Proceedings of the 2023 (deep) learning to break semantic image captchas. In IEEE European Symposium
+ JNIC Cybersecurity Conference (JNIC 2023). Institute of Electrical and Electronics on Security and Privacy (EuroS&P), pages 388–403, 2016.
+ Engineers (IEEE), 2023. doi:10.23919/JNIC58574.2023.10205593. [31] Andreas Theofanous, Eva Papadogiannaki, Alexander Shevtsov, and Sotiris Ioan-
+[15] FoxIO. Ja4+ database, community-maintained network fingerprint repository, nidis. Fingerprinting the shadows: Unmasking malicious servers with machine
+ 2024. URL: https://ja4db.com/. learning-powered tls analysis. In Proceedings of the ACM Web Conference 2024
+[16] Google. Https encryption on the web – google transparency report, 2024. URL: (WWW ’24), pages 1933–1944. Association for Computing Machinery, May 2024.
+ https://transparencyreport.google.com/https/overview?hl=en. doi:10.1145/3589334.3645719.
+[17] Jenny Heino, Antti Hakkala, and Seppo Virtanen. Categorizing tls traffic based [32] Antoine Vastel, Walter Rudametkin, Romain Rouvoy, and Xavier Blanc. Fpon ja3 pre-hash values. Procedia Computer Science, 220:94–101, 1 2023. URL: crawlers: Studying the resilience of browser fingerprinting to block crawlers. In
+ https://www.sciencedirect.com/science/article/pii/S1877050923005501, doi:10. Workshop on Measurements, Attacks, and Defenses for the Web, 2020. URL: https:
+ 1016/J.PROCS.2023.03.015. //dx.doi.org/10.14722/madweb.2020.23010, doi:10.14722/madweb.2020.23010.
+[18] Jason Huggins. About selenium. https://www.selenium.dev/about/, 2004. Ac- [33] Hari Venugopalan, Shaoor Munir, Shuaib Ahmed, Tangbaihe Wang, Samuel T.
+ cessed: 2025-02-06. King, and Zubair Shafiq. Fp-inconsistent: Measurement and analysis of fingerprint
+[19] Martin Husák, Milan Čermák, Tomáš Jirsík, and Pavel Čeleda. Https traffic inconsistencies in evasive bot traffic. Proceedings of ACM Conference, 1, 2025.
+ analysis and client identification using passive ssl/tls fingerprinting. EURASIP [34] Xin Xu, Lei Liu, and Bo Li. A survey of captcha technologies to distinguish
+ Journal on Information Security, 2016, 2016. URL: https://jis-eurasipjournals. between human and computer. Neurocomputing, 408:292–307, 2020. doi:10.
+ springeropen.com/articles/10.1186/s13635-016-0030-7, doi:10.1186/s13635- 1016/j.neucom.2019.08.109.
+ 016-0030-7.
+
+ 7

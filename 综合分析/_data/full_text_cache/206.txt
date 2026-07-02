@@ -1,0 +1,837 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024 3249
+
+ Detecting Cloud Anomaly via Broad
+ Network-Based Contrastive Autoencoder
+ Guoxiang Zhong , Fagui Liu , Member, IEEE, Jun Jiang , Member, IEEE,
+ Bin Wang , Xi Yao, and C. L. Philip Chen , Fellow, IEEE
+
+ Abstract—Anomaly detection is indispensable for achieving
+higher availability and reliability in the cloud computing. The
+traditional autoencoder-based method only models the historical
+normal samples and then identifies the current online anomaly
+samples by the fixed threshold of anomaly score. Although more
+advances have been made in recent years, two main challenges
+remain: (i) ignoring the historical anomaly samples, (ii) poor
+self-adaptive ability for online detection. To address the above
+challenges, we propose a unified detector, namely BroadCAE,
+which integrates autoencoder with contrastive learning and broad
+network. Specifically, the reconstruction loss is first replaced
+by contrastive loss, which equally formulates both normal and
+anomaly samples. These samples belonging to the same class
+become closer in a lower-dimensional space. Conversely, different
+classes of samples are far away from each other. Next, we apply
+the anomaly-score-based pseudo thresholds to train the dynamic
+threshold selection, which generates the threshold according to
+the coming sample. The broad network in dynamic threshold
+selection takes the place of the deep network, which overcomes
+catastrophic forgetting and adapts to new online samples.
+Finally, validation experiments are conducted on four benchmark
+ Fig. 1. Faults of the server cluster in SMD benchmark dataset. The red
+datasets. Our BroadCAE outperforms the comparative baseline metric curves in blue boxes indicate the faults. These faults are described as
+methods by averaging over 4% of the f1-score. anomalies of 9-th, 13-th, 14-th, and 15-th metrics, which also are referred to
+ Index Terms—Anomaly detection, contrastive learning, broad as root causes.
+network, cloud computing.
+
+ I. I NTRODUCTION system must continuously improve the availability and reli-
+ ITH the wide application of cloud computing, the ability of cloud services [1], [2]. However, accidental faults,
+W scales of cloud services and their users are dramatically
+increasing. For a better user experience, the cloud operation
+ such as network delay [3], [4] and resource hog [5], [6],
+ frequently pose a substantial threat to the system running.
+ These faults cause the anomalous behaviors of the related
+ Manuscript received 16 August 2023; revised 22 December 2023; accepted monitoring metrics [7], [8], which is shown in Fig. 1. The
+10 January 2024. Date of publication 15 January 2024; date of current version
+12 July 2024. This work was supported in part by the Guangdong Major operation system always discovers the faults by detecting
+Project of Basic and Applied Basic Research under Grant 2019B030302002, in the anomaly of running data and then starts the correspondpart by the Science and Technology Major Project of Guangzhou under Grant ing fault tolerance solutions [9], [10], [11]. In other words,
+202007030006, in part by the Science and Technology Project of Guangdong
+Province under Grant 2021B1111600001, and in part by the Major Key Project anomaly detection is the first step to actively removing the
+of PCL, China under Grant PCL2023A09. The associate editor coordinating faults [12], [13]. The powerful detection result maintains
+the review of this article and approving it for publication was H. Lutfiyya. a solid foundation of higher availability and reliability in
+(Corresponding authors: Fagui Liu; Jun Jiang.)
+ Guoxiang Zhong, Xi Yao, and C. L. Philip Chen are with the School of cloud [14], [15].
+Computer Science and Engineering, South China University of Technology, The autoencoder-based anomaly detection algorithm com-
+Guangzhou 510006, China (e-mail: cszhongguoxiang111@mail.scut.edu.cn; bines the robust neural network to mine the intrinsic patterns,
+201930330247@mail.scut.edu.cn; philip.chen@ieee.org).
+ Fagui Liu is with the School of Computer Science and Engineering, South which has significantly been concerned [16], [17], [18], [19].
+China University of Technology, Guangzhou 510006, China, and also with More recent literature has also demonstrated that the encoderthe Department of New Networks, Peng Cheng Laboratory, Shenzhen 518000, decoder architecture outperforms traditional methods by a
+China (e-mail: fgliu@scut.edu.cn).
+ Jun Jiang is with the College of Information Science and Technology, large margin, such as Bagel [20] and USAD [21]. The
+Nanjing Forestry University, Nanjing 210037, China (e-mail: junjiang@ autoencoder-based method adopts the historical normal data
+ieee.org). to train the representation network. The reconstruction error
+ Bin Wang is with the Department of New Networks, Peng Cheng
+Laboratory, Shenzhen 518000, China (e-mail: wangb02@pcl.ac.cn). provided by this representation is regarded as an anomaly
+ Digital Object Identifier 10.1109/TNSM.2024.3353772 score. The online testing data with a larger anomaly score
+ 1932-4537 
+ c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+3250 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024
+
+indicates the presented anomaly. More proposed works focus to empower the representation of cloud anomaly
+on optimizing the above-mentioned procedures [22], [23]. detection.
+However, there still exist two main challenges, which are in • The BroadCAE adopts the broad network without deep
+the following: structure to dynamically generate thresholds in the light
+ • The first challenge is related to feature representation, of the coming samples, which provides a different perwhich ignores the historical anomaly samples. For uni- spective to refine the anomaly detection system.
+ versal anomaly detection applications, normal samples • In validation experiments, our BroadCAE outperforms
+ constitute the majority of the training sample owing to the other comparative algorithms, which demonstrates the
+ higher overhead of labeling scarce anomaly samples. The applicability of BroadCAE for cloud anomaly identificafeature representation rebuilds the normal sample, which tion. The open-source codes1 will continue to motivate
+ only formulates the intra-class features. Both intra-class the research in cloud anomaly detection.
+ features of anomalies and inter-class features between The rest of the paper is organized as follows. Section II
+ two kinds of samples are absent. The anomaly detection reviews the BroadCAE’s related work. The design details of
+ in the cloud is a special case with complete running doc- BroadCAE are discussed in Section III, containing problem
+ uments [11], [24], [25]. The recorded anomalous events formulation, BroadCAE’s overview, contrastive autoencoder,
+ are abundant, which can provide feature representation broad network-based dynamic threshold selection, and
+ with adequate and cheap labeled anomaly samples. BroadCAE’s pseudo code. The experiment in Section IV
+ • The second challenge comes from poor self-adaptive validates the effectiveness of BroadCAE by answering three
+ ability in online detection. Cloud resource utilization is research questions. Finally, the conclusion is presented in
+ in a constant state of change due to various practical Section V.
+ requirements. For example, if the computing-intensive
+ task is uploaded, more computing nodes are in need. The II. R ELATED W ORK
+ CPU available percentage becomes lower. Subsequently,
+ A. Background of Cloud Anomaly
+ the cloud user deploys network-intensive tasks. The
+ network byte sent rate will be higher. In the meanwhile, The anomaly in the cloud is a running behavior that deviates
+ the metrics about computing return to normal. Without from the normal system setting on account of fault. According
+ the self-adaptive ability, anomaly detection identifies the to different fault locations, cloud anomaly can be divided into
+ lower CPU available percentage and higher network byte internal and external behavior. The external factor caused by
+ sent rate as anomaly behaviors. other services leads to an external anomaly. For example, the
+ In this paper, we overcome these limitations and propose cloud SaaS application downloads a large file, which brings
+an improved autoencoder framework BroadCAE, which inte- about network congestion [26]. Besides, cyber attack [27] is
+grates contrastive learning and broad network. For the first the most common external fault. Internal processes induce
+challenge, contrastive loss is introduced to formulate the internal anomalies, such as authentication failure and network
+latent variable in the autoencoder. The anomaly samples in packet loss. The operation system uses several reactive and
+an embedding space are closer to each other as possible, proactive fault tolerance methods, such as auto-scaling [5],
+which is the same operation for normal samples. Inversely, to remove the presented fault [28], which avoids further
+the training samples from different classes are separated. The affecting the regular cloud services. Before that, the operation
+feature representation extracts both intra-class and inter-class system still needs to consider identifying the fault through
+features, which further optimizes the margin between normal the anomaly. They always analyze the anomaly state by
+and anomaly samples. To tackle the second challenge, the monitoring metric, log, and trace. Particularly, the monitoring
+BroadCAE incorporates the broad network module to develop metric is easier to embed and reveal the most comprehensive
+dynamic threshold selection. We first apply the anomaly scores data pattern. In this paper, we focus on the monitoring-metricto calculate the pseudo thresholds. Specifically, the anomaly based anomaly detection algorithm.
+bias shrinks the anomaly scores of anomalies as their pseudo
+thresholds, while the normal bias amplifies the anomaly scores B. Cloud Anomaly Detection Algorithm
+of normal samples to develop the normal-sample thresholds. In the early stage, the cloud operation system primarily
+Thus, the violation of the actual label would be minimal. adopts keyword-based [29] and statistics-based [30] anomaly
+Then we attain the threshold pattern by feeding the pseudo detection methods. The keyword-based method identifies the
+thresholds and initial samples into the broad network. In the anomaly recorded in the log by matching the related words,
+online testing stage, this trained broad learning model outputs such as ERROR and FAILURE [31]. The statistics-based
+the individual threshold according to the coming sample. A methods focus on several key performance indicators [32].
+portion of the network weight is updated while the actual label If their values exceed a certain setting threshold, an alert is
+of the testing sample is acquired, which fits the need for the triggered. The keyword-based and statistics-based methods are
+new detection setting. only suitable for anomalies with relatively simple patterns.
+ The major contributions of our proposed BroadCAE are: With the development of artificial intelligence operations in
+ • The BroadCAE innovates anomaly samples into the the cloud, more machine-learning-based anomaly detections
+ traditional normal-only encoder-decoder framework,
+ which develops both inter-class and intra-class features 1 https://github.com/zhongguoxiang/BroadCAE
+ZHONG et al.: DETECTING CLOUD ANOMALY VIA BROAD NETWORK-BASED CONTRASTIVE AUTOENCODER 3251
+
+ TABLE I
+ T HE C OMPARISON OF R ELATED A LGORITHMS AND O UR B ROAD CAE C. Broad Network
+ The broad network [45] is an improved single-layer feedforward neuron model. Without the deep architecture, the
+ broad network still has universal approximation properties [46]
+ and is much faster with credible classification accuracy. The
+ weight in the broad network is solved by the pseudoinverse
+ rather than gradient-descent-based methods used in deep
+ networks. The generalization ability of the broad network is
+ improved through the broad expansion. More broad network
+ variants are proposed. For example, fuzzy broad learning
+ system [47] introduces the Takagi-Sugeno fuzzy approach
+ into the feature node. Stacked broad learning system [48]
+ develops the incremental flatted framework to deep network,
+ which outperforms the deep residual network in experimental
+ comparison. Although the broad network is still in the early
+are deployed [31], [33], [34], [35]. They always depend developing stage, some application researches continuously
+on the distribution divergence between normal and anomaly model this novel network. The broad network combines the
+samples. For instance, the local outliers factor (LOF) [36] graph neural network to achieve the emotion recognition [49].
+believes that the distribution density of normal is higher The semi-supervised broad network is built for spammer
+than the anomaly sample’s. The one-class support vector detection in social communication networks [50].
+machine (OCSVM) [37] considers that all normal samples Unlike the above broad network application, our BroadCAE
+are in a hyper-sphere. However, these methods have lim- unifies the deep-network-based autoencoder and broad
+ited feature modeling ability and are not robust enough. network for cloud anomaly detection. For the broad network,
+As a result, they are even invalidated when the large- we apply the increment of input samples, which is designed
+scale samples do not follow the corresponding assumed for self-adaptive ability in the online setting.
+distribution.
+ At the same time, the cloud architecture is becoming larger.
+The coordination between cloud components steadily grows, III. M ETHODOLOGY
+leading to more monitoring data. It is difficult for the classic A. Problem Formulation
+machine-learning-based method to meet the practical applica-
+ Suppose there are several metrics for monitoring cloud
+tion requirements. The root cause is their weak modeling of
+ components. We attain their labeled history running data as
+mining data patterns. The autoencoder (AE) algorithm [38] is
+an effective solution that formulates massive historical normal
+ D = {(xi , yi )|i = 1, . . . , N },
+sample data to obtain deep-level features. More potential
+patterns can be employed to identify complex cloud anomalies. xi = [xi1 , xi2 , . . . , xid ]T ∈ Rd ,
+Some proposed works improve the vanilla autoencoder, which yi ∈ {+1, −1}, (1)
+has obvious advantages in terms of detection efficiency and
+accuracy. For instance, Donut [39] formulates the anomalies where xi represents the i-th sample in D and yi is the label
+and missing points into the ELBO of variational autoen- of xi . The N is the number of samples in D. The d indicates
+coder (VAE) [40], which outperforms the random-forest-based the number of monitoring metrics. The “+1” and “−1” are
+Opprentice [41]. As an improved method of Donut, Bagel [20] the label marks of normal and anomaly samples, respectively.
+handles the time information based on the conditional VAE The autoencoder-based anomaly detection algorithm regards
+(CVAE) [42]. The superiority of Bagel in detection accu- D as the training dataset and formulates the feature repreracy is also significant. Both Donut and Bagel modify the sentation with D. The representation of this anomaly detector
+loss function. In addition, other approaches concentrate on contains encoder fe and decoder fd . For the normal sample
+developing the network architecture. The VAE-LSTM [43] (xi , yi = +1) ∈ D, the encoder fe transforms xi into latent
+introduces long short-term memory (LSTM) into the backbone variable Z.
+network of VAE for modeling metric-based time series. The
+UASD [21] inherits the encoder-decoder architecture and adds zi = fe (xi ), zi ∈ Z ,
+one more decoder as a discriminator for adversarial training. yi = +1, (2)
+The Anomaly Transformer [22] and TranAD [23] integrate
+the attention mechanism [44], which enjoys long-term series where zi is the latent variable corresponding to xi . Then, the
+modeling. decoder fd inversely transforms zi into xi :
+ As displayed in Table I, our BroadCAE goes beyond
+the previous autoencoder-based algorithm and considers the xi = fd (zi ), xi ∈ Rd , (3)
+anomaly sample for formulating more features. It is also the
+first time to unify anomaly and normal sample patterns under where xi is the reconstruction of xi . What is more, both fe
+the autoencoder representation. and fd are in the form of deep neural networks. We optimize
+3252 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024
+
+Fig. 2. The overview of BroadCAE. The training-use historical dataset includes the labeled normal and anomaly samples in cloud computing. Our BroadCAE
+consists of contrastive-learning-based CAE and broad network-based dynamic threshold selection. The CAE improves the feature representation by adding
+anomaly samples. The dynamic threshold selection has the powerful self-adaptive ability for online detection. The update procedure () empowers the
+broad network.
+
+the objective representation by minimizing the following if the threshold value is too small, the predicted anomaly
+reconstruction loss function Lr : samples may contain more normal ones. The autoencoderbased methods need the self-adaptive threshold selection,
+ 1 
+ N
+   
+ L = Lr X , X  = x i − x  2 , (4) which offers the dynamic threshold.
+ i 2
+ N
+ i=1
+
+where  · 22 denotes the metric of similarity in Euclidean B. Overview
+distance. Because the normal sample is always far from the
+ This paper focuses on the above challenge and proposes
+anomaly ones, the reconstruction error of the normal sample is
+ the BroadCAE that introduces contrastive learning and broad
+smaller than the anomaly’s. This divergence in reconstruction
+ network. The overview of BroadCAE is shown in Fig. 2.
+error is the core of achieving the autoencoder-based anomaly
+ The historical running data of normal and anomalous cloud
+detector. The reconstruction error is referred to as the anomaly
+ components are collected. The data preprocessing includes
+score. Given the online testing sample xiu ∈ D u where D u
+ padding and normalization, which is omitted in the overview.
+represents the online testing dataset, ŷiu is the predicted label
+ The contrastive autoencoder (CAE) innovates contrastive
+of xiu . The autoencoder-based anomaly detector outputs the
+ learning into the autoencoder. The autoencoder reconstruct
+predicted label as
+  X = [xi ]1×N as X  = [xi ]1×N . The feature representation
+ u +1, ASiu ≤ θ; ignores the anomaly samples, which ascribes to the dimension
+ ŷi =
+ −1, ASiu > θ; reduction transformation in the encoder. For the latent variable
+ ASiu = xiu − fd [fe (xiu )]22 , (5) Z = [zi ]1×N , the divergence of normal and anomaly samples
+ should be more obvious. Thus, we add the contrastive loss Lc
+where θ is a threshold and ASiu is the anomaly score to the latent variable. The contrastive loss uses the constraint
+of xiu . about sample label Y = [yi ]1×N and latent variable Z.
+ Challenges: (i) Ignoring the historical anomaly samples in The broad network combines dynamic threshold selection,
+training the feature representation. From Equation (2), only the which is designed for self-adaptive online detection. The
+normal sample is formulated by fe . Actually, anomaly samples combination of anomaly score X − X  22 and sample label
+also can enlarge the reconstruction divergence. In detail, Y calculates the pseudo label Θ∗ for threshold selection. The
+The inter-class feature between anomaly and normal samples predicted threshold Θu is provided while the online coming
+requires that the latent variable of anomaly samples should be sample X u = [xiu ] is fed into the trained broad network.
+separated as possible. The intra-class feature from anomaly Furthermore, the relationship between Θu and anomaly score
+samples distinguishes the overlapping normal samples, which of X u decides the predicted label Ŷ u = [yiu ]. The broad
+enhance the robustness of fe and fd . (ii) Poor self-adaptive network weight can be updated when the actual label Y u of
+ability for online detection. In Equation (5), the threshold θ is X u is acquired. It is noteworthy that only the network weights
+fixed, which does not enjoy dealing with the online continual related to the online coming samples are retrained. The broad
+change samples. A small portion of anomaly samples will be network avoids updating the whole network weights, which is
+detected if the threshold value is larger enough. In contrast, a great substitute for the deep network.
+ZHONG et al.: DETECTING CLOUD ANOMALY VIA BROAD NETWORK-BASED CONTRASTIVE AUTOENCODER 3253
+
+ Fig. 4. Distribution of anomaly score using different loss functions. In
+Fig. 3. Potential deployment of BroadCAE in microservice. (a), the majority of anomaly samples are covered by normal samples, which
+ indicates that the anomaly-score divergence is too smaller. However, in (b),
+ more anomaly samples have larger anomaly scores than normal samples,
+ For example, Fig. 3 describes our BroadCAE, which is which contributes to anomaly identification.
+deployed into the cloud-based microservice system. The monitoring data of each microservice is collected and delivered to
+ margin do not contribute to the contrastive loss. If xi and xj
+the database. The detector BroadCAE identifies the anomaly
+ are in the same classes, we annotate the pseudo label yij = 0.
+data from the database and transmits the alert signal to
+ While they belong to different classes, the pseudo label is
+operations.
+ shown as yij = 1.
+ 
+C. Contrastive Autoencoder  0, yi = yj
+ yij = , Y  = yij (8)
+ The general autoencoder-based method builds up the rep- 1, yi = yj N ×N .
+resentation by training with normal samples. The extracted
+ In the first part of Lc , the fr strains every nerve to pull closer
+features in the representation can be regarded as intra-class
+ points, which are from the same class. The intra-class features
+ones of normal samples. The anomaly samples are discovered,
+ of normal and anomaly samples are extracted. The second part
+which follows the principle “normal is not anomalous”. In
+ aims at separating samples into different classes by a large
+other words, the normal-sample intra-class features provide the
+ margin. This operation enjoys the inter-class features between
+manifold of normal. The testing sample far away from this
+ normal and anomaly samples.
+manifold is not normal. The approaches only model the seen or
+ During the training stage, all labeled training samples are
+occurred normal samples. However, the novel normal pattern
+ fed into fe and fd , which are optimized by contrastive loss
+constantly emerges in cloud operation. It is unachievable to
+ rather than reconstruction loss.
+model all types of normal samples under the evolving cloud.
+The representation manifold only the training normal samples, L = Lc (X , Y ). (9)
+which will gradually lose efficacy in the future. Besides, in the
+cloud environment, the deployed cloud component needs more On the one hand, both contrastive loss and reconstruction loss
+preliminary tests. The anomaly events supply more anomaly can formalize the normal-sample intra-class features. In the
+samples to optimize the autoencoder. The anomaly-sample meanwhile, beyond the reconstruction loss, the contrastive loss
+intra-class features indicate whether the sample is not normal. develops the anomaly-sample intra-class and anomaly-normal
+The inter-class features between normal and anomaly samples inter-class features. On the other hand, the latent variable
+lead to the margin for dividing the samples. The additional divergence between normal and anomaly samples achieves a
+intra-class and inter-class features enhance the representation. more powerful effect than reconstruction divergence, using the
+Thus, it is necessary to incorporate anomaly samples into identical decoder. For example, Fig. 4 displays the anomaly
+the representation. The CAE in our BroadCAE introduces score of the first SMD subset. The contrastive loss enlarges
+contrastive loss for formulating the anomaly samples. The con- the anomaly score of anomaly samples.
+trastive loss focuses on the lower-dimensional latent variable,
+which is compacted by the encoder fe . Suppose that (xi , yi ) ∈ D. Dynamic Threshold Selection Based on Broad Network
+D and (xj , yj ) ∈ D are given, their latent variables are Suppose that G(·) is the dynamic threshold selection in our
+   BroadCAE. As for different inputs xiu and xju , their output
+ zi = fe (xi ), zj = fe xj . (6)
+ thresholds are also different.
+The contrastive loss is  
+ θiu = G(xiu ), θju = G xju ,
+ 1    
+ N
+  2  2 θiu = θju .
+ Lc = 1 − y S + y max 0, m − S , (7) (10)
+ 2N 2 ij ij ij ij
+ i,j =1
+ For the self-adaptive ability, G(·) should be update to reflect
+where Sij = zi − zj 22 is the Euclidean-distance similarity the online coming sample. The classical deep-network-based
+between zi and zj . The max(·, ·) returns the largest value. threshold selection algorithm repeats the training procedure
+The m > 0 is the classification margin about distance. In our to update the network weights. After several above repliexperiments, m = 2. The pairs of samples far away from this cations, the knowledge about the previous training samples
+3254 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024
+
+Fig. 5. The overview of broad network. This flattened network has only one input layer and one output layer. There are k feature mapped nodes and r
+enhancement nodes in the input layer. The network weight is solved by pseudoinverse. The increment of xiu is in green.
+
+will disappear, which is called as catastrophic forgetting [51]. As for Θ∗ = [θi∗ ]1×N , we can not directly attain from the
+The G(·) addresses this problem by incorporating the broad previous problem setting. Instead, we develop the supervised
+network, not the deep network. As shown in Fig. 5, the broad pseudo threshold.
+network consists of two main components: feature mapped 
+node and enhancement node. Given X = [xi ]1×N as the ∗ β+1 · ASi , yi = +1,
+ θi =
+training sample, the k-th feature mapped node projects X as β−1 · ASi , yi = −1,
+  2
+   ASi = xi − xi 2 , (17)
+ Fk = φ XWfk + βfk , (11)
+ where β−1 and β+1 are anomaly bias and normal bias,
+where Wfk and βfk are the initial weights and bias of
+ respectively.
+Fk , respectively. The φ is a mapping function. The F k =
+[F1 , . . . , Fk ] denotes all the first k-th feature mapped nodes 0 < β−1 < 1, β+1 ≥ 1. (18)
+in the form of concatenation. The output of F k is mapped by
+enhancement nodes. The r-th enhancement node is In this solution, it is not hard to show
+  
+ Hr = ξ F k W h r + βh r , (12) 
+ N
+ min |yi − yi∗ | = 0,
+where Whr and βhr are the initial weights and bias of Hr , i=1
+ 
+respectively. The ξ is a mapping function. The first r-th +1, ASi ≤ θi∗ ,
+ s.t. yi∗ = (19)
+enhancement nodes are also in the form of concatenation. −1, ASi > θi∗ ,
+
+ H r = [H1 , . . . , Hr ]. (13) where yi∗ is the label of xi provided by pseudo threshold.
+ Thus, the generative pseudo threshold is practicable.
+The broad network has k feature mapped nodes and r enhance- After finishing the training of broad network, the dynamic
+ment nodes, which is formulated as threshold selection G(·) will enter the online detection to
+ identify the presented anomaly. Given the online coming
+ Θ∗ = [F1 , . . . , Fk | H1 , . . . , Hr ]W
+ sample xiu ∈ D u , the G(·) follows
+ = Fk | Hr W , (14)
+ θiu = G(xiu ),
+ 
+where Θ∗ = [θi∗ ]1×N is the threshold training label of X in u +1, ASiu ≤ θiu ,
+ ŷi =
+G(·). The W is the network weight for the broad network. −1, ASiu > θiu .
+Different from the deep network, the broad network attains the (20)
+optimal W through Moore-Penrose generalized inverse theory.
+ + while the predicted label ŷiu is equal to the actual label yiu ,
+ k r ∗
+ W = F |H Θ , (15) the accurate prediction offer the correct sample pattern. The
+ broad network in G(·) can be updated. The increments of the
+where [F k | H r ]+ denotes the pseudoinverse of [F k | H r ]. feature mapping node and enhancement node are
+Suppose that Ark = [F k | H r ], we have  
+ F̂k = φ xiu Wfk + βfk ,
+  −1  
+ (Ark )+ = lim λI + AAT AT . (16) Ĥr = ξ F̂ k Whr + βhr , (21)
+ λ→0
+ZHONG et al.: DETECTING CLOUD ANOMALY VIA BROAD NETWORK-BASED CONTRASTIVE AUTOENCODER 3255
+
+Algorithm 1 Training Algorithm of BroadCAE Algorithm 2 Testing Algorithm of BroadCAE
+Input: Encoder fe ; Decoder fd ; Training sample X; Training Input: Optimized encoder fe , Optimized decoder fd ; Broad
+ label Y; Number of feature mapped node k; Number of network weight W and pseudoinverse (Ark )+ ; Random
+ enhancement node r; Random mapping φ and ξ; Iteration mapping φ and ξ; Testing sample X u .
+ limitation Ne . Output: Predicted label Ŷ u .
+Output: Optimized encoder fe ; Optimized decoder fd ; Broad 1: Reconstruct X u through fe and fd ;
+ network weight W; Network pseudoinverse (Ark )+ . 2: Compute the anomaly score of X u ;
+ 1: Initialize the network weights of fe and fd ; 3: Calculate the threshold of X u ;
+ 2: Initialize the weights and biases of φ and ξ; 4: Attain the predicted label Y u
+ 3: n ← 1; 5: while Ŷ u = Y u do
+ 4: repeat 6: Update pseudoinverse (Ark )+ as (Ârk )+ ;
+ 5: Feed X into fe and fd ; 7: Update network weight W as Ŵ ;
+ 6: Calculate the contrastive loss Lc ; 8: end while
+ 7: Optimize fe and fd with loss function L = Lc (X , Y );
+ 8: n ← n+1; TABLE II
+ 9: until (n = Ne ). T HE C HARACTERISTICS OF F OUR E XPERIMENTAL DATASETS
+10: Generate the pseudo threshold Θ∗ ;
+11: Fed X into feature mapped node Fk ;
+12: Project F k = [F1 , . . . , Fk ] by enhancement node Hr ;
+13: Deduce the pseudoinverse (Ark )+ and network weight W.
+
+where F̂ k = [F̂1 , . . . , F̂k ] are the first k-th incremental O(N 2 ). The dynamic threshold selection is between Line 10
+mapping features of xiu . The Ark in the initial network is and Line 13. The dot-product for computing the pseudoinverse
+transformed as makes the time complexity of dynamic threshold selection
+ Ark O(N 2 ). Thus, our BroadCAE achieves the quadratic time
+ Ârk = , (22)
+ ÂT complexity. In Algorithm 2, our goal is to predict the label of
+ X u . Besides, the threshold selection adapts to the new coming
+where ÂT = [F̂ k |Ĥ r ] and Ĥ r = [Ĥ1 , . . . , Ĥr ]. The update samples by updating the network weight and pseudoinverse,
+pseudoinverse is which is presented from Line 5 to Line 8.
+  +
+ Ârk = (Ark )+ − B D T |B , (23)
+ IV. E XPERIMENT
+where D T = ÂT (Ark )+ , We first introduce the experimental setting, including
+ + datasets, performance metrics, and experimental details. Then,
+ (C ) , C = 0,
+ BT =  −1   (24) the following research questions (RQ) about validating our
+ +
+ 1+D D
+ T Ak D , C = 0,
+ r
+ BroadCAE are answered by a series of experiments. Their
+ experimental results and analysis are displayed.
+and C = ÂT − D T Ark . The updated network weight is RQ1: How about the overall performance of BroadCAE
+  
+ in cloud anomaly detection?
+ Ŵ = W + θiu∗ − ÂT W B, (25)
+ RQ2: How about the impact of parameters in BroadCAE?
+where θiu∗ is the pseudo threshold of xiu . From the RQ3: How about the effectiveness of each component in
+Equation (25), we can apply the initial network weight W and BroadCAE?
+initial pseudoinverse Ark to calculate the Ŵ . The previous
+knowledge about W and Ark in the initial network are retained, A. Datasets
+which avoids catastrophic forgetting. In the meanwhile, the
+ We conduct the experiments on four benchmark datasets,
+new pattern about the new xiu is described by ÂT , which
+ including MBD [52], EMOS, SMD [53], and ASD [54]. These
+adapts quickly to the new developing environment.
+ datasets are collected from different cloud environments. The
+ first dataset is from a Hadoop-based distributed cluster. The
+E. Implementation second one is related to a benchmark microservice-based
+ The implementation of our BroadCAE is composed of system.2 The last two datasets correlate with the server in the
+training (Algorithm 1) and testing (Algorithm 2) blocks. All cloud. The characteristics of these datasets are in Table II.
+of the input of these two Algorithms can be directly calculated The MBD reflects the running behavior of five cluster
+in the neural network. In Algorithm 1, we consider the feature nodes, which process the big data batch. To imitate the
+representation of CAE from Line 3 to Line 9. There are actual setting, the researchers randomly upload the large-scale
+N 2 pairs training samples. The quadratic computation about
+similarity in Lc causes the time complexity of CAE to be 2 https://github.com/FudanSELab/train-ticket
+3256 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024
+
+ TABLE III
+workload using HiBench.3 The faults of the CPU, network, T HE C HARACTERIZATIONS OF E XPERIMENTAL C OMPUTER S ERVER
+and application are randomly injected into the file system.
+There are 26 monitoring metrics for each node, including CPU,
+disk, memory, network, and process.
+ The EMOS presents the status of 41 microservices, which
+service the train ticket booking application.4 The faults are
+injected by Chaosblade5 and iPerf.6 These faults include CPU
+hog, memory hog, disk input, disk output, DDOS delay, and
+packet loss. We monitor four representative metrics, including
+CPU usage, RAM usage, Net out, and Net in. All faults and with 10−3 initial learning rate and step-scheduler with step
+metrics are used in some published works [5], [52]. For the size of 0.5. We run 100 epochs, where the size of the batch is
+purpose of research, we encourage anyone to use this dataset. 256. The other hyper-parameters of our BroadCAE are listed
+More details are provided here.7 in the following.
+ The SMD is provided by a commercial computing cluster, • Number of feature mapped nodes k = 35.
+which includes 28 machines. During the 5-week-long period, • Number of enhancement nodes r = 500.
+the collected data consists of two subset components. The first • Anomaly bias β−1 = 0.01.
+half is used for training, and the remaining half is regarded as a • Normal bias β+1 = 2.
+testing subset. However, only the testing subset provides both For four datasets, we randomly split all samples into training
+the label and the dimensions of the anomaly. For performance and testing subsets with a ratio of 5:5. Then, we follow the
+evaluation, we adopt the testing subset in our experiments. above-mentioned parameters and repeat the identical proce-
+ The ASD describes the status of 12 servers in a large dure for one hundred independent runs. The mean of these
+Internet company. To avoid the concept drifts, the stable replications can be regarded as the final experimental results.
+workloads run on each server during a 45-days-long period. The comparative baselines also follow the same operations.
+We also utilize the testing subset of ASD. However, the ASD Some comparative anomaly detection methods only output the
+contains fewer metrics, which differs from the SMD. The anomaly score of the testing sample. The threshold selection
+monitoring metrics are related to CPU, memory, network, and is absent. We plot the ROC curve [58] and search for the best
+virtual machine. detection result.
+ The BroadCAE and other comparative anomaly detection
+B. Performance Metrics algorithms are tested in the server computer, which equips with
+ In general, recall (R), precision (P), and f1-score (F1) are one NVIDIA GeForce RTX 3080. More details of experiment
+used to evaluate anomaly detection algorithm performance. equipment are shown in Table III.
+The R focuses on presenting the accuracy of identifying
+the goal samples. The P considers that the presented goal D. Research Questions
+samples are detected as more as possible. The F1 is introduced
+to keep the balance between R and P. However, for more We conduct the experiments about three research questions.
+comprehensive evaluation [21], [53], we import the macro R The experimental results and analysis should validate the
+(R̄), macro P (P̄ ), and macro F1 (F¯1) in this paper. effectiveness of BroadCAE.
+ RQ1: How about the overall performance of
+ 1 1 BroadCAE in cloud anomaly detection?
+ R̄ = R, P̄ = P,
+ 2 2 The RQ1 is designed to demonstrate whether BroadCAE
+ 2 · R̄ · P̄
+ F¯1 = . (26) can outperform the state-of-the-art baseline approaches in
+ R̄ + P̄ cloud anomaly detection. There are 12 comparative algorithms
+ used in this experiment. Among them, the LOF, OCSVM,
+C. Experimental Details and iForest are proposed in the earlier period. With the rapid
+ The BroadCAE is implemented in a Python program. development of deep learning, autoencoder-based methods are
+Both encoder fe and decoder fd with deep architectures more and more applied because of their strong generalization.
+are employed through the Pytorch package. The fe contains The AE, VAE, and CVAE are the baseline algorithms. The
+a 4-layer multi-layer perceptron (MLP), the size of output Bagel are adapted from CVAE. The USAD and SaVAE-SR
+features of which are d → 1024 → 512 → 256. The ReLU [55] innovate the training style, which is inspired by the adversarial
+and batch normalization [56] are added into each layer. The learning theory of GAN [62]. Both TranAD and Anomaly
+fd is made up of a 3-layer MLP (256 → 128 → d ) with batch Transformer are developed from the improved autoencodernormalization. The ReLU is also added into the first layer of based architecture Transformer [44]. The CAE-M utilizes the
+fd . The fe and fd are optimized by the ADAM optimizer [57] autoencoder-based architecture to mine the semantics features.
+ 3 https://github.com/Intel-bigdata/HiBench
+ These comparative algorithms are introduced as follows:
+ 4 https://github.com/FudanSELab/train-ticket • LOF [36]: The local reachability density (LRD) about
+ 5 https://github.com/chaosblade-io/chaosblade nearest neighbor samples is first released to measure the
+ 6 https://iperf.fr/ anomaly degree. The higher values of LDR, the less
+ 7 https://github.com/zhongguoxiang/BroadCAE anomalous the sample is.
+ZHONG et al.: DETECTING CLOUD ANOMALY VIA BROAD NETWORK-BASED CONTRASTIVE AUTOENCODER 3257
+
+ TABLE IV
+ T HE OVERALL P ERFORMANCE R ESULTS FOR O UR B ROAD CAE AND OTHER C OMPARATIVE M ETHODS IN F OUR B ENCHMARK DATASETS
+
+ • OCSVM [59]: The hyper-sphere is optimized in the time-dependency relationship. Both the self-condition
+ training dataset. The testing sample outside of the hyper- approach and adversarial learning stabilize the training
+ sphere is anomalous. procedure.
+ • iForest [60]: From its authors’ view, the anomaly is easier • Anomaly Transformer [22]: The Transformer architecture
+ to be isolated. The iForest adopts isolation instead of is improved by developing a new anomaly-attention
+ distance and density to identify anomaly samples. mechanism. The association discrepancy and minimax
+ • AE [38]: Both the encoder and the decoder with a strategy enlarge the divergence between normal and
+ deep network rebuild the samples. The back-propagation anomaly samples.
+ algorithm with reconstruction loss optimizes the network • CAE-M [61]: The deep convolutional characterization
+ weight. The reconstruction error presents the anomaly network is employed as a feature extractor. The attentionscore. based bidirectional LSTM and auto-regression provide
+ • VAE [40]: Based on AE, the latent variable is described the final predicted result.
+ in the form of Gaussian distribution. The reconstruction Table IV presents the overall performance results of our
+ probability of KL divergence is added into the ELBO loss BroadCAE and 12 baseline algorithms in four benchfunction and further indicates how anomalous the testing mark datasets. The superiority of our BroadCAE can be
+ sample is. observed, compared with other baseline comparative algo-
+ • CVAE [42]: Being distinguished from AE and VAE, rithms. Especially our BroadCAE gets the highest score of F¯1
+ CVAE formulates the model about the relationship and R̄ in all four datasets. However, the lower P̄ is recorded in
+ between the input latent variable, input sample, and its the MBD (84.44%), SMD (94.90%), and ASD (74.46%). The
+ label. In fact, the CVAE is one of the semi-supervised imbalance between anomaly and normal samples results in this
+ encoder-decoder-based methods. situation. The proportion of correct identification of normal
+ • Bagel [20]: Compared to Dount [39], Bagel includes time samples is larger than that of abnormal samples. The confusion
+ information into CVAE and enhances the robustness in matrices of our BroadCAE detection results are displayed
+ detecting the time-related anomaly. in Fig. 6, which provides more details. As for EMOS, our
+ • USAD [21]: In the encoder-decoder architecture, it BroadCAE achieves the best P̄ (91.76%), which ascribes to
+ imports the adversarial training by adding a decoder the less false negative samples.
+ block. At the same time, it also avoids collapse and non- In the next step, we further discuss comparative anomaly
+ convergence phenomena. detection algorithms. It is noteworthy that the deep encoder-
+ • SaVAE-SR [14]: It draws its strength from combining decoder-based methods always outperform the traditional
+ spectral residual technique and self-adversarial training machine-learning-based anomaly detection algorithms. For
+ manner, which still follow the framework of VAE. example, Bagel attains the best P̄ in MBD (93.25%), SMD
+ • TranAD [23]: The Transformer [44] is introduced. (96.16%), and ASD (83.62%), although the quantity of pre-
+ The vanilla attention mechanism is designed for dicted anomaly samples is smaller. The CAE-M and Anomaly
+3258 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024
+
+ performance metric, area under the ROC curve (AUC), to
+ evaluate the impact of the latent variable dimensions. Fig. 8
+ presents the experiment results of all the experimental datasets,
+ which are achieved by different dimensions. We start from
+ 32 dimensions, keeping the interval of 32 and up to 320
+ dimensions. As we increase the dimensions, the performance
+ of BroadCAE does not improve by a larger margin. For
+ example, the detection results about four evaluation metrics
+ become poorer in MBD. As for SMD, the value of F¯1, R̄,
+ and AUC are relatively steady. It is noteworthy that the AUC
+ of MBD, EMOS, and ASD have dropped. However, the F¯1 of
+ EMOS and ASD do not descend, which ascribes to dynamic
+ threshold selection.
+ The remaining parameters come from the dynamic threshold
+ selection, of which the first two are related to broad network
+ learning, and the others form the supervised pseudo threshold.
+ Because the AUC is always considered for feature representation, we only use F¯1, R̄, and P̄ as performance metrics to
+ evaluate the impact of these parameters.
+ In Fig. 9, the impact of different numbers of feature mapped
+ nodes is shown. We select up to 50 feature mapped nodes in
+ each experiment, starting from only 5. The F¯1 about ASD
+Fig. 6. Confusion matrices on four datasets. The normal and anomaly samples
+belong to the positive and negative classes, respectively. A majority of normal
+and anomaly samples are well identified, which results in the higher F¯1. achieves the maximum values and stops rising. As for MBD,
+ the F¯1 also improves with the increase of feature mapped
+ nodes. The P̄ of these two datasets keep the same pace as
+Transformer acquire the second-best F¯1 and R̄ in SMD and well. In the view of R̄, the improvement is weak, although
+ASD, respectively. For the EMOS, USAD attains the second- more feature mapped nodes are added. In other words, more
+best F¯1 (84.06%) and P̄ (84.77%), which SaVAE-SR get the network parameters can not bring more powerful detection
+second-best R̄ (84.94%). results. Considering the experiment setting, we recommend
+ To illustrate the efficiency, we select six competitive that the number of feature mapped nodes is between 25
+algorithms in detection accuracy, including Bagel, USAD, and 35.
+SaVAE-SR, TranAD, Anomaly Transformer, and CAE-M. In Fig. 10, we pay attention to the influence of enhancement
+The averaged training time, averaged testing time, and aver- nodes. The number of enhancement nodes is between 100 and
+aged memory used by these algorithms are regarded as 1000 with an interval of 100. For the F¯1, the SMD presents
+baseline results. As we know from Fig. 7, our BroadCAE a growing tendency from 100 to 300. The improvement of P̄
+does not outperform the baseline about efficiency. Although in the SMD occurs again. For the R̄, the MBD also keeps an
+the training procedure of BroadCAE takes less time, upward trend. However, the P̄ about MMS is in fluctuation.
+BroadCAE needs more testing time and memory in SMD Besides, the EMOS in P̄ reaches the peak and then begins to
+and ASD. This ascribes to the broad network-based threshold drop in the next stage. We deem the increasing feature mapped
+selection. node is not good at broad network generalization for learning
+ RQ2: How about the impact of parameters in threshold patterns. The overfitting still exists. Considering the
+ BroadCAE? actual setting, we recommend that the number of enhancement
+ The parameter always has an impact on BroadCAE’s nodes should be under 500.
+performance. The following parameters are discussed for In Fig. 11, we analyze the effect of different anomaly
+answering this RQ. biases. Before the anomaly bias is 0.2, all of the datasets
+ • Dimension of latent variable. reach their peak of F¯1. After that, the ASD decreases. In
+ • Number of feature mapped nodes. the meanwhile, MBD, EMOS, and SMD are still at the top.
+ • Number of enhancement nodes. With the decreasing of anomaly bias, the increase of R̄ in four
+ • Anomaly bias. benchmark datasets is in the range of 2% to 8%. Inversely, the
+ • Normal bias. P̄ is down by about averaged 3% with the smaller anomaly
+ We follow the advantage of the encoder-decoder architecture bias. The anomaly bias should be between 0.01 and 0.1.
+to develop BroadCAE. The dimension of the latent variable Fig. 12 displays how the normal bias impacts the
+is involved with the feature extractor. If the dimension is performance of BroadCAE. The value of normal bias starts
+larger enough, information is abundant, and parameter tuning from 1.2 and is up to 3 with an interval of 0.2. For the
+becomes time-consuming. In contrast, if it is in a lower- F¯1, MBD, SMD, and ASD present a growing tendency. The
+dimensional space, limited features will be modeled, and EMOS achieves a peak and then decreases. The EMOS, MBD,
+encoder representation may be invalidated. We apply one more and ASD are at the peak of R̄ while the normal bias is 1.4.
+ZHONG et al.: DETECTING CLOUD ANOMALY VIA BROAD NETWORK-BASED CONTRASTIVE AUTOENCODER 3259
+
+Fig. 7. Training time, testing time, and memory consumption of BroadCAE and baseline algorithm.
+
+ TABLE V
+ T HE E FFECTIVENESS OF DYNAMIC T HRESHOLD S ELECTION
+
+Fig. 8. Impact of latent variable dimension. red “Lc ” indicate the reconstruction loss and contrastive
+ loss, respectively. For F¯1, P̄ , and AUC, the “Lc ” outperforms the “Lr ” and “L”. However, the R̄ of “Lc ” in
+After the best normal bias, they fall sharply, which leads to MBD does not attain the improvement. The reason for this
+the decrease of EMOS’s F¯1. Similar to the F¯1, P̄ keeps an phenomena is that broad-learning-based threshold selection
+upward trend with the larger normal bias. We suggest that the can cover the shortcoming of feature representation. Besides,
+normal bias is between 1.8 and 2.8. in some benchmark datasets, the result of “L” is improved
+ RQ3: How about the effectiveness of each component by a margin, which illustrates that the inter-class feature is
+ in BroadCAE? effective.
+ Our design of BroadCAE is to optimize the feature rep- 2) Effect of dynamic threshold selection. This part is
+resentation and add the dynamic threshold selection. The directly related to the identification of anomalies. The F¯1,
+reconstruction loss Lr is replaced by contrastive loss Lc , R̄, P̄ are used. In addition, we adopt detection accuracy
+which extracts both intra-class and inter-class features in (Acc), a performance metric about the ground truth of normal
+representation. The dynamic threshold selection generates the and anomaly samples in testing data. Table V displays the
+different thresholds for different testing samples, instead of experiment results. The “Dynamic” is the dynamic threshold
+the fixed value. To analyze the effect of the above-mentioned selection in our BraodCAE. The “Fixed A” denotes the
+components, we conduct ablation experiments. threshold that comes from the best result in the ROC curve.
+ 1) Effect of contrastive loss. The experimental results The “Fixed B” denotes the 3-sigma criterion. Compared to
+are displayed in Fig. 13. The F¯1, R̄, P̄ , and AUC are the " Fixed A” and “Fixed B”, the new “Dynamic” sees the
+referred to as performance metrics. The brown “L” denotes maximum 10.01% jump in F¯1 and the maximum 3.07% leap
+the combination of “Lr ” and “Lc ”. The green “Lr ” and in Acc. Form this reference’s view [46], broad learning is more
+3260 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024
+
+Fig. 9. Impact of the number of feature mapped nodes.
+
+Fig. 10. Impact of the number of enhancement nodes.
+
+Fig. 11. Impact of anomaly bias.
+
+Fig. 12. Impact of normal bias.
+
+suitable to the online setting. In addition, we do not need to recommend broad-learning-based dynamic threshold selection.
+consider the selection and combination of deep network blocs In addition, for ASD, the “Dynamic” only acquires the 0.37%
+while adopting broad learning. This is the reason why we improvement of F¯1.
+ZHONG et al.: DETECTING CLOUD ANOMALY VIA BROAD NETWORK-BASED CONTRASTIVE AUTOENCODER 3261
+
+ [7] L. Yang and A. Shami, “A multi-stage automated online network
+ data stream analytics framework for IIoT systems,” IEEE Trans. Ind.
+ Informat., vol. 19, no. 2, pp. 2107–2116, Feb. 2023.
+ [8] G. Zhong, F. Liu, J. Jiang, and C. L. P. Chen, “CauseFormer:
+ Interpretable anomaly detection with stepwise attention for cloud service,” IEEE Trans. Netw. Service Manag., early access, Jul. 31, 2023,
+ doi: 10.1109/TNSM.2023.3299846.
+ [9] Z. Zou, Y. Xie, K. Huang, G. Xu, D. Feng, and D. Long, “A docker
+ container tnsm-zhong-3353772 isolation forest,” IEEE Trans. Cloud
+ Comput., vol. 10, no. 1, pp. 134–145, Jan.–Mar. 2022.
+ [10] Y. Song, R. Xin, P. Chen, R. Zhang, J. Chen, and Z. Zhao, “Identifying
+ performance anomalies in fluctuating cloud environments: A robust
+ correlative-GNN-based explainable approach,” Future Gener. Comput.
+ Syst., vol. 145, pp. 77–86, Aug. 2023.
+ [11] J. Soldani and A. Brogi, “Anomaly detection and failure root cause
+ analysis in (micro) service-based cloud applications: A survey,” ACM
+ Comput. Surv., vol. 55, no. 3, pp. 1–39, 2023.
+ [12] Y. Chen et al., “Outage prediction and diagnosis for cloud service
+ systems,” in Proc. World Wide Web Conf., 2019, pp. 2659–2665.
+ [13] G. Fan, L. Chen, H. Yu, and D. Liu, “Modeling and analyzing dynamic
+ fault-tolerant strategy for deadline constrained task scheduling in cloud
+ computing,” IEEE Trans. Syst., Man, Cybern., Syst., vol. 50, no. 4,
+Fig. 13. Effectiveness of contrastive loss.
+ pp. 1260–1274, Apr. 2020.
+ [14] Y. Liu, Y. Lin, Q. Xiao, G. Hu, and J. Wang, “Self-adversarial variational
+ autoencoder with spectral residual for time series anomaly detection,”
+ V. C ONCLUSION Neurocomputing, vol. 458, pp. 349–363, Oct. 2021.
+ [15] M. S. Islam, W. Pourmajidi, L. Zhang, J. Steinbacher, T. Erwin, and
+ In this paper, we propose the cloud anomaly detector, A. Miranskyy, “Anomaly detection in a large-scale cloud platform,” in
+BroadCAE, which incorporates contrastive learning and broad Proc. IEEE/ACM 43rd Int. Conf. Softw. Eng. Pract. (ICSE-SEIP), 2021,
+ pp. 150–159.
+network under the autoencoder framework. The contrastive [16] L. Li, J. Yan, H. Wang, and Y. Jin, “Anomaly detection of time
+loss enriches the representation by extracting additional series with smoothness-inducing sequential variational auto-encoder,”
+intra-class and inter-class features. The cloud anomaly and IEEE Trans. Neural Netw. Learn. Syst., vol. 32, no. 3, pp. 1177–1191,
+ Mar. 2021.
+normal sample are equally exploited. The broad network-based [17] A. Garg, W. Zhang, J. Samaran, R. Savitha, and C.-S. Foo, “An evaldynamic threshold selection aims at the changing cloud envi- uation of anomaly detection and diagnosis in multivariate time series,”
+ronment. The learned threshold pattern provides the dynamic IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2508–2517,
+ Jun. 2022.
+threshold, instead of the fixed one. The experimental results
+ [18] T. Zhao, T. Jiang, N. Shah, and M. Jiang, “A synergistic approach
+in four datasets illustrate that our BroadCAE outperforms for graph anomaly detection with pattern mining and feature learning,”
+the comparative method, and the improved components of IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2393–2405,
+BroadCAE are practical. Jun. 2022.
+ [19] G. Zhong, F. Liu, J. Jiang, B. Wang, and C. L. P. Chen, “Refining one-
+ For cloud operation, the accuracy of the anomaly detector is class representation: A unified transformer for unsupervised time-series
+essential to address the fault. The BroadCAE can be regarded anomaly detection,” Inf. Sci., vol. 656, Jan. 2024, Art. no. 119914.
+as one of the state-of-the-art methods. In future works, we will [20] Z. Li, W. Chen, and D. Pei, “Robust and unsupervised KPI anomaly
+ detection based on conditional variational autoencoder,” in Proc. IEEE
+explore the following research points for application-driven 37th Int. Perform. Comput. Commun. Conf. (IPCCC), 2018, pp. 1–9.
+anomaly detection: [21] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+ 1) the classification of anomaly or system fault, “USAD: UnSupervised anomaly detection on multivariate time series,”
+ in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discov. Data Min., 2020,
+ 2) the location and cause root of anomaly or system fault. pp. 3395–3404.
+ [22] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer: Time
+ series anomaly detection with association discrepancy,” in Proc. Int.
+ R EFERENCES Conf. Learn. Represent., 2022, pp. 1–20.
+ [1] H. Jayathilaka, C. Krintz, and R. Wolski, “Detecting performance [23] S. Tuli, G. Casale, and N. R. Jennings, “TranAD: Deep transformer
+ anomalies in cloud platform applications,” IEEE Trans. Cloud Comput., networks for anomaly detection in multivariate time series data,” Proc.
+ vol. 8, no. 3, pp. 764–777, Jul.–Sep. 2020. VLDB Endowment, vol. 15, no. 6, pp. 1201–1214, 2022.
+ [2] D. Saxena, I. Gupta, A. K. Singh, and C.-N. Lee, “A fault tolerant [24] Q. Lin et al., “EDITS: An easy-to-difficult training strategy for cloud
+ elastic resource management framework toward high availability of failure prediction,” in Proc. ACM Web Conf., 2023, pp. 371–375.
+ cloud services,” IEEE Trans. Netw. Service Manag., vol. 19, no. 3, [25] B. Li, D. Yu, J. Wu, P. Ju, and Z. Li, “Coordinated cloud-edge
+ pp. 3048–3061, Sep. 2022. anomaly identification for active distribution networks,” IEEE Trans.
+ [3] M. Soualhia, F. Khomh, and S. Tahar, “A dynamic and failure-aware Cloud Comput., vol. 11, no. 2, pp. 1204–1216, Apr.–Jun. 2023.
+ task scheduling framework for Hadoop,” IEEE Trans. Cloud Comput., [26] F. Schmidt et al., “IFTM-unsupervised anomaly detection for virtualized
+ vol. 8, no. 2, pp. 553–569, Apr.–Jun. 2020. network function services,” in Proc. IEEE Int. Conf. Web Services
+ [4] M. Zoure, T. Ahmed, and L. Réveillère, “Network services anomalies in (ICWS), 2018, pp. 187–194.
+ NFV: Survey, taxonomy, and verification methods,” IEEE Trans. Netw. [27] L. Yang et al., “Multi-perspective content delivery networks security
+ Service Manag., vol. 19, no. 2, pp. 1567–1584, Jun. 2022. framework using optimized unsupervised anomaly detection,” IEEE
+ [5] T. Wang, W. Zhang, J. Xu, and Z. Gu, “Workflow-aware automatic Trans. Netw. Service Manag., vol. 19, no. 1, pp. 686–705, Mar. 2022.
+ fault diagnosis for microservice-based applications with statistics,” IEEE [28] M. A. Mukwevho and T. Celik, “Toward a smart cloud: A review
+ Trans. Netw. Service Manag., vol. 17, no. 4, pp. 2350–2363, Dec. 2020. of fault-tolerance methods in cloud systems,” IEEE Trans. Services
+ [6] S. Kardani-Moghaddam, R. Buyya, and K. Ramamohanarao, “ADRL: Comput., vol. 14, no. 2, pp. 589–605, Mar./Apr. 2021.
+ A hybrid anomaly-aware deep reinforcement learning-based resource [29] S. He, J. Zhu, P. He, and M. R. Lyu, “Experience report: System log
+ scaling in clouds,” IEEE Trans. Parallel Distrib. Syst., vol. 32, no. 3, analysis for anomaly detection,” in Proc. 27th IEEE Int. Symp. Softw.
+ pp. 514–526, Mar. 2021. Rel. Eng., 2016, pp. 207–218.
+3262 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 3, JUNE 2024
+
+[30] M. Smara, M. Aliouat, A.-S. K. Pathan, and Z. Aliouat, “Acceptance test [54] Z. Li et al., “Multivariate time series anomaly detection and
+ for fault detection in component-based cloud computing and systems,” interpretation using hierarchical inter-metric and temporal embedding,”
+ Future Gener. Comput. Syst., vol. 70, pp. 74–93, May 2017. in Proc. 27th ACM SIGKDD Int. Conf. Knowl. Discov. Data Min., 2021,
+[31] Q. Lin, H. Zhang, J.-G. Lou, Y. Zhang, and X. Chen, “Log clustering pp. 3220–3230.
+ based problem identification for online service systems,” in Proc. [55] V. Nair and G. E. Hinton, “Rectified linear units improve restricted
+ IEEE/ACM 38st Int. Conf. Softw. Eng., Companion (ICSE-Companion), Boltzmann machines,” in Proc. 27rd Int. Conf. Int. Conf. Mach. Learn.,
+ 2016, pp. 102–111. 2010, pp. 807–814.
+[32] N. Zhao, J. Zhu, R. Liu, D. Liu, M. Zhang, and D. Pei, “Label-less: [56] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating deep
+ A semi-automatic labelling tool for KPI anomalies,” in Proc. IEEE network training by reducing internal covariate shift,” in Proc. 32rd Int.
+ INFOCOM Conf. Comput. Commun., 2019, pp. 1882–1890. Conf. Mach. Learn., 2015, pp. 448–456.
+[33] T. Huang et al., “An LOF-based adaptive anomaly detection scheme for [57] D. P. Kingma and J. Ba, “ADAM: A method for stochastic optimization,”
+ cloud computing,” in Proc. IEEE 37th Annu. Comput. Softw. Appl. Conf. in Proc. Int. Conf. Learn. Represent., 2015, pp. 1–15.
+ Workshops (COMPSAC), 2013, pp. 206–211. [58] J. Davis and M. Goadrich, “The relationship between precision-recall
+[34] J. Álvarez Cid-Fuentes, C. Szabo, and K. Falkner, “Adaptive and ROC curves,” in Proc. 23rd Int. Conf. Mach. Learn., 2006,
+ performance anomaly detection in distributed systems using online pp. 233–240.
+ SVMs,” IEEE Trans. Dependable Secure Comput., vol. 17, no. 5, [59] M. Amer, M. Goldstein, and S. Abdennadher, “Enhancing one-class
+ pp. 928–941, Sep./Oct. 2020. support vector machines for unsupervised anomaly detection,” in Proc.
+[35] N. Zhao et al., “Understanding and handling alert storm for online ACM SIGKDD Workshop Outl. Detec. Descr., 2013, pp. 8–15.
+ service systems,” in Proc. IEEE/ACM 42st Int. Conf. Softw. Eng., Softw. [60] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation-based anomaly
+ Eng. Pract. (ICSE-SEIP), 2020, pp. 162–171. detection,” ACM Trans. Knowl. Discov. Data, vol. 6, no. 1, pp. 1–39,
+ 2012.
+[36] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF:
+ [61] Y. Zhang, Y. Chen, J. Wang, and Z. Pan, “Unsupervised deep anomaly
+ Identifying density-based local outliers,” in Proc. Int. Conf. Manag. Data
+ detection for multi-sensor time-series signals,” IEEE Trans. Knowl. Data
+ (SIG-MOD), 2000, pp. 93–104.
+ Eng., vol. 35, no. 2, pp. 2118–2132, Feb. 2023.
+[37] D. M. J. Tax and R. P. W. Duin, “Support vector data description,” Mach. [62] I. J. Goodfellow et al., “Generative adversarial nets,” in Proc. Adv.
+ Learn., vol. 54, no. 1, pp. 45–66, 2004. Neural Inf. Process. Syst., 2014, pp. 2672–2680.
+[38] S. Hawkins, H. He, G. Williams, and R. Baxter, “Outlier detection using
+ replicator neural networks,” in Proc. 4th Int. Conf. Data Ware. Knowl.
+ Discov., 2002, pp. 170–180.
+[39] H. Xu et al., “Unsupervised anomaly detection via variational autoencoder for seasonal KPIs in Web applications,” in Proc. World Wide
+ Web Conf., 2018, pp. 187–196.
+[40] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in
+ Guoxiang Zhong received the M.S. degree from the
+ Proc. Int. Conf. Learn. Represent., 2014, pp. 1–14.
+ Guangdong University of Technology, Guangzhou,
+[41] D. Liu et al., “Opprentice: Towards practical and automatic anomaly
+ China, in 2020. He is currently pursuing the Ph.D.
+ detection through machine learning,” in Proc. ACM Int. Meas. Conf.,
+ degree with the School of Computer Science and
+ 2015, pp. 211–224.
+ Engineering, South China University of Technology,
+[42] K. Sohn, H. Lee, and X. Yan, “Learning structured output representation Guangzhou. His research interests include cloud
+ using deep conditional generative models,” in Proc. Adv. Neural Inf. computing and data mining.
+ Process. Syst., 2015, pp. 3483–3491.
+[43] S. Lin, R. Clark, R. Birke, S. Schönborn, N. Trigoni, and S. Roberts,
+ “Anomaly detection for time series using VAE-LSTM hybrid model,” in
+ Proc. IEEE Int. Conf. Acoust., Speech Signal, 2020, pp. 4322–4326.
+[44] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Adv. Neural
+ Inf. Process. Syst., 2017, pp. 5998–6008.
+[45] C. L. P. Chen and Z. Liu, “Broad learning system: An effective
+ and efficient incremental learning system without the need for deep
+ architecture,” IEEE Trans. Neural Netw. Learn. Syst., vol. 29, no. 1,
+ pp. 10–24, Jan. 2018.
+ Fagui Liu (Member, IEEE) received the M.S.
+[46] C. L. P. Chen, Z. Liu, and F. Shuang, “Universal approximation capabil- degree from Beihang University in 1991, and the
+ ity of broad learning system and its structural variations,” IEEE Trans. Ph.D. degree from the South China University of
+ Neural Netw. Learn. Syst., vol. 30, no. 4, pp. 1191–1204, Apr. 2019. Technology, China, in 2006, where she is cur-
+[47] S. Feng and C. L. P. Chen, “Fuzzy broad learning system: A novel neuro- rently a Professor with the School of Computer
+ fuzzy model for regression and classification,” IEEE Trans. Cybern., Science and Engineering, South China University of
+ vol. 50, no. 2, pp. 414–424, Feb. 2020. Technology. She is also with the Department of New
+[48] Z. Liu, C. L. P. Chen, S. Feng, Q. Feng, and T. Zhang, “Stacked broad Networks, Peng Cheng Laboratory, Shenzhen. Her
+ learning system: From incremental flatted structure to deep model,” current research interests include service computing,
+ IEEE Trans. Syst., Man, Cybern., Syst., vol. 51, no. 1, pp. 209–222, Internet of Things, cloud computing, and big data.
+ Jan. 2021.
+[49] T. Song, W. Zheng, P. Song, and Z. Cui, “EEG emotion recognition using
+ dynamical graph convolutional neural networks,” IEEE Trans. Affect.
+ Comput., vol. 11, no. 3, pp. 532–541, Jul.–Sep. 2020.
+[50] T. Qiu, X. Liu, X. Zhou, W. Qu, Z. Ning, and C. L. P. Chen,
+ “An adaptive social spammer detection model with semi-supervised
+ broad learning,” IEEE Trans. Knowl. Data Eng., vol. 34, no. 10,
+ pp. 4622–4635, Oct. 2022. Jun Jiang (Member, IEEE) received the Ph.D.
+[51] F. Zhou and C. Cao, “Overcoming catastrophic forgetting in graph neural degree in computer science and technology from the
+ networks with experience replay,” in Proc. 35th AAAI Conf. Artif. Intell., South China University of Technology, Guangzhou,
+ 2021, pp. 4714–4722. China, in 2022. He was a visiting student with Peng
+[52] Z. He et al., “A spatiotemporal deep learning approach for unsupervised Cheng Laboratory, Shenzhen, China, in 2023. He is
+ anomaly detection in cloud systems,” IEEE Trans. Neural Netw. Learn. currently a Lecturer with the College of Information
+ Syst., vol. 34, no. 4, pp. 1705–1719, Apr. 2023. Science and Technology and the College of Artificial
+[53] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly Intelligence, Nanjing Forestry University, Nanjing,
+ detection for multivariate time series through stochastic recurrent neural China. His research interests include data stream
+ network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discov. Data classification, anomaly detection, cloud computing,
+ Min., 2019, pp. 2828–2837. and Internet of Things.
+ZHONG et al.: DETECTING CLOUD ANOMALY VIA BROAD NETWORK-BASED CONTRASTIVE AUTOENCODER 3263
+
+ Bin Wang received the B.S. and Ph.D. degrees from C. L. Philip Chen (Fellow, IEEE) is the Chair
+ the South China University of Technology in 2014 Professor and the Dean of the College of Computer
+ and 2021, respectively. He is currently a Research Science and Engineering, South China University
+ Scientist with the Department of New Networks, of Technology, Guangzhou, China. Been a Program
+ Peng Cheng Laboratory, Shenzhen. His research Evaluator of the Accreditation Board of Engineering
+ interests include cloud computing, edge computing, and Technology Education, USA, for computer
+ and energy efficiency. engineering, electrical engineering, and software
+ engineering programs, he successfully architects the
+ University of Macau’s Engineering and Computer
+ Science programs receiving accreditations from
+ Washington/Seoul Accord through the Hong Kong
+ Institute of Engineers, of which is considered as his utmost contribution in
+ engineering/computer science education for Macau as the Former Dean of
+ the Faculty of Science and Technology. His current research interests include
+ cybernetics, computational intelligence, and systems.
+ Dr. Chen received the IEEE Norbert Wiener Award in 2018 for his
+ contribution in systems and cybernetics, and machine learnings and the
+ IEEE Joseph Wohl Award in 2021. He received two times Best Transactions
+ Paper Award from IEEE T RANSACTIONS ON N EURAL N ETWORKS AND
+ L EARNING S YSTEMS for his papers in 2014 and 2018. He was a recipient of
+ the 2016 Outstanding Electrical and Computer Engineers Award from his alma
+ mater, Purdue University, West Lafayette, IN, USA, in 1988, after he graduated from the University of Michigan at Ann Arbor, Ann Arbor, MI, USA,
+ in 1985. He is a Highly Cited Researcher by Clarivate Analytics from 2018
+ to 2021. He is a Fellow of the American Association for the Advancement
+ of Science, the International Association for Pattern Recognition, the Chinese
+ Association of Automation, and HKIE, and a member of the Academia
+ Europaea and the European Academy of Sciences and Arts. He was the
+ Xi Yao received the B.S. degree from the South Editor-in-Chief of the IEEE T RANSACTIONS ON C YBERNETICS from 2020
+ China University of Technology, Guangzhou, China, to 2021 after he completed his term as the Editor-in-Chief of the IEEE
+ in 2023. She will pursue the Ph.D. degree with T RANSACTIONS ON S YSTEMS , M AN , AND C YBERNETICS : S YSTEMS from
+ the School of Computer Science and Engineering, 2014 to 2019, followed by serving as the IEEE Systems, Man, and Cybernetics
+ South China University of Technology. Her research Society President from 2012 to 2013. He is currently serving as the Deputy
+ interests include anomaly detection and cloud Director for CAAI Transactions on Artificial Intelligence, an Associate
+ computing. Editor for the IEEE T RANSACTIONS ON A RTIFICIAL I NTELLIGENCE, IEEE
+ T RANSACTIONS ON S YSTEMS , M AN , AND C YBERNETICS : S YSTEMS, IEEE
+ T RANSACTIONS ON F UZZY S YSTEMS, and China Sciences: Information
+ Sciences.

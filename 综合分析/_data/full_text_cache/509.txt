@@ -1,0 +1,598 @@
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 6, JUNE 2025 4435
+
+ Privacy-Preserving Lightweight Time-Series
+ Anomaly Detection for Resource-Limited
+ Industrial IoT Edge Devices
+ Lei Chen , Member, IEEE, Yepeng Xu , Ming Li, Bowen Hu , Haomiao Guo,
+ and Zhaohua Liu , Senior Member, IEEE
+
+ Abstract—Identifying anomalies directly on edge devices detection models are often deployed on the cloud with powerful
+rather than in the cloud, known as edge computing, is es- resources [2]. In this case, edge devices periodically upload the
+sential for Industry 4.0. However, the limited computing and collected data to the cloud. The detection model in the cloud
+storage resources on edge devices render traditional cloud- identifies anomalies and then returns the results to edge debased anomaly detection models ineffective. To solve this vices. These models prioritize enhancing feature representation
+issue, a privacy-preserving lightweight time-series anomaly
+detection model, named PPLAD, is proposed for resource- and model accuracy (ACC) by building deep neural networks
+limited industrial Internet of Things (IoT) edge devices via with complex structures and huge parameters. Therefore, deep
+global and local similarity discrepancy. First, PPLAD di- neural network-based models are the dominant focus of currectly uses data similarity instead of raw data as model rent research. However, driven by fine-grained industrial smart
+input, to achieve privacy-preserving. Second, PPLAD ap- controls, an increasing number of Internet of Things (IoT) senplies trainable Gaussian distribution rather than deep neu- sors are being used to perform more intensive data collection
+ral network as model structure, to achieve high timeliness and information perception. As a result, the volume of data
+and low cost. Specifically, PPLAD constructs a trainable is growing rapidly, which causes substantial communication
+Gaussian distribution with only one parameter for each overhead between edge devices and the cloud. Moreover, the
+timestamp to model its similarity with neighbors. Third, a
+ huge data volume further makes anomaly detection in the cloud
+global and local adversarial learning strategy is developed
+to amplify the discrepancy between local similarity and
+ result in high latency and high costs. Therefore, identifying
+global similarity for each timestamp. Finally, the discrep- anomalies directly on edge devices rather than in the cloud,
+ancy is used to accurately identify timestamp-level anoma- also known as edge computing, is a critical requirement for
+lies. To the best of authors’ knowledge, this is the first work Industry 4.0 [3]. However, limited computing and storage reto build an industrial anomaly detection model using only sources on edge devices make the current popular deep neural
+learnable Gaussian distributions. Extensive experiments network-based models powerless. Specifically, there are two
+on eight public industrial multisensor datasets and three major challenges for existing models on resource-limited edge
+edge devices demonstrate that PPLAD outperforms several devices [4].
+state-of-the-art models.
+ Index Terms—Data privacy-preserving, edge devices, in- A. Challenges
+dustrial Internet of Things, lightweight anomaly detection,
+resource-limited, similarity discrepancy. 1) Balancing ACC, Timeliness, and Cost-Efficiency is Challenging: Anomaly detection on resource-limited edge devices
+ must simultaneously meet high ACC, high timeliness, and
+ I. INTRODUCTION low-resource consumption [5]. However, these goals are often
+ mutually conflicting and difficult to balance. For example, to
+ NOMALY detection is crucial and widely concerned
+A for costly industrial scenarios [1]. In the past, anomaly
+ get high ACC, detection models often need to have strong
+ representational capabilities by building deep neural networks
+ with complex structures and huge parameters [6], [7], [8]. In this
+ Received 26 October 2024; revised 10 January 2025; accepted 20 case, these models demand long processing times and consume
+January 2025. Date of publication 3 March 2025; date of current version 23 May 2025. This work was supported in part by the National
+ substantial computational and storage resources. Conversely, to
+Natural Science Foundation of China under Grant 62103143, in part achieve high timeliness, detection models usually lightweight
+by the Hunan Provincial Natural Science Foundation of China under models with shallow structures and few parameters. Although
+Grant 2024JJ5162 and Grant 2024JJ7179, and in part by the Scientific these models only consume less computational and storage
+Research Fund of Hunan Provincial Education Department under Grant resources, but they have poor feature capture capability and
+22B0471. Paper no. TII-24-5638. (Corresponding author: Lei Chen.)
+ The authors are with the School of Information and Electrical Engi- unsatisfactory detection ACC.
+neering, Hunan University of Science and Technology, Xiangtan 411201, 2) Data Privacy is Not Secure and Easily Exposed: In in-
+China (e-mail: chenlei@hnust.edu.cn; xuyepeng@mail.hnust.edu.cn; dustrial scenarios, edge devices continuously collect sensor
+minglee@hnust.edu.cn; hubowen@mail.hnust.edu.cn; guohaomiao@ temporal signals from the production process. These sensor data
+mail.hnust.edu.cn; zhaohua.liu@hnust.edu.cn).
+ The source code of PPLAD is available at
+ contains highly valuable information and has strong privacy.
+https://github.com/infogroup502/PPLAD. Currently, existing anomaly detection models for IoT edge de-
+ Digital Object Identifier 10.1109/TII.2025.3538127 vices directly take raw sensor signals as input data. However,
+
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+ Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+ for more information.
+4436 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 6, JUNE 2025
+
+IoT edge devices are often insecure [9], [10] and lack powerful
+protection mechanisms. In this case, external attacks can easily
+steal the raw sensor signal data, resulting in a privacy leakage.
+In more severe cases, attackers may compromise edge devices
+and disrupt production processes.
+
+B. Existing Solutions
+ As for the first challenge, some works [11], [12] use deep
+neural networks as prototypes, employing parallelization or
+compression techniques to reduce network layers and redundant
+parameters, ultimately creating lightweight models that balance
+ACC and timeliness. However, these models still have numerous
+parameters and a deep structure, resulting in unsatisfactory
+resource consumption and processing time. The other works
+rely on shallow machine learning or statistical models, combined with other techniques or customized ACC optimization
+strategies, to build hybrid lightweight models [13], [14], [15]
+that balance ACC and timeliness. However, these models may be Fig. 1. Illustration of the local and global similarity discrepancy.
+unstable when encountering multisensor temporal signals with (a) Anomaly in real-world UCR dataset. (b) Anomaly detection driven
+complex feature patterns. by similarity discrepancy.
+ As for the second challenge, existing solutions [16], [17]
+employ some security mechanisms to guarantee data privacy. The second bottleneck is how to achieve flexible privacy-
+However, these models require additional encryption and de- preserving for multisensor temporal data without incurring addicryption processing, which results in more computational, com- tional overhead. A straightforward scheme is to use data similarmunication, and storage resource consumption and processing ity as an initial input rather than raw privacy data. In this scheme,
+time. In certain industrial scenarios, some privacy-preserving the initial similarity computation can either be outsourced to a
+technologies may not even be feasible on resource-efficient edge third-party security interface or flexibly integrated with other
+devices. models.
+ In summary, performing anomaly detection with high speed, Based on these insights, a privacy-preserving lightweight
+high ACC, and low-resource consumption on resource-limited anomaly detection model, named PPLAD, is proposed for
+edge devices remains a significant challenge. resource-limited industrial IoT edge devices. First, PPLAD uses
+ data similarity as an initial input. Second, PPLAD employs
+ a tiny trainable Gaussian distribution for each timestamp to
+C. New Insights learn both local and global similarities. Finally, PPLAD designs
+ To fill this gap, this article tries to design a lightweight an adversarial learning mechanism to amplify the discrepancy
+anomaly detection model to achieve the desired goals. Specifi- between global and local similarities and use this discrepancy
+cally, two key bottlenecks need to be solved. to detect anomalies.
+ The first bottleneck is how to build a lightweight model
+with high ACC, high timeliness, and low-resource consump- D. Contributions
+tion. Anomalies in industrial IoT systems occur infrequently, The main contributions of this article are listed as follows.
+typically spanning multiple timestamps, and exhibit distinct 1) A learnable Gaussian distribution-based lightweight
+characteristics compared to normal data, as shown in Fig. 1(a). It
+implies that an abnormal timestamp is only similar to its adjacent anomaly detection model, named PPLAD, is proposed
+neighbors (local neighbors) and not to its distant neighbors for resource-limited industrial IoT edge devices. Driven
+(global neighbors). On the contrary, a normal timestamp is simi- by the global and local similarity discrepancy, PPLAD
+lar not only to its local neighbors but also to its global neighbors. employs the tiny learning structure and customized adver-
+Hence, the local-global similarity discrepancy offers a useful sarial mechanism to achieve high timeliness, high ACC,
+criterion for distinguishing anomalies from normal timestamps, and low-resource consumption. To the best of authors’
+as shown in Fig. 1(b). knowledge, this is the first work to build an industrial
+ Driven by this observation, we try to set up a tiny train- anomaly detection model using only learnable Gaussian
+able Gaussian distribution with only one parameter for each distributions.
+timestamp, so as to learn its local and global similarities. 2) PPLAD utilizes data similarity as the initial input, rather
+Meanwhile, we design an adversarial learning mechanism to
+ than raw multisensor privacy data. This approach not only
+amplify the discrepancy between global and local similarities for each timestamp. This mechanism works by simulta- protects data privacy but also enables flexible integration
+neously maximizing its local and global similarities. In this with other models.
+scheme, the lightweight trainable Gaussian distribution with 3) Extensive experiments on eight public industrial multionly a parameter ensures high timeliness and low consump- sensor datasets and three edge devices (Thick PC, Thin
+tion, while the adversarial learning mechanism provides high Jetson Xavier NX, Mirco Raspberry Pi 4b) demonstrate
+ACC. that PPLAD outperforms several state-of-the-art (SOTA)
+CHEN et al.: PRIVACY-PRESERVING LIGHTWEIGHT TIME-SERIES ANOMALY DETECTION FOR RESOURCE-LIMITED INDUSTRIAL 4437
+
+ TABLE I incorporates clustering learning and hashing to design an opti-
+ RELATED WORK mal multibranch tree structure. The DIF model [14] employs a
+ customized shallow neural network to improve the ACC of isolation forest. The calibrated oneclass classification-based anomalydetection (COUTA) model [15] designs multiple calibrated
+ mechanisms for one-class support vector machine (OCSVM).
+ Similarly, the VQ-OCSVM model [20] combines the vector
+ quantization and OCSVM. The federated unsupervised anomaly
+ detection (FedPCA) model [21] leverages principal component analysis (PCA), federal learning and alternating directions
+ method multipliers to boost ACC. Although these models deliver
+ superior timeliness and efficiency, their ACC often falters when
+ applied to industrial time series with complex feature patterns.
+
+ B. Privacy-Preserving Anomaly Detection
+ To get privacy-preserving, most existing models utilize encryption, digital signatures, blockchain, and other protection
+ techniques to enhance security. For example, the federated
+ anomaly detection with noisy global density estimation (FADngs) model [17] uses a federated signature mechanism to
+ guarantee identity authorization and data privacy. Similarly,
+ the federated learning-based anomaly detection (FedAnomaly)
+ model [22] develops a novel collaborative learning protocol
+ models. Notably, its detection time and model parameters to secure cloud-edge communications. The federated semisupervised class-rebalanced (Fed-SCR) model [23] applies the
+ are only one-tenth of those in competing models.
+ federal learning to preserve data privacy. Meanwhile, the
+ blockchain-empowered anomaly detection (BCFL) model [24]
+ II. RELATED WORK adopts a blockchain-enabled decentralized asynchronous federated learning framework. In addition, the Shagufta et al.
+ In this section, we respectively summarize the related work on [16] designs a lightweight, aggregation-optimized encryption
+lightweight anomaly detection and privacy-preserving anomaly scheme. The OP-ADIHT model [25] uses interval hash table
+detection, as shown in Table I. (ADIHT) and homomorphic encryption to construct a privacypreserving anomaly detection scheme. However, these models
+ often require encryption and decryption steps before performing
+A. Lightweight Anomaly Detection
+ anomaly detection. Consequently, they require longer process-
+ To achieve a balance between high ACC, high timeliness, ing times or consume more computational and storage resources.
+and low-resource consumption, existing lightweight models are On resource-efficient IoT edge devices, some bulky privacygenerally classified into two categories. preserving solutions may not run smoothly, which results in
+ The first category directly compresses deep neural network- anomaly detection not working smoothly, or even not working
+based models with high ACC. For example, the patch- at all.
+based anomaly detection (PatchAD) model [11] constructs a
+lightweight two-branch contrastive network using an Multi-
+Layer Perceptron (MLP)-based architecture inspired by the dual C. Summary
+attention contrastive anomaly detection (DCdetector) model [8]. Coming to Industry 4.0, detecting anomalies directly on
+Similarly, the lightweight neural network-based anomaly detec- industrial IoT edge devices is becoming increasingly critical.
+tion (ANNet) model [12] optimizes Long Short Term Mem- However, the resource limitations of edge devices necessitate
+ory (LSTM) blocks with MLPs. The lightweight deep neural the development of lightweight anomaly detection models with
+network-based anomaly detection (LightDNN) model [18] com- minimal parameters and low-resource consumption, all while
+presses the redundant parameters of the convolutional neural maintaining high ACC. In addition, industrial IoT edge devices
+network (CNN), and tests the performance on edge devices. The in industrial scenarios are often deployed in insecure environreconstructed graph with global–local distillation (RG-GLD) ments. This requires anomaly detection models to protect data
+model [19] integrates graph neural networks(GNN) and knowl- privacy without introducing significant additional overhead.
+edge distillation (KD) to enhance timeliness and reduce resource
+consumption. Despite these advancements, compressed models
+retain deep structures with numerous parameters, which limits III. PROPOSED MODEL
+their potential for significant improvements in timeliness and
+ A. Problem Statement
+resource efficiency.
+ The second category enhances the ACC of shallow machine Suppose M sensors are employed to observe a dynamic prolearning or statistical models, which inherently offer high speed duction system over T times. The collected data is multisensor
+and low-resource consumption. For instance, the optimal iso- temporal data, also known as a multivariate time series. Mullation forest-based anomaly detection (Optiforest) model [13] tisensor temporal data consists of both temporal and variable
+4438 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 6, JUNE 2025
+
+ (a) (b) (c)
+
+Fig. 2. Overview of PPLAD model. (a) Initial similarity calculation. (b) Tiny trainable Gaussian distribution-based adversarial learning. (c) Global
+and local similarity discrepancy-based anomaly scoring.
+
+(spatial) dimensions. In the temporal dimension, the multisen- is designed to amplify the discrepancy between global
+sor temporal data can be formulated as X = {xt ∈ RM ×1 }Tt=1 , and local similarities.
+where xt represents the observed value of M variables at the tth 3) Anomaly scoring: This component exploits the discreptimestamp. In the variable dimension, the multisensor temporal ancy between global and local similarities to determine if
+data can be formulated as X = {xm ∈ R1×T }M m=1 , where x
+ m
+ a timestamp is an anomaly.
+represents the observed values from T timestamps at the mth
+variable.
+ Problem statement: This article aims to develop a lightweight C. Initial Similarity Calculation
+anomaly detection model. First, unlabeled historical multisensor Unlike traditional models that directly use raw private data,
+temporal data is used to train the anomaly detection model. PPLAD utilizes data similarities obtained from third-party se-
+Second, the trained model is used to generate an anomaly score cure interfaces as model input to ensure privacy preservation.
+for each to-be-tested timestamp These interfaces can be located on edge devices or in the cloud.
+ In this case, data privacy is not only preserved on insecure edge
+ Scoret = PPLAD (xt ) (1) devices, but also the coupling between multiple sensors can be
+where xt ∈ RM denotes the observed values of M variables captured.
+at the tth to-be-tested timestamp. Finally, the anomaly score In this section, a similarity calculation strategy is designed
+determines whether a timestamp is classified as an anomaly to serve as a recommended solution for third-party references.
+ First, for each timestamp, the M variables in the raw data
+ 
+ 1, if Scoret ≥ α X ∈ RM ×T form a data vector xt ∈ RM ×1 . Second, a similarity
+ ȳt = (2) technique—such as distance similarity (Mean Squared Error,
+ 0, otherwise
+ MSE), probability distribution similarity (Kullback-Leibler diwhere α is a preset threshold ranging from 0 to 1. If ȳt = 1, the vergence, KL), or vector similarity (Cosine)—is used to compute
+tth to-be-tested timestamp is labeled as an anomaly; otherwise, the similarity between data vectors of any two timestamps.
+it is classified as normal. Finally, the raw data is transformed into a similarity matrix
+ S ∈ RT ×T , where st ∈ RT ×1 represents the similarities between timestamp t and its T neighbors.
+B. Overview
+ To detect anomalies directly on the resource-limited edge D. Gaussian Distribution-Based Adversarial Learning
+devices, a trainable Gaussian distributions-based privacypreserving lightweight anomaly detection model, named Industrial sensor signals often show periodicity, seasonal-
+PPLAD, is proposed via global and local similarity discrep- ity, and trends. This suggests that a normal timestamp is not
+ancy. To the best of authors’ knowledge, this is the first work only related to neighbor timestamps (local neighbors), but
+to build an industrial anomaly detection model using only also to distant timestamps (global neighbors). Conversely, outlearnable Gaussian distributions. The overview of PPLAD is liers typically persist across multiple timestamps and show
+illustrated as Fig. 2, which consists of the following three significant deviations from normal values. This suggests that an
+components. abnormal timestamp is only related to adjacent timestamps (local
+ 1) Initial similarity calculation: This component calls a neighbors). Therefore, the discrepancy between global and local
+ third-party security interface to generate the initial simi- similarities for each timestamp is a useful metric for identifying
+ larities of each timestamp with its local and global neigh- anomalies. Based on this insight, a trainable Gaussian distribution with only one parameter is constructed for each timestamp
+ bors as input for the model.
+ to learn global and local similarities from the initial similarities,
+ 2) Gaussian distribution-based adversarial learning: In this as shown in Fig. 2(b). To enhance this process, a customized adcomponent, a trainable Gaussian distribution with only versarial learning mechanism is designed to amplify the discrepone parameter is constructed for each timestamp, so as to ancy between global and local similarities. In adversarial learnmodel its global and local similarities based on initial sim- ing mechanism, local and global similarity learning are treated as
+ ilarities. Meanwhile, an adversarial learning mechanism competing processes vying for the same Gaussian distribution.
+CHEN et al.: PRIVACY-PRESERVING LIGHTWEIGHT TIME-SERIES ANOMALY DETECTION FOR RESOURCE-LIMITED INDUSTRIAL 4439
+
+ possible
+ t+LN/2
+ 1 
+ L1 = [gt (i) − sit ]2 (5)
+ LN
+ i=t− 2
+ LN
+
+ where LN indicates the number of local neighbors and L1 is the
+ first train loss function.
+ Second, the area of local similarities is expected to be maximized within the overall distribution
+     
+ LN LN
+ L2 = 1 − Area t + − Area t − (6)
+ 2 2
+ where Area(x) represents the area of the Gaussian distribution
+ in the range [−∞, x], L2 is the second train loss function.
+ 4) Similarity Learning for Global Neighbors: First, the Gaussian distribution is expected to only fit normalized similarity of
+Fig. 3. Global and local sampling. each global neighbor as closely as possible
+ L3 =
+Local similarity learning wants to monopolize the Gaussian ⎡ ⎤
+ t− LN t+ GN
+distribution itself. Specifically, the Gaussian distribution for a 1  2  2
+ ⎣ (gt (i) − sit )2 + (gt (j) − sjt )2 ⎦
+timestamp should perfectly fit the initial local similarities, and GN − LN
+the area occupied by the local neighbors in the Gaussian dis- i=t− GN
+ 2 j=t+ LN
+ 2
+tribution should be as large as possible. On the contrary, global (7)
+similarity learning also wants to monopolize the Gaussian distribution itself. The Gaussian distribution is expected to fit only where GN indicates the number of global neighbors and L3 is
+the initial global similarities, and the area occupied by the global the third loss function.
+neighbors is as large as possible. Through this adversarial learn- Second, the area of global similarities is expected to be
+ing, the Gaussian distribution adapts to fit both local and global maximized within the overall distribution
+  
+similarities simultaneously for normal timestamps. However, LN
+for abnormal timestamps, such simultaneous fitting becomes L4 = 1 − 2 × Area t − (8)
+ 2
+challenging. As a result, the discrepancy between global and
+local similarities diminishes for normal timestamps but increases where L4 is the fourth loss function.
+for abnormal ones, enabling effective anomaly detection. 5) Adversarial Learning: In the abovementioned process, lo-
+ Taking the tth timestamp as an example, the adversarial learn- cal similarity learning and global similarity learning constitute
+ing process is stated as follows. two competitors who play against each other. Therefore, the final
+ 1) Global and Local Neighbor Sampling: Timestamps within loss function for adversarial learning is the sum of the local and
+the range [t − LN global losses
+ 2 , t + 2 ] are selected as local neighbors
+ LN
+
+for timestamp t. Meanwhile, timestamps with the ranges Loss = L1 + L2 + L3 + L4 . (9)
+[t − GN2 , t − 2 ] and [t + 2 , t + 2 ] are chosen as global
+ LN LN GN
+
+neighbors. The sampling process is shown in Fig. 3. Based on
+ E. Anomaly Scoring
+the coordinates of local and global neighbors, the corresponding
+initial similarities are extracted from st ∈ RT ×1 and normalized After the PPLAD model is trained, a test timestamp t first uses
+as follows: the PPLAD model to generate its Gaussian distribution. Then,
+ the discrepancy between global and local similarities serves as
+ 1 the final anomaly score for timestamp t
+ sit = (3)
+ 1 + exp−(sit ) Scoret = |L1 − L3 |. (10)
+where sit is initial similarity between timestamps i and t. where | · | means absolute value, L1 represents the Gaussian-fit-
+ 2) Trainable Gaussian Distribution: A private trainable error for the local similarities of timestamp t, and L3 indicates
+Gaussian distribution with only one parameter is constructed the Gaussian-fit-error for the global similarities of timestamp t.
+for timestamp t, and expressed as follows: Finally, (2) is employed to determine whether timestamp t is an
+ anomaly.
+  
+ 1 (x − t)2
+ gt (x) = √ exp − (4) F. Algorithm and Analysis
+ 2πσt 2σt2
+ The pseudocode for PPLAD is shown in Algorithm 1.
+where x indicates the coordinate of a neighbor. σt indicates the Complexity: The PPLAD model consists of four stages: initial
+variance of this distribution, it is a trainable parameter and its similarity calculation, Gaussian distribution-based adversarial
+value is initialized by a common two-layer MLP network. learning, anomaly scoring, and anomaly detention. In the first
+ 3) Similarity Learning for Local Neighbors: First, the vari- stage, the initial similarity calculation is handled by a thirdance σt is trained to make the Gaussian distribution only fit party library, and its complexity is, therefore, omitted. In the
+the normalized similarity of each local neighbor as closely as second stage, a private, trainable Gaussian distribution is created
+4440 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 6, JUNE 2025
+
+ Algorithm 1: PPLAD. TABLE II
+ DATASET
+
+ 1) RQ-1 (ACC): Does our model outperform baseline models in detection ACC on multisensor temporal datasets?
+ 2) RQ-2 (Deployability): Is our model easily deployable on
+ resource-constrained industrial IoT edge devices?
+ 3) RQ-3 (Timeliness and resource consumption): How does
+ our model perform in terms of timeliness and resource
+ consumption on industrial IoT edge devices?
+ 4) RQ-4 (Ablation): Does each innovative component of our
+ model contribute to overall performance?
+ 5) RQ-5 (Case Study): Can PPLAD perform well in real
+ industrial environments?
+
+ B. Dataset
+ The following nine publicly available real-world industrial
+ multisensor temporal datasets are selected for our experiments,
+ as shown in Table II.
+ 1) HAI (HIL-based Augmented ICS Dataset): Multiple industrial signals from pumps, valves, pressure sensors, and
+ other common industrial equipment.
+ 2) MSL (Mars Science Laboratory Dataset): Operating status
+ of multiple sensors or controllers on the Mars rover.
+ 3) PSM (Pooled Server Metrics Dataset): 25-dimensional
+ monitoring information from eBay server machines.
+ 4) PUMP (Pump Sensor Dataset): Inspection data from multiple sensors on pumps.
+ 5) SKAB (Skoltech Anomaly Benchmark Dataset): Mulfor each timestamp. Adversarial learning is then applied to this tisensor temporal signals obtained from industrial test
+distribution by maximizing both local and global similarities. benches.
+Specifically, the complexity of the sampling process is O(T × 6) SMAP (Soil Moisture Active Passive Satellite Dataset):
+GN), the complexity of the Gaussian Construction is O(T ), NASA’s SMAP satellite signals that record moisture levthe complexity of the local similarity learning is O(T × LN), els at varying soil depths.
+and the complexity of the global similarity learning is O(T × 7) SMD (Server Machine Dataset): Operational status from
+(GN-LN)). Consequently, the overall complexity for this stage multiple servers.
+is O(T × (2 × GN + 1)), where GN  T . In the third stage, 8) SWaT (Secure Water Treatment (SWaT) Dataset): 51-
+the discrepancy between local and global fitting is computed as dimensional data collected by multiple sensors in public
+the anomaly score for each timestamp. Its complexity is O(T ).
+ water treatment infrastructure.
+In the final stage, each timestamp is determined whether to be
+an anomaly, its complexity is O(T ). In summary, the overall 9) WaDi (Water Distribution Dataset): 127-dimensional
+time complexity of the PPLAD model is O(T × GN), making monitoring data from an industrial control system.
+it linear and nearly linear given that GN  T .
+ C. Baseline, Metric, Environment
+ IV. EXPERIMENT 1) Baseline: Eight SOTA models are selected as the baselines, as listed in Table III. Among these, PatchAD, NPSR,
+A. Experimental Goal
+ DTAAD, DIF, TFMAE, and DCdetector are deep models with
+ We conduct extensive experiments to answer the following numerous parameters, while PPLAD, COUTA, and Optiforest
+four research questions. are lightweight models with fewer parameters.
+CHEN et al.: PRIVACY-PRESERVING LIGHTWEIGHT TIME-SERIES ANOMALY DETECTION FOR RESOURCE-LIMITED INDUSTRIAL 4441
+
+ TABLE III
+ BASELINE
+
+ 2) Metric: To ensure a comprehensive evaluation, four achieves an ACC of 0.9919 and a recall of 0.9885, compared to
+widely used metrics are employed: ACC, precision, recall, and DTAAD’s ACC of 0.9242 and recall of 0.3754, and DCdetector’s
+F 1-Score (F 1). ACC of 0.9883 and recall of 0.9703.
+ 1) ACC measures the proportion of correctly predicted sam- 2) Visualization: We visualize anomaly detection results of
+ ples relative to the total number of samples. nine models for timestamps 60 500 to 63 500 in the 1th variable
+ 2) Precision indicates the proportion of accurately predicted on the MSL dataset, as illustrated in Fig. 4. In this figure, the
+ normal timestamps among all predicted normal times- black curve represents the real data, while the red curve corresponds to the predicted labels (peaks indicate outliers and valleys
+ tamps.
+ denote normal values). Two key observations can be drawn from
+ 3) Recall reflects the proportion of actual normal timestamps
+ Fig. 4. ACC: PPLAD, TFMAE, COUTA, and DCdetector exhibit
+ that are correctly identified. higher ACC compared to other models. For instance, within the
+ 4) F 1 provides a balanced evaluation by combining recall timestamps of 62 300 to 62 600, PPLAD, TFMAE, COUTA, and
+ and precision. DCdetector detection results closely align with the real labels,
+ In general, these metrics range from 0 to 1, with higher values while other models exhibit greater errors. False alarm: PPLAD,
+indicating better anomaly detection performance. COUTA, and DCdetector demonstrate fewer false alarms than
+ 3) Environment: The primary experiments are conducted on other models.
+a Windows 11 system equipped with an Intel Core i7-10700KF 3) Conclusion: The experimental results show that the
+CPU, an NVIDIA GeForce RTX 3090 GPU (24 GB VRAM), PPLAD model achieves superior ACC and stability in anomaly
+and 64 GB of RAM. Deployment experiments are performed detection on industrial multisensor datasets.
+on two resource-constrained IoT edge devices: Raspberry Pi
+4b and NVIDIA Jetson Xavier NX. The PPLAD model is
+implemented in Python using PyCharm as the integrated E. RQ-2 (Deployability)
+development environment. For the other models, official Python
+implementations are obtained from the websites of respective To address RQ-2, deployment experiments are conducted for
+authors, as detailed in Table III. nine models on two edge devices: the Raspberry Pi 4b with
+ little resources and the Jetson Xavier NX with normal resources.
+ Specifically, the Raspberry Pi 4b is equipped with a 1.5 GHz
+D. RQ-1 (ACC)
+ ARM Cortex-A72 processor and 2 GB of RAM, while the Jetson
+ To answer RQ-1, the PPLAD model is compared against seven Xavier NX has a 6-core Carmel ARMv8.2 processor with 8 GB
+baselines across eight multisensor datasets. of RAM. In these experiments, deep models are initially trained
+ 1) Accuracy: Table IV presents the detection ACC of the in the cloud before being deployed on edge devices for testing.
+eight models across eight datasets. Bold text in the table denotes Meanwhile, the shallow models are deployed on the edge devices
+the highest performance, while underlined text indicates the directly. The deployment test results are illustrated in Fig. 5.
+second best. Several observations can be made from the table. From the figure, two key observations can be made. De-
+ 1) Overall performance: PPLAD achieves the best perfor- ployability: All models except the PatchAD are successfully
+ mance, followed by DCdetector, COUTA, PatchAD, DIF, deployed on the edge devices, with lightweight models demonand DTAAD, while Optiforest and NPSR show the weak- strating greater ease of deployment. Convenience: In industrial
+ est performance. IoT environments, frequent changes in production processes
+ 2) Stability: PPLAD demonstrates the most stable perfor- cause dynamic fluctuations in time signals. As a result, we need
+ to update the model regularly and keep its best performance.
+ mance across all four metrics, with DCdetector, DIF, DIF For deep models, the update process requires fine-tuning in
+ following closely. Specifically, PPLAD achieves first or the cloud with new data samples and then redeploying the
+ second rankings across all datasets and all metrics. updated model to the edge devices. In contrast, lightweight
+ 3) Deep versus shallow models: Deep neural network-based models can be updated directly on edge devices, consuming
+ models (DIF, DCdetector, DTAAD, PatchAD) generally fewer data samples and reducing communication overhead.
+ outperform shallow models (Optiforest, COUTA). Summary: Shallow lightweight models are more easily deploy-
+ However, PPLAD, despite being a shallow model, surpasses able on resource-constrained Industrial IoT edge devices than
+several deep models. For instance, in the MSL dataset, PPLAD their deeper counterparts.
+4442 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 6, JUNE 2025
+
+ TABLE IV
+ ACCURACY ANALYSIS
+
+Fig. 4. Visualization of anomaly detection at timestamps 60500–63500 of 1th-variable on MSL dataset.
+
+F. RQ-3 (Timeliness and Resource Consumption) 12.0Kparameters, significantly fewer than other models such
+ as COUTA (376.1K), PatchAD (2072.9 K), and DCdetector
+ To answer RQ-3, the timeliness and resource consumption (826.5 K). Timeliness: For training one epoch with a batch
+of eight models are evaluated using the MSL dataset across size of 128, the PPLAD needs just 10.3 s, whereas PatchAD
+three deployment environments: a thick PC, a thin Jetson Xavier takes 229.9 s, DCdetector requires 128.1 s, and COUTA takes
+NX, and a micro Raspberry Pi 4b. Table V lists the timeliness 26.5 s. Similarly, PPLAD completes testing all timestamps in
+and resource consumption of eight models, where “Ot” denotes 0.9 s, outperforming PatchAD (154.5 s), COUTA (3.7 s), and
+out-of-memory. From the table, several key findings can be DCdetector (2.9 s). Computing resource consumption: Shallow
+observed. Model parameters: The PPLAD model contains only models show substantially lower CPU and GPU usage compared
+CHEN et al.: PRIVACY-PRESERVING LIGHTWEIGHT TIME-SERIES ANOMALY DETECTION FOR RESOURCE-LIMITED INDUSTRIAL 4443
+
+Fig. 5. Deployment results on two industrial IoT edge devices, where Raspberry Pi 4b on the left, Jetson Xavier NX on the right.
+
+ TABLE V
+ TIMELINESS AND RESOURCE CONSUMPTION
+
+to deep models. For example, on the Raspberry Pi 4b, CPU association similarity. Fig. 6(a) shows the detection performance
+usage for PPLAD is 25.5%, while it is 57.4% for DCdetector of four models across four datasets. From the figure, we can find
+and 63.2% for NPSR. Storage resource consumption: Deep that the performance of the four models is very similar across
+models require substantially more storage. For example, on the the four datasets. It suggests that the PPLAD model is robust
+Jetson Xavier NX environment with only 8 G RAM, the RAM to different initial similarity calculation methods. For example,
+Usage is 3.1 GB for deep DIF, 3.7 GB for deep DCdetector, on the SMAP dataset, the ACC scores are 0.9909 for the MSEwhile only 1.1 GB for our PPLAD, and 0.8 GB for shallow based model, 0.9901 for the Cosine-based model, 0.9903 for the
+Optiforest. In summary: PPLAD demonstrates strong timeliness KL-based model, and 0.9892 for the attention-based model.
+and low-resource consumption, making it highly suitable for Table VI further lists the integration results of PPLAD with
+resource-constrained industrial IoT edge devices. other models. From the table, the PPLAD model demonstrates
+ flexibility in integrating with other models and improving their
+ anomaly detection performance. For example, the trained DCde-
+G. RQ-4 (Ablation) tector model is used to compute the initial neighbor similarities
+ To address RQ-4, two ablation experiments are conducted to for each timestamp. Then, these similarities are optimized by
+evaluate key components of the PPLAD model. These experi- the PPLAD model to better identify anomalies. Specifically, on
+ments employ four multisensor datasets (HAI, PUMP, SMAP, the SMAP dataset, the ACC score improves from 0.9843 with
+and SWaT), and three metrics (ACC, Recall, and F 1). the DCdetector model to 0.9892 with the integrated DCdetec-
+ 1) Input Similarity Calculation: The first key component is to tor+PPLAD model.
+utilize data similarity from the third-party interfaces or other 2) Adversarial Learning: The second key component is
+models to replace the raw private data and thus achieve data an adversarial learning mechanism designed to amplify the
+privacy protection. Therefore, this experiment assesses the im- discrepancy between local similarity and global similarity. In the
+pact of different initial similarity calculation methods on model adversarial learning mechanism, there are two adversarial parts:
+performance. Specifically, we design four contrasting models: similarity adversarial learning, and area adversarial learning.
+MSE-based distance similarity, Cosine-based vector similarity, Therefore, this experiment evaluates the effect of two adversarial
+KL-based probability distribution similarity, and attention-based parts. Specifically, we design three competition models: only
+4444 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 6, JUNE 2025
+
+Fig. 6. Two ablation experiment results. (a) Performance analysis for different initial similarity. (b) Performance analysis for adversarial learning.
+
+ TABLE VI
+ INTEGRATION WITH OTHER MODELS
+
+similarity adversarial learning (first model), only area adversarial learning (second model), and similarity and area adversarial
+learning (third model). Fig. 6(b) displays the detection ACC
+ Fig. 7. Physical testbed and anomaly detection process.
+of the three models. From the figure, two observations can be
+obtained. Overall performance: The model combining similarity
+and area adversarial learning (third model) outperforms the other
+models across all metrics and datasets, as indicated by the high- vibration acceleration sensor, and a current and voltage clamp
+est bars in the figure. Comparison of the first and second models: to collect signals for current, voltage, vibration, and torque.
+Each of these models has strengths in different contexts. For 2) Data Collection and Anomaly Generation: Based on this
+instance, on the SWaT dataset, the first model achieves higher testbed, signal data were collected over 60 s at a frequency
+scores for ACC, recall, and F 1. However, on the SMAP dataset, of 12.8 kHz. The collected data contains 6 variables: vibration
+the second model performs better across all three metrics. In signals along the x, y, and z axes, a torque signal, and current and
+summary: The combination of similarity and area adversarial voltage signals. With the aid of control software, false data injeclearning yields the best results. tion attacks were applied to tamper with the real collected data.
+ Specifically, 3 s of data were tampered with every 12 s, repeated 4
+ times. Based on the abovementioned process, two datasets with
+H. RQ-5 (Case Study)
+ anomalies are generated. The first, a single-anomaly dataset,
+ To answer RQ-5, a drive system abnormality and fault simula- contains only the tooth-break-failure anomaly. The second, a
+tion testbed is employed to perform this experiment, its process mixed-anomaly dataset, includes both tooth-break-failure and
+is shown in Fig. 7. outer-ring-failure anomalies. Each dataset contains 768 000
+ 1) Physical Testbed: The drive system abnormality and fault timestamps, with 537 600 used for training and the remainder
+simulation testbed comprises a motor, a gearbox, a magnetic for testing.
+powder brake, a motor controller, an edge data collector, and con- 3) Experiment Results: Table VII summarizes the perfortrol software. The testbed integrates a torque sensor, a three-axis mance of all models on two datasets. Focusing on the single
+CHEN et al.: PRIVACY-PRESERVING LIGHTWEIGHT TIME-SERIES ANOMALY DETECTION FOR RESOURCE-LIMITED INDUSTRIAL 4445
+
+ TABLE VII
+ RESULTS OF ANOMALY DETECTION
+
+anomaly dataset, PPLAD demonstrates superior anomaly de- mechanism for the proposed model to automatically select aptection performance compared to baseline models. For instance, propriate parameters for different datasets.
+PPLAD achieves an ACC score of 0.9961 and an F 1 of 1.
+In contrast, COUTA records an ACC score of 0.9581 and an
+F 1 of 0.8925, while DCdetector achieves 0.9872 and 0.9648,
+ REFERENCES
+respectively. In addition, PPLAD exhibits the shortest detection
+time of 2.1 s, significantly outperforming TFMAE (8.1 s) and [1] A. Villalonga, G. Beruvides, F. Castaño, and R. E. Haber, “Cloud-based
+DTAAD (384.5 s), highlighting its lightweight nature, and high industrial cyber–physical system for data-driven reasoning: A review and
+ use case on an Industry 4.0 pilot line,” IEEE Trans. Ind. Informat., vol. 16,
+ACC. Focusing on the mixed anomaly dataset, similar trends no. 9, pp. 5975–5984, Sep. 2020.
+are observed. PPLAD achieves an ACC score of 0.9929 and an [2] A. Sgueglia, A. Di Sorbo, C. A. Visaggio, and G. Canfora, “A
+F 1 of 0.9801, outperforming competing models. Moreover, it systematic literature review of IoT time series anomaly detecmaintains a fast detection time of 1.7 s, considerably faster than tion solutions,” Future Gener. Comput. Syst., vol. 134, pp. 170–186,
+other approaches. In summary, PPLAD presents the efficiency 2022.
+ [3] S. Lu, J. Lu, K. An, X. Wang, and Q. He, “Edge computing
+and effectiveness for anomaly detection in real-world settings. on IoT for machine signal processing and fault diagnosis: A review,” IEEE Internet Things J., vol. 10, no. 13, pp. 11093–11116,
+ Jul. 2023.
+ [4] K. Zhang et al., “Self-supervised learning for time series analysis: Taxon-
+ V. CONCLUSION omy, progress, and prospects,” IEEE Trans. Pattern Anal. Mach. Intell.,
+ vol. 46, no. 10, pp. 6775–6794, Oct. 2024.
+ This article proposes PPLAD, a privacy-preserving [5] L. Zhang, W. Bai, X. Xie, L. Chen, and P. Dong, “TMANomaly:
+lightweight anomaly detection model for resource-limited Time-series mutual adversarial networks for industrial anomaly detection,” IEEE Trans. Ind. Informat., vol. 20, no. 2, pp. 2263–2271,
+industrial IoT edge devices. Unlike traditional deep neural Feb. 2024.
+network-based approaches, PPLAD employs tiny learnable [6] L.-r. Yu, Q.-h. Lu, and Y. Xue, “DTAAD: Dual TCN-attention networks for
+Gaussian distributions to achieve high speed, low-resource anomaly detection in multivariate time series data,” Knowl.-Based Syst.,
+consumption, high ACC, and data privacy-preserving. vol. 295, 2024, Art. no. 111849.
+ [7] C.-Y. A. Lai, F.-K. Sun, Z. Gao, J. H. Lang, and D. Boning, “Nominality
+ 1) To preserve data privacy, the data similarity from third score conditioned time series anomaly detection by point/sequential reparty secure interfaces instead of raw privacy data is used construction,” Adv. Neural Inf. Process. Syst., vol. 36, pp. 76637–76655,
+ as the initial input of PPLAD. 2024.
+ [8] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “Dcdetector: Dual atten-
+ 2) To achieve high speed and low-resource consumption, a tion contrastive representation learning for time series anomaly detection,”
+ trainable Gaussian distribution with only one parameter in Proc. 29th ACM SIGKDD Conf. Knowl. Discov. Data Mining, 2023,
+ is set for each timestamp to learn local and global simi- pp. 3033–3045.
+ [9] M. Ul Hassan, M. H. Rehmani, and J. Chen, “Anomaly detection in
+ larities based on the initial similarity. blockchain networks: A comprehensive survey,” IEEE Commun. Surv. Tut.,
+ 3) To ensure high ACC, an adversarial learning mechanism vol. 25, no. 1, pp. 289–318, First Quarter 2023.
+ is designed to maximize the discrepancy between local [10] I. Bala, I. Pindoo, M. M. Mijwil, M. Abotaleb, and W. Yundong, “Ensuring security and privacy in healthcare systems: A review explorsimilarities and global similarities. ing challenges, solutions, future trends, and the practical applications
+ To the best of authors’ knowledge, this is the first work to of artificial intelligence,” Jordan Med. J., vol. 58, no. 2, pp. 250–270,
+build an industrial anomaly detection model using only train- 2024.
+able Gaussian distributions. Extensive experiments conducted [11] Z. Zhong, Z. Yu, Y. Yang, W. Wang, and K. Yang, “PatchAD: A
+on eight public industrial multisensor datasets and three edge lightweight patch-based MLP-mixer for time series anomaly detection,”
+ 2024, arXiv:2401.09793.
+devices (Thick PC, Thin Jetson Xavier NX, Mirco Raspberry Pi [12] G. Sivapalan, K. K. Nundy, S. Dev, B. Cardiff, and D. John, “ANNet:
+4b) demonstrate that PPLAD outperforms several SOTA deep A lightweight neural network for ECG anomaly detection in iot edge
+models. sensors,” IEEE Trans. Biomed. Circuits Syst., vol. 16, no. 1, pp. 24–35,
+ Despite its advantages, the performance of PPLAD is sensitive Feb. 2022.
+ [13] H. Xiang et al., “OptIForest: Optimal isolation forest for anomaly detecto the ACC of the initialization similarity. Inaccurate initial sim- tion,” in Proc. 32nd Int. Joint Conf. Artif. Intell., 2023, pp. 2379–2387.
+ilarity can significantly degrade performance. Future research [14] H. Xu, G. Pang, Y. Wang, and Y. Wang, “Deep isolation forest for
+will focus on developing a mechanism to address this limitation. anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+In addition, another goal is to design a lightweight optimization pp. 12591–12604, Dec. 2023.
+4446 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 6, JUNE 2025
+
+[15] H. Xu, Y. Wang, S. Jian, Q. Liao, and Y. Wang, “Calibrated one-class clas- Ming Li received the Ph.D. degree in computer
+ sification for unsupervised time series anomaly detection,” IEEE Trans. science and technology from the College of
+ Knowl. Data Eng., vol. 36, no. 11, pp. 5723–5736, Nov. 2024. Computer Science and Electronic Engineering,
+[16] S. Mehnaz and E. Bertino, “Privacy-preserving real-time anomaly detec- Hunan University, Changsha, China, in 2023.
+ tion using edge computing,” in Proc. IEEE 36th Int. Conf. Data Eng., 2020, She is currently a Lecturer with the School of
+ pp. 469–480. Information and Electrical Engineering, Hunan
+[17] B. D. D. Chen, Y. Wu, S. Tang, and Y. Zhuang, “FADngs: Federated learn- University of Science and Technology, Xiangtan,
+ ing for anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 36, China. Her research interests are in the areas
+ no. 2, pp. 2578–2592, Feb. 2025, doi: 10.1109/TNNLS.2024.3350660. of parameter/state estimation, fault diagnosis,
+[18] Q. Zhang, R. Han, G. Xin, C. H. Liu, G. Wang, and L. Y. Chen, modeling, decision-making, machine learning.
+ “Lightweight and accurate DNN-based anomaly detection at edge,”
+ IEEE Trans. Parallel Distrib. Syst., vol. 33, no. 11, pp. 2927–2942,
+ Nov. 2022.
+[19] X. Zhou et al., “Reconstructed graph neural network with knowledge
+ distillation for lightweight anomaly detection,” IEEE Trans. Neural Netw.
+ Bowen Hu received the B.Eng. degree in au-
+ Learn. Syst., vol. 35, no. 9, pp. 11817–11828, Sep. 2024.
+ tomation in 2024 from the Hunan University
+[20] J. Pang, X. Pu, and C. Li, “A hybrid algorithm incorporating vector
+ quantization and one-class support vector machine for industrial anomaly of Science and Technology, Xiangtan, China,
+ where he is currently working toward the masdetection,” IEEE Trans. Ind. Informat., vol. 18, no. 12, pp. 8786–8796,
+ ter’s degree in control science and engineering.
+ Dec. 2022.
+ His current research interests include data-
+[21] T.-A. Nguyen et al., “Federated PCA on Grassmann manifold for
+ driven anomaly detection, deep learning, and
+ IoT anomaly detection,” IEEE/ACM Trans. Netw., vol. 32, no. 5,
+ fault diagnosis.
+ pp. 4456–4471, Oct. 2024.
+[22] S. Ma et al., “Privacy-preserving anomaly detection in cloud manufacturing via federated transformer,” IEEE Trans. Ind. Inform., vol. 18, no. 12,
+ pp. 8977–8987, Dec. 2022.
+[23] M. Abdel-Basset, N. Moustafa, and H. Hawash, “Privacy-preserved generative network for trustworthy anomaly detection in smart grids: A
+ federated semisupervised approach,” IEEE Trans. Ind. Inform., vol. 19, Haomiao Guo received the B.Eng. degree in
+ no. 1, pp. 995–1005, Jan. 2023. automation from North China Electric Power
+[24] L. Cui et al., “Security and privacy-enhanced federated learning for University, Beijing, China, in 2022. He is curanomaly detection in iot infrastructures,” IEEE Trans. Ind. Inform., vol. 18, rently working toward the master’s degree in
+ no. 5, pp. 3492–3500, May 2022. control science and engineering with the Hunan
+[25] C. Zhang, W. Zuo, P. Yang, Y. Li, and X. Wang, “Outsourced privacy- University of Science and Technology, Xiangtan,
+ preserving anomaly detection in time series of multi-party,” China Com- China.
+ mun., vol. 19, no. 2, pp. 201–213, 2022. His current research interests include data
+[26] Y. Fang, J. Xie, Y. Zhao, L. Chen, Y. Gao, and K. Zheng, “Temporal- mining, deep learning, and anomaly detection.
+ frequency masked autoencoders for time series anomaly detection,” in
+ Proc. IEEE 40th Int. Conf. Data Eng., 2024, pp. 1228–1241.
+
+ Lei Chen (Member, IEEE) received the M.Sc. Zhaohua Liu (Senior Member, IEEE) received
+ degree in computer science and engineering the M.Sc. degree in computer science and enand the Ph.D. degree in automatic control and gineering and the Ph.D. degree in automatic
+ electrical engineering from Hunan University, control and electrical engineering from Hunan
+ Changsha, China, in 2012 and 2017, respec- University, Changsha, China, in 2010 and 2012,
+ tively. respectively.
+ He is currently an Associate Professor with He is currently a Professor of Automatic Conthe School of Information and Electrical Engi- trol and Systems with the School of Information
+ neering, Hunan University of Science and Tech- and Electrical Engineering, Hunan University of
+ nology, Xiangtan, China. His current research Science and Technology, Xiangtan, China. His
+ interests include anomaly detection, lightweight current research interests include intelligent indesign, time-series analysis, deep learning, information security of in- formation processing and control of wind turbines, computational industrial control system, and Big Data analysis. telligence and learning algorithm design, machine-learning aided fault
+ diagnosis and prognosis.
+
+ Yepeng Xu received the B.Eng. degree in automation from the Hunan Institute of Science
+ and Technology, Yueyang, China, in 2023. He is
+ currently working toward the master’s degree in
+ control science and engineering with the Hunan
+ University of Science and Technology, Xiangtan,
+ China.
+ His current research interests include datadriven anomaly detection, deep learning, and
+ fault diagnosis.

@@ -1,0 +1,1483 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [179] ATVITSC: A Novel Encrypted Traffic Classification Method Based on Deep Learning
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：179
+题名：ATVITSC: A Novel Encrypted Traffic Classification Method Based on Deep Learning
+年份：2024
+DOI：10.1109/tifs.2024.3433446
+来源：IEEE Transactions on Information Forensics and Security
+PDF：paper/10.1109_TIFS.2024.3433446.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：其他AI安全与跨域异常检测
+相关性：强相关，分数 13
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\179.txt
+- 原始字符数：72398
+- 本次发送字符数：72398
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+9374
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+ATVITSC: A Novel Encrypted Traffic Classification
+Method Based on Deep Learning
+Ya Liu , Xiao Wang , Bo Qu , and Fengyu Zhao
+Abstract— The increasing prevalence of encrypted communication on the modern internet has presented new challenges
+for traffic classification and network management. Traditional
+traffic classification methods cannot handle encrypted traffic
+effectively. Meanwhile, many existing methods either rely on
+hand-crafted features or fail to extract the underlying interaction patterns between data packets adequately. In this paper,
+we propose a novel encrypted traffic classification method called
+the Attention-based Vision Transformer and Spatiotemporal for
+Traffic Classification (ATVITSC). In the preprocessing stage,
+packet-level images within a session, generated from the payload
+of data packets, are combined into a session image to mitigate
+information confusion. In the classification stage, session images
+are first processed by the packet vision transformer (PVT)
+module, which employs the transformer encoder and multihead self-attention mechanism, to capture the global features.
+In parallel, session images are also processed by the spatiotemporal feature extraction (STFE) module, where spatial features
+of packets are extracted by the convolution operation with the
+attention mechanism and temporal features between packets are
+then combined by the bidirectional Long Short-Term Memory
+(LSTM). The global and spatiotemporal features are fused in
+the feature fusion classification (FFC) module by a dynamic
+weighting mechanism and encrypted traffic is finally classified
+based on the fused features. Comprehensive experiments on
+various types of encrypted traffic, including virtual private
+network (VPN), onion router (Tor), malicious traffic, and mobile
+traffic, show that the ATVITSC successfully improves the macrof1 scores to 97.88%, 98.79%, 99.67%, 94.90%, respectively. The
+results also reveal that the ATVITSC exhibits better classification
+performance and generalization ability than the state-of-the-art
+methods.
+Index Terms— Encrypted traffic classification, self-attention
+mechanism, a dynamic weighting mechanism, spatialtemporal
+network.
+
+I. I NTRODUCTION
+
+I
+
+N RECENT years, network security has been elevated to
+a significant strategic position in many countries. Encryption technology is one of the most widely used methods to
+safeguard network security [1]. However, cybercriminals can
+also be hidden in the encrypted network traffic. To address
+this challenge, encrypted traffic classification has been extensively applied in intrusion detection systems and malware
+propagation detection. It seems impossible to classify the
+encrypted traffic if the encrypted algorithm is applied safely.
+Nevertheless, this hypothesis is not always correct. Lin et al.
+[2] evaluated the randomness of 5 ciphers through 15 sets
+of statistical tests, and found that all these ciphers could not
+achieve the ideal randomness. Furthermore, because encrypted
+communication increases the payload and latency of the network, different types of encrypted traffic may result in different
+impacts on the network. Hence, if encrypted traffic is classified
+correctly, network administrators can better understand and
+manage various communication behaviors [3].
+Early traffic classification relies on port numbers, where different types of network traffic can be classified based on their
+source and destination ports [4]. However, with the widespread
+usage of dynamic and non-standard ports, port-based methods
+become less reliable. Deep Packet Inspection (DPI) methods [2], which classify network traffic by analyzing the
+content of network packets, are more precise than port-based
+methods but only applicable to unencrypted traffic and require
+substantial computational resources. Machine learning is also
+used to classify network traffic by analyzing the behavior
+or statistical features of network traffic, such as the transmission frequency, size, and flow duration of packet [5].
+Although this method is more robust than port-based and
+DPI methods, the performance depends on manually designed
+features.
+The application of deep learning in traffic classification
+can automatically extract features, which avoids the laborious
+steps of feature engineering [6]. Deep learning models can
+adapt to different encryption scenarios and perform end-to-end
+encrypted traffic classification [7]. Encrypted traffic classification based on deep learning has been a hot spot of network
+security in recent years. However, on the one hand, previous
+research studies extracted the spatial or temporary features
+of network flows and the relationships among packets inadequately, resulting in the limited ability of feature extraction
+and insufficient robustness of classification [8]. On the other
+hand, some methods that attempt to capture the spatiotemporal
+features of traffic may lead to confusion in temporal informa-
+
+Received 19 December 2023; revised 9 June 2024; accepted 16 July
+2024. Date of publication 25 July 2024; date of current version 10 October
+2024. This work was supported in part by the National Natural Science
+Foundation of China under Grant 62002184, in part by the Doctoral Startup
+Fund of Guangdong University of Science and Technology under Grant
+XJ2023002001, in part by the Open Topics from The Lion Rock Labs of
+Cyberspace Security under Project #LRL24017, and in part by the Scientific
+Research Initiation Fund for High-Level Talents of Shanghai Publishing and
+Printing College under Grant 2024rcky22. The associate editor coordinating
+the review of this article and approving it for publication was Prof. Ghassan
+Karame. (Corresponding author: Bo Qu.)
+Ya Liu is with the School of Optical-Electrical and Computer Engineering,
+University of Shanghai for Science and Technology, Shanghai 200093, China,
+and also with the Lion Rock Labs of Cyberspace Security, CTIHE, Hong
+Kong, China.
+Xiao Wang is with the School of Optical-Electrical and Computer Engineering, University of Shanghai for Science and Technology, Shanghai 200093,
+China.
+Bo Qu is with the School of Computer Science, Guangdong University of
+Science and Technology, Dongguan 523083, China (e-mail: bo@qubo.im).
+Fengyu Zhao is with the Department of Information and Intelligence
+Engineering, Shanghai Publishing and Printing College, Shanghai 200093,
+China.
+Digital Object Identifier 10.1109/TIFS.2024.3433446
+1556-6021 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+LIU et al.: ATVITSC: A NOVEL ENCRYPTED TRAFFIC CLASSIFICATION METHOD BASED ON DEEP LEARNING
+
+tion. For example, in the cascaded structure of convolutional
+neural networks and recurrent neural networks, convolutional
+operations are based on local neighborhoods, which may lead
+to a lack of temporal relationships among the spatial features
+extracted from packets, thereby affecting the extraction of
+spatiotemporal features [9].
+To tackle the aforementioned problems, we propose a
+novel scheme called Attention-based Vision Transformer and
+Spatiotemporal for Traffic Classification (ATVITSC). In the
+preprocessing stage, the raw traffic is split into network sessions. Within each session, the packet sequence is transformed
+into a sequence of packet images, which are combined into a
+session image. All session images are divided into fixed-size
+patches to avoid information distortion. In the classification
+stage, session images are fed into the packet vision transformer
+(PVT) and spatiotemporal feature extraction (STFE) modules
+in parallel to capture the global and spatiotemporal features.
+In the PVT module, the patches are transformed through
+packet embedding, positional embedding, and length embedding, which are added together to feed into a PVT encoder
+with a Multi-Head Self-Attention (MHSA) mechanism to
+extract global features of the network flow. In the STFE module, the patches are transformed through the attention-based
+convolution operation and the bidirectional LSTM network
+to capture spatial features of each packet within the session and temporal features among packets, thereby obtaining
+spatial-temporal features of the entire network session. The
+global and spatial-temporal features are fused in the feature
+fusion classification (FFC) module by a dynamic weighting
+mechanism and encrypted traffic is finally classified based on
+the fused features. The main contributions of this paper are
+summarized as follows:
+(1) Propose a packet-level preprocessing method to transform encrypted traffic into session images, which not only
+mitigates the issue of information disorder but also enhances
+the capability to learn inner relations among packets. In addition, this preprocess method adopts both position encoding and
+length encoding to capture the order and length information
+among packets, which alleviates the problem of information
+loss after image generation.
+(2) Design the PVT and STFE modules with the attention mechanism, which accurately identifies network traffic.
+In the PVT module, three kinds of embedding operations
+are designed, and then added together to feed into a PVT
+encoder with the MHSA mechanism to retain the time and
+position information and extract global features fully. In the
+STFE module, the convolution operation with the self-attention
+mechanism and bidirectional LSTM network are designed
+so that ATVITSC can accurately capture spatiotemporal
+features.
+(3) Propose a dynamic weighting mechanism that adaptively
+adjusts the weights of global and spatial-temporal features,
+thereby resulting in the appropriate fusion of these two features. Additionally, by introducing a temperature parameter,
+ATVITSC avoids the highly imbalanced weight distribution
+of different features during the feature fusion process. Meanwhile, it ensures that different feature extraction modules
+perform sufficient learning during the training stage.
+
+9375
+
+(4) A large number of comprehensive experiments on four
+datasets, i.e., USTC-TFS, ISCX-Tor, ISCX-VPN and CrossPlatform (U.S. Android APP), are performed to demonstrate
+the superior performances of ATVITSC. From the view of
+the accuracy, Macro-F1, Macro-Recall and Macro-Precision,
+ATVITSC outperforms ten advanced schemes in most cases.
+In addition, we also explain the reasons for selecting hyperparameters by conducting experiments, such as the number of
+chosen packets, the first m bytes selected from each packet
+and the temperature.
+The rest of the paper is structured as follows: Section II
+introduces the related work on encrypted traffic classification. Section III presents our novel approach ATVITSC.
+Section IV provides a detailed experimental analysis of
+ATVITSC. Finally, section V concludes the paper.
+II. R ELATED W ORK
+The current approaches employed for traffic identification
+can be categorized into port-based methods, payload-based
+methods, machine learning methods that rely on statistical
+features and end-to-end deep learning methods [10].
+As discussed above, port-based traffic classification and
+payload-based methods such as DPI cannot be suitable for
+analyzing the encrypted traffic. Machine learning methods use
+statistical features to perform encrypted traffic classification.
+For instance, AppScanner [11] trained a random forest classifier using statistical features based on the packet size, while
+BIND [12] used statistical features based on time features.
+However, these features are only suitable for specific scenarios,
+and it is difficult to design a universal set of statistical features
+that can be adapted to different encryption scenarios.
+In recent years, encrypted traffic classification methods
+based on deep learning have developed very rapidly. Liu et al.
+proposed an FS-Net based on recurrent neural networks
+(RNNs) to automatically extract the simplistic features from
+the sequence of packet sizes for the encrypted traffic classification [13]. Shapira and Shavitt used FlowPic [14] to extract
+packet size and arrival time from raw traffic to construct
+images for classification. Wang et al. used 1D-CNN [15]
+and 2D-CNN [16] approaches for the traffic classification by
+converting the first 768 bytes of network flows into grayscale
+images. However, they didn’t handle them at the packet level,
+thereby resulting in the confusion of packet image information
+from different periods during the convolutional operations.
+Shen et al. proposed GraphDApp based on graph neural
+networks to classify encrypted traffic by constructing a Traffic
+Interaction Graph (TIG) [17]. However, compared to other
+methods, GraphDApp takes more time to label unknown flows
+and the accuracy decreases when adjustments are made to
+the application fingerprints. Huoh et al. [18] considered the
+raw bytes, metadata and inter-packet relationships in traffic to
+construct a traffic graph. They used graph neural networks
+to extract graph representations for classification. In traffic
+recognition, Wang [19] stressed the significance of detecting
+essential byte features, and analyzed the impact of the first
+25 bytes, the first 100 bytes and the least helpful 300 bytes
+of the payload for encrypted traffic classification to indicate
+the initial 200 bytes were the most crucial. Lotfollahi et al.
+
+9376
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 1.
+
+The frame of ATVITSC.
+
+discovered that 96% of packet payloads have a length of less
+than 1480 bytes [20]. Hence, they used the first 1500 bytes as
+the model’s input and considered protocol fields in the network
+and transport layers. Taking the entire payload as input will
+increase the computational complexity of the model. However,
+these fields are primarily designed for network transmission
+rather than application classification. Thus, protocol fields
+below the application layer usually contain minimal helpful
+information. Excessive irrelevant information would increase
+the data complexity and potentially lead the model to rely
+on unimportant details, thus reducing its ability to differentiate fine-grained traffic classification. Yao et al. proposed
+HAN [21] by combining the attention mechanism with LSTN
+to extract temporal features from raw traffic. Kumano et al.
+[22] demonstrated that the minimum number of packets
+needed for processing certain features was 10. This result
+provided a basis for reducing the number of packets required.
+Lin et al. proposed TSCRNN [23] by combining CNN and
+LSTM in a cascade structure, which only extracted temporal
+and spatial features from network flows and did not fully
+
+capture the relationships among packets in the flow. Therefore,
+TSCRNN cannot extract the global features of the entire
+flow. The CMTSNN [24] proposed by Zhu et al. also used
+a cascaded structure of CNN and LSTM. In a word, these
+methods do not adequately capture the dependencies among
+local features and the interaction among packets of the network
+flow.
+III. ATVITSC
+This section introduces a novel method ATVITSC, shown
+in Figure 1. It comprises a preprocessing layer, the packet
+vision transformer, the spatiotemporal feature extraction layer,
+and the feature fusion classification layer. First, the raw traffic
+is partitioned into bidirectional flows called sessions. Second,
+extract a portion of the payload of each data packet within
+one session to generate a byte-level grayscale image for each
+packet, which is then combined to construct session-level
+grayscale images. Next, these session-level grayscale images
+are input into the PVT and STFE modules to capture global
+and spatiotemporal features, respectively. Finally, a dynamic
+
+LIU et al.: ATVITSC: A NOVEL ENCRYPTED TRAFFIC CLASSIFICATION METHOD BASED ON DEEP LEARNING
+
+9377
+
+Fig. 2. Generation of grayscale image for application layer data of the packet.
+
+weighting mechanism (DW) is proposed in the feature fusion
+classification layer to perform the feature fusion, thereby
+accurately achieving the encrypted traffic classification.
+A. Raw Packets Preprocess
+The raw traffic, including various types of packets,
+is divided into flows to achieve a more precise classification.
+IP addresses, port numbers, and protocol types are typically
+used to identify and organize flows [25]. Specifically, the
+original network traffic data can be denoted by R as follows:
+n , where t , s , d , sp and d p repR = {(ti , si , spi , di , dpi )}i=1
+i i i
+i
+i
+resent the timestamp of the i-th packet, the source IP address,
+the destination IP address, the source port and destination port
+number, respectively. Partition R into different network flows:
+S = {S1 , S2 , . . . , Sm }. Each flow S j contains a set of packets
+with the same source IP address s j , the same source port sp j ,
+the same destination IP address d j and the same destination
+nj
+port d p j : S j = {(t j,k , s j,k , sp j,k , d j,k , dp j,k )}k=1
+, where n j
+represents the number of packets in the j-th flow.
+In the ATVITSC scheme, we mainly focus on a bidirectional flow called a session. The source IP, the destination
+IP, the source port, and the destination port in a session
+can be interchangeable. Therefore, the session contains more
+interactive information than a unidirectional flow. According
+to the timestamps of the bidirectional flows in chronological
+order, combine the bidirectional flows to generate a session
+flow Ssession , i.e., Ssession = SSr c→Dst ∪ S Dst→Sr c , where
+SSr c→Dst represents the flow of packets with the source IP as
+Src, the destination IP as Dst and the source port as SrcPort,
+and S Dst→Sr c represents the flow of packets with the source IP
+as Dst, the destination IP as Src and the source port as SrcPort.
+The symbol ∪ denotes the combined operation. During the
+combining process, the packets are arranged by the timestamps
+in chronological order.
+After extracting the sessions, remove those packets irrelevant to encrypted traffic classification to eliminate the dataset’s
+noise and redundancy. The protocol fields below the application layer contain almost no useful information. They are
+mainly used for network transmission rather than network
+recognition. Additionally, IP addresses should not be used
+for classification learning because they may cause the model
+to focus on packet sources too much. Therefore, only the
+application layer’s data packets of each session flow should be
+retained. Fixed-step sampling is used for data augmentation,
+i.e., a fixed number of packets are sampled in the session to
+increase the dataset’s richness and the model’s robustness [26].
+At the final stage of preprocessing, ATVITSC proposes
+a novel method of constructing packet-level session images,
+effectively alleviating the confusion of packet information.
+The process of converting the payload of each packet into
+a grayscale image is shown in Figure 2. Precisely, for a
+given session flow SSession , we extract the first m bytes of
+
+Fig. 3. The combined operation of the packet image, Pi represents the image
+of the i-th packet in the session flow.
+
+the application layer’s data for each of the n packets, where
+m is a perfect square s p 2 and n is also a perfect square.
+The application layer’s data will be truncated if its length
+is more than m bytes. Otherwise, it will be padded with
+0 × 00. Similarly, the number of packets will be padded to
+n if the number of packets is less than n. Read each packet
+byte by byte, convert each byte to an integer, and transform
+each integer to a packet image of size s p × s p , represented as
+Pi ∈ Rs p ×s p . Finally, the packet images are combined into a
+session image. The combined operation is shown in Figure 3
+for the case of n = 4 and m = 256.
+B. Packet Vision Transformer
+This subsection proposes a global feature extraction method
+called packet vision transformer (PVT), which is inspired by
+vision transformer (ViT) [27]. PVT contains a session embedding layer and applies a multi-head self-attention mechanism.
+In a session embedding layer, PVT decomposes session images
+into a sequence of multiple packet images to perform embedding processing. Then, using the multi-head self-attention
+mechanism, PVT captures the interaction information among
+all packets and extracts global features from the session flows.
+1) Embedding Operations:
+a) Packet embedding: During the embedding process, the
+session image is divided into multiple packet images, and
+each is projected into a d-dimensional space. Specifically,
+we perform a two-dimensional convolution operation on the
+session image. The convolution operation has a stride of s p ,
+a kernel size of s p ×s p , and a channel size of d. Subsequently,
+we obtain the embedding ei ∈ Rd for each packet.
+b) Position embedding: Due to the use of self-attention
+mechanisms, PVT cannot capture the sequential information directly. However, since the packets in the session are
+chronological, we can embed the position of each packet
+to preserve their orders and position information. In the
+ATVITSC scheme, PVT combines sine and cosine functions
+to obtain sequential details on data packets and better capture
+their intrinsic dependencies. Specifically, let pi ∈ Rd represent
+the position embedding of the i-th data packet in the session,
+which can be expressed as:
+pi,2 j = sin(
+
+posi
+),
+100002 j/d
+
+pi,2 j+1 = cos(
+
+posi
+)
+100002 j/d
+
+9378
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+where j represents the j-th dimension of the positional embedding and posi denotes the position of the i-th data packet in
+the session flow. This formula is derived from the absolute
+positional embeddings used in Transformers [28].
+c) Length embedding: After converting the packets into
+images, the information on the length of packets is lost. Introducing the length embeddings for the packets could mitigate
+this deficiency. Since the length of each packet is a discrete
+value, we convert it into a one-hot vector and then generate
+a length embedding by using a linear layer. Let len i denote
+the length of the i-th packet, which can be transformed into a
+one-hot vector lvi ∈ Rmax_len as follows:
+(
+1, j = leni
+lvi, j =
+0, j ̸ = leni
+By using learnable parameter Wlen ∈ Rd×max_len , we can
+compute the length embedding li ∈ Rd by li = Wlenlvi .
+Let max_len be 1500 due to the Ethernet standard’s maximum transmission unit (MTU) of the data link layer frame
+being set to 1500 bytes [29]. Finally, find the sum of the
+packet embeddings ei , position embeddings pi and length
+embeddings li to obtain the final embeddings h i ∈ Rd for
+each packet: h i = ei + pi + li , i = 1, 2, . . . , n.
+Similarly, inspired by BERT [30], a learnable embedding
+Vs ∈ Rd is added at the beginning of these embeddings to
+represent the global features of the session. The output after
+feeding the session into the embedding layer is computed
+by E s = [Vs ; h 1 ; h 2 ; . . . ; h n ], where [a; b] denotes the new
+vector obtained by concatenating vectors a and b along the
+time dimension.
+2) Packet Vision Transformer: The encoder of PVT uses the
+multi-head self-attention mechanism to capture global dependencies and process features through a feed-forward neural
+network, enabling efficient modeling and feature extraction
+of packet image sequences. The encoder of PVT, as shown
+in Figure 4, follows a similar structure to the Transformer’s
+encoder. The k-head self-attention mechanism projects queries,
+keys, and values into k subspaces based on the self-attention
+mechanism and performs separate self-attention operations
+in each subspace. Specifically, for the i-th head, the query
+matrix(Q i ), key matrix(K i ) and value matrix(Vi ) are calculated by the linear projection as follows:
+Q
+
+Q i = E s Wi , K i = E s WiK , Vi = E s WiV
+Q
+
+where Wi ∈ Rd×dh , WiK ∈ Rd×dh and WiV ∈ Rd×dv are
+learned weight matrices, dh is typically set to d/k.
+Next, we use the scaled dot-product attention mechanism [31] to compute the self-attention weight matrix:
+Qi K T
+Ai = so f tmax( √ i ),
+dh
+
+S Ai = Ai Vi
+
+where √Ai denotes the attention weight matrix for the i-th
+head, dh represents the scaling factor used to solve the
+problem of gradient explosion, and S Ai denotes the output
+of the self-attention mechanism of the i-th head.
+After concatenating the outputs of all attention heads,
+we obtain the final output of the multi-head self-attention
+
+Fig. 4.
+
+Packet Vision Transformer encoder.
+
+layer by applying a linear projection: M H S A(E s ) =
+[S A1 , S A2 , . . . , S Ak ]Wmhsa , where k represents the number
+of heads, [·] denotes concatenation along the last dimension
+and Wmhsa ∈ Rk·dh ×d is a learned weight matrix.
+Algorithm 1 demonstrates the process of the packet vision
+transformer. The PVT encoder consists of multiple submodules, each of which includes a multi-head self-attention
+mechanism (MHSA) and a fully connected layer (FC) with
+a LeakyRELU [32] activation function. Layer normalization
+(LN) [33] and residual connections [34] are utilized in each
+sub-layer as well.
+This architecture design enables the encoder to conduct
+multi-level transformations and generate representations of
+input sequences, thereby enhancing the ability of PVT to
+capture the semantic and contextual information embedded in
+the input sequences. It can be formalized as:
+O ′(llayer ) = MHSA(L N (E s (llayer ) )) + E s (llayer −1)
+O (llayer ) = FC(L N (O ′(llayer ) )) + O ′(llayer )
+where L is the number of layers of the PVT encoder, and
+llayer ∈ [0, L] is the llayer -th layer.
+To obtain this global feature, we extract the first vector
+from the output sequence O L of the final layer in the PVT
+encoder, which is regarded as the global feature of the session:
+Fglobal = O0L .
+C. Spatiotemporal Feature Extractor Module
+The spatiotemporal feature extraction(STFE) module consists of two core components: the residual Attention
+
+LIU et al.: ATVITSC: A NOVEL ENCRYPTED TRAFFIC CLASSIFICATION METHOD BASED ON DEEP LEARNING
+
+9379
+
+Algorithm 1 The Workflow of PVT
+Input: the normalized network session image Sn , the session
+length sequence L n , the global feature dimension dmodel ,
+the number of transformer encoder nlayer s .
+Output: The global feature Oglobal ;
+1: P K E = PaketEmbedding(Sn ,Conv2d(s p ,s p ));
+2: L E = LengthEmbedding(L n ,Embedding(1500,dmodel )
+3: P E = PositionEmbedding(Sn )
+4: I E = Addition(P K E,L E,P E)
+5: for i = 1 to n layer s do
+6:
+L Nie = LayerNorm(I E);
+7:
+Wmhsa = MultiHeadSelfAttention(L Nie ,dmodel );
+8:
+RC= Addition(Wmhsa ,I E)
+9:
+I E = FeedForward(RC,dmodel )
+10: end for
+11: Fglobal = I E
+return Fglobal ;
+Algorithm 2 The Workflow of STFE
+Input: Normalized network session image Sn , Temporal feature dimension dt , Spatial feature dimension ds , The
+number of AttetionConvResNet n c .
+Output: The spatiotemporal feature Fst ;
+1: Split Sn into a sequence of packet images Ps ;
+2: T = Length(Ps )
+3: t = 1
+4: for X in Ps do
+5:
+Fm = BN(Conv2d(X ));
+6:
+Wspatial = ConvAttention(GAP(Fm ),GMP(Fm ),ds );
+7:
+Fspatial = MatMul(Fm ,Wspatial );
+8:
+Fm′ = Addition(Shortcut(Fspatial ),Fm );
+9:
+Fs(t) =Flatten(Conv1×1 (Fm′ ));
+10:
+t = t + 1;
+11: end for
+12: h f , h b = BiLSTM(Fs(1) , Fs(2) , Fs(3) , . . . , Fs(T ) );
+13: Fst = FC(Concat(h f,n , h b,n ),ds );
+return Fst ;
+
+Convolutional layer (ResAtConv) with residual connections
+and the attention mechanism and the Bidirectional LSTM layer
+(Bi-LSTM). ResAtConv extracts high-level spatial features of
+each packet and solves the problem of temporal information
+disorder while convolving the entire session image. Then,
+these spatial features with temporal features are fed into BiLSTM [35] to capture the spatiotemporal features of a session
+further. Algorithm 2 shows the process of the spatiotemporal
+feature extraction module.
+1) Residual Attention Convolution Layer: Inspired by
+SeNet [36], we propose a Residual Attention Convolutional
+Module. This module primarily consists of a convolutional
+layer and an attention layer. Its structure is shown in Figure 5.
+The convolutional layer is responsible for the feature extraction of the packet images. Because the contribution of each
+channel’s feature map is different, the ATVITSC scheme
+presents an attention layer to determine the weights of each
+channel.
+
+Fig. 5.
+
+Residual Attention Convolution.
+
+The session image is segmented into packet images, and
+convolutional operations are performed on each packet to
+generate a set of feature maps Fm . By applying global max
+pooling (GMP) and global average pooling (GAP) on Fm , each
+feature map is compressed into a scalar [37] which still retains
+the important information of Fm , and Fm will be compressed
+into two vectors (the dimension is equal to the number of
+channels of Fm ) which will be fed to the fully connected
+(FC) layer with an S-shaped Activation function. Next, the
+feature map is weighted by using the attention values of each
+channel. This weight will focus on feature maps with more
+significant contributions while suppressing unimportant feature
+maps. Finally, a 1 × 1 convolutional kernel is applied to adjust
+the features at different positions. Similar to PVT, we also
+apply batch normalization (BN) [38] and residual connections
+[34] in this module. This process can be formalized as:
+
+
+ Fm = B N (Conv(X ))
+Fm′ = FC(FC(G A P(Fm )) + FC(G M P(Fm )))Fm + Fm
+
+ ′′
+Fm = Conv1×1 (Fm′ )
+Due to the small size of individual data packet images,
+multiple ResAtConv operations may lead to overfitting. Thus
+ATVITSC only uses one ResAtConv operation for each packet
+image, which can learn the weights of each channel, allowing
+the model to focus on more critical feature maps during the
+convolution process. Finally, 1×1 convolution is used to adjust
+the information of different positional features in the weighted
+feature map to highlight critical spatial features. The output of
+
+9380
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+the last layer of ResAtConv is flattened to obtain the spatial
+features Fs of a packet: Fs = Flatten(Fm′′ ).
+2) Bidirectional LSTM: After obtaining spatial features
+of each packet through ResAtConv, these features are then
+sequentially fed into the Bi-LSTM. The nature of Bi-LSTM
+allows it to simultaneously capture the forward and backward
+information of the packet sequence, which can enhance the
+modeling ability of ATVITSC to capture the correlations
+among packets. Each packet’s spatial features Fs(t) is fed into
+the LSTM cell in both temporal order and reverse temporal
+order to capture the temporal dependencies of the spatial
+features Fs(t) .
+h f,t = LSTM(Fs(t) , h f,t−1 ),
+
+h b,t = LSTM(Fs(t) , h b,t+1 )
+
+where h f,t represents the forward hidden state of the LSTM
+at time step t and h b,t represents the backward hidden state
+of the LSTM at time step t. Concatenate the last hidden states
+from both the forward and backward hidden state sequences
+to obtain the spatiotemporal features of the session. Subsequently, these concatenated hidden states undergo a nonlinear
+transformation by using a fully connected layer (FC) with
+the LeakyRELU activation function: Fst = FC([h f,n , h b,n ]),
+where n represents the maximum value of the time step, i.e.,
+the length of the packet sequence.
+D. Feature Fusion Classification Layer
+Traditional methods, such as simple concatenation or fixed
+weighted fusion, cannot fully utilize the correlations between
+these two features and cannot adaptively adjust the weights.
+In the ATVITSC scheme, we propose a dynamic weighting
+mechanism in the Feature Fusion Classification layer (FFC) to
+compute the weight coefficients of the global feature Fglobal
+and the spatiotemporal feature Fst . After the weighted fusion
+of Fglobal and Fst , the fused feature is fed into two fully
+connected layers (FC) and the softmax function to generate
+the classification probability distribution. The Algorithm 3
+describes the workflow of FFC.
+Algorithm 3 The Workflow of FFC
+Input: Global feature of session Fglobal , Spatiotemporal feature of session Fst .
+Output: Result of classification;
+1: Fg,s = Concat(Fglobal ,Fst );
+2: αg , αs = DynamicWeight(Fg,s );
+3: v = Matmul&Addition(αg , αs , Fglobal , Fst );
+4: y = Softmax(FeedForwad(v));
+5: Class Result = ArgMax(y);
+6: return Class Result;
+The dynamic weighting mechanism assigns different
+weights for Fglobal and Fst of different sessions. Moreover,
+we also introduce a temperature parameter τ to control the
+balance of weights among different feature extraction modules
+and to prevent the feature extraction module from failing
+during the training process [39]. It can be formalized as:
+z = tanh(Wg,s · [Fglobal ; Fst ] + bg,s ),
+
+ξ = Wz z + bz
+
+αg =
+
+exp(ξ1 /τ )
+exp(ξ2 /τ )
+, αs =
+exp(ξ1 /τ ) + exp(ξ2 /τ )
+exp(ξ1 /τ ) + exp(ξ2 /τ )
+
+where Wg,s , bg,s , Wz and bz are learnable parameters, tanh(·)
+represents the hyperbolic tangent function, exp(·) represents
+the exponential function, ξ ∈ R2 is a unnormalized weight
+for the feature, and ξ1 ∈ R2 and ξ2 ∈ R2 are separate
+unnormalized weights for the global and local features. The
+temperature parameter τ is a hyperparameter that balances the
+attention of FFC to different features and alleviates extreme
+cases of weight coefficients when normalizing them. How to
+select τ will be discussed in section IV.
+After computing the normalized weights for different features, the fusion vector v can be represented as: v = αg ·
+Fglobal + αs · Fst . Finally, v is fed into two fully connected
+layers, and a non-linear transformation is applied to the hidden
+layer to obtain a higher-level representation. The softmax
+function, i.e., y = softmax(FC(LeakyRELU(FC(v)))), is used
+to determine the category of the encrypted traffic.
+IV. E XPERIMENTAL
+In this section, we evaluate the performance of ATVITSC
+on four different scenarios of encrypted traffic: Virtual Private
+Networks (VPN), Tor (the Onion Router), malicious traffic,
+and Android mobile traffic. The implementation configurations
+of the experiments are shown in Table I. Among these parameters, ATVITSC selects a standard batch size and learning
+rate in deep learning classification tasks to strike a balance
+between its training speed and its performance. Additionally, it employs the cross-entropy as the loss function due
+to the cross-entropy demonstrating the efficacy of previous
+classification tasks, which effectively quantifies the disparity
+between model predictions and the truth labels [40]. The
+selection of the Adam optimizer is due to its favorable convergence properties during the training process, adaptive learning
+rate adjustments, and ability to handle sparse gradients [41].
+PyTorch is chosen as the deep learning framework to support
+the model’s design and training processes in our experiments.
+We compare ATVITSC with ten state-of-the-art traffic classification methods and further investigate the roles of its
+sub-modules through an ablation study. These experiments
+aim to demonstrate the generalization and effectiveness of
+ATVITSC in various encryption environments.
+A. Datasets
+We select four widely used datasets to study the performance of ATVITSC. These datasets are listed in the following:
+• USTC-TFS2016 dataset [16]: This dataset contains samples of encrypted network traffic from 10 categories of
+benign traffic and ten categories of malicious traffic.
+• Tor-nonTor dataset (ISCXTor2016) [42]: This dataset is
+designed to classify encrypted applications on Tor, which
+contains samples from 16 different applications.
+• VPN-nonVPN dataset (ISCXVPN2016) [43]: This dataset
+focuses on encrypted traffic classification on virtual
+private networks (VPNs), which comprises both VPN
+and non-VPN traffic samples from 6 communication
+applications.
+
+LIU et al.: ATVITSC: A NOVEL ENCRYPTED TRAFFIC CLASSIFICATION METHOD BASED ON DEEP LEARNING
+
+9381
+
+where Nc represents the number of classes, F1i , Recalli
+and Pr ecision i are the F1-score, the Recall score and the
+Precision score for class i.
+
+TABLE I
+E XPERIMENTAL C ONFIGURATION
+
+C. Exploration of Hyperparameters
+
+Cross Platform (US Mobile APP) [44]: This dataset
+provides a large amount of mobile traffic for analysis
+and evaluation, which contains 59 Android traffic from
+the United States for specific classification tasks.
+These datasets provide abundant samples and features,
+allowing us to verify the validation of ATVITSC and evaluate
+its performance in real-world scenarios. By studying and
+analyzing these datasets, we enhance the understanding of
+encrypted traffic classification in various encryption environments.
+•
+
+B. Metrics
+To evaluate the performance of the ATVITSC, we use
+four metrics: Accuracy, Macro-F1, Macro-Recall, and MacroPrecision. Accuracy is a standard metric in classification
+schemes, representing the ratio of correctly classified samples to total samples [45]. Macro-F1, Macro-Recall, and
+Macro-Precision are evaluation metrics designed for multiclassification problems [46]. These metrics can be expressed
+using the following formula:
+TP +TN
+TP
+, Recall =
+T P + FP + T N + FN
+T P + FN
+TP
+pr ecision · r ecall
+Pr ecision =
+, F1 = 2 ·
+T P + FP
+pr ecision + r ecall
+Accuracy =
+
+where T P, T N , F P, and F N represent true positive, true
+negative, false positive, and false negative.
+N
+
+c
+1 X
+F1macr o =
+F1i ,
+Nc
+
+i=1
+
+Prmacr o =
+
+Nc
+1 X
+
+Nc
+
+i=1
+
+N
+
+c
+1 X
+Rcmacr o =
+Recalli
+Nc
+
+We explore three important hyperparameters: the number
+of chosen data packets (denoted by Packet Number), the
+first m bytes selected from each data packet (denoted by
+ByteNum), and the temperature coefficient of ATVITSC in the
+ISCX VPN dataset to determine how to select the appropriate
+hyperparameters.
+1) Packet Number and ByteNum: We do a series of experiments to explain the selections of two parameters, i.e., Packet
+Number and ByteNum. First, to select the appropriate number
+of data packets, we consult previous research, especially
+Kumano’s results, which show that selecting 10 data packets
+during the visualization process can achieve relatively good
+classification results [22]. To maximize the search space,
+we choose the number of data packets to be 4, 9, 16, 25,
+36, and 49. Second, since Wang have demonstrated that the
+traffic after 300 bytes of the payload has little significance for
+improving the traffic classification [19], we choose ByteNum
+being 16, 36, 64, 100, 169, 256, 324, and 400. For all combinations of selected parameters, the accuracy of the ATVITSC
+in the test set is shown in Figure 6. The results show that the
+performance of ATVITSC tends to stabilize when the Packet
+Number is more than 9, and the accuracy of ATVITSC is high
+when ByteNum is between 100 and 300 bytes. Finally, after
+careful analysis, the accuracy of ATVITSC reaches its optimal
+value of 0.9436 when the Packet Number is 16 and ByteNum
+is 256.
+2) Temperature Parameter: We study the selection of the
+temperature parameter τ in the feature fusion classification
+layer (FFC). This parameter τ depends on a dynamic weighting mechanism that adjusts the weight distribution between
+global and spatiotemporal features to achieve adaptive fusion
+of different features. Randomly select 500 samples from each
+category in four different datasets for training. During the
+training process, τ is set from 1 to 800 in step 20. After
+20 rounds of training, Figure 7 shows the change of accuracy
+under different values of τ . The accuracy of ATVITSC significantly improves at larger values of τ . Conversely, when τ
+is set to a small value, the weight distribution between global
+features and spatiotemporal features may not be reasonable,
+resulting in a decrease in the performance of ATVITSC. In particular, when τ is more than 400, the classification accuracy
+tends to stabilize. By reasonably selecting the value of τ ,
+we can effectively improve the performance of the ATVITSC
+and avoid unreasonable weight distribution during the initial
+stage of training. In a word, the temperature parameter τ ,
+which plays a crucial role in the FFC module, is of great
+significance for achieving feature fusion and improving the
+performance of ATVITSC.
+
+i=1
+
+D. Comparison With Other Methods
+Pr ecision i
+
+We compare ATVITSC with other state-of-the-art traffic classification schemes on the USTC-TFS, ISCX-Tor,
+
+9382
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 6.
+
+Accuracy under different combinations of the number of data packets and the first m bytes of each packet.
+
+used autoencoder and convolutional neural network structure,
+HAN combined the attention mechanism and recurrent neural network for encrypted traffic classification. Flow-GNN
+uses geometric deep learning that simultaneously considers
+raw bytes of packets, metadata features, and the relations
+among packets for classification. These schemes cover various popular neural network structures and algorithms in the
+current field of deep learning, which makes us comprehensively compare the performances and effectiveness of different
+advanced encrypted traffic classification schemes based on
+deep learning.
+
+Fig. 7.
+
+Accuracy variation curves under different values of τ .
+
+ISCX-VPN and Cross-Platform (US Android APP) datasets,
+including some classic schemes based on machine learning
+such as AppScanner [11] and BIND [12], and some advanced
+schemes based on deep learning such as FS-Net [13], GraphDApp [17], FlowPic [14], HAN [21], TSCRNN [23] and
+DeepPacket [20], CMTSNN [24], Flow-GNN [18]. These
+schemes based on deep learning cover almost all neural
+network structures. For example, FS-Net used a structure
+with recurrent neural networks to classify temporal features,
+FlowPic converted statistical features into images and used
+convolutional neural networks for classification, GraphDApp
+used graph neural network structure for encrypted traffic
+classification, TSCRNN and CMTSNN combined recurrent
+and convolutional neural network architecture, DeepPacket
+
+1) Malicious Traffic Classification: According to the experimental results provided in Table II, ATVITSC achieves the
+best result in terms of Rcmacr o and F1macr o . However, four
+other methods, such as DeepPacket, TSCRNN, CMTSNN,
+and Flow-GNN, also show considerable performance on the
+UTSC-TFC dataset because the UTSC-TFC dataset contains
+plaintexts in the application layer of malicious traffic. These
+plaintexts make it easier for the models to learn patterns
+of different categories from unencrypted data and achieve
+accurate classification. Table III shows the experimental results
+on a 20-classification task of USTC-TFC.
+2) Tor Traffic Classification: In Table IV, ATVITSC
+achieves an accuracy of 98.79%, which is 3.79% higher than
+the previously best result, TSCRNN, because TSCRNN fails
+to fully capture the relationships among packets and only
+extracts spatiotemporal features by using a cascaded structure.
+In contrast, ATVITSC designs the Packet Vision Transformer
+to extract global features and a dynamic weighting mechanism
+
+LIU et al.: ATVITSC: A NOVEL ENCRYPTED TRAFFIC CLASSIFICATION METHOD BASED ON DEEP LEARNING
+
+9383
+
+TABLE II
+
+TABLE V
+
+C OMPARISON R ESULTS O N USTC-TFC
+
+C LASSIFICATION R EPORT OF ISCX T OR
+
+TABLE III
+C LASSIFICATION R EPORT OF USTC-TFC
+TABLE VI
+C OMPARISON R ESULTS O N ISCX VPN
+
+TABLE VII
+C LASSIFICATION R EPORT OF ISCX VPN
+TABLE IV
+C OMPARISON R ESULTS O N ISCX T OR
+
+to fuse global and spatiotemporal features for classification. Meanwhile, the accuracy of ATVITSC also surpasses
+DeepPacket’s by 24.30%, because DeepPacket has a weaker
+generalization ability. Table V shows the experimental results
+of a 16-classification task on Tor2016.
+3) VPN Traffic Classification: Table VI demonstrates all
+experimental results on the dataset ISCX VPN. We find that
+the accuracy of ATVITSC is about 97.89%, which is more
+than the accuracy of Flow-GNN, CMTSNN, DeepPacket,
+and TSCRNN by 0.33%, 4.59%, 4.6%, and 6.19%, respectively. Although Flow-GNN can achieve similar accuracy,
+
+the F1macr o of ATVITSC is more than Flow-GNN’s by
+3.05%. In fact, ISCX VPN is an imbalanced dataset. In this
+dataset, TSCRNN uses random sampling to enhance data
+diversity, DeepPacket uses undersampling to mitigate the data
+imbalance, and CMTSNN, designed only for encrypted traffic classification in IoT, adopts the cost penalty matrix and
+improved cross-entropy loss function without the attention
+mechanism. In contrast, ATVITSC uses the attention mechanism for each module to explore the interactive relationship
+among packets in ISCX VPN fully. Please refer to Table VII
+for more detailed experimental results on twelve classification
+tasks performed on VPN2016.
+4) Mobile Traffic Classification: We also perform
+ATVITSC and other ten schemes on Cross-Platform (US
+
+9384
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+TABLE VIII
+C OMPARISON R ESULTS O N C ROSS -P LATFORM
+
+Android APP). Table VIII gives comparison results. From
+Table VIII, ATVITSC demonstrates superior performance
+across four key metrics again. Specifically, its F1macr o
+score surpasses those of HAN, CMTSNN and Flow-GNN
+by 7.05%, 7.18% and 3.52%, respectively. Although HAN
+also uses attention mechanisms, it has certain limitations
+in extracting temporal features. CMTSNN only extracts
+features at the spatiotemporal dimension level. Flow-GNN
+achieves suboptimal classification results by utilizing
+statistical features and constructing a graph of the order
+among the original data packets. In contrast, ATVITSC
+not only captures the interactions among data packets but
+also extracts spatiotemporal features from network flows,
+resulting in more accurate classification. The classification
+report for 59 categories of U.S. Android app traffic in the
+Cross-platform is listed in Table IX.
+5) Comparison of Inference Speed: We list the inference
+time of 9 different deep learning methods in Table X when
+the batch size is 16. Since AppScanner and BIND are based
+on machine learning, we do not analyze them. First, FS-Net
+has the fastest inference speed of 18.67ms because FS-Net
+only accepts simple sequence features as input. However,
+simple sequence features also affect its classification accuracy.
+Second, FlowPic uses a simple CNN structure, but its input
+matrix (1500×1500) is too large, resulting in its inference time
+of 71.52ms. Although the model structure of ATVITSC is relatively complex, its input size is relatively small. For example,
+when Packet Number is 16 and ByteNum is 256 bytes, the size
+of input received by ATVITSC is only 80 × 80. So ATVITSC
+can achieve an inference speed of 32.54ms.
+In summary, the inference speed of different models is
+influenced by the complexity of input features and model
+structure. FS-Net has advantages in speed, but its classification
+accuracy is relatively low. ATVITSC achieves a good balance
+between inference speed and classification accuracy.
+6) Analysis and Discussion: According to the above experimental results, ATVITSC shows significant performance
+advantages over other state-of-the-art traffic classification
+methods on multiple datasets, while the performances of other
+methods are not stable enough on different datasets. The F1
+value of TSCRNN in the USTC dataset is 98.70%, while it
+is 92.70% in the VPN dataset. The F1 value of DeepPacket
+in the USTC dataset is 96.50%, but it drops to 75.49% in
+the Tor dataset. AppScanner and Bind perform the worst in
+
+the three datasets, mainly due to the insufficient applicability
+of encrypted traffic classification methods based on statistical
+features in different datasets. It is necessary to redesign the
+features for each type of traffic. FS-Net uses packet sizes
+as features and then applies recurrent neural networks for
+computing. However, such features are too simplistic and
+make it difficult to accurately reflect the encrypted network
+traffic features. GraphDAPP constructs a TIG for encrypted
+traffic based on the packet length and direction. Then it
+applies a graph neural network for classification. However, the
+constructed graph structure may not capture the key features of
+encrypted traffic. Meanwhile, when the fingerprint of the application changes, the accuracy will correspondingly decrease.
+DeepPacket chooses the IP header and the first 1480 bytes of
+each packet to form a 1500-byte input, which contains the data
+below the application layer. However, this selection will result
+in excessive computation and data redundancy. In addition,
+the CNN model fails to effectively extract the relationship
+between temporal features and data packets, resulting in lower
+accuracy. FlowPic converts packet size and arrival time into
+images and uses CNN for classification. Using simplistic
+features as input makes it difficult to accurately extract traffic
+features. TSCRNN and CMTSNN combine CNN and LSTM
+in a cascaded structure to extract spatiotemporal features from
+network flows but do not consider the interaction among data
+packets. HAN combines LSTM with the attention mechanism,
+but it can only extract packet features from the temporal
+dimension, which is not comprehensive enough. Flow-GNN
+utilizes the sequential relationship among data packets, raw
+traffic and meta features as network inputs, which can fully
+extract traffic features for classification. However, due to
+its lack of attention mechanism, its ability to extract global
+features may be weak in certain scenarios.
+ATVITSC achieves an F1 value of over 97% in datasets
+such as USTC, VPN, and Tor, and the F1 value on the
+Android Mobile traffic dataset also reaches 94.9%. Clearly,
+it demonstrates stable performance in various application
+environments. This advantage mainly stems from ATVITSC’s
+comprehensive use of the PVT and STFE modules, augmented
+by various feature extraction methods, such as the attention
+mechanism, feedforward neural network, residual attention
+convolution module, and bidirectional LSTM. These methods
+collectively extract the spatiotemporal and spatial features of
+traffic data. In addition, the PVT module of ATVITSC first
+embeds each data packet in the traffic image to obtain the
+initial vector of the packet. It uses an attention mechanism to
+learn the interaction relationship among the packets and uses
+a feedforward neural network to extract the global features
+of the entire flow. Compared with traditional visualization
+methods, our proposed traffic visualization method can avoid
+the problem of temporal information distortion caused by
+convolution operations in network traffic.
+After obtaining the spatial features of the data packet,
+bidirectional LSTM is used to accurately extract spatiotemporal features, and the dynamic weighting mechanism can
+dynamically adjust the weights of global and spatiotemporal
+features for feature fusion based on the features of the data.
+Compared to previous methods with fixed weights in advance,
+
+LIU et al.: ATVITSC: A NOVEL ENCRYPTED TRAFFIC CLASSIFICATION METHOD BASED ON DEEP LEARNING
+
+9385
+
+TABLE IX
+C LASSIFICATION R EPORT OF C ROSS -P LATFORM (U.S. A NDROID APP)
+
+TABLE X
+C LASSIFICATION T IME FOR D IFFERENT M ODELS W HEN BATCHSIZE I S 16
+
+ATVITSC is more flexible and could enhance the applicability
+of the model in different environments. In contrast, other
+methods have limitations in feature extraction and model
+design, resulting in unstable or unsatisfactory performance.
+Meanwhile, they could not consider the interaction among data
+packets.
+
+Fig. 8.
+
+Attention Visualization.
+
+E. Interaction of Packets
+In this experiment, let the number of packets be 16 and
+the payload size be 256 bytes while keeping other parameters
+unchanged. Our main objective is to observe the dependencies
+among packets by visualizing the attention in the PVT. To simplify the analysis, we train ATVITSC on the VPN dataset and
+randomly select a sample. The attention matrix computed by
+PVT is then mapped onto a session image. Figure 8 illustrates
+the attention distributions of different packets within the same
+session (for display purposes, only four packets are chosen).
+Different colors represent the attention level of the model
+towards different parts, with darker colors indicating greater
+attention. The red box represents a packet. Obviously, for
+different data packets, the model focuses on different parts,
+
+which further proves that ATVITSC can capture the interaction
+of different packets and extract global features adequately.
+F. Dynamic Weighting Mechanism
+We analyze the role of the dynamic weighting mechanism
+on the ISCX-Tor dataset. In the training process, without using
+the temperature parameter τ , significant fluctuations in the
+weight of the STFE and PVT modules lead to an unstable
+training process, as seen in Figure 9. After 400 steps of
+training, the model encounters an extreme weight distribution
+problem where the weights of the STFE approach 0. During
+the initial stage of training, if there is a significant difference in
+contribution between the two feature extraction modules, the
+
+9386
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 9.
+
+Weight changes in training without τ .
+
+Fig. 11. Training accuracy on ISCX Tor with/without dynamic weighting
+mechanism.
+TABLE XI
+E VALUATION OF D IFFERENT P REPROCESS M ETHODS
+
+weighting mechanism can improve the convergence speed and
+accuracy of training. This result is attributed to the adaptive
+adjustment of the importance of different features during the
+training process, leading to a stable and effective model.
+
+Fig. 10.
+
+Weight changes in training.
+
+weight of one of the modules may approach 0. In this case, the
+weight of the PVT approaches 1, while the weight of the STFE
+module approaches 0. Consequently, the STFE is ignored
+after 400 steps, rendering it unable to continue learning.
+Therefore, without using the temperature parameter τ , the
+two sub-modules of ATVITSC cannot sufficiently complete
+the training.
+With the temperature parameter τ , ATVITSC can achieve
+more balanced attention between the STFE and PVT modules.
+This adjustment makes both sub-modules effectively learn
+rather than directly disregard the weaker one. Thus ATVITSC
+allows the initially lower-weighted module to actively participate in feature extraction and classification processes. In our
+experiment, let τ be 500, which is a more reasonable change
+in the weights of the two modules. The weight changes of the
+two modules are depicted in Figure 10. Introducing τ alleviates
+the problem of extreme weight coefficient distributions. Both
+sub-modules effectively accomplish learning, and the fusion
+classification layer assigns corresponding weights to the global
+and spatiotemporal features of different sessions to complete
+traffic classification.
+Compare the simple concatenation of global and spatiotemporal features with a dynamic weighting mechanism to those
+without a dynamic weighting mechanism. The accuracy variations of the two methods during the training process are
+shown in Figure 11. The results indicate that the dynamic
+
+G. Comparison of Preprocess Methods
+To validate the superiority of the proposed preprocess
+method in this paper, we compare it with a traditional approach
+of generating session-level images (using the first 1600 bytes
+of each session). Due to the incompatibility of the traditional
+method with the ATVITSC model, a widely used 1D-CNN
+model [15] is applied for performance comparison in this
+experiment. In the VPN dataset, 1000 sessions are randomly
+selected for each class. To ensure similar image sizes between
+the two methods, our preprocess approach uses the first
+256 bytes of the payload and selects the first four packets
+of each session for image generation, which is compared
+with the traditional preprocess method based on session-level
+images. Table XI demonstrates that our method performs better. Generating images on the packet level allows the processed
+data to retain their temporal features and effectively prevent
+temporal information distortion from convolutional operations.
+Additionally, length embeddings are introduced to maintain the
+packets’ length information. Conversely, simply extracting the
+first z bytes at the session level can lead to confusion and loss
+of information.
+H. Ablation Study
+Module ablation experiments and independent validation
+experiments need to be conducted on all modules to evaluate
+the performance of each module in the ATVITSC system. The
+ablation analysis of ATVITSC is performed on the ISCX-Tor
+dataset and the results are shown in Table XII. PVT exhibits
+the best performance, followed closely by STFE. Obviously,
+
+LIU et al.: ATVITSC: A NOVEL ENCRYPTED TRAFFIC CLASSIFICATION METHOD BASED ON DEEP LEARNING
+
+9387
+
+TABLE XII
+E VALUATION OF D IFFERENT M ODULES
+
+Fig. 12.
+
+Classification results of PVT in a single packet dataset.
+
+the STFE’s performance is relatively weaker than PVT’s.
+When the PVT and STFE modules are combined, the network
+traffic features in both global and spatiotemporal dimensions
+can be considered comprehensively, leading to improved identification accuracy. Furthermore, more accurate classification
+performance is achieved by introducing the dynamic weighting
+mechanism to fuse the features extracted by the two modules.
+In a word, the dynamic weighting mechanism is better suited
+for combining different types of features.
+We study the performances of PVT and STFE in sessions
+that only contain a single packet. A sample containing one
+packet is selected from six categories in the UTSC dataset:
+BitTorrent, Facetime, Gmail, MySQL, Outlook and Skype.
+The confusion matrices of the PVT and STFE are shown
+in Figure 12 and Figure 13. In this case, the accuracy of
+STFE is superior to that of PVT. With only one packet,
+there is no information to interact across locations, degrading the self-attention mechanism to a fully connected layer.
+Specifically, if the packet sequence contains only one packet,
+denoted as x1 , its embedding vector representation can be
+expressed as x1 ∈ R1×d , the query vector Q ∈ R1×dh , the
+key vector K ∈ R1×dh and the value vector V ∈ R1×dv in the
+following:
+Q = X W Q = x1 W Q ,
+K = X W K = x1 W K ,
+V = X WV = x1 WV
+
+Fig. 13.
+
+Classification results of STFE in a single packet dataset.
+
+where W Q ∈ R d×dh , W K ∈ R d×dh , WV ∈ R d×dv are the
+weight matrices of Query, Key and Value, respectively, dh and
+dv represent the dimensions of Key and Value.
+According to the calculation formula of the self-attention
+mechanism, the unnormalized score S ∈ R 1×1 is obtained by
+the values of Q and K :
+x1 W Q W KT x1T
+QK T
+S= √
+=
+√
+dh
+dh
+For a sequence S = [S1 ] that contains only one packet, the
+attention weights a can be obtained by the softmax function:
+exp(s1 )
+a = so f tmax (S) V = P1
+(x1 WV )
+j=1 exp(s j )
+exp(s1 )
+=
+(x1 WV ) = x1 WV
+exp(s1 )
+Based on the above formula, we can find that the
+self-attention mechanism is similar to the fully connected
+layer in this scenario, which causes PVT to be unable to
+capture critical information. However, STFE can still extract
+important temporal and spatial features from a single packet,
+making STFE more efficient in this case. For longer sequences,
+the self-attention mechanism within the PVT module can use
+more context information to generate a stronger representation.
+Given the unique advantages of PVT and STFE, it is essential
+to use a dynamic weighting mechanism to effectively combine
+global and spatiotemporal features.
+
+9388
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+V. C ONCLUSION
+This paper proposes a new encrypted traffic classification
+scheme called the ATVITSC. ATVITSC first presents a method
+to generate network flow images at the packet level, which
+preserves the original sequential nature of different packets
+after the image generation. Second, the ATVITSC splits the
+session image into multiple packet image sequences and
+extracts global and spatiotemporal features by using a multihead self-attention mechanism and spatiotemporal feature
+extraction method. Next, ATVITSC applies a dynamic weighting mechanism to fuse these features to classify encrypted
+traffic effectively. Our scheme shows higher accuracy and
+generalization ability than existing methods in the tasks of
+encrypted malicious traffic classification, VPN encrypted traffic classification, Tor encrypted application classification, and
+mobile traffic classification.
+However, ATVITSC also faces certain challenges. For
+example, it is still being determined whether ATVITSC can
+classify the encrypted traffic for dynamic datasets effectively.
+The encryption algorithms are updated constantly and the
+emergence of new algorithms may decrease the accuracy of
+ATVITSC in encrypted traffic classification. In the future,
+we will explore incremental learning methods to make the
+ATVITSC maintain good reusability in dynamic network environments. Meanwhile, we will introduce the latest multi-scale
+retention mechanism in the ATVITSC, which aims to speed up
+the time for classification and optimize its performance from
+the view of accuracy and efficiency.
+R EFERENCES
+[1] J. Xiang, N. Fulton, and S. Chong, “Relational analysis of sensor attacks
+on cyber-physical systems,” in Proc. IEEE 34th Comput. Secur. Found.
+Symp. (CSF), Jun. 2021, pp. 1–16.
+[2] X. Lin, G. Xiong, and G. Gou, “ET-BERT: A contextualized datagram representation with pre-training transformers for encrypted traffic
+classification,” in Proc. ACM Web Conf., New York, NY, USA, 2022,
+pp. 633–642, doi: 10.1145/3485447.3512217.
+[3] R. Liu and X. Yu, “A survey on encrypted traffic identification,” in Proc.
+Int. Conf. Cyberspace Innov. Adv. Technol., New York, NY, USA, 2021,
+pp. 159–163, doi: 10.1145/3444370.3444564.
+[4] J. Erman, A. Mahanti, M. Arlitt, and C. Williamson, “Identifying and
+discriminating between web and peer-to-peer traffic in the network core,”
+in Proc. 16th Int. Conf. World Wide Web. New York, NY, USA, 2007,
+pp. 883–892, doi: 10.1145/1242572.1242692.
+[5] R. T. Elmaghraby, N. M. A. Aziem, M. A. Sobh, and
+A. M. Bahaa-Eldin, “Encrypted network traffic classification
+based on machine learning,” Ain Shams Eng. J., vol. 15,
+no. 2, Feb. 2024, Art. no. 102361. [Online]. Available:
+https://www.sciencedirect.com/science/article/pii/S2090447923002502
+[6] Z. Okonkwo, E. Foo, Q. Li, and Z. Hou, “A CNN based encrypted network traffic classifier,” in Proc. Australas. Comput. Sci. Week. New York,
+NY, USA: ACM, Feb. 2022, pp. 74–83, doi: 10.1145/3511616.3513101.
+[7] S. Rezaei and X. Liu, “Deep learning for encrypted traffic classification: An overview,” IEEE Commun. Mag., vol. 57, no. 5, pp. 76–81,
+May 2019.
+[8] J. Lan, X. Liu, B. Li, Y. Li, and T. Geng, “DarknetSec:
+A novel self-attentive deep learning method for darknet traffic classification and application identification,” Comput. Secur.,
+vol. 116, May 2022, Art. no. 102663. [Online]. Available: https://www.
+sciencedirect.com/science/article/pii/S0167404822000621
+[9] M. Lopez-Martin, B. Carro, A. Sanchez-Esguevillas, and J. Lloret, “Network traffic classifier with convolutional and recurrent neural networks
+for Internet of Things,”IEEE Access, vol. 5, pp. 18042–18050, 2017.
+[10] P. Wang, X. Chen, F. Ye, and Z. Sun, “A survey of techniques for
+mobile service encrypted traffic classification using deep learning,” IEEE
+Access, vol. 7, pp. 54024–54033, 2019.
+
+[11] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smartphone app identification via encrypted network traffic analysis,” IEEE
+Trans. Inf. Forensics Security, vol. 13, no. 1, pp. 63–78, Jan. 2018.
+[12] K. Al-Naami et al., “Adaptive encrypted traffic fingerprinting with
+bi-directional dependence,” in Proc. 32nd Annu. Conf. Comput.
+Secur. Appl., New York, NY, USA, Dec. 2016, pp. 177–188, doi:
+10.1145/2991079.2991123.
+[13] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow sequence
+network for encrypted traffic classification,” in Proc. IEEE Conf. Comput. Commun. (INFOCOM), Apr. 2019, pp. 1171–1179.
+[14] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for
+encrypted traffic classification and applications identification,” IEEE
+Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1218–1232, Jun. 2021.
+[15] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+encrypted traffic classification with one-dimensional convolution neural
+networks,” in Proc. IEEE Int. Conf. Intell. Secur. Informat. (ISI),
+Jul. 2017, pp. 43–48.
+[16] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+classification using convolutional neural network for representation
+learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2017, pp. 712–717.
+[17] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized application identification via encrypted traffic analysis using
+graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+pp. 2367–2380, 2021.
+[18] T.-L. Huoh, Y. Luo, P. Li, and T. Zhang, “Flow-based encrypted network
+traffic classification with graph neural networks,” IEEE Trans. Netw.
+Service Manag., vol. 20, no. 2, pp. 1224–1237, Jul. 2023.
+[19] Z. Wang, “The applications of deep learning on traffic identification,”
+BlackHat USA, Las Vegas, LV, USA, Tech. Rep., 2015, pp. 1–10.
+[Online]. Available: https://www.blackhat.com/us-15/briefings.html#theapplications-of-deep-learning-on-traffic-identification
+[20] M. Lotfollahi, R. S. H. Zade, M. J. Siavoshani, and M. Saberian,
+“Deep packet: A novel approach for encrypted traffic classification using
+deep learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, 2020, doi:
+10.1007/s00500-019-04030-2.
+[21] H. Yao, C. Liu, P. Zhang, S. Wu, C. Jiang, and S. Yu, “Identification
+of encrypted traffic through attention mechanism based long short term
+memory,” IEEE Trans. Big Data, vol. 8, no. 1, pp. 241–252, Feb. 2022.
+[22] Y. Kumano, S. Ata, N. Nakamura, Y. Nakahira, and I. Oka, “Towards
+real-time processing for application identification of encrypted traffic,”
+in Proc. Int. Conf. Comput., Netw. Commun. (ICNC), Feb. 2014,
+pp. 136–140.
+[23] K. Lin, X. Xu, and H. Gao, “TSCRNN: A novel classification
+scheme of encrypted traffic based on flow spatiotemporal
+features for efficient management of IIoT,” Comput. Netw.,
+vol. 190, May 2021, Art. no. 107974. [Online]. Available:
+https://www.sciencedirect.com/science/article/pii/S1389128621001067
+[24] S. Zhu, X. Xu, H. Gao, and F. Xiao, “CMTSNN: A deep learning model
+for multiclassification of abnormal and encrypted traffic of Internet of
+Things,” IEEE Internet Things J., vol. 10, no. 13, pp. 11773–11791,
+Jul. 2023.
+[25] A. Dainotti, A. Pescape, and K. C. Claffy, “Issues and future directions
+in traffic classification,” IEEE Netw., vol. 26, no. 1, pp. 35–40, Jan. 2012.
+[26] S. Rezaei and X. Liu, “How to achieve high classification accuracy with
+just a few labels: A semi-supervised approach using sampled packets,”
+2018, arXiv:1812.09761.
+[27] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers
+for image recognition at scale,” 2020, arXiv:2010.11929.
+[28] A. Vaswani et al., “Attention is all you need,” in Proc. NIPS. Red Hook,
+NY, USA: Curran Associates, 2017, pp. 6000–6010.
+[29] T. Völker, M. Tüxen, and E. P. Rathgeb, “The search of the path MTU
+with QUIC,” in Proc. Workshop Evol., Perform. Interoperability (QUIC),
+vol. 802. New York, NY, USA: Association for Computing Machinery,
+Dec. 2021, pp. 22–28, doi: 10.1145/3488660.3493805.
+[30] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training
+of deep bidirectional transformers for language understanding,” 2018,
+arXiv:1810.04805.
+[31] S. Chaudhari, V. Mithal, G. Polatkan, and R. Ramanath, “An attentive
+survey of attention models,” ACM Trans. Intell. Syst. Technol., vol. 12,
+no. 5, pp. 1–32, Oct. 2021, doi: 10.1145/3465055.
+[32] A. L. Maas. (2013). Rectifier Nonlinearities Improve Neural
+Network Acoustic Models. [Online]. Available: https://api.
+semanticscholar.org/CorpusID:16489696
+[33] J. L. Ba, J. R. Kiros, and G. E. Hinton, “Layer normalization,” 2016,
+arXiv:1607.06450.
+
+LIU et al.: ATVITSC: A NOVEL ENCRYPTED TRAFFIC CLASSIFICATION METHOD BASED ON DEEP LEARNING
+
+[34] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2016, pp. 770–778.
+[35] A. Graves, Long Short-Term Memory. Berlin, Germany: Springer, 2012,
+pp. 37–45, doi: 10.1007/978-3-642-24797-2_4.
+[36] J. Hu, L. Shen, and G. Sun, “Squeeze-and-excitation networks,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2018,
+pp. 7132–7141.
+[37] M. Lin, Q. Chen, and S. Yan, “Network in network,” in Proc. Int. Conf.
+Learn. Represent. (ICLR), 2014.
+[38] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating deep
+network training by reducing internal covariate shift,” in Proc. Int. Conf.
+Mach. Learn., 2015, pp. 448–456.
+[39] G. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a neural
+network,” 2015, arXiv:1503.02531.
+[40] Z. Zhang and M. Sabuncu, “Generalized cross entropy loss for
+training deep neural networks with noisy labels,” in Proc. Adv.
+Neural Inf. Process. Syst., S. Bengio, H. Wallach, H. Larochelle,
+K. Grauman, N. Cesa-Bianchi, and R. Garnett, Eds., vol. 31.
+Red Hook, NY, USA: Curran Associates, 2018. [Online]. Available:
+https://proceedings.neurips.cc/paper_files/paper/2018/file/f2925f97bc13
+ad2852a7a551802feea0-Paper.pdf
+[41] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+2014, arXiv:1412.6980.
+[42] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani,
+“Characterization of Tor traffic using time based features,” in Proc. 3rd
+Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), Feb. 2017, pp. 253–262.
+[43] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani,
+“Characterization of encrypted and VPN traffic using time-related
+features,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, 2016,
+pp. 407–414.
+[44] T. Ede et al., “FlowPrint: Semi-supervised mobile-app fingerprinting on
+encrypted network traffic,” in Proc. Netw. Distrib. Syst. Secur. Symp.,
+Jan. 2020, pp. 1–18.
+[45] C. Catal, “Performance evaluation metrics for software fault prediction
+studies,” Acta Polytechnica Hungarica, vol. 9, pp. 193–206, Jan. 2012.
+[46] C. Liu, W. Wang, M. Wang, F. Lv, and M. Konan, “An efficient
+instance selection algorithm to reconstruct training set for support
+vector machine,” Knowl.-Based Syst., vol. 116, pp. 58–73,
+Jan.
+2017.
+[Online].
+Available:
+https://www.sciencedirect.
+com/science/article/pii/S0950705116304257
+
+Ya Liu received the B.S. and M.S. degrees from the
+Mathematics Department, Anhui Normal University,
+in 2004 and 2007, respectively, and the Ph.D. degree
+in computer system architecture from Shanghai Jiao
+Tong University in 2013. She is currently an Associate Professor with the Department of Computer
+Science and Engineering, University of Shanghai
+for Science and Technology. Her research interests
+include cryptology, federated learning, the scalability
+and privacy protection of blockchain, and network
+security by network analysis. She serves as a member for IACR, CACR, and CCF.
+
+9389
+
+Xiao Wang received the B.S. degree in engineering
+from the Huanghe University of Science and Technology in 2021 and the M.S. degree in engineering
+from the University of Shanghai for Science and
+Technology in 2024. His research interests include
+encrypted traffic classification.
+
+Bo Qu received the B.S. and M.S. degrees in
+information security and computer science from
+Shanghai Jiao Tong University, China, in 2009 and
+2012, respectively, and the Ph.D. degree in intelligent systems from Delft University of Technology, The Netherlands, in 2017. Before joining
+Guangdong University of Science and Technology,
+he worked with the Peng Cheng Laboratory as
+a Research Associate. He was also with Tencent
+Technology as a Researcher in applied research
+of network security. His research interests include
+network security by network analysis and network representation learning.
+
+Fengyu Zhao received the B.S. and M.S. degrees
+in computer engineering from Nanjing University
+of Aeronautics and Astronautics in 1984 and 1989,
+respectively, and the Ph.D. degree in computer software and theory from Fudan University in 2010.
+From 1998 to 1999, he was a Visiting Scholar with
+Linköping University, Sweden. He is currently a
+Professor with the Department of Information and
+Intelligence Engineering, Shanghai Publishing and
+Printing College. His research interests include the
+design and analysis of software systems. He serves
+as a member for the Software Engineering Professional Committee of CCF.
+PAPER_TEXT

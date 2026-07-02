@@ -1,0 +1,734 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [227] FedETC: Encrypted traffic classification based on federated learning
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：227
+题名：FedETC: Encrypted traffic classification based on federated learning
+年份：2024
+DOI：10.1016/j.heliyon.2024.e35962
+来源：Heliyon
+PDF：paper/10.1016_j.heliyon.2024.e35962.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：联邦学习、隐私保护与分布式协同、其他AI安全与跨域异常检测
+相关性：强相关，分数 10
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\227.txt
+- 原始字符数：34880
+- 本次发送字符数：34880
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+Heliyon 10 (2024) e35962
+
+Contents lists available at ScienceDirect
+
+Heliyon
+journal homepage: www.cell.com/heliyon
+
+Research article
+
+FedETC: Encrypted traﬃc classiﬁcation based on federated
+learning
+Zhiping Jin a , Ke Duan a , Changhui Chen b , Meirong He c , Shan Jiang c ,
+Hanxiao Xue d,∗
+a School of Information Engineering, Zhongshan Polytechnic, Zhongshan, China
+b Guangzhou Panyu Polytechnic, Guangzhou, China
+c Institute of Artiﬁcial Intelligence, Guangzhou University, Guangzhou, China
+d School of Information Technology and Engineering, Guangzhou College of Commerce, Guangzhou, China
+
+A R T I C L E
+
+I N F O
+
+Keywords:
+Network traﬃc classiﬁcation
+Federated learning
+Encrypted traﬃc
+
+A B S T R A C T
+The current popular traﬃc classiﬁcation methods based on feature engineering and machine
+learning are diﬃcult to obtain suitable traﬃc feature sets for multiple traﬃc classiﬁcation tasks.
+Besides, data privacy policies prohibit network operators from collecting and sharing traﬃc data
+that might compromise user privacy. To address these challenges, we propose FedETC, a federated
+learning framework that allows multiple participants to learn global traﬃc classiﬁers, while
+keeping locally encrypted traﬃc invisible to other participants. In addition, FedETC adopts onedimensional convolutional neural network as the base model, which avoids manual traﬃc feature
+design. In the experiments, we evaluate the FedETC framework for the tasks of both application
+identiﬁcation and traﬃc characterization in a publicly available real-world dataset. The results
+show that FedETC can achieve promising accuracy rates that are close to centralized learning
+schemes.
+
+1. Introduction
+The classiﬁcation and identiﬁcation of network traﬃc play a signiﬁcant role in network operation management and cyberspace
+security [1–3]. For instance, identifying the type of applications in a network enables ﬁne-grained management of critical bandwidth
+resources. It also serves as an eﬀective and essential building block of network protection for detecting unknown attack behaviors,
+preventing network intrusions, and facilitating network situational awareness [4,5].
+It is worth noting that with the evolution and development of encryption protocols such as Transport Layer Security (TLS), the era
+of traﬃc encryption has come. Network traﬃc, as the core carrier of network data, can hide user behavior and protect user privacy
+by using encryption technology. Traditional network traﬃc classiﬁcation approaches like deep packet inspection rely on matching
+protocol signatures in the application layer data, which will face a huge challenge to process encrypted traﬃc data [6,7]. In contrast,
+machine learning based approaches can eﬀectively handle encrypted traﬃc [8].
+Generally, encrypted traﬃc classiﬁcation based on classic machine learning require researchers to design and deﬁne a set of
+traﬃc feature in advance and then train a classiﬁcation model using machine learning algorithms such as Naive Bayes, support
+
+* Corresponding author.
+E-mail address: 20220057@gcc.edu.cn (H. Xue).
+
+https://doi.org/10.1016/j.heliyon.2024.e35962
+Received 22 May 2024; Received in revised form 22 July 2024; Accepted 6 August 2024
+Available online 11 August 2024
+2405-8440/© 2024 The Authors.
+Published by Elsevier Ltd.
+(http://creativecommons.org/licenses/by/4.0/).
+
+This is an open access article under the CC BY license
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+
+vector machine, decision trees and so on. Nonetheless, due to the complexity of network applications and the prominent diﬀerence
+in traﬃc components, the manually deﬁned feature sets will signiﬁcantly aﬀect the performance of traﬃc classiﬁers. For example,
+network operators have a wide variety of traﬃc types, and thus need to have experienced network experts to manually construct
+a representative set of features, which incurs expensive labor costs [9]. In addition, manual feature engineering cannot adapt to
+the current surge of network applications with signiﬁcantly diﬀerent behaviors and concept drifts. Deep learning [10], on the other
+hand, diﬀers from classic machine learning algorithms in that it can accomplish both feature learning and traﬃc classiﬁcation without
+requiring the manual eﬀorts of network experts. It not only reduces labor costs linked to feature design but also facilitates the discovery
+of deep traﬃc patterns [11]. In recent years, a series of studies have adopted deep learning for classifying encrypted network traﬃc
+and reported promising results [12–14].
+Despite the promising results of machine learning and deep learning approaches for network traﬃc classiﬁcation, most existing
+studies focus on centralized learning schemes and rely on the quality of training data. In practice, collecting a large, representative
+and diverse traﬃc data set is diﬃcult and subject to security and privacy concerns [15]. While centralized learning schemes can
+aggregate traﬃc data from many network domains to improve data quality and model performance, the participating domains do not
+have full control over their data, which can lead to data leakage. For example, although the payload of SSL/TLS packet is invisible,
+a lot of side information such as the length of packets, the interval between packets, the dependency relationship between packets,
+and the transmission relationship between packets can be disclosed. More importantly, due to the frequent occurrence of user privacy
+leakage caused by centralized training, many countries around the world have introduced data privacy protection laws and policies.
+In this paper, we propose the FedETC (Federated Encrypted Traﬃc Classiﬁcation) framework, which allows multiple autonomous
+network domains to collaborate with each other on training a universal end-to-end encrypted traﬃc classiﬁcation model without
+disclosing their data to other participants and the central server. The goal is to achieve classiﬁcation accuracy and data privacy at
+the same time. In FedETC, the traﬃc sessions are transformed and represented in normalized byte sequences with ﬁxed length. The
+sequences are provided as input to train the one-dimensional Convolutional Neural Network (1D-CNN) model. The parameters of the
+local models are exchanged with the central server and merged into a global model using the FedAvg algorithm.
+For the purpose of evaluation, we conduct extensive experiments using a publicly available encrypted traﬃc dataset. In the
+experiments, we perform two types of traﬃc classiﬁcation tasks (i.e., application identiﬁcation and traﬃc characterization), and also
+consider two scenarios with diﬀerent class and data distributions across the participating network domains. The results show that
+the proposed federated learning scheme can achieve accuracy rates that are close to that of the centralized learning scheme. The
+diﬀerence in overall accuracy can be as low as 0.8%.
+The contributions of this work are summarized as follows:
+
+∙ We propose a federated learning scheme for encrypted traﬃc classiﬁcation, which is based on 1D-CNN model and FedAvg
+algorithm.
+
+∙ We compare the proposed scheme with centralized and other federated learning approaches using a publicly available real-world
+encrypted traﬃc dataset.
+
+∙ We explore the impact of diﬀerent distributions of traﬃc class and data across the participants in the proposed federated learning.
+The rest of this paper is organized as follows. Section 2 provides a brief review of the related works. Section 3 introduces the
+FedETC framework and describes the components in detail. The experimental results and analysis are presented in Section 4. Finally,
+section 5 concludes the paper.
+2. Related works
+Traﬃc classiﬁcation approaches based on machine learning often use a pre-deﬁned feature set that consists of statistical traﬃc
+characteristics [16–21]. For example, Riyad et al. [22] use more than 20 statistics data, such as the mean forward arrival interval and
+the minimum forward packet length, as the input of the machine learning algorithm, and identiﬁed 14 traﬃc attributes for Secure
+Shell (SSH) traﬃc classiﬁcation. Moore et al. [23] identify near 250 features that are useful for classifying ﬂow records. However,
+more features result in higher computational cost and thus limit the application in real-time traﬃc classiﬁcation. Therefore, feature
+selection or feature reduction techniques are often adopted for dimension reduction and redundancy removal.
+To avoid the disadvantages of manual feature design, researchers begin to adopt the deep learning models that integrate feature
+learning. For example, Zhou et al. [24] adopt the minimum-maximum normalization method to process network ﬂow data and map it
+into gray-scale images as the input data of the convolutional neural network to achieve feature learning. Rui et al. [25] provide a byte
+segment neural network for traﬃc classiﬁcation, in which the payload fragments are put into the attention encoder to automatically
+obtain feature representation vectors, and then the softmax classiﬁer is used for classiﬁcation.
+In recent years, encrypted traﬃc classiﬁcation has attracted more and more research attention due to the widespread use of traﬃc
+encryption. For example, Wang et al. [12] convert encrypted traﬃc into gray-scale images as the input of a 1D-CNN and perform
+classiﬁcation tasks of diﬀerent granularity. Lotfollahi et al. [13] use stacked autoencoder and Convolution Neural Network (CNN) to
+automatically extract the eﬀective load characteristics of encrypted packets to identify traﬃc. Aceto et al. [14] propose the Distiller
+classiﬁer, which adopts a multi-modal multitask deep learning approach for encrypted traﬃc classiﬁcation.
+Other than the traditional centralized learning scheme adopted in the above-mentioned approaches, federated learning has also
+been applied in the ﬁeld of network traﬃc classiﬁcation. For example, Mun et al. [15] propose a federated traﬃc classiﬁcation scheme
+to identify traﬃc by associating locally encrypted data across various traﬃc transmission devices.
+2
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+
+Fig. 1. The FedETC framework.
+
+Table 1
+Encrypted traﬃc classiﬁcation tasks.
+Task
+
+Classes
+
+APPI: Application Identiﬁcation
+
+Aim Chat, Email, Facebook, FTPS, Gmail, Hangouts, ICQ, Netﬂix, SCP, SFTP, Skype, Spotify, Tor, Torrent, Vimeo, Voipbuster,
+Youtube.
+
+TC: Traﬃc Characterization
+
+Chat, Email, File Transfer, Streaming, Torrent, VoIP, VPN Chat, VPN Email, VPN File Transfer, VPN Streaming, VPN Torrent,
+VPN VoIP.
+
+Fig. 2. Data preprocessing operations.
+
+3. Method
+This section ﬁrst introduces the proposed framework, then describes the data preprocessing process, classiﬁcation model, and
+federated learning algorithms in detail.
+3.1. Framework
+The proposed FedETC framework for encrypted traﬃc classiﬁcation is illustrated in Fig. 1. The ﬁgure shows the main process how
+the participating domains implement the federated learning scheme to collaboratively train the 1D-CNN model without disclosing
+local training data.
+In this work, we are interested in diﬀerent encrypted traﬃc classiﬁcation tasks including application identiﬁcation and traﬃc
+characterization. As listed in Table 1, application identiﬁcation (APPI) involves identifying speciﬁc applications such as Facebook,
+Gmail, Skype, Netﬂix, Spotify, YouTube and so on, while traﬃc characterization involves breaking the traﬃc down to categories such
+as chat, email, ﬁle transfer, streaming and so on, with and without virtual private network (VPN) tunneling and encryption.
+After selecting the interested task, the network operators of the participating domains can collect and label local traﬃc data
+within their domain for the purpose of training. The collected traﬃc data is stored in pcap format. Several data preprocessing steps
+are involved to derive the training set, which is then fed into the local 1D-CNN model for training.
+A central server is coordinating the participating nodes to build a global model. It is done by communicating with the participants
+to exchange model parameters and running the FedAvg federated learning algorithm to merge the models. Please note that the data
+is processed and used for training locally within each participating domain, only the model parameters will be exchanged beyond
+the domain boundaries.
+3.2. Data preprocessing
+The data preprocessing consists of traﬃc cleaning, session cutting, bytes digitization, uniform length, and data standardization,
+as shown in Fig. 2.
+Typically, a traﬃc trace collected from a network consists of many sessions. Each session 𝑆 can be identiﬁed by and represented
+as in Equation (1).
+3
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+Table 2
+Parameters of 1D-CNN model (𝑛 = 700).
+Layer
+
+Operation
+
+Input
+
+Filter
+
+Stride
+
+Output
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+
+Conv+ReLU
+MaxPool
+Conv+ReLU
+MaxPool
+Conv+ReLU
+MaxPool
+Conv+ReLU
+Linear
+Linear
+Linear
+Linear
+Linear
+Linear
+
+700*1
+349*100
+347*100
+173*200
+171*200
+85*300
+83*300
+41*400
+7600
+3800
+1800
+600
+180
+
+4
+3
+3
+3
+3
+3
+3
+-
+
+2
+1
+2
+1
+2
+1
+2
+-
+
+349*100
+347*100
+173*200
+171*200
+85*300
+83*300
+41*400
+7600
+3800
+1800
+600
+180
+17
+
+𝑆 = {𝑓𝑖 |𝑖 ∶ (𝑠𝑖𝑝, 𝑑𝑖𝑝, 𝑠𝑝𝑜𝑟𝑡, 𝑑𝑝𝑜𝑟𝑡, 𝑝𝑟𝑜)},
+
+(1)
+
+where 𝑖 indicates the 5-tuple (source IP address, source port number, destination IP address, destination port number, and transport
+protocol) that occurs during session establishment, and 𝑓𝑖 indicates a one-way ﬂow.
+The collected traﬃc data is stored in the binary form as in the pcap ﬁles, where each session 𝑆 can be represented by a vector of
+bytes 𝑣 as in Equation (2).
+
+𝑣 = {𝑏1 , 𝑏2 , ..., 𝑏𝑖 , ...},
+
+(2)
+
+where 𝑏𝑖 represents the 𝑖𝑡ℎ byte of the data in the session. The structural relationships in the byte sequence can be destroyed if the
+sequence is reorganized. Therefore, we adopt the form of one-dimensional byte vector for data representation.
+We then convert the original byte vector 𝑣 of the encrypted traﬃc into a sequence of integers 𝑑 as in Equation (3).
+
+𝑑 = {𝑑1 , 𝑑2 , ..., 𝑑𝑖 , ..., 𝑑𝑛 },
+
+(3)
+
+where 𝑑𝑖 represents the value of 𝑏𝑖 ranging from 0 to 255. Vector 𝑑 is set to have a ﬁxed length 𝑛. For example, we set 𝑛 to 700 in
+our experiments. The sequences longer than 𝑛 bytes are truncated and the sequences shorter than 𝑛 bytes are padded with zeros.
+Finally, we normalize the integer vector 𝑑 as in Equation (4).
+
+𝐷𝑠𝑡 = {𝐷1 , 𝐷2 , ..., 𝐷𝑖 ..., 𝐷𝑛 },
+
+(4)
+
+where 𝐷𝑖 = 𝑑𝑖 ∕255 ∈ [0, 1]. The normalized ﬁxed length vector are aggregated to form the training data set 𝐷𝑠𝑡 , which is used as the
+input of the local 1D-CNN model.
+3.3. Classiﬁcation model
+In this work, we adopt 1D-CNN as the base classiﬁcation model. 1D-CNN has been adopted in several previous studies in traﬃc
+classiﬁcation and showed promising results [26–28]. It is considered to be eﬀective on dealing with sequential data.
+Table 2 shows the network structure and parameters of the 1D-CNN model designed in our work. The model consists of two main
+parts: a feature extractor and a predictor. The feature extractor consists of multiple convolutional layers and pooling layers, while
+the predictor consists of multiple fully connected layers. The normalized data of 1*700 dimension 𝐷 (𝑛 = 700) is fed to the feature
+extractor, then transformed into a 1*16400 dimension vector, and ﬁnally fed to the predictor to output the prediction label.
+The model includes 4 convolution layers, 3 pooling layers, and 6 full connection layers. Suppose that a single-channel traﬃc data
+𝐷𝑠𝑡 of 1 ∗ 𝑎 dimension is input into a single convolution layer composed of 1 ∗ 𝑁 neurons, and ﬁltered by a convolution kernel with
+a size of 1 ∗ 𝑛 and a sliding step of 𝑠, and the result 𝑂𝐶𝑜𝑛𝑣𝐿 in the output layer 𝐶𝑜𝑛𝑣𝐿 is calculated as in Equation (5).
+𝐶𝑜𝑛𝑣𝐿
+
+𝑂𝑖𝑗
+
+=
+
+𝑛
+∑
+𝑛=1
+
+0
+𝑊𝑚,𝑗
+𝐷𝑠𝑡 0𝑖+𝑛−1,𝑗 + 𝐵𝑗0 ,
+
+(5)
+𝐶𝑜𝑛𝑣𝐿
+
+where 𝑖 represents feature index, 𝑗 represents feature graph index, 𝑊 represents weight and 𝐵 represents bias. Signal 𝑂𝑖𝑗
+
+is
+
+converted to output signal 𝑂𝑢𝑡𝐿 by applying a nonlinear activation function (e.g. ReLU), whose output signal 𝑂𝑢𝑡𝐿 can be obtained
+as in Equation (6).
+𝐶𝑜𝑛𝑣𝐿
+
+𝑂𝑢𝑡𝐿
+𝑖𝑗 = 𝑓 (𝑂𝑖𝑗
+
+(6)
+
+),
+
+where 𝑓 (⋅) represents the nonlinear activation function. The same process applies to the signals at some pooling layers. These valuable
+signal 𝑂𝑢𝑡𝐿 input to fully connected layers is used to output predictive labels. In summary, 𝐷𝑠𝑡 is ﬁrst input into the feature extractor
+to obtain feature vectors with varying degrees of complexity, followed by input into the predictor to accomplish the classiﬁcation.
+4
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+
+Fig. 3. Number of per-class sessions in the dataset.
+
+3.4. Federated learning algorithm
+Each network operator participant who choose to train a certain classiﬁcation model have a small amount of encrypted traﬃc
+𝑁
+
+𝑘 = {(𝑥𝑘 , 𝑦𝑘 )} 𝑘 that has been standardized by preprocessing. The server initializes a certain global model. Every time the server
+𝐷𝑠𝑡
+𝑖 𝑖 𝑖=1
+communicates with participants, each randomly selected participant 𝑘 ∈ 𝐶 ⋅ 𝑚 receives the global model 𝐺𝑇 and parameters sent
+by the server and perform 𝐸 rounds of supervised training locally, where 𝐶 is the participant fraction that controls the amount of
+𝑓
+𝑝
+multi-participant parallelism. Parameters 𝜃𝑘 of the model 𝐺𝑇 includes parameters 𝜃𝑘 of feature extractor 𝑓 (𝑧|𝑥) and parameters 𝜃𝑘
+′
+of predictor 𝑝(𝑦 |𝑧), so the loss risk assessment 𝐿𝜃𝑘 of the model can be calculated as in Equation (7).
+
+𝐿𝜃𝑘 =
+
+𝑁𝑘
+
+1 ∑
+𝑙𝑜𝑠𝑠(𝑝(𝑓 (𝑥𝑘𝑖 , 𝜃𝑘𝑓 ), 𝜃𝑘𝑝 ), 𝑦𝑘𝑖 ),
+𝑁𝑘 𝑖=1
+
+(7)
+
+where 𝑙𝑜𝑠𝑠(⋅) is cross-entropy loss function. The server uses FedAvg algorithm to average and update local model parameters of
+participants until the global model 𝐺𝑇 is stable and stored in the server as in Equation (8).
+𝑚
+
+𝜃←
+
+1∑
+𝜃
+𝑚 𝑘=1 𝑘
+
+(8)
+
+Our goal is to minimize the loss of models to participants and to learn a shared model without sharing local data [29] as in Equation (9).
+
+𝑚𝑖𝑛𝜃
+
+𝑚
+∑
+𝑘=1
+
+𝐿𝜃𝑘 .
+
+(9)
+
+4. Experiment
+4.1. Dataset
+In order to evaluate the propose approach, we use the publicly available encrypted network traﬃc dataset ISCXVPN2016 [30].
+The dataset is provided in pcap format and consists of representative real network traﬃc generated by Skype, Facebook, and other
+popular services, as showed in Table 1. For each type of traﬃc, both a regular session and a session over VPN are captured. The
+data is used for two classiﬁcation tasks, that is, application identiﬁcation (APPI) and traﬃc characterization (TC). Fig. 3 shows the
+number of per-class sessions obtained after data preprocessing, which are randomly divided into training data (85% per class) and
+testing data (15% per class).
+In order to simulate the distributed data sets in the federated learning setting, we suppose there are 20 network domains to train
+a model jointly. Therefore, we need to divide the data into 20 parts. In particular, we consider two scenarios. One is the IID scenario,
+where the traﬃc is independent and identically distributed throughout all the network domains. The other is the non-IID scenario,
+in which each network domain could have diﬀerent types and distributions of traﬃc. For example, domain A may have some FTPS
+traﬃc that is not seen in domain B.
+The divided dataset for the APPI task is shown in Fig. 4. In particular, Fig. 4(a) shows the IID scenario, in which we have the
+training data shuﬄed and divided per class label, resulting independent and identically distributed samples for each participant.
+Fig. 4(b) shows the Non-IID scenario, in which we ﬁrst sort the training samples by class label and divide them into 100 fragments
+(with a size of 187 for each), and then randomly assign 5 fragments to each participant. It can be noticed that there are 5 dominating
+types of traﬃc (Voipbuster, Skype, Hangouts, Facebook, Email) in the APPI data set in Fig. 3(a). Therefore, some participants only
+have the samples from the 5 dominating classes, as seen in Fig. 4(b).
+5
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+
+Fig. 4. Number of samples in each participant for APPI task.
+
+Fig. 5. Number of samples each participant for TC task.
+
+The dataset for the TC task is divided in the same way. Fig. 5(a) shows the case for the IID scenario, and Fig. 5(b) shows the case
+for Non-IID scenario.
+4.2. Evaluation and validation metrics
+In the case of multi-class classiﬁcation with unbalanced class distribution, the overall accuracy cannot completely reﬂect the
+eﬀectiveness of classiﬁers. Therefore, in addition to overall accuracy, the per-class metrics including precision (Pr), recall (Rc), and
+F1 score (F1) are included as evaluation metrics. Given a target class, precision reﬂects the correct predictions among the positive
+predictions to this class and recall reﬂects the correctly identiﬁed samples among all samples of this class. F1 value is a combination
+measure of precision and recall. The metrics are described mathematically as in Equation (10) to (13).
+
+𝐴𝑐𝑐𝑢𝑟𝑎𝑐𝑦 =
+
+𝑇𝑃 +𝑇𝑁
+,
+𝑇𝑃 + 𝑇𝑁 + 𝐹𝑃 + 𝐹𝑁
+
+(10)
+
+𝑇𝑃
+,
+𝑇𝑃 + 𝐹𝑃
+𝑇𝑃
+𝑅𝑐 =
+,
+𝑇𝑃 + 𝐹𝑁
+2 ⋅ 𝑃 𝑟 ⋅ 𝑅𝑐
+,
+𝐹1 =
+𝑃 𝑟 + 𝑅𝑐
+𝑃𝑟 =
+
+(11)
+(12)
+(13)
+
+where TP is the number of positive samples correctly classiﬁed as positive, FP is the number of negative samples that is wrongly
+classiﬁed as positive, TN is the number of negative samples correctly classiﬁed as negative, and FN is the number of positive samples
+that are wrongly classiﬁed as negative.
+4.3. FedETC vs. centralized learning
+We ﬁrst conduct a set of experiments to compare the proposed FedETC framework to the centralized learning scheme. Centralized
+learning scheme uses all the training data as showed in Fig. 3. FedETC adopts the data partitions as showed in Fig. 4 and Fig. 5 for
+20 participating client nodes.
+6
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+
+Fig. 6. The accuracy results in diﬀerent scenarios for TC task and APPI task.
+
+Fig. 7. The accuracy results in diﬀerent communication rounds.
+
+As shown in Fig. 6, the accuracy of FedETC is comparable to that of centralized learning. For the TC task, the accuracy diﬀerence
+between the centralized method and FedETC is 0.8% in the IID scenario and 2.37% in the non-IID scenario. For the APPI task, the
+diﬀerence is 1.62% in the IID scenario and 3.16%in the non-IID scenario. When the accuracy rates of the two learning paradigms are
+comparable, the advantage of FedETC is that it allows diﬀerent domains to cooperate while preserving data privacy.
+Fig. 7(a) and Fig. 7(b) show the accuracy results in diﬀerent communication rounds for the TC task and APPI task respectively.
+As can be seen, for both tasks the model convergence rate in the IID scenario is close to that in centralized learning. However, due to
+the inﬂuence of imbalanced and diﬀerently distributed samples in each participating domain, model convergence is much slower in
+the Non-IID scenario.
+4.4. FedETC vs. FLIC
+In this section, we compare FedETC with an existing federating traﬃc classiﬁcation scheme called FLIC [15]. FLIC uses the same
+dataset to sort the ﬁrst 1500 bytes of packet into 375*4 gray images (2-dimensional vector) and then employed the FedAvg algorithm
+to aggregate the convolution model to realize dynamic and static application recognition. The key diﬀerence between FedETC and
+FLIC lies in data preprocessing and convolution model structure. For the purpose of comparison, we perform the APPI task with all
+the data classes in Table 1 except Tor. The federating learning parameters are as 𝐶 = 0.1 and 𝐸 = 5.
+Table 3 shows the F1 results in the APPI-IID task. For the classes with fewer samples, FedETC obtains much higher F1 scores than
+FLIC. For example, the F1 scores for AIM, Email and iCQ are 0.81, 0.98 and 0.84 for FedETC, in contrast to 0.59, 0.67 and 0.62 for
+FLIC. Besides, the average F1 scores of FLIC and FedETC are 0.87 and 0.90, respectively. The results indicate that FedETC performs
+better, especially for the classes with fewer samples.
+Fig. 8(a), demonstrates the diﬀerent behavior of FedETC and FLIC by varying the number of participants from 5 to 45. As shown
+in the results, FedETC is more accurate than FLIC in the IID scenario. Besides, the trends show that both schemes maintain steady
+performance while increasing the number of participants, as long as their data is IID.
+To evaluate the inﬂuence of Non-IID data in the APPI task, we explore the impact by increasing or decreasing the number of
+classes presented in each participant. As depicted in Fig. 8(b), in the rare case that only one class of traﬃc is presented in the dataset
+of each participant, FedETC obtains poorer accuracy than FLIC. However, when each participant has two or more classes of traﬃc in
+their data, FedETC can achieve better accuracy than FLIC.
+7
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+Table 3
+The F1 results for IID scenario in
+APPI task.
+Application
+
+FLIC
+
+FedETC
+
+AIM Chat
+Email
+Facebook
+FTPS
+Gmail
+Hangouts
+ICQ
+Netﬂix
+SCP
+SFTP
+Skype
+Spotify
+Torrent
+Vimeo
+Voipbuster
+Youtube
+
+0.59
+0.67
+0.94
+0.98
+0.84
+0.94
+0.62
+0.96
+0.91
+0.86
+0.89
+0.94
+0.94
+0.97
+0.96
+0.95
+
+0.81
+0.98
+0.99
+0.9
+0.9
+0.82
+0.84
+0.83
+1
+0.81
+0.78
+0.89
+0.98
+0.85
+0.98
+0.97
+
+Average
+
+0.87
+
+0.90
+
+Fig. 8. The accuracy results of FedETC and FLIC in comparison.
+
+5. Conclusion
+In this work, we propose a federated learning approach for encrypted traﬃc classiﬁcation. We use 1D-CNN model to learn from
+the encrypted traﬃc sessions presented in the form of normalized ﬁxed-length byte sequences, which integrates the process of feature
+learning and prediction. The federated learning scheme allows autonomous network domains to perform collaborate model training
+without exposing local data. The proposed approach is evaluated based on a public dataset with comparison to the classic centralized
+learning scheme and an existing federated learning approach FLIC. The results show the feasibility of training accurate encrypted
+traﬃc classiﬁers with the federated learning paradigm, and the advantage of the proposed approach.
+CRediT authorship contribution statement
+Zhiping Jin: Writing – review & editing, Methodology, Funding acquisition, Conceptualization. Ke Duan: Writing – review &
+editing, Validation, Supervision, Project administration, Funding acquisition. Changhui Chen: Writing – review & editing, Validation, Project administration, Investigation, Funding acquisition. Meirong He: Writing – original draft, Visualization, Methodology,
+Investigation, Formal analysis, Data curation, Conceptualization. Shan Jiang: Writing – review & editing, Visualization, Validation,
+Software, Investigation. Hanxiao Xue: Writing – original draft, Visualization, Validation, Resources, Methodology, Investigation,
+Conceptualization.
+Declaration of competing interest
+The authors declare the following ﬁnancial interests/personal relationships which may be considered as potential competing
+interests: Zhiping Jin, Ke Duan reports ﬁnancial support was provided by Zhongshan Public Welfare Science and Technology Research
+Project (No. 2021B2068, 2021B2064). Changhui Chen reports ﬁnancial support was provided by Science and Technology Project of
+8
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+
+Guangzhou (202102080252). Changhui Chen reports ﬁnancial support was provided by Guangdong University Featured Innovation
+Program Project (2021KTSCX261). Zhiping Jin reports ﬁnancial support was provided by Zhongshan Polytechnic Research Project
+(No. KYA2301). If there are other authors, they declare that they have no known competing ﬁnancial interests or personal relationships
+that could have appeared to inﬂuence the work reported in this paper.
+Data availability
+The ISCXVPN2016 dataset used in this study is publicly available [30].
+Acknowledgement
+The work is partly supported by the Zhongshan Public Welfare Science and Technology Research Project (No. 2021B2068,
+2021B2064), and the Zhongshan Polytechnic Research Project (No. KYA2301), the Science and Technology Project of Guangzhou
+(202102080252), and the Guangdong University Featured Innovation Program Project (2021KTSCX261). Thanks to Guangzhou University Graduate Student Joint Training Program Abroad.
+References
+[1] J. Cai, Z. Wei, J. Luo, Ics anomaly detection based on sensor patterns and actuator rules in spatiotemporal dependency, IEEE Trans. Ind. Inform. (2024) 1–10,
+https://doi.org/10.1109/TII.2024.3393528.
+[2] B. Liao, H. Chen, Y. Wang, W. Meng, J. Zhang, Analysis of hybrid attack and defense based on block withholding strategy, J. Inf. Secur. Appl. 78 (2023) 103620,
+https://doi.org/10.1016/j.jisa.2023.103620.
+[3] W. Meng, W. Li, Y. Wang, M.H. Au, Detecting insider attacks in medical cyber–physical networks based on behavioral proﬁling, Future Gener. Comput. Syst. 108
+(2020) 1258–1266, https://doi.org/10.1016/j.future.2018.06.007.
+[4] Y. Wang, W. Meng, W. Li, J. Li, W.-X. Liu, Y. Xiang, A fog-based privacy-preserving approach for distributed signature-based intrusion detection, J. Parallel
+Distrib. Comput. 122 (2018) 26–35, https://doi.org/10.1016/j.jpdc.2018.07.013.
+[5] Y. Wang, W. Meng, W. Li, Z. Liu, Y. Liu, H. Xue, Adaptive machine learning-based alarm reduction via edge computing for distributed intrusion detection systems,
+Concurr. Comput., Pract. Exper. 31 (19) (2019) e5101, https://doi.org/10.1002/cpe.5101.
+[6] R. Antonello, S. Fernandes, C. Kamienski, D. Sadok, J. Kelner, I. Gódor, G. Szabó, T. Westholm, Deep packet inspection tools and techniques in commodity
+platforms: challenges and trends, J. Netw. Comput. Appl. 35 (6) (2012) 1863–1878, https://doi.org/10.1016/j.jnca.2012.07.010.
+[7] A. Dainotti, A. Pescape, K.C. Claﬀy, Issues and future directions in traﬃc classiﬁcation, IEEE Netw. 26 (1) (2012) 35–40, https://doi.org/10.1109/MNET.2012.
+6135854.
+[8] M. Liberatore, B.N. Levine, Inferring the source of encrypted http connections, in: Proceedings of the 13th ACM Conference on Computer and Communications
+Security, CCS ’06, Association for Computing Machinery, New York, NY, USA, 2006, pp. 255–263.
+[9] N. Williams, S. Zander, G. Armitage, A preliminary performance comparison of ﬁve machine learning algorithms for practical ip traﬃc ﬂow classiﬁcation,
+SIGCOMM Comput. Commun. Rev. 36 (5) (2006) 5–16, https://doi.org/10.1145/1163593.1163596.
+[10] J. Cai, W. Zhang, S. Zhong, C. Yi, A super-twisting algorithm combined zeroing neural network with noise tolerance and ﬁnite-time convergence for solving
+time-variant Sylvester equation, Expert Syst. Appl. 248 (2024) 123380, https://doi.org/10.1016/j.eswa.2024.123380.
+[11] W. Wang, M. Zhu, X. Zeng, X. Ye, Y. Sheng, Malware traﬃc classiﬁcation using convolutional neural network for representation learning, in: 2017 International
+Conference on Information Networking (ICOIN), 2017, pp. 712–717.
+[12] W. Wang, M. Zhu, J. Wang, X. Zeng, Z. Yang, End-to-end encrypted traﬃc classiﬁcation with one-dimensional convolution neural networks, in: 2017 IEEE
+International Conference on Intelligence and Security Informatics (ISI), 2017, pp. 43–48.
+[13] M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, M. Saberian, Deep packet: a novel approach for encrypted traﬃc classiﬁcation using deep learning,
+Soft Comput. 24 (3) (2020) 1999–2012, https://doi.org/10.1007/s00500-019-04030-2.
+[14] G. Aceto, D. Ciuonzo, A. Montieri, A. Pescapé, Distiller: encrypted traﬃc classiﬁcation via multimodal multitask deep learning, J. Netw. Comput. Appl. 183–184
+(2021) 102985, https://doi.org/10.1016/j.jnca.2021.102985.
+[15] H. Mun, Y. Lee, Internet traﬃc classiﬁcation with federated learning, Electronics 10 (1) (2021), https://doi.org/10.3390/electronics10010027.
+[16] H. Tahaei, F. Aﬁﬁ, A. Asemi, F. Zaki, N.B. Anuar, The rise of traﬃc classiﬁcation in iot networks: a survey, J. Netw. Comput. Appl. 154 (2020) 102538, https://
+doi.org/10.1016/j.jnca.2020.102538.
+[17] R. Alshammari, A.N. Zincir-Heywood, Unveiling skype encrypted tunnels using gp, in: IEEE Congress on Evolutionary Computation, 2010, pp. 1–8.
+[18] B. Anderson, D. McGrew, Machine learning for encrypted malware traﬃc classiﬁcation: accounting for noisy labels and non-stationarity, in: Proceedings of the
+23rd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, KDD ’17, Association for Computing Machinery, New York, NY, USA,
+2017, pp. 1723–1732.
+[19] Y. Wang, Y. Xiang, J. Zhang, W. Zhou, G. Wei, L.T. Yang, Internet traﬃc classiﬁcation using constrained clustering, IEEE Trans. Parallel Distrib. Syst. 25 (11)
+(2014) 2932–2943, https://doi.org/10.1109/TPDS.2013.307.
+[20] Z. Jin, Z. Liang, Y. Wang, W. Meng, Mobile network traﬃc pattern classiﬁcation with incomplete a priori information, Comput. Commun. 166 (2021) 262–270,
+https://doi.org/10.1016/j.comcom.2020.11.003.
+[21] Y. Wang, H. Xue, Y. Liu, W. Liu, Statistical network protocol identiﬁcation with unknown pattern extraction, Ann. Télécommun. 74 (2019) 473–482, https://
+doi.org/10.1007/s12243-019-00704-y.
+[22] R. Alshammari, N. Zincir-Heywood, Generalization of signatures for ssh encrypted traﬃc identiﬁcation, in: 2009 IEEE Symposium on Computational Intelligence
+in Cyber Security, 2009, pp. 167–174.
+[23] A.W. Moore, D. Zuev, Internet traﬃc classiﬁcation using Bayesian analysis techniques, ACM SIGMETRICS Perform. Eval. Rev. 33 (1) (2005) 50–60, https://
+doi.org/10.1145/1071690.1064220.
+[24] H. Zhou, Y. Wang, X. Lei, Y. Liu, A method of improved cnn traﬃc classiﬁcation, in: 2017 13th International Conference on Computational Intelligence and
+Security (CIS), 2017, pp. 177–181.
+[25] R. Li, X. Xiao, S. Ni, H. Zheng, S. Xia, Byte segment neural network for network traﬃc classiﬁcation, in: 2018 IEEE/ACM 26th International Symposium on
+Quality of Service (IWQoS), 2018, pp. 1–10.
+[26] Y. Zeng, H. Gu, W. Wei, Y. Guo, 𝑑𝑒𝑒𝑝 − 𝑓 𝑢𝑙𝑙 − 𝑟𝑎𝑛𝑔𝑒: a deep learning based network encrypted traﬃc classiﬁcation and intrusion detection framework, IEEE
+Access 7 (2019) 45182–45190, https://doi.org/10.1109/ACCESS.2019.2908225.
+[27] G. Aceto, D. Ciuonzo, A. Montieri, A. Pescapè, Mimetic: mobile encrypted traﬃc classiﬁcation using multimodal deep learning, Comput. Netw. 165 (2019)
+106944, https://doi.org/10.1016/j.comnet.2019.106944.
+9
+
+Heliyon 10 (2024) e35962
+
+Z. Jin, K. Duan, C. Chen et al.
+
+[28] S. Rezaei, X. Liu, Multitask learning for network traﬃc classiﬁcation, in: 2020 29th International Conference on Computer Communications and Networks
+(ICCCN), 2020, pp. 1–9.
+[29] B. McMahan, E. Moore, D. Ramage, S. Hampson, B.A.y. Arcas, Communication-eﬃcient learning of deep networks from decentralized data, in: A. Singh, J. Zhu
+(Eds.), Proceedings of the 20th International Conference on Artiﬁcial Intelligence and Statistics, in: Proceedings of Machine Learning Research, vol. 54, PMLR,
+2017, pp. 1273–1282.
+[30] G. Draper-Gil, A.H. Lashkari, M.S.I. Mamun, A.A. Ghorbani, Characterization of encrypted and vpn traﬃc using time-related, in: Proceedings of the 2nd International Conference on Information Systems Security and Privacy (ICISSP), 2016, pp. 407–414.
+
+10
+PAPER_TEXT

@@ -1,0 +1,155 @@
+                                                                      Computer Networks 224 (2023) 109614
+
+
+                                                                    Contents lists available at ScienceDirect
+
+
+                                                                        Computer Networks
+                                                          journal homepage: www.elsevier.com/locate/comnet
+
+
+
+
+EC-GCN: A encrypted traffic classification framework based on multi-scale
+graph convolution networks
+Zulong Diao a,b , Gaogang Xie c , Xin Wang f , Rui Ren a,d , Xuying Meng a,b , Guangxing Zhang a ,∗,
+Kun Xie e , Mingyu Qiao a,d
+a
+    ICT/CAS, Chinese Academy of Sciences, China
+b Purple Mountain Laboratories, China
+c CNIC/CAS, Chinese Academy of Sciences, China
+d University of Chinese Academy of Sciences, China
+e
+    Computer Science and Electronics Engineering, Hunan University, China
+f
+    Electrical and Computer Engineering, State University of New York at Stony Brook, USA
+
+
+
+ARTICLE                  INFO                               ABSTRACT
+
+Keywords:                                                   The sharp increase in encrypted traffic brings a huge challenge to traditional traffic classification methods.
+Encrypted traffic classification                            Combining deep learning with time series analysis techniques is a recent trend in solving this problem. Most
+Graph neural networks                                       of these approaches only capture the temporal correlation within a flow. The accuracy and robustness are
+Packet sequence learning
+                                                            unsatisfactory, especially in an unstable network environment with high packet loss and reordering. How
+                                                            to learn a representation with a strong generalization ability for each encrypted traffic flow remains a key
+                                                            challenge. Our detailed analysis indicates that there is a graph with particular local structures corresponding to
+                                                            each type of encrypted traffic flow. Inspired by this observation, we propose a novel deep learning framework
+                                                            called EC-GCN to classify encrypted traffic flows based on multi-scale graph convolutional neural networks.
+                                                            We first provide a novel lightweight layer that only relies on the metadata and encodes each encrypted
+                                                            traffic flow into graph representations. So that our framework can be independent of different encryption
+                                                            protocols. Then we design a novel graph pooling and structure learning layer to dynamically extract the
+                                                            multi-graph representations and improve the capabilities to adapt to complex network environments. EC-GCN
+                                                            is an end-to-end classification model that learns representative spatial–temporal traffic features hidden in a
+                                                            traffic time series and then classifies them in a unified framework. Our comprehensive experiments on three
+                                                            real-world datasets indicate that EC-GCN can achieve up to 5%–20% accuracy improvement and outperforms
+                                                            state-of-the-art methods.
+
+
+
+1. Introduction                                                                              makes the performance of traditional traffic classification methods suf-
+                                                                                             fer. Therefore, how classifying the encrypted traffic accurately attracts
+    In recent years, network traffic classification has become possible                      widespread attention from both industries and academia.
+due to breakthroughs in technology as well as the speedy growth                                  In order to improve the classification accuracy of encrypted traf-
+of high-speed internet traffic demands. The accurate classification of                       fic, some methods pay attention to fields in packet headers, statistic
+network traffic can help manage and secure network resources, and                            characteristics or contextual information of a network flow. In the
+also plays a vital role in Quality of Service (QoS) provisioning, billing                    packet header, cipher suites and digital certificate features have been
+in ISPs to security-related applications in firewalls, and providing dif-                    proven in many studies to be informative for traffic fingerprints. DNS-
+ferentiated services. The process of traffic classification often includes                   based algorithms can immediately classify network flows, requiring just
+capturing the network traffic on a target network link, building be-                         the IP header of the first packet and the information extracted from
+havioral fingerprints and then identifying the traffic according to the                      DNS query-response conversations. However, with the rapid evolution
+classification criterion. However, widely used encryption techniques                         of network protocols over time, some previously unencrypted fields
+(IPSec, TLS/SSL etc.) randomize all the communication contents, which                        began to be encrypted, reducing the classification performance of these
+
+
+
+     ∗ Corresponding author.
+   E-mail addresses: diaozulong@ict.ac.cn (Z. Diao), xie@cnic.cn (G. Xie), x.wang@stonybrook.edu (X. Wang), renruirui1234@gmail.com (R. Ren),
+mengxuying@ict.ac.cn (X. Meng), guangxing@ict.ac.cn (G. Zhang), xiekun@hnu.edu.cn (K. Xie), qiaomingyudinghan@163.com (M. Qiao).
+
+https://doi.org/10.1016/j.comnet.2023.109614
+Received 25 August 2022; Received in revised form 26 January 2023; Accepted 3 February 2023
+Available online 10 February 2023
+1389-1286/© 2023 Elsevier B.V. All rights reserved.
+Z. Diao et al.                                                                                                             Computer Networks 224 (2023) 109614
+
+
+methods (DNS to DOH, TLS1.2 to TLS1.3). Some end-to-end models,                      Payload-based method [3–5] uses the specific signature strings in
+based on deep learning algorithms and time-series features, emerge.              the payload for matching, such as the Deep Packet Inspection (DPI)
+These models do not rely on data packet fields, which allows them to             approaches [6]. Keralapura et al. provided a self-learning traffic clas-
+be protocol-independent and handle both encrypted and unencrypted                sifier to identify the P2P traffic in high-speed networks with applica-
+traffic. An end-to-end model can combine feature engineering and                 tion payload signatures [7]. The payload-signature-based classifier is
+model training into a unified model and learn features from the raw              considered a reliable method for Internet traffic classification but is
+input directly. The learned features are guided by real labels to boost          prohibitively and computationally expensive for the real-time handling
+performance. However, the available information for the end-to-end               of large amounts of traffic on a high-speed network. To solve this
+models is limited compared with previous methods. Most of them only              problem, most studies focus on the pattern matching algorithm or
+extract the time correlation within a time series, which leads to low
+                                                                                 hardware-based approaches using FPGA or network processors. Yang
+classification accuracy and adaptability. As traffic distribution varies
+                                                                                 et al. [4] propose a novel multi-stride regular expression matching
+at different network locations, the performance of these approaches
+                                                                                 engine based on FPGA to solve the memory explosion problem of multi-
+is also different. In addition, The real-time packet length sequence of
+                                                                                 stride DPI algorithms. Doroud et al. [5] proposed a multi-stage and
+encrypted traffic data may be partially abnormal (packet loss/packet
+                                                                                 modular architecture to combine state-of-the-art classifiers in order to
+reordering) as a result of network failures. The multiple aggregations
+of traffic flows will also have a great impact on the performance of             improve the overall efficiency of DPI, while maintaining an equivalent
+the model due to the change in the time interval between consecutive             classification accuracy. However, as the application payload has been
+packets.                                                                         randomized by various encryption techniques, payload-based methods
+    In light of the issues above, we propose an adaptive end-to-end              often lose their efficiency in classifying the encrypted traffic if not
+model, named EC-GCN. Compared with existing encrypted traffic clas-              completely infeasible.
+sifying methods, our paper makes the following contributions:
+
+     • We creatively represent an encrypted traffic flow as a graph and          2.2. Fingerprint construction
+       we observe many obvious characteristics which reveal potential
+       spatial patterns in the encrypted traffic.                                    As conventional traffic classification may fail under encrypted traf-
+     • To learn the spatial dependence hidden in the traffic flow, we            fic, some studies [8–11] suggest using unencrypted protocol field infor-
+       creatively introduce GCN into our classification method and pro-          mation, typically layer 3 and layer 4 information to represent each flow
+       pose a novel temporal–spatial (multi-subgraph) encrypted traffic          and constructs a fingerprint library by clustering and cross-correlating
+       classification framework. To the best of our knowledge, this is           for efficient traffic classification. Yoon et al. [12] propose a novel fin-
+       the first multi-graph-based method that is applied to classify            gerprint maintenance method using the properties of identified traffic
+       the encrypted traffic. To make our method robust to noise and
+                                                                                 and the usage history of the signatures. Lee et al. [13] propose an
+       dynamics, we organize the graph into multiple granularity levels
+                                                                                 automatic header-signature naming system and identification system
+       and exploit the features from all levels.
+                                                                                 using the named header-signature. The proposed system provides ef-
+     • In the deep learning framework, we creatively design an encoding
+                                                                                 ficient management of the header signature of each service as well.
+       layer to automatically convert an encrypted traffic flow to a
+                                                                                 The main problem of the fingerprint-based identification method is the
+       graph representation. In addition, we propose a novel graph-
+                                                                                 unstable classification performance and a large-scale fingerprint library
+       pooling layer and graph-learning layer to dynamically extract the
+       multi-graph structures in an encrypted traffic flow.                      that need to be maintained.
+     • To evaluate the performance of our proposed model, we conduct
+       a series of experiments across 3 datasets. The experiment results         2.3. Statistical and traditional machine learning approach
+       show that EC-GCN can achieve up to 5%–20% precision improve-
+       ment in these experiments and is more fault-tolerant compared
+       with the state-of-the-art methods.                                            Statistical Features are proposed to solve encrypted traffic classi-
+                                                                                 fication problems together with various traditional machine learning
+    The rest of this paper is organized as follows. We first summarize the       algorithms [14,15]. For instance, Anderson et al. took flow-level fea-
+related work of encrypted traffic classification in Section 2, and provide       tures and unencrypted TLS header information as joint features to
+some data analysis results and motivations in Section 3. We then                 identify malware encrypted traffic with the logistic regression algo-
+present the technical details of our novel EC-GCN model in Section 4.            rithm [16]. A robust application identification method with the concept
+After that, we evaluate the performance of our proposed model through            of the burst and flow statistical features was proposed by work [17]. In
+experiments on 3 data sets in Section 5, and conclude our work in                order to reduce the impact of the high dimensionality and redundancy
+Section 6.                                                                       of flow statistical features, the imbalance in the number of traffic flows
+                                                                                 and the concept drift of Internet traffic on classification performance,
+2. Related works
+                                                                                 And Shi et al. propose a new feature optimization approach based on
+                                                                                 deep learning and Feature Selection (FS) techniques to provide the op-
+   Encrypted traffic analysis has attracted intensive attention. Accord-
+                                                                                 timal and robust features for traffic classification [18]. However, these
+ing to the methodologies used, we divide the previous research into
+                                                                                 methods are mainly based on rich experiences, professional knowledge
+several categories to review.
+                                                                                 and lots of human effort.
+2.1. Conventional traffic classification                                             Some studies apply Markov models for learning the generation
+                                                                                 probabilities of features and identifying the corresponding applica-
+    Some studies finish the traffic classification task by analyzing the         tion [19–21]. Chang et al. propose a multi-attribute encrypted traffic
+used communication ports contained in the TCP/UDP header. The well-              classification method that integrates both message type sequences and
+known ports for the protocols are assigned by the IANA [1]. However,             packet length sequences to build Markov models [22]. Moreover, Fu
+this method is failed in situations with port dynamic allocation [2] or          et al. dev

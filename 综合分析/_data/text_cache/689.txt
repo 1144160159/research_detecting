@@ -1,0 +1,168 @@
+1524                                                                  IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+
+
+
+   FusedBoostNet: A Lightweight Hybrid Model for
+        Consumer-Grade Intrusion Detection
+                                     Ankita Sharma            and Shalli Rani , Senior Member, IEEE
+
+   Abstract— The rapid accumulation of AI-enabled cyberattacks                 and mobile devices [5]. Furthermore, existing systems often
+poses a significant threat to the security of consumer applications            fail to detect novel or adversarial patterns introduced by
+and smart devices. Traditional intrusion detection and prevention              AI-powered attacks, such as data poisoning, traffic mimicry,
+systems (IDPS) often struggle to balance accuracy, efficiency,
+and deployability in resource-constrained environments. Fused-                 or zero-day intrusions, which can easily bypass static rule-
+BoostNet, a novel hybrid framework that fuses Gradient Boosting                based defenses [6]. These limitations highlight the pressing
+Machines (GBM) with an attention-augmented one-dimensional                     need for a next-generation IDPS solution tailored for consumer
+Convolutional Neural Network (1D-CNN) has been proposed to                     electronics: a system that is intelligent, adaptable, and most
+deliver accurate, robust, and lightweight threat detection. The                importantly, lightweight [7]. Such a solution must balance
+system leverages the interpretability and decision strength of
+GBM on tabular network features while capturing temporal                       high detection accuracy with low computational complexity
+patterns from sequential traffic using the 1D-CNN, enhanced                    to ensure real-time performance and energy efficiency [8].
+by a channel-level attention mechanism. A score-level fusion                   Moreover, it should be robust against the evolving nature of
+strategy ensures optimal synergy between the models for final                  AI-generated attack vectors while being interpretable and easy
+classification. Extensive experiments on the CIC-IDS2018 dataset
+                                                                               to integrate into existing consumer platforms [9]. To address
+demonstrate that FusedBoostNet outperforms classical machine
+learning, deep learning, and ensemble-based techniques, achiev-                these challenges, we propose FusedBoostNet, a novel hybrid
+ing a detection accuracy of 96.8%, an F1-score of 96.0%, and                   architecture that combines the strengths of both traditional
+a false positive rate below 3%. The model is further validated                 ML and modern DL models in a lightweight and deployable
+for edge deployment with a compact footprint (less than 5 MB)                  form. Experimental results demonstrate that FusedBoostNet
+and inference latency under 10 ms. In addition, robustness
+                                                                               achieves a favorable balance between accuracy, speed, and
+testing against adversarial perturbations highlights the system’s
+resilience to AI-enabled evasion attacks. FusedBoostNet offers                 resource efficiency, outperforming several baseline models
+a practical and scalable solution for securing next-generation                 including Random Forest, CNN, and LSTM in both adversarial
+consumer applications in an increasingly adversarial digital                   robustness and edge deployability.
+landscape.
+  Index Terms— IDS, IPS, intrusion, threats, ML, DL.
+                                                                               A. Our Contributions
+                         I. I NTRODUCTION                                         • We introduce FusedBoostNet, a novel hybrid ML-DL
+                                                                                    architecture for intrusion detection and prevention in
+T     HE escalation of consumer-oriented smart devices rang-
+      ing from smartphones and home assistants to connected
+appliances and wearables has significantly enriched modern
+                                                                                    consumer-grade systems, capable of defending against
+                                                                                    modern AI-enabled attacks.
+lifestyles [1]. However, this digital transformation has simul-                   • The model combines a GBM with a lightweight 1D-
+taneously expanded the threat landscape, exposing users to                          CNN and feature attention mechanism, ensuring both
+a growing spectrum of cyberattacks [2]. In recent years,                            high interpretability and sequential learning capacity.
+these attacks have become increasingly sophisticated, lever-                      • We design the architecture for lightweight deployment,
+aging artificial intelligence (AI) to launch adaptive, stealthy,                    including model pruning, attention-guided fusion, and
+and evasive intrusions [3]. Consumer-grade devices, often                           TensorFlow Lite compatibility for mobile and embedded
+designed with limited computational and security resources,                         systems.
+are especially vulnerable to such AI- enabled threats [4].                        • We conduct comprehensive evaluations on benchmark
+Traditional IDPS have been instrumental in securing enter-                          datasets and edge hardware, demonstrating superior
+prise infrastructures, but their direct applicability to consumer                   performance in terms of detection accuracy, inference
+applications remains limited. Many rely on heavyweight ML                           latency, and model size compared to state-of-the-art meth-
+or DL models, which demand substantial processing power,                            ods.
+memory, and energy resources that are scarce in edge-based                     The rest of the paper is organized as follows: Section II
+environments such as smart home hubs, personal routers,                        presents related work and the motivation for our hybrid
+                                                                               approach. Section III details the design and internal archi-
+  Received 15 July 2025; revised 16 September 2025 and 24 October 2025;
+accepted 16 November 2025. Date of publication 19 November 2025; date of       tecture of the proposed FusedBoostNet model. Section IV
+current version 25 March 2026. (Corresponding author: Shalli Rani.)            describes the experimental setup, dataset, and implementation
+  The authors are with the Chitkara University Institute of Engineer-          details. Section V discusses the results, comparative evalua-
+ing and Technology, Chitkara University, Punjab 140401, India (e-mail:
+sharma.ankita@chitkara.edu.in; shallir79@gmail.com).                           tions, and system performance. Finally, Section VI concludes
+  Digital Object Identifier 10.1109/TCE.2025.3634568                           the paper and outlines directions for future work.
+               1558-4127 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+SHARMA AND RANI: FusedBoostNet: A LIGHTWEIGHT HYBRID MODEL                                                                               1525
+
+
+
+                        II. P RELIMINARIES                                                             TABLE I
+                                                                                   C OMPARATIVE A NALYSIS OF IDPS A PPROACHES
+   This section outlines the theoretical foundation and
+mathematical background for the proposed FusedBoostNet
+architecture. The system integrates GBM and 1D-CNN
+with a feature attention mechanism, fused through a
+score-level ensemble strategy for robust, interpretable, and
+edge-deployable intrusion detection.
+
+A. Intrusion Detection as a Classification Problem
+  IDS can be formulated as a multi-class classification task.
+Given a labeled dataset:
+                         D = {(xi , yi )}i=1
+                                         N
+                                                                 (1)
+where xi ∈ Rd is the feature vector and yi ∈ {1, 2, . . . , C} is
+the class label, the objective is to learn a function f : Rd →          The scores are normalized using softmax:
+{1, 2, . . . , C} that minimizes classification error. The classifier
+outputs probabilities across classes, and the predicted class is                                       e Ac
+                                                                                                αc = PC                                   (7)
+                                                                                                                       Aj
+given by:                                                                                                      j=1 e
+
+                        ŷi = arg max f k (xi )                  (2)    The reweighted output is given by:
+                                       k
+                                                                                                      ′
+                                                                                                    Ft,c = αc · Ft,c                      (8)
+B. Gradient Boosting Machines (GBM)
+                                                                        This mechanism enables the network to focus on more dis-
+  GBM constructs an additive model by combining multiple                criminative features during convolutional processing.
+weak learners in a stage-wise manner. At each iteration t, the
+prediction is updated as:
+                                                                        E. Score-Level Fusion Strategy
+                  (t)          (t−1)
+                 ŷ (x) = ŷ           (x) + η · h t (x)         (3)       To combine the outputs of the GBM and CNN models,
+where h t (x) is the t-th weak learner (usually a decision tree),       a weighted fusion strategy is used. Let PGBM and PCNN denote
+and η ∈ (0, 1] is the learning rate. The model minimizes the            the class probability vectors from GBM and CNN respectively.
+total loss:                                                             The final prediction is computed as:
+                             N                                                 Pfinal = α · PGBM + (1 − α) · PCNN ,         α ∈ [0, 1]    (9)
+                                   ℓ(yi , ŷ (T ) (xi ))
+                             X
+                        L=                                       (4)
+                                                                        The final class label is:
+                             i=1
+                                                                                                             (k)
+                                                                                                                 
+with ℓ typically being the cross-entropy loss in classification                               ŷ = arg max Pfinal                        (10)
+                                                                                                           k
+tasks.
+                                                                        F. Adversarial Robustness via FGSM
+C. 1D Convolutional Neural Networks (1D-CNN)                               To assess the model’s robustness against AI-enabled attacks,
+   A 1D-CNN operates on sequential input x ∈ RT ×C , where              adversarial examples are generated using the Fast Gradient
+T is the temporal length and C is the number of input                   Sign Method (FGSM). Given an input x, label y, and model
+channels. A convolution operation with kernel w ∈ R K of                loss L, the perturbed sample x ′ is defined as:
+size K is given by:
+                                                                                       x ′ = x + ϵ · sign (∇x L( f (x), y))              (11)
+                                           K −1
+                                                                        where ϵ is a small perturbation factor. The proposed Fused-
+                                           X
+                 yt = (x ∗ w)t =                  wk · xt−k      (5)
+                                           k=0                          BoostNet demonstrates robustness by maintaining high accu-
+The CNN captures local temporal features such as byte fre-              racy under such adversarial conditions due to its dual-channel
+quency and inter-arrival time patterns in traffic flows.                architecture.
+                                                                           The Table I is showing the comparative analysis of IDPS
+                                                                        approaches.
+D. Feature Attention Mechanism
+   To prioritize important features, a channel-wise attention               III. P ROPOSED M ETHODOLOGY–F USED B OOST N ET
+mechanism is employed. For a feature map F ∈ RT ×C , the
+                                                                          In this section, we present the architecture and design
+attention score for channel c is computed as:
+                                                                        methodology of FusedBoostNet, a novel hybrid intrusion
+                                           T                            detection and prevention system tailored for consumer-grade
+                                    1 X
+                          Ac =          Ft,c                     (6)    devices. The model is developed to be both lightweight and
+                                    T
+                                        t=1                             accurate, capable of detecting a broad range of cyberattacks
+1526                                                     IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+
+                                                                 Algorithm 1 FusedBoostNet: Training and Inference Work-
+                                                                 flow
+                                                                    Network Traffic Dataset D = {X, Y } with features and
+                                                                    labels
+                                                                    Trained FusedBoostNet Model with fusion-based prediction
+                                                                    Step 1: Preprocessing Normalize numerical features and
+                                                                    one-hot encode categorical ones Apply sliding window to
+                                                                    generate session-level data
+                                                                    Step 2: Feature Partitioning Extract tabular features X tab
+                                                                    for GBM Extract sequential features X seq for CNN
+                                                                    Step 3: Train GBM Model Train XGBoost on X tab to min-
+                                                                    imize classification loss Store output: Pgbm = GBM(X tab )
+                                                                    Step 4: Train 1D-CNN with Attention Construct 1D-CNN
+                                      

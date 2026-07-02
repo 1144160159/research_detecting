@@ -1,0 +1,645 @@
+1070 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 2, MARCH/APRIL 2025
+
+ Detecting Smart Home Device Activities Using
+ Packet-Level Signatures From Encrypted Traffic
+ Mohammad Shamim Ahsan , Md. Shariful Islam , Md. Shohrab Hossain, Member, IEEE,
+ and Anupam Das , Senior Member, IEEE
+
+ Abstract—Despite the significant benefits of the widespread However, the related meta-data (e.g., packet lengths, traffic rate)
+adoption of smart home Internet of Things (IoT) devices, these of the network traffic still leaks some information about the
+devices are known to be vulnerable to active and passive attacks. messages exchanged [38]. Existing works in this domain have
+Existing literature has demonstrated the ability to infer the activities of these devices by analyzing their network traffic. In this study, looked at extracting statistical features from traffic metadata to
+we introduce a packet-based signature generation and detection detect device events [1], [10], [11], [37], but such approaches are
+system that can identify specific events associated with IoT devices prone to background traffic noise and thus harder to generalize
+by extracting simple features from raw encrypted network traffic. across varying settings [4]. Moreover, most existing passive
+Unlike existing techniques that depend on specific time windows, inference techniques can only identify the device type and
+our approach automatically determines the optimal number of
+packets to generate unique signatures, making it more resilient whether there is device activity (i.e., an event), but not the exact
+to network jitters. We evaluate the effectiveness, uniqueness, and type of event or command [2], [3], [22], [23], [24], [25]. The
+correctness of our signatures by training and testing our system state-of-the-art work on packet-level signatures for IoT devices
+using four public datasets and an emulated dataset with varying is PINGPONG [28], which relies on the packet arrival time winnetwork delays, verifying known signatures and discovering new dow to detect device activities. This time-window dependency
+ones. Our system achieved an average recall and precision of 98-
+99% and 98-100%, respectively, demonstrating the effectiveness can result in inaccurate detection whenever the traffic rate signifand feasibility of using packet-level signatures to detect IoT device icantly changes; because the number of packets considered in a
+activities. specific time interval for matching signatures will be drastically
+ Index Terms—Network traffic analysis, packet-based signature.
+ more or less than that considered during training. Also, such
+ time delays can vary significantly depending on the underlying
+ internet connection. Furthermore, for IoT devices that have more
+ I. INTRODUCTION than two forms of device status (e.g., STANDBY, ACTIVE,
+ HE use of Internet of Things (IoT) devices (e.g., light sen- QUICKRUN, STOP), PINGPONG considers separate events as
+T sors, cameras, door locks, thermostats, etc.) has increased
+rapidly in recent years. IoT provides a flexible and scalable platbinary type and trains them independently, rather than training
+ all the events of the device at a time, resulting in additional
+form that can support various applications within a home setting, overhead.
+e.g., enhance security, enable eldercare or childcare, save energy, Our work aims to address the existing limitations of state-ofand automate appliances [35]. However, IoT devices also create the-art techniques to determine user activities on IoT devices
+new attack vectors. For example, simply knowing what devices solely using encrypted network traffic. In particular, we seek
+reside inside a household can pose both security and privacy to answer the following questions: RQ1: Can we develop an
+risks. Knowing that there is a smart lock can enable an adversary activity detection system that is independent of time-window?
+to launch targeted attacks, e.g., exploit unpatched vulnerabilities. We develop a methodology where we depend on a threshold
+Similarly, knowing that there is a sleep monitoring device inside of packets rather than time-window for detecting events in any
+the home can reveal the sleeping patterns of residents. network traffic. RQ2: How can we generate packet-level signa-
+ While most IoT devices encrypt traffic using standard pro- tures for devices with multi-type events without prior knowledge
+tocols such as WPA2, such encryption only hides the payload, about a device’s behavior? We analyze how to automatically
+that is, the contents of the exchanged messages or commands. construct signatures from devices with multi-type events using
+ different features extracted from the network traffic. RQ3: How
+ well do the generated signature(s) of a specific device maintain
+ Manuscript received 1 August 2023; revised 28 June 2024; accepted 1 July
+2024. Date of publication 11 July 2024; date of current version 14 March 2025.
+ uniqueness and correctness across independent datasets? We
+(Corresponding author: Anupam Das.) evaluate to what extent the signatures of a device are unique and
+ Mohammad Shamim Ahsan, Md. Shariful Islam, and Md. Shohrab Hossain generalizable across various datasets collected from different
+are with the Department of Computer Science and Engineering, Bangladesh
+University of Engineering and Technology (BUET), Dhaka 1000, Bangladesh
+ locations and under different settings.
+(e-mail: shamim19119@gmail.com; sharifulislam08031998@gmail.com; ms In summary, we introduce a packet-based signature generhohrabhossain@cse.buet.ac.bd). ation and detection system that does not consider a temporal
+ Anupam Das is with the Department of Computer Science, North Carolina
+State University, Raleigh, NC 27695 USA (e-mail: anupam.das@ncsu.edu).
+ threshold and can efficiently handle both binary and multi-
+ Digital Object Identifier 10.1109/TDSC.2024.3424299 type events. Our system overcomes these limitations as we
+
+ 1545-5971 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+AHSAN et al.: DETECTING SMART HOME DEVICE ACTIVITIES USING PACKET-LEVEL SIGNATURES FROM ENCRYPTED TRAFFIC 1071
+
+experiment with a diverse range of smart home devices and directly communicate with the cloud (i.e., Device ↔ Cloud).
+use only the packet length and direction for a specific number Second, the companion mobile app can exchange information
+of packets, simplifying the detection technique and achieving with the IoT device directly (i.e., Phone ↔ Device). Lastly, the
+higher recall and precision rates. We make the following contri- companion mobile app can communicate with the cloud (i.e.,
+butions: Phone ↔ Cloud). IoT manufacturers typically create companr To generate and detect packet-level signatures, we establish ion mobile apps to configure, control, and interface with their
+ a threshold on the number of packets instead of relying corresponding devices. Therefore, data from the IoT device can
+ on time windows. Time window-based methods are less also reach the IoT cloud via the companion app installed on a
+ effective across different datasets as they can be easily smartphone [36].
+ impacted by traffic rate changes. Our approach is more
+ resilient to temporal fluctuations caused by network jitters, as demonstrated through experiments on real-world C. Related Works
+ datasets. There is a large body of work in the network measurement
+ r To the best of our knowledge, we have obtained the highest community that uses traffic analysis to fingerprint applicaaverage recall and precision of 98−99% and 98−100%, re- tions [5], [9], [12], identify anomalies [13], [21], attacks [32], or
+ spectively, for any packet-level signature detection system malware [31]. In recent years, there have been multiple studies
+ to date. We have also open-sourced our codebase.1 to characterize traffic from IoT devices and develop techniques
+ r Our automated process captures new signatures from ex- to fingerprint their activities.
+ isting datasets, verified through cross-data validations. Hafeez et al. propose IoTGUARD [10], a self-adaptive semi-
+ This method systematically generates signatures for both supervised learning-based classification scheme for real-time
+ binary-type and multi-type events without prior knowledge activity detection of IoT devices in edge networks. It predicts
+ of the device’s behavior. malicious traffic based on the network activity of the device
+ generating the traffic. Peek-a-Boo [1] introduces a multi-stage
+ II. BACKGROUND AND RELATED WORK privacy attack utilizing machine-learning approaches for detecting and identifying the types of IoT devices, their states, and
+A. Key Components of IoT-Based System
+ ongoing user activities by only passively sniffing the network
+ A typical IoT system has four key components that work traffic. IOT-KEEPER [11] detects malicious IoT network activity
+together to provide the desired functionalities. An essential using a combination of fuzzy k-means clustering and a fuzzy
+component of an IoT system is sensors or end devices that interpolation scheme for online traffic analysis at the edge gateobserve and capture environmental and physical changes. All ways. HomeSnitch [37] classifies IoT device semantic behavior
+the collected data can be used in various domains and might such as heartbeat, firmware check, and motion detection using
+have various degrees of complexity. The second key compo- statistics derived from the entire client-server dialog. PINGnent of IoT is connectivity. The collected data needs to be PONG [28] explores the sequential and directional “ping/pong”
+sent to a cloud-based infrastructure so that it can be processed behavioral patterns in IoT data communication. Interestingly,
+and analyzed. Based on the scale of the implementations, IoT the most important feature used in HomeSnitch is the average
+components can be connected over LANs, MANs, or WANs. number of bytes sent from the IoT device to the server per
+It can also be connected through Wi-Fi, Bluetooth, telephone turn, whereas PINGPONG uses packet lengths and directions
+networks like LTE (popularly known as 4 G Network), or of individual requests (and replies) to uniquely identify device
+light-based technologies like Li-Fi (where light is used as a events.
+mode of communication to maintain interconnections) [7]. The A recent paper by Ren et al. [15] presents a large-scale and
+gathered data from sensors are transmitted over the internet multidimensional analysis of information exposure from IoT
+using one of these technologies. The analytic component starts devices and reveals how these devices operate differently due to
+functioning once the data is collected and delivered to the cloud. different privacy regulations in the US and U.K.. The paper also
+IoT analytics are utilized here to get a sense of the gathered presents a classifier to infer event types spanning many device
+data and to prevent it from getting corrupted. Last but not least, categories. Researchers have also used DNS queries to infer
+the main internal key component of IoT is the user interface IoT devices [23], [30]. They also model traffic characteristics
+which allows humans to interact with IoT devices and systems. to infer device-level activities. Sivanathan et al. [2], [3] also
+The collected information from the previous components can be leverage network traffic and uniquely build a multi-layer model
+made available to users either in report format or in the form of to fingerprint IoT devices. Ahmed et al. [4] present the largest
+some actions like triggering an alarm, notifying them through to-date study of IoT device fingerprinting in which they consider
+emails or texts, etc. multiple factors such as fingerprinting across time, region, and
+ different datasets and under different constraints. Others have
+B. Data Communication Model for IoT utilized data from different layers of the system stack to identify
+ There are three different methods of communication between IoT devices [18], [34].
+an IoT device and the backend cloud. First, an IoT device can Limitations of Existing Works: Most event inference techniques rely on machine learning [1], [2], [3], [10], [17] or
+ 1 https://github.com/MdShamim097/Packet-based-IoT-Event-Detection/ statistical analysis of traffic time series [6], [11], [15], [37].
+1072 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 2, MARCH/APRIL 2025
+
+ TABLE I
+ COMPARISON WITH RELATED WORK ON IOT DEVICES
+
+These techniques have different limitations as they use different Moreover, we discover some new signatures that are not only
+approaches. IoTGUARD [10] cannot detect the event of a device; different from the existing ones but also smaller in size, indicatrather, it can only tell whether an attack is going on or not. ing the efficiency of our packet-based approach. Furthermore,
+Besides, the aggregated features used here are not always ap- the development of the multi-event detection technique makes
+propriate for all scenarios; for instance, the total amount of data our system more resource-efficient since it requires only O(x)
+transferred and the total number of connections made depend on computational overhead; whereas PINGPONG requires O(xn),
+higher-level user activity rather than device activity. Unsuper- where, x and n are the number of devices and the number of
+vised learning techniques may be hard to interpret, especially for event types for each of the devices, respectively. Table I provides
+large feature sets (e.g., 197 features in Peek-a-Boo [1]). Home- an in-depth comparison with related works, highlighting the
+Snitch [37] lacks resistance to traffic fluctuations. Moreover, it contributions of our work over existing studies.
+uses statistics (average, min, max) derived from the entire client-
+ III. PROPOSED APPROACH
+server dialog, which may lead to false positives at a large scale.
+Signature generation and detection in PINGPONG [28] depends In this section, we describe our system architecture, methodon time-window, which may result in incorrect detection if the ologies, algorithms, and heuristics for generating signatures.
+traffic rate slows down or speeds up. IOTKEEPER [11] uses
+statistical approaches that may reduce clustering performance A. Threat Model
+when dealing with a large number of features.
+ Our setup accounts for a passive adversary capable of mon-
+ Moreover, these machine-learning approaches have limitaitoring network traffic from smart home devices. We consider
+tions in differentiating event types (e.g., distinguishing ON from
+ two types of adversaries: a WAN sniffer and a Wi-Fi sniffer,
+OFF). Especially, [2], [3], [17] use features like sleep time, flow
+ as seen in previous works [28]. The WAN sniffer observes
+volume-duration, average packet size, peak-to-mean ratio, DNS
+ network traffic between the home router and the ISP network
+queries, and cipher suites, or uses source port, destination port,
+ (or beyond), while the Wi-Fi sniffer monitors encrypted IEEE
+direction, payload, window size and timestamps, which can only
+ 802.11 wireless traffic. The WAN sniffer can inspect IP headers
+identify the IoT devices; not the specific events of those devices.
+ but lacks device MAC addresses for traffic identification. The
+Statistical analysis approaches depending on time series also
+ Wi-Fi sniffer lacks the WPA2 key and can only access clear
+lack resistance to traffic fluctuations [6], [11], [15], [37]. A
+ text information, including MAC addresses, packet lengths, and
+series of papers by Apthorpe et al. [22], [23], [24], [25] use
+ timing data. Both adversaries are aware of the smart home
+traffic volume-based signatures to infer IoT device activity, but
+ device type they want to target and passively monitor. Thus,
+cannot always determine the exact type of the event. Arguably,
+ they can train the system on a similar device offline, extract
+by observing changes in traffic rates, it is only possible to identify
+ its signature, and use it to detect the targeted device’s signature
+whether any user interaction occurs or not; but not which kind
+ from the monitored traffic. It is assumed that the devices encrypt
+of interaction has occurred.
+ their communication, preventing adversaries from accessing
+ Distinction from Prior Work: Our work is inspired by the
+ clear-text communication.
+aforementioned work, especially PINGPONG [28], which detects user activity of IoT devices using packet-level signatures.
+Our primary and differentiating goal is to overcome the limita- B. Architecture
+tions of existing works by implementing a “packet-based signa- In this paper, we focus on improving the state-of-the-art work,
+ture generation and detection system,” which depends on packet PINGPONG [28], to automatically and accurately unveil user
+counts instead of time-window, making it more resilient against activities from smart home network traffic logs. Our system
+time delays and network jitters. We also focus on handling multi- includes three key stages: i) Input processing, ii) Training, and
+type events rather than only binary (ON/OFF) events as analyzed iii) Activity detection. In the first stage, we take necessary
+by PINGPONG [28]. Through comprehensive evaluation, we annotated inputs, such as a device’s event types and triggered
+see that our proposed approach performs better in detecting events. Then, the training stage begins, where we analyze netactivities of IoT devices and sensors, as described in Section IV. work traffic, extract features, make a pair of relevant packets,
+AHSAN et al.: DETECTING SMART HOME DEVICE ACTIVITIES USING PACKET-LEVEL SIGNATURES FROM ENCRYPTED TRAFFIC 1073
+
+Fig. 1. Our System Architecture. At first, a device’s event types and triggered events are taken as input. Then, we collect network traffic, extract features, and
+make a pair of relevant packets. After that, we generate signatures that consist of a particular number of ordered sequences of packet pairs. Next, we validate each
+event’s signatures. At last, we test our system to detect activity on independent network traffic. In the last two stages, we use our heuristic.
+
+generate signatures using some particular ordered packet pairs, If there are more pairs in y than in x, the extra pairs in y are
+and cross-validate our generated signatures. In the final stage, discarded. Finally, this system sorts the sets of packet sequences
+we test our system on independent network traffic to detect the based on the total number of packets to form a list of packet
+activities of a given device. In the last two stages, we use our sequence sets.
+proposed heuristic. The architecture of our system is depicted Signature Validation: The signatures are validated by running
+in Fig. 1. the detection algorithm at layer 3 using the dataset on which sig-
+ ➊ Input Processing: At first, we take a device’s event types natures are created. Suppose the system detects at most n events,
+and trigger events of that type as input. For convenience, we and the timestamps of detected events match the timestamps for
+consider each event type as an integer at the time of training, as events recorded during training. In that case, the signature is
+illustrated in Fig. 1. finalized as a valid packet-level signature.
+ ➋ Training: We utilize the PINGPONG dataset [28] to gen- Heuristic: Heuristic is used in both signature generation and
+erate and test packet-level signatures. We will also demonstrate detection. At first, we find out the number of packets, ni , of each
+generalizability using other public datasets [3], [14], [27]. triggered event within a specific time interval ‘t’ (empirically
+ Trace Filtering: We filter the collected raw training set (a set set to 15 milliseconds). Here, i presents different instances of
+of pcap files and event-based timestamps) to discard unrelated the event and i = 1, 2, . . . , m as the training dataset generally
+traffic. We discard the packets where neither the source nor supports 100 instance per event. Then, we calculate the geodestination IP matches. Also, the packets beyond a number metric mean considering all the ni for a given event. If an
+of packets, n (a threshold we described later on), after each event is triggered m times during the training phase and the
+timestamped event is discarded. number of packets observed in each instance is n1 , n2 , . . . , nm ,
+ Pair Clustering: In this step, we separate relevant packet then the number of packets to be considered will
+ respectively,
+pairs (i.e., those that consistently occur after an event) from be: n = m m i=1 ni . Importantly, we determine the value of n
+irrelevant ones. Since we do not know in advance the packet using a controlled setup (lab settings), where no delay exists.
+lengths in pairs, we use an unsupervised learning algorithm, For this reason, this is essentially dependent on time. But, since
+called DBSCAN [19] that makes clusters of similar data points, our main goal is to apply our methodology to a real-world
+where the similarity is determined by the euclidean distance scenario, where network traffic contains unavoidable delays, we
+between the points. In this algorithm, we mark some points as use there the same n that is not dependent on the time frame
+core points if they have a certain amount of points (amount may anymore, irrespective of datasets and environments. We prove
+be number or percentage) within a particular distance d from the correctness of our methodology in Section IV-C-2.
+them. If two core points are situated within d from each other, We opt for the geometric mean to accommodate unforeseen
+they will be in the same cluster. Finally, the non-core points (i.e. fluctuations in the traffic rate. If, instead, we use the arithmetic
+leftover points) will join any cluster if that particular cluster is mean and the traffic rate experiences extreme fluctuations, the
+at most d distance from them. However, the points without any values of ni for m number of events will vary significantly,
+cluster are treated as noise or outliers that can be ignored. leading to an inappropriate threshold, n. Consequently, this will
+ Signature Creation: Signatures in this paper are identified result in inaccurate detection.
+based on only two parameters: packet-length and direction. To ➌ Activity Detection: Detection is done on independent
+create a signature, we concatenate packet pairs in the clusters to datasets from which we did not generate signatures. We treat
+reassemble the longest packet sequences possible. Packet pairs a network trace as a stream of packets. Each packet is presented
+in clusters x and y are concatenated if, and only if, for each to a set of state machines. A state machine is maintained for
+packet pair px in x, there exists a packet pair py in y such that each packet sequence of the signature for each flow, i.e., TCP
+px and py occurred consecutively in the same TCP connection. connection for the WAN sniffer or layer-2 flow for the Wi-Fi
+1074 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 2, MARCH/APRIL 2025
+
+sniffer (both adversaries have been described in Section III-A).
+ Algorithm 1: Generate Packet-Based Signatures.
+A state machine advances to its next state if the packet matches
+the next packet in the modeled packet sequence. Our heuristic Input
+(i.e., Equation III-B) is used here too. F Pcap file
+ Signature matching: There are two signature matching strate- E Event of the IoT device
+gies: exact matching and range-based or relaxed matching. In IP IP address of the device
+exact matching, only the packets whose lengths exactly match TS Timestamp list of when the event occurred
+the packet lengths that were observed during training are con- Output
+sidered to be valid. On the other hand, in range-based matching, List of Signatures
+the packet lengths are allowed to lie between a minimum and packets ← all packets from F
+maximum packet length (i.e., within a small delta, ) observed E ← event name from file
+during training. We set  = 10 as existing work [28]. Now, if the T S ← list from the timestamps file
+signatures during training are <C-136, S-780> and <C-700, IP ← ip address from command line argument
+S-511>, the range-based matching will consider client-to-server n ← {}
+packets with lengths in [126, 710] and server-to-client packets for each pck ∈ packets do
+with lengths in [501, 790] as valid. We used exact matching when if pck.src = IP or pck.dest = IP then
+no variations in packet lengths were observed during training, packets.remove(pck)
+otherwise, range-based matching is used. A signature match end if
+is searched within n packets (i.e., the heuristic described in end for
+Section III-B). i←0
+ for each ts ∈ T S do
+ Initialize twindow
+C. Packet-Based Signature Generation and Detection
+ n[i + +] ← number of packets in [ts, ts + twindow ]
+ We develop a new packet-based signature generation and end for
+detection system that relies on the total number of packets to nheu ← Heuristic(m = |T S|, n)
+make signatures and detect activities. Algorithm 1 shows the cor- considered_packets ← []
+responding pseudocode for signature generation and detection for each ts ∈ T S do
+of a single event of a given device. At first, we take all packets considered_packets.add(packets(ts, nheu ))
+(packets) from the pcap file (F ), events supported by a device end for
+(E), and the IP address (IP ) of a device as input. Then, we take signatures ← []
+a list of timestamps (T S) of the occurred event which is stored clusters ← DBSCAN (considered_packets)
+as separate files. After that, we discard the packets where neither for each clstr ∈ clusters do
+the source nor destination address matches with IP and take the sig ← clstr.packet_pairs.concatenate()
+number of packets (ni ) occurring within a specific time-window signatures.add(sig)
+(twindow ) of each time the event is triggered and calculate the end for
+heuristic, nheu , using equation III-B. Since during training, we return signatures
+determine the value of nheu in controlled lab settings having no
+delays in traffic, it is dependent on time in essence. However,
+once we get nheu , any real-time inference is not dependent on
+ n/2 times, rather than executing all the events of the device at a
+the time frame anymore. We set twindow = 15 milliseconds
+ time, which results in additional overhead. Consequently, if there
+so that we can compare our system with PINGPONG [28].
+ are total x devices each with n possible types of events, then the
+The detailed procedure is described in Section III-B. Next, we
+ computational overhead will be O(xn). On the other hand, we
+re-iterate the traffic and consider nheu number of packets per
+ improve the system to handle multi-type events simultaneously.
+event. Finally, we use the DBSCAN clustering algorithm to
+ Specifically, in multi-type detection, we train and detect all
+generate clusters (clusters) and concatenate packet pairs in
+ events of a specific device in a single run. As a result, if there
+the clusters to reassemble the longest packet sequences possible
+ are total x devices each with n possible types of events, then
+for creating signatures (signatures) of that event. Finally, we
+ the computational overhead will be only O(x). Therefore, no
+output the signatures into a file. Using these signatures and nheu ,
+ additional overhead is required, and the performance of the
+we match signatures and detect activities in any independent
+ system is improved.
+dataset, as described in Section III-B.
+ Algorithm 2 shows the corresponding pseudocode for detecting multiple types of events. At first, we merge network traces of
+D. Handling Multi-Type Events all the events of a device into a single pcap file. Then, we take all
+ For multi-type IoT devices, such as the TP-Link light bulb packets (packets) from the pcap file (F ), event type list (Evnt),
+with events ON-OFF-COLOR-INTENSITY, PINGPONG [28] and the IP address (IP ) of the device as input. Next, we take a
+considers separate events as binary types, and trains and detects list of occurred events (E) with their corresponding timestamp
+them independently. Thus, if there are n possible types of events (T S) which were stored in separate files. After that, we discard
+for a device, PINGPONG runs the detection process at least the packets where neither the source nor destination address
+AHSAN et al.: DETECTING SMART HOME DEVICE ACTIVITIES USING PACKET-LEVEL SIGNATURES FROM ENCRYPTED TRAFFIC 1075
+
+ events, we keep separate files. Using these signatures and nheu ,
+ Algorithm 2: Handle Multi-type Events.
+ we match signatures and detect activities in other independent
+ Input datasets, as described in Section IV.
+ F Pcap file
+ Evnt Event type list of IoT device
+ IP IP address of the device IV. EVALUATION
+ (E, TS) Tuple list of type of occurred event with This section provides a concise overview of our approach.
+ corresponding timestamp We begin by describing the datasets used for training, testing,
+ Output and negative, and positive experiments. Next, we present the
+ List of Signatures detailed results of our improved methodologies. We evaluate
+ packets ← all packets from F our system using various performance metrics and compare it
+ Evnt ← event types file with existing work. Additionally, we assess signature uniqueness
+ IP ← ip address from command line argument using network traffic from two large independent datasets and
+ (E, T S) ← events occurred and timestamps file test signature generalizability with another dataset.
+ n ← {}
+ for each pck ∈ packets do A. Dataset
+ if pck.src = IP or pck.dest = IP then
+ packets.remove(pck) For evaluation, we used data from four public datasets:
+ r Training and Testing: PINGPONG dataset [28] contains
+ end if
+ end for network traces of 19 different smart home devices with a
+ i←0 total size of around 40 GB. The dataset was collected in
+ for each t ∈ Evnt do 2018 but it also contains updated traces for some of the
+ for each (e, ts) ∈ (E, T S) do devices from 2019. We use this dataset in Section IV-C.
+ r Negative Control Experiment: A negative control experi-
+ Initialize twindow
+ n[i + +] ← number of packets in [ts, ts + twindow ] ment means testing our system on an independent dataset
+ end for to observe the uniqueness of our signatures for uncommon
+ end for devices.
+ nheu ← Heuristic(m = |T S|, n) – UNSW smart home traffic dataset [3] contains network
+ signaturesList ← [] traces for 26 smart home devices. The dataset is a
+ for each t ∈ Evnt do collection of 59 pcap files, with a total size of 26.3 GB
+ considered_packets ← [] and a total of 10,497,761 packets. We use this dataset in
+ for each (e, ts) ∈ (E, T S) do Section IV-D-1.
+ if e = t then – YourThings smart home traffic dataset [26], [27] concontinue tains 1,992 pcap files from 45 smart home devices, with
+ end if a total size of approximately 179.9 GB and 282,097,515
+ considered_packets.add(packets(ts, nheu )) packets. We use this dataset in Section IV-D-2.
+ r Positive Control Experiment: A positive control experend for
+ tempList ← [] iment means testing the generalizability of our signaclusters ← DBSCAN (considered_packets) tures using an independent dataset with common devices.
+ for each clstr ∈ clusters do Mon(IoT)r [14] dataset contains network traces for 55 IoT
+ signature ← clstr.packet_pairs.concatenate() devices, with a total size of around 8.6 GB. We use this
+ tempList.add(signature) dataset in Section IV-E to compare our signatures generated
+ end for in Section IV-C using the PINGPONG dataset with those
+ signaturesList.add(tempList) generated using this dataset (for only common devices
+ end for across the datasets).
+ return signaturesList
+ B. Examples of Packet-Based Signatures
+ Fig. 2 illustrates the observed packet exchanges for three IoT
+matches with IP and take the number of packets (ni ) within a devices. For the Sengled bulb, the communication is from the
+specific time-window (twindow ) of when an event (t) occurs and companion app to the cloud. In this case, for an ON event, the
+calculate the heuristic, nheu , using III-B. Next, for each type controlling smartphone always sends a request packet of 215
+of event (t), we iterate over all the times that event occurred bytes to an Internet host and receives a reply packet of 1275
+(e, ts) and take nheu number of packets. Finally, we use the bytes. For the OFF event, these packet lengths are 217 bytes and
+DBSCAN clustering algorithm to make clusters (clusters) and 1277 bytes, respectively, and for INTENSITY, 211 bytes, and
+concatenate packet pairs in the clusters to reassemble the longest 1063 bytes, respectively. For an Amazon plug, we observe an
+packet sequences possible for creating signatures (signatures) exchange of TLS Application Data packets between the Amazon
+of that event. We output the signatures into a file. For individual plug and an Internet host where the packet lengths are 1099
+1076 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 2, MARCH/APRIL 2025
+
+Fig. 2. Packet-level signatures of Sengled bulb, Amazon plug, and TP-Link light bulb observable by a passive network adversary. We can see that unique traffic
+patterns are exhibited during the execution of specific device events.
+
+ TABLE II
+ RESULTS OF PACKET-BASED SIGNATURE GENERATION & DETECTION METHODOLOGY, INCLUDING DETECTION RESULTS OF PINGPONG
+
+bytes and 235 bytes, respectively, when the plug is ON. For any communication mode, such as Phone ↔ Device, Device ↔
+OFF events, we find consistently occurring packet pairs in the Cloud, or Phone ↔ Cloud (as highlighted in Section II-B).
+plug’s communication with two different Internet hosts where
+the lengths of the reply packets are the same; but for the requests
+packets, the lengths are different. Similarly, for the TP-Link light C. Results Using the PINGPONG Dataset
+bulb, we observe that the smartphone sends a request packet to We have tested our methodology on 15 IoT devices on the
+the device with the same lengths of packets for both events, and PINGPONG dataset [28]. Table II depicts the results. For devices
+the reply packets from the device are of lengths 227 and 244 with multi-type events, we merge network traces of all the events
+bytes, respectively. Thus, this request-reply pattern can occur in of a device into a single file and use Algorithm 2 as described in
+AHSAN et al.: DETECTING SMART HOME DEVICE ACTIVITIES USING PACKET-LEVEL SIGNATURES FROM ENCRYPTED TRAFFIC 1077
+
+ TABLE III
+ DIFFERENCE IN GENERATED SIGNATURE BY US AND PINGPONG [28]
+
+Section III-D. For most of the devices, we can detect signatures (STOP), Roomba robot (BACK-TO-STATION), Amazon plug
+for different events. The fourth column shows the number of (ON-OFF), and SmartThings plug (ON). These new signatures
+packets we have used for signature generation and detection. are either smaller in size (i.e., vary in packet length, deduct
+The fifth column of the table contains the validation results any part of the signature) or completely different from the
+conducted on the training dataset, and the sixth column contains signatures stated in PINGPONG [28]. Table III illustrates a
+the detection results after testing on traffic, independent of the comparison between our system and PINGPONG [28], only for
+training and validation phases. Finally, the last two columns the devices where we obtain new signatures. For the Sengled
+contain corresponding validation and detection results for PING- bulb, we get signatures <C-215 S-1275>, <C-217 S-1277>,
+PONG. The “TPT (Total Packets Taken)” depends on individual and <C-211 S-1063> for the ON, OFF, and INTENSITY
+network traffic, that is the total number of packets in the pcap events, respectively, which are completely different from those
+file, which varies from device to device. Though we discard reported by PINGPONG [28]. These new signatures improve
+irrelevant packets, we can not strictly say the “majority” of the the validation rate while keeping the detection rates almost
+packets are deemed irrelevant and subsequently discarded. In identical. For Rachio sprinkler’s event STOP, the signature
+several cases, we find most of the packets to be irrelevant. On generated by PINGPONG [28] is <C-496 C-155 C-395>. In
+the contrary, in other cases, the network traffic contains compara- our experiment, C − 395 is not present, and the new signature
+tively fewer packets. Interestingly, we get identical signatures for becomes <C-496 C-155>. Importantly, this shortened signature
+the individual events of the WeMo plug, Dlink plug, and WeMo does not affect the validation and detection system, as evident
+Insight Plug (possibly these devices share the same software in Table III. The signature in PINGPONG [28] for the event
+codebase from the same vendor). Also, for some device events BACK-TO-STATION for the Roomba robot is <S-440 C-105
+we obtain different signatures as highlighted using S1 and S2 S-[1018-1024] C-105>. On the contrary, our system generates
+labels in the table. In the “Matching” results of the last two a smaller signature excluding S − [1020 − 1022], and again
+columns, we denote the number of detected events of each type we observe improvement in both the validation and detection
+of device by summation. For example, our system detects 50 phases. For the Amazon plug, parts of PINGPONG’s [28] sig-
+On, 50 Off, and 97 Intensity events of the Sengled bulb device natures: S − [443 − 445] and S − [444 − 446], for events ON
+in the validation phase. However, the total number of actual and OFF, respectively, are not present in our new signatures (see
+events for the Sengled bulb is 200. Therefore, we mention the in Table III). Most importantly, these new signatures prove their
+results as “50+50+97=197/200” in the table. For devices with correctness by obtaining perfect matches in the validation and
+binary events, since the total number of actual events is 100 per detection phases (i.e., 100 versus 98, 100 versus 99). Finally, for
+device in both validation and detection, we skip mentioning the the SmartThings plug’s ON event, our system comes up with
+number of actual events in the table. Similar things go for the a single signature, that is, <C-699 S-511>. On the other hand,
+detection column and other devices, except for the three devices the corresponding existing signatures from PINGPONG [28]
+(WeMo plug, Dlink plug, and WeMo Insight Plug), for which we are <C-699 S-511> and <S-777 C-136> (i.e., two signatures).
+get identical signatures, we state the number of detected events From Table III, we can see that this new signature can identify
+together, rather than writing separately. more events compared to PINGPONG [28] (i.e., 100 versus 92
+ We next compare our signatures with the ones reported by and 95 versus 92).
+PINGPONG [28]. We discover some new signatures for five de- 1) Comparisons With PINGPONG: We have compared our
+vices: Sengled bulb (ON-OFF-INTENSITY), Rachio sprinkler system with the PINGPONG [28] system in terms of signature
+1078 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 2, MARCH/APRIL 2025
+
+ TABLE IV TABLE V
+ COMPARISON BETWEEN BOTH SYSTEMS ON SIGNATURE DURATION COMPARISON BETWEEN OUR SYSTEM AND PINGPONG
+
+ system since our main goal is to reduce false negatives and
+ increase true positives, which may result in a few false positive
+ events as a side effect. Besides, we get a higher recall score
+ which indicates that we can detect more events than others.
+ Additionally, the precision of both systems is almost similar.
+duration and detection. The average signature duration for our Therefore, the results of Tables V and IV indicate that our
+approach across all the devices is 1,141 milliseconds, which system outperforms PINGPONG in the signature generation,
+is less than that of PINGPONG (1,499 milliseconds). From and detection process.
+Table IV, we can see that the longest signature in PINGPONG Takeaway. PINGPONG [28] employs a time window-based
+is 9,132 milliseconds (for Sengled bulb), whereas in our case, signature generation and detection strategy, considering all
+it is 8,060 milliseconds (for Dlink plug). Moreover, our system packets within a specific time-window. However, this approach’s
+improves the minimum and average signature duration time. drawback lies in its sensitivity to traffic rate fluctuations, leading
+ For the Sengled bulb, the minimum duration reduces to 3,324 to variations in validation and detection phases. This is especially
+milliseconds from 4,145.5 milliseconds, the average duration problematic during network congestion, as fewer packets may
+reduces to 5,311 milliseconds from 5,964.5 milliseconds, and be available for signature detection in such periods. To address
+the maximum duration reduces to 7,171 milliseconds from 9,132 these limitations, we have introduced a packet-count-based apmilliseconds. For the Amazon plug, we observe a drastic change proach (Section III-B), which mitigates the impact of temporal
+in signature duration time as minimum, average, and maximum fluctuations and network congestion. Moreover, this approach
+duration reduced by 1,162 milliseconds (70 versus 1,232 ms), remains unaffected by higher-than-usual traffic rates, ensuring
+1,179 milliseconds (686 versus 2,465 ms), and 3,071 millisec- accurate signature detection.
+onds (1,466 versus 4,537 ms), respectively. For the Kwikset 2) Experiment on Real World Settings: In the real world,
+doorlock, the minimum duration reduces to 136 milliseconds network traffic usually experiences random delays up to 500 ms,
+from 173 milliseconds, the average duration reduces to 305 even 700 ms [16], [33]. Therefore, to better justify our methodolmilliseconds from 395 milliseconds, and the maximum duration ogy and prove our claim, we create a dataset by injecting random
+reduces to 2,361 milliseconds from 2,874 milliseconds. Finally, delays in the PINGPONG dataset [28] and test both systems on
+for the SmartThings plug, minimum and average signature du- the new dataset. Specifically, we inject delays of different ranges,
+ration improve (131 versus 335 ms, and 385 versus 537 ms), for example [0-100] ms, [100-200] ms, [200-300] ms, [300-
+and maximum duration remains similar to PINGPONG. For 400] ms, and [400-500] ms varying the frequency of the delays,
+four devices: Sengled bulb, Amazon plug, Kwikset doorlock, such as after every 2, 5, 7, 10, 25, 50, 75, and 100 packets. For
+and SmartThings plug, our performance is much better than every experiment, at first, we select a delay range, let [0-100] ms.
+PINGPONG. For others, it remains almost the same. Then, we randomly choose a delay from that range every time,
+ Moreover, the last four columns of Table II illustrate that keeping the frequency of the delays static for that experiment.
+our system always gives better validation results since it can, After that, we repeat the same experiment 10 times (rounds), and
+most of the time, validate all 100 triggered events. In the case finally, we take the average of the detection results. Similarly,
+of detection, it either improves or remains consistent with the we conduct experiments changing the frequency for that delay
+performance of PINGPONG. In our experiments, a true positive range. As a result, in total, there are 5*7*10=350 experiments
+is a case where our system can detect the event that is actually per device. Fig. 3 shows the comparison results on precision, retriggered, a false positive is where there is no event happening call, and f1-score metrics. We see that PINGPONG predicts few
+but our system detects as that event occurred, and a false negative true positive events, but misses many of them (resulting in too
+is a case where our system can not detect the actual triggered many false negative events). Thus, in most cases, there are near
+event. However, a true negative is not possible here because there 0 false positives. Consequently, recall and accuracy of PINGwill be nothing to detect if there is no ongoing event. In any PONG drastically decrease to 14.7% and 25.6%, respectively,
+detection system, the target is to get high true positives and low as the more frequent delays increase. Additionally, precision
+false negatives. From Table V, we can see that our system gives becomes almost 100 since there are a negligible number of false
+more true positives and fewer false negatives than the existing positives. On the other hand, the precision, recall, and f1-score
+AHSAN et al.: DETECTING SMART HOME DEVICE ACTIVITIES USING PACKET-LEVEL SIGNATURES FROM ENCRYPTED TRAFFIC 1079
+
+Fig. 3. In real-world comparisons, our system maintains stable performance metrics. In contrast, PINGPONG experiences a notable decrease in recall and
+F1-score, while precision remains unaffected. This suggests that while PINGPONG accurately detects true events, it misses a significant number of them.
+
+of our system remain stable at 98.3%, 98.5%, and 98.4%, re- datasets. There are five common devices: WeMo Insight plug,
+spectively, which means the system is not affected by the delays Blink camera, TP-Link plug, Sengled bulb, and TP-Link light
+at all. bulb. Since Mon(IoT)r dataset was collected in 2019, we use the
+ secondary dataset that PINGPONG collected for the common
+D. Negative Control Experiments devices in 2019. Thus, we repeat the signature extraction for the
+ dataset collected in 2019 for these devices to facilitate a better
+ 1) Using UNSW Dataset: UNSW dataset [3] contains netcomparison of signatures.
+work traces of 26 IoT devices. We evaluate the uniqueness
+ Table VI highlights the signatures for the common devices
+of the signatures generated for 15 IoT devices by performing
+ across the two independent datasets. We can see that the sigsignature detection on the UNSW dataset [3]. As there is no
+ natures for the three devices changed. For the WeMo Insight
+common devices between UNSW and the 15 IoT devices for
+ plug and Blink camera, the extracted signatures from the PINGwhich we have generated signatures, all the detected events will
+ PONG (2019) dataset and the Mon(IoT)r dataset are identical.
+be considered false positives. We get a total 90 false positive
+ The signatures for the TP-Link plug and Sengled bulb remain
+events across a total of 10,497,761 packets.
+ almost the same across these two datasets. The packet lengths
+ 2) Using YourThings Dataset: YourThings dataset [27] conslightly differ in some positions by a few bytes. For example,
+tains network traces of 45 IoT devices. We have tested our system
+ in the PINGPONG dataset, the TP-Link plug’s OFF signature
+on the YourThings dataset, which includes 1,992 pcap files
+ is <C-593 S-[1235-1236] S-100>, which changes to <C-606
+over seven days. As there are three common devices (WeMo
+ S-[1214-1215] S-100> in Mon(IoT)r dataset. A similar thing
+plug, Roomba robot, and TP-Link light bulb) present in both
+ goes for the Sengled bulb. We could not obtain an updated
+the YourThings dataset and our training-testing dataset, we only
+ network trace from the PINGPONG dataset for the TP-Link light
+performed signature detection for 12 of our devices that are not
+ bulb. Thus, we used the previous version. Overall, signatures
+present in the YourThings dataset to avoid the potential for true
+ across these two datasets do not exactly match, but they are still
+positives. We get here only 258 false positives across a total of
+ closer.
+282,097,515 packets.
+ Another interesting insight is the temporal stability of sig-
+ Takeaway. In the two negative control experiments, we obnatures. Comparing Tables II with VI, we can see that the
+serve an average of 1 false positive per 0.117 million packets in
+ signature changed for two of the devices across a 2-year time
+the UNSW dataset and an average of 1 false positive per 1.09
+ span. For example, the WeMo Insight plug’s signature no longer
+million packets in the YourThings dataset. These false positives
+ contains P H − 259, and S − 100 is added to the TP-Link plug’s
+occur due to the range-based or relaxed matching strategy emsignature.
+ployed by our system. This strategy considers a match even if the
+ Takeaway. We observed in the positive control experiment
+packet lengths in independent traffic are close to the exact lengths
+ that some signatures change over time, probably due to the
+observed during training. The detailed strategy is explained in
+ configuration changes, communication protocol introduced in
+Section III-B.
+ firmware updates, or other credentials. This evolution can result
+ in introducing false negative events as the signatures will not
+E. Positive Control Experiment Using Mon(IoT)r Dataset match the ones that were observed during training. To overcome
+ In this Section, we apply our methodology to the publicly this situation, we need to update our signatures periodically.
+available Mon(IoT)r [14] dataset. We compare the signatures The best thing is to repeat the training process to extract the
+extracted from the Mon(IoT)r dataset to those extracted from latest signatures of a device right before launching the detection
+the PINGPONG [28] dataset for the devices present in both process.
+1080 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 2, MARCH/APRIL 2025
+
+ TABLE VI
+ COMMON DEVICES IN THE MON(IOT)R AND PINGPONG DATASETS
+
+ V. DISCUSSION multi-type events, using packet-level signatures extracted from
+ Our system demonstrates high accuracy in revealing IoT both encrypted and unencrypted network traffic. By overcoming
+device activities from real smart home network traffic logs. The the time-window dependency limitations of existing systems, we
+ demonstrate the system’s superiority and correctness through
+experimental evaluations, covering a diverse range of IoT devices, show an average recall of 98-99% and an average precision experimental results in real-world datasets. The uniqueness and
+of 98-100%. We identify new packet-level signatures and val- accuracy of our generated signatures are validated using publicly
+ available datasets, yielding satisfactory outcomes.
+idate their uniqueness by performing detection on independent
+datasets, resulting in negligible false positives. Furthermore, the
+generated signatures exhibit good generalizability within the REFERENCES
+same time frame, although firmware updates can impact the final
+ [1] A. Acar et al., “Peek-a-boo: I see your smart home activities, even ensignature. crypted!,” in Proc. 13th ACM Conf. Secur. Privacy Wireless Mobile Netw.,
+ Our system has a few limitations. First, the proposed method- Linz, Austria, 2020, pp. 207–218.
+ology can only be applied to the TCP protocol, not to the UDP [2] A. Sivanathan et al., “Characterizing and classifying IoT traffic in smart
+ cities and campuses,” in Proc. IEEE Conf. Comput. Commun. Workshops,
+protocol, which we plan to explore in the future. Besides, we 2017, pp. 559–564.
+observe a few false positives as a side effect of reducing false [3] A. Sivanathan et al., “Classifying IoT devices in smart environments using
+negatives while maximizing true positives. network traffic characteristics,” IEEE Trans. Mobile Comput., vol. 18,
+ no. 8, pp. 1745–1759, Aug. 2019.
+ Strategies to prevent general traffic analysis, like website [4] D. Ahmed, A. Das, and F. Zaffar, “Analyzing the feasibility
+fingerprinting defenses [20], can mitigate our signature detection and generalizability of fingerprinting Internet of Things devices,”
+system. These include using VPNs, traffic padding, and shaping Proc. Privacy Enhancing Technol., vol. 2022, no. 2, pp. 578–600,
+ Mar. 2022.
+techniques, which aim to obscure traffic patterns and connection [5] A. Panchenko et al., “Website fingerprinting at internet scale,” in Proc.
+details. However, they often introduce significant bandwidth Netw. Distrib. Syst. Secur. Symp., 2016.
+and latency overheads, challenging the real-time nature of IoT [6] B. Copos, K. N. Levitt, M. Bishop, and J. Rowe, “Is anybody home?
+ Inferring activity from smart home network traffic,” in Proc. IEEE Secur.
+devices. Other approaches involve injecting adversarial noise Privacy Workshops, 2016, pp. 245–251.
+into traffic [29] or splitting traffic across multiple networks [8], [7] DataFlair Team, “How IoT works-4 main components of IoT sysalbeit with practical limitations. A promising approach akin tem,” 2019. [Online]. Available: https://data-flair.training/blogs/how-iotworks/
+to ‘k-anonymity’ could group traffic based on network usage [8] W. De la Cadena et al., “TrafficSliver: Fighting website fingerprinting
+by IoT devices while preserving usability. Implementation and attacks with traffic splitting,” in Proc. ACM SIGSAC Conf. Comput.
+evaluation of such methods for IoT devices remain avenues for Commun. Secur., 2020, pp. 1971–1985.
+ [9] G. Acar et al., “FPDetective: Dusting the web for fingerprinters,” in Proc.
+future research. ACM SIGSAC Conf. Comput. Commun. Secur., 2013, pp. 1129–1140.
+ [10] I. Hafeez, A. Y. Ding, M. Antikainen, and S. Tarkoma, “Real-time IoT
+ device activity detection in edge networks,” in Proc. Int. Conf. Netw. Syst.
+ VI. CONCLUSION Secur., 2018, pp. 221–236.
+ This paper introduces a packet-based signature generation [11] I. Hafeez, M. Antikainen, A. Y. Ding, and S. Tarkoma, “IoT-KEEPER:
+ Detecting malicious IoT network activity using online traffic analysis at
+and detection system for effectively detecting user activi- the edge,” IEEE Trans. Netw. Service Manag., vol. 17, no. 1, pp. 45–59,
+ties of diverse IoT devices, encompassing single, binary, and Mar. 2020.
+AHSAN et al.: DETECTING SMART HOME DEVICE ACTIVITIES USING PACKET-LEVEL SIGNATURES FROM ENCRYPTED TRAFFIC 1081
+
+[12] J. Hayes and G. Danezis, “k-fingerprinting: A robust scalable web- [37] T. OConnor et al., “HomeSnitch: Behavior transparency and control for
+ site fingerprinting technique,” in Proc. USENIX Secur. Symp., 2015, smart home IoT devices,” in Proc. 12th Conf. Secur. Privacy Wireless
+ pp. 1187–1203. Mobile Netw., Miami, FL, USA, 2019, pp. 128–138.
+[13] Y. Jin, E. Sharafuddin, and Z.-L. Zhang, “Unveiling core network-wide [38] Z. Berkay Celik et al., “Sensitive information tracking in commodity IoT,”
+ communication patterns through application traffic activity graph de- in Proc. 27th USENIX Conf. Secur. Symp., Baltimore, MD, USA, 2018,
+ composition,” ACM SIGMETRICS Perform. Eval. Rev., vol. 37, no. 1, pp. 1687–1704.
+ pp. 49–60, 2009.
+[14] J. Ren et al., “Information exposure for consumer IoT devices: A multidi- Mohammad Shamim Ahsan received the BS demensional, network-informed measurement approach,” in Proc. Internet gree in computer science and engineering from the
+ Meas. Conf., 2019, pp. 267–279. Bangladesh University of Engineering and Technol-
+[15] J. Ren et al., “Information exposure from consumer IoT devices: A multi- ogy (BUET), in 2023. Currently, he is a lecturer
+ dimensional, network-informed measurement approach,” in Proc. Internet with the Computer Science and Engineering (CSE)
+ Meas. Conf., 2019, pp. 267–279. Department, United International University, Dhaka,
+[16] J. Li, T. Zhang, J. Jin, Y. Yang, D. Yuan, and L. Gao, “Latency estimation Bangladesh. He will start his PhD in Fall’24 with
+ for fog-based Internet of Things,” in Proc. 27th Int. Telecommun. Netw. the IST Department of Pennsylvania State University,
+ Appl. Conf., 2017, pp. 1–6. USA. His research interests are in Cybersecurity and
+[17] M. Lopez-Martin, B. Carro, A. J. Sánchez-Esguevillas, and J. Lloret, “Net- Privacy, focusing on IoT security, computer security,
+ work traffic classifier with convolutional and recurrent neural networks for web security, and social aspects of security. Apart
+ Internet of Things,” IEEE Access, vol. 5, pp. 18042–18050, 2017. from this, he is continuously serving society as a peer-reviewer in several
+[18] M. Miettinen et al., “IoT sentinel: Automated device-type identification well-known journals.
+ for security enforcement in IoT,” in Proc. IEEE 37th Int. Conf. Distrib.
+ Comput. Syst., 2016, pp. 2177–2184. Md. Shariful Islam received the BSc degree in com-
+[19] M. Ester, H.-P. Kriegel, J. Sander, and X. Xu, “A density-based algorithm puter science and engineering from the Bangladesh
+ for discovering clusters in large spatial databases with noise,” in Proc. 2nd University of Engineering and Technology (BUET),
+ Int. Conf. Knowl. Discov. Data Mining, 1996, pp. 226–231. Dhaka, Bangladesh, in 2023. Currently, he works as a
+[20] N. Mathews, J. K. Holland, S. E. Oh, M. S. Rahman, N. Hopper, and software engineer with Enosis Solutions, Bangladesh,
+ M. Wright, “SoK: A critical evaluation of efficient website fingerprinting while seeking PhD opportunities starting Fall ’25.
+ defenses,” in Proc. IEEE Symp. Secur. Privacy, 2023, pp. 344–361. He possesses experience in IoT security and has
+[21] T. T. T. Nguyen and G. J. Armitage, “A survey of techniques for internet participated in Computer Security competitions like
+ traffic classification using machine learning,” IEEE Commun. Surveys Tut., Capture the Flag. His research interests encompass
+ vol. 10, no. 4, pp. 56–76, Fourth Quarter 2008. IoT security, cryptography, web security, and network
+[22] N. J. Apthorpe, D. Y. Huang, D. Reisman, A. Narayanan, and N. Feamster, security.
+ “Keeping the smart home private with smart(ER) IoT traffic shaping,”
+ Proc. Privacy Enhancing Technol., vol. 2019, pp. 128–148, 2018. Md. Shohrab Hossain (Member, IEEE) received the
+[23] N. J. Apthorpe, D. Reisman, and N. Feamster, “A smart home is no castle: BSc and MSc degrees in computer science and engi-
+ Privacy vulnerabilities of encrypted IoT traffic,” 2017, arXiv: 1705.06805. neering from the Bangladesh University of Engineer-
+[24] N. J. Apthorpe, D. Reisman, and N. Feamster, “Closing the blinds: Four ing and Technology (BUET), Dhaka, Bangladesh, in
+ strategies for protecting smart home privacy from network observers,” 2003 and 2007, respectively, and the PhD degree
+ 2017, arXiv: 1705.06809. from the School of Computer Science, University
+[25] N. J. Apthorpe, D. Reisman, S. Sundaresan, A. Narayanan, and N. Feam- of Oklahoma, Norman, OK, USA, in 2012. During
+ ster, “Spying on the smart home: Privacy attacks and defenses on encrypted his PhD, he worked under NASA-funded projects
+ IoT traffic,” 2017, arXiv: 1708.05044. related to survivability, scalability, and security of
+[26] O. Alrawi, C. Lever, M. Antonakakis, and F. Monrose, “Yourthings score- space networks. He is currently serving as a professor
+ card,” 2019. [Online]. Available: https://yourthings.info/ with the Department of Computer Science and Engi-
+[27] O. Alrawi, C. Lever, M. Antonakakis, and F. Monrose, “SoK: Security neering, Bangladesh University of Engineering and Technology (BUET), Dhaka,
+ evaluation of home-based IoT deployments,” in Proc. IEEE Symp. Secur. Bangladesh. His research interests include Cyber Security, Mobile malware
+ Privacy, San Francisco, CA, USA, 2019, pp. 1362–1380. detections, Software-defined networking (SDN), security of mobile and ad hoc
+[28] R. Trimananda, J. Varmarken, A. Markopoulou, and B. Demsky, “Packet- networks, and the Internet of Things. He has published more than 90 technical
+ level signatures for smart home devices,” in Proc. Netw. Distrib. Syst. research papers in leading journals and conferences including the Journal of
+ Secur. Symp., San Diego, CA, USA, 2020. Computers & Security, Ad Hoc Networks, IEEE Access, Journal of Network and
+[29] M. S. Rahman, M. Imani, N. Mathews, and M. Wright, “Mocking- Computer Applications, IEEE Trans. of Mobile Computing, Wireless Personal
+ bird: Defending against deep-learning-based website fingerprinting at- Communication, PLoS One, IEEE GLOBECOM, IEEE ICC, IEEE MILCOM,
+ tacks with adversarial traces,” IEEE Trans. Inf. Forensics Secur., vol. 16, IEEE WCNC, IEEE HPCC, etc.
+ pp. 1594–1609, 2021.
+[30] R. Perdisci, T. Papastergiou, O. Alrawi, and M. Antonakakis, “IoTFinder: Anupam Das (Senior Member, IEEE) received the
+ Efficient large-scale identification of IoT devices via passive DNS traffic BS and MS degrees in computer science and engineeranalysis,” in Proc. IEEE Eur. Symp. Secur. Privacy, 2020, pp. 474–489. ing from the Bangladesh University of Engineering
+[31] R. Perdisci, W. Lee, and N. Feamster, “Behavioral clustering of HTTP- and Technology, Dhaka, Bangladesh, in 2008 and
+ based malware and signature generation using malicious network traces,” 2010, respectively, and the PhD degree in computer
+ in Proc. Symp. Netw. Syst. Des. Implementation, 2010, pp. 391–404. science from the University of Illinois at Urbana-
+[32] R. Doshi, N. J. Apthorpe, and N. Feamster, “Machine learning DDoS Champaign (UIUC), Illinois, USA, in 2016. He was
+ detection for consumer Internet of Things devices,” in Proc. IEEE Secur. a recipient of a Fulbright Science and Technology
+ Privacy Workshops, 2018, pp. 29–35. fellowship during his PhD degree. He was also a
+[33] A. S. S. M. D. Kumar, “Delay estimation of healthcare applications based postdoctoral fellow with the School of Computer
+ on MQTT protocol: A node-red implementation,” in Proc. IEEE Int. Conf. Science, Carnegie Mellon University (CMU) from
+ Electron., Comput. Commun. Technol., 2022, pp. 1–6. 2016 to 2018. He is currently an assistant professor with the Computer Sci-
+[34] S. Marchal, M. Miettinen, T.D. Nguyen, A.-R. Sadeghi, and N. Asokan, ence Department at North Carolina State University (NCSU), Raleigh, North
+ “AuDI: Toward autonomous IoT device-type identification using pe- Carolina, USA. His research interests lie in security and privacy, with a special
+ riodic communication,” IEEE J. Sel. Areas Commun., vol. 37, no. 6, focus on designing secure and privacy-preserving technologies. He has published
+ pp. 1402–1412, Jun. 2019. more than 60 technical research papers in leading journals and conferences.
+[35] S. Madakam, R. Ramaswamy, and S. Tripathi, “Internet of Things (IoT): He has been awarded more than U.S. $2.5 million in research grants from the
+ A literature review,” J. Comput. Commun., vol. 3, pp. 164–173, Dec. 2022. U.S. National Science Foundation (NSF), NCSU, Meta, and Amazon. He has
+[36] A. Subahi and G. Theodorakopoulos, “Detecting IoT user behavior and also received two ACM Distinguished Paper Awards (ASIACCS 2014, MMSys
+ sensitive information in encrypted IoT-app traffic,” Sensors, vol. 19, no. 21, 2017). His projects have been covered by media outlets such as Wired, Forbes,
+ 2019, Art. no. 4777. ZDNet, MotherBoard, and FastCompany.

@@ -1,0 +1,146 @@
+16648                                          IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 9, SEPTEMBER 2025
+
+
+
+
+                Learning to Detect Industrial Time-Series
+                Anomalies From Imputation Consistency
+                       With Sparse Observations
+                             Zhen Zhang , Yongming Han , Member, IEEE, and Zhiqiang Geng
+
+
+
+   Abstract—Time-series anomaly detection plays an important                      W and b                  Weight matrix and bias vector,
+role in ensuring industrial safety. Currently, many anomaly detec-                                         respectively.
+tion methods mainly target complete time series and ignore the                    d and h                  Embedding and encoder dimension,
+widespread problem of data missing in the real world. Therefore,
+this article proposes a novel anomaly detection method for time
+                                                                                                           respectively.
+series with sparse observations based on imputation consistency                   Ȟ, Ĥ, H́, and H̀       Input of encoders.
+using a mixture of patch information inference network (MoPIN).                   Ž, Ẑ, Ź, and Z̀       Output of encoders.
+Due to the robustness of the imputation method modeling to                        Z̄                       Spatiotemporal mixture feature.
+the random mask, different imputed series of the same normal                      U and V                  Output of PIML and PIMM,
+time series with different random masks should have consistency.                                           respectively.
+Then, a novel imputation consistency is used to detect anomalies
+in sparse observation series. Moreover, the MoPIN imputes series                  θ                        All parameters of the MoPIN.
+by a two-step imputation and multiscale modeling of patch                         R, X R , OR , and LR     Random mask matrix and time series
+information. Meanwhile, the similarity of imputed series under                                             and its corresponding observation and
+different masks is used to measure imputation consistency, which                                           delay matrix.
+well constructs the relationship between sparse observation series                C I and λ                Imputation consistency constraint and
+and anomaly scores. Finally, the MoPIN can accurately detect                                               coefficient.
+anomalies while imputing series. Extensive experiments on four
+real-world benchmarks in different domains of imputation and                      X Imp and X Rec          Imputation and reconstruction series,
+anomaly detection tasks and a real fluid catalytic cracking                                                respectively.
+(FCC) process case demonstrate the effectiveness of the proposed                  LStage1 and LStage2      Optimization target of two stages.
+method. Specifically, the MoPIN achieved at least 8.05% mean
+absolute error (MAE) relative improvement in imputation and                                           I. I NTRODUCTION
+3.74% F1 relative improvement in anomaly detection.
+  Index Terms—Anomaly detection, patch, process industry,
+sparse observation, time series.
+                                                                               W        ITH the development of industrial technologies, the
+                                                                                        number of industrial devices is increasing. The occur-
+                                                                               rence of device anomalies poses a serious threat to industrial
+                          N OMENCLATURE                                        safety [1]. Accurate status monitoring of these devices plays
+  Abbreviation            Expansion                                            an important role in ensuring industrial production safety
+                                                                               and improving production efficiency [2]. However, with a
+   X, T , and C            Time series and its length and                      large number of devices, it is difficult to monitor manually.
+                           dimension.                                          Therefore, it is of practical significance to achieve accurate
+   X o and X m             Sets of observed values and missing                 and timely status monitoring through anomaly detection algo-
+                           values of X.                                        rithms. Time series exist in various industrial scenarios and are
+  ∆, O, and L              Sampling interval, observation, and                 widely used in industrial anomaly detection, including process
+                           delay matrix, respectively.                         industries, spacecrafts, and industrial servers. However, due to
+  l, s, and n              Length, step size, and the number of                the rarity of actual anomalies and the professional nature of
+                           patches, respectively.                              identification, labeling data are time-consuming and difficult.
+  S , S t , and S s        Input series of the PIML and its trend              Therefore, unsupervised time-series anomaly detection is an
+                           and seasonal components, respectively.              active research topic [3].
+  Received 24 August 2024; revised 19 January 2025; accepted 3 May 2025.          Currently, promising progress has been made in unsu-
+Date of publication 21 May 2025; date of current version 4 September 2025.     pervised time-series anomaly detection, including traditional
+This work was supported by the National Natural Science Foundation of          methods and deep learning-based methods [4]. Traditional
+China under Grant 62422303 and Grant 62373035. (Corresponding authors:
+Yongming Han; Zhiqiang Geng.)
+                                                                               methods identify anomalies through spatial projection and
+  The authors are with the College of Information Science and Technology,      iterative partitioning. Deep learning-based methods use their
+Beijing University of Chemical Technology, Beijing 100029, China, and also     powerful feature extraction capabilities to distinguish anoma-
+with the Engineering Research Center of Intelligent PSE, Ministry of Edu-      lies [5]. However, traditional methods ignore the inherent
+cation of China, Beijing 100029, China (e-mail: zhang zhen@buct.edu.cn;
+hanym@mail.buct.edu.cn; gengzhiqiang@mail.buct.edu.cn).                        time dependencies, making it difficult to achieve accurate
+  Digital Object Identifier 10.1109/TNNLS.2025.3568019                         anomaly detection. Therefore, deep learning-based methods
+             2162-237X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+ZHANG et al.: LEARNING TO DETECT INDUSTRIAL TIME-SERIES ANOMALIES FROM IMPUTATION CONSISTENCY                                    16649
+
+
+
+have been widely studied, which are divided into prediction-           In summary, this article introduces a patch-based approach
+based methods and reconstruction-based methods [1]. The             to time-series anomaly detection with sparse observations and
+anomaly data are difficult to accurately predict or recon-          proposes a mixture of patch information inference network
+struct by the model modeled by normal data, so time-series          (MoPIN) for imputation consistency learning. Specifically, a
+anomaly detection methods based on recurrent neural network         hybrid modeling approach based on channel independence and
+(RNN) [6], graph neural network (GNN) [1], Transformer              mixture for patch information is proposed. In addition, a two-
+[7], and many other basic neural networks have been                 step time-series imputation framework is designed to achieve
+proposed to realize data representation and anomaly discov-         accurate imputation. Furthermore, the imputation consistency
+ery through feature extraction of different dimensions and          of different mask series is proposed and exploited for detect-
+capabilities.                                                       ing anomalies. In particular, despite the complex design, all
+   However, current anomaly detection methods are all used          branches of the MoPIN are implemented by simple multilayer
+for complete time series, but in real industrial scenarios,         perceptions (MLPs). Finally, the MoPIN can fully integrate the
+data missing due to reasons such as communication inter-            tasks of time-series imputation and anomaly detection, and
+ruption and nonuniform sampling is very common [8].                 thus realize anomaly monitoring of time series with sparse
+At present, anomaly detection methods for time series with          observations while performing imputation. The contributions
+sparse observations often adopt a two-stage approach, which         are summarized as follows.
+use imputation methods to impute series and then use anomaly           1) This article proposes a novel MoPIN to realize time-
+detection methods to detect anomalies [9]. Obviously, the                  series modeling by making full use of the information
+above approach breaks the connection between the data and the              of time-series patches.
+target of anomaly detection, hindering to accurately identify          2) The MoPIN not only accurately imputes series, but
+anomalies.                                                                 also uses the imputation consistency to achieve anomaly
+   Benefiting from the advantages of deep learning methods                 detection of time series with sparse observations, thus
+in deep modeling of time series, deep learning-based time-                 avoiding the separation between data and tasks.
+series imputation methods have also achieved remarkable                3) Extensive experiments on four real-world benchmarks in
+results [10]. Therefore, deep learning methods are used to                 different fields of series imputation and anomaly detec-
+jointly perform two tasks of imputation and anomaly detection              tion and a real chemical production application case
+to achieve single-stage anomaly detection for sparse obser-                demonstrate the effectiveness of the proposed method.
+vation series. Time-series imputation methods use random                   Specifically, the MoPIN achieved at least 8.05% mean
+masking to train models since the imputation model should                  square error (mse) relative improvement in imputa-
+be robust to random masks. Moreover, due to factors such as                tion and 3.74% F1 relative improvement in anomaly
+the inherent time dependence and dimensional dependence in                 detection.
+time series, different random mask positions in a series will          The rest of this article is organized as follows. Section II
+not cause significant changes in its imputed series. Combined       reviews the related work. Section III introduces the proposed
+with the idea of unsupervised time-series anomaly detection,        MoPIN method. Section IV analyzes the performance of the
+when only normal samples are used for modeling, anomaly             MoPIN through extensive experiments. Section V verifies the
+series are difficult to be accurately reconstructed or predicted.   application effect of the MoPIN using an actual industrial case.
+Meanwhile, for normal time series, the imputed time series          Section VI draws the conclusions of this article.
+with different masks should have consistency. And when the
+series contains anomalies, since the model itself lacks the                              II. R ELATED W ORKS
+ability to recover the anomaly data, it is difficult to achieve        This section reviews recent related works of time-series
+robust imputation under different masks. Therefore, series with     anomaly detection and imputation. And also, the patch-based
+anomalies will have lower imputation consistency than normal        time-series modeling methods are reviewed.
+series, which can be used to combine imputation and anomaly
+detection tasks to achieve anomaly detection of time series
+with sparse observations.                                           A. Unsupervised Time-Series Anomaly Detection
+   In addition, patch-based approach is used to implement              Due to the scarcity of data labels, traditional unsupervised
+series modeling, which is mainly due to its powerful local-         methods often score data points at a timestamp based on
+global modeling capabilities [11]. In the field of time-series      density or distance. The typical method, principal component
+analysis, the patch-based approach provides the time-series         analysis (PCA) [14], achieves anomaly identification by pro-
+model with partial frequency domain information at the input        jecting data points into a low-dimensional space and using
+level, enabling it to achieve better information extraction         statistics as its distance measure [15]. The isolation forest (IF)
+and utilization [12]. Most recent patch-based works use the         [5] divided the data space through iterative partitioning and
+channel-independence approach for series modeling, achieving        calculated the local density of data points to identify anoma-
+better results than channel-mixture modeling. However, this         lies. The recent copula-based outlier detection (COPOD)
+approach ignores the feature relationship between channels          method [16] and the empirical cumulative distribution-based
+[13]. Therefore, this article will adopt the hybrid modeling        outlier detection (ECOD) method [17] determined the anoma-
+approach for patch information, integrating the advantages of       lies by calculating the probability density of data points.
+channel-independence modeling and mixture spatiotemporal            However, although traditional methods can achieve data
+modeling.                                                           anomaly detection faster, they only consider the information of
+16650                                   IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 9, SEPTEMBER 2025
+
+
+
+data points at a single timestamp and ignore the inherent time-     of series [25]. The classic mean imputation method uses the
+dependent characteristics, which hinders accurate anomaly           mean of the series to fill in the missing values. In addi-
+detection.                                                          tion, some works adopt the iterative calculation approaches
+    Benefiting from the powerful feature extraction capability      including soft threshold singular value decomposition, matrix
+of deep learning, Zong et al. [18] combined the traditional         decomposition, and random forest to propose imputation
+density-based method with the deep model and proposed               methods such as soft imputation (SoftImpute) [26], matrix fac-
+the deep autoencoder Gaussian mixture model (DAGMM).                torization imputation (MatrixFactorization) [27], and missing
+However, it still does not consider the data characteristics        forest (MissForest) [28]. However, the above methods have the
+in the time dimension. Recent deep learning-based methods           problem of strong assumptions about mi

@@ -1,0 +1,835 @@
+One Train for Two Tasks: An Encrypted Traffic Classification
+ Framework Using Supervised Contrastive Learning
+ Haozhen Zhang Xi Xiao∗ Le Yu
+ Shenzhen International Graduate Shenzhen International Graduate Nanjing University of Posts and
+ School, Tsinghua University School, Tsinghua University Telecommunications
+ China China China
+ zhang-hz21@mails.tsinghua.edu.cn xiaox@sz.tsinghua.edu.cn yulele08@njupt.edu.cn
+
+ Qing Li Zhen Ling Ye Zhang
+arXiv:2402.07501v1 [cs.LG] 12 Feb 2024
+
+ Peng Cheng Laboratory Southeast University National University of Singapore
+ China China Singapore
+ liq@pcl.ac.cn zhenling@seu.edu.cn e1124294@u.nus.edu
+
+ ABSTRACT ACM Reference Format:
+ As network security receives widespread attention, encrypted traf- Haozhen Zhang, Xi Xiao, Le Yu, Qing Li, Zhen Ling, and Ye Zhang. 2018.
+ One Train for Two Tasks: An Encrypted Traffic Classification Framework
+ fic classification has become the current research focus. However,
+ Using Supervised Contrastive Learning. In Proceedings of Make sure to
+ existing methods conduct traffic classification without sufficiently enter the correct conference title from your rights confirmation emai (Conferconsidering the common characteristics between data samples, lead- ence acronym ’XX). ACM, New York, NY, USA, 14 pages. https://doi.org/
+ ing to suboptimal performance. Moreover, they train the packet- XXXXXXX.XXXXXXX
+ level and flow-level classification tasks independently, which is
+ redundant because the packet representations learned in the packetlevel task can be exploited by the flow-level task. Therefore, in
+ this paper, we propose an effective model named a Contrastive 1 INTRODUCTION
+ Learning Enhanced Temporal Fusion Encoder (CLE-TFE). In par- As advancements in computer network technology continue and
+ ticular, we utilize supervised contrastive learning to enhance the a large number of devices connect to the Internet, user privacy
+ packet-level and flow-level representations and perform graph data becomes increasingly vulnerable to malicious attacks. While enaugmentation on the byte-level traffic graph so that the fine-grained cryption technologies like VPNs and Tor [27] offer protection to
+ semantic-invariant characteristics between bytes can be captured users [31], they can paradoxically serve as tools for attackers to conthrough contrastive learning. We also propose cross-level multi- ceal their identities. Traditional data packet inspection (DPI) methtask learning, which simultaneously accomplishes the packet-level ods have lost effectiveness against encrypted traffic [25]. Designing
+ and flow-level classification tasks in the same model with one a universally effective method to classify an attacker’s network
+ training. Further experiments show that CLE-TFE achieves the activities—such as website browsing or application usage—from
+ best overall performance on the two tasks, while its computational encrypted traffic remains a formidable challenge.
+ overhead (i.e., floating point operations, FLOPs) is only about 1/14 In the past few years, many methods have been proposed to
+ of the pre-trained model (e.g., ET-BERT). We release the code at enhance the capability of encrypted traffic classification techniques.
+ https://github.com/ViktorAxelsen/CLE-TFE. Among them, statistic-based methods [7, 24, 34, 37, 41] generally
+ rely on hand-crafted traffic statistical features and then leverage a
+ CCS CONCEPTS traditional machine learning model for classification. However, they
+ • Security and privacy → Network security; • Information require heavy feature engineering and are susceptible to unreliable
+ systems → Data mining. flows [47]. With the burgeoning of representation learning [15],
+ some methods also use deep learning models to conduct traffic
+ KEYWORDS classification, such as pre-trained language models [18, 23], neu-
+ Traffic Classification, Graph Neural Networks, Contrastive Learning ral networks [19, 47], etc. For several samples with the same data
+ label, there usually exist some common characteristics between
+ ∗ Corresponding author.
+ them. Nevertheless, these methods directly learn representations of
+ statistical features or raw bytes, without considering the potential
+ Permission to make digital or hard copies of all or part of this work for personal or
+ classroom use is granted without fee provided that copies are not made or distributed commonalities between features of different samples, thus cannot
+ for profit or commercial advantage and that copies bear this notice and the full citation sufficiently uncover the semantic-invariant information contained
+ on the first page. Copyrights for components of this work owned by others than the in the data. Therefore, how to leverage common features beauthor(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+ republish, to post on servers or to redistribute to lists, requires prior specific permission tween data to assist the model in learning more robust repreand/or a fee. Request permissions from permissions@acm.org. sentations is a difficult problem. Additionally, current methods
+ Conference acronym ’XX, June 03–05, 2018, Woodstock, NY cannot simultaneously train the packet-level and flow-level traffic
+ © 2018 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ ACM ISBN 978-1-4503-XXXX-X/18/06. . . $15.00 classification tasks on the same model. So, they require at least
+ https://doi.org/XXXXXXX.XXXXXXX two independent training for the flow-level and packet-level tasks,
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haozhen Zhang, Xi Xiao, Le Yu, Qing Li, Zhen Ling, and Ye Zhang
+
+respectively. This is inconvenient and redundant because an infor- 2 PRELIMINARIES
+mative packet representation has been learned while training on Encrypted Traffic Classification. Encrypted traffic classification
+the packet-level task, and there is no need to learn it again from aims to identify the traffic source based on packet information
+scratch on the flow-level task. Consequently, how to utilize the captured by professional software or programs [28]. In this paper,
+potential relation between the two tasks of different levels we only utilize raw bytes for classification and mainly focus on the
+in model training to improve model performance is also a packet-level and flow-level classification tasks. Given a training
+vital challenge. dataset with 𝑁 𝑓 traffic flows (defined by its five-tuple: the source
+ To address the above challenges, in this paper, we propose a and destination IP address, the source and destination ports, and
+novel and simple yet effective model named a Contrastive Learning protocol), 𝑁𝑝 packets, and 𝐶 categories in total, the packet-level
+Enhanced Temporal Fusion Encoder (CLE-TFE) for encrypted traf- classification task aims to classify each unseen test packet sample
+fic classification. We build CLE-TFE based on TFE-GNN [47], and into a predicted category 𝒚 ′ 𝑝 (𝒚𝑝 is the packet ground truth) with
+CLE-TFE consists of two modules: the contrastive learning module a well-trained model 𝑆𝑝 on 𝑁𝑝 packet training samples, where
+and the cross-level multi-task learning module. The contrastive 𝒚 ′ 𝑝 = 0, 1, · · · , 𝐶−1. Similarly, the flow-level classification task aims
+learning module conducts contrastive learning at both the packet to classify each unseen test flow sample into a predicted category
+and flow levels. The packet-level contrastive learning skillfully per- 𝒚 ′ 𝑓 (𝒚 𝑓 is the flow ground truth) with another well-trained model
+forms graph data augmentation on the byte-level traffic graph of
+ 𝑆 𝑓 on 𝑁 𝑓 flow training samples, where 𝒚 ′ 𝑓 = 0, 1, · · · , 𝐶 − 1. Note
+TFE-GNN to better capture fine-grained semantic-invariant reprethat the packet ground truth 𝒚𝑝 is consistent with the ground truth
+sentations between bytes, leading to a robust packet-level representation. On top of this, the flow-level contrastive learning further 𝒚 𝑓 of the flow it belongs to. In this paper, we perform only one
+augments packets in the flow to strengthen the flow-level represen- training on the same model to simultaneously accomplish both
+tation. In particular, we use supervised contrastive learning [13] packet-level and flow-level classification tasks, making 𝑆𝑝 and 𝑆 𝑓
+instead of unsupervised contrastive learning [36] to learn common completely consistent in architecture and parameters (i.e., 𝑆𝑝 ≡ 𝑆 𝑓 ).
+features between samples with the same data label and further im- Temporal Fusion Encoder. The temporal fusion encoder (TFEprove model performance. In addition, in the cross-level multi-task GNN) [47] is a flow-level traffic classification model. It utilizes
+learning module, we use the same model to finish both the packet- point-wise mutual information [42] to construct the (undirected)
+level and the flow-level traffic classification tasks in one training byte-level traffic graph G = {V, E} for each packet, where V is the
+and reveal the cross-level relation between the packet-level and the node set denoting byte values and E is the edge set denoting the
+flow-level tasks: the packet-level task is helpful for the flow-level semantic correlation between bytes (for simplicity, we refer to the
+task. In the experiments, we adopt the ISCX VPN-nonVPN [6] and header and payload byte-level traffic graph of TFE-GNN collectively
+the ISCX Tor-nonTor [14] datasets with 20+ baselines to conduct as the traffic graph). TFE-GNN designs a traffic graph encoder to
+a comprehensive evaluation of CLE-TFE on both the packet-level encode the traffic graph G into the packet-level representation p,
+and the flow-level traffic classification tasks. Elaborately designed which can be described as:
+experiments and results demonstrate that CLE-TFE achieves the
+best overall performance on the two tasks of different levels. Note p = TFE-GNN(G) (1)
+that compared with TFE-GNN, CLE-TFE adds almost no additional
+parameters, and the computational costs are significantly reduced TFE-GNN further leverages long-short term memory (LSTM) [11]
+by nearly half while achieving better model performance (2.4%↑ and to obtain the flow-level representation f:
+5.7%↑ w.r.t. f1-score on the ISCX-VPN and ISCX-nonTor datasets,
+respectively). f = LSTM(p1, p2, · · · , p𝑛 ) (2)
+ To summarize, our main contributions include:
+ where 𝑛 is the flow length, p𝑛 is the 𝑛-th packet-level representation
+ in the flow. We build our model based on TFE-GNN in this paper.
+ • To fully exploit common characteristics between data sam- Contrastive Learning. Contrastive learning is a widely used
+ ples, we propose a simple yet effective model (i.e., CLE-TFE) representation learning method in computer vision that aims to
+ that utilizes supervised contrastive learning. We perform learn semantic-invariant representations by contrasting positive
+ graph data augmentation on the byte-level traffic graph to and negative sample pairs [2, 8, 29, 36]. Generally, most contrastive
+ uncover fine-grained semantic-invariant representations be- learning methods employ various data augmentation on the origitween bytes through contrastive learning. nal data (e.g., color jitter, random flop) to construct two different
+ • To our best knowledge, we are the first to accomplish both augmented views, which are further encoded by a shared encoder.
+ the packet-level and flow-level traffic classification tasks in Moreover, some methods apply contrastive learning to graph reprethe same model with one training through cross-level multi- sentation learning, which leverages graph data augmentation (GDA)
+ task learning with almost no additional parameters. We also to construct the augmented view [26, 39, 43, 50]. Given a minibatch
+ find that the packet-level task benefits the flow-level task. of 𝑁 samples during training, we can obtain two augmented views
+ • We conduct experiments on both the packet-level and flow- containing 2𝑁 augmented samples through data augmentation. Uslevel classification tasks using the ISCX dataset [6, 14]. The ing the shared encoder, we further obtain the embedding vector
+ experimental results show that CLE-TFE achieves the overall z for each augmented sample. In particular, an unsupervised conbest performance. trastive loss [36, 43] is utilized to maximize agreement between the
+One Train for Two Tasks: An Encrypted Traffic Classification Framework Using Supervised Contrastive Learning Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+two augmented views, which can be formulated as: Edge Dropping. We randomly drop edges on the node-dropping
+   graph G ′ , which is equivalent to removing the semantic correlation
+ ∑︁ exp z𝑖 · z 𝑗 (𝑖 ) /𝜏 between two arbitrary bytes in the original byte sequence. Edge
+ LCL = − log Í (3)
+ 𝑘 ∈𝐾 (𝑖 ) exp (z𝑖 · z𝑘 /𝜏) dropping can be formulated as:
+ 𝑖 ∈𝐼
+ GAUG = V ′, 𝑒𝑖 𝑗 ⊙ 𝜌𝑖 𝑗 | 𝑒𝑖 𝑗 ∈ E ′
+  
+where 𝑖 ∈ 𝐼 ≡ {1 . . . 2𝑁 } is the index of an arbitrary augmented (5)
+sample, 𝑗 (𝑖) (the positive) is the index of another augmented sample where 𝜌𝑖 𝑗 ∈ {0, 1} obeys 𝜌𝑖 𝑗 ∼ B (𝑃ED ), denoting whether to drop
+from the same original sample as 𝑖, and 𝐾 (𝑖) ≡ 𝐼 \{𝑖} (Note that edge 𝑒𝑖 𝑗 . 𝑃ED ∈ [0, 1] is the edge dropping ratio, which is a hyper-
+𝐼 \{𝑖, 𝑗 (𝑖)} is the negatives). The symbol · represents the inner prod- parameter controlling the expected amount of dropped edges.
+uct operation and 𝜏 ∈ R + denoted the temperature parameter. In After the augmentations, we obtain the packet-level augmented
+this way, similar samples (i.e., the positive sample pairs) are closer view G𝐴𝑈 𝐺 and its embedding vector:
+in the embedding space, and dissimilar samples (i.e., the negative
+ pAUG = TFE-GNN(G𝐴𝑈 𝐺 ) (6)
+sample pairs) are further apart, resulting in a better representation.
+ Notably, we treat the original traffic graph G as a packet-level
+3 METHODOLOGY anchor view without augmentation for training stability. In Eq. 3,
+ the unsupervised contrastive loss only treats two different views
+3.1 Framework Overview of the same sample as positive sample pairs, which is insufficient.
+As shown in Figure 1, our model consists of two main modules: the Instead, we propose to utilize supervised contrastive loss [13] to
+contrastive learning module (Section 3.2) and the cross-level multi- take advantage of the data labels during training. Given a sample in
+task learning module (Section 3.3). The contrastive learning module a minibatch, the supervised contrastive loss treats all other samples
+contains the packet-level and flow-level contrastive learning mod- with the same data label as positive samples. This significantly
+ules. The packet-level contrastive learning module applies graph increases the number of positive sample pairs and can bring similar
+data augmentation to the traffic graph to construct a packet-level samples closer in the embedding space, yielding a more robust
+augmented view for packet-level contrastive learning. The flow- representation. By incorporating supervision in Eq. 3, the packetlevel contrastive learning module further constructs a flow-level level supervised contrastive loss can be formulated as:
+augmented view by randomly removing packets in the flow, which
+ exp p′𝑖 · p′𝑚 /𝜏
+ ∑︁ −1 ∑︁ 
+is used for flow-level contrastive learning. The cross-level multi- LPCL = log Í (7)
+ ′ ′
+ 
+task learning module leverages the relation between the packet- |𝑀 (𝑖)| 𝑘 ∈𝐾 (𝑖 ) exp p 𝑖 · p 𝑘 /𝜏
+ 𝑖 ∈𝐼 𝑚∈𝑀 (𝑖 )
+level and flow-level tasks to jointly train the two levels’ contrastive
+ where pn′ refers to the embedding vector collection of pAUG and p.
+learning and classification tasks for better representations. 𝑝
+ o
+ 𝑝
+ 𝑀 (𝑖) ≡ 𝑚 ∈ 𝐾 (𝑖) : 𝒚𝑚 = 𝒚𝑖 is the indices of all positive samples
+3.2 Contrastive Learning at Dual Levels of 𝑖. The negative sample selection remains the same as Eq. 3 be-
+Inspired by the powerful representation learning capabilities of cause the performance generally becomes better with increasing
+contrastive learning (Section 2), we propose to utilize it to enhance negatives, as many works suggest [2, 8, 10, 35].
+the packet-level and flow-level representations in TFE-GNN [47], 3.2.2 Flow-level Contrastive Learning. We aim to enhance the model
+which will be detailed in the following two sections. performance further by conducting the flow-level contrastive learn-
+3.2.1 Packet-level Contrastive Learning. Since TFE-GNN uses raw ing task. Based on the packet-level augmented view G𝐴𝑈 𝐺 and its
+bytes to construct the traffic graph, we need to construct the packet- embedding vector pAUG , we augment the traffic flow by randomly
+level augmented view by perturbing the byte sequence, which dropping packets from it, which is equivalent to simulating network
+is not a convenient and direct way. Instead, since the nodes and packet loss and can be formulated as:
+edges on the traffic graph represent byte values and the semantic fAUG = LSTM(pAUG 1 ⊙ 𝜌 1, pAUG 2 ⊙ 𝜌 2, · · · , pAUG𝑛 ⊙ 𝜌𝑛 ) (8)
+correlation between bytes, respectively, directly perturbing nodes
+ where we feed the flow-level augmented view (pAUG 1 ⊙𝜌 1, pAUG 2 ⊙
+or edges on the traffic graph has a finer granularity and can better
+ 𝜌 2, · · · , pAUG𝑛 ⊙ 𝜌𝑛 ) into LSTM and obtain its embedding vector
+uncover semantic-invariant representations between bytes through
+ fAUG . 𝜌𝑖 ∈ {0, 1} obeys 𝜌𝑖 ∼ B (𝑃 PD ), which denotes whether to
+contrastive learning, so we choose to use graph data augmentation
+ drop packet pAUG𝑖 . 𝑃 PD ∈ [0, 1] is the packet dropping ratio, which
+to perturb and construct the packet-level augmented view on the
+ is a hyper-parameter controlling the expected amount of dropped
+traffic graph [43], which includes node dropping and edge dropping.
+ packets in a flow. The flow-level representation f also acts as the
+ Node Dropping. Given the traffic graph G, we randomly drop
+ embedding vector of the flow-level anchor view (p1, p2, · · · , p𝑛 )
+nodes along with their connecting edges with a certain probability,
+ for stable training. Similarly, we also adopt the supervised conwhich is equivalent to deleting the corresponding bytes in the
+ trastive loss [13] in the flow-level contrastive learning, which can
+original byte sequence. Node dropping can be formulated as:
+ be formulated as:
+ G ′ = {𝑣𝑖 ⊙ 𝜌𝑖 | 𝑣𝑖 ∈ V} , 𝑒𝑖 𝑗 ⊙ 𝜌𝑖 | 𝑒𝑖 𝑗 ∈ E = {V ′, E ′ } (4)
+  
+ ∑︁ −1 ∑︁ exp (f ′𝑖 · f ′𝑛 /𝜏)
+ LFCL = log Í ′ ′ (9)
+where 𝜌𝑖 ∈ {0, 1} is drawn from a Bernoulli distribution 𝜌𝑖 ∼ 𝑖 ∈𝐼
+ |𝑁 (𝑖)|
+ 𝑛∈𝑁 (𝑖 ) 𝑘 ∈𝐾 (𝑖 ) exp (f 𝑖 · f 𝑘 /𝜏)
+B (𝑃ND ), which denotes whether to drop node 𝑣𝑖 with its connecting
+edges 𝑒𝑖 𝑗 . 𝑃 ND ∈ [0, 1] is the node dropping ratio, which is a hyper- where f ′ refers to the embedding vector collection of f
+ n o AUG and f.
+ 𝑓 𝑓
+parameter controlling the expected amount of dropped nodes. 𝑁 (𝑖) ≡ 𝑛 ∈ 𝐾 (𝑖) : 𝒚𝑛 = 𝒚𝑖 is the indices of all positive samples
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haozhen Zhang, Xi Xiao, Le Yu, Qing Li, Zhen Ling, and Ye Zhang
+
+ Cross-level Multi-task Learning
+
+ Temporal Fusion Encoder Parameter Temporal Fusion Encoder
+ Flow-level Anchor View
+ Flow-level Anchor View
+
+ Classification Head
+ Classification Head
+ Long Short-term Memory
+
+ (TFE-GNN)
+
+ Packet-level
+ Packet-level Representation (LSTM)
+
+ Flow-level
+ ......
+ ......
+ Packet-level Anchor View
+ ...... ...
+ .. .. Packet-level Representation
+ Flow-level Representation
+ Augmentation
+
+ Parameter
+ Shared
+
+ Shared
+ Graph
+
+ Flow-level Augmented View ...
+
+ Augmentation
+ Packet-level Representation Packet Label Flow Label Flow-level Representation
+ ......
+
+ Flow
+ (TFE-GNN)
+
+ X
+ Flow-level Augmented View Flow-level Augmented View
+
+ Long Short-term Memory
+ Packet-level Augmented View Packet-level Representation (LSTM)
+ ...... ...... ......
+ .. ..
+ Packet-level Contrastive Learning Flow-level Contrastive Learning
+
+ Figure 1: CLE-TFE Model Architecture
+
+of 𝑖. Such learning paradigms can also help the model capture the 3.4 Training Objective
+common characteristics of the traffic flow through augmentation, We first give the formal formula description of the flow-level and
+leading to a robust flow-level representation. the packet-level classification task. To conduct the flow-level classification task, we use the flow-level classification head to perform a
+ non-linear transformation on the flow-level representation 𝑓 :
+3.3 Cross-level Multi-task Learning f̂ = w𝑇𝑓 2 PReLU(w𝑇𝑓 1 f + b 𝑓 1 ) + b 𝑓 2 (10)
+The Packet-level Classification Task Extension. Because TFE-
+GNN [47] can encode each packet into a high-dimensional vector where PReLU [9] is the activation function. w 𝑓 1, w 𝑓 2 and b 𝑓 1, b 𝑓 2
+independently, we can easily extend it to the packet-level classifi- are the weights and biases of the flow-level classification head. The
+cation task based on the flow-level classification task. As shown flow-level classification task can be further described as:
+in Figure 1, we feed the high-dimensional packet vectors p into an
+additional packet-level classification head, which is a multi-layer LFCLS = CE( f̂, 𝒚 𝑓 ) (11)
+perception (MLP), to conduct the packet-level classification task. where CE(·) is the cross entropy loss function. Similarly, the packet-
+Cross-level Relation. Since a flow is composed of several pack- level classification task can be written as:
+ets, a better packet representation should facilitate learning the
+flow representation. Using the original design of TFE-GNN [47], p̂ = w𝑇𝑝2 PReLU(w𝑇𝑝1 p + b𝑝1 ) + b𝑝2 (12)
+the traffic graph encoder, which is responsible for encoding packet
+vectors p, can only be optimized by receiving cross-level supervi- LPCLS = CE( p̂, 𝒚𝑝 ) (13)
+sion signals from the flow-level classification and contrastive tasks.
+However, the cross-level supervision signals from flow-level tasks where 𝒚𝑝 is consistent with the flow label it belongs to. w𝑝1, w𝑝2
+cannot sufficiently optimize the packet vectors p, resulting in subop- and b𝑝1, b𝑝2 are the weights and biases of the packet-level classificatimal performance. In other words, packet vectors lack supervision tion head. In summary, we propose the overall end-to-end training
+signals that can optimize them directly. Intuitively, the packet-level objective of CLE-TFE as follows:
+classification and contrastive tasks can naturally play this role, L = LPCLS + LFCLS + 𝛼 LPCL + 𝛽LFCL (14)
+which gives the packet vectors p an additional constraint in their
+embedding space so that the packet vectors p can be optimized where 𝛼, 𝛽 ∈ [0, 1] are the coefficients that control the contribution
+more sufficiently, leading to a better flow representation f. There- of the packet-level and flow-level contrastive tasks, respectively.
+fore, leveraging this cross-level relation, we can simultaneously In this way, we can complete the flow-level and packet-level
+perform multi-task learning on both the flow-level and packet-level tasks in the same model with one training. The trained model can
+tasks, which unifies the two classical traffic classification tasks into be directly leveraged to evaluate the flow-level and packet-level
+one model with one training. The cross-level multi-task learning classification tasks without two independent training, which is
+module also improves the overall model performance, which is convenient and reduces computing resource consumption. We will
+mutually beneficial. further analyze the computational costs of CLE-TFE in Section 4.5.
+One Train for Two Tasks: An Encrypted Traffic Classification Framework Using Supervised Contrastive Learning Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+4 EXPERIMENTS conduct all experiments with PyTorch and Deep Graph Library.
+ The experimental results are reported as the mean over five runs
+4.1 Experimental Settings
+ on an NVIDIA RTX 3080 GPU.
+4.1.1 Dataset. To thoroughly evaluate the superiority of CLE-TFE As for evaluation metrics, we use Overall Accuracy (AC), Preon the packet-level and flow-level traffic classification tasks, we se- cision (PR), Recall (RC), and Macro F1-score (F1). We compare
+lect the ISCX VPN-nonVPN [6] and ISCX Tor-nonTor [14] datasets. CLE-TFE with the flow-level and packet-level methods for a com-
+The ISCX VPN-nonVPN dataset is a collection of two datasets: the prehensive comparison. The comparison baselines include Flow-
+ISCX-VPN and ISCX-nonVPN datasets. The ISCX-VPN dataset con- level Traffic Classification Methods (i.e., AppScanner [34], K-FP
+tains traffic collected over virtual private networks (VPNs), which (K-Fingerprinting) [7], FlowPrint [37], CUMUL [24], GRAIN [45],
+are commonly used for accessing blocked websites or services. Due FAAR [20], ETC-PS [41], FS-Net [19], DF [33], EDC [16], FFB [46],
+to obfuscation technology, this kind of traffic can be challenging to MVML [5], ET-BERT [18], GraphDApp [32], ECD-GNN [12], TFEdetect. In contrast, the ISCX-nonVPN dataset contains regular traf- GNN [47]) and Packet-level Traffic Classification Methods (i.e.,
+fic not collected over VPNs. The ISCX Tor-nonTor dataset consists Securitas [44], 2D-CNN [17], 3D-CNN [48], DeepPacket (DP) [21],
+of the ISCX-Tor and ISCX-nonTor datasets. The ISCX-Tor dataset BLJAN [22], EBSNN [40]).
+involves traffic collected over the onion router (Tor), making its traf- For the rest of the experiment section, we will evaluate CLE-TFE
+fic difficult to trace, whereas the ISCX-nonTor is a regular dataset from the following research questions:
+not collected over Tor. RQ1: How does CLE-TFE perform on the packet-level and flow-
+ In the experiment, we divide the traffic data in the ISCX VPN- level tasks? (Section 4.2)
+nonVPN and ISCX Tor-nonTor datasets into six and eight cate- RQ2: How much does each module of CLE-TFE contribute to the
+gories according to the type of traffic in the datasets following [47]. model performance? (Section 4.3)
+We conduct all experiments independently on these four datasets RQ3: How discriminative are the learned packet-level and flow-
+(i.e., ISCX-VPN, ISCX-NonVPN, ISCX-Tor, and ISCX-NonTor). The level representations in the embedding space? (Section 4.4)
+dataset statistics and category details are given in Appendix E, and RQ4: How computationally expensive is CLE-TFE? (Section 4.5)
+we describe the threat model and assumptions in Appendix A. RQ5: How sensitive is CLE-TFE to hyper-parameters? (Section 4.6)
+4.1.2 Pre-processing. For each dataset, we use SplitCap to obtain
+bidirectional flows from each pcap file. Due to the limited num-
+ 4.2 Comparison Experiments (RQ1)
+ber of flows in the ISCX-Tor dataset, we enrich traffic flows by
+dividing each flow into 60-second non-overlapping blocks in our The comparison results of the flow-level task and the packet-level
+experiments [30]. Following [47], we filter out traffic flows without task on the ISCX datasets are shown in Table 1 and 2, respectively.
+payload or that surpass a length of 10000. Such flows are usually Flow-level Classification Results. According to Table 1, CLEused to establish connections between two communicating enti- TFE achieves the best results w.r.t. all the metrics on the ISCX
+ties or result from temporary network failures, which have little datasets. Compared with traditional statistical feature methods, our
+useful information for classification. As for each packet in a traffic approach surpasses them by a large margin due to the powerful
+flow, we first remove bad packets and retransmission packets. Then, expressive ability of graph neural networks. As for deep learning
+we remove the Ethernet header, IP addresses, and port numbers methods, our method still has obvious advantages. Among these
+to protect sensitive information while eliminating the potential methods, the performance of ET-BERT [18] is the closest to that
+interference it brings. After the above processing, we only keep the of CLE-TFE, which benefits from its large number of parameters
+first 15 packets of a traffic flow at most to ensure relatively smaller and the pretraining on large-scale datasets. But at the same time,
+computation costs, which is enough to achieve good performance. its computational overhead is relatively large. Especially, CLE-TFE
+ Since our method needs to perform both the flow-level and improves the performance of TFE-GNN [47] by a significant marpacket-level classification tasks in one training, we first adopt strati- gin, which verifies the effectiveness of our elaborately designed
+fied sampling to partition the flow-level training and testing dataset contrastive learning scheme.
+into 9:1 according to the number of traffic flows for all datasets. All Packet-level Classification Results. From Table 2, CLE-TFE
+packets in the flow-level training and testing datasets are directly reaches the best results on the ISCX-nonVPN, ISCX-Tor, and ISCXused as the packet-level training and testing datasets, respectively. nonTor datasets. Securitas [44], which is a traditional packet clas-
+The category of each packet is consistent with that of the traffic sification method, performs much worse than CLE-TFE on the
+flow it belongs to. Note that independent packets can also be used encrypted traffic such as the ISCX-VPN and ISCX-Tor datasets,
+to evaluate the packet-level task. Here, for convenience, the packets but only slightly worse than CLE-TFE on the ISCX-NonVPN and
+in a traffic flow are directly used for evaluation. ISCX-NonTor datasets, which illustrates the superior representation capability of CLE-TFE on encrypted traffic. Especially on the
+4.1.3 Implementation Details and Baselines. We use TFE-GNN [47] ISCX-VPN dataset, CLE-TFE is slightly weaker than EBSNN [40] on
+as the packet representation encoder. We set the max packet number the packet-level classification task. It’s mainly because EBSNN [40]
+within a flow (i.e., flow length) to 15. The edge dropping ratio 𝑃 ED only conducts the packet-level classification task independently,
+and node dropping ratio 𝑃ND are set to 0.05 and 0.1, respectively. reducing the potential negative impact brought by the flow-level
+The packet dropping ratio 𝑃 PD is 0.6, and the temperature coefficient classification task. However, it is more difficult for CLE-TFE to op-
+𝜏 is 0.07. Other hyper-parameters depend on the specific dataset, timize the flow-level and packet-level tasks simultaneously in one
+and we detail them in Appendix D. We implement CLE-TFE and training, so the results of the two tasks will have some trade-offs.
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haozhen Zhang, Xi Xiao, Le Yu, Qing Li, Zhen Ling, and Ye Zhang
+
+Table 1: Experimental Results on ISCX VPN-nonVPN and ISCX Tor-nonTor Datasets w.r.t. Flow-level Classification Task.
+(Partial Results Are Taken From [47])
+
+ Dataset ISCX-VPN ISCX-nonVPN ISCX-Tor ISCX-nonTor
+ Model AC PR RC F1 AC PR RC F1 AC PR RC F1 AC PR RC F1
+ AppScanner [34] 0.8889 0.8679 0.8815 0.8722 0.7576 0.7594 7465 0.7486 0.7543 0.6629 0.6042 0.6163 0.9153 0.8435 0.8140 0.8273
+ K-FP [7] 0.8713 0.8750 0.8748 0.8747 0.7551 0.7478 0.7354 0.7387 0.7771 0.7417 0.6209 0.6313 0.8741 0.8653 0.7792 0.8167
+ FlowPrint [37] 0.8538 0.7451 0.7917 0.7566 0.6944 0.7073 0.7310 0.7131 0.2400 0.0300 0.1250 0.0484 0.5243 0.7590 0.6074 0.6153
+ CUMUL [24] 0.7661 0.7531 0.7852 0.7644 0.6187 0.5941 0.5971 0.5897 0.6686 0.5349 0.4899 0.4997 0.8605 0.8143 0.7393 0.7627
+ GRAIN [45] 0.8129 0.8077 0.8109 0.8027 0.6667 0.6532 0.6664 0.6567 0.6914 0.5253 0.5346 0.5234 0.7895 0.6714 0.6615 0.6613
+ FAAR [20] 0.8363 0.8224 0.8404 0.8291 0.7374 0.7509 0.7121 0.7252 0.6971 0.5915 0.4876 0.4814 0.9103 0.8253 0.7755 0.7959
+ ETC-PS [41] 0.8889 0.8803 0.8937 0.8851 0.7273 0.7414 0.7133 0.7208 0.7486 0.6811 0.5929 0.6033 0.9365 0.8700 0.8311 0.8486
+ FS-Net [19] 0.9298 0.9263 0.9211 0.9234 0.7626 0.7685 0.7534 0.7555 0.8286 0.7487 0.7197 0.7242 0.9278 0.8368 0.8254 0.8285
+ DF [33] 0.8012 0.7799 0.8152 0.7921 0.6742 0.6857 0.6717 0.6701 0.6514 0.4803 0.4767 0.4719 0.8568 0.8003 0.7415 0.7590
+ EDC [16] 0.7836 0.7747 0.8108 0.7888 0.6970 0.7153 0.7000 0.6978 0.6400 0.4980 0.4528 0.4504 0.8692 0.7994 0.7411 0.7451
+ FFB [46] 0.8304 0.8714 0.8149 0.8335 0.7020 0.7274 0.6945 0.7050 0.6343 0.4870 0.5203 0.4952 0.8954 0.7545 0.7430 0.7430
+ MVML [5] 0.6491 0.7231 0.6198 0.6151 0.5126 0.5751 0.4707 0.4806 0.6343 0.3914 0.4104 0.3752 0.7235 0.5488 0.5512 0.5457
+ ET-BERT [18] 0.9532 0.9436 0.9507 0.9463 0.9167 0.9245 0.9229 0.9235 0.9543 0.9242 0.9606 0.9397 0.9029 0.8560 0.8217 0.8332
+ GraphDApp [32] 0.6491 0.5668 0.6103 0.5740 0.4495 0.4230 0.3647 0.3614 0.4286 0.2557 0.2509 0.2281 0.6936 0.5447 0.5398 0.5352
+ ECD-GNN [12] 0.1111 0.0185 0.1667 0.0333 0.0606 0.0101 0.1667 0.0190 0.0571 0.0071 0.1250 0.0135 0.9078 0.8015 0.8168 0.7977
+ TFE-GNN [47] 0.9591 0.9526 0.9593 0.9536 0.9040 0.9316 0.9190 0.9240 0.9886 0.9792 0.9939 0.9855 0.9390 0.8742 0.8335 0.8507
+ CLE-TFE 0.9813 0.9771 0.9762 0.9761 0.9286 0.9396 0.9391 0.9389 1.0000 1.0000 1.0000 1.0000 0.9554 0.9009 0.9019 0.8994
+
+ Table 2: Experimental Results on ISCX VPN-nonVPN and ISCX Tor-nonTor Datasets w.r.t. Packet-level Classification Task.
+
+ Dataset ISCX-VPN ISCX-nonVPN ISCX-Tor ISCX-nonTor
+ Model AC PR RC F1 AC PR RC F1 AC PR RC F1 AC PR RC F1
+ Securitas-C4.5 [44] 0.8174 0.8128 0.8271 0.8194 0.8833 0.8820 0.8842 0.8827 0.8848 0.8669 0.8519 0.8577 0.8475 0.8336 0.8501 0.8413
+ Securitas-SVM [44] 0.6447 0.6727 0.6488 0.6085 0.7888 0.8096 0.7750 0.7817 0.8244 0.7749 0.8320 0.7999 0.7274 0.6970 0.7819 0.7327
+ Securitas-Bayes [44] 0.5796 0.6334 0.5703 0.5271 0.7292 0.7974 0.6608 0.7061 0.7681 0.7643 0.6500 0.6639 0.6884 0.6868 0.6494 0.6384
+ 2D-CNN [17] 0.6595 0.7117 0.5601 0.5444 0.4287 0.7166 0.4075 0.3653 0.7641 0.5933 0.5814 0.5657 0.4380 0.5710 0.3515 0.3521
+ 3D-CNN [48] 0.5480 0.6420 0.5428 0.4971 0.6130 0.7153 0.6422 0.6223 0.7096 0.8240 0.6498 0.6580 0.6746 0.7438 0.4881 0.5062
+ DP-SAE [21] 0.7137 0.7187 0.6662 0.6777 0.7241 0.7431 0.7626 0.7451 0.7598 0.7791 0.6490 0.6567 0.7156 0.6257 0.5850 0.5913
+ DP-CNN [21] 0.8508 0.8309 0.8307 0.8303 0.7467 0.7597 0.7774 0.7669 0.9388 0.9600 0.9347 0.9452 0.8021 0.7360 0.6876 0.6971
+ BLJAN [22] 0.6379 0.6423 0.7723 0.5957 0.6914 0.6741 0.7727 0.6960 0.9913 0.9953 0.9933 0.9942 0.5856 0.5992 0.6599 0.5674
+ EBSNN-GRU [40] 0.9588 0.9604 0.9569 0.9584 0.8266 0.8618 0.8537 0.8440 0.9925 0.9880 0.9958 0.9918 0.9120 0.8622 0.8398 0.8501
+ EBSNN-LSTM [40] 0.9583 0.9592 0.9587 0.9584 0.8798 0.8991 0.9020 0.9000 0.9992 0.9995 0.9988 0.9992 0.9120 0.8646 0.8453 0.8532
+ CLE-TFE 0.9480 0.9445 0.9425 0.9433 0.8853 0.9039 0.9033 0.9027 0.9996 0.9997 0.9998 0.9997 0.9240 0.8795 0.8544 0.8649
+
+ From the overall perspective of the flow-level and packet-level the packet-level representation. We will further analyze the learned
+tasks, CLE-TFE reaches the best comprehensive performance. representation of both levels in Section 4.4.
+ As for graph augmentation, both header and payload graph perturbations are conducive to improving the model performance, but
+4.3 Ablation Study (RQ2) the effect of header graph perturbation is slightly greater. This may
+For a clear understanding of CLE-TFE architecture design, we con- be because the header contains crucial data packet attributes, while
+duct a comprehensive ablation study on the ISCX-VPN dataset, and the payload only describes the content of that. The perturbation of
+the results are shown in Table 3. From Table 3, we can conclude that attributes has a greater and more aggressive impact on the model
+the packet-level and flow-level contrastive loss can improve the performance than the perturbation of the content, so it can force the
+classification performance of the corresponding level task. However, model to learn a more robust representation during the optimizajointly training the two-level tasks does not benefit them simulta- tion process to resist the influence of such perturbation. Besides,
+neously. The packet-level classification & contrastive tasks have a we also give the results of using unsupervised contrastive learning
+positive effect on the flow-level classification task, but conversely, loss (i.e., no label used), which is much worse than ours. It indicates
+the flow-level classification & contrastive tasks have a slightly neg- that choosing the appropriate positive and negative sample pairs in
+ative effect on the packet-level classification task. The underlying contrastive learning can greatly improve the model’s performance.
+reason is that the packet-level classification & contrastive tasks In short, CLE-TFE achieves the best results compared to various
+enable the model to learn a more discriminative packet-level repre- variants w.r.t. the average performance of the packet-level and
+sentation, whereby the flow-level representation will also benefit flow-level tasks. More ablation study results are in Appendix B.
+from this and become more robust. However, the flow-level classification & contrastive tasks optimize the flow-level representation,
+which cannot directly have a positive impact on the packet-level
+representation and may even slightly do harm to the learning of
+One Train for Two Tasks: An Encrypted Traffic Classification Framework Using Supervised Contrastive Learning Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+ Table 3: Ablation Study of CLE-TFE on the ISCX-VPN Dataset
+
+ Tasks Flow-level Classification Task Packet-level Classification Task Average on the Two Tasks
+ Variants AC PR RC F1 AC PR RC F1 AC PR RC F1
+ w/o Flow-level Classification Loss - - - - 0.9539 0.9533 0.9492 0.9507 0.4770 0.4767 0.4746 0.4754
+ w/o Flow-level Contrastive Loss 0.9743 0.9744 0.9684 0.9710 0.9426 0.9386 0.9349 0.9364 0.9585 0.9565 0.9517 0.9537
+ w/o Flow-level Classification & Contrastive Loss - - - - 0.9548 0.9559 0.9498 0.9522 0.4774 0.4780 0.4749 0.4761
+ w/o Packet-level Classification Loss 0.9696 0.9642 0.9624 0.9625 - - - - 0.4848 0.4821 0.4812 0.4763
+ w/o Packet-level Contrastive Loss 0.9766 0.9738 0.9740 0.9735 0.9325 0.9312 0.9242 0.9271 0.9546 0.9525 0.9491 0.9503
+ w/o Packet-level Classification & Contrastive Loss 0.9474 0.9366 0.9373 0.9354 - - - - 0.4737 0.4683 0.4687 0.4677
+ w/o Packet-level Header Graph Aug 0.9719 0.9692 0.9651 0.9669 0.9387 0.9343 0.9315 0.9328 0.9553 0.9518 0.9483 0.9499
+ w/o Packet-level Payload Graph Aug 0.9790 0.9774 0.9751 0.9760 0.9422 0.9389 0.9358 0.9369 0.9606 0.9582 0.9555 0.9565
+ w/o Packet-level Header & Payload Graph Aug 0.9766 0.9736 0.9764 0.9748 0.9434 0.9382 0.9394 0.9384 0.9600 0.9559 0.9579 0.9566
+ w/ Unsupervised Contrastive Loss (No Label Used) 0.9228 0.9208 0.9183 0.9189 0.8790 0.8725 0.8592 0.8651 0.9009 0.8967 0.8888 0.8920
+ CLE-TFE 0.9813 0.9771 0.9762 0.9761 0.9480 0.9445 0.9425 0.9433 0.9647 0.9608 0.9594 0.9597
+
+4.4 Analysis on the Learned Flow-level and
+ Packet-level Representations (RQ3)
+To reveal why contrastive learning can help the model learn more
+robust representations and how packet-level and flow-level tasks
+affect each other in joint training, we conduct t-SNE visualization
+of the packet-level and flow-level representations on the ISCX-VPN
+test dataset, and the results are shown in Figure 2.
+ Intra-level Relation. From Figure 2a and 2c, we can find that
+the flow-level contrastive learning (CL) task obviously brings the (a) Flow Reps (Default) (b) Packet Reps (Default)
+flow-level sample representations of the same category closer in
+the embedding space, thus making the decision boundary between
+samples of different categories clearer and improving the robustness
+of the model. We can draw similar conclusions from Figure 2b and
+2d. Since the number of packets is larger than that of flows, we can
+intuitively see that the packet-level contrastive learning (CL) task
+widens the average sample distance of different categories in the
+embedding space. However, in Figure 2d, the decision boundary
+between samples of different categories appears more blurred.
+ (c) Flow Reps (w/o CL Task) (d) Packet Reps (w/o CL Task)
+ Cross-level Relation. We can obtain some insights from Figure
+2e and 2f. To a certain extent, the packet-level task helps the model
+learn a more robust flow-level representation, which is similar to
+narrowing the distance between samples of the same category in
+the embedding space in supervised contrastive learning. However,
+the flow-level task has no obvious positive effect on the packet-level
+representation. More visualization results are in Appendix ??.
+
+4.5 Computational Cost and Model Parameter
+ (e) Flow Reps (w/o Packet Tasks) (f) Packet Reps (w/o Flow Tasks)
+ Analysis (RQ4)
+We evaluate the computational costs of CLE-TFE using the floating Figure 2: t-SNE Visualization w.r.t. the Learned Flow-level
+point operations (FLOPs) and the model parameters and compare and Packet-level Representations (Reps) on the ISCX-VPN
+CLE-TFE with ET-BERT [18], TFE-GNN [47], and CLE-TFE without Test Dataset (The Digit and Its Coordinate Position Indicate
+the augmentation and the calculation of contrastive loss (CLE-TFE Dataset Category Index and Its Sample Centroid)
+w/o AUG&CL). Figure 3 shows the results.
+ Based on Figure 3, we can draw several conclusions. (1) ET-BERT,
+which is a pre-trained model, has the largest FLOPs and parameters,
+while TFE-GNN is much smaller than ET-BERT. (2) Since CLE-TFE
+only needs a shorter flow length to achieve good results, CLE-TFE
+has smaller FLOPs than TFE-GNN. Furthermore, the parameters small computational cost. (3) The augmentation and contrastive loss
+of CLE-TFE only increase slightly compared to TFE-GNN (caused in CLE-TFE do not add additional parameters, and the additional
+by the packet-level classification head), which ensures a relatively computational costs brought to CLE-TFE are also very small.
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haozhen Zhang, Xi Xiao, Le Yu, Qing Li, Zhen Ling, and Ye Zhang
+
+ 10000 FLOPs 80 Parameters using packet length and time delay sequences, then leverages multi-
+ 8000 layer perceptions for traffic identification. EDC [16] utilizes packet
+
+ Parameters(M)
+ 60
+FLOPs(M)
+
+ 6000 header properties (e.g., protocol types, packet length) to serve as
+ 40
+ 4000 inputs for MLPs. RBRN [49], DF [33], and FS-Net [19] all use sta-
+ 2000 20 tistical feature sequences (e.g., packet length sequences) as inputs
+ 0 ET-BERTTFE-GNNCLE-TFE CLE-TFE 0 ET-BERT TFE-GNN CLE-TFE CLE-TFE for convolutional neural networks (CNNs) or recurrent neural net-
+ (w/o AUG&CL) (w/o AUG&CL) works (RNNs). There are also some methods using raw bytes as
+ Models Models
+ features. FFB [46] utilizes raw bytes and packet length sequences
+ (a) FLOPs(M) (b) Model Parameters(M) as inputs for CNNs and RNNs. EBSNN [40] combines RNNs with
+ Figure 3: Results of Computational Cost Analysis the attention mechanism to process header and payload byte segments. ET-BERT [18] conducts pre-training tasks on large-scale
+ traffic datasets to learn a powerful raw byte representation, which
+4.6 Sensitivity Analysis (RQ5)
+ is time-consuming and expensive. Graph neural networks (GNNs)
+To investigate the influence of hyper-parameters on model perfor- are another model that can be used for traffic classification tasks.
+mance, we conduct sensitivity analysis w.r.t. flow-level contrastive GraphDApp [32] builds traffic interaction graphs from traffic bursts
+learning (cl) ratio 𝛽, packet-level cl ratio 𝛼, edge dropping ratio and uses GNNs for representation learning. Huoh et al. [12] gen-
+𝑃ED , and node dropping ratio 𝑃ND on the ISCX-VPN dataset, and erate edges based on the chronological order of packets in a flow.
+the results are shown in Figure 4. TFE-GNN [47] employs point-wise mutual information [42] to con-
+ Flow-level CL Ratio 𝛽. From Figure 4a, increasing the flow- struct byte-level traffic graphs and designs a traffic graph encoder
+level cl ratio can enhance the performance of the flow-level task but for feature extraction. These methods conduct the traffic classificahas little effect on the packet-level task. Packet-level CL Ratio tion task at the flow level, which cannot benefit from the cross-level
+𝛼. From Figure 4b, increasing the packet-level cl ratio can make relation with the packet-level classification task (Sec 4.3, 4.4).
+the packet-level task perform better, but it will also fluctuate the Packet-level Traffic Classification Methods. KISS [4] extracts
+performance of the flow-level task. Edge Dropping Ratio 𝑃ED . statistical signatures of payload to train SVM for UDP packet classi-
+From Figure 4c, we can conclude that a small edge dropping ratio fication. HEDGE [1] is a threshold-based method using randomness
+is enough to make the model achieve superior results, while a large tests of payload to classify a single packet without accessing the enone may introduce too much noise and cause model performance tire stream. Securitas [44] generates n-grams for raw bytes and utidegradation. Node Dropping Ratio 𝑃 ND . From Figure 4d, we can lizes Latent Dirichlet Allocation (LDA) to form protocol keywords
+find that node dropping ratio has a greater impact on the model as features, followed by SVM, C4.5 decision tree, or Bayes netperformance than edge dropping ratio because deleting a node will work for packet classification. 2D-CNN [17] and 3D-CNN [48] treat
+also delete the edges connected to it. But generally speaking, a packet bytes as pixel values and convert them into images, which
+small ratio is preferred to reach a better f1-score. More sensitivity are further fed into 2D-CNNs and 3D-CNNs for packet classification.
+analysis results are in Appendix C. DP [21] leverages CNNs and autoencoders to extract byte features.
+ BLJAN [22] explores the correlation between packet bytes and their
+5 RELATED WORK labels and encodes them into a joint embedding space to classify
+Flow-level Traffic Classification Methods. Many flow-level traf- packets. EBSNN [40] and ET-BERT [18] can also perform packet
+fic classification methods have been proposed. classification. But, they still require two independent training or
+ • Statistical Feature Based Methods. Many methods use statistical fine-tuning to conduct flow-level and packet-level tasks, which are
+features to represent packet properties and utilize traditional ma- computationally expensive. PacRep [23] leverages triplet loss [29]
+chine learning models for classification. AppScanner [34] extracts without data augmentation and jointly optimizes multiple packetfeatures from traffic flows based on bidirectional flow characteris- level tasks to learn a better packet representation. However, it is
+tics. CUMUL [24] uses cumulative packet length as its feature, while still based on a single packet level, and the transformer-based [38]
+GRAIN [45] uses payload length. ETC-PS [41] strengthens packet pre-trained encoder is very computationally intensive.
+length sequences by applying the path signature theory, and Liu et
+al. [20] uses wavelet decomposition to exploit them. Hierarchical
+clustering is also leveraged for feature extraction by Conti et al. [3].
+ • Fingerprinting Matching Based Methods. Fingerprinting denotes 6 CONCLUSION AND FUTURE WORK
+traffic characteristics and is also used in traffic identification. Flow- In this paper, we propose a simple yet effective model named CLE-
+Print [37] generates traffic fingerprints by creating correlation TFE that uses supervised contrastive learning to obtain more robust
+graphs that compute activity values between destination IPs. K- packet-level and flow-level representations. In particular, we per-
+FP [7] uses the random forest to construct fingerprints and identifies form graph data augmentation on the byte-level traffic graph of
+unknown samples through k-nearest neighbor matching. These TFE-GNN to uncover fine-grained semantic-invariant representatwo methods cannot encode an independent packet into a high- tions between bytes through contrastive learning. Through crossdimensional vector, thus failing in packet-level classification tasks. level multi-task learning, we can perform the packet-level and
+ • Deep Learning Based Methods. Deep learning has demonstrated flow-level classification tasks in the same model with one training.
+powerful learning abilities, and many traffic classification meth- The experimental results show that CLE-TFE reaches the overall
+ods are based on it. MVML [5] extracts local and global features best performance on the two tasks with slight computational costs.
+One Train for Two Tasks: An Encrypted Traffic Classification Framework Using Supervised Contrastive Learning Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+ Flow-level CL Ratio Packet-level CL Ratio Edge Dropping Ratio 0.980 Node Dropping Ratio
+ 0.98 0.975 0.975
+ 0.97 0.970 0.970
+ 0.97 0.965 0.965
+ 0.96
+ F1-Score
+
+ F1-Score
+
+ F1-Score
+
+ F1-Score
+ Flow-level Task Flow-level Task 0.960 Flow-level Task 0.960 Flow-level Task
+ 0.96 Packet-level Task 0.95 Packet-level Task 0.955 Packet-level Task 0.955 Packet-level Task
+ 0.950 0.950
+ 0.95 0.94 0.945
+ 0.940 0.945
+ 0.94 0.93 0.935 0.940
+ 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.000.050.100.150.200.250.30 0.000.050.100.150.200.250.30
+ Flow-level CL Ratio Packet-level CL Ratio Edge Dropping Ratio Node Dropping Ratio
+ (a) Flow-level CL Ratio 𝛽 (b) Packet-level CL Ratio 𝛼 (c) Edge Dropping Ratio 𝑃 ED (d) Node Dropping Ratio 𝑃 ND
+
+Figure 4: Model Sensitivity Analysis w.r.t. Flow-level CL Ratio 𝛽, Packet-level CL Ratio 𝛼, Edge Dropping Ratio 𝑃ED , and Node
+Dropping Ratio 𝑃ND on the ISCX-VPN Dataset (The shallow lines are attained by smoothing the dark plotted lines)
+
+ In the future, we will continue to pursue research on the fol- REFERENCES
+lowing several topics: (1) Learnable Graph Augmentation. The [1] Fran Casino, Kim-Kwang Raymond Choo, and Constantinos Patsakis. 2019.
+graph augmentation is non-trainable, which may give sub-optimal HEDGE: Efficient Traffic Classification of Encrypted and Compressed Packets.
+ IEEE Transactions on Information Forensics and Security 14, 11 (2019), 2916–2926.
+results. (2) Hard Negative Sample Mining in Contrastive Learn- [2] Ting Chen, Simon Kornblith, Mohammad Norouzi, and Geoffrey Hinton. 2020.
+ing. Although we utilize supervised contrastive learning to increase A Simple Framework for Contrastive Learning of Visual Representations. In
+ International Conference on Machine Learning. 1597–1607.
+the positive sample pairs, some hard negative samples should be [3] Mauro Conti, Luigi Vincenzo Mancini, Riccardo Spolaor, and Nino Vincenzo
+optimized more sufficiently for better performance. Verde. 2015. Analyzing Android Encrypted Network Traffic to Identify User
+ Actions. IEEE Transactions on Information Forensics and Security 11, 1 (2015).
+ [4] Alessandro Finamore, Marco Mellia, Michela Meo, and Dario Rossi. 2010. KISS:
+ Stochastic Packet Inspection Classifier for UDP Traffic. IEEE/ACM Transactions
+ on Networking 18, 5 (2010), 1505–1515.
+ [5] Yanjie Fu, Junming Liu, Xiaolin Li, and Hui Xiong. 2018. A Multi-Label Multi-
+ View Learning Framework for In-App Service Usage Analysis. ACM Transactions
+ on Intelligent Systems and Technology 9, 4 (2018), 1–24.
+ [6] Gerard Drapper Gil, Arash Habibi Lashkari, Mohammad Mamun, and Ali A.
+ Ghorbani. 2016. Characterization of Encrypted and VPN Traffic Using Time-
+ Related Features. In International Conference on Information Systems Security and
+ Privacy. 407–414.
+ [7] Jamie Hayes and George Danezis. 2016. k-fingerprinting: a Robust Scalable
+ Website Fingerprinting Technique. In USENIX Security Symposium. 1187–1203.
+ [8] Kaiming He, Haoqi Fan, Yuxin Wu, Saining Xie, and Ross Girshick. 2020. Momentum Contrast for Unsupervised Visual Representation Learning. In Computer
+ Vision and Pattern Recognition. 9729–9738.
+ [9] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. 2015. Delving Deep
+ into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
+ In IEEE International Conference on Computer Vision. 1026–1034.
+ [10] Olivier J. Henaff, Aravind Srinivas, Jeffrey De Fauw, Ali Razavi, Carl Doersch,
+ S. M. Ali Eslami, and Aaron van den Oord. 2020. Data-Efficient Image Recognition with Contrastive Predictive Coding. In International Conference on Machine
+ Learning. 4182–4192.
+ [11] Sepp Hochreiter and Jürgen Schmidhuber. 1997. Long Short-Term Memory.
+ Neural Computation 9, 8 (1997), 1735–1780.
+ [12] Ting-Li Huoh, Yan Luo, and Tong Zhang. 2021. Encrypted Network Traffic
+ Classification Using a Geometric Learning Model. In IFIP/IEEE Symposium on
+ Integrated Network Management. 376–383.
+ [13] Prannay Khosla, Piotr Teterwak, Chen Wang, Aaron Sarna, Yonglong Tian, Phillip
+ Isola, Aaron Maschinot, Ce Liu, and Dilip Krishnan. 2020. Supervised Contrastive
+ Learning. In Conference on Neural Information Processing Systems. 18661–18673.
+ [14] Arash Habibi Lashkari, Gerard Draper-Gil, Mohammad Saiful Islam Mamun, and
+ Ali A. Ghorbani. 2017. Characterization of Tor Traffic Using Time Based Features.
+ In International Conference on Information System Security and Privacy. 253–262.
+ [15] Phuc H. Le-Khac, Graham Healy, and Alan F. Smeaton. 2020. Contrastive Representation Learning: A Framework and Review. IEEE Access 8 (2020), 193907–
+ 193934.
+ [16] Wenbin Li and Gaspard Quenard. 2021. Towards a Multi-Label Dataset of Internet
+ Traffic for Digital Behavior Classification. In International Conference on Computer
+ Communication and the Internet. 38–46.
+ [17] Hyun-Kyo Lim, Ju-Bong Kim, Joo-Seong Heo, Kwihoon Kim, Yong-Geun Hong,
+ and Youn-Hee Han. 2019. Packet-based Network Traffic Classification Using
+ Deep Learning. In International Conference on Artificial Intelligence in Information
+ and Communication. 046–051.
+ [18] Xinjie Lin, Gang Xiong, Gaopeng Gou, Zhen Li, Junzheng Shi, and Jing Yu.
+ 2022. ET-BERT: A Contextualized Datagram Representation with Pre-training
+ Transformers for Encrypted Traffic Classification. In The Web Conference. 633–
+ 642.
+ [19] Chang Liu, Longtao He, Gang Xiong, Zigang Cao, and Zhen Li. 2019. FS-Net: A
+ Flow Sequence Network For Encrypted Traffic Classification. In IEEE Conference
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haozhen Zhang, Xi Xiao, Le Yu, Qing Li, Zhen Ling, and Ye Zhang
+
+ on Computer Communications. 1171–1179. [46] Hui Zhang, Gaopeng Gou, Gang Xiong, Chang Liu, Yuewen Tan, and Ke Ye.
+[20] Xue Liu, Shigeng Zhang, Huihui Li, and Weiping Wang. 2021. Fast Applica- 2021. Multi-granularity Mobile Encrypted Traffic Classification Based on Fusion
+ tion Activity Recognition with Encrypted Traffic. In International Conference on Features. In International Conference on Science of Cyber Security. 154–170.
+ Wireless Algorithms, Systems, and Applications. 314–325. [47] Haozhen Zhang, Le Yu, Xi Xiao, Qing Li, Francesco Mercaldo, Xiapu Luo, and
+[21] Mohammad Lotfollahi, Mahdi Jafari Siavoshani, Ramin Shirali Hossein Zade, and Qixu Liu. 2023. TFE-GNN: A Temporal Fusion Encoder Using Graph Neural Net-
+ Mohammdsadegh Saberian. 2020. Deep packet: a novel approach for encrypted works for Fine-grained Encrypted Traffic Classification. In The Web Conference.
+ traffic classification using deep learning. Soft Computing 24, 3 (2020), 1999–2012. 2066–2075.
+[22] Kelong Mao, Xi Xiao, Guangwu Hu, Xiapu Luo, Bin Zhang, and Shutao Xia. [48] Jielun Zhang, Fuhao Li, Feng Ye, and Hongyu Wu. 2020. Autonomous Unknown-
+ 2021. Byte-Label Joint Attention Learning for Packet-grained Network Traffic Application Filtering and Labeling for DL-based Traffic Classifier Update. In IEEE
+ Classification. In International Workshop on Quality of Service. 1–10. Conference on Computer Communications. 397–405.
+[23] Xuying Meng, Yequan Wang, Runxin Ma, Haitong Luo, Xiang Li, and Yujun [49] Wenbo Zheng, Chao Gou, Lan Yan, and Shaocong Mo. 2020. Learning to Classify:
+ Zhang. 2022. Packet Representation Learning for Traffic Classification. In ACM A Flow-Based Relation Network for Encrypted Traffic Classification. In The Web
+ SIGKDD Conference on Knowledge Discovery and Data Mining. 3546–3554. Conference. 13–22.
+[24] Andriy Panchenko, Fabian Lanze, Andreas Zinnen, Martin Henze, Jan Pennekamp, [50] Yanqiao Zhu, Yichen Xu, Feng Yu, Qiang Liu, Shu Wu, and Liang Wang. 2021.
+ Klaus Wehrle, and Thomas Engel. 2016. Website Fingerprinting at Internet Scale. Graph Contrastive Learning with Adaptive Augmentation. In The Web Conference.
+ In Annual Network and Distributed System Security Symposium. 2069–2080.
+[25] Eva Papadogiannaki and Sotiris Ioannidis. 2021. A Survey on Encrypted Network Traffic Analysis Applications, Techniques, and Countermeasures. Comput.
+ Surveys 54, 6 (2021), 1–35.
+[26] Jiezhong Qiu, Qibin Chen, Yuxiao Dong, Jing Zhang, Hongxia Yang, Ming Ding,
+ Kuansan Wang, and Jie Tang. 2020. GCC: Graph Contrastive Coding for Graph
+ Neural Network Pre-Training. In ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. 1150–1160.
+[27] E Ramadhani. 2018. Anonymity communication VPN and Tor: a comparative
+ study. Journal of Physics: Conference Series 983, 1 (2018), 012060.
+[28] Shahbaz Rezaei and Xin Liu. 2019. Deep Learning for Encrypted Traffic Classification: An Overview. IEEE Communications Magazine 57, 5 (2019), 76–81.
+[29] Florian Schroff, Dmitry Kalenichenko, and James Philbin. 2015. FaceNet: A
+ Unified Embedding for Face Recognition and Clustering. In Computer Vision and
+ Pattern Recognition. 815–823.
+[30] Tal Shapira and Yuval Shavitt. 2021. FlowPic: A Generic Representation for
+ Encrypted Traffic Classification and Applications Identification. IEEE Transactions
+ on Network and Service Management 18, 2 (2021), 1218–1232.
+[31] Ritik Sharma, Sarishma Dangi, and Preeti Mishra. 2021. A Comprehensive Review
+ on Encryption based Open Source Cyber Security Tools. In IEEE International
+ Conference on Signal Processing, Computing and Control. 614–619.
+[32] Meng Shen, Jinpeng Zhang, Liehuang Zhu, Ke Xu, and Xiaojiang Du. 2021.
+ Accurate Decentralized Application Identification via Encrypted Traffic Analysis
+ Using Graph Neural Networks. IEEE Transactions on Information Forensics and
+ Security 16, 1 (2021), 2367–2380.
+[33] Payap Sirinam, Mohsen Imani, Marc Juarez, and Matthew K Wright. 2018. Deep
+ Fingerprinting: Undermining Website Fingerprinting Defenses with Deep Learning. In Conference on Computer and Communications Security. 1928–1943.
+[34] Vincent F. Taylor, Riccardo Spolaor, Mauro Conti, and Ivan Martinovic. 2016.
+ AppScanner: Automatic Fingerprinting of Smartphone Apps From Encrypted
+ Network Traffic. In IEEE European Symposium on Security and Privacy. 439–454.
+[35] Yonglong Tian, Dilip Krishnan, and Phillip Isola. 2020. Contrastive Multiview
+ Coding. In European Conference on Computer Vision. 776–794.
+[36] Aaron van den Oord, Yazhe Li, and Oriol Vinyals. 2018. Representation Learning
+ with Contrastive Predictive Coding. arXiv preprint arXiv:1807.03748v2 (2018).
+[37] Thijs van Ede, Riccardo Bortolameotti, Andrea Continella, Jingjing Ren, Daniel J.
+ Dubois, and Martina Lindorfer. 2020. FlowPrint: Semi-Supervised Mobile-App
+ Fingerprinting on Encrypted Network Traffic. In Annual Network and Distributed
+ System Security Symposium.
+[38] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones,
+ Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is All
+ you Need. In Conference on Neural Information Processing Systems.
+[39] Petar Veličković, William Fedus, William L. Hamilton, Pietro Liò, Yoshua Bengio,
+ and R Devon Hjelm. 2019. Deep Graph Infomax. In International Conference on
+ Learning Representations. 1–17.
+[40] Xi Xiao, Wentao Xiao, Rui Li, Xiapu Luo, Haitao Zheng, and Shutao Xia. 2022. EB-
+ SNN: Extended Byte Segment Neural Network for Network Traffic Classification.
+ IEEE Transactions on Dependable and Secure Computing 19, 5 (2022), 3521–3538.
+[41] Shi-Jie Xu, Guang-Gang Geng, and Xiao-Bo Jin. 2022. Seeing Traffic Paths:
+ Encrypted Traffic Classification With Path Signature Features. IEEE Transactions
+ on Information Forensics and Security 17, 1 (2022), 2166–2181.
+[42] Liang Yao, Chengsheng Mao, and Yuan Luo. 2019. Graph Convolutional Networks
+ for Text Classification. In AAAI Conference on Artificial Intelligence. 7370–7377.
+[43] Yuning You, Tianlong Chen, Yongduo Sui, Ting Chen, Zhangyang Wang, and
+ Yang Shen. 2020. Graph Contrastive Learning with Augmentations. In Conference
+ on Neural Information Processing Systems. 5812–5823.
+[44] Xiaochun Yun, Yipeng Wang, Yongzheng Zhang, and Yu Zhou. 2015. A Semantics-
+ Aware Approach to the Automated Network Protocol Identification. IEEE/ACM
+ Transactions on Networking 24, 1 (2015), 583–595.
+[45] Faiz Zaki, Firdaus Afifi, Shukor Abd Razak, Abdullah Gani, and Nor Badrul Anuar.
+ 2022. GRAIN: Granular multi-label encrypted traffic classification using classifier
+ chain. Computer Networks 213, 1 (2022), 109084.
+One Train for Two Tasks: An Encrypted Traffic Classification Framework Using Supervised Contrastive Learning Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+A THREAT MODEL AND ASSUMPTIONS E DATASET STATISTICS
+We briefly describe the threat model and assumptions in this section. We give specific category divisions for each dataset in the following:
+ Normal users employ mobile apps to communicate with remote • ISCX-VPN: VoIP, Streaming, P2P, File, Email, Chat.
+servers. The attacker is a passive observer (i.e., he cannot decrypt • ISCX-NonVPN: VoIP, Video, Streaming, File, Email, Chat.
+or modify packets). The attacker captures the packets of the target • ISCX-Tor: VoIP, Video, P2P, Mail, File, Chat, Browsing, Auapps by compromising the device or sniffing the network link. Then, dio.
+the attacker analyzes the captured packets to infer the behaviors of • ISCX-NonTor: VoIP, Video, P2P, FTP, Email, Chat, Browsing,
+normal users. Audio.
+ As for category types of the ISCX VPN-NonVPN dataset, some
+B MORE ABLATION STUDY RESULTS files can be labeled as either “Browser” or other types like “Stream-
+In this section, we give more ablation study results on the ISCX- ing.” So, we abandoned “Browser” and used the remaining six types.
+NonVPN, ISCX-Tor, and ISCX-NonTor datasets. The results are Note that we didn’t delete data but used the alternative types inshown in Table 4, 5, and 6, respectively. stead.
+
+C MORE SENSITIVITY ANALYSIS RESULTS Table 8: Dataset Statistics
+In this section, we give more sensitivity analysis results on the
+ISCX-NonVPN, ISCX-Tor, and ISCX-NonTor datasets. The results Dataset #Flow #Packet #Category
+are shown in Figure 5, 6, and 7, respectively.
+ ISCX-VPN 1674 19282 6
+D HYPER-PARAMETERS ISCX-NonVPN 3928 33838 6
+ ISCX-Tor 1697 22888 8
+We give hyper-parameters used in this paper in Table 7.
+ ISCX-NonTor 7979 68024 8
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haozhen Zhang, Xi Xiao, Le Yu, Qing Li, Zhen Ling, and Ye Zhang
+
+ Table 4: Ablation Study of CLE-TFE on the ISCX-NonVPN Dataset
+
+ Tasks Flow-level Classification Task Packet-level Classification Task Average on the Two Tasks
+ Variants AC PR RC F1 AC PR RC F1 AC PR RC F1
+ w/o Flow-level Classification Loss - - - - 0.8855 0.9046 0.9024 0.9025 0.4428 0.4523 0.4512 0.4513
+ w/o Flow-level Contrastive Loss 0.9192 0.9306 0.9301 0.9301 0.8858 0.9033 0.9033 0.9025 0.9025 0.9170 0.9167 0.9163
+ w/o Flow-level Classification & Contrastive Loss - - - - 0.8855 0.9045 0.9032 0.9027 0.4428 0.4523 0.4516 0.4514
+ w/o Packet-level Classification Loss 0.9232 0.9365 0.9284 0.9321 - - - - 0.4616 0.4683 0.4642 0.4661
+ w/o Packet-level Contrastive Loss 0.9136 0.9248 0.9240 0.9241 0.8744 0.8929 0.8923 0.8911 0.8940 0.9089 0.9082 0.9076
+ w/o Packet-level Classification & Contrastive Loss 0.9061 0.9216 0.9122 0.9161 - - - - 0.4531 0.4608 0.4561 0.4581
+ w/o Packet-level Header Graph Aug 0.9207 0.9331 0.9302 0.9313 0.8805 0.8987 0.8983 0.8976 0.9006 0.9159 0.9143 0.9145
+ w/o Packet-level Payload Graph Aug 0.9237 0.9342 0.9336 0.9336 0.8838 0.9014 0.9021 0.9012 0.9038 0.9178 0.9179 0.9174
+ w/o Packet-level Header & Payload Graph Aug 0.9222 0.9344 0.9284 0.9311 0.8797 0.8985 0.8971 0.8966 0.9010 0.9165 0.9128 0.9139
+ w/ Unsupervised Contrastive Loss (No Label Used) 0.8096 0.8233 0.8119 0.8137 0.8396 0.8540 0.8603 0.8555 0.8246 0.8387 0.8361 0.8346
+ CLE-TFE 0.9286 0.9396 0.9391 0.9389 0.8853 0.9039 0.9033 0.9027 0.9070 0.9218 0.9212 0.9208
+
+ Table 5: Ablation Study of CLE-TFE on the ISCX-Tor Dataset
+
+ Tasks Flow-level Classification Task Packet-level Classification Task Average on the Two Tasks
+ Variants AC PR RC F1 AC PR RC F1 AC PR RC F1
+ w/o Flow-level Classification Loss - - - - 0.9994 0.9993 0.9997 0.9995 0.4997 0.4997 0.4999 0.4998
+ w/o Flow-level Contrastive Loss 0.9989 0.9983 0.9994 0.9988 0.9990 0.9987 0.9980 0.9983 0.9990 0.9985 0.9987 0.9986
+ w/o Flow-level Classification & Contrastive Loss - - - - 0.9985 0.9988 0.9992 0.9990 0.4993 0.4994 0.4996 0.4995
+ w/o Packet-level Classification Loss 1.0000 1.0000 1.0000 1.0000 - - - - 0.5000 0.5000 0.5000 0.5000
+ w/o Packet-level Contrastive Loss 0.9989 0.9964 0.9994 0.9978 0.9971 0.9957 0.9980 0.9968 0.9980 0.9961 0.9987 0.9973
+ w/o Packet-level Classification & Contrastive Loss 0.9954 0.9976 0.9976 0.9975 - - - - 0.4977 0.4988 0.4988 0.4988
+ w/o Packet-level Header Graph Aug 1.0000 1.0000 1.0000 1.0000 0.9993 0.9987 0.9996 0.9992 0.9997 0.9994 0.9998 0.9996
+ w/o Packet-level Payload Graph Aug 0.9989 0.9964 0.9994 0.9978 0.9991 0.9986 0.9996 0.9990 0.9990 0.9975 0.9995 0.9984
+ w/o Packet-level Header & Payload Graph Aug 1.0000 1.0000 1.0000 1.0000 0.9996 0.9992 0.9998 0.9995 0.9998 0.9996 0.9999 0.9998
+ w/ Unsupervised Contrastive Loss (No Label Used) 0.9337 0.9467 0.9459 0.9410 0.9791 0.9800 0.9817 0.9803 0.9564 0.9634 0.9638 0.9607
+ CLE-TFE 1.0000 1.0000 1.0000 1.0000 0.9996 0.9997 0.9998 0.9997 0.9998 0.9999 0.9999 0.9999
+
+ Table 6: Ablation Study of CLE-TFE on the ISCX-NonTor Dataset
+
+ Tasks Flow-level Classification Task Packet-level Classification Task Average on the Two Tasks
+ Variants AC PR RC F1 AC PR RC F1 AC PR RC F1
+ w/o Flow-level Classification Loss - - - - 0.9259 0.8863 0.8562 0.8688 0.4630 0.4432 0.4281 0.4344
+ w/o Flow-level Contrastive Loss 0.9505 0.8876 0.8844 0.8844 0.9203 0.8776 0.8443 0.8576 0.9354 0.8826 0.8644 0.8710
+ w/o Flow-level Classification & Contrastive Loss - - - - 0.9228 0.8873 0.8557 0.8685 0.4614 0.4437 0.4279 0.4343
+ w/o Packet-level Classification Loss 0.9504 0.8851 0.8761 0.8793 - - - - 0.4752 0.4426 0.4381 0.4397
+ w/o Packet-level Contrastive Loss 0.9531 0.9066 0.8924 0.8989 0.9164 0.8733 0.8389 0.8527 0.9348 0.8900 0.8657 0.8758
+ w/o Packet-level Classification & Contrastive Loss 0.9497 0.8843 0.8772 0.8797 - - - - 0.4749 0.4422 0.4386 0.4399
+ w/o Packet-level Header Graph Aug 0.9509 0.8923 0.8812 0.8857 0.9233 0.8810 0.8496 0.8625 0.9371 0.8867 0.8654 0.8741
+ w/o Packet-level Payload Graph Aug 0.9492 0.8856 0.8869 0.8849 0.9230 0.8746 0.8512 0.8613 0.9361 0.8801 0.8691 0.8731
+ w/o Packet-level Header & Payload Graph Aug 0.9507 0.8987 0.8884 0.8907 0.9222 0.8748 0.8512 0.8612 0.9365 0.8868 0.8698 0.8760
+ w/ Unsupervised Contrastive Loss (No Label Used) 0.9148 0.8765 0.7807 0.8124 0.8710 0.8240 0.7817 0.7977 0.8929 0.8503 0.7812 0.8051
+ CLE-TFE 0.9554 0.9009 0.9019 0.8994 0.9240 0.8795 0.8544 0.8649 0.9397 0.8902 0.8782 0.8822
+One Train for Two Tasks: An Encrypted Traffic Classification Framework Using Supervised Contrastive Learning Conference acronym ’XX, June 03–05, 2018, Woodstock, NY
+
+ Flow-level CL Ratio Packet-level CL Ratio Edge Dropping Ratio Node Dropping Ratio
+ 0.940 0.94 0.94 0.94
+ 0.935 0.93
+ 0.930 0.93 0.93
+ 0.925 0.92 Flow-level Task
+ F1-Score
+
+ F1-Score
+
+ F1-Score
+
+ F1-Score
+ 0.920 Flow-level Task 0.91 Packet-level Task 0.92 Flow-level Task 0.92 Flow-level Task
+ 0.915 Packet-level Task Packet-level Task Packet-level Task
+ 0.90 0.91 0.91
+ 0.910 0.89
+ 0.905 0.90
+ 0.900 0.88 0.90
+ 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.890.000.050.100.150.200.250.30 0.000.050.100.150.200.250.30
+ Flow-level CL Ratio Packet-level CL Ratio Edge Dropping Ratio Node Dropping Ratio
+ (a) Flow-level CL Ratio 𝛽 (b) Packet-level CL Ratio 𝛼 (c) Edge Dropping Ratio 𝑃 ED (d) Node Dropping Ratio 𝑃 ND
+
+Figure 5: Model Sensitivity Analysis w.r.t. Flow-level CL Ratio 𝛽, Packet-level CL Ratio 𝛼, Edge Dropping Ratio 𝑃ED , and Node
+Dropping Ratio 𝑃ND on the ISCX-NonVPN Dataset (The shallow lines are attained by smoothing the dark plotted lines)
+
+ Flow-level CL Ratio Packet-level CL Ratio 1.000 Edge Dropping Ratio Node Dropping Ratio
+ 1.000 1.000 1.000
+ 0.999 0.999 0.999 0.999
+ 0.998 0.998 0.998 0.998
+ F1-Score
+
+ F1-Score
+
+ F1-Score
+
+ F1-Score
+ 0.997 Flow-level Task 0.997 Flow-level Task 0.997 Flow-level Task 0.997 Flow-level Task
+ 0.996 Packet-level Task 0.996 Packet-level Task 0.996 Packet-level Task 0.996 Packet-level Task
+ 0.995 0.995 0.995 0.995
+ 0.994 0.994 0.994 0.994
+ 0.9930.0 0.2 0.4 0.6 0.8 1.0 0.9930.0 0.2 0.4 0.6 0.8 1.0 0.9930.000.050.100.150.200.250.30 0.9930.000.050.100.150.200.250.30
+ Flow-level CL Ratio Packet-level CL Ratio Edge Dropping Ratio Node Dropping Ratio
+ (a) Flow-level CL Ratio 𝛽 (b) Packet-level CL Ratio 𝛼 (c) Edge Dropping Ratio 𝑃 ED (d) Node Dropping Ratio 𝑃 ND
+
+Figure 6: Model Sensitivity Analysis w.r.t. Flow-level CL Ratio 𝛽, Packet-level CL Ratio 𝛼, Edge Dropping Ratio 𝑃ED , and Node
+Dropping Ratio 𝑃ND on the ISCX-Tor Dataset (The shallow lines are attained by smoothing the dark plotted lines)
+
+ Flow-level CL Ratio Packet-level CL Ratio Edge Dropping Ratio Node Dropping Ratio
+ 0.90 0.90 0.90 0.90
+ 0.89 0.89 0.89 0.89
+ 0.88 0.88 0.88 0.88
+ 0.87 0.87 0.87
+ F1-Score
+
+ F1-Score
+
+ F1-Score
+
+ F1-Score
+ 0.87
+ 0.86 0.86 0.86 0.86
+ 0.85 0.85 0.85 0.85
+ 0.84 Flow-level Task 0.84 Flow-level Task 0.84 Flow-level Task 0.84 Flow-level Task
+ 0.83 Packet-level Task 0.83 Packet-level Task 0.83 Packet-level Task 0.83 Packet-level Task
+ 0.820.0 0.2 0.4 0.6 0.8 1.0 0.820.0 0.2 0.4 0.6 0.8 1.0 0.820.000.050.100.150.200.250.30 0.820.000.050.100.150.200.250.30
+ Flow-level CL Ratio Packet-level CL Ratio Edge Dropping Ratio Node Dropping Ratio
+ (a) Flow-level CL Ratio 𝛽 (b) Packet-level CL Ratio 𝛼 (c) Edge Dropping Ratio 𝑃 ED (d) Node Dropping Ratio 𝑃 ND
+
+Figure 7: Model Sensitivity Analysis w.r.t. Flow-level CL Ratio 𝛽, Packet-level CL Ratio 𝛼, Edge Dropping Ratio 𝑃ED , and Node
+Dropping Ratio 𝑃ND on the ISCX-NonTor Dataset (The shallow lines are attained by smoothing the dark plotted lines)
+Conference acronym ’XX, June 03–05, 2018, Woodstock, NY Haozhen Zhang, Xi Xiao, Le Yu, Qing Li, Zhen Ling, and Ye Zhang
+
+ Table 7: Hyper-parameters
+
+ Datasets ISCX-VPN ISCX-NonVPN ISCX-Tor ISCX-NonTor
+ Batch Size 16 102 32 102
+ Gradient Accumulation 1 5 1 5
+ Epoch 20 120 100 120
+ Learning Rate (Max, Min) (1e-2, 1e-4) (1e-2, 1e-5) (1e-2, 1e-4) (1e-2, 1e-4)
+ Label Smoothing 0.0 0.01 0.0 0.0
+ Warm Up 0.1 0.1 0.1 0.1
+ GNN Dropout Ratio 0.0 0.1 0.0 0.2
+ LSTM Dropout Ratio 0.0 0.15 0.0 0.1
+ Embedding Dimension 64 64 64 64
+ Hidden Dimension 128 128 128 128
+ PMI Window Size 5 5 5 5
+ Edge Dropping Ratio 𝑃ED 0.05 0.05 0.05 0.05
+ Node Dropping Ratio 𝑃 ND 0.1 0.1 0.1 0.1
+ Packet Dropping Ratio 𝑃PD 0.6 0.6 0.6 0.6
+ Temperature 𝜏 0.07 0.07 0.07 0.07
+ Flow-level Contrastive Loss Ratio 𝛽 0.5 0.8 1.0 1.0
+ Packet-level Contrastive Loss Ratio 𝛼 1.0 0.4 0.4 0.6

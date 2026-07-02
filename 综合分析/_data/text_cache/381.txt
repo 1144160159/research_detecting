@@ -1,0 +1,135 @@
+    CertTA: Certified Robustness Made Practical
+        for Learning-Based Traffic Analysis
+    Jinzhu Yan, Tsinghua University; Zhuotao Liu, Tsinghua University and
+   Zhongguancun Laboratory; Yuyang Xie, Tsinghua University; Shiyu Liang,
+Shanghai Jiao Tong University; Lin Liu, National University of Defense Technology;
+           Ke Xu, Tsinghua University and Zhongguancun Laboratory
+      https://www.usenix.org/conference/usenixsecurity25/presentation/yan-jinzhu
+
+
+
+
+        This paper is included in the Proceedings of the
+               34th USENIX Security Symposium.
+                     August 13–15, 2025 • Seattle, WA, USA
+                                  978-1-939133-52-6
+
+
+                       Open access to the Proceedings of the
+              34th USENIX Security Symposium is sponsored by USENIX.
+CertTA: Certified Robustness Made Practical for Learning-Based Traffic Analysis
+
+
+          Jinzhu Yan1     Zhuotao Liu1,2, # Yuyang Xie1 Shiyu Liang3 Lin Liu4 Ke Xu1,2
+                              1 Tsinghua University    2 Zhongguancun Laboratory
+                 3 Shanghai Jiao Tong University    4 National University of Defense Technology
+
+
+
+
+                              Abstract                             robustness against adversarial attacks. For instance, by prop-
+Learning-based traffic analysis models exhibit significant vul-    erly introducing adversarial perturbations to the original
+nerabilities to adversarial attacks. Attackers can compromise      network traffic (such as inserting dummy packets, padding
+these models by generating adversarial network flows with          the packet lengths or delaying packets), the researchers can
+precisely optimized perturbations. These perturbations typi-       easily undermine the performance of traffic analysis mod-
+cally take two forms: additive modifications, which include        els [15, 16, 22, 26, 29, 33, 40, 43].
+packet length padding and timing delays, and discrete al-             To address this problem, our community explored a useful
+terations, such as dummy packet insertion. In response to          paradigm, named certified robustness, which provably guaran-
+these threats, certified robustness has emerged as a promising     tees that the learning-based models are secure against certain
+methodology for ensuring reliable model performance in the         adversarial attacks. Randomized smoothing [5] is the preva-
+presence of adversarially manipulated network traffic.             lent methodology to achieve certified robustness. Randomized
+   However, current approaches inadequately address the            smoothing transforms a base classifier f into a certifiably ro-
+multi-modal nature of adversarial perturbations in network         bust model g as follows. Given an input sample x , it first
+traffic, resulting in limited robustness guarantees against so-    generates a set of smoothing samples {ss} in the vicinity of x
+phisticated attacks. To overcome this limitation, we intro-        by applying randomized perturbations over x . It then feeds
+duce CertTA, the first solution providing certifiable robust-      these smoothing samples into f to collect a set of inference
+ness against multi-modal adversarial attacks in traffic analysis   results f ({ss}). Finally, it outputs g(xx) as the majority class
+models. CertTA incorporates a novel multi-modal smooth-            from f ({ss}) and mathematically derives a robustness region
+ing mechanism that explicitly accounts for attack-induced          based on the probability distribution of f ({ss}). g is certifiably
+perturbations during the generation of smoothing samples,          robust because given any adversarial input x̃x within the robust-
+based on which CertTA rigorously derives robustness regions        ness region of x , g(x̃x) is provably equivalent to g(xx), implying
+that are meaningful against these attacks. We implement a          that the adversity of x̃x cannot disrupt the model prediction.
+prototype of CertTA and extensively evaluate it against three      Based on this fundamental methodology, our community has
+categories of multi-modal adversarial attacks across six traffic   extensively studied certified robustness in the field of Com-
+analysis models and two datasets. Our experimental results         puter Vision (CV) [6, 18, 20, 42, 47] and Natural Language
+demonstrate that CertTA provides significantly stronger ro-        Processing (NLP) [13, 49, 52, 54].
+bustness guarantees than the state-of-the-art approaches when         Yet, enabling certified robustness in learning-based traf-
+confronting adversarial attacks. Further, CertTA is universally    fic analysis is fundamentally challenging due to the multi-
+applicable across diverse model architectures and flow repre-      modality of adversarial perturbations. Specifically, existing
+sentations.                                                        attacks can simultaneously apply additive perturbations (e.g.,
+                                                                   padding the packet lengths or delaying packets) and discrete
+                                                                   perturbations (e.g., inserting dummy packets) when generat-
+1    Introduction                                                  ing adversarial network traffic [15, 16, 22, 26, 29, 33, 40, 43].
+                                                                   However, none of the state-of-the-art (SOTA) approaches have
+Network traffic analysis is crucial to understanding network
+                                                                   considered certified robustness against multi-modal adversity.
+activities and detecting cyberspace attacks. While learning-
+                                                                   For instance, BARS [39] only considers additive perturbations
+based traffic analysis models achieve superior accuracies in
+                                                                   applied to the network flow features (e.g., the mean, variance
+many traffic analysis tasks, they often struggle to maintain
+                                                                   and max of packet lengths) in its randomized smoothing pro-
+    # Corresponding author.                                        cess. As a result, the insertion of a single dummy packet
+
+
+
+USENIX Association                                                                    34th USENIX Security Symposium           7349
+to the network flow may overwhelm the robustness regions           ferent models are unified, serving as quantifiable metrics to
+derived by BARS. Similarly, RS-Del [13], which considers           compare the robustness across different models.
+the discrete perturbations over sequence data (e.g., insertion,       (ii) Stronger Robustness Guarantees. CertTA demonstrates
+substitution and deletion), is ineffective against the additive    significant performance advantages over the SOTA ap-
+perturbations in adversarial flows. In § 2, we present concrete    proaches in terms of certified accuracy, defined as the per-
+quantitative results to demonstrate that the multi-modal adver-    centage of adversarial flows guaranteed to be classified cor-
+sity can easily undermine the robustness guarantees offered        rectly. Most notably, in scenarios where existing approaches
+by existing SOTA approaches.                                       fail to maintain any certified accuracy, CertTA achieves 99%
+   To address this problem, we present CertTA, the first ap-       certified accuracy with two Transformer-based models and
+proach that enables certifiably robust traffic analysis models     exceeds 80% certified accuracy across the four remaining
+against multi-modal adversarial attacks. CertTA is founded         models.
+on a critical insight: we explicitly account for the adversarial      (iii) Synergistic Integration with Anomaly Detection. We
+perturbations introduced by these attacks when designing the       propose a novel integration between CertTA and anomaly de-
+perturbation mechanisms in our system’s randomized smooth-         tection systems, which creates a fundamental dilemma for the
+ing process. This enables us to derive robustness regions          attackers: stealth adversarial flows (i.e., with small perturba-
+that are meaningful against these attacks. To this end, CertTA     tions) which may bypass the anomaly detector are ineffective
+proposes a novel certification framework that (i) generates        against CertTA; and the adversarial flows with significant per-
+smoothing samples by a multi-modal smoothing mechanism             turbations which may exceed CertTA’s certified robustness
+and then (ii) derives robustness regions from the complicated      regions can be easily captured by the anomaly detector. We
+probability distribution of these smoothing samples.               demonstrate that the integrated system achieves consistently
+   Specifically, the multi-modal smoothing mechanism in            high Defense Success Rate against adversarial attacks with
+CertTA consists of a discrete smoothing mechanism that ran-        varying attack intensities.
+domly selects packets from a network flow, and an additive
+smoothing mechanism that applies Exponential noises to the
+metadata (e.g., the packet length and inter-arrival time) of       2   Problem Space and Motivation
+the selected packets. When deriving robustness regions, the
+multi-modality of adversarial attacks introduces several criti-    Certified Robustness in CV and NLP. Our community
+cal challenges. First, discrete perturbations can cause signifi-   has extensively studied certified robustness in the area of
+cant variations in the network traffic data. For instance, the     CV [6,18,20,42,47] and NLP [13,49,52,54]. The typical ran-
+insertion of a single dummy packet can result in significant       domized smoothing approach in CV, referred to as VRS [5],
+displacement of the packet sequence (a key feature used by         provides an isotropic ℓ2 -norm robustness radius against addi-
+many models [8, 25, 35, 38]), or significant changes in vari-      tive perturbations on image pixels. The paradigm of certifying
+ous statistical flow features. Second, the robustness regions      an image classifier against pixel-wise additive perturbations in
+derived from additive perturbations exhibit non-linear rela-       VRS can be straightforwardly adapted to certifying the robust-
+tionships with the number of input dimensions. This problem,       ness of traffic analysis models against additive perturbations
+known as the “curse of dimensionality” [3, 17, 36], substan-       on statistical flow features. Yet, due to the diverse scales of
+tially diminishes the effectiveness of the robustness regions      different flow features (e.g., the percentage of outgoing pack-
+when processing extended flow sequences or analyzing multi-        ets is smaller than 1, while the average packet size is on the
+ple flow statistics. These challenges are effectively addressed    order of hundreds), the isotropic ℓ2 -norm robustness radius is
+in CertTA’s certification framework.                               often impractical for certain features with larger scales.
+Contributions. The major contribution of this paper is the de-        Similarly, although initially proposed to provide robustness
+sign, mathematical construction, and evaluation of CertTA, the     guarantees against discrete perturbations (e.g., insertion, sub-
+first approach provides certifiably robustness against multi-      stitution and deletion) applied to sequence data like texts and
+modal adversarial attacks in traffic analysis models. We exten-    binary files, RS-Del [13] can be adopted in traffic analysis
+sively evaluate CertTA over six heterogeneous traffic analysis     models by viewing a network flow as a discrete sequence of
+models against three categories of adversarial attacks. The        packets. However, the robustness regions derived from this
+experimental results show that CertTA exhibits the following       simple adaptation are inadequate when confronted with ad-
+advantages over the SOTA approaches.                               ditive perturbations in network traffic, such as packet length
+   (i) Generality. CertTA is universally applicable to heteroge-   padding and timing delays.
+neous traffic analysis models trained using different flow rep-    Certified Robustness for Traffic Analysis. BARS [39] rep-
+resentations (e.g., flow statistics, raw flow sequences and raw    resents the leading research on certified robustness in traffic
+bytes) and architectures (e.g., traditional machine learning       analysis. Specifically, BARS improves upon VRS by taking
+based, deep learning based and Transformer-based). Mean-           into account the diverse scales of different flow features. It in-
+while, the robustness regions derived in CertTA across dif-        troduces a distribution transformer to customize the scale and
+
+
+
+7350    34th USENIX Security Symposium                                                                        USENIX Association
+

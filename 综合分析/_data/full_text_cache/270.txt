@@ -1,0 +1,750 @@
+Array 22 (2024) 100349
+
+ Contents lists available at ScienceDirect
+
+ Array
+ journal homepage: www.elsevier.com/locate/array
+
+Network intrusion detection leveraging multimodal features
+Aklil Kiflay ∗, Athanasios Tsokanos, Mahmood Fazlali, Raimund Kirner
+University of Hertfordshire, Hatfield, AL10 9AB, United Kingdom
+
+ARTICLE INFO ABSTRACT
+
+Keywords: Network Intrusion Detection Systems (NIDSes) are essential for safeguarding critical information systems.
+Intrusion detection However, the lack of adaptability of Machine Learning (ML) based NIDSes to different environments could
+Network flow cause slow adoption. In this paper, we propose a multimodal NIDS that combines flow and payload features
+Packet payload
+ to detect cyber-attacks. The focus of the paper is to evaluate the use of multimodal traffic features in detecting
+Random forest
+ attacks, but not on a practical online implementation. In the multimodal NIDS, two random forest models
+Machine learning
+ are trained to classify network traffic using selected flow-based features and the first few bytes of protocol
+ payload, respectively. Predictions from the two models are combined using a soft voting approach to get
+ the final traffic classification results. We evaluate the multimodal NIDS using flow-based features and the
+ corresponding payloads extracted from Packet Capture (PCAP) files of a publicly available UNSW-NB15 dataset.
+ The experimental results show that the proposed multimodal NIDS can detect most attacks with average
+ Accuracy, Recall, Precision and F1 scores ranging from 98% to 99% using only six flow-based traffic features,
+ and the first 32 bytes of protocol payload. The proposed multimodal NIDS provides a reliable approach to
+ detecting cyber-attacks in different environments.
+
+1. Introduction across networks. Thirdly, there is no consensus among researchers on
+ which flow-based features to use in ML-based NIDSes, resulting in
+ Network Intrusion Detection Systems (NIDSes) are used to detect lack of standardization, compatibility, repeatability, and adaptability
+security threats to information systems [1,2]. To detect attacks effec- to different domains and environments [11,12]. These problems have
+tively, state-of-the-art NIDSes have used Machine Learning (ML) [3– led to flow-based NIDSes that can detect attacks accurately in one net-
+9]. Broadly, NIDSes are either signature-based or anomaly-based sys- work environment, while giving unacceptably low levels of detection
+tems [10]. Signature-based NIDSes detect intrusions by comparing in others [13,14]. Furthermore, extracting and pre-processing flownetwork traffic with known attack patterns using a set of rules prebased features require human expertise and tend to be costly and
+determined by security experts. In contrast, anomaly-based NIDSes use
+ time-consuming.
+ML algorithms to model normal traffic behavior and deviations thereof
+ Unlike their flow-based counterparts, payload-based NIDSes detect
+are considered as attacks. While ML has been applied in both signatureattacks using the actual user data exchanged between hosts. While
+based and anomaly-based intrusion detection, most ML-based NIDSes
+ payload-based NIDSes inspect payloads of network packets, they do not
+nowadays use anomaly-based approach. With respect to what aspect of
+a network packet is analyzed for intrusion detection, ML-based NIDSes use flow-based features for intrusion detection. Instead, packet contents
+can be further classified into flow-based and payload-based. are analyzed including any application data. Payload-based methods
+ Flow-based NIDSes use statistical features and packet metadata, are particularly useful for detecting attacks that are embedded as user
+collectively referred to as flow-based features, to identify unexpected contents. Therefore, payload-based NIDSes are effective in detecting
+changes in network traffic and detect attacks. As they use summarized various threats such as application-layer attacks. However, payloadinformation, flow-based NIDSes are more scalable and require less com- based NIDSes require large computational resources and have limited
+puting resources than payload-based methods. However, flow-based scalability.
+NIDSes have limitations that could hamper their adoption in practice. In this paper we focus on an NIDS for offline attack detection,
+Firstly, since they do not analyze user data in network packets, flow- i.e., we focus on after-the-fact detection of attacks. This decision is
+based NIDSes lack capability to detect threats concealed within packet noteworthy, as it allows us to access information that would not be
+payloads. Secondly, flow-based NIDSes are not usually domain-adaptive available to an online NIDS for intrusion prevention. For example, this
+because the features based on which they detect attacks can change
+
+ ∗ Corresponding author.
+ E-mail addresses: a.z.kiflay@herts.ac.uk (A. Kiflay), a.tsokanos@herts.ac.uk (A. Tsokanos).
+
+https://doi.org/10.1016/j.array.2024.100349
+Received 7 November 2023; Received in revised form 5 February 2024; Accepted 14 May 2024
+Available online 16 May 2024
+2590-0056/© 2024 The Author(s). Published by Elsevier Inc. This is an open access article under the CC BY license (http://creativecommons.org/licenses/by/4.0/).
+A. Kiflay et al. Array 22 (2024) 100349
+
+ Fig. 1. Multimodal ML-based NIDS.
+
+allows us to access statistical features that are computed after the end features using which an ML classifier can detect attacks in one network
+of the traffic flow. may not enable the detection of the same attacks in another network
+ Our NIDS approach is based on machine learning and uses a mul- due to inherent unpredictability of network traffic [29,30]. Secondly,
+timodal detection using flow-based and payload-based information, there is no consensus among researchers on which set of traffic features
+which is shown in Fig. 1. We use a soft-voting approach to merge the to use in ML-based NIDSes [31]. As a result, current ML-based NIDSes
+predictions of the two detection models. use non-standard set of traffic features, creating compatibility and
+ This paper provides the following scientific contributions: adaptability problems across networks [32,33].
+ Overall, most ML-based NIDSes tend to use flow-based traffic fea-
+ 1. Proposing a multimodal NIDS using flow-based and payloadtures for attack detection, thereby focusing more on statistical atbased information (see Fig. 1). To the best of our knowledge, this
+ tributes of network traffic rather than packet payloads. Flow-based
+ is the first ML-based NIDS approach that combines flow-based
+ NIDSes have minimum data processing costs because they use sumand payload-based information as a multimodal approach. To
+ marized traffic information. However, they can detect only a limited
+ merge the results of the two models, we have used a soft-voting
+ range of cyber-attacks since they rely solely on information extracted
+ method.
+ from packet headers. Flow-based methods do not scan packet pay-
+ 2. Focus on first 32 bytes of protocol payload to minimize payload
+ loads, and therefore, their capacity to detect network attacks embedded
+ processing overhead of the NIDS. Previous works focused on
+ within application-layer data is relatively lower than payload-based
+ larger packet payload sizes.
+ methods [34].
+ 3. An experimental evaluation of the multimodal NIDS.
+ 4. An algorithm to extract and label the protocol payload from the
+ 2.2. Payload-based intrusion detection
+ traffic data. This algorithm is needed, as publicly available open
+ source datasets provide labeled flow-based traffic features, but
+ Some ML-based NIDSes detect cyber-attacks based on the actual
+ not the extracted protocol payload information.
+ user data exchanged during network traffic transactions [35]. In
+ The paper is structured as follows: Section 2 reviews related work payload-based intrusion detection, data from a network application is
+on flow-based and payload-based intrusion detection. The proposed analyzed for signs of maliciousness. Previously, some payload-based
+multimodal NIDS is presented in Section 3. Section 4 presents eval- NIDSes have been proposed. In general, most of these NIDSes are
+uation of the proposed method. In Section 5, the obtained results designed to classify traffic using either N-gram analysis of the payload
+are presented and comparisons with alternative approaches are made. or deep learning methods.
+Section 6 concludes the paper.
+ 2.2.1. N-gram analysis
+2. Related work N-grams are used to model the payload distributions of normal and
+ attack traffic. Although N-gram methods were originally developed for
+ In this section, previous studies are classified and discussed. With text categorization [36], they have been applied in network traffic
+respect to data used to detect attacks, the broad categories of ap- classification and intrusion detection [37–39]. To analyze traffic using
+proaches are flow-based and payload-based methods. While packet N-grams, packet payloads are treated as strings of bytes. From each
+metadata from protocol headers and traffic statistics are used in flow- packet, sets of payload sub-strings of a fixed length are extracted and
+based techniques, payload-based methods use either the actual user analyzed to identify attacks. Accordingly, by taking the user content
+data of application-layer protocols or features extracted thereof as a as the basis of attack detection, a number of payload-based NIDSes
+foundation for detecting intrusions [15,16]. extracted features using N-grams [40–42].
+
+2.1. Flow-based intrusion detection 2.2.2. Deep learning approaches
+ Deep neural networks, commonly known as Deep Learning (DL), are
+ In flow-based methods, cyber-attacks are identified by tracking used to extract representation features from raw data through layered
+changes in the statistical properties of network traffic and packet meta- processing [43]. DL-based NIDSes usually convert packet payloads to
+data, collectively referred to as flow-based features. Several ML-based sequences of bytes, characters or images. Recently, DL methods like
+NIDSes monitor flow-based features to detect cyber-attacks [17–22]. Convolutional Neural Networks (CNNs) have been used to detect cyber-
+Therefore, a significant body of previous work in ML-based NIDSes attacks [44]. CNNs can extract spatial and temporal traffic features
+focused on determining a subset of flow-based features that result in from packet payloads without manual expert involvement.
+high detection rates [2,23–26]. However, NIDSes that are based on flow Classical ML and one dimensional (1D) CNN were used to detect netfeatures usually consume high dimensional data as input. As a result, work attacks in [45]. While CNN was used for feature learning, attacks
+they tend to require high computational resources due to the curse of were detected using classical ML. In [46], images were generated from
+dimensionality [27,28]. network traffic to detect malware using 2D CNNs. The images were
+ Consequently, ML-based NIDSes that depend on flow-based features created from raw traffic and passed to CNN which learned the traffic
+have limitations that hamper their adoption in practice. Firstly, many features. In [47], Marín et al. proposed DeepMAL to detect network
+of the statistical traffic attributes are not domain-adaptive because traffic flows that contain malware. The authors used a DL model to
+
+ 2
+A. Kiflay et al. Array 22 (2024) 100349
+
+classify traffic using only raw byte streams without any handcrafted Table 1
+ Random forest parameters.
+flow-based features. In a packet-based version of DeepMAL, the first
+1024 bytes of payload were used to detect malware traffic. The authors Number of estimators 100
+ Split function Gini
+suggested that payload-based DL approaches can outperform ML-based Maximum features for best split 2
+techniques in malware traffic detection. In contrast, Millar et al. [48] Maximum tree depth 3
+demonstrated that DL can detect malicious traffic with the first 50 bytes Minimum samples to split 2
+of payload. Furthermore, the authors suggested that classical ML can be Minimum leaf samples 0.1
+more effective in classifying network traffic in certain situations.
+
+2.3. Feature-fusion based intrusion detection classification results from the two random forest models are aggregated
+ using a voting scheme.
+ More recently, various combinations of traffic features for flow- Fig. 2 shows the traffic classification process of the proposed mulbased and payload-based detection approaches have been proposed [49, timodal NIDS. Flow-based features and packet payload contents are
+50]. Unlike methods that are purely flow-based or payload-based, extracted from raw traffic and two random forest classifiers are used
+feature-fusion based NIDSes use multiple types of network traffic to to detect attacks. By considering distinct aspects of network traffic
+detect anomalies from different data sources. For example, MFFAN de-
+ (flow-based features and payload contents), the proposed NIDS detects
+tected malicious traffic better than those that used flow-based features
+ intrusions robustly. Firstly, flow-based features, which are handcrafted
+alone because it incorporated byte-level, packet-level and flow-level
+ based on the domain knowledge of security professionals, are passed to
+aspects of network traffic [11].
+ random forest classifier as depicted in Fig. 2(a).
+ Similarly, an intrusion detection technique that used both statistical
+ Secondly, the corresponding protocol payloads within a traffic flow
+and payload-based features was proposed in TR-IDS [51]. Word emare analyzed to scan for potential attack in user data. As shown in
+bedding was used to map bytes of a packet payload to a word vector
+ Fig. 2(b), protocol payloads from raw traffic are converted to fixed
+and Text-CNN was used for feature extraction [52]. Additionally, statissize numeric arrays at a byte-level. Note that packet switched networks
+tical features were extracted from network flows and packet headers.
+ fragment user data before transmission. Furthermore, some packets are
+Both Text-CNN derived payload features and statistical features were
+ used only to control the connection between hosts, and therefore, not
+concatenated and inputted to random forest for classification. In TRall packets in a network flow contain user data or protocol payload. In
+IDS, payload features extracted from the first bytes of payload were
+ addition, the size of protocol payload varies from one packet to the
+used in conjunction with statistical traffic features. Generally, while
+ other. In the proposed NIDS, while packets with empty payload are
+CNNs and other DL methods can extract patterns from raw network
+ discarded, non-empty payloads are zero-padded or trimmed to a fixeddata that might be challenging for classical ML algorithms, training DL
+ size payload depending on the original size. Moreover, the hexadecimal
+models is computationally intensive and requires specialized hardware.
+ strings of the fixed-size payloads are converted to numeric array before
+Furthermore, DL models can be challenging to interpret and explain,
+ classification by the proposed NIDS.
+raising concerns about transparency and trust.
+ As depicted in Fig. 2(a) and Fig. 2(c), a random forest model is
+ In this paper, a multimodal ML-based NIDS is presented and evaltrained on each type of network traffic. In both cases the data values
+uated. The proposed NIDS uses random forest [53], which is one of
+ are normalized before training the ML models. Whereas one random
+the well-known classical ML algorithms. TR-IDS [51] is the closest
+ forest classifier is trained on flow-based features, decoded byte arrays
+related work to the intrusion detection approach proposed in this
+ of protocol payloads are used to train a second random forest classifier.
+paper. However, unlike TR-IDS [51], which concatenates payload and
+ Finally, the classification probabilities of the two ML models are used
+statistical features before classification, the combination of output in
+ to obtain traffic class predictions using a soft voting scheme as depicted
+our NIDS occurs at the decision level. In the proposed multimodal NIDS,
+ in Fig. 2(d).
+two separate random forest classification probabilities obtained using
+flow-based features and protocol payloads are combined using a soft
+voting scheme to make final class predictions. 3.1. Flow-based subsystem
+ Another important difference is that bigger size of packet payloads
+and larger number of flow-based features have been used in previous The proposed multimodal NIDS detects intrusions in two ways. In
+ML-based NIDSes including TR-IDS [51]. In contrast, only the first 32 the first part, flow-based features which are extracted from network
+bytes of protocol payload along with six flow-based traffic features are traffic within a time window of interest are used to make one level of
+used in the proposed NIDS. Random forest is used as an ML classifier intrusion detection using a random forest classifier. In place of random
+because it requires less computational resources as opposed to DL forest, other supervised tree-based ML algorithms such as Gradient
+methods. The obtained results show that it is possible to detect most Boosting Decision Trees (GBDT) [54] and Extreme Gradient Boosting
+attacks using classical ML when both flow-based features and protocol (XGBoost) [55] can be used as traffic classifiers to make the flow-based
+payloads are used in a complementary manner. detection.
+ Randomized grid search was used to identify optimal hyperparam-
+3. The proposed multimodal ML-based NIDS eter values for the random forest classifier. This has been done by
+ evaluating different parameter value combinations and cross validation
+ In this section, a multimodal Machine Learning (ML) based Network to select best performing parameters. Table 1 shows the parameters of
+Intrusion Detection System (NIDS) that leverages both traffic flow the classifier used in the flow-based subsystem.
+features and payload data is presented. Decisions made by two ML Flow-based traffic features and protocol payloads are extracted from
+classifiers trained using flow-based features and a small part of payload the same network flow. In other words, for a given traffic sample,
+data, respectively, are used in a complementary manner to detect the link between its protocol payloads and flow-based features is that
+attacks. The proposed NIDS has flow-based and payload-based subsys- both of them refer to the same network flow. A flow contains a group
+tems that take different aspects of network traffic as data objects for of packets having common traffic attributes and traversing through
+intrusion detection. The two types of network traffic enable the flow- a network observation point within a designated time frame. Generbased and payload-based subsystems to gather cyber threat intelligence ally, packets in a flow are commonly aggregated based on five-tuple
+from traffic flow features, and packet payloads, respectively. In both traffic features, namely source and destination Internet Protocol (IP)
+subsystems, random forest [53] is used as ML classifier. Finally, the addresses, source and destination ports, and transport layer protocol.
+
+ 3
+A. Kiflay et al. Array 22 (2024) 100349
+
+ Fig. 2. Intrusion detection in the proposed multimodal ML-based NIDS.
+
+ Table 2
+ Flow-based features used in the multimodal NIDS.
+ Feature Description
+ Flow starting time Starting time of network flow
+ Flow duration Time duration of network flow
+ Source bytes Byte count from source
+ Destination bytes Byte count from destination
+ Source packets Packet count from source
+ Destination packets Packet count from destination
+
+Fig. 3. Illustration of packets within flows and time windows (𝑇𝑤 ). While blocks
+marked by ‘‘+’’ represent packets included in a current 𝑇𝑤 , those with ‘‘-’’ marks show
+packets included in a previous 𝑇𝑤 , and ‘‘-+’’ blocks represent packets waiting to be were determined by analyzing the training data. In the process of
+included in a future 𝑇𝑤 of the respective flows. detecting attacks, it is operationally sensible to set a time range within
+ which suspected intrusions are analyzed. Accordingly, the values of
+ 𝑇𝑤 were manually set in accordance with the minimum and maximum
+ In the proposed multimodal NIDS, flow-based traffic features and traffic flow duration of packets in the evaluation dataset.
+protocol payloads are extracted based on the concept of network flow. For a traffic flow between source and destination, an ML classifier
+ is trained using flow-based features. The objective of the flow-based
+Assume Flow represents a set that contains all active network flows
+ subsystem is to detect attacks using limited flow information that can
+at an observation point within a time range of interest. Flow is a set
+ be obtained directly from packet headers with limited expert involvedefined by the notation in (1).
+ ment. To this end, six flow-based features that are defined in the
+𝐹 𝑙𝑜𝑤 = {𝐹 𝑙𝑜𝑤1 , 𝐹 𝑙𝑜𝑤2 , 𝐹 𝑙𝑜𝑤3 , … 𝐹 𝑙𝑜𝑤𝑁 } (1) Internet Protocol Flow Information Export (IPFIX) standard have been
+ identified [56]. These are byte counts and packet counts from source
+where 𝑁 denotes the network flow count in a given time window. to destination and vice versa, flow starting time and duration. Since
+ In computer networks, exchange of control information and data most network vendors have provisions for gathering and disseminating
+occurs using packets. Here, Flow 1 , Flow 2 , … , Flow 𝑁 denote a set of traffic flow data to support network management and security objecflows at an observation point where a total of 𝑁 flows are processed. tives, these statistical features are straightforward to collect with little
+Within each flow, there are a number of packets. Fig. 3 shows indi- expert involvement. To minimize bias in the flow-based random forest
+vidual network packets that form a Flow as Packet 1 , Packet 2 , Packet 3 , classifier, certain traffic attributes including source and destination
+… , Packet 𝑀 where 𝑀 represents the number of packets in the flow. A IP addresses, source and destination ports, and protocol type were
+packet included in a flow may have user data in the form of protocol discarded, while the six standard traffic features were used for model
+payload. While the objective of the flow-based subsystem is to identify training and testing. To extract the flow-based features from the UNSWelements of Flow that are suspected attack traffic by analyzing their sta- NB15 PCAP files, Argus [57] and Bro-IDS [58], also known as Zeek IDS,
+tistical features, the payload-based subsystem analyzes actual contents were used as network flow analyzers. From the flow-based features,
+of the packet payload for malicious data patterns. some of those that are compliant to the IPFIX standard were used as
+ In real world network scenarios, the elements of Flow change dy- flow-based features to train the propose multimodal NIDS. Table 2
+namically as the individual flows contained within it vary with time. shows a description of the flow-based features used in the proposed
+Therefore, to account for the time-based variation in Flow’s contents, multimodal NIDS.
+starting time and ending time associated with each element of Flow are
+defined. To illustrate with an example, consider the two Flow elements 3.2. Payload-based subsystem
+shown in Fig. 3. Each flow consists of IP packets where each one of
+them stays in the flow between specific starting and ending times. To complement results of the flow-based subsystem with a different
+ Accordingly, without a loss of generality, a time window variable source of cyber-threat intelligence, actual data contents of packets
+𝑇𝑤 is defined to represent a time range within which a set of packets are used for intrusion detection in the payload-based subsystem. As
+in Flow are considered for intrusion detection. Depending on the time shown in Fig. 2(c), pre-processed protocol payloads are passed to
+duration an intrusion detection is intended to cover, values of 𝑇𝑤 random forest for traffic classification. A motivation to use a mixedcan range from seconds to hours. As illustrated in Fig. 3, different data based intrusion detection comes from an observation about the
+𝑇𝑤 ’s cover a number of packets within Flow during the course of an diversity of network attacks. While some attacks (e.g. reconnaissance,
+intrusion detection. In this paper, 𝑇𝑤 values ranging from 0 to 60 port scanning) do not usually contain payload, other types of atseconds were considered. The minimum and maximum values of 𝑇𝑤 tacks (e.g. viruses, worms) come embedded within packet payloads.
+
+ 4
+A. Kiflay et al. Array 22 (2024) 100349
+
+Therefore, a complementary approach of attack detection, which is layer protocol from Raw, and stores it in 𝑃𝑓 𝑙𝑜𝑤 . To extract protocol
+applicable in scenarios where at least some of the packets in a traffic payloads from Raw, Tshark [59], which is a well-known and openflow contain payload, is proposed in this paper. By learning from flow- source protocol analyzer, is used in Algorithm 1. From payloads in
+based traffic features on the one hand, and examining the first few bytes 𝑃𝑓 𝑙𝑜𝑤 , a unique identifier (𝑃𝑖𝑑 ) composed of timing parameters (𝑡𝑠 and
+of protocol payload on the other, the proposed NIDS robustly detects 𝑡𝑑 ), 𝑠𝑖𝑝 , 𝑑𝑖𝑝 , 𝑠𝑝𝑜𝑟𝑡 , and 𝑑𝑝𝑜𝑟𝑡 is extracted from the raw packet data. A
+diverse types network attacks. similar flow identifier (𝐹𝑖𝑑 ) is extracted from the labeled IDS dataset.
+ Since the proposed NIDS depends on both flow-based traffic features If a non-empty payload is found, the algorithm checks whether
+and protocol payloads, it is critical to ensure that both types of data the identifier of the extracted payload (𝑃𝑖𝑑 ) matches the identifier of
+are from the same network flow. Therefore, in the payload-based any flow in the labeled dataset (𝐹𝑖𝑑 ). If there is a match (i.e., the
+subsystem, protocol payloads are taken from corresponding flows used extracted payload corresponds to a labeled flow in the dataset), the
+in the flow-based subsystem. Accordingly, flow-specific payload data label of the matching flow in the labeled dataset is assigned to the
+are extracted and labeled, which are in turn used in the payload- extracted protocol payload (𝑃𝑙𝑎𝑏𝑒𝑙 ← 𝐹𝑖𝑑 ’s label). While the extracted
+based subsystem to classify traffic. To this end, a new method shown payload (𝑃𝑓 𝑙𝑜𝑤 ) is added to the list of payloads, the corresponding label
+in Algorithm 1 was developed and used to extract and label protocol (𝑃𝑙𝑎𝑏𝑒𝑙 ) is included in the list of labels. If there is no match between the
+payloads. Samples of flow-based features and protocol payloads are extracted payload and the flows in the labeled dataset, the algorithm
+considered to belong to the same network flow if both have the same continues to the next iteration until there are no more PCAP files. When
+values for traffic features that are used as flow identifiers. there are no more PCAP files to process, the algorithm returns the lists
+ of extracted payloads and their corresponding labels as the final output.
+Algorithm 1 Protocol payload extractor in the multimodal NIDS. In summary, Algorithm 1 iterates through the raw packet capture files,
+Input: extracts protocol payloads of a specified transport layer protocol, and
+ 1: Flow: Labeled dataset of network traffic flows matches them with corresponding labeled flows in the dataset. The
+ 2: Raw: Unlabeled raw PCAP files result is a list of extracted protocol payloads and their respective labels.
+ 3: Proto: Transport layer protocol While the flow-based subsystem uses labeled traffic samples con-
+Output: 𝑃 𝑎𝑦𝑙𝑜𝑎𝑑 and 𝐿𝑎𝑏𝑒𝑙 taining the six flow-based features as input, a list of protocol pay-
+ 4: function Extract_Payload(𝐹 𝑙𝑜𝑤, 𝑅𝑎𝑤, 𝑃 𝑟𝑜𝑡𝑜)
+ loads extracted and labeled according to Algorithm 1 are used by the
+ 5: 𝑃 𝑎𝑦𝑙𝑜𝑎𝑑 ← ∅
+ payload-based subsystem. As depicted in Fig. 2(c), a random forest
+ 6: 𝐿𝑎𝑏𝑒𝑙 ← ∅
+ classifier is trained to classify traffic based on these labeled protocol
+ 7: while 𝑅𝑎𝑤 ≠ ∅ do
+ 8: 𝑃𝑓 𝑙𝑜𝑤 ← Extract Proto’s payload from Raw file
+ payloads. Flow-specific payloads are converted into numeric represen-
+ 9: 𝑃𝑖𝑑 ← Extract [𝑡𝑠 , 𝑡𝑑 , 𝑠𝑖𝑝 , 𝑑𝑖𝑝 , 𝑠𝑝𝑜𝑟𝑡 , 𝑑𝑝𝑜𝑟𝑡 ] for 𝑃𝑓 𝑙𝑜𝑤 tations. Each byte in the payload’s hexadecimal string is converted into
+10: 𝐹𝑖𝑑 ← Extract [𝑡𝑠 , 𝑡𝑑 , 𝑠𝑖𝑝 , 𝑑𝑖𝑝 , 𝑠𝑝𝑜𝑟𝑡 , 𝑑𝑝𝑜𝑟𝑡 ] for Flow its numeric representation.
+11: if 𝑃𝑓 𝑙𝑜𝑤 ≠ ∅ then Since the size of payload is variable across IP packets in a flow,
+12: if 𝑃𝑖𝑑 = 𝐹𝑖𝑑 then a pre-processing procedure is applied to convert payload samples to
+13: 𝑃𝑙𝑎𝑏𝑒𝑙 ← 𝐹𝑖𝑑 ’s label fixed-size data. Algorithm 2 is used to transform the protocol payloads
+14: 𝑃 𝑎𝑦𝑙𝑜𝑎𝑑 ← 𝑃𝑓 𝑙𝑜𝑤 ∪ 𝑃 𝑎𝑦𝑙𝑜𝑎𝑑 to byte-level traffic features that can be used for attack detection.
+15: 𝐿𝑎𝑏𝑒𝑙 ← 𝑃𝑙𝑎𝑏𝑒𝑙 ∪ 𝐿𝑎𝑏𝑒𝑙
+16: else Algorithm 2 Payload pre-processor.
+17: Continue
+ Input:
+18: end if
+ 1: 𝑃 : A list of protocol payloads in network flow
+19: end if
+ 2: 𝐾: The first 𝐾 number of bytes of payload
+20: return 𝑃 𝑎𝑦𝑙𝑜𝑎𝑑, 𝐿𝑎𝑏𝑒𝑙
+ Output:
+21: end while
+ 3: 𝑋: Numeric array representation of payloads
+22: end function
+ 4: function decode_payload(𝑃 , 𝐾)
+ 5: 𝑋←∅
+ According to the definitions of Flow and 𝑇𝑤 , seven traffic attributes
+ 6: for 𝑖 in 𝑃 do
+are used as flow identifiers. Namely, flow starting time (𝑡𝑠 ), time 7: 𝐵 ← Get the first K bytes of payload
+duration of the flow (𝑡𝑑 ), source IP (𝑠𝑖𝑝 ), destination IP (𝑑𝑖𝑝 ), source 8: 𝑀 ← Numeric representation of 𝐵
+port (𝑠𝑝𝑜𝑟𝑡 ), destination port (𝑑𝑝𝑜𝑟𝑡 ), and the transport layer protocol. 9: 𝑁 ← Normalized values of 𝑀
+Algorithm 1 is used to extract and label protocol payloads from raw 10: 𝑋 ←𝑋∪𝑁
+packet capture (PCAP) files using labeled network flow dataset as 11: end for
+a reference. Note that labeled flow-based traffic features are widely 12: return 𝑋
+available as open source datasets. In contrast, labeled protocol payloads 13: end function
+are not publicly available as far as we know. Therefore, the newly
+proposed procedure in Algorithm 1 is used to extract and label protocol For a protocol payload in a network flow, Algorithm 2 extracts the
+payloads, which are in turn used by the payload-based subsystem to first set of bytes of the payload, converts them to numeric format and
+classify network traffic. normalizes the values. The payload-based classification model then uses
+ Algorithm 1 works as follows. Given a set of labeled network traffic the normalized byte-level payload samples as training and testing data.
+flows and the corresponding unlabeled raw PCAP files, Algorithm 1 In effect, every byte of the payload is taken as a feature in the
+extracts and labels protocol payloads. The algorithm takes three input payload-based subsystem. While using the first few bytes of protoparameters, which are Flow, Raw, and Proto. Flow is a dataset that col payload for classification minimizes processing overhead, we also
+contains labeled network traffic flows while Raw consists of the original show in Section 4 that analyzing payload data beyond the first 64
+PCAP files of the dataset. Proto is the type of transport layer protocol bytes does not increase detection accuracy. Overall, a list of protocol
+whose payload is to be extracted and labeled. The output of Algorithm payloads are taken, each payload’s first few bytes are converted into
+1 is a list of protocol payloads and their corresponding labels. numeric representation and the values are normalized. In this way, raw
+ The payload extraction and labeling procedure starts with empty protocol payloads are converted into a numerical format suitable for
+lists, 𝑃 𝑎𝑦𝑙𝑜𝑎𝑑 and 𝐿𝑎𝑏𝑒𝑙, which store the extracted payloads and their random forest and other ML classifiers. Finally, a soft voting scheme
+corresponding labels, respectively. As long as there are PCAP files to is used to combine traffic class predictions from the flow-based and
+process, the algorithm extracts the payload of the specified transport payload-based subsystems.
+
+ 5
+A. Kiflay et al. Array 22 (2024) 100349
+
+3.3. Classification using soft voting Table 3
+ Feature importance.
+
+ In a voting based classification, predictions from individual ML Feature Importance Feature Importance
+
+classifiers are combined to obtain the final class prediction. Assume swin 0.20379 sbytes 0.180505
+ spkts 0.170338 dwin 0.103253
+there are two ML classifiers denoted by ℎ1 and ℎ2 . Each classifier
+ isftplogin 0.076508 dpkts 0.07425
+predicts the probability that a given input sample, 𝑥, belongs to a dbytes 0.070062 dmeansz 0.040409
+class. In the proposed multimodal NIDS, ℎ1 and ℎ2 are the flow-based dur 0.030362 synack 0.011084
+and payload-based subsystems. For a traffic sample 𝑥, let 𝑃𝑗 (𝑥, ℎ1 ) and
+𝑃𝑗 (𝑥, ℎ2 ) denote the probability that 𝑥 belongs to class 𝑗 as determined
+ Table 4
+by ℎ1 and ℎ2 , respectively. In soft voting, the predicted probability for Flow-based TCP and UDP traffic samples in the dataset.
+class 𝑗, denoted as 𝑃𝑗 (𝑥), is the average of the predicted probabilities Protocol Training Testing Total Sample ratio
+from the two subsystems as shown in Eq. (2). samples (80%) samples (20%) samples by protocol
+ 1( ) TCP 1196057 299014 1495071 58.86%
+𝑃𝑗 (𝑥) = 𝑃 (𝑥, ℎ1 ) + 𝑃𝑗 (𝑥, ℎ2 ) (2)
+ 2 𝑗 UDP 792347 198087 990434 39%
+ Others – – 54538 2.14%
+𝑃𝑗 (𝑥, ℎ1 ) and 𝑃𝑗 (𝑥, ℎ2 ) represent the predicted probabilities of class 𝑗 for
+ Total 2540043 100%
+sample 𝑥 according to classifiers ℎ1 and ℎ2 , respectively.
+ For the given input sample 𝑥, the final class label is the class with
+the maximum average probability as shown in Eq. (3).
+ 𝐶 Values (CSV). To evaluate the proposed multimodal NIDS, both the
+𝑦pred (𝑥) = arg max 𝑃𝑗 (𝑥) (3) feature-ready CSV and the raw PCAP files were used.
+ 𝑗=1
+ As discussed in Section 3, six standard traffic features were extracted
+where 𝑦pred (𝑥) is class label predicted for the input sample 𝑥, and 𝐶 defrom data records in the original CSV files of the dataset. These flownotes the number of classes. By combining predicted traffic class proba- based features were selected due their availability in the IPFIX standard
+bilities of two independent random forest classifiers, the proposed mul- and ease of extraction from packet and byte counts of network transtimodal ML-based NIDS leverages threat intelligence gathered from sep- actions. The six features are among the statistical traffic information
+arate flow-based and payload-based subsystems and provides a robust commonly collected by IPFIX compliant network devices. Furthermore,
+intrusion detection. to assess the relative importance of the selected features, an ML model
+ was trained on all flow-based features and then used to rank all features
+4. Evaluation of the dataset including those used in the multimodal NIDS. Table 3
+ shows top contributing feature on a purely flow-based model trained
+ In a learning phase, two random forest classifiers are trained on two using all traffic features. It can be observed that spkts, sbytes, dbytes,
+distinct types of network traffic. While one classifier is trained on flow- dpkts and dur are among the most important features in the flow-based
+based features, the second classifier uses protocol payloads as shown model. Although there are other high ranking features in terms of the
+in Fig. 2. To detect intrusions during a testing phase, the flow-based output of a standalone flow-based model, these have not been used
+and payload-based models are used to classify new samples of flow- in the proposed multimodal NIDS. Priority was given to the relative
+based data and payload data, respectively. Subsequently, classification ease of feature extraction and IPFIX compliance of the selected features
+probabilities from each Machine Learning (ML) model are combined due to the use of both flow-based and payload-based features in a
+using a soft voting scheme to make the final traffic classification. complementary manner in the proposed method.
+ Since the proposed multimodal Network Intrusion Detection System In the flow-based part of the multimodal NIDS, traffic classification
+(NIDS) uses both flow-based features and protocol payloads, two types is made by random forest using the flow-based traffic features as shown
+of network traffic data are required for its evaluation. Accordingly, the in Fig. 2(a). Table 4 shows the network traffic samples of the dataset
+proposed NIDS was evaluated using flow-based features and protocol by protocol type. These flow-based traffic samples were obtained from
+payloads extracted from open source intrusion detection dataset known the feature-ready CSV records of the dataset. As depicted in Table 4,
+as UNSW-NB15 [60]. The proposed method has been implemented the majority of the flows, 97.86%, are either TCP or UDP traffic.
+using Scikit-learn and the Python programming language on Ubuntu Accordingly, we evaluate the proposed multimodal NIDS using TCP and
+operating system. UDP traffic samples.
+ Similarly, protocol payloads were extracted from the original PCAP
+4.1. Evaluation dataset files using Algorithm 1 as discussed in Section 3. In the process of
+ labeling protocol payloads, the CSV records were used as a reference
+ The proposed multimodal NIDS was trained and tested using the to identify matching network flows. Following payload extraction and
+UNSW-NB15 dataset [60]. While old datasets such KDDCup99 and NSL- labeling, hexadecimal strings of the protocol payloads were converted
+KDD [61] were used in the past, neither of them forms a realistic to numeric values and normalized according to Algorithm 2. A second
+representation of modern network traffic [62]. As the types of attacks random forest classifier is then trained and tested using the labeled and
+have been increasing over time, it is crucial to include emerging normalized payload traffic samples.
+attacks in an NIDS evaluation. Consequently, new datasets such as TShark [59], which is a well known protocol analyzer, was used
+CDX [63], CICIDS2017 [64] and UNSW-NB15 [60] have been devel- to extract network flows and protocol payloads from PCAP files. Paroped by researchers. After an evaluation of more than thirty different ticularly, starting timestamp, source and destination IPs, source and
+NIDS datasets, UNSW-NB15 is one of two datasets recommended by the destination ports, and the respective TCP and UDP packet payloads
+authors in [65] due to its broad range of attack scenarios. were extracted from every PCAP file of the dataset. For both TCP
+ The UNSW-NB15 intrusion detection dataset was created by cap- and UDP, network flows without packet payloads were discarded. The
+turing nearly 100 gigabyte of Packet Capture (PCAP) files from an same traffic features, except payload, were also extracted from the CSV
+experimental computer network. It is one of the latest datasets and files of the dataset. Redundant network flows were removed from the
+it contains traces of benign traffic and nine types of cyber-attacks. traffic features extracted using the PCAPs and CSV files. Subsequently,
+Network monitoring tools were used to extract 47 traffic features and to corresponding traffic samples from the CSV records and PCAPs were
+label network flows from the PCAP files. The labeled part of the dataset matched and selected according to the flow identifiers discussed in
+contains a total of 2540043 records in four files as Comma Separated Section 3.
+
+ 6
+A. Kiflay et al. Array 22 (2024) 100349
+
+ Fig. 4. Model 𝐹1 score versus payload size.
+
+ Overall, more than ten million (10727720) TCP flows with payloads proposed model was evaluated by taking average scores of evaluation
+and more than seven hundred thousand (786118) UDP flows with metrics discussed in Section 4.3.
+payloads were extracted and labeled using Algorithm 1. Whereas all
+of the UDP flows were included, 10% of the TCP flows were randomly 4.3. Evaluation metrics
+selected and used for evaluation. The resulting data was divided into
+80% and 20% for training and testing, respectively. The correctness of the predictions made by the proposed multimodal
+ NIDS was measured using a confusion matrix. Confusion matrix was
+4.2. Payload size used to compare traffic classes predicted by the proposed NIDS against
+ the actual traffic classes (ground truth). An ideal NIDS would have non-
+ When protocol payloads are transformed to fixed-size samples ac- zero values for True Positive (TP) and True Negative (TN), and zero
+cording to Algorithm 2, the payload size was determined experimen- values for False Positive (FP) and False Negative (FN) which represent
+tally. While aiming for minimized resource consumption and processing errors.
+time, it is also important to identify the size of protocol payload The objective of the proposed NIDS is to classify network traffic into
+that gives better detection accuracy. To this end, the payload-based attack or normal, and into multiple attack categories in the case of mulsubsystem was trained and its detection performance evaluated across ticlass classification. The confusion matrix was used in the evaluation
+a range of payload sizes. Fig. 4 shows F1 score of the payload-based of binary as well as multiclass traffic classification. In the case of the
+model versus the number of bytes across different payload sizes. It multiclass classification, where the NIDS predicted not only normal and
+can be seen that the model’s F1 score reaches 97% at a payload size attack traffic classes but also the types of attack, the confusion matrix
+of 32 bytes. Furthermore, while processing the payload data beyond was used to provide a detailed breakdown of the predictions for more
+the first 64 bytes incurs additional computational costs, no significant than two traffic types. Accordingly, the classification performance of
+performance improvement is obtained by doing so. the proposed multimodal NIDS in predicting normal traffic and cate-
+ Similarly, different fixed-size payloads starting from the leading gories of attack traffic was evaluated using average Accuracy, Precision,
+end of the payload have been used in other payload-based detection Recall, F1 score, and False Positive Rate (FPR). These standard metrics
+approaches [46–48]. Although the exact payload size varies from one are calculated from TP, TN, FP, and FN entries of the confusion matrix
+method to the other, it is common to take traffic samples from the first for the respective traffic class [68].
+few bytes of the payload. Cognizant of resources and time required Furthermore, Receiver Operating Characteristic (ROC) curve, which
+to handle protocol payloads of 64 bytes and 32 bytes vis-a-vis the shows True Positive Rate (TPR) and FPR, was used for evaluation. The
+detection accuracy achieved by using each, the first 32 bytes of payload target of the NIDS is maximizing TPR while minimizing FPR. In the
+were considered in the proposed method. Accordingly, the payload- case of multiclass classification, ROC curves with One-vs-Rest (OvR) apbased model was trained and tested using the first 32 bytes of protocol proach were used to measure the correctness of predictions. Using OvR
+payload. approach, the classification performance of the NIDS was evaluated
+ With the aforementioned configurations of the flow-based and for each traffic class. In OvR, the traffic class under consideration is
+payload-based models, the multimodal NIDS combines classifications treated as the positive class while considering all other traffic classes
+outputs of the two models using the soft voting scheme discussed in as the negative class. In addition, Area Under the Curve (AUC) measures
+Section 3.3. When the models were trained on their respective data the classification performance by calculating the area under the ROC
+samples, they could learn parameters of the data too well and result in curve. A nearly perfect NIDS would classify almost all network traffic
+overfitting, in which case the models would not perform well on new correctly, and the AUC in that case would be very close to 1.
+data. Therefore, to tackle overfitting, the models were trained using Flow-based features and protocol payloads from TCP and UDP of
+a k-fold cross-validation method [66,67]. Each model was trained and the UNSW-NB15 dataset were used for training and testing. The reason
+validated on the available data at different rounds of training by using that the proposed NIDS was evaluated using only these types of traffic
+ten-fold cross validation (𝑘 = 10), where one out of ten traffic samples is because TCP and UDP are the most commonly used transport layer
+were used for validation and the rest for training. Accordingly, the protocols. In addition, 97.86% of all data samples in the UNSW-NB15
+
+ 7
+A. Kiflay et al. Array 22 (2024) 100349
+
+ Fig. 5. Binary confusion matrix of the proposed multimodal NIDS.
+
+dataset come from either TCP or UDP traffic flows. Therefore, the In practice, excessive false alerts tend to cause threat-alert fatigue and
+proposed NIDS was evaluated using these traffic samples. The proposed take the attention of a security expert from responding to real attacks.
+NIDS was tested for binary and multiclass classification. Therefore, the fact that the proposed multimodal NIDS has low FPR has
+ useful practical significance for network security operations.
+5. Results Overall, the model classified most traffic classes correctly with
+ AUCs of more than 0.95 in most cases. Exceptions to this are Worms
+ In this section, the evaluation results of the proposed method are and Backdoor attack types with AUCs of 0.85 and 0.94, respectively.
+presented. Fig. 5 shows the binary confusion matrix of the proposed The obtained results confirm that the proposed multimodal NIDS can
+multimodal NIDS using traffic samples in the test data. While True classify most normal and attack traffic correctly. However, the classifi-
+Traffic Class shows the number of samples of attack and normal traffic cation results for attacks such as Backdoor and Worms were not as good
+in reality (ground truth), values of Predicted Traffic Class are the respec- as the others. In these cases, the low scores could be due to the fact that
+tive numbers of attack and normal traffic as classified by the proposed the attacks are a minority in the dataset with relatively few samples in
+ the training and testing sets. The number of samples of each type of
+NIDS. As shown in Fig. 5, out of a total of 371,778 testing samples,
+ attack used for evaluation are shown in multiclass confusion matrix in
+369,583 were correctly classified by the model. The remaining 2195
+ Fig. 7.
+traffic samples were misclassified where 1955 were false positives and
+ Fig. 7 shows multiclass confusion matrix for the proposed model.
+240 were false negatives. For binary classification, the proposed model
+ While values to the right of a True Traffic Class label are the real
+was evaluated using average values of Accuracy, Precision, Recall and
+ number of samples of that class, values shown vertical to Predicted
+F1 metrics using k-fold cross validation scores. The model achieved
+ Traffic Class label are the number of samples predicted by the model
+more than 98% on most of the evaluation metrics. The obtained high
+ as the respective class. It can be seen that the cells along the diagonal
+scores on the evaluation metrics indicate that the proposed NIDS can
+ of the confusion matrix from top left to bottom right, contain most of
+classify normal and attack traffic accurately. Fig. 6 shows the ROC the non-zero values, indicating the proposed NIDS detects most attacks
+curves of evaluating the proposed NIDS for multiclass classification. As correctly. In comparison to the actual attack categories, it can be seen
+stated earlier in this section, a good classifier has a ROC curve that that the model has predicted most traffic samples correctly. However,
+is close to the upper left corner of the plot, which indicates high true classes such as Normal, Exploits, Generic and Fuzzers had a few of their
+positive rates and low false positive rates. As can be seen in Fig. 6, samples misclassified as other types of traffic.
+the ROC curves of the attack traffic except two are close to the upper In summary, the proposed multimodal NIDS, which uses flow-based
+left corner of the plot. Backdoor and Worms are the two attack traffic features and the first 32 bytes of protocol payload in a complementary
+classes for which the proposed NIDS scored relatively low. manner was able to classify network traffic successfully, with high
+ Another way to assess the effectiveness of the proposed NIDS for average Accuracy, Precision, Recall, F1 score and low FPR values. While
+multiclass classification is to look at the AUC of the ROC curve. Values the proposed NIDS identified most attack categories in the evaluation
+of AUC close to 1 indicate a good classification performance. As shown dataset accurately, it has a limitation in terms of detecting unknown
+in Fig. 6, the ROC curves of most traffic classes have high AUCs except attacks. Since random forest, which is a supervised ML, is used in both
+Backdoor and Worms, which have AUCs of 0.85 and 0.94, respectively. the flow-based and payload-based models of the proposed multimodal
+Furthermore, very low FPRs were obtained for the nine attack classes. NIDS, it does not detect unknown or zero-day cyber-attacks.
+
+ 8
+A. Kiflay et al. Array 22 (2024) 100349
+
+ Fig. 6. Model ROC curves and AUCs.
+
+ Fig. 7. Multiclass confusion matrix.
+
+5.1. Model explainability results of intrusion detection models [71]. Beyond detecting attacks
+ accurately, it is important that the decisions made by an ML-based NIDS
+ With the widespread use of artificial intelligence (AI) in many are transparent and explainable. Once malicious network flows have
+domains, explainable AI (XAI) [69,70] has been used to interpret been identified by the NIDS, model explainability helps to determine
+
+ 9
+A. Kiflay et al. Array 22 (2024) 100349
+
+ Fig. 8. SHAP explainability of multiclass model output.
+
+why the attacks occurred and to inform actions that can be taken to Due to the use of random forest as a classifier, intermediate fusion is
+deal with the attacks. Model explainability provides insights about the not applicable in the proposed method. Therefore, thirdly, the proposed
+traffic attributes that the model relies on to detect attacks. decision-level multimodal NIDS is compared with a detection approach
+ To gain insights about the explainability of classification outputs of that combines flow-based data and the corresponding protocol paythe proposed multimodal NIDS, Shapley Additive Explanations (SHAP) loads as features before classification. Accordingly, a random forest
+values were used [72]. Model explainability was analyzed using traffic classifier was trained on a combined data obtained by joining the flowfeatures used in the payload-based and flow-based models that form based and payload-based traffic samples. The flow-based features were
+the proposed multimodal NIDS. Fig. 8 shows summary SHAP plot of zero-padded to match the byte-level features of the payload data.
+the payload-based model for multiclass classification. Fig. 8 depicts the In all three cases, random forest was used as the classifier to make
+impact of different payload byte features on the prediction of normal a fair comparison with the proposed method. The results show that the
+traffic and nine types of attacks. The results indicate that the 10th byte proposed multimodal NIDS is more effective in detecting attacks than
+of the payload is the highest contributing feature to the model’s output. both standalone flow-based and payload-based approaches. While the
+In addition, while the individual contributions to the model output vary payload-based model scored better than the flow-based model in almost
+on different payload byte positions, most top contributor features have all evaluation metrics, the proposed multimodal model scored better
+been found to be up to the 32nd byte of the payload. A similar trend was than both of them.
+observed in the case of binary classification of the model. The results To assess the effectiveness of the decision-level fusion of results in
+indicate that the treatment of the protocol payload at the byte-level the proposed method, it was compared with an early fusion approach.
+leads to the identification of the most common payload byte position Fig. 9 shows ROC curves of the model that was trained using traffic
+that can be used for attack detection. samples combined at a feature-level. In contrast, as shown in Fig. 6,
+ Similarly, the contribution of flow-based features to the multimodal the ROC curves of the proposed method have higher AUC scores. The
+ results indicate that early fusion of flow-based features and protocol
+output was evaluated using SHAP values of the flow-based model. The
+ payloads has lower attack detection performance than the proposed
+SHAP values of the flow-based features were smaller than that of the
+ multimodal model which uses decision-level fusion of results.
+payload-based model, thus indicating flow-based features have smaller
+ To compare the different fusion approaches in terms of explainabilcontribution to the overall multimodal model output. Although the
+ ity, Shapley Additive Explanations (SHAP) values were used to evaluate
+SHAP values of the flow-based features were small, their presence in
+ the contributions of the features on the output of the models. While it
+the multimodal NIDS was necessary for the detection of attacks that
+ was possible to measure the impact of payload and flow-features using
+have limited payload.
+ SHAP values as shown in Section 5.1, the early fusion based model
+ showed limitations in terms of explainability. For the model based on
+5.2. Comparisons the fusion of flow and payload features at data-level, model output
+ was not directly attributable to specific flow or payload features. The
+ In this subsection, the proposed multimodal NIDS is compared with early fusion of flow and payload data before classification introduces
+three types of intrusion detection approaches. Firstly, the proposed complexity in the explainability of model output.
+multimodal NIDS is compared with standalone flow-based and payloadbased detection methods. Secondly, the decision-level combination of 6. Conclusions
+results from the two models is compared against a method that uses
+aggregated flow-based and payload-based features at the data level. In this paper, a new multimodal Machine Learning (ML) based Net-
+The fusion of classification results in the proposed method occurs at work Intrusion Detection System (NIDS) is presented. The multimodal
+the decision level using a soft voting scheme. However, in multimodal NIDS uses distinct aspects of traffic in a complementary approach to
+ML approaches, the fusion can also be made at an intermediate step or reliably detect network intrusions. It has flow-based and payload-based
+early at a feature level. subsystems, where six standard traffic flow features and the first 32
+
+ 10
+A. Kiflay et al. Array 22 (2024) 100349
+
+ Fig. 9. ROC curves using early fusion.
+
+bytes of protocol payload are processed, respectively. In both subsys- Declaration of competing interest
+tems, a random forest ML model is trained to classify network traffic.
+Predicted probabilities of the two subsystems are then aggregated using The authors declare that they have no known competing finana soft voting scheme to obtain the final classification results. The pro- cial interests or personal relationships that could have appeared to
+posed NIDS was evaluated for binary and multiclass classification using influence the work reported in this paper.
+flow-based features and protocol payloads extracted from a publicly
+available UNSW-NB15 dataset. Data availability
+ The results show that the multimodal NIDS can detect network
+attacks with high average Precision, Recall, F1 , and Accuracy scores Link to code is provided in the paper and the dataset used is open
+reaching 98% in many cases, and up to 99% in some cases. The FPR source and available publicly.
+scores of the proposed NIDS were low for most of the attack categories
+in the evaluation dataset. While the proposed NIDS uses six standard- Acknowledgments
+ized flow-based features and the first 32 bytes of protocol payload,
+most previous ML-based NIDS used large number of traffic features and This work was supported by the School of Physics, Engineering
+big payload sizes. Therefore, the results in this paper confirm that a and Computer Science, University of Hertfordshire, Hatfield, United
+multimodal ML-based NIDS that learns from few standard traffic flow Kingdom.
+features on the one hand, and checks the first few bytes of protocol
+payload on the other, has a good potential to detect most network References
+attacks. For future work, the applicability and effectiveness of the
+proposed NIDS for online intrusion detection will be evaluated. The [1] Abdulganiyu OH, Ait Tchakoucht T, Saheed YK. A systematic literature review
+implementation of the multimodal ML-based NIDS is publicly available for network intrusion detection system (IDS). Int J Inf Secur 2023;1–38.
+ [2] Chapaneri R, Shah S. A comprehensive survey of machine learning-based network
+on GitHub.1
+ intrusion detection. Smart Intell Comput Appl 2019;345–56.
+ [3] Shaukat K, Luo S, Varadharajan V, Hameed IA, Xu M. A survey on ma-
+CRediT authorship contribution statement chine learning techniques for cyber security in the last decade. IEEE Access
+ 2020;8:222310–54.
+ [4] Xin Y, Kong L, Liu Z, Chen Y, Li Y, Zhu H, et al. Machine learning and deep
+ Aklil Kiflay: Conceptualization, Investigation, Methodology, Soft- learning methods for cybersecurity. Ieee Access 2018;6:35365–81.
+ware, Visualization, Writing – original draft. Athanasios Tsokanos: [5] Torres JM, Comesaña CI, Garcia-Nieto PJ. Machine learning techniques applied
+Conceptualization, Funding acquisition, Project administration, Re- to cybersecurity. Int J Mach Learn Cybern 2019;10(10):2823–36.
+sources, Supervision, Validation, Writing – review & editing. Mahmood [6] Pacheco F, Exposito E, Gineste M, Baudoin C, Aguilar J. Towards the deployment
+ of machine learning solutions in network traffic classification: A systematic
+Fazlali: Conceptualization, Funding acquisition, Project administrasurvey. IEEE Commun Surv Tutor 2018;21(2):1988–2014.
+tion, Resources, Supervision, Validation, Writing – review & editing. [7] Buczak AL, Guven E. A survey of data mining and machine learning meth-
+Raimund Kirner: Conceptualization, Funding acquisition, Project ad- ods for cyber security intrusion detection. IEEE Commun Surv Tutorials
+ministration, Resources, Supervision, Validation, Writing – review & 2015;18(2):1153–76.
+ [8] Fazlali M, Khodamoradi P, Mardukhi F, Nosrati M, Dehshibi MM. Metamorphic
+editing.
+ malware detection using opcode frequency rate and decision tree. Int J Inf Secur
+ Priv (IJISP) 2016;10(3):67–86.
+ [9] Aslan ÖA, Samet R. A comprehensive review on malware detection approaches.
+ 1
+ https://github.com/azkiflay/multimodal-nids IEEE Access 2020;8:6249–71.
+
+ 11
+A. Kiflay et al. Array 22 (2024) 100349
+
+[10] Khraisat A, Gondal I, Vamplew P, Kamruzzaman J. Survey of intrusion detection [37] Wressnegger C, Schwenk G, Arp D, Rieck K. A close look on n-grams in intrusion
+ systems: techniques, datasets and challenges. Cybersecurity 2019;2(1):1–22. detection: anomaly detection vs. classification. In: Proceedings of the 2013 ACM
+[11] Huang W, Han X, Zhang M, Li M, Liu W, Yang Z, et al. MFFAN: Multiple workshop on artificial intelligence and security. 2013, p. 67–76.
+ features fusion with attention networks for malicious traffic detection. In: 2022 [38] Wang K, Parekh JJ, Stolfo SJ. Anagram: A content anomaly detector resistant
+ IEEE international conference on trust, security and privacy in computing and to mimicry attack. In: International workshop on recent advances in intrusion
+ communications (trustCom). IEEE; 2022, p. 391–8. detection. Springer; 2006, p. 226–48.
+[12] Thakkar A, Lohiya R. A review on challenges and future research directions for [39] Swarnkar M, Hubballi N. Rangegram: A novel payload based anomaly detecmachine learning-based intrusion detection system. Arch Comput Methods Eng tion technique against web traffic. In: 2015 IEEE international conference on
+ 2023;1–25. advanced networks and telecommuncations systems. ANTS, IEEE; 2015, p. 1–6.
+[13] de Melo LH, de C Bertoli G, Pereira LA, Saotome O, Domingues MF, dos [40] Wang K, Stolfo SJ. Anomalous payload-based network intrusion detection. In:
+ Santos AL. Generalizing flow classification for distributed denial-of-service over International workshop on recent advances in intrusion detection. Springer; 2004,
+ different networks. In: GLOBECoM 2022-2022 IEEE global communications p. 203–22.
+ conference. IEEE; 2022, p. 879–84. [41] Perdisci R, Ariu D, Fogla P, Giacinto G, Lee W. McPAD: A multiple clas-
+[14] Apruzzese G, Colajanni M. Evading botnet detectors based on flows and random sifier system for accurate payload-based anomaly detection. Comput Netw
+ forest with adversarial samples. In: 2018 IEEE 17th international symposium on 2009;53(6):864–81.
+ network computing and applications. NCA, IEEE; 2018, p. 1–8. [42] Swarnkar M, Hubballi N. OCPAD: One class naive Bayes classifier for payload
+[15] Umer MF, Sher M, Bi Y. Flow-based intrusion detection: Techniques and based anomaly detection. Expert Syst Appl 2016;64:330–9.
+ challenges. Comput Secur 2017;70:238–54. [43] LeCun Y, Bengio Y, Hinton G. Deep learning. Nature 2015;521(7553):436–44.
+[16] Özdel S, Ateş Ç, Ateş PD, Koca M, Anarım E. Payload-based network traffic [44] Tsogbaatar E, Bhuyan MH, Fall D, Taenaka Y, Gonchigsumlaa K, Elmroth E, et al.
+ analysis for application classification and intrusion detection. In: 2022 30th A 1D-CNN based deep learning for detecting VSI-ddos attacks in IoT applications.
+ European signal processing conference. EUSIPCO, IEEE; 2022, p. 638–42. In: Advances and trends in artificial intelligence. artificial intelligence practices:
+[17] Kiflay AZ, Tsokanos A, Kirner R. A network intrusion detection system using 34th international conference on industrial, engineering and other applications of
+ ensemble machine learning. In: 2021 international carnahan conference on applied intelligent systems, IEA/AIE 2021, Kuala Lumpur, Malaysia, July 26–29,
+ security technology. ICCST, IEEE; 2021, p. 1–6. 2021, proceedings, part I 34. Springer; 2021, p. 530–43.
+[18] Al-Bakaa A, Al-Musawi B. Flow-based intrusion detection systems: A survey. In: [45] Xu Y, Zhang X, Ye T, Qiu Z, Zhang L, Zhang H, et al. 1D cnn for feature recon-
+ International conference on applications and techniques in information security. struction on network threat detection. In: 2021 13th international conference on
+ Springer; 2021, p. 121–37. machine learning and computing. 2021, p. 127–32.
+[19] Nguyen LG, Watabe K. Flow-based network intrusion detection based on BERT [46] Wang W, Zhu M, Zeng X, Ye X, Sheng Y. Malware traffic classification using
+ masked language model. In: Proceedings of the 3rd international CoNEXT student convolutional neural network for representation learning. In: 2017 international
+ workshop. 2022, p. 7–8. conference on information networking. ICOIN, IEEE; 2017, p. 712–7.
+ [47] Marín G, Caasas P, Capdehourat G. Deepmal-deep learning models for malware
+[20] Alasmary F, Alraddadi S, Al-Ahmadi S, Al-Muhtadi J. Shieldrnn: A distributed
+ traffic detection and classification. In: Data science–analytics and applications:
+ flow-based ddos detection solution for iot using sequence majority voting. IEEE
+ proceedings of the 3rd international data science conference–IDSC2020. Springer;
+ Access 2022;10:88263–75.
+ 2021, p. 105–12.
+[21] Thakkar A, Lohiya R. Fusion of statistical importance for feature selection in deep
+ [48] Millar K, Cheng A, Chew HG, Lim C-C. Deep learning for classifying malicious
+ neural network-based intrusion detection system. Inf Fusion 2023;90:353–63.
+ network traffic. In: Trends and applications in knowledge discovery and data
+[22] Santos L, Gonçalves R, Rabadao C, Martins J. A flow-based intrusion detection
+ mining: PAKDD 2018 workshops, BDASC, BDM, ML4Cyber, PAISI, DaMEMO,
+ framework for internet of things networks. Cluster Comput 2021;1–21.
+ Melbourne, VIC, Australia, June 3, 2018, revised selected papers 22. Springer;
+[23] Zhou Y, Cheng G, Jiang S, Dai M. Building an efficient intrusion detec-
+ 2018, p. 156–61.
+ tion system based on feature selection and ensemble classifier. Comput Netw
+ [49] Lin K, Xu X, Xiao F. MFFusion: A multi-level features fusion model for malicious
+ 2020;174:107247.
+ traffic detection based on deep learning. Comput Netw 2022;202:108658.
+[24] Kshirsagar D, Kumar S. Towards an intrusion detection system for detecting web
+ [50] Lin Y-D, Wang Z-Y, Lin P-C, Nguyen V-L, Hwang R-H, Lai Y-C. Multi-datasource
+ attacks based on an ensemble of filter feature selection techniques. Cyber-Phys
+ machine learning in intrusion detection: Packet flows, system logs and host
+ Syst 2023;9(3):244–59.
+ statistics. J Inf Secur Appl 2022;68:103248.
+[25] Mishra P, Varadharajan V, Tupakula U, Pilli ES. A detailed investigation and
+ [51] Min E, Long J, Liu Q, Cui J, Chen W. TR-IDS: Anomaly-based intrusion detection
+ analysis of using machine learning techniques for intrusion detection. IEEE
+ through text-convolutional neural network and random forest. Secur Commun
+ Commun Surv Tutorials 2018;21(1):686–728.
+ Netw 2018;2018.
+[26] Di Mauro M, Galatro G, Fortino G, Liotta A. Supervised feature selection [52] Kim Y. Convolutional neural networks for sentence classification. 2014, arXiv
+ techniques in network intrusion detection: A critical review. Eng Appl Artif Intell preprint arXiv:1408.5882.
+ 2021;101:104216. [53] Breiman L. Random forests. Mach Learn 2001;45(1):5–32.
+[27] Li J, Cheng K, Wang S, Morstatter F, Trevino RP, Tang J, et al. Feature selection: [54] Friedman JH. Greedy function approximation: a gradient boosting machine. Ann
+ A data perspective. ACM Comput Surv (CSUR) 2017;50(6):1–45. Stat 2001;1189–232.
+[28] Bommert A, Sun X, Bischl B, Rahnenführer J, Lang M. Benchmark for filter [55] Chen T, Guestrin C. Xgboost: A scalable tree boosting system. In: Proceedings of
+ methods for feature selection in high-dimensional classification data. Comput the 22nd acm sigkdd international conference on knowledge discovery and data
+ Statist Data Anal 2020;143:106839. mining. 2016, p. 785–94.
+[29] Pontes CF, De Souza MM, Gondim JJ, Bishop M, Marotta MA. A new method [56] Claise B, Trammell B, Aitken P. Specification of the IP flow information export
+ for flow-based network intrusion detection using the inverse Potts model. IEEE (IPFIX) protocol for the exchange of flow information. Tech. rep., 2013.
+ Trans Netw Serv Manag 2021;18(2):1125–36. [57] Bullard C. Argus, Online: https://openargus.org/, [Accessed 13/08/2022].
+[30] Wang F, Chai G, Li Q, Wang C. An efficient unsupervised domain adaptation [58] Zeek IDS, Online: https://zeek.org/, [Accessed 20/08/2022].
+ deep learning model for unknown malware detection. In: Security and privacy [59] Combs G. Tshark, Online: http://www.wireshark.org/docs/man-pages/tshark.
+ in new computing environments: 4th eAI international conference, SPNCE 2021, html, [Accessed 03/07/2022].
+ virtual event, December 10-11, 2021, proceedings. Springer; 2022, p. 64–76. [60] Moustafa N, Slay J. UNSW-NB15: a comprehensive data set for network in-
+[31] Siddique K, Akhtar Z, Khan FA, Kim Y. KDD cup 99 data sets: A perspective trusion detection systems (UNSW-NB15 network data set). In: 2015 military
+ on the role of data sets in network intrusion detection research. Computer communications and information systems conference (MilCIS). IEEE; 2015, p.
+ 2019;52(2):41–51. 1–6.
+[32] Sarhan M, Layeghy S, Moustafa N, Portmann M. Netflow datasets for machine [61] Tavallaee M, Bagheri E, Lu W, Ghorbani AA. A detailed analysis of the KDD CUP
+ learning-based network intrusion detection systems. In: Big data technologies 99 data set. In: 2009 IEEE symposium on computational intelligence for security
+ and applications: 10th EAI international conference, BDTA 2020, and 13th and defense applications. Ieee; 2009, p. 1–6.
+ EAI international conference on wireless internet, WiCON 2020, virtual event, [62] Sommer R, Paxson V. Outside the closed world: On using machine learning for
+ December 11, 2020, proceedings 10. Springer; 2021, p. 117–35. network intrusion detection. In: 2010 IEEE symposium on security and privacy.
+[33] Apruzzese G, Pajola L, Conti M. The cross-evaluation of machine learning- IEEE; 2010, p. 305–16.
+ based network intrusion detection systems. IEEE Trans Netw Serv Manag [63] Sangster B, O’connor T, Cook T, Fanelli R, Dean E, Morrell C, et al. Toward
+ 2022;19(4):5152–69. instrumenting network warfare competitions to generate labeled datasets. In:
+[34] Sperotto A, Schaffrath G, Sadre R, Morariu C, Pras A, Stiller B. An overview of IP CSET. 2009.
+ flow-based intrusion detection. IEEE Commun Surv Tutorials 2010;12(3):343–56. [64] Sharafaldin I, Lashkari AH, Ghorbani AA. Toward generating a new intrusion
+[35] Soltani M, Siavoshani MJ, Jahangir AH. A content-based deep intrusion detection detection dataset and intrusion traffic characterization. ICISSp 2018;1:108–16.
+ system. Int J Inf Secur 2022;1–16. [65] Ring M, Wunderlich S, Scheuring D, Landes D, Hotho A. A survey of
+[36] Cavnar WB, Trenkle JM, et al. N-gram-based text categorization. In: Proceedings network-based intrusion detection data sets. Comput Secur 2019;86:147–67.
+ of SDAIR-94, 3rd annual symposium on document analysis and information [66] Wong T-T, Yeh P-Y. Reliable accuracy estimates from k-fold cross validation.
+ retrieval. Vol. 161175, Las Vegas, NV; 1994, p. 14. IEEE Trans Knowl Data Eng 2019;32(8):1586–94.
+
+ 12
+A. Kiflay et al. Array 22 (2024) 100349
+
+[67] Wong T-T. Performance evaluation of classification algorithms by k-fold and [70] Minh D, Wang HX, Li YF, Nguyen TN. Explainable artificial intelligence: a
+ leave-one-out cross validation. Pattern Recognit 2015;48(9):2839–46. comprehensive review. Artif Intell Rev 2022;1–66.
+[68] Sokolova M, Lapalme G. A systematic analysis of performance measures for [71] Wang M, Zheng K, Yang Y, Wang X. An explainable machine learning framework
+ classification tasks. Inf Process Manag 2009;45(4):427–37. for intrusion detection systems. IEEE Access 2020;8:73127–41.
+[69] Rjoub G, Bentahar J, Wahab OA, Mizouni R, Song A, Cohen R, et al. A survey on [72] Lundberg SM, Erion G, Chen H, DeGrave A, Prutkin JM, Nair B, et al. From
+ explainable artificial intelligence for cybersecurity. IEEE Trans Netw Serv Manag local explanations to global understanding with explainable AI for trees. Nat
+ 2023. Mach Intell 2020;2(1):56–67.
+
+ 13

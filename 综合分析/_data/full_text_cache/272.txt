@@ -1,0 +1,741 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 6, JUNE 2024 4639
+
+Normal Image Guided Segmentation Framework for
+ Unsupervised Anomaly Detection
+ Peng Xing , Yanpeng Sun , Dan Zeng , Senior Member, IEEE, and Zechao Li , Senior Member, IEEE
+
+ Abstract— Unsupervised anomaly detection is required to
+detect/segment anomalous samples/regions that deviate from
+the normal pattern while learning only through the normal
+sample category. Towards this end, this paper proposes a
+novel framework for anomaly detection by introducing normal
+images as guidance called Normal Image Guided Segmentation
+Framework (NIGSF). It consists of a Normal Guided Network
+(NGN) and a Saliency Augmentation Module (SAM). NGN
+constructs the contrast set, which is a candidate set for extracting
+normal sample features. Then, a normal feature extractor is
+developed to extract detailed and complete features containing
+normal semantic information as guidance features. Meanwhile,
+the guidance feature fusion module is introduced to realize
+normal semantic guidance in the feature space, and then the
+segmentation module discriminates the features that are different
+from the normal guidance features as anomalies. SAM aims
+to generate forged anomaly samples utilizing available normal
+samples. It introduces saliency maps and random Perlin noise to
+generate saliency Perlin noise maps and then to generate diverse
+forged anomaly samples. Extensive experiments are conducted to Fig. 1. Comparison of different unsupervised anomaly detection methods.
+evaluate the performance of NIGSF on three anomaly detection (a) “Recon.”( Reconstruction-based method [6], [19]). (b) DRAEM [20].
+benchmark datasets. The results demonstrate the effectiveness (c) The proposed framework (NIGSF). NIGSF takes full advantage of the
+of each proposed module and the superiority of the proposed similarity of normal samples and directly utilizes normal image to guide the
+method. Specifically, NIGSF outperforms the runner-up by 5.4% segmentation of abnormal regions.
+in terms of anomaly segmentation AP metric.
+ Index Terms— Anomaly detection, contrast set, normal guidance, saliency augmentation, feature guidance. anomaly events and the difficulty of collecting all anomaly
+ categories [6], [7]. Therefore, unsupervised anomaly detection
+ I. I NTRODUCTION that relies only on normal sample modelling becomes an
+ important task. This task holds great promise in industrial
+U NSUPERVISED anomaly detection is a crucial task in
+ computer vision, which includes two parts: anomaly
+classification and anomaly segmentation [1], [2], [3], [4], [5].
+ contexts [1], [2], [8], [9], [10], [11], medical diagnosis [12],
+ [13], and video surveillance [14], [15], [16], [17], [18], for
+ example, by modeling normal industrial product images to
+The former aims to identify samples as normal or anomadetect abnormal types of products and get rid of manual quality
+lous, whereas the latter strives to locate anomalous pixels.
+ control. Training only through normal samples poses a huge
+However, anomaly detection is different from general detecchallenge of unsupervised anomaly detection. To solve this
+tion and segmentation tasks. Due to the wide distribution of
+ challenge, the relationship between normal images must be
+ Manuscript received 29 June 2023; revised 23 September 2023; accepted 16 fully explored.
+October 2023. Date of publication 25 October 2023; date of current ver- Recent developments in anomaly detection have explored
+sion 6 June 2024. This work was supported in part by the National Key
+Research and Development Program of China under Grant 2022ZD0118802 a plethora of methods to address its inherent challenges
+and in part by the National Natural Science Foundation of China under [21], [22], [23], [24]. As depicted in Figure 1 (a), popu-
+Grant U20B2064 and Grant U21B2043. This article was recommended by lar reconstruction-based methods [6], [25], [26] utilize an
+Associate Editor A. Liu. (Corresponding author: Zechao Li.)
+ Peng Xing, Yanpeng Sun, and Zechao Li are with the School autoencoder for recovering normal samples with low error,
+of Computer Science and Engineering, Nanjing University of Science while recovering “unlearn” abnormal samples are expected
+and Technology, Nanjing 210094, China (e-mail: xingp_ng@njust.edu.cn; to yield higher reconstruction error. This reconstruction error,
+yanpeng_sun@njust.edu.cn; zechao.li@njust.edu.cn).
+ Dan Zeng is with the School of Communication and Informa- representing the anomaly score of an image, alongside the
+tion Engineering, Shanghai University, Shanghai 200444, China (e-mail: pixel-level error forming the anomaly segmentation map, are
+dzeng@shu.edu.cn). the principal insights of these methods [3], [4]. However, these
+ Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TCSVT.2023.3327448. models face limitations as they cannot filter all anomalies,
+ Digital Object Identifier 10.1109/TCSVT.2023.3327448 especially when actual anomalous samples for training are
+ 1051-8215 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+4640 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 6, JUNE 2024
+
+insufficient or when these anomalies closely resemble normal participate in training. SAM introduces the saliency map and
+samples. Figure 1 (b) illustrates the DRAEM segmentation Perlin noise to forge anomalies in saliency regions rather
+method [20], which anticipates training a segmentation model than background regions while ensuring diversity and avoiding
+for direct anomaly segmentation. The insight of DRAEM generating noisy samples that may hinder model learning.
+expects the segmentation model to learn the representation During training, NIGSF is expected to accurately segment
+of anomalies and then segmentation. However, anomalous the forged anomalies under the guidance of the normal
+features are diverse, which results in unlearned anomaly image. Extensive experiments are conducted on three anomaly
+types that may still be misclassified as normal. Under the detection datasets. The performance of NIGSF over the statetraditional anomaly detection paradigm, a significant limitation of-the-art approaches demonstrates its superiority.
+of existing methods is that they aim to learn as much as The main contributions of this paper can be summarized as
+possible about the representation of all anomaly types and follows:
+then filter or segment them accordingly. Therefore, there is • In this paper, the inadequacies of the current anomaly
+an urgent requirement to develop a novel anomaly detec- detection paradigm are analyzed, and a novel paradigm,
+tion paradigm to overcome this challenge. Moreover, some anomaly detection guided by normal images, which aligns
+methods [20], [27] have been proposed to overcome the more closely with human intuition, is proposed.
+imbalance challenge between positive and negative samples • Based on the proposed anomaly detection paradigm,
+associated with the dearth of anomalous samples available for a novel Normal Image Guided Segmentation Framework
+training. CutPaste [27] generates forged anomalous samples (NIGSF) is proposed. It directly introduces normal image
+by randomly cropping thin rectangular areas from normal features as reference features and guides the segmentation
+samples and then uses a classifier to detect the anomalous model to identify “abnormal” classes that differ from the
+samples. Meanwhile, anomaly segmentation maps are inferred normal reference.
+by the classifier’s gradient. Nonetheless, the forged anomalous • A Saliency Augmentation Module (SAM) is proposed to
+regions only comprise part of the normal sample and are generate diverse and valid forged anomaly samples, which
+rectangular in shape, which causes the forged anomalies to be facilitates the learning of NIGSF.
+too simplistic. DRAEM [20] is developed based on random The remainder of the paper is organized as follows.
+noise [28] to create binary masks that generate forged anoma- Section II presents a brief overview of related work, includlous regions. However, the use of global random noise results ing differences between recent studies and the proposed
+in the generated anomalies appearing in image backgrounds. approach. Section III outlines the details of the proposed
+These forged anomaly samples may prompt the model to focus method. Section IV provides a detailed description of the
+excessively on the background region, which results in the experiments, containing the ablation experiments and the
+model being ineffective in detecting real anomalies, especially experimental results of the three data sets. Section V provides
+in industrial product scenes. the conclusions.
+ Towards this end, a novel Normal Image Guided Segmentation Framework (NIGSF) for anomaly detection is presented,
+as illustrated in Figure 1 (c). The proposed NIGSF is more II. R ELATED W ORK
+perceptually consistent with human intuition for detecting Anomaly detection plays a pivotal role in visual tasks [20],
+abnormal images, i.e., it utilizes normal samples as the ref- [27]. The issue lies in the diversity of anomalous samples
+erence to guide the segmentation model to identify “abnormal making it unfeasible to obtain representations of all anomalies,
+features” that deviate from the normal reference. This is called necessitating unsupervised methods which only require normal
+the normal image-guided anomaly detection paradigm. Our samples [29], [30], [31]. This challenge of detecting anomalies
+framework hinges on two main components: the Normal- without prior knowledge of anomalous scenes is demand-
+Guided Network (NGN), and the Saliency Augmentation ing. Initially, anomaly detection aimed to identify unlearned
+Module (SAM). Firstly, Normal-Guided Network (NGN) is category samples, referred to as Out-of-Distribution (OOD)
+proposed to extract valid normal features as reference features detection [32] or One-Class Classification [23]. Yet, in indusand guide the segmentation model to segment out abnormal trial and medical scenarios, locating anomalous regions in
+regions. In NGN, we set up the contrast set, which is pro- abnormal images becomes imperative [1], [20], [33], [34],
+posed as a candidate set for extracting guidance features for thereby bifurcating unsupervised anomaly detection into two
+the input image. In addition, a normal feature extractor is subtasks, namely, anomaly classification and anomaly segmendeveloped to extract noiseless guidance features with detailed tation. Various existing approaches include distribution-based,
+normal semantic information from the contrast set. Meanwhile, knowledge distillation-based, reconstruction-based, and forged
+a simple yet effective multiscale guidance fusion is proposed anomalous sample-based methods.
+to fully utilize the guidance features to guide the segmentation Distribution-based methods [21], [22], [23] deduce norof anomalous features. The multiscale features account for the mal sample distribution before identifying anomalies as
+discrimination of tiny anomaly regions. Secondly, to further samples falling outside these distributions. For instance,
+facilitate NIGSF learning to detect abnormal regions that devi- DeepSVDD [23] uses deep learning models to map the original
+ate from normal patterns, a Saliency Augmentation Module image space to high-dimensional latent space. Normal sam-
+(SAM) is proposed, which aims to generate forged anomalous ples’ distribution is limited to certain regions in this space,
+samples that differ from the normal sample distribution to enabling the identification of anomalies outside these regions.
+XING et al.: NIGSF FOR UNSUPERVISED ANOMALY DETECTION 4641
+
+These methods excel when normal and anomaly classes have a networks for segmenting forged anomalous samples. However,
+wide gap but falter with finer anomalies like leather scratches. this is not effective due to the distributional gap between the
+Padim [24] further refines this approach by modeling the dis- generated and real anomalies. Towards this end, this paper
+tribution of each normal image patch using multiple Gaussian proposes a more reasonable method to generate forged anomamixture models [35], thus identifying outliers, yet precise lous samples. Then, a novel anomaly detection framework is
+anomaly segmentation remains elusive. proposed, which utilizes normal features as guidance features
+ The knowledge distillation-based approach [2], [36] trains to detect anomaly regions. The purpose of NIGSF is to learn
+one or more student networks through a pre-trained teacher and detect distributions that differ from the normal distribution,
+network and detects anomalies by the output’s differences guided by the normal pattern.
+between the teacher and student networks for the samples.
+U-Std [2] utilizes multiple student networks and image patches III. T HE P ROPOSED M ETHOD
+as input to the network. However, it is inefficient in practice A. Overview
+and can not achieve anomaly localization. MKDAD [36] uses
+only one student network and multi-scale feature distillation The overall architecture of the proposed Normal Image
+to encode normal samples closer together. It achieves anomaly Guided Segmentation Framework (NIGSF) is shown in
+localization relying on the gradients to locate anomalous Figure 2, which contains a Normal Guided Network (NGN)
+regions. However, it is limited by the resolution of feature and a Saliency Augmentation Module (SAM). The intumaps and does not enable accurate anomaly segmentation. ition of NIGSF is to identify unknown abnormal samples
+ The reconstruction-based approaches usually utilize autoen- by comparing the differences with known normal samples
+coder (AE) [37] to successfully reconstruct normal samples which is similar to the detection of abnormal classes in
+and poorly anomalous samples [19], [26], [38], [39]. Abnormal humans. Towards this end, NGN (Sec. III-B) is proposed,
+regions are detected and localized by comparing the difference which contains a normal feature extractor, the guidance feabetween the original and reconstructed images. These methods ture fusion and a segmentation module. The purpose of the
+are implemented directly through AE [19]. However, due to normal feature extractor is to extract the normal features
+the strong reconstruction ability of AE, they can reconstruct with detailed information from only the normal samples.
+anomalous samples well even if no anomalous samples are To facilitate feature-level guidance, this paper utilizes a simple
+available in training. Some methods [4], [6], [7], [25], [40], yet effective guidance feature fusion method. Specifically, the
+[41], [42], [43] are proposed to reduce the reconstruction features extracted from the input image (I or A) by the
+ability of AE by introducing memory networks. For example, encoder of the segmentation module are multi-scale fused
+MemAE [6] introduces a memory module after the encoder with the guidance features. The decoder of the segmentation
+of the traditional AE, and PMB introduces a more efficient module learns from the fused features and segments the
+local memory module weakening anomaly recovery. However, “anomalies” that differ from the guidance features. To facilitate
+the simple memory module makes the performance poor the segmentation module segmenting anomalies efficiently,
+in the face of fine-grained anomalies. MNAD [7] further SAM (Sec. III-C) is proposed. SAM aims to generate forged
+improves the original memory module and introduces a new anomaly samples by available normal samples. It can generate
+loss function to improve the learning of the memory module. reasonable forged anomaly samples in the saliency region
+Unfortunately, these methods can still reconstruct unlearned rather than the background region. In the training phase, the
+objects well, and the anomaly segmentation performance of generated forged anomalous samples serve as training samples
+anomaly detection remains poor. along with normal samples to train the segmentation model to
+ The forged anomalous sample-based approach is proposed locate the forged regions. In the inference phase, the input
+to solve the problem of positive and negative sample imbal- samples are input to the segmentation module without SAM.
+ance in anomaly detection [20], [27]. After acquiring forged In summary, NIGSF aims to enable the model to learn to
+anomaly samples, supervised models can be used to solve the identify content that differs from the guidance features as
+anomaly detection challenge. Cutpaste [27] generates forged anomalies under normal sample guidance. Therefore, NIGSF
+abnormal samples that are added to the training set by using differs from the traditional anomaly detection paradigm in that
+a part of the rectangular region of the original image to fill it is more in line with the anomaly detection principle, i.e.,
+the forged region. However, the forged anomalies are not only identifies deviations from normal as abnormal.
+rectangular in shape but also simple. Besides, using the gradi- Formally, A represents the input image and y A =
+  ij ij N ,N
+ent method to locate the anomalies, the pixel-level localization y |y ∈ {0} i=1, j=1 is pixel-level label, where N × N repreperformance is poor. Inspired by the excellent performance of sents the size of A, y i j = 0 represents that the pixel is normal,
+segmentation models in dense prediction tasks [44], [45], [46], y i j = 1 represents that the pixel is abnormal. The contrast set
+ N ,N
+ is C = {C1 , C2 , . . . , Cn }, yC = yi j |y i j ∈ {0} i=1, j=1 , where
+ 
+[47], several studies [20], [48] have introduced segmentation
+networks in anomaly localization task. In [48], the forged n denotes the number of samples in C. The sampled image is
+images are first generated by the GAN as well as the semantic Ci as the input of the normal feature extractor. The auxiliary
+ N ,N
+ image is represented as B, y B = yi j |y i j ∈ {1} i=1, j=1 . R
+ 
+segmentation network, and then the distillation network is
+used to detect anomaly images. However, it is only applicable represents the output of the normal feature extractor with the
+to anomaly classification and difficult to achieve anomaly same size as Ci . The loss function of the normal feature
+localization. DRAEM [20] directly introduces segmentation extractor is L N . The image A is forged by the SAM to obtain
+4642 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 6, JUNE 2024
+
+Fig. 2. Illustration of the proposed NIGSF. A represents the input image. The contrast set C is first generated from A and available normal samples, then
+Ci is randomly sampled from C as the input of the normal feature extractor, which is responsible for extracting the noise-free and complete features as
+the guidance features that guide the segmentation module to segment anomaly regions. During training, the image A is input to the Saliency Augmentation
+Module (SAM) to generate the forged anomaly image I . The guidance features and features extracted by I are fed into the decoder of the segmentation
+network by the guidance feature fusion module. Finally, the decoder of the segmentation module identifies the difference between the input features and the
+guidance features segmenting the anomalous region to obtain the segmentation map O. The proposed NISGF utilizes L N and L S to train the model. SAM
+is discarded during the inference phase, and A is fed directly into the segmentation module to achieve anomaly detection.
+
+ N ,N
+the set of samples I , and y I = yi j |y i j ∈ {0, 1} i=1, j=1 . O
+ 
+ serves as the features for measuring similarity. The output q
+represents the output of the segmentation module as anomaly is then flattened into a vector p A ∈ R512 by the mean-pooling
+localization images. M represents the forged mask. The loss layer. p A obtained from image A is used to calculate the cosine
+function of the segmentation network is L S . similarity T with the training normal images pT rain .
+ j
+ p A · pT rain
+B. Normal Guided Network T = {T 1 , T 2 , . . . , T j , . . . , T m |T j = },
+ j
+ Since the high correlation among normal samples, it is ∥ p A ∥ × pT rain
+natural to consider normal sample comparisons for identifying (1)
+anomalies. In this regard, we first introduce the concept of a
+contrast set whose images serve as reference samples for the where m is the number of available normal samples to coninput samples. We then extract features from the reference struct the contrast set. Then, T is arranged as T ′ in descending
+images using a normal feature extractor as guidance features. order of similarity. The top n in T ′ that correspond to the
+Finally, the anomaly detection results are obtained by guidance original images are used to constitute the contrast set of A.
+feature fusion and the segmentation module. It is important to note that the contrast set of image A does
+ 1) Contrast Set: Given the substantial intra-class variations not comprise A itself since this can prevent the network from
+exhibited by samples, even normal ones, low-level attributes excessively attending to low-level features (see Sec. IV-E).
+such as texture and color tend to differ. Consequently, ran- During the training phase, images are randomly sampled from
+domly selecting normal samples as reference images poses the contrast set and used as input for the normal feature
+a challenge in ensuring the extracted features suitable for extractor. On the other hand, in the reference phase, only
+guiding the detection of anomalous samples. This paper intro- normal samples that are most similar to the input samples
+duces the contrast set. The contrast set is composed of normal A are included in the contrast set (Table VIII and ablation
+samples that closely resemble input image A, allowing for experiments (5) give more explanation.).
+the controlled similarity of low-level information and high- 2) Normal Feature Extractor: To guarantee that the
+level semantic information between the guidance features and extracted features comprise comprehensive and detailed inforfeatures extracted from A. As a result, the segmentation mation, a normal feature extractor is employed, as shown
+module is better guided to locate tiny anomalies using the in Figure 3. In particular, Ci , sampled randomly from the
+guidance features obtained from the segmentation module. contrast set, is inputted into the extractor to ensure that the
+ Specifically, the proposed approach utilizes a feature extrac- extracted guidance features possess normal semantic informator, where the output q ∈ R512×8×8 of the extractor’s last layer tion. Specifically, the normal feature extractor with a standard
+XING et al.: NIGSF FOR UNSUPERVISED ANOMALY DETECTION 4643
+
+Fig. 3. Illustration of the guidance feature fusion module and segmentation module. Ci is randomly sampled from the contrast set C and used as the input
+of the normal feature extractor. The features of Ci are extracted by the normal feature extractor as the guidance features C D = {C iD }i=1
+ 4 . The segmentation
+
+module extracts the features A E = {AiE }i=14 of the input image I or A (During the inference phase, A is input directly into the segmentation module
+without SAM). The C D as guidance feature to provide feature-level guidance. The fused results are subjected to a standard 3 × 3 convolution layer to extract
+discriminative features, which utilize skip connections to guide the decoder to obtain anomalous localization map O.
+
+AE composition is trained by a reconstruction task. The output Ai−1
+ D of layer i − 1.
+reconstruction task compresses and then recovers the image
+features to ensure that the output of the decoder is normal D ),
+ AiD = T rConvi (Ai−1
+ d (4)
+features. In addition, the multi-scale ensures the extraction of
+high-dimensional semantic and low-dimensional information. where T rConvi (·) is 2× transposed convolution, d
+ AiD is out-
+Therefore, the multi-scale features output from the normal put of the transposed convolution. Meanwhile, the guidance
+feature extractor decoder are used as guidance features. features C iD are fused with AiE to obtain a new tensor
+ 3) Guidance Feature Fusion: To achieve normal features as ACi ∈ Rh×w×2c . We utilize the fused features to generate
+ di and then obtain the decoder output Ai at layer
+ further AC
+the guidance for input images, we adopt a simple yet effective i
+ D
+guidance feature fusion, as shown in Figure 3. We utilize i. A D is represented as follows:
+guidance features and the encoder of segmentation module to di , d
+ AiD = σ (B Ni2 (Convi2 (σ (B Ni1 (Convi1 (cat ( AC AiD )))))).
+achieve fusion. n each step, features with the same resolution
+are fused through each layer of encoder to achieve feature (5)
+level fusion. Formally, the multi-scale features extracted by
+ where B Ni1 (·) and B Ni2 (·) denote two batch normalization
+a normal feature extractor network are C E = {C Ei }i=14 . The
+ i 4 layers, Convi1 and Convi2 represent 3 × 3 with stride =
+output of the decoder is C D = {C D }i=1 , where C D is defined
+ 1. By performing the aforementioned operations iteratively,
+as the guidance features. The output of the encoder of the
+ a segmentation map O is obtained. Each pixel value of
+segmentation network is A E = {AiE }i=1 4 and the output of
+ i 4 the localization image O indicates the likelihood of each
+the decoder is A D = {A D }i=1 . The proposed approach direct
+ pixel being discriminated as anomalous. Following [20], O
+multiscale fuses C D and A E , which ensures the segmentation
+ is processed through the mean-pooling layer to aggregate
+of tiny anomalous regions. It can be expressed as:
+ local anomaly information. Furthermore, the proposed method
+ ACi = cat (C iD , AiE ), i = 1, 2, 3, 4, (2) utilizes the maximum pixel value of O rather than the average
+ value as the anomaly score of the sample to eliminate any
+where cat (·) represents two features concatenated along the adverse effects caused by noise.
+channel dimension. Then, we further process ACi by 3 ×
+3 convolutional layer to implement feature-level guidance. C. Saliency Augmentation Module
+ di = σ (B Ni (Convi (ACi ))),
+ AC (3) SAM aims to generate reasonable forged anomalous samples that are close to the real anomaly distribution and suitable
+where B Ni (·) denotes batch normalization layer, σ (·) denotes for model learning, which includes a Saliency Perlin Noise
+the ReLU activation function. ACi and AC di are fed to the next Generator (SPNG) and a Forged Sample Generator (FSG),
+encoder layer and to the decoder after the skip connection, as shown in Figure 4. We follow DRAEM [20] to introrespectively. duce random Perlin noise. However, the mask generated by
+ 4) Segmentation Module: The segmentation module con- DRAEM using global noise may cause the model to focus
+sists of an autoencoder. The encoder is responsible for excessively on the background region, which is detrimental to
+extracting the multi-scale features of the input image. The industrial anomaly detection. SAM further introduces saliency
+fused features are input to the decoder, then gradually obtains information.SPNG generates saliency Perrin noise to make the
+the segmentation result by transposition convolution. Taking generated anomaly masks lie in the saliency region instead
+layer i of the decoder as an example. First, its input is the of the background region. Meanwhile, to generate diverse
+4644 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 6, JUNE 2024
+
+ generate G S . Formally,
+ (
+ G R , sum(S) = 0,
+ GS = (8)
+ G S , other wise,
+
+ D. Loss Function
+ The proposed approach contains losses L N and L S . For the
+ normal feature extractor, the l2 loss is introduced. Besides,
+ the SS I M loss function [50] is also introduced to enhance the
+Fig. 4. Illustration of the Saliency Augmentation Module (SAM). The reconstruction result so that the output guidance features are
+input of the SAM consists of three parts: the original input image A, the completely noise-free normal features. Following [19], SS I M
+auxiliary image B and the saliency map S. The Saliency Perlin Generator
+generates the saliency Perlin noise G. The mask M is obtained from the
+ loss is obtained from Equation (10). It is expressed as follows:
+saliency Perlin noise G using an adaptive threshold segmentation strategy. Ll2 = ∥R − C∥2 , (9)
+Finally, the original image A, auxiliary image B and mask (M and 1 − M)
+ N N
+are processed to generate the forged anomaly image I . G R represents the 1 XX
+ j) (R, C),
+ k
+random grid. L SS I M = 1 − SS I M(i, (10)
+ N×N
+ i=1 j=1
+
+masks, an adaptive threshold scheme is proposed to binarize where R and C are the reconstruction image and input
+ image of normal feature extractor. SS I M(i, k (R, C) denotes
+the saliency Perlin noise. Then, FSG utilizes the auxiliary j)
+samples, the mask generated by SPNG and the original image the structural similarity index of a block of size k × k centred
+to generate the forged anomalous samples. at (i, j). For the segmentation module, the Focal loss [51]
+ Specifically, as shown in Figure 4, the input of SAM is is introduced to alleviate the imbalance between normal and
+the original image A, the saliency map S extracted using anomalous pixels. L S is expressed as follows:
+ −(1 − p)τ log( p), y I = 1,
+ (
+ ij
+the saliency method [49], and the auxiliary image B. First,
+ LS = (11)
+a random grid G R is generated with the same size as the − p τ log(1 − p),
+ ij
+ y I = 0.
+original image A. Second, the saliency grid G S is obtained by
+ where p represents the probability of pixel (i, j) prediction.
+Hadamard product between saliency map S and the original
+ Finally, the total loss of the proposed NIGSF is expressed as:
+grid G R , which is used to generate the original noise G in
+the saliency region. Third, by setting the threshold µ, the L = λ × L N + L S = λ × (Ll2 + L SS I M ) + L S , (12)
+foreground mask (M) and the background mask (1 − M) where λ is set to measure the importance of the two loss
+are segmented. In this paper, an adaptive threshold scheme functions.
+is developed associated with the saliency map as follows: IV. E XPERIMENTS
+ sum(S) In this section, we introduce the experimental datasets, the
+ µ=a+ × b, (6) experimental setup, and anomaly classification and localiza-
+ N∗N
+ tion performance. In addition, we conduct extensive ablation
+where [a, a + b] denotes the value domain of µ, sum(S) experiments to demonstrate the effectiveness of each proposed
+denotes the sum of the values of S, and N represents the size of module.
+image A. Finally, FSG fuses the image A, the auxiliary image A. Datasets
+B, the background mask (1 − M) and the foreground mask
+ 1) MVTec: MVTec [1] is a challenging anomaly detection
+(M) to generate a forged anomalous sample I . The specific
+ dataset. It contains a series of industrial real abnormal and
+methods are as follows:
+ normal images. The MVTec dataset includes 15 different
+ categories, containing both texture images (e.g., “leather”) and
+ I = A ⊙ (1 − M) + α × (B ⊙ M) + (1 − α) × (A ⊙ M), non-textured images (e.g., “cable”). Anomaly classification
+ (7) and anomaly localization can be evaluated. In the training
+ phase only normal samples for training and in the reference
+where α denotes the proximity of the simulation to the normal phase different anomalies need to be detected. All images are
+sample distribution, ⊙ denotes the Hadamard product. The high-resolution images, and some anomalous regions are tiny,
+label of I is composed of the labels of A, B, and M, i.e., such as “broken screw”.
+y I = M ⊙ y B + (1 − M) ⊙ y A . To ensure the diversity 2) KolektorSDD2: KolektorSDD2 [55] is a surface anomaly
+of the generated forged anomaly samples, NIGSF randomly detection dataset from real scenes. The dataset consists of
+samples auxiliary image B from a large-scale dataset and color images of defective production items captured by a
+applies data augmentation operations when generating each vision inspection system. The images in the dataset are capforged anomaly sample. tured in a controlled environment and are similar in size, about
+ However, existing saliency detection methods identify the 230 × 630. The dataset is complex and accurately annotated.
+whole image as a background when targeting textured images. In the original dataset, the training set contains a large number
+Each pixel value on the saliency map is 0, which is obviously of abnormal samples. In this work, we first process the original
+not reasonable. Therefore, we used the following way to dataset to contain only normal samples for training. Finally,
+XING et al.: NIGSF FOR UNSUPERVISED ANOMALY DETECTION 4645
+
+ TABLE I
+C OMPARISON OF THE P ROPOSED M ETHOD AND U NSUPERVISED A NOMALY D ETECTION M ETHODS ON MVT EC DATASET W ITH AUROC (%). T HE B EST
+ R ESULTS A RE M ARKED IN B OLD . B OTH DRAEM1 AND DRAEM2 A RE R EPRODUCED F ROM T HIS PAPER , W HERE DRAEM1 U TILIZES THE
+ U-N ET M ODEL W ITH THE L ARGER PARAMETERS F ROM [20] AND DRAEM2 U SES THE S AME UN ET M ODEL AS NIGSF
+
+the number of training samples is 2085, and the test samples is AU R OCloc and A Ploc represent AUROC for anomaly image
+1004. The anomalies include scratches or large surface defects classification, AUROC for anomaly image localization, and AP
+with different shapes, sizes, and colors. for anomaly image localization, respectively. Following [55],
+ 3) DAGM: DAGM [61] is a well-known dataset for surface on the DAGM dataset, the image level AUROC, AP, F1, TPR,
+defect detection. It contains ten categories of computer- TNR, ACC, and mACC = (T P R + T N R)/2 are introduced
+generated gray images of surfaces and various defects. Early, to evaluate the performance of anomaly classification.
+only six categories of data were publicly evaluated, and subsequently, four categories were publicly available. The anomaly C. Implementation Details
+label of this dataset is inaccurate. Therefore, only the anomaly
+classification performance of the DAGM dataset is evaluated. 1) Sets: The number of contrast set n is set to 5. The auxiliary images in SAM are randomly sampled from the DTD [65].
+B. Baselines and Evaluation Metric We follow the image augmentation method in the DRAEM and
+ adjust the ratio of forged abnormal images to normal images
+ 1) Baselines: NIGSF is compared with state-of-the-art deep to 3:1 during the training phase.
+methods including fully supervised methods, i.e., CCNN [56] 2) Experimental Setting: The proposed model is trained on
+and ENSDD [57], weakly supervised methods, i.e., CADN- a single RTX TiTAN GPU using PyTorch. It is trained with a
+W18 [58], CADN-W18 (KD) [58], and MSDD [55], as well mini-batch size of 16 using the Adam optimizer. The learning
+as unsupervised methods, i.e., GANomaly [52], MKDAD [36], rate is set to 1 × 10−4 . The learning rate decays to 0.1 times
+U-Std [2], DAAD+ [25], RIAD [53], MAD [54], Cut- the current one at 800×[0.5, 0.7, 0.9] iterations, respectively.
+paste [27], Padim [24], RD [62], UniAD [3], and SPADE [63]. The hyperparameter a is set to 0.4, b is set to 0.2 in Eq. (6),
+Fully supervised methods use all the normal samples with and the input image size is set to 256 × 256. In Eq. (7) a ∈
+pixel-level labels. The weakly supervised method uses image- [0.1, 1]. In Eq. (12) λ is set to 1 and in Eq. (11) τ is set to 2.
+level labelled abnormal samples with all normal samples or a
+part of pixel-level labelled abnormal samples with all normal
+samples. The unsupervised method only uses normal samples. D. Comparison With State-of-the-Art Methods
+The MKDAD, U-Std, RD, UniAD, and Cutpaste use the 1) Anomaly Image Classification: For the anomaly classipre-trained model. The Cutpaste and DRAEM use forged fication task, we evaluate the performance of the proposed
+anomalous samples. method on MVTec, DAGM, and KolektorSDD2 datasets.
+ 2) Evaluation Metric: Following previous work [1], [36], Table I presents a comparison between the anomaly clas-
+[64], image-level and pixel-level Area Under the Receiver sification performance of NIGSF and unsupervised anomaly
+Operating Characteristic Curve (AUROC) are introduced detection methods on MVtec dataset. The results indicate
+to evaluate the performance of anomaly classification and that NIGSF is a competitive method, achieving a mean
+anomaly localization. The metric of AUROC does not reflect AU R OCdet of 96.7%. Specifically, NIGSF outperforms the
+the true performance in evaluating the localization perfor- remaining unsupervised methods in four categories, such as
+mance. However, the percentage of anomalous pixels is small “leather” and “Toothbrush” categories, achieving 100% in
+in the test images, which makes the overall false positive rate terms of AU R OCdet . Additionally, it demonstrates the best
+perform at a low-level [20]. Therefore, the pixel-level average performance in eight categories of MVTec, which verifies
+precision (AP) metric is introduced. It evaluates the accuracy the effectiveness of introducing normal sample features as
+of the overall pixel discrimination and the localization per- reference features. In comparison with the recently advanced
+formance together with the pixel-level AUROC. AU R OCdet , UniAD method that incorporates Transformer and pretrained
+4646 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 6, JUNE 2024
+
+ TABLE II
+C OMPARISON OF THE P ROPOSED M ETHOD AND U NSUPERVISED A NOMALY D ETECTION M ETHODS ON DAGM DATASET W ITH AUROC (%). N IN MSDD
+ I NDICATES T HAT MSDD U SES N P IXEL -L EVEL L ABELLED A NOMALY S AMPLES . T HE B EST R ESULTS A RE M ARKED IN B OLD
+
+models, NIGSF still remains more competitive. In addition, TABLE III
+we compare it with the current state-of-the-art DRAEM C OMPARISON OF NIGSF AND U NSUPERVISED A NOMALY D ETECTION
+ M ETHODS ON KOLEKTOR SDD2 DATASET W ITH APdet (%). T HE B EST
+method. We reproduce the results of DRAEM, denoted as R ESULTS A RE M ARKED IN B OLD
+DRAEM1 . Furthermore, we find that DRAEM uses a larger
+Unet model, so we replace this model with the same Unet
+model as the proposed NIGSF method and perform anomaly
+detection in MVTec-AD. The results are denoted as DRAEM2 .
+It can be found that DRAEM relies on a specific UNet model.
+NIGSF significantly outperforms DRAEM when the same
+network structure is used. The above experimental results
+show the effectiveness of NIGSF for anomaly classification
+on MVTec dataset.
+ In Table II, we compare the anomaly classification
+performance of NIGSF with unsupervised, weakly, and supervised anomaly detection methods on DAGM dataset. The method MSDD 3%, indicating the effectiveness of introducing
+experimental results indicate that NIGSF outperforms the normal features to guide the segmentation module. Even
+unsupervised and weakly supervised methods in 10 and 6 cat- though real anomaly samples are lacking, the proposed normal
+egories, respectively, highlighting its superiority over these image guided anomaly detection paradigm can effectively
+methods. The proposed method achieves AUROC 99.9%, solve the anomaly detection challenges of multiple scenes.
+indicating that NIGSF can solve the anomaly classification 2) Anomaly Localization: To evaluate the performance of
+challenge of grayscale images well. Specifically, the anomaly NIGSF in anomaly localization task, we conduct experiment
+classification performance of NIGSF without real anomaly on the MVTec dataset. The experimental results of the prosupervision information is the same as the supervised CCNN posed method and unsupervised anomaly detection methods
+and ENSDD. Importantly, there is a large distribution gap are shown in Table IV. The proposed NIGSF achieves mean
+between the forged anomalous samples and the grayscale AU R OCloc 97.2% and mean A Ploc 73.8%. The proposed
+anomalies of DAGM, yet the anomalous samples in DAGM method achieved similar results with PaDim and DRAEM
+can be detected. This is due to the fact that NIGSF by in AU R OCloc . However, NIGSF is 18% higher than PaDim
+introducing normal samples as guidance, the model learns to and 5% higher than DRAEM in A Ploc . For the “toothbrush”
+detect different from guidance images as anomalies. NIGSF category, the proposed NIGSF is the only one that achieves
+generalizes well for grayscale image anomaly detection. 78.9% in the A Ploc metric, exceeding the rest of the methods
+ In Table III, we compare the anomaly classification per- by at least 24%, validating the efficiency of the segmentation
+formance of NIGSF and unsupervised and weakly supervised paradigm using normal image guidance. The remaining unsuanomaly detection methods on KolektorSDD2 dataset. The pervised anomaly localization methods have similar findings
+experimental results show that NIGSF achieves the best per- while obtaining good localization performance for anomalous
+formance for the weakly supervised methods and unsupervised regions is difficult. Since the segmentation module of NIGSF
+methods. NIGSF outperforms unsupervised methods U-std has prior knowledge of normal patterns, it can detect all
+21% and F-AnoGan 30% and outperforms weakly supervised patterns different from normal guidance as anomalies, which
+XING et al.: NIGSF FOR UNSUPERVISED ANOMALY DETECTION 4647
+
+ TABLE IV
+ A NOMALY L OCALIZATION P ERFORMANCE OF THE P ROPOSED M ETHOD AND OTHER A NOMALY D ETECTION M ETHODS ON THE MVT EC DATASET
+
+Fig. 5. Anomaly segmentation results of the proposed NIGSF with DRAEM [20], where (5) and (10) are normal samples and the rest are abnormal samples.
+“IMAGE” denotes the test image. “NIGSF” denotes the results of the proposed method. “DRAEM” denotes the results of DRAEM. “GT” represents
+groundtruth. The accuracy of the proposed NIGSF segmentation significantly exceeds the current state-of-the-art methods.
+
+is not available in other methods. In summary, the proposed effectively provide guidance about the boundary information,
+NIGSF method achieves state-of-the-art localization results. resulting in excellent localization performance of the seg-
+ In Figure 5, we visualize the anomaly localization results mentation module. Third, (9), (11), and (12) show that our
+of the proposed method and the DRAEM. It can be seen method has advantages in localizing tiny anomalous regions.
+that NIGSF has the following advantages. First, NIGSF is The detailed feature information acts as guidance features that
+more accurate for detection of normal regions in the abnormal allow the model to effectively locate small anomalies. Fourth,
+samples, as shown in (1), (5), (6), and (10). The localization (2), (7), and (15) show that DRAEM is wrong in predicting
+map of DRAEM has many mislocalized anomalous regions. the background. NIGSF addresses this problem in the Saliency
+NIGSF directly utilizes normal sample features as guidance Augmentation module. SAM introduces saliency map that
+features, thus ensuring the validity of the guidance infor- makes the model more focused on foreground content. Howmation. Therefore, the segmentation module can correctly ever, Figure 7 (C) demonstrates that NIGSF can also precisely
+identify the normal features and segment the abnormal ones localize to anomalies outside the saliency region. Finally,
+that differ from the normal guidance features. Second, NIGSF NIGSF is more sensitive for locating anomalous regions.
+performs better for detail boundary localization, as shown in As shown in (13), the anomalies are subtle textural differences.
+(3) and (8). It demonstrates the advantage of using multi- NIGSF can still accurately locate detailed anomalies, which
+scale features for guidance in NIGSF. The low-level features are unavailable with DRAEM.
+4648 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 6, JUNE 2024
+
+ TABLE V
+A BLATION S TUDIES ON NGN. “- / - / -” R EPRESENTS THE AVERAGE R ESULT OF 5 T EXTURE C LASSES , THE AVERAGE R ESULT OF 10 O BJECT C LASSES ,
+ AND THE OVERALL AVERAGE R ESULT, R ESPECTIVELY
+
+ TABLE VI
+ A BLATION S TUDIES ON SAM
+
+ Fig. 7. The forged anomalous samples generated by DRAEM (a) and SAM
+ (b) are illustrated. (c) shows that our method can locate the anomalous regions
+Fig. 6. Illustration of the localization map and Ground Truth of some samples beyond the saliency regions.
+in the “Transistor” category. The anomaly detection results of these images
+need to predict not only the regions where anomalies appear, but also the
+regions where components are missing.
+ found that the anomaly detection performance decreases with
+ the lack of normal image guidance. With image guidance, both
+ a) Failure cases: Although NIGSF achieves good results image anomaly detection and localization are significantly
+in most categories, it does not perform well in the “transistor” improved. Particularly, A Ploc decreases by 17% compared to
+category. Figure 6 shows the localization results of the sam- the method that introduces normal guidance. Even though the
+ples in “transistor” category. Groundtruth of some abnormal SAM can generate forged anomalous samples close to the real
+samples is marked not only with “component bending” but anomalies to participate in training, there is still a distribution
+also with semantically missing regions. The model is required gap with the real anomalous samples. The normal feature thus
+to further understand the fine-grained semantics of normal plays a key role in guiding the segmentation model by explicsamples: the position of the component is related to whether itly providing normal distribution information that contributes
+the sample is abnormal or normal. However, NIGSF only to detecting abnormal distribution. The experimental results
+locates the anomalous component but fails to predict the validate the effectiveness of the normal image guided anomaly
+original component location. detection paradigm.
+ 2) Saliency Perlin Noise Generator: To validate the effec-
+E. Ablation Study tiveness of the proposed Saliency Perlin Noise Generator
+ 1) Normal Image Guided Anomaly Detection Paradigm: To (SPNG), experiments were conducted to explore the difvalidate the effectiveness of the proposed paradigm, ablation ferences between it and traditional generation methods.
+experiments were conducted without normal image guidance. Figure 7 (A) shows the forged anomalous samples generated
+In other words, the segmentation module directly segments by DRAEM, while Figure 7 (B) shows the forged anomalous
+forged anomalous and normal regions without guidance fea- samples generated by the proposed Saliency Perlin Noise Gentures. The results are shown in Table V. It can be clearly erator (SPNG). Obviously, NIGSF focuses on saliency regions
+XING et al.: NIGSF FOR UNSUPERVISED ANOMALY DETECTION 4649
+
+ TABLE VII
+T HE I MPACT OF M ODEL S IZE ON THE P ERFORMANCE OF THE M ETHODS . T HE DRAEM1 , DRAEM2 U SE THE O RIGINAL S TRUCTURE AND THE N ETWORK
+ S TRUCTURE OF T HIS PAPER , R ESPECTIVELY
+
+to generate anomalies, while DRAEM tends to generate more Therefore, the guidance features extracted from the denoising
+noisy samples in the background, especially in the category of network may include noisy anomalous features, which cannot
+small foreground objects (e.g., “screw”). Table VI shows the be used as guidance. In conclusion, the choice of the reconresults of the ablation experiments in two settings. Comparing struction task has the potential to achieve excellent anomaly
+(1) and (2), (3) and (4), the anomaly localization and anomaly detection performance.
+classification results of NIGSF using PNG are lower than 4) Comparison of the Proposed Method With Advanced
+those using SPNG, which validates the effectiveness of SPNG. Method Draem: To demonstrate the performance and param-
+SPNG reduces the noise sample generation and improves the eter advantages of the proposed NIGSF, we conduct three
+learning efficiency of effective samples. Specifically, although different settings compared with DRAEM.
+NIGSF produces anomalies only in the saliency region, how- • DRAEM1 : SOTA DRAEM with the large UNet network
+ever, we can still obtain good localization results on regions structure, i.e., more decoders and encoders.
+outside the saliency region, such as the zipper shown in • DRAEM2 : SOTA DRAEM with the standard UNet net-
+Figure 7 (C) (the saliency map contains only the “zipper” not work. The number of parameters is 1/3 less than that of
+the “cloth”, but anomalies on the “cloth” can be detected). DRAEM1 .
+ 3) Reconstruction Task and Denoising Task: To validate • NIGSF: The proposed method with the standard UNet
+the influence of self-supervised tasks in the normal feature network.
+extractor, different self-supervised tasks are selected to val- The experimental results are shown in Table VII. It shows
+idate the performance. Different self-supervised tasks have that our method has better localization results than DRAEM1 ,
+advantages and disadvantages for NIGSF, and we examined and the parameters are reduced by 1/3, which shows that
+the reconstruction task and denoising task in our experiments. NIGSF is more efficient and accurate. Second, after changing
+Specifically, we choose the reconstruction task and denoising the network of DRAEM to the network structure of this
+task as the training method for the normal feature extractor paper, the anomaly classification and localization results are
+to verify their effects on anomaly detection, respectively. The reduced by 3.7%, 2.3% and 12.9%, respectively. By comparing
+input and optimization objective of the reconstruction task are DRAEM2 with the proposed method, it is shown that our
+as described in Section III-B. In the denoising task, we re- method is more competitive. The smaller model brings more
+design the input part of the normal feature extractor. Its input competitive localization and classification results.
+is the forged anomaly sample, and the objective is the original 5) Contrast Set: To validate the effect of the number of
+samples without the contrast set. The two tasks share the same images n in the contrast set, ablation studies with different
+backbone. values of n are explored. The results are shown in Table VIII.
+ The experimental results are shown in Table V. The results “W/O.A.” indicates whether the contrast set contains the
+show that the anomaly classification performance decreases original image A. From Table VIII (2) and (3), it can be
+by 2% introducing the denoising task compared to the recon- observed that the performance of anomaly detection containing
+struction task, and the anomaly localization in AU R OCloc A is lower than the performance without A. Including the
+and A Ploc decreases by 3% and 7%, respectively. Therefore, original image in the contrast set makes the segmentation
+the reconstruction task is more suitable for NIGSF. The module in NIGSF overly focused on the guidance of low-level
+reason is that NIGSF relies on the guidance features as the features, which produces a negative effect. It is impossible to
+prior knowledge to guide the segmentation module to locate find normal samples in the contrast set that completely overlap
+anomalous regions. Therefore, it is important to ensure that the with the inference phase at low-level features, resulting in
+guidance features are noise-free normal features. The input of serious degradation of NIGSF performance. From the results
+the reconstruction network is normal samples, while the input of Table VIII (1), (2) and (4), the localization performance
+of the denoising network is forged anomalous samples. The with n = 4 exceeds the remaining settings. Therefore, n
+features extracted from the reconstruction network are noise- in the contrast set is set to 4 without the original image.
+free and more suitable for the guidance features. Although A large n leads to the more significant difference between
+the denoising network can denoise some anomalous regions the image in the contrast set and the input image, which
+by training, it is difficult for a simple denoising network to makes the extracted guidance feature may be noisy. Noisy
+guarantee a good denoising effect for all anomalous regions. guidance features fail to provide an effective reference, which
+4650 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 6, JUNE 2024
+
+ TABLE VIII
+T HE I MPACT OF THE N UMBER OF S AMPLES n IN C ONTRAST S ET ON NIGSF. “W/O. A” I NDICATES W HETHER THE C ONTRAST S ET C ONTAINS THE I NPUT
+ I MAGES . “- / - / -” R EPRESENTS THE AVERAGE R ESULT OF 5 T EXTURE C LASSES , THE AVERAGE R ESULT OF 10 O BJECT C LASSES , AND THE
+ OVERALL AVERAGE R ESULT, R ESPECTIVELY
+
+ Specifically, based on the novel paradigm, a Normal Image
+ Guided Segmentation Framework (NIGSF) is proposed, which
+ consists of a Normal Guided Network (NGN) and a Saliency
+ Augmentation Module (SAM). In NGN, we introduce the contrast set, which is a normal guidance image candidate set for
+ input samples. From the guidance images, we extract normal
+ features with unambiguous semantics and free from noise.
+ Meanwhile, a straightforward and efficient feature fusion strategy is developed to fuse guidance features and features to be
+ detected, which allows the segmentation module to efficiently
+ detect “abnormal features” different from the guidance features. To facilitate the segmentation of “anomalies” by NIGSF,
+ we introduce the SAM that generates forged anomaly samples
+ utilizing saliency maps and random Perlin noise. Multiple
+ experiments confirmed the efficacy of NIGSF, specifically
+ its anomaly segmentation capability. In the future, we will
+ gradually address the challenge of low accuracy of existing
+Fig. 8. Ablation study of weight parameter λ in loss functions. models in “transistor” category localization and propose more
+ reasonable alignment methods to make the guidance features
+results in the segmentation module’s localization effect being more useful.
+weakened. When n is too small, the segmentation module
+accepts less variation in the guidance features, which weakens
+the generalization ability of the segmentation module. R EFERENCES
+ 6) Ablation Study of λ: To validate the effect of hyperpa- [1] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A
+rameters λ in the loss function on the model, four sets of comprehensive real-world dataset for unsupervised anomaly detection,”
+comparison experiments with hyperparameters λ were con- in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+ Jun. 2019, pp. 9584–9592.
+ducted. In the experiment, λ is set to 0.01, 0.1, 1, and 2, [2] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed
+respectively. The experimental results are shown in Figure 8. students: Student-teacher anomaly detection with discriminative latent
+When λ = 0.01, it indicates that the loss of the normal embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+ (CVPR), Jun. 2020, pp. 4182–4191.
+feature extractor is smaller than the overall loss. From the [3] Z. You et al., “A unified model for multi-class anomaly detection,” in
+results in Figure 8, it is found that the performance of both Proc. Neural Inf. Process. Syst., 2022, pp. 4571–4584.
+localization and classification decreases, which may be due [4] P. Xing and Z. Li, “Visual anomaly detection via partition memory bank
+to the loss function causing the normal feature extractor not module and error estimation,” IEEE Trans. Circuits Syst. Video Technol.,
+ vol. 33, no. 8, pp. 3596–3607, Aug. 2023.
+fully to converge. Normal feature extractor plays a critical [5] T. Shenkar and L. Wolf, “Anomaly detection for tabular data with
+role in this paper. If the reconstruction effect of the normal internal contrastive learning,” in Proc. Int. Conf. Learn. Represent., 2022,
+feature extractor is not significant, then there may be noise pp. 1–26.
+in the extracted guidance features, which affects the learning [6] D. Gong et al., “Memorizing normality to detect anomaly: Memoryaugmented deep autoencoder for unsupervised anomaly detection,”
+effect of the segmentation module. Therefore, the value of λ in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019,
+cannot be too small. When λ is large, the performance of the pp. 1705–1714.
+model starts to degrade. Therefore, the optimal hyperparameter [7] H. Park, J. Noh, and B. Ham, “Learning memory-guided normality
+ for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+λ = 1 is chosen in this paper. Recognit. (CVPR), Jun. 2020, pp. 14372–14381.
+ [8] D. Carrera, F. Manganini, G. Boracchi, and E. Lanzarone, “Defect
+ V. C ONCLUSION detection in SEM images of nanofibrous materials,” IEEE Trans. Ind.
+ Informat., vol. 13, no. 2, pp. 551–561, Apr. 2017.
+ In this paper, a novel unsupervised anomaly detection [9] Z. Li et al., “Superpixel masking and inpainting for self-supervised
+paradigm is proposed to introduce normal image as reference. anomaly detection,” in Proc. Brit. Mach. Vis. Conf., 2020, pp. 1–12.
+XING et al.: NIGSF FOR UNSUPERVISED ANOMALY DETECTION 4651
+
+[10] G. Xie, J. Wang, J. Liu, F. Zheng, and Y. Jin, “Pushing the limits of [33] T. Fernando, H. Gammulle, S. Denman, S. Sridharan, and C. Fookes,
+ fewshot anomaly detection in industry vision: Graphcore,” in Proc. Int. “Deep learning for medical anomaly detection—A survey,” ACM Com-
+ Conf. Learn. Represent., 2023, pp. 1–18. put. Surv., vol. 54, no. 7, pp. 141:1–141:37, 2022.
+[11] C. Piciarelli, C. Micheloni, and G. L. Foresti, “Trajectory-based anoma- [34] W. Liu, Q. Bao, Y. Sun, and T. Mei, “Recent advances of monocular
+ lous event detection,” IEEE Trans. Circuits Syst. Video Technol., vol. 18, 2D and 3D human pose estimation: A deep learning perspective,” ACM
+ no. 11, pp. 1544–1554, Nov. 2008. Comput. Surv., vol. 55, no. 4, pp. 1–41, Apr. 2023.
+[12] Y. Du et al., “Individualized statistical modeling of lesions in fundus [35] D. A. Reynolds, “Gaussian mixture models,” in Encyclopedia of Biometimages for anomaly detection,” IEEE Trans. Med. Imag., vol. 42, no. 4, rics, S. Z. Li and A. K. Jain, Eds. USA: Springer, 2009, pp. 659–663,
+ pp. 1185–1196, Apr. 2023. doi: 10.1007/978-0-387-73003-5_196.
+[13] Y. Zhao, Q. Ding, and X. Zhang, “AE-FLOW: Autoencoders with [36] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee,
+ normalizing flows for medical images anomaly detection,” in Proc. Int. “Multiresolution knowledge distillation for anomaly detection,” in Proc.
+ Conf. Learn. Represent., 2023, pp. 1–14. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+[14] A. Acsintoae et al., “UBnormal: New benchmark for supervised open- pp. 14897–14907.
+ set video anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. [37] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in
+ Pattern Recognit. (CVPR), Jun. 2022, pp. 20143–20153. Proc. Int. Conf. Learn. Represent., 2014, pp. 1–14.
+[15] S. Zhang et al., “Influence-aware attention networks for anomaly detec- [38] S. Venkataramanan, K.-C. Peng, R. V. Singh, and A. Mahalanobis,
+ tion in surveillance videos,” IEEE Trans. Circuits Syst. Video Technol., “Attention guided anomaly localization in images,” in Proc. Eur. Conf.
+ vol. 32, no. 8, pp. 5427–5437, Aug. 2022. Comput. Vis., 2020, pp. 485–503.
+[16] M. Z. Zaheer, A. Mahmood, M. H. Khan, M. Segu, F. Yu, and S.-I. Lee, [39] Y. Tang, L. Zhao, S. Zhang, C. Gong, G. Li, and J. Yang, “Integrating
+ “Generative cooperative learning for unsupervised video anomaly detec- prediction and reconstruction for anomaly detection,” Pattern Recognit.
+ tion,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Lett., vol. 129, pp. 123–130, Jan. 2020.
+ Jun. 2022, pp. 14744–14754. [40] T. Wang, X. Xu, F. Shen, and Y. Yang, “A cognitive memory-augmented
+[17] Y. Cheng, W. Liu, P. Duan, J. Liu, and T. Mei, “PyAnomaly: A PyTorch- network for visual anomaly detection,” IEEE/CAA J. Autom. Sinica,
+ based toolkit for video anomaly detection,” in Proc. Conf. Int. Conf. vol. 8, no. 7, pp. 1296–1307, Jul. 2021.
+ Multimedia, C. W. Chen et al., Eds., 2020, pp. 4473–4476. [41] K. Wu, L. Zhu, W. Shi, W. Wang, and J. Wu, “Self-attention memory-
+[18] J. Yang, W. Liu, J. Yuan, and T. Mei, “Hierarchical soft quantization augmented wavelet-CNN for anomaly detection,” IEEE Trans. Circuits
+ for skeleton-based human action recognition,” IEEE Trans. Multimedia, Syst. Video Technol., vol. 33, no. 3, pp. 1374–1385, Mar. 2023.
+ vol. 23, pp. 883–898, 2021. [42] D. Liu, P. Zhou, Z. Xu, H. Wang, and R. Li, “Few-shot temporal sentence
+ grounding via memory-guided semantic learning,” IEEE Trans. Circuits
+[19] P. Bergmann, S. Löwe, M. Fauser, D. Sattlegger, and C. Steger, “Improv-
+ Syst. Video Technol., vol. 33, no. 5, pp. 2491–2505, May 2023.
+ ing unsupervised defect segmentation by applying structural similarity
+ to autoencoders,” in Proc. 14th Int. Joint Conf. Comput. Vis., Imag. [43] Z. Li, H. Tang, Z. Peng, G.-J. Qi, and J. Tang, “Knowledge-guided
+ Comput. Graph. Theory Appl., 2019, pp. 1–9. semantic transfer network for few-shot image recognition,” IEEE
+ Trans. Neural Netw. Learn. Syst., early access, Feb. 6, 2023, doi:
+[20] V. Zavrtanik, M. Kristan, and D. Skočaj, “DRAEM—A discrimina-
+ 10.1109/TNNLS.2023.3240195.
+ tively trained reconstruction embedding for surface anomaly detection,”
+ in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021, [44] G. Lin, A. Milan, C. Shen, and I. Reid, “RefineNet: Multi-path
+ pp. 8310–8319. refinement networks for high-resolution semantic segmentation,” in
+ Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017,
+[21] S. M. Erfani, S. Rajasegarar, S. Karunasekera, and C. Leckie, “High- pp. 5168–5177.
+ dimensional and large-scale anomaly detection using a linear one-class
+ [45] J. Long, E. Shelhamer, and T. Darrell, “Fully convolutional networks
+ SVM with deep learning,” Pattern Recognit., vol. 58, pp. 121–134,
+ for semantic segmentation,” in Proc. IEEE Conf. Comput. Vis. Pattern
+ Oct. 2016.
+ Recognit. (CVPR), Jun. 2015, pp. 3431–3440.
+[22] K.-L. Li, H.-K. Huang, S.-F. Tian, and W. Xu, “Improving one-class
+ SVM for anomaly detection,” in Proc. Int. Conf. Mach. Learn. Cybern., [46] Z. Li, Y. Sun, L. Zhang, and J. Tang, “CTNet: Context-based tandem
+ Nov. 2003, pp. 3077–3081. network for semantic segmentation,” IEEE Trans. Pattern Anal. Mach.
+ Intell., vol. 44, no. 12, pp. 9904–9917, Dec. 2022.
+[23] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+ [47] H. Tang, C. Yuan, Z. Li, and J. Tang, “Learning attention-guided pyra-
+ Learn., 2018, pp. 4393–4402.
+ midal features for few-shot fine-grained recognition,” Pattern Recognit.,
+[24] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch dis- vol. 130, Oct. 2022, Art. no. 108792.
+ tribution modeling framework for anomaly detection and localization,” [48] Y. Xia, Y. Zhang, F. Liu, W. Shen, and A. L. Yuille, “Synthesize then
+ in Proc. Int. Conf. Pattern Recognit., 2021, pp. 475–489. compare: Detecting failures and anomalies for semantic segmentation,”
+[25] J. Hou, Y. Zhang, Q. Zhong, D. Xie, S. Pu, and H. Zhou, “Divide- in Proc. Eur. Conf. Comput. Vis., 2020, pp. 145–161.
+ and-assemble: Learning block-wise memory for unsupervised anomaly [49] Z. Wu, L. Su, and Q. Huang, “Cascaded partial decoder for fast and
+ detection,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), accurate salient object detection,” in Proc. IEEE/CVF Conf. Comput.
+ Oct. 2021, pp. 8771–8780. Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 3902–3911.
+[26] F. Ye, C. Huang, J. Cao, M. Li, Y. Zhang, and C. Lu, “Attribute [50] Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, “Image
+ restoration framework for anomaly detection,” IEEE Trans. Multimedia, quality assessment: From error visibility to structural similarity,” IEEE
+ vol. 24, pp. 116–127, 2022. Trans. Image Process., vol. 13, no. 4, pp. 600–612, Apr. 2004.
+[27] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Self- [51] T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár, “Focal loss for
+ supervised learning for anomaly detection and localization,” in Proc. dense object detection,” in Proc. IEEE Int. Conf. Comput. Vis. (ICCV),
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, Oct. 2017, pp. 2999–3007.
+ pp. 9659–9669.
+ [52] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “GANomaly:
+[28] K. Perlin, “An image synthesizer,” in Proc. 12th Annu. Conf. Comput. Semi-supervised anomaly detection via adversarial training,” in Proc.
+ Graph. Interact. Techn., 1985, pp. 287–296. Asian Conf. Comput. Vis., 2018, pp. 622–637.
+[29] A. Zimek, E. Schubert, and H. Kriegel, “A survey on unsupervised [53] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting
+ outlier detection in high-dimensional numerical data,” Stat. Anal. Data for visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021,
+ Mining, ASA Data Sci. J., vol. 5, no. 5, pp. 363–387, Oct. 2012. Art. no. 107706.
+[30] I. Golan and R. El-Yaniv, “Deep anomaly detection using geometric [54] O. Rippel, P. Mertens, and D. Merhof, “Modeling the distribution of
+ transformations,” in Proc. Conf. Neural Inf. Process. Syst., vol. 31, 2018, normal data in pre-trained deep features for anomaly detection,” in Proc.
+ pp. 9781–9791. 25th Int. Conf. Pattern Recognit. (ICPR), Jan. 2021, pp. 6726–6733.
+[31] K. Leung and C. Leckie, “Unsupervised anomaly detection in network [55] J. Božič, D. Tabernik, and D. Skočaj, “Mixed supervision for surfaceintrusion detection using clusters,” in Proc. 28th Australas. Conf. Com- defect detection: From weakly to fully supervised learning,” Comput.
+ put. Sci., 2005, pp. 333–342. Ind., vol. 129, Aug. 2021, Art. no. 103459.
+[32] G. Pang, C. Shen, L. Cao, and A. Van Den Hengel, “Deep learning [56] D. Racki, D. Tomazevic, and D. Skocaj, “A compact convolutional neural
+ for anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2, network for textured surface anomaly detection,” in Proc. IEEE Winter
+ pp. 38:1–38:38, Mar. 2021. Conf. Appl. Comput. Vis. (WACV), Mar. 2018, pp. 1331–1339.
+4652 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 6, JUNE 2024
+
+[57] Z. Lin, H. Ye, B. Zhan, and X. Huang, “An efficient network for surface Yanpeng Sun received the M.S. degree from the
+ defect detection,” Appl. Sci., vol. 10, no. 17, p. 6085, Sep. 2020. Guilin University of Electronic Technology, China,
+[58] J. Zhang, H. Su, W. Zou, X. Gong, Z. Zhang, and F. Shen, “CADN: in 2019. He is currently pursuing the Ph.D. degree
+ A weakly supervised learning-based category-aware object detection with the School of Computer Science and Engineernetwork for surface defect detection,” Pattern Recognit., vol. 109, ing, Nanjing University of Science and Technology,
+ Jan. 2021, Art. no. 107571. China. His research interests include deep learning,
+[59] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and visual segmentation, and understanding.
+ U. Schmidt-Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection
+ with generative adversarial networks,” Med. Image Anal., vol. 54,
+ pp. 30–44, May 2019.
+[60] B. Staar, M. Lütjen, and M. Freitag, “Anomaly detection with convolutional neural networks for industrial surface inspection,” Proc. CIRP,
+ vol. 79, pp. 484–489, Jan. 2019.
+[61] S. Albelwi and A. Mahmood, “A framework for designing the architectures of deep convolutional neural networks,” Entropy, vol. 19, no. 6, Dan Zeng (Senior Member, IEEE) received the
+ p. 242, May 2017. B.S. degree in electronic science and technology
+[62] H. Deng and X. Li, “Anomaly detection via reverse distillation from and the Ph.D. degree in circuits and systems from
+ one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern the University of Science and Technology of China,
+ Recognit. (CVPR), Jun. 2022, pp. 9727–9736. Hefei. She is currently a Full Professor and the Dean
+[63] N. Cohen and Y. Hoshen, “Sub-image anomaly detection with deep of the Department of Communication Engineering
+ pyramid correspondences,” 2020, arXiv:2005.02357. and the Computer Vision and Pattern Recognition
+[64] M. Sabokrou, M. Fayyaz, M. Fathy, Z. Moayed, and R. Klette, Laboratory, Shanghai University. Her main research
+ “Deep-anomaly: Fully convolutional neural network for fast anomaly interests include computer vision, multimedia analdetection in crowded scenes,” Comput. Vis. Image Understand., vol. 172, ysis, and machine learning. She is serving as a TC
+ pp. 88–97, Jul. 2018. Member for IEEE MSA and IEEE MMSP. She is
+[65] M. Cimpoi, S. Maji, I. Kokkinos, S. Mohamed, and A. Vedaldi, serving as an Associate Editor for IEEE T RANSACTIONS ON M ULTIME -
+ DIA and IEEE T RANSACTIONS ON C IRCUITS AND S YSTEMS FOR V IDEO
+ “Describing textures in the wild,” in Proc. IEEE Conf. Comput. Vis.
+ Pattern Recognit., Jun. 2014, pp. 3606–3613. T ECHNOLOGY.
+
+ Zechao Li (Senior Member, IEEE) received the
+ B.E. degree from the University of Science and
+ Technology of China in 2008 and the Ph.D. degree
+ Peng Xing is currently pursuing the Ph.D. degree
+ from the National Laboratory of Pattern Recogniwith the School of Computer Science and Engineertion, Institute of Automation, Chinese Academy of
+ ing, Nanjing University of Science and Technology.
+ Sciences, in 2013. He is currently a Professor with
+ His current research interests include anomaly detecthe Nanjing University of Science and Technology.
+ tion and unsupervised deep learning.
+ His research interests include big media analysis and
+ computer vision. He was a recipient of the Best
+ Paper Award from ACM Multimedia Asia 2020 and
+ the Best Student Paper Award from ICIMCS 2018.
+ He serves as an Associate Editor for IEEE T RANSACTIONS ON N EURAL
+ N ETWORKS AND L EARNING S YSTEMS.

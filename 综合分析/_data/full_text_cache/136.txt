@@ -1,0 +1,1067 @@
+i An update to this article is included at the end
+
+ Computer Networks 235 (2023) 109965
+
+ Contents lists available at ScienceDirect
+
+ Computer Networks
+ journal homepage: www.elsevier.com/locate/comnet
+
+FastTraffic: A lightweight method for encrypted traffic fast classification
+Yuwei Xu a,b,c ,∗, Jie Cao a,c , Kehui Song c,d , Qiao Xiang e , Guang Cheng a,b,c
+a
+ School of Cyber Science and Engineering, Southeast University, Nanjing, 211189, China
+b
+ Purple Mountain Laboratories, Nanjing, 211111, China
+c
+ Jiangsu Province Engineering Research Center of Security for Ubiquitous Network, Nanjing, 211189, China
+d
+ College of Computer Science, NanKai University, Tianjin, 300071, China
+e School of Informatics, Xiamen University, Xiamen, 361005, China
+
+ARTICLE INFO ABSTRACT
+
+Keywords: Nowadays, most Internet communications have adopted encrypted network access technology for privacy
+Encrypted traffic classification protection, so encrypted traffic classification (ETC) has become a crucial research point to support network
+Lightweight model management and ensure cyberspace security. Meanwhile, off-the-shelf deep learning (DL)-based approaches
+N-gram feature
+ suffer from long preprocessing time, large input size, and a trade-off between model complexity and accuracy.
+Deep learning
+ There is a tough challenge to deploy them on mainstream network devices and achieve fast and accurate traffic
+ classification. In this paper, we design FastTraffic, a lightweight DL-based method for ETC on low-configuration
+ network devices. To speed up processing, we set an IP packet as the granularity of FastTraffic, truncate the
+ informative parts in packets as inputs, and utilize a text-like packet tokenization method. For a lightweight
+ and effective model, we propose an N-gram feature embedding method to represent structured and sequential
+ features of packets and design a three-layer MLP to complete fast classification. We compare FastTraffic with
+ eight state-of-the-art ETC methods on three public benchmark datasets. The experimental results show that
+ FastTraffic obtains better classification performance than the other seven methods with only 0.43M model
+ parameters. Besides, it can also achieve high throughput on low-configuration devices and consume a small
+ amount of computing and storage resources. Therefore, FastTraffic is a lightweight ETC method capable of
+ large-scale deployment on Internet devices.
+
+1. Introduction guaranteeing the quality of service (QoS), QoE, and network security
+ provision [2].
+ With the awakening of security awareness, Internet users realize the As aforementioned, encrypted network environments pose signifiimportance of privacy protection and gradually use encrypted network cant challenges to traditional traffic classification methods, including
+communication tools or protocols for network access. Studies from Fire- port-based traffic identification methods and deep packet inspection
+fox [1] reportedly counted that the percentage of U.S. users leveraging (DPI) technology. Port-based identification methods utilize the correthe SSL/TLS security protocol rose from 55% in 2017 to 93% in 2022. spondence between ports and protocols for traffic classification but
+In addition, Virtual Private Network (VPN) and The Onion Router (Tor) become ineffective due to the widespread use of port forwarding and
+are also widely employed by users to ensure the anonymity of network dynamic port negotiation techniques. DPI identifies specific protocol
+communications. While improving communication privacy, users also and application data by analyzing the entire IP packet. Since it cannot
+hope to obtain a high-quality network experience. Internet service
+ parse encrypted packet payloads, DPI cannot achieve encrypted traffic
+providers (ISPs) are responsible for charging users based on the quality
+ classification [3].
+of experience (QoE) provided. However, the introduction of encryption
+ So far, researchers have proposed many methods to classify entechnology protects the confidentiality of transmitted data, while the
+ crypted traffic by leveraging artificial intelligence technologies. There
+adoption of obfuscation technology increases the difficulty of traffic
+ are two categories: machine learning (ML)-based and deep learning
+identification. It is difficult for ISPs to identify various types of encrypted traffic on network devices. In this context, the encrypted traffic (DL)-based. ML-based methods usually use statistical patterns of traffic
+classification (ETC) technique is envisioned as the critical enabler of to construct traffic features, like packet path signature [4], packet
+
+ ∗ Corresponding author at: School of Cyber Science and Engineering, Southeast University, Nanjing, 211189, China.
+ E-mail addresses: xuyw@seu.edu.cn (Y. Xu), cao_jie@seu.edu.cn (J. Cao), songkehui@nankai.edu.cn (K. Song), qiaoxiang@xmu.edu.cn (Q. Xiang),
+chengguang@seu.edu.cn (G. Cheng).
+
+https://doi.org/10.1016/j.comnet.2023.109965
+Received 6 March 2023; Received in revised form 1 June 2023; Accepted 2 August 2023
+Available online 6 August 2023
+1389-1286/© 2023 Elsevier B.V. All rights reserved.
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+arrival time and size [5], and cumulative packet sizes (CUMUL) [6], on high-configuration and low-configuration devices. The results
+the best-performing classifier is then chosen to classify them. The main show that FastTraffic obtains high classification performance and
+research topic and also a dilemma of ML-based methods is that they excellent operational efficiency. It is suitable for large-scale demust accomplish feature engineering to select optimal features for ployment on mainstream network devices, achieving fast and
+each specific encrypted traffic protocol or tool. This work is highly accurate traffic classification.
+dependent on domain expert knowledge, and the selected features are
+commonly less generalization [7]. However, in real network scenarios, The rest of this paper is organized as follows. In Section 2, we
+it is time-consuming and prohibitive to train and implement different introduce previous work and show the motivation of FastTraffic. In
+ML-based ETC methods for various encrypted traffic generated by Section 3, three public datasets are described first, and then the comdifferent tools or protocols. prehensive workflow of the data preprocessing method is elaborated.
+ Given the powerful representation capability of deep neural net- The design of our classification model and its complexity analysis are
+works, researchers put forward numerous DL-based methods for clas- arranged in Section 4. We introduce the experimental setup in Section 5
+sifying encrypted traffic [8]. The merit of DL is that the model can and verify the classification performance and operational efficiency of
+directly input raw traffic data and automatically perform feature ex- FastTraffic through comparative experiments in Section 6. Finally, we
+traction and representation during the supervised training process, thus conclude our work in Section 7.
+eliminating the requirement for feature engineering and expert knowledge in ML. The DL-based method is naturally suitable for early ETC 2. Related work
+scenarios, which signifies a clear difference from ML-based approaches
+that depend on complete flow or session. However, there are two short- In this section, we review the existing works in ETC and underline
+comings of existing DL-based methods. Firstly, they did not explore the motivation of our work.
+the input size of the classification model by analyzing packet format.
+In previous work, the researchers often set the input size according 2.1. ML-based method
+to the maximum transmission unit (MTU). The unreasonable values
+increase preprocessing time overhead and cause a waste of resources on ML-based methods are proposed to tackle the problem that tradevices. Secondly, many DL-based methods pursued superior classifica- ditional traffic classification methods cannot cope with dynamic port
+tion performance at the expense of operational efficiency. To explore negotiation and encrypted payload. Feature selection and optimization
+the feature of encrypted traffic, the model structure adopted by ETC play a vital role in ML-based methods, thus researchers proposed lots
+methods shifted from a single Convolutional Neural Network (CNN) [9] of features based on the statistical pattern of the traffic, and selected
+or Recurrent Neural Network (RNN) [10] to a stack of CNNs and the appropriate ML classifiers, such as support vector machine, random
+RNNs [11,12]. Recently, Transformer [13] has also been introduced forest, etc., to classify them.
+into the ETC field owing to its outstanding performance in NLP and In [17], the authors proposed to use only the uplink’s packet timing
+CV. Although these complex models can achieve excellent classification information to measure VPN traffic. The cumulative packet sizes feature
+performance on high-configuration workstations, mainstream network
+ (CUMUL) was first proposed in [6] to produce the Tor website fingerdevices on the Internet cannot provide the same hardware resources,
+ printing and was widely used by subsequent researchers. NetScope [24]
+especially high-performance graphics cards (GPUs). With the research
+ was proposed to infer both Android and iOS device users’ activities
+trend of adopting complex network models, DL-based methods occupy
+ based on traffic behaviors transfer rates, packet exchanges, etc. In [18],
+more and more hardware resources. Once deployed on network devices
+ the authors proposed a video download feature called Bit-Per-Peak,
+with limited resources, they will affect regular network functions,
+ which is the total number of bits in a peak. Shen et al. [15] combined
+which goes against the original intention of guaranteeing QoS and
+ the CUMUL with the packet position on the uplink-dominant stage to
+QoE [14].
+ construct a novel fine-grained website fingerprinting. ETC-PS [4] con-
+ To deploy on mainstream network devices on the Internet and
+ structed the traffic path between the encrypted communication client
+achieve fast and accurate traffic classification, we propose FastTraffic, a
+ and the server via the session packet length sequence, and extracted
+lightweight ETC method, including a traffic preprocessing method and
+ path signature features based on this path.
+a classification model. The main contributions of our work lie in the
+ Table 1 provides a summary of ML-based methods, and their comfollowing three aspects.
+ monality is that their granularity is flow or session because achieving
+ • Firstly, we propose a traffic preprocessing method. A suitable and the pattern of communication and extracting statistical features need
+ reasonable packet truncation length, 50 bytes, is determined via to observe the entire flow or session i.e. it is infeasible to implement
+ protocol analysis and experiments. Besides, we perform tokeniza- early ETC, which is time consuming. At the same time, ML-based
+ tion with one byte of hexadecimal characters as one word to methods were all employed at the foundation of feature engineering,
+ reduce the input size. With this method, we effectively preprocess which relied on expert knowledge. Nevertheless, researchers’ feature
+ the encrypted traffic and thus lay the groundwork for subsequent selection efforts focused on specific encryption tools or protocols, and
+ data representation and reduce the time overhead from the outset. these selected feature sets lacked generalization ability. Hence, ML-
+ • Secondly, we design a lightweight classification model. In the based methods cannot rapidly select uniform features for classifying
+ packet embedding part, we propose N-gram feature embedding to encrypted traffic and are not suitable for real network scenarios where
+ extract the structural and sequential information in the raw bytes, traffic types and sources are variable.
+ aiming to provide a better packet representation. In the classification network part, we use a three-layer MLP to reduce the number 2.2. DL-based method
+ of model parameters. In addition, we analyze the complexity of
+ the FastTraffic classification model at the theoretical dimension In NLP and CV, DL-based methods have grown significantly, and
+ and prove that its model complexity is lower than state-of-the-art many classical neural network models from them have been applied
+ methods. to the ETC field. DL-based methods did not require manually selecting
+ • Thirdly, to assess the effectiveness of FastTraffic, we conduct features. Instead, they directly feed the model with the raw traffic and
+ comprehensive experiments and reproduce eight contrastive ETC generated features automatically and depending on the input granularmethods, including two lightweight methods. We introduce four ity can be divided into three levels, including session, flow, and packet,
+ ETC tasks from three benchmark datasets and test these methods as shown in Table 1.
+
+ 2
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+Table 1
+A summary of existing encrypted traffic classification methods.
+ Ref ID. Type Classifier Granularity Feature Early ETC Input size Used dataset Lightweight
+ [6] ML SVM Session CUMUL ✗ – Self-collect Dataset ✗
+ [15] ML RF Session CUMUL ✗ – JD, YH dataset ✗
+ [4] ML RF Session Packet path signature ✗ – ISCX-VPN, Tor, etc. ✗
+ [16] ML SVM Flow Statistical TCP flow features ✗ – Malicious traffic ✓
+ [17] ML KNN+Naive Bayes Flow Packet timing information ✗ – VPN, Tor (self-collect) ✗
+ [18] ML SVM, NN Flow Total number of bits in a peak ✗ – YouTube (self-collect) ✗
+ [19] DL CNN Session Raw session bytes ✓ 28 × 28 ISCX-VPN ✗
+ [20] DL BiLSTM+Attention Flow Raw flow bytes ✓ 10 × 1500 ISCX-VPN ✗
+ [21] DL Transformer Flow Raw flow bytes ✓ 3 × 786 CSTNET, etc. ✓
+ [11] DL CNN+LSTM Flow Raw flow bytes ✓ 15 × 1500 ISCX-Tor, USTC-TFC ✗
+ [9] DL CNN Packet Raw packet bytes ✗ 1500 ISCX-VPN, Tor ✗
+ [22] DL MLP, SAE, CNN Packet Raw packet bytes ✗ 1480 ISCX-VPN ✓
+ [23] DL Attention+CNN Packet Raw packet bytes ✓ 50 ISCX-VPN, WIDE ✗
+ [13] DL BERT Packet Raw packet bytes ✓ 256 ISCX-VPN, Tor, etc. ✗
+ FastTraffic DL MLP Packet Raw packet bytes ✓ 50 ISCX-VPN, Tor, USTC-TFC ✓
+
+ Researchers have followed the iterations of models in artificial 2.3. Motivation
+intelligence field and have also continued to propose various DL classification models. The most important advantage of the DL model is Given deployment on real-world network devices, researchers have
+the automated feature representation of the traffic raw data. First of proposed several lightweight ETC methods such as MATEC [22] and
+all, CNN as an effective structure for automatic extraction of features Datanet [21]. The common thread of these studies is to reduce the
+is also applied to ETC, for example, DeepPacket [9] method is de- input data and simplify the model structure. Although MATEC aims
+signed based on the 1DCNN model. While RNN has advantages in to be lightweight, it retains a complex network structure in the model
+processing time-series data, researchers have also proposed RNN-based to maintain high classification performance, resulting in many model
+methods [10] for ETC. Secondly, individual CNN or RNN cannot fully parameters and much resource usage. Datanet adopts a four-layer MLP
+and comprehensively represent the raw flow or packet, so in [11,20], to construct its classification model. It does meet the requirement
+the authors proposed to stack CNN with RNN to further improve the of lightweight, but its poor data expression capability has caused a
+model’s ability to represent traffic. Finally, the Transformer structure, decrease in accuracy.
+which is centered on the Self Attention mechanism (SA) and Multi- To address the shortcomings of previous work, we propose FastTrafhead Attention mechanism (MHA), has a larger perceptual field than fic intending to deploy on mainstream network devices and achieve
+CNN and stronger time-series data representation ability than RNN fast and accurate traffic classification. The novelty of FastTraffic lies
+and has obtained great success in NLP and CV fields in recent years.
+ in two points. Firstly, we put forward a traffic preprocessing method.
+Thus, Transformer has also been introduced by researchers in the ETC
+ A suitable and reasonable packet truncation length, 50 bytes, is defield. Lin et al. [13] proposed ET-BERT, which is an excellent method.
+ termined via protocol analysis and experiments. Besides, we perform
+They constructed this novel pre-training method for ETC inspired by
+ tokenization with one byte of hexadecimal characters as one word to
+Transformer design in [25] and fine-tuned it for different downstream
+ reduce the input size. Secondly, we design a lightweight classification
+tasks on this basis. The accuracy of ET-BERT for seven ETC tasks can
+ model. In the packet embedding part, we propose N-gram feature
+reach 97% and above.
+ embedding to extract the structural and sequential information in the
+ In addition to the conventional methods listed in Table 1, reraw bytes, aiming to provide a better packet representation. In the classearchers have proposed many emerging ETC methods. In [26], the
+ sification network part, we use a three-layer MLP to reduce the number
+authors designed a framework for multi-task learning based on 1DCNN
+to improve the generalization ability and resource utilization of DL of model parameters. Experimental results show that FastTraffic has
+models. The idea of multi-task learning was also adopted in [27]. significant advantages over state-of-the-art ETC methods and is suitable
+Meanwhile, researchers proposed DL-based multimodal ETC methods for deployment on network devices with limited resources.
+to improve classification performance. In [28], the authors used packet
+length sequences and packet load bytes as the input of two modali- 3. Data preprocessing of FastTraffic
+ties fed in parallel to the model to learn the joint characterization.
+In [29,30], CNN and GRU were employed to extract features from In this section, we first introduce three well-known public datasets
+the L4 payload and header field of packets, respectively. In [31], the covering the typical application fields of network encrypted traffic and
+authors optimize Distiller [30] for deployment on resource-constrained then elaborate on the workflow of our preprocessing method.
+devices by pruning, quantification, and knowledge distillation from the
+perspective of eXplainable Artificial Intelligence (XAI). 3.1. Dataset
+ As can be observed, DL-based approaches accompanying the development of artificial intelligence, tend to create sophisticated model In order to guarantee the general applicability of our method, three
+structures to classify encrypted traffic, which does not comply with most cited public datasets in the field of network traffic research are
+online traffic classification and cannot ensure QoS. To sum up, the first selected, including ISCX-VPN, ISCX-Tor and USTC-TFC. In the following
+problem of DL-based methods was that the researchers did not conduct study, we will not only determine the truncation length by analyzing
+a more reasonable exploration of the input format construction and the packets of these datasets but also evaluate the performance of
+input size selection of the ETC model, leading to blindly consistent FastTraffic on their classification tasks.
+processing of inputs with large sizes [9]. It increases the time overhead of preprocessing and also affects the model’s input layer design. (1) The ISCX-VPN dataset is provided by Canadian Institute for Cy-
+The second one was that the existing works, like [11,13,30], tended bersecurity (CIC) [32]. The network traffic is captured using
+to introduce complex and heavyweight neural network in pursuit of Wireshark and stored in PCAP files. The whole dataset contains
+high accuracy, which dramatically reduced the efficiency of the ETC 193GB real-world traffic data. All samples are set with three catmethod and does not meet the online classification and real deployment egories of labels, namely VPN and non-VPN, 11 types of network
+requirements of guaranteeing. service, and 15 types of network application.
+
+ 3
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+ 3.2.2. Packet filtering
+ Due to the complexity of the network environment, traffic datasets
+ often contain a portion of packets that are irrelevant to the classification tasks and need to be filtered out. In addition, before the packets
+ are fed into the classification model as input data, some fields need to
+ be specially processed to avoid adverse effects on the model. As shown
+ in Fig. 1, packet filtering consists of four operations.
+
+ (1) Some packets are necessary for maintaining data communication
+ over the Internet but are not related to the applications and services labeled in classification tasks. Based on this consideration,
+ we filter out DNS and ICMP packets after traffic segmentation.
+ (2) Since the MAC layer only provides information about the underlying communication of the local network, it does not contain
+ global information for Internet transmission. This limitation of
+ data will affect the training result of the classification model.
+ Therefore, we remove the header and tail of the Ethernet frame
+ and reserve the IP packet as the input of FastTraffic.
+ (3) Due to limited conditions, experimenters usually can only deploy a few devices to connect to specified services during traffic
+ collection, so the number of addresses included in the dataset
+ cannot cover the address range of the entire Internet. To prevent
+ classification tricks caused by high-frequency addresses, we mask
+ the source and destination addresses in IP packets by 0.0.0.0.
+ Besides, we set all source ports to 0 to avoid the experimental
+ biases demonstrated in [35].
+ (4) As the data transmission requirements are different, the network
+ traffic flows in the three datasets adopt both the TCP and UDP
+ Fig. 1. The workflow of FastTraffic’s preprocessing.
+ protocols. The length of the UDP header is shorter than that of
+ the TCP header. To provide uniform-length data input to the
+ model, we pad 12 bytes of 0𝑥00 after the UDP header. Besides,
+ (2) The ISCX-Tor dataset is also provided by CIC [33], which contains some control packets used to maintain TCP connections are re-
+ 22.8GB of Tor network traffic data. Since Tor aims at anonymous moved because they do not contain the payload of upper-layer
+ communication, it adopts traffic encryption and obfuscation tech- applications.
+ nologies when transmitting application data. Therefore, its traffic
+ identification has been a difficult and hot topic in ETC research. 3.2.3. Truncation & byte tokenization
+ In ISCX-Tor, all samples contain two categories of labels, namely The length of IP packets is variable, but the classification model
+ Tor and non-Tor, and 11 types of Tor application. based on deep learning requires input data of uniform size. Therefore,
+ (3) The USTC-TFC dataset is published on GitHub by Wei Wang [34]. truncating long packets and padding short packets is an essential step.
+ It is widely cited in intrusion detection studies because it provides As discussed in Section 2, padding all packets to the MTU size preserves
+ the traffic of 10 well-known malware. The USTC-TFC contains all original data but increases the processing time overhead of the
+ 3.7GB of data, and all samples are set with two categories of classification model. To build a lightweight model under the premise of
+ labels, namely goodware and malware, and 20 types of software. ensuring classification performance, it is an important issue to choose a
+ reasonable truncation length  for IP packets. For the optimal value of
+ , we propose an interval-based searching strategy. By analyzing the
+3.2. Data preprocessing workflow data in three datasets, we set a byte interval for  according to the
+ length distribution of IP packets and the format of related protocols.
+ In the training phase, the classification model only needs to make
+ Since the task of data preprocessing is to provide raw data of
+ hyperparameter tuning within this interval, thus reducing the number
+uniform size to the classification models as input, it is an important
+ of parameters and shortening the processing time.
+issue worthy of discussion in DL-based network traffic classification. As
+ Fig. 2 shows the distributions of IP packet length. In the three
+shown in Fig. 1, the process of data preprocessing includes four steps, datasets, 41%, 51%, and 76% of the packets are less than 100 bytes
+traffic segmentation, packet filtering, truncation & byte tokenization, in length, respectively. If  is set to exceed 100 bytes, many packets
+and under-sampling. need to be padded to achieve a uniform input size. In addition, we
+ analyze the encapsulation structure of IP packets. Compared with random data payloads, the headers at each layer of the network protocol
+3.2.1. Traffic segmentation
+ stack can provide more meaningful information for ETC. Through the
+ In FastTraffic, we set an IP packet as the classification granularity
+ statistics of the network traffic, we find that most of the packets include
+to improve the efficiency of the classification model. It is worth noting TLS headers in addition to IP headers and TCP/UDP headers. In the
+that although a finer-grained segmentation is adopted, the labels of papers [23,36], the authors have obtained good classification results
+each packet 𝑝 should be set according to the flow 𝑓 to which it belongs. by using the first 50 bytes of the IP packets, proving that the header
+Therefore, we first extract the flows from the original PCAP file, still information of each layer protocol is effective for ETC. Based on the
+based on the common 5-tuple {𝑠𝑟𝑐𝐼𝑃 , 𝑠𝑟𝑐𝑃 𝑜𝑟𝑡, 𝑑𝑠𝑡𝐼𝑃 , 𝑑𝑠𝑡𝑃 𝑜𝑟𝑡, 𝑃 𝑟𝑜𝑡𝑜𝑐𝑜𝑙}, above analysis, we set the interval of  to [50, 100] to discard the
+and then segment the packets from each flow. According to the above payload of long packets and retain all types of header information in
+strategy, we can quickly generate labeled packets from all the PCAP IP packets. In Section 5, the value of  will be determined within this
+files by leveraging SplitCap. interval by random hyperparameter tuning.
+
+ 4
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+ Table 2
+ Notation used in FastTraffic.
+ Notation Definition
+ 𝑝𝑖 The 𝑖th IP packet in the flow.
+ 𝑡𝑖 The 𝑖th byte in the IP packet.
+ 𝑦𝑖 True label of 𝑝𝑖 .
+  Truncation length, retaining the first  bytes of each
+ packet.
+  Embedding dimension.
+ 𝑁 N-gram slide window size.
+
+ Model related
+ 𝑈 (𝑁) Trainable embedding vector for N-gram.
+ 𝑘𝑖 Index of 𝑡𝑖 in the uni-gram vocabulary.
+ 𝑘𝑖,𝑖+1 Index of 𝑡𝑖 𝑡𝑖+1 in the 2-gram vocabulary.
+ 𝑘𝑖−1,𝑖,𝑖+1 Index of 𝑡𝑖−1 𝑡𝑖 𝑡𝑖+1 in the 3-gram vocabulary.
+ 𝑀 Hash bucket size. It is the 2-gram and 3-gram vocabulary
+ size, and set to 5000.
+ 𝛼, 𝛽, 𝛾 Random large prime numbers.
+ 𝑝(𝑁−𝑔𝑟𝑎𝑚)
+ 𝑖 N-gram sequence for 𝑝𝑖 .
+ 𝐸𝑝𝑖 Concated vector for uni-gram, 2-gram, and 3-gram
+ embedding.
+ 𝑋𝑝𝑖 Packet representation obtained by N-gram feature embedding for 𝑝𝑖 .
+  Hidden layer size of three-layer MLP.
+ 𝐖 Trainable weight.
+ 𝐛 Trainable bias.
+
+ Training related
+  Dropout rate.
+ |𝐵| Batch size.
+ 𝑌 Class set for the ETC task.
+ 𝑦̂𝑝𝑖 Predicted probability vector that 𝑝𝑖 belongs to each class
+ in 𝑌 .
+ 𝑦̂𝑝𝑖𝑐 𝑐th element of 𝑦̂𝑝𝑖
+ 𝑦𝑖𝑐 The ground truth label.
+
+ 4.1. Model architecture
+
+ As shown in Fig. 3, the FastTraffic classification model has two
+ components, including the packet embedding part and the classification
+ network part. Owing to the analogy between the traffic bytes and text
+ paragraph, the packet embedding part leverage the N-gram feature
+ embedding aiming to learn the structural and sequential information
+ within bytes and extracts the packet representation from the raw bytes.
+ Fig. 2. Distribution of IP packet lengths in three public encrypted traffic datasets. To achieve the lightweight goal, we propose a classification network
+ based on a three-layer MLP to classify the packet representation. Each
+ component will be explained in more detail below. Table 2 presents
+ Drawing on the idea of NLP research, we handle the original data a summary of the mathematical notations that have been used in this
+of each IP packet as a piece of text in FastTraffic. As shown in Fig. 1, paper, thus making it easier for readers to follow the content.
+the truncated IP packet undergoes treatment as a fixed-length sequence
+of bytes, which is then disassembled into tokens. Each byte is viewed 4.1.1. Packet embedding
+as a token, symbolized by two hexadecimal characters. After the above The purpose of embedding is to transform raw packet bytes into
+operation, we convert each IP data packet into a token sequence whose a vector, and some embedding design have been proposed in existing
+length is . works.
+ First of all, an input traffic packet can be denoted as 𝑝𝑖 = {(𝑡1 , 𝑡2 , … ,
+3.2.4. Under-sampling 𝑡 ), 𝑦𝑖 }, 𝑦𝑝𝑖 is the true label of this packet and 𝑡𝑖 is each byte in the
+ Data imbalance is a common issue that affects the performance of packet and defined as follows:
+ETC. FastTraffic is a packet-level approach that deals with each IP 0𝑥00 ≤ 𝑡𝑖 ≤ 0𝑥𝑓 𝑓
+packet as one sample. To prevent the high-frequency samples from
+attracting the attention of the classification model and thereby reducing which can be obtained after preprocessing. This byte can be exactly
+the accuracy, we randomly under-sample the three datasets. According equivalent to one word in a text paragraph, so we construct a vocabuto the analysis in Section 3.1, we require at most 50,000 IP packets can lary of size 256 and perform one-hot encoding for each 𝑡𝑖 . For one-hot
+be sampled for each category. If the number is less than 50,000, we use sparse representation, all byte representation vectors are orthogonal
+all packets of this category as samples. and cannot convey the correlation between bytes, so trainable embedding layers are introduced in FastTraffic to perform low-dimensional
+ representation of bytes. For each 𝑝𝑖 , the uni-gram embedding process
+4. FastTraffic classification model
+ can be expressed as Eq. (1), where 𝑝𝑖 ∈ R , 𝐔(1) is a trainable embedding vector, and 𝐸 (1) ∈ R× .  is the embedding dimension, which is
+ This section first demonstrates the classification model details of our an adjustable hyperparameter and will be determined in Section 5.
+proposed FastTraffic and then analyze and compare the computational
+complexity with other methods’ model theoretically. 𝐸 (1) = 𝑝𝑖 𝐔(1) (1)
+
+ 5
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+ Fig. 4. Packet structure and N-gram construction.
+
+ 𝑝(3−𝑔𝑟𝑎𝑚)
+ 𝑖 = {𝑡1 𝑡2 𝑡3 , 𝑡2 𝑡3 𝑡4 , … , 𝑡−2 𝑡−1 𝑡 } (3)
+
+ 𝐸 (2) = 𝑝(2−𝑔𝑟𝑎𝑚)
+ 𝑖 𝐔(2) (4)
+ Fig. 3. The classification model of FastTraffic.
+
+ 𝐸 (3) = 𝑝(3−𝑔𝑟𝑎𝑚)
+ 𝑖 𝐔(3) (5)
+
+ It is insufficient to utilize the uni-gram embedding, because it just [ ]
+ 𝐸𝑝𝑖 = 𝐸 (1) 𝐸 (2) 𝐸 (3) (6)
+offer the byte information and not the structural and sequential information inherent in the byte sequence. Therefore, the N-gram feature [ ∑ ]
+ 1  1 ∑
+embedding is introduced to enrich the learnable packet information. 𝐗𝑝𝑖 = 𝑀𝑒𝑎𝑛(𝐸𝑝𝑖 ) =  𝑟=1 𝑒𝑟,1 ⋯  𝑟=1 𝑒𝑟,3 (7)
+N-gram itself is a feature embedding method in the NLP domain [37]
+and is a classical statistical language model that operates a sliding Towards 2-gram and 3-gram, we also need to build the correspondwindow of size 𝑁 on the content of a sequence according to different ing vocabulary to complete the embedding. The scale of the vocabulary
+token lengths. In the scenario of ETC, we introduce N-gram feature for 2-gram is 2562 , and 3-gram reaches 2563 . Consequently, building
+embedding for the following two reasons: the complete vocabulary for 2-gram and 3-gram will incur huge computational and storage overhead, and not all 2-gram and 3-gram byte’s
+ (1) The byte sequence of an IP packet has a more fixed and rigorous combination occur in the byte sequence at high frequencies. Thus, a
+ structure than a text sequence. One, two, three, or four consecu- simple hash bucket trick is proposed to compress the vocabulary size
+ tive bytes are as fields and provide practical support for network based on [38] and improve the running speed. The formulas of the hash
+ traffic transmission. For instance, as shown in Fig. 4, the first bucket are as follows:
+ three bytes of the TLS header specify the data type of the TLS
+ payload and the TLS protocol version. In the packet header, only 𝑘𝑖,𝑖+1 = ℎ𝑎𝑠ℎ1 (𝑘𝑖 , 𝑘𝑖+1 ) = (𝛼𝑘𝑖 + 𝛽𝑘𝑖+1 ) mod 𝑀 (8)
+ four fields are four bytes, thus avoiding excessive storage and
+ computation overhead, we only design sliding windows with sizes 𝑘𝑖−1,𝑖,𝑖+1 = ℎ𝑎𝑠ℎ2 (𝑘𝑖−1 , 𝑘𝑖 , 𝑘𝑖+1 )
+ (9)
+ 𝑁 = 2 and 𝑁 = 3 to extract the packet structural information. = (𝛼𝑘𝑖−1 + 𝛽𝑘𝑖 + 𝛾𝑘𝑖+1 ) mod 𝑀
+ (2) In IP packets, there is a clear relative order between each byte
+ Where 𝑘𝑖 is the index of 𝑡𝑖 in the uni-gram vocabulary and 𝑀 is
+ position, so introducing this order can help us achieve a better
+ the hash bucket size. 𝛼, 𝛽, and 𝛾 is a large prime numbers that we
+ representation of the packet. However, Uni-gram embedding is
+ randomly choose. With this hash mapping, we establish the relationship
+ invariant to a byte sequence, and introducing this order via a
+ between uni-gram to 2-gram and 3-gram token sequences and obtain
+ well-known self-attention mechanism is computationally expenthe corresponding vocabulary to support the 2-gram and 3-gram emsive. Therefore, N-gram feature embedding with sliding winbedding. As a result, we set the size of the 2-gram and 3-gram 𝑀 to 5000
+ dows, whose stride is 1 byte, can capture the byte sequential
+ by experimental analysis. Significantly, benefiting from the fact that
+ information, as shown in Fig. 4.
+  is limited to the interval [50, 100] in Section 3.2, the occurrence of
+ Therefore, we use 2-gram (2-byte) and 3-gram (3-byte) features to low-frequency 2-grams and 3-grams can be effectively alleviated, thus
+construct two new token sequences, which can be denoted as Eq. (2)– controlling the hash collision scale. Eventually, this trick reduces the
+(3). The 𝑝(2−𝑔𝑟𝑎𝑚)
+ 𝑖 and 𝑝(3−𝑔𝑟𝑎𝑚)
+ 𝑖 will be represented by two independent number of parameters of the embedding layers 𝐔(2) and 𝐔(3) , memory
+embedding vectors. The two low-dimensional vectors obtained after usage, and increases the inference speed.
+embedding will be concated together with 𝐸 (1) , and the mean value
+of the  bytes will be calculated for obtaining the final representation 4.1.2. Classification network
+of the input packet. This process is shown in Eqs. (4)–(6). 𝐔(2) and 𝐔(3) After obtaining the packet representation 𝐗𝑝𝑖 , we construct the
+are trainable embedding vectors, and the concated vector is denoted as three-layer MLP network structure shown in Fig. 3 to classify it. The
+𝐸𝑝𝑖 ∈ R×3 . In Eq. (7), the 𝑒𝑟,𝑐 represents the element in row 𝑟 and first layer is the input layer, which will obtain 𝐗𝑝𝑖 . Then, 𝐗𝑝𝑖 will be
+column 𝑐 of the 𝐸𝑝𝑖 , and the final representation of the input packet calculated through a hidden layer, viz., a fully connected network (FC),
+can be denoted as 𝐗𝑝𝑖 ∈ R3 . and the output of it can be expressed as Eq. (10).
+
+𝑝(2−𝑔𝑟𝑎𝑚)
+ 𝑖 = {𝑡1 𝑡2 , 𝑡2 𝑡3 , … , 𝑡−1 𝑡 } (2) 𝑓 (1) (𝐗𝑝𝑖 ) = 𝐺𝐸𝐿𝑈 (𝐵𝑁(𝐖(1) ⋅ 𝐗𝑝𝑖 + 𝐛(1) )) (10)
+
+ 6
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+Table 3 Table 4
+Details of FastTraffic classification model. Comparison of core structure complexity.
+ Function Layer Input Dropout Output Method Core Complexity Sequential Maximum
+ structure per layer operations path length
+ Uni-gram  – ×
+ Packet
+ 2-gram  – × 1DCNN
+ Embedding
+ 3-gram  – × TSCRNN
+ CNN (𝑘 ⋅  ⋅ 2 ) (1) (∕𝑘)
+ DeepPacket
+ Concat [ × ] × 3 –  × 3
+ Representation SAM
+ Mean/Input  × 3 – 3
+ LSTM-Att
+ Hidden 3 –  RNN ( ⋅ 2 ) () ()
+ TSCRNN
+ layer
+   2
+ Classification BN – SAM SA ( ⋅ ) (1) (1)
+ Network GELU  – 
+ MATEC
+ Dropout    MHA (ℎ ⋅ 2 ⋅ ) (1) (1)
+ ET-BERT
+ Output  – |𝑌 |
+ Datanet
+ MLP ( ⋅ ) (1) (1)
+ FastTraffic
+
+ ( [√ ( )])
+𝐺𝐸𝐿𝑈 (𝑥) = 0.5𝑥 1 + tanh 2∕𝜋 𝑥 + 𝑐𝑥3 • 1DCNN [19] is a session-level method. The authors convert the
+ (11)
+ 𝑐 = 0.044715 session bytes to MNIST grayscale images, then propose 1DCNN
+ to classify them.
+ Where 𝐖(1) ∈ R×3 and 𝐛(1) ∈ R are the trainable parameter • TSCRNN [11] is a flow-level method. The authors use the first 15
+weight and bias of the hidden layer. BN is the batch normalization packets of each flow, and the length of each packet is controlled
+algorithm. The GELU activation function is used to introduce nonlin- in MTU. It proposes a 2-layer 1DCNN with a bidirectional LSTM
+earities. Compared with the commonly used ReLU activation func- classification model.
+tion, the GELU is smoother and can effectively improve the model • BiLSTM-Attention [20] (abbr. LSTM-att) is a flow-level method.
+performance [39]. The authors use the first 10 packets of each flow, and the length
+ Afterward, as shown in Eq. (12), we employ a Dropout strategy of each packet is controlled in MTU. It proposes a bidirectional
+to alleviate the over-fitting phenomenon during the network forward LSTM with additive attention mechanism classification model.
+propagation process, and the dropout rate is set to , where  is a • DeepPacket [9] is a packet-level method and controls packet
+hyperparameter that needs to be chosen.
+ length in MTU. It proposes a classification model based on 1DCNN.
+𝑓 (2) = 𝐷𝑟𝑜𝑝𝑜𝑢𝑡(𝑓 (1) (𝐗𝑝𝑖 ), ) (12) • SAM [23] is a packet-level method and controls packet length at
+ the first 50 bytes. It proposes a classification model based on the
+ The last layer is the output layer of FastTraffic. This layer will self-attention mechanism with a two-layer 1DCNN.
+calculate the final prediction of 𝐗𝑝𝑖 through the Softmax function, • ET-BERT [13] is a packet-level method and controls packet length
+and 𝑓 (3) ∈ R|𝑌 | , |𝑌 | is the size of the classification label set, as shown at the first 512 bytes. It proposes a classification model based on
+in Eq. (13)–(14). 12 layers Transformer encoder and it is a method with the best
+𝑓 (3) = 𝐖(2) ⋅ 𝑓 (2) + 𝐛(2) (13) classifying performance in the ETC field currently.
+ • MATEC [21] is a lightweight flow-level method. The authors use
+𝑦̂𝑝𝑖 = 𝑆𝑜𝑓 𝑡𝑚𝑎𝑥(𝑓 (3) ) (14) the first 3 packets of each flow, and the length of each packet is
+ controlled in 784 bytes. The location and length of the packet
+ Where 𝑦̂𝑝𝑖 denotes the predicted probability vector. 𝑦̂𝑝𝑖𝑐 is the 𝑐th are attached before these bytes. It proposes a classification model
+element of 𝑦̂𝑝𝑖 , which represent the probability of 𝐗𝑝𝑖 belongs to 𝑐th based on several modified Transformer encoders stacking.
+class in 𝑌 . During the training process, FastTraffic uses the Cross • Datanet [22] is a lightweight packet-level method and controls
+entropy loss function to measure the distance between the predicted packet length at the first 1480 bytes. It proposes a classification
+label and the true label and then iterate the model, as defined in model based on a four-layer MLP.
+Eq. (15).
+ |𝐵| |𝑌 |−1 ( ) For the above methods, we reproduce them all according to the
+ 1 ∑ ∑ original structure designs and maintenance the hyperparameter settings
+𝑙𝑜𝑠𝑠 = − 𝑦𝑝𝑖𝑐 log 𝑦̂𝑝𝑖𝑐 (15)
+ |𝐵| 𝑖=1 𝑗=0 in their paper.
+ Where |𝐵| is the training batch size, and 𝑦𝑖𝑐 = 0∕1 is the ground The existing ETC methods leverage different core structures to
+truth label. Overall, the details of FastTraffic classification model and construct the final classification model, which is an upper bound on
+the specific parameters are illustrated in Table 3. the complexity of the model and determines the theoretical and com-
+ Besides the above model structure and execution process, we use the putational complexity. Hence, we summarize the core structures of
+Xavier method to initialize the model training parameters to ensure the above methods and compare them with FastTraffic theoretically in
+stable and fast convergence of the model, and the Adam optimizer, three aspects, including computational complexity per layer, sequential
+which is an adaptive and little memory consumption optimization operations, and maximum path length [40].
+algorithm, is also used in FastTraffic. The remaining hyperparameter As designed in Section 4, the core structure of our FastTraffic is
+tuning process, such as batch size, and epoch number, will be discussed MLP, but contrast methods are designed based on CNN, RNN, selfdetailedly in Section 5. attention (SA), and multi-head attention (MHA) respectively. Especially, MHA is the core structure of the Transformer-based method, such
+4.2. Model complexity analysis as MATEC and ET-BERT. CNN, RNN, SA, and MHA is leveraged to map
+ one variable-length sequence of symbol representations (𝑥1 , 𝑥2 , … , 𝑥 )
+ To demonstrate the model complexity of FastTraffic, we introduce to another (𝑧1 , 𝑧2 , … , 𝑧 ), with 𝑥𝑖 , 𝑧𝑖 ∈ R . The computational complexand reproduce eight typical state-of-the-art ETC methods including ity per layer is shown in Table 4, where  is the input length, 𝑘 is the
+six conventional methods and two lightweight methods, which are as kernel size of convolution,  is the representation dimension and ℎ is
+follows: the number of attention head. Each layer of MLP is linearly mapped
+
+ 7
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+Table 5
+Two devices with different configurations.
+ Hardware Name Configuration Setting
+ Operation system Ubuntu 20.04.2 LTS
+ Traffic manipulation Scapy & SplitCap
+ DL framework Pytorch-GPU 1.9
+ CPU Intel Core i9-10900 K
+ High-configuration device
+ RAM 64 GB DDR4
+ Storage 1TB SSD
+ GPU GeForce RTX3080
+ VRAM 10 GB
+ Operation system Windows 10
+ DL framework Pytorch-CPU 1.9
+ Low-configuration device CPU Intel Core i5-7500
+ RAM 8 GB DDR4
+ Storage 500 GB HDD
+
+to the next layer by a weight vector, hence the complexity per layer
+of MLP is only ( ⋅ ).  is commonly less than 2 or  × , so the
+computational complexity per layer of MLP is much lower compared to
+CNN, RNN, SA, and MHA. Meanwhile, towards MLP, CNN, and MHA,
+parallel operations can be performed using vector multiplication, so
+their sequential operation complexity of them is only (1), while RNN
+is () due to its time-step sequential execution.
+ The maximum path length is defined as the length of the paths that
+the forward and backward information pass through in the network.
+The shorter these paths between any combination of neurons for input
+and output, the easier it is to learn long-distance dependencies, which
+also means less information loss between neurons [40]. So for SA,
+MHA, and MLP, they can connect all neurons with a constant number
+of sequentially executed operations, i.e., (1), but RNN requires ()
+operations. CNN needs to stack (∕𝑘) convolutional layer operations
+with kernel size 𝑘 to connect all input and output neurons, so its
+maximum path length is (∕𝑘). To summarize, the computational
+complexity of FastTraffic is lower than other methods in three theoretical aspects. As a result, the above theoretical analysis demonstrate
+that FastTraffic obtains extremely low model complexity.
+
+5. Experiment setup
+
+ Experiments are carefully designed to evaluate FastTraffic by comparing it with eight state-of-the-art ETC methods. In this section, we
+introduce the details of the experimental setup, including hardware
+configuration, classification tasks, evaluation metrics, and model hyperparameter tuning.
+
+5.1. Device configuration & task settings
+ Fig. 5. Number of packets for four tasks.
+
+ As shown in Table 5, we conduct comparative experiments on
+two computers with different hardware configurations. A computer
+equipped with an advanced GPU is used as a high-configuration device, network device to test the performance of all ETC methods. Table 5
+while another ordinary computer is used as a low-configuration device. shows the details of this device. Since no GPU is installed, all ETC
+Since GPUs can accelerate the training and prediction process of deep models can only run on the CPU, which is consistent with the results of
+learning models, researchers usually choose some devices with ad- our survey of mainstream network equipment. In Section 6.2, we will
+vanced GPUs for experiments in previous work. In our experiments, we comprehensively compare the operating efficiencies of 9 ETC methods
+follow this setting for method comparison. However, on the Internet, on this device.
+ISPs have not deployed network devices equipped with GPUs on a large According to the processing method introduced in Section 3, we
+scale due to their high prices and huge energy consumption. Therefore, constructed four sub-datasets corresponding to different classification
+ETC methods should adapt to low-configuration network devices to tasks based on the three benchmark datasets. As shown in Fig. 5, both
+achieve large-scale deployment. Based on the above analysis, we have T1 and T2 classify the network traffic of ISCX-VPN. T1 is a multilaunched a survey of network devices with traffic access control and classification of network service types, while T2 is a multi-classification
+interception functions on the market, such as Sangfor AC-1000-B1200 of different network applications. T3 is set for multi-classification of
+and Cisco N540-FH-CSR-SYS. These devices generally have only one Tor’s application traffic in ISCX-Tor, while T4 is a multi-classification
+multi-core processor, 4 G or 8 G RAM, and power within 200 W. None of different types of software in USTC-TFC. Notably, the classification
+of them have a GPU installed. In experiments, we use an ordinary metrics will be evaluated based on these four sub-datasets by 10-fold
+computer that meets the above configuration as a low-configuration cross-validation.
+
+ 8
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+ Fig. 6. Impact of truncation length  on accuracy and training time of FastTraffic on four experiments.
+
+5.2. Evaluation metrics Table 6
+ Hyperparameter tuning for FastTraffic.
+ Hyperparameters Search range Final selection
+ In experiments, we introduce multiple metrics to evaluate the classification performance and model efficiency of FastTraffic and other Truncation length [50, … , 100] 50
+ Embedding dimension [40, 50, 60, 70] 40
+state-of-art methods.
+ Hidden layer size [64, … , 200] 150
+ Dropout rate [0, … , 0.5] 0.38
+5.2.1. Classification metrics Training epoch [5, … , 30] 24
+ For a fair comparison, four typical classification evaluation metrics Batch size [64, … , 256] 204
+ Learning rate [1E−4, … , 1E-2] 3.6E−3
+are introduced, including accuracy (AC), precision (PR), recall (RC),
+and F1 score (F1). As shown in Eq. (16), AC is equal to the number of
+samples accurately classified divided by the total number of packets.
+Besides, in order to evaluate the classification results of all categories The truncation length  of the original data packet is an important
+as a whole, we use the macro-average method to calculate the values parameter that affects the classification performance and operational
+of PR, RC, and F1. Their calculations are described in Eqs. (17) to (19). efficiency of FastTraffic. In Section 3.2, we propose an interval-based
+ searching strategy and decide to tune  within the interval [50, 100].
+ 𝑇𝑃 + 𝑇𝑁 According to the results of the above experiments, 50 bytes is the
+𝐴𝐶 = (16)
+ 𝑇𝑃 + 𝑇𝑁 + 𝐹𝑃 + 𝐹𝑁 optimal value of . In order to further verify the rationality of this
+ |𝑌 |−1 value, we conduct experiments on four classification tasks. We fix
+ 1 ∑ 𝑇 𝑃𝑖
+ the other hyperparameters and let  take the values in the sequence
+𝑃𝑅 = (17)
+ |𝑌 | 𝑖=0 𝑇 𝑃𝑖 + 𝐹 𝑃𝑖 {10, 20, 40, 50, 100, 750, 1500} to explore the influence of  on classi-
+ |𝑌 |−1 fication accuracy and training time. As shown in Fig. 6, FastTraffic
+ 1 ∑ 𝑇 𝑃𝑖
+𝑅𝐶 = (18) achieves the highest accuracy in all tasks when  is 50 bytes. In terms
+ |𝑌 | 𝑖=0 𝑇 𝑃𝑖 + 𝐹 𝑁𝑖
+ of operational efficiency, as the value of  increases, the training time
+ 2 × 𝑃 𝑅 × 𝑅𝐶 of the model increases linearly. Besides, IT is only 0.43 ms when  is 50
+𝐹1 = (19)
+ 𝑃 𝑅 + 𝑅𝐶 bytes, but it grows to 1.41 ms when  is 1500 bytes. Therefore, setting a
+5.2.2. Efficiency metrics larger  does not bring better classification performance but introduces
+ more time overhead. To sum up, we fix  to be 50 bytes.
+ In addition to classification performance, operational efficiency is
+another important dimension to evaluate ETC methods. Network traffic
+classification usually consists of three steps: traffic capture, data pre- 6. Experimental results & analysis
+processing, and model classification. According to [41,42], the process
+of traffic capture can be accelerated by FPGA-based devices, so the In experiments, we compare the classification performance and opbottleneck of the ETC method mainly lies in the last two steps. erational efficiency of FastTraffic and eight state-of-the-art ETC meth-
+ To objectively compare the efficiency of these ETC methods, we ods, evaluate their performance in low-resource scenarios, and finally
+introduce two metrics, PT and IT. PT describes the preprocessing time prove the rationality of the FastTraffic model design through an ablaconsumed by one packet, and IT represents the inference time of the tion study.
+classification model for one sample. It is worth noting that both PT
+and IT are the average results of 10,000 random samples under 20 6.1. Classification performance comparison
+repeated experiments. To obtain accurate results of PT and IT, we
+load the models into the memory at one time. The models are resident Tables 7 and 8 depict the classification performance of all ETC
+in the memory during each repeated experiments, thus avoiding the methods. To illustrate the feasibility of FastTraffic, we first compare
+additional time overhead introduced by loading from disk multiple it with six conventional methods. In T1 and T2, it far outperforms the
+times. Furthermore, we define throughput (TH ) based on PT and IT. five ETC methods and is only worse than ET-BERT. According to the
+According to Eq. (20), it represents the number of packets processed results in Table 7, the F1 score of FastTraffic exceed 93% in the above
+by the classification model per second. two tasks. As shown in Table 8, almost all methods achieve satisfactory
+ 1 performance in T3, and the F1 score of FastTraffic reaches 99.40%. It
+𝑇𝐻 = (20) is worth noting that since 1DCNN is a session-level method and the
+ 𝑃 𝑇 + 𝐼𝑇
+ dataset ISCX-Tor cannot provide a sufficient number of samples to train
+5.3. Hyperparameter tuning the model, it performs very poorly. For T4, FastTraffic’s classification
+ performance is relatively weaker than other methods, but its F1 is still
+ To achieve the best performance of the FastTraffic model, we per- acceptable, exceeding 95%. ET-BERT is the best of all methods due to
+form hyperparameter tuning on ISCX-VPN. In experiments, we first take its pre-training strategy and complex model, while overall FastTraffic
+AC as the evaluation metric and T1 as the target task and then use the achieves the second-best performance after ET-BERT. It is worth notrandom search method [43] to determine the optimal values of these ing that the above six conventional methods are designed to pursue
+hyperparameters within the search ranges listed in Table 6. high classification performance and lack lightweight considerations.
+
+ 9
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+ Table 7
+ Classification performance comparison among nine ETC methods on T1, and T2. Results are in the format Avg.(±Std.) obtained over 10-fold.
+
+ Task T1 [%] T2 [%]
+
+ Method AC PR RC F1 AC PR RC F1
+
+ 1DCNN 91.52(±0.13) 93.12(±0.15) 93.11(±0.22) 93.09(±0.18) 91.78(±1.12) 86.08(±1.63) 79.47(±1.57) 81.83(±1.82)
+ TSCRNN 88.04(±1.02) 89.36(±0.97) 89.41(±1.54) 89.26(±1.22) 80.25(±1.00) 77.59(±1.73) 76.11(±1.56) 76.21(±1.48)
+ LSTM-Att 88.01(±1.03) 89.38(±0.97) 89.03(±1.10) 88.92(±1.11) 80.54(±1.02) 79.16(±2.20) 74.55(±1.10) 76.05(±0.70)
+ DeepPacket 90.66(±1.19) 91.18(±1.37) 89.50(±1.31) 89.83(±1.33) 89.05(±0.32) 88.67(±0.53) 86.68(±0.89) 87.23(±0.73)
+ SAM 91.59(±0.17) 92.46(±0.35) 91.99(±0.18) 92.00(±0.17) 91.02(±0.22) 93.56(±0.60) 92.27(±0.70) 92.72(±0.58)
+ ET-BERT 99.92(±0.09) 99.98(±0.04) 99.95(±0.06) 99.95(±0.05) 98.97(±0.13) 98.96(±0.36) 99.11(±0.12) 99.02(±0.23)
+
+ MATEC 73.20(±0.72) 84.43(±1.04) 82.40(±1.03) 82.87(±0.81) 69.21(±0.69) 73.32(±1.47) 65.40(±2.03) 68.24(±1.43)
+ Datanet 91.85(±0.31) 91.57(±0.40) 91.06(±0.30) 91.17(±0.32) 87.19(±0.44) 84.43(±1.09) 82.85(±0.95) 83.16(±0.75)
+
+ FastTraffic 94.50(±0.13) 94.77(±0.23) 94.26(±0.08) 94.40(±0.12) 92.24(±0.54) 93.58(±0.33) 92.84(±0.49) 93.12(±0.35)
+
+ Table 8
+ Classification performance comparison among nine ETC methods on T3, and T4. Results are in the format Avg.(±Std.) obtained over 10-fold.
+
+ Task T3 [%] T4 [%]
+
+ Method AC PR RC F1 AC PR RC F1
+
+ 1DCNN 58.78(±0.26) 62.83(±3.06) 43.81(±0.41) 46.09(±0.83) 98.68(±0.20) 98.96(±0.27) 98.96(±0.25) 98.95(±0.27)
+ TSCRNN 98.97(±0.31) 94.83(±2.61) 94.73(±2.45) 94.01(±2.40) 96.90(±0.43) 96.95(±0.40) 96.86(±0.42) 96.85(±0.43)
+ LSTM-Att 97.30(±0.71) 95.87(±1.02) 95.36(±1.42) 95.30(±1.37) 97.01(±0.22) 97.03(±0.19) 96.89(±0.23) 96.92(±0.22)
+ DeepPacket 98.78(±0.11) 95.08(±0.88) 94.01(±0.71) 94.29(±0.71) 95.36(±0.29) 95.89(±0.80) 93.23(±1.20) 93.88(±1.20)
+ SAM 98.05(±1.35) 96.74(±1.67) 96.44(±1.80) 96.27(±1.94) 95.73(±1.53) 96.70(±1.15) 96.61(±1.21) 96.64(±1.19)
+ ET-BERT 99.92(±0.09) 99.98(±0.04) 99.95(±0.06) 99.95(±0.05) 98.97(±0.13) 98.96(±0.36) 99.11(±0.12) 99.02(±0.23)
+
+ MATEC 99.39(±0.10) 95.72(±0.49) 95.04(±0.57) 95.17(±0.55) 97.19(±1.11) 97.40(±1.01) 97.28(±1.13) 97.26(±1.15)
+ Datanet 98.41(±0.25) 94.32(±0.63) 93.74(±0.87) 93.73(±0.99) 96.74(±0.19) 97.07(±0.20) 97.11(±0.22) 97.05(±0.21)
+
+ FastTraffic 99.72(±0.03) 99.47(±0.24) 99.33(±0.18) 99.40(±0.19) 96.93(±0.16) 96.57(±0.74) 94.99(±0.70) 95.53(±0.42)
+
+In the following experiments, we will demonstrate their shortcomings Table 9
+in operational efficiency. Second, we compare FastTraffic with two Comparison of the number of parameters among nine
+ ETC models..
+lightweight methods, MATEC and Datanet. In all four classification
+tasks, FastTraffic outperforms the above two methods. Especially in Method Number of parameters
+T1 and T2, the gap between them is significant. The above results 1DCNN 1.7M
+demonstrate that FastTraffic can better complete traffic classification TSCRNN 2.9M
+while pursuing lightweight. LSTM-Att 1.6M
+ In Table 7, all ETC methods perform worse on T1 and T2 than on DeepPacket 10M
+T3 and T4. The reason is that ISCX-VPN contains much more samples SAM 0.8M
+ ET-BERT 132M
+than other datasets, and each category contains traffic from various
+sources. For example, the VoIP category in T1 includes the traffic flows MATEC 2.6M
+of Skype_video, VoipBuster, Facebook_audio, Facebook_video, etc. Due to Datanet 0.19M
+differences in traffic samples of various software, some samples are FastTraffic 0.43M
+mislabeled during the classification process. The complex composition
+of ISCX-VPN poses a difficult challenge, causing a drop in classification
+performance for all methods.
+ This difficulty is also reflected in the confusion matrices, as shown 6.2.1. Number of model parameters
+in Figs. 7 and 8. The results indicate an overall enhancement of the The number of parameters is an important metric that affects the
+confusion matrices achieved by FastTraffic when compared to MATEC
+ operational efficiency of a deep learning model. We use Pytorch API
+and Datanet. Towards T1, misclassification patterns are relatively similar for the three methods, with the File Transfer class and VoIP class to count the parameters of all ETC models. As shown in Table 9, Fastbeing the most likely to be misclassified, due to their complex com- Traffic’s number of parameters is 0.43M and is the second least among
+position. The difference in misclassification is most pronounced on all methods. Compared with the six conventional methods, FastTraffic
+T2, where FastTraffic improved the MATEC’s recall of the Email class requires half or even fewer parameters of them. Although proposed as a
+(39.80%) to 83.64%, Datanet’s recall of the Aim Chat class (26.89%) to
+ lightweight method, MATEC has six times more parameters than Fast-
+90.62%. Hence, benefiting from packet truncation and N-gram feature
+ Traffic. Due to the N-gram feature embedding, FastTraffic has slightly
+embedding, FastTraffic can accurately classify more packets than the
+other two methods. Therefore, it obtains better results than MATEC and more parameters than Datanet, but it obtains better performance in
+Datanet. Tables 7 and 8. Therefore, FastTraffic can achieve the goal of the
+ lightweight model while ensuring its classification performance. In ad-
+6.2. Operational efficiency comparison
+ dition, although ET-BERT achieves the best classification performance,
+ To evaluate the feasibility of deployment, we compare the opera- the pre-training process and complex model make it harvest up to
+tional efficiency of FastTraffic with other methods on high-configurat- 132M parameters. Therefore, it is impossible to deploy ET-BERT on
+ion and low-configuration devices. resource-constrained devices in real network scenarios.
+
+ 10
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+ Fig. 7. Confusion matrices of three lightweight methods on T1.
+
+ Fig. 8. Confusion matrices of three lightweight methods on T2.
+
+ Table 10
+ Operational efficiency comparison among nine ETC
+ methods on the high-configuration device.
+
+ Method PT (ms) IT (ms) TH
+
+ 1DCNN 0.87 0.64 662 sps
+ TSCRNN 1.3 5.3 152 fps
+ LSTM-Att 1.7 2.6 233 fps
+ DeepPacket 0.61 1.0 62 pps
+ SAM 0.49 0.96 690 pps
+ ET-BERT 0.61 9.99 94 pps
+
+ MATEC 1.3 1.3 385 fps
+ Datanet 0.27 0.51 1282 pps
+
+ FastTraffic 0.59 0.39 1010 pps
+
+ Fig. 9. Training speed comparison among nine ETC methods on the low-configuration
+ device.
+
+6.2.2. Efficiency on high-configuration device
+ We evaluate PT, IT, and TH of all ETC methods on the highconfiguration device. As shown in Table 10, FastTraffic obtains a PT 6.2.3. Efficiency on low-configuration device
+of 0.59ms, an IT of 0.39ms, and achieves a TH of 1010 pps. It is To verify the feasibility of deploying the ETC methods in an actual
+the second-best result among all methods. The complex model brings network environment, we use a low-configuration computer described
+ET-BERT the best classification performance but causes the lowest in Table 5 to evaluate their operating efficiency. In the following
+operating efficiency. Although they are both packet-level ETC methods, experiments, we mainly examine the operational efficiency of model
+ET-BERT’s TH is only 9.3% of FastTraffic’s TH. As mentioned above, training and traffic classification.
+since MATEC’s model has more parameters, its operational efficiency is First, we introduce the training speed (TS) as an evaluation metric,
+worse than other lightweight methods. Datanet only uses a four-layer and it is equal to the number of batches that the ETC model can process
+MLP, so it obtains the highest efficiency. FastTraffic operates slightly per second. Due to the frequent updates of network applications and
+less efficiently than Datanet. The main reason is that FastTraffic needs protocols, the features of the network traffic flows change over time.
+to filter unrelated packets before feeding samples into the classification Therefore, any ETC model cannot guarantee excellent classification
+model. According to the discussion in Section 6.1, although FastTraffic results in long-term use after only one training. Besides, the training
+sacrifices part of the operating efficiency, it dramatically improves the process of the classification models requires significant computational
+classification performance. Therefore, FastTraffic is the first choice for and storage resources. Although it is a good idea to train the models on
+fast traffic classification. the cloud and then distribute the parameters to devices, many ISPs still
+
+ 11
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+ Table 11
+ Operational efficiency comparison among nine ETC methods on the low-configuration device.
+
+ Method File size (MB) On-device training PT (ms) IT (ms) TH CPU utilization Memory usage(MB)
+
+ 1DCNN 6.6 ✓ 5.5 1.7 139 sps 15% ∼ 21% ∼ 112
+ TSCRNN 11.0 ✗ 4.1 18.7 44 fps 16% ∼ 23% ∼ 119
+ LSTM-Att 5.9 ✓ 4.4 5.8 98 fps 8% ∼ 16% ∼ 78
+ DeepPacket 38.5 ✗ 1.3 4.4 175 pps 16% ∼ 20% ∼ 146
+ SAM 3.3 ✗ 0.7 1.1 556 pps 14% ∼ 22% ∼ 111
+ ET-BERT 504 ✗ 1.2 170.9 6 pps 33% ∼ 38% ∼ 660
+
+ MATEC 9.9 ✓ 2.4 2.1 227 fps 8% ∼ 13% ∼ 84
+ Datanet 0.74 ✓ 0.53 0.57 909 pps 8% ∼ 10% ∼ 72
+
+ FastTraffic 1.60 ✓ 1.22 0.25 680 pps 7%∼11% ∼74
+
+want to do model training on their local devices due to data privacy
+concerns. Therefore, we use training speed to evaluate whether an
+ETC model can complete the training process on a low-configuration
+network device. In Fig. 9, FastTraffic achieves the second-fastest training speed. Compared with six conventional ETC methods, FastTraffic
+is more than twice as fast as them. Besides, FastTraffic is faster than
+MATEC but slower than Datanet. The reason is that Datanet directly
+sends data packets to MLP for classification, while FastTraffic needs
+to complete packet truncation and N-gram feature embedding before
+this. It also explains why FastTraffic maintains a higher classification
+accuracy than Datanet.
+ Second, we count the size of the model file. As shown in Table 11,
+the file size of FastTraffic is only 1.6 MB, so it will not cause storage pressure on any network device. Due to the complexity of the
+model, ET-BERT needs to occupy 504 MB of storage space. It is a pro- Fig. 10. Comparison of low-resource learning capabilities among nine ETC methods
+hibitive overhead for resource-constrained network devices. Based on on T1.
+the above analysis, FastTraffic’s excellent operating efficiency ensures
+it can achieve fast model training on most network devices.
+ To evaluate the operational efficiency of traffic identification, we 6.3. Comparison in low-resource scenarios
+calculate the TH, PT, and IT of all ETC methods. As shown in Table 11,
+the TH of FastTraffic on the low-configuration device reaches 680 In real network scenarios, constructing a large-scale dataset for
+pps. It is lower than the result on the high-configuration device but network applications or services requires a lot of resources and labor
+is still the second best among all ETC methods. Since there is no costs. If an ETC method only uses a small number of labeled samples
+GPU to accelerate the classification process, the TH s of these ETC to complete model training, it can reduce the actual operating cost.
+methods based on deep learning models drop significantly. ET-BERT In [13], the authors refer to it as the low-resource learning ability of
+only achieves 6 pps. Although it obtains the best classification perfor- ETC methods. Accordingly, we randomly select 10%, 25%, and 50%
+mance, its model is difficult to deploy on network devices. In addition, samples from the original dataset for experiments to evaluate the low-
+Table 11 shows the PT and IT of all methods. FastTraffic takes only resource learning ability of all methods. As shown in Fig. 10, the
+1.47ms to process one packet, slightly longer than Datanet’s 1.1ms. It F1 values of FastTraffic under the above sampling ratios are 90.05%,
+is consistent with the experimental results on the high-configuration 92.48%, and 93.70%. Although the values are all lower than the result
+device. FastTraffic performs packet filtering before sending samples to of training the model with all samples, they are still above 90%. Comthe classification network. Although this step will increase the value of pared with FastTraffic, the F1 values of other ETC methods drop more
+PT, it can improve classification performance. Given the low execution sharply when the training samples are insufficient. Besides, we note
+efficiency of Python’s Scapy library, there is still room to shorten the PT
+ that flow-level methods are more susceptible to the problem that there
+during engineering. In addition, it is worth noting that FastTraffic’s IT
+ are not enough training samples. Since a flow contains many packets,
+is 0.25ms, which is even lower than the results on the high-configuration
+ flow-level methods will get fewer samples for the same bytes of traffic
+device. It proves that FastTraffic does not rely on high-performance
+ data. Due to adopting a smaller identification granularity, FastTraffic
+GPUs during traffic identification. Therefore, FastTraffic is suitable for
+ can obtain more labeled samples, thereby training a more robust model.
+deployment on most mainstream network devices.
+ To sum up, it has excellent learning ability in low-resource scenarios.
+ In addition to identifying traffic, network devices must provide
+daily services, such as packet forwarding. ETC methods cannot occupy
+too many device resources after deployment. We observe the memory 6.4. Ablation study
+usage and CPU utilization on the low-configuration device to compare
+these ETC methods. As shown in Table 11, FastTraffic only needs To verify the validity and rationality of each component of the
+∼74MB of memory when performing traffic classification and takes up FastTraffic model, we conduct an ablation study on T1 and set the
+∼10% of the computing power of the CPU. So it meets the lightweight variants of FastTraffic for comparison as follows.
+requirement when deployed on the current network devices. In contrast, ET-BERT uses ∼660MB of memory and takes up one-third of the • w/ 𝐔(1) : We only retain the single uni-gram embedding modify
+computing power, which will seriously affect the QoS provided by the the classification network detail to prove the validity of 2-gram
+network device. and 3-gram design.
+
+ 12
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+Table 12 CRediT authorship contribution statement
+Ablation study of FastTraffic on T1 in the format Avg.(±Std.) obtained over 10-fold.
+ Method 𝐔(1) 𝐔(2) 𝐔(3) 𝐖(1) AC [%] F1 [%] Yuwei Xu: Conceptualization, Writing – review & editing, Fundw/ 𝐔(1) ✔ ✗ ✗ ✔ 89.65(±0.18) 89.26(±0.16) ing acquisition. Jie Cao: Methodology, Software, Validation, Writw/o 𝐔(1) ✗ ✔ ✔ ✔ 93.75(±0.24) 93.65(±0.24) ing – original draft. Kehui Song: Resources, Visualization, Investigaw/o 𝐔(2) ✔ ✗ ✔ ✔ 94.05(±0.23) 93.96(±0.27)
+ w/o 𝐔(3) ✔ ✔ ✗ ✔ 92.49(±0.13) 92.35(±0.13)
+ tion. Qiao Xiang: Formal analysis, Supervision. Guang Cheng: Project
+ w/o 𝐖(1) ✔ ✔ ✔ ✗ 93.49(±0.09) 93.37(±0.08) administration, Supervision.
+ Fast Traffic ✔ ✔ ✔ ✔ 94.50(±0.13) 94.40(±0.12)
+ Declaration of competing interest
+
+ The authors declare that they have no known competing finan-
+ • w/o 𝐔(1) ∼ w/o 𝐔(3) : We discard the single uni-gram, 2-gram, and cial interests or personal relationships that could have appeared to
+ 3-gram embedding layers in order and correspondingly modify influence the work reported in this paper.
+ the classification network.
+ • w/o 𝐖(1) : We remove the hidden layer and GELU activation Data availability
+ function and only retain the output layer and Softmax function
+ for classification. The three datasets used in this paper are all publicly available and
+ all cite corresponding references.
+ From the results in Table 12, we get the following three observa-
+ Acknowledgments
+tions:
+ This work was supported in part by the National Natural Sci-
+ (1) w/ 𝐔(1) achieves the worst performance since its model uses
+ ence Foundation of China under Grant U22B2025, and in part by the
+ only uni-gram embedding, omitting the structural and sequential National Key R&D Program of China under Grant 2020YFB1005500.
+ information provided by 2-gram and 3-gram feature embedding.
+ This result proves that introducing 2-gram and 3-gram embedding References
+ can help improve classification performance.
+ (2) w/o 𝐔(1) ∼ w/o 𝐔(3) illustrates that each embedding discard has [1] L. Encrypt, Percentage of web pages loaded by firefox using HTTPS, 2023, URL
+ https://letsencrypt.org/stats/.
+ a negative impact on the model performance and fully illustrates
+ [2] E. Papadogiannaki, S. Ioannidis, A survey on encrypted network traffic analysis
+ the effectiveness of the n-gram feature embedding design. It is applications, techniques, and countermeasures, ACM Comput. Surv. 54 (6) (2021)
+ worth noting that w/o 𝐔(3) causes a 2% decrease in 𝐴𝐶 and 𝐹 1, 1–35.
+ which indicates that 3-gram embedding is the most important [3] S. Rezaei, X. Liu, Deep learning for encrypted traffic classification: An overview,
+ IEEE Commun. Mag. 57 (5) (2019) 76–81.
+ module. It can extract more useful information from packets than [4] S.-J. Xu, G.-G. Geng, X.-B. Jin, D.-J. Liu, J. Weng, Seeing traffic paths: Encrypted
+ the uni-gram and 2-gram embedding. traffic classification with path signature features, IEEE Trans. Inf. Forensics Secur.
+ (3) w/o 𝐖(1) proves that the design of the hidden layer is valid and (2022).
+ [5] T. Shapira, Y. Shavitt, FlowPic: A generic representation for encrypted traffic
+ reasonable. We further extract latent information from packet
+ classification and applications identification, IEEE Trans. Netw. Serv. Manag. 18
+ representation through the hidden layer and use a non-linear (2) (2021) 1218–1232.
+ activation function to improve classification performance. [6] A. Panchenko, F. Lanze, J. Pennekamp, T. Engel, A. Zinnen, M. Henze, K. Wehrle,
+ Website fingerprinting at internet scale, in: NDSS, 2016.
+ [7] M. Shen, Y. Liu, L. Zhu, K. Xu, X. Du, N. Guizani, Optimizing feature selection
+ In summary, each component of the model contributes to the im- for efficient encrypted traffic classification: A systematic approach, IEEE Netw
+provement of classification performance. The non-redundant model 34 (4) (2020) 20–27.
+structure ensures the achievement of FastTraffic’s lightweight goal. [8] T. Zhang, H. Qiu, M. Mellia, Y. Li, H. Li, K. Xu, Interpreting AI for networking:
+ Where we are and where we are going, IEEE Commun. Mag. 60 (2) (2022)
+ 25–31.
+ [9] M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, M. Saberian, Deep
+7. Conclusion packet: A novel approach for encrypted traffic classification using deep learning,
+ Soft Comput. 24 (3) (2020) 1999–2012.
+ [10] X. Ren, H. Gu, W. Wei, Tree-RNN: Tree structural recurrent neural network for
+ In this paper, we propose FastTraffic, a lightweight method for fast network traffic classification, Expert Syst. Appl. 167 (2021) 114363.
+and accurate encrypted traffic classification on network devices. In the [11] K. Lin, X. Xu, H. Gao, TSCRNN: A novel classification scheme of encrypted traffic
+ based on flow spatiotemporal features for efficient management of IIoT, Comput.
+data preprocessing, we treat each IP packet as a text-like byte sequence
+ Netw. 190 (2021) 107974.
+and truncate the first 50 bytes of the IP packet for efficient data [12] M. Lopez-Martin, B. Carro, A. Sanchez-Esguevillas, J. Lloret, Network traffic
+representation. In the model design, we propose an N-gram embedding classifier with convolutional and recurrent neural networks for Internet of Things,
+ IEEE Access 5 (2017) 18042–18050.
+method to extract the structural and sequential information in raw
+ [13] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, J. Yu, ET-BERT: A contextualized datagram
+bytes of packets and use a three-layer MLP to perform fast classi- representation with pre-training transformers for encrypted traffic classification,
+fication. Through theoretical analysis and experimental verification, in: Proceedings of the ACM Web Conference 2022, 2022, pp. 633–642.
+we prove that FastTraffic achieves the lightweight goal and obtains [14] Z. Meng, M. Wang, J. Bai, M. Xu, H. Mao, H. Hu, Interpreting deep learningbased networking systems, in: Proceedings of the Annual Conference of the
+the second-best classification performance among nine ETC methods. ACM Special Interest Group on Data Communication on the Applications,
+Experimental results show that FastTraffic reaches a throughput of 680 Technologies, Architectures, and Protocols for Computer Communication, 2020,
+pps on low-configuration network devices with low CPU and memory pp. 154–171.
+ [15] M. Shen, Y. Liu, L. Zhu, X. Du, J. Hu, Fine-grained webpage fingerprinting using
+usage. In a word, FastTraffic can achieve encrypted traffic classification
+ only packet length information of encrypted traffic, IEEE Trans. Inf. Forensics
+on mainstream network devices and obtain excellent classification Secur. 16 (2020) 2046–2059.
+performance and high operational efficiency. In the future, we will still [16] R. Yuan, Z. Li, X. Guan, L. Xu, An SVM-based machine learning method
+ for accurate internet traffic classification, Inform. Syst. Front. 12 (2) (2010)
+aim at the lightweight ETC method and plan to deepen our research
+ 149–156.
+in two directions: traffic data representation and classification model [17] S. Feghhi, D.J. Leith, A web traffic analysis attack using only timing information,
+construction. IEEE Trans. Inf. Forensics Secur. 11 (8) (2016) 1747–1759.
+
+ 13
+Y. Xu et al. Computer Networks 235 (2023) 109965
+
+[18] R. Dubin, A. Dvir, O. Pele, O. Hadar, I know what you saw last minute— [41] A. Monemi, R. Zarei, M.N. Marsono, Online NetFPGA decision tree statistical
+ encrypted http adaptive video streaming title classification, IEEE Trans. Inf. traffic classifier, Comput. Commun. 36 (12) (2013) 1329–1340.
+ Forensics Secur. 12 (12) (2017) 3039–3049. [42] H.R. Loo, S.B. Joseph, M.N. Marsono, Online incremental learning for high
+[19] W. Wang, M. Zhu, J. Wang, X. Zeng, Z. Yang, End-to-end encrypted traffic bandwidth network traffic classification, Appl. Comput. Intell. Soft Comput. 2016
+ classification with one-dimensional convolution neural networks, in: 2017 IEEE (2016).
+ International Conference on Intelligence and Security Informatics, ISI, IEEE, [43] J. Bergstra, Y. Bengio, Random search for hyper-parameter optimization, J. Mach.
+ 2017, pp. 43–48. Learn. Res. 13 (2) (2012).
+[20] H. Yao, C. Liu, P. Zhang, S. Wu, C. Jiang, S. Yu, Identification of encrypted
+ traffic through attention mechanism based long short term memory, IEEE Trans.
+ Big Data (2019).
+[21] J. Cheng, Y. Wu, E. Yuepeng, J. You, T. Li, H. Li, J. Ge, MATEC: A lightweight Yuwei Xu received the B.Eng. degree in information secuneural network for online encrypted traffic classification, Comput. Netw. 199 rity and the Ph.D. degree in computer science from Nankai
+ (2021) 108472. University, Tianjin, China, in 2007 and 2012, respectively.
+[22] P. Wang, F. Ye, X. Chen, Y. Qian, Datanet: Deep learning based encrypted He worked as an Assistant Professor with the College of
+ network traffic classification in sdn home gateway, IEEE Access 6 (2018) Computer and Control Engineering, from 2012 to 2017, and
+ 55380–55391. an Associate Professor with the College of Cyber Science,
+[23] G. Xie, Q. Li, Y. Jiang, Self-attentive deep learning method for online traffic Nankai University, from 2018 to 2019. He is currently
+ classification and its interpretability, Comput. Netw. 196 (2021) 108267. an Associate Professor with the School of Cyber Science
+[24] B. Saltaformaggio, H. Choi, K. Johnson, Y. Kwon, Q. Zhang, X. Zhang, D. and Engineering, Southeast University, Nanjing, China. His
+ Xu, J. Qian, Eavesdropping on {fine-grained} user activities within smartphone research interests include the Internet of Things, future
+ apps over encrypted network traffic, in: 10th USENIX Workshop on Offensive network architecture, and network security.
+ Technologies, WOOT 16, 2016.
+[25] J. Devlin, M.-W. Chang, K. Lee, K. Toutanova, Bert: Pre-training of deep
+ Jie Cao received B.S. degree in Information Security from
+ bidirectional transformers for language understanding, 2018, arXiv preprint
+ Xi’an University of Posts and Telecommunications, Xi’an,
+ arXiv:1810.04805.
+ China. He is currently pursuing M.S. degree in Cyberspace
+[26] S. Rezaei, X. Liu, Multitask learning for network traffic classification, in: 2020
+ Security from Southeast University, Nanjing, China. His
+ 29th International Conference on Computer Communications and Networks,
+ research interests mainly revolve around the field of
+ ICCCN, IEEE, 2020, pp. 1–9.
+ cybersecurity and encrypted traffic identification.
+[27] H. Huang, H. Deng, J. Chen, L. Han, W. Wang, Automatic multi-task learning
+ system for abnormal network traffic detection, Int. J. Emerg. Technol. Learn. 13
+ (4) (2018).
+[28] X. Wang, S. Chen, J. Su, App-net: A hybrid neural network for encrypted mobile
+ traffic classification, in: IEEE INFOCOM 2020-IEEE Conference on Computer
+ Communications Workshops, INFOCOM WKSHPS, IEEE, 2020, pp. 424–429. Kehui Song received the B.S., M.S., and Ph.D. degrees in
+[29] G. Aceto, D. Ciuonzo, A. Montieri, A. Pescapè, MIMETIC: Mobile encrypted computer science from Nankai University. She is currently
+ traffic classification using multimodal deep learning, Comput. Netw. 165 (2019) working as a Post-Doctoral Researcher with the College of
+ 106944. Computer Science, Nankai University. Her main research
+[30] G. Aceto, D. Ciuonzo, A. Montieri, A. Pescapé, DISTILLER: Encrypted traffic interests include machine learning, medical data analysis,
+ classification via multimodal multitask deep learning, J. Netw. Comput. Appl. and big data management.
+ 183 (2021) 102985.
+[31] A. Nascita, A. Montieri, G. Aceto, D. Ciuonzo, V. Persico, A. Pescapé, Improving performance, reliability, and feasibility in multimodal multitask traffic
+ classification with XAI, IEEE Trans. Netw. Serv. Manag. (2023).
+[32] G. Draper-Gil, A.H. Lashkari, M.S.I. Mamun, A.A. Ghorbani, Characterization
+ of encrypted and vpn traffic using time-related, in: Proceedings of the 2nd Qiao Xiang received the bachelor’s degree in information
+ International Conference on Information Systems Security and Privacy, ICISSP, security and the bachelor’s degree in economics from Nankai
+ 2016, pp. 407–414. University in 2007, and the master’s and Ph.D. degrees
+[33] A.H. Lashkari, G. Draper-Gil, M.S.I. Mamun, A.A. Ghorbani, et al., Charac- in computer science from Wayne State University in 2012
+ terization of tor traffic using time based features, in: Proceedings of the 3rd and 2014, respectively. He is a faculty member with Xia-
+ International Conference on Information Systems Security and Privacy, ICISSP, men University. He was previously an Associate Research
+ 2017, pp. 253–262. Scientist with the Department of Computer Science, Yale
+[34] W. Wang, M. Zhu, X. Zeng, X. Ye, Y. Sheng, Malware traffic classification using University. His research interests include software-defined
+ convolutional neural network for representation learning, in: 2017 International networking, resource discovery and orchestration in col-
+ Conference on Information Networking, ICOIN, IEEE, 2017, pp. 712–717. laborative data sciences, interdomain routing, and wireless
+[35] G. Aceto, D. Ciuonzo, A. Montieri, A. Pescapé, Mobile encrypted traffic clas- cyber–physical systems. From 2016 to 2016, he was a
+ sification using deep learning: Experimental evaluation, lessons learned, and Post-Doctoral Fellow with the Department of Computer
+ challenges, IEEE Trans. Netw. Serv. Manag. 16 (2) (2019) 445–458. Science, Yale University. From 2014 to 2015, he was a
+[36] O. Barut, Y. Luo, P. Li, T. Zhang, R1DIT: Privacy-preserving malware traffic Post-Doctoral Fellow with the School of Computer Science,
+ classification with attention-based neural networks, IEEE Trans. Netw. Serv. McGill University.
+ Manag. (2022).
+[37] T. Mikolov, K. Chen, G. Corrado, J. Dean, Efficient estimation of word
+ representations in vector space, 2013, arXiv preprint arXiv:1301.3781. Guang Cheng received the Ph.D. degree in computer sci-
+[38] P. Bojanowski, E. Grave, A. Joulin, T. Mikolov, Enriching word vectors with ence from Southeast University, Nanjing, China, in 2003.
+ subword information, Trans. Assoc. Comput. Linguist. 5 (2017) 135–146. From 2006 to 2007, he held a post-doctoral position with
+[39] D. Hendrycks, K. Gimpel, Gaussian error linear units (GELUS), 2016, arXiv the School of Electrical and Computer Engineering, Georgia
+ preprint arXiv:1606.08415. Institute of Technology. He is currently a Full Professor
+[40] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A.N. Gomez, Ł. Kaiser, with the School of Cyber Science and Engineering, Southeast
+ I. Polosukhin, Attention is all you need, in: Advances in Neural Information University. His research interests include network security,
+ Processing Systems, Vol. 30, 2017. network measurement, and traffic sampling in computer
+ network.
+
+ 14
+ Update
+ Computer Networks
+ Volume 237, Issue , December 2023, Page
+
+DOI: https://doi.org/10.1016/j.comnet.2023.110098
+ Computer Networks 237 (2023) 110098
+
+ Contents lists available at ScienceDirect
+
+ Computer Networks
+ journal homepage: www.elsevier.com/locate/comnet
+
+Corrigendum
+
+Corrigendum to “FastTraffic: A lightweight method for encrypted traffic
+fast classification” [Computer Networks, Volume 235, November
+2023, 109965]
+Yuwei Xu a, b, c, *, Jie Cao a, c, Kehui Song c, d, Qiao Xiang e, Guang Cheng a, b, c
+a
+ School of Cyber Science and Engineering, Southeast University, Nanjing, 211189, China
+b
+ Purple Mountain Laboratories, Nanjing, 211111, China
+c
+ Jiangsu Province Engineering Research Center of Security for Ubiquitous Network, Nanjing, 211189, China
+d
+ College of Computer Science, NanKai University, Tianjin, 300071, China
+e
+ School of Informatics, Xiamen University, Xiamen, 361005, China
+
+ The authors regret that the results of the experiments in Table 7 were In Table 7, ET-BERT’s metrics were corrected for experimental re­
+not correctly checked during proofing. The authors would like to apol­ sults in T1 and T2, so Table 7 should be corrected to:
+ogize for any inconvenience caused.
+
+ DOI of original article: https://doi.org/10.1016/j.comnet.2023.109965.
+ * Corresponding author at: School of Cyber Science and Engineering, Southeast University, Nanjing, 211189, China.
+ E-mail address: xuyw@seu.edu.cn (Y. Xu).
+
+https://doi.org/10.1016/j.comnet.2023.110098
+
+Available online 21 November 2023
+1389-1286/© 2023 Elsevier B.V. All rights reserved.
+Y. Xu et al. Computer Networks 237 (2023) 110098
+
+Table 7
+Classification performance comparison among nine ETC methods on T1 and T2. Results are in the format Avg.(±Std.) obtained over 10-fold.
+ Task T1 [%] T2 [%]
+
+ Method AC PR RC F1 AC PR RC F1
+
+ 1DCNN 91.52(±0.13) 93.12(±0.15) 93.11(±0.22) 93.09(±0.18) 91.78(±1.12) 86.08(±1.63) 79.47(±1.57) 81.83(±1.82)
+ TSCRNN 88.04(±1.02) 89.36(±0.97) 89.41(±1.54) 89.26(±1.22) 80.25(±1.00) 77.59(±1.73) 76.11(±1.56) 76.21(±1.48)
+ LSTM-Att 88.01(±1.03) 89.38(±0.97) 89.03(±1.10) 88.92(±1.11) 80.54(±1.02) 79.16(±2.20) 74.55(±1.10) 76.05(±0.70)
+ DeepPacket 90.66(±1.19) 91.18(±1.37) 89.50(±1.31) 89.83(±1.33) 89.05(±0.32) 88.67(±0.53) 86.68(±0.89) 87.23(±0.73)
+ SAM 91.59(±0.17) 92.46(±0.35) 91.99(±0.18) 92.00(±0.17) 91.02(±0.22) 93.56(±0.60) 92.27(±0.70) 92.72(±0.58)
+ ET-BERT 97.70(±0.92) 97.55(±0.85) 97.50(±0.80) 97.51(±0.83) 98.43(±1.07) 98.41(±1.12) 98.46(±1.08) 98.43(±1.10)
+
+ MATEC 73.20(±0.72) 84.43(±1.04) 82.40(±1.03) 82.87(±0.81) 69.21(±0.69) 73.32(±1.47) 65.40(±2.03) 68.24(±1.43)
+ Datanet 91.85(±0.31) 91.57(±0.40) 91.06(±0.30) 91.17(±0.32) 87.19(±0.44) 84.43(±1.09) 82.85(±0.95) 83.16(±0.75)
+
+ FastTraffic 94.50(±0.13) 94.77(±0.23) 94.26(±0.08) 94.40(±0.12) 92.24(±0.54) 93.58(±0.33) 92.84(±0.49) 93.12(±0.35)
+
+ 2

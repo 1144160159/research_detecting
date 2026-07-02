@@ -1,0 +1,150 @@
+                    This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024                                                                                                              1
+
+
+
+
+            ilLog: Incremental Learning based Anomaly
+               Detection from Evolving System Logs
+         Jiyu Tian, Mingchu Li, Zumin Wang, Liming Chen, Senior Member, IEEE, Jing Qin, Jianyuan Gan
+
+
+
+
+   Abstract—Log anomaly detection (LAD) is of paramount
+importance to enhance the reliability and stability of software
+systems. Current state-of-the-art LAD suffers a significant per-
+formance degradation when dealing with consistently evolving
+log events caused by system updates. To build a reliable LAD
+model under the context of log data evolution, we propose an
+incremental learning-based method for LAD, namely ilLog, to
+avoid catastrophic forgetting of previously learned knowledge
+while continuously updating the model for better detection when
+processing the evolving log events. In particular, we design a
+novel entropy-driven sorting algorithm for real log sample replay,
+which enables the preservation of old knowledge via storing
+representative samples with discrete sequence features from
+previous tasks. Additionally, we introduce a Halton-based low
+discrepancy sequence to better approximate the sliced Cramér
+distance between the probability distributions of two models, thus
+enhancing the model learning capability. Based on a standard
+incremental learning protocol setting, we evaluate the newly                                               Version Ⅰ
+                                                                                                                                             131 Days
+                                                                                                                                                                             Version Ⅱ
+proposed ilLog method on three publicly available datasets.                                                  Normal                                                            Normal
+Experimental results demonstrate that our approach achieves the                                              Abnormal                                                          Abnormal
+best performance compared to SOTA LAD methods and models
+by applying existing IL-based methods in evolving software                                       Fig. 1: An example of BGL software system data distribution
+systems.                                                                                         evolution. Group the parsed BGL dataset based on a sliding
+   Index Terms—Log Anomaly Detection, Incremental Learning,                                      window (window size=20, step=10), and construct two dataset
+Information Entropy, Quasi-Monte Carlo.                                                          versions in chronological order. Each version of the dataset
+                                                                                                 contains 94933 samples, with a 131-day gap between the ver-
+                                                                                                 sions. Randomly sample 500 samples from each version (half
+                           I. I NTRODUCTION
+                                                                                                 normal samples and half abnormal samples), and visualise
+
+L    OG anomaly detection (LAD), aiming to identify abnor-
+     mal behaviors from log files, has been an active research
+topic to enhance the security and reliability of software
+                                                                                                 them using T-SNE. It can be observed that as time progresses,
+                                                                                                 there are significant changes in the data distribution between
+                                                                                                 samples of the same type.
+systems [1]–[5]. Recently, deep learning based methods, e.g.,
+DeepLog [6], LogAnomaly [7], LogRobust [8], PLELog [9],
+MetaLog [10], LogSer [11] and CSCLog [12], have achieved                                         systems are updated quickly and consistently. System update
+impressive performance to detect log anomalies in complex                                        is a common practice since developers introduce new features
+software systems. They learn effective feature representations                                   and functions, fix bugs and enhance the security of software
+from log events and classify the log data into some predefined                                   systems regularly. Consequently, log events for LAD are
+anomaly categories.                                                                              changed accordingly. Taking Blue-Gene/L. (BGL), a super-
+   However, these LAD models suffer significant performance                                      computing operation system as an example, the large number
+degradation when the systems evolve as modern software                                           of new log events are consistently defined in the standard log
+   This paper is supported by the National Nature Science Foundation of China
+                                                                                                 dataset of BGL during its evolution [13]–[16]. Compared to
+under Grant Number: 625B2031 and 62466025. (Corresponding author:                                the log event types in the first month, the number of log event
+Mingchu Li and Liming Chen)                                                                      types doubled after six months. Figure 1 further shows that the
+   Jiyu Tian, Mingchu Li and Jianyuan Gan are with the School of Software
+Technology, Dalian University of Technology, Dalian, China. Mingchu Li is
+                                                                                                 generation and evolution of log events as features of sequential
+also with the School of Computer and Information Engineering, Jiangxi Nor-                       samples may lead to changes in the data distribution. Assume
+mal University, Nanchang, Jiangxi, China. Email: tianjiyu@mail.dlut.edu.cn                       that a LAD method is trained based on log data that contains
+   Zumin Wang is with College of Information Engineering, Dalian University,
+Dalian, China. Email: wangzumin@dlu.edu.cn
+                                                                                                 events at a particular version, its performance will degrade
+   Liming Chen is with the School of Computer Science and Tech-                                  over time when it takes unseen log events in future versions
+nology, Dalian University of Technology, Dalian, China. Email: lim-                              as its inputs.
+ingchen0922@dlut.edu.cn
+   Jing Qin is with School of Software Engineering, Dalian University, Dalian,                      Incremental learning (IL) is an emerging machine learning
+China. Email: qinjing@dlu.edu.cn                                                                 paradigm to deal with the issues caused by evolving envi-
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                 This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                            content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024                                                                                                           2
+
+
+
+ronmental contexts when processing a large number of new                                      two models. This distance is then integrated as a regularization
+tasks [17]. It continuously learns new knowledge as well as                                   term in the loss function, with the objective of minimizing
+avoids forgetting old knowledge. Thus, the main challenges                                    changes to the parameters in the model that have a significant
+an IL-based model addresses can be summarised as:                                             impact on previous tasks. To evaluate the proposed approach,
+                                                                                              we conducted experiments on three publicly available log
+  • Intransigence refers to the difficulty of incorporating
+                                                                                              datasets and performed comparisons with existing log anomaly
+    new knowledge into a model that has already been learned
+                                                                                              detection methods. The experimental results indicate that our
+    from previous data. When confronted with new informa-
+                                                                                              method achieves better detection performance in terms of
+    tion, the model exhibits resistance to updating its existing
+                                                                                              accuracy and robustness under the context of an evolving
+    knowledge or adjusting its representations. This can lead
+                                                                                              system.
+    to the model being unable to adapt effectively to new
+    tasks, resulting in performance degradation. For LAD,                                        The main contributions of our work can be summarised as
+    the training cost incurred by the continuous accumulation                                 follows:
+    of training data is unacceptable for the development and                                      • To the best of our knowledge, this is the first endeavor to
+    maintenance of large-scale software systems [8], [13],                                          introduce incremental learning methods into log anomaly
+    [18].                                                                                           detection to overcome the limitations of existing ap-
+  • Catastrophic forgetting refers to the severe forgetting or                                      proaches when adapted to evolving software systems.
+    loss of previously learned knowledge by a model when it                                       • We design an entropy-driven sorting algorithm for real
+    learns new tasks. When the model is trained on new data,                                        log replay, where we perform under-sampling (≤10%)
+    it often overwrites or interferes with the representations                                      on the log samples from the previous task. We select
+    and parameters learned in previous tasks. This can cause a                                      representative log samples and merge them into the
+    sharp decline in performance on previously learned tasks,                                       current task, thereby reducing storage and computational
+    making it unable to retain its knowledge in continuous                                          costs.
+    learning. For LAD, if access to or utilization of old                                         • We present a Quasi-Monte Carlo Scliced Cramér Preser-
+    training data is limited, it inevitably results in forgetting                                   vation (QMC-SCP) loss function based on the Halton
+    previously learned knowledge [17].                                                              low-discrepancy sequence to improve the computation of
+                                                                                                    high-dimensional Cramér distance. This method allows
+   Current state-of-the-art (SOTA) IL-based methods either use
+                                                                                                    an effective measurement of the parameter importance of
+memory replay [19]–[21], or update trivial synapse but pre-
+                                                                                                    an evolving model while avoiding catastrophic forgetting.
+serve important parameters of a model via regularization [22]–
+                                                                                                  • We evaluate the effectiveness of our method on three
+[26] during the training process. Despite the fact that IL is a
+                                                                                                    publicly available log datasets by comparing to the SOTA
+suitable framework to tackle the problem of the LAD in an
+                                                                                                    log anomaly detection methods, and the IL-based LAD
+evolving system, it is not straightforward to apply existing IL
+                                                                                                    models by applying existing incremental learning meth-
+methods to the task directly due to its unique characteristics.
+                                                                                                    ods to the task.
+In particular, log samples comprise sequences of different
+message events, including both discrete features and semantic
+information. Presently, incremental learning in the context of                                                                II. R ELATED W ORK
+memory replay focuses mainly on exploring continuous fea-
+tures which makes it difficult to apply existing memory replay                                A. Log-based Anomaly Detection
+methods to log data. Furthermore, parameter regularization-                                      Deep learning methods have demonstrated strong capabil-
+based methods usually require extensive sampling (e.g. Monte                                  ities in log anomaly detection [13], [27]–[31]. Currently, log
+Carlo) to approximate the distance between probability dis-                                   anomaly detection is predominantly composed of three main
+tributions as a part of loss. However, the continuous update                                  approaches: unsupervised learning [6], [7], [32], [33], super-
+process of the model is constrained by computational resources                                vised learning [8], [34]–[36], and semi-supervised learning
+due to the massive scale of log data. Random sequences                                        methods [9], [14], [18].
+contain clustering and biased sampling points, and may not                                       For unsupervised LAD methods, DeepLog [6] employed
+be efficient, leading to significant wastage of computational                                 One-Hot encoding to vectorize log events, transforming log
+resources.                                    

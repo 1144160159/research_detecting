@@ -1,0 +1,154 @@
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024                                                               10231
+
+
+
+
+     Contrasting Estimation of Pattern Prototypes for
+       Anomaly Detection in Urban Crowd Flow
+                                           Yupeng Wang , Xiling Luo , and Zequan Zhou
+
+
+
+   Abstract— Crowd flow anomaly detection (CFAD) plays a vital
+role in ensuring public safety due to its capability to distinguish
+abnormal crowd movement behaviors from the norm. However,
+the influence of coexisting spatiotemporal factors presents a
+substantial challenge in capturing the dynamic normal pattern.
+Moreover, the inherent similarities within the original crowd
+flow data necessitate the creation of a discriminative feature
+space. To address this, we propose ProtoDetect, a novel method
+that learns distinguishable representations (named as prototypes)
+of the influencing factors. It subsequently identifies anomalous               Fig. 1. (a) Illustration of inflow and outflow of Region A. (b) Crowd flow
+samples by comparing them with their normal counterparts,                      variation from Wednesday to Sunday (eight-week average).
+estimated based on the prototypes. Experimental evaluations on
+three real-world datasets demonstrate ProtoDetect’s consistent
+superior performance in CFAD. The source code is available at                  and concerts often result in increased crowd flow. Conversely,
+https://github.com/yupwang/ProtoDetect.                                        extreme weather conditions typically lead to a decrease in
+   Index Terms— Anomaly detection, crowd management, urban                     crowd flow. Street closures, on the other hand, result in a
+transportation systems, contrastive learning.                                  decrease in the crowd flow of the closed street and an increase
+                                                                               in neighboring streets [11]. Recognizing anomalies in crowd
+                          I. I NTRODUCTION                                     flow is essential as it helps identify these issues and is crucial
+                                                                               for enhancing public safety and improving urban planning.
+C     ROWD management plays a crucial role in enhanc-
+      ing urban transportation systems, traveler information
+systems, and promoting sustainable urban development [1],
+                                                                                  Performing CFAD encounters two main difficulties. Firstly,
+                                                                               due to the complex impact of anomalies on crowd flow,
+                                                                               simply recognizing decreases or increases in the original crowd
+[2], [3], [4]. With the advancement of urban transportation
+                                                                               inflow and outflow struggles in real-world environments.
+infrastructures, large volumes of traffic data is being collected
+                                                                               To illustrate this challenge, we examine the inflow and
+from sources such as vehicle trajectories, trip records, mobile
+                                                                               outflow of an urban region encompassing Millennium Park
+phone call logs, social media posts, and surveillance camera
+                                                                               and Grant Park in Chicago during the period from August
+signals [4], [5], [6]. This data provides valuable insights into
+                                                                               16th, 2019, to September 1st, 2019, as depicted in Figure 2.
+individual movement within urban environments and has expe-
+                                                                               We estimate crowd flow dynamics by aggregating taxi and
+dited the development of efficient crowd management in areas
+                                                                               bike trip records arriving at or leaving the region every hour
+such as crowd simulation [1], [7], [8] and crowd flow predic-
+                                                                               (as detailed in Section V-A). Real-world anomalies happened
+tion [4], [9], [10]. Nonetheless, further investigation is required            in the two parks, including Grant Park Music Festival (16th,
+to address the field of anomaly detection within crowd flow.                   17th), Summer Dance Celebration (24th), and Chicago Jazz
+   Crowd flow anomaly detection (CFAD) involves identifying                    Festival (29th, 30th), are indicated by light red shading. The
+uncommon or abnormal patterns in the movement of indi-                         observation from the figure reveals the considerable challenge
+viduals within urban environments. Crowd flow refers to the                    in discerning a distinct and intuitive difference in crowd flow
+count of people entering (inflow) or exiting (outflow) specific                patterns in the presence or absence of anomalies.
+urban regions during specific times, as shown in Figure 1.                        Secondly, modeling the normal patterns that represent
+Anomalies in crowd flow arise from exceptional events. For                     the expected crowd behavior poses a difficulty. In anomaly
+example, occurrences such as sports competitions, festivals,                   detection, it is common to compute the deviation of observed
+  Manuscript received 17 July 2023; revised 6 November 2023 and 8 January      data from their expected normal pattern. However, estimating
+2024; accepted 12 January 2024. Date of publication 31 January 2024; date      the normal pattern is complex as it involves contributions
+of current version 1 August 2024. This work was supported by the Zhejiang      from various spatial and temporal factors. Temporal factors
+“Jianbing” Research and Development Project under Grant 2022C01055.
+The Associate Editor for this article was F. Xia. (Corresponding author:
+                                                                               include considerations like the time of day and day of
+Xiling Luo.)                                                                   the week. For example, crowd flow tends to peak during
+  The authors are with the School of Electronic and Information Engineering,   morning and evening hours while significantly decreasing
+Beihang University, Beijing 100191, China, and also with the Hangzhou          during nighttime. Similarly, crowd flow in office buildings may
+Innovation Institute, Beihang University, Hangzhou 310000, China (e-mail:
+wangyup@buaa.edu.cn; luoxiling@buaa.edu.cn; zhouzequan@buaa.edu.cn).           be much more active on workdays and quieter on weekends.
+  Digital Object Identifier 10.1109/TITS.2024.3355143                          Holidays introduce additional temporal factors, leading to
+                      1558-0016 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+10232                                                    IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+
+
+                                                                                     spatiotemporal dependencies of data points and do
+                                                                                     not prioritize enhancing feature discriminability. The
+                                                                                     homogeneity among features makes it difficult to
+                                                                                     effectively distinguish anomalies from normal data
+                                                                                     points.
+                                                                                  2) Coexistence of spatiotemporal factors: Capturing the
+                                                                                     expected crowd behavior necessitates modeling the
+Fig. 2. Crowd flow of the region encompassing Millennium Park and Grant              spatial and temporal factors and how they contribute
+Park, Chicago, from August 16th to September 1st, 2019. Light red shading            to normal patterns. However, existing approaches often
+highlights real-world anomalies in the two parks, including the Grant Park
+Music Festival on the 16th and 17th, the Summer Dance Celebration on the             rely on general anomaly detection algorithms that are
+24th, and the Chicago Jazz Festival on the 29th and 30th, emphasizing the            not specifically designed to handle the simultaneous
+challenge in distinguishing crowd flow patterns in the presence of anomalies.        occurrences of influencing factors. This oversight leads
+                                                                                     to inaccurate estimations of normal patterns and can
+                                                                                     hinder the detection of anomalies.
+                                                                                   In this paper, we leverage contrastive representation learning
+                                                                                to obtain a discriminative feature space, and to represent
+                                                                                distinguishable influencing factors. Contrastive representation
+                                                                                learning has garnered significant attention in recent years,
+                                                                                primarily due to its outstanding performance across diverse
+Fig. 3. Eight-week averaged total crowd flow (sum of inflow and outflow)        domains, including computer vision [20], [21], [22], time
+of regions with different functional properties. Various factors contribute
+distinctively to the normal pattern.                                            series analysis [23], [24], [25], and graph learning [26],
+                                                                                [27]. This approach, executed in an unsupervised manner,
+                                                                                aims to foster a representation that effectively distinguishes
+increased crowd flow in tourist areas and decreased flow in
+                                                                                one instance from others. Specifically, to overcome the
+work-related regions. Spatial factors, such as the presence
+                                                                                homogeneity challenge in the feature space, we introduce the
+of public functional places, also contribute to diverse crowd
+                                                                                Instance Contrast Module (IC) to obtain an informative
+flow patterns. To illustrate this, we present the eight-week
+                                                                                and discriminative feature space. This module captures spa-
+averaged total crowd flow (sum of inflow and outflow) of two
+                                                                                tiotemporal dependencies by contrastively encoding local and
+urban regions in Figure 3. These regions are categorized as
+                                                                                global views of crowd flow data. Furthermore, by comparing
+residential and commercial based on the number of functional
+                                                                                the encoded samples with their augmented counterparts,
+places within them. It is evident that the peak hours of the two
+                                                                                it effectively disperses the samples in the feature space, thereby
+regions exhibit noticeable differences. Additionally, the crowd
+                                                                                enhancing their discriminability. Additionally, we propose the
+flow in the residential area experiences a substantial decrease
+                                                                                Prototype Contribution Contrast Module (PCC) to estimate
+on weekends, whereas the flow in the commercial region is
+                                                                                representations of the influencing factors in the feature
+more evenly distributed throughout the week.
+                                                                                space. These representations are referred to as prototypes.
+   Existing approaches for CFAD, including general traffic
+                                                                                Instead of directly modeling the prototypes themselves,
+anomaly detection methods, typically adopt a two-step
+                                                                                we focus on modeling their contribution to the observed
+approach. Firstly, they transform the original traffic data
+                                                                                crowd flows. To achieve this, we train a projection head
+into a feature space. These features encompass direct traffic
+                                                                                that estimates the contributions by contrasting contribution
+dynamics such as vehicle speed, travel distance, and traffic
+                                                                                vectors between the local and global views. This process
+flow volume [12], [13], as well as handcrafted statistics derived
+                                                                                aligns vectors from the same prototype and repels vectors
+from the dynamics [14], [15], [16]. Advanced techniques like
+                                                                                from different prototypes, leading to distinguishable prototype
+tensor factorization [17] or neural networks [11], [18] can also                distributions, as demonstrated in our experiment section V-
+be employed for feature extraction. In the second step, general                 D.3. These contribution vectors are then used to iteratively
+anomaly detection algorithms widely used in data science are                    update the randomly initialized prototypes through a cross-
+applied to the extracted features to identify anomalous data                    view prediction task. In the anomaly degree scoring stage,
+points. However, despite the effectiveness of these approaches,                 we measure the degree of anomaly by computing the deviation
+they fail to adequately address the two difficulties mentioned                  between incoming crowd flow features and their corresponding
+previously. Here we summarize the aspects that have not been                    normal features, which are estimated based on the prototypes.
+adequately considered:                                                          Our main contributions can be summarized as follows.
+   1) Homogeneity of the feature space: As discussed in
+      Figure 2, the original features (inflow and outflow)                        1) We present the ProtoDetect model for CFAD. It intro-
+      tend to exhibit similariti

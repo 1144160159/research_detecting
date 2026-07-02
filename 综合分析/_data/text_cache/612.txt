@@ -1,0 +1,131 @@
+                    This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS                                                                                                              1
+
+
+
+
+               Anomaly Subgraph Detection on Multiple
+                   Associated Attributed Networks
+                Nannan Wu , Ying Sun , Yazheng Zhao , Wenjun Wang , Xueli Liu, and Jianxin Li
+
+
+
+   Abstract—With the rapid development of artificial intelligence                        XG1 ∈ Rn×d1                    Anomaly attribute matrix of G1 .
+(AI) technology and large-scale dataset applications, anomaly                            XG2 ∈ Rm×d2                    Nonanomaly attribute matrix of G2 .
+subgraph detection is becoming an essential and widespread                               n = |V1 |, m = |V2 |           Number of nodes of G1 and G2 .
+application. Most existing methods detect anomaly subgraphs                              d1 ∈ N, d2 ∈ N                 Dimensionality of node attributes.
+depending on the observable anomalous attributes in target                               S 1 = (VS 1 , ES 1 , XS 1 )    Anomaly subgraph of G1 .
+data. However, they may face challenges when the target data
+lacks such anomalous attributes. E.g., identifying suspicious
+                                                                                         S 2 = (VS 2 , ES 2 , XS 2 )    Anomaly subgraph of G2 .
+gangs in the target transportation graph solely based on road                            H ⊆ V1 × V2                    Prior alignment edge sets.
+traffic information, or detecting burst events in nonpublic data                         xG1 (v) ∈ Rd1 , v ∈ V1         Anomaly attribute of G1 nodes.
+without explicit anomalous attributes. To address the detection                          xG2 (v) ∈ Rd2 , v ∈ V2         Non-anomaly attribute of G2 nodes.
+of implicit anomaly subgraphs (IASs) in such target graphs,                              x1 ∈ Rn , x2 ∈ Rm              Feature vectors of G1 , G2 .
+this article proposes a novel approach IAS detection (IASD)
+with multidimensional feature transfer. First, our approach is
+built upon transfer learning techniques and involves fusing                                                        I. I NTRODUCTION
+features from multiple graphs. Second, we explore a feature
+extraction procedure based on a graph attention (GAT) network
+model to generate representations of anomaly features for large
+                                                                                      A     NOMALY detection refers to the discovery of enti-
+                                                                                            ties, events, and observations that deviate from the
+                                                                                      majority, while anomaly subgraph detection identifies unusual
+multidimensional attribute graphs. Third, we construct a two-
+                                                                                      or anomaly subgraphs within a larger graph or network.1
+layer graph by introducing an attributed graph referred to as
+a “source graph,” where anomalies can be easily detected, and                         Anomaly subgraph detection is a vital task in various public
+nodes of the source graph are partially aligned with the target                       safety applications, such as hot spot detection, fraud detection,
+graph. We validate the effectiveness and robustness of IASD                           and intrusion detection.
+through experiments on five real-world datasets, and implement                           In general, anomaly subgraph detection specifically focuses
+four anomaly subgraph detection tasks in practical applications.                      on revealing anomalous patterns and facilitating informed
+   Index Terms—Anomaly alignment, anomaly subgraph detec-
+                                                                                      decision-making. Most existing approaches achieve this by
+tion, complex network, feature transfer learning.                                     directly extracting anomaly-related features based on observ-
+                                                                                      able anomalous attributes within the target dataset [1], [2].
+                                                                                      Nonetheless, they face significant challenges when such
+                           N OMENCLATURE                                              anomalous attributes are absent. In practical applications,
+  N = (G1 , G2 , M)           Two-layer graph.                                        detecting urban crime hotspots remains a crucial anomaly
+  G1 = (V1 , E1 , XG1 )       Source graph layer.                                     subgraph detection task for ensuring urban security. Typically,
+  G2 = (V2 , E2 , XG2 )       Target graph layer.                                     identifying criminal activity in urban street networks (USNs)
+  M ⊆ V1 × V2                 Alignment edge sets.                                    or urban transport networks (UTNs) is often impossible or
+  V1 , V2 and E1 , E2         Node sets and edge sets.                                limited by insufficient road surveillance, e.g., in a city’s
+                                                                                      commercial district, traffic monitoring may report normal flow
+   Received 20 May 2024; revised 9 October 2024, 1 May 2025,                          while social media simultaneously reveals abnormal events
+and 24 September 2025; accepted 15 December 2025. This work was                       such as robberies or sudden crowd gatherings. As shown in
+supported in part by the Natural Science Foundation of Tianjin under Grant            Fig. 1, emotional words (e.g., nasty, hate, and complaint) fre-
+25JCZDJC01300, in part by the National Natural Science Foundation of China
+under Grant U2468204, and in part by the Innovative Research Group Project            quently appear in social networks (SNs), and this particularly
+of the National Natural Science Foundation of China under Grant 62272311.             anomalous attribute is difficult to observe in USN. Similar situ-
+(Corresponding author: Ying Sun.)                                                     ations also arise in public SNs and private forums. The private
+   Nannan Wu is with the School of Cybersecurity, Tianjin University, Tianjin         nature of some SNs conceals certain information, making it
+300350, China (e-mail: nannan.wu@tju.edu.cn).
+   Ying Sun is with the School of International Business, Zhejiang Yuexiu
+                                                                                      challenging to directly capture the anomalous attributes. In
+University, Shaoxing 312000, China (e-mail: yingsun@tju.edu.cn).                      addition to the absence of anomalous attributes in the dataset,
+   Yazheng Zhao and Xueli Liu are with the School of Computer Sci-                    the lack of anomaly features may also result from anomalous
+ence and Technology, Tianjin University, Tianjin 300350, China (e-mail:               attributes being obscured within the vast volume of big data
+yazhengzhao@tju.edu.cn; xueli@tju.edu.cn).                                            and its high-dimensional nature. How can we achieve effective
+   Wenjun Wang is with the College of Intelligence and Computing, Tianjin
+University, Tianjin 300350, China (e-mail: wjwang@tju.edu.cn).                        detection performance when anomaly features are lacking due
+   Jianxin Li is with the State Key Laboratory of Software Develop-                   to the absence of observable anomalous attributes?
+ment Environment and Beijing Advanced Innovation Center for Big Data
+and Brain Computing, Beihang University, Beijing 100191, China (e-mail:                  1 In this article, we use the terms “network” and “graph” interchangeably
+lijx@act.buaa.edu.cn).                                                                for the structure denoted as G = (V, E), where V and E denote the node and
+   Digital Object Identifier 10.1109/TNNLS.2025.3647831                               the edge sets, respectively.
+             2162-237X © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+                         This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+2                                                                                                    IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+
+
+                                                                                                    analyzing both opinion diffusion subgraphs and congested
+                                                                                                    subgraphs. Inspired by transfer learning to address the chal-
+                                                                                                    lenge of data sparsity and sample limitations across domains
+                                                                                                    and tasks, this article proposes an innovative anomaly feature
+                                                                                                    transfer learning approach for detecting IAS through Anomaly
+                                                                                                    Alignment across multidimensional attributed networks.
+                                                                                                       Our approach works on a multilayer graph structure N =
+                                                                                                    (G1 , G2 , M) to tackle the aforementioned challenges. G1 is the
+                                                                                                    source graph associated with the target graph G2 . G1 contains
+                                                                                                    certain observable anomalous attributes, which make it easier
+                                                                                                    to capture anomaly features and detect the anomaly subgraph
+                                                                                                    S 1 within it. In contrast, the target graph G2 lacks explicit
+                                                                                                    anomalous attributes and includes the IAS, referred to as S 2 .
+                                                                                                    Let M denote the association relationships between G1 and G2 .
+                                                                                                    These association relationships are modeled within a two-layer
+                                                                                                    graph N, subject to specific alignment constraints. Although
+Fig. 1. Illustration of crime hotspot detection using the IASD framework.                           this article focuses on two-layer graphs, the proposed method
+Crime hotspots in the urban street graph are identified by leveraging a                             can be extended to multilayer graphs. A multilayer graph
+social graph enriched with negative emotional attributes. The proposed IASD                         is an effective model for representing multiple interrelated
+approach integrates anomaly subgraph detection with network alignment.
+                                                                                                    source graphs originating from diverse domains. Each layer
+                                                                                                    represents a unique type of interaction between nodes, and
+                                                                                                    different layers consist of distinct sets of nodes and types of
+                                                                                                    links. Additionally, alignment links exist between layers to
+                                                                                                    represent the association relationships across different graphs
+                                                                                                    [3]. Our approach postulates that the anomaly features present
+                                                                                                    in the source graph G1 affect the target graph G2 through
+                                                                                                    alignment links M between G1 and G2 . Hence, the IAS S 2 in
+                                                                                                    G2 is possibly detected by correlating this affection from G1 .
+                                                                                                    Fig. 1 demonstrates our approach for detecting urban crime
+                                                                                                    hotspots in social and USNs. Our main contributions can be
+                                                                                                    summarized as follows.
+                                                                                                      1) This article proposes a pioneering approach (IASD),
+                                                                                                         designed for the specific challenge of detecting IASs S 2
+Fig. 2. Illustration of anomaly alignment: red circles vi and v j denote anomaly                         under “Anomaly Alignment” within multidimensional
+nodes, orange circles v0i and v0j denote implicit anomaly nodes, solid lines                             attribute networks.
+(vi , v j ) and (v0i , v0j ) are edges in graphs, and dash lines (vi , v0i ) and (v j , v0j ) are     2) IASD novelty interprets the anomaly subgraph S 2 by
+the alignment edges between two graphs.                                                                  fusing aligned attributes from the explicit anomaly sub-
+                                                                                                         graph S 1 in G1 , facilitating the detection of causal chains
+    In this article, we refer to the anomaly subgraph hidden                                             within anomalies.
+within the target data that lacks anomaly features as the                                             3) Extensive experiments are conducted on five real-world
+implicit anomaly subgraph (IAS). Hence, detecting anomaly                                                datasets, showcasing IASD’s significant performance
+subgraphs will face challenges due to the lack of anomaly fea-                                           and robustness. Additionally, IASD is applied to address
+tures within the target datasets. Another chall

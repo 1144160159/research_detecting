@@ -1,0 +1,152 @@
+4228                                                                       IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+
+
+
+Robust Detection of Malicious Encrypted Traffic via
+               Contrastive Learning
+        Meng Shen , Member, IEEE, Jinhe Wu, Ke Ye, Ke Xu , Fellow, IEEE, Gang Xiong, Member, IEEE,
+                                 and Liehuang Zhu , Senior Member, IEEE
+
+
+   Abstract—Traffic encryption is widely used to protect com-                     clearance, malicious traffic tries to hide its distinctive features
+munication privacy but is increasingly exploited by attackers to                  through traffic encryption, where potential attackers protect
+conceal malicious activities. Existing malicious encrypted traffic                their traffic using encryption protocols such as SSL/TLS [2].
+detection methods rely on large amounts of labeled samples
+for training, limiting their ability to quickly respond to new                    As demonstrated by the report of WatchGuard threat lab [3],
+attacks. These methods also are vulnerable to traffic obfuscation                 91.5% of malware arrived over encrypted connections by the
+strategies, such as injecting dummy packets. In this paper, we                    end of 2023.
+propose SmartDetector, a robust malicious encrypted traffic detec-                   The traditional malicious traffic detection methods try to
+tion method via contrastive learning. We first propose a novel                    find abnormal traffic by searching predetermined signatures in
+traffic representation named Semantic Attribute Matrix (SAM),
+which can effectively distinguish between malicious and benign                    packet payload [4]. However, traffic encryption protocols such
+traffic. We also design a data augmentation method to generate                    as SSL/TLS [2] make packet contents invisible, leading to
+diverse traffic samples, which makes the detection model more                     the inefficacy of the methods based on deep packet inspection
+robust against different traffic obfuscation strategies. We propose               (DPI). To detect malicious traffic hidden in encrypted traffic,
+a malicious encrypted traffic classifier that first pre-trains a                  recent studies resort to machine learning approaches and
+model via contrastive learning to learn deep representations from
+unlabeled data, then fine-tunes the model with a supervised                       extract statistical features [4] or sequence features [5] that
+classifier to achieve accurate detection even with only a few                     are independent of packet contents to build machine learning
+labeled samples. We conduct extensive experiments with five                       classifiers. As a result, malicious traffic detection is usually
+public datasets to evaluate the performance of SmartDetector.                     regarded as a classification problem.
+The results demonstrate that it outperforms the state-of-the-                        However, existing methods are still hampered by two-fold
+art (SOTA) methods in three typical scenarios. Specifically, in
+the evasion attack detection scenario, SmartDetector achieves an                  challenges, i.e., efficiency and robustness. Efficiency means
+F1 score and AUC above 93%, with average improvements of                          that a method can quickly respond to new types of attacks.
+19.84% and 18.17% over the SOTA method, respectively.                             The existing methods usually require a large volume of well-
+  Index Terms—Malicious traffic detection, contrastive learning,                  labeled data for model training [4], [6], [7]. When new
+encrypted traffic analysis.                                                       attacks appear, it is quite time-consuming to collect adequate
+                                                                                  malicious samples and retrain the classifiers. For instance, even
+                                                                                  if researchers use two dozen computers for traffic crawling, it
+                           I. I NTRODUCTION                                       still takes two weeks to collect sufficient dataset for model
+
+W       ITH the prosperity of Internet applications, the volume
+        of network traffic has increased dramatically, which
+brings an outbreak trend of cyber attacks. According to the
+                                                                                  training [8]. Robustness means that obfuscated malicious traf-
+                                                                                  fic can also be accurately detected. The existing methods
+                                                                                  can easily be defeated by evasion attacks [5], [8], [9], [10],
+Check Point Report [1], world-wide weekly cyber attacks                           i.e., obfuscating the original traffic by adding manual noises.
+increased 42% in the first half of 2022. To bypass the security                   For instance, evasion attacks [11] can change the features
+                                                                                  of malicious traffic by injecting dummy packets and adding
+   Received 21 October 2024; revised 18 March 2025; accepted 6 April              time delay into encrypted traffic, making the classifiers built
+2025. Date of publication 15 April 2025; date of current version 25 April
+2025. This work was supported in part by the National Key Research and            based on the original features less effective. Thus, evasion
+Development Program of China under Grant 2023YFB2703800, in part by               attacks bring new challenges for malicious traffic detection,
+the NSFC Projects under Grant 62222201 and Grant U23A20304, and in part           which requires the extracted features to be resilient to traffic
+by Beijing Natural Science Foundation under Grant M23020. The associate
+editor coordinating the review of this article and approving it for publication   obfuscation.
+was Dr. Z. Berkay Celik. (Corresponding author: Meng Shen.)                          In this paper, we propose SmartDetector, a robust malicious
+   Meng Shen, Jinhe Wu, and Liehuang Zhu are with the School of
+Cyberspace Science and Technology, Beijing Institute of Technology, Bei-
+                                                                                  traffic detection method based on contrastive learning [12]
+jing 100081, China (e-mail: shenmeng@bit.edu.cn; jinhewu@bit.edu.cn;              to discover malicious traffic hidden in encrypted traffic. We
+liehuangz@bit.edu.cn).                                                            propose a new traffic representation named Semantic Attribute
+   Ke Ye is with the School of Computer Science, Beijing Institute of             Matrix (SAM), which captures distinctive features between
+Technology, Beijing 100081, China (e-mail: yek 1010@163.com).
+   Ke Xu is with the Department of Computer Science and Technology,               benign and malicious traffic in a simple matrix. We take
+Tsinghua University, Beijing 100084, China (e-mail: xuke@tsinghua.edu.cn).        SAM as the starting point and build a traffic classifier based
+   Gang Xiong is with the Institute of Information Engineering, Chinese
+Academy of Sciences, Beijing 100190, China (e-mail: xionggang@iie.ac.cn).
+                                                                                  on contrastive learning, which enables us to pre-train an
+   Digital Object Identifier 10.1109/TIFS.2025.3560560                            encoder with a large volume of unlabeled traffic and then
+              1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+SHEN et al.: ROBUST DETECTION OF MALICIOUS ENCRYPTED TRAFFIC VIA CONTRASTIVE LEARNING                                                       4229
+
+
+
+quickly adapt the pre-training encoder to a new type of
+attack with only a few labeled samples for model tuning. As
+the unlabeled instances can be easily collected, not requir-
+ing the heavy cost of environment construction and traffic
+labeling.
+   To improve the robustness of SmartDetector, we propose
+a data augmentation method tailored to the traffic obfuscation
+strategies adopted by the attackers. We simulate the process by
+which an attacker perturbs traffic features by adding random
+noises [11], e.g., inserting dummy packets and adding random
+time delay. Based on augmented traffic samples, SmartDetec-
+                                                                                Fig. 1. The threat model for malicious traffic detection.
+tor learns the correlation between the original and obfuscated
+traffic, which makes it effectively resist evasion attacks.
+   We summarize our contributions as follows.                          encryption protocols, which is more challenging for malicious
+   • We propose a novel traffic representation named the               traffic detection.
+      Semantic Attribute Matrix (SAM). SAM is capable of                  1) Capability of Attackers: We assume that the attacker can
+      extracting distinct features that differentiate between          manipulate packets within the traffic flow to evade detection
+      benign and malicious traffic, and can maintain its effec-        [10], such as inserting dummy packets or introducing delays.
+      tiveness under different traffic obfuscation strategies. We      However, we assume that attackers cannot fully replicate the
+      provide a quantitative analysis to demonstrate that SAM          traffic features of benign traffic (e.g., packet length, direction).
+      is more effective than the three typical representations         This is due to the fact that fully replicating the aforementioned
+      employed by the state-of-the-art (SOTA) methods.                 features to imitate benign traffic would impose a significant
+   • We propose SmartDetector, a robust malicious traffic              burden on attackers and result in the failure of the attack [4],
+      detection method based on contrastive learning. In the           [11]. For example, in a Denial of Service (DoS) attack, if
+      pre-training phase, we design a data augmentation method         the attacker adjusts the sending intervals to be identical to
+      tailored to the specifications of the network traffic. The       those of benign traffic, they may not be able to overwhelm
+      encoder in SmartDetector can be pre-trained with unla-           the target system [13]. We further assume that the attacker
+      beled traffic samples. During retraining, we only need a         lacks the ability to manipulate ports within the target network,
+      few labeled samples to train the traffic classifier to achieve   specifically the inability to open widely recognized ports (such
+      high accuracy in detecting new attacks.                          as port 80 for HTTP and port 443 for HTTPS), as this would
+   • We conducted extensive experiments using five repre-              necessitate system-level privileges [14].
+      sentative public datasets to evaluate the performance               2) Capability of Network Administrator: The administrator
+      of SmartDetector. The results show that SmartDetector            possesses the capability to monitor encrypted traffic via the
+      outperforms the SOTA methods [6], [7], [8], [9] in               network gateway, however, they are unable to decrypt any
+      all scenarios. In particular, in the scenario of detecting       individual packets. The administrator can continuously collect
+      obfuscated malicious traffic, SmartDetector achieves an          traffic data to distinguish between malicious and benign traffic.
+      F1 score and AUC that both exceed 90%, with an average           However, they are unable to foresee the type of attack or
+      improvement of 19.84% and 18.17% over the SOTA                   malware that an attacker might initiate, nor do they have
+      method.                                                          any prior information regarding the specific traffic obfuscation
+   The remainder of this paper is organized as follows. We             method employed by the attacker.
+introduce the background and related work in Section II. Then,
+we describe the design goals in Section III. We present SAM
+                                                                       B. Related Work on Malicious Traffic Detection
+and SmartDetector in Section IV and Section V. Next, we
+conduct experiments to evaluate the performance of Smart-                 Traditional malicious traffic detection methods in the early
+Detector in Section VI. Finally, we conclude this paper in             stages typically rely on signature matching. These methods
+Section VII.                                                           extract sequences of bytes from malicious traffic [4] and
+                                                                       detect malicious activity by comparing the traffic against
+          II. BACKGROUND AND R ELATED W ORK                            known malicious signatures. However, the widespread adop-
+                                                                       tion of encryption technologies has made packet contents
+   In this section, we first describe the threat model of mali-
+                                                                       inaccessible, thereby rendering detection methods based on
+cious traffic detection, and then review the existing methods.
+                                                                       packet content scanning ineffective. To overcome this lim-
+                                                                       itation, various detection methods specifically designed for
+A. Threat Model                                                        malicious encrypted traffic have been proposed, as summarized
+   There are usually two kinds of roles in the scenario of             in Table I.
+malicious traffic detection, i.e., the network administrator and          1) Methods Based on Unsupervised Learning: These meth-
+the attacker, as shown in Fig. 1. The attacker launches remote         ods detect malicious traffic by identifying patterns that deviate
+attacks on devices located in a local area network (LAN). We           from established benign traffic behaviors. Mirsky et al. [15]
+assume that communication traffic is encrypted by network              proposed Kitsune, a real-time plug-and-play framework that
+4230                                                          IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+
+
+                             TABLE I                               new attack types. By leveraging prior experience, the model
+       S UMMARY OF E XISTING M ALICIOUS E NCRYPTED T RAFFIC        can rapidly adapt to new malicious traffic patterns, even
+                       D ETECTION M ETHODS                         with limited labeled samples. Several studies have applied
+                                                                   this approach to malicious traffic detection. Xu et al. [9]
+                                                                   proposed FC-Net, a malicious traffic detection framework
+                                                                   based on meta-learning, which was leveraged to distinguish
+                                 

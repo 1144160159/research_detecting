@@ -1,0 +1,728 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024 7091
+
+ MPAF: Encrypted Traffic Classification With
+ Multi-Phase Attribute Fingerprint
+ Yige Chen and Yipeng Wang , Senior Member, IEEE
+
+ Abstract— The widespread use of cryptographic protocols a large proportion of mobile network traffic is now encrypted
+such as Transport Layer Security (TLS) has necessitated the using TLS.
+development of effective methods for encrypted traffic clas- Accurate encrypted traffic classification is essential for
+sification. The existing methods relying on a single feature
+source face challenges in achieving high accuracy and efficiency a range of networking and security services, including
+simultaneously. Additionally, there is a decrease in accuracy in policy-based network traffic management, application Qualitycomplex scenarios, posing significant challenges for networks and of-Service (QoS), and application-level firewalls [5]. For
+security services based on application-level traffic classification. instance, an enterprise network administrator may prioritize
+In this paper, we propose Multi-Phase Attribute Fingerprint certain specific applications for the quality of critical ser-
+(MPAF), an encrypted traffic classification system that overcomes
+these limitations. MPAF leverages three phases to separately vices and assign a lower network communication priority
+leverage attributes that emerge at different time periods of to applications that do not adhere to the network polencrypted traffic communication. Additionally, we transform icy. Existing approaches for encrypted traffic classification
+discrete attributes into computable vectors through embedding involve mobile application identification [6], [7], IoT behavior
+and design a classifier for the multi-phase mechanism based on a identification [8], [9], [10], protocol identification [11], etc.
+leaf node masking tree. The experimental results show that MPAF
+achieves a classification accuracy ranging from 96.33% to 99.42% However, existing approaches for encrypted traffic classificaand an average waiting time (AWT) ranging from 0.18s to 0.45s. tion overlook the average waiting time required to capture a
+MPAF outperforms other approaches in scenarios with high sufficient number of packets for classification. Furthermore,
+robustness requirements, including small-scale training datasets, these approaches lack the robustness to classify traffic in
+cross-dataset classification, and unknown application recognition. complex scenarios accurately. In this paper, we propose a novel
+ Index Terms— Encrypted traffic classification, multi-phase, fingerprinting approach to address the shortcomings of existing
+TLS messages, network management. approaches.
+
+ I. I NTRODUCTION
+A. Motivation and Problem Statement B. Our Insights and Proposed Approach
+ 1) Key Observation to Encrypted TLS Traffic: In this paper,
+T HIS paper presents a novel approach to address the
+ challenge of encrypted traffic classification for mobile
+applications. As the number of mobile applications in the
+ we propose MPAF, Multi-Phase Attribute Fingerprint for
+ encrypted TLS traffic classification. MPAF aims to enhance the
+application market continues to grow, identifying the appli- classification efficiency of encrypted TLS traffic by performing
+cation to which network traffic belongs becomes increasingly multi-phase traffic classification, while still ensuring high
+important for network management. To ensure secure mobile classification accuracy. The general encrypted communication
+application communications, major application markets such process between a client and a server consists of three phases.
+as App Store [1] and Google Play [2] have adopted Transport In the first phase, the client application initiates a domain name
+Layer Security (TLS) [3], [4] encryption standards. As a result, query against the destination application server, thus obtaining
+ the IP address of that server. Then, in the second phase, based
+ Manuscript received 2 January 2024; revised 3 June 2024; accepted 30 June on the obtained IP address, the client application conducts a
+2024. Date of publication 15 July 2024; date of current version 25 July 2024. handshake process with the destination server regarding the
+This work was supported in part by the Fundamental Scientific Research
+Project of Wenzhou City under Grant G2023005 and in part by the General exchange of some metadata (including the negotiated encryp-
+Scientific Research Project of the Education Department of Zhejiang Province tion suite, server-side certificate information, etc.). Finally, the
+under Grant Y202248893. The associate editor coordinating the review of third phase involves the exchange of encrypted application
+this article and approving it for publication was Prof. Husrev Taha Sencar.
+(Corresponding author: Yipeng Wang.) content between the client and the server. It’s worth noting
+ Yige Chen is with the College of Computer Science and Artificial Intelli- that in some situations, due to caching mechanisms, the first
+gence, Wenzhou University, Wenzhou 325000, China, and also with Wenzhou and second phases of this process may not be necessary.
+Key Laboratory for Intelligent Networking, Wenzhou 325000, China (e-mail:
+ygchen@wzu.edu.cn). 2) Key Insights Into Our System: In this paper, MPAF
+ Yipeng Wang is with the College of Computer Science, Beijing Univer- builds on our key insight that the three phases of encrypted
+sity of Technology, Beijing 100124, China, and also with the Engineering traffic communication between a client and a server occur at
+Research Center of Intelligent Perception and Autonomous Control, Ministry
+of Education, Beijing 100124, China (e-mail: yipeng.wang1@gmail.com). distinct time periods: the first phase precedes the second, and
+ Digital Object Identifier 10.1109/TIFS.2024.3428839 the second precedes the third. If we can classify a majority of
+ 1556-6021 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+7092 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+the encrypted flows accurately during the first two phases, the including small-scale training datasets, cross-dataset clasoverall classification efficiency can be significantly enhanced. sification, and unknown application recognition.
+Specifically, during encrypted traffic communication, more The remaining sections of this paper are structured as
+than half of encrypted flows can be accurately classified solely follows. In Section II, we present an overview of prior works.
+based on their associated domain names. A large portion In Section III, we present the design of MPAF, offering
+of other encrypted flows can be accurately classified solely insights into the system’s architecture and providing detailed
+through the metadata in the handshake process. The remainder information on each phase. In Section IV, we elaborate on the
+can be accurately classified using the message sequence of details of our dataset collection and provide an overview of the
+each TLS flow. datasets used in this study. Section V presents the experimental
+ 3) Brief Introduction to Our Approach: MPAF aims to settings and provides an in-depth analysis of the evaluation
+reduce the observation waiting time for encrypted flows results. Section VI outlines a comparison of our proposed
+to be classified while ensuring high classification accuracy. approach with state-of-the-art methods. Finally, in Section VII,
+As shown in Figure 1, MPAF consists of three classification we conclude our study and discuss potential avenues for future
+phases, namely, domain name phase, handshake metadata research.
+phase, and message sequence phase.
+ 1) Phase 1: Domain Name Phase. This is the first phase II. R ELATED W ORK
+ of our proposed scheme. In this phase, MPAF attempts In this section, we introduce the relevant and recent
+ to classify a significant portion of the encrypted flows encrypted traffic classification methods. The literature on
+ at an early phase, relying solely on their associated traffic classification techniques can be categorized into
+ domain names. Any flows not classified in this phase are three groups: (1) machine learning-based methods, (2) deep
+ forwarded to the subsequent phases for further analysis. learning-based methods, and (3) dataset and benchmarking.
+ 2) Phase 2: Handshake Metadata Phase. MPAF classifies In Table I, we give a summary for each related work.
+ encrypted flows that cannot be classified during the
+ domain name phase. The classification in this phase
+ relies solely on the raw bytes in the TLS handshake A. Machine Learning-Based Methods
+ messages. Encrypted flows that remain unclassified are In 2014, Korczyński and Duda [12] proposed the concept
+ then forwarded to the message sequence phase. of Markov chain fingerprinting using first-order homogeneous
+ 3) Phase 3: Message Sequence Phase. MPAF processes Markov chains to model the probability of message type
+ the encrypted flows that remained unclassified after the sequences. In 2017, Shen et al. [13] extended this concept
+ first two phases. The objective here is to classify all by incorporating second-order message type Markov chains
+ these flows accurately based on the message sequence with the lengths of the Certificate and first Application
+ of each flow. Data in the session. They proposed second-order Markov
+ Through these three phases, MPAF can classify encrypted chain fingerprints with application attribute bigrams (SOB)
+flows accurately and more efficiently. to capture distinctive characteristics of applications. In 2020,
+ Montieri et al. [14] proposed a novel traffic classification
+ method for network traffic generated by anonymity tools
+C. Key Contributions through a general hierarchical classification framework. The
+ proposed method uses per-flow statistical features for clas-
+ We briefly summarize our main contributions as follows: sification. Additionally, to promote analysis of anonymity
+ • We propose an encrypted traffic classification system tools’ traffic at different levels of granularity, Montieri et al.
+ called Multi-Phase Attribute Fingerprint (MPAF). MPAF conducted experiments at three levels: (1) anonymous network
+ employs three phases to utilize distinct attributes that level, (2) traffic type level, and (3) application level. Also in
+ emerge at different time periods within encrypted traffic 2020, Van Ede et al. [15] proposed a semi-supervised approach
+ communication, thereby enhancing classification effi- for the mobile application fingerprint named FlowPrint. Flowciency while maintaining high classification accuracy. Print uses destination-related features to deal with unseen apps
+ • We utilize an embedding mechanism to transform discrete without requiring prior knowledge. In 2021, Aceto et al. [16]
+ attributes into calculable vectors and use the message proposed machine learning-based methods for modeling the
+ length sequence as a supplementary fallback attribute. network traffic of mobile applications. The proposed method
+ Additionally, we design a leaf-node masking tree-based introduced a novel heuristic to reconstruct application-layer
+ classifier to facilitate the multi-phase mechanism. messages in the common case of encrypted traffic. They
+ • We compare the effectiveness and robustness of MPAF designed and evaluated per-app modeling and prediction using
+ with state-of-the-art approaches on two real-world col- Hidden Markov Models and high-order Markov Chains at
+ lected datasets and two public datasets. Experimental both the packet level and message level. Also in 2021,
+ results demonstrate that MPAF achieves a remarkable Ma et al. [17] proposed a context-aware website fingerprinting
+ classification accuracy ranging from 96.33% to 99.42%. system for encrypted traffic. The system uses built-in spatial-
+ Besides, it exhibits a low Average Waiting Time (AWT) temporal flow correlation for packet sizes to understand flow
+ ranging from 0.18s to 0.45s. Notably, MPAF outperforms sequential patterns. In 2022, Xu et al. [18] proposed a creative
+ other approaches in scenarios demanding robustness, path signature-based method named ETC-PS. ETC-PS adopts
+CHEN AND WANG: MPAF: ENCRYPTED TRAFFIC CLASSIFICATION WITH MULTI-PHASE ATTRIBUTE FINGERPRINT 7093
+
+ TABLE I
+ S UMMARY OF R ELATED W ORK
+
+session packet length sequences as the path signature and same year, Lotfollahi et al. [24] proposed a convolution neural
+performs path transformations to exhibit its structure and network-based approach named Deep Packet. Deep Packet
+obtain different information. In 2023, Piet et al. [19] proposed takes the IP header and the first 1480 bytes of packets as
+GGFAST, a unified, automated framework designed to build input and classifies them through the convolution and max
+powerful classifiers for specific network traffic analysis tasks. pooling operations of the neural network. Also in 2020,
+GGFAST aims to automatically identify sets of patterns in Zhang et al. [25] proposed an autonomous model update
+packet length sequences, which are critical characteristics of scheme to achieve data filtering and dataset construction
+each category of traffic. for unseen applications, and then update traffic classifiers
+ via transfer learning. In 2021, Aceto et al. [26], [27] proposed DISTILLER, a novel multimodal deep learning-based
+B. Deep Learning-Based Methods approach for multitask network traffic classification. It aims to
+ In 2019, Aceto et al. [20] proposed, for the first time, learn both intra- and inter-modality dependencies, thus overthe design of mobile traffic classifiers capable of operating coming the limitations of single-task deep learning in network
+with encrypted traffic through the adoption of deep learn- traffic classification. The lack of interpretability of classiing technology. Additionally, they systematically provided fication models built by deep learning techniques prevents
+valuable guidelines and directions to address the challenges their applicability to critical scenarios. To address this issue,
+of applying deep learning algorithms to mobile traffic clas- in 2021, Nascita et al. [28] designed MIMETIC-ENHANCED,
+sification. In the same year, Aceto et al. [21] introduced a novel architecture for traffic classification operating at the bi-
+MIMETIC, which allows network traffic to be inspected from flow level. Their proposal leverages the multimodal paradigm
+complementary views, thus providing a more effective solution and consists of two branches. They investigate the rationale
+for network traffic classification. MIMETIC uses the initial behind the working behavior of MIMETIC-ENHANCED by
+bytes of the Layer 4 payload and the fields of the initial applying state-of-the-art XAI tools to understand input imporpackets as inputs. It is also the first attempt to introduce tance in both branches and within each individual branch.
+the idea of multimodal deep learning into the field of traffic Also in 2021, Montieri et al. [29] predicted the network traffic
+classification. Also in 2019, Liu et al. [22] proposed the Flow generated by mobile applications at the finest granularity,
+Sequence Network (FS-Net), which uses a multi-layer RNN- the packet level, using multitask deep learning architectures.
+based encoder-decoder structure to generate features from To deal with time series data, they proposed a windowing
+packet length sequences and directly predicts the original approach based on a sliding memory window. They also invesapplication of the flow. In 2020, Aceto et al. [23] envisioned tigated the potential advantages of using exogenous inputs
+the deep learning paradigm as a stepping stone toward the taken from the traffic data. In 2022, Xiao et al. [30] introduced
+design of practical mobile traffic classifiers based on auto- an Extended Byte Segment Neural Network (EBSNN) for
+matically extracted features that can operate with encrypted network traffic classification. This method introduces an aggretraffic and reflect complex traffic patterns. They proposed gate strategy that relies on only the first k packets in the flow to
+a deep learning-based traffic classification framework that identify the flow. For each packet, EBSNN divides the payload
+capitalizes on heterogeneous input data from mobile traffic into segments and feeds them into encoders with the attention
+to solve multiple traffic classification tasks simultaneously. mechanism for classification. In 2022, Lin et al. [31] proposed
+They also proposed and validated a general framework for ET-BERT that pre-trains deep contextualized datagram-level
+deep learning-based encrypted traffic classification. In the representation from large-scale unlabeled data. The pre-trained
+7094 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+model can be fine-tuned on a small number of task-specific TABLE II
+labeled data for accurate encrypted traffic classification. Also ACRONYMS AND T HEIR M EANINGS
+in 2022, Jiang et al. [32] proposed FG-Net to utilize graph
+neural networks to capture flow-level relationships. FG-
+Net converts the problem of learning app fingerprints from
+encrypted mobile traffic into the task of graph embedding
+to identify mobile applications. In 2023, Nascita et al. [33]
+aimed to use XAI-based techniques to understand and improve
+the behavior of state-of-the-art multimodal and multitask
+deep learning traffic classifiers. To this end, they explored
+and exploited XAI techniques to characterize these traffic classifiers, providing global interpretations, and proposed
+a novel classifier, DISTILLER-EVOLVED, optimized along
+three objectives: performance, reliability, and feasibility. Also
+in 2023, Qu et al. [34] proposed an input-agnostic hierarchical
+deep learning framework tailored for traffic fingerprinting. The
+framework allows the effective handling of diverse traffic patterns without reliance on specific input characteristics. In 2024,
+Cerasuolo et al. [35] proposed a novel fine-tuning approach
+aimed at solving the class incremental learning task in network
+traffic classification. To this end, they designed three main
+building blocks for the proposed fine-tuning approach in class gateway. The attacker aims to identify applications associated
+incremental learning: memory management, training proce- with encrypted traffic using a training dataset. By utilizing the
+dure, and model rectification. Additionally, four per-packet attributes extracted from the traffic, the attacker can determine
+properties are considered: transport-layer payload size, inter- if a flow belongs to a particular application. We demonstrate
+arrival time between consecutive packets, TCP window size, this attack through experiments described in § V and § VI.
+and direction. The assumption made in this paper is that the attacker can
+ track all 802.3 frames to various devices based on extracted
+C. Dataset and Benchmarking source/destination IP addresses. This enables the reassembly
+ In 2019, Aceto et al. [36] proposed and described of frames into TCP flows using the IP 5-tuple. However,
+MIRAGE, a novel reproducible architecture for the capture the attacker is unable to obtain the secrets shared between
+and ground-truth creation of the network traffic of mobile communication parties, nor can they access plaintext payload
+applications. The significant outcome of this architecture is from TLS Application Data messages.
+a human-generated dataset, MIRAGE-2019, which aims to
+ B. Traffic Preprocessing
+advance the state-of-the-art in mobile application traffic analysis. In 2020, Van Ede et al. [15] released a new cross-platform This subsection details the preprocessing of raw traffic
+dataset, which includes applications from iOS and Android for encrypted traffic classification. The traffic preprocessing
+operating systems. In 2024, Bovenzi et al. [37] experimentally consists of TLS message reassembly and DNS extraction.
+evaluated the performance of a large set of state-of-the-art As the focus is on the sniffed traffic, network packets are
+class incremental learning approaches for classifying network first extracted from the raw bidirectional traffic and reassemtraffic generated by mobile apps in an incremental scenario. bled into bidirectional flows, which form the smallest unit for
+They made several new and interesting observations regarding classification. A bidirectional flow encapsulates all packets
+the differences between big-increment and small-increment belonging to a network session, so we can utilize the TLS
+scenarios. protocol specification to parse the packets and recover the TLS
+ message sequence, which contains handshake messages and
+ III. M ULTI -P HASE ATTRIBUTE F INGERPRINT Application Data messages.
+ In this section, we first present the threat model and the DNS packets are also considered in the fingerprint, as they
+traffic preprocessing method. Then, we outline the system- provide information on queried domains and address records
+atic design of the Multi-Phase Attribute Fingerprint (MPAF). from authoritative name servers. For the DNS record parsed
+MPAF comprises three key phases to hierarchically utilize from DNS packet d, we extract the domain name DN d , request
+traffic attributes, namely Domain Name Phase, Handshake time Td , and authoritative addresses record Ad , and build a
+Metadata Phase, and Message Sequence Phase. For the conve- DNS record dict, D = {(DN d , Td ) → Ad |d ∈ DNS Packets},
+nience of readers, we collect all the acronyms used throughout to facilitate the reverse retrieval of domain names from address
+the manuscript into Table II. records.
+
+A. Threat Model C. Phase 1: Domain Name Phase
+ This paper considers an attacker who intercepts encrypted The domain name phase is the first phase of our protraffic at a specific point in the network, such as a firewall or posed classification scheme. As shown in Figure 1, this
+CHEN AND WANG: MPAF: ENCRYPTED TRAFFIC CLASSIFICATION WITH MULTI-PHASE ATTRIBUTE FINGERPRINT 7095
+
+ Fig. 1. Architecture of Multi-Phase Attribute Fingerprint (MPAF).
+
+phase consists of three components: a domain name extractor,
+a domain name vectorizer, and a domain name classifier. First,
+the domain name extractor retrieves the associated domain
+name in reverse by matching each flow’s IP address and timestamp with the acquired DNS records. Then, the domain name
+vectorizer generates domain name vectors through attribute
+embedding. Finally, the domain name classifier aims to accurately classify a significant portion of encrypted flows at this
+early phase based solely on their associated domain names.
+ 1) Domain Name Extractor: In the realm of networking,
+domain names provide long-term, stable entry points that allow
+applications to access their respective remote servers. Appli- Fig. 2. The retrieval of domain name.
+cation vendors can utilize Server Name Indication (SNI) to
+facilitate multi-domain hosting on a single server to optimize
+the efficiency of computing resource utilization. This will flow, causing a time logic error. To address the “one-to-many”
+cause “one-to-many” relationships between an IP addresses issue caused by the first two records, we select the query name
+and domain names. By extracting the domain name associated from the second record as the associated domain name because
+with a flow, we can infer the application to which the flow the timestamp of the second record is closest to the timestamp
+belongs. A straightforward way to extract the domain name of the flow.
+associated with a flow is to conduct a reverse lookup from its Due to the DNS caching mechanism, some DNS queries
+IP address. do not generate DNS traffic but instead utilize the DNS
+ Specifically, for a given encrypted flow f with IP address caches. However, this does not affect the effectiveness of the
+A f and its first packet timestamp T f , the associated DNS aforementioned reverse DNS lookup for flows’ IP addresses.
+record satisfies the following three conditions: (1) the author- We can set the time-to-live (TTL) declared in the DNS
+itative addresses record Ad of the DNS record (DNd , Td ) → response for captured DNS records, thereby conducting a
+Ad ∈ D should contain the IP address of the flow A f , i.e. validity test of the TTL during the reverse retrieval of domain
+A f ∈ Ad ; (2) The request time of the DNS record Td should be names, simulating the process of DNS caching.
+earlier than the first packet timestamp of the flow T f ; (3) When 2) Domain Name Vectorizer: To represent discrete domain
+multiple DNS records meet the first two conditions, we address name values as vectors, we use an embedding matrix for
+the “one-to-many” relationship between IP addresses and attribute representation. Specifically, we assign each domain
+domain names by choosing the DNS record that has the closest name an embedding vector based on its occurrence frequency
+timestamp to the flow. Figure 2 presents a case study of the in the training traffic for each application. For the training
+reverse retrieval for domain names. For flow 1, we can find domain name set DN , we construct the domain name embedthree DNS records that satisfy the address record inclusion ding matrix E DN = [e1DN , e2DN , . . . , e|DN
+ DN | ], which comprises
+criteria. The timestamp of the third record is later than the |DN | unique vectors. Each vector ei DN = [q1i , q2i , . . . , q Ni ]
+7096 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+corresponds to the embedding for the i-th domain name in fully-connected layers. First, T oK f is fed into an embedding
+DN . Here, ‘N ’ represents the total number of applications, and layer to construct the d-dimensional high-level abstraction, and
+the element q ij indicates the frequency of the i-th domain name positional information is added to the embedding tensor using
+appears in the j-th application’s traffic. During the classifica- a sinusoidal embedding manner. Then, the positional embedtion phase, we map the domain name DN f to the embedding ding tensor is fed into the first self-attention encoder, which
+ DN f DN DN
+vector eDN
+ DN f = [q1 , q2 f , . . . , q N f ] using the embedding consists of h parallel self-attention layers and a feed forward
+matrix. If a domain name is absent from the embedding matrix, layer. Here, we adopt the default parameter settings from the
+we map it to a zero vector. ET-BERT structure [31]. Finally, the output tensor from the
+ 3) Domain Name Classifier: The domain name classifier stacked self-attention encoders is fed into two fully-connected
+aims to classify new incoming encrypted flows using the layers, with input dimensions of 768 and the number of traffic
+domain name vectors previously described. Most encrypted classes, respectively. The above neural network model 9 uses
+flows can be classified with a high degree of confidence using the application labels of the flow samples to guide model
+only domain name vectors, while others require additional training and convergence.
+information for accurate classification. Those flows that remain 2) Metadata Vectorizer: After the transformer-based neural
+unclassified after this initial phase are further processed during network 9 is well-trained, the metadata vectorize uses it to
+the handshake metadata phase, where additional attributes are extract classification features for each flow. Specifically, for
+utilized for traffic classification. The classification algorithm a flow f , we use the output from the first fully-connected
+employed by the classifier will be detailed in Section III-F. layer as its feature tensor with dimensions of 768. This feature
+ tensor is also processed through a tanh activation function. For
+ the extracted feature tensor, we employ the same embedding
+D. Phase 2: Handshake Metadata Phase method for vectorization as used in the domain name phase
+ The handshake metadata phase is the second phase of our discussed in Section III-C. Next, we convert the feature values
+proposed classification scheme. As shown in Figure 1, this into embedding vectors, which serve as the input for the
+phase consists of a metadata extractor, a metadata vectorizer, subsequent metadata classifier.
+and a metadata classifier. In this phase, we aim to classify 3) Metadata Classifier: Similar to the domain name classithe remaining encrypted flows from the first phase, known as fier, the metadata classifier assigns categories to a portion of
+the domain name phase. Here, we rely solely on raw bytes the remaining encrypted flows based on the metadata vectors.
+in the TLS handshake messages. The encrypted flows that are The majority of these flows are classified in this phase. Those
+not classified in this phase will enter the subsequent message encrypted flows lacking domain names and metadata, as well
+sequence phase for processing. as some unclear flows, are fed into the final phase. The
+ 1) Metadata Extractor: TLS handshake messages contain algorithm for this classifier is the same as that for the domain
+various fields that can serve as indicators for encrypted traffic name classifier, but with different inputs, outputs, and different
+classification. Although TLS is an encrypted protocol, its model parameters. We will describe the algorithm used by the
+handshake messages are plaintext. In this part, we design a classifier in Section III-F.
+deep learning-based model to automatically extract discriminative representation from the raw byte sequences of the TLS
+handshake messages. The input to the metadata extractor is the E. Phase 3: Message Sequence Phase
+first L packets of a flow, where each packet belongs to a TLS The message sequence phase is the final phase of our
+handshake message. The output from the metadata extractor proposed classification scheme. As illustrated in Figure 1, this
+is a deep learning-based model for extracting classification phase consists of a message length extractor and a sequence
+features from handshake messages. classifier. The input for this phase consists of encrypted
+ For a flow f , the metadata extractor first constructs a token flows that remained unclassified in the first two phases (the
+sequence from the first L packets, which serves as the input to domain name phase and the handshake metadata phase). Its
+the subsequent step. Specifically, for each packet, the metadata objective is to accurately classify all remaining flows. In this
+extractor extracts the initial B bytes to create a token sequence phase, we perform encrypted traffic classification based on the
+representation. We use truncation or padding to ensure each message sequence of each flow.
+packet maintains its first B bytes. After obtaining L B-length 1) Message Length Extractor: The encrypted nature of
+byte sequences, the metadata extractor arranges these byte the message payload in TLS traffic presents a significant
+sequences in packet sequential order. We then use a bi-gram challenge for deep packet inspection-based traffic classificaencoding scheme, where each token consists of two adjacent tion. According to the TLS protocol specification, the byte
+bytes, to form the token sequence T oK f , denoted by T oK f = stream of a transmitted datagram should be encrypted as a
+{tok1 , · · · , toki , · · · , tok L∗B/2 }, where each token unit ranges TLS message before transmission. The length of each TLS
+from 0 to 65535. message is determined by the length of the original datagram.
+ Next, we adopt a transformer-based neural network to Therefore, the length sequence of TLS messages can reveal the
+learn a stable and discriminative representation for labeled traffic pattern of applications that generate them. In this phase,
+encrypted flows. There are three key components in our we extract the message length information from TLS flows and
+transformer-based neural network 9: (1) input and positional use the message length sequences as our classification input.
+embedding, (2) 12 stacked self-attention encoders, and (3) two We define the message length sequence ML f of a flow f as
+CHEN AND WANG: MPAF: ENCRYPTED TRAFFIC CLASSIFICATION WITH MULTI-PHASE ATTRIBUTE FINGERPRINT 7097
+
+ Fig. 3. Leaf-node masking tree-based classifier.
+ Fig. 4. Schemes for collecting datasets from mobile applications.
+
+follows:
+ f f f f
+ ML f = [l1 , l2 , · · · , li , · · · , lh |H | ]. (1) impure leaf nodes, thus preserving the capability to classify
+ all incoming flows.
+ f One C4.5 decision tree is prone to over-fitting when the
+where li denotes the captured message length in the i-th
+position, |H | denotes the number of messages used for each training data contains noise or irrelevant patterns. To address
+flow. this issue, we implement the bootstrap mechanism within
+ 2) Sequence Classifier: In the sequence classifier, the random forest algorithm, which performs sampling
+we directly use the message length sequence as a length at both the sample level and the feature level. For the
+ |S|
+vector, without any embedding operation. To accommodate training dataset S = {(x j , y j )} j=1 that contains |S|
+the input of our sequence classifier, we truncate overly samples, the random forest algorithm constructs a subset
+long sequences to a preset fixed length and zero-pad short S ′ = {Sub1 , . . . , Subi , . . . , Sub K } through sampling with
+sequences to ensure dimensional consistency. This module replacement, where K is the number of subsets. Using these
+assigns the final classification results to all input flows subsets, the random forest algorithm then constructs K
+without any confidence limitation. The algorithm used in this leaf-node masking trees in each phase. For each flow sample
+classifier mirrors that of the domain name classifier, with fed into the random forest, we can obtain K application labels
+variations only in its inputs, outputs, and model parameters. from the K trees. If more than K ∗ P identical labels are
+ present in the results, where P ∈ (0, 1] is a preset threshold
+ parameter, we confirm the classification and assign the flow to
+F. Leaf-Node Masking Tree-Based Classifier the most confidently predicted label; otherwise, we advance
+ In this subsection, we first introduce the design of our it into the next phase.
+tree-based classification algorithm, which is utilized across
+the three phases of our proposed method. Then, we elaborate
+on the details of using the bootstrap mechanism to mitigate IV. E XPERIMENTAL DATASETS
+overfitting in the classifiers.
+ In this section, we introduce four encrypted traffic clas-
+ As shown in Figure 3, we propose a leaf-node masking treesification datasets used to evaluate our proposed approach
+based classifier for the multi-phase classification of encrypted
+ and other state-of-the-art methods. The first two datasets are
+traffic. C4.5, a decision tree model, employs normalized
+ collected by ourselves: one is a manually collected dataset, and
+information gain as the splitting criterion to establish paths
+ the other is an automatically collected dataset. The third and
+from the root to the leaf nodes. A node becomes a leaf node
+ fourth datasets are public datasets: one is the cross-platform
+and ceases further splitting once the training samples meet
+ (Android) dataset, and the other is the cross-platform (iOS)
+the preset parameter thresholds. In the initial two phases, our
+ dataset.
+strategy is to utilize early-generated attributes, such as the
+domain name and the metadata from handshake messages,
+to achieve high accuracy and efficiency in traffic classification.
+ A. Collection Scheme
+For this purpose, we mask leaf nodes with a node purity value
+greater than 0 – that is, those containing training samples from In order to evaluate the effectiveness of MPAF, the collecmultiple categories. Flow samples classified into masked nodes tion of mobile network datasets with ground-truth application
+will be advanced to the subsequent phase for further analysis, labels is essential. Two fundamental schemes are commonly
+while other samples are immediately classified. In contrast used to collect such datasets, namely (1) active dataset collecto the earlier phases, the final phase of our method retains tion, and (2) passive dataset collection.
+7098 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+ 1) Active Dataset Collection: Figure 4 (a) illustrates the demonstrates that roughly 25%-30% of the encrypted flows
+active scheme used for collecting mobile application datasets, in the datasets lack domain name association. In the passive
+which is similar to the MIRAGE architecture [36]. The dataset collection scheme, these flows may be discarded due
+scheme involves running mobile applications on a manipu- to difficulty in labeling. Additionally, approximately 5%-10%
+lated Android phone and dumping the corresponding mobile of the flows neither originate from a domain query nor possess
+network traces with the application label on the workstation. a certificate, posing a challenge for the classifier.
+The mobile application activities can be generated using either Table IV presents the ranking of attribute overlap between
+Monkeyrunner [38] or volunteers. The manual trace collection applications. The utilization of public or vendor libraries in
+generates authentic application traces but requires significant applications will result in the presence of identical domain
+human effort. Monkeyrunner offers the advantage of full names and SNI attributes across application datasets. We take
+automation to generate traces by random UI operations [6], the average proportion of flows with the same attributes
+[39]. Compared to the human collection, Monkeyrunner has between two applications in their datasets as the proportion
+the fundamental limitation that the collected traces may not of attribute overlap. The attribute overlap between Alireflect the complex, structured interactions of actual human pay/Taobao, Taobao/Amap, and Taobao/Ele reaches an average
+users. The workstation monitors the traffic forwarded by its of 34.84% 23.94%, and 14.78%, respectively, presenting a
+NIC when the Android phone is connected to the workstation’s significant challenge for the classifier.
+access point, to selectively capture the traces generated by an
+application and attach the specified application label to them. C. Public Datasets
+ 2) Passive Dataset Collection: The passive scheme,
+ To further evaluate the effectiveness and efficiency of our
+as shown in Figure 4 (b), collects unlabeled mobile application
+ proposed approach, we also use public datasets released by
+traces through a port-mirroring [40] supporting switch or Van Ede et al. in 2020 [15]. The datasets include two encrypted
+another network trace collection device deployed between the traffic classification tasks: (1) the Cross-Platform (Android)
+mobile device network and the Internet. To label the passively task, and (2) the Cross-Platform (iOS) task. The statistical
+collected traces, some works [12], [13] select certain labelable information for this dataset is shown in Table V. The first
+encrypted flows from the collected traces by matching their task contains 215 applications, while the second contains
+IP addresses to the address records [41] of application-related 196 applications. The Android apps and the iOS apps were
+domain names. However, the accuracy of application labels collected from the top 100 apps in the US, China, and India.
+in this scheme may be compromised when the domain name The datasets exhibit a long-tail data distribution across all
+is mapped to more than one application, such as several classes, meaning that some applications have a very small
+applications that share the same domain names. number of flows. We retain the classes with more than 30 flows
+ in the dataset to ensure each class has a sufficient number of
+B. Datasets Collected by Ourselves flows for reliable experimental evaluations.
+ To ensure accurate experimental evaluations, we employ
+two different dataset collection schemes, namely the manual V. E VALUATION OF MPAF
+and automated methods, to gather network traces for popular In the present section, we undertake a comprehensive evalmobile applications.1 During the trace collection process, uation of the MPAF through rigorous experiments. Initially,
+only the necessary system applications and the application we introduce the evaluation preliminary in § V-A, after which
+being traced are installed on the Android phone. To minimize we report the evaluation results in § V-B.
+extraneous network connection requests, we use a root-level
+firewall to block noisy requests by Android system applica- A. Preliminary
+tions. We refer to the application list in [13] to conduct a
+robust comparison evaluation against state-of-the-art methods. 1) Evaluation Schemes: To comprehensively evaluate the
+We add three applications, ‘Taobao’, ‘Amap’, and ‘Baidu performance of MPAF, we devise two comparison experiments
+Map’, to examine the classification performance of applica- on the manually collected dataset and two cross-platform
+tions from the same vendor. The manual dataset collection datasets, aiming at exploring the performance of MPAF’s
+was conducted for two months, compared to two weeks for phases.
+the automated collection. First, we conduct a parameter selection experiment for the
+ Table III presents a statistical summary of the two datasets, leaf-masking-based tree classifier, including the number of
+including the number of flows (Flows), packets (Packets), per- subsets K and the threshold parameter P. We vary the range of
+cent of flows starting from a domain name query (Domain), parameter K ∈ {10, 20, 30}, and P ∈ {0.6, 0.7, 0.8, 0.9, 1.0}.
+percent of flows containing an X.509 certificate (Cert), and For each parameter combination, we evaluate the classification
+percent of flows starting from a domain name query or contain- accuracy of the three phases separately and calculate the
+ing an X.509 certificate (Both). The imbalance in the number overall classification accuracy. After selecting the optimal
+of flows in the automatically collected dataset is attributed parameters, we further measure the average waiting time, the
+to the varying complexity of the application UI logic and execution time, and the proportion of classified samples in the
+Monkeyrunner’s adaptability to them. Our statistical analysis three phases.
+ Besides, we perform an experiment to study the effective-
+ 1 https://www.kaggle.com/datasets/ygchen1/mpaf-dataset-pcap ness of a single MPAF phase in classification. Meanwhile,
+CHEN AND WANG: MPAF: ENCRYPTED TRAFFIC CLASSIFICATION WITH MULTI-PHASE ATTRIBUTE FINGERPRINT 7099
+
+ TABLE III
+ S TATISTICAL S UMMARY OF DATASETS O URSELVES
+
+ TABLE IV • Precision: We define the precision of application Appi as
+ R ANKING OF ATTRIBUTE OVERLAP B ETWEEN A PPLICATIONS the ratio of correctly classified encrypted flows belonging
+ to Appi to the total number of encrypted flows classified
+ as Appi . The Precision is the macro average of all
+ application precisions.
+ • Recall: We define the recall of Application Appi as the
+ ratio of correctly classified encrypted flows belonging to
+ Appi to the total number of encrypted flows that actually
+ belong to Appi . The Recall is the macro average of all
+ application recalls.
+ • Accuracy: We define accuracy as the overall ratio of
+ correctly classified encrypted flows to the total number
+ of encrypted flows.
+ TABLE V • F1_Macro: We calculate the F-score of each application
+S TATISTICAL I NFORMATION OF THE P UBLIC C ROSS -P LATFORM DATASET Appi as the harmonic mean of its Precision and Recall.
+ The F1_Macro is the macro average of all F-scores.
+ • AWT: We define the waiting time W T f of a flow
+ f as the time required from the initialization of the
+ flow until sufficient packets are collected or the flow is
+ prematurely terminated to implement classification. The
+ average waiting time (AWT) is the arithmetic mean of the
+we can infer the performance lower bound of MPAF from the waiting times. A smaller AWT value implies a quicker
+results of this experiment. implementation of traffic classification.
+ We conduct the experiments on a general computing server
+with 2*Intel® Xeon® Gold 6330 CPU @ 2.00GHz and DDR4 B. Experimental Results of MPAF
+2933MHz 256GB memory. 1) The Parameters Selection for Leaf-Node Masking Tree-
+ 2) Cross-Validation: We employ repeated random Based Classifier: Table VI shows the experimental results of
+sub-sampling to mitigate the potential impact of accidental the classifier parameter selection. We make a grid search for
+errors introduced by the dataset partitioning. We partition both the number of trees K and the classification threshold P.
+each experimental dataset into a training dataset and a For each parameter combination, we evaluate the classification
+validation dataset in a randomized manner using a 70-30 split accuracy in each phase and perform summary calculations.
+and repeat this split ten times and compute the average of the Based on the Table VI, all parameter combinations show
+resulting experimental results. remarkably high classification accuracy for the summary of all
+ 3) Evaluation Criteria: In our evaluation, we employ Preci- phases. In some parameter combinations, the first two phases
+sion (Prec.), Recall (Rec.), Accuracy (Acc.), F1_Macro (F1), completely classify all flows, leaving none for the third phase.
+and Average Waiting Time (AWT) as metrics to provide a We use ’-’ in the table to indicate this. The parameter comcomprehensive evaluation of the overall performance. binations {K = 20, P = 0.8}, {K = 30, P = 0.5}, and {K =
+7100 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+ TABLE VI
+ E XPERIMENTAL R ESULTS OF C LASSIFIER PARAMETER S ELECTION
+
+ TABLE VII
+ C LASSIFICATION P ERFORMANCE IN E ACH P HASE
+
+ TABLE VIII
+ C LASSIFICATION P ERFORMANCE W ITH A S INGLE P HASE
+
+20, P = 0.6} achieve the best overall accuracy of 99.50%, because the associated DNS records are always generated
+96.51%, and 99.11% for the three experimental datasets, and captured before the flow starts. The domain name phase
+respectively. From the perspective of attribute sources, the of MPAF handles approximately 70% of the flows, which
+message sequence is less discriminative than the attributes in significantly reduces the waiting time for most flows. The
+the first two phases and is therefore more susceptible to the AWT of the handshake metadata phase ranges from 0.62s to
+classifier parameters. Considering the classification accuracy 1.32s, while the AWT of the message sequence phase ranges
+across three datasets, we select {K = 30, P = 0.6} as the from 1.00s to 4.19s. The overall AWT of the three phases
+final parameter combination. are 0.45, 0.18, and 0.19 seconds(s) for the three experimental
+ Table VII presents the classification performance in each datasets, respectively.
+phase under the optimal parameter combination, including 2) The Effectiveness of a Single MPAF Phase: Table VIII
+classification accuracy, AWT, and the proportion of classified shows the classification performance of each single phase.
+flows. The first two phases both demonstrate high classification We implement this experiment by skipping the prior phases
+accuracy and low AWT, and together handle approximately and enforcing classification at a given phase. Based on the
+99% of the flows. The flows classified in the message sequence combined results of each phase across the three datasets,
+phase are residual flows from the first two phases, introducing the domain name phase shows high precision but relatively
+challenges to the classification process. The accuracy of the lower recall. The handshake metadata phase achieves both
+message sequence phase ranges from 34.67% to 76.52%, high accuracy and recall. The performance of the message
+which is significantly lower than the first two phases. This sequence phase fluctuates significantly, making it suitable as
+phase tries to use message sequence features to classify them a supplementary fallback. In the manually collected dataset
+as accurately as possible, thereby improving the overall system and the cross-platform(Android) dataset, the combined use
+accuracy. The AWT of the domain name phase is 0.00s of all three phases further enhances overall performance.
+CHEN AND WANG: MPAF: ENCRYPTED TRAFFIC CLASSIFICATION WITH MULTI-PHASE ATTRIBUTE FINGERPRINT 7101
+
+ TABLE IX
+ C OMPARISON R ESULTS OF C LASSIFICATION ACCURACY
+
+ Fig. 5. Classification accuracy with different training dataset proportions.
+
+ TABLE X
+ E XPERIMENTAL R ESULTS OF C ROSS -DATASET C LASSIFICATION
+
+In the cross-platform(iOS) dataset, the overall performance is • FS-Net [22] utilizes an encoder-decoder structure to genminimally affected by the accuracy of the domain name phase erate features and directly classify the feature vectors.
+and the message sequence phase, but still remains relatively We use the parameters mentioned in their paper to rebuild
+high. the neural network using Pytorch.
+ • EBSNN [30] is a method that aggregates the payload
+ VI. C OMPARISONS W ITH E XISTING A PPROACHES segments of the first few packets of each flow as input
+ and classifies them using an encoder with an attention
+ In this section, we conduct a comprehensive evaluation of
+ mechanism. We utilize open-source code to implement
+MPAF by comparing it with five contemporary approaches
+ the approach on our datasets.
+in terms of classification accuracy, AWT, scalability of the
+ • ET-BERT [31] is a pre-trained model on large-scale
+dataset, and resilience to cross-dataset classification. Furtherunlabeled traffic data. We refine the model on our datasets
+more, we compare MPAF against one advanced approach that
+ through fine-tuning using the open-source code.
+addresses the challenge of unknown application recognition.
+ • ETC-PS [18] builds traffic path signatures for the first
+ N data packets of each flow and uses machine learn-
+A. Preliminary ing algorithms to implement the classifier. We use six
+ 1) Existing Approaches: In this section, we conduct a com- sequence features declared in the paper to rebuild the
+parison analysis of MPAF with six state-of-the-art approaches system.
+for encrypted traffic classification. These approaches are • Input-Agnostic [34] is a neural network method that
+selected for their superior declared classification performance, is built upon a hierarchical attention mechanism that
+with a focus on incorporating a variety of technical routes. integrates information from packet level, flow level, and
+7102 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+ TABLE XI
+ E XPERIMENTAL R ESULTS IN THE P RESENCE OF U NKNOWN A PPLICATIONS
+
+ trace level. We implement the approach on our datasets unknown applications, we compare it with a state-of-the-art
+ using open-source code. approach on the manually collected dataset.
+ • AMUS [25] is a novel approach that identifies unknown
+ applications by setting a threshold on the discriminator.
+ We use the parameters mentioned in the paper to rebuild B. Classification Performance and AWT
+ the unknown application identification system. Table IX presents the comparison experimental results of
+ both the classification effectiveness metric and the classifica-
+ 2) Setting of MPAF: According to the experimental results tion efficiency metric. In terms of classification effectiveness
+presented in § V, we select {K = 30, P = 0.6} as the metric, Table IX shows that MPAF achieves high classifiparameter combination, and use a maximum of 5 payload cation accuracies of 99.42%, 99.09%, and 96.33% on the
+packets per flow in the second phase and a maximum of three datasets, accompanied by consistently high F1_Macro
+12 messages per flow in the third phase. scores. On the manually collected dataset, MPAF surpasses all
+ 3) Experimental Setting: In this study, we evaluate MPAF the state-of-the-art approaches on the classification accuracy.
+against state-of-the-art approaches on six key aspects, namely In addition, MPAF and EBSNN lead the other methods on
+classification accuracy, F1_Macro, AWT, scalability of the the AWT metric. On the cross-platform(Android) dataset, the
+dataset, resilience to cross-dataset classification, and recog- classification accuracy of MPAF and ET-BERT is comparable
+nition of unknown applications. To compare classification and leads other methods, while the AWT of MPAF leads all the
+accuracy, F1_Macro, and AWT, we conduct experiments on other approaches. On the cross-platform(iOS) dataset, MPAF
+the manually collected dataset and two cross-platform datasets. is slightly inferior to ET-BERT in classification accuracy but
+We also investigate the scalability of the dataset in relation performs 3.74 × faster than ET-BERT on the AWT metric.
+to classification accuracy, covering a range from 20% to The slightly inferior performance of MPAF is caused by the
+80% of the manually collected dataset and two cross-platform domain name phase. Table VII shows that the performance of
+datasets. the domain name phase falls short compared to the handshake
+ Moreover, we explore the robustness of cross-dataset clas- metadata phase. To further improve performance, it is feasible
+sification by training on the automatically collected dataset to incorporate the first packet information into the domain
+and validating on the manually collected dataset. Finally, name phase to enhance its classification capability. The good
+to evaluate the performance of MPAF in the recognition of performance of ET-BERT on the cross-platform dataset can be
+CHEN AND WANG: MPAF: ENCRYPTED TRAFFIC CLASSIFICATION WITH MULTI-PHASE ATTRIBUTE FINGERPRINT 7103
+
+attributed to its reliance on a pre-trained transformer model, • MPAF-M is a three-phase attribute fingerprint that
+which exhibits better generalization capabilities on datasets incorporates Multiple attributes in its last two phases.
+with fewer samples. Specifically, the first phase exploits domain names, the
+ Discussion: The Average Waiting Time (AWT) is the arith- second phase uses domain name and handshake metadata,
+metic mean of the waiting time when sufficient packets have and the third phase uses all attributes.
+been captured or the flow is prematurely terminated. Thus, The state-of-the-art approaches exhibit accuracy and
+the AWT is primarily determined by the number of packets F1_Macro ranging from 17.24% to 47.75%. This represents a
+required by each method. Based on the results in Table IX, decline of 47.86% to 71.19% when compared to the baseline
+MPAF achieves the AWTs of 0.45s, 0.18s, and 0.19s on classification results presented in Table IX. The dissimilarities
+the three datasets without packet limitations, respectively, between the two datasets stem from differences in the UI
+improves the AWT by up to 77.53 times compared to the state- operation logic of the application when generating traffic,
+of-the-art approach. MPAF requires a maximum of 5 payload resulting in differences in dataset distribution. The independent
+packets in the second phase and a maximum of 12 messages nature of MPAF’s utilized attributes, such as Domain Name
+in the third phase, resulting in lower AWTs compared to state- and Metadata, from the traffic content enables it to perform
+of-the-art approaches. EBSNN and ET-BERT require a small, accurate classification for most applications. This results in an
+fixed number of payload packets, resulting in relatively low accuracy of 79.09%, signifying a decrease of 20.33%, and an
+AWT ranges of 0.41s to 0.69s and 0.71s to 1.00s, respectively. F1_Macro of 77.44%, reflecting a drop of 21.88%.
+FS-Net, ETC-PS, and Input-Agnostic achieve classification
+with 32-40 raw packets, resulting in much higher AWTs. E. Recognition of Unknown Applications
+ In addition to providing traffic classification for known
+C. Robustness to Scale of the Dataset applications in the training dataset, we can make some modifi-
+ The classification accuracy of MPAF and five state-of-the- cations to MPAF to enable it to identify unknown applications
+art approaches, under different proportions of the training in real-world scenarios. We alter the classification output
+dataset, is presented in Figure 5. For the manually collected mode from labels to classification probability vectors v =
+dataset and cross-platform(Android) dataset, as the proportion [ p1 , p2 , . . . , p N ], where pi is the classification probability to
+of the training dataset increases, the improvement of FS- i-th application. In the last phase of MPAF and its variants,
+Net, ETC-PS, and Input-Agnostic is notably significant, which we set a probability threshold τ to label the flows whose
+highlights the substantial dependence of these approaches maximum probability is lower than the threshold, that is,
+on the scale of the training dataset. The accuracy of other max(v) < τ , to the unknown applications.
+approaches, MPAF, ET-BERT, and EBSNN, do not increase To evaluate the robustness of MPAF, MPAF-D, MPAF-M,
+significantly as the proportion of the training dataset increases. and AMUS against unknown applications, we randomly select
+For the manually collected dataset and cross-platform(android) three applications as unknown and remove the corresponding
+dataset, the accuracy of ET-BERT, FS-Net, and ETC-PS is traffic from the training dataset, but keep them in the validation
+fairly high at 20% training dataset proportion, which indicates dataset. We conduct the experiments on four scenarios with
+the robustness of these approaches to the training dataset’s different randomly selected unknown applications to improve
+scale. MPAF shows consistently high accuracy from 20% the confidence of the experimental results. In the experimental
+to 80% of the training dataset proportion with very small result analysis, we treat the unknown applications as a distinct
+differences. This demonstrates the strong tolerance of MPAF class.
+to the inadequacy of the training dataset, and we can signifi- Table XI reports the experimental results of classifying
+cantly reduce the amount of training dataset while maintaining encrypted traffic in the presence of unknown applications.
+high accuracy. For the cross-platform(iOS) dataset, some Experimental results reveal that MPAF attains the highest
+approaches show a significant decrease in classification perfor- classification accuracy, ranging from 93.50% to 97.09%,
+mance under all training dataset proportions, while MPAF and F1_Macro from 93.89% to 97.72%, an unknown applica-
+ET-BERT maintain a high classification accuracy with only tion precision rate ranging from 92.16% to 95.68%, and
+20% of the training dataset. an unknown application recall rate of 100.00% across four
+ scenarios. The overall performance of MPAF-M is higher
+ than MPAF-D, but weaker than MPAF. Compared to MPAF-
+D. Resilience to Cross-Dataset Classification
+ M, MPAF-D removes a phase designed for domain attributes
+ Table X reports the results of a comparison study and maintains comparable overall performance to MPAF-M.
+of approaches when applied to cross-dataset classification. This indicates that independently utilizing domain attributes
+Specifically, the classifiers are trained on the automatically in the initial phase does not result in an overall performance
+collected dataset and tested on the manually collected dataset. decrease; instead, it can reduce the AWT of the classification.
+We create two MPAF variants for comparison in cross-dataset AMUS demonstrates a classification accuracy ranging from
+classification and the recognition of unknown applications in 74.07% to 81.18%, F1_Macro from 70.62% to 77.80%,
+the subsequent subsection. an unknown application precision rate varying between
+ • MPAF-D is a Dual-phase attribute fingerprint where the 71.34% to 92.45%, and an unknown application recall rate
+ first phase exploits domain name and handshake metadata spanning 9.73% to 23.22% across four scenarios. In comparand the second phase uses all attributes. ison to the precision rate for unknown applications, the recall
+7104 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+rate for unknown applications is notably lower. This could [15] T. van Ede et al., “FlowPrint: Semi-supervised mobile-app fingerprinting
+be attributed to the ambiguous classification boundaries of on encrypted network traffic,” in Proc. Netw. Distrib. Syst. Secur. Symp.,
+ vol. 27, 2020, pp. 1–18.
+known applications. In comparison to AMUS, MPAF exhibits [16] G. Aceto, G. Bovenzi, D. Ciuonzo, A. Montieri, V. Persico, and
+superior performance with a 14.93% to 21.36% advantage in A. Pescapé, “Characterization and prediction of mobile-App traffic using
+classification accuracy, an improvement of 18.19% to 25.87% Markov modeling,” IEEE Trans. Netw. Service Manag., vol. 18, no. 1,
+ pp. 907–925, Mar. 2021.
+in F1_Macro, a 1.71% to 24.34% increase in precision for
+ [17] X. Ma et al., “Context-aware website fingerprinting over encrypted
+unknown application precision rate, and a 76.78% to 90.27% proxies,” in Proc. IEEE INFOCOM Conf. Comput. Commun., May 2021,
+boost in unknown application recall rate. pp. 1–10.
+ [18] S.-J. Xu, G.-G. Geng, X.-B. Jin, D.-J. Liu, and J. Weng, “Seeing
+ VII. D ISCUSSION AND C ONCLUSION traffic paths: Encrypted traffic classification with path signature features,” IEEE Trans. Inf. Forensics Security, vol. 17, pp. 2166–2181,
+ This study introduces an efficient encrypted traffic clas- Jun. 2022.
+sification system named Multi-Phase Attribute Fingerprint [19] J. Piet, D. Nwoji, and V. Paxson, “GGFAST: Automating generation
+(MPAF), which leverages three phases to exploit attributes of flexible network traffic classifiers,” in Proc. ACM SIGCOMM Conf.,
+ New York, NY, USA, 2023, pp. 850–866.
+emerging at different time periods. The experimental results [20] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapè, “Mobile encrypted
+clearly demonstrate the superiority of MPAF over state- traffic classification using deep learning: Experimental evaluation,
+of-the-art approaches in terms of classification efficiency lessons learned, and challenges,” IEEE Trans. Netw. Service Manage.,
+ vol. 16, no. 2, pp. 445–458, Jun. 2019.
+and robustness. The two datasets used in our study were
+ [21] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapè, “MIMETIC: Mobile
+captured, respectively, by volunteers and through machine encrypted traffic classification using multimodal deep learning,” Comput.
+automation. There still exists a performance gap between Netw., vol. 165, Dec. 2019, Art. no. 106944.
+the cross-dataset classification and single-dataset classifica- [22] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-net: A flow sequence
+ network for encrypted traffic classification,” in Proc. IEEE Conf. Comtion. In future research, we will delve into the diminishing put. Commun., Apr. 2019, pp. 1171–1179.
+effectiveness of attributes across different datasets to achieve [23] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapé, “Toward effective
+comparable classification accuracy. These findings will sig- mobile encrypted traffic classification through deep learning,” Neuronificantly broaden the applicability of automatically collected computing, vol. 409, pp. 306–315, Oct. 2020.
+ [24] M. Lotfollahi, R. S. H. Zade, M. J. Siavoshani, and M. Saberian, “Deep
+datasets for replacing manually collected datasets. packet: A novel approach for encrypted traffic classification using deep
+ learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, 2020.
+ R EFERENCES [25] J. Zhang, F. Li, F. Ye, and H. Wu, “Autonomous unknown-application
+ [1] App Store. Accessed: Jan. 2024. [Online]. Available: filtering and labeling for DL-based traffic classifier update,” in Proc.
+ https://www.apple.com/ios/app-store/ IEEE Conf. Comput. Commun., Jul. 2020, pp. 397–405.
+ [2] Google Play. Accessed: Jan. 2024. [Online]. Available: [26] G. Aceto, D. Ciuonzo, A. Montieri, A. Nascita, and A. Pescapè,
+ https://play.google.com/store “Encrypted multitask traffic classification via multimodal deep learning,”
+ [3] T. Dierks and E. Rescorla, “The transport layer security (TLS) protocol in Proc. IEEE Int. Conf. Commun., Aug. 2021, pp. 1–6.
+ version 1.2,” Internet Eng. Task Force, USA, Tech. Rep. rfc5246, 2008. [27] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapé, “DISTILLER:
+ [4] E. Rescorla, “The transport layer security (TLS) protocol version 1.3,” Encrypted traffic classification via multimodal multitask deep learning,”
+ Internet Eng. Task Force, USA, Tech. Rep. rfc8446, 2018. J. Netw. Comput. Appl., vols. 183–184, Jun. 2021, Art. no. 102985.
+ [5] Y. Wang, X. Yun, Y. Zhang, L. Chen, and T. Zang, “Rethinking [28] A. Nascita, A. Montieri, G. Aceto, D. Ciuonzo, V. Persico, and
+ robust and accurate application protocol identification,” Comput. Netw., A. Pescapé, “XAI meets mobile traffic classification: Understanding and
+ vol. 129, pp. 64–78, Dec. 2017. improving multimodal deep learning architectures,” IEEE Trans. Netw.
+ [6] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smart- Service Manag., vol. 18, no. 4, pp. 4225–4246, Dec. 2021.
+ phone app identification via encrypted network traffic analysis,” IEEE [29] A. Montieri, G. Bovenzi, G. Aceto, D. Ciuonzo, V. Persico,
+ Trans. Inf. Forensics Security, vol. 13, no. 1, pp. 63–78, Jan. 2018. and A. Pescapè, “Packet-level prediction of mobile-app traffic using
+ [7] M. Conti, Q. Q. Li, A. Maragno, and R. Spolaor, “The dark side(- multitask deep learning,” Comput. Netw., vol. 200, Dec. 2021,
+ channel) of mobile devices: A survey on network traffic analysis,” IEEE Art. no. 108529.
+ Commun. Surveys Tuts., vol. 20, no. 4, pp. 2658–2713, 4th Quart., 2018. [30] X. Xiao, W. Xiao, R. Li, X. Luo, H. Zheng, and S. Xia, “EBSNN:
+ [8] A. Acar et al., “Peek-a-boo: I see your smart home activities, even Extended byte segment neural network for network traffic classification,”
+ encrypted!” in Proc. 13th ACM Conf. Secur. Privacy Wireless Mobile IEEE Trans. Dependable Secure Comput., vol. 19, no. 5, pp. 3521–3538,
+ Netw., Jul. 2020, pp. 207–218. Sep. 2022.
+ [9] B. Charyyev and M. H. Gunes, “IoT event classification based on
+ [31] X. Lin, G. Xiong, and G. Gou, “ET-BERT: A contextualized datagram
+ network traffic,” in Proc. IEEE Conf. Comput. Commun. Workshops,
+ representation with pre-training transformers for encrypted traffic clas-
+ Jul. 2020, pp. 854–859.
+ sification,” in Proc. ACM Web Conf., 2022, pp. 633–642.
+[10] S. Dong, Z. Li, D. Tang, J. Chen, M. Sun, and K. Zhang, “Your
+ smart home can’t keep a secret: Towards automated fingerprinting of [32] M. Jiang et al., “Accurate mobile-app fingerprinting using flow-level
+ IoT traffic,” in Proc. 15th ACM Asia Conf. Comput. Commun. Secur., relationship with graph neural networks,” Comput. Netw., vol. 217,
+ Oct. 2020, pp. 47–59. Nov. 2022, Art. no. 109309.
+[11] R. Alshammari and A. N. Zincir-Heywood, “Investigating two different [33] A. Nascita, A. Montieri, G. Aceto, D. Ciuonzo, V. Persico, and
+ approaches for encrypted traffic classification,” in Proc. 6th Annu. Conf. A. Pescapé, “Improving performance, reliability, and feasibility in mul-
+ Privacy, Secur. Trust, Oct. 2008, pp. 156–166. timodal multitask traffic classification with XAI,” IEEE Trans. Netw.
+[12] M. Korczynski and A. Duda, “Markov chain fingerprinting to classify Service Manag., vol. 20, no. 2, pp. 1267–1289, Jun. 2023.
+ encrypted traffic,” in Proc. IEEE INFOCOM Conf. Comput. Commun., [34] J. Qu et al., “An input-agnostic hierarchical deep learning framework
+ Apr. 2014, pp. 781–789. for traffic fingerprinting,” in Proc. 32nd USENIX Secur. Symp., 2023,
+[13] M. Shen, M. Wei, L. Zhu, and M. Wang, “Classification of encrypted pp. 589–606.
+ traffic with second-order Markov chains and application attribute [35] F. Cerasuolo et al., “MEMENTO: A novel approach for class incremental
+ bigrams,” IEEE Trans. Inf. Forensics Security, vol. 12, no. 8, learning of encrypted traffic,” Comput. Netw., vol. 245, May 2024,
+ pp. 1830–1843, Aug. 2017. Art. no. 110374.
+[14] A. Montieri, D. Ciuonzo, G. Bovenzi, V. Persico, and A. Pescapé, [36] G. Aceto, D. Ciuonzo, A. Montieri, V. Persico, and A. Pescapé,
+ “A dive into the dark web: Hierarchical traffic classification of anonymity “MIRAGE: Mobile-app traffic capture and ground-truth creation,” in
+ tools,” IEEE Trans. Netw. Sci. Eng., vol. 7, no. 3, pp. 1043–1054, Proc. 4th Int. Conf. Comput., Commun. Secur. (ICCCS), Oct. 2019,
+ Jul. 2020. pp. 1–8.
+CHEN AND WANG: MPAF: ENCRYPTED TRAFFIC CLASSIFICATION WITH MULTI-PHASE ATTRIBUTE FINGERPRINT 7105
+
+[37] G. Bovenzi et al., “Benchmarking class incremental learning in deep Yipeng Wang (Senior Member, IEEE) received the
+ learning traffic classification,” IEEE Trans. Netw. Service Manage., Ph.D. degree in computer science from the Institute
+ vol. 21, no. 1, pp. 51–69, Feb. 2024. of Computing Technology, Chinese Academy of
+[38] (2019). Monkeyrunner—Android Developers. [Online]. Available: Sciences (CAS), China, in 2014. He is currently an
+ https://developer.android.com/studio/test/monkeyrunner/ Associate Professor with the College of Computer
+[39] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “AppScanner: Science, Beijing University of Technology, China.
+ Automatic fingerprinting of smartphone apps from encrypted net- He has published more than 50 research papers
+ work traffic,” in Proc. IEEE Eur. Symp. Secur. Privacy, Mar. 2016, in refereed international journals and conferences,
+ pp. 439–454. such as IEEE T RANSACTIONS ON I NFORMATION
+ F ORENSICS AND S ECURITY, IEEE/ACM T RANS -
+[40] J. Zhang and A. Moore, “Traffic trace artifacts due to monitoring via
+ ACTIONS ON N ETWORKING , IEEE International
+ port mirroring,” in Proc. Workshop End-End Monitor. Techn. Services,
+ Conference on Network Protocols, and IEEE T RANSACTIONS ON N ETWORK
+ May 2007, pp. 1–8.
+ AND S ERVICE M ANAGEMENT . His research interests include networking,
+[41] P. V. Mockapetris, “Domain names: Concepts and facilities,” Internet network security, and machine learning. He serves as a Program Com-
+ Eng. Task Force, USA, Tech. Rep. rfc1034, 1987. mittee Member for IJCAI 2021, IJCAI 2022, IJCAI 2023, and IJCAI
+ 2024. He was a recipient of the Best Paper Award at IEEE International
+ Conference on Network Protocols (ICNP) on his protocol format inference
+ technology. He serves as a regular reviewer for IEEE T RANSACTIONS ON
+ I NFORMATION F ORENSICS AND S ECURITY, IEEE/ACM T RANSACTIONS
+ Yige Chen received the Ph.D. degree in computer ON N ETWORKING , IEEE T RANSACTIONS ON M OBILE C OMPUTING , IEEE
+ software and theory from the Institute of Information T RANSACTIONS ON C OGNITIVE C OMMUNICATIONS AND N ETWORKING,
+ Engineering, Chinese Academy of Sciences (CAS), IEEE T RANSACTIONS ON N ETWORK S CIENCE AND E NGINEERING, and
+ China, in 2022. He is currently a Lecturer with the IEEE I NTERNET OF T HINGS J OURNAL.
+ College of Computer Science and Artificial Intelligence, Wenzhou University, China. His research
+ interests include encrypted traffic fingerprints, network security, and machine learning.

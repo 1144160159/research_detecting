@@ -1,0 +1,1340 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [823] TopoCL: Topological Contrastive Learning for Time Series
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：823
+题名：TopoCL: Topological Contrastive Learning for Time Series
+年份：2026
+DOI：10.1109/tnnls.2026.3675422
+来源：IEEE Transactions on Neural Networks and Learning Systems
+PDF：paper/10.1109_TNNLS.2026.3675422.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：时序、日志、KPI 与云原生异常检测
+相关性：弱相关，分数 3
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\823.txt
+- 原始字符数：60867
+- 本次发送字符数：60867
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+1
+
+TopoCL: Topological Contrastive Learning
+for Time Series
+Namwoo Kim , Hyungryul Baik, and Yoonjin Yoon
+Abstract—Universal time-series representation learning is
+challenging but valuable in real-world applications such as
+classification, anomaly detection, and forecasting. Recently, contrastive learning (CL) has been actively explored to tackle
+time-series representation. However, a key challenge is that the
+data augmentation process in CL can distort seasonal patterns or
+temporal dependencies, inevitably leading to a loss of semantic
+information. To address this challenge, we propose topological CL
+for time series (TopoCL). TopoCL mitigates such information
+loss by incorporating persistent homology, which captures the
+topological characteristics of data that remain invariant under
+transformations. In this article, we treat the temporal and
+topological properties of time-series data as distinct modalities. Specifically, we compute persistent homology to construct
+topological features of time-series data, representing them in
+persistence diagrams (PDs). We then design a neural network to
+encode these persistent diagrams. Our approach jointly optimizes
+CL within the time modality and time–topology correspondence,
+promoting a comprehensive understanding of both temporal
+semantics and topological properties of time series. We conduct
+extensive experiments on four downstream tasks—classification,
+anomaly detection, forecasting, and transfer learning. The results
+demonstrate that TopoCL achieves state-of-the-art performance.
+Index Terms—Anomaly detection, classification, contrastive
+learning (CL), forecasting, time-series modeling, topological data
+analysis (TDA).
+
+I. I NTRODUCTION
+
+T
+
+IME-SERIES analysis plays a crucial role in numerous real-world applications such as weather, economics,
+and transportation. However, analyzing time-series data are
+challenging due to its incompleteness, vulnerability to noise,
+and complexity. In addition, employing deep learning models
+for time-series analysis introduces further obstacles, as it
+necessitates well-labeled data. Labeling time-series data is
+time-consuming and requires a high level of expertise, creating
+significant bottlenecks in the analysis process. In recent years,
+contrastive learning (CL) has become increasingly popular in
+graph [1], computer vision (CV) [2], [3], natural language
+
+Received 26 November 2024; revised 31 October 2025; accepted 9 March
+2026. This work was supported in part by the National Research Foundation
+of Korea (NRF) Basic Research Laboratory under Grant 2021R1A4A1033486
+and in part by Midcareer Research funded by the South Korean Government
+under Grant 2020R1A2C2010200 and Grant RS-2025-00517342. (Corresponding author: Yoonjin Yoon.)
+Namwoo Kim and Yoonjin Yoon are with the Department of
+Civil and Environmental Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon 34141, South Korea (e-mail:
+namwoo@spacetime.kaist.ac.kr; yoonjin@spacetime.kaist.ac.kr).
+Hyungryul Baik is with the Department of Mathematical Science, Korea
+Advanced Institute of Science and Technology (e-mail: hrbaik@kaist.ac.kr).
+This article has supplementary downloadable material available at
+https://doi.org/10.1109/TNNLS.2026.3675422, provided by the authors.
+Digital Object Identifier 10.1109/TNNLS.2026.3675422
+
+processing (NLP) [4], and recommendation system [5], [6],
+mainly due to its ability to train models without explicit
+labels. Accordingly, ongoing research is focused on applying
+CL to time-series data for various downstream applications,
+including anomaly detection [7], [8], forecasting [9], and
+classification [10].
+In general, CL leverages data augmentation to create
+positive and negative pairs for training, thereby creating a
+contrast between similar and dissimilar samples by exploring
+different transformations and variations of the data. Several
+augmentation techniques for time-series have been proposed to
+learn robust and discriminative representations. For example,
+permutation reorders segments within a time series to produce
+a new sequence [10], [11]. However, using permutation on
+time-series data might introduce inappropriate inductive bias,
+as it can distort the autocorrelated nature of time-series data.
+Techniques borrowed from CV, such as f lipping, which flips
+the signs of the original time series, may misrepresent the trend
+or seasonal patterns. Moreover, these distortions raise concerns
+about whether the augmented time series are, indeed, positive
+samples of the original series. Consequently, applying data
+augmentation may inevitably risk information loss, making it
+difficult to capture semantically meaningful representations.
+Therefore, it is necessary to find ways that compensate such
+potential information loss.
+Recently, topological data analysis (TDA) has emerged as a
+subfield of algebraic topology focused on capturing the global
+shape of data, where shape broadly refers to data properties
+that remain invariant under transformations [12]. Such shape
+patterns or topological features include connected components, loops, and voids. Topological features are obtained
+by computing persistent homology and are represented as a
+multiset in persistence diagrams (PDs) [13]. These diagrams
+encapsulate persistent homology across different scales of
+data. The overall structure and distribution of sets in the
+diagram provide insights into the topological invariants of the
+data. By incorporating such topological information, we can
+capture the essential structural properties of the time series
+that remain invariant under various transformations. Therefore,
+integrating topological information can help compensate for
+potential information loss due to data augmentation, reduce
+inductive bias, and lead to more robust representations.
+Fueled by the advancements in both CL and TDA, we
+harness the strengths of the two methods and introduce topological CL for time series (TopoCL), a simple yet effective
+cross-modal CL approach for universal time-series representations. Our method integrates and leverages information from
+the time and topology modalities. To start, we construct
+
+2162-237X © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+2
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+topological characteristics from time series data. We apply
+delay embedding to time-series data, compute persistent
+homology, and design a simple topological module to effectively encode topological information. Our approach then
+focuses on a joint objective: ensuring that the augmented versions of the same time series are closely embedded together in
+the feature space while preserving the correspondence between
+time and topology. The joint learning objective promotes
+a comprehensive understanding of temporal semantics and
+topological properties of time series and improves robustness
+to data augmentations. We perform extensive experiments on
+time-series forecasting, anomaly detection, classification, and
+transfer learning tasks. The experimental results demonstrate
+that the learned representations of TopoCL are effective. The
+contributions of this work are as follows.
+1) We demonstrate that incorporating topological properties is effective for capturing robust and discriminative
+representations of time-series data.
+2) We design a novel framework for learning representations of time-series data that takes into account their
+topology. To the best of our knowledge, our approach is
+the first to combine persistent homology with CL in the
+context of time-series representation learning.
+3) We conduct extensive experiments across four downstream tasks: time-series classification, anomaly detection, forecasting, and transfer learning on diverse
+datasets. The experimental results demonstrate the effectiveness of the proposed model.
+The remainder of this article is organized as follows.
+Section II presents a literature review on TDA and timeseries CL. Section III provides preliminaries. The proposed
+framework is described in Section IV. Section V provides
+the experimental results of the proposed model. Section VI
+presents the additional analysis. Finally, Section VII presents
+the conclusion and future work.
+II. R ELATED W ORKS
+A. Topological Data Analysis
+TDA is an emerging field that utilizes abstract algebra
+to uncover the intrinsic shape of the data. A fundamental
+concept in TDA is PD, which helps to understand the topological structure of data. By computing persistent homology
+across scales, such topological structure is represented as
+a multiset of points. Directly using PD in machine learning and deep learning models is challenging, since these
+models typically work with Hilbert space. To overcome
+this, several research efforts have been made to convert
+PD into a vector format. For instance, persistence landscapes transform the multiset of points in a PD into a
+collection of piecewise-linear functions [14]. Adams et al.
+[15] proposed persistence images, which convert PD into
+a fixed-size representation. In addition, various kernel functions have been proposed to handle PD, such as geodesic
+topological kernel [16] and persistence landscape-based
+kernels [17], [18].
+Recently, the integration of TDA into neural networks
+has been explored, leading to the development of various
+
+topological layers for machine learning applications. The first
+approach to input a PD into a neural network architecture
+was presented by Hofer et al. [19]. Carrière et al. [20] proposed PersLay, which incorporates PD for graph classification.
+Moor et al. [21] proposed a topological autoencoder preserving
+topological structures of the input space in latent representations. Kim et al. [22] proposed PLlay, a neural network
+layer for learning embeddings from persistence landscapes.
+These approaches demonstrated that incorporating persistent
+homology with deep learning has the potential to offer a more
+comprehensive understanding of data.
+B. Time-Series CL
+Similar to the advancements of CL in the fields of CV
+and NLP, numerous studies incorporate CL into time-series
+analysis. TS-TCC [10] employed both weak and strong
+augmentations to time-series data and utilized contextual
+contrasting to learn transformation-invariant representations.
+Mixing-up [23] generated an augmented sample by mixing two
+data samples and proposed a pretext task method for predicting
+the mixing proportion. Inspired by great success in masked
+modeling in NLP and CV, several works adopted this approach
+for time series. TS2vec [7] used masking and cropping for
+data augmentation, and proposed a hierarchical contrastive loss
+to learn scale-invariant representations. InfoTS [24] exploited
+a meta-learning framework to automatically select the augmentation method. SimMTM [25] generated multiple masked
+series and facilitated reconstruction by assembling complementary temporal variations from multiple masked series.
+Recently, several studies have focused on the use of the
+frequency domain of time series data. CoST [9] proposed
+a disentangled seasonal-trend representation learning framework, incorporating contrastive loss in both the time and
+frequency domains. TF-C [26] proposed a novel contrastive
+loss to maintain consistency between frequency- and timedomain representations.
+Gorade et al. [27] captured both low- and high-frequency
+features from the input signal and learns complementary features between them to learn robust representations. TimesURL
+[8] proposed a novel frequency-temporal-based augmentation method to maintain temporal dependencies of time
+series. However, it still remains unclear whether the proposed
+methodologies effectively mitigate the inevitable information
+loss resulting from data augmentation. To address this issue,
+we propose using persistent homology to capture the essential
+structural properties of time-series data, thereby mitigating
+such information loss.
+III. P RELIMINARY
+In this section, we give the formal definitions of the major
+terminologies of TDA used in this study.
+A. Delay Embedding
+Takens’s delay embedding [28] is a commonly used
+technique for converting time-series data into point cloud representations. Given an ith time series xi = {xi,1 , xi,2 , . . ., xi,T },
+one can extract a sequence of vectors of the form
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+KIM et al.: TopoCL: TOPOLOGICAL CONTRASTIVE LEARNING FOR TIME SERIES
+
+[xi,t , xi,t+γ , . . ., xi,t+(m−1)γ ] ∈ Rm , where m is the embedding
+size and γ is the time delay.
+B. Simplicial Complex
+In the algebraic topology, a simplex is a geometric object
+that generalizes the notion of a triangle or a tetrahedron to
+higher dimensions. Specifically, a k−simplex is defined as
+a convex hull spanned by k + 1 points v ∈ Rm that are
+affinely independent. Then, a simplicial complex K is a finite
+collection of simplices such that following hold.
+1) If σ ∈ K, every subset of σ (i.e., every face of σ) is an
+also element of K.
+2) If two simplices σ1 , σ2 ∈ K intersects, their intersection
+is a face of both σ1 and σ2 .
+C. Vietoris–Rips Complex
+To construct a simplicial complex, we used the
+Vietoris–Rips complex [29]. Let (X, d) be a finite metric
+space equipped with a distance function d. The Vietoris–Rips
+complex VR(X, r) is the abstract simplicial complex whose
+simplices are subsets of X with diameter (i.e., the maximum
+pairwise distance between points) at most r ≥ 0. That is,
+a subset S of X is a simplex in VR(X, r) if and only if
+the distance d(x, y) ≤ r for any two points x, y ∈ S . The
+0-simplices of VR(X, r) are the points of X, and the
+k-simplices are the subsets of X of cardinality k + 1 that can
+be realized as the union of k + 1 closed balls of radius r
+with nonempty pairwise intersections.
+
+3
+
+2) Persistent Homology: Persistent homology is a valuable
+technique in TDA for understanding the shape of complex
+datasets. For a given simplicial complex K, let (K)m
+i=0 be a
+nested subcomplexes of K such that ∅ = K0 ⊆ K1 ⊆ . . . ⊆
+Km = K, called a filtration. The inclusion maps Ki ,→ K j
+defined by f (x) = x induce fi, j : H p (Ki ) → H p (K j ) for all i, j
+with 1 ≤ i ≤ j ≤ m, for all p. Then, the sequence of homology
+groups is represented as follows:
+0 = H p (K0 ) → H p (K1 ) → . . . → H p (Km ) = H p (K) .
+
+(3)
+
+For given i ≤ j and p, we can consider the pth boundary
+maps ∂ip : C p (Ki ) → C p−1 (Ki ) and ∂ pj : C p (K j ) → C p−1 (K j ).
+Since Ki ⊂ K j , one can see C p (Ki ) and C p−1 (Ki ) as subspaces
+j
+)⊂
+of C p (K j ) and C p−1 (K j ), respectively. Then, both im(∂ p+1
+i
+C p (K j ) and ker(∂ p ) ⊂ C p (Ki ) can be considered as subspaces
+of C p (K j ). Then, pth persistent homology group is defined as
+follows:
+
+ı  j 
+(4)
+H i,p j = ker ∂ip
+im ∂ p+1 ∩ ker ∂ip .
+Note that an element of ker(∂ip ) represents both an element
+of H p (Ki ) and an element of H p (K j ). If it vanishes in H i,p j ,
+j
+then it must be in im(∂ p+1
+), hence it vanishes in H p (K j ) as
+well. In summary, the homology group H i,p j consists of the pth
+homology classes of Ki that are still present at K j , i.e., those
+not in the kernel of the map fi, j .
+The pth Betti number, which refers to the rank of the
+homology group, is defined as: βi,p j := rankH i,p j . By analyzing
+the sequence of Betti numbers, persistent homology enables
+the systematic measurement of topological features (e.g., holes
+and voids) in a dataset across multiple scales. Such topological
+information can be summarized as PD.
+
+D. Homology
+1) Simplicial Homology: Given a simplicial complex K,
+a weighted sum of n-simplices with coefficients from Z/Z2 defines an n-chain on K. Then, the space of n-chains on K,
+represented as Cn (K), is defined as the vector space spanned
+by n-simplicies of K over Z/Z2 . The modules C0 , C1 , . . ., are
+connected by boundary operators ∂n : Cn (K) → Cn−1 (K). The
+boundary operator for a simplex σ = [v0 , . . . , vn ] is defined as
+follows:
+n
+X
+[v0 , . . . , v̂i , . . . , vn ]
+∂n (σ) =
+(1)
+i=0
+
+where [v0 , . . . , v̂i , . . . , vn ] denotes the (n − 1) simplex spanned
+by all the vertices except vi . It is easy to see that im(∂n+1 ) is
+contained in ker(∂n ) for each n. The nth homology group of
+K is defined as follows:
+
+Hn (K) = ker (∂n ) /im ∂n+1 .
+(2)
+The nth Betti number of K, denoted by βn (K), is the dimension
+of the nth homology group of K, which can be computed as the
+difference between the kernel dimension of ∂n and the image
+dimension of ∂n+1 . In simpler terms, the nth Betti number
+indicates the number of n-dimensional voids that exist in the
+simplicial complex. For example, β0 indicates the number of
+connected components, while β1 represents the number of
+loops.
+
+E. Persistence Diagram
+In TDA, PD is a useful tool for summarizing topological
+information from data across different scales. A PD captures
+topological features such as connected components and loops,
+showing when these features appear and disappear as the scale
+parameter changes. The pth PD Dgm p is defined as a multiset
+collection of points (i, j) with µi,p j = 1, where µi,p j is calculated
+as follows:
+
+
+j−1
+j
+µi,p j = βi,p j−1 − βi,p j − βi−1,
+− βi−1,
+.
+(5)
+p
+p
+Each point (a, b) ∈ Dgm p corresponds to a homological
+feature that was born at scale a and dies at scale b. This
+homological feature has the persistence value of b − a. Fig. 1
+illustrates an example of PD based on the Vietoris–Rips
+filtration. The diagram effectively summarizes evolving homological information with respect to . For instance, as 
+increases from 0 to 1, the number of connected components
+decreases from 4 to 2, which is reflected as a point (0, 1) on
+the PD.
+IV. S TABILITY OF P ERSISTENT H OMOLOGY U NDER
+VARIOUS DATA AUGMENTATIONS
+In Section III, we claim that the use of topological features
+as a robust auxiliary view in CL is stable under common data
+augmentations such as jittering, scaling, and shifting.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+4
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+2) Scaling: Rescaling of the entire sequence
+x̃t = (1 + ) xt ,
+
+
+ ∼ N 0, σ2 .
+
+3) Shifting: Additive offset
+x̃t = xt + ,
+
+
+ ∼ N 0, σ2 .
+
+4) Rotation: Sign inversion of the signal
+x̃t = −xt .
+In Sections IV-A–IV-D, we provide theoretical analyses
+showing that the PDs remain stable under each type of
+augmentation.
+A. Stability Under Jittering
+Let x = {xt }Tt=1 be a real-valued time series and x̃ = { x̃t }Tt=1 its
+jittered version with x̃t = xt + t . Fix an embedding dimension
+m and delay τ, and form the delay-embedded point clouds
+˚
+
+
+N
+X = x (i) = xi , xi+τ , . . ., xi+(m−1)τ ∈ Rm i=1
+˚
+
+ N
+X̃ = x̃ (i) = x̃i , x̃i+τ , . . ., x̃i+(m−1)τ i=1
+(6)
+where N := T − (m − 1)τ. For each i,
+kx (i) − x̃ (i)k22 =
+
+m−1
+X
+
+2
+i+kτ
+.
+
+(7)
+
+k=0
+
+By the Laurent–Massart inequality [31], for any s > 0
+
+√
+P kx (i) − x̃ (i)k22 ≤ σ2 m + 2 m s + 2s ≥ 1 − e−s . (8)
+Fig. 1. Illustration of PD. (a) Vietoris–Rips filtration. (b) Corresponding PD.
+
+We begin with the following well-established theory from
+persistent homology.
+Theorem 1 (Rips Stability via Gromov–Hausdorff Distance
+[30]): Let (X, dX ) and (Y, dY ) be compact metric spaces, and
+let F be a field. For every k ≥ 0, the kth persistent homology
+modules of the Vietoris–Rips filtrations
+Hk (X; F) = {Hk (VR (X, r) ; F)}r≥0
+Hk (Y; F) = {Hk (VR (Y, r) ; F)}r≥0
+are 2 dGH (X, Y) interleaved
+dI (Hk (X; F) , Hk (Y; F)) ≤ 2 dGH (X, Y) .
+In particular, for the associated PDs
+
+dB Dgmk (X) , Dgmk (Y) ≤ 2 dGH (X, Y) .
+This theorem implies that if two point clouds X, X̃ ⊂ Rd are
+close in Gromov–Hausdorff distance, then their Vietoris–Rips
+PDs are close in bottleneck distance. Therefore, when data
+augmentations cause only small geometric perturbations (i.e.,
+when dGH (X, X̃) is small), the corresponding Vietoris–Rips
+PDs remain stable.
+To further demonstrate the robustness of persistent homology to practical data augmentations, we analyze four representative types of augmentations commonly applied to time
+series.
+1) Jittering: Additive Gaussian noise applied to each time
+step
+
+i.i.d.
+x̃t = xt + t , t ∼ N 0, σ2 .
+
+Since dH (X, X̃) ≤ max1≤i≤N kxi − x̃i k2 , we obtain
+q
+
+√
+dH X, X̃ ≤ σ m + 2 m s + 2s
+
+(9)
+
+−s
+
+with probability at least 1 − N e .
+Because dGH (X, X̃) ≤ dH (X, X̃) for subsets of the same
+metric space, the Vietoris–Rips stability theorem yields, for
+every k ≥ 0
+
+
+dB Dgmk (X) , Dgmk X̃ ≤ 2 dGH X, X̃
+q
+√
+≤ 2 σ m + 2 m s + 2s (10)
+with probability at least 1 − Ne−s .
+B. Stability Under Scaling
+For each i, we have x̃(i) = (1 + )x(i), hence
+kx (i) − x̃ (i)k2 = || kx (i) k2 ≤ || M
+M := max kx (i)k2 .
+1≤i≤N
+
+Taking the canonical pairing i 7→ x̃i yields
+
+dH X, X̃ ≤ max kx (i) − x̃ (i) k2 ≤ || M.
+1≤i≤N
+
+(11)
+
+(12)
+
+Since  ∼ N (0, σ2 ), for any s > 0, Gaussian tail bounds
+yields
+
+√ 
+P || ≤ σ 2s ≥ 1 − 2e−s .
+(13)
+Consequently,
+
+√ 
+
+P dH X, X̃ ≤ M σ 2s ≥ 1 − 2e−s
+
+
+dB Dgmk (X) , Dgmk X̃ ≤ 2 dGH X, X̃
+√
+≤ 2 M σ 2s
+−s
+
+with probability at least 1 − 2e .
+
+(14)
+
+(15)
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+KIM et al.: TopoCL: TOPOLOGICAL CONTRASTIVE LEARNING FOR TIME SERIES
+
+5
+
+C. Stability Under Rotation
+
+C. PD Construction
+
+For the sign-inverted time series x̃, the delay-embedded
+point clouds X and X̃ are related by the reflection map R(v) =
+−v for v ∈ X. Since R is an isometry, the metric spaces (X, d)
+and (X̃, d) are distance-preserving isomorphic, and hence
+their Gromov–Hausdorff distance satisfies dGH (X, X̃) = 0.
+Moreover, because the Vietoris–Rips complex depends
+only on pairwise distances, the filtrations {VR(X, r)}r≥0 and
+{VR(X̃, r)}r≥0 are isomorphic under S . Consequently, for every
+k ≥ 0, the PDs coincide, i.e.,
+
+(16)
+Dgmk (X) = Dgmk X̃
+
+To extract topological features from a time series, we
+first convert x ∈ Xtime into a point cloud format, enabling
+the construction of the Vietoris–Rips filtration. This involves
+applying delay embedding to the input sample x. Next, we
+compute PDs for H0 and H1 homology groups, summarizing
+the topological features of the data. For each channel c in
+time-series data, we obtain channel-specific 0-D and 1-D PDs
+Dgmc (x). A composite diagram Dgm(x) is then created as
+Dgm(x) = ∪c Dgmc (x). Next, points in Dgm(x) are mapped
+using δ : (a, b) → (a, b, b − a), resulting in point cloud
+data x p ∈ R M×3 , where M is the maximum number of
+topological features. The set of topological feature is denoted
+by Xtopo = {x1p , x2p , . . . , xNp }. Further details of topological
+feature construction are provided in the Appendix.
+
+and their bottleneck distance is 0. Therefore, Vietoris–Rips
+persistence is stable under sign inversion of the original time
+series.
+D. Stability Under Shifting
+For the shifted time series x̃ = {xt + ε}Tt=1 , the delayembedded point clouds X and X̃ are related by the translation
+map T : X → X̃, defined by T (u) = u + (ε, . . . , ε) for u ∈ X.
+Since translation is an isometry, the metric spaces (X, d) and
+(X̃, d) are isometric, and hence Vietoris–Rips persistence is
+also stable under shifting of the original time series.
+These results collectively establish that PDs are robust to
+a wide class of common time-series augmentations. The key
+implication is that the distance between PDs is always bounded
+above by the amount of perturbation applied to the input.
+V. P ROPOSED T OPO CL F RAMEWORK
+In this section, we present TopoCL framework.
+A. Problem Formulation
+Our goal is to train a neural network fθ to transform
+each time series instance xi ∈ RT ×C in the time series
+set Xtime = {x1 , x2 , . . . , xN } into its representation ri . Here,
+N denotes the number of samples, T denotes the number
+of timestamps, and C represents the number of variables.
+The representation ri is expressed as {ri,1 , ri,2 , . . . , ri,T }, where
+ri,t ∈ RF is the embedding vector at time t, with F being the
+dimension of embedding vector.
+B. Overview
+The overall framework of TopoCL is shown in Fig. 2.
+Given Xtime , we construct the topological modality Xtopo
+by computing its PD. Then, Xtime is fed into the temporal module to capture temporal dependencies. Concurrently,
+Xtopo is processed by the topological module to learn the
+underlying topology of the data. Temporal features are
+learned using a time modality contrastive loss Ltime . In addition, an auxiliary contrastive objective Lcross is applied to
+align temporal features and topological features. The output of the temporal encoder fθtime is used for downstream
+applications.
+
+D. Topological Feature Extraction
+We design a topological feature extractor fθtopo , which
+directly processes unordered point sets x p as inputs. Given
+that a point cloud is an unordered collection of points, a
+neural network capable of processing these M point sets
+needs to be invariant to M! possible permutations of the
+input set’s order during data feeding. Inspired by the works
+on PointNet [32] and Deep Sets [33], we apply a simple
+symmetric function to combine information from all the points
+in x p = {p1 , p2 , . . . , p M }. Then, the model is unaffected
+by the order of input points, preserving invariance to input
+permutations.
+Specifically, a series of shared multilayer perceptrons
+(MLPs) φ : R3 → RH is applied to each topological feature
+xip ∈ Xtopo to obtain a set of encoded persistence points. We
+then aggregate the resulting embeddings via a permutationinvariant function ζ. Formally, the topological encoder is
+defined as follows:
+˚
+
+ M 
+θ
+ftopo
+xip = ζ φ p j j=1 .
+(17)
+As illustrated in Fig. 2, we use a max-pooling layer as
+the permutation-invariant function ζ. Each point in xip passes
+through the series of shared MLP with ReLU activation
+and max pooling aggregates all outputs into a topological
+representation vector h ∈ RH , where H is the dimension of
+the embedding vector. Since both the shared MLP φ and the
+max-pooling operator ζ are invariant to the order of the inputs,
+θ
+the overall function ftopo
+is permutation invariant
+
+
+θ
+θ
+ftopo
+xip = ftopo
+π xip
+∀ permutations π.
+(18)
+E. Temporal Feature Extraction
+Capturing the temporal dependency is essential for time
+series representation learning. Given an input instance xi ,
+we construct augmented versions of it. Then, the time-series
+feature extractor fθtime maps them to a feature embedding
+space, resulting in embeddings ri and ri0 .
+To learn discriminative and robust temporal representations,
+(i,t)
+we use temporalwise and instancewise contrastive losses, `temp
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+6
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+Fig. 2. (a) Overall framework of TopoCL. TopoCL consists of two distinct modules: temporal module and topological module. The temporal module learns
+semantically meaningful temporal characteristics using a hierarchical contrastive loss, while the topological module facilitates time–topology correspondence
+through cross-modal contrastive loss. To achieve this, topological feature construction is performed in three steps: time delay embedding, PD calculation via
+Vietoris–Rips filtration, and point cloud transformation. Subsequently, a contrastive loss between the embeddings from the time and topology modalities is
+applied to ensure time–topology correspondence. TopoCL jointly optimizes the learning process through both intramodal and cross-modal correspondences.
+topo
+After pretraining, the embedding vectors obtained from fθtime are used for downstream applications. (b) Topological feature extractor fθ . The topological
+feature extractor comprises a series of MLPs with ReLU activations and a max-pooling layer.
+
+(i,t)
+and `inst
+[7]. For a given timestamp t, these two loss functions
+can be formulated as follows:
+
+0
+exp ri,t · ri,t
+(i,t)
+
+ (19)
+`temp = − log P
+0
+t0 exp ri,t · ri,t + 1[t,t0 ] exp ri,t · ri,t
+
+0
+exp ri,t · ri,t
+(i,t)
+
+
+`inst = − log P 
+ .
+0
+j exp ri,t · r j,t + 1[i, j] exp ri,t · r j,t
+(20)
+
+Time modality contrastive loss function Ltime for a mini-batch
+B is defined as follows:
+
+1 X X  (i,t)
+(i,t)
+Ltime =
+`temp + `inst
+.
+(21)
+BT i t
+Next, we apply the hierarchical contrasting method proposed
+by Yue et al. [7]. This involves performing max pooling
+0
+on ri,t and ri,t
+along the time axis and then recursively
+compute (21).
+F. Time–Topology Alignment
+In addition to Ltime , which learns instance-specific characteristics and temporal variation, we propose a contrastive
+objective for aligning time and topology modalities. Since the
+PD inherently captures topological features that are robust
+to perturbations, the proposed cross-modal alignment helps
+prevent potential information loss caused by augmentations. To
+0
+this end, we first map the embedding vectors ri,t , ri,t
+∈ RF from
+time
+temporal encoder fθ , and topological features hi ∈ RH to the
+multimodal latent space. Then, we apply projection headers
+pro jtime and pro jtopo as follows:
+yi = pro jtopo (hi )
+
+(22)
+
+zi = pro jtime ri∗
+
+
+
+(23)
+
+z0i = pro jtime
+
+ri∗0
+
+
+
+(24)
+
+where ri∗ is an instance level representation of ri,t which is
+obtained by applying max pooling across all timestamps. The
+average of zi and z0i is computed as follows:
+
+1
+zi + z0i .
+(25)
+2
+Next, we maximize the similarity between zai and yi , which
+are mapped into the multimodal latent space. The similarity
+between zai and yi is defined as s(zai , yi ) = (zai · yi )/(kzai kkyi k)/τ,
+where τ refers to the temperature parameter. For a mini-batch
+B, (zai , yi ) is regarded as a positive pair, whereas the remaining
+2B − 2 feature vectors constitute negative pairs. Our crossmodal contrastive loss between zai and yi can be formulated as
+follows:
+zai =
+
+(i;time,topo)
+
+`align
+
+= − log P
+
+
+j∈B
+
+
+exp s zai , yi
+ 
+ .
+
+exp s zai , y j + 1[ j,i] exp s zai , zaj
+(26)
+
+The final cross-modal contrastive loss is formulated as follows:
+
+1 X  (i;time,topo)
+(i;topo,time)
+`align
++ `align
+.
+(27)
+Lcross =
+2B i
+(i;time,topo)
+In the time-to-topology direction `align
+, the temporal
+a
+view zi acts as the query, and the model is trained to align
+it with the matching topological representation yi (target).
+(i;topo,time)
+Conversely, in the topology-to-time direction `align
+, the
+topological representation yi becomes the query, and the
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+KIM et al.: TopoCL: TOPOLOGICAL CONTRASTIVE LEARNING FOR TIME SERIES
+
+temporal representation zai is the target. This symmetric formulation enables the model to learn a mutual alignment between
+temporal and topological modalities. Leveraging the inherent robustness of PDs—which capture topological features
+resilient to perturbations—the proposed alignment further
+helps to prevent potential information loss introduced by data
+augmentations.
+
+7
+
+TABLE I
+A NOMALY D ETECTION R ESULTS OF THE P ROPOSED M ODEL
+AND BASELINES ON YAHOO AND KPI DATASETS
+
+G. Overall Objective
+The proposed model jointly optimizes CL in time modality
+and time–topology correspondence. The overall loss function
+can be formulated as follows:
+L = Ltime + αLcross
+
+(28)
+
+where α is a hyperparameter.
+Please note that instance discrimination using contrastive
+loss is not performed on the topology modality. Instead, we
+apply contrastive loss to the time modality and leverage topology modality to enhance time series representation learning.
+The assumption is that time–topology alignment allows learning comprehensive and complementary semantic information
+by incorporating temporal features and their corresponding
+topological features.
+VI. E XPERIMENTS
+In this section, we conduct experiments on anomaly detection, classification, forecasting, and transfer learning tasks by
+applying TopoCL to state-of-the-art methods. Implementation
+details are presented in the Appendix.
+A. Anomaly Detection
+The anomaly detection is used for identifying and addressing unusual patterns or behaviors across various domains. In
+this task, Yahoo [34] and KPI [35] datasets are used. We
+apply TopoCL to TS2Vec [7], and the evaluation is performed
+under normal and cold-start settings. For the normal setting,
+each sample is divided into two portions: one for training and
+the other for testing. For the cold-start setting, the model is
+pretrained on the FordA dataset from the UCR archive before
+evaluating on each target dataset. Following the evaluation
+protocol proposed by [34], we determine whether the last point
+is an anomaly.
+SPOT, DSPOT [36], DONUT [37], SR, and TS2vec methods are used as baselines for the normal setting, while FFT
+[38], Twitter-AD [39], and Luminol [40], SR, and TS2vec are
+used as baselines for the cold-start setting. As shown in Table I,
+in the normal setting, TopoCL improves the F1 score by 1.9%
+and 2.2% on the Yahoo and KPI dataset, respectively. In the
+cold-start setting, our model outperforms the best baseline,
+achieving a 1.8% higher F1 score on the Yahoo dataset and a
+0.5% improvement on the KPI dataset.
+B. Classification
+In this section, we conduct a classification task to evaluate
+the performance of the proposed model using the UCR [41]
+and UEA [42] archives, selecting 125 univariate and 29
+
+Fig. 3. CD diagram of representation learning methods on time-series
+classification tasks, using 125 UCR datasets and 29 UEA datasets.
+
+multivariate time-series datasets from each archive. We train
+an RBF kernel-based SVM classifier on top of the learned
+representation, following the evaluation protocol used in
+T-Loss [43]. The penalty factor for the RBF kernel is selected
+by performing a grid search on the validation set, exploring
+the range {10i | i ∈ [−4, 4]}
+We apply TopoCL to TS2vec and compare its peformance with baselines including DTW, TST [44], TS-TCC
+[10], T-Loss [43], TNC [45], TS2vec, and InfoTS [24]. The
+classification results for these datasets are summarized in
+Table II. The classification accuracy of the proposed model
+outperforms the best baseline by 3.8% on the UCR datasets
+and by 1.4% on the UEA datasets. Detailed classification
+results are provided in the Appendix.
+To further evaluate the effectiveness of TopoCL, we perform
+a significance test on the classification results. In Fig. 3,
+critical difference (CD) diagram [46] for Nemenyi tests on all
+datasets is presented. The CD diagram indicates that methods
+connected by a bold line do not have significantly different
+average ranks. From the results, we can conclude that the
+proposed model significantly outperforms other methods in
+average ranks.
+C. Forecasting
+In this section, we conduct two types of forecasting experiments to examine the plug-and-play capability of TopoCL
+across different self-supervised learning paradigms. Specifically, we apply TopoCL to: 1) the masked-modeling-based
+pretraining framework of PatchTST [47] and 2) contrastivelearning-based frameworks such as TS2Vec and CoST [9]. All
+models are evaluated using mean absolute error (MAE) and
+mean squared error (mse) as performance metrics.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+8
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+TABLE II
+C LASSIFICATION R ESULTS OF THE P ROPOSED M ODEL AND BASELINES ON UCR AND UEA DATASETS
+
+TABLE III
+M ULTIVARIATE F ORECASTING R ESULTS W HEN T OPO CL I NTEGRATED W ITH PATCH TST
+
+1) TopoCL With PatchTST: In this task, the PatchTST
+architecture is employed as the encoder and trained in a selfsupervised manner using a masked-modeling objective. The
+model is first pretrained on the ETT [48] dataset and subsequently finetuned on the same data for task-specific long-term
+forecasting. TopoCL is integrated into this training pipeline to
+enhance representation learning during the pretraining stage.
+The experiments focus on long-term time-series forecasting
+with prediction horizons of 96, 192, 336, and 720 time steps.
+We compare our method against ten state-of-the-art timeseries forecasting baselines including ASAP [49], iTransformer [50], PatchTST, Crossformer [51], MRformer [52],
+NonStat [53], SCINet [54], TimesNet [55], and DLinear
+[56]. To ensure a fair comparison, the input sequence length
+for all models is fixed at 96. As summarized in Table III,
+TopoCL consistently outperforms end-to-end forecasting baselines that directly optimize the prediction loss. It achieves
+improvements across most prediction horizons on multivariate
+long-term forecasting benchmarks, with an average reduction
+of 2.0% in mse and 0.7% in MAE over the best-performing
+baseline.
+2) TopoCL With TS2Vec and CoST: To further assess the
+plug-and-play capability of TopoCL under CL paradigms, we
+integrate it into two representative self-supervised frameworks:
+TS2Vec and CoST [9]. Following [7] and [9], a ridge regressor
+with L2 regularization is trained on top of the final timestep representation rt to forecast future values. Specifically,
+the model predicts the next 24, 48, 168, and 720 time
+steps based on the preceding observations. The regularization
+
+coefficient is selected using the validation set, searching over
+{0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000}.
+We use Informer [48], LogTrans [57], TCN [58], LSTnet
+[59], TS2Vec, and CoST as baselines. The evaluation results
+for multivariate forecasting are shown in Table IV. In general,
+CoST + TopoCL outperforms the baselines in most cases,
+achieving reductions of 1.76% in multivariate forecasting, in
+terms of mse. Furthermore, TS2Vec + TopoCL demonstrates a
+3.33% decrease in average mse compared with TS2Vec alone
+for multivariate forecasting.
+D. Transfer Learning
+Transfer learning on time-series data brings a unique challenge, stemming from the complex nature of the data, such
+as rapidly changing trends and shifts in temporal dynamics.
+In this section, we conduct transfer learning, following the
+experimental settings proposed by TF-C [26]. Specifically, the
+model is pretrained on the SleepEEG dataset and subsequently
+finetuned on the Epilepsy [60], Gesture [61], FD-B [62], and
+EMG [63] datasets.
+To assess the generality of the proposed approach, TopoCL
+is applied to two distinct self-supervised learning paradigms:
+CL (TS-TCC [10]) and masked modeling (SimMTM [25]).
+The method is compared with several state-of-the-art baselines, including TS-TCC, SimMTM, TS2Vec, CoST, Ti-MAE
+[64], TF-C, and TST. Performance is evaluated using accuracy
+and F1 score. As shown in Table V, both SimMTM and TSTCC exhibit performance improvements when combined with
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+KIM et al.: TopoCL: TOPOLOGICAL CONTRASTIVE LEARNING FOR TIME SERIES
+
+9
+
+TABLE IV
+M ULTIVARIATE F ORECASTING R ESULTS W HEN T OPOCL I NTEGRATED W ITH C O ST AND TS2 VEC
+
+TABLE V
+
+TABLE VI
+
+T RANSFER L EARNING R ESULTS
+
+A BLATION R ESULTS
+
+TABLE VII
+
+TopoCL. In particular, integrating TopoCL with TS-TCC leads
+to a notable performance gain.
+
+E FFECT OF FPS D OWNSAMPLING ON RUNTIME ,
+M EMORY U SAGE , AND ACCURACY
+
+VII. A NALYSIS
+A. Ablation Study
+In this section, we compared TopoCL to its five variants on 128 UCR datasets to study the effectiveness of
+the proposed components. The five variants are as follows:
+1) w/o time–topology alignment: removes the time–topology
+cross-modal alignment from TopoCL; 2) w/o time domain
+contrastive loss removes the instance and temporal contrast
+from fθtopo ; 3) w/o H0 excludes the 0-D persistent homology
+when computing the PD, 4) w/o H1 excludes the 1-D persistent
+homology; and 5) avg-pool replaces the symmetric aggregate
+function (max-pool) in fθtopo with avg-pool. As shown in
+Table VI, any absence of the components leads to a decrease
+in performance, showing that all components are imperative.
+B. Runtime and Memory Analysis
+In this section, the runtime and memory consumption of
+the proposed framework are evaluated using two representative datasets: the EigenWorms dataset, which contains the
+longest multivariate time series (six channels and 17 984 time
+
+steps), and the DuckDuckGeese dataset, which has the highest
+dimensionality (1345 channels and 60 time steps).
+Because computational and memory costs increase with the
+number of persistence points generated during PD computation, this quantity is reported for both datasets. The maximal
+number of persistence points reached 520 910 for DuckDuckGeese and 33 021 for EigenWorms. Although persistent
+homology computations are performed entirely as an offline
+preprocessing step, the large volume of topological features
+caused DuckDuckGeese to exceed the memory capacity of
+an NVIDIA RTX 3090 GPU (24-GB VRAM). To mitigate
+this issue, farthest point sampling (FPS) was applied to the
+point cloud xip ∈ Xtopo , reducing redundancy while preserving
+the underlying geometric structure. The impact of FPS was
+examined by retaining 10k and 1k points, respectively, and the
+corresponding runtime, GPU memory usage, and classification
+accuracy are summarized in Table VII.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+10
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+Fig. 4. Comparison of classification accuracy under different augmentation
+techniques with and without Lcross ) on (a) crop and (b) RefrigerationDevices
+datasets.
+
+As shown in the results, applying FPS to our framework
+reduces memory consumption, while causing only a marginal
+drop in accuracy. These results demonstrate that although the
+large volume of topological features can lead to computational
+overhead, such challenges can be effectively mitigated through
+sampling strategies.
+
+Fig. 5. Visualized explannations. (a) Raw time series. (b) Learned embeddings
+of TopoCL w/o Lcross . (c) Learned embedding of TopoCL.
+
+C. Robustness Under Data Augmentation
+The robustness of TopoCL was evaluated against different
+data augmentation techniques using the Crop and RefrigerationDevices datasets from the UCR archive. Specifically,
+common augmentation methods, including jittering, scaling,
+shifting, and rotation, were applied individually.
+The classification accuracy was measured for both
+configurations—with and without the proposed topological
+regularization—and the results are summarized in Fig. 4.
+While the performance gain from each augmentation varies
+across datasets, incorporating Lcross generally led to improved
+accuracy under different augmentation settings. These results
+empirically demonstrate that time–topology alignment can
+help compensate for the information loss introduced during
+data augmentation.
+D. Visualized Explanation
+In this section, we visualize the learned embeddings
+obtained from the time–topology alignment. The analysis is
+conducted on the RefrigerationDevices dataset, which primarily exhibits periodic behavior with occasional sharp transient
+peaks. The first test sample is selected as a representative case
+for evaluation.
+
+Fig. 6. Classification results in a limited data sample scenario.
+
+To illustrate the representative structure of the learned
+embeddings (see Fig. 5), we focus on the 16 latent dimensions with the highest variance. Without the time–topology
+correspondence term Lcross, the representation shows irregular fluctuations and diffuse responses around the transient
+anomaly (t ≈ 480), suggesting that the model mainly captures
+local amplitude variations. In contrast, incorporating Lcross
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+KIM et al.: TopoCL: TOPOLOGICAL CONTRASTIVE LEARNING FOR TIME SERIES
+
+produces more periodic and structured embeddings, with the
+transient anomaly localized to only a few dimensions.
+E. Limited Data Scenario
+Due to sensor malfunctions, data transmission errors, or
+manual data entry issues, a sufficient amount of data is not
+always guaranteed. To verify the effectiveness of the proposed
+method in scenarios with limited data, we adjusted the proportion of training samples. FordB dataset from the UCR
+archive is chosen for this analysis. The classification results
+using only 1%–9% of the original training dataset are shown
+in Fig. 6. The proposed method consistently outperforms w/o
+time–topology alignment. This result suggests that leveraging
+topological properties can capture the intrinsic characteristics
+of the data, even with a small amount of data.
+VIII. C ONCLUSION
+This article presents TopoCL, a topological CL for time
+series. We treat temporal and topological properties of time
+series as distinct modalities and propose a joint learning
+objective to enhance understanding of both, while also improving robustness to data augmentations. TopoCL is evaluated
+across multiple tasks: time-series classification, forecasting,
+anomaly detection, and transfer learning. The experimental
+results demonstrate the universality, generalization capability,
+and effectiveness of the proposed model. Our ablations show
+that the joint learning of time modality contrastive loss and
+time–topology correspondences enhances these capabilities.
+Moreover, TopoCL shows consistent performance across various data augmentation techniques, suggesting its effectiveness
+in mitigating information loss resulting from these augmentations. In the future, we aim to extend TopoCL to accommodate
+large scale and diverse pretraining datasets, thereby advancing
+toward a foundation model for time-series analysis.
+ACKNOWLEDGMENT
+The authors gratefully acknowledge the data donors whose
+contributions made this article possible.
+During the preparation of this work they used ChatGPT
+and Grammarly in order to refine the writing and check the
+grammar.
+R EFERENCES
+[1]
+[2]
+[3]
+[4]
+[5]
+[6]
+[7]
+
+Y. You, T. Chen, Y. Sui, T. Chen, Z. Wang, and Y. Shen, “Graph
+contrastive learning with augmentations,” in Proc. NeurIPS, 2020,
+pp. 5812–5823.
+T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc. ICML, 2020,
+pp. 1597–1607.
+K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for
+unsupervised visual representation learning,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020, pp. 9726–9735.
+T. Gao, X. Yao, and D. Chen, “SimCSE: Simple contrastive learning of
+sentence embeddings,” in Proc. Conf. Empirical Methods Natural Lang.
+Process., Nov. 2021, pp. 6894–6910.
+Y. Zhang et al., “Enhancing sequential recommendation with graph
+contrastive learning,” in Proc. 31st Int. Joint Conf. Artif. Intell., Jul.
+2022, pp. 2398–2405.
+Y. Yang, C. Huang, L. Xia, C. Huang, D. Luo, and K. Lin, “Debiased
+contrastive learning for sequential recommendation,” in Proc. ACM Web
+Conf., Apr. 2023, pp. 1063–1073.
+Z. Yue et al., “TS2Vec: Towards universal representation of time series,”
+in Proc. AAAI, 2022, pp. 8980–8987.
+
+11
+
+[8]
+
+J. Liu and S. Chen, “TimesURL: Self-supervised contrastive learning
+for universal time series representation learning,” in Proc. AAAI, 2024,
+pp. 13918–13926.
+[9] G. Trajcevski, Z. Wang, X. Xu, W. Zhang, T. Zhong, and
+F. Zhou, “Learning latent seasonal-trend representations for time
+series forecasting,” in Proc. Adv. Neural Inf. Process. Syst.,
+2022, pp. 38775–38787. [Online]. Available: https://openreview.net/
+forum?id=PilZY3omXV2
+[10] E. Eldele et al., “Time-series representation learning via temporal and
+contextual contrasting,” in Proc. 13th Int. Joint Conf. Artif. Intell., Aug.
+2021, pp. 2352–2359.
+[11] Q. Meng, H. Qian, Y. Liu, L. Cui, Y. Xu, and Z. Shen, “MHCCL:
+Masked hierarchical cluster-wise contrastive learning for multivariate
+time series,” in Proc. AAAI, 2023, pp. 9153–9161.
+[12] G. Carlsson, “Topology and data,” Bull. Amer. Math. Soc., vol. 46, no. 2,
+pp. 255–308, 2009.
+[13] D. Cohen-Steiner, H. Edelsbrunner, and J. Harer, “Stability of persistence diagrams,” in Proc. 21st Annu. Symp. Comput. Geometry, Jun.
+2005, pp. 263–271.
+[14] P. Bubenik et al., “Statistical topological data analysis using persistence
+landscapes,” J. Mach. Learn. Res., vol. 16, no. 1, pp. 77–102, 2015.
+[15] H. Adams et al., “Persistence images: A stable vector representation of
+persistent homology,” J. Mach. Learn. Res., vol. 18, no. 8, pp. 1–35,
+2017.
+[16] T. Padellini and P. Brutti, “Supervised learning with indefinite topological kernels,” Statistics, vol. 55, no. 4, pp. 765–786, Jul. 2021.
+[17] X. Zhu, A. Vartanian, M. Bansal, D. Nguyen, and L. Brandl, “Stochastic
+multiresolution persistent homology kernel,” in Proc. IJCAI, 2016,
+pp. 2449–2457.
+[18] P. Bubenik, “The persistence landscape and some of its properties,” in
+Proc. Topological Data Anal. Abel Symp. Cham, Switzerland: Springer,
+2020, pp. 97–117.
+[19] C. Hofer, R. Kwitt, M. Niethammer, and A. Uhl, “Deep learning with
+topological signatures,” in Proc. NeurIPS, 2017, pp. 1634–1644.
+[20] M. Carrière, F. Chazal, Y. Ike, T. Lacombe, M. Royer, and Y. Umeda,
+“PersLay: A neural network layer for persistence diagrams and new
+graph topological signatures,” in Proc. AISTATS, 2020, pp. 2786–2796.
+[21] M. Moor, M. Horn, B. Rieck, and K. Borgwardt, “Topological
+autoencoders,” in Proc. ICML, 2020, pp. 7045–7054.
+[22] K. Kim, J. Kim, M. Zaheer, J. Kim, F. Chazal, and L. Wasserman,
+“PLLay: Efficient topological layer based on persistent landscapes,” in
+Proc. NerIPS, 2020, pp. 15965–15977.
+[23] K. Wickstrøm, M. Kampffmeyer, K. Ø. Mikalsen, and R. Jenssen,
+“Mixing up contrastive learning: Self-supervised representation learning for time series,” Pattern Recognit. Lett., vol. 155, pp. 54–61,
+Mar. 2022.
+[24] D. Luo et al., “Time series contrastive learning with information-aware
+augmentations,” in Proc. AAAI, 2023, pp. 4534–4542.
+[25] J. Dong, M. Long, J. Wang, H. Wu, H. Zhang, and L. Zhang, “SimMTM:
+A simple pre-training framework for masked time-series modeling,” in
+Proc. Adv. Neural Inf. Process. Syst., 2023, pp. 29996–30025.
+[26] T. Tsiligkaridis, X. Zhang, Z. Zhao, and M. Zitnik, “Self-supervised
+contrastive pre-training for time series via time-frequency consistency,”
+in Proc. Adv. Neural Inf. Process. Syst., 2022, pp. 3988–4003.
+[27] V. Gorade, A. Singh, and D. Mishra, “Large scale time-series representation learning via simultaneous low- and high-frequency feature
+bootstrapping,” IEEE Trans. Neural Netw. Learn. Syst., vol. 36, no. 1,
+pp. 991–1002, Jan. 2025.
+[28] F. Takens, “Detecting strange attractors in turbulence,” in Proc. Dyn.
+Syst. Turbulence, Warwick Symp. Held Univ. Warwick. Cham, Switzerland: Springer, 2006, pp. 366–381.
+[29] L. Vietoris, “Über den höheren Zusammenhang kompakter räume und
+eine klasse von Zusammenhangstreuen abbildungen,” Mathematische
+Annalen, vol. 97, no. 1, pp. 454–472, Dec. 1927.
+[30] S. Lim, F. Mémoli, and O. B. Okutan, “Vietoris–rips persistent homology, injective metric spaces, and the filling radius,” Algebr. Geometric
+Topol., vol. 24, no. 2, pp. 1019–1100, Apr. 2024.
+[31] B. Laurent and P. Massart, “Adaptive estimation of a quadratic functional
+by model selection,” Ann. Statist., vol. 28, pp. 1302–1338, Oct. 2000.
+[32] R. Q. Charles, H. Su, M. Kaichun, and L. J. Guibas, “PointNet:
+Deep learning on point sets for 3D classification and segmentation,”
+in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017,
+pp. 77–85.
+[33] M. Zaheer, S. Kottur, S. Ravanbakhsh, B. Poczos, R. R. Salakhutdinov,
+and A. J. Smola, “Deep sets,” in Proc. NeurIPS, 2017, pp. 3391–3401.
+[34] H. Ren et al., “Time-series anomaly detection service at Microsoft,” in
+Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+Jul. 2019, pp. 3009–3017.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+12
+
+[35] Y. B. Nikolay Laptev, Saeed Amizadeh. (2015). A Benchmark
+Dataset for Time Series Anomaly Detection. [Online]. Available:
+https://yahooresearch.tumblr.com/post/114590420346/a-benchmarkdataset-for-time-series-anomaly
+[36] A. Siffer, P.-A. Fouque, A. Termier, and C. Largouet, “Anomaly detection in streams with extreme value theory,” in Proc. 23rd ACM SIGKDD
+Int. Conf. Knowl. Discovery Data Mining, Aug. 2017, pp. 1067–1075.
+[37] H. Xu et al., “Unsupervised anomaly detection via variational autoencoder for seasonal KPIs in web applications,” in Proc. WWW, 2018,
+pp. 187–196.
+[38] F. Rasheed, P. Peng, R. Alhajj, and J. Rokne, “Fourier transform based
+spatial outlier mining,” in Proc. Int. Conf. Intell. Data Eng. Automated
+Learn. Cham, Switzerland: Springer, 2009, pp. 317–324.
+[39] O. Vallis, J. Hochenbaum, and A. Kejariwal, “A novel technique for
+long-term anomaly detection in the cloud,” in Proc. 6th USENIX
+Workshop Hot Topics Cloud Comput. (HotCloud), 2014, pp. 1–6.
+[40] V. Brennan and M. Ritesh. (2018). Luminol (Github Repository).
+[Online]. Available: https://github.com/linkedin/luminol
+[41] H. A. Dau et al., “The UCR time series archive,” IEEE/CAA J. Autom.
+Sinica, vol. 6, no. 6, pp. 1293–1305, Nov. 2019.
+[42] A. J. Bagnall et al., “The UEA multivariate time series classification
+archive,” 2018, arXiv:1811.00075.
+[43] J.-Y. Franceschi, A. Dieuleveut, and M. Jaggi, “Unsupervised scalable
+representation learning for multivariate time series,” in Proc. NeurIPS,
+2019, pp. 4652–4663.
+[44] G. Zerveas, S. Jayaraman, D. Patel, A. Bhamidipaty, and C. Eickhoff,
+“A transformer-based framework for multivariate time series representation learning,” in Proc. SIGKDD, New York, NY, USA, 2021,
+pp. 2114–2124.
+[45] S. Tonekaboni, D. Eytan, and A. Goldenberg, “Unsupervised representation learning for time series with temporal neighborhood coding,” in
+Proc. ICLR, 2021, pp. 1–6.
+[46] J. Demšar, “Statistical comparisons of classifiers over multiple data sets,”
+J. Mach. Learn. Res., vol. 7, pp. 1–30, Jan. 2006.
+[47] Y. Nie, N. H. Nguyen, P. Sinthong, and J. Kalagnanam, “A time series
+is worth 64 words: Long-term forecasting with transformers,” in Proc.
+ICLR, 2023, pp. 1–24.
+[48] H. Zhou et al., “Informer: Beyond efficient transformer for long sequence
+time-series forecasting,” in Proc. AAAI, 2021, pp. 11106–11115.
+[49] J. Chen, P. Li, J. Lv, H. Zha, K. Zhang, and J. Zhang, “Learning
+temporal features with alternated similarity and proximity attention for
+time-series prediction,” IEEE Trans. Neural Netw. Learn. Syst., vol. 36,
+no. 9, pp. 16339–16350, Sep. 2025.
+[50] Y. Liu et al., “iTransformer: Inverted transformers are effective for time
+series forecasting,” in Proc. ICLR, 2024, pp. 1–25.
+[51] Y. Zhang and J. Yan, “Crossformer: Transformer utilizing crossdimension dependency for multivariate time series forecasting,” in Proc.
+ICLR, 2023, pp. 1–21.
+[52] S. Zhu, J. Zheng, and Q. Ma, “MR-transformer: Multiresolution transformer for multivariate time series prediction,” IEEE Trans. Neural
+Netw. Learn. Syst., vol. 36, no. 1, pp. 1171–1183, Jan. 2025.
+[53] Y. Liu, M. Long, J. Wang, and H. Wu, “Non-stationary transformers:
+Exploring the stationarity in time series forecasting,” in Proc. Adv.
+Neural Inf. Process. Syst., 2022, pp. 9881–9893.
+[54] M. Chen et al., “SCINet: Time series modeling and forecasting with
+sample convolution and interaction,” in Proc. Adv. Neural Inf. Process.
+Syst., 2022, pp. 5816–5828.
+[55] H. Wu, T. Hu, Y. Liu, H. Zhou, J. Wang, and M. Long, “TimesNet:
+Temporal 2D-variation modeling for general time series analysis,” in
+Proc. ICLR, 2023, pp. 1–23.
+[56] A. Zeng, M. Chen, L. Zhang, and Q. Xu, “Are transformers effective
+for time series forecasting?,” in Proc. AAAI, 2023, pp. 11121–11128.
+[57] S. Li et al., “Enhancing the locality and breaking the memory bottleneck
+of transformer on time series forecasting,” in Proc. NeurIPS, 2019,
+pp. 5244–5254.
+[58] S. Bai, J. Z. Kolter, and V. Koltun, “An empirical evaluation of generic
+convolutional and recurrent networks for sequence modeling,” 2018,
+arXiv:1803.01271.
+[59] G. Lai, W.-C. Chang, Y. Yang, and H. Liu, “Modeling long- and shortterm temporal patterns with deep neural networks,” in Proc. 41st Int.
+ACM SIGIR Conf. Res. Develop. Inf. Retr., Jun. 2018, pp. 95–104.
+[60] R. G. Andrzejak, K. Lehnertz, F. Mormann, C. Rieke, P. David,
+and C. E. Elger, “Indications of nonlinear deterministic and finitedimensional structures in time series of brain electrical activity:
+Dependence on recording region and brain state,” Phys. Rev. E, Stat.
+Phys. Plasmas Fluids Relat. Interdiscip. Top., vol. 64, no. 6, Nov. 2001,
+Art. no. 061907.
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+[61] J. Liu, Z. Wang, L. Zhong, J. Wickramasuriya, and V. Vasudevan,
+“UWave: Accelerometer-based personalized gesture recognition and its
+applications,” in Proc. IEEE Int. Conf. Pervasive Comput. Commun.,
+Mar. 2009, pp. 1–9.
+[62] C. Lessmeier, J. K. Kimotho, D. Zimmer, and W. Sextro, “Condition
+monitoring of bearing damage in electromechanical drive systems by
+using motor current signals of electric motors: A benchmark data set
+for data-driven classification,” in Proc. PHM, 2016, pp. 1–17.
+[63] P. PhysioBank, “PhysioNet: Components of a new research resource for
+complex physiologic signals,” Circulation, vol. 101, pp. 215–220, Jun.
+2000.
+[64] Z. Li, Z. Rao, L. Pan, P. Wang, and Z. Xu, “Ti-MAE: Self-supervised
+masked time series autoencoders,” 2023, arXiv:2301.08871.
+
+Namwoo Kim received the B.S. degree in mathematical science and the M.S. and Ph.D. degrees
+in civil and environmental engineering from Korea
+Advanced Institute of Science and Technology
+(KAIST), Daejeon, South Korea, in 2015, 2017, and
+2023, respectively.
+From January to June 2023, he was a Visiting
+Student Researcher at the Department of Civil and
+Environmental Engineering, University of California, Berkeley, Berkeley, CA, USA. He is currently
+a Post-Doctoral Researcher with the Department of
+Civil and Environmental Engineering, KAIST. His research interests include
+spatiotemporal data mining, representation learning, topological data analysis
+(TDA), and urban informatics.
+
+Hyungryul Baik received the B.S. degree in mathematical sciences from KAIST, Daejeon, South
+Korea, in 2009, and the Ph.D. degree in mathematics
+from Cornell University, Ithaca, NY, USA, in 2014.
+He was a Post-Doctoral Researcher at the University of Bonn, Bonn, Germany, from 2014 to 2017,
+before joining the Faculty Member at KAIST, in
+2017. He is currently an Associate Professor with
+the Department of Mathematical Sciences and the
+Director of the Graduate School of AI for Mathematics, KAIST. His research interests primarily involve
+dynamical techniques at the geometric topology and geometric group theory,
+as well as the topological and geometric structures of low-dimensional spaces.
+More recently, he has expanded his research focus toward topological data
+analysis and mathematical formalization.
+
+Yoonjin Yoon received the B.S. degree in mathematics from Seoul National University, Seoul, South
+Korea, in 1996, the M.S. degree in computer science
+and the M.S. degree in management science and
+engineering from Stanford University, Stanford, CA,
+USA, in 2000 and 2002, respectively, and the Ph.D.
+degree in civil and environmental engineering from
+the University of California, Berkeley, Berkeley, CA,
+USA, in 2010.
+Since 2011, she has been an Assistant Professor
+with the Department of Civil and Environmental
+Engineering, Korea Advanced Institute of Science and Technology (KAIST),
+Daejeon, South Korea. Before arriving at KAIST, she was a Graduate Student
+Researcher with the National Center of Excellence in Air Transportation
+Operations Research (NeXTOR), University of California, Berkeley, from
+2005 to 2010. Previously, she was a Research Assistant with the Artificial
+Intelligence Center, SRI International, Menlo Park, CA, USA, in 1999, and
+the Center for Reliability Computing, Stanford University, from 2000 to 2002.
+Her research interests include the traffic management of both crewed and
+uncrewed vehicles using stochastic optimization, data-driven driving behavior
+analysis, and autonomous vehicle traffic flow management using large-scale
+driving data.
+PAPER_TEXT

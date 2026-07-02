@@ -1,0 +1,131 @@
+     774                                                      IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 2, MARCH/APRIL 2025
+
+
+
+
+                  SENTINEL: Insider Threat Detection Based
+                     on Multi-Timescale User Behavior
+                        Interaction Graph Learning
+      Fengrui Xiao , Student Member, IEEE, Shuangwu Chen , Member, IEEE, Siyang Chen, Student Member, IEEE,
+        Yuanyi Ma , Student Member, IEEE, Huasen He , Member, IEEE, and Jian Yang , Senior Member, IEEE
+
+
+        Abstract—Insider threats have become a prominent driver be-                    Ponemon’s 2022 Insider Threat Report [2], there has been a sig-
+     hind a myriad of cybersecurity incidents in recent years. Since                   nificant 44% increase in insider threat incidents over the past two
+     the threats take place within intranet, traditional security de-                  years and the financial impact of each incident has risen by more
+     vices located at the network perimeter can hardly detect them.
+     The trust management methods employed within the organiza-                        than a third, with the amount of money lost per incident reaching
+     tion are likewise incapable of intercepting access actions already                a staggering $15.38 million. In contrast to external attacks that
+     authenticated with valid credentials. In this paper, we propose a                 need to breach security perimeter, attacks from insiders are more
+     novel insider threat detection method named SENTINEL, which                       pernicious because the malicious insiders are well-acquainted
+     identifies abnormal behavior of insiders and provides fine-grained                with core secrets and may already have delegated authority to
+     threat intelligence. We devise a dynamic user behavior interaction
+     graph (BIG), which jointly considers the spatial distribution of                  access sensitive data. Hence, insider threat poses serious security
+     user behavioral trajectories among the network topology and the                   risks and potential harm to the organization’s network.
+     temporal variations of user behavioral profiles. By incorporating a                  Detecting insider threat still face many challenges for busi-
+     spatio-temporal graph neural network, SENTINEL is able to learn                   nesses and organizations of all sizes and across diverse indus-
+     the operation regularities of users at specific times and respective              tries. Firstly, due to their position within security perimeter,
+     positions in BIG. In order to perceive both the abrupt and persis-
+     tent threats simultaneously, we conceive a multi-timescale fusion                 internal employees can inadvertently launch attacks without
+     mechanism for detecting users’ activities at different timescales.                triggering alarms from security devices. Besides, these insiders
+     SENTINEL implements a log-entry-level detection without requir-                   with privileged access can leverage the credentials associated
+     ing any attack samples during model training. The experiments                     with their working accounts to circumvent the multi-layer trust
+     conducted on widely-used public datasets demonstrate that SEN-                    management mechanisms within the organization [3]. Secondly,
+     TINEL achieves superior performance while maintaining a rela-
+     tively low computational overhead compared to the state-of-the-art                malicious activity carried out by insiders is relatively uncom-
+     methods.                                                                          mon. As a result, there is often limited available data to describe
+                                                                                       and analyze such activities [4]. Thirdly, for the sake of exfil-
+       Index Terms—Insider threat detection, graph neural network,
+     anomaly detection, behavior interaction graph (BIG).
+                                                                                       trating confidential files, tampering with sensitive data, and sab-
+                                                                                       otaging system components, insider threats perpetrators would
+                                                                                       move laterally across multiple hosts in the target network using
+                                I. INTRODUCTION                                        stolen credentials and accounts [5]. The attacker’s footprints
+                                                                                       could be fragmented and scattered across various user and host
+            MIDST the rapidly evolving landscape of network secu-
+     A      rity, insider threats have become a prominent driver behind
+     a myriad of cybersecurity incidents in recent years, which have
+                                                                                       records, which makes it difficult to raise security personnel’s
+                                                                                       attention. Lastly, well-planned attackers usually employ sophis-
+                                                                                       ticated strategies, like multistage persistent threats and mimicry
+     inflicted substantial detriment upon government, enterprises and                  attacks, to circumvent detection [6].
+     education networks. Insider threats commonly emerges from                            Massive efforts have been made to promptly detect insider
+     the actions of either malicious or unintentional insiders, who                    threats. Existing insider threat detection methods can be roughly
+     exploit their authorized access to negatively affect the reliability              divided into three categories: rule-based methods, machine
+     of the organization’s information systems [1]. According to                       learning based methods, and graph-based methods [7]. Rule-
+                                                                                       based methods [8], [9], [10] employ manually defined rules
+       Received 5 November 2023; revised 24 October 2024; accepted 12 December         to detect data leakage, which however heavily rely on expert
+     2024. Date of publication 17 December 2024; date of current version 24            knowledge, and thus can hardly handle attacks beyond prede-
+     February 2025. This work was supported in part by the National Natural Science    fined rules and prior experiences. Machine learning based [1],
+     Foundation of China under Grant U23A20275 and Grant 62101525 and in
+     part by the China Environment for Network Innovations (CENI) under Grant          [4], [11], [12] approaches necessitate manual design of feature
+     2016-000052-73-01-000515. Recommended for acceptance by Dr. Baochun Li.           engineering and employ techniques such as Markov models or
+     (Corresponding author: Shuangwu Chen.)                                            deep learning models to accomplish the detection task. More-
+       The authors are with the Department of Automation, University of Science
+     and Technology of China, Hefei 230026, China (e-mail: chensw@ustc.edu.cn).        over, machine learning algorithms face the challenges of feature
+       Digital Object Identifier 10.1109/TNSE.2024.3519155                             redundancy, feature correlation, and temporal-spatial feature
+          2327-4697 © 2024 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+    Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+
+Authorized licensed use limited to: NATIONAL INSTITUTE OF TECHNOLOGY CALICUT. Downloaded on April 01,2026 at 02:00:48 UTC from IEEE Xplore. Restrictions apply.
+    XIAO et al.: SENTINEL: INSIDER THREAT DETECTION BASED ON MULTI-TIMESCALE USER BEHAVIOR INTERACTION GRAPH LEARNING                                  775
+
+
+
+    processing [13] and rely on large volumes of labeled data to                intervals [21]. Through this way, SENTINEL not only excels
+    learn patterns of malicious activity. However, for insider threat           in rapidly responding sudden dangerous actions, but also can
+    detection, obtaining sufficiently high quality labeled data is very         perceive the long-term evolutionary pattern of user behavior.
+    difficult. Lack of sufficient labeled data can result in inadequate         Furthermore, to deal with the insufficiency of abnormal samples,
+    or biased training of the model. Graph-based methods lever-                 a semi-supervised insider threat detection algorithm is proposed,
+    age the sequential relationships between log entries to learn               which solely requires the training data to be benign.
+    normal patterns from graph structures (e.g. user authentication                Our contributions of this paper are fourfold as follows:
+    networks and lateral movement traces) [14], [15], [16], [17].                  r We propose SENTINEL, an insider threat detection algo-
+    Existing graph-based insider threat detection methods usually                     rithm, to identify abnormal behavior of insiders and to
+    treat operation logs as nodes and attempt to convert log records                  provide fine-grained threat intelligence. SENTINEL im-
+    into a graph according to correlation relationships among them,                   plements a log-entry-level detection without requiring any
+    which incurs high computational burden and lengthy execution                      attack samples during model training.
+    times for large-scale graph learning.                                          r We devise a dynamic user behavior interaction graph
+       Inspired by the limitations of current researches, we propose                  (BIG), which jointly considers the spatial distribution of
+    a novel insider threat detection method named SENTINEL,                           user behavioral trajectories among the network topology
+    which provides a systematic and dynamic perspective on users’                     and the temporal variations of user behavioral profiles. By
+    behavior within the intranet. Since insider threats often involve                 incorporating ST-GNN with edge feature enhancement,
+    multiple stages, including reconnaissance, lateral movement,                      the BIG achieves accurate modeling of spatio-temporal
+    foothold establishment, and remote command and control, the                       relationships between nodes, enhancing the representative
+    behavior patterns of malicious insiders would exhibit temporal                    ability of user behaviors.
+    dependencies. Meanwhile, the network within organizations                      r In order to perceive both the abrupt and persistent threats
+    typically is comprised of multiple subnets and regions with                       simultaneously, we conceive a multi-timescale fusion
+    specific network topologies. Thus, it is possible that the attackers              mechanism for incorporating users’ activities at different
+    need to traverse across various network regions or subnets to                     timescales. With the help of the temporal hierarchy aggre-
+    gain access to diverse systems during the execution of threat                     gation layer, the multi-level temporal interaction context
+    activities. This topological constraint indicates the spatial de-                 is explicitly embedded into the potential representation of
+    pendencies of insider threats. Based on this observation, we                      timescale-aware.
+    model user behaviors in different time periods into dynamic                    r We conduct experiments on three public datasets to com-
+    graph instances and develop an insider threat detection model                     pare the performance of SENTINEL to the state-of-the-
+    using spatio-temporal graph neural network (ST-GNN). How-                         art methods. The results demonstrate that SENTINEL
+    ever, existing graph learning-based methods [14], [16], [18], [19]                achieves superior AUC value of 0.980 while maintaining a
+    for insider threat detection generally treat logs as nodes, which                 relatively low computational overhead.
+    results in extremely large graphs and significant computational                The rest of our paper is organized as follows. Section II
+    overhead. In contrast, SENTINEL treats user interaction behav-              summarizes the related work. Section III describes our threat
+    ior logs between network hosts as edges rather than nodes of                model and challenges, and the detailed system architecture is
+    the graph, which greatly reduces the amount of nodes in graphs              proposed in Section IV. Section V presents the comparative
+    and thereby alleviates computational burden. Besides, analyzing             experiments. Finally, we conclude this paper in Section VII.
+    insider threats requires investigating and processing diverse and
+    voluminous users’ log data [1], such as network traffic, file
+    access records, logon authentication events, etc. Fusing such                                        II. RELATED WORK
+    a substantial volume of data to capture complex relationships                  Existing Researches on insider threat detection can be divided
+    is a tricky problem. Nevertheless, traditional ST-GNN models                into three categories: rule matching based methods, machine
+    only focus on the propagation of node attributes, but ignore the            learning based methods, and graph-based methods.
+    edges attributes. In this paper, edges represent user interactions             Rule matching has been widely applied in insider threat
+    between hosts, and their attributes often reflect the behavioral            detection. Early detection tools, such as Addamark LMS [8] and
+    routines of different users. We can profile a user behavioral               Splunk [9], primarily generated alerts by monitoring users’ log
+    baseline based on the edge attributes, which plays a more critical          files or network requests and matching configurable rule lists.
+    role than the node attributes in our insider threat detection. To           With the help of these tools, security analyst could determine
+    address this problem, we leverage an Edge Graph Attention                   the pertinent log files to assess and prescribe appropriate alert
+    (EGAT) mechanism [20] to acquire the feature representations                actions [22]. Although these offline tools or schemes could be
+    of various operation types among system hosts, which allows                 executed multiple times within an hour or a day, they lacked
+    us to capture the behavioral pattern implied by edge attributes.            the capacity to conduct longitudinal log analysis or proactively
+    Moreover, in practical applications, abrupt threats and persistent          respond in real-time. To remedy these deficiencies and deal
+    threats may exist at the same time. To deal with a broad range              with new emerged Advanced Persistent Threat (APT), Milajerdi
+    of attack scenarios, we integrate user behavior states at multiple          et al. [10] utilized the Tactics, Techniques, and Procedures
+    timescales into the detection model, which enables SENTINEL                 (TTP

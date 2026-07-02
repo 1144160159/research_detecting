@@ -1,0 +1,153 @@
+2460                                                         IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+
+
+
+     M ETA ROCK ETC: Adaptive Encrypted Traffic
+    Classification in Complex Network Environments
+      via Time Series Analysis and Meta-Learning
+ Jianjin Zhao , Graduate Student Member, IEEE, Qi Li , Yueping Hong , and Meng Shen , Member, IEEE
+
+
+
+   Abstract—Encrypted Traffic Classification (ETC) is crucial                                          I. I NTRODUCTION
+for network security management and Quality of Service (QoS)
+                                                                                       S ONE of the most defining features of modern networks,
+improvement. There have been many attempts to tackle var-
+ious ETC tasks, however, which generally suffer from task
+dependency and limited adaptability, falling short of meet-
+                                                                                A      the extensive deployment of encryption mechanisms in
+                                                                                network communications plays a crucial role in preserving
+ing practical requirements. Under the realistic assumptions of                  user privacy and ensuring data integrity. According to the
+complex network environments, diverse encryption techniques                     Google Transparency Report [1], over 98% webpages were
+and ever-changing application landscapes coexist. It is highly
+desirable to learn the generic encrypted traffic representations                loaded over HTTPS in Chrome by platform in 2022. Yet,
+to investigate the common knowledge across different ETC tasks                  the proliferation of encrypted traffic brings great challenges
+and rapidly adapt to the dynamic shifts. To fill the gap, we                    to network traffic analysis, unveiling severe security concerns
+propose M ETA ROCK ETC, a generic encrypted traffic classifi-                   for potential hidden threats. Encrypted Traffic Classification
+cation framework, which extracts protocol-agnostic features to
+learn the common knowledge and rapidly adapt to novel ETC
+                                                                                (ETC), holding great significance for network security man-
+tasks and evolving network environments. In M ETA ROCK ETC,                     agement and Quality of Service (QoS) improvement, and
+we first model packet length sequences of encrypted sessions                    serving as a preliminary step in threat identification, has
+as multivariate time series and perform random convolution                      emerged as a critical area of interest for both industry and
+kernel transformations to summarize discriminatory behavioral                   academia.
+patterns across channels. By integrating M ETA ROCK ETC into
+an advanced Model-Agnostic Meta-Learning (MAML) frame-                             Meanwhile, there have been many attempts to address
+work, we learn a task-adaptive loss function to facilitate better               diverse ETC tasks (e.g., application classification, threat
+generalization and transferability across diverse ETC tasks.                    detection, device identification and website fingerprint-
+Extensive experimental results demonstrate the superiority of                   ing), achieving considerable progresses. For instance,
+M ETA ROCK ETC in both across-task and few-shot scenarios,
+                                                                                Pham et al. [2] derive aggregated, temporal, statistical and
+highlighting its potential to provide a practical solution for
+encrypted traffic classification in real-world scenarios.                       categorical features to model the communication behaviors
+                                                                                for mobile application classification. Fu et al. [3] aim to
+   Index Terms—Encrypted traffic classification, time series anal-
+ysis, meta-learning.                                                            detect malicious traffic encrypted by TLS protocol and extract
+                                                                                key information from TLS handshake messages such as
+                                                                                TLS version and cipher suites. Sivanathan et al. [4] extract
+                                                                                extensive statistical features and protocol-related features
+                                                                                (e.g., DNS, NTP and TLS) to distinguish IoT devices.
+                                                                                Wang et al. [5] leverage adversarial domain adaptation to
+   Manuscript received 29 May 2023; revised 28 October 2023; accepted
+23 December 2023. Date of publication 5 January 2024; date of current           fingerprint websites over few traffic. An emerging trend of
+version 15 April 2024. This work was supported in part by the National          ETC solutions appears to be more generic to handle different
+Natural Science Foundation of China under Grants 62172055, 61972039 and         ETC tasks. Meng et al. [6] make an initial trial to learn
+U20B2045; in part by the China National Funds for Excellent Young Scientists
+under Grant 62222201; in part by the Beijing Nova Program under Grants          general packet representation for diverse ETC tasks utilizing
+Z201100006820006 and 20220484174; in part by the Beijing Natural Science        both encrypted and unencrypted data.
+Foundation under Grants M23020, L222098 and 7232041; in part by the                Unfortunately, prevalent research falls short in addressing
+National Defense Basic Scientific Research Program of China under Grant
+JCKY2021602B002; in part by the Ningxia Natural Science Foundation under        the complexities inherent to practical network environments.
+Grant 2022AAC03620; and in part by the BUPT Scientific and Technological        Under realistic network assumption for encrypted traffic clas-
+Innovation Capacity Improvement Project under Grant 2021XD-A09. The
+associate editor coordinating the review of this article and approving it for
+                                                                                sification, diverse encryption techniques cater to different
+publication was Y. Diao. (Corresponding author: Qi Li.)                         applications, raising the question: How to devise generic
+   Jianjin Zhao, Qi Li, and Yueping Hong are with the School of Cyberspace      traffic representation for multiple ETC tasks? Moreover, with
+Security, Beijing University of Posts and Telecommunications, Beijing
+100876, China (e-mail: jianjinzhao@bupt.edu.cn; liqi2001@bupt.edu.cn;
+                                                                                the continuous evolution of the network landscape, security
+hongyp@bupt.edu.cn).                                                            solutions deployed ought to be adaptable to the corresponding
+   Meng Shen is with the School of Cyberspace Science and Technology,           dynamic shifts. In this context, we define complex network
+Beijing Institute of Technology, Beijing 100081, China (e-mail: shenmeng@
+bit.edu.cn).                                                                    environments as those characterized by the coexistence of
+   Digital Object Identifier 10.1109/TNSM.2024.3350080                          diverse encryption techniques and ever-changing application
+                      1932-4537 
+                                c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION                                                                 2461
+
+
+
+landscapes. Previous studies generally share two common                        Extensive experimental results demonstrate the superior-
+deficiencies in the face of complex network environments: (1)                  ity of M ETA ROCK ETC in both across-task and few-shot
+current features are often either overly excessive [4], [7] or                 scenarios.
+protocol-dependent [8], [9], limiting their effectiveness against            The remainder of this paper is organized as follows. In
+various encryption techniques (e.g., VPN, Tor and SSL/TLS);               Section II, the related work is reviewed. In Section III, the
+and (2) the model abilities are restricted to specific datasets           preliminaries of our work is introduced. In Section IV, our
+or tasks [10], requiring frequent time-consuming retraining to            proposed M ETA ROCK ETC is presented. The performance
+tackle environment and task shift in practical applications.              evaluations of M ETA ROCK ETC are provided in Section V.
+   To overcome the limitations and provide a practical solution           The limitations and potential future directions are discussed
+for encrypted traffic classification, in this paper, we aim               in Section VI. Finally, we conclude in Section VII.
+to extract protocol-agnostic features from encrypted sessions
+with minimal computational cost and develop a generic ETC                                      II. R ELATED W ORK
+framework with the ability to rapidly adapt to unknown
+                                                                             In this section, we review the relevant studies in the
+tasks and evolving environments. We are motivated by recent
+                                                                          following three aspects: encrypted traffic classification, time
+advances in time series analysis [11], [12], [13] and meta-
+                                                                          series classification and meta-learning.
+learning [14], [15], [16]. The per-packet feature sequences of
+encrypted sessions are naturally time series data. Also, meta-
+learning technique can enable models to rapidly adapt to novel            A. Encrypted Traffic Classification
+tasks. To this end, we model per-packet feature sequences as                 Encrypted traffic classification, aiming to classify the cate-
+multivariate time series and perform time series analysis to              gory of encrypted traffic from various applications, services or
+efficiently summarize sequential information for subsequent               devices, is a crucial technique in network security management
+ETC tasks. Then we follow Model-Agnostic Meta-Learning                    and QoS improvement. We briefly review those that are closely
+(MAML), a meta-learning framework, to learn a task-adaptive               related to our work, which can be roughly divided into five
+loss function, achieving better generalization across diverse             categories according to analysis goals.
+ETC tasks.                                                                   1) Application Classification: Mobile or Web application
+   Formally, we propose a generic encrypted traffic clas-                 classification is crucial in traffic engineering. In this con-
+sification framework, namely M ETA ROCK ETC, aimed at                     text, Taylor et al. [17] present APPS CANNER to fingerprint
+learning generic knowledge from different ETC tasks to                    mobile applications from encrypted traffic. This approach
+build internal representation for encrypted sessions that are             derives 54 statistical features (e.g., minimum, maximum,
+broadly suitable to tackle complex network environments.                  mean and variance) per network flow and employ a Random
+Specifically, we first extract packet length sequences from               Forest classifier for application classification. Liu et al. [18]
+encrypted sessions and extend them as multivariate time                   propose FS-N ET, an end-to-end ETC model following a multi-
+series to enrich the representations. Then we perform random              layer encoder-decoder structure. FS-N ET learns sequential
+convolution kernel transformations on the multivariate time               features from raw flow sequences (e.g., packet length and
+series by random channel sampling and summation operations                message type). Shen et al. [19] develop a Graph Neural
+to capture discriminatory behavioral patterns. To achieve better          Network (GNN)-based ETC model, namely G RAPH DAPP.
+generalization, we build two meta-networks to learn a task-               This model represents packet length sequences as Traffic
+adaptive loss function during inner-loop optimization in the              Interaction Graphs (TIGs), and employs graph classification
+MAML manner. Extensive experimental results demonstrate                   to identify decentralized applications. Xu et al. [10] propose
+the superiority of M ETA ROCK ETC in both across-task and                 ETC-PS, which models packet length sequences of encrypted
+few-shot scenarios.                                                       sessions as traffic paths and extracts path signature features for
+   In sum, the main contributions of this paper are summarized            classification. The efficacy of ETC-PS has been demonstrated
+as follows:                                                               in various ETC tasks (e.g., HTTPS, VPN and Tor traffic
+   • We enrich simple per-packet features (i.e., packet lengths           classification).
+      and directions) as multivariate time series. Through                   2) Threat Detection: Early-stage studies on threat detection
+      random convolution kernel transformations, we effec-                primarily focus on SSL/TLS traffic. Anderson et al. [8],
+      tively summarize the discriminatory behavioral patterns             [20], [21] first propose extracting features from unencrypted
+      of encrypted traffic across different channels.                     handshake messages for encrypted malicious traffic detection.
+   • We present a novel meta-learning framework to derive                 This pioneering work has since served as a foundation for
+      generic encrypted traffic representations. By designing             subsequent investigations. Zhao et al. [9] construct encrypted
+      a task-adaptive loss function, we investigate common                traffic graph to model the behavior similarities and service cor-
+      knowledge across diverse ETC tasks and facilitate fast              relations among encrypted sessions, and employ an improved
+      adaptation in complex network environments to satisfy               Graph Attention Network (GAT) to characterize the reliability
+      the practical requirements.                                         and stability of encrypted sessions for threat detection in
+   • We develop a generic encrypted traffic classification                SSL/TLS traffic. Fu et al. [22], [23] present W HISPER, a real-
+      framework, namely M ETA ROCK ETC, and comprehen-                    time malicious traffic detection system by frequency domain
+      sively evaluate it on various datasets and scenarios.               analysis. Notably, the features employed in W HISPER are not
+2462                                                  IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+
+                                                               TABLE I
+                                       C OMPARISON B ETWEEN O UR W ORK AND THE E XISTING S TUDIES
+
+
+
+
+confined to specific protocols, rendering it more versatile.           in encrypted traffic analysis. Shen et al. [31] present a com-
+W HISP

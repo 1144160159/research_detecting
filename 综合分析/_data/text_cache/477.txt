@@ -1,0 +1,146 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 9, SEPTEMBER 2025                                                         17295
+
+
+
+
+          Lightweight and Fast Time-Series Anomaly
+         Detection via Point-Level and Sequence-Level
+                  Reconstruction Discrepancy
+   Lei Chen , Member, IEEE, Jiajun Tang , Ying Zou , Xuxin Liu , Xingquan Xie , and Guangyang Deng
+
+
+   Abstract—Unsupervised time-series anomaly detection (TSAD)                   time-series data exhibit new characteristics: complex temporal
+aims to identify anomalies in industrial sensing signals to ensure              dynamics, rare anomaly labels, and rapidly increasing data
+production safety. As Industry 4.0 emerges, TSAD deployment                     volumes [2]. These characteristics undermine the effectiveness
+must migrate from resource-rich cloud to resource-limited edges                 of traditional statistical, machine-learning-based, supervised,
+for real-time and fine-grained control. In this case, it raises                 and semi-supervised TSAD models [3], compromising their
+new targets with high accuracy, high timeliness, and low con-
+sumption for TSAD. However, existing models focus solely on
+                                                                                competitiveness. As a result, unsupervised deep-learning-
+achieving high accuracy by building neural networks with deep                   based TSAD models, such as those using CNN, transformer,
+structures and large parameters. Consequently, these models                     and RNN architectures, have attracted significant attention
+demand prohibitive training durations and computational over-                   in recent years [4], [5], [6], [7], [8]. However, the existing
+head, which makes them unsuitable for edge deployment. To solve                 unsupervised TSAD models still face two main challenges.
+this issue, an unsupervised lightweight and fast TSAD model,
+namely, LFTSAD, is proposed via point-level and sequence-                       A. Challenge
+level reconstruction discrepancy in this article. First, to achieve
+high timeliness and low consumption, LFTSAD uses two two-                         1) Balancing Timeliness, Resource Efficiency, and Accu-
+layer multilayer perceptron networks (MLPs) to construct a                           racy: Traditional deep TSAD models are typically
+lightweight contrastive architecture with few parameters. Sec-                       deployed on resource-rich cloud servers, where they pri-
+ond, leveraging the lightweight architecture, a dual-branch                          oritize high accuracy using deep architectures and large
+reconstruction network is designed to generate corresponding                         parameters [9], [10], [11], [12], [13], [14]. Consequently,
+reconstruction discrepancies from point-level and sequence-level                     they require long training and detection time, along
+perspectives. Finally, a novel anomaly scoring scheme is designed                    with significant computational and storage resources.
+to combine point-level and sequence-level reconstruction dis-
+crepancies for more accurate anomaly detection. To the best of                       As Industry 4.0 emerges, industrial production processes
+our knowledge, this is the first work to develop a lightweight                       require real-time and fine-grained intelligent monitoring
+All-MLP-based TSAD model for resource-limited edge devices.                          and management. This makes it necessary to migrate the
+Extensive experiments demonstrate that LFTSAD is 3–10 times                          TSAD models from cloud servers to edge devices. How-
+faster in timeliness, consumes only 1/2 of the resources, and                        ever, edge devices typically have limited computational
+achieves accuracy that is either comparable to or superior to                        and storage resources, which restricts their ability to run
+several deep SOTA models. The source code of LFTSAD is here                          complex deep models. For example, a Raspberry Pi 4b
+https://github.com/infogroup502/LFTSAD                                               has only 2-GB RAM and 1.5-GHz clock speed. There-
+   Index Terms—All-multilayer perceptron network (MLP)-based                         fore, unsupervised TSAD models need to find a tradeoff
+anomaly detection, lightweight network and design, point-                            among timeliness, resource consumption, and accuracy
+level and sequence-level, reconstruction discrepancy, time-series                    to ensure stable operation on resource-constrained edge
+anomaly detection (TSAD).                                                            devices.
+                                                                                  2) Constructing Powerful Anomaly Scoring Scheme: An
+                       I. I NTRODUCTION                                              unsupervised TSAD model typically requires an
+                                                                                     anomaly scoring scheme to evaluate observations at each
+T    IME-series anomaly detection (TSAD) aims to identify
+     outliers or deviations in temporal data that record the state
+of a continuous dynamic system [1]. Coming to Industry 4.0,
+                                                                                     timestamp and detect anomalies. The existing schemes
+                                                                                     can be mainly divided into three categories: reconstruc-
+                                                                                     tion error-based [12], prediction error-based [9], and
+  Received 23 August 2024; revised 29 March 2025 and 17 April 2025;                  hybrid error-based [10]. However, each of these schemes
+accepted 27 April 2025. Date of publication 19 May 2025; date of current             has limitations, which makes it difficult to achieve both
+version 4 September 2025. This work was supported in part by the National
+Natural Science Foundation of China under Grant 62103143 and Grant
+                                                                                     high accuracy and low time overhead, particularly when
+62203164, in part by Hunan Provincial Natural Science Foundation of China            handling time-series data with complex features. As a
+under Grant 2024JJ5162, and in part by the Scientific Research Fund of Hunan         result, these schemes struggle to perform effectively on
+Provincial Education Department under Grant 22B0471. (Corresponding                  resource-constrained edge devices.
+author: Lei Chen.)
+  The authors are with the School of Information and Electrical
+Engineering, Hunan University of Science and Technology, Xiangtan               B. Existing Solution
+411201,     China    (e-mail:     chenlei@hnust.edu.cn;      jiajuntang@mail.
+hnust.edu.cn;      1040134@hnust.edu.cn;        xuxinliu@mail.hnust.edu.cn;       To address the first challenge, some approaches use parallel
+xingquanxie@mail.hnust.edu.cn; guangyangdeng@mail.hnust.edu.cn).                computing [15] or federated learning [16] to accelerate the
+  Digital Object Identifier 10.1109/TNNLS.2025.3565807                          speed of the existing deep TSAD models. However, they
+             2162-237X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+17296                                         IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 9, SEPTEMBER 2025
+
+
+
+
+Fig. 1. Illustration of three anomaly scoring schemes. (a) Reconstruction error-based anomaly scoring. (b) Association discrepancy-based anomaly scoring.
+(c) Reconstruction discrepancy-based anomaly scoring.
+
+
+require significant computational resources and large stor-                   making it challenging to simultaneously ensure high accuracy,
+age due to multithreaded processing and distributed learning.                 fast inference, and low resource usage.
+Other methods either apply compression techniques (pruning
+and quantization) to reduce redundant parameters [17], [18]                   C. New Insight
+or use shallow CNN or multilayer perceptron network (MLP)                        To fill such a gap, this article aims to develop an unsuper-
+networks to replace time- or resource-consuming modules                       vised lightweight TSAD model based only on the two-layer
+[19], [20] in the existing deep models. In this case, model                   MLP architecture for deployment on resource-limited edge
+parameters and computation times are reduced, achieving a                     devices. For this goal, two bottlenecks need to be addressed.
+balance between high accuracy and high timeliness. How-                          The first challenge lies in how to solely use two-layer MLPs
+ever, these methods still rely on deep structures, which limit                to design a lightweight architecture with high speed, accu-
+their optimization capabilities in terms of time and resource                 racy, and low consumption. To address this, the association
+efficiency. Thus, they are unsuitable for stable operation in                 discrepancy-based scoring scheme is used to guide architec-
+resource-constrained environments.                                            ture construction. However, traditional fine-grained association
+   To address the second challenge, a novel association                       calculations are time- and resource-intensive, as each times-
+discrepancy-based anomaly scoring scheme is introduced in                     tamp must evaluate associations with all the neighbors
+2022 [21], as shown in Fig. 1(b). In the proposed scheme,                     individually, as shown in Fig. 1(b). This complexity makes
+it states that compared with normal timestamps, anomalous                     fine-grained association processing infeasible for a two-layer
+timestamps in the time-series data exhibit stronger associ-                   MLP network. To overcome this, a reconstruction-discrepancy-
+ations with local neighbors and weaker associations with                      based scheme is proposed by fusing reconstruction-based
+global neighbors. Based on this work, several advanced TSAD                   and association discrepancy-based scoring schemes, as shown
+models, such as AnomalyTrans (ATran) [21] and DCdetector                      in Fig. 1(c). Instead of computing each association value
+(DCDet) [22], are proposed in the past two years, achieving                   explicitly, we focus on learning whether a strong association
+high accuracy by capturing fine-grained short- and long-term                  exists between a timestamp and its neighbors, significantly
+contextual information. However, the computational complex-                   simplifying the process. Based on this approach, two two-layer
+ity of fine-grained context processing leads to high time and                 MLPs are used to perform contrastive reconstruction learning
+resource consumption. Therefore, this novel scoring scheme                    of “local neighbors-to-a timestamp” and “global neighbors-
+is not well-suited for high-timeliness TSAD applications on                   to-same timestamp” respectively. A small difference between
+resource-limited edge devices.                                                the two reconstruction outputs indicates strong associations
+   In summary, current acceleration schemes and accuracy                      with both local and global neighbors, suggesting a normal
+optimization methods fail to achieve an effective tradeoff                    timestamp. In contrast, a large discrepancy is interpreted as
+among speed, resource efficiency, and accuracy on resource-                   an anomaly. To the best of our knowledge, the fusion of
+limited edge devices. To meet the demands of real-time TSAD                   reconstruction error-based and association discrepancy-based
+at the edge devices, a more direct and effective solution is to               scoring schemes has not been previously explored.
+design lightweight TSAD models using simple networks and                         The second challenge is enhancing detection accuracy of
+shallow structures. Among neural networks, MLPs are partic-                   the designed lightweight architecture. Typically, outliers in
+ularly well-suited due to their simplicity and efficiency. This               time series persist across multiple timestamps and can be
+makes All-MLP architectures a promising choice for balancing                  categorized as explicit or implicit, as presented in Fig. 2.
+timeliness, low resource consumption, and accuracy. Although                  In explicit outliers [Fig. 2(a)], the association pattern of
+some existing TSAD models, such as PatchAD (PaAD) [19]                        each anomalous timestamp (x1 ) with its point-level neighbors
+and USAD [20], adopt All-MLP designs, they still rely on                      deviates significantly from that of normal timestamps (y1 ). In
+deep structures. For example, PaAD uses a deep transformer                    this case, the lightweight architecture can accurately identify
+with MLP units, while USAD builds an autoencoder using                        anomalous timestamps. However, implicit outliers present a
+two multilayer MLPs. Therefore, a gap remains in developing                   greater challenge, as only some timestamps exhibit association
+TSAD models based solely on shallow All-MLP architectures                     patterns that significantly deviate from normal timestamps,
+(e.g., one or two layers) for edge deployment. However, shal-                 while others appear similar. As illustrated in Fig. 2(b), the
+low structures inherently offer limited representation capacity,              association pattern of x2 with its point-level neighbors closely
+CHEN et al.: LFTSAD VIA POINT-LEVEL AND SEQUENCE-LEVEL RECONSTRUCTION DISCREPANCY                                                              17297
+
+
+
+
+Fig. 2. Two types of anomalies in time series. (a) Explicit outlier. (b) Implicit outlier.
+
+
+resembles that of y2 , increasing the risk of misclassification. To                A. Association Discrepancy-Based TSAD
+address this issue, we expand the analysis beyond individual                          In 2022, association discrepancy-based anomaly scor-
+timestamps. Instead of relying solely on x2 , we consider a                        ing scheme was proposed for unsupervised timestamp-level
+subsequence centered around x2 as its substitute, as shown in                      anomaly detection [21]. In the past two years, several advanced
+the elliptical region of Fig. 2(b). This extended view reveals                     TSAD models based on association discrepancy have been
+that the association pattern of the substitute subsequence of x2                   proposed and demonstrated strong performance [23], [24],
+with its sequence-level neighbors differs significantly from that                  [25].
+of y2 . By incorporating both the point-level and sequence-level                      For example, the ATran model [21] uses a learnable Gaus-
+perspectives, our lightweight architecture enhances detection                      sian kernel for local associations and a multihead attention
+accuracy for both the explicit and implicit outliers.                              mechanism for global asso

@@ -1,0 +1,706 @@
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 11, NO. 5, OCTOBER 2024 5619
+
+ Multipattern Integrated Networks With Contrastive
+ Pretraining for Graph Anomaly Detection
+ Manzhi Yang , Jian Zhang , Liyuan Lin , Jinpeng Han , Student Member, IEEE, Xiaoguang Chen ,
+ Zhen Wang , and Fei-Yue Wang , Fellow, IEEE
+
+ Abstract—As a challenge of practical significance, fraud de- Index Terms—Anomaly detection, contrastive learning, graph
+tection has great potential for telecom fraud prevention, eco- neural network, network representation learning.
+nomic crime prevention, and personal property preservation.
+Fraudulent activities are always buried in massive regular
+transactions, making it hard to find them. Traditional rule-based
+approaches need multiple domain-specific rules and multistep I. INTRODUCTION
+verification, which limits their transferability and efficiency.
+Machine learning-based methods might ignore the intricate interactions or the temporal relations among accounts. Meanwhile,
+the lack of sufficient manual labels restricts their performance.
+ N OWADAYS, services such as mobile communication, online payment, and e-commerce provide tremendous convenience in our daily lives. Such convenient services, however,
+To overcome the above limitations, we present a multipattern also cause security issues in the meanwhile [1], [5], [7]. Not
+integrated network (MPIN) in this article to identify fraudulent
+ only normal users but also service providers themselves sufaccounts in transaction networks. Specifically, MPIN considers
+the interactions among nodes from three perspectives: inflows, fer from the losses and damages caused by deceptions [6].
+outflows, and their mutual influences. To learn the behavior Fraudulent activities pose a multifaceted threat, socially eroding
+pattern of each node, MPIN first applies an attention mechanism public trust in institutions and economically inflicting billions
+to integrate the short-term information and then learns the in losses and increased operational costs while also comprolong-term patterns by aggregating multiple short-term patterns.
+ mising security by exploiting vulnerabilities in data [3] and
+Behavior patterns from different perspectives together with long
+short-term modeling enable the model to precisely distinguish financial systems. From communications both over regular terfraudulent accounts from the normal ones. Moreover, con- minals and Internet telephones to cryptocurrency exchanges in
+trastive pretraining with temporal consistency and local tightness blockchain-based platforms, even the real money transactions
+guarantee is adopted to alleviate the label sparsity issue and in online payment services, frauds breed where profits exist.
+provide the model with low-variance performance. We conducted
+ The critical importance of fraud detection lies in its ability
+experiments on two real-world transaction networks, and the
+results showed the effectiveness of MPIN compared with five to mitigate these social, economic, and security risks. Effecstate-of-the-art baselines. tive fraud detection strategies are essential to safeguard assets,
+ maintain public confidence, and ensure the smooth functioning
+ Manuscript received 2 September 2023; revised 18 January 2024; accepted of financial systems, making it a key area of focus in both the
+31 January 2024. Date of publication 18 July 2024; date of current version
+2 October 2024. This work was supported by the Science and Technology De- private and public sectors. Hence, it is of practical significance
+velopment Fund, Macao SAR under Grant 0093/2023/RIA2 and the National to find out those who are involved in fraudulent cases to elim-
+Natural Science Foundation of China under Grant 62176080. (Manzhi Yang inate financial losses and even prevent fraud from happening
+and Jian Zhang contributed equally to this work.) (Corresponding author:
+Fei-Yue Wang.) in advance.
+ Manzhi Yang and Xiaoguang Chen are with Macau Institute of Systems In the early exploration of fraud detection, rule-based detec-
+Engineering, Macau University of Science and Technology, Macao 999078, tion systems [8] are widely deployed due to its efficiency and
+China (e-mail: yangmanzhi@eversec.cn; chenxiaoguang@eversec.cn).
+ Jian Zhang and Liyuan Lin are with the School of Cyberspace, effectiveness. Practitioners summarize fraudulent patterns and
+Hangzhou Dianzi University, Hangzhou 310000, China (e-mail: then apply heuristic rules to filter out fraudulent activities as
+zhangjian-hdu@hdu.edu.cn; linliyuan@hdu.edu.cn). well as related fraudsters. Thus, the decisions [4] provided by
+ Jinpeng Han is with the School of Software Engineering, Xi’an Jiaotong
+University, Xi’an 710049, China (e-mail: jinpeng.han@stu.xjtu.edu.cn). rule-based detection systems are explainable and can greatly
+ Zhen Wang is with the School of Cyberspace and Experimental Center of save the cost of manual reviews. Benefiting from their effec-
+Data Science and Intelligent Decision-Making, Hangzhou Dianzi University, tiveness and simplicity, rule-based approaches still play im-
+Hangzhou 310000, China (e-mail: wangzhen@hdu.edu.cn).
+ Fei-Yue Wang is with the State Key Laboratory for Management and portant roles in industrial scenarios. For instance, in banking
+Control of Complex Systems and Beijing Engineering Research Center of transactions, transactions that involve abnormal amounts of
+Intelligent Systems and Technology, Chinese Academy of Sciences, Beijing currency or relate to risky accounts would be intercepted by
+100190, China, also with Macau Institute of Systems Engineering, Macau
+University of Science and Technology, Macao 999078, China, and also with the monitoring systems. Another typical example is telecom-
+Beijing Huairou Academy of Parallel Sensing, Beijing 101407, China (e-mail: munication fraud, shown in Fig. 1. The victim may be infeiyue.wang@ia.ac.cn). volved in a series of phone frauds that are hidden in numerous
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TCSS.2024.3362393, provided by the authors. normal communication records. It is hard for a bunch of
+ Digital Object Identifier 10.1109/TCSS.2024.3362393 handcraft-designed rules to find the fraud. Despite the above
+
+ 2329-924X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5620 IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 11, NO. 5, OCTOBER 2024
+
+ frauds, several phone numbers call one victim to make
+ up a specific scenario for the victim to commit fraud.
+ Similarly, chainlike transaction in financial scenarios
+ is also a pattern of group collaboration. Besides, such
+ collaborations are not finished immediately but form temporal correlation, which could not be characterized by
+ static networks.
+ To address the above challenges, we propose a multipattern integrated network (MPIN) to identify fraudulent accounts
+ purely based on network structures. Modeling the interactions
+ between entities as a temporal network, MPIN pays attention to
+ the directions of entity interactions and considers three different
+ views, i.e., inflows, outflows, and their mutual influences, to
+ learn interaction patterns. Inflows of a node are the interactions
+ initialed by other nodes, while outflows of a node represent the
+ interactions started by the node on its initiative. Incoming calls
+Fig. 1. Example of telecom fraud.
+ and outgoing calls could be the representatives of inflows and
+ outflows. Meanwhile, we assume that each in-edge of a node is
+advantages, rule-based detection systems are usually a sum- associated with its out-edges and vice versa. An intuitive exammary of expert experiences provided by game operators, mak- ple is that the payment of an account is direct. Therefore, the
+ing it difficult to deal with unknown and frequently evolving mutual influence of inflows and outflows should be considered
+fraud patterns. when modeling node interaction patterns. Furthermore, con-
+ After collecting a large amount of data from online services, sidering the dynamics of the network evolving, we divide the
+such as transaction information and fraud labels, fraud iden- whole network into snapshots at a given timespan Δt and merge
+tification could also be addressed by machine learning-based the short-term behavior patterns into long-term patterns. To
+models. Considering the behaviors of an account as a sequence compensate for the lack of sufficient supervised signals caused
+of events, time-series analysis could be applied to find the by label scarcity and class imbalance, contrastive pretraining
+outliers that could be regarded as potential frauds. However, with two pretext tasks is designed to enable the model to learn
+such methods only focus on the individual patterns of fraud and more informative representations by self-discrimination from
+ignore the fraudulent collaboration between group members. massive unlabeled data. The pretext tasks are designed based
+Recently, some researchers proposed to model the transactions on two assumptions: temporal consistency that the change of
+as networks and argued that exploiting the network structure time window has little influence on one’s behavior pattern; and
+could help with fraud detection [9]. For example, a bunch local tightness that individuals with similar interaction patterns
+of graph-based algorithms is proposed to detect credit card should be gathered. In summary, our main contributions are
+frauds either in real-world scenarios [10] or in cryptocurrency listed as follows.
+transactions [11]. 1) We propose an end-to-end framework, namely MPIN, to
+ Although great efforts have been devoted to fraud detection, identify the anomalous nodes in graphs. Jointly considit is still challenging for real-world applications due to the ering the directions of node interactions and temporal
+following reasons. correlations between them, the framework learns the long
+ 1) Label scarcity and class imbalance: Machine learning- short-term node behavior patterns for fraud detection.
+ based models often require sufficient fraud labels to en- 2) Contrastive pretraining with two pretext tasks is
+ sure performance, while fraud labels are always scarce implemented to initialize model parameters by selfin real-world scenarios. In telecom fraud detection, most discrimination. The pretraining process, which ensures
+ fraudulent phone numbers are recognized based on re- temporal consistency and local tightness, effectively
+ ports from victims, and so are the fraudsters in other alleviates the label scarcity problem and paves the way
+ scenarios. Such manual annotation is costly and labor- for behavior pattern learning with better generalization.
+ consuming in real-world applications. At the same time, 3) We conduct experiments on two networks extracted from
+ fraud labels are extremely unbalanced since fraudsters real-world scenarios, i.e., telecommunication and cryponly account for a small percentage of regular accounts. tocurrency platforms. The experimental results show the
+ As a result, the lack of sufficient and balanced labels superior performance of the MPIN compared with the
+ makes it difficult to train classification models in a su- several state-of-the-art baselines. Then, the ablation studpervised manner, which may lead to problems such as ies verify the effectiveness of each model component.
+ over-fitting and unstable performances [1]. Finally, elaborate analysis and visualization shed light on
+ 2) Group collaboration and temporal correlation: Fraud- the effectiveness of the MPIN.
+ sters in practical scenarios do not commit fraud sep- The rest of the article is organized as follows. First, we
+ arately. They often work as a team, which makes the briefly review the literature about fraud detection, graph reprefraudulent patterns intricate and implicit. In telecom sentation learning, and contrastive learning in Section II. Then,
+YANG et al.: MPIN WITH CONTRASTIVE PRETRAINING FOR GRAPH ANOMALY DETECTION 5621
+
+Section III gives a detailed illustration of the proposed frame- structure learning or deepen the model for more expressive
+work, and Section IV presents comprehensive experiments to- representations.
+gether with the discussion of the results. Finally, we conclude To date, dynamic networks also have gained much more
+the article in Section V. research interests recently [35], [36]. Temporal walk [37],
+ [38] extends random walk to dynamic networks to learn both
+ II. RELATED WORK structural and temporal information from node sequences in
+ chronological order. Considering the dynamics of the network
+ This section briefly reviews the research on fraud detection, evolving, DyRep [39] models two kinds of events as two intergraph representation learning, and contrastive learning. leaved Hawkees processes and learns node embedding with an
+ attention mechanism. Other methods [40], [41] that focus on
+A. Fraud Detection discrete dynamic networks are also developed to meet different
+ Frauds could be considered as a kind of anomaly in real- practical needs. Though the above algorithms are effective in
+world scenarios such as credit card transactions [12], telecom- their fields, the latent anomalous behavior patterns are still hard
+munication, and news spreading [13]. Machine learning-based to capture. Moreover, the lack of enough labeled data further
+methods focusing on fraud detection could roughly be divided makes it harder for them to make precise judgments.
+into feature classification [14], sequence analysis [15], and
+graph-based models [16]. In credit card fraud detection, fea- C. Contrastive Learning
+tures such as transaction ID and transaction amount should be
+ As a kind of self-supervised learning, contrastive learning
+extracted before applying machine learning methods [14], [17].
+ captures internal data features by maximizing the agreement of
+Fraud detection is a typical imbalanced classification problem.
+ similar samples without labels. With the success in computer vi-
+Han et al. [18], [19] applied multimodal multiobjective opsion [42], [43] and natural language processing [44], contrastive
+timization to detect credit card fraud. Noisy-sample-removed
+ learning is also introduced into graph representation learning.
+under-sampling scheme (NUS) [20] to improve classification
+ Following the idea of Deep InfoMax [45], DGI [46] maximizes
+performance in imbalanced datasets by removing noisy samthe mutual information between patch representations and corples and using logistics regression, decision tree, and random
+ responding high-level summaries of graphs to learn graph repforest as base classifiers. Weighted extreme learning machine
+ resentations. Improvement on heterogeneous networks [47] and
+[21] could also be used to solve the problem. Frauds could
+ temporal networks [48] based on DGI are proposed for specific
+also be detected based on sequence feature learning. DIFM
+ scenarios. The main challenge for contrastive learning is to
+[22] captures information on field value variations and field
+ construct proper positive samples. GraphCL [49] summarizes
+interactions of user activities on e-commerce platforms with
+ four types of graph data augmentation, which shows their efa factorization machine. The importance-aware module makes
+ fectiveness in GNN pretraining. CoLA [50] adopts subgraph
+the model an explainable one for fraud detection. Besides,
+ embeddings as the positive sample for target node to learn node
+there are also many other researches [23], [24] attempt to idenrepresentations. Graph representation in another latent space
+tify frauds based on time-series features. Graph-based fraud
+ could also serve as positive samples [51]. CG3 [52] utilizes both
+detection methods model the interaction between entities as
+ localized and hierarchical graph convolutions to generate mulgraphs and then find graph anomalies. For example, GEM
+ tiview graph representations and then implements contrastive
+[25] constructs heterogeneous graphs of devices and activilearning to train the model. Many other researchers [46], [53]
+ties and applies an attention-based graph neural network to
+ also employ contrastive learning on graphs to avoid over-fitting
+detect malicious accounts. HGAT [26] leverages high-order
+ and obtain more robust representations.
+graph attention representations for loan risk assessment. Focusing on loan frauds, GRC [27] integrates a role-constrained
+conditional random field into a graph neural network to make III. METHOD
+use of role information and aims to detect collusive fraud in A. Problem Formulation
+consumer loans.
+ Suppose we have a network G = (V, ET , X) where V denotes the node set and ET signifies the temporal edges with
+B. Graph Representation Learning timestamps. Each edge e = (u, v, t) ∈ ET is associated with a
+ Graph representation learning tries to map nodes in networks source node u ∈ V, a target node v ∈ V, and a timestamp t ∈ R+
+from sparse high-dimensional space to dense lower dimensional representing the interaction time. The node feature is denoted
+representations, making it possible to apply machine learning by X ∈ R|V|×D where D represents the feature dimension. It is
+models in subsequent tasks. Starting from random walk-based worth noticing that there could be multiple interactions between
+methods such as DeepWalk [28] and node2vec [29] to graph two nodes at different times, which makes G a multidigraph.
+neural networks with the representative of GCN [30], GAT [31], In the multidigraph, each node is annotated with a label y to
+and GraphSage [32], a vast of research has been devoted to show whether it is a fraudulent node or not. In this article,
+learning expressive node representations on static networks. A we aim to identify whether a given node u is anomalous or
+bunch of models developed upon GCN such as cluter-GCN not, which could be expressed p(yu = 1|u, G). Specifically, we
+[33] and deepGCN [34] were explored to achieve fast network innovatively divide the original dynamic graph with a given
+5622 IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 11, NO. 5, OCTOBER 2024
+
+Fig. 2. Illustration of short-term behavior pattern modeling with multiview attention.
+
+timespan Δt and then form a series of snapshots, denoted by same way, we could also obtain the representation of outflow
+SG = {G1 , . . . , Gn }. Each snapshot Gk could also be considered pattern hout
+ u
+as a dynamic graph to characterize the short-term behavior 
+patterns. Finally, the goal of this article could be expressed as hout
+ i =
+ out
+ αi,j,t (hi ||hi,j,t )
+p(yu = 1|u, SG ). (i,j,t)∈ET
+ out
+ exp(Wtrans (hi ||hi,j,t ))
+ out
+ αi,j,t = (2)
+ trans (hi ||hi,v,t ))
+ out
+ (i,v,t)∈ET exp(W
+B. Behavior Pattern Modeling 
+ out
+ where Wtrans ∈ RD×D is trainable weight for attention be-
+ The behaviors act as fingerprints of entities, informing us tween node i and its out-edges and αj,i,t out
+ is the obtained atwhich kind of entity it might belong to. In online transactions, tention weight over node i and its temporal out-edge (i, j, t).
+active accounts continuously trade with others, while fallow Considering inflows and outflows of an account separately
+accounts might have transaction records only within a short could provide insights of the scale and volatility of one’s forspace of time. In telecommunications, fraudsters are intended tune. Meanwhile, the relation between each inflow and outflow
+to call a large proportion of unacquainted phone numbers, while also matters. Despite the fortune obtained by topping up with
+the contacts of normal users are usually within a small amount real money, the profits earned through trading are another major
+of familiar phone numbers. However, the differences between source of assets. It means that the money one spends has latent
+fraudulent nodes and normal ones are nontrivial. Fraudulent be- relations with the money he/she earns. Hence, we further model
+haviors are always buried in numerous normal records, making such relationships as follows:
+them hard to identify. In this article, we propose to learn both 
+short-term and long-term behavior patterns for each account to hin-out
+ u = in-out in
+ αui hi [n]
+distinguish fraudulent nodes from normal ones. i∈Nuout
+ 1) Short-Term Behavior Pattern: It characterizes one’s be-   in 
+ exp hin u hi
+havior pattern in a short observation time Δt, which could in-out
+ αui =   in  (3)
+ in
+reflect its intentions in the short run. For instance, a beginner in j∈Nuout exp hu hj
+
+online games would like to frequently buy more in-game equip- where hin-out represents the influence that the inflows of u have
+ u
+ment to upgrade or gain special powers. While such intensive on the outflows. Similarly, hout-in denotes the influence that the
+ u
+transactions might decrease as the player gets stronger. Hence, outflows of u have on the inflows. The short-term behavior
+proper modeling of the short-term behavior pattern could ben- pattern extraction scheme is presented in Fig. 2.
+efit the identification of the roles of different accounts. Given a 2) Long-Term Behavior Pattern: By now, we have obtained
+snapshot dynamic graph observed in Δt, as we have mentioned, three types of short-term behavior patterns reflecting an indifor node i in the graph, its behavior could be depicted from vidual’s trading behaviors in a short period of time. Neverthethree aspects: inflows, outflows, and their mutual influence. less, the transaction features in the short run are insufficient to
+Mathematically, the inflow pattern could be represented as distinguish one from the others. To characterize one’s behavior
+  pattern in the long run, we assemble all the short-term patterns.
+ hin
+ i =
+ in
+ αj,i,t (hi ||hj,i,t ) Take the learning of long-term inflow pattern, for instance, we
+ (j,i,t)∈ET first sort the short-term inflow patterns of u to obtain hin u in
+ in
+ exp(Wtrans (hi ||hj,i,t )) chronological order and apply GRU, a variation of RNN, to
+ in
+ αj,i,t = (1)
+ (j,i,t)∈ET exp(Wtrans (hi ||hj,i,t ))
+ in learn the transition patterns among different intervals
+  in 
+ u = GRU( hu [1], · · · , hu [n] ).
+ hin in
+  (4)
+ in
+where Wtrans ∈ RD×D is the trainable weight for attention
+between node i and its in-edges and D represents the output The long-term pattern of outflow and mutual influence, denoted
+ in m
+dimension of the attention module. αj,i,t is the obtained atten- by hout
+ u and hu , respectively, could also be obtained in the same
+tion weight over node i and its temporal in-edge (j, i, t). In the way. These three patterns describe an account from different
+YANG et al.: MPIN WITH CONTRASTIVE PRETRAINING FOR GRAPH ANOMALY DETECTION 5623
+
+Fig. 3. Illustration of contrastive pretraining.
+
+aspects, and we merge them by concatenation as the final rep- Hence, the contrastive objective could be modeled in the form
+ 
+resentation hu ∈ R3D of InfoNCE [54], [55]
+ 
+   1  exp( τ1 hi h i ) + j∈V sp exp( τ1 hi hj )
+ hu = Merge hin out m
+ u , hu , hu . (5) Lc = − log 1  
+  i
+ 1  
+ |V| exp( h
+ τ i i h ) + j∈Vi ∪Vineg exp( τ hi hj )
+ sp
+ i∈V
+ (6)
+ where τ represents the temperature parameter.
+C. Learning With Contrastive Pretraining Apart from the need for temporal consistency, we would
+ like the accounts with similar behavior patterns to be clustered
+ Traditional supervised learning requires large amounts of together to ensure local tightness. For account i, we first mealabeled data to ensure fair performance. However, fraudulent sure its behavior pattern hi with other accounts with a score
+accounts are hard to annotate in real-world applications. Thus, function s(hi , hj ) = cosine(hi , hj ) and then filter out the top kl
+we propose to adopt contrastive learning to pretrain the fore- accounts, denoted by Vitop , that share the most similar behavior
+going behavior pattern extraction module, and the procedure patterns with i. To ensure the local tightness, we force hi to
+is presented in Fig. 3. The goal of contrastive pretraining is to be close to the local center hi , and the optimization goal Lt is
+make sure that each representation is distinguishable compared modeled as
+with the others, and thus the model could learn distinct behavior 1 
+patterns. Following the general scheme of contrastive learning, Lt =  hi − hi 2
+ |V|
+we need to find a positive sample, soft positive samples, and i∈V
+negative samples for the target node at first. 1 
+ hi = hj . (7)
+ 1) Positive Sample: Under the assumption that the behavior |kl | − 1 top
+ j∈Vi
+patterns of one account observed under different Δt should be
+identical, we change Δt to Δt to obtain a new graph sequence Finally, we obtain the loss function for pretraining
+SG  . To increase the local structure diversity of accounts, we
+ Lp = (1 − λ)Lc + λLt (8)
+further randomly remove β |ET | transactions from G  where
+β ∈ (0, 1) represents the pruning rate. Based on SG  , we could where λ ∈ [0, 1] is a hyperparameter used for balancing Lc and
+obtain h , which can regarded as the positive sample of h, for Lt . Finally, the overall training procedure of MPIN is shown in
+each account following the above behavior pattern extraction Algorithm 1.
+procedure.
+ 2) Soft Positive Sample: In addition to constructing a pos-
+ D. Malicious Account Detection
+itive sample for each node, we propose to use the nodes with
+similar behavior features compared with the target node, which After obtaining the behavior patterns for each account, we
+are considered as soft positive samples, to further regularize the then apply graph convolution layers to make the final prediction.
+learning of node representations. Specifically, we first calculate Denoting the graph convolution layer applied on a single node
+the behavior similarity by X X  and then select ksp nodes as the as f , the calculation could be described as
+soft positive samples for each node after descending sort. The ⎛ ⎞
+ 1 
+selected nodes are denoted by V sp . f (hu ) = ReLU ⎝ Wo hi + b⎠ (9)
+ 3) Negative Sample: We then select the last kneg nodes, |Nu | + 1
+ i∈Nu ∪{u}
+denoted by V neg , that are different from the target node as the
+ 
+negative samples. Apparently, with u as the target node we need where Wo ∈ RF ×3D are trainable weights and b ∈ RF repto draw the distance between hu and hu close and widen the resents the bias. Nu represents both in-neighbor and outgap between hu and hj , where j ∈ Vuneg . neighbors of u. Multiple graph convolution layers are applied
+5624 IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 11, NO. 5, OCTOBER 2024
+
+Algorithm 1 Training Procedure of MPIN TABLE I
+ BASIC STATISTICS OF THE TWO DATASETS
+Input: Transaction network G, observation interval Δt and
+ Δt , the number of soft positive samples ksp , the number of Anomaly
+ Dataset |V| |ET | No. Fraudsters
+ negative samples kneg ,model’s parameter Θ Ratio
+ Telecom 11 427 20 581 116 1.02%
+Output: Prediction results {ŷi }, model M Ether 26 370 50 998 684 2.59%
+ Initialize an MPIN model M with Θ. Syn-Ether 26 370 51 898 200 0.76%
+ Slice G at the interval of Δt to obtain SG ;
+ # Contrastive pre-training.
+ repeat A. Dataset
+ Select ksp nodes as soft positive samples and kneg nodes Though fraud detection is of practical significance, realas negative samples for each node ; world labeled data are hard to obtain. Previous research either
+ Slice G at the interval of Δt to obtain SG  ; manually inject anomalies into networks or regard the nodes
+ Obtain h for each node in G based on Eq. (1)-(5); belonging to the minority class as anomalies. Such anomaly
+ Obtain h for each node in G  based on Eq. (1)-(5); definition might differ from the problems in practice. In this
+ Calculate pair-wise similarity among all nodes and obtain article, we evaluate the proposed method on the following two
+ kc nodes for each node as a cluster; real-world datasets and one synthetic dataset, and their statistics
+ Calculate Lp based on Eq. (6)-(8); are summarized in Table I.
+ Update M’s parameter Θ. 1) Telecom: Telecom is a dynamic network that consists
+ until converge of 20 581 telecom records among 11 427 phone num-
+ # Supervised learning. bers. The telecom records range from 25 August 2022 to
+ repeat 30 September 2022 and 116 phone numbers are labeled
+ Obtain ŷ for each node based on Eq. (9)-(10); as fraudsters.
+ Calculate L based on Eq. (11); 2) Ether [11]: Ether is one of the largest cryptocurrency
+ Update M’s parameter Θ. in the world second to Bitcoin. The network consists of
+ until converge 26 370 accounts and involves 50 998 ether transactions
+ return model M and prediction results {ŷi }. between 1 January 2018 and 30 June 2018. In the network, 684 accounts are labeled as phishers which are
+ regarded as anomalous nodes.
+to further encode the behavior patterns that denoted by ou ∈ R2 3) Syn-Ether: We manually inject anomalous structures into
+and the prediction results ŷu for node u could be obtained by the Ether transaction network following. Specifically, folŷu = softmax(ou ). (10) lowing [56], we randomly select m accounts in the transaction network and then connect each pair of accounts
+Finally, the model could be optimized with binary cross entropy with virtual transactions if they have no history of transas the objective action. It makes the accounts form a fully connected
+ 1  anomalous structure, and the m accounts are regarded
+ L= yu log(ŷu ) + (1 − yu )log(1 − ŷu ). (11)
+ N as fraudulent accounts. We repeat the injection process k
+ u∈V
+ times and finally obtain mk virtual fraudulent accounts.
+E. Complexity Analysis In this article, we set m = 10 and k = 20.
+ In contrastive pretraining, every node within the input graph
+ We give computational analysis in this section. The com- is involved in the pretraining process, eliminating the need to
+putational complexity of pattern learning mainly comes from separate nodes into training and test sets. However, for superthree aspects: the short-term pattern learning, the long-term vised fine-tuning, we categorize the nodes into training and test
+pattern learning, and the final classification module. The short- sets in a 4:1 ratio.
+term learning includes multiple attention module whose complexity is O(2|V |2 D + ET D ). The long-term pattern learning
+ 2
+
+module mainly contains a GRU and neighborhood aggregation B. Baseline
+operation whose complexity is O(3D + |VD |). We use two-
+ 3
+ We compare the proposed MPIN with five graph representalayer graph convolution in the final classification module, and
+ tion learning approaches which include both static and dynamic
+its complexity is O(6|E|2 D F ) where E denotes the number of
+ network embedding methods.
+edges in G without taking time into consideration and F is the
+ 1) Node2vec [29] is a random walk-based node embedding
+hidden dimension of the GCN module.
+ approach for static networks. It performs a biased random
+ walk to combine depth-first and breadth-first searches on
+ IV. EXPERIMENT
+ networks to capture network structure.
+ In this section, we compare the proposed method with six 2) GCN [30] is regarded as a low-pass filter that passes the
+state-of-the-art baselines on two datasets extracted from real features along with edges and aggregates neighbor node
+scenarios and one synthetic dataset. features of target nodes.
+YANG et al.: MPIN WITH CONTRASTIVE PRETRAINING FOR GRAPH ANOMALY DETECTION 5625
+
+ TABLE II
+ PERFORMANCE OF DIFFERENT METHODS WITH RESPECT TO AUC, PRECISION, RECALL, AND F1 SCORE
+
+ Dataset Metric Node2vec GCN CTDNE EvolveGCN DGI CoLA MPIN
+ AUC 75.69 ± 2.79 99.26 ± 0.24 82.37 ± 2.13 99.13 ± 0.43 81.70 ± 2.41 85.85 ± 1.84 99.67 ± 0.20
+ Precision 28.77 ± 2.54 51.70 ± 5.44 42.98 ± 1.89 54.38 ± 2.51 66.33 ± 4.79 71.82 ± 2.15 90.78 ± 3.96
+ Telcom
+ Recall 35.29 ± 3.19 75.53 ± 1.97 51.09 ± 2.37 78.29 ± 1.22 60.88 ± 4.51 69.73 ± 2.47 75.33 ± 3.00
+ F1 Score 32.71 ± 3.28 61.30 ± 2.93 48.69 ± 1.94 65.73 ± 1.47 63.42 ± 3.25 71.33 ± 2.24 88.32 ± 2.52
+ AUC 92.83 ± 2.50 96.89 ± 0.82 96.29 ± 0.44 98.31 ± 0.53 97.70 ± 1.17 95.39 ± 2.19 99.12 ± 0.28
+ Precision 38.28 ± 5.58 66.39 ± 0.99 62.28 ± 3.75 69.23 ± 1.67 69.19 ± 4.14 68.73 ± 1.71 70.23 ± 1.12
+ Ether
+ Recall 54.28 ± 4.57 69.38 ± 3.07 70.88 ± 3.86 72.47 ± 1.15 84.78 ± 2.42 85.29 ± 1.91 89.49 ± 1.17
+ F1 Score 44.83 ± 3.87 67.83 ± 1.37 66.28 ± 2.65 71.37 ± 1.34 77.85 ± 2.09 77.35 ± 1.77 78.69 ± 2.33
+ AUC 76.07 ± 4.05 94.18 ± 1.01 74.39 ± 5.45 98.28 ± 1.59 99.95 ± 0.57 99.95 ± 0.87 99.97 ± 0.08
+ Precision 21.33 ± 3.67 55.84 ± 2.98 30.55 ± 2.28 75.34 ± 1.87 96.08 ± 1.67 96.58 ± 1.48 95.91 ± 1.53
+ Syn-Ether
+ Recall 22.81 ± 2.31 62.35 ± 2.65 41.01 ± 2.56 69.57 ± 1.34 92.19 ± 1.82 92.57 ± 1.29 93.50 ± 1.50
+ F1 Score 21.92 ± 1.77 58.88 ± 2.51 34.97 ± 1.78 73.84 ± 1.61 92.64 ± 1.61 94.31 ± 1.43 94.68 ± 1.52
+
+ Note: The values in bold font denote the best results.
+
+ 3) CTDNE [37] focuses on continuous-time dynamic net- TABLE III
+ works and extends random walk with temporal bias to PERFORMANCE OF MPIN WITHOUT hin , hout , OR hm
+ obtain node representations.
+ w/o hin w/o hout w/o hm
+ 4) EvolveGCN [40] applies RNNs to learn the temporal AUC 97.58 96.32 94.89
+ correlations of GCNs’ weights to map nodes in dynamic Precision 88.23 86.91 81.09
+ Telecom
+ networks to lower dimensional spaces. Recall 72.65 73.04 70.31
+ F1 Score 79.83 79.37 75.97
+ 5) DGI [46] maximizes the mutual information between AUC 97.31 97.05 95.43
+ patch representations and high-level graph summaries to Precision 68.29 67.50 63.37
+ Ether
+ learn graph embeddings. Recall 86.35 85.92 81.03
+ F1 Score 76.53 75.60 71.65
+ 6) CoLA [50] applies contrastive learning on node-subgraph AUC 98.95 98.42 96.36
+ instances and provides anomaly score for nodes in at- Precision 93.45 92.73 87.26
+ Syn-Ether
+ tributed networks. Recall 92.17 91.63 89.85
+ F1 Score 92.81 91.97 88.54
+ When implementing MPIN, we set the hidden dimension of
+both the attention module and the GRU to 128. We employ two
+fully connected layers with 256 and two hidden units to make
+the final prediction. In the contrastive pretraining phase, we
+set λ = 0.1, β = 0.4, and the behavior pattern learning module methods. The two-stage detection scheme further lowers the
+at the learning rate of 1e–3. The learning rate for subsequent detection performance. Nevertheless, CTDNE, another random
+supervised learning is also set to 1e–3. All the experiments walk-based method, has better detection performance compared
+were conducted on a computer with Unbuntu 20.04 OS and one with node2vec, which is due to the temporal bias adopted in its
+NVIDIA GeForce RTX 3090Ti (24 GB memory) GPU. walking strategy. The usefulness of temporal information is also
+ shown by comparing the performance of GCN and EvolveGCN.
+C. Performance Comparison
+ As is described in Section III, MPIN adopts contrastive pretrain-
+ To evaluate the performance of MPIN, we compare it with ing before anomaly identification. Comparing the performance
+six graph embedding algorithms. Table II shows the aver- of MPIN with DGI and CoLA, we could draw the conclusion
+age performance of MPIN as well as the baselines in terms that MPIN has a better ability to characterize both structural
+of AUC, precision, recall, and F1 score. The best ones are and temporal features.
+marked in black font. As is shown, MPIN has the best per- Apart from Telecom and Ether, which are extracted from
+formance, including high detection performance and low de- real-world scenarios where frauds happen, we also manually
+viation, among all approaches with regard to all four met- inject structural anomalies into Ether to compare the perforrics. The results prove the effectiveness of the characteriza- mance of different methods against such anomalies. As the
+tion of three interaction patterns and contrastive pretraining. results suggest, MPIN is more capable of detecting the manually
+Taking all the results on the three datasets into consideration, injected anomalies than real-world anomalies, and so do the
+MPIN outperforms node2vec with a notable statistical signifi- baseline methods such as GCN and DGI. The two random
+cance, as indicated by a p-value of less than 0.05. For detailed walk-based methods, node2vec and CTDNE, could not seem
+insights and supporting data, please refer to the Appendix to capture the anomalous structure feature, resulting the poor
+(see the supplementary material). detection performance. The results on real-world datasets and
+ No surprisingly, node2vec which is designed for static net- the synthetic dataset demonstrate the significance of real-world
+work embedding performs the worst in most cases. It is be- datasets in the research of graph anomaly detection since the
+cause the anomalies are rare in networks which could fail methods evaluated on synthetic datasets may not suit real-world
+the structure characterization achieved by random walk-based scenarios.
+5626 IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 11, NO. 5, OCTOBER 2024
+
+ TABLE IV
+ PERFORMANCE OF MPIN WITH AND
+ WITHOUT PRETRAINING
+
+ Telecom Ether Syn-Ether
+ MPIN-p 99.32 99.24 99.51
+ AUC MPIN 99.67 99.12 99.97
+ GAIN 0.35% –0.12% 0.46%
+ MPIN-p 83.79 64.17 88.72
+ Precision MPIN 90.78 70.23 95.91
+ GAIN 8.34% 9.44% 8.10%
+ MPIN-p 68.15 88.39 89.03
+ Recall MPIN 75.33 89.49 93.50
+ GAIN 10.54% 1.24% 5.02%
+ MPIN-p 74.17 76.36 87.93
+ F1 Score MPIN 88.32 93.34 94.68
+ GAIN 19.08% 22.24% 7.68%
+
+ Fig. 5. Performance of MPIN as λ varies.
+
+Fig. 4. Performance of MPIN with the increment of training data.
+
+D. Ablation Study
+ 1) The Influence of Different Patterns: As described above, Fig. 6. Performance of MPIN as β varies.
+MPIN takes three types of interactions, i.e., inflows, outflows,
+and their mutual influence, into consideration. The notable performance shown in Table II has proved the effectiveness of
+MPIN. A subsequent question arises: which type of interaction 2) The Effectiveness of Pretraining: Since the scheme of
+information is most important in fraudster identification? To MPIN contains contrastive pretraining, we would like to ininvestigate into question, we drop the inflow pattern, the outflow vestigate how much the pretraining contributes to the anomaly
+pattern, and their mutual influence in MPIN, respectively. As detection. Table IV presents the performance of MPIN with
+presented in Table III, the model without hm behaves the worst and without contrastive pretraining (denoted by MPIN-p). The
+in anomaly detection over the three datasets, which indicates results show that the pretraining could indeed improve the dethat the mutual influence between inflows and outflows has the tection performance in most cases. The AUC value of MPIN
+most impact on model inference. It is might because that hm always stays at a high level. The unnoticeable performance
+contains part of the information of hin and hout , making it the decrease of MPIN with pretraining on Ether might be due to
+most informative one. the noise in model training.
+YANG et al.: MPIN WITH CONTRASTIVE PRETRAINING FOR GRAPH ANOMALY DETECTION 5627
+
+Fig. 7. Behavior pattern visualization of Comm, Ether, and Syn-Ether. The red  represents fraudsters, and the dots in light grey are normal nodes. The
+images in rounded rectangles are enlarged versions of fraudulent clusters.
+
+E. Parameter Analysis and observe the performance change. The results are presented
+ 1) The Influence of the Amount of Training Data: In this in Fig. 6. We found that the performance of MPIN does not
+ significantly vary when β changes. It might be because there
+article, fraud detection is considered as a classification problem
+ are multiple parallel temporal edges and only removing part of
+with extreme class imbalance. Thus, we would like to further
+investigate into the performance of MPIN with labeled data re- them still could generate effective positive samples. With the
+ help of soft-positive samples, the performance change could be
+duction. With curiosity, We vary the percentage of training data
+ even smaller. Empirically, [0.2, 0.8] would be an appropriate
+from 20% to 80% and reevaluate MPIN on the three datasets.
+Fig. 4 shows the performance of MPIN with the increment range for λ, especially for the three datasets.
+of training data. The results on the three datasets represent
+three different situations. On Ether, the performance of MPIN F. Behavior Pattern Visualization
+does not significantly improve when training data are added, Besides pursuing the performance of graph anomaly detecwhich shows that MPIN indeed learns the patterns of labeled tion, we also visualize1 the behavior patterns of individuals
+fraudsters and again proves the effectiveness of the proposed in different networks to investigate which kind of patterns the
+model. Compared with the performance on Ether, MPIN grad- model learns when performing anomaly detection. As presented
+ually performs better with the increment of training data, which in Fig. 7, the nodes in all three datasets share similar interaction
+accords with our intuition. In this situation, MPIN needs enough patterns cluster together. Specifically, the fraudsters in Telecom
+labeled data to perfect its detection ability. As for Telecom, are distributed in three clusters while normal phone numbers
+we find that the tendency of precision is as opposed to that possess similar communication patterns from many other clusof recall, while AUC and F1 score do not change significantly. ters. As for Ether and Syn-Ether, there is only one main cluster
+With such a small amount of true labeled fraudsters, MPIN is formed by fraudsters in the networks. It indicates that MPIN
+easy to find false-positive sample, resulting in the high recall indeed learns exact interaction patterns. Meanwhile, we should
+and low precision at the beginning. More labeled data could notice that some anomalous nodes and normal nodes are mixed
+rectify its judgment. in one cluster, which may lead to the misjudgment of fraudsters.
+ 2) The Influence of λ: In the contrastive pretraining, we
+adopt the contrastive loss Lc to learn distinct transaction pat- V. CONCLUSION
+terns and the local tightness loss Lt to gather the accounts
+with similar transaction patterns. We would like to explore the In this article, we proposed an MPIN to address the problem
+influences of the two objectives on the final detection perfor- of fraudulent account identification in transaction networks.
+mance. As we can observe from Fig. 5, the addition of Lt indeed Considering inflows, outflows, and the mutual influence of the
+improves the performance of MPIN. As λ increases, the average two kinds of interaction from both short-term and long-term
+performance gets better and the deviation gets smaller. When perspectives, MPIN could well learn the behavior patterns of
+λ > 0.3, both precision and recall decline. We argue that it is each account and then distinguish the fraudulent accounts from
+because the model focuses more on gathering accounts into normal ones. The contrastive learning process indeed stabilized
+local clustering rather than learning distinct transaction patterns the learning process and led to a low-variance performance. The
+when λ gets too large. Based on the experimental results, we experimental results on two real-world transaction networks
+suggest that [0.1, 0.3] would be a proper range for λ. proved the superior performance of MPIN compared with sev-
+ 3) The Influence of β: β controls how many edges will be eral baselines. By now, the fraudulent account identification
+removed to generate positive samples. To quantify the influence 1 The visualization is implemented by UMAP: https://github.com/lmcin
+that β has on MPIN’s performance, we vary it from 0.2 to 0.8 nes/umap.
+5628 IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 11, NO. 5, OCTOBER 2024
+
+has been achieved through supervised training. Meanwhile, credit card fraud detection,” IEEE Trans. Syst., Man, Cybern.: Syst.,
+we performed fraud detection on the whole graph which may vol. 52, no. 12, pp. 7845–7857, Dec. 2022.
+ [20] H. Zhu, M. Zhou, G. Liu, Y. Xie, S. Liu, and C. Guo, “NUS: Noisylimit the scalability of large-scale networks with millions of sample-removed undersampling scheme for imbalanced classification
+nodes. The contrastive-pretraining was actually time-costly for and application to credit card fraud detection,” IEEE Trans. Comput.
+the whole graph inference. In future works, we would like to Social Syst., vol. 11, no. 2, pp. 1793–1804, Apr. 2024.
+ [21] H. Zhu, G. Liu, M. Zhou, Y. Xie, A. Abusorrah, and Q. Kang,
+explore the ways, e.g., inference based on subgraphs, to reduce “Optimizing weighted extreme learning machines for imbalanced classithe computation cost while maintaining the detection accuracy. fication and application to credit card fraud detection,” Neurocomputing,
+ vol. 407, pp. 50–62, Sep. 2020.
+ [22] D. Xi et al., “Modeling the field value variations and field interactions
+ simultaneously for fraud detection,” in Proc. AAAI Conf. Artif. Intell.,
+ REFERENCES vol. 35, no. 17, 2021, pp. 14957–14965.
+ [23] Z. Xiao and J. Jiao, “Explainable fraud detection for few labeled time
+ [1] Q. Tao, G. W. Wu, et al., “Posterior probability support vector machines series data,” Secur. Commun. Netw., vol. 2021, Jun. 2021, Art. no.
+ for unbalanced data,” in IEEE Transactions on Neural Networks, vol. 16, 9942464.
+ no. 6, Nov. 2005, pp. 1561–1573.
+ [24] N. Kant and M. Mahajan, “Time-series outlier detection using enhanced
+ [2] F. Y. Wang, D. Zeng, et al., “A study of the human flesh search engine: k-means in combination with PSO algorithm,” in Proc. Eng. Vib.,
+ Crowd-powered expansion of online knowledge,” Computer, vol. 43,
+ Commun. Inf. Process, Singapore: Springer, 2019, pp. 363–373.
+ no. 8, pp. 45–53, Aug. 2010.
+ [3] Y. Chen, Y. Lv, et al., “Traffic flow imputation using parallel data and [25] Z. Liu, C. Chen, X. Yang, J. Zhou, X. Li, and L. Song, “Heterogeneous
+ graph neural networks for malicious account detection,” in Proc. 27th
+ generative adversarial networks,” in IEEE Transactions on Intelligent
+ ACM Int. Conf. Inf. Knowl. Manage., 2018, pp. 2077–2085.
+ Transportation Systems, vol. 21, no. 4, Apr. 2020, pp. 1624–1630.
+ [4] W. Wang, X. Na, et al., “Decision-making in driver-automation shared [26] D. Cheng, Y. Tu, Z.-W. Ma, Z. Niu, and L. Zhang, “Risk assessment for
+ control: A review and perspectives,” in IEEE/CAA Journal of Automatica networked-guarantee loans using high-order graph attention representa-
+ Sinica, vol. 7, no. 5, Sep. 2020, pp. 1289–1307. tion.” in Proc. Int. Joint Conf. Artif. Intell., 2019, pp. 5822–5828.
+ [5] J. Cao, K. Zeng, et al., “Web-based traffic sentiment analysis: Methods [27] B. Xu, H. Shen, B. Sun, R. An, Q. Cao, and X. Cheng, “Towards conand applications,” in IEEE Transactions on Intelligent Transportation sumer loan fraud detection: Graph neural networks with role-constrained
+ Systems, vol. 15, no. 2, Apr. 2014, pp. 844–853. conditional random field,” in Proc. AAAI Conf. Artif. Intell., vol. 35,
+ [6] Y. Xing, C. Lv, et al., “Identification and analysis of driver postures for no. 5, 2021, pp. 4537–4545.
+ in-vehicle driving activities and secondary tasks recognition,” in IEEE [28] B. Perozzi, R. Al-Rfou, and S. Skiena, “DeepWalk: Online learning of
+ Transactions on Computational Social Systems, vol. 5, no. 1, Mar. 2018, social representations,” in Proc. 20th ACM SIGKDD Int. Conf. Knowl.
+ pp. 95–108. Discovery & Data Mining, 2014, pp. 701–710.
+ [7] J. Han et al., “ParaDefender: A scenario-driven parallel system for [29] A. Grover and J. Leskovec, “node2vec: Scalable feature learning for
+ defending metaverses,” IEEE Trans. Syst., Man, Cybern.: Syst., vol. 53, networks,” in Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discovery &
+ no. 4, pp. 2118–2127, Apr. 2023. Data Mining, 2016, pp. 855–864.
+ [8] M. del Mar Roldán-García, J. García-Nieto, and J. F. Aldana-Montes, [30] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+ “Enhancing semantic consistency in anti-fraud rule-based expert sys- convolutional networks,” in Proc. 5th Int. Conf. Learn. Representations,
+ tems,” Expert Syst. Appl., vol. 90, pp. 332–343, Dec. 2017. 2017.
+ [9] X. Ma et al., “A comprehensive survey on graph anomaly detection [31] W. Lu, N. Jiang, D. Jin, H. Chen, and X. Liu, “Learning distinct
+ with deep learning,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, relationship in package recommendation with graph attention networks,”
+ pp. 12012–12038, Dec. 2023. IEEE Trans. Comput. Social Syst., vol. 10, no. 6, pp. 3308–3320,
+[10] D. Wang et al., “A semi-supervised graph attentive network Dec. 2023.
+ for financial fraud detection,” in Proc. IEEE Int. Conf. Data [32] W. L. Hamilton, R. Ying, and J. Leskovec, “Inductive representation
+ Mining (ICDM), Piscataway, NJ, USA: IEEE Press, 2019, learning on large graphs,” in Proc. 31st Int. Conf. Neural Inf. Process.
+ pp. 598–607. Syst., 2017, pp. 1025–1035.
+[11] J. Wu et al., “Who are the phishers? Phishing scam detection on [33] W.-L. Chiang, X. Liu, S. Si, Y. Li, S. Bengio, and C.-J. Hsieh,
+ Ethereum via network embedding,” IEEE Trans. Syst., Man, Cybern.: “Cluster-GCN: An efficient algorithm for training deep and large graph
+ Syst., vol. 52, no. 2, pp. 1156–1166, Feb. 2022. convolutional networks,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl.
+[12] Y. Xie, G. Liu, C. Yan, C. Jiang, and M. Zhou, “Time-aware attention- Discovery & Data Mining, 2019, pp. 257–266.
+ based gated network for credit card fraud detection by extracting [34] G. Li, M. Muller, A. Thabet, and B. Ghanem, “DeepGCNs: Can GCNs
+ transactional behaviors,” IEEE Trans. Comput. Social Syst., vol. 10, go as deep as CNNs?” in Proc. IEEE/CVF Int. Conf. Comput. Vis., 2019,
+ no. 3, pp. 1004–1016, Jun. 2023. pp. 9267–9276.
+[13] P. K. Verma, P. Agrawal, I. Amorim, and R. Prodan, “WELFake: [35] Y. Han, G. Huang, S. Song, L. Yang, H. Wang, and Y. Wang, “Dynamic
+ Word embedding over linguistic features for fake news detection,” neural networks: A survey,” IEEE Trans. Pattern Anal. Mach. Intell.,
+ IEEE Trans. Comput. Social Syst., vol. 8, no. 4, pp. 881–893, vol. 44, no. 11, pp. 7436–7456, Nov. 2022.
+ Aug. 2021. [36] C. He, X. Fei, Q. Cheng, H. Li, Z. Hu, and Y. Tang, “A survey of
+[14] A. C. Bahnsen, D. Aouada, A. Stojanovic, and B. Ottersten, “Feature community detection in complex networks using nonnegative matrix
+ engineering strategies for credit card fraud detection,” Expert Syst. Appl., factorization,” IEEE Trans. Comput. Social Syst., vol. 9, no. 2, pp. 440–
+ vol. 51, pp. 134–142, Jun. 2016. 457, Apr. 2022.
+[15] Y. Xie, G. Liu, C. Yan, C. Jiang, M. Zhou, and M. Li, “Learning [37] G. H. Nguyen, J. B. Lee, R. A. Rossi, N. K. Ahmed, E. Koh, and S. Kim,
+ transactional behavioral representations for credit card fraud detection,” “Continuous-time dynamic network embeddings,” in Proc. Companion
+ IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 4, pp. 5735–5748, Proc. Web Conf., 2018, pp. 969–976.
+ Apr. 2024. [38] W. Yu, W. Cheng, C. C. Aggarwal, K. Zhang, H. Chen, and W. Wang,
+[16] R. Li, Z. Liu, Y. Ma, D. Yang, and S. Sun, “Internet financial fraud “NetWalk: A flexible deep embedding approach for anomaly detection
+ detection based on graph learning,” IEEE Trans. Comput. Social Syst., in dynamic networks,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl.
+ vol. 10, no. 3, pp. 1394–1401, Jun. 2023. Discovery & Data Mining, 2018, pp. 2672–2681.
+[17] X. Zhang, Y. Han, W. Xu, and Q. Wang, “HOBA: A novel feature [39] R. Trivedi, M. Farajtabar, P. Biswal, and H. Zha, “DyRep: Learning
+ engineering methodology for credit card fraud detection with a deep representations over dynamic graphs,” in Proc. Int. Conf. Learn. Reprelearning architecture,” Inf. Sci., vol. 557, pp. 302–316, May 2021. sentations, 2019.
+[18] S. Han, K. Zhu, M. Zhou, and X. Cai, “Information-utilization-method- [40] A. Pareja et al., “EvolveGCN: Evolving graph convolutional networks
+ assisted multimodal multiobjective optimization and application to credit for dynamic graphs,” in Proc. AAAI Conf. Artif. Intell., vol. 34, no. 4,
+ card fraud detection,” IEEE Trans. Comput. Social Syst., vol. 8, no. 4, 2020, pp. 5363–5370.
+ pp. 856–869, Aug. 2021. [41] J. Chen et al., “E-LSTM-D: A deep learning framework for dynamic
+[19] S. Han, K. Zhu, M. Zhou, and X. Cai, “Competition-driven multimodal network link prediction,” IEEE Trans. Syst., Man, Cybern.: Syst.,
+ multiobjective optimization and its application to feature selection for vol. 51, no. 6, pp. 3699–3712, Jun. 2021.
+YANG et al.: MPIN WITH CONTRASTIVE PRETRAINING FOR GRAPH ANOMALY DETECTION 5629
+
+[42] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for Liyuan Lin received the B.S. degree in computer
+ unsupervised visual representation learning,” in Proc. IEEE/CVF Conf. science from China Jiliang University, Hangzhou,
+ Comput. Vis. Pattern Recognit., 2020, pp. 9729–9738. China, in 2021. He is currently working toward the
+[43] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework M.S. degree in cyberspace security from Hangzhou
+ for contrastive learning of visual representations,” in Proc. Int. Conf. Dianzi University, Hangzhou, China.
+ Mach. Learn., PMLR, 2020, pp. 1597–1607. His research interests include graph representa-
+[44] Y. Jian, C. Gao, and S. Vosoughi, “Non-linguistic supervision tion learning and anomaly detection.
+ for contrastive learning of sentence embeddings,” vol. 35, 2022,
+ pp. 3533–35548.
+[45] R. D. Hjelm et al., “Learning deep representations by mutual information
+ estimation and maximization,” in 7th Int. Conf. Learn. Representations,
+ ICLR, New Orleans, LA, USA, May 2019. OpenReview.net, 2019.
+ [Online]. Available: https://openreview.net/forum?id=Bklr3j0cKX
+[46] P. Veličković, W. Fedus, W. L. Hamilton, P. Lio, Y. Bengio, and R. D.
+ Hjelm, “Deep graph infomax,” in 7th Int. Conf. Learn. Representations,
+ ICLR, New Orleans, LA, USA, May 2019. OpenReview.net, 2019.
+ [Online]. Available: https://openreview.net/forum?id=rklz9iAcKQ
+[47] Y. Ren and B. Liu, “Heterogeneous deep graph infomax,” 2019,
+ arXiv:1911.08538. Jinpeng Han (Student Member, IEEE) received
+[48] F. L. Opolka, A. Solomon, C. Cangea, P. Veličković, P. Lio, and R. D. the B.E. degree in automation from the School
+ Hjelm, “Spatio-temporal deep graph infomax,” 2019, arXiv:1904.06316. of Automation, Wuhan University of Technology,
+[49] Y. You, T. Chen, Y. Sui, T. Chen, Z. Wang, and Y. Shen, “Graph Wuhan, China in 2016. He is currently working
+ contrastive learning with augmentations,” in Proc. Adv. Neural Inf. toward the Ph.D. degree in software engineering
+ Process. Syst., vol. 33, 2020, pp. 5812–5823. with the School of Software Engineering, Xi’an
+[50] Y. Liu, Z. Li, S. Pan, C. Gong, C. Zhou, and G. Karypis, “Anomaly de- Jiaotong University, Xi’an, China, as well as the
+ tection on attributed networks via contrastive self-supervised learning,” State Key Laboratory for Management and Control
+ IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2378–2392, of Complex Systems, Institute of Automation, Chi-
+ Jun. 2022. nese Academy of Sciences, Beijing, China.
+[51] H. Yang, H. Chen, S. Pan, L. Li, P. S. Yu, and G. Xu, “Dual space graph His research interests include parallel intellicontrastive learning,” in Proc. ACM Web Conf., 2022, pp. 1238–1247. gence, parallel security, and security games.
+[52] S. Wan, S. Pan, J. Yang, and C. Gong, “Contrastive and generative graph
+ convolutional networks for graph-based semi-supervised learning,” in
+ Proc. 35th AAAI Conf. Artif. Intell., Palo Alto, CA, USA: AAAI Press,
+ 2021, pp. 10 049–10 057.
+[53] J. Zeng and P. Xie, “Contrastive self-supervised learning for graph
+ classification,” in Proc. 35th AAAI Conf. Artif. Intell., AAAI Press, 2021,
+ pp. 10824–10832.
+[54] A. v. d. Oord, Y. Li, and O. Vinyals, “Representation learning with
+ contrastive predictive coding,” 2018, arXiv:1807.03748. Xiaoguang Chen received the M.E. degree in
+[55] S. Li, W. Li, A. M. Luvembe, and W. Tong, “Graph contrastive learning information security from Beijing University of
+ with feature augmentation for rumor detection,” IEEE Trans. Comput. Posts and Telecommunications, Beijing, China, in
+ Social Syst., early access, doi: 10.1109/TCSS.2023.3269303. 2008. He is currently working toward the Ph.D. de-
+[56] K. Ding, J. Li, R. Bhanushali, and H. Liu, “Deep anomaly detection on gree in intelligent science and systems engineering
+ attributed networks,” in Proc. SIAM Int. Conf. Data Mining., Calgary, with Macao University of Science and Technology,
+ Alberta, Canada: SIAM, 2019, pp. 594–602. Macao, China.
+ He is specialized in industrial IOT security sys-
+ Manzhi Yang received the master’s degree in tems with Eversec Technology Company Ltd., Beicryptography from Beijing University of Posts and jing, China. His research interests include parallel
+ Telecommunications, Beijing, China, in 2005. He is intelligence, parallel security, and cybersecurity.
+ currently working toward the Ph.D. degree in intelligent science and systems engineering with Macao
+ University of Science and Technology, Macao,
+ China.
+ He is a Senior Expert in network security systems
+ with Eversec Technology Company Ltd., Beijing,
+ China. His research interests include parallel intelligence, parallel security, and cybersecurity.
+ Zhen Wang received the B.Sc., M.Eng., and Ph.D.
+ degrees in software engineering from Dalian Uni-
+ Jian Zhang received the B.S. degree in automation versity of Technology, Dalian, China, in 2007, 2009,
+ and the Ph.D. degree in control theory and engi- and 2016, respectively.
+ neering from Zhejiang University of Technology, He is a Professor with the School of Cyberspace
+ Hangzhou, China, in 2017 and 2022, respectively. and the Experimental Center of Data Science and
+ He is currently a Lecturer with the School of Cy- Intelligent Decision-Making, Hangzhou Dianzi Uniberspace, Hangzhou Dianzi University, Hangzhou, versity, Hangzhou, China. From 2014 to 2016, he
+ China. His research interests include graph neural was a Research Fellow with Nanyang Technolognetworks, machine learning security, and anomaly ical University, Singapore. His research interests
+ detection. include network security, artificial intelligence security, complex networks, reinforcement learning, and algorithmic game theory.
+5630 IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 11, NO. 5, OCTOBER 2024
+
+ Fei-Yue Wang (Fellow, IEEE) received the Ph.D. his work in intelligent control and social computing. He received the IEEE
+ degree in computer and systems engineering from ITS Outstanding Application and Research Awards in 2009, 2011, and 2015,
+ Rensselaer Polytechnic Institute, Troy, NY, USA, in respectively, the IEEE SMC Norbert Wiener Award in 2014, and became the
+ 1990. IFAC Pavel J. Nowacki Distinguished Lecturer in 2021. Since 1997, he has
+ He joined The University of Arizona, Tucson, been serving as the General or Program Chair of over 30 IEEE, INFORMS,
+ USA, in 1990, and became a Professor and the IFAC, ACM, and ASME conferences. He was the President of the IEEE
+ Director of the Robotics and Automation Labora- ITS Society from 2005 to 2007, the IEEE Council of RFID from 2019 to
+ tory and the Program in Advanced Research for 2021, the Chinese Association for Science and Technology, USA, in 2005,
+ Complex Systems. In 1999, he founded the Intelli- the American Zhu Kezhen Education Foundation from 2007 to 2008, the Vice
+ gent Control and Systems Engineering Center, Insti- President of the ACM China Council from 2010 to 2011, the Vice President
+ tute of Automation, Chinese Academy of Sciences and the Secretary General of the Chinese Association of Automation from
+(CAS), Beijing, China, under the support of the Outstanding Chinese Talents 2008 to 2018, the Vice President of IEEE Systems, Man, and Cybernetics
+Program from the State Planning Council, and in 2002, was appointed as the Society from 2019 to 2021. He was the Founding Editor-in-Chief (EiC)
+Director of the Key Laboratory of Complex Systems and Intelligence Science, of International Journal of Intelligent Control and Systems from 1995 to
+CAS, and the Vice President of Institute of Automation, CAS, in 2006. 2000, IEEE Intelligent Transportation Systems Magazine from 2006 to 2007,
+ He founded CAS Center for Social Computing and Parallel Management, IEEE/CAA JOURNAL OF AUTOMATICA SINICA from 2014 to 2017, China’s
+in 2008, and became the State Specially Appointed Expert and the Founding Journal of Command and Control from 2015 to 2021, and Chinese Journal
+Director of the State Key Laboratory for Management and Control of Complex of Intelligent Science and Technology from 2019 to 2021. He was the EiC
+Systems, in 2011. His research interests include methods and applications for of IEEE INTELLIGENT SYSTEMS from 2009 to 2012, IEEE TRANSACTIONS
+parallel intelligence, social computing, and knowledge automation. ON INTELLIGENT TRANSPORTATION SYSTEMS from 2009 to 2016, and IEEE
+ He is a fellow of INCOSE, IFAC, ASME, and AAAS. In 2007, he received TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS from 2017 to 2020.
+the National Prize in Natural Sciences of China, numerous best papers awards Currently, he is the President of CAA’s Supervision Council and the EiC of
+from IEEE Transactions, and became an Outstanding Scientist of ACM for IEEE TRANSACTIONS ON INTELLIGENT VEHICLES.

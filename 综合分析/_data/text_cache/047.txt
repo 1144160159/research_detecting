@@ -1,0 +1,136 @@
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020                                                                1043
+
+
+
+
+        A Dive into the Dark Web: Hierarchical Traffic
+             Classification of Anonymity Tools
+          Antonio Montieri , Graduate Student Member, IEEE, Domenico Ciuonzo , Senior Member, IEEE,
+               Giampaolo Bovenzi , Valerio Persico , and Antonio Pescape , Senior Member, IEEE
+
+
+   Abstract—Privacy-preserving protocols and tools are                             The most popular ATs developed in recent years are The
+increasingly adopted by Internet users nowadays. These                          Onion Router (Tor),1 the Invisible Internet Project (I2P),2 and
+mechanisms are challenged by the process of traffic classification
+(TC) which, other than being an important workhorse for several                 JonDonym3 (formerly known as Java Anon Proxy or Web-
+network management tasks, becomes a key factor in the                           Mix). These tools allow users to preserve their anonymity, e.g.
+assessment of their privacy level, both from offensive (malign)                  encrypting data multiple times and routing it through multiple
+and defensive (benign) standpoints. In this paper, we propose TC                stations, providing each with just a piece of the information.
+of anonymity tools (and deeper, of their running services and                   From the user viewpoint, ATs allow browsing and running
+applications) via a truly hierarchical approach. Capitalizing a
+public dataset released in 2017 containing anonymity traffic, we                applications (also circumventing restrictions enforced at either
+provide an in-depth analysis of TC and we compare the proposed                  providers or governmental level) keeping their identity and
+hierarchical approach with a flat counterpart. The proposed                     location secret to any intermediary entity observing the traffic.
+framework is investigated in both the usual TC setup and its                    Accordingly, tracing users and their activities across these net-
+“early” variant (i.e., only the first segments of traffic aggregate             works is a complex task.
+are used to take a decision). Results highlight a general
+improvement over the flat approach in terms of all the                             ATs have been investigated in recent years by several stud-
+classification metrics. Further performance gains are also                      ies from different perspectives including design improvement,
+accomplished by tuning the thresholds ensuring progressive                      AT delay and performance analysis, feasibility of effective
+censoring. Finally, fine-grain performance investigation allows us              attacks to ATs, users’ behavior profiling and identity disclo-
+to demonstrate lower severity of errors incurred by the                         sure risk, and censoring policies enforced for ATs [1]. Among
+hierarchical approach (as opposed to the flat case) and highlight
+poorly classifiable services/applications of each anonymity tool,               these crucial aspects, a cardinal issue is understanding to what
+gathering useful feedback on their privacy level.                               extent (encrypted) ATs traffic can be classified, i.e. at which
+   Index Terms—Dark web, dark net, Tor, I2P, JonDonym, traffic                  granularity ATs and related applications can be accurately rec-
+classification, hierarchical classification, anonymity, privacy,                ognized by external entities. Accordingly, in this paper, we
+security.                                                                       focus on ATs Traffic Classification (TC).
+                                                                                   Indeed, TC—consisting in associating traffic aggregates to
+                                                                                specific applications or groups of applications (viz. labeling
+                           I. INTRODUCTION                                      them)—is of utmost importance in Internet traffic engineering,
+                                                                                along with related methodologies & tools, as they jointly sup-
+I  N line with the growing criticality of the activities users
+   perform online, privacy is today a key concern. In particu-
+lar, preserving the anonymity of users is an aspect that has
+                                                                                port activities such as network monitoring, security assessment,
+                                                                                application identification, anomaly detection, accounting,
+gathered the attention of the research community, that over                     advertising, and service differentiation [2], [3]. For these rea-
+last years put the effort in designing and developing tools able                sons, TC has gained importance in recent years due to growing
+to achieve privacy at varying degrees. As a result, at present a                incentives to disguise certain applications [4], comprising those
+number of Anonymity Tools (ATs) are freely available, able                      generating anonymous traffic [5].
+to hide—besides the content of the communication itself, via                       On the one hand, investigating TC of ATs is useful to
+encryption—the identity of the parties (source and destination)                 designers, as it puts their effectiveness to the test, reveals
+involved in the communication.                                                  shortcomings, and leads the way to robustify them. On the
+                                                                                other hand, these studies are of interest to providers as well as
+   Manuscript received October 2, 2018; revised January 14, 2019; accepted      governmental entities, providing knowledge e.g. to enforce
+February 21, 2019. Date of publication March 8, 2019; date of current version   informed engineering policies or to prevent users performing
+September 2, 2020. This work was partially funded by art. 11 DM 593/2000 for
+NM2 s.r.l. (Italy). Recommended for acceptance by S. Xu. (Corresponding
+                                                                                unwanted actions. Hence, classifying ATs traffic is a particu-
+author: Antonio Pescap e.)                                                     larly appealing and challenging research field whose state-of-
+   A. Montieri, D. Ciuonzo, and G. Bovenzi are with the University of           art solutions leave room for improvement.
+Napoli Federico II, 80125 Napoli, Italy (e-mail: antonio.montieri@unina.it;
+domenico.ciuonzo@ieee.org; giampaolo.bovenzi@gmail.com).
+   V. Persico and A. Pescape are with the University of Napoli Federico
+                                                                                   1
+II, 80125 Napoli, Italy, and also with NM2 s.r.l. 80143, Napoli, Italy (e-          Tor Project. https://www.torproject.org.
+                                                                                   2
+mail: valerio.persico@unina.it; pescape@unina.it).                                  The Invisible Internet Project. https://geti2p.net.
+                                                                                   3
+   Digital Object Identifier 10.1109/TNSE.2019.2901994                              JonDonym. http://anonymous-proxy-servers.net.
+                        2327-4697 ß 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+
+
+          Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+1044                                                IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020
+
+
+
+   Because of the specific nature of ATs encrypted traffic,                       In [9] a novel multilateral (viz. multi-view) and hierarchical
+Machine Learning (ML) classifiers represent the natural                        approach for Internet TC is proposed, further refined into
+enabler, able to provide decisions based on the sole traffic-                  FORMULA framework [10], operating on biflow-segmented
+flow features [5] and to overcome shortcomings due to the                      traffic. Specifically, the devised approach relies on a taxonomy
+application of common solutions (e.g., those based on payload                  that provides multilateral identification based on four different
+inspection or earlier port-based ones [6]).                                    classification criteria (i.e. service, application, protocol, and
+   On the top of that, hierarchical classification represents a                function) via a hierarchical structure (whose working principle
+perfect match for TC of ATs, as (i) it allows fine-grained tun-                is however not detailed), supporting roll-up and drill-down
+ing and design, potentially leading to classification perfor-                  operations on the classification results. Unfortunately, the col-
+mance gains; (ii) it also brings a number of “practical”                       lected traffic lacks a ground truth, precluding a verification of
+benefits by design, at cost of moderate complexity increase.                   the reported results.
+For example, re-training does not involve all the nodes in the                    In [11], the authors propose a fine-grained scheme for hierar-
+hierarchy when new applications leveraging anonymity net-                      chical TC of video traffic based on clustering. A hierarchical
+works are released. Also, distributed deployment of TC tasks,                  version of k-Nearest Neighbor (k-NN) is fed with the most dis-
+thanks to the modularity of the framework, is enabled in the                   criminative statistical features selected among 40 extracted
+network (thus hierarchical classification could be achieved                    from downstream/upstream data, ranked by the information
+through chaining of virtualized network functions, each asso-                  gain ratio. The dataset, including six types of (symmetric and
+ciated to a classifier). Albeit these benefits are granted by the              asymmetric) traffic, is collected on the campus network of Nanj-
+hierarchical approach itself, research efforts are needed to                   ing University. Experimental results report  97% F-measure in
+deepen the aspects of design optimization (to obtain enhanced                  discriminating among all the considered (video) traffic and supe-
+performance) and fine-grain evaluation to delve into privacy-                  rior performance w.r.t. existing alternatives, while providing
+level assessment of ATs.                                                       only a slight time-complexity increase. Recently, in [12] a two-
+                                                                               level hierarchical classification framework is presented to iden-
+                                                                               tify the services running within HTTPS connections leveraging
+A. Related Works
+                                                                               a set of features robust to alteration (e.g., statistics of inter-
+    Up to our knowledge, there are no studies focused on classi-               arrival times and packet/payload sizes). The proposed evalua-
+fication of different anonymity services at various levels of                  tion method, based on real traffic traces, achieves a recall within
+granularity via hierarchical learning. Accordingly, this sec-                  ½95; 100% in 50 out of the 68 HTTPS services considered.
+tion first discusses the (few) works tackling standard TC (i.e.                   2) (Flat) Traffic Classification of Anonymity Tools: The
+not focusing on traffic generated by ATs) via a hierarchical                   analysis of ATs has been initially carried in private networks,
+approach. Then, literature on TC of ATs via a “flat” (viz. non-                e.g. with the aim of discriminating between HTTPS and Tor
+hierarchical) approach is reviewed, including the conceptu-                    traffic [13]. In detail, by leveraging a dataset made of
+ally-related Website Fingerprinting (WF) problem.                              (i) regular HTTPS traffic, (ii) HTTP and (iii) HTTPS over a
+    1) Hierarchical Traffic Classification: A first approach to                private Tor network, authors show that HTTP/HTTPS traffic
+hierarchical TC is described in [7], where a three-level system                over Tor can be detected with  93% accuracy, employing
+for Peer-to-Peer (P2P) biflow-based traffic categorization is                  Random Forest (RF), C4.5, and AdaBoost classifiers.
+proposed to discern among 11 P2P and 5 non-P2P apps. The                          On the other hand, a few works focus on TC analyzing real
+first-level classifier adopts a Support Vector Machine (SVM)                   traffic from anonymity networks, as most of the “experimental”
+for P2P/non-P2P recognition, whereas Support Vector Data                       literature explores anonymous WF, whose aim is to identify a
+Descriptions are employed at the other two levels for P2P-type                 web-page accessed by a client of encrypted and anonymized
+(i.e. file-sharing, messenger, and TV) and P2P plus non-P2P                    connections by observing patterns of data flows (e.g., packet
+app TC, respectively. Results (pertaining to each single classi-               size and direction). Herrmann et al. [14] propose a Multinomial
+fier in the hierarchy separately) show that the proposed                       Na€ıve Bayes (MNB) that relies on the normalized frequency
+approach achieves precision and recall  95% in P2P/non-                       distribution of IP packet sizes to tackle the WF problem in the
+P2P recognition and  93% in P2P-type classification, while a                  context of different privacy-enhancing technologies (in a
+recall drop down to 71% is observed at last level. Similarly,                  closed-world scenario) including Tor and JonDonym. Although
+[8] propose the adoption of a hierarchical classifier to allow                 Tor and JonDonym guarantee a better protection than other pri-
+Internet TC (into  20 fine-grained classes), showing a com-                   vacy-enhancing technologies (i.e. OpenSSL, OpenVPN), they
+parison with flat-learning results. The proposed tree-structured               prove to be not perfect (3% and 20% average accuracy, respec-
+(three-level) taxonomy introduces also a first level which iden-               tively). In [15] the same problem is tackled via a Support Vector
+tifies known/unseen traffic. Both (per-classifier) feature selec-              Classifier, obtaining a gain of detection rate over [14] from 3%
+tion (from a set of 200, as proposed by past literature) and                   to 55% (resp. from 20% to 80%) in Tor (resp. JonDonym) net-
+(coarse-grained) optimization w.r.t. different classifiers (such               work. On the other hand, in an open-world case, the detection
+as Decision Trees, Neural Networks, and SVMs) are consid-                      rate drops with a maximum of 73% and 0:05% false-positive
+ered. Results show that the proposed hierarchical system out-                  rate. More recently, in [16] a WF approach aimed to overcome
+performs off-the-shelf flat classification, with an average                    limitation of previous

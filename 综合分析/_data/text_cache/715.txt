@@ -1,0 +1,147 @@
+2940                                                                  IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 5, MAY 2026
+
+
+
+
+        LaGraph: Laplacian-Guided Graph Learning for
+              Time Series Anomaly Detection
+  Shicong Zeng , Guoqing Chao , Junquan Wei , Yanwei Yu , Member, IEEE, Zhijin Wang , Member, IEEE,
+                                         and Dianhui Chu
+
+
+   Abstract—Time series anomaly detection is crucial in fields such                 is to identify data points that significantly deviate from normal
+as industrial monitoring, financial risk management, and net-                       temporal patterns. However, this task remains challenging due
+work security. Graph Neural Networks (GNNs) have demonstrated                       to the scarcity of anomalies, the diverse nature of anomaly types,
+strong capabilities in capturing multivariate dependencies. How-
+ever, existing methods often fail to adequately account for the tem-                complex temporal dependencies, and the difficulty of modeling
+poral proximity between adjacent time points and are susceptible                    hidden relationships among multiple variables.
+to the influence of weak or noisy connections during graph-based                       The rarity of anomalous events, combined with the high cost
+representation learning. To address these challenges, we propose                    and the need for expert knowledge during labeling, poses signif-
+LaGraph, a novel framework that integrates GNNs with a mask-                        icant challenges in constructing large-scale labeled datasets [5],
+optimized attention mechanism. Specifically, LaGraph decomposes
+input sequences into stable and trend components using an Expert                    [6], [7]. Consequently, supervised methods are often impractical
+Decomposition Block. The trend component is processed via a                         in real-world scenarios. In contrast, unsupervised methods have
+Multi-layer Convolution Block, while the stable component is mod-                   garnered increasing attention in recent years, as they focus
+eled with a Proximity-enhanced Graph Convolutional Network                          on modeling normal patterns and detecting anomalies based
+that incorporates a Laplacian kernel to capture local temporal                      on deviations from these patterns, without requiring labeled
+dependencies. Additionally, a Mask-optimized Multi-head Atten-
+tion Block, based on the Straight-Through Estimator (STE), miti-                    anomaly data [8].
+gates the negative effects of less informative edges, enhancing both                   Existing time series anomaly detection methods can be
+representation quality and reconstruction performance. Extensive                    broadly categorized into statistical methods, traditional machine
+experiments on five real-world benchmark datasets demonstrate                       learning methods, and deep learning-based methods [9], [10].
+that LaGraph consistently outperforms state-of-the-art methods,
+                                                                                    Statistical methods, such as ARIMA [11], seasonal decompo-
+verifying its effectiveness and superiority for time series anomaly
+detection.                                                                          sition [12], and CUSUM [13], typically rely on assumptions
+                                                                                    of stationarity or known data distributions. While effective for
+  Index Terms—Time series anomaly detection, temporal                               simple and regular patterns, their performance often deteriorates
+proximity, Laplacian kernel, graph neural networks, mask-
+optimized attention.
+                                                                                    when applied to nonlinear, non-stationary, or high-dimensional
+                                                                                    time series. Traditional machine learning methods, including
+                                                                                    isolation forests [14], support vector machines [15], and k-
+                            I. INTRODUCTION                                         nearest neighbors [16], depend on hand-crafted features and
+     IME series anomaly detection plays a crucial role in                           fixed decision boundaries, making them sensitive to hyperpa-
+T    various real-world applications, including industrial fault
+diagnosis, financial risk management, healthcare monitoring,
+                                                                                    rameter choices and limited in modeling long-range temporal
+                                                                                    dependencies.
+and intelligent transportation systems [1], [2], [3], [4]. Its goal                    Deep learning methods have shown superiority to model
+                                                                                    complex temporal patterns. Among them, three main paradigms
+                                                                                    are commonly adopted. Prediction-based methods [17], [18],
+   Received 1 August 2025; revised 26 January 2026; accepted 14 February
+2026. Date of publication 17 February 2026; date of current version 9 April 2026.
+                                                                                    [19] train models to forecast future values and identify anomalies
+This work was supported in part by the National Natural Science Foundation of       based on prediction errors. Reconstruction-based methods [20],
+China under Grant 62276079, in part by the Young Teacher Development Fund           [21], [22], [23] aim to learn normal time series patterns and
+of Harbin Institute of Technology under Grant IDGA10002071, in part by the
+Research and Innovation Foundation of Harbin Institute of Technology under
+                                                                                    detect anomalies by measuring the discrepancy between the
+Grant IDGAZMZ00210325, and in part by the Special Funding Program of                original inputs and their reconstructed counterparts. Latent
+Shandong Taishan Scholars Project. Recommended for acceptance by S. Whang.          representation-based methods differentiate normal and abnor-
+(Corresponding author: Guoqing Chao.)
+   Shicong Zeng, Guoqing Chao, Junquan Wei, and Dianhui Chu are with the
+                                                                                    mal behaviors through discriminative or contrastive learning
+School of Computer Sciences and Technology, Harbin Institute of Technology,         objectives to learn effective representation [24], [25].
+Weihai 264209, China (e-mail: guoqingchao@hit.edu.cn).                                 Among deep learning approaches for time series anomaly de-
+   Yanwei Yu is with the Faculty of Information Science and Engineering, Ocean
+University of China, Qingdao 266005, China.
+                                                                                    tection, reconstruction-based methods have gained considerable
+   Zhijin Wang is with the College of Computer Engineering, Jimei University,       attention, particularly in unsupervised settings. These methods
+Xiamen 361021, China.                                                               aim to model the underlying structure and temporal patterns
+   To promote reproducibility and support future research, we have publicly
+released the full implementation at https://github.com/hit-zsc/LaGraph.
+                                                                                    of normal data and reconstruct the input sequence. The core
+   Digital Object Identifier 10.1109/TKDE.2026.3665696                              idea is that inputs deviating from learned normal behavior will
+
+      1041-4347 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ZENG et al.: LAGRAPH: LAPLACIAN-GUIDED GRAPH LEARNING FOR TIME SERIES ANOMALY DETECTION                                          2941
+
+
+
+result in higher reconstruction errors, which can be used as       Mask-optimized Multi-head Attention Block integrates long-
+effective signals for anomaly detection. Since these methods do    range dependencies while suppressing irrelevant or noisy graph
+not require labeled anomalies, they are suitable for real-world    connections, thereby improving reconstruction quality. By
+scenarios where annotated data is scarce or unavailable. In        jointly modeling structural and temporal similarities and ex-
+addition, reconstruction-based methods can capture complex         plicitly addressing noise in the learned temporal graph, the
+temporal dependencies and provide an interpretable anomaly         proposed framework enhances both the expressiveness of the
+scoring mechanism through reconstruction loss. Despite these       reconstruction process and the reliability of anomaly detection.
+advantages, reconstruction-based methods still face significant       The main contributions of this paper are summarized as
+challenges. Their effectiveness depends largely on the model’s     follows:
+ability to accurately capture normal patterns without overgen-        r We propose an Expert Decomposition Block that sepa-
+eralizing to unseen abnormal inputs. Thus, designing robust              rates the input time series into stable and trend compo-
+model architectures and loss functions is crucial to guaran-             nents, reducing the contamination of reconstruction by
+tee reliable performance in diverse and complex time series              non-stationary components and enabling targeted model-
+scenarios.                                                               ing of distinct temporal dynamics. This design improves
+   Graph Neural Networks (GNNs) [26] have demonstrated                   robustness by isolating trend-induced variations and re-
+strong performance in modeling structural dependencies within            constructing more stationary residual patterns.
+multivariate time series, making them particularly suitable           r We design a Proximity-enhanced Graph Convolutional
+for reconstruction-based anomaly detection. By incorporating             Network that incorporates a Laplacian kernel to emphasize
+graph structures, GNNs explicitly capture relationships and              temporal proximity between adjacent time points, pro-
+structural similarities among variables, which is crucial for            viding a principled temporal prior and thereby enhancing
+accurate sequence reconstruction. However, conventional GNNs             the model’s ability to capture fine-grained local temporal
+often overlook an essential characteristic of time series data:          dependencies.
+temporal proximity, which refers to the intrinsic similarity          r We propose a Mask-optimized Multi-head Attention Block
+between adjacent time points. Ignoring this property limits              based on the STE to adaptively suppress weak and noisy
+the model’s ability to capture fine-grained temporal dynamics,           connections in the temporal graph structure, leading to
+which is critical for precise anomaly detection. Moreover, the           more reliable feature aggregation and improving both re-
+learned graphs in existing methods are often dense and noisy;            construction accuracy and anomaly detection robustness.
+spurious edges can propagate noise through message passing            r Extensive experiments on five widely used benchmark
+and destabilize reconstruction, especially under non-stationary          datasets demonstrate that our method achieves state-of-
+drifts and level shifts.                                                 the-art performance compared with strong recent baselines,
+   To address these issues, we propose a Laplacian kernel-               verifying its effectiveness and superiority.
+enhanced graph convolutional network that integrates temporal
+awareness into the graph learning process. The proposed method                            II. RELATED WORKS
+introduces an explicit temporal proximity prior and performs
+noise-aware graph sparsification during message passing, avoid-    A. Time Series Anomaly Detection
+ing reliance on similarity-driven dense temporal graphs. Specif-      Traditional time series anomaly detection methods can be
+ically, we construct a time-aware graph using a Laplacian kernel   broadly classified into statistical modeling and classical machine
+to explicitly emphasize the temporal proximity between adjacent    learning techniques. Statistical approaches typically decompose
+time points. This kernel serves as a prior to modulating edge      time series into trend, seasonal, and residual components to
+weights in the graph convolution, enabling the model to capture    detect anomalies, whereas machine learning methods are com-
+locally coherent temporal structures. Furthermore, to suppress     monly based on clustering, classification, or density estimation
+the influence of weakly connected nodes and noisy edges, we        techniques. Despite their success in simple or low-dimensional
+introduce a mask-optimized multi-head attention mechanism          cases, these methods generally fail to scale effectively to high-
+based on the Straight-Through Estimator (STE) [27]. This           dimensional and dynamically evolving multivariate time series.
+mechanism adaptively filters out noisy connections, allowing          In recent years, deep learning has emerged as a pow-
+the model to focus more on the meaningful relationships or         erful paradigm for time series anomaly detection. By di-
+structures in the data, which improves anomaly detection.          rectly learning temporal structures and nonlinear patterns
+   Our proposed model, LaGraph, consists of four core mod-         from raw data, these models eliminate the need for man-
+ules. First, the Expert Decomposition Block separates the raw      ual feature engineering and offer enhanced modeling flexi-
+time series into stable and trend components, enabling special-    bility. Prominent architectures include recurrent neural net-
+ized modeling of distinct temporal dynamics and reducing the       works (e.g., RNNs, LSTMs) [28] for modeling temporal
+contamination of reconstruction by non-stationary components.      dependencies, Transformer-based models [29] for capturing
+Second, the trend component is passed through a Multi-layer        long-range interactions via attention mechanisms, and GNNs
+Convolution Block to extract global temporal patterns. Third,      for encoding inter-variable relationships in multivariate set-
+the stable component is processed by the Proximity-enhanced        tings. Compared with traditional methods, deep learning ap-
+Graph Convolutional Network, which captures fine-grained tem-      proaches have exhibited improved accuracy, adaptability, and
+poral correlations using a time-aware graph structure that em-     scalability, and have thus become a primary focus of recent
+phasizes temporal proximity between time points. Finally, the      research.
+2942                                                      IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 5, MAY 2026
+
+
+
+B. Graph Neural Network for Time Series                               C. Transformer for Time Series
+   GNNs, a class of deep learning models designed for non-               The Transformer architecture, first introduced by Vaswani
+Euclide

@@ -1,0 +1,1082 @@
+This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 1
+
+ ilLog: Incremental Learning based Anomaly
+ Detection from Evolving System Logs
+ Jiyu Tian, Mingchu Li, Zumin Wang, Liming Chen, Senior Member, IEEE, Jing Qin, Jianyuan Gan
+
+ Abstract—Log anomaly detection (LAD) is of paramount
+importance to enhance the reliability and stability of software
+systems. Current state-of-the-art LAD suffers a significant performance degradation when dealing with consistently evolving
+log events caused by system updates. To build a reliable LAD
+model under the context of log data evolution, we propose an
+incremental learning-based method for LAD, namely ilLog, to
+avoid catastrophic forgetting of previously learned knowledge
+while continuously updating the model for better detection when
+processing the evolving log events. In particular, we design a
+novel entropy-driven sorting algorithm for real log sample replay,
+which enables the preservation of old knowledge via storing
+representative samples with discrete sequence features from
+previous tasks. Additionally, we introduce a Halton-based low
+discrepancy sequence to better approximate the sliced Cramér
+distance between the probability distributions of two models, thus
+enhancing the model learning capability. Based on a standard
+incremental learning protocol setting, we evaluate the newly Version Ⅰ
+ 131 Days
+ Version Ⅱ
+proposed ilLog method on three publicly available datasets. Normal Normal
+Experimental results demonstrate that our approach achieves the Abnormal Abnormal
+best performance compared to SOTA LAD methods and models
+by applying existing IL-based methods in evolving software Fig. 1: An example of BGL software system data distribution
+systems. evolution. Group the parsed BGL dataset based on a sliding
+ Index Terms—Log Anomaly Detection, Incremental Learning, window (window size=20, step=10), and construct two dataset
+Information Entropy, Quasi-Monte Carlo. versions in chronological order. Each version of the dataset
+ contains 94933 samples, with a 131-day gap between the versions. Randomly sample 500 samples from each version (half
+ I. I NTRODUCTION
+ normal samples and half abnormal samples), and visualise
+
+L OG anomaly detection (LAD), aiming to identify abnormal behaviors from log files, has been an active research
+topic to enhance the security and reliability of software
+ them using T-SNE. It can be observed that as time progresses,
+ there are significant changes in the data distribution between
+ samples of the same type.
+systems [1]–[5]. Recently, deep learning based methods, e.g.,
+DeepLog [6], LogAnomaly [7], LogRobust [8], PLELog [9],
+MetaLog [10], LogSer [11] and CSCLog [12], have achieved systems are updated quickly and consistently. System update
+impressive performance to detect log anomalies in complex is a common practice since developers introduce new features
+software systems. They learn effective feature representations and functions, fix bugs and enhance the security of software
+from log events and classify the log data into some predefined systems regularly. Consequently, log events for LAD are
+anomaly categories. changed accordingly. Taking Blue-Gene/L. (BGL), a super-
+ However, these LAD models suffer significant performance computing operation system as an example, the large number
+degradation when the systems evolve as modern software of new log events are consistently defined in the standard log
+ This paper is supported by the National Nature Science Foundation of China
+ dataset of BGL during its evolution [13]–[16]. Compared to
+under Grant Number: 625B2031 and 62466025. (Corresponding author: the log event types in the first month, the number of log event
+Mingchu Li and Liming Chen) types doubled after six months. Figure 1 further shows that the
+ Jiyu Tian, Mingchu Li and Jianyuan Gan are with the School of Software
+Technology, Dalian University of Technology, Dalian, China. Mingchu Li is
+ generation and evolution of log events as features of sequential
+also with the School of Computer and Information Engineering, Jiangxi Nor- samples may lead to changes in the data distribution. Assume
+mal University, Nanchang, Jiangxi, China. Email: tianjiyu@mail.dlut.edu.cn that a LAD method is trained based on log data that contains
+ Zumin Wang is with College of Information Engineering, Dalian University,
+Dalian, China. Email: wangzumin@dlu.edu.cn
+ events at a particular version, its performance will degrade
+ Liming Chen is with the School of Computer Science and Tech- over time when it takes unseen log events in future versions
+nology, Dalian University of Technology, Dalian, China. Email: lim- as its inputs.
+ingchen0922@dlut.edu.cn
+ Jing Qin is with School of Software Engineering, Dalian University, Dalian, Incremental learning (IL) is an emerging machine learning
+China. Email: qinjing@dlu.edu.cn paradigm to deal with the issues caused by evolving envi-
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 2
+
+ronmental contexts when processing a large number of new two models. This distance is then integrated as a regularization
+tasks [17]. It continuously learns new knowledge as well as term in the loss function, with the objective of minimizing
+avoids forgetting old knowledge. Thus, the main challenges changes to the parameters in the model that have a significant
+an IL-based model addresses can be summarised as: impact on previous tasks. To evaluate the proposed approach,
+ we conducted experiments on three publicly available log
+ • Intransigence refers to the difficulty of incorporating
+ datasets and performed comparisons with existing log anomaly
+ new knowledge into a model that has already been learned
+ detection methods. The experimental results indicate that our
+ from previous data. When confronted with new informamethod achieves better detection performance in terms of
+ tion, the model exhibits resistance to updating its existing
+ accuracy and robustness under the context of an evolving
+ knowledge or adjusting its representations. This can lead
+ system.
+ to the model being unable to adapt effectively to new
+ tasks, resulting in performance degradation. For LAD, The main contributions of our work can be summarised as
+ the training cost incurred by the continuous accumulation follows:
+ of training data is unacceptable for the development and • To the best of our knowledge, this is the first endeavor to
+ maintenance of large-scale software systems [8], [13], introduce incremental learning methods into log anomaly
+ [18]. detection to overcome the limitations of existing ap-
+ • Catastrophic forgetting refers to the severe forgetting or proaches when adapted to evolving software systems.
+ loss of previously learned knowledge by a model when it • We design an entropy-driven sorting algorithm for real
+ learns new tasks. When the model is trained on new data, log replay, where we perform under-sampling (≤10%)
+ it often overwrites or interferes with the representations on the log samples from the previous task. We select
+ and parameters learned in previous tasks. This can cause a representative log samples and merge them into the
+ sharp decline in performance on previously learned tasks, current task, thereby reducing storage and computational
+ making it unable to retain its knowledge in continuous costs.
+ learning. For LAD, if access to or utilization of old • We present a Quasi-Monte Carlo Scliced Cramér Presertraining data is limited, it inevitably results in forgetting vation (QMC-SCP) loss function based on the Halton
+ previously learned knowledge [17]. low-discrepancy sequence to improve the computation of
+ high-dimensional Cramér distance. This method allows
+ Current state-of-the-art (SOTA) IL-based methods either use
+ an effective measurement of the parameter importance of
+memory replay [19]–[21], or update trivial synapse but prean evolving model while avoiding catastrophic forgetting.
+serve important parameters of a model via regularization [22]–
+ • We evaluate the effectiveness of our method on three
+[26] during the training process. Despite the fact that IL is a
+ publicly available log datasets by comparing to the SOTA
+suitable framework to tackle the problem of the LAD in an
+ log anomaly detection methods, and the IL-based LAD
+evolving system, it is not straightforward to apply existing IL
+ models by applying existing incremental learning methmethods to the task directly due to its unique characteristics.
+ ods to the task.
+In particular, log samples comprise sequences of different
+message events, including both discrete features and semantic
+information. Presently, incremental learning in the context of II. R ELATED W ORK
+memory replay focuses mainly on exploring continuous features which makes it difficult to apply existing memory replay A. Log-based Anomaly Detection
+methods to log data. Furthermore, parameter regularization- Deep learning methods have demonstrated strong capabilbased methods usually require extensive sampling (e.g. Monte ities in log anomaly detection [13], [27]–[31]. Currently, log
+Carlo) to approximate the distance between probability dis- anomaly detection is predominantly composed of three main
+tributions as a part of loss. However, the continuous update approaches: unsupervised learning [6], [7], [32], [33], superprocess of the model is constrained by computational resources vised learning [8], [34]–[36], and semi-supervised learning
+due to the massive scale of log data. Random sequences methods [9], [14], [18].
+contain clustering and biased sampling points, and may not For unsupervised LAD methods, DeepLog [6] employed
+be efficient, leading to significant wastage of computational One-Hot encoding to vectorize log events, transforming log
+resources. sequences into sparse matrices that do not contain semantic
+ To overcome the above-mentioned limitations, in this work, information. LogAnomaly [7] recognized the semantic simiwe propose a novel incremental learning-based log anomaly larity between log events and utilized the word2vec algorithm
+detection method, ilLog, to enhance the performance of a LAD to map log events into semantic vectors, enriching the feature
+model in an evolving system. Specifically, we first design an representation by incorporating quantitative vectors. DeepSys-
+Entropy-Sorting Replay (ESR) algorithm to select log sam- log [32] adopted character-level word embedding techniques
+ples with discretized sequence features from previous tasks, to uncover log changes through the evolution of log print
+obtaining valuable instances that are merged into the training statements. It extracts semantic and contextual information that
+set of the current task. Furthermore, we introduce a Quasi- is concealed within the log stream to represent the original
+Monte Carlo (QMC) algorithm based on the Halton low- logs. Besides, Log2Vec used an OOV word processor to embed
+discrepancy sequence to provide a better approximation of the OOV words at runtime, effectively handling continuously
+sliced Cramér distance between the probability distributions of evolving log types.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 3
+
+ For semi-supervised LAD methods, SwissLog [18] com- the target and the output of the original model and employed
+bined semantic embedding and temporal embedding to train a an effective distillation strategy to maintain a single backbone
+unified attention-based Bi-LSTM model for capturing anoma- model.
+lies. PLELog [9] incorporated historical anomaly knowledge Replay-based incremental learning trains new tasks while
+through probability label estimation and utilizes semantic retaining a portion of old representative data for the model to
+embedding to mitigate the impact of unstable log data. review previously learned knowledge. iCaRL [19] introduced
+ For supervised LAD methods, LogRobust [8] also addressed the concept of replay-based incremental learning. After comthe issue of log evolution. This method combined TF-IDF and pleting each task, this method saved a few samples from each
+FastText techniques to mitigate the effects of log evolution and class for subsequent model training. Considering the class imparsing noise, and introduces an attention mechanism within balance problem due to storage limitations, Rwalk [20] stored
+the Bi-LSTM architecture to train a supervised detection samples with high entropy of softmax output probabilities or
+model. LightLog [34] extended the methods from LogRobust samples that are close to the decision boundary for replay.
+for handling evolving logs and introduced semantic vector BiC [39] explicitly calibrated the model’s output by learning
+dimensionality reduction and a lightweight TCN network, a linear bias correction layer using an additional balanced
+significantly reducing the floating-point computations and de- validation set. WA [21] reduced the imbalance between old
+tection time. NeuralLog [35] required no prior parsing and and new classes by aligning the logits outputted by the model
+could directly extract semantic vectors from raw logs. It on old and new class nodes.
+then used a transformer-based classification model to detect Parameter isolation-based incremental learning is to increanomalies. mentally expand the model while keeping the parameters of
+ Recently, Le et al. [27] pointed out that existing methods the old task unchanged. This involves isolating the parameters
+still face challenges regarding limited labeled data, early de- of the old and new tasks. DER [41] froze the previously
+tection, system evolution, and the relations among log events. learned feature extractor and expanded the super feature ex-
+Of these, the dynamic evolution of the system has garnered tractor network with a new feature extractor when facing a new
+significant attention. Nonetheless, a static training framework task. Finally, the features extracted by all the extractors are
+fails to learn anomalous patterns evolving from new events, concatenated together for classification. DCE [42] addressed
+which may result in a decrease in the generalization ability class imbalance in domain-incremental learning by employing
+and detection performance of the old model on new instances. a two-stage process: training a set of expert networks respectively biased towards the majority, balanced, and minority
+ classes, and adapting to distribution shifts with a dynamic
+B. Incremental learning
+ selector. SOYO [43] balanced data by compressing historical
+ Incremental learning is capable of processing continuous features using a Gaussian Mixture Model for resampling, then
+streams of information, retaining and integrating prior knowl- extracted discriminative features through a multi-level fusion
+edge while absorbing new knowledge [37]. Based on mecha- network.
+nisms for preventing forgetting, incremental learning methods Logs are discrete feature samples with semantic similarities,
+can be divided into three categories: Parameter regularization- which are rarely considered by current memory replay studies.
+based methods [22]–[26], [38], replay-based methods [19]– Additionally, the computational complexity of the loss func-
+[21], [39], and parameter isolation-based methods [40]–[43]. tion in parameter regularization methods makes it challenging
+ Parameter regularization-based incremental learning primar- to continuously train on large-scale data. Therefore, further exily protected existing knowledge by imposing constraints ploration is needed for the application of existing incremental
+on the loss function of the new task. This approach can learning methods in the field of log anomaly detection.
+be further divided into two types: Prior-focused and Datafocused. Prior-focused approaches aim to penalize changes III. M ETHODOLOGY
+in important parameters to prevent significant alterations in
+parameters related to previous tasks. EWC [22] was the first A. Problem Formulation
+to introduce the Prior-focused concept and used the second- The incremental learning task, when referring to log
+order derivative of the loss with respect to the parameters to anomaly detection, can be defined as the ability of a classificameasure their importance. MAS [23] recorded the sensitivity tion model to learn the new anomaly patterns without forgetof the prediction output to parameter changes and accumulated ting or deteriorating too much the performance of previously
+an importance measure for each parameter in the network. SCP learned ones. Consequently, the main objective then is to strike
+[25] demonstrated the close relationship between methods like a balance between the preservation of previous knowledge and
+EWC and MAS and further consolidated model parameters by the capability of learning new events and patterns.
+using the Cramér distance to measure the difference between In the incremental log anomaly detection scenario, we
+two probability distributions. Data-focused approaches are define log anomaly detection as a task flow, where each task
+based on the idea of knowledge distillation to preserve the corresponds to a group with the same label. For the K-th task,
+knowledge learned from previous tasks. LwF [38] minimized we define DK = {(XiK , YiK )}N i=1 as the training set. where
+the Kullback-Leibler (KL) divergence between the probability XiK ∈ X represents the input and YiK ∈ {0, 1} represents the
+distributions of the old and new model outputs. Foster [26] dy- true label, indicating that the output space consists of two
+namically expanded new modules to fit the residuals between labels: normal and abnormal. We assume that the sampler
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 4
+
+ Initial Learning Task Incremental Learning Tasks
+ Log Task 1 Task 2 Task 3
+ Processing
+
+ ∪ ∪ ∪ ...
+ 0 2 3
+ QMC QMC QMC
+ CE
+ -SCP -SCP -SCP
+
+ ESR Replay Incremental Log Processing QMC-SCP Loss Function
+
+ Templates T K1
+ Dataset D K 1 Log K Halton
+ Processing Templates T
+ Sampler QMC
+ Entropy  K 1 K
+ Sorting Dataset
+ Calculate Sliced Cramer
+ XiK T5 T3 T5 T5 T4 T9
+ Valuable Distance
+ Memory m
+ Sample
+ D K  R K 1 CE Loss 
+ Regularisation
+  Incremental
+ Loss
+ K 1
+ D K Term
+ R ∪
+
+ Raw Consolidation ESR Probability
+ Model ∪
+ Distribution
+ System Logs of Data Replay
+
+Fig. 2: Overview of ilLog approach. The learning model of ilLog is categorized into two task types: initial learning task and
+incremental learning task, where incremental learning task consists of three essential components: incremental log processing,
+ESR, and QMC-SCP loss function.
+
+ N
+RK = (Xi1:K−1 , Yi1:K−1 ) i=1 contains the replay data of
+ 
+ log processing). These steps transform the raw log data into
+previous tasks, where 1:K represents from the first task to the log sequence samples, which serve as the training set for the
+K-th task. The optimization problem is defined as follows: model. The detection model is trained using the cross-entropy
+ loss function without regularization term.
+ arg minθ E(X ,Y)∼DK ∪RK [L (X , Y; θ)] (1) Incremental Learning Task Each incremental training task
+ consists of three components: incremental log processing, ESR
+where the L is the loss function, typically includes a base loss algorithm, and QMC-SCP loss function.
+(e.g., Cross-Entropy loss) and a regularization term, and θ is Component 1: Incremental Log processing involves prethe parameters of the model. processing the log messages from the new task. The raw logs
+ generated by the software system undergo parsing, grouping,
+B. Incremental Log Anomaly Detection Framework and representation processes to transform them into a template
+ Our incremental learning log anomaly detection framework, set and dataset. As shown in Figure 2, ilLog then merges
+namely ilLog, is shown in Figure 2, where iLog is a continuous the dataset DK with the valuable training samples RK that
+log anomaly detection framework that divides the training and have been accumulated from previous tasks (i.e. DK ∪ RK−1 ).
+detection process into multiple tasks based on chronological. This merged dataset will serve as the training set for the
+According to the training mode, tasks can be classified into current task, allowing for a comprehensive and robust learning
+two categories: initial learning tasks and incremental learning process. Moreover, both the dataset DK and the template set
+tasks. In the initial learning task, since there is no prior T K from the current phase will be utilized for ESR algorithm
+data, the detection model only needs to be trained following in the subsequent tasks, ensuring the retention and transfer of
+the common training mode without considering catastrophic knowledge acquired in this task to future detection task.
+forgetting. In the incremental learning tasks, we provide a Component 2: ESR consists of calculating the importance
+data replay strategy based on entropy sorting and a param- of the training samples from the previous task, selecting a
+eter regularization loss function called QMC-SCP to combat few valuable samples for storage, and merging them with
+catastrophic forgetting, ensuring the continuous generalization the training samples from the current task. Creating a trainability of the detection model towards evolving logs. ing set in this way preserves some prior knowledge, which
+ Initial Learning Task The initial learning task only occurs can be used to mitigate forgetting and significantly reduce
+during the first training phase. Given the absence of prior computational costs. ESR algorithm leverages entropy as a
+data, it is not necessary to implement any measures to prevent metric to assess the value of log sequence samples. Higher
+knowledge forgetting during this particular stage. The raw log entropy indicates greater training value, meaning that samples
+data in the system undergoes several steps of log processing, with higher entropy are considered more valuable for learning.
+including parsing, grouping, and representation (Since it is Additionally, the number of samples retained in the replay
+not the focus of this paper, we followed the details of [27] for process is determined by the memory m, which serves as a
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 5
+
+ normal data normal data normal data
+
+ (a) Both Methods of Replay (b) Random Replay (c) ESR
+
+ Normal Abnormal Random Entropy
+
+ Fig. 3: Intuitive comparison of feature distributions among different data replay algorithms based on T-SNE.
+
+criterion for selecting the optimal number of samples to retain. We assume that samples near the decision boundaries are
+Notably, unlike randomly selected samples, the algorithm more representative than samples far from the decision boundfocuses on selecting distinctive samples (details are presented aries. As shown in Figure 3, compared to random selection, the
+in Section IV). visualization results demonstrate that the sample distribution
+ Component 3: QMC-SCP loss function with parameter selected using the entropy-based replay sampling strategy is
+regularization is crucial for preserving important model pa- located near the boundaries of the classes.
+rameters to mitigate catastrophic forgetting. Unlike typical loss
+functions (e.g., cross-entropy), the incremental loss function B. Theoretical Analysis of Entropy Sorting Replay
+suppresses changes in parameters that have a significant impact
+on previous tasks by adding a regularization term. It only Based on the definition of information entropy, here are
+adjusts the less important parameters for the previous detection some conclusions. For a log event, if it appears less frequently
+task in the current training phase. Our proposed QMC-SCP in the log sequence, its probability of occurrence is lower,
+achieves a more accurate calculation of the Cramér distance resulting in higher self-information. As a result, the average
+between probability distributions from two different models information (i.e., entropy) of the log sequence containing that
+(ωK and ωK−1 ) by introducing a Halton-based low variance event is larger. On the other hand, if the event appears more
+sequence instead of a Monte Carlo random sequence (details frequently in the log sequence, its probability is higher, leadare presented in Section V). ing to lower self-information. Consequently, the information
+ entropy of the log sequence containing that event is smaller.
+ Therefore, we determine the importance of a log sequence by
+IV. L OG S AMPLES R EPLAY BASED ON E NTROPY S ORTING calculating its entropy in the training set.
+ Although memory replay techniques have been explored
+in incremental learning tasks, there has been relatively less C. Entropy Sorting Replay Algorithm
+research on applying these techniques to discrete features. Here we provide a specific explanation of how to calculate
+ the importance of samples composed of different log events.
+ Assuming in task K, we have a raw log set from the previous
+A. Intuitive Explanation
+ task, which contains d log messages and various types of
+ Preserving old data is essential for maintaining previous templates (i.e., log events). The template set containing all
+knowledge. One effective method is to randomly select sam- event types from the current task and previous tasks is denoted
+ I
+ples from all training samples of each class. This random as T K = {Ti }1 . For a simpler description, we implement
+selection process helps to represent the task mean, ensuring grouping with a fixed window and set the window size to
+ N
+that important characteristics and patterns from the old data be W. Then, we can obtain a dataset DK−1 = {Sn }1 that
+are retained. However, we rely on two intuitions: Firstly, contains N log sequence samples, where N = ⌊d/W⌋. For
+scarce samples may contain rare but significant exceptional a log sequence, since the window size is fixed as W, thus
+information. Smooth-running software systems produce a fixed −−−−−−−−−−−−−−→
+ Sn = [E1 , E2 , E3 , ..., Ew ], Ew ∈ T K , w ∈ [W] which
+type of log event over time. The generation of a rare event means a log sequence contains W log events. The probability
+often means that an unusual change has occurred in the of each log event Ew occurring is given by:
+system and the information it represents is more meaningful.
+Secondly, due to the changes in model parameters being PN
+regularized (see Section IV), the feature space and decision n=1 σn,w
+ P(Ew ) = (2)
+boundaries do not change significantly. Therefore, the replay N
+strategy should select samples near the classification decision when Ew ∈ Sn , σn,w = 1, , otherwise σn,w = 0. Thus, the
+boundaries [20]. formula for the self-information of event Ew is as follows:
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 6
+
+ In comparison to the commonly used KL-divergence [22],
+ [23] and its symmetric form, Jensen-Shannon distance, Cramér
+ I(Ew ) = − log P(Ew )
+ PN ! distance respects the underlying geometry of the problem,
+ n=1 σn,w offers improved performance in capturing the differences
+ = − log (3)
+ N between distributions [25].
+ !
+ N
+ = log PN L(θ) = LB (θ) + λLB→A (θ) (8)
+ n=1 σn,w
+
+ Entropy is used to measure the average information of a As shown in Equation (8), the total loss function L(θ) comsample, which represents the average expectation of the infor- prises two components: the cross-entropy loss term LB (θ) and
+mation. For each log sequence Sn , the formula for calculating the regularization term LB→A (θ). where the hyperparameter
+its entropy is: λ is used to balance these two components. If we set λ = 0,
+ it indicates that we do not apply parameter-regularization (10)
+ XW and only use cross-entropy loss (9) for model training, which
+ H(Sn ) = − P(Ew )I(Ew ) can lead to catastrophic forgetting in incremental learning
+ w=1
+ XW tasks.
+ =− P(Ew ) log P(Ew ) (4)
+ w=1 !
+ PN N
+ XW
+ n=1 σn,w N 1 X
+ = log PN LB (θ) = − Yi log(Ŷi ) (9)
+ w=1 N n=1 σn,w
+ N i=1
+ where N is the number of log sequences included in
+the dataset DK−1 , which can be omitted in the probability ∗
+ LB→A (θ) = SC(pA (·|θA ), pA (·|θ)) (10)
+operations, thus
+ To overcome forgetting, SCP [25] leverages the radon
+ !! transform to slice the Cramér distance (SC) between high-
+ XW XN 1 dimensional distributions, aiming to make the new prob-
+ H(Sn ) ∝ σn,w log (5) ∗
+ ability distribution pA (·|θA ) close to the pA (·|θ) learned
+ w=1 n=1
+ PN
+ n=1 σn,w
+ from previous tasks A. As learning progresses, this approach
+ Then, we obtain the information entropy set HK−1 = preserves the inherent properties of the model regarding the
+{H (S1 ) , H (S2 ) , ..., H (Sn )} for the log sequence samples. previous tasks. After further derivation based on Equation (10)
+Therefore, the order of the sample sequences constructed based (see [25]), the regularized term is obtained as follows:
+on entropy values is meaningful, where the samples with
+higher entropy can be considered more important and con- !2
+ Q N ∗
+tribute more to the training. Memory m denotes the maximum 1 X 1 X dξq · ϕ(xAn ; θA )
+ LB→A (θ) = (11)
+number of samples that can be retained for each class in the Q q=1 N n=1 dθi
+previous task, which is usually less than 10% of the total
+number of samples of that class. Therefore, we sequentially The SC distance between conditional probability distribuselect m samples with the highest entropy value from HK−1 tions is difficult to compute directly. Therefore, SCP uses the
+as the replay dataset Hm K−1
+ for the previous task. Therefore, Monte Carlo algorithm to obtain approximate solutions for the
+ ∗
+the final output of the data replay is high-dimensional integral of the SC. ϕ(xA n ; θA ) is the output
+ of the network. ξq is to slice the average output using a Monte
+ Carlo algorithm based on pseudo-random sequences.
+ K−1
+ RK = Hm K−2
+ ∪ Hm K−3
+ ∪ Hm 1
+ ∪ · · · ∪ Hm (6)
+ K
+Thus, the merged training set DM of current task can be B. Halton-Based Quasi-Monte Carlo
+formula as However, when it comes to Monte Carlo methods, the
+ utilization of pseudo-random sequence sampling in computer-
+ K
+ DM = D K ∪ RK (7) based random sampling can result in clustering and bias within
+ the sampled points. Firstly, the bias of sampling points directly
+ impacts the accuracy of the approximate solution for sliced
+ V. QMC-SCP L OSS FUNCTION FOR BALANCING
+ Cramér distance. Secondly, the clustering of sampling points
+ I NTRANSIGENCE AND F ORGETTING
+ generates redundant data, leading to significant computational
+A. SCP Loss Function resource wastage. When handling a vast amount of log sam-
+ As described in Section II-B, the parameter isolation-based ples, such inefficiency is deemed highly unacceptable.
+approach has limitations when it comes to handling a large Therefore, we introduce Quasi-Monte Carlo (QMC) with
+number of successive tasks, and the replay-based approach is Halton-based low-discrepancy sequences as the sampling
+utilized and elaborated in Section IV. Therefore, during incre- method to approximate the solution of higher dimensional
+mental training, we employ a regularization-based incremental integrals. Compared to the randomly generated sequences, the
+loss function to address the forgetting-intransigence dilemma. sampling points of the Halton sequence exhibit advantages
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 7
+
+ TABLE I: Description of the log dataset used in the experiments
+ Datasets Parsing Events Grouping Window Size Step Types Samples
+ Normal 575,059
+ HF Public [27] 28 Session / /
+ Abnormal 16,838(2.8%)
+ Normal 433,877
+ BGL Public [27] 378 Sliding 20 10
+ Abnormal 40,789 (8.6%)
+ Normal 749,681
+ TB Spell [44] 6,411 Sliding 20 10
+ Abnormal 247,831 (24.8%)
+
+such as uniform distribution, low repetitiveness, and low den- RQ2: How does the ilLog method perform in terms of
+sity. In QMC, any non-negative integer a can be represented as robustness?
+a string of digits in base b. For example, 6 can be represented RQ3: How does the ilLog method perform in terms of
+as 110 in base 2. The radical inverse function Φb represents advancement?
+the reversal of a number string in base b, and then converts RQ4: How does the ilLog method perform on different
+the resulting number string into a fraction by adding a 0. The backbones?
+result falls within the interval [0, 1), and it can be expressed RQ5: How does the ilLog method perform in terms of
+mathematically as: incremental training efficiency?
+ RQ6: How does each component contribute to ilLog?
+ i
+ X
+ Φb (a) = 0.b1 (a)b2 (a)...bn (a) = bi (a)b−i−1 (12)
+ A. Experimental Setup
+ i=0
+
+ where the Halton sequence is implemented based on a spe- 1) Dataset: To evaluate the proposed ilLog, we utilize the
+cific set of prime numbers, with each dimension corresponds original HDFS dataset, BGL dataset, and Thunderbird dataset
+to a prime number.Typically, the values are taken in the order as data sources, and restructured each dataset according to
+of the prime numbers. This approach facilitates the control of the incremental learning protocol. The detailed information
+distances between different sampling points when combined for each dataset is as follows:
+across dimensions. HDFS dataset (HF) [45] consists of 11,175,629 logs produced from more than 200 Amazon EC2 nodes, spanning
+ 38.7 hours. These log messages form different log sequences
+C. QMC-SCP for overcoming forgetting
+ according to their session ID, including 575,059 normal log
+ Combined with the Quasi-Monte Carlo solution, we end up sequences and 16,838 (2.8%) abnormal log sequences.
+with the following improved loss function regularization term BGL Dataset [46] consists of 4,747,963 log messages
+LB→A (θ): generated by a supercomputing system Blue-Gene/L, spanning
+ 244 days. Each message in the BGL dataset was manually
+  P N  2 labeled as either normal or anomalous. As described in Table
+ i
+ 
+ (−i−1) 1 A ∗
+ P
+ Q d bi (Q)b · N ϕ x n ; θA I, we set the size of the sliding window to 20 and the step
+ 1 X i=0 n=1 
+  (13)
+  size to 10, a total of 40,789 (8.6%) abnormal sequences were
+ Q  dθi 
+ q=1 obtained by this method.
+ Thunderbird dataset (TB) [46] consists of more than 200
+ The main difference between regularization terms (10) million logs collected from a Thunderbird supercomputer at
+and (13) lies in their respective sampling approaches for Sandia National Labs (SNL), spanning 38.7 hours. The log
+approximating high-dimensional integrals. In (10), calculation data contains normal and abnormal log messages which are
+using ξq is based on computer-generated random numbers, manually identified. As the raw dataset is so large that it was
+while in (13), the calculation is based on low-discrepancy difficult to process, we initially selected 10 million consecutive
+Halton sequences, which allows for obtaining
+ Pi accurate com- log messages for validation. We set the window size to 20 and
+ −i−1 ⃗ ∗
+putational results. Where Φ b (q) = b
+ 0 i (q)b , ϕA = the step size to 10, used the sliding window to divide the logs
+ 1
+ P N A ∗
+ 
+N n=1 ϕ xn ; θA , the obtained total loss function is and obtained 247,831 (24.8%) anomalous sequences.
+ Following the standard setup protocol of incremental learn-
+ !2
+ 1 X
+ Q ⃗∗
+ dΦb (q) · ϕ ing, we partition the incremental learning task chronologically,
+ A
+ L(θ) = LB (θ) + (14) dividing each dataset into four testing scenarios: Base0 Task5,
+ Q q=1 dθi
+ which evenly divides each dataset into five consecutive task
+ subsets (T1, T2, T3, T4, T5) based on chronology; Base0.5
+ VI. E XPERIMENT Task5, which divides each dataset into five consecutive task
+ In our research, we evaluate our method by addressing the subsets while allocating 50% of the samples to the first task
+following research questions: subset (T1) and evenly distributing the remaining 50% of
+ RQ1: How effective is the ilLog method in evolving soft- samples into four consecutive subsets (T2, T3, T4, T5) based
+ware systems? on chronology; Base0 Task10, which evenly divides each
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 8
+
+ TABLE II: Comparison F1 score with existing LAD approaches
+ B0T5 B0.5T5 B0T10 B0.5T10
+ Methods
+ HF BGL TB HF BGL TB HF BGL TB HF BGL TB
+ DeepLog 99.5 65.6 65.6 99.4 50.8 53.0 99.1 43.3 51.9 99.4 46.9 56.3
+ LogAnomaly 99.4 46.2 46.2 99.5 53.9 53.6 99.5 40.7 46.7 99.6 60. 60.1
+ LogRobust 99.8 90.8 90.8 99.7 85.1 96.2 99.4 85.4 88.2 99.5 81.0 96.0
+ LightLog 99.6 93.6 93.6 99.7 92.8 95.5 99.7 92.7 91.3 99.7 88.8 96.4
+ PLELog 99.6 66.2 66.2 99.5 54.3 57.3 99.4 59.4 67.5 99.6 73.3 66.9
+ ilLog 99.5 94.8 94.8 99.9 93.3 97.9 99.8 93.6 91.8 99.8 89.1 98.4
+
+ 100 100 100 100
+ 99 99 99 99
+F1 Score
+
+ F1 Score
+
+ F1 Score
+
+ F1 Score
+ 98 98 98 98
+ 97 97 97 97
+ 96 1 2 3 4 5 96 1 2 3 4 5 96 1 2 3 4 5 6 7 8 9 10 96 1 2 3 4 5 6 7 8 9 10
+ Base0 Task5 Base0.5 Task5 Base0 Task10 Base0.5 Task10
+ (a) HF Scenario 1 (b) HF Scenario 2 (c) HF Scenario 3 (d) HF Scenario 4
+
+ 100 100 100 100
+ 80 80 80 80
+F1 Score
+
+ F1 Score
+
+ F1 Score
+
+ F1 Score
+ 60 60 60 60
+ 40 40 40 40
+ 20 20 20 20
+ 0 1 2 3 4 5 0 1 2 3 4 5 0 1 2 3 4 5 6 7 8 9 10 0 1 2 3 4 5 6 7 8 9 10
+ Base0 Task5 Base0.5 Task5 Base0 Task10 Base0.5 Task10
+ (e) BGL Scenario 1 (f) BGL Scenario 2 (g) BGL Scenario 3 (h) BGL Scenario 4
+
+ 100 100 100 100
+ 80 80 80 80
+F1 Score
+
+ F1 Score
+
+ F1 Score
+
+ F1 Score
+ 60 60 60 60
+ 40 40 40 40
+ 20 20 20 20
+ 0 1 2 3 4 5 0 1 2 3 4 5 0 1 2 3 4 5 6 7 8 9 10 0 1 2 3 4 5 6 7 8 9 10
+ Base0 Task5 Base0.5 Task5 Base0 Task10 Base0.5 Task10
+ (i) TB Scenario 1 (j) TB Scenario 2 (k) TB Scenario 3 (l) TB Scenario 4
+
+ DeepLog LogAnomaly LogRobust LightLog PLELog ilLog
+
+ Fig. 4: Comparison of different log anomaly detection methods in evolving scenario
+
+dataset into ten consecutive subsets (T1, T2, T3, T4, T5, T6, • TP: Correctly detecting normal samples as normal
+T7, T8, T9, T10) based on chronology; Base0.5 Task10, which • FN: Incorrectly detecting normal samples as abnormal
+divides each dataset into ten consecutive task subsets while • TN: Correctly detecting abnormal samples as abnormal
+allocating 50% of the samples to the first task subset (T1) and • FP: Incorrectly detecting abnormal samples as abnormal
+evenly distributing the remaining 50% of samples into nine To assess the effectiveness of the anomaly detection model
+consecutive subsets (T2, T3, T4, T5, T6, T7, T8, T9, T10) in incremental scenarios, the F1 Score is used as a detection
+based on chronology. Among them, each subset contains both metric. This metric is a comprehensive evaluation metric that
+a training set and a test set. Here, we set the split value to includes Precision and Recall. Among them, precision is the
+0.7, meaning that the training set accounts for 70% of the proportion of all log sequences identified as anomalous that
+samples, while the test set accounts for 30% of the samples are correctly identified as anomalous. Precision = T PT+FP
+ P.
+in each subset. These different testing scenarios correspond to Recall is the proportion of all log sequences that are corlearning to distinguish log events that evolve and incrementally rectly identified as anomalous. Recall = T PT+FP
+ N . F1 Score
+change over time. (F1) is the summed average of precision and Recall. F1 =
+ 2∗P recision∗Recall
+ 2) Evaluation Metrics: Anomaly detection in log data P recision+Recall .
+using incremental learning involves the binary classification 3) Implementations and Environments: In our experiments,
+of sequences, with test results categorized into four outcomes: we process the log data and conduct log-based anomaly
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 9
+
+detection as follows: we adopt the implementations of log C. RQ2: Robustness Analysis of Different Log Anomaly Deprocessing provided by open source [27]. We use Adam as the tection Approaches
+optimizer, set the learning rate to 0.0001, the number of epochs
+to 100, the Memory for each task is 10% of the training set, Mislabeled and parsing errors are prevalent forms of noise
+and the sampling value Q to 200. To complete the testing of often encountered in log data [27]. Specifically, mislabeled
+the method, the experiments are performed using the following errors possess the potential to disrupt the classification boundhardware and software platforms: Intel(R) Xeon(R) Gold 5218 aries established by detection models, while parsing errors
+CPU @ 2.30GHz, CPU cores 16, 256 GB RAM, NVIDIA have the propensity to introduce spurious log events and
+Tesla V100-PCIE-32GB*2, CentOS Linux release 7.9, CUDA generate erroneous log templates. Consequently, to assess the
+11.7, cuDNN 7.6.5, Python 3.7.12, and PyTorch 1.7.0. robustness of our approach, we conduct an evaluation encompassing various levels of mislabeled logs alongside diverse
+B. RQ1: Comparison with Different SOTA Log Anomaly De- log parsers. In the mislabeled experiments, we introduce logs
+tection Approaches comprising 5% and 10% of the entire dataset, with an equal
+ distribution of normal and abnormal labels, into the training
+ To evaluate the incremental detection performance of ildata. Meanwhile, the test set remained unaltered. In the parsing
+Log more intuitively, the following experiments compared it
+ error experiments, we employ two widely utilized log parsing
+with five state-of-the-art log anomaly detection approaches:
+ techniques: Drain [47] and Spell [5]. These experiments are
+DeepLog and LogAnomaly based on unsupervised learning,
+ conducted on two datasets, namely BGL and TB. As illustrated
+LogRobust and LightLog based on supervised learning, and
+ in Figure 5, the noise-resistant capabilities of our approach are
+PLELog based on semi-supervised learning. The experimental
+ demonstrated to exhibit a notable advantage.
+results are shown in Figure 4 and Table II.
+ For the HF dataset, in the testing scenario of Base0 Task10 Figures 5 (a)-(d) depict the impact of different percentages
+(Figure 4 (c)), the F1 score of the DeepLog method is 96.5% of mislabeled logs on the precision, recall and F1 of the model.
+in the 5th task, significantly lower than the other methods. It is evident that as the percentage of mislabeled logs rises
+In the other three testing scenarios (Figure 4 (a) (b) (d)), from 5% to 10%, the performance of the models experiences
+all detection methods achieve an F1 above 99%. Therefore, varying degrees of decline. On the BGL dataset, LogRobust
+compared to the other five LAD methods, our proposed and LightLog exhibit greater sensitivity to mislabeled logs.
+ilLog method does not show significant advantages in terms When the mislabeled logs account for 5%, the proposed ilLog
+of detection performance. However, in consecutive detection method achieves an impressive F1 of 92.1%, surpassing the
+tasks, our method demonstrates the most stable performance. scores of 89.1% for LogRobust and 90.4% for LightLog.
+prior work [14], [16], we analyze that this is because the log However, when the mislabelling ratio increases to 10%, the
+events in the HF dataset have minimal dynamic evolution. This F1 of LogRobust and LightLog plummets to 78.1% and
+indirectly verifies that existing log anomaly detection methods 81.7%, respectively. With essentially equal precision ratios,
+can perform well in detecting performance for a non-evolving the proposed ilLog maintains a substantial recall of 87.6%,
+software system. outperforming LogRobust by 22.1% and LightLog by 16.6%.
+ For the BGL dataset, as expected, in the evolving logs, our Notably, despite a marginal decrease of only 0.2% in the F1,
+proposed detection method based on parameter regularization ilLog showcases remarkable robustness by achieving a score
+and data replay outperforms other detection methods by a large of 91.9% when the mislabeling ratio increases from 5% to
+margin (see Figure 4 (e) (f) (g) (h)). Furthermore, the ilLog 10%. On the TB dataset, incorrectly labelled logs similarly
+method, while ensuring generalization to new task log events, degrade the performance of the different methods for anomaly
+does not forget the knowledge learned from previous tasks. As detection. Nevertheless, regardless of whether the mislabeling
+shown in Figure 4 (e), when transitioning from Task 2 to Task percentage is 5% or 10%, ilLog consistently exhibits superior
+3, ilLog quickly adapts to the new task, achieving an F1 of precision, recall, and F1.
+over 99%; when transitioning from Task 5 to Task 6, the detec- Figure 5 (e)-(f) presents the detection results of models
+tion performance of the current supervised learning methods utilizing different log parsers on the BGL and TB datasets.
+rapidly deteriorates, but ilLog’s detection performance remains The performance of the models is influenced by the noise
+unaffected. Therefore, in most task transitions, our method introduced by log parsing errors. Specifically, on the BGL
+exhibits a lower forgetting rate of previous knowledge and dataset, when parsed by Drain, the F1 for LogRobust, Lightfaster adaptation to new knowledge, resulting in the overall Log, and ilLog is 81.5%, 85.3%, and 87.7%, respectively.
+best performance. However, when the dataset is parsed by Spell, the detection
+ For the TB dataset, as shown in Figure 4 (i) (j) (k) (l), performance improves by 2.1%, 1.7%, and 0.2%, respectively.
+ilLog maintains the highest detection accuracy in most tasks. Notably, the proposed ilLog method consistently outperforms
+Additionally, it is easy to observe that compared to supervised the other methods on both log parsers. For instance, on the
+learning models, unsupervised and semi-supervised learning TB dataset parsed by Drain, ilLog outperforms LogRobust
+models are lacking in both detection accuracy and the ability and LightLog by 8.8% and 0.9%, respectively, in terms of
+to handle adversarial log evolution. For example, DeepLog the overall evaluation metric F1. On the TB dataset parsed by
+and LogAnomaly exhibit a sharp drop in detection accuracy Spell, ilLog still leads LogRobust and LightLog by 2.9% and
+to below 50% for most tasks. 1.5%, respectively.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 10
+
+ 100 98.0 98.5 97.6 100 96.8 95.6 96.6 100 94.7 95.1 95.7
+ 100 94.6
+ 92.1 91.9 92.2 92.6 93.7 92.3 93.0 91.9
+ 89.1 90.4 89.8 90.2 91.7 89.7 90.2
+ 90 90 87.6 90 90 87.2 87.6
+ 89.3
+ Accuracy(%)
+
+ Accuracy(%)
+
+ Accuracy(%)
+
+ Accuracy(%)
+ 87.2
+ 83.6 81.7
+ 81.6
+ 80 80 78.1 80 80
+ 71.3
+ 70 70 65.5
+ 70 70
+ 60 60 60 60
+ PRE REC F1 PRE REC F1 PRE REC F1 PRE REC F1
+ (a) BGL Mislabeled 5% (b) BGL Mislabeled 10% (c) TB Mislabeled 5% (d) TB Mislabeled 10%
+
+ 100 97.9 97.5 97.9 100 97.9 97.5 97.5 100 95.6 95.7 100 96.0 97.2
+ 98.1
+ 95.7
+ 92.1 93.8 93.8 94.7 93.4 92.8 94.2
+ 89.9 91.4
+ 90 87.7 90 87.0 87.9 90 87.7 90
+ Accuracy(%)
+
+ Accuracy(%)
+
+ Accuracy(%)
+
+ Accuracy(%)
+ 85.3 84.2 85.9
+ 83.6
+ 81.57
+ 80 75.9
+ 79.3 80 78.5 80.1 80 80
+ 72.9
+ 70 69.8
+ 70 70 70
+ 60 60 60 60
+ PRE REC F1 PRE REC F1 PRE REC F1 PRE REC F1
+ (e) BGL Drain (f) BGL Spell (g) TB Drain (h) TB Spell
+
+ LogRobust LightLog ilLog
+
+ Fig. 5: Comparison of LAD methods with mislabeled and parsing noise
+
+ 100 100 100 100
+ 90 90 90 90
+F1 Score
+
+ F1 Score
+
+ F1 Score
+
+ F1 Score
+ 80 80 80 80
+ 70 70 70 70
+ 60 60 60 60
+ 50 1 2 3 4 5 50 1 2 3 4 5 50 1 2 3 4 5 6 7 8 9 10 50 1 2 3 4 5 6 7 8 9 10
+ Task (Base0 Task5) Base0.5 Task5 Task (Base0 Task10) Task (Base0.5 Task10)
+ (a) BGL Scenario 1 (b) BGL Scenario 2 (c) BGL Scenario 3 (d) BGL Scenario 4
+
+ 100 100 100 100
+ 90 90 90 90
+F1 Score
+
+ F1 Score
+
+ F1 Score
+
+ F1 Score
+
+ 80 80 80 80
+ 70 70 70 70
+ 60 60 60 60
+ 50 1 2 3 4 5 50 1 2 3 4 5 50 1 2 3 4 5 6 7 8 9 10 50 1 2 3 4 5 6 7 8 9 10
+ Task (Base0 Task5) Base0.5 Task5 Task (Base0 Task10) Task (Base0.5 Task10)
+ (e) TB Scenario 1 (f) TB Scenario 2 (g) TB Scenario 3 (h) TB Scenario 4
+
+ Baseline EWC MAS SI SCP DCE SOYO ilLog
+
+ Fig. 6: Comparison of different incremental learning algorithms.
+
+D. RQ3: Comparison with Different SOTA Incremental Learn- lems where the data distribution shifts while labels remain
+ing Algorithms unchanged; the other is SOTA domain-incremental learning
+ methods based on parameter isolation, i.e., DCE and SOYO.
+ To validate the advancement of the algorithm for incremental detection, experiments were conducted to compare the As shown in Figure 6, in the field of log anomaly deteccontinuous detection performance of 8 incremental learning tion, the parameter isolation-based algorithm lags behind the
+algorithms on 8 scenarios from 2 datasets. The Baseline parameter regularization-based algorithms. It is evident that in
+algorithm adopts the same neural network model as ilLog Figure 6 (a) (b) (c) (e) (f) (g) (h), ilLog exhibits a significant
+but does not employ any incremental learning strategy. The advantage in terms of overall detection performance. In Figalgorithms compared fall into two main categories: one is ure 6 (d), ilLog has lower detection performance on T9 and
+task-incremental learning algorithms based on parameter reg- T10 compared to the Baseline and other 6 algorithms, but it
+ularization, such as EWC, MAS, SI, and SCP, which provide still maintains a significant advantage in detection performance
+inspiration for addressing domain-incremental learning prob- on T1-T8. Moreover, as an advanced algorithm in the field of
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 11
+
+parameter isolation-based incremental learning, SOYO, which
+is based on model ensemble compression, achieves the low- 10 10 10 10
+est detection performance. Notably, the DCE algorithm, also 8 8 8 8
+ 6 6 6 6
+based on parameter isolation, outperforms multiple parameter 4 4 4 4
+
+ Training Time (hours)
+regularization-based algorithms in numerous scenarios, yet it 2 2 2 2
+still falls short compared to the proposed ilLog. 0 Baseline 0 EWC 0 MAS 0 SI
+ 10 10 10 10
+ 8 8 8 8
+E. RQ4: Comparison Detection Performance with Different 6 6 6 6
+ 4 4 4 4
+Backbones 2 2 2 2
+ 0 SCP 0 DCE 0 SOYO 0 ilLog
+ TABLE III: Backbones Comparison
+ (a) Training on BGL Dataset
+ B0T5 B0.5T5 B0T10 B0.5T10
+ Backbones
+ BGL TB BGL TB BGL TB BGL TB
+ 20 20 20 20
+ LSTM 95.7 93.8 94.2 97.8 92.7 92.5 93.8 97.9
+ 15 15 15 15
+ ResNet 91.4 88.8 89.9 95.3 93.4 88.7 90.1 96.1
+ 10 10 10 10
+
+ Training Time (hours)
+ Transformer 93.9 90.2 92.2 96.9 93.1 91.0 93.2 97.5
+ TSLANet 95.5 93.3 94.3 97.4 93.3 93.0 94.1 98.6 5 5 5 5
+ MLP 94.8 94.8 93.3 97.9 93.6 91.8 89.1 98.5 0 Baseline 0 EWC 0 MAS 0 SI
+ 20 20 20 20
+ 15 15 15 15
+ To evaluate the adaptability of the ilLog method across dif-
+ 10 10 10 10
+ferent neural network architectures, we select five backbones 5 5 5
+ 5
+for analysis: LSTM, ResNet, Transformer, TSLAnet, and 0 0 0 0
+MLP. Specifically, LSTM is a classic choice for log anomaly SCP DCE SOYO ilLog
+detection due to its ability to model temporal dependencies (b) Training on TB Dataset
+in log sequences [6]–[8]; ResNet is commonly used as a
+backbone in numerous incremental learning methods [19], Fig. 7: Training time of different incremental learning methods
+[38]; Transformer, as a mainstream architecture for sequence in B0T10 scenario.
+modeling, is widely adopted in log anomaly detection [18],
+[35] and incremental learning approaches [42]; TSLANet [48] excessively complex incremental learning training methods
+is an advanced architecture specifically designed for temporal may prove challenging for continuous online model updating.
+representation; additionally, a simple MLP model [43] is Therefore, to answer RQ5, we evaluate the training complexity
+included as a baseline for comparison. of ilLog and 7 incremental learning algorithms on the BGL
+ As shown in Table III, the performance of these backbones and TB datasets.
+varies across different datasets and task scenarios. Overall, Taking the B0T10 incremental training scenario as an
+TSLANet demonstrates excellent and stable performance un- example, each subtask in the BGL dataset contained 5,708
+der most settings. LSTM achieves the second-best perfor- training samples, while each subtask in the TB dataset conmance, attaining the highest F1 in the B0T5 scenario on the tained 34,696 training samples. The dimension of the semantic
+BGL dataset, which validates its effectiveness in modeling vectors is 300, and the memory replayed memories were set to
+temporal relationships in logs. MLP performs outstandingly 10% of the training samples from the previous subtask. Each
+across all scenarios, highlighting the generalization capability method underwent 10 training iterations. On the BGL dataset,
+of ilLog when paired with different backbones. In contrast, the training time of the ilLog is similar to that of the baseline
+the performance of ResNet and Transformer shows slight and classical parameter regularization-based methods. On the
+fluctuations in specific tasks but remains at a high level in TB dataset, ilLog requires approximately twice the training
+most cases. Experimental results indicate that the choice of time of the baseline but remains lower than that of the SOYO
+backbone significantly impacts the final detection effectiveness method, which is acceptable in practice. The results indicate
+of ilLog, with TSLANet and LSTM demonstrating stronger that while effectively mitigating catastrophic forgetting and
+adaptability in incremental log anomaly detection tasks due to achieving advanced detection performance, ilLog does not
+their architectural characteristics. introduce substantial additional computational overhead. Its
+ training efficiency is comparable to that of a simple retraining
+F. RQ5: Comparison Incremental Training Efficiency with strategy, demonstrating the practicality and advantage of ilLog
+Different SOTA Incremental Learning Algorithms in computational complexity and its suitability for meeting the
+ Given that incremental learning-based log anomaly detec- demands of continuous model updates in online systems.
+tion methods necessitate continuous model updates, the computational complexity and time required for training become G. RQ6: Ablation Study
+crucial considerations, particularly when facing vast training In this section, we conducted various detailed analyses of
+data and high-dimensional semantic vectors. Consequently, different components of ilLog to demonstrate their impact on
+training time is an evaluation metric to be considered, and classification performance.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 12
+
+ TABLE IV: Results of ablation experiments with ilLog
+ Components
+ Test B0T5 B0.5T5 B0T10 B0.5T10
+ SCP QMC-SCP ESR Random Replay
+ BGL 93.7 91.0 91.8 91.0
+ ! % % % TB 88.2 97.8 90.5 97.6
+ BGL 94.0 92.3 93.1 89.4
+ ! % % ! TB 91.6 98.1 91.6 97.8
+ BGL 94.7 93.1 93.1 89.1
+ ! % ! % TB 92.0 97.7 92.3 98.2
+ BGL 94.7 90.1 93.5 89.8
+ % ! % ! TB 92.2 97.6 91.3 98.2
+ BGL 94.8 93.3 93.6 89.1
+ % ! ! % TB 92.2 97.9 91.8 98.4
+
+ Table IV presents the influence of two main components, Although ilLog achieves significant detection performance,
+QMC-SCP and ESR algorithm. It can be observed that relying it still has limitations. Graph neural networks have demonsolely on SCP-based regularization loss to counteract forget- strated strong modeling capabilities in log anomaly detection,
+ting and the no-compromise dilemma is insufficient for effec- effectively capturing complex interactions in distributed systive LAD. Given the settings as described in Section VI-A3, tems through graph structures and overcoming the limitations
+under the condition of an equal number of sampling points Q, of traditional sequence detection models. However, the current
+the performance improvement of QMC-SCP is significant. The implementation of ilLog mainly targets log event sequences,
+SCP-based method achieved the best performance of 91.0% and its sample replay mechanism is more suitable for inin the BGL B0.5T5 testing scenario. However, it significantly cremental learning of discrete sequences. In the future, we
+lagged behind the ilLog detection method based on QMC-SCP will explore how to extend entropy-driven replay to graphand ESR in the remaining seven test scenarios. When SCP and structured data and validate the effectiveness of incremental
+ESR, as well as Random Replay, are combined separately, learning on log graph, in order to handle complex scenarios
+further performance improvements are achieved. The SCP where both log events and trace structures evolve.
+based on ESR exhibited the best performance in the TB
+B0T10 test scenario, outperforming the SCP based on Random B. Threats To Validity.
+Replay in all test scenarios except TB B0.5T5. However, it
+lagged behind ilLog in the other seven test scenarios. The We have identified the following two major threats to
+combination of QMC-SCP and Random Replay demonstrated validity.
+superior performance compared to the original SCP. However, Data Quality: The comparative experiments for the deexcept for the BGL B0.5T10 test scenario, where it achieved tection models were conducted using the BGL and Thun-
+89.8%, surpassing ilLog’s 89.2%, it still fell short in the derbird public log datasets. Although these datasets have
+remaining test scenarios compared to ilLog. been extensively utilized in existing research, it is crucial to
+ In summary, ilLog based on QMC-SCP and ESR achieved acknowledge the potential limitations of their data quality.
+the best performance in the BGL B0T5, BGL B0.5T5, BGL These datasets were primarily collected and introduced in
+B0T10, TB B0T5, and TB B0.5T10 test scenarios. In the TB 2007, which implies that they might not encompass all the
+B0.5T5 and TB B0T10 detection scenarios, ilLog exhibited characteristics and patterns of the current system log evolution.
+detection performance of 97.9% and 91.8%, respectively. Consequently, the proposed method may be limited in practical
+Although slightly lower than SCP+Random Replay (98.1%) application.
+and SCP+ESR (92.3%), it outperformed the other three com- Tool Comparison: We utilize the unified framework [27]
+binations. Therefore, the proposed algorithm demonstrated the based on PyTorch with default parameters for implementing
+strongest detection advantage in terms of overall detection DeepLog, LogAnomaly, LogRobust, and PLELog methods.
+performance. For LightLog, since its original implementation was based on
+ Keras, we converted it into a PyTorch-based implementation.
+ VII. D ISCUSSION For EWC, MAS, SI, SCP, DCE and SOYO methods, we
+A. Why does ilLog work? reproduce based on the original paper and confirm that our
+ There are two main reasons why ilLog performs better than results are similar to the reported values. However, there is
+existing SOTA methods. First, ilLog enhances the effectiveness a possibility of errors or inconsistencies in the conversion
+of the training set for log time sequences with discrete process, which could impact the fairness and accuracy of the
+features through the implementation of the ESR algorithm, tool comparison.
+which can select training-value log samples from previous
+tasks. Second, ilLog incorporates a Quasi-Monte Carlo (QMC) VIII. C ONCLUSION
+algorithm based on Halton-based low-discrepancy sequences. In this work, we introduced the problem of incremental
+This approach provides a more approximate value of the sliced learning for log anomaly detection. Specifically, we design
+Cramér distance while optimizing computational resource uti- a novel data replay algorithm that uses the entropy value of
+lization. events to sort log sequence samples with discrete features and
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 13
+
+selects samples with training values for subsequent training [14] X. Wang, J. Song, X. Zhang, J. Tang, W. Gao, and Q. Lin, “Logonline: A
+tasks, thereby reducing storage and computation requirements. semi-supervised log-based anomaly detector aided with online learning
+ mechanism,” in 2023 38th IEEE/ACM International Conference on
+Additionally, we improved a loss regularization based on the Automated Software Engineering (ASE), 2023, pp. 141–152.
+Cramér distance to calculate the distance between different [15] J. Tian, M. Li, Z. Wang, L. Chen, J. Qin, and R. Zhang, “Omlog: Online
+probability distributions, mitigating catastrophic forgetting of log anomaly detection for evolving system with meta-learning,” IEEE
+ Internet of Things Journal, vol. 12, no. 15, pp. 30 142–30 155, 2025.
+knowledge. Our proposed method, ilLog, has been thoroughly [16] J. Tian, M. Li, L. Chen, Z. Wang, X. Nie, and J. Qin, “Ssdalog:
+evaluated through extensive experiments on three publicly Semi-supervised domain adaptation for incremental log-based anomaly
+available log datasets. Experimental results demonstrate the detection,” IEEE Transactions on Information Forensics and Security,
+ vol. 20, pp. 6607–6619, 2025.
+substantial advantages of our approach in handling continu- [17] M. D. Lange, R. Aljundi, M. Masana, S. Parisot, X. Jia, A. Leonardis,
+ously evolving log events within software systems. G. G. Slabaugh, and T. Tuytelaars, “A continual learning survey: Defying
+ forgetting in classification tasks,” IEEE Transactions on Pattern Analysis
+ R EFERENCES and Machine Intelligence, vol. 44, pp. 3366–3385, 2019.
+ [18] X. Li, P. Chen, L. Jing, Z. He, and G. Yu, “Swisslog: Robust anomaly
+ [1] S. He, P. He, Z. Chen, T. Yang, Y. Su, and M. R. Lyu, “A survey on detection and localization for interleaved unstructured logs,” IEEE
+ automated log analysis for reliability engineering,” ACM Comput. Surv., Transactions on Dependable and Secure Computing, vol. 20, no. 4, pp.
+ vol. 54, no. 6, jul 2021. 2762–2780, 2023.
+ [2] X. Wang, X. Zhang, L. Li, S. He, H. Zhang, Y. Liu, L. Zheng, Y. Kang, [19] S.-A. Rebuffi, A. Kolesnikov, G. Sperl, and C. H. Lampert, “icarl: Incre-
+ Q. Lin, Y. Dang, S. Rajmohan, and D. Zhang, “Spine: A scalable mental classifier and representation learning,” in 2017 IEEE Conference
+ log parser with feedback guidance,” in Proceedings of the 30th ACM on Computer Vision and Pattern Recognition (CVPR), 2017, pp. 5533–
+ Joint European Software Engineering Conference and Symposium on 5542.
+ the Foundations of Software Engineering, ser. ESEC/FSE’22, 2022, p. [20] A. Chaudhry, P. K. Dokania, T. Ajanthan, and P. H. S. Torr, “Rie-
+ 1198–1208. mannian walk for incremental learning: Understanding forgetting and
+ [3] N. Zhao, H. Wang, Z. Li, X. Peng, G. Wang, Z. Pan, Y. Wu, Z. Feng, intransigence,” in Computer Vision – ECCV 2018, V. Ferrari, M. Hebert,
+ X. Wen, W. Zhang et al., “An empirical investigation of practical C. Sminchisescu, and Y. Weiss, Eds. Cham: Springer International
+ log anomaly detection for online service systems,” in Proceedings Publishing, 2018, pp. 556–572.
+ of the 29th ACM joint meeting on european software engineering [21] B. Zhao, X. Xiao, G. Gan, B. Zhang, and S.-T. Xia, “Maintaining
+ conference and symposium on the foundations of software engineering, discrimination and fairness in class incremental learning,” in 2020
+ ser. ESEC/FSE’21, 2021, pp. 1404–1415. IEEE/CVF Conference on Computer Vision and Pattern Recognition
+ [4] S. He, J. Zhu, P. He, and M. R. Lyu, “Experience report: System (CVPR), 2020, pp. 13 205–13 214.
+ log analysis for anomaly detection,” in 2016 IEEE 27th International [22] J. Kirkpatrick, R. Pascanu, N. Rabinowitz, J. Veness, G. Desjardins,
+ Symposium on Software Reliability Engineering (ISSRE), 2016, pp. 207– A. A. Rusu, K. Milan, J. Quan, T. Ramalho, A. Grabska-Barwinska,
+ 218. D. Hassabis, C. Clopath, D. Kumaran, and R. Hadsell, “Overcoming
+ [5] J. Zhu, S. He, J. Liu, P. He, Q. Xie, Z. Zheng, and M. R. Lyu, “Tools catastrophic forgetting in neural networks,” Proceedings of the National
+ and benchmarks for automated log parsing,” in 2019 IEEE/ACM 41st In- Academy of Sciences, vol. 114, no. 13, pp. 3521–3526, 2017.
+ ternational Conference on Software Engineering: Software Engineering [23] R. Aljundi, F. Babiloni, M. Elhoseiny, M. Rohrbach, and T. Tuytelaars,
+ in Practice (ICSE-SEIP), 2019, pp. 121–130. “Memory aware synapses: Learning what (not) to forget,” in Computer
+ [6] M. Du, F. Li, G. Zheng, and V. Srikumar, “Deeplog: Anomaly detection Vision – ECCV 2018, V. Ferrari, M. Hebert, C. Sminchisescu, and
+ and diagnosis from system logs through deep learning,” in Proceedings Y. Weiss, Eds. Cham: Springer International Publishing, 2018, pp.
+ of the 2017 ACM SIGSAC Conference on Computer and Communica- 144–161.
+ tions Security, ser. CCS ’17. New York, NY, USA: Association for [24] F. Zenke, B. Poole, and S. Ganguli, “Continual learning through synaptic
+ Computing Machinery, 2017, p. 1285–1298. intelligence,” in Proceedings of the 34th International Conference on
+ [7] W. Meng, Y. Liu, Y. Zhu, S. Zhang, D. Pei, Y. Liu, Y. Chen, R. Zhang, Machine Learning - Volume 70, ser. ICML’17. JMLR.org, 2017, p.
+ S. Tao, P. Sun, and R. Zhou, “Loganomaly: Unsupervised detection of 3987–3995.
+ sequential and quantitative anomalies in unstructured logs,” in Proceed- [25] S. Kolouri, N. A. Ketz, A. Soltoggio, and P. K. Pilly, “Sliced cramer
+ ings of the 28th International Joint Conference on Artificial Intelligence, synaptic consolidation for preserving deeply learned representations,” in
+ ser. IJCAI’19. AAAI Press, 2019, p. 4739–4745. International Conference on Learning Representations, 2020.
+ [8] X. Zhang, Y. Xu, Q. Lin, B. Qiao, H. Zhang, Y. Dang, C. Xie, X. Yang, [26] F. Wang, D. Zhou, H. Ye, and D. Zhan, “Foster: Feature boosting
+ Q. Cheng, Z. Li, J. Chen, X. He, R. Yao, J.-G. Lou, M. Chintalapati, and compression for class-incremental learning,” in Computer Vision –
+ F. Shen, and D. Zhang, “Robust log-based anomaly detection on unstable ECCV 2022. Cham: Springer Nature Switzerland, 2022, pp. 398–414.
+ log data,” in Proceedings of the 2019 27th ACM Joint Meeting on [27] V.-H. Le and H. Zhang, “Log-based anomaly detection with deep
+ European Software Engineering Conference and Symposium on the learning: How far are we?” in Proceedings of the 44th International
+ Foundations of Software Engineering, ser. ESEC/FSE 2019, 2019, p. Conference on Software Engineering, 2022, p. 1356–1367.
+ 807–817. [28] H. Studiawan, F. Sohel, and C. Payne, “Anomaly detection in oper-
+ [9] L. Yang, J. Chen, Z. Wang, W. Wang, J. Jiang, X. Dong, and W. Zhang, ating system logs with deep learning-based sentiment analysis,” IEEE
+ “Semi-supervised log-based anomaly detection via probabilistic label Transactions on Dependable and Secure Computing, vol. 18, no. 5, pp.
+ estimation,” in 2021 IEEE/ACM 43rd International Conference on 2136–2148, 2021.
+ Software Engineering (ICSE), 2021, pp. 1448–1460. [29] C. Zhang, X. Peng, C. Sha, K. Zhang, Z. Fu, X. Wu, Q. Lin, and
+[10] C. Zhang, T. Jia, G. Shen, P. Zhu, and Y. Li, “Metalog: Generalizable D. Zhang, “Deeptralog: Trace-log combined microservice anomaly decross-system anomaly detection from logs with meta-learning,” in Pro- tection through graph-based deep learning,” in 2022 IEEE/ACM 44th
+ ceedings of the IEEE/ACM 46th International Conference on Software International Conference on Software Engineering (ICSE), 2022, pp.
+ Engineering, ser. ICSE ’24. New York, NY, USA: Association for 623–634.
+ Computing Machinery, 2024. [30] J. Li, H. He, S. Chen, D. Jin, and J. Yang, “Loggraph: Log event
+[11] X. Chai, H. Zhang, J. Zhang, Y. Sun, and S. K. Das, “Log sequence graph learning aided robust fine-grained anomaly diagnosis,” IEEE
+ anomaly detection based on template and parameter parsing via bert,” Transactions on Dependable and Secure Computing, vol. 21, no. 4, pp.
+ IEEE Transactions on Dependable and Secure Computing, vol. 22, no. 2, 1876–1889, 2024.
+ pp. 1150–1167, 2025. [31] J. Tian, M. Li, and J. Gan, “Fslog: Adversarial margin for cross-system
+[12] L. Chen, C. Song, X. Wang, D. Fu, and W. Zhou, “Csclog: A component few-shot log anomaly detection,” IEEE Transactions on Dependable and
+ subsequence correlation-aware log anomaly detection method,” IEEE Secure Computing, pp. 1–16, 2026.
+ Transactions on Dependable and Secure Computing, vol. 22, no. 6, pp. [32] J. Zhou, Y. Qian, Q. Zou, P. Liu, and J. Xiang, “Deepsyslog: Deep
+ 6441–6453, 2025. anomaly detection on syslog using sentence embedding and metadata,”
+[13] Y. Huo, C. Lee, Y. Su, S. Shan, J. Liu, and M. R. Lyu, “Evlog: IEEE Transactions on Information Forensics and Security, vol. 17, pp.
+ Identifying anomalous logs over software evolution,” in 2023 IEEE 34th 3051–3061, 2022.
+ International Symposium on Software Reliability Engineering (ISSRE), [33] B. Li, S. Ma, R. Deng, K.-K. R. Choo, and J. Yang, “Federated anomaly
+ 2023, pp. 391–402. detection on system logs for the internet of things: A customizable and
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3690744
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2024 14
+
+ communication-efficient approach,” IEEE Transactions on Network and Mingchu Li received his doctorate in Mathematics,
+ Service Management, vol. 19, no. 2, pp. 1705–1716, 2022. University of Toronto in 1998. He worked for School
+[34] Z. Wang, J. Tian, H. Fang, L. Chen, and J. Qin, “Lightlog: A lightweight of Software of Tianjin University as a full professor
+ temporal convolutional network for log anomaly detection on the edge,” (from 2002 to 2004), for School of Software Tech-
+ Computer Networks, vol. 203, p. 108616, 2022. nology of Dalian University of Technology as a full
+[35] V.-H. Le and H. Zhang, “Log-based anomaly detection without log pars- Professor and Vice Dean (from 2002 to 2023), for
+ ing,” in Proceedings of the 36th IEEE/ACM International Conference on Jiangxi Normal University as a full Professor from
+ Automated Software Engineering, 2022, p. 492–504. 2024 to now. His main research interests include the-
+[36] R. Chen, S. Zhang, D. Li, Y. Zhang, F. Guo, W. Meng, D. Pei, oretical computer science and information security,
+ Y. Zhang, X. Chen, and Y. Liu, “Logtransfer: Cross-system log anomaly and trust models and cooperative game theory.
+ detection for software systems with transfer learning,” in 2020 IEEE 31st
+ International Symposium on Software Reliability Engineering (ISSRE),
+ 2020, pp. 37–47.
+[37] G. M. van de Ven, T. Tuytelaars, and A. S. Tolias, “Three types of incremental learning,” Nature Machine Intelligence, vol. 4, p. 1185–1197,
+ 2022. Zumin Wang is a professor at Dalian University
+[38] Z. Li and D. Hoiem, “Learning without forgetting,” IEEE transactions since 2014. His research interests include Sensors
+ on pattern analysis and machine intelligence, vol. 40, no. 12, pp. 2935– and Sensor Application, Wireless Sensor Networks,
+ 2947, 2017. and Smart City. He received his MS degree in
+[39] Y. Wu, Y. Chen, L. Wang, Y. Ye, Z. Liu, Y. Guo, and Y. Fu, “Large Mechanical Manufacturing and Automation in 2004
+ scale incremental learning,” in 2019 IEEE/CVF Conference on Computer from North University of China, and Ph.D. degree
+ Vision and Pattern Recognition (CVPR), 2019, pp. 374–382. in Physical Electronics in 2007 from the Chinese
+[40] K. Zhu, W. Zhai, Y. Cao, J. Luo, and Z.-J. Zha, “Self-sustaining Academy of Sciences. He was a visiting scholar at
+ representation expansion for non-exemplar class-incremental learning,” the University of Washington from Nov. 2016 to
+ in 2022 IEEE/CVF Conference on Computer Vision and Pattern Recog- Nov. 2017. He is a distinguished member of CCF.
+ nition (CVPR), 2022, pp. 9286–9295.
+[41] S. Yan, J. Xie, and X. He, “Der: Dynamically expandable representation
+ for class incremental learning,” in 2021 IEEE/CVF Conference on
+ Computer Vision and Pattern Recognition (CVPR), 2021, pp. 3013–
+ 3022.
+[42] L. Li, D.-W. Zhou, H.-J. Ye, and D.-C. Zhan, “Ad- Liming Chen received his B.Eng and M.Eng dedressing imbalanced domain-incremental learning through dual- grees from Beijing Institute of Technology, China,
+ balance collaborative experts,” in Forty-second International in 1985 and 1988 respectively, and his Ph.D. degree
+ Conference on Machine Learning, 2025. [Online]. Available: from De Montfort University, UK, in 2003. He
+ https://openreview.net/forum?id=dwjwvTwV3V is currently a Chair Professor at the School of
+[43] Q. Wang, X. Song, Y. He, J. Han, C. Ding, X. Gao, and Y. Gong, Computer Science and Technology, Dalian Univer-
+ “Boosting domain incremental learning: Selecting the optimal parame- sity of Technology, China. His research interests
+ ters is all you need,” in 2025 IEEE/CVF Conference on Computer Vision include pervasive computing, data analytics, artificial
+ and Pattern Recognition (CVPR), 2025, pp. 4839–4849. intelligence, user-centred intelligent cyber-physical
+[44] M. Du and F. Li, “Spell: Streaming parsing of system event logs,” in systems and their applications in smart healthcare
+ 2016 IEEE 16th International Conference on Data Mining (ICDM), and cyber security. He has over 300 publications in
+ 2016, pp. 859–864. the aforementioned areas. Liming is an IET Fellow and a Senior Member of
+[45] W. Xu, L. Huang, A. Fox, D. Patterson, and M. I. Jordan, “Detecting IEEE.
+ large-scale system problems by mining console logs,” in Proceedings of
+ the ACM SIGOPS 22nd Symposium on Operating Systems Principles,
+ ser. SOSP ’09, 2009, p. 117–132.
+[46] A. Oliner and J. Stearley, “What supercomputers say: A study of five
+ system logs,” in 37th Annual IEEE/IFIP International Conference on Jing Qin received the Ph.D degree in the School of
+ Dependable Systems and Networks (DSN’07), 2007, pp. 575–584. Computer Science and Technology, Dalian Univer-
+[47] P. He, J. Zhu, Z. Zheng, and M. R. Lyu, “Drain: An online log parsing sity of Technology, Dalian, China. She is an assoapproach with fixed depth tree,” in 2017 IEEE International Conference ciate professor in the School of Software Engineeron Web Services (ICWS), 2017, pp. 33–40. ing, Dalian University. Her research interests include
+[48] E. Eldele, M. Ragab, Z. Chen, M. Wu, and X. Li, “TSLANet: Rethinking multimedia information retrieval, signal processing
+ transformers for time series representation learning,” in Proceedings of and machine learning.
+ the 41st International Conference on Machine Learning, ser. Proceedings of Machine Learning Research, vol. 235. PMLR, 21–27 Jul 2024,
+ pp. 12 409–12 428.
+
+ Jianyuan Gan received the B.S. degree and the
+ M.S. degree in science from Nanchang Hangkong
+ University, Nanchang, China, in 2016 and 2019,
+ Jiyu Tian received the master’s degree in cyberspace respectively. He is currently pursuing the Eng.D.
+ security from Dalian University, Dalian, China in degree at Dalian University of Technology. His re-
+ 2022. He is currently pursuing the Ph.D. degree search interests include traffic engineering, AI.
+ in Dalian University of Technology, Dalian, China.
+ His current research focuses on temporal anomaly
+ detection and cyberspace security.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

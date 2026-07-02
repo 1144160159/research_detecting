@@ -1,0 +1,145 @@
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026                                                                                          5943
+
+
+
+
+                  Log Anomaly Detection via Transformers
+                   Pre-Trained on Massive Unlabeled Data
+           Senming Yan , Graduate Student Member, IEEE, Lei Shi , Graduate Student Member, IEEE,
+    Jing Ren , Member, IEEE, Wei Wang , Senior Member, IEEE, Limin Sun , and Wei Zhang , Fellow, IEEE
+
+
+   Abstract—Cyber attacks pose serious threats to computer sys-                                                I. INTRODUCTION
+tems. Automatically detecting anomalous patterns in system logs
+is critical for identifying and mitigating security risks. However,                 A. Background and Motivations
+as log data grows increasingly complex and labeled logs remain
+                                                                                             ITH the rapid advancement of modern information tech-
+scarce, existing detection methods face significant challenges. To
+address these issues, we introduce the pre-training and fine-tuning
+paradigm for log analysis and propose a hybrid pipeline tai-
+                                                                                    W        nologies such as cloud computing, artificial intelligence,
+                                                                                    and the Internet of Things (IoT), cyberattacks have become a
+lored for accurate and low-cost log anomaly detection. Specifically,                major threat to cyberspace [2], [3], [4], [5] and are increasingly
+we employ a masked log reconstruction strategy to pre-train a                       extending into the physical world [6]. Exploiting networks as a
+Transformer encoder–based foundation model by leveraging the
+sequential dependencies in unlabeled logs. The model is then fine-
+                                                                                    medium, attackers adopt sophisticated and diverse techniques
+tuned on an event prediction task to derive the anomaly detec-                      to compromise the availability, integrity, and confidentiality
+tor. To reduce computational and storage overhead, we further                       of computer systems [7]. To identify and mitigate such cyber
+design a knowledge distillation method tailored for compressing                     threats, a practical approach is to analyze system operation logs
+log anomaly detectors. Beyond fitting the detector’s outputs, our                   to detect anomalies and implement corresponding countermea-
+method also exploits its internal representations to transfer richer
+knowledge. Experiments on the HDFS, BGL, and Thunderbird
+                                                                                    sures.
+public datasets demonstrate that our framework outperforms                             Modern computer systems generate logs to record their crit-
+state-of-the-art baselines in multiple metrics. Empirical evalua-                   ical runtime information [8]. The ever-increasing complexity
+tion on a reconstructed HDFS dataset confirms that it can adapt                     of computer systems and the exponentially growing amount of
+to real-world scenarios where labeled data is scarce. Moreover,                     log data render manually analyzing logs infeasible [9]. Conse-
+through our knowledge distillation approach, the lightweight de-
+tectors achieve outstanding performance with substantially lower
+                                                                                    quently, automatic log analysis and anomaly detection have been
+overhead, while maintaining robustness in real-world scenarios.                     developed as effective technologies to monitor the security status
+                                                                                    and therefore safeguard computer systems [10], [11], [12], [13].
+   Index Terms—Cyber security, log analysis, log anomaly detec-                        Log anomaly detection refers to identifying atypical behav-
+tion, pre-trained model.
+                                                                                    iors that fall outside the expected patterns of normal system
+   Received 22 October 2025; revised 18 December 2025; accepted 9 January           operations. The anomalies in logs indicate the presence of
+2026. Date of publication 15 January 2026; date of current version 27 January       system failures and even malicious attacks. System operators
+2026. This work was supported in part by the Major Key Project of Pengcheng
+Laboratory under Grant PCL2024A03, in part by the National Key Research             leverage log anomaly detection methods to identify anomalies
+and Development Program of China under Grant 2020YFA0711400, in part by             before further taking mitigation measures. Log anomaly detec-
+the National Natural Science Foundation of China under Grant U20A20156 and          tion methods utilize structured log data as inputs, which are
+Grant 92467201, in part by the Key Research Project of Chinese Academy of
+Sciences under Grant RCJJ-145-24-17, and in part by Beijing Natural Science         typically generated by parsing raw logs. The objective of log
+Foundation under Grant L234033. Recommended for acceptance by Dr. Yuan              anomaly detection is to accurately classify input logs as either
+Wu. (Corresponding author: Wei Wang.)                                               normal or abnormal. Its core methodologies focus on analyzing
+   Senming Yan and Limin Sun are with the Institute of Information Engineering,
+Chinese Academy of Sciences, Beijing 100045, China, and also with the School        the discernible patterns within logs and distinguishing normal
+of Cyber Security, University of Chinese Academy of Sciences, Beijing 101408,       log patterns from abnormal ones.
+China (e-mail: yansenming@iie.ac.cn; sunlimin@iie.ac.cn).                              Numerous log anomaly detection methods are proposed in
+   Lei Shi is with the School of Integrated Circuits (School of Electronic Infor-
+mation and Electrical Engineering), Shanghai Jiao Tong University, Shanghai         existing works. Some researchers propose to extract quantitative
+200240, China (e-mail: shi.lei@sjtu.edu.cn).                                        features from log sequences and leverage classic machine learn-
+   Jing Ren is with the Department of Strategic and Advanced Interdisciplinary      ing (ML)-based algorithms to detect anomalous patterns [14],
+Research, Peng Cheng Laboratory, Shenzhen 518066, China, and also with
+the School of Information and Communication Engineering, University of              [15]. Different from classic ML-based methods, since logs are
+Electronic Science and Technology of China, Chengdu 611731, China (e-mail:          essentially structured time-series event sequences, they can be
+renjing@uestc.edu.cn).                                                              processed as natural language. Therefore, sequential deep learn-
+   Wei Wang is with the Department of Strategic and Advanced Interdisci-
+plinary Research, Peng Cheng Laboratory, Shenzhen 518066, China (e-mail:            ing (DL)-based models, even Large Language Models (LLMs)
+wei_wang@ieee.org).                                                                 are leveraged for analyzing logs and detecting anomalies [12],
+   Wei Zhang is with the School of Electrical Engineering and Telecommuni-          [16], [17].
+cations, The University of New South Wales, Sydney NSW 2033, Australia
+(e-mail: w.zhang@unsw.edu.au).                                                         Despite achieving high detection performance, existing meth-
+   Digital Object Identifier 10.1109/TNSE.2026.3654089                              ods still face some significant challenges, making them difficult
+
+      2327-4697 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+5944                                                                 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+
+
+to apply in real-world scenarios: (i) as modern computer systems            unlabeled logs are hard to acquire. Our framework is the
+evolve, the types of system logs become more diverse, and the               one that is still effective in such scenarios.
+volume of log data is exploding, leading to the demand for
+developing more powerful log anomaly detectors; (ii) existing          C. Paper Structure
+methods commonly train anomaly detectors on labeled logs,
+which are scarce in real-world scenarios, as the amount of log            The remainder of this paper is organized as follows. We intro-
+data is extremely large and manual labeling requires heavy labor       duce related works and present essential background knowledge
+work; (iii) most existing works only consider the performance          regarding system log analysis, generative pre-trained transform-
+metrics of anomaly detectors but ignore the computational and          ers, and knowledge distillation in Section II. Then, we give an
+storage overhead issues, limiting their practical deployment.          overall introduction to our hybrid log anomaly detection frame-
+                                                                       work in Section III. After that, in Section IV, we describe our
+                                                                       pre-training, fine-tuning, knowledge distillation, and anomaly
+B. Our Contributions                                                   detection approaches in detail. We introduce the experiment
+   Since logs are essentially time series data, we design a Trans-     settings in Section V. We conduct several experiments and
+former encoder-based model to acquire both learning capabil-           analyze the results in Section VI. Finally, conclusions and some
+ities and computing efficiency. We propose a hybrid training           future work directions are presented in Section VII.
+method following the pre-training and fine-tuning paradigm as
+in Large Language Models [18]. Specifically, to exploit the                                   II. RELATED WORK
+information within massive unlabeled logs, i.e., the volume of           In this section, we review the existing research works on sys-
+unlabeled log data is significantly larger than manually labeled       tem log analysis, log anomaly detection, generative pre-trained
+ones, we pre-train a foundation model to learn the sequential          Transformers, and knowledge disillation, to provide sufficient
+features in logs with an input-masking-inspired self-supervised        background and identify the main research gaps.
+training task, i.e., masked log reconstruction. Then, we fine-tune
+it for the event prediction task to discern abnormal patterns
+                                                                       A. System Log Analysis
+and gain advanced detection capabilities for complex log data.
+To reduce the computational and storage overhead of our log                Modern computer systems generate logs to record their criti-
+anomaly detector, we propose a knowledge distillation method           cal runtime events. By analyzing logs, system operators are ca-
+to compress the fine-tuned model while preserving its detec-           pable of monitoring the operational status of computer systems
+tion performance. We also implement a framework for online             and taking measures when anomalies occur. Therefore, as the
+anomaly detection, including data processing, model training,          requirements for the availability of computer systems increase,
+model compression, and anomaly detection modules. We eval-             it is critical to effectively analyze system logs to maintain high
+uate our log anomaly detection framework on three widely               reliability [19], [20].
+used public datasets, including HDFS, BGL, and Thunder-                    System logs are structured text printed by logging software,
+bird. The evaluation results demonstrate the advantages of our         i.e., loggers. Generally, loggers generate log entries by populat-
+framework.                                                             ing predefined templates with parameters that record the critical
+   To summarize, in this work, we have mainly made the follow-         operating status. In order to extract effective information for
+ing contributions:                                                     system administrators from massive log data, researchers have
+    r We propose the masked log reconstruction approach to             made significant progress in a wide range of fields such as log
+      pre-train a Transformer-based foundation model and fine-         parsing, log anomaly detection, and system failure detection [8],
+      tune it for the event prediction task to train the detector.     [19].
+      Inspired by input masking-based pre-training objectives,             Since logs are essentially semi-structured data generated by
+      our proposed training approach effectively exploits the          logging software, it is significant for automatic analysis tools
+      bidirectional sequential information of log data.                to extract key information from raw logs and generate struc-
+    r We propose a hybrid pipeline tailored for log anomaly            tured data, which is the purpose of log parsing techniques.
+      detection. Different from existing works, our framework          An example of log parsing is illustrated in Fig. 1. A raw log
+      follows the pre-training and fine-tuning paradigm, which         message generated by the Hadoop Distributed File System
+      exploits unlabeled data and reduces the demand for manual        (HDFS) is processed by the log parser. The log message is
+      labeling.                                                        a natural language-like string containing information about a
+    r We propose a multi-level knowledge distillation approach         system event, including time, level, operations, etc. Log parsers
+      for log anomaly detection, which leverages both internal         aim to extract this information into a structured format. However,
+      and external information from Transformer-based anomaly          the contents of the log messages are difficult to extract, since their
+      detectors. The distilled detector has high computational         formats are customized by developers. To this end, log parsing
+      and storage efficiency while maintaining outstanding de-         methods are proposed to automatically identify the format of
+      tection capabilities.                                            log messages, i.e., log templates, to provide structured data
+    r We evaluate our framework on three public datasets, and          for the subsequent log analysis process. As a necessary step
+      our framework outperforms the existing state-of-the-art          in automatic log analysis, researchers have proposed a variety
+      methods. Also, we simulate real-world scenarios where            of log parsing methods [21], [22], [23] and developed a series of
+YAN et al.: LOG ANOMALY DETECTION VIA TRANSFORMERS PRE-TRAINED ON MASSIVE UNLABELED DATA                                            5945
+
+
+
+                                                                     in log event sequences. However, these ML-based methods are
+                                                                     still limited by feature engineering and difficulties in processing

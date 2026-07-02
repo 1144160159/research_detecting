@@ -1,0 +1,776 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025 5039414
+
+ LScAD: A Large–Small Model Collaboration
+ Framework for Unsupervised Industrial
+ Anomaly Detection
+ Shichen Qu , Xian Tao , Senior Member, IEEE, Xinyi Gong , Zhen Qu ,
+ Mukesh Prasad , Senior Member, IEEE, Fei Shen , Zhengtao Zhang , Member, IEEE,
+ and Guiguang Ding , Senior Member, IEEE
+
+ Abstract—Currently, in the field of anomaly detection, most of 74.1% on the MVTec AD dataset. Our proposed method can
+existing methods rely on small models that focus on specific also effortlessly adapt to multiclass anomaly detection without
+industrial scenarios which exhibit strong task orientation but any modifications and achieve remarkable performance. Our
+lack generalization capabilities. Segment anything model (SAM), code is available at: https://github.com/qsc1103/LScAD
+a vision foundation model designed for semantic segmentation
+tasks, has demonstrated remarkable performance in the nat- Index Terms—Anomaly detection, large–small model collaboural scene segmentation. However, SAM lacks domain-specific ration, segment anything model (SAM), unsupervised learning.
+knowledge of industrial defects and relies on an interactive
+inference framework, which restricts its application in indus- I. I NTRODUCTION
+trial anomaly detection. In this article, we propose a novel
+framework: A large–small model collaboration framework for
+unsupervised industrial anomaly detection (LScAD), aiming to
+use task-oriented small models to guide SAM for precise anomaly
+ I NDUSTRIAL defect detection based on supervised deep
+ learning is a critical technology widely used in fields,
+ such as mechanical manufacturing [1], consumer electronics
+localization. Specifically, the small model generates the initial [2], and bridge inspection [3]. With the advancement of
+guidance information, which serves as the input for a multimodal
+prompt module. This module consists of two modalities: image computer vision technologies, supervised learning methods
+and text prompt. These prompts are then used to guide SAM for have shown impressive performance in industrial defect detecaccurate anomaly segmentation. Moreover, we design a dual- tion. However, these approaches heavily rely on large-scale,
+branch adapter to enhance SAM’s domain-specific capability pixel-level annotated datasets, which are extremely costly
+through a color-domain branch and a frequency-domain branch, and time-consuming to obtain in real-world manufacturing
+aiming to improve its performance in anomaly detection tasks.
+Extensive experiments on the MVTec AD benchmark and other environments [4]. Moreover, the diversity of defects, which
+real-world industrial datasets demonstrate that our method includes variations in shape, scale, and texture, makes it diffiachieves state-of-the-art performance, with an image-level area cult to collect sufficient annotated samples to cover all possible
+under the receiver operating characteristic curve (AUROC) of types of anomalies [5]. These limitations have motivated a shift
+99.6%, pixel-level AUROC of 98.4%, and average precision (AP) to unsupervised paradigms, where models are trained only on
+ Received 20 April 2025; revised 26 June 2025; accepted 29 June 2025. normal samples and are expected to identify deviations during
+Date of publication 14 July 2025; date of current version 25 July 2025. This inference [6].
+work was supported in part by the National Science and Technology Major Currently, most unsupervised anomaly detection methods
+Project of China under Grant 2022ZD0119402; in part by the National Natural
+Science Foundation of China under Grant 62373350 and Grant 62371179; rely on specific task-oriented small models, which are typically
+in part by the Youth Innovation Promotion Association, CAS, under Grant lightweight convolutional neural networks (CNNs) with a
+2023145; in part by Beijing Nova Program under Grant 20240484687; and limited number of parameters and without pretraining on largein part by Beijing Municipal Natural Science Foundation, China, under Grant
+4252053. The Associate Editor coordinating the review process was Dr. scale datasets [5]. Existing small-model-based approaches can
+Vincenzo Gallo. (Corresponding authors: Xian Tao; Xinyi Gong.) be roughly divided into three categories: feature embedding-
+ Shichen Qu and Zhen Qu are with the Institute of Automation, Chinese based methods [7], [8], [9], which aim to learn unique
+Academy of Sciences, Beijing 100190, China, and also with the School of
+Artificial Intelligence, University of Chinese Academy of Sciences, Beijing feature embeddings and detect anomalies based on the distance
+100049, China. between learned features and input features in the feature
+ Xian Tao, Fei Shen, and Zhengtao Zhang are with the Institute of Automa- space; reconstruction-based methods [10], [11], [12], [13],
+tion, Chinese Academy of Sciences, Beijing 100190, China, also with the
+School of Artificial Intelligence, University of Chinese Academy of Sciences, which rely on reconstruction errors between abnormal and nor-
+Beijing 100049, China, and also with CASI Vision Technology Company Ltd., mal regions to detect anomalies; and anomaly synthesis-based
+Luoyang 471000, China (e-mail: taoxian2013@ia.ac.cn). methods [14], [15], [16], [17], which introduce the synthetic
+ Xinyi Gong is with the Space Information Research Institute, Hangzhou
+Dianzi University, Hangzhou 310018, China (e-mail: gongxinyi@hdu.edu.cn). anomaly information to detect anomalies in a self-supervised
+ Mukesh Prasad is with the Faculty of Engineering and Information Tech- paradigm. As shown in Fig. 1(a), current task-specific small
+nology, University of Technology Sydney, Sydney, NSW 2007, Australia. models usually introduce refinement modules represented by
+ Guiguang Ding is with the School of Software, Tsinghua University, Beijing
+100084, China. U-Net [14] or simple multilayer perceptrons [15] to further
+ Digital Object Identifier 10.1109/TIM.2025.3588927 improve the performance of anomaly localization. However,
+ 1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5039414 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ In order to combine the generative capabilities of large
+ models and the specific task orientation of small models, a
+ novel large–small model collaboration framework for unsupervised industrial anomaly detection (LScAD) is proposed, as
+ shown in Fig. 1(c). Specifically, different from previous SAMbased anomaly detection methods, a small model built on a
+ teacher–student network is designed to address the limitations
+ of SAM’s interactive working framework. During training,
+ since only normal samples are provided, a self-supervised
+ strategy based on synthetic anomaly images is employed to
+ train the multimodal prompt module. Unlike conventional
+ single-prompt methods, the proposed multimodal prompt module incorporates both location and semantic prompts, which
+ effectively leverage the preliminary guidance signals generated
+Fig. 1. Comparison of different frameworks for anomaly detection. (a)
+ by the small model to enhance the anomaly localization task
+Specific task-oriented small model. (b) Manual annotation single-prompt- [24]. This design thereby effectively guides SAM to perbased SAM. (c) Automatic multimodal prompt-based SAM with dual-branch form more refined anomaly segmentation tasks. Furthermore,
+adapter.
+ existing large models often lack adaptability to industrial
+ scenarios, to address this issue, our method introduces a dualbranch adapter structure composed of a frequency-domain
+due to the limited number of parameters, small models inher- adapter and a color-domain adapter. These adapters enrich
+ently lack the capacity to extract and represent high-level the feature representation by capturing high-frequency textures
+semantic features of anomalies. This limitation significantly and color variations, ensuring the large model is well-suited
+weakens their ability to distinguish subtle defect patterns for industrial applications.
+from normal textures, especially when dealing with complex The architecture of our LScAD is feasible because it combackgrounds or low-contrast variations. Furthermore, in the bines the efficiency of small models with the expressiveness of
+absence of pretraining on large-scale and diverse datasets, large models, while addressing domain gap and representation
+these models fail to acquire generalizable knowledge, which limitations through prompt guidance and feature adaptation.
+is essential for adapting to unseen scenarios and variations In summary, our contributions are as follows.
+in lighting, scale, noise, or structural patterns. As a result, 1) A novel framework LScAD is proposed to guide the
+small models often suffer from poor generalization and limited general segmentation ability of SAM with the taskrobustness, making it difficult to accurately detect and localize oriented capability of the small model, establishing a
+defects in real-world industrial environments [5]. collaborative working approach for industrial anomaly
+ Recently, with the rapid rise of large-scale pretrained detection.
+techniques, meta-AI research proposed an interactive vision 2) Combining the small model with the multimodal prompt
+foundation model for image segmentation called the segment module, we have not only resolved the interactive issue
+anything model (SAM) [18]. It is trained on a billion-scale but also generated an efficient prompt for SAM. Fursegmentation dataset, achieving impressive zero-shot segmen- thermore, a dual-branch adapter is designed to inject
+tation performance in natural scenes. With a large number color and frequency-domain knowledge into SAM for
+of parameters and a powerful feature extraction backbone, it industrial anomaly detection.
+possesses strong representational capacity, enabling remark- 3) Extensive experiments are conducted on the MVTec
+able performance across various downstream vision tasks AD, WFDD, and BTAD datasets under the single-
+[5]. However, applying SAM to industrial anomaly detection class/multiclass case which demonstrate that LScAD
+presents several significant challenges. First, SAM’s mask achieves state-of-the-art performance in both anomaly
+prediction is inherently interactive and relies on manually detection and localization. Meanwhile, our method is
+provided prompts, as illustrated in Fig. 1(b), which limits its successfully applied in a real-world vision system to
+applicability in fully automated industrial inspection scenarios detect chip trays.
+[19]. Second, the data distribution of SAM’s pretraining corpus differs substantially from that of industrial environments, II. R ELATED W ORKS
+lacking domain-specific characteristics that are essential for This section reviews related works on industrial anomaly
+reliable generalization to anomaly detection tasks in manufac- detection and localization, which can be divided into two
+turing [20]. Finally, existing SAM-based anomaly detection main categories: task-oriented small model-based methods and
+approaches typically utilize SAM either as a standalone seg- SAM-based methods.
+mentation module [21] or as a feature extractor backbone [22],
+[23], without fully leveraging its potential for understanding
+anomaly semantics. Therefore, directly applying large pre- A. Task-Oriented Small-Model-Based Methods
+trained models such as SAM to industrial anomaly detection 1) Feature Embedding-Based Methods: Feature
+is not an appropriate choice. embedding-based methods typically utilize pretrained
+QU et al.: LARGE–SMALL MODEL COLLABORATION FRAMEWORK FOR UNSUPERVISED INDUSTRIAL ANOMALY DETECTION 5039414
+
+networks to extract semantic representations and project structures all originate from natural language processing tasks
+them into a lower dimensional latent space [25], where [31], and there is no adapter architecture specifically designed
+anomalies are identified by measuring the deviation of testing for the purpose of anomaly detection yet. Some studies have
+sample embeddings from the distribution of normal training also conducted preliminary explorations of applying SAM to
+embeddings. RD4AD [7] proposes the research paradigm of anomaly detection tasks. ClipSAM [21] leverages the powerful
+reverse distillation, which effectively alleviates the limitation general capabilities of CLIP and SAM to perform two-stage
+of anomaly representation. PaDim [9] utilizes multivariate zero-shot anomaly detection. STLM [23] designs a dual-
+Gaussian distributions to obtain a probabilistic representation stream lightweight model and utilizes SAM for knowledge
+and evaluates anomaly scores via the Mahalanobis distance. guidance. UCAD [22] designs a structure-based contrastive
+Patchcore [8] uses a maximally representative memory bank learning module based on SAM to enhance the performance of
+of nominal patch features, which offers promising inference prompt learning and continual anomaly detection. The above
+times and detection accuracy. SAM-based methods do not incorporate domain knowledge
+ 2) Reconstruction-Based Methods: The reconstruction- of industrial anomalies, resulting in difficulty achieving satbased methods rely on the strong assumption that normal isfactory performance under the settings of diverse industrial
+regions can be reconstructed almost perfectly by the model, anomaly detection scenarios.
+while abnormal regions cannot be reconstructed. DFR [10]
+proposes a multiscale regional feature generator and a III. M ETHOD
+lightweight convolutional autoencoder to detect and locate A. Overview
+anomalies via fast feature reconstruction. Some methods set The overall pipeline of our method is illustrated in Fig. 2,
+the condition that the abnormal pixels are not visible to the which consists of three key components: small model, th
+autoencoder and reconstruct the missing information through multimodal prompt module, and SAM-based large model with
+inpainting. Typically, RIAD [11] and Intra [26] use CNN a dual-branch adapter.
+and Transformer, respectively, to inpaint images. However, the We adopt a single-stage training strategy for our proposed
+generalization ability of the generated model is often under- method, as shown in Fig. 3(a). To further elaborate on the
+estimated, and the network can not only reconstruct normal internal structure and detailed functionality of each comporegions but also generalize to abnormal regions, resulting in nent, we refer to Fig. 2. During training, a normal sample
+inaccurate reconstruction errors. IN is used to train the small model, which is a lightweight
+ 3) Anomaly Synthesis-Based Methods: The existing teacher–student reverse knowledge distillation network. Since
+anomaly synthesis methods can be divided into two paradigms: only normal samples are available for training, we design
+image-level anomaly synthesis and feature-level anomaly a self-supervised training approach to train the multimodal
+synthesis. The anomaly synthesis strategy of DRAEM [14] prompt module for generating location prompts and semantic
+creates binary masks using Perlin noise and fills them with prompt embedding. Specifically, anomaly synthesis strategy
+various textures from auxiliary datasets. Tao et al. [27] is employed to generate an anomalous image IA and its
+adopted a random erasure method to generate more realistic corresponding mask MA , so the location prompt is obtained by
+defect images. These image-level synthesized anomalies are points and boxes automatically annotated from the known synprimarily utilized to train models in a self-supervised manner. thetic mask MA . The semantic prompt embedding is generated
+In contrast to image-level anomaly synthesis, feature-level by fusing and aligning the anomalous sample IA and its coranomaly synthesis is typically conducted in high-dimensional responding text t p through the cross-modal model BEIT3 [32]
+feature spaces. SimpleNet [15] adds random Gaussian noise and an MLP projection layer. The text serves as a semantic
+sampled from a normal distribution to each feature channel prior to guide the large model in interpreting the visual content
+of normal samples. DSR [28] generates the anomalies at the from a multimodal perspective. This design takes advantage
+feature level by sampling the learned quantized feature space, of the vision-language alignment learned during pretraining.
+which allows a controlled generation of near-in-distribution The location prompt and semantic prompt, derived from both
+anomalies. the mask MA and text t p , are subsequently input into SAM’s
+ While these methods have achieved promising detection prompt encoder. This encoder serves to guide the SAM-based
+performance, they are constrained by the ability of small large model to achieve better anomaly detection results. In
+models, making it difficult to achieve a perfect anomaly order to facilitate the migration of data distribution from
+localization effect. natural scenes to industrial scenarios, a dual-branch adapter is
+ delicately designed and then integrated into the original SAM.
+B. Sam-Based Methods The process of embedding the adapter into SAM is as follows:
+ With the rapid rise of large-scale vision foundation mod- the high-frequency components IAh of the anomalous image IA
+els, the universal interactive segmentation model SAM has are first extracted by a Butterworth high-pass filter (BHPF).
+achieved remarkable performance in natural scenes. How- Then, IAh is input into the proposed frequency-domain adapter,
+ever, the bias in SAM’s training data distribution limits its where it is transformed into frequency-domain embeddings
+effectiveness in downstream tasks. To address the adaptation and embedded before each Transformer block. Meanwhile,
+challenges of SAM across diverse scenarios, researchers have the color-domain adapter is embedded in the main and residfocused on efficient fine-tuning techniques, such as LoRA ual branches of each Transformer block in the SAM image
+[29] and Adapter [30]. However, the current existing adapter encoder.
+5039414 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 2. Overview of our proposed LScAD framework.
+
+Fig. 3. Training and inference strategies. (a) Single-stage training strategy. (b) Inference strategy. (c) Two-stage training strategy.
+
+ During inference, the pipeline is shown in Fig. 3(b). The TABLE I
+input image IT is first fed into the small model. The score map A RCHITECTURE OF THE T EACHER E NCODER
+of the multiscale feature between the output of encoder E and
+decoder D in the small model is then binarized and used as
+the initial guidance information. Based on the initial guidance
+information, the automatically annotated points, boxes, and its
+corresponding text are subsequently input into the multimodal
+prompt module to generate the location prompt and semantic
+prompt embedding. Finally, image IT and its high-frequency
+component ITh are fed into the image encoder and the frequency
+adapter of SAM, respectively. Based on the above two types
+of prompts, SAM predicts the corresponding masks Mloc
+ B. Small Model
+and Msem for IT . The final anomaly detection result M is
+obtained by adding and normalizing Mloc and Msem , as shown 1) Architecture: To address the limitations of SAM’s interin Fig. 2. active segmentation, a small model is proposed, as shown in
+QU et al.: LARGE–SMALL MODEL COLLABORATION FRAMEWORK FOR UNSUPERVISED INDUSTRIAL ANOMALY DETECTION 5039414
+
+the green background at the bottom left of Fig. 2. Unlike other Algorithm 1 Anomaly Synthesis Strategy
+methods that require either complex anomaly synthesis strate- Input: Normal image IN ; Anomaly source image A; Perlin
+gies [14] or substantial storage to maintain external memory noise generator P; Image size H and W; Noise resolution
+banks [8], we design the small model based on the reverse r x and ry ; Blending factor γ; Binarization threshold λ.
+knowledge distillation paradigm, which has been proven to be Output: Synthetic anomaly image IA and corresponding mask
+an efficient and effective approach for anomaly detection [7]. MA
+The teacher encoder E is employed to extract comprehensive 1: M p ← where(P(H,W,r x ,ry )> λ, 1, 0)
+feature representations of the input image IN , as detailed in 2: M f ← Foreground(IN )
+Table I. WideResNet [33] pretrained on ImageNet serves as E 3: MA ← M p ∩ M f
+to extract multiscale features fEk , where k represents the output 4: MA ← 1 − MA
+of the kth block of the teacher encoder. In addition, simple 5: IA ← γ(MA A) + (1 − γ)(MA IN ) + MA IN
+Gaussian noise  is added to fEk , producing noisy feature 6: return IA , MA
+representations f˜Ek to enhance the model’s robustness. Subsequently, both fEk and f˜Ek undergo dimensionality reduction
+via a projection layer, and a bottleneck-based feature fusion 1) Anomaly Synthesis Strategy: We use the Perlin noise
+module is then employed to align the multiscale features of generator [14] to generate global anomaly masks M p . Specifithe projected fEk . Finally, the fused features fEfuse are fed into cally, to ensure that the generated anomaly regions are located
+the student decoder D to generate fDk , restoring them to the within the foreground of interest, a foreground segmentation
+same dimension as the features of the teacher encoder. During binarization method based on the adaptive thresholding is
+training, the student decoder is trained to approximate the proposed to obtain the foreground mask M f . In practice,
+output of the teacher encoder as closely as possible, due to we apply Otsu or Triangle thresholding on grayscale images
+the representational capabilities between the teacher encoder depending on the object subclass, followed by morphological
+and the student decoder, the cosine similarity between fEk and closing and opening using a 10 × 10 square kernel to refine
+ fDk is used to locate anomalous regions. Therefore, the small the mask [36]. The intersection of M p and M f is the final
+model is utilized to generate the initial guidance information anomaly mask MA . The whole process of anomaly synthesis
+for the following multimodal prompt module during inference. strategy is shown in Algorithm 1. Following the same settings
+ 2) Loss Function: The loss function of the small model as [14], we set r x and ry to 4, the blending factor γ is randomly
+includes the knowledge distillation loss [7] between fEk and sampled from the range [0, 1), and the binarization threshold λ
+ fDk , as well as the cosine reconstruction loss [34] between f˜Ek is fixed to 0.5, resulting in a binary mask where values above
+and fEk , which can be formulated as follows: the threshold are assigned 1 to indicate anomaly regions, and
+ values below are assigned 0 as background.
+ K >  2) Location Prompt: The location prompt includes the
+ X fEk · fDk
+ LKd = 1 − (1a) point and box coordinate information of the anomalous
+ k=1
+ fEk fDk regions.
+ K During training, the synthetic binary masks are generated,
+ 1 X
+ LRec = (1 − cos(Proj( fEk ), Proj( f˜Ek ))) (1b) and ten random points are automatically annotated within the
+ K anomalous regions, with these points distributed at different
+ k=1
+ Lsmall = LKd + αLRec (1c) locations of the defect. In addition, the smallest external
+ rectangle that encompasses all disconnected regions is comwhere α is the hyperparameter that balances the loss weight puted and used as the bounding box for the location prompt.
+in the small model. The optimal value of α is empiri- This ensures that the location prompt provides comprehensive
+cally determined to be 0.4 based on the ablation study in spatial information during the training phase, helping the
+Section IV-E7. model to identify and localize the anomalous regions.
+ In the inference phase, the score map generated by the
+ small model is first binarized, converting the image into a
+C. Multimodal Prompt Module mask-like representation. Then, this binarized mask is again
+ As shown in the red background at the bottom right of automatically annotated with ten random points, similar to
+Fig. 2, we design a multimodal prompt module that generates the process in the training phase. However, a key difference
+both location and semantic prompts based on the initial guid- in the inference phase is that the smallest external rectangle
+ance from the small model, which are used to guide the large of the largest connected region in the binarized mask is used
+model to more accurately focus on the critical regions relevant as the bounding box for the location prompt. This ensures
+to the anomaly detection task [35]. In this module, an anomaly that the model focuses on the most prominent anomalous
+synthesis strategy is adopted to generate pseudo-anomalies, region within the image, thereby improving the accuracy of
+and the corresponding masks of these pseudo-anomalies are the localization process. The precise bounding box definition
+used as initial guidance information to train the multimodal helps the model focus on the critical areas of the defect.
+prompt module. However, during inference, the initial guid- 3) Semantic Prompt: For the semantic prompt, we first
+ance information is derived from the binarized score map design a pair of opposing generic texts, “defect/good,” which
+output by the small model. correspond to the semantic information of anomalous and
+5039414 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 4. Generation pipeline of the semantic prompt.
+
+ Fig. 6. Dual-branch adapter for SAM. (a) Internal architecture of the
+ frequency-domain adapter. (b) SAM with color- and frequency-domain adapter
+ encoder’s Transformer block. (c) Internal architecture of the color-domain
+ adapter.
+
+ erated by the small model, which serves as the initial guidance
+Fig. 5. Results of LScAD at different stages. (a) Testing image. (b) Output of information, (c) the location and semantic prompts annotated
+the small model. (c) Location prompt (points and box) and semantic prompt
+(text). (d) Output of SAM. (b) and (d) are heatmaps, where red indicates
+ by the multimodal prompt module based on the binarized score
+regions with a higher likelihood of being anomalous, and blue represents ma, and (d) the final result of anomaly detection.
+normal regions.
+
+ D. Dual-Branch Adapter for Sam
+normal samples, respectively. When the initial guidance infor- Industrial anomaly detection often involves subtle, finemation does not contain a defect, the text corresponds to grained defects and complex textures that differ significantly
+“good”; otherwise, it corresponds to “defect.” This binary from the pretrained data distribution of SAM. This domain
+semantic labeling provides clear targets for subsequent model gap limits the model’s ability to effectively perceive and
+training. localize anomalies in real-world industrial settings. Therefore,
+ To effectively integrate the textual and visual features of we propose a dual-branch adapter to enhance the specialization
+anomaly information, we employ the BEIT3 [32] multimodal of the SAM-based large model, as illustrated in the blue
+encoder. BEIT3 leverages the powerful ability to jointly embed background at the top right of Fig. 2. The dual-branch adapter
+image and text, enabling fine-grained alignment in cross- parameters are learnable and embedded into the frozen SAM
+modal learning tasks. Specifically, as shown in Fig. 4, the model, enabling effective transfer to industrial scenarios while
+input image is first divided into nonoverlapping patches and preserving SAM’s strong general-purpose segmentation capaprojected into a sequence of visual tokens, while the input text bilities. The adapter consists of two complementary branches:
+prompt (e.g., “defect” or “good” is tokenized and embedded a color-domain adapter and a frequency-domain adapter.
+into a sequence of textual tokens. These two token sequences 1) Color-Domain Adapter: As shown in Fig. 6(c), we
+are then concatenated and passed through a shared stack of design a color-domain adapter with a bottleneck structure.
+multihead self-attention (MHSA) layers to enable cross-modal Specifically, the feature embeddings F spat of IA are first comfeature interaction between the textual and visual modalities. spat
+ pressed in dimensionality through downprojection to Fdown ,
+Subsequently, the visual and textual branches are separately then enhanced in representational capacity through a linear
+processed by their respective feed-forward networks (FNNs) spat
+ layer to Fdown , and finally up-projected back to the original
+to further refine the representations. The outputs from both spat
+ dimensionality as Fup , which is then residual-connected with
+branches are then integrated by a fusion layer, and the resulting spat
+ F spat to obtain Fagg . As shown in Fig. 6(b), the color-domain
+multimodal embedding is fed into a three-layer MLP for adapter is integrated into both the main branch and the residual
+dimensionality adjustment. This projection step ensures com- branch of each frozen transformer block. The process can be
+patibility with the input dimension of SAM’s prompt encoder, formalized as follows:
+enabling the semantic prompt to provide precise and flexible
+ spat
+ Fdown = Down F spat
+ 
+guidance for the downstream anomaly detection task. (2a)
+ 0
+ This design not only optimizes the fusion of cross-modal spat
+ Fdown = GeLU MLP Fdown
+ spat 
+ (2b)
+features but also enhances the model’s sensitivity to semantic  0 
+ spat
+prompts. In this way, the model can dynamically adjust its Fup = Up Fdown
+ spat
+ (2c)
+discrimination ability for anomalous samples based on the spat
+ Fagg = Fup
+ spat
+ + F spat . (2d)
+textual prompt, effectively improving detection performance.
+ As shown in Fig. 5, the overall process consists of the 2) Frequency-Domain Adapter: As illustrated in Fig. 6(a),
+following steps: (a) the testing image, (b) the score map gen- we designed a CNN-based frequency-domain adapter module,
+QU et al.: LARGE–SMALL MODEL COLLABORATION FRAMEWORK FOR UNSUPERVISED INDUSTRIAL ANOMALY DETECTION 5039414
+
+which uses convolutional filters of various sizes to capture thereby enhancing SAM’s ability to perceive anomalies in the
+complex frequency-domain features at different scales. frequency domain.
+ As shown in the top-left corner of Fig. 2, the high-frequency 3) Loss Function: The dual-branch adapter is trained endcomponent of the image is extracted through frequency- to-end in a self-supervised manner. The loss function is defined
+domain filtering. Given a sample IA , the discrete Fourier as follows:
+transform (DFT) first converts the image to the frequency
+ Lsam = LDice (MA , M) + LBCE (MA , M) (5a)
+domain F A . Then, BHPF is employed to filter out low-
+ 2MA M
+frequency components, enhancing details and edges in the LDice (MA , M) = 1 − (5b)
+image. Finally, the inverse DFT (IDFT) converts the image MA + M
+ LBCE (MA , M) = − M log MA + (1 − M) log (1 − MA ) (5c)
+ 
+back to the spatial domain IAh
+ where LDice (·) is the Dice loss and LBCE (·) is the binary cross
+ M−1 X
+ N−1 entropy loss. M is the anomaly mask predicted by SAM which
+ vy
+ IA (x, y) e−i2π( M + N )
+ ux
+ X
+ F A = F (u, v) = (3a) is obtained by fusing the masks corresponding to the location
+ x=0 y=0 Mloc and semantic prompt Msem . MA is the synthetic known
+ 1 anomaly mask.
+ HBHPF (u, v) = (3b)
+ 1 + (D0 /D(u, v))2n
+ F (u, v)A = F (u, v) · HB (u, v)
+ h
+ (3c) E. Optimization of Training Strategy
+ IAh = f (x, y)h As shown in Fig. 3, we propose two training optimization
+ M−1 N−1
+ strategies to explore the optimal joint training approach for
+ 1 XX vy
+ different modules.
+ F(u, v)hA e j2π( M + N )
+ ux
+ = (3d)
+ MN 1) Two-Stage Training Strategy: A two-stage training stratu=0 v=0
+ egy is proposed to better handle the complexity involved in
+ where M and N are the spatial-domain dimensions of the training a multimodule system. Although this approach helps
+image. u and v correspond to the coordinates in the frequency alleviate issues such as loss balancing and gradient synchrodomain. x and y correspond to the coordinates in the spatial nization during the joint optimization of different modules, it
+domain. adds complexity to the training process.
+ In order to incorporate high-frequency feature informa- In the first stage, the small model is trained independently,
+tion into the frequency-domain adapter, the high-frequency focusing on generating accurate and informative prompts withgrayscale image IAh is first patched and reshaped into a feature out being influenced by the complexity of the large model. In
+map which is reduced in dimensionality via a 1 × 1 convo- the second stage, the adapter component of the SAM-based
+ freq freq
+lution to obtain Fdown . Subsequently, Fdown undergoes feature large model and the multimodal prompt module are jointly
+extraction through 3 × 3, 5 × 5, and 7 × 7 convolutional filters, trained. This allows the two modules to effectively collaborate
+ freq
+and the resulting outputs are averaged to produce Favg which in generating and refining location and semantic prompts for
+is then combined with F freq through a residual connection anomaly detection.
+ freq freq
+to form Fagg . Finally, Fagg undergoes dimensional upscaling The loss functions for the two-stage training strategy are
+through a 1 × 1 convolution and a GeLU activation function, given by (1) and (5), respectively, to achieve phase-specific
+ freq
+resulting in Fup which is reshaped into a feature embedding. optimization.
+The frequency-domain adapter is inserted before each frozen 2) Single-Stage Training Strategy: To simplify the training
+transformer block, as shown in Fig. 6(b). The process can be process, we introduce a straightforward single-stage training
+formalized as follows: strategy, where all modules are jointly trained in a unified
+ training process. This approach simplifies the overall training
+ workflow since all modules are trained together in the same
+ F freq = Reshape Patch IAh
+ 
+ (4a) pipeline. The main advantage of this method is that it reduces
+ freq
+ Fdown = Conv1×1 F freq the complexity of training and allows for a more direct
+ 
+ (4b)
+ X 
+ freq
+  optimization of the entire model.
+ freq
+ Favg = Average Convi×i Fdown (4c) In this approach, all components of the model, except
+ freq
+ Fagg = Favg
+ freq freq
+ + Fdown (4d) for the pretrained parameters frozen in the SAM-based large
+ model, are optimized simultaneously. By training all modules
+ freq
+ = GeLU Conv1×1 freq
+ 
+ Fup Fagg (4e) together, the model can learn the interdependencies between
+ them, leading to a more consistent and integrated system.
+ The frequency-domain adapter operates on a high-frequency
+ This method ensures that the small model, large model, and
+representation of the input image to capture local pattern dismultimodal prompt module work collaboratively from the
+ruptions. Even slight anomalies, such as microdefects or subtle
+ beginning of the training process.
+texture inconsistencies, can produce localized high-frequency
+ The loss function for the entire training process is the sum
+responses [37]. To capture both coarse and fine-grained defect
+ of the loss functions of the small and large models, which can
+patterns, the adapter applies parallel convolutions with mulbe expressed as follows:
+tiple kernel sizes. This design enables the model to attend
+to both large-scale abnormal regions and subtle local defects, Ltotal = Lsmall + βLsam (6)
+5039414 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE II
+A NOMALY D ETECTION R ESULTS IN T ERMS OF AUROC AT I MAGE L EVEL ON THE MVT EC AD DATASET. T HE B EST R ESULTS ARE H IGHLIGHTED IN
+ B OLD , W HILE THE S ECOND -B EST R ESULTS ARE U NDERLINED . T HE U NCERTAINTIES ARE Q UANTIFIED AS M EAN S TANDARD D EVIATION
+
+where β is a hyperparameter that balances the loss weight adopted to provide a more accurate evaluation of performance
+between the large and small models. The optimal value of β for anomaly localization tasks.
+is empirically determined to be 8 based on the ablation study
+in Section IV-E7. C. Implementation Details
+ IV. E XPERIMENTS In our experiments, the feature extractor for the small model
+ is WideResNet50. The image encoder of SAM is ViT-B,
+ In this section, the proposed method is extensively experi- with its parameters frozen during training. The multimodal
+mented on different datasets to evaluate its effectiveness, and model employed is BEIT3-B. The optimizer is Adam, with
+the ablation studies have been experimentally conducted and the learning rate set to 1 × 10−5 . The training is conducted
+discussed. for 200 epochs with a batch size of 8. Our experiments
+ are implemented using the PyTorch framework on a single
+A. Datasets NVIDIA GeForce RTX 3090 GPU. All images are resized to
+ In our experiment, we primarily use three public unsuper- 224 × 224 before being input into the model. The model is
+vised anomaly detection datasets. evaluated under the single-stage training strategy.
+ 1) MVTec AD: The MVTec AD [38] dataset includes ten
+object categories and five texture categories, with a total of D. Experimental Results
+4096 normal samples and 1258 anomaly samples in the test
+set. The anomaly types include scratches, dents, and color 1) Experiments on the MVTec AD Dataset Under Singlevariations. Pixel-level annotations are provided as the ground Class Setting: The proposed method is thoroughly compared
+truth for evaluation. with state-of-the-art unsupervised anomaly detection methods
+ 2) WFDD: The WFDD [16] dataset contains 4101 images in both anomaly detection and localization tasks, as shown in
+of woven fabrics, categorized into four different types with Tables II and III. The methods included in the comparison
+various textures and patterns. The training set consists of 3657 are DSR [28], PatchCore [8], DRAEM [14], RD4AD [7],
+normal samples, whereas the testing set is composed of 203 SimpleNet [15], MDPS [40], DC-AE [41], AMI-Net [42],
+normal samples and 241 anomaly samples. REASON [43], and DualFlow [44]. To ensure fairness, all
+ 3) BTAD: The BTAD [39] dataset includes three object results, except those from DC-AE [41], are reproduced using
+categories, with a total of 451 normal images and 290 anoma- the official code provided in their respective papers. For DClous images. The images have resolutions ranging from 600 AE, which does not have the official code, the results are
+to 1600. borrowed directly from this article.
+ The experimental results indicate that the proposed method
+ has a significant advantage in both anomaly detection and
+B. Evaluation Metrics
+ localization tasks. Specifically, for anomaly detection, our
+ Image-level area under the receiver operating characteristic method achieves an image-level AUROC of 99.6%, demoncurve (AUROC) is used to evaluate anomaly detection perfor- strating state-of-the-art performance. In addition, for anomaly
+mance, while pixel-level AUROC and average precision (AP) localization, our method achieves a pixel-level AUROC of
+are employed to assess anomaly localization performance. 98.4% and a pixel-level AP of 74.1%, surpassing all the
+Notably, due to the significant imbalance between positive existing state-of-the-art methods. The pixel-level AP is 18.2%
+and negative samples, AUROC may not effectively reflect higher than that of SimpleNet, showing the superior locallocalization performance [14]. Therefore, pixel-level AP is ization accuracy of our method, particularly in precisely
+QU et al.: LARGE–SMALL MODEL COLLABORATION FRAMEWORK FOR UNSUPERVISED INDUSTRIAL ANOMALY DETECTION 5039414
+
+ TABLE III
+A NOMALY L OCALIZATION R ESULTS IN T ERMS OF AUROC/AP AT P IXEL -L EVEL ON THE MVT EC AD DATASET. T HE B EST R ESULTS ARE H IGHLIGHTED
+ IN B OLD , W HILE THE S ECOND -B EST R ESULTS ARE U NDERLINED . T HE U NCERTAINTIES ARE Q UANTIFIED AS M EAN S TANDARD D EVIATION
+
+Fig. 7. Qualitative visualization results for anomaly localization on the MVTec AD dataset.
+
+ TABLE IV
+A NOMALY D ETECTION AND L OCALIZATION R ESULTS ON MVT EC AD DATASET FOR M ULTICLASS S ETTING . T HE B EST R ESULTS ARE H IGHLIGHTED IN
+ B OLD , W HILE THE S ECOND -B EST R ESULTS ARE U NDERLINED . T HE U NCERTAINTIES ARE Q UANTIFIED AS M EAN S TANDARD D EVIATION
+
+identifying the boundaries of anomalies. This significant 2) Experiments on the MVTec AD Dataset Under Multiclass
+improvement suggests that our method is better at capturing Setting: Most existing methods are designed for single-class
+the finer details of defects in complex images, thereby enhanc- anomaly detection tasks. However, due to the wide variety of
+ing the model’s anomaly localization capability. samples to be tested, training a separate model for each class
+ To visually demonstrate the effectiveness of the proposed leads to considerable increases in training and memory usage.
+method, Fig. 7 presents the visual anomaly score maps of our As a result, multiclass anomaly detection techniques have
+model on the MVTec AD dataset, along with a comparison gradually become a research focus, aiming to train a unified
+to other state-of-the-art methods. These visualizations clearly model that can efficiently detect anomalies across all classes,
+show that our method outperforms others in both anomaly thus reducing the computational and memory overhead.
+detection and localization, proving its superiority in capturing As shown in Table IV, we compared our proposed LScAD
+fine-grained anomaly details. method with several existing multiclass anomaly detection
+5039414 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE V
+A NOMALY D ETECTION (I MAGE AUROC) AND L OCALIZATION (P IXEL
+ AUROC/P IXEL AP) R ESULTS ON WFDD AND BTAD DATASETS
+
+ Fig. 9. Comparisons of different anomaly detection methods in terms of pixel
+ AP (y-axis) and latency (x-axis).
+
+ TABLE VI
+ PARAMETER AND I NFERENCE S PEED OF S MALL AND L ARGE M ODELS
+
+ TABLE VII
+ Q UANTITATIVE R ESULTS ON R EAL -W ORLD DATA
+
+Fig. 8. Qualitative visualization results for anomaly localization on (a) WFDD
+and (b) BTAD datasets.
+
+methods, including Padim [9], DRAEM [14], RD4AD [7], to other methods. These visualizations highlight our model’s
+UniAD [45], DeSTSeg [46], Simplenet [15], and DiAD [47]. effective capability to detect and localize anomalies. Intu-
+The experimental results show that LScAD outperforms these itively, our method excels in anomaly localization for subtle,
+methods, especially in terms of pixel-level AP, demonstrating texture-based defects, which are typically difficult for other
+the superiority of our approach. It is noteworthy that although models to accurately capture. This success can be attributed
+UniAD [45] and DiAD [47] are specifically designed for to the collaborative working mode of the small and large
+multiclass anomaly detection, our method not only achieves models in LScAD. The small model acts as a lightweight
+state-of-the-art performance in single-class settings but also guidance information generator, while the large model refines
+surpasses these specialized algorithms in multiclass settings. the details and contextual understanding of the anomalies,
+This indicates that our model has strong flexibility, easily thus improving the accuracy of anomaly localization. This
+transitioning from single-class to multiclass tasks while main- collaborative approach enables the model to focus on both finetaining high efficiency across different settings. grained details and broader patterns, making it highly effective
+ 3) Experiments on WFDD and BTAD Datasets: Table V across a variety of tasks.
+presents the results of anomaly detection and localization for 4) Execution Time Evaluation: We conducted a real-time
+the proposed method and several state-of-the-art unsupervised performance evaluation of our LScAD on the MVTec AD
+anomaly detection methods on the WFDD and BTAD datasets. dataset and compared it with other methods. The inference
+On the BTAD dataset, our method achieves comprehensive speed, as presented in Fig. 9, was measured on an NVIDIA
+state-of-the-art performance in both detection and localization RTX 3090 GPU. The experimental results show that our
+metrics, with a 9.1% improvement in pixel-level AP. On the method achieves a latency of 153 ms while delivering the best
+WFDD dataset, which contains anomalies primarily in the performance in pixel-level metrics. Furthermore, the parameter
+form of points or lines with small areas, our method achieves size and inference speed of the small and large models in our
+state-of-the-art performance in both image-level AUROC and method are shown in Table VI. The small model has less than
+pixel-level AP. The anomalies in the WFDD dataset are 1/10 the number of parameters of the large model.
+typically subtle and low contrast, making detection and local- 5) Applications in Real-World System and Data: Fig.
+ization particularly challenging. Despite this, our method 10(b) presents the visualization results of anomaly detecperforms excellently in capturing these defects, demonstrating tion and localization, which demonstrate that our method
+its robustness in handling subtle, low-contrast anomalies. produces accurate and fine-grained segmentation masks for
+ Fig. 8 presents the visual anomaly score maps of our method defect regions. In addition, Table VII shows that our method
+on both WFDD and BTAD datasets, along with a comparison achieves superior performance in both image-level AUROC
+QU et al.: LARGE–SMALL MODEL COLLABORATION FRAMEWORK FOR UNSUPERVISED INDUSTRIAL ANOMALY DETECTION 5039414
+
+ Fig. 12. Noise robustness analysis.
+
+ TABLE VIII
+ I NFLUENCE OF THE T RAINING S TRATEGY
+
+ TABLE IX
+ I NFLUENCE OF THE SAM A DAPTER
+
+Fig. 10. Applications in real-world systems. (a) Real photograph of the vision
+hardware system. (b) Qualitative visualization results for anomaly localization
+on the real-world chip tray dataset.
+
+ the noise level increases to 25%, the segmentation quality
+ begins to degrade, but the model can still approximately
+ identify the defective region. However, at 50% noise, the
+ anomaly region becomes nearly indistinguishable even to the
+ human eye, as shown in the zoomed-in patch. Therefore,
+ the model fails to respond to the anomaly region, leading
+Fig. 11. Three real-world industrial datasets. (a) Smartphone back cover glass
+ to missed detection. These results suggest that our method
+dataset. (b) Magnetic Tile. (c) KSDD2. maintains reasonable robustness under moderate noise, but its
+ performance can be compromised when the defect itself is
+ obscured. This highlights the necessity of applying denoisand pixel-level AP compared to existing approaches. The
+ ing or image enhancement preprocessing in extremely noisy
+improvement in AP reflects more precise localization of subtle
+ industrial environments.
+defects, which is particularly important in real-world industrial
+scenarios. These results confirm the practical effectiveness and
+robustness of our method under actual imaging conditions. E. Ablation Study
+ To further validate the robustness and credibility of our In this section, we conduct extensive ablation experiments
+method across diverse and challenging real-world industrial and analysis of the proposed method on the MVTec AD
+scenarios, we conducted experiments on three representative dataset.
+datasets, as illustrated in Fig. 11. (a) a smartphone back cover 1) Influence of the Training Strategy: We have analyzed the
+glass dataset from the actual production line, and (b) and performance of LScAD under different training strategies with
+(c) two public industrial benchmarks, Magnetic Tile [48] and the corresponding experimental results presented in Table VIII.
+KSDD2 [49]. These three datasets exhibit varying lighting The results show that both strategies yield comparable perforconditions and complex backgrounds, demonstrating that our mance in terms of anomaly detection and localization. This
+method can effectively adapt to different inspection scenarios. suggests that the proposed framework is not sensitive to the
+ 6) Noise Robustness Analysis: To evaluate the robustness training pipeline design, demonstrating its flexibility and ease
+of the proposed method under degraded visual conditions, of deployment. Based on these findings, we adopt the simpler
+we conducted experiments by adding different levels of salt- single-stage strategy to reduce training complexity without
+and-pepper noise (5%, 25%, and 50%) to the original input sacrificing performance.
+image. As illustrated in Fig. 12, the localization results remain 2) Influence of the Sam Adapter: We investigated the
+relatively accurate when the noise level is low (5%), with impact of the components of the SAM adapter on the prothe anomaly region clearly highlighted in the heatmap. When posed method’s performance using the MVTec AD dataset,
+5039414 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE X
+ I NFLUENCE OF P ROMPT F ORMATS
+
+Fig. 13. Visualization results using different forms of prompts. (a) Input
+image. (b) Only location prompts. (c) Only semantic prompts. (d) Both
+location prompts and semantic prompts. (e) GT.
+
+ TABLE XI
+ I NFLUENCE OF SAM T RAINABLE C OMPONENTS
+
+Fig. 14. Influence of the backbone of the small model.
+
+ 3) Influence of the Prompt Formats: To validate the effectiveness of the multimodal prompt module, we conducted a
+ series of comparative experiments, with quantitative results
+ presented in Table X. We also visualized the anomaly
+ localization outputs using heatmaps under different prompt
+Fig. 15. Influence of the backbone of the large model. configurations, as shown in Fig. 13. The results show that the
+ inclusion of the multimodal prompt leads to more accurate
+ and complete localization of anomalies, with significantly
+ fewer false positives. Furthermore, the consistency between the
+ quantitative improvements and visual results confirms that the
+ multimodal prompt module effectively enhances both anomaly
+ detection and localization accuracy in practical scenarios.
+ 4) Influence of the Sam Trainable Components: We conducted a comparative experiment to explore the effect of
+ making SAM’s prompt encoder and mask decoder either
+Fig. 16. Influence of the hyperparameter α. trainable or frozen. As shown in Table XI, the experimental
+ results demonstrate that enabling training for both components significantly improves the model’s performance in
+ anomaly detection and localization. This improvement suggests that fine-tuning these modules allows the model to
+ better adapt SAM’s pretrained representations to the specific
+ characteristics of industrial anomaly data. In particular, the
+ trainable configuration enhances the model’s ability to align
+ prompt information with downstream segmentation tasks,
+ resulting in more accurate and robust localization of anoma-
+Fig. 17. Influence of the hyperparameter β.
+ lies.
+ 5) Influence of the Backbone of Small and Large Modwith detailed results presented in Table IX. The experimental els: Fig. 14 displays the qualitative comparisons of different
+results show that without the adapter, the model struggles to backbones of the small model. Intuitively, the deeper and
+generalize to the industrial domain, achieving only 37.8% in wider WideResNet50 enables the small model to generate
+pixel-level AP. The addition of the color-domain adapter leads high-quality guidance information, which contribute to more
+to a significant improvement of 32.8%, indicating its effec- accurate anomaly detection. Fig. 15 presents a comparison of
+tiveness in capturing global appearance information. Further our method across different image encoder backbones of SAM.
+introducing the frequency-domain adapter brings an additional Notably, our method achieves the best performance with the
+10.9% gain, suggesting its ability to capture fine-grained local lightweight ViT-B backbone. This is attributed to the fact that
+anomalies through multiscale frequency features. When both smaller backbones are better suited for fine-tuning tasks on
+adapters are combined, the model achieves a pixel-level AP the data-limited datasets.
+of 74.1%, confirming that the dual-branch adapter design 6) Influence of the Text Prompt Template: As shown in
+provides complementary benefits and plays a critical role in Table XII, we evaluate the impact of various text prompt
+enhancing SAM’s adaptation to industrial anomaly detection. templates on the performance of the proposed LScAD frame-
+QU et al.: LARGE–SMALL MODEL COLLABORATION FRAMEWORK FOR UNSUPERVISED INDUSTRIAL ANOMALY DETECTION 5039414
+
+ TABLE XII have room for improvement. In the future, we will further
+ I NFLUENCE OF THE T EXT P ROMPT T EMPLATE enhance the model’s real-time performance and computational
+ efficiency through techniques such as model distillation and
+ pruning.
+
+ R EFERENCES
+ [1] Y. He, K. Song, Q. Meng, and Y. Yan, “An end-to-end steel surface
+ defect detection approach via fusing multiple hierarchical features,”
+ IEEE Trans. Instrum. Meas., vol. 69, no. 4, pp. 1493–1504, Apr. 2020.
+ [2] J. Mao, G. Xu, L. He, and J. Luo, “Attention-relation network for mobile
+ phone screen defect classification via a few samples,” Digit. Commun.
+work. Specifically, we compare concise class-level prompts, Netw., vol. 10, no. 4, pp. 1113–1120, Aug. 2024.
+such as “good/defect” with more descriptive formulations [3] W. Jiang, M. Liu, Y. Peng, L. Wu, and Y. Wang, “HDCB-Net: A
+ neural network with the hybrid dilated convolution for pixel-level crack
+inspired by CLIP-style templates, including “a good/defective detection on concrete bridges,” IEEE Trans. Ind. Informat., vol. 17,
+[],” and “a photograph of a good/defect [].” The experimental no. 8, pp. 5485–5494, Aug. 2021.
+results show that concise prompt words generally outper- [4] X. Tao, X. Gong, X. Zhang, S. Yan, and C. Adak, “Deep learning for
+ unsupervised anomaly localization in industrial images: A survey,” IEEE
+form CLIP-style text prompt templates. Among them, the Trans. Instrum. Meas., vol. 71, pp. 1–21, 2022.
+prompt “good/defect” achieves the best overall performance, [5] Y. Lin et al., “A survey on RGB, 3D, and multimodal approaches for
+suggesting that in industrial anomaly detection tasks, minimal unsupervised industrial image anomaly detection,” Inf. Fusion, vol. 121,
+ Sep. 2025, Art. no. 103139.
+semantic cues are sufficient to effectively guide the multimodal [6] S. Q. Qu, X. Tao, Z. Qu, X. Gong, Z. Zhang, and M. Prasad, “ALMRR:
+encoder. Moreover, this design simplifies the prompt construc- Anomaly localization mamba on industrial textured surface with feature
+tion process and enhances the generalizability of the proposed reconstruction and refinement,” in Proc. Chin. Conf. Pattern Recognit. Comput. Vis. (PRCV). Cham, Switzerland: Springer, Oct. 2024,
+method. pp. 378–391.
+ 7) Influence of the Hyperparameter of Loss Function: [7] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+Under the single-stage training strategy, we investigated the one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ Recognit. (CVPR), Jun. 2022, pp. 9737–9746.
+impact of two key hyperparameters, α and β, on the perfor- [8] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and
+mance of our model. Specifically, α controls the contribution P. Gehler, “Towards total recall in industrial anomaly detection,” in
+of the reconstruction loss LRec relative to the knowledge Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2022,
+ pp. 14318–14328.
+distillation loss LKd in the small model, while β determines [9] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch disthe weight of the segmentation loss Lsam derived from the tribution modeling framework for anomaly detection and localization,”
+large SAM-based model in the overall objective. We conducted in Proc. Int. Conf. Pattern Recognit. Cham, Switzerland: Springer, Jan.
+ 2021, pp. 475–489.
+multiple comparative experiments with different settings of [10] J. Yang, Y. Shi, and Z. Qi, “DFR: Deep feature reconstruction for
+these hyperparameters, and the results are shown in Figs. unsupervised anomaly segmentation,” 2020, arXiv:2012.07122.
+16 and 17. The experimental findings indicate that setting [11] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting
+ for visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021,
+α = 0.4 and β = 8 yields the best performance across various Art. no. 107706.
+anomaly detection and localization metrics, suggesting that [12] X. Tao, C. Adak, P.-J. Chun, S. Yan, and H. Liu, “ViTALnet: Anomaly
+a well-balanced tradeoff between the small- and large-model on industrial textured surfaces with hybrid transformer,” IEEE Trans.
+ Instrum. Meas., vol. 72, pp. 1–13, 2023.
+objectives is crucial for optimal performance. [13] S. Wang, C. Lv, Z. Zhang, and X. Wei, “Dual-branch learning with
+ prior information for surface anomaly detection,” IEEE Trans. Instrum.
+ V. C ONCLUSION Meas., vol. 72, pp. 1–11, 2023.
+ [14] V. Zavrtanik, M. Kristan, and D. Skočaj, “DRAEM—A discriminatively
+ In this work, we propose LScAD, a novel framework for trained reconstruction embedding for surface anomaly detection,” in
+unsupervised industrial anomaly detection that leverages the Proc. IEEE/CVF Int. Conf. Comput. Vis., Jun. 2021, pp. 8330–8339.
+ [15] Z. Liu, Y. Zhou, Y. Xu, and Z. Wang, “SimpleNet: A simple network
+collaboration between small and large models. This framework for image anomaly detection and localization,” in Proc. IEEE/CVF Conf.
+effectively combines the task-specific orientation of small Comput. Vis. Pattern Recognit., Jun. 2023, pp. 20402–20411.
+models with the generalization capability of large models, [16] Q. Chen, H. Luo, C. Lv, and Z. Zhang, “A unified anomaly synthesis
+ strategy with gradient ascent for industrial anomaly detection and
+achieving complementary strengths. Specifically, the small localization,” in Proc. Eur. Conf. Comput. Vis. Cham, Switzerland:
+model is utilized to generate the initial guidance information Springer, Nov. 2024, pp. 37–54.
+for the large model, overcoming the limitations of SAM’s [17] Q. Chen et al., “Center-aware residual anomaly synthesis for multiclass industrial anomaly detection,” IEEE Trans. Ind. Informat.,
+interactive working mode. The multimodal prompt module 2025, doi: 10.1109/TII.2025.3575122. [Online]. Available: https://
+supplies SAM with diverse and rich prompt information for ieeexplore.ieee.org/document/11040032
+subsequent anomaly segmentation tasks. Moreover, the dual- [18] A. Kirillov et al., “Segment anything,” in Proc. IEEE/CVF Int. Conf.
+ Comput. Vis., Oct. 2023, pp. 4015–4026.
+branch adapter mitigates biases in SAM’s pretrained data [19] L. Zheng, X. Pu, S. Zhang, and F. Xu, “Tuning a SAM-based
+distribution, effectively transferring its segmentation capa- model with multicognitive visual adapter to remote sensing instance
+bilities to industrial anomaly detection scenarios. Extensive segmentation,” IEEE J. Sel. Topics Appl. Earth Observ. Remote Sens.,
+ vol. 18, pp. 2737–2748, 2025.
+experiments on the MVTec AD dataset and other real-world [20] T. Chen et al., “SAM fails to segment anything?—SAM-adapter: Adaptdatasets demonstrate the effectiveness of the proposed method. ing SAM in underperformed scenes: Camouflage, shadow, medical
+ Meanwhile, we also acknowledge the current limitations, image segmentation, and more,” 2023, arXiv:2304.09148.
+ [21] S. Li, J. Cao, P. Ye, Y. Ding, C. Tu, and T. Chen, “ClipSAM: CLIP
+due to the integration of the large model-SAM, the over- and SAM collaboration for zero-shot anomaly segmentation,” 2024,
+all parameter count and inference speed of the model still arXiv:2401.12665.
+5039414 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+[22] J. Liu et al., “Unsupervised continual anomaly detection with [47] H. He et al., “A diffusion-based framework for multi-class anomaly
+ contrastively-learned prompt,” in Proc. AAAI Conf. Artif. Intell., Jan. detection,” in Proc. AAAI Conf. Artif. Intell., Mar. 2024, vol. 38, no. 8,
+ 2024, pp. 3639–3647. pp. 8472–8480.
+[23] C. Li, L. Qi, and X. Geng, “A SAM-guided two-stream lightweight [48] Y. Huang, C. Qiu, and K. Yuan, “Surface defect saliency of magnetic
+ model for anomaly detection,” ACM Trans. Multimedia Comput., Com- tile,” Vis. Comput., vol. 36, no. 1, pp. 85–96, Jan. 2020.
+ mun., Appl., vol. 21, no. 2, pp. 1–23, Feb. 2025. [49] J. Božič, D. Tabernik, and D. Skočaj, “Mixed supervision for surface-
+[24] S. Song, C. Zhang, P. Zhang, P. Li, F. Song, and L. Zhang, “Urban defect detection: From weakly to fully supervised learning,” Comput.
+ waterlogging detection: A challenging benchmark and large-small model Ind., vol. 129, Aug. 2021, Art. no. 103459.
+ co-adapter,” in Proc. Eur. Conf. Comput. Vis. Cham, Switzerland:
+ Springer, Oct. 2024, pp. 366–382.
+[25] G. E. Hinton and R. R. Salakhutdinov, “Reducing the dimensionality of
+ Shichen Qu received the B.Sc. degree from Dalian University of Technology,
+ data with neural networks,” Science, vol. 313, no. 5786, pp. 504–507,
+ Dalian, China, in 2023. He is currently pursuing the M.Sc. degree with the
+ Jul. 2006.
+ Institute of Automation (IA), Chinese Academy of Sciences (CAS), Beijing,
+[26] J. Pirnay and K. Chai, “Inpainting transformer for anomaly detection,” China.
+ in Proc. Int. Conf. Image Anal. Process. Cham, Switzerland: Springer, His research interests include computer vision and anomaly detection.
+ 2022, pp. 394–406.
+[27] X. Tao, D. Zhang, W. Ma, Z. Hou, Z. Lu, and C. Adak, “Unsupervised
+ anomaly detection for surface defects with dual-siamese network,” IEEE
+ Trans. Ind. Informat., vol. 18, no. 11, pp. 7707–7717, Nov. 2022. Xian Tao (Senior Member, IEEE) received the Ph.D. degree in control
+[28] V. Zavrtanik, M. Kristan, and D. Skočaj, “DSR—A dual subspace re- theory and control engineering from the Institute of Automation (IA), Chinese
+ projection network for surface anomaly detection,” in Proc. Eur. Conf. Academy of Sciences (CAS), Beijing, China, in 2016.
+ Comput. Vis. Cham, Switzerland: Springer, 2022, pp. 539–554. He is currently an Associate Professor with IA, CAS. His current research
+[29] E. J. Hu et al., “LoRA: Low-rank adaptation of large language models,” interests include machine learning and automated surface inspection for
+ 2021, arXiv:2106.09685. industries.
+[30] J. Wu et al., “Medical SAM adapter: Adapting segment anything model
+ for medical image segmentation,” 2023, arXiv:2304.12620.
+[31] N. Houlsby et al., “Parameter-efficient transfer learning for NLP,” in Xinyi Gong received the Ph.D. degree in control theory and control engi-
+ Proc. Int. Conf. Mach. Learn., 2019, pp. 2790–2799. neering from the Institute of Automation (IA), Chinese Academy of Sciences
+[32] W. Wang et al., “Image as a foreign language: BEIT pretraining for (CAS), Beijing, China, in 2019.
+ vision and vision-language tasks,” in Proc. IEEE/CVF Conf. Comput. He is currently a Professor with the Space Information Research Institute,
+ Vis. Pattern Recognit. (CVPR), Jun. 2023, pp. 19175–19186. Hangzhou Dianzi University (HDU), Hangzhou, China. His research interests
+[33] S. Zagoruyko and N. Komodakis, “Wide residual networks,” 2016, include computer vision, image processing, pattern recognition, and machine
+ arXiv:1605.07146. learning.
+[34] S. Sheng, J. Jing, Z. Wang, and H. Zhang, “Cosine similarity knowledge
+ distillation for surface anomaly detection,” Sci. Rep., vol. 14, no. 1,
+ p. 8150, Apr. 2024. Zhen Qu received the B.Sc. degree from Xidian University, Xi’an, China,
+[35] Y. Zhang et al., “EVF-SAM: Early vision-language fusion for text- in 2022. He is currently pursuing the Ph.D. degree with the Institute of
+ prompted segment anything model,” 2024, arXiv:2406.20076. Automation (IA), Chinese Academy of Sciences (CAS), Beijing, China.
+[36] X. Zhang, M. Xu, and X. Zhou, “RealNet: A feature selection net- His research interests include machine learning and visual inspection.
+ work with realistic synthetic anomaly for anomaly detection,” in Proc.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2024,
+ pp. 16699–16708.
+ Mukesh Prasad (Senior Member, IEEE) received the M.S. degree from the
+[37] D.-M. Tsai and C.-Y. Hsieh, “Automated surface inspection for direc-
+ School of Computer and Systems Sciences, Jawaharlal Nehru University, New
+ tional textures,” Image Vis. Comput., vol. 18, no. 1, pp. 49–62, Dec.
+ Delhi, India, in 2009, and the Ph.D. degree from the Department of Computer
+ 1999.
+ Science, National Chiao Tung University, Hsinchu, Taiwan, in 2015.
+[38] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A He is currently a Senior Lecturer with the School of Computer Science,
+ comprehensive real-world dataset for unsupervised anomaly detection,” Faculty of Engineering and Information Technology, University of Technology
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. Sydney, Sydney, NSW, Australia, who has made substantial contributions to
+ 2019, pp. 9584–9592. the fields of machine learning, artificial intelligence, and natural language
+[39] P. Mishra, R. Verk, D. Fornasier, C. Piciarelli, and G. L. Foresti, “VT- processing.
+ ADL: A vision transformer network for image anomaly detection and
+ localization,” in Proc. IEEE 30th Int. Symp. Ind. Electron. (ISIE), Jun.
+ 2021, pp. 01–06.
+[40] D. Wu et al., “Unsupervised anomaly detection via masked diffusion Fei Shen received the B.Sc. degree from Xidian University, Xi’an, China, in
+ posterior sampling,” 2024, arXiv:2404.17900. 2007, the M.Sc. degree from Beijing Institute of Technology, Beijing, China,
+[41] R. Zhang, H. Wang, M. Feng, Y. Liu, and G. Yang, “Dual-constraint in 2009, and the Ph.D. degree in control science and engineering from the
+ autoencoder and adaptive weighted similarity spatial attention for unsu- Institute of Automation (IA), Chinese Academy of Sciences (CAS), Beijing,
+ pervised anomaly detection,” IEEE Trans. Ind. Informat., vol. 20, no. 7, in 2012.
+ pp. 9393–9403, Jul. 2024. He is currently a Professor with the Engineering Laboratory for Intelligent
+[42] W. Luo, H. Yao, W. Yu, and Z. Li, “AMI-Net: Adaptive mask inpainting Equipment, CAS. His research interests include visual inspection, robot vision
+ network for industrial anomaly detection and localization,” IEEE Trans. control, and microassembly.
+ Autom. Sci. Eng., vol. 22, pp. 1591–1605, 2025.
+[43] G. Wang, Y. Zou, S. He, Y. Wang, and R. Dai, “Anomaly detection and
+ localization via reverse distillation with latent anomaly suppression,” Zhengtao Zhang (Member, IEEE) received the Ph.D. degree in control
+ IEEE Trans. Circuits Syst. Video Technol., 2025, doi: 10.1109/ science and engineering from the Institute of Automation (IA), Chinese
+ TCSVT.2025.3562258. [Online]. Available: https://ieeexplore.ieee.org/ Academy of Sciences (CAS), Beijing, China, in 2010.
+ document/10969994 He is currently a Professor with the Engineering Laboratory for Intelligent
+[44] Y. Zhao, X. Wu, and J. Cheng, “DualFlow: Dual-branch flow for Equipment and Technology of Industrial Vision, CAS. His research interests
+ unsupervised anomaly detection and localization,” IEEE Trans. Instrum. include visual measurement, microassembly, and automation.
+ Meas., vol. 74, pp. 1–14, 2025.
+[45] Z. You et al., “A unified model for multi-class anomaly detection,” in
+ Proc. Adv. Neural Inf. Process. Syst., Jan. 2022, pp. 4571–4584. Guiguang Ding (Senior Member, IEEE) received the B.E. and Ph.D. degrees
+[46] X. Zhang, S. Li, X. Li, P. Huang, J. Shan, and T. Chen, “DeSTSeg: from Xidian University, Xi’an, China, in 1999 and 2004, respectively.
+ Segmentation guided denoising student-teacher for anomaly detection,” He is currently a Professor with the School of Software, Tsinghua Uniin Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. versity, Beijing, China. His research interests include the areas of multimedia
+ 2023, pp. 3914–3923. information retrieval, computer vision, and machine learning.

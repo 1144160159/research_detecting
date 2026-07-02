@@ -1,0 +1,158 @@
+                                     IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 44, NO. 2, FEBRUARY 2025                                    801
+
+
+
+
+          Facing Differences of Similarity: Intra- and
+           Inter-Correlation Unsupervised Learning
+              for Chest X-Ray Anomaly Detection
+        Shicheng Xu , Wei Li , Zuoyong Li , Member, IEEE, Tiesong Zhao , Senior Member, IEEE,
+                                and Bob Zhang , Senior Member, IEEE
+
+
+   Abstract — Anomaly detection can significantly aid doc-                    environments. Finally, a comparison with 18 state-of-the-
+tors in interpreting chest X-rays. The commonly used                          art methods on three datasets demonstrates the superiority
+strategy involves utilizing the pre-trained network to extract                and effectiveness of the proposed method across various
+features from normal data to establish feature represen-                      scenarios.
+tations. However, when a pre-trained network is applied
+to more detailed X-rays, differences of similarity can limit                    Index Terms— Medical anomaly detection, correlation
+the robustness of these feature representations. Therefore,                   learning, feature fusion, transfer learning, chest X-ray.
+we propose an intra- and inter-correlation learning frame-
+work for chest X-ray anomaly detection. Firstly, to better                                          I. I NTRODUCTION
+leverage the similar anatomical structure information in
+                                                                                    -RAY images are commonly used by physicians to diag-
+chest X-rays, we introduce the Anatomical-Feature Pyramid
+Fusion Module for feature fusion. This module aims to
+obtain fusion features with both local details and global
+                                                                              X     nose and evaluate various medical conditions, such as
+                                                                              pneumonia, chest fractures, and pneumothorax. Despite being
+contextual information. These fusion features are initialized                 considered intuitive, accurate, and an efficient diagnostic tool,
+by a trainable feature mapper and stored in a feature bank                    X-ray images still require interpretation by skilled radiologists.
+to serve as centers for learning. Furthermore, to Facing
+Differences of Similarity (FDS) introduced by the pre-                        Even experienced practitioners, who rely on visual inspection
+trained network, we propose an intra- and inter-correlation                   of chest X-ray images, face challenges such as time-consuming
+learning strategy: 1) We use intra-correlation learning to                    analysis and the potential for missed diagnoses and misdiag-
+establish intra-correlation between mapped features of                        noses. Several deep learning methods have shown significant
+individual images and semantic centers, thereby initially                     efficacy in automatically analyzing X-ray images, thus easing
+discovering lesions; 2) We employ inter-correlation learning
+to establish inter-correlation between mapped features of                     the workload burden on radiologists [1], [2], [3], [4], [5], [6].
+different images, further mitigating the differences of simi-                 However, the scarcity of large, well-annotated X-ray datasets
+larity introduced by the pre-trained network, and achieving                   impedes supervised learning performance. Therefore, unsuper-
+effective detection results even in diverse chest disease                     vised anomaly detection has become a primary research focus
+                                                                              in X-ray medical imaging [7], [8], [9], [10], [11], [12], [13],
+  Received 11 August 2024; accepted 11 September 2024. Date of
+publication 16 September 2024; date of current version 4 February             [14]. However, compared to natural datasets, the differences
+2025. This work was supported in part by the National Natural Science         between normal and abnormal data in X-ray images are more
+Foundation of China under Grant 62471207 and Grant 62276146; in               subtle. Therefore, this poses significant challenges for chest
+part by Key Technological Innovation and Industrialization Projects in
+Fujian Province (School-Enterprise Joint) under Grant 2024XQ002; in           X-ray anomaly detection.
+part by the Natural Science Foundation of Fujian Province under Grant            Currently, anomaly detection models solely utilize normal
+2021J011014, Grant 2023R1050, and Grant 2023J011390; and in part              data to construct feature representations. During the testing
+by the Scientific and Technological Major Special Project of Fujian Provin-
+cial Health Commission under Grant 2021ZD01004. (Corresponding                phase, these models identify anomalies by analyzing whether
+author: Zuoyong Li.)                                                          the feature representations significantly deviate from the nor-
+  Shicheng Xu is with the College of Computer and Information Sci-            mal distribution. Most medical anomaly detection [7], [8], [9],
+ences, Fujian Agriculture and Forestry University, Fuzhou 350002, China
+(e-mail: fafuxsc1121@163.com).                                                [10] relies on simulating pseudo-anomalous data to construct
+  Wei Li is with the College of Computer Science and Mathemat-                effective feature representations. Due to the diverse and unpre-
+ics, Fujian University of Technology, Fuzhou 350118, China (e-mail:           dictable nature of anomalies, simulating pseudo-anomalous
+liwei33660@163.com).
+  Zuoyong Li is with Fujian Provincial Key Laboratory of Information Pro-     data does not closely match real anomalies. Moreover, sim-
+cessing and Intelligent Control, School of Computer and Big Data, Min-        ulating an anomaly set containing all possible anomalies is
+jiang University, Fuzhou 350121, China (e-mail: fzulzytdq@126.com).           impractical [15]. Methods based on Teacher-Student archi-
+  Tiesong Zhao is with Fujian Key Laboratory for Intelligent Processing
+and Wireless Transmission of Media Information, Fuzhou University,            tectures [12], [16], [17], [18], [19], [20] implicitly describe
+Fuzhou 350108, China (e-mail: t.zhao@fzu.edu.cn).                             the normal feature distribution by optimizing the differences
+  Bob Zhang is with the PAMI Research Group, Department of Computer           between teacher and student features distribution (learning nor-
+and Information Science, University of Macau, Macau, China (e-mail:
+bobzhang@um.edu.mo).                                                          mal feature distribution). However, the student network may
+  Digital Object Identifier 10.1109/TMI.2024.3461231                          unexpectedly produce abnormal feature distribution similar to
+
+                   1558-254X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                 See https://www.ieee.org/publications/rights/index.html for more information.
+802                                                                   IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 44, NO. 2, FEBRUARY 2025
+
+
+
+
+those in the teacher network. To overcome this issue, methods
+based on distribution mapping (mapping the normal feature
+distribution to a specific distribution) have shown improved
+potential. Recently, distribution mapping methods primarily
+employ techniques such as normalization flows [21], [22],
+[23] and feature fine-tuning [13], [14], [24], [25], [26], [27].
+The normalization flow-based methods primarily transform the
+output of the pre-trained network into a Gaussian distribution.
+Feature fine-tuning methods primarily map the output of the
+pre-trained network to the feature distribution in a memory
+bank or reduce the feature distribution differences between var-
+ious positive samples through contrastive learning strategies.
+The pre-trained network plays a crucial role in distribution
+mapping methods and is also essential for the field of medical
+anomaly detection [28]. However, the pre-trained network is
+trained on large-scale datasets like ImageNet [29], which do
+not include medical images. Although these methods perform
+well on datasets such as MVTecAD [30], their application to
+more subtle X-ray datasets may be limited by the introduction           Fig. 1. (a) The use of a network pre-trained on ImageNet has led to
+of bias [31], [32]. These biases stem from differences of               differences of similarity, thereby causing significant differences in feature
+                                                                        distribution. (b) Through intra-correlation learning, features are mapped
+similarity between the pre-trained dataset domain and the               into hyperspheres corresponding to their semantics, thereby effectively
+target dataset domain. For example, in the ImageNet, the                constructing feature representations. (c) By integrating inter-correlation
+structure of objects and scenes is conveyed through a combi-            learning, error mapping caused by differences of similarity are corrected,
+                                                                        thereby alleviating significant differences in feature distribution. (Note:
+nation of color, shape, and texture, which are highly complex           Features of various colors represent distinct semantics.)
+and variable. In contrast, structures in X-rays are typically
+more direct and apparent because X-rays primarily depict the
+internal anatomical structures of the body in a straightforward         of fuzzy mapping features, resulting in a higher-density
+and intuitive manner, focusing mainly on internal rather than           representation of mapped features. Inter-correlation learning
+external features of objects.                                           establishes inter-correlation between different images. In the
+   The motivation here is to address the bias introduced                case of error mapping, the mutual antagonism of intra- and
+by using the pre-trained network, while detecting subtle                inter-correlation learning guides the optimization direction of
+lesions–from the way humans discover anomalies. When                    error mapping, as shown in Fig. 1. Finally, the feature mapper
+an ordinary person without medical knowledge detects lesions            trained by the intra- and inter-correlation learning framework
+on chest X-rays, apart from obvious lesions (intra-correlation          can be used for anomaly detection. Our FDS is compared with
+learning), the most effective method is to search for lesions by        several state-of-the-art methods on the pediatric pneumonia
+pairwise comparison of the same positions (inter-correlation            ZhangLab dataset, the adult pneumonia RSNA dataset, and
+learning). Inspired by this, we propose an intra- and inter-            the multi-disease CheXpert dataset. The results show that
+correlation learning framework for anomaly detection in chest           our proposed method outperforms other methods in anomaly
+X-rays, aimed at Facing Differences of Similarity (FDS).                detection performance. The main contributions are as follows:
+Firstly, we consider that X-ray images usually focus on specific           • We proposed an intra- and inter-correlation learning
+body regions and therefore exhibit similar structural features.               framework FDS for chest X-ray anomaly detection, which
+To fully utilize this fixed anatomical structure information,                 applies Facing the Differences of Similarity to mitigate
+we propose an Anatomical-Feature Pyramid Fusion (AFPF)                        the biases introduced by the pre-trained network. This
+module for feature fusion. The features fused by the AFPF                     framework is able to construct more robust feature repre-
+module are initialized by a trainable feature mapper and stored               sentations, thereby demonstrating exceptional capabilities
+in a feature bank as semantic centers. Next, we reevaluate the                in anomaly detection.
+relationship between mapped features and semantic centers,                 • We have developed an AFPF module specifically for
+identifying two mapping scenarios that influence the detec-                   X-ray images, designed to preserve local details while
+tion of subtle lesions: fuzzy mapping and error mapping.                      enhancing its effectiveness in capturing subtle yet
+Fuzzy mapping refers to mapping features close to multiple                    large-scale lesion patterns, including patchy, cloudy,
+related semantic centers. Error mapping involves mapping fea-                 or filamentous appearances.
+tures near semantic centers that are semantically mismatched.              • We conducted comprehensive experiments using three
+Therefore, we propose intra- and inter-correlation learning to                distinct datasets: the pediatric pneumonia ZhangLab
+optimize the mapping ability of the feature mapper, enabling                  dataset, the adult pneumonia RSNA dataset, and the
+it to detect subtle lesions. Specifically, intra-correlation learn-           multi-disease CheXpert dataset. We compared FDS with
+ing establishes intra-correlation between individual images                   several state-of-the-art baseline methods. Results from
+and semantic centers. In the face of fuzzy mapping, intra-                    these experiments showed that our FDS consistently
+correlation is established to determine the unique center                     outperforms other methods in detecting anomalies across
+XU et al.: FACING DIFFERENCES OF SIMILARITY: INTRA- AND INTER-CORRELATION UNSUPERVISED LEARNING                                  803
+
+
+
+
+     pediatric and adult populations, as well as under various          In the field of medical anomaly detection, [11] introduced a
+     disease conditions.                                             contrastive learning paradigm to address the issue of collapse
+   The structure of this paper is organized as follows: Section II   in Teacher-Student architecture. Reference [12] achieved accu-
+discusses the application of anomaly detection in natural and        rate classification of X-ray images by dynamically maintaining
+medical images. Section III offers an in-depth explanation           a memory queue based on spatial position information to
+of our proposed FDS framework for chest X-ray anomaly                suppress abnormal features. However, when attempting to
+detection. Section IV presents extensive experimental results        minimize the differences between normal feature distributions,
+to validate the effectiveness of FDS. Section V discusses the        the student network may unexpectedly generalize and produce
+advantages and disadvantages of FDS. Finally, Section VI             abnormal feature distributions similar to those in the teacher
+provides a summary of our work.                                      network [19].
+                     II. R ELATED W ORK
+                                                                     C. Distribution Mapping-Based Anomaly Detection
+A. Anomaly Simulation-Based Anomaly Detection
+   While there are no abnormal data in the training dataset for         Methods based on distribution mapping utilize a pre-trained
+anomaly detection, it is possible to simulate pseudo-anomalous       network to extract embedding vectors from normal train-
+data, thereby training the anomaly detection model in self-          ing images, subsequently mapping these embeddin

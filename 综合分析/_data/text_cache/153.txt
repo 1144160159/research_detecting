@@ -1,0 +1,150 @@
+                                                                       Computers & Security 135 (2023) 103466
+
+
+                                                                       Contents lists available at ScienceDirect
+
+
+                                                                       Computers & Security
+                                                              journal homepage: www.elsevier.com/locate/cose
+
+
+
+
+TGPrint: Attack ﬁngerprint classiﬁcation on encrypted network traﬃc
+based graph convolution attention networks
+Leiqi Wang a,b , Xiu Ma a,b , Ning Li a , Qiujian Lv a,∗ , Yan Wang a,b , Weiqing Huang a,b ,
+Haiyan Chen c
+a
+  Institute of Information Engineering, Chinese Academy of Science, Beijing, China
+b
+  School of Cyber Security, University of Chinese Academy of Science, Beijing, China
+c
+  Chinese Research Academy of Environmental Sciences, Beijing, China
+
+
+
+
+A R T I C L E              I N F O                           A B S T R A C T
+
+Keywords:                                                    Nowadays, most network traﬃc is encrypted, which protects user privacy but hides attack traces, further
+Attack classiﬁcation                                         hindering identifying attacks to inspect traﬃc packages. Machine Learning (ML) methods are widely applied
+Encrypted network traﬃc                                      to attack classiﬁcation on encrypted traﬃc owing to no need for manual analysis. However, existing studies only
+Unseen attack
+                                                             concentrate on basic statistical features and cannot obtain the crucial attack behaviors hiding in the encrypted
+Attack graph
+                                                             traﬃc. Worse still, attackers constantly update attack vectors to evade detection, which means outdated features
+Graph neural networks
+                                                             extracted from historical traﬃc fail to recognize unseen attacks.
+                                                             As a solution, we propose an attack classiﬁcation approach, attack ﬁngerprint based on graphs of time-window
+                                                             (TGPrint). We ﬁrst ﬁlter normal traﬃc ﬂows using ML models to eliminate the impact of useless, noisy data
+                                                             for attack classiﬁcation and maintain suspicious traﬃc. Then, we create attack graphs to depict interaction
+                                                             behaviors of attack-victim hosts from suspicious traﬃc containing crucial attack behaviors. Besides, we divide a
+                                                             speciﬁc duration for each attack to precisely elaborate attack graphs, where temporal, statistical, and aggregate
+                                                             features are extracted to portray attack behaviors. Finally, we utilize Graph Neural Networks (GNNs) to mine
+                                                             and grasp the crucial behavior patterns from attack graphs to generate ﬁngerprints and classify attacks, even
+                                                             unseen attacks. Extensive experiments are conducted on well-known datasets to verify our approach. It achieves
+                                                             a precision of 99% in attack classiﬁcation on encrypted traﬃc, an average higher than other ML methods of
+                                                             50%. Meanwhile, it classiﬁes unseen attacks with an average accuracy of over 80% and has a strong robustness
+                                                             to false positives.
+
+
+
+
+1. Introduction                                                                               DPI has been proven ineﬃcient in attack classiﬁcation tasks because
+                                                                                              it directly goes against the purpose of encryption protocol, which is to
+    Guaranteeing those online activities and the sensitive information                        keep user data conﬁdential. Therefore, how to detect and reveal attack
+exchanged daily remain private, Transport Layer Security (TLS) pro-                           behaviors based on encrypted traﬃc has become a vital research hot
+tocol was created in 1999 (Dierks, 1999) which provides encryption                            spot.
+for the application layer (Roques et al., 2019). Gartner estimated that
+                                                                                                  Given the above constraints, ML on the encrypted network for attack
+80% of global web traﬃc would be encrypted by 2019 (Cisco, 2019).
+                                                                                              classiﬁcation is a natural solution without complicated manual analysis.
+However, privacy does not guarantee security. Attackers have started
+                                                                                              The application of ML to recognize attacks in encrypted network traf-
+to leverage TLS to hide their persistent malicious activities. Pattern-
+matching techniques are hard to recognize attacks in encrypted traﬃc,                         ﬁc classiﬁcation has been well studied in the past decades (Luo et al.,
+such as port identiﬁcation and Deep Packet Inspection (DPI). Port-based                       2020; Zhai et al., 2020; Nychis et al., 2008; Koch et al., 2014; Torroledo
+approaches encounter failures in identifying attacks due to dynamic                           et al., 2018a; Yao et al., 2019). Unfortunately, the promise of ML has
+port techniques (Madhukar and Williamson, 2006; Erman et al., 2007).                          been slow to materialize in the network security domain (Anderson and
+
+
+ * Corresponding author.
+   E-mail addresses: wangleiqi@iie.ac.cn (L. Wang), maxiu@iie.ac.cn (X. Ma), lining@iie.ac.cn (N. Li), lvqiujian@iie.ac.cn (Q. Lv), wangyan@iie.ac.cn (Y. Wang),
+huanweiqing@iie.ac.cn (W. Huang), chenhy@craes.org.cn (H. Chen).
+
+https://doi.org/10.1016/j.cose.2023.103466
+Received 30 January 2023; Received in revised form 22 August 2023; Accepted 31 August 2023
+Available online 12 September 2023
+0167-4048/© 2023 Elsevier Ltd. All rights reserved.
+L. Wang, X. Ma, N. Li et al.                                                                                             Computers & Security 135 (2023) 103466
+
+
+McGrew, 2017). There are three main challenges for ML-based attack                  • We construct attack graphs to precisely depict interaction behav-
+classiﬁcation approaches.                                                             iors of attack-victim hosts with a time window ratio 𝜏 to divide a
+                                                                                      speciﬁc duration for each attack’s encrypted traﬃc.
+    Challenge 1: Imprecise features without attack behavior pat-                    • We run extensive experiments on three well-known datasets to
+terns. The sophisticated features decide the model’s detection eﬀective-              demonstrate the eﬀectiveness of TGPrint, which achieves a preci-
+ness because of garbage in, garbage out. Features in attack classiﬁcation             sion of 99% in attack classiﬁcation on encrypted traﬃc, an average
+studies on encrypted traﬃc are mainly classiﬁed into two aspects: 1)                  higher than other ML methods of 50% and achieves an average
+statistical and temporal traﬃc features (e.g., packet size, traﬃc direc-              accuracy of over 80% in unseen attacks classiﬁcation.
+tion, transmission time) (Gu et al., 2008; Arora et al., 2014; Anderson et
+al., 2018) and 2)TLS handshake features (e.g., handshake message sta-             2. Related work
+tus, encryption suite). The former focuses on the detailed transmission
+information, and the latter grasp TLS session details.                            2.1. Attack classiﬁcation
+    An attack lasts between attack-victim hosts, while attack behaviors
+leave traces in the traﬃc. However, these two features, exclusive of the          2.1.1. Pattern-matching approaches
+interaction information, cannot be abstracted to crucial high-level at-               Pattern-matching approaches focus on manually set rules to look for
+tack behavior patterns. The attack behavior patterns can enhance the              the particular malicious program or the data patterns reﬂected from the
+models’ capability of attack classiﬁcation on encrypted traﬃc because             packet traﬃc. Port mapping classiﬁes traﬃc by mapping the port in the
+they reﬂect the attacks’ behavior characteristics from interaction ac-            TCP/UDP message header to the speciﬁc attack. However, some appli-
+tivities. The interaction information of hosts’ traﬃc restores the attack         cations use dynamic ports (Madhukar and Williamson, 2006), which
+behavior patterns, which are crucial for attack classiﬁcation.                    may change during data transmission; some applications use ports of
+                                                                                  other standard protocols for data transmission in order to avoid system
+    Challenge 2: Unseen attack with new attack vectors. Various at-               restrictions (Erman et al., 2007), thus achieving port steganography.
+tack vectors can implement an attack. For example, bruteforce attack              DPI (Park et al., 2013) parses the network packets as a whole during the
+vectors involve a variety of protocols, such as HTTP and FTP. Diﬀerent            traﬃc analysis process and determines whether the traﬃc in the packets
+attack vectors execute diﬀerent operations during the attack, and the             matches the characteristics of a speciﬁc attack. However, DPI only ap-
+malicious traﬃc generated from diverse attack operations is disparate.            plies to plaintext traﬃc and has a high computational overhead. These
+ML models learn traﬃc characteristics based on the attack already seen            approaches are no longer suited for attack classiﬁcation in encrypted
+and make accurate judgments when the same attack reappears. The traf-             traﬃc. TLS certiﬁcates sent by web servers in plaintext can also help
+ﬁc the new attack vector generates is diﬀerent from the known, making             detect phishing websites or anomalous connections (Richman, 2022).
+the model misjudge. Hence, attackers usually change the attack vectors,           Blacklists maintaining certiﬁcates from malicious servers and checking
+which makes the classiﬁcation model confused and unable to detect the             all incoming certiﬁcates against that list are the easiest way of dealing
+attack activities. Therefore, the ability to identify unseen attacks with         with certiﬁcates (Suricata, 2010; Abuse, 2022). However, this method
+new attack vectors is a critical assessment criterion in addition to the          must be updated regularly by trusted people, and mistakes resulting in
+evaluation, such as accuracy. This paper deﬁnes an unseen attack as a             blocked websites can frustrate users. These approaches are no longer
+known attack with a new attack vector.                                            suited for attack classiﬁcation in encrypted traﬃc.
+    To address the above challenges, we need to propose an approach.
+It can mine the crucial attack behavior patterns in encrypted traﬃc for           2.1.2. Machine learning approaches
+accurate attack classiﬁcation. Meanwhile, it identiﬁes unseen attacks                 ML algorithms have been the critical research direction in recent
+based on these crucial patterns, which reveal fundamental techniques              years, whose main idea is to determine what attack there is by ana-
+for the same attack with diﬀerent attack vectors. The emergence of                lyzing the encrypted network traﬃc features (Anderson and McGrew,
+GNN has demonstrated the capability of learning complex behavior and              2017; FRANTISEK S, 2017; Alqudah and Yaseen, 2020; Lopez-Martin et
+extracting high-level features from big data to create the signature or           al., 2017; Torroledo et al., 2018b; Duessel et al., 2017). Anderson (An-
+ﬁngerprint of analyzed data (Pham et al., 2021; Kipf and Welling, 2016;           derson and McGrew, 2017) demonstrates six ML algorithms perform
+Veličković et al., 2017). High-level attack behaviors with complex inter-       well with malicious traﬃc classiﬁcation when confronted with real net-
+actions among hosts could be graph-structured for recognizing attacks.            work data. Frantisek (FRANTISEK S, 2017) compares four ML methods,
+Inspired by this, we propose an attack classiﬁcation approach TGPrint,            XGBoost, Random Forest, Neural Network, and SVM, for TLS encrypted
+which uses attack graphs as a ﬁngerprint for attack classiﬁcation on en-          malicious traﬃc detection. They conclude that XGBoost and Random
+crypted traﬃc. TGPrint ﬁrst eliminates noise from normal traﬃc ﬂows               Forest methods are eﬀective, and the accuracy of XGBoost and Ran-
+using ML tools and leaves suspicious traﬃc to construct attack graphs.            dom Forest is about 95%. Besides, Deep Learning (DL), a new branch
+Then, TGPrint clusters attack-victim hosts’ traﬃc and divides them ac-            of ML, is also fully applied to attack classiﬁcation on encrypted traﬃc.
+cording to a speciﬁc time window set for each attack to portray attack            Ivan (Torroledo et al., 2018b) analyze and summarize forty features in
+behaviors as a graph precisely. Thirdly, TGPrint constructs a set of at-          four classes for detecting malware and phishing signatures using LSTM
+tack graphs where ports are nodes, attack-victim hosts’ communication             and obtain 94.87% and 88.64% accuracy, respectively.
+relationships are edges, and temporal, statistical, and aggregate fea-                However, feature processing is a signiﬁcant challenge in ML ap-
+tures are edge attributes to generate each attack’s ﬁngerprint. Finally,          proaches, which can directly aﬀect the network’s classiﬁcation perfor-
+TGPrint exploits GCAN’s learning ability of graph representation to gen-          mance and require much work. How to extract and represent the limited
+erate ﬁngerprints and mines crucial attack behavior patterns to classify          features in the encrypted traﬃc are the key to identifying attacks accu-
+attacks.                                                                          rately.
+    In summary, the main contributions of this paper are as follows:
+                                                                                  2.1.3. Deep learning’s challenges
+   • We propose TGPrint to classify attacks precisely in encrypted traﬃc              Despite its eﬀectiveness, deep learning also has some limitations
+     based on attack ﬁngerprints, which obtain the high-level crucial             when applied to attack identiﬁcation. Deep learning models require
+     attack behavior patterns.                                                    a large amount of labeled data for training (Mohamad Tahir et al.,
+   • We use GCAN to mine behavior patterns from attack graphs to                  2015). However, in the ﬁeld of cyber security, obtaining labeled attack
+     identify unseen attacks and reveal fundamental techniques of the             data can be challenging due to the limited availability of comprehen-
+     attack, which adapt to the behaviors’ changing over time.                    sive and diverse datasets. Moreover, the distribution of attacks is often
+
+                                                                              2
+L. Wang, X. Ma, N. 

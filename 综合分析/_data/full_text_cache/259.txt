@@ -1,0 +1,764 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024 3829
+
+ MetaCluster: A Universal Interpretable
+ Classification Framework
+ for Cybersecurity
+ Wenhan Ge , Zeyuan Cui , Junfeng Wang , Binhui Tang , and Xiaohui Li , Member, IEEE
+
+ Abstract— Rising cyber threats have created an immediate Fortinet’s report [1], ransomware variants saw a nearly 100%
+demand for Deep Learning (DL) in cybersecurity. Nevertheless, increase in 2022 compared to 2021, resulting in losses of $600
+the opaque nature of DL models poses challenges in deploying, million in the first half of 2021. The primary impediment to
+collaborating, and assessing their effectiveness in less reliable
+cybersecurity environments. Despite eXplainable Artificial Intel- efficient and effective cyber threat analysis lies in the disparity
+ligence (XAI) playing a role in enhancing cybersecurity analytics, and asymmetry between cyber attackers and defenders. This
+the limited task scope, the propensity for data overfitting, and the inequity is evident in the discrepancies in time and cost,
+stochastic explanations hinder its broader application. To fill the the uncertainty surrounding attack occurrences, and cognitive
+gap, this paper introduces a generic interpretable classification biases [2]. It’s worth highlighting that Deep Learning (DL)
+framework, named MetaCluster. MetaCluster generates semantic prototypes for features, patterns, and domains at varying approaches can rectify this imbalance. They can automate
+granular levels by following three fundamental steps: embedding processes to reduce costs, enhance threat perception, and leverrepresentations, acquiring prototypes, and aggregating semantics. age multi-source Cyber Threat Intelligence (CTI) to enrich
+These mechanisms guarantee that MetaCluster achieves critical insights [3], [4]. However, there are advantages and disadvaninformation extraction and reliable classification at minimal tages just as there are two sides to the sword. Adversaries can
+cost. The experiments encompass cybersecurity classification
+tasks and assess the interpretability of the framework. These employ countermeasures, such as using adversarial samples
+tasks encompass malware family classification, threat behavior to evade detection [5], [6], or injecting backdoor samples to
+analysis, and malicious traffic identification. In particular, when compromise and steal data [7]. Therefore, there is an urgent
+compared to other DL models, MetaCluster exhibits a significant demand for cybersecurity methods that can be detected,
+reduction in parameter consumption by 79.52% to 91.78%, and
+ monitored, and trusted [8].
+boosts operational speed up to 71.37%, while its F1 scores remain
+stable or slightly increase. Additionally, MetaCluster possesses Researches in the field of explainable cybersecurity analysis
+the ability to assess and visually represent the significance of typically involve three methodologies: reliance on general
+image, text, and statistical features. This capability leads to a frameworks, the use of attention mechanisms, and the
+reduction of Mean Squared Error (MSE) between expected and application of rule generation. General frameworks in
+actual predictions by 0.0101 to 0.1020.
+ cybersecurity [9], [10], [11], [12], [13], [14], [15] often
+ Index Terms— eXplainable Artificial Intelligence (XAI), cyber- consist of simplified network approximations like LIME [16]
+security, interpretable classification, model lightweight, general and SHAP [17]. These frameworks may also incorporate
+framework.
+ adversarial-based feature sampling [18], [19]. General frameworks offer versatility across multiple tasks but may yield
+ I. I NTRODUCTION unstable outcomes, reduced precision, and the need for additional parameters or training. Attention mechanisms [20],
+T HE escalating cyber threat landscape has inflicted substantial losses on internet applications, ranging from data
+breaches and service outages to facility failures. According to
+ [21], [22], utilizing attention networks, focus on the influence
+ of distinct features on subsequent tasks. They often require
+ supplementary visualization tools to clarify the extent of
+ Manuscript received 27 October 2023; revised 26 January 2024; feature focus [23], [24], [25], [26]. Unlike general frameworks,
+accepted 22 February 2024. Date of publication 4 March 2024; date of attention mechanisms are relatively straightforward, as their
+current version 2 May 2024. This work was supported in part by the National
+Natural Science Foundation of China under Grant U2133208 and Grant
+ interpretability is inherent within the original model. However,
+62101368, in part by the Sichuan Youth Science and Technology Innovation complex models like GPT [27] and GLM [28] can lose inter-
+Team under Grant 2022JDTD0014, and in part by the Sichuan Science pretability, leading to epistemic illusions. Rule generation
+and Technology Program under Grant 2022YFG0168. The associate editor
+coordinating the review of this manuscript and approving it for publication
+ is an intuitive approach involving the translation of features
+was Dr. Andrew Clark. (Corresponding author: Junfeng Wang.) into human-readable language rules to formulate security
+ Wenhan Ge, Zeyuan Cui, and Junfeng Wang are with the College of decisions. Decision Trees (DT) [29], [30], [31] and detection
+Computer Science, Sichuan University, Chengdu 610065, China (e-mail:
+wangjf@scu.edu.cn). rules [32], [33], [34], [35] fall into this category. While rule
+ Binhui Tang and Xiaohui Li are with the School of Cyber Science and generation is transparent, the alignment with human com-
+Engineering, Sichuan University, Chengdu 610065, China. prehension may not always match machine suitability [36].
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TIFS.2024.3372808, provided by the authors. Consequently, rule generation often leads to precision loss
+ Digital Object Identifier 10.1109/TIFS.2024.3372808 and issues related to boundary ambiguity. Additionally, prior
+ 1556-6021 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+3830 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+knowledge of engineering significantly influences the method’s 2) A set of assessment methods is designed to verify the
+performance. quality of the results produced. By forming prototypes of
+ Based on the aforementioned summary, it indicates that the the categories, we validate the ability of models to differinterpretability of cybersecurity is still in its early stages of entiate key information. And, by inputting blank noise,
+development. There are three main reasons for this: the models have been tested to resist noise interference.
+a) Single-Task Limitation: Some explanation models may 3) We conduct experiments with multiple data sources from
+ not be universally applicable to multi-tasks, as they pri- multiple scenarios. The results show that our model
+ marily focus on interpreting the specific data structures in compresses a large portion of computational space and
+ input features. Even the most generalized versions of LIME time while guaranteeing highly accurate recognition. It is
+ and SHAP may pose challenges and mistakes when using believed that the method in this paper can be adopted for
+ the TensorFlow2.0 framework. richer scenarios.
+b) Data Overfitting: Issues such as data imbalance and the The paper is structured as follows: Section I provides
+ black-box nature of neural networks can introduce noisy an overview of the need for interpretative analysis in
+ semantics along unknown pathways, disrupting the clas- network security and outlines the study’s contributions.
+ sification of normal semantics and leading to parameter Section II explores the relevant literature on prototype netredundancy, causing the model to become overfitted to the works and similar models in the context of interpretability
+ current dataset [37]. research. Section III elaborates on the methodology and
+c) Stochastic Explanation: Due to factors like stochas- its implementation in this study. Section IV covers the
+ tic gradient descent and stochastic initialization, existing empirical experimentation phase, including classification and
+ explanation methods may not always yield reliable and explication tasks across various network security analysis
+ stable results [38]. At the same time, a large number of scenarios. Finally, Section V summarizes the entire manuscript
+ explanations rest on human identification [25], [39] and comprehensively.
+ lack quantitative assessment indicators.
+Therefore, it is imperative to prioritize a generalizable II. R ELATED W ORK
+framework ensuring the lightweight and highly accurate clas- A. Explainable Artificial Intelligence
+sification and quantitative interpretation for cybersecurity
+ Before diving into a detailed presentation of relevant
+interpretive analysis.
+ work, it’s essential to clarify the concept of eXplainable
+ To address this gap, this paper introduces MetaClus-
+ Artificial Intelligence (XAI). XAI can be broadly categoter, a general classification framework based on semantic
+ rized into two key aspects: global interpretability and local
+prototype aggregation. MetaCluster is designed to enhance
+ explainability [41].
+interpretability across various cybersecurity tasks and address
+ Global interpretability entails understanding the algoriththe following Research Questions (RQ):
+ mic logic underlying a neural network model. This type of
+RQ1. How to establish a lightweight, highly accurate, gen- interpretability aligns with natural laws and human reasoneralizable, and interpretable framework for all kinds ing processes. Models like Decision Trees (DT) [42], naive
+ of cybersecurity classifications? Bayes [36], [43], Markov decision processes [44], and Monte
+RQ2. How to quantitatively assess the interpretation Carlo decision-making [45] adhere to this approach.
+ of results for a more reliable model that meets Local explainability, on the other hand, focuses on explainexpectations? ing individual examples by assessing the importance and
+ Firstly, MetaCluster transforms any input data type into
+ contribution of features and highlighting the relationship
+3-dimensional vectors through embedding operations to
+ between features and the model’s decision. Local explainabilanswer RQ1. Secondly, inspired by the Prototype Network
+ ity emphasizes the input-output relationship, often neglecting
+(PN) [40] of meta-learning, MetaCluster assumes that there
+ the internal logic of the network’s decision-making proexists a set of semantic prototypes of each granularity feature
+ cess. This makes it well-suited for most black-box models.
+to guide its contribution to the classification process. There-
+ However, this focus on individual instances can introduce chalfore, MetaCluster repeats the three basic steps of “embedding
+ lenges such as result instability, dependence on sample quality
+features, finding prototypes, and aggregating similar features”
+ and difficulty in establishing a unified basis for generalizato filter and merge the features of each network layer in the
+ tion [18], [19], [20]. Typical methods for local explainability
+classification process into high-level features, forming a proinclude LIME [16], which modifies feature representations to
+totype decision process. Finally, to answer RQ2, MetaCluster
+ observe corresponding changes in outcomes, and SHAP [17],
+provides the Mean Squared Error (MSE) as a measure of the
+ which explores the contribution of groups of features to
+gap between the model prediction and the standard expectation
+ outcomes through feature games.
+when using main and none semantics. The contributions of this
+paper are as follows:
+ 1) This paper proposes a generalized interpretive framework B. XAI for Cybersecurity
+ for explaining most of the cybersecurity classification As discussed in Section I, current efforts in interpreting
+ tasks, which can be used to derive the contribution of cybersecurity can be broadly categorized into three cases.
+ arbitrary input features to the classification results and These include: the Case explanations using a general explanaproduce highly accurate and efficient recognition results. tory framework, the Attention mechanisms with embedded
+GE et al.: MetaCluster: A UNIVERSAL INTERPRETABLE CLASSIFICATION FRAMEWORK 3831
+
+feature attention modules, and the Rule generation that pro- domains, guiding inputs with varying distributions into difduces rules comprehensible to humans. The first two methods ferent branches for classification.
+of these are currently the mainstream approaches, as they are While rule generation allows neural networks to cateeffective and do not necessitate complex expert knowledge gorize feature combinations with similarities, this tree-like
+integration. partitioning can affect the model’s decision-making process,
+ 1) Case Explanation: In the field of cybersecurity, the especially in cases of sequences with varying lengths and
+primary XAI frameworks are mainly LIME and SHAP. For image categorization, particularly in multi-label classificainstance, Alani [9] and Kinkead [10] respectively applied tion. ProtoPNeT [51] introduces semantic prototypes to filter
+SHAP and LIME in malware analysis. Suryotrisongko [12] features and replace strongly segmented regions of input
+used both LIME and SHAP for botnet identification, while features, resulting in softer importance scores and improved
+Psychoula [13] employed LIME and SHAP for fraud detection. model applicability and generalization. ProtoTree [52] and
+Moreover, LIME and SHAP have found applications in other ViT-NeT [22] extend ProtoPNeT’s single-level semantic prodomains such as spam file retrieval [11] and network intrusion totype comparison into a binary comparison tree to distinguish
+detection [15], [46], where their explainability features have between critical and minor features. This deepens the model’s
+been leveraged. decision pathways but also increases resource consumption.
+ Further, more researches have been done to emphasize 4) Summary: Although the XAI in cybersecurity analysis
+information variability based on LIME and SHAP. TRUST- is in its early stages, the integration of deep learning and
+XAI [37] statistically counts the most important variables by interpretability methodologies has become a pivotal aspect
+assuming Gaussian distributions and input-output information of XAI research. This paves the way for the exploration of
+entropy. SeqMask [25] measures the impact of different feature multifaceted cybersecurity XAI frameworks as an inevitable
+masks on the classification results by counting the change in trajectory in this field.
+KL scatter. SATG [20] and Aditya [47] respectively use an The core concept of MetaCluster lies in its bottom-up
+adversarial-based approach to explore and explain the bound- one-way decision graph with granularity-by-granularity generaries of understanding attack cases and textual semantics. alization. In contrast to traditional DT structures, this approach
+ While the utilization of a nested XAI framework provides permits the sharing of sibling nodes. It places a greater
+explanatory foundations for most tasks, its instability often emphasis on preserving the matching and filtering of feature
+necessitates additional expert analytical procedures [18], [19], prototypes at each level, rather than relying on the common
+[20]. Therefore, there exists a growing demand for an XAI attention mechanism. Differing from expert matching rules,
+framework that enables the transfer of explanatory assessment MetaCluster generates a step-by-step granularity of feature
+feedback to the original model. importance distribution for DL.
+ 2) Attention Mechanism: Self-interpretable attention mechanisms present another avenue in XAI. The integration of III. M ETHODOLOGY
+attention empowers neural networks to naturally revisit con- As discussed in Sect. I, MetaCluster primarily addresses the
+textual relationships and determine feature importance. questions related to RQ1: Universal Classification Framework
+ The Transformer methodology [23], [24], [26] introduced and RQ2: Quantitative Interpretation Assessment. The RQ1
+attention to the analysis of malware and CTI, resulting in will be addressed in Sect. III-A, while the RQ2 will be
+improved accuracy. SATG [20] explores the contributions of answered in Sect. III-B.
+the self-adversarial central attention mechanism in recognizing
+sufficient and necessary behavioral patterns during attacks.
+ViT-NeT [22] integrates prototype match into visual transform- A. MetaCluster Model
+ers to facilitate the segmentation of salient features in images. Ensuring interpretability of the process entails making every
+ Attention mechanisms introduce a bias in feature selection, neural network layer interpretable, while the lightweight model
+but an excessive accumulation of attention layers can com- requires minimizing noise semantics as feasible. By combining
+plicate subsequent explanations. Large-scale language models the characteristics of graph learning and PN, MetaCluster
+like GPT [27] and GLM [28], which adhere to the Transformer converts all embedding operations throughout the classificaarchitecture, are still in the early stages of determining their tion process into prototypical network operations. It utilizes
+underlying reasoning processes. the similarity of “layer prototypes” as guidance for “graph
+ 3) Rule Generation: Rule generation is a method that aggregation”, creating aggregated features that are involved in
+can represent the model’s decision-making process compre- subsequent embedding transformations. As a result, each layer
+hensively, with the DT being a prominent example of the of the MetaCluster neural network comprises three core steps:
+way. Mahbooba [29] utilized DT as an explanatory approach feature embedding, meta-generation, and meta-aggregation.
+in intrusion detection systems. Similarly, Wang et al. [30] The structure of the MetaCluster Model is in Fig. 1. The
+employed the DT method for mobile malware traffic detection. formal expressions for these steps are as follows:
+Verkerken et al. [48] also used Random Forests (RF) as a 
+ f t (lt (xt−1 , pt ) · xt−1 ) (1a)
+layered detector in unknown attack detection. xt = gt (xt−1 ) =
+ lt (xt−1 , pt ) · f t (xt−1 ) (1b)
+ More advanced approaches such as Neural DT [49],
+Deep Neural DT [31], and Neural Decision Forest [50] use where xt ∈ R|xt |×vt represents the output of layer t as well as
+neural networks to determine the decision tree’s partition the input for layer t +1. f t (·) : R|xt−1 |×vt−1 → R|xt |×vt denotes
+3832 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 1. MetaCluster model structure. MetaCluster accepts many types of input, such as images, text, and tables. It transforms the input into a formal input
+model in the form of Rw×v . Each layer of MetaCluster follows the three basic steps of “feature embedding, prototype finding, and semantic aggregation” to
+form a progressively constrained feature filtering mechanism to predict categories.
+
+the embedding method, which can be any standard neural (where w denotes width, h denotes height, and c denotes the
+network layer. pt ∈ R|xt |×vt−1 corresponds to the semantic number of channels), convolution and flattening operations
+prototype for each layer. In the original PN, semantic pro- will be employed for transformation. When the input X ∈
+totypes are obtained by averaging sample features. However, Ns represents sequences (with s being the sequence length),
+in MetaCluster, as the exact number of semantic prototypes is transformation is accomplished through word embedding or
+unknown, pt is randomized and requires adjustments through sentence embedding. When the input X ∈ Rv corresponds to
+forward propagation. feature sets (with v denoting the number of vectors), reshaping
+ 
+ pt · xt−1 T is utilized to convert Rv into R1×v .
+ (2a) The output of MetaCluster consists of a probability set PY ∈
+ 
+ 
+ 
+  ∥x ∥ · ∥ p ∥
+ lt (xt−1 , pt ) = σ ◦
+ t−1 t R|Y | for classification labels Y . Assuming this output is from
+ (t)
+ 
+  LN( pt Wk · (xt−1 Wq(t) )T ) + bt (2b) the n-th layer of the MetaCluster, there are two methods to
+ 
+ obtain PY (in Formula (4a) and Formula (4b)). Both of them
+  −∥ p −x ⊗W ∥/τ +b
+ e t t−1 t t (2c)
+ can be activated using σ (·), with available activation options
+ lt (xt−1 , pt ) : R|xt−1 |×vt−1 × R|xt |×vt−1 → R|xt |×|xt−1 | rep- including identity, sigmoid, softmax, or others.
+resents the process of establishing “meta-aggregation,” which
+ ln (xn−1 , pY ),
+ 
+can be achieved through cosine similarity (eq. (2a)), attention if |xn−1 | = 1 (4a)
+ PY = σ ◦
+mechanisms (eq. (2b), LN is short for Layer Normalization), f n (ln (xn−1 , pY ) · xn−1 ), if |xn−1 | > 1 (4b)
+or L2 norm distance (eq. (2c)), among other techniques. Where
+ (t) The first method is the original PN approach, where,
+τ represents the temperature coefficient. Wq ∈ Rvn−1 ×dk and
+ (t) v ×d
+ assuming the penultimate layer contains only one semantic
+Wk ∈ R n−1 k are query and key weights for attentions. prototype, xn−1 ∈ R1×vn , the labels that surpass a certain
+Wt ∈ Rvt−1 denote the weight matrices for the xn−1 ’s vectors threshold are determined solely by comparing the similarity
+respectively. bt ∈ R is the bias. ⊗ is the element-wise multiply between the input features xn−1 of the last layer and the
+function. σ could be any kind of activation methods like relu, prototypes pY ∈ R|Y |×vn corresponding to the labels in Y .
+min-max-scale, tanh, softmax, or none. The second method does not necessitate the assumption of
+ The complete MetaCluster model is constructed through the having only one prototype but instead employs a function
+stacking of MetaCluster layers, with slight modifications to the f n (·) : R|Y |×vn−1 → R|Y |×1 to transform the features into
+input of the first layer and the output of the final layer. The probability outputs. Here, pY ∈ R|Y |×vn−1 is still the label
+following formula is responsible for transforming any input X prototypes set.
+into an acceptable form x0 ∈ R|x0 |×v0 .
+ w×h×c
+ 
+  Flatten(Conv2D(X )), X ∈ R
+  (3a)
+ B. Interpretability & Explainability
+ x0 = Embedding(X ), X ∈N s (3b)
+ 
+ v
+ The answer to RQ2 implies the need to design metrics
+ ReshapeRv →R1×v (X ), X ∈ R (3c)
+ 
+ to measure the reliability and stability of the interpretation
+ There are generally three input modalities for cybersecu- results. In fact, the interpretation process of MetaCluster can
+rity classification problems: images, sequences, and feature be decomposed into two stages: feature explanation and pattern
+sets. When the input X ∈ Rw×h×c represents images interpretation. The feature explanation is used to get the
+GE et al.: MetaCluster: A UNIVERSAL INTERPRETABLE CLASSIFICATION FRAMEWORK 3833
+
+Fig. 2. The interpretation process of MetaCluster. Since semantic aggregation occurs in each MetaCluster layer, the structure of the model with softmax
+activation can be equated to a tree structure with level-by-level feature upward aggregation in the global view. The structure possesses both explainable and
+Interpretable properties. Explanation indicates that any feature can obtain a contribution to the classification result. Interpretation indicates that an invariant
+inference path can be obtained for any classification task.
+
+interpretation results and the pattern interpretation is used the following equation:
+to measure the reliability and stability of the interpretation 
+ g1 (xY ), if t = 1 (6a)
+results. The difference between this two explanations will be plt =
+ gt ( plt−1 ), otherwise (6b)
+taken as an example of a simple two-layer model as shown in
+Fig. 2. where xY ∈ R|Y |×w×v is the feature prototype of each label Y .
+ Feature explanation is the process of transforming all Unlike label prototype pY in the last layer, X Y emphasizes
+lt (xt−1 , pt ) by individually abstracting them and continuously the feature prototypes obtained in the embedding space corlinking them to form x0 → xn . Although there is an embed- responding to the original x0 without any embedding and
+ding operation f t (·) in the original MetaCluster model, the aggregation. This concept is similar to the “average face” [53]
+elements before and after the embedding can correspond to in the field of face recognition, which can reflect the “average”
+each other since each embedding only modifies the vector characteristics of a classification. Because the number of xY
+vt and not the number of features |xt−1 | or | pt |. Then a and the number of labels Y are the same, as well as to
+one-way feature interpretation tree or graph with xt as the build |Y | decision paths to |Y | categories, the model output
+node and lt (xt−1 , pt ) as the edge can be obtained. It is also pln ∈ R|Y |×|Y | of the xY prototypes is expected to be close to
+possible to obtain an arbitrary label Y on the x0 attention score the unit matrix I|Y |×|Y | . At this time, each feature prototype
+s(x0 ) ∈ R|x0 |×|Y | , here the PY ∈ R|Y |×1 is the predictions of has been precisely matched to each classification. Thus it exists
+the model: MSE: eq. (7) so that the smaller loss pl is, the more accurate
+ the xY and the model are.
+ s(x0 ) = l1 (x0 , p1 ) · · · lt (xt−1 , pt ) · · · ln (xn−1 , pY )PY (5) ∥ pln − I|Y |×|Y | ∥2
+ loss pl = (7)
+ |Y |
+ Pattern interpretation achieves quantitative interpretability In particular, plt can also accept inputs of all-0 vectors or
+by constructing links to decision patterns. A simple approach matrices, i.e., [0]w×v . In this case, the default is that the model
+to obtain highly reliable and stable interpretation measure- accepts the task of predicting the null semantics and should
+ments is to verify that the model can categorize feature output an all-0 prediction. Then the loss pl at this point will
+prototypes for each class into the correct belongings. Also, be adjusted to the following prediction process. The smaller
+considering that the explanation cannot be far-fetched, empty (0)
+ loss pl is, the greater the model’s immunity to interference.
+feature prototypes must be recognized as empty labels.
+ g1 ([0]w×v ), if t = 1
+ 
+ It is worth noting that for a given MetaCluster prediction (0) (8a)
+ plt =
+model, where pt , f t (·), lt (·) are not varying with samples. gt ( plt−1 ), otherwise (8b)
+In this way, if the pt decision tree or graph can be con-
+ (0)
+structed by constructing the pt decision tree or graph for loss pl = ∥ pln(0) − [0]|Y | ∥2 = ∥ pln(0) ∥2 (9)
+each layer of necklaces, it will be possible to represent the
+ (0)
+fundamentals and logic of the classification task. The formu- loss pl and loss pl can also serve as metrics for evaluating
+lation plt is the edge connecting the pt samples and satisfies other classification models if they are not used in the training
+3834 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+ TABLE I TABLE II
+ DATASETS FOR D IFFERENT C LASSIFICATION TASKS G ENERAL E XPERIMENT S ETTINGS
+
+process. When loss pl is smaller, the model is more able
+to differentiate the core semantic prototypes into distinct
+categories, proving a more reliable and believable prediction.
+ (0)
+A smaller loss pl signifies that the model is better able to resist
+external interference and noise.
+ attention maps or other visualization techniques by eq. (5)
+ and eq. (8).
+ IV. E XPERIMENTS
+ The DL and machine learning models in Table III will be
+A. Experiment Settings used for experimental comparisons. The methods in the upper
+ The experiments primarily focus on answering RQ1: half of the table are traditional methods, while the methods
+Universal Classification Framework and RQ2: Quantitative in the lower half are XAIs. Due to the different types of
+Interpretation Assessment. RQ1 requires classification analysis inputs in the three experiments, not all methods will be used
+that is multi-tasked and multi-input. RQ2 demands that the as comparisons for the same set of experiments.
+explanations and examinations in Sect. III-B exist for each
+experimental species. Thus, the experiments will be partitioned B. Malware Classification
+into several cybersecurity classification scenarios. They are
+malware classification with image input, ATT&CK classifi- 1) Classification Analysis: As Drebin is processed as
+cation with CTI text input, and malicious traffic classification Markov images for input, it primarily involves image classifiwith feature sets. The datasets for these three scenarios are cation techniques. The following methods have been selected
+given in Table I. in this sub-section, with each method utilizing the sigmoid(·)
+ For the malware classification task, we used the Drebin activation for outputting: ViT, MLP, MalPurifier, ResNet,
+datasets. Drebin classification involves identifying malicious Conv-BiLSTM, ProtoTree, ProtoPNet, *-PN, *-DNDT, and
+programs from Android packages, primarily in binary format. *-NeT.
+To process the input data, we will utilize Markov image The classification results of the aforementioned comparative
+processing [54] in conjunction with eq. (3a). methods and MetaCluster are presented in Table IV. In the
+ ATT&CK classification dissects attack tactics and tech- case of MetaCluster, the implementation of f t (·) is indicated
+niques defined by Mitre ATT&CK1 from unstructured Cyber within parentheses.
+Threat Intelligence (CTI). To handle the unstructured CTIs, According to the results in the table, it can be observed that
+we’ll employ a sequence-based approach and DistilBERT2 MetaCluster achieves a higher F1 score and less processing
+embedding as outlined in eq. (3b). time. While most of the decision tree explanation models have
+ For malicious traffic classification, the statistical feature reduced their accuracy compared to the original models. This
+dataset of CIC-IDS-2017 [55] was selected. This dataset is advantage can be attributed to MetaCluster’s meta-aggregation
+based on uniform features, and we’ll employ eq. (3c) as the mechanism. On one hand, it helps compress model size to
+input processing method. In the data processing, we transform avoid redundant computation of similar features. On the other
+it to exclude the BENIGN type of traffic in favor of one-hot hand, it ensures that the features generated by f t (·) can parcoding due to the excessive number and the lack of malicious- ticipate relatively “completely” in subsequent computations.
+ness of BENIGN tags. Specifically, when the prediction result Simultaneously, it can be also observed that MetaCluster
+is all zeros, it is considered consistent with the BENIGN label. using Conv1D outperforms the model using Dense layers.
+ The experiments’ general settings are summarized in Referring to the definitions of Query and Key in ViT, this
+Table II. The meta-cluster-layers’ settings like “Meta num difference may be attributed to MetaCluster’s feature fusion
+|xt |”, “Meta-cluster-layer num”, and “Meta weight vt ” are based on the similarity of features, while Conv1D’s fusion
+chosen by the hyper-parameter optimization framework for relies on spatial connectivity. In this classification task, a single
+TensorFlow models named keras_tuner.3 We will assess the pass of spatial correlation in image input may not indepenclassification results using metrics such as Precision, Recall, dently provide all the necessary features for classification.
+and F1, while also considering the model’s size and process- Therefore, using Conv1D can better leverage the cooperative
+ing speed. The interpretation of results will involve feature advantage of neighboring local features, leading to an improvement in classification performance.
+ 1 https://attack.mitre.org/ 2) Feature Explanation: Fig. 3 provides explanations of
+ 2 https://huggingface.co/distilbert-base-uncased Drebin’s features when using MetaCluster (Dense), Conv-
+ 3 https://tensorflow.google.cn/tutorials/keras/keras_tuner DNDT, ProtoPNet, ProtoTree, Conv-NeT and ViT-NeT.
+GE et al.: MetaCluster: A UNIVERSAL INTERPRETABLE CLASSIFICATION FRAMEWORK 3835
+
+ TABLE III
+ T HE E XPERIMENTAL C OMPARISON M ETHODS
+
+ TABLE IV Each row in the subgraphs represents the feature focus of
+D REBIN C LASSIFICATION R ESULT A FTER M ARKOV I MAGE P ROCESSING . the model on a class of samples. Different rows correspond
+ T HE S PEED I S M EASURED IN M S /S TEP. S OME OF THE NAMES H AVE
+ B EEN S HORTENED TO S AVE S PACE , T HEY A RE : CRNN FOR
+ to the results of the seven malware classes as “Plankton,
+ C ONV-B I LSTM AND MC FOR M ETAC LUSTER GinMaster, FakeDoc, FakeInstaller, Opfake, BaseBridge, and
+ Kmin”. The more stable the interpretation method, the more
+ similar the area of the feature interests in the same class, and
+ the more significant the discrepancy between the patterns over
+ different classes. Based on this hypothesis, it can be found that
+ MetaCluster’s explanation possesses significant variability.
+ Although there is more than one feature attention under the
+ same class, MetaCluster has more different distributions of
+ features of interest for any class than Conv-DNDT, ProtoP-
+ Net, ProtoTree, and Conv-NeT. And the feature distributions
+ between classes are highly consistent. Even based on prototype
+ similarity measures, the feature maps of Conv-DNDT, ProtoP-
+ Net, and ProtoTree are not intuitive and easy to differentiate.
+ This may be due to the fact that the prototypes of these three
+ are only related to the convolved feature x0 , which makes
+The figure uses the feature attention maps to show the output the attention relatively distracting and the visualization not
+(eq. (5)) of the models for part of the classifications. obvious. On the contrary, ConvNeT and ViT-NeT’s attentions
+3836 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 3. The feature explanation for Drebin. Each row shows a type of different examples of image feature attention. A good feature attention is the one with
+large differences between classes and small differences within classes. This is reflected in the graph by the similarity of peers and significant differences in
+the same column. In this way, it seems that MetaCluster has relatively good feature attention.
+
+are focused while the feature attention differentiation across direct, which conforms to the repeatability principle of
+classes is not as clear as MetaCluster. interpretability.
+ This indicates that MetaCluster can better categorize fea- 3) Pattern Interpretation: The xY used here is the result of
+tures and generate a direct mapping of features to classification averaging by class for samples in the training and testing sets:
+results, which has both between-class variation and within- x
+ xY = [ |x| |x ∈ X, model(x) = y] y∈Y . For MetaCluster the
+class uniformity. Therefore, it can be considered that the output y is pln , and pln is replaced by model(xY ) for other
+decision process generated by MetaCluster is stable and models. eq. (7) also applies to other models as well. When
+GE et al.: MetaCluster: A UNIVERSAL INTERPRETABLE CLASSIFICATION FRAMEWORK 3837
+
+ TABLE V C. ATT&CK Classification
+ T HE PATTERN I NTERPRETATION ’ S loss pl FOR M ALWARE
+ C LASSIFICATIONS . I F loss pl OF A M ODEL I S C LOSER TO 0, 1) Classification Analysis: The primary task in utilizing
+ I TS P REDICTIONS OF THE C ATEGORY P ROTOTYPES FOR the ATT&CK textual dataset revolves around the generation
+ E ACH C LASS A RE C LOSER TO THE U NIT M ATRIX , of word vectors through the application of text embedding
+ I NDICATING T HAT I T I S THE M ORE S UITABLE IN
+ S TABLE S EMANTIC G ENERALIZATION techniques. In this regard, DistilBERT4 is employed as the
+ chosen method for text embedding. Given that sequences serve
+ as input, conventional text classification methodologies are
+ typically considered as baseline approaches for comparative
+ purposes, including CNN, BiLSTM, TextRCNN, BiLSTM-
+ MHA, Transformer, SATG, *-NeT, ProtoTree, ProtoPNet,
+ *-DNDT.
+ Due to the different abstraction levels of tactics and
+ techniques, MetaCluster will respectively participate in the
+ experiment using Dense, Conv1D, and Gated Recurrent Unit
+ (GRU) as its f t (·). Since GRU causes all semantics to
+ be displaced, only the aggregation-after-embedding approach
+ (eq. (1a)) is considered for the implementation of MetaCluster
+ when GRU is used as f t (·).
+ The results of the experiments are shown in Table VII.
+ It can be found that MetaCluster is able to achieve higher
+ F1 values using fewer parameters and at a faster speed, both
+ when it comes to tactics and techniques categorization. The
+ TABLE VI possible reason for this is that the use of prototype aggregation
+ (0) can change the reasoning process to be simpler and more
+loss pl FOR D IFFERENT M ODELS IN M ALWARE C LASSIFICATION .
+ (0)
+ efficient. Among them, when classifying tactics, it can be
+ A S MALLER loss pl S IGNIFIES T HAT THE M ODEL I S B ETTER E QUIPPED
+ found that TextRCNN-NeT and MetaCluster (GRU) using
+ TO R ESIST E XTERNAL I NTERFERENCE . S OME OF THE M ODEL
+ NAMES H AVE B EEN S HORTENED TO S AVE S PACE . T HEY A RE cyclic recursion and aggregation ideas are able to achieve
+ CRNN FOR C ONV-B I LSTM AND MC FOR M ETAC LUSTER higher F1, suggesting that models that aggregate full-text
+ contextual semantics are able to express the abstraction of
+ tactics more fully. On the contrary, MetaCluster with Conv1D
+ and BiLSTM-MHA-NeT are able to obtain better results when
+ categorizing technologies, suggesting that localized information is more able to dominate the recognition of technologies.
+ 2) Feature Explanation: We enumerate the keyword extraction of a specific CTI text by various models. The keywords
+ are identified by the rule that the normalized score is higher
+ than 50%. The results are shown in Table VIII. The statements
+ in the table are from the CTI report [68], and the TTPs tags
+ to which it belongs are T1071: Application Layer Protocol
+eq. (7) is small, the resulting matrix should look more like the
+ and TA0011: Command and Control (C2). According to the
+unit matrix, so it is only necessary to compare this matrix to
+ semantic constraints of the tags provided by Mitre,5 the
+get an idea of how well the model fits xY .
+ manually extracted keywords mainly contain DNS and C2.
+ Table V shows the loss pl for different models. The loss pl
+ From the results in the table, although most of the models
+measures the ability of the model to correctly predict xY .
+ provide sufficient attention to DNS and C2, some of the
+The smaller loss pl is, the more the model is able to predict
+ models that classify well, such as TextRCNN-Net, BiLSTMthe corresponding categorization using the standard, desired
+ MHA-Net, Conv-Net, etc., all produce redundant attention to
+semantics. In this example, MetaCluster obtains relatively
+ other non-important words. The reason for this may be the
+small results, signaling MetaCluster’s outstanding ability to
+ use of CNN or RNN structures. Although complex models
+grasp standard semantics in images. At the same time, Metaare able to synthesize the context, the semantics are shifted
+Cluster’s loss difference between the training and testing
+ imperceptibly, thus making unimportant information tainted
+datasets is small, which can be assumed that MetaCluster has
+ with important semantics as well.
+the ability to find core semantics and extensions.
+ (0) Among the explanations of all models, SATG, Transformer-
+ Table VI is the loss pl prediction of each model for all
+ (0) NeT, and MetaCluster do not focus on redundant information
+classes in Drebin with all-zero matrix. The loss pl of ViT-PN, and have relatively good classification results, indicating that
+ProtoPNet, ProtoTree, and MetaCluster is below 0.5, while the methods based on the attention mechanism are able to
+the other models are greater than 0.5. Meanwhile, the standard
+deviation of MetaCluster (Dense) is the smallest. It shows that 4 https://huggingface.co/distilbert-base-uncased
+MetaCluster is more resistant to noise interference. 5 https://attack.mitre.org/versions/v8/ techniques/T1071/004/
+3838 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+ TABLE VII
+ ATT&CK C LASSIFICATION R ESULTS FOR C YBER T HREAT I NTELLIGENCE . T HE S PEED I S M EASURED IN M S /S TEP
+
+ TABLE VIII
+T HE N ORMALIZED W ORDS S CORES ( EQ . (5)) FOR A S ENTENCE IN [68]. T HE L ABELS FOR THE S ENTENCE A RE T1071: A PPLICATION L AYER P ROTOCOL
+ AND TA0011: C OMMAND AND C ONTROL (C2). T HE B OLDER S CORES OF W ORDS A RE H IGHER T HAN 50%. MSE I S THE M EAN S QUARED
+ E RROR B ETWEEN THE H UMAN AND THE M ODEL . I F THE G AP OR MSE B ETWEEN THE H UMAN ’ S P REDICTION AND THE M ODEL’ S
+ P REDICTION I S S MALL , I T M EANS T HAT THE M ODEL I S B ETTER A BLE TO ACQUIRE K EYWORDS
+ T HAT A RE R ECOGNIZED AS O FFENSIVE BY H UMANS
+
+form explanations efficiently and understandably. Throughout, MetaCluster obtains relatively small results, indicating that
+MetaCluster’s attention to all non-important words is almost MetaCluster has mastered the standard definition of ATT&CK.
+ (0)
+0.0, indicating that MetaCluster is able to form better expla- Table X shows the loss pl results of predicting all-zero
+nations for text categorization. inputs to tactics using different models. From the results,
+ More instances in text explanation of MetaCluster can be we can see that *-NeT’s model can partially suppress
+found in Fig. 4. the abnormal prediction of the original model, for exam-
+ (0)
+ 3) Pattern Interpretation: To obtain the average text xY for ple, the average loss pl of BiLSTM-MHA is 0.7153, while
+CTI, we counted the TF-IDF scores of the words (DistilBert’s BiLSTM-MHA-NeT’s is 0.3669. However, the prediction of
+tokens) in all tactical categorizations and selected the top |X | MetaCluster for all classifications is close to 0, reaching a
+ (0)
+words in each category as the result. The tactical category loss pl of 0.0070. This indicates that MetaCluster can suppress
+was chosen because the number of samples in the tactical the expression of classification without semantic input, making
+category is much larger than the technical, which would make the model more reliable.
+the sampling results more natural.
+ Table IX shows the loss pl of the different models for the
+classification of tactics. The loss pl measures the ability of the D. Traffic Classification
+model to correctly predict xY . The smaller loss pl is, the more 1) Classification Analysis: Due to the temporal statistical
+the model is able to translate standard, expected CTI semantics characteristics provided by the malicious traffic dataset, the
+into corresponding behavioral categories. In this example, following models with sigmoid activation will be chosen for
+GE et al.: MetaCluster: A UNIVERSAL INTERPRETABLE CLASSIFICATION FRAMEWORK 3839
+
+ Fig. 4. Other examples for explanations of MetaCluster (Dense).
+
+ TABLE IX TABLE X
+ T HE PATTERN I NTERPRETATION ’ S loss pl FOR ATT&CK TACTICS (0)
+ loss pl FOR D IFFERENT M ODELS IN ATT&CK C LASSIFICATION .
+ C LASSIFICATIONS . I F loss pl OF A M ODEL I S C LOSER TO 0, (0)
+ I TS P REDICTIONS OF THE C ATEGORY P ROTOTYPES FOR A S MALLER loss pl S IGNIFIES T HAT THE M ODEL I S B ETTER
+ E ACH C LASS A RE C LOSER TO THE U NIT M ATRIX , E QUIPPED TO R ESIST E XTERNAL I NTERFERENCE . S OME OF
+ I NDICATING T HAT I T I S THE M ORE S UITABLE THE M ODEL NAMES H AVE B EEN S HORTENED TO S AVE
+ IN S TABLE S EMANTIC G ENERALIZATION S PACE , T HEY A RE RCNN FOR T EXT RCNN, RANN FOR
+ B I LSTM-MHA, AND MC FOR M ETAC LUSTER
+
+ TABLE XI
+ T RAFFIC C LASSIFICATION R ESULTS . T HE S PEED I S M EASURED
+ BY M S /S TEP. MC I S S HORT FOR M ETAC LUSTER
+
+comparison: DT, RF, LinerSVC, MLP, CtxAtt, DNDT and
+*-NeT.
+ Table XI shows the prediction metrics of different models.
+From the results in the table, it can be seen that DT and
+RF are the most powerful models for this dataset, followed
+by MetaCluster. The reason for this may be that DT is
+more suitable for distinguishing the decision boundaries of maintains higher F1, lower space and time consumption among
+the features. MetaCluster, although not as good as DT, still other deep learning methods.
+3840 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+Fig. 5. The importance of categorical features in traffic dataset. The different colored bars are how much attention the model pays to different features of
+the same classification. If the score is much greater than 0, it means that the feature is relevant and more important to the classification.
+
+ 2) Feature Explanation: Since MetaCluster will reshape results in the use of the original x0 with only one score left.
+X ∈ Rv to become x0 ∈ R1×v , and eq. (5) will place all This will lead to not being able to get the attention of the
+of the attention on the first dimension of x0 , this inevitably features in v, and therefore the x0 transformation is needed.
+GE et al.: MetaCluster: A UNIVERSAL INTERPRETABLE CLASSIFICATION FRAMEWORK 3841
+
+One approach, like in LIME [16], is to break up the features TABLE XII
+into different sets and use these sets to see if the predictions are T HE PATTERN I NTERPRETATION ’ S loss pl FOR T RAFFIC C LASSIFICATIONS .
+ I F loss pl OF A M ODEL I S C LOSER TO 0, I TS P REDICTIONS OF THE
+correct. Therefore, we use the Mask unit matrix Iv×v and the C ATEGORY P ROTOTYPES FOR E ACH C LASS A RE C LOSER TO THE
+original x0 to multiply by element, and the individual features U NIT M ATRIX , I NDICATING T HAT I T I S THE M ORE S UITABLE
+of x0 are broken up into different sets x f ∈ Rv×v to achieve IN S TABLE S EMANTIC G ENERALIZATION
+
+the selection of important features. The formula is as follows:
+  (1) 
+ x0 ··· 0
+ x f = x0 ⊗ Iv×v =  ... ..
+ .
+ .. 
+ .  (10)
+ 
+ (v)
+ 0 ··· x0
+ At this point, we then substitute both x0 and x f into
+MetaCluster to obtain the desired classification y0 ∈ R1×l and
+the classification results of independent features y f ∈ Rv×l ,
+as shown in eq. (11). We want that the y f of the high
+importance x f should be as close as possible to y0 , so the
+score s P v×1 for each feature is calculated using eq. (12).
+ f ∈R
+ v (y f )
+where v ∈ R1×l is the base score for each class (cf. the TABLE XIII
+ybase definition in [17]). abs(·) takes absolute values for the (0)
+ loss pl FOR D IFFERENT M ODELS IN T RAFFIC C LASSIFICATION .
+normalized x0 . Under this requirement, when s f is positive and (0)
+ A S MALLER loss pl S IGNIFIES T HAT THE M ODEL I S B ETTER
+has a large absolute value, it means that the feature is effective E QUIPPED TO R ESIST E XTERNAL I NTERFERENCE
+for y0 classification. When s f is close to 0, it means that the
+feature has no effect. When s f is negative and the absolute
+value is large, the feature may helpful for non-y0 classification.
+ y0 = MetaCluster(x0 ), y f = MetaCluster(x f ) (11)
+ (y ) (y )
+ P P
+ s f = abs(LN(x f ))ReLU(y f − v
+ f 0 T
+ )(y0 − l )
+ v l
+ (12)
+ Fig. 5 shows how much attention LIME and MetaCluster
+pay to each feature. The left and right columns respectively V. C ONCLUSION
+show the average feature importance for each category for Addressing the need for a universal, stable, convenient,
+the 0th to 500th and the 500th to 1000th test samples. The and efficient interpretable framework in cybersecurity, this
+top, middle and bottom rows are the feature importance scores paper introduces MetaCluster, a generic classification interobtained using the LIME [16] on MLP, LIME on MetaCluster preter framework based on prototype semantic aggregation.
+and MetaCluster itself. It can be found that compared to LIME, MetaCluster filters, combines, and expresses classification
+the method in this paper is able to obtain a more obvious and semantics by generating feature prototypes at different granustable level of feature attention, as well as a more obvious larity levels and constructing dynamic graph learning layers.
+differentiation of features in different classes. It shows that We validate the applicability of MetaCluster to multiple interthe feature explanation of MetaCluster is stable and obvious. pretable classification tasks through three sets of experiments:
+ 3) Pattern Interpretation: Since a statistical feature dataset malware, ATT&CK, and malicious traffic classification.
+was chosen, it is assumed that the features of each classifica- According to the experimental results, MetaCluster outpertion obey a polynomial normal distribution. The expectation forms other deep learning models by achieving more accurate,
+of the distribution, i.e., the average of the features of each stable, and explanatory classification predictions with lower
+sample, is considered as the “average feature prototype” xY time and space consumption. Specifically, in the classifications
+for each classification. Bringing this feature prototype into the of malware, attack tactics, attack techniques, and malicious
+model prediction yields the degree of model fitness for each traffic, MetaCluster improves F1 values by 0.0148, 0.0275,
+class of features. The closer the prediction is to a unit matrix, 0.0023, and −0.0093, reduces parameter count consumption
+the more robust and reliable the model is. by 91.78%, 88.54%, 79.52%, and 88.57%, and increases oper-
+ Table XII shows the loss pl profile of the traffic. The smaller ation speed by 0.0%, 64.00%, 71.37%, and 0.0%, respectively.
+the loss pl , the more the model is able to correspond the Additionally, MetaCluster can provide the importance of
+average features from the normal distribution to the malicious image, text, and statistical features, and it effectively resists
+categorized species. In this case, MetaCluster unsurprisingly noise interference on classification. On the malware, the tacobtains relatively small results, demonstrating the ability to tics, and the traffic dataset, the Mean Squared Error (MSE) of
+understand standard semantics. prediction and expectation for the standard category prototypes
+ (0)
+ From Table XIII, it can be seen that MetaCluster’s loss pl is reduced by an average of 0.0099, 0.1020, and 0.0903,
+is the closest to 0 when predicting null semantics. indicating respectively. And the MSE on non-semantic predictions is
+that MetaCluster can resist the noise effect well. reduced by 0.0157, 0.0872, and 0.0101.
+3842 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+ In summary, MetaCluster is a self-interpreting lightweight [22] S. Kim, J. Nam, and B. C. Ko, “ViT-NeT: Interpretable vision transclassification model designed to offer interpretation and sta- formers with neural tree decoder,” in Proc. 39th Int. Conf. Mach. Learn.,
+ vol. 162, K. Chaudhuri, S. Jegelka, L. Song, C. Szepesvari, G. Niu, and
+bility testing for various cybersecurity tasks. It is well-suited S. Sabato, Eds. Jul. 2022, pp. 11162–11172.
+for deployment in low-reliability cyberattack scenarios. [23] F. Ullah, A. Alsirhani, M. M. Alshahrani, A. Alomari, H. Naeem, and
+ S. A. Shah, “Explainable malware detection system using transformersbased transfer learning and multi-model visual representation,” Sensors,
+ R EFERENCES vol. 22, no. 18, p. 6766, Sep. 2022.
+ [1] Fortinet. (Nov. 2023). Cyber Threat Predictions for 2023. [Online]. [24] M. Q. Li, B. C. M. Fung, P. Charland, and S. H. H. Ding, “I-MAD: Inter-
+ Available: https://www.fortinet.com/content/dam/fortinet/assets/white- pretable malware detector using galaxy transformer,” Comput. Secur.,
+ papers/wp-threat-prediction-2023.pdf vol. 108, Sep. 2021, Art. no. 102371.
+ [2] J. Zhao, M. Shao, H. Wang, X. Yu, B. Li, and X. Liu, “Cyber threat [25] W. Ge and J. Wang, “SeqMask: Behavior extraction over cyber threat
+ prediction using dynamic heterogeneous graph learning,” Knowledge- intelligence via multi-instance learning,” Comput. J., vol. 67, no. 1,
+ Based Syst., vol. 240, Mar. 2022, Art. no. 108086. pp. 253–273, Jan. 2024.
+ [3] N. Sun et al., “Cyber threat intelligence mining for proactive cybersecu- [26] C. Liu, J. Wang, and X. Chen, “Threat intelligence ATT&CK extracrity defense: A survey and new perspectives,” IEEE Commun. Surveys tion based on the attention transformer hierarchical recurrent neural
+ Tuts., vol. 25, no. 3, pp. 1748–1774, 3rd Quart., 2023. network,” Appl. Soft Comput., vol. 122, Jun. 2022, Art. no. 108826.
+ [4] B. Tang et al., “Advanced persistent threat intelligent profiling technique: [27] T. Brown et al., “Language models are few-shot learners,” in Advances
+ A survey,” Comput. Electr. Eng., vol. 103, Oct. 2022, Art. no. 108261. in Neural Information Processing Systems, vol. 33, H. Larochelle,
+ [5] D. Li, Q. Li, Y. Ye, and S. Xu, “Arms race in adversarial malware M. Ranzato, R. Hadsell, M. Balcan, and H. Lin, Eds. Red Hook, NY,
+ detection: A survey,” ACM Comput. Surveys, vol. 55, no. 1, pp. 1–35, USA: Curran Associates, 2020, pp. 1877–1901.
+ Nov. 2021. [28] Z. Du et al., “GLM: General language model pretraining with autore-
+ [6] Y. Jakhotiya, H. Patil, J. Rawlani, and D. S. B. Mane, “Adver- gressive blank infilling,” in Proc. 60th Annu. Meeting Assoc. Comput.
+ sarial attacks on transformers-based malware detectors,” 2022, Linguistics. Dublin, Ireland: Association for Computational Linguistics,
+ arXiv:2210.00008. May 2022, pp. 320–335.
+ [7] Y. Du, B. Prebot, X. Xi, and C. Gonzalez, “A cyber-war between bots: [29] B. Mahbooba, M. Timilsina, R. Sahal, and M. Serrano, “Explainable
+ Human-like attackers are more challenging for defenders than deter- artificial intelligence (XAI) to enhance trust management in intrusion
+ ministic attackers,” in Proc. Annu. Hawaii Int. Conf. Syst. Sci., 2023, detection systems using decision tree model,” Complexity, vol. 2021,
+ pp. 856–865. pp. 1–11, Jan. 2021.
+ [8] M. Beechey, K. G. Kyriakopoulos, and S. Lambotharan, “Evidential [30] S. Wang et al., “TrafficAV: An effective and explainable detection of
+ classification and feature selection for cyber-threat hunting,” Knowledge- mobile malware behavior using network traffic,” in Proc. IEEE/ACM
+ Based Syst., vol. 226, Aug. 2021, Art. no. 107120. 24th Int. Symp. Quality Service (IWQoS), Jun. 2016, pp. 1–6.
+ [9] M. M. Alani and A. I. Awad, “PAIRED: An explainable lightweight [31] Y. Yang, I. G. Morillo, and T. M. Hospedales, “Deep neural decision
+ Android malware detection system,” IEEE Access, vol. 10, trees,” 2018, arXiv:1806.06988.
+ pp. 73214–73228, 2022. [32] H. Asad and I. Gashi, “Dynamical analysis of diversity in rule-based
+[10] M. Kinkead, S. Millar, N. McLaughlin, and P. O’Kane, “Towards open source network intrusion detection systems,” Empirical Softw. Eng.,
+ explainable CNNs for Android malware detection,” Proc. Comput. Sci., vol. 27, no. 1, p. 4, Jan. 2022.
+ vol. 184, pp. 959–965, 2021. [33] S. Guruprasad and R. D’Souza, “Development of an evolutionary
+[11] J. C. S. Reis, A. Correia, F. Murai, A. Veloso, and F. Benevenuto, framework for autonomous rule creation for intrusion detection,” in Proc.
+ “Explainable machine learning for fake news detection,” in Proc. 10th IEEE 6th Int. Conf. Adv. Comput. (IACC), Feb. 2016, pp. 534–538.
+ ACM Conf. Web Sci. New York, NY, USA: Association for Computing [34] N. Fallahi, A. Sami, and M. Tajbakhsh, “Automated flow-based rule
+ Machinery, 2019, pp. 17–26. generation for network intrusion detection systems,” in Proc. 24th
+[12] H. Suryotrisongko, Y. Musashi, A. Tsuneda, and K. Sugitani, “Robust Iranian Conf. Electr. Eng. (ICEE), May 2016, pp. 1948–1953.
+ botnet DGA detection: Blending XAI and OSINT for cyber threat
+ [35] R. Muthuregunathan and S. R. Rajesh, “Efficient snort rule generaintelligence sharing,” IEEE Access, vol. 10, pp. 34613–34624, 2022.
+ tion using evolutionary computing for network intrusion detection,” in
+[13] I. Psychoula, A. Gutmann, P. Mainali, S. H. Lee, P. Dunphy, and Proc. 1st Int. Conf. Comput. Intell., Commun. Syst. Netw., Jul. 2009,
+ F. Petitcolas, “Explainable machine learning for fraud detection,” Com- pp. 336–341.
+ puter, vol. 54, no. 10, pp. 49–59, Oct. 2021.
+ [36] F. Charmet et al., “Explainable artificial intelligence for cybersecurity: A
+[14] P. R. G. Hernandes et al., “Phishing detection using URL-based XAI
+ literature survey,” Ann. Telecommun., vol. 77, pp. 789–812, Oct. 2022.
+ techniques,” in Proc. IEEE Symp. Series Comput. Intell. (SSCI), 2021,
+ pp. 1–6. [37] M. Zolanvari, Z. Yang, K. Khan, R. Jain, and N. Meskin, “TRUST XAI:
+ Model-agnostic explanations for AI with a case study on IIoT security,”
+[15] Z. A. E. Houda, B. Brik, and L. Khoukhi, “‘Why should i trust your
+ IEEE Internet Things J., vol. 10, no. 4, pp. 2967–2978, Feb. 2023.
+ IDS?’: An explainable deep learning framework for intrusion detection
+ systems in Internet of Things networks,” IEEE Open J. Commun. Soc., [38] E. Tjoa and C. Guan, “A survey on explainable artificial intelligence
+ vol. 3, pp. 1164–1176, 2022. (XAI): Toward medical XAI,” IEEE Trans. Neural Netw. Learn. Syst.,
+[16] M. T. Ribeiro, S. Singh, and C. Guestrin, “Why should i trust you?’: vol. 32, no. 11, pp. 4793–4813, Nov. 2021.
+ Explaining the predictions of any classifier,” in Proc. 22nd ACM [39] M. Al-Shouha and G. Szucs, “PIC-XAI: Post-hoc image captioning
+ SIGKDD Int. Conf. Knowl. Discovery Data Mining. New York, NY, explanation using segmentation,” in Proc. IEEE 17th Int. Symp. Appl.
+ USA: Association for Computing Machinery, 2016, pp. 1135–1144. Comput. Intell. Informat. (SACI), May 2023, pp. 000033–000038.
+[17] S. M. Lundberg and S.-I. Lee, “A unified approach to interpreting model [40] J. Snell, K. Swersky, and R. Zemel, “Prototypical networks for fewpredictions,” in Proc. 31st Int. Conf. Neural Inf. Process. Syst. Red Hook, shot learning,” in Advances in Neural Information Processing Systems,
+ NY, USA: Curran Associates, 2017, pp. 4768–4777. vol. 30, I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus,
+[18] B. Mittelstadt, C. Russell, and S. Wachter, “Explaining explanations S. Vishwanathan, and R. Garnett, Eds. Red Hook, NY, USA: Curran
+ in AI,” in Proc. Conf. Fairness, Accountability, Transparency. New Associates, 2017.
+ York, NY, USA: Association for Computing Machinery, Jan. 2019, [41] Y. Zhang, P. Tino, A. Leonardis, and K. Tang, “A survey on neural
+ pp. 279–288. network interpretability,” IEEE Trans. Emerg. Topics Comput. Intell.,
+[19] C. Rudin, “Stop explaining black box machine learning models for vol. 5, no. 5, pp. 726–742, Oct. 2021.
+ high stakes decisions and use interpretable models instead,” Nature [42] A. J. Myles, R. N. Feudale, Y. Liu, N. A. Woody, and S. D. Brown,
+ Mach. Intell., vol. 1, no. 5, pp. 206–215, May 2019. “An introduction to decision tree modeling,” J. Chemometrics, vol. 18,
+[20] W. Ge, J. Wang, T. Lin, B. Tang, and X. Li, “Explainable cyber no. 6, pp. 275–285, Jun. 2004.
+ threat behavior identification based on self-adversarial topic generation,” [43] K. P. Murphy, “Naive Bayes classifiers,” Univ. Brit. Columbia, vol. 18,
+ Comput. Secur., vol. 132, Sep. 2023, Art. no. 103369. no. 60, pp. 1–8, 2006.
+[21] S. Islam et al., “A comprehensive survey on applications of transform- [44] M. L. Puterman, “Chapter 8 Markov decision processes,” in Stochastic
+ ers for deep learning tasks,” Exp. Syst. Appl., vol. 241, May 2024, Models (Handbooks in Operations Research and Management Science),
+ Art. no. 122666. vol. 2. Amsterdam, The Netherlands: Elsevier, 1990, pp. 331–434.
+GE et al.: MetaCluster: A UNIVERSAL INTERPRETABLE CLASSIFICATION FRAMEWORK 3843
+
+[45] F. James, “Monte Carlo theory and practice,” Rep. Prog. Phys., vol. 43, Wenhan Ge received the B.S. and M.S. degrees
+ no. 9, p. 1145, Sep. 1980. in computer science and technology from Sichuan
+[46] P. Barnard, N. Marchetti, and L. A. DaSilva, “Robust network intrusion University, China, where he is currently pursuing the
+ detection through explainable artificial intelligence (XAI),” IEEE Netw. Ph.D. degree. His research interests include cyber
+ Lett., vol. 4, no. 3, pp. 167–171, Sep. 2022. threat intelligence, natural language processing, and
+[47] A. Kuppa and N.-A. Le-Khac, “Adversarial XAI methods in cybersecu- explainable artificial intelligence.
+ rity,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 4924–4938, 2021.
+[48] M. Verkerken et al., “A novel multi-stage approach for hierarchical
+ intrusion detection,” IEEE Trans. Netw. Service Manage., vol. 20, no. 3,
+ pp. 3915–3929, Sep. 2023.
+[49] R. Balestriero, “Neural decision trees,” 2017, arXiv:1702.07360.
+[50] S. R. Bulo and P. Kontschieder, “Neural decision forests for semantic
+ image labelling,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.,
+ Jun. 2014, pp. 81–88.
+[51] C. Chen, O. Li, A. Barnett, J. Su, and C. Rudin, “This looks Zeyuan Cui is currently pursuing the M.S. degree
+ like that: deep learning for interpretable image recognition,” 2018, with Sichuan University, Chengdu, China. His
+ arXiv:1806.10574. research interests include cyber threat analysis,
+[52] M. Nauta, R. van Bree, and C. Seifert, “Neural prototype trees for machine learning in security contexts, and intelligent
+ interpretable fine-grained image recognition,” in Proc. IEEE/CVF Conf. decision-making.
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, pp. 14933–14943.
+[53] T. Valentine, “A unified account of the effects of distinctiveness, inversion, and race in face recognition,” Quart. J. Experim. Psychol. Sect. A,
+ vol. 43, no. 2, pp. 161–204, May 1991.
+[54] B. Yuan, J. Wang, P. Wu, and X. Qing, “IoT malware classification based
+ on lightweight convolutional neural networks,” IEEE Internet Things J.,
+ vol. 9, no. 5, pp. 3770–3783, Mar. 2022.
+[55] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+ a new intrusion detection dataset and intrusion traffic characterization,” in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), 2018, Junfeng Wang received the M.S. degree in
+ pp. 108–116. computer application technology from Chongqing
+[56] D. Arp, M. Spreitzenbarth, M. Hübner, H. Gascon, and K. Rieck, University of Posts and Telecommunications,
+ “DREBIN: Effective and explainable detection of Android malware in Chongqing, in 2001, and the Ph.D. degree in
+ your pocket,” in Proc. NDSS, Feb. 2014, pp. 1–15. computer science from the University of Electronic
+ Science and Technology of China, Chengdu,
+[57] Y. Zhou, G. Cheng, Z. Chen, and S. Yu, “MalPurifier: Enhancing
+ in 2004. From July 2004 to August 2006, he was
+ Android malware detection with adversarial purification against evasion
+ a Post-Doctoral Researcher with the Institute of
+ attacks,” 2023, arXiv:2312.06423.
+ Software, Chinese Academy of Sciences. Since
+[58] M. Hearst, S. Dumais, E. Osuna, J. Platt, and B. Scholkopf, “Support
+ August 2006, he has been a Professor with the
+ vector machines,” IEEE Intell. Syst. Appl., vol. 13, no. 4, pp. 18–28,
+ College of Computer Science, Sichuan University.
+ Aug. 1998.
+ His recent research interests include network and information security, spatial
+[59] H. Taud and J. Mas, Multilayer Perceptron (MLP). Cham, Switzerland: information networks, and data mining. He serves as an associate editor for
+ Springer, 2018, pp. 451–455. several international journals.
+[60] K. Grosse, N. Papernot, P. Manoharan, M. Backes, and P. McDaniel,
+ “Adversarial examples for malware detection,” in Proc. Comput. Secur.
+ ESORICS, S. N. Foley, D. Gollmann, and E. Snekkenes, Eds. Cham,
+ Switzerland: Springer, 2017, pp. 62–79.
+[61] Y. Kim, “Convolutional neural networks for sentence classification,” Binhui Tang is currently pursuing the Ph.D. degree
+ in Proc. Conf. Empirical Methods Natural Lang. Process. (EMNLP), with the School of Cyber Science and Engineering,
+ A. Moschitti, B. Pang, and W. Daelemans, Eds. Doha, Qatar: Association Sichuan University. She is an Associate Professor
+ for Computational Linguistics, Oct. 2014, pp. 1746–1751. [Online]. with Chengdu Jincheng College. Her recent research
+ Available: https://aclanthology.org/D14-1181 interests include APT analysis, cyber threat intel-
+[62] Y. You et al., “TIM: Threat context-enhanced TTP intelligence mining ligence mining, cyber-space attacks, and defensive
+ on unstructured threat data,” Cybersecurity, vol. 5, no. 1, p. 3, Dec. 2022. confrontation.
+[63] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+ image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+ (CVPR), Jun. 2016, pp. 770–778.
+[64] N. Rani, B. Saha, V. Maurya, and S. K. Shukla, “TTPHunter: Automated
+ extraction of actionable intelligence as TTPs from narrative threat
+ reports,” in Proc. Australas. Comput. Sci. Week. New York, NY, USA:
+ Association for Computing Machinery, Jan. 2023, pp. 126–134.
+[65] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers Xiaohui Li (Member, IEEE) received the B.S. and
+ for image recognition at scale,” 2020, arXiv:2010.11929. Ph.D. degrees in computer science from the College
+[66] X. Sun, L. Li, L. Bo, X. Wu, Y. Wei, and B. Li, “Automatic software of Computer Science, Sichuan University, Chengdu,
+ vulnerability classification by extracting vulnerability triggers,” J. Soft- China, in 2012 and 2017, respectively. She is curware, Evol. Process, vol. 36, no. 2, Feb. 2024, Art. no. e2508. rently a Teacher with the School of Cyber Science
+[67] H. Alkahtani and T. H. H. Aldhyani, “Botnet attack detection by using and Engineering, Sichuan University. Her research
+ CNN-LSTM model for Internet of Things applications,” Secur. Commun. interests include network and information security,
+ Netw., vol. 2021, pp. 1–23, Sep. 2021. such as wireless networks, satellite networks, the
+[68] R. Falcone and B. Lee. (Mar. 2017). The Oilrig Campaign: Attacks Internet of Things, and cyber threat intelligence,
+ on Saudi Arabian Organizations Deliver Helminth Backdoor. [Online]. with an emphasis on the design of efficient trans-
+ Available: https://unit42.paloaltonetworks.com/the-oilrig-campaign- port protocols, routing protocols, and intelligence
+ attacks-on-saudi-arabian-organizations-deliver-helminth-backdoor/ analysis.

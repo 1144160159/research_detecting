@@ -1,0 +1,1152 @@
+Enhancing Website Fingerprinting Attacks
+ against Traffic Drift
+ Xinhao Deng∗† , Yixiang Zhang∗ , Qi Li∗§¶ , Zhuotao Liu∗¶ , Yabo Wang‡ , Ke Xu‡§¶
+ ∗ INSC, Tsinghua University † Ant Group ‡ DCST, Tsinghua University
+ § State Key Laboratory of Internet Architecture, Tsinghua University
+ ¶ Zhongguancun Laboratory
+
+ xinhaodeng.thu@gmail.com, {zhangyix24, yb-wang22}@mails.tsinghua.edu.cn,
+ {qli01, zhuotaoliu, xuke}@tsinghua.edu.cn,
+
+ Abstract—Anonymous communication systems, e.g., Tor, are Before launching a WF attack, the adversary needs to collect
+vulnerable to various website fingerprinting (WF) attacks, which Tor traffic labeled with the corresponding websites to train
+analyze network traffic p atterns t o c ompromise u ser privacy. the DL model. Through such training, the model captures
+In particular, sophisticated attacks employ deep learning (DL)
+models to identify distinctive traffic p atterns a ssociated with correlations between traffic patterns and website labels. As
+specific w ebsites, a llowing t he a dversary t o d etermine which a result, the trained DL model can effectively identify a user’s
+websites users have visited. However, these attacks are not Tor traffic, undermining their anonymity.
+designed to handle traffic d rift, s uch a s c hanges i n website DL-based WF attacks achieve significant success under
+content and network conditions. Since traffic d rift i s common controlled conditions. However, their performance degrades
+in real-world, the effectiveness of these attacks diminishes significantly i n r eal-world d eployment. To a ddress t his limitation, substantially when traffic experiences drift [4], [6], [9], [10].
+we develop Proteus, the first a daptive W F a ttack f ramework to Traffic drift refers to changes in network traffic characteristics
+effectively mitigate the impact of traffic d rift w hile maintaining over time, which can occur due to various factors such
+robust performance in real-world scenarios. The key design as website content updates [9], changes in user browsing
+rationale of Proteus is to continuously fine-tune t he W F model behavior [11], Tor version updates [5], [12], or variations in
+using only drifted traffic w ithout g round-truth l abels collected
+while deploying the model, enabling the model to adapt to network conditions [6]. Consequently, traffic drift introduces
+complex traffic d rift i n n ear r eal t ime. S pecifically, Proteus distributional discrepancies of traffic between the training and
+aligns the feature distributions of original and drifted traffic by deployment phases, resulting in diminished model performinimizing the maximum mean discrepancy and thus enhances mance. Thus, traffic drift stands as a major barrier to the
+model confidence b y o ptimizing t he e ntropy d istribution o f its practical application of WF attacks.
+predictions. Furthermore, it utilizes a Gaussian mixture model
+to obtain reliable pseudo labels, which are subsequently used in Prior research typically addressed traffic drift by periodisupervised fine-tuning t o f urther e nhance i ts r obustness against cally collecting newly labeled traffic to retrain DL models [1],
+drifted traffic. N otably, P roteus c an b e s eamlessly integrated [3], [5], [7], [8], [11], [13]–[15]. Unfortunately, it is difficult
+with existing DL-based WF attacks to enhance their resilience to collect and constitute large-scale labeled data, and thus
+to traffic d rift. W e e valuate P roteus o n l arge-scale datasets unable to timely adapt to traffic drift. To address this limitation,
+containing over 350,000 real-world Tor browsing traces across
+six traffic d rift s cenarios. T he r esults d emonstrate t hat Proteus recent studies use data augmentation and contrastive learning
+achieves an average 94.24% relative improvement in F1-score to reduce dependence on large labeled datasets [4], [6]. Yet,
+over eight state-of-the-art WF attacks for identifying drifted they still depend on labeled traffic that precisely reflects the
+traffic. conditions of real-world deployment. As a result, when facing
+ I. I NTRODUCTION traffic drift caused by unknown and unpredictable factors (such
+ as Tor version updates or user browsing behavior shifting),
+ Website Fingerprinting (WF) attacks pose a significant
+ these approaches become less effective.
+threat to anonymous communication systems such as Tor [1],
+ In this paper, we present Proteus, an adaptive and re-
+[2]. By analyzing network traffic p atterns, W F a ttacks can
+ silient framework that enhances existing DL-based WF atinfer which websites users visit, thereby compromising Tor’s
+ tacks against traffic drift. Proteus continuously fine-tunes
+privacy guarantees and exposing sensitive browsing activithe DL models using only traffic without ground-truth labels
+ties [3], [4]. Recently, deep learning (DL) techniques have
+ collected between the client and the Tor entry node while
+substantially improved the accuracy of these attacks [5]–[8].
+ deploying these attacks, enabling them to adapt to various
+ types of traffic drift in near real time. It exploits relationships
+ between feature distributions of original and drifted traffic
+ generated from the same website so that it can align the drifted
+Network and Distributed System Security (NDSS) Symposium 2026 traffic with the original traffic and attenuate traffic drift. In
+23-27 February 2026, San Diego, CA, USA particular, we design a three-step approach to achieve the
+ISBN 979-8-9919276-8-0
+https://dx.doi.org/10.14722/ndss.2026.230059
+ goal. First, Proteus employs a Gaussian kernel function to
+www.ndss-symposium.org
+map traffic features into a high-dimensional space where they TABLE I: Comparison of WF attacks on handling traffic
+are linearly separable. Then it aligns the feature distributions ✗ denote full, no, and partial mitigation,
+ drift. ✔, ✗, and ✔
+of original and drifted traffic by minimizing the Maximum respectively.
+Mean Discrepancy (MMD). Second, Proteus reduces the Attacks Traffic Drift Types
+ambiguity of prediction by optimizing the entropy distribution 1
+of the model outputs, thereby ensuring consistent predictions Client-Side Server-Side2 Network-Side3
+for traffic exhibiting high feature similarity. Finally, Proteus AWF [3] ✗ ✗ ✗
+utilizes a Gaussian Mixture Model (GMM) to identify reliable DF [1] ✗ ✗ ✗
+predictions and treat them as pseudo-labels. These pseudo- Tik-Tok [13] ✗ ✗ ✗
+ BAPM [14] ✗ ✗ ✗
+labeled traces are subsequently used for supervised fine-tuning ARES [5] ✗ ✗ ✗
+to further enhance the model’s adaptability to drifted traffic. RF [7] ✗ ✗ ✗
+ We prototype Proteus and evaluate its performance using Var-CNN [16] ✗ ✗
+ ✔ ✗
+large-scale datasets of over 300,000 real-world Tor traces TF [4] ✗ ✗
+ ✔ ✗
+ GANDALF [17] ✗ ✗
+ ✔ ✗
+collected between March and December 2024. Our datasets ✗
+ NetCLR [6] ✗ ✔ ✗
+encompass traffic drift caused by various factors, including OnlineWF [9] ✗ ✔ ✗
+ ✔
+changes in website content over time, different Tor ver- Proteus ✔ ✔ ✔
+sions, shifts in client browsing behavior, dynamic network 1 Drift caused by user behavior or Tor version changes.
+conditions, open-world scenarios, and the presence of the 2 Drift caused by changes in website content.
+ 3 Drift caused by varying network conditions.
+WF defense. Experimental results demonstrate that Proteus
+significantly improves the performance of existing WF attacks
+against drifted traffic. For instance, Proteus achieves the F1-
+score of 82.27% under 270 days of real-world traffic drift, features, which are vulnerable to specific obfuscation techwhereas the F1-scores of eight baselines remain below 60%. niques [18]–[20]. To overcome this weakness, recent WF
+ Our primary contributions are as follows: attacks employ deep learning (DL) models (e.g., CNNs and
+ Transformers) to automatically extract features, enabling ac-
+ • We propose Proteus, an adaptive approach to enhance
+ curate and robust website identification [1], [3], [7], [8].
+ WF attacks against diverse traffic drifts by consistently
+ Advanced DL-based WF attacks perform well in several
+ fine-tuning the existing WF models during the deploychallenging scenarios, including bypassing WF defenses [1],
+ ment phase, allowing these models to adapt to various
+ [7], [8], [13], handling multi-tab obfuscated traffic [5], [14],
+ traffic drifts in near real time.
+ [15], and identifying fine-grained webpages [11]. However,
+ • Proteus accomplishes this through two key mechanisms.
+ their performance degrades significantly when traffic drift
+ First, it aligns feature distributions and enhances preoccurs [3], [5], [9], [12]. Table I presents a comparison of WF
+ diction confidence to maintain consistent classification
+ attacks in handling traffic drift. Traffic drift can be categorized
+ across both original and drifted traffic patterns associated
+ into three major types: (i) client-side drift, caused by changes
+ with the same website. Second, it employs the GMM to
+ in user browsing behavior or Tor versions [11], [12], (ii)
+ generate reliable pseudo-labels, enabling supervised fineserver-side drift, due to website content updates [9], [10],
+ tuning to improve the model’s adaptability.
+ and (iii) network-side drift, resulting from varying network
+ • We implement a functional prototype of Proteus and
+ conditions [6], [8].
+ conduct extensive evaluations across multiple drift scenarios to validate its effectiveness. We release the datasets To mitigate the effects of traffic drift, some studies peand source code of our work1 . riodically collect new data and retrain models to maintain
+ performance [1], [3], [5]. However, retraining deep learning
+ The rest of this paper is structured as follows. Section II models is time-consuming due to the need for large-scale trafprovides the necessary background. Section III specifies the fic collection. As traffic drift consistently evolves in real-time,
+threat model for Proteus, and Section IV presents our design periodic retraining is unable to address traffic drift promptly.
+and its underlying principles. In Section V, we thoroughly Therefore, the community has explored few-shot fine-tuning
+evaluate Proteus in multiple drift scenarios. Section VI dis- methods, including enhancing model architecture [16], opcusses the implications and countermeasures. Sections VII and timizing model training procedures [4], [6], and generating
+VIII review related work and conclude this paper, respectively. synthetic traffic using GANs [17]. NetCLR [6], the state-
+Section IX discusses the ethical considerations. of-the-art attack in this category, utilizes data augmentation
+ and contrastive learning for model pre-training. NetCLR then
+ II. BACKGROUND
+ fine-tunes the model with only a small amount of labeled
+ Website fingerprinting (WF) attacks compromise the drifted traffic. While these approaches reduce the overall
+anonymity of Tor users by analyzing website patterns in dependence of labeled data, they still require labeled traffic
+encrypted traffic. Traditional WF attacks rely on handcrafted that precisely reflects the conditions of real-world deployment.
+ Their effectiveness is further undermined when the drift is
+ 1 https://github.com/Xinhao-Deng/Adaptive-WF-Attack caused by unknown client-side factors, such as changes in Tor
+
+ 2
+ Defense
+ Following prior studies [1], [3], [5], [7], [8], [11], our threat
+ model includes both closed-world and open-world scenarios.
+ In the closed-world scenario, Tor users visit only a limited
+ set of websites, enabling the adversary to pre-collect labeled
+ traffic from these websites (i.e., monitored websites) to train
+ Tor user Tor network Website models. In the open-world scenario, Tor users can browse
+ arbitrary websites, including those unknown to the adversary.
+ Adversary Therefore, the adversary can only collect traffic from a subset
+ of websites to train the models.
+ Unlike previous works [4], [6], [9], [10] that focus on a
+ single type of traffic drift, our threat model addresses multiple
+ Unlabeled Model
+ traffic fine-tuning Identification types of traffic drift happening in real-world deployment.
+ Specifically, we consider traffic drift caused by changes on
+ Fig. 1: The threat model of Proteus. the client side, server side, and network side. To handle these
+ traffic drifts, Proteus continuously fine-tunes the model using
+ traffic without ground-truth labels collected in the attack phase.
+versions or variations in user browsing behavior. This mechanism enables Proteus to adapt to complex traffic
+ Furthermore, recent works collect labeled traffic from Tor drift during the attack.
+exit nodes for model updates [9], [10]. For instance, On- Note that Proteus is compatible with existing WF attacks
+lineWF [9] builds on the TF attack [4] and adapts to traffic and can improve their robustness against traffic drift. For
+drift in real time. It continuously updates website feature dis- example, an adversary may first perform supervised finetributions using labeled traces from Tor exit nodes. However, tuning on the WF model using labeled traffic exhibiting drift
+WF attacks are usually performed at the entry side of the Tor from synthetic sources [6], [17] or Tor exit nodes [9]. Proteus
+network, whose traffic patterns significantly differ from those can then perform unsupervised fine-tuning using traffic without
+at the exit. Furthermore, Tor users can deploy WF defenses ground-truth labels, which closely reflects the drifted traffic
+that obfuscate traffic at the entry node while leaving the exit patterns observed in practical deployment. This significantly
+node traffic unaffected [21]–[23]. This further increases the enhances the resilience of WF attacks against traffic drift
+differences between entry and exit node traffic traces in real- in real-world scenarios. In our study, combining supervised
+world scenarios. As a result, WF models trained on exit-node fine-tuning with Proteus yields even better performance, as
+data perform poorly when used to identify entry-node traffic. detailed in Appendix V-G.
+ Unlike prior works, Proteus aims to address the traffic drift
+ IV. D ESIGN OF P ROTEUS
+issue by eliminating the dependence on labeled traffic. Traffic
+drift can occur due to various unpredictable factors, such as A. Overview
+changes in Tor versions or shifts in users’ browsing behaviors. In this paper, we propose Proteus, a novel WF attack
+Therefore, it is difficult to obtain properly-labeled datasets that framework that fine-tunes WF models using drifted traffic
+can capture all possible drift patterns for retraining or fine- without ground-truth labels to achieve accurate WF perfortuning. To address this, Proteus fine-tunes WF models using mance during the attack phase. Proteus can be seamlessly
+traffic without ground-truth labels collected between the client integrated with existing DL-based WF attacks to effectively
+and the Tor entry node. This traffic can match the drifted traffic enhance their performance against drifted traffic. The key
+that needs to be identified in the actual attack phase. Therefore, insight behind Proteus is that there are inherent relationships
+Proteus significantly enhances the robustness of WF attacks between the original and drifted traffic from the same website.
+against traffic drift. By fine-tuning the WF model to capture these relationships,
+ Proteus achieves more robust WF attacks against drifted
+ III. T HREAT M ODEL traffic. Specifically, Proteus first analyzes the feature dis-
+ Figure 1 illustrates our threat model. We consider an adver- tributions of the original and drifted traffic, and then aligns
+sary aiming to de-anonymize a client’s online activities. The the two distributions by minimizing the Maximum Mean
+adversary infers the websites visited by users through website Discrepancy (MMD). Next, Proteus calculates the entropy
+fingerprinting. The adversary could deploy traffic mirroring distribution of the model’s predictions to measure output
+points between the client and the Tor entry node to record the uncertainty. Proteus optimizes the entropy distribution to
+client’s encrypted traffic. Potential adversaries include local facilitate consistent predictions for original and drifted traffic
+network administrators, Internet Service Providers (ISPs), and from the same website. Finally, Proteus utilizes a Gaussian
+Autonomous Systems (ASes). Note that the adversary cannot Mixture Model (GMM) to estimate the probability of correct
+directly decrypt the packets. Furthermore, we assume that the predictions for traces without ground-truth labels, selecting
+client is capable of deploying WF defenses. WF defenses reliable predictions as pseudo-labels. These pseudo-labeled
+disrupt the traffic patterns of various websites by padding traces are used for supervised fine-tuning, further improving
+dummy packets and delaying packets [21]–[25]. the WF model’s ability to identify drifted traffic.
+
+ 3
+ Feature Distribution Alignment Model Confidence Enhancement Adaptive Pseudo-Labeling
+ 1 2 Correct prediction 3
+
+ Prob.
+ ...
+ ... ...
+
+ Prob.
+Original traffic Original feat. Drifted feat. Entropy
+
+ Prob.
+ Feature mapping Probability analysis via
+ Gaussian mixture model
+ ... Optimize the entropy
+ Feature Space distribution of model prediction Pseudo-labels
+Drifted traffic generation
+ z!# z!" z&# Enhanced Model
+ z&" Prediction
+ Minimize score
+ z!$ distance z&$
+ 0.95
+ ...
+ z!% z&% 0.91
+ Confidence ... Supervised fine-tuning
+Trained model
+Fig. 2: The overview of Proteus. Proteus can be integrated with existing DL-based WF attacks to enhance WF attacks against
+traffic drift.
+
+ As shown in Figure 2, Proteus consists of three modules Section IV-D.
+designed to construct robust WF attacks against traffic drift, Note that Proteus introduces a novel end-to-end framework
+including the feature distribution alignment module, the model for WF attacks that dynamically adapts online to evolving
+confidence enhancement module, and the adaptive pseudo- traffic patterns while operating solely on traffic data without
+labeling module. requiring ground-truth labels during the attack phase. While
+Feature Distribution Alignment. The feature distribution some components draw inspiration from computer vision and
+alignment module fine-tunes the model to minimize the dis- related fields [26]–[31], Proteus fundamentally diverges from
+tributional discrepancy between the original and drifted traffic prior works in its problem formulation and integration strategy.
+features. Specifically, Proteus utilizes a Gaussian kernel func- Unlike existing approaches that assume static or single-factor
+tion to map the traffic features into a high-dimensional space. distribution shifts, Proteus is explicitly designed to handle
+This high-dimensional mapping enhances the separability of complex, multi-source traffic drift in real-world network envifeature distributions, enabling more accurate analysis of dis- ronments.
+tributional discrepancies. By minimizing the MMD between Furthermore, Proteus unifies these components into a taskfeature distributions, Proteus aligns the feature distributions optimized pipeline that enables continuous online adaptation
+of the original and drifted traffic features. Furthermore, we throughout the attack process. As shown in Appendix V-I,
+design a dynamic bandwidth Gaussian kernel that adaptively this integrated design significantly outperforms any standalone
+adjusts its bandwidth based on the traffic feature distribution. component.
+This design ensures effective feature distribution alignment
+across diverse traffic drift scenarios. Details of this module B. Feature Distribution Alignment
+are described in Section IV-B. The feature distribution alignment module aims to minimize
+Model Confidence Enhancement. This module mitigates differences in feature distributions between original traffic
+traffic drift by enhancing the model’s prediction confidence on and drifted traffic, thereby improving the performance of
+drifted traffic. Specifically, Proteus optimizes the entropy dis- WF attacks in traffic drift scenarios. The key insight arises
+tribution of predictions to reduce output uncertainty, ensuring from the inherent relationship between original and drifted
+consistent predictions for traffic with similar features. Bene- traffic from the same website, which results in smaller feature
+fiting from the aligned feature distributions, the confidence- distances compared to traffic features from different websites.
+enhanced model accurately links original traffic and drifted Thus, fine-tuning the model to align feature distributions helps
+traffic from the same website, enabling effective identification capture the relationship between original and drifted traffic and
+of drifted traffic. We will describe the details of this module enhances identifying drifted traffic.
+in Section IV-C. However, directly aligning the feature distributions of origi-
+Adaptive Pseudo-Labeling. The adaptive pseudo-labeling nal and drifted traffic poses significant challenges for two main
+module utilizes reliable predictions as pseudo-labels to fa- reasons: (i) The relationships between feature distributions are
+cilitate the model learning drifted traffic patterns through complex, making it difficult to analyze and quantify their difsupervised fine-tuning. Specifically, Proteus employs a GMM ferences. (ii) The causes of traffic drift in real-world scenarios
+to estimate the probability of each traffic being correctly are highly diverse. As discussed in Section III, traffic drift can
+predicted. Predictions with high probabilities are assigned as result from changes in client browsing behavior, Tor versions,
+pseudo-labels, which are then used to fine-tune the WF model. website content, or network conditions. Different types of
+We will introduce the details of adaptive pseudo-labeling in traffic drift induce distinct changes in feature distributions.
+
+ 4
+Therefore, our design must remain effective across various where σ denotes the kernel bandwidth, which determines the
+traffic drift scenarios. sensitivity of the Gaussian kernel to the distances between
+ To address these challenges, Proteus employs a Gaussian features. The Gaussian kernel function maps features into a
+kernel function to map traffic features into a high-dimensional high-dimensional space and computes the distance between
+Reproducing Kernel Hilbert Space (RKHS) [32]. In this high- two features in that space. By leveraging the kernel trick [34],
+dimensional space, traffic feature distributions that are origi- there is no need to explicitly construct the mapping function.
+nally complex or nonlinear become more linearly separable, We achieve feature distribution alignment by minimizing the
+enabling precise measurement of the differences between the average distance between the features of original traffic and
+feature distributions of original and drifted traffic. Based on drifted traffic computed using the Gaussian kernel function.
+this embedding, Proteus fine-tunes the model parameters by To prevent the model from converging to a trivial solution
+minimizing the Maximum Mean Discrepancy (MMD) [33]. where it outputs the same feature representation for all traffic
+MMD effectively computes the distance between different during fine-tuning, we simultaneously maximize the average
+feature distributions by comparing their mean embeddings distance between features within the original traffic and within
+in the RKHS. By minimizing MMD, Proteus reduces the the drifted traffic. This ensures that the intra-class variability
+differences between the feature distributions of original and of traffic features is preserved while aligning the inter-class
+drifted traffic, thereby mitigating the impact of traffic drift on distributions. Therefore, the loss in Equation 1 can be commodel performance. To enhance adaptability to diverse traffic puted using the Gaussian kernel function as follows:
+drift scenarios, we design an adaptive bandwidth mechanism
+ N N M M
+for the Gaussian kernel function. This mechanism dynamically 1 XX 1 XX
+adjusts the kernel bandwidth based on the observed traffic L1 = k(z i
+ ,
+ o o z j
+ ) + k(zid , zjd )
+ N 2 i=1 j=1 M 2 i=1 j=1
+feature distributions, enabling Proteus to maintain robustness (3)
+ N M
+across various dynamic traffic drift scenarios. Proteus not 2 XX
+only achieves effective alignment of traffic feature distributions − k(zio , zjd ).
+ N M i=1 j=1
+but also maintains generalization across different traffic drift
+scenarios. Different types of traffic drift result in significant differences
+ Next, we describe the details of the feature distribution in the feature distribution of the drifted traffic. To enhance
+alignment module. We input both the original traffic and the adaptability of Proteus to various traffic drift scenarios,
+drifted traffic into the model, using the output of the layer we design a dynamic bandwidth mechanism for the Gaussian
+preceding the fully connected layer as the extracted traffic fea- kernel function. This mechanism dynamically adjusts the
+tures. Let the trained model extract feature sets Zo = {zio }N kernel bandwidth by analyzing the observed traffic feature
+ i=1
+from the original traffic and Zd = {zjd }M distribution in real-time and enables flexibility in handling
+ j=1 from the drifted
+traffic, where N and M represent the respective numbers of different types of traffic drift. The bandwidth is computed as
+traffic instances in these two domains. We map both feature follows:
+distributions into the high-dimensional Reproducing Kernel v
+ u N X M
+Hilbert Space (RKHS) and compute the centroids of the two u 1 X
+ σ=t ∥zi − zjd ∥2 . (4)
+feature distributions in the RKHS. The centroid of a feature N M i=1 j=1 o
+distribution is defined as the mean of features across all
+dimensions. The optimization goal of fine-tuning the model The WF model leverages feature distribution alignment to
+is to minimize the distance between these two centroids in the effectively learn the relationships between original and drifted
+RKHS, formulated as follows: traffic. However, this may lead to the WF model forgetting
+ the knowledge necessary to distinguish traffic from different
+ N M
+ 2 websites. To address this issue, we augment the feature dis-
+ 1 X 1 X tribution alignment process with supervised fine-tuning based
+ L1 = sup ϕ(zio ) − ϕ(zjd ) , (1)
+ ϕ∈H N i=1 M j=1 on the original traffic. Proteus performs alignment at the level
+ of global traffic distributions rather than individual samples,
+where ϕ denotes the feature mapping function, and H is the thereby maintaining site-level distinctions even under distribu-
+RKHS. We aim to find a mapping function ϕ that maximally tional drift. While many factors can substantially alter traffic
+amplifies the differences between two distributions in the patterns, such alterations typically occur in a consistent manner
+original space when projected into the RKHS. This ensures across different sites, enabling Proteus to achieve effective
+that the distributions become as linearly separable as possible adaptation through global alignment.
+in the RKHS. To achieve this, we use a Gaussian kernel
+function for feature mapping. The Gaussian kernel function C. Model Confidence Enhancement
+is defined as: After feature distribution alignment, the original and drifted
+ traffic features of the same website exhibit similarities. How-
+ ∥zi − zj ∥2 ever, deep learning models often lack confidence when predict-
+  
+ i j
+ k(z , z ) = exp − , (2) ing the drifted traffic that was not seen during training, leading
+ 2σ 2
+
+ 5
+Probability (%) 20 20 20 fidence enhancement module. Let pi = {pi 1 , pi 2 , . . . , pi K }
+ Day 0 Day 14 Day 30
+ 15 15 15 represent the softmax values output by the final layer of the
+ 10 10 10 model, where pi k is the probability that the model classifies
+ 5 5 5 the i-th unknown traffic as belonging to the k-th website. K is
+ 00 1 2 3 4 00 1 2 3 4 00 1 2 3 4 the total number of monitored websites. Proteus can calculate
+ the entropy H(pi ) as follows:
+ 20 20 20
+Probability (%)
+
+ Day 90 Day 150 Day 270
+ 15 15 15 K
+ X
+ 10 10 10 H(pi ) = − pi k log pi k . (5)
+ 5 5 5 k=1
+
+ 00 1 2 3 4 00 1 2 3 4 00 1 2 3 4 Proteus fine-tunes the model parameters by minimizing the
+ Entropy Entropy Entropy average entropy of prediction probabilities across all instances
+ in a batch, enabling Proteus to make more confident and
+ Fig. 3: The entropy distribution of prediction scores from the accurate predictions for drifted traffic. Furthermore, Proteus
+ WF model on real-world drifted traffic from 102 monitored also maximizes the entropy of the average prediction results
+ websites. As the degree of traffic drift increases over time, the across all instances in a batch, increasing the model’s diversity
+ entropy of the model’s prediction scores gradually increases, in identifying traffic from different websites.
+ indicating a decrease in model confidence.
+ B B
+ 1 X 1 X
+ L2 = H(pi ) − H( pj ), (6)
+ B i=1 B j=1
+ to misclassification. To address this, Proteus improves the
+ model’s confidence in identifying unknown traffic, ensuring where B is the number of instances in the batch.
+ consistent predictions for traffic with similar features. Notably, Benefiting from the model confidence enhancement, Prothe model confidence enhancement module does not require teus achieves more consistent predictions for both original
+ the collection of drifted traffic with website labels. and drifted traffic of the same website, enabling more accurate
+ An intuitive approach to enhancing model confidence is identification of drifted traffic.
+ to maximize the softmax probabilities of the model output,
+ thereby increasing the probability of the predicted website cat-
+ D. Adaptive Pseudo-Labeling
+ egory. However, this method may significantly decline model
+ performance in practical applications, especially when the The feature distribution alignment module and the model
+ website class distribution in traffic is imbalanced. Specifically, confidence enhancement module improve model consistency
+ maximizing the softmax probability leads the model to predict in identifying both original and drifted traffic from the same
+ all traffic as belonging to the most prevalent website class in website. However, during unsupervised model fine-tuning,
+ the traffic. This occurs because the method focuses solely on the model might lose critical knowledge essential for distinthe class with the highest predicted probability while neglect- guishing traffic from different websites. This discriminative
+ ing reasonable constraints on the probability distribution for ability stems from the knowledge gained by optimizing the
+ other classes, ultimately impairing the model’s generalization cross-entropy loss function using labeled traffic during model
+ capability and overall performance. training [1], [3], [5], [7]. Based on this observation, we
+ To address these challenges, we propose a model confi- design the adaptive pseudo-labeling module to enhance the
+ dence enhancement technique based on optimizing the entropy WF model’s ability to distinguish between drifted traffic from
+ distribution of model predictions. We leverage Shannon en- different websites by generating reliable pseudo-labels for traftropy [35], a commonly used metric for measuring uncertainty. fic without ground-truth labels and incorporating supervised
+ Figure 3 illustrates the entropy distribution of WF model fine-tuning.
+ predictions under traffic drift across different days in the Pseudo-labeling is a technique where the model’s own
+ real world. We observe that as traffic drift increases, the predictions are used as pseudo-labels for unannotated samples
+ entropy distribution of model predictions undergoes significant to fine-tune the model. This approach is commonly applied
+ changes. This insight motivated us to fine-tune the model by in semi-supervised and self-supervised learning [36], [37].
+ optimizing the entropy distribution to enhance its confidence However, the WF model may generate incorrect predictions
+ for drifted traffic, thereby mitigating the effects of traffic drift. for certain traffic, and the noise introduced by these pseudo-
+ To prevent the model from predicting all traffic as belonging to labels could degrade performance. Therefore, ensuring the
+ a single website, we design a batch-based diversity constraint high quality of pseudo-labels is critical for maintaining model
+ mechanism. Specifically, Proteus minimizes the entropy of accuracy. Generating reliable pseudo-labels under Tor traffic
+ the predicted probabilities for all websites while maximizing drift is particularly challenging. The reason is that the Tor
+ the entropy across all prediction results within a batch to network experiences multiple types of traffic drift that evolve
+ ensure diversity among the predicted websites. dynamically over time. Each type of drift affects the model’s
+ Next, we introduce the design details of the model con- predictions in different ways, and simply analyzing the predic-
+
+ 6
+tion confidence of individual traffic samples is not sufficient Finally, we consider all predictions with probabilities above
+to effectively filter out noise in the pseudo-labels. a specified threshold as reliable pseudo-labels and use these
+ To address these challenges, Proteus utilizes a Gaussian pseudo-labeled traffic instances to fine-tune the model in a
+Mixture Model (GMM) [38] to estimate the probability that supervised manner. This process further improves the model’s
+each traffic sample is correctly predicted, based on the en- performance in identifying drifted traffic.
+tropy distribution of model predictions. Proteus then filters In summary, Proteus leverages a GMM-based approach to
+out pseudo-labels with low probabilities, ensuring the reli- adapt to different types of Tor traffic drift, generating reliable
+ability of the pseudo-labels. Specifically, the GMM utilizes pseudo-labels for traffic without ground-truth labels. By effectwo Gaussian components to separately model the entropy tively mitigating the impact of traffic drift, Proteus enhances
+distributions of correctly and incorrectly predicted traffic. A the performance of WF attacks against drifted traffic.
+linear combination of these two components is then used to
+fit the overall entropy distribution of all traffic. The GMM V. P ERFORMANCE E VALUATION
+accurately captures the model’s prediction entropy distribution In this section, we prototype Proteus and evaluate its
+across different types of traffic drift, adaptively computing the performance under various types of traffic drift.
+probability that each sample is correctly classified. This allows
+Proteus to generate reliable pseudo-labels, making it robust A. Experimental Setup
+to the diverse and dynamic traffic drift scenarios.
+ Implementation. We prototype Proteus using PyTorch 2.0.1
+ Next, we describe the detailed design of the adaptive and Python 3.8. The default WF model in Proteus is the
+pseudo-labeling module. Recall from Equation 5 that H(pi ) SOTA attack RF. By replacing the fine-tuned model, Proteus
+represents the entropy of the model’s prediction for the i- can integrate with other DL-based WF attacks. All experiments
+th traffic instance xi , quantifying the model’s uncertainty. To are accelerated using the NVIDIA GeForce RTX 4090 GPU
+ensure consistency across instances, we normalize the entropy for model training and testing. Furthermore, we perform 5-
+values for B unknown traffic instances in the batch, so that fold cross-validation and report the average values as the
+the normalized entropy values fall within the range of 0 to 1: experimental results.
+ Dataset. From March to December 2024 and from June to July
+ H(pi ) − min H(pj )
+ 1≤j≤B 2025, we collected over 350,000 real-world Tor traffic traces
+ Ĥ(pi ) = . (7) under various traffic drift scenarios. We randomly selected
+ max H(pj ) − min H(pj )
+ 1≤j≤B 1≤j≤B 102 monitored websites and 20,000 non-monitored websites
+ We then use the GMM to fit the entropy distribution. from the Tranco list [40]. Details of the dataset construction
+The GMM is a probabilistic model that combines multiple are provided in Appendix A. Our datasets encompass six
+Gaussian distributions. In this module, we use two Gaussian categories of data.
+components to separately represent the entropy distribution • Dataset for Temporal Drift: To evaluate traffic drift
+of correctly predicted traffic and that of incorrectly predicted caused by changes in website content over time, we
+traffic. The GMM models the overall entropy distribution as periodically collected traffic from 102 monitored websites
+a weighted mixture of these two Gaussian distributions as over 9 months. In total, we collected over 140,000 realfollows: world traffic traces.
+ • Dataset for Tor Version Drift: To evaluate traffic drift due
+
+ P (Ĥ|θ) = π1 N(Ĥ|µ1 , Σ1 ) + π2 N(Ĥ|µ2 , Σ2 ), (8) to changes in the Tor client version, we used four major
+ versions: 0.4.8, 0.4.7, 0.4.6, and 0.4.5. We focus on Tor
+where N, π, µ, Σ represent the probability density function, versions rather than Tor Browser Bundle (TBB) versions
+weight, mean, and covariance, respectively. We update these because TBB updates are more frequent. A total of over
+parameters using the Expectation-Maximization (EM) algo- 100,000 real-world traffic traces were collected from 102
+rithm [39] to fit the entropy distribution of the model pre- monitored websites.
+dictions. After fitting the entropy distribution, we identify • Dataset for Network Condition Drift: To evaluate traffic
+the Gaussian component with the smaller mean, which corre- drift caused by changes in network conditions, we folsponds to the entropy distribution of correctly predicted traffic. lowed previous studies [12] and collected over 34,000
+Let us assume that the Gaussian distribution with parameters real-world traces for 102 monitored websites from Tor
+µ1 and Σ1 has the smaller mean. For a traffic instance x, clients located in five countries with varying network
+Proteus calculates the posterior probability that this traffic conditions.
+belongs to the Gaussian distribution representing correctly • Dataset for Browsing Behavior Drift: To simulate scepredicted traffic, i.e., the probability that this traffic is correctly narios where clients visit subpages unknown to the adpredicted. versary, we evaluated traffic drift caused by changes in
+ client browsing behaviors. We collected over 20,000 real-
+ π1 N(Ĥ(x)|µ1 , Σ1 ) world traces for 17,739 subpages across 102 monitored
+ P (x) = P2 . (9)
+ j=1 πj N(Ĥ(x)|µj , Σj )
+ websites.
+
+ 7
+TABLE II: Comparison of input features and model structures 100 100
+
+ Probability (%)
+across various WF attacks. 80 80
+ Day 14
+ Attack Input feature Model structure 60 Day 30 60
+ 40 Day 90 40
+ AWF Packet direction sequence CNN
+ 20 Day 150 20
+ DF Packet direction sequence CNN Day 270 Browsing subpages
+ BAPM Packet direction sequence Transformer 0 0
+ 0 5 10 15 5 10
+ 0 15
+ ARES Packet direction sequence Transformer Energy distance Energy distance
+ RF Traffic aggregated features CNN (a) Temporal drift (b) Behavior drift
+ NetCLR Packet direction sequence CNN
+ Holmes Traffic aggregated features CNN 0.4.5 0 5.6 7.6 8.8 SG 0 0.4 0.6 2.5 2.4
+ Tik-Tok
+ Packet direction and
+ CNN 0.4.6 5.6 0 2.5 6.5 JP 0.4 0 0.3 2.1 2.0
+ timestamp sequences
+ USA 0.6 0.3 0 1.3 1.2
+ Var-CNN
+ Packet direction, timestamp,
+ and size sequences
+ CNN 0.4.7 7.6 2.5 0 4.7 DE 2.5 2.1 1.3 0 0.1
+ UAF
+ Packet direction and
+ CNN 0.4.8 8.8 6.5 4.7 0 UK 2.4 2.0 1.2 0.1 0
+ timestamp sequences
+ 0.4.5 0.4.6 0.4.7 0.4.8 SG JP USA DE UK
+ (c) Tor version drift (d) Network condition drift
+ Fig. 4: Traffic drift quantification across different scenarios
+ using energy distance.
+ • Open-World Dataset: To evaluate traffic drift in the openworld setting, we considered both changes in website content and users browsing non-monitored websites unknown B. Drift Quantification Analysis
+ to the adversary. We collected over 160,000 real-world
+ traffic traces from 102 monitored websites and 20,000 To quantitatively evaluate the extent of traffic drift in our
+ non-monitored websites. experiments, we utilize the energy distance metric [43], a
+ • Dataset with WF Defense: To evaluate the robustness of
+ statistically rigorous measure widely used to assess similarity
+ Proteus under defense mechanisms, we selected three between probability distributions. This metric is particularly
+ obfuscation techniques: WTF-PAD [21], obfs4 [41], and well-suited for detecting and quantifying concept drift [44]
+ Front [22]. We generated a simulated dataset for WTF- because of its high sensitivity to distributional changes and
+ PAD and collected real-world datasets for obfs4 and Front robustness in high-dimensional spaces.
+ deployments, comprising over 200,000 obfuscated traffic Energy distance measures the discrepancy between two
+ traces in total. distributions by comparing the average pairwise distances
+ both across and within distributions. Formally, given two
+ probability distributions P and Q, with samples {xi }m i=1 ∼ P
+Baselines. For a thorough comparison, we use ten state- and {yj }nj=1 ∼ Q, the energy distance DE (P, Q) is defined
+of-the-art WF attacks as baselines: AWF [3], DF [1], Tik- as:
+Tok [13], Var-CNN [16], BAPM [14], ARES [5], RF [7],
+NetCLR [6], Holmes [8] and UAF [42]. All baseline models, DE (P, Q) = 2 E[∥x − y∥] − E[∥x − x′ ∥] − E[∥y − y ′ ∥], (10)
+except UAF, rely on labeled data and cannot be fine-tuned
+ where ∥ · ∥ denotes the Euclidean distance. A larger energy
+using unlabeled drift traffic. We implemented all baseline
+ distance indicates a greater divergence between the two dismodels using the official source code. To ensure fairness,
+ tributions, making it a reliable metric for quantifying shifts in
+we tuned each model’s parameters to match or exceed the
+ traffic patterns.
+performance reported in their respective original papers. Ta-
+ Figure 4 presents the quantified results of traffic drift under
+ble II summarizes the input features and model architectures
+ various scenarios. In the cases involving temporal page updates
+of baselines. Among baselines with identical input features
+ and subpage visits, the degree of drift varies significantly
+and architectures, models with larger parameter sizes tend
+ across websites. To capture this variation, we plot the cumuto exhibit more substantial accuracy improvements when enlative distribution functions (CDFs) of energy distances for
+hanced with Proteus. Moreover, baselines that incorporate
+ all monitored websites under both temporal and behavioral
+traffic aggregation features (e.g., RF) benefit more significantly
+ drift conditions. As shown in Figure 4(a), temporal drift
+from Proteus integration. This effect can be attributed to the
+ increases progressively over time. Specifically, for the top 20%
+higher stability of aggregated traffic features under dynamic
+ of websites most affected by drift, the minimum observed
+traffic variations [7], which allows Proteus to exploit these
+ energy distances are 0.39 on Day 14, 0.91 on Day 30, 3.19 on
+features more effectively and deliver stronger performance
+ Day 90, 4.69 on Day 150, and 5.68 on Day 270. Figure 4(b)
+gains.
+ demonstrates that user behaviors involving subpage visits lead
+Metrics. We follow prior arts [1], [3], [5], [7], [8] and select to more pronounced drift compared to browsing limited to
+4 metrics that are widely used to evaluate the performance of the homepage. In this behavioral drift scenario, over 40% of
+WF attacks, i.e., Accuracy, Precision, Recall, and F1-score. websites exhibit energy distances exceeding 5.4, indicating
+
+ 8
+ wo/ Proteus w/ Proteus
+ 100 90
+ 80 80
+Accuracy (%)
+
+ 80 70
+ 60 60
+ 50
+ 60 14 30 90 150 270 40 14 30 90 150 270 14 30 90 150 270 40 14 30 90 150 270
+ Time (days) Time (days) Time (days) Time (days)
+ (a) RF (b) ARES (c) Tik-Tok (d) DF
+ Fig. 5: Evaluating the accuracy of robust WF attacks under temporal traffic drift.
+
+ TABLE III: Comparison with prior arts under temporal drift, where P, R, F1 represent Precision (%), Recall (%), and F1-score
+ (%).
+ Day 14 Day 30 Day 90 Day 150 Day 270
+ P R F1 P R F1 P R F1 P R F1 P R F1
+ AWF 50.36 49.29 48.84 46.42 46.05 45.36 38.28 39.09 37.49 33.12 33.63 32.21 29.40 30.07 28.64
+ BAPM 64.62 62.83 62.08 58.89 57.33 56.28 48.48 48.78 46.75 44.28 43.92 41.89 38.38 38.30 35.98
+ ARES 71.36 69.07 68.82 66.74 64.72 64.17 56.53 55.96 54.05 49.06 49.21 47.43 46.04 45.51 43.48
+ DF 73.30 72.10 71.94 67.12 66.49 65.79 55.91 57.17 55.24 50.11 50.49 48.91 45.47 46.69 44.48
+ NetCLR 73.78 72.93 72.71 68.27 67.47 66.92 56.99 57.94 55.81 49.29 50.82 49.03 44.72 46.80 43.92
+ Tik-Tok 78.98 78.35 77.89 73.46 73.25 72.36 62.01 63.08 60.87 53.89 54.90 52.56 48.70 49.47 46.58
+ Var-CNN 81.23 79.93 79.77 76.20 74.76 74.30 65.03 65.43 63.14 57.43 58.14 55.68 52.79 53.49 50.84
+ RF 88.46 87.99 87.63 82.92 82.15 81.62 73.83 73.85 72.02 68.07 68.13 66.25 61.00 62.81 59.57
+ Proteus 92.53 92.59 92.53 91.21 91.23 91.18 90.67 90.77 90.65 86.15 86.82 86.32 81.90 83.21 82.27
+
+ substantial deviations in traffic patterns. example, after a temporal drift of 270 days, the accuracies of
+ For drift caused by Tor version changes and network RF, ARES, Tik-Tok, and DF decrease by 28.45%, 35.41%,
+ condition variations, the impacts are relatively uniform across 37.36%, and 36.83%, respectively. Proteus integrates with
+ websites. Therefore, we calculate the average energy distance these WF attacks and improves their performance by fineacross all monitored websites. As shown in Figure 4(c), larger tuning model parameters using traffic without ground-truth
+ differences between Tor versions result in more severe traffic labels collected during the attack phase. As shown in Figure 5,
+ drift. For example, the distance between Tor 0.4.5 and 0.4.6 is Proteus improves the accuracies of RF, ARES, Tik-Tok,
+ 5.6, while it increases to 8.8 between Tor 0.4.5 and 0.4.8. and DF on traffic with a 270-day temporal drift by 31.84%,
+ Figure 4(d) presents the impact of network condition drift 46.40%, 34.87%, and 28.74%, respectively.
+ caused by clients located in different geographical regions. We further compared Proteus with all baselines. Table III
+ Although network variability also contributes to traffic drift, presents the Precision, Recall, and F1-score of WF attacks
+ its overall magnitude is lower compared to the other scenarios. under temporal drift. We observe that Proteus achieves the
+ In summary, the traffic patterns observed across all four best performance for drifted traffic. Compared to the baselines,
+ scenarios demonstrate substantial drift, thereby providing a Proteus increases the F1-score by an average of 33.65%
+ robust basis for comprehensively evaluating the effectiveness at Day 14, 43.30% at Day 30, 70.09% at Day 90, 84.25%
+ of Proteus. at Day 150, and 95.44% at Day 270, respectively. As drift
+ time increases, the advantage of Proteus over the baselines
+ C. Performance under Traffic Drift gradually increases.
+ We evaluate the effectiveness of Proteus in enhancing WF Tor Version Drift. Next, we evaluate the performance of
+ attacks under four types of traffic drift: evolving website WF attacks under Tor version drift. Following the setup in
+ content, different Tor versions, varying network conditions, prior studies [1], [3], [5], WF models are trained on traffic
+ and changes in user browsing patterns. collected using Tor version 0.4.8, the latest version at the
+ Temporal Drift. One of the primary causes of temporal drift time of data collection. The trained models are evaluated on
+ in Tor traffic is the continuous change in website content traffic collected using Tor versions 0.4.5, 0.4.6, and 0.4.7.
+ over time. Figure 5 illustrates the accuracy of four robust WF Figure 6 shows the F1-scores of eight deep learning-based WF
+ attacks (i.e., RF, ARES, Tik-Tok, and DF) against temporally attacks under Tor version drift, as well as their performance
+ drifting traffic. Existing robust WF attacks primarily target when combined with Proteus. We observe that a larger
+ obfuscated traffic under WF defenses or multi-tab browsing. difference between the Tor versions used for training and
+ However, these attacks are not robust against drifted traffic. For evaluation leads to greater performance degradation in WF
+
+ 9
+ wo/ Proteus w/ Proteus
+ 80 80 90 90
+F1-score (%)
+
+ 60 60 70 70
+ 40 40 50 50
+ 20 0.4.5 0.4.6 0.4.7 20 0.4.5 0.4.6 0.4.7 30 0.4.5 0.4.6 0.4.7 30 0.4.5 0.4.6 0.4.7
+ Tor version Tor version Tor version Tor version
+ (a) AWF (b) BAPM (c) NetCLR (d) DF
+ 90 90 90 90
+F1-score (%)
+
+ 70 70 70 70
+ 50 50 50 50
+ 30 0.4.5 0.4.6 0.4.7 30 0.4.5 0.4.6 0.4.7 30 0.4.5 0.4.6 0.4.7 30 0.4.5 0.4.6 0.4.7
+ Tor version Tor version Tor version Tor version
+ (e) ARES (f) Tik-Tok (g) Var-CNN (h) RF
+ Fig. 6: Evaluation of eight WF attacks in terms of F1-score under traffic drift caused by Tor version differences. The WF
+ model is trained on traffic collected using Tor version 0.4.8 and evaluated on traffic from Tor versions 0.4.5, 0.4.6, and 0.4.7.
+
+ TABLE IV: The F1-score of WF attacks under different
+ wo/ Proteus w/ Proteus
+ 100 network environments. We use traffic collected from clients
+ 90 in five countries with varying network environments, including
+F1-score (%)
+
+ 80 Singapore (SG), Japan (JP), the United States (USA), Germany
+ 70 (DE), and the United Kingdom (UK).
+ 60 SG JP USA DE UK
+ 50
+ AWF BAPM ARES DF LR ok N RF w/o Proteus 52.15 43.78 43.21 30.63 32.59
+ NetC Tik-T Var-CN AWF
+ w/ Proteus 54.25 46.87 44.96 31.59 35.87
+
+ Fig. 7: The F1-score of eight WF attacks under traffic drift w/o Proteus 66.01 57.10 53.23 38.26 39.61
+ BAPM
+ w/ Proteus 68.64 58.48 56.29 44.98 48.82
+ caused by Tor version differences. The model is trained using
+ traffic from Tor versions 0.4.8, 0.4.7, and 0.4.6, and tested on w/o Proteus 72.96 66.48 62.87 43.75 46.19
+ ARES
+ traffic from version 0.4.5. w/ Proteus 80.27 74.25 70.95 58.83 65.35
+ w/o Proteus 76.24 68.58 63.94 46.67 50.14
+ DF
+ w/ Proteus 78.10 73.03 69.22 56.18 61.87
+ w/o Proteus 78.25 71.76 68.13 46.66 49.76
+ models. For example, when trained on traffic from Tor 0.4.8, NetCLR
+ w/ Proteus 78.91 73.07 68.76 57.58 60.23
+ the NetCLR model achieves accuracies of 40.85%, 55.86%,
+ w/o Proteus 81.36 74.74 74.61 51.34 50.25
+ and 71.37% on traffic from Tor versions 0.4.5, 0.4.6, and Tik-Tok
+ w/ Proteus 84.49 81.95 79.40 67.40 70.08
+ 0.4.7, respectively. This performance degradation is mainly
+ due to the data augmentation strategy of NetCLR, which w/o Proteus 78.59 74.42 73.00 45.80 47.11
+ Var-CNN
+ w/ Proteus 84.38 81.57 81.69 66.10 69.89
+ is effective only for certain types of traffic drift. It does
+ not sufficiently address differences caused by changes in the w/o Proteus 88.87 87.45 83.10 20.85 17.38
+ RF
+ Tor version. Integrating Proteus with existing WF attacks w/ Proteus 90.63 90.98 92.64 81.66 84.60
+ results in significant performance improvements across all
+ eight models. As shown in Figure 6(h), for drifted traffic from
+ Tor versions 0.4.5, 0.4.6, and 0.4.7, Proteus improves the WF attacks on drifted traffic. For example, Proteus increases
+ F1-score of the RF attack by 39.60%, 16.62%, and 9.85%, the F1-score of AWF, BAPM, ARES, DF, NetCLR, Tikrespectively. Tok, Var-CNN, and RF by 22.15%, 23.33%, 24.96%, 24.63%,
+ Furthermore, we consider a potential mitigation strategy in 24.84%, 20.47%, 18.45%, and 16.77%, respectively. While
+ which the adversary collects traffic from multiple Tor versions increasing the diversity of training data helps mitigate traffic
+ to train the model. Figure 7 shows the F1-score results when drift, the Tor version used by the client remains unknown to
+ the model is trained on a mixture of traffic from Tor versions the attacker. Even when the client’s Tor version differs from
+ 0.4.8, 0.4.7, and 0.4.6, and evaluated on traffic from version the one used for training, Proteus continues to enhance the
+ 0.4.5. Proteus still significantly improves the performance of robustness of WF models against traffic drift.
+
+ 10
+Network Condition Drift. Existing WF attacks [1], [5], [7] TABLE V: Comparison with prior arts in browsing behavior
+train and evaluate models using traffic under identical network drift scenarios, where P, R, F1 represent Precision (%), Recall
+conditions, which is impractical. To evaluate the impact of (%), and F1-score (%).
+network condition drift, we followed the setting of the pre-
+ Homepage Subpages
+vious work [12] and collected real-world Tor traffic for 102
+monitored websites using clients deployed in various countries P R F1 P R F1
+during the same period. Specifically, we collected Tor traffic AWF 54.74 53.74 53.04 22.18 22.87 21.68
+from clients located in Singapore (SG), Japan (JP), the United BAPM 70.29 65.68 65.38 29.98 27.67 25.96
+States (USA), Germany (DE), and the United Kingdom (UK) ARES 75.36 73.28 72.77 31.87 31.96 29.87
+to simulate Tor users in various geographical locations. Due DF 77.73 77.11 76.72 32.12 33.56 31.36
+ NetCLR 78.66 77.58 77.27 34.10 35.50 33.58
+to differences in the geographical distribution of Tor nodes, Tik-Tok 83.48 82.00 81.82 36.07 36.66 34.56
+Tor clients in different regions typically experience significant Var-CNN 85.08 83.60 83.59 39.58 39.19 37.24
+variations in network conditions. RF 89.85 89.21 89.00 48.79 46.74 44.76
+ As shown in Table IV, we train models using traffic col- Proteus 91.28 91.40 91.18 55.32 56.32 55.24
+lected in SG and evaluate the F1-score of WF attacks using
+traffic collected in SG, JP, USA, DE, and UK, respectively.
+We observe that under network condition drift, the F1-scores under browsing behavior drift. Compared to the baselines,
+of existing WF attacks significantly decreased, with RF ex- Proteus improves Precision, Recall, and F1-score by an
+periencing the largest decline. For example, for drifted traffic average of 69.58%, 71.47%, and 78.35%, respectively. Procollected in DE and UK, the F1-scores of RF decreased by teus significantly enhances the consistency of WF models in
+76.5% and 80.44%, respectively. The decline in performance is identifying traffic from different subpages of the same website
+attributed to the dependence of RF on hyperparameter settings by aligning traffic feature distributions and boosting model
+(e.g., the time slot used in feature extraction), which limit the confidence, thereby still enhancing existing WF attacks under
+effectiveness of RF to specific network conditions. client browsing behavior drift.
+ When Proteus is integrated with existing WF attacks,
+all attacks demonstrate significant improvements in the F1- TABLE VI: F1-score comparison of Proteus with UAF and
+score across various network conditions. For instance, for Holmes across various drift scenarios.
+drifted traffic collected from the UK, Proteus improves the Day 0→270 Tor 0.4.8→0.4.5 SG→DE Homepage→Subpage
+F1-score of AWF, BAPM, ARES, DF, NetCLR, Tik-Tok,
+ UAF 50.31 51.15 57.33 36.50
+Var-CNN, and RF by 10.06%, 23.25%, 41.48%, 23.39%, Holmes 54.31 55.62 29.43 38.82
+21.04%, 39.46%, 48.35%, and 386.77%, respectively. Proteus Proteus 82.27 88.28 81.66 55.24
+provides greater performance enhancements for WF attacks
+with larger model parameters, as models with more parameters Comparison with Drift Adaptation Baselines. We further
+have stronger data fitting capabilities and can better adapt to compare Proteus with two representative drift adaptation
+complex traffic drift. The effectiveness of Proteus arises from baselines: Holmes [8] and UAF [42]. Holmes leverages suits ability to adapt to drifted traffic under different network pervised contrastive learning to capture the spatial distribution
+conditions without requiring website labels. Unlike existing of website traffic, enhancing its adaptability to varying traffic
+attacks that maintain fixed model parameters during the attack patterns. In contrast, UAF employs an unsupervised approach
+phase, Proteus fine-tunes the model using traffic without that integrates multiple feature representations and combines
+ground-truth labels during the attack phase, thereby enhancing models trained under diverse scenarios to address traffic drift
+the performance of WF attacks on unknown drifted traffic. during WF attacks.
+Browsing Behavior Drift. We further evaluate the perfor- Table VI shows the F1-score comparison of Proteus with
+mance of WF attacks under client browsing behavior drift. Holmes and UAF. Based on the drift quantification anal-
+Previous works [1], [3], [6], [7] assume that clients only visit ysis in Section V-B, we select four experimental settings
+the homepage of websites, which is unrealistic. This paper with the most significant drift, including temporal drift from
+considers a more realistic browsing behavior drift scenario, Day 0 to Day 270, version drift from Tor 0.4.8 to 0.4.5,
+where the adversary does not have prior knowledge of the network environment drift from clients located in Singapore
+client’s browsing behavior. As shown in Table V, existing (SG) to clients in Germany (DE), and behavioral drift from
+WF attacks experience a significant decline in performance homepage browsing to subpage browsing. The experimental
+under client browsing behavior drift. For example, when the results demonstrate that Proteus consistently outperforms
+client visits subpages unknown to the adversary, the F1-score both baselines across all drift settings, achieving average F1-
+of baselines decreases by an average of 57.32%. score improvements of 82.5% over Holmes and 57.45% over
+ Even in realistic and challenging browsing behavior drift UAF. This significant performance gain can be attributed to the
+scenarios, Proteus can still enhance the performance of unified design of Proteus, which jointly incorporates feature
+existing WF attacks on drifted traffic. We combine Proteus alignment, confidence augmentation, and pseudo-labeling to
+with the SOTA attack RF to achieve optimal performance enable robust adaptation to complex traffic drift. In contrast,
+
+ 11
+TABLE VII: Evaluating the F1-score of WF attacks under the TABLE VIII: F1-scores of WF attack performance on multitemporal drift in the open world. tab browsing traffic under different traffic overlap ratios.
+ 14 30 90 150 270 20% 40% 60% 80%
+ w/o Proteus 46.30 44.34 35.61 31.02 26.52 RF 51.29 50.81 49.54 48.52
+ AWF
+ w/ Proteus 49.35 45.56 40.08 34.42 30.27 RF w/ MMD 58.21 57.00 56.60 54.67
+ RF w/ Proteus 81.11 78.97 76.78 73.62
+ w/o Proteus 59.74 54.70 44.91 40.00 33.63
+ BAPM
+ w/ Proteus 64.72 61.00 55.91 45.70 45.16
+ w/o Proteus 67.88 63.73 50.96 40.95 26.42
+ ARES
+ w/ Proteus 76.97 75.31 68.85 62.59 54.99 E. Evaluating Proteus under Defenses
+ w/o Proteus 67.85 62.93 50.41 40.50 25.92
+ DF
+ w/ Proteus 75.08 70.56 63.91 57.00 51.25
+ We further evaluate Proteus under several WF defenses, including WTF-PAD [21], obfs4 [41], and Front [22]. The WTFw/o Proteus 71.94 66.28 54.50 46.06 32.81
+ NetCLR
+ w/ Proteus 73.34 68.10 61.03 53.66 46.66 PAD defense mitigates traffic analysis by inserting dummy
+ packets to obfuscate burst patterns. The variant of WTF-PAD
+ w/o Proteus 75.41 70.24 58.43 50.88 37.86
+ Tik-Tok has been deployed in Tor based on circuit padding [45]. As
+ w/ Proteus 81.17 77.78 72.76 65.51 59.81
+ shown in Figure 8, we evaluate the F1-score of four robust
+ w/o Proteus 78.53 73.16 60.45 47.33 26.49
+ Var-CNN WF attacks in identifying temporal-drifted traffic under the
+ w/ Proteus 83.04 79.79 72.84 65.82 56.83
+ WTF-PAD defense. We observe that Proteus still enhances
+ w/o Proteus 85.97 79.88 68.54 60.59 36.83
+ RF WF attacks even under the WTF-PAD defense. For instance,
+ w/ Proteus 88.23 84.98 82.97 79.15 73.94
+ for 270-day drifted traffic, Proteus improves the F1-score of
+ RF, ARES, Tik-Tok, and DF by 56.29%, 39.90%, 30.59%,
+both baselines show limited generalization capabilities, per- and 15.36%, respectively.
+forming effectively only under conditions with relatively minor We next evaluate the performance of Proteus on obfusdrift. cated traffic without adversarial training. Obfs4, the default
+ pluggable transport in the Tor network, is widely used to
+ obfuscate traffic and enable users to circumvent traffic cen-
+D. Open-World Evaluations
+ sorship imposed by ISPs or governmental entities. We use
+ Next, we evaluate the performance of Proteus in the open- clean traffic as training data and evaluate WF attacks on the
+world scenario. In the open-world scenario, Tor users can traffic obfuscated by obfs4. As shown in Figure 9(a), Proteus
+browse non-monitored websites unknown to the adversary. achieves an average improvement of 66.48% in F1-score over
+We randomly selected 20,000 non-monitored websites from existing WF attacks under obfs4 obfuscation, demonstrating
+the Tranco list, and collected Tor traffic from 102 monitored strong adaptability to unseen obfuscation strategies.
+websites and 20,000 non-monitored websites from March to We further examine Front, a WF defense mechanism that
+December 2024. Table VII shows the evaluation of the F1- introduces dummy packet padding during the initial phase
+score for WF attacks under temporal drift in the open-world of page loading. Compared to the WTF-PAD defense, Front
+scenario. To analyze the enhancement effect of Proteus on provides stronger obfuscation while incurring lower bandwidth
+existing WF attacks in the open-world scenario, we evaluate overhead. We implemented a real-world deployment of Front
+the F1-score of WF attacks with and without Proteus inte- based on the WFDefProxy framework [46] to assess the
+gration on day 14, day 30, day 90, day 150, and day 270. performance of Proteus under realistic defense conditions. To
+We observe that Proteus enhances all baselines in identifying emulate practical attack scenarios, we designed a challenging
+drifted traffic in the open-world scenario. For instance, for experimental setting where the adversary trains the WF model
+traffic with the 270-day drift, Proteus improves the F1-score on simulated Front traffic but is tested on traffic collected
+of AWF, BAPM, ARES, DF, NetCLR, Tik-Tok, Var-CNN, from the real-world Front deployment. In this setting, the
+and RF by 14.14%, 34.28%, 108.14%, 97.72%, 42.21%, defense implementation details remain unknown to the ad-
+57.98%, 114.53%, and 100.76%, respectively. Compared to versary, causing a significant traffic distribution drift between
+the closed-world scenario, Proteus exhibits a more significant training and testing data. As shown in Figure 9(b), Proteus
+enhancement of WF attacks in the open-world scenario. The outperforms four baseline methods, achieving an average F1-
+reason is that Proteus can adapt to various traffic drifts in the score improvement of 48.1%, indicating its robustness under
+open-world scenario, such as traffic drifts caused by changes real-world deployments of Front defense.
+in website content and the emergence of new non-monitored Note that the robustness of WF attacks against defenses
+websites. in prior works has primarily stemmed from improvements in
+ In summary, during the attack phase, Proteus fine-tunes feature extraction [7], [8], [13] and model architectures [1],
+the model parameters using traffic from non-monitored web- [5]. In contrast, Proteus does not modify these components
+sites. This enables adaptation to traffic drift from websites in existing WF attacks. Instead, Proteus only fine-tunes
+unknown to the adversary, thereby significantly enhancing the the model parameters to enhance the identification of drifted
+performance of WF attacks in the open-world scenario. traffic, remaining effective even under WF defenses.
+
+ 12
+ wo/ Proteus w/ Proteus
+
+ 80 60 60 50
+F1-score (%)
+
+ 45 45 40
+ 60
+ 30 30 30
+ 40 14 30 90 150 270 14 30 90 150 270 14 30 90 150 270 14 30 90 150 270
+ Time (days) Time (days) Time (days) Time (days)
+ (a) RF (b) ARES (c) Tik-Tok (d) DF
+ Fig. 8: Evaluating the F1-score of robust WF attacks in identifying temporal-drifted traffic under the WTF-PAD defense.
+
+ TABLE IX: Compared with the F1-score of NetCLR finewo/ Proteus w/ Proteus
+ tuned with labeled drifted traffic.
+ 80 80
+F1-score (%)
+
+ 0 30 90 150 270
+ 60 60
+ Base 75.77 66.92 55.81 49.03 43.92
+ 40 40
+ Supervised fine-tuning 75.77 67.87 62.33 54.96 56.79
+ 20 20
+ Proteus 75.77 70.58 63.05 56.16 52.71
+ RF ARES Tik-Tok DF RF ARES Tik-Tok DF
+ (a) Obfs4 defense (b) Front defense Supervised fine-tuning
+ 75.77 74.02 71.71 61.07 63.40
+ combined with Proteus
+ Fig. 9: The F1-score of robust WF attacks under the obfs4 and
+ Front defenses.
+ tuning, Proteus empowers WF models to sustain strong attack
+ efficacy, even in the presence of heterogeneous concept drift.
+ F. Evaluating Proteus in Multi-Tab Browsing
+ G. Comparison with Supervised Fine-tuning
+ We next evaluate the performance of Proteus in handling In this section, we compare Proteus with supervised finemulti-tab traffic scenarios. Following prior studies [5], [14], tuning. Following the default settings of NetCLR, we sample
+ [15], we simulate multi-tab browsing behavior to generate the drifted traffic with website labels to fine-tune the pre-trained
+ required traffic data. Specifically, traffic traces are randomly NetCLR model. As shown in Table IX, NetCLR with supersampled from both monitored and non-monitored websites and vised fine-tuning achieves a higher F1-score than the base
+ subsequently combined to produce streams that exhibit multi- model under temporal drift. We observe that for short-term
+ tab characteristics. To capture varying levels of traffic overlap, drifted traffic, Proteus outperforms supervised fine-tuning.
+ we configure multiple overlap ratios and merge traffic traces For example, on days 30, 90, and 150, Proteus achieves
+ based on packet timestamps. Two datasets are constructed to the 3.99%, 1.16%, and 2.18% improvement in F1-score over
+ assess the impact of temporal drift and multi-tab browsing: supervised fine-tuning, respectively. However, for longer-term
+ one from Day 0, used for training the WF models, and another drifted traffic, supervised fine-tuning has the advantage over
+ from Day 270, used for model testing. This setup allows us to Proteus. Despite this, collecting labeled drifted traffic for
+ comprehensively evaluate the robustness of Proteus against supervised fine-tuning is impractical, as certain forms of traffic
+ the dual challenges of long-term distribution drift and traffic drift remain unknown to the adversary. The adversary can only
+ heterogeneity. collect drifted traffic without ground-truth labels during the
+ As shown in Table VIII, Proteus consistently enhances the attack phase.
+ performance of the RF attack model, even under conditions Proteus can be combined with supervised fine-tuning to
+ of substantial heterogeneity and temporal drift. For example, further boost performance. Specifically, we first fine-tune the
+ with an 80% traffic overlap ratio, Proteus achieves a 51.73% model with labeled drifted traffic and then fine-tune the model
+ relative improvement in F1-score compared to the baseline RF with traffic without ground-truth labels collected during the
+ attack. Moreover, when compared to an RF model augmented attack phase. When combined with supervised fine-tuning,
+ solely with the MMD module, Proteus demonstrates superior Proteus improves the F1-score of the base model for drifted
+ overall performance. This improvement can be attributed to traffic on days 30, 90, 150, and 270 by 10.61%, 28.49%,
+ the synergistic interaction among its three modules: (i) MMD 24.56%, and 44.35%, respectively.
+ facilitates robust feature alignment; (ii) the aligned features
+ enable the generation of reliable pseudo-labels; and (iii) these H. Impact of the Scale of Unannotated Traffic
+ high-quality pseudo-labels further mitigate the risk of mis- In Figure 10, we evaluate the impact of the scale of
+ alignment during feature alignment. Through iterative fine- unannotated traffic on Proteus. Specifically, we evaluate the
+
+ 13
+ wo/ Proteus w/ Proteus wo/ Proteus w/ Proteus
+ 80 80 3 2.61 2.77
+
+ Latency (ms)
+Accuracy (%)
+
+ 2 1.50 1.59 1.48 1.49 1.51
+ 70 70 1.09
+ 1
+ 0.19 0.23 0.36 0.25 0.24 0.18 0.41 0.21
+ 60 60 0
+ 40 50 60 70 80 90 100 5 10 20 30 40 60 80 AWF BAPM ARE
+ S DF LR ok N RF
+ # of Websites # of Instances per Website NetC Tik-T Var-CN
+ Fig. 10: Evaluating the impact of unannotated traffic scale on Fig. 11: Comparison of website identification latency with and
+ Proteus. without Proteus integration.
+
+ TABLE X: Ablation analysis of Proteus.
+ distribution alignment module, model confidence enhancement
+ Precision Recall F1-score
+ module, and adaptive pseudo-labeling module individually
+ Base 61.00 62.81 59.57 improve the F1-score of RF by 9.97%, 28.82%, and 27.60%,
+ Feature distribution respectively. Thus, all three modules contribute to the perfor-
+ 65.16 68.12 65.51
+ alignment mance of Proteus. When the three modules are combined,
+ Model confidence Proteus achieves the optimal F1 score of 82.27%, represent-
+ 77.11 77.02 76.74 ing a 38.11% improvement over the base model.
+ enhancement
+ Adaptive J. Latency Analysis
+ 76.86 79.97 76.01
+ pseudo-labeling
+ Proteus 81.90 83.21 82.27
+ In Figure 11, we illustrate the latency analysis of DLbased WF attacks with and without integration of Proteus. All
+ experiments were conducted using an NVIDIA GeForce RTX
+ accuracy of Proteus combined with RF using 270-day drifted 4090 GPU to accelerate the fine-tuning and inference of deep
+ traffic. As shown in Figure 10(a), we first analyze the impact learning models. Initially, we measure the latency required
+ of the number of websites in the unannotated traffic. In real- to identify a single traffic trace for the existing WF attacks.
+ world scenarios, the adversary may only collect partial traffic Next, we integrate Proteus with these attacks, calculating
+ from certain websites over a short period. Our findings indicate the latency for model fine-tuning once, as well as website
+ that as the number of websites included in the unannotated identification. The total latency is then divided by the number
+ dataset increases, the enhancement effect of Proteus becomes of traffic traces to determine the average latency. Our findings
+ more pronounced. For example, when the unannotated dataset show that integrating Proteus increases the average latency
+ contains traffic from 40 and 100 websites, Proteus boosts by 1.5 milliseconds across the eight WF attacks. Furthermore,
+ the accuracy of RF by 3.71% and 29.88%, respectively. Next, larger model parameter sizes correlate with higher fine-tuning
+ we analyze the impact of the number of traffic instances per latencies. For example, the latency increases by 2.25 milwebsite in Figure 10(b). Similarly, as the number of instances liseconds for ARES and 2.36 milliseconds for Var-CNN. In
+ per website increases, Proteus shows a greater improvement. practice, the adversary could identify websites first, followed
+ Specifically, when the number of instances per website rises by fine-tuning the model with Proteus to improve the attack
+ from 5 to 80, Proteus ’s enhancement of the accuracy of RF performance on future drifted traffic. In this scenario, Proteus
+ grows from 11.72% to 28.81%. would not affect the latency of website identification during
+ Overall, Proteus is able to enhance the performance of WF attacks.
+ WF attacks even when the unannotated traffic contains limited VI. D ISCUSSION
+ websites or traffic traces. As the scale of the unannotated
+ traffic increases, the effectiveness of Proteus in strengthening Implications of Proteus. Proteus introduces a continuously
+ existing WF attacks also improves. In particular, attackers can evolving framework for WF attacks that leverages traffic withfurther boost performance not only by continuously collecting out ground-truth labels during the attack phase, significantly
+ more unannotated traffic during the attack phase, but also by enhancing the effectiveness of WF attacks against real-world
+ leveraging control over Tor entry or relay nodes to gather drifted traffic. The adversary can further strengthen Proteus
+ additional unannotated traffic. by collecting additional unannotated real-world traffic traces,
+ potentially by controlling middle nodes in the Tor network.
+ I. Ablation Analysis Furthermore, experimental results in Section V-G demonstrate
+ Next, we perform the ablation analysis of Proteus. Specif- that the adversary can combine Proteus with supervised fineically, we evaluate the performance of Proteus on 270-day tuning to improve its performance. For instance, the adversary
+ drifted traffic. Table X shows the ablation results for the can collect a small amount of labeled synthetic [6] or exit-node
+ three core modules of Proteus. We observe that the feature traces [9] to achieve supervised fine-tuning.
+
+ 14
+Limitations of Proteus. First, Proteus requires continuous data, enhancing model performance across various drift scefine-tuning of the model, which increases computational over- narios. In contrast, Proteus fine-tunes the model using the
+head. Second, we evaluated Proteus on multiple common continuously accumulating traffic without ground-truth labels
+scenarios of traffic drift observed in real-world scenarios. To collected during the attack phase. It utilizes various adaptive
+the best of our knowledge, this paper represents the most techniques to ensure effectiveness across multiple Tor traffic
+comprehensive evaluation of Tor traffic drift types to date. drift scenarios.
+However, the effectiveness of Proteus against more complex
+ VIII. C ONCLUSION
+traffic drift (e.g., substantial updates to website templates and
+content) has not yet been validated. Finally, experimental In this paper, we propose Proteus, a WF attack framework
+results in Section V-H show that the scale of unannotated that adapts to real-world traffic drift by fine-tuning models
+traffic impacts the enhancement effect of Proteus. The more with traffic without ground-truth labels. Proteus improves the
+unannotated traffic available, the stronger the enhancement consistency of WF model predictions for both original and
+effect of Proteus. In cases where unannotated traffic is lim- drifted traffic from the same website by aligning feature disited, the adversary could collect additional traffic to enhance tributions and optimizing entropy distributions. Furthermore,
+Proteus, such as unannotated traffic from controlled Tor entry Proteus uses a Gaussian mixture model to generate reliable
+nodes or middle nodes. pseudo-labels, further fine-tuning the model to enhance attack
+Countermeasure against Proteus. The effectiveness of Pro- performance. We evaluate Proteus across various traffic drift
+teus depends on the inherent relationship between original scenarios, and the experimental results demonstrate significant
+traffic and drifted traffic from the same website, which is improvements in WF attack performance against drifted traffic.
+captured during the model fine-tuning process. A potential IX. E THICS C ONSIDERATIONS
+countermeasure is to apply adversarial machine learning tech-
+ Similar to previous studies [1], [3], [5], our research
+niques [47], specifically by generating adversarial samples that
+ fully adheres to the guidelines of the Tor Research Safety
+disrupt the model’s ability to learn this relationship. We will
+ Board [53]. Regarding the data collection process, all trafexplore this design in future work.
+ fic was collected exclusively from locally initiated browsing
+ sessions and did not involve any real-world Tor user traffic.
+ VII. R ELATED W ORK Furthermore, we continuously monitored bandwidth consump-
+WF Attacks against Traffic Drift. DL-based WF attacks have tion during data collection, which averaged 3.52 Mbps. Given
+demonstrated exceptional performance under controlled con- that the average bandwidth of the Tor network in 2024 exceeds
+ditions [1], [3], [5]–[8], [11], [13], [15], [16]. However, their 250 Gbps [54], our data collection did not interfere with the
+effectiveness significantly declines in real-world scenarios due normal operation of the Tor network.
+to traffic drift. Early studies periodically collected large-scale ACKNOWLEDGEMENTS
+labeled traffic datasets for model retraining [1], [3], [5], which
+ We thank the anonymous reviewers for their valuable comis impractical. Few-shot fine-tuning [4], [6], [17] eliminated
+ ments. This work is supported in part by the National Natural
+the reliance on large labeled traffic but failed to address the
+ Science Foundation of China (NSFC) under Grant 62132011,
+diverse traffic drift encountered in real-world scenarios. Online
+ 62472247, 62425201, and the Ant Group Postdoctoral Proadaptation methods [9], [10] using real-world traces are more
+ gramme. Qi Li is the corresponding author of this paper.
+practical. OnlineWF [9] collected labeled traffic from exit
+nodes of the Tor network to train and update the model. R EFERENCES
+However, WF attacks typically target the entry side of the Tor [1] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fingerprinting:
+network, where traffic patterns differ greatly from those at the Undermining website fingerprinting defenses with deep learning,” in
+exit. Furthermore, Tor users can use WF defenses that hide Proceedings of the 2018 ACM SIGSAC Conference on Computer and
+ Communications Security, 2018, pp. 1928–1943.
+traffic patterns at the entry node but do not affect exit traffic. [2] R. Dingledine, N. Mathewson, and P. Syverson, “Tor: The second-
+Different from previous works, Proteus leverages real-world generation onion router,” Naval Research Lab Washington DC, Tech.
+traces without ground-truth labels collected during the attack Rep., 2004.
+ [3] V. Rimmer, D. Preuveneers, M. Juarez, T. Van Goethem, and W. Joosen,
+phase to fine-tune the model, enabling it to adapt to diverse “Automated website fingerprinting through deep learning,” in NDSS,
+traffic drift in real-world scenarios. 2018.
+Unsupervised Domain Adaptation. Unsupervised Domain [4] P. Sirinam, N. Mathews, M. S. Rahman, and M. Wright, “Triplet
+ fingerprinting: More practical and portable website fingerprinting with
+Adaptation (UDA) techniques leverage unannotated samples to n-shot learning,” in Proceedings of the 2019 ACM SIGSAC Conference
+fine-tune models for adapting to drifted samples, which have on Computer and Communications Security, 2019, pp. 1131–1148.
+been extensively studied in the field of computer vision [48], [5] X. Deng, Q. Yin, Z. Liu, X. Zhao, Q. Li, M. Xu, K. Xu, and J. Wu,
+ “Robust multi-tab website fingerprinting attacks in the wild,” in 2023
+[49]. UDA improves the generalization of DL models to IEEE Symposium on Security and Privacy (SP). IEEE Computer
+images from different domains by employing methods such Society, 2023, pp. 1005–1022.
+as domain alignment [50] or self-training [51]. In the field [6] A. Bahramali, A. Bozorgi, and A. Houmansadr, “Realistic website
+ fingerprinting by augmenting network traces,” in Proceedings of the
+of cybersecurity, Thirumuruganathan et al. [52] utilized self- 2023 ACM SIGSAC Conference on Computer and Communications
+training techniques to fine-tune the model with unlabeled Security, 2023, pp. 1035–1049.
+
+ 15
+ [7] M. Shen, K. Ji, Z. Gao, Q. Li, L. Zhu, and K. Xu, “Subverting [29] X. Wu, Q. Zhou, Z. Yang, C. Zhao, L. J. Latecki et al., “Entropy
+ website fingerprinting defenses with robust traffic representation,” in minimization vs. diversity maximization for domain adaptation,” arXiv
+ 32nd USENIX Security Symposium (USENIX Security 23), 2023, pp. preprint arXiv:2002.01690, 2020.
+ 607–624. [30] Y. Li, L. Guo, and Y. Ge, “Pseudo labels for unsupervised domain
+ [8] X. Deng, Q. Li, and K. Xu, “Robust and reliable early-stage website adaptation: A review,” Electronics, vol. 12, no. 15, p. 3325, 2023.
+ fingerprinting attacks via spatial-temporal distribution analysis,” in Pro- [31] S. Chhabra, H. Venkateswara, and B. Li, “Domain adaptation using
+ ceedings of the 2024 on ACM SIGSAC Conference on Computer and pseudo labels,” arXiv preprint arXiv:2402.06809, 2024.
+ Communications Security, 2024, pp. 1997–2011. [32] A. Berlinet and C. Thomas-Agnan, Reproducing kernel Hilbert spaces
+ [9] G. Cherubin, R. Jansen, and C. Troncoso, “Online website fingerprinting: in probability and statistics. Springer Science & Business Media, 2011.
+ Evaluating website fingerprinting attacks on tor in the real world,” in 31st [33] G. K. Dziugaite, D. M. Roy, and Z. Ghahramani, “Training generative
+ USENIX Security Symposium (USENIX Security 22), 2022, pp. 753–770. neural networks via maximum mean discrepancy optimization,” arXiv
+[10] R. Jansen, R. Wails, and A. Johnson, “Repositioning real-world website preprint arXiv:1505.03906, 2015.
+ fingerprinting on tor,” in Proceedings of the 23rd Workshop on Privacy [34] B. Schölkopf, “The kernel trick for distances,” Advances in neural
+ in the Electronic Society, 2023, pp. 124–140. information processing systems, vol. 13, 2000.
+[11] X. Zhao, X. Deng, Q. Li, Y. Liu, Z. Liu, K. Sun, and K. Xu, “Towards [35] C. E. Shannon, “A mathematical theory of communication,” The Bell
+ fine-grained webpage fingerprinting at scale,” in Proceedings of the system technical journal, vol. 27, no. 3, pp. 379–423, 1948.
+ 2024 on ACM SIGSAC Conference on Computer and Communications [36] E. Arazo, D. Ortego, P. Albert, N. E. O’Connor, and K. McGuinness,
+ Security, 2024, pp. 423–436. “Pseudo-labeling and confirmation bias in deep semi-supervised learn-
+[12] M. Juarez, S. Afroz, G. Acar, C. Diaz, and R. Greenstadt, “A critical ing,” in 2020 International joint conference on neural networks (IJCNN).
+ evaluation of website fingerprinting attacks,” in Proceedings of the 2014 IEEE, 2020, pp. 1–8.
+ ACM SIGSAC Conference on Computer and Communications Security, [37] D.-H. Lee et al., “Pseudo-label: The simple and efficient semi-supervised
+ 2014, pp. 263–274. learning method for deep neural networks,” in Workshop on challenges
+[13] M. S. Rahman, P. Sirinam, N. Mathews, K. G. Gangadhara, and in representation learning, ICML, vol. 3, no. 2. Atlanta, 2013, p. 896.
+ M. Wright, “Tik-tok: The utility of packet timing in website finger- [38] D. A. Reynolds et al., “Gaussian mixture models.” Encyclopedia of
+ printing attacks,” Proceedings on Privacy Enhancing Technologies, biometrics, vol. 741, no. 659-663, 2009.
+ vol. 3, pp. 5–24, 2020. [39] T. K. Moon, “The expectation-maximization algorithm,” IEEE Signal
+[14] Z. Guan, G. Xiong, G. Gou, Z. Li, M. Cui, and C. Liu, “Bapm: Block processing magazine, vol. 13, no. 6, pp. 47–60, 1996.
+ attention profiling model for multi-tab website fingerprinting attacks on [40] V. Le Pochat, T. Van Goethem, S. Tajalizadehkhoob, M. Korczyński,
+ tor,” in Annual Computer Security Applications Conference, 2021, pp. and W. Joosen, “Tranco: A research-oriented top sites ranking hardened
+ 248–259. against manipulation,” in Proceedings of the 26th Annual Network and
+[15] Z. Jin, T. Lu, S. Luo, and J. Shang, “Transformer-based model for multi- Distributed System Security Symposium, ser. NDSS 2019, Feb. 2019.
+ tab website fingerprinting attack,” in Proceedings of the 2023 ACM [41] Y. Angel, “The obfs4 protocol: Specification and implementation,” https:
+ SIGSAC Conference on Computer and Communications Security, 2023, //gitweb.torproject.org/pluggable-transports/obfs4.git, 2015, accessed:
+ pp. 1050–1064. 2025-07-25.
+[16] S. Bhat, D. Lu, A. Kwon, and S. Devadas, “Var-cnn: A data-efficient [42] G. Zhang, J. Cao, M. Xu, and X. Deng, “Unsupervised and adaptive
+ website fingerprinting attack based on deep learning,” Proceedings on tor website fingerprinting,” in International Conference on Security and
+ Privacy Enhancing Technologies, vol. 4, pp. 292–310, 2019. Privacy in Communication Systems. Springer, 2023, pp. 209–229.
+[17] S. E. Oh, N. Mathews, M. S. Rahman, M. Wright, and N. Hopper, [43] G. J. Székely and M. L. Rizzo, “Energy statistics: A class of statistics
+ “Gandalf: Gan for data-limited fingerprinting,” Proceedings on Privacy based on distances,” Journal of statistical planning and inference, vol.
+ Enhancing Technologies, vol. 2021, no. 2, 2021. 143, no. 8, pp. 1249–1272, 2013.
+[18] T. Wang, X. Cai, R. Nithyanand, R. Johnson, and I. Goldberg, “Effective [44] A. S. Iwashita and J. P. Papa, “An overview on concept drift learning,”
+ attacks and provable defenses for website fingerprinting,” in 23rd IEEE access, vol. 7, pp. 1532–1547, 2018.
+ USENIX Security Symposium, 2014, pp. 143–157. [45] (2023) Circuit-level padding. [Online]. Available: https://spec.torproject.
+ org/padding-spec/circuit-level-padding.html
+[19] A. Panchenko, F. Lanze, J. Pennekamp, T. Engel, A. Zinnen, M. Henze,
+ and K. Wehrle, “Website fingerprinting at internet scale.” in NDSS, 2016. [46] J. Gong, W. Zhang, C. Zhang, and T. Wang, “Wfdefproxy: Modularly implementing and empirically evaluating website fingerprinting
+[20] J. Hayes and G. Danezis, “k-fingerprinting: A robust scalable website
+ defenses,” arXiv preprint arXiv:2111.12629, 2021.
+ fingerprinting technique,” in 25th USENIX Security Symposium, 2016,
+ pp. 1187–1203. [47] B. Biggio and F. Roli, “Wild patterns: Ten years after the rise of
+ adversarial machine learning,” in Proceedings of the 2018 ACM SIGSAC
+[21] M. Juárez, M. Imani, M. Perry, C. Dıaz, and M. Wright, “Wtf- Conference on Computer and Communications Security, 2018, pp.
+ pad: toward an efficient website fingerprinting defense for tor,” CoRR, 2154–2156.
+ abs/1512.00524, 2015.
+ [48] X. Liu, C. Yoo, F. Xing, H. Oh, G. El Fakhri, J.-W. Kang, J. Woo et al.,
+[22] J. Gong and T. Wang, “Zero-delay lightweight defenses against website “Deep unsupervised domain adaptation: A review of recent advances
+ fingerprinting,” in 29th USENIX Security Symposium, 2020, pp. 717– and perspectives,” APSIPA Transactions on Signal and Information
+ 734. Processing, vol. 11, no. 1, 2022.
+[23] J. Gong, W. Zhang, C. Zhang, and T. Wang, “Surakav: generating [49] G. Kang, L. Jiang, Y. Yang, and A. G. Hauptmann, “Contrastive
+ realistic traces for a strong website fingerprinting defense,” in 2022 IEEE adaptation network for unsupervised domain adaptation,” in Proceedings
+ Symposium on Security and Privacy (SP). IEEE, 2022, pp. 1558–1573. of the IEEE/CVF conference on computer vision and pattern recognition,
+[24] T. Wang and I. Goldberg, “Walkie-talkie: An efficient defense against 2019, pp. 4893–4902.
+ passive website fingerprinting attacks,” in 26th USENIX Security Sym- [50] G. Wei, C. Lan, W. Zeng, and Z. Chen, “Metaalign: Coordinating domain
+ posium, 2017, pp. 1375–1390. alignment and classification for unsupervised domain adaptation,” in
+[25] J. K. Holland and N. Hopper, “Regulator: A straightforward website Proceedings of the IEEE/CVF conference on computer vision and
+ fingerprinting defense,” Proceedings on Privacy Enhancing Technolo- pattern recognition, 2021, pp. 16 643–16 653.
+ gies, vol. 2022, no. 2, pp. 344–362, 2022. [51] Y. Zou, Z. Yu, B. Kumar, and J. Wang, “Unsupervised domain adaptation
+[26] S. J. Pan, I. W. Tsang, J. T. Kwok, and Q. Yang, “Domain adaptation for semantic segmentation via class-balanced self-training,” in Proceedvia transfer component analysis,” IEEE transactions on neural networks, ings of the European conference on computer vision (ECCV), 2018, pp.
+ vol. 22, no. 2, pp. 199–210, 2010. 289–305.
+[27] M. Long, Y. Cao, J. Wang, and M. Jordan, “Learning transferable [52] S. Thirumuruganathan, F. Deniz, I. Khalil, T. Yu, M. Nabeel, and
+ features with deep adaptation networks,” in International conference on M. Ouzzani, “Detecting and mitigating sampling bias in cybersecurity
+ machine learning. PMLR, 2015, pp. 97–105. with unlabeled data,” in 33rd USENIX Security Symposium (USENIX
+[28] Y. Grandvalet and Y. Bengio, “Semi-supervised learning by entropy Security 24), 2024, pp. 1741–1758.
+ minimization,” Advances in neural information processing systems, [53] “Research safety board,” 2024, accessed: December 29, 2024. [Online].
+ vol. 17, 2004. Available: https://research.torproject.org/safetyboard/
+
+ 16
+[54] K. Loesing, S. J. Murdoch, and R. Dingledine, “A case study on 90, day 150, and day 270. After data cleaning, 102 websites
+ measuring statistical data in the Tor anonymity network,” in Proceedings remained consistently accessible over the 9 months. These
+ of the Workshop on Ethics in Computer Security Research (WECSR
+ 2010), ser. LNCS. Springer, January 2010. websites were selected as monitored websites, resulting in
+[55] G. Acar, M. Juarez, and individual contributors, “tor-browser-selenium 142,067 traces collected. Note that we collected this dataset
+ - tor browser automation with selenium,” https://github.com/webfp/ using cloud servers deployed in Singapore, with the client’s
+ tor-browser-selenium, 2023.
+[56] “Selenium: a browser automation framework and ecosystem.” 2021. Tor version set to 0.4.8.
+ [Online]. Available: https://github.com/SeleniumHQ/selenium Dataset for Tor Version Drift. Tor supports multiple versions
+[57] X. Cai, R. Nithyanand, T. Wang, R. Johnson, and I. Goldberg, “A simultaneously, and adversaries lack prior knowledge of the
+ systematic approach to developing and evaluating website fingerprinting
+ defenses,” in Proceedings of the 2014 ACM SIGSAC Conference on specific Tor version used by clients. Therefore, the Tor version
+ Computer and Communications Security, 2014, pp. 227–238. used by clients may differ from the version used by adversaries
+[58] K. P. Dyer, S. E. Coull, T. Ristenpart, and T. Shrimpton, “Peek-a-boo, i to train the WF models. We selected four major stable Tor
+ still see you: Why efficient traffic analysis countermeasures fail,” in 2012
+ IEEE symposium on security and privacy. IEEE, 2012, pp. 332–346. versions from the past three years: 0.4.8, 0.4.7, 0.4.6, and
+[59] X. Cai, R. Nithyanand, and R. Johnson, “Cs-buflo: A congestion 0.4.5. Notably, our focus is on Tor versions rather than Tor
+ sensitive website fingerprinting defense,” in Proceedings of the 13th browser bundle (TBB) versions. The reason is that TBB
+ Workshop on Privacy in the Electronic Society, 2014, pp. 121–130.
+[60] W. De la Cadena, A. Mitseva, J. Hiller, J. Pennekamp, S. Reuter, J. Filter, updates occur more frequently. In July 2024, we used 20
+ T. Engel, K. Wehrle, and A. Panchenko, “Trafficsliver: Fighting website servers deployed in Singapore to collect traffic for the 102
+ fingerprinting attacks with traffic splitting,” in Proceedings of the 2020 monitored websites under these four Tor versions. In total, we
+ ACM SIGSAC Conference on Computer and Communications Security,
+ 2020, pp. 1971–1985. collected 100,162 traces for the Tor version drift.
+[61] N. Mathews, J. K. Holland, S. E. Oh, M. S. Rahman, N. Hopper, and Dataset for Network Condition Drift. Previous research [6]
+ M. Wright, “Sok: A critical evaluation of efficient website fingerprinting has shown that changes in network conditions can degrade the
+ defenses,” in 2023 IEEE Symposium on Security and Privacy (SP).
+ IEEE, 2023, pp. 969–986. performance of WF attacks. To evaluate traffic drift resulting
+ from real-world variations in network conditions, we collected
+ A PPENDIX A traffic from clients located in five different countries. Due to
+ DATA C OLLECTION the varying density of Tor nodes across different regions, Tor
+ Most prior WF studies focused solely on traffic drift caused clients in different countries encounter significantly different
+by changes in website content over time [4], [6]. As discussed network conditions. Specifically, in December 2024, traffic
+in Section II, Tor traffic drift encompasses client-side drift, was collected from clients in Singapore, Japan, the United
+server-side drift, and network-side drift. To comprehensively States, Germany, and the United Kingdom during visits to
+evaluate the effectiveness of Proteus, we collected real- 102 monitored websites. This collection yielded a dataset
+world Tor traffic across various drift scenarios from March comprising 34,700 real-world traces.
+to December 2024 and from June to July 2025. Specifi- Dataset for Browsing Behavior Drift. Most WF attacks
+cally, we extended the tor-browser-selenium tool [55] and assume that clients only visit website homepages, which is
+implemented automated Tor traffic collection based on the unrealistic. WF attacks trained solely on homepage traffic
+Selenium framework [56]. We configured the default Tor experience a significant performance drop when identifying
+Browser Bundle (TBB) version as 12.0.10 and the Tor version subpage traffic [5], [11]. WF attacks targeting subpages asas 0.4.8. sume that the adversary has prior knowledge of client browsing
+ Our data collection tool was deployed on 40 different cloud behavior [11]. However, most websites contain a large number
+servers located in Singapore, Japan, the United States, Ger- of subpages, and clients may visit subpages unknown to the
+many, and the United Kingdom. Following prior research [1], adversary. This dynamic browsing behavior results in traffic
+[5], we set the browsing time for each session to 200 seconds drift. To efficiently collect subpage traffic for monitored webto ensure full page loads. To filter out traffic from pages that sites, we first crawl all subpage URLs for the 102 monitored
+failed to load, we captured screenshots after the page load and websites. Irrelevant domains were filtered out based on the
+utilized a CNN-based image classification model to identify root domain. In November 2024, we randomly collected 200
+failed page loads. In total, our dataset contains over 300,000 real-world subpage traffic traces for each monitored website.
+real-world Tor traces, encompassing six traffic drift scenarios. Open-World Dataset. We considered temporal drift in Tor
+The details of each dataset are described below. traffic in the open-world scenario. Specifically, we ran-
+Dataset for Temporal Drift. To evaluate traffic drift caused domly selected 20,000 websites from the Tranco list as nonby changes in website content over time, we continuously monitored websites. Note that non-monitored websites do not
+collected traffic from 102 monitored websites between March overlap with monitored websites. From March to December
+2024 and December 2024. These monitored websites were 2024, we collected traffic for these non-monitored websites
+selected from the top 120 websites of the Tranco list [40] and incorporated it into the original time-drift dataset, thereby
+generated on March 20242 . We began collecting traffic to building the open-world dataset.
+train the model on March 13 (i.e., day 0), and subsequently Dataset with WF Defense. In recent years, WF defenses have
+collected real-world drifted traffic on day 14, day 30, day been extensively studied [21]–[24], [57]–[60]. WF defenses
+ disrupt the effectiveness of WF attacks by padding dummy
+ 2 Available at https://tranco-list.eu/list/YXX7G. packets or delaying packets. However, most defenses introduce
+
+ 17
+significant overhead, which can cause Tor relay malfunctions,
+making them impractical for deployment [61]. Following prior
+arts [1], [5], [7], [8], [13], we evaluated the robustness of
+Proteus against obfuscated traffic using three representative
+defenses: WTF-PAD [21], obfs4 [41], and Front [22].
+ WTF-PAD leverages adaptive padding to obfuscate burst
+intervals in Tor traffic without introducing additional delays.
+Using the authors’ official scripts, we simulated WTF-PAD to
+generate a dataset for analyzing temporal drift under this defense. Obfs4, the default pluggable transport in Tor, is designed
+to help users bypass censorship imposed by ISPs or governments. To collect obfs4-obfuscated traffic, we selected nine
+globally distributed obfs4 bridges and configured 40 clients in
+Singapore to rotate bridges for each website visit. We collected
+27,487 traces under obfs4 obfuscation. Front, another WF
+defense mechanism, injects dummy packets during the initial
+stage of page loading. Compared to WTF-PAD, Front achieves
+stronger obfuscation with lower communication overhead. We
+implemented Front using the WFDefProxy framework [40],
+deploying 40 cloud servers as Tor clients and 10 servers as Tor
+bridges. This deployment produced 29,776 obfuscated traces
+in July 2025.
+
+ 18

@@ -1,0 +1,1904 @@
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+1
+
+FORM-IDS: A Lightweight yet High-Fidelity Intrusion Detection
+Framework via Formal Verification and Knowledge Distillation
+Huale Li, Yanwei Chen, Dingzhong Cai, Zhaobin Wang, Hualong Wu, Arun Kumar Sangaiah
+
+Abstract—In practical IoT and IIoT deployments, intrusion
+detection faces significant challenges due to overlapping feature
+distributions of mixed attack vectors and the scarcity of computational resources on edge devices. Conventional deep learningbased detectors often struggle with instability across diverse
+environments and high false alarm rates. To address these issues,
+this paper proposes FORM-IDS, a lightweight yet high-fidelity
+intrusion detection framework tailored for resource-constrained
+edge scenarios. By integrating multi-teacher relational knowledge
+distillation, our approach effectively transfers complex decision
+patterns from large-scale ensembles into a compact student
+network, ensuring high detection capability without the computational burden. Furthermore, a novel runtime formal verification
+module is introduced to enforce logical safety constraints, rigorously filtering spurious alerts and enhancing decision reliability.
+Extensive experiments on multiple heterogeneous datasets show
+that FORM-IDS achieves competitive classification performance
+and robust temporal generalization against both the DTLIDS lineage baselines and two additional recent IDS baselines.
+Crucially, the framework significantly suppresses false positives
+while maintaining low inference latency, making it a promising
+option for real-time edge security.
+Index Terms—IoT, intrusion detection system, knowledge distillation, formal verification.
+
+I. I NTRODUCTION
+N recent years, the rapid development of the Internet of
+Things (IoT) and Industrial IoT (IIoT) has enabled largescale deployment of heterogeneous devices in critical sectors.
+These devices support real-time connectivity and cross-domain
+collaboration, improving operational efficiency in scenarios
+such as smart transportation, energy management, and public
+infrastructure [1]–[3]. However, this trend introduces significant security challenges. IoT devices typically operate with
+limited computing and storage resources, often running simplified communication stacks. Consequently, they are highly
+exposed to malicious scanning, botnet enrollment, and distributed denial of service (DDoS) attacks [4]. Given these
+
+I
+
+This work were funded by the National Natural Science Foundation of China (No.62406251), Natural Science Foundation of Gansu
+(No.26JRRA256).
+Huale Li and Zhaobin Wang are with the School of Information Science
+and Engineering, Lanzhou University, Lanzhou 730000, China. (e-mail: lihuale@lzu.edu.cn; wangzhb@lzu.edu.cn)
+Yanwei Chen is with the Institute of Modern Physics, Chinese Academy
+of Sciences, Lanzhou 730000, China. (e-mail: chenyanwei@impcas.ac.cn)
+Dingzhong Cai is with the School of Software, Northwestern Polytechnical
+University, Xi’an 710000, China. (e-mail: caidz@mail.nwpu.edu.cn)
+Hualong Wu is with School of Computer Science and Technology, Harbin
+Institute of Technology, Shenzhen 518055, China.(Corresponding author, email: wuhl@stu.hit.edu.cn)
+Arun Kumar Sangaiah is with the International Graduate Institute of
+Artificial Intelligence, National Yunlin University of Science and Technology,
+Yunlin, Taiwan.(e-mail: aksangaiah@ieee.org)
+
+constraints, building effective network-side intrusion detection
+mechanisms is essential for maintaining system security.
+Early Intrusion Detection Systems (IDS) mainly relied on
+signature-based or rule-based detection. While these methods are easy to interpret, they struggle to detect novel or
+evolving attacks, such as those employing obfuscation or
+multi-stage strategies [5]. To overcome these limitations, deep
+learning-based approaches, particularly Convolutional Neural
+Networks, have become a dominant direction in IoT security
+research [6]–[9]. Deep learning models can automatically
+extract discriminative patterns from high-dimensional traffic
+data, reducing reliance on handcrafted features. Despite their
+potential, deploying deep learning-based IDS in practical IoT
+environments faces three major obstacles. First, network traffic
+often contains mixed attack vectors and rare benign behaviors.
+This causes feature distributions to overlap, leading to unstable
+performance and reduced class separability across different environments. Second, a critical trade-off exists between model
+performance and computational cost. High-capacity models
+require significant resources that are unavailable on edge
+devices, whereas lightweight models often lack the structural
+depth to capture complex attack patterns. Third, deep neural
+networks typically operate as black boxes. They lack logical constraints on their decision-making process. In highassurance scenarios like industrial control, relying solely on
+probabilistic outputs is risky, as even a low false positive rate
+can trigger disruptive defensive actions.
+Although knowledge distillation (KD) and rule-based verification are individually known methods, existing KD-based
+IDS frameworks focus exclusively on model compression
+through logit-level transfer, without addressing the trustworthiness of detection decisions. Meanwhile, formal verification
+in security remains confined to offline, design-time analysis,
+disconnected from runtime detection. To the best of our
+knowledge, no prior work has systematically bridged these
+paradigms. FORM-IDS fills this gap by introducing Relational Knowledge Distillation (RKD) into the multi-teacher
+IDS distillation pipeline, preserving inter-sample structural
+relationships in the feature space rather than merely transferring individual prediction distributions, and by compiling
+formally verified Linear Temporal Logic (LTL) properties into
+a lightweight runtime monitor that acts as a post-hoc decision
+filter. This integration yields a lightweight and trustworthy
+framework in which the distilled student model ensures high
+detection sensitivity, while the verification module enforces
+logical safety constraints to suppress false alarms. These capabilities cannot be achieved by either component in isolation.
+
+0000–0000/00$00.00 © 2021 IEEE
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+To address these issues, this paper proposes FORM-IDS,
+an enhanced intrusion detection framework evolved from the
+DTL-IDS architecture and tailored for resource-constrained
+IoT and IIoT networks [10]. The framework utilizes a multiteacher relational knowledge distillation strategy. This approach allows a compact student model to inherit not only
+the prediction accuracy but also the structural feature relationships from a high-capacity teacher ensemble. Furthermore,
+we integrate a lightweight formal verification module into the
+detection pipeline. Unlike traditional offline verification, this
+module performs runtime logical checks on detection outcomes, effectively filtering false alarms and enforcing safety
+constraints without compromising inference speed.
+The main contributions of this paper are summarized as
+follows:
+• We propose FORM-IDS, utilizing multi-teacher RKD to
+compress complex decision patterns into a compact CNN,
+balancing high accuracy with minimal computational
+overhead.
+• We integrate a logical verification module to enforce
+safety constraints on model predictions, effectively filtering transient false alarms and ensuring decision reliability.
+• Extensive evaluations across four heterogeneous datasets
+and multiple IDS baselines demonstrate that FORMIDS maintains strong generalization and stability under
+diverse IoT/IIoT network environments.
+II. R ELATED WORKS
+This section reviews the literature on IDS for IoT environments, focusing on the specific technologies integrated into
+our proposed framework.
+A. CNN-based Architectures and Automated Optimization
+Recent research has increasingly prioritized Convolutional
+Neural Networks (CNN) and hybrid architectures to address
+the complexity of modern network environments. To leverage
+both spatial and temporal feature extraction, Bamber et al. [11]
+proposed a hybrid CNN–LSTM system. They evaluated this
+approach against a range of deep learning models, including
+ANN, LSTM, BiLSTM, GRU, and BiGRU, using the NSLKDD dataset after applying Recursive Feature Elimination.
+Their comparative analysis demonstrated that the CNN–LSTM
+architecture yields superior performance, achieving 95% accuracy, 0.89 recall, and a 0.94 F1-score. Shifting the focus
+toward operational efficiency in IIOT, Arsalan et al. [12]
+introduced a lightweight one-dimensional CNN. This model
+was specifically tailored to classify nine types of cyberattacks with minimal computational overhead. It achieved an
+accuracy of 99.90%, effectively validating the capability of
+streamlined CNN architectures to maintain high fidelity in
+resource-constrained industrial settings.
+Beyond standard detection tasks, CNN-based frameworks
+have evolved to tackle emerging challenges such as data
+privacy and wireless security. Torre et al. [13] addressed
+the privacy concerns in distributed networks by proposing
+a federated learning IDS built upon a 1D-CNN backbone.
+Their approach integrates robust cryptographic techniques,
+
+2
+
+including Differential Privacy, Diffie–Hellman Key Exchange,
+and Homomorphic Encryption, to secure sensitive data during training. Extensive evaluation across seven public IoT
+datasets, such as TON-IoT, IoT-23, and Edge-IIoT, confirmed
+the framework’s robustness, delivering an average accuracy of
+97.31% and an F1-score of 92.69%. Similarly, in the context of
+wireless sensor networks, Yesodha et al. [14] optimized a CNN
+classifier using Fuzzy Temporal rules and an Artificial Bee
+Colony algorithm (FT-ABC-CNN). When compared against
+traditional CNN, LSTM, and RNN classifiers, the FT-ABCCNN model demonstrated a significant reduction in false
+positive rates, highlighting the importance of domain-specific
+optimization in noisy wireless environments.
+Despite these architectural advances, relying on manual
+model design often limits scalability and robustness. Consequently, recent studies have pivoted toward automated Hyperparameter Optimization (HPO) and Neural Architecture
+Search (NAS) to enhance deployment efficiency. Latif et al.
+[10] proposed DTL-IDS, a framework that employs Genetic
+Algorithms (GA) to fine-tune transfer learning models, followed by ensemble aggregation to improve generalization
+across heterogeneous IIoT scenarios. In a similar vein, Ahmad
+et al. [15] utilized Random Search-based HPO to optimize
+multiple CNNs on the Edge-IIoT dataset. By combining the
+best-performing models via ensemble learning and applying
+quantization, they achieved a balance between improved accuracy and reduced inference costs. Moving beyond simple
+parameter tuning, Lu et al. [16] proposed BPSO-AHDL-IDS,
+which jointly optimizes hyperparameters and hybrid CNN–
+RNN structures using Binary Particle Swarm Optimization.
+This approach enables fully automated IDS design without
+expert intervention. Extending this work, Lu et al. [17] further
+introduced a multi-objective framework based on discrete
+extremal optimization. This method automatically constructs
+lightweight CNNs, explicitly addressing the trade-off between
+detection performance and computational complexity in IIoT
+networks.
+B. Knowledge Distillation
+Complementing HPO and automated model design, Knowledge Distillation (KD) has emerged as a pivotal strategy for
+deploying IDS on resource-constrained IoT and IIoT devices.
+By focusing on reducing model complexity, KD enables highfidelity detection on hardware with limited computational
+capacity. Wang et al. [18] addressed the efficiency challenge by
+proposing a lightweight CNN-based IDS that leverages selfadaptive temperature scaling. Their approach facilitates the
+transfer of discriminative representations from a deep teacher
+to a shallow student, significantly reducing the parameter count
+without compromising detection accuracy.
+Umair et al. [19] showed that KD can support both
+lightweight deployment and model interpretability in resourceconstrained consumer devices. Using teacher–student training
+on the N-BaIoT and CIC-IDS 2023 datasets, their framework
+retained near-teacher detection performance while reducing
+parameter count, model size, and inference latency. With
+SHAP-based analysis, they also showed that a distilled IDS
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+can preserve useful feature-level explanations while remaining
+efficient.
+To further enhance the stability of this knowledge transfer,
+Xie et al. [20] introduced DTKD-IDS, a dual-teacher framework that combines prototype and complementary distillation.
+This mechanism allows the student model to selectively absorb
+structurally aligned knowledge, ensuring robust performance
+even under complex attack scenarios. Moving beyond centralized training paradigms, Shen et al. [21] integrated ensemble
+knowledge distillation within a federated learning framework.
+By distilling locally trained models into a global student,
+their strategy effectively mitigates data heterogeneity across
+distributed clients while preserving user privacy.
+KD has also been adapted for graph-based anomaly detection. Zhou et al. [22] designed a reconstructed graph
+neural network utilizing global–local distillation to transfer
+both structural and traffic-level representations. This design
+achieves lightweight anomaly detection by minimizing computational overhead. Liu et al. [23] proposed a Dynamic Gradient
+Distillation method for graph neural networks, where gradient
+mapping and fusion let the student inherit part of the teacher’s
+learning dynamics rather than only its final outputs. Although
+their work targets node classification rather than intrusion
+detection, it reflects a broader shift from simple logit imitation
+toward richer structural and process-aware knowledge transfer.
+This perspective is relevant to IDS, where preserving intersample relationships helps model heterogeneous attack behaviors. These advancements indicate that KD now serves purposes far beyond mere model compression, increasingly supporting explainability, heterogeneity mitigation, and structureaware knowledge transfer across lightweight security models.
+
+3
+
+or offline analysis tool, remaining largely decoupled from
+the dynamic operation of data-driven IDS. The systematic
+integration of formal methods, specifically using verified invariants or model-checked properties to constrain learningbased models, remains an underexplored frontier. Bridging this
+gap by embedding formal logic into the runtime decision loop
+is essential for providing safety guarantees and defining strict
+decision boundaries for otherwise opaque detection models.
+III. T HE PROPOSED FRAMEWORK
+As illustrated in Fig. 1, the proposed FORM-IDS framework
+systematically transforms raw network traffic into reliable
+detection outcomes through a structured, three-stage pipeline:
+1) Data Preprocessing: Raw consecutive packet streams are
+first organized into sliding windows and synthesized into
+2D color images, capturing spatial-temporal traffic features
+while balancing the distribution of rare attack classes. 2)
+Model Training and Distillation: In the offline phase, a diverse
+ensemble of large-scale teacher CNNs is trained. Their derived
+relational knowledge (inter-sample structural features) and
+logit-level probabilities are then distilled into an ultra-compact
+Student CNN. The teacher-model candidates are optimized
+with a Genetic Algorithm during teacher selection, while the
+student distillation hyperparameters remain fixed. 3) Runtime
+Formal Verification: During the online deployment phase, the
+standalone Student CNN performs initial feature extraction
+and classification. Its probabilistic outputs are immediately
+intercepted by a lightweight, NuSMV-verified runtime monitor. This module enforces deterministic LTL safety equations
+(e.g., timeliness, confidence guards) on the decision logic,
+effectively filtering out transient false alarms before finalizing
+the block/monitor action.
+
+C. Formal Verification in Security Systems
+Formal verification and model checking have become indispensable in safety-critical domains, including IoT, automotive
+systems, and programmable networks, where they are primarily used to rigorously analyze system behaviors and uncover
+design-time vulnerabilities. In the context of IoT and cyberphysical systems, Toman et al. [24] applied formal methods
+such as Event-B modeling to reason about physical-layer
+vulnerabilities. Their work enabled the construction of security
+proofs for specific threats, such as jamming and spoofing,
+under strict system assumptions. Similarly, in the automotive
+sector, Krichen et al. [25] demonstrated the integration of
+model checking and theorem proving across the development
+lifecycle, verifying security properties and system resilience
+against both faults and attacks.
+At the network control level, formal verification has been
+leveraged to model protocol behaviors in SDN controllers.
+This approach facilitates the automatic discovery of feasible
+attack paths, revealing previously unknown vulnerabilities
+within the control logic [26]. Addressing the complexity of
+large-scale ecosystems, Krichen et al. [27] further explored
+abstraction and modularization techniques to improve the scalability of model-based testing for smart city infrastructures.
+Despite these advances, a critical disconnect remains: formal verification is predominantly treated as a design-time
+
+A. Data Preprocessing and Augmentation
+In the FORM-IDS framework, we inherited the data preprocessing workflow from DTL-IDS and enhanced the image synthesis process to tackle the issue of uneven data distribution. In
+DTL-IDS, 285 consecutive samples are combined into a single
+image. While this approach works well for most datasets, when
+dealing with imbalanced sample sizes, certain attack types may
+be scarce, hindering the model’s ability to effectively learn
+their characteristics during training. To address this challenge,
+we incorporated a sliding window technique during the data
+preprocessing stage. By increasing the number of samples for
+rare attack types, we bolstered the model’s learning capacity
+for these specific attacks.
+Specifically, we maintain the window size of 285 samples
+for image synthesis. However, by reducing the sliding step
+size to 90, we generate a significantly larger number of image
+samples from the original data. This method generates approximately three times the original sample size. Consequently, it
+greatly enhances the model’s ability to identify rare attacks.
+However, adopting the sliding window method introduces
+certain trade-offs. With a step size of 90, successive windows
+have a significant overlap. This means that generated images
+share a large portion of their underlying data with adjacent
+samples. Although this approach increases the size of dataset,
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+4
+
+Fig. 1. The overall framework of FORM-IDS. The pipeline integrates sliding-window data preprocessing, genetic algorithm-optimized multi-teacher relational
+distillation for lightweight model training, and a runtime formal verification module to filter transient false alarms.
+
+the generated instances are created via offsets of existing traffic
+records rather than capturing new behaviors. Consequently,
+they may lack the diversity found in independently collected
+samples.
+To preserve the temporal integrity of the evaluation, the
+dataset is first partitioned according to the original occurrence
+timeline. The sliding-window augmentation is then applied
+exclusively to the training subset to amplify rare attack signatures. Meanwhile, the test set remains unaugmented and
+contains only temporally subsequent, non-overlapping streams,
+ensuring that the model is evaluated under realistic conditions
+without data leakage.
+
+B. Teacher Models
+To support the knowledge distillation stage in FORM-IDS,
+we first train and select a set of high-quality teacher models.
+We train and evaluate multiple CNN models with different
+architectures, then select the best models to form a teacher
+ensemble. This ensemble provides supervision for the later
+distillation stage. The teacher ensemble is utilized exclusively
+during the offline training phase on high-performance servers.
+Since these heavy models do not participate in runtime inference, they impose no computational burden on the target
+hardware, allowing only the lightweight student CNN to be
+deployed on resource-constrained edge devices.
+
+We consider several widely used CNN architectures as
+candidates. They include Generic CNN, Xception, VGG16,
+VGG19, Inception, InceptionResNetV2, EfficientNetB7, and
+EfficientNetV2L. These models differ in depth, feature extraction style, and parameter size. This architectural diversity ensures that discriminative traffic patterns are captured
+from varying receptive fields and abstraction levels. For each
+architecture, we use a Genetic Algorithm to optimize key
+hyperparameters. This reduces reliance on manual tuning. It
+also improves the stability of model performance.
+After optimization, each model is first pre-trained on the
+source-domain data. It is then fine-tuned on the target dataset
+with transfer learning. This step adapts the model to the IoT
+intrusion detection task. In addition, we train a Generic CNN
+from scratch on the target dataset. This model serves as a
+baseline without transfer learning. Finally, we compare all
+candidates on the validation set. We select the top 5 models
+to construct the teacher ensemble for multi-teacher relational
+knowledge distillation.
+C. Student CNN
+In the FORM-IDS framework, Student CNN serves as the
+core detection model for the final deployment and inference
+stage. Its design necessitates a reasonable balance between
+model complexity and detection performance. Specifically,
+the Student CNN must meet the following requirements: 1)
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+Efficiency: Its computational overhead and parameter count
+must be significantly lower than the baseline models in DTLIDS. This ensures adaptability to resource-constrained IoT
+and edge computing scenarios. 2) Baseline Performance: Even
+without auxiliary mechanisms like distillation, its standalone
+detection capability should not degrade significantly. This
+provides a stable performance lower bound for subsequent
+optimization. 3) Distillation Compatibility: The architecture
+must support explicit access to intermediate feature maps and
+output logits. This capability is essential for implementing
+knowledge distillation and enforcing relational constraints
+during the training phase.
+The aforementioned requirements dictate that the design
+of Student CNN cannot be achieved simply by reducing
+network depth or pruning channel numbers. Although an
+overly simplified model can significantly reduce the number of
+parameters, it often weakens the ability to represent complex
+attack patterns, thereby limiting overall detection performance.
+Therefore, in terms of model structure design, we have adopted
+a compromise approach that maintains necessary feature abstraction capabilities while controlling the scale of parameters.
+Specifically, the Student CNN employs a progressively
+deeper hierarchy with stacked convolutional and pooling layers. This structure enables the extraction of multi-level feature
+representations from input traffic images. At the same time,
+by maintaining a small channel size in the early layers and
+gradually increasing the channel count only in the higher
+layers, the overall growth of model parameters is effectively
+limited. Additionally, the model uniformly adopts 3x3 convolutional kernels. This design ensures layer-wise expansion of
+the receptive field while controlling computational complexity
+and enhancing structural stability.
+At the end of the network, the Student CNN explicitly
+incorporates a feature representation layer and a logits output
+layer. This design enables the model to make final classification decisions while providing necessary intermediate
+representations for distillation loss and relationship constraints
+during training. This structural design lays the foundation for
+the subsequent multi-teacher knowledge distillation process,
+while the Student CNN itself merely serves as a base model
+for carrying distilled knowledge. The mechanism behind its
+performance improvement will be further explored in the next
+section.
+To provide a clear understanding of the network’s compactness and design rationale, Tables I and II present the
+architectural details for the baseline Generic CNN (included
+in the teacher ensemble) and our proposed lightweight Student
+CNN, respectively. By reducing the convolutional kernel size
+from 5 × 5 to 3 × 3 and streamlining the repetitive block
+structures into a progressively deeper but narrower hierarchy,
+the student model drastically minimizes computational load
+and memory requirements. This optimized configuration is
+designed to reduce inference cost and support low-latency
+operation in resource-constrained IoT edge settings.
+D. Multi-Teacher Relational Knowledge Distillation
+Under strict lightweight constraints, the student model often
+struggles to extract discriminative information from complex
+
+5
+
+TABLE I
+A RCHITECTURAL D ETAILS OF THE G ENERIC CNN (T EACHER )
+Structure
+Block 1
+Block 2
+Block 3
+Block 4
+Pooling
+Feature Layer
+Logits Output
+
+Configuration
+Conv2D(32, 5 × 5)
+Conv2D(32, 5 × 5) + MaxPool(2 × 2)
+Conv2D(128, 5 × 5)
+Conv2D(128, 5 × 5)
+GlobalAvgPool2D
+Dense(256) + Dropout(p = 0.1)
+Dense(C)
+
+TABLE II
+A RCHITECTURAL D ETAILS OF THE S TUDENT CNN (P ROPOSED )
+Structure
+Block 1
+Block 2
+Block 3
+Block 4
+Block 5
+Pooling
+Feature Layer
+Logits Output
+
+Configuration
+Conv2D(32, 3 × 3) + MaxPool(2 × 2)
+Conv2D(32, 3 × 3) + MaxPool(2 × 2)
+Conv2D(32, 3 × 3) + MaxPool(2 × 2)
+Conv2D(64, 3 × 3) + MaxPool(2 × 2)
+Conv2D(128, 3 × 3)
+GlobalAvgPool2D
+Dense(128) + Dropout(p = 0.1)
+Dense(C)
+
+attack patterns. Relying solely on its own supervision signals is frequently insufficient for capturing these intricacies.
+Knowledge distillation offers an effective approach to enhance
+detection performance while controlling model size by transferring knowledge from high-performance teacher models to
+structurally constrained student models. Compared to training
+methods based solely on hard labels, the distillation approach
+leverages soft-label information from teacher model outputs
+to guide the student model in learning relative relationships
+between categories, thereby achieving smoother and more
+discriminative decision boundaries.
+In the context of IoT malicious traffic detection, different
+model architectures often exhibit distinct perception preferences toward attack signatures, making it difficult for a
+single teacher model to comprehensively characterize complex and diverse attack behaviors. Based on this observation,
+FORM-IDS adopts a multi-teacher-single-student distillation
+framework, integrating multiple performance-complementary
+teacher models to provide the student model with more
+stable and information-rich supervision signals. Additionally,
+to constrain the student’s representation structure in the feature space, we introduce Relational Knowledge Distillation
+alongside output-layer distillation, as outlined in Algorithm 1.
+This mechanism enables the student model to inherit not only
+the prediction distributions of individual samples but also the
+relative structural relationships between samples modeled by
+the teachers.
+1) Multi-Teacher Distillation: Let the training sample be
+x, and assume there are K teacher models {T1 , T2 , . . . , TK }.
+The k-th teacher produces the corresponding logits z Tk (x).
+To reduce the impact of prediction bias from a single teacher,
+FORM-IDS fuses the outputs of multiple teachers using mean
+ensembling. The ensemble logits are defined as:
+K
+
+z T (x) =
+
+1 X Tk
+z (x)
+K
+k=1
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+(1)
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+Algorithm 1 Multi-Teacher Relational Knowledge Distillation
+Training
+Input: Training dataset D, Teacher ensemble T
+=
+{T1 , . . . , TK }, Student model S, Total epochs N , Temperature τ , RKD weight γ, Dynamic weight bounds
+αstart , αend .
+Output: Optimized Student Model parameters θS .
+1: Initialization: Randomly initialize student parameters θS .
+2: for epoch t = 1 to N do
+3:
+Calculate dynamic distillation weight:
+end )·t
+4:
+α(t) ← αstart − (αstart −α
+N
+5:
+for each mini-batch (x, y) in D do
+6:
+Get logits z Tk and feature maps E Tk from each
+teacher Tk ∈ T
+PK
+1
+Tk
+7:
+Compute ensemble logits: z T ← K
+k=1 z
+T
+8:
+Compute teacher soft labels q using softmax with
+τ (Eq. 2)
+9:
+Get logits z S and feature maps E S from student
+S(x; θS )
+10:
+Compute student soft probabilities q S using softmax
+with τ (Eq. 3)
+S
+11:
+Lstudent ← CrossEntropy(z
+, y)
+▷ Hard label loss
+P T
+2
+T
+12:
+Ldistill ← τ · q log(q /q S )
+▷ KL Divergence
+loss
+e T and D
+eS
+13:
+Calculate normalized distance matrices D
+(Eq. 5 6)
+eT , D
+e S ) ▷ Structural relational loss
+14:
+LRKD ← Huber(D
+15:
+Compute total loss:
+16:
+Ltotal ← Lstudent + α(t)Ldistill + γLRKD
+17:
+Update θS via backpropagation: θS ← θS − η∇Ltotal
+18:
+end for
+19: end for
+20: return θS
+
+6
+
+training, rather than relying only on the hard constraints
+provided by ground-truth labels.
+2) Relational Knowledge Distillation: Although logit-level
+distillation can effectively transfer class-level discriminative
+information, it still ignores the structural relationships among
+samples in the feature space. To further constrain feature learning, FORM-IDS incorporates a relational knowledge distillation mechanism. This ensures that the student preserves intersample relations in the feature space, maintaining structural
+consistency with the teacher models.
+Let the feature representations of the teacher and the student for a mini-batch be E T ∈ RB×d and E S ∈ RB×d ,
+respectively, where B is the batch size and d is the feature
+dimension. For any sample pair (i, j), the Euclidean distances
+are defined as:
+T
+Dij
+= EiT − EjT
+
+2
+
+,
+
+S
+Dij
+= EiS − EjS 2
+
+To mitigate the effect of scale differences, the distance
+matrices are normalized by their mean values:
+eT =
+D
+
+DT
+,
+µ(DT )
+
+eS =
+D
+
+DS
+µ(DS )
+
+where C denotes the total number of attack classes. Correspondingly, let the logits produced by the student model be
+z S (x), and its soft-label distribution is:
+
+exp ziS (x)/τ
+S
+(3)
+qi (x) = PC
+
+S
+j=1 exp zj (x)/τ
+Based on the above soft-label distributions, the distillation
+loss is measured by the KL divergence:
+
+Ldistill = τ 2 · KL q T (x) ∥ q S (x)
+= τ2
+
+C
+X
+i=1
+
+qiT (x) log
+
+qiT (x)
+qiS (x)
+
+(6)
+
+where µ(·) denotes the mean of all matrix entries. The relational distillation loss is computed using the Huber function:
+
+
+eT , D
+eS
+LRKD = Huber D
+(7)
+The Huber loss formulation enforces global structural consistency while being more robust to abnormal distances, which
+helps stabilize the training process of the student model.
+3) Overall Training Objective: By jointly considering supervision from ground-truth labels, logit-level distillation, and
+relational distillation, the overall training loss of FORM-IDS
+is defined as:
+Ltotal = Lstudent + α(t)Ldistill + γLRKD
+
+Given a temperature parameter τ , the soft-label distribution of
+the teacher is defined as:
+
+exp ziT (x)/τ
+T
+qi (x) = PC
+(2)
+
+T
+j=1 exp zj (x)/τ
+
+(5)
+
+(8)
+
+where Lstudent is the cross-entropy loss based on ground-truth
+labels, and γ is the fixed weighting coefficient for the relational
+distillation loss. The term α(t) denotes the dynamic distillation
+weight, which balances the contribution of teacher supervision.
+To facilitate effective knowledge transfer, we adopt a linear
+decay strategy defined as:
+(αstart − αend ) · t
+(9)
+T
+where αstart and αend represent the initial and final weight
+values, respectively, t is the current epoch index, and T is the
+total number of training epochs. This strategy encourages the
+student model to prioritize teacher guidance during the early
+stages of optimization while gradually shifting focus towards
+ground-truth labels as the training converges.
+α(t) = αstart −
+
+(4)
+
+where the squared temperature term τ 2 is used to compensate
+for the change in gradient scale. Minimizing the divergence
+Ldistill enables the student model to learn the class-similarity
+information implicitly captured by the teacher models during
+
+E. Lightweight Formal Verification
+Although deep learning-based detection models show strong
+capabilities in recognizing complex attack patterns, their
+decision-making process is essentially a data-driven blackbox inference. Consequently, they are vulnerable to noisy
+samples, distribution shifts, and model uncertainty in practical
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+deployments. This issue is particularly evident in IoT and IIoT
+scenarios, where frequent false alarms not only increase the
+burden on operation and maintenance but may also trigger
+unnecessary defensive actions that disrupt normal business
+processes. Therefore, relying solely on classification confidence is often insufficient to meet practical requirements for
+reliability and safety.
+To mitigate these issues, FORM-IDS introduces a
+lightweight formal verification module following the deep
+detection model. This module checks logical consistency
+and enforces safety-property constraints on suspected attack
+events. It does not aim to verify the internal weights of
+the neural network. Instead, it abstracts detection outcomes
+into finite-state behaviors and enforces runtime constraints
+through formal logic rules, as detailed in Algorithm 2. In this
+way, potential false alarms can be filtered effectively while
+maintaining low system overhead.
+Rather than statically proving the mathematical properties
+of internal neural network weights, which often leads to
+severe state-explosion problems on high-dimensional data, our
+framework performs runtime verification of the decision logic.
+By abstracting the continuous stream of deep learning outputs
+into a sequence of discrete events within a finite-state machine,
+formally verified properties can be used to dynamically filter
+the neural network’s decisions.
+1) Security Property Modeling: The core of the formal
+verification module is an explicit specification of behavioral
+constraints for the IDS. Considering practical intrusion detection requirements, we define key safety properties covering
+timeliness, access control, and false-alarm suppression. These
+properties are formally described using Linear Temporal Logic
+(LTL).
+First, to ensure a timely response, once an attack is confirmed, the system must complete the flagging operation within
+a bounded time window:
+G(attack → F≤∆t flagged)
+
+Algorithm 2 Runtime Formal Verification and Decision Logic
+Input: Real-time traffic sample xt , Trained Student Model S,
+High-assurance threshold θ, Persistence limit ∆t.
+Output: Final Decision Action At ∈ {Pass, Monitor, Block}.
+1: Initialization: System State Q ← Normal, Attack Counter
+c ← 0.
+2: while System is Active do
+3:
+Receive new packet xt at time step t
+4:
+Get prediction ŷ and confidence score σ from S(xt )
+5:
+if ŷ = Benign then
+6:
+Q ← Normal
+7:
+c←0
+8:
+At ← Pass
+9:
+else
+10:
+if σ < θ then
+11:
+Q ← Suspect
+▷ Low confidence, hold alert
+12:
+c←c+1
+13:
+if c > ∆t then
+14:
+Q ← Flagged ▷ Check Property 1: Timeliness
+15:
+else
+16:
+At ← Monitor
+17:
+end if
+18:
+else
+19:
+Q ← Flagged
+▷ High confidence triggers
+immediate flag
+20:
+end if
+21:
+end if
+22:
+if Q == Flagged then
+23:
+Logic Check: flagged → ¬control granted
+24:
+Revoke Control Privileges()
+25:
+Q ← Blocked
+26:
+At ← Block
+27:
+end if
+28:
+Execute Action At
+29: end while
+
+(10)
+
+where ∆t denotes the maximum acceptable response delay in
+logical steps.
+Second, to prevent further propagation, the system must revoke control privileges immediately after an attack is flagged:
+G(flagged → ¬ control granted)
+
+7
+
+(11)
+
+Finally, to suppress misclassification of benign traffic (false
+positives), we introduce a constraint based on detection confidence. Unlike standard formulations that rely on asymptotic
+probabilities, we enforce a deterministic guard on the decision
+boundary:
+G((model output = attack ∧ confidence < θ) → ¬ flagged)
+(12)
+where θ is a strict confidence threshold. This property ensures
+that uncertain predictions remain in the suspect state rather
+than triggering an immediate alarm. Together, these properties
+provide a rigorous logical basis for constraining detection
+outcomes.
+The choice of the confidence threshold θ essentially governs
+the trade-off between system sensitivity and false positive
+
+rates. A higher θ establishes a conservative decision boundary
+requiring strong neural network certainty before transitioning a
+sample to the flagged state, effectively suppressing false alarms
+but potentially delaying the detection of stealthy attacks.
+Conversely, a lower θ promotes agility at the risk of allowing
+transient noise to trigger unwarranted defensive actions. In
+our experiments, θ is selected by validation-set grid search
+to match the dataset-specific confidence distribution.
+2) State-machine Abstraction and Verification Workflow:
+To make formal verification executable, FORM-IDS abstracts
+the detection process as a finite-state machine with the following state set: {normal, suspect, flagged, blocked}.
+The workflow operates as follows: The model output first
+triggers the transition from normal to suspect. To prevent
+transient noise from causing false alarms, the system enters
+the flagged state only if the attack pattern persists or the confidence score exceeds the high-assurance threshold θ. Finally,
+after control constraints are satisfied, the system moves to the
+blocked state to execute defensive actions.
+This abstraction simplifies the handling of complex model
+outputs and provides clear semantics for verification. At
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+the implementation level, FORM-IDS utilizes the NuSMV
+model-checking tool. We define a comprehensive SMV model
+that captures the aforementioned state machine alongside the
+three core LTL properties as LTLSPEC declarations. Running NuSMV performs offline consistency verification of the
+state machine against these specific properties. During our
+evaluation, all three LTL specifications were verified as true,
+confirming that the rule set is free of logical conflicts or
+deadlocks. Once theoretically sound, the verified behavioral
+rules are compiled into a lightweight runtime monitor. This
+monitor is embedded directly into the detection pipeline. It
+acts as a deterministic filter, applying real-time, step-by-step
+checks and constraint enforcement on the incoming sequence
+of neural network outputs.
+It should be emphasized that the formal verification module
+does not replace the deep detection model. Instead, it serves
+as a post hoc logical filtering and constraint layer. By formally
+constraining the output behaviors, FORM-IDS effectively reduces the false alarm rate with negligible additional computational cost, exhibiting stable detection behavior across multiple
+datasets. This design allows the overall framework to retain
+the sensitivity of deep models while significantly improving
+trustworthiness in high-security scenarios.
+IV. E XPERIMENTS
+This section evaluates the performance of FORM-IDS
+across four heterogeneous datasets. We first outline the experimental setup and baselines, followed by a detailed analysis
+of detection accuracy. Finally, we validate the effectiveness of
+the relational knowledge distillation strategy and the formal
+verification module in reducing false alarms and computational
+overhead.
+A. Implementation Platform
+All experiments in this study were conducted on a cloud
+computing infrastructure. The experimental environment was
+configured with Python 3.10 running on Ubuntu 22.04, and
+CUDA 11.8 was used to enable GPU acceleration. The hardware configuration includes a single NVIDIA RTX 3090 GPU
+(24 GB) and a 16-vCPU Intel Xeon Platinum 8352V processor
+clocked at 2.10 GHz. This setup ensures efficient training and
+evaluation for all deep learning models.
+Unless otherwise specified, the data preprocessing pipeline
+and training procedures strictly follow those adopted in DTLIDS, ensuring fair and consistent comparisons. All models
+were trained for a fixed number of 25 epochs under the same
+experimental settings. After training, model performance was
+evaluated on the corresponding test sets for each dataset. This
+unified implementation platform and configuration guarantee
+that the observed performance differences are attributable to
+the proposed framework rather than variations in the experimental environment.
+B. Datasets and Baselines
+To comprehensively evaluate the detection performance and
+generalization capability of FORM-IDS under diverse network
+
+8
+
+environments and attack scenarios, this paper conducts experiments on four representative public datasets: Edge-IIoTset,
+UNSW-NB15, TON-IoT, and PowerDuck. Specifically, EdgeIIoTset targets edge-computing and IoT settings and covers
+multiple typical IoT attack types [28]. UNSW-NB15 provides
+a rich and well-structured collection of network attack samples
+and is widely used to assess the multi-class classification capability of IDS models [29]–[33]. TON-IoT focuses on integrated
+IoT and industrial-system scenarios and thus reflects higher
+environmental complexity [34]–[41]. PowerDuck characterizes
+anomalies and attack behaviors in power systems and is used to
+validate model applicability in critical-infrastructure contexts
+[42]. By performing evaluations across multiple datasets with
+different scales, domains, and distribution characteristics, we
+aim to verify the stability and robustness of the proposed
+framework under cross-scenario conditions.
+For comparison, we consider two groups of baselines. First,
+DTL-IDS is selected as the primary lineage baseline [10].
+Since FORM-IDS is built upon the DTL-IDS framework, both
+methods share the same preprocessing pipeline, ensuring a
+controlled environment for comparison. DTL-IDS integrates
+multiple large-scale CNN models and therefore serves as a
+high-accuracy but high-cost reference point.
+Given that DTL-IDS has a parameter size several orders of
+magnitude larger than FORM-IDS, we additionally include the
+Generic CNN from the DTL-IDS suite as a compact lineage
+baseline. This model follows the same input representation and
+training procedure. With a model size closer to our proposed
+student network, the Generic CNN provides a more equitable
+baseline for evaluating detection capability under constrained
+model capacity.
+Second, we include two recent IDS baselines, Fed PCA
+[43] and DIDS-MFL [44], to broaden the comparison beyond the DTL-IDS family. Whereas DTL-IDS and Generic
+CNN provide a controlled comparison within the same design
+lineage, Fed PCA and DIDS-MFL offer additional reference
+points from different methodological directions. Their results
+are incorporated into the main performance plot in Fig. 2.
+C. Evaluation Metrics
+To comprehensively evaluate the classification capability
+and security-related behavior of FORM-IDS in attack detection
+tasks, this paper assesses the model from two perspectives,
+namely classification performance metrics and security-related
+metrics. All metrics are computed based on the confusion
+matrix entries: true positives (TP), true negatives (TN), false
+positives (FP), and false negatives (FN).
+Accuracy measures the overall correctness of the model
+across all samples and reflects its overall predictive performance. It is defined as:
+TP + TN
+(13)
+Accuracy =
+TP + TN + FP + FN
+Precision measures the proportion of true attack samples
+among the samples predicted as attacks, and it reflects the
+credibility of detection results. It is defined as:
+Precision =
+
+TP
+TP + FP
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+(14)
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+ )   6 F R U H
+
+ $ F F X U D F \
+
+     
+
+     
+
+     
+
+      
+      
+      
+      
+
+      
+      
+      
+      
+
+ * H Q H U L F  & 1 1
+
+ ' 7 /  , ' 6
+
+ ) H G  3 & $
+
+ ' , ' 6  0 ) /
+
+     
+     
+     
+     
+     
+
+ ) 2 5 0  , ' 6  0 X O W L  5 . '  & 1 1  0 L Q L  & 1 1
+
+  D 
+  ( G J H  , , R 7 V H W
+ )   6 F R U H
+
+ $ F F X U D F \
+
+    
+
+     
+
+    
+
+     
+
+      
+      
+      
+      
+
+      
+      
+      
+      
+
+ ' 7 /  , ' 6
+
+ ) H G  3 & $
+
+ ' , ' 6  0 ) /
+
+ )   6 F R U H
+
+     
+     
+     
+     
+     
+
+ ) 2 5 0  , ' 6  0 X O W L  5 . '  & 1 1  0 L Q L  & 1 1
+
+  F 
+  7 2 1  , R 7
+
+      
+      
+      
+      
+
+      
+      
+      
+      
+
+ * H Q H U L F  & 1 1
+
+ 5 H F D O O
+
+      
+      
+      
+      
+
+      
+      
+      
+      
+
+      
+      
+      
+      
+
+      
+      
+      
+      
+
+    
+
+ ) 2 5 0  , ' 6  0 X O W L  5 . '  & 1 1  0 L Q L  & 1 1
+
+ ' , ' 6  0 ) /
+
+      
+      
+      
+      
+
+    
+
+    
+
+ ) H G  3 & $
+
+      
+      
+      
+      
+
+    
+
+    
+
+ ' 7 /  , ' 6
+
+ 3 U H F L V L R Q
+
+      
+      
+      
+      
+
+ 3 H U I R U P D Q F H  6 F R U H
+
+     
+
+      
+      
+      
+      
+
+ 5 H F D O O
+
+      
+      
+      
+      
+
+ 3 U H F L V L R Q
+
+ * H Q H U L F  & 1 1
+
+  E 
+  8 1 6 :  1 %  
+
+    
+
+      
+      
+      
+      
+
+ 3 H U I R U P D Q F H  6 F R U H
+
+ $ F F X U D F \
+
+      
+      
+      
+      
+
+      
+      
+      
+      
+
+ ) 2 5 0  , ' 6  0 X O W L  5 . '  & 1 1  0 L Q L  & 1 1
+
+      
+      
+      
+      
+
+     
+
+      
+      
+      
+      
+
+     
+
+      
+      
+      
+      
+
+     
+
+     
+
+      
+      
+      
+      
+
+     
+
+ )   6 F R U H
+
+      
+      
+      
+      
+
+     
+
+ 5 H F D O O
+
+      
+      
+      
+      
+
+     
+
+ 3 U H F L V L R Q
+
+      
+      
+      
+      
+
+ 3 H U I R U P D Q F H  6 F R U H
+
+     
+
+     
+
+      
+      
+      
+      
+
+ 5 H F D O O
+
+      
+      
+      
+      
+
+ 3 U H F L V L R Q
+
+     
+
+      
+      
+      
+      
+
+ 3 H U I R U P D Q F H  6 F R U H
+
+ $ F F X U D F \
+
+9
+
+ * H Q H U L F  & 1 1
+
+ ' 7 /  , ' 6
+
+ ) H G  3 & $
+
+ ' , ' 6  0 ) /
+
+  G 
+  3 R Z H U ' X F N
+
+Fig. 2. Performance comparison of the evaluated models across the four datasets.
+
+FP
+(17)
+FP + TN
+By jointly considering the above metrics, we conduct a
+systematic evaluation of FORM-IDS and baseline methods
+from both classification performance and security practicality.
+FPR =
+
+    
+    
+
+ 0 X O W L  5 . '  & 1 1
+
+ ) 2 5 0  , ' 6
+
+    
+    
+    
+
+ ) 3 5
+
+Recall evaluates the coverage of real attack samples, i.e.,
+the proportion of attacks that are successfully detected. It is
+computed as:
+TP
+Recall =
+(15)
+TP + FN
+F1-score is the harmonic mean of Precision and Recall, and
+it balances the two metrics. It is defined as:
+2 · Precision · Recall
+(16)
+F1 =
+Precision + Recall
+For security-related evaluation, the False Positive Rate
+(FPR) measures the proportion of benign traffic that is incorrectly classified as attacks. It is a key indicator of practical
+deployability for IDS. It is defined as:
+
+    
+    
+    
+    
+    
+    
+
+ 7 2 1  , R 7
+
+ 3 R Z H U ' X F N
+
+Fig. 3. FPR Comparison on TON-IoT and PowerDuck.
+
+D. Results and Discussion
+In this section, we present a comprehensive empirical evaluation of the proposed FORM-IDS framework. The analysis is
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+ * H Q H U L F  & 1 1
+ 0 X O W L  5 . '  & 1 1
+
+    
+    
+
+ ) 2 5 0  , ' 6
+ ' 7 /  , ' 6
+
+ 0 R G H O  6 L ] H   0 % 
+
+   
+
+   
+  
+
+  
+ 
+ 
+ 
+ 
+ ( G J H  , , R 7 V H W
+
+ 8 1 6 :  1 %  
+
+ 7 2 1  , 2 7
+
+ 3 R Z H U ' X F N
+
+Fig. 4. Model Size (MB) Comparison Across Datasets.
+
+ * H Q H U L F  & 1 1
+ 0 X O W L  5 . '  & 1 1
+
+ , Q I H U H Q F H  7 L P H   P V  V D P S O H 
+
+   
+
+ ) 2 5 0  , ' 6
+ ' 7 /  , ' 6
+
+   
+  
+  
+  
+ 
+ 
+ 
+ ( G J H  , , R 7 V H W
+
+ 8 1 6 :  1 %  
+
+ 7 2 1  , 2 7
+
+ 3 R Z H U ' X F N
+
+Fig. 5. Inference Time (ms/sample) Comparison Across Datasets.
+
+ ( G J H  , , R 7 V H W
+ 8 1 6 :  1 %  
+ 7 2 1  , 2 7
+ 3 R Z H U ' X F N
+
+ U L F  &
+
+ * H Q H
+
+ 1 1
+
+  
+ 9 * *
+
+  
+
+ 9 * *
+
+ W L
+ , Q F H S
+
+ R Q 9 
+
+ ; F H S
+
+ /
+ W 9 
+ W L R Q
+ H W % 
+ H W 9 
+ H V 1 H
+ L H Q W 1
+ L H Q W 1
+ W L R Q 5
+ ( I I L F
+ ( I I L F
+ , Q F H S
+
+Fig. 6. Selected Backbone Models for Each Dataset.
+
+10
+
+strictly designed to validate the system’s effectiveness, robustness, and operational efficiency within resource-constrained
+IoT environments. To provide a structured and in-depth discussion, we organize our evaluation to systematically address
+the following four key research questions (RQs):
+• RQ1 (Detection Performance): Does FORM-IDS achieve
+strong detection accuracy and generalization capability
+compared to the selected baselines across heterogeneous
+datasets?
+• RQ2 (Ablation Study): What are the contributions of
+the knowledge distillation strategy to the student model’s
+performance?
+• RQ3 (Verification Effectiveness): Can the lightweight formal verification module effectively suppress false alarms
+and enforce safety constraints without compromising
+detection sensitivity?
+• RQ4 (Operational Efficiency): Is the proposed framework
+computationally efficient enough to support real-time
+deployment on resource-constrained edge devices?
+1) Classification Performance: As illustrated in Fig. 2,
+FORM-IDS demonstrates consistently robust classification
+performance across all four datasets. Beyond the DTL-IDS
+family, the comparisons with Fed PCA and DIDS-MFL further show that the proposed framework remains competitive
+under a broader benchmark setting. FORM-IDS consistently
+surpasses Fed PCA across all four datasets. Compared with
+DIDS-MFL, FORM-IDS achieves higher accuracy on every
+dataset and higher F1-scores on Edge-IIoTset, UNSW-NB15,
+and TON-IoT, while remaining essentially tied on PowerDuck
+(0.9888 vs. 0.9890). In both Edge-IIoTset and UNSW-NB15
+(Fig. 2a, b), our framework achieves perfect metrics (1.0000)
+across all indicators, mirroring the performance of the heavyweight DTL-IDS baseline. This confirms that the proposed
+lightweight distillation strategy successfully preserves the detection capability of large-scale ensembles in standard scenarios.
+On the more complex TON-IoT (Fig. 2c) and PowerDuck (Fig. 2d) datasets, FORM-IDS maintains high fidelity,
+achieving accuracies of 99.56% and 99.02%, respectively.
+While DTL-IDS exhibits a marginal advantage in PowerDuck
+(99.78%), this comes at the cost of massive computational
+overhead. In contrast, FORM-IDS delivers comparable precision with significantly reduced complexity, highlighting its
+efficiency advantage in resource-constrained edge scenarios.
+2) Effectiveness of Knowledge Distillation: To isolate the
+specific contribution of our distillation strategy, we benchmark
+the Multi-RKD CNN against a baseline Mini CNN trained
+from scratch. As evident in Fig. 2, eliminating the distillation
+process results in sharp performance degradation on complex
+datasets. Most notably on UNSW-NB15, the standalone Mini
+CNN struggles to generalize, with accuracy plummeting to
+87.27% and the F1-score dropping to 84.94%. Similarly, on
+TON-IoT, its accuracy falls to 96.53%.
+In stark contrast, the Multi-RKD CNN effectively recovers
+this capability. It restores accuracy to a perfect 100% on
+UNSW-NB15 and boosts TON-IoT performance to 98.04%.
+Even on the Edge-IIoTset, the distilled model maintains a
+clear advantage over its scratch-trained counterpart (99.92%
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+11
+
+TABLE III
+R EPRESENTATIVE O NE -FACTOR S ENSITIVITY A NALYSIS OF D ISTILLATION H YPERPARAMETERS ON TON-I OT (M ULTI -RKD CNN)
+
+Setting
+Accuracy
+Precision
+Recall
+F1-Score
+Default (τ = 8, αstart = 0.5, αend = 0.2, γ = 0.15)
+0.9804
+0.9816
+0.9804
+0.9808
+γ=0
+0.9689
+0.9734
+0.9689
+0.9705
+τ =4
+0.9760
+0.9789
+0.9760
+0.9769
+τ = 12
+0.9671
+0.9702
+0.9671
+0.9681
+αstart = 0.3
+0.9742
+0.9769
+0.9742
+0.9751
+αstart = 0.7
+0.9751
+0.9758
+0.9751
+0.9753
+αend = 0
+0.9724
+0.9722
+0.9724
+0.9721
+αend = 0.1
+0.9787
+0.9796
+0.9787
+0.9790
+* Each row changes one parameter at a time around the default setting while keeping the remaining settings fixed.
+
+TABLE V
+TABULAR DATA C ORRESPONDING TO F IG . 4.
+
+TABLE IV
+TABULAR DATA C ORRESPONDING TO F IG . 3.
+Model
+Multi-RKD CNN
+FORM-IDS
+
+TON-IoT
+0.017
+0.003
+
+PowerDuck
+0.074
+0.041
+
+vs. 99.32%). Crucially, these results demonstrate that the
+lightweight network inherently possesses sufficient representational capacity; however, it requires the rich, structural
+supervision provided by the teacher ensemble to successfully
+navigate the complex decision boundary.
+Together, the Mini CNN, Multi-RKD CNN, and full FORMIDS form a three-stage ablation that isolates the contributions of distillation and formal verification. The Mini CNN
+establishes the lower-capacity baseline, the Multi-RKD CNN
+captures the benefit of relational distillation, and the complete
+FORM-IDS reflects the additional suppression of false alarms
+brought by verification. Following the DTL-IDS setting, the
+teacher ensemble size is uniformly set to K = 5. To keep
+the training objective consistent across datasets, the distillation
+hyperparameters are fixed at τ = 8, αstart = 0.5, αend = 0.2,
+and γ = 0.15. The verification threshold θ is selected by
+validation-set grid search for each dataset, yielding θ = 0.9
+for Edge-IIoTset and UNSW-NB15, θ = 0.8 for TON-IoT,
+and θ = 0.85 for PowerDuck.
+To further examine the robustness of the distillation phase, a
+one-factor sensitivity analysis was conducted on the challenging TON-IoT dataset using the Multi-RKD CNN (excluding
+the formal verification module to isolate distillation effects).
+By varying one parameter at a time around the aforementioned
+default settings, the sensitivity metrics reported in Table III
+confirm that the default configuration yields the optimal F1score of 0.9808. Notably, setting γ = 0 or increasing the temperature to τ = 12 results in the most pronounced degradation,
+validating the necessity of relational distillation and moderate
+temperature scaling. Meanwhile, the student model remains
+highly stable against minor tuning variations in the dynamic
+weight bounds (αstart and αend ).
+3) Impact of Formal Verification: To address RQ3, we
+explicitly evaluate the impact of the formal verification module
+by contrasting the full FORM-IDS framework against the
+standalone Multi-RKD CNN. Fig. 3 visualizes the FPR on
+the two most complex datasets. The integration of logical
+
+Dataset
+Edge-IIoTset
+UNSW-NB15
+TON-IOT
+PowerDuck
+
+Generic CNN
+2.20
+2.20
+2.20
+2.20
+
+Multi-RKD CNN
+0.50
+0.50
+0.50
+0.50
+
+FORM-IDS
+0.50
+0.50
+0.50
+0.50
+
+DTL-IDS
+670.22
+1041.60
+793.07
+507.86
+
+TABLE VI
+TABULAR DATA C ORRESPONDING TO F IG . 5.
+Dataset
+Edge-IIoTset
+UNSW-NB15
+TON-IOT
+PowerDuck
+
+Generic CNN
+3.54
+11.38
+3.84
+1.96
+
+Multi-RKD CNN
+2.57
+5.68
+1.67
+1.26
+
+FORM-IDS
+2.58
+5.68
+1.68
+1.27
+
+DTL-IDS
+22.69
+134.07
+21.11
+9.72
+
+constraints results in a substantial suppression of false alarms:
+on TON-IoT, the FPR is slashed from 0.017 to a mere 0.003,
+while on PowerDuck, it decreases from 0.074 to 0.041. For
+completeness, the exact numerical values corresponding to
+Fig. 3 are also reported in Table IV. This sharp reduction
+empirically confirms the module’s capability to filter out
+spurious, transient noise in dynamic environments.
+4) Computational Efficiency: Crucially, this rigorous filtering enhances overall decision reliability without sacrificing
+sensitivity. As corroborated by Fig. 2(c), FORM-IDS achieves
+superior Precision and F1-scores compared to the unverified
+Multi-RKD model. Notably, on TON-IoT, the F1-score improves from 0.9808 to 0.9942. These findings affirmatively
+answer RQ3, demonstrating that the formal verification module successfully purifies the decision boundary, eliminates
+inconsistent predictions, and enforces safety constraints while
+preserving the system’s acute ability to detect genuine attacks.
+Finally, we assess the computational advantage of FORMIDS. As summarized in Fig. 4, DTL-IDS requires storage
+ranging from 507 MB to 1041 MB depending on the datasetspecific ensemble. The specific composition of these ensembles is visualized in Fig. 6, where dark cells denote the
+five backbone architectures selected for each dataset, while
+light cells indicate excluded models. This reliance on multiple
+heavy backbones results in substantial overhead. In contrast,
+FORM-IDS maintains a fixed, ultra-compact size of 0.50 MB
+across all scenarios, corresponding to a reduction of three orders of magnitude. The exact numerical values corresponding
+to Fig. 4 are summarized in Table V.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+This compactness translates directly to inference speed (Fig.
+5). On UNSW-NB15, FORM-IDS reduces the inference time
+per sample from 134.07 ms (DTL-IDS) to just 5.68 ms.
+Even compared to the Generic CNN (11.38 ms), FORM-IDS
+achieves a 2x speedup due to its optimized architecture. The
+exact numerical values corresponding to Fig. 5 are summarized
+in Table VI. These results show that FORM-IDS balances
+strong security performance with the efficiency needed for
+edge-oriented IoT deployment.
+V. C ONCLUSION
+In this paper, we proposed FORM-IDS, a lightweight intrusion detection framework tailored for resource-constrained
+IoT environments. By synergizing multi-teacher relational
+distillation with runtime formal verification, our approach reconciled the inherent trade-off between detection performance
+and deployment cost. Experimental evaluations confirmed that
+FORM-IDS achieved competitive classification performance
+against both the DTL-IDS lineage baselines and the broader
+IDS baselines considered in our experiments, while significantly reducing computational overhead and inference latency.
+Beyond this specific task, the integration of data-driven learning and symbolic reasoning offers a promising direction for
+building trustworthy and verifiable AI at the network edge.
+Future research will explore adaptive thresholding mechanisms
+to dynamically calibrate formal verification bounds against
+real-time concept drift. Additionally, we aim to deploy the
+FORM-IDS pipeline on varied physical edge hardware to
+profile energy constraints, and to investigate adaptive feature
+alignment for seamless cross-dataset transfer learning across
+disparate IoT traffic structures.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+12
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+R EFERENCES
+[1] H. Son, J. Jang, J. Park, A. Balog, P. Ballantyne, H. R. Kwon,
+A. Singleton, and J. Hwang, “Leveraging advanced technologies for
+(smart) transportation planning: A systematic review,” Sustainability,
+vol. 17, no. 5, p. 2245, 2025.
+[2] P. J. Ganesh, B. M. Sundaram, P. K. Balachandran, and G. B. Mohammad, “Intdem: an intelligent deep optimized energy management
+system for iot-enabled smart grid applications,” Electrical Engineering,
+vol. 107, no. 2, pp. 1925–1947, 2025.
+[3] B. O. Sanusi, “Smart infrastructure: Leveraging iot and ai for predictive
+maintenance in urban facilities,” SAMRIDDHI: A Journal of Physical
+Sciences, Engineering and Technology, vol. 17, no. 02, pp. 26–37, 2025.
+[4] M. Driss, D. Hasan, W. Boulila, and J. Ahmad, “Microservices in iot
+security: current solutions, research challenges, and future directions,”
+Procedia Computer Science, vol. 192, pp. 2385–2395, 2021.
+[5] A. Thakkar and R. Lohiya, “A survey on intrusion detection system:
+feature selection, model, performance measures, application perspective,
+challenges, and future research directions,” Artificial Intelligence Review,
+vol. 55, no. 1, pp. 453–563, 2022.
+[6] H. Dong and I. Kotenko, “Cybersecurity in the ai era: analyzing the
+impact of machine learning on intrusion detection,” Knowledge and
+Information Systems, pp. 1–52, 2025.
+[7] I. Rakine, A. Oukaira, K. El Guemmat, I. Atouf, S. Ouahabi, M. Talea,
+and T. Bouragba, “Comprehensive review of intrusion detection techniques: Ml and dl in different networks,” IEEE Access, 2025.
+[8] A. K. Desta, S. Ohira, I. Arai, and K. Fujikawa, “Rec-cnn: In-vehicle
+networks intrusion detection using convolutional neural networks trained
+on recurrence plots,” Vehicular Communications, vol. 35, p. 100470,
+2022.
+[9] M. A. Haq, M. A. Rahim Khan, and T. AL-Harbi, “Development of
+pccnn-based network intrusion detection system for edge computing.”
+Computers, Materials & Continua, vol. 71, no. 1, 2022.
+[10] S. Latif, W. Boulila, A. Koubaa, Z. Zou, and J. Ahmad, “Dtl-ids: An
+optimized intrusion detection framework using deep transfer learning
+and genetic algorithm,” Journal of Network and Computer Applications,
+vol. 221, p. 103784, 2024.
+[11] S. S. Bamber, A. V. R. Katkuri, S. Sharma, and M. Angurala, “A hybrid
+cnn-lstm approach for intelligent cyber intrusion detection system,”
+Computers & Security, vol. 148, p. 104146, 2025.
+[12] M. Arsalan, M. Mubeen, M. Bilal, and S. F. Abbasi, “1d-cnn-ids: 1d
+cnn-based intrusion detection system for iiot,” in 2024 29th International
+Conference on Automation and Computing (ICAC), 2024, pp. 1–4.
+[13] D. Torre, A. Chennamaneni, J. Jo, G. Vyas, and B. Sabrsula, “Toward
+enhancing privacy preservation of a federated learning cnn intrusion
+detection system in iot: Method and empirical study,” ACM Trans.
+Softw. Eng. Methodol., vol. 34, no. 2, Jan. 2025. [Online]. Available:
+https://doi.org/10.1145/3695998
+[14] K. Yesodha, M. Krishnamurthy, M. Selvi, and A. Kannan, “Intrusion
+detection system extended cnn and artificial bee colony optimization in
+wireless sensor networks,” Peer-to-peer Networking and Applications,
+vol. 17, no. 3, pp. 1237–1262, 2024.
+[15] B. Ahmad, Z. Wu, Y. Huang, and S. U. Rehman, “Enhancing the security
+in iot and iiot networks: An intrusion detection scheme leveraging deep
+transfer learning,” Knowledge-Based Systems, vol. 305, p. 112614, 2024.
+[16] K.-D. Lu, Y.-W. Yang, G.-Q. Zeng, C. Peng, G.-G. Geng, and J. Weng,
+“Bpso-ahdl-ids: Binary particle swarm optimization-based automated
+hybrid deep learning model for intrusion detection of internet of things,”
+IEEE Transactions on Automation Science and Engineering, vol. 22, pp.
+15 859–15 877, 2025.
+[17] K.-D. Lu, J.-C. Huang, G.-Q. Zeng, M.-R. Chen, G.-G. Geng, and
+J. Weng, “Multi-objective discrete extremal optimization of variablelength blocks-based cnn by joint nas and hpo for intrusion detection in
+iiot,” IEEE Transactions on Dependable and Secure Computing, vol. 22,
+no. 4, pp. 4266–4283, 2025.
+[18] L.-H. Wang, Q. Dai, T. Du, and L.-f. Chen, “Lightweight intrusion
+detection model based on cnn and knowledge distillation,” Applied Soft
+Computing, vol. 165, p. 112118, 2024.
+[19] M. Umair, M. S. Khan, W. Al Malwi, F. Asiri, I. Nafea, F. Saeed,
+and J. Ahmad, “Knowledge distillation for lightweight and explainable
+intrusion detection in resource-constrained consumer devices,” IEEE
+Transactions on Consumer Electronics, 2025.
+[20] B. Xie, Z. Wang, Z. Zeng, D. He, and S. Chan, “Dtkd-ids: A dual-teacher
+knowledge distillation intrusion detection model for the industrial internet of things,” Ad Hoc Networks, vol. 174, p. 103869, 2025.
+
+13
+
+[21] J. Shen, W. Yang, Z. Chu, J. Fan, D. Niyato, and K.-Y. Lam, “Effective
+intrusion detection in heterogeneous internet-of-things networks via
+ensemble knowledge distillation-based federated learning,” in ICC 2024
+- IEEE International Conference on Communications, 2024, pp. 2034–
+2039.
+[22] X. Zhou, J. Wu, W. Liang, K. I.-K. Wang, Z. Yan, L. T. Yang, and Q. Jin,
+“Reconstructed graph neural network with knowledge distillation for
+lightweight anomaly detection,” IEEE Transactions on Neural Networks
+and Learning Systems, vol. 35, no. 9, pp. 11 817–11 828, 2024.
+[23] K. Liu, S. Yang, C.-D. Wang, Y. Chen, and Z. Huang, “A novel
+knowledge distillation method for graph neural networks with gradient
+mapping and fusion,” Information Fusion, p. 104163, 2026.
+[24] Z. H. Toman, L. Hamel, S. H. Toman, M. Graiet, and D. C. G. Valadares,
+“Formal verification for security and attacks in iot physical layer,”
+Journal of Reliable Intelligent Environments, vol. 10, no. 1, pp. 73–91,
+2024.
+[25] M. Krichen, “Formal methods and validation techniques for ensuring
+automotive systems security,” Information, vol. 14, no. 12, p. 666, 2023.
+[26] B. Yuan, C. Zhang, J. Ren, Q. Chen, B. Xu, Q. Zhang, Z. Li, D. Zou,
+F. Zhang, and H. Jin, “Toward automated attack discovery in sdn
+controllers through formal verification,” IEEE Transactions on Network
+and Service Management, vol. 21, no. 3, pp. 3636–3655, 2024.
+[27] M. Krichen, “Improving formal verification and testing techniques for
+internet of things and smart cities,” Mobile networks and applications,
+vol. 28, no. 2, pp. 732–743, 2023.
+[28] M. A. Ferrag, O. Friha, D. Hamouda, L. Maglaras, and H. Janicke,
+“Edge-iiotset: A new comprehensive realistic cyber security dataset of
+iot and iiot applications for centralized and federated learning,” IEEe
+Access, vol. 10, pp. 40 281–40 306, 2022.
+[29] N. Moustafa and J. Slay, “Unsw-nb15: a comprehensive data set for
+network intrusion detection systems (unsw-nb15 network data set),”
+in 2015 military communications and information systems conference
+(MilCIS). IEEE, 2015, pp. 1–6.
+[30] N. Moustafa and J. Slay, “The evaluation of network anomaly detection
+systems: Statistical analysis of the unsw-nb15 data set and the comparison with the kdd99 data set,” Information Security Journal: A Global
+Perspective, vol. 25, no. 1-3, pp. 18–31, 2016.
+[31] N. Moustafa, G. Creech, and J. Slay, “Big data analytics for intrusion
+detection system: Statistical decision-making using finite dirichlet mixture models,” in Data Analytics and Decision Support for Cybersecurity:
+Trends, Methodologies and Applications. Springer, 2017, pp. 127–156.
+[32] N. Moustafa, J. Slay, and G. Creech, “Novel geometric area analysis
+technique for anomaly detection using trapezoidal area estimation on
+large-scale networks,” IEEE transactions on big data, vol. 5, no. 4, pp.
+481–494, 2017.
+[33] M. Sarhan, S. Layeghy, N. Moustafa, and M. Portmann, “Netflow
+datasets for machine learning-based network intrusion detection systems,” in International Conference on Big Data Technologies and
+Applications. Springer, 2020, pp. 117–135.
+[34] T. M. Booij, I. Chiscop, E. Meeuwissen, N. Moustafa, and F. T.
+Den Hartog, “Ton iot: The role of heterogeneity and the need for
+standardization of features and attack types in iot network intrusion data
+sets,” IEEE Internet of Things Journal, vol. 9, no. 1, pp. 485–496, 2021.
+[35] A. Alsaedi, N. Moustafa, Z. Tari, A. Mahmood, and A. Anwar, “Ton iot
+telemetry dataset: A new generation dataset of iot and iiot for data-driven
+intrusion detection systems,” Ieee Access, vol. 8, pp. 165 130–165 150,
+2020.
+[36] J. Ashraf, M. Keshk, N. Moustafa, M. Abdel-Basset, H. Khurshid, A. D.
+Bakhshi, and R. R. Mostafa, “Iotbot-ids: A novel statistical learningenabled botnet detection framework for protecting networks of smart
+cities,” Sustainable Cities and Society, vol. 72, p. 103041, 2021.
+[37] N. Moustafa, “A systemic iot–fog–cloud architecture for big-data analytics and cyber security systems: A review of fog computing,” Secure
+Edge Computing, pp. 41–50, 2021.
+[38] N. Moustafa, “New generations of internet of things datasets for
+cybersecurity applications based machine learning: Ton iot datasets,”
+in Proceedings of the eResearch Australasia Conference, Brisbane,
+Australia, 2019, pp. 21–25.
+[39] N. Moustafa, M. Ahmed, and S. Ahmed, “Data analytics-enabled intrusion detection: Evaluations of ton iot linux datasets,” in 2020 IEEE 19th
+International Conference on Trust, Security and Privacy in Computing
+and Communications (TrustCom). IEEE, 2020, pp. 727–735.
+[40] N. Moustafa, M. Keshky, E. Debiez, and H. Janicke, “Federated ton iot
+windows datasets for evaluating ai-based security applications,” in 2020
+IEEE 19th international conference on trust, security and privacy in
+computing and communications (TrustCom). IEEE, 2020, pp. 848–
+855.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3694426
+
+JOURNAL OF IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. , NO. , FEBRUARY 2026
+
+[41] N. Moustafa, “A new distributed architecture for evaluating ai-based
+security systems at the edge: Network ton iot datasets,” Sustainable
+Cities and Society, vol. 72, p. 102994, 2021.
+[42] S. Zemanek, I. Hacker, K. Wolsing, E. Wagner, M. Henze, and M. Serror,
+“PowerDuck: A GOOSE Data Set of Cyberattacks in Substations,” in
+Proceedings of the 15th Workshop on Cyber Security Experimentation
+and Test. New York, NY, USA: Association for Computing Machinery,
+2022, pp. 49–53.
+[43] T.-A. Nguyen, L. T. Le, T. D. Nguyen, W. Bao, S. Seneviratne, C. S.
+Hong, and N. H. Tran, “Federated PCA on grassmann manifold for IoT
+anomaly detection,” IEEE/ACM Transactions on Networking, vol. 32,
+no. 5, pp. 4456–4471, 2024.
+[44] C. Qiu, G. Nan, H. Xia, Z. Weng, X. Wang, M. Shen, X. Tao, and
+J. Liu, “Disentangled dynamic intrusion detection,” IEEE Transactions
+on Pattern Analysis and Machine Intelligence, vol. 47, no. 11, pp.
+10 528–10 545, 2025.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+14

@@ -1,0 +1,147 @@
+           F LOW P RINT: Semi-Supervised Mobile-App
+           Fingerprinting on Encrypted Network Traffic
+Thijs van Ede1 , Riccardo Bortolameotti2 , Andrea Continella3 , Jingjing Ren4 , Daniel J. Dubois4 , Martina Lindorfer5 ,
+                              David Choffnes4 , Maarten van Steen1 , and Andreas Peter1
+          1 University of Twente, 2 Bitdefender, 3 UC Santa Barbara, 4 Northeastern University, 5 TU Wien
+
+                  {t.s.vanede, m.r.vansteen, a.peter}@utwente.nl, rbortolameotti@bitdefender.com,
+                  {acontinella, mlindorfer}@iseclab.org, {renjj, d.dubois, choffnes}@ccs.neu.edu
+
+    Abstract—Mobile-application fingerprinting of network traffic          However, recognizing mobile apps can be a double-edged
+is valuable for many security solutions as it provides insights into   sword: On the one hand, network flow analysis provides a non-
+the apps active on a network. Unfortunately, existing techniques       intrusive central view of apps on the network without requiring
+require prior knowledge of apps to be able to recognize them.          host access. On the other hand, app detection can be used for
+However, mobile environments are constantly evolving, i.e., apps       censoring and invades users’ privacy. As we show in this work,
+are regularly installed, updated, and uninstalled. Therefore, it is
+                                                                       active apps on a network can not only be reliably fingerprinted
+infeasible for existing fingerprinting approaches to cover all apps
+that may appear on a network. Moreover, most mobile traffic is         for security purposes, but also in an adversarial setting, despite
+encrypted, shows similarities with other apps, e.g., due to common     traffic encryption. Thus, privacy-conscious users need to be
+libraries or the use of content delivery networks, and depends on      aware of the amount of information that encrypted traffic is still
+user input, further complicating the fingerprinting process.           revealing about their app usage, and should consider additional
+                                                                       safeguards, such as VPNs, in certain settings.
+    As a solution, we propose F LOW P RINT, a semi-supervised
+approach for fingerprinting mobile apps from (encrypted) net-
+work traffic. We automatically find temporal correlations among
+                                                                           The idea of network-based app detection has already been
+destination-related features of network traffic and use these          extensively explored in both industry and academia [2, 4, 5,
+correlations to generate app fingerprints. Our approach is able        17, 25]. Snort for example offers AppID [21], a system for
+to fingerprint previously unseen apps, something that existing         creating network intrusion detection rules for specified apps,
+techniques fail to achieve. We evaluate our approach for both          while Andromaly [57] attempts to detect unknown software
+Android and iOS in the setting of app recognition, where we            through anomaly detection by comparing its network behavior
+achieve an accuracy of 89.2%, significantly outperforming state-       to that of known apps. Other approaches specifically focus
+of-the-art solutions. In addition, we show that our approach can       on detecting apps containing known vulnerabilities [62], and
+detect previously unseen apps with a precision of 93.5%, detecting     others identify devices across networks based on the list of
+72.3% of apps within the first five minutes of communication.          apps installed on a device [61]. All these approaches have
+                                                                       in common that they require prior knowledge of apps before
+                       I.   I NTRODUCTION                              being able to distinguish them. However, new apps are easily
+    Security solutions aim at preventing potentially harmful or        installed, updated and uninstalled, with almost 2.5 million
+vulnerable applications from damaging the IT infrastructure or         apps to choose from in the Google Play Store alone [60],
+leaking confidential information. In large enterprise networks,        not to mention a number of alternative markets. Furthermore,
+this is traditionally achieved by installing monitoring agents         recent work has shown that even the set of pre-installed apps
+that protect each individual device [67]. However, for mobile          on Android varies greatly per device [30]. Thus, especially
+devices security operators do not have direct control over the         when companies adopt BYOD policies, it is infeasible to know
+apps installed on each device in their infrastructure, especially      in advance which apps will appear on the network. As a
+when new devices enter networks under bring-your-own-device            consequence, unknown apps are either misclassified or bundled
+(BYOD) policies on a regular basis and with the ease by                into a big class of unknown apps. In a real-world setting, a
+which apps are installed, updated, and uninstalled. In order           security operator would need to inspect the unknown traffic
+to still retain detection capabilities for apps that are active in     and decide which app it belongs to, limiting the applicability
+the network, operators rely on observing the network traffic           of existing approaches in practice.
+of mobile devices. This naturally introduces the challenge of
+detecting apps in encrypted network traffic, which represents              Unlike existing solutions, we assume no prior knowledge
+the majority of mobile traffic—80% of all Android apps, and            about the apps running in the network. We aim at generating
+90% of apps targeting Android 9 or higher, adopt Transport             fingerprints that act as markers, and that can be used to both
+Layer Security (TLS) [31].                                             recognize known apps and automatically detect and isolate
+                                                                       previously unseen apps. From this, a security operator can
+                                                                       update whitelists, blacklists or conduct targeted investigations
+                                                                       on per-app groupings of network traffic.
+Network and Distributed Systems Security (NDSS) Symposium 2020
+23-26 February 2020, San Diego, CA, USA
+ISBN 1-891562-61-4                                                         There are several challenges that make such fingerprinting
+https://dx.doi.org/10.14722/ndss.2020.24412                            non-trivial. This is because mobile network traffic is particu-
+www.ndss-symposium.org                                                 larly homogeneous, highly dynamic, and constantly evolving:
+Homogeneous. Mobile network traffic is homogeneous be-                   example, having knowledge about the Google Maps app,
+cause many apps share common libraries for authentication,               allows us to rename unknown_app_X to google_maps.
+advertisements or analytics [11]. In addition, the vast majority         Similarly, unseen app detection requires a training phase on a
+of traffic uses the same application-level protocol HTTP in              set of known apps to identify unknown ones.
+various forms (HTTP(S)/QUIC) [50]. Furthermore, part of
+the content is often served through content delivery networks            In summary, we make the following contributions:
+(CDNs) or hosted by cloud providers. Consequently, different                 • We introduce an approach for semi-supervised fin-
+apps share many network traffic characteristics. Our work                       gerprinting by combining destination-based clustering,
+tackles homogeneous traffic by leveraging the difference in                     browser isolation and pattern recognition.
+network destinations that apps communicate with. We show
+that despite the large overlap in destinations, our approach is              • We implement this approach in our prototype F LOW-
+still able to extract unique patterns in the network traffic.                   P RINT, the first real-time system for constructing
+                                                                                mobile app fingerprints capable of dealing with unseen
+Dynamic. Mobile network traffic is often dynamic as data that                   apps, without requiring prior knowledge.
+apps generate may depend on the behavior of the users, e.g.,                 • We show that, for both Android and iOS apps, our
+their navigation through an app. Such dynamism may already                      approach detects known apps with an accuracy of
+be observed in synthetic datasets that randomly browse through                  89.2%, significantly outperforming the state-of-the-art
+an app’s functionality. Various fingerprinting approaches rely                  supervised app recognition system AppScanner [62].
+on repetitive behavior in network traffic [1, 28]. Despite good                 Moreover, our approach is able to deal with app
+results of these methods in smart-home environments and                         updates and is capable of detecting previously unseen
+industrial control systems, dynamic traffic could complicate                    apps with a precision of 93.5%.
+fingerprinting of mobile apps. Hence, our work aims to create
+fingerprints that are robust against user interactions by leverag-       In the spirit of open science, we make both our prototype and
+ing information about network destinations on which the user             datasets available at https://github.com/Thijsvanede/FlowPrint.
+has limited influence. We show that our approach achieves
+similar results on both automated and user-generated datasets.
+                                                                                         II.   P RELIMINARY A NALYSIS
+Evolving. Mobile network traffic is constantly evolving as app
+                                                                             To study mobile network traffic and identify strong indica-
+markets offer effortless installation, update, and uninstallation
+                                                                         tors that can be used to recognize mobile apps, we performed
+of a vast array of apps. Studies have shown that apps are
+                                                                         a preliminary analysis on a small dataset. As indicated in
+regularly updated with new versions, as frequently as once a
+                                                                         the introduction, our fingerprinting method should be able to
+month on average [11, 22]. This is a challenge for existing fin-
+                                                                         distinguish mobile apps despite their homogeneous, dynamic
+gerprinting mechanisms that require prior knowledge of an app
+                                                                         and evolving behavior. Hence, in our preliminary analysis we
+in order to generate fingerprints. When new or updated apps
+                                                                         explored features that may be used to fingerprint apps.
+are introduced into the network, these fingerprinting systems
+become less accurate, similarly to what Vastel et al. observed in
+the setting of browser fingerprinting [65]. Moreover, the frac-          A. Dataset
+tion of apps covered by these systems dramatically decreases                 In order to perform our analyses, we use datasets of
+over time if fingerprints are not regularly updated. Our solution        encrypted network traffic labeled per app (see Table I). These
+counters this by basing its fingerprints on pattern discovery in         datasets allow us to evaluate our method in various conditions
+network traffic instead of training on labeled data. Doing so,           as they contain a mix of both synthetic and user-generated data;
+our approach produces fingerprints that automatically evolve             Android and iOS apps; benign and potentially harmful apps;
+together with the changing network traffic. We show that our             different app stores; and different versions of the same app. We
+approach is able to correctly recognize updated apps and can             collected three of the datasets as part of our prior work [40, 51,
+even detect and fingerprint previously unseen apps.                      52, 53]. We collected the last set specifically for this work with
+    To address these challenges, we introduce a semi-                    the purpose of representing browser traffic, which is lacking in
+supervised approach to generate fingerprints for mobile apps.            most available datasets. For this preliminary analysis, we only
+Our key observation is that mobile apps are composed of                  used a small fraction of the available data in order to prevent
+different modules that often communicate with a static set of            bias in the final evaluation.
+destinations. We leverage this property to discover patterns in
+                                                                         ReCon. The ReCon AppVersions dataset [52, 53] consists
+the network traffic corresponding to these different modules.
+                                                                         of labeled network traces of 512 Android apps from the
+On a high level, we group together (encrypted) TCP/UDP
+                                                                         Google Play Store, including multiple version releases over
+flows based on their destination and find correlations in des-
+                                                                         a period of eight years. The traces were generated through
+tinations frequently accessed together. We then combine these
+                                                                         a combination of automated and scripted interactions on five
+patterns into fingerprints, which may, among other use cases,
+                                                                         different Android devices. The apps were chosen among the
+be used for app recognition and unseen app detection.
+                                                                         600 most popular free apps on the Google Play Store ranking
+    While our approach does not require prior knowledge to               within the top 50 in each category. In addition, this dataset
+generate fingerprints, and could, thus, be considered unsuper-           contains extended traces of five apps, including multiple ver-
+vised, the applications of our approach are semi-supervised. In          sion releases. The network traffic of each of these five apps
+fact, our approach creates “anonymous” labels that uniquely              was captured daily over a two-week period. In this work, we
+identify mobile apps. However, app recognition uses known                refer the AppVersions dataset as ReCon and to the extended
+labels to assign app names to the matched fingerprints. For              dataset as ReCon extended.
+
+                                                                     2
+ TABLE I.  DATASET OVERVIEW. 3 INDICATES A DATASET CONTAINS
+   H OMOGENEOUS (H), DYNAMIC (D), OR E VOLVING (E) TRAFFIC .                                                  traffic limits the available features to temporal and size-based
+                                                                                                              features, as well as the header values of unencrypted layers
+ Dataset
+                                  No.
+                                 Apps
+                               

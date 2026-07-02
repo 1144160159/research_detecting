@@ -1,0 +1,145 @@
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 64, 2026                                                                                 5509418
+
+
+
+
+       A Joint Masked Spectral Group Framework for
+           Hyperspectral Representation Learning
+                  Minzhen Cao , Graduate Student Member, IEEE, Hao Deng , Senior Member, IEEE,
+                       Bowen Du , Member, IEEE, and Shengjie Zhao , Senior Member, IEEE
+
+
+
+   Abstract—Given the scarcity of labeled data, hyperspec-                     of hundreds of correlated bands, variations across sensors
+tral image (HSI) analysis has increasingly relied on self-                     and acquisition conditions, and the presence of noise and
+supervised representation learning. Masked reconstruction and                  mixed pixels complicate reliable data interpretation [4], [5].
+contrastive learning are two dominant paradigms that emphasize
+spectral–spatial fidelity and feature discrimination, respectively,            Moreover, the scarcity of large-scale, high-quality labeled
+yet their objectives are not naturally aligned in HSI: recon-                  data, together with the heterogeneity of acquisition conditions,
+struction is vulnerable to redundancy-induced shortcut solutions,              further limits the scalability and robustness of hyperspectral
+while contrastive learning may under-emphasize subtle but class-               analysis in practice [6], [7].
+critical spectral cues. Motivated by this gap, we propose a                       Over the past decades, HSI analysis has evolved through
+joint masked spectral group (MSG) framework for hyperspectral
+representation learning that couples the two objectives through                several methodological stages. Early studies relied on hand-
+a shared spectral-group representation and objective-consistent                crafted features and shallow classifiers, including spectral
+structured masking. At its core, MSG builds on spectral group                  indices [8], subspace-based methods [9], dictionary learning
+embedding and masking (SGEM), which organizes contiguous                       [10], and kernel-based support vector machines [11]. With
+bands into compact groups and performs group-wise masking to                   the advent of deep learning, convolutional neural networks
+suppress redundancy while preserving coherent spectral context
+for stable view formation. This design encourages reconstruction               (CNNs) and their 2-D/3-D extensions became dominant, effec-
+and discrimination to complement rather than interfere with                    tively capturing spectral–spatial correlations and achieving
+each other, yielding representations that are both discriminative              substantial gains in classification accuracy [12], [13]. More
+and transferable. Extensive experiments under linear evalua-                   recently, attention-based architectures and transformer variants
+tion and few-shot fine-tuning (FT) across multiple downstream                  have further advanced HSI representation learning by enabling
+benchmarks demonstrate that MSG consistently outperforms
+strong masked reconstruction and contrastive learning baselines,               the modeling of long-range dependencies across spectral and
+achieving higher accuracy, more stable class-wise performance,                 spatial dimensions [14], [15]. Despite these advances, the
+and stronger transferability.                                                  strong reliance on annotated data remains a critical bottleneck,
+  Index Terms—Contrastive learning, hyperspectral image                        motivating the exploration of unsupervised and self-supervised
+(HSI), masked reconstruction, self-supervised learning (SSL),                  paradigms for more generalizable hyperspectral representation
+spectral grouping, transformer.                                                learning.
+                                                                                  Self-supervised learning (SSL) has emerged as a promis-
+                          I. I NTRODUCTION                                     ing solution for HSI analysis, as it enables the extraction
+                                                                               of transferable representations from abundant unlabeled data
+
+H      YPERSPECTRAL images (HSIs) provide continuous
+       spectral responses with fine-grained material infor-
+mation, supporting diverse applications such as land-cover
+                                                                               [16], [17]. In computer vision (CV), SSL has evolved into
+                                                                               several dominant paradigms, such as masked reconstruction
+                                                                               [18], contrastive learning [19], clustering-based representation
+classification, vegetation monitoring, environmental assess-                   learning [20], and generative pretraining [21]. When trans-
+ment, and urban or disaster surveillance [1], [2], [3]. To fully               ferred to HSI, these paradigms have achieved encouraging
+exploit this rich spectral–spatial information, however, several               progress but still struggle to fully capture the hierarchi-
+key challenges must be addressed. The high dimensionality                      cal spectral–spatial dependencies inherent in hyperspectral
+   Received 5 February 2026; accepted 10 March 2026. Date of publication       data [22], [23]. This limitation largely stems from the
+17 March 2026; date of current version 3 April 2026. This work was supported   predominant reliance on a single pretext objective, which
+in part by the National Key Research and Development Program of China          restricts the ability to exploit complementary learning cues.
+under Grant 2023YFC3806000 and Grant 2023YFC3806002, in part by the
+National Natural Science Foundation of China under Grant 62371342 and          Specifically, masked reconstruction focuses on fine-grained
+Grant 62406227, in part by Shanghai Pujiang Program under Grant 25PJD128,      spectral–spatial reconstruction, whereas contrastive learning
+and in part by the Fundamental Research Funds for the Central Universities.    emphasizes global feature consistency between augmented
+(Corresponding author: Hao Deng.)
+   The authors are with the School of Computer Science and Technology and      views. While a few studies have explored multiobjective SSL
+the Engineering Research Center of Key Software Technologies for Smart City    frameworks, they typically combine different objectives only at
+Perception and Planning, Ministry of Education, Tongji University, Shanghai    the loss level, leaving the two objectives to compete on incon-
+201804, China (e-mail: denghao1984@tongji.edu.cn).
+   Data is available on-line at https://github.com/Viento1027/MSG              sistent inputs and learning signals, which often yields limited
+   Digital Object Identifier 10.1109/TGRS.2026.3674733                         synergy [24]. These limitations highlight the need for an SSL
+             1558-0644 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+5509418                                                              IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 64, 2026
+
+
+
+framework that can explicitly coordinate reconstruction- and          asymmetric encoder–decoder structure with most capacity
+contrastive-driven supervision in a shared spectral–spatial rep-      allocated to the encoder, and performing reconstruction either
+resentation space, rather than merely summing losses.                 in the pixel domain or in compact latent spaces [27], [28].
+   To address these limitations, we propose the joint masked          These advances demonstrate that such reconstruction objec-
+spectral group (MSG) framework for self-supervised hyper-             tives can effectively capture contextual dependencies without
+spectral representation learning. Instead of treating masked          reliance on manual annotations.
+reconstruction and contrastive learning as two loosely coupled           When extended to an HSI, masked reconstruction needs to
+branches, MSG introduces an objective-consistent coordina-            account for the intrinsic spectral–spatial structure. Prior works
+tion mechanism that aligns their supervision through a shared         have attempted to reconstruct full spectral signatures [22],
+spectral-group representation and structured masking. Con-            low-dimensional subspace projections [29], or hybrid targets
+cretely, MSG uses a shallow shared encoder to establish               combining spectral and spatial cues [30]. Spatial masking
+a common spectral–spatial feature space, upon which two               encourages the modeling of local context, whereas spectral
+lightweight task heads are optimized with different masking           masking compels the encoder to capture interband correlations.
+ratios to provide complementary learning signals. At its core         Several studies further integrate spatial and spectral masking
+lies the spectral group embedding and masking (SGEM)                  to model joint dependencies [31]. Decoders are generally
+module, which aggregates contiguous spectral bands into               designed to be lightweight, thereby avoiding trivial copying
+coherent group-wise tokens and applies group-wise masking             and forcing the encoder to assume the representational burden
+aligned with the grouped representation. In this way, recon-          [32]. Nevertheless, recent analyses indicate that reconstruction
+struction emphasizes intragroup spectral–spatial fidelity while       with pixel-space or other low-level targets does not necessar-
+contrastive learning promotes global invariance on consistent         ily induce semantically meaningful high-level representations,
+grouped views, so that the two objectives complement rather           even under high masking ratios [33]. Consistent observations
+than interfere with each other.                                       further show that MAE-style pretraining often produces fea-
+   The main contributions of this work are summarized as              tures with limited abstraction and entanglement of object and
+follows.                                                              background cues, thereby increasing reliance on labeled fine-
+   1) We propose MSG, a joint self-supervised framework               tuning (FT) for achieving strong downstream performance
+       for hyperspectral representation learning. It integrates       [34]. It also exhibits limited cross-sensor transferability, as
+       spectral-group masked reconstruction and group-wise            fidelity objectives alone do not ensure domain invariance
+       contrastive learning within a partially shared encoder         [35]. Consequently, reconstruction-based pretraining remains
+       architecture to balance fidelity and discriminability.         constrained in semantic abstraction and cross-domain gener-
+   2) We design the SGEM module, which employs a spectral             alization in HSI.
+       stem and group-wise patchification to partition con-
+       tiguous spectral bands into groups, generating coherent        B. Contrastive Learning for HSIs
+       spectral–spatial tokens. This module allows the trans-             In parallel, contrastive learning has emerged as a cen-
+       former to jointly capture spatial and spectral correlations    tral paradigm for self-supervised representation learning. By
+       and provides a unified foundation for both reconstruction      maximizing agreement between positive pairs and enforcing
+       and contrastive learning.                                      separation from negatives, it produces compact, discriminative,
+   3) We comprehensively evaluate MSG across multiple                 and transferable embeddings [36]. Technical innovations such
+       benchmark datasets through comparative and ablation            as momentum encoders, memory queues, and temperature
+       analyses. The results demonstrate its consistent superi-       scaling have substantially improved its scalability and effec-
+       ority over strong baselines and verify the generalization      tiveness in large-scale visual representation learning [19], [37].
+       and robustness of the proposed framework.                          In the hyperspectral domain, contrastive learning presents
+   The remainder of this article is organized as follows. Sec-        both opportunities and unique challenges. Spatial augmenta-
+tion II provides a review of related work. Section III describes      tions (e.g., cropping, flipping, and translation) enrich spatial
+the proposed MSG methodology. Section IV presents the                 diversity, whereas spectral perturbations (e.g., band dropout,
+datasets and experimental setup, and then reports the perfor-         jittering, and smooth distortions) expand the view space while
+mance comparison and ablation studies. Section V concludes            preserving spectral structure [38]. The design of augmenta-
+the article and discusses potential future research directions.       tions is particularly delicate: they must increase variability
+                                                                      while maintaining the physical continuity of spectral signa-
+                     II. R ELATED W ORK                               tures. To improve scalability and stability, momentum-based
+                                                                      encoders and prototype-based clustering have been adapted
+A. Masked Reconstruction for HSIs                                     to hyperspectral settings [39], [40]. Despite these efforts,
+   Masked reconstruction has become a prominent paradigm in           several issues persist. Highly similar spectra across classes can
+self-supervised representation learning, which aims to recover        generate false negatives, undermining the contrastive objective.
+missing input regions from partial observations [25]. In CV,          Excessive spectral perturbations may destroy essential class-
+this principle has been instantiated in various architectures,        discriminative cues, while insufficient perturbations fail to
+among which masked autoencoders (MAEs) are particularly               provide meaningful contrast. Moreover, large-batch training
+influential [26]. Key design principles include employing a           and reliance on memory banks introduce computational bur-
+high masking ratio to increase task difficulty, adopting an           dens for high-resolution hyperspectral datasets [41]. These
+CAO et al.: JOINT MSG FRAMEWORK FOR HYPERSPECTRAL REPRESENTATION LEARNING                                                    5509418
+
+
+
+limitations highlight that contrastive learning for HSI remains     to obtain balanced spectral–spatial representations for hyper-
+sensitive to augmentation design, spectral redundancy, and          spectral pretraining.
+computational scalability, calling for further exploration of
+more adaptive and domain-aware strategies.                                              III. M ETHODOLOGY
+                                                                    A. Overall Framework
+C. Spectral Information Handling in Hyperspectral
+Representation Learning                                                To learn transferable representations from unlabeled HSIs,
+                 

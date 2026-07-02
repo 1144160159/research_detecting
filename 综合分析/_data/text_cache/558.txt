@@ -1,0 +1,145 @@
+       The Discriminative Power of Cross-layer RTTs
+              in Fingerprinting Proxy Traffic
+
+                                Diwen Xue       Robert Stanley Piyush Kumar Roya Ensafi
+                                                     University of Michigan
+                                           {diwenx, rsta, piyushks, ensafi}@umich.edu
+    Abstract—The escalating global trend of Internet censorship        developers to obfuscate it to resemble popular protocols like
+has necessitated an increased adoption of proxy tools, especially      TLS [48], [81]. As censors blocked circumvention traffic based
+obfuscated circumvention proxies. These proxies serve a fun-           on their distinctive ciphersuites, developers adopted cipher-
+damental need for access and connectivity among millions in            suites from mainstream browsers [19], [25]. When censors
+heavily censored regions. However, as the use of proxies expands,      deployed active probing to identify circumvention servers,
+so do censors’ dedicated efforts to detect and disrupt such
+circumvention traffic to enforce their information control policies.
+                                                                       developers in response implemented probe-resistant protec-
+                                                                       tions [14], [24]. The incidents in Myanmar, Russia, and China
+     In this paper, we bring out the presence of an inherent           mark the latest developments in this circumvention arms race.
+fingerprint for detecting obfuscated proxy traffic. The fingerprint
+is created by the misalignment of transport- and application-layer         Obfuscated proxies remain one of the most popular meth-
+sessions in proxy routing, which is reflected in the discrepancy in    ods for circumventing censorship, providing flexible, general-
+Round Trip Times (RTTs) across network layers. Importantly,            purpose access to information with good usability for average
+being protocol-agnostic, the fingerprint enables an adversary to       users. Similar to standard proxies, an obfuscated proxy setup
+effectively target multiple proxy protocols simultaneously. We         involves a user in a censored region connecting to a proxy
+conduct an extensive evaluation using both controlled testbeds         outside that jurisdiction in order to access an application server
+and real-world traffic, collected from a partner ISP, to assess the    that is otherwise blocked. The proxy, upon receiving payloads
+fingerprint’s potential for exploitation by censors. In addition
+                                                                       from the user, establishes a new connection with the applica-
+to being of interest on its own, our timing-based fingerprinting
+vulnerability highlights the deficiencies in existing obfuscation      tion server and forwards the traffic as received. Obfuscated
+approaches. We hope our study brings the attention of the circum-      proxies differ from standard proxies by including an extra
+vention community to packet timing as an area of concern and           obfuscation layer to avoid being detected by censors. Over
+leads to the development of more sustainable countermeasures.          the past decade, the circumvention community has developed
+                                                                       various obfuscation schemes, such as by mimicking allowed
+                       I.   I NTRODUCTION                              protocols [13], [45], [68] or by randomizing proxy’s payloads
+                                                                       so they cannot be statically identified [4], [62], [66].
+    On May 30, 2024, Myanmar imposed a blocking on user
+                                                                           The main focus of this paper is to bring out the presence of
+traffic to VPN and proxy servers, affecting citizens who had re-
+                                                                       a fingerprint for detecting traffic from obfuscated proxies and
+lied on these services to circumvent censorship put in place af-
+                                                                       to empirically evaluate its potential for practical fingerprinting
+ter the military coup [28]. On April 25, 2024, Russia launched
+                                                                       attacks by nation-state censors. At a high level, the fingerprint
+a new method to fingerprint and block proxy-enabled circum-
+                                                                       is created by the inherent misalignment of sessions across OSI
+vention traffic, reinforcing the government’s hold on informa-
+                                                                       layers that results from the use of a proxy. Transport-layer
+tion flow and further isolating its citizens from the global Inter-
+                                                                       sessions break into two parts at the proxy – client to proxy,
+net [49]. In November 2021, China deployed its latest finger-
+                                                                       and proxy to server – while the application-layer maintains an
+printing attack against traffic of fully encrypted proxies, show-
+                                                                       end-to-end session that extends directly from client to server.
+casing both its advancement in censorship capabilities and its
+                                                                       This architecture enables the proxy to relay communication
+persistent commitment to suppress circumvention efforts [74].
+                                                                       between client and server while also preserving end-to-end
+    These are not isolated events. They are part of a global           features of higher layers like TLS. However, because transport-
+trend where escalating Internet censorship motivates a growing         and application-layer sessions terminate at different endpoints,
+reliance on circumvention tools, leading to an ongoing arms            their round-trip times (RTTs) may show significant discrep-
+race [65]: on one side, developers and users of circumvention          ancies, as the paths they traverse span different distances.
+tools aim to bypass restrictions on information; on the other,         Throughout this paper, we focus on this discrepancy in cross-
+censors deploy increasingly sophisticated fingerprinting attacks       layer RTTs, RT Tdif f , and demonstrate the distinguishing
+to detect and block circumvention traffic. Censors used deep           power it holds in fingerprinting proxy traffic.
+packet inspection (DPI) to detect circumvention traffic, driving
+                                                                           We emphasize that this fingerprint represents more than
+                                                                       just another potential way to detect proxy traffic. Up until
+                                                                       now, the vast majority of fingerprinting attacks against ob-
+Network and Distributed System Security (NDSS) Symposium 2025          fuscated proxies, whether deployed by censors or envisioned
+24-28 February 2025, San Diego, CA, USA
+ISBN 979-8-9894372-8-3                                                 by researchers, focused on specific protocols – censors exploit
+https://dx.doi.org/10.14722/ndss.2025.240966                           the obfuscation flaws of individual protocols, while developers
+www.ndss-symposium.org                                                 patch these issues and introduce new protocols in an attempt to
+outpace a resource-limited censor. Both sides find themselves           mitigate the proposed fingerprint and, paradoxically, may even
+locked in this ongoing arms race, where each side must                  worsen the issue. Additionally, while our focus is on transport-
+constantly balance between efficacy and expenditure [65]. The           layer obfuscated proxies, we also explore how the underlying
+fingerprinting vulnerability discussed in this paper, however,          principles of our timing-based fingerprint extend to network-
+belongs to a class of fingerprints that are inherent to all             layer VPNs. We hope this study highlights packet timing as
+proxy protocols. Not only does this protocol-agnostic approach          an area that warrants further attention from the circumvention
+complement existing protocol-specific attacks; it also enables          community and leads to the development of more principled,
+censors to efficiently target multiple protocols at once with           sustainable countermeasures.
+little manual effort. Such a development could shift the balance
+in the ongoing circumvention arms race.                                                       II.   BACKGROUND
+    Assuming the role of a censor, we empirically evaluate the          A. Internet Censorship
+practicality of exploiting the RT Tdif f fingerprint with only
+passive monitoring capabilities. We detail our construction of              News reports, personal anecdotes, and measurement studies
+the exploit: first, from features visible to an on-path censor,         collectively suggest an increasing trend in nation-state Internet
+we estimate the RTTs at the transport and application layers            censorship on a global scale, as governments exert control over
+through cross-correlation and derive their discrepancy. Next,           the flow of information deemed undesirable within and across
+we frame a sequential hypothesis testing (SHT) problem to               their borders [38], [43], [56], [59]. For over two decades,
+determine whether the observed discrepancy in delays sug-               researchers and Internet freedom activists have studied gov-
+gest a direct or proxied connection. Using eight geographic             ernment censorship policies and their enforcement through
+locations, we conducted extensive evaluation of the exploit             technical means. Building upon seminal works from the early
+using a mixture of controlled proxy traffic and real user traffic       2000s [10], [52], [84], censorship research has advanced
+collected from an Internet provider, to assess the sensitivity          our understanding of how nation-state firewalls interfere with
+and specificity of RT Tdif f as a standalone fingerprint.               users’ traffic [31], [32], [55], their technical capabilities [6],
+                                                                        [42], [70], and their architecture and geographical distribu-
+    We found that the efficacy of the exploit is largely in-
+                                                                        tion [15], [78], [80]. This body of research not only exposes
+dependent of the client’s location or the censor’s position
+                                                                        the otherwise covert practice of censorship but also assists
+relative to the client; nor is it affected by the specific proxy
+                                                                        in developing a realistic threat model. In general, censorship
+protocol tested, whether obfuscated or otherwise. For a client
+                                                                        involves a two-step process: Detect and Disrupt. The first
+visiting the top 5K domains via an obfuscated proxy, we found
+                                                                        phase classifies traffic as either allowed or prohibited using
+that about 80% of the domains visited would generate at
+                                                                        a range of techniques from simple keyword matching to more
+least one traffic flow characterized by the RTT discrepancy
+                                                                        sophisticated traffic analysis. Traffic considered undesirable is
+detectable by our fingerprint, with half of these detections
+                                                                        then actively interfered with by dropping packets or RST-ing
+made within the first 60 packets of a flow, all while maintaining
+                                                                        connections [65], [67]. Note that while Disrupt often requires
+a False Positive Rate (FPR) on par with those of deployed
+                                                                        active engagement, Detect can operate passively, remaining
+attacks. While we demonstrate the general feasibility of this
+                                                                        completely invisible to the communicating parties. Our inves-
+fingerprint, we also discuss practical factors – such as the
+                                                                        tigation into proxy fingerprinting falls under the detection step.
+handling of DNS resolution, the presence of CDNs, and the
+potential for categorical collateral damage – that would affect
+the fingerprint’s efficacy and compel a potential adversary to          B. Circumvention Arms Race
+weigh the costs and implications of deployment.                             As censorship measures intensify, users in affected regions
+    Our evaluation on this timing-based fingerprint highlights          increasingly seek methods to circumvent these restrictions.
+the deficiencies in existing obfuscation schemes. Over the              The most common and flexible circumvention mechanisms
+years, researchers have long recognized that distributions of           follow a channel-based approach – users establish channels
+packet sizes hold significant classification power for detecting        to forwarders located outside the censor’s jurisdiction, which
+circumvention traffic [41], [68], and censors have indeed               in turn forward their traffic to its final destinations [65]. This
+exploited packet sizes in practice [49], [74]. As such, many ob-        setup commonly involves proxying protocols (both network-
+fuscated proxy protocols have incorporated (random) padding             layer and transport-layer). However, standard proxying proto-
+schemes directly into their designs [66], [75]. While padding           cols such as OpenVPN and SOCKS feature plaintext headers
+provides a straightforward defense to obfuscate patterns over           that can be easily detected and blocked, which necessitates
+packet sizes, it leave packet timings unprotected, a source             the use of obfuscation techniques, or more specifically, the
+of information often overlooked by designers of obfuscation             indistinguishability provided by such obfuscation, across all
+schemes. What this paper showcases, however, is one example             channel-based systems.
+of what a censor can accomplish in fingerprinting proxy traffic
+                                                                            This has led to an ongoing arms race between developers of
+using only features derived from packet timings.
+                                                                        obfuscated proxies, who obfuscate the traffic of their protocols
+    While we demonstrate several potential short-term mitiga-           to evade detection, and censors, who aim to see through such
+tions, such as configuring TCP delayed ACK on the proxy                 obfuscation. The dynamics of this conflict are best illustrated
+server or enabling connection multiplexing, we caution that             by the interactions between the Great Firewall of China
+these strategies result in atypical behaviors that might them-          (GFW) and various circumvention tools: The GFW was able
+selves be fingerprintable. In partic

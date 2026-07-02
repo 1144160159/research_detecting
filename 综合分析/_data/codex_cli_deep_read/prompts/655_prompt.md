@@ -1,0 +1,1302 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [655] Edge-Aware Multi-Modal Intrusion Detection for Consumer-Centric Industrial Internet-of-Things Devices Using Deep Adaptive Fusion
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：655
+题名：Edge-Aware Multi-Modal Intrusion Detection for Consumer-Centric Industrial Internet-of-Things Devices Using Deep Adaptive Fusion
+年份：2026
+DOI：10.1109/tce.2026.3674715
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2026.3674715.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：IoT、车联网、工业互联网与边缘安全
+相关性：强相关，分数 15
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\655.txt
+- 原始字符数：45454
+- 本次发送字符数：45454
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3674715
+
+1
+
+Edge-Aware Multi-Modal Intrusion Detection for
+Consumer-Centric Industrial Internet-of-Things
+Devices Using Deep Adaptive Fusion
+Nimra Nasir, Amnah Firdous, Syeda Sitara Waseem, Syed Rizwan Hassan, Mansoor Ihsan, Isma Farah Siddiqui
+
+HE exponential growth of interconnected smart nodes
+in Internet-of-Things (IoT) environments has substantially increased vulnerability to sophisticated cyber threats.
+Malicious activities, including system intrusions, phishing
+operations, malware propagation, and service disruption attacks, compromise sensitive information, interrupt operational
+continuity, and endanger critical infrastructure components
+[1], [2]. Traditional intrusion detection mechanisms frequently
+
+prove inadequate against emerging cyber threats due to their
+dependence on signature-based recognition and limited generalization capacity [3].
+Cybersecurity breaches can produce severe consequences,
+including data exposure, service unavailability, and reputational harm. In industrial and healthcare contexts, undetected
+intrusions can potentially endanger human safety. The escalating complexity of attack methodologies, combined with
+imbalanced datasets, further complicates detection efforts and
+typically generates excessive false positive rates [4]–[6].
+Contemporary research has focused on deep learning-based
+IDS solutions to address these challenges. Sequential models,
+autoencoders, and transformer architectures have demonstrated
+proficiency in learning temporal and spatial relationships
+within network traffic patterns [7], [8]. Hybrid approaches,
+including feature fusion, meta-learning, and transfer learning,
+have shown promising improvements in robustness and detection accuracy [9]–[11]. Explainable AI (XAI) methodologies
+have also been incorporated to enhance decision transparency
+and interpretability [12], [13]. Despite these advancements,
+current systems continue to face challenges, including suboptimal performance on imbalanced datasets, insufficient crossdataset generalization, and inadequate model explainability.
+This investigation presents a fusion-based deep learning
+(DL) intrusion detection framework that combines sequenceoriented (GRU/LSTM) and transformer-based architectures to
+leverage complementary learning characteristics. Computationally efficient feature engineering and late fusion strategies
+are implemented to improve detection performance across
+diverse publicly available datasets, including network traffic
+and phishing email collections [14], [15]. The system additionally incorporates explainability components through ROCAUC analysis and attention-based visualization to enhance
+practical deployment viability.
+
+Nimra Nasira and Syeda Sitara Waseema with are the Department
+of Computer Science & IT, The Govt. Sadiq College Women University, Bahawalpur, 63100, Pakistan.(Email: nimranasir122@gmail.com, syedasitara14@gmail.com)
+Amnah Firdous is with the Department of Computer Science, The Islamia University of Bahawalpur, Bahawalpur, 63100, Pakistan. (Email: amnah@gscwu.edu.pk)
+Syed Rizwan Hassan is with the Department of Computer Engineering, Gachon University, Seongnam-si, South Korea. (Email:syed9919@gachon.ac.kr)
+Mansoor Ihsan is with the The University of Salford, Manchester, UK.
+(Email:enquiries@greatermanchester.ac.uk)
+Isma Farah Siddiqui is Department of Software, Systems and Cybersecurity,
+Faculty of Information Technology, Monash University, Victoria, Australia.
+(Email: Ismafarah.siddiqui@monash.edu)
+(Corresponding author: Syed Rizwan Hassan)
+
+A. Motivation and Contribution
+The growth of Consumer-centric Industrial IoT (CCIIoT)
+networks has heightened vulnerability to intrusions, phishing,
+and denial-of-service (DoS) attacks. Traditional signaturebased intrusion detection systems (IDS) are often ineffective
+against novel attack strategies and face challenges like class
+imbalance, scarce labeled data, and poor interpretability. While
+DL offers promise by learning hierarchical and temporal patterns, single-model architectures struggle to generalize across
+diverse data types. To overcome these issues, this study introduces a multimodal DL framework that combines sequence
+
+Abstract—The rapid proliferation of Consumer-Centric Industrial Internet-of-Things (CCIIoT) ecosystems has substantially expanded the attack surface for diverse cyber threats.
+Conventional intrusion detection systems (IDS) primarily rely
+on signature-based techniques, which exhibit limited effectiveness against zero-day and evolving attack patterns. To address
+these limitations, this study proposes a deep learning–driven
+IDS framework that concurrently integrates multiple modalityspecific models. The proposed architecture employs a Gated
+Recurrent Unit (GRU) for host system log analysis, a Long ShortTerm Memory (LSTM) network for network flow modeling, a 1D
+Transformer for packet-level traffic inspection, and a fine-tuned
+TinyBERT model for phishing email detection. The probabilistic
+outputs of these heterogeneous models are combined through
+a learnable adaptive fusion mechanism, enabling confidenceaware decision aggregation across modalities. Extensive experiments conducted on the UNSW-NB15, CIC-IDS2018, CTDAPD,
+and phishing email datasets demonstrate that the proposed
+framework outperforms conventional IDS approaches, achieving
+improved accuracy, F1-score, and ROC-AUC while significantly
+reducing false positive rates. The framework is explicitly designed
+as edge-aware through lightweight architectures edge-aware and
+late-fusion strategies, while detailed deployment benchmarking
+is reserved for future work.
+Index Terms—Consumer-Centric Industrial Internet-of-Things
+(CCIIoT), Intrusion Detection, LSTM, TinyBERT, CyberAttacks.
+
+I. I NTRODUCTION
+
+T
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3674715
+
+2
+
+models (LSTM, GRU) with transformer-based architectures
+(1D Transformer, TinyBERT) for robust and interpretable
+intrusion detection across heterogeneous datasets. The primary
+contributions of this work are summarized as follows:
+• A novel hybrid GRU–Transformer fusion architecture
+designed for multimodal intrusion detection scenarios
+• Implementation of advanced feature engineering and data
+balancing techniques to enhance robustness and detection
+performance
+• Comprehensive experimental evaluation across heterogeneous datasets including UNSW-NB15, CIC-IDS2018,
+CTAP host logs, and phishing email data
+• This study provides preliminary interpretability analysis
+using attention-based representations and ROC-AUC visualization transparent decision-making
+• Demonstrated superiority over existing IDS models
+through improved accuracy and reduced false positive
+rates
+Existing ensemble intrusion detection systems often use
+static fusion methods like majority voting or averaging that
+treat all data types as equally reliable. However, in CCIIoT
+environments, security data is inherently varied, including
+network flows, logs, and text, each with distinct patterns. Fixed
+fusion fails to adapt when some sources become noisy or
+less informative, leading to suboptimal detection. To overcome
+this, we propose an adaptive fusion mechanism that learns
+modality-specific importance weights, dynamically integrating
+complementary signals while suppressing unreliable ones.
+Notably, to our knowledge, no current CCIIoT framework
+employs such a learnable, adaptive approach to combine
+sequence models, transformers, and language models across
+network, host, and textual data. Our work bridges this gap
+by introducing a deep adaptive fusion framework to improve
+robustness, generalization, and accuracy in heterogeneous
+CCIIoT settings.
+B. Paper Structure
+The remainder of this paper is organized as follows. Section
+II reviews relevant literature on DL-based intrusion detection.
+Section III details the data collection, preprocessing, and
+model configuration methodology. Section IV elaborates on
+individual model architectures and the fusion mechanism. Section V presents experimental results and performance analysis.
+Finally, Section VI concludes the paper and suggests potential
+future research directions.
+II. R ELATED W ORK
+Artificial intelligence and DL are widely applied to enhance
+network intrusion detection systems. Research focuses on
+hybrid models, feature fusion, and lightweight designs to
+boost accuracy and efficiency. Kaur et al. [1] highlight the
+promise of hybrid and ensemble methods for advanced threats,
+while Thakkar and Lohiya [16] improve detection by integrating statistical feature selection in DNN-based IDS, reducing
+computational costs. To address scarce labeled attack data,
+meta-learning and few-shot techniques have been explored.
+Lu et al. [11] propose a meta-learning framework for CCIIoT
+
+intrusion detection, and Zhang et al. [10] enhance malware
+traffic classification via knowledge transfer and architecture
+search. Deep sequence models like LSTM and GRU have
+proven effective for capturing temporal dependencies in traffic
+[7], [8].
+For resource-constrained CCIIoT and edge environments,
+lightweight supervised and hybrid schemes have been developed. Roy et al. [3] present a low-latency IDS for CCIIoT,
+and Thakkar et al. [16] combine dimensionality reduction with
+LSTM for enhanced performance. Alzubi et al. [17] design a
+hybrid DL framework for edge IoMT, and Louk and Tama [18]
+demonstrate robust anomaly detection using ensemble gradient
+boosting. Recent advancements in consumer electronics security have achieved notable progress. Alzubi et al. [17] created
+a blended DL model for edge-based IoMT, enabling efficient
+intrusion detection for home medical devices. Chen et al. [19]
+proposed a lightweight CNN optimized for smart home devices, achieving high accuracy with minimal resources. Zhang
+and Li [20] introduced a federated learning framework for
+consumer CCIIoT that preserves privacy through collaborative
+edge-device training.
+Additional contributions address explainability: [21] edgebased processing [22] and multi-modal fusion for smart cameras [23] collectively demonstrating a trend toward adaptive,
+explainable, and efficient DL frameworks. Collectively, these
+studies demonstrate a trend toward adaptive, explainable, and
+efficient DL frameworks that leverage multimodal fusion,
+privacy-aware learning, and edge computing for advanced
+intrusion detection Table I.
+Current fusion-based IDSs rely on static aggregation (e.g.,
+voting, averaging), assuming equal reliability across all modalities. However, CCIIoT data is heterogeneous network flows,
+logs, packets, and text; each has distinct statistical properties
+and noise levels. Static methods cannot adapt to varying data
+quality and underperform with sparse or noisy sources. Moreover, existing research focuses on single datasets or modalities, limiting cross-domain generalization. To our knowledge, no CCIIoT framework employs a learnable, modalityaware adaptive fusion mechanism that integrates sequence
+models (LSTM/GRU), transformers, and language models
+(TinyBERT) across network, host, and textual data. This gap
+motivates our deep adaptive fusion framework, which dynamically aggregates heterogeneous outputs to improve accuracy,
+robustness, and generalization in CCIIoT.
+
+III. P ROPOSED M ETHODOLOGY
+This research employs a multi-model DL approach for cybersecurity threat identification and classification from diverse
+data sources. We utilized four distinct datasets, each processed
+by a specialized DL model according to its data characteristics.
+Figure 1 illustrates the methodological pipeline encompassing
+data collection, preprocessing, model construction, training,
+and evaluation stages. All modality-specific models operate in
+parallel on their respective data streams, and their probabilistic
+outputs are subsequently integrated through the proposed
+adaptive fusion module.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3674715
+
+3
+
+TABLE I: Summary of Key Related Works on Deep Learning for Intrusion Detection
+Ref.
+
+Approach / Model
+
+Dataset(s)
+
+Key Findings / Contribution
+
+[1]
+[3]
+[7]
+[9]
+[11]
+[10]
+[24]
+[25]
+[16]
+[17]
+[18]
+[26]
+[27]
+[28]
+
+AI/ML cybersecurity review
+Lightweight supervised model
+Sequential DL (LSTM/GRU)
+DNN with statistical fusion
+Few-shot meta-learning
+Knowledge transfer + NAS
+Enhanced component analysis
+Hierarchical multi-stage
+LSTM with feature reduction
+Blended DL framework
+Bagging-based GBDT
+Sin-Cos-BIAVOA feature selection
+End-to-end DL
+Bio-inspired hybrid DL
+
+Multiple
+CCIIoT Networks
+UNSW-NB15
+UNSW-NB15
+CCIIoT Traffic
+Malware Traffic
+WSN Data
+NIMS
+UNSW-NB15
+Edge-IoMT Data
+Multiple datasets
+DDoS-specific
+Industrial CCIIoT
+NSL-KDD, UNSW-NB15
+
+Identified hybrid models as key for advanced threats
+Resource-efficient detection for CCIIoT devices
+Captured temporal dependencies for sequential attacks
+Statistical feature selection improved accuracy
+Effective detection with limited labeled data
+Enhanced few-shot malware classification
+Improved WSN intrusion detection
+Progressive filtering improved reliability
+Dimensionality reduction enhanced feature representation
+Edge-centric framework for IoMT industries
+Ensemble improved robustness against diverse attacks
+Novel optimization for DDoS feature selection
+Learned features directly from raw data
+Biological mechanisms for high accuracy
+
+with comprehensive flow-based features, effective for anomaly
+and intrusion detection.
+4) Phishing Email Dataset (Textual): This dataset [15]
+consists of email metadata and content-based attributes for
+detecting malicious and phishing messages, capturing lexical,
+structural, and header-based characteristics.
+TABLE II: Attributes of Host Log and Packet-Level Datasets
+Host Log Dataset
+
+Packet-Level Dataset
+
+Timestamp: Log generation
+time
+Consumer ID: Identifier of
+the user
+Event Type: Activity type
+(login, file access)
+Process Name: Name of executed process
+File Accessed: File involved
+in event
+Logon Status: Failure of login attempt
+
+Source IP: IP address of
+sender
+Destination IP: IP address
+of receiver
+Source Port: Port number of
+sender
+Destination Port: Port number of receiver
+Protocol: TCP, UDP, ICMP
+Packet Size: bytes
+Timestamp: Time of packet
+capture
+
+Fig. 1: Architecture of Multimodal Intrusion Detection
+
+A. Data Collection
+This study utilizes four heterogeneous datasets representing
+host logs, packet-level data, network flows, and textual emails
+to capture diverse cybersecurity threats Table II. All data are
+preprocessed and labeled under two categories: Normal and
+Attack.
+1) Host Logs Dataset (CTAP): This dataset [29] contains
+simulated system event logs reflecting real world host-level
+activities, including authentication details, file access, and
+process execution critical for detecting insider threats and
+anomalous host behaviors.
+2) UNSW-NB15 Dataset (Packet Level): This dataset [14]
+includes raw packet captures with both normal and malicious
+traffic. For our study, 43 flow-based features were used,
+excluding redundant identifiers (e.g., IPs). Attack labels were
+mapped to a binary setting (Normal vs Attack).
+3) CIC-IDS2018 Dataset (Network Flow): The CICIDS2018 dataset [30] provides realistic network traffic flows
+
+These four datasets collectively represent CCIIoT’s heterogeneous landscape: (1) CTAP host logs capture device-level
+anomalies; (2) UNSW-NB15 enables packet-level threat inspection; (3) CIC-IDS2018 provides scalable flow-based analysis; (4) Phishing emails cover human-centric textual attacks.
+Together, they comprehensively span network, host, packet,
+and human interaction layers characteristic of consumercentric IIoT environments.
+B. Data Preprocessing
+Following data acquisition, raw datasets undergo comprehensive preprocessing to ensure data consistency and model
+readiness. Missing values are addressed through imputation
+(mean/median for numerical, mode for categorical), and duplicate records are removed to prevent bias. Categorical variables
+such as protocol types and service properties are encoded via
+one-hot or ordinal encoding, and all numerical attributes are
+normalized to a [0,1] range using Min-Max normalization to
+avoid feature scale bias.
+Textual data, including phishing emails and logs, is tokenized, cleaned of stop-words, and lowercased. Network
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3674715
+
+4
+
+payloads undergo duplicate symbol elimination and are
+padded/truncated to fixed sequence lengths, while system logs
+are standardized by timestamp, filtered for relevance, and
+transformed into structured numerical sequences suitable for
+model input.
+C. Data Balancing
+Class imbalance, where benign instances vastly outnumber attacks, causes model overfitting to majority classes and
+poor rare-attack detection. We address this using SMOTE
+(generating synthetic minority samples via interpolation) and
+random undersampling (reducing majority class size while
+preserving key patterns). These techniques collectively balance
+class distributions and enhance detection of both common and
+rare attacks.
+
+2) Masking Layer: A masking layer ignores padded positions with zero values, ensuring padding does not affect
+training.
+3) LSTM Layer: An LSTM layer containing 64 hidden
+units processes sequences. With return_sequences
+set to False, the layer outputs only the final timestep
+hidden state hT ∈ R64 , serving as comprehensive
+sequence representation.
+4) Dense Embedding Layer: The hidden state projects into
+a higher-dimensional latent representation using a fully
+connected layer with 128 units:
+z = We hT + be ,
+
+z ∈ R128 .
+
+(7)
+
+5) Output Layer: A single neuron dense layer with sigmoid activation performs binary classification:
+
+D. Experimental Protocol and Data Integrity
+A strict data protocol prevents leakage. Datasets are split
+80/10/10 via stratified sampling, with no sample overlap.
+SMOTE/undersampling is applied to the training set only; validation/test sets remain original. Feature scaling uses trainingset parameters exclusively. For time-series data, time-aware
+splitting ensures training precedes validation/testing, preventing temporal leakage. All metrics reported reflect a true generalization without contamination. To ensure reproducibility, all
+experiments used fixed random seeds (42 for Python/NumPy,
+42 for TensorFlow).
+IV. M ODEL C ONFIGURATION
+A. Model 1: Long Short-Term Memory (LSTM) Model
+LSTM networks address the vanishing gradient problem
+through memory cells and gating mechanisms. This architecture effectively captures long-range temporal dependencies,
+which are crucial for network intrusion detection [31]. At each
+timestep t, the LSTM unit updates its hidden state ht and
+cell state ct using three gating components: forget, input, and
+output. The operations are mathematically defined as:
+ft = σ(Wf xt + Uf ht−1 + bf ),
+
+(1)
+
+it = σ(Wi xt + Ui ht−1 + bi ),
+
+(2)
+
+c̃t = tanh(Wc xt + Uc ht−1 + bc ),
+
+(3)
+
+ct = ft ⊙ ct−1 + it ⊙ c̃t ,
+
+(4)
+
+ot = σ(Wo xt + Uo ht−1 + bo ),
+
+(5)
+
+ht = ot ⊙ tanh(ct ),
+
+(6)
+
+where σ(·) denotes the sigmoid function, tanh(·) represents
+the hyperbolic tangent, and ⊙ indicates element-wise multiplication. The CIC-IDS2018 dataset is modeled as sequences
+of feature vectors, where each sequence corresponds to a network flow. The following architecture, illustrated in Figure 2,
+captures temporal dependencies in traffic behavior:
+1) Input Layer: Input comprises sequences with dimensionality (T, F ), where T represents timesteps and F denotes features. Variable-length sequences undergo zeropadding.
+
+ŷ = σ(Wo z + bo ).
+
+(8)
+
+The model trains using binary cross-entropy loss function
+[32]:
+L=−
+
+N
+i
+1 Xh
+yi log(ŷi ) + (1 − yi ) log(1 − ŷi ) ,
+N i=1
+
+(9)
+
+where yi ∈ {0, 1} represents ground-truth class labels and ŷi
+indicates predicted probabilities.
+The LSTM architecture defined by Equations 1–6 enables
+effective learning of temporal patterns in network traffic flows,
+as shown in the model schematic Figure 2. The embedding
+transformation in Equation 7 creates rich feature representations, while the final classification output in Equation 8
+provides intrusion detection probabilities. The optimization
+objective in Equation 9 ensures the model learns to distinguish between normal and malicious network activities.
+Hyperparameter for this model were selected using grid search
+on the validation set to balance detection performance and
+computational efficiency.
+
+B. Model 2: Gated Recurrent Unit (GRU)
+This model processes sequential host log data for intrusion
+detection [31] using stacked Bidirectional GRUs with an
+attention mechanism, with the overall architecture depicted in
+Figure 2.
+The GRU model exhibits lower standalone performance
+due to severe class imbalance in CTAP (Host Logs) and
+their sparse, repetitive semantic content. However, it provides
+complementary behavioral signals (e.g., authentication events,
+process execution) not captured by network or packet data. The
+proposed fusion mechanism automatically down-weights lowconfidence GRU outputs, preventing performance degradation
+while preserving multimodal diversity.
+1) Bidirectional GRU Layers: The architecture uses two
+stacked Bidirectional GRU layers, each with 64 units see
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3674715
+
+5
+
+Figure 2. The GRU cell updates its hidden state ht at timestep
+t through gating operations:
+zt = σ(Wz xt + Uz ht−1 + bz )
+
+(Update Gate)
+
+(10)
+
+rt = σ(Wr xt + Ur ht−1 + br )
+
+(Reset Gate)
+
+(11)
+
+h̃t = tanh(Wh xt + Uh (rt ⊙ ht−1 ) + bh )
+
+(12)
+
+ht = (1 − zt ) ⊙ ht−1 + zt ⊙ h̃t
+
+(13)
+
+The fusion weights αi are sample-adaptive: computed per
+instance from modality-specific confidence signals. During
+training, fusion parameters {wi } are jointly optimized via
+validation-set gradients while base models remain frozen,
+enabling dynamic weighting that adapts to varying data quality
+across modalities.
+2) Attention Layer: An attention mechanism focuses on
+critical host events. For each timestep, the attention score αt
+and context vector c are computed:
+
+This pooled vector is passed to a final classifier. Hyperparameters were selected via grid search on the validation set to
+balance performance and computational efficiency.
+D. Model 4: TinyBERT for Phishing Email Detection
+The fourth component uses TinyBERT, a distilled BERT
+variant offering efficient yet capable linguistic representation
+[31], making it suitable for resource-constrained environments requiring semantic understanding. The Transformer encoder architecture underlying TinyBERT follows the principles
+shown in Figure 2.
+Dataset
+
+Dataset Preprocessing
+
+Model Configration
+
+LSTM Model
+Dense Layer
+
+Full Connected
+
+Bidirectional
+Layer
+
+Input layer
+
+LSTM Layer
+
+Normalization Layer
+
+(14)
+(15)
+
+Transformer Encoder Block 1 Transformer Encoder Block 2
+
+Input Layer
+
+GRU Model
+
+et = tanh(Wa ht + ba ),
+e et
+,
+αt = PT
+ek
+k=1 e
+T
+X
+αt ht
+c=
+
+Patch + Position Embedding
+Extra Learnable class Embedding
+
+Training Dataset
+
+Testing Dataset
+
+Output Layer
+
+MLP
+
+MLP
+
+Norm
+
+Norm
+
+Multi Head
+Attention
+
+Multi Head
+Attention
+
+Norm
+
+Norm
+
+Output Layer
+
+Masking Layer
+
+Linear Projection Layer
+
+GRU & LSTM MODEL ARCHITECTURE
+Transformer Encoder
+
+Pooling and Classification Layer
+
+Output Layer
+
+(16)
+
+Embedded Packets
+
+t=1
+
+Add & Nor
+Feed Forward
+
+Hyperparameters were selected using grid search on the validation set to balance detection performance and computational
+efficiency.
+
+Transformer Encoding
+
+Add & Nor
+Transformer Encoding
+
+Feed Forward
+
+Embedding Layer
+
+Token Embedding
+
+Pooling Layer
+Output Layer
+
+Dense Layer
+
+Segment Embedding
+
+Input Layer
+
+C. Model 3: 1D Transformer Encoder for UNSW-NB15
+
+Position Embedding
+
+1-D TRANSFORMER ENCODER MODEL ARCHITECTURE
+
+TinyBERT MODEL ARCHITECTURE
+
+This model uses a one-dimensional Transformer Encoder
+[31] to capture both local and long-range dependencies in
+packet flow sequences from the UNSW-NB15 dataset. The
+encoder-based architecture is illustrated in Figure 2.
+1) Transformer Encoder Blocks: The encoder processes
+input sequences through stacked blocks Figure 2. Each block
+first applies Multi-Head Self-Attention (MHSA) to contextualize token representations, followed by a feed-forward network
+for non-linear transformation. Residual connections and layer
+normalization are used after each operation:
+
+Fig. 2: Evaluated model architectures: (1) GRU with masking
+and normalization, (2) LSTM, and (3) Transformer Encoder
+with multi-head self-attention.
+1) Architecture and Adaptation: TinyBERT builds on the
+Transformer encoder architecture Figure 2. The core selfattention mechanism is scaled dot-product attention:
+
+
+QK ⊤
+Attention(Q, K, V ) = softmax √
+V,
+(25)
+dk
+where scaling prevents gradient vanishing.
+Multi-head attention captures diverse contextual relationships:
+
+
+QK T
+√
+V,
+dk
+H1 = LayerNorm(X ′ + MHA(X ′ )),
+
+(18)
+
+H2 = LayerNorm(H1 + MHA(H1 )),
+
+(19)
+
+headi = Attention(QWiQ , KWiK , V WiV ),
+(26)
+
+H2 = LayerNorm(H2 + FFN(H2 )),
+
+(20)
+
+MultiHead(Q, K, V ) = Concat(head1 , . . . , headh )W O . (27)
+
+(21)
+
+For classification, the final hidden state of the ‘[CLS]‘ token
+is passed to:
+
+
+
+MHA(Q, K, V ) = softmax
+
+FFN(x) = max(0, xW1 + b1 )W2 + b2 .
+
+(17)
+
+2) Pooling Layer: A fixed-dimensional representation for
+classification is created by pooling across the sequence dimension:
+hmean =
+
+T
+1X
+
+T t=1
+
+Hnorm,t ,
+
+T
+
+(22)
+
+hmax = max Hnorm,t ,
+
+(23)
+
+hpool = [hmean ∥ hmax ].
+
+(24)
+
+t=1
+
+ŷ = softmax(Wcls · H[CLS] + bcls ).
+
+(28)
+
+2) Model Configuration and Training: We use the
+TinyBERT_General_4L_312D variant with 4 layers and
+312 hidden size. The model is fine-tuned on our phishing email
+dataset with hyperparameters in Table III. A linear learning
+rate warmup stabilizes early training over the first 6% of steps.
+Hyperparameters were tuned via validation-set grid search to
+balance accuracy and efficiency.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3674715
+
+6
+
+TABLE III: Hyperparameter Configurations for All Models
+
+B. 1D Transformer Model
+
+Parameter
+
+The 1D Transformer model is designed to exploit attention
+mechanisms for sequence learning. As a multi-class model, it
+extends beyond binary classification, providing richer performance insights. Table IV presents classification metrics, while
+Figures 3 and 4 show the confusion matrix and ROC curve
+respectively.
+
+Architecture
+Hidden Units
+Heads/Layers
+Embed Dim
+Seq Length
+Optimizer
+LR
+Batch Size
+Epochs
+Loss
+Dropout
+Weight Decay
+
+LSTM
+
+GRU
+
+1D Trans.
+
+TinyBERT
+
+LSTM
+64
+1/1
+128
+Variable
+Adam
+0.001
+64
+10
+Binary CE
+–
+–
+
+GRU
+128
+1/1
+–
+Variable
+Adam
+0.001
+64
+50
+Categorical CE
+0.3
+–
+
+Transformer
+–
+4/2
+Variable
+Variable
+AdamW
+3 × 10−4
+64
+30
+Binary CE
+0.1
+1 × 10−4
+
+TinyBERT
+–
+4/4
+312
+64
+AdamW
+2–5 × 10−5
+16–32
+3–6
+Cross-Entropy
+0.1
+0.01
+
+E. Deep Adaptive Fusion Mechanism
+Effective intrusion detection requires unified decisionmaking that accounts for the varying reliability of the modality.
+We introduce a Deep Adaptive Fusion mechanism to dynamically integrate outputs from all four models in a confidenceaware manner.
+Let M = {M1 , M2 , M3 , M4 } be the trained models respectively, the GRU host log analyzer, LSTM network flow model,
+1D Transformer packet inspector, and TinyBERT phishing
+detector. For an input sample, each outputs a probability:
+pi ∈ [0, 1],
+
+pi = Mi (xi ),
+
+i ∈ {1, 2, 3, 4}
+
+(29)
+
+The fusion module learns adaptive importance weights αi
+via a fully connected layer and softmax:
+exp(wi )
+
+αi = P4
+
+j=1 exp(wj )
+
+,
+
+4
+X
+
+αi = 1
+
+(30)
+
+i=1
+
+The final intrusion probability is the weighted aggregation:
+Pfinal =
+
+4
+X
+
+αi · pi
+
+(31)
+
+i=1
+
+Parameters are trained jointly via validation-driven optimization, allowing the model to emphasize modalities with
+higher confidence or discriminative power per sample. This
+strategy ensures robustness against noisy, unbalanced, or incomplete inputs. Unlike conventional ensemble techniques, the
+proposed modality-aware fusion approach is end-to-end trainable and is suitable for edge-based deployments in CCIIoT
+environments.
+V. R ESULTS AND D ISCUSSION
+We evaluate the proposed models on binary classification
+tasks in this section. Individual performance metrics, including
+accuracy, precision, recall, F1-score, confusion matrices, and
+ROC curves, assess each model. Results demonstrate each DL
+architecture’s efficacy and the benefits of fusion. A unified
+ROC-AUC visualization is used to highlight comparative discriminative performance across all models.
+A. LSTM Model
+The LSTM is trained to capture the dataset’s temporal relationships. Table IV demonstrates the model’s discrimination
+capability between classes. Furthermore, the confusion matrix
+in Figure 3 reveals misclassification patterns, while the ROC
+curve in Figure 4 illustrates model discriminative power.
+
+C. TinyBERT Model
+TinyBERT leverages transformer-based language modeling
+for classification. Its results, summarized in Table IV, indicate
+competitive performance, particularly regarding precision and
+recall. The confusion matrix in Figure 3 and the ROC curve
+in Figure 4 further confirm robustness.
+D. GRU Model
+The GRU model was evaluated on host logs for anomaly
+detection. Its gating mechanisms effectively capture sequential
+dependencies, enabling the identification of subtle behavioral
+anomalies. The model achieves an 82.34% accuracy, with
+detailed performance visualized in Figure 3 and Figure 4,
+demonstrating its effectiveness in learning temporal relationships for host-level intrusion detection.
+E. Fusion Model
+Finally, a fusion approach was applied, combining LSTM,
+GRU, 1D Transformer, and TinyBERT outputs. The fusion model boosts performance by leveraging complementary
+strengths of multiple architectures. The ROC curve in Figure 4 demonstrates improved predictive accuracy. All models,
+including fusion accuracy, are visible in Figure 5. Performance
+comparison across all four multi-modal intrusion detection
+models appears in Table V. TinyBERT’s attention maps reveal
+interpretable justification for its 99.53% accuracy by consistently highlighting suspicious sender fields and urgent phrases
+(e.g., ”verify immediately”) while ignoring benign boilerplate
+text.
+F. Ablation Study
+An ablation study is conducted to evaluate the contribution
+of individual modalities and to justify the proposed adaptive
+fusion strategy. Multiple fusion configurations are evaluated
+by selectively removing components and replacing adaptive
+fusion with simpler aggregation techniques, as summarized in
+Table VI.
+While TinyBERT achieves the highest standalone accuracy
+on phishing emails, it operates exclusively on textual data
+and cannot generalize across heterogeneous intrusion modalities. In contrast, the proposed adaptive fusion framework
+provides robust system-level intrusion detection by integrating
+network, host, packet, and textual signals. The ablation results
+in Table VI demonstrate that adaptive fusion outperforms
+simple averaging by 1.20% accuracy and achieves the highest
+ROC-AUC, confirming that the fusion mechanism contributes
+meaningful performance gains rather than redundant computational overhead.The ablation study reveals two key insights:
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3674715
+
+7
+
+TABLE IV: Classification Performance Comparison of Individual Models
+Models
+
+Datasets
+
+LSTM
+1D Transformer
+TinyBERT
+GRU
+
+Benign/Normal Class
+
+CTAP (Host Logs)
+UNSW-NB15
+CTAP (Host Logs)
+CTAP (Host Logs)
+
+(a) GRU
+
+Attack Class
+
+Accuracy (%)
+
+P
+
+R
+
+F1
+
+P
+
+R
+
+F1
+
+1.00
+0.95
+1.00
+0.85
+
+0.96
+0.94
+0.99
+0.96
+
+0.98
+0.95
+1.00
+0.90
+
+0.96
+0.94
+0.99
+0.17
+
+1.00
+0.96
+1.00
+0.04
+
+0.98
+0.95
+1.00
+0.07
+
+(b) LSTM
+
+(c) 1D Transformer
+
+97.96
+94.86
+99.53
+82.34
+
+(d) TinyBERT
+
+Fig. 3: Comparative confusion matrices for attack detection across four DL architectures.
+TABLE V: Performance Comparison of Different Models
+Model
+LSTM
+GRU (Host Logs)
+1D Transformer
+TinyBERT (Emails)
+
+Accuracy
+97.96%
+82.34%
+94.86%
+99.53%
+
+Precision
+0.98
+0.75
+0.95
+1.00
+
+Recall
+0.98
+0.82
+0.95
+1.00
+
+F1-Score
+0.98
+0.78
+0.95
+1.00
+
+TABLE VI: Ablation Study of Fusion Configurations
+Configuration
+Fusion without GRU
+Fusion without TinyBERT
+Simple Averaging Fusion
+Proposed Adaptive Fusion
+
+Accuracy (%)
+98.41
+96.87
+97.92
+99.12
+
+F1-Score
+0.984
+0.968
+0.979
+0.991
+
+ROC-AUC
+0.991
+0.982
+0.988
+0.997
+
+(1) Removing GRU (host logs) causes only marginal performance drop (0.71%), indicating network and packet-level
+signals dominate detection; however, GRU remains valuable
+for detecting host-specific anomalies invisible to network monitors. (2) Removing TinyBERT causes significant degradation
+(2.25%), confirming that textual phishing detection provides
+non-redundant semantic signals. The 1.20% improvement over
+simple averaging validates that learnable modality weighting
+effectively suppresses noisy predictions while amplifying high
+confidence outputs.
+Fig. 4: ROC AUC curves of all models.
+
+G. Baseline and State-of-the-Art Comparison
+To ensure fair performance assessment, the proposed fusion
+framework is compared against standard ensemble baselines
+and recent state-of-the-art intrusion detection approaches as
+shown in Table VII.
+TABLE VII: Comparison with State-of-the-Art Methods
+Method
+Majority Voting Ensemble
+Average Probability Fusion
+Thakkar et al. [16]
+Alzubi et al. [17]
+Proposed Adaptive Fusion
+
+Fig. 5: Performance comparison of all models including fusion.
+
+Accuracy (%)
+97.31
+97.92
+96.45
+95.88
+99.12
+
+Precision
+0.973
+0.979
+0.965
+0.958
+0.991
+
+F1-Score
+0.972
+0.979
+0.964
+0.956
+0.991
+
+ROC-AUC
+0.986
+0.988
+0.981
+0.978
+0.997
+
+VI. C ONCLUSION AND F UTURE W ORK
+This study employs diverse DL models to detect and classify
+cyber attacks across multiple datasets. Using modality-specific
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Consumer Electronics. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TCE.2026.3674715
+
+8
+
+architectures, the framework captures both numerical network traffic patterns and textual email-based threats. Results
+demonstrate that integrating models for heterogeneous data
+enhances the robustness of detection. While individual models
+perform well within their modalities, the framework’s adaptive
+fusion of complementary information across network, host,
+packet, and textual domains ensures system-level reliability.
+This multi-modal approach offers more comprehensive and
+dependable cybersecurity detection than single-model methods.
+A. Limitations
+Despite promising results, this study may not reflect evolving real-world threats due to the use of pre-collected datasets.
+Lightweight models were used, but deployment-level benchmarking on the edge level was still required to make it fully
+edge-deployable. The use of SMOTE may introduce unrealistic attack patterns, and the explainability analysis remains
+preliminary without detailed post-hoc visualizations.
+B. Future Work
+Future work will focus on edge-aware deployment benchmarking on resource-constrained devices. Deployment on
+resource-constrained edge devices will be assessed to validate
+practical feasibility. Moreover, advanced XAI techniques and
+instance-level attribution will be explored to enhance transparency. Finally, a unified adaptive framework with inputbased dynamic model selection will be investigated to balance
+accuracy and computational efficiency in CCIIoT environments.
+R EFERENCES
+[1] R. Kaur, D. Gabrijelčič, and T. Klobučar, “Artificial intelligence for
+cybersecurity: Literature review and future research directions,” Inf.
+Fusion, vol. 97, p. 101804, 2023.
+[2] J. Yang, E. Rezvani, M. A. Khan, B. Heidari, H. M. Albarakati,
+S. Prajapat, M. Abdel-Salam, and L. Y. Po, “Qb-autoids: A blockchainbased decentralized autonomous cyberattack detection system for consumer electronics using hybrid double q-learning and bi-lstm,” IEEE
+Transactions on Consumer Electronics, 2025.
+[3] S. Roy, J. Li, B.-J. Choi, and Y. Bai, “A lightweight supervised intrusion
+detection mechanism for iot networks,” Futur. Gener. Comput. Syst., vol.
+127, pp. 276–285, 2022.
+[4] M. S. Milosevic and V. M. Ciric, “Extreme minority class detection in
+imbalanced data for network intrusion,” Comput. Secur., vol. 123, p.
+102940, 2022.
+[5] S. Prajapat, D. Gautam, P. Kumar, A. K. Das, and M. S. Hossain, “Designing lattice-based sequential aggregate signature scheme for securing
+consumer electronics-centric iomt,” IEEE Transactions on Consumer
+Electronics, 2025.
+[6] N. Wei et al., “A feature enhancement-based model for the malicious
+traffic detection with small-scale imbalanced dataset,” Inf. Sci., vol. 647,
+p. 119512, 2023.
+[7] S. Hore, J. Ghadermazi, A. Shah, and N. D. Bastian, “A sequential deep
+learning framework for a robust and resilient network intrusion detection
+system,” Comput. Secur., vol. 144, p. 103928, 2024.
+[8] A. Basati and M. M. Faghih, “PDAE: Efficient network intrusion
+detection in iot using parallel deep auto-encoders,” Inf. Sci., vol. 598,
+pp. 57–74, 2022.
+[9] A. Thakkar and R. Lohiya, “Fusion of statistical importance for feature
+selection in deep neural network-based intrusion detection system,” Inf.
+Fusion, vol. 90, pp. 353–363, 2023.
+[10] X. Zhang et al., “Enhanced few-shot malware traffic classification via
+integrating knowledge transfer with neural architecture search,” IEEE
+Trans. Inf. Forensics Secur., vol. 19, pp. 5245–5256, 2024.
+
+[11] C. Lu, X. Wang, A. Yang, Y. Liu, and Z. Dong, “A few-shot-based
+model-agnostic meta-learning for intrusion detection in security of
+internet of things,” IEEE Internet Things J., vol. 10, no. 23, pp. 21 309–
+21 321, 2023.
+[12] D. Attique, W. Hao, W. Ping, D. Javeed, and P. Kumar, “Explainable
+and data-efficient deep learning for enhanced attack detection in iiot
+ecosystem,” IEEE Internet Things J., 2024.
+[13] R. Chowdhury, S. Sen, A. Goswami, S. Purkait, and B. Saha, “An
+implementation of bi-phase network intrusion detection system by using
+real-time traffic analysis,” Expert Syst. Appl., vol. 224, p. 119831, 2023.
+[14] N. Moustafa and J. Slay, “UNSW-NB15 data set,” 2015, accessed: 202505-12. [Online]. Available: https://research.unsw.edu.au/projects/unswnb15-dataset
+[15] N. A. Alam, “Phishing email dataset,” 2023, accessed:
+2025-05-14. [Online]. Available: https://www.kaggle.com/datasets/
+naserabdullahalam/phishing-email-dataset
+[16] A. Thakkar, N. Kikani, and R. Geddam, “Fusion of linear and non-linear
+dimensionality reduction techniques for feature reduction in lstm-based
+intrusion detection system,” Appl. Soft Comput., vol. 154, p. 111378,
+2024.
+[17] J. A. Alzubi, O. A. Alzubi, I. Qiqieh, and A. Singh, “A blended deep
+learning intrusion detection framework for consumable edge-centric iomt
+industry,” IEEE Transactions on Consumer Electronics, vol. 70, no. 2,
+pp. 2049–2057, 2024.
+[18] M. Louk and B. A. Tama, “Dual-IDS: A bagging-based gradient
+boosting decision tree model for network anomaly intrusion detection
+system,” Expert Syst. Appl., vol. 213, p. 119030, 2023.
+[19] W. Chen, L. Wang, H. Zhang, and Y. Liu, “Lightweight cnn-based
+intrusion detection system for consumer iot devices,” IEEE Transactions
+on Consumer Electronics, vol. 69, no. 3, pp. 312–321, 2023.
+[20] M. Zhang, Q. Li, X. Zhou, and P. Wang, “Federated learning for
+privacy-preserving intrusion detection in consumer iot networks,” IEEE
+Transactions on Consumer Electronics, vol. 70, no. 1, pp. 145–154,
+2024.
+[21] S. Kumar, R. Patel, and M. Johnson, “Explainable ai-based intrusion
+detection system for smart home consumer electronics,” IEEE Transactions on Consumer Electronics, vol. 69, no. 4, pp. 521–530, 2023.
+[22] X. Wang, Y. Zhang, and H. Chen, “Edge-computing based intrusion
+detection for resource-constrained consumer iot devices,” IEEE Transactions on Consumer Electronics, vol. 70, no. 1, pp. 89–98, 2024.
+[23] J.-H. Lee, M.-S. Park, and Y.-H. Kim, “Multi-modal intrusion detection
+for smart camera systems in consumer iot,” IEEE Transactions on
+Consumer Electronics, vol. 69, no. 2, pp. 215–224, 2023.
+[24] L. Zhiqiang, G. Mohiuddin, Z. Jiangbin, M. Asim, and W. Sifei,
+“Intrusion detection in wireless sensor network using enhanced empirical
+based component analysis,” Futur. Gener. Comput. Syst., vol. 135, pp.
+181–193, 2022.
+[25] M. Verkerken et al., “A novel multi-stage approach for hierarchical
+intrusion detection,” IEEE Trans. Netw. Serv. Manage., vol. 20, no. 4,
+pp. 3915–3929, 2023.
+[26] Z. Sharifian, B. Barekatain, A. A. Quintana, Z. Beheshti, and F. SafiEsfahani, “Sin-Cos-BIAVOA: A new feature selection method based on
+improved african vulture optimization algorithm and a novel transfer
+function to DDoS attack detection,” Expert Syst. Appl., vol. 228, p.
+120404, 2023.
+[27] K. Hassini, S. Khalis, O. Habibi, M. Chemmakha, and M. Lazaar,
+“An end-to-end learning approach for enhancing intrusion detection in
+industrial-internet of things,” Knowl.-Based Syst., vol. 294, p. 111785,
+2024.
+[28] M. Moizuddin and M. V. Jose, “A bio-inspired hybrid deep learning
+model for network intrusion detection,” Knowl.-Based Syst., vol. 238, p.
+107894, 2022.
+[29] Dataset Engineer, “Cybersecurity threat and awareness program dataset,” 2024, accessed: 2026-05-14. [Online]. Available:
+https://www.kaggle.com/datasets/datasetengineer/cybersecuritythreat-and-awareness-program-dataset
+[30] Chethuhn, “Network intrusion dataset,” 2023, accessed: 2025-0512. [Online]. Available: https://www.kaggle.com/datasets/chethuhn/
+network-intrusion-dataset
+[31] X. Shi et al., “Early network intrusion detection enabled by attention
+mechanisms,” IEEE Transactions on Information Forensics and Security,
+2024.
+[32] M. Nakıp and E. Gelenbe, “Online self-supervised deep learning for intrusion detection systems,” IEEE Transactions on Information Forensics
+and Security, 2024.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+PAPER_TEXT

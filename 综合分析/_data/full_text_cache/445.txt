@@ -1,0 +1,897 @@
+10604 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Flow Microelement-Driven Traffic Relationship
+ Analysis: Robust Detection of Malicious
+ Encrypted Traffic
+ Hao Fu , Degang Sun , Jinxia Wei, Wei Wan , and Chun Long
+
+ Abstract—Encryption technologies randomize network com- cyberattacks. Attackers exploit encrypted malicious traffic as
+munication to protect user privacy. However, attackers exploit efficient carriers, posing serious security threats with minimal
+encrypted traffic to conceal malicious activities. The existing costs [1]. Since cyberattacks are executed along with multidetection methods rely primarily on traffic content or interactive stage network traffic, mainstream defences focus on detecting
+patterns. Nevertheless, static methods can be easily obfuscated
+by advanced attacks. Since the set of potential attacks is open and mitigating the actual impact through traffic analysis [2].
+and infinite, models regularly lose effectiveness against novel Currently, industries widely deploy intrusion detection systems
+attacks. Robust encrypted malicious traffic detection remains (IDSs) for malicious traffic detection. These systems (such as
+a valuable research area. In this paper, we propose BSTS- Suricata [3] and Snort [4]) efficiently detect encrypted traffic
+Net, a robust unsupervised encrypted malicious traffic detection on the basis of threat intelligence and predefined rules [5].
+model based entirely on traffic relations. The key motivations However, with the emergence of novel attacks, rigid detection
+are to construct a relation-based traffic contextual representation
+and to establish dynamic baselines for anomaly detection. To
+ methods of IDSs are becoming increasingly ineffective in
+represent local relations within flows, we innovatively introduce dealing with encrypted and obfuscated malicious traffic.
+the concept of traffic microelements, which capture fine-grained In recent years, various efforts targeting encrypted traffic
+interaction pattern relations. To integrate the global relationships detection using artificial intelligence have been proposed [6].
+between flows, we construct a traffic microelement space based Most of the related research has focused on traffic content to
+on the Siamese neural network. Three optimization functions are extract complex potential attack features, and some methods
+proposed to optimize the intraservice, interservice and internode have achieved accuracies exceeding 99% [7]. Some research
+relations. For robust detection, we introduce a reputationenhanced dynamic encrypted traffic detection algorithm that has avoided encrypted traffic content analyses and opted for
+constructs dynamic baselines and continuously detects novel traffic interactive patterns to detect malicious communicaanomalies. We evaluate BSTS-Net through extensive experiments tion behaviour. To leverage network communication features
+on three datasets and compare it with seven SOTA methods. and enhance the representation of nodes in non-Euclidean
+Our results demonstrate its superiority, with an F1 score of spaces, models such as graph neural networks [8] (GNNs) and
+more than 99.63% across all the datasets in multiclassification knowledge graphs [9] (KGs) integrate entities and interflow
+scenarios. Additionally, we simulate three adversarial scenarios correlations. However, these static methods learn the distribufor robustness analysis. Although the baseline methods experience
+an F1 score degradation of 32.21%, BSTS-Net achieves high tional representation of malicious traffic from labelled datasets
+performance, with only 1% degradation. and lack robustness for novel malicious traffic. Specifically,
+ real-life scenarios still face the following challenges:
+ Index Terms—Malicious traffic detection, traffic behaviour,
+Siamese neural network, spatial–temporal graph.
+ • High-precision complex models rely on millions of
+ high-quality labelled data for reliability, while the persis-
+ I. I NTRODUCTION tence and stealthiness of attacks complicate the labelling
+ process [7].
+W ITH the increasing awareness of privacy protection
+ and security, anonymous communication technologies
+such as secure sockets, secure shell protocols, virtual private
+ • While complex model structures enhance generalization
+ by fitting labelled datasets, the set of potential attacks is
+ open and infinite. Detection models are updated slower
+networks (VPNs), and Tor have been widely adopted. This than novel attacks are generated [10].
+trend has been followed by a significant increase in encrypted • Attackers can easily circumvent static detection meth-
+ Received 7 April 2025; revised 23 August 2025; accepted 16 September
+ ods by modifying encryption algorithms, communications
+2025. Date of publication 24 September 2025; date of current version protocols, etc. [11]
+9 October 2025. This work was supported in part by the Youth Innovation Anomaly-based unsupervised detection methods alleviate
+Promotion Association of Chinese Academy of Sciences (CAS) under Grant the aforementioned challenges to a certain extent [12]. These
+2022170 and in part by the Special Project for Cybersecurity and Informatization of CAS under Grant CAS-WX2022GC-04. The associate editor methods construct baselines of normal traffic and subsequently
+coordinating the review of this article and approving it for publication was detect deviations from these baselines. Since encryption pro-
+Prof. Mika Ylianttila. (Corresponding author: Chun Long.) tocols generate different encrypted content for the same raw
+ The authors are with the Computer Network Information Center, Uni- traffic content, it is impossible to find a completely closed
+versity of Chinese Academy of Sciences, Beijing 100083, China (e-mail:
+anquanip@cnic.cn). set of benign traffic. Currently, baselines are constructed on
+ Digital Object Identifier 10.1109/TIFS.2025.3613971 the basis of normal traffic content or interactive behaviour,
+ 1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+FU et al.: FLOW MICROELEMENT-DRIVEN TRAFFIC RELATIONSHIP ANALYSIS 10605
+
+and malicious traffic is detected by comparing reconstruction • We introduce the traffic microelement space, which
+errors (e.g., Autoencoder [13]). These methods necessitate is implemented by an optimized Siamese neural
+meticulous attention to the fitting of traffic content to con- network. By incorporating traffic microelements, our
+struct distinct categorical boundaries. Since the randomness of method achieves efficient similarity embedding without
+encryption eliminates the information entropy of the content, the need for labels. We propose three targeted loss funcmodels tend to generate false positives because of overfitting. tions to improve the model performance.
+Even though some studies integrate more universal features, • We propose a method to construct a fine-grained traffic
+such as temporal and graph structures of traffic, models baseline on the basis of similarity. On the basis of
+trained on encrypted content are susceptible to evasion. Cur- the baseline, we propose a dynamic reputation-enhanced
+rent anomaly-based malicious traffic detection methods fail malicious traffic detection model. The model analyses
+to meet the robustness requirements necessary for reliable traffic in real time and detects unknown attacks
+cybersecurity applications. • We conduct experiments on three large-scale datasets,
+ To achieve robust detection, we propose a model based namely, CIC-IDS2017, CIC-IDS2018, and UNSWNB15,
+on traffic microelements to extract features of relationships and the results demonstrate that our method outperforms
+between similar flows. The microelement is the description the current state-of-the-art approaches. A perturbation
+of the intrinsic communication metadata pattern of given experiment is used to verify the ability to detect adverservices, which remains relatively stable across multiple sarial attacks. Our model is complete and open source.1
+encrypted traffic detection instances. The model focuses on
+the traffic relations with better generalization rather than II. R ELATED W ORK
+the encrypted content. To enhance robustness, the traffic
+microelements extract flow metadata as features that are less A. Content-Based Detection
+affected by encryption-related interference. While some works Attackers hide attack intent using unique encryption algoalso propose metadata-based features, their models essentially rithms, which makes traffic payloads differ. Researchers have
+perform static feature classification and fail to analyse cor- analysed differences in traffic content distribution by building
+relations [14], making it difficult to dynamically detect novel deep learning models. Wang et al. [16] first utilized CNN
+attacks. Specifically, we introduce a malicious traffic detection networks to detect the grayscale images converted from raw
+model named BSTS-Net, which is able to exploit the fine- bidirectional traffic, which revealed the difference in traffic
+grained relations of traffic. By observing the mechanisms of distribution through visualization. To improve the semantic
+service traffic generation, we identify their special modular understanding of encrypted traffic, Hwang et al. [17] proposed
+fragmentation structure. On this basis, observation, a greedy a novel embedding mechanism and leveraged LSTM for
+strategy is employed to extract optimal traffic microelements. temporal correlation in packet headers. Recent studies have
+ Then, the traffic microelements are used to construct a increased the model parameters for complex flow contents. Lin
+traffic microelement space, which maps traffic to a suitable et al. [18] proposed a contextualized datagram representation
+relational distance space. The subspace reflects high-order with transformers pretrained from large-scale unlabelled data,
+traffic flow behaviours. We construct datasets based on traffic which was applied to different encrypted traffic scenarios.
+microelements, including positive and negative samples, which Zhou et al. [19] proposed TrafficFormer, a general pretrained
+are used to train an optimized Siamese neural network [15]. To large model for generalization across diverse traffic analysis
+the best of our knowledge, this is the first study in which the tasks, which achieved the best performance on six classi-
+Siamese neural network is applied to unsupervised malicious fication tasks. For robust traffic feature representation, Fu
+traffic detection. To represent the exact relationships between et al. [20] introduced frequency-domain analysis into the task
+flows, we propose three loss functions that are optimized of malicious traffic detection. Barradas et al. [21] proposed
+for the intraservice, interflow, and internode flow distances. an unsupervised feature compression mechanism based on
+The traffic microelement space forms a similarity relationship quantization and truncation, which seamlessly integrates a
+between flows. downstream machine learning model. Holland et al. [22]
+ Finally, we construct baselines based on flows with similar combined a unified binary packet representation, enabling endrelationships and obtain these baseline reputation scores. This to-end automation from raw network traffic to high-accuracy
+article proposes a method for dynamic baseline construction classification models. For efficient detection, Zhou et al. [23]
+that is based on the reputation score. We pass and update the proposed real-time traffic classification, which is implemented
+reputation score through the temporal communication struc- on a programmable switch, enabling high-speed performance.
+ture. Baselines with lower reputation scores will be dropped. Zhao et al. [24] proposed a unified detection framework
+Our approach enables dynamic, continuous and robust mali- for attack traffic that supports fine-grained classification and
+cious encrypted traffic detection. incremental updates. In summary, content-based detection can
+ In summary, the contributions of this paper are summarized be improved by complex modelling, while static methods are
+as follows: costly and unreliable for novel encrypted traffic.
+ • By analysing traffic relations, we propose a novel
+ method for traffic microelement extraction. Intraflow B. Interaction-Based Detection
+ and interflow relations are combined to extract optimal Owing to the low entropy of malicious encrypted traffic
+ traffic microelements. The experiments show that the content and the difficulty of representation generalization,
+ extracted traffic microelements are robust for adversarial
+ traffic. 1 https://github.com/gswsfh/BSTS-Net.git
+10606 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE I
+ C OMPARISON W ITH R ELATED W ORKS
+
+researchers have aimed to detect attacks in terms of flow datasets, some studies have used anomaly-based detection
+interactions. Gu et al. [25] discovered temporal similarities methods. These methods use self-supervised or unsupervised
+in communication within the same botnet and employed approaches to construct normal traffic baselines and detect
+statistical algorithms to detect malicious traffic from botnets. deviation anomalies. Xie et al. [34] proposed Rosetta to
+To improve detection, researchers have used fine-grained accurately construct a baseline for TLS-encrypted traffic,
+features to represent interaction patterns. Shen et al. [26] enhancing classification performance across various network
+proposed a detection method using packet length from two- environments. Kitsune [35] introduced an autoencoder to learn
+way client–server interactions to train a machine learning from normal traffic and detect abnormal network attacks for
+classifier. Fu et al. [27] detected tunnelled attack traffic various network channel patterns. The existing anomaly-based
+by analysing packet length patterns. Recent studies have detection methods rely on traffic content or interactions for
+constructed communication graphs for topological feature rep- baseline construction, which establish classification boundresentation. Veličković et al. [28] introduced graph attention aries by analysing the closure of traffic behaviour. However,
+networks (GATs), which enhance node features using message evolving networks lead to high false-positive rates, which
+passing methods. Pareja et al. [29] proposed a model that is particularly common in large-scale networks. Nakip and
+dynamically adjusts graph convolutional neural networks to Gelenbe [36] proposed an online learning detection method
+capture the dynamics of graph sequence data. To incorporate without human involvement to automatically adapt models to
+temporal features, Duan et al. [30] presented sequences of novel malicious traffic. However, long-term baselines produce
+spatiotemporal graphs and analysed their evolutionary rela- biases in classification boundaries, resulting in unreliable
+tionships. To better integrate various graph interactions, Li results. Moreover, detection models exhibit significant hystereet al. [31] transformed user features and structural information sis in response to novel malicious traffic.
+into heterogeneous graphs on the basis of relationship weights. We improve anomaly-based detectors by exploiting flow
+Fu et al. [33] constructed lightweight flow interaction graphs relationships and computing local baselines on the fly, elimito capture multiflow collaboration patterns in fully encrypted nating long-term bias. Compared with existing anomaly-based
+environments. Although interaction-based approaches have methods, the present method demonstrates superior robustness.
+improved detection, graph models are sensitive to perturbed Table I summarizes the relevant works.
+network environments. Consequently, [32] optimized the graph
+structure for noise, but the models still lack robustness to III. M OTIVATION
+address novel malicious traffic interactions. Advances in traffic encryption have resulted in increas-
+ Graph-based methods struggle with dynamic environments ingly unreliable content-based analysis methods since traffic is
+because of poor generalization, adversarial fragility, and high encrypted into entirely unrelated random payloads at different
+computational cost. GNNs require global graph traversal, levels of access. As highlighted by Papadogiannaki and Ioancausing high latency in incremental updates. Their memory nidis [37] in their survey, traditional malware traffic detection
+overhead scales linearly with graph size, limiting scalability. methods that rely on payload-based features have become
+Attackers can manipulate topology via malicious nodes or significantly less effective because of the widespread adoption
+edges, distorting neighbourhood relationships and misleading of encryption technologies such as TLS 1.3 and encrypted
+predictions. These issues hinder real-time, large-scale, robust server name indication. To investigate the information content
+deployment in evolving network settings. of encrypted traffic payloads, we design a dedicated experiment aimed at assessing whether communication patterns
+C. Anomaly-Based Detection generate distinguishable and meaningful payload-level features
+ To address the problem of weak robustness of malicious despite encryption. Specifically, we establish a proxy server
+traffic detection models trained on limited malicious type using Nginx to access static resources and utilize Scapy to
+FU et al.: FLOW MICROELEMENT-DRIVEN TRAFFIC RELATIONSHIP ANALYSIS 10607
+
+Fig. 1. Packet information entropy and the difference between and maximum
+randomness.
+
+ Fig. 3. Packet length and time series statistical analysis.
+
+ • Traffic data that were once homogeneous are now
+ segmented because of the finer-grained divisions [41].
+ Fig. 2. Traffic componentized communication sequence diagram. These metadata leads to more traffic information. Similar
+ services utilizing common modules generate comparable fragments [42]. As illustrated in Fig. 2, the same
+capture the encrypted packets. Fig. 1 shows the information video services produce analogous traffic segments when
+entropy and Pearson coefficient of the encrypted packet during accessed by different users, and different video services
+1000 repeated accesses. The experimental results demonstrate also produce partly analogous traffic segments. Although
+several key characteristics of the encrypted packets: the content of the encrypted traffic has become completely
+ • They exhibit a high level of information entropy, with indistinguishable, its traffic metadata information has a
+ values exceeding 5.7. The difference from the maximum large degree of similarity. Although there are variations
+ random information entropy is less than 0.27. in packets due to the content distinction, common frames
+ • The absolute value of the Pearson coefficient between and static resources result in common patterns.
+ encrypted packets that originate from the same data • The change in design pattern introduces temporal features
+ remains within 0.25, indicating nearly uncorrelated [43]. As illustrated in Fig. 2, the authenticated flows
+ relations. precede the resource flows. Flows from the same ser-
+ • Overall, the entropies of the encrypted packets appear vice exhibit consistent access temporal patterns. Different
+ to be highly random and exhibit less significant packets from flows also possess temporal features (e.g.,
+ differentiation. heartbeat packets, etc.). The temporal features are crucial
+Although the traffic payload is entirely indivisible, the traf- for detecting malicious traffic. On the one hand, traffic
+fic interactions exhibit a modular pattern [38], [39], [40], generated by scripts and tools exhibits strong periodicity.
+revealing the behaviour of traffic relations. As illustrated in In contrast, attackers use high-frequency attack flows
+Fig. 2, users access a video service through multiple requests. to improve intrusion efficiency (e.g., probe scanning)
+Initially, users visit a website and authenticate their identify or directly cause damage (e.g., DDoS attacks). Thus,
+through requests and then access the images and video data temporal features reflect traffic intentions to some extent.
+through staged media requests. Multiple accesses follow a sim- • Flows of similar services result in more granular similarilar interactive mode, and segmented communication reveals ities [44]. The communication patterns of normal service
+the identities. traffic are highly similar and prevalent, forming a majority
+ For further research, we analyse the access patterns during that differs sharply from the distinct and minority malithe communication process in the same encrypted traf- cious traffic. Moreover, the finer-grained design pattern
+fic analysis experiments. Fig. 3 illustrates the sequence of results in more obvious service behaviours [14] between
+packet lengths and time intervals during the 1000 accesses. benign and malicious.
+Fig. 3 (a) and (b) illustrate the distribution of the packet lengths Inspired by the scientific findings above, sophisticated
+and sequential lengths, respectively. Fig. 3 (c) and (d) illustrate design methodologies are needed. Specifically, we need to
+the distribution of the time intervals and sequential time inter- construct the following core functional components:
+vals, respectively. The results indicate that the packet lengths • Extraction of traffic relations from network flows.
+and intervals of the same service are confined within finite sets • Construction of dynamic relevance based on traffic relaand exhibit stable and consistent sequential characteristics. tions.
+ Combining the results of the theoretical analysis and exper- • Detection of malicious traffic through deviation analysis
+imental verification, we obtain the following conclusions: from established relevance patterns.
+10608 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Fig. 4. System architecture diagram.
+
+ We build the above components in steps. First, we analyse TABLE II
+the traffic metadata within services and identify the most S YMBOL M EANINGS
+representative as traffic microelements, which belong to the
+most common interactive patterns between traffic and capture
+the essential features of services. Second, we construct a traffic
+microelement space that uses an optimized Siamese neural
+network to determine the relevance between flows. Third,
+we construct a dynamic baseline for aggregated traffic on
+the basis of time windows and assign reputation. Malicious
+encrypted traffic is identified with dynamic baselines. In fact, main components–traffic microelement extraction, the SNN
+our detection integrates various perspectives. By integrating (Siamese neural network), and anomaly detection.
+behavioural patterns and entities, we construct traffic microelements to achieve dynamic optimality. By integrating local A. Notation
+and global features, we construct integrated distance representations between flows. By integrating temporal and spatial For clarity, we summarize the key notations used throughout
+dimensions, we achieve robust malicious detection based on this paper. All the symbols are defined at their first appearance,
+dynamic local aggregation. In Section IV, we elaborate on the and this table II serves as a consolidated reference.
+methodology employed to address the identified issues.
+ B. Traffic Microelement Extraction
+ The proposed microelements are designed to derive stable
+ IV. M ODEL S TRUCTURE metadata fingerprints from multiple flows F communicating
+ To address the challenge of robust malicious traffic detec- with S . The fingerprint, composed of packet slices and their
+tion, we introduce a dynamic detection method that leverages sequential patterns, captures consistent and recurring comtraffic relations named BSTS-Net. Fig. 4 illustrates the munication behaviours while ignoring user-specific payload
+overall structure of BSTS-Net, which consists of three variations.
+FU et al.: FLOW MICROELEMENT-DRIVEN TRAFFIC RELATIONSHIP ANALYSIS 10609
+
+ TABLE III 3) Greedy Traffic Microelement Extraction: For service
+ F EATURE S ELECTION FOR F ILTERING N OISY S AMPLE DATA S , we model its intrinsic behaviour from observed traffic
+ S N = {F N1 , F N2 , . . . , F Nn }, which consists of fragmented flows
+ induced by heterogeneous user access patterns and each corresponding to distinct phases such as authentication or data
+ transfer. By grouping flows on the basis of service, we extract
+ microelements via the longest matching patterns, capturing a
+ stable behavioural fingerprint that abstracts transient details
+ while preserving invariant protocol-level interactions. During
+ A novel end-to-end approach for extracting traffic features is training, microfeatures are derived from a clean and compreintroduced by identifying traffic microelements, which search hensive dataset S F , enabling optimal baseline construction.
+for as many similar interactions as possible from the traffic of In real-time detection, where full traffic S F is unavailable,
+the same service. The method encompasses three steps: Zeek- a greedy on-the-fly extraction algorithm ensures low latency
+based feature extraction, flow feature aggregation and data and achieves near-optimal matching on the basis of S N ⊆ S F .
+filtering, and a greedy traffic microelement extraction process. A reliable fingerprint requires at least two flows per functional
+ 1) Zeek Feature Extraction: To obtain a more robust and group for comparison, with statistical stability achieved at
+generalized representation of flow interactions, we extract three or more flows. The success probability P of fingerprint
+metadata from raw traffic using Zeek [45]. We avoid using raw generation is defined in Eq. 1
+metadata features directly. Instead, we leverage these metadata  T (Nt , Ng )
+to construct microelements, which capture higher-level pat- P = Nt ≥ 2Ng · (1)
+terns for relation understanding. Since Zeek efficiently handles S (Nt , Ng )
+packet reordering, loss, and corruption during transmission where Nt is the number of traffic fragments and Ng is
+[46], it also enables direct alerts on low-level link errors. the number of functional groups. Here, S (Nt , Ng ) denotes
+Specifically, we develop a custom Zeek script,2 spanning the Stirling numbers of the second kind, representing the
+over 1000 lines for various common protocols, to extract the number of ways to partition Nt distinguishable elements
+following information: into Ng nonempty unordered subsets. T (Nt , Ng ) represents
+ • 4-tuple information, including source IP, destination IP, the number of such partitions where each subset contains at
+ source port, and destination port. least two elements, ensuring meaningful group-level matching.
+ • Packet timestamp and payload size. We compute S (n, m) using the recurrence relation as shown
+ • Application layer metadata of traffic. This information in Eq. 2.
+ extracted by Zeek verifies the effectiveness of traffic S (n, m) = m · S (n − 1, m) + S (n − 1, m − 1)
+ microelements.
+ S (0, 0) = 1, S (n, 1) = 1, S (n, n) = 1
+ 2) Flow Feature Aggregation and Data Filtering: As mentioned earlier, we extract traffic microelements under services S (n, 0) = 0, f or n > 0, S (0, m) = 0, f or m > 0 (2)
+provided by specific servers [47]. Therefore, we first aggre- Similarly, T (n, m) is computed via Eq. 3
+gate flow metadata based on 4-tuples, and flows under the !
+same destination IP are considered the same service traffic. n−1
+ T (n, m) = m · T (n − 1, m) + T (n − 2, m − 1)
+Afterwards, the following processes are carried out on each 1
+flow to extract fine-grained interactions: (2m)!
+ • Record the direction of the packet. T (0, 0) = 1, T (2m, m) =
+ m! · 2m
+ • Sort the packets with metadata on the basis of the T (n, 0) = 0, f or n > 0, T (0, m) = 0, f or m > 0
+ timestamp.
+ T (n, m) = 0, i f n < 2m (3)
+ In fact, services such as CDN [48] generate a large number
+of accesses infrequently, which produces a significant amount We evaluate the probability over up to 200 traffic fragments
+of diverse noise traffic. We filter the noise that is irrelevant and 10 functional groups. As shown in Fig. 5, our greedy
+for the traffic microelements before detection. Specifically, algorithm achieves a 96% success rate in generating valid
+the DBSCAN algorithm [49] is used for clustering, and the traffic fingerprints, with 94.92% of matches being stable and
+features extracted are shown in Table III. On the one hand, 93.34% for groups of size 5. The histogram further shows
+DBSCAN enables fast detection by leveraging precomputed that when there are two functional groups, more than 80% of
+distance metrics. On the other hand, it performs coarse- the configurations achieve a matching probability above 95%,
+grained grouping, focusing only on the salient and distinctive which holds for more than 75% of the cases with three groups
+characteristics of CDN traffic to ensure stable and efficient and 70% of the cases with five groups, demonstrating the
+batch filtering. After that, we filter out the most isolated robustness of our approach under practical grouping scenarios.
+IPs whose traffic can be regarded as noise. Experiments on The analysis of the CICIDS2017 dataset reveals that 86.74%
+the CIC-IDS2017 dataset [50] demonstrate that the filtering of services exhibit 3 or fewer functional groups, and 95.87%
+reduces traffic by approximately 17%, without introducing any have 5 or fewer functional groups. Under these realistic
+false positives. In the analysis, the IPs filtered include DNS conditions, our method achieves a matching rate of 99.78%,
+servers and benign websites. demonstrating the high effectiveness and practicality of the
+ proposed greedy microelement extraction strategy for real-
+ 2 https://github.com/gswsfh/BSTS-Net/blob/main/AllFeas.zeek world deployment.
+10610 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Fig. 7. Example for F~lf .
+
+ Fig. 8. Example for F~f .
+ p
+
+ Owing to the complexity of network environments, fuzzy
+ Fig. 5. Fingerprint matching probability. matching based on the forwards and backwards positions
+ is used to address traffic fragmentation and manage packet
+ backlog to achieve robust feature extraction. Matching
+ segments are considered successful when they satisfy the
+ following rules:
+ • The size of the segment matches the size of the target
+ segment.
+ • The size of the segment matches the size of the target
+ Fig. 6. Example for F~rf . segment’s preceding or succeeding segment in the
+ same direction.
+ • The size of the segment matches the sum of the
+ Within the traffic of the same service, we identify and size of the target segment’s preceding and succeeding
+extract a wealth of traffic interaction patterns. Specifically, we segment in the same direction.
+focus on the following five microelements: The specific process is shown in Algorithm 1.
+ • Repetition microelements. Protocols’ (e.g., SMB and As illustrated in Figure 7, the longest local packet
+ MDNS) fixed packet sizes [51], [52] allows for the sequence common to the same service is matched as
+ categorization˚of packets with fixed patterns. Specifically, 873, 165, 539, and 721. The positive and negative signs
+ for flow f = p1s , p2s , . . . , pks , the repeatability feature is associated with these values indicate the direction of each
+ computed as Eq. (4) packet.
+ • Packet microelements. Similarly, we implement the
+ F~ τf = 1{k f k>θr ∧k{ f }k=1} · (p1s + 1) − 1 (4)
+ greedy algorithm to identify bidirectional traffic segments
+ wherek{ f }k indicates the type of packets in the flow and that exhibit similar features within the same service. The
+ k f k indicates the number of packets in the flow. As packet feature is computed by Eq.(6)
+ illustrated in Figure 6, flow pairs with identical packet
+ lengths are assigned feature values of 873. For flows that F~pf = argmax ζ( fct , f pt )|| argmax ζ( fc f , f p f ) (6)
+ f p ∼ fs f p ∼ fs
+ do not meet this criterion, the default feature value is set
+ to -1. where || represents the splice of vectors. Unlike local fea-
+ • Local microelements. Owing to the similarity of request ture extraction, this algorithm employs a direction-based
+ or response fragments within the flow under the same correlation, which resolves the issue of long-distance data
+ service, we employ a greedy algorithm to extract the dependency. The matching rules are as follows:
+ most common fragments between traffic. Specifically, • When the current direction traffic and the target
+ we compare the current traffic with historical traffic, traffic have a common packet size, calculate the
+ identify similar fragments, and flag the longest sequence minimum match quantity, and save the matching
+ of matches. The local feature F~lf is computed as Eq. (5) segment.
+ • Choose the segment with the largest total matching
+ argmax argmin ζ i (χ( fc ), χ( f p )), F~lf = ζ( fc , f p )|| (5) quantity as the best matching segment. The specific
+ f p ∼ fs i∈[0,lmin ]
+ algorithm is shown in Algorithm 2.
+ where fc is the current flow to be matched, f p is the As shown in Figure 8, forwards and reverse packet
+ matched flow, and f s is the flow of service. χ(•) denotes sequences are matched separately, producing directional
+ the split function, which splits flows by direction. ζ(•) matching patterns. The forwards direction produces the
+ finds common segments of flows. || combines all seg- sequence 873, whereas the reverse direction yields 165
+ ments and lmin denotes the minimum length of the flows. and 721. Each packet is matched only once to ensure an
+FU et al.: FLOW MICROELEMENT-DRIVEN TRAFFIC RELATIONSHIP ANALYSIS 10611
+
+ Algorithm 2 Packet Feature Extraction
+ Input: Flow metadata: F;
+ Output: Packet microelements:PF;
+ 1: Segmenting the traffic metadata by service yields G,Nb =
+ −1,S b
+ Fig. 9. Example for F~cf . 2: R = newHashT able()
+ 3: for fd ∈ [T rue, False] do
+ 4: for F c , F m ∈ G do
+ 5: store S m = GetDirFinger(F c [ fd ], F m [ fd ]) if R[F c , F m ] is
+ not stored.
+ 6: PF(F c , F m )[ fd ] = the longest of all S m
+ 7: end for
+ 8: end for
+ Fig. 10. Example for F~df . 9: return PF
+
+ accurate representation of the communication volume and the direction, with positive signs for outbound transmisprevent duplication. sions and negative signs for inbound transmissions.
+ • Cyclical microelements. As illustrated in Fig. 2, the
+ Additionally, we do not utilize a transport layer or other
+ video service periodically fetches segments of resources
+ headers of traffic, since this information, such as the window
+ after the initial request. Services generate periodic data
+ sizes, is mostly influenced by network conditions. Even so,
+ packets. Accordingly, we compute the directional periodic
+ we can still efficiently detect protocol-targeted attacks such as
+ segments of flows and count the repetitions. The circle
+ slow DDoS using Zeek. Compared with the other potential
+ feature is computed as Eq. (7)
+ features, the uniqueness of these five features is as follows:
+ F~cf = argmax Ξi (χ( fc )) (7) • Among all traffic metadata, these microelements are
+ i∈[0,lmin ] derived from the packet length and direction, which
+ where Ξ(•) calculates the number of repetitions. Common remain highly stable across diverse encrypted traffic and
+ protocols, such as HTTPS [53], generate data packets of can be extracted efficiently to enable real-time detection.
+ size 0 no less than twice and interference with features. • These microelements are comprehensive, covering all the
+ Therefore, segments of size 0 need to be repeated at metadata features used in the existing studies, except for
+ least 3 times. Figure 9 shows successful matching of the time metrics and header fields, which are susceptible
+ repeated traffic segments across flows. The first segment to networks. For example, they cover all nontemporal
+ contains 853 and 259 packets, and the second segment features among the more than 80 attributes extracted by
+ contains 259 and 539 packets. Tye packet signs indicate CICFlowMeter [54], a tool widely used for malicious
+ the direction, with positive signs for outbound traffic and encrypted traffic detection.
+ negative signs for inbound traffic. • These microelements are both independent and indispensable. Empirical analysis of the CICIDS2017 dataset
+Algorithm 1 Local Feature Extraction has demonstrated that pairwise mutual information is
+Input: Flow metadata F; less than 0.15 and that additional features contribute less
+Output: Local microelements LF; than 0.5% to the F1 score, satisfying the conditions for
+ 1: Segmenting the traffic metadata by service yields G
+ minimally sufficient statistics.
+ 2: R = newHashT able()
+ 3: for F c , F m ∈ G do C. Microelementary Space Construction
+ 4: store S m = GetLocalF(F c , F m ) if R[F c , F m ] is not stored. Traffic microelements cannot be directly used as features for
+ 5: LF(F c ) = the longest of all S m detection. Since different traffic microelements exhibit signif-
+ 6: end for icant variability, making it challenging to achieve a consistent
+ 7: return LF and reasonable vector representation in Euclidean space. To
+ address this, we employ a feature mapping method based on a
+ • Duplicate features. Services generate a large number of Siamese neural network. The Siamese neural network (SNN)
+ duplicate message fragments. For example, proxy services [15] is a special type of neural network architecture that is
+ transport data with the same size packets. In this paper, typically used to process paired data. It consists of two (or
+ we extract the duplicated segment size within a flow and more) weight-sharing subnetworks that independently process
+ choose segments whose number of duplicates is no less the input data and then compare their respective outputs.
+ than 2. The duplicate feature is computed as Eq. (8). Owing to weight sharing, the SNN can learn more general
+ and robust feature representations during training and improve
+ F~df = argmax(Ξ( fci )) (8) feature extraction.
+ i∈[0,lmin ]
+ We adopt an SNN in place of AE-based approaches such
+ Figure 10 shows the matched periodic patterns from two as variational autoencoders (VAEs) or graph autoencoders
+ flows, identified as 873 and 259. Tye packet signs indicate (GAEs), which focus on reconstruction and lack explicit
+10612 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ where  is the noise parameter and || • || is the Euclidean
+ distance between flows. This loss function supports the baseline detection that uses the Euclidean distance for anomaly
+ judgement, which encourages instances with fewer shared
+ microfeatures to be farther apart in the embedding space.
+ Since the interservice traffic has a large sequence of
+ microelements, the loss function is constructed, and the error
+ coefficients are computed to allow the model to learn larger
+ interservice microelement features. The specific calculation
+ equation is shown in Eq. (10)
+ |IPS (S x )&IPS (S y )| |IP (S )&IP (S )|
+ τ2 = 0.5 · 24 + 0.5 · D x 24 D y (10)
+
+ Fig. 11. Siamese network structure.
+ where mask denotes the sought IP binary code, IPS denotes
+ the source IP, and IPD denotes the destination IP. This loss
+modelling of pairwise similarity. In contrast, the SNN is penalizes reliance on IP similarity, where traffic between
+specifically designed to learn a similarity-preserving embed- identical or similar IP pairs is overfit to IP-specific patterns
+ding, where instance distances directly reflect behavioural instead of generalizable microelement similarity.
+relevance. If the number of clients for the same service is greater,
+ the more accurate the micrometadata it creates. To reduce the
+Algorithm 3 Sampling Method noise of the model, the internode factor is calculated as shown
+Input: Fingerprints group: Fg , sample size:N s ; in Eq. (11)
+Output: Datasets:D; τ3 = 1/num(S ac ) + 1/num(S pe ) (11)
+ 1: for all F gs ∈ F g do
+ 2: for gc , g p ∈ Fgs do where num is the number of client streams in the service.
+ 3: if len(gc ) < 2 then This loss function includes confidence-aware weighting based
+ 4: continue on microelement reliability, which reduces the penalty as the
+ 5: end if number of flows per service increases, encouraging the model
+ 6: for i = 0, 1, · · · N s do to focus on microelements from abundant traffic samples.
+ In summary, the loss function is calculated as shown
+ 7: S an , S ac ← random(gc ), S ne ← random(g p )
+ in Eq. (12)
+ 8: D.add([S an , S ac , S ne ])
+ 9: end for L(S an , S ac , S pe ) = τ2 ∗ (τ1 /ω1 + ω2 + τ3 ) (12)
+10: end for
+ where ω1 and ω2 are regularization factors. ω1 is set to
+11: end for
+ the feature dimensionality to prevent loss explosion from
+12: return D
+ high-dimensional vector norms. ω2 is initialized as −1 to
+ balance the scaling effect of τ3 on the product of confidence
+ Dataset Construct Beforehand, we propose a method to factors. This ensures stable training and proper sensitivity to
+construct positive and negative sample pairs for the model, confidence variations across flows.
+which is named the microelement dataset. As mentioned pre- Our network architecture supports the representation of
+viously, traffic microelements indicate traffic relationships, and traffic relations, as motivated by the earlier discussion. For
+the pairs are divided on the basis of microelements. We choose any two traffic flows, the learned embedding space satisfies
+a flow from the service as the anchor data and select positive the condition stated in Eq. 13
+data that share two or more microelements; the negative data
+are selected randomly from the rest of the service. The specific d( f s − fa ) > d( fd − fa ) (13)
+sampling method is illustrated in Algorithm 3. where d denotes the distance in the embedding space, fa
+ Model Structure Subsequently, we train the SNN model. represents the anchor flow, f s denotes the flow with a similar
+As illustrated in Fig. 11, the Siamese neural network uses pattern to fa , and fd denotes the flow with a dissimilar
+different networks for positive and negative sample pairs pattern. The smaller distance between similar flows ensures
+while sharing model weights. Specifically, we employ fully that the model explicitly preserves the relational structure in
+connected layers, along with batch normalization and dropout, the space, enabling effective discrimination between normal
+to prevent overfitting. and anomalous traffic.
+ The loss function minimizes the distance between outputs of
+similar samples and maximizes the distance between the outputs of dissimilar samples. The intraservice loss is represented D. Traffic Anomaly Detection
+as Eq. (9) We construct a traffic microelement spatiotemporal graph
+ to represent the state. As illustrated in Fig. 12, IPs serve as
+ τ1 = max {kS an , S ac k − kS an , S ne k + , 0} nodes, and traffic flows as edges.
+ lmax
+ X The graph is segmented by service. As the time window
+ kS x , S y k = S ix − S yi (9) advances, we construct a baseline of normal traffic for each
+ i=0 service within the time window. Specifically, we extract the
+FU et al.: FLOW MICROELEMENT-DRIVEN TRAFFIC RELATIONSHIP ANALYSIS 10613
+
+ where Re denotes a reputation list that represents either baseline entries or the client.
+
+ E. Continuous Detection and Complexity Analysis
+ Continuous detection is achieved by maintaining a baseline
+ repository for long-term anomaly monitoring. The process
+ involves baseline construction and anomaly detection. When
+ incoming traffic matches a known service in the database,
+ its behaviour is compared against established baselines for
+ Fig. 12. Graphic of flow spatiotemporal behaviour.
+ anomaly identification. Concurrently, the reputation score is
+ updated on the basis of the detection results, enabling adapspatiotemporal features of the traffic microelements in the tive refinement and improved baseline stability. For unseen
+subgraph for clustering according to Eq. (14) services, new baselines are constructed and initialized on the
+ fly. We conduct algorithm complexity analysis for real-time
+ Fni = Ψ f ( fnj ||) + Ψt ( f ) + Ψe ( f ) (14) detection.
+where Ψ f (•) represents the flow features, Ψt (•) represents the • Zeek processes N flows in O(N). Subsequently, DBSCAN
+temporal feature and Ψe (•) represents the entropy feature. On introduces O(NlogN) overhead, where N denotes the total
+this basis, clustering is performed using the K-means algorithm number of flows. Flow aggregation is incremental and
+[55]. This process is formulated as shown in Eq. (15) lightweight.
+ Pm ˚ i • Greedy pairwise matching over K service-associated
+ 1 c = j xi flows yields O(KlogK) complexity.
+ c = argmin( x − µ j ), µ j = Pi=1
+ i i
+ m (15)
+ i=1 1 c = j
+ ˚ i
+ j • Sample selection and SNN inference both run in
+ O(K) because of parallel feature extraction and fixed
+where µ j is the centre of the clusters and ci represents the architecture.
+centre point speculation. The ci of the majority clusters are • Graph construction, K-means clustering, and dynamic
+utilized as the flow baselines for anomaly detection. Clustering baseline updates each take O(K).
+is applied after the SNN, where the output consists of pairwise
+ Overall, the pipeline achieves O(N + NlogN + KlogK + K),
+distance metrics between traffic flows. This naturally aligns
+ dominated by KlogK, resulting in quasilinear complexity. The
+with distance-based K-means methods, making them well
+ main limitation, which is greedy flow matching, is mitigated
+suited for grouping flows by behavioural similarity.
+ in practice, as most flows are sparse, reducing the number
+ In addition, we consider a particular server as an attack
+ of effective comparisons. Consequently, the empirical runtime
+server where most of the traffic is attack traffic such that it is
+ scales near O(K), with sublinear growth under increasing load,
+impossible to identify the flow baselines. Therefore, we also
+ confirming the high efficiency and scalability of real-time
+construct a baseline for the services and cluster for the service
+ intrusion detection.
+grouping. We extract features and perform K-means clustering
+for the server subgraph with the following features:
+ • Flow features. Central traffic features for flow baselines. V. E XPERIMENTAL A NALYSIS
+ • Temporal features. Interactions of intragroup traffic within A. Dataset and Experimental Setup
+ the service.
+ • Entropy features. Cross-entropy of client frequency. We use the CIC-IDS2017, CIC-IDS2018, and UNSW-
+ NB15 datasets for evaluation. The nonencrypted flows in
+ Furthermore, we consider scenarios where services change
+ these datasets are processed using the same feature extraction
+frequently or attacks change the baselines. To address this, we
+ pipeline as encrypted traffic, where plaintext content is not
+employ a reputation-enhanced dynamic baseline construction
+ inspected, ensuring a protocol-agnostic evaluation framework.
+method. First, the reputation scores are evenly allocated to all
+ The CIC-IDS2017 [50] dataset resembles real-world scethe baselines. When dynamic traffic is subsequently routed to a
+ narios. To generate realistic traffic data, the dataset employs
+specific baseline, a corresponding reputation value is assigned
+ the B-Profile system to profile abstract human interaction
+to the client. If client traffic is segmented and allocated to a
+ behaviours and generate naturalistic benign background traffic.
+baseline, the client’s reputation is updated and integrated into
+ The dataset is based on 25 common user abstract behaviours
+that baseline. Finally, all the reputation values are normalized
+ built upon application layer protocols. It contains data from
+to ensure consistency and fairness. The reputation calculation
+ July 3 to July 7, 2017, spanning five days.
+is shown as Eq. (16)
+ The CIC-IDS2018 [56] dataset is generated using a
+ n + (1 − α)Rn )
+ Rb = λ(α ∗ Rnew old combination of B-profile and M-profile configuration files to
+ create a diverse and comprehensive network intrusion detec-
+ Rn = λ(β ∗ Rb + (1 − β) ∗ Rold
+ n ) (16)
+ tion dataset. Spanning a 10-day period in 2018, it captures
+where Rb denotes the baseline reputation, Rn denotes the client a wide array of network activities. The attack infrastructure
+reputation, α and β are the forgetting rates, and λ is the comprises 50 machines, and the victim organization has 5
+regularization function. The function λ is defined as shown departments and includes 420 machines and 30 servers.
+in Eq. 17 The UNSW-NB15 [57] dataset is created by the IXIA
+ λ(Re ) = mean(Re ) (17) PerfectStorm tool in the Cyber Range Lab of UNSW Canberra,
+10614 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+which generates a hybrid of real modern normal activities and • The second hidden layer is a linear layer with a size of
+synthetic contemporary attack behaviours. 32 ∗ 16.
+ The three public datasets contain pcap files of malicious • The output layer is a sigmoid layer, which limits the
+traffic generated by network attacks, as well as features output values to the range [0, 1]. This facilitates the
+extracted for machine learning. Since the raw datasets are normalization of different types of classification outputs
+labelled only for features, we extract the traffic metadata from to a consistent data distribution range.
+the pcap files and label them by comparison. Specifically, for
+the UNSW-NB15 dataset, the pcap files are labelled by 4-tuple.
+ B. Analysis of Experimental Results
+For the CIC-IDS2017 dataset, more precise labels are marked
+by matching the 4-tuple and timestamps of the flows. The Table IV presents the comparative experimental results
+CIC-IDS2018 dataset is labelled by combining the IPs of the between BSTS-Net and baseline algorithms across three
+attackers, the IPs of the victims, and the time period when the datasets. Bold denotes the best results, and underline denotes
+attack took place. The evaluation metrics are accuracy (AC), the second-best results. The results indicate that BSTS-Net
+precision (PR), recall (RE), and F1 score (F1). Our code3 is achieves the best detection performance across all three
+implemented using Zeek and Python. datasets, with F1 scores of 99.74, 99.63, and 99.88, respec-
+ To validate the effectiveness of the proposed algorithm, tively. Different sizes and categories of datasets demonstrate
+experiments are conducted on the same datasets and compared the effectiveness of BSTS-Net. Among the content-based
+with seven state-of-the-art algorithms, representing three main- methods, TMG-GAN achieves a high F1 on CICIDS2017 but
+stream research directions. For the comparative algorithms, F1 scores that are 3.07% and 6.85% lower on the others due to
+detection is performed using the corresponding feature types GAN training instability. Interaction-based DL-GNN and Conextracted from the datasets. traMTD use GCNs and contrastive learning but struggle with
+ • Content-based detection. We choose the TMG-GAN algo- irregular traffic. BSTS-Net avoids long-term dependencies by
+ rithm as the baseline. The algorithm employs multiple segmenting traffic into dynamic windows and comparing it
+ generators to increase the diversity of generated samples, against local baselines, achieving F1 values that are 8.84%
+ addressing the issue of sample imbalance in malicious and 11.92% higher than those of DL-GNN and ContraMTD on
+ traffic detection. UNSW-NB15, respectively. Among the anomaly-based meth-
+ • Interaction-based detection. (1) DL-GNN [7] uses a ods, Rosetta-IF achieves a 91% F1 on CICIDS2017 using TCP
+ dynamic line graph neural network to extract spatial semantics, but BSTS-Net outperforms it by 17.21% via SNNinformation from each discrete snapshot and capture based microelement mapping. Kitsune and CPS-Guard use
+ temporal variations in IP communication. It then uses line packet-level or environmental features, yielding only 54.99%
+ graphs to enhance the detection capabilities of the graph and 59.70% F1 scores, respectively. CIC-GMM, which is
+ neural network. (2) ContraMTD [58] comprehensively based on Gaussian modelling, achieves an approximately 51%
+ considers both vertical and horizontal perspectives and F1 and is sensitive to the data distribution.
+ uses SEC strategies and DE-GAT graph neural networks
+ to extract local features and global interaction features C. Results of the per-Attack Binary Classification Experiment
+ of normal traffic. It employs contrastive learning techniques to learn the consistency relationship between these In the binary classification experiment on the CICIDS2017
+ features and ultimately detects malicious traffic through dataset, BSTS-Net achieves an F1 score exceeding 99% and
+ multiple rounds of scoring. outperforms the best baseline methods by 1.17% to 3.92%
+ • Anomaly-based detection. (1) CIC-GMM [50] uses a for the F1 and 3.13% to 3.99% for the accuracy across seven
+ Gaussian mixture model for detection. (2) Rosett-IF [34] attack types. Simple anomaly-based baselines such as Kitsune
+ trains an isolation forest to classify the malicious data. have shown limited detection ability. The content-based meth-
+ (3) Kitsune [35] uses an autoencoder to train on nor- ods perform better on Patator, Web Attack, Botnet, PortScan,
+ mal data and identifies attack samples by evaluating and LOIT, achieving approximately 2% higher accuracy, but
+ the reconstruction error. (4) CPS-Guard [13] employs are less effective on DoS and DDoS attacks, with 1.85%
+ an outlier-aware autoencoder, detecting by setting an lower accuracy and a 1.9% lower F1 score. Interaction-based
+ adaptive threshold and comparing reconstruction loss. methods struggle to capture structural patterns. BSTS-Net
+ Parameter Settings. The training parameters for the SNN integrates traffic microelements and structural information,
+are configured as follows: 100 epochs, an initial learning rate achieving the best overall performance and demonstrating
+of 0.001, and the Adam optimizer. The weights from the strong robustness across diverse attack categories and scales.
+epoch with the lowest computed loss value are selected as the
+optimal model weights. The network architecture is configured D. Adversarial Experimental Analysis
+as follows:
+ To evaluate the detection capability under attack conditions,
+ • The input layer is a linear layer with a size of 128 ∗ 64,
+ the dataset is perturbed, an adversarial dataset is constructed,
+ the following is a batch normalization layer, and then a
+ and experiments are conducted accordingly. Specifically, the
+ dropout layer with a dropout rate 0.2.
+ adversarial dataset is designed for the CICIDS2017 dataset,
+ • The first hidden layer is a linear layer with a size of
+ with packet-level, stream-level and feature-level perturbations
+ 64 ∗ 32, followed by a batch normalization layer and then
+ constructed as follows:
+ a dropout layer with a dropout rate 0.2.
+ • Packet perturbation. The packet-level perturbation is cre-
+ 3 https://github.com/gswsfh/BSTS-Net ated by randomly adding, removing, or modifying a
+FU et al.: FLOW MICROELEMENT-DRIVEN TRAFFIC RELATIONSHIP ANALYSIS 10615
+
+ TABLE IV
+ R ESULTS OF THE M ULTICLASSIFICATION E XPERIMENTS (%)
+
+ TABLE V
+ B INARY C LASSIFICATION E XPERIMENTAL R ESULTS (%)
+
+ TABLE VI
+ R ESULTS OF THE A DVERSARIAL E XPERIMENTS (%)
+
+ certain number of packets within the flows of the original TABLE VII
+ dataset. B EHAVIOURAL M ICROELEMENT I NFORMATION
+ • Flow perturbation. The flow-level perturbation is created
+ by randomly adding, removing, or modifying a certain
+ number of flows within the services of the original
+ dataset.
+ • Feature perturbation. We modify the malicious flows such
+ that their statistical features resemble those of the benign
+ traffic in the dataset.
+ E. Traffic Microelement Analysis
+ Table VI presents the adversarial evaluation results. BSTS-
+Net achieves the best performance across all the scenarios, Traffic microelements capture the interaction correlations
+with an F1 score decrease ranging from 0.66% to 2.9%. between flows. To assess the consistency of the proposed
+This strong robustness is due to its service-specific baseline microelements, we compare their features. The traffic informaconstruction from normal traffic, which reduces the impact tion used for this analysis is detailed in Table VII. We analyse
+of perturbations. In addition, the microelement space captures traffic consistency using metadata. First, flows sharing more
+complex flow correlations, making it difficult for attackers than two identical microelements in either the source or the
+to generate evasive samples. Interaction-based methods suffer destination port are grouped. This grouping does not rely on IP
+heavily under flow perturbations, with F1 decreases of 17.96% addresses or service labels, making achieving accurate results
+and 18.48%, because injected noise disrupts the communi- more challenging. Next, we evaluate the consistency within
+cation graph and impairs feature fusion. The content-based groups by checking the metadata overlaps. The results across
+methods are most affected by feature perturbations, with a the three datasets are shown in Table VIII and demonstrate that
+23.63% decline in the F1 score as the adversarial samples more than 99 % of similar traffic from the same service is corresemble benign traffic. The anomaly-based baselines show rectly aggregated, validating the ability of the microelements
+inconsistent robustness, with F1 decreasing between 6.99% to capture flow relationships. This approach provides a novel
+and 32.21% under packet and feature perturbations because and efficient feature extraction method. We also compare the
+of simplistic baseline modelling. consistency and efficiency of the microelements with those
+10616 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE VIII
+ F INGERPRINT C ONSISTENCY D ETERMINATION (%)
+
+ TABLE IX
+ CICIDS2017 DATASET F INGERPRINT C ONSISTENCY AND
+ P ERFORMANCE C OMPARISON
+
+of alternative methods, including statistical features, deep
+learning and graph neural networks. Deep learning consists
+of multiple fully connected layers. Graph neural networks
+employ two graph convolutional layers. Statistical features
+are extracted using CICFlowMeter [54]. The results are presented in Table IX. The microelement achieves the highest
+consistency and shortest processing, outperforming the worst Fig. 13. Effect of feature extraction.
+method by 42.77% in terms of consistency and 47-fold in
+terms of efficiency. Deep learning performs poorly because of
+the randomness of the encrypted traffic. The use of a graph distributed, which minimizes both the false-positive rate for
+neural network improves the consistency by 58.29% when flow malicious traffic and the false-negative rate for benign traffic.
+dependencies are modelled, but both deep and graph models We conduct a comparative analysis of the training time and
+require training and incur a computational cost that is more sample distribution, which reveals that the SNN reduces the
+than an order of magnitude greater. Statistical features are loss to a low level within just 10 epochs, indicating fast conefficient but sensitive to traffic variations, resulting in 25.5% vergence and minimal training overhead. Further experiments
+lower consistency than microelements. reveal that increasing the complexity of the SNN increases
+ To study the distribution of the proposed traffic microele- the training time without yielding significant improvements in
+ment space, we select samples from three major categories of detection performance, suggesting that a lightweight architecattacks and label the samples simply as benign or malicious. ture is sufficient for effective learning.
+Afterwards, we perform PCA dimensionality reduction on
+the original traffic metadata and traffic microelements for
+visualization. The results are shown in Fig. 13 (a-f). The exper- G. Ablation Experiment
+imental results indicate that although the original traffic shows To investigate the contributions of each component of the
+some clustering indications of distribution, the distribution is BSTS-Net model, we conduct three ablation experiments.
+irregular and inconsistent. In contrast, the traffic microele- • Ablation Experiment 1: Flow features are extracted
+ments exhibit a clear linear distribution, which demonstrates by packet size and timestamps instead of traffic
+that the proposed microelements achieve a normalized suitable microelements.
+data distribution. However, relying solely on microelements • Ablation Experiment 2: The traffic microelement space
+overlooks the unique features of different samples, thereby is deleted, and the microelements are input into a spacausing diverse traffic patterns to be mapped into a nondis- tiotemporal graph for classification.
+criminative space. The traffic microelement space will be used • Ablation Experiment 2-1: The traffic microelement space
+to address this issue. is deleted and replaced with VAE embedding.
+ • Ablation Experiment 2-2: The traffic microelement space
+F. Analysis of the Traffic Microelement Space is deleted and replaced with GAE embedding.
+ To evaluate the mapping effectiveness of the microelement • Ablation Experiment 3: The spatiotemporal graph is
+space, we visualize the same three attack features after map- replaced with an autoencoder from the baseline methods.
+ping. Fig. 13 (g-i) reveals a surprising finding: despite the The results of Table X on the CICIDS2017 dataset show
+samples being input to the SNN consisting only of positive that the traffic microelements significantly increase detection
+and negative sample pairs based on microelements, with- when relational patterns missed by traditional metrics are
+out explicit labels, benign and malicious traffic demonstrate captured. The SNN enhances global pattern learning, but direct
+distinct distribution patterns, especially for botnets. These classification harms accuracy because of poor group generalpatterns arise from the correlations and comparisons among ization. Autoencoder-based methods underperform, with the
+the traffic microelements, thereby creating varying levels of GAE being better than the VAE. While autoencoder integration
+correlation. Additionally, the samples are more uniformly improves accuracy and recall, it remains sensitive to traffic
+FU et al.: FLOW MICROELEMENT-DRIVEN TRAFFIC RELATIONSHIP ANALYSIS 10617
+
+ TABLE X
+ R ESULTS (%) OF THE A BLATION E XPERIMENTS
+
+ TABLE XI Fig. 14. Comparison of the memory usage over time.
+ R ESULTS (%) OF THE F INE -G RAINED A BLATION E XPERIMENTS
+
+ Fig. 15. Change in the proportion of baseline matches.
+
+ 3.3 times more time than the third-slowest. method. TMG-
+ TABLE XII
+ GAN’s adversarial training leads to a 2.5 higher training cost,
+ R ESULTS OF THE P ERFORMANCE E XPERIMENTS (%) although the inference is fast. Kitsune and CPS-Guard reduce
+ inference latency but still require 3.1 and 1.3 times more time
+ than the next slowest method, respectively. CIC-GMM and
+ Rosett-IF complete detection in under 9 seconds but suffer up
+ to a 46% decrease in the F1 score. In contrast, compared with
+ the most expensive baseline, BSTS reduces the training time
+ by more than 2.1-fold and achieves an inference that is 50%
+ faster than the autoencoder-based models and only 12 seconds
+ slower than the fastest method. As the baseline repository
+ increases, the matching efficiency improves, enabling sublinear
+ scaling and progressively lowering the end-to-end latency.
+
+noise, reducing precision. In addition, we conduct a fine- I. Online Analysis Experiments
+grained ablation study to evaluate the contribution of each
+of the five microelements and three components of the loss BSTS-Net establishes service-specific baselines and monfunction. The results are presented in Table XI. Each feature itors for deviations in real time. To evaluate its online
+ detection capability, we replay CICIDS2017 traffic using tcpreand contrastive component is essential. F~lf and F~pf reduce the play. During processing, BSTS-Net dynamically generates
+F1 scores by 51.92% and 38.03%, respectively, as they capture 1317 baseline profiles. The corresponding memory and time
+local patterns and directionality, which are core to protocol overheads are shown in Fig. 14(a) and 14(b), respectively.
+patterns. Among the loss components, τ1 has the greatest BSTS-Net achieves real-time detection on a 2.7 GB dataset
+impact, with an 18.2% decrease in the F1 score because of its with a peak memory usage of 559 MB and an average of only
+focus on fine-grained low noise comparisons. In contrast, τ2 39 MB, with processing traffic at 145.6 MB/s. In contrast, the
+and τ3 yield smaller performance drops of 5.91% and 5.03%, most memory-efficient autoencoder-based method requires a
+respectively, as they operate over broader noisier traffic scopes peak memory usage of 47189 MB, which is more than 84
+with lower discriminability. times greater than that of BSTS-Net. This efficiency stems
+ from the lightweight SNN and baseline-deviation classifica-
+H. Performance Analysis tion. During detection, 65.84% of flows are classified via
+ We evaluate the performance of the compared algorithms direct baseline matching, bypassing costly model inference.
+on the CICIDS2017 dataset. To ensure fairness, deep learning Fig. 15 shows that matching accelerates after an initial 20%
+models are trained to convergence for optimal performance. slow phase caused by few baselines, revealing self-reinforcing
+The results are summarized in Table XII. The training and efficiency.
+detection times of ContraMTD are the longest because of the
+use of dual-loop graph contrastive learning, taking 2.7 and J. Sensitivity Analysis
+5.4 longer than those of the second-slowest method. DL-GNN In this section, the CICIDS2017 dataset is used for experiscales superlinearly with the graph size, requiring 1.8 and ments to validate the influence of parameter selection.
+10618 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE XIII environments. While our current approach excels in stable
+ W INDOW S IZE A NALYSIS (%) settings, we plan to develop dynamic updating mechanisms
+ to improve generalization and reduce false alarms in evolving
+ networks.
+
+ VI. C ONCLUSION
+ Current malware detection methods rely on payload or
+ traffic interactions, which are easily evaded by encryption. In
+ this paper, BSTS-Net, a behaviour-based approach robust to
+ encrypted traffic, is proposed. We introduce a greedy-based
+ TABLE XIV microelement extraction method to capture intrinsic traffic
+ C ONTRASTIVE L OSS H YPERPARAMETER A NALYSIS (%) relations. An SNN models local and global communication
+ patterns in the microelement space without the need for labels.
+ We further construct a spatiotemporal graph integrated with
+ reputation scoring for dynamic anomaly detection. Clustering
+ and dynamic baseline analysis enable effective malicious traffic identification. Experiments show that BSTS-Net achieves
+ detection rates over 99% across multiple datasets, outperforming the state-of-the-art methods by up to 8%, with strong
+ robustness under adversarial settings. Future work will explore
+ 1) Analysing the impact of window size selection. Given richer microelement representations.
+ varying session lengths, the window size significantly
+ affects classification. As shown in Table XIII, a window R EFERENCES
+ size of 4 is too small to capture traffic patterns, whereas [1] S. Elmohamed. (2021). Acronis Cyberthreats Report 2021. [Online].
+ a window size of 256 includes mixed communica- Available: https://community.spiceworks.com/t/acronis-cyberthreatstion stages and introduces interference. For the dataset report-mid-year-2021/807520
+ [2] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. Venkatakrin this work, a window size of 32 achieves optimal ishnan, “HOLMES: Real-time APT detection through correlation of
+ performance. suspicious information flows,” in Proc. IEEE Symp. Security Privacy,
+ 2) Analysing the impact of cluster size selection. As shown Mar. 2019, pp. 1137–1152.
+ in Table XIII, small cluster sizes disperse malicious [3] (2024). Suricata 7.0.6. [Online]. Available: https://suricata.io/
+ [4] (2024). Snort 3. [Online]. Available: https://www.snort.org/
+ samples across clusters, increasing the false-positive [5] R. A. Bridges, T. R. Glass-Vanderlan, M. D. Iannacone, M. S. Vincent,
+ rate. A cluster size of 10 achieves optimal detection and Q. Chen, “A survey of intrusion detection systems leveraging
+ performance, with stability maintained for larger sizes host data,” ACM Comput. Surv. (CSUR), vol. 52, no. 6, pp. 1–35,
+ and no significant degradation observed. 2019.
+ [6] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+In conclusion, the selection of parameters in this study influ- Process. Syst., vol. 30, 2017, pp. 5998–6008.
+ences the experimental outcomes. However, window sizes [7] H. Ding, Y. Sun, N. Huang, Z. Shen, and X. Cui, “TMG-GAN:
+ranging from 8 to 256 and cluster numbers from 6 to 14 yield Generative adversarial networks-based imbalanced learning for network intrusion detection,” IEEE Trans. Inf. Forensics Security, vol. 19,
+relatively high accuracy. The robustness of the proposed model pp. 1156–1167, 2024.
+is insensitive to parameter variations. [8] F. Scarselli, M. Gori, A. C. Tsoi, M. Hagenbuchner, and G. Monfardini,
+ In addition, we analyse the impact of hyperparameter “The graph neural network model,” IEEE Trans. Neural Netw., vol. 20,
+ no. 1, pp. 61–80, Jan. 2008.
+settings in contrastive loss on detection performance. The [9] S. Ji, S. Pan, E. Cambria, P. Marttinen, and P. S. Yu, “A survey on
+results are summarized in Table XIV. A large ω1 weakens knowledge graphs: Representation, acquisition, and applications,” IEEE
+the relation modelling and sharply decreases the F1 score. A Trans. Neural Netw. Learn. Syst., vol. 33, no. 2, pp. 494–514, Feb. 2022.
+small ω1 causes overfitting to host-specific patterns. A large [10] Y. Zhang, P. Tiňo, A. Leonardis, and K. Tang, “A survey on neural
+ network interpretability,” IEEE Trans. Emerg. Topics Comput. Intell.,
+ω2 amplifies noise and false positives. A small ω2 fails to vol. 5, no. 5, pp. 726–742, Oct. 2021.
+balance the confidence weighting. ω1 has a greater impact [11] M. Liu et al., “Enhanced detection of obfuscated HTTPS tunnel traffic
+than ω2 because it nonlinearly scales an unstable loss term. using heterogeneous information network,” Comput. Netw., vol. 257,
+Training is highly sensitive to ω1 , and improper values cause Sep. 2024, Art. no. 110975.
+ [12] V. Jyothsna, V. V. R. Prasad, and K. M. Prasad, “A review of anomaly
+severe degradation. based intrusion detection systems,” Int. J. Comput. Appl., vol. 28, no. 7,
+ pp. 26–35, 2011.
+ [13] M. Catillo, A. Pecchia, and U. Villano, “CPS-GUARD: Intrusion detec-
+K. Zero-Day Attack Detection tion for cyber-physical systems and IoT devices using outlier-aware deep
+ BSTS-Net effectively detects zero-day attacks by modelling autoencoders,” Comput. Secur., vol. 129, Jun. 2023, Art. no. 103210.
+ [14] D. Zhao et al., “Botnet detection based on traffic behavior analysis and
+robust benign baselines and identifying deviations. When flow intervals,” Comput. Secur., vol. 39, pp. 2–16, Nov. 2013.
+trained on CICIDS2017 and evaluated on CICIDS2018, it [15] X. Chen and K. He, “Exploring simple Siamese representation learning,”
+achieves 99.59% recall, demonstrating strong generalizability in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+to unseen attacks. However, when applied to the benign traffic 2021, pp. 15750–15758.
+ [16] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+of CICIDS2018, a 13.84% false-positive rate occurs because classification using convolutional neural network for representation
+of behavioural shifts not captured by the static baseline. This learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Da Nang, Vietnam,
+highlights the need for adaptive baseline modelling in new Jan. 2017, pp. 712–717.
+FU et al.: FLOW MICROELEMENT-DRIVEN TRAFFIC RELATIONSHIP ANALYSIS 10619
+
+[17] R.-H. Hwang, M.-C. Peng, V.-L. Nguyen, and Y.-L. Chang, “An LSTM- [37] E. Papadogiannaki and S. Ioannidis, “A survey on encrypted network
+ based deep learning approach for classifying malicious traffic at the traffic analysis applications, techniques, and countermeasures,” ACM
+ packet level,” Appl. Sci., vol. 9, no. 16, p. 3414, Aug. 2019. Comput. Surv., vol. 54, no. 6, pp. 1–35, Jul. 2022.
+[18] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A [38] K. J. Sullivan, W. G. Griswold, Y. Cai, and B. Hallen, “The structure
+ contextualized datagram representation with pre-training transformers and value of modularity in software design,” ACM SIGSOFT Softw. Eng.
+ for encrypted traffic classification,” in Proc. ACM Web Conf., Apr. 2022, Notes, vol. 26, no. 5, pp. 99–108, Sep. 2001.
+ pp. 633–642. [39] M. Papazoglou and W. Van Den Heuvel, “Service oriented architectures:
+[19] G. Zhou, X. Guo, Z. Liu, T. Li, Q. Li, and K. Xu, “TrafficFormer: An Approaches, technologies and research issues,” VLDB J., vol. 16, no. 3,
+ efficient pre-trained model for traffic data,” in Proc. IEEE Symp. Secur. pp. 389–415, 2007.
+ Privacy (SP), May 2025, pp. 1844–1860. [40] I. Nadareishvili, R. Mitra, M. McLarty, and M. Amundsen, Microservice
+[20] C. Fu, Q. Li, M. Shen, and K. Xu, “Realtime robust malicious traffic Architecture: Aligning Principles, Practices, and Culture. Sebastopol,
+ detection via frequency domain analysis,” in Proc. ACM SIGSAC Conf. CA, USA: O’Reilly Media, 2016.
+ Comput. Commun. Secur., Nov. 2021, pp. 3431–3446. [41] O. Mämmelä, J. Hiltunen, J. Suomalainen, K. Ahola, P. Mannersalo, and
+[21] D. Barradas, N. Santos, L. Rodrigues, S. Signorello, F. M. V. Ramos, J. Vehkaperä, “Towards micro-segmentation in 5G network security,” in
+ and A. Madeira, “FlowLens: Enabling efficient flow classification for Proc. Eur. Conf. Netw. Commun. (EuCNC) Workshop Netw. Manage.,
+ ML-based network security applications,” in Proc. Netw. Distrib. Syst. 2016, pp. 3–5.
+ Secur. Symp., Mar. 2021, pp. 4–5. [42] S. McCanne et al., “Toward a common infrastructure for multimedia-
+[22] J. Holland, P. Schmitt, N. Feamster, and P. Mittal, “New directions networking middleware,” in Proc. 7th Int. Workshop Netw. Operin automated traffic analysis,” in Proc. ACM SIGSAC Conf. Comput. ating Syst. Support Digit. Audio Video (NOSSDAV), Jun. 1997,
+ Commun. Secur., Nov. 2021, pp. 3366–3383. pp. 39–49.
+[23] G. Zhou, Z. Liu, C. Fu, Q. Li, and K. Xu, “An efficient design of [43] Y. Fu, H. Xiong, X. Lu, J. Yang, and C. Chen, “Service usage
+ intelligent network data plane,” in Proc. 32nd USENIX Secur. Symp., classification with encrypted internet traffic in mobile messaging
+ 2023, pp. 6203–6220. apps,” IEEE Trans. Mobile Comput., vol. 15, no. 11, pp. 2851–2864,
+[24] Z. Zhao, Z. Li, Z. Song, W. Li, and F. Zhang, “Trident: A univer- Nov. 2016.
+ sal framework for fine-grained and class-incremental unknown traffic [44] M. Korczyński and A. Duda, “Markov chain fingerprinting to classify
+ detection,” in Proc. ACM Web Conf., May 2024, pp. 1608–1619. encrypted traffic,” in Proc. IEEE Conf. Comput. Commun. (IEEE INFO-
+[25] G. Gu, J. Zhang, and W. Lee, “BotSniffer: Detecting botnet command COM), Apr. 2014, pp. 781–789.
+ and control channels in network traffic,” in Proc. 15th Netw. Distrib. [45] (2024). Zeek 7.0. [Online]. Available: https://zeek.org/about/
+ Syst. Secur. Symp. (NDSS), 2008, pp. 4–5. [Online]. Available: https:// [46] B.-K. Lee and J.-H. Chang, “Packet loss concealment based on deep
+ api.semanticscholar.org/CorpusID:13302792 neural networks for digital speech transmission,” IEEE/ACM Trans.
+[26] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained webpage Audio, Speech, Language Process., vol. 24, no. 2, pp. 378–387, Feb.
+ fingerprinting using only packet length information of encrypted traffic,” 2016.
+ IEEE Trans. Inf. Forensics Security, vol. 16, pp. 2046–2059, 2021. [47] (2024). Service Name and Transport Protocol Port Number
+[27] C. Fu, Q. Li, M. Shen, and K. Xu, “Detecting tunneled flooding traffic Registry. [Online]. Available: http://www.iana.org/assignments/
+ via deep semantic analysis of packet length patterns,” in Proc. ACM service-names-port-numbers/service-names-port-numbers
+ SIGSAC Conf. Comput. Commun. Secur., Dec. 2024, pp. 3659–3673. .xhtml
+[28] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and [48] G. Peng, “CDN: Content distribution network,” 2004, arXiv:cs/0411069.
+ Y. Bengio, “Graph attention networks,” 2017, arXiv:1710.10903. [49] E. Schubert, J. Sander, M. Ester, H. P. Kriegel, and X. Xu,
+[29] A. Pareja et al., “EvolveGCN: Evolving graph convolutional networks “DBSCAN revisited, revisited: Why and how you should (still) use
+ for dynamic graphs,” in Proc. AAAI Conf. Artif. Intell., Apr. 2020, DBSCAN,” ACM Trans. Database Syst., vol. 42, no. 3, pp. 1–21,
+ vol. 34, no. 4, pp. 5363–5370. Sep. 2017.
+[30] G. Duan, H. Lv, H. Wang, and G. Feng, “Application of a dynamic [50] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+ line graph neural network for intrusion detection with semisupervised a new intrusion detection dataset and intrusion traffic characterization,”
+ learning,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 699–714, in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, Portugal, Jan. 2018,
+ 2023. pp. 108–116.
+[31] X. Li et al., “A high accuracy and adaptive anomaly detection [51] (2024). Samba 4.20.2 Document. [Online]. Available: https://
+ model with dual-domain graph convolutional network for insider threat www.samba.org/samba/docs/
+ detection,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 1638–1652, [52] (2013). Multicast DNS. [Online]. Available: https://www.rfc-editor.org/
+ 2023. rfc/rfc6762
+[32] Y. Zhong, Z. Wang, X. Shi, J. Yang, and K. Li, “RFG-HELAD: A [53] (2000). Http Over TlS. [Online]. Available: https://www.rfc-editor.org/
+ robust fine-grained network traffic anomaly detection model based on rfc/rfc2818
+ heterogeneous ensemble learning,” IEEE Trans. Inf. Forensics Security, [54] (2021). Ahlashkari/Cicflowmeter. [Online]. Available: https://
+ vol. 19, pp. 5895–5910, 2024. github.com/ahlashkari/CICFlowMeter
+[33] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted mali- [55] M. Ahmed, R. Seraj, and S. M. S. Islam, “The k-means algorithm: A
+ cious traffic in real time via flow interaction graph analysis,” 2023, comprehensive survey and performance evaluation,” Electronics, vol. 9,
+ arXiv:2301.13686. no. 8, p. 1295, Aug. 2020.
+[34] R. Xie et al., “Rosetta: Enabling robust TLS encrypted traffic clas- [56] (2018). A Realistic Cyber Defense Dataset (CSE-CIC-IDS2018).
+ sification in diverse network environments with TCP-aware traffic [Online]. Available: https://registry.opendata.aws/cse-cicaugmentation,” in Proc. ACM Turing Award Celebration Conf.-China, ids2018/
+ Jul. 2023, pp. 131–132. [57] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set
+[35] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An for network intrusion detection systems (UNSW-NB15 network data
+ ensemble of autoencoders for online network intrusion detection,” 2018, set),” in Proc. Mil. Commun. Inf. Syst. Conf. (MilCIS), Nov. 2015,
+ arXiv:1802.09089. pp. 1–6.
+[36] M. Nakıp and E. Gelenbe, “Online self-supervised deep learning [58] X. Han et al., “ContraMTD: An unsupervised malicious network traffic
+ for intrusion detection systems,” IEEE Trans. Inf. Forensics Security, detection method based on contrastive learning,” in Proc. ACM Web
+ vol. 19, pp. 5668–5683, 2024. Conf., May 2024, pp. 1680–1689.

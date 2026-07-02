@@ -1,0 +1,537 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025 2502109
+
+ Anomaly Detection Framework With Contrastive
+ Learning and Multiview Augmentation for
+ Time-Series Domain Generalization
+ Yeseul Lee , Seunghwan Song , Kwan-Yong Park , Byoung-Mo Koo , and Jun-Geol Baek
+
+ Abstract— Time-series data are generated and collected the distribution of the training data [2]. This is because most
+in manufacturing processes. Time-series data have different models assume that all the data are collected from the same
+distribution characteristics, with the underlying assumption distribution during training and testing. However, this strong
+being that all data originate from the same distribution. Timeseries anomaly detection methods are trained on stationary data assumption is not appropriate in the real world. In particular,
+derived from the source domain. However, the performance of the distributions often change during manufacturing processes due
+trained model diminishes when confronted with a nonstationary to labor, machine changes, or maintenance. In this study, this
+distribution in the target domain. Consequently, there is a need situation is referred to as a domain shift. Since a domain
+for a model that can adapt to any distribution using only the shift causes performance degradation in existing models,
+source domain. In this study, we propose an anomaly detection
+framework with contrastive learning and multiview augmentation appropriate measures are required [3].
+for time-series domain generalization. The proposed method Domain adaptation has been proposed to address domain
+uses multiview augmentation to learn three representations for shifts by transferring knowledge or information obtained from
+time-series domain generalization. Moreover, the augmented training data (i.e., the source domain) to a model based on test
+samples use a temporal convolutional network (TCN) to extract data (i.e., the target domain) [4], [5]. This process primarily
+these representations. Subsequently, the extracted representations
+are trained with a contrastive learning method inspired by involves reducing or adjusting the differences between the
+simple triplet representation learning (SimTriplet). Therefore, source and target domains, enabling the model to be trained
+the proposed method can attain the diversity and generalization in the source domain and adaptable to the target domain [6].
+performance of the source domain. The performance superiority Despite its success in various tasks, domain adaptation still
+of our proposed method is experimentally validated across faces significant challenges. First, training in the target
+various domain shift scenarios. Additionally, the effectiveness of
+the modules used in the proposed method is confirmed through domain becomes unstable if the distribution is nonstationary.
+qualitative analysis. Domain adaptation aims to generalize from in-distribution
+ (ID) data with stationarity. However, model performance
+ Index Terms— Contrastive learning, multiview augmentation,
+temporal convolutional network (TCN), time-series domain degrades when the target domain distribution shifts to out-ofgeneralization. distribution (OOD) and becomes nonstationary, necessitating
+ additional learning. Second, effective domain adaptation
+ requires collecting samples from all possible distributions,
+ I. I NTRODUCTION
+ which is inefficient and impractical [7]. Consequently, there
+
+I N THE digital twin manufacturing process, the data are
+ collected from several sensors. A large amount of normal
+data and a small amount of abnormal data are collected during
+ is a need for models that can adapt to any distribution using
+ only the source domains collected from the ID.
+ Domain generalization aims to maintain performance on
+the manufacturing process. The few abnormal data are related unknown domains by training multiple independent source
+to the yield of the manufacturing process. Semisupervised domains [8]. Domain adaptation focuses on minimizing the
+anomaly detection aims to train the normality of a time- difference between the source and target domains; in contrast,
+series representation under the assumption that most of the domain generalization has been proposed as a technique
+training data are normal [1]. However, these methods rely on to address the inherent limitations of domain adaptation.
+ Domain generalization has been successful in a variety
+ Received 9 August 2024; accepted 19 September 2024. Date of publication
+27 November 2024; date of current version 9 December 2024. This work was of vision tasks [9], [10] and natural language processing
+supported by the National Research Foundation of Korea (NRF) grant funded (NLP) tasks [11], [12], [13]. Representation learning is
+by the Korean government (MSIT) (NRF- 2022R1A2C2004457). Also, this often used in domain generalization to extract a generalized
+work was supported by Samsung Electronics Co., Ltd (IO201210-07929-01)
+and BK21 FOUR funded by the Ministry of Education of Korea and National representation for the source domain. Contrastive learning
+Research Foundation of Korea. The Associate Editor coordinating the review among representation learning has demonstrated effective
+process was Dr. Zhibin Zhao. (Yeseul Lee and Seunghwan Song are co-first performance for feature extraction [14], [15], [16]. Contrastive
+authors.) (Corresponding author: Jun-Geol Baek.)
+ The authors are with the Department of Industrial and Management learning trains the same classes (i.e., positive pairs) to
+Engineering, Korea University, Seoul 02841, Republic of Korea (e-mail: be closer in distance, while different classes (i.e., negative
+yetsyl0705@korea.ac.kr; ss-hwan@korea.ac.kr; gamja331@korea.ac.kr; pairs) are further apart. Contrastive learning-based domain
+kbm970709@korea.ac.kr; jungeol@korea.ac.kr).
+ Digital Object Identifier 10.1109/TIM.2024.3507042 generalization studies typically aim to train domain-invariant
+ 1557-9662 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+2502109 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+and class-variant representations. Contrastive learning is performance. Then, the augmented sample is processed using
+an effective method for domain generalization, which is a temporal convolutional network (TCN). A TCN is a
+the problem of interest in this study. It affords several convolutional neural network (CNN)-based model that can be
+advantages over traditional methods, such as less dependence used for time-series modeling and has the advantage of fast
+on labeled data, improved robustness to domain shifts, and computation speed [27]. Finally, the extracted representation
+utilization of effective data augmentation techniques for is trained using a contrastive learning method inspired by
+time-series data [15], [16]. Dou et al. [17] proposed model- SimTriplet [25].
+agnostic learning of semantic features (MASF). This method The key contributions of this study are as follows:
+can be used to extract domain-invariant and class-variant 1) multiview augmentation improves domain generalization
+representations. In contrast, Kim et al. [16] overcame the by generating multiple representations of time-series
+instability of training due to negative pairs with self-supervised data;
+contrastive regularization (SelfReg), which uses only positive 2) the TCN and SimTriplet structures make training
+pair samples. suitable for time-series data; and
+ However, adapting contrastive learning-based domain gen- 3) domain generalization experiments on various timeeralization to time-series data presents several challenges. series datasets demonstrate the robustness of the
+First, previous studies have focused on supervised learning proposed method.
+or assumed fully annotated datasets [18]. In manufacturing The remainder of this study is organized as follows.
+processes, obtaining sufficient labeled data is time-consuming, Section II provides a detailed description of the proposed
+making these approaches impractical. Second, many of these method and its structure. Section III presents an evaluation of
+methods are designed for vision and NLP tasks, which three different time-series datasets using the proposed method
+utilize data augmentation techniques to diversify the source to verify its performance. Finally, Section IV presents the
+domain [19]. Contrastive learning-based domain generalization conclusions and future works of this study.
+uses data augmentation to diversify the source domain used for
+training. Data augmentation is a technique used to increase II. P ROPOSED M ETHOD
+the size of a practical dataset by diversifying the source In this section, we propose an anomaly detection framework
+domain [20]. Adding random noise, changing colors, and with contrastive learning and multiview augmentation for timeshapes have been used to augment the source domain [21], series domain generalization. The proposed method draws
+[22], [23]. However, because data augmentation is specialized inspiration from SimTriplet [25] but undergoes a model
+for vision and NLP tasks, augmentation for time-series data redesign to better suit the requirements of time-series anomaly
+is limited. Therefore, appropriate augmentation for time-series detection. Initially, multiview augmentation is employed to
+data is required. enhance the diversity of time-series data in the source
+ Meanwhile, defining negative pairs in time-series data is domain. Subsequently, the TCN encoder is utilized to extract
+difficult owing to the dependencies between time variables representations for each augmented time-series dataset. The
+and inter-variables. Therefore, it is necessary to design a overall structure of the proposed method is depicted in Fig. 1.
+model that uses only positive pairs [24]. Liu et al. [25]
+proposed a simple triplet representation learning (SimTriplet)
+that uses only positive pairs. SimTriplet is a modified version A. Multiview Augmentation
+of the exploring simple Siamese representation learning Effective time-series domain generalization necessitates
+(SimSiam) [26] network structure. Compared to SimSiam, achieving three primary objectives [14]. First, the considerit has the advantage of learning multiple representations by ation of domain-invariant representations between the source
+adding features. SimTriplet uses the spatial property that domains allows for the learning of generalized representations
+geographically adjacent images are more likely to belong across domain variations without being constrained to a
+to the same class, achieved through two-view consistency specific domain. Second, the model must exhibit robustness
+learning, which minimizes the distance between two positive against external environments, ensuring stable training under
+pairs. However, there are limitations when applied to diverse conditions by accounting for noise. Lastly, it must
+time-series data, as they lack distinct classes and spatial possess task-adaptive capabilities to effectively perform tasks
+features. in the target domain, making the model applicable to real-
+ In this study, we proposed an anomaly detection framework world scenarios. In this study, we utilized three augmentations
+with contrastive learning and multiview augmentation for to perform domain generalization in time-series anomaly
+time-series domain generalization. The proposed method detection. First, we extracted general features from multiple
+aims to detect time-series anomalies in a domain shift tasks in the source domain; this helps achieve performance
+situation by extracting a generalized representation. First, the in the target domain. It also enables the extraction of
+proposed method uses multiview augmentation for time-series representations that are robust to real-world, noisy time-series
+data. Multiview augmentation learns three representations anomalies.
+for time-series domain generalization: 1) domain-invariant To attain these objectives, multiview augmentation is
+representation; 2) robust representation; and 3) task-adaptive employed, incorporating adversarial attacks and jitter-based
+representation. These representations have the advantage data augmentation. Adversarial attacks for data augmentation
+of providing source domain diversity and generalization are implemented using the fast gradient sign method (FGSM)
+LEE et al.: ANOMALY DETECTION FRAMEWORK WITH CONTRASTIVE LEARNING AND MULTIVIEW AUGMENTATION 2502109
+
+Fig. 1. Contrastive learning with multiview augmentation for time-series domain generalization framework.
+
+[28] in this study. The FGSM-based data augmentation is denotes the gradient of the loss function. The noise
+expressed as follows: sign(∇x L(θ S , D S , y S )) is adjusted by the hyperparameter ∈DI .
+ Consequently, x̃ DI trains the source domain-invariant represenxadversarial = x+ ∈adversarial ·sign(∇x L(θ, x, y)) (1)
+ tation by adding noise, which can lead to misclassification.
+where x and y denote the train data and labels, respectively, θ 2) Robust Representation: In the real world, a model that
+is the weight of the network, and L(·) is the loss function. The can reliably perform in various environments is required.
+process for creating an adversarial sample using the FGSM is In particular, considerable noise is generated during the manas follows: ufacturing process, making it crucial to ensure the robustness
+ Step 1: Calculate the gradient ∇x L(θ, x, y) for the loss of generalized performance under diverse conditions and
+function on the training data. environments. In this study, we employed jitter-based data
+ Step 2: The gradient ∇x L(θ, x, y) is updated in a direction augmentation, as it has been demonstrated to effectively handle
+opposite to the label y. real-world noise in several studies [30]. The creation of a
+ Step 3: The noise sign(∇x L(θ, x, y)) that can cause sample for a robust representation is shown in the following
+misclassification during the update process is defined. equation:
+ Step 4: The noise sign(∇x L(θ, x, y)) is adjusted by a
+ x̃ R = x+ ∈ R ·σ (3)
+hyperparameter ∈adversarial , which is added to the original
+data x. where x is the original data and σ is the standard deviation
+ FGSM-based data augmentation was used for source for each variable. The standard deviation σ is adjusted by
+domain-invariant and task-adaptive representations. This is the hyperparameter ∈ R . Consequently, x̃ R trains the robust
+achieved by updating the noise values obtained from each representation to deal with real-world noise and variation.
+model in the existing FGSM equation. By contrast, jitter-based 3) Task-Adaptive Representation: Time-series domain genaugmentation is used for external robustness. eralization must be task-adaptive to the target domain,
+ 1) Domain-Invariant Representation: If the model is trained signifying that the proposed model can be applied in
+on common and general patterns across the source domains, new environments. For this purpose, we utilized inverse
+it can achieve performance in the target domain. This implies FGSM (InvFGSM) [28]. InvFGSM enhances task-adaptive
+that training the model to distinguish between source domains performance by subtracting the noise of the model from the
+prevents overreliance on a particular domain. In this study, original data. In this process, InvFGSM aids in achieving better
+we utilized FGSM-based data augmentation. FGSM trains performance by adjusting the inputs with minimal loss [31].
+the source domain-invariant representation by adding noise to Therefore, InvFGSM-based data augmentation can enhance
+the original data [28]. This process increases the uncertainty anomaly detection performance in the target domain. In this
+of the model because it generates an adversarial sample study, we employed a temporal convolutional autoencoder
+that confuses the model, leading to misclassification. In this (TCN-AE) [32] as an anomaly detection model, with the mean
+study, we employed long short-term memory (LSTM) [29] squared error (mse) serving as the loss function. The creation
+as a classification model to consider the temporal pattern, of an adversarial sample for a task-adaptive representation is
+and cross-entropy served as the loss function. Consequently, as shown in the following equation:
+the creation of an adversarial sample for a domain-invariant
+ x̃ TA = x− ∈TA ·sign ∇x L θiS , DiS , i = 1, . . . , M (4)
+ 
+representation is shown in the following equation:
+ where x is the original data, and DiS is the ith source domain.
+ x̃ DI = x+ ∈DI ·sign ∇x L θ S , D S , y S
+ 
+ (2)
+ The total number of source domains is M. In addition, θiS
+where x is the original data and D S and y S are the data is the ith source domain network weights and ∇x L(θiS , DiS )
+and labels in the source domain, respectively. In addition, θ S denotes the gradient of the ith loss function. The ith noise
+is the source domain network weights and ∇x L(θ S , D S , y S ) sign(∇x L(θiS , DiS )) is adjusted by the hyperparameter ∈TA .
+2502109 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Consequently, x̃ TA trained the task-adaptive representation to as pDI , p R , and pTA . The proposed method involves two
+allow the model to achieve more robust results. loss functions for time-series domain generalization: 1)
+ minimizing the dissimilarity between the source domain-
+B. TCN Encoder for Feature Extraction and Predictor invariant representation and the robust representation to ensure
+ that the learned features are stable and generalizable across
+ In this study, we employed a TCN encoder for feature different domains and 2) minimizing the dissimilarity between
+extraction from the augmented samples. TCN is a CNN- the task-adaptive representation for the target domain and the
+based model that can be used in sequence modeling and robust representation to enhance the model’s ability to adapt
+uses dilated convolution [27]. Dilated convolution has the to new tasks and improve anomaly detection performance in
+advantage of increasing the receptive field to obtain long the target domain. Each loss function is expressed as follows:
+time step information without the need for a convolutional
+ 1
+layer. TCN is suitable for time-series modeling and offers the L RDI = NCS(z DI , p R ) + NCS(z R , pDI )
+ 
+ (6)
+advantage of faster computation compared to a recurrent neural 2
+ 1
+network (RNN)-based models [27]. The proposed method L RTA = NCS(z TA , p R ) + NCS(z R , pTA ) .
+ 
+ (7)
+utilized three parallel TCN encoders with shared weights, 2
+extracting features from the multiview augmented samples. In (6), L RDI maximizes the similarity between the source
+In this study, we utilized ten dilated convolution layers in domain-invariant representation and the robust representation,
+the TCN encoder, enabling the extraction of generalized promoting a robust domain-invariant to facilitate learning
+representations from long-term timesteps. As a result, TCN and avoid misclassification among between different source
+encoders could process each sequential input and capture the domains. Conversely, L RTA in (7) maximizes the similarity
+relationship between the augmented samples. between the task-adaptive representation for the target domain
+ The predictor and stop-gradient are devices to prevent mode and the robust representation, fostering robust task adaptation
+collapse that occurs when SimTriplet performs contrastive to enhance the extraction of representations for improved
+learning using only positive pairs. The predictor utilizes a anomaly detection performance in the target domain. The final
+multilayer perceptron structure with two linear layers, which loss function of the proposed method is shown in the following
+is the same as the SimTriplet structure. equation:
+ L Total = L RDI + L RTA . (8)
+C. Loss Function
+ The final loss function of the proposed method helps TCN
+ In domain generalization, training and testing are performed encoders with shared weights in embedding the representations
+using the source and target domains, respectively. In this study, of different augmentations. Meanwhile, the stop-gradient is
+we trained an encoder that can extract the representation with accomplished by stopping or not propagating a particular
+the loss function negative cosine similarity (NCS) loss using gradient during backpropagation [26]. Therefore, the proposed
+the source domain data in the training process. In the test method can be trained to avoid mode collapse through the final
+process, we defined the Euclidean distance between the target loss function and to stop the gradient.
+domain representation and the source domain representation Consequently, the output of the proposed method is the
+obtained by the encoder as the anomaly score and utilized it latent vector calculated by the TCN. Training of the proposed
+for anomaly detection. method yields a feature extractor that is task-adaptive and
+ Our model for contrastive-learning-based time-series capable of extracting domain-invariant representations.
+domain generalization relies on positive pairs exclusively,
+drawing inspiration from the SimTriplet [25]. The suitability III. E XPERIMENT
+of two-view consistency learning in SimTriplet for learning
+ A. Datasets
+the relationship between augmented samples motivated this
+choice. Consequently, each output of the TCN encoder serves The aim of the proposed method is to train a representation
+as an asymmetrical predictor, with a stop gradient applied. for time-series data in the source domain, enabling effective
+The NCS [33] is employed to calculate dissimilarity between time-series anomaly detection, even in a domain shift situation
+the outputs, reducing differences between the augmented in the target domain. Therefore, two datasets were selected to
+samples through opposite characteristics. The NCS is shown evaluate the proposed method.
+in the following equation: 1) SKAB Dataset: The Skoltech Anomaly Benchmark
+ (SKAB) dataset was collected during the simulation of a
+ p q
+ NCS( p, q) = − · . (5) water circulation system [34]. It comprises Valve1 at the outlet
+ ∥ p∥2 ∥q∥2 and Valve2 at the inlet of the water circulation pump. Each
+In (5), p and q denote two vectors. Further, ∥ p∥2 and ∥q∥2 subset of Valve1 and Valve2 signifies the time order in which
+denote the Euclidean distances between the two vectors. NCS they were collected. There were 14 subsets of Valve1 and
+makes the two vectors more similar and ranges from −1 to 1. four subsets of Valve2. The data consist of eight variables
+ In this study, x̃ DI , x̃ R , and x̃ TA were created using (accelerometer1, accelerometer2, temperature, thermocouple,
+multiview augmentation. These representations are processed current, pressure, voltage, and rate) along with a time step.
+using the TCN encoder to obtain z DI , z R , and z TA . These The SKAB dataset contains the following anomaly types:
+features were passed on to the predictor and expressed abrupt change, contextual anomalies, collective anomalies, and
+LEE et al.: ANOMALY DETECTION FRAMEWORK WITH CONTRASTIVE LEARNING AND MULTIVIEW AUGMENTATION 2502109
+
+ TABLE I changes. Three different machines Machine01, Machine02,
+ TASK I NFORMATION FOR T IME , M ACHINE , AND and Machine03 of a CNC milling machine were considered for
+ O PERATION D OMAIN S HIFT S CENARIO
+ this purpose. Three tasks (M1, M2, and M3) were established
+ to verify the machine domain shift, with each task’s source
+ domain comprising two machines and the target domain
+ consisting of the remaining machine not used in the source
+ domain.
+ The operation domain shift evaluates the proposed method’s
+ performance when the operating conditions of the machine
+ undergo changes. Fifteen different operations (Operation01 to
+ Operation15) from the CNC milling machine dataset were
+ considered for this purpose. Four tasks (O1, O2, O3, and O4)
+ were employed to verify operational domain shifts. In each
+ task, the source domain included the remaining 14 operations,
+ excluding one specific operation. In this study, Operation02,
+ Operation04, Operation07, and Operation10 were chosen as
+ specific operations because only four out of the 15 contain
+ both normal and abnormal data.
+
+gradual change. Additionally, both normal and abnormal data C. Experiment Details
+are labeled, with a 35% anomaly ratio. Time-series domain generalization requires testing of
+ 2) CNC Milling Machine Dataset: The computer numerical distributions that are not used in training. Therefore, M source
+control (CNC) milling machine dataset was collected during domains D S = [D1S , . . . , D M
+ S
+ ] with only normal data used in
+the processing of a piece of aluminum [34]. It includes the training process. The testing process used the target domain
+three machine subsets and 15 operation subsets, reflecting D T that was not part of the training, containing both normal
+the variability in the physical flow of production during the and abnormal data. This setup allowed the evaluation of the
+manufacturing process. The data consist of three variables (x- performance of the target domain for a model trained in the
+axis, y-axis, and z-axis vibrations) along with a time step. source domain.
+The CNC milling machine dataset contains the following The proposed method aims to achieve generalized perforanomaly types: tool wear, spindle malfunction, unexpected mance in time-series anomaly detection. Consequently, various
+vibrations, temperature anomalies, and misalignment. Normal time-series anomaly detection models were employed for comand abnormal data are labeled, with a 4.12% anomaly ratio. parison: deep support vector data description (Deep SVDD)
+ [36], multiscale convolutional recurrent encoder–decoder
+ (MSCRED) [37], unsupervised anomaly detection (USAD)
+B. Problem Definition
+ [38], deep transformer networks for anomaly detection
+ The proposed method aims for good performance in the (TranAD) [39], and SimSiam [26]. All algorithms were trained
+target domain by training in the source domain. Therefore, for 50 epochs with a window size of 60 and a batch size of 64,
+three domain shift scenarios were considered using the SKAB and each experiment was repeated five times. The experiments
+and CNC milling machine datasets. For the time domain shift were implemented using the PyTorch software package in
+scenario, the SKAB dataset is considered because it contains the Python3 language. Training procedures utilized an Intel1
+valves collected at different times in the same environment. Core2 i9-12900K CPU at 3.60 GHz, 64 GB of RAM, and an
+For the machine and operation domain shift scenarios, the NVIDIA GeForce RTX 3090Ti graphics card with 32 GB of
+CNC milling machine dataset is considered as it contains G6X memory.
+information about different machines or operations collected
+simultaneously. The task information for each domain shift D. Evaluation Metrics
+scenario is presented in Table I.
+ Two metrics were employed to evaluate the performance
+ The time domain shift assesses the performance of the
+ of time-series domain generalization. First, the area under
+proposed method as the temporal distribution undergoes
+ the receiver operating characteristic (AUROC) curve assessed
+changes. Valve1 was considered because it contained sufficient
+ the anomaly detection performance. A higher AUROC
+subsets of the SKAB dataset. There are 14 subsets of Valve1
+ value indicates effective discrimination between normal and
+ranging from Valve1_00 to Valve1_13, where “t” in each
+ abnormal data. Second, to evaluate generalization performance
+Valve1_t signifies the temporal order. Tasks for evaluating the
+ in domain shift situations, a new metric, the GP-Score, was
+time domain shift scenario were categorized from T1 to T7,
+ defined as follows:
+with the number of source domains increasing by one for
+ AUROC of source to target domain
+each task to align with the temporal order. The target domain GP-Score = . (9)
+consists of a subset immediately after each task. AUROC of source to source domain
+ The machine domain shift assesses the performance 1 Registered trademark.
+
+of the proposed method as the distribution of machines 2 Trademarked.
+2502109 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 2. GP-Score in time domain shift. Fig. 3. GP-Score in machine domain shift.
+
+ The GP-Score is calculated as the ratio of the AUROC
+for different types of test data when the model is trained on
+normal data from the source domain. In (9), the denominator
+represents the AUROC when the model is trained on normal
+data from the source domain and tested on normal and
+abnormal data from the source domain. The numerator
+represents the AUROC when the model is trained on normal
+data from the source domain and tested on normal and
+abnormal data from the target domain. Essentially, the GP-
+Score quantifies the performance change as the distribution
+shifts. Any GP-Score greater than 1 is scaled to 1, enabling
+the observation of quantitative performance changes in domain
+shift situations. Fig. 4. GP-Score in operation domain shift.
+
+E. Experiment Results included the remaining unused machines in the source domain.
+ 1) Time Domain Shift Result: To assess the performance Table III and Fig. 3 present the AUROC and GP-Score results,
+of the proposed method under changes in the temporal respectively, for the machine domain shifts.
+distribution, seven tasks (T1–T7) were considered using the Experimental results reveal that the proposed method
+SKAB dataset. The source domains were utilized for training performs the best in two out of the three tasks. The
+in chronological order, while the target domain is a subset AUROC performance for task M2 was suboptimal; however,
+immediately after each task. Table II and Fig. 2 present the the GP-Score results remained stable compared to those
+AUROC and GP-Score results for the time domain shifts, of other models. The comparison models, except for Deep
+respectively. SVDD, demonstrated effective performance under machine
+ The experimental findings indicate that the proposed method domain shifts. This is attributed to the CNC milling machine
+outperforms the comparison models in four out of seven tasks. dataset not inherently being prone to machine domain shifts.
+For the remaining three tasks, the proposed method exhibits Consequently, the results indicate that the proposed method
+less performance degradation than the comparison models. extracts general representations from multiple source domains
+In contrast, anomaly detection models based on adversarial and adapts to variations in the machine distribution, suggesting
+learning, such as USAD and TranAD, exhibit limitations in that stable performance can be achieved with a small number
+their ability to learn representations from source domains. of source domains.
+TranAD performs poorly due to overfitting to the source 3) Operation Domain Shift Result: To assess the perfordomains caused by the transformer structure used in the model. mance of the proposed method under changes in machine
+Additionally, deep SVDD performs inadequately as it involves operating conditions, four tasks (O1, O2, O3, and O4) were
+converting multiple source domains into a single center. The considered using the CNC milling machine dataset. The
+GP-Score suggests that the proposed method maintains stable source domain for each task included all 14 operations,
+performance under time domain shifts, indicating its ability except for one specific operation, while the target domain
+to sustain generalized performance even when the temporal comprised the remaining unused operations in the source
+distribution changes. domain. Table IV and Fig. 4 present the AUROC and GP-
+ 2) Machine Domain Shift Result: To evaluate the perfor- Score results, respectively, for the operation domain shifts.
+mance of the proposed method under changes in the machine The experimental results showed that the proposed method
+distribution, three tasks (M1, M2, and M3) were considered performed the best in all tasks. Because the experiment on
+using the CNC milling machine dataset. Each task’s source the operational domain shifts trains 14 source domains, most
+domain comprised two machines, and the target domain of the comparison models also performed well. However,
+LEE et al.: ANOMALY DETECTION FRAMEWORK WITH CONTRASTIVE LEARNING AND MULTIVIEW AUGMENTATION 2502109
+
+ TABLE II
+ AUROC OF T IME -S ERIES D OMAIN G ENERALIZATION IN T IME D OMAIN S HIFT (SKAB DATASET )
+
+ TABLE III
+ AUROC OF T IME -S ERIES D OMAIN G ENERALIZATION IN M ACHINE D OMAIN S HIFT (CNC M ILLING M ACHINE DATASET )
+
+ TABLE IV
+ AUROC OF T IME -S ERIES D OMAIN G ENERALIZATION IN O PERATION D OMAIN S HIFT (CNC M ILLING M ACHINE DATASET )
+
+the performance of most models tended to drop sharply standard deviation. The experiments were performed on the
+at O4. This is because Operation10, which is used as the SKAB dataset in a time domain shift scenario. Elucidating
+target domain in O4, has a greater variation in the operation the individual effects of multiview augmentation is difficult
+distribution than the source domains. In contrast, the GP-Score because the framework used in this study consists of shared
+shows that the proposed method performs consistently and weights of the three TCN encoders. Therefore, we replaced
+well in all tasks. This demonstrates that the proposed method the augmentation with jitter-based augmentation to verify its
+maintained its generalized performance when the machine effectiveness. Experiments showed that the best performance is
+operation distribution changed. achieved when the multiview augmentation technique is fully
+ utilized. In addition, x̃ DI had the greatest impact on multiview
+ augmentation.
+F. Ablation Study Fig. 5(b) shows the sensitivity of each augmented sample
+ We performed an ablation study involving a qualitative anal- to the hyperparameters ∈DI , ∈ R , and ∈TA of the multiview
+ysis of the proposed method to validate the effectiveness and augmentation. The box plot represents the AUROC of
+necessity of the employed modules. Multiview augmentation the seven tasks in the SKAB dataset. The experimental
+achieves source domain-invariant, robust, and task-adaptive results show that x̃ DI and x̃ TA are hardly affected by
+representations in the target domain. Fig. 5 illustrates the hyperparameters, while x̃ R is considerably affected.
+the individual impact of multiview augmentation and the Consequently, multiview augmentation is relatively robust
+sensitivity of each augmented sample to hyperparameters ∈DI , to hyperparameters. This can lead to stable performance
+∈ R , and ∈TA . in time-series domain generalization. The proposed method
+ Fig. 5(a) shows the AUROC performance as a result of the used fixed hyperparameters regardless of the dataset: ∈DI =
+individual impacts of multiview augmentations x̃ DI and x̃ TA . 0.001, ∈ R = 0.0005, and ∈TA = 0.005. The hyperparameter
+The bar graph shows the mean, and the line graph shows the values were determined through extensive experimentation
+2502109 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ IV. C ONCLUSION
+ This study devised a novel anomaly detection framework
+ that utilizes multiview augmentation to enhance time-series
+ domain generalization. This structure leverages multiview
+ augmentation to learn three features for time-series domain
+ generalization. Subsequently, the time-series features are
+ extracted using a TCN encoder. Finally, the extracted
+ representations are trained using a contrastive learning method
+ inspired by SimTriplet. Experiments were conducted in three
+ domain shift scenarios to evaluate the performance of the
+ proposed method; the results demonstrated its effectiveness
+ in learning generalized features from various source domains
+ to perform reliably within the target domain. Moreover, the
+ proposed method exhibited high generalization performance
+ compared to existing methods. Finally, qualitative analysis was
+ performed to verify the effectiveness of the modules used in
+ the proposed method.
+ Despite the promising results, a few limitations must be
+ acknowledged. First, the proposed method heavily relies on the
+ quality and diversity of the source domain data. If the source
+ domains are not adequately representative of potential target
+ domains, the model’s generalization performance may suffer.
+ Second, while the method shows robustness in simulated
+ domain shifts, its performance in real-world applications,
+Fig. 5. Ablation study of multiview augmentation. (a) Comparison of where domain shifts can be more unpredictable and complex,
+the impacts of multiview augmentation. (b) Hyperparameter sensitivity in requires further validation. Future studies should focus on
+multiview augmentation.
+ addressing these limitations by exploring more efficient
+ algorithms, incorporating additional real-world datasets for
+ validation, and enhancing the adaptability of the model to
+ unforeseen domain shifts.
+
+ R EFERENCES
+ [1] F. Zhou, G. Wang, K. Zhang, S. Liu, and T. Zhong, “Semi-supervised
+ anomaly detection via neural process,” IEEE Trans. Knowl. Data Eng.,
+ vol. 35, no. 10, pp. 1–13, Apr. 2023, doi: 10.1109/TKDE.2023.3266755.
+ [2] F. Gao, J. Li, R. Cheng, Y. Zhou, and Y. Ye, “ConNet:
+ Deep semi-supervised anomaly detection based on sparse positive samples,” IEEE Access, vol. 9, pp. 67249–67258, 2021, doi:
+ 10.1109/ACCESS.2021.3077014.
+ [3] Z. Sun et al., “Dynamic domain generalization,” 2022,
+Fig. 6. Ablation study for feature extraction. arXiv:2205.13913.
+ [4] C. Chen, F. Shen, J. Xu, and R. Yan, “Domain adaptation-based
+ transfer learning for gear fault diagnosis under varying working
+ conditions,” IEEE Trans. Instrum. Meas., vol. 70, pp. 1–10, 2021, doi:
+to balance model performance in different domains and 10.1109/TIM.2020.3011584.
+ [5] G. Michau and O. Fink, “Unsupervised transfer learning for anomaly
+tasks. detection: Application to complementary operating condition transfer,”
+ In this study, we utilized a TCN encoder for feature Knowl.-Based Syst., vol. 216, Mar. 2021, Art. no. 106816, doi:
+extraction for the augmented samples. Comparison with other 10.1016/J.KNOSYS.2021.106816.
+ [6] P. Singhal, R. Walambe, S. Ramanna, and K. Kotecha, “Domain adapencoder methods demonstrated the effectiveness of the TCN tation: Challenges, methods, datasets, and applications,” IEEE Access,
+encoder for time-series modeling. Three time-series encoders vol. 11, pp. 6973–7020, 2023, doi: 10.1109/ACCESS.2023.3237025.
+were used for comparison: 1-D CNN, LSTM, and linear. Fig. 6 [7] Y. Liao, R. Huang, J. Li, Z. Chen, and W. Li, “Deep semisupervised
+ domain generalization network for rotary machinery fault diagnosis
+presents the ranking results for the AUROC performance upon under variable speed,” IEEE Trans. Instrum. Meas., vol. 69, no. 10,
+changing the encoder in the proposed method. pp. 8064–8075, Oct. 2020.
+ For the domain shift scenario, we performed investigations [8] J. Wang et al., “Generalizing to unseen domains: A survey on
+ domain generalization,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 8,
+by changing the encoder used for feature extraction. pp. 8052–8072, Aug. 2022.
+We performed five experiments with each of the encoders [9] C. Liu, “Learning causal semantic representation for out-of-distribution
+and ranked the results. As shown in Fig. 6, the best results prediction,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2021,
+corresponded to the use of the TCN encoder on all datasets. pp. 6155–6170.
+ [10] R. Gong, W. Li, Y. Chen, and L. Van Gool, “DLOW: Domain flow for
+This shows that the TCN encoder can effectively extract adaptation and generalization,” in Proc. IEEE/CVF Conf. Comput. Vis.
+features from time-series data. Pattern Recognit. (CVPR), Jun. 2019, pp. 2472–2481.
+LEE et al.: ANOMALY DETECTION FRAMEWORK WITH CONTRASTIVE LEARNING AND MULTIVIEW AUGMENTATION 2502109
+
+[11] G. Perez, “Improving domain generalization using style regularization,” [36] L. Ruf et al., “Deep one-class classification,” in Proc. Int. Conf.
+ in Proc. LatinX AI Comput. Vis. Pattern Recognit. Conf., Jun. 2021, Mach. Learn., 2018, pp. 4393–4402.
+ pp. 1006–1016. [37] C. Zhang et al., “A deep neural network for unsupervised anomaly
+[12] Z. Wang, Q. Wang, C. Lv, X. Cao, and G. Fu, “Unseen target stance detection and diagnosis in multivariate time series data,” in Proc. AAAI
+ detection with adversarial domain generalization,” in Proc. Int. Joint Conf. Artif. Intell., 2019, pp. 1409–1416.
+ Conf. Neural Netw. (IJCNN), Jul. 2020, pp. 1–8. [38] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+[13] B. Wang, M. Lapata, and I. Titov, “Meta-learning for domain “USAD: UnSupervised anomaly detection on multivariate time series,”
+ generalization in semantic parsing,” in Proc. Conf. North Amer. Chapter in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+ Assoc. Comput. Linguistics, Hum. Lang. Technol., 2021, pp. 366–379. Aug. 2020, pp. 3395–3404.
+[14] S. Motiian, M. Piccirilli, D. A. Adjeroh, and G. Doretto, “Unified deep [39] S. Tuli, G. Casale, and N. R. Jennings, “TranAD: Deep transformer
+ supervised domain adaptation and generalization,” in Proc. IEEE Int. networks for anomaly detection in multivariate time series data,” Proc.
+ Conf. Comput. Vis. (ICCV), Oct. 2017, pp. 5716–5726. VLDB Endowment, vol. 15, no. 6, pp. 1201–1214, Feb. 2022.
+[15] H. Yun, R. Wang, R. Rayhana, S. Pant, M. Genest, and Z. Liu,
+ “WaveCLR: Contrastive learning of guided wave representations for
+ composite damage identification,” IEEE Trans. Instrum. Meas., vol. 73, Yeseul Lee received the B.S. degree in industrial
+ pp. 1–14, 2024, doi: 10.1109/TIM.2024.3386207. engineering from Hanyang University, Seoul,
+[16] D. Kim, Y. Yoo, S. Park, J. Kim, and J. Lee, “SelfReg: Self- South Korea, in 2022. She is currently pursuing
+ supervised contrastive regularization for domain generalization,” in Proc. the M.S. degree in industrial and management
+ IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021, pp. 9599–9608. engineering with Korea University, Seoul.
+ Her research interests include time-series
+[17] Q. Dou, K. Kamnitsas, and B. Glocker, “Domain generalization via
+ anomaly detection and domain generalization for
+ model-agnostic learning of semantic features,” in Proc. Int. Conf. Neural
+ manufacturing.
+ Inf. Process. Syst., 2019, pp. 6447–6458.
+[18] Q. Zhang et al., “Conditional adversarial domain generalization with a
+ single discriminator for bearing fault diagnosis,” IEEE Trans. Instrum.
+ Meas., vol. 70, pp. 1–15, 2021, doi: 10.1109/TIM.2021.3071350.
+[19] X. Zhang, L. Zhou, R. Xu, P. Cui, Z. Shen, and H. Liu, “Towards Seunghwan Song received the B.S. degree in
+ unsupervised domain generalization,” 2021, arXiv:2107.06219. information statistics from Korea University, Seoul,
+[20] L. Zhang et al., “When unseen domain generalization is unnecessary? South Korea, in 2019, where he is currently pursuing
+ Rethinking data augmentation,” 2019, arXiv:1906.03347. the M.S. and Ph.D. degrees in industrial and
+[21] J. Tobin, R. Fong, A. Ray, J. Schneider, W. Zaremba, and P. Abbeel, management engineering.
+ “Domain randomization for transferring deep neural networks from His research interests include representation learnsimulation to the real world,” in Proc. IEEE/RSJ Int. Conf. Intell. Robots ing and prognostics and health management in
+ Syst. (IROS), Sep. 2017, pp. 23–30. manufacturing. He is conducting research to improve
+[22] X. B. Peng, M. Andrychowicz, W. Zaremba, and P. Abbeel, “Sim-to- manufacturing systems using the latest deep learning
+ real transfer of robotic control with dynamics randomization,” in Proc. technologies.
+ IEEE Int. Conf. Robot. Autom. (ICRA), May 2018, pp. 3803–3810.
+[23] R. Khirodkar, D. Yoo, and K. Kitani, “Domain randomization for scenespecific car detection and pose estimation,” in Proc. IEEE Winter Conf. Kwan-Yong Park received the B.S. degree in indus-
+ Appl. Comput. Vis. (WACV), Jan. 2019, pp. 1932–1940. trial engineering from Seoul National University
+[24] X. Zheng, X. Chen, M. Schurch, A. Mollaysa, A. Allam, and of Science and Technology, Seoul, South Korea,
+ M. Krauthammer, “Simple contrastive representation learning for time in 2022. He is currently pursuing the M.S. and Ph.D.
+ series forecasting,” 2023, arXiv:2303.18205. degrees in industrial and management engineering
+[25] Q. Liu et al., “SimTriplet: Simple triplet representation learning with a with Korea University, Seoul.
+ single GPU,” 2021, arXiv:2103.05585. His research interests include anomaly detection,
+[26] X. Chen and K. He, “Exploring simple Siamese representation learning,” fault detection, object detection, and representation
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), learning.
+ Jun. 2021, pp. 15745–15753.
+[27] S. Bai, J. Zico Kolter, and V. Koltun, “An empirical evaluation of generic
+ convolutional and recurrent networks for sequence modeling,” 2018,
+ arXiv:1803.01271. Byoung-Mo Koo received the B.S. degree in
+[28] M. Tasnim Pervin, L. Tao, A. Huq, Z. He, and L. Huo, “Adversarial statistics and industrial and management engineering
+ attack driven data augmentation for accurate and robust medical image from Korea University, Seoul, South Korea, in 2023,
+ segmentation,” 2021, arXiv:2105.12106. where he is currently pursuing the M.S. and Ph.D.
+[29] R. C. Staudemeyer and E. Rothstein Morris, “Understanding LSTM—A degrees in industrial and management engineering.
+ tutorial into long short-term memory recurrent neural networks,” 2019, His research interests include anomaly detection,
+ arXiv:1909.09586. fault detection, and classification.
+[30] E. Eldele et al., “Time-series representation learning via temporal and
+ contextual contrasting,” 2021, arXiv:2106.14112.
+[31] S. Liang, Y. Li, and R. Srikant, “Enhancing the reliability
+ of Out-of-distribution image detection in neural networks,” 2017,
+ arXiv:1706.02690. Jun-Geol Baek received the B.S., M.S., and
+[32] M. Thill, W. Konen, H. Wang, and T. Bäck, “Temporal convolutional Ph.D. degrees in industrial engineering from Korea
+ autoencoder for unsupervised anomaly detection in time series,” University, Seoul, South Korea, in 1993, 1995, and
+ Appl. Soft Comput., vol. 112, Nov. 2021, Art. no. 107751, doi: 2001, respectively.
+ 10.1016/J.ASOC.2021.107751. From 2002 to 2007, he was an Assistant
+[33] F. Baier, S. Mair, and S. G. Fadel, “Self-supervised Siamese Professor with the Department of Industrial Systems
+ autoencoders,” 2023, arXiv:2304.02549. Engineering, Induk University, Seoul. He was also
+[34] D. Pau, A. Khiari, and D. Denaro, “Online learning on tiny micro- an Assistant Professor with the Department of
+ controllers for anomaly detection in water distribution systems,” in Proc. Business Administration, Kwangwoon University,
+ IEEE 11th Int. Conf. Consum. Electron. (ICCE-Berlin), Nov. 2021, Seoul, from 2007 to 2008. In 2008, he joined the
+ pp. 1–6. School of Industrial and Management Engineering,
+[35] M.-A. Tnani, M. Feil, and K. Diepold, “Smart data collection system Korea University, where he is currently a Professor. His research interests
+ for brownfield CNC milling machines: A new benchmark dataset for include fault detection and classification (FDC), advanced process control
+ data-driven machine monitoring,” Proc. CIRP, vol. 107, pp. 131–136, (APC), prognostics and health management (PHM), and big data analytics in
+ Apr. 2022, doi: 10.1016/J.PROCIR.2022.04.022. manufacturing.

@@ -1,0 +1,152 @@
+3168                                                            IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 5, OCTOBER 2025
+
+
+
+
+            GraphTAN: Temporal Attention Network for
+                Learning Graph-Level Embedding
+            Yan-Jiang Cai , Hai-Chun Cai , Chun-Yang Zhang , C. L. Philip Chen , Life Fellow, IEEE,
+                                             and Qian-Xi Tang
+
+
+   Abstract—Numerous significant temporal graph tasks, such
+as graph similarity ranking, trend analysis and anomaly de-
+tection, necessitate low-dimensional and high-order graph-level
+embedding in terms of the evolving nodes and topologies over
+time. However, most existing graph embedding methods focus on
+extracting node-level embeddings, while ignoring these evolutions.
+Therefore, these methods inadequately consider the impact of
+trends on the overall graph. Moreover, there are a large number
+of nodes in temporal graphs, which make it difficult to generate
+effective graph embeddings directly by aggregating dynamic
+node embeddings. In this study, we propose a novel temporal
+attention network for learning graph-level embedding learning                      Fig. 1. Temporal graph example, where nodes and edges can be added or
+called GraphTAN. Specifically, the proposed model employs                          removed between time snapshots.
+pooling attention to select crucial nodes and filter out noisy ones
+for each snapshot, thereby enhancing the quality of aggregated
+graph embeddings. Furthermore, we design a graph-level tem-                        graph tasks require careful consideration of the temporal at-
+poral attention mechanism to effectively extract temporal graph                    tributes associated with nodes and edges as they undergo ad-
+embeddings, capturing trends and patterns across snapshots.
+                                                                                   ditions, deletions, or changes over time as illustrated by the
+The proposed model is evaluated on three downstream tasks.
+Experimental results demonstrate that GraphTAN captures both                       example in Fig. 1.
+the topology structure and fine-grained trend effectively, outper-                    Recently, some work has explored temporal node and edge
+forming the state-of-the-art methods with big margins on multiple                  embedding methods [5], [6], [7], yet there remains a paucity of
+tasks over several real networks.                                                  research focusing on the temporal graph-level embeddings [8],
+   Index Terms—Anomaly detection, graph-level representation                       [9]. Such embeddings describe the global topology structure
+learning, graph neural networks (GNNs), temporal attention,                        and node attributes of each snapshot, capturing the evolution
+trend analysis.                                                                    patterns of the graph over time. Temporal graph embeddings
+                                                                                   are crucial for various valuable tasks, such as graph similarity
+                            I. INTRODUCTION                                        [8], [9], [10] anomaly detection and trend analysis [11], [12].
+                                                                                   The graph similarity task involves discerning similarities among
+
+G      RAPH embedding techniques have extensive applications
+       across various graph tasks, including graph classification
+and graph clustering, etc. Despite the significant advancements
+                                                                                   snapshots. The objective is to find a snapshot that has the most
+                                                                                   similar structure to the anchor snapshot. This task has many
+                                                                                   application scenarios [13]. For example, when monitoring an
+achieved in the field of static graph in recent years [1], [2],                    organization with a history of illegal activity, it is possible to
+[3], there remains a considerable disparity between theoretical                    predict whether the organization is planning another crime by
+developments and real-world scenarios. In the real world, tem-                     analyzing the communication graph, namely, comparing the
+poral graphs emerge from dynamic interactions among nodes                          similarity of the current snapshot to the target snapshot. The
+in various contexts such as social networks [4], question-and-                     anomaly detection and trend analysis tasks involve identifying
+answer forums, or user-item interaction systems [5]. Many                          anomalous occurrences and trends within the temporal graphs.
+                                                                                   For instance, detecting protests in social networks, tracking
+  Received 1 July 2024; revised 24 October 2024 and 20 January 2025;               unusual public opinion shifts generated by viral news stories,
+accepted 19 February 2025. Date of publication 5 March 2025; date of current
+version 2 October 2025. This work was supported in part by the National            and monitoring structural changes in the company resulting
+Natural Science Foundation of China under Grant 62476059. (Corresponding           from specific events.
+authors: Hai-Chun Cai; Chun-Yang Zhang.)                                              Currently, numerous methodologies are available for obtain-
+  Yan-Jiang Cai, Hai-Chun Cai, Chun-Yang Zhang, and Qian-Xi Tang are
+with the School of Computer and data Science, Fuzhou University, Fuzhou            ing static graph-level embedding. Some methods extract node
+350108, China (e-mail: fjsmchc@163.com; zhangcy@fzu.edu.cn).                       embeddings individually and subsequently employ clustering
+  C. L. Philip Chen is with the School of Computer Science and Engineering,        methods [14], [15] to aggregate them into a single graph em-
+South China University of Technology, Guangzhou, Guangdong 510006,
+China.                                                                             bedding [16]. Alternatively, contrastive learning methods [17]
+  Digital Object Identifier 10.1109/TCSS.2025.3544460                              produce the optimal graph embeddings by comparing node
+
+   2329-924X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+CAI et al.: GRAPHTAN: TEMPORAL ATTENTION NETWORK FOR LEARNING GRAPH-LEVEL EMBEDDING                                                3169
+
+
+
+and graph embeddings [18]. However, these studies predom-              The rest of this article is organized as follows. Section II in-
+inantly focus on static graph representation learning, overlook-    troduces several related works of graph representation learning.
+ing trends in graph-level embeddings [10], [19], which limit        In Section III, we will introduce the proposed GraphTAN model
+their ability to capture patterns necessary for temporal graph      in detail. The experimental results are reported in Section IV.
+tasks. Subsequently, some existing node-level methods for tem-      Section V draws the conclusion and further works.
+poral graphs focus on evolving nodes, while it is difficult to
+depict the dynamics of the graph by directly pooling node-                                II. RELATED WORKS
+level features. Existing works on learning temporal graph-level
+embeddings are limited, most methods simply rely on random             Graph representation learning methods are primarily cate-
+walk techniques to transform temporal graphs into sequential        gorized into two types: node-level and graph-level methods.
+data for learning graph embeddings. However, these methods          In static graph scenarios, they represent each node or graph
+inevitably lose essential temporal patterns due to the same         with a single vector. Alternatively, temporal graphs involve the
+sampling strategies, which cannot adapt to the rapid changes of     analysis of multiple snapshots, which entails generating a set
+temporal graphs. Additionally, they are incapable of processing     of vectors for each node or snapshot, with a different number
+the importance of nodes across different snapshots. In fact, the    of nodes at each timestamp.
+nodes may play different roles along with time, thus showcasing
+different contributions for the whole network. For example,         A. Static Node-Level Embedding
+a YouTuber uploading a trend-setting video may become a                Matrix factorization-based methods involve decomposing
+key node in the network temporarily, but their influence may        graph-associated matrices, such as adjacency or Laplacian ma-
+significantly diminish at other times. This leads to a signifi-     trices, into lower-dimensional representations, while preserv-
+cant number of nodes whose importance varies over time, re-         ing key structural relationships of the graph. Techniques for
+ferred to as temporal noise nodes, which present challenges for     static node embedding encompass matrix factorization-based
+learning effective temporal graph-level embeddings. Therefore,      methods, such as singular value decomposition (SVD) [21] and
+a tractable and learnable node selection mechanism is needed to     locally linear embedding (LLE) [22], which decompose the
+effectively filter out temporal noise nodes. Moreover, it is also   Laplacian matrix or higher-order adjacency matrices to gen-
+crucial to learn the temporal patterns of the graph.                erate node embeddings that preserve distances between nodes.
+   Since the attention mechanism is proven to be effective in       Random walk-based methods specify different walking strate-
+various fields [20], we propose a new temporal attention-based      gies to generate a sequence of nodes starting from every node
+graph neural network (GNN) with a node selection mech-              on the graph, further maximizing the occurrence probabilities
+anism to learn expressive temporal graph-level embeddings.          of all the nodes in the sequence when searching for their rep-
+In GraphTAN, temporal graph-level embeddings are produced           resentations. Random walk-based methods such as DeepWalk
+through three attention mechanisms across different aspects:        [23] and node2vec [1] create random paths over the graph and
+topology structure, node pooling, and graph-level dynamics.         produce node embeddings through a word2vec-like architecture
+Structural attention extracts each node features from their local   [24]. Deep learning-based methods employ neural networks to
+neighborhoods within each snapshot. Pooling attention employs       learn graph representations by jointly encoding the topological
+the attention mechanism to determine which nodes should be          structure and node attributes. In recent years, deep learning-
+removed. Temporal attention captures the evolution pattern of       based methods, particularly GNNs [16], have gained popularity,
+the graph across numerous timestamps by adaptively assigning        which includes graph convolutional networks (GCN) [2], graph
+weights to historical embeddings. In this way, the proposed         attention networks (GAT) [25], and GraphSage [26]. These
+model comprehends the complex topology structure and reveals        methods employ effective message-passing mechanisms to ag-
+the trends of each snapshot, and effectively representing trends,   gregate information between nodes, producing expressive node
+node attributes, and topology structure synchronously. The          representations. However, traditional static graph methods are
+contributions of this work are summarized as follows.               limited in their ability to handle temporal graphs, as they only
+   1) A novel temporal attention GNN is proposed, which             capture static structural information and struggle to account for
+       incorporates three attention mechanisms across three         temporal variations.
+       aspects. Unlike previous temporal graph embedding
+       methods, GraphTAN synchronously captures trends,
+                                                                    B. Temporal Node-Level Embedding
+       node attributes, and graph topology.
+   2) A modular architecture design for GraphTAN is pro-               A significant portion of existing research endeavors focuses
+       posed, enabling the flexible stacking of different layer     on the depiction of node-level embeddings within the temporal
+       types and facilitating computationally efficient learning    domain. Part of these methods use static node embedding tech-
+       compared with previous graph-based temporal methods.         niques directly, which are independently applied to temporal
+   3) Extensive experiments have been conducted across var-         snapshots individually, followed by aligning them to produce a
+       ious tasks, such as graph similarity ranking, temporal       unified representation [27]. However, the alignment technique
+       anomaly detection, trend analysis, and visualization anal-   struggles to handle scenarios where nodes are added or removed
+       ysis. The results show that GraphTAN surpasses the state-    over time. As a result, many methods use sequence models to
+       of-the-art methods.                                          deal with the temporal nodes.
+3170                                                IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 5, OCTOBER 2025
+
+
+
+   Dynamic self-attention network (DySAT) [28] combines             overall graph structure and their relevance over time, presenting
+information from the structural neighborhood and temporal           a more complex and challenging task. The tdGraphEmbed [8]
+dynamics patterns through two attention modules to                  leverages the Doc2Vec [35] architecture to produce temporal
+generate dynamic node representations. However, it                  graph-level embeddings. Unlike traditional node embedding
+has high model complexity, which is not applicable                  methods that use random walks, this approach globally embeds
+to large-scale graphs. Motif-preserving temporal shift              the entire graph structure and its nodes at each timestamp.
+network (MTSN) [29] introduces a dynamic GNN                        Notably, it incorporates node attributes shared across differ-
+architecture that integrates network structure features and         ent timestamps to capture the temporal patterns. In contrast,
+temporal patterns through a time-series migration mechanism.        GraphERT [9] employs Transformer architecture [36] to em-
+This design aims to capture the evolutionary patterns inherent      bed the entire graph. It encodes each snapshot of the graph
+in dynamic networks proficiently. DyG2Vec [30] introduces a         by conducting numerous random walks, which are fed into
+window-based encoder–decoder model for temporal graphs.             Transformer. By incorporating a temporal model to forecast
+TREND [31] operates on temporal events and node dynamics,           the temporal indices of the random walks, the model captures
+utilizing a GNN framework grounded in the Hawkes process.           both the contextual information of the paths and their temporal
+However, this process formulation does not scale for large          relationships.
+graphs with millions of links.                               

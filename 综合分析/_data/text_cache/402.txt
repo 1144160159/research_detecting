@@ -1,0 +1,134 @@
+10528                                           IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 47, NO. 11, NOVEMBER 2025
+
+
+
+
+                Disentangled Dynamic Intrusion Detection
+ Chenyang Qiu , Graduate Student Member, IEEE, Guoshun Nan , Member, IEEE, Hongrui Xia , Zheng Weng,
+             Xueting Wang, Meng Shen , Member, IEEE, Xiaofeng Tao , Senior Member, IEEE,
+                                   and Jun Liu , Senior Member, IEEE
+
+
+   Abstract—Network-based intrusion detection system (NIDS)                        DIDS-MFL. For few-shot NIDS, our DIDS-MFL achieves a 71.91%
+monitors network traffic for malicious activities, formingthe front-               –125.19% improvement in average F1-score over 14 baselines and
+line defense against increasing attacks over information infrastruc-               shows versatility in multiple baselines and multiple tasks.
+tures. Although promising, our quantitative analysis shows that
+existing methods perform inconsistently in attacks (e.g., 18% F1                      Index Terms—Intrusion detection, network security.
+for the MITM and 93% F1 for DDoS by a GCN-based state-of-
+the-art method), and perform poorly in few-shot intrusion de-
+tections (e.g., dramatically drops from 91% to 36% in 3D-IDS,                                                  I. INTRODUCTION
+and drops from 89% to 20% in E-GraphSAGE). We reveal that
+the underlying cause is entangled distributions of flow features.                         NAUTHORIZED attempts like password cracking [1],
+This motivates us to propose DIDS-MFL, a disentangled intrusion
+detection approach for various scenarios. DIDS-MFL involves two
+key components: a double Disentanglement-based Intrusion De-
+                                                                                   U      man-in-the-middle attacks (MITM) [2], and denial-of-
+                                                                                   service (DoS) [3] are known as the network attacks [4], tar-
+tection System (DIDS) and a plug-and-play Multi-scale Few-shot                     geting an organization’s digital assets with the intention of
+Learning-based (MFL) intrusion detection module. Specifically,                     data leakage or the execution of harmful deeds. These attacks
+the proposed DIDS first disentangles traffic features by a non-                    are frequently perceived as network anomalies [5] due to their
+parameterized optimization, automatically differentiating tens and                 distinct characteristics that differ from standard traffic patterns.
+hundreds of complex features. Such differentiated features will be
+further disentangled to highlight the attack-specific features. Our
+                                                                                   An alarming statistic [6] notes that 31% companies across the
+DIDS additionally uses a novel graph diffusion method that dynam-                  globe experience a daily average of at least one cyber attack, a
+ically fuses the network topology for spatial-temporal aggregation                 frequency amplified by the proliferation of mobile online busi-
+in evolving data streams. Furthermore, the proposed MFL involves                   ness endeavors. The situations necessitate an intelligent system
+an alternating optimization framework to address the entangled                     deployment to assist network administrators in the automated
+representations in few-shot traffic threats with rigorous deriva-
+tion. MFL first captures multi-scale information in latent space
+                                                                                   segregation of these anomalies from the vast sea of internet
+to distinguish attack-specific information and then optimizes the                  traffic. A network-based intrusion detection system (NIDS) [7],
+disentanglement term to highlight the attack-specific information.                 which monitors network traffic and identifies malicious activ-
+Finally, MFL fuses and alternately solves them in an end-to-end                    ities, facilitates administrators to form the frontline defense
+way. To the best of our knowledge, DIDS-MFL takes the first step                   against increasing attacks over information infrastructures (e.g.,
+toward disentangled dynamic intrusion detection under various
+attack scenarios. Equipped with DIDS-MFL, administrators can
+                                                                                   sensors and servers). Hence, NIDS is widely applied in many
+effectively identify various attacks in encrypted traffic, including               information systems of governments and e-commercial business
+known, unknown, and few-shot threats that are not easily detected.                 sectors [8]. Fig. 1 demonstrates how NIDS builds a frontline
+Comprehensive experiments show the superiority of our proposed                     defense against two network attacks, protecting systems from
+                                                                                   potential cyber threats.
+   Received 11 December 2024; revised 5 June 2025; accepted 25 July 2025.             Existing NIDS can be categorized into two types, i.e.,
+Date of publication 4 August 2025; date of current version 3 October 2025.         signature-based ones [9], [10], [11] and anomaly-based
+This work was supported in part by the National Key Research and Devel-            ones [12], [13], [14]. The former detects network attacks based
+opment Program of China under Grant 2022YFB2902200, and in part by the
+General Program of National Natural Science Foundation of China under Grant        on pre-defined patterns or known malicious sequences stored
+62471064. Recommended for acceptance by M. L. Zhang. (Corresponding                in a database, such as the number of bytes in traffic. These
+author: Guoshun Nan.)                                                              patterns in the NIDS are referred to as signatures. The lat-
+   Chenyang Qiu, Guoshun Nan, Hongrui Xia, Zheng Weng, Xueting
+Wang, and Xiaofeng Tao are with the National Engineering Research Cen-             ter anomaly-based NIDS learns to track attacks with machine
+ter for Mobile Network Technologies, Beijing University of Posts and               learning techniques. Early statistical approaches [2], [3], such
+Telecommunications, Beijing 100876, China, and also with Beiyou Shen-              as Support Vector Machine (SVM), Logistic Regression (LR),
+zhen Institute, Shenzhen 518057, China (e-mail: cyqiu@bupt.edu.cn; nan-
+guo2021@bupt.edu.cn; kphchrls@bupt.edu.cn; wengzheng@bupt.edu.cn; wx-              and Decision Tree (DT), rely on carefully designed handcrafted
+tyuki@bupt.edu.cn; taoxf@bupt.edu.cn).                                             features to learn classification boundaries. Recent deep learning-
+   Meng Shen is with the Beijing Institute of Technology, Beijing 100081, China    based methods [15], [16] use millions of neural parameters
+(e-mail: shenmeng@bit.edu.cn).
+   Jun Liu is with the School of Computing and Communications, Lancaster           to mine the knowledge underlying the training samples, and
+University, LA14YW Lancaster, U.K. (e-mail: j.liu81@lancaster.ac.uk).              have achieved great success in automatically modeling complex
+   Our code is available at https://github.com/qcydm/DIDS-MFL.                     correlations for tens and thousands of features. The state-of-the-
+   This article has supplementary downloadable material available at
+https://doi.org/10.1109/TPAMI.2025.3595671, provided by the authors.               art E-GraphSAGE [17] employs graph convolution networks
+   Digital Object Identifier 10.1109/TPAMI.2025.3595671                            (GCNs) to learn the feature representations for better prediction.
+      0162-8828 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+QIU et al.: DISENTANGLED DYNAMIC INTRUSION DETECTION                                                                                             10529
+
+
+
+                                                                                   such a phenomenon as the entangled distribution of statistical
+                                                                                   features. To analyze the reason for performance variations of
+                                                                                   acknowledged attacks during testing, we use Pearson correlation
+                                                                                   heat map [21] to visualize the representations of MITM and
+                                                                                   DDoS respectively, where the representations are generated by
+                                                                                   the encoder of E-GraphSAGE. Fig. 2(e) and 2(f) demonstrate
+                                                                                   the two correlation maps. Interestingly, we observe that the
+                                                                                   coefficients of MITM representations are much larger than those
+                                                                                   of DDoS. We further compare MITM with other attacks, includ-
+Fig. 1. Illustration of two network attacks DoS and MITM. DoS floods the           ing Backdoor and Dos, and find those high coefficients in the
+target with massive traffic to overwhelm an online service, and MITM eavesdrops    representation will lead to lower intrusion detection scores. We
+on the communication between two targets and steals private information. An
+NIDS can be easily deployed in a single location to collect statistical features   refer to such a phenomenon as the entangled distribution of
+and alert administrators for potential threats.                                    representational features, which can be considered as another
+                                                                                   main cause for the degradation of attack classification.
+                                                                                      For the second challenge, we observe that the NIDS ap-
+   Although promising, existing NIDS approaches face two                           proaches still perform poorly when combining the state-of-
+challenges in detecting traffic threats accurately:                                the-art few-shot learning methods, as shown in Fig. 3(b). For
+   r Challenge 1. The existing NIDS methods yield extremely                        the meta-learning-based MBase [22], we attribute the poor
+      inconsistent results in identifying distinct attacks: For sta-               performance to the limited anomaly types in network traffic.
+      tistical methods, Fig. 2(a) demonstrates that the detection                  Effective meta-learning approaches typically necessitate vast
+      performance of an SVM-based method [18] for an un-                           types of few-shot anomalies, which are more aligned with the
+      known attack1 can be as low as 9% in terms of F1 on                          field of computer vision and natural language processing [23],
+      the CIC-ToN-IOT [19] dataset. While the model achieves                       [24], [25], [26]. Therefore, we focus on the similarity-based
+      40% F1 in declaring another unknown threat (DDoS) on the                     method BSNet [27] and uncover why BSNet outperforms DIDS.
+      same benchmark. Regarding the deep learning-based meth-                      We depict the t-SNE visualizations of their respective learned
+      ods, Fig. 2(d) demonstrates that E-GraphSAGE achieves a                      representations. As shown in Fig. 4(a) and (b), we observe
+      lower than 20% F1 score for MITM attacks and a higher                        that the representations of BSNet in different attack types are
+      than 90% F1 score for DDoS on the CTC-ToN-IOT dataset.                       more separated in the latent space. It can be inferred as one
+   r Challenge 2. The existing NIDS approaches struggle to                         of the main causes of higher F1 scores in BSNet. Following
+      detect few-shot traffic threats accurately: In practical sce-                this thread, we further depict their representation correlations
+      narios, the strengthening of defensive measures and the                      via correlation heatmaps. We have found that the representa-
+      consequent escalating trend of cyber threats have inevitably                 tions of BSNet are more entangled than DIDS as shown in
+      caused the rise of new-type attacks with a limited instance                  Fig. 4(c) and (d). Aligning with the disentanglement studies in
+      number, referred to as few-shot traffic threats. However, our                Challenge 1, we attribute the main obstacle to the performance
+      empirical observations reveal that the NIDS methods have                     improvement of BSNet to the entangled representations. More
+      dramatic performance deterioration in few-shot scenarios,                    discussions on the above empirical studies are available in
+      as shown in Fig. 3(a), e.g., our previous work DIDS [20]                     Appendix 18.3.
+      dramatically drops from 91.57% under supervised learning                        In light of the discussions, we raise two critical questions:
+      setting to 36.12% under the few-shot learning setting over                       r Q1: How can an intrusion detection model automatically
+      the CIC-ToN-IoT dataset, and similarly, EURLER and                                 address the first challenges, i.e., two entangled distribu-
+      E-GraphSAGE have an average F1-scores lower to 36.26%                              tions, to benefit the detection of both unknown and known
+      under the few-shot learning setting.                                               attacks?
+   For the first challenge, we depict feature distributions and vi-                    r Q2: Can a few-shot intrusion detection method automati-
+sualize the representations to investigate the underlying cause of                       cally learn the representations as separated in latent space,
+why existing methods perform inconsistently for various attacks,                         simultaneously as disentangled among representation
+including unknown ones and known ones. Fig. 2(b) and (c) depict                          elements?
+statistical distributions of the two unknown attacks for the SVM-                     Achieving Q1 is challenging. To mitigate the issue of the first
+based model during testing. We observe that feature distributions                  entangled distribution, we need to differentiate tens and thou-
+of MITM attacks are entangled, while the ones of DDoS are more                     sands of features involved in real-time network traffic, without
+separated. It can be inferred that statistical distributions of traffic            prior knowledge of the statistical distributions. Such a problem
+features are one of the main underlying causes of performance                      is largely under-explored in the field of NIDS. For the second
+variations. Separated distributions benefit the unknown attack                     entangled distribution, there are some remotely related meth-
+identification, while entangled ones are indistinguishable and                     ods [28], [29], [30] in other fields, including computer vision
+un

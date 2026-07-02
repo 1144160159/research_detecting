@@ -1,0 +1,136 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 1, FEBRUARY 2025                                                           317
+
+
+
+
+Dual Temporal Masked Modeling for KPI Anomaly
+       Detection via Similarity Aggregation
+           Ting Yu , Zijian Gao , Kele Xu , Xu Wang , Peichang Shi , Bo Ding , and Dawei Feng
+
+
+   Abstract—With the expanding scale of current industries,                     is essential for preventing potential risks, mitigating economic
+monitoring systems centered around Key Performance Indicators                   losses, and maintaining overall safety [8]. Common monitoring
+(KPIs) play an increasingly crucial role. KPI anomaly detection                 techniques encompass the utilization of KPIs and the analysis
+can monitor the potential risks according to KPI data and has
+garnered widespread attention due to its rapid responsiveness                   of logs and trace data. Considering the dynamic nature and
+and adaptability to dynamic changes. Considering the absence                    time sensitivity of these systems, many opt for monitoring
+of labels and the high cost of manual annotation of KPI                         strategies centered around KPIs.
+data, the self-supervised approaches are proposed. Among them,                     KPIs, often time series data, face anomaly detection chal-
+mask modeling methods draw great attention and can learn                        lenges due to scarce labeled data and high labeling costs
+the intrinsic distribution of data without relying on prior
+assumptions. However, conventional mask modeling often over-                    in large-scale systems [9]. Consequently, many KPI anomaly
+looks the examination of relationships between unsynchronized                   detection algorithms resort to unsupervised methods, assuming
+variables, treating them with equal importance, and inducing                    anomalies are hard to reconstruct or predict such as [10]
+inaccurate detection results. To address this, this paper proposes              and [11]. The disparity between the reconstructed or predicted
+a Dual Masked modeling Approach combined with Similarity                        data and the original data is utilized as the anomaly score
+Aggregation, named DMASA. Starting from a self-supervised
+approach based on mask modeling, DMASA incorporates spec-                       and performs well under the assumption of Gaussian noise.
+tral residual techniques to explore inter-variable dependencies                 Performance can falter with complex, non-Gaussian noise [12],
+and aggregates information from similar data to eliminate                       especially in fluctuating time series data where differenti-
+interference from irrelevant variables in anomaly detection.                    ating anomalies is tough. Hence, some methods attempt to
+Extensive experiments on eight datasets and state-of-the-art                    incorporate certain supervised information, as demonstrated
+results demonstrate the effectiveness of our approach. Our code
+is available at https://github.com/colaudiolab/GT-DMASA.                        by Huang et al. [13], who combine active learning and
+                                                                                variational autoencoders to boost accuracy. However, these
+   Index Terms—Anomaly detection, key performance indicators,                   approaches necessitate a prior hypothesis of the data. A
+self-supervised learning, monitoring.
+                                                                                more universal and convenient choice would be a method
+                                                                                capable of autonomously extracting features from the data
+                                                                                itself.
+                          I. I NTRODUCTION                                         Defining anomalies is intricate, often involving outliers
+   N CONTEMPORARY industrial landscape, the continu-                            with unusual data patterns [14] that necessitate contextual
+I  ous expansion of infrastructure, and the proliferation of
+sensors underscore the significance of monitoring systems.
+                                                                                consideration [15]. For example, seasonal variations in power
+                                                                                system operations can affect anomaly assessment. A com-
+Employing monitoring systems is crucial for ensuring the                        prehensive evaluation, including frequency domain insights,
+continuous and reliable operation of diverse systems, includ-                   is crucial. Microsoft [4] employs spectral residual for pro-
+ing financial systems [1], [2], Internet-based online service                   cessing one-dimensional KPIs, introducing frequency domain
+systems [3], [4], and critical infrastructures such as network                  information to aid in anomaly identification. Park et al. [16]
+systems [5], [6] and water treatment facilities [7]. For exam-                  refine the Fast Fourier Transform (FFT) by computing only
+ple, Key Performance Indicators (KPIs), in the context of                       a subset of Fourier coefficients to expedite computation. The
+network security, encompass a wide array of data points, such                   incorporation of frequency domain information contributes to
+as login failures, unusual data transfers, and unauthorized                     enhancing detection effectiveness.
+access attempts, which are vital for detecting anomalies that                      Additionally, monitoring data’s multidimensionality intro-
+could signify security breaches or system irregularities. This                  duces complex interdependencies among time and indicator
+                                                                                dimensions [17]. Taking the IT operations domain as an
+  Received 27 January 2024; revised 30 July 2024 and 19 October 2024;           example, as depicted in Figure 1, similar indicator types like
+accepted 19 October 2024. Date of publication 24 October 2024; date of
+current version 14 March 2025. This paper is Supported by the National Key      CPU usage and load show related patterns, yet many methods
+Research and Development Program of China (No. 2021ZD0112904). The              incorrectly equate their correlation with dissimilar indicators
+associate editor coordinating the review of this article and approving it for   such as disk and database metrics. Especially in anomaly
+publication was Y. Diao. (Ting Yu and Zijian Gao contributed equally to this
+work.) (Corresponding author: Kele Xu.)                                         detection, not all indicators exhibit anomalies simultaneously.
+  The authors are with the College of Computer, National University of          Given the multitude of metrics in monitoring systems, treating
+Defense Technology, Changsha 410073, China, and also with the State Key         various indicators equally may result in the features of indi-
+Laboratory of Complex & Critical Software Environment, Beihang University,
+Beijing 100191, China (e-mail: xukelele@163.com).                               cators undergoing significant changes being submerged within
+  Digital Object Identifier 10.1109/TNSM.2024.3486167                           numerous data points where no substantial changes have
+                       1932-4537 
+                                 c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+318                                                        IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 1, FEBRUARY 2025
+
+
+
+                                                                                    across variables. Our main contributions can be distilled to the
+                                                                                    following points:
+                                                                                       1. We introduce a novel anomaly detection approach that
+                                                                                    integrates mask modeling to adaptly capture the inherent struc-
+                                                                                    ture of KPI data through self-supervised learning, overcoming
+                                                                                    the challenge of sparse labeling.
+                                                                                       2. By utilizing spectral residual in conjunction with
+                                                                                    frequency-domain insights, our method bolsters the identifica-
+                                                                                    tion of anomalies, allowing for prompt detection and precise
+                                                                                    delineation of anomalous patterns.
+                                                                                       3. Our model incorporates similarity aggregation to seg-
+                                                                                    regate irrelevant variables, ensuring that only closely related
+                                                                                    variables contribute to the reconstruction process. This refines
+                                                                                    the detection of anomalies without being obscured by unre-
+                                                                                    lated data.
+                                                                                       4. The vast majority of state-of-the-art experimental results
+                                                                                    obtained on eight datasets demonstrate the effectiveness and
+                                                                                    competitiveness of our proposed method.
+                                                                                       The remaining sections of this paper are organized as fol-
+Fig. 1.     Partial indicators obtained from an entity within the Internet          lows. Section II provides a concise overview of KPI anomaly
+monitoring system. The segments highlighted in red denote anomalies. Not
+all metrics are in an anomalous state when anomalies occur. The variables
+                                                                                    detection, the utilization of self-supervised methods in time
+indicated by red arrows have experienced anomalies, while those indicated           series anomaly detection, and the application of Transformers
+by green arrows have not exhibited significant changes. In particular, the          in time series analysis. In Section III, we provide a detailed
+Transformer structure facilitates extensive information exchange among differ-
+ent variables. Treating all variables equally may result in the changes occurring
+                                                                                    introduction to our DMASA method. Section IV comprehen-
+in anomalous indicators being averaged, potentially making it challenging to        sively outlines the experimental details and analyzes the results
+identify anomalous states comprehensively.                                          of our approach. The article culminates with a conclusion that
+                                                                                    encapsulates our findings, contributions, and future works.
+
+
+occurred, hindering timely anomaly capture. Exploring the                                                II. R ELATED W ORK
+correlations between variables and mitigating the interference                         Operation and maintenance monitoring system analysis data
+of irrelevant variables on those experiencing anomalies can                         comprise KPI data, logs, traces, and other relevant information,
+contribute to enhancing detection accuracy.                                         and KPI data draws widespread attention due to its capacity to
+   To address the challenges mentioned earlier, we propose the                      effectively address dynamic changes in complex systems and
+KPI anomaly detection method DMASA. First, the method                               facilitate prompt responses. First, we review self-supervised
+tackles the issue of limited labels in KPI data by using self-                      methods for unlabeled KPI data. Furthermore, recognizing the
+supervised mask modeling. In contrast to contrastive learning,                      predominance of masking and predictive techniques within the
+relying on prior assumptions and may introduce inductive                            Transformer framework in current self-supervised methods, we
+bias, mask modeling excavates information from the data to                          offer a comprehensive review of their application to time series
+learn richer representations with better generality. Secondly, it                   data. Subsequently, we delve into the specifics of KPI anomaly
+introduces frequency-domain information to identify anoma-                          detection, self-supervised methods for time series anomaly
+lies from multiple perspectives based on spectral residual,                         detection, and the utilization of Transformer-based strategies
+which highlights anomalies by accentuating deviations from                          in time series analysis.
+the frequency domain mean and enhances detection accuracy                              KPI Anomaly Detection: KPI data fundamentally is contin-
+and timeliness. This helps the model in rapidly identifying                         uous time series data. Consequently, we will review methods
+the starting point of anomalies and capturing them earlier.                         designed for anomaly detection in time series data. They can
+Additionally, the distinct boundaries facilitate the observation                    be broadly categorized into statistical approaches, classical
+of whether anomalies occur simultaneously across different                          machine learning algorithms, and deep learning methods.
+variables.                                                                          Statistical methods, including mean-based approaches, feature
+   Furthermore, treating all variables as equivalent may result                     prominently in this domain, with classic methods such as
+in interference of irrelevant variables. Especially for models                      moving average [19] and Autoregression [20], autoregres-
+employing the Transformer method, akin to the “over-                                sive integrated moving average, and exponentially weighted
+smoothing” issue [18], with the stacking of Transformer layers,                     moving average [21] being extensively explored. Classical
+variables tend to become increasingly similar, implying that                        machine learning algorithms, such as K-means [22], support
+local anomalous trends are flattened. Thus, DMASA intro-                            vector machines [23], GBRT [24], and Gaussian Mixture
+duces similarity aggregation to segregate irrelevant variables,                     Models [25], have also found applications. Deep learning
+preventing the dilution of anomaly signals and ensuring that                        me

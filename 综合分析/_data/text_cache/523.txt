@@ -1,0 +1,159 @@
+6066                                                   IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+
+
+
+      RLpatch: A Robust Low-Overhead Website
+       Fingerprinting Defense Method Based on
+   Reinforcement Learning Within Sensitive Regions
+   Shuangwu Chen , Member, IEEE, Siyang Chen , Yuxing Wei, Dong Jin , Xiaobin Tan , Member, IEEE,
+                        Xiaofeng Jiang, and Jian Yang , Senior Member, IEEE
+
+
+
+   Abstract—Website Fingerprinting (WF) attacks have posed                     Tor [2] and VPN [3], to encrypt the transmission content
+a serious threat to the anonymity of the onion router (Tor)                    and conceal communication relationships when browsing the
+communication system, as attackers can passively pry into the                  website. Although these PETs reduce privacy threats to some
+encrypted traffic and infer the website visited by users. To defend
+against WF, recent studies focus on adversarial perturbations.                 extent, a local attacker can still pry into which website the
+However, most of them suffer from a high bandwidth overhead                    user is visiting via the website fingerprinting (WF) attack
+and a low defense performance. To address this problem, our                    [4], which poses a significant challenge to the anonymity of
+basic idea is to generate perturbation only on the sensitive                   users’ browsing activities. Recently, Deep Neural Networks
+regions, which can effectively mask the website’s fingerprint, thus            (DNNs) based WF attack models have achieved remarkable
+misleading the WF attack models and reducing the bandwidth
+overhead. In this paper, we formulate a joint optimization                     effectiveness in website identification [5]. It is necessary to
+problem of perturbation position and magnitude by confining the                develop an effective defense method against DNN-based WF
+perturbations within sensitive regions, which is rarely considered             attacks.
+in the literature. We propose a robust low-overhead WF defense                    Previous defenses are mainly divided into obfuscation
+method based on reinforcement learning (RL), named RLpatch.                    and regularization defenses. Obfuscation defenses mislead
+RLpatch identifies the common sensitive regions of various
+surrogate models and adjusts perturbation according to the                     attackers by randomly injecting dummy packets and padding
+query result from a query WF model. It further employs the                     time delay [6], [7]. Regularization defenses interfere with
+positional frequency of perturbations to generate a common                     attackers by shaping traffic traces into a fixed pattern to
+perturbation paradigm for different traces of a same website.                  conceal traffic characteristics [8]. However, these defenses
+Experimental results show that RLpatch achieves higher defense                 induce a high bandwidth overhead and introduce extra time
+performance, lower bandwidth overhead and better robustness
+against adversarial training compared to the state-of-the-art                  delay. Recently, adversarial learning based WF defenses have
+methods.                                                                       revealed that adding tiny adversarial perturbations to the
+                                                                               original traffic traces could confuse the DNN-based WF attack
+   Index Terms—Traffic analysis, website fingerprinting, rein-
+forcement learning, adversarial defense.                                       models [4], [9]. Compared to the previous defenses, they
+                                                                               achieve a high defense performance and a low bandwidth over-
+                                                                               head. To achieve real-time defense, some recent adversarial
+                          I. I NTRODUCTION                                     learning based WF defenses like [10] dynamically determine
+    O MITIGATE the threats of online monitoring and exam-                      packet injection based on each ongoing packet. However,
+T   ination, an increasing number of Internet users are relying
+on using privacy-enhancing technologies (PETs) [1], such as
+                                                                               they need to determine the perturbations in time, which may
+                                                                               degrade the user’s browsing experience. Moreover, existing
+                                                                               adversarial learning based WF defenses have rarely considered
+   Received 10 February 2025; revised 24 June 2025 and 17 August 2025;         the generalization capability of the defense model. As a
+accepted 22 August 2025. Date of publication 26 August 2025; date of current
+version 5 December 2025. This work was supported by the National Natural
+                                                                               result, these defenses may be effective against the known
+Science Foundation of China (Grant No. U23A20275) and the Open Project         WF attack models used for training, but may struggle to
+Program of Guangxi Key Laboratory of Digital Infrastructure (Grant No.         maintain the performance when facing unseen WF attack
+GXDIOP2024001). The associate editor coordinating the review of this article
+and approving it for publication was P. Yu. (Corresponding authors: Dong
+                                                                               models.
+Jin; Jian Yang.)                                                                  To overcome the existing drawbacks, we aim to develop
+   Shuangwu Chen, Siyang Chen, Xiaobin Tan, Xiaofeng Jiang, and                an effective WF defense method that can achieve real-time
+Jian Yang are with the Department of Automation, University of
+Science and Technology of China, Hefei 230026, China (e-mail:
+                                                                               defense with a low bandwidth overhead but also ensure strong
+chensw@ustc.edu.cn;        csy1366@mail.ustc.edu.cn;    xbtan@ustc.edu.cn;     generalization capability across different WF attack models.
+jxf@ustc.edu.cn; jianyang@ustc.edu.cn).                                        We have an insight that WF attack models tend to pay
+   Yuxing Wei is with the Guangxi Key Laboratory of Digital Infrastructure,
+Guangxi Zhuang Autonomous Region Information Center, Nanning 530028,
+                                                                               more attention to some sensitive regions of a traffic trace for
+China (e-mail: weiyustar@163.com).                                             website identification, which often represent the distinctive
+   Dong Jin is with the Institute of Artificial Intelligence, Hefei            fingerprints of a website. By introducing perturbations in the
+Comprehensive National Science Center, Hefei, 230088, China (e-mail:
+kingdon@ustc.edu.cn).
+                                                                               common sensitive regions of multiple WF attack models,
+   Digital Object Identifier 10.1109/TNSM.2025.3602964                         it is possible to reduce overall bandwidth overhead and
+               1932-4537 
+                         c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                      and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+CHEN et al.: RLpatch: A ROBUST LOW-OVERHEAD WF DEFENSE METHOD                                                                  6067
+
+
+
+deceive unseen models. We can further offline train a common       effectiveness and robustness of our method. Section VII
+perturbation paradigm specifically tailored for each website       discusses the deployment issues and limitations of our defense.
+and apply the perturbation to all the live traffic of the          The conclusion is drawn in Section VIII.
+website.
+   In light of the above idea, we propose a robust low-
+overhead WF defense method, named RLpatch. By analyzing                                 II. R ELATED W ORK
+the impact of different regions of traffic traces on the WF        A. WF Attacks
+attack models’ decisions, RLpatch can pinpoint the sensitive          WF attacks in the early stage leveraged expert knowledge
+regions. Afterwards, RLpatch employs reinforcement learning        to analyze the unique statistical features of different target
+(RL) to adjust the positions and magnitude of the adversarial      websites, and employed machine learning classifiers such as
+perturbations according to the query results from a query          KNN [11], random forest [12], and improved support vector
+model. Rather than querying indiscriminately all positions of      machine [13] to identify target websites. Hermann et al.
+the entire trace, RLpatch focuses its query and generate pertur-   [14] were the first to propose the concept of WF attacks,
+bations just on the sensitive regions. To enhance the robustness   which utilized the frequency distribution of packet lengths
+against adversarial training, we introduce a disturbance fac-      to classify websites. However, due to the fixed size (512
+tor, which is unknown to the attackers, into the reward to         bytes) of Tor cells, the recognition accuracy was still far
+increase the diversity of the perturbations. Finally, RLpatch      from satisfactory. Wang et al. [11] combined various features
+aggregates multiple perturbations of a website into a common       including packet ordering, the number of incoming/outgoing
+perturbation paradigm, which serves as a defense strategy          packets, and burst count into a multidimensional feature vector,
+for all traffic traces of the corresponding website. Based on      and utilized a KNN classifier to identify the network traffic.
+the injection positions and the number of dummy packets            To make a step forward, Hayes and Danezis [12] analyzed
+specified by the perturbation paradigm, RLpatch can achieve        the importance of different statistical features using random
+real-time defense for the traffic traces of the corresponding      forests, significantly reducing the number of input features.
+website.                                                           Penchenko et al. [13] proposed CUMUL, which extracted a
+   • We devise a perturbation generator which confines             fixed number of cumulative packet length features from traffic
+      the perturbations within the sensitive regions that are      traces and identified website using an RBF kernel-based SVM.
+      most critical for website identification of multiple            Recent WF attacks usually achieved high recognition accu-
+      surrogate models. Injecting perturbations in these sen-      racy by utilizing deep learning methods to learn the sequence
+      sitive regions can effectively deceive the closed-box        features of target websites automatically with side-channel
+      WF attack model and reduce the bandwidth over-               information. Rimmer et al. [15] employed three types of DNN
+      head, which however is rarely considered in the              architectures, namely SDAE, CNN, and LSTM, for website
+      literature.                                                  fingerprinting. Afterwards, Sirinam et al. [16] developed a
+   • We propose an RL-based framework to learn the optimal         more complex CNN based WF model, which further improved
+      perturbation position and magnitude under the guidance       the attack accuracy. They also examined the effectiveness
+      of reward signal from a glass-box query model. To            of the proposed model against WF defense. Bhat et al.
+      enhance the robustness against adversarial training, we      [17] designed a complex Var-CNN architecture to extract the
+      introduce a random disturbance factor into the reward,       temporal information of traffic traces as meta-features, which
+      which could induce diverse perturbations even for the        were fused with sequence features. Shen et al. [18] proposed
+      same website.                                                a traffic aggregation matrix (TAM) based WF method by
+   • We develop a perturbation aggregation method to find          combining temporal features with sequential features.
+      a common perturbation paradigm for different traces             Moreover, several recent studies have extended traditional
+      of the same website, which enables us to conduct             WF attacks to specific scenarios. Yuan et al. [19] introduced
+      real-time dummy packet injection. By aggregating var-        class incremental learning into WF attacks, enabling the attack
+      ious perturbations, this paradigm further enhances the       model to continuously expand its monitoring scope by learning
+      defense performance against closed-box WF attack             new website classes. Zou et al. [20] proposed Deep Quadruplet
+      models.                                                      Fingerprinting (DQF), which combines metric learning and
+   • We conduct extensive experiments using two widely             meta-learning techniques to effectively tackle the few-shot
+      used datasets to evaluate the performance. Experimental      learning problem in WF attacks. Meng et al. [21] have begun
+      results show that RLpatch achieves a lower attack success    to address the challenges of the multi-tab WF attacks.
+      rate, lower bandwidth overhead and stronger robustness
+      against adversarial training compared to the state-of-the-
+      art methods.                                                 B. WF Defenses
+   The remainder of this paper is organized as follows.               To defeat WF attackers, defenders employ strategies such
+Section II briefly reviews the related work. Section III           as adding dummy packets and delaying packets to alter the
+describes the preliminaries and challenges. Our motivation         traffic patterns generated during website visits, thus confusing
+is introduced in Section IV. Section V gives the details of        the attacker’s classifier. We divide WF defense methods into
+our proposed adversarial WF defense method. Section VI             three categories: obfuscation defenses, regularization defenses
+presents some comparative experiments to demonstrate the           and adversarial defenses.
+6068                                             IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+
+                            TABLE I
+                OVERVIEW OF N OTABLE WF D EFENSE
+
+
+
+
+                                                                       Fig. 1.   The threat model of WF attack and defense.
+
+
+
+                                                                       evaluate each coming packet, leading to significant computa-
+                                                                       tional overhead and time delays.
+   (1) Obfuscation Defenses: The obfuscation defenses                     To enable flexible real-time perturbation injection,
+attempted to confuse attackers’ classifiers by introducing             Dolos [28] proposed generating a universal perturbation for
+uncertainty. By injecting random number of dummy packets               each website. This perturbation is pre-calculated offline and
+or padding random delay between packets, they could ensure       

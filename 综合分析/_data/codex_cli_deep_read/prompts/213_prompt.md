@@ -1,0 +1,1123 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [213] Encoder-Decoder Contrast for Unsupervised Anomaly Detection in Medical Images
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：213
+题名：Encoder-Decoder Contrast for Unsupervised Anomaly Detection in Medical Images
+年份：2023
+DOI：10.1109/tmi.2023.3327720
+来源：IEEE Transactions on Medical Imaging
+PDF：paper/10.1109_TMI.2023.3327720.pdf
+已有粗分类：多媒体、医学、遥感与视频异常检测
+二级关联：其他AI安全与跨域异常检测、入侵检测与网络异常检测
+相关性：弱相关，分数 3
+已有代码状态：已下载；EDC -> source\EDC
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\213.txt
+- 原始字符数：53453
+- 本次发送字符数：53453
+- 是否截断：False
+
+代码包：
+- 仓库：EDC
+  - URL：https://github.com/guojiajeremy/EDC
+  - 状态：downloaded
+  - 本地目录：source\EDC
+  - 顶层结构：README.md、custom_writer.py、datasets/、edc_aptos.py、edc_br35h.py、edc_isic.py、edc_oct.py、methods/、models/、prepare_dataset/、requirements.txt、train_utils.py、utils.py
+  - 主要语言：Python:18
+  - README 标题：EDC、Official PyTorch Implementation of、1. Environments、2. Prepare Datasets、OCT2017、APTOS、ISIC2018、Br35H、3. Run Experiments、Further Improvement
+  - README 运行线索：conda environment and install required packages.；conda create -n my_env python=3.8.12；conda activate my_env；pip install -r requirements.txt；python ./prepare_dataset/prepare_aptos.py --data-folder ../APTOS/original --save-folder ../APTOS；python ./prepare_dataset/prepare_isic2018.py --data-folder ../ISIC2018/original --save-folder ../ISIC2018；python ./prepare_dataset/prepare_br35h.py --data-folder ../Br35H/original --save-folder ../Br35H；python edc_aptos.py
+  - 关键文件：{"依赖环境": ["requirements.txt"], "数据处理入口": ["prepare_dataset/prepare_aptos.py", "prepare_dataset/prepare_br35h.py", "prepare_dataset/prepare_isic2018.py"], "训练入口": ["train_utils.py"]}
+  - 数据集线索：MVTec、Tor、ton、tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+1102
+
+IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 3, MARCH 2024
+
+Encoder-Decoder Contrast for Unsupervised
+Anomaly Detection in Medical Images
+Jia Guo , Shuai Lu , Lize Jia, Graduate Student Member, IEEE, Weihang Zhang ,
+and Huiqi Li , Senior Member, IEEE
+
+Abstract — Unsupervised anomaly detection (UAD) aims
+to recognize anomalous images based on the training set
+that contains only normal images. In medical image analysis, UAD benefits from leveraging the easily obtained normal
+(healthy) images, avoiding the costly collecting and labeling of anomalous (unhealthy) images. Most advanced UAD
+methods rely on frozen encoder networks pre-trained using
+ImageNet for extracting feature representations. However,
+the features extracted from the frozen encoders that are
+borrowed from natural image domains coincide little with
+the features required in the target medical image domain.
+Moreover, optimizing encoders usually causes pattern collapse in UAD. In this paper, we propose a novel UAD method,
+namely Encoder-Decoder Contrast (EDC), which optimizes
+the entire network to reduce biases towards pre-trained
+image domain and orient the network in the target medical
+domain. We start from feature reconstruction approach that
+detects anomalies from reconstruction errors. Essentially,
+a contrastive learning paradigm is introduced to tackle
+the problem of pattern collapsing while optimizing the
+encoder and the reconstruction decoder simultaneously.
+In addition, to prevent instability and further improve performances, we propose to bring globality into the contrastive
+objective function. Extensive experiments are conducted
+across four medical image modalities including optical
+coherence tomography, color fundus image, brain MRI,
+and skin lesion image, where our method outperforms all
+current state-of-the-art UAD methods. Code is available at:
+https://github.com/guojiajeremy/EDC
+Index Terms— Medical anomaly detection, unsupervised learning, feature reconstruction, contrastive learning,
+anomaly localization.
+
+I. I NTRODUCTION
+EEP neural networks have become a popular methodology for analyzing medical images [1], [2], [3]. These
+successes should be attributed not only to the profound
+progress in deep learning techniques but also to a great
+
+D
+
+Manuscript received 31 July 2023; revised 16 October 2023;
+accepted 22 October 2023. Date of publication 26 October 2023; date
+of current version 4 March 2024. This work was supported in part by
+the National Natural Science Foundation of China (NSFC) under Grant
+82072007, in part by the Beijing Natural Science Foundation under Grant
+IS23112, and in part by the Beijing Institute of Technology Research Fund
+Program for Young Scholars. (Corresponding authors: Weihang Zhang;
+Huiqi Li.)
+The authors are with the Beijing Institute of Technology, Beijing
+100081, China (e-mail: guojia.jeremy@gmail.com; lushuaie@163.
+com; 3220212096@bit.edu.cn; zhangweihang@bit.edu.cn; huiqili@bit.
+edu.cn).
+Digital Object Identifier 10.1109/TMI.2023.3327720
+
+number of carefully annotated medical image datasets [4].
+However, the collection and labeling of medical images is
+usually an arduous task, especially for rare diseases [5]. It is
+also difficult to exhaust every possible anomaly for building
+disease screening systems. In health examinations, the amount
+of normal (healthy) subjects usually overwhelms anomalous
+(unhealthy) subjects, making normal image collection much
+easier. Unsupervised anomaly detection (UAD) aims to identify anomalous images based on the training set that contains
+only normal images. Recently, UAD has attracted increasing
+interest in medical image analysis [5], [6], [7].
+Most UAD methods attempt to learn the distribution of
+available normal samples. Pixel reconstruction methods [5],
+[7], [8], [9], [10] train auto-encoders or generative adversarial networks (GAN) [7] from scratch to reconstruct normal
+images, relying on the hypothesis that the networks trained
+on normal images can only reconstruct normal regions, but
+fail for anomalous regions. However, recent studies [11], [12]
+suggest that anomalous regions can also be well constructed
+when normal and anomalous regions share similar pixel values
+or anomalies are too subtle. Accordingly, feature reconstruction methods reconstruct features from pre-trained encoders
+instead of raw pixels, because learned features provide more
+discriminative and noise-free representation [11], [12], [13].
+To prevent the reconstruction networks from converging to a
+trivial solution, i.e., pattern collapse, the parameters of the
+encoders should be frozen during training [11]. However, the
+semantic gap between natural images (usually ImageNet [14])
+on which the frozen networks were pre-trained and medical
+images in various modalities causes poor transfer ability.
+Memory matching methods [15], [16], [17], [18] memorize
+all anomaly-free features extracted from pre-trained networks
+in training, and match them with test samples during inference. Apart from the expensive computational overhead, these
+methods also struggle in transfer as the feature extractor is not
+optimized in the target domain.
+In this study, our motivation is to reorient the large-scale
+pre-trained encoders to target medical UAD datasets without
+losing their ability to extract discriminative features. We propose a novel UAD method, namely Encoder-Decoder Contrast
+(EDC), as illustrated in Fig. 1(c). The essence of contrastive
+learning (Fig. 1(a)) and feature reconstruction UAD (Fig. 1(b))
+are elegantly combined, orienting the network in the medical
+domain by training all parameters end-to-end.
+
+1558-254X © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+GUO et al.: ENCODER-DECODER CONTRAST FOR UAD IN MEDICAL IMAGES
+
+1103
+
+1) To address the poor transfer performance of the frozen
+pre-trained encoder, we propose a simple yet effective
+UAD method for detecting medical anomalies, combining the key elements of contrastive learning and feature
+reconstruction.
+2) We introduce the stop-gradient operation to optimize the
+entire network in target medical domains without feature
+collapse.
+3) We design a new objective loss function, introducing
+globality into cosine distance to prevent instability and
+divergence.
+II. R ELATED W ORK
+A. Unsupervised Anomaly Detection
+
+Fig. 1.
+Comparison of three similar architectures. (a) Contrastive
+learning [19], [20] for self-supervised representation learning. It maximizes the similarity between the representations of two augmentations
+of one image (x and x′ ) while trying to avoid collapsing solutions (all
+inputs encoded to a constant). (b) Feature reconstruction [11], [13].
+It reconstructs 2-D features extracted by frozen pre-trained encoder for
+anomaly detection. (c) Our proposed EDC prototype. It combines 2-D
+reconstruction with the elements of contrastive learning, i.e. training
+encoder, stop-gradient, and global distance. Here, 1-D and 2-D indicate
+the distance is calculated by 1-D feature representations RC and 2-D
+feature map RC×H×W , respectively.
+
+First, we start with the feature reconstruction-based UAD
+methods that detect anomalies by reconstruction errors
+between the encoder and the reconstruction network (decoder)
+[11], [13]. Second, we explain why the direct optimization of
+encoder causes feature collapse by probing the behavior of
+encoder features. Accordingly, we introduce the key element
+of contrastive learning into feature reconstruction, building
+a feature map contrast paradigm to train the encoder and
+decoder jointly on medical images. Specifically, we target
+the essential operation, stop-gradient, that enables contrastive
+representation learning methods [19], [20] to train without
+collapse. Third, we observe that optimizing the encoder makes
+the training procedure extremely unstable, which causes degradation in the end. Inspired by global average pooling (GAP),
+a new optimization objective, namely global cosine distance,
+is proposed to make the contrast in a global manner to stabilize
+the optimization and further improve performances.
+We evaluate EDC with extensive experiments on four medical image datasets, including optical coherence tomography
+(OCT) [21], color fundus image [22], brain MRI [23] and
+skin lesion image [24]. Without elaborately designed modules
+or pseudo anomalies, our proposed method achieved superior
+performance compared with previous state-of-the-arts. On the
+widely used OCT2017 benchmark, proposed method achieves
+nearly perfect scores (AUC=99.56%), reducing the error of
+previous best by three-quarters. The contributions of this study
+can be summarized as:
+
+Unsupervised anomaly detection methods rely on learning the distribution of available normal samples. Classical
+approaches focus on utilizing machine learning methods for
+building a one-class classifier, such as one-class support vector
+machine (OC-SVM) [25] and support vector data description
+(SVDD) [26]. With the advance of deep learning, most recent
+works apply neural networks on UAD tasks. Reconstructionbased methods are under the hypothesis that the networks
+trained on normal images can only reconstruct anomaly-free
+regions, but fail for anomalous regions [27]. Within the reconstruction paradigm, pixel reconstruction methods are trained
+from scratch to reconstruct normal pixels via auto-encoder
+(AE) [10], [27], variational auto-encoder (VAE) [9], [28], and
+generative adversarial network (GAN) [5], [7], [29]. Such
+methods detect anomalies by the pixel value errors between
+input images and reconstructed images. Recent studies suggest
+that unseen anomalous regions can also be well restored when
+normal and anomalous regions share similar pixel values or
+the anomalies are too subtle [11], [13].
+Most advanced methods utilize networks pre-trained on
+large-scale datasets (ImageNet [14]) for extracting discriminative and informative feature representation in UAD tasks.
+Because the available UAD training set is usually small
+and contains only one class of image, i.e., normal samples,
+the usage of a powerful pre-trained network alleviates the
+need for training networks from scratch with limited supervision. Feature reconstruction methods reconstruct features from
+pre-trained encoders instead of raw pixels [11], [12], [30].
+To prevent the reconstruction networks from converging to a
+trivial solution, i.e., pattern collapse, the parameters of the
+encoders are frozen during training [13]. Feature distillation
+is a special configuration of feature reconstruction, where the
+student network mimics the output features of the pre-trained
+teacher network with the same input of normal images [11],
+[31], [32]. The above two approaches are also based on the
+hypothesis that the models trained on normal samples only
+succeed in predicting features of normal regions. Memory
+matching methods [15], [16], [17] memorize all (or their
+reduced subset) normal features extracted from pre-trained
+encoders and match them with test samples during inference.
+Since these methods require memorizing, processing, and
+matching nearly all features from training samples, they are
+computationally expensive in both training and inference,
+especially when the training set is large. Pseudo-anomaly
+
+1104
+
+IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 3, MARCH 2024
+
+methods generate artificial defects on normal images to imitate
+anomalous images, converting UAD to supervised classification [33] or segmentation task [34]. These methods deeply rely
+on how well the pseudo anomalies match real anomalies [11],
+which makes it hard to generalize to different datasets. Another
+type of paradigm, i.e., normalizing-flow, models the likelihood
+(distribution) function of normal samples. Such methods [35],
+[36], [37] deploy a sequence of invertible and differentiable
+mappings to transform a complex distribution of extracted
+image features into a standard normal distribution, and detect
+anomalies by estimating the likelihood of features.
+There are considerable semantic gaps between large-scale
+natural images on which the frozen networks were pre-trained
+and the medical images in various modalities. Therefore,
+methods based on pre-trained networks struggle in transferring
+to medical images as the feature encoders are not optimized
+in the target medical domain. There are some efforts [6], [38],
+[39] paying attention to first pre-train a domain-specific feature extractor on normal samples via self-supervised learning
+and then run aforementioned UAD methods. However, such
+two-step approaches require an additional pre-text training
+phase and a carefully designed pre-text task, which limits efficiency and generality. In this work, we mainly focus on orienting the network in the medical domain during UAD training.
+
+
+ N
+available, given as Dtrain = (x i , yi }i=1
+, yi ∈ {0}, where
+xi is the i th sample with its label yi . During test, Dtest =
+M , y ∈ {0, 1} (0 for normal, 1 for anomalous)
+(x i , yi }i=1
+i
+containing both normal and anomalous images is given. The
+goal is to build a model using Dtrain to distinguish (x, 1)
+from (x, 0) in Dtest , while localizing anomalous regions as
+explanations. As usual, no validation set is used in UAD
+settings because no anomalous samples are available in the
+training data which includes the validation set.
+Instead of introducing our proposed method directly,
+we present an exploration journey starting from the
+conventional feature reconstruction (config. 1) to our
+Encoder-Decoder Contrast with global cosine distance (EDC,
+config. 4) in a problem and solution manner. We believe such
+exploration will motivate researchers to rethink the role of
+encoders in UAD. In this section, the exploration is conducted
+on the APTOS dataset. By convention, area under the receiver
+operating characteristic (AUC) is used as the primary evaluation metric.
+
+B. Anomaly Detection in Medical Images
+UAD methods for medical image are mostly adaptations or
+combinations of previously discussed approaches. AnoGAN
+[8] and f-AnoGAN [7] utilize GAN to detect anomalies in
+medical images. VAE is adopted for UAD on ultra-sound
+images [28]. A hybrid framework SALAD [5] was proposed
+to combine GAN and pseudo-anomaly. Normal images are
+first augmented to carry the artificial anomaly through pixel
+corruption and pixel shuffling. The fake abnormal images and
+normal ones are fed to the GAN for learning discriminative
+feature representations. This method demands strong prior
+knowledge of the real anomaly type. Most recently, SQUID
+[40] was proposed for detecting anomalies in chest x-ray,
+which is a GAN-based in-painting network with memory
+bank. ProxyAno [41] makes use of an auto-encoder with a
+memory bank in the middle to reconstruct super-pixels instead
+of raw pixels. STMC [42] proposed to memorize texture and
+structure information to avoid reconstructing anomalies too
+well. SCVAE [43] is proposed for retinal OCT images by
+introducing both spatial and contextual constraints in the latent
+space of VAE to amplify the anomalous reconstruction errors.
+The above methods are trained from scratch, without the help
+of pre-trained feature extractors. Self-supervised learning [44]
+is used to pre-train networks on medical images for better
+transfer [6] as supplementary to the base UAD methods. AEflow [37] was proposed as a normalizing flow-based AE for
+modeling the distribution of features extracted by an ImageNet
+encoder. The method also suffers from the transfer ability of
+the frozen pre-trained feature encoder.
+
+A. Config. 1: Feature Reconstruction, A Baseline
+First, we build a simple feature reconstruction-based UAD
+approach, encoder-decoder reconstruction, which is the simplified version of RD4AD [11] without the multi-scale feature
+bottleneck. This configuration consists of a pre-trained encoder
+and a reconstruction decoder, as depicted in Fig. 2(a). The
+encoder is frozen, aiming to extract informative feature maps
+with different spatial sizes. The decoder is the reverse of the
+encoder, i.e., the down-sampling operation at the beginning of
+each layer is replaced by up-sampling. During training, the
+decoder learns to reconstruct the output of the encoder layers
+by maximizing the similarity between feature maps. During
+inference, the decoder accurately reconstructs anomaly-free
+regions of the feature maps but fails for anomalous regions
+as the decoder has never seen such samples. Without loss of
+generality, we consider the standard 4-layer ResNet [45] as
+our encoder and reconstruct the output of the first three layers.
+k
+k
+k
+Mathematically, let f Ek , f Dk ∈ RC ×H ×W denote the output
+feature maps from the k-th layer of the encoder and decoder
+respectively, where C k , H k , and W k denote the number of
+channels, height, and width of the k-th layer, respectively.
+As illustrated in Fig. 2(e), the point-wise cosine distance [11],
+[32] is used to measure the difference between f Ek and f Dk
+k
+k
+point by point, obtaining a 2-D anomaly map Mk ∈ R H ×W :
+Mk (h, w) = 1 −
+
+f Ek (h, w)T · f Dk (h, w)
+f Ek (h, w)
+
+f Dk (h, w)
+
+,
+
+(1)
+
+where ∥·∥ is ℓ2 norm, and a set of (h, w) locates a spatial point
+in the feature map. A large value in Mk indicates anomaly
+at the corresponding position. Final anomaly map Mano is
+obtained by up-sampling all Mk to the same size and makes
+an average, as:
+Mano =
+
+3
+X
+
+R(Mk ),
+
+(2)
+
+III. M ETHOD : F ROM R ECONSTRUCTION TO C ONTRAST
+
+k=1
+
+First, we give the definition of unsupervised anomaly detection. During training, a dataset with N normal images is
+
+where R denotes the up-sampling operation. The maximum
+or mean value of Mano is taken as the anomaly score for the
+
+GUO et al.: ENCODER-DECODER CONTRAST FOR UAD IN MEDICAL IMAGES
+
+1105
+
+Fig. 2. Training configurations. (a) config. 1, encoder-decoder reconstruction. (b) config. 2, encoder-decoder reconstruction without freezing encoder.
+(c) config. 3, encoder-decoder contrast. (d) config. 4 (Ours), encoder-decoder contrast with global cosine distance. (e) Illustration of point-wise cosine
+distance and global cosine distance.
+
+Fig. 3. Training record. (a) Test AUC. (b) Training loss. (c) Feature diversity of the 3rd encoder layer. (d) Feature diversity of the 2nd encoder layer.
+
+image. During training, the anomaly maps are minimized on
+normal images by the point-wise cosine distance loss, given
+as:
+L=
+
+3
+X
+k=1
+
+Hk Wk
+
+1 XX
+1−
+k
+H Wk
+h=1 w=1
+
+f Ek (h, w)T · f Dk (h, w)
+f Ek (h, w)
+
+f Dk (h, w)
+
+.
+(3)
+
+The AUC of test set is presented by the blue line in Fig. 3(a),
+indicating that config. 1 can serve as a solid baseline.
+B. Config. 2: Unfreeze Encoder
+It seems straightforward to adapt the network in the target medical domain by jointly optimizing the encoder and
+decoder, as illustrated in Fig. 2(b). However, previous studies
+suggest that training encoders would lead encoders to extract
+indiscriminative features that are easy to reconstruct [13],
+which is also described as pattern collapsing or converging to
+trivial solution [11]. In this configuration, we observe a similar
+
+phenomenon that the training loss quickly decreases to nearly
+zero, as shown in Fig. 3(b). Though the network converges
+to an easy solution, the AUC does not degrade completely as
+previously expected but rises slowly to a comparable result as
+in Fig. 3(a).
+To inspect the behavior of the encoder feature, we examine
+the diversity of feature maps by probing the standard deviation
+(std) of f Ek (h, w)/ f Ek (h, w) 2 . The larger the std, the more
+discriminative the feature, and the more distinctive between
+normal and anomalous regions. We plot the feature diversity
+of the 2nd and 3rd encoder layers during training in Fig. 3(c)
+and Fig. 3(d), respectively. The std of config. 2 drops quickly
+during training, while the std of config. 1 keeps relatively
+constant as a comparison. In addition, the std of config.
+2 does not completely collapse to zero, which explains the
+passable AUC performance. The experiment shows that the
+trivial solution is attributed to the degeneration of the features
+extracted by the optimized unfrozen encoder. It is noted that
+the std starts from different values because of the different
+modes of batch normalization (BN) [46] during training. BN is
+
+1106
+
+IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 3, MARCH 2024
+
+Fig. 4. Optimization of cosine distance losses. The black arrows represent optimization directions.
+
+in eval mode in config. 1 using pre-trained running mean and
+variation, and it is in train mode in other configurations using
+batch mean and variation.
+C. Config. 3: Encoder-Decoder Contrast
+Contrastive learning [19], [20], [44] for self-supervised representation learning (SSL) maximizes the similarity between
+the representations of two augmentations of one image while
+trying to avoid collapsing solutions (all inputs are encoded to a
+constant value). It has been proved that the stop-gradient operation plays an essential role in preventing collapsing for SSL
+methods that rely only on positive pairs [19]. Interestingly,
+we found that contrastive methods can be explained from the
+perspective of feature reconstruction. Take SimSiam [19] as
+an example, the predictor (a multi-layer perceptron, MLP) can
+also be regarded as a reconstruction network that reconstructs
+the representation of one view x to match the representation
+of another view x ′ . Vice versa, feature reconstruction UAD
+can be converted to contrastive learning as well, regarding the
+reconstruction network as a predictor. Literally, “reconstruction” means the reconstructed object is constant, while the
+objects of “contrast” are adaptive during training.
+To this end, we introduce the stop-gradient operation into
+encoder-decoder reconstruction, transforming it into a contrastive learning paradigm. In this configuration, the network
+is optimized by contrasting the feature maps of the encoder
+and decoder, as shown in Fig. 2(c). The gradients propagate,
+instead of directly into the encoder, back into the encoder
+through the decoder. It is implemented by modifying (3) as:
+
+3
+Hk Wk
+X
+sg f Ek (h, w)T · f Dk (h, w)
+1 XX
+
+L=
+1−
+,
+HkWk
+sg f Ek (h, w)
+f Dk (h, w)
+k=1
+
+h=1 w=1
+
+(4)
+where sg denotes the stop-gradient operation. The encoder features are treated as constants in (4), but still optimized by the
+gradients of L from the decoder. The training of this configuration can be seen as a mutual reinforcement. The optimization
+of f Dk makes both the encoder and decoder more informative in
+the task image domain, while the more informative f Ek requires
+further optimization of f Dk . In Fig. 3(c) and (d), we plot
+the feature std, showing that config. 3 can constantly extract
+more discriminative features. The performance rises quickly
+
+at the beginning of the training; however, we observe extreme
+instability during the training with “dips” in the AUC curve,
+as shown by the green curve in Fig. 3(a). The high and stable
+feature diversity indicates that this instability is not caused by
+the degradation of features as in config. 2.
+D. Config. 4: Global Cosine Distance
+We are now one step away from the last success. The
+config. 3 proves to be effective to extract discriminative feature
+representation on the target domain by contrasting. However,
+the instability in training limited its performance, especially in
+the UAD setting where validation set is not available for selecting the best checkpoint. In addition, previous studies suggest
+that the instability in neural network training harms the final
+performance, though catastrophic failure (e.g., divergence) is
+not caused [47]. Therefore, it is of great importance to find
+the reason and the solution to the instability.
+Recalling the structure of SSL methods, there is still one
+component missing: globality. It is a convention to use global
+average pooling (GAP) to pool the 2-D feature map of the
+last network layer to a 1-D representation, in both supervised
+classification and SSL approaches. In UAD, the use of GAP
+will simply mess up all feature points together, losing the
+ability to distinguish normal and anomalous regions, as shown
+in Fig. 4(b). Therefore, we try to bring globality into the loss
+function directly. Let F denote a flatten operation that casts a
+−
+
+2-D feature map f ∈ RC×H ×W to a vector f ∈ RC H W . Our
+proposed global cosine distance loss is given as:
+
+T 
+
+3
+sg F f Ek
+· F f Dk
+X
+ 
+
+Lglobal =
+1−
+(5)
+sg F f Ek
+F f Dk
+k=1
+The calculation difference between Lglobal and point-wise L
+is depicted in Fig. 2(e). In Lglobal , a variation of one feature
+point will alter the whole representation vector and further
+affects the cosine distance, as opposed to the point-by-point
+independent cosine distance in L. Intuitively, Mk (1) is also
+minimized along with the minimization of Lglobal . It is easy
+to prove that minimizing global cosine distance to 0 equals
+
+to minimizing Mk to 0. For simplicity,
+we denote F f Ek by
+
+A = [a1 , . . . , a N ], and F f Dk by B = [b1 , . . . , b N ], where
+each ai and bi represent feature points f Ek (h, w) and f Dk (h, w)
+
+GUO et al.: ENCODER-DECODER CONTRAST FOR UAD IN MEDICAL IMAGES
+
+1107
+
+at the same location. Therefore, the Lglobal of the k-th layer
+can be given as:
+
+2
+AT · B
+1
+A
+B
+1−
+=
+−
+∥A∥ ∥B∥
+∥B∥
+2 ∥A∥
+A
+1
+B
+.
+=
+−
+∥B∥
+2 ∥A∥
+If the above equation equals to 0,
+A
+B
+ai
+bi
+=
+,
+=
+, ∀i ∈ 1 . . . N .
+∥A∥
+∥B∥
+∥A∥
+∥B∥
+As ai and bi are linearly correlated, their cosine distance is
+0. Thus, Mk is 0 on each location. Though losses are not
+completely optimized to 0 in neural network training, we still
+use point-wise Mano as anomaly map just like previous
+configurations.
+The AUC record is shown in red in Fig. 3(a), exceeding
+all previous configurations with stability. We coarsely make a
+hypothesis on how Lglobal work: the loss landscape of Lglobal
+is flatter than L, especially when both the encoder and decoder
+are included. In config. 2 and 3, the “dips” in the AUC curve
+are sometimes accompanied by “spikes” in the training loss
+curve, as shown in Fig. 3, which implies the optimizer encounters a cliff in the loss landscape. The rough loss landscape of
+L can be caused by the point-by-point distance, as depicted in
+Fig. 4(a). The fitting of one region may cause under-fitting of
+the others, and further disturbs the optimization. Lglobal can
+be seen as the distance between manifolds of feature points,
+as depicted in Fig. 4(c), which measures the consistency
+globally instead of excessively focusing on individual regions.
+The real mechanism can be more complicated and is still under
+further investigation.
+IV. E XPERIMENTS
+A. Datasets
+OCT2017 is an retinal optical coherence tomography
+(OCT) dataset [21]. The dataset is labeled into four classes:
+normal, drusen, DME, and CNV. The latter three classes are
+considered anomalous. The dataset was already separated into
+training and test set. The official training set contains 26,315
+normal images and the official test set contains 1,000 images.
+It is noted that the 2-D images are slices from the original 3-D
+imaging modality. Images are resized to 256 × 256 pixels.
+APTOS is a color fundus image dataset, available as the
+official training set of 2019 APTOS blindness detection challenge [22]. The dataset contains 3662 images with annotated
+grade 0-4 to indicate different severity of diabetic retinopathy.
+Grade 0 is healthy and grade 1 to 4 are diabetic retinopathy
+with increasing severity, giving 1805 normal images and
+1,857 anomalous images. For data balance in the test set,
+we randomly selected 1,000 normal images as our training set
+and the rest 2,662 images (805 normal, 1,857 anomalous) as
+the test set. Images are preprocessed to remove the redundant
+background and then resized to 256 × 256 pixels.
+Br35H is a brain MRI dataset on Kaggle [23]. It contains
+1,500 2-D image slices that are tumorous and 1,500 images
+that are non-tumorous. We randomly selected 1,000 nontumorous images as our training set and the rest 2,000 images
+
+Fig. 5. Dataset Exclusion. There are medical-irrelevant differences
+between normal and anomalous images in some datasets. There are
+calibration marks in most pneumonia X-rays, but not in healthy X-rays
+in Chest X-ray (first row). The left-down corner of normal and poly-p
+endoscope images is in different colors in HyperKvasir (second row).
+
+as the test set. It is noted that the 2-D images are slices
+from the original 3-D imaging modality. Images are resized
+to 256 × 256 pixels.
+ISIC is a skin disease dataset, available as task 3 of
+ISIC2018 challenge [24]. It contains seven classes and we
+take NV (nevus) class as normal samples and the rest classes
+as anomalous samples, following [37]. The official training
+set contains 6,705 normal images. The official validation set
+is used as test set, which includes 193 images. Images are
+resized to 256 × 256 and center cropped to 224 × 224 pixels.
+Dataset Exclusion: For the dataset used in previous UAD
+studies, we found that Chest X-ray [21] used in [5], [37], and
+[40] and HyperKvasir [48] used in [6] contain anomalous
+images that differ from normal images not only in diseased
+anomalies but also in the aspect of medically irrelevant
+artifacts, e.g. calibrations, labels, and different imaging
+devices, as shown in Fig. 5. It might be caused by difference
+sources when collecting healthy and unhealthy samples.
+In our preliminary exploration, we found that UAD methods
+do pay strong attention to those regions. Though we achieved
+promising AUC of 89.6% and 98.5% respectively on these
+datasets, we do not recommend utilizing such datasets for
+fair comparison.
+B. Expermiental Settings and Metrics
+Standard ResNet50 pre-trained on ImageNet is utilized
+as the encoder by default. The decoder is the upside-down
+version of the encoder without layer 4, i.e., the down-sampling
+convolution with stride 2 at the beginning of each layer
+is replaced by an up-sampling interpolation followed by a
+convolution with stride 1. AdamW optimizer [49] is utilized
+with β=(0.9,0.999) and weight decay=1e-4. The learning rates
+(lr) of the encoder and decoder are separately searched in {1e3, 5e-4, 1e-4} and {1e-4, 5e-5, 1e-5} on each dataset, while
+keeping the lr of decoder lower than the lr of encoder. The
+
+1108
+
+selected encoder lr are 5e-4, 5e-4, 5e-4, 1e-4 for OCT2017,
+APTOS, Br35H, and ISIC, respectively. The selected decoder
+lr are 1e-5, 1e-5, 5e-5, 1e-5, respectively. The networks are
+trained with the batch size of 32 for 1,000, 4,000, 6,000,
+and 500 iterations on APTOS, Br35H, OCT2017, and ISIC.
+In ISIC, normal and anomalous images are both with lesions
+and they differ by their overall appearance; in the other three
+datasets, anomalous images differ from normal images by local
+lesions on the healthy background. Therefore, we take the
+mean of Mano as the image anomaly score (indicates overall
+anomaly) for ISIC and the maximum value of Mano (indicates
+local anomaly) for the other three datasets. By default, all
+batchnorm layers (BN) is in train mode during training.
+However, we observe instability when setting the encoder
+BN to train mode on OCT2017 (probably because of the
+contrasting white background); therefore, we set it to eval on
+OCT2017. Experiments are conducted on NVIDIA GeForce
+RTX3090 GPUs and PyTorch.
+We adopt Area Under Receiver Operation Characteristic
+(AUC), F1-score (F1), accuracy (ACC), sensitivity (SEN), and
+specificity (SPE) as the evaluation metrics. Their definitions
+are given as followed:
+SEN = T P/(T P + F N ) S P E
+= T N /(F P + T N )
+PRE (precision) = T P/(T P + F P)
+ACC = (T P + T N )/(T P + T N + F P + F N )
+F1 = 2 ∗ P R E ∗ S E N /(P R E + S E N )
+where TP, TN, FP, and FN are true positives, true negatives,
+false positives, and false negatives, respectively. AUC is the
+area under SEN - (1−SPE) curve across different operating
+thresholds. AUC, F1, and ACC are the evaluation of overall
+performance, while SEN and SPE focus on the positive
+samples and negative samples, respectively. Following [5] and
+[37], the operating threshold of F1, ACC, SEN, and SPE is
+determined by the optimal value of F1.
+C. Comparison to State-of-the-Arts
+We compare our method with previous state-of-the-arts
+(SOTA) on four medical datasets. Auto-Encoder and VAE
+[9] are basic pixel reconstruction methods. GANomaly [29],
+f-AnoGAN [7], and SALAD [5] are pixel reconstruction methods based on GAN. ProxyAno [41] is based on auto-encoder
+with memory bank. SCVAE [43] is based on VAE. MBUNet [50] is specifically designed for OCT images via layer
+segmentation. SSD [39] pre-train a domain-specific feature
+encoder on normal samples via contrastive learning. The
+aforementioned methods train networks from scratch on the
+target training set, while the following methods utilize pretrained encoders. STFPM [32] and MKD [31] are feature
+distillation methods. RD4AD [11] is a feature reconstruction
+method. PaDiM [15] is a memory matching method. DifferNet
+[35], Fastflow [36], and AE-flow [37] are methods based on
+normalizing flow. We take the results of compared methods
+from the original papers or papers that report the performances
+if available. Otherwise, we reproduce the method if code is
+
+IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 3, MARCH 2024
+
+TABLE I
+A NOMALY D ETECTION P ERFORMANCE (%) ON OCT2017
+
+open source. The results of our EDC are the averages of
+the last iteration of three runs. Some works report their best
+performance during training [37]; therefore, we report our
+best checkpoint (in AUC, check every 100 iterations) during
+training as well for fair comparison (denoted with †).
+1) Results on OCT2017: We first evaluate our method
+on OCT2017. The experimental results are presented in
+Table I. Among the compared methods, GAN-based methods
+outperform AE-based methods among pixel reconstruction
+paradigms. In addition, methods that make use of pre-trained
+feature encoders (STFPM, MKD, PaDiM, AE-flow and Ours)
+generally outperform methods that train networks from scratch
+(AE, VAE, GANomaly, f-AnoGAN, SALAD, ProxyAno,
+SCVAE, MBU-Net, SSD), indicating that medical UAD
+benefits from large-scale pre-training. The advanced methods proposed for general and industrial anomaly detection
+(STFPM, MKD, and PaDiM) also generalize promisingly well
+on OCT2017.
+Our method producesan superior AUC of 99.56%, F1 of
+98.6%, and ACC of 97.9%, exceeding previous SOTA AE-flow
+by 1.41%, 2.24%, and 3.48%. In the aspect of error (1)AUC), we achieve 0.44%, reducing the previous SOTA error
+by 76.2%.
+2) Results on APTOS: Anomaly detection on APTOS is
+a significantly harder task, as the lesions in retinal fundus
+images can be extremely inconspicuous, especially for mild
+and moderate diabetic retinopathy. The experimental results
+are presented in Table II. Among competing methods, PaDiM
+cannot perform as well as in OCT2017 because it models
+the features based on the position. However, fundus images
+are not registered with the same anatomical position. Though
+PaDiM produces the best SEN, it sacrifices the SPE with a
+low anomaly threshold. Surprisingly, other methods for general
+anomaly detection outperform all previous medical anomaly
+detection methods, suggesting that researchers should also pay
+close attention to the latest UAD approaches for natural images
+while developing medical UAD methods.
+Nevertheless, our EDC achieves the best results in all metrics except SEN. Specifically, EDC outperforms the runner-up
+counterparts STFPM by 1.82% in AUC, 1.2% in F1, and
+
+GUO et al.: ENCODER-DECODER CONTRAST FOR UAD IN MEDICAL IMAGES
+
+TABLE II
+A NOMALY D ETECTION P ERFORMANCE (%) ON APTOS
+
+TABLE III
+A NOMALY D ETECTION P ERFORMANCE (%) ON B R 35H
+
+1.73% in ACC. In the aspect of AUC error, we achieve 4.59%,
+reducing the previous best error by 28.4%. Though EDC does
+not perform best in SEN, it produces a favorable SEN-SPE
+trade-off.
+3) Results on Br35H: Anomaly detection on Br35H is a
+relatively simple task, as tumors are generally conspicuous
+in this MRI dataset. The experimental results are presented in
+Table III. The performance of SOTA methods are comparatively good, with four methods (MKD, PaDiM, RD4AD and
+Ours) exceeding 98% in AUC.
+Our method produces an excellent AUC of 99.85%, F1 of
+99.57%, and ACC of 99.35%, outperforming previous SOTA
+RD4AD by 0.73%, 0.53%, and 0.8%. In the aspect of AUC
+error, our EDC presents only 0.15%, reducing the previous
+error by 83%.
+4) Results on ISIC: For the ISIC skin lesion image dataset,
+the normal class (nevus) is a kind of benign lesion, instead of
+a completely normal object like other datasets (plain skin in
+this scenario), which makes normal images easily mistaken
+with anomalous images. The experimental results are presented in Table IV. All compared methods present relatively
+undesirable results (AUC under 90%), including the most
+recently proposed AE-flow in which ISIC is first proposed as
+a UAD dataset. Methods based on normalizing flow generally
+outperform GAN-based pixel reconstruction methods, which
+may also be attributed to the pre-trained feature extractor
+utilized in such methods.
+The results of our last iteration are already comparable
+to previous SOTA AE-flow that reports their best results
+during training. In the aspect of best checkpoints, we achieve
+superior results in all metrics compared to AE-flow. However,
+
+1109
+
+TABLE IV
+A NOMALY D ETECTION P ERFORMANCE (%) ON ISIC
+
+the performance is still less satisfactory than other image
+modalities. We argue that the setting of UAD is designed for
+detecting anomalies in healthy objects, which is not suitable
+for the classification of different diseases or lesions. Most
+UAD methods construct the anomaly detection paradigm by
+segmenting unseen regions (lesions) on seen backgrounds
+(objects); however, it is less reasonable to segment unseen
+lesions out of normal lesions. Besides, the intra-class variation
+is more significant than other image modalities, causing the
+false-positive activation of irrelevant objects like hairs and
+pores. Therefore, such tasks require investigation to further
+improve performance.
+D. Visualization of Anomaly Localization
+Localization of lesions is important to the explanation of
+detection in clinical disease screening. We present the anomaly
+maps of anomalous samples by min-max-normalizing each
+Mano to 0-1 and overlaying it on the input image. The
+visualization result is shown in Fig. 6. Our method produces
+strong responses to diseased regions. It is also observed that
+EDC detects large lesions by their edge. However, the anomaly
+map of the anomalous image in ISIC is less instructive,
+activating lesions as well as other noises, which accounts for
+the unfavorable anomaly detection performance.
+E. Ablation Study
+In this section, we conduct further ablation studies on
+APTOS and OCT2017 to evaluate the contribution made by
+each proposed element, as shown in Table V. Each result is
+reported with a single run. Because some configurations are
+extremely unstable in training, we report both the last and the
+best AUC during training. Starting from conventional feature
+reconstruction (config. 1), optimizing the encoder and decoder
+together (config. 2) causes a small performance drop on
+APTOS but a complete collapse on OCT2017. By introducing
+the stop-gradient operation to construct a contrastive learning
+paradigm (config. 3), the performance is recovered and further
+improved. Finally, replacing point-wise cosine distance with
+the proposed global cosine distance yields the best result
+(config. 4, Ours). In addition, we show that the global cosine
+distance can improve the baseline feature reconstruction alone
+(config. 1 + Lglobal ), indicating the generality of the proposed
+objective function.
+
+1110
+
+IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 3, MARCH 2024
+
+Fig. 6. Visualization of anomaly maps. The first column from the left presents normal images as references. On OCT2017, APTOS, and Br35H,
+anomalous regions are indicated by red arrows. On ISIC, the whole foreground lesions are considered to be anomalous.
+TABLE V
+A BLATION S TUDY ON APTOS AND OCT2017
+
+By default, the predicted anomaly map Mano is the ensemble of all anomaly maps M1 , M2 , and M3 . We further
+explore the detection performance of the anomaly map of each
+layer, as shown in Table VI. We observe that different dataset
+favors different layer. M3 yields the best result in APTOS,
+while M2 yields the best result in OCT2017. As each layer
+has a different receptive field, they are sensitive to different
+
+kinds and sizes of anomalies. The superior result is obtained
+by ensemble the anomaly maps of all layers to detect a wider
+range of anomalies.
+In addition, we test a variety of encoder backbones,
+i.e., ResNet50 (default), ResNet34, WideResNet50 [51], and
+ResNeXt50 [52]. The corresponding decoder is the reversed
+version of the encoder. It is noted that different encoders
+
+GUO et al.: ENCODER-DECODER CONTRAST FOR UAD IN MEDICAL IMAGES
+
+1111
+
+TABLE VI
+P ERFORMANCE (AUC, %) OF A NOMALY M APS OF D IFFERENT L AYERS
+
+jointly optimizing all parameters end-to-end without pattern
+collapse and training instability. In addition, we propose a
+new objective function, namely global cosine distance, to make
+the contrast between feature point manifolds to stabilize the
+optimization and further improve performances. Extensive
+experiments demonstrate our superiority, setting a new stateof-the-art on four public datasets. The proposed EDC with 2-D
+encoder is currently limited to 2-D input. For application on
+3-D modalities, our method can be applied to the 2-D slices
+of 3-D images and the results are aggregated. The proposed
+method also has the potential to extend to 3-D input given
+a pre-trained 3-D encoder. The idea of optimizing encoders
+may further boost the research of UAD methods not only in
+medical images but also in other image applications that are
+far from natural image domain.
+
+TABLE VII
+P ERFORMANCE (AUC, %) OF D IFFERENT E NCODER B ACKBONES
+
+R EFERENCES
+
+Fig. 7. Performance on OCT2017 with varied numbers of training
+images.
+
+may favor different optimal learning rates. We set the encoder
+learning rate of ResNet50, ResNet34, ResNext50 to 1e-5
+(default), and WideResNet50 to 5e-5. Results are shown in
+Table VII. Different backbones produce comparable results,
+suggesting the generality of our method.
+F. Training With Fewer Samples
+Building UAD models with a limited number of normal
+samples is a relevant setting for real-world scenarios, e.g.,
+after a piece of new imaging equipment is launched in a
+hospital. Therefore, we study the performance with fewer
+training images. On OCT2017 with 26315 normal samples,
+we vary the number of training samples from 100 (0.38%)
+to 2000 (7.6%). As training with fewer samples for the same
+iterations (6000) causes over-fitting, we also present the best
+AUC during training to save searching time. Results are
+presented in Fig. 7. With only 200 (0.76%) normal samples,
+our EDC can still match previous SOTA performance.
+V. C ONCLUSION
+In this study, we propose a novel contrastive learning
+paradigm, namely EDC, for medical anomaly detection.
+It enhances the transfer ability of the pre-trained encoder by
+
+[1] A. Esteva et al., “Dermatologist-level classification of skin cancer
+with deep neural networks,” Nature, vol. 542, no. 7639, pp. 115–118,
+Feb. 2017.
+[2] W. Zhu, C. Liu, W. Fan, and X. Xie, “DeepLung: Deep 3D dual path nets
+for automated pulmonary nodule detection and classification,” in Proc.
+IEEE Winter Conf. Appl. Comput. Vis. (WACV), Mar. 2018, pp. 673–681.
+[3] Z. Zhou, M. M. R. Siddiquee, N. Tajbakhsh, and J. Liang, “UNet++:
+A nested U-Net architecture for medical image segmentation,” in Proc.
+Int. Workshop Deep Learn. Med. Image Anal., in Lecture Notes in
+Computer Science: Including Subseries Lecture Notes in Artificial
+Intelligence and Lecture Notes in Bioinformatics, vol. 11045, 2018,
+pp. 3–11.
+[4] D. Wang, Y. Zhang, K. Zhang, and L. Wang, “FocalMix: Semisupervised learning for 3D medical image detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020,
+pp. 3950–3959.
+[5] H. Zhao et al., “Anomaly detection for medical images using selfsupervised and translation-consistent features,” IEEE Trans. Med. Imag.,
+vol. 40, no. 12, pp. 3641–3651, Dec. 2021.
+[6] Y. Tian et al., “Constrained contrastive distribution learning for unsupervised anomaly detection and localisation in medical images,” in Proc.
+Int. Conf. Med. Image Comput. Comput.-Assist. Intervent., in Lecture
+Notes in Computer Science: Including Subseries Lecture Notes in
+Artificial Intelligence and Lecture Notes in Bioinformatics, vol. 12905,
+2021, pp. 128–140.
+[7] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and
+U. Schmidt-Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection
+with generative adversarial networks,” Med. Image Anal., vol. 54,
+pp. 30–44, May 2019.
+[8] T. Schlegl, P. Seeböck, S. M. Waldstein, U. Schmidt-Erfurth, and
+G. Langs, “Unsupervised anomaly detection with generative adversarial
+networks to guide marker discovery,” in Proc. Int. Conf. Inf. Process.
+Med. Imag., in Lecture Notes in Computer Science: Including Subseries
+Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinformatics Computer Science, vol. 10265, 2017, pp. 146–157.
+[9] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in
+Proc. 2nd Int. Conf. Learn. Represent., 2014.
+[10] P. Perera and V. M. Patel, “Learning deep features for one-class classification,” IEEE Trans. Image Process., vol. 28, no. 11, pp. 5450–5463,
+Nov. 2019.
+[11] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2022, pp. 9727–9736.
+[12] Z. You, K. Yang, W. Luo, L. Cui, Y. Zheng, and X. Le, “ADTR:
+Anomaly detection transformer with feature reconstruction,” 2022,
+arXiv:2209.01816.
+[13] Z. You et al., “A unified model for multi-class anomaly detection,” 2022,
+arXiv:2206.03687.
+[14] O. Russakovsky et al., “ImageNet large scale visual recognition challenge,” Int. J. Comput. Vis., vol. 115, no. 3, pp. 211–252, Dec. 2015.
+[15] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch distribution modeling framework for anomaly detection and localization,”
+in Proc. Int. Conf. Pattern Recognit., in Lecture Notes in Computer
+Science: Including Subseries Lecture Notes in Artificial Intelligence and
+Lecture Notes in Bioinformatics, vol. 12664, 2021, pp. 475–489.
+
+1112
+
+IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 43, NO. 3, MARCH 2024
+
+[16] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+“Towards total recall in industrial anomaly detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+pp. 14298–14308.
+[17] J. Yi and S. Yoon, “Patch SVDD: Patch-level SVDD for anomaly
+detection and segmentation,” in Proc. Asian Conf. Comput. Vis., in Lecture Notes in Computer Science: Including Subseries Lecture Notes in
+Artificial Intelligence and Lecture Notes in Bioinformatics, vol. 12627,
+2021, pp. 375–390.
+[18] O. Rippel, P. Mertens, and D. Merhof, “Modeling the distribution of
+normal data in pre-trained deep features for anomaly detection,” in Proc.
+25th Int. Conf. Pattern Recognit. (ICPR), Jan. 2021, pp. 6726–6733.
+[19] X. Chen and K. He, “Exploring simple Siamese representation learning,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2021, pp. 15745–15753.
+[20] J. B. Grill et al., “Bootstrap your own latent a new approach to selfsupervised learning,” in Proc. Adv. Neural Inf. Process. Syst., Dec. 2020,
+pp. 21271–21284.
+[21] D. S. Kermany et al., “Identifying medical diagnoses and treatable diseases by image-based deep learning,” Cell, vol. 172, no. 5,
+pp. 1122–1131.e9, Feb. 2018.
+[22] APTOS 2019 Blindness Detection, Asia Pacific Tele-Ophthalmology
+Society, Melbourne, VIC, Australia, 2019.
+[23] H. Ahmed, “Br35H: Brain tumor detection 2020,” Kaggle, 2020.
+[Online]. Available: https://www.kaggle.com/datasets/ahmedhamada0/
+brain-tumor-detection and https://github.com/guojiajeremy/EDC
+[24] N. Codella et al., “Skin lesion analysis toward melanoma detection
+2018: A challenge hosted by the international skin imaging collaboration
+(ISIC),” 2019, arXiv:1902.03368.
+[25] B. Schölkopf, J. C. Platt, J. Shawe-Taylor, A. J. Smola, and
+R. C. Williamson, “Estimating the support of a high-dimensional
+distribution,” Neural Comput., vol. 13, no. 7, pp. 1443–1471,
+Jul. 2001.
+[26] D. M. J. Tax and R. P. W. Duin, “Support vector data description,” Mach.
+Learn., vol. 54, no. 1, pp. 45–66, Jan. 2004.
+[27] A.-S. Collin and C. De Vleeschouwer, “Improved anomaly detection by
+training an autoencoder with skip connections on images corrupted with
+stain-shaped noise,” in Proc. 25th Int. Conf. Pattern Recognit. (ICPR),
+Jan. 2021, pp. 7915–7922.
+[28] F. Milkovic, B. Filipovic, M. Subašic, T. Petkovic, S. Loncaric, and
+M. Budimir, “Ultrasound anomaly detection based on variational autoencoders,” in Proc. 12th Int. Symp. Image Signal Process. Anal. (ISPA),
+Sep. 2021, pp. 225–229.
+[29] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “GANomaly:
+Semi-supervised anomaly detection via adversarial training,” in Proc.
+Asian Conf. Comput. Vis., in Lecture Notes in Computer Science:
+Including Subseries Lecture Notes in Artificial Intelligence and Lecture
+Notes in Bioinformatics, vol. 11363, 2019, pp. 622–637.
+[30] Y. Shi, J. Yang, and Z. Qi, “Unsupervised anomaly segmentation
+via deep feature reconstruction,” Neurocomputing, vol. 424, pp. 9–22,
+Feb. 2021.
+[31] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee,
+“Multiresolution knowledge distillation for anomaly detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+pp. 14897–14907.
+[32] G. Wang, S. Han, E. Ding, and D. Huang, “Student-teacher feature
+pyramid matching for anomaly detection,” 2021, arXiv:2103.04257.
+[33] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Selfsupervised learning for anomaly detection and localization,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+pp. 9659–9669.
+
+[34] V. Zavrtanik, M. Kristan, and D. Skocaj, “DRAEM—A discriminatively trained reconstruction embedding for surface anomaly detection,”
+in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021,
+pp. 8330–8339.
+[35] M. Rudolph, B. Wandt, and B. Rosenhahn, “Same same but DifferNet:
+Semi-supervised defect detection with normalizing flows,” in Proc. IEEE
+Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2021, pp. 1906–1915.
+[36] J. Yu et al., “FastFlow: Unsupervised anomaly detection and localization
+via 2D normalizing flows,” 2021, arXiv:2111.07677.
+[37] Y. Zhao, Q. Ding, and X. Zhang, “AE-FLOW: Autoencoders with
+normalizing flows for medical images anomaly detection,” in Proc. 11th
+Int. Conf. Learn. Represent., 2023.
+[38] T. Reiss, N. Cohen, L. Bergman, and Y. Hoshen, “PANDA: Adapting
+pretrained features for anomaly detection and segmentation,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+pp. 2805–2813.
+[39] V. Sehwag, M. Chiang, and P. Mittal, “SSD: A unified framework for
+self-supervised outlier detection,” in Proc. Int. Conf. Learn. Represent.,
+2021.
+[40] T. Xiang, Y. Liu, A. L. Yuille, C. Zhang, W. Cai, and Z. Zhou,
+“In-painting radiography images for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2023,
+pp. 1–6.
+[41] K. Zhou et al., “Proxy-bridged image reconstruction network for
+anomaly detection in medical images,” IEEE Trans. Med. Imag., vol. 41,
+no. 3, pp. 582–594, Mar. 2022.
+[42] K. Zhou et al., “Memorizing structure-texture correspondence for image
+anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33,
+no. 6, pp. 2335–2349, Jun. 2022.
+[43] X. Zhou et al., “Spatial–contextual variational autoencoder with attention
+correction for anomaly detection in retinal OCT images,” Comput. Biol.
+Med., vol. 152, Jan. 2023, Art. no. 106328.
+[44] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc. 37th Int.
+Conf. Mach. Learn., 2020, pp. 1597–1607.
+[45] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2016, pp. 770–778.
+[46] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating deep
+network training by reducing internal covariate shift,” in Proc. 32nd
+Int. Conf. Mach. Learn., vol. 1, 2015, pp. 448–456.
+[47] X. Chen, S. Xie, and K. He, “An empirical study of training selfsupervised vision transformers,” in Proc. IEEE/CVF Int. Conf. Comput.
+Vis. (ICCV), Oct. 2021, pp. 9620–9629.
+[48] H. Borgli et al., “HyperKvasir, a comprehensive multi-class image and
+video dataset for gastrointestinal endoscopy,” Sci. Data, vol. 7, no. 1,
+p. 283, Aug. 2020.
+[49] I. Loshchilov and F. Hutter, “Decoupled weight decay regularization,”
+in Proc. 7th Int. Conf. Learn. Represent., 2019.
+[50] L. Mou, L. Liang, Z. Gao, and X. Wang, “A multi-scale anomaly
+detection framework for retinal OCT images based on the Bayesian
+neural network,” Biomed. Signal Process. Control, vol. 75, May 2022,
+Art. no. 103619.
+[51] S. Zagoruyko and N. Komodakis, “Wide residual networks,” 2016,
+arXiv:1605.07146.
+[52] S. Xie, R. Girshick, P. Dollár, Z. Tu, and K. He, “Aggregated residual
+transformations for deep neural networks,” in Proc. IEEE Conf. Comput.
+Vis. Pattern Recognit. (CVPR), Jul. 2017, pp. 5987–5995.
+PAPER_TEXT

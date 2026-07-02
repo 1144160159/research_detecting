@@ -1,0 +1,1276 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [701] Hierarchical Graph Neural Networks for Resilient Intrusion Detection in Consumer IoT With Limited Labeled Data
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：701
+题名：Hierarchical Graph Neural Networks for Resilient Intrusion Detection in Consumer IoT With Limited Labeled Data
+年份：2025
+DOI：10.1109/tce.2025.3604228
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2025.3604228.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：图学习、知识图谱与威胁情报、IoT、车联网、工业互联网与边缘安全
+相关性：强相关，分数 11
+已有代码状态：已下载；HierGNN -> source\HierGNN
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\701.txt
+- 原始字符数：62308
+- 本次发送字符数：62308
+- 是否截断：False
+
+代码包：
+- 仓库：HierGNN
+  - URL：https://github.com/guolong-zheng/HierGNN
+  - 状态：downloaded
+  - 本地目录：source\HierGNN
+  - 顶层结构：README.md、hiergnn.py、requirements.txt
+  - 主要语言：Python:1
+  - README 标题：HierGNN: Hierarchical Graph Neural Network for Network Intrusion Detection、Model Architecture、Packet-Level Analysis (PacketLevelGAT)、Flow-Level Temporal Analysis (TemporalModule)、Generalization and Classification (GeneralizationModule)、Features、Getting Started、Prerequisites、Installation、Data Preparation
+  - README 运行线索：Python 3.8+；bash git clone https://github.com/your-username/HierGNN.git；bash python -m venv venv；bash pip install -r requirements.txt；bash python hiergnn.py --dataset cicids17 --sample_ratio 0.1 --gpu_id 0；bash python hiergnn.py --dataset cicids17 --sample_ratio 0.1 --gpu_id 0 --pre_sample；Python 3.8+；bash git clone https://github.com/your-username/HierGNN.git
+  - 关键文件：{"依赖环境": ["requirements.txt"]}
+  - 数据集线索：Tor、cicids、dapt、tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+1584
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+Hierarchical Graph Neural Networks for Resilient
+Intrusion Detection in Consumer IoT With
+Limited Labeled Data
+Guolong Zheng, Changgui Xu, Jianshan Zhang , Member, IEEE, Chen Hou, Xu Yang , Tao Huang ,
+Xuan Liu , Senior Member, IEEE, and Muhammad Khurram Khan , Senior Member, IEEE
+Abstract—The growing number of interconnected systems in
+consumer IoT environments and the increasing intelligence of
+AI-enabled cyber threats have introduced significant security
+challenges. Intrusion detection systems must be not only accurate
+but also resilient to evolving threats and robust against adversarial manipulation. A major limitation is the lack of labeled data
+for evolving adversarial attacks, which limits the generalization
+of detection models, making them less practical for the dynamic
+and heterogeneous nature of IoT networks. To overcome these
+limitations, we propose HierGNN, a hierarchical graph neural
+network designed for accurate and resilient network intrusion
+detection using few labeled examples. HierGNN utilizes a packetlevel graph attention network for adaptive feature filtering,
+which enhances resilience to subtle data perturbations, coupled
+with a flow-level temporal model to capture complex spatial
+and temporal dependencies in traffic patterns. By hierarchically
+abstracting these features, it learns robust representations of
+normal and malicious network behavior from limited data.
+Experimental results on multiple widely used network intrusion
+datasets demonstrate the HierGNN’s remarkable data efficiency
+and resilience. With as little as 5% of labeled training data,
+HierGNN achieves an F1-score of 0.97 and an accuracy of 0.98
+across all the benchmarks. Even in extreme data scarcity, using
+just 0.1% of labeled data, it maintains a high F1-score of 0.94+
+and an accuracy of 0.96+. Furthermore, we demonstrate the
+model’s resilience by evaluating it against common adversarial
+evasion attacks, such as the Fast Gradient Sign Method (FGSM)
+and Projected Gradient Descent (PGD). Under these attacks,
+HierGNNś accuracy only degrades minimally to 0.95, outperforming standard deep learning baselines whose performance
+drops below 90% under similar conditions. These results validate
+Received 6 July 2025; revised 13 August 2025; accepted 25 August 2025.
+Date of publication 29 August 2025; date of current version 25 March 2026.
+This work was supported in part by the National Natural Science Foundation
+of China (NSFC) under Grant 62402203; in part by the Fujian Provincial
+Natural Science Foundation under Grant 2024J08278, Grant 2024J08276, and
+Grant 2024J08277; and in part by the Key Research Project for Young and
+Middle-aged Researchers by the Fujian Provincial Department of Education
+under Grant JZ230044; in part by the Science Foundation of Fuzhou under
+Grant 2025-ZD-023; and in part by the Ongoing Research Funding Program,
+King Saud University, Riyadh, Saudi Arabia, under Grant ORF-Ctr-2025-4.
+(Corresponding authors: Tao Huang; Xuan Liu.)
+Guolong Zheng, Jianshan Zhang, Chen Hou, Xu Yang, and Tao Huang
+are with the School of Computer and Data Science, Minjiang University,
+Fuzhou 350108, China (e-mail: gzheng@mju.edu.cn; jszhang@mju.edu.cn;
+houchen@mju.edu.cn; xu.yang@mju.edu.cn; huang-tao@mju.edu.cn).
+Changgui Xu is with the School of Information Science and
+Technology, ShanghaiTech University, Shanghai 201210, China (e-mail:
+xuchg2022@shanghaitech.edu.cn).
+Xuan Liu is with the the College of Information and Artificial Intelligence
+(College of Industrial Software), Yangzhou University, Yangzhou 225009,
+China (e-mail: yusuf@yzu.edu.cn).
+Muhammad Khurram Khan is with the Center of Excellence in Information
+Assurance, DSR, King Saud University, Riyadh 11451, Saudi Arabia (e-mail:
+mkhurram@ksu.edu.sa).
+Digital Object Identifier 10.1109/TCE.2025.3604228
+
+HierGNN as a scalable, resilient, and practical method for
+efficient network intrusion detection with high accuracy and
+low false positives, even in data-scarce and adversarial IoT
+environments.
+Index Terms—Network intrusion detection, few-shot learning,
+graph neural networks, hierarchical graph neural network.
+
+I. I NTRODUCTION
+HE RAPID growing of interconnected systems, particularly within consumer Internet of Things (IoT)
+environments, has created a hyper-connected ecosystem with
+75 billion devices by 2025 [1], dramatically broadening the
+network attack surface [2]. Consumer IoT devices often
+prioritize low-cost and rapid market entry over robust security,
+resulting in systemic weaknesses such as unpatched firmware,
+weak or default credentials, and insecure communication protocols [2], [3], [4]. Consequently, these vulnerable endpoints
+can be easily compromised and organized into botnets for
+large-scale Distributed Denial-of-Service (DDoS) attacks or
+data exfiltration campaigns, leading to significant financial
+losses and undermining consumer trust [3], [5].
+A primary challenge for modern Network Intrusion
+Detection Systems (NIDS) in these environments is the
+dual problem of data scarcity and adversarial vulnerability. Traditional signature-based NIDS are ineffective against
+novel, zero-day attacks [6]. While supervised machine learning models offer a path to generalization, they typically
+demand vast quantities of labeled data, a resource that is
+notoriously scarce in dynamic IoT networks [7]. Furthermore,
+even well-trained deep learning models are susceptible to
+adversarial evasion attacks, where malicious actors introduce
+subtle, carefully crafted perturbations to network traffic to
+bypass detection [8], [9]. The resilience of a NIDS against
+such manipulation is therefore as critical as its baseline
+accuracy [10]. While Graph Neural Networks (GNNs) have
+emerged as a promising paradigm for modeling complex
+network traffic [11], many existing GNN-based systems still
+require substantial labeled data and struggle to filter out
+irrelevant packet-level noise, which can degrade performance
+and increase vulnerability to adversarial inputs [12].
+Other deep learning architectures have been applied to
+NIDS, but often operate at a single level of granularity
+(either packet or flow), neglecting the hierarchical nature of
+network attacks. For instance, Convolutional Neural Networks
+(CNNs) can extract spatial features from packets but lack
+
+T
+
+c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+1558-4127 
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+ZHENG et al.: HIERGNNS FOR RESILIENT INTRUSION DETECTION IN CONSUMER IOT
+
+interpretability [13], while recurrent architectures like Long
+Short-Term Memory (LSTM) networks model temporal dependencies in flows but may miss coordinated, multi-flow attack
+patterns [14], [15]. A unified framework that combines multilevel analysis with high data efficiency and adversarial
+robustness remains a critical challenge in the field [16].
+To address these limitations, we propose HierGNN, a twolevel hierarchical Graph Neural Network (GNN) designed
+for high-accuracy, resilient network intrusion detection using
+few labeled examples. At the packet level, a Graph Attention
+Network (GAT) [17] with an adaptive gating mechanism acts
+as a sophisticated filter, suppressing noisy packet features
+while amplifying salient indicators of malicious activity. This
+enhances resilience to the subtle data perturbations characteristic of adversarial attacks [18], [19]. Building upon these
+refined representations, the second level employs a temporal model with self-attention to model high-level, flow-level
+interactions over time, capturing the long-range dependencies of sophisticated intrusions [20], [21]. By hierarchically
+abstracting spatiotemporal features, our model can learn robust
+representations resilient to adversarial inputs from a limited
+number of labeled samples.
+The efficacy of HierGNN is rigorously validated on three
+widely-used benchmarks (CICIDS2017 [22], ToN-IoT [23],
+and MedBIoT [24]). With as little as 0.1% of labeled data,
+HierGNN achieves an F1-score of 0.94+ and an accuracy of
+0.96+ across all benchmarks. Furthermore, to demonstrate its
+resilience, we evaluated the model against common adversarial
+evasion attacks, including the Fast Gradient Sign Method
+(FGSM) [8] and Projected Gradient Descent (PGD) [9].
+Under these attacks, HierGNN’s accuracy only degraded to
+0.95, outperforming standard deep learning baselines whose
+performance dropped below 90% under similar conditions.
+The results validate HierGNN as a scalable, resilient, and
+practical method for network intrusion detection in datascarce and adversarial consumer IoT environments. The main
+contributions of this article are:
+• We propose a hierarchical graph neural network for NIDS
+that efficiently utilizes scarce labels. The model learns
+robust and discriminative flow embeddings by first capturing packet-level spatial dependencies and then abstracting
+high-level temporal patterns, enabling accurate detection
+with minimal labeled data.
+• We introduce a label-aware learning strategy where an
+adaptive gating mechanism filters irrelevant packet features. This improves the resilience to noise and allows
+the model to alleviate data heterogeneity across diverse
+IoT scenarios.
+• Our framework is inherently resilient to adversarial
+manipulation. The hierarchical feature abstraction process
+improves robustness, allowing the model to maintain high
+accuracy against common evasion attacks.
+• We conduct extensive experiments on three public NIDS
+datasets. The results demonstrate that our model significantly outperforms baseline approaches, achieving over
+96% accuracy and 0.94 F1-score with as little as 0.1%
+of labeled data, validating its efficacy in data-scarce and
+adversarial environments.
+
+1585
+
+The source code for this work is publicly available at
+https://github.com/guolong-zheng/HierGNN.
+The remainder of this article is organized as follows:
+Section II reviews related work. Section III details the architecture of HierGNN, while Section IV presents the experimental
+setup and results. Section V concludes the paper.
+II. R ELATED W ORK
+The escalating complexity of cyber threats necessitates
+advanced Network Intrusion Detection Systems (NIDS) that
+move beyond static, signature-based methods, which struggle
+against novel attacks and often cause alert fatigue [25], [26].
+Machine learning and deep learning approaches have emerged
+as a powerful alternative, learning intricate patterns from
+data to improve detection of previously unseen intrusions [27], [28].
+Early ML solutions, such as Support Vector Machines
+(SVM) and Decision Trees, required extensive manual feature engineering, a time-consuming and expertise-intensive
+process [29], [30], [31]. Deep learning models, such as
+Convolutional and Recurrent Neural Networks (CNNs, RNNs),
+automated this feature extraction from raw traffic [14], [32].
+Unsupervised methods like Autoencoders have also been
+used for anomaly detection [33]. However, these approaches
+typically process network flows in isolation, failing to capture the rich topological patterns inherent in network traffic
+interactions [31].
+Graph Neural Networks (GNNs) naturally represent network
+traffic as a graph of interacting entities, making them
+ideal for capturing the complex relational patterns indicative of sophisticated attacks like APTs [20], [34]. Initial
+GNN-based NIDS focused on topological structure to detect
+botnets [35], [36], but often ignored valuable node and edge
+features. Subsequent research integrated flow statistics with
+graph structure [37], [38], but these supervised models still
+required extensive labeled data. To address this, recent works
+have explored few-shot and self-supervised learning. Methods
+like Anomal-E [39] and TS-IDS [40] leverage self-supervision
+to learn from unlabeled data, while FeCoGraph [31] uses a
+federated contrastive learning approach. While these methods
+improve data efficiency, they still face challenges with intricate
+attack patterns and the computational overhead of centralized
+analysis in large-scale IoT networks [31].
+A critical insight is that comprehensive detection requires
+integrating both fine-grained packet-level details and coarsegrained flow-level patterns [41], [42]. Packet analysis can
+detect payload-specific attacks, while flow analysis identifies broader patterns like DDoS. Pioneering frameworks like
+XG-NID [42] and HGNN [43] construct heterogeneous or
+multi-modal graphs to combine packet and flow data, often
+using hierarchical GNNs. Despite this progress, a key gap
+remains in developing a unified framework that combines
+this hierarchical analysis with a dynamic packet filtering
+mechanism that can adapt to evolving threats, especially under
+the constraint of limited labeled data. Our work addresses this
+gap by proposing a hierarchical GNN that integrates adaptive
+packet filtering with flow-level temporal analysis for resilient
+and data-efficient intrusion detection.
+
+1586
+
+Fig. 1.
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+Architecture of HierGNN.
+
+The key difference between HierGNN and current
+techniques, especially FeCoGraph, lies in the mechanism used
+to achieve robustness and data efficiency. HierGNN employs
+an intra-sample adaptive filtering mechanism. It learns to
+dynamically weigh and select the most salient features within
+each individual data sample, effectively filtering out noise
+and adversarial perturbations on a case-by-case basis. In contrast, methods like FeCoGraph utilize inter-sample label-aware
+contrastive learning. This approach learns a discriminative
+embedding space by pulling samples with the same label
+(e.g., two different benign flows) closer together while pushing
+samples with different labels (e.g., a benign and a malicious
+flow) farther apart. While both are powerful techniques,
+their philosophies are complementary. HierGNN focuses on
+purifying the features of each sample before learning, whereas
+FeCoGraph focuses on learning robust representations by
+comparing different samples against each other. Our approach
+is particularly well-suited to mitigating adversarial attacks that
+manipulate features within a single sample.
+III. M ETHODOLOGY
+As illustrated in Fig. 1, the proposed Hierarchical GNN
+(HierGNN) architecture is composed of three primary modules
+following the initial data preprocessing that transform raw
+PCAP packets into graphs. First, the Packet-Level GNN module processes individual network flows by converting packet
+sequences into a series of dynamic packet graphs. Each graph
+is then passed through a Graph Attention Network, utilizing
+two GATConv layers and a mean pooling layer, to generate a
+contextualized graph embedding.
+Second, the Flow-Level Temporal module receives the
+sequence of these embeddings and employs a temporal attention mechanism, which includes self-attention and several
+GRU layers, to capture long-range temporal dependencies
+within the flow.
+Finally, the Generalization module achieves robust intrusion
+detection by employing an adaptation layer that integrates
+
+a Model-Agnostic Meta-Learning (MAML) framework for
+learning from limited data and an adaptive attention mechanism to bolster adversarial resilience, before passing the
+resulting flow representation to a final classifier. This
+hierarchical design enables HierGNN to learn both finegrained packet interactions and long-term behavioral patterns,
+effectively addressing the multi-scale nature of network
+attacks.
+
+A. Data Preprocessing
+HierGNN is designed to operate directly on packetlevel information to dynamically learn flow characteristics.
+Therefore, all features are extracted exclusively from packet
+headers, without relying on Deep Packet Inspection or any
+payload content. The flow-level CSV files provided with
+the datasets are used solely for ground-truth labeling and
+for grouping packets into their respective flows based on
+their 5-tuple (source/destination IP, source/destination port,
+protocol) and timestamps. No pre-computed, high-level flow
+features from these files are used.
+The initial stage of our methodology involves a comprehensive data preprocessing pipeline designed to convert raw
+network traffic captures into a structured, graph-based format
+amenable to the GNN model. The pipeline takes pcap files
+as primary input. For labeled datasets, it additionally ingests
+corresponding csv files to map network flows to their groundtruth labels (e.g., benign or a specific attack type), which are
+then converted to binary class labels.
+The pipeline begins by grouping packets from the input
+pcap file into bidirectional flows using a normalized fivetuple key. Flow and packet selection are governed by two
+temporal constraints: first, an inactivity timeout of 300 seconds defines the maximum idle time before a new flow
+is initiated for subsequent packets, effectively segmenting
+long-lived connections. Second, we define a variable-size
+packet window, considering the first n packets of any given
+
+ZHENG et al.: HIERGNNS FOR RESILIENT INTRUSION DETECTION IN CONSUMER IOT
+
+flow segment for feature extraction, where n is capped at a
+maximum of 20.1
+This is represented as packets t1 , . . . , tn for each flow in
+Fig. 1. This dual-window approach ensures that the analysis
+focuses on the crucial initial phase of network connections while maintaining computational tractability. For each
+packet within this window, a 10-dimensional feature vector is
+meticulously extracted to capture its essential characteristics,
+providing a detailed snapshot of each packet’s role and context
+within its flow.
+A key innovation in our preprocessing is the representation
+of each network flow as a temporal sequence of graphs.
+Instead of constructing a single, static graph for an entire flow,
+we model each individual packet as a distinct graph object
+using the PyTorch Geometric library. Each “packet-graph” is
+a small, fully-connected graph comprising three nodes. The
+10-dimensional feature vector of the packet is duplicated and
+assigned as the feature set for each of these three nodes.2 This
+design transforms a flow of N packets into a sequence of N
+graphs, Gt1 , Gt2 , . . . , Gtn , which allows the packet-level GNN
+module to learn fine-grained intra-packet feature interactions
+before the flow-level module captures their temporal evolution.
+Following feature extraction, all packet feature vectors
+across the entire training dataset are normalized using a
+StandardScaler to have zero mean and unit variance. The
+parameters of this scaler are saved and applied consistently
+to any validation or testing data to prevent information
+leakage. Finally, the complete processed datasetcontaining
+the sequences of packet-graphs. This creates a compact and
+efficient data structure that can be loaded directly into memory
+for model training and evaluation.
+B. Packet-Level Processing: Dynamic Feature Filtering and
+Graph Attention
+The packet-level processing module transforms raw network
+packet features, xi for each packet i, into contextualized
+packet graph embeddings. This is achieved through a two-step
+process: dynamic feature filtering followed by graph attentionbased aggregation.
+1) Dynamic Feature Filtering: Initially, each packet’s feature vector xi ∈ RDin , where Din is the input feature dimension,
+undergoes a dynamic filtering process designed to isolate the
+most salient features. This process consists of two parallel
+components:
+1 The 20 is selected based on an empirical trade-off between capturing
+
+essential information and maintaining computational efficiency. The initial
+packets of a network flow are often the most informative for intrusion
+detection, as they typically contain handshake protocols, session initiations,
+and initial data exchanges that can reveal the flow’s intent. Furthermore,
+the flow with more than 20 packets is then split into multiple flows, and
+information between them is then captured at flow level.
+2 The 3-node fully-connected graph architecture is designed to enable the
+Graph Attention Network (GAT) to perform intra-packet feature learning. The
+GAT’s self-attention mechanism can weigh and learn the interactions and
+relative importance among the different features within that single packet. This
+creates a richer, more contextualized packet embedding before the temporal
+model analyzes the sequence of packets. It allows the model to discover which
+feature combinations (e.g., a specific flag set with a particular port) are most
+indicative of malicious activity at the most granular level.
+
+1587
+
+1) Feature Importance Scoring and Masking: A feature
+importance network, MLPimp , computes an importance
+imp
+score vector si
+∈ [0, 1]Din . This network is a
+three-layer Multi-Layer Perceptron (MLP) with Leaky
+Rectified Linear Unit (LeakyReLU) activations, concluding with a Sigmoid function to normalize scores
+between 0 and 1.
+
+
+imp
+si = Sigmoid MLPimp (xi )
+(1)
+A dynamic threshold τi is determined using a predefined
+quantile qr (termed filter_ratio) of these scores.
+This threshold is used to generate a binary mask mthresh
+i
+that retains features with scores in the top (1 − qr )
+percentile.
+
+
+imp
+(2)
+τi = quantile si , 1 − qr
+
+
+imp
+mthresh
+(3)
+= I si ≥ τi
+i
+where I(·) is the indicator function.
+2) Gating Mechanism: Concurrently, a gating network,
+gate
+∈
+MLPgate , computes a gating score vector gi
+[0, 1]Din . This network is a two-layer MLP employing a
+hyperbolic tangent (Tanh) activation in its hidden layer
+and a final Sigmoid activation.
+
+
+gate
+gi = Sigmoid MLPgate (xi )
+(4)
+The original features xi are then modulated through
+element-wise multiplication with both the binary mask and the
+gating scores to produce the filtered feature vector xi .
+xi = xi  mthresh
+ gi
+i
+
+gate
+
+(5)
+
+where  denotes the Hadamard product. This vector xi
+represents the dynamically refined packet features fed into the
+subsequent stage.
+2) Graph Attention Network: The filtered packet features
+X = {x1 , . . . , xN } and their corresponding communication
+links, represented by an adjacency matrix A, constitute a
+packet graph. This graph is processed by a two-layer Graph
+Attention Network (GAT).
+The first GAT layer, GATConv1 , computes hidden representations using Kh attention heads. The output is passed through
+an Exponential Linear Unit (ELU) activation and regularized
+with dropout.
+
+
+H(1) = Dropout ELU(GATConv1 (X , A; gat1 , Kh )) (6)
+The second GAT layer, GATConv2 , takes the hidden representations H(1) as input, using a single attention head to
+consolidate features. The output is then stabilized using Layer
+Normalization to produce the final node embeddings H(2) .
+
+
+(7)
+H(2) = LayerNorm GATConv2 (H(1) , A; gat2 , 1)
+The attention coefficient αij between a node i and its
+neighbor j ∈ Ni within each GAT layer is computed as:
+
+ 
+eij = LeakyReLU aT Whi Whj
+(8)
+ 
+exp eij
+(9)
+αij = 
+k∈Ni exp(eik )
+
+1588
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+where hi is the feature vector for node i, W is a shared
+learnable linear transformation, and a is a learnable attention
+weight vector.
+Finally, a single graph-level embedding gpg for the entire
+packet graph is derived by applying a global mean pooling
+operation to the final node embeddings.
+
+
+(10)
+gpg = GlobalMeanPool H(2)
+
+To produce a single representative vector for the entire
+flow, the fused temporal features are aggregated. First, the
+fused
+mean of the valid (unpadded) feature vectors {ht } is
+computed. This mean vector is then passed through a final
+two-layer aggregation MLP, MLPagg , which uses ReLU and
+Tanh activations.
+fused
+
+h̄
+This embedding, gpg , encapsulates the processed
+information of a single packet graph, corresponding to a
+snapshot of network activity.
+This two-part filtering mechanism is intentionally sophisticated to enhance adversarial resilience. The importance
+network combined with quantile masking performs a hard
+selection, forcing the model to ignore irrelevant features
+and reducing the overall attack surface. The gating network
+then performs a soft re-weighting of the remaining features,
+providing a more nuanced, data-dependent modulation that
+can suppress features that may be subtly perturbed. This
+combination of coarse-grained filtering and fine-grained gating
+creates a robust defense that is difficult for an adversary to
+predict and evade.
+C. Flow-Level Temporal Modeling
+The flow-level module processes sequences of packet graph
+embeddings Sflow = (gpg,1 , gpg,2 , . . . , gpg,T ) derived from
+the packet-level stage. This module is designed to capture
+temporal dependencies within a network flow.
+1) Temporal Self-Attention: A multi-head self-attention
+mechanism is first applied to the sequence Sflow to dynamically
+weigh the importance of different packet graph embeddings
+across the flow’s timeline. This allows the model to focus on
+the most relevant temporal steps.
+
+
+Aflow = MultiheadAttention Sflow , Sflow , Sflow , mask (11)
+where Aflow = (a1 , . . . , aT ) are the attention-weighted representations. A key padding mask is utilized to ensure that
+padded elements in variable-length flow sequences do not
+contribute to the attention computation.
+2) Bidirectional Gated Recurrent Unit: The sequence
+of attended features Aflow is then processed by a
+multi-layer bidirectional GRU. To efficiently handle the
+variable lengths of flows, the sequences are packed using
+torch.nn.utils.rnn.pack_padded_sequence
+before being fed into the GRU, which allows the model to
+operate only on the valid, unpadded time steps.
+
+
+(12)
+Hgru = BiGRU pack_padded(Aflow )
+gru
+
+gru
+
+The output, Hgru = (h1 , . . . , hT ), consists of the concatenated forward and backward hidden states, capturing both
+past and future context at each time step.
+3) Temporal Fusion and Aggregation: The BiGRU output
+sequence Hgru is passed through a temporal fusion layer to
+refine the features. This layer consists of a linear transformation, a Tanh activation, dropout, and Layer Normalization.
+
+
+fused
+gru
+= LayerNorm Dropout(Tanh(MLPtf (ht ))) (13)
+ht
+
+=
+
+1
+Tvalid
+
+Tvalid
+
+fused
+
+ht
+
+(14)
+
+t=1
+
+
+
+
+fagg = Tanh MLPagg h̄fused
+
+(15)
+
+The resulting vector fagg is the final, comprehensive representation of the network flow.
+This BiGRU architecture is chosen over a full Transformer
+architecture due to its computational efficiency on the relatively short sequences of packets found in network flows. For
+such sequences, a GRU-based model provides a strong balance
+of performance and lower computational overhead, making it
+more suitable for potential edge deployment.
+D. Generalization Module
+The Generalization Module receives the aggregated
+flow representation fagg and applies a Model-Agnostic
+Meta-Learning (MAML) framework that operates on
+adversarially-adapted feature representations before passing
+to a final classifier. MAML is chosen due to its flexibility and
+suitability for the NIDS task. It learns a model initialization
+that can be rapidly adapted to new tasks with few gradient
+steps. Especially in the context of intrusion detection, which
+requires adapting the model’s decision boundary, not just
+learning a static feature space, MAML’s approach of finding
+an optimal starting point for fine-tuning is better suited for
+adapting the detection logic itself, making it more effective
+for generalizing to unseen threats from a small number of
+examples.
+1) Adversarial Resilience via Adaptive Attention: To
+improve the model’s robustness against adversarial attacks
+with subtle perturbations, we first process fagg through an
+adaptive attention layer. This layer learns to dynamically reweight the feature vector, emphasizing salient features while
+suppressing those likely manipulated by an adversary. An
+attention network, MLPadapt , computes a vector of importance
+scores, which are normalized via a Softmax function to
+produce an attention mask aadapt .
+
+
+aadapt = Softmax MLPadapt (fagg)
+
+(16)
+
+This mask is then applied to the original representation via
+element-wise multiplication to yield a resilient flow vector
+fresilient.
+fresilient = fagg  aadapt
+
+(17)
+
+The refined vector serves as the input for the subsequent
+meta-learning stage, ensuring that the model learns from a
+more robust and stable feature space.
+
+ZHENG et al.: HIERGNNS FOR RESILIENT INTRUSION DETECTION IN CONSUMER IOT
+
+2) Few-Shot Generalization With MAML: To address the
+challenge of data scarcity, we employ the Model-Agnostic
+Meta-Learning (MAML) algorithm [44]. MAML trains the
+model’s initial parameters, denoted by θ to be a suitable
+initialization that can be rapidly adapted to a new task
+using only a few labeled examples. The meta-training process
+involves a two-step update. First, for each task Ti , an inner
+update adapts the parameters to θi using a small “support set”
+Si of labeled examples:
+θi = θ − α∇θ LTi (θ, Si )
+
+(18)
+
+Second, an outer update optimizes the initial parameters θ
+by evaluating the adapted model on a query set Qi and
+minimizing the loss across all tasks:
+
+
+θ ← θ − β∇θ
+T iLTi θi , Qi
+(19)
+where α and β are the inner and outer loop learning rates,
+respectively.
+This meta-learning process trains an initial model state for
+rapid and effective generalization, making HierGNN highly
+data-efficient.
+3) Final Classification: The final component is a classification head, a simple MLP denoted as MLP class, which takes
+the resilient flow representation fresilient and maps it to a final
+prediction. During inference or fine-tuning on a specific task,
+the adapted parameters θi are used. The final output is passed
+through a Sigmoid function to produce a probability score ŷ ∈
+[0, 1], indicating whether the network flow is malicious.
+
+
+(20)
+ŷ = Sigmoid MLPclass (fresilient ; θi )
+E. Model Interpretability
+A significant challenge for complex deep learning models
+in security is their lack of transparency. However, HierGNN’s
+architecture includes components that provide a degree of
+imp
+explainability. The feature importance scores (si ) from the
+packet-level filtering module allow an analyst to identify
+which packet features the model is focusing on. Similarly,
+the temporal self-attention weights from the flow-level module
+highlight which packets in a sequence are most critical to
+the model’s final decision. This hierarchical interpretability
+can help an analyst understand not only what is classified as
+an attack, but also why, by pinpointing both the suspicious
+features and the key temporal moments within a network flow.
+IV. E XPERIMENTAL E VALUATION
+This section presents a comprehensive evaluation of
+HierGNN on multiple real-world Network Intrusion Detection
+datasets. The experiments are designed to validate that
+HierGNN achieves high-accuracy intrusion detection with high
+data efficiency, even in scenarios of extreme data scarcity and
+against adversarial attacks. To systematically assess HierGNN,
+we propose the following research questions:
+• RQ1: Effectiveness in General Scenarios. How does
+HierGNN’s detection performance compare against stateof-the-art methods in standard settings where labeled
+training data is not so limited (e.g., 10%)?
+
+1589
+
+•
+
+RQ2: Robustness to Extreme Data Scarcity. How robust is
+HierGNN’s performance when labeled data is extremely
+scarce (e.g., 500), and how does it compare to baseline
+methods under such constraints?
+• RQ3: Resilience against Adversial Attacks. To what
+extent does HierGNN maintain its detection accuracy
+when subjected to adversarial evasion attacks (e.g.,
+FGSM and PGD)?
+• RQ4: Architectural Contribution (Ablation Study). What
+is the contribution of HierGNN’s key architectural
+components—the packet-level adaptive filtering and the
+flow-level temporal GNN—to its overall performance and
+data efficiency?
+• RQ5: Computational Performance and Edge Feasibility.
+How efficient is HierGNN in terms of computational
+overhead (e.g., inference latency, memory footprint), and
+is it practical for deployment in resource-constrained edge
+environments?
+A. Experiment Setup
+1) Datasets: We evaluate our model, HierGNN, on three
+widely used network intrusion datasets: CICIDS2017 [22],
+MedBIoT [45], and ToN-IoT [23]. These datasets were chosen
+to represent diverse intrusion scenarios with varied background
+traffic and attack methodologies. All datasets provide both
+packet-level information in pcap format and flow-level labels
+in csv format. Each dataset is described as follows:
+• CICIDS2017 [22]: This dataset contains over 2.8 million
+flow instances, with 80.3% benign and 19.7% malicious
+traffic. The data was captured over a five-day period and
+includes a variety of modern attacks such as DoS/DDoS,
+Brute Force, Heartbleed, Botnet, and Web attacks.
+• MedBIoT [45]: A dataset focused on IoT botnets within
+a medium-sized IoT network. It comprises approximately
+17.8 million network packets, where 70% represents
+legitimate traffic and 30% constitutes malicious botnet
+activity.
+• ToN-IoT [23]: Generated from a testbed simulating realistic IoT and Industry 4.0 networks, this dataset contains
+16.9 million records, with 36% benign traffic and 64%
+attack traffic. It is designed to reflect the complexity and
+scale of modern smart environments.
+While comprehensive, these datasets are static and may not
+fully capture the dynamic nature and “concept drift” of a live
+production network. The specific traffic profiles may also differ
+from a target deployment environment. Consequently, while
+our results demonstrate HierGNN’s strong potential, realworld performance will invariably depend on the similarity
+between the training data and the live traffic. However, we
+argue that HierGNN’s design, particularly its generalization
+module, makes it inherently well-suited to address this challenge. It is designed for rapid adaptation, allowing it to be
+efficiently fine-tuned with a small number of labeled samples
+from a new environment to maintain high accuracy.
+2) Data Preparation: To comprehensively evaluate our
+model’s performance under varying conditions of data availability, we employ two data splitting settings:
+
+1590
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+1) Percentage-Based Splitting: In this setting, we partition
+the dataset into training and testing sets based on a
+fixed ratio. We create training sets by randomly sampling
+{0.1%, 1%, 5%, 10%, 30%, 50%, 70%} of the total data.
+The remaining data in each case forms the corresp+ onding test set (i.e., {99.9%, 99%, . . . , 30%}). This allows
+us to systematically measure how the model’s detection
+accuracy scales with the volume of available training
+data.
+2) Fixed-Size Sampling: This methodology evaluates the
+model’s effectiveness in a low-data regime. We randomly sample a total of N instances from the entire
+dataset, where N is varied from {300, 500, 700, 1,000}.
+This approach simulates a realistic scenario where a
+small, collected dataset may not contain uniform representations of all classes, thereby testing the model’s
+performance and robustness against class imbalance.
+3) Baseline Methods: We conduct a comprehensive
+performance comparison of HierGNN against two main
+categories of baselines: a suite of traditional machine learning
+models and state-of-the-art GNN-based approaches. The
+selected traditional models, chosen for their prevalence in
+NIDS literature, include Decision Tree (DT), Random Forest
+(RF), Support Vector Machine (SVM), K-Nearest Neighbors
+(KNN), and XGBoost.
+Our selection of GNN baselines prioritized methods with
+publicly available source code to ensure that our comparisons are both reproducible and fair. We compare our model
+against two prominent flow-level GNNs for which official
+implementations exist: E-GraphSAGE [38], a GNN model
+that leverages edge features for classification, and AnomalE [39], a self-supervised GNN for anomaly detection. Several
+related methods, like FeCoGraph [31], are not compared as we
+could not find public available code, re-implementing those
+complicated methods can introduce subtle deviations that may
+not reflect their true performance, leading to potentially unfair
+evaluations.
+4) Evaluation Metrics: To provide a comprehensive and
+robust assessment of our model’s performance, we employ a
+set of standard and widely used classification metrics. These
+metrics are derived from the four primary outcomes of a binary
+classification task: True Positives (TP), True Negatives (TN),
+False Positives (FP), and False Negatives (FN). In the context
+of intrusion detection, these are defined as:
+• True Positive (TP): An attack instance correctly identified
+as an attack.
+• True Negative (TN): A benign instance correctly identified as benign.
+• False Positive (FP): A benign instance incorrectly identified as an attack (a false alarm).
+• False Negative (FN): An attack instance incorrectly identified as benign (a missed detection).
+The following metrics are used for evaluation:
+Accuracy measures the overall proportion of correctly
+classified instances.
+Accuracy =
+
+TP + TN
+TP + TN + FP + FN
+
+(21)
+
+Precision (or Positive Predictive Value) measures the proportion of predicted attacks that were actual attacks. High
+precision is critical for minimizing the operational cost of
+investigating false alarms.
+Precision =
+
+TP
+TP + FP
+
+(22)
+
+Recall (or True Positive Rate) measures the proportion of
+actual attack instances that were correctly identified. High
+recall is essential for ensuring that threats are not missed.
+Recall =
+
+TP
+TP + FN
+
+(23)
+
+F1-Score is the harmonic mean of Precision and Recall,
+providing a single score that balances the trade-off between
+false positives and false negatives.
+F1-Score = 2 ×
+
+Precision × Recall
+Precision + Recall
+
+(24)
+
+5) Experiment Setup: All experiments were implemented
+in Python 3.8.8 using the PyTorch 1.13.0 framework. For
+the GNN-based baselines, PyTorch Geometric 2.3.0 and DGL
+1.2 were also utilized. The experiments were conducted on a
+server running Ubuntu 22.04, equipped with one Intel Xeon
+Silver 4310 CPU of 2.10GHz, and two NVIDIA GeForce RTX
+4090 GPUs.
+All experiments were conducted multiple times with different random seeds, and the reported results were stable and
+consistent across these runs. This confirms the reliability of
+our findings.
+B. Experiment Result
+1) RQ1: Effectiveness in General Scarcity Scenarios: To
+answer the first research question on the effectiveness of
+HierGNN in typical percentage-based environments, we conducted a performance comparison against state-of-the-art
+baselines. We evaluated all models on the MedBIoT, ToNIoT, and CICIDS2017 datasets, training them with limited
+subsets of the available labeled data: 10%, 1%, 0.5% and
+1%. This experimental design directly tests the models’ ability
+to generalize from sparse supervision, a common challenge
+in real-world IoT deployments. The results are detailed in
+Table I.
+The results across all three datasets consistently demonstrate
+the superior performance of HierGNN compared to the baseline methods, even when trained on a very small fraction of
+the data.
+On the MedBIoT dataset, HierGNN achieves an accuracy
+of 98.15% with only 0.1% of the training data, outperforming the next best model, XGBoost, by a significant margin
+of 5.05%. As the percentage of training data increases to
+10%, HierGNN‘s accuracy reaches 99.15%, maintaining a
+substantial lead over all other methods. A similar trend is
+observed for Precision, Recall, and F1-Score, where HierGNN
+consistently achieves scores above 97.90% across all training
+data percentages, highlighting its robustness and effectiveness.
+For the ToN-IoT dataset, HierGNN again shows remarkable performance. With just 0.1% of the data, it records an
+
+ZHENG et al.: HIERGNNS FOR RESILIENT INTRUSION DETECTION IN CONSUMER IOT
+
+1591
+
+TABLE I
+P ERFORMANCE C OMPARISON ON M ED BI OT, T O N-I OT, AND CICIDS2017 DATASETS . T HE C OLUMNS L ABELED 0.1%, 0.5%,
+1%, AND 10% I NDICATE THE P ERCENTAGE OF THE F ULL T RAINING S ET U SED FOR M ODEL T RAINING
+
+accuracy of 95.40%, which is 6.5% higher than the second-best
+performer, XGBoost. The performance gap remains significant
+as more data is used, with HierGNN reaching 96.10% accuracy
+at the 10% level. The F1-Score for HierGNN starts at a high
+of 95.30% and improves to 96.05%, whereas other methods
+struggle to get past 90%. This indicates HierGNN’s strong
+ability to balance precision and recall effectively, even with
+limited labeled examples.
+The CICIDS2017 dataset is known for its complexity and
+class imbalance, which is reflected in the lower performance
+of some baseline models like KNN and E-GraphSAGE,
+especially in terms of F1-score. Despite this, HierGNN demonstrates exceptional performance. It starts with an accuracy of
+95.25% at the 0.1% level, surpassing the next best, XGBoost,
+by 4.45%. When trained with 10% of the data, its accuracy
+climbs to 98.25%. Most notably, its F1-Score remains consistently high and balanced (95.15% to 98.15%), in stark contrast
+to methods like KNN and E-GraphSAGE whose F1-scores
+indicate a significant drop in performance due to poor recall.
+In conclusion, the experimental results unequivocally show
+that HierGNN is highly effective in scenarios with limited
+labeled data. Across all tested datasets and all evaluated
+percentages of training data, HierGNN consistently and
+significantly outperforms state-of-the-art methods in accuracy, precision, recall, and F1-score. Its ability to achieve
+high performance with as little as 0.1% of the training data demonstrates its powerful learning capability and
+its potential for real-world applications where obtaining
+large amounts of labeled data is often impractical and
+expensive.
+2) RQ2: Robustness to Extreme Data Scarcity: To address
+RQ2, we push the boundaries of data scarcity further, evaluating model performance under extreme conditions where
+labeled data is exceptionally rare. We trained all models on
+all three datasets using only 300, 500, 700 and 1000 labeled
+training instances. This experiment simulates a worst-case
+
+scenario for model training, testing the absolute limits of each
+model’s learning capability. The comprehensive results are
+presented in Table II.
+The results from the data scarcity experiments further underscore the robustness of HierGNN. Even with an extremely
+limited number of training samples, HierGNN maintains a
+commanding lead over all other evaluated methods.
+On the MedBIoT dataset, with only 300 training records,
+HierGNN achieves an F1-Score of 97.27%. This is a substantial 5.87% higher than the next-best model, XGBoost. This
+performance gap remains consistent as the number of samples
+increases to 1000, where HierGNN reaches a 97.92% F1Score. This demonstrates that HierGNN can build a highly
+effective detection model from a minimal data footprint.
+The performance on the ToN-IoT dataset tells a similar
+story. HierGNN starts with a 94.20% accuracy with 300 samples, while the runner-up, XGBoost, only achieves 88.05%.
+The F1-Score of HierGNN is particularly notable, starting at
+94.10% and increasing to 95.20%, while all other methods
+remain below 88.20%. This highlights HierGNN‘s superior
+learning efficiency in data-starved environments.
+On the complex CICIDS2017 dataset, the strength of
+HierGNN is even more apparent. While most baseline methods
+struggle, HierGNN achieves an F1-Score of 94.05% with just
+300 samples. In contrast, models like KNN and E-GraphSAGE
+show a severe degradation in performance, with F1-scores of
+43.10% and 72.80% respectively, indicating their inability to
+handle the dataset’s complexity with scarce data. HierGNN’s
+performance remains stable and high, reinforcing its suitability
+for challenging real-world scenarios.
+In response to RQ2, the evidence strongly supports that
+HierGNN is exceptionally robust to conditions of extreme
+data scarcity. Across all datasets, its performance in terms
+of accuracy, precision, recall, and F1-score is significantly
+higher than state-of-the-art methods, even when trained with as
+few as 300 records. This resilience makes HierGNN an ideal
+
+1592
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+TABLE II
+P ERFORMANCE C OMPARISON ON M ED BI OT, T O N-I OT, AND CICIDS2017 DATASETS . T HE C OLUMNS L ABELED 300, 500,
+700, AND 1000 I NDICATE THE N UMBER OF R ECORDS F ROM THE F ULL T RAINING S ET U SED FOR M ODEL T RAINING
+
+TABLE III
+P ERFORMANCE C OMPARISON ON M ED BI OT, T O N-I OT, AND CICIDS2017 (T RAINED ON 1000 L ABELED DATA R ECORDS )
+B EFORE AND A FTER A DVERSARIAL E VASION ATTACKS
+
+candidate for network intrusion detection in environments
+where collecting and labeling large datasets is not feasible.
+3) RQ3: Resilience Against Adversarial Attacks:
+Answering RQ3 required evaluating HierGNN’s resilience to
+common adversarial evasion attacks. As glass box attacks
+represent a worst-case scenario where the attacker has
+complete knowledge of the model, a model that is robust to
+them is generally expected to be resilient against less-informed
+closed box attacks. We subjected the best-performing models
+to two well-known gradient-based glass box attacks: the Fast
+Gradient Sign Method (FGSM) and the more potent Projected
+Gradient Descent (PGD) attack. The evaluation was conducted
+on all three datasets, with models trained on 1000 labeled the
+data to provide a realistic baseline. Table III shows model
+performance before and after being subjected to these attacks.
+The results clearly indicate that adversarial attacks significantly degrade the performance of all baseline models,
+whereas HierGNN exhibits remarkable resilience.
+On the MedBIoT dataset, under the FGSM attack, the F1Score of XGBoost plummets from 92.45% to 71.15%, a drop
+
+of 21.3 percentage points. The PGD attack causes an even
+more severe drop to 67.15%. In contrast, HierGNN‘s F1-Score
+only decreases from 97.92% to 97.17% under FGSM and to
+96.36% under PGD, demonstrating a minimal performance
+loss and superior stability.
+A similar pattern is observed on the ToN-IoT dataset.
+XGBoost’s accuracy drops from 88.75% to 63.80% (FGSM)
+and 60.90% (PGD). Other models like E-GraphSAGE and
+Anomal-E also suffer substantial performance degradation.
+HierGNN, however, shows only a minor dip in accuracy,
+from 95.30% to 94.45% (FGSM) and 93.80% (PGD). Its F1score remains impressively high, above 93.70% even under
+the stronger PGD attack.
+The resilience of HierGNN is further highlighted on the
+challenging CICIDS2017 dataset. The baseline models are
+highly vulnerable; for instance, the F1-score of E-GraphSAGE
+drops from 73.80% to 62.70% (FGSM) and 58.00% (PGD).
+HierGNN, on the other hand, maintains a very high F1-score,
+which only slightly reduces from 95.00% to 94.20% (FGSM)
+and 93.40% (PGD).
+
+ZHENG et al.: HIERGNNS FOR RESILIENT INTRUSION DETECTION IN CONSUMER IOT
+
+1593
+
+TABLE IV
+C OMBINED A BLATION S TUDY ON M ED BI OT, T O N-I OT, AND CICIDS2017, C OMPARING M ODELS T RAINED W ITH 1000 R ECORDS V ERSUS 10% OF
+THE T RAINING DATA . P ERFORMANCE I S E VALUATED U NDER N ORMAL (N O ATTACK ) AND A DVERSARIAL (PGD ATTACK ) C ONDITIONS
+
+The findings for RQ3 demonstrate that HierGNN possesses
+a high degree of resilience against adversarial evasion attacks.
+While state-of-the-art methods experience a severe decline in
+detection performance, HierGNN maintains its high accuracy
+and F1-score with only a negligible drop. This robustness
+makes HierGNN a much more reliable and secure solution
+for deployment in real-world network environments where
+adversarial threats are a significant concern.
+4) RQ4: Architectural Contribution (Ablation Study): To
+address RQ4, we conducted an ablation study to quantify
+the contribution of HierGNN’s core architectural components:
+the packet-level adaptive filtering GNN (Packet-GAT) and
+the flow-level temporal GNN (Flow-TGN). We created two
+variants of our model: HierGNN w/o Packet-GAT (which
+uses mean aggregation instead) and HierGNN w/o FlowTGN (which uses a simple MLP classifier on aggregated
+packet features). We compared these variants against the full
+HierGNN model on all three datasets, training with 1000
+and 10% labeled data. We evaluated performance under both
+normal conditions and adversarial (PGD) attacks to isolate the
+components responsible for performance and resilience. The
+results are summarized in Table IV.
+The ablation study reveals the individual contributions of
+HierGNN’s core components. Removing either the packetlevel or flow-level component leads to a noticeable drop in
+performance, with the effect being most pronounced under
+adversarial attack.
+Contribution of Packet-level GAT: The ‘w/o Packet-GAT‘
+variant shows the most significant performance degradation
+across all scenarios. On the MedBIoT dataset (1000 records),
+its F1-Score under PGD attack drops to 73.44%, a staggering 22.92 percentage points below the full model. This
+demonstrates that the packet-level adaptive filtering is critical
+for learning robust, fine-grained features that are resilient
+to adversarial perturbations. Without it, the model becomes
+highly vulnerable, and its data efficiency is compromised, as
+seen in the performance drops in both the 1000-record and
+10%-data settings.
+Contribution of Flow-level TGN: The ‘w/o Flow-TGN‘
+variant also underperforms compared to the full model, though
+the drop is less severe than removing the packet-level GAT.
+For instance, on the CICIDS2017 dataset (10% data), its F1score under PGD attack is 86.30%, which is 11.35 points lower
+than the full model’s 97.65%. This indicates that capturing
+
+the temporal evolution of network flows is crucial for accurate
+and stable detection. The flow-level TGN effectively models
+the sequential nature of traffic, and its absence weakens the
+model’s ability to understand the broader context of network
+behavior over time.
+The ablation study confirms that both the packet-level
+adaptive filtering (GAT) and the flow-level temporal GNN
+(TGN) are indispensable components of the HierGNN architecture, with the packet-level GAT being particularly critical
+for adversarial resilience. Its superior contribution stems
+from its position as the first line of defense against feature
+perturbations. Gradient-based attacks like FGSM and PGD
+operate by introducing subtle, malicious noise to the input
+features, and the packet-level GAT is specifically designed to
+identify and suppress these manipulations at the most granular
+level. By filtering adversarial noise within each individual
+packet, it prevents corrupt data from propagating through the
+model. While the flow-level TGN is crucial for modeling
+temporal patterns, its effectiveness depends on the quality of
+the initial packet embeddings it receives. If these embeddings
+are compromised, the TGN’s ability to classify correctly is
+severely hindered. Therefore, the packet-level module’s role as
+a robust feature purifier is the primary reason for the model’s
+overall resilience, ensuring that subsequent layers operate on
+a clean and reliable representation of the network traffic. The
+synergy between this robust packet-level analysis and the highlevel temporal modeling is the key to HierGNN’s superior
+performance, validating our hierarchical design.
+C. RQ5: Computational Performance Analysis
+To evaluate the feasibility of deploying HierGNN in realworld edge environments, we analyzed its computational
+complexity, memory footprint, and inference latency. We
+measured the performance for processing a single network
+flow, averaged over 10,000 samples from the CICIDS2017 test
+set. The results are presented in Table V.
+This result indicates that HierGNN is highly efficient,
+particularly when accelerated with a GPU, processing a flow
+in under 3 milliseconds. Even on a CPU, the latency remains
+low enough for real-time detection scenarios. The model’s
+size is a modest 15.2 MB, and its memory footprint is
+well within the capabilities of contemporary edge devices.
+While more resource-intensive than a simple Decision Tree,
+HierGNN’s performance profile demonstrates its practicality
+
+1594
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+TABLE V
+C OMPUTATIONAL P ERFORMANCE OF HierGNN
+
+for deployment at the network edge, where its high accuracy
+and resilience are most needed.
+V. C ONCLUSION
+In this article, we introduced HierGNN, a hierarchical graph
+neural network designed to address the critical challenge of
+resilient intrusion detection in consumer IoT environments
+with limited labeled data. Our comprehensive evaluation
+demonstrates that HierGNN not only establishes a new standard for detection accuracy but also excels in data efficiency
+and adversarial resilience. By hierarchically modeling network
+traffic from the packet to the flow level, HierGNN maintains high performance even under extreme data scarcity,
+achieving an F1-score over 0.96 with just 0.1% of labeled
+data. Furthermore, its architecture provides inherent resilience
+to adversarial attacks, showing only minimal performance
+degradation against FGSM and PGD attacks. Our ablation
+studies confirmed the vital contributions of both the packetlevel adaptive filtering and the flow-level temporal GNN to
+this success.
+Future work will proceed in several promising directions.
+First, we plan to evaluate the model’s resilience against
+closed box, query-based adversarial attacks and explore the
+integration of specific defense mechanisms to counter them.
+Next, we aim to develop methods to enhance the explainability
+of HierGANN’s decisions, providing security analysts with
+insights into why a particular flow was flagged as malicious.
+Finally, we will assess the model’s performance and scalability
+in more complex, high-volume network environments beyond
+consumer IoT, such as enterprise or carrier-grade networks.
+R EFERENCES
+[1] P. K. Sadhu, V. P. Yanambaka, and A. Abdelgawad, “Internet of Things:
+Security and solutions survey,” Sensors, vol. 22, no. 19, p. 8227, 2022.
+[2] I. Lee and K. Lee, “The Internet of Things (IoT): Applications,
+investments, and challenges for enterprises,” Bus. Horizons, vol. 58,
+no. 4, pp. 431–440, 2015.
+[3] S. Sicari, A. Rizzardi, L. A. Grieco, and A. Coen-Porisini, “Security,
+privacy and trust in Internet of Things: The road ahead,” Comput. Netw.,
+vol. 76, pp. 146–164, Jan. 2015.
+[4] M. Antonakakis et al., “Understanding the mirai botnet,” in Proc. 26th
+USENIX Secur. Symp. (USENIX Secur.), 2017, pp. 1093–1110.
+[5] C. Kolias, G. Kambourakis, A. Stavrou, and J. Voas, “DDoS in the IoT:
+Mirai and other botnets,” Computer, vol. 50, no. 7, pp. 80–84, 2017.
+[6] P. Garcia-Teodoro, J. Diaz-Verdejo, G. Maciá-Fernández, and
+E. Vázquez, “Anomaly-based network intrusion detection: Techniques,
+systems and challenges,” Comput. Secur., vol. 28, nos. 1–2, pp. 18–28,
+2009.
+[7] A. Khraisat, I. Gondal, P. Vamplew, and J. Kamruzzaman, “Survey
+of intrusion detection systems: Techniques, datasets and challenges,”
+Cybersecurity, vol. 2, no. 1, pp. 1–22, 2019.
+[8] I. J. Goodfellow, J. Shlens, and C. Szegedy, “Explaining and harnessing
+adversarial examples,” in Proc. Int. Conf. Learn. Represent. (ICLR),
+2015, pp. 1–11.
+
+[9] A. Madry, A. Makelov, L. Schmidt, D. Tsipras, and A. Vladu, “Towards
+deep learning models that are robust to adversarial attacks,” in Proc. Int.
+Conf. Learn. Represent. (ICLR), 2018, pp. 1–28.
+[10] S. Ennaji, F. De Gaspari, D. Hitaj, A. Kbidi, and L. V. Mancini,
+“Adversarial challenges in network intrusion detection systems:
+Research insights and future prospects,” 2024, arXiv:2409.18736.
+[11] J. Zhou et al., “Graph neural networks: A review of methods and
+applications,” AI Open, vol. 1, pp. 57–81, Apr. 2021.
+[12] J. Liu and M. Guo, “DIGNN-A: Real-time network intrusion detection
+with integrated neural networks based on dynamic graph,” Comput.,
+Mater. Continua, vol. 82, no. 1, pp. 817–842, 2025.
+[13] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+classification using convolutional neural network for representation
+learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), 2017, pp. 712–717.
+[14] F. Jiang et al., “Deep learning based multi-channel intelligent attack
+detection for data security,” IEEE Trans. Sustain. Comput., vol. 5, no. 2,
+pp. 204–212, Apr.–Jun. 2020.
+[15] M. M. Hassan, A. Gumaei, A. Alsanad, M. Alrubaian, and G. Fortino,
+“A hybrid deep learning model for efficient intrusion detection in big
+data environment,” Inf. Sci., vol. 513, pp. 386–396, Mar. 2020.
+[16] N. Moustafa, N. Koroniotis, M. Keshk, A. Y. Zomaya, and Z. Tari,
+“Explainable intrusion detection for cyber defences in the Internet of
+Things: Opportunities and solutions,” IEEE Commun. Surveys Tuts.,
+vol. 25, no. 3, pp. 1775–1807, 3rd Quart., 2023.
+[17] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and
+Y. Bengio, “Graph attention networks,” in Proc. Int. Conf. Learn.
+Represent. (ICLR), 2018, pp. 1–12.
+[18] K. Simonyan, A. Vedaldi, and A. Zisserman, “Deep inside convolutional
+networks: Visualising image classification models and saliency maps,”
+in Proc. 2nd Int. Conf. Learn. Represent. (ICLR), 2014, pp. 1–8.
+[19] M. Sundararajan, A. Taly, and Q. Yan, “Axiomatic attribution for
+deep networks,” in Proc. Int. Conf. Mach. Learn. (ICML), 2017,
+pp. 3319–3328.
+[20] C. Do Xuan, M. H. Dao, and H. D. Nguyen, “APT attack detection
+based on flow network analysis techniques using deep learning,” J. Intell.
+Fuzzy Syst., vol. 39, no. 3, pp. 4785–4801, 2020.
+[21] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Int. Conf.
+Neural Inf. Process. Syst. (NIPS), 2017, pp. 6000–6010.
+[22] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+a new intrusion detection dataset and intrusion traffic characterization,”
+in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), 2018, pp. 1–8.
+[23] N. Moustafa, “A new distributed architecture for evaluating AI-based
+security systems at the edge: Network TON_IoT datasets,” Sustain.
+Cities Soc., vol. 72, Sep. 2021, Art. no. 102994.
+[24] M. Saied, S. Guirguis, and M. Madbouly, “Review of filtering based
+feature selection for botnet detection in the Internet of Things,” Artif.
+Intell. Rev., vol. 58, no. 4, p. 119, 2025.
+[25] M. Eskandari, Z. H. Janjua, M. Vecchio, and F. Antonelli, “Passban
+IDS: An intelligent anomaly-based intrusion detection system for IoT
+edge devices,” IEEE Internet Things J., vol. 7, no. 8, pp. 6882–6897,
+Aug. 2020.
+[26] C. Wang, P. Zheng, J. Gui, C. Hua, and W. U. Hassan, “Are we there
+yet? Unraveling the state-of-the-art graph network intrusion detection
+systems,” 2025, arXiv:2503.20281.
+[27] Z. Xu et al., “Deep learning-based intrusion detection systems: A
+survey,” 2025, arXiv:2504.07839.
+[28] R. Xu, G. Wu, W. Wang, X. Gao, A. He, and Z. Zhang, “Applying
+self-supervised learning to network intrusion detection for network
+flows with graph neural network,” Comput. Netw., vol. 248, Jun. 2024,
+Art. no. 110495.
+[29] J. Gu and S. Lu, “An effective intrusion detection approach using
+SVM with Naïve Bayes feature embedding,” Comput. Secur., vol. 103,
+Apr. 2021, Art. no. 102158.
+[30] B. Mahbooba, M. Timilsina, R. Sahal, and M. Serrano, “Explainable
+artificial intelligence (XAI) to enhance trust management in intrusion
+detection systems using decision tree model,” Complexity, vol. 2021,
+pp. 1–11, Jan. 2021.
+[31] Q. Mao et al., “FeCoGraph: Label-aware federated graph contrastive
+learning for few-shot network intrusion detection,” IEEE Trans. Inf.
+Forensics Security, vol. 20, pp. 2266–2280, 2025.
+[32] P. Wu and H. Guo, “LuNet: A deep neural network for network intrusion
+detection,” in Proc. IEEE Symp. Ser. Comput. Intell. (SSCI), 2019,
+pp. 617–624.
+[33] A. Z. Alalmaie, P. Nanda, and X. He, “Zero trust-NIDS: Extended multiview approach for network trace anonymization and auto-encoder CNN
+for network intrusion detection,” in Proc. IEEE Int. Conf. Trust, Security
+Privacy Comput. Commun. (TrustCom), 2022, pp. 449–456.
+
+ZHENG et al.: HIERGNNS FOR RESILIENT INTRUSION DETECTION IN CONSUMER IOT
+
+[34] X. Ma et al., “A comprehensive survey on graph anomaly detection
+with deep learning,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+pp. 12012–12038, Dec. 2023.
+[35] J. Zhou, Z. Xu, A. M. Rush, and M. Yu, “Automating botnet detection
+with graph neural networks,” 2020, arXiv:2003.06344.
+[36] W. W. Lo, G. Kulatilleke, M. Sarhan, S. Layeghy, and M. Portmann,
+“XG-BOT: An explainable deep graph neural network for botnet detection and forensics,” Internet Things, vol. 22, Jul. 2023, Art. no. 100747.
+[37] J. Zheng and D. Li, “GCN-TC: Combining trace graph with statistical
+features for network traffic classification,” in Proc. IEEE Int. Conf.
+Commun. (ICC), 2019, pp. 1–6.
+[38] W. W. Lo, S. Layeghy, M. Sarhan, M. Gallagher, and M. Portmann, “EGraphSAGE: A graph neural network based intrusion detection system
+for IoT,” in Proc. IEEE/IFIP Netw. Oper. Manag. Symp. (NOMS),
+Budapest, Hungary, 2022, pp. 1–9.
+[39] E. Caville, W. W. Lo, S. Layeghy, and M. Portmann, “AnomalE: A self-supervised network intrusion detection system based on
+graph neural networks,” Knowl. Based Syst., vol. 258, Dec. 2022,
+Art. no. 110030.
+
+1595
+
+[40] H. Nguyen and R. Kashef, “TS-IDS: Traffic-aware self-supervised
+learning for IoT network intrusion detection,” Knowl. Based Syst.,
+vol. 279, Nov. 2023, Art. no. 110966.
+[41] R. Sommer and V. Paxson, “Outside the closed world: On using machine
+learning for network intrusion detection,” in Proc. IEEE Symp. Security
+Privacy (SP), 2010, pp. 305–316.
+[42] Y. A. Farrukh, S. Wali, I. Khan, and N. Bastian, “XG-NID: Dualmodality network intrusion detection using a heterogeneous graph neural
+network and large language model,” 2024, arXiv:2408.16021.
+[43] H. Li and D. Chasaki, “Heterogeneous GNN with express edges for
+intrusion detection in cyber-physical systems,” in Proc. Int. Conf.
+Comput., Netw. Commun. (ICNC), 2024, pp. 523–529.
+[44] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for
+fast adaptation of deep networks,” in Proc. 34th Int. Conf. Mach. Learn.
+(ICML), 2017, pp. 1126–1135.
+[45] A. Guerra-Manzanares, J. Medina-Galindo, H. Bahsi, and S. Nõmm,
+“MedBIoT: Generation of an IoT botnet dataset in a medium-sized IoT
+network,” in Proc. Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), 2020,
+pp. 207–218.
+PAPER_TEXT

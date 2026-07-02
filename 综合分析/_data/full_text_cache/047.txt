@@ -1,0 +1,640 @@
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020 1043
+
+ A Dive into the Dark Web: Hierarchical Traffic
+ Classification of Anonymity Tools
+ Antonio Montieri , Graduate Student Member, IEEE, Domenico Ciuonzo , Senior Member, IEEE,
+ Giampaolo Bovenzi , Valerio Persico , and Antonio Pescape , Senior Member, IEEE
+
+ Abstract—Privacy-preserving protocols and tools are The most popular ATs developed in recent years are The
+increasingly adopted by Internet users nowadays. These Onion Router (Tor),1 the Invisible Internet Project (I2P),2 and
+mechanisms are challenged by the process of traffic classification
+(TC) which, other than being an important workhorse for several JonDonym3 (formerly known as Java Anon Proxy or Webnetwork management tasks, becomes a key factor in the Mix). These tools allow users to preserve their anonymity, e.g.
+assessment of their privacy level, both from offensive (malign) encrypting data multiple times and routing it through multiple
+and defensive (benign) standpoints. In this paper, we propose TC stations, providing each with just a piece of the information.
+of anonymity tools (and deeper, of their running services and From the user viewpoint, ATs allow browsing and running
+applications) via a truly hierarchical approach. Capitalizing a
+public dataset released in 2017 containing anonymity traffic, we applications (also circumventing restrictions enforced at either
+provide an in-depth analysis of TC and we compare the proposed providers or governmental level) keeping their identity and
+hierarchical approach with a flat counterpart. The proposed location secret to any intermediary entity observing the traffic.
+framework is investigated in both the usual TC setup and its Accordingly, tracing users and their activities across these net-
+“early” variant (i.e., only the first segments of traffic aggregate works is a complex task.
+are used to take a decision). Results highlight a general
+improvement over the flat approach in terms of all the ATs have been investigated in recent years by several studclassification metrics. Further performance gains are also ies from different perspectives including design improvement,
+accomplished by tuning the thresholds ensuring progressive AT delay and performance analysis, feasibility of effective
+censoring. Finally, fine-grain performance investigation allows us attacks to ATs, users’ behavior profiling and identity discloto demonstrate lower severity of errors incurred by the sure risk, and censoring policies enforced for ATs [1]. Among
+hierarchical approach (as opposed to the flat case) and highlight
+poorly classifiable services/applications of each anonymity tool, these crucial aspects, a cardinal issue is understanding to what
+gathering useful feedback on their privacy level. extent (encrypted) ATs traffic can be classified, i.e. at which
+ Index Terms—Dark web, dark net, Tor, I2P, JonDonym, traffic granularity ATs and related applications can be accurately recclassification, hierarchical classification, anonymity, privacy, ognized by external entities. Accordingly, in this paper, we
+security. focus on ATs Traffic Classification (TC).
+ Indeed, TC—consisting in associating traffic aggregates to
+ specific applications or groups of applications (viz. labeling
+ I. INTRODUCTION them)—is of utmost importance in Internet traffic engineering,
+ along with related methodologies & tools, as they jointly sup-
+I N line with the growing criticality of the activities users
+ perform online, privacy is today a key concern. In particular, preserving the anonymity of users is an aspect that has
+ port activities such as network monitoring, security assessment,
+ application identification, anomaly detection, accounting,
+gathered the attention of the research community, that over advertising, and service differentiation [2], [3]. For these realast years put the effort in designing and developing tools able sons, TC has gained importance in recent years due to growing
+to achieve privacy at varying degrees. As a result, at present a incentives to disguise certain applications [4], comprising those
+number of Anonymity Tools (ATs) are freely available, able generating anonymous traffic [5].
+to hide—besides the content of the communication itself, via On the one hand, investigating TC of ATs is useful to
+encryption—the identity of the parties (source and destination) designers, as it puts their effectiveness to the test, reveals
+involved in the communication. shortcomings, and leads the way to robustify them. On the
+ other hand, these studies are of interest to providers as well as
+ Manuscript received October 2, 2018; revised January 14, 2019; accepted governmental entities, providing knowledge e.g. to enforce
+February 21, 2019. Date of publication March 8, 2019; date of current version informed engineering policies or to prevent users performing
+September 2, 2020. This work was partially funded by art. 11 DM 593/2000 for
+NM2 s.r.l. (Italy). Recommended for acceptance by S. Xu. (Corresponding
+ unwanted actions. Hence, classifying ATs traffic is a particuauthor: Antonio Pescap e.) larly appealing and challenging research field whose state-of-
+ A. Montieri, D. Ciuonzo, and G. Bovenzi are with the University of art solutions leave room for improvement.
+Napoli Federico II, 80125 Napoli, Italy (e-mail: antonio.montieri@unina.it;
+domenico.ciuonzo@ieee.org; giampaolo.bovenzi@gmail.com).
+ V. Persico and A. Pescape are with the University of Napoli Federico
+ 1
+II, 80125 Napoli, Italy, and also with NM2 s.r.l. 80143, Napoli, Italy (e- Tor Project. https://www.torproject.org.
+ 2
+mail: valerio.persico@unina.it; pescape@unina.it). The Invisible Internet Project. https://geti2p.net.
+ 3
+ Digital Object Identifier 10.1109/TNSE.2019.2901994 JonDonym. http://anonymous-proxy-servers.net.
+ 2327-4697 ß 2019 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+1044 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020
+
+ Because of the specific nature of ATs encrypted traffic, In [9] a novel multilateral (viz. multi-view) and hierarchical
+Machine Learning (ML) classifiers represent the natural approach for Internet TC is proposed, further refined into
+enabler, able to provide decisions based on the sole traffic- FORMULA framework [10], operating on biflow-segmented
+flow features [5] and to overcome shortcomings due to the traffic. Specifically, the devised approach relies on a taxonomy
+application of common solutions (e.g., those based on payload that provides multilateral identification based on four different
+inspection or earlier port-based ones [6]). classification criteria (i.e. service, application, protocol, and
+ On the top of that, hierarchical classification represents a function) via a hierarchical structure (whose working principle
+perfect match for TC of ATs, as (i) it allows fine-grained tun- is however not detailed), supporting roll-up and drill-down
+ing and design, potentially leading to classification perfor- operations on the classification results. Unfortunately, the colmance gains; (ii) it also brings a number of “practical” lected traffic lacks a ground truth, precluding a verification of
+benefits by design, at cost of moderate complexity increase. the reported results.
+For example, re-training does not involve all the nodes in the In [11], the authors propose a fine-grained scheme for hierarhierarchy when new applications leveraging anonymity net- chical TC of video traffic based on clustering. A hierarchical
+works are released. Also, distributed deployment of TC tasks, version of k-Nearest Neighbor (k-NN) is fed with the most disthanks to the modularity of the framework, is enabled in the criminative statistical features selected among 40 extracted
+network (thus hierarchical classification could be achieved from downstream/upstream data, ranked by the information
+through chaining of virtualized network functions, each asso- gain ratio. The dataset, including six types of (symmetric and
+ciated to a classifier). Albeit these benefits are granted by the asymmetric) traffic, is collected on the campus network of Nanjhierarchical approach itself, research efforts are needed to ing University. Experimental results report  97% F-measure in
+deepen the aspects of design optimization (to obtain enhanced discriminating among all the considered (video) traffic and supeperformance) and fine-grain evaluation to delve into privacy- rior performance w.r.t. existing alternatives, while providing
+level assessment of ATs. only a slight time-complexity increase. Recently, in [12] a twolevel hierarchical classification framework is presented to identify the services running within HTTPS connections leveraging
+A. Related Works
+ a set of features robust to alteration (e.g., statistics of inter-
+ Up to our knowledge, there are no studies focused on classi- arrival times and packet/payload sizes). The proposed evaluafication of different anonymity services at various levels of tion method, based on real traffic traces, achieves a recall within
+granularity via hierarchical learning. Accordingly, this sec- ½95; 100% in 50 out of the 68 HTTPS services considered.
+tion first discusses the (few) works tackling standard TC (i.e. 2) (Flat) Traffic Classification of Anonymity Tools: The
+not focusing on traffic generated by ATs) via a hierarchical analysis of ATs has been initially carried in private networks,
+approach. Then, literature on TC of ATs via a “flat” (viz. non- e.g. with the aim of discriminating between HTTPS and Tor
+hierarchical) approach is reviewed, including the conceptu- traffic [13]. In detail, by leveraging a dataset made of
+ally-related Website Fingerprinting (WF) problem. (i) regular HTTPS traffic, (ii) HTTP and (iii) HTTPS over a
+ 1) Hierarchical Traffic Classification: A first approach to private Tor network, authors show that HTTP/HTTPS traffic
+hierarchical TC is described in [7], where a three-level system over Tor can be detected with  93% accuracy, employing
+for Peer-to-Peer (P2P) biflow-based traffic categorization is Random Forest (RF), C4.5, and AdaBoost classifiers.
+proposed to discern among 11 P2P and 5 non-P2P apps. The On the other hand, a few works focus on TC analyzing real
+first-level classifier adopts a Support Vector Machine (SVM) traffic from anonymity networks, as most of the “experimental”
+for P2P/non-P2P recognition, whereas Support Vector Data literature explores anonymous WF, whose aim is to identify a
+Descriptions are employed at the other two levels for P2P-type web-page accessed by a client of encrypted and anonymized
+(i.e. file-sharing, messenger, and TV) and P2P plus non-P2P connections by observing patterns of data flows (e.g., packet
+app TC, respectively. Results (pertaining to each single classi- size and direction). Herrmann et al. [14] propose a Multinomial
+fier in the hierarchy separately) show that the proposed Na€ıve Bayes (MNB) that relies on the normalized frequency
+approach achieves precision and recall  95% in P2P/non- distribution of IP packet sizes to tackle the WF problem in the
+P2P recognition and  93% in P2P-type classification, while a context of different privacy-enhancing technologies (in a
+recall drop down to 71% is observed at last level. Similarly, closed-world scenario) including Tor and JonDonym. Although
+[8] propose the adoption of a hierarchical classifier to allow Tor and JonDonym guarantee a better protection than other pri-
+Internet TC (into  20 fine-grained classes), showing a com- vacy-enhancing technologies (i.e. OpenSSL, OpenVPN), they
+parison with flat-learning results. The proposed tree-structured prove to be not perfect (3% and 20% average accuracy, respec-
+(three-level) taxonomy introduces also a first level which iden- tively). In [15] the same problem is tackled via a Support Vector
+tifies known/unseen traffic. Both (per-classifier) feature selec- Classifier, obtaining a gain of detection rate over [14] from 3%
+tion (from a set of 200, as proposed by past literature) and to 55% (resp. from 20% to 80%) in Tor (resp. JonDonym) net-
+(coarse-grained) optimization w.r.t. different classifiers (such work. On the other hand, in an open-world case, the detection
+as Decision Trees, Neural Networks, and SVMs) are consid- rate drops with a maximum of 73% and 0:05% false-positive
+ered. Results show that the proposed hierarchical system out- rate. More recently, in [16] a WF approach aimed to overcome
+performs off-the-shelf flat classification, with an average limitation of previously-devised alternatives is proposed and
+recall > 95% for most popular traffic classes. tested on a huge real-world representative dataset, exploring the
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+MONTIERI et al.: A DIVE INTO THE DARK WEB: HIERARCHICAL TRAFFIC CLASSIFICATION OF ANONYMITY TOOLS 1045
+
+ fingerprints). The effects of bandwidth sharing on I2P is analyzed by the same authors in [23] considering both application
+ and user profiling achievable by an attacker. Using a C4.5 classifier fed with flow-based features, results show that users and
+ applications on I2P can be profiled, with a harmful (resp. beneficial) effect of the shared bandwidth increase on applications
+ (resp. users) profiling accuracy.
+ Recently, [24] describe Anon17 public dataset comprising
+ directional traffic-flows obtained by collecting data from three
+ ATs (i.e. Tor, I2P, and JonDonym). Besides, detailed information about the traffic types and applications running on Tor
+ and I2P is provided in the form of three-level labels for each
+ flow. Up to our knowledge, the sole public dataset similar to
+ Anon17 is that described in [25], containing however only Tor
+ traffic of eight applications (browsing, audio, chat, mail, P2P,
+ FT, VoIP, and video). Anon17 dataset is leveraged in [5],
+Fig. 1. Sketch of the proposed HC framework.
+ where three flat classifiers (that is, one per level, i.e. Anonymity Network, Traffic Type, and Application), are employed to
+limits of WF at Internet scale. Specifically, these are highlighted perform TC, also in its “early” variant [26]. In detail, at each
+by a precision/recall drop with the size of the background sites level the performance of five ML classifiers (NB, MNB, BN,
+which the monitored pages need to be distinguished from. C4.5, and RF) is compared, highlighting insights about the
+Finally, we mention that the adoption of Deep Learning (DL) to number and nature of relevant features needed for an accurate
+WF is also a currently-investigated topic. A novel DL-based TC. Results show that the anonymity networks (i.e. Tor, I2P,
+method to deanonymize Tor traffic is proposed in [17] and and JonDonym) can be easily distinguished (up to 99% Ftested on a dataset made of  3  106 network traces, with the measure). Differently, the specific application generating the
+best-performing DL model being þ2% accurate than state- traffic can be classified with up to 69% F-measure. At both
+of-the-art attacks. In [18] a WF attack against Tor is developed, levels, early TC achieves worse results.
+leveraging a Convolutional Neural Network and evaluated These findings highlight the need for delving into the probagainst state-of-the-art defenses (i.e. WTF-PAD and Walkie- lem via successive splits and devising a more sophisticated
+Talkie). Results report an accuracy > 98% on undefended Tor classification framework for harder classification tasks.
+traffic, while reaching > 90% accuracy (resp. 49:7%) when
+WTF-PAD (resp. Walkie-Talkie) is employed, with the attack
+ B. Summary of Contributions
+remaining effective also in an open-world setting.
+ Moving to pure TC of ATs (based on real-data), [19] devise The main contribution of this paper is a detailed study on
+an approach based on Hidden Markov Models (HMMs) to clas- TC of ATs by proposing a general Hierarchical Classification
+sify four categories of Tor traffic (P2P, FTP, IM, and Web). (HC) framework (see Fig. 1). The novelty of this work has a
+HMMs are employed to build inbound and output models of the two-fold significance: it (i) investigates the unexplored adopapplication types considered, and are fed with features based on tion of hierarchical approaches to TC of ATs (as opposed to
+burst volumes and directions of Tor flows, obtaining an accu- existing flat learning approaches) and (ii) overcomes the limiracy up to 92%. AlSabah et al. [20] present a ML-based method tations of earlier hierarchical proposals dealing with standard
+employing Naive Bayes (NB), Bayesian Network (BN), func- TC. Such framework uniquely suits to encrypted traffic and
+tional and logistic model trees to recognize applications used by naturally allows for both coarsening & narrowing of classifi-
+Tor users. Both circuit-level and cell-level information is lever- cation results. Our study includes its design, implementation,
+aged for offline and offline/online classification, respectively. optimization and evaluation.
+The highest accuracy achieved in online (resp. offline) case Specifically, the hierarchical approach resorts to a structure
+equals 97:8% (resp. 91%). A similar setup is proposed of (potentially different) classifiers arranged in a tree fashion,
+in [21] for user activity recognition by means of four classifiers each specialized in labeling a subset of classes. Such frame-
+(NB, BN, RF, and C4.5) fed with traffic-flow and circuit-level work exploits the “divide-et-impera” principle, enabling the
+features. Both approaches reach  100% accuracy, with flow- partition of workload among several classifiers, almost-natubased TC being less demanding and based on data that could be rally enabling a distributed implementation. Hence, the
+captured anywhere between the user and the Tor’s relay. Along obtained HC structure grants scalability, enables both perthe same lines, [22] employ flow-based (statistical) traffic analy- node tuning and performance analysis, and supports roll-up
+sis to prove whether Tor Pluggable Transports (PTs) can evade and drill-down operations of the results, which are provided at
+censorship systems. Adopting a C4.5 classifier (and based on a different levels of detail. Per-node performance figures also
+thorough analysis), authors show that Tor PTs usage is recog- allow to accurately evaluate per-node behaviors, and allow to
+nizable, as PT-based obfuscation changes the content shape in a identify potential causes of performance degradation, and thus
+distinct way w.r.t. Tor (i.e. conferring to flows distinctive prove useful in guiding feedback-driven design improvement.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+1046 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020
+
+Besided, HC design supports incremental-update (e.g., only a classification levels and Lt classes to discriminate from at tth
+minor additional training is required when a new part of the level (whose number increases with the depth), organized in
+application traffic is needed, instead of re-training the whole the corresponding set Lt , f1; . . . ; Lt g.
+system). Finally, the proposed architecture allows progressive The tree structure can be explored with three alternative
+censoring of “unsure” instances, implementing a per-classifier approaches [27]: (i) top-down approach, i.e., the system
+reject option via (a set of) independently-tunable thresholds. employs a set of local classifiers each tackled to a specific
+ The key issue researchers encounter in the collection of AT sub-problem; (ii) big-bang (or global) approach, when a single
+traffic datasets and the resulting lack of data publicly available classifier copes with the entire class hierarchy (i.e., it is trained
+in this field is herein overcome by leveraging the recently by considering the entire class hierarchy at once); (iii) flat
+released Anon17 dataset [24], representing an important classification approach, ignoring the class relationships at difshared workbench for research studies on anonymity and con- ferent levels (solving a classification task at each level of the
+sisting of a collection of traces gathered by different ATs, at hierarchy in an independent fashion), as adopted in [5]. In this
+different granularities: anonymous network, traffic type, and paper, we adopt the top-down choice (similarly to [8]). In this
+application. Although our HC strategy is encouraged by the case, for each instance to be classified, the HC framework first
+nature of the classification problem defined on this dataset, the predicts its first-level (most generic) class, then it uses that
+underlying HC principle generally suits to the varying degrees predicted class to narrow the choices of classes to be predicted
+of privacy ensured by a certain AT, including its identification at the second level (i.e., allowed second-level predicted claswithin “normal” traffic. ses are the children of that predicted at the first level), and so
+ The results show that the proposed HC approach proves to on. Although errors at a certain class level could propagate
+be a very good fit to the problem of classification of ATs traf- downwards the hierarchy, this choice promotes the architecfic. The HC approach is able to discern among ATs looking at ture modularity, which is crucial in TC, as opposed to bigtheir encrypted traffic, also when considering only the features bang and flat classifiers.
+extracted from the first K packets of each flow (i.e., imple- Further, three different ways of using the local information
+menting early TC). Compared to flat approaches we have can be employed, mainly differing in their training phase [27]:
+recently proposed [5], the hierarchical framework also pro- (i) Local Classifier per Node (LCN); (ii) Local Classifier per
+vides performance gains at application level. This result holds Level (LCL); (iii) Local Classifier per Parent Node (LCPN).
+both when considering classic performance indexes at macro- LCN and LCL consist in training one binary classifier for each
+scopic level (typically adopted in the TC literature) and by node and a multi-class classifier for each level of the class
+accurately breaking it down and evaluating it along multiple hierarchy, respectively. Unluckily, since these two approaches
+facets (i.e. by introducing metrics able to capture error suffer from class-membership inconsistency and have higher
+severity). complexity, in this work we adopt LCPN, that is widely used
+ The rest of the manuscript is organized as follows: Section II in the literature [8], [11] and requires a multi-class classifier
+describes the considered hierarchical TC framework of ATs; for each parent node in the class hierarchy, trained to distinthe experimental environment and the corresponding classifica- guish among its children nodes (usually less than Lt , with t
+tion results are reported in Sections III and IV, respectively; being node classification level).
+finally, Section V provides conclusions and future directions. Fig. 1 reports a sketch of the proposed HC framework. We
+ highlight that the indexing of a node reflects the ordered list of
+ II. HIERARCHICAL TRAFFIC CLASSIFICATION its ancestors (except the root C0 ), e.g. Cij denotes the jth L3
+ OF ANONYMITY TOOLS classifier having C0 and Ci , as grandparent and parent, respectively. Classifier Cij is in charge of discriminating from
+ In this section we introduce the proposed framework for HC
+ Lij < L3 classes, grouped within the set Vij , based on the
+of AT traffic, as streamlined in Fig. 1, whose main compoassociated prediction probabilities p1; . . . pLij .
+nents are discussed in the following. In detail, preliminaries
+ The proposed HC framework is trained by recursively spliton HC are discussed first, together with a general overview of
+ ting the training set according to the tree structure. Specifithe proposed approach (Section II-A). Then, terms and concally, the procedure starts from the root classifier C0 trained
+cepts regarding traffic objects are introduced, along with a
+ using the whole set. On the other hand, each node concurring
+description of the feature sets (Section II-B). The dissertation
+ to t > 1 level classification uses a training set corresponding
+ends with the classification algorithms (Section II-C) which
+ to a subset of Lt , the elements all belonging to the same class
+could be adopted for AT (hierarchical) traffic analysis.
+ at ðt  1Þ. Reducing the number of classes per classifier hopefully simplifies the resulting problem and reduces the error
+A. Preliminaries and Proposed HC Framework
+ scope of flat classification.
+ In what follows we provide HC preliminaries needed to In addition, the proposed framework adopts a progressiveunderstand the design choices adopted for the TC framework censoring (viz. non-mandatory leaf node prediction [27]) polhere proposed and investigated in the context of TC of ATs. icy, accomplished by equipping each classifier node with a
+ First, we remark that our classification framework focuses “reject option” that censors “unsure” classification outcomes
+on classes whose relationship can be summarized in the form at intermediate layers (RO blocks in Fig. 1). In other words,
+of a tree (each class has one parent class, at most) with T the reject option forces the classification process to stop for a
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+MONTIERI et al.: A DIVE INTO THE DARK WEB: HIERARCHICAL TRAFFIC CLASSIFICATION OF ANONYMITY TOOLS 1047
+
+ B. Traffic Object and Feature Design
+ The definition of a specific traffic object (also known as traffic
+ view) determines how raw traffic is segmented into multiple discrete traffic units [2] which are then labeled by the classifier. We
+ remark that, although several proposals exist and have been considered in the (ATs) TC literature, flows and biflows are the most
+ commonly used traffic objects [5], [24]. In more detail, a flow is
+ a set of packets with the same 5-tuple (i.e. source IP, source
+ port, destination IP, destination port, and transport-level protocol). On the other hand, a biflow includes both directions of traffic. In other words, in the latter case, (IP address, port)
+ pairs of source and destination are interchangeable. Referring
+ to the hierarchical approach illustrated in Fig. 1, we assume that
+ all the classifiers in the hierarchy shall operate on a common TC
+ object, although not restricted to a specific one.
+ As previously explained, different sets of features (of different sizes) can be considered to feed the classifiers in the hierarchical architecture (to achieve accurate TC), as shown in
+ Fig. 1. For instance, referring to the example in Section II-A,
+ classifier Cij is assumed to rely on Mij features, collected in
+ the vector f ij . Finally, given a set of features, feature selection/extraction techniques are adopted to extract only a subset
+ among them, with the aim of improving further TC perfor-
+Fig. 2. Anon17 Classification Levels: Anonymous network (L1), Traffic
+ mance, while reducing the computational complexity.
+Type (L2) and Application (L3), with total number of samples per class and
+class label at each level.
+ C. Classification Algorithms
+given instance when a classifier node (e.g., Ci;j ) does not reach As in the case of set of features, the proposed HC approach
+a clear verdict, i.e. when the highest class prediction probabil- allows for a different classifier to be employed at each node
+ity (e.g., max‘¼1;...Li;j p‘ ) is below a threshold (e.g., g ij ). This (see Fig. 1). Therefore, any ML/DL-based (as ATs traffic is
+design choice—already introduced and justified in the mobile encrypted) supervised classifier can be adopted. For example,
+context in a flat scenario [28]—here avoids that misclassifica- referring to classifier Cij in the example of Section II-A, any
+tions are propagated downwards, at the expense of coarser- ML/DL-based classifiers could be used to discriminate from
+grained predictions. Lij classes within the set Vij . The sole requirement for each
+ By looking at the hierarchy of classifiers reported in classifier is to be able to provide its soft-output vector, required
+Fig. 1, it is apparent that its naivest implementation resorts by the censoring mechanism described in Section II-A.
+to the same classification algorithm and feature set throughout all the hierarchy. Nonetheless, although HC can achieve III. EXPERIMENTAL ENVIRONMENT
+a potential performance gain w.r.t. a flat approach even in
+ Hereinafter, we first report the main details of Anon17
+this case (due to the decomposition of the classification task
+ dataset and the pre-processing operations carried out on it
+into sub-problems), the proposed framework allows for fur-
+ (Section III-A); then we discuss the design choices made to
+ther optimization [27]. Indeed, classification performance is
+ implement the HC system, matching the characteristics of the
+expected to improve with more refined implementations,
+ dataset (Section III-B); finally, we introduce the performance
+leveraging a specific selection of features for classification,
+ metrics employed to evaluate our solution (Section III-C).
+and/or using different classification algorithms at different
+nodes of the class hierarchy (e.g., chosen from a pool of
+classifiers available). This work investigates both these A. Dataset Description
+optimization degrees-of-freedom. In case both the classifier Anon17 was collected in a real-network environment at the
+and the feature set are optimized at each node, the combina- NIMS Lab [24] during 2014–17 and gathers traffic from Tor,
+torial explosion of the resulting optimization is herein cir- I2P, and JonDonym. The dataset has been labeled leveraging
+cumvented by a decoupled design resorting to per-node the information provided by the anonymity services themselves.
+performance, e.g. selecting the pair corresponding to the Indeed, it provides labels at different levels: (i) Anonymous Netclassifier and the number of features ensuring the highest work Level (L1 ¼ 3 classes); (ii) Traffic Type Level (L2 ¼ 7
+score for the sub-classification problem the classifier node is classes); (iii) and Application Level (L3 ¼ 21 classes). This
+in charge to solve. Nonetheless, we remark that an optimiza- label organization promotes analyses of ATs traffic at different
+tion based on complete enumeration or alternative heuristics levels of granularity, as well as the implementation of hierardoes not contrast with HC architecture in Fig. 1. chical approaches, as remarked in Fig. 2. We point to [24] for
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+1048 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020
+
+obtaining exhaustive information on Anon17 dataset. In this consider two different feature sets, referred hereinafter to as
+study, we down-sample to 5% the most-populated traffic-type TC_set and EarlyTC_set. In brief, TC_set capitalizes
+classes of the original dataset, adopting a pre-processing strat- complete traffic flows, while EarlyTC_set only relies on the
+egy similar to [5], so as to mitigate class imbalance. This repre- first K packets of each flow, thus enabling early TC.7
+sents a safe choice due to the high number of samples of In detail, TC_set originally refers to 81 per-flow statistical
+“majority” classes.4 features. Repeated fields (such as those related to packet
+ According to the above dataset description, we tackle the length and packet size) and (initial/final) timestamps have
+problem of classification of ATs traffic assuming that we are been removed to avoid overestimated results.8 As a result, the
+in the presence of AT traffic only, similarly to [5]. The employed feature set consists of 74 statistics comprising: (i)
+depicted scenario refers to a context where an upstream classi- flow direction and duration, (ii) packet length (PL) and interfier has been able to separate AT traffic from clear or standard- arrival time (IAT) statistics (mean, min, max, median, quarencrypted one (e.g., as shown by [13] for Tor network). tiles, etc.), (iii) TCP9 and IP header-related features (window
+Hence, the aim of the proposed approach is to assess discrimi- size, sequence number, TCP and IP options, etc.), (iv) number
+nation of anonymity services and related applications once of Tx/Rx bytes and packets, (v) number of distinct hosts conthis AT traffic has been separated from other traffic. More nected to flow source or destination IP (during its lifetime),
+generally, the results of our analysis can be intended as an (vi) number of concurrent flows sharing the same (source IP,
+upper bound on the ATs classification performance in the case destination IP) pair (regardless of source & destination
+of an open-world assumption. Indeed, the use of an upstream ports).10 Differently, EarlyTC_set is made of the sequence
+classifier would perfectly fit within the hierarchical approach of pairs (PL, IAT) of the first K packets of each flow. In the
+proposed in this paper, with design and evaluation of the rest of the paper, we will employ TC_set when referring to
+whole AT-TC system (truly operating in an open-world sce- standard TC, whereas adoption of EarlyTC_set will be
+nario) left as future work. assumed just for early TC.
+ Finally, for TC_set features, we consider feature selection, based on a filtering approach, ranking the elements
+B. HC Implementation Choices
+ of the set based on the relative importance of each feature
+ Hereinafter, we briefly discuss how the general HC frame- (so as to skim the more informative ones), in terms of
+work described in Section II is specialized in the case of its mutual information with the class (random) variable,
+adoption on Anon17 dataset, with the following paragraphs whereas for EarlyTC_set features, ranking is performed
+covering all the different aspects needing specification. HC according to a time-constraint (i.e. only the first K packets
+framework specialized for classification of Anon17 traffic- are employed). We remark that, for the TC_set, feature
+flows has been implemented in Python, leveraging Weka extraction techniques, such as PCA, could be easily
+wrapper and Scikit-learn utilities. A Virtual Machine (OS adopted in the proposed HC framework without any sub-
+Ubuntu Server 16.04) equipped with 32 VCPUs and 64 GB stantial change.
+RAM, running on private OpenStack cloud platform, has been 3) Classification Algorithms: Herein, we consider as
+employed for evaluating the HC framework. Finally, the code potential nodes four different ML-based classifiers, i.e., the
+used for the analyses has been made available on GitHub5 to C4.5, the RF, the NB, and the BN. Indeed, these classifiers
+foster reproducibility of the experiments. have been successfully employed in several works tackling
+ 1) HC Architecture: Based on the nature of the traffic in TC of anonymous traffic [20], [21], [23]. Nonetheless, as the
+Anon17 dataset, the TC here considered is arranged in three lev- proposed HC framework is general, other ML (e.g., SVM,
+els, corresponding to anonymity networks, traffic types, and spe- Gradient Boosting, etc.) or even DL classifiers could be
+cific applications. As a whole, the HC framework resorts on one adopted with no substantial change.
+classifier at L1, two classifiers at L2 and five classifiers at L3. Specifically, the first two belong to the family of decision
+ 2) Traffic Object and Feature Sets: Anonymous traffic trees, whereas the second two to the Bayesian family. In brief,
+contained in Anon17 is split into different flows (see Section II- C4.5 is an algorithm employed to generate a decision tree
+B), by means of the flow-exporting tool Tranalyzer2 [29], con- used for classification based on the distribution entropy constituting the TC object here employed. We highlight that the cept and trained via a top-down recursive and greedy procedirection of each flow (considered as a feature) is indicated as dure, whereas RF is a classifier based on an ensemble of
+“A” or “B” for client-to-server and vice versa, respectively. We different decision trees built at training time exploiting the
+note that the proposed HC approach could even operate at the ideas of “bootstrap aggregating” and random-feature selection
+packet-level, in principle (viz. the TC object could be the single
+packet6). For each traffic flow, Anon17 provides different sets of
+ 7
+features extracted via Tranalyzer2 [29]. In this work, we We highlight that other feature sets (e.g., histograms), leading to lower performance, have been considered in [5].
+ 8
+ Timestamp values depend upon the process adopted for collecting traces,
+ 4
+ Experimental results, not shown, have highlighted negligible difference potentially introducing to classification artifacts.
+ 9
+with the (additional) use of oversampling of “minority” classes. TCP-related features have zero-value if the flow leverages UDP as trans-
+ 5
+ https://github.com/NM2/hierarchical-tc-at. port protocol (e.g., I2P network works on both TCP and UDP).
+ 6 10
+ Up to our knowledge, there is no work in literature tackling anonymous TC We point to the user manual of Tranalyzer2 (https://tranalyzer.com) for
+at this granularity. further details about these features.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+MONTIERI et al.: A DIVE INTO THE DARK WEB: HIERARCHICAL TRAFFIC CLASSIFICATION OF ANONYMITY TOOLS 1049
+
+ TABLE I assumption) of each performance measure as a result of the
+ ACCURACY, F-MEASURE, AND G-MEAN (%) OF THE BEST FLAT CLASSIFIER
+ (RF) WITH {OPTIMAL NUMBER OF FEATURES} AT EACH LEVEL COMPARED evaluation on the ten different folds.
+ TO NAIVE HIERARCHICAL CONFIGURATION. RESULTS ARE IN THE FORMAT
+ AVG. ( STD.) OVER 10-FOLDS
+ IV. EXPERIMENTAL EVALUATION
+ In this section, we show experimental results aimed at investigating anonymous TC performance via the proposed hierarchical framework, also when considering early TC. First, the
+ performance of the proposed approach is analyzed and compared with the best flat classifier, showing that the usage of a
+ “naive” hierarchical architecture is able to introduce non-negligible improvements, being the result of decomposition in simpler TC sub-tasks. Then, the results of design improvements are
+ shown, deepening the impact of both rough- and fine-grained
+ optimization choices—the former consisting in varying the
+Legend: Best Accuracy ($ ), F-Measure (y), and G-Mean () Per Level number of features of the classifiers (keeping the classifier type
+ fixed) in the hierarchy with the same increment, while the latter
+to mitigate overfitting. Differently, NB is a simple probabilis- involving changes to both features and classifier types. Contic classifier that assumes class conditional independence of cerning the early-TC scenario, only final results pertaining to
+the features, being not the case for real-world problems, but fine-grained optimization are reported, for brevity. Also, the
+working well in practice and leading to low complexity. Such evaluation contains finer-grained analyses of the error patterns
+stringent assumption is mitigated by the BN classifier, model- of these two different classification “philosophies” along with
+ing dependence relationships between features and classes the severity of errors (thus leading to interesting conclusions on
+usually via a direct acyclic graph. In this work, for the latter the ATs considered). Finally, a first investigation of classificatwo algorithms we will adopt the variants shown to perform tion performance obtained by resorting to progressive censoring
+better in [5], i.e. NB_SD (supervised discretization is used for in the hierarchical case is reported, and compared with the
+numerical features) and BN_TAN (the dependence model is effects of censoring on a flat classifier baseline.
+reduced to a simpler tree).
+ A. Naive Hierarchical vs. Best Flat Classifier
+C. Performance Metrics
+ In Table I we report the performance of the best flat classifiers
+ Performance evaluation process is based on the following (e.g., the configurations with an optimal number of features in
+main performance metrics: accuracy, precision (prec), recall terms of F-measure) as derived from [5] and resulting in a RF
+(rec), and specificity (spec). For conciseness, out of the fed with 50, 35, and 65 features at L1, L2, and L3, respectively.
+latter three metrics, we consider the F-measure, F , Performance is reported in terms of accuracy, F-measure, and
+ð2  prec  recÞ=ðprec þ recÞ, and the G-mean, G , G-mean at each classification level.11 Such optimal setup is
+pﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+ rec  spec. Since these two arise from three metrics defined compared with a first naive implementation of our HC
+on a per-class basis, we employ their arithmetically averaged approach, obtained by using the best L3 flat configuration (RF +
+(viz. macro) versions. Also, confusion matrices (breaking the 65 features) in all the classifier nodes of the hierarchy. Unsurresults down by class) are leveraged to provide a representa- prisingly, L1 performance metrics report a score  99:7%: traftion of the results of the investigated classification approaches, fic generated through different anonymity networks is easily
+also highlighting misclassification patterns at fine grain. To distinguishable from each other, confirming that these tools are
+detect performance bottlenecks of our HC approach, we also designed to provide anonymity but not to hide the usage of the
+provide per-node metrics (i.e. not considering classification tool itself. Also, results show that even a naive hierarchical soluerrors introduced by upper levels), also deriving useful guide- tion improves L3 performance (up to þ2:68% F-measure)12 w.r.
+lines for system design and evaluation. t. the best L3 flat classifier, and performs on a par in terms of
+ Considering that in our design each classifier implements a L1–L2 levels when compared to level-optimized best flat classireject option, we also deepen the impact of this design choice fiers. This is due to split of the original TC task (21 classes at
+on performance. In more detail, we investigate the impact of L3) into smaller tasks (at most, 5 classes).
+varying the thresholds (see Section II-A), whose tuning can be
+effective to improve classification performance trading it off B. Impact of Feature Selection
+with the reduction of the classified instances (viz. the ratio of
+classified instances, CR). As a first step towards the optimization of the proposed
+ For each considered analysis, our evaluation is based on a approach, we investigate here the performance of the
+(stratified) ten-fold cross-validation, representing a stable per-
+ 11
+formance evaluation setup. As a consequence, we report both “n.d.” points out unavailable performance for flat classifiers at levels
+ deeper than that considered for classification.
+the mean and the standard deviation (in the form of a 3s 12
+ Also, from a statistical significance viewpoint, we observed a gain of HC
+interval, corresponding to 99:7% confidence under a Gaussian approach in 100% of the cases over the considered folds.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+1050 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020
+
+Fig. 3. F-measure (a)–(c) and G-mean (d)–(f) [%] of hierarchical and flat classifiers: RF fed with different subsets of features in TC_set (from 5 to 74 with
+increments of 5). Average on 10-folds and corresponding 3s confidence interval are shown.
+
+framework when varying the number of features used by each explosion of the optimization problem, we resort to the perclassifier but considering a common number of features (here node optimization rationale described in Section II-A. Based on
+denoted M) for each node in the tree, and keeping the classifi- the above rationale, in Fig. 4 we report the classification perforcation algorithm fixed to RF (that is, the best-performing one mance in terms of accuracy (Fig. 4(a)), F-measure (Fig. 4(b))
+in the flat case [5]). We remark that although there is a com- and G-mean (Fig. 4(c)), by comparing the flat classification
+mon M for all nodes, the specific set of features may differ. approaches with the per-node optimized hierarchical classifier.
+ Fig. 3 summarizes the obtained results—with a view to find- The proposed (optimized) hierarchical classifier is able, at least,
+ing the optimal value M for the entire hierarchy—also provid- to perform at tth (t ¼ 1; 2; 3) level as well as the corresponding
+ing a comparison against the three flat classifier counterparts (in flat classifier explicitly designed to solve the classification task
+terms of F-measure and G-mean, as accuracy showed similar of the same level. In detail, such optimized hierarchical
+trends). First, results highlight that there is no appreciable per- approach is able to achieve 99:81% (resp. 99:83%), 95:81%
+formance difference among L1–L3 flat classifiers and the hier- (resp. 97:44%) and 75:56% (resp. 85:89%) F-measure (resp. Garchical approach by looking at L1 metrics, and only a slight mean) score at L1, L2, and L3, respectively. These results
+performance improvement is observed with a high number of (almost) represent a tie at L1, whereas þ1:51% (resp. þ1:73%)
+features (performance saturation is observed with at least 10 and þ4:42% (resp. þ3:16%) gains are experienced at L2 and
+features) is achieved. On the other hand, at L2 slightly higher L3, respectively.13 The details of optimized HC are reported in
+performance are obtained by the hierarchical approach with a Fig. 5(a), where for each classifier node the employed classifier
+lower number of employed features per node (approximately and the number of features are reported. Remarkably, RF
+10–20), whereas at L3 (being the harder task) the following key denotes the best classifier for each node-specific classification
+observations can be made: (i) the hierarchical approach pro- task, while only for the classifier of Tor App applications
+vides a non-negligible improvement over the L3 flat classifier BN_TAN provides higher performance. Instead, the variability
+for all the range considered, (ii) the best performance of the HC of the optimal number of features underlines no clear trend,
+is attained with a smaller number of features. These considera- except that usually I2P-related node classifiers require a lower
+tions apply to both F-measure and G-mean. number of features, at least when leveraging those in TC_set.
+
+C. Fine-Grained Optimization D. Optimization for Early TC
+ Herein the fine-grained framework optimization, in case of Herein we evaluate the hierarchical framework when
+features from TC_set, is discussed. In detail, with the aim of the classifiers are fed with features in EarlyTC_set (see
+trading off design complexity with performance, we remove the Section III-B), i.e. considering PLs and IATs of the first K ¼
+constraints previously introduced, and allow each node in the 1; . . . ; 16 (non-zero payload) packets. This analysis helps
+hierarchy to be optimized in terms of both the number of fea- assessing the framework capability in supporting early TC,
+tures and the classifier type. As remarked in Section III-B, we
+consider four different ML-based classifiers (C4.5, RF, NB_SD 13
+ Also, from a statistical significance viewpoint, we observed a gain of HC
+and BN_TAN). We remark that, to avoid a combinatorial approach in 97:5% of the cases over the considered folds.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+MONTIERI et al.: A DIVE INTO THE DARK WEB: HIERARCHICAL TRAFFIC CLASSIFICATION OF ANONYMITY TOOLS 1051
+
+Fig. 4. Accuracy (a), F-measure (b) and G-mean (c) of the best classifiers and of their early-TC counterparts (d, e, and f). Average on 10-folds and
+corresponding 3s confidence interval are shown.
+
+Fig. 5. Fine-grained optimized hierarchical structure with (a) TC_set and (b) EarlyTC_set. Optimal number of features for each classifier (node) is shown
+in square brackets. Lighter colors point to worse performance. Related per-node metrics are shown in (c) and (d), respectively (with < 60% F-measure nodes
+highlighted in gray).
+
+i.e., to evaluate how soon and to which degree ATs and related packets) is not able to provide improved performance (e.g.,
+services can be identified. To this end, we have paralleled the 48:80% F-measure at L3, as opposed to 50:23% in the flat
+previous investigations in the early-TC scenario. Nonetheless, case). This result highlights a key difference with respect to
+herein we omit the details for brevity, and comment only the the scenario leveraging TC_set and emphasizes the need for
+final results. We remark that the main difference with the pre- hierarchical-specific optimization in such case. Secondly, we
+vious analysis concerns the feature selection process, herein investigate (as in Fig. 3) how varying the features correspondperformed on a time-basis (i.e. only the features drawn from ing to the first K packets could improve the performance of
+the first K packets are considered). the naive hierarchical extension, and compare it with the best
+ First, results show that a naive hierarchical “extension” of flat counterpart. Our investigations reveal that a performance
+best flat L3 classifier (in this case a BN_TAN with K ¼ 11 saturation is observed after  10 packets, and that the HC
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+1052 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020
+
+Fig. 6. L3 Confusion matrices ([%] in log scale) of best flat and hierarchical classifiers in standard TC (red) and early TC (blue).
+
+approach is able to improve best flat L3 approach in terms of with features in EarlyTC_set. Therefore, classification
+G-mean, whereas an F-measure drop is observed for all values within I2PApp80BW cannot be accurately attained with neither
+of K considered. Finally, fine-grained optimization (see Fig. 4 of the considered feature sets (confirming the intuition that
+(d), (e), and (f)) provides higher performance with respect to I2PApp80BW represents traffic obtained by mixing different
+the optimized flat case, e.g., þ1:71% F-measure and þ1:59% apps), and the advantage of the classification task split into sub-
+G-mean at L3.14 problems cannot exceed a certain threshold in this case, due to
+ The corresponding optimized hierarchical structure is the impossibility of discerning applications within this traffic
+shown in Fig. 5(b) and—when compared to Fig. 5(a)—clearly type, resorting to the set of the available features.
+shows that per-node optimized classifiers significantly differ
+in type and number of features, thus motivating the need for F. Per-Class Performance Breakdown
+fine-tuned optimization of the proposed HC. Although the HC
+ Since classification at L3 is a challenging task (but also the
+gain is not significant, its operating principle allows to delve
+ most interesting from a user’s privacy perspective), we report
+into the “information structure” of the TC problem and highin Fig. 6 the per-class performance breakdown of HC results
+light critical points, by excluding potential performance drops
+ in terms of confusion matrices at L3, comparing them against
+due to the size of the classification task, as shown by the folresults obtained with flat approach. We recall that for these
+lowing per-node performance analysis.
+ matrices the higher the concentration toward the main diagonal, the better the overall performance. Further, to highlight
+E. Per-Node Detailed Classification Performance how errors at L3 which do not imply misclassifications at L1/
+ For completeness, we report in Fig. 5(c) and (d) the detailed L2 are less severe and should be promoted as opposed to the
+per-node classification performance, corresponding to TC_set others, in the same figures we also highlight the error patterns
+and EarlyTC_set, respectively. corresponding to the same traffic type (solid boxes) and the
+ The following interesting observations can be made on the same AT (dashed boxes).
+reported tree representation. First, with respect to Anonymous First, comparing flat and hierarchical approaches (Fig. 6(a)
+Network Level classification (L1) nodes present near-ideal per- and (b), respectively), we can observe a reduction of errorformance both when relying on TC_set and EarlyTC_set, patterns in the latter case, highlighting the beneficial “dividethus showing (almost) no errors propagating from HC of ATs. et-impera” principle of HC. Secondly, confusion matrices at L1
+Secondly, at Traffic Type Level (L2) both approaches based on (dashed boxes) show that classifiers based on both approaches
+TC_set and EarlyTC_set present near-ideal performance (with different quantitative outcomes) present error patterns
+in classifying Tor traffic types, whereas some performance deg- which almost entirely lead to a misclassification of the traffic
+radation is observed in classification of I2P traffic types; this type within the same anonymous network. Differently, referring
+phenomenon is more penalizing in the early-TC case, e.g., with to L2 standpoint (solid boxes), HC provides improved capabili-
+I2P F-measure dropping down to 60:61%. This represents one ties in confining errors to the same traffic type (especially in the
+of the main causes of performance difference among the two case of I2P traffic). A similar consideration applies to early TC
+scenarios, as all these errors are propagated downwards. results (Fig. 6(c) and (d)) and, in particular, to errors concerning
+Finally, at Application Level (L3), the behavior of the classifier the applications of I2P Apps and Tor Apps. Hence HC approach
+nodes is more varied. Indeed, referring to approach based on performance clearly highlights the inability, not depending on
+TC_set, it is apparent that Tor nodes (TorApp and TorPT) the size of the classification task, in satisfactorily discriminating
+work well, whereas on I2P nodes significant degradations (with an early TC setup in mind) among I2P traffic types and
+(higher than those at L2) are observed, with I2PApp80BW the within their corresponding applications, along with those in
+most significant. Differently, discrimination within each I2P Tor Apps. On the other hand, results confirm the outcomes of
+traffic type and TorApp is only possible with < 65% F-measure [30], witnessing that obfuscation implemented by Tor Pluggable Transports induces a class fingerprint easily distin-
+ 14
+ Also, from a statistical significance viewpoint, we observed a gain of HC guishable ( 99% accuracy, see C2 classifier in Fig. 5) from
+approach in 90:0% of the cases over the considered folds. both Normal Tor Traffic and Tor Apps.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+MONTIERI et al.: A DIVE INTO THE DARK WEB: HIERARCHICAL TRAFFIC CLASSIFICATION OF ANONYMITY TOOLS 1053
+
+Fig. 7. F-measures and Classified Ratios (CR) of best classifiers vs. g.
+
+G. Performance With Reject Option the network (L2), and the application category generating
+ Finally, in Fig. 7 we focus on the adoption of censoring such traffic (L3). Moving from naive to fine-grain optimized
+threshold(s) for flat classification and HC of ATs. Specifically, implementations for the hierarchical classifier, results at difwe report L3 performance, being the hardest task considered. ferent granularities highlighted how HC guarantees interesting
+We recall that, although in the flat case there is only a single tun- performance gains, especially at the finest level (L3). More
+able g (referred to as FC 3 ), HC allows to set a different threshold specifically, applications were classified with up to 75:56% Fvalue at each node (e.g., for Cij the threshold g ij can be adjusted measure, obtaining a gain of up to þ4:5% with respect to an
+independently from the others, see Section II-A). Nonetheless, optimized flat implementation [5].
+as a preliminary investigation toward the censored behavior of Further, it was proved that these errors can be mitigated fur-
+HC approach—to avoid cumbersome analyses—we consider ther with outcome censoring mechanisms (avoiding error
+two simplified options: considering only a common g value propagation), e.g. by discarding  20% of classified flows, the
+shared by (i) by all the nodes in the hierarchy (HC all ) and proposed approach is able to guarantee  80% F-measure.
+(ii) solely by the classifier nodes concurring to L3 classification Also, per-node and per-class performance evaluation allowed
+(HC 3 ). Accordingly, we report the F-measure vs. g (similar to delve into misclassification patterns and their severity,
+trends have been observed for other metrics) along with the proving that HC approach better confines misclassifications in
+corresponding trend of the ratio of classified samples (CR). the same AT and even the same traffic type. These evaluations
+ Although using such thresholds cannot be intended as a pana- witnessed the appeal and effectiveness of HC framework also
+cea able to cope with high-confidence wrong predictions, results in real environments and provided insights in identifying perpertaining to the adoption of TC_set show performance formance bottlenecks which lie on a very limited set of nodes
+improvement with increasing g. In detail, both hierarchical var- in the hierarchy. Specifically, applications running within I2P
+iants offer performance gain with higher CR (less discarded correspond to the hardest to be classified each other, thus conflows) w.r.t. FC 3 (e.g.,  80% F-measure is attained with  firming the common thinking that such AT provides a higher
+80% CR), with HC all having slightly improved performance privacy level (from TC viewpoint) w.r.t. Tor, at the expenses
+(while incurring in a slightly higher CR, due to the presence of of increased latency.
+non-zero thresholds for nodes at higher levels in the hierarchy). The proposed HC framework suggests the following future
+On the other hand, in the early-TC scenario, the CR is lower for directions: (i) use of sophisticated nodes and alternative hierhierarchical approaches, while HC all provides slightly archical approaches; (ii) advanced HC optimization, e.g.,
+improved performance than FC 3 , whose performance do not automatic computation of reject thresholds possibly differing
+benefit from a g increase. Nonetheless, such results underline at each node; (iii) hierarchical architectures having nodes
+how progressive censoring via per-node thresholds may be a operating with different TC objects and with applications
+viable option for further performance improvement. arranged in “multi-view” structures; (iv) HC implementation
+ in the community-oriented TC platform TIE [31], allowing
+ V. CONCLUSIONS AND FURTHER DIRECTIONS live (anonymous and not) traffic evaluation.
+
+ In this paper, we tackled TC of Tor, I2P, and JonDonym via
+a hierarchical approach that, beyond classification perfor- REFERENCES
+mance gains, carries by design several advantages in terms of [1] G. Aceto and A. Pescape, “Internet censorship detection: A survey,”
+modularity, training efficiency, distributed deployment, and Comput. Netw., vol. 83, pp. 381–421, 2015.
+ [2] A. Dainotti, A. Pescape, and K. C. Claffy, “Issues and future directions
+“tunable view” of classification outputs. In detail, the pro- in traffic classification,” IEEE Netw., vol. 26, no. 1, pp. 35–40,
+posed framework was designed with varying constraints, Jan./Feb. 2012.
+resulting in implementations with different degrees of com- [3] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescape, “Multi-classification approaches for classifying mobile app traffic,” J. Netw. Comput.
+plexity (in terms of classifiers, features, and reject option). Appl., vol. 103, pp. 131–145, 2018.
+ Our experimental analysis—carried on the Anon17 public [4] A. Dainotti, A. Pescape, and G. Ventre, “Worm traffic analysis and chardataset—allowed reasoning on which degree ATs traffic can acterization,” in Proc. IEEE Int. Conf. Commun., 2007, pp. 1435–1442.
+ [5] A. Montieri, D. Ciuonzo, G. Aceto, and A. Pescape, “Anonymity services
+be told apart, considering different granularities such as the Tor, I2P, JonDonym: Classifying in the dark (web),” IEEE Trans. Depend.
+anonymity network adopted (L1), the traffic type tunneled in Secure Comput., vol. 17, no. 3, pp. 662–675, May-Jun. 2020.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.
+1054 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 7, NO. 3, JULY-SEPTEMBER 2020
+
+ [6] N. Cascarano, A. Este, F. Gringoli, F. Risso, and L. Salgarelli, “An [31] W. De Donato, A. Pescape, and A. Dainotti, “Traffic identification
+ experimental evaluation of the computational cost of a DPI traffic classi- engine: An open platform for traffic classification,” IEEE Netw., vol. 28,
+ fier,” in Proc. IEEE Global Telecommun. Conf., 2009, pp. 1–8. no. 2, pp. 56–64, Mar./Apr. 2014.
+ [7] J. Yu, H. Lee, Y. Im, M.-S. Kim, and D. Park, “Real-time classification
+ of internet application traffic using a hierarchical multi-class SVM,”
+ KSII Trans. Internet Inf. Syst., vol. 4, no. 5, pp. 859–876, 2010. Antonio Montieri (GS’18) received the M.S. degree,
+ [8] L. Grimaudo, M. Mellia, and E. Baralis, “Hierarchical learning for fine in 2015, from the Department of Electrical Engineergrained internet traffic classification,” in Proc. IEEE 8th Int. Wireless ing and Information Technologies, University of
+ Commun. Mobile Comput. Conf., 2012, pp. 463–468. Napoli Federico II, Naples, Italy, where he has been
+ [9] J.-h. Kim, S.-H. Yoon, and M.-S. Kim, “Study on traffic classification working toward the Ph.D. degree since 2017. His
+ taxonomy for multilateral and hierarchical traffic classification,” in work is focused on network measurements,
+ Proc. IEEE 14th Asia-Pac. Netw. Oper. Manage. Symp., 2012, pp. 1–4. (encrypted and mobile) traffic classification and
+[10] S.-H. Yoon, K.-S. Shim, S.-K. Lee, and M.-S. Kim, “Framework for modeling, monitoring of cloud network performance.
+ multi-level application traffic identification,” in Proc. IEEE 17th Asia- He has coauthored 16 papers and 5 posters accepted
+ Pac. Netw. Oper. Manage. Symp., 2015, pp. 424–427. for publication in international journals and confer-
+[11] Y. N. Dong, J. J. Zhao, and J. Jin, “Novel feature selection and classifi- ence proceedings.
+ cation of internet video traffic based on a hierarchical scheme,” Comput.
+ Netw., vol. 119, pp. 102–111, 2017.
+[12] W. M. Shbair, T. Cholez, J. François, and I. Chrisment, “A multi-level
+ framework to identify HTTPS services,” in Proc. IEEE/IFIP Netw. Domenico Ciuonzo (S’11–M’14–SM’16) received
+ the Ph.D. degree in electronic engineering from the
+ Oper. Manage. Symp., 2016, pp. 240–248.
+[13] J. Barker, P. Hannay, and P. Szewczyk, “Using traffic analysis to iden- University of Campania “L. Vanvitelli,” Caserta,
+ tify the second generation onion router,” in Proc. IFIP 9th Int. Conf. Italy. He is currently an Assistant Professor with the
+ Embedded Ubiquitous Comput., 2011, pp. 72–78. Department of Electrical Engineering and Informa-
+[14] D. Herrmann, R. Wendolsky, and H. Federrath, “Website fingerprinting: tion Technologies, University of Napoli “Federico
+ Attacking popular privacy enhancing technologies with the multinomial II,” Naples, Italy. His work focuses on data fusion,
+ wireless sensor networks, machine learning, and net-
+ Na€ıve-Bayes classifier,” in Proc. ACM Workshop Cloud Comput. Secur.,
+ work analytics, Since 2014, he has been on the edito-
+ 2009, pp. 31–42.
+[15] A. Panchenko, L. Niessen, A. Zinnen, and T. Engel, “Website finger- rial board of different IEEE and Elsevier journals.
+ printing in onion routing based anonymization networks,” in Proc. 10th
+ Annu. ACM Workshop Privacy Electron. Soc., 2011, pp. 103–114.
+[16] A. Panchenko et al., “Website fingerprinting at internet scale,” in Proc.
+ Netw. Distrib. Syst. Secur. Symp., 2016. Giampaolo Bovenzi received the M.S. degree
+[17] V. Rimmer, D. Preuveneers, M. Juarez, T. Van Goethem, and W. Joosen, (summa cum laude), in October 2018, from the Uni-
+ “Automated feature extraction for website fingerprinting through deep versity of Napoli “Federico II,” where he has been
+ learning,” 2018, arXiv:1708.06376v2. working toward the Ph.D. degree in information tech-
+[18] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fingerprinting: nology and electrical engineering with the Depart-
+ Undermining website fingerprinting defenses with deep learning,” in Proc. ment of Electrical Engineering and Information
+ ACM SIGSAC Conf. Comput. Commun. Secur., 2018, pp. 1928–1943. Technologies, since November 2018. His research
+[19] G. He, M. Yang, J. Luo, and X. Gu, “Inferring application type informa- interests focus on (anonymized and encrypted) traffic
+ tion from Tor encrypted traffic,” in Proc. 2nd Int. Conf. Adv. Cloud Big classification, network security (with applications to
+ Data, 2014, pp. 220–227. IoT), and blockchain.
+[20] M. AlSabah, K. Bauer, and I. Goldberg, “Enhancing Tor’s performance
+ using real-time traffic classification,” in Proc. ACM Conf. Comput.
+ Commun. Secur., 2012, pp. 73–84.
+[21] K. Shahbar and A. N. Zincir-Heywood, “Benchmarking two techniques Valerio Persico received the Ph.D. degree in comfor Tor classification: Flow level and circuit level classification,” in puter and automation engineering from the Univer-
+ Proc. IEEE CICS, 2014, pp. 1–8. sity of Napoli “Federico II,” Naples, Italy, in 2016.
+[22] K. Shahbar and A. N. Zincir-Heywood, “An analysis of Tor pluggable He is a post-doc with the Department of Electrical
+ transports under adversarial conditions,” in Proc. IEEE Symp. Ser. Com- Engineering and Information Technologies, Univerput. Intell., 2017.
+ sity of Napoli “Federico II.” His work focuses on
+[23] K. Shahbar and A. N. Zincir-Heywood, “Effects of shared bandwidth on
+ Internet measurements, cloud network performance,
+ anonymity of the I2P network users,” in Proc. IEEE Secur. Privacy and traffic analysis and classification. He was the
+ Workshops, 2017, pp. 235–240. recipient of the Best Student Paper Award at ACM
+[24] K. Shahbar and A. N. Zincir-Heywood, “Packet momentum for identifi- CoNext 2013.
+ cation of anonymity networks,” J. Cyber Secur. Mobility, vol. 6, no. 1,
+ pp. 27–56, 2017.
+[25] A. H. Lashkari, G. Draper-Gil, M. Mamun, I. Saiful, and A. A. Ghorbani,
+ “Characterization of Tor traffic using time based features,” in Proc. 3rd
+ Int. Conf. Inf. Syst. Secur. Privacy, 2017, pp. 253–262. Antonio Pescape (SM’09) is a full Professor in com-
+[26] L. Bernaille, R. Teixeira, I. Akodkenou, A. Soule, and K. Salamatian, puter engineering with the University of Napoli
+ “Traffic classification on the fly,” ACM SIGCOMM Comput. Commun. “Federico II,” Naples, Italy. His work focuses on
+ Rev., vol. 36, no. 2, pp. 23–26, 2006. Internet technologies and specifically on measure-
+[27] C. N. Silla and A. A. Freitas, “A survey of hierarchical classification ment, monitoring, and analysis of the Internet.
+ across different application domains,” Data Mining Knowl. Discovery, Recently, he is working on bioinformatic and ICTs
+ vol. 22, no. 1/2, pp. 31–72, 2011. for a smarter health. He has coauthored more than
+[28] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smart- 200 conference and journal papers and is the recipiphone app identification via encrypted network traffic analysis,” IEEE ent of a number of research awards.
+ Trans. Inf. Forensics Secur., vol. 13, no. 1, pp. 63–78, Jan. 2018.
+[29] S. Burschka and B. Dupasquier, “Tranalyzer: Versatile high performance network traffic analyser,” in Proc. IEEE Symp. Ser. Comput.
+ Intell., 2016, pp. 1–8.
+[30] K. Shahbar and A. N. Zincir-Heywood, “Traffic flow analysis of Tor
+ pluggable transports,” in Proc. IEEE 11th Int. Conf. Netw. Serv. Manage., 2015, pp. 178–181.
+
+ Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 07:01:01 UTC from IEEE Xplore. Restrictions apply.

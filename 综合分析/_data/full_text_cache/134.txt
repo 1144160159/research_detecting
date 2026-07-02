@@ -1,0 +1,752 @@
+Computers & Security 128 (2023) 103175
+
+ Contents lists available at ScienceDirect
+
+ Computers & Security
+ journal homepage: www.elsevier.com/locate/cose
+
+EETC: An extended encrypted traﬃc classiﬁcation algorithm based on
+variant resnet network
+Xiuli Ma a,∗, Wenbin Zhu a, Jieling Wei a, Yanliang Jin a, Dongsheng Gu b, Rui Wang a
+a
+ Key Laboratory of Specialty Fiber Optics and Optical Access Networks, Joint International Research Laboratory of Specialty Fiber Optics and Advanced
+Communication, Shanghai Institute of Advanced Communication and Data Science, Shanghai University, Shanghai 200444, China
+b
+ Shanghai YueWei Technology Co., Shanghai 200072, China
+
+a r t i c l e i n f o a b s t r a c t
+
+Article history: With the advent of big data, encrypted traﬃc is widely used, and it is gradually becoming a new chal-
+Received 31 August 2022 lenge for network security and management. Many researchers have obtained good results by converting
+Revised 20 January 2023
+ encrypted traﬃc into images and feeding them to deep learning-based classiﬁcation models. However,
+Accepted 4 March 2023
+ these methods have some limitations in that they cannot do sustainable learning. They have to retrain a
+Available online 8 March 2023
+ new classiﬁer when new traﬃc is encountered. To tackle this issue, we propose an extended encrypted
+Keywords: traﬃc classiﬁcation algorithm based on incremental learning. This approach extracts content and statis-
+Encrypted traﬃc tical information from encrypted traﬃc and supports multi-label prediction for VPN channels and appli-
+Network security cations. We can add new classes to the model without completely retraining and accelerate the update
+Incremental learning cycle of the model. The results show that the proposed model performs well in classiﬁcation experiments,
+Residual network which can achieve 98.1% and 96.0% classiﬁcation accuracy on ISCXVPN2016 and self-collected dataset re-
+Extended classiﬁcation
+ spectively. In addition, our method can retain high accuracy under the situation of limited memory space
+ while the number of new classes of data increases gradually. It demonstrates the superiority of constructing a generic unforgetting basis for classifying encrypted communication.
+ © 2023 Elsevier Ltd. All rights reserved.
+
+1. Introduction dividuals and businesses. Therefore, academia and industry have
+ begun to pay attention to the classiﬁcation of encrypted traﬃc in
+ Due to the prevalence of Internet applications, a large amount recent years.
+of network traﬃc is generated when people surf the Internet. Traditionally, there are two main methods of traﬃc classiﬁca-
+Therefore, the high-accuracy classiﬁcation of traﬃc has become an tion: the port-based approach and the payload-based approach. In
+essential aspect of network security and cyberspace management. the port-based approach, protocols can be identiﬁed directly ac-
+For example, the enterprise network administrator can prioritize cording to the corresponding port in RFC. For instance, port 21
+the quality of service (QoS) for certain speciﬁc applications and as- corresponds to File Transfer Protocol (FTP), whereas port 80 corresign a lower network communication priority to the applications sponds to Hypertext Transfer Protocol (HTTP). The port-based apthat do not comply with the network policy. Nowadays, the need proach is straightforward. However, with the appearance of dyfor information privacy is increasingly recognized. Many compa- namically assigned port numbers (Cotton et al., 2011), more and
+nies use encryption protocols that are designed to guarantee the more applications begin to use random ports to circumvent the
+security of information in their products, such as Transport Layer inspection of the ﬁrewall. As a consequence, the port-based ap-
+Security (TLS), Virtual Private Network (VPN), Secure Sockets Layer proach is invalid. Then, researchers are devoted to the traﬃc iden-
+(SSL), Secure Real-time Transport Protocol (SRTP), and so on. How- tiﬁcation method by studying payload in traﬃc, which is also
+ever, cyber-attacks are commonplace. Typically, attackers utilize known as deep packet inspection (DPI) (Bujlow et al., 2015). Due
+encryption technology to conceal themselves, elude the scrutiny of to the speciﬁc packet formats in different encryption protocols or
+network security technologies, and cause enormous losses to in- applications, such as ﬁxed strings, DPI can explore and summarize the characteristics of payloads from different kinds of traf-
+ ﬁc. However, it has restrictions with regard to encrypted payload.
+ ∗
+ Corresponding author. At present, machine learning has emerged as a strategy to solve
+ E-mail addresses: xlma@shu.edu.cn (X. Ma), zhuwenbin@shu.edu.cn (W. Zhu), the problem of encrypted traﬃc classiﬁcation, such as Bayesian
+969377443@qq.com (J. Wei), jinyanliang@staff.shu.edu.cn (Y. Jin), gds@yview.cn (D. technology (Kudryavtsev and Shorgin, 2010), C4.5 decision tree
+Gu), rwang@shu.edu.cn (R. Wang).
+
+https://doi.org/10.1016/j.cose.2023.103175
+0167-4048/© 2023 Elsevier Ltd. All rights reserved.
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+(Ho, 1998), support vector machine (Poulet, 2004), and k-nearest Table 1
+ List of acronyms.
+neighbor (Sun and Huang, 2010). However, these classical algorithms deeply rely on the artiﬁcial feature selection of encrypted Acronym Expansion
+traﬃc. Consequently, deep learning classiﬁers have been imple- APP Application
+mented in modern-traﬃc classiﬁcation which gives computers the BV Bias Vector
+ability to learn the features of traﬃc. Some works classify en- CIL Class-Incremental Learning
+crypted data based on statistical characteristics of traﬃc. Gener- CNN Convolutional Neural Network
+ DER Dark Experience Replay
+ally, statistical information needs to be adjusted according to dif-
+ DPI Deep Packet Inspection
+ferent classiﬁcation tasks. Apart from that, the majority of these EETC Extended Encrypted Traﬃc Classiﬁcation
+works use raw traﬃc data to classify. Due to the uniﬁed input size EWC Elastic Weight Consolidation
+of neural network, it is necessary to truncate raw traﬃc data or FN False Negative
+ FP False Positive
+add 0 bytes after packet. Hence, the traﬃc information is lost or
+ FTP File Transfer Protocol
+redundant, and classiﬁcation accuracy decreases. In recent years, GEM Gradient Episodic Memory
+an increasing number of researchers have utilized parallel network GIL General Incremental Learning
+topology to combine the content characteristics and statistical fea- HTTP Hypertext Transfer Protocol
+tures of encrypted data, which increases the complexity of the net- iCaRL Incremental Classiﬁer and
+ Representation Learning
+work and the training time.
+ IP Internet Protocol
+ In addition, another diﬃculty exists in the classiﬁcation of LSTM Long Short-Term Memory
+encrypted traﬃc. Traditional encrypted traﬃc classiﬁcation algo- LWF Learning without Forgetting
+rithms often focus on oﬄine training. When new data come, the MAC Media Access Control
+ NME Nearest Mean of Exemplars
+model needs to be retrained. With the rapid growth of encrypted
+ QoS Quality of Service
+traﬃc types, it has become a trend for the dataset to be larger, the RKHS Reproducing Kernel Hilbert Space
+model to be more intricate, and the training period to be longer. SAE Stacked Autoencoders
+Therefore, it is of great signiﬁcance to explore an algorithm that SRTP Secure Real-time Transport Protocol
+can make the model accumulate learning experience despite lim- SSL Secure Sockets Layer
+ SSR Shadowsocks-R
+ited memory and computational resources.
+ TCP Transmission Control Protocol
+ In this paper, we propose an encrypted traﬃc classiﬁcation TLS Transport Layer Security
+model based on variant ResNet18 (He et al., 2016) and apply in- TN True Negative
+cremental learning to realize expanded classiﬁcation and improve TP True Positive
+ VPN Virtual Private Network
+the model’s practicability. Our method is different from the existing approaches of traﬃc classiﬁcation in both preprocessing and
+network structure.
+ The contributions of our work are as follows: 2.1. Encrypted traﬃc classiﬁcation
+
+ • We propose a new composition method based on packet splic- In the literature, deep learning-based traﬃc classiﬁcation mething to generate three-channel RGB images. It enhances statisti- ods are classiﬁed into two categories. Some methods directly use
+ cal information such as packet direction and data transmission the traﬃc payload as the input to the network. Other methods exfrequency with completely keeping the content information of tract statistical characteristics from the raw traﬃc as input to the
+ encrypted traﬃc. classiﬁcation model.
+ • To extend the framework, a novel attempt is adopted to apply Many studies focus on traﬃc payload. Wang et al. (2017) transincremental learning to encrypted traﬃc classiﬁcation. We em- formed traﬃc payloads into images and used an end-to-end oneploy a variety of techniques to store a subset of exemplars in dimensional convolutional neural network (CNN) architecture to
+ limited memory and replay them for the next classiﬁcation. classify these images. This is the ﬁrst work to turn traﬃc clas-
+ • To overcome the bias problem caused by Softmax, we purpose siﬁcation into image classiﬁcation. They integrated feature exa bias vector and a balance factor to modify the prediction of traction and classiﬁcation network into one system directly usthe model by normalization in an extended framework. ing the ﬁrst 784 bytes of original ﬂow, which can successfully
+ • Our proposed model supports the multi-label prediction of VPN distinguish VPN and non-VPN traﬃc. He and Li (2020) also prochannels and applications. The experimental results show it can posed an image-based traﬃc classiﬁcation method. They converted
+ achieve 98.1% and 96.0% classiﬁcation accuracy on ISCXVPN2016 the ﬁrst few non-zero payloads of the session into gray images
+ (Draper-Gil et al., 2016) and self-collected dataset respectively. and employed CNN to achieve classiﬁcation. Hu et al. (2021) proposed the CLD-Net model which can automatically extract fea-
+ The remainder of the paper is organized as follows: tures from the packet payload of the original stream and add
+Section 2 presents related work. Section 3 describes EETC, an the information of the packet interval and fuse it into new feaextended encrypted traﬃc classiﬁcation model based on variant tures. Cui et al. (2019) fed the 28×28 traﬃc matrices into the
+ResNet18 and incremental learning. Section 4 shows the results capsule neural network (Rajasegaran et al., 2019). Compared with
+of experiments, including classiﬁcation performance and exten- CNN, the capsule network adopts vector instead of scalar as neusion performance. In Section 5, we conclude this paper. Table 1 ron, which can learn the features of packets more effectively.
+summarizes the acronyms that are used in this paper. Lotfollahi et al. (2020) proposed a framework called Deep Packet,
+ which preprocessed raw traﬃc at the packet-level and employed
+ 1DCNN and stacked autoencoders (SAE) (Gehring et al., 2013) in
+2. Related works two tasks: application identiﬁcation and traﬃc characterization.
+ To cope with packet features, Zou et al. (2018) retrieved ﬂow
+ In this section, we review previous related works under two time-sequence features using Long Short-Term Memory (LSTM)
+categories: encrypted traﬃc classiﬁcation and incremental learn- (Hochreiter and Schmidhuber, 1997) paired with CNN. The exing. Table 2 summarizes the input data and network structure us- perimental results showed that their model performed better
+ing deep learning in encrypted traﬃc classiﬁcation. than using CNN or LSTM alone on encrypted traﬃc classiﬁcation.
+
+ 2
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+ Table 2
+ Related works based on deep learning: B(Bytes).
+
+ Input Data Network Structure Paper
+
+ Payload[784B] 1DCNN/2DCNN Wang et al. (2017)
+ Payload[784B] 1DCNN He and Li (2020)
+ Payload[256B] 1DCNN+LSTM Hu et al. (2021)
+ Payload[28×28B] Capsule Network Cui et al. (2019)
+ Payload[1500B] 1DCNN/SAE Lotfollahi et al. (2020)
+ Payload[28×28B][3 packets] CNN+LSTM Zou et al. (2018)
+ Payload[784B] 1DCNN+LSTM Lu et al. (2021)
+ Payload[1480B] 1DCNN Soleymanpour et al. (2021)
+ Arrival time, Frame length, Packet size 2DCNN Pathmaperuma et al. (2022)
+ 6 ﬁelds [20 packets] LSTM+2DCNN Aceto et al. (2018, 2019)
+ Flow-based statistics CNN Chen et al. (2017)
+ Packet direction 1DCNN Sirinam et al. (2018)
+ Arrival time, Packet length 2DCNN Shapira and Shavitt (2019)
+ IP packet length BiGRU Liu et al. (2019)
+ Payload[784B]+4 ﬁelds [32packets] 1DCNN+BiGRU Aceto et al. (2021)
+ Payload[64B]+Flow-based statistics Neural Network Zhou et al. (2020)
+ Packet length, Packet direction Graph Neural Network Shen et al. (2021)
+ Payload[32×32×3B] Variant ResNet18 This Paper
+
+Lu et al. (2021) used the inception module to extract local features architecture. After preprocessing, the variant residual network is
+of the traﬃc and the LSTM model to extract the temporal features used to extract features automatically and realize classiﬁcation.
+of the packets within a session. Their approach enhanced the characterization of packet features to improve classiﬁcation accuracy. 2.2. Incremental learning
+Soleymanpour et al. (2021) proposed a Cost-Sensitive CNN (CSCNN)
+to deal with the class imbalance issue in encrypted traﬃc classiﬁ- In incremental learning, the deep model often leads to catascation. It greatly improved the impact of data imbalance on traf- trophic forgetting (Robins, 1993). The model performs well in the
+ﬁc classiﬁcation. Pathmaperuma et al. (2022) proposed a method current task, but poorly in previous tasks. There are three main
+to both identify known and unknown traﬃc and categorize in-app categories of methods for solving this problem.
+activity types. After ﬁltering the unknown traﬃc, the classiﬁcation The regularization-based method (Rannen et al., 2017) involves
+accuracy of their model would be 92%. punishing the parameters and encouraging them to be similar
+ Different classes of encrypted traﬃc can be identiﬁed by eval- to the parameters of the old task. Kirkpatrick et al. (2017) puruating the temporal and spatial information of the ﬂow’s pack- posed elastic weight consolidation (EWC) based on synaptic plasets in light of statistical features. Aceto et al. (2018, 2019) at- ticity, which mitigated catastrophic forgetting by limiting the space
+tempted to classify mobile traﬃc by constructing a classiﬁer based of weight update. Speciﬁcally, it includes a penalty term meaon six statistical characteristics: the number of bytes in the trans- sured by Fisher information within the loss function. Therefore,
+port layer payload, the TCP window size, the source port, the the weights closely related to the classiﬁer performance are prodestination port, the inter-arrival time, and the packet direction. tected. Zenke et al. (2017) suggested limiting changes to the most
+Chen et al. (2017) put forward an online traﬃc classiﬁcation al- relevant synapses in order to reduce catastrophic forgetting, thus
+gorithm which was called Seq2Img focusing on packet size, inter- controlling the changes in important parameters. LWF (Li and
+arrival time, and direction. They used Reproducing Kernel Hilbert Hoiem, 2017) computed the distillation loss between the teacher
+Space (RKHS) embeddings (Rosipal and Trejo, 2001) to transform model and the student model, using the preceding model’s output
+the packet sequences into six-channel images and classify these as the soft label to alleviate forgetting.
+images into different applications. Sirinam et al. (2018) applied The structure-based method modiﬁes the architecture of the
+CNN to website traﬃc identiﬁcation. They achieved high accu- network (Mallya et al., 2018; Mallya and Lazebnik, 2018), so as
+racy using only the packet direction as an input to the net- to reduce the disturbance between tasks without changing the
+work. Shapira and Shavitt (2019) constructed a two-dimensional objective function. You can freeze some weights in the network
+histogram as the input to the CNN. They deﬁned the X-axis as and keep the same, or specify a model copy for each task. Some
+the normalized arrival time and the Y-axis as the packet size. studies decrease to reduce the learning rate of the layer shared
+Liu et al. (2019) tapped potential ﬂow-based characteristics via an with the original task and ﬁne-tune it to avoid drastic changes
+encoder-decoder structure. Aceto et al. (2021) combined statistic in parameters. Moreover, models using different nonlinear acticharacteristics with content characteristics to achieve multimodal vation functions, such as ReLU, MaxOut, and Tanh, have been
+traﬃc classiﬁcation, ultimately addressing three classiﬁcation ob- proven to improve the effect of incremental learning, especially in
+jectives. There exists plain text during a three-way handshake, in- MNIST and emotion analysis tasks (Rosenfeld and Tsotsos, 2018).
+cluding unencrypted communication parameters and the public Yan et al. (2021) proposed a novel architecture, which replicated
+key. Thus, some researchers consider the entropy distribution to be the entire network and added new branches in order to perform
+a property of traﬃc. Zhou et al. (2020) combined entropy estima- the new task. Nonetheless, it will enhance the complexity of archition with neural networks in their method, where 64 bytes in the tecture.
+content of TCP protocol are randomly selected to calculate entropy. The replay-based method (De Lange et al., 2021) stores samples
+Shen et al. (2021) constructed traﬃc interaction graphs based on in raw format. While learning new tasks, the samples of previous
+the length and direction of packets, and then used graph neural tasks will be replayed. Rebuﬃ et al. (2017) proposed iCaRL, which
+networks to implement the identiﬁcation of decentralized apps. adopted herding algorithm to select exemplars and Nearest Mean
+ In contrast to the above methods, we leverage both the con- of Exemplars (NME) classiﬁer for training. DER (Buzzega et al.,
+tent characteristics and statistical characteristics of encrypted traf- 2020) employed reservoir sampling (Dash and Ng, 2006) during
+ﬁc through the composition method rather than parallel network the whole training phase and investigated the generalization po-
+
+ 3
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+ Table 3
+ Number of samples in ISCXVPN2016.
+
+ Class Name Training Samples Testing Samples
+
+ Chat 6573 731
+ Email 2586 288
+ File 25656 2851
+ P2P 20842 2316
+ Streaming 26787 2976
+ VoIP 26700 2967
+ VPN-Chat 7182 798
+ VPN-Email 2047 227
+ VPN-File 25747 2861
+Fig. 1. Overview of EETC with a scenario: EETC is identifying different apps’ traﬃc VPN-P2P 24324 2703
+under different VPN tunnels. When new traﬃc comes, the model does not need to VPN-Streaming 26678 2964
+be trained from scratch through memory updating. VPN-VoIP 26603 2956
+
+tential of incremental learning. It is an alternative solution to concrucial in self-collected dataset because the original ﬂow contains
+strain optimization. The key idea of GEM (Lopez-Paz and Rantraﬃc belonging to some non-target users.
+zato, 2017) is to restrict new tasks without interfering with pre-
+ Deleting MAC&IP. In general, the IP address of two hosts will
+vious ones.
+ not often change in the process of communication. The MAC ad-
+ It is a novel attempt to apply incremental learning to encrypted
+ dress and IP address in each packet are removed to avoid the ﬁxed
+traﬃc classiﬁcation. We refer to the herding algorithm in iCaRL
+ address feature acquired by the neural network, which leads to
+(Rebuﬃ et al., 2017) and use the variant residual network instead
+ model overﬁtting.
+of NME as a classiﬁer. A bias vector and a balance factor are in-
+ Splicing packets. Different lengths of bytes are padded at the
+tended to adjust the prediction in order to address the bias probend of each packet. As shown in Fig. 4, we set different padding
+lem in softmax. In this paper, we not only evaluate the classiﬁcavalues (0 or 240) to tackle packets in different directions. We detion ability of the model but also show the extension performance
+ ﬁne the packet from the source entity to the target entity as an upof the model when new samples are added.
+ link packet, and its padding value is 0. On the contrary, the packet
+ from the target entity to the source entity is deﬁned as a down-
+3. Methodology link packet, and its padding value is 240. It is helpful for neural
+ network to learn multimodal features (e.g., content characteristics
+ In this section, we explain the general framework of EETC in and statistical characteristics) via different padding bytes between
+detail. The primary goal of EETC is to classify different applications’ packets.
+traﬃc under different VPN tunnels, as shown in Fig. 1. When new Byte conversion with normalization. We convert every 3072
+types of traﬃc occur, EETC’s secondary objective is to allow the bytes (including padding bytes) into a same-size array and normalmodel to accumulate experience without training from scratch. ize each element, which is helpful to accelerate the convergence
+ Fig. 2 shows the overview of our proposed extended encrypted speed of neural network in the training process.
+traﬃc classiﬁcation framework, which mainly consists of prepro- RGB images generation. Fig. 4 shows how we reshape the
+cessing, classiﬁcation, and memory updating. The raw traﬃc is normalized array to a 32×32 image with 3 channels. The packet
+used to generate TFRecords ﬁles after preprocessing, which are in- a to the packet n represents a continuous sequence of packets.
+put into neural network for training. Through the Softmax layer, Each packet consists of bytes of different lengths. All bytes are
+the probability distributions of traﬃc are created after the auto- converted to a decimal range of 0 to 255. Ba1 denotes the ﬁrst
+matic extraction of characteristics. In the training phase, we de- byte of packet a. Similarly, Bnk denotes the kth byte of packet
+velop an improved cross-distilled loss to mitigate the forgetting of n. A one-dimensional sequence of 3072 bytes is sequentially reold knowledge. And some rules are formulated to select the old shaped into three 32×32 two-dimensional matrices. The three
+samples after training, where important samples will be stored in two-dimensional matrices represent the three channels of the
+memory to prepare for the next classiﬁcation. Furthermore, our RGB image (R channel, G channel, and B channel). We can conproposed model provides the simultaneous prediction of VPN la- struct the RGB image (32×32×3) by merging these three twobels and application labels. dimensional matrices. The three-channel RGB images have more
+ information on traﬃc features than one-dimensional sequences or
+ two-dimensional images.
+3.1. Preprocessing
+ Dividing dataset. Based on TensorFlow framework (Abadi et al.,
+ 2015), the generated three-channel RGB images and labels are con-
+ The preprocessing of encrypted traﬃc often varies with the
+ verted to TFRecords ﬁles which store image data and labels as a
+classiﬁcation task, which can be mainly divided into three levels
+ sequence of binary strings. The training set and testing set are di-
+(e.g., session, ﬂow, and packet). We choose to preprocess at the
+ vided into 9:1. Table 3 shows a detailed description of the number
+packet-level in the preprocessing phase due to the need for ﬁneof training and test samples.
+grained characteristics in application classiﬁcation. The details of
+our preprocessing procedure are shown in Fig. 3, consisting of ﬁvetuple clustering, deleting Mac and IP addresses, splicing packets, 3.2. Neural network structure
+byte conversion with normalization, RGB images generation, and
+dividing dataset. Residual network is one of the most pioneering works in the
+ Five-tuple clustering. The ﬁve-tuple consists of the source IP ﬁeld of computer vision and deep learning in the past few years.
+address, source port, destination IP address, destination port, and It effectively solves the problem of vanishing gradient. The neutransport layer protocol. Five-tuple clustering can ﬁlter irrelevant ral network structure refers to ResNet18 (He et al., 2016), includtraﬃc noise and eliminate the inﬂuence of non-target user traﬃc. ing four residual blocks with depths of 64, 128, 256, and 512.
+For a public dataset, the step of data cleaning is not essential. It is Each residual block is composed of several residual units, and each
+
+ 4
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+Fig. 2. Overview of EETC: The framework consists of preprocessing, classiﬁcation, and memory updating. It supports the simultaneous prediction of VPN labels and application labels.
+
+Fig. 3. Preprocessing procedure: padding bytes are in red, original bytes are in blue. The preprocessing completely keeps the content characteristics of the raw traﬃc without
+truncating bytes and enhances useful statistical information, such as frequency and direction.
+
+ Fig. 5. Variant ResNet18 network structure: The dotted line indicates that there is
+ a skip-connection in the residual block. We replace 3×3 convolution kernels with
+ 7×7 convolution kernels and remove max pooling layer.
+
+ losophy of ResNet18, the variant ResNet18 is adopted. In order to
+ keep more ﬁne-grained traﬃc features, we replace 3×3 convolution kernels with 7×7 convolution kernels and remove the max
+ pooling layer.
+ The variant ResNet18 network structure is shown in Fig. 5. The
+ entire network starts with an input layer to obtain three-channel
+ RGB images. The convolutional layers have 3×3 ﬁlters, extracting
+ the content and statistical information of encrypted traﬃc. As the
+ core of the residual layer, skip-connection connects the feature
+ maps of different layers to construct the identity mapping. In ad-
+Fig. 4. RGB images generation. The image size of each channel is 32×32. The
+padding value of uplink packet is 0 while the padding value of downlink packet
+ dition, we perform downsampling to reduce the dimension of the
+is 240. feature map. Finally, the variant ResNet18 ends with a global average pooling layer and a 12-way fully-connected layer with Softmax.
+residual unit uses (n=6,7,8,9) convolution kernels with the size of
+3×3. 3.3. Loss function and training procedure
+ The classical ResNet18 is commonly used with the default input size of 224×224. According to the packet length of encrypted In the encrypted traﬃc classiﬁcation, we input all class samtraﬃc, the size of image is designed as 32×32. Inspired by the phi- ples in one process. The whole training procedure consists of two
+
+ 5
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+stages: pre-training and ﬁne-tuning. Pre-training aims to prelimi- where G is training dataset, Centropy is cross-entropy loss function,
+narily extract the encrypted traﬃc characteristics. In addition, we and yi is ground truth of new classes. F (xi ) is exactly the same as
+employ the cross-entropy loss for each task: F T (xi ), giving a distribution over the old classes and new classes.
+   H T (xi ) is the model that outputs the probability distribution over
+ 1  i
+ m c
+L=− yk log (S(xi ))k + (1 − yik ) log (1 − S(xi ))k (1) old classes. And temperature parameter T to soften the ﬁnal Softm max layer.
+ i=1 k=1
+ Hinton et al. (2015) found the bias problem that models tend
+where m is the number of training samples, yik represents the class to be more prone to new traﬃc classes. Mai et al. (2021) showed
+of ith sample. If the ith sample belongs to class k, yik = 1. Other- that Softmax classiﬁer and related fully connected layer are easwise, yik = 0. (S(xi ))k is the output of xi . ily affected by the imbalance between old and new classes. Bias
+ In the variant Resnet18 network, we try to minimize the loss problem (Javed and Shafait, 2018) is one of the main sources of
+function by AdaGrad (Lydia and Francis, 2019) local optimizer and catastrophic forgetting. We speciﬁcally analyze the causes of bias
+adopt usual back-propagation for gradient descent. problem:
+
+3.4. Memory updating • Modiﬁcation of network structure. The model is required to add
+ weights in fully connected layer when receiving new classes.
+ Due to the rapid growth and extreme dynamicity of encrypted • Decoupling of feature extraction and classiﬁcation. The weight
+traﬃc, it is necessary to provide a way to support continuous of classiﬁer will be updated with the weight of encoder.
+model updates (Bovenzi et al., 2021). In this work, we propose an
+extended traﬃc classiﬁcation framework to integrate incremental The paper (Javed and Shafait, 2018) proposed that representalearning. tive memory and knowledge distillation are incapable of solving
+ The baseline network is the variant ResNet18. Our goal is to the bias of neural network in the training process. Motivated by
+meet the following three requirements (Tahir and Loo, 2020): this, we propose an extended algorithm based on bias vector, in
+ which a bias vector V is proposed to represent the statistics of
+ • It can accommodate the new traﬃc classes without training
+ predict labels and real labels. This demonstrates that the bias vecfrom scratch.
+ tor V intuitively reﬂects the degree to which class is biased by the
+ • With the growth of classes, the consumption of computer
+ model. Then, a balance factor α is deﬁned to modify the prediction
+ memory and the computing time are increasing slowly.
+ of the model by normalization.
+ • The accuracy of classiﬁcation will not decrease seriously.
+ 
+ It has been demonstrated that replay-based strategies in Class- V = ( 1 − γ ) × yi + T 2 γ × H T ( xi ) (3)
+ x i ,yi ∈G
+Incremental Learning (CIL) are simple and effective (Bang et al.,
+2021). Nonetheless, resolving the disparity between old and new
+classes is a crucial obstacle for replay-based techniques (Hou et al., α = VV  (4)
+2019). With the increase of training epochs, we adopt representative memory updating to prioritize and select training exemplars. Finally, the proposed loss function is as follows:
+When a new class of traﬃc or a group of new traﬃc data is added 
+to the current model, a subset of representative samples will be
+ Loss = (1 − γ ) × Centropy (α · F (xi ), yi )+
+ x i ,yi ∈G (5)
+selected and stored in the representative memory. S denotes the T 2 γ × Centropy (α · F T (xi ), H T (xi ))
+computer’s ﬁxed memory capacity for the model. The number of
+samples per class k is given by k = S/m, where m is the number of Algorithm 1 describes the training process of extended algoclasses stored in memory. rithm based on bias vector in detail.
+ The updating of representative memory consists of two parts.
+First, after the training of each incremental stage, we will store the
+ 3.6. General incremental learning
+old class samples in a sorted list, keep the ﬁrst k and remove the
+others that are no longer needed. Second, we calculate the average
+ General Incremental Learning aims at learning from stream data
+Euclidean distance of the new class samples in the current class.
+ and does not rely on boundaries between tasks during training
+The new samples are sorted according to the distance from the
+ and testing. Because the encrypted traﬃc appears in the form of
+current class mean, and the ﬁrst k samples are preferred for stordata stream, the traﬃc sampling shall be processed in sequence.
+age.
+ Sequential sampling has two main challenges:1) the input stream
+3.5. Improved cross-distilled loss must be processed in one process and 2) the size of the stream is
+ usually unknown in advance. To solve the above problem, reservoir
+ As illustrated in Fig. 2, the feature extractor sends features sampling (Dash and Ng, 2006) is adopted, which selects uniform
+to the classiﬁcation layer with logit output. During the training random samples of a given size from the input stream without rephase, the model employs these logits to calculate the gradient of placement.
+the weight in neural network through cross-distilled loss, which Herding algorithm (Rebuﬃ et al., 2017) needs to calculate the
+is composed of classiﬁcation loss and distillation loss. We try to sample distance from the mean of current class, which increases
+measure the classiﬁcation performance difference of all classes in the model’s computing cost. To explore the generalization capabilterms of classiﬁcation loss. We will then suppress the difference ities of the algorithm, we substitute the more selective sampling
+between the previous model and the current model in distilla- method with reservoir sampling. Without knowing the length of
+tion loss. Notably, the structure of the feature extractor has not input stream in advance, each traﬃc sample has an equal chance
+changed. Only the new classiﬁcation layer is connected to the fea- of being stored in memory S. The reservoir sampling accelerates
+ture extractor. Paper (Li and Hoiem, 2017) proposed the following the algorithm and makes general incremental learning more comloss function in the training model: petitive. Considering the possibility of a sudden distribution shift
+  (Yu et al., 2020) in the input stream, we replay the samples from
+Loss = (1 − γ ) × Centropy (F (xi ), yi )+
+ x i ,yi ∈G (2) previous tasks and use two additional coeﬃcients λ and μ to bal-
+T γ × Centropy (F T (xi ), H T (xi ))
+ 2 ance. To this end, the loss function is combined with regulariza-
+
+ 6
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+ Table 4
+Algorithm 1 Extended Algorithm Based on Bias Vector.
+ Classes in three datasets.
+Input O = (O1 , · · · , Om−1 ) //old exemplar set
+ Dataset Classes
+Input C = (Cm , · · · , Ct ) //current exemplar sets
+Input S //memory size ISCXVPN2016 Chat, Email, File, P2P, Streaming, VoIP,VPN-Chat,
+Require current feature function ϕ (x ) VPN-Email, VPN-File, VPN-P2P, VPN-Streaming,
+ VPN-VoIP
+G = O∪C //combined training set Self-collected SSR-YouTube, SSR-Zalo, SSR-Weibo, SSR-Wechat,
+network training with loss function Psiphon-YouTube, Psiphon-Zalo, Psiphon-Weibo,
+ 
+ Loss = (1 − γ ) × Centropy (α · F (xi ), yi ) Psiphon-Wechat
+ xi ,yi ∈G TLS HTTPS, SMTPS, POP3S, FTPS
+ + T 2 γ × Centropy (α · F T (xi ), H T (xi ))
+ 
+ V = (1 − γ ) × yi + T 2 γ × H T (xi ) //bias vector
+ xi ,yi ∈G
+ formance on two datasets in the oﬄine model. We then set up
+ V 
+ α= //balance factor incremental tasks in a phase-by-phase manner to evaluate the ex-
+ V
+that consists of distillation and classiﬁcation tension performance of the two algorithms by performing a single
+k ← S/m //number of exemplars per class update that adds different traﬃc classes. Finally, we show that our
+for y = 1, · · · , m − 1 do algorithm correctly adjusts the bias to the prediction of new traﬃc
+ O ← ( o1 , · · · , ok ) //keep only ﬁrst k classes.
+end for
+for y = m, · · · , t do
+ 1  4.1. Dataset
+ μ← ϕ (x ) //current class mean
+ n x∈X
+   To conﬁrm the validity and practicability of the algorithm, we
+  1 s−1
+ Cs ← arg min μ − ϕ (x ) + ϕ (C j ) experiment on three datasets: a public ISCXVPN2016 traﬃc dataset
+ x∈X s j=1
+ (Draper-Gil et al., 2016), a self-collected traﬃc dataset, and a TLS
+select samples with the minimum distance from the
+ traﬃc dataset. Table 4 shows the classes in each dataset.
+mean of current class
+ ISCXVPN2016 which is based on OpenVPN channel and capend for
+ tured by Wireshark and TCPDUMP is provided by the Canadian In-
+O ← (O1 , · · · , Ot ) //new exemplar sets
+ stitute of cyber security. The dataset includes both non-VPN and
+carry out multi-stage incremental learning training.
+ VPN traﬃc and involves many popular applications. We refer to
+ DeepPacket (Lotfollahi et al., 2020) to label the raw traﬃc in the
+ dataset. The labeled ISCX dataset has 12 classes, including 6 classes
+tion: of VPN traﬃc and 6 classes of non-VPN traﬃc.
+     Most public datasets mainly focus on traﬃc types or application
+Loss = Centropy (F (x ), y ) + λ z − h(x )2
+ 2 types. To solve the problem, we expand the experimental data by
+ x,y∈S x  ,y ,z ∈S
+ capturing different applications’ traﬃc under different VPN chan-
+ 
+ +μ Centropy (F (x ), y ) (6) nels. In detail, we choose Wireshark to capture the raw traﬃc genx ,y ,z ∈S erated by Android phones after running scripts to verify the practical value of the algorithm. The self-collected dataset consists of
+where h(x ) is output logits. F (x )  so f tmax(h(x )), giving a distrieight kinds of encrypted traﬃc samples based on four kinds of
+bution over the old classes and new classes. And z  ht (x ) when t
+ APP (e.g., YouTube, Zalo, Weibo, WeChat) under two kinds of VPN
+indicates an incremental task.
+ channels (e.g., SSR and Psiphon). In the process of running scripts,
+ Algorithm 2 elaborates on the training process of extended alaiming at ensuring the diversity and authenticity of samples, text,
+gorithm based on general incremental learning.
+ video, voice, static picture, dynamic picture, and other message formats are applied automatically with each message sent at random
+4. Experiments
+ intervals. In addition, we also collect a TLS-related dataset. This
+ dataset has 4 classes of TLS traﬃc (HTTPS, SMTPS, POP3S, FTPS).
+ This section details the classiﬁcation performance and extension performance for EETC. We ﬁrst verify the classiﬁcation per-
+ 4.2. Preprocessed results
+
+Algorithm 2 Extended Algorithm Based on General.
+ We preprocess the three datasets and then visualize RGB im-
+Incremental Learning ages, as shown in Fig. 6. It is apparent that different traﬃc classes
+Input: dataset G, coeﬃcients λ and μ, memory buffer S have different kinds of textures. Therefore, it is reasonable to asfor (x, y ) in G do sume that our method can effectively discriminate traﬃc features.
+ (x , y , z ) ← sample(S )
+ (x , y , z ) ← sample(S )
+ z ← ht (x ) 4.3. Hyper-parameters selection
+ network training with loss function
+     
+ Loss = Centropy (F (x ), y ) + λ z − h(x )2 TensorFlow is used as a deep learning framework that runs on
+ 2
+ x,y∈S x  ,y ,z ∈S Ubuntu 16.04 64bit OS. The speciﬁc experimental environment is
+ 
+ +μ Centropy (F (x ), y ) shown in Table 5. All the experiments on ISCXVPN2016 are run for
+ x ,y ,z ∈S 50 epochs per increment with a batch size of 64, a momentum of
+ S ← reservoir sampling 0.9, a weight decay of 0.0 0 0 05, a temperature of 2, and a memory
+end for budget of 20 0 0. At the beginning of training, the learning rate is
+ set to 2.0 and then reduced 5 times in 45, 60, and 68 epochs. In
+ the improved cross-distilled loss function, γ is set to 0.5.
+
+ 7
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+Fig. 6. Visualization of encrypted traﬃc. We show the generated three-channel RGB images from (a) ISCXVPN2016 dataset, (b) self-collected dataset, and (c) TLS dataset. It
+is apparent that three-channel RGB images with different traﬃc classes have unique texture information, which will be conducive to classiﬁcation.
+
+ Table 5 • SAE (Gehring et al., 2013): It preprocessed raw traﬃc at packet-
+ Experimental environment.
+ level and employed 1DCNN and stacked autoencoders in two
+ Category Parameter tasks (e.g., application identiﬁcation and traﬃc characteriza-
+ System Ubuntu 16.04 64bit OS tion).
+ CPU Intel(R) Core i5-8600K • CNN+LSTM (Zou et al., 2018): It extracted the ﬂow time-
+ Memory 8GB sequence features by Long Short-Term Memory combined with
+ Graphics card NVIDIA GTX 1080Ti CNN to deal with packet features. To be speciﬁc, CNN extracts
+ Deep learning backend TensorFlow1.15
+ the content features of a single packet while LSTM extracts the
+ Cuda version 9.0
+ CuDNN version 7.4 statistical characteristics of any three sequential packets in the
+ ﬂow.
+
+ 4.5. Classiﬁcation performance
+4.4. Competing methods
+
+ Four measures are utilized for evaluation: accuracy, precision,
+ To demonstrate the effectiveness of EETC in encrypted traﬃc
+ recall, and F1. For the multi-classiﬁcation problem, we regard each
+classiﬁcation task, we compare the below algorithms under the
+ class and the remaining classes as binary classiﬁcation. Eqs. (7)–
+same condition, which are different in both preprocessing and net-
+ (10) is shown below, where T P , T N, F P , and F N respectively stand
+work structure.
+ for true positive, true negative, false positive, and false negative.
+ • 1DCNN (Cui et al., 2019): It integrated feature extraction and P+T N
+ Accuracy = T P+TT N+ F P+F N
+ (7)
+ classiﬁcation network into one system directly using the ﬁrst
+ 784 bytes of original ﬂow, which can successfully distinguish
+ TP
+ VPN and non-VPN traﬃc. P recision = T P+ FP
+ (8)
+
+ 8
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+ Table 6 Table 10
+ Comparison of different lengths of padding bytes (%). Comparison of different algorithms (%).
+
+ Lengths of padding bytes Accuracy Precision Recall F1 Algorithm Accuracy Recall F1
+
+ 0 97.7 96.6 95.3 95.7 1DCNN 85 86 86
+ 24 98.1 96.7 95.8 96.1 SAE 92 92 92
+ 48 97.3 95.1 95.1 95.0 CNN+LSTM 91 91 91
+ This Paper 98 96 96
+
+ Table 7
+ Comparison of different size of RGB images (%).
+ ant ResNet18 network has better accuracy under small image in-
+ Size of RGB images Accuracy Precision Recall F1 put, which gets an improvement of 8.1%.
+ 32×32×3 98.1 96.7 95.8 96.1 Compared with the three encrypted traﬃc classiﬁcation algo-
+ 64×64×3 97.2 95.6 95.1 95.3 rithms below, as shown in Table 10, our approach outperforms ex-
+ 128×128×3 96.5 93.9 94.9 94.4 isting approaches on ISCXVPN2016, achieving the highest accuracy
+ of 98%, recall of 96%, and F1 of 96%.
+ The confusion matrix is utilized to evaluate the performance of
+ Table 8 our proposed model. As shown in Fig. 7, we visualize the confusion
+ Comparison of composition of RGB images (%).
+ matrix of the classiﬁer on ISCXVPN2016, self-collected dataset, and
+ Composition Accuracy Precision Recall F1 TLS dataset. It can achieve 98.1%, 96.0%, and 97.3% classiﬁcation ac-
+ Payload 83.7 84.2 83.5 83.7 curacy respectively.
+ Header + Payload 98.1 96.7 95.8 96.1 The experimental results show that the accuracy of all traﬃc
+ Improvement 14.4 12.5 12.3 12.4 classes is higher than 90% except for e-mail (see Fig. 7(a)). The
+ reason is that the size of e-mail pcap ﬁles is smaller than other
+ classes in ISCXVPN2016, which results in fewer training samples.
+ Table 9
+ Therefore, we pay attention to the balance of raw traﬃc in the self-
+ Comparison of different network structures (%).
+ collected dataset. As a result, each class of self-collected datasets is
+ Network Accuracy Precision Recall F1 very accurate. For example, we achieve an accuracy of 99%, 96%,
+ ResNet18 90.0 85.5 83.6 84.2 and 100% classifying p-weibo, p-wx p-youtube (see Fig. 7(b)). It
+ Variant ResNet18 98.1 96.7 95.8 96.1 demonstrates that the proposed method can successfully identify
+ Improvement 8.1 11.2 12.2 11.9
+ different apps’ traﬃc in different VPN channels. In addition, we
+ also provide the results for TLS-related traﬃc. The classiﬁcation accuracies of four TLS traﬃc (HTTPS, FTPS, SMTPS, POP3S) are 99%,
+ 98%, 95%, and 97% (see Fig. 7(c)). It indicates that the proposed
+ TP method can successfully identify TLS-related traﬃc.
+Recall = T P+ FN
+ (9)
+ 4.6. Extension performance
+F 1 = 2T P+2FT PP+F N (10)
+ For the public dataset, we divide 12 traﬃc classes into 2,3,4,
+ Three design choices are investigated in EETC: 1) the length of and 6 incremental training steps, that is to say, performing a single
+padding bytes, 2) the composition of three-channel RGB image, and update adding 6,4,3, and 2 traﬃc classes.
+3) the type of classiﬁer. To validate the extension performance of EETC, we compare two
+ In preprocessing, we study the importance of padding bytes. incremental learning strategies: BV (i.e., Bias Vector) and GIL (i.e.,
+Table 6 shows the effect of the length of padding bytes on model General Incremental Learning) in four scenarios. Taking memory
+evaluation. Depending on the image size, we set the padding size as a key index, we study the classiﬁcation performance unlength to 0, 24, and 48. As shown in Table 6, the proposed model der different memory sizes. In general, it has better performance
+achieves the highest accuracy of 98.1% when the padding length in larger incremental steps, because the student model obtains less
+reaches 24. Our experimental results indicate that the padding distillation loss by reducing the noise caused by training. As shown
+bytes with appropriate length are conducive to generating a more in Fig. 8, the accuracy of the classiﬁer has not decreased rapidly in
+discriminative traﬃc image and enhancing the classiﬁcation ability BV. In the last incremental task, most of them reach more than
+of the network. 85%.
+ We study the effect of different sizes of RGB images on the clas- Compared with BV, GIL has the advantage of less perforsiﬁcation results. It can be seen from Table 7, the classiﬁcation re- mance dropping rate in medium and large memory. We estabsults show a slight decrease as the size of the image increases. It lish a performance dropping rate that measures the absolute drops
+shows that the 32×32 size of the traﬃc images is more beneﬁcial in the last task with respect to the accuracy in the ﬁrst task
+to the classiﬁcation results of the network. Zhang et al. (2021). We believe that random sampling strategy and
+ To verify whether the packet header affects the effectiveness of improved loss function with regularization are the main reasons
+the encrypted traﬃc classiﬁcation algorithm, under the same con- for better performance. Meanwhile, it leads to a minor disadvandition, we conduct a comparative experiment on the composition tage that the accuracy of the initial task is lower than BV. Howof input RGB images. As shown in Table 8, it is indicated that the ever, extension performance focuses more on the degree of forgetpacket header contains information beneﬁcial to the identiﬁcation ting. To sum up, when the memory buffer is small, BV shows the
+of encrypted traﬃc, and accuracy is increased by 14.4%. As is com- best performance in ISCXVPN2016. With a larger memory size, GIL
+mon knowledge, a packet header usually contains a series of ﬁxed suffers from less forgetting than BV.
+features, such as packet length, protocol type, live time, version Furthermore, we attempt to determine whether the bias vector
+number, etc. and balance factor play a role in the CIL. Fig. 9 shows the confusion
+ Table 9 reveals the difference between the original ResNet18 matrix of BV in the last incremental task, from which we can ﬁnd
+network and the Variant ResNet18 network for training. The Vari- that in the process of constantly adding new classes to training
+
+ 9
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+Fig. 7. Confusion matrix on different datasets. The value on the diagonal represents the classiﬁcation performance. The higher the value, the better the classiﬁcation performance.
+
+ Table 11
+ Time cost of different algorithms.
+
+ Algorithm Training time Testing time
+
+ 1DCNN 50.5 min 0.09 s
+ SAE 47.2 min 0.08 s
+ CNN+LSTM 75.6 min 0.13 s
+ BV 26 min 0.10 s
+ GIL 34 min 0.10 s
+
+ Additionally, we present the performance of GIL under different
+ hyper-parameters when incremental step=2, as shown in Fig. 10.
+ To the end, λ is set to 0.2 and μ is set to 0.5 in GIL.
+ Table 11 shows the time cost of several algorithms. The training
+ time of our proposed BV and GIL for a single incremental task is
+ signiﬁcantly less than that of other algorithms. It is due to other algorithms do not have the ability to extend, and the entire network
+ needs to be retrained for each incremental task. Among them, BV
+ has the shortest average training time of 26 min. This is because
+ the teacher model in BV only calculates all probability labels at the
+ beginning of each incremental stage. Regarding the teacher model
+Fig. 8. Classiﬁcation accuracy when performing increments of different sizes with
+BV and GIL. as the student model of the previous incremental task, its parameters have been fully updated. As a result, the parameters in this incremental stage are frozen and only used to generate the probability labels of data. The teacher model without updating parameters
+samples, the classiﬁer does not forget the old traﬃc classes and does not need to predict the same data many times. Due to the
+our model successfully overcome catastrophic forgetting in incre- trick, BV occupies a relatively large speed advantage in the trainmental learning. ing phase. All algorithms are based on deep learning, so the test
+
+ 10
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+ Fig. 9. Confusion matrix of BV on different incremental steps.
+
+ in the public dataset but also has stable performance in the selfcollected dataset, which is composed of the traﬃc of popular apps
+ in the real world. When new classes of traﬃc are added continuously, our methods can maintain high accuracy under the condition of limited memory space without catastrophic forgetting. We
+ propose a method to establish a generic unforgetting basis for encrypted traﬃc classiﬁcation. In the future, we will focus on the following: 1) designing a special classiﬁer for encrypted traﬃc classi-
+ ﬁcation instead of a general deep learning classiﬁer, 2) publishing
+ our self-collected traﬃc dataset, and 3) integrating other mechanisms to boost extension performance.
+
+ Declaration of Competing Interest
+
+ The authors declare the following ﬁnancial interests/personal
+ relationships which may be considered as potential competing interests:
+ Rui Wang reports ﬁnancial support was provided by National
+ Fig. 10. Performance of GIL under different hyper-parameters with step=2.
+ Natural Science Foundation of China.
+
+ CRediT authorship contribution statement
+times are roughly the same. 1DCNN and SAE have fewer network
+layers, so the test times are slightly lower than the other methods.
+ Xiuli Ma: Conceptualization, Methodology, Visualization, Writ-
+ In a word, the two methods have their own advantages. It can
+ ing – review & editing. Wenbin Zhu: Methodology, Data curabe concluded that our methods show the superiority of building a
+ tion, Writing – original draft. Jieling Wei: Methodology, Data curageneral unforgetting base for encrypted traﬃc classiﬁcation.
+ tion, Writing – review & editing. Yanliang Jin: Conceptualization,
+ Methodology, Visualization. Dongsheng Gu: Supervision, Writing –
+5. Conclusion
+ review & editing. Rui Wang: Supervision, Writing – review & editing.
+ In this paper, we propose an effective extended encrypted traf-
+ﬁc classiﬁcation model based on the variant ResNet18. Notably, the Data availability
+multi-channel images are composed of raw traﬃc with padding
+bytes. It perfectly combines content characteristics and statistical Data will be made available on request.
+characteristics. As a result, different apps’ traﬃc can be identiﬁed
+in different VPN channels. To support continuous model updates, References
+incremental learning is applied to achieve extended classiﬁcation,
+ Abadi, M., Agarwal, A., Barham, P., 2015. TensorFlow: large-scale machine learnwhich is a novel attempt at encrypted traﬃc classiﬁcation. Our ing on heterogeneous systems. Software available from tensorﬂow.org, http:
+method not only shows signiﬁcant superiority over other methods //tensorﬂow.org/.
+
+ 11
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+Aceto, G., Ciuonzo, D., Montieri, A., Nascita, A., Pescapé, A., 2021. Encrypted multi- Lydia, A., Francis, S., 2019. Adagrad–an optimizer for stochastic gradient descent. Int.
+ task traﬃc classiﬁcation via multimodal deep learning. In: ICC 2021-IEEE Inter- J. Inf. Comput. Sci 6 (5), 566–568.
+ national Conference on Communications. IEEE, pp. 1–6. Mai, Z., Li, R., Kim, H., Sanner, S., 2021. Supervised contrastive replay: revisiting the
+Aceto, G., Ciuonzo, D., Montieri, A., Pescapé, A., 2018. Mobile encrypted traﬃc clas- nearest class mean classiﬁer in online class-incremental continual learning. In:
+ siﬁcation using deep learning. In: 2018 Network Traﬃc Measurement and Anal- Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recogysis Conference (TMA). IEEE, pp. 1–8. nition, pp. 3589–3599.
+Aceto, G., Ciuonzo, D., Montieri, A., Pescapé, A., 2019. Mobile encrypted traﬃc classi- Mallya, A., Davis, D., Lazebnik, S., 2018. Piggyback: adapting a single network to
+ ﬁcation using deep learning: experimental evaluation, lessons learned, and chal- multiple tasks by learning to mask weights. In: Proceedings of the European
+ lenges. IEEE Trans. Netw. Serv.Manage. 16 (2), 445–458. Conference on Computer Vision (ECCV), pp. 67–82.
+Bang, J., Kim, H., Yoo, Y., Ha, J.-W., Choi, J., 2021. Rainbow memory: continual learn- Mallya, A., Lazebnik, S., 2018. PackNet: adding multiple tasks to a single network by
+ ing with a memory of diverse samples. In: Proceedings of the IEEE/CVF Confer- iterative pruning. In: Proceedings of the IEEE Conference on Computer Vision
+ ence on Computer Vision and Pattern Recognition, pp. 8218–8227. and Pattern Recognition, pp. 7765–7773.
+Bovenzi, G., Yang, L., Finamore, A., Aceto, G., Ciuonzo, D., Pescapè, A., Rossi, D., 2021. Pathmaperuma, M.H., Rahulamathavan, Y., Dogan, S., Kondoz, A., 2022. CNN for user
+ A ﬁrst look at class incremental learning in deep learning mobile traﬃc classi- activity detection using encrypted in-app mobile data. Future Internet 14 (2),
+ ﬁcation. arXiv preprint arXiv:2107.04464. 67.
+Bujlow, T., Carela-Español, V., Barlet-Ros, P., 2015. Independent comparison of pop- Poulet, F., 2004. SVM and graphical algorithms: a cooperative approach. In: Fourth
+ ular DPI tools for traﬃc classiﬁcation. Comput. Netw. 76, 75–89. IEEE International Conference on Data Mining (ICDM’04). IEEE, pp. 499–502.
+Buzzega, P., Boschini, M., Porrello, A., Abati, D., Calderara, S., 2020. Dark experience Rajasegaran, J., Jayasundara, V., Jayasekara, S., Jayasekara, H., Seneviratne, S., Rofor general continual learning: a strong, simple baseline. Adv. Neural Inf. Pro- drigo, R., 2019. DeepCaps: going deeper with capsule networks. In: Proceedcess. Syst. 33, 15920–15930. ings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+Chen, Z., He, K., Li, J., Geng, Y., 2017. Seq2Img: a sequence-to-image based approach pp. 10725–10733.
+ towards ip traﬃc classiﬁcation using convolutional neural networks. In: 2017 Rannen, A., Aljundi, R., Blaschko, M.B., Tuytelaars, T., 2017. Encoder based lifelong
+ IEEE International Conference on Big Data (Big Data). IEEE, pp. 1271–1276. learning. In: Proceedings of the IEEE International Conference on Computer Vi-
+Cotton, M., Eggert, L., Touch, J.D., Westerlund, M., Cheshire, S., 2011. Internet as- sion, pp. 1320–1328.
+ signed numbers authority (IANA) procedures for the management of the service Rebuﬃ, S.-A., Kolesnikov, A., Sperl, G., Lampert, C.H., 2017. iCaRL: incremental clasname and transport protocol port number registry. RFC 6335, 1–33. siﬁer and representation learning. In: Proceedings of the IEEE Conference on
+Cui, S., Jiang, B., Cai, Z., Lu, Z., Liu, S., Liu, J., 2019. A session-packets-based encrypted Computer Vision and Pattern Recognition, pp. 2001–2010.
+ traﬃc classiﬁcation using capsule neural networks. In: 2019 IEEE 21st Interna- Robins, A., 1993. Catastrophic forgetting in neural networks: the role of retional Conference on High Performance Computing and Communications; IEEE hearsal mechanisms. In: Proceedings 1993 The First New Zealand International
+ 17th International Conference on Smart City; IEEE 5th International Conference Two-Stream Conference on Artiﬁcial Neural Networks and Expert Systems. IEEE,
+ on Data Science and Systems (HPCC/SmartCity/DSS). IEEE, pp. 429–436. pp. 65–68.
+Dash, M., Ng, W., 2006. Eﬃcient reservoir sampling for transactional data streams. Rosenfeld, A., Tsotsos, J.K., 2018. Incremental learning through deep adaptation. IEEE
+ In: Sixth IEEE International Conference on Data Mining-Workshops (ICDMW’06). Trans. Pattern Anal. Mach.Intell. 42 (3), 651–663.
+ IEEE, pp. 662–666. Rosipal, R., Trejo, L.J., 2001. Kernel partial least squares regression in reproducing
+De Lange, M., Aljundi, R., Masana, M., Parisot, S., Jia, X., Leonardis, A., Slabaugh, G., kernel hilbert space. J. Mach. Learn. Res. 2 (Dec), 97–123.
+ Tuytelaars, T., 2021. A continual learning survey: defying forgetting in classiﬁca- Shapira, T., Shavitt, Y., 2019. FlowPic: encrypted internet traﬃc classiﬁcation is as
+ tion tasks. IEEE Trans. Pattern Anal. Mach.Intell. 44 (7), 3366–3385. easy as image recognition. In: IEEE INFOCOM 2019-IEEE Conference on Com-
+Draper-Gil, G., Lashkari, A.H., Mamun, M.S.I., Ghorbani, A.A., 2016. Characterization puter Communications Workshops (INFOCOM WKSHPS). IEEE, pp. 680–687.
+ of encrypted and VPN traﬃc using time-related. In: Proceedings of the 2nd In- Shen, M., Zhang, J., Zhu, L., Xu, K., Du, X., 2021. Accurate decentralized application
+ ternational Conference on Information Systems Security and Privacy (ICISSP), identiﬁcation via encrypted traﬃc analysis using graph neural networks. IEEE
+ pp. 407–414. Trans. Inf. ForensicsSecur. 16, 2367–2380. doi:10.1109/TIFS.2021.3050608.
+Gehring, J., Miao, Y., Metze, F., Waibel, A., 2013. Extracting deep bottleneck features Sirinam, P., Imani, M., Juarez, M., Wright, M., 2018. Deep ﬁngerprinting: underusing stacked auto-encoders. In: 2013 IEEE International Conference on Acous- mining website ﬁngerprinting defenses with deep learning. In: Proceedings of
+ tics, Speech and Signal Processing. IEEE, pp. 3377–3381. the 2018 ACM SIGSAC Conference on Computer and Communications Secu-
+He, K., Zhang, X., Ren, S., Sun, J., 2016. Deep residual learning for image recogni- rity. Association for Computing Machinery, New York, NY, USA, pp. 1928–1943.
+ tion. In: Proceedings of the IEEE Conference on Computer Vision and Pattern doi:10.1145/3243734.3243768.
+ Recognition, pp. 770–778. Soleymanpour, S., Sadr, H., Nazari Soleimandarabi, M., 2021. CSCNN: cost-sensitive
+He, Y., Li, W., 2020. Image-based encrypted traﬃc classiﬁcation with convolution convolutional neural network for encrypted traﬃc classiﬁcation. Neural Process.
+ neural networks. In: 2020 IEEE Fifth International Conference on Data Science Lett. 53 (5), 3497–3523.
+ in Cyberspace (DSC). IEEE, pp. 271–278. Sun, S., Huang, R., 2010. An adaptive k-nearest neighbor algorithm. In: 2010 Seventh
+Hinton, G., Vinyals, O., Dean, J., et al., 2015. Distilling the knowledge in a neural International Conference on Fuzzy Systems and Knowledge Discovery, Vol. 1.
+ network 2 (7). arXiv preprint arXiv: 1503.02531. IEEE, pp. 91–94.
+Ho, T.K., 1998. C4. 5 decision forests. In: Proceedings. Fourteenth International Con- Tahir, G.A., Loo, C.K., 2020. An open-ended continual learning for food recogference on Pattern Recognition (Cat. No. 98EX170), Vol. 1. IEEE, pp. 545–549. nition using class incremental extreme learning machines. IEEE Access 8,
+Hochreiter, S., Schmidhuber, J., 1997. Long short-term memory. Neural Comput. 9 82328–82346.
+ (8), 1735–1780. Wang, W., Zhu, M., Wang, J., Zeng, X., Yang, Z., 2017. End-to-end encrypted traﬃc
+Hou, S., Pan, X., Loy, C.C., Wang, Z., Lin, D., 2019. Learning a uniﬁed classiﬁer incre- classiﬁcation with one-dimensional convolution neural networks. In: 2017 IEEE
+ mentally via rebalancing. In: Proceedings of the IEEE/CVF Conference on Com- International Conference on Intelligence and Security Informatics (ISI). IEEE,
+ puter Vision and Pattern Recognition, pp. 831–839. pp. 43–48.
+Hu, X., Gu, C., Wei, F., 2021. CLD-Net: a network combining CNN and LSTM for in- Yan, S., Xie, J., He, X., 2021. DER: Dynamically expandable representation for class
+ ternet encrypted traﬃc classiﬁcation. Secur. Commun. Netw. 2021. incremental learning. In: Proceedings of the IEEE/CVF Conference on Computer
+Javed, K., Shafait, F., 2018. Revisiting distillation and incremental classiﬁer learning. Vision and Pattern Recognition, pp. 3014–3023.
+ In: Asian Conference on Computer Vision. Springer, pp. 3–17. Yu, L., Twardowski, B., Liu, X., Herranz, L., Wang, K., Cheng, Y., Jui, S., Weijer, J.v.d.,
+Kirkpatrick, J., Pascanu, R., Rabinowitz, N., Veness, J., Desjardins, G., Rusu, A.A., 2020. Semantic drift compensation for class-incremental learning. In: Proceed-
+ Milan, K., Quan, J., Ramalho, T., Grabska-Barwinska, A., et al., 2017. Overcom- ings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+ ing catastrophic forgetting in neural networks. Proc. Natl. Acad. Sci. 114 (13), pp. 6982–6991.
+ 3521–3526. Zenke, F., Poole, B., Ganguli, S., 2017. Continual learning through synaptic intelli-
+Kudryavtsev, A., Shorgin, S., 2010. On the Bayesian approach to the analysis of gence. In: International Conference on Machine Learning. PMLR, pp. 3987–3995.
+ queueing systems and reliability characteristics. In: International Congress on Zhang, C., Song, N., Lin, G., Zheng, Y., Pan, P., Xu, Y., 2021. Few-shot incremental
+ Ultra Modern Telecommunications and Control Systems. IEEE, pp. 1042–1045. learning with continually evolved classiﬁers. In: Proceedings of the IEEE/CVF
+Li, Z., Hoiem, D., 2017. Learning without forgetting. IEEE Trans. Pattern Anal. Conference on Computer Vision and Pattern Recognition, pp. 12455–12464.
+ Mach.Intell. 40 (12), 2935–2947. Zhou, K., Wang, W., Wu, C., Hu, T., 2020. Practical evaluation of encrypted traﬃc
+Liu, C., He, L., Xiong, G., Cao, Z., Li, Z., 2019. FS-Net: a ﬂow sequence network for en- classiﬁcation based on a combined method of entropy estimation and neural
+ crypted traﬃc classiﬁcation. In: IEEE INFOCOM 2019-IEEE Conference On Com- networks. ETRI J. 42 (3), 311–323.
+ puter Communications. IEEE, pp. 1171–1179. Zou, Z., Ge, J., Zheng, H., Wu, Y., Han, C., Yao, Z., 2018. Encrypted traﬃc classiﬁ-
+Lopez-Paz, D., Ranzato, M., 2017. Gradient episodic memory for continual learning. cation with a convolutional long short-term memory neural network. In: 2018
+ Adv. Neural Inf. Process. Syst. 30. IEEE 20th International Conference on High Performance Computing and Com-
+Lotfollahi, M., Jafari Siavoshani, M., Shirali Hossein Zade, R., Saberian, M., 2020. Deep munications; IEEE 16th International Conference on Smart City; IEEE 4th Interpacket: a novel approach for encrypted traﬃc classiﬁcation using deep learning. national Conference on Data Science and Systems (HPCC/SmartCity/DSS). IEEE,
+ Soft Comput. 24 (3), 1999–2012. pp. 329–334.
+Lu, B., Luktarhan, N., Ding, C., Zhang, W., 2021. ICLSTM: encrypted traﬃc service
+ identiﬁcation based on inception-LSTM neural network. Symmetry 13 (6), 1080.
+
+ 12
+X. Ma, W. Zhu, J. Wei et al. Computers & Security 128 (2023) 103175
+
+ Xiuli Ma received the PhD degree from Xidian Univer- Yanliang Jin received the BS and MS degrees in electrical
+ sity, in 2007. She is currently an Associate Professorship engineering from Xidian University, Xi’an, China, in 1997
+ with the School of Communication and Information En- and 20 0 0, respectively, and the PhD degree in communigineering, Shanghai University. Her research interests in- cation and information system from Shanghai Jiao Tong
+ clude big data and intelligent information processing. University, in 2005. He is currently an Associate Professorship with the School of Communication and Information Engineering, Shanghai University. He has published
+ more than 30 journals/conference papers. His research
+ interests include mobile ad hoc networks, wireless sensor networks, wireless multimedia sensor networks, and
+ wireless broad-band access.
+
+ Wenbin Zhu received the BE degree in communica- Dongsheng Gu received the BS and MS in degrees from
+ tion engineering from Zhejiang University of Technology, Nanjing University of Science and Technology, China, in
+ Hangzhou, China, in 2020. He is currently pursuing the 1999 and 2002. He worked nearly 10 years in the immaster’s degree in signal and information processing with migration and optimization of MPEG4/H264 codec algothe Shanghai University. His research interests include big rithms for embedded system. His current research interdata and intelligent information processing. ests include in deep learning models for AI auxiliary diagnosis algorithms for medical images, object detection,
+ tracking and Re-ID algorithms in public safety ﬁeld, encrypted traﬃc classiﬁcation, detection and identiﬁcation
+ algorithms in cybersecurity ﬁeld.
+
+ Jieling Wei received the BE degree in communication en- Rui Wang (Senior Member, IEEE) received the PhD degree
+ gineering from Hubei University, Wuhan, China, in 2019. in signal and information processing from Xidian Univer-
+ She is currently pursuing the master’s degree in commu- sity, Xi’an, Shaanxi, China in 2009. He is currently a pronication and information systems with the Shanghai Uni- fessor with the School of Communication and Informaversity. Her research interests include big data and intel- tion Engineering, Shanghai University. His research interligent information processing. ests include Sensor networks, Geometric algebra, Multimedia signal processing.
+
+ 13

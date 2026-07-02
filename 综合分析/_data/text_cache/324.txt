@@ -1,0 +1,156 @@
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024                                                                2745
+
+
+
+
+        WAKE: A Weakly Supervised Business Process
+           Anomaly Detection Framework via
+               a Pre-Trained Autoencoder
+  Wei Guan , Jian Cao , Senior Member, IEEE, Haiyan Zhao , Yang Gu , and Shiyou Qian , Member, IEEE
+
+
+    Abstract—The ability to detect anomalies in business processes              practitioners and decision-makers in analyzing and managing
+is crucial for achieving success in business operations. While unsu-            businesses more effectively, and preventing severe consequences
+pervised anomaly detection approaches have gained popularity in                 resulting from anomalies.
+recent years due to their label-free nature, in some cases, a limited
+number of labelled anomalies can be provided and using them can                    Many anomaly detection methods for business processes have
+improve the performance of anomaly detection. To address this                   been proposed, including conformance checking-based [1], [2],
+issue, we propose a novel framework for anomaly detection that                  information theory-based [3], [4], probabilistic [5], [6], [7] and
+uses a pre-trained autoencoder to extract feature representations               distance-based [8], [9]. They are either based on assumptions
+of traces. An anomaly score generator based on a multi-layer
+                                                                                about the data distribution or require extensive prior knowledge
+perceptron is utilized to evaluate the extracted features. The entire
+framework is trained using a joint loss that ensures the generated              of the process, which is not always available in real life.
+anomaly scores satisfy a specific distribution without compromising                In recent years, deep learning [10] has achieved remarkable
+the autoencoder’s ability to reconstruct normal traces. The feature             feats in revealing complex relationships in high-dimensional
+encoder is fine-tuned to provide insights into the cause of anomalies.          data. Not surprisingly, it has become the mainstream ap-
+Additionally, we design a novel technique for calculating anomaly
+                                                                                proach for business process anomaly detection [11], [12],
+scores to mitigate the effects of varying numbers of potential at-
+tribute values. We conduct extensive experiments on both synthetic              [13], [14], [15]. In these models, anomalies are detected in
+and real-life logs, and our results demonstrate that our proposed               terms of reconstruction errors directly and there is no need
+method, WAKE, outperforms state-of-the-art unsupervised deep                    to spend time annotating the data. However, without incorpo-
+business process anomaly detection methods by a significant mar-                rating prior knowledge about anomalies, the performance of
+gin. Additionally, it outperforms other weakly supervised anomaly
+                                                                                these approaches and the reliability of their results can not be
+detection methods as well.
+                                                                                guaranteed.
+  Index Terms—Process mining, weakly supervised anomaly                            Providing supervision information to train a model can not
+detection, deep learning, recurrent neural networks, autoencoder.               only improve its performance but also enhance its trustwor-
+                                                                                thiness. Unfortunately, fully-supervised anomaly detection ap-
+                                                                                proaches are often impractical as they require labelled training
+                           I. INTRODUCTION
+                                                                                data containing both normal and anomalous samples [16]. How-
+      NSURING smooth and organized business processes is
+E     crucial to maintaining a successful enterprise. This makes
+it an important task for both IT departments and business ad-
+                                                                                ever, detecting anomalies using a limited number of labelled
+                                                                                anomalies can be challenging. First, the insufficient supervised
+                                                                                information provided by the limited number of labelled anoma-
+ministrators. Despite efforts to maintain the correct executions                lies poses a significant challenge to generalize the detection
+of these processes, anomalies are inevitable and can arise from                 of both known anomalies, whose behaviors resemble those of
+various causes such as system malfunctions and human errors.                    labelled anomalies, and unknown anomalies, whose behaviors
+Detecting anomalies in event traces of business processes can aid               differ from those of labelled anomalies. Additionally, in the
+                                                                                unlabelled samples, the large number of normal samples can
+  Manuscript received 1 June 2023; revised 13 September 2023; accepted 3        potentially overwhelm the model’s ability to distinguish between
+October 2023. Date of publication 13 October 2023; date of current version 19   normal and anomalous behavior.
+April 2024. This work was supported in part by the China National Science          Thankfully, researchers have proposed several approaches to
+Foundation under Grant 62072301, and in part by the Program of Technology
+Innovation of the Science and Technology Commission of Shanghai Munici-         address these challenges. For instance, there has been research
+pality under Grant 21DZ1205000. Recommended for acceptance by R.C.-W.           into anomaly detection with incomplete supervision, which
+Wong. (Corresponding author: Jian Cao.)                                         involves labeling only a portion of the input data. The major
+  Wei Guan, Jian Cao, Yang Gu, and Shiyou Qian are with the Depart-
+ment of Computer Science and Engineering, Shanghai Jiao Tong University,        methods [17], [18], [19] focus on learning feature represen-
+Shanghai 200240, China (e-mail: guan-wei@sjtu.edu.cn; cao-jian@sjtu.edu.cn;     tations while other approaches [20], [21], [22] directly learn
+gu_yang@sjtu.edu.cn; qshiyou@sjtu.edu.cn).                                      anomaly scores within an end-to-end learning framework. Ap-
+  Haiyan Zhao is with the University of Shanghai for Science and Technology,
+Shanghai 200093, China (e-mail: zhaohaiyan1992@foxmail.com).                    proximate labels can also be generated to detect anomalies by
+  Digital Object Identifier 10.1109/TKDE.2023.3322411                           directly addressing the insufficiency of labels [23], [24], [25].
+
+
+                        1041-4347 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+2746                                                     IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 6, JUNE 2024
+
+
+
+                                                                         r We provide a formal definition for the problem of detect-
+                                                                            ing and interpreting the cause of anomalies in business
+                                                                            processes using weak supervision.
+                                                                         r We design the WAKE framework, which can detect and
+                                                                            interpret the cause of anomalies by utilizing incomplete
+                                                                            and inexact labelled anomalies.
+                                                                         r We propose a new method for extracting feature represen-
+                                                                            tations of traces by utilizing a pre-trained autoencoder.
+                                                                         r To interpret the causes of anomalies, we propose a novel
+                                                                            calculation method for anomaly scores that mitigates the
+Fig. 1.   Illustration of our proposed framework.                           influence of varying numbers of potential attribute values.
+                                                                         We conduct comprehensive experiments on synthetic and
+                                                                      real-life datasets, which demonstrate that WAKE achieves su-
+Moreover, the multiple-instance learning (MIL) framework is           perior performance. Additionally, we carry out ablation studies
+applied in [26], [27], [28] to detect anomalies with inexact          to evaluate the impact of each individual component in our
+labels.                                                               approach.
+   Despite these advances, these weakly supervised anomaly               The rest of this paper is organized as follows. Section II
+detection methods for other applications are not directly appli-      introduces the related work. Section III gives the definition of
+cable to business processes. First, they do not have the ability      the problem. Then proposed framework WAKE is elaborated in
+to learn the temporal relationships between events in traces          Section IV. Section V reports the experiment results on both
+of business processes. Second, these methods require identical        synthetic and real-life logs. Finally, we conclude our work and
+features as inputs, while traces have different lengths. Third,       discuss future work in Section VI.
+none of these methods simultaneously consider incomplete and
+inexact supervision.                                                                        II. RELATED WORK
+   Recently, Elaziz et al. [29] introduced a novel weakly super-
+                                                                         To align with the focus of our research, we provide a concise
+vised anomaly detection method tailored for business processes.
+                                                                      review of existing work in three areas: i) traditional business
+However, a notable limitation of their approach is the absence of
+                                                                      process anomaly detection approaches, ii) deep business process
+explanations for the detected anomalies, which holds significant
+                                                                      anomaly detection approaches, and iii) the utilization of weakly
+practical importance. Identifying which attribute of an event
+                                                                      supervised learning in anomaly detection. To serve as a point of
+contributes to the detection of an anomaly using trace-level
+                                                                      reference, we present an overview of these works in Table I.
+(inexact) labels can be challenging due to ambiguous label
+information.
+                                                                      A. Traditional Business Process Anomaly Detection
+   To tackle the aforementioned challenges, we design a
+Weakly-supervised business process Anomaly detection frame-           Approaches
+worK via a prE-trained autoencoder, named WAKE, which is                 Traditional business process anomaly detection approaches
+illustrated in Fig. 1. WAKE, which effectively exploits a few         can be broadly divided into four categories.
+labelled anomalies in logs, is optimized through a three-stage           The conformance checking-based approaches [1], [30] are
+training procedure to detect and interpret anomalies. WAKE            the first category, which utilize conformance checking tech-
+leverages a pre-trained autoencoder capable of reconstructing         niques to examine the synchronisation between the recorded
+normal traces as a feature encoder. The feature representa-           log and the corresponding process model. The process model
+tion extracted from the feature encoder somehow reveals prior         can either be given or discovered from the log using process
+knowledge about the normal traces. Specifically, the feature          mining techniques. In some studies [2], [31], the integration of
+representation of the trace is composed of three factors (i.e.,       conformance checking techniques and association rule learning
+latent representation, reconstruction error vector and maximum        has been shown to improve the accuracy of anomaly detection.
+reconstruction error vector) and characterizes whether the trace         The second category is information theory-based ap-
+deviates from the normal pattern. Latent representation is the        proaches [3], [4], [32], [33], which applies statistical leverage
+low-dimensional vector representation of the trace, while re-         to detect trace-level anomalies in business processes while ac-
+construction error vector and maximum reconstruction error            counting for varying trace lengths.
+vector are the reconstruction errors of the trace. Following             The third category is probabilistic approaches, which utilizes
+feature extraction, the feature representations are fed into an       probabilistic graphical models such as likelihood graph [34],
+anomaly score generator to detect anomalies. The feature en-          Bayesian networks [35], hidden Markov model (HMM) [5],
+coder and the anomaly score generator are jointly optimized           [6] and variable order Markov models (VOMMs) [7] to create
+using both unlabelled traces and a limited number of labelled         normal process behavior probabilistic models based on event
+anomalies. The feature encoder can also be applied to interpret       logs for detecting anomalies.
+the cause of anomalies after fine-tuning to provide an insight into      The fourth category involves distance-based approaches that
+anomalies.                                                            consider the distance between traces for anomaly detection. For
+   The main contributions of our work are as follows:                 example, Sureka [8] calculate the normalized longest common
+GUAN et al.: WAKE: A WEAKLY SUPERVISED BUSINESS PROCESS ANOMALY DETECTION FRAMEWORK VIA A PRE-TRAINED AUTOENCODER                    2747
+
+
+
+                                                                TABLE I
+                                                     BRIEF SUMMARY OF RELATED WORKS
+
+
+
+
+sub-sequence (NLCS) between traces and apply k nearest neigh-          are time series, the authors in [12], [13], [15], [43] embed
+bor (KNN) to detect anomalies. Kang et al. [36] use the LOF            LSTM or GRU in the autoencoder to improve the reconstruction
+algorithm based on k nearest neighbor imputation (KNNI) to             capability of the model. GAE [14] and GAMA [44] convert
+detect abnormal termination. In other studies [37], outlier-aware      traces into graphs and utilize graph neural networks (GNN) to
+clustering algorithms are used, while Hsu et al. [9] utilize the       obtain graph encoding. Anomalies are detected based on the
+durat

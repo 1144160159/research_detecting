@@ -1,0 +1,135 @@
+                                                NetGPT: Generative Pretrained Transformer for
+                                                              Network Traffic
+                                                           Xuying Meng1 , Chungang Lin1 , Yequan Wang2 , Yujun Zhang1
+                                                                1 Institute of Computing Technology, Chinese Academy of Sciences, China
+                                                                              2 Beijing Academy of Artificial Intelligence, China
+
+                                                           {mengxuying, linchungang22s, nrcyujun}@ict.ac.cn, tshwangyequan@gmail.com
+arXiv:2304.09513v2 [cs.NI] 17 May 2023
+
+
+
+
+                                         ABSTRACT                                                                         Network Traffic Input   Specific Models    Network Task Output
+
+                                         All data on the Internet are transferred by network traffic,                                                          Application classification: FTP
+                                                                                                                                                               (Delay/bandwidth demands)
+                                         thus accurately modeling network traffic can help improve
+                                                                                                                                                               Attack detection: benign
+                                         network services quality and protect data privacy. Pretrained           header                                        (Security demands)
+                                         models for network traffic can utilize large-scale raw data to                                                        Reverse protocol analysis: USER *
+                                         learn the essential characteristics of network traffic, and gen-                                                      (Vulnerability discover demands)
+                                                                                                                payload
+                                                                                                                                                               Traffic generation: <IP version=4…
+                                         erate distinguishable results for input traffic without consid-        (encrypted)
+                                                                                                                                                               (Testing/Privacy demands)
+                                         ering specific downstream tasks. Effective pretrained models                                                          ...
+
+                                         can significantly optimize the training efficiency and effec-
+                                         tiveness of downstream tasks, such as application classifi-            Figure 1: An example of diverse downstream traffic
+                                         cation, attack detection and traffic generation. Despite the           tasks.
+                                         great success of pretraining in natural language processing,
+                                         there is no work in the network field. Considering the diverse         service demands. With the development of artificial intel-
+                                         demands and characteristics of network traffic and network             ligence, recent years have witnessed great advancements
+                                         tasks, it is non-trivial to build a pretrained model for net-          in intelligent networks to improve these task performances
+                                         work traffic and we face various challenges, especially the            from both academia and industry. As shown in Figure 1,
+                                         heterogeneous headers and payloads in the multi-pattern                to satisfy demands of building a better network environ-
+                                         network traffic and the different dependencies for contexts            ment, existing works design specific models for different
+                                         of diverse downstream network tasks.                                   network tasks, including encrypted application classification
+                                            To tackle these challenges, in this paper, we make the first        [10], attack detection [12], reverse protocol analysis [23], etc.
+                                         attempt to provide a generative pretrained model NetGPT                Meanwhile, to ensure data privacy, traffic generation and
+                                         for both traffic understanding and generation tasks. We pro-           trace synthesizing are carefully studied [21]. However, they
+                                         pose the multi-pattern network traffic modeling to construct           always customize specific models for specific network tasks,
+                                         unified text inputs and support both traffic understanding             which may suffer limitations from small sample sizes for spe-
+                                         and generation tasks. We further optimize the adaptation               cific tasks, insufficient model training under small samples,
+                                         effect of the pretrained model to diversified tasks by shuffling       and high costs to develop customized models. Note that, we
+                                         header fields, segmenting packets in flows, and incorporating          use traffic to uniformly denote both packets and flows.
+                                         diverse task labels with prompts. With diverse traffic datasets           To relieve limitations of customization, a pretraining strat-
+                                         from encrypted software, DNS, private industrial protocols             egy is proposed to utilize large-scale data to learn intrin-
+                                         and cryptocurrency mining, expensive experiments demon-                sic characteristics without considering specific downstream
+                                         strate the effectiveness of our NetGPT in a range of traffic           tasks [5, 17]. The pretrained model can easily adapt to di-
+                                         understanding and generation tasks on traffic datasets, and            verse downstream tasks, and help optimize the efficiency and
+                                         outperform state-of-the-art baselines by a wide margin.                efficacy, which has recently received great success in natu-
+                                                                                                                ral language processing [1, 15]. Motivated by these works,
+                                         1   INTRODUCTION                                                       we assume the pretrained model of network traffic can help
+                                         All data on the Internet are transferred by network traf-              learn the intrinsic characteristics of network traffic and adapt
+                                         fic, which in turn can reveal network service quality, attack          to downstream network tasks. Previous work has demon-
+                                         conditions, user network behavior patterns, etc. To provide            strated that pretrained representation models can signifi-
+                                         high-quality network services as well as ensure data pri-              cantly enhance various network tasks such as application
+                                         vacy, there are plenty of network tasks for diverse network            classification and attack detection [11]. However, although
+                                                                                                            1
+ACM Conference, 2023,                                                                                                            M. et al.
+
+existing works do map network traffic into latent semantic               practicable plaintext traffic in the traffic generation. Based
+space, they still target specific tasks and can not adapt to             on this general encoding, we encode multi-pattern network
+other tasks, especially for traffic generation tasks [10, 11].           traffic into a general semantic space and obtain a founda-
+Considering the specialty of raw traffic input and network               tional pretrained model that supports diverse tasks. In the
+task output, existing generative pretrained models for NLP               finetuning process, based on the observation of independent
+cannot be directly applied in the network field. Building a              network header fields, we enlarge the usable information
+generative pretrained model for network traffic faces multi-             and learn from the latter information by shuffling header
+ple challenges.                                                          fields, segmenting packet semantics during flow-level train-
+   First, for raw traffic inputs in the pretraining process, con-        ing, and incorporating labels of diverse traffic understanding
+sidering the heterogeneous headers and payloads in multi-                and generation tasks with designed prompts. In this way, we
+pattern network traffic, it is difficult to integrate semantic           optimize the pretrained model of network traffic for various
+information effectively. On the one hand, with the continu-              tasks, supporting both traffic understanding and generation
+ous enrichment of network services, network protocol types               tasks with great performance. With traffic datasets from en-
+are also constantly increasing, especially in the industrial             crypted software, DNS, private industrial protocols and cryp-
+Internet where there are a large number of private proto-                tocurrency mining, expensive experiments demonstrate the
+cols [23]. The syntax structure of different network traffic’s           effectiveness of our NetGPT in a range of traffic understand-
+header and payload parts has significant differences. On the             ing and generation tasks on traffic datasets, and outperform
+other hand, except for plaintext, various encrypted traffic ex-          state-of-the-art baselines by a wide margin.
+ists in the network. The division of tokens and construction
+of vocabularies face challenges and it is difficult to retain rich
+semantics of both plaintext and ciphertext for both diverse              2 RELATED WORK
+network tasks.                                                           2.1 Intelligent Network Tasks
+   Second, for network task outputs in the finetuning pro-
+                                                                         Intelligent network tasks can be classified into two categories
+cess, different network tasks have different dependencies on
+                                                                         based on their nature, i.e., traffic understanding tasks and
+contexts. On the one hand, traffic understanding tasks, such
+                                                                         traffic generation tasks.
+as application classification and attack detection, require to
+                                                                            The goal of traffic understanding tasks is to identify and
+integrate bidirectional information (like BERT [5]). However,
+                                                                         classify network traffic for the purpose of management, se-
+traffic generation tasks, such as testing traffic generation
+                                                                         curity, and performance optimization [4]. Existing research
+and network behavior simulation, only need to use already
+                                                                         on traffic understanding tasks can be classified into feature-
+generated information (like GPT-based methods [1, 15, 17])
+                                                                         based and byte-based ones. Feature-based methods construct
+to learn unidirectional information, whereas resulting in re-
+                                                                         effective features tailored to specific applications from raw
+duced effectiveness for traffic understanding. Since traffic
+                                                                         traffic data to improve the model’s performance on specific
+generation is a core issue for related tasks, we will follow the
+                                                                         applications [12, 19, 24]. Byte-based methods automatically
+unidirectional way to support both traffic understanding and
+                                                                         mine deep features from raw traffic data to enable the model
+generation tasks, which makes it necessary to handle the
+                                                                         to more accurately capture the distribution of the original
+cost of relatively insufficient modeling of token associations.
+                                                                         traffic data [2, 13, 22]. However, due to diverse data repre-
+On the other hand, to adapt to diverse tasks including both
+                                                                         sentation patterns, these methods have difficulty extracting
+packet-level and flow-level ones, it is important to seize the
+                                                                         effective information at the semantic and syntactic levels,
+sequential contexts of packets as well as retain the packet
+                                                                         resulting in poor model performance and a lack of generality
+structure. However, the packet count and length (Ethernet
+                                                                         for different tasks.
+MTU is 1500) can be relatively large, and as packet structure
+                                                                            Traffic generation tasks create or simulate network traffic
+reflects protocol standards, tokens inside a packet should not
+                                                                         for performance evaluation and benchmark testing. Exist-
+be split. It is still challenging to adapt to diverse tasks and
+                                                                         ing research on traffic generation tasks primarily revolves
+optimize downstream performance.
+                                                                         around Generative Adversarial Networks (GANs) [7, 14, 18,
+   To tackle these challenges, we propose NetGPT to learn
+                                                                         21]. Ring et al. [18] first propose using GANs to generate
+essential characteristics of traffic and effectively improve the
+                                                                         flow-level test traffic. Yin et al. [21] propose ensuring fidelity
+performance of diverse network tasks. To the best of our
+                                                                         while generating test traffic using GANs. However, GAN-
+knowledge, this is the first attempt to propose a pretrained

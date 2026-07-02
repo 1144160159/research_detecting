@@ -1,0 +1,1784 @@
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+457
+
+MOON: A Modality Conversion-Based Efficient
+Multivariate Time Series Anomaly Detection
+Yuanyuan Yao , Yuhan Shi, Lu Chen , Ziquan Fang , Member, IEEE, Yunjun Gao , Senior Member, IEEE,
+Leong Hou U , Member, IEEE, Yushuai Li , Senior Member, IEEE, and Tianyi Li , Member, IEEE
+
+Abstract—Multivariate time series (MTS) anomaly detection
+identifies abnormal patterns where each timestamp contains
+multiple variables. Existing MTS anomaly detection methods
+fall into three categories: reconstruction-based, prediction-based,
+and classifier-based methods. However, these methods face three
+key challenges: (1) Unsupervised learning methods, such as
+reconstruction-based and prediction-based methods, rely on error
+thresholds, which can lead to inaccuracies; (2) Semi-supervised
+methods mainly model normal dataand often underuse anomaly labels, limiting detection of subtle anomalies; (3) Supervised learning
+methods, such as classifier-based approaches, often fail to capture
+local relationships, incur high computational costs, and are constrained by the scarcity of labeled data. To address these limitations,
+we propose MOON, a supervised modality conversion-based multivariate time series anomaly detection framework. MOON enhances
+the efficiency and accuracy of anomaly detection while providing
+detailed anomaly analysis reports. First, MOON introduces a novel
+multivariate Markov Transition Field (MV-MTF) technique to convert numeric time series data into image representations, capturing
+relationships across variables and timestamps. Since numeric data
+retains unique patterns that cannot be fully captured by image
+conversion alone, MOON employs a Multimodal-CNN to integrate
+numeric and image data through a feature fusion model with
+parameter sharing, enhancing training efficiency. Finally, a SHAPbased anomaly explainer identifies key variables contributing to
+anomalies, improving interpretability. Extensive experiments on
+six real-world MTS datasets demonstrate that MOON outperforms
+six state-of-the-art methods by up to 93% in efficiency, 4% in
+accuracy and, 10.8% in interpretation performance.
+Index Terms—Anomaly
+multivariate time series.
+
+detection,
+
+interpretable
+
+system,
+
+I. INTRODUCTION
+ULTIVARIATE time series anomaly detection identifies
+unusual patterns or behaviors across multiple variables
+over time. It benefits a wide range of real-life applications,
+
+M
+
+Received 21 January 2025; revised 6 September 2025; accepted 30 September
+2025. Date of current version 25 November 2025. This work was supported by
+NSFC under Grant 62472377, Grant 62402431, Grant 62025206, and Grant
+U23A20296. Recommended for acceptance by D.-N. Yang. (Corresponding
+author: Lu Chen.)
+Yuanyuan Yao, Yuhan Shi, Lu Chen, Ziquan Fang, and Yunjun Gao are with
+the College of Computer Science, Zhejiang University, Hangzhou 310027, China
+(e-mail: yoyoyao@zju.edu.cn; shiyuhan@zju.edu.cn; luchen@zju.edu.cn; zqfang@zju.edu.cn; gaoyj@zju.edu.cn).
+Leong Hou U is with the Department of Computer and Information Science,
+University of Macau, Macau (e-mail: ryanlhu@um.edu.mo).
+Yushuai Li and Tianyi Li are with the Department of Computer Science, Aalborg University, 9220, Aalborg, Denmark (e-mail: yusli@cs.aau.dk;
+tianyi@cs.aau.dk).
+Digital Object Identifier 10.1109/TKDE.2025.3622154
+
+including finance [38], healthcare [3], and industrial monitoring [14], [44], where timely detection of anomalies can lead
+to significant improvements in decision-making and framework
+reliability [15], [53]. In recent years, deep learning techniques
+have been widely applied to time series anomaly detection and
+achieved superior performance.
+In multivariate time series anomaly detection, the scarcity
+of labeled anomalies and high annotation costs pose major
+challenges. To address these, unsupervised methods are widely
+used [5], [12], [13], [26], [39], [42], [49], modeling normal behavior and detecting deviations via prediction or reconstruction
+errors. However, unsupervised methods typically rely on large
+amounts of continuous and stable normal data as the basis for
+modeling. In real-world applications, such as in financial or
+industrial systems, data often fluctuates due to external shocks,
+making it difficult to obtain stable normal sequences. Moreover,
+the definition of “normal” is often ambiguous and prone to
+labeling errors, where certain anomalous points may be mistakenly marked as normal, further limiting the adaptability of
+these methods. Semi-supervised methods attempt to combine a
+small amount of anomalous labels with unlabeled data, improving performance while controlling label dependence. However,
+they still rely on large amounts of stable normal data, limiting
+effectiveness in dynamic environments, while scarce anomalies hinder learning complex patterns. In contrast, supervised
+methods, while exhibiting strong discriminative performance
+when sample labels are available [9], [50], [51], are highly
+dependent on labels. In scenarios with scarce samples, they
+are prone to overfitting, leading to insufficient generalization
+capability.
+The interpretability of anomaly detection methods is also
+crucial for understanding the root causes of anomalies. Existing
+methods [8], [27], [29], [34], [39], [42], [43] often rely on differences between reconstructed and ground-truth data to identify
+variables causing anomalies. However, they treat all models as
+closed-box models, ignoring unique structures and offering low
+interpretability. Thus, we aim to develop an accurate, efficient,
+and interpretable anomaly detection framework.
+Accurate anomaly detection: To achieve accurate and robust
+anomaly detection under limited supervision, it is crucial to effectively leverage scarce anomaly labels, enhancing the model’s
+ability to recognize and model abnormal patterns with minimal
+annotation cost. Multimodal data improves performance by
+combining complementary information from different sources,
+thereby enhancing the overall result quality. However, collecting
+
+1041-4347 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+458
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+TABLE I
+MODAL CONVERSION TIME (SECONDS) FOR MTS
+
+multimodal data is often costly and impractical, while numeric
+time series data is readily available.
+To address this, we propose Multivariate Markov Transition
+Field (MV-MTF), which explicitly encodes variable-to-variable
+and time-to-time transitions in a 2D format to enhance anomaly
+representation by capturing structural dynamics that are difficult
+to extract from raw sequences. However, MV-MTF may lose
+fine-grained numerical details that are crucial for identifying
+point anomalies or small deviations. To compensate for this,
+we integrate MV-MTF with raw numerical features using a
+shared-parameter multimodal CNN. This architecture allows
+the model to jointly learn global structural patterns and local
+numerical variations [6], [17]. The multimodal-CNN employs
+convolutional kernels with varying receptive fields to capture
+multi-scale features from both the image-like representations
+and the raw time series. These kernels effectively extract information across variable and timestamp dimensions, enabling
+robust multimodal feature fusion. To further enhance the model’s
+ability to process multimodal data, we incorporate a Multimodal
+Attention mechanism within Multimodal-CNN. This mechanism identifies and focuses on the most relevant features across
+different modalities, enabling the model to prioritize key information effectively. By integrating this attention mechanism,
+Multimodal-CNN achieves greater sensitivity and accuracy in
+detecting anomalous patterns.
+Efficient anomaly detection: Efficient modal conversion directly contributes to efficient anomaly detection by reducing
+the computational overhead associated with processing large
+datasets. Markov Transition Field (MTF) is an effective modal
+conversion method that transforms time-series data into image
+representations for analysis. It captures local temporal information, representing short-term dependencies between consecutive or nearby data points [25], [46]. However, existing MTF
+methods primarily focus on univariate data [25], [46] and are
+computationally intensive, as they calculate transitions between
+every pair of data points. A straightforward extension of MTF
+to MTS is calculating transitions across different variables and
+timestamps. As shown in Table I, the extended MTF incurs
+very high processing times, with 10,000 data points requiring
+nearly 10 hours to process. Moreover, combining data from both
+modalities may increase the training cost.
+To address these limitations, we propose an optimized MVMTF strategy to improve efficiency of modal conversion, we
+simplify the time dimension. Since the influence between variables decreases with temporal distance, we consider only the
+impact of values from the previous time step on the current time.
+This reduces computational complexity from O(n2 ) to O(n),
+significantly accelerating MV-MTF while preserving essential
+local information. As shown in Table I, with 10,000 data points,
+MV-MTF processes 10,000 data points in just 9.25 seconds, a
+
+Fig. 1.
+
+An example of an anomaly report.
+
+99.97% reduction compared to Extended MTF. Furthermore,
+in the multimodal-CNN module, we adopt a parameter-sharing
+strategy to reduce the overall number of trainable parameters,
+which not only decreases the memory footprint but also accelerates model convergence. This contributes to a more efficient
+training process and significantly shortens the overall training
+time.
+Interpretable anomaly detection: Interpretability is one of the
+core objectives of our anomaly detection framework. For multivariate time series detected as anomalous, the anomaly typically
+involves only a subset of variables. Accordingly, solving the
+anomalies requires not only determining whether an anomaly
+has occurred but also precisely localizing the affected variables.
+Existing threshold-based interpretability methods [39], [42] face
+two main limitations in anomaly detection. First, error score
+threshold-based methods risk misjudgment or omission. Second,
+they lack intuitive, model-specific explanations, limiting their
+interpretability.
+To address these issues, we propose a high-interpretability
+method leveraging multimodal information. Gradient Shapley
+Additive Explanations (SHAP) [1] values are used to quantify
+the impact of other variables on a target variable and assess
+the current variable’s contribution to anomaly occurrence. This
+enables a multi-dimensional evaluation of anomalies, clarifying
+how various factors contribute to the detection process.
+Next, we apply a weighted ranking method to prioritize
+variables based on their contributions to anomaly detection,
+generating a ranked list of the most likely causes. To ensure
+reliability, we introduce an evaluation module that validates
+top-ranked variables, reducing false positives and enhancing the
+robustness of the explanations. Finally, we categorize anomalies
+into specific types based on expert insights. By clustering the
+data and constructing classifiers, we identify patterns that refine
+anomaly categorization.
+A comprehensive anomaly report is then generated, as exemplified in Fig. 1. The report highlights key information about
+the anomaly, including (i) the dataset (SMD), (ii) the timestamp
+(2024-08-02, 07:15:23), (iii) the contributing variables (Variables 1 and 3), and (iv) actionable recommendations (verifying
+configuration settings and running network diagnostics). The
+report helps users quickly understand and address anomalies
+and enhances framework interpretability and reliability.
+We integrate the above novel techniques to propose MOON,
+a modality conversion-based anomaly detection framework for
+MTS that is accurate, efficient, and interpretable. First, MOON
+employs the Multimodal-CNN to represent and fuse multimodal
+data while training a classifier for accurate anomaly detection.
+
+YAO et al.: MOON: A MODALITY CONVERSION-BASED EFFICIENT MULTIVARIATE TIME SERIES ANOMALY DETECTION
+
+Next, it efficiently converts numeric MTS data into image data
+using a new MV-MTF technique. Finally, MOON integrates an
+interpretability module to refine anomaly categories and generate detailed anomaly analysis reports.
+To sum up, we have made the following key contributions:
+r We present MOON, a modality conversion-based MTS
+anomaly detection framework, that efficiently and effectively supports MTS anomaly detection.
+r We propose a supervised classification Multimodal-CNN,
+which integrates numerical MTS data and image representations using convolution kernels with varying receptive
+fields and a Multimodal Attention mechanism. It multiscale features and prioritizes key information, enhancing
+anomaly detection accuracy.
+r We propose a MV-MTF technique designed to simultaneously capture transitions across both time and variables. By
+leveraging the strong temporal dependencies in time-series
+data, we further simplify the calculation of transitions
+between variables, accelerating the modal conversion.
+r We present a SHAP-based anomaly explainer that integrates multimodal data to compute SHAP values and incorporates a reliable evaluation module to enhance accuracy.
+By categorizing anomalies into distinct types, it significantly improves anomaly detection interpretability.
+r We conduct experiments on six real-world datasets. The
+results demonstrate that MOON outperforms six state-ofthe-art methods by up to 93% in efficiency, 4% in accuracy
+and, 10.8% in interpretation performance.
+The rest of this paper is organized as follows. We provide the
+preliminaries in Section II. Section III provides our framework
+overview and main components of our framework. Section IV
+presents the experimental results. We review related work in
+Section V, and conclude the paper in Section VI.
+II. PRELIMINARIES
+A. Problem Definition
+Definition 1 (Multivariate time series). A multivariate time
+series X = (x1 , x2 , . . . , xn ) is a sequence of numerical observations ordered by time, where xt (1 ≤ t ≤ n) is a c-dimensional
+vector (c > 1) representing the observation at timestamp t, and
+n is the length of the time series. The dimension of X is n × c.
+For the v th variable (1 ≤ v ≤ c), X v represents its univariate
+time series, and xvt denotes its value at timestamp t.
+Definition 2 (Anomaly detection). Given a training time series X, anomaly detection predicts Y = {yt }n̂t=1 for any unseen
+test time series X̂ of length n̂ with the same modality as X.
+yt ∈ {0, 1} indicates whether the data point at timestamp t of
+X̂ is anomalous (yt = 1 denotes anomalous points).
+Definition 3 (Anomaly interpretablity). Given an anomalous
+time series data point x̂t at timestamp t with c variables, anomaly
+interpretability identifies the variables that contributed to classifying x̂t as anomalous.
+Example 1.
+Consider a multivariate time series
+X = (x1 , x2 , x3 ), where each xt (1 ≤ t ≤ 3) has three
+variables: temperature, pressure, and humidity. The
+observations are x1 = [30, 101325, 20], x2 = [32, 101300, 21],
+
+459
+
+Hence,
+X 1 = [30, 32, 50],
+and
+x3 = [50, 101310, 20].
+2
+and X 3 = [20, 21, 20].
+X = [101325, 101300, 101300],
+Anomaly detection identifies x3 as an anomalous data
+point (y3 = 1). Anomaly interpretability determines that
+the temperature value x13 = 50 is the primary contributor to the
+anomaly, while pressure x23 = 101310 and humidity x33 = 20
+remain normal.
+B. Markov Transition Field Technology (MTF)
+MTF techniques [25], [46] are primarily designed for converting univariate time series data to image data. For a univariate
+time series X = (x1 , . . . , xn ) with a single variable (c = 1),
+data points are first discretized by mapping continuous values
+to discrete bins, reducing computational cost. Let Q denote
+the number of bins used to partition the data range. After
+discretization, each data point xt is assigned to a bin with
+identifier qi (i ∈ [1, Q]). A Q × Q state transition matrix W is
+then constructed, where Wij represents the transition probability
+from bin qi to bin qj (1 ≤ i, j ≤ Q).
+⎤
+⎡
+w11 | P11 · · · w1Q | P1Q
+⎥
+⎢
+⎢ w21 | P21 · · · w2Q | P2Q ⎥
+⎥,
+⎢
+(1)
+W =⎢
+..
+..
+⎥
+⎦
+⎣
+.
+.
+wQ1 | PQ1 · · · wQQ | PQQ
+where wij denotes the transition probability in Pij from qj to
+qi , with Pij = P (xt ∈ qi | xt−1 ∈ qj ), and t denotes any given
+time.
+Example 2. Given three bins q1 = [0, 0.2), q2 = [0.2, 0.3),
+q3 = [0.3, 0.4), and a univariate time series X = (0.1, 0.3,
+0.05, 0.4, 0.15, 0.2), the data points are discretized as follows:
+x1 , x3 , and x5 are classified into q1 , x2 and x4 into q3 , and x6 into
+q2 . The resulting converted time series is (1, 3, 1, 3, 1, 2). For the
+state transition matrix, w13 = 2/3, where 2 represents the two
+occurrences of the consecutive pair (1, 3) in the converted series,
+and 3 is the total occurrences of pairs starting with 1 (1 ≤ i ≤ 3).
+Based on the obtained state transition matrix W , an n × n
+Markov Transition Field (MTF) matrix M is constructed to capture the transition probabilities between states (i.e., timestamps),
+where mij represents the transition probability of state i to the
+state j, and its value equals to wab (i.e., xi ∈ qa , and xj ∈ qb ).
+Note that, the obtained MTF matrix M is typically viewed as an
+image.
+Example 3. Continuing Example 2, m12 = w13 due to x1 ∈
+q1 and x2 ∈ q3 , m23 = w31 due to x2 ∈ q3 and x3 ∈ q1 , and
+m34 = w13 due to x3 ∈ q1 and x4 ∈ q3 .
+C. Shapley Additive Explanations (SHAP)
+SHAP [1] is a unified framework for interpreting the output
+of machine learning models, grounded in cooperative game
+theory. The theoretical foundation of SHAP is based on the
+Shapley value, which provides a fair distribution of payoffs to
+players depending on their contribution to the total payoff in a
+cooperative game. In machine learning, SHAP values assign an
+importance value to each feature, representing its contribution
+to the model’s output. Given a model f and an instance x, the
+
+460
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+Framework overview.
+
+SHAP value φi (x) for feature i is computed as:
+φi (x) =
+
+
+S⊆F \{i}
+
+|S|!(|F | − |S| − 1)!
+[fx (S ∪ {i}) − fx (S)] ,
+|F |!
+
+(2)
+where F is the set of all features, S is a subset of F excluding
+feature i, |S| is the number of features in subset S, and fx (S) is
+the model output for the subset S with the instance x.
+The SHAP value computation ensures that the sum of SHAP
+values for all features equals the difference between the model
+output and the expected output. If two features contribute equally
+to all subsets, they receive equal SHAP values.
+
+weighted SHAP values to identify the variables causing
+the anomalies. In addition, we train an explainer classifier
+to refine the anomaly categories.
+The online anomaly detection process includes the following
+three steps. (i) MTS data is converted into image data using
+MV-MTF. (ii) Both the original MTS data and the converted
+image data are simultaneously fed into a Multimodal-CNN to
+determine if the data is anomalous. (iii) For data identified as
+anomalous, it is processed by an interpretable classifier to classify the anomaly type and generate a detailed anomaly detection
+report.
+IV. FRAMEWORK DESIGN
+
+III. FRAMEWORK OVERVIEW
+Fig. 2 illustrates an overview of MOON, comprising modal
+conversion, anomaly detection, and anomaly explainer.
+r Modal conversion. To capture the local information between multivariate time series, we use the proposed MVMTF technique to efficiently calculate the transition probabilities from other variables to a specific variable, thereby
+converting the multivariate time series into an image.
+r Anomaly detection. To support two different data modalities (i.e., numerical time series data and image data), we
+propose Multimodal-CNN that utilizes a parameter sharing
+mechanism to cross-extract features from two modalities,
+significantly reducing computational complexity and parameter count. In addition, a multi-modal attention mechanism and a separable convolution-based feature fusion
+technique are introduced to combine the features from both
+modalities, thereby improving the classifier’s performance.
+r Anomaly explainer. To provide a user-friendly anomaly
+explainer, we generate an anomaly detection report for
+each detected anomly. Specifically, for the anomalous time
+series data points, we use the kernel explainer and gradient
+explainer to generate SHAP values based on numerical and
+image time series data, respectively. Next, we use these
+
+A. Modality Conversion
+To enable efficient multivariate time series conversion, we
+introduce MV-MTF technology, which generates an image capturing the time dependency relationships between variables, as
+shown in the left part of Fig. 2.
+Let X u = {xu1 , xu2 , . . . , xun } represent the time series for
+variable u (u ∈ [1, c]), mapped into Qu distinct bins. Similarly,
+
+
+
+
+let X u = {xu1 , xu2 , . . . , xun } represent the time series for an
+other variable u mapped into Qu distinct bins. To determine
+an appropriate bin count Qu for each variable u, we search
+over a candidate set of bin counts Q. For each Qu ∈ Q, we
+apply quantile-based binning to discretize X u into Qu bins.
+The resulting discretized sequence Qu is then evaluated using
+entropy:
+H(Qu ) = −
+
+|Qu |−1
+
+
+i=0
+
+n
+
+pi log pi , pi =
+
+1
+I(Qut = i)
+n t=1
+
+(3)
+
+where I(·) is an indicator function that equals 1 if the t-th
+sample falls into the i-th bin, and 0 otherwise. We then select the optimal bin count that maximizes the entropy: Q∗u =
+arg maxQu ∈Q H(Qu ).
+
+YAO et al.: MOON: A MODALITY CONVERSION-BASED EFFICIENT MULTIVARIATE TIME SERIES ANOMALY DETECTION
+
+With the optimal bin count determined for each variable,
+we proceed to analyze temporal transitions between discretized
+states, in contrast to hierarchical binning [28], which first partitions the data by layers or groups before discretization. For
+
+two consecutive timestamps, data points xut−1 and xut from
+
+variables u and u are classified into bins qiu (i ∈ [1, Qu ]) and qju
+(j ∈ [1, Qu ]), respectively. A Qu × Qu state transition matrix
+W is then calculated as follows.
+
+
+
+
+W = wij | P xut ∈ qiu | xut−1 ∈ qju
+
+,
+
+(4)
+
+where 1 ≤ i ≤ Qu , 1 ≤ j ≤ Qu , and wi,j is the transition prob
+
+
+ability P (xut ∈ qju |xut−1 ∈ qiu ) from qiu in variable X u to qju in
+variable X v .
+Based on the obtained state transition matrix W , we compute
+the n × n Markov Transition Field matrix M . For any data
+
+point xui of variable u at timestamp i and data point xuj of
+
+variable u at timestamp j (xui is classified into qau , while xuj is
+
+classified to qbu ), the value mij in M equals to the state transition
+
+probability wab in W , which represents the probability of xut
+
+at time t belonging to qbu given that the data in xut−1 at time
+t − 1 belonging to qau . This gives us the Markov Transition Field
+matrix Mu,u for variables u and u .
+Example 4. Given two time series for variables u
+
+and u : X u = (0.1, 0.3, 0.05, 0.4, 0.15, 0.2) and X u =
+(0.2, 0.3, 0.45, 0.3, 0.35, 0.4), with their respective bins defined
+as Qu : q1u = [0, 0.2), q2u = [0.2, 0.3), q3u = [0.3, 0.4) and
+
+
+
+
+Qu : q1u = [0.2, 0.3), q2u = [0.3, 0.4), q3u = [0.4, 0.5).
+The sequence X u is classified as follows: xu1 , xu3 , and xu5 are
+classified into q1u ; xu2 and xu4 are classified into q3u ; while xu6 is
+
+
+classified into q2u . For the sequence X u : xu1 is classified into
+
+
+u
+u
+u
+u
+u
+q1 ; x2 , x4 , and x5 are classified into q2 ; while xu3 and xu6
+u
+are classified into q3 . Thus, we obtain the converted time series
+
+Xqu = (1, 3, 1, 3, 1, 2) and Xqu = (1, 2, 3, 2, 2, 3) respectively.
+The transition probability w12 = 23 , where 2 indicates two ocu
+currences of the pair (1, 2) in consecutive time steps from qt−1
+u
+to qt , and 3 represents the total occurrences of pairs starting
+from q1u (1 ≤ i ≤ 3). The corresponding matrices W and M are
+shown below.
+⎡
+⎤
+0 2/3 1/3
+⎢
+⎥
+W = ⎣0
+0
+0 ⎦
+0 1/2 1/2
+⎤
+⎡
+0 2/3 1/3 2/3 2/3 1/3
+⎥
+⎢
+⎢0 1/2 1/2 1/2 1/2 1/2⎥
+⎥
+⎢
+⎢0 2/3 1/3 2/3 2/3 1/3⎥
+⎥
+⎢
+M =⎢
+⎥
+⎢0 1/2 1/2 1/2 1/2 1/2⎥
+⎥
+⎢
+⎣0 2/3 1/3 2/3 2/3 1/3⎦
+0
+0
+0
+0
+0
+0
+
+
+According to W , the probability 23 from q1u to q2u is assigned
+
+
+to m12 , since xu1 ∈ q1u and xu2 ∈ q2u .
+Note that, we have more than two variables in a multivariate
+time series data, thus, for a specific variable u, the Markov
+Transition Field matrices Mu,k between variable u and all other
+
+461
+
+variables k (1 ≤ k ≤ c and k = u) are computed. These matrices
+are then averaged to obtain a new Markov Random Field matrix
+Mu,· , as shown in Equation (5).
+Mu,· =
+
+c
+
+
+ωu,k × Mu,k ,
+
+(5)
+
+k=1,k=u
+
+where ωu,k is the weight parameter for Mu,k , denoting the
+influence degree of k on u. The previously computed MTF
+matrix Mu,u for variable u ( 2) is weighted and summed with
+Mu,· to obtain the Multivariate Markov Transition Field matrix
+Mu for variable u, as shown in Equation (6),
+Mu = α × Mu,u + (1 − α) × Mu,· ,
+
+(6)
+
+where α is the weight parameter to control the influence degree
+of the same variable on the transition probability.
+For a multivariate time series data X with c variables, we
+obtain the MV-MTF MX for the multivariate time series data
+X by summing the MTF matrices of all variables, as shown in
+Equation (7).
+MX =
+
+c
+
+
+Mu ,
+
+(7)
+
+u=1
+
+where Mu is the MV-MTF matrices for all variables u (u ∈
+[1, c]).
+Time complexity analysis: The computational complexity of
+each MTF matrix computation is O(n2 ). In particular, the MTF
+matrix M requires calculating the values for all pairs in X u and
+
+X u , resulting in very high complexity.
+However, for time series data, the temporal relevance is crucial, and calculating the relationship between two timestamps
+time points do not make sense. Therefore, we optimize M as:
+Mij =
+
+mi,j ,
+0,
+
+if j = i + 1
+,
+otherwise
+
+(8)
+
+Each element in M represents the transition relationship between two consecutive timestamps. In this way, the complexity
+of Markov Transition Field matrix computation is reduced from
+O(n2 ) to O(n).
+B. Anomaly Detection
+We present Multimodal-CNN with two key components: multimodal feature extraction and multimodal feature fusion.
+1) Multimodal Feature Extraction: This component incorporates a unified framework for extracting features from both
+numerical and image data, as illustrated in Fig. 3. It begins by
+initializing parameters, with a focus on designing the receptive
+field for the CNN-Block. Using this design, the MultimodalCNN extracts multi-scale features, capturing critical information
+through a multimodal attention mechanism. Moreover, parameter sharing is employed across modalities, further enhancing feature extraction performance. The detailed process is described
+below.
+Receptive field design. In the multimodal feature extraction
+module, determining the receptive field size of the 1D-CNN
+is crucial, as it directly influences the range of features captured during convolution. To handle features at different scales
+
+462
+
+Fig. 3.
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+Multimodal feature extraction.
+
+effectively, the receptive field design must be both flexible
+and efficient. Using convolution kernels of even sizes enables
+coverage of receptive fields at various scales [41].
+The receptive field (denoted as RF ) is calculated as RF =
+p(1) + p(2) + p(3) − 2. For example, if the kernel size of the
+first convolutional layer p1 is 3 and the second layer p2 is 5, the
+receptive field after a 1D convolution is RF = 3 + 5 + 1 − 2 =
+7. Similarly, after a 2D convolution, the receptive field becomes
+RF = 3 + 5 + 2 − 2 = 8. Extending this concept, ensuring that
+p(1) + p(2) covers all even numbers smaller than n enables the
+network to achieve receptive fields of all sizes less than n.
+To maximize coverage, the network uses sets of prime numbers smaller than n as convolution kernel sizes for each layer.
+This allows processing of receptive fields at different scales,
+avoiding limitations in local feature extraction and enhancing
+the network’s ability to capture multi-scale information. In the
+final layer, two convolution kernels—1 × 1 and 2 × 2—are employed to optimize receptive field coverage. The 1 × 1 kernel
+captures features at the smallest scale, while the 2 × 2 kernel
+captures slightly larger-scale features. This ensures complete
+coverage of all receptive field sizes, preventing information loss
+due to incomplete receptive fields and enhancing the network’s
+robustness in feature extraction.
+CNN-Block and Multimodal attention. Based on the defined
+parameter list, different convolution kernel sizes are determined
+for the model. Each convolution layer is responsible for processing different temporal windows, allowing the model to extract information across multiple time scales as shown in Equation (9).
+Fp = Convkp ×kp (X),
+Fconcat = Concat(F1 , F2 , . . . , Fp ),
+
+(9)
+
+where kp is the pth kernel size in each layer, and Convkp ×kp (X)
+denotes the convolution operation applied to the input X with
+a kernel size of kp × kp . This operation extracts local patterns
+and features within a specific temporal window defined by kp .
+Concat is used to concatenate the features with different kernel sizes along the channel dimension, forming a consolidated
+feature representation Fconcat .
+
+To preserve information in deeper networks, multimodal feature extraction adopts a residual connection design. Through
+skip connections, the input data is directly added to the output,
+ensuring original information is passed to subsequent layers
+and mitigating the gradient diminishing problem. In each layer,
+the input passes through both the main network and a 1 × 1
+convolution layer, which adjusts the channel dimensions to
+match the extracted features. The residual connection output,
+Conv1×1 (X), is the transformed input, while the combined
+output, Foutput , is the sum of the concatenated features Fconcat and
+the residual connection Conv1×1 (X), computed as follows.
+Foutput = Fconcat ⊕ Conv1×1 (X)
+
+(10)
+
+To enable each input type to focus on relevant features from the
+other, we calculate cross-type attention weights. For the numerical input, we compute the query Qnum , key Knum , and value
+Vnum as follows: Qnum = Fnum WQ , Knum = Fnum WK , and
+Vnum = Fnum WV . For the image input, we compute the query
+Qimg , key Kimg , and value Vimg as follows: Qimg = Fimg WQ ,
+Kimg = Fimg WK , and Vimg = Fimg WV . Here, WQ , WK , and
+WV are weight matrices learned during training. Next, we
+compute attention weights to let the numerical data attend to
+the image data, extracting relevant features:
+
+
+T
+Qnum Kimg
+√
+,
+Attentionnum→img = softmax
+d
+Fnum→img = Attentionnum→img ⊕ Vimg ,
+
+(11)
+
+T
+(transpose of Kimg ) to compute
+where Qnum is multiplied by Kimg
+√
+similarity scores, scaled by d, where d is the feature dimension.
+The result is passed through a softmax function to calculate
+attention weights Attentionnum→img . These weights are then
+applied to Vimg to produce updated features Fnum→img .
+Finally, we reverse the process to let the image data attend to
+the numerical data:
+
+
+T
+Qimg Knum
+√
+Attentionimg→num = softmax
+,
+d
+
+Fimg→num = Attentionimg→num ⊕ Vnum , (12)
+
+YAO et al.: MOON: A MODALITY CONVERSION-BASED EFFICIENT MULTIVARIATE TIME SERIES ANOMALY DETECTION
+
+T
+where Qimg is multiplied by Knum
+√(transpose of Knum ) to compute similarity scores, scaled by d. The softmax function
+converts the scores into attention weights, Attentionimg→num ,
+which are applied to Vnum to produce updated features Fimg→num .
+The above process allows each input type to focus on complementary information from the other, enhancing feature representation.
+Parameter sharing:Parameter sharing across different data
+types reduces the number of parameters and improves training
+efficiency. The shared parameters include the weights W, biases
+B, and masks M for each convolution kernel in the CNN-Block.
+During each epoch, the model trains sequentially on numerical
+data and image data, initializing parameters from the previous
+training iteration. The process is defined as follows:
+
+Nb = fb (Xn , (Wb , Bb , Mb ))
+← fb−1 (Xi , (Wb−1 , Bb−1 , Mb−1 )) ,
+Ib = fb (Xi , (Wb , Bb , Mb )) ,
+
+(13)
+
+where Xn and Xi are the numerical and image data, respectively; b denotes the batch index in an epoch; W, B, and
+M are the shared weight, bias, and mask parameters of the
+CNN-Block; Nb and Ib are the embeddings generated for the
+numerical and image data, respectively; and fb represents the
+above multimodal feature extraction process. For each batch b,
+the numerical data Xn is processed first using the parameters
+Wb , Bb , and Mb obtained from the image data in the previous
+batch b − 1. The image data Xi is then processed using the
+parameters updated after training on Xn in the current batch.
+This sequential training captures correlations between numerical
+and image data, enhancing the model’s ability to learn effectively
+from multimodal inputs.
+Parameter sharing not only significantly accelerates gradient
+convergence but also offers multiple additional benefits. Theoretically, consider gradients from two modalities denoted as
+gn and gi . The gradient update for the shared parameters is a
+weighted linear combination:
+Δθs = λgn + (1 − λ)gi ,
+
+(14)
+
+where λ ∈ [0, 1] is a weighting factor that controls the relative
+contribution of the two gradients to the final parameter update.
+The magnitude Δθs denotes the overall step size of the update,
+determined by the direction and scale of the combined gradients,
+and can be calculated as: Δθs =
+
+λ2 gn 2 + (1 − λ)2 gi 2 + 2λ(1 − λ) gn gi cos θ,
+(15)
+where cos θ = ggnn ·ggii , measures the alignment between the
+two gradient directions. When cos θ approaches to 1 (indicating
+high directional similarity), the combined gradient magnitude is
+maximized, resulting in more effective updates and significantly
+faster convergence.
+This mechanism enables parameter sharing to promote information fusion between different modalities, allowing the
+model to learn more generalizable and robust feature representations, thereby improving generalization and noise resilience.
+Furthermore, the weighted combination of gradients inherently
+
+463
+
+suppresses noise: when one modality’s gradient is noisy, the
+other can partially offset the disturbance, enhancing training
+stability and model robustness. Additionally, by reusing the
+same parameter set, parameter sharing drastically reduces the
+total number of model parameters, lowering computational and
+storage costs, while simplifying the model architecture and
+training process, thus improving overall the training efficiency.
+2) Multimodal Feature Fusion: It integrates features from
+multiple modalities to enhance representation for classification
+tasks. Multimodal feature fusion includes five key steps: (i)
+concatenation, (ii) depthwise separable convolution, (iii) layer
+normalization, and (iv) gated Feedforward Network.
+Concatenation:The features extracted from different modalities are concatenated to form a combined feature vector Fconcat =
+[Fimg ; Fnum ].
+Depthwise separable convolution:The concatenated feature
+vector Fconcat is processed using a depthwise separable convolution. This encompasses two sequential steps: (i) a depthwise
+convolution extracts spatial or temporal relationships within
+individual feature channels, and (ii) a point wise convolution
+integrates information across all channels, enhancing feature
+interaction and representation. The resulting output Fout is computed as follows:
+Fout = PointwiseConv (DepthwiseConv(Fconcat ))
+(16)
+Splitting standard convolution into these two steps significantly
+reduces computational complexity by minimizing cross-channel
+operations, while preserving the richness of extracted features
+through efficient intra-channel pattern extraction and crosschannel integration.
+Layer normalization:Layer normalization stabilizes and accelerates training by normalizing the input across features for
+each data sample, resulting in Fnorm .
+Gated Feedforward Network:The Gated Feedforward Network (GDFN) achieves refined fusion of multimodal features
+through dynamic channel weight. Given the input feature Fnorm ,
+it is first projected into a higher-dimensional space through a
+pointwise convolution. A subsequent depthwise convolution is
+applied to capture intra-channel dependencies, producing intermediate features Fv . The feature Fv is then split along the
+channel dimension into two parts, Fv1 and Fv2 . A gating mechanism is applied as follows: Fw = GELU(Fv1 )  Fv2 , where 
+denotes element-wise multiplication. This operation adaptively
+reweights the feature channels, suppressing modality-specific
+redundancy while emphasizing informative signals. Finally, a
+1 × 1 convolution reduces dimensionality: Z = Conv1×1 (Fw ).
+This process enables GDFN to perform fine-grained modeling
+and learnable weighting of multimodal features, effectively enhancing the discriminative power and robustness of the representation. The fused vector Z is then passed to the classifier for
+anomaly detection.
+The classifier begins with global average pooling to compute the global averages of the input features, reducing their
+dimensionality and generating a compact representation. This
+low-dimensional representation is further processed by a fully
+
+464
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+Algorithm 1: Multimodal-CNN Model.
+
+Training:During the training phase, the algorithm iterates
+through each training epoch. For each batch, it processes the
+original time series data using the convolutional blocks. The
+output output n from each block is added to the original input,
+followed by applying the ReLU function to generate a new input
+output n (lines 7–11).
+Second, the algorithm applies a fully connected layer and
+pooling operation to output n , producing the feature Fnum (line
+12). Similarly, the image time series data is processed, generating output i , which passes through a fully connected layer and
+pooling operation to derive the feature Fimg (lines 14–16).
+Next, We initialize the parameters Q, K, and V for the
+multimodal attention mechanism, which is then employed to
+capture and fuse inter-modal relationships, producing updated
+features Fnum and Fimg (lines 18–21). These features are fused
+into a combined feature Fconcat , and the model is optimized using
+the Adam optimizer [23] with a learning rate adjustment function
+(lines 22–23).
+Finally, the algorithm returns the trained MultiModal Feature Extraction model model. This enables effective extraction
+and fusion of features from multiple modalities, enhancing the
+model’s overall performance.
+
+C. Anomaly Explainer
+The explainer interprets the results of anomaly detection models, as illustrated in the lower right corner of Fig. 2. It includes
+the Kernel Explainer and Gradient Explainer [1], which are
+used to interpret numerical and image data, respectively. Kernel
+methods and gradient methods are employed to generate SHAP
+values (sK and sG ), which evaluate each variable’s contribution
+to anomaly detection. sK represents the direct impact of the
+current variable’s raw data on anomaly detection results, while
+sG captures the influence of the current variable’s MV-MTF
+data on the current variable. During anomaly evaluation, sK
+and sG are combined to identify the variables that significantly
+contribute to anomalies. For the v th variable, its SHAP value sv
+is computed as follows:
+connected layer, which produces the final anomaly detection
+results.
+3) Model Construction and Training: Algorithm 1 outlines
+the construction and training process of the Multimodal-CNN.
+Construction:The algorithm begins by defining input parameters, including the original time series data (denoted as input n ),
+image time series data (denoted as input i ), model parameters
+(denoted as parameter _l ist), the weight, bias and mask of
+each layer (denoted as W , B, and M ), the number of layers
+(denoted as layers), and the number of training epochs (denoted
+as epoch_num).
+Next, convolutional layers are constructed iteratively. For
+each layer, the algorithm checks if it is the final layer and
+determines whether to apply the ReLU activation function accordingly (lines 2–3). The Build_Layer function is then used
+to create the current layer, which is appended to the layer_list.
+Finally, all layers are combined into a sequential CNN model
+named CNN-Block (lines 4–5).
+
+sv = ω × sK
+v + (1 − ω) ×
+
+c
+
+K
+G
+j=1 sj × sv
+
+c
+
+,
+
+(17)
+
+where c is the total number of variables, ω is a weight parameter
+balancing the contributions of sK and sG , sK
+v is the SHAP value
+reflecting the direct impact of the v th variable, and sG
+v is the
+impact of other variables on the v th variable. Equation (17)
+exhibits Bounded Controllability and Top-k Ranking Plateau
+properties.
+Let the fused attribution
+v be sv (ω) = ω sK
+v +
+cfor variable
+1
+G
+K
+(1 − ω) γ sv with γ = c j=1 sj . Collecting terms in ω yields
+G
+G
+sv (ω) = av ω + bv with av := sK
+v − γsv and bv := γsv .
+Lemma 1 (Bounded controllability). Given sv (ω) = av ω +
+bv and let L :=
+ a ∞ = maxv |av |. Then for any v and any
+ω, ω  ∈ [0, 1], sv (ω  ) − sv (ω) ≤ |av | |ω  − ω| ≤ L |ω  −
+ω|. Hence each sv is L-Lipschitz in ω, ensuring bounded sensitivity and controllability with respect to the weighting parameter.
+
+YAO et al.: MOON: A MODALITY CONVERSION-BASED EFFICIENT MULTIVARIATE TIME SERIES ANOMALY DETECTION
+
+Proof. For any perturbation δ with ω + δ ∈ [0, 1], since
+sv (ω) = av ω + bv , we have
+sv (ω + δ) − sv (ω) = av δ
+
+
+⇒ sv (ω + δ) − sv (ω) = |av | |δ| ≤ max |av | |δ|.
+v
+  
+
+(18)
+
+= a ∞ =L
+
+Equivalently, for any ω, ω  ∈ [0, 1],
+
+ 
+
+sv (ω  ) − sv (ω) = av (ω  − ω) ≤ L |ω  − ω|.
+
+(19)
+
+Hence, each sv is L-Lipschitz in ω, establishing bounded controllability.
+
+K
+G
+|
+and
+a
+=
+s
+−
+γs
+,
+we
+can
+get
+that
+As L = maxv |aK
+v
+v
+v
+v
+G
+L ≤ maxv |sK
+v | + γ · maxv |sv |. In binary classification, it is
+known that maxv |sK
+v | = 1, and for anomalous data the MVMTF values are very small, which leads to |sG
+v | ≈ 0. Therefore,
+we can derive that L ≤ 1. Hence, for any ω, ω  , it holds that
+|sv (ω  ) − sv (ω)| ≤ |ω  − ω|. This indicates that as ω varies, the
+contribution of variable v is constrained by a uniform upper
+bound, and its ranking is therefore stable.
+Given the ranked contribution list C(ω) = {si (ω)}ni=1 , where
+n is the number of variables and C(ω) is in descending order of
+si (ω), the Top-k set is defined as k variables with highest si (ω),
+i..e, Top-k(ω) = {s1 (ω), . . . , sk (ω)}.
+Lemma 2 (Top-k ranking plateau). For any two variables u and v, the pairwise contribution difference is defined
+as Δuv (ω) := su (ω) − sv (ω) = Auv ω + Buv , where Auv =
+au − av and Buv = bu − bv . Then, with S := maxu,v |Auv |,
+the Top-k set remains locally invariant within radius |δ| =
+(sk (ω) − sk+1 (ω))/S, i.e., Top-k(ω + δ) ≡ Top-k(ω).
+Proof. For any u ∈ Top-k and v ∈
+/ Top-k, given the offset
+value δ of ω, then
+Δuv (ω + δ) = Auv (ω + δ) + Buv
+≥ Δuv (ω) − |Auv | |δ|
+≥ (sk (ω) − sk+1 (ω)) − |Auv | |δ|.
+
+(20)
+
+Only when Δuv (ω + δ) > 0, we have Top-k(ω + δ) =
+Top-k(ω). To ensure this condition simultaneously across all
+variable pairs, we set S := maxu,v |Auv |, which leads to the sufficient condition |δ| < (sk (ω) − sk+1 (ω))/S. Here, sk (ω) −
+sk+1 (ω) represents the minimal margin between Top-k and
+non-Top-k variables. Under this condition, the Top-k set remains
+unchanged.
+
+S := maxu,v |Auv | is the same for all ω. Therefore, δ is
+determined by sk (ω) − sk+1 (ω). From sv (ω) = ω sK
+v + (1 −
+,
+we
+can
+find
+that
+increasing
+ω
+raises
+the
+contribution
+ω) γ sG
+v
+of the raw data sK , while decreasing ω raises the contribution of the transition MV-MTF data γsG . Under anomalies,
+the values of the transition structure MV-MTF tend to decrease (due to the low probability of anomalous transitions),
+which in turn drives the contribution sG close to zero, thereby
+leading to a very small sk (ω) − sk+1 (ω) value. The value of
+sk (ω) − sk+1 (ω) increases only when ω grows, which means
+
+465
+
+the weight of the raw data contribution is increased. According to |δ| < sk (ω)−sSk+1 (ω) , it follows that as sk (ω) − sk+1 (ω)
+increases, Δ also grows, thereby widening the plateau region.
+This weighting scheme effectively balances the contributions
+of raw numerical features and MV-MTF modalities, ensuring
+anomaly detection primarily relies on reliable raw data while
+moderately integrating the complex structural information captured by MV-MTF.
+Based on Equation (17), we rank variables by their contribution to anomalies. Variables with higher sv contribute more,
+while those with lower sv have little or no contribution. Identifying the contributing variables is essential. To achieve this,
+we propose a binary search strategy to efficiently determine a
+critical point k, defined as follows:
+Definition 4 (Critical point). Given a list of variables L
+ranked by their contribution to anomalies, k is a critical point
+such that the first k variables in L contribute to the anomalies,
+while the remaining variables do not. Lo,o denotes a sublist of
+L from Lo to Lo , where Lo is the oth variable in L.
+Example 5. For an anomaly time series with eight variables,
+we first calculate sv (1 ≤ v ≤ 8) using 10 and rank the variables
+by sv to obtain L = {2, 4, 5, 1, 8, 7, 6, 3}. This ranking indicates
+that variable 2 is ranked first, variable 4 s, and so on.
+Next, we apply the binary search strategy. First, we replace
+the first four variables L1,4 = {2, 4, 5, 1}—the first half of L—
+with normal sequences and check whether the anomaly remains.
+Two cases arise: (i) If the anomaly remains, 4 ≤ k ≤ 8, and we
+replace L4,5 —the first half of L4,8 —with normal sequences. (ii)
+If the anomaly is resolved, 1 ≤ k ≤ 4, and we replace L1,2 —
+the first half of L1,4 —with normal sequences. This process is
+repeated until k is determined, identifying the first k variables
+as those contributing to the anomalies.
+During anomaly analysis, anomalous data is clustered and
+evaluated with expert knowledge to determine the nature of
+each anomaly. For example, in the SMD dataset, anomalies are
+categorized into the three types: (i) network failure, (ii) hardware
+damage, and (iii) software service anomaly. New anomalies can
+be classified into these predefined types and further interpreted
+in detail.
+Finally, by combining the results of anomaly evaluation and
+analysis, an anomaly report is generated. This report not only
+provides detailed explanations of anomaly detection results but
+also enhances the accuracy and actionability of the analysis
+through evaluation and classification mechanisms. It offers users
+deeper insights and robust support for decision-making.
+
+V. EXPERIMENTS
+A. Experimental Setting
+Datasets: We evaluate MOON on six real-world MTS datasets.
+r Soil Moisture Active Passive (SMAP) [19]: It consists of
+soil samples and telemetry data collected by NASA’s Mars
+rover.
+r Mars Science Laboratory (MSL) [48]: It is similar to SMAP
+but corresponds to the sensor and actuator data for the Mars
+rover itself.
+
+466
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+TABLE II
+DATASET STATISTICS
+
+r Secure Water Treatment (SWaT) [32]: It is collected from a
+real-world water treatment plant with seven days of normal
+and four days of abnormal operation. This dataset consists
+of sensor values (water level, flow rate, etc.) and actuator
+operations (valves and pumps).
+r Water Distribution dataset (WADI) [32]: It is an extended
+dataset of SWAT. WADI features 14 days of normal operation KPIs and two days of attack scenario KPIs.
+r Pooled Server Metrics (PSM) [2]: It is collected from
+multiple eBay application server nodes, anonymized for
+publication. It includes 26 features related to server machine metrics like CPU utilization and memory, with some
+localization meta-attributes omitted. The training set spans
+13 weeks, followed by eight weeks for testing.
+r Server Machine Dataset (SMD) [39]: It is a five-week
+long dataset of stacked traces of the resource utilizations
+of 28 machines from a compute cluster. Similar to MSL,
+we use the nontrivial sequences, specifically the traces for
+machine-2-1, machine-2-6, and machine-3-7.
+The datasets used are publicly available and can be accessed
+at the following URLs: SMAP1 , MSL2 , SWaT3 , WADI4 , PSM5 ,
+and SMD6 . We summarize the key characteristics of the datasets
+in Table II. “#Entities” refers to the number of distinct time
+series, and “#Dimensions” refers to the number of dimensions
+in each dataset. Each dataset includes a training set without
+anomaly detection labels and a testing set with labels. For
+our experiments, we use 6,000 training samples for the WADI
+dataset and 10,000 for the other five datasets. All datasets use
+5,000 testing samples.
+Baselines and setting: We compare MOON with eight stateof-the-art reconstruction-based methods: TRANAD [42], OMNIANOMALY [39], MAD_GAN [26], LSTM_AD [20], TIMESNET, ADTRANSFORMER, DCDETECTOR and CATCH [49] and
+two classification-based methods: HYPERROCKET [11] and
+ROCKET [10], [40]. We choose the two types of methods as baselines because (i) prediction-based methods are theoretically similar to reconstruction-based methods, with the latter being more
+mainstream, and (ii) MOON is a classification-based method.
+Due to the space limitation, please refer to Section VI for more
+details about baselines. In our experiments, the hyperparameters
+1 https://nsidc.org/data/smap/data
+2 https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/
+Mars/Mars.html
+3 https://itrust.sutd.edu.sg/itrust-labs_datasets/dataset_info/#swat
+4 https://itrust.sutd.edu.sg/itrust-labs_datasets/dataset_info/#wadi
+5 https://github.com/eBay/RANSynCoders/tree/main/data
+6 https://github.com/NetManAIOps/OmniAnomaly/tree/master/
+ServerMachineDataset
+
+are configured as follows: the coefficient α in (6) is set to 0.9,
+the learning rate is set to 0.001, and the weight ω in (17) is fixed
+at 0.8.
+Performance metrics: We evaluate anomaly detection performance using Precision, Recall, F1 score, and F1PA score.
+F1PA score is a segment-based F1 score using point adjustment (PA), where a segment is considered abnormal if at
+least one point within it is detected as abnormal [18], [22].
+PrecisionPA ·RecallPA
+, where PrecisionPA and RecallPA are
+F1PA = 2 · Precision
+PA +RecallPA
+the precision and recall calculated using the PA method.
+We evaluate the interpretability of anomaly detection using
+Hit@P%, which measures the proportion of true anomalous
+dimensions included among the top candidates predicted by the
+model [30]. Here, P% is the percentage of true anomalous dimensions at each timestamp, defining the number of top predicted
+candidates considered.
+Environment: All methods are executed on a machine with an
+Intel(R) Core(TM) i9-10900 K CPU, featuring 10 cores and a
+3.70 GHz clock speed. The framework is also equipped with an
+NVIDIA GeForce RTX 3090 graphics card, which has 24 GB
+of video memory. The source code of MOON are available.7
+B. Comparison Study
+We compare MOON with reconstruction-based methods
+(TRANAD, OMNIANOMALY, MAD_GAN, LSTM_AD, TIMESNET, ADTRANSFORMER, DCDETECTOR and CATCH) and
+classification-based methods (HYPERROCKET and ROCKET) in
+six datasets. Table III presents the results, highlighting the best
+performance in bold.
+Compared with reconstruction-based methods: MOON
+achieves the highest or near-highest Recall, F1 and F1PA
+on most datasets, with Precision values almost reaching 1
+across all datasets. In contrast, reconstruction-based methods
+such as TRANAD, OMNIANOMALY, MAD_GAN, CATCH, and
+LSTM_AD often have lower F1 and F1PA on complex datasets,
+particularly on the SMAP and SWaT datasets where the F1
+are below 0.9. This is because the Moon method improves the
+ability to identify anomalies in complex multivariate time-series
+data through modal transformation and deeper feature extraction and fusion techniques. Meanwhile, reconstruction-based
+methods rely on reconstruction error, which is effective for
+simple patterns. However, they struggle with multivariate, highdimensional, and complex dependencies because they cannot
+fully capture anomaly characteristics, resulting in lower detection performance.
+Furthermore, although many reconstruction-based methods
+generally excel in Recall, detecting most anomalies and thus
+maintaining a low miss rate, they struggle with Precision, with
+higher false positive rates. For instance, OMNIANOMALY has a
+Precision of only 0.7991 on the SMAP dataset, and MAD_GAN
+has a Precision of only 0.8725 on the PSM dataset, both significantly lower than MOON. This indicates that these methods
+have difficulties distinguishing between normal and anomalous
+data, possibly due to reconstruction error inadequately capturing
+7 https://github.com/Syh517/Moon/
+
+YAO et al.: MOON: A MODALITY CONVERSION-BASED EFFICIENT MULTIVARIATE TIME SERIES ANOMALY DETECTION
+
+467
+
+TABLE III
+COMPARISON RESULTS
+
+anomaly characteristics. In contrast, the comprehensive feature
+extraction and classification techniques of MOON enable accurate anomaly detection across various datasets. In addition,
+MOON outperforms CATCH in most cases. This is because
+CATCH transforms time series into the frequency domain,
+capturing frequency features but potentially losing temporal
+structure, making it less effective for anomalies that rely on
+fine-grained temporal context. However, MOON uses raw and
+enhanced anomaly data to better capture details, achieving more
+accurate detection.
+Compared with classification-based methods: MOON outperforms the classification-based methods in F1-Score on most
+datasets in all performance metrics. However, classificationbased methods often show a clear disparity between Precision
+and Recall. For instance, in the SMAP dataset, HYPERROCKET
+has a Precision of only 0.9107, while its Recall reaches 1.0.
+This result indicates that HYPERROCKET is highly sensitive to
+anomalies but lacks the ability to accurately distinguish between normal and anomalous data. This occurs because the
+Rocket method assigns random kernels to each variable, disregarding the correlations between variables. In contrast, Moon
+enhances the ability to identify anomalies in complex MTS
+data by capturing local information between variables through
+modality conversion, showcasing excellent overall performance.
+Additionally, HyperRocket performs slightly worse than Rocket.
+This is because HyperRocket emphasizes global modeling and
+cross-variable dynamics, which benefits sequence-level classification [50] but may overlook subtle point-wise anomalies. In
+contrast, Rocket uses random convolutional kernels to extract local features, making it more effective for detecting anomalies at
+individual time points. Classification-based methods generally
+
+Fig. 4.
+
+Training efficiency study.
+
+achieve higher F1-Score than reconstruction-based methods on
+most datasets. This is due to classification methods not relying
+on anomaly scores, allowing them to more effectively capture
+abnormal patterns in the data.
+C. Efficiency Study
+Training efficiency study:To evaluate the efficiency, we compare the running time per epoch of MOON with that of
+reconstruction-based methods. HYPERROCKET and ROCKET,
+which use predefined feature extraction instead of deep neural
+networks, do not require training. Hence, their epoch running
+times cannot be measured and are excluded from the comparison. The results shown in the Fig. 4(a) indicate that MOON’s
+running time per epoch is comparable to that of TRANAD and
+significantly lower than that of other methods, especially on
+SMD datasets. This result stems primarily from two factors.
+First, MOON’s efficiency is primarily due to its use of parameter
+sharing, which reduces redundant computations, and its CNNbased feature extraction module, which accelerates the feature extraction process and further enhances overall efficiency.
+
+468
+
+Fig. 5.
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+The test time (ms) of each time series data point.
+
+Second, TRANAD is a lightweight method which contributes
+to its fast performance. In contrast, other reconstruction-based
+methods process all sequential windows, making them more
+computationally intensive.
+Fig. 4(b) presents the execution time of MV-MTF technology
+in MOON across all six datasets. The results demonstrate that the
+execution time of MV-MTF increases with the number of variables. For instance, it takes only a few seconds when the number
+of variables is less than 40, as seen in PSM (26 variables), SMAP
+(25 variables), and SMD (38 variables). However, the execution
+time increases significantly when the number of variables exceeds 50, as demonstrated by the MSL (55 variables), SWaT
+(51 variables) and WADI (123 variables) datasets. However,
+MV-MTF transformation is performed once during the entire
+training process. We have optimized its time complexity to O(n)
+(see Section IV-A), making its time consumption negligible
+compared to overall training time. In real-time applications,
+reconstruction- and prediction-based methods compare with
+original data, while Moon uses modal conversion. Both have
+O(n) complexity, proportional to window size and number of
+variables, resulting in minimal efficiency differences.
+Inference efficiency study:To demonstrate the practical feasibility of our approach in real-time streaming settings, we further
+report the online testing time, as shown in Fig. 5. It is important
+to note that our method is not designed for real-time anomaly
+detection in streaming settings. Therefore, we first calculate the
+total test time, then divide by the number of samples to get the
+inference time per TS point. Experimental results show that the
+anomaly detection time (i.e., 0.2 ms) of our classification-based
+model is comparable to that of existing unsupervised methods.
+Although the MV-MTF transformation introduces an additional
+1.5 ms per time series data point, the overall time remains
+more efficient than traditional supervised classifiers Rocket and
+HyperRocket, as our model avoids complex high-dimensional
+computations during inference.
+D. Ablation Study
+Ablation study on multimodal-CNN:We evaluate the effectiveness of the proposed Multimodal-CNN by comparing it to
+ResNet, LSTM, and CNN models across four metrics: Precision,
+Recall, F1, and F1PA , on six datasets. Fig. 6 presents the comparative results, demonstrating that Multimodal-CNN consistently
+
+Fig. 6.
+
+Ablation Study on Multimodal-CNN of Moon.
+
+outperforms both ResNet, LSTM and CNN across all evaluation
+metrics, with especially notable improvements over ResNet.
+This arises from Multimodal-CNN’s use of convolutional kernels with varying sizes, enabling it to capture receptive fields
+at different scales and model both local and global features
+effectively. In contrast, ResNet’s fixed receptive field limits its
+ability to fully capture the range of data features.
+Furthermore, Multimodal-CNN demonstrates a clear advantage over LSTM and CNN in handling high-dimensional MTS
+data, such as MSL with 55 variables and WADI with 123
+variables. This advantage stems from its ability to effectively
+capture complex inter-variable relationships using a MV-MTF
+and to enhance key information extraction through a cross-modal
+attention mechanism. These features enable Multimodal-CNN
+to better integrate multimodal information and model dependencies between variables. In contrast, LSTM and CNN lack
+the capability to effectively capture inter-variable dependencies.
+As a result, they often overlook interactions and relationships
+between variables, leading to the loss of critical information.
+Ablation study on four key components:We evaluate the effectiveness of three key components—modality conversion, feature
+fusion, parameter sharing, and multimodal attention—through
+ablation experiments on the PSM and SMD datasets. Table IV
+presents the results, with bold values indicating the best performance.
+As observed, omitting any component leads to a performance
+drop, particularly in Recall, F1, and F1PA . On the PSM dataset,
+removing the feature fusion module reduces Recall, F1, and F1PA
+by 0.0530, 0.0282, and 0.0277, respectively. This is because simple data concatenation fails to capture the relationships between
+
+YAO et al.: MOON: A MODALITY CONVERSION-BASED EFFICIENT MULTIVARIATE TIME SERIES ANOMALY DETECTION
+
+469
+
+TABLE IV
+ABLATION STUDY ON MODALITY CONVERSION, FEATURE FUSION, AND
+PARAMETER SHARING OF MOON
+
+modalities, resulting in decreased performance. On the SMD
+dataset, omitting modality transformation (i.e., only raw data)
+causes a significant drop in Recall, F1, and F1PA , decreasing
+by 0.1349, 0.0688, and 0.0690, respectively. This highlights
+the critical role of modality transformation in capturing local
+inter-variable relationships and improving performance. Only
+the MV-MTF data or replacing MV-MTF with Gramian Angular
+Fields (GAF) method still lead to a decline in performance,
+particularly on the PSM dataset. This is because MV-MTF
+is specifically designed to capture temporal dependencies and
+inter-variable relationships in time series. This enables more
+effective modeling of complex dynamic behaviors and significantly enhances the distinguishability between normal and
+anomalous patterns. In contrast, GAF primarily relies on static
+spatial or temporal mappings and struggles to uncover such rich
+structural information. In addition, the absence of parameter
+sharing leads to a notable performance decline, emphasizing
+its importance in integrating information across modalities to
+enhance feature extraction and overall model performance. Finally, the ablation of the multimodal attention module results
+in a substantial performance degradation, with Recall, F1, and
+F1PA dropping to 0.2444, 0.1374, and 0.1374, respectively.
+This highlights the pivotal role of multimodal attention in capturing cross-modal correlations and complementary information, thereby improving the model’s ability to detect abnormal
+patterns.
+E. Parameter Study
+Parameter study on α:We conduct a parameter study on the
+weight parameter α (cf. Equation 5), using the PSM, SMAP,
+and SMD datasets. As shown in Fig. 8, α exhibits a similar
+trend. When α is set to 0.1, the performance is notably poor
+because this setting reduces the transition probabilities between
+timestamps, leading to insufficient information capture from individual time dimensions and consequently, lower performance.
+As α increases, performance generally improves. However, the
+
+Fig. 7.
+
+The efficiency of different window size .
+
+Fig. 8.
+
+Parameter study of α.
+
+Fig. 9.
+
+Parameter study on historical time-step length in performance.
+
+optimal α value for achieving the best performance varies across
+datasets due to differences in variable dependencies.
+Parameter study on historical window sizes:In addition, we
+conduct a sensitivity analysis on different historical window
+sizes on MSL dataset to evaluate the robustness of our method.
+The results presented in Fig. 9 demonstrate that the model
+achieves optimal performance—in terms of both F1 and F 1PA
+scores—when the window size is set to 0.6. This is because
+a smaller window may fail to capture the distinction between
+normal and abnormal patterns, while a larger window tends to
+obscure critical local anomaly signals.
+From an efficiency perspective, smaller window sizes result
+in faster computation, as illustrated in Fig. 7. This is because
+
+470
+
+Fig. 10.
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+The weight parameter balancing in the interpretability contribution equation.
+
+TABLE V
+ANOMALY INTERPRETATION PERFORMANCE
+
+both the transformation overhead of MV-MTF and the overall
+model complexity increase with the growth of window size.
+Parameter study of ω:We perform a parameter study of the
+fusion weight ω in Eq. (17) over [0,1] on three SMD subsets
+stratified by interpretability ground-truth length—long (SMD2-8), medium (SMD-2-9), and short (SMD-3-11). The results in
+Fig. 10 yield two consistent findings, aligned with Lemmas 1
+and 2: (i) performance varies slightly with ω, fluctuations occur
+mainly for ω ∈ [0, 0.4]; and (ii) there exists a broad plateau (i.e.,
+ω ∈ [0.6, 1.0]) on which the variable-interpretability ranking
+remains essentially unchanged. These patterns persist across all
+three length regimes, indicating robustness both to the choice of
+ω and to the ground-truth duration. Therefore, we fix ω = 0.8
+as a robust default.
+F. Performance of Anomaly Interpretation
+We evaluate the anomaly interpretability by using Hit@P% =
+is the ground truth array of dimensions
+that contribute to the anomaly and |GTt | is its length. Here,
+Hit@P% [39] represents the number of ground truth dimensions
+in the top P % × |GTt | of the AS list, where P is set to 100
+and 150. For example, for an anomaly in a time series with 5
+variables, where the ground truth GTt is {2, 3} and the AS list
+generated by MOON is {2, 1, 3, 5, 4}, the Hit@100% is 50%
+since only one of the top two variables in AS matches GTt .
+The Hit@150% is 100%, as both variables in GTt are among
+the top three in the AS list. We also use metric (NDCG) [21] to
+measure the ranking quality of anomaly interpretation. Similar
+to HitRate@P%, NDCG@P% considers the top P % × |GTt |
+variables, but it further emphasizes the positions of the ground
+truth dimensions in the ranking. We evaluate MOON exclusively
+on the SMD dataset, as other datasets lack interpretation labels.
+As shown in Table V, MOON achieves superior anomaly
+interpretation accuracy, with a Hit@100% of 0.5294 and
+Hit@P%
+|GTt | , where GTt
+
+a Hit@150% of 0.7034. In contrast, the state-of-the-art
+reconstruction-based model TRANAD performs significantly
+worse on the same dataset, with a Hit@100% of 0.4905 and
+a Hit@150% of 0.6634. Reconstruction-based methods such
+as TRANAD rely on thresholding to identify anomalous variables, making their performance highly dependent on detection accuracy and often overlooking the model’s influence on
+individual variables. In contrast, MOON focuses on explaining
+the model’s internal mechanisms rather than merely interpreting
+its outputs. Moreover, Moon achieves superior performance on
+the NDCG@P% metric, as it emphasizes ranking order rather
+than simply detecting whether a target is hit. By integrating a
+scoring mechanism to filter out unreliable explanations, Moon
+provides more precise interpretations, thereby enhancing both
+the interpretability and reliability of anomaly detection.
+G. Case Study
+To validate the performance of our method in real-world
+scenarios, we conducte a case study using the SMD dataset.
+We selected the SMD 1–4 subset and focus our analysis on the
+time interval [370, 430]. Within this interval, the dataset labels
+the period [385, 417] as anomalous. It is important to note that
+in SMD, anomaly labels are assigned at the time-point level: if
+any variable is anomalous at a given timestamp, all variables
+at this timestamp are marked as anomalous. However, based on
+the dataset’s provided interpretable labels, we confirm that the
+true anomalous variables during this period are variables 12,
+15, and 16, corresponding to disk_svc, disk_wa, and disk_wb,
+which represent the average service time per disk request, the
+I/O wait time, and the write-back time, respectively. As shown
+in Fig. 11, the top three subplots display the time-series curves
+of these anomalous variables, with red shaded regions indicating
+the actual anomalous intervals. For comparison, we also include
+several variables (e.g., 19, 20, 21) that remained normal during
+the same period.
+Interpretable anomaly detection must not only identify
+anomalous timestamps but also accurately locate the responsible variables. Once an anomaly is detected, we compute the
+contribution of each variable by combining the MV-MTF representation with the original TS data. To assess the performance
+of Moon’s explainer, we visualize the contribution results in
+Fig. 12. As observed, Moon’s explainer correctly identifies
+2 out of the 3 ground-truth anomalous variables within its
+
+YAO et al.: MOON: A MODALITY CONVERSION-BASED EFFICIENT MULTIVARIATE TIME SERIES ANOMALY DETECTION
+
+Fig. 11.
+
+Fig. 12.
+
+471
+
+Time series plots of anomalous variables (12, 15, 16) and partial normal variables (19, 20, 21) in time interval [370, 430] of the SMD 1-4 dataset.
+
+The relative contribution of variables to the anomalies .
+
+top-3 predictions, yielding a Hit@100% score of 0.667. Finally,
+engineers can leverage the identified anomalous variables to
+perform root cause analysis and promptly address system issues.
+For example, Moon’s explainer highlights variables 12 and 15
+as anomalous, we can investigate potential disk bottlenecks by
+examining which processes are heavily utilizing disk I/O and
+take corresponding optimizations.
+VI. RELATED WORK
+Modality Conversion:Time series data can be transformed
+into time-frequency representations using various modal conversion methods, such as Short-Time Fourier Transform
+(STFT) [45], Wavelet Transform [37], and Hilbert-Huang Transform (HHT) [24]. Each method has distinct characteristics:
+STFT uses a fixed window scale, which cannot adjust based
+on frequency; WT is better suited for non-stationary signals;
+and HHT offers adaptability but with lower resolution.
+
+Moreover, time series data can be encoded into images and
+feature extraction and classification can be performed using
+Convolutional Neural Networks (CNN). Common techniques
+include Gramian Angular Field (GAF) [47], Recurrence Plots
+(RP) [16], Markov Transition Field (MTF) [47], Difference
+Field [52], and Relative Position Matrix [7]. GAF converts time
+series data into cosine and sine Gramian matrices, preserving
+angular information and capturing dynamic features. RP generates two-dimensional matrices reflecting similarity structures,
+making it suitable for identifying repeating patterns and periodicity. MTF creates Markov transition matrices, generating
+images that reflect state transitions and capture dynamic evolution. DF highlights data trend changes by producing images
+through differential operations. RPM maps time series data to
+high-dimensional spaces to generate images reflecting relative
+positional relationships. Among these, MTF is particularly effective for time series data with strong contextual links, as it
+captures dynamic characteristics and evolutionary trends. However, current research on multivariate MTF techniques remains
+limited.
+To address this gap, this paper proposes MV-MTF that transforms MTS with contextual links into two-dimensional images.
+MV-MTF preserves transition relationships between variables
+over time, effectively enhancing anomaly detection.
+Deep Learning Anomaly Detection. Deep learning models [5],
+[35], [41], [42], [47] have demonstrated exceptional effectiveness in anomaly detection tasks for complex and large-scale
+datasets due to their ability to learn intricate data representations
+and features.
+OmniAnomaly [39] utilizes a stochastic recurrent neural network combined with a planar normalizing flow to generate
+reconstruction probabilities. It integrates an improved Peak Over
+Threshold (POT) method for automated anomaly threshold selection, significantly enhancing performance. However, its training process is lengthy and resource-intensive. MAD-GAN [26]
+employs an LSTM-based GAN model to capture time-series
+distributions through its generator, incorporating both prediction
+error and discriminator loss into anomaly scoring. This method
+
+472
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+boosts anomaly detection performance but can also be computationally demanding.
+USAD [5] is more efficient than the above methods because
+it utilizes a simple autoencoder with dual decoders trained in an
+adversarial framework. This lightweight design significantly reduces training time while maintaining competitive performance.
+TranAD [42] incorporates focus score-based self-conditioning
+for robust multimodal feature extraction, adversarial training
+for stability, and Model-Agnostic Meta-Learning (MAML) for
+effective training on limited data.
+CNNs have proven highly effective in extracting and learning
+features from data, enabling them to capture complex structures. Omni-Scale CNN [41] is particularly adept at handling
+multi-scale MTS data through its multi-scale feature extraction
+capabilities. However, it does not support multimodal data,
+limiting its applicability to more diverse datasets.
+To address this limitation, we enhance Omni-Scale CNN by
+incorporating parameter sharing and a feature fusion module,
+creating a multimodal anomaly detection model. This enhanced
+model significantly improves its ability to process and analyze
+multimodal data, further advancing its effectiveness in anomaly
+detection.
+Explainable Anomaly Detection: Explainable Anomaly Detection (XAD) extracts insights from anomaly detection models,
+emphasizing data relationships to help users understand the
+causes of anomalies, thereby enhancing interpretability and
+usability. In time-series data, XAD methods can be classified
+into sample-based and model-based methods.
+Sample-based methods explain anomalies by comparing
+anomalous and normal objects, focusing on local neighborhoods, counterexamples, or contextual anomalies. For example,
+reconstruction-based methods such as OmniAnomaly [39] and
+TranAD [42] identify anomalous variables by comparing reconstructed values with original ones.
+Model-based methods explain the internal workings or predictions of anomaly detection models. They can be further divided
+into glass-box and closed-box methods. Glass-box methods are
+inherently in terpretable, while closed-box methods use post-hoc
+techniques, often model-agnostic, to explain predictions [4],
+[36]. For example, closed-box methods such as SHAP values [31], [33] provide insights into feature importance within
+the model. We integrate sample-based and model-based methods
+by leveraging SHAP values to enhance interpretability and using
+normal samples to define the range of anomalous variables.
+VII. CONCLUSION
+This paper introduces MOON, an efficient and effective framework for multivariate time series anomaly detection. MOON
+utilizes the MV-MTF technology to provide more detailed
+multi-modal information via mode conversion, while introduces
+Multimodal-CNN to effectively learns and integrates information from different modalities. Additionally, MOON provides
+user-friendly anomaly interpretability by using SHAP values to
+rank variables in ascending order of their impact on anomalies
+and select the top-ranked ones. Extensive experiments evaluate
+the performance of Moon and validate the effectiveness of
+
+each component/technique in MOON. compared with existing
+state-of-the-arts methods, MOON achieves high efficient and
+accurate anomaly detection and provides the detail anomaly
+analysis report for good interpretability. In the future, it is of
+interest to extend our anomaly detection model to handle other
+downstream tasks.
+
+REFERENCES
+[1] Shap, 2024. Accessed: Aug. 2, 2024. [Online]. Available: https://shap.
+readthedocs.io/en/latest/
+[2] A. Abdulaal, Z. Liu, and T. Lancewicki, “Practical approach to asynchronous multivariate time series anomaly detection and localization,”
+in Proc. 27th ACM SIGKDD Conf. Knowl. Discov. Data Mining, 2021,
+pp. 2485–2494.
+[3] M. Abououf, S. Singh, R. Mizouni, and H. Otrok, “Explainable AI for
+event and anomaly detection and classification in healthcare monitoring
+systems,” IEEE Internet Things J., vol. 11, no. 2, pp. 3446–3457, Jan. 2024.
+[4] R. Assaf and A. Schumann, “Explainable deep neural networks for multivariate time series predictions,” in Proc. 28th Int. Joint Conf. Artif. Intell.,
+2019, pp. 6488–6490.
+[5] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga, “USAD:
+Unsupervised anomaly detection on multivariate time series,” in Proc. 26th
+ACM SIGKDD Conf. Knowl. Discov. Data Mining, R. Gupta, Y. Liu, J.
+Tang, and B. A. Prakash, Eds., 2020, pp. 3395–3404.
+[6] A. Bhatta, D. Mery, H. Wu, J. Annan, M. C. King, and K. W. Bowyer,
+“Our deep CNN face matchers have developed achromatopsia,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops, 2024,
+pp. 142–152.
+[7] W. Chen and K. Shi, “A deep learning framework for time series classification using relative position matrix and convolutional neural network,”
+Neurocomputing, vol. 359, pp. 384–394, 2019.
+[8] X. Chen et al., “DAEMON: Unsupervised anomaly detection and interpretation for multivariate time series,” in Proc. IEEE 37th Int. Conf. Data
+Eng., 2021, pp. 2225–2230.
+[9] E. Çokaj, H. S. Gustad, A. Leone, P. T. Moe, and L. Moldestad, “Supervised
+time series classification for anomaly detection in subsea engineering,”
+2024, arXiv:2403.08013.
+[10] A. Dempster, F. Petitjean, and G. I. Webb, “ROCKET: Exceptionally
+fast and accurate time series classification using random convolutional
+kernels,” Data Min. Knowl. Discov., vol. 34, no. 5, pp. 1454–1495, 2020.
+[11] A. Dempster, D. F. Schmidt, and G. I. Webb, “Hydra: Competing convolutional kernels for fast and accurate time series classification,” Data Min.
+Knowl. Discov., vol. 37, no. 5, pp. 1779–180, 2023.
+[12] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+in multivariate time series,” in Proc. 35th AAAI Conf. Artif. Intell., 2021,
+pp. 4027–4035.
+[13] N. Ding, H. Ma, H. Gao, Y. Ma, and G. Tan, “Real-time anomaly detection
+based on long short-term memory and gaussian mixture model,” Comput.
+Electr. Eng., vol. 79, 2019, Art. no. 106458.
+[14] G. B. Gaggero, A. Armellin, G. Portomauro, and M. Marchese, “Industrial
+control system-anomaly detection dataset (ICS-ADD) for cyber-physical
+security monitoring in smart industry environments,” IEEE Access, 12,
+pp. 64140–64149, 2024.
+[15] M. Gupta, J. Gao, C. C. Aggarwal, and J. Han, “Outlier detection for
+temporal data: A survey,” IEEE Trans. Knowl. Data Eng., vol. 26, no. 9,
+pp. 2250–2267, Sep. 2014.
+[16] N. Hatami, Y. Gavet, and J. Debayle, “Classification of time-series images
+using deep convolutional neural networks,” in Proc. 10th Int. Conf. Mach.
+Vis., A. Verikas, P. Radeva, D. P. Nikolaev, and J. Zhou, Eds., 2017, vol.
+10696, Art. no. 106960.
+[17] M. Huang, C. Nie, and W. Zhong, “A visualization method for data domain
+changes in CNN networks and the optimization method for selecting
+thresholds in classification tasks,” in Proc. IEEE/CVF Conf. Comput. Vis.
+Pattern Recognit. Workshops, 2024, pp. 986–994.
+[18] A. Huet, J. M. Navarro, and D. Rossi, “Local evaluation of time series
+anomaly detection algorithms,” in Proc. ACM SIGKDD Conf. Knowl.
+Discov. Data Mining, A. Zhang and H. Rangwala, Eds., 2022, pp. 635–645.
+[19] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Soderstrom,
+“Detecting spacecraft anomalies using lstms and nonparametric dynamic
+thresholding,” in Proc. ACM SIGKDD Conf. Knowl. Discov. Data Mining,
+2018, pp. 387–395.
+
+YAO et al.: MOON: A MODALITY CONVERSION-BASED EFFICIENT MULTIVARIATE TIME SERIES ANOMALY DETECTION
+
+[20] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Söderström,
+“Detecting spacecraft anomalies using lstms and nonparametric dynamic
+thresholding,” in Proc. 24th ACM SIGKDD Conf. Knowl. Discov. Data
+Mining, 2018, pp. 387–395.
+[21] K. Järvelin and J. Kekäläinen, “Cumulated gain-based evaluation of IR
+techniques,” ACM Trans. Inf. Syst., vol. 20, no. 4, pp. 422–446, 2002.
+[22] S. Kim, K. Choi, H. Choi, B. Lee, and S. Yoon, “Towards a rigorous
+evaluation of time-series anomaly detection,” in Proc. 36th AAAI Conf.
+Artif. Intell., 2022, pp. 7194–7201.
+[23] D. P. Kingma and J. B. Adam, “A method for stochastic optimization,” in
+Proc. 3rd Int. Conf. Learn. Representations, vol. 5, no. 6, 2015.
+[24] V. G. Kurbatsky, D. N. Sidorov, V. A. Spiryaev, and N. V. Tomin, “Forecasting nonstationary time series based on Hilbert-Huang transform and
+machine learning,” Autom. Remote. Control., vol. 75, no. 5, pp. 922–934,
+2014.
+[25] H. Lee and J. Lee, “Convolutional model with a time series feature based on
+RSSI analysis with the markov transition field for enhancement of location
+recognition,” Sensors, vol. 23, no. 7, 2023, Art. no. 3453.
+[26] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, and S. Ng, “MAD-GAN: Multivariate anomaly detection for time series data with generative adversarial
+networks,” in Proc. Artif. Neural Netw. Mach. Learn., in Lecture Notes in
+Computer Science, 2019, vol. 11730, pp. 703–716.
+[27] L. Li, X. Lin, B. Ran, and B. Du, “Tensor decomposition of transportation
+temporal and spatial Big Data: A brief review,” Fundam. Res., early access,
+Sep. 25, 2024, doi: 10.1016/j.fmre.2024.03.032.
+[28] C. Lin, B. Du, L. Sun, and L. Li, “Hierarchical context representation
+and self-adaptive thresholding for multivariate anomaly detection,” IEEE
+Trans. Knowl. Data Eng., vol. 36, no. 7, pp. 3139–3150, Jul. 2024.
+[29] H. Liu and L. Li, “Anomaly detection of high-frequency sensing data
+in transportation infrastructure monitoring system based on fine-tuned
+model,” IEEE Sensors J.,vol. 23, no. 8, pp. 8630–8638, Apr. 2023.
+[30] H. Liu, W. Luo, L. Han, P. Gao, W. Yang, and G. Han, “Anomaly
+detection via graph attention networks-augmented mask autoregressive
+flow for multivariate time series,” IEEE Internet Things J.vol. 11, no. 11,
+pp. 19368–19379, Jun. 2024.
+[31] S. M. Lundberg and S. Lee, “A unified approach to interpreting model
+predictions,” in Proc. 31st Int. Conf. Neural Inf. Process. Syst., 2017,
+pp. 4765–4774.
+[32] A. P. Mathur and N. O. Tippenhauer, “SWAT: A water treatment testbed for
+research and training on ICS security,” in Proc. CySWater, 2016, pp. 31–36.
+[33] F. Mujkanovic, V. Doskoc, M. Schirneck, P. Schäfer, and T. Friedrich,
+“Timexplain - A framework for explaining the predictions of time series
+classifiers,” 2020, arXiv:2007.07606.
+[34] G. Pang, J. Li, A. V. D. Hengel, L. Cao, and T. G. Dietterich, “ANDEA: Anomaly and novelty detection, explanation, and accommodation,” in Proc. ACM SIGKDD Conf. Knowl. Discov. Data Mining, 2022,
+pp. 4892–4893.
+[35] D. Park, Y. Hoshi, and C. C. Kemp, “A multimodal anomaly detector
+for robot-assisted feeding using an LSTM-based variational autoencoder,”
+IEEE Robot. Autom. Lett., vol. 3, no. 3, pp. 1544–1551, Jul. 2018.
+[36] M. T. Ribeiro, S. Singh, and C. Guestrin, “Anchors: High-precision modelagnostic explanations,” in Proc. 32nd AAAI Conf. Artif. Intell., 30th Innov.
+Appl. Artif. Intell. Conf.; Proc. 80th AAAI Symp. Educ. Adv. Artif. Intell.,
+2018, pp. 1527–1535.
+[37] L. Sasal, T. Chakraborty, and A. Hadid, “W-transformers: A wavelet-based
+transformer framework for univariate time series forecasting,” in Proc. 21st
+IEEE Int. Conf. Mach. Learn. Appl., M. A. Wani, M. M. Kantardzic, V.
+Palade, D. Neagu, L. Yang, and K. Y. Chan, Eds., 2022, pp. 671–676.
+[38] A. Song, E. Seo, and H. Kim, “Anomaly VAE-transformer: A deep learning
+approach for anomaly detection in decentralized finance,” IEEE Access,
+vol. 11, pp. 98115–98131, 2023.
+[39] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+detection for multivariate time series through stochastic recurrent neural
+network,” in Proc. 25th ACM SIGKDD Conf. Knowl. Discov. Data Mining,
+2019, pp. 2828–2837.
+[40] C. W. Tan, A. Dempster, C. Bergmeir, and G. I. Webb, “Multirocket:
+Multiple pooling operators and transformations for fast and effective
+time series classification,” Data Min. Knowl. Discov., vol. 36, no. 5,
+pp. 1623–1646, 2022.
+[41] W. Tang, G. Long, L. Liu, T. Zhou, M. Blumenstein, and J. Jiang, “OMNIscale CNNS: A simple and effective kernel size configuration for time
+series classification,” in Proc. Int. Conf. Learn. Representations, 2022,
+pp. 1–17.
+
+473
+
+[42] S. Tuli, G. Casale, and N. R. Jennings, “TranAD: Deep transformer
+networks for anomaly detection in multivariate time series data,” Proc.
+VLDB Endow., vol. 15,no. 6, pp. 1201–1214, 2022.
+[43] H. Wang, Z. Luo, J. W. L. Yip, C. Ye, and M. Zhang, “ECGGAN:
+A framework for effective and interpretable electrocardiogram anomaly
+detection,” in Proc. ACM SIGKDD Conf. Knowl. Discov. Data Mining,
+2023, pp. 5071–5081.
+[44] J. Wang et al., “Real-time workload pattern analysis for large-scale cloud
+databases,” Proc. VLDB Endow., vol. 16, no. 12, pp. 3689–3701, 2023.
+[45] T. Wang and F. Kirchner, “Grasp stability prediction with time series data
+based on STFT and LSTM,” in Proc. Int. Conf. Adv. Robot. Mechatron.,
+2023, pp. 587–593.
+[46] Z. Wang and T. Oates, “Encoding time series as images for visual inspection and classification using tiled convolutional neural networks,” in Proc.
+Workshops 29th AAAI Conf. Artif. Intell., 2015, pp. 91–96.
+[47] Z. Wang and T. Oates, “Imaging time-series to improve classification
+and imputation,” in Proc. 24th Int. Conf. Artif. Intell., Q. Yang and M.
+J. Wooldridge, Eds., 2015, pp. 3939–3945.
+[48] R. Wu and E. J. Keogh, “Current time series anomaly detection benchmarks
+are flawed and are creating the illusion of progress,” IEEE Trans. Knowl.
+Data Eng.,vol. 35, no. 3, pp. 2421–2429, Mar. 2021.
+[49] X. Wu, “CATCH: channel-aware multivariate time series anomaly detection via frequency patching,” in Proc. 13th Int. Conf. Learn. Representations., 2025, pp. 56894–56922.
+[50] Y. Yao, H. Jie, L. Chen, T. Li, Y. Gao, and S. Wen, “TSec: An efficient and
+effective framework for time series classification,” in Proc. IEEE 40th Int.
+Conf. Data Eng., 2024, pp. 1394–1406.
+[51] M. Zhang, B. Xu, and J. Gong, “An anomaly detection model based on
+one-class SVM to detect network intrusions,” in Proc. 11th Int. Conf.
+Mobile Ad-hoc Sensor Netw., 2015, pp. 102–107.
+[52] Y. Zhang and X. Chen, “Motif difference field: A simple and effective image representation of time series for classification,” 2020,
+arXiv:2001.07582.
+[53] Y. Zhao et al., “A comparative study on unsupervised anomaly detection
+for time series: Experiments and analysis,” 2022, arXiv:2209.04635.
+
+Yuanyuan Yao received the master’s degree in
+computer science from the University of Chinese
+Academy of Sciences, China, in 2018. She is currently
+working toward the PhD degree in the College of
+Computer Science, Zhejiang University, China. Her
+research interests include time series management,
+compression, and analytics.
+
+Yuhan Shi received the BS degree in computer science from the Nanjing University of Aeronautics
+and Astronautics, China, in 2024. She is currently
+working toward the master’s degree in the College of
+Software, Zhejiang University, China. Her research
+interests include anomaly detection in time series data
+and distributed databases.
+
+Lu Chen received the PhD degree in computer science from Zhejiang University, Hangzhou, China,
+in 2016. She was an assistant professor in Aalborg
+University for a 2-year period from 2017 to 2019, and
+she was an associated professor in Aalborg University
+for a 1-year period from 2019 to 2020. She is currently
+a ZJU Plan 100 professor in the College of Computer
+Science, Zhejiang University. Her research interests
+include indexing and querying metric spaces.
+
+474
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 38, NO. 1, JANUARY 2026
+
+Ziquan Fang (Member, IEEE) received the PhD
+degree in computer science from Zhejiang University, Hangzhou, in 2023. He is currently a researcher
+with Zhejiang University’s “Hundred Talents Program”. His research interests include big trajectory
+data management, spatio-temporal data mining, and
+distributed streaming data processing.
+
+Yunjun Gao (Senior Member, IEEE) received the
+PhD degree in computer science from Zhejiang University, China, in 2008. He is currently a professor in
+the College of Computer Science, Zhejiang University. His research interests include spatial and spatiotemporal databases, metric and incomplete/uncertain
+data management, graph databases, spatio-textual
+data processing, and database usability. He is a member of the ACM and a senior member of IEEE.
+
+Leong Hou U (Member, IEEE) received the PhD
+degree in computer science from the University of
+Hong Kong, Hong Kong, in 2010. He is currently an
+assistant professor with the University of Macau. His
+research interest include spatial and spatio-temporal
+databases, advanced query processing, web data management, information retrieval, data mining, and optimization problems.
+
+Yushuai Li (Senior Member, IEEE) received the
+PhD degree in control theory and control engineering
+from the Northeastern University, Shenyang, China,
+in 2019. He is currently an assistant professor with
+the Department of Computer Science, Aalborg University. He is also an associate editor for IEEE Transactions on Industrial Informatics, IEEE Transactions
+on Automation Science and Engineering, Journal of
+Modern Power Systems and Clean Energy, and IEEE
+Systems, Man, and Cybernetics Magazine. His main
+research interests include machine learning, digital
+twin, and integrated energy.
+
+Tianyi Li (Member, IEEE) received the PhD degree
+from Aalborg University, Denmark, in 2022. She
+currently an assistant professor with the Department
+of Computer Science, Aalborg University. Her main
+research interests include data management and analytics, machine learning, and digital twin. She is also
+an associate editor for IEEE Transactions on Intelligent Vehicles and IEEE Network. She is a member of
+IEEE.

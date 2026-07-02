@@ -1,0 +1,709 @@
+8684 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 9, SEPTEMBER 2024
+
+ Text-Driven Traffic Anomaly Detection With
+ Temporal High-Frequency Modeling
+ in Driving Videos
+ Rongqin Liang , Student Member, IEEE, Yuanman Li , Senior Member, IEEE,
+ Jiantao Zhou , Senior Member, IEEE, and Xia Li , Member, IEEE
+
+ Abstract— Traffic anomaly detection (TAD) in driving videos I. I NTRODUCTION
+is critical for ensuring the safety of autonomous driving and
+advanced driver assistance systems. Previous single-stage TAD
+methods primarily rely on frame prediction, making them vulnerable to interference from dynamic backgrounds induced by
+ T RAFFIC anomaly detection (TAD) in driving videos is a
+ crucial component of automated driving systems [1], [2]
+ and advanced driver assistance systems [3], [4]. It is designed
+the rapid movement of the dashboard camera. While two-stage to detect anomalous traffic behavior from the first-person
+TAD methods appear to be a natural solution to mitigate such driving perspective. Accurate detection of traffic anomalies
+interference by pre-extracting background-independent features
+(such as bounding boxes and optical flow) using perceptual
+ helps improve road safety, shorten traffic recovery times, and
+algorithms, they are susceptible to the performance of first-stage reduce the number of regrettable daily traffic accidents.
+perceptual algorithms and may result in error propagation. Given the significance of traffic anomaly detection, scholars
+In this paper, we introduce TTHF, a novel single-stage method are actively involved in this field and have proposed conaligning video clips with text prompts, offering a new perspective structive research [5], [6], [7], [8], [9]. We observe that these
+on traffic anomaly detection. Unlike previous approaches, the
+supervised signal of our method is derived from languages rather
+ works on TAD can be mainly divided into the single-stage
+than orthogonal one-hot vectors, providing a more comprehen- paradigm [6], [10], [11] and the two-stage paradigm [8], [9],
+sive representation. Further, concerning visual representation, [12]. As shown in Fig. 1, previous TAD methods mainly
+we propose to model the high frequency of driving videos in the embrace a single-stage paradigm, exemplified by frame pretemporal domain. This modeling captures the dynamic changes diction [6] and reconstruction-based [11] TAD approaches.
+of driving scenes, enhances the perception of driving behavior,
+and significantly improves the detection of traffic anomalies. Nevertheless, these methods are subject to the dynamic
+In addition, to better perceive various types of traffic anomalies, backgrounds caused by the rapid movement of the dashwe carefully design an attentive anomaly focusing mechanism board camera and have limited accuracy in detecting traffic
+that visually and linguistically guides the model to adaptively anomalies. To confront the challenges posed by dynamic backfocus on the visual context of interest, thereby facilitating the grounds, researchers have advocated for TAD methods [8],
+detection of traffic anomalies. It is shown that our proposed
+TTHF achieves promising performance, outperforming state-of- [9], [12] that utilize a two-stage paradigm. These two-stage
+the-art competitors by +5.4% AUC on the DoTA dataset and approaches first extract features such as optical flow, bounding
+achieving high generalization on the DADA dataset. boxes, or tracking IDs from video frames using existing visual
+ Index Terms— Traffic anomaly detection, multi-modality learn- perception algorithms, and then propose a TAD model for
+ing, high frequency, attention. detecting traffic anomalies. While these approaches have laid
+ the foundation for TAD in driving videos, they are suscep-
+ Manuscript received 8 January 2024; revised 2 April 2024; accepted 12 April tible to the performance of the first-stage visual perception
+2024. Date of publication 17 April 2024; date of current version 30 September algorithm, which may cause error propagation, resulting in
+2024. This work was supported in part by the Key Project of Shenzhen
+Science and Technology Plan under Grant 20220810180617001, in part by the false detection or missing traffic anomalies. Therefore, in this
+Foundation for Science and Technology Innovation of Shenzhen under Grant paper, we strive to explore an effective single-stage paradigm-
+RCBS20210609103708014, in part by Guangdong Basic and Applied Basic based approach for traffic anomaly detection in driving
+Research Foundation under Grant 2022A1515010645, and in part by the Open
+Research Project Programme of the State Key Laboratory of Internet of Things videos.
+for Smart City (University of Macau) under Grant SKLIoTSC(UM)-2021- Recently, large-scale visual language pre-training mod-
+2023/ORP/GA04/2022. This article was recommended by Associate Editor els [13], [14], [15] have achieved remarkable results by
+R. He. (Corresponding author: Yuanman Li.)
+ Rongqin Liang, Yuanman Li, and Xia Li are with Guangdong Key Labora- utilizing language knowledge to assist with visual tasks.
+tory of Intelligent Information Processing, College of Electronics and Infor- Among them, CLIP [13] stands out for its exceptional transmation Engineering, Shenzhen University, Shenzhen 518060, China (e-mail: ferability through the alignment of image-text semantics and
+1810262064@email.szu.edu.cn; yuanmanli@szu.edu.cn; lixia@szu.edu.cn).
+ Jiantao Zhou is with the State Key Laboratory of Internet of Things has demonstrated outstanding capabilities across various comfor Smart City and the Department of Computer and Information Science, puter vision tasks such as object detection [16], semantic
+University of Macau, Macau (e-mail: jtzhou@um.edu.mo). segmentation [17], and video retrieval [18]. The success of
+ Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TCSVT.2024.3390173. image-text alignment techniques can be attributed to their
+ Digital Object Identifier 10.1109/TCSVT.2024.3390173 ability to map the natural languages associated with an
+ 1051-8215 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+LIANG et al.: TEXT-DRIVEN TAD WITH THFM IN DRIVING VIDEOS 8685
+
+ fundamental idea is to not only capture the spatial visual
+ context but also emphasize the depiction of dynamic changes
+ in the driving scenes, thereby enhancing the visual representation of driving videos. Specifically, we initially leverage
+ the pre-trained visual encoder of CLIP, endowed with rich
+ prior knowledge of visual language semantics, to encode the
+ visual context of driving videos. Then, to capture the dynamic
+ changes in driving scenes, we innovatively introduce temporal
+ high-frequency modeling (THFM) to obtain temporal high
+ frequency representations of driving videos along the temporal
+Fig. 1. Existing TAD approaches of single-stage paradigm (a) and two-stage
+ dimension. Subsequently, the visual context and temporal
+paradigm (b) vs. the proposed TTHF framework (c). Existing single-stage high-frequency representations are fused to enhance the overall
+approaches mainly rely on frame prediction, which is difficult to adapt to visual representation of driving videos. To better perceive
+detecting traffic anomalies with a dynamic background, while the two-stage
+TAD approaches are vulnerable to the performance of the first-stage perceptual
+ various types of traffic anomalies, we propose an attentive
+algorithms. The proposed TTHF framework is text-driven and focuses on anomaly focusing mechanism (AAFM) to guide the model to
+capturing dynamic changes in driving scenes through modeling temporal high adaptively focus both visually and linguistically on the visual
+frequency to facilitate traffic anomaly detection.
+ context of interest, thereby facilitating the detection of traffic
+ anomalies.
+image into high-dimensional non-orthogonal vectors. This is It is shown that our proposed TTHF model exhibits promisin contrast to traditional supervised methods that map prede- ing performance on the DoTA dataset [9], outperforming
+fined labels to low-dimensional one-hot vectors. Compared to state-of-the-art competitors by +5.4% AUC. Furthermore,
+the low-dimensional one-hot vectors, these high-dimensional without any fine tuning, the AUC performance of TTHF on the
+vectors offer more comprehensive representations to guide DADA dataset [23] demonstrates its generalization capability.
+the network training. Motivated by this, we endeavor to The main contributions of our work can be summarized as
+investigate a language-guided approach for detecting traffic follows:
+anomalies in driving videos. Intuitively, the transition of CLIP 1) We introduce a simple yet effective single-stage traffic
+from image-text alignment to video-text alignment primarily anomaly detection method that aligns the visual semaninvolves the consideration of modeling temporal dimensions. tics of driving videos with matched textual semantics
+Despite the exploration of various methods [19], [20], [21], to identify traffic anomalies. In contrast to previous
+[22] for temporal modeling, encompassing various techniques TAD methods, the supervised signals in our approach
+such as Average Pooling, Conv1D, LSTM, Transformer, the are derived from text, offering a more comprehensive
+existing approaches predominantly concentrate on aggregating representation in high-dimensional space.
+visual context along the temporal dimension. In the context 2) We emphasize the modeling of high frequency in the
+of traffic anomaly detection for driving videos, we emphasize temporal domain for driving videos. In contrast to
+that beyond the visual context, characterizing dynamic changes previous approaches that solely aggregate visual conin the driving scene along the temporal dimension proves text along the temporal dimension, we place additional
+advantageous in determining abnormal driving behavior. For emphasis on modeling high frequency in the tempoinstance, traffic events such as vehicle collisions or loss of ral domain. This enables us to characterize dynamic
+control often result in significant and rapid alterations in the changes in the driving scene over time, thereby sigdriving scene. Therefore, how to effectively characterize the nificantly enhancing the performance of traffic anomaly
+dynamic changes of driving scenes holds paramount impor- detection.
+tance for traffic anomaly detection in driving videos. 3) We further propose an attentive anomaly focusing mech-
+ Additionally, considering that different types of traffic anism to enhance the perception of various traffic
+anomalies exhibit unique characteristics, a straightforward anomalies. Our proposed mechanism guides the model
+encoding of the entire driving scene may diminish the dis- both visually and linguistically to adaptively focus on
+criminability of driving events and impede the detection the visual contexts of interest, facilitating the detection
+of diverse traffic anomalies. For instance, traffic anomalies of traffic anomalies.
+involving the ego-vehicle are often accompanied by global 4) Comprehensive experimental results on public benchjittering of the dashboard camera, while anomalies involv- mark datasets demonstrate the superiority and robustness
+ing non-ego vehicles often lead to local anomalies in the of the proposed method. Compared to existing statedriving scene. Consequently, how to better perceive various of-the-art methods, the proposed TTHF improves AUC
+types of traffic anomalies proves crucial for traffic anomaly by +5.4% on the DoTA dataset and also achieves
+detection. state-of-the-art AUC on the DADA dataset without any
+ In this work, we propose a novel traffic anomaly detec- fine-tuning.
+tion approach: Text-Driven Traffic Anomaly Detection with The remainder of this paper is organized as follows.
+Temporal High-Frequency Modeling (TTHF), as shown in Section II gives a brief review of related works. Section III
+Fig. 2. To represent driving videos comprehensively, our details our proposed TTHF for traffic anomaly detection in
+8686 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 9, SEPTEMBER 2024
+
+driving videos. Extensive experimental results are presented by the traffic anomalies of other road participants because
+in Section IV, and we finally draw a conclusion in Section V. of the interference of the dynamic background from the fastmoving ego-vehicle. This impairs their ability to detect traffic
+ II. R ELATED W ORKS anomalies.
+ In recent years, to address the challenges posed by dynamic
+A. Traffic Anomaly Detection (TAD) in Driving Videos backgrounds, researchers have proposed applying a two-stage
+ Traffic anomaly detection (TAD) in driving videos aims paradigm to the traffic anomaly detection task. In this
+to identify abnormal traffic events from the perspective of paradigm, the perception algorithm is initially applied to
+driving, such as collisions with other vehicles or obstacles, extract visual features in the first stage. Then, the TAD model
+being out of control, and so on. Such events can be classi- utilizes these features to detect traffic anomalies. For instance,
+fied into two categories: ego-involved anomalies (i.e., traffic Yao et al. [9], [32] applied Mask-RCNN [35], FlowNet [36],
+events involving the ego-vehicle) and non-ego anomalies (i.e., DeepSort [37], and ORBSLAM [38] algorithms to extract
+traffic events involving observed objects but not the ego- bounding boxes (bboxes), optical flow, tracking ids, and ego
+vehicle). A closely related topic to TAD in driving videos motion, respectively. Then, they used these visual features to
+is anomaly detection in surveillance videos (VAD), which predict the future locations of objects over a short horizon
+involves identifying abnormal events such as fights, assaults, and detected traffic anomalies based on the deviation of the
+thefts, arson, and so forth from a surveillance viewpoint. predicted location. Along this line, Fang et al. [12] used
+In recent years, various VAD methods [24], [25], [26], [27], optical flow and bboxes as visual features. They attempted to
+[28], [29] have been proposed for surveillance videos, which collaborate on frame prediction and future object localization
+have greatly contributed to the development of this field. How- tasks [39] to detect traffic anomalies by analyzing inconsisever, in contrast to the static background in surveillance videos, tencies in predicted frames, object locations, and the spatial
+the background in driving videos is dynamically changing due relation structure of the scene. Zhou et al. [8] obtained bboxes
+to the fast movement of the ego vehicle, which makes the VAD of objects in the scene from potentially abnormal frames as
+methods prone to failure in the TAD task [9], [12]. Recently, visual features. They then encoded the spatial relationships
+Wang et al. [30] proposed a method for detecting crowd of the detected objects to determine the abnormality of these
+flow anomalies by comparing anomalous samples with normal frames. Despite the success of the two-stage paradigm TAD
+samples that were estimated based on prototypes. However, methods, they rely on the perception algorithms in the first
+crowd flow anomaly detection methods are difficult to apply stage, which may cause error propagation and lead to missed
+to the TAD task due to the differences in tasks and the data or false detection of traffic anomalies. Different from existing
+processed. In this paper, we work on the task of traffic anomaly TAD methods, we propose a text-driven single-stage traffic
+detection in driving videos to provide a new solution for this anomaly detection approach that provides a promising solution
+community. for this task.
+ Early TAD methods [5], [31] mainly extracted features in a
+handcrafted manner and utilized a Bayesian model for classifi-
+ B. Vision-Text Multi-Modality Learning
+cation. However, these methods are sensitive to well-designed
+features and generally lack robustness in dealing with a wide Recently, there has been a gradual focus on vision-text
+variety of traffic scenarios. With the advances of deep neural multi-modal learning. Among them, contrastive languagenetworks in computer vision, researchers have proposed deep image pre-training methods have achieved remarkable results
+learning-based approaches for TAD, laying the foundation for in many computer vision tasks such as image classificathis task. Based on our observations, the existing TAD methods tion [13], [14], object detection [16], [40], semantic segmencan be basically classified into single-stage paradigm [6], [10], tation [17], [41] and image retrieval [42], [43]. At present,
+[11] and two-stage paradigm [12], [32], [33], [34]. CLIP [13] has become a mainstream visual learning method,
+ Previous single-stage paradigm-based TAD approaches which connects visual signals and language semantics by
+mainly comprise frame reconstruction-based and frame comparing large-scale image-language pairs. Essentially, comprediction-based TAD approaches [6], [10], [11]. These meth- pared to traditional supervised methods that convert labels
+ods used reconstruction or prediction errors of video frames to into orthogonal one-hot vectors, CLIP provides richer and
+evaluate traffic anomalies. For instance, Liu et al. [6] predicted more comprehensive supervision information by collecting
+video frames of normal traffic events through appearance large-scale image-text pairs from web data and mapping the
+and motion constraints, thereby helping to identify traffic text into high-dimensional supervision signals (usually nonanomalies that do not conform to expectations. Unfortunately, orthogonal). Following this idea, many scholars have applied
+these methods tend to detect ego-involved anomalies (e.g., out CLIP to various tasks in the video domain, including video
+of control) and perform poorly on non-ego traffic anomalies. action recognition [19], [44], video retrieval [18], [20], [45],
+This is primarily attributed to ego-involved anomalies caus- video recognition [46], [47], and so on. For example, Actioning significant shaking of the dashboard camera, leading to CLIP [19] modeled the video action detection task as a
+substantial global errors in frame reconstruction or predic- video-text matching problem in a multi-modal learning frametion. Such errors undoubtedly facilitate anomaly detection. work and strengthened the video representation with more
+However, the methods based on frame reconstruction or pre- semantic language supervision to enable the model to perform
+diction have difficulty distinguishing the local errors caused zero-shot action recognition. More recently, Wu et al. [48]
+LIANG et al.: TEXT-DRIVEN TAD WITH THFM IN DRIVING VIDEOS 8687
+
+Fig. 2. Overview of our proposed TTHF. It is a CLIP-like framework for traffic anomaly detection. In this framework, we first apply a visual encoder to
+extract visual representations of driving video clips. Then, we propose Temporal High-Frequency Modeling (THFM) to characterize the dynamic changes of
+driving scenes and thus construct a more comprehensive representation of driving videos. Finally, we introduce an attentive anomaly focusing mechanism
+(AAFM) to enhance the perception of various types of traffic anomalies. Besides, for brevity, we denote the cross-attention as CA, the visually focused
+representation as VFR, and the linguistically focused representation as LFR.
+
+proposed a vision-language model for anomaly detection in we employ Average Pooling along the temporal dimension
+surveillance videos. However, as mentioned earlier, traffic as in previous works [19], [20], [21] to aggregate these
+anomaly detection faces the problem of dynamic changes in representations to characterize the visual context of the video
+the driving scene, which often makes VAD methods prone clip. For the text representation, we first describe normal and
+to fail in TAD tasks. To the best of our knowledge, there abnormal traffic events as text prompts (i.e., a1 and a2 in
+is no effective approach to model traffic anomaly detection Table I), and then apply the pretrained textual encoder in CLIP
+task from the perspective of vision-text multi-modal learning. to extract text representations.
+In this paper, we preliminarily explore an effective text-driven Intuitively, after extracting the visual and textual repremethod for traffic anomaly detection, which we hope can sentations of driving video clips, we can directly leverage
+provide a new perspective on this task. contrastive learning to align them for traffic anomaly detection.
+ However, in our task, solely modeling the visual representation
+ III. T HE P ROPOSED A PPROACH : TTHF from visual context is insufficient to capture the dynamic
+ In this section, we mainly introduce the proposed TTHF changes in the driving scene. Therefore, we introduce temporal
+framework. First, we describe the overall framework of TTHF. high-frequency modeling (THFM) to characterize the dynamic
+Then, we explain two key modules in TTHF, i.e., temporal changes and provide a more comprehensive representation of
+High-Frequency Modeling (THFM) and attentive anomaly the driving video clips. Additionally, to better perceive various
+focusing mechanism (AAFM). Moreover, we describe the types of traffic anomalies, we further propose an attentive
+contrastive learning strategy for cross-modal learning of video- anomaly focusing mechanism (AAFM) to adaptively focus
+text pairs, and finally show how to perform traffic anomaly on the visual context of interest in the driving scene, thereby
+detection in our TTHF. facilitating the detection of traffic anomalies. In the following
+ sections, we will introduce these two key modules in detail.
+A. Overview of Our TTHF Framework
+ The overall framework of TTHF is illustrated in Fig. 2. B. Temporal High-Frequency Modeling (THFM)
+It presents a CLIP-like two-stream framework for traffic Video-text alignment diverges from image-text alignment by
+anomaly detection. For the visual context representation, necessitating consideration of temporal characteristics. Numerconsiderable research [49], [50], [51] has demonstrated that ous methods [19], [20], [21] have effectively employed CLIP
+CLIP possesses a robust foundation of vision-language prior in addressing downstream tasks within the video domain. The
+knowledge. Leveraging this acquired semantic knowledge for modeling strategies adopted in these approaches for the temanomaly detection in driving videos facilitates the perception poral domain encompass various techniques such as Average
+and comprehension of driving behavior. Therefore, we advo- Pooling, Conv1D, LSTM, and Transformer. These strategies
+cate applying the pretrained visual encoder of CLIP to extract primarily emphasize aggregating visual context from distinct
+visual representations from driving video clips of two con- video frames along the temporal dimension. Nevertheless, for
+secutive frames. After obtaining the frame representations, the anomaly detection task in driving videos, we contend that
+8688 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 9, SEPTEMBER 2024
+
+Fig. 3. An illustration of the AAFM. The original video frames are displayed in column (a). In column (b), we visualize the attention of the visual representation
+to the deep features of a video clip under the visually focused strategy (VFS). In column (c), we visualize the attention of the soft text representation to the
+deep features of a video clip under the linguistically focused strategy (LFS). We present two types of traffic anomaly scenarios. Specifically, case 1 illustrates
+an instance where the ego-vehicle experiences loss of control while executing a turn. In case 2, the driving vehicle observes a collision between the car turning
+ahead and the motorcycle traveling straight on the right.
+
+ hp
+ Further, we encode In to the high-frequency representation
+ by
+ hp
+ Hnt = Fh f (In ; ξh f ), (2)
+ where Fh f (·) represents the high-frequency encoder, sharing
+ the same architecture as the visual encoder (i.e., ResNet50
+ unless specified otherwise). The resultant high-frequency representation is denoted as Hnt . Finally, to obtain the visual
+ representation of the driving video clip in the spatio-temporal
+ domain, we fuse the spatial visual context representation
+ with the temporal high-frequency representation Hnt , which
+ is expressed as follows:
+Fig. 4. An illustration of the high frequency. We show 3 cases as examples.
+The first and second columns correspond to the original consecutive video Int , Int−1 = Fve ( f rament , f rament−1 ; ξve ),
+frames, and the last column is the high-frequency component extracted along
+the temporal dimension. Vnt = Avg Pool(Int , Int−1 ),
+ Fn = Vnt + Hnt , (3)
+
+not only the visual context but also the temporal dynamic where Fve is the visual encoder with frozen pre-trained paramchanges in the driving scene hold significant importance in eter ξve , Int and Int−1 represent visual representations of frame
+modeling driving behavior. For instance, a collision or loss t and t − 1, respectively, and Vnt denotes the spatial visual
+of vehicle control often induces substantial changes in the context representation after Average Pooling.Here, Fn ∈ R1×C
+driving scene within a brief timeframe. Therefore, in our is the fused visual representation, where C denotes the feature
+work, we propose to model the visual representation of driving dimension. The fused visual representation Fn not only models
+videos in two aspects, i.e., the visual context of video frames the visual context of driving video clips, but also characterizes
+in the spatial domain and the dynamic changes of driving the dynamic changes in the temporal dimension, which is
+scenes in the temporal domain. Considering the fact that the beneficial for perception and understanding driving behaviors.
+high frequency of the driving video in the temporal domain
+reflects the dynamic changes of the driving scene. To clarify, C. Attentive Anomaly Focusing Mechanism
+we present several cases in Fig. 4 for illustration. Based on Different types of traffic anomalies tend to exhibit disthe above observations, we introduce the Temporal High Fre- tinct characteristics. For instance, anomalies involving the
+quency Modeling (THFM) to enhance the visual representation ego vehicle are often accompanied by global jitter from
+of the driving video within the temporal-spatial domain. the dashboard camera, whereas anomalies involving non-ego
+ Our fundamental idea involves utilizing the high frequency vehicles typically cause anomalies in local regions of the
+presented in the temporal domain of the driving video to driving scene. Blindly encoding the entire driving scene may
+characterize dynamic changes. Specifically, we first extract reduce the discriminability of driving events and impede the
+the high frequency of the driving video clip in the temporal ability to detect various types of traffic anomalies. Therefore,
+dimension, which is formulated as: adaptively focusing on the visual context of interest is critical
+ hp to perceiving different types of traffic anomalies.
+ In = H P( f rament , f rament−1 ), (1)
+ In our work, we propose an attentive anomaly focusing
+where H P(·) is the difference operation to extract high mechanism (AAFM). The fundamental idea is to decouple
+ hp
+frequency In along the temporal dimension from two con- the visual context visually and linguistically, to guide the
+secutive frames t − 1 and t of the n-th driving video clip. model to adaptively focus on the visual content of interest.
+LIANG et al.: TEXT-DRIVEN TAD WITH THFM IN DRIVING VIDEOS 8689
+
+Specifically, we carefully design two focusing strategies: the fine-grained text prompts, we apply the textual encoder in
+visually focused strategy (VFS) and the linguistically focused CLIP to extract the fine-grained text representation as follows:
+strategy (LFS). The former utilizes visual representations with
+global context to concentrate on the most semantically relevant Tm′ = Fte (tm ; ξte ), (5)
+visual context, while the latter adaptively focuses on visual where Fte is the textual encoder with parameter ξte ,
+contexts that are most relevant to text prompts through the tm (m ∈ [1, 11]∩Z) denotes the m-th fine-grained text prompt,
+guidance of language. and Tm′ represents the corresponding text representation. As we
+ 1) Visually Focused Strategy (VFS): In fact, the spatial can see, the fine-grained text prompts describe the subjects and
+visual representation inherently captures the global context. objects involved in a traffic event in a video frame, as well as
+Utilizing the attention of visual representation towards the the event type, which helps to focus on the visual regions in
+deep features of various regions in the driving scene enables the driving scene where the traffic event occurred. Therefore,
+a focus on the most semantically relevant visual content. we further propose to leverage the similarity of the fine-grained
+Specifically, as shown in Fig. 2, we focus on and weight the text representation with each deep feature of the video clip to
+deep features of interest by using cross-attention (CA) on the focus on the most relevant visual context of the text prompt.
+spatial visual context representation Vnt and deep features of Note that in the driving scenario, we do not have direct
+the video clip, which can be written as: access to realistic text prompt that match the driving video.
+ ! To solve this problem, we leverage the similarity between the
+ Q Vnt · K ⊤ (P)
+ 
+ V F Rn = so f tmax · V (P) , (4) visual representation Fn and fine-grained text representations
+ c to weight the text representations, and obtain the soft text
+ representation as follows:
+where Q, K and V are linear transformation, P ∈ Rh∗w×C
+is the deep feature map of the video clip, (h, w) represents Fn · (Tm′ )⊤
+ Am
+ n = ,
+the size of the feature map, and c is the scaling factor which ∥Fn ∥ · ∥Tm ∥
+refers to the rooted square of feature dimension. Note that, X11
+ Amn Tm ,
+ ′
+for transformer-based visual encoders, Vnt is represented by Tso f t = (6)
+the class token, and P is represented by the patch tokens. m=1
+V F Rn ∈ R1×C denotes the visually focused representation where Am n is the cosine similarity between the n-th visual
+of the n-th video clip. Since the spatial visual representation representation Fn and the m-th fine-grained text representation
+encodes global context, focusing on its most relevant visual Tm′ ∈ R1×C . After obtaining the soft text representation
+content helps guide the model to perceive the semantics of the Tso f t ∈ R1×C , similar to Section III-C.1, we can further focus
+driving scene. As shown in Fig. 3 (b), our VFS can adaptively on the most semantically relevant visual context of the text
+focus on the crucial scene semantics in the driving scene. description based on the cross-attention (CA) on the soft text
+Such attention helps to detect traffic anomalies involving the representation Tso f t and deep features P, which is denoted as:
+ego-vehicle, especially the loss of control of the ego vehicle !
+ Q Tso f t · K ⊤ (P)
+ 
+(case 1 in Fig. 3).
+ L F Rn = so f tmax · V (P) . (7)
+ 2) linguistically Focused Strategy (LFS): Intuitively, the c
+fine-grained text prompts clearly define the subjects, objects,
+and traffic types involved in the traffic events. In contrast to L F Rn ∈ R1×C represents the linguistically focused represengeneral text prompts (as listed in a1 and a2 in Table I), utilizing tation of the n-th video clip, which focuses on the visual
+fine-grained text prompts helps guide the model to focus on context that is most relevant to the soft text representation
+relevant visual contexts, thereby improving the comprehension Tso f t . Moreover, Fig. 3(c) shows that our LFS can indeed
+of various traffic anomalies. Therefore, to facilitate the model’s adaptively concentrate on road participants potentially linked
+adaptive perception of relevant visual context, we further to anomalies. This capability is crucial for identifying local
+design a linguistically focused strategy. The core idea is to anomalies in driving scenarios arising from non-ego vehicles
+utilize the carefully designed fine-grained text prompts (as (case 2 in Fig. 3).
+listed in b1 to b4 in Table I) to guide the model to adaptively Finally, we enhance the visual representation Fn of driving
+focus on the visual context of interest, thereby enhancing the videos by fusing it with visually and linguistically focused
+understanding of traffic anomalies. representations. Formally, it can be expressed as:
+ Specifically, first, we categorize traffic events into four Fn′ = F f usion ([V F Rn , L F Rn , Fn ]; ξ f ), (8)
+groups based on their types. Second, we further categorize
+each type of traffic event according to the different sub- where F f usion is the fusion layer composed of multi-layer
+jects (i.e., ego or non-ego vehicle) and objects (i.e., vehicle, perceptrons with parameter ξ f . Fn′ is an enhanced visual
+pedestrian, or obstacle) involved. Finally, we define a total representation that not only adaptively focuses on the visual
+of 11 types of fine-grained text prompts, as summarized in contexts of interest but also more comprehensively charac-
+Table I from b1 to b4. Note that the DoTA dataset used in our terizes the driving video clip in the spatio-temporal domain.
+experiments is annotated with 9 types of traffic anomalies, Moreover, such representations facilitate the alignment of
+as shown in Table II, with each anomaly encompassing both visual representations with general text prompts, thus improvego-involved and non-ego traffic anomalies. With the defined ing the detection of traffic anomalies.
+8690 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 9, SEPTEMBER 2024
+
+ TABLE I The overall loss then becomes:
+ S UMMARY OF W ELL -D ESIGNED T EXT P ROMPTS
+ L = ((Lv f + Lt f ) + (Lvg + Ltg ))/2. (14)
+ The inference procedure is similar to the training procedure. For the i-th testing driving video clip, our TTHF first
+ extracts the visual representation Fi and the enhanced visual
+ representation Fi′ . For text prompts, the text encoder constructs
+ 11 fine-grained text representations T ′ = {T1′ , T2′ , . . . , T11
+ ′ } and
+
+ 2 general text representations T = {T1 , T2 }. We then compute
+ the cosine similarity between Fi and T ′ and between Fi′ and
+D. Contrastive Learning Strategy and Inference Process T , respectively. Finally, we calculate the anomaly score for
+ the i-th driving video clip as:
+ In this section, we introduce the contrastive learning strategy
+of the proposed TTHF framework for cross-modal learning and f + Sg )/2,
+ Scor ei = 1 − (S 11 2
+ (15)
+present how to perform traffic anomaly detection.
+ Suppose that, there are N video clips in the batch, where S 11f represents the cosine similarity after softmax
+ between Fi and T11 ′ , and S 2 denotes the cosine similarity after
+we denote: g
+ softmax between Fi′ and T2 . By taking the complement of the
+ F = {F1 , F2 , . . . , FN }, average over the prompts corresponding to normal traffic at
+ F ′ = {F1′ , F2′ , . . . , FN′ }, (9) different levels, we can obtain the final anomaly score Scor ei .
+where F is the visual representation of N video clips and
+F ′ represents the enhanced visual representation. For text IV. E XPERIMENTS AND D ISCUSSIONS
+prompts, we denote: In this section, we evaluate the performance of our proposed method, which is performed on a platform with one
+ T = {T1 , T2 , . . . , TN },
+ NVIDIA 3090 GPU. All experiments were implemented using
+ T ′ = {T1′ , T2′ , . . . , TN′ }, (10) the PyTorch framework. Our source code and trained models
+where T means the matched general text representation of will be publicly available upon acceptance.
+N video clips and T ′ is the matched fine-grained text representation. Note that Tn and Tn′ denote the high-dimensional A. Implementation Details
+representations of one of the D predefined text prompts. In the experiments, we resize the driving video frames
+In our case, D = 2 for general text prompts and D = to 224 × 224 and take every two consecutive frames as
+11 for fine-grained text prompts. To better understand abstract the input video clip. Except where noted otherwise, in all
+concepts of traffic anomalies, we first perform contrastive experimental settings, we adopt ResNet-50 [52] for the visual
+learning to align visual representations F with fine-grained and high-frequency encoders and Text Transformer [53] for the
+text representations T ′ . Formally, the objective loss along the textual encoder. All of them are initialized with the parameters
+visual axis can be expressed as: of CLIP’s pre-trained model. Note that during the training
+ N phase, we freeze the pre-trained parameters of the visual
+ 1 X exp(Fi · (Ti′ )⊤ /τ )
+ Lv f = − log P . (11) encoder to prevent the model from overfitting to a specific
+ j∈[1,D] exp(Fi · (T j ) /τ )
+ N ′ ⊤
+ i=1 dataset (e.g., DoTA) while enhancing the generalization of
+For the j-th trained text representation T j , it may actually the visual representation. Besides, we optimize loss functions
+match more than one visual representation. Symmetrically, using the Adam algorithm with batch size 128, learning
+we can calculate the loss along the text axis by: rate 5e-6, weight decay 1e-4, and train the framework for
+ 10 epochs. During inference, we evaluate the traffic anomaly
+ k∈[1,N ],Tk′ =T j′ exp Tk · Fk /τ
+ ′ ⊤
+ P 
+ D
+ 1 X score by taking the complement of the similarity score of
+ Lt f = − log P   , (12) normal traffic prompts on both fine-grained and general text
+ D exp T ′ · F ⊤ /τ
+ j=1 i∈[1,N ] j i prompts.
+where τ is a learned temperature parameter [13]. Similarly,
+we further apply contrastive learning to align the enhanced B. Dataset and Metrics
+visual representations with the general text representations. 1) Dataset: For the sake of fairness, we evaluate our
+The calculations along the visual and textual axis are as method on two challenging datasets, namely, DoTA [9] and
+follows: DADA-2000 [23], following prior works [8], [9], [12]. DoTA
+ N
+ 1 X exp(Fi′ · (Ti )⊤ /τ ) is the first traffic anomaly video dataset that provides detailed
+ Lvg = − log P , spatio-temporal annotations of anomalous objects for traffic
+ j∈[1,D] exp(Fi · (T j ) /τ )
+ N ′ ⊤
+ i=1 anomaly detection in driving scenarios. The dataset contains
+ k∈[1,N ],Tk =T j exp Tk · (Fk ) /τ
+ ′ ⊤
+ D
+ P 
+ 1 X 4677 dashcam video clips with a resolution of 1280×720 pix-
+ Ltg = − log  . (13) els, captured under various weather and lighting conditions.
+ i∈[1,N ] exp T j · (Fi ) /τ
+ ′ ⊤
+ P
+ D
+ j=1 Each video is annotated with the start and end time of the
+LIANG et al.: TEXT-DRIVEN TAD WITH THFM IN DRIVING VIDEOS 8691
+
+ TABLE II TABLE III
+ T RAFFIC A NOMALY C ATEGORY IN THE D OTA DATASET T HE AUC ↑ (%) OF D IFFERENT A PPROACHES ON THE D OTA DATASET
+
+anomaly and assigned to one of nine categories, which we
+summarize in Table II. The DADA-2000 dataset consists of
+2000 dashcam videos with a resolution of 1584 × 660 pixels,
+each annotated with driver attention and one of 54 anomaly
+categories. In our experiments, we use the standard train-test
+split as used in [9] and [23] and other previous works. their respective variants (i.e., different inputs) and paradigms
+ 2) Metrics: Following prior works [8], [9], [54], we use employed. Overall, our framework demonstrates the supe-
+Area under ROC curve (AUC) metric to evaluate the per- rior performance on the DoTA dataset in terms of AUC.
+formance of different TAD approaches. The AUC metric is Specifically, our method outperforms the previously two-stage
+calculated by computing the area under a standard frame-level paradigm-based leading TAD method, STFE [8], by +5.4%
+receiver operating characteristic (ROC) curve, which plots the AUC. Although in previous methods, the two-stage paradigm
+true positive rate (TPR) against the false positive rate (FPR). method employs a perception algorithm in the first stage to
+The larger AUC prefers better performance. mitigate the impact of dynamic background resulting from the
+ ego-vehicle movement, and generally outperforms single-stage
+C. Competitors TAD methods [6], [10], [11], such approaches are susceptible
+ to the performance of the perception algorithm in the first
+ To verify the superiority of the proposed framework,
+ stage, potentially leading to error propagation. In contrast,
+we compare with the following state-of-the-art TAD
+ our proposed single-stage TAD method explicitly characterizes
+approaches: ConvAE [10], ConvLSTMAE [11], AnoPred [6],
+ dynamic changes by modeling high frequency in the temporal
+FOL-STD [32], FOL-Ensemble [9], DMMNet [55], SSCdomain, achieving a significant performance improvement
+TAD [12] and STFE [8]. Among them, the ConvAE [10] and
+ over all previous methods and establishing a new state-of-
+ConvLSTMAE [11] methods contain two variants. The variant
+ the-art in traffic anomaly detection. Note that our baseline
+utilizing the grayscale image as input belongs to the singlemethod outperforms all previous single-stage paradigm-based
+stage paradigm, while the variant using optical flow as input
+ methods by at least +8.3% AUC. This is mainly attributed to
+belongs to the two-stage paradigm. The AnoPred method [6]
+ our introduction of text prompts and the alignment of driving
+also contains two variants. The variant employing the full
+ videos with text representations in a high-dimensional space,
+video frame as input falls within the single-stage paradigm,
+ which facilitates the detection of traffic anomalies.
+whereas the variant utilizing pixels of foreground objects
+belongs to the two-stage paradigm. Besides, the DMMNet 2) Per-Class Results: To investigate the ability of our
+method [55] follows the single-stage paradigm, while the proposed method to detect traffic anomalies in different catmethods FOL-STD [32], FOL-Ensemble [9], SSC-TAD [12], egories, we compared the detection performance of different
+and STFE [8] fall under the two-stage paradigm. Note that the methods for ego-involved and non-ego traffic anomalies. Based
+experimental results for all these methods and their variants on the nine traffic anomalies divided by the DoTA dataset,
+are obtained from the published papers [8], [9], and [12]. detailed in Table II, we summarize the AUC performance
+In addition, we consider a CLIP-like TAD framework, denoted of the different methods as well as the average AUC in
+as TTHF-Base, as our baseline approach. This baseline lacks Table IV. Our method achieves significant improvements in all
+temporal High-Frequency Modeling and the attention anomaly categories of traffic anomalies except ST*, and in particular,
+focusing mechanism and utilizes only general text prompts for achieves an average AUC of at least +9.9% on egos involving
+alignment. traffic anomalies. This further validates our idea that characterizing dynamic changes in driving scenarios is important for
+ traffic anomaly detection. Simultaneously, it also demonstrates
+D. Quantitative Results the effectiveness of our proposed approach to model the
+ 1) Overall Results: We conduct a comparative analysis of temporal high frequency of driving videos to characterize the
+TTHF with a wide range of competitors and their variants dynamic changes of driving scenes.
+in terms of AUC metric. Table III presents the AUC per- 3) Generalization Performance: To explore the generalformance of various competitors, along with labels indicating ization performance of our method for unseen types of
+8692 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 9, SEPTEMBER 2024
+
+ TABLE IV
+ T HE AUC ↑ (%) OF D IFFERENT M ETHODS FOR E ACH I NDIVIDUAL A NOMALY C LASS ON THE D OTA DATASET I S P RESENTED . T HE ∗ I NDICATES
+ N ON -E GO A NOMALIES , W HILE E GO -I NVOLVED A NOMALIES A RE S HOWN W ITHOUT ∗. N /A I NDICATES T HAT THE AUC
+ P ERFORMANCE FOR THE C ORRESPONDING C ATEGORY I S N OT AVAILABLE . W E B OLD THE B EST P ERFORMANCE
+
+ TABLE V leaving the roadway to the left. From the above visualization
+T HE AUC ↑ (%) OF D IFFERENT M ETHODS ON THE DADA-2000 DATASET results of different types of traffic anomalies, we can summarize as follows. Overall, our TTHF exhibits superior detection
+ performance on various types of traffic anomalies. Secondly,
+ while the most intuitive classify-based approach (It has the
+ same network architecture as the visual encoder of TTHF,
+ but directly classifies the visual representation, denoted as
+ Classifier in Fig. 5) also follows a single-stage paradigm, our
+ proposed text-driven TAD approach offers a more comprehensive representation in high-dimensional space than orthogonal
+traffic anomalies, we perform a generalization experiment one-hot vectors. Consequently, both our proposed TTHF and
+on the DADA-2000 dataset. Specifically, we compare the its variants outperform the Classifier. Third, incorporating
+AUC performance of our TTHF and TTHF-Base without AAFM allows our method to better perceive different types of
+any fine tuning on the DADA-2000 dataset with previous traffic anomalies, as evident in Fig. 5 when comparing the Base
+trained models, summarized in Table V. As we can see, and AAFM variants across various traffic anomalies. Finally,
+our proposed TTHF-base and TTHF methods outperform capturing dynamic changes in driving scenarios significantly
+previously trained TAD methods, bringing at least +0.8% enhances traffic anomaly detection. This highlights the effecand +4.2% improvement in AUC respectively, indicating the tiveness of our approach in characterizing dynamic changes in
+strong generalization performance of the proposed approach. driving scenarios by modeling high frequency in the temporal
+This is mainly attributed to our introduction of a text-driven domain.
+video-text alignment strategy for traffic anomaly detection 2) Visualization of the Weights Used for Soft Text Reprefrom a new perspective, as well as the proposed attentive sentation: We further investigate the feasibility of soft text
+anomaly focusing mechanism and temporal high-frequency representations. Specifically, as shown in Fig. 6, we use
+modeling for traffic anomaly detection. three cases from the test set as examples. For video frames
+ captured at different moments in driving videos, we visualize
+ the weights employed to compute the soft text representation
+E. Qualitative Results and compare it with the real fine-grained text representation.
+ In this subsection, we visualize some examples to further From the visualization results, we observe that the text repreillustrate the detection capability of our TTHF across various sentation associated with the maximum weight (indicated by
+types of traffic anomalies and the feasibility of soft text the darkest red) consistently aligns with the real fine-grained
+representation in our framework. text representation. The above results indicate that the way we
+ 1) Visualization of Various Types of Traffic Anomalies: As calculate the soft text representation is effective and can well
+presented in Fig. 5, we show five representative traffic anoma- reflect the real anomaly category.
+lies from top to bottom as examples: a) The other vehicle
+collides with another vehicle that turns into or crosses a road.
+b) The ego-vehicle collides with another oncoming vehicle. c) F. Ablation Investigation
+The ego-vehicle collides with another vehicle moving laterally In this subsection, we conduct ablation studies by analyzin the same direction. d) The ego-vehicle collides with another ing how different components of TTHF contribute to traffic
+vehicle waiting. e) The ego-vehicle is out-of-control and anomaly detection on DoTA dataset.
+LIANG et al.: TEXT-DRIVEN TAD WITH THFM IN DRIVING VIDEOS 8693
+
+Fig. 5. The visualization of anomaly score curves for traffic anomaly detection of different variants on the DoTA dataset. The first row of each case shows
+the extracted video frames of the driving video, where the red boxes mark the object involved in or causing the anomaly. The second rows show the anomaly
+score curves of different methods on the corresponding whole videos. For brevity, we label the TTHF-Base variant as Base and TTHF-Base with AAFM as
+AAFM, while Classifier denotes the classify-based TAD method. Better viewed in color.
+
+ 1) Variants of Our Architecture: We first evaluate the the visual representation. This adaptation formulates the traffic
+effectiveness of different components in our TTHF framework anomaly detection task as a straightforward binary classificaincluding the visual encoder, the textual encoder, the attentive tion task. The results presented in Table VI demonstrate that
+anomaly focusing mechanism (AAFM), and the temporal introducing linguistic modalities and aligning visual-text in
+high-frequency modeling (THFM). The ablation results are high-dimensional space greatly facilitates anomaly detection
+summarized in Table VI. Note that when only the visual in driving videos compared to the classifier, achieving an
+encoder is applied, we add a linear classification head after AUC improvement of +14.8%. Based on this, the designed
+8694 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 9, SEPTEMBER 2024
+
+Fig. 6. Visualization of the weights used for computing soft text representations. We present three illustrative cases, each involving video frames captured at
+different times. These frames are accompanied by the corresponding weight values used in the computation of soft text representations. Notably, we employ
+a blue-to-red color scale, where increasing redness signifies higher weights. Additionally, we label the ground-truth fine-grained text representations (denoted
+as T_i) associated with specific frames. Among them, T_1 corresponds to the text “The ego vehicle collision with another vehicle” (as described in Table I),
+T_4 corresponds to the text “The non-ego vehicle collision with another vehicle”, T_7 corresponds to the text “The ego vehicle out-of-control and leaving
+the roadway”, and T_11 corresponds to the text “The vehicle is running normally on the road”.
+
+ TABLE VI TABLE VIII
+ A BLATION R ESULTS OF D IFFERENT C OMPONENTS ON D OTA DATASET. A BLATION R ESULTS OF D IFFERENT BACKBONES ON D OTA DATASET.
+ N OTE T HAT FOR FAIR C OMPARISON , IN THE E XPERIMENTS L ARGER AUC P REFERS B ETTER P ERFORMANCE
+ W ITHOUT THFM, W E F INE -T UNE THE PARAMETERS OF
+ THE V ISUAL E NCODER . L ARGER AUC
+ P REFERS B ETTER P ERFORMANCE
+
+ TABLE VII
+ A BLATION R ESULTS ON H OW AAFM C ONTRIBUTES TO T RAFFIC
+ A NOMALY D ETECTION ON THE D OTA DATASET. L ARGER component in the AAFM. The ablation results are presented
+ AUC P REFERS B ETTER P ERFORMANCE in Table VII. We can conclude that both the Visually Focused
+ Strategy (VFS) and the Linguistically Focused Strategy (LFS)
+ explicitly guide the model to pay attention to the visual
+ context most relevant to the representations of visual and
+ linguistic modalities, respectively. This enhances the ability
+ to perceive traffic anomalies with different characteristics,
+ thereby improving traffic anomaly detection in driving videos.
+ Our AAFM achieves the best detection performance when both
+AAFM helps guide the model to adaptively focus on the visual VFS and LFS are applied.
+context of interest and thus enhance the perception ability of 3) Network Architecture: Different network architectures of
+various types of traffic anomalies. Lastly, the incorporation of visual encoder may exhibit different representation capabilthe modeling of temporal high frequency to capture dynamic ities. We now evaluate the performance of traffic anomaly
+background during driving significantly improves traffic detection when ResNet50 [52], ResNet50 × 64 [13], ViT-B-32
+anomaly detection, resulting in an AUC improvement of [56] and ViT-L-14 [56] are used. Specifically, the results of
++7.9%. these visual encoders can be found in Table VIII, respectively.
+ 2) Analysis of the AAFM: To investigate how the proposed As can be noticed, for the task of traffic anomaly detection
+attentive anomaly focusing mechanism (AAFM) contributes in driving videos, we observe that the ResNet-based network
+to traffic anomaly detection, we perform ablation on each achieves comparable performance to the Transformer-based
+LIANG et al.: TEXT-DRIVEN TAD WITH THFM IN DRIVING VIDEOS 8695
+
+Fig. 7. Visualization of some bad cases of the proposed TTHF. The first row of each case shows the extracted video frames of the driving video, where
+the red boxes mark the objects involved in the anomaly. The second rows show the anomaly score curves of different methods on the corresponding whole
+videos. Better viewed in color.
+
+network. The larger model sizes perform slightly better, with vehicles when the ego-vehicle is at rest. These slight traffic
+ViT-L-14 achieving an AUC performance of 85.0%. Therefore, anomalies may not be well focused on the corresponding
+considering both computing resources and performance gains, abnormal regions by modeling the dynamic changes of the
+we ultimately chose ResNet50 as an example as our visual driving scene as well as using text guidance. This also explains
+encoder in all other experiments. that the ability of our method in detecting non-ego involved
+ traffic anomalies is not as good as in detecting ego-involved
+G. Disscusion traffic anomalies, especially ST* in Table IV. Despite the
+ significant improvement of our approach over previous TAD
+ In this subsection, we discuss the limitations of the pro- methods, addressing these more challenging traffic anomalies
+posed framework. We experimentally found that the detection undoubtedly requires a greater effort from the community.
+accuracy of our proposed method needs improvement for
+two specific cases: 1) long-distance observation of traffic
+anomalies; and 2) subtle traffic anomalies involving other V. C ONCLUSION
+vehicles when the ego-vehicle is stationary. Fig. 7 shows This paper have proposed an accurate single-stage TAD
+several cases where the accuracy of our method needs to framework. For the first time, this framework introduces
+be further improved. In the first scenario, the other vehicle visual-text alignment to address the traffic anomaly detection
+at a distance collide with a turning or crossing vehicle. The task for driving videos. Notably, we verified that modeling the
+second scenario depicts a distant vehicle losing control and high frequency of driving videos in the temporal domain helps
+veering to the left side of the road. The third scenario involves to characterize the dynamic changes of the driving scene and
+a slowly retreating vehicle experiencing friction with other enhance the visual representation, thereby greatly facilitating
+stationary vehicles. By analyzing the anomaly score curve in the detection of traffic anomalies. In addition, the experimen-
+Fig. 7, we can conclude that our method faces challenges tal results demonstrated that the proposed attentive anomaly
+primarily due to the traffic anomalies occurring in these focusing mechanism is indeed effective in guiding the model
+scenarios involve non-ego vehicles and cause minor anomaly to adaptively focus on the visual content of interest, thereby
+areas. These anomalies include small local anomalies that are enhancing the ability to perceive different types of traffic
+caused when non-ego vehicles are abnormal at a distance, and anomalies. Although extensive experiments have demonstrated
+slow and slight traffic anomalies that are observed for other that the proposed TTHF substantially outperforms state-of-the-
+8696 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 9, SEPTEMBER 2024
+
+art competitors, more effort is required to accurately detect the [23] J. Fang, D. Yan, J. Qiao, J. Xue, and H. Yu, “DADA: Driver attenmore challenging slight traffic anomalies. tion prediction in driving accident scenarios,” IEEE Trans. Intell.
+ Transp. Syst., vol. 23, no. 6, pp. 4959–4971, Jun. 2022.
+ [24] Y. Zhong, X. Chen, Y. Hu, P. Tang, and F. Ren, “Bidirectional spatio-
+ R EFERENCES temporal feature learning with multiscale evaluation for video anomaly
+ detection,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 12,
+ [1] Z. Yuan, X. Song, L. Bai, Z. Wang, and W. Ouyang, “Temporal-channel pp. 8285–8296, Dec. 2022.
+ transformer for 3D LiDAR-based video object detection for autonomous [25] M. I. Georgescu, R. T. Ionescu, F. S. Khan, M. Popescu, and M. Shah,
+ driving,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4, “A background-agnostic framework with adversarial training for abnorpp. 2068–2078, Apr. 2022. mal event detection in video,” IEEE Trans. Pattern Anal. Mach. Intell.,
+ [2] L. Claussmann, M. Revilloud, D. Gruyer, and S. Glaser, “A review of vol. 44, no. 9, pp. 4505–4523, Sep. 2022.
+ motion planning for highway autonomous driving,” IEEE Trans. Intell. [26] S. Zhang et al., “Influence-aware attention networks for anomaly detec-
+ Transp. Syst., vol. 21, no. 5, pp. 1826–1848, May 2020. tion in surveillance videos,” IEEE Trans. Circuits Syst. Video Technol.,
+ [3] M. Jeong, B. C. Ko, and J.-Y. Nam, “Early detection of sudden vol. 32, no. 8, pp. 5427–5437, Aug. 2022.
+ pedestrian crossing for safe driving during summer nights,” IEEE Trans. [27] X. Zeng, Y. Jiang, W. Ding, H. Li, Y. Hao, and Z. Qiu, “A hierarchical
+ Circuits Syst. Video Technol., vol. 27, no. 6, pp. 1368–1380, Jun. 2017. spatio-temporal graph convolutional neural network for anomaly detec-
+ [4] L. Yue, M. A. Abdel-Aty, Y. Wu, and A. Farid, “The practical effec- tion in videos,” IEEE Trans. Circuits Syst. Video Technol., vol. 33, no. 1,
+ tiveness of advanced driver assistance systems at different roadway pp. 200–212, Jan. 2023.
+ facilities: System limitation, adoption, and usage,” IEEE Trans. Intell. [28] C. Huang et al., “Self-supervised attentive generative adversarial net-
+ Transp. Syst., vol. 21, no. 9, pp. 3859–3870, Sep. 2020. works for video anomaly detection,” IEEE Trans. Neural Netw. Learn.
+ [5] Y. Yuan, D. Wang, and Q. Wang, “Anomaly detection in traffic scenes via Syst., vol. 34, no. 11, pp. 9389–9403, Nov. 2023.
+ spatial-aware motion reconstruction,” IEEE Trans. Intell. Transp. Syst., [29] Y. Gong, C. Wang, X. Dai, S. Yu, L. Xiang, and J. Wu, “Multivol. 18, no. 5, pp. 1198–1209, May 2017. scale continuity-aware refinement network for weakly supervised video
+ [6] W. Liu, W. Luo, D. Lian, and S. Gao, “Future frame prediction for anomaly detection,” in Proc. IEEE Int. Conf. Multimedia Expo. (ICME),
+ anomaly detection—A new baseline,” in Proc. IEEE/CVF Conf. Comput. Jul. 2022, pp. 1–6.
+ Vis. Pattern Recognit., Jun. 2018, pp. 6536–6545. [30] Y. Wang, X. Luo, and Z. Zhou, “Contrasting estimation of pat-
+ [7] Z. Liu, Y. Nie, C. Long, Q. Zhang, and G. Li, “A hybrid video anomaly tern prototypes for anomaly detection in urban crowd flow,” IEEE
+ detection framework via memory-augmented flow reconstruction and Trans. Intell. Transp. Syst., early access, Jan. 31, 2024, doi:
+ flow-guided frame prediction,” in Proc. IEEE/CVF Int. Conf. Comput. 10.1109/TITS.2024.3355143.
+ Vis. (ICCV), Oct. 2021, pp. 13588–13597. [31] Y. Yuan, J. Fang, and Q. Wang, “Incrementally perceiving hazards in
+ [8] Z. Zhou, X. Dong, Z. Li, K. Yu, C. Ding, and Y. Yang, “Spatio-temporal driving,” Neurocomputing, vol. 282, pp. 202–217, Mar. 2018.
+ feature encoding for traffic accident detection in VANET environment,” [32] Y. Yao, M. Xu, Y. Wang, D. J. Crandall, and E. M. Atkins, “Unsuper-
+ IEEE Trans. Intell. Transp. Syst., vol. 23, no. 10, pp. 19772–19781, vised traffic accident detection in first-person videos,” in Proc. IEEE/RSJ
+ Oct. 2022. Int. Conf. Intell. Robots Syst. (IROS), Nov. 2019, pp. 273–280.
+ [9] Y. Yao et al., “DoTA: Unsupervised detection of traffic anomaly in [33] G. Sun, Z. Liu, L. Wen, J. Shi, and C. Xu, “Anomaly crossing:
+ driving videos,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 1, New horizons for video anomaly detection as cross-domain few-shot
+ pp. 444–459, Jan. 2023. learning,” 2021, arXiv:2112.06320.
+[10] M. Hasan, J. Choi, J. Neumann, A. K. Roy-Chowdhury, and L. S. Davis, [34] R. Liang, Y. Li, Y. Yi, J. Zhou, and X. Li, “A memory-augmented multi-
+ “Learning temporal regularity in video sequences,” in Proc. IEEE Conf. task collaborative framework for unsupervised traffic accident detection
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016, pp. 733–742. in driving videos,” 2023, arXiv:2307.14575.
+[11] Y. S. Chong and Y. H. Tay, “Abnormal event detection in videos [35] K. He, G. Gkioxari, P. Dollár, and R. Girshick, “Mask R-CNN,” in Proc.
+ using spatiotemporal autoencoder,” in Proc. Adv. Neural Netw., 2017, IEEE Int. Conf. Comput. Vis. (ICCV), Oct. 2017, pp. 2980–2988.
+ pp. 189–196. [36] E. Ilg, N. Mayer, T. Saikia, M. Keuper, A. Dosovitskiy, and T. Brox,
+[12] J. Fang, J. Qiao, J. Bai, H. Yu, and J. Xue, “Traffic accident detection via “FlowNet 2.0: Evolution of optical flow estimation with deep networks,”
+ self-supervised consistency learning in driving scenarios,” IEEE Trans. in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017,
+ Intell. Transp. Syst., vol. 23, no. 7, pp. 9601–9614, Jul. 2022. pp. 1647–1655.
+[13] A. Radford et al., “Learning transferable visual models from natural [37] N. Wojke, A. Bewley, and D. Paulus, “Simple online and realtime
+ language supervision,” in Proc. Int. Conf. Mach. Learn., vol. 139, 2021, tracking with a deep association metric,” in Proc. IEEE Int. Conf. Image
+ pp. 8748–8763. Process. (ICIP), Sep. 2017, pp. 3645–3649.
+[14] C. Jia et al., “Scaling up visual and vision-language representation [38] R. Mur-Artal and J. D. Tardós, “ORB-SLAM2: An open-source SLAM
+ learning with noisy text supervision,” in Proc. Int. conf. mach. learn., system for monocular, stereo, and RGB-D cameras,” IEEE Trans. Robot.,
+ vol. 139, 2021, pp. 4904–4916. vol. 33, no. 5, pp. 1255–1262, Oct. 2017.
+[15] Y. Yang et al., “Attentive mask CLIP,” in Proc. IEEE/CVF Int. Conf. [39] R. Liang, Y. Li, J. Zhou, and X. Li, “STGlow: A flow-based generative
+ Comput. Vis. (ICCV), Oct. 2023, pp. 2771–2781. framework with dual-graphormer for pedestrian trajectory prediction,”
+[16] X. Gu, T.-Y. Lin, W. Kuo, and Y. Cui, “Open-vocabulary object detection IEEE Trans. Neural Netw. Learn. Syst., early access, pp. 1–14, 2024,
+ via vision and language knowledge distillation,” in Proc. Int. Conf. doi: 10.1109/TNNLS.2023.3294998.
+ Learn. Represent., 2022, pp. 1–21. [40] L. Yao et al., “DetCLIPv2: Scalable open-vocabulary object detection
+[17] J. Xu et al., “GroupViT: Semantic segmentation emerges from text pre-training via word-region alignment,” in Proc. IEEE Conf. Comput.
+ supervision,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Vis. Pattern Recogn., 2023, pp. 23497–23506.
+ (CVPR), Jun. 2022, pp. 18113–18123. [41] Z. Zhou, Y. Lei, B. Zhang, L. Liu, and Y. Liu, “ZegCLIP:
+[18] S. Chen, Q. Xu, Y. Ma, Y. Qiao, and Y. Wang, “Attentive snip- Towards adapting CLIP for zero-shot semantic segmentation,” in Proc.
+ pet prompting for video retrieval,” IEEE Trans. Multimedia, vol. 26, IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2023,
+ pp. 4348–4359, 2024. pp. 11175–11185.
+[19] M. Wang, J. Xing, and Y. Liu, “ActionCLIP: A new paradigm for video [42] A. Baldrati, L. Agnolucci, M. Bertini, and A. Del Bimbo, “Zero-shot
+ action recognition,” 2021, arXiv:2109.08472. composed image retrieval with textual inversion,” in Proc. IEEE/CVF
+[20] H. Luo et al., “CLIP4Clip: An empirical study of CLIP for end to Int. Conf. Comput. Vis. (ICCV), Oct. 2023, pp. 15338–15347.
+ end video clip retrieval and captioning,” Neurocomputing, vol. 508, [43] M. Tschannen, B. Mustafa, and N. Houlsby, “CLIPPO: Image-andpp. 293–304, Oct. 2022. language understanding from pixels only,” in Proc. IEEE/CVF Conf.
+[21] H. Rasheed, M. U. Khattak, M. Maaz, S. Khan, and F. S. Khan, Comput. Vis. Pattern Recognit. (CVPR), Jun. 2023, pp. 11006–11017.
+ “Fine-tuned CLIP models are efficient video learners,” in Proc. [44] S. Nag, X. Zhu, Y.-Z. Song, and T. Xiang, “Zero-shot temporal action
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2023, detection via vision-language prompting,” in Proc. Eur. Conf. Comput.
+ pp. 6545–6554. Vis., 2022, pp. 681–697.
+[22] Y. Li et al., “Learning hierarchical fingerprints via multi-level fusion for [45] Y. Ma, G. Xu, X. Sun, M. Yan, J. Zhang, and R. Ji, “X-CLIP: End-tovideo integrity and source analysis,” IEEE Trans. Consum. Electron., end multi-grained contrastive learning for video-text retrieval,” in Proc.
+ early access, pp. 1–11, 2024, doi: 10.1109/TCE.2024.3357977. 30th ACM Int. Conf. Multimedia, Oct. 2022, pp. 638–647.
+LIANG et al.: TEXT-DRIVEN TAD WITH THFM IN DRIVING VIDEOS 8697
+
+[46] W. Wu, Z. Sun, and W. Ouyang, “Revisiting classifier: Transferring Yuanman Li (Senior Member, IEEE) received
+ vision-language models for video recognition,” in Proc. AAAI Conf. Art. the B.Eng. degree in software engineering from
+ Intel., vol. 37, 2023, pp. 2847–2855. Chongqing University, Chongqing, China, in 2012,
+[47] B. Ni et al., “Expanding language-image pretrained models for general and the Ph.D. degree in computer science from the
+ video recognition,” in Proc. Eur. Conf. Comput. Vis. (ECCV), 2022, University of Macau, Macau, in 2018. From 2018
+ pp. 1–18. to 2019, he was a Post-Doctoral Fellow with the
+[48] P. Wu et al., “VadCLIP: Adapting vision-language models for weakly State Key Laboratory of Internet of Things for
+ supervised video anomaly detection,” 2023, arXiv:2308.11681. Smart City, University of Macau. He is currently an
+[49] R. Zhang, Z. Zeng, Z. Guo, and Y. Li, “Can language understand depth?” Assistant Professor with the College of Electronics
+ in Proc. 30th ACM Int. Conf. Multimedia, Oct. 2022, pp. 6868–6874. and Information Engineering, Shenzhen University,
+[50] Z. Liang, C. Li, S. Zhou, R. Feng, and C. C. Loy, “Iterative prompt Shenzhen, China. His current research interests
+ learning for unsupervised backlit image enhancement,” in Proc. IEEE include multimedia security and forensics, data representation, computer
+ Int. Conf. Comput. Vis., 2023, pp. 8094–8103. vision, and machine learning.
+[51] K. Zhou, J. Yang, C. C. Loy, and Z. Liu, “Conditional prompt learning
+ for vision-language models,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ Pattern Recognit., Jul. 2022, pp. 16816–16825. Jiantao Zhou (Senior Member, IEEE) received
+ the B.Eng. degree from the Department of Elec-
+[52] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+ tronic Engineering, Dalian University of Technology,
+ recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recogn., 2016,
+ Dalian, China, in 2002, the M.Phil. degree from the
+ pp. 770–778.
+ Department of Radio Engineering, Southeast Univer-
+[53] A. Radford, J. Wu, R. Child, D. Luan, D. Amodei, and I. Sutskever, sity, Nanjing, China, in 2005, and the Ph.D. degree
+ “Language models are unsupervised multitask learners,” OpenAI Blog, from the Department of Electronic and Computer
+ vol. 1, no. 8, pp. 1–9, 2019. Engineering, The Hong Kong University of Science
+[54] D. Gong et al., “Memorizing normality to detect anomaly: Memory- and Technology, Hong Kong, in 2009. He held varaugmented deep autoencoder for unsupervised anomaly detection,” ious research positions at the University of Illinois
+ in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019, at Urbana–Champaign, Champaign, IL, USA; The
+ pp. 1705–1714. Hong Kong University of Science and Technology; and McMaster University,
+[55] S. Li, J. Fang, H. Xu, and J. Xue, “Video frame prediction by deep Hamilton, ON, Canada. He is currently an Associate Professor with the
+ multi-branch mask network,” IEEE Trans. Circuits Syst. Video Technol., Department of Computer and Information Science, Faculty of Science and
+ vol. 31, no. 4, pp. 1283–1295, Apr. 2021. Technology, University of Macau, Macau, and also the Interim Head of the
+[56] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers newly established Centre for Artificial Intelligence and Robotics. He holds
+ for image recognition at scale,” in Proc. Int. Conf. Learn. Represent., four granted U.S. patents and two granted Chinese patents. His research
+ 2021, pp. 1–22. interests include multimedia security and forensics, multimedia signal processing, artificial intelligence, and big data. He has coauthored two papers
+ that received the Best Paper Award from the IEEE Pacific-Rim Conference
+ on Multimedia in 2007 and the Best Student Paper Award from the IEEE
+ International Conference on Multimedia and Expo in 2016. He is serving as
+ an Associate Editor for IEEE T RANSACTIONS ON I MAGE P ROCESSING and
+ IEEE T RANSACTIONS ON M ULTIMEDIA.
+
+ Xia Li (Member, IEEE) received the B.S. and
+ Rongqin Liang (Student Member, IEEE) received M.S. degrees in electronic engineering and sigthe B.Eng. degree in communication engineering nal and information processing (SIP) from Xidian
+ from Wuyi University, Guangdong, China, in 2018, University, Xi’an, China, in 1989 and 1992, respecand the M.S. degree in information and com- tively, and the Ph.D. degree from the Department
+ munication engineering from Shenzhen University, of Information Engineering, The Chinese Univer-
+ Shenzhen, China, in 2021, where he is currently sity of Hong Kong, in 1997. She is currently a
+ pursuing the Ph.D. degree with the College of member of Guangdong Key Laboratory of Intelli-
+ Electronics and Information Engineering. His cur- gent Information Processing, Shenzhen University.
+ rent research interests include trajectory prediction, Her research interests include intelligent computing
+ anomaly detection, computer vision, and deep and its applications, image processing, and pattern
+ learning. recognition.

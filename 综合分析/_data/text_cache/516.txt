@@ -1,0 +1,142 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 9, SEPTEMBER 2025                                                         16661
+
+
+
+
+ Reconciling Attribute and Structural Anomalies for
+       Improved Graph Anomaly Detection
+  Chunjing Xiao , Jiahui Lu, Xovee Xu, Fan Zhou , Member, IEEE, Tianshu Xie , Wei Lu, and Lifeng Xu
+
+
+   Abstract—Graph anomaly detection is critical in domains                     [1], [2]. In social welfare, fraudulent medical insurance claims
+such as healthcare and economics, where identifying deviations                 burden healthcare systems [3], [4]. In economic systems,
+can prevent substantial losses. Existing unsupervised approaches               financial fraud harms businesses, investors, and consumers [5],
+strive to learn a single model capable of detecting both attribute
+and structural anomalies. However, they confront the tug-of-                   [6]. On social media, fake news distorts public perception,
+war problem between two distinct types of anomalies, resulting                 triggering panic and confusion [7], [8]. By modeling entities as
+in suboptimal performance. This work presents TripleAD, a                      nodes and their interactions as edges, graph anomaly detection
+mutual distillation-based triple-channel graph anomaly detection               identifies fraudulent or abnormal nodes deviating from the
+framework. It includes three estimation modules to identify the                norm [9], [10], offering valuable applications to address these
+attribute, structural, and mixed anomalies while mitigating the
+interference between different types of anomalies. In the first                security and economic threats.
+channel, we design a multiscale attribute estimation module to                    In real-world scenarios, graph anomalies primarily mani-
+capture extensive node interactions and ameliorate the over-                   fest in three forms: attribute anomalies, structural anomalies,
+smoothing issue. To better identify structural anomalies, we                   and mixed attribute-structural anomalies [11], [12]. The
+introduce a link-enhanced structure estimation module in the                   attribute anomalies usually have a normal neighborhood topol-
+second channel that facilitates information flow to topolog-
+ically isolated nodes. The third channel is powered by an                      ogy but abnormal node attributes [13], whereas structural
+attribute-mixed curvature, a new indicator that encapsulates both              anomalies display normal node attributes but possess an
+attribute and structural information for discriminating mixed                  atypical neighborhood topology. Mixed anomalies are char-
+anomalies. Moreover, a mutual distillation strategy is intro-                  acterized by irregularities in both attributes and structure.
+duced to encourage communication and collaboration between                     Since collecting ground-truth anomaly node labels is pro-
+the three channels. Extensive experiments demonstrate the
+effectiveness of the proposed TripleAD model against strong                    hibitively expensive, the main challenge of graph anomaly
+baselines.                                                                     detection lies in identifying anomalies in an unsupervised
+                                                                               manner [14].
+  Index Terms—Attribute anomaly, graph anomaly detection,
+graph neural network, mutual distillation, structural anomaly.                    To address this challenge, existing efforts have been devoted
+                                                                               to designing unsupervised graph neural networks (GNNs)
+                                                                               for graph anomaly detection, which primarily fall into two
+                     I. I NTRODUCTION
+                                                                               categories: reconstruction-based methods [15], [16], [17]
+
+A     S THE Internet rapidly evolves, a growing array of
+      anomalies is causing significant disruptions and losses
+                                                                               and contrast-based methods [18], [19], [20]. Reconstruction-
+                                                                               based methods focus on learning node representations by
+                                                                               reconstructing node attributes and structure and identifying
+   Received 28 May 2024; revised 15 January 2025; accepted 7 April 2025.
+Date of publication 30 April 2025; date of current version 4 September 2025.   anomalies through reconstruction errors. On the other hand,
+This work was supported in part by the National Natural Science Foundation     contrast-based methods aim to learn distinguishable node rep-
+of China under Grant 62176043 and Grant 62072077, in part by Henan             resentations by discriminating the agreements between nodes
+Province Science and Technology Development Plan Project under Grant
+252102210096 and Grant 242102210065, in part by the Key Research and           and their neighborhoods.
+Development Program of Henan Province under Grant 251111211300, and               Nevertheless, a significant limitation of current methods is
+in part by the Key Project of Henan Provincial Department of Education for     their reliance on a single, unified model to detect both attribute
+Colleges and Universities under Grant 25A520044. (Corresponding authors:
+Wei Lu; Lifeng Xu.)                                                            and structural anomalies. Specifically, identifying different
+   Chunjing Xiao and Jiahui Lu are with the School of Computer and             types of anomalies at the same time may lead to a “tug-
+Information Engineering, Henan University, Kaifeng 475004, China (e-mail:      of-war” problem, where the optimization for one anomaly
+chunjingxiao@gmail.com; lujh@henu.edu.cn).
+   Xovee Xu and Fan Zhou are with the School of Information and                type may interfere with or diminish the optimization of the
+Software Engineering, University of Electronic Science and Technol-            other, ultimately degrading overall performance. Given that
+ogy of China, Chengdu 610054, China (e-mail: xovee@std.uestc.edu.cn;
+fan.zhou@uestc.edu.cn).
+                                                                               attribute anomalies and structural anomalies represent inher-
+   Tianshu Xie is with the Yangtze Delta Region Institute (Quzhou),            ently different types of data, the endeavor to learn distinct
+University of Electronic Science and Technology of China, Quzhou               representations using a single model can readily induce inter-
+324000, China, and also with Quzhou Affiliated Hospital of Wenzhou             ference between the two tasks [21], [22]. Recent studies also
+Medical University, Quzhou People’s Hospital, Quzhou 324000, China
+(e-mail: tianshuxie@std.uestc.edu.cn).                                         highlighted the interference between attributes and structure
+   Wei Lu and Lifeng Xu are with Quzhou Affiliated Hospital of Wen-            as a key factor in the performance decline of GNNs [23],
+zhou Medical University, Quzhou People’s Hospital, Quzhou 324000, China
+(e-mail: luwei@wmu.edu.cn; qz1109@wmu.edu.cn).
+                                                                               [24]. An illustration of this interference problem is depicted
+   Digital Object Identifier 10.1109/TNNLS.2025.3561172                        in Fig. 1.
+             2162-237X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+16662                                            IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 9, SEPTEMBER 2025
+
+
+
+                                                                                     4) Mutual Distillation: We propose a mutual distillation
+                                                                                         module to promote knowledge exchange between dif-
+                                                                                         ferent channels. It incorporates a triplet distillation loss
+                                                                                         to harness the complementary strengths of the attribute,
+                                                                                         structural, and mixed channels. For the attribute and
+                                                                                         structure estimation modules, we treat each other as
+                                                                                         teacher and student and distill knowledge from the
+                                                                                         teacher to the student. For the mixture estimation mod-
+                                                                                         ule, we consider both attribute and structure estimation
+                                                                                         modules as teachers to guide the reconstruction of the
+Fig. 1. Tug-of-war problem between different anomalies. (a) Single-model                 attribute-mixed curvature. This strategy facilitates a rich
+fsin is faced with the tug-of-war issue when detecting attribute and structural
+anomalies simultaneously. When simultaneously detecting both anomalies, fsin
+                                                                                         knowledge transfer, enhancing the detection capabilities.
+has to compromise the performance of both tasks. (b) This problem can be             Our contributions are summarized as follows.
+addressed by using three dedicated channels for different types of anomalies.
+                                                                                     1) We propose a new TripleAD framework, which contains
+                                                                                         three distinct estimation modules for detecting attribute,
+                                                                                         structure, and mixed anomalies, mitigating the cross-
+   Inspired by the divide-and-conquer strategy widely applied                            anomaly interference.
+in vision [25], [26] and natural language understanding [22],                        2) We design a multiscale attribute estimation module,
+[27], we propose to decompose the graph anomaly detection                                leveraging augmented views at varying propagation
+into three subtasks to overcome the “tug-of-war” problem.                                scales to alleviate GNN over-smoothing and boost
+Specifically, we propose a novel triple-channel graph anomaly                            attribute anomaly detection.
+detection (TripleAD) framework powered by mutual distil-                             3) We devise a link-enhanced structure estimation module,
+lation. In TripleAD, we design three distinct channels to                                which generates an enhanced graph to enable effective
+identify the attribute, structural, and mixed anomalies, respec-                         message passing to isolated nodes and enhances struc-
+tively. Moreover, these channels engage in mutual cooperation                            ture anomaly detection.
+through teacher-student distillation, enhancing training effec-                      4) We propose a curvature-based mixture estimation mod-
+tiveness and interchannel learning. This strategy not only                               ule, which introduces an attribute-mixed curvature to
+mitigates the interference problem but also improves the                                 express the mixture of attribute and structure information
+detection performance for different types of anomalies.                                  for mixed anomaly detection.
+                                                                                     5) We present a mutual distillation module to prompt
+   1) Attribute Channel: This channel employs a multiscale                               knowledge exchange between three anomaly detection
+      attribute estimation module to reconstruct a target node’s                         channels via teacher-student distillation.
+      masked attributes using its neighbors’ attribute and                           Extensive experiments demonstrate the effectiveness of the
+      structural information. By facilitating attribute prop-                     proposed TripleAD framework in comparison to strong base-
+      agation across multiple scales, it effectively captures                     lines.
+      extensive node interactions for attribute reconstruction.
+      The attribute channel relieves the over-smoothing issue                                             II. P RELIMINARIES
+      inherent in the multilayer message passing of GNNs and
+      boosts the detection of attribute anomalies.                                A. Problem Statement
+   2) Structure Channel: We corrupt a target node’s struc-                           Now, we formalize the graph anomaly detection task. For
+      ture by masking its edges and try to reconstruct the                        an attributed graph G = (V, E, X), where V = {v1 , v2 , . . . , vN }
+      masked edges utilizing both attribute and neighborhood                      is a collection of nodes, E = {e1 , e2 , . . . , e M } is a set of edges,
+      information. We devise a link-enhanced structure esti-                      and X = {x1 , x2 , . . . , xN } is the attribute matrix of N nodes. We
+      mation module that generates an enhanced graph to                           have the adjacency matrix A ∈ RN×N containing the structural
+      promote information propagation to the isolated nodes.                      information of both V and E, where Ai j = 1 means there
+      This channel encourages node information sharing and                        exists an edge between nodes vi and v j ; otherwise, Ai j = 0. In
+      improves the detection of structural anomalies.                             this context, the task of a graph anomaly detection model is to
+   3) Mixed Channel: We propose a curvature-based mix-                            rank all the nodes based on computed anomaly scores, thereby
+      ture estimation module, which introduces a new                              placing nodes with significant deviations from the majority of
+      indicator—attribute-mixed curvature—to encapsulate                          reference nodes at higher positions.
+      both attribute and structural information for detecting
+      mixed anomalies. The dual-focus indicator simultane-                        B. Graph Curvature
+      ously considers the strength of pairwise node con-                             Graph curvature quantifies the strength of interaction and
+      nections and the degree of attribute similarity. By                         overlap between the neighbors of a pair of nodes [28], [29],
+      reconstructing the attribute-mixed curvature, the mixed                     [30]. Given a pair of nodes (vi , v j ), its curvature is defined as
+      channel captures anomalous patterns in both node                            follows:
+                                         

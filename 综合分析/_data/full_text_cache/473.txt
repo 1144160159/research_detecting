@@ -1,0 +1,503 @@
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 11, NOVEMBER 2025 8475
+
+ KD-BERT: A Lightweight Knowledge Distillation
+ Bidirectional Encoder Representations from
+ Transformers for IoT Network
+ Intrusion Detection
+ Zhong Cao , Xiaohua Liu, Zheng Zhou , Lei Ding, and Wenli Shang
+
+ Abstract—The Internet of Things (IoT) network intrusion Index Terms—Intrusion detection, bidirectional encoder
+detection (NID) has emerged as a powerful technique representations from Transformer (BERT, Knowledge disfor effectively detecting attacks and protecting internet tillation.
+safety across a wide range of applications. However,
+existing NID models often struggle to achieve good detection performance when deployed in resource-restricted
+environments. To achieve an optimal balance between de- I. INTRODUCTION
+tection performance and computational cost, we propose
+ ITH the proliferation of the Internet of Things (IoT),
+a lightweight knowledge distillation bidirectional encoder
+representations from Transformers (KD-BERT) framework
+for efficient IoT intrusion detection. Specifically, we first
+ W its integration into daily life across industries, such as
+ healthcare, pharmacy, food and beverage, agriculture, electrondevelop a header-payload pairs tokenization method to
+preprocess the raw data. Then, we distill rich knowledge
+ ics, transportation, and retail, has become ubiquitous, harnessing
+from a large pre-trained BERTteacher model into a smaller its immense potential for practical solutions [1], [2], [3], [4],
+BERTstudent model with fewer training parameters. By lever- [5]. However, this widespread adoption has also attracted the
+aging KD-BERT, the BERTteacher can be compressed into the attention of malicious actors, leading to a surge in IoT device
+BERTstudent , reducing the number of parameters from 135 to intrusions and attacks [2]. These attacks have manifested in
+9 M, while maintaining high detection accuracy. To effectively obtain the essential features, we design a data transvarious forms, posing significant risks to users and society.
+formation strategy and fine-tuned the BERTstudent model on For instance, hackers can infiltrate wireless webcams to violate
+several labeled IoT NID tasks. Comprehensive experimental privacy, compromise medical equipment endangering patients’
+results on three public datasets (telemetry datasets, oper- lives, or access sensitive data from children’s smartwatches and
+ating systems datasets and network traffic dataset of IoT vehicle control systems, manipulating their functionality with
+(TON-IoT), Edge-IIoTset, and IoMT2024) have demonstrated
+superior performance compared to state-of-the-art methdire consequences. A recent case underscores this threat, as
+ods. a survey revealed that smart home systems experienced over
+ 12 000 illicit attacks within a week, highlighting the urgent
+ need for robust security measures to safeguard IoT devices and
+ their users. Therefore, it is imperative to develop a lightweight
+ Received 11 March 2025; revised 6 May 2025; accepted 11 June IoT network intrusion detection systems (NIDS) to effectively
+2025. Date of publication 22 July 2025; date of current version 17 Octo- detect and mitigate the emerging cyber threats.
+ber 2025. This work was supported in part by the National Key Research IoT systems present distinct challenges for intrusion detection
+and Development Program of China under Grant 2021YFB2012300, in
+part by the National Natural Science Foundation of China under Grant when compared to traditional networks, primarily due to their
+62173101, in part by the Basic and Applied Basic Research Fund- inherent constraints in computational power, memory capacity,
+ing of Guangdong Province under Grant 2022A1515011558 and Grant battery life, and network bandwidth. Furthermore, the integra-
+2022A1515010865, in part by the Guangzhou Science and Technology
+Funding under Grant 202201020217, in part by the Guangzhou Basic tion of a diverse range of heterogeneous protocols and technoloand Applied Basic Research Topics under Grant 2025A04J3377, and in gies within the same system exacerbates these challenges. Previpart by the Key Laboratory of On-Chip Communication and Sensor Chip ous intrusion detection models primarily relied on datasets with
+of Guangdong Higher Education Institutes under Grant 2023KSYS002.
+Paper no. TII-25-1470. (Zhong Cao and Xiaohua Liu contributed equally manually selected features. However, network traffic feature sets
+to this work.) (Corresponding authors: Zheng Zhou; Wenli Shang.) provided by various edge devices often exhibit inconsistency,
+ Zhong Cao, Xiaohua Liu, Zheng Zhou, and Wenli Shang are with and there is no standardized network traffic feature set in this
+the School of Electronics and Communication Engineering, Guangzhou
+University, Guangzhou 510006, China (e-mail: zhongc@gzhu.edu. field. As a result, feature engineering-based intrusion detection
+cn; 32119500035@e.gzhu.edu.cn; zhouzheng@gzhu.edu.cn; shangwl approaches face significant challenges in manually extracting
+@gzhu.edu.cn). features from the diverse range of protocols and technologies.
+ Lei Ding is with the School of Cyber Security, Guangzhou University,
+Guangzhou 510006, China (e-mail: 1112206007@e.gzhu.edu.cn). In contrast, end-to-end approaches offer a promising direction
+ Digital Object Identifier 10.1109/TII.2025.3582375 for intrusion detection in IoT environments, as they have the
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+ Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+ for more information.
+8476 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 11, NOVEMBER 2025
+
+capability to discover globally optimal solutions without relying process. In this approach, a larger, more complex teacher model
+on manually selected features [6]. This makes them more adept guides the training of a smaller, more compact student model,
+at handling heterogeneous systems and addressing the complexi- enabling the student to mimic the functionality of the teacher.
+ties of IoT environments. However, these methods often require This technique has garnered significant research attention due to
+significant computational resources, making them impractical its remarkable ability to substantially reduce model sizes while
+for direct application to IoT environments [1], [7], [8]. maintaining high levels of accuracy. Wang et al. [10] introduced
+ In this work, we introduce a lightweight knowledge distil- the concept of knowledge distillation into a triple convolulation bidirectional encoder representations from Transformers tional neural network (TCNN) architecture, termed KD-TCNN,
+(KD-BERT) framework specifically tailored for IoT environ- with the aim of deriving optimal features while utilizing a
+ments. Our approach initially learns generalized representations compressed student network. This approach effectively reduces
+from an extensive corpus of unlabeled IoT traffic. Subsequently, resource consumption and model parameters, enabling real-time
+we compress this pretrained model into a lightweight student detection capabilities. Meanwhile, Wang et al. [11] developed
+model, maintaining high performance through the application BERT of Theseus Transformer and PoolFormer, which utilizes
+of knowledge distillation techniques. This student model is then knowledge distillation in conjunction with a Siamese network
+fine-tuned for specific downstream tasks. Notably, we construct dimension reducer and a large teacher model. This method
+our pretraining dataset directly from raw packet-level traffic, successfully compresses an efficient detection model for IoT
+enabling the model to discern inherent patterns within IoT applications, demonstrating the suitability of knowledge distillanetworks. During pretraining, we introduce a same-origin packet tion for IoT NIDS. By enabling model compression, knowledge
+prediction module, which effectively captures the intricate rela- distillation facilitates the practical deployment of NIDS in IoT
+tionships between headers and payloads. Following pretraining, environments.
+we utilize a BERT model consisting of 12 Transformer layers
+as a teacher to guide the training of a more efficient student
+BERT model containing only two Transformer layers. To obtain B. Transformer
+a compact student model, we strategically reduce the number of The Transformer model [12] has achieved remarkable perforself-attention (SA) modules. Finally, KD-BERT fine-tunes its mance on a wide range of natural language processing tasks by
+parameters using a limited amount of task-specific labeled data, incorporating the attention mechanism, distinguishing it from
+ensuring optimal performance for the intended application. The traditional deep learning approaches that rely on recurrent or
+main contributions of this article can be summarized as follows. convolutional layers. Subsequently, BERT [13] further advanced
+ 1) We propose a KD-BERT framework for IoT network in- this field by leveraging a bidirectional Transformer architecture
+ trusion detection, avoiding manual feature extraction and that enables the sharing of attention and parameters, resulting in
+ significantly reducing model computational complexity. outstanding multitask fine-tuning capabilities. These innovative
+ 2) We implement a header-payload pairs tokenization strat- models have found widespread application in IoT NIDS. Ferrag
+ egy for preprocessing raw data, and devise a knowledge et al. [14] introduced a novel approach for cyber threat hunting
+ distillation module to capture essential representations in 6G IoT NIDS, combining the power of generative adversarial
+ from pivotal network layers. In addition, we incorporate networks with a Transformer-based model. Their work focused
+ a data transformation module utilizing a sliding window on threat mining using a new dataset, demonstrating the potenapproach to fine-tune the KD-BERT model, further ob- tial of this methodology. In Ferrag et al. [15] they presented
+ taining representative features and enhancing its perfor- SecurityLLM, which builds upon BERT from the ground up,
+ mance. integrating it with a large language model called FalconLLM for
+ 3) We conduct comprehensive comparison experiments with enhanced threat analysis. Furthermore, they introduced PPFLE,
+ state-of-the-art methods on real network security datasets a structured and private format for representing network data,
+ (telemetry datasets, operating systems datasets and net- addressing the challenges posed by nontextual data for language
+ work traffic dataset of IoT (TON-IoT), Edge-IIoTset, models. Basset et al. [16] proposed federated deep learningand IoMT2024) to demonstrate the superiority and high- based intrusion detection system (FED-IDS), a framework that
+ efficiency of KD-BERT. utilizes federated deep learning for collaborative detection of
+ The rest of this article is organized as follows. Section II cyberattacks. Their approach incorporates an improved Transintroduces the related works of this article. In Section III, we former model to extract features for edge node detection, while
+propose the KD-BERT framework for IoT network intrusion ensuring data privacy is preserved.
+detection. In Section IV, we evaluate the performance of the Furthermore, several studies have delved into the application
+proposed approach and compare it with the state-of-the-art of end-to-end models grounded in Transformer architectures and
+methods, demonstrating the superiority and effectiveness of our their derivatives, directly processing raw traffic data. He et al.
+approach. Finally, we conclude this article in Section V. [17] introduced a payload encoding representation from Transformer, leveraging dynamic word embedding techniques to au-
+ II. RELATED WORK tonomously discern the salient features within traffic payloads.
+ Similarly, Lin et al. [18] presented encrypted traffic bidirectional
+A. Knowledge Distillation
+ encoder representation from Transformer (ET-BERT), a ground-
+ Knowledge distillation [9] is a highly effective technique for breaking traffic representation model that introduces a tailored
+compressing deep learning models through a transfer learning traffic representation method alongside two traffic-oriented
+CAO et al.: KD-BERT: A LIGHTWEIGHT KD-BERT FOR IOT NETWORK INTRUSION DETECTION 8477
+
+Fig. 1. Overall framework of KD-BERT for IoT network intrusion detection
+
+self-supervised pretraining tasks: Masked BURST Model and intrusion detection and efficiently capturing the essential char-
+Same-origin BURST Prediction. acteristics of IoT traffic, we propose the KD-BERT model as
+ Previous research has demonstrated significant advancements illustrated in Fig. 1.
+in applying knowledge distillation techniques and Transformer 1) The header-payload pairs tokenization module is firstly
+models for IoT network intrusion detection and traffic analysis. designed to preprocess the raw traffic data and elevate the
+However, most methods rely on preprocessed datasets with KD-BERT model’s proficiency in comprehending heterogemanually crafted features, which limits their generalization ca- neous IoT data features. 2) The masked packet modeling and
+pabilities in diverse IoT environments. Due to the constrained same-origin packet prediction pretraining tasks then fortify the
+computational resources prevalent in IoT environments, end- KD-BERT model’s understanding of the intricate relationships
+to-end methodologies cannot be seamlessly integrated into IoT between IoT packet datagrams. 3) Furthermore, the knowledge
+NIDS without appropriate adaptations. Therefore, it is nec- distillation module is integrated into the BERT model to address
+essary to develop a lightweight, efficient, and heterogeneous the constraints of limited resources in IoT environments, yielddata-capable intrusion detection model within the context of IoT ing a resource-efficient KD-BERT student model. 4) Finally,
+security. we introduce a refined fine-tuning strategy utilizing window
+ sequences, enabling the KD-BERT model to better acclimate
+ III. METHODOLOGY to the complexities of IoT environments.
+A. Overall Model Architecture
+ We introduce KD-BERT, as shown in Fig. 1, an innovative
+framework that harnesses knowledge distillation to enhance B. Header-Payload Pairs Tokenization
+BERT, empowering efficient and real-time network intrusion Given the inherent challenges of IoT traffic, which lack clear
+detection tailored for Industry 4.0 environments amidst compu- semantic units and human-comprehensible content compared
+tational constraints and IoT device heterogeneity. to natural language and imagery, it significantly diverges from
+ IoT raw traffic data typically comprise unencrypted data- these domains. Furthermore, IoT systems often integrate diverse
+grams, rich in information but inherently challenging to interpret and heterogeneous protocols and technologies within the same
+compared to curated IoT network data. To mitigate the model’s ecosystem [7]. To address these complexities and enable our
+complexity while leveraging the raw IoT network traffic for model to broadly learn the generalized representation of IoT
+8478 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 11, NOVEMBER 2025
+
+traffic during the pretraining phase, we devise an enhanced traffic classifier that meticulously examines the relationship between
+representation framework. header and payload. This classifier is tasked with distinguishing
+ To refine our approach, we initially segment the traffic into whether the header and payload belong to the same packet or
+discrete packets, each of which is further divided into a header originate from separate ones. To ensure robustness and generaland payload section. For traffic that solely comprises headers izability, we introduce a balanced sampling strategy where, for
+or adheres to protocols, such as Bluetooth, we designate the each packet formation, there is an equal chance (50%) that the
+entire packet as the header and augment the payload section payload is sourced from the same packet as the header or from
+with a dedicated [PAD] token to maintain a consistent structure. a distinct packet. The label y assigned to each input sequence
+In cases where the payload exceeds 80 bytes, we truncate it succinctly indicates this origin congruence, facilitating precise
+at this threshold to ensure efficient processing. To mitigate model training and evaluation. The loss function is defined as
+potential interference and enhance anonymity, we implement follows:
+a series of sanitization measures. Specifically, we replace the 
+ n
+original IP addresses with randomly generated ones, reset all LSPP = − log (P (yj )|Bj ; θ) (2)
+port numbers to zero, and strip the Ethernet headers from the j=1
+packets. These steps not only reduce unnecessary information
+ where θ are the trainable parameters and Bj represents the
+but also contribute to preserving the privacy of the data sources.
+ jth header–payload pair in the training data. yj represents the
+ We tokenize raw IoT traffic datagrams into a sequence of units,
+ definitive label that indicates whether the two constituent parts
+each comprising two adjacent hexadecimal bytes. These tokens
+ of the jth sentence pair are indeed corresponding to each other.
+are then represented using byte-pair Encoding, with a range of 0
+ P designates the model’s predicted probability for the label of
+to 65535, supporting a maximum vocabulary size of 65 536. To
+ the jth pair to be yj .
+enhance pretraining tasks, we incorporate special tokens: [CLS]
+ Continue-pretraining: Previous research has demonstrated
+as the initial token in each sequence, [SEP] to delineate headers
+ that starting from scratch when training BERT on domainfrom payloads, [PAD] for padding to meet fixed minimum length
+ specific corpora, such as the biomedical domain, and utilizing
+requirements, and [MASK] for context-based learning during
+ a custom vocabulary tailored to that space can significantly
+pretraining.
+ improve model’s performance for the tasks within that domain
+ Finally, a comprehensive tag representation is constructed
+ [19]. The diversity of IoT systems and protocols results in vastly
+utilizing three distinct word encodings: token embedding, posidifferent network traffic patterns, which can be further altered
+tion embedding, and segment embedding, to serve as the input
+ by system upgrades. Consequently, a single dataset may not aderepresentation for pretraining, which are depicted in Fig. 1.
+ quately represent the full spectrum of traffic types, necessitating
+Following N iterations of Transformer encoding, where N varies
+ a more nuanced approach to data collection and analysis. To
+between the student and teacher models, the refined final token
+ address these challenges, we incorporate continue-pretraining
+embedding is derived.
+ into our methodology. We refine the teacher model, initially pretrained on a foundational dataset, with a specialized new dataset.
+C. KD-BERT This approach facilitates adaptability to new environments and
+ Masked packet mode: During this phase, a random masking evolving systems, ensuring representation quality is preserved
+process is applied to the input sequence tokens, with a probability even with limited data, offering an advantage over training from
+of 15%. Of the selected tokens, 80% are replaced with the scratch with small datasets.
+[MASK] token, 10% are substituted with a random token, and BERT distillation: As shown in Fig. 2, we present a refined
+the remaining 10% are left unchanged. This strategy aims to BERT distillation framework tailored for efficiently distilling
+capture the intricate relationships within binary datagrams while knowledge into student models of any size. Given a teacher
+fostering the model’s ability to comprehend and generalize from model with N Transformer layers, we obtain a student model by
+partially obscured data. The objective function is defined as adaptively learning M layers from the teacher model to facilitate
+follows: targeted knowledge distillation (N > M ). There is a function
+ n = g(m), which is defined as the mapping between the student
+ 
+ k
+ LMPM = − log (P (MASKi = tokeni |X̄; θ)) (1) layers and the teacher layers. The g(m)th layer of the teacher
+ i=1 model is learned by the mth layer of the student model. We
+ use g(m) = 6 × m as the layer mapping function, so student
+where the probability P is modeled by the Transformer encoder
+ model learns from every six layers of teacher model. Formally,
+equipped with trainable parameters θ. X̄ represents the encoded
+ the student model optimizes the following objective function to
+representation of the masked input X, and MASKi indicates the
+ minimize the distillation loss:
+masking token at position i in the sequence.
+ Same-origin packet prediction: In the diverse landscape of 
+ M
+
+IoT protocols, understanding the overarching traffic patterns and Lmodel = λm LTrans (3)
+ m=1
+intrapacket connections is paramount. To achieve this, we emphasize the intimate interplay between the header and payload where LTrans denotes the loss function of a Transformer layer.
+components within individual packets. To this end, we adopt λm denotes the hyperparameter that represent the importance of
+the same-origin packet prediction approach, leveraging a binary distillation at the mth layer of the Transformer.
+CAO et al.: KD-BERT: A LIGHTWEIGHT KD-BERT FOR IOT NETWORK INTRUSION DETECTION 8479
+
+Fig. 2. Detailed structure of knowledge distillation on Transformer networks
+
+ The multihead attention (MHA) and hidden states-based dis- D. Fine-tuning using Data Transformation
+tillation are included in the proposed Transformer-layer distil-
+ During pretraining, the model is solely trained on unlabeled
+lation. The complexity of the MHA mechanism is O(HN 2 D),
+ byte-level data-gram traffic, fostering its ability to acquire genwhere N represents the length of the input sequence, D denotes
+ eralized representations of network traffic. The pretrained model
+the hidden-layer dimension, and H represents the number of
+ can be efficiently leveraged for various downstream tasks. Durheads. To further reduce the complexity of BERT, we simultaneing fine-tuning, a minimal set of labeled traffic is utilized to
+ously reduce the number of Transformer layers and the number
+ adapt the pretrained model for specific downstream tasks. Prior
+of SA in MHA module. The student model adjusts its MHA
+ to fine-tuning, traffic data must be converted into datagram
+parameters to closely mimic the MHA parameters of the teacher
+ byte tokens. The [CLS] from the pretrained model’s output
+model, which are defined as follows:
+ encapsulates the entire input traffic’s representation.
+  
+ LMHA = MSE M S WM , M T (4) Given the shared architecture between pretraining and fine-
+ 
+ tuning, we refine all parameters by fine-tuning the pretrained
+where the matrices M S ∈ Rl×d and M T ∈ Rl×d refer to the model with known traffic data representations. For intrusion de-
+MHA parameters of student and teacher networks, respectively. tection in IoT networks, where resources are scarce and real-time
+The scalar values d and d denote the hidden size of teacher and processing is crucial, a multiclass classifier leverages the [CLS]
+student models (d < d), respectively. In our work, we utilize representation from the output layer to classify potential threats.
+the ratio d = 3d to derive a more concise student network. To tackle these constraints, we propose an innovative fine-tuning
+mse(∗) means the mean squared error function. The matrix approach that utilizes a sliding window as the input mechanism,
+ 
+WM ∈ Rd ×d serves as a learnable linear transformation, en- enabling efficient and timely analysis of data streams. The
+abling the student network’s multihead attention weights to align sliding window approach of fine-tuning, depicted in Fig. 1,
+with the space of teacher network. efficiently processes traffic data by maintaining a contextual
+ Apart from the MHA based distillation, we also distill knowl- window. This approach requires only a minimal number of packedge from the output of Transformer layers using the following ets (K = 5) to form a window sequence, significantly reducing
+objective function: computational load and ensuring real-time performance. We
+   utilize a continuous stream of K packets as input and extract
+ LHidn = MSE H S WH , H T (5)
+ window sequences with a stride of S = 1. Given that packets
+ 
+where the matrices H S ∈ Rl×d and H T ∈ Rl×d refer to the within a window sequence originate from the same known traffic
+hidden parameters of student and teacher networks, respectively. dataset, each sequence is assigned a corresponding label for
+ 
+The matrix WH ∈ Rd ×d serves as a learnable linear transfor- accurate analysis.
+mation that maps the hidden state of the student network into
+the same dimensional space as the hidden state of the teacher
+network. IV. EXPERIMENTS
+ Using the above distillation objective functions [i.e., (4) and A. Experimental Setup
+(5)], the final distillation loss of the matching Transformer-layer,
+ 1) Datasets: The experiment is conducted on three realdenoted as LTrans , in the network between the student and the
+ world IoT network traffic datasets: TON-IoT [20], Edge-IIoTset
+teacher models can be expressed as follows:
+ [21], and IoMT2024 [22] to validate the performance of the
+ LTrans = LMHA + LHidn . (6) proposed method. The TON-IoT dataset integrates IoT and
+8480 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 11, NOVEMBER 2025
+
+ TABLE I TABLE II
+ MULTICLASSIFICATION RESULTS OF TON-IOT MULTICLASSIFICATION RESULTS OF EDGE-IIOTSET
+
+IIoT data, featuring ten labeled network data types like Normal, Scanning, denial of service/distributed denial of service
+(DoS/DDoS), Ransomware, etc. For our experiment, we chose TABLE III
+a subset with the first pcap file from each attack type. Edge- MULTICLASSIFICATION RESULTS OF IOMT2024
+IIoTset, a comprehensive IoT/IIoT cybersecurity dataset, simulates 14 attack types under five threat categories: DoS/DDoS,
+Information gathering, man-in-the-middle (MITM), Injection,
+and Malware attacks. IoMT2024, a medical device benchmark
+dataset, covers Wi-Fi, message queuing telemetry transport
+(MQTT), and Bluetooth protocols in healthcare. It categorizes
+attacks into five groups: DDoS, DoS, Reconnaissance, MQTTrelated, Spoofing with 18 subtypes, and Bluetooth DoS. We use
+a subset (20%) of IoMT2024 for continue-pretraining.
+ 2) Data Preprocessing: We replace the IP address with a
+randomly generated one, reset the port number to 0, and strip the
+Ethernet header of the packet to eliminate potential interference.
+As depicted in Fig. 1, we utilize raw traffic data as input for
+both pretraining and fine-tuning phases. During fine-tuning, we
+employ a sliding window algorithm to create sequences from
+the dataset, randomly selecting 5000 sequences per class. Each
+dataset is subsequently partitioned into training, validation, and
+test sets in an 8:1:1 ratio. During the fine-tuning phase, the
+validation set is utilized to assess the model’s performance and
+facilitate the selection of optimal hyperparameters.
+ 3) Implementation Details: In pretraining, we optimize with
+batch size 32, learning rate 2e-5, 500k steps, and a 0.1 warm-up
+ and F1-score (F 1) [24]. Meanwhile, we calculate their macro
+ratio. For knowledge distillation, we employ a compact student
+ average to obtain an overall evaluation [25].
+model comprising two layers, with a hidden dimension of 128,
+a feedforward size of 512, and two attention heads, with 9
+million parameters. The teacher model BERTteacher (N =12, B. Experimental Results and Comparative Analysis
+d=768, di =3072, and h=12) contains 135 million parameters. Tables I–III present the multiclassification results of the com-
+The learning weight λ for each layer is set to 1 as each layer parison models, evaluated on the TON-IoT, Edge-IIoTset, and
+contributes critical linguistic knowledge to the student model. IoMT2024 datasets. The teacher model achieved an impressive
+During the fine-tuning phase, we adopt a base learning rate of overall accuracy ranging from 96.26% to 99.38%, demonstrating
+2 × 10−5 with the AdamW optimizer for ten epochs, maintain- its superiority. Remarkably, the student model, with just 6%
+ing a batch size of 32 and a dropout rate of 0.5 for effective of the teacher’s parameters, maintains comparable performance
+regularization. All experiments are conducted using NVIDIA on TON-IoT and Edge-IIoTset datasets, exhibiting a minor
+Corporation device 2204 GPU, Pytorch 2.1.2, and universal 5.06% loss in accuracy on IoMT2024. This underscores the
+encoder representations framework [23]. effectiveness of the knowledge distillation and the efficiency
+ 4) Evaluation Measures: To avoid the result deviation of the student model. As depicted in Fig. 3, the student
+caused by data imbalance, we evaluate the model through four model’s confusion matrix for IoMT2024 indicates difficulties in
+typical metrics: Accuracy (Acc), Precision (Pr), Recall (Rc), distinguishing between “DDoS synchronize sequence numbers
+CAO et al.: KD-BERT: A LIGHTWEIGHT KD-BERT FOR IOT NETWORK INTRUSION DETECTION 8481
+
+ our model achieves robust performance across datasets, surpassing classical methods that rely on manual feature engineering.
+ DeepPacket and DeepAK-IoT perform well on specific datasets
+ but show inconsistent results across diverse IoT traffic scenarios. Deep-Packet, designed for encrypted traffic classification,
+ lacks specialized mechanisms to handle the heterogeneity of
+ IoT network datasets and the nuanced features of diverse IoT
+ protocols. DeepAK-IoT relies on manually engineered features
+ for intrusion detection, which may overlook critical latent patterns or semantic correlations in data, leading to suboptimal
+ results when dataset characteristics deviate from its predefined
+ feature assumptions. In contrast, the proposed KD-BERT addresses these limitations by integrating adaptive feature learning
+ and domain-specific complexity modeling, obtaining robust,
+ dataset-agnostic performance across varied IoT traffic environments. Our approach can obtain an optimal tradeoff between
+ performance and compactness.
+
+Fig. 3. Confusion matrix of student model on IoMT2024
+ C. Ablation Study
+ To assess the model components, we perform ablation studies utilizing the Edge-IIoTset dataset. As shown in Table V,
+ “HP” denotes removes header–payload pair tokenization strategy; “SW” means the sliding window technique; “KD” indicates the knowledge distillation module; “LMHA ” and “LHidn ,”
+ respectively, represent the two objective functions in knowledge distillation; “PT” represents pretraining task. The student
+ model, featuring fewer parameters, outperforms both the teacher
+ and nondistilled models, showcasing exceptional performance.
+ These two distillation objective functions jointly contribute to
+ distillation performance. The real-time performance of the student model is 0.034 ms per sequence on the GPU and 1.927 ms
+ per sequence on the CPU. The removal of the sliding window notably impairs performance, highlighting its critical role in captur-
+Fig. 4. Loss Curves: Pretraining with and without continue-pretraining ing sequence dependencies. The header-payload pairs tokenizain the IoMT2024 dataset tion strategy enhances feature learning, while the pretraining
+ approach initializes model parameters to bolster generalization
+ capabilities. To evaluate the efficacy of continue-pretraining, we
+(SYN)” and “DoS SYN,” as well as “DDoS transmission control
+ compare three approaches on the IoMT2024 dataset: training a
+protocol (TCP)” and “DoS TCP” attacks. The key distinction
+ new BERT model from scratch, training a new BERT model
+between DDoS and DoS lies in the number of sources: DDoS
+ from a mixed dataset containing the three datasets used, and
+involves multiple sources, whereas DoS originates from a single
+ continuing to train an Edge-IIoTset-pretrained BERT model.
+or limited number of sources, both aiming to deny network
+ As demonstrated in Table VI and Fig. 4, continue-pretraining
+resources. Anonymizing IP addresses during preprocessing,
+ outperforms training from scratch by 4.79% and outperforms
+while protecting privacy, may have inadvertently hindered the
+ training on the mixed dataset by 4.95% in accuracy, while also
+model’s ability to accurately differentiate these attack types on
+ achieving faster loss convergence. In scenarios with limited
+IoMT2024.
+ IoMT2024 data, training from scratch encounters challenges
+ To validate the efficacy of our models, we compare them
+ due to random initialization, whereas continue-pretraining efwith several classical algorithms, specifically decision tree (DT),
+ fectively leverages existing knowledge to efficiently adapt to
+random forest (RF), support vector machine (SVM), k-nearest
+ the new domain.
+neighbor (KNN), and E-GraphSAGE [26], alongside some
+state-of-the-art methods, such as Generative AI [14], Security-
+BERT [15], FED-IDS [16], ET-BERT [18], Bayesian reinforce- D. Discussion
+ment learning-based explainable threat detection model (BRL- The proposed model avoids manual feature extraction and
+ETDM) [27], deep transfer learning (DTL) [28], DeepAK-IoT the problem of input dimension inconsistencies by directly
+[29], and Deep-Packet [30]. As presented in Table IV, the leveraging raw network traffic as input. To address the dyproposed teacher model demonstrates superior performance, namic nature of IoT network data caused by evolving scenarios
+achieving the F 1 score of 0.9628, 0.9905, and 0.9760 across all and technological advancements, we implement the continuethree datasets. Notably, the student model closely matches the pretraining strategy. Furthermore, knowledge distillation signifiteacher model’s performance. The comparison results show that cantly reduces model parameters and computational complexity
+8482 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 11, NOVEMBER 2025
+
+ TABLE IV
+ COMPARISON RESULTS ON TON-IOT, EDGE-IIOTSET, AND IOMT2024 DATASETS
+
+ TABLE V module contributed to model performance. The successful ap-
+ ABLATION STUDY OF THE PROPOSED METHODS
+ plication of KD-BERT demonstrates the significant potential of
+ knowledge distillation in IoT NIDS, while also highlighting its
+ drawback: performance degradation. Future work will focus on
+ exploring ways to minimize performance loss while improving
+ the generalization capability of the student model.
+
+ REFERENCES
+ [1] L. D. Xu, W. He, and S. Li, “Internet of things in industries: A survey,”
+ IEEE Trans. Ind. Inform., vol. 10, no. 4, pp. 2233–2243, Nov. 2014.
+ [2] Y. Zhang, Y. Wu, and X. Huang, “Toward transferable adversarial attacks
+ against autoencoder-based network intrusion detectors,” IEEE Trans. Ind.
+ Inform., vol. 20, no. 12, pp. 13863–13872, Dec. 2024.
+ TABLE VI [3] M. Lin, K. Yang, Z. Yu, Y. Shi, and C. L. P. Chen, “Hybrid ensemble
+ ABLATION STUDY OF CONTINUE-PRETRAINING MODULE broad learning system for network intrusion detection,” IEEE Trans. Ind.
+ Inform., vol. 20, no. 4, pp. 5622–5633, Apr. 2024.
+ [4] W. Zhou, Y. Jia, A. Peng, Y. Zhang, and P. Liu, “The effect of IoT
+ new features on security and privacy: New threats, existing solutions,
+ and challenges yet to be solved,” IEEE Internet things J., vol. 6, no. 2,
+ pp. 1606–1616, Apr. 2018.
+ [5] Z. Zhou, Y. Chen, and Y. Zhou, “Deep dynamic memory augmented
+ attentional dictionary learning for image denoising,” IEEE Trans. Circuits
+ Syst. Video Technol., vol. 33, no. 9, pp. 4784–4797, Sep. 2023.
+ [6] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end encrypted
+ traffic classification with one-dimensional convolution neural networks,”
+while maintaining competitive performance on public datasets. in Proc. IEEE Int. Conf. Intell. Secur. Inform., Beijing, China, 2017,
+However, this compression introduces performance tradeoffs, pp. 43–48.
+ [7] N. Chaabouni, M. Mosbah, A. Zemmari, C. Sauvignac, and P. Faruki, “Netparticularly in fine-grained attack detection. For instance, the work intrusion detection for iot security based on learning techniques,”
+model exhibits relatively low recognition accuracy for certain IEEE Commun. Surv. Tut., vol. 21, no. 3, pp. 2671–2701, 2019.
+DDoS/DoS attacks in the IoMT2024 dataset. [8] S. Roy, J. Li, B.-J. Choi, and Y. Bai, “A lightweight supervised intrusion
+ detection mechanism for IoT networks,” Future Gener. Comput. Syst.,
+ vol. 127, pp. 276–285, 2022.
+ V. CONCLUSION [9] X. Jiao et al., “TinyBERT: Distilling bert for natural language understanding,” in Findings of the Association for Computational Linguistics, 2020,
+ In this article, we propose KD-BERT, an end-to-end IoT pp. 4163–4174.
+ [10] Z. Wang, Z. Li, D. He, and S. Chan, “A lightweight approach for network
+intrusion detection method designed to operate efficiently in intrusion detection in industrial cyber-physical systems based on knowlresource-constrained IoT environments. By leveraging raw traf- edge distillation and deep metric learning,” Expert Syst. Appl., vol. 206,
+fic data and knowledge distillation, our approach eliminates 2022, Art. no. 117671.
+ [11] Z. Wang, J. Li, S. Yang, X. Luo, D. Li, and S. Mahmoodi, “A lightweight
+the need for extensive feature engineering and makes it both IoT intrusion detection model based on improved BERT-of-Theseus,”
+lightweight and adaptable. We evaluate the effectiveness of the Expert Syst. Appl., vol. 238, 2024, Art. no. 122045.
+proposed method on three public datasets (TON-IoT, Edge- [12] W. Xiao, J. Su, Y. Chen, and G. Cao, “Cross-scale-guided fusion transformer for disaster assessment using satellite imagery,” IEEE Trans.
+IIoTset, and IoMT2024). The experimental results demonstrate Geosci. Remote Sens., vol. 61, 2023, Art. no. 4600512.
+that our model achieves good detection performance across [13] N. Liu, Q. Hu, H. Xu, X. Xu, and M. Chen, “Med-BERT: A pretraining
+the three datasets and has strong generalization ability. Further framework for medical records named entity recognition,” IEEE Trans.
+ Ind. Inform., vol. 18, no. 8, pp. 5600–5608, 2022.
+analysis of the ablation study results shows that each modified
+CAO et al.: KD-BERT: A LIGHTWEIGHT KD-BERT FOR IOT NETWORK INTRUSION DETECTION 8483
+
+[14] M. A. Ferrag, M. Debbah, and M. Al-Hawawreh, “Generative AI for cyber Xiaohua Liu was born in Guangdong, China in
+ threat-hunting in 6G-enabled IoT networks,” in Proc. IEEE Int. Symp. 2004. He is currently working toward the un-
+ Cluster Cloud Internet Comput. Workshops, 2023, pp. 16–25. dergraduation degree in electronic information
+[15] M. A. Ferrag et al., Revolutionizing cyber threat detection with large engineering with the School of Electronics and
+ language models: A privacy-preserving bert-based lightweight model for Communication Engineering, Guangzhou Uniiot/iiot devices. Piscataway, NJ, USA: IEEE Access, 2024. versity, Guangzhou, China.
+[16] M. Abdel-Basset, N. Moustafa, H. Hawash, I. Razzak, K. M. Sallam, and His research intersets include artificial intelli-
+ O. M. Elkomy, “Federated intrusion detection in blockchain-based smart gence, machine learning, industrial control systransportation systems,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 3, tem, and computer vision.
+ pp. 2523–2537, 2021.
+[17] H. Y. He, Z. G. Yang, and X. N. Chen, “PERT: Payload encoding representation from transformer for encrypted traffic classification,” in Proc. ITU
+ Kaleidoscope: Ind.-Driven Digit. Transformation, 2020, pp. 1–8.
+[18] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+ contextualized datagram representation with pre-training transformers for
+ encrypted traffic classification,” in Proc. ACM Web Conf., Berlin, Germany,
+ 2022, pp. 633–642.
+[19] J. Lee et al., “BioBERT: A pre-trained biomedical language representation model for biomedical text mining,” Bioinformatics, vol. 36, no. 4, Zheng Zhou received the B.S. degree in elecpp. 1234–1240, 2020. tronic science and technology from the Univer-
+[20] N. Moustafa, “A new distributed architecture for evaluating AI-based sity of Electronic Science and Technology of
+ security systems at the edge: Network TON_IoT datasets,” Sustain. Cities China, Chengdu, China, in 2017, and the Ph.D.
+ Soc., vol. 72, 2021, Art. no. 102994. degree in computer science from the University
+[21] F. Li, J. Lin, Y. Wang, Y. Du, and H. Han, “Distributed hierarchical tempo- of Macau, Macau, China, in 2023.
+ ral graph learning for communication-efficient high-dimensional industrial He is currently a Lecturer with the School
+ iot modeling,” IEEE Internet Things J., vol. 11, no. 17, pp. 28578–28590, of Electronics and Communication Engineering,
+ 2024. Guangzhou University, Guangzhou, China. His
+[22] S. Dadkhah, E. C. P. Neto, R. Ferreira, R. C. Molokwu, S. Sadeghi, and A. research interests include computer vision, im-
+ Ghorbani, “Ciciomt2024: A benchmark dataset for multi-protocol security age processing, feature extraction, and deep
+ assessment in iomt,” Internet Things, vol. 28, 2024, Art. no. 101351. learning.
+[23] Z. Zhao et al., “UER: An open-source toolkit for pre-training models,” in Proc. Conf. Empirical Methods Natural Lang. Process., 2019,
+ pp. 241–246.
+[24] Z. Zhou, Y. Wu, and Y. Zhou, “Consistent arbitrary style transfer using
+ consistency training and self-attention module,” IEEE Trans. Neural Netw.
+ Learn. Syst., vol. 35, no. 11, pp. 16845–16856, Nov. 2024.
+[25] Z. Zhou, Y. Chen, and Y. Zhou, “Simultaneously learning deep quaternion reconstruction and noise convolutional dictionary for color image
+ denoising,” IEEE Trans. Emerg. Topics Comput. Intell., vol. 9, no. 2,
+ pp. 1766–1779, Apr. 2025.
+ Lei Ding was born in Tianjin, China, in 1995.
+[26] W. W. Lo, S. Layeghy, M. Sarhan, M. Gallagher, and M. Portmann, “E- He is currently working toward the Ph.D. degraphsage: A graph neural network based intrusion detection system for
+ gree in cyberspace security with the School
+ iot,” in Proc. IEEE Netw. Operations Manage. Symp., Berlin, Germany,
+ of Cyberspace Security, Guangzhou University,
+ 2022, pp. 1–9.
+ Guangzhou, China.
+[27] A. K. Dey, G. P. Gupta, and S. P. Sahu, “BRL-ETDM: Bayesian reinforce- His research focuses on include industrial
+ ment learning-based explainable threat detection model for industry 5.0
+ control system, information security, computanetwork,” Cluster Comput., vol. 27, pp. 8243–8268, 2024.
+ tional intelligence, and machine learning.
+[28] S. T. Mehedi, A. Anwar, Z. Rahman, K. Ahmed, and R. Islam, “Dependable intrusion detection system for iot: A deep transfer learning based
+ approach,” IEEE Trans. Ind. Informat., vol. 19, no. 1, pp. 1006–1017,
+ 2022.
+[29] W. Ding, M. Abdel-Basset, and R. Mohamed, “DeepAK-IoT: An effective
+ deep learning model for cyberattack detection in IoT networks,” Inf. Sci.,
+ vol. 634, pp. 157–171, 2023.
+[30] A. Thakkar and R. Lohiya, “Attack classification of imbalanced intrusion
+ data for IoT network using ensemble learning-based deep neural network,”
+ IEEE Internet Things J., vol. 10, no. 13, pp. 11888–11895, Jul. 2023.
+ Wenli Shang was born in Heilongjiang, China,
+ in 1974. He received the M.S. degree in me-
+ Zhong Cao received the M.S. degree in soft- chanical design and theory from the School
+ ware and theory from the School of Computer of Mechanical and Automation Engineering,
+ Science and Educational Software, Guangzhou Northeastern University, Boston, MA, USA, in
+ University, Guangzhou, China, in 2005, and the 2002, and the Ph.D. degree in mechanical and
+ Ph.D. degree in detection technology and au- electronic engineering from the Laboratory of Intomation equipment from the School of En- dustrial Control Network and System, Shenyang
+ ergy Science and Engineering, University of Institute of Automation, Chinese Academy of
+ Electronic Science and Technology of China, Sciences, Beijing, China, in 2005.
+ Chengdu, China, in 2015. From 2005 to 2019, he was an Assistant Re-
+ From December 2016 to December 2017, he searcher, Associate Researcher, and Researcher with the Shenyang
+ was a Visiting Scholar with the Department of Institute of Automation, Chinese Academy of Sciences. Since 2020, he
+Civil and Environmental Engineering, University of North Carolina at has been a Professor with Guangzhou University, Guangzhou, China.
+Charlotte, Charlotte, NC, USA. He is currently an Associate Profes- His research interests include industrial control system information sesor with the School of Electronics and Communication Engineering, curity, computational intelligence and machine learning, and edge com-
+Guangzhou University. His research interests include artificial intelli- puting.
+gence, machine learning, industrial control system, and computer vision.

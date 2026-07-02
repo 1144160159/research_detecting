@@ -1,0 +1,1156 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [435] Federated Edge Intelligence for Enhanced Security in Consumer Intermittent Healthcare Devices Using Adversarial Examples
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：435
+题名：Federated Edge Intelligence for Enhanced Security in Consumer Intermittent Healthcare Devices Using Adversarial Examples
+年份：2024
+DOI：10.1109/tce.2024.3511615
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2024.3511615.pdf
+已有粗分类：联邦学习、隐私保护与分布式协同
+二级关联：IoT、车联网、工业互联网与边缘安全
+相关性：中相关，分数 9
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\435.txt
+- 原始字符数：51299
+- 本次发送字符数：51299
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+4574
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+Federated Edge Intelligence for Enhanced Security
+in Consumer Intermittent Healthcare Devices Using
+Adversarial Examples
+Farhan Ullah , Leonardo Mostarda , Diletta Cacciagrano , Mohammed J. F. Alenazi , Senior Member, IEEE,
+Chien-Ming Chen , Senior Member, IEEE, and Saru Kumari , Senior Member, IEEE
+Abstract—Modern consumer electronics that integrate the
+concept of connected personal medical devices are known as
+Smart Healthcare Systems (SHS). The SHS utilized healthcare
+devices and edge computing for data capture, transmission via
+smart devices, analysis, and the delivery of healthcare services.
+Cyberattacks on consumer medical devices in the healthcare
+sector are becoming increasingly common. Technological frameworks like edge computing can act as an intermediary layer
+between the cloud and SHS, reducing the burden and enhancing
+data security and privacy. In this study, we proposed a novel edge
+intelligence approach for improving medical device security that
+employs Federated Learning (FL) and network traffic adversarial
+examples. First, we generated a distinctive dataset using imagebased features extracted from network traffic bytes. Secondly,
+due to the intermittent behavior of clients, the dataset received
+from each client may be imbalanced, which can negatively
+affect performance. Third, adversarial examples are generated to
+assess the robustness of datasets, utilizing four distinct types of
+adversarial attack methods that introduce perturbations into the
+input data. Finally, the cooperative FL architecture ensured data
+security, privacy, and edge intelligence. The proposed method
+is analyzed using two standard datasets, CICIoMT2024 and
+Edge-IIoT, achieving 97.45% and 96.7% detection accuracy,
+respectively.
+Index Terms—Consumer healthcare devices, security and privacy, edge computing, federated learning, adversarial attacks,
+network traffic.
+
+I. I NTRODUCTION
+HE HEALTHCARE industry is undergoing a paradigm
+shift due to integrating modern consumer electronics
+and technologies with medical devices to enhance patient
+
+T
+
+Received 26 June 2024; revised 23 August 2024, 8 October 2024, 16
+October 2024, and 2 December 2024; accepted 2 December 2024. Date of publication 4 December 2024; date of current version 14 August 2025. This work
+was supported by the Researcher Supporting Project, King Saud University,
+Riyadh, Saudi Arabia, under Grant RSPD2024R582. (Corresponding author:
+Saru Kumari.)
+Farhan Ullah and Diletta Cacciagrano are with the Division of
+Computer Science, University of Camerino, 62032 Camerino, Italy (e-mail:
+farhan.ullah@unicam.it; diletta.cacciagrano@unicam.it).
+Leonardo Mostarda is with the Department of Mathematics and
+Computer Science, University of Perugia, 06123 Perugia, Italy
+(e-mail: leonardo.mostarda@unipg.it).
+Mohammed J. F. Alenazi is with the Department of Computer Engineering,
+College of Computer and Information Sciences, King Saud University, Riyadh
+11451, Saudi Arabia (e-mail: mjalenazi@ksu.edu.sa).
+Chien-Ming Chen is with the School of Artificial Intelligence (School
+of Future Technology), Nanjing University of Information Science and
+Technology, Nanjing 211544, China (e-mail: chienmingchen@ieee.org).
+Saru Kumari is with the Department of Mathematics, Chaudhary Charan
+Singh University, Meerut 250004, India (e-mail: saryusiirohi@gmail.com).
+Digital Object Identifier 10.1109/TCE.2024.3511615
+
+care and outcomes. The Internet of Medical Things (IoMT),
+which consists of a vast network of interconnected medical
+devices, has substantially revolutionized healthcare delivery.
+These devices have a variety of applications, including electronic health record management, medicine administration
+systems, diagnostics, and patient monitoring. However, the
+interconnection of these devices poses significant security
+and privacy concerns. The potential implications of security
+flaws in healthcare devices are severe, including unauthorized access to personal patient information and tampering
+with life-threatening medical equipment. Furthermore, the
+increasing sophistication of cyberattacks makes it harder to
+maintain the integrity and confidentiality of healthcare data.
+Medical devices can be vulnerable to various attacks, including
+ransomware, which encrypts data and demands payment to
+decrypt it. Unauthorized access occurs when hackers acquire
+control, modify settings, or steal data. Data theft refers to
+getting sensitive patient information. Additional risks include
+exploiting software or firmware flaws and changing features
+to cause harm or malfunction. Denial of service (DoS) attacks
+interrupt device functionality. Furthermore, adversaries can
+physically manipulate devices, access manufacturing processes
+(also known as supply chain assaults), and monitor communication using man-in-the-middle attacks. Social engineering
+tactics can be used to trick individuals into granting unauthorized access or distributing malware [1], [2], [3]. The need
+to analyze enormous volumes of data collected daily to form
+inferences has led to several advances in machine learning and
+deep learning. Nonetheless, due to the immense value of this
+information, it is vital to safeguard the privacy and security
+of the examined data. In certain circumstances, regulatory
+compliance demands adopting protections to protect sensitive
+information, such as the General Data Protection Regulation
+(GDPR) [1].
+Figure 1 depicts the purpose of an adversarial attack, which
+is to disrupt or destroy a system, obtain unauthorized access,
+or defeat security measures by leveraging vulnerabilities. The
+model training and prediction generation process requires
+transmitting individual client data to a centralized server. The
+resulting models are then distributed to each client. The fundamental risk associated with this technique is the insufficient
+security of confidential data. The interception of data transfers
+between consumers and the central server is a potential
+vulnerability. Furthermore, keeping massive amounts of data
+requires high-bandwidth, low-latency communication to make
+
+c 2024 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+1558-4127 
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+ULLAH et al.: FEDERATED EDGE INTELLIGENCE FOR ENHANCED SECURITY
+
+Fig. 1.
+
+Adversarial attacks on conventional model training process.
+
+accurate forecasts. One possible solution to these concerns
+would be to centrally train the machine learning model by
+combining initial data from multiple clients. The trained model
+is then replicated and disseminated to each client, removing the
+need to transmit data for periodic updates. This methodology
+has two significant advantages over the traditional approach.
+First, minimizing network dependencies and latency enables
+clients to make predictions locally. Furthermore, it lowers
+communication overhead. This method requires initial data
+transfer from clients to the central server during training,
+which may jeopardize sensitive information. Furthermore, data
+privacy concerns may deteriorate due to large data transfers in
+scenarios such as IoT or Edge computing with low network
+quality [4].
+FL is gaining popularity because it stores data on each local
+server, which is important for healthcare applications. It tackles privacy problems with distributed data analysis by storing
+confidential patient data on local computers and only exchanging updated models, not raw data. This decentralized strategy
+decreases the probability of adversarial attacks by removing
+a central repository that attackers can target. FL improves
+resilience by securely combining model weights from various
+sources, reducing the impact of adverse changes [5], [6].
+The use of iterative model updates with aggregated weights
+improves predictive model dependability and accuracy while
+maintaining data confidentiality. This makes FL an effective
+strategy for dealing with hostile threats and protecting healthcare data and devices. The following are the main contributions
+of this study.
+1) Image-based features are particularly useful for capturing structural data types such as storage, processes, and
+headers. We generated a dataset by crawling large-scale
+network traffic bytes. Following this, we developed an
+algorithm for converting network data into greyscale
+images.
+2) To address overfitting and misclassification, we applied
+data augmentation techniques to balance images within
+each class. To enhance our dataset against adversarial
+attacks, we used strategies such as FGSM, IGSM, PGD,
+and a hybrid strategy that combined IGSM and PGD.
+This comprehensive approach increases the potential of
+the dataset to detect and protect against such threats
+while also improving data security.
+
+4575
+
+3) We present a cooperative FL framework for detecting
+adversarial attacks on healthcare devices and demonstrate intelligent edge data processing. Through the
+utilization of shared data, our approach enhances security by preventing sensitive information from being
+disclosed.
+4) Client numbers can vary dynamically, affecting classification accuracy. Despite the use of decentralized
+data, intermittent clients, and adversarial examples, the
+proposed strategy is more robust than centralized solutions.
+The remaining part of the paper is organized as follows:
+Section II explains the related work, and Section III describes
+the proposed method. Section IV presents the experimental
+results, and Section V concludes the work.
+II. R ELATED W ORK
+Intrusion detection in healthcare devices gradually shifts
+from traditional machine learning-based methods to edgebased FL approaches [2], [7]. In this section, we discuss
+several methods involving machines and FL that detect and
+classify attacks on healthcare devices.
+A. Machine Learning
+Newaz et al. [8] demonstrated the susceptibility of personal
+medical device communications to several cyber threats. An
+adversary with malicious intent can intercept sensitive health
+data and execute denial-of-service, man-in-the-middle, replay,
+and fraudulent data injection attacks. Moreover, they introduced HEKA, which functions as an intrusion detection system
+(IDS). HEKA uses an n-gram-based technique and machine
+learning technologies to track and detect aberrant traffic trends
+in portable medical device interactions. HEKA achieves an
+F1-score of 98% and a detection accuracy of 98.4% when
+examined on eight publicly available devices. Fan et al. [9]
+explored the difficulty of constructing transferable adversarial
+scenarios for closed mode assaults without relying on the
+replacement model. This method used data-modal conversion
+to combine image-to-graph conversion, graph perturbation,
+and graph-to-image inversion. The solution outperforms the
+three baseline approaches in experiments and applies to realworld scenarios because it does not require prior knowledge
+of the victim model.
+Zhang et al. [10] developed the DroidSIFT approach,
+which identifies malicious Android apps using relationship
+graphs and semantic information. The major goal of this
+system is to detect and prevent evolution attacks, emerging
+threats, and harmful variants. After evaluating 13,500 benign
+samples and 2,200 hazardous samples, DroidSIFT detected
+threats with an amazing 93% accuracy. Gao et al. [11]
+designed apps that use APIs for triggering connections and
+activities. These apps build a graph, which is then used in
+a network to produce embeddings for app categorization.
+GDroid employed graph neural networks to detect fraudulent
+apps as a security solution. The system accurately identified
+98.99% of Android malware instances with a false positive rate
+below 1%. An efficient method for finding neural networks
+designed for Multi-Target Classification (MTC) was proposed
+
+4576
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+Federated-based edge intelligence for healthcare devices using adversarial network traffic patterns.
+
+by Zhang et al. [12]. This method determined the optimal
+model topologies by analyzing real-world Android network
+traffic. This method takes a distinctive search space and
+discrete design components into account to solve the problem
+as a limited optimization problem. This approach found
+appropriate MTC classification models by using the USTCTFC2016 dataset.
+B. Federated Learning Analysis
+Several research studies [13], [14] used FL approaches
+in the healthcare domain. Schneble and Thamilarasu [15]
+described a massively distributed, machine learning-based IDS
+for Medical Cyber-Physical Systems (MCPS). It explored FL
+to reduce communication and compute costs in machine learning. Real patient data and security risks like DoS are used to
+test. The results showed a decrease in network communication
+costs and a 99.0% accuracy. The system used mobile device
+resources to achieve scalability and manage anomalous data
+distribution. Rehman et al. [16] described an FL framework
+for detecting side-channel threats on confidential medical data.
+Data was acquired from ten Android smartphone soft keyboard
+
+users. The architecture trained a Deep Neural Network (DNN)
+model by training local models on two clients and then
+combining their updates. The DNN model demonstrated an
+accuracy of 80.09% following three validations conducted
+by each client. This result suggested that the model can
+detect side-channel attacks accurately. Wang et al. [17] used
+certificate-less signatures in FL to hide where parameter
+updates come from to protect medical devices from source
+inference attacks (SIAs). The proposed strategy incorporated
+an enhanced batch verification technique, which reduced the
+server’s workload. Experimental results confirmed the efficacy
+of the suggested approach in lowering SIA success rates
+and accelerating signature verification. Mothukuri et al. [18]
+used an FL-based anomaly detection approach that uses data
+from individual devices to detect intrusions in IoT networks
+proactively. It maintains local data, uses federated training
+cycles with GRUs, and only communicates learned weights
+to the central server. The empirical findings indicate that
+decentralized systems exhibit better results in terms of privacy
+preservation and accuracy.
+The main challenges in developing an FL technique are
+intermittent clients and imbalanced datasets. The primary
+
+ULLAH et al.: FEDERATED EDGE INTELLIGENCE FOR ENHANCED SECURITY
+
+4577
+
+Algorithm 1: Generating Images From Network Traffic
+Input: FPCAP : Folder containing PCAP files
+Output: Images representing byte streams
+
+Fig. 3.
+
+Image extraction from healthcare network traffic.
+
+focus of this research is the intermittent connectivity of clients
+to a variety of cybersecurity organizations. Furthermore, for
+local training, each client may have access to imbalanced
+malware datasets. We developed a deep CNN-based FL
+approach to address the challenges of intermittent clients and
+imbalanced datasets.
+III. P ROPOSED M ETHOD : F EDERATED E DGE
+I NTELLIGENCE FOR H EALTHCARE S ECURITY
+A. Visual Features Extraction From Network Patterns
+Figure 2 shows the architectural framework of the proposed
+approach.
+PCAP files are critical to improving network security and
+speed. They give detailed logs of network packets, which aid
+in detecting irregularities and threats. These files are useful for
+investigating events by tracing breaches or network difficulties.
+They also support protocol analysis, which aids in the detection of errors and unauthorized use. Performance evaluation
+is enhanced by analyzing packet data to discover bottlenecks
+and latency concerns. Additionally, PCAP files provide an
+audit record for regulatory compliance and security policy
+enforcement. They help with threat detection by highlighting
+unusual behaviors and significant security threats. Moreover,
+PCAP is useful for debugging network issues because it provides specific data flows. Considering the continual upgrading
+of network traffic to avoid static and dynamic classification,
+we investigated the usefulness of visual features in detecting
+malicious traffic. This method uses image processing to transform network traffic patterns into textural properties. It works
+without involving reverse engineering or traffic signatures.
+This solution successfully reduces the impact of anti-detection
+strategies including signature modification and dynamic feature extraction evasion [19]. By examining the PCAP, a
+byte stream about each malicious variation is obtained. We
+designed a bytes-to-image translation technique for extracting
+images from byte streams. Greyscale images are produced
+by processing 8-bit vectors retrieved from network-based
+byte streams. Following that, each image is set to 256x256
+pixels. Figure 3 depicts an example of 256x256 network traffic
+images for spoofing, Distributed Denial of Service (DDoS),
+Message Queuing Telemetry Transport (MQTT), and DoS.
+Smaller image sizes have been found to result in a significant
+reduction in network traffic. For instance, the picture converts
+megabytes of PCAP data into kilobytes. This has the potential
+to reduce computational power.
+B. Data Augmentation
+Data augmentation improves model performance and
+addresses data imbalance in real-world datasets, especially
+
+Function GenerateImages(FPCAP ):
+for each PCAP file pcap_file ∈ FPCAP do
+Open pcap_file;
+Initialize accumulated_bytes ← {};
+Initialize total_bytes ← 65536;
+Initialize packet_count ← 0;
+for each packet pi in pcap_file do
+byte stream: bytestreami ;
+Accumulate
+byte streams
+n
+|bytestream
+j | ≥ total_bytes;
+j=1
+if
+k
+j=1 |accumulated_bytesj | + |bytestreami | ≥
+total_bytes then
+Append bytestreami to
+accumulated_bytes;
+remaining_bytes
+←
+total_bytes − kj=1 |accumulated_bytesj |;
+Truncate bytestreami to fit remaining
+space;
+Create image accumulated_bytes;
+Save image;
+Increment packet_count;
+Clear accumulated_bytes;
+Append bytestreami to
+accumulated_bytes;
+Save images to corresponding directories;
+
+when identifying adverse network traffic on healthcare equipment [20]. It involves transforming and modifying the training
+dataset D to increase diversity and allow machine learning
+models to learn from diverse network traffic patterns. To
+illustrate how data transmission and packet structure can
+vary, alternative orientations and sizes of network traffic
+images can be simulated using random rotations (θ ), flips,
+and scaling (resize(x, y)). The following mathematical expressions describe these transformations using equations (1)-(2). Rotating an image I by angle θ :
+Irotated = rotate(I, θ ).
+
+(1)
+
+- Resizing an image I to dimensions x × y:
+Iresized = resize(I, x, y).
+
+(2)
+
+Additionally, adding random noise () with mean μ and
+standard deviation σ improves the model’s capacity to detect
+fragile network traffic anomalies. This noise enhancement is
+especially useful for medical devices since it mimics actual
+changes and makes the model more resistant to chaotic
+network conditions. Adding noise to an image I can be
+mathematically expressed using equation (3).
+Inoisy = I + ,
+
+ ∼ N (μ, σ ).
+
+(3)
+
+4578
+
+Fig. 4.
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+Overview of evasion attacks using abnormal network traffic flows.
+
+Additionally, the dataset is made more diverse by methods
+like color jittering and cropping (crop(x, y)), which help
+the model acquire invariant properties across various spatial
+layouts and color distributions. The following can be used to
+crop an image I to dimensions x × y using equation (4).
+Icropped = crop(I, x, y).
+
+(4)
+
+Color jittering, which alters brightness, contrast, saturation,
+and hue, can be represented using equation (5).
+
+
+Ijittered = jitter I, δbrightness , δcontrast , δsaturation , δhue . (5)
+Data augmentation enhances machine learning models by
+adding diverse transformations, helping them learn robust
+features for better and more reliable detection of malicious
+activity in healthcare devices [21]. To boost the performance
+of our malware detection model, we applied data augmentation
+techniques such as rotation, jitter, noise addition, cropping,
+and resizing. These strategies are critical in increasing the
+diversity and variability of the training dataset, improving
+its robustness and generalization. By simulating numerous
+real-world characteristics such as evolving image orientation,
+position, and noise levels, these augmentations enabled our
+model to handle a broader range of scenarios and reduce
+overfitting. This method is particularly helpful given the
+limited data available and the necessity for the model to work
+effectively in changing scenarios.
+C. Crafting Adversarial Examples
+We used and evaluated four adversarial attack techniques:
+PGD, FGSM, IGSM, and a novel hybrid strategy that combined PGD and IGSM [22], [23]. As shown in Figure 4, we
+aim to assess how well these strategies generate adversarial
+examples that mislead a target model with few perturbations.
+1) Fast Gradient Sign Method (FGSM): The FGSM algorithm perturbs input data x in the direction of the gradient of
+the loss function J(θ, x, y). It is simple and computationally
+efficient. The strength of the threat is regulated by the variable
+, which scales the perturbation. The following is the process
+for generating the adversarial example, x using equation (6).
+x = x +  · sign(∇x J(θ, x, y)).
+
+(6)
+
+The one-step simplicity of FGSM makes it excellent at
+producing adversarial samples rapidly, but it is typically
+ineffective against well-defended systems.
+2) Iterative Gradient Sign Method (IGSM): IGSM, which
+stands for Basic Iterative Method (BIM), is an extension of
+FGSM that uses iterative applications to achieve a cumulative
+effect with fewer perturbations at each stage. The following is
+how the technique improves the adverse effects after several
+iterations k using equations (7) and (8).
+x
+
+(0)
+
+= x.
+
+ (k+1)
+
+
+
+ (k)
+
+= clipx, x
+
+x
+
+
+
+ (k)
+
++ α · sign ∇x J(θ, x
+
+(7)
+
+, y) . (8)
+
+The step size is denoted by α, and perturbations are
+guaranteed to be kept within a -ball surrounding the initial
+input x.
+3) Projected Gradient Descent (PGD): PGD is an iterative
+approach that functions as a resilient complement to IGSM.
+PGD employs FGSM at each iteration, then performs an
+estimating step to guarantee perturbations stay within a defined
+p norm ball. Here is the sequence of iterations using
+equations (9) and (10)
+x
+
+(0)
+
+ (k+1)
+
+x
+
+= x.
+
+
+
+(9)
+
+
+ (k)
++ α · sign ∇x J(θ, x , y) . (10)
+
+ (k)
+
+= x+Bp () x
+
+The projection onto the norm ball of radius  around x
+is represented by x+Bp () . It confirms that the adversarial
+instances work as expected and remain within a reasonable
+perturbation bound.
+4) Hybrid Approach of PGD and IGSM): The hybrid
+methodology leverages the distinctive features of both PGD
+and IGSM. We utilize IGSM to generate adversarial instances
+and initiate the attack in this method. Then, it is imperative
+to optimize these examples further using PGD to ensure that
+they are within the intended perturbation limits and to enhance
+their efficacy. The process can be described as follows using
+equations (11), (12) and (13).
+• IGSM Initialization:
+x
+
+(0)
+
+ (k+1)
+
+x
+
+= x.
+
+
+
+ (k)
+
+= clipx, x
+
+
+
+(k)
++ α · sign ∇x J(θ, x , y) .
+
+(11)
+(12)
+
+ULLAH et al.: FEDERATED EDGE INTELLIGENCE FOR ENHANCED SECURITY
+
+•
+
+PGD Refinement:
+
+
+
+(k+1)
+(k)
+(k)
+x
+= x+Bp () x + α · sign ∇x J(θ, x , y) . (13)
+
+
+This hybrid strategy combines the robust estimation of
+PGD with the continuous refining of IGSM, leveraging the
+strengths of both techniques [24], [25]. The adversarial attack
+generation technique that combines PGD and IGSM surpasses
+distinct methods such as FGSM, IGSM, and PGD. The ability
+of PGD to undertake significant gradient-based optimization,
+along with the iterative improvement of IGSM, improves
+the precision and effectiveness of adversarial instances. PGD
+provides a strong starting estimation, and IGSM refines these
+estimates to improve robustness and accuracy. Performance is
+greatly enhanced by this synergy, which guarantees that the
+adversarial examples generated are both extremely effective
+and resilient within the given limitations.
+D. Federated-Based Edge Computing: Adversarial Attacks
+Detection and Classification
+FL provides edge intelligence by processing data locally on
+each client device, reducing latency and enhancing privacy.
+This is particularly helpful as it allows for real-time detection
+and classification of adversarial attacks directly on healthcare
+devices without sending sensitive data to a central server [26].
+This research aims to leverage secure FL settings for detecting
+and classifying adversarial attacks on healthcare devices
+within the context of cybersecurity. McMahan et al. [27]
+introduced the FL approach for data-driven system design using
+distributed data without relying on a centralized data center.
+This collaborative learning framework, which requires only the
+sharing of model updates, can significantly enhance security
+and privacy, particularly for healthcare devices more susceptible
+to cyberattacks. A timely and comprehensive understanding of
+cyberattacks, such as spoofing, intrusion, anomaly, and Denial
+of Service (DoS), is crucial for developing and improving
+cyber defense models and methods. Consequently, FL has
+tremendous potential to secure cyberspace at device and network
+levels.
+1) Localized Training Process: In a FL scenario, a soft
+federation of distinct entities or machines, referred to as
+clients, is coordinated to train a model. In our case, these
+clients could be various medical institutions or devices
+using adversarial network images generated on medical
+devices [28]. Each client maintains local training data,
+known as Local Model Update (LMU), which updates
+the current global model. Therefore, client data is never
+transmitted to the global server; only the latest model
+update is shared. Mathematically, the update process for
+the global model w at time t can be expressed using
+equation (14)
+wt+1 = wt − η · ∇f (wt ).
+
+(14)
+
+where η is the learning rate, ∇f (wt ) is the gradient of
+the loss function concerning the model parameters w,
+computed based on the local data of each client. The
+healthcare devices, acting as clients, conduct mini-batch
+Stochastic Gradient Descent (SGD) on locally collected
+images using deep CNN. Our method employs sporadic
+
+4579
+
+clients, represented by healthcare devices, sharing the
+same CNN framework and loss functions. Each device
+retrieves global model weights and computes a gradient
+update after multiple SGD iterations, ensuring data
+confidentiality. CNN, widely used for detection tasks,
+extracts information for deep training and potential gains
+in model capacity. Our deep CNN framework processes
+images on healthcare devices to produce LMU. It
+includes three convolutional layers with filter sizes of
+64, 128, 256, and 512, respectively, followed by pooling
+layers, dropout layers, a fully connected layer, and
+a softmax layer. Batch normalization ensures training
+stability, reducing overfitting risk [29], [30].
+2) Global Training Process: Several causes can contribute
+to intermittent behavior among remote customers in FL,
+including dropped connections, delayed data delivery,
+and system failures. Existing methods often fail to
+account for this intermittency, resulting in a loss in
+model accuracy. To solve this issue, we present a FL
+system capable of detecting adversarial attacks on a
+variety of healthcare devices. It is critical to properly
+manage clients’ inconsistent behavior, including their
+decision to engage in or withdraw from training. The
+inclusion of a new client and the removal of an existing
+one may have an impact on the dataset balance. To
+accommodate irregular clients and unbalanced datasets,
+we suggest storing and using weights from paused
+clients for further aggregations, or ignoring weights from
+departed clients in subsequent iterations. The best course
+of action is context-dependent; variables such as dataset
+imbalance and client engagement influence the relative
+advantages of the two strategies.
+In FL, the global server handles dynamic client behavior
+caused by network issues and delays by employing asynchronous aggregation, which allows it to incorporate updates
+from clients at various times. It properly schedules clients,
+uses robust aggregation methods to handle delays and lost
+updates, and adjusts learning rates based on client behavior. Furthermore, despite fluctuations in client connectivity
+and availability, the training process is made durable and
+successful by employing appropriate communication protocols and fault recovery methods. To assess our method, we
+conducted extensive experiments with intermittent clients and
+varied adversarial attack image sizes. These studies give
+information on the efficacy of various ways for minimizing
+the effects of intermittent client behavior on FL systems.
+The heterogeneity in network data samples often leads to
+a lack of generalization. Consequently, a model with high
+performance in one network may be inefficient at detecting
+attacks in another. This is due to each organizational network
+having its own Standard Operating Environments (SOEs) [31]
+and various potential attacks. The conditional distribution
+of the used data reflects these threats. Machine learning
+models heavily rely on mining useful features to differentiate
+between benign and malicious samples. Therefore, training
+a threat detection model necessitates a broad range of data
+samples. In ML-based attack detection, data scarcity and
+heterogeneity are critical considerations in each ML scenario
+[32], [33].
+
+4580
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+IV. R ESULTS AND D ISCUSSIONS
+A. Dataset Preparation
+We evaluated the proposed approach with two standard and realistic datasets, such as CICIoMT20241 [34],
+and Edge-IIoT2 [35]. The CICIoMT2024 dataset includes
+healthcare equipment attack vectors. The dataset evaluates
+IoMT security by analyzing attacks on 40 devices (25 real
+and 15 simulated) using healthcare protocols such as WiFi, Queuing Telemetry Transport (MQTT), and Bluetooth.
+There have been five identified attacks: DDoS, DoS, recon,
+MQTT, and spoofing. A network tap created a security
+and profiling dataset by replaying real-time packets between
+the switch and Wi-Fi/MQTT-capable IoMT devices. EdgeIIoT, the second dataset, was developed using an IoT/IIoT
+testbed, which included devices, sensors, protocols, and
+edge configurations. This compilation comprises data from
+over 10 IoT devices, including low-cost digital temperature and humidity sensors. There are 14 attacks on IoT
+and IIoT communication protocols, including DoS/DDoS,
+information gathering, man-in-the-middle, Injection, and
+Malware. Alarms, system resources, logs, and network traffic datasets have 61 significantly related features from
+1176.
+B. Performance Indicators
+We selected various network traffic-based images and several clients to evaluate the proposed method comprehensively.
+The proposed method is evaluated using two publicly available
+standard datasets, CICIoMT2024 and Edge-IIoT. We measured
+performance using precision, recall, F-measure, Kappa, and
+accuracy. These metrics are calculated from True Positives
+(TP), False Positives (FP), True Negatives (TN), and False
+Negatives (FN) counts. The performance measures are provided by Equations (15)-(19).
+TP
+.
+(TP + FP)
+FP
+Recall =
+.
+(FP + TN)
+(2 ∗ TP)
+F-measure =
+.
+(2TP + FP + FN)
+(TP + TN)
+Accuracy =
+.
+(TP + TN + FP + FN)
+(observedacc − expectedacc
+Kappa =
+.
+(1 − expectedacc )
+Precision =
+
+(15)
+(16)
+(17)
+(18)
+(19)
+
+where, total = TP + TN + FP + FN, observedacc = (TP +
+TN)/total, a = (TP + FN) ∗ (TP + FP)/total, b = (FP + TN) ∗
+(FN + TN)/total, and expectedacc = (a + b)/total.
+C. Performance Analysis and Comparisons
+The proposed method is tested on various clients to examine intermittent behavior. Figures 5-8 illustrate the local and
+global accuracy curves used to study the dynamic behavior
+1 https://www.unb.ca/cic/datasets/iomt-dataset-2024.html
+2 https://www.kaggle.com/datasets/mohamedamineferrag/edgeiiotset-cybersecurity-dataset-of-iot-iiot/code
+
+Fig. 5.
+
+Dynamic local and global accuracy curves using 2 clients.
+
+of the proposed system. The proposed method is tested with
+clients numbered 2, 3, 10, and 15. It is determined that
+expanding the number of clients yields the best improvements.
+Having more FL clients boosts performance due to the diversity of datasets, parallel processing, integrated knowledge,
+confidentiality, and reliability. Figure 5 illustrates the two
+clients’ local and global accuracy curves. The green and
+orange colors represent the clients, while the blue represents
+the global averaged accuracy values. Both clients start at
+around 63% accuracy, but the global server starts at 58%.
+After a few epochs, client 1 has worse performance than client
+2. Client 1 has 70% accuracy, whereas client 2 has 92%
+on the 22nd epoch. Furthermore, the global accuracy curve
+performs similarly depending on client 2. Overall, client 1
+performs poorly because it frequently loses precision. Figure 6
+illustrates three clients’ local and global accuracy values.
+When compared to each other, their dynamic values vary
+greatly. Client 1 has the lowest performance, client 3 has
+the highest, and client 2 is somewhat in the middle. The
+global accuracy curve also performs roughly in the middle.
+For instance, on epoch 20, client 1 has 65% accuracy, client 3
+has 99%, client 2 has 87%, and global accuracy is 77%.
+After the 30th epoch, the three clients and the global server
+are behaving similarly. Figure 7 depicts the local and global
+accuracy curves for ten clients. It demonstrates significant
+variances in client performance, although the global server
+performs better after the 23rd epoch. Our key goal is for the
+global server to perform better by averaging client weights and
+leveraging varied datasets. Similarly, 8 illustrates the dynamic
+local and global accuracy curves with 15 clients. Overall, the
+global server improves after the 28th epoch.
+Figures 9-12 depict the dynamic local and global loss
+values. Figure 9 analyzes two clients with a global server. The
+major purpose is to obtain the declining trend for each epoch.
+For instance, client 1, client 2, and the global server begin
+with a 70% loss and steadily reduce. Client 1 displays slightly
+larger loss values than client 2 and the global server. At the
+38th epoch, client 1 has a 10% loss, whereas client 2 has
+2%. Figure 10 illustrates three clients’ local and global loss
+values. Client 1 has the biggest loss of over 100% on the 24th
+epoch, while client 3 has the lowest loss of 2%. Client 2 and
+the global server both show slightly higher second-best losses.
+Figures 11 and 12 demonstrate loss values for ten and fifteen
+clients, respectively. It can be observed that the global server
+
+ULLAH et al.: FEDERATED EDGE INTELLIGENCE FOR ENHANCED SECURITY
+
+4581
+
+Fig. 6.
+
+Dynamic local and global accuracy curves using 3 clients.
+
+Fig. 9.
+
+Dynamic local and global loss curves using 2 clients.
+
+Fig. 7.
+
+Dynamic local and global accuracy curves using 10 clients.
+
+Fig. 10.
+
+Dynamic local and global loss curves using 3 clients.
+
+Fig. 8.
+
+Dynamic local and global accuracy curves using 15 clients.
+
+Fig. 11.
+
+Dynamic local and global loss curves using 10 clients.
+
+always performs better with a larger number of clients after
+a few epochs, which is the primary purpose of the proposed
+approach. Table I compares the performance of several forms
+of adversarial attack detection on the CICIOMT2024 dataset.
+The FGSM attack is identified with reduced performance,
+whereas the hybrid is detected with maximum performance.
+Although the hybrid attack is the most powerful feature attack
+due to the combination of IGSM and PGD. The proposed
+method remains the most effective. For instance, the FGSM
+attack has precision, recall, and f1-score, with accuracy of
+93.2%, 97.2%, 95.6%, and 95.2%. The performance measures
+for hybrid attacks are 98.3%, 100%, 99%, and 99.34%. The
+PGD attack is detected more than the other two approaches
+(FGSM and IGSM), but less than the hybrid strategy. For
+
+TABLE I
+P ERFORMANCE C OMPARISONS FOR A DVERSARIAL ATTACKS
+D ETECTION U SING CICI O MT2024
+
+instance, the PGD has precision, recall, f1-score, and accuracy
+of 98.3%, 100%, 99%, and 99.34%, respectively.
+Table II compares the performance of several attack detection methods using the Edge-IIoT dataset. Similar to Table I,
+
+4582
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+TABLE III
+P ERFORMANCE C OMPARISONS FOR A DVERSARIAL ATTACKS
+C LASSIFICATION U SING CICI O MT2024
+
+Fig. 12.
+
+Dynamic local and global loss curves using 15 clients.
+
+TABLE II
+P ERFORMANCE C OMPARISONS FOR A DVERSARIAL ATTACKS D ETECTION
+U SING E DGE -II OT SET
+
+hybrid attacks are identified more effectively than other methods. For the hybrid attack, the precision, recall, f1 score,
+and accuracy are 98.9%, 100%, 98.8%, and 99.2%. Similarly,
+the same performance measurements are lowest for FGSM,
+but PGD is superior. Table III presents performance metrics,
+including precision, recall, and f1 score for classifying adversarial attacks on the CICIOMT2024 dataset. There are five
+classes: DDoS, DoS, MQTT, Recon, and Spoofing. As can
+be observed, hybrid adversarial attacks are accurately divided
+into five distinct attacks. For instance, DDoS (94.7%, 96%,
+96.1%), DoS (97.6%, 98.1%, 97.6%), MQTT (95.8%, 98.7%,
+98.3%), Recon (98.2%, 94%, 95.9%), and Spoofing (100%,
+100%, 100%). Table IV shows the performance classification
+of several adversarial attacks on the Edge-IIoT dataset. We
+presented adversarial examples for FGSM and hybrid to
+demonstrate the effectiveness of the proposed approach. The
+Edge-IIoT dataset has 14 categories, and the suggested strategy is more accurate in classifying hybrid-based adversarial
+attacks. Table V presents classification accuracy utilizing four
+adversarial attacks for the suggested technique. The hybrid
+technique achieves the greatest classification rate of 97.45%
+utilizing the CICIoMT2024 dataset and 96.7% with the EdgeIIoTset dataset.
+To provide deeper analysis, the confusion matrix can
+show the correct and incorrect classification rates for each
+class in the dataset. Figure 13 presents the confusion
+matrix for FGSM-based adversarial attack detection with the
+CICIoMT2024 dataset. The benign and attack are successfully
+identified at 92% and 97%, respectively. Figure 14 depicts the
+confusion matrix for hybrid-based adversarial attack detection
+using the CICIoMT2024 dataset. The benign and attack
+are appropriately identified at 98% and 100% respectively.
+Figure 15 depicts the confusion matrix for the hybrid adversarial approach with the Edge-IIoTset dataset. Figure 16 shows
+
+Fig. 13.
+dataset.
+
+FGSM-based Adversarial attacks detection using CICIoMT2024
+
+the confusion matrix for FGSM-based adversarial attack classification on the CICIoMT2024 dataset. DDoS, DoS, MQTT,
+Recon, and Spoofing are correctly characterized at 92%. 83%,
+91%, 92%, and 100%. Figure 17 illustrates the confusion
+matrix for hybrid adversarial attack classification. DDoS, DoS,
+MQTT, Recon, and Spoofing are accurately identified at 96%.
+98%, 99%, 94%, and 100%. Figure 18 presents the confusion
+matrix for adversarial attack classification using the EdgeIIoTset dataset.
+Table VI presents a performance comparison with related
+studies. Fan et al. [9] introduced a method for generating
+adaptable adversarial instances without a replacement model,
+achieving a 95.16% success rate. Their approach involves
+image-to-graph transformation, perturbation on the graph, and
+graph-to-image inversion. Guduri et al. [14] developed FedKC,
+a personalized FL algorithm for resisting model poisoning
+in the consumer health metaverse. FedKC provides tailored
+medical treatments for new users and demonstrated 91.1%
+accuracy in mitigating attacks and enhancing client customization in experimental tests. Mothukuri et al. [18] developed
+a method for detecting FL anomalies in IoT networks using
+GRUs and decentralized on-device data, sending only learned
+
+ULLAH et al.: FEDERATED EDGE INTELLIGENCE FOR ENHANCED SECURITY
+
+4583
+
+TABLE IV
+P ERFORMANCE C OMPARISONS FOR A DVERSARIAL ATTACKS C LASSIFICATION U SING E DGE -II OT SET
+
+Fig. 14.
+dataset.
+
+Hybrid-based Adversarial attacks detection using CICIoMT2024
+
+Fig. 15.
+dataset.
+
+Hybrid-based Adversarial attacks detection using Edge-IIoTset
+
+weights to the FL server. This approach improves global ML
+model accuracy and offers superior privacy protection and
+attack detection, achieving 95.6% accuracy. Zhang et al. [36]
+used GANs to study poisoning threats in FL, where attackers
+simulate participants to generate poisoned updates from copied
+samples. Their method can produce samples with over 80%
+accuracy for both poisoning and main activities. The proposed
+approach provides better performance, i.e., 97.45% as compared to the related works.
+
+TABLE V
+C LASSIFICATION ACCURACY U SING CICI O MT2024 AND E DGE -II OT SET
+
+V. C ONCLUSION
+
+computing and medical equipment. However, the possibility of
+cyberattacks increased as a result of this interconnectedness,
+especially in vital industries like healthcare, where attacks
+on consumer medical equipment were common. Massive
+volumes of data from medical devices also offered significant
+
+SHS is a contemporary consumer electronics concept that
+emerged from the integration of networked personal medical
+devices. These systems collected data, sent it to smart devices
+for analysis, and delivered healthcare services using edge
+
+4584
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 2, MAY 2025
+
+TABLE VI
+P ERFORMANCE C OMPARISON W ITH R ECENT AND R ELATED W ORKS
+
+Fig. 16. FGSM-based Adversarial attacks classification using CICIoMT2024
+dataset.
+
+solve these issues and enhance the security of medical devices
+in SHS. On standard datasets, CICIoMT2024 and EdgeIIoT detect and mitigate adversarial attacks with 97.45% and
+96.7% accuracy, respectively. This emphasizes the crucial need
+for creative solutions that improve healthcare data security
+while assuring the continued delivery of essential healthcare
+services. Our work protects sensitive healthcare data and
+strengthens SHSs against cyber-attacks, hence improving the
+security of existing healthcare technology. FL protects medical
+data by storing it on local devices and delivering only model
+updates instead of raw data. Security and privacy can be
+enhanced by the use of blockchain technology, homomorphic
+encryption, safe aggregation, and differential privacy. While
+homomorphic encryption allows computations on encrypted
+data, secure aggregation uses cryptographic algorithms to
+protect updates, and blockchain ensures apparent process
+recording, differential privacy adds noise to model updates.
+Data privacy is further enhanced by regular security audits and
+regulatory compliance.
+R EFERENCES
+
+Fig. 17. Hybrid-based Adversarial attacks classification using CICIoMT2024
+dataset.
+
+Fig. 18.
+dataset.
+
+Hybrid-based Adversarial attacks classification using Edge-IIoTset
+
+challenges in terms of storage and security. Utilizing edge
+computing as a layer between the cloud and SHS is crucial to
+overcoming these challenges. The proposed method enhanced
+security and privacy while simplifying the processing of large
+volumes of data. We used an edge intelligence approach that
+included suspicious examples of network traffic and FL to
+
+[1] A. Rahman, M. S. Hossain, N. A. Alrajeh, and F. Alsolami, “Adversarial
+examples—Security threats to COVID-19 deep learning systems in medical IoT devices,” IEEE Internet Things J., vol. 8, no. 12, pp. 9603–9610,
+Jun. 2021.
+[2] H. R. Chi, M. de Fátima Domingues, H. Zhu, C. Li, K. Kojima, and
+A. Radwan, “Healthcare 5.0: In the perspective of consumer Internetof-Things-based fog/cloud computing,” IEEE Trans. Consum. Electron.,
+vol. 69, no. 4, pp. 745–755, Nov. 2023.
+[3] T. Yaqoob, H. Abbas, and M. Atiquzzaman, “Security vulnerabilities, attacks, countermeasures, and regulations of networked medical
+devices—A review,” IEEE Commun. Surveys Tuts., vol. 21, no. 4,
+pp. 3723–3768, 4th Quart., 2019.
+[4] D. Li, Q. Li, Y. Ye, and S. Xu, “A framework for enhancing deep neural
+networks against adversarial malware,” IEEE Trans. Netw. Sci. Eng.,
+vol. 8, no. 1, pp. 736–750, Jan.–Mar. 2021.
+[5] L. Lyu et al., “Privacy and robustness in federated learning: Attacks
+and defenses,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 7,
+pp. 8726–8746, Jul. 2024.
+[6] F. Ullah, G. Srivastava, S. Ullah, and L. Mostarda, “Privacy-preserving
+federated learning approach for distributed Malware attacks with
+intermittent clients and image representation,” IEEE Trans. Consum.
+Electron., vol. 70, no. 1, pp. 4585–4596, Feb. 2024.
+[7] A. I. Newaz, A. K. Sikder, M. A. Rahman, and A. S. Uluagac, “A survey
+on security and privacy issues in modern healthcare systems: Attacks
+and defenses,” ACM Trans. Comput. Healthc., vol. 2, no. 3, pp. 1–44,
+2021.
+[8] A. I. Newaz, A. K. Sikder, L. Babun, and A. S. Uluagac, “HEKA:
+A novel intrusion detection system for attacks to personal medical
+devices,” in Proc. IEEE Conf. Commun. Netw. Security (CNS), 2020,
+pp. 1–9.
+[9] X. Fan et al., “GCSA: A new adversarial example-generating scheme
+toward black-box adversarial attacks,” IEEE Trans. Consum. Electron.,
+vol. 70, no. 1, pp. 2038–2048, Feb. 2024.
+[10] M. Zhang, Y. Duan, H. Yin, and Z. Zhao, “Semantics-aware android
+malware classification using weighted contextual API dependency
+graphs,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2014,
+pp. 1105–1116.
+
+ULLAH et al.: FEDERATED EDGE INTELLIGENCE FOR ENHANCED SECURITY
+
+4585
+
+[11] H. Gao, S. Cheng, and W. J. C. Zhang, “GDroid: Android malware
+detection and classification with graph convolutional network,” Comput.
+Secur., vol. 106, Jul. 2021, Art. no. 102264.
+[12] X. Zhang, L. Hao, G. Gui, Y. Wang, B. Adebisi, and H. Sari,
+“An automatic and efficient malware traffic classification method for
+secure Internet of Things,” IEEE Internet Things J., vol. 11, no. 5,
+pp. 8448–8458, Mar. 2024.
+[13] R. Kumari, D. K. Sah, S. Gupta, K. Cengiz, and N. Ivković, “Advancing
+medical recommendations with federated learning on Decentralized
+data: A roadmap for implementation,” IEEE Trans. Consum. Electron.,
+vol. 70, no. 1, pp. 2666–2674, Feb. 2024.
+[14] M. Guduri, C. Chakraborty, U. Maheswari, and M. Margala,
+“Blockchain-based federated learning technique for privacy preservation
+and security of smart electronic health records,” IEEE Trans. Consum.
+Electron., vol. 70, no. 1, pp. 2608–2617, Feb. 2024.
+[15] W. Schneble and G. Thamilarasu, “Attack detection using federated
+learning in medical cyber-physical systems,” in Proc. 28th Int. Conf.
+Comput. Commun. Netw. (ICCCN), vol. 29, 2019, pp. 1–8.
+[16] A. Rehman, I. Razzak, and G. Xu, “Federated learning for privacy
+preservation of healthcare data from smartphone-based side-channel
+attacks,” IEEE J. Biomed. Health Inform., vol. 27, no. 2, pp. 684–690,
+Feb. 2023.
+[17] W. Wang, X. Li, X. Qiu, X. Zhang, V. Brusic, and J. Zhao,
+“A privacy preserving framework for federated learning in smart
+healthcare systems,” Inf. Process. Manage., vol. 60, no. 1, 2023,
+Art. no. 103167.
+[18] V. Mothukuri, P. Khare, R. M. Parizi, S. Pouriyeh, A. Dehghantanha,
+and G. Srivastava, “Federated-learning-based anomaly detection for IoT
+security attacks,” IEEE Internet Things J., vol. 9, no. 4, pp. 2545–2554,
+Feb. 2022.
+[19] S. Ni, Q. Qian, and R. Zhang, “Malware identification using visualization images and deep learning,” Comput. Secur., vol. 77, pp. 871–885,
+Aug. 2018.
+[20] P. Chlap, H. Min, N. Vandenberg, J. Dowling, L. Holloway, and
+A. Haworth, “A review of medical image data augmentation techniques
+for deep learning applications,” J. Med. Imag. Radiat. Oncol., vol. 65,
+no. 5, pp. 545–563, 2021.
+[21] E. Lashgari, D. Liang, and U. Maoz, “Data augmentation for deeplearning-based electroencephalography,” J. Neurosci. Methods, vol. 346,
+Dec. 2020, Art. no. 108885.
+[22] A. Mustafa, S. Khan, M. Hayat, R. Goecke, J. Shen, and L. Shao,
+“Adversarial defense by restricting the hidden space of deep neural networks,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., 2019,
+pp. 3385–3394.
+
+[23] Y. Shi, Y. Han, Q. Hu, Y. Yang, and Q. Tian, “Query-efficient black-box
+adversarial attack with customized iteration and sampling,” IEEE Trans.
+Pattern Anal. Mach. Intell., vol. 45, no. 2, pp. 2226–2245, Feb. 2023.
+[24] Y. Zhao, K. Xu, H. Wang, B. Li, M. Qiao, and H. Shi, “MEC-enabled
+hierarchical emotion recognition and perturbation-aware defense in
+smart cities,” IEEE Internet Things J., vol. 8, no. 23, pp. 16933–16945,
+Dec. 2021.
+[25] F. Chen et al., “Frequency constraint-based adversarial attack on deep
+neural networks for medical image classification,” Comput. Biol. Med.,
+vol. 164, Sep. 2023, Art. no. 107248.
+[26] E. Rabieinejad, A. Yazdinejad, A. Dehghantanha, and G. Srivastava,
+“Two-level privacy-preserving framework: Federated learning for attack
+detection in the consumer Internet of Things,” IEEE Trans. Consum.
+Electron., vol. 70, no. 1, pp. 4258–4265, Feb. 2024.
+[27] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. Y. Arcas,
+“Communication-efficient learning of deep networks from decentralized
+data,” in Proc. Artif. Intell. Statist., 2017, pp. 1273–1282.
+[28] N. Rieke et al., “The future of digital health with federated learning,” NPJ Digit. Med., vol. 3, no. 1, pp. 1–7, 2020.
+[29] A. Y. A. Amer, J.-M. Aerts, B. Vanrumste, and S. Luca, “A localized
+learning approach applied to human activity recognition,” IEEE Intell.
+Syst., vol. 36, no. 3, pp. 58–71, May/Jun. 2020.
+[30] R. Zuech, T. M. Khoshgoftaar, and R. Wald, “Intrusion detection and big
+heterogeneous data: A survey,” J. Big Data, vol. 2, pp. 1–41, Feb. 2015.
+[31] T. R. Peltier, Information Security Policies, Procedures, and Standards:
+Guidelines for Effective Information Security Management. Boca Raton,
+FL, USA: CRC Press, 2016.
+[32] E. Bagdasaryan, A. Veit, Y. Hua, D. Estrin, and V. Shmatikov, “How
+to backdoor federated learning,” in Proc. Int. Conf. Artif. Intell. Statist.,
+2020, pp. 2938–2948.
+[33] V. Mothukuri, R. M. Parizi, S. Pouriyeh, Y. Huang, A. Dehghantanha,
+and G. Srivastava, “A survey on security and privacy of federated learning,” Future Gener. Comput. Syst., vol. 115, pp. 619–640, Feb. 2021.
+[34] S. E. A. Dadkhah, “CICIoMT2024: Attack vectors in healthcare devicesa multi-protocol dataset for assessing IoMT device security,” Internet
+Things, vol. 28, Dec. 2024, Art. no. 101351.
+[35] M. A. Ferrag, O. Friha, D. Hamouda, L. Maglaras, and H. Janicke,
+“Edge-IIoTset: A new comprehensive realistic cyber security dataset of
+IoT and IIoT applications for centralized and federated learning,” IEEE
+Access, vol. 10, pp. 40281–40306, 2022.
+[36] J. Zhang, J. Chen, D. Wu, B. Chen, and S. Yu, “Poisoning attack in
+federated learning using generative adversarial nets,” in Proc. 18th IEEE
+Int. Conf. Trust, Security Privacy Comput. Commun., 13th IEEE Int.
+Conf. Big Data Sci. Eng. (TrustCom/BigDataSE), 2019, pp. 374–380.
+PAPER_TEXT

@@ -1,0 +1,1075 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [220] Explosive Cyber Security Threats During COVID-19 Pandemic and a Novel Tree-Based Broad Learning System to Overcome
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：220
+题名：Explosive Cyber Security Threats During COVID-19 Pandemic and a Novel Tree-Based Broad Learning System to Overcome
+年份：2022
+DOI：10.1109/tits.2022.3160182
+来源：IEEE Transactions on Intelligent Transportation Systems
+PDF：paper/10.1109_TITS.2022.3160182.pdf
+已有粗分类：恶意流量、暗网与攻击检测
+二级关联：无
+相关性：强相关，分数 10
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\220.txt
+- 原始字符数：48594
+- 本次发送字符数：48594
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+786
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 1, JANUARY 2024
+
+Explosive Cyber Security Threats During
+COVID-19 Pandemic and a Novel Tree-Based
+Broad Learning System to Overcome
+Ying Gao , Hongyue Miao , Jixiang Chen, Binjie Song , Xiping Hu, and Wei Wang
+
+Abstract— The rapid spread of the COVID-19 has not only
+affected personal health and economy, but also revolutionized
+people’s lifestyles. As more people turn to work and socialize
+online, the development of unmanned technologies based on the
+Internet of Vehicles (IoV), such as unmanned delivery, unmanned
+vehicles, unmanned transportation, etc., will become an inevitable
+trend. However, all kinds of intelligent terminals for unmanned
+equipment require a large amount of data interaction with
+devices such as cloud servers, mobile terminals, and roadside
+terminals, which poses cyber security risks. Furthermore, the
+outbreak of COVID-19 has prompted people to put forward
+higher demands for the security of network communications.
+Unfortunately, the current intrusion detection methods based on
+machine learning still have weaknesses such as low accuracy and
+low efficiency when faced with unbalanced data distribution.
+To solve the above problems, we propose a novel Tree-based
+BLS (TBLS) intrusion detection method according to the idea
+of ensemble learning and decision tree (CART and J48). The
+performance of TBLS was tested on the NSL-KDD dataset and
+the UNSW-NB15 dataset respectively, which contain a variety of
+malicious traffic types for attacks on the IoV. The results show
+that our proposed method can achieve higher accuracy rate and
+lower false alarm rate, compared with the existing 16 solutions.
+Index Terms— Intrusion detection, broad learning system
+(BLS), decision trees, ensemble learning.
+
+I. I NTRODUCTION
+
+S
+
+INCE 2020, the number of COVID-19 cases has been
+increasing and spreading rapidly to the world. It has not
+only affected personal health and economy, but also completely changed people’s ways of life. More people choose to
+work and socialize online to protect themselves from the virus.
+Thanks to huge advances in artificial intelligence, mobile
+
+Manuscript received 25 November 2021; revised 3 February 2022; accepted
+14 March 2022. Date of publication 28 March 2022; date of current version 17 January 2024. This work was supported in part by the Key-Area
+Research and Development Program of Guangdong Province under Grant
+2019B010137001 and Grant 2020B010166001 and in part by the Natural
+Science Foundation of Guangdong Province under Grant 2018A030313351.
+The Associate Editor for this article was L. Wan. (Corresponding author:
+Binjie Song.)
+Ying Gao, Hongyue Miao, Jixiang Chen, and Binjie Song are with the
+School of Computer Science and Engineering, South China University
+of Technology, Guangzhou 510006, China (e-mail: gaoying@scut.
+edu.cn; csmiaohy1997@mail.scut.edu.cn; cs_cjx_cdh@mail.scut.edu.cn;
+sbj332644514@163.com).
+Xiping Hu and Wei Wang are with the School of Intelligent Systems
+Engineering, Sun Yat-sen University, Shenzhen 518107, China (e-mail:
+huxiping@mail.sysu.edu.cn; wangw328@mail.sysu.edu.cn).
+Digital Object Identifier 10.1109/TITS.2022.3160182
+
+sensing, ultra-reliable and low-latency communications, and
+intelligent manufacturing technology, the Internet of Vehicles
+(IoV), which refers to a vast interactive network composed
+of information such as vehicle position, speed, and routes, has
+grown rapidly in recent years, especially during the COVID-19
+pandemic. The great breakthrough in unmanned technologies
+has not only attracted the attention of industry and academia,
+but also brought potential network security risks, because all
+intelligent terminals of unmanned equipment need to interact
+with cloud servers, mobile terminals, roadside terminals, and
+other devices for large amounts of data interaction [1]–[4].
+Taking the VANET as an example, a distributed denial of
+service (DDoS) attack may occur during vehicle-to-vehicle
+(V2V) and vehicle-to-infrastructure (V2I) communication [5].
+Once the intrusion is successful, it may cause communication
+congestion, or even send malicious instructions to mislead the
+vehicle’s actions, and even lead to serious traffic accidents.
+Monitored by the Ministry of Industry and Information Technology (MIIT) of China, there were more than one million
+malicious attacks appeared on the VANET platforms in the
+first half of 2021, which is an increase of more than 80%
+over the same period in 2020. With the spread of COVID-19,
+people have put forward higher requirements for the security
+and stability of the IoV [6].
+Nowadays, experts have done lots of research work [7]–[10]
+to improve the safety and reliability of IoV, adopting mainly
+machine learning-based methods, such as artificial neural networks (ANN) [11], convolutional neural networks (CNN) [12],
+decision trees (DT) [13], random forests (RF) [14], support
+vector machines (SVM), Naive Bayes (NB) [15] and so on.
+However, the current intrusion detection methods expose the
+following challenges [16]:
+1) Anomalous traffic is relatively difficult to obtain, which
+results in more normal data in the training set and fewer anomalous data. The imbalance of the dataset leads to insufficient
+training of the detection method, and the detection results often
+tend to classify the abnormal traffic as normal.
+2) There are differences between the same types of traffic,
+and similarities between the different types of traffic, which
+makes it difficult to detect anomalies.
+3) It is not known in advance which features contribute
+greatly to anomaly detection.
+4) VANET has high real-time performance and a large
+amount of data, which requires high efficiency in detection.
+
+1558-0016 © 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+GAO et al.: EXPLOSIVE CYBER SECURITY THREATS DURING COVID-19 PANDEMIC AND NOVEL TBLS TO OVERCOME
+
+At present, the anomaly detection method based on deep
+learning needs to be layer-by-layer in training. This results
+in large time overhead and low efficiency.
+To improve the accuracy of intrusion detection, the existing
+methods usually take two approaches [7]. One is to obtain
+better feature representation in order to enlarge the difference
+between data distributions and the other is to enhance the
+recognition ability of the classifier.
+Although these approaches have achieved good intrusion
+detection results, in fact, most of them are still misuse-based
+method rather than advanced. With the continuous increase of
+data volume, the demands for data processing efficiency will
+also become higher. Thus, complex methods such as ensemble
+learning [17]–[19] were adopted to improve the performance
+of the classifier. However, the added time and space overhead
+of these methods will limit their deployment on NIDS.
+Considering the existing problems comprehensively, this
+paper firstly proposes an intrusion detection method based on
+BLS. As far as we know, this is the first time that BLS [20] is
+applied to intrusion detection. We also propose a novel method
+named Tree-based BLS (TBLS) to detect network intrusion in
+IoV systems. The implementation process is as follows. First,
+multiple decision tree classifiers are used to fit the features of
+the dataset. Second, based on the idea of ensemble learning,
+we use BLS to integrate the features fitted by each basic
+tree classifier, and finally get the distribution features of the
+raw traffic. In the intrusion detection stage, BLS performs
+multiple non-linear transformations on the input nodes to
+obtain feature nodes. Then the input nodes and feature nodes
+are concatenated for the next step and the final classification
+result is obtained through the pseudo-inverse operation.
+The contributions of this paper include the following
+aspects:
+1) To our best knowledge, this is the first time that BLS has
+been adopted in network intrusion detection. This paper realizes the preliminary exploration of BLS in intrusion detection
+and shows how to set various parameters in order to maximize
+its effectiveness. We also have provided references for the
+latter research work.
+2) We have improved the BLS intrusion detection method
+and proposed the TBLS method, which uses trees to improve
+the input nodes of the original BLS and further improve the
+generalization ability of the BLS.
+3) The experimental results show that the proposed method
+can adapt to intrusion detection better. Compared with other
+proposed intrusion detection method, TBLS can obtain higher
+accuracy and a lower false alarm rate, and it shows higher
+intrusion detection efficiency in the test phase.
+The structure of the following paper is as follows: Section II
+mainly introduces the related work of the paper. Section III
+is the key part, which mainly describes the BLS and TBLS
+algorithms in detail. Section IV includes the analysis of the
+experimental content and results. The summary and future
+work are in Section V.
+II. R ELATED W ORK
+As we know, network intrusion detection systems (NIDS)
+can be divided into two categories [21]. The first category
+
+787
+
+is the misuse-based anomaly detection method. This method
+creates a library of exception rules, which stores known types
+of attack behaviors. During detection, if the network traffic
+matches a rule in library B, the traffic is identified as abnormal.
+Thus, this method cannot detect unknown abnormal traffic.
+The other category is the anomaly-based detection method,
+which only learns the pattern of normal network traffic. During
+detection, if the network traffic cannot be identified by the
+model, the traffic will be regarded as abnormal. Although this
+method can identify new types of abnormal traffic, the false
+alarm rate is high because it will treat new normal traffic and
+traffic never seen before as an exception.
+With the development of big data technology [22]–[25] and
+artificial intelligence (AI) [26]–[28], the self-learning model
+based on massive data is widely used in the field of NIDS.
+Nowadays, machine learning has been widely used in intrusion
+detection and can be divided into three categories.
+The first category is supervised anomaly detection method.
+In the training process, a training set and labels representing
+categories are required. Shone et al. [29] combined the deep
+and shallow learning for intrusion detection. This approach
+adopted a deep neural network for feature extraction with
+random forest for classification. The result showed that it
+was more efficient and effective than the deep brief network (DBN). Yin et al. [30] used recurrent neural networks
+to build IDS that suitable for binary and multiclass classification. The experimental results showed that its performance is superior to that of traditional ML classification
+methods.
+The second is unsupervised anomaly detection method.
+It requires only a training set and no labels. The classification
+is achieved by means such as clustering. Cao et al. [31]
+proposed a novel method to help the AE achieve shallow
+representation of abnormal traffic, and proposed two models which are Shrink Auto-encoder (SAE), and Dirac Delta
+Variational Auto-encoder (DVAE). They adopted seven oneclassifiers to detect abnormal traffic. Experiments showed that
+SAE and DVAE can achieve higher accuracy when compared
+with the other three shallow representation methods. Ahmed
+and Mahmood [32] presented a clustering-based collective
+anomaly detection approach to detect denial of service (DoS)
+attacks in the traffic. Their approach was proved to be more
+efficient than other traditional cluster methods.
+The third is the semi-supervised anomaly detection method.
+This method combines the above two methods and adopts
+a few labels to train the model. Semi-supervised learning
+methods can be further subdivided into transductive learning
+and inductive learning. An online sequential and network
+Entropy estimation based semi-supervised ML approach was
+proposed for DDoS detection in [33]. The supervised part was
+designed to reduce the false alarm rate of the unsupervised
+part. A semi-supervised learning method called FSSL-EL was
+also proposed to detect abnormal network traffic in [34]. After
+training the supervised part, the author adopted the fuzzinessbased method to mine the hidden structure of unlabeled
+data and combined them via a neural network. However, the
+prediction performance of the above methods still needs to be
+improved.
+
+788
+
+Fig. 1.
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 1, JANUARY 2024
+
+Structure of TBLS.
+
+III. T HE I MPLEMENTATION P ROCESS
+A novel Tree-based Broad Learning System (TBLS) for
+intrusion detection is presented in this section, which can give
+a more accurate classification with less time consumption.
+The main structure of broad learning is also artificial neural
+network. However, unlike the deep learning system which
+mainly learns hidden features by increasing the number of
+layers in its neural network, a broad learning system adds
+neurons to each layer to extend features in order to realize
+thorough analysis and recognition of complex and multivariate
+data. Moreover, in order to further improve the fitting degree
+of traffic data and the processing performance of unbalanced
+data, we have involved several weighted DT classifiers in our
+structure.
+In the following subsections, data preprocessing, k-means
+based data sampling, broad learning system and the novel treebased BLS method for NIDS will be introduced respectively
+in detail. For better understanding our method, the flowchart
+of the proposed approach is described in Fig.1.
+
+A. Data Preprocessing
+In this paper, we set X = {x 1 , x 2 , . . . , x n } ∈ R m×n to denote
+the training traffic with features, where n expresses the amount
+of traffic in the training dataset, and m represents the number
+j
+of dimensional features. x i represents the j -th feature in x i .
+Due to the existence of non-numerical features in X which
+may cause a negative effect on the learning process, we adopt
+the one-hot encoding method to transform symbolic features
+into numerical data. For example, if a column in X has three
+distinct values { f 1 , f2 , f3 }, and then they will be mapped to
+three binary vectors [1, 0, 0], [0, 1, 0], [0, 0, 1] respectively,
+which are regarded as their new values.
+
+After encoding, we use min-max standardization to scale all
+the feature values within the interval [0, 1], the new value is
+calculated by:
+j
+xi =
+
+j
+
+xi − M I N j
+M AX j − M I N j
+
+(1)
+
+j
+where x i is the attribute value, M I N is the minimum of the
+j -th column while M AX is the maximum.
+Meanwhile, Y = {y1 , y2 , . . . , yn } denotes the label of X,
+and the range of y j is determined according to the classification categories. For instance, we set yi ∈ {0, 1} if there
+are only two types of records: normal and abnormal. If there
+are five types to be identified, we will set yi ∈ {0, 1, 2, 3, 4}.
+We also implement the one-hot encoding method on Y as well,
+it will facilitate the training process of the whole model.
+In addition, the redundancy and correlation between features
+in Traffic data may slow down the training process and reduce
+detection efficiency. Hence, we use the Principal Component
+Analysis (PCA) algorithm to reduce the dimensions of the
+dataset for better feature selection and improving the speed
+of training process. Principal Component Analysis (PCA) is a
+kind of unsupervised learning feature extraction method which
+maps high-dimensional data to a low-dimensional space by
+linear projection. Useful information will be kept after the
+change. In this paper, we adopt PCA to discard the redundant
+components and extract the important features.
+B. K-Means Based Data Sampling
+A universal characteristic of the network traffic dataset is
+that the original data is unbalanced. The number of normal
+data is always much larger than that of abnormal data. Thus,
+once a classifier is trained on an imbalanced dataset, it will
+tend to bias towards those frequent records. To avoid this,
+
+GAO et al.: EXPLOSIVE CYBER SECURITY THREATS DURING COVID-19 PANDEMIC AND NOVEL TBLS TO OVERCOME
+
+Algorithm 1 K-Means Based Sampling Approach
+Input: The labeled examples S = {X, Y }, the number
+of categories C, the number of clusters k, and sampling
+threshold n over
+Output: The labeled examples Snew after sampling
+1: initialize Snew = {}
+2: for i = 1 : C
+3:
+select all examples
+ that labeled i from S, and mark
+i = Xi, Y i
+them
+as
+S
+ 
+4:
+if  S i  ≤ n over
+ 
+5:
+randomly select n over −  S i  records from
+S i as S dup , add perturbation to X dup in S dup
+6:
+Snew = Snew ∪ S dup ∪ S i
+7:
+end
+ if
+8:
+if  S i  > n over
+ 
+9:
+calculate sample rate r = n over /  S i 
+10:
+fit a k-means model with k and X i
+
+11:
+get the clustered examples set S1i , . . . ,Ski
+12:
+for j = 1 : k
+  
+ 
+13:
+randomly select S ij  ∗ r records to form Sˆij
+14:
+S
+=S
+∪ Sˆi
+new
+
+15:
+16:
+17:
+18:
+
+new
+
+j
+
+end for
+end if
+end for
+return Snew
+
+789
+
+alternative approach to deep learning. In order to save the
+time consumption caused by multi-layer neural network, there
+are only two layers in a BLS. The first layer contains input
+nodes together with feature nodes which are mapped by input
+nodes. And the second layer is the output layer, which has the
+same number of nodes as the number of categories. A BLS can
+expand the model by adding feature nodes to the first layer,
+and in this way extract more useful and non-linear information.
+Besides, the BLS does not require backpropagation to find
+the optimal weights because it only has two layers. Instead,
+Pseudoinverse and ridge regression learning algorithms are
+adopted to calculate the optimal weights.
+Assume the input data is X, the feature nodes group is
+F (X) = F1 (X) , F2 (X) , . . . , Fq (X) , the number of the
+feature nodes is q, the i -th feature node is calculated via the
+following formula:
+Fi (X) = δ (wi X + bi )
+
+(2)
+
+where wi (i = 1, 2, . . . , q) indicates weight and bi (i =
+1, 2, . . . , q) indicates bias, which are both randomly generated. δ(·) represents the activation function. In this paper,
+we adopt tanh function as the activation function. The formula
+is as follows:
+δ (x) =
+
+e x − e−x
+e x + e−x
+
+(3)
+
+After calculating the feature nodes from the input, the first
+layer A(X) of the BLS can be expressed as:
+we adopt a k-means based sampling method to get a balanced
+training set from an imbalanced one.
+First, we define n over as the sampling threshold, k as the
+number of clusters for a k-means clustering algorithm, Snew
+as the sampled dataset. Second, we divide the training set
+S into C subsets S i (i ∈ {1, 2, . . . , C}) based on the label.
+For a subset S i , if the number
+ records is less than n over ,
+ of
+we randomly select n over −  S i  records from S i , then add
+noise to those duplicates and put both the duplicates and
+the original subset into Snew . For a subset whose quantity is
+more than n over , we first cluster the subset into k clusters and
+calculate the sample rate r by a function which is defined in
+Algorithm 1, then randomly select records from each cluster at
+this sample rate and add them into Snew . Finally, we get a new
+dataset Snew , which is a balanced one with around C ∗ n over
+records. The details of the sampling approach are presented in
+Algorithm 1.
+After data sampling, if n over is set appropriately, the new
+training set can well represent the raw dataset and is suitable
+for training a fairer classifier.
+
+A (X) = [X|F(X)] = [X, F1 (X)]
+
+= X, F 1 (X) , · · · , Fq (X)
+
+Finally, calculate the weight matrix W which satisfies the
+equation A (X) W = Y . Because there are only two layers
+in BLS, the optimal weight can be calculated by a simple
+inversion method. The formula is as follows:
+W = A (X)−1 Y
+
+Deep learning-based method includes many hidden layers.
+It can further grasp the correlation between features and the
+target labels by continuously increasing the depth of the structure. However, the huge number of parameters to be optimized
+in a deep learning structure usually takes a lot of time and
+machine resources. To resolve these issues, the Broad Learning
+System was first introduced in [20], aiming to provide an
+
+(5)
+
+However, the inverse matrix of A(x) may not exist, and
+we cannot get (A(X))−1 directly. Therefore, a pseudo-inverse
+operation is adopted to substitute the matrix inverse operation,
+expressed as A(X)W ≈ Y . The pseudo-inverse of a matrix M
+can be calculated by the following formula:
+M + = li m (M T M + λI )−1 M T
+λ→0
+
+(6)
+
+the pseudo-inverse of A(X) and the optimal weight matrix W
+are calculated as follows:
+A(X)+ = li m (A(X)T A(X) + λI )−1 A(X)T
+
+C. Broad Learning System (BLS)
+
+(4)
+
+λ→0
+
+W = A (X)+ Y
+
+(7)
+(8)
+
+It is obviously that it takes much less time to get the
+weight matrix compared with deep learning approaches which
+require complex backpropagation processes. Thus, the BLS
+shows better real-time performance in dealing with the massive
+dataset of VANET and at the same time effectively avoids the
+transmission error between layers in backpropagation.
+
+790
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 1, JANUARY 2024
+
+D. Tree-Based BLS Method for NIDS
+Since all the feature nodes are generated from the input X,
+the quality of the input data plays a vital role in the performance of BLS. While the raw data of traffic is not able to
+fully present the relationship between feature X and labels Y ,
+we reconstruct the input nodes of BLS with the help of
+ensemble learning, and put forward a novel network intrusion
+detection method named Tree-based BLS (TBLS). The TBLS
+uses the extended feature nodes of broad learning algorithm
+to integrate the learning results of each weighted decision
+tree classifier and adaptively calculate the input weight of
+each classifier so that it can achieve better predictions than
+a single classifier.
+Assume the input of BLS is I (X) , for an original BLS,
+I (X) = [X]. Instead of using raw training data X as input,
+we define I (X) = [I1 (X) ,I2 (X) , . . . ,I p (X)], where Ii is a
+decision tree classifier, p denotes the number of the trees, and
+Ii (·) is the i -th tree’s decision function, i ∈ {1, 2, . . . , p}. The
+dimension of I (X) is p × C, where C denotes the number of
+classes.
+First, for the training dataset S = {X, Y }, we adopt a
+bootstrap sampling strategy to get some samples from S as
+Bi to train the i -th basic classifier Ii . The sample rate r is set
+to 0.4 based on sufficient experimental results in this paper.
+After p classifiers have been generated, input X to each basic
+classifier to get the
+ predictions, and assemble them to form
+the input I (X) = I1 (X) , I2 (X) , . . . , I p (X) of BLS.
+Second, according to the training approach of BLS
+described in the previous section, the i -th feature node is
+mapped via the following formula:
+Fi (X) = δ wi I (X)T + bi
+thus, the first layer can be present as:
+
+A (X) = [I (X)|F(X)] = I (X) , F1 (X) , · · · ,Fq (X)
+
+(9)
+
+(10)
+
+where q denotes the number of the feature nodes.
+Finally, the weight matrix W which satisfies the equation
+A (X) W = Y is calculated by the following formula:
+W = A (X)+ Y
+
+(11)
+
++
+
+where A (X) is the pseudo-inverse matrix of A (X).
+In the testing phase, for a record x, after data preprocessing,
+the input is mapped to I (x) = [I1 (x) , I2 (x) , . . . , I p (x)] in
+the first step. Then, use all the wi and bi which have been
+fitted during the training process to build the i -th feature node
+and F (x). After that, I (x) and F (x) are used for generating
+A (X) via Eq. (10). Finally, the output of x is ŷ = A (X) W .
+Since there are C nodes in the output layer, ŷ contains C
+values, and the label corresponding to the maximum value of
+ŷ is considered as the prediction class.
+To make it easier to understand, the details of the TBLS
+algorithm are demonstrated in Algorithm 2.
+
+Algorithm 2 Tree-Based BLS
+Input: The labeled training dataset S = {X, Y }, the number
+of the basic classifiers p, the number of the feature nodes q
+and the bootstrap sample rate r
+Output: Tree-based BLS model χ
+1: χ = {}
+2: for i = 1 : p
+3:
+Generate bootstrap Bi by sampling S with sample
+rate r
+4:
+Train a tree classifier Ii on Bi , χ = χ ∪ {I i }
+5: end for 
+6: I (X) = I1 (X) , . . . ,I p (X)
+7: for i = 1 : q
+8:
+randomly initialize weight wi and bias bi
+9:
+χ = χ ∪ {wi , bi }
+10:
+Calculate Fi (X) use Eq. (9)
+11: end for 
+12: F (X) = F1 (X) , . . . ,Fq (X)
+13: A (X) = [I (X)|F(X)]
+14: Calculate the optimal weight W use Eq. (11)
+15: χ = χ ∪ W
+16: return χ
+TABLE I
+C ONFUSION M ATRIX
+
+proposed model. The representations of these three metrics are
+given as follows:
+TP +TN
+(12)
+T P + T N + FP + FN
+TP
+DR =
+(13)
+T P + FN
+FP
+(14)
+FAR =
+FP + T N
+where true positive (TP) refers to the number of attack records
+correctly identified as an attack, true negative (TN) denotes the
+number of normal records that are correctly identified as normal, false positive (FP) denotes the number of normal records
+incorrectly identified as an attack, and false negative (FN)
+refers to the number of attack records incorrectly identified
+as normal. The definition of a confusion matrix is shown in
+Table I. The accuracy describes the ability of a detection model
+to make correct prediction while the detection rate indicates
+the probability that attacks can be identified correctly. The
+false alarm rate indicates the rate that the normal records
+are predicted as attacks. Researchers try their best to build
+a detection model with high accuracy and low FAR.
+AC =
+
+IV. E XPERIMENT AND A NALYSIS
+A. Evaluation Measures
+
+B. Experiment Dataset and Settings
+
+In our work, accuracy (AC), detection rate (DR), and false
+alarm rate (FAR) are used to evaluate the performance of the
+
+KDD Cup 99 dataset has been widely used as a benchmark
+dataset for evaluating the performance of IDS for many years.
+
+GAO et al.: EXPLOSIVE CYBER SECURITY THREATS DURING COVID-19 PANDEMIC AND NOVEL TBLS TO OVERCOME
+
+791
+
+TABLE II
+T HE D ISTRIBUTION OF C LASSES IN NSL-KDD D ATASET
+
+TABLE III
+T HE D ISTRIBUTION OF C LASSES IN UNSW-NB15 D ATASET
+
+However, it was observed that the training data contains a
+lot of redundant records. This redundancy causes the learning
+algorithms to be biased towards the frequent records and leads
+to poor classification results of harmful records. Thus, this
+paper is tested on the other two common datasets, NSL-KDD
+[35] and UNSW-NB15 [40], respectively.
+NSL-KDD dataset is an improved version of the KDD
+Cup 99 dataset, and it was built by eliminating the redundant
+records from the training and test data in KDD Cup 99 dataset.
+Hence, the NSL-KDD dataset contains a reasonable number
+of records, which make it more suitable for the training and
+evaluating of any learning algorithm. Nowadays, although
+there are some other newer datasets available for evaluation,
+NSL-KDD dataset is still considered as one of the most
+authoritative benchmark datasets in this filed. Therefore, we
+utilize the NSL-KDD dataset in our work as mentioned before.
+The NSL-KDD dataset covers two training sets ‘KDDTrain’
+and ‘KDDTrain_20percent’, ‘KDDTest+’ and ‘KDDTest-21’
+as the testing sets. Each record consists of 41 features in
+numerical or symbolic type, and one class label for indicating
+whether the record is normal or a particular kind of attack.
+There are five typical network events involved in the dataset,
+i.e., normal, probe, Denial-of-Service (DoS), user to root
+(U2R) and remote to local (R2L). We provide Table II below
+to show the distribution of classes in NSL-KDD dataset.
+The ‘KDDTrain_20percent’ dataset contains 20% records
+in the ‘KDDTrain’, which can still represent the distribution
+well. Specifically, we use the ‘KDDTrain_20percent’ dataset
+as our training dataset for improving training efficiency while
+guaranteeing a good performance. Besides, ‘KDDTest+’ and
+‘KDDTest-21’ are used for testing.
+The UNSW-NB15 dataset is collected and established by
+the Australian Centre for Cyber Security (ACCS) from IXIA
+PerfectStorm. The dataset contains multifarious normal and
+
+TABLE IV
+T HE PARAMETERS IN D ATA P REPROCESSING
+
+abnormal behaviors of traffic data. Compared with NSLKDD, the UNSW-NB15 dataset has more novel types of
+attacks and features. It has nine aggressive behaviors in total:
+Fuzzers, Analysis, Backdoor, DoS, Exploits, Generic, Reconnaissance, Shellcode, and Worms. The raw data of UNSWNB15 includes 47 features, and can be divided into two subsets
+‘UNSW-NB15_training-set.csv’ and ‘UNSW-NB15_testingset.csv’. And in these subsets, the number of features has been
+reduced to 42. Table III shows more information about the
+distribution of classes in UNSW-NB15 dataset.
+The experiments are performed on a personal computer,
+and the configurations are listed as follows: The Windows
+10 professional system, Intel Core i7-8700 CPU @ 3.20 GHz,
+and 16 GB RAM, NVIDIA GeForce RTX 2070S GPU.
+C. Experimental Results
+In order to make our experimental testing process easier
+to understand, all the specific parameters of the experiments
+under the NSL-KDD dataset and UNSW-NB15 dataset are
+written in the following Table IV and Table V.
+1) The Impact of the PCA Method: To maximize the performance of the proposed model, we designed an experiment
+
+792
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 1, JANUARY 2024
+
+TABLE V
+T HE PARAMETERS OF TBLS
+
+Fig. 3.
+
+Relationship between sample size n over and detection accuracy.
+
+Fig. 2. Relationship between PCA dimensionality d and detection accuracy.
+
+to find out the optimal parameter for PCA. The results of
+NSL-KDD and UNSW-NB15 are shown in Fig.2. For the
+NSL-KDD dataset, when the dimensionality is set to 20, the
+proposed model reaches its best performance in terms of
+accuracy on Test+ and Test-21 datasets. When the dimension
+is lower than 20, the processed data is not able to describe
+the raw data fully, and the performance is unsatisfactory
+predictably. Meanwhile, when the dimension is higher than 20,
+the processed data may generate irrelevant data that adversely
+affect the detection performance and consume more computing
+resources. When the dimension is set to 121, it means the PCA
+is not applied, and we have observed that the accuracy drops
+sharply. For the UNSW-NB15 dataset, the model peeks when
+the dimensionality is set to 30. Neither higher than 30 nor
+lower than 30 can give better performance. The result shows
+that it is necessary to apply PCA to reduce the dimension of
+the data before the training process. Thus, we choose to use
+the 20-dimension and the 30-dimension data respectively for
+our proposed model in the following experiments.
+Besides, we also made tests about the threshold n over of the
+k-means based sampling method to explore the relationship
+between n over and detection accuracy. Fig.3 shows the whole
+results of the above two datasets. When n over is too small, the
+lack of data samples results in underfitting, which makes the
+model unable to achieve a satisfactory training effect. Meanwhile, when n over is too large, the algorithm is more inclined
+to classify traffic into normal class and ignore other aggressive
+behaviors. Therefore, it is proved that proper sampling can
+reduce the impact of data imbalance to a certain extent, make
+the algorithm pay more attention to those attack classes, and
+then improve the performance of data prediction and detection
+of attack behaviors. As a result, we decided to choose 400 and
+
+Fig. 4. Relationship between number of decision trees p and detection
+accuracy.
+
+3000 as the sample size of the NSL-KDD dataset and the
+UNSW-NB15 dataset respectively.
+2) The Impact of the Bootstrapping Method: In this part,
+we test the effects of two parameters in the bootstrapping
+process which are the number of decision trees p and the
+sample rate r , to study the efficiency of the ensemble learning
+method. Relative results are shown in Fig.4. When p is set to
+100, the TBLS method performs the best. As p declines from
+100, there is a significant decrease in accuracy, which indicates
+that the model is underfitting and cannot learn the training
+data comprehensively. Therefore, we choose p = 100 as the
+optimal number of decision trees.
+Furthermore, it is shown in Fig.5 about the performance
+of the TBLS algorithm when different sample rates are used.
+Through the outcomes, when r is set to 0.4, the model gets
+the best accuracy in all three datasets. If the r is set below
+0.4, the accuracy of the model will be poor due to lack of
+sampled data. However, the performance of the model will
+still decline when r is set over 0.4, since TBLS cannot fully
+learn the distribution of the dataset based on a mass of data.
+As a result, we choose r = 0.4 as the sample rate of our
+approach.
+3) The Impact of the Feature Nodes: In order to verify the
+effect of increasing feature nodes in broad learning system on
+the overall performance of model, we change the number of
+feature nodes q to see which is the most appropriate one. The
+
+GAO et al.: EXPLOSIVE CYBER SECURITY THREATS DURING COVID-19 PANDEMIC AND NOVEL TBLS TO OVERCOME
+
+Fig. 5.
+
+Relationship between sample rate r and detection accuracy.
+
+Fig. 7.
+
+793
+
+Classification results of different basic classifier.
+
+TABLE VI
+C OMPARED W ITH THE C URRENT D ETECTION M ETHODS
+
+Fig. 6.
+Relationship between number of feature nodes q and detection
+accuracy.
+
+results are shown in Fig.6, illustrating that the detection ability
+to traffic data is constantly improving with the increase of the
+feature nodes. However, limited by the personal computer’s
+performance in the experiment, we can only set q to 80 as the
+optimal number of feature nodes.
+4) The Impact of the Basic Classifier: To explore the
+influence of different basic classifiers on the detection accuracy
+of our TBLS model, we tried three decision tree classifiers J48,
+CART and C4.5 respectively as the basic classifiers. Besides,
+an original BLS based on GNB classifiers was built to act
+as the baseline for comparison. For each model, grid search
+and cross-validation techniques are used to search for the best
+parameters. After training, we apply the models to the testing
+set for multiple classifications.
+The results are described in Fig.7. The detecting accuracy of
+BLS(GNB) in ‘KDDTest-21’ and ‘UNSW-NB15_testing-set’
+drops to almost 50% without the help of the decision trees, and
+the integrated model gets the highest accuracy score when J48
+serves as the base classifier. In a word, the TBLS has proved to
+be more efficient than the original BLS for intrusion detection
+with a stronger non-linear representation produced by the basic
+decision tree classifiers. Moreover, after weighted processing,
+the decision tree classifiers can improve the performance of
+the whole model more effectively.
+5) Comparison With Other Existing Methods: In this
+section, we compare the proposed method with 16 existing
+
+methods. Among them, ‘Experiment-1’ in [38] and
+‘Experiment-2’ in [39] are methods based on semi-supervised
+learning. In addition, we also used the original BLS framework
+and the tree-based deep learning system (TDLS) to conduct
+ablation experiments. The results are shown in Table VI.
+The accuracy of TBLS is 84.49% on ‘KDDTest+’, 70.92%
+on ‘KDDTest-21’, and 72.84% on ‘UNSW-NB15_testing-set’
+(which is not listed). When compared with the most popular
+semi-supervised learning algorithms, our approach can still
+stay ahead. Although the accuracy of TBLS is relatively weak
+on ‘KDDTest+’, it has obvious advantage in FAR, which is
+regarded more important in the field of intrusion detection.
+
+794
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 1, JANUARY 2024
+
+The great improvement of our TBLS over the original BLS
+have emphasized the importance of using tree structure as the
+basic classifier. Furthermore, in order to verify the superiority
+of BLS in NIDS, we replace the broad learning structure in
+Fig.1 with a 3-layer neural network to connect each decision
+tree classifier. Momentum-based gradient descent algorithm
+was used to train the new model called TDLS. Experimental
+results show that the TBLS not only learns faster, but also has
+better detection performance than TDLS in NIDS scenarios.
+In sum, the proposed TBLS is superior to other methods
+regardless of AC or FAR. Results have already proved that our
+proposed method can be well adapted to intrusion detection.
+V. C ONCLUSION
+In this paper, a novel Tree-based broad learning system
+(TBLS) method is proposed for intrusion detection task in
+VANET during COVID-19 pandemic. The presented TBLS
+approach achieves 84.49%, 70.92%, and 72.84% accuracy
+respectively on ‘KDDTest+’, ‘KDDTest-21’, and ‘UNSWNB15’ datasets through a large series of experiments, which
+stand out from the other state-of-the-art methods.
+Overall, the main contributions of our method can be
+summarized as follows. Firstly, it is the first time that BLS
+has been applied to intrusion detection domain as far as
+we know, aiming to reduce training time consumption and
+provide a faster way to remodel without retraining. Secondly,
+multiple decision trees are trained to reconstruct the input of
+a BLS so that the integrated TBLS model can perform better
+on multi-class classification. Finally, several approaches like
+PCA method and k-means based sampling method have been
+adopted to discard the redundant part of data for extracting
+important features and address the issue of data imbalance,
+which ensures the quality of data and thus raises the ceiling
+of performance.
+In the future research, we are going to try more machine
+learning structures like the Generative Adversarial Networks
+in order to improve the generalization ability of our model
+and realize the real-time detection of new attacks. Our goal is
+to build an all-around intrusion detection system. By the way,
+we will test our approach on more public benchmarks.
+R EFERENCES
+[1] H. F. Al-Turkistani and H. Ali, “Enhancing users’ wireless network cyber
+security and privacy concerns during COVID-19,” in Proc. 1st Int. Conf.
+Artif. Intell. Data Anal. (CAIDA), Apr. 2021, pp. 284–285.
+[2] A. A. Shammari, R. R. Maiti, and B. Hammer, “Organizational security
+policy and management during COVID-19,” in Proc. SoutheastCon,
+Mar. 2021, pp. 1–4.
+[3] J. Ahmed and Q. Tushar, “COVID-19 pandemic: A new era of cyber
+security threat and holistic approach to overcome,” in Proc. IEEE Asia–
+Pacific Conf. Comput. Sci. Data Eng. (CSDE), Dec. 2020, pp. 1–5.
+[4] A. Rahman, M. S. Hossain, N. A. Alrajeh, and F. Alsolami, “Adversarial
+examples—Security threats to COVID-19 deep learning systems in medical IoT devices,” IEEE Internet Things J., vol. 8, no. 12, pp. 9603–9610,
+Jun. 2021.
+[5] A. M. Alrehan and F. A. Alhaidari, “Machine learning techniques
+to detect DDoS attacks on VANET system: A survey,” in Proc. 2nd
+Int. Conf. Comput. Appl. Inf. Secur. (ICCAIS), Riyadh, Saudi Arabia,
+May 2019, pp. 1–6.
+[6] N. Mathew and V. Uma, “VANET security—Analysis and survey,”
+in Proc. Int. Conf. Control, Power, Commun. Comput. Technol.
+(ICCPCCT), Kannur, India, Mar. 2018, pp. 100–106.
+
+[7] L. Tawalbeh, F. Muheidat, M. Tawalbeh, M. Quwaider, and G. Saldamli, “Predicting and preventing cyber attacks during COVID-19 time
+using data analysis and proposed secure IoT layered model,” in Proc.
+4th Int. Conf. Multimedia Comput., Netw. Appl. (MCNA), Oct. 2020,
+pp. 113–118.
+[8] M. Said Elsayed, N.-A. Le-Khac, and A. D. Jurcut, “Dealing with
+COVID-19 network traffic spikes [cybercrime and forensics],” IEEE
+Security Privacy, vol. 19, no. 1, pp. 90–94, Jan. 2021.
+[9] W. Choi, K. Joo, H. J. Jo, M. C. Park, and D. H. Lee, “VoltageIDS:
+Low-level communication characteristics for automotive intrusion detection system,” IEEE Trans. Inf. Forensics Security, vol. 13, no. 8,
+pp. 2114–2129, Aug. 2018.
+[10] R. Bitton and A. Shabtai, “A machine learning-based intrusion detection
+system for securing remote desktop connections to electronic flight
+bag servers,” IEEE Trans. Dependable Secure Comput., vol. 18, no. 3,
+pp. 1164–1181, May 2021, doi: 10.1109/TDSC.2019.2914035.
+[11] A.-H. Muna, N. Moustafa, and E. Sitnikova, “Identification of malicious
+activities in industrial Internet of Things based on deep learning models,”
+J. Inf. Secur. Appl., vol. 41, pp. 1–11, Aug. 2018.
+[12] K. Wu, Z. Chen, and W. Li, “A novel intrusion detection model for
+a massive network using convolutional neural networks,” IEEE Access,
+vol. 6, pp. 50850–50859, 2018.
+[13] Y. Won, M.-J. Choi, B. Park, and J. W.-K. Hong, “An approach for
+failure recognition in IP-based industrial control networks and systems,”
+Int. J. Netw. Manage., vol. 22, no. 6, pp. 477–493, Mar. 2012.
+[14] Y. Chang, W. Li, and Z. Yang, “Network intrusion detection based on
+random forest and support vector machine,” in Proc. IEEE Int. Conf.
+Comput. Sci. Eng. (CSE) IEEE Int. Conf. Embedded Ubiquitous Comput.
+(EUC), Guangdong, China, Jul. 2017, pp. 635–638.
+[15] J. M. Beaver, R. C. Borges-Hink, and M. A. Buckner, “An evaluation
+of machine learning methods to detect malicious SCADA communications,” in Proc. 12th Int. Conf. Mach. Learn. Appl., Miami, FL, USA,
+Dec. 2013, pp. 54–59.
+[16] J. Zhang, Z. Wang, J. Meng, Y.-P. Tan, and J. Yuan, “Boosting positive
+and unlabeled learning for anomaly detection with multi-features,” IEEE
+Trans. Multimedia, vol. 21, no. 5, pp. 1332–1344, May 2019.
+[17] A. H. Mirza, “Computer network intrusion detection using various classifiers and ensemble learning,” in Proc. 26th Signal Process. Commun.
+Appl. Conf. (SIU), Izmir, Turkey, May 2018, pp. 1–4.
+[18] B. Morris, “Explainable anomaly and intrusion detection intelligence
+for platform information technology using dimensionality reduction and
+ensemble learning,” in Proc. IEEE AUTOTESTCON, National Harbor,
+MD, USA, Aug. 2019, pp. 1–5.
+[19] A. S. Varal and S. K. Wagh, “Misuse and anomaly intrusion detection
+system using ensemble learning model,” in Proc. Int. Conf. Recent
+Innov. Electr., Electron. Commun. Eng. (ICRIEECE), Bhubaneswar,
+India, Jul. 2018, pp. 1722–1727.
+[20] C. L. P. Chen and Z. L. Liu, “Broad learning system: An effective
+and efficient incremental learning system without the need for deep
+architecture,” IEEE Trans. Neural Netw. Learn. Syst., vol. 29, no. 1,
+pp. 10–24, Jan. 2018.
+[21] T. F. Lunt, “A survey of intrusion detection techniques,” Comput. Secur.,
+vol. 12, no. 4, pp. 405–418, Jun. 1993.
+[22] L. Zhu, F. R. Yu, Y. Wang, B. Ning, and T. Tang, “Big data analytics in
+intelligent transportation systems: A survey,” IEEE Trans. Intell. Transp.
+Syst., vol. 20, no. 1, pp. 383–398, Jan. 2019.
+[23] G. Bello-Orgaz, J. J. Jung, and D. Camacho, “Social big data: Recent
+achievements and new challenges,” Inf. Fusion, vol. 28, pp. 45–59,
+Mar. 2016.
+[24] U. Aftab and G. F. Siddiqui, “Big data augmentation with data warehouse: A survey,” in Proc. IEEE Int. Conf. Big Data, Seattle, WA, USA,
+Dec. 2018, pp. 2785–2794.
+[25] G. Chareyron, J. Da-Rugna, and T. Raimbault, “Big data: A new
+challenge for tourism,” in Proc. IEEE Int. Conf. Big Data, Washington,
+DC, USA, Oct. 2014, pp. 5–7.
+[26] B. S. Sager, S. Niranjan, N. Kashyap, and D. N. Sachin, “Providing
+cyber security using artificial intelligence—A survey,” in Proc. 3rd Int.
+Conf. Comput. Methodol. Commun. (ICCMC), Erode, India, Mar. 2019,
+pp. 717–720.
+[27] B. Zhang, T. Zhang, and Z. Yu, “DDoS detection and prevention based
+on artificial intelligence techniques,” in Proc. 3rd IEEE Int. Conf.
+Comput. Commun. (ICCC), Chengdu, China, Dec. 2017, pp. 1276–1280.
+[28] M. Lin and Y. Zhao, “Artificial intelligence-empowered resource management for future wireless communications: A survey,” China Commun., vol. 17, no. 3, pp. 58–77, Mar. 2020.
+
+GAO et al.: EXPLOSIVE CYBER SECURITY THREATS DURING COVID-19 PANDEMIC AND NOVEL TBLS TO OVERCOME
+
+[29] N. Shone, T. N. Ngoc, V. D. Phai, and Q. Shi, “A deep learning approach
+to network intrusion detection,” IEEE Trans. Emerg. Topics Comput.
+Intell., vol. 2, no. 1, pp. 41–50, Feb. 2018.
+[30] C. Yin, Y. Zhu, J. Fei, and X. He, “A deep learning approach for
+intrusion detection using recurrent neural networks,” IEEE Access,
+vol. 5, pp. 21954–21961, 2017.
+[31] V. L. Cao, M. Nicolau, and J. McDermott, “Learning neural representations for network anomaly detection,” IEEE Trans. Cybern., vol. 49,
+no. 8, pp. 3074–3087, Aug. 2019.
+[32] M. Ahmed and A. N. Mahmood, “Novel approach for network traffic
+pattern analysis using clustering-based collective anomaly detection,”
+Ann. Data Sci., vol. 2, no. 1, pp. 111–130, 2015.
+[33] M. Idhammad, K. Afdel, and M. Belouch, “Semi-supervised machine
+learning approach for DDoS detection,” Appl. Intell., vol. 48, no. 10,
+pp. 3193–3208, 2018.
+[34] Y. Gao, Y. Liu, Y. Jin, J. Chen, and H. Wu, “A novel semi-supervised
+learning approach for network intrusion detection on cloud-based robotic
+system,” IEEE Access, vol. 6, pp. 50927–50938, 2018.
+[35] T. M. Tavallaee, E. Bagheri, W. Lu, and A. A. Ghorbani, “A detailed
+analysis of the KDD CUP 99 data set,” in Proc. IEEE Symp. Comput.
+Intell. Secur. Defense Appl., Ottawa, ON, Canada, Jul. 2009, pp. 1–6.
+[36] B. Ingre and A. Yadav, “Performance analysis of NSL-KDD dataset
+using ANN,” in Proc. Int. Conf. Signal Process. Commun. Eng. Syst.,
+Andhra Pradesh, India, Jan. 2015, pp. 92–96.
+[37] T. A. Tang, L. Mhamdi, D. McLernon, S. A. R. Zaidi, and M. Ghogho,
+“Deep learning approach for network intrusion detection in software
+defined networking,” in Proc. Int. Conf. Wireless Netw. Mobile Commun.
+(WINCOM), Fez, Morocco, Oct. 2016, pp. 258–263.
+[38] M. Yousefi-Azar, V. Varadharajan, L. Hamey, and U. Tupakula,
+“Autoencoder-based feature learning for cyber security applications,” in
+Proc. Int. Joint Conf. Neural Netw. (IJCNN), Anchorage, AK, USA,
+May 2017, pp. 3854–3861.
+[39] R. A. R. Ashfaq, X.-Z. Wang, J. Z. Huang, H. Abbas, and Y.-L. He,
+“Fuzziness based semi-supervised learning approach for intrusion detection system,” Inf. Sci., vol. 378, pp. 484–497, Feb. 2017.
+[40] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+network intrusion detection systems (UNSW-NB15 network data set),” in
+Proc. Mil. Commun. Inf. Syst. Conf. (MilCIS), Canberra, ACT, Australia,
+Nov. 2015, pp. 1–6.
+Ying Gao received the bachelor’s and master’s
+degrees from the Central South University, China,
+and the Ph.D. degree from the South China University of Technology, China, in 1997, 2000, and
+2006, respectively. She is currently a Professor with
+the School of Computer Science and Engineering,
+South China University of Technology. She has
+published more than 70 papers in international journals and conferences. Her current research interests
+include service-oriented computing technology, software architecture, and network security.
+Hongyue Miao was born in Zhenjiang, Jiangsu,
+China, in 1997. He received the B.S. degree in electronic science and technology from the South China
+University of Technology in 2019, where he is currently pursuing the M.S. degree in computer science
+and technology. His research interests include deep
+learning, adversarial attacks, and network intrusion
+detection.
+
+795
+
+Jixiang Chen is currently pursuing the M.S. degree
+in computer science and technology with the School
+of Computer Science and Engineering, South China
+University of Technology, China. His research interests include deep learning, big data, and network
+anomaly behavior recognition.
+
+Binjie Song received the M.S. degree from the South
+China University of Technology, China, in 2020. His
+main research interests include machine learning,
+deep learning, evolutionary computation, cyberspace
+security, network anomaly behavior recognition, and
+the Internet of Things.
+
+Xiping Hu received the Ph.D. degree from The University of British Columbia, Vancouver, BC, Canada.
+He is currently a Professor with the School of Intelligent Systems Engineering, Sun Yat-sen University,
+China. He has more than 120 papers published and
+presented in prestigious conferences and journals.
+His research areas consist of mobile cyber physical
+systems, crowd sensing, and affective computing.
+
+Wei Wang received the Ph.D. degree in software
+engineering from the Dalian University of Technology in 2018. He is currently an Associate Professor
+with the School of Intelligent Systems Engineering,
+Sun Yat-sen University, China. Before this, he had
+been the UM Macao Research Fellow at the University of Macau, Macau. He has authored/coauthored
+over 60 scientific papers in international journals and
+conferences. His research interests include computational social science, data mining, the Internet of
+Things, and artificial intelligence.
+PAPER_TEXT

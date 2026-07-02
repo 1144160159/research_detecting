@@ -1,0 +1,712 @@
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026 7315
+
+ HAVEN: A Hybrid Anomaly Detection System for
+ Intra-Vehicular CAN-Bus Communication Using
+ Rule-Based and Neural Networks
+ Shaurya Purohit and Manimaran Govindarasu , Fellow, IEEE
+
+ Abstract—Modern vehicles rely on ECUs connected over an with ECUs. Additionally, CAN offers a reliable error detection
+Intra-Vehicular CAN-bus network to facilitate data exchange. mechanism that promotes uniform transmission and potentially
+However, in recent times, the quantity of potential attack surfaces diminishes wiring expenses, weight, and intricacy [2]. CAN opfor malicious cyberattacks, such as DOS, Fuzzy, etc., has notably
+ erates as a peer-to-peer network, meaning there is no designated
+surged owing to their amplified connectivity. Unfortunately, the
+CAN bus solitarily cannot ensure its protection due to its defi- master that governs transmission. CAN nodes or devices initiate
+ciency in security components, leading to grave safety and security transmissions on the CAN frame only when the bus is unoccuissues like disabling the brakes, etc., and hence requires a reliable pied, and the node is prepared to transmit. The communication
+mechanism for detecting anomalies in the system. To address these protocol used by the CAN-bus is designed to be a broadcast
+challenges, this paper proposes HAVEN, a Hybrid Anomaly Detec- domain, which implies that any message sent is received by
+tion System for Intra-Vehicular CAN-bus Communication using all the nodes linked to it. The CAN frame lacks the recipient’s
+combinations of Rule-based with Machine Learning techniques
+and Neural Networks (Binary and Multiclass Classification forms). address but includes a unique message priority bit known as the
+The experimental results show that our proposed hybrid models Arbitration ID. Nodes receive the frame by matching it with an
+achieve high detection accuracy on different datasets incurring sig- arbitrary bit of the sent frame, and each node decides whether
+nificantly low execution time and high F1-score. This is attributable or not to accept the received frame.
+to the parallel execution and multi-threading nature of the Machine In situations where several nodes attempt to send mes-
+Learning and Neural Networks employed in conjunction with the sages simultaneously, they employ a non-destructible system
+Rule-based techniques. Upon comparing the results of both models, called Carrier Sense Multiple Access with Collision Avoidance
+our evaluation demonstrates that the second model incorporating
+neural networks yields superior results, establishing its potential (CSMA/CA) and Arbitration on Message Priority (AMP) to
+as a highly efficient and promising solution and opening future contend for access to the bus. The arbitration process in this
+avenues for further research work. system prioritizes messages with lower ID, allowing them to be
+ transmitted first, while nodes with lower priority must wait until
+ Index Terms—CAN-bus, anomaly detection, machine learnhigher priority nodes complete their execution.
+ing, neural networks, multiclass classification.
+ In light of their progressively getting connected, these modern
+ vehicles have emerged as a novel arena for hackers to exploit,
+ I. INTRODUCTION thereby making automotive cybersecurity a matter of profound
+ HE transportation sector is undergoing significant transfor- importance within the present-day automotive industry. In fact,
+T mation, propelled by rapid advancements in autonomous
+and connected vehicle technologies. Modern automated and
+ every single node within these vehicles presents a potential
+ point of target for serious cyber-attacks. Given these risks,
+connected vehicles have intricate designs that merge different developing and implementing a rigorous and comprehensive
+automated driving functions, and diverse communication inter- methodology for identifying and addressing critical security
+faces [1]. threats has become indispensable. Eclectic techniques, such as
+ The inter-connectivity and autonomy of vehicles are increas- message authentication and sender identity, have been proposed
+ing as Electronic Control Units (ECUs) communicate with each in previous studies to ensure the legitimacy and reliability of
+other to manage various functions, including engine control, CAN messages [3], [4], [5], [6], [7]. These methods are efficatelematics control, and airbag deployment. Different communi- cious in preventing unauthorized access to the CAN network but
+cation standards have been established within vehicles. Nearly are limited in their ability to defend against attacks emanating
+ubiquitous, Controller Area Network (CAN) act as intermedi- from compromised ECUs. Since ECUs are a vital part of the
+aries for data exchange between ECUs by furnishing a commu- vehicular network and are typically equipped with the necessary
+nal network with a standard protocol. It is a serial-bus commu- credentials for secure communication, they can become a source
+nication protocol that allows sensors and actors to communicate of security threats, hence allowing these malicious actors to
+ possess the capability to infiltrate the vehicular networks and
+ Received 11 October 2023; revised 22 January 2026; accepted 8 March 2026. transmit unauthorized CAN messages that disrupt the regular
+Date of publication 11 March 2026; date of current version 12 May 2026. functioning of the vehicle, thereby leading to consequential
+(Corresponding author: Shaurya Purohit.)
+ The authors are with Iowa State University, Ames, IA 50011 USA (e-mail:
+ safety repercussions.
+shaurya1@iastate.edu; gmani@iastate.edu). For instance, consider the dire consequences that could arise
+ Digital Object Identifier 10.1109/TDSC.2026.3673151 if a connected vehicle carrying numerous passengers were to
+ 1545-5971 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+7316 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+experience a malicious attack on its steering control node [8]. addressing the challenge of complex non-periodic attacks (e.g.,
+Additionally, an attacker with malicious intent could target a Impersonation, Spoofing) that lack consistent timing or strucspecific frame of the CAN-bus, causing the throttle position to ture and often bypass traditional frequency- or sequence-based
+be compromised and rendering the vehicle immobile. While not methods. The rule-based layer serves as a lightweight, rapid filter
+necessarily life-threatening, an adversary motivated by mone- that flags overt timing and sequence anomalies in CAN traffic.
+tary gain could exploit vulnerabilities in the car’s entertainment The subsequent ML or neural network layer—depending on the
+system through CAN-bus, forcing the vehicle to come to a halt model—focuses on learning more subtle and irregular patterns
+and displaying ransom messages on the entertainment system that evade deterministic rules. This two-step design allows us
+screen and thereby making the owner compelled to pay the to efficiently detect both frequent and complex attack behaviors
+ransom demanded to regain control of the car. with minimal execution time.
+ Given the lack of encryption and authentication procedures, The principal contributions put forth by the medium of this
+we hold the view that an Anomaly Detection System (ADS) paper are:
+would be an efficacious method for detecting anomalous data r HAVEN: Development of two novel hybrid ADS models
+and malevolent attacks through network traffic data transmitted comprising two distinct stages, which enables the attainbetween the vehicle and other devices. If an attacker executes an ment of high detection accuracy incurring low latency. The
+attack by injecting harmful traffic into the CAN-bus, the ADS first stage employs resilient and efficient rules to minimize
+sifts through the traffic and notifies the user of any unusual the burden on the resource-intensive second stage. In turn,
+activity by contrasting the normal and aberrant behaviors. the second stage harnesses advanced machine learning and
+ While ADSs have been widely studied here, many prior neural network techniques to effectively detect intricate
+approaches fall short in key areas. Most focus on a lim- attacks that can elude the first stage. These hybrid ADS
+ited range of attacks—often ignoring threats like spoofing or frameworks have the capability to identify a wide range of
+impersonation—and rely on simulated data, reducing real-world attacks that may pose a significant challenge for individual
+applicability. Additionally, several models emphasize accuracy detection approaches to detect accurately.
+but neglect execution time, which is critical for responsiveness in r Enhancing Classification: Furthermore, the second model,
+CAN-bus environments. Many also lack lightweight preprocess- which amalgamates rule-based and neural network teching, making them inefficient for resource-constrained systems. niques, is trained to cater to both binary and multiclass
+ Building on these prior efforts, many ADSs have also at- classification scenarios to enhance the current state of the
+tempted to leverage distinct features of CAN messages. How- art, an aspect that was overlooked in earlier studies.
+ever, their predicament seems to be a deficiency of suitable r Expanded Assessment: The efficacy of the proposed modand potent detection and mitigation solutions for threats and els are gauged using three large CAN-bus datasets that are
+attacks. Several of these systems also exploit the recurring and widely used and publicly available (CAN Intrusion dataset,
+periodic nature of CAN traffic [9], [10]. While they prove to be Car Hacking dataset, and Automotive CAN-bus Intrusion
+successful in creating efficient ADS, they falter when it comes dataset). The results show that the proposed framework
+to identifying with non-periodic attack messages, which poses a outperformed prior studies in terms of detection accuracy
+significant challenge. To determine whether changes to packets and execution time (latency).
+have occurred, other researchers have researched on distinct r Comprehensive Attack model: The proposed models unmetrics as well. For instance, one of the algorithms assesses derwent testing on actual car-hacking data, encompassing a
+modifications in packet entropy for every bit of the CAN ID diverse array of attacks such as DoS, Fuzzy, Impersonation,
+to establish if an injection attack has taken place and obstructs Spoofing and Replay attacks. The attack model utilized
+the message. Another intrusion detection algorithm estimates was more realistic and encompassing, covering a majority
+the Hamming distance of attack payloads and juxtaposes it with of the well-known attack types in the literature, in contrast
+Hamming distance data of reference to detect attacks [11]. The to prior studies that only focused on specific attacks. The
+majority of the suggested ADS lack efficacy due to their high efficacy of the proposed models are demonstrated through
+incidence of false positive and false negative alerts. the calculation of various evaluation metrics.
+ To overcome these limitations, this work proposes HAVEN, The subsequent sections of this paper are structured as folnovel two-step Hybrid ADS’s for Intra-Vehicular CAN-bus lows: Section II presents the Problem Formulation. Section III
+Communication (refers to the implementation of the CAN bus elucidates the related research work. Section IV expounds
+protocol for communication between ECUs within a vehicle, the Rule and Machine Learning based Hybrid ADS model.
+which is a subset of the broader in-vehicle networks) that Section V details the insights into the implementation and
+maintain an equilibrium between detection rates and efficiency. evaluation of the Rule and Neural Networks based Hybrid ADS
+The initial model employs rule-based detection coupled with model. Finally, Section VI concludes the paper.
+tree-based ML algorithms, such as Decision Tree (DT), Random
+Forest (RF), Extreme Gradient Boosting (XGBoost), Categorical Boosting (CatBoost), and Light Gradient Boosting Machine II. PROBLEM FORMULATION
+(LightGBM). The second model employs rule-based discovery
+ A. CAN Bus
+in combination with deep neural networks, including Binary and
+Multiclass classifiers. By integrating rule-based detection with CAN is a bus communication protocol designed to broadcast
+machine learning and neural networks, our framework ensures messages, with the ability to transmit frames that can contain
+high detection accuracy and low false negatives while effectively up to 64 bits of data. In Fig. 1, the standard format of a CAN
+PUROHIT AND GOVINDARASU: HAVEN: A HYBRID ANOMALY DETECTION SYSTEM FOR INTRA-VEHICULAR CAN-BUS COMMUNICATION 7317
+
+Fig. 1. CAN Message Frame.
+
+frame is presented. The CAN frame includes various fields such easily execute an array of harmful actions, including but not
+as the Start of Frame (SOF), Control Field, Arbitration Field limited to injecting harmful messages to observe network traffic
+(CAN ID), Data Field (payload), CRC Field, Acknowledge Field or launching hostile attacks, while nodes within the network are
+(ACK), and End of Frame (EOF). obliged to process the message automatically without identify-
+ The Start Frame, which has a chief bit of ‘0’, marks the ing its source.
+beginning of a CAN message. The CAN ID field is capable of
+supporting different identifier formats, such as a base frame of 11
+bits, an extended frame of 29 bits, and an 18-bit extension. The B. Attack Model
+Remote Transmission Request field determines whether a mes- As stated earlier, attackers are extremely incentivized to exsage is being transmitted or received. The Control Field specifies ploit the vulnerabilities present in the CAN Bus. In this paper,
+the transmitted data length, which ranges from 0 to 8 bytes. The we worked with some of the primary categories of in-vehicle
+Data Field contains the actual content and critical information attacks that can be executed on the CAN-bus system: Denial
+sent to the network’s intended node. The Cyclic Redundancy of Service (DOS), Fuzzy, Impersonation, Spoofing, and Replay
+Check is a partial check used to detect any alterations made to attacks. Fig. 2 portrays the prevalent categories of attacks on the
+the original data. The Acknowledge Field is used to validate that CAN-bus that have been addressed in our work.
+the node has received the data correctly. The End of the Frame Denial of Service Attack: DOS attacks on the CAN-bus system
+marks the message’s conclusion. involve sending many requests to the targeted nodes, which
+ CAN is message-oriented and does not require sender and consumes their resources and may lead to vehicle unavailability
+receiver addresses. Instead, each CAN frame has a predeter- or mishaps [12]. As Autonomous Vehicles (AVs) use wireless
+mined ID and message structure outlined in the DBC file. The technology, DOS attacks can be easily executed by adversaries.
+DBC file is a confidential file in an exclusive format, such as a In this type of attack, the attacker inundates the bus with mesdatabase, that is part of a specific vehicle configuration. During sages having high frequency and high priority (such as messages
+compilation, the ECU is set to accept only CAN messages with with a CAN ID of 0x000 or some different ID that is smaller
+a specific CAN ID and disregard all other messages. than all valid message IDs) to congest the bus and occupy its
+ CAN ID refers to the designated ECU’s destination address, entire bandwidth. This causes the true messages to be unable to
+and its payload has a maximum length of 8 bytes with no en- transmit successfully, eventually compromising the vehicle. If
+cryption or authentication mechanisms. As a result of this, CAN the attackers gain access to the vehicle, they can easily insert
+is susceptible to message injection attacks due to its broadcast flooding assaults into the CAN-bus network, thereby interruptcommunication strategy and the lack of authentication mech- ing or disabling the services of the ECUs in the vehicle.
+anisms. Adversaries can leverage this vulnerability to launch Fuzzy Attack: The adversary launches an attack by injecting
+DoS and Spoofing attacks on the CAN-bus, thereby occupying CAN messages with unpredictable CAN IDs, which results
+resources and extracting sensitive information such as RPM in a delay in the delivery of certain legitimate messages with
+and Gear information. Furthermore, Replay and Fuzzy attacks higher priority (i.e., larger CAN IDs). This form of attack is
+represent another class of frequently encountered categories of more surreptitious than a DoS attack, owing to the random
+attacks that target the CAN-bus. These attacks occur when the nature of the CAN IDs assigned to the injected messages, and
+attacker inserts a message into the bus to drive it into, signaling a single malicious message injected of such nature into the
+an abnormal state or malfunction, thereby providing a false CAN-bus network system can potentially result in the failure of
+impression to the vehicle’s control systems. the entire network, leading to unintended consequences such as
+ Many studies have posited the notion that an adversary can the steering wheel shaking, automatic gear shifts, turning on/off
+acquire absolute authority by gaining entry to the CAN network indicator lights, and other similar effects.
+through a plethora of attack interfaces, including but not limited Impersonation Attack: In this type of attack, the attacker
+to TPMS, Bluetooth, telematics, and OBD2. The deficiency of deliberately injects modified CAN messages with specific CAN
+the fundamental security protocols renders the CAN-bus system IDs to cause confusion within the ECU. If the attacker’s CAN
+susceptible to a variety of severe assaults. An adversary could IDs are indistinguishable from legitimate ones, it is challenging
+7318 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+Fig. 2. Different Attack Scenarios.
+
+for the ECU to differentiate between genuine and malicious mes- an attacker could spoof a message to the ECU, instructing it to
+sages. Moreover, these attacks are non-periodic and can occur shut down the engine or make other critical changes. Notably,
+sporadically, adding another layer of complexity to the detection spoofing attacks can exhibit a non-periodic nature, meaning
+process. As a result, the ECU can become overwhelmed with they can occur at irregular intervals, making it challenging for
+incoming messages, potentially leading to system failure. For conventional security measures to identify and mitigate them
+instance, an attacker could impersonate the anti-lock braking effectively. This type of attack can have serious safety implisystem (ABS) ECU’s ID and send a message to disable the cations, especially in autonomous vehicles where the system
+system, causing the brakes to malfunction. relies heavily on the information being communicated via the
+ Replay Attack: In a replay attack, the attacker intercepts, CAN-bus.
+records valid messages sent over the bus, and then replays them
+to the same or other nodes on the bus later. This type of attack
+ C. Problem Statement
+can be particularly dangerous in systems where messages are
+used for control safety-critical functions, such as in automotive On a vehicle’s CAN-bus network, the complexities and divercontrol systems. The replayed message may cause unintended or sity of network traffic, encompassing both benign and malicious
+dangerous behavior, leading to serious consequences such as ac- activities, pose challenges in accurately identifying malevocidents or equipment damage. For example, suppose a message lent attacks such as DOS, Fuzzy, Impersonation, Replay, and
+with a specific CAN ID is sent to turn on a car’s headlights. In Spoofing attacks. Achieving high precision and minimizing
+that case, an attacker could intercept and record that message and false negatives in detection are critical objectives. This paper
+later replay it multiple times, causing the headlights to repeatedly addresses this problem by proposing two potent ADS models,
+turn on and off, which could be dangerous for the driver and other designed using combinations of Rule-based, Machine Learning,
+vehicles on the road. and Neural Networks techniques, that exhibit efficient perfor-
+ Spoofing Attack: A spoofing attack on a CAN-bus refers to an mance in enhancing the accuracy of identifying these attacks
+attack in which an attacker sends a message to the bus with a fake while ensuring low latency.
+source address to deceive the recipient node into thinking that
+the message came from a trusted source. The attacker modifies
+ III. RELATED WORK
+the message’s ID and data payload fields to make it appear
+legitimate. This type of attack can have serious consequences, In recent times, a significant focus has been placed on ausuch as compromising the integrity of the data, disrupting the tonomous vehicles, which have the potential to significantly
+system’s normal functioning, or causing safety-critical systems impact people’s daily lives. Researchers have devoted their
+to fail. For example, an attacker could spoof a message from the attention to examining the features and roles of these vehicles in
+ECU to the braking system, instructing it to apply the brakes or real-life scenarios to improve their functionality and enhance the
+release them suddenly, causing a potential accident. Similarly, safety infrastructure on roads. Consequently, the development
+PUROHIT AND GOVINDARASU: HAVEN: A HYBRID ANOMALY DETECTION SYSTEM FOR INTRA-VEHICULAR CAN-BUS COMMUNICATION 7319
+
+of IDS and ADS for AVs and connected vehicles has become factors. However, the latter method lacks a functional implemenincreasingly paramount. In this section, we will discuss some of tation. In their study, Loukas et al. [23] developed an IDS using
+the previous studies on detecting network intrusions and anoma- multiple machine learning classifiers for in-vehicle network
+lies in autonomous vehicle systems. Researchers have employed systems. They conducted experiments by introducing threats
+a diverse range of sophisticated methods, including statistical into a cloud-based system and testing it with robotic cars. After
+analysis, machine learning algorithms, frequency-based analy- achieving an overall accuracy of 86.9%, they concluded that the
+sis, neural networks, and other techniques to detect anomalies in IDS is effective in detecting vehicular attacks. Aloqaily et al. [24]
+the CAN-bus. Barletta et al. [13] proposed an IDS for CAN using proposed an IDS for the Internet of Vehicles (IoV) and connected
+an X-Y fused Kohonen network and the k-means algorithm. The cars using the deep belief network (DBN) and decision tree
+suggested technique, called XYF-K, has a high accuracy for (DT) algorithms. Their approach achieved good accuracy on the
+detecting intrusions on the CAN-intrusion dataset, but suffers NSL-KDD dataset. In a research paper [25], a clock-based IDS
+from high computational complexity. Schmidt et al. [14] devel- was proposed that detects anomalies and fingerprints Electronic
+oped a spline-based IDS using the knot flow classification (KFC) Control Units (ECUs) by utilizing the periodicity of many CAN
+approach for vehicular networks and evaluated it on the NSL- signals. However, this approach has limitations as it is not
+KDD dataset. However, this model did not achieve low latency. effective against attacks that involve aperiodic messages, despite
+Oladimeji et al. [15] proposed CANGuard, an IDS tailored for its lightweight design. In [26], our previous work, we presented
+CAN-enabled vehicles to detect DoS attacks and identify the the preliminary rendition of our research endeavor, wherein we
+originating node in real time. The system was developed using proposed the approach utilizing a combination of rule-based and
+a simulated CAN environment with four nodes representing machine-learning techniques. The proposed approach was solely
+different vehicle components. Various machine learning mod- trained and evaluated on the CAN-intrusion dataset. Compared
+els were trained on a generated dataset exploiting CAN bus to prior works, our HAVEN framework demonstrates clear adarbitration features. While the Multi-Layer Perceptron (MLP) vantages in both detection accuracy and operational efficiency.
+model showed good detection capabilities, it underperformed Unlike the majority of related approaches that either rely on
+with node identification, achieving less than 50% accuracy. Tay- simulated data or handle a limited number of attack types,
+lor et al. [16] introduced a method for detecting CAN-bus attacks HAVEN is evaluated using multiple public, real-world CAN
+that involves an anomaly detector utilizing a Long Short-Term datasets, making it more practical for real-world applications.
+Memory (LSTM) neural network. This detector functions by Furthermore, our hybrid approach, which combines rule-based
+training the LSTM network to forecast the next data word sent with ML and Neural Network techniques, offers faster execution
+from each sender on the bus. Any significantly unexpected bits times while maintaining high detection accuracy (around 95%),
+in the actual next word are identified as anomalies and flagged particularly for complex attack patterns. HAVEN also supports
+accordingly. The research conducted by Li et al. [17] presents both binary and multi-class classification, providing flexibility
+an innovative technique for identifying anomalous CAN-bus in detecting a broader range of attack types.
+messages through the fusion of a deep neural network and a Table I compares some of the related works.
+triplet loss network. Specifically, the DNN is first employed
+to train CAN-bus sequences and extract feature vectors which
+ IV. RULE AND MACHINE LEARNING BASED HYBRID ADS
+are then utilized for the triplet loss network, which calculates
+ MODEL
+similarities between three randomly selected data sequences
+from the CAN-bus database. Ali Alheeti et al. [18] introduced This research endeavors to devise a pioneering ADS model
+an IDS using Artificial Neural Network (ANN) to oversee the for vehicular networks, which can detect and pinpoint any
+car’s status based on information gathered from the internal malicious conduct on the CAN system in real-time and draw
+buses. The primary objective of this system is to ensure the attention to any aberrations from standard or malignant behavsecurity and safety of the internal network. To achieve this, the iors. Our proposed methodology comprises a two-stage ADS
+parameters of the ANN structure are established by training it model aimed at attaining the desired objectives. A robust rulewith CAN packet information to derive the essential statistical based system is put into operation in the first stage, while
+properties of normal and attacking packets. This system aims to for the second stage, a tree-based ML algorithm system is
+extract the relevant attribute to classify the attack and protect employed.
+the car from any potential security threat. The research pre- The high-level design of the ADS model is presented in Fig. 3.
+sented by Kosmanos et al. [19] presents a cross-layer Intrusion The proposed two-stage ADS model utilizes a Rule-based sys-
+Detection System (IDS) utilizing probabilistic approaches and tem at the initial stage to filter out most attacks and only provides
+Machine Learning (ML) techniques, specifically KN and RF. efficient detection before allowing remaining messages to move
+Olufowobi et al. [20] suggested an anomaly-based IDS for CAN forward. Rules are designed to have a low rate of false negatives.
+attack detection using the adaptive cumulative sum (CUSUM) Messages that do not pass through the rules in the system are
+technique. This technique can effectively identify intrusions deemed as an attack, and an alert is extended. Subsequently, the
+based on statistical changes, but it may take a significant amount remaining messages are directed towards the ML-based model
+of time to execute. Song et al. [21] proposed a lightweight IDS (Model1) for further processing. The multi-threading nature and
+for in-vehicle networks based on time interval analysis (TIA) parallelism of the ML techniques render the overall model to
+of CAN communications. Another proposed approach [22] sug- have a significantly reduced computational time. The messages
+gested using a combination of in-vehicle sensors to verify mes- that satisfy both stages are then transmitted to the vehicular
+sage formality, position, data range, data plausibility, and other network via the CAN-bus.
+7320 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE I
+ COMPARISON WITH OF SOME OF THE RELEVANT WORK
+
+Fig. 3. Proposed Hybrid ADS Rule-based with Machine Learning and Neural Networks Model.
+
+A. Data Pre-Processing results for training ML models. Consequently, the numerical
+ values for each feature are constrained to a scale of 0.0 to 1.0, and
+ The foremost and preliminary measure to fabricate an ADS
+ the resulting normalized values, denoted as xn , are expressed as:
+involves the accumulation of an adequate amount of network
+traffic data in both the normal and attack state. The CAN intru- x − min
+sion dataset is utilized for this function as it comprises data for xn = (1)
+ max − min
+both normal and attack data. Subsequently, the data undergoes
+pre-processing to render it more suitable for the development where x is the initial value, min and max are the minimum and
+of ADS. The normalization of data often yields more optimal maximum values of each feature.
+PUROHIT AND GOVINDARASU: HAVEN: A HYBRID ANOMALY DETECTION SYSTEM FOR INTRA-VEHICULAR CAN-BUS COMMUNICATION 7321
+
+ TABLE II
+ DATA ATTRIBUTES OF CAN
+
+ Additionally, class imbalances are common in network data,
+where normal states dominate and attack-label instances are
+scarce. This can lead to low detection rates of anomalies. To
+address this issue, Synthetic Minority Oversampling Technique
+(SMOTE) [27] is utilized to generate additional data for the
+minority classes that lack sufficient data. SMOTE is a technique
+that examines the minority classes and creates new samples
+based on the K nearest neighbors.
+ Specifically, for each instance in the minority class, a random Fig. 4. Feature Correlation Map.
+sample Xj is chosen from its k-nearest neighbors, and a new
+synthetic instance, Xn , can be expressed as:
+ Xn = X + rand(0, 1) ∗ (Xj − X), j = 1, 2, . . ...k (2) shown in Fig. 1. These features include CAN ID, Time differwhere rand(0,1) denotes a random number between 0 and 1. The ence, and DATA[0]-DATA[7], which were selected for ADS ML
+proposed system thus employs SMOTE to generate high-quality model development. The correlation between these features is
+samples for pre-processing data. depicted in Fig. 4.
+ Furthermore, the input data for the proposed system was initially in hexadecimal format. The conversion from hexadecimal C. Rule Based Intrusion Detection
+to decimal format was necessary to meet the requirements of
+the machine learning model. The data was not decoded during The foremost stage of the proposed ADS model is a rule-based
+this process. In cases where the data was missing, a value of component, which offers efficient detection prior to moving on
+−1 was used to replace the empty fields. In our work, ten to the second stage. The characteristics of CAN traffic can be
+different features and a CAN ID-based ADS were analyzed. The exploited to establish rule-based systems, and a plethora of rules
+features included CAN ID, DLC, Data [m0 − m7 ], and Time can be implemented. The key objective is to determine a set of
+difference. CAN ID serves as a unique identifier for each CAN criteria that can filter out most of the attack messages in the
+communication, while the DLC data bytes range from 0 to 8. first stage, thus preventing them from moving on to the time-
+The explanation of several attributes is shown in Table II. consuming second stage. In order to achieve quick detection, it
+ is crucial to select rules that possess a low false-negative rate
+ and minimal processing latency.
+B. Feature Extraction
+ Our model comprises of 4 rules which are based on the
+ To determine the importance of each feature, we use the subsequent attributes:
+information gain (IG) method, which calculates a score for each 1) Valid ID: A valid message transmitted via CAN protocol
+feature’s relevance to the target variable. The IG approach is necessitates the presence of a singular and exclusive idenchosen for its low time complexity of O(n), enabling it to quickly tifier. Any communication lacking such an identifier will
+evaluate the significance of each feature. The relevance score of be promptly recognized, identified as potentially maleveach feature is used to select the most relevant features for the olent, and subsequently flagged. Consequently, the mestask at hand. The IG value of using each feature, represented by sage will be deemed invalid and omitted from the further
+the random variable X, is calculated based on the target variable stage.
+T. 2) Message Frequency: The rule underpinning this regulation
+ stems from the observation that a vast majority of CAN
+ IG(T |X) = H(T ) − H(T |X) (3)
+ packets are transmitted in a consistent and predictable patwhere H(T |X) is the conditional entropy and H(T) represents tern, thus leading to a recognizable frequency distribution.
+the entropy of target variable. If IG(T |X) > IG(T |Y ), a fea- 3) Message Sequence: The underlying foundation for the
+ture X is regarded more critical to the target T than feature Y . sequence rule is the observation that a set of specific IDs
+ Correlation analysis helps identify relationships between vari- inevitably accompanies a unique ID. For instance, this rule
+ables, allowing us to select the most relevant features that is particularly effective in detecting DOS attacks, as such
+contribute to improving model performance [28]. Using similar attacks are often characterized by the presence of 0x0000
+approach, ten features were extracted from the identifier field and value in their messages, which can be promptly eyeballed
+data field of CAN packets based on the CAN packet structure through inspection.
+7322 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ 4) Time Interval: The time interval rule is pertinent to CAN r DT has a time complexity of O(n2 K).
+ messages since they are primarily generated and trans- r RF has a time complexity of O(n2 √Kt).
+ mitted periodically. This rule is particularly effective in r XGBoost, CatBoost have a time complexity of O(nKt).
+ identifying injected messages, as it scrutinizes the time r LightGBM has a time complexity of O(n log n · Kt).
+ intervals between incoming messages for any irregulari- It is worth mentioning that the optimization of some hyperties or anomalies. parameters is necessary to enhance the performance of the algorithms. Furthermore, the number of decision trees T represents
+ a crucial parameter that greatly influences the performance of
+D. ML Based Anomaly Detection tree algorithms, as the majority vote of multiple decision trees
+ Decision tree, Random Forest, XGBoost, CatBoost and Light- influences their outcomes.
+GBM are the ML techniques used in the ADS model. Consequently, the grid search approach is employed to der Decision Tree: The Decision Tree (DT) is a classification termine the optimal parameter values. The models are initially
+ method that recursively splits data based on the attribute trained using a small number of decision trees and a low-depth
+ with the highest information gain. It builds a tree-like level to ensure accuracy. Subsequently, these two values are
+ model of decisions and stops when reaching a predefined incrementally increased while checking for accuracy until overcriterion, such as maximum depth or minimum samples fitting is detected, which is characterized by a deterioration in
+ per leaf node. the accuracy of the model.
+ r Random Forest: Random Forest (RF) is an ensemble learning method that selects the final classification result based
+ on majority voting from multiple decision trees. Each tree is E. Performance Evaluation
+ trained on a random subset of data and features to increase 1) Validation Metrics: In order to assess the generalizabildiversity and prevent overfitting. The predictions from all ity of the proposed model and prevent overfitting, both crosstrees in the forest are combined to make the final decision. validation and hold-out approaches are utilized. The train-test-
+ XGBoost: XGBoost [29] is a boosting ML algorithm that validation split and model evaluation process employed for the
+ combines decision trees using gradient descent, improv- dataset are as follows:
+ ing speed and accuracy. It iteratively trains trees on the 1) The dataset is split into training and test sets using a 70%-
+ residuals of the previous ones, correcting errors with each 30% train-test split. Specifically, 70% of the data samples
+ iteration to create a more accurate overall model. (chronologically ordered by timestamp) are assigned to the
+ r CatBoost and LightGBM: CatBoost [30] and Light- training set, while the remaining 30% (which follow the
+ GBM [31] are advanced gradient boosting algorithms. training portion) are reserved as the test set for final hold-
+ CatBoost excels in processing categorical data with out validation. This preserves temporal order and avoids
+ minimal preprocessing, ideal for complex datasets. Light- potential data leakage by ensuring that no future data is
+ GBM reduces memory usage with histogram-based meth- used during model training.
+ ods and leaf-wise growth, enhancing efficiency. Both al- 2) To assess the performance of the proposed model across
+ gorithms like XGBoost, iteratively refine decision trees, multiple areas of the dataset, 10-fold cross-validation is
+ offering precise corrections and notable accuracy on large conducted on the training set. Specifically, in each itdatasets. eration/fold of the 10-fold cross-validation, 90% of the
+ The rationales underlying the selection of these algorithms original training set is used for model training, while the
+are: remaining 10% of the original training set is utilized as
+ r The primary motive for opting for these tree-based algo- the validation set for model testing.
+ rithms is their reduced computational time attributed to This process is repeated ten times, with each subset serving
+ multi-threading utilization. as the validation set once, and the overall performance is
+ r Furthermore, the capability of these algorithms to deal with evaluated as the average of the performance across all ten
+ non-linear and high-dimensional data, which is character- iterations/folds.
+ istic of the network data being analyzed, also contributed 3) The model is tested on the untouched test set to evaluate
+ to their selection. the performance of the trained model obtained from Step
+ r As most of these machine learning models are based on tree 2. This step ensures that the model can generalize well to
+ structures that incorporate ensemble learning, they tend to new, unseen data and provides an accurate measure of its
+ exhibit superior performance compared to single models performance.
+ such as KNN and SVM. The proposed ADS’s model performance is evaluated usr Also, the ability to perform parallel execution is a notable ing a range of metrics, including Accuracy, Precision, Readvantage of these algorithms, resulting in a significant call(Detection Rate), and F1-Score. These metrics are computed
+ reduction in the time required for model training and using the values of True Positives (TP), True Negatives (TN),
+ refinement in detection accuracy. False Positives (FP), and False Negatives (FN) determined by the
+ Under the assumption that the number of instances is denoted proposed model. The following equations are used to calculate
+by n, the number of features is represented by K, and the number the metrics:
+of decision trees in ensemble models is represented by t, the
+time complexity of DT, RF, XGBoost, CatBoost and LightGBM TP + TN
+algorithms can be expressed as follows: Accuracy = (4)
+ TP + TN + FP + FN
+PUROHIT AND GOVINDARASU: HAVEN: A HYBRID ANOMALY DETECTION SYSTEM FOR INTRA-VEHICULAR CAN-BUS COMMUNICATION 7323
+
+ TABLE III 90% in each instance) when evaluated on the CAN-intrusion
+ SIZE OF THE DATASET
+ dataset.
+ Comparing our proposed model to previous works on a similar
+ dataset, it can be observed that although the approaches presented in the literature [33], [34] have achieved slightly better
+ accuracies (ranging from 94% to 96%), they suffer from a comparatively high execution time in comparison to our proposed
+ model shown in Fig. 3. This is attributed to the utilization of
+ multi-threading enabled by DT, RF, XGBoost, CatBoost and
+ LightGBM with the combination of Rule-based system in our
+ 2 ∗ TP proposed approach.
+ F1 = (5)
+ 2 ∗ TP + FP + FN Therefore, the proposed model is well-suited for practical ap-
+ TP plications due to its high accuracy, F1-score, and low execution
+ P recision = (6) time (latency). In future works, it may be applied to real-time
+ TP + FP
+ environmental data by taking into account the CAN-bus speed
+ TP and CAN packet size.
+ Recall = (7)
+ TP + FN
+ TP refer to correctly identified anomalies, while TN are V. RULE AND NEURAL NETWORKS BASED HYBRID ADS
+correctly identified normal instances. FP occur when normal MODEL
+data is incorrectly classified as an anomaly, and FN arise when
+ Recently, there has been considerable admiration for Artianomalies are mistakenly classified as normal. Together these
+ ficial Neural Networks (ANN), which are machine learning
+provide a comprehensive evaluation of the proposed model’s
+ techniques widely used in applications involving large amounts
+performance and its ability to accurately detect anomalies in the
+ of data. The construction of a neural network follows a similar
+dataset.
+ pattern to how the human brain processes and makes decisions
+ An effective ADS should be capable of achieving a high
+ based on vital information. These neural networks were con-
+F1-score while maintaining a low execution time. The F1-score
+ cocted to mimic the human brain’s ability to excel in tasks such
+is a useful metric as it considers both precision and recall, calcuas recognizing images, patterns, etc., with high accuracy. The
+lating their harmonic average to provide an overall assessment of
+ ability to train an ANN model enables substantial improvements
+the model’s performance. Therefore, a high F1-score indicates
+ in results.
+that the ADS model has both high precision and high recall,
+ Neural networks consist of a fundamental processing unit
+which means it detects a significant proportion of anomalies
+ known as a neuron, similar to those found in the human brain,
+while minimizing false positives. However, the execution time
+ which transmits information from the brain to the nervous sysof the ADS, particularly the model training time is also crucial
+ tem. These neurons are interconnected through multiple layers
+as it offers information about the computational performance.
+ and are responsible for processing information based on the
+Therefore, achieving a balance between a high F1-score and
+ weight allocated to each layer during the processing stage.
+low execution time is crucial for developing an effective ADS.
+ In a neural network, a neuron is designed to process multiple
+ 2) Dataset: To evaluate the proposed ADS model, we used
+ input features, xi , each assigned with a corresponding weight,
+the “CAN-intrusion dataset” provided by the Hacking and Counwi . The neuron then performs computation to determine the
+termeasure Research Lab (HCRL) [32]. This dataset, tailored
+ weighted sum of these inputs. It is a standard approach to include
+for ADS/IDS development on the CAN-bus, was obtained by
+ a bias term b, in the calculation to enhance the neuron’s output.
+monitoring CAN traffic through a vehicle’s OBD-II port. The
+intrusions in the dataset were created through message injection  n
+ 
+ 
+attacks, with each intrusion lasting between 3 to 5 seconds. y =f b+ x i wi (8)
+The dataset, spanning 30-40 minutes of CAN traffic, features i=1
+instances of impersonation attacks that occur sporadically without a predictable pattern, adding complexity to the detection The reason for selecting Deep Neural Network for ADS
+process, and was processed by combining data and removing modeling lies in its capacity for training, which allows it to
+missing values for the development of the proposed ADS model. continually adapt and assimilate details about the regular and
+Table III outlines the details of the modified dataset. anomalous behavior of the system.
+ 3) Performance Analysis: On a system with an Intel(R) Core The rationales underpinning our decision to implement the
+i7 − 8550 processor and 16 GB of RAM, the proposed model DNN are:
+was trained and tested. Python programming language, Py- r Neural Networks have low development costs and can be
+Charm IDE version 2020.1, Keras, Pandas, and Xgboost libraries scaled more easily than other ML methods.
+were utilized to develop the model, with Tenserflow as the r The accuracy of statistical distribution provided by neural
+backend. networks is high, and they make fewer assumptions. They
+ The results of the proposed model on the CAN intrusion can also be efficiently modified through learning.
+dataset are shown in Tables IV & V. As indicated by Table IV, the r Also, they excel in minimizing false positives and false
+proposed model, which incorporates a blend of Rule-based and negatives, which are crucial factors in Anomaly Detection
+ML algorithms, demonstrates notable detection accuracy (above Systems.
+7324 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE IV
+ PERFORMANCE EVALUATION OF ADS ON CAN DATASET
+
+ TABLE V A. Binary Classification Neural Networks
+ EXECUTION TIME EVALUATION OF ADS ON CAN DATASET
+ A binary classification neural network is a computational
+ model that includes an input layer, several hidden layers, and an
+ output layer. The layers are composed of multiple neurons, and
+ a single-node Sigmoid output layer for distinguishing between
+ normal and attack classes.
+ They are used for binary classification tasks, where the goal
+ is to classify an input into one of two possible classes, and
+ hence there is only one output node that gives the probability of
+ belonging to one of the two classes. In our case, they are trained
+ to classify inputs into one of two categories - normal or attack.
+ In our model, the subsequent step after obtaining data from the
+ initial stage 1 involves developing a binary classification neural
+ network using the TensorFlow API.
+ The neural network is created through a sequential method
+ by adding two dense layers with 40 and 20 neurons, respectively, along with input feature size. Only one neuron is in the
+ output layer, as the output is either 1 (normal) or 0 (attack) for
+ classification purposes.
+ Following the standard hyperparameters and optimization
+ Thus in this section, we present a hybrid ADS comprising
+ strategies of neural networks for binary classification [35], the
+two stages: a rule-based detection component and a Deep Neural
+ activation function, ‘Relu’ is used at the input layer to ensure
+Networks-based detection component (Model2), as depicted in
+ non-negative output from all neurons. At the output layer, the
+Fig. 3.
+ ‘Sigmoid’ activation function is employed to specify binary clas-
+ The rule-based component offers a robust and prompt resification by determining the size of the output label. The model
+sponse by identifying malicious messages that overtly viois trained using ‘Adam’ optimizer with a learning rate of 0.01
+late pre-defined rules, as discussed in Section IV. The neural
+ and is compiled with a binary cross-entropy loss function model,
+networks component further enhances accuracy by identifywhich measures the difference between the predicted probability
+ing malicious messages that pass the rules in the first stage
+ of the positive class and the true probability of the positive class,
+in a shorter time. Furthermore, the integration of the DNN
+ i.e., it penalizes the network for making incorrect predictions and
+component in the proposed hybrid ADS confers a high derewards it for making correct predictions. Table VI shows the
+gree of versatility, making it capable of effectively detecting
+ hyper-parameter list of Binary Classification Neural Network.
+and classifying a broad spectrum of attacks that are otherwise
+ Finally, the model is trained using xtrain (featuring values
+challenging to handle using traditional machine learning (ML)
+ used for training and prediction) and ytrain (output label values),
+techniques.
+ and the performance metrics are reckoned.
+ Specifically, we evaluated the model’s performance on three
+different datasets and successfully detected the five most important types of attacks with high detection accuracy. Thus, B. Multiclass Classification Neural Networks
+the proposed hybrid model not only provides superior accuracy A multiclass classification neural network is a computational
+but also offers robustness against various types of attacks while model that includes an input layer, several hidden layers, and
+minimizing computational time. multiple output layers.
+PUROHIT AND GOVINDARASU: HAVEN: A HYBRID ANOMALY DETECTION SYSTEM FOR INTRA-VEHICULAR CAN-BUS COMMUNICATION 7325
+
+ TABLE VI presents a compendium of the specifics concerning the datasets
+ THE HYPER-PARAMETERS OF BINARY CLASSIFICATION NEURAL NETWORK
+ employed. These datasets are:
+ r CAN INTRUSION DATASET: As discussed in Section IV-E-2, the dataset we utilized was provided by
+ HCRL specifically for developing ADS on CAN BUS.
+ This dataset, sourced from a Kia Soul vehicle, captures
+ both benign and malicious activities. While instances of
+ DOS and Fuzzy attacks are periodic, our analysis during
+ the data-preprocessing stage reveals that among Impersonation attacks, 18% are non-periodic, with the remainder
+ being periodic. Notably, it is the only publicly available
+ CAN dataset with remote frames and responses. The main
+ attributes of this dataset encompass timestamp, CAN ID,
+ DLC, and payload.
+ r CAR HACKING DATASET: This dataset [37] was created
+ TABLE VII
+ THE HYPER-PARAMETERS OF MULTICLASS CLASSIFICATION NEURAL for experiments by connecting two Raspberry Pi devices
+ NETWORK to a vehicle’s in-vehicle network via the OBD-II port,
+ which allowed them to send and receive messages from
+ real ECU nodes on the CAN-bus. The intrusions present
+ in this dataset encompass three distinct types of attacks,
+ specifically DOS attacks, Fuzzy attacks, and Spoofing
+ attacks. While DOS and Fuzzy attacks are primarily periodic, Spoofing attacks have both periodic and non-periodic
+ instances, with almost 26% of the instances being nonperiodic, as observed during our data pre-processing. Notably, each dataset attribute —timestamp, CAN ID, DLC,
+ payload, and label—serves as a crucial pointer, differentiating between the injected malicious messages and the
+ normal ones. A significant volume of attack instances were
+ recorded, leading to noticeable ID frequency alterations.
+ They are used for classification tasks where there are more Such marked changes indicate that sequence-based dethan two possible classes, and hence there are multiple output tection methodologies could be particularly effective in
+nodes, each corresponding to one of the possible classes, and the identifying these intrusions.
+ r AUTOMOTIVE CAN BUS INTRUSION DATASET: This
+highest output value indicates the predicted class. In the context
+of our study, they are trained to categorize into diverse attack cat- dataset [38], was released by the Department of Matheegories and eventfully exhibit impressive accuracy levels during matics and Computer Science at Eindhoven University of
+testing and uses multiple hidden layers and a Softmax-activated Technology. It offers a comprehensive collection of CAN
+output layer for multi-category attack classification. bus data acquired from three distinct sources: two cars, the
+ For our model, the next step after obtaining filtered data from Opel Astra and Renault Clio, and a custom-built CAN-bus
+the initial stage of the rule-based system involves developing a prototype. While benign data was collected directly from
+multiclass classification neural network using TensorFlow. the vehicles, a variety of simulated attacks enriched the
+ The neural network is created through a sequential method dataset, including Replay attacks, DOS attacks, and fuzzy
+by adding three dense layers with 40, 40, and 20 neurons, re- attacks. The diversity of attack types and the non-periodic
+spectively, along with input feature size. The number of neurons nature of some attacks make this dataset a valuable resource
+in the output layer of a multiclass classification neural network for developing and testing ADS.
+depends on the number of classes in the classification task. The 3) Performance Analysis: The implemented hybrid model
+values of these neurons represent the probability of the input underwent a series of training and testing procedures on a
+belonging to the corresponding class. Table VII shows the hyper- computational system equipped with an Intel(R) Core i7-8550
+parameter list of Multiclass Classification Neural Network. as stated in Section IV-E-3. For the model, we utilized Python
+ version 3, scikit-learn, while Tensorflow was designated as the
+ underlying framework.
+C. Performance Evaluation
+ The results of the proposed model on the three different
+ 1) Validation Metrics: The assessment methodology and the dataset are shown in Table IX & Table X. As shown through
+validation metrics remain unchanged and are consistent with the these tables, when testing on different datasets, the proposed
+procedure explicated in Section IV-E-1 of this paper. model, which includes a combination of Rule-based and neural
+ 2) Datasets: This study utilizes three distinct datasets to networks, achieves quite good accuracies (above 95% for both
+assess the performance of the proposed hybrid Anomaly Binary and Multiclass).
+Detection Systems (ADS), which combines rule-based and If we compare these to the results in Section IV-E-3,
+neural network-based (binary and multiclass) models. Table VIII the approach proposed here has achieved higher accuracies
+7326 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+ TABLE VIII
+ DATASETS
+
+ TABLE IX
+ PERFORMANCE EVALUATION OF HYBRID RULE BASED AND BINARY CLASSIFICATION NEURAL NETWORK MODEL ON DIFFERENT DATASETS
+
+ TABLE X
+ PERFORMANCE EVALUATION OF HYBRID RULE BASED AND MULTICLASS CLASSIFICATION NEURAL NETWORK MODEL ON DIFFERENT DATASETS
+
+(95%–98%) and relatively low execution time, attributed to learning paradigm, this comparison provides additional context
+the neural networks combined with the rule-based system. The for the relative performance of HAVEN.
+model also shows significantly lower false negative rates, which We replicated the LCCDE-style ensemble using the same base
+is due to the neural network’s ability to learn and detect more learners (LightGBM, XGBoost, and CatBoost) and evaluated
+complex attack patterns that might elude rule-based systems, it on the three datasets used in our study. Table XI shows
+thereby reducing missed anomalies. This balance of higher the detailed results for the Car Hacking Dataset, which offers
+detection accuracy, reduced false negatives, and low execution the most direct point of comparison. While the LCCDE-style
+time (latency) demonstrates the overall efficiency of our model. ensemble achieved slightly higher accuracy, HAVEN attained
+ To further benchmark our hybrid anomaly detection approach, higher precision and F1-score, underscoring its more reliable
+we conducted a comparative evaluation against the LCCDE classification behavior and lower false-positive tendency. For the
+ensemble methodology proposed by Yang et al. [36], a decision- CAN Intrusion and Automotive CAN Bus datasets, the LCCDEbased ensemble learning framework for CAN Bus intrusion de- style ensemble exhibited slightly modest accuracy improvetection. Although our architecture differs in model structure and ments of around 0.3–0.5% over HAVEN, though the overall
+PUROHIT AND GOVINDARASU: HAVEN: A HYBRID ANOMALY DETECTION SYSTEM FOR INTRA-VEHICULAR CAN-BUS COMMUNICATION 7327
+
+ TABLE XI
+ PERFORMANCE COMPARISON ON CAR HACKING DATASET
+
+precision and F1-score remained comparable or in favor of our like spoofing and impersonation, while maintaining low execuapproach. However, the overall gain remained incremental and tion latency. This highlights the complementary strengths of both
+did not match the near-perfect metrics reported in [36] likely approaches, validating our hybrid architecture that strategically
+due to variations in preprocessing, class balancing, or feature integrates them for a balanced and robust anomaly detection
+engineering steps not fully specified in the original study. system
+ While the LCCDE ensemble showed a reduction in execution As a part of our future endeavors and a natural progression
+time compared to HAVEN, the difference is expected due to the of this research, we aim to augment the performance of our
+additional complexity introduced by the neural network-based hybrid ADS model by continuously seeking and scrutinizing
+learning phase in our approach. This trade-off allows HAVEN new rules and machine learning algorithms that could potento reduce false alarms while maintaining strong detection capa- tially provide superior results. Furthermore, we can enhance
+bility, enabling better modeling of temporal dependencies and the proposed model’s outcomes on datasets by optimizing the
+feature semantics, particularly in multiclass or rule-assisted set- hyper-parameters of the algorithms, which can be achieved
+tings where static ensemble voting may underperform. Overall, by utilizing advanced optimization techniques such as particle
+HAVEN offers a competitive and balanced solution with high swarm and Bayesian optimization. This would aid in fine-tuning
+detection performance, adaptability and practical applicability the model parameters and eventually lead to better results. Furacross diverse CAN datasets. thermore, we intend to incorporate emerging advancements in
+ machine learning, including one-class classifiers, autoencoders,
+ VI. CONCLUSION and self-supervised anomaly detection methods, to improve
+ resilience against previously unseen attack types and reduce
+ In this paper, we presented two novel two-step ADS’s mod- dependency on labeled data. Finally, evaluating the model in
+els for in-vehicle CAN buses. In first model, we employed a real-time conditions using live CAN traffic is another important
+rule-based component to check injected CAN signals in the first direction that will help validate HAVEN’s detection latency and
+step and tree-based machine learning methods in the second practical deployment feasibility.
+step. The SMOTE oversampling technique was used to lessen
+the impact of class imbalance and computational expense. The
+results on the CAN-intrusion dataset reveal that the proposed REFERENCES
+system provides an detection accuracy of above 90% with very
+ [1] B. Marilisa et al., “C-its communication: An insight on the current research
+low execution time (in all three cases), thus showing a better activities in the European union,” Int. J. Transp. Syst., vol. 3, pp. 52–63,
+trade-off between the accuracy and the execution time. The 2018.
+second model employs rule-based discovery in combination [2] E. Seo, H. M. Song, and H. K. Kim, “GIDS: GAN based intrusion detection
+ system for in-vehicle network,” in Proc. 16th Annu. Conf. Privacy, Secur.
+with deep neural networks, including binary and multiclass Trust, 2018, pp. 1–6.
+classifiers which was something missing from previous works. [3] D. K. Nilsson, U. E. Larson, and E. Jonsson, “Efficient in-vehicle delayed
+The model was tested on three large datasets and achieved data authentication based on compound message authentication codes,” in
+high detection accuracy rates of over 95% for all three datasets Proc. IEEE 68th Veh. Technol. Conf., 2008, pp. 1–5.
+ [4] C. Szilagyi and P. Koopman, “Flexible multicast authentication for
+while also maintaining low execution times, including various time-triggered embedded control network applications,” in Proc. 2009
+types of attacks such as DOS, Fuzzy, Impersonation, Spoofing, IEEE/IFIP Int. Conf. Dependable Syst. Netw., 2009, pp. 165–174.
+and Replay attacks. The optimization of performance in the [5] L. B. Othmane, L. Dhulipala, M. Abdelkhalek, N. Multari, and M. Govindarasu, “On the performance of detecting injection of fabricated messages
+model is attained through the meticulous adjustment of specific into the CAN bus,” IEEE Trans. Dependable Secure Comput., vol. 19,
+parameters while testing and examining the model’s functioning no. 1, pp. 468–481, Jan./Feb. 2022.
+through fine-tuning parameters such as the number of hidden [6] H. Schweppe, Y. Roudier, B. Weyl, L. Apvrille, and D. Scheuermann,
+layers, the encoding methods employed, and the model’s dropout “Car2X communication: Securing the last meter-a cost-effective approach for ensuring trust in Car2X applications using in-vehicle symand learning rate. After thorough evaluation, it is evident that our metric cryptography,” in Proc. 2011 IEEE Veh. Technol. Conf., 2011,
+second hybrid ADS model integrating neural networks outper- pp. 1–5.
+forms the tree-based machine learning variant in both accuracy [7] A. Van Herrewege, D. Singelee, and I. Verbauwhede, “CANAuth-A simand execution efficiency. This advantage stems from the neural ple, backward compatible broadcast authentication protocol for CAN bus,”
+ in Proc. ECRYPT Workshop Lightweight Cryptography, 2011, vol. 2011,
+network’s ability to analyze complex, high-dimensional data and pp. 229–235. [Online]. Available: https://perso.uclouvain.be/fstandae/
+swiftly adapt to nuanced patterns. While tree-based models such LC_2011_proceedings.pdf
+as LightGBM, XGBoost, and CatBoost offer strong performance [8] J. Golson, “Car hackers demonstrate wireless attack on tesla model S,”
+ Verge, vol. 19, 2016. [Online]. Available: https://www.theverge.com/2016/
+across accuracy, recall, and F1-scores, they do not consistently 9/19/12985120/tesla-model-s-hack-vulnerability-keen-labs
+provide faster inference times. DL models, on the other hand, [9] M. Müter and N. Asaj, “Entropy-based anomaly detection for in-vehicle
+show superior performance in detecting non-periodic attacks networks,” in Proc. 2011 IEEE Intell. Veh. Symp., 2011, pp. 1110–1115.
+7328 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+[10] M. Marchetti, D. Stabili, A. Guido, and M. Colajanni, “Evaluation of [32] “Can-intrusion-dataset (OTIDS),” (n.d.). [Online]. Available: http://
+ anomaly detection for in-vehicle networks through information-theoretic ocslab.hksecurity.net/Dataset/CAN-intrusion-dataset
+ algorithms,” in Proc. IEEE 2nd Int. Forum Res. Technol. Soc. Ind. Lever- [33] A. Alshammari, M. A. Zohdy, D. Debnath, and G. Corser, “Classificaaging Better Tomorrow, 2016, pp. 1–6. tion approach for intrusion detection in vehicle systems,” Wireless Eng.
+[11] Z. Tyree, R. A. Bridges, F. L. Combs, and M. R. Moore, “Exploiting the Technol., vol. 9, no. 4, pp. 79–94, 2018.
+ shape of can data for in-vehicle intrusion detection,” in Proc. IEEE 88th [34] H. Olufowobi, C. Young, J. Zambreno, and G. Bloom, “SAIDuCANT:
+ Veh. Technol. Conf., 2018, pp. 1–5. Specification-based automotive intrusion detection using controller area
+[12] Y. Fraiji, L. B. Azzouz, W. Trojet, and L. A. Saidane, “Cyber security issues network (CAN) timing,” IEEE Trans. Veh. Technol., vol. 69, no. 2,
+ of internet of electric vehicles,” in Proc. 2018 IEEE Wireless Commun. pp. 1484–1494, Feb. 2020.
+ Netw. Conf., 2018, pp. 1–6. [35] A. Géron, Hands-On Machine Learning With Scikit-Learn, Keras,
+[13] V. S. Barletta, D. Caivano, A. Nannavecchia, and M. Scalera, “A Kohonen and TensorFlow. Sebastopol, CA, USA: O’Reilly Media, Inc.,
+ SOM architecture for intrusion detection on in-vehicle communication 2022.
+ networks,” Appl. Sci., vol. 10, no. 15, 2020, Art. no. 5062. [36] L. Yang, A. Shami, G. Stevens, and S. De Rusett, “LCCDE: A decision-
+[14] D. A. Schmidt, M. S. Khan, and B. T. Bennett, “Spline-based intrusion based ensemble framework for intrusion detection in the Internet of Vehidetection for VANET utilizing knot flow classification,” Internet Technol. cles,” in Proc. 2022 IEEE Glob. Commun. Conf., 2022, pp. 3545–3550.
+ Lett., vol. 3, no. 3, 2020, Art. no. e155. [37] “Car-hacking dataset,” (n.d.). [Online]. Available: https://ocslab.
+[15] D. Oladimeji, R. Jinad, A. Rasheed, and M. Baza, “CANGuard: An hksecurity.net/Datasets/car-hacking-dataset
+ enhanced approach to the detection of anomalies in can-enabled vehicles,” [38] G. Dupont, A. Lekidis, J. Den Hartog, and S. Etalle, “Automo-
+ Sensors, vol. 25, no. 1, 2025, Art. no. 278. tive controller area network (CAN) bus intrusion dataset V2,” 4TU.
+[16] A. Taylor, S. Leblanc, and N. Japkowicz, “Anomaly detection in auto- Centre for Research Data, Nov. 14, 2019, doi: 10.4121/UUID:
+ mobile control network data with long short-term memory networks,” in B74B4928-C377-4585-9432-2004DFA20A5D.
+ Proc. 2016 IEEE Int. Conf. Data Sci. Adv. Analytics, 2016, pp. 130–139.
+[17] A. Zhou, Z. Li, and Y. Shen, “Anomaly detection of CAN bus messages
+ using a deep neural network for autonomous vehicles,” Appl. Sci., vol. 9,
+ no. 15, 2019, Art. no. 3174.
+[18] N. Hamad, K. Alheeti, and S. Al-Rawi, “Intelligent intrusion detection
+ system in internal communication systems for driverless cars,” Ph.D.
+ dissertation, Univ. Anbar, Ramadi, Iraq, 2020.
+[19] D. Kosmanos et al., “A novel intrusion detection system against
+ spoofing attacks in connected electric vehicles,” Array, vol. 5, 2020,
+ Art. no. 100013. [Online]. Available: https://www.sciencedirect.com/ Shaurya Purohit received the PhD degree in comscience/article/pii/S259000561930013X puter engineering with a major in secure and reli-
+[20] H. Olufowobi et al., “Anomaly detection approach using adaptive cumu- able computing from Iowa State University, USA,
+ lative sum algorithm for controller area network,” in Proc. ACM Workshop in 2025. He was a research and teaching assistant
+ Automot. Cybersecurity, 2019, pp. 25–30. with the Department of Electrical and Computer En-
+[21] H. M. Song, H. R. Kim, and H. K. Kim, “Intrusion detection system based gineering. He is currently a lead research engineer
+ on the analysis of time intervals of CAN messages for in-vehicle network,” with Eaton Corporation, USA. His research interests
+ in Proc. 2016 Int. Conf. Inf. Netw., 2016, pp. 63–68. include developing advanced cybersecurity solutions
+[22] M. Müter, A. Groll, and F. C. Freiling, “A structured approach to anomaly and anomaly/intrusion detection systems using madetection for in-vehicle networks,” in Proc. 6th Int. Conf. Inf. Assurance chine learning, deep learning, federated learning, and
+ Secur., 2010, pp. 92–98. game theory. He applies these techniques to domains
+[23] G. Loukas, T. Vuong, R. Heartfield, G. Sakellari, Y. Yoon, and D. Gan, such as autonomous vehicles, EV charging infrastructure, and distributed energy
+ “Cloud-based cyber-physical intrusion detection for vehicles using deep resources to enhance their security and reliability. He was honored with the
+ learning,” IEEE Access, vol. 6, pp. 3491–3508,xbrk 2018. Research Excellence Award.
+[24] M. Aloqaily, S. Otoum, I. Al Ridhawi, and Y. Jararweh, “An intrusion
+ detection system for connected vehicles in smart cities,” Ad Hoc Netw.,
+ vol. 90, 2019, Art. no. 101842.
+[25] K.-T. Cho and K. G. Shin, “Fingerprinting electronic control units for
+ vehicle intrusion detection,” in Proc. USENIX Secur. Symp., 2016, vol. 40,
+ pp. 911–27.
+[26] S. Purohit and M. Govindarasu, “ML-based anomaly detection for intravehicular CAN-bus networks,” in Proc. 2022 IEEE Int. Conf. Cyber Secur.
+ Resilience, 2022, pp. 233–238.
+[27] N. V. Chawla, K. W. Bowyer, L. O. Hall, and W. P. Kegelmeyer, “SMOTE: Manimaran Govindarasu (Fellow, IEEE) is cur-
+ Synthetic minority over-sampling technique,” J. Artif. Intell. Res., vol. 16, rently the Anson Marston distinguished professor
+ pp. 321–357, 2002. of engineering and Murray J. and Ruth M. Harpole
+[28] I. Guyon and A. Elisseeff, “An introduction to variable and fea- professor of electrical and computer engineering with
+ ture selection,” J. Mach. Learn. Res., vol. 3, no. 3, pp. 1157–1182, Iowa State University. He has co-authored nearly 250
+ 2003. peer-reviewed research publications. His research in-
+[29] D. Zhang, L. Qian, B. Mao, C. Huang, B. Huang, and Y. Si, “A data- terests include cybersecurity for smart grid and critidriven design for fault detection of wind turbines using random forests cal infrastructures, IoT security, internet security, and
+ and XGboost,” IEEE Access, vol. 6, pp. 21020–2103, 2018. real-time systems. He was the recipient of the multiple
+[30] L. Prokhorenkova, G. Gusev, A. Vorobev, A. V. Dorogush, and best paper awards, presented several dozen invited
+ A. Gulin, “CatBoost: Unbiased boosting with categorical fea- talks, tutorials, and industry short-courses/hands-on
+ tures,” in Proc. Adv. Neural Inf. Process. Syst., 2018, vol. 31. training sessions on cybersecurity. He was an associate editor for IEEE Transac-
+ [Online]. Available: https://papers.nips.cc/paper_files/paper/2018/hash/ tions on Smart Grid and IEEE Transactions of Mobile Computing. He is the chair
+ 14491b756b3a51daac41c24863285549-Abstract.html of the Cybersecurity Working Group in IEEE Power and Energy Society. He led
+[31] G. Ke et al., “LightGBM: A highly efficient gradient boosting de- the effort to build ISU’s Cybersecurity testbed for smart grid and successfully
+ cision tree,” in Proc. Adv. Neural Inf. Process. Syst., 2017, vol. 30. collaborated with many universities, national laboratories, and industries in R&D
+ [Online]. Available: https://papers.nips.cc/paper_files/paper/2017/hash/ projects. His research program received funding from NSF, DOE, DHS, DoD,
+ 6449f44a102fde848669bdd9eb6b76fa-Abstract.html PSERC, and ISU EPRC. He is an ABET Program Evaluator.

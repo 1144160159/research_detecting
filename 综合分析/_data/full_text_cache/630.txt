@@ -1,0 +1,1034 @@
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026 1503
+
+ Clustering Diffusion Model With Frequency-Signal
+ Modulation for Variational Graph Autoencoders
+ Junwei Cheng , Ke Liang , Pengxing Feng , Weixiong Liu, Yong Tang , and Chaobo He
+
+ Abstract—Variational autoencoders (VAEs) have been widely I. INTRODUCTION
+used for node clustering, with existing methods mainly focusing
+ ODE clustering (also known as community detection) is a
+on enhancing the expressiveness of their latent space. Recently,
+the integration of diffusion models with VAEs has provided new
+opportunities to achieve this objective. However, the mechanism
+ N fundamental task in the field of graph machine learning. It
+ aims to partition nodes into distinct clusters while ensuring high
+by which the diffusion model improves performance remains un- intra-cluster compactness and clear inter-cluster separation [1].
+clear. To bridge this gap, we conduct an empirical analysis from
+the perspective of graph spectral theory, revealing that the signal
+ Identifying cluster structures within networks facilitates a deeper
+modulation induced by diffusion models closely aligns with the low- understanding of node relationships, which support applications
+frequency spectral characteristics of VAEs, which in turn explains such as anomaly detection [2], [3] and drug discovery [4],
+their effectiveness. Nevertheless, further experiments highlight that [5]. High-performance node clustering methods largely relies
+diffusion models exhibit limitations in modulating high-frequency on specially designed optimization functions. In this context,
+signals, which diverge from the spectral characteristics of VAEs.
+Moreover, existing diffusion methods fail to enable the latent space
+ Variational Autoencoders (VAEs) [6], as generative methods,
+to adequately capture and reflect cluster-specific characteristics. To offer a natural optimization objective well suited for this task.
+address these challenges, we propose a novel plug-and-play method, The probabilistic framework of traditional VAEs is illustrated
+FVD, to improve the performance of VAE-based methods in node in Fig. 1(a). Building upon this framework, existing VAE-based
+clustering tasks. Specifically, we incorporate the graph wavelet methods can be classified into two main groups. The first group
+transform as a secondary signal modulator, enabling independent
+adjustments of specific frequency bands to better align with the
+ extends the inference and/or generation processes by incorporatspectral characteristics of VAEs. Additionally, we introduce the ing higher-order structural information, such as modularity [7],
+Student’s t-distribution as a conditional constraint in the reverse motifs [8] and k-core structures [9]. The second group introduces
+process of FVD, deriving a more compact variational lower bound. constraints to modify the optimization function [10], [11], [12].
+This enhancement preserves fine-grained node information while In general, these methods primarily aim to improve the represenfocusing on clustering details, effectively mitigating the cluster collapse phenomenon. Comprehensive experimental results demontational capacity of the latent space. Notably, recent studies have
+strate that integrating FVD with existing methods achieves com- proposed combining Denoising Diffusion Probabilistic Model
+petitive performance improvements in most cases. (DDPM) [13] (pipeline in Fig. 1(b)) with VAEs, which opens
+ up new pathways to achieve this objective. For example, [14]
+ Index Terms—Variational graph autoencoder, node clustering,
+diffusion model, graph signal. propose to apply DDPM across multiple VAEs to support user
+ recommendation. [15] design a sandwich-structured method
+ that integrates variational autoencoder and DDPM for graph
+ augmentation. Likewise, [16] incorporate DDPM into the latent space to guide the aggregation process of neighborhood
+ Received 1 May 2025; revised 15 September 2025; accepted 22 September information for anomaly detection.
+2025. Date of publication 25 September 2025; date of current version 9 January Although these studies suggest that DDPM can effectively
+2026. This work was supported by the National Natural Science Foundation of enhance the representational capacity of the latent space in
+China under Grant 62477016, Grant 62077045, and Grant 62506371, and in
+part by the Guangdong Basic and Applied Basic Research Foundation under variational graph autoencoder-based methods, the underlying
+Grant 2024A1515011758 and Grant 2024A1515140144. Recommended for mechanisms remain unclear. Against this backdrop, two quesacceptance by J. Wang. (Junwei Cheng and Ke Liang contributed equally to tions arise: What mechanism enables DDPM to improve the
+this work). (Corresponding authors: Yong Tang; Chaobo He.)
+ Junwei Cheng, Weixiong Liu, Yong Tang, and Chaobo He are with the expressiveness of the latent space in VAEs? Can this mechanism
+School of Computer Science, South China Normal University, Guangzhou help the latent space better reflect cluster characteristics?
+510631, China (e-mail: jung@m.scnu.edu.cn; weixiongliu@m.scnu.edu.cn; Essentially, noise can be regarded as a high-frequency signal
+ytang@m.scnu.edu.cn; hechaobo@m.scnu.edu.cn).
+ Ke Liang is with the College of Computer Science and Technology, Na- within the graph spectrum. Consequently, the pipeline of DDPM
+tional University of Defense Technology, Changsha 410073, China (e-mail: can be understood as modifying specific frequency components
+liangke22@nudt.edu.cn). in the graph, thereby altering the amplitude in the spectrum [17],
+ Pengxing Feng is with the Department of Electrical Engineering, City University of Hong Kong, Hong Kong, China (e-mail: [18]. This natural and intuitive connection motivates us to expengxfeng2-c@my.cityu.edu.hk). plore how DDPM affects latent representations from the spectral
+ The code of FVD is available at https://github.com/Roiko97/FVD. perspective. To this end, we begin with an empirical study
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TPAMI.2025.3614385, provided by the authors. (detailed in Section III-A) using a traditional VAE-based
+ Digital Object Identifier 10.1109/TPAMI.2025.3614385 method, VGAE, to explore the spectral characteristics of VAEs.
+ 0162-8828 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+1504 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+ According to the aforementioned findings and analysis,
+ we propose a cluster-dri V en Diffusion model that integrates Frequency signal modulation (FVD). As a plug-and-play
+ method, it improves the performance of existing VAE-based
+ methods without modifying their core structures. Specifically,
+ we introduce graph wavelet transform as an adapter for the
+ DDPM to reduce its coupling with the latent space. Meanwhile,
+ secondary signal modulation through graph wavelet transform
+ ensures that the modulated signals conform to the LGH pattern.
+ To address cluster collapse, inspired by [12], we incorporate the
+ Student’s t-distribution [19] as a conditional constraint into re-
+Fig. 1. (a) is the probabilistic framework of VAEs. (b) presents the pipelines verse process of DDPM. At each reverse diffusion step, noise reof DDPM. (c) highlights the spectral characteristics of VAEs for low-frequency
+signals, while intentionally suppressing high-frequency components during moval occurs under the guidance of cluster information, thus presignal modulation is needed. (d) depicts the signal modulation results of DDPM, venting the misinterpretation of boundary and intra-cluster difindicating a deviation from the LGH pattern in the high-frequency band. (e) ferences as noise. Our contributions are summarized as follows:
+outlines the detrimental effects of DDPM on intra-cluster compactness and r Analysis: We investigate the spectral behavior of VAEs
+inter-cluster separation.
+ and propose the LGH pattern to characterize it. Building
+ on this foundation, we explain how DDPM enhances the
+ Our observations reveal that VGAE prioritizes low-frequency representational capacity of the latent space in VAEs, while
+signals, indicating a clear inclination towards preserving their also elucidating its limitations.
+features, while high-frequency signals receive relatively less r Method: (1) We propose a plug-and play method FVD,
+emphasis. Based on this, we summarize a general mathematical which integrates graph wavelet transform module as an
+pattern, called LGH, for VAEs from the spectral perspective, as adapter to ensure modulated signals conform to the LGH
+shown in Fig. 1(c): after modulation, the integral of amplitude pattern, while independent secondary signal modulation
+difference function in the Low-frequency band should be addresses the bottleneck caused by the strong coupling
+Greater than zero, while the integral in High-frequency band between DDPM and the latent space. (2) We develop a
+should be less than zero. conditional diffusion module to mitigate cluster collapse by
+ Within the constraints of the LGH pattern, we adopt two designing a novel reverse process and deriving a variational
+more comprehensive experimental designs to discuss the two lower bound, effectively preserving cluster boundaries and
+questions raised earlier. Specifically, we design the second em- intra-cluster differences. To the best of our knowledge, this
+pirical experiment to evaluate how well the signal modulation is the first application of a conditional diffusion method to
+results produced by DDPM align with the LGH pattern (detailed node clustering with VAEs.
+in Section III-B). Additionally, we conduct a third experiment r Experiments: We apply FVD to eight representative VAEto assess the impact of DDPM on clustering characteristics based methods for node clustering. Experimental results on
+(detailed in Section III-C). five benchmark datasets demonstrate that integrating FVD
+ r Finding (1): We observe that the signal modulation results enables these methods to achieve competitive performance
+ of DDPM are generally consistent with the signal char- improvements while maintaining their original module
+ acteristics required by VAEs, which explains why DDPM structures unchanged.
+ enhances the expressiveness of the latent space. However,
+ VAEs exhibit a progressively diminishing response to fre- II. PRELIMINARIES
+ quency signals as the frequency increases from low to high.
+ This behavior indicates that amplifying low-frequency sig- A. Node Clustering
+ nals or suppressing high-frequency signals can lead to An undirected graph G = (A, X) comprises interactions
+ performance gains, or vice versa. However, as visualized among N nodes, where A ∈ RN ×N represents the adjacency
+ in Fig. 1(d), DDPM amplifies signals across the entire matrix and X ∈ RN ×M denotes the attribute matrix. For any
+ frequency band, which differs from the requirement of pair of nodes u and v, if there is a interaction between them,
+ VAEs for high-frequency signals. Au,v = 1, otherwise, Au,v = 0. Each node is associated with
+ r Finding (2): A well-structured cluster should exhibit
+ an M −dimensional attribute vector that represents its inherent
+ high intra-cluster compactness and inter-cluster separa- features.
+ tion. However, DDPM amplifies signals across all fre- The graph clustering task utilizes node information to partiquency bands, which may lead to the loss of key struc- tion them into k disjoint clusters C = {C1 , C2 , . . . , Ck } in an
+ tural information related to clustering. This may lead to unsupervised manner, where Ck is the k-th cluster.
+ node escape or the formation of ambiguous clusters, a
+ phenomenon we term as cluster collapse. Specifically, as
+ B. Variational Autoencoder
+ outlined in Fig. 1(e), after signal modulation, we observe
+ that intra-cluster compactness and inter-cluster separa- VAE-based methods primarily consist of inference, genertion may adjust in the opposite direction of the expected ation and the Evidence Lower Bound (ELBO), as illustrated
+ results. in the Fig. 1(a). Specifically, for an input sample x, the true
+CHENG et al.: CLUSTERING DIFFUSION MODEL WITH FREQUENCY-SIGNAL MODULATION FOR VARIATIONAL GRAPH AUTOENCODERS 1505
+
+posterior distribution p(z) is unknown. To approximate p(z), eigenvectors associated with eigenvalues ranging from λ1 to
+a common approach is to introduce the variational distribution λN/2 (λN/2 ≈ 1). In contrast, high-frequency signals F+ repq(z|x) ∼ N (μ, σ 2 ) to infer z, and the observation distribution resent non-smooth information among nodes and are generally
+p(x|z) ∼ Bernoulli(x) to generate x. By maximizing ELBO, considered noise. They correspond to eigenvectors associated
+the inference and generation processes progressively capture the with eigenvalues ranging from λ(N/2)+1 to λN (λN ≈ 2) [20],
+structural and distributional characteristics of the data, thereby [21]. Amplitude A quantifies the strength of each frequency
+approximating the true representation distribution. Without loss signal, and is derived by applying the Fourier transform [22],
+of generality, the ELBO is derived using Bayes’ theorem as i.e., A = UT z.
+follows [6]:
+  III. EMPIRICAL STUDY
+ log p(x) ≥ q(z | x) log p(x | z)dz − KL(q(z | x)p(z))
+ z In our empirical study, we mainly explore three questions:
+  (Q1) What characteristics do the VAEs exhibit for frequency
+ 1
+ = q(z | x) log p(x | z)dz − (μ2 + σ 2 − log σ 2 − 1) signals? (Q2) What mechanism enables DDPM to enhance the
+ z 2
+ expressiveness of the latent space in VAEs? Furthermore, (Q3)
+ (1)
+ Can this mechanism help the latent space better reflect cluster
+where the first term can be directly computed via binary cross- characteristics?
+entropy, KL represents the Kullback-Leibler divergence, and
+p(z) ∼ N (0, 1). Finally, the learned node representations z are A. (Q1) What Characteristics Do the VAEs Exhibit for
+clustered using either K-means or an argmax-based strategy. For Frequency Signals?
+more details, please refer to Section VI-A.
+ Experimental design: Given a symmetric normalized graph
+ Laplacian matrix L̂, it can be rewritten via eigenvalue decom-
+C. Denoising Diffusion Probabilistic Model position as follows:
+ The DDPM pipeline, as shown in Fig. 1(b), which consists
+ L̂ =
+of two main processes. Given an input sample x0 ∼ p(x), the
+forward process involves gradually injecting Gaussian noise into (λuuT )1 + · · ·+ (λuuT )N/2 +(λuuT )N/2+1 + · · · + (λuuT )N
+the sample via a Markov chain until its structure is completely      
+ F− F+
+lost. Formally, let T denote the total number of steps. For any
+ (3)
+noisy sample
+ √ generated at step t, its distribution is p(xt |xt−1 ) =
+N (xt ; 1 − βt xt−1 , βt I), where t ∈ {1, 2, . . . , T } and βt is To verify the characteristics of VAEs for different frea hyperparameter that controls the noise scale at step t. As quency signals, we discard signals in two directions at ratios
+T → +∞, xT approaches N (0, 1) [13]. In the reverse pro- of {0%, 5%, 10%, 15%, 20%, 25%}. Fig. 2(a) illustrates this
+cess, noise is progressively removed, ultimately recovering the process. Specifically, we progressively discard signals from
+original sample x0 . Mathematically, given a noisy sample xt , λ = 0 toward λ = 1 according to the specified ratios, while
+the denoising process is defined iteratively by qθ (xt−1 |xt ) = retaining the remaining components unchanged. For example,
+N (xt−1 ; μθ (xt , t), σθ (xt , t)), where θ is learned via a neural discarding the corresponding frequency signal at a rate of 5%,
+network. With the maximizing of variational lower bound (VLB) the reorganized L̂ is as follows:
+on log-likelihood, DDPM identifies and removes noise to gen-
+ L̂ := (λuuT )N ×5%+1 + · · · + (λuuT )N/2 + F+ (4)
+erate a new sample. Without loss of generality, the VLB is
+derived using Bayes’ theorem and the reparameterization trick Similarly, we perform the same procedure at λ = 2 → λ = 1.
+as follows: Given the foundational role of VGAE in VAEs, we select it
+ T as a representative method and conduct experiments on the
+ t=1 p(xt |xt−1 )
+ log p(x) ≥ Eq(x1 ,...,xT |x0 ) log  (2) Cora dataset. Specifically, we replace the symmetric normalized
+ qθ (xT ) Tt=1 qθ (xt−1 |xt ) adjacency matrix in the inference phase with the reorganized L̂
+ as the input for graph convolution. This design is motivated
+D. Graph Spectrum Theory by the fact that signal propagation in graph convolution essen-
+ Graph spectrum theory is a fundamental concept in graph tially corresponds to spectral filtering via the graph Laplacian.
+signal processing. It relies on the eigenvalues and eigenvectors Therefore, using reorganized L̂ can be regarded as applying a
+of the graph Laplacian matrix L = D − A to modulate node spectral modulation kernel, enabling us to explore how the model
+signals, where D is node degree matrix. L̂ = D−1/2 LD−1/2 responds to different spectral configurations and to analyze its
+is the symmetric normalized graph Laplacian matrix. Through frequency characteristics. We evaluate its performance on node
+eigendecomposition, it can be decomposed into the product of clustering tasks using Accuracy (ACC), Normalized Mutual
+three matrices, i.e., L̂ = UT ΛU, where U = [u1 , u2 , . . . , uN ] Information (NMI), Adjusted Rand Index (ARI), and F1-macro
+is an orthonormal eigenmatrix, and Λ = diag[λ1 , λ2 , . . . , λN ] (F1).
+is a diagonal matrix. For each λi ∈ [0, 2] arranged in ascending Results and analysis: Fig. 3 presents the performance results
+order, there is a corresponding eigenvector ui . of VGAE when signals are randomly removed at various ratios
+ In graph signal processing, low-frequency signals F− rep- in two different directions. We find that even removing a small
+resent smooth information among nodes and correspond to portion of the lowest-frequency signals significantly degrades
+1506 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+Fig. 2. (a) is the first empirical study, designed to illustrate the frequency characteristics of VAEs. (b) corresponds to the second empirical study, focusing on the
+modulation effects of DDPM on frequency signals. (c) explore the third empirical study, which aims to evaluate the impact of DDPM on intra-cluster compactness
+and inter-cluster separation.
+
+Fig. 3. VGAE performance changes under different signal removal rates.
+
+VGAE performance. As shown in Fig. 3(a), all evaluated metrics Mathematically, the LGH pattern is defined as:
+decline noticeably, among which key clustering metrics NMI  1  2
+and ARI approaching zero. In contrast, discarding a small por- Φ(A)dA > 0 > Φ(A)dA (5)
+tion of the highest-frequency signals can yield substantial per- 0 1
+formance gains. As depicted in Fig. 3(b), applying any removal where Φ(A) = A − A0 is amplitude difference function and
+rate above 0% leads to measurable improvements compared to A0 is the initial amplitude. Note that this pattern only constrains
+retaining all signals. the amplification and attenuation of the overall signal in the low
+ From the spectral perspective, low-frequency components and high frequency bands, without imposing further constraints
+mainly capture node similarity, while high-frequency compo- on the internal details of these bands.
+nents emphasize differences. Since clustering naturally relies on
+aggregating similar nodes, suppressing low-frequency signals
+undermines the similarity characteristics essential for effective B. (Q2) What Mechanism Enables DDPM to Enhance the
+clustering. Meanwhile, removing the high-frequency signals Expressiveness of the Latent Space in VAEs?
+reduces their distinguishing differences. Both adjustments can Experimental design: Given that the processing of noise by
+lead to pronounced changes in the observed outcomes. More- DDPM can be viewed as the modification of specific frequency
+over, frequency signals near λ = 1 often carry information about components, we explore its underlying mechanism in the latent
+cluster boundaries [23], with the left side generally exhibiting space from the spectral perspective. We choose node2vec [24]
+smoother boundary details compared to the right. This is be- to generate the input representation z0 for DDPM instead of
+cause low-frequency signals tend to capture globally smooth adopting the output from VAEs. The main reason is that prior
+structures, while high-frequency components reflect sharp lo- work [25] often employs node2vec to generate missing node
+cal variations. In contrast, transitions near cluster boundaries attributes. Following this strategy helps reduce input-specific
+typically exhibit intermediate variations. Therefore, removing dependencies (e.g., VAE outputs) and thereby minimizes potenthese smoother details may disrupt the structural integrity of the tial bias when studying the spectral characteristics of DDPM.
+clusters, causing their boundaries to blur and stack. Conversely, Fig. 2(b) shows this process. Specifically, we train DDPM for
+filtering out less smooth boundary information can help reveal 200 epochs on the Cora, Citeseer and Pubmed datasets, respecthe boundaries more clearly. tively. Once trained, new samples ẑ0 are inferred by sampling
+ Based on the above results and findings, we describe the noisy data from zT and iteratively denoising. Finally, we map
+spectral characteristics of VAEs as follows: (A1) The latent the representations z0 and ẑ0 to the spectral domain using
+representation of VAEs tends to capture low-frequency Fourier transform to observe the amplification and attenuation
+information while attenuating high-frequency components: of amplitudes across different frequency bands by DDPM.
+Based on this characteristic, we summarize a general Results and analysis: Fig. 4 shows the amplitude magnifipattern LGH, for VAEs from the spectral perspective: after cation ratio across different frequency bands before and after
+modulation, the integral of amplitude difference function in applying DDPM, computed as (Aẑ0 − Az0 )/Az0 . We observe
+the Low-frequency band should be Greater than zero, while that DDPM can be viewed as a signal modulator that amplifies
+the integral in High-frequency band should be less than zero. the most signal across the entire frequency band. Specifically, we
+CHENG et al.: CLUSTERING DIFFUSION MODEL WITH FREQUENCY-SIGNAL MODULATION FOR VARIATIONAL GRAPH AUTOENCODERS 1507
+
+Fig. 4. Amplification ratio of signal amplitude before and after DDPM modulation. After applying DDPM, 92.95%, 92.31% and 92.39% of the nodes in Cora,
+Citeseer and Pubmed, respectively, exhibit increased signal amplitudes.
+
+ TABLE I where Nk is the number of nodes in the cluster k, and μ is the
+ EVALUATING THE INFLUENCE OF DDPM ON INTRA-CLUSTER COMPACTNESS
+ AND INTER-CLUSTER SEPARATION. BOTH  AND  REPRESENT POSITIVE
+ cluster center. Hintra quantifies the interaction density within a
+ RESULTS. cluster, where a smaller value indicates greater internal cohesion.
+ Hinter measures the separation between communities, where a
+ larger value indicates clearer segregation between communities.
+ Fig. 2(c) visualizes the above calculation.
+ Results and analysis: Table I presents the results of the calculations for Hintra and Hinter . We observe that, in most cases, the
+ representation after frequency modulation using DDPM leads
+ to slight dispersion of nodes within clusters and a reduction in
+observe that 92.95%, 92.31% and 92.39% of the nodes in Cora, inter-cluster distance. We propose two possible explanations for
+Citeseer and Pubmed, respectively, experience an increase in this. First, the significant amplification of low-frequency signals
+their signal amplitude after DDPM modulation. Furthermore, by DDPM indicates its focus on capturing individual details
+the amplification effect in the low-frequency range is more during the reverse process. While this may enhance fine-grained
+pronounced compared to the high-frequency range, which is details, it can also lead to the loss of key structural information
+consistent with the spectral characteristics of VAEs in the low- related to clusters. Building on this, DDPM amplifies highfrequency band described in (A1). Notably, a representative frequency components that reflect non-smooth information. This
+study [26] in graph signal processing demonstrates that fully amplification may cause nodes to cross cluster boundaries (as
+leveraging the implicit structural information in signals can sig- shown in Fig. 2(c)), resulting in node escape or even cluster
+nificantly enhance the expressiveness of latent representations. stacking. We refer to this phenomenon as cluster collapse. To
+Inspired by this finding, and in conjunction with the spectral this end, we argue that (A3) the modulation of signals by
+characteristics exhibited by VAEs, we propose that (A2) DDPM DDPM does not enable the latent space to reflect clustering
+enhances the latent space expressiveness of VAEs mainly by characteristics well. This motivates us to explore an approach
+amplifying low-frequency signals. for improving DDPM that prevents the loss of cluster structural
+ However, DDPM does not fully follow the LGH pattern features during the reverse diffusion process, thereby alleviating
+for high-frequency signals. Specifically, the modulation of cluster collapse. This will be discussed in Section IV-C.
+frequency signals by DDPM not only amplifies low-frequency
+signals but also enhances high-frequency signals, sometimes IV. METHODOLOGY
+even emphasizing the highest frequency components (as shown
+in Fig. 4(c)), which contradicts spectral characteristics of VAEs A. Overview
+for high-frequency signals. Misalignment in signals can impair Two key findings from empirical experiments deserve attenthe reconstruction capability of VAEs during decoding, a phe- tion and are summarized as follows:
+nomenon also observed in spectral analysis of DDPM within the r DDPM functions as a signal modulator that is capable of
+vision domain [27]. Therefore, we need to consider how to adjust modulating the frequency signals within the latent space of
+the frequency modulation results of DDPM to ensure alignment VAEs. However, its modulation of high-frequency signals
+with the LGH pattern. This will be discussed in Section IV-D. contravenes the LGH pattern, thereby limiting the expressiveness of the latent space in VAEs.
+C. (Q3) Can This Mechanism Help the Latent Space Better r DDPM exhibits a tendency to focus on fine-grained details,
+Reflect Cluster Characteristics? yet this often neglects cluster information with localized
+ characteristics. With the amplification of high-frequency
+ Experimental design: Based on the node representations z0
+ signals, the differences among nodes are further emphaand ẑ0 obtained in (Q2), we compute the intra-cluster compactsized, making clusters more likely to collapse.
+ness Hintra and inter-cluster separation Hinter as follows:
+ For the first problem, a straightforward approach is to repeat-
+ 1  edly adjust the parameters in DDPM (e.g., diffusion step, noise
+ Hintra = max zi − μk 2 (6) scale, etc. [13]) to minimize noise during the reverse diffusion
+ c1 ,c2 ,···ck Nk
+ i∈c
+ k process, thus attenuating high-frequency signals. However, this
+ Hinter = min μi − μj  (7) black-box approach leads to modulated results that lack controli,j∈C,i=j lability. Even when some degree of control is achieved, the input
+1508 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+Fig. 5. The framework of FVD. Starting with graph information G, the inference component of VAE projects this data into a latent space to learn the node
+embedding z. The conditional diffusion module then processes z by iteratively adding and removing noise, modulating its frequency signals to better capture
+clustering structures. Following this, the graph wavelet transform applies independent secondary signal modulation, aligning the final frequency signals with the
+LGH pattern. Finally, the generation component of the VAE reconstructs the original graph structure.
+
+to DDPM is dependent on the output of encoder, which in turn is secondary signal modulation, ensuring that the final frequency
+determined by the design of model. This strong coupling results signals follow the LGH pattern. Finally, the generation compoin the inevitability of extensive manual tuning, which limits the nent of VAE reconstructs the original graph. The model is trained
+generalizability of the model. As for the second issue, existing by iteratively optimizing the ELBO and VLB to complete the
+methods [11], [28] attempt to address the inherent limitations graph clustering task. In the next section, we will provide a
+of VAEs to mitigate cluster collapse. However, these methods step-by-step introduction to the FVD pipeline.
+cannot be directly extended to DDPM. Moreover, for DDPM
+variants such as conditional diffusion models, the focus has pre- B. Inference Component of VAEs
+dominantly been on the visual domain, with limited exploration Consider a node x randomly drawn from the sample space. In
+in graph-related tasks. To the best of our knowledge, no work general, x is usually considered to follow a Gaussian distribution
+has yet applied conditional diffusion methods to graph clustering to infer the latent representation z [29]. Formally, the representasks. tation z obtained by the reparameterization trick can be written
+ To address the aforementioned issues, and based on the as:
+conclusions drawn from our empirical study, we propose
+a frequency-signal modulated cluster-driven diffusion model z = μ + σ (8)
+(FVD). As a plug-and-play method, FVD enhances the perfor- where  is sampled from N (0, 1). Without loss of generality,
+mance of existing VAE frameworks without modifying their core let f (x) denote the node-related information associated with x.
+structures. Specifically,
+ r To ensure that signal modulation by DDPM aligns with the The parameters μ and σ are then computed by two-layer Graph
+ Convolutional Network (GCN):
+ LGH pattern while minimizing strong coupling with the
+ integrated method, we introduce the graph wavelet trans- μ = COVφμ (COVφ (f (x)), f (x)) (9)
+ form for independent secondary modulation. Building on σ = COVφσ (COVφ (f (x)), f (x)) (10)
+ the amplification of low-frequency signals by DDPM, the
+ graph wavelet transform enable fine-tuning within this fre- where φμ , φσ and φ are learnable parameters of GCN. COV
+ quency band while effectively suppressing high-frequency denotes convolution operation.
+ components, thereby ensuring alignment with the spectral
+ characteristics of VAEs. C. Cluster-Driven Conditional Diffusion Modules
+ r To address the issue of cluster collapse, we introduce
+ Forward process: Vanilla DDPM progressively adds Gaussian
+ the Student’s t-distribution as a constraint within the re- noise to the node x through a Markov chain during forward
+ verse diffusion process. At each denoising step, DDPM process, gradually destroying its structure. At each step, DDPM
+ not only captures fine-grained details but also emphasizes generates a sequence of perturbed sample {x1 , x2 , . . . , xT },
+ the preservation of local cluster information. Additionally, with the perturbations becoming more obvious. The toy image in
+ with the attenuation of high-frequency signals, inherent the Fig. 1(b) shows illustrates this process. The forward process
+ differences at cluster boundaries and within clusters are of our conditional diffusion module adopts the same strategy.
+ preserved, rather than being mistakenly removed as noise. Specifically, given a node representation z0 = z obtained from
+ Fig. 5 presents the framework of FVD. Given graph infor- the output of VAEs, the distribution of a sequence of perturbed
+mation G, the inference component of VAE maps this data samples {z1 , z2 , . . . , zT } is expressed as p(z1 , z2 , . . . , zT |z0 ).
+into the latent space to learn the node embedding z. Within According to the Markov chain, this distribution can be rewritten
+the conditional diffusion module, the latent representation z as:
+undergoes iterative noise addition and denoising, modulating its T
+frequency signals to capture clustering structure information. p(z1:T |z0 ) = p(zt |zt−1 ) ∼ N (zt | 1 − βt zt−1 , βt I) (11)
+Subsequently, graph wavelet transform performs independent t=1
+CHENG et al.: CLUSTERING DIFFUSION MODEL WITH FREQUENCY-SIGNAL MODULATION FOR VARIATIONAL GRAPH AUTOENCODERS 1509
+
+where βt ∈ (0, 1) controls the scale of the Gaussian noise added in the reverse process is:
+at each step t. T
+ Based on (11), the properties of Gaussian distribution and the qϕ (z0:T ) = q(zT ) qϕ (zt−1 |zt , c) (18)
+reparameterization trick, we derive the conclusion that the per- t=1
+turbation distribution at any given step can be fully determined
+by z0 and βt . Specifically, we can obtain the distribution of zt and where ϕ is learnable parameter in any neural networks, and
+zt−1 via (11) and further rewrite them via the reparameterization clustering constraint c is a learnable parameter, initialized by
+trick as: the cluster centers obtained from applying K-means to the
+ √ √ node2vec-generated representations.
+ zt = αt zt−1 + 1 − αt t−1 (12) Assuming that zt and c are independent, the conditional
+ √ distribution in the above equation can be further approximated
+ zt−1 = αt−1 zt−2 + 1 − αt−2 t−2 (13) as:
+where αt = 1 − βt .
+ qϕ (zt−1 |zt ) ∼ N (zt−1 |μϕ (zt , t), σϕ (zt , t)) (19)
+ By substituting (13) into (12), we can rewrite (12) as follows:
+ √ √ √ qϕ (zt−1 |c) ∼ N (zt−1 |0, σ̃(c, zt )) (20)
+zt = αt ( αt−1 zt−2 + 1 − αt−1 t−2 ) + 1 − αt t−1
+ √ √ √ It is worth noting that as T → +∞, the distribution zT will
+ = αt αt−1 zt−2 + αt − αt αt−1 t−2 + 1 − αt t−1 approximate the standard Gaussian distribution. To this end, the
+ √ √ reverse diffusion process can be interpreted as a gradual adjust-
+ ∵ αt − αt αt−1 t−2 + 1 − αt t−1 ∼ N (0, 1 − αt αt−1 )
+ √ ment of the mean and variance of this standard Gaussian. In this
+ ∴ zt = αt αt−1 zt−2 + 1 − αt αt−1  (14) context, in (20), we assume that, under the cluster constraint
+ c, the distribution of zt remains Gaussian, with its variance
+ By iteratively applying the above equation until t = 0, we
+ determined by the Student’s t-distribution:
+obtain:
+ √ √ (1 + zt − Θi 2 )−1
+ zt = α t z0 + 1 − α t  (15) σ̃(c, zt ) = 2 −1
+ (21)
+  i (1 + zt − Θi  )
+where αt = Tt=1 αi . where Θi is the cluster center of the i-th cluster and is initialized
+ Overall, during the forward process, given the initial repre- by K-means.
+sentation input z0 and noise schedule βt , the distribution of the
+any perturbation representation zt can be expressed as:
+ D. Graph Wavelet Transform
+ √
+ q(zt |z0 ) ∼ N (zt | αt z0 , 1 − αt ) (16) Graph wavelet transform allows independent manipulation of
+ To regulate the noise added in z1:T , we follow [14] to use a different frequency components, enabling effective amplificalinear noise schedule for 1 − αt , i.e., tion or attenuation of specific frequency components [30], [31].
+ Building on the advantages of graph wavelet transform observed
+ t−1
+ 1 − αt = ζ · αmin + (αmax − αmin ) (17) in related studies [23], [32], we adopt it as a secondary frequency
+ T −1 modulation method to ensure that the final frequency-modulated
+where ζ is a parameter that controls the noise scale, and αmin < signal adheres to the LGH pattern. This strategy ensures that the
+αmax ∈ (0, 1) are the lower and upper bounds of the added noise. frequency signals modulated by DDPM remain stable in the
+ Reverse process: Vanilla DDPM gradually removes noise low-frequency range while further attenuating high-frequency
+from the sample xT via a Markov chain during the reverse components. Similar to graph Fourier transform [33], compoprocess, ultimately reconstructing the original data. However, nents with smaller eigenvalues in graph wavelet transform coras discussed in Section III-C, DDPM tends to overlook cluster respond to low-frequency signals, while those with larger eigeninformation with localized characteristics, while inadvertently values correspond to high-frequency signals. Mathematically,
+emphasizing node differences. In this context, the vanilla reverse the normalized Laplacian matrix is symmetric and semi-positive
+diffusion approach tends to lead to cluster collapse. To mitigate definite. According to the theory of graph signal processing [34],
+this issue, we introduce the Student’s t-distribution as a con- its eigenvectors can be used as the basis for the graph wavelet
+straint in the reverse diffusion process to guide data recovery. transform. Specifically, given a signal-modulated representation
+While existing VAE-based clustering methods [11], [12], [29] z, the graph wavelet transform is defined as [35]:
+employ Gaussian mixture models (GMM) to enable end-to-end
+ ẑ = Ψ(λ)z = Ugs (λ)UT z (22)
+clustering, each component in a GMM requires learning multiple
+parameters and is also prone to cluster collapse during pretrain- where gs (λ) = diag(exp(sλ1 ), exp(sλ2 ), . . . , exp(sλN )) is a
+ing. In contrast, the Student’s t-distribution, with its heavy-tailed scaling matrix with heat kernel scaled by parameter s.
+nature, is more robust to local structural outliers commonly Notably, computing (22) results in the same computational
+observed in graph. This property allows it to better capture burden as calculating the graph Fourier transform. Specifically,
+local and boundary cluster structures, thereby facilitating the as discussed in Section II-D, computing the eigenvector U
+preservation of cluster information during the reverse process. typically requires O(N 3 ) time complexity, which becomes pro-
+Formally, according to a Markov chain, the sample distribution hibitive for large graphs. Fortunately, existing research [35] has
+1510 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+demonstrated that the graph wavelet transform can be efficiently incorporated into the forward process does not fundamentally
+approximated using Chebyshev polynomials, reducing the time affect the distribution of the final representation zT .
+complexity to a linear relationship with the number of edges in Since FVD follows Markov chains in both the forward and
+the graph. Consequently, Ψ(λ) can be rewritten as: reverse processes, the above equation can be simplified to:
+ K
+  p(zt |zt−1 , z0 , c) = p(zt |zt−1 , c) (28)
+ Ψ(λ) ≈ θi Polyi (L̂) (23)
+ i=0 According to the independence assumption, (26) can be further approximated as:
+where Poly0 (L̂) = I, Poly1 (L̂) = L̂, and Polyi (L̂) =
+2L̂Polyi−1 (L̂) − Polyi−2 (L̂). θ is the filter coefficient and p(zt |zt−1 )p(zt−1 |z0 )q(zt−1 |c)
+ p(zt−1 , zt , z0 , c) = (29)
+K is the order of the polynomial. p(zt |z0 )
+ where
+E. Generation Component of VAEs ⎧ √
+ ⎪
+ ⎪ p(zt |zt−1 ) ∼ N (z√t | αt zt−1 , 1 − αt )
+ Given the representation z after graph wavelet transform, ⎨
+ p(zt |z0 ) ∼ N (zt | αt z√0 , 1 − αt )
+the generation component of the VAEs reconstruct the original (30)
+ ⎪
+ ⎪ p(z t−1 |z0 ) ∼ N (zt−1 | αt−1 z0 , 1 − αt−1 )
+graph as follows: ⎩
+ q(zt−1 |c) ∼ N (zt−1 |0, σ̃)
+ p(Âx = 1|ẑ) = (ẑ ẑ T ) (24) Based on the probability density function of the Gaussian
+ distribution, (29) can be expanded as:
+where is a non-linear function, such as sigmoid function.
+  √
+ 1 (zt − αt zt−1 )2
+ p(zt−1 , zt , z0 , c) ∝ exp −
+F. Optimization 2 1−α
+ √ √ 
+ VAEs optimization: To ensure that the prior distribution as- (zt−1 − αt−1 z0 )2 (zt−1 )2 (z0 − αt z0 )2
+sumed by the VAEs gradually approximates the true posterior + + −
+ 1 − αt−1 σ̃ 1 − αt
+distribution, the training objective is to maximize the ELBO. For   
+unconditional VAEs, the ELBO can be further rewritten via (1) 1 αt 1 1 2
+ ∝ exp − + + zt−1
+as: 2 1 − αt 1 − αt−1 σ̃
+  √ √  
+ L
+ 1 
+ N N −2 αt zt −2 αt−1 z0
+ LELBO =
+ (l)
+ Aij log Âij + + zt−1 + Δ (31)
+ L 1 − αt 1 − αt−1
+ i=1 j=1
+ l=1
+
+ (l)
+ where Δ is a constant term.
+ + (1 − Aij ) log(1 − Âij ) Based on (31), the μ̂ of p(zt−1 , zt , z0 , c) is:
+ √ √
+ − KL(q(Ẑ | f (G))p(Ẑ)) (25) −2 αt zt −2 αt−1 z0
+ 1−αt + 1−αt−1
+ μ̂ = − αt (32)
+where L is the number of samples from Monte Carlo 2( 1−α t
+ + 1−α1t−1 + σ̃1 )
+Stochastic Gradient Variational Bayes estimator [6], and Ẑ =
+[ẑ1 , ẑ2 , . . . , ẑN ]. For details on the ELBO of conditional VAEs, The above equation can be expanded in terms of zt and z0 as:
+refer to [12]. √
+ αt (1 − αt−1 )σ̃
+ FVD optimization: To optimize FVD, the training objective μ̂ = zt
+ σ̃(1 − αt ) + (1 − αt )(1 − αt−1 )
+is to maximize the VLB on the log-likelihood. However, due √
+to the introduction of a cluster-driven constraint in the reverse (1 − αt )σ̃ αt−1
+ + z0 (33)
+process, the standard VLB (i.e., (2)) is insufficient for training σ̃(1 − αt ) + (1 − αt )(1 − αt−1 )
+FVD. Below, we will derive the new VLB for FVD.
+ Similar, the σ̂ of p(zt−1 , zt , z0 , c) is:
+ Given the input representation z0 , the t−th step representation
+zt and the constraint c, the (t − 1)−th step representation zt−1 σ̃(1 − αt−1 )
+can be derived via Bayes’s theorem: σ̂ = (1 − αt ) (34)
+ σ̃(1 − αt ) + (1 − αt )(1 − αt−1 )
+ p(zt−1 , zt , z0 , c) Overall, the VLB can be written via (2) as:
+ p(zt−1 |zt , z0 , c) = (26)
+ p(zt , z0 , c) T
+ t=1 p(zt |zt−1 , c)
+where joint probability distribution can be rewritten as: log p(x) = Eq(z1:T |z0 ) log 
+ qϕ (zT ) Tt=1 qϕ (zt−1 |zt , c)
+ p(zt−1 , zt , z0 , c) = p(zt |zt−1 , z0 , c)p(zt−1 |z0 , c)p(z0 |c)p(c)  T
+  p(zt |zt−1 , c)
+ (27) = E − log qϕ (zT ) + log
+ t=2
+ qϕ (zt−1 |zt , c)
+ It is worth noting that the constraint c is implicitly introduced
+in the forward distribution to simplify the computation of the p(z1 |z0 , c)
+ + log
+final VLB. In practice, whether the constraint c is explicitly qϕ (z0 |z1 , c)
+CHENG et al.: CLUSTERING DIFFUSION MODEL WITH FREQUENCY-SIGNAL MODULATION FOR VARIATIONAL GRAPH AUTOENCODERS 1511
+
+  T
+  p(zt−1 |zt , z0 , c) Algorithm 1: The Procedure of Integrating FVD into VAE-
+ = E − log qϕ (zT ) + log Based Methods.
+ t=2
+ qϕ (zt−1 |zt , c)
+
+ T
+ p(zt |z0 , c)
+ +
+ t=2
+ p(zt−1 |z0 , c)
+
+ p(z1 |z0 , c)
+ + log
+ qϕ (z0 |z1 , c)
+  T
+  p(zt−1 |zt , z0 , c)
+ = E − log qϕ (zT ) + log
+ t=2
+ qϕ (zt−1 |zt , c)
+
+ p(zT |z0 , c)
+ + log
+ p(z1 |z0 , c)
+ p(z1 |z0 , c)
+ + log
+ qϕ (z0 |z1 , c)
+  T
+ p(zT |z0 , c)  p(zt−1 |zt , z0 , c)
+ = E log + log
+ qϕ (zT ) qϕ (zt−1|zt ,c )
+ t−2 Since 0 < αt < 1 and α
+ t−1 > αt (equivalently α1 > α2 >
+
+ − log qϕ (z0 |z1 , c)] · · · > αT > 0 with αt = ts=1 αs ), we have (1 − αt )(1 −
+ αt−1 ) > 0. Hence
+ ≥ LV LB = Eq(z1 |z0 ) log qϕ (z0 |z1 , c)
+    σ̃(1 − αt ) < σ̃(1 − αt ) + (1 − αt )(1 − αt−1 ) (41)
+ L1
+ which implies
+ − Eq(z2:T |z0 ) DKL (p(zt−1 |zt , z0 , c)||qϕ (zt−1 |zt , c))
+    σ̃ σ̃ 1
+ Lt ≤ =
+ σ̃(1 − αt ) + (1 − αt )(1 − αt−1 ) σ̃(1 − αt ) 1 − αt
+ (35) (42)
+where (39) ∼ (42) together imply that the per-step coefficient of
+ 1 LV LB is no larger than that of L̂. Since both objectives subtract
+ Lt = Eq(z2:T |z0 ) ||μϕ (zt , t, c) − μ̂||2 these terms under the same norm assume, it follows that LV LB ≥
+ 2σ̂
+ L̂.
+ σ̂αt−1
+ = ||z̃ϕ (zt , t, c) − z0 ||2 (36) Total optimization function: For VAEs integrated with FVD,
+ 2(1 − αt−1 )2 the overall optimization objective comprises two components:
+which constrains z̃ϕ (zt , t, c) to accurately predict z0 . the optimization objective of the integrated method (including
+ As outlined in [14], [36], L1 is calculated as follows: ELBO) and the optimization objective of FVD (i.e., VLB):
+ L = LELBO + γLV LB (43)
+ L1 = ||z̃ϕ (z1 , 1, c) − z0 ||2 (37)
+ where γ is a hyperparameter used to control the contribution of
+ Remark: LV LB (derived for FVD) yields a tighter variational
+ different optimization objectives.
+lower bound than DDPM objective L̂ [14], i.e., LV LB ≥ L̂.
+ Finally, clusters are derived based on the partitioning pattern
+ Given
+   of the integrated methods. For methods specifically designed for
+ 2 1 αt−1 αt clustering tasks, cluster structures are identified in an end-to-end
+ L̂ = ||z̃ϕ (z1 , 1) − z0 || − −
+ 2 1 − αt−1 1 − αt manner. In contrast, for general-purpose methods not explicitly
+ 2
+  tailored for clustering, K-means is typically employed to parti-
+ ×||z̃ϕ (zt , t) − z0 || (38)
+ tion cluster structures. We outline the complete procedure of in-
+ Assume that || · || is consistent with L1 , and thus, a com- tegrating FVD into existing VAE-based methods in Algorithm 1.
+parison of the coefficients between the two is required. The
+coefficient of L̂ is rewritten as: V. EXPERIMENTS
+ αt−1 αt αt−1 (1 − αt ) A. Experiment Setup
+ − = (39)
+ 1 − αt−1 1 − αt (1 − αt−1 )(1 − αt ) Datasets: We use Cora, Citeseer, Pubmed, ACM and Blog-
+ The corresponding coefficient in Lt can be written as: catalog as benchmark datasets to conduct our experiments, and
+ the detailed data are shown in Table II.
+ 1 (1 − αt )σ̃αt−1 Baselines: FVD is designed to address the limitations of
+ (40)
+ 1 − αt−1 σ̃(1 − αt ) + (1 − αt )(1 − αt−1 ) integrating DDPM into VAE-based methods. To this end, we
+1512 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+ TABLE II ARI and F1, respectively. In some cases, the improvements are
+ THE STATISTIC OF DATASETS. Avg.C DENOTES THE AVERAGE CLUSTERING
+ COEFFICIENT.
+ even more pronounced, reaching 5.18, 4.16, 7.32 and 5.09 points
+ for the same metrics. In addition to these improvements, the
+ integration of FVD further improves the robustness of the methods, as demonstrated by significantly lower standard deviations
+ across a majority of performance metrics. For example, after
+ integrating FVD, VGAE experiences approximately 2, 3 and 3
+ points reductions in standard deviation for ACC, NMI and ARI,
+ respectively. Similarly, CVGAE maintains stable performance
+integrate FVD into a variety of representative and state-of-the-art post-integration, with no observable fluctuations in its overall
+VAE-based methods to conduct node clustering experiments. results. These findings suggest that FVD not only boosts overall
+These methods include methods specifically designed for node performance but also enhances stability in clustering tasks. In
+clustering tasks, such as VGAECD [12], GM-VGAE [37], CV- general, the experiments demonstrate that the combination of
+GAE [11] and VGAER [7], as well as general-purpose meth- graph wavelet transform and cluster-driven conditional diffusion
+ods not explicitly tailored for clustering, including VGAE [6], substantially enhances the performance of VAE-based methods.
+VGNAE [38], DGVAE [39] and RWR-VGAE [40]. Detailed (2) FVD demonstrates a stronger affinity for methods explicdescriptions of these methods are provided in Section VI. itly designed to address clustering tasks: We analyze the impact
+ Parameter setting and evaluation metrics: FVD is a plug- of integrating FVD into methods specifically tailored for clusand-play method, meaning it can be seamlessly integrated into tering tasks, and the results highlight significant enhancements
+any VAE-based approach without requiring modifications to the in their ability to capture cluster structures. Specifically, on an
+original module. Therefore, all baseline methods either adopt the overall scale, methods combined with FVD achieve average
+parameter settings described in their papers or, if they use differ- performance improvements of 3.85, 2.4, 3.73 and 3.4 points
+ent datasets, fine-tune them based on existing settings. The pa- in ACC, NMI, ARI and F1, respectively. Notably, GM-VGAE
+rameter settings for FVD need to focus on two modules. For the exhibits remarkable gains on the ACM dataset, with improvecluster-driven conditional diffusion module, the diffusion step T ments of 19.6, 13.7, 25.7 and 18.4 points across the same
+is optimized within the range [50, 100, 300, 500], with T = 100 metrics. Similarly, VGAECD benefits significantly from FVD
+being effective for most scenarios. To improve generalization, integration, achieving competitive boosts of 8.4, 7.3, 12.5 and
+we apply a dropout layer during the reverse process of FVD, with 7.9 points. The affinity of FVD for clustering-oriented methods
+the dropout ratio searched within the range {0.2, 0.3, 0.4, 0.5}. can be attributed to the complementary strengths of the Student’s
+For γ in the total optimization function, the optimal value is t-distribution and the Gaussian mixture distribution. Unlike the
+determined by searching within the range {10−2 , 10−3 , 10−4 , Gaussian distribution, the Student’s t-distribution demonstrates
+10−5 }. For the graph wavelet transform module, we fix the heightened sensitivity to cluster boundary nodes, enabling it
+parameter K to 2, and set θ to [1, -0.5] with reference to [31]. to capture critical boundary information that Gaussian mixture
+Detailed parameter settings used in our experiments are provided models often overlook. During the reverse process in FVD, this
+in Appendix A, available online. All experiments are performed sensitivity facilitates the recovery of previously neglected cluson a PC running 64-bit Windows 10, equipped with a 3.40 GHz ter boundary details while concurrently preserving fine-grained
+Intel Core i7-6700 CPU and 64 GB of RAM. Each method is node information.
+run three times (with the random seed fixed during the first run), (3) FVD shows flexibility across a variety of common sceand the mean and standard deviation of the performance are narios: Our experiments also integrate FVD into methods not
+reported in Section 2. For the remaining experimental sections, originally designed for node clustering. Although the degree
+results are reported using a fixed random seed. Additionally, the of improvement is smaller compared to methods explicitly denode clustering performance of all methods is evaluated using signed for clustering, these methods still benefit from the signal
+four widely adopted metrics: ACC, NMI, ARI and F1. modulation capabilities of FVD. Specifically, after two rounds of
+ signal modulation and the incorporation of cluster information,
+ these methods achieve average performance improvements of
+B. Node Clustering Performance 1.95, 1.89, 2.65, and 2.12 points in ACC, NMI, ARI and F1,
+ We apply FVD to various VAE-based methods, and the node respectively. On specific datasets, the improvements are even
+clustering results are summarized in Table III. We have the more pronounced, with competitive gains of 3.68, 3.15, 4.15
+following observations and analysis: and 3.9 points across these metrics. We attribute these results to
+ (1) Comprehensive experiments reveal that FVD effectively the discovery of the LGH pattern and the design of the guided
+enhances the expressiveness of the latent space in VAEs, driving VLB. The noise addition and removal processes in the diffusion
+improved clustering performance: The performance comparison module can be interpreted as frequency signal processing, where
+of all VAE-based methods before and after integrating FVD aligning the signal modulation results with the LGH pattern
+shows that FVD enables these methods to achieve more com- allows existing methods to benefit from frequency-adjusted node
+petitive results in node clustering tasks. On an overall scale, representations. Moreover, the cluster-driven VLB enhances the
+methods integrated with FVD achieve average performance expressiveness of the latent space, enabling it to encode cluster
+improvements of 2.9, 2.15, 3.19 and 2.76 points in ACC, NMI, information more effectively. This process implicitly embeds
+CHENG et al.: CLUSTERING DIFFUSION MODEL WITH FREQUENCY-SIGNAL MODULATION FOR VARIATIONAL GRAPH AUTOENCODERS 1513
+
+ TABLE III
+ NODE CLUSTERING RESULTS (%): MEAN ± STANDARD DEVIATION (BOLD: BEST). THE ABBREVIATION FOR RWR-VGAE IS RWR-,
+ AND FOR GM-VGAE, IT IS GM-.
+
+ process. In this case, the Student’s t-distribution facilitates the
+ preservation of local variations and mitigates cluster collapse.
+
+ C. Ablation Experiments and Motivation Analysis
+ We conduct ablation experiments to explore and validate the
+ two motivations behind FVD.
+ 1) Cluster-driven conditional diffusion module facilitates
+ the latent space in capturing and reflecting cluster structure
+ information: To validate the this motivation, we expand the
+ experiments presented in the Section III-C. Specifically, we
+ measure intra-cluster compactness and inter-cluster separation
+ after introducing the cluster-driven conditional diffusion module. The results, summarized in Table V, show significant
+Fig. 6. Visualization of the degree distributions for all datasets. improvements in both metrics compared to the initial distances,
+ confirming ability of the module to enhance cluster cohesion and
+ separation. Furthermore, a comparison with the DDPM results
+ in Table I indicates that our conditional diffusion module offers
+cluster structures into the node representations, further boosting a more effective mechanism for the latent space to reflect cluster
+their performance in node clustering tasks. structure information.
+ (4) FVD performs better on graphs with strong cluster pat- Table IV compares the performance of various baseline methterns and broad degree distributions: To further explore the ods with and without the cluster-driven conditional diffusion
+conditions under which FVD is most effective, we analyze the module (i.e., Wavelet: × and Conditional: /×). The results
+relationship between the structural properties of the graph and reveal that, in most cases, incorporating the conditional diffusion
+the performance gains obtained by integrating FVD. Fig. 6 module leads to noticeable performance gains. For methods not
+and Table II respectively present the degree distributions and specifically designed for clustering tasks, these improvements
+average clustering coefficients of all datasets. We observed that are sometimes significant. For example, VGAE on the Citeseer
+the most significant performance improvements occur on the dataset shows remarkable increases in ACC, NMI, ARI and
+ACM, while the gains on Pubmed are comparatively limited. F1 by 7.12, 2.75, 6.76 and 5.32 points, respectively. Even for
+By examining the degree distributions and average clustering clustering-specific methods, such as VGAECD on the same
+coefficients, we conclude a consistent pattern: FVD tends to dataset, the module provides consistent benefits, with improveyield more substantial improvements on datasets with higher av- ments of 1.9, 0.97, 1.31 and 0.52 points in ACC, NMI, ARI and
+erage clustering coefficients and broader degree distributions. In F1, respectively. These findings underscore the versatility and
+contrast, its benefits are less pronounced on datasets with lower adaptability of the cluster-driven conditional diffusion module
+clustering coefficients and more narrow degree structures. A across different types of methods. They also validate the ratiopossible explanation is that the presence of clear local structural nale and effectiveness of our first motivation.
+patterns and well-defined cluster boundaries allows FVD to ef- 2) Graph wavelet transform, as a secondary signal
+fectively leverage this information to guide the reverse diffusion modulation, complements the diffusion model in enhancing
+1514 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+ TABLE IV
+ ABLATION EXPERIMENTS. ALL PERFORMANCE RESULTS (%) ARE REPORTED USING THE SAME RANDOM NUMBER SEED. WHEN BOTH THE CLUSTER-DRIVEN
+ CONDITIONAL DIFFUSION MODULE AND THE GRAPH WAVELET TRANSFORM ARE INCLUDED, THE CONFIGURATION CORRESPONDS TO OUR PROPOSED FVD
+ METHOD. CONVERSELY, WHEN NEITHER IS INCLUDED, IT CORRESPONDS TO THE VANILLA DDPM.
+
+Fig. 7. Amplification ratio of signal amplitude before and after graph wavelet transform modulation. After applying graph wavelet transform, 18.17%, 23.08%
+and 8.44% of the nodes in Cora, Citeseer, and Pubmed, respectively, exhibit increased signal amplitudes.
+
+ TABLE V The ablation experiments summarized in Table IV compare
+EVALUATING THE INFLUENCE OF CLUSTER-DRIVEN CONDITIONAL DIFFUSION
+ON INTRA-CLUSTER COMPACTNESS AND INTER-CLUSTER SEPARATION. BOTH
+ the performance of various baseline methods before and after
+  AND  REPRESENT POSITIVE RESULTS. applying the graph wavelet transform (i.e., Conditional:  and
+ Wavelet: /×). The results indicate that baseline methods integrated with FVD generally demonstrate competitive performance improvements. For example, on the Cora dataset, VGAE
+ achieves notable gains of 7.9, 5.31, 5.63 and 8.31 points in ACC,
+ NMI, ARI and F1, respectively. Similarly, GM-VGAE, which
+ is specifically designed for clustering tasks, shows significant
+the latent space expressiveness: To validate this motivation, enhancements on the same dataset, with increases of 5.76,
+we extend the experiments in Section III-B by analyzing the 10.43, 11.14 and 2.63 points in these metrics. These findings
+impact of the graph wavelet transform on signal amplitudes. highlight that the graph wavelet transform effectively amplifies
+The changes are visualized in Fig. 7, which shows that while low-frequency signals while suppressing high-frequency comvanilla DDPM amplifies signals across the frequency spectrum, ponents, aligning with spectral characteristics of VAEs. Howthe graph wavelet transform suppresses high-frequency ever, in certain cases, relying solely on the conditional diffusion
+components while maintaining meaningful amplification in module still achieves considerable performance gains. This varithe low-frequency range. Specifically, after applying the graph ation can be attributed to differences in how individual methods
+wavelet transform, only 18.17%, 23.08% and 8.44% of the affect signal amplitudes, potentially leading to blurred clusternodes in Cora, Citeseer and Pubmed, respectively, exhibit ing boundaries. Specifically, methods that inherently suppress
+increased signal amplitude, which is primarily concentrated in high-frequency signals or struggle to capture cluster boundaries
+the low-frequency range. Importantly, the amplitude variations may experience diminished benefits from the wavelet transform,
+observed before and after applying this transform align with as it could inadvertently lead to the loss of critical boundary
+the LGH pattern, underscoring the efficacy of the graph wavelet information. Overall, although the full integration of FVD may
+transform in enhancing signal processing. not always produce optimal results, methods enhanced with this
+CHENG et al.: CLUSTERING DIFFUSION MODEL WITH FREQUENCY-SIGNAL MODULATION FOR VARIATIONAL GRAPH AUTOENCODERS 1515
+
+plug-in consistently achieve competitive performance compared results, visualized in Fig. 8, reveal that without a balancing
+to their original implementations. parameter between VLB and ELBO, VGAE fails to achieve
+ effective training. Furthermore, overly small γ may hinder the
+D. Effectiveness Analysis Between FVD and DDPM training of FVD on complex datasets (e.g., Pubmed), degrading
+ the overall performance of VGAE. Analyzing Fig. 8 alongside
+ Table IV also shows the performance improvements achieved
+ the parameter settings in Appendix A, available online, we find
+by FVD and vanilla DDPM across various VAE-based methods.
+ that γ ∈ {10−3 , 10−4 } generally works well for most methods
+Specifically, Conditional:  and Wavelet:  represent the conacross diverse datasets. For methods requiring pre-training,
+figuration using FVD, whereas Conditional: × and Wavelet: ×
+ multiple attempts to adjust γ may be necessary to achieve
+correspond to the vanilla DDPM setup.
+ optimal performance. Nevertheless, the choice of γ is relatively
+ We observe that integrating FVD yields more substantial
+ straightforward, as suitable values are typically confined to the
+performance improvements compared to DDPM integration. On
+ range {10−2 , 10−3 , 10−4 }.
+average, ACC, NMI, F1 and ARI improve by 3.61, 3.53, 4.28
+and 3.4 points, respectively. For certain methods, these enhance-
+ F. Dropout Rate Analysis in Reverse Process
+ments are even more pronounced, with gains of 20.23, 12.94,
+23.28 and 20.29 points across the four metrics. The competitive During the reverse process of FVD, noise is gradually reperformance of FVD can be attributed to its cluster-driven con- moved to inference the original samples. In this process, the
+ditional diffusion, coupled with a frequency modulation strategy dropout layer serves as a regularization mechanism, ensuring
+aligned with the LGH pattern. Unlike DDPM, which primarily robustness in the cluster task. To determine the suitable range
+focuses on refining node representations, FVD is specifically of dropout rates, we use VGAE as a case study and analyze its
+designed to meet the unique demands of node clustering by performance across multiple datasets. The experimental results,
+effectively capturing and enhancing cluster-specific structural shown in Fig. 9, evaluate VGAE with dropout rates ranging
+information. However, in some cases, FVD achieves near- from 0% to 50%. While the default dropout rate for VGAE (as
+optimal performance improvements or, occasionally, exhibits specified in Appendix A), available online is set to 0%, our
+minor drawbacks. These outcomes likely arise from the design observations reveal that optimal performance is often achieved
+sensitivities of certain models to signals in specific frequency within the range of 5% to 25%, as illustrated in Fig. 9(b) and
+bands. For instance, VGAER replaces node attributes with a (e) Notably, excessively high dropout rates suppress critical
+modularity matrix for inference and generation. From a graph structural information, leading to ineffective method training,
+signal processing perspective, this approach results in lower as shown in Fig. 9(c). These findings suggest that smaller
+signal amplitudes near λ = 1, because node attribute informa- dropout rates are sufficient for most scenarios. However, for
+tion is excluded, leaving only topology data. While topology methods requiring pre-training, careful tuning the dropout rate
+data reflects the overall graph structure, it is less effective at is necessary.
+delineating cluster boundaries. Consequently, the secondary signal modulation introduced by FVD may inadvertently diminish G. Analysis of the Trade-Off Between Efficiency and
+the clarity of these boundaries, thereby increasing the risk of Performance
+cluster collapse.
+ The time complexity of FVD primarily consists of two
+ components: the cluster-driven conditional diffusion module
+E. Hyperparameter Analysis of γ in Joint Training
+ and the graph wavelet transform. The diffusion module has a
+ We recognize that integrating diffusion model into variational complexity of O(T N M ). The graph wavelet transform, when
+autoencoder frameworks often requires some parameter tun- implemented using Chebyshev polynomial approximation, has
+ing [14], particularly to balance the contributions of VLB and a linear complexity of O(KE), where E is the number of edges.
+ELBO. This challenge arises from the inherent differences and To more intuitively demonstrate the runtime efficiency of FVD,
+interdependence of their optimization objectives. Specifically, we compare the training time of the vanilla VGAE and VGAE
+the diffusion model focuses on capturing fine-grained informa- integrated with FVD over 100 epochs. The results are shown in
+tion from the node representations output by the variational Fig. 10(a). Across all datasets, the time cost of VGAE+FVD is
+autoencoder, while the variational autoencoder reconstructing only slightly higher than that of the original VGAE, indicating
+the original graph structure as accurately as possible through the that FVD enhances performance while keeping computational
+new node representations output by diffusion model [41]. Addi- costs manageable. A key reason for the low overhead is our
+tionally, the slower convergence of diffusion model compared to use of Chebyshev approximation to compute the graph wavelet
+variational autoencoders further complicates the the balancing transform, which avoids costly eigenvalue decomposition and
+process [42], [43]. Without careful parameter adjustment, the wavelet basis construction.
+training process may become dominated by one model, leading To further compare the time overhead and performance bento suboptimal overall performance. To investigate this issue, efits of FVD with full graph wavelet transform (denoted as
+we use VGAE as a representative example and conduct exper- FVDEigen. ) versus the standard Chebyshev-approximated FVD,
+iments on the Cora, Citeseer, Pubmed, ACM and Blogcatalog. we conduct additional experiments and statistical analyses. As
+Specifically, we expand the range of γ to explore its impact, shown in Fig. 10(b), we first compare the preprocessing time
+evaluating values {100 , 10−1 , 10−2 , 10−3 , 10−4 , 10−5 }. The required by the two implementations across different datasets.
+1516 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+Fig. 8. Exploring the influence of γ on VGAE-FVD joint training performance.
+
+Fig. 9. Impact of different dropout rates on VGAE performance, where we set dropout rates ∈ {0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50%}.
+
+It can be observed that on large-scale datasets such as Pubmed, augmentation [21], [47]. However, the former often suffers from
+the computational cost of eigendecomposition increases signif- limited generalization capabilities, while the latter significantly
+icantly, which makes FVDEigen. not suitable for large graphs. increases training time and memory overhead. In contrast, FVD,
+Next, we evaluate the performance improvements brought by as a plug-and-play method, strikes an effective balance between
+FVDEigen. and standard FVD when integrated into VGAE, as improving performance and maintaining training efficiency.
+summarized in Table VI. While FVDEigen. generally achieves
+slightly higher performance gains, the additional time overhead
+becomes non-negligible, particularly on large graphs. Consider- H. Discussion of Limitations
+ing that the standard FVD achieves competitive improvements While FVD delivers substantial improvements across various
+with minimal computational cost, we recommend it for achiev- VAE-based methods, several limitations need to explanation.
+ing a practical trade-off between efficiency and effectiveness. Specifically, during the integration of FVD with CVGAE, we
+ Furthermore, FVD can be viewed as signal modulators, ex- had to repeatedly adjust certain parameters within FVD. This
+panding the toolbox of graph signal processing. Existing graph issue arises because methods like CVGAE often require presignal processing methods typically fall into two categories: training of specific modules, which can hinder the subsequent
+frequency response function design [44], [45], [46] and graph effective training of FVD. Similar issues arise in methods that
+CHENG et al.: CLUSTERING DIFFUSION MODEL WITH FREQUENCY-SIGNAL MODULATION FOR VARIATIONAL GRAPH AUTOENCODERS 1517
+
+ the perspective of graph motifs and significantly promoting
+ the use of graph-based methods in real-world biomedical applications. [48] leverages large language models to efficiently
+ and accurately construct cross-disciplinary knowledge graphs,
+ effectively addressing the heavy reliance on manual intervention
+ in existing methods. This significantly enhances the automation of knowledge extraction and integration, providing strong
+ technical support for multidisciplinary knowledge fusion. [49]
+ and [50] have also contributed to advancing research in graph
+ machine learning. On this basis, node clustering plays a central
+ role in understanding the structural organization of graphs. In
+ recent years, VAEs have garnered widespread interest in node
+ clustering tasks due to their strong ability to model complex
+ data distributions. As mentioned before, existing VAE methods
+ can be roughly divided into two categories: (1) extends the inference and/or generation processes by incorporating additional
+ sample information, and (2) introduces constraints to modify the
+Fig. 10. Runtime comparison. optimization function.
+ TABLE VI
+ For the first category, VGAE as a representative method
+ PERFORMANCE (%) COMPARISON OF VGAE+FVD USING for unsupervised learning, has gradually become an important
+CHEBYSHEV-APPROXIMATED VS. EIGENVALUE-BASED WAVELET TRANSFORMS method for node clustering due to its competitive performance,
+ interpretability and scalability. In recent years, numerous related
+ variants have been developed to address specific challenges in
+ graph representation and node clustering. For example, [38]
+ observes that vanilla VGAE struggles to effectively encode
+ isolated nodes. To address this, they propose incorporating
+ L2 normalization to generate more robust node embeddings.
+ [40] introduces random walk-based regularization on the node
+ representation, which effectively strengthens its capability to
+ capture latent graph structures. [51] explore the use of Gaussian
+ distributions in Wasserstein space as potential representations
+ for nodes. Their method not only captures the graph structure
+ but also incorporates node uncertainties, proving effective for
+ handling real-world graphs with complex and irregular structures. Building on this foundation, [52] employs Wasserstein
+ regularization directly on the latent space distribution to enhance
+rely on pre-training Gaussian mixture distributions, though these the quality of node embeddings. Modularity is an effective
+methods generally require only minor parameter adjustments. metric for evaluating the quality of cluster partitions [53]. To
+Notably, even vanilla DDPM encounters similar challenges in leverage this, [7] introduce a modularity matrix during the
+such scenarios. Additionally, we observe that FVD yields rel- inference process and reconstruct it during generation, aiming
+atively modest performance improvements for certain methods to enhance the accuracy of cluster partitions. [39] establishes
+and, in some instances, even minor performance declines. We a theoretical connection between variational Bayesian methods
+attribute this to the differing impacts of different methods on and graph partitioning by interpreting the reconstruction term
+signal amplitude, which may lead to blurred cluster boundary in ELBO as a spectrally relaxed balanced graph cut. In addition
+information. Specifically, some methods inherently suppress to the aforementioned methods, related studies [9], [54], [55]
+high-frequency signals or lack the capacity to accurately capture summarize or provide new insights into node clustering tasks.
+cluster boundaries. Consequently, the signal modulation intro- Notably, these methods are not explicitly designed for node
+duced by the graph wavelet transform may inadvertently result clustering, and thus often requiring downstream partitioning
+in the loss of cluster boundary information. techniques, such as K-means, to identify cluster structures.
+ In contrast to the first category, methods in the second category
+ VI. RELATED WORKS are typically capable of performing end-to-end node clustering.
+ Among them, one of the most representative approaches is
+A. Varational Autoencoder-Based Node Clustering proposed by [12], who first integrate Gaussian mixture models
+ Graph machine learning has become a key interdisciplinary into the graph variational Bayesian framework. Each Gaussian
+field for modeling complex relational data. For example, [8] distribution represents a cluster, enabling iterative optimization
+represents a important effort at the intersection of drug discov- through a novel ELBO formulation to achieve end-to-end clusery and graph learning, exploring molecular generation from tering. Expanding on this idea, [56] designs a simplified graph
+1518 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+convolutional encoder aimed at improving the convergence them, several studies combining diffusion models with VAEs
+speed of VGAECD. Through the incorporation of dual vari- have been proposed for image generation tasks [66]. Given
+ational objectives, their method achieves significant advance- the advantages of these methods over traditional generative
+ments in computational efficiency. Building on the contributions models, research on diffusion models has gradually expanded
+of these two works, a growing number of end-to-end node and found applications in graph-based tasks. For example, [14]
+clustering methods have been developed, which incorporate integrates diffusion models with the autoencoder framework to
+Gaussian mixture models as a key component. For example, address the challenges of high resource costs in large-scale item
+GM-VGAE [37] incorporates a Gaussian mixture model along prediction and temporal changes in user preferences within recwith adversarial regularization to represent the prior distribution ommendation systems. [67] combines a graph diffusion model
+within the variational graph Bayesian framework. [11] observes with a cross-modal contrastive learning paradigm to tackle
+that existing VAE methods fail to account for the differences the challenge of data sparsity in multi-modal recommendation
+between inference and generation models after incorporating tasks. [15] proposes integrating variational autoencoders with
+clustering inductive bias. Moreover, they are poor at solving the conditional diffusion models to improve the embeddings of
+problems of posterior collapse and attribute drift. To address historical neighbor nodes in continuous-time graphs. To better
+these limitations, they integrate contrastive learning with the capture both local and global structures in topology and attribute
+variational Bayesian framework and propose a more compact spaces, [68] combines graph diffusion with contrastive learning
+optimization objective to mitigate or resolve these challenges. and adaptive embedding fusion, yielding state-of-the-art per-
+Related studies [57], [58], [59], [60] have all contributed to formance on multiple benchmarks. Beyond the aforementioned
+advancing this research direction. For example, [61] proposes a methods, graph diffusion-based methods have also been applied
+attribute graph augmented clustering framework that explicitly to various graph tasks and applications, including anomaly
+models node relationships in both the topology and attribute detection [16], graph generation [69], [70], [71], protein strucspaces, thereby effectively improving clustering performance. ture and sequence generation [72], and link prediction [73].
+Compared to methods that rely solely on explicit graph informa- It is worth noting that FVD fundamentally differs from these
+tion, this approach further uncovers implicit correlations in the methods. Specifically, FVD is explicitly designed for node
+attribute space and provides new insights for model design. No- clustering and integrates principles from graph signal processing
+tably, methods that integrate Gaussian mixture models typically to align with the spectral characteristics of VAEs. To the best of
+require pre-training to initialize their parameters. Poorly chosen our knowledge, no existing approach has attempted to apply
+initial parameters can negatively impact the overall performance conditional diffusion methods to VAEs for node clustering from
+of these methods. Therefore, when integrating such methods the spectrum perspective.
+with FVD, careful attention must be paid to tuning certain
+parameters in the FVD to ensure optimal results. Moreover,
+ VII. CONCLUSION
+building on the concept of message invariance, [62] develops the
+topological compensation framework, which converts out-of- This paper explores why DDPM can enhance the expresbatch message passing into in-batch propagation. Demonstrated siveness of the latent space in VAEs from the perspective of
+efficiency gains on million-node and billion-edge graphs mark graph signal processing. Based on this insight, we conduct
+a key step toward scalable graph machine learning, and this line empirical studies and identify two key limitations of DDPM:
+of work has also inspired subsequent applications of variational inadequate high-frequency signal modulation and limited ability
+autoencoder-based methods to large-scale graphs. to effectively capture and reflect cluster characteristics in the
+ Beyond performance improvements, the structural consis- latent space. To overcome these challenges, we propose FVD,
+tency of representation spaces has also attracted increasing a plug-and-play method that integrates a graph wavelet transattention. Notably, DURA [63], as a representative work, in- form module and cluster-driven conditional diffusion modules.
+troduces a duality-induced regularizer to address the limitations Comprehensive experiments demonstrate that baseline methods
+of inner-product-based attribute matching, ensuring that nodes enhanced with FVD achieve competitive performance in node
+with similar attributes are embedded closely. Inspired by this clustering tasks, while maintaining manageable computational
+perspective, although FVD is not explicitly designed for attribute overhead.
+matching, its frequency-aware signal modulation may implicitly
+encourage more structured latent spaces, potentially enhancing REFERENCES
+the consistency of representations in downstream tasks such as
+ [1] X. Su et al., “A comprehensive survey on community detection with
+node clustering. deep learning,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 4,
+ pp. 4682–4702, Apr. 2024.
+ [2] Z. Hu et al., “Unsupervised multi-view outlier detection via optimal
+B. Application of Diffusion Model on Graph graph filtering,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process.,
+ Hyderabad, India, 2025, pp. 1–5.
+ Denoising Diffusion Probabilistic Model [13] is a generative [3] L. Zheng, J. R. Birge, H. Wu, Y. Zhang, and J. He, “Cluster aware graph
+method that is widely applied in images, videos and texts, anomaly detection,” in Proc. ACM Web Conf., Sydney, NSW, Australia,
+ 2025, pp. 1771–1782.
+since it can learn the underlying data distribution and generate [4] M. Xu, L. Yu, Y. Song, C. Shi, S. Ermon, and J. Tang, “Geodiff: A geometric
+high-quality samples [64], [65]. In recent years, diffusion models diffusion model for molecular conformation generation,” in Proc. 10th Int.
+have achieved remarkable success in the field of vision. Among Conf. Learn. Representations, 2022, pp. 14163–14181.
+CHENG et al.: CLUSTERING DIFFUSION MODEL WITH FREQUENCY-SIGNAL MODULATION FOR VARIATIONAL GRAPH AUTOENCODERS 1519
+
+ [5] W. Jin, R. Barzilay, and T. S. Jaakkola, “Junction tree variational autoen- [30] B. Xu, H. Shen, Q. Cao, Y. Qiu, and X. Cheng, “Graph wavelet neural
+ coder for molecular graph generation,” in Proc. 35th Int. Conf. Mach. network,” in Proc. 7th Int. Conf. Learn. Representations, New Orleans,
+ Learn., Stockholm, Sweden, 2018, pp. 2328–2337. LA, USA, 2019, pp. 7420–7432.
+ [6] T. N. Kipf and M. Welling, “Variational graph auto-encoders,” 2016, [31] L. Stankovic, D. P. Mandic, M. Dakovic, M. Brajovic, B. Scalzo, and
+ arXiv:1611.07308. A. G. Constantinides, “Graph signal processing - Part II: Processing and
+ [7] C. Qiu, Z. Huang, W. Xu, and H. Li, “VGAER: Graph neural network analyzing signals on graphs,” 1909, arXiv: 1909.10325.
+ reconstruction based community detection,” in Proc. AAAI Conf. Artif. [32] R. Liu, R. Yin, Y. Liu, and W. Wang, “ASWT-SGNN: Adaptive spec-
+ Intell., 2022, pp. 1-9. tral wavelet transform-based self-supervised graph neural network,”
+ [8] Z. Geng et al., “De novo molecular generation via connection-aware motif in Proc. 38th AAAI Conf. Artif. Intell., Vancouver, Canada, 2024,
+ mining,” in Proc. 11th Int. Conf. Learn. Representations, Kigali, Rwanda, pp. 13990–13998.
+ 2023, pp. 1476–1497. [33] A. Sandryhaila and J. M. F. Moura, “Discrete signal processing on graphs:
+ [9] R. Fei, Y. Wan, B. Hu, A. Li, and Q. Li, “A novel network core struc- Graph fourier transform,” in Proc. IEEE Int. Conf. Acoust. Speech Signal
+ ture extraction algorithm utilized variational autoencoder for community Process., Vancouver, BC, Canada, 2013, pp. 6167–6170.
+ detection,” Expert Syst. Appl., vol. 222, 2023, Art. no. 119775. [34] D. I. Shuman, S. K. Narang, P. Frossard, A. Ortega, and P. Vandergheynst,
+[10] C. He, J. Cheng, G. Chen, Q. Guan, X. Fei, and Y. Tang, “Detecting com- “The emerging field of signal processing on graphs: Extending highmunities with multiple topics in attributed networks via self-supervised dimensional data analysis to networks and other irregular domains,” IEEE
+ adaptive graph convolutional network,” Inf. Fusion, vol. 105, 2024, Art. Signal Process. Mag., vol. 30, no. 3, pp. 83–98, May 2013.
+ no. 102254. [35] D. K. Hammond, P. Vandergheynst, and R. Gribonval, “Wavelets on graphs
+[11] N. Mrabah, M. Bouguessa, and R. Ksantini, “A contrastive variational via spectral graph theory,” Appl. Comput. Harmon. Anal., vol. 30, no. 2,
+ graph auto-encoder for node clustering,” Pattern Recognit., vol. 149, 2024, pp. 129–150, 2011.
+ Art. no. 110209. [36] D. Liang, R. G. Krishnan, M. D. Hoffman, and T. Jebara, “Variational
+[12] J. J. Choong, X. Liu, and T. Murata, “Learning community structure with autoencoders for collaborative filtering,” in Proc. World Wide Web Conf.,
+ variational autoencoder,” in Proc. IEEE Int. Conf. Data Mining, Singapore, Lyon, France, 2018, pp. 689–698.
+ 2018, pp. 69–78. [37] G. Niknam, S. Molaei, H. Zare, D. Clifton, and S. Pan, “Graph repre-
+[13] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,” sentation learning based on deep generative Gaussian mixture models,”
+ in Proc. Annu. Conf. Neural Inf. Process. Syst., 2020, pp. 6840–6851. Neurocomputing, vol. 523, pp. 157–169, 2023.
+[14] W. Wang, Y. Xu, F. Feng, X. Lin, X. He, and T. Chua, “Diffusion [38] S. Ahn and M. H. Kim, “Variational graph normalized autoencoders,” in
+ recommender model,” in Proc. 46th Int. ACM SIGIR Conf. Res. Develop. Proc. 30th ACM Int. Conf. Inf. Knowl. Manage., Virtual Event, Queens-
+ Inf. Retrieval, Taipei, Taiwan, 2023, pp. 832–841. land, Australia, 2021, pp. 2827–2831.
+[15] Y. Tian, A. Jiang, Q. Huang, J. Guo, and Y. Qi, “Latent diffusion-based [39] J. Li et al., “Dirichlet graph variational autoencoder,” in Proc. Annu. Conf.
+ data augmentation for continuous-time dynamic graph model,” in Proc. Neural Inf. Process. Syst., 2020, Art. no. 443.
+ 30th ACM SIGKDD Conf. Knowl. Discov. Data Mining, Barcelona, Spain, [40] P. VaibhavHuang and R. E. Frederking, “RWR-GAE: Random walk reg-
+ 2024, pp. 2900–2911. ularization for graph auto encoders,” 2019, arXiv: 1908.04003.
+[16] X. Li, C. Xiao, Z. Feng, S. Pang, W. Tai, and F. Zhou, “Controlled graph [41] X. Hou, K. Sun, L. Shen, and G. Qiu, “Improving variational autoencoder
+ neural networks with denoising diffusion for anomaly detection,” Expert with deep feature consistent and generative adversarial training,” Neuro-
+ Syst. Appl., vol. 237, no. Part B, 2024, Art. no. 121533. computing, vol. 341, pp. 183–194, 2019.
+[17] E. Isufi, F. Gama, D. I. Shuman, and S. Segarra, “Graph filters for signal [42] Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and B.
+ processing and machine learning on graphs,” IEEE Trans. Signal Process., Poole, “Score-based generative modeling through stochastic differential
+ vol. 72, pp. 4745–4781, 2024. equations,” in Proc. 9th Int. Conf. Learn. Representations, 2021, pp. 240–
+[18] A. Ortega, P. Frossard, J. Kovacevic, J. M. F. Moura, and P. Vandergheynst, 275.
+ “Graph signal processing: Overview, challenges, and applications,” Proc. [43] A. Q. Nichol and P. Dhariwal, “Improved denoising diffusion probabilistic
+ IEEE, vol. 106, no. 5, pp. 808–828, May 2018. models,” in Proc. 38th Int. Conf. Mach. Learn., 2021, pp. 8162–8171.
+[19] D. Bo, X. Wang, C. Shi, M. Zhu, E. Lu, and P. Cui, “Structural [44] S. Li, D. Kim, and Q. Wang, “Beyond low-pass filters: Adaptive feature
+ deep clustering network,” in Proc. Web Conf., Taipei, Taiwan, 2020, propagation on graphs,” in Proc. Joint Eur. Conf. Mach. Learn. Knowl.
+ pp. 1400–1410. Discov. Databases, Bilbao, Spain, 2021, pp. 450–465.
+[20] L. Stankovic, D. P. Mandic, M. Dakovic, M. Brajovic, B. S. Dees, and T. [45] S. Zheng, Z. Zhu, Z. Liu, Y. Li, and Y. Zhao, “Node-oriented spectral
+ Constantinides, “Graph signal processing - Part I: Graphs, graph spectra, filtering for graph neural networks,” IEEE Trans. Pattern Anal. Mach.
+ and spectral clustering,” 2019, arXiv: 1907.03467. Intell., vol. 46, no. 1, pp. 388–402, Jan. 2024.
+[21] N. Liu, X. Wang, D. Bo, C. Shi, and J. Pei, “Revisiting graph contrastive [46] D. Bo, X. Wang, C. Shi, and H. Shen, “Beyond low-frequency information
+ learning from the perspective of graph spectrum,” in Proc. Annu. Conf. in graph convolutional networks,” in Proc. 35th AAAI Conf. Artif. Intell.,
+ Neural Inf. Process. Syst., New Orleans, LA, USA, 2022, Art. no. 215. 2021, pp. 3950–3957.
+[22] T. N. Kipf and M. Welling, “Semi-supervised classification with graph [47] Y. Li, X. Huang, J. Li, M. Du, and N. Zou, “Specae: Spectral autoencoder
+ convolutional networks,” in Proc. 5th Int. Conf. Learn. Representations, for anomaly detection in attributed networks,” in Proc. 28th ACM Int. Conf.
+ 2017, pp. 2713–2726. Inf. Knowl. Manage., Beijing, China, 2019, pp. 2233–2236.
+[23] H. Chang et al., “Spectral graph attention network with fast eigen- [48] H. Chen, X. Shen, Q. Lv, J. Wang, X. Ni, and J. Ye, “SAC-KG: Exploiting
+ approximation,” in Proc. 30th ACM Int. Conf. Inf. Knowl. Manage., Virtual large language models as skilled automatic constructors for domain knowl-
+ Event, Queensland, Australia, 2021, pp. 2905–2909. edge graph,” in Proc. 62nd Annu. Meeting Assoc. Comput. Linguistics,
+[24] A. Grover and J. Leskovec, “node2vec: Scalable feature learning for Bangkok, Thailand, 2024, pp. 4345–4360.
+ networks,” in Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discov. Data [49] Z. Zhao, Z. Yang, C. Li, Q. Zeng, W. Guan, and M. Zhou, “Dual feature
+ Mining, San Francisco, CA, USA, 2016, pp. 855–864. interaction-based graph convolutional network,” IEEE Trans. Knowl. Data
+[25] M. Liu et al., “Deep temporal graph clustering,” in Proc. 12th Int. Conf. Eng., vol. 35, no. 9, pp. 9019–9030, Sep. 2023.
+ Learn. Representations, Vienna, Austria, 2024, pp. 43859–43876. [50] M. Gong, H. Zhou, A. K. Qin, W. Liu, and Z. Zhao, “Self-paced co-
+[26] M. Ye et al., “State sequences prediction via fourier transform for repre- training of graph neural networks for semi-supervised node classification,”
+ sentation learning,” in Proc. Annu. Conf. Neural Inf. Process. Syst., New IEEE Trans. Neural Netw. Learn. Syst., vol. 34, no. 11, pp. 9234–9247,
+ Orleans, LA, USA, 2023, pp. 67565–67588. Nov. 2023.
+[27] Y. Lee, J. Kim, H. Go, M. Jeong, S. Oh, and S. Choi, “Multi-architecture [51] D. Zhu, P. Cui, D. Wang, and W. Zhu, “Deep variational network embedmulti-expert diffusion models,” in Proc. AAAI Conf. Artif. Intell., 2024, ding in wasserstein space,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl.
+ pp. 13427–13 436. Discov. Data Mining, London, U.K., 2018, pp. 2827–2836.
+[28] N. Mrabah, M. Bouguessa, M. F. Touati, and R. Ksantini, “Rethinking [52] H. Liang and J. Gao, “Wasserstein adversarially regularized graph autoengraph auto-encoder models for attributed graph clustering,” IEEE Trans. coder,” Neurocomputing, vol. 541, 2023, Art. no. 126235.
+ Knowl. Data Eng., vol. 35, no. 9, pp. 9037–9053, Sep. 2023. [53] T. Chakraborty, A. Dalmia, A. Mukherjee, and N. Ganguly, “Metrics
+[29] J. Cheng, C. He, K. Han, G. Chen, W. Liang, and Y. Tang, “Unveiling for community analysis: A survey,” ACM Comput. Surv., vol. 50, no. 4,
+ community structures in static networks through graph variational bayes pp. 54:1–54:37, 2017.
+ with evolution information,” Neurocomputing, vol. 576, 2024, Art. no. [54] Y. Cho, “Decoupled variational graph autoencoder for link prediction,” in
+ 127349. Proc. ACM Web Conf., 2024, pp. 839–849.
+1520 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 2, FEBRUARY 2026
+
+[55] X. Guo and L. Zhao, “A systematic survey on deep generative models for Ke Liang received the BSc degree from Beihang Unigraph generation,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 5, versity, the MSc degree from the Pennsylvania State
+ pp. 5370–5390, May 2023. University, and the PhD degree from the National
+[56] J. J. Choong, X. Liu, and T. Murata, “Optimizing variational graph au- University of Defense Technology (NUDT), China.
+ toencoder for community detection,” in Proc. IEEE Int. Conf. Big Data, He is now a lecturer with the College of Computer
+ Los Angeles, CA, USA, 2019, pp. 5353–5358. Science and Technology, NUDT. His current research
+[57] X. Sun, W. Zhang, Z. Wang, and W. Lu, “Variational graph embedding for interests include graph learning, knowledge represencommunity detection,” in Proc. 29th Int. Conf. Neural Inf. Process., 2022, tation, and multi-view clustering. He has published
+ pp. 685–697. more than 40 papers in highly regarded journals and
+[58] C. He, J. Cheng, Q. Guan, X. Fei, H. Li, and Y. Tang, “A deep con- conferences such as IEEE Transactions on Pattern
+ ditional generative approach for constrained community detection,” in Analysis and Machine Intelligence, IEEE Transac-
+ Proc. 32nd ACM Int. Conf. Inf. Knowl. Manage., Birmingham, U.K., 2023, tions on Knowledge and Data Engineering, NeurIPS, etc. He serves as the Area
+ pp. 3928–3932. Chair/Senior Program Committee Member of ICLR, CVPR, IJCAI, ACM MM,
+[59] K. Na, J. Lee, and E. Kim, “Augmented ELBO regularization for enhanced ECML-PKDD, etc.
+ clustering in variational autoencoders,” Neurocomputing, vol. 614, 2025,
+ Art. no. 128795.
+[60] J. Guo, W. Fan, M. Amayri, and N. Bouguila, “Deep clustering analysis via
+ variational autoencoder with gamma mixture latent embeddings,” Neural
+ Netw., vol. 183, 2025, Art. no. 106979. Pengxing Feng received the BEng degree in au-
+[61] L. Zhang, Z. Wu, H. Yang, W. Zhang, and P. Zhou, “Feature graph tomotive engineering from the China Agricultural
+ augmented network representation for community detection,” IEEE Trans. University, and the master’s degree in automotive
+ Comput. Soc. Syst., vol. 11, no. 6, pp. 7516–7527, Dec. 2024. engineering from the Tongji University, in 2020 and
+[62] Z. Shi, J. Wang, Z. Zhuang, X. Liang, B. Li, and F. Wu, “Accurate and 2023, respectively. He is currently working toward the
+ scalable graph neural networks via message invariance,” in Proc. 13th PhD degree on electrical engineering with the City
+ Int. Conf. Learn. Representations, Singapore, 2025. [Online]. Available: University of Hong Kong, Hong Kong SAR, China.
+ https://openreview.net/forum?id=UqrFPhcmFp His main research interests include statistical signal
+[63] J. Wang, Z. Zhang, Z. Shi, J. Cai, S. Ji, and F. Wu, “Duality-induced processing and adaptive signal processing.
+ regularizer for semantic matching knowledge graph embeddings,” IEEE
+ Trans. Pattern Anal. Mach. Intell., vol. 45, no. 2, pp. 1652–1667, Feb. 2023.
+[64] L. Yang et al., “Diffusion models: A comprehensive survey of methods
+ and applications,” ACM Comput. Surv., vol. 56, no. 4, pp. 105:1–105:39,
+ 2024.
+[65] H. Cao et al., “A survey on generative diffusion models,” IEEE Trans. Weixiong Liu received the BS degree from the
+ Knowl. Data Eng., vol. 36, no. 7, pp. 2814–2830, Jul. 2024. Lanzhou University of Technology, China, in 2023.
+[66] G. D. Maggiora, L. A. Croquevielle, N. Deshpande, H. Horsley, T. Heinis, He is currently working toward the master’s degree
+ and A. Yakimovich, “Conditional variational diffusion models,” in Proc. with the School of Computer Science, South China
+ 12th Int. Conf. Learn. Representations, Vienna, Austria, 2024, pp. 38839- Normal University. His research interest includes
+ 38870. focuses on graph data mining.
+[67] Y. Jiang, L. Xia, W. Wei, D. Luo, K. Lin, and C. Huang, “DiffMM: Multimodal diffusion model for recommendation,” in Proc. 32nd ACM Int. Conf.
+ Multimedia, Melbourne, VIC, Australia, 2024, pp. 7591–7599.
+[68] L. Zhang, F. Sun, Z. Wu, W. Zhang, H. Yang, and P. Zhou, “Graph diffusion
+ enhanced contrastive representation learning on topology and feature space
+ for community detection,” IEEE Trans. Emerg. Topics Comput. Intell.,
+ early access, Jun. 17, 2025.
+[69] M. Simonovsky and N. Komodakis, “GraphVAE: Towards generation of
+ small graphs using variational autoencoders,” in Proc. 27th Int. Conf. Artif. Yong Tang received the BS and MS degrees in
+ Neural Netw., Rhodes, Greece, 2018, pp. 412–422. computer science from Wuhan University, China, in
+[70] G. Minello, A. Bicciato, L. Rossi, A. Torsello, and L. Cosmo, “Generating 1985 and 1990, respectively, and the PhD degree
+ graphs via spectral diffusion,” in Proc. 13th Int. Conf. Learn. Representa- in computer science from the University of Science
+ tions, Singapore, 2025, pp. 18077–18096. and Technology of China, China, in 2001. He is
+[71] T. Luo, Z. Mo, and S. J. Pan, “Fast graph generation via spectral diffusion,” currently a professor with the School of Computer
+ IEEE Trans. Pattern Anal. Mach. Intell., vol. 46, no. 5, pp. 3496–3508, Science, South China Normal University, China. His
+ May 2024. research interests include Big Data and collaborative
+[72] B. L. Trippe et al., “Diffusion probabilistic modeling of protein backbones computing. He has published more than 100 papers
+ in 3D for the motif-scaffolding problem,” in Proc. 11th Int. Conf. Learn. on international journals and conferences.
+ Representations, Kigali, Rwanda, 2023, pp. 7798–7827.
+[73] Y. Tian, Y. Qi, and F. Guo, “FreeDyG: Frequency enhanced continuoustime dynamic graph model for link prediction,” in Proc. 12th Int. Conf.
+ Learn. Representations, Vienna, Austria, 2024, pp. 9725–9744.
+ Chaobo He is currently a professor and PhD supervisor with the School of Computer Science, South
+ China Normal University, and is also an outstanding
+ Junwei Cheng received the BS degree from the member of the China Computer Federation (CCF).
+ School of Computer Science, University of Electronic His research interests include graph data mining and
+ Science and Technology of China, Zhongshan Insti- intelligent education. He has published more than
+ tute, in 2020. He is currently working toward the PhD 70 peer-reviewed papers on many international jourdegree with the School of Computer Science, South nals and conferences, including IEEE Transactions
+ China Normal University, China. His research interest on Knowledge and Data Engineering, IEEE Transincludes graph data mining. He has published several actions on Neural Networks and Learning Systems,
+ papers in highly regarded journals and conferences IEEE Transactions on Big Data, Information Fusion,
+ such as IEEE Transactions on Knowledge and Data Neural Networks, AAAI, WWW, SIGIR, CIKM and DASFAA.
+ Engineering, AAAI, SIGIR, etc.

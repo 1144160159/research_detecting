@@ -1,0 +1,154 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 8, AUGUST 2024                                               6661
+
+
+
+
+      Regularity Learning via Explicit Distribution
+     Modeling for Skeletal Video Anomaly Detection
+            Shoubin Yu , Zhongyin Zhao, Haoshu Fang , Andong Deng, Haisheng Su, Dongliang Wang,
+                          Weihao Gan, Cewu Lu , Senior Member, IEEE, and Wei Wu
+
+
+   Abstract— Anomaly detection in surveillance videos is chal-                   Pixel-based methods [4], [5], [6], [7], [8], have been exten-
+lenging but important for ensuring public security. Different                 sively studied for VAD. Recently, thanks to the success of
+from pixel-based anomaly detection methods, pose-based meth-                  pose estimation, pose, as a clean and well-structured data,
+ods utilize highly-structured skeleton data, which decreases the
+computational burden and also avoids the negative impact                      attracted the attention of researchers [9], [10], [11], [12].
+of background noise. However, pose-based methods lack an                      Since pose is immune from background noise and also pre-
+alternative dynamic representation akin to the explicit motion                serve the privacy related to human as compared to using the
+features, such as optical flow, employed by pixel-based methods.              raw data, the pose-based method is viewed as a promising
+In this paper, a novel Motion Embedder (ME), a label-efficient                approach and is expected to compete with the pixel-based
+scheme without extra annotation efforts, is proposed to provide               counterparts.
+a pose motion representation for the structured posed data
+from a probability perspective. Furthermore, a novel task-                       Despite the advantages of pose-based methods, as demon-
+specific Spatial-Temporal Transformer (STT) is deployed for                   strated in prior research, their performance gains remain
+self-supervised pose sequence reconstruction. These two modules               relatively limited. We assert that this is due to the inherent
+are then integrated into a unified framework for pose regularity              differences between image anomaly detection, which relies
+learning, which is referred to as Motion Prior Regularity Learner             solely on static features (e.g., appearance), and VAD, which is
+(MoPRL). MoPRL achieves competitive results on multiple chal-
+                                                                              more dependent on dynamic features. For instance, as shown
+lenging datasets while minimizing computational costs. Extensive
+experiments validate the versatility of the proposed modules and              in the top half of Figure 1, the man in the red box may be
+provide insights for future research.                                         judged as normal if only given the right frame, while the
+                                                                              confidence of this assertion could be strengthened if the left
+  Index Terms— Video anomaly detection, label-efficient motion
+prior, regularity learning.                                                   frame is visible since he is jumping. The incorporation of
+                                                                              motion features, such as optical flow, in pixel-based methods
+                      I. I NTRODUCTION                                        enhances these models’ sensitivity to dynamics and motion
+                                                                              anomalies. That is why we can easily tell different motions by
+V    IDEO Anomaly Detection (VAD) [1] represents a critical
+     and challenging task within the realm of computer vision,
+aimed at identifying frames containing abnormal events, such
+                                                                              observing lighter areas in the optical flow map in Figure 1 top
+                                                                              right.
+as criminal activities and traffic accidents. The reliance                       In contrast, pose-based methods lack such an intuitive
+on context, large variety, and rarity of abnormal events,                     motion representation. Previous pose-based methods [9], [10],
+make it extremely difficult to collect anomalous events for                   [11], [12], [13], [14] utilize the entire pose trajectory, com-
+conventional supervised model training [2]. Consequently,                     prised of a sequence of static coordinates, with motion
+un/self-supervised methods are usually employed to learn                      implicitly incorporated.
+normal patterns, allowing anomaly detection to be approached                     The development of motion features for pose-based methods
+as the identification of out-of-distribution [3] that deviates                is both logical and crucial for enhancing pose-based VAD
+from the training distribution.                                               performance. However, two primary challenges warrant fur-
+                                                                              ther consideration when conceptualizing such a pose motion
+  Manuscript received 2 April 2023; revised 15 June 2023; accepted            feature: i) obtaining a dense motion descriptor analogous
+2 July 2023. Date of publication 17 July 2023; date of current version        to optical flow for pose keypoints is difficult due to their
+12 August 2024. This article was recommended by Associate Editor Z. Tang.
+(Shoubin Yu and Zhongyin Zhao are co-first authors.) (Corresponding author:   highly structured, discrete nature and the higher semantics
+Shoubin Yu.)                                                                  compared to pixel values. ii) replicating the optical flow
+  Shoubin Yu is with the Department of Computer Science, The University       approach to train a “pose motion flow” detector would be
+of North Carolina at Chapel Hill, Chapel Hill, NC 27599 USA (e-mail:
+shoubin@cs.unc.edu).                                                          resource-intensive, as optical flow algorithms in previous
+  Zhongyin Zhao, Haoshu Fang, and Cewu Lu are with the Department             pixel-based methods predominantly rely on supervised learn-
+of Electrical and Computer Engineering, Shanghai Jiao Tong University,        ing and extensive ground truth annotation, while also being
+Shanghai 200240, China.
+  Andong Deng is with the Department of Computer Science, University of
+                                                                              susceptible to scene changes. As a result, our objectives are
+Central Florida, Orlando, FL 32816 USA.                                       to: i) Develop label-efficient strategies to represent motion
+  Haisheng Su, Dongliang Wang, Weihao Gan, and Wei Wu are with Sense-         features for discrete poses. ii) ensure that these features
+Time Group, Hong Kong.                                                        capitalize on well-structured data and can be easily adapted
+  Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TCSVT.2023.3296118.                                   to various VAD scenarios without necessitating an additional,
+  Digital Object Identifier 10.1109/TCSVT.2023.3296118                        burdensome learning process.
+                      1051-8215 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+6662                                    IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 8, AUGUST 2024
+
+
+
+   In this paper, we propose a novel Motion Prior Reg-
+ularity Learner (MoPRL) to achieve the aforementioned
+goals in pose-based methods. MoPRL is composed of two
+sub-modules: Motion Embedder (ME) and Spatial-Temporal
+Transformer (STT). Specifically, Motion Embedder is
+designed to extract the spatial-temporal representation of input
+poses from the perspective of probabilistic. Inspired by the
+commonly used frame gradients and optical flow in pixel-
+based methods, we model the pose motion based on the first-
+order difference, or so-called displacement, between the center
+point of the poses among adjacent frames. However, directly
+applying such differences as the motion representation is over-
+simplified. Given the common assumption that the anomaly            Fig. 1. In pixel-based methods, optical flow is a commonly-used motion
+rarely happens, we further transform such displacement into         feature; however, a similar feature could not be obtained via pose modality.
+                                                                    In this paper, we propose a distribution-based pose motion representation from
+the probability domain. In detail, we obtain the motion prior,      the perspective of probability. Best viewed in color.
+which represents an explicit distribution of displacement on the
+training data, by statistics. In this way, as shown in the bottom
+                                                                    framework with the optical flow [23] as additional input.
+half of Figure 1, to represent corresponding motion, every pose
+displacement is mapped to a certain probability based on the        In [24], Nguyen et al. proposed a cross-channel transla-
+motion prior. Notably, such intuitive motion representation is      tion framework to learn the coherence between motion and
+directly deduced from the training data itself in a statistical     appearance. In a recent work [25], Liu et al. exploited the
+manner, which avoids introducing extra annotations, making          Conditional Variational Autoencoder to capture the correlation
+it suitable for large-scale VAD datasets. Spatial-Temporal          between the frame and the optical flow. Recently, pose-
+Transformer is then deployed as a task-specific model to            based methods have been popular because of their efficiency
+learn the regular patterns with the input of poses and their        and immunity from background noise. In [10], the authors
+motion features from Motion Embedder. Different from previ-         proposed a connected RNN for learning pose regularity with
+ous Recurrent Neural Network (RNN) or Convolution Neural            decomposed keypoints. In [9], Rodrigues et al. deployed a
+Network (CNN)-based frameworks, the transformer is adopted          multi-timescale prediction framework to model trajectories.
+for its self-supervised and sequential structure, which naturally   Moreover, Markovitz1 et al. [11] learned poses graph embed-
+fits our task.                                                      dings with autoencoders and generated soft assignments via
+   To sum up, the contributions of this paper are four-fold:        clustering. Moreover, Zeng et al. [12] proposes a hierarchical
+                                                                    graph neural network capture scene semantics. However, it is
+   • Motion Embedder is proposed as a label-efficient scheme
+                                                                    rather no attempt to obtain a sophisticated dynamic feature
+      to represent pose motion in the probability domain for        in pose-based methods. In this work, we proposed a novel
+      video pose regularity learning.                               Motion Embedder to generate pose motion representation from
+   • Motion Prior Regularity Learner (MoPRL) is proposed,
+                                                                    the probability domain.
+      which consists of the Motion Embedder and the Spatial-
+      Temporal Transformer, to model regularity in motion-
+      embedded poses.                                               B. Vision Transformer
+   • MoPRL delivers competitive performance on the two                 Transformer [26] has gradually become a mainstream
+      most challenging datasets while maintaining minimal           framework for the computer vision community [27], [28], [29],
+      computational costs.                                          [30], [31] for its tremendous potential in sequence modeling.
+   • Comprehensive experiments are conducted to verify the          It has achieved competitive even superior performance com-
+      effectiveness of each module, and more insights for future    pared with CNN-based methods in image classification [32],
+      work based on the failure cases are provided.                 [33], [34], object detection [35], semantic segmentation [36],
+                                                                    etc. Dosovitskiy et al. [32] viewed an image as a patch
+                    II. R ELATED W ORKS                             sequence and constructed ViT to achieve effective recognition.
+                                                                    Carion et al. [35] regarded the object detection problem as a
+A. Self-Supervised Video Anomaly Detection                          set direction prediction task and solve it with a transformer-
+    Different from supervised/weakly supervised [15], [16],         based encoder-decoder called DETR. Similarly, SETR [36] is
+[17], [18] video anomaly detection where abnormal classes           proposed for image context modeling in semantic segmen-
+labels are accessible for model training, in self-supervised        tation. Transformer is also deployed to estimate 3D human
+video anomaly detection, anomalies are recognized as outliers       pose as in [37]. The authors build a divided temporal-spatial
+of the distribution of normality. The pixel-based frame-            transformer to model the pose sequence. HOT-Net [38] fully
+work handles the problem by reconstruction and prediction.          exploits the correlation between joints and object corners to
+In [19], Hasan et al. reconstructed the normal appearance [20]      obtain a more accurate estimation. In video anomaly detection,
+and motion [21] features to learn video regularity. In [22],        Feng et al. [7] first apply transformer structure on the tempo-
+the authors leveraged sparsing coding to enforce adjacent           ral dimension with pixel input. Different from related trans-
+frames to be encoded with similar reconstruction coeffi-            former works, MoPRL is proposed with a spatial-temporal
+cients. In [4], Liu et al. proposed a future frame prediction       transformer and motion-embedded pose input.
+YU et al.: REGULARITY LEARNING VIA EXPLICIT DISTRIBUTION MODELING FOR SKELETAL VAD                                                       6663
+
+
+
+                          III. M ETHODS                                   a predefined distribution (e.g., Rayleigh or Gaussian) to fit
+   In this section, we introduce our proposed pose-based                  the discretized distribution and obtain its continuous version,
+video anomaly detection method called Motion Prior Reg-                   which we refer to as motion prior. In the end, we leverage both
+ularity Learner (MoPRL), which introduces a new motion                    the normalized pose and its motion probability, which repre-
+representation abstracted from the statistical distribution for           sent spatial and temporal information, respectively, to obtain
+label-efficient training purposes. As shown in the left of                the motion-embedded pose. We will introduce ME in detail in
+Figure 2, MoPRL consists of two sub-modules: Motion                       the following subsections.
+Embedder (ME) and Spatial-Temporal Transformer (STT).                        1) Displacement Calculation: The displacement is the
+We first utilize a pose detect

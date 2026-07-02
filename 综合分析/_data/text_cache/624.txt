@@ -1,0 +1,153 @@
+4920                                                        IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 6, JUNE 2026
+
+
+
+
+                    CCG-IDS: A Causal Counterfactual
+                     Graph-Based Intrusion Detection
+                        System for Industrial IoT
+       Chen Zhang , Lu Zheng , Huakun Huang , Member, IEEE, and Chunhua Su , Member, IEEE
+
+
+   Abstract—The industrial Internet of Things (IIoT) requires                hv
+                                                                               (l)
+                                                                                                        Node embedding at GNN layer l.
+robust intrusion detection systems (IDS) to ensure criti-
+cal business continuity. However, existing solutions suffer                  φ(e)                       Edge/event feature.
+from high false-positive rates, difficulty in interpreting, and              zt                         Graph embedding (dual readout).
+cross-domain generalization. In particular, they fail to re-                  t , pt , s t             Logits; attack probability; margin score.
+liably infer context-dependent causal links from host logs                   w0 , w1 , π0 , π1          CE weights; class priors (benign/attack).
+under global graph-level context. To address these issues,                   α, Nα , τ                  False-positive rate budget; hard nega-
+we propose causal counterfactual graph-based IDS (CCG-
+IDS), an IIoT-focused interpretable graph neural network                                                tives; rank smoothness.
+IDS based on conformal calibration and counterfactual rea-                   λrank                      Weight of ranking loss.
+soning. This system implements a unified provenance sub-                     p̂ = g(p)                  Calibrated probability (isotonic).
+graph detection paradigm, and employs conformal anomaly                      U, Ũ , β, λu              Fisher uncertainty; normalized; mixing;
+detection and counterfactual reasoning to provide cali-                                                 risk mix.
+brated alerts and interpretable outputs. We also estimate
+predictive uncertainty via Fisher information to quantify                    Nval , θraw , θw , θZF     Val benign set; thresholds
+decision confidence. We introduce a discrete counterfac-                                                (raw/weighted/zero-FP).
+tual explainer with a counterfactual destructiveness score                   wt , ε, γ                  Uncertainty-weighted quantile params.
+(CDS) to extract a minimal decision-critical evidence chain,                 S, K, Tf                   Removed-edge set; budget; detector in-
+and use this evidence to generate structured analyst-ready                                              ference cost.
+security reports. Experiments on real-world industrial log
+datasets, including the windows event log EVTX (Windows                      Δ1 (e), CDS(e), ωe         Score drop; edge importance; CDS
+XML Event Log) and DARPA OpTC (Operationally Transpar-                                                  weight.
+ent Cyber) datasets, demonstrated that CCG-IDS achieved                      G  , me                   Decision-critical subgraph; edge mask.
+an F 1 score of 92% and a near-zero false-positive rate,
+outperforming other state-of-the-art methods.
+   Index Terms —Causal, counterfactual, graph, industrial                                               I. INTRODUCTION
+Internet of Things (IIoT), intrusion detection system (IDS).                       HE Industrial Internet of Things (IIoT) environments face
+                          NOMENCLATURE                                       T     increasingly sophisticated host-based intrusions, such as
+                                                                             advanced persistent threats (APTs) and lateral movement at-
+t                          Time-Window index.                                tacks [1]. These stealthy activities, exemplified by incidents like
+Gt = (Vt , Et , Xt )       Window provenance subgraph.                       SolarWinds and NotPetya, are characterized by long-term inac-
+V t , Et , X t             Nodes, edges, node features.                      tivity and high stealth [2], [3]. In IIoT deployments, resource-
+N = |Vt |, L, dh           Nodes; GNN layers; hidden dim.                    constrained devices often lack robust security protections, mak-
+ρ                          DropEdge probability.                             ing system audit logs one of the few reliable data sources for
+                                                                             intrusion detection [4]. Host provenance logs record detailed
+   Received 12 January 2026; accepted 19 February 2026. Date of              system activity and causal relationships. Some research has
+publication 17 March 2026; date of current version 5 June 2026. This         demonstrated that by parsing this audit data into provenance
+work was supported in part by the JSPS Grant-in-Aid for Scientific
+Research (C) under Grant 23K11103, in part by the National Natu-             graphs, representing processes, files, and network sockets as
+ral Science Foundation of China under Grant 62571147, in part by             nodes and their interactions as directed edges, security systems
+the Natural Science Foundation of Guangdong Province, China under            can gain a holistic view of runtime behavior [5], [6]. This graph-
+Grant 2025A1515011755, and in part by the SCAT Foundation under
+Grants for Researchers. Paper no. TII-26-0353. (Corresponding author:        based approach has significant implications for detecting APTs
+Chunhua Su.)                                                                 and zero-day attacks, where capturing the complete causal chain
+   Lu Zheng is with the        School of Computer and Communication,         of an attack is important for early detection and mitigation [7].
+Lanzhou University of Technology, Lanzhou 730050, China.
+   Huakun Huang is with the School of Computer Science and Cyber             However, deploying provenance-based host-based intrusion de-
+Engineering, Guangzhou University, Guangzhou 510006, China.                  tection systems in real-world industrial environments still faces
+   Chen Zhang and Chunhua Su are with the Department of Computer             significant challenges.
+Science and Engineering, University of Aizu, Aizuwakamatsu 965-8580,
+Japan (e-mail: chsu@u-aizu.ac.jp).                                               1) Sparse attack signals [8]: APTs often generate only
+   Digital Object Identifier 10.1109/TII.2026.3667569                                sparse, low-amplitude signals in host logs by blending in
+1941-0050 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+   Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+                                                                 for more information.
+ZHANG et al.: CCG-IDS: A CAUSAL COUNTERFACTUAL GRAPH-BASED INTRUSION DETECTION SYSTEM                                              4921
+
+
+
+       with normal activity. An APT’s provenance graph may             the alert threshold, and reconstructs the corresponding causal
+       contain only a few anomalous nodes or edges amidst              path, which is quantified by the counterfactual destructiveness
+       thousands of benign events. This makes it difficult for         score (CDS). Finally, an LLM (Large Language Model)-based
+       detectors to distinguish malicious substructures from be-       structured reporting module turns the extracted evidence into
+       nign noise without generating numerous false positives.         a fixed-schema, analyst-facing security report. Although prior
+    2) High false positives [9], [10]: Highly sensitive IDSs often     provenance-based IDSs often employ GNN encoders, they solve
+       result in high false positives. The large number of legiti-     different operational problems. ThreatTrace [6] represents the
+       mate operations similar to attacks, combined with miss-         node-level role/type deviation paradigm, where anomalies are
+       ing logs, time asynchrony, and semantic heterogeneity,          detected as entities whose learned benign roles deviate at run-
+       makes it difficult to establish stable baseline models and      time. FLASH [20] represents a comprehensive representation-
+       generalize poorly across domains, frequently misclassi-         learning and scalable deployment paradigm, enriching node
+       fying seemingly anomalous provenance substructures as           semantics and employing lightweight scoring with downstream
+       malicious.                                                      aggregation such as attack-evolution graphs. Both methods
+    3) Data silos [11], [12]: Host log characteristics vary signifi-   operate on provenance graphs and use GNN-based model-
+       cantly across organizations, platforms, and over time. IDS      ing, making them the most relevant references for positioning
+       models in one environment may not generalize directly           our contributions beyond other GNNs for provenance. Since
+       to another.                                                     provenance-graph IDS works may appear similar at a high
+    4) Lack of explainability [13], [14]: Anomaly-based ma-            level, we explicitly align the three frameworks along check-
+       chine learning detectors can issue alerts without human-        able axes, such as decision unit, false-positive control, and
+       understandable justification. However, in mission-critical      explainability paradigm. Table I summarizes these differences,
+       industrial environments, security operators need expla-         showing that our framework changes the detection semantics
+       nations for alert flags to verify genuine threats and fa-       from node alerts to time-windowed subgraph decisions and
+       cilitate incident response. Unfortunately, to date, most        introduces a calibrated low/zero-FP (low/zero-False Positive)
+       provenance-based IDS research has focused on detection          operating layer with counterfactual intervention-based evidence.
+       accuracy rather than explainability. The decision-making        To avoid treating the above differences as qualitative claims,
+       process of graph neural networks (GNNs) and other               we provide a Table II that summarizes our contributions and
+       models remains opaque, hindering analyst trust. This has        solutions compared to these two baselines.
+       prompted researchers to propose graph interpretability             Our contributions are as follows.
+       techniques to identify the most influential subgraph fea-           1) We formulate intrusion detection on time-windowed
+       tures on model predictions.                                            provenance subgraphs and propose a GNN detector with
+   These challenges indicate that enterprises and IIoT deploy-                dual readout pooling to robustly aggregate graph repre-
+ments require an IDS that can achieve high detection, low false               sentations under large and variable graph sizes.
+positives, adapt to environmental changes, and output inter-               2) We introduce Fisher-information-based uncertainty to de-
+pretable results. In the past few years, researchers have proposed            rive an uncertainty-aware risk score and apply conformal-
+a variety of approaches, which we can roughly categorize as                   style calibration to support two deployment modes that
+follows:                                                                      are zero-FP and low-FPR.
+    1) edge anomaly detection [15];                                        3) We propose a discrete counterfactual explainer that iden-
+    2) full-graph detection with attention mechanisms [16];                   tifies a small decision-critical edge set whose removal
+    3) heterogeneous graph modeling and cross-domain                          reduces the risk score below the alert threshold; we rank
+       learning [17];                                                         evidence with the CDS and reconstruct a compact causal
+    4) interpretability techniques for graph-based IDS [18].                  event chain for interpretation.
+   Despite these advances, no existing solution can fully meet the         4) We design a constrained LLM module that converts the
+three requirements of low false positives, cross-source fusion,               grounded counterfactual evidence into a fixed-schema
+and interpretable output. This results in security analysts having            JSON (JavaScript Object Notation) security report for
+to manually inspect large causal graphs to reconstruct attack                 analyst-facing triage.
+steps, which is time-consuming and error-prone [19]. Given                 5) We evaluate CCG-IDS on EVTX and DARPA OpTC and
+that current methods struggle to achieve low false positives,                 report both threshold-free ranking metrics and low-FPR
+cross-source fusion, and interpretability, this article proposes              operating-point metrics, together with efficiency mea-
+a unified approach for collaborative optimization. To address                 surements for deployment.
+these limitations, we propose CCG-IDS, an end-to-end intru-               The rest of this article is organized as follows. Section II
+sion detection pipeline built on unified provenance graphs de-         reviews related work. Section III presents our proposed frame-
+rived from Windows host audit logs. CCG-IDS encodes each               work and mathematical models, and Section IV evaluates our
+time-window graph with a GNN and summarizes it using dual              proposed performance. Finally, Section V concludes this article.
+readout pooling to capture both the overall behavior and the most
+suspicious evidence. It then uses Fisher uncertainty to estimate                            II. RELATED WORK
+confidence in the prediction and to support low false-positive
+rate (FPR) operation. For interpretability, CCG-IDS generates          A. Node/Entity-Level Anomaly Detection
+a counterfactual explanation by removing the smallest set of             Node-level anomaly detection considers each process, file, or
+decision-critical edges that makes the risk score drop below           socket in the audit log graph as a potential compromise point
+4922                                                            IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 6, JUNE 2026
+
+
+
+                                                             TABLE I
+                                              METHODOLOGICAL COMPARISON WITH OTHERS
+
+
+
+
+                                                             TABLE II
+                    CONTRIBUTION SUMMARY AND THE SPECIFIC GAPS RELATIVE TO NODE-LEVEL PROVENANCE IDS BASELINES
+
+
+
+
+and learns embeddings or features of these nodes to identify         partitioning a continuous event stream into manageable time-
+outliers [21]. Hassan et al.’s UNICORN [22] is an anomaly-           windowed subgraphs. Each snapshot graph preserves the tem-
+based APT detector that explores the behavior of each node in a      poral order of events and is treated as an independent graph
+large provenance graph. By tailoring its modeling to the unique      instance for detection.
+characteristics of APTs, UNICORN can detect hidden anomalies            Another notable subgraph-level approach is FLASH [20],
+in a group of network hosts without relying on known attack          which emphas

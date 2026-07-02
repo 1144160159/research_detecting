@@ -1,0 +1,1725 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [276] Open set identification of malicious encrypted traffic based on multi-feature fusion
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：276
+题名：Open set identification of malicious encrypted traffic based on multi-feature fusion
+年份：2024
+DOI：10.1016/j.comnet.2024.110824
+来源：Computer Networks
+PDF：paper/10.1016_j.comnet.2024.110824.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：恶意流量、暗网与攻击检测
+相关性：强相关，分数 12
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\276.txt
+- 原始字符数：76526
+- 本次发送字符数：76526
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+Computer Networks 254 (2024) 110824
+
+Contents lists available at ScienceDirect
+
+Computer Networks
+journal homepage: www.elsevier.com/locate/comnet
+
+Open set identification of malicious encrypted traffic based on multi-feature
+fusion
+Xingwen Zhao, Han Zhang ∗, Hui Li, Xuangui Chen
+Xidian University, Xi’an, Shanxi, China
+
+ARTICLE
+
+INFO
+
+Keywords:
+SSL/TLS
+Malicious traffic detection
+Open set recognition
+Feature selection
+Deep learning
+
+ABSTRACT
+In the current network environment, an increasing amount of malicious traffic is transmitted through encrypted
+channels, carrying control commands and data. With the continuous development of communication protocols
+and applications, new types of malicious encrypted traffic are emerging, posing significant challenges for
+network management (e.g., traffic engineering). Therefore, accurately identifying malicious traffic in complex
+open network spaces has become a hot research topic in network security. In this study, we draw inspiration
+from channel theory in image science and innovatively convert traffic data into Red-Green-Blue (RGB) image
+format to achieve the fusion of multiple features. Inspired by image recognition technologies, we have designed
+a multi-granularity network model that integrates both global and local features, serving as our core network
+architecture. At the top of the model, we have equipped each known category with a unique autoencoder, using
+its generated manifold to replace traditional prototypes for model construction. Classification is accomplished
+through a scoring mechanism that evaluates category membership and by setting thresholds to achieve open
+set recognition of unknown categories. Relying on our self-created dataset,Malicious and Encrypted Traffic
+2024 (MNET2024), we conduct a series of extensive experiments. The results demonstrate that our proposed
+method exhibits outstanding performance in both closed-set and open-set recognition tasks.
+
+1. Introduction
+To ensure the privacy and security of internal data, an increasing
+number of network communications are now adopting traffic encryption technologies. Widely applied encryption techniques, such as Secure
+Sockets Layer (SSL),Virtual Private Network (VPN), and DNS over
+HTTPS (DoS) [1], however, present a challenge to traditional security detection mechanisms. Firewalls, for instance, are incapable of
+inspecting encrypted traffic, leading to a situation where over 70%
+of attackers use encrypted protocols to transmit malicious software,
+conceal their attack activities, and steal sensitive data [2]. As a solution, SSL/Transport Layer Security (TLS) encryption traffic detection
+technology (also referred to as decryption detection technology) has
+emerged to fill the gap left by firewalls’ inability to scrutinize encrypted
+traffic [3] This is achieved by decrypting SSL traffic to inspect encrypted data for potential security threats. Although decrypting SSL
+traffic is instrumental in uncovering hidden threats and thereby improving network security, the considerable computational resources required for SSL encrypted traffic detection can diminish the throughput
+performance of firewalls and potentially compromise user privacy.
+To protect data transmission and user privacy, most security tools
+have adopted malicious encrypted traffic identification schemes to
+
+enhance SSL/TLS encryption traffic detection systems. Recent studies
+indicate that identification of malicious encrypted traffic primarily
+relies on machine learning methods, such as convolutional neural networks (CNN) and decision trees. These approaches have been effective
+in detecting known types of malicious encrypted traffic. However, in
+the real world, due to the continuous development of communication
+protocols and applications, there exists a significant amount of unknown types of malicious traffic in the network. Traditional neural
+networks model the entire feature space by comparing the similarity
+between predicted samples and known category features, leading to
+classification outcomes. This poses a severe issue: an unknown category that overlaps with known category feature spaces in specific
+areas is likely to be misidentified as a known class. Consequently,
+these solutions might incorrectly classify malicious traffic as normal
+traffic of a known category, resulting in interception failures, and more
+seriously, allowing malicious traffic to infiltrate the system, causing
+attacks [4]. Thus, these approaches are no longer sufficient to cope with
+the complexity of the current network environment.
+Although machine learning models have greatly accelerated the
+process of extracting features from network traffic [5], most existing
+solutions have not conducted in-depth research on processing raw
+
+∗ Corresponding author.
+
+E-mail address: zzh12061128@163.com (H. Zhang).
+https://doi.org/10.1016/j.comnet.2024.110824
+Received 30 May 2024; Received in revised form 26 August 2024; Accepted 20 September 2024
+Available online 26 September 2024
+1389-1286/© 2024 Elsevier B.V. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+
+Fig. 1. Firewall traffic detection example. Outbound detection is utilized to prevent internal network clients from malicious software invasions when accessing external websites [8].
+When internal network users visit websites compromised with Trojans by attackers, the firewall security system identifies and blocks such malicious traffic to protect the users.
+Inbound detection, on the other hand, protects the internal network from risks of external access. By deploying firewalls within the web server’s network, it ensures that all traffic
+passing through is secure.
+
+data for malicious traffic identification, still relying on the original
+traffic data packets or using serialized traffic data as model input.
+Furthermore, some solutions converted raw traffic into text or images
+based on specific rules, for instance, Wang [6] mapped the original
+traffic directly to two-dimensional grayscale images using byte codes.
+These methods face two major issues: firstly, neural networks generally
+require input sequences of a fixed length, which may have led to
+the loss of some information or the introduction of noise; secondly,
+the abundance of background information make it difficult to extract
+feature information.
+Open set recognition, by training on known samples in the model,
+can not only accurately classify samples within a closed set space
+but also identify unknown categories [7]. To enable encrypted traffic
+detection technology to be applied more efficiently and securely in
+network management, we propose a new type of malicious encrypted
+traffic open set recognition model and data processing method. This
+scheme can monitor traffic in complex network environments and
+accurately identify known categories of malicious encrypted traffic
+without decryption. For previously unseen unknown category traffic,
+our scheme can also timely intercept it and send it to the SSL/TLS
+encrypted traffic detection system for decryption and detection. This
+process significantly reduces unnecessary exposure of sensitive data
+while substantially improving the efficiency of traffic monitoring (see
+Fig. 1).
+Our contributions include:
+1.We design a feature fusion method for SSL encrypted traffic. We
+comprehensively extract sufficient information from the raw data and
+select specific features from statistical patterns and handshake packet
+data to enhance the quality of features. Finally, drawing from channel
+theory in image science, we map three-dimensional features onto the
+R, G, B channels, forming RGB images as the representation form for
+model input data.
+2.We develop a malicious encrypted traffic open set recognition
+scheme based on multi-feature fusion. This scheme employs a complex
+CNN model with multiple branches and feedback mechanisms, capable
+of extracting both global and local features of images and facilitating
+their interaction. At the top of the backbone network, we insert unique
+autoencoders for each known category, implementing open set recognition through the reconstruction of feature semantics and a scoring
+mechanism.
+3.This study conducts extensive experiments based on our selfcreated dataset MNET2024 and the ISCX VPN-NonVPN dataset. The
+experimental results demonstrate that our proposed model significantly
+outperforms several baseline methods.
+
+The first category is rule-based pattern matching methods, which
+represent an earlier approach to identifying malicious encrypted traffic.
+The open-source intrusion detection system Snort [9] first generates
+a signature set for sample encrypted traffic and compares it with the
+signature set of malicious encrypted traffic to determine the category of
+the sample. Kim [10] and colleagues designed identification rules based
+on Signatures, Session IDs, and IPs, showing that the identification
+effect is significantly improved when using multiple rules compared
+to a single rule. Papadogiannaki et al. [11] used the frequency and
+location information of packets as rules to design a pattern language
+describing packets, achieving an identification rate of 84%, indicating that a simple regular expression can possess sufficient expressive
+power. Husák [12] identified clients through fingerprints in the SSL
+handshake packets, determining if the traffic was malicious based on
+the client. However, these methods are not suitable for large-scale
+traffic identification; moreover, as rules are updated and the signatures
+of malicious traffic change, the accuracy of identification may also
+decrease.
+The second method involve decrypting and analyzing the traffic.
+Sourabh Saxena [13] utilized transparent SSL proxy tools such as
+SSLsplit, stunnel, socat, and ettercap as intermediaries between the
+client and server. These tools decrypted SSL encrypted traffic and
+forwarded it, ensuring normal communication between parties while
+compromising the privacy of the transmitted content.
+The third category employed machine learning for traffic identification. Traditional machine learning classification methods included the
+C4.5 decision tree, random forest, etc. McCarthy et al. [14] utilized
+four machine learning algorithms (AdaBoost, C4.5, RIPPER, and Naive
+Bayesian) to learn and evaluate 22 features, demonstrating the feasibility of identifying SSL/TLS encrypted applications using flow-based
+statistical features and ML algorithms. Shbair et al. [15] proposed a
+multi-level framework-based HTTPS identification method that did not
+rely on specific header fields (e.g., easily obtained SNI, TLS certificates,
+etc.). They used C4.5 and random forest algorithms to train on 18
+feature data, such as packet arrival time and packet size from client
+to server (C2S) and server to client (S2C) directions, achieving a
+final identification rate of 93.1%. However, a drawback of the C4.5
+algorithm is its long training time, making it suitable only for small
+datasets. Yan et al. [16] introduced the concept of ‘‘Burst’’ by studying
+the traffic behavior of WeChat red packets. They segmented the traffic
+into multiple Bursts based on sudden changes in communication bytes
+and built fingerprints using statistical features such as packet length,
+TCP handshake counts, inbound and outbound payload, and packet
+numbers. Experiments comparing K-Nearest Neighbor (KNN), Support
+Vector Machine (SVM), Random Forest (RF), and GaussianNB (GNB)
+algorithms showed that the RF algorithm achieved the highest identification rate of 96%, which could further increase to 98% by adding
+more trees to the RF.
+
+2. Related work
+In this study, we focus on elaborating on the following four categories.
+2
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+Table 1
+Benign SSL/TLS encrypted traffic types.
+
+The fourth method utilizes neural networks for traffic identification.
+Ivan Torroledo and others [17] extracted features from certificate
+contents and used deep neural networks to determine the validity of
+malicious certificates, achieving a 94.87% accuracy rate. Blake Anderson and others [18] analyzed traffic statistical features and handshake
+fields, extracted features such as packet length and byte distribution,
+and employed logistic regression, decision trees, and other methods for
+classification training. Lotfol1ahi et al. [19] proposed a ‘‘Deep Packet’’
+traffic identification method, adopting SAE and CNN architectures and
+selecting 1480 bytes of traffic payload as input, cutting off excess data
+and padding shorter data to unify dimensions.
+With the advancements in machine learning, the field of encrypted
+malicious traffic identification has witnessed various interdisciplinary
+attempts. For instance, Wang et al. [6,20] introduced a new traffic preprocessing method, extracting data through Session and Flow forms and
+converting it into two-dimensional grayscale images for training with
+a simple CN-ID model. The experiments showed that the Session+ALL
+combination is the optimal training data form. Wang [21] also explored
+converting data packets into two-dimensional images for input into
+CNN models to learn spatial features, then combined with LSTM models to learn temporal features, successfully implementing a real-time
+intrusion detection system. Chen et al. [22] converted flow data into automatically convoluted images for neural network analysis. Tal Shapira
+et al. [23] created images from packet sizes and arrival times, named
+FlowPic, as input for CNN models. Furthermore, deep learning models
+for text processing, voice recognition, and situational analysis have also
+been attempted in the encrypted traffic detection field, displaying good
+performance in their respective domains. For example, the BERT [24]
+model achieves precise natural language text recognition through contextual processing, addressing the issue of training a large number of
+model parameters. However, applying images and other applications in
+the traffic identification domain faces challenges such as: (1) How to
+solve the problem of excessive background information or incomplete
+feature selection; (2) How to effectively integrate multi-dimensional
+features.
+
+Name
+
+Type
+
+Sample number
+
+Dropbox
+Ebay
+Gmail
+Mega
+NetEase Music
+Skype
+WhatsApp
+Youtube
+Instagram
+News Break
+
+P2P
+Web browsing
+E-mail
+P2P
+Stream media
+Instant messaging
+Instant messaging
+Stream media
+Stream media
+Web browsing
+
+8342
+7109
+8942
+9231
+7302
+7843
+7681
+6993
+6671
+5619
+
+Table 2
+Vicious SSL/TLS encrypted traffic types.
+Name
+
+CTU nubmer
+
+Sample number
+
+Bunitu
+CCleaner
+Dridex
+Emotet
+HPEMOTET
+PUA.Taobao
+Razy
+Trickbot
+WannaCry
+Heuristic
+
+140–1
+320–2
+346–1
+264–1
+317–1
+237–1
+274–1
+327–2
+270–1
+317–1
+
+7831
+7457
+7210
+8002
+7467
+6901
+6987
+7013
+8021
+9012
+
+3.2. Feature selection
+Hexadecimal Traffic Data Research indicates that the valid content
+of each Packet Capture (PCAP) packet, when output in hexadecimal
+form, displays distinct characteristics, with the majority of effective
+bytes falling within the [50,1480] byte range [26]. We read the original
+binary data stream, store it in an array in hexadecimal format, and
+then map these data directly to channels to generate images without
+the need for excessive processing of the original data. According to
+studies by Wang et al. [6], the overall effect of using Session is superior
+to Flow under various conditions, though the differences in results
+are not consistent. Experiments utilizing the ALL layer yielded better
+outcomes than those using only the L7 layer. Based on these findings,
+this study ultimately opts for the Session+ALL traffic representation
+method, selecting traffic from all layers within the same session as the
+original data stream.
+Features sourced from SSL/TLS handshake fields. By analyzing
+data packet fields with Wireshark, we discover that different SSL/TLS
+handshakes contain distinct key information. For instance, the cipher
+suites, compression methods, and extension information in Client Hello
+and Server Hello packets, as well as the certificate information in
+Certificate packets. Typically, to reduce attack costs, malicious software
+families opt for free digital certificates, such as those unconditionally
+provided by the Let us Encrypt certification authority. Certificate data
+can reveal extensive information related to malicious software families.
+Therefore, certain handshake field values in malicious software traffic
+exhibit significant differences from normal conditions, playing a crucial
+role in identifying malicious encrypted traffic. As shown in the Table 3,
+we extract fifteen-dimensional features from the handshake fields.
+Traffic Statistical Features The training data for machine learning models primarily utilize preprocessed statistical features because
+they can mathematically articulate the characteristics of traffic accurately. Thus, this study selects traditional statistical features as the
+third dimension. Moore and others [27] identified 248 statistical features of common traffic, encompassing a variety of aspects related to
+ports, time, and space; additionally, Kim and others [28] highlighted
+that TCP flags, such as the count of data packets with PUSH, Explicit Acknowledgment (ACK), Reset the connection (RST) flags set
+to 1, serve as crucial features. Specifically, the size of data packets
+
+3. Data processing methods
+By analyzing the structure of SSL/TLS protocol encrypted traffic
+data packets, this study introduces an innovative method for processing
+traffic data. Initially, we select and extract traffic features across three
+dimensions: raw traffic data, handshake packets, and conventional
+statistical patterns. The characteristics from these three dimensions
+complement each other, and the three types of features manage to
+preserve a comprehensive set of characteristics. After standardizing the
+data, these tri-dimensional feature data are mapped onto the R, G, B
+channels, transforming them into RGB traffic images to serve as the
+input data for the model. To balance the number of data samples, we
+employ supervised data augmentation techniques to expand datasets
+with fewer samples.
+3.1. Data source
+To meet the research requirements, we develop the MNET2024
+dataset, which includes 10 types of benign encrypted data (such as P2P,
+web browsing, emails, etc.) and 10 types of malicious encrypted traffic
+sourced from Stratosphere Lab’s open dataset [25] (like Dridex, Emotet,
+etc.). For malware with limited sample sizes, we supplement the data
+by running the respective malware in a safe sandbox environment. To
+assess the effectiveness of the proposed model, we categorize the 20
+types of encrypted traffic into groups of malicious and mixed traffic,
+randomly assigning unknown categories within the malicious group for
+experimentation. The specific data distribution is presented in Tables 1
+and 2.
+3
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+Table 3
+Handshake field feature extraction.
+ID
+
+Description
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+
+Ratio of SSL connections that use successful
+TLS cipher suites supported by the client
+Mean public key length
+TLS cipher suites chosen by the server
+Parameters for server-side key exchange method
+Parameters for client-side key exchange method
+SSL and connection record ratio
+Number of different certificates
+Certificate data
+Mean certificate length
+Mean number of SAN(Subject Alternate Name)DNS Domains
+Indicates if CN in SAN-DNS-domain
+Indicates if SNI in SAN-DNS-domain
+Mean duration of certificate validity
+Standard deviation of the validity period of certificates
+
+12
+13
+14
+15
+
+Fig. 2. Data standardization processing module.
+
+Table 4
+Flow statistical features.
+ID
+
+Description
+
+16
+17
+18
+19
+20
+21
+22
+
+Average duration of the connection
+Number of PUSH packages
+Number of RST packages
+Minimum inter-arrival time of connection
+Mean inter-arrival time of connection
+Maximum inter-arrival time of connection
+Standard deviation of interarrival time between
+connection
+Mean secondary time difference of connection
+Standard deviation of connection’s secondary time
+difference
+Number of ACK packages
+Byte count in the forward direction (upstream)
+Byte count in the backward direction (downstream)
+Ratio of backward and forward bytes
+Packet count in the forward direction
+Packet count in the backward direction
+Mean forward packet length
+Mean backward packet length
+
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+
+127.0.0.1. Due to the fixed values and positions of IP and MAC in the
+traffic, such highly similar data could lead to model learning biases,
+making randomization a necessary step.
+Normalization refers to mapping data of varying scales to the same
+scale, ensuring that the processed data has an equal impact on the
+model. This process is divided into two parts: base conversion and data
+length unification. RGB pixel values range between 0 and 255, and the
+decimal conversion range of two hexadecimal values precisely fits this
+interval, enabling the mapping of all pixel values. In response to the
+deep learning network’s requirements for input data size, data lengths
+are standardized by truncating excessively long data or padding too
+short data, thereby unifying the size of images.
+The specific technical method for mapping traffic data to channels is
+as follows. First, we read the content of the PCAP file, where the PCAP
+file data is represented in binary format. We read the hexadecimal
+values of the multi-dimensional feature data in two-byte units and
+store them in an array (this is because we have chosen hexadecimal
+as the representation of the raw traffic data in one of the three feature
+dimensions). Finally, for the purpose of value conversion, we convert
+the hexadecimal values in the array to decimal, i.e., converting the
+value range [00, FF] to [0, 255], and then reshape the resulting decimal
+array into a two-dimensional array according to the image width, which
+gives us the image matrix. Ultimately, we use the Pillow library [29] to
+save these matrices as Portable Network Graphics (PNG) format image
+files. Features across three dimensions are sequentially transformed
+into three grayscale images. Due to variations in data size and output
+sequence for each feature dimension, the overlapping of these grayscale
+images produces RGB traffic images that display different morphologies, primarily reflected in the colors of the images. To better segment
+images of varying granularities, this paper adopts the image dimensions
+used in pedestrian re-identification [30], settling on a size specification
+of 128 × 64.
+From the generated image data, one image per category is randomly
+selected to compose the visualization effect displayed. The behavior
+differences among malicious software lead to significant variations
+between traffic images across categories, especially for the ten types
+of malicious traffic shown in Fig. 3.
+To study the consistency among samples of the same category,
+four categories of samples are randomly selected, and four images
+are extracted for comparative analysis. As shown in Fig. 4, despite
+differences among the four categories, traffic images within the same
+category generally align.
+In summary, traffic images within the same category demonstrate
+relative consistency, while those between different categories are distinct. Thus, employing image classification methods for encrypted traffic identification in this domain is feasible.
+This study supplements the dataset with supervised data augmentation techniques. The imgaug toolkit [31] provides a wealth of data
+
+in malicious traffic often differs from normal traffic. For instance,
+in Trojan communications, upstream traffic is significantly smaller,
+whereas downstream traffic is considerably larger than normal. Aiming
+to control the host, a Trojan’s communication patterns differ from the
+stable characteristics of regular traffic, maintaining communication for
+extended periods. Based on these insights, we selected seventeen traffic
+statistical features, as shown in the Table 4.
+3.3. Channel fusion
+The data standardization process depicted in Fig. 2 encompasses
+three pivotal modules: traffic segmentation, address randomization,
+and iterative normalization. The process unfolds as follows. Initially,
+encrypted traffic is divided by Sessions while removing empty data
+packets and User Datagram Protocol (UDP) data packets; next, the Media Access Control (MAC) and Internet Protocol (IP) addresses within
+the data stream are randomized; then, hexadecimal values of multidimensional feature data are read two bytes at a time and stored
+as pixel values in an array; finally, the values within the array are
+converted to decimals, mapping the range [00, FF] to [0, 255], and data
+lengths are unified through padding or discarding data, thus completing
+the standardization.
+The publicly available datasets of malicious encrypted traffic are
+mostly captured at proxies, containing destination MAC and IP addresses that correspond to the proxy tools rather than the actual addresses of malicious software families. Proxy tools are typically applied
+locally, hence their MAC addresses are local, and IP addresses are often
+4
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+
+Fig. 6. Effectiveness visualization of the same data augmentation algorithm.
+
+while Wang [6] chose to work with the entirety of the raw data.
+As depicted in Fig. 6, the distinction between these methodologies is
+visually discernible. However, both of these strategies harness solely
+the dimensional features of raw data streams without deeply engaging
+in the data preprocessing phase, allocating the outcome’s quality to the
+model’s capacity.
+In contrast, the traffic images generated by this method differ
+significantly in appearance from the former two. The width of the
+pictures is roughly the same, but they are longer and are RGB colored
+images. With the current level of knowledge, it is possible to extract
+three-dimensional feature data from SSL/TLS encrypted traffic, and
+the combination of different data in the RGB channels can produce
+255 × 255 × 255 different pixel colors. Consequently, mapping the
+three-dimensional feature data into the three channels generates traffic
+images that can express traffic characteristics more finely.
+
+Fig. 3. Visualization results of twenty sample classes.
+
+3.5. Advantages of regional segmentation in RGB traffic maps
+Fig. 4. Consistency analysis of Samples within the same class.
+
+As described in Fig. 7, significant differences exist between Dridex
+and Heuristic traffic maps. In Dridex traffic maps, the G and B channels
+feature sparse data, resulting in the lower half of the image predominantly displaying in red and black—red dominated by non-zero data
+in the R channel, and black indicating zero pixel values. Conversely,
+in Heuristic traffic maps, only the B channel has relatively sparse data,
+leading to approximately one-third of the image presenting in red and
+black. Further comparison reveals that about half of the images in the
+G and B channels of the Dridex traffic maps are pure black, i.e., zero
+pixel values, whereas only about half of the images in the B channel of
+the Heuristic traffic maps are pure black. Dividing the Heuristic traffic
+map into thirds shows that the last portion of both the G and B channels
+is pure black.
+These color differences between RGB traffic maps reflect the similarities and differences among various traffic types, and regional segmentation of different ratios helps the model capture image features across
+more dimensions. Thus, RGB traffic maps demonstrate significant advantages in regional segmentation, providing crucial design insights for
+subsequent model development.
+
+Fig. 5. Renderings of different data enhancement algorithms.
+
+augmentation algorithms. As illustrated in Fig. 5, this research employs four image enhancement methods — image flipping, cropping,
+brightness adjustment, and noise injection — to augment the image
+data. It is observed that the processed images across categories remain macroscopically consistent but differ in details, thereby offering
+valuable sample supplementation for subsequent model training.
+3.4. Compared to other methods
+
+4. Method introduction
+
+In the latest research within the field of traffic identification, deep
+learning emerges as one of the most frequently utilized methods. Researchers typically need to process the raw traffic into text or images
+based on specific rules before feeding it into deep learning networks
+for training and learning. Currently, a common traffic preprocessing approach is to directly map the raw traffic into two-dimensional
+grayscale images using byte codes. However, there are variations in
+practice. For instance, Li Ding [32] maintained the positional information in HTTP traffic, including specific markers like the NUL character,
+
+Currently, the field of malicious traffic identification has not yet
+solved the problem of identifying traffic categories outside of predetermined sets, limiting the application of models to specific scenarios. To
+address this issue, this study designs a multi-granularity network model
+that integrates both global and local features, and in conjunction with
+autoencoders, proposes an open set recognition scheme for malicious
+encrypted traffic. For ease of reference, all the symbols used in this
+paper are listed in Table 5.
+5
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+
+Fig. 8. (a) Prototypical learning. (b) Autoencoder method.
+
+4.2. Reconstruct latent space features
+In the method proposed in this study, for each traffic category 𝑤,
+we design a corresponding autoencoder 𝐸𝑤 and use 𝐸𝑤 to reconstruct
+the pixel-level latent space feature 𝑝 extracted by the backbone network, yielding the reconstructed feature 𝑝.
+̂ The working principle is
+as follows: the encoder 𝑓 compresses the high-dimensional semantic
+feature 𝑝 into the hidden layer 𝐻, learning the mapping from the
+original feature space to the low-dimensional space ℎ = 𝑓 (𝑝). The
+decoder’s mapping then generates a manifold 𝑟 = 𝑔(ℎ). We take the
+latent space features extracted from the backbone network as the input
+to the autoencoder. This approach, which reconstructs samples at the
+pixel level rather than directly reconstructing the original images,
+can reduce the influence of background information (i.e., information
+irrelevant to the malicious traffic category) on the recognition results,
+thereby minimizing the reconstruction error as much as possible. The
+reconstruction error for each pixel is calculated using Formula (1):
+
+Fig. 7. Example of region segmentation of RGB traffic map. (For interpretation of the
+references to color in this figure legend, the reader is referred to the web version of
+this article.)
+Table 5
+Symbol table.
+Symbol
+
+Significance
+
+𝑓
+𝑔
+𝐻
+𝑤
+𝐸/𝐸𝑤
+𝑝
+𝑝̂
+𝑟
+𝐷
+𝑖
+𝑖𝑥
+𝑃
+𝑃𝑖
+
+Encoder
+Decoder
+Hidden layer
+A category
+Autoencoder/class i-specific autoencoder
+Pixel-level latent space feature
+Reconstructed feature semantic graph
+Manifold generated by autoencoder
+Reconstruction error
+Predicted label
+Class to be predicted
+Feature semantic map
+A collection of feature maps divided according to
+predicted categories
+Scale Factor
+The total number of known categories
+Scoring function
+About the mean of 𝑠 ∗
+About s* standard deviation
+Detection score weight
+
+𝜆
+𝑚
+𝑠∗
+𝐸(𝑠 ∗)
+𝑆𝑡𝑑(𝑠 ∗)
+𝑤1 𝑤2
+
+𝐷(𝑝, 𝐸𝑤 ) = ‖𝑝 − 𝐸𝑤 (𝑝)‖1
+
+(1)
+
+By calculating the reconstruction error between samples and each
+category flow, we can classify them. Applying SoftMax to normalize the
+Logits, the final probability can be defined as shown in Formula (2):
+𝑒−𝛾𝐷(𝑝,𝐸𝑤 )
+𝑝(𝑦 = 𝑤|𝑝, 𝐸) = ∑𝑚
+−𝛾𝐷(𝑝,𝐸𝑗 )
+𝑗=1 𝑒
+
+(2)
+
+where 𝛾 is a hyperparameter that controls the hardness of probability
+distribution. In most prototype learning schemes, the distance between
+samples and prototypes is calculated using Mean Square Error (MSE).
+However, evidence [33] shows that MSE may cause the model to
+overfit, leading to inconsistencies between the prototypes and the actual categories of samples. Therefore, this study adopts Mean Absolute
+Error (MAE), averaging the predictions for each pixel to make global
+predictions.
+
+4.1. Prior knowledge
+Class prototype methods rely on learning prototypes for each category to achieve open-world recognition. These prototypes are typically
+a set of representative samples selected from the training data, with
+each prototype representing a category or cluster. They can be the
+center of data points (e.g., mean vectors) or specific representative
+sample points. Classification is conducted by calculating the distance
+between a sample and each prototype. However, the applicability of
+this method is limited due to its lack of fitting capability and diversity
+in prototype representation.
+Autoencoders are a type of unsupervised learning neural network
+formed by a series of encoders 𝑓 and decoders 𝑔, with an internal
+hidden layer 𝐻 used to generate a code representation of the input.
+Autoencoders compress input samples from a high-dimensional space
+to a low-dimensional space (i.e., the hidden layer 𝐻), learning a compressed representation of the original image and then reconstructing
+the original image, thus possessing excellent feature extraction capabilities. However, a challenge with methods based on autoencoders is that
+the features learned from reconstructed images might contain irrelevant
+information, which could adversely affect performance in both closed
+and open sets (see Fig. 8).
+
+4.3. Unknown category recognition
+Autoencoders compress high-dimensional semantic features into a
+hidden space and minimize reconstruction error, thereby forming a
+manifold with diverse features. This diversity is reflected in the relationship between categories and features: each category is described
+by specific parts of the global features.
+A sample activates relevant parts of the global features, while
+irrelevant parts remain inactive. Through the autoencoder, a sample
+activates features related to its category, which does not result in high
+reconstruction error; conversely, it leads to significant reconstruction
+error. This property enables the backbone network to learn to activate
+only the features related to the category in collaboration with the
+autoencoder, thereby reducing reconstruction error. The trained model
+ultimately extracts only features related to specific categories. For unknown categories, the activation rate is low because they are untrained
+and not associated with any features. Based on the reconstruction error
+and activation values, this study has established a scoring function.
+According to the set scoring mechanism, the model sets a threshold
+6
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+
+score to ensure that 95% of the known samples are correctly recognized; if a sample scores below the threshold, it will not be recognized
+as that category. If rejected by all categories, the sample is considered
+to belong to an unknown category.
+Assuming the semantic features 𝑃 of a given test sample and its
+predicted label 𝑖. As mentioned in Section 4.1, the autoencoder consists
+of a linear decoder and a linear encoder, satisfying 𝑓 (𝜆𝑝) = 𝜆𝑓 (𝑝),
+and 𝑔(𝜆𝑝) = 𝜆𝑔(𝑝). Therefore, when constructing a scoring function
+based on reconstruction error, what needs to be considered is the linear
+relationship between the latent space features 𝑝 and the reconstruction
+error ‖𝑝−𝐸𝑖 (𝑝)‖1 . For autoencoders with tanh activation, assuming 𝑓 (𝑝)
+is close to zero, then 𝑡𝑎𝑛ℎ(𝜆𝑝) ≈ 𝜆𝑡𝑎𝑛ℎ(𝑝). Thus, we have:
+‖𝜆𝑝 − 𝐸𝑖 (𝜆𝑝)‖1 ≈ 𝜆‖p − 𝐸𝑖 (p)‖1 ,
+
+(3)
+
+Fig. 9. Scoring mechanism.
+
+At the same time, we eliminate the scaling factor 𝜆 by dividing
+by ‖𝑝‖1 . Additionally, to consider the detection capability of unknown
+features based on their magnitude, we introduce an extra ‖𝑝‖1 term.
+Thus, the scoring function based on reconstruction error is defined as
+follows:
+𝐷(𝑝, 𝐸𝑖 )
+𝑠1 (𝑝, 𝑖) = −
+(4)
+‖𝑝‖21
+Assuming the feature semantic map 𝑃𝑥 and the predicted class 𝑖𝑥
+are obtained from the samples in the training set, we divide the feature
+maps into different sets based on the predicted categories, defining the
+feature set 𝑇 𝑖 = {𝑃𝑥 |𝑖𝑥 = 𝑖, 𝑥 = 1, 2, … , 𝑛}, where 𝑖 = 1, 2, … , 𝑚. In the
+scoring function based on activation patterns, we primarily consider the
+average activation level within the same category.
+∑ ∑
+1
+𝜇𝑥 =
+𝐩
+(5)
+𝑥 ∥ 𝑃|
+|𝑇
+𝑥
+𝑃 ∈𝑇 𝐩∈𝑃
+To also take into account the activation levels of different categories, we will further perform category normalization:
+𝜇
+𝜇̃ 𝑥 = ∑ 𝑥
+(6)
+𝑗 𝜇𝑗
+
+Fig. 10. Basic architecture of multi-branch network. Branch 1 extracts coarse (global)
+features of the entire traffic map; Branch 2 bisects the traffic map to extract mediumgrained features of the upper and lower parts; Branch 3 trisects the traffic map to
+extract fine-grained features of the top, middle, and bottom parts.
+
+The division of vectors is performed element-wise. To detect unknowns, samples that activate the same features as those activated by
+known categories are more likely to belong to one of those known categories. Specifically, the activation strength of each feature is weighted
+by 𝜇̃ 𝑖 , and the unknown is assessed based on the weighted average
+strength of all features. Additionally, we also perform pixel-level score
+integration. Based on these, the scoring function is formulated as
+Formula (7):
+∑ 1
+𝑠2 (𝑃 , 𝑖) =
+𝑝⊤ 𝜇̃ 𝑖
+(7)
+|𝑃 |
+𝑝∈𝑃
+
+image features. The MGN model has achieved unprecedented success on three open-source ReID datasets: Market-1501, CUHK03, and
+DukeMTMC-reID, notably reaching a Rank-1 Accuracy of 96.6% on the
+Market-1501 dataset, which even increased to 97.1% after Re-Ranking,
+significantly advancing the development of the ReID field.
+In RGB traffic images, the pixels at the top often contain features
+from all dimensions, while the pixels in the lower part of the image
+may only display features from one to two dimensions. This characteristic allows RGB traffic images and ReID (Re-Identification) pedestrian
+images to show different levels of feature granularity in various areas,
+exhibiting a high degree of similarity. Drawing inspiration from the
+MGN network architecture, we have developed three separate but interconnected branch networks that share a backbone network to extract
+features of different granularities from the images, thereby obtaining
+detailed local feature information. These branch networks share the
+common features extracted by the main network and then conduct a
+more thorough analysis of the features, achieving recognition of traffic
+samples from a holistic to a localized perspective.
+
+The overall scoring function is derived from normalizing the above
+two, aiming to standardize the metrics of scoring functions based on
+different rules by calculating their mean and standard deviation. This
+process is as Formula (8):
+𝑠̃∗ (𝑃 , 𝑖) =
+
+𝑠∗ (𝑃 , 𝑖) − 𝐸(𝑠∗ )
+𝑆𝑡𝑑(𝑠∗ )
+
+(8)
+
+Finally, this paper combines the three normalized scoring functions
+through linear combination. The specific scoring process is shown in
+Fig. 9, and the final overall scoring function is organized as Formula (9):
+𝑠𝑎𝑙𝑙 (𝑃 , 𝑖) = 𝑤1 × 𝑠̃1 (𝑃 , 𝑐) + 𝑤2 × 𝑠̃2 (𝑃 , 𝑐)
+
+5. Malicious encrypted traffic open set recognition scheme based
+on multi-feature fusion
+
+(9)
+
+5.1. Model architecture
+4.4. Multiple granularity network
+The multi-branch network model mainly consists of two parts: the
+backbone network and the branch network. In this paper, the backbone
+network employs ResNet-50 [35], maintaining the same structure for
+each layer as its official configuration but only utilizing the first three
+layers. ResNet-50, a deep network based on the Bottleneck design,
+
+The Multiple Granularity Network (MGN), initially proposed by
+CloudWalk [34] Technology in 2018, is a dynamic target detection
+model for pedestrian re-identification. Its principal concept involves
+segmenting an image into multiple parts to extract finer granularity
+7
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+
+5.2. Scheme introduction
+Theoretically, utilizing multidimensional feature data combined
+with category-specific classifier models is expected to enhance the accuracy of open-set recognition. However, this approach also leads to additional cost burdens, including GPU resources and time consumption,
+which may not be justified in certain application scenarios.
+In response to these challenges, this article focuses on the discussion
+and design of multiple comparative experiments. Under the premise
+of reasonable cost control, it evaluates the impact of traditional data
+processing methods versus multidimensional feature fusion strategies
+on recognition accuracy. Additionally, it analyzes the efficiency difference between traditional approaches and the category-specific classifier
+method proposed in this study.
+The research first concentrates on the overall design process of the
+recognition scheme, covering selections from data processing options,
+backbone network selection, and parameter tuning, to the comparative
+analysis of final results. Secondly, to ensure the scheme’s applicability
+in various traffic scenarios, a comparison is made using multi-category
+datasets to specify software configurations and evaluation criteria.
+Furthermore, based on traffic preprocessing techniques and open-set
+recognition models, experiments are designed in a unified experimental
+environment to refine parameter selection. Ultimately, a malicious
+encrypted traffic open-set recognition scheme based on feature fusion is proposed, compared with existing schemes, showcasing the
+comprehensive advantages of this approach.
+The core architecture of this study is illustrated in Fig. 12. The malicious encrypted traffic open-set recognition process is divided into five
+major phases: data preprocessing, model training, scheme validation,
+model evaluation, and scheme deployment.
+Compared to other traffic recognition schemes, this proposal guarantees three significant advantages: firstly, it effectively utilizes the
+multidimensional features of malicious encrypted traffic, including
+statistical features extracted based on prior knowledge. Secondly, it
+achieves open-set recognition while ensuring the performance of closed
+sets. Thirdly, it supports transfer learning, enabling an end-to-end
+processing flow. The diagram briefly explains the main framework of
+this scheme. The following sections will detail critical stages such as
+data preprocessing, model training, and model evaluation.
+
+Fig. 11. Visual semantic feature map of backbone network. (For interpretation of the
+references to color in this figure legend, the reader is referred to the web version of
+this article.)
+
+primarily comprises 4 layers, each consisting of several Blocks. Before
+the first Block, there are two layers of operations: a 7 × 7 convolution layer and a 3 × 3 pooling layer, named conv1 and maxpool,
+respectively. Using Python’s PyTorch and Matplotlib tools, this paper
+visualizes the feature semantic maps output by each layer of the
+backbone network, as shown in Fig. 11, with four key points to note:
+Firstly, the input image is a color image based on RGB channels, with
+a size of [ 3,384,128], meaning it has three channels and a dimension
+of 384 × 128, generated using the method described in Chapter 3;
+Secondly, the initial convolution layer conv1 uses a 7 × 7 kernel
+size, and the pooling layer employs 3 × 3 maximum pooling, aiming
+to coarsely extract shallow features of the image, some feature maps
+show a clear boundary at two-thirds of the way, visually similar to the
+original traffic map; Thirdly, from layer1 to layer3, each layer contains
+multiple Blocks, each performing three convolution operations, where
+the structure between Blocks in each layer is the same but with slight
+variations in detail parameters, such as the use of stride 1 convolutions
+in all three layers, but convolutions with stride 2 in layers 2 and 3,
+aiming to reduce the size of the output image and increase the number
+of channels, thereby generating more feature maps; Lastly, Fig. 10
+includes the feature semantic maps after passing through all the layers
+of ResNet-50, including the 2048-dimensional feature maps generated
+by layer4, although layer4 is not used in this model.
+The model’s other component consists of three branch networks,
+which operate independently after layer3 of ResNet-50. Each branch
+undergoes a max pooling process first, with branches 2 and 3 also
+undergoing local max pooling, followed by a convolutional operation
+that reduces the feature semantic map from 2048 dimensions to 256
+dimensions. Global feature semantic maps directly use Triplet Loss
+for loss calculation, while local feature maps, after being connected
+to a fully connected layer, utilize Softmax Loss for loss calculation.
+Moreover, after the pooling layer in each branch, the global feature
+maps are additionally fed into a fully connected layer and subjected to
+Softmax Loss for loss calculation, aiding the model in better learning
+the global features of images across all branches.
+
+5.3. Model training
+This module encompasses the backbone network ResNet-50, designed for learning latent space features, and specific autoencoders
+{𝐸𝑖 }𝑚
+for classifying known classes and detecting unknown classes.
+𝑖=1
+The three 256-dimensional semantic feature maps extracted from the
+network are concatenated into a comprehensive semantic feature map
+𝑃 , which is then input into the specific autoencoder 𝐸𝑖 . This autoencoder equally learns and encodes features of all pixels and reconstructs
+the semantic features of 𝑃 . The reconstruction error of the classspecific autoencoder is used as Logits, and the logits are multiplied
+by a coefficient 𝛾 to perform pixel-level SoftMax operation. The global
+prediction is obtained by averaging the predictions of each pixel:
+1 ∑
+𝑝(𝑦 = 𝑤|𝑃 , 𝐸) =
+𝑝(𝑦 = 𝑤|𝑝, 𝐸)
+(10)
+|𝑃 | 𝑝∈𝑃
+Next, the model is trained by minimizing the negative log probability of the true class 𝑖 using gradient descent, as follows:
+𝐿 = − log 𝑝(𝑦 = 𝑖|𝑃 , 𝐸)
+
+(11)
+
+For the recognition of unknown classes, this scheme uses the pixel
+reconstruction error derived from the autoencoders corresponding to
+known classes as input. A scoring mechanism is then employed to
+assess the probability that an image belongs to an unknown class. After
+feeding the data into the model, continuous training is conducted to
+reduce the loss value to the lowest threshold, and then the model
+is packaged and saved for subsequent model evaluation and scheme
+deployment.
+8
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+
+Fig. 12. Model Evaluation Process for Malicious Traffic Detection Based on Object Detection. Original traffic data serves as the input for the entire model, which after data
+preprocessing, is transformed into RGB traffic maps. These features, extracted by the backbone network for their fundamental semantic traits, are subsequently fed into three
+branches to capture semantic features of varying granularity. By concatenating the semantic features derived from the three branches, we obtain the ultimate semantic feature
+map, 𝑝. Autoencoders (𝐸𝑤 ) for each category 𝑤 encode and reconstruct these pixel-level semantic features. Following that, the pixel reconstruction error from category-specific
+autoencoders is used as Logits, with SoftMax operation applied at the pixel level. Then, these pixel-wise predictions are averaged to generate a composite prediction for the entire
+image. For the recognition of unknown categories, this is implemented by scoring the image’s unknown traits.
+
+5.4. Model evaluation
+For multi-classification problems, this paper employs macroaveraging or micro-averaging methods [36] to assess the model. Macroaveraging refers to averaging the F1 scores of n binary classification
+problems, specifically by calculating the Precision and Recall for each
+of the n binary classifications to obtain n F1 scores, and then averaging
+these F1 scores to derive the Macro-F1:
+1∑
+𝐹 1𝑖
+𝑛 𝑖=1
+𝑛
+
+Macro_𝐹 1 =
+
+(12)
+Fig. 13. Model evaluation process based on target detection.
+
+Micro-averaging, however, involves summing the True Positives
+(TP), True Negatives (TN), False Positives (FP), and False Negatives
+(FN) of the n binary classification problems to calculate an overall
+Precision and Recall, thereby obtaining the Micro-F1:
+∑𝑛
+𝑖=1 𝑇 𝑃𝑖
+𝑀𝑖𝑐𝑟𝑜_𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 = ∑𝑛
+(13)
+∑𝑛
+𝑇
+𝑃
+𝑖+
+𝑖=1
+𝑖=1 𝐹 𝑃𝑖
+∑𝑛
+𝑖=1 𝑇 𝑃𝑖
+𝑀𝑖𝑐𝑟𝑜_𝑅𝑒𝑐𝑎𝑙𝑙 = ∑𝑛
+(14)
+∑𝑛
+𝑇
+𝑃
+𝑖+
+𝑖=1
+𝑖=1 𝐹 𝑁𝑖
+2 ⋅ 𝑀𝑖𝑐𝑟𝑜_𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 ⋅ 𝑀𝑖𝑐𝑟𝑜_𝑅𝑒𝑐𝑎𝑙𝑙
+𝑀𝑖𝑐𝑟𝑜_𝐹 1 =
+(15)
+𝑀𝑖𝑐𝑟𝑜_𝑃 𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 + 𝑀𝑖𝑐𝑟𝑜_𝑅𝑒𝑐𝑎𝑙𝑙
+
+be the number of pictures in 𝑃 𝑟 that satisfy the first hit, the model’s
+Rank-1 accuracy is defined as Formula (17).
+𝑅𝑎𝑛𝑘 − 1 =
+
+6. Experiment
+The experimental section of this study is divided into three main
+parts: evaluating the preprocessing methods for SSL/TLS encrypted traffic raw data, comparative analysis with other models, and evaluation
+of the open-set recognition scheme. For each part, we have designed
+corresponding experiments to compare with other schemes and have
+detailed the dataset selection and comparison results.
+6.1. Dataset preprocessing methods
+This study maps the raw data stream of encrypted traffic, plaintext
+handshake packet data of TLS, and traditional statistical feature data to
+the R, G, and B channels, respectively. Furthermore, by selecting three
+different combinations among the R channel, G channel, B channel,
+and a blank channel, we generate three types of traffic maps. The
+blank channel refers to a channel with all-zero data, meaning it contains no data, hereinafter referred to as the 𝑁 channel (NULL). For
+instance, Fig. 14 shows the traffic maps of Heuristic type data with
+different channel combinations, where RNN represents a multichannel
+map composed of the R channel and two 𝑁 channels, and RGN is a
+multidimensional channel map composed of the R, G channels, and an
+𝑁 channel.
+
+𝑛 𝐾𝑝𝑖
+
+)
+1 ∑∑(
+𝑟̂ ∕𝑟
+𝑛 𝑖=1 𝑗=1 𝑗 𝑗
+
+(17)
+
+Correspondingly, the Rank-n value represents the proportion of
+images hitting within the top n predictions.
+This experiment evaluates the effects using accuracy, precision,
+recall, and F1 score. Specifically, for describing the performance of
+open-set recognition, we introduce the Area Under the Receiver Operating Characteristic (AUROC) as a threshold-independent metric. This
+metric is calculated by comparing the True Positive Rate (TPR) with
+the False Positive Rate (FPR) by varying the threshold. If known and
+unknown classes are entirely separable, the AUROC value reaches 1.
+
+The model evaluation process, based on target detection, is illustrated in Fig. 13, where the Gallery Set acts as a database containing
+all target samples, and the Probe Set is the collection of targets to be
+recognized. The assessment of model performance is reflected in the
+overall effectiveness of target recognition within the Probe Set.
+First, define the set of images to be detected as the Probe set,
+containing 𝑛 images. For each image 𝑝𝑟𝑖 in this set, the Probe set can
+be represented as 𝑃 𝑟 = {𝑝𝑟1 , 𝑝𝑟2 , … , 𝑝𝑟𝑖 , … , 𝑝𝑟𝑛 }. Similarly, define all
+base images as the Gallery set, containing m images. For each image 𝑔𝑖
+in the Gallery set, it can be represented as 𝐺 = {𝑔1 , 𝑔2 , … , 𝑔𝑖 , … , 𝑔𝑚 }.
+We define the number of times a sample of the same type as the
+image 𝑝𝑟𝑖 in the Probe set appears in the Gallery set as 𝐾𝑝𝑟𝑖 . The target
+recognition process is as follows: First, extract the feature vector of the
+image 𝑝𝑟𝑖 from the Probe set and compare it with the feature vectors of
+all images in the Gallery set, calculating the distance between them.
+Then, according to the size of the distance, sort the Gallery set in
+ascending order, and the re-sorted Gallery set is denoted as 𝐺𝑝𝑟𝑖 . In this
+process, if there are matching images for the image 𝑝𝑟𝑖 in the Probe set
+within the Gallery set, then this set of matching images is denoted as
+𝐺̂ 𝑝𝑟𝑖 = {𝑔̂1 , 𝑔̂2 , … , 𝑔̂𝑖 , … , 𝑔̂𝐾𝑝𝑟 }. Assume the matching image 𝑔̂𝑖 ranks 𝑟𝑗
+𝑖
+in the re-sorted Gallery set 𝐺𝑝𝑟𝑖 and ranks 𝑟̂𝑗 in the set of matching
+images 𝐺̂ 𝑝𝑟𝑖 . By repeating this process for all images in the Probe set,
+we can calculate the overall mAP value of the model as Formula (16).
+𝑚𝐴𝑃 =
+
+𝑛̂
+𝑛
+
+(16)
+
+When a picture 𝑝𝑟𝑖 in the detection set matches the first identified
+result 𝐺̂ 𝑝𝑟𝑖 (the top-ranked picture after sorting by feature vector distance) as the same type, it is said that 𝑝𝑟𝑖 satisfies the first-hit. Let 𝑛̂
+9
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+Table 7
+The Details of ISCXVPN2016.
+Traffic type
+
+Traffic content
+
+Web browsing
+VPN-Web browsing
+
+Firefox,Chrome
+
+Email
+VPN-Email
+
+SMTPS,POP3S,IMAPS
+
+Chat
+VPN-Chat
+
+ICQ,AIM,Skype,Facebook,Hangouts
+
+Streaming
+VPN-Streaming
+
+Vimeo,Youtube
+
+File Transfer
+VPN-File transfer
+
+Skype,FTPS,SFTP
+
+VoIP
+VPN-VoIP
+
+Facebook,Skype,Hangouts,Voice
+
+P2P
+VPN-P2P
+
+uTorrent,Transmission
+
+and processing the right feature data often leads to substantial improvements. Currently, most researchers simply convert the raw traffic
+bytecodes directly into grayscale images for training deep learning
+models, generating images similar to the aforementioned RNN traffic
+maps. Although this approach minimizes manual intervention, the
+quality of recognition is entirely dependent on the model design. Thus,
+leveraging prior knowledge for traffic preprocessing, as in the multidimensional feature extraction process of this scheme, proves invaluable.
+Experimental results confirm that appropriate training data selection
+can significantly enhance the model’s recognition accuracy.
+Fig. 14. Illustration of traffic features with multiple dimensions and different
+combinations.
+
+6.2. Comparison with other models
+To demonstrate the characteristics and effectiveness of the aforementioned models in our scheme, this section conducts a comparative
+analysis of multiple models on the same dataset. The dataset used is
+the VPN-nonVPN (ISCXVPN2016) dataset, which was open-sourced by
+Draper-Gil G [37] and others in 2016. The comparative models include
+C4.5 proposed by Draper-Gil G and one-dimensional CNN proposed by
+Wang W [6]. In order to differentiate between different models, the
+notation ‘‘model’’ is used throughout. For example, the model proposed
+in this paper is denoted as MGN_OSR.
+Data augmentation techniques are disabled in this study, and
+Draper-C4.5, Wang-1CNN, and the model proposed in this paper are
+evaluated on a dataset consisting of 12 classes of traffic, including
+emails, as shown in the Table 7.
+The experimental results, as shown in Fig. 15, indicate that our
+proposed model performs better overall in terms of precision and
+recall compared to the C4.5 algorithm used by Draper-Gil G. It even
+outperforms C4.5 by approximately 23% in the VPN-Chat category.
+Furthermore, compared to the one-dimensional CNN used by Wang W,
+our model only achieves slightly lower scores in certain categories such
+as Streaming and File, but shows a significant improvement overall,
+especially in the Email and Chat categories.
+Additionally, in terms of average precision, Draper-C4.5 achieves
+86.4%, Wang-1CNN achieves 89.3%, and our model achieves 97.8%.
+Regarding average recall, Draper-C4.5 achieves 85.4%, Wang-1CNN
+achieves 89.8%, and our model achieves 96.5%. Our model exhibits
+outstanding performance in both metrics.
+
+Table 6
+Traffic identification results under different dimensional characteristics.
+
+RNN
+RGN
+RGB
+
+Macro-F1
+
+Micro-F1
+
+mAP
+
+Rank-1
+
+Rank-3
+
+Rank-5
+
+Rank-10
+
+74.86
+76.45
+76.55
+
+75.69
+78.46
+78.58
+
+91.83
+94.39
+94.42
+
+93.22
+95.39
+95.37
+
+93.97
+96.64
+96.82
+
+94.21
+96.72
+96.98
+
+95.78
+97.53
+97.84
+
+In the comparative experiments of this section, the data chosen for
+model training include the three aforementioned types of traffic maps.
+For ease of description, we label them as RNN, RGN, and RGB, respectively. The deep learning model uniformly adopts the architecture
+proposed in this paper, and the evaluation metrics include the microaveraged F1 value, macro-averaged F1 value, the commonly used mAP
+value in the target detection field, and the Rank-n hit rate. Table 6
+displays the results of traffic recognition under different dimensional
+features.
+According to Table 6, the recognition performance between RGN
+and RGB does not differ significantly, yet, overall, RGB tends to outperform RGN. This advantage mainly attributes to the additional dimension of statistical feature data incorporated into RGB, enriching the
+traffic map with more detailed information. However, it is noteworthy
+that the top-1 hit rate for RGB is slightly lower than that for RGN, a
+result consistently observed across multiple experiments. This might be
+due to the visual similarity among certain types of RGB traffic maps,
+for instance, some WannaCry traffic maps might be misidentified as
+Dridex type. Moreover, both RGB and RGN significantly outperform
+RNN, indirectly validating the feasibility and superiority of this scheme.
+The analysis above demonstrates that different combinations of
+multidimensional features of encrypted traffic directly influence the
+model’s recognition performance, with traffic maps utilizing the RGB
+combination yielding the best results. This underscores the significant
+impact of data preprocessing on the overall scheme, where choosing
+
+6.3. Open set recognition performance
+To better demonstrate the recognition performance of the proposed
+method, this section uses the MNET2024 dataset built in this paper for
+experiments.
+A group of experiments is randomly selected, with Razy, Trickbot,
+and Wannacry as the unknown class in the first group. The traffic
+recognition rate is shown in the Table 8.
+10
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+
+Table 9
+Comparison of AUROC metrics on the unknown class detection task.
+
+Table 8
+Traffic identification accuracy.
+Accuracy
+
+Name(Malicious)
+
+Accuracy
+
+Dropbox
+Ebay
+Gmail
+Mega
+NetEase Music
+Skype
+WhatsApp
+Youtube
+Instagram
+News Break
+
+98.2
+89.2
+96.5
+97.3
+95.2
+93.7
+98.2
+96.4
+99.5
+97.8
+
+Bunitu
+CCleaner
+Dridex
+Emotet
+Heuristic
+HPEMOTET
+PUA.Taobao
+Razy(Unkwon)
+Trickbot(Unkwon)
+WannaCry(Unkwon)
+
+89.2
+96.7
+99.8
+97.4
+94.9
+98.9
+92.4
+97.6
+95.8
+99.3
+
+MNET2024
+
+ISCXVPN2016
+
+CTU
+
+C2AE [21]
+MLOSR [19]
+GFROSR [22]
+
+91.3
+93.7
+83.1
+
+92.5
+88.2
+87.3
+
+83.3
+82.5
+80.7
+
+OSRCI [22]
+GCPL [23]
+PROSER [24]
+
+84.2
+87.3
+94.5
+
+65.3
+86.8
+87.9
+
+73.2
+79.4
+81.2
+
+MGN_OSR
+
+96.8
+
+92.1
+
+86.5
+
+ones. With the continuous advancement in technology, the accuracy of
+these recognition schemes has been steadily improving. When ample
+physical and time resources are available, selecting the appropriate
+data format and network model can significantly enhance efficiency.
+Therefore, this section compares the characteristics of different schemes
+to further highlight the efficiency and superiority of our approach. For
+the task of recognizing malicious encrypted traffic, current research
+has shown that the iterative update of technology from surface feature
+extraction to deep learning has led to significant improvements in
+recognition effects. With sufficient computational resources and time,
+choosing the appropriate data processing methods and network models
+can greatly improve the efficiency and accuracy of recognition. This
+section, through a detailed comparison of existing different schemes,
+further demonstrates the significant advantages of our scheme in terms
+of efficiency and performance.
+Comparative schemes include MARK-ELM (2015) [44], VAEN
+(2017) [34], HAST-IDS (2018) [21], LeNet-5 (2019) [23], and HexCNN1D (2023) [26], with the results shown in Table 10.
+In the model evaluation phase, our research’s data preprocessing
+stage stands out significantly from other approaches. Our scheme integrates three-dimensional feature data of malicious encrypted traffic,
+whereas other schemes, such as VAEN and HAST-IDS, rely solely on
+single-dimensional feature data of traffic, opting only for specific segments of raw data. The LeNet-5 scheme, on the other hand, constructs
+images based on the size of data packets and their arrival times, without
+much human intervention in feature engineering. Thus, our approach
+is unique in extracting multidimensional traffic features. During the
+model training phase, we utilize RGB traffic maps as the data carrier,
+extracting multi-granular features of the traffic maps through a multibranch CNN model based on ResNet-50. The interaction and feedback
+among features from different branches endow our scheme with the capabilities of multi-granular feature extraction, end-to-end recognition,
+and transferable learning. In contrast, the HAST-IDS scheme uses both
+CNN and LSTM deep learning models to extract spatial and temporal
+features of traffic, illustrating its multi-granular feature extraction properties as well. Furthermore, this paper explores the new direction of
+open-set recognition, an area not yet extensively studied in the field of
+malicious traffic recognition.
+
+Fig. 15. Results of multi-classification experiments. (a) Accuracy results of
+multi-classification experiments. (b) Recall results of multi-classification experiments.
+
+Name(Benign)
+
+Method
+
+This paper compares the proposed method with different but related architectures, such as autoencoder-based methods [38–40] and
+newer class prototype methods [40–42]. The experiments are conducted using the dataset constructed in this paper (MNET2024), VPNnonVPN (ISCXVPN2016) dataset, and the CTU malware dataset [43].
+The experimental results are shown in the 9. Apart from a slight lag
+behind C2AE on ISCXVPN2016, our model performs better on the
+other two datasets, especially on the dataset constructed in this paper
+(MNET2024) with an improvement of 2.3%. This also indicates that
+our scheme can accurately identify unknown classes while ensuring
+closed-set performance.
+
+7. Conclusion and future work
+This article proposes an innovative encrypted malicious traffic open
+set identification scheme based on multi-feature fusion. The scheme
+deeply explores the entire process from traffic preprocessing to the
+selection of deep learning models. By converting the original traffic
+data into RGB images, the scheme not only achieves multidimensional
+traffic selection and fusion but also effectively eliminates redundant
+background information, significantly improving the quality of the data
+input into the model. In terms of model selection, we use a multi-branch
+structure network to extract and learn features at different granularity
+levels, making the most of all available features. Finally, by modeling
+on the manifold generated by the category-specific encoder, we successfully achieve open set identification in the field of traffic recognition.
+Through extensive experiments on our self-built MNET2024 dataset and
+
+6.4. Comparison with other plans
+In comparing different schemes for the recognition of malicious
+encrypted traffic, researchers have proposed a variety of solutions ranging from superficial features to deep features, from machine learning
+to deep learning, and from simple network architectures to complex
+11
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+Table 10
+A comparison of the characteristics of different schemes.
+Program features
+
+MARK-ELM
+
+VAEN
+
+HAST-IDS
+
+LeNet-5
+
+HexCNN-1D
+
+MGN_OSR
+
+Multidimensional feature extraction and fusion
+Multi-granularity vector feature extraction
+Open set recognition
+Data processing methods
+
+#
+#
+#
+#
+
+#
+#
+#
+#
+
+#
+!
+#
+!
+
+#
+#
+#
+#
+
+#
+#
+#
+!
+
+!
+!
+!
+!
+
+the publicly available ISCXVPN2016 dataset, and by comparing with
+other research results, the model shows significant recognition effects
+in both closed and open sets.
+To further explore the application scenarios of the model, we identified two issues that need further research in future work. First,
+although many studies have achieved good results on public datasets,
+the real samples faced in industrial environments often have a serious
+imbalance problem, such as a certain type of sample being far more
+numerous than another type. This data imbalance may lead to problems
+such as model overfitting, a common challenge in machine learning. In
+practical applications, it is almost impossible to achieve consistency in
+the amount of training data samples for all types. Therefore, how to
+implement reasonable sampling strategies at the data level (to avoid
+undersampling or oversampling), adjust network parameters at the
+algorithm level, and use data augmentation techniques to increase the
+sample size are issues that need further exploration.
+Second, with the rapid development of network protocols and applications, the current network environment is becoming increasingly
+complex. Open set traffic identification is just the first step; future
+research should also consider how to build models in a network environment that is updated in real-time. Exploring how to use detected
+unknown category traffic for real-time training of the model, thereby
+learning from newly emerging malicious or benign traffic to expand the
+model’s recognition capabilities, is also an urgent problem to be solved
+in future research.
+
+[4] Robert Winding, Timothy Wright, Michael Chapple, System anomaly detection:
+Mining firewall logs, in: 2006 Securecomm and Workshops, IEEE, 2006, pp. 1–5.
+[5] Ming Li, Dezhi Han, Xinming Yin, Han Liu, Dun Li, Design and implementation
+of an anomaly network traffic detection model integrating temporal and spatial
+features, Secur. Commun. Netw. 2021 (1) (2021) 7045823.
+[6] Wei Wang, Ming Zhu, Xuewen Zeng, Xiaozhou Ye, Yiqiang Sheng, Malware traffic
+classification using convolutional neural network for representation learning, in:
+2017 International Conference on Information Networking, ICOIN, IEEE, 2017,
+pp. 712–717.
+[7] Chuanxing Geng, Sheng-jun Huang, Songcan Chen, Recent advances in open set
+recognition: A survey, IEEE Trans. Pattern Anal. Mach. Intell. 43 (10) (2020)
+3614–3631.
+[8] K.K. Sunny Behal, Krishan Kumar, Extrusion: An outbound traffic based approach
+to detect botnets, Int. J. Inf. Telecommun. Technol. 2 (1) (2010) 71–76.
+[9] Snort, URL: https://www.snort.org/.
+[10] Sung-Min Kim, Young-Hoon Goo, Myung-Sup Kim, Soo-Gil Choi, Mi-Jung Choi,
+A method for service identification of SSL/TLS encrypted traffic with the relation
+of session ID and server IP, in: 2015 17th Asia-Pacific Network Operations and
+Management Symposium, APNOMS, IEEE, 2015, pp. 487–490.
+[11] Eva Papadogiannaki, Constantinos Halevidis, Periklis Akritidis, Lazaros Koromilas, Otter: A scalable high-resolution encrypted traffic identification engine, in:
+Research in Attacks, Intrusions, and Defenses: 21st International Symposium,
+RAID 2018, Heraklion, Crete, Greece, September 10-12, 2018, Proceedings 21,
+Springer, 2018, pp. 315–334.
+[12] Martin Husák, Milan Čermák, Tomáš Jirsík, Pavel Čeleda, HTTPS traffic analysis
+and client identification using passive SSL/TLS fingerprinting, EURASIP J. Inf.
+Secur. 2016 (2016) 1–14.
+[13] Sourabh Saxena, Demystifying malware traffic, in: SANS Institute InfoSec.(August
+2016), 2016.
+[14] Curtis McCarthy, A. Nur Zincir-Heywood, An investigation on identifying SSL
+traffic, in: 2011 IEEE Symposium on Computational Intelligence for Security and
+Defense Applications, CISDA, IEEE, 2011, pp. 115–122.
+[15] Wazen M Shbair, Thibault Cholez, Jerome Francois, Isabelle Chrisment, A multilevel framework to identify HTTPS services, in: NOMS 2016-2016 IEEE/IFIP
+Network Operations and Management Symposium, IEEE, 2016, pp. 240–248.
+[16] Feipeng Yan, Ming Xu, Tong Qiao, Ting Wu, Xue Yang, Ning Zheng, KimKwang Raymond Choo, Identifying wechat red packets and fund transfers
+via analyzing encrypted network traffic, in: 2018 17th IEEE International
+Conference on Trust, Security and Privacy in Computing and Communications/12th IEEE International Conference on Big Data Science and Engineering,
+TrustCom/BigDataSE, IEEE, 2018, pp. 1426–1432.
+[17] Ivan Torroledo, Luis David Camacho, Alejandro Correa Bahnsen, Hunting malicious TLS certificates with deep neural networks, in: Proceedings of the 11th
+ACM Workshop on Artificial Intelligence and Security, 2018, pp. 64–73.
+[18] Blake Anderson, David McGrew, Machine learning for encrypted malware traffic
+classification: accounting for noisy labels and non-stationarity, in: Proceedings
+of the 23rd ACM SIGKDD International Conference on Knowledge Discovery and
+Data Mining, 2017, pp. 1723–1732.
+[19] Mohammad Lotfollahi, Mahdi Jafari Siavoshani, Ramin Shirali Hossein Zade,
+Mohammdsadegh Saberian, Deep packet: A novel approach for encrypted traffic
+classification using deep learning, Soft Comput. 24 (3) (2020) 1999–2012.
+[20] Wei Wang, Ming Zhu, Jinlin Wang, Xuewen Zeng, Zhongzhen Yang, End-toend encrypted traffic classification with one-dimensional convolution neural
+networks, in: 2017 IEEE International Conference on Intelligence and Security
+Informatics, ISI, IEEE, 2017, pp. 43–48.
+[21] Wei Wang, Yiqiang Sheng, Jinlin Wang, Xuewen Zeng, Xiaozhou Ye, Yongzhong
+Huang, Ming Zhu, HAST-IDS: Learning hierarchical spatial-temporal features
+using deep neural networks to improve intrusion detection, IEEE Access 6 (2017)
+1792–1806.
+[22] Zhitang Chen, Ke He, Jian Li, Yanhui Geng, Seq2img: A sequence-to-image based
+approach towards ip traffic classification using convolutional neural networks,
+in: 2017 IEEE International Conference on Big Data, Big Data, IEEE, 2017, pp.
+1271–1276.
+[23] Tal Shapira, Yuval Shavitt, Flowpic: Encrypted internet traffic classification is
+as easy as image recognition, in: IEEE INFOCOM 2019-IEEE Conference on
+Computer Communications Workshops, INFOCOM WKSHPS, IEEE, 2019, pp.
+680–687.
+[24] José Cañete, Gabriel Chaperon, Rodrigo Fuentes, Jou-Hui Ho, Hojin Kang, Jorge
+Pérez, Spanish pre-trained bert model and evaluation data, 2023, arXiv preprint
+arXiv:2308.02976.
+
+Dataset & code availability
+The code and data related to the experiments are available at the
+provided link: https://github.com/BeerHan/Code-and-data-for-MGN-O
+SR.
+CRediT authorship contribution statement
+Xingwen Zhao: Methodology, Funding acquisition. Han Zhang:
+Writing – review & editing, Writing – original draft, Validation,
+Methodology, Data curation. Hui Li: Resources, Funding acquisition.
+Xuangui Chen: Writing – review & editing.
+Declaration of competing interest
+The authors declare that they have no known competing financial
+interests or personal relationships that could have appeared to
+influence the work reported in this paper.
+Data availability
+Data will be made available on request.
+References
+[1] Yue Zhao, Yarang Yang, Yiru Niu, Kaijun Wu, Yao Hao, Hong Su, Qi Zhao, A classification and identification technology of TLS encrypted traffic applications, in:
+2021 IEEE 4th International Conference on Big Data and Artificial Intelligence,
+BDAI, IEEE, 2021, pp. 160–164.
+[2] I. Sandvine, Global internet phenomena report, in: North America and Latin
+America, 2016.
+[3] What is encrypted traffic detection?, URL: https://info.support.huawei.com/infofinder/encyclopedia/zh/SSL%E5%8A%A0%E5%AF%86%E6%B5%81%E9%87%
+8F%E6%A3%80%E6%B5%8B.html.
+12
+
+Computer Networks 254 (2024) 110824
+
+X. Zhao et al.
+
+[43] CTU Malware Dataset, URL: https://www.stratosphereips.org/datasets-malware.
+[44] John M. Fossaceca, Thomas A. Mazzuchi, Shahram Sarkani, MARK-ELM: application of a novel multiple kernel learning framework for improving the robustness
+of network intrusion detection, Expert Syst. Appl. 42 (8) (2015) 4062–4080.
+
+[25] Stratosphere Lab. Malware Capture Facility Project, URL: https://mcfp.felk.cvut.
+cz/publicDatasets.
+[26] Yan Zhou, Huiling Shi, Yanling Zhao, Wei Ding, Jing Han, Hongyang Sun, Xianheng Zhang, Chang Tang, Wei Zhang, Identification of encrypted and malicious
+network traffic based on one-dimensional convolutional neural network, J. Cloud
+Comput. 12 (1) (2023) 1–10.
+[27] Andrew Moore, Denis Zuev, Michael Crogan, Discriminators for use in
+Flow-Based Classification, Tech. Rep., 2013.
+[28] Hyunchul Kim, Kimberly C Claffy, Marina Fomenkov, Dhiman Barman, Michalis
+Faloutsos, KiYoung Lee, Internet traffic classification demystified: myths, caveats,
+and the best practices, in: Proceedings of the 2008 ACM CoNEXT Conference,
+2008, pp. 1–12.
+[29] Python Pillow, URL: https://python-pillow.org/.
+[30] Liang Zheng, Liyue Shen, Lu Tian, Shengjin Wang, Jingdong Wang, Qi Tian,
+Scalable person re-identification: A benchmark, in: Proceedings of the IEEE
+International Conference on Computer Vision, 2015, pp. 1116–1124.
+[31] Image Augmentation for Machine Learning Experiments, URL: https://github.
+com/aleju/imgaug.
+[32] Ding Li, Yuefei Zhu, Wei Lin, Traffic identification of mobile apps based on
+variational autoencoder network, in: 2017 13th International Conference on
+Computational Intelligence and Security, CIS, IEEE, 2017, pp. 287–291.
+[33] Hongzhi Huang, Yu Wang, Qinghua Hu, Ming-Ming Cheng, Class-specific semantic reconstruction for open set recognition, IEEE Trans. Pattern Anal. Mach. Intell.
+45 (4) (2022) 4214–4228.
+[34] Guanshuo Wang, Yufeng Yuan, Xiong Chen, Jiwei Li, Xi Zhou, Learning discriminative features with multiple granularities for person re-identification, in:
+Proceedings of the 26th ACM International Conference on Multimedia, 2018, pp.
+274–282.
+[35] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun, Deep residual learning for
+image recognition, in: Proceedings of the IEEE Conference on Computer Vision
+and Pattern Recognition, 2016, pp. 770–778.
+[36] Yiming Yang, An evaluation of statistical approaches to text categorization, Inf.
+Retr. 1 (1–2) (1999) 69–90.
+[37] Gerard Draper-Gil, Arash Habibi Lashkari, Mohammad Saiful Islam Mamun, Ali A
+Ghorbani, Characterization of encrypted and vpn traffic using time-related, in:
+Proceedings of the 2nd International Conference on Information Systems Security
+and Privacy, ICISSP, 2016, pp. 407–414.
+[38] JinJin Lin, Pengfei Chen, Zibin Zheng, Microscope: Pinpoint performance issues
+with causal graphs in micro-service environments, in: Service-Oriented Computing: 16th International Conference, ICSOC 2018, Hangzhou, China, November
+12-15, 2018, Proceedings 16, Springer, 2018, pp. 3–20.
+[39] Jörg Thalheim, Antonio Rodrigues, Istemi Ekin Akkus, Pramod Bhatotia,
+Ruichuan Chen, Bimal Viswanath, Lei Jiao, Christof Fetzer, Sieve: Actionable
+insights from monitored metrics in distributed systems, in: Proceedings of the
+18th ACM/IFIP/USENIX Middleware Conference, 2017, pp. 14–27.
+[40] Yuan Meng, Shenglin Zhang, Yongqian Sun, Ruru Zhang, Zhilong Hu, Yiyin
+Zhang, Chenyang Jia, Zhaogang Wang, Dan Pei, Localizing failure root causes
+in a microservice through causality inference, in: 2020 IEEE/ACM 28th
+International Symposium on Quality of Service, IWQoS, IEEE, 2020, pp. 1–10.
+[41] Hong-Ming Yang, Xu-Yao Zhang, Fei Yin, Qing Yang, Cheng-Lin Liu, Convolutional prototype network for open set recognition, IEEE Trans. Pattern Anal.
+Mach. Intell. 44 (5) (2020) 2358–2370.
+[42] Da-Wei Zhou, Han-Jia Ye, De-Chuan Zhan, Learning placeholders for open-set
+recognition, in: Proceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition, 2021, pp. 4401–4410.
+
+Xingwen Zhao received his Bachelor’s and Master’s degrees
+in Communication Engineering from Xidian University in
+1999 and 2004, respectively. He obtained his Ph.D. in
+Computer Software and Theory from Sun Yat-sen University
+in 2011. Currently, he is an Associate Professor at the School
+of Cyber Engineering, Xidian University, specializing in
+Information Security. He is also involved as a board member
+in the Intelligent Information Processing Industrialization
+Branch of the China Association for the Industrialization of
+High Technology and is a member of ACM SIGSAC and the
+China Cryptology Association.
+
+Han Zhang received her B.S. degree in Computer Science
+and Technology from Jiangnan University in 2022,and
+is pursuing her M.S. degree in cyberspace security from
+Xidian University. Her research in terests primarily include malicious encrypted traffic detection and intrusion
+detection.
+
+Hui Li received the B.Sc. degree from Fudan University,
+in 1990, and the M.A.Sc.and Ph.D. degrees from Xidian
+University, Xi’an,Shaanxi, China,in 1993 and 1998, respectively.Since June 2005, he has been a Professor with
+the School of Cyber Engineering, Xidian University.He has
+published more than 170 international academic research
+papers on information security and privacy preservation.
+His research interests include cryptography, wireless network security, information theory, and network coding. He
+served as the Technique CommitteeChair or the Co-Chair for
+several conferences.
+
+Xuangui Chen received the B.S. degree in information
+security from Xidian University in 2023, and is pursuing
+her M.S. degree in cyberspace security from Xidian University. Her research interests include network traffic anomaly
+detection and semi supervised detection.
+
+13
+PAPER_TEXT

@@ -1,0 +1,789 @@
+This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 1
+
+ Learnable Frequency Domain Phase Residual and
+ Graph-Contrastive Dynamic Convolution Network
+ for Hyperspectral Anomaly Detection
+ Xiaobin Zhao, Senior Member, IEEE, Yuli Wang, Junjun Yin, Senior Member, IEEE, Wei Li, Senior
+ Member, IEEE, Yantao Zong, Gemine Vivone, Senior Member, IEEE
+
+ Abstract—Hyperspectral anomaly detection aims to identify
+sparse pixels with significant spectral or spatial differences
+from the surrounding background without prior target spectral
+ H YPERSPECTRAL remote sensing technology captures
+ the spectral reflection characteristics of ground objects
+ in the continuous narrow band range of 400-2500 nm, which
+information, and it has significant application value in key fields
+such as military reconnaissance and environmental monitoring. can finely depict the differences in material composition of
+Existing methods suffer from insufficient frequency-domain fea- ground objects and provide unprecedented data support for
+ture extraction, static multiscale spatial modeling, and inad- ground object classification, target recognition, and anomaly
+equate spectral–spatial feature interaction mechanisms. These detection. Hyperspectral anomaly detection (HAD), as one of
+limitations hinder their ability to adapt to complex scenarios the core tasks in this field, aims to automatically identify
+involving target spectral variations, diverse target scales, and
+intricate spatial structures. Therefore, we propose a learnable sparse pixels with significant spectral or spatial differences
+frequency domain phase residual and graph-contrastive dynamic from the surrounding background without prior target spectral
+convolution (LFGDC) network for hyperspectral anomaly detec- information [1]. With the unique advantage of unsupervised
+tion that integrates learnable frequency-domain modeling, mul- detection, this technology has irreplaceable application value
+tiscale dynamic convolution, and graph-structured contrastive in key fields such as military reconnaissance [2], [3], enconstraints. First, a learnable frequency domain phase residual block (LFPRB) is introduced to explicitly exploit spectral vironmental monitoring [4], [5], resource exploration [6],
+frequency-domain characteristics. Second, a multiscale dynamic and disaster emergency response [7]. The development of
+convolution module (MDCM) generates input-dependent convo- HAD technology has primarily focused on two core aspects:
+lution kernels to effectively adapt to spatial representations of enhancing feature modeling capability and improving scene
+targets at different scales. Finally, a graph-contrastive structure adaptability, leading to three main categories of approaches:
+fusion module (GCSFM) is constructed to uncover global-local
+topological correlations and enhance feature discriminability. statistics-based methods, representation-based methods, and
+This is combined with adaptive frequency-domain modeling and deep learning-based methods.
+multiscale feature fusion strategies to bolster model robustness. Statistics-based methods are the most classic category in
+Extensive experimental results demonstrate that this method HAD. Their core idea is to establish a statistical model for
+achieves superior detection performance compared to baseline the background and identify pixels that do not conform to this
+methods on both public and produced datasets, providing an
+effective solution for hyperspectral anomaly detection in complex statistical distribution as anomalies. Global statistical methods
+scenarios. are based on the Reed-Xiaoli (RX) algorithm [8], which
+ assumes that the background follows a multivariate Gaussian
+ Index Terms—Hyperspectral anomaly detection, learnable frequency domain phase residual block, multiscale dynamic convo- distribution and realizes anomaly discrimination by calculating
+lution module, graph-contrastive learning. the Mahalanobis distance between pixels and the background
+ mean. This method is only suitable for scenes with uniform
+ backgrounds. Local statistical methods introduce a sliding
+ I. I NTRODUCTION
+ window mechanism to cope with background inhomogeneity.
+ This work was supported in part by NSFC under Grant NSFC 62222102, Local RX [9] uses an inner-outer double window structure,
+62171023, 62401062, and the National Key Research and Development where the inner window is used to estimate local background
+Program of China under Grant 2024YFB3909800; in part by Fundamental statistical characteristics and the outer window is used to ex-
+Research Funds for the Central Universities under Grant FRF-TP-25-038.
+(Corresponding author: Junjun Yin.) clude potential anomaly interference. Statistics-based methods
+ Xiaobin Zhao, Yuli Wang and Junjun Yin are with the University rely on manually designed statistics and strong distribution
+of Science and Technology Beijing, Beijing 100083, China (e-mail: xi- assumptions, lacking robustness to complex factors such as
+aobinzhao@ustb.edu.cn, 15129778328@163.com, yinjj07@gmail.com).
+ Wei Li is with the School of Information and Electronics, Beijing Institute spectral variation and band redundancy. In the complex backof Technology, Beijing 100081, China, National Key Laboratory of Science ground of actual hyperspectral images (HSI), their detection
+and Technology on Space-Born Intelligent Information Processing, Beijing performance is easily severely affected, making it difficult to
+100081, China, and also with the Beijing Key Laboratory of Fractional Signals
+and Systems, Beijing 100081, China (e-mail: liwei089@ieee.org). meet the requirements of high-precision detection.
+ Yantao Zong is with the Department of Weapon and Control, Academy of Representation-based methods assume that the background
+Armored Forces, Beijing 100072, China (e-mail: 240089545@qq.com). can be linearly or nonlinearly represented by a set of basis
+ Gemine Vivone is with the National Research Council, Institute of Methodologies for Environmental Analysis, CNR-IMAA, 85050 Tito, Italy (e-mail: vectors or dictionary atoms, while anomalies cannot be efgemine.vivone@imaa.cnr.it). fectively represented, thereby identifying anomalies through
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 2
+
+representation residuals. Sparse representation methods [10] cient, as conventional transforms lack adaptability to spectral
+emphasize that background pixels can be sparsely represented variations and fail to fully exploit discriminative phase and
+under an overcomplete dictionary. Collaborative representation amplitude information. Second, spatial multiscale modeling is
+methods [11], [12] assume that background pixels can be largely static, with fixed convolution kernels and neighborlinearly represented by their neighboring pixels. Low-rank hood definitions that are inadequate for handling targets of
+representation methods [13], [14] decompose the entire HSI diverse scales under complex background conditions. Third,
+matrix into a low-rank background part and a sparse anomaly spectral–spatial interaction mechanisms are underdeveloped,
+part. Tensor representation methods [15], [16], [17] regard as most approaches rely on simplistic fusion strategies and
+hyperspectral data as a third-order tensor, which better pre- lack effective multiscale feature propagation and structured
+serves the spatial-spectral structure of the data [18]. Although regularization, limiting the exploitation of global–local toporepresentation-based methods have strong theoretical inter- logical dependencies.
+pretability, they generally have the following problems: most To address the above problems, this paper proposes a
+require manual tuning of a large number of parameters, and HAD method learnable frequency domain phase residual and
+flatten 3D hyperspectral data into a 2D matrix, destroying the graph-contrastive dynamic convolution (LFGDC) network. We
+inherent spatial-spectral structure information, limiting their move beyond fixed frequency-domain transforms and realize
+performance improvement in complex scenes. adaptive transformation in the frequency spectrum domain to
+ Benefiting from the powerful feature modeling capability enhance spectral robustness, optimize band weights through
+of deep learning, deep neural network (DNN)-based meth- attention mechanism, and improve target representation capaods have become the mainstream solution for current HAD. bility through multiscale fusion. The core contributions of this
+Unlike other methods, these methods do not require manual study are as follows:
+feature design or data distribution assumptions, and distinguish
+ 1) A learnable frequency-domain feature modeling mechbetween background and anomalies through self-supervised
+ anism is introduced. By embedding learnable frequency
+reconstruction tasks [19], [20], [21]. In convolution-based
+ domain phase residual block (LFPRB), adaptive roanomaly detection methods, researchers mostly rely on the
+ tation modulation of frequency-domain phase is reallocal feature extraction capability of convolutional neural
+ ized, combined with a multiscale spectral enhancement
+networks (CNNs) to construct detection frameworks [22].
+ strategy to extract complementary information at differ-
+Autonomous HAD network based on fully convolutional auent frequency scales. In addition, a lightweight spectoencoder [23] realizes end-to-end HSI reconstruction and
+ tral channel gating module is used to realize adaptive
+suppresses anomaly component reconstruction through adapweighting of spectral channels and enhancement of sigtive weights. Weakly supervised discriminative learning with
+ nificant spectral bands, thereby significantly improving
+spectral-constrained generative adversarial network [24] enthe frequency-domain discriminability and expression
+hances the difference in reconstruction errors between anomastability of spectral features.
+lies and the background. Deep low-rank prior (DeepLR) [25]
+ 2) A multiscale adaptive dynamic convolution module
+incorporates low-rank prior constraints during the reconstruc-
+ (MDCM) is proposed. This structure generates dynamic
+tion process to improve background modeling accuracy. Such
+ convolution kernels driven by input features to realize
+methods with fixed convolution kernels lack adaptive adjustinput-dependent adjustment of convolution weights, and
+ment capabilities for multiscale targets and complex scenes,
+ extracts feature representations of different receptive
+and fail to fully exploit discriminative information in the
+ fields under multiple convolution branches. This design
+frequency domain [26]. This results in limited adaptability to
+ enables the network to have spatial multiscale response
+spectral and structural variations.
+ and context adaptive capabilities, enhancing the model-
+ The rise of graph neural networks (GNNs) provides a new
+ ing performance for complex scenes and target structure
+technical path for HAD, which models feature correlations
+ changes.
+by constructing topological structures. Some methods [27],
+ 3) A graph-contrastive structure fusion module (GCSFM)
+[28], [29] regard HSI pixels as graph nodes, construct static
+ is constructed. By adaptively constructing multiscale
+adjacency graphs based on spectral similarity, and capture
+ adjacency graphs based on similarity in the feature space
+global correlation features through graph convolution propand performing graph convolution propagation under
+agation. Other studies [30], [31] combine graph embedding
+ different neighborhood scales, the model can capture
+with autoencoders to enhance the distinguishability of anomaly
+ local and global topological correlation features. At the
+features. In addition, some derivative methods expand the
+ same time, contrastive learning loss is introduced to agtechnical boundary of DNN-based HAD, such as deep support
+ gregate intra-class features and separate inter-class feavector data description [32] which transforms anomaly detectures, enhancing feature discriminative capability from
+tion into a hypersphere classification problem in the feature
+ the structural level.
+space, and low-rank embedded network [33] which extracts
+deep spectral features through joint training of an autoencoder The rest of this paper is organized as follows. Section II
+and a Gaussian mixture model. provides an overview of related works on HAD, Section III
+ In summary, although existing methods have achieved sig- elaborates on the proposed method. In Section IV, we present
+nificant progress, they still suffer from three major limitations. experimental results and analysis, comparing the performance
+First, frequency-domain feature modeling remains insuffi- of our framework with other methods. Finally, Section V gives
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 3
+
+concluding remarks. weak anomaly targets, cascaded AEs and pixel-level attention
+ AEs enhance feature extraction but have problems such as
+ II. R ELATED W ORK parameter redundancy and lack of global guidance.
+ CNN-based methods construct end-to-end models with the
+ This section briefly reviews the related work of traditional
+ help of the spatial feature extraction capability of CNNs. Liu
+methods, and deep learning-based methods, respectively.
+ et al. propose a multiscale CNN method [43], which uses
+ multi-size convolution kernels to extract multiscale features.
+A. Traditional Methods Multi-frequency transform guides dual-path CNN realizes
+ Some subspace representation methods assume that back- anomaly enhancement and background restoration, but the
+ground data lies in a low-dimensional subspace, while anomaly decomposition threshold is fixed. Wang et al. [44] propose
+pixels deviate from this subspace, and realize anomaly de- a multiscale fusion network with global weighting, integrating
+tection by learning the background subspace and calculating spectral–spatial features via 3-D weighting to suppress heterothe projection error of pixels to the subspace. Sparse repre- geneous interference.
+sentation methods assume that anomaly pixels have sparse Transformer-based methods capture long-distance depenrepresentation characteristics under the background dictionary, dencies through self-attention mechanisms, effectively modand separate the background and anomalies by solving sparse eling global spectral correlations and long-distance spatial
+coefficients. Mairal et al. propose a dictionary learning-based dependencies. The spectral–spatial transformer dual-branch
+sparse representation [34] method, which uses redundant infor- fuses spectral and spatial features [45], but the fusion method
+mation of the background to improve representation accuracy. is simple and inefficient. The lightweight spatial-window
+The collaborative representation detection [35] method con- transformer reduces complexity by limiting attention windows,
+structs a dictionary with local neighboring pixels to improve the hybrid transformer-CNN architecture combines the local
+computational efficiency. feature extraction of CNNs with the global dependency mod-
+ Li et al. [36] builds a new set of HAD benchmark datasets eling of transformers [46], retaining global information while
+for improving the robustness of the algorithm in complex improving efficiency [47].
+scenarios. Sun et al. propose the low-rank and total variation- GNN-based methods mine topological correlations by conbased anomaly detection (LARTVAD) [37] method, which structing pixel adjacency graphs [48], adapting to nonoperates directly on third-order tensors, uses tensor singular Euclidean structure data [49]. A method based on graph pixel
+value decomposition to characterize the global low-rankness selection achieves anomaly detection by solving a quadratic
+of the background, and combines total variation regularization programming problem on a vertex- and edge-weighted graph
+to constrain spatial smoothness. Representation-based meth- in [50]. Spectral graph convolutional networks rely on fixed
+ods usually rely on fixed linear transforms (such as Fourier similarity thresholds to construct adjacencies. It [51] fuses
+transform) or predefined dictionaries, lacking adaptive learning dual-dimensional correlations but has a fixed weight fusion
+capability for discriminative frequency-domain features, and ratio. Liu et al. [52] captures local and global topological
+spatial feature extraction is often static and fixed, making it features but uses simple concatenation for fusion, and fixes
+difficult to adapt to variable target scales and morphologies. neighborhood scales cannot adapt to dynamic targets.
+
+ III. M ETHODOLOGY
+B. Deep Learning-Based Methods H×W ×B
+ Let X ∈ R denote a HSI, where H, W , and B
+ With the breakthrough progress of deep learning technol- represent the spatial height, width, and the number of spectral
+ogy in feature extraction and representation learning, deep bands, respectively. In this work, we adopt a reconstructionlearning-based HAD methods have become the current re- based paradigm. A neural network F(·; Θ) is trained to model
+search mainstream, mainly covering five core architectures: background structures, while anomalous pixels are expected
+autoencoders, generative adversarial networks, convolutional to produce larger reconstruction errors, where Θ denotes the
+neural networks, transformers, and graph neural networks. set of all learnable network parameters. The anomaly score at
+ AE-based methods are the most widely used frameworks. spatial location (i, j) is defined as:
+The core idea is to use the reconstruction capability of AE to 2
+learn background features and realize discrimination through R(i, j) = X(i, j) − X̂(i, j) , (1)
+ 2
+the high reconstruction error of anomaly pixels [38], [39], [40].
+Early stacked AEs focuse on the spectral dimension and ignore where X̂ = F(X; Θ) denotes the reconstructed HSI.
+spatial information, resulting in poor detection results for The overall architecture of the proposed method is ilcomplex structural anomalies. Convolutional AEs introduce lustrated in Fig. 1. The network consists of three major
+convolution operations to extract spatial-spectral joint features, components: LFPRB for extraction of spectral discriminant
+but fixed-size convolution kernels are difficult to adapt to features, MDCM for spatial feature extraction, and GCSFM
+multiscale targets and have insufficient robustness to spectral for spectral–spatial consistency enhancement.
+variation. Subsequent improved adversarial AEs [41] constrain The proposed network follows a hierarchical modeling stratfeature distribution through an adversarial mechanism but are egy. Specifically, spectral modeling is first conducted in the
+prone to mode collapse. Variational AEs [42] improve gener- frequency domain to capture intrinsic spectral characteristics.
+alization capability but have insufficient distinguishability for Subsequently, spatial feature interactions are enhanced via
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 4
+
+Fig. 1: Overall framework of the proposed HAD method. LFPRB performs frequency-domain spectral enhancement, followed
+by MDCM for input-adaptive multiscale spatial modeling. In parallel, GCSFM is imposed on intermediate features during
+training to enforce global–local structural consistency via graph-contrastive learning, without introducing additional inference
+overhead.
+
+Fig. 2: Structure of the LFPRB. A learnable frequency domain phase modulation is applied to spectral frequency
+components, followed by a residual connection to preserve the original spectral information.
+
+multiscale dynamic convolution. Finally, structural consistency real-valued Fourier transform is applied along the spectral
+is imposed through graph-based contrastive learning during dimension:
+training to further regularize background representations. Xf = rFFT(X), (2)
+
+A. LFPRB where Xf ∈ C(⌊B/2⌋+1)×H×W . Instead of adopting a fixed
+ spectral transform, a learnable frequency domain phase mod-
+ Spectral information plays a fundamental role in HAD. ulation is performed:
+However, conventional convolutional networks mainly operate
+in the spatial domain and implicitly model spectral correlations X′f = Xf ⊙ exp(−jαω), (3)
+through stacked convolutions, which limits their ability to √
+explicitly capture discriminative spectral frequency character- where j = −1 denotes the imaginary unit, which is distinct
+istics. Moreover, fixed spectral transforms lack adaptability to from the spatial index j used in (i, j), ω denotes the normalspectral variability caused by illumination changes, material ized spectral frequency indices, and α is a learnable frequency
+heterogeneity, and complex background distributions. domain parameter controlling the degree of phase rotation.
+ To explicitly exploit spectral frequency-domain characteris- This operation enables adaptive adjustment of spectral phase
+tics while maintaining adaptivity, we introduce a LFPRB to information, allowing the network to emphasize discriminative
+enhance spectral discrimination, as shown in Fig. 2. Given frequency components and suppressing background-dominated
+an input hyperspectral feature tensor X ∈ RB×H×W , a spectral responses in a data-driven manner.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 5
+
+Fig. 3: Structure of the MDCM. Dynamic convolution kernels with different receptive fields are generated adaptively
+according to the input features for flexible spatial modeling.
+
+ The modulated frequency-domain features are then trans- generation network. For each branch, the input feature map is
+formed back to the spectral domain using the inverse real FFT: first globally aggregated and then fed into a sequence of fully
+ connected (FC) layers, followed by batch normalization (BN)
+ X̃ = irFFT(X′f ), (4)
+ and Gaussian Error Linear Unit (GeLU) activation, to produce
+which results in a spectrally enhanced representation. To the scale-specific convolution weights.
+preserve the original spectral information and stabilize network For the s-th convolution branch, the dynamic convolution
+optimization, a residual connection is introduced: operation can be expressed as:
+
+ XLFPRB = X̃ + X. (5) Fs = Conv(F, Ws (F)), (6)
+ Through learnable frequency domain phase modulation, where Convs (·) denotes a standard convolution operation,
+LFPRB enhances spectral discriminability while retaining Ws (·) denotes the dynamically generated convolution kernel
+background stability, providing a robust spectral foundation for s-th scale, and Ws (F) is generated by a lightweight
+for subsequent spatial modeling. parameter prediction network composed of FC, BN, and
+ GeLU layers. The use of FC layers enables flexible cross-
+B. MDCM channel interaction, BN stabilizes the dynamic kernel learning
+ process, and GeLU introduces non-linearity to enhance the
+ Hyperspectral anomaly targets often exhibit irregular spatial
+ expressive capacity of the generated kernels, while keeping
+structures and diverse spatial scales. Fixed convolution kernels
+ the overall computational overhead low. This formulation
+with limited receptive fields are insufficient to effectively
+ allows the receptive field response to adapt to spatial context
+model such variability, especially under complex and heterovariations, enhancing sensitivity to anomalies of different sizes
+geneous background conditions. Although multiscale convoand shapes.
+lutional architectures can partially alleviate this issue, their
+ The outputs of all branches are subsequently fused through
+convolution kernels remain static and lack adaptability to local
+ an attention-based weighting mechanism:
+feature distributions. To address these limitations, we propose
+a MDCM that performs input-dependent spatial feature ex- N
+ X S
+ X
+traction by dynamically adjusting convolutional kernels across FMDCM = βs F s , βs = 1, (7)
+multiple receptive fields, as shown in Fig. 3. s=1 s=1
+
+ Given an intermediate feature map F ∈ RC×H×W , the where βs represents the adaptive importance weight of the s-th
+feature tensor is rearranged to C × H × W for convolution scale, inferred from the input features. Specifically, the scale
+operations, where C denotes the number of feature chan- weights are estimated via a lightweight attention mechanism,
+nels, and MDCM consists of multiple parallel convolution in which the multi-scale branch outputs are first summarized
+branches with different kernel sizes, each corresponding to by global average pooling and then passed through a small
+a distinct receptive field. Instead of using fixed convolution fully connected network to produce scale-wise responses.
+weights, a lightweight kernel generation mechanism conditions A softmax normalization
+ P is subsequently applied to obtain
+the convolution kernels on the input feature representation, βs , ensuring that s β s = 1. This adaptive fusion strategy
+enabling adaptive modulation of spatial filters according to enables the network to emphasize the most informative spatial
+local spectral–spatial characteristics. Specifically, the dynamic scales while suppressing redundant or background-dominated
+convolution kernels are generated through a lightweight kernel responses.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 6
+
+Fig. 4: Structure of the GCSFM. Multiscale graph convolution and contrastive learning are employed to enhance global local
+spectral–spatial consistency.
+
+ By jointly leveraging multiscale receptive fields and input- integrate contextual information from spectrally and spatially
+dependent convolutional kernels, MDCM provides flexible and similar neighbors, reinforcing background consistency while
+context-aware spatial modeling, which is particularly benefi- preserving local structural variations.
+cial for HAD in scenes with complex spatial layouts and scale- Let hn denote the graph-enhanced feature representation
+varying targets. of the n-th node in H. To further regularize the learned
+ representations, a contrastive learning objective is imposed on
+ these graph-enhanced features. Specifically, for each anchor
+C. GCSFM
+ feature hn , a positive h+n is constructed by pairing features
+ Although reconstruction-based HAD methods can effec- of the same node under different graph scales or feature pertively model background distributions, they often suffer from turbations, while features from other nodes serve as negative
+insufficient feature compactness in the latent space, which samples. The contrastive loss is defined as:
+leads to background dispersion and blurred separation between
+background and anomaly representations. This issue is partic-
+ X exp(sim(hn , h+n )/τ )
+ Lcon = − log P , (10)
+ularly prominent in complex scenes with heterogeneous spatial n m exp(sim(hn , hm )/τ )
+structures and spectral variability. where sim(·, ·) denotes the cosine similarity function and τ
+ To further enhance spectral–spatial consistency and im- is the temperature parameter This loss encourages compact
+prove feature discriminability during training, we introduce a background representations while enlarging the embedding
+GCSFM, which incorporates structured neighborhood model- gap between background and anomalous pixels.
+ing and contrastive constraints into the representation learning By jointly leveraging graph-based neighborhood aggregaprocess, as shown in Fig. 4. tion and contrastive regularization, GCSFM encourages com-
+ Given the intermediate feature representation Z ∈ pact background representations while enlarging the embed-
+RC×H×W , each spatial location is treated as a graph node. To ding separation between background and anomalous pixels. It
+capture local spectral–spatial correlations, a similarity graph is is worth noting that GCSFM is only activated during training
+constructed based on cosine similarity in the feature space. For and is completely removed during inference, introducing no
+each node n, its neighborhood NK (n) is defined as the set of additional computational overhead at test time.
+its top-K nearest neighbors, and the corresponding adjacency The overall training objective is formulated as:
+matrix is formulated as:
+ ( L = Lrec + λLcon , (11)
+ 1, if m ∈ NK (n),
+ Anm = (8) where Lrec denotes the reconstruction loss and λ controls the
+ 0, otherwise.
+ contribution of the contrastive term.
+ Note that the resulting adjacency matrix is generally asym- During inference, only the reconstruction branch is retained.
+metric due to the directed KNN construction. Multiscale The anomaly map is generated based on the pixel-wise regraphs are constructed by varying the neighborhood size K, construction residual defined in Eq.(1) followed by spatial
+enabling both local and global structural modeling. Based smoothing to suppress isolated noise responses.
+on the constructed graph, graph convolution is performed to
+aggregate neighborhood information: IV. E XPERIMENTAL R ESULTS
+ H = σ(AZW), (9) In this section, eight real hyperspectral datasets are used
+ to evaluate the performance of the proposed HAD algowhere W is a learnable weight matrix and σ(·) denotes a non- rithm through experiments. Detailed descriptions of these real
+linear activation function. This operation enables each node to datasets are provided below. All experiments are conducted in
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 7
+
+ (a) (b) (c) (d) (e) (f) (g) (h)
+Fig. 5: The pseudo-color images and ground truth maps of the eight HSI datasets. (a) Los Angeles, (b) Gulfport, (c) Cat Island,
+(d) Pavia, (e) Texas Coast, (f) Gainesville, (g) Wasteland-WZW, (h) Wasteland-DDC.
+
+the Python 3.11 environment on a personal computer equipped B. Comparative Algorithms and Evaluation Metrics
+with an AMD Ryzen 9 8940HX CPU, an NVIDIA RTX
+5060 GPU, 16 GB memory, and 64-bit Windows 11 operating 1) Comparative Algorithms: To comprehensively demonsystem. In terms of deep learning frameworks, PyTorch 2.9.0 strate the superiority of our proposed method, we selected
+is used. seven state-of-the-art HAD algorithms for comparison, including low-rank and total variation-based anomaly detection
+ (LARTVAD) [37], transformer-based AE framework (TAEF)
+ [53], low-rank and sparse matrix decomposition-based Ma-
+A. Datasets
+ halanobis distance anomaly detection (LSMAD) [54], kernel
+ The first dataset is Los Angeles, captured by the Airborne isolation forest detection (KIFD) [55], deep low-rank prior
+Visible/Infrared Imaging Spectrometer (AVIRIS) sensor over (DeepLR) [25], gated transformer for HAD (GT-HAD) [56],
+the region of Los Angeles. After removing water absorption and background suppression diffusion model (BSDM) [57].
+and low signal-to-noise ratio bands, 205 spectral bands are The LSMAD algorithm measures the degree of anomaly by
+retained, with a spatial size of 100 × 100 pixels. The second calculating the Mahalanobis distance between the pixel under
+dataset, Gulfport, is also an airport area captured by the test and the statistical characteristics of its local background.
+airborne AVIRIS sensor. It has a size of 100 × 100 pixels LARTVAD is a tensor-based method that exploits the low-rank
+and retains 191 bands. The third dataset, Cat Island, is a property and piecewise smoothness of the background tensor
+beach region also captured by the AVIRIS sensor, containing [58]. TAEF employs the attention mechanism of transformers
+100 × 100 pixels and 188 spectral bands. The fourth dataset, to handle long-range dependencies and captures global infor-
+Pavia, is a city acquired by the reflective optics system imaging mation. KIFD is an unsupervised detection algorithm based
+spectrometer (ROSIS) sensor, with a spatial dimension of on kernel density estimation. Deep-LR integrates model-driven
+150 × 150 pixels and 102 spectral bands. The fifth dataset low-rank priors into a data-driven network and imposes lowis Texas Coast, which consists of images of an urban area rank constraints on the network outputs. GT-HAD utilizes the
+collected by the airborne AVIRIS sensor. The spatial area spatial-spectral similarity of HSI to guide the reconstruction
+covered by the dataset is 100 × 100 pixels, and 204 spectral process.
+bands are retained removing noise bands. The sixth dataset is 2) Evaluation Metrics: Several classical and commonly
+Gainesville, urban area images also collected by the airborne used metrics are employed to evaluate the performance of
+AVIRIS sensor. The dataset covers a spatial area of 100 × 100 these algorithms. First, the receiver operating characteristic
+pixels, with 207 spectral bands retained after noise band (ROC) curve is employed to evaluate anomaly detection
+removal, respectively. The seventh dataset, Wasteland-WZW, performance by illustrating the trade-off between the true
+which is collected from a specific wasteland area, contains positive rate (TPR) and the false positive rate (FPR) under
+three camouflage. These are made of a special synthetic different detection thresholds. Specifically, TPR measures the
+material designed to blend with the natural environment. The proportion of abnormal pixels that are correctly detected and
+areas corresponding to these camouflage in the image have is defined as the ratio of true positives (TP) to the total
+21 anomalous pixels. The dataset has a size of 256 × 256 number of abnormal pixels, where TP denotes the number
+pixels and 198 spectral bands. The final dataset, Wasteland- of abnormal pixels correctly classified as anomalies and false
+DDC, is characterized by a spatial dimension of 512 × 512 negatives (FN) denote the number of abnormal pixels inpixels. This dataset features a total of ten missile - vehicle correctly classified as background. FPR measures the protargets, and after excluding noisy bands, 198 spectral bands portion of background pixels that are incorrectly classified
+are preserved, containing a total of 64 anomalous pixels to as anomalies and is defined as the ratio of false positives
+be detected. These datasets feature diverse types of anomaly (FP) to the total number of background pixels, where FP
+targets, and their pseudo-color images along with ground truth denotes the number of background pixels incorrectly classified
+maps are shown in Fig. 5. as anomalies and true negatives (TN) denote the number of
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 8
+
+ Ground
+ LARTVAD TAEF LSMAD KIFD Deep-LR GT-HAD BSDM Ours
+ truth
+
+ (a)
+
+ (b)
+
+ (c)
+
+ (d)
+
+ (e)
+
+ (f)
+
+ (g)
+
+ (h)
+
+Fig. 6: The detection maps of different methods on eight datasets. (a) Los Angeles, (b) Gulfport, (c) Cat Island, (d) Pavia, (e)
+Texas Coast, (f) Gainesville, (g) Wasteland-WZW, (h) Wasteland-DDC. All anomaly maps are normalized to the range [0, 1]
+for visualization purposes, where brighter intensities indicate higher anomaly scores.
+
+background pixels correctly classified as background. Second, LARTVAD, TAEF, and KIFD methods are susceptible to
+the area under the ROC curve (AUC) is used to measure the background texture interference, resulting in numerous false
+overall performance of the algorithm, the closer the AUC is to positive annotations. In contrast, our method can successfully
+1, the better the average performance. Finally, the background- eliminate texture interference and accurately locate anomaly
+separated anomaly map is drawn through a box-plot, which targets. Moreover, compared with the deep learning methclearly shows the distribution difference of the anomaly scores ods of Deep-LR and GT-HAD, the boundaries of anomaly
+output by the algorithm on real background pixels and real targets in our method are clearer, with no obvious target
+abnormal pixels, thereby intuitively evaluating the separation diffusion phenomenon. In the camouflage net detection task
+ability of the algorithm. An anomaly box that is overall much of Wasteland-WZW, the proposed method can effectively
+higher than the background box and has a good separation overcome the spectral confusion between the camouflage
+between the two boxes indicates that the anomaly detection net and the background. However, due to the insufficient
+algorithm has excellent performance. capture of low-frequency spectral differences, LSMAD and
+ BSDM miss the detection of some anomaly pixels. These
+C. Detection Performance detection maps strongly demonstrate that the proposed method
+ can effectively highlight anomaly targets while significantly
+ The detection maps of different methods on eight HSI
+ suppressing background noise.
+datasets are shown in Fig. 6. As can be seen from the figure,
+the proposed method can achieve a balance between anomaly Fig. 7 shows the box-plot results of each method. The
+detection and background suppression in all scenarios. The green boxes represent the distribution of anomaly scores for
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 9
+
+ (a) (b)
+
+ (c) (d)
+
+ (e) (f)
+
+ (g) (h)
+
+Fig. 7: Box-plots of the compared methods on the eight datasets. (a) Los Angeles, (b) Gulfport, (c) Cat Island, (d) Pavia, (e)
+Texas Coast, (f) Gainesville, (g) Wasteland-WZW, (h) Wasteland-DDC.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 10
+
+ (a) (b)
+
+ (c) (d)
+
+ (e) (f)
+
+ (g) (h)
+
+Fig. 8: ROC curves of the different methods on the eight datasets. (a) Los Angeles, (b) Gulfport, (c) Cat Island, (d) Pavia, (e)
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+Texas Coast, (f) Gainesville, but Wasteland-WZW,
+ (g)republication/redistribution Wasteland-DDC.
+ (h) IEEE
+ requires permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 11
+
+ TABLE I: AUC Values of the Different Methods on the Eight Hyperspectral Datasets
+
+ Dataset LARTVAD TAEF LSMAD KIFD Deep-LR GT-HAD BSDM Ours
+ Los Angeles 0.9781 0.9910 0.9670 0.9887 0.9911 0.9603 0.9807 0.9982
+ Gulfport 0.9259 0.9304 0.9410 0.9017 0.9772 0.9862 0.9783 0.9902
+ Cat Island 0.9271 0.9271 0.9648 0.9985 0.9990 0.9990 0.9996 0.9996
+ Pavia 0.9003 0.8696 0.9218 0.9568 0.9178 0.8992 0.9627 0.9965
+ Texas Coast 0.9834 0.9276 0.8973 0.9903 0.9674 0.9866 0.9882 0.9959
+ Gainesville 0.9963 0.9276 0.9601 0.9972 0.9931 0.9904 0.9968 0.9994
+ Wasteland-WZW 0.7320 0.7899 0.8479 0.8130 0.7557 0.8932 0.9789 0.9910
+ Wasteland-DDC 0.8294 0.8130 0.8462 0.9458 0.9478 0.8454 0.9623 0.9921
+
+ TABLE II: Execution Time of the Different Algorithms on the Eight Datasets (Unit: Seconds)
+
+ Dataset LARTVAD TAEF LSMAD KIFD Deep-LR GT-HAD BSDM Ours
+ Los Angeles 228.75 60.51 1.84 0.63 86.57 216.94 16.53 280.34
+ Gulfport 231.79 95.30 1.87 0.61 87.24 215.35 15.27 282.51
+ Cat Island 236.83 58.25 1.83 0.62 85.31 331.15 16.79 291.06
+ Pavia 314.26 63.26 2.98 0.70 97.63 356.47 37.25 343.96
+ Texas Coast 265.44 92.48 1.84 1.02 102.98 232.77 29.09 305.78
+ Gainesville 264.92 88.56 1.91 0.64 92.17 222.06 29.29 304.92
+ Wasteland-WZW 381.51 243.12 8.90 1.54 1934.57 2443.39 150.31 1921.38
+ Wasteland-DDC 839.77 752.27 40.51 2.79 7548.32 8773.56 1580.99 7957.94
+
+background pixels, and the red boxes represent the score mance. On the Los Angeles dataset, the TPR of the proposed
+distribution of anomaly pixels. We can observe that our method reaches 0.92 when FPR = 0.01, while the TPRs of
+method can achieve excellent background suppression and Deep-LR and GT-HAD are only 0.78 and 0.83 respectively,
+separation between background and anomalies on all eight indicating that the proposed method has stronger anomaly
+datasets. On the Wasteland-DDC dataset, the median score detection ability at a low false positive rate. On the Pavia
+of the anomaly box is more than three times higher than that dataset, due to the spectral heterogeneity of the background,
+of the background box, far outperforming other comparison the ROC curves of KIFD and TAEF fluctuate significantly,
+algorithms. The scores of the background boxes of LARTVAD while the curve of the proposed method is smooth and always
+and LSMAD fluctuate significantly, indicating their weak above those of other algorithms, reflecting stronger scene
+adaptability to complex backgrounds. In contrast, the scores of adaptability. By observing Table I, it is evident that the
+the background box of the proposed method are concentrated AUC score of the proposed method is superior to all other
+in the low-score range, and the box is compact, suggesting sta- methods on all datasets, with an average AUC value of 0.987,
+ble background suppression. Although GT-HAD and BSDM significantly higher than other comparison algorithms. In sumare superior to other algorithms in background suppression, mary, our method better balances the relationship between the
+GT-HAD fails to effectively separate the background from detection rate and the false alarm rate, consistently achieving
+anomalies, and the anomaly scores of BSDM are relatively better AUC scores across all datasets.
+low. In complex urban scenarios such as Texas Coast and
+ Table II presents the computational costs of the different
+Gainesville, the inter-quartile range of the anomaly box of
+ algorithms on the eight test datasets. The KIFD algorithm takes
+the proposed method is smaller, indicating higher consistency
+ the least time on all test datasets. The GT-HAD algorithm has
+in the scores of anomaly targets and less influence from target
+ the highest computational cost. The proposed method exhibits
+scale changes. Overall, the proposed method can effectively
+ increased inference time when processing large-scale HSI.
+suppress the background and separate anomalies.
+ This behavior is mainly attributed to the patch-wise sliding-
+ The ROC curves of different methods are shown in Fig. window inference strategy adopted in our implementation,
+8, and the AUC scores are listed in Table I, where a larger which is commonly used in reconstruction-based HAD to envalue indicates better performance, and the best results are sure local spectral–spatial consistency. It should be noted that
+highlighted in bold. The ROC curve of the proposed method the reported runtime reflects the cumulative cost of densely
+is closer to the upper-left corner of the coordinate axis on scanning overlapping patches over large images, rather than
+all datasets, demonstrating superior detection trade-off perfor- the intrinsic complexity of the proposed network.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 12
+
+ Moreover, the GCSFM is exclusively employed during
+training and is completely removed during inference, which
+further ensures that the test-time complexity remains independent of graph construction. Therefore, the increased runtime
+on large images primarily arises from implementation-level Ground-truth Baseline +LFPRB +MDCM The full model
+design choices rather than algorithmic inefficiency. In practical
+applications, the proposed method can be efficiently acceler- Fig. 9: From left to right: Ground-truth, Baseline, +LFPRB,
+ated through larger patch strides, parallel processing, or fully +MDCM, The full model on Pavia.
+convolutional inference, without affecting the learned model
+ TABLE III: AUC and GPU inference time (ms) of ablated
+parameters.
+ variants on Pavia (Best results are in boldface)
+ In conclusion, our proposed method demonstrates excellent
+performance in terms of detection maps, box-plots, ROC Model AUC ↑ Time (ms)
+curves, and AUC scores. Despite a moderate parameter scale Baseline 0.9492 21
+(4.22M), the proposed method achieves state-of-the-art per- +LFPRB 0.9793 23
+formance, demonstrating a favorable balance between model
+ +MDCM 0.9897 25
+complexity and detection accuracy.
+ the full model 0.9974 27
+
+D. Ablation Study
+ 2) Quantitative Evaluation: Table III summarizes the AUC
+ To quantitatively analyze the contribution of each proposed values and inference time on the Pavia dataset for the different
+component, we conduct an ablation study on two representa- ablation variants.
+tive datasets, Texas Coast and Pavia, which contain complex Introducing LFPRB improves the AUC by effectively exbackground structures and scale-varying anomaly targets. All ploiting discriminative spectral frequency information. The
+variants are trained under the same settings to ensure fair further inclusion of MDCM brings an additional performance
+comparison. Four variants are implemented as follows: gain by enhancing spatial adaptability to targets of different
+ • Baseline: A reconstruction-based network consisting of a scales and shapes. The full model achieves the highest AUC,
+ lightweight convolutional encoder–decoder with residual confirming that GCSFM provides complementary benefits
+ connections, without LFPRB, MDCM, or GCSFM. by regularizing feature representations through graph-based
+ • +LFPRB: The baseline model augmented with the pro- contrastive learning during training.
+ posed LFPRB to enable adaptive frequency-domain spec- Although the inference time slightly increases with the
+ tral modeling. addition of LFPRB and MDCM, the overall computational
+ • +MDCM: Further introducing the MDCM for adaptive overhead remains limited. This increase mainly arises from
+ spatial feature extraction with input-dependent convolu- spectral frequency modulation and multi-branch convolution
+ tion kernels. operations, while no graph construction or contrastive compu-
+ • Full (LFPRB + MDCM + GCSFM): The complete tation is involved at inference time.
+ proposed model, which additionally incorporates the 3) Parameter Sensitivity: We additionally investigate three
+ GCSFM during training to enhance spectral–spatial con- key hyper-parameters on Texas Coast.
+ sistency via graph-based contrastive regularization.
+ TABLE IV: Impact of α on Texas Coast (Best results are in
+ 1) Visual Comparison: Fig. 9 presents the visual anomaly boldface)
+detection results of different ablation variants on the Pavia
+dataset. α 0.1 0.5 1.0
+ The Baseline model produces noticeable false alarms in AUC 0.9891 0.9922 0.9840
+homogeneous background regions, indicating limited discriminability when relying solely on the reconstruction loss. After The α is the LFPRB parameter. This parameter controls
+introducing LFPRB, spectral discrimination is improved, and the degree of spectral phase rotation in the frequency domain
+some background interference is suppressed due to adaptive and directly affects the strength of spectral discrimination.
+frequency-domain phase modulation. With the addition of When α is too small, the phase modulation effect becomes
+MDCM, anomaly targets become more spatially compact and negligible, limiting the ability of the model to emphasize disbetter localized, benefiting from multi-scale and input-adaptive criminative spectral components. Conversely, an excessively
+spatial modeling. large α may introduce excessive phase distortion, which can
+ The full model, which incorporates GCSFM during training, adversely affect background reconstruction stability. As shown
+achieves the cleanest anomaly maps with the sharpest target in Table IV, a moderate value of α achieves the best balance
+boundaries and minimal background responses. This demon- between spectral enhancement and reconstruction robustness.
+strates that graph-based contrastive regularization effectively The second one is loss balance coefficient λ. Fig. 10 shows
+enforces background compactness in the feature space and the AUC curve when λ varies from 0.4 to 0.8. The model is
+enlarges the separation between background and anomalous relatively stable in [0.5, 0.7], and peaks at λ=0.6, which is
+representations. hence adopted for all datasets.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 13
+
+       Future work will focus on further improving the computational efficiency of large-scale hyperspectral inference,
+      
+ extending the framework to multi-temporal and cross-sensor
+       anomaly detection scenarios, and exploring more lightweight
+       frequency–spatial interaction mechanisms to enhance real-time
+  $ 8 &
+
+       applicability in operational remote sensing systems.
+      
+       R EFERENCES
+       [1] H. Su, Z. Wu, H. Zhang, and Q. Du, “Hyperspectral anomaly detection:
+ A survey,” IEEE Geosci. Remote Sens. Mag., vol. 10, no. 1, pp. 64–90,
+                     2022.
+  / R V V  E D O D Q F H  F R H I I L F L H Q W  [2] D. Manolakis, D. Marden, and G. Shaw, “Hyperspectral image processing for automatic target detection applications,” Lincoln Lab. J., vol. 14,
+Fig. 10: The AUC curve when λ varies from 0.4 to 0.8 on 01 2003.
+Texas Coast. [3] M. Shimoni, R. Haelterman, and C. Perneel, “Hyperspectral imaging for
+ military and security applications: Combining myriad processing and
+ sensing techniques,” IEEE Geosci. Remote Sens. Mag., vol. 7, no. 2, pp.
+ 101–117, 2019.
+ We additionally evaluate the impact of different neighbor- [4] X. X. Zhu, D. Tuia, L. Mou, G.-S. Xia, L. Zhang, F. Xu, and
+ F. Fraundorfer, “Deep learning in remote sensing: A comprehensive
+hood sizes K used in graph construction. Extremely small review and list of resources,” IEEE Geosci. Remote Sens. Mag., vol. 5,
+K values limit the ability to capture contextual information, no. 4, pp. 8–36, 2017.
+while overly large K values introduce background heterogene- [5] L. Papp, B. Van Leeuwen, P. Szilassi, Z. Tobak, J. Szatmari, M. Árvai,
+ J. Mészáros, and L. Pásztor, “Monitoring invasive plant species using
+ity. Empirically, moderate neighborhood sizes yield the best hyperspectral remote sensing data,” Land, vol. 10, 01 2021.
+performance, striking a balance between local consistency and [6] K. Tan, F. Wu, Q. Du, P. Du, and Y. Chen, “A parallel
+global structure modeling. gaussian–bernoulli restricted boltzmann machine for mining area
+ classification with hyperspectral imagery,” IEEE J. Sel. Top. Appl.
+ In summary, the ablation study corroborates that every Earth Observ. Remote Sens., vol. 12, no. 2, pp. 627–636, 02 2019.
+introduced module contributes positively to the final detection [Online]. Available: https://ieeexplore.ieee.org/document/8636983/
+accuracy, and the full model achieves the best compromise [7] S. Garske, B. Evans, C. Artlett, and K. C. Wong, “Erx: A fast realtime anomaly detection algorithm for hyperspectral line scanning,” IEEE
+between accuracy and computational overhead. Trans. Geosci. Remote Sens., vol. 63, pp. 1–17, 2025.
+ [8] I. Reed and X. Yu, “Adaptive multiple-band cfar detection of an
+ optical pattern with unknown spectral distribution,” IEEE Trans. Acoust.,
+ V. C ONCLUSION Speech, Signal Process., vol. 38, no. 10, pp. 1760–1770, 1990.
+ [9] H. Kwon, S. Der, and N. Nasrabadi, “Adaptive anomaly detection using
+ In this paper, we proposed a novel HAD framework that subspace separation for hyperspectral imagery,” Opt. Eng., vol. 42, 11
+jointly addresses the challenges of spectral variability, spatial 2003.
+scale diversity, and insufficient feature discriminability in com- [10] Z. Zhang, Y. Xu, J. Yang, X. Li, and D. Zhang, “A survey of sparse
+ representation: Algorithms and applications,” IEEE Access, vol. 3, pp.
+plex scenes. By integrating frequency-domain learning, adap- 490–530, 2015.
+tive spatial modeling, and structured representation regulariza- [11] Z. Wu, H. Su, X. Tao, L. Han, M. E. Paoletti, J. M. Haut, J. Plaza, and
+tion into a unified reconstruction-based paradigm, the proposed A. Plaza, “Hyperspectral anomaly detection with relaxed collaborative
+ representation,” IEEE Trans. Geosci. Remote Sens., vol. 60, pp. 1–17,
+method significantly enhances both detection accuracy and 2022.
+robustness. Specifically, a LFPRB was introduced to perform [12] W. Li and Q. Du, “Collaborative Representation for Hyperspectral
+adaptive spectral frequency modulation, enabling the network Anomaly Detection,” IEEE Trans. Geosci. Remote Sens., vol. 53, no. 3,
+ pp. 1463–1474, Mar. 2015.
+to selectively emphasize discriminative spectral components [13] T. Cheng and B. Wang, “Graph and Total Variation Regularized Lowwhile preserving background stability. This frequency-aware Rank Representation for Hyperspectral Anomaly Detection,” IEEE
+representation effectively complements conventional spatial- Trans. Geosci. Remote Sens., vol. 58, no. 1, pp. 391–406, Jan. 2020.
+ [14] J. Huang, K. Liu, and X. Li, “Locality constrained low rank
+domain processing. Furthermore, a MDCM was designed to representation and automatic dictionary learning for hyperspectral
+generate input-dependent convolution kernels across different anomaly detection,” Remote Sens., vol. 14, no. 6, 2022. [Online].
+receptive fields, allowing the network to flexibly adapt to Available: https://www.mdpi.com/2072-4292/14/6/1327
+ [15] M. Signoretto, Q. Tran Dinh, L. De Lathauwer, and J. A. K. Suykens,
+anomaly targets with diverse spatial scales and irregular struc- “Learning with tensors: a framework based on convex optimization
+tures. To further improve feature compactness and background and spectral regularization,” Mach. Learn., vol. 94, no. 3, pp. 303–351,
+consistency during training, a GCSFM was incorporated, 2014. [Online]. Available: https://doi.org/10.1007/s10994-013-5366-3
+which exploits multiscale neighborhood relations and con- [16] Q. Xiao, L. Zhao, S. Chen, and X. Li, “Enhanced tensor low-rank
+ representation learning for hyperspectral anomaly detection,” IEEE
+trastive constraints to enhance the separation between back- Geosci. Remote Sens. Lett., vol. 20, pp. 1–5, 2023.
+ground and anomalous representations. Notably, this module [17] S. Yang, M. Wang, Z. Feng, Z. Liu, and R. Li, “Deep sparse tensor
+is only activated during training and introduces no additional filtering network for synthetic aperture radar images classification,”
+ IEEE Trans. Neural Netw. Learn. Syst., vol. 29, no. 8, pp. 3919–3924,
+computational burden at inference time. Extensive experiments 2018.
+on multiple real hyperspectral datasets demonstrate that the [18] X. Zhao, K. Liu, X. Wang, S. Zhao, K. Gao, H. Lin, Y. Zong, and W. Li,
+proposed method consistently outperforms state-of-the-art ap- “Tensor adaptive reconstruction cascaded with global and local feature
+ fusion for hyperspectral target detection,” IEEE Journal of Selected
+proaches in terms of detection accuracy, background suppres- Topics in Applied Earth Observations and Remote Sensing, vol. 18, pp.
+sion, and robustness under complex background conditions. 607–620, 2025.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Geoscience and Remote Sensing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TGRS.2026.3698646
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2025 14
+
+[19] L. Ding, D. Hong, M. Zhao, H. Chen, C. Li, J. Deng, N. Yokoya, [38] M. Hu, C. Wu, L. Zhang, and B. Du, “Hyperspectral Anomaly Change
+ L. Bruzzone, and J. Chanussot, “A Survey of Sample-Efficient Deep Detection Based on Autoencoder,” IEEE J. Sel. Top. Appl. Earth Observ.
+ Learning for Change Detection in Remote Sensing: Tasks, strategies, Remote Sens., vol. 14, pp. 3750–3762, Jan. 2021.
+ and challenges,” IEEE Geosci. Remote Sens. Mag., vol. 13, no. 3, pp. [39] C. Zhao, X. Li, and H. Zhu, “Hyperspectral anomaly detection based
+ 164–189, Jan. 2025. on stacked denoising autoencoders,” Journal of Applied Remote Sensing,
+[20] D. Peng, M. Liu, Y. Zhang, and H. Guan, “Toward Label-Efficient Deep vol. 11, no. 4, p. 1, 2017.
+ Learning Change Detection for Remote Sensing Imagery: A Compre- [40] C. Zhao and L. Zhang, “Spectral-spatial stacked autoencoders based on
+ hensive Review,” Photogramm. Rec., vol. 40, no. 191, p. 9171137, Jul. low-rank and sparse matrix decomposition for hyperspectral anomaly
+ 2025. detection,” Infrared Phys. Technol., vol. 92, pp. 166–176, Aug. 2018.
+[21] V. Kumar, R. S. Singh, M. Rambabu, and Y. Dua, “Deep [41] A. Makhzani, J. Shlens, N. Jaitly, I. Goodfellow, and B. Frey, “Adverlearning for hyperspectral image classification: A survey,” Computer sarial Autoencoders,” arXiv e-prints, p. arXiv:1511.05644, Nov. 2015.
+ Science Review, vol. 53, p. 100658, 2024. [Online]. Available: [42] I. Higgins, L. Matthey, A. Pal, C. P. Burgess, X. Glorot, M. M.
+ https://www.sciencedirect.com/science/article/pii/S157401372400042X Botvinick, S. Mohamed, and A. Lerchner, “beta-vae: Learning basic
+[22] W. Li, G. Wu, and Q. Du, “Transferred deep learning for anomaly visual concepts with a constrained variational framework,” in Proc.
+ detection in hyperspectral imagery,” IEEE Geosci. Remote Sens. Lett., Int. Conf. Learn. Represent. (ICLR), 2016. [Online]. Available:
+ vol. 14, no. 5, pp. 597–601, May 2017, publisher Copyright: © 2017 https://api.semanticscholar.org/CorpusID:46798026
+ IEEE. [43] Y. Liu, J. Liu, X. Ning, and J. Li, “MS-CNN: multiscale recognition of
+[23] S. Wang, X. Wang, L. Zhang, and Y. Zhong, “Auto-ad: Autonomous building rooftops from high spatial resolution remote sensing imagery,”
+ hyperspectral anomaly detection network based on fully convolutional Int. J. Remote Sens., vol. 43, no. 1, pp. 270–298, Jan. 2022.
+ autoencoder,” IEEE Trans. Geosci. Remote Sens., vol. 60, pp. 1–14, [44] J. Wang, J. Liu, J. Cui, J. Luan, and Y. Fu, “Multiscale fusion network
+ 2022. based on global weighting for hyperspectral feature selection,” IEEE J.
+[24] T. Jiang, W. Xie, Y. Li, J. Lei, and Q. Du, “Weakly supervised Sel. Top. Appl. Earth Observ. Remote Sens., vol. 16, pp. 2977–2991,
+ discriminative learning with spectral constrained generative adversarial 2023.
+ network for hyperspectral anomaly detection,” IEEE Trans. Neural Netw. [45] I. Ahmad, G. Farooque, Q. Liu, F. Hadi, and L. Xiao, “Mstsenet:
+ Learn. Syst., vol. 33, no. 11, pp. 6504–6517, 2022. Multiscale spectral–spatial transformer with squeeze and excitation
+[25] S. Wang, X. Wang, L. Zhang, and Y. Zhong, “Deep low- network for hyperspectral image classification,” Eng. Appl. Artif. Intell.,
+ rank prior for hyperspectral anomaly detection,” IEEE Trans. vol. 134, no. 000, p. 15, 2024.
+ Geosci. Remote Sens., vol. 60, pp. 1–17, 2022. [Online]. Available: [46] Y. Cai, X. Liu, and Z. Cai, “Bs-nets: An end-to-end framework for band
+ https://ieeexplore.ieee.org/document/9756439/ selection of hyperspectral image,” IEEE Trans. Geosci. Remote Sens.,
+[26] X. Wang, J. Du, Q. Lv, P. Wang, X. Zhang, J. Cheng, and H. Leung, vol. 58, no. 3, pp. 1969–1984, 2020.
+ “Hyperspectral anomaly detection using dual-branch network based on [47] X. Wang, P. Wang, J. Cheng, D. Zhu, H. Leung, and P. Gamba, “Hyperfrequency domain learning,” IEEE Journal of Selected Topics in Applied spectral anomaly detection via hybrid convolutional and transformer-
+ Earth Observations and Remote Sensing, vol. 18, pp. 15 789–15 803, based u-net with error attention mechanism,” IEEE Transactions on
+ 2025. Neural Networks and Learning Systems, pp. 1–15, 2025.
+[27] Z. Zhang, F. Meng, Y. Wang, C. Mao, Q. Qiu, and G. Shi, “Hyperspectral [48] E. Ientilucci and D. Messinger, “Anomaly detection using topology -
+ image classification with graph attention network,” in 2025 6th Interna- art. no. 65650j,” Proc. SPIE, vol. 6565, 04 2007.
+ [49] X. Zhao, J. Huang, Y. Gao, and Q. Wang, “Hyperspectral target detection
+ tional Conference on Geology, Mapping and Remote Sensing (ICGMRS),
+ 2025, pp. 105–112. based on prior spectral perception and local graph fusion,” IEEE Journal
+ of Selected Topics in Applied Earth Observations and Remote Sensing,
+[28] D. Hong, L. Gao, J. Yao, B. Zhang, A. Plaza, and J. Chanussot, “Graph
+ vol. 17, pp. 13 936–13 948, 2024.
+ convolutional networks for hyperspectral image classification,” IEEE
+ [50] Y. Yuan, D. Ma, and Q. Wang, “Hyperspectral anomaly detection by
+ Trans. Geosci. Remote Sens., vol. 59, no. 7, pp. 5966–5978, 2021.
+ graph pixel selection,” IEEE Trans. Cybern., vol. 46, no. 12, pp. 3123–
+[29] Q. Wang, F. Liu, M. Wang, L. Wang, J. Huang, and T. Shen, “Spec- 3134, 2016.
+ tral–spatial hypergraph convolutional network for hyperspectral image [51] C. Li, D. Zhu, and C. Wu, “Spatial–spectral graph convolutional network
+ classification,” IEEE J. Sel. Top. Appl. Earth Observ. Remote Sens., for hyperspectral target detection,” IEEE Geosci. Remote Sens. Lett.,
+ vol. 18, pp. 23 744–23 756, 2025. vol. 22, pp. 1–5, 2025.
+[30] B. Tu, B. He, Y. He, T. Zhou, B. Liu, J. Li, and A. Plaza, “Self- [52] Y. Liu, Z. Ye, Y. Xi, H. Liu, W. Li, and L. Bai, “Multiscale and
+ supervised masked graph autoencoder for hyperspectral anomaly de- multidirection feature extraction network for hyperspectral and lidar
+ tection,” IEEE Trans. Image Process., vol. 34, pp. 6714–6729, 2025. classification,” IEEE J. Sel. Top. Appl. Earth Observ. Remote Sens.,
+[31] Z. S. Sadrolhefazi, H. Zare, S. A. Asghari, P. Moradi, and M. Jalili, vol. 17, pp. 9961–9973, 2024.
+ “Unsupervised graph-based anomaly detection using variational au- [53] Z. Wu and B. Wang, “Transformer-based autoencoder framework for
+ toencoder,” in 2024 IEEE International Conference on Data Mining nonlinear hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote
+ Workshops (ICDMW), 2024, pp. 734–741. Sens., vol. 62, pp. 1–15, 2024.
+[32] L. Ruff, N. Görnitz, L. Deecke, S. A. Siddiqui, R. A. Vandermeulen, [54] Y. Zhang, B. Du, L. Zhang, and S. Wang, “A low-rank and sparse matrix
+ A. Binder, E. Müller, and M. Kloft, “Deep one-class classification,” decomposition-based mahalanobis distance method for hyperspectral
+ in International Conference on Machine Learning, 2018. [Online]. anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 54, no. 3,
+ Available: https://api.semanticscholar.org/CorpusID:49312162 pp. 1376–1389, 2016.
+[33] K. Jiang, W. Xie, J. Lei, T. Jiang, and Y. Li, “LREN: Low-rank [55] S. Li, K. Zhang, P. Duan, and X. Kang, “Hyperspectral anomaly
+ embedded network for sample-free hyperspectral anomaly detection,” detection with kernel isolation forest,” IEEE Trans. Geosci. Remote
+ Proc. AAAI Conf. Artif. Intell., vol. 35, no. 5, pp. 4139–4146, Sens., vol. 58, no. 1, pp. 319–329, 2020.
+ 2021. [Online]. Available: https://ojs.aaai.org/index.php/AAAI/article/ [56] J. Lian, L. Wang, H. Sun, and H. Huang, “GT-HAD: Gated transformer
+ view/16536 for hyperspectral anomaly detection,” IEEE Trans. Neural Netw. Learn.
+[34] Y. Xu, Z. Wu, J. Li, A. Plaza, and Z. Wei, “Anomaly detection in Syst., vol. 36, no. 2, pp. 3631–3645, 2025. [Online]. Available:
+ hyperspectral images based on low-rank and sparse representation,” https://ieeexplore.ieee.org/document/10432978/
+ IEEE Trans. Geosci. Remote Sens., vol. 54, no. 4, pp. 1990–2000, 2016. [57] J. Ma, W. Xie, Y. Shi, X. Xiang, Y. Li, and L. Fang, “Bsdm: Background
+[35] W. Li and Q. Du, “Collaborative representation for hyperspectral suppression diffusion model for hyperspectral anomaly detection,” IEEE
+ anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 53, no. 3, Trans. Circuits Syst. Video Technol., pp. 1–1, 2025.
+ pp. 1463–1474, 2015. [58] X. Zhao, K. Liu, K. Gao, and W. Li, “Hyperspectral time-series target
+[36] C. Li, B. Zhang, D. Hong, J. Yao, and J. Chanussot, “Low-Rank detection based on spectral perception and spatial–temporal tensor
+ representations meets deep unfolding: A generalized and interpretable decomposition,” IEEE Transactions on Geoscience and Remote Sensing,
+ network for hyperspectral anomaly detection,” arXiv e-prints, p. vol. 61, pp. 1–12, 2023.
+ arXiv:2402.15335, Feb. 2024.
+[37] S. Sun, J. Liu, X. Chen, W. Li, and H. Li, “Hyperspectral
+ anomaly detection with tensor average rank and piecewise smoothness
+ constraints,” IEEE Trans. Neural Netw. Learn. Syst., vol. 34, no. 11,
+ pp. 8679–8692, 2023. [Online]. Available: https://ieeexplore.ieee.org/
+ document/9728731/
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

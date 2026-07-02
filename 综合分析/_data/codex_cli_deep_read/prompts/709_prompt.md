@@ -1,0 +1,3072 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [709] ICAD: Rethinking the Role of Inference and Cues for the Anomaly Detection of Time Series in IIoT
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：709
+题名：ICAD: Rethinking the Role of Inference and Cues for the Anomaly Detection of Time Series in IIoT
+年份：2026
+DOI：10.1109/tkde.2026.3682751
+来源：IEEE Transactions on Knowledge and Data Engineering
+PDF：paper/10.1109_TKDE.2026.3682751.pdf
+已有粗分类：IoT、车联网、工业互联网与边缘安全
+二级关联：时序、日志、KPI 与云原生异常检测、入侵检测与网络异常检测
+相关性：中相关，分数 7
+已有代码状态：已下载；ICAD -> source\ICAD
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\709.txt
+- 原始字符数：87060
+- 本次发送字符数：87060
+- 是否截断：False
+
+代码包：
+- 仓库：ICAD
+  - URL：https://github.com/Anomaly-Detection3/ICAD
+  - 状态：downloaded
+  - 本地目录：source\ICAD
+  - 顶层结构：Code_Noise_Test_Experiment/、DDPM_main.py、Datasets/、GPU_system_monitoring.py、README.md、__init__.py、gpu_memory_plots/、model/、process/、results/、utils/
+  - 主要语言：Python:17
+  - README 标题：Requirements、Model Training and Predict、=======# WADI、-------train-------、-----predict-----、=======# SWAT、------train-------、------predict------、=======# EO、------train------
+  - README 运行线索：bash #=======# WADI；python DDPM_main.py --epochs 50 --learning_rate 1e-3 --hidden_size 32 --batch_size 16 --noise_steps 100；python DDPM_main.py --batch_size 16 --window_size 50 seed_test=14；python DDPM_main.py --epochs 200 --learning_rate 1e-3 --hidden_size 32 --batch_size 16 --noise_steps 100；python DDPM_main.py --batch_size 16 --window_size 50 seed_test=80；python DDPM_main.py --epochs 200 --learning_rate 1e-3 --hidden_size 32 --batch_size 16 --noise_steps 100；python DDPM_main.py --batch_size 16 --window_size 40 seed_test=42；python DDPM_main.py --epochs 300 --learning_rate 1e-3 --hidden_size 12 --batch_size 16 --noise_steps 100
+  - 关键文件：{"数据处理入口": ["model/dataset_load_no_text.py", "model/dataset_trend_text_cluster.py", "model/dataset_trend_text_complex.py", "model/dataset_trend_text_pattern.py", "utils/dataset_trend_text_pattern_picture.py"], "模型定义": ["model/modules.py"], "评估/测试入口": ["utils/eval.py", "utils/eval_methods.py"]}
+  - 数据集线索：SWAT、SWaT、Swat、Tor、WADI、dapt、swat、ton、tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+1
+
+ICAD: Rethinking the Role of Inference and Cues
+for the Anomaly Detection of Time Series in IIoT
+Zhichao Wu, Li Zhu, Zitao Yin, Shunqi Zhang, Xirong Xu, Xiaopeng Wei, and Xin Yang
+
+Abstract—Time series anomaly detection in real-world Industrial Internet of Things (IIoT) systems is pivotal for identifying unsafe conditions and implementing timely preventive
+measures. While diffusion models are popular for capturing
+complex patterns, they often struggle to balance diversity and
+fidelity across scenarios due to limited exploration of contextwindow logical inference relationships and trend-pattern cues.
+To address these challenges, we propose ICAD, a novel method
+that rethinks the role of inference and cues in IIoT time series
+anomaly detection. ICAD defines trend patterns and uncertainties
+in textual form and utilizes a fine-tuned large language model
+to encode these descriptions as conditions for the diffusion
+model, thereby enhancing its generalization across diverse data
+distributions. Additionally, a “reasoning network for contextual
+window” mechanism is designed to capture temporal dependencies between adjacent windows, complemented by multi-scale
+and spatial feature adaptive fusion modules to further enhance
+the predictive performance. Empirical evaluations across four
+benchmark datasets and a large-scale ethylene oxide production
+process demonstrate that ICAD consistently outperforms stateof-the-art baselines, confirming its effectiveness and practicality
+in overcoming current anomaly detection model limitations.
+Index Terms—Inference and Cues, Anomaly Detection, Conditional Diffusion model, IIoT.
+
+I. I NTRODUCTION
+NOMALY detection is essential in the Industrial Internet of Things (IIoT) due to the increasing reliance on
+interconnected sensors, instruments, and devices. From one
+perspective, many of these devices are designed with limited
+security features, exposing them to potential exploitation by
+malicious actors. Efficient anomaly detection is crucial for
+ensuring the security and integrity of IIoT systems, safeguarding industrial operations. From another perspective, using realtime industrial data, anomaly detection can identify abnormal
+situations not only as they occur but also proactively before
+they manifest. With effective anomaly detection, the risks of
+economic losses from system failures, safety incidents, or
+downtime can be significantly mitigated [1], [2].
+
+A
+
+Corresponding author: Xin Yang and Xiaopeng Wei.
+Zhichao Wu, Zitao Yin, Shunqi Zhang, Xirong Xu, Xiaopeng Wei and
+Xin Yang are with the College of Computer Science and Technology, Dalian
+University of Technology, Dalian, China, and also with the Key Laboratory
+of Social Computing and Cognitive Intelligence (Dalian University of Technology), Ministry of Education, Dalian, China. E-mail: {wuzhch@mail, yinzt@mail, shunqizhang@mail, xirongxu@, xpwei@, xinyang@}dlut.edu.cn.
+Li Zhu is with the School of Control Science and Engineering, Dalian
+University of Technology, Dalian, China, and also with the Key Laboratory
+of Intelligent Control and Optimization for Industrial Equipment (Dalian
+University of Technology), Ministry of Education, E-mail: zhuli@dlut.edu.cn.
+
+Fig. 1. Trend pattern and uncertainty cue for complex anomaly scenarios.
+(a) shows the original time series along with their corresponding anomaly
+indicators. (b) compares the dimensionality-reduced distributions of the time
+series generated under clue-conditioned and clue-free scenarios.
+
+Due to the inherent scarcity of labeled anomalies and
+the diverse nature of anomaly types, anomaly detection is
+typically approached as an unsupervised learning task [3],
+[4]. These techniques can be broadly classified into two main
+categories: prediction-based [5]–[8] and reconstruction-based
+[4], [9], [10]. Unlike prediction-based methods, reconstructionbased methods are widely used for their ability to avoid the
+cumulative effect of prediction errors on anomaly detection
+tasks [11].
+Diffusion models, an emerging and promising reconstruction technique, have shown superior performance compared
+to traditional generative models such as Autoencoders (AEs),
+Generative Adversarial Networks (GANs) and Variational Autoencoders (VAEs) in time series anomaly detection [12]–[17].
+This stems from the complexity of IIoT data, characterized by
+multi-modal distributions, rare events, and dynamic variations.
+The mathematical framework of diffusion models enables
+them to approximate multi-distribution scenarios through iterative denoising, making them particularly effective for anomaly
+detection in such environments [18], [19]. However, current
+diffusion models face challenges in balancing time series
+fidelity and diversity in complex scenarios, impeding their
+practical deployment in real-world production processes [20],
+[21]. Specifically:
+•
+
+The failure to account for inherent trend patterns and
+uncertainty descriptions results in excessive variability
+in the generated data, limiting the model’s ability to
+accurately fit the true distribution of anomaly scenarios.
+Specifically, the complexity of anomaly distributions in
+IIoT stems from the system’s high interconnectivity. Minor perturbations, such as external disturbances or equip-
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+ment degradation, can cause abrupt shifts in operational
+conditions, leading to uncertain and diverse anomaly
+patterns (highlighted in purple on the left side of Fig. 1).
+By incorporating these inherent factors, the conditional
+diffusion model outperforms the unconditional model by
+effectively constraining this variability. This enables the
+conditional model to better capture the underlying trend
+patterns and uncertainty, leading to a higher coverage
+rate (as shown on the right side of Fig. 1), improved
+generalization, and enhanced prediction accuracy.
+• During the process of adding noise to time series window
+data, diffusion models often lose the inherent logical
+relationships between contextual windows. Naturally, this
+disruption can ultimately compromise the model’s performance.
+In this paper, we rethink the role of inference and cues
+for IIoT time series anomaly detection, and propose a novel
+method, termed ICAD, to address the aforementioned issues.
+Firstly, a textual description of trend patterns and uncertainties
+is defined as input to the diffusion model. Subsequently, a logic
+inference network based on contextual windows is proposed to
+focus on the important information and ensure the fidelity of
+the generated samples. Finally, we propose a multi-scale and
+spatial adaptive fusion module to train the denoising network.
+Overall, the main contributions of our work are summarized
+as follows:
+• Enhanced Generalization: To enhance the generalization
+ability of the diffusion model across diverse abnormal data distributions, we fine-tune a pre-trained large language
+model, BERT, to encode defined textual descriptions of
+trend patterns and uncertainties. This is verified by the
+generalization test results presented in Subsection 5.8.
+• Contextual Inference Network: An inference network is
+defined for contextual windows to address the diffusion
+model’s neglect of relationships between these windows,
+ensuring its ability to detect both progressive and concealed anomalies.
+• Adaptive Fusion Module: We design an adaptive fusion
+module for multi-scale and spatial features, serving as
+the denoising network in the diffusion model, which enhances the model’s capability to capture complex anomaly characteristics in challenging scenarios.
+• Comprehensive Evaluation: Experiments are conducted
+on five real-world multivariate time series datasets, including four existing datasets and a newly collected
+dataset from a large-scale fine chemical enterprise. These
+datasets span various IIoT domains. A comparative analysis with 23 baselines shows that ICAD significantly
+outperforms state-of-the-art methods. We publicly publish
+our code and EO dataset of experiments on GitHub1 for
+better reproducibility of the results of this paper.
+II. R ELATED W ORK
+A. Multivariate Time Series Anomaly Detection
+With the rapid growth of interconnected devices and sensors
+in cyber-physical systems, multivariate time series (MTS)
+1 Code and Dataset: https://github.com/Anomaly-Detection3/ICAD
+
+2
+
+anomaly detection has received significant attention from the
+industrial communities, leading to the development of various
+algorithms [22]–[24].
+Classical methods, such as Local Outlier Factor and variations [25], [26], Isolation Forest [27], Empirical-Cumulativedistribution-based Outlier Detection [28], etc., do not explicitly
+model the contextual information or deep feature representations within MTS data. Consequently, they struggle to adapt
+to complex industrial sensor detection tasks.
+In recent years, deep learning algorithms have made breakthroughs in MTS anomaly detection due to their powerful feature representation capabilities, typically falling into
+forecasting-based or reconstruction-based categories [29].
+Forecasting-based methods determine the anomaly scores
+of the samples by assessing the disparity between the model
+predictions and input data. Graph Deviation Network (GDN)
+uses graph neural networks with an attention mechanism to
+capture sensor topologies for anomaly detection [5]. Lunar
+employs information from the nearest neighbors of each node
+in a trainable manner to detect anomalies [6].
+Conversely, reconstruction-based methods exploit the difficulty of learning abnormal samples, resulting in relatively large
+errors when reconstructing the original samples. USAD trains
+autoencoders to reconstruct the original samples [4]. ANOMALY TRANSFORMER computes the association discrepancies
+by a new Anomaly Attention mechanism [30]. COUTA realizes contamination-tolerant, anomaly-informed learning of
+data normality via uncertainty modeling-based calibration and
+native anomaly-based calibration [31].
+However, current deep learning algorithms often struggle
+to efficiently generate diverse time series data, making it
+challenging to capture complex patterns and potential data
+distributions. This limitation hinders their ability to adapt to
+complex scenarios, especially when anomalies are intricate or
+abnormal samples are scarce.
+
+B. Diffusion Model
+The application of diffusion models, a powerful generative
+model, in the field of time series is relatively new, and
+researchers are beginning to explore its potential. DiffAD
+enhances the imputation performance of missing values by
+a new denoising diffusion-based method with conditional
+weight-incremental diffusion [13]. DDMT integrates a novel
+adaptive dynamic neighbor mask mechanism with Transformer
+and DDPM models for anomaly detection [14]. ImDiffusion
+combines time series imputation and diffusion models to
+achieve accurate and robust anomaly detection [15]. Diffstg
+integrates the spatio-temporal learning capabilities of spatiotemporal graph neural networks with the uncertainty measurements of diffusion models [32].
+To the best of our knowledge, our proposed ICAD represents the pioneering application of the textual descriptions of
+trend patterns and uncertainties as diffusion model conditions
+and the contextual window logic in anomaly detection with
+MTS.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+3
+
+III. P RELIMINARIES
+A. Multivariate Time Series Anomaly Detection
+{ }
+Given multivariate time series X =
+Xij , i ∈
+[1, 2, · · · N ] , j ∈ [1, 2, · · · , M ], where M and N are the
+maximum length of timestamps and the number of sensors in
+the input, respectively. The goal of MTS anomaly detection is
+to identify whether an observation deviates significantly from
+the overall pattern of X, indicating an anomaly. To capture
+the local contextual information, a sliding window of length
+w over the MTS is adopted to obtain the result XW , defined
+as:
+{
+}
+XW = W 1 , W 2 , · · · , W k ,
+(1)
+⌊N ⌋
+where k, calculated as w , is the number of windows.
+B. Denoising Diffusion Probabilistic Model
+The diffusion model consists of two processes: the forward
+process and the backward process. During the forward process,
+noise is incrementally added to the input X0 , ultimately transforming it into Gaussian noise XT after T steps. Conversely,
+the backward process generates samples by progressively
+removing the noise.
+The forward process q (Xt |Xt−1 ) aims to obtaining Xt by
+adding Gaussian noise to the time series Xt−1 at each step
+t, t ∈ [1, 2, · · · , T ]. Therefore, mathematically, the expression
+for the forward process is as follows:
+(
+)
+√
+q (Xt |Xt−1 ) = N Xt ; 1 − βt Xt−1 , βt I ,
+(2)
+where βt is a fixed variance linearly increasing with t, representing the noise level.
+During the backward process, the noise is gradually removed to generate the samples, expressed as:
+pθ (Xt−1 |Xt ) = N (Xt−1 ; µθ (Xt , t) , βt I).
+
+(3)
+
+Instead of learning to predict µθ (Xt , t), a more efficient
+approach trains a network ϵθ to predict the noise ϵ. The training
+loss is defined as:
+min L′ (θ) = min Ex0 ∼q(x0 ),ϵ∼N (0,1),t ∥ϵ−ϵθ (XT , t)∥22 .
+θ
+
+θ
+
+(4)
+
+IV. ICAD M ETHOD
+The overall architecture of the proposed ICAD method, depicted in Fig. 2, adheres to the foundational structure of DDPM
+[33]. ICAD comprises three modules: Textual Embedding for
+Trend Cue Description, Reasoning Network for Contextual
+Window Logic, and Model Training and Anomaly Inference.
+• Textual Embedding for Trend Cue Description: By defining trend patterns and converting time series into textual
+cues, we utilize a pre-trained BERT model [34] to encode
+cues into text embeddings. These encoded vectors serve
+as conditions during the backward process of the diffusion model. This strategy ensures sample fidelity while
+promoting diversity in the samples generated by DDPM.
+• Reasoning Network for Contextual Window Logic: We
+ingeniously transform traditional logical reasoning rules
+
+into a format suitable for neural network training. Specifically, we define the logical relationships between contextual windows and express these relationships through
+contrastive learning using positive and negative samples.
+This approach enables the diffusion model to better
+understand and capture the logical connections between
+contextual windows, thereby significantly enhancing the
+model’s reasoning capabilities.
+• Model Training and Anomaly Inference: To enhance the
+stability of anomaly detection results, we jointly optimize
+the Reasoning Network and conditional diffusion model.
+For training the diffusion model, we devise two key
+techniques: 1) employing a multi-scale feature and spatial
+feature adaptive fusion module to train the denoising
+network of the diffusion model, and 2) utilizing a Kalman
+filter [35] to perceive the state space values of the time
+series, which are then used as inputs for the forward
+process of the diffusion model.
+To elucidate the proposed ICAD method, we present the
+pseudo-code of its workflow in Algorithm 1 and 2. The algorithm comprises two primary phases: training and reasoning.
+During the training phase, noise is introduced to the original
+data, and the model is trained to predict this noise. In the
+reasoning phase, the trained denoising model is used to sample
+and reconstruct the noise, thereby clarifying the underlying
+data structure.
+A. Textual Embedding for Trend Cue Description
+Effectively capturing trend cues is crucial for enhancing
+the generalization capacity of models in IIoT applications.
+Conventional methods, such as trend decomposition, excel
+at extracting numerical trends but often treat them as isolated features, overlooking the role of qualitative insights in
+anomaly detection. Humans assess anomalies by combining
+quantitative measurements with qualitative reasoning about
+patterns, often summarizing these observations as descriptive
+narratives. Inspired by this, we propose a mechanism that
+integrates both qualitative and quantitative descriptions of
+trend patterns as priors, structured to guide anomaly detection.
+The proposed ICAD method adapts to diverse and dynamic
+operating conditions by automatically generating trend-aware
+representations, thereby facilitating the early recognition of
+operational shifts.
+Given the window input W d ∈ RN ∗w , d ∈ [1, 2, · · · , k],
+the first-order difference is computed as:
+d
+d
+∆Xi,j = Wi,j+1
+− Wi,j
+,
+
+(5)
+
+where i = 1, 2, · · · , N and j = 1, 2, · · · , w − 1.
+After obtaining ∆X, we define the trend pattern and information entropy to characterize trend cues.
+Definition 1: Trend Pattern
+For the first-order difference ∆X of a window, we firstly
+partition ∆X into two distinct intervals, ∆X (1) and ∆X (2) .
+For each feature within these intervals, we calculate the mean
+(1)
+(2)
+(1)
+(2)
+µi , µi and variance σi , σi as:
+1
+(1)
+µi =
+
+q
+∑
+
+q p=1
+
+(1)
+∆Xi,p ,
+
+1
+(2)
+µi =
+q
+
+2∗q−1
+∑
+
+(2)
+
+∆Xi,p ,
+
+p=q
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+(6)
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+4
+
+Fig. 2. The framework of the proposed ICAD method. The upper module is the flow chart of ICAD, the lower module is the detailed explanations of Cue
+Description, Reasoning Network and Denoising Network, respectively. The Cue Description module firstly processes the input X using differential calculations
+and predefined statistical methods to automatically determine the trend pattern. Subsequently, it calculates the joint entropy of histograms to generate textual
+cues describing the trend. The Reasoning Network module constructs a contrastive learning network to simulate logical relationships within a contextual
+window, forming the inference loss function. The Denoising Network module adaptively fuses multi-scale features with the spatial features obtained by Unet
+and GCN with the attention mechanism.
+
+(1)
+
+σi =
+
+q
+2∗q−1
+1∑
+1 ∑
+(1)
+(2)
+(1) 2
+(2) 2
+(2)
+(∆Xi,p −µi ) , σi =
+(∆Xi,p −µi ) ,
+q p=1
+q p=q
+(7)
+
+where q = ⌊(w − 1)/2⌋ and i = 1, 2 · · · , N .
+Subsequently, we compute the ratio of the mean to the
+(1)
+(2)
+variance, denoted as Mi and Mi , for each feature, as
+following:
+(1)
+(2)
+µ
+µ
+(1)
+(2)
+(8)
+Mi = i(1) , Mi = i(2) .
+σi
+σi
+This ratio quantifies the degree of trend deviation, providing a
+measure of the stability and variability of the time series data
+across the two intervals. To reflect the overall trend of the
+feature set, the mean values M (1) and M (2) are computed by
+averaging these ratios across all feature dimensions, expressed
+as:
+N
+N
+1 ∑ (1)
+1 ∑ (2)
+Mi , M (2) =
+M .
+M (1) =
+(9)
+N i=1
+N i=1 i
+Finally, the trend pattern is identified using the judgment
+function f , which determines the pattern type based on the
+values of M (1) and M (2) :
+
+
+U-shaped Trend
+
+Inverse U-shaped Trend
+f =
+Monotonic Decrease
+
+
+Monotonic Increase
+
+if M (1) < 0 and M (2) > 0
+if M (1) > 0 and M (2) < 0
+if M (1) < 0 and M (2) < 0
+if M (1) > 0 and M (2) > 0.
+
+(10)
+
+Definition 2: Information Entropy
+Given the ∆X of a window, a “flatten” operation, compressing the distribution of multidimensional data into a
+single dimension, is adopted to make it easier to observe
+and understand the distribution characteristics of overall data
+distribution, as follows:
+ϕ = f latten(∆X),
+
+(11)
+
+where ∆X ∈ RN ∗(w−1) and ϕ ∈ R(N w−N ) .
+Then, to further analyze the distribution of ϕ, a histogram
+is constructed as:
+hi =
+
+N∑
+w−N
+
+δ(ϕj ∈ [bi , bi+1 )),
+
+(12)
+
+j=1
+
+where hi and N w − N are the frequency count for the ith bin and the total number of samples, respectively. ϕj and
+[bi , bi+1 ) represent the j-th data point and the boundaries of
+the i-th bin, with bi and bi+1 marking its start and end points,
+respectively. The indicator function δ(ϕj ∈ [bi , bi+1 )) equals
+1 if ϕj lies within the i-th bin, and 0 otherwise.
+Finally, the trend uncertainty H of the time series is
+calculated by the histogram information entropy as follows:
+H=−
+
+l
+∑
+
+pi log(pi ),
+
+i=1
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+(13)
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+5
+
+where l is the number of bins in the histogram, pi is the
+probability for the i-th bin, calculated as the ratio of the
+sample count in that bin to the total number of samples, i.e.,
+pi = hi /(N w − N ).
+Based on the aforementioned definitions of trend and uncertainty, we design an input template to enhance the comprehension of the large language model. The template is as
+follows: “The trend pattern of the time series is {}, the overall
+uncertainty is {}, please provide a detailed description of the
+trend information for this window.” Subsequently, a pre-trained
+BERT model [34] is utilized for text encoding. Finally, an
+MLP is fine-tuned to generate the conditions necessary for
+diffusing the model input:
+Xc = M LP (Bert(T ext)),
+
+(14)
+
+where Xc ∈ R . M LP , T ext and h are multi-layer perceptron, the template and embedding dimension, respectively.
+The visualization of difference histograms and trend patterns
+is provided by Fig. 5.
+k∗h
+
+B. Reasoning Network for Contextual Window Logic
+Anomalies in time series data often manifest as dynamic patterns across adjacent windows, which are difficult to
+capture through isolated window analysis. Identifying these
+context-driven dependencies is essential for uncovering hidden
+patterns and modeling temporal dynamics accurately. To better
+capture these relationships, we replace raw time series data
+with state representations that abstract essential trends and
+filter out irrelevant fluctuations, enabling the identification of
+logical dependencies between contextual windows.
+The proposed reasoning framework models these dependencies by focusing on transitions between state representations.
+If the state of window A can be inferred from the state of
+window B, it suggests a logical connection between these
+windows. Conversely, if such an inference is not possible, no
+logical relationship exists. The corresponding symbolic logic
+expression is as follows:
+
+C. Model Training and Anomaly Inference
+1) Model Training: Traditional diffusion models lack the
+capability to incorporate conditional information during the
+backward process. To address this issue, we use trend text encoding Xc as a condition for the diffusion model. In particular,
+we use the state [35] of the time series as input to the diffusion
+model, enabling the model to focus on the underlying patterns,
+mitigate high-frequency noise, and enhance anomaly detection
+performance.
+The goal of the conditional reverse diffusion process is to
+infer St−1 by leveraging the information St and Xc . The
+condition diffusion models employ the same parameterization
+as DDPM, with the only difference being the learning of
+backward process parameters ϵθ , which incorporates additional
+inputs from the trend cue condition Xc . The process is
+described as follows:
+pθ (St−1 |St , Xc ) = N (St−1 ; µθ (St , Xc , t), βt I),
+
+(20)
+
+where µθ (St , X c , t) is the estimated mean of the conditional
+backward process, and βt is a fixed constant. The backward
+process starts with a noise state vector ST sampled from a
+Gaussian noise, and generates samples with similar properties
+to the original state S0 by pθ (St−1 |St , Xc ).
+To parameterize µθ (St , Xc , t), the multi-feature fusion network (denoising network) is employed to approximate the
+target ϵθ (ST |Xc , t) to predict the noise ϵ by minimizing the
+following loss function:
+min L(θ) = min ES0 ∼q(S0 ),ϵ∼N (0,1),t
+θ
+
+θ
+
+2
+
+∥ϵ − ϵθ (ST |Xc , t)∥2 .
+
+(21)
+
+To enhance the diffusion model’s ability to learn the relationship between contextual windows, we jointly train the
+denoising network loss and the logical network loss, resulting
+in the following final optimization function:
+Ltotal = L(θ) + Lreg .
+
+(22)
+
+S1 → S2 is T RU E,
+
+(15)
+
+S1 → ¬S2 is F ALSE,
+
+(16)
+
+Then, based on the denoising function ϵθ (ST , t|Xc ), the
+µθ (St , X c , t) can be calculated as:
+
+where S1 and S2 represent the states of windows A and B,
+obtained by the Kalman filter [35].
+The neural reasoning network is then used to model the
+symbolic logic and realize the transformation of the above
+symbolic logic, obtained as:
+
+1
+1 − αt
+µθ (St , X c , t) = √ (St − √
+ϵθ (ST |Xc , t)), (23)
+αt
+1 − ᾱt
+∏T
+where αt = 1 − βt , ᾱt = i=0 αi .
+Finally, the reverse denoising process is obtained as:
+
+E+ = σ(f (S1 ∥ S2 )),
+
+(17)
+
+where σ represents the sigmoid function, and f is composed
+of two linear layers and a RELU activation function.
+Since the reasoning of Eq. (17) is logically reasonable, we
+consider it to be a positive sample. In order to increase the
+robustness of the model, we introduce negative samples
+E− = σ(f (S1 ∥ ψ(S2 ))),
+
+(18)
+
+where ψ(•) is a random cyclic shift.
+Formally, the optimization objective function of positive and
+negative samples is as below:
+Lreg = log(E+ ) − log(1 − E− ).
+
+(19)
+
+1
+Ŝt−1 = √
+αt
+
+(
+
+)
+√
+1 − αt
+St − √
+ϵθ (ST |Xc , t) + βt z,
+1 − ᾱt
+
+(24)
+
+where z ∼ N (0, 1). During the sample generation phase,
+various samples are drawn from the z distribution at different
+time intervals, iteratively continuing this process until reaching
+a predetermined number of steps. The final output, termed Ŝ0 ,
+obtained from the last sampling step.
+2) Denoising Network: As illustrated in the bottom-right
+corner of Fig. 2, our denoising network leverages adaptive
+modules to integrate multi-scale features extracted by the UNet [36] and spatial features obtained from the GCN [37],
+which operates on a dynamically learned graph. The fusion
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+6
+
+process begins with feature concatenation along channel dimension, presented as:
+
+V. E XPERIMENT
+A. Dataset
+
+Sc = Concat(Sm , Ss ),
+
+(25)
+
+where Sm and Ss are multi-scale features and spatial features,
+respectively.
+To calculate the attention weights, a global average pooling
+is introduced at the “squeeze” step to generate a channel-wise
+descriptor, Sf , defined as:
+Sf = AvgP ool2d(Sc )
+
+(26)
+
+Next, in the “excitation” step, the squeezed feature descriptor Sf is passed through a 2D convolutional layer (Conv2d)
+configured to output 2 channels, each corresponding to one
+of the input feature streams. This produces two distinct raw
+scores, which are then activated using a Sigmoid activation
+function (σ) to generate the final attention weights, αm and
+αs . This process can be formulated as:
+Sscore = Conv2d(Sf ),
+)
+(
+(m)
+,
+α(m) = σ Sscore
+(
+)
+(s)
+α(s) = σ Sscore
+,
+
+(27)
+
+(s)
+
+(m)
+
+where Sscore and Sscore denote the first and second channel,
+corresponding to the multi-scale and spatial streams, respectively. Finally, the fused output is obtained through elementwise weighted summation of the original feature maps:
+St = α(m) ⊙ Sm + α(s) ⊙ Ss ,
+
+(28)
+
+where ⊙ denotes element-wise multiplication. This adaptive attention mechanism enables the network to dynamically
+emphasize relevant features from both branches depending on
+the context.
+3) Anomaly Inference: Firstly, the error between the reconstructed value Ŝ0 and the true value S0 is calculated at time
+t and sensor i as follows:
+errorit = Ŝ0 − S0 .
+
+(29)
+
+Then, the error values of each sensor are normalized as:
+Ei (t) =
+
+errori − µ̂i
+.
+σ̂i
+
+(30)
+
+Finally, we aggregate over sensors using the statistical
+function to compute the overall anomalousness at time t:
+DS (t) =
+
+where µ =
+
+N
+∑
+i=1
+
+µ
+,
+max − min
+
+(31)
+
+Ei (t)/N , max = max Ei (t) and min =
+i
+
+min Ei (t). DS (t) is used as the input of SPOT algorithm to
+i
+automatically identify anomalies [38].
+
+To demonstrate the accuracy and effectiveness of the proposed ICAD method, four publicly available MTS anomaly
+detection datasets (Swat, WADI, PSM, HAI) and a chemical
+production process dataset (EO) collected by us are used,
+which all come from industrial production processes as shown
+in Table I. The detailed description of these datasets is
+provided below.
+Swat: the secure water treatment dataset, derived from
+the water treatment simulation test bench, is designed to
+investigate the launch of network attacks. It records network
+traffic and readings from 51 sensors and actuators [39].
+WADI: serving as an extension of the Swat testbed, the
+dataset is collected from a water distribution testbed and
+consists of 16 consecutive days of operations, including 14
+routine operations and 2 with attack scenarios [39].
+PSM: Pooled Server Metrics dataset collects internally from
+multiple application server nodes at eBay, which consists
+of 25 features describing server machine metrics such as
+CPU utilization and memory. The dataset includes a 13-week
+training period followed by an eight-week testing phase [40].
+EO: The Ethylene Oxide dataset is collected from a realworld, continuous chemical production process characterized
+by its high-risk and safety-critical nature. The data were
+recorded in August 2024 at a high sampling frequency of
+one sample every 5 seconds. It includes measurements from
+multiple key process units, such as reactors, condensation
+towers, and distillation towers. To ensure meaningful data
+representation, we collaborated with experienced frontline
+operators to select 430 critical variables from thousands of
+sensors across the plant. These variables include direct physical measurements (e.g., temperature, flow rate, pressure),
+interlock control variables that trigger automated safety responses, and key indicators used in operational early warning
+systems. Compared to public benchmarks, EO offers higher
+dimensionality and richer process semantics, making it a more
+challenging and realistic testbed.
+Anomalies within the dataset are labeled by domain experts
+and correspond to genuine operational challenges, such as
+process fluctuations during startup and shutdown phases and
+abnormal deviations during steady-state operations, providing
+a reliable ground truth for model evaluation under complex
+industrial conditions. Due to confidentiality agreements and
+the proprietary nature of the process, detailed engineering
+schematics cannot be disclosed. However, we believe that
+the inclusion of EO as a private, high-fidelity, safety-critical
+dataset significantly enhances the practical relevance and robustness evaluation of the proposed method.
+HAI: (HIL-based Augmented ICS) Security Dataset is collected from a realistic industrial control system (ICS) testbed
+augmented with a Hardware-In-the-Loop (HIL) simulator that
+emulates steam-turbine power generation and pumped-storage
+hydropower generation. Featuring 59 dimensions including
+temperature, pressure, and flow, this dataset simulates 38
+attack types [41].
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+7
+
+TABLE II
+Q UANTITATIVE RESULTS IN TERMS OF P REC , R EC , AND F1 SCORE ON FIVE DATASETS WITH GROUND TRUTH LABELLED ANOMALIES .
+Swat
+
+Method
+
+WADI
+F1
+
+Rec
+
+Prec
+
+PSM
+F1
+
+Rec
+
+Prec
+
+EO
+
+Prec
+
+One-SVM
+DSVDD
+COUTA
+COCA
+
+0.832
+0.8965
+0.9365
+0.8946
+
+0.7839
+0.7403
+0.8217
+0.7903
+
+0.8072 0.6649 0.7121 0.6877 0.9071
+0.8109 0.7379 0.7036 0.7203 0.8125
+0.8754 0.7217 0.7458 0.7336 0.9417
+0.8437 0.739 0.7602 0.7495 0.9154
+
+0.7592 0.8266 0.8312 0.5977 0.6954 0.4347 0.7519 0.5509
+0.9364 0.8701 0.8635 0.6246 0.7249 0.4004 0.7296 0.517
+0.9544 0.948 0.7585 0.7793 0.7688 0.5204 0.7936 0.6286
+0.9306 0.9229 0.7615 0.7808 0.771 0.6583 0.6964 0.6768
+
+MAD
+GDN
+GRELEN
+GLUE
+Lunar
+CST GL
+
+0.8220
+0.6812
+0.8350
+0.7478
+0.8735
+0.8366
+
+0.7954
+0.9935
+0.9560
+0.9356
+0.7369
+0.8706
+
+0.8085
+0.8100
+0.8910
+0.8312
+0.7994
+0.8533
+
+0.5241
+0.4019
+0.6130
+0.7553
+0.5994
+0.2295
+
+0.6942
+0.9750
+0.7730
+0.5528
+0.8905
+0.8389
+
+0.5973
+0.5700
+0.6820
+0.6384
+0.7165
+0.3604
+
+0.9504
+0.8372
+0.9420
+0.9326
+0.8234
+0.8144
+
+0.8736
+0.9274
+0.9210
+0.8792
+0.9071
+0.8703
+
+0.9104
+0.8800
+0.9310
+0.9051
+0.8632
+0.8414
+
+0.5565
+0.7510
+0.6490
+0.7817
+0.6002
+0.4902
+
+0. 8035
+0.6048
+0.8495
+0.7143
+0.5891
+0.759
+
+0.6576
+0.6700
+0.7358
+0.7465
+0.5946
+0.5957
+
+0.4240
+0.4545
+0.4852
+0.8032
+0.4539
+0.3955
+
+0.5684
+0.7293
+0.4178
+0.6291
+0.7126
+0.6208
+
+0.4857
+0.5600
+0.4490
+0.7056
+0.5546
+0.4832
+
+LOF
+IF
+ALAD
+OMNIANOMALY
+USAD
+INTERFUSION
+ECOD
+A T
+PeFAD
+
+0.9677
+0.7315
+0.9314
+0.8430
+0.7402
+0.8558
+0.7771
+0.9250
+0.9491
+
+0.6563
+0.9620
+0.7172
+0.8142
+0.9870
+0.8059
+0.9304
+0.8049
+0.9119
+
+0.7821
+0.8311
+0.8104
+0.8283
+0.8460
+0.8301
+0.8469
+0.8608
+0.9301
+
+0.8345
+0.6155
+0.8397
+0.9799
+0.3220
+0.7719
+0.7340
+0.3844
+0.9478
+
+0.6218
+0.6241
+0.2605
+0.2652
+0.6451
+0.6842
+0.6618
+0.6885
+0.5107
+
+0.7126
+0.6198
+0.3976
+0.4174
+0.4296
+0.7254
+0.6960
+0.4933
+0.6439
+
+0.9049
+0.9245
+0.9719
+0.7446
+0.9100
+0.8345
+0.8633
+0.9622
+0.9747
+
+0.5789
+0.7609
+0.2915
+0.8839
+0.6800
+0.8361
+0.9658
+0.9313
+0.9799
+
+0.7061
+0.8348
+0.4485
+0.8083
+0.7800
+0.8352
+0.9117
+0.9465
+0.9772
+
+0.7309
+0.6225
+0.7750
+0.8647
+0.6918
+0.6386
+0.6225
+0.8853
+0.7911
+
+0.5056
+0.9451
+0.4178
+0.7063
+0.6172
+0.8041
+0.7381
+0.7085
+0.8273
+
+0.5977
+0.7506
+0.5429
+0.7775
+0.6524
+0.7119
+0.6754
+0.7871
+0.8088
+
+0.4987
+0.5567
+0.4973
+0.4672
+0.6019
+0.4425
+0.6921
+0.6793
+0.9398
+
+0.4271
+0.5340
+0.4502
+0.4835
+0.6318
+0.4672
+0.6859
+0.6658
+0.7256
+
+0.4601
+0.5451
+0.4726
+0.4752
+0.6165
+0.4545
+0.6890
+0.6725
+0.8159
+
+DiffAD
+DDMT
+ImDiffusion
+Diffstg
+
+0.9690
+0.9978
+0.8465
+0.9037
+
+0.9844
+0.9656
+0.8988
+0.9492
+
+0.9766
+0.9724
+0.8709
+0.9259
+
+0.8621
+0.7153
+0.7596
+0.7125
+
+0.6078
+0.7821
+0.7315
+0.8366
+
+0.7130
+0.7472
+0.7453
+0.7696
+
+0.9892
+0.9840
+0.9753
+0.9215
+
+0.9700
+0.9792
+0.9811
+0.9379
+
+0.9795
+0.9816
+0.9781
+0.9296
+
+0.8252
+0.6793
+0.7225
+0.7405
+
+0.8086
+0.8124
+0.7873
+0.8312
+
+0.8168
+0.7399
+0.7535
+0.7832
+
+0.8290
+0.7763
+0.6192
+0.8003
+
+0.8372
+0.8489
+0.6923
+0.8459
+
+0.8331
+0.8110
+0.6537
+0.8225
+
+ICAD (ours)
+
+0.9889 0.9794 0.9841 0.9264 0.7834 0.8489 0.9985 0.9763 0.9873 0.8977 0.8400 0.8679 0.8591 0.8872 0.8730
+
+TABLE I
+DATA INFORMATION ABOUT DIMENSIONS , THE SIZE OF TRANING ,
+VALIDATION AND TESTING , ANOMALY RATIO .
+No. of Training Validation Testing Anomaly
+Datasets dimensions set size set size set size ratio(%)
+EO
+Swat
+WADI
+PSM
+HAI
+
+430
+51
+118
+25
+59
+
+1632
+396,000
+967680
+105984
+192960
+
+408
+99,000
+241921
+26497
+48240
+
+2040
+449919
+172801
+87841
+153000
+
+12.21
+11.97
+5.71
+27.76
+3.91
+
+B. Baselines and Evaluation Metrics
+We evaluate the ICAD algorithm against 23 baselines across
+five datasets using popular performance metrics: precision
+(Prec), recall (Rec), F1, AUPRC and AUROC. Specifically,
+these algorithms are divided into four types, graph-based
+learning, non-graph learning, recently popular diffusion model
+and one class learning.
+The evaluated graph-based learning methods include:
+• MAD (ICDM 2020) constructs two graph attention layers
+to learn the complex dependencies of MTS from time and
+feature dimensions [42].
+• GDN (AAAI 2021) uses attention mechanism to learn
+the topology of graph neural networks (GNN) to detect
+anomalies [5].
+• GLUE (2021) uses graph deviation network with local
+uncertainty estimation to learn complex dependencies
+between variables [43].
+• GRELEN (IJCAI 2022) combines graph neural network
+(GNN) and stochastic graph relational learning strategy
+to capture the between-sensor dependence [8].
+• Lunar (AAAI 2022) learns to use information from the
+nearest neighbors of each node to find anomalies [6].
+• CST-GL (TNNLS 2024) captures spatial-temporal depen-
+
+F1
+
+Rec
+
+Prec
+
+HAI
+
+Rec
+
+F1
+
+Rec
+
+Prec
+
+F1
+
+dencies via dynamic correlation learning, multi-hop graph
+convolutions, and dilated temporal modeling [49].
+The selected non-graph learning methods are as follows:
+LOF (SIGMOD) calculates an outlier factor for each data
+point by defining the locally accessible density, which
+identifies the outlier degree of a data point [25].
+• IF (ICDM 2008) aims to find anomalies at leaves that
+are relatively close to the root of a decision tree, i.e., at
+a shallower depth of a decision tree [27].
+• ALAD (ICDM 2018) uses adversarially learned features
+by bi-directional generative adversarial networks to detect
+anomaly sample [10].
+• OMNIANOMALY (KDD 2019) aims to capture the
+normal patterns of MTS by learning their robust representations with key techniques such as stochastic variable
+connection and planar normalizing flow [9].
+• USAD (KDD 2020) learns a robust representation for
+the raw time-series input using an adversarially trained
+encoder-decoder pair and the reconstruction error is used
+as the anomaly score [4].
+• INTERFUSION (KDD 2021) aims to model the normal
+patterns inside MTS data through hierarchical variational
+autoencoder with two stochastic latent variables [7].
+• ECOD (TKDE 2022) computes an empirical cumulative
+distribution along each data dimension, and then utilizes
+this distribution to estimate the tail probability [28].
+• ANOMALY TRANSFORMER (ICLR 2022) aims to
+compute the association discrepancy by a new Anomaly
+Attention mechanism. For the sake of clarity in writing,
+this method is designated as “A T” [30].
+• PeFAD (KDD 2024) uses pre-trained language models
+and parameter-efficient tuning to detect anomalies [48].
+•
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+8
+
+TABLE III
+Q UANTITATIVE RESULTS IN TERMS OF AUPRC AND AUROC SCORE ON FIVE DATASETS WITH GROUND TRUTH LABELLED ANOMALIES .
+
+Method
+
+Swat
+
+WADI
+
+PSM
+
+EO
+
+HAI
+
+Average
+
+AUPRC AUROC AUPRC AUROC AUPRC AUROC AUPRC AUROC AUPRC AUROC AUPRC AUROC
+One-SVM
+DSVDD
+COUTA
+COCA
+
+0.8153
+0.8007
+0.8949
+0.8126
+
+0.9015
+0.9174
+0.9610
+0.8779
+
+0.6648
+0.6832
+0.7517
+0.6572
+
+0.7743
+0.8049
+0.9295
+0.8459
+
+0.8211
+0.8351
+0.9391
+0.8893
+
+0.9058
+0.9210
+0.9538
+0.9420
+
+0.5490
+0.5615
+0.8360
+0.7552
+
+0.7985
+0.8134
+0.9158
+0.8736
+
+0.5271
+0.4639
+0.7845
+0.6922
+
+0.7594
+0.7135
+0.8820
+0.8716
+
+0.6755
+0.6689
+0.8412
+0.7613
+
+0.8279
+0.8340
+0.9284
+0.8822
+
+MAD
+GDN
+GRELEN
+GLUE
+Lunar
+CST GL
+
+0.8245
+0.8403
+0.8692
+0.8126
+0.7768
+0.8469
+
+0.9133
+0.9036
+0.9764
+0.8693
+0.8460
+0.8935
+
+0.6635
+0.4192
+0.6548
+0.7503
+0.7764
+0.2011
+
+0.8244
+0.6633
+0.8032
+0.8180
+0.8757
+0.6933
+
+0.8705
+0.8596
+0.8932
+0.8516
+0.8845
+0.8536
+
+0.9218
+0.9054
+0.9634
+0.9050
+0.9166
+0.9155
+
+0.7006
+0.6493
+0.7296
+0.7517
+0.7104
+0.5289
+
+0.7995
+0.7377
+0.8577
+0.8283
+0.8056
+0.7834
+
+0.5131
+0.7434
+0.4288
+0.7644
+0.5779
+0.4164
+
+0.7996
+0.9047
+0.7632
+0.8569
+0.8004
+0.8034
+
+0.7144
+0.7024
+0.7151
+0.7861
+0.7452
+0.5694
+
+0.8517
+0.8229
+0.8728
+0.8555
+0.8489
+0.8178
+
+LOF
+0.7245
+IF
+0.7343
+ALAD
+0.7945
+OMNIANOMALY 0.7984
+USAD
+0.8545
+INTERFUSION 0.707
+ECOD
+0.7507
+A T
+0.8973
+PeFAD
+0.9274
+
+0.8967
+0.8768
+0.9032
+0.8946
+0.9077
+0.8489
+0.8846
+0.9564
+0.9682
+
+0.6483
+0.4249
+0.2197
+0.2187
+0.3098
+0.5396
+0.5009
+0.4579
+0.5424
+
+0.7954
+0.8337
+0.7632
+0.7853
+0.7631
+0.8154
+0.857
+0.7654
+0.7916
+
+0.7049
+0.8169
+0.3638
+0.8426
+0.7955
+0.804
+0.8717
+0.9201
+0.9631
+
+0.819
+0.9006
+0.853
+0.9034
+0.884
+0.8981
+0.9258
+0.9385
+0.9742
+
+0.5632
+0.648
+0.4582
+0.7642
+0.5195
+0.7022
+0.5055
+0.6893
+0.7393
+
+0.7854
+0.8039
+0.841
+0.8953
+0.7746
+0.7937
+0.7958
+0.8007
+0.8687
+
+0.4537
+0.4777
+0.4038
+0.3692
+0.5944
+0.4245
+0.664
+0.7643
+0.6842
+
+0.6858
+0.7404
+0.8057
+0.8058
+0.864
+0.6985
+0.8254
+0.8955
+0.8131
+
+0.6189
+0.6204
+0.4480
+0.5986
+0.6147
+0.6355
+0.6586
+0.7458
+0.7713
+
+0.7965
+0.8311
+0.8332
+0.8569
+0.8387
+0.8109
+0.8577
+0.8713
+0.8832
+
+DiffAD
+DDMT
+ImDiffusion
+Diffstg
+
+0.9752
+0.9803
+0.8226
+0.9164
+
+0.9952
+0.9916
+0.8763
+0.9580
+
+0.7144
+0.7526
+0.7380
+0.7699
+
+0.9033
+0.8904
+0.8776
+0.8837
+
+0.9429
+0.9594
+0.9699
+0.9338
+
+0.9677
+0.9906
+0.9780
+0.9652
+
+0.8588
+0.8629
+0.7842
+0.8470
+
+0.9300
+0.9246
+0.8782
+0.9188
+
+0.8795
+0.8406
+0.5139
+0.8571
+
+0.9233
+0.8947
+0.7785
+0.9120
+
+0.8742
+0.8792
+0.7657
+0.8648
+
+0.9439
+0.9384
+0.8777
+0.9275
+
+ICAD (ours)
+
+0.9817
+
+0.9935
+
+0.8328
+
+0.9667
+
+0.9652
+
+0.9811
+
+0.9046
+
+0.9753
+
+0.9154
+
+0.9855
+
+0.9199
+
+0.9804
+
+For diffusion-based learning, we compare our method with:
+• DiffAD (2023 KDD) enhances the imputation performance of missing values with conditional weightincremental diffusion by a new denoising diffusion-based
+imputation method [13].
+• DDMT (2023) integrates a novel adaptive dynamic neighbor mask mechanism with the Transformer and Denoising
+Diffusion Model for anomaly detection [14].
+• ImDiffusion (VLDB 2024) combines time series imputation and diffusion models to achieve accurate and robust
+anomaly detection [15].
+• Diffstg (SIGSPATIAL 2023) combines the spatiotemporal learning capabilities of spatio-temporal graph
+neural networks with the uncertainty measurements of
+diffusion models [32].
+The one-class learning baseline is represented by:
+• One-SVM (NIPS) identifies anomalies by finding a hyperplane that best separates the majority of the data points
+from the origin in a high-dimensional feature space [44].
+• DSVDD (ICML 2018) uses deep learning to map data
+into a new space where normal data points cluster tightly,
+allowing effective identification of anomalies [45].
+• COUTA (TKDE 2024) realizes contamination-tolerant,
+anomaly-informed learning of data normality via uncertainty modeling-based calibration and native anomalybased calibration [31].
+• COCA (ICDM 2023) follows the normality assumptions
+of contrastive learning (CL) and one-class classification.
+It treats the original and reconstructed representations as
+the positive pair of negative-sample-free CL [46].
+C. Overall Performance
+According to the results in Table II, Table III and Fig. 3,
+a comprehensive analysis of the performance of our proposed
+
+ICAD method leads to the following conclusions:
+• ICAD consistently outperforms the state-of-the-art baseline methods on all datasets. It demonstrates that ICAD
+is able to learn the logical relationship between the trendpattern cues and the contextual window of time series to
+improve the forecasting performance.
+• In comparisons between six graph-based learning methods and nine non-graph-based approaches, it is clear that
+graph learning techniques consistently outperform nongraph counterparts, particularly on datasets with complex
+topologies such as WADI, EO, and HAI. This performance gap is especially evident in tasks that require
+the capture of intricate relationships among data points,
+which are crucial for accurate predictions. ICAD’s ability
+to effectively model these relationships enables it to
+achieve superior performance in such tasks, highlighting
+its capability to handle complex and diverse structures.
+• Comparing diffusion models with other approaches, it is
+found that diffusion models offer significant advantages
+due to their diverse generative capabilities and rigorous mathematical foundations. However, current diffusion
+models still lack targeted cue guidance, which can lead
+to challenges in achieving high fidelity in practical applications. The proposed ICAD method can significantly
+enhance the robustness of diffusion model by incorporating trend textual description cues.
+• Despite the increased complexity in the HAI, WADI, and
+EO datasets, characterized by more sensor variables and
+intricate anomaly patterns, Fig. 3 demonstrates that ICAD
+consistently outperforms SOTA methods, maintaining remarkable stability even in large-scale deployments with
+up to 430 sensors. Specially, the uptime of the algorithm and its advantages in actual IIoT deployment are
+described in Subsection 5.7.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+9
+
+TABLE IV
+P ERFORMANCE IMPROVEMENT OF F1 IN FIVE DATASETS .
+Datasets
+
+Method
+PSM
+SOTA
+ICAD
+
+Swat
+
+HAI
+
+WADI
+0.7696
+0.8489
+
+EO
+
+AVG
+
+0.8168 0.8755
+0.8679 0.9122
+
+Improvement 0.58%↑ 0.77%↑ 4.79%↑ 10.30%↑ 6.26%↑ 4.54%↑
+
+SOTA
+
+Datasets
+
+Method
+
+0.9816 0.9766 0.8331
+0.9873 0.9841 0.8730
+
+100
+
+TABLE V
+A BLATION STUDIES
+
+ICAD
+
+Improvement
+
+Swat
+
+WADI
+
+PSM
+
+EO
+
+HAI
+
+w/o cue
+w/o relation
+w/o fusion
+W/ complex
+W/ word2Vec
+W/ cluster
+W/ mlp
+
+0.9748
+0.9576
+0.9602
+0.9886
+0.9788
+0.9863
+0.9703
+
+0.7866
+0.8135
+0.8092
+0.8605
+0.8275
+0.8302
+0.8145
+
+0.9542
+0.9469
+0.9711
+\
+0.9792
+0.9890
+0.9762
+
+0.8121
+0.8236
+0.8306
+\
+0.8421
+0.8424
+0.8412
+
+0.8265
+0.8428
+0.8319
+0.8827
+0.8652
+0.8612
+0.8497
+
+ICAD
+
+0.9841
+
+0.8489
+
+0.9873
+
+0.8679
+
+0.8730
+
+F1 Accuracy(%)
+
+80
+
+D. Ablation Analysis
+60
+
+40
+
+20
+
+0
+
+0.58
+PSM (n = 25)
+
+0.77
+Swat (n = 51)
+
+4.79
+HAI (n = 59)
+
+10.30
+WADI (n = 118)
+
+6.26
+EO (n = 430)
+
+Fig. 3. The performance of algorithms on different complex datasets. The
+SOTA represents the optimal baseline algorithm.
+
+•
+
+ICAD achieves the highest average AUPRC (0.9199)
+and the highest average AUROC (0.9804), confirming
+its robust and superior performance. ICAD consistently
+attains the highest AUPRC score on all five datasets,
+which is particularly significant as AUPRC is widely
+regarded as a more informative metric than AUROC for
+heavily imbalanced tasks. This superiority is especially
+evident on the challenging HAI and WADI datasets,
+which feature highly imbalanced distributions. On these
+difficult benchmarks where many competing methods
+struggle, ICAD achieves exceptional AUPRC scores of
+0.9154 and 0.8328 respectively, establishing a clear advantage over other methods.
+
+To provide a more intuitive comparison between our proposed ICAD algorithm and the current state-of-the-art algorithms for each dataset, we present the performance improvements in F1 scores across five datasets (see Table IV). The
+following observations can be made:
+On the PSM and Swat datasets, ICAD shows a slight performance improvement of 0.58% and 0.77%, respectively,
+due to the relative simplicity of these datasets. In contrast,
+on the WADI and EO datasets, the ICAD algorithm
+exhibits significant improvements. This enhancement is
+attributed to the ICAD algorithm’s ability to capture
+complex trend patterns and uncertainties in the data,
+improving the model’s adaptability to complex scenarios.
+• On average, our ICAD algorithm outperforms SOTA
+methods overall, achieving a 4.54% increase. This improvement is significant for the intelligent monitoring of
+actual production processes, as it enhances the algorithm’s ability to detect anomalies, predict potential failures,
+and optimize operational efficiency.
+•
+
+We conduct ablation studies to validate the effectiveness of
+our key components that contribute to the improvements on
+five datasets. We compare ICAD with the following variants:
+• w/o cue: This variant does not use textual embeddings to
+describe trend cues as conditions for a diffusion model,
+i.e. an unconditional diffusion model.
+• w/o relation: This variant does not take into account
+the logical relationship between time series windows,
+implying a purely conditional diffusion model.
+• w/o fusion: This variant uses the U-net network directly
+as a denoising network, ignoring multiple features and
+adaptive fusion modules.
+• W/ complex: For datasets with available metadata (Swat,
+WADI, HAI), we replaced generalized trend descriptions
+with detailed prompts incorporating equipment and sensor semantics. These prompts incorporate specific metadata such as equipment names and sensor tags (e.g., Temperature sensors in unit P-101 exhibit a sharp increase).
+For datasets like PSM and our proprietary EO, which do
+not disclose specific sensor semantics, constructing these
+detailed prompts is infeasible, marked as “\”.
+• W/ word2Vec: We replaced the BERT encoder with a
+standard Word2Vec model to generate text embeddings,
+while keeping the rest of model architecture unchanged.
+• W/ cluster: Training-time windows are clustered, and
+each resulting cluster is labeled based on its dominant
+trend pattern (e.g., U-shaped, monotonic increase). During inference, each new time series window is assigned
+to the nearest cluster, and the corresponding label is used
+as the trend cue.
+• W/ mlp: We replaced the Kalman filter module with a
+standard multi-Layer perceptron (MLP).
+Table V shows the F1 accuracy of different variants. The
+results reveal the following key insights:
+(1) The textual embeddings for trend cue descriptions are
+vital, especially for datasets with complicated trends, such
+as WADI, EO, and HAI, which involve industrial operations
+like shutdowns and startups. This finding aligns with our
+expectations, as these embeddings guide the diffusion model
+to generate high-fidelity time series, crucial for capturing complex patterns in challenging datasets. (2) Existing conditional
+diffusion models often overlook the contextual relationships
+between windows, leading to overfitting and suboptimal performance. (3) Simply using a U-Net network is insufficient
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+for capturing the spatial features of time series data. In
+contrast, an adaptive fusion module with GCN designed by us
+enhances the model’s ability to extract and generalize across
+multiple features. (4) The W/ complex variant achieves stateof-the-art performance on the three datasets where it could
+be applied. This result strongly suggests that incorporating
+rich, domain-specific knowledge can significantly enhance
+model precision. However, the primary limitation of this
+approach is its dependency on detailed metadata, which is
+often proprietary or unavailable in many real-world datasets,
+as demonstrated by our inability to apply it to PSM and EO.
+In contrast, our proposed ICAD, using generalized trend cues,
+delivers consistently high and robust performance across all
+five datasets, including those where detailed descriptions are
+not feasible. This confirms ICAD’s robustness and practical
+value. (5) Our proposed ICAD method, which utilizes a
+BERT, consistently outperforms the Word2Vec-based variant
+across all five datasets. This result strongly suggests that the
+contextualized and representations generated by BERT are
+critical for effectively conditioning the diffusion process. The
+ability of BERT to understand the semantics of the trend
+descriptions leads to more precise guidance and, ultimately,
+superior performance. (6) This W/ cluster variant performs
+reasonably on some datasets (e.g., PSM), but it is notably
+outperformed by ICAD on more complex industrial datasets
+such as WADI, EO, and HAI. While clustering provides a
+reasonable approximation, its performance is limited by the
+difficulty of forming distinct and semantically meaningful
+clusters in high-dimensional, noisy data. In contrast, our direct,
+mathematically-principled method, identifying trend patterns
+individually for each window, proves to be more robust
+and avoids potential error propagation from an intermediate,
+imperfect clustering mathematically-principled calculation is
+applied to each window individually. (7) Across all datasets,
+our Kalman filter-based ICAD consistently and significantly
+outperforms the MLP-based alternative. This provides strong
+empirical evidence that the structured, probabilistic modeling
+of dynamics in Kalman filtering provides significant advantages over purely learned embedding, particularly in noisy or
+complex environments.
+E. Effect of Parameters
+We evaluate the impact of the window w on the performance
+of ICAD. The results, shown in Fig. 4, indicate that ICAD can
+achieve stable results under different parameter settings. The
+stability is attributed to model’s ability to leverage the relationships between contextual windows to train the diffusion model,
+effectively mitigating the impact of window size on model
+performance. By incorporating contextual dependencies, the
+model can better capture underlying trend patterns within time
+series data, leading to improved accuracy.
+F. Visualization of Difference histogram and Uncertainty
+To visualize the uncertainty of the trend, we convert the time
+series into a histogram. This transformation allows for a better
+understand and analysis of the distibution and variation of data
+from a new perspective, enabling effective identification of
+
+10
+
+Fig. 4.
+
+F1 score of ICAD with different window size w.
+
+Algorithm 1 Training the Condition Diffusion Model
+( )
+Input: noise level N ∈ N+ , data X 0 ∼ q X 0 ,
+X 0 ∈ RM ∗N , Kalman filter K.
+repeat
+State vector S 0 = K(X 0 )
+Difference vector x d = dif f (X 0 )
+The trend pattern f obtained by Eq.(6)-Eq. (10)
+and uncertainty obtained by Eq. (11)-Eq. (13)
+T ext: the trend pattern and uncertainty are {} and {}.
+Initialize t ∼ Uniform(1, · · · , N ) and ϵ ∼ N (0, I)
+The condition XC = M LP (Bert(T ext))
+Compute the loss function for the input X n
+(S 0 after t steps of noise):
+(√
+) 2
+√
+Ldif = ϵ − ϵθ
+αt S 0 + 1 − αt ϵ|XC , t
+The inference loss function Lreg obtained by Eq. (19).
+Take gradient step on ∇θ (Ldif + Lreg )
+until converged
+Output: ϵθ (•)
+
+abnormal or unusual behavior. In particular, by comparing the
+histograms in different time windows, we can indirectly observe the trend changes and periodic patterns of the time series.
+For example, periodic changes may manifest as fluctuations in
+data frequency within specific intervals on the histogram.
+According to Fig. 5, we observe the following:
+• The time series data in window 1 (subfigure (e)) and window 2 (subfigure (f)) both generally exhibit a U-shaped
+trend. However, window 2 shows a notable decline in
+the middle, indicating increased uncertainty and resulting
+in a lower overall information entropy. Additionally, the
+histogram for window 2 (subfigure (b)) shows a clear
+concentration of values in the middle range, highlighting
+the effectiveness of the difference histogram in capturing
+this sudden decline in the trend.
+• The time series in window 3 (subfigure (c)) and window
+4 (subfigure (d)) follow the same monotonic trend, with
+comparable levels of uncertainty and overall information
+entropy. This consistency demonstrates the effectiveness
+of our ICAD algorithm in measuring trend uncertainty.
+Additionally, the difference histogram clearly shows that,
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+Diiference Histogram
+
+11
+
+Diiference Histogram
+
+Diiference Histogram
+
+Diiference Histogram
+
+14
+25
+
+30
+
+12
+
+6
+
+15
+
+15
+
+4
+
+10
+
+10
+
+2
+
+5
+
+5
+
+0
+
+0
+
+10
+5
+
+−0.10
+
+−0.05
+
+0.00
+
+0.05
+
+0.10
+
+−0.4
+
+(a) window 1
+
+0.0
+
+0.2
+
+0.4
+
+−0.15
+
+−0.10
+
+(b) window 2
+
+The Trend Pattern is U-shaped,
+and Information Entropy is 2.074.
+
+−0.05
+
+0.00
+
+0
+
+0.05
+
+−0.15
+
+(c) window 3
+
+The Trend Pattern is U-shaped,
+and Information Entropy is 1.003.
+
+−0.10
+
+−0.05
+
+0.00
+
+0.05
+
+0.10
+
+(d) window 4
+
+The Trend Pattern is Monotonic Increase,
+and Information Entropy is 2.111.
+
+The Trend Pattern is Monotonic Decrease,
+and Information Entropy is 1.979.
+
+1.0
+
+1.0
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.8
+
+0.8
+
+Value
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0.0
+
+0.0
+0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Value
+
+0.6
+
+0.6
+
+Value
+
+−0.2
+
+Value
+
+0
+
+20
+
+20
+
+8
+
+15
+
+25
+
+25
+
+10
+
+20
+
+30
+
+0.4
+0.2
+
+0.2
+
+0.0
+0
+
+Time
+
+10
+
+20
+
+30
+
+40
+
+50
+
+0.0
+0
+
+10
+
+20
+
+Time
+
+(e) window 1
+
+0.4
+
+30
+
+40
+
+50
+
+0
+
+10
+
+20
+
+Time
+
+(f) window 2
+
+30
+
+40
+
+50
+
+Time
+
+(g) window 3
+
+(h) window 4
+
+Fig. 5. Visual demonstration of the trend cue extraction process detailed in Section IV.A. The bottom row (e)-(h) displays specific time series windows
+(showing all 25 sensor variables from the PSM dataset), along with the automatically calculated Trend Pattern and Information Entropy. The top row (a)-(d)
+displays the corresponding histograms of the flattened first-order differences, which are the basis for the entropy calculation. The colors in the histograms are
+utilized to visually emphasize the structural differences and spread of the data distributions across these windows.
+
+E = Se0 − S 0
+
+2
+
+t
+
+end
+Y = 1 if E ≥ τ else -1, where τ is anomaly score threshold,
+computed using the SPOT [38].
+end
+Output: anomaly labels Y
+
+despite the similar shapes, the locations of the highest
+value sets differ between the two windows, indicating
+ICAD’s ability to effectively distinguish between upward
+and downward trends.
+G. Running Settings, Time, and Memory
+To evaluate the computational cost of both training and
+inference on five datasets, as shown in Table V, we conduct
+experiments with the sampling steps of the diffusion model
+
+2.5
+
+Peak Memory: 2.30 GB
+Average Memory: 0.63 GB
+Total Device Memory: 12.00 GB
+Peak Utilization: 19.20%
+
+Allocated Memory
+Peak: 2.30 GB
+Avg: 0.63 GB
+
+2.0
+
+Memory Usage (GB)
+
+Algorithm 2 Anomaly Inference
+Input: noise level M ∈ N+ , test data X 0 ∈ RM ∗N ,
+Kalman filter K.
+repeat
+State vector S 0 = K(X 0 )
+Difference vector x d = dif f (X 0 )
+The trend pattern f obtained by Eq.(6)-Eq. (10)
+and uncertainty obtained by Eq. (11)-Eq. (13)
+T ext: the trend pattern and uncertainty are {} and {}.
+XC = M LP (Bert(T ext))
+for t = M, · · · , 1 do
+z ∼ N(0, I) if t > 1 else z = 0
+√
+t
+Set−1 = √1αt (Set − √1−α
+ϵ (Set |XC , t)) + 1 − αt z
+1−α θ
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+0
+
+3
+
+6
+
+9
+
+12
+
+15
+
+18
+
+21
+
+24
+
+27
+
+Time (minutes)
+
+Fig. 6.
+
+GPU Memory Utilization for model training.
+
+set to 100 for all datasets. These tests are crucial due to the
+high time requirements for deployment in actual IIoT, where
+efficient training and inference are essential to ensure timely
+and reliable application of our proposed ICAD algorithm. To
+further address edge deployment feasibility, we explicitly monitor the GPU memory footprint during execution, and visualize
+the peak usage across datasets in Fig. 6. The experiments
+are executed on a single i7-8700 CPU @ 3.20GHz and an
+NVIDIA GeForce RTX 3080 Ti GPU. The window size (w),
+number of epochs epochs, and number of hidden layers h
+for the five datasets (EO, Swat, WADI, PSM, and HAI) are
+50/200/32, 50/200/32, 50/50/32, 50/300/16, and 50/400/32,
+respectively.
+From Table VI and Fig. 6, the following conclusions can
+be drawn:
+•
+
+The training time of our ICAD algorithm is influenced
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+12
+
+TABLE VI
+T HE COMPUTATIONAL COST IN BOTH TRAINING AND INFERENCE ON S WAT, WADI, PSM, EO AND HAI DATASETS . T HE UNIT OF RUNNING TIME IS
+SECONDS .
+Swat
+
+WADI
+
+PSM
+
+EO
+
+HAI
+
+training inference training inference training inference training inference training inference
+all time
+5373.39
+epoch size
+200
+batch size
+16
+window size
+50
+window number
+9900
+each window time 0.54
+
+674.4
+\
+16
+50
+6898
+0.10
+
+6497.38 745.69 5135.55 196.70
+50
+\
+300
+\
+16
+16
+16
+16
+50
+50
+50
+50
+24192
+3456
+2595
+1756
+0.27
+0.22
+2.00
+0.11
+
+DiffAD
+
+1
+
+DDMT
+
+0.29
+
+1
+
+1
+
+0.0016
+
+0.6
+
+Diffstg
+
+0.29
+
+1
+
+1
+
+0.0016
+
+0.4
+
+ICAD
+
+1.0
+
+0.012
+
+0.0016
+
+0.0016
+
+1
+
+DiffAD
+
+DDMT
+
+Diffstg
+
+ICAD
+
+0.29
+
+0.29
+
+0.012
+0.8
+
+0.2
+
+Fig. 7. P value matrix of F1 for graph-based method in five datasets, each
+value in the figure represents the degree of performance difference between the
+corresponding algorithms. Smaller values indicate more obvious differences
+between the algorithms, while larger values signify less obvious distinctions.
+
+by the number of epochs, the number of sensors in each
+dataset, and the complexity of data anomalies, resulting
+in an overall efficient training duration. Despite using
+a single NVIDIA GeForce RTX 3080 Ti, the longest
+training time is for the WADI dataset, taking only 0.3
+hours per 50 epochs. If the graphics card with the
+computing power of A100 or A800 is used, the training
+time of our algorithm would be significantly reduced,
+making it more suitable for the actual IIoT.
+• Our proposed ICAD algorithm consistently achieves an
+inference time of less than 1.01 seconds per window on
+a single GPU across all five datasets, highlighting its
+efficient memory usage and rapid computation capabilities. This efficiency indicates that the ICAD algorithm
+is well-suited to meet real-time detection requirements.
+The quick inference time allows the ICAD algorithm to
+analyze incoming data streams and identify anomalies
+swiftly, minimizing delays. Such performance is critical
+in applications where the timely detection of anomalies
+is paramount, including industrial monitoring, cybersecurity, and healthcare. In these domains, the ability
+to promptly respond to anomalies can prevent system
+failures, enhance security measures, and improve patient
+outcomes by enabling proactive interventions.
+• The peak allocated memory during training is 4.16 GB,
+with the average memory usage being only 1.00 GB.
+While a 4.16 GB peak training memory might be too high
+for highly constrained microcontrollers at the extreme
+
+130.01
+200
+16
+50
+48
+2.70
+
+42.78
+\
+16
+50
+48
+0.89
+
+6284.35 559.42
+400
+\
+16
+16
+50
+50
+6192
+5832
+1.01
+0.10
+
+edge, it is perfectly feasible for deployment on more
+capable industrial edge servers, gateways, or local control
+room machines.
+A central consideration during our design process was
+to ensure the models computational efficiency for practical
+deployment. To mitigate the resource-intensiveness typically
+associated with multi-module deep learning models, we implemented several strategic architectural choices:
+Compact BERT: We utilize a foundational, compact version
+of BERT (bert-base-uncased) rather than larger, more complex
+BERT variants, to strike a balance between expressive power
+and computational cost.
+Minimalist GCN Architecture: GCN is intentionally designed with only one layer, sufficient to capture essential spatial correlations between sensors while significantly reducing
+the computational cost associated with deeper graph networks.
+U-Net Simplification: The attention mechanism is removed
+from U-Net architecture, balancing multi-scale feature extraction with computational efficiency.
+H. Generalization and Robustness
+1) Generalization Performance Test: To comprehensively
+compare the generalization performance of different learning
+algorithms, it is insufficient to rely solely on evaluating their
+performance on individual datasets. Hypothesis testing provides a crucial foundation for such comparisons. In this paper,
+we employ the Friedman test and the Conover post hoc test
+[47] to evaluate the performance of multiple algorithms across
+different datasets. Since the F1 score serves as an average
+measure of both recall (Rec) and precision (Prec), our analysis focuses exclusively on the F1 score. The generalization
+performance evaluation is divided into two stages:
+In the first stage, Friedman test is conducted under the null
+hypothesis that there is no difference in performance among
+algorithms. The calculated F-statistic (Eq. (32)) is 14.106843,
+which exceeds the critical value of 3.076797 at a confidence
+level of 0.0001. Therefore, the null hypothesis is rejected,
+indicating significant differences among the 23 algorithms.
+(N − 1) τχ2
+,
+N (k − 1) − τχ2
+( k
+)
+∑
+12N
+k
+(k
++
+1)
+τχ2 =
+,
+r2 −
+k (k − 1) i=1 i
+4
+TF =
+
+(32)
+(33)
+
+where k and N represent the number of methods and datasets,
+and ri is the average sorting value of the ith algorithm.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+Fig. 8.
+
+Domain discrepancy visualization for the EO dataset.
+
+13
+
+test set. This robustness stems from the fact that our trend and
+uncertainty cues are not based on fixed or global templates.
+Instead, they are dynamically calculated for each time series
+window based on difference statistics and information entropy.
+This allows the conditioning of our diffusion model to adaptively respond to shifts in data distribution, making it resilient
+to overarching domain shifts.
+Second, we conduct additional experiments to explicitly
+evaluate the sensitivity of our method to sensor noise and
+outliers. Two types of perturbations were introduced into the
+test sets: Gaussian noise added to 2 or 4 randomly selected
+sensor channels, and sporadic, sharp spike outliers added to 2
+or 4 randomly selected channels. As Fig. 9 demonstrates, our
+model’s performance remains highly stable. With only minor
+degradation as noise levels increase, the F1-scores remain
+very strong across all datasets. This resilience stems from the
+fact that our trend and uncertainty calculations are based on
+statistics aggregated over a time window. This aggregation
+effectively smooths out transient anomalies and reduces the
+influence of localized sensor noise, leading to a stable and
+reliable conditioning signal for the diffusion model.
+VI. C ONCLUSION
+
+Fig. 9. Robustness evaluation of the model against different types and levels
+of noise across five benchmark datasets.
+
+In the second stage, after confirming the differences among
+the algorithms, the Conover post hoc test is conducted to compare whether there are significant differences between pairs of
+algorithms. At the 95% confidence level, the proposed ICAD
+algorithm is significantly different from all other algorithms
+except for DiffAD, DDMT, and Diffstg.
+To further explore the differences among our proposed
+ICAD algorithm and the DiffAD, DDMT, and Diffstg algorithms, a Conover post hoc test is conducted specifically for
+these four algorithms. As shown in Fig. 7, at the 95% confidence level, our proposed ICAD algorithm is more effective
+than the other three algorithms.
+2) Robustness Analysis: A key strength of our proposed
+method is its robustness to both high-level domain shifts and
+data perturbations. We validate this through two targeted sets
+of experiments.
+First, to evaluate robustness under domain shift, we conduct
+a case study using the EO dataset, which exhibits a clear
+distributional shift between the training and test sets. As shown
+in Fig. 8, a t-SNE visualization reveals a distinct separation
+between the training (blue) and test samples (red). Despite
+this, our model achieves a state-of-the-art F1-score on the EO
+
+In this work, we propose a novel unsupervised anomaly
+detection method, termed ICAD, which uses defined textual
+descriptions of trend patterns and uncertainties as conditions.
+To enable the diffusion model to more accurately capture
+the logical relationships between contextual windows, a reasoning network is introduced. In particular, a multi-feature
+adaptive fusion network is designed to enhance the ability
+of diffusion model to predict noise. Experiments conducted
+on five real-world industrial datasets demonstrate that ICAD
+method outperforms baseline methods in both accuracy and
+generalization. Such a study provides insights for industrial
+operators and engineers, enabling more effective monitoring
+of production states and the rapid identification of abnormal
+behavior. In turn, this facilitates timely corrective actions and
+drives improvements in IIoT.
+VII. ACKNOWLEDGMENT
+The authors are grateful to the Editor-in-Chief and the
+editorial team, as well as the Associate Editor and anonymous reviewers, for their dedicated service, efficient work,
+and constructive comments throughout the review process.
+This work was supported by the Natural Science Foundation
+of China [Grant No. U21A20491] and Liaoning Provincial
+Natural Science Foundation of China [Grant No. 2023-MSBA001].
+R EFERENCES
+[1] D. Lpez, I. Aguilera-Martos, M. Garca-Barzana, F. Herrera, D. GarcaGil, J. Luengo, ”Fusing anomaly detection with false positive mitigation
+methodology for predictive maintenance under multivariate time series,”
+Information Fusion, vol. 100, pp. 101957, 2023.
+[2] W. Shi, D. Tang, S. Zhan, Z. Qin, X. Wang, ” Anapproach for detecting
+LDoS attack based on cloud model,” Frontiers of Computer Science, vol.
+16, no. 6, pp. 166821, 2022.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+[3] S. Qin, L. Chen, Y. Luo, G. Tao, ” Multiview Graph Contrastive Learning
+for Multivariate Time-Series Anomaly Detection in IoT,” Information
+Fusion, vol. 10, no. 24, pp. 122401–22414, 2023.
+[4] J. Audibert, P. Michiardi, F. Guyard, and M. A. Marti, S. Zuluaga,
+”Usad: Unsupervised anomaly detectionon multivariate time series,” in
+Proceedings of the 26th ACMSIGKDD International Conference on
+Knowledge Discovery and Data Mining (KDD), pp. 3395–3404, 2020.
+[5] A. Deng, B. Hooi, ”Graph neural network-based anomaly detection in
+multivariate time series,” in Proceedings of the AAAI Conference on
+Artificial Intelligence (AAAI), vol. 35, pp. 4027–4035, 2021.
+[6] A. Goodge, B. Hooi, S.-K. Ng, W. S. Ng, ”Lunar: Unifying local outlier
+detection methods via graph neural networks,” in Proceedings of the AAAI
+Conference on Artificial Intelligence, pp. 6737–6745, 2022.
+[7] Z. Li, Y. Zhao, J. Han, Y. Su, R. Jiao, X. Wen, D. Pei, ”Multivariate time
+series anomaly detection and interpretation using hierarchical inter-metric
+and temporal embedding,” in ACM SIGKDD Conference on Knowledge
+Discovery and Data Mining (KDD), pp. 3220–3230, 2021.
+[8] W. Zhang, C. Zhang, F. Tsung, ”GRELEN: Multivariate time series
+anomaly detection from the perspective of graph relational learning,”
+in International Joint Conference on Artificial Intelligence (IJCAI), pp.
+2390–2397, 2022.
+[9] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, ”Robust anomaly
+detection for multivariate time series through stochastic recurrent neural
+network,” in Proceedings of the ACM SIGKDD International Conference
+on Knowledge Discovery andd Data Mining, pp. 2828–2837, 2019.
+[10] H. Zenati, M. Romain, C. S. Foo, B. Lecouat, and V. Chandrasekhar,
+”Adversarially learned anomaly detection,” in IEEE International Conference on Data Mining (ICDM), pp. 727–736, 2018.
+[11] K. Zhang, K. Yin, W. Yang, ”Probabilistic accumulation grey forecasting
+model and its properties,” Expert Systems with Applications, vol. 223, pp.
+119889, 2023.
+[12] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, S.-K. Ng, ”MAD-GAN:
+Multivariate anomaly detection for time series data with generative
+adversarial networks,” in International Conference on Artificial Neural
+Networks, pp. 703–716, 2019.
+[13] C. Xiao, Z. Gou, W. Tai, K. Zhang, F. Zhou, ”Imputation-based timeseries anomaly detection with conditional weight-incremental diffusion
+models,” in Proceedings of the 29th ACM SIGKDD Conference on
+Knowledge Discovery and Data Mining, pp. 2742–2751, 2023.
+[14] C. Yang, T. Wang, X. Yan, ”Ddmt: Denoising diffusion mask transformer
+models for multivariate time series anomaly detection,” arXiv preprint
+arXiv:2310.08800, 2023.
+[15] Y. Chen, C. Zhang, M. Ma, Y. Liu, R. Ding, B. Li, S. He, S. Rajmohan,
+Q. Lin, D. Zhang, ”Imdiffusion: Imputed diffusion models for multivariate
+time series anomaly detection,” in 50th International Conference on Very
+Large Databases (VLDB)., 2024.
+[16] D. Park, Y. Hoshi, C. C. Kemp, ”A multimodal anomaly detector for
+robot-assisted feeding using an lstm-based variational autoencoder,” IEEE
+Robotics and Automation Letters, vol. 3, no. 3, pp. 1544–1551, 2018.
+[17] Z. Zhang, W. Li, W. Ding, L. Zhang, Q. Lu, P. Hu, T. Gui, S. Lu,
+”STAD-GAN: unsupervised anomaly detection on multivariate time series
+with self-training generative adversarial networks,” ACM Transactions on
+Knowledge Discovery from Data, vol. 17, no. 5, pp. 1–18, 2023.
+[18] D. Liu, Y. Wang, C. Liu, X. Yuan, K. Wang, C. Yang, ”Scope-free global
+multi-condition-aware industrial missing data imputation framework via
+diffusion transformer,” IEEE Transactions on Knowledge and Data Engineering (TKDE), vol.36, no. 11, pp. 6977–6988, 2024.
+[19] T. Zhang, J. Lin, J. Jiao, H. Zhang, H. Li, ”An interpretable latent
+denoising diffusion probabilistic model for fault diagnosis under limited
+data,” IEEE Transactions on Industrial Informatics, vol. 20, no. 8, pp.
+10354–10365, 2024.
+[20] M. F. Sikder, R. Ramachandranpillai, F. Heintz, ”Transfusion: generating
+long, high fidelity time series using diffusion models with transformers,”
+arXiv preprint arXiv:2307.12667, 2023.
+[21] N. Sivaroopan, D. Bandara, C. Madarasingha, G. Jourjon, A. P. Jayasumana, K. Thilakarathna, ”Netdiffus: Network traffic generation by
+diffusion models through time-series imaging,” Computer Networks, vol.
+251, pp. 110616, 2024.
+[22] G. Li, Y. Shen, P. Zhao, X. Lu, J. Liu, Y. Liu, S. C. Hoi, ”Detecting cyber
+attacks in industrial control systems using online learning algorithms,”
+Neurocomputing, vol. 364, pp. 338–348, 2019.
+[23] Y. Zheng, H. Y. Koh, M. Jin, L. Chi, K. T. Phan, S. Pan, Y. P. Chen,
+and W. Xiang, ”Correlation-aware spatial-temporal graph learning for
+multivariate time-series anomaly detection,” IEEE Transactions on Neural
+Networks and Learning Systems, 2023.
+
+14
+
+[24] M. Ma, L. Han, C.Zhou, ”BTAD: A binary transformer deep neural
+network model for anomaly detection in multivariate time series data,”
+Advanced Engineering Informatics, vol. 56, pp. 101949, 2023.
+[25] M. Breunig, H. Kriegel, R. Ng, J. Sander, ”LOF: identifying densitybased local outliers,” in Proceedings of the 2000 ACM SIGMOD International Conference on Management of Data, pp. 93–104, 2000.
+[26] Z. Wu, X. Yang, X. Wei, P. Yuan, Y. Zhang, and J. Bai, ”A selfsupervised anomaly detection algorithm with interpretability,” Expert
+Systems with Applications, vol. 237, pp. 121539, 2024.
+[27] T. L. Fei, M. T. Kai, and Z. H. Zhou, ”Isolation Forest,” in IEEE
+International Conference on Data Mining (ICDM), pp. 413–422, 2008.
+[28] Z. Li, Y. Zhao, X. Hu, N. Botta, C. Ionescu, and G. Chen, ”Ecod:
+Unsupervised outlier detection using empirical cumulative distribution
+functions,” IEEE Transactions on Knowledge and Data Engineering, vol.
+35, no. 12, pp. 12181–12193, 2022.
+[29] N. Mohammadi Foumani, L. Miller, C. W. Tan, G. I. Webb, G. Forestier,
+M. Salehi, ”Deep learning fortime series classification and extrinsic
+regression: A currentsurvey,” ACM Computing Surveys, vol. 56, no. 9,
+pp. 1–45, 2024.
+[30] J. Xu, H. Wu, J. Wang, and M. Long, ”Anomaly Transformer: Time Series Anomaly Detection with Association Discrepancy,” in International
+Conference on Learning Representations (ICLR), 2022.
+[31] H. Xu, Y. Wang, S. Jian, Q. Liao, Y. Wang, G. Pang, ”Calibrated oneclass classification for unsupervised time series anomaly detection,” in
+IEEE Transactions on Knowledge and Data Engineering (TKDE), vol.
+36, pp. 5723–5736, 2024.
+[32] H. Wen, Y. Lin, Y. Xia, H. Wan, Q. Wen, R. Zimmermann, Y. Liang,
+”Diffstg: Probabilistic spatiotemporal graph forecasting with denoising
+diffusion models,” in Proceedings of the 31st ACM International Conference on Advances in Geographic Information Systems, pp. 112, 2023.
+[33] J. Ho, A. Jain, P. Abbeel, ”Denoising diffusion probabilistic models,”
+in Advances in Neural Information Processing Systems, pp. 6840–6851,
+2020.
+[34] J. Devlin, M. Chang, K. Lee, K. Toutanova, ”Bert: Pre-training of deep
+bidirectional transformers for language understanding,” arXiv preprint
+arXiv:1810.04805, 2018.
+[35] D. Simon, ”Optimal state estimation: Kalman, H infinity, and nonlinear
+approaches,” John Wiley & Sons, 2006.
+[36] O. Ronneberger, P. Fischer, T. Brox, ”U-net: Convolutional networks
+for biomedical image segmentation,” in Medical Image Computing and
+Computer-Assisted Intervention-MICCAI 2015: 18th International Conference, pp. 234–241, 2015.
+[37] A. Lazcano, P. Herrera, M. Monge, ”A combined model based on
+recurrent neural networks and graph convolutional networks for financial
+time series forecasting,” Mathematics, vol. 11, no. 1, pp. 224, 2023.
+[38] A. Siffer, P. Fouque, A. Termier, C. Largouet, ”Anomaly detection in
+streams with extreme value theory,” in Proceedings of the 23rd ACM
+SIGKDD International Conference on Knowledge Discovery and Data
+Mining, pp. 1067–1075, 2017.
+[39] A. P. Mathur, and N. O. Tippenhauer, ”SWaT: A water treatment testbed
+for research and training on ICS security,” in International Workshop on
+Cyber-physical Systems for Smart Water Networks, pp. 31–36, 2016.
+[40] A. Abdulaal, Z. Liu, and T. Lancewicki, ”Practical approach to asynchronous multivariate time series anomaly detection and localization,”
+in Proceedings of the 27th ACM SIGKDD Conference on Knowledge
+Discovery and Data Mining (KDD), pp. 2485–2494, 2021.
+[41] H. K. Shin, W. Lee, J. H. Yun, and H. Kim, ”HAI 1.0:HIL-based
+Augmented ICS Security Dataset,” in 13Th USENIX Workshop on Cyber
+Security Experimentation and Test (CSET 20), 2020.
+[42] H. Zhao, Y. Wang, J. Duan, C. Huang, D. Cao, Y. Tong, B. Xu, J.
+Bai, J. Tong, Q. Zhang, ” Multivariate time-series anomaly detection via
+graph attention network,” in 2020 IEEE International Conference on Data
+Mining, pp. 841–850, 2020.
+[43] S. Ray, S.Lakdawala, M. Goswami, C. Gao, ” Learning graph neural
+networks for multivariate time series anomaly detection,” in arXiv preprint
+arXiv:2111.08082, 2021.
+[44] B. Schlkopf, R. C. Williamson, A. Smola, J. Shawe-Taylor, J. Platt,
+”Support vector method for novelty detection,” in Advances in Neural
+Information Processing Systems, pp. 582–588, 1999.
+[45] L. Ruff, R. Vandermeulen, N. Goernitz, L. Deecke, S. A. Siddiqui, A.
+Binder, E. Mller, M. Kloft, ”Deep one-class classification,” in International Conference on Machine Learning, pp. 4393–4402, 2018.
+[46] R. Wang, C. Liu, X. Mou, K. Gao, X. Guo, P. Liu, T. Wo, and
+X. Liu, ”Deep contrastive one-class time series anomaly detection,” in
+Proceedings of the 2023 SIAM International Conference on Data Mining,
+pp. 694–702, 2023.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3682751
+
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING
+
+[47] H. J. Cabral, ”Multiple comparisons procedures,” Circulation, vol. 117,
+pp. 698–701, 2008.
+[48] R. Xu, H. Miao, S. Wang, et al. PeFAD: a parameter-efficient federated
+framework for time series anomaly detection, in Proceedings of the 30th
+ACM SIGKDD Conference on Knowledge Discovery and Data Mining
+(KDD), pp. 3621–3632, 2024.
+[49] Y. Zheng, H. Y. Koh, M. Jin, et al. Correlation-Aware SpatialTemporal
+Graph Learning for Multivariate Time-Series Anomaly Detection, IEEE
+Transactions on Neural Networks and Learning Systems (TNNLs), vol.
+35, no. 9, pp. 11802–11816, 2024.
+
+Zhichao Wu is currently working toward the
+Ph.D. degree in the College of Computer Science
+and Technology, Dalian University of Technology,
+Dalian, China. His research interests include machine learning and data mining.
+
+Li Zhu received the B.S. degree in automation from
+Dalian University of Technology, Dalian, China, in
+2009, and the Ph.D. degree in control science and engineering from Zhejiang University, Hangzhou, China, in 2014. He is currently an Associate Professor
+with the School of Control Science and Engineering,
+Dalian University of Technology, Dalian, China.
+His current research interests include data mining
+and analytics, process monitoring and diagnosis,
+machine intelligence, and knowledge automation.
+
+15
+
+Xirong Xu is an Associate Professor of School
+of Computer Science and Technology at Dalian
+University of Technology. She primarily works on
+the topology structure of interconnection networks,
+graph theory algorithms, as well as knowledge
+graphs and knowledge Q&A and recommendation
+system. Her main application area includes complex
+networks, natural language processing, Artificial intelligence and big data analysis.
+
+Xiaopeng Wei is a Professor in the School of
+Computer Science and Technology, Dalian University of Technology, China. He received his B.S.,
+M.S., and Ph.D. degrees from Dalian University of
+Technology. His research areas include intelligent
+computing and intelligent manufacturing.
+
+Xin Yang is a Professor in the School of Computer Science and Technology, Dalian University of
+Technology, China. He received his B.S. degree in
+Computer Science from Jilin University. He was a
+joint Ph.D. student at Zhejiang University and UC
+Davis for Graphics and received his Ph.D. degree.
+His research interests include artificial intelligence
+and computational visual media.
+
+Zitao Yin is currently working toward the Ph.D. degree in the College of Computer Science and Technology, Dalian University of Technology, Dalian,
+China. His research interests include knowledge
+graph and data mining.
+
+Shunqi Zhang is currently working toward the
+Ph.D. degree in the College of Computer Science
+and Technology, Dalian University of Technology,
+Dalian, China. His research interests include machine learning and data mining.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+PAPER_TEXT

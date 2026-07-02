@@ -1,0 +1,871 @@
+2982 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ Hardware-Aware Neural Architecture Search for
+ Encrypted Traffic Classification on
+ Resource-Constrained Devices
+ Adel Chehade , Graduate Student Member, IEEE, Edoardo Ragusa , Member, IEEE,
+ Paolo Gastaldo , Member, IEEE, and Rodolfo Zunino
+
+ Abstract—This paper presents a hardware-efficient deep I. I NTRODUCTION
+neural network (DNN), optimized through hardware-aware
+neural architecture search (HW-NAS); the DNN supports the
+classification of session-level encrypted traffic on resourceconstrained Internet of Things (IoT) and edge devices. Thanks to
+ T HE proliferation of Internet of Things (IoT) technologies
+ introduces security challenges that traditional methods
+ often cannot handle effectively [1]. Resource-constrained
+HW-NAS, a 1D convolutional neural network (CNN) is tailored devices generate huge amounts of data; relying on centralized
+on the ISCX VPN-nonVPN dataset to meet strict memory and servers to process that data may lead to transfer delays,
+computational limits while achieving robust performance. The increased network load, and additional power consumption
+optimized model attains an accuracy of 96.60% with just 88.26K [2]. Ideally, data flow monitoring should be carried out on
+parameters, 10.08M floating-point operations (FLOPs), and a
+maximum tensor size of 20.12K. Compared to state-of-the-art edge devices to limit overhead in network management [3].
+(SOTA) models, it achieves reductions of up to 444-fold, 312-fold, This paper proposes a design strategy to enable efficient traffic
+and 15-fold in these metrics, respectively, significantly minimizing classification (TC) on constrained devices at the network edge.
+memory footprint and runtime requirements. The model also The growth of encrypted Internet traffic, which now
+demonstrates versatility, achieving up to 99.86% across multiple accounts for up to 96% of data [4], worsens this scenario.
+VPN and traffic classification (TC) tasks; it further generalizes to Widespread encryption complicates network security and trafexternal benchmarks with up to 99.98% accuracy on USTC-TFC fic analysis [5], [6]; since modern protocols conceal packet
+and QUIC NetFlow. In addition, an in-depth approach to headerlevel preprocessing strategies confirms that the optimized model
+ contents, traditional methods such as Deep Packet Inspection
+can provide notable performance across a wide range of config- (DPI) and port-based classification are mostly ineffective [3].
+urations, even in scenarios with stricter privacy considerations. Efficient real-time traffic analysis is essential in today’s
+Likewise, a reduction in the length of sessions of up to 75% cybersecurity ecosystem, especially for devices with limited
+yields significant improvements in efficiency while maintaining resources like IoT and edge platforms [2]. These devices
+high accuracy with only a negligible drop of 1-2%. However, the require fast, adaptive processing to manage encrypted traffic
+importance of careful preprocessing and session length selection patterns and support real-time decision-making. Use cases
+in the classification of raw traffic data is still present, as improper
+settings or aggressive reductions can bring about a 7% reduction
+ include edge monitoring in high-bandwidth 5G applications,
+in overall accuracy. The quantized architecture was deployed such as video streaming and gaming, which need smooth peron STM32 microcontrollers and evaluated across input sizes; formance [7], and sensitive areas like finance and healthcare,
+results confirm that the efficiency gains from shorter sessions where secure data exchange is critical [4].
+translate to practical, low-latency embedded inference. These Deep neural networks (DNNs) are increasingly used for
+findings demonstrate the method’s practicality for encrypted traffic classification (TC) due to their high accuracy and ability
+traffic analysis in constrained IoT networks. to automatically extract features [5], [8]. However, their high
+ Index Terms—Deep neural networks, encrypted traffic classi- computational needs limit their use in devices with limited
+fication, hardware-aware neural architecture search, Internet of resources [9]. This work explores ways to optimize DNN
+Things, resource-constrained devices. designs specifically for these restricted settings.
+ Beyond the DNN architecture, optimizing classification
+ performance requires careful design choices. Network traffic
+ can be classified at different levels, namely packets, flows, and
+ Received 15 January 2025; revised 22 August 2025 and 26 January 2026; sessions [10]. A packet is the smallest unit of data, while a flow
+accepted 15 February 2026. Date of publication 20 February 2026; date of includes packets sent from a source to a destination. A session
+current version 10 March 2026. This work was partially supported by project extends this concept by including bidirectional communication
+SERICS (PE00000014) under the MUR National Recovery and Resilience between two endpoints, capturing the full packet exchange
+Plan funded by the European Union - NextGenerationEU. The associate editor
+coordinating the review of this article and approving it for publication was over time. This paper focuses on session-level classification,
+G. Sun. (Corresponding author: Adel Chehade.) as it provides a broader view of network behavior, particularly
+ The authors are with the Department of Naval, Electrical, Electronic for identifying encrypted traffic patterns [11], [12], [13], [14].
+and Telecommunications Engineering (DITEN), University of Genoa, 16126
+Genoa, Italy (e-mail: adel.chehade@edu.unige.it; edoardo.ragusa@unige.it;
+ Another important aspect is the processing of packets; this
+paolo.gastaldo@unige.it; rodolfo.zunino@unige.it). process aims to ensure that only relevant information feeds
+ Digital Object Identifier 10.1109/TNSM.2026.3666676 the neural network. Several approaches in the literature [15],
+
+ © 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+ For more information, see https://creativecommons.org/licenses/by/4.0/
+CHEHADE et al.: HARDWARE-AWARE NEURAL ARCHITECTURE SEARCH FOR ETC 2983
+
+[16], [17], [18] considered both accuracy and computational dataset [26], demonstrates strong performance across
+costs. diverse TC tasks. It achieves 96.60% accuracy in the main
+ Finally, one should consider that the varying levels of VPN-nonVPN classification. Additionally, it delivers
+complexity in the overall design problem can make certain high accuracy in VPN differentiation (99.86%), VPNstrategies more feasible than others. This paper analyzes the type (99.14%), broader traffic categories (96.74%), and
+interaction between those factors from an empirical viewpoint session-level application identification (94.18%), showing
+and provides the reader with practical design guidelines. its flexibility and effectiveness in real-world scenarios.
+ The paper presents a solution that relies on hardware- • Cross-dataset generalization: The very same architecaware neural architecture search (HW-NAS) for network TC. ture, tailored on the ISCX dataset, proves able to achieve
+HW-NAS has been applied in various deep learning (DL) up to 99.98% accuracy on the USTC-TFC2016 [27] and
+fields [19], [20]; prior studies have shown that hardware QUIC NetFlow [28] datasets.
+objectives are most effectively handled during architecture • On-device inference: Efficiency gains from reduced sesoptimization, rather than through post-hoc compression or sion lengths also result in lower latency and energy
+manual tuning [21], [22]. In this work, HW-NAS is employed consumption, enabling the model to run reliably on conas a constraint-driven design methodology, in which parameter strained IoT hardware; the quantized architecture operates
+count, floating-point operations (FLOPs), and peak intermedi- in real time on Cortex-M4 and M7 microcontrollers, with
+ate tensor size are explicitly bounded during the search. These latency under 115 ms and energy below 29 mJ.
+constraints reflect practical deployment bottlenecks in model • Code availability: The proposed HW-NAS is available
+storage, computational cost, and runtime memory usage. at https://github.com/SEAlab-unige/ProtectIT Unige.
+ The application considered in this paper deals with a
+significant, uncovered aspect in the literature, that is, the
+ II. R ELATED W ORK
+design of optimized neural models that satisfy strict hardware
+constraints and yet maintain satisfactory classification perfor- A. Traditional Approaches
+mances across diverse network environments, thus making Traditional TC methods such as port-based classification
+real-world deployment on IoT (edge) platforms feasible. and DPI often fail on encrypted and obfuscated traffic.
+ The main contributions of this paper are: Port-based classification associates traffic with specific ser-
+ • Hardware-aware deep networks for traffic classifica- vices based on port numbers, which was suitable for older
+ tion: To the best of our knowledge, this is the first work architectures but fails in modern networks due to dynamic
+ to design hardware-efficient deep networks for TC under ports and HTTP tunneling [3], [4]. Foundational studies
+ strict, IoT-compatible constraints. HW-NAS specifically indicated that default ports in Peer-to-Peer (P2P) protocols
+ targets session-level classification and endows DNNs account for less than 70% of actual traffic, thus confirming
+ with hardware efficiency and satisfactory classification the increasing ineffectiveness of this method [29], [30].
+ accuracy; previous approaches primarily focused on max- DPI identifies applications by detecting signatures within
+ imizing accuracy [5], [11], [13], [14], [23], [24], [25]. packet payloads [3], [4]. While effective on unencrypted traffic,
+ • Header-level preprocessing and session length reduc- it fails on encrypted flows where payloads are inaccessible [3],
+ tion: This work extends existing studies by covering and it remains resource-intensive [4].
+ multiple header-level preprocessing methods, such as
+ IP/MAC addresses, UDP padding, and anonymization,
+ alongside session-length reductions, on the optimized B. Machine Learning Methods
+ model. Experimental evidence demonstrates that the Classic machine learning (ML) approaches infer patterns
+ model achieves stable performance, maintaining high from statistical features (e.g., packet size, flow duration, and
+ accuracy with session lengths reduced by up to arrival intervals) without examining packet payloads [3], [4].
+ 75%, while achieving greater efficiency for resource- Various algorithms, including Naı̈ve Bayes for real-time
+ constrained devices through these reductions. At the same application classification, k-Nearest Neighbors (k-NN), and
+ time, excessive data obfuscation or aggressive reductions Decision Trees, have demonstrated effectiveness in identifying
+ in session lengths can affect accuracy; hence, careful encrypted flows based on these features [26]. Additionally,
+ selection of configurations is required to avoid drops Random Forests (RF) have been successfully employed for TC
+ of up to 7%. The paper gives practical guidelines for in real-world specialized environments like software-defined
+ optimizing preprocessing and session length, providing networking (SDN) [31].
+ a basis for future research on trading off accuracy and Addressing the need for high-speed processing, [32] impleresource efficiency. mented a fully in-switch classification framework that executes
+ • Efficiency benchmarks: Established benchmarks vali- RF inference at line rate within the data plane. Moreover, [33]
+ date the HW-NAS-driven strategy against state-of-the-art combined flow label propagation with compound classification
+ (SOTA) methods. The proposed model yields substantial to detect unknown flows and boost accuracy.
+ resource savings, with reductions of up to 444-fold in Some limitations affect traditional ML methods for TC.
+ parameters, 312-fold in FLOPs, and 15-fold in maxi- They rely on manual feature extraction, which is labormum tensor size compared to baseline models. These intensive, and even strong models such as RF require frequent
+ reductions streamline session-level TC by reducing com- retraining to maintain satisfactory performance [4].
+ putational cost and memory usage. DL models extract complex features from raw traffic,
+ • Comprehensive validation across tasks: The HW-NAS- bypassing manual feature selection. While Convolutional Neuoptimized model, tailored on the ISCX VPN-nonVPN ral Networks (CNNs) and Recurrent Neural Networks (RNNs)
+2984 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+achieve high accuracy, they are often computationally heavy, Networks (HAN) to classify flows as time-series data. The
+hindering deployment in resource-limited applications. attention mechanism captures key features, achieving 91.2%
+ Several studies focused on session-level data. In [11], accuracy, but with limited efficiency on constrained devices.
+a 1D-CNN and 2D-CNN were evaluated on this task: the
+1D-CNN scored an accuracy of 86.6% and outperformed the C. Trends in Hardware-Aware NAS
+2D-CNN. The approach presented in [27] also used 1D-CNN NAS methods improve model performance by tuning the
+for malware TC. [34] proposed an image-based approach network architecture on the target data. Many approaches have
+that converted initial non-zero payload sessions into grayscale been proposed in the literature [19], [20], each improving
+images for classification using CNNs. Although it achieved architecture exploration in unique ways.
+high F1 scores (97.73% for conventional encrypted traffic HW-NAS extends NAS by optimizing models for accuracy
+and 99.55% for VPN traffic), the coarse-grained handling alongside hardware constraints, such as memory, latency, and
+of subflows disregarded relevant session information. The computational efficiency [41]; this direction was established by
+framework in [35] combined CNN and Stacked AutoEncoders works such as MnasNet [21] and ProxylessNAS [22], which
+(SAE) for encrypted traffic classification (ETC) by integrating integrated hardware objectives into the search process targeting
+trimmed raw traffic data and statistical features; the method mobile platforms. Frameworks like MCUNet [42] further spereached 98% F1-score, at the expense of additional time cialized these techniques for microcontrollers by using systemrequired for feature extraction. Long Short-Term Memory algorithm co-design to fit deep models within strict SRAM
+(LSTM) networks, often used to model sequential dependen- and Flash constraints. Additionally, studies such as [43], [44],
+cies, were employed in the Inception-LSTM (ICLSTM) model and [45] illustrated how HW-NAS could produce models
+[24], which converted traffic data into grayscale images and tailored to efficient deployment on resource-limited platforms
+combined Inception modules with LSTM layers; it attained by matching network design with target hardware needs.
+over 98% accuracy but showed limitations in adapting to A recent work applied NAS to ETC [8], although without
+diverse real-world scenarios. The integration of LSTM, CNN, strict IoT-centric constraints. Other works have applied NAS
+and a squeeze-and-excitation module to capture spatiotempo- to malware detection using proximal-iteration search [46], and
+ral features [13] achieved over 90% accuracy on encrypted have shown that session-level ETC is feasible under hardware
+and unencrypted traffic via end-to-end representation learn- constraints [47]. A HW-NAS strategy was also adopted in [48]
+ing. Focusing on attention mechanisms added computational for session-level inference on microcontrollers; however, the
+overhead and limited scalability for resource-constrained study did not account for how input data variation can affect
+environments. efficiency and performance.
+ At the packet level, [6] introduced Deep Packet, which NAS effectiveness relies on careful adaptation to the specific
+classified encrypted traffic using a combination of SAE and constraints and priorities of the target application domain.
+CNN. Packet-level approaches require large volumes of data, The research presented in this paper relies on HW-NAS to
+thus leading to high computational requirements and extended develop a hardware-efficient neural network for ETC. The
+training times. The work in [36] proposed DataNets, which target environment includes IoT applications, in which high
+used Multilayer Perceptron (MLP), SAE, and CNN models for accuracy and resource efficiency are of paramount importance.
+the accurate categorization of encrypted traffic in smart home
+networks. Aggressive undersampling was used to address III. P RELIMINARIES
+dataset imbalance, but it may affect the model’s generalization NAS automates neural network design by applying a search
+performance. The authors in [37] proposed a deep hierarchical algorithm to identify optimal architectures within a predefined
+neural network for packet-level malicious traffic detection; a search space; this approach outperforms traditional handmade
+1D-CNN for spatial feature extraction and Gated Recurrent models [8], [20] in terms of accuracy.
+Unit (GRU) for temporal features scored high accuracy levels Conventional NAS algorithms aim to optimize computaacross multiple intrusion detection datasets [38], [39]. tional performance but often overlook hardware constraints;
+ Several works integrated session and packet-level data. as a result, the models they produce may lack the efficiency
+Capsule Networks (CapsNet) [23] yielded a session packet- required for their deployment in resource-limited devices. HWbased model for ETC. It prioritized classification performance NAS overcomes this limitation by directly including hardware
+at the expense of computational overhead. Likewise, the CBS constraints in the search process; this makes it possible to envimodel in [5] combined 1D-CNN, attention-based Bi-LSTM, sion deployment on a variety of application devices, such as
+and SAE for ETC at both session and packet levels by integrat- microcontroller units (MCUs), field-programmable gate arrays
+ing spatial, temporal, and statistical features. CBS employed (FPGAs), and cloud accelerators. The extended optimization
+Generative Adversarial Networks (GANs) for data augmen- problem takes into account multiple objectives and constraints,
+tation and class imbalance handling, resulting in improved including accuracy, memory usage, computational complexity
+performance. The computational requirements limited its use (measured in FLOPs), and energy efficiency [19].
+in offline processing and made the method unsuitable for The HW-NAS optimization problem is to identify an archireal-time applications. In [40], the authors proposed a hybrid tecture a ∈ A that minimizes the validation loss on a given
+model that extracts flow-level statistical features and classifies dataset D. This objective can be formally defined as:
+them using a deep feedforward DNN followed by a maximum
+entropy classifier. Despite reporting 99.23% accuracy, the min Lval (w∗ (a), a)
+ a∈A
+approach relies on handcrafted features and static encoding, s.t w∗ (a) = argmin Ltrain (w, a)
+limiting its adaptability to raw or evolving traffic. Other works w
+[18] applied attention-based LSTM and Hierarchical Attention ψ(a, HW) < Thr (1)
+CHEHADE et al.: HARDWARE-AWARE NEURAL ARCHITECTURE SEARCH FOR ETC 2985
+
+where A denotes the search space containing all candidate Data scaling: This process prepares the data for subsequent
+architectures, Lval represents the validation loss, and Ltrain is input to the model, converting raw byte information into
+the training loss minimized to optimize the model weights a standardized format suitable for neural network training.
+w∗ (a). ψ(a, HW) is a function that measures the performance Each byte in the raw packet values forming session data is
+of the architecture with respect to hardware-specific metrics normalized into the range [0,1].
+and Thr is a threshold value associated with these constraints.
+ Three main phases characterize NAS, namely, defining the B. Optimization Problem in HW-NAS
+search space, selecting the search strategy, and evaluating the
+performance. The search space defines the set of admissible The HW-NAS design strategy adopted in this paper casts
+network structures (including layer configurations and opti- architecture selection as a constrained optimization problem
+mization hyperparameters), which collectively determine the over candidate models a ∈ A, defined as follows:
+exploration boundaries for the NAS algorithm. The search min Accuracyval (w∗ (a), a)
+ a∈A
+strategy then controls how the NAS algorithm explores the
+architecture space. Finally, the performance evaluation tests s.t w∗ (a) = argmin Ltrain (w, a)
+ w
+the candidate architecture using a task-specific merit function,
+ |P(a)| < FTh
+which adapts to the requirements of the application.
+ |T (a)| < RTh
+ IV. M ETHODOLOGY: D ESIGN OF E FFICIENT N ETWORK Flops(a) < FlopsTh (2)
+ FOR T RAFFIC C LASSIFICATION
+ Hardware constraints are applied using thresholds FTh , RTh ,
+ The method described in this paper provides a novel design and FlopsTh , which manage the critical resource limitations
+pipeline to develop lightweight, optimized DNN architec- typically characterizing IoT devices. These thresholds stem
+tures for session-level ETC, with a focus on deployment from existing works, such as [43].
+on resource-constrained IoT devices. The workflow consists The parameter-count threshold, FTh , controls the total numof three key stages: (1) Data preprocessing arranges raw ber of model parameters P(a) of a candidate architecture and
+traffic data for DL by converting sessions into a consistent directly affects memory usage. Reducing that quantity miniinput format; (2) in HW-NAS execution, the search algorithm mizes the model’s memory footprint and helps fit the limited
+explores the space of admissible architectures to find a high- Flash memory available on edge devices. The threshold on
+performing model that also satisfies hardware constraints; the maximum tensor size, RTh , bounds the peak intermediate
+finally, (3) the Model selection and testing first picks out activation size T (a) during inference and ensures that it fits the
+the best-performing architecture, based on performance and available RAM. This is critical for session-level classification
+constraints, then completes a rigorous testing process involving tasks, where efficient memory utilization is essential to avoid
+multiple tasks and deployment settings, ensuring generaliza- overflows during computation. Finally, the FLOPs threshold,
+tion and real-world feasibility. FlopsTh , limits computational complexity by bounding the
+ number of floating-point operations, which serves as a proxy
+A. Preprocessing for inference speed and energy consumption. This constraint
+ is essential for maintaining real-time performance on devices
+ The following steps implement the preprocessing phase. that often lack dedicated Graphics Processing Units (GPUs).
+ Session extraction: Raw traffic data is divided into sessions;
+each session consists of an ordered sequence of bidirectional
+packets exchanged between two endpoints, identified by IP C. Search Space Design
+addresses, port numbers, and protocol. Packet data is typically The HW-NAS search space in this work is a block-wise
+stored as raw bytes. structure relying on 1D CNNs, which efficiently capture
+ Data cleaning: This step removes data-link layer informa- dependencies in session-based traffic data. They extract localtion, including MAC addresses, and anonymizes IPs. This ized structural patterns within packet content (e.g., payload
+approach is frequently adopted in the literature to prevent and headers) and sequential trends across an entire session
+overfitting; otherwise, some session-specific features could (e.g., bidirectional exchanges). Recurrent neural networks
+lead the model to memorize traffic patterns instead of learning (RNNs), such as LSTMs and GRUs, can model sequengeneralization-relevant features [5], [6]. tial dependencies in session-based traffic data. At the same
+ Filtering irrelevant data: Packets without payloads time, their step-by-step processing paradigm increases over-
+(e.g., those featuring SYN, ACK, or FIN flags) and irrelevant head and training time, making them unsuitable for real-time
+DNS segments are discarded. Prior studies showed that those applications. Likewise, Transformers capture global relationkinds of packets did not contribute meaningfully to TC and ships using self-attention but exhibit impractical memory and
+could actually add noise to the dataset. Filtering these packets computational requirements for resource-constrained environensures only meaningful traffic is used for training [5]. ments. In contrast, 1D CNNs can benefit from weight sharing
+ Session normalization: In compliance with a method orig- and local connectivity to extract features efficiently, yieldinally proposed in [11] and [27], each session is normalized to ing a balance between computational cost and classification
+a uniform length of 784 bytes. This approach proved effective accuracy.
+in handling varying session sizes while ensuring consistency Each convolutional layer in the CNN block is defined by
+for model input. Longer sessions are truncated, and shorter its kernel size, number of filters, padding, and stride. These
+sessions are padded with null bytes to maintain a uniform parameters allow the model to flexibly adjust its receptive field
+length over all sessions. and depth so that it can capture both detailed packet-level
+2986 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+features and overall session-level patterns. A series of batch TABLE I
+normalization, ReLU activation, pooling (max or average, with ISCX VPN- NON VPN 2016 N UMBER OF S AMPLES
+adjustable pooling size), and dropout (with a configurable
+dropout rate) follow each convolutional layer. This improves
+feature representation while minimizing computational load.
+A Global Average Pooling (GAP) layer supports the final
+feature aggregation, which condenses spatial information into
+a compact representation and feeds a dense layer for the
+eventual classification outcome.
+
+D. Evolutionary Algorithm for NAS Search
+ In the proposed HW-NAS framework, an evolutionary
+algorithm supports the exploration of architecture space. Evolutionary algorithms proved to be highly effective toward that
+purpose [19]. This approach is suitable to ensure that target TABLE II
+architectures meet predefined hardware requirements [43]. OVERVIEW OF C LASSIFICATION TASKS
+ The search strategy starts from an initial (parent) architecture, a0 . A mutation function Rm (a p ) then spawns candidate
+architectures (children). Mutations involve random modifications to the parent, such as adding new blocks with
+randomly generated hyperparameters, removing blocks to
+reduce complexity, or adjusting parameters within existing
+blocks (e.g., number of filters, kernel size). Each child is then
+evaluated against the predefined hardware constraints H, and
+only those that satisfy them proceed to training.
+ This spawning/selection process iterates over a predefined
+ the next generation. After all generations, the architecture with
+number of generations Ng ; each generation yields Nc child
+ the highest validation score is selected.
+architectures. If a child fails the hardware constraint check,
+further mutations are applied until the required number of
+admissible children is achieved. A maximum depth constraint V. E XPERIMENTAL S ETUP
+limits the number of blocks within each architecture, ensuring This section outlines the empirical setting for designing
+that each child remains within a preset complexity level. and evaluating efficient DNNs for session-level TC. It covers:
+ (1) the encrypted traffic datasets; (2) the deployment-driven
+Algorithm 1 Evolutionary NAS with hardware constraints. hardware constraints; and (3) the HW-NAS process for dis-
+Inputs: Training set XT = {Xi , yi }i=1...n , validation set XV = covering models under resource limits.
+ {Xi , yi }i=1...m , search space A, initial parent a0 , mutation
+ operator Rm (·), Nc children per generation, number of A. Datasets and Tasks
+ generations Ng , evaluation function E(a, XV ), hardware 1) Encrypted VPN Dataset: The ISCX VPN-nonVPN
+ constraints H. dataset [26], consisting of approximately 30GB of traffic
+ Procedure: divided into 11 classes, is used in this study. It includes
+ 1: Initialize parent architecture a p ← a0 traffic for various applications in packet capture (PCAP)
+ 2: Initialize best architecture a∗ ← a p format, labeled according to application and activity type.
+ 3: for g = 1 to Ng do Table I outlines the dataset structure, detailing traffic cate-
+ 4: for c = 1 to Nc do gories, encapsulation types (VPN and Non-VPN), and their
+ 5: Generate child ac ← Rm (a p ) respective proportions. Widely adopted in TC research [5], [6],
+ 6: if ac satisfies H then [11], [14], [18], [24], this dataset serves as the main benchmark
+ 7: Train ac on XT for architecture optimization and supports the definition of
+ 8: end if various TC tasks.
+ 9: end for These tasks span a range of complexities and objectives,
+ as detailed in Table II. The rows represent different tasks,
+10: Select a p ← arg max E(ac , XV )
+ ac while the columns specify the name of the experiment, its
+11: Update a∗ ← arg max(E(a∗ , XV ), E(a p , XV )) objective, and the number of output classes. VPN-NonVPN
+12: end for classifies traffic into 11 categories across both VPN and
+13: Return a∗ Non-VPN traffic. VPN-Diff performs binary classification to
+ detect whether traffic is VPN or Non-VPN. VPN-Type and
+ The search loop is outlined in Algorithm 1. After passing NonVPN-Type further classify traffic types within the VPN
+the hardware check, each child undergoes training on the train- and Non-VPN groups into 6 and 5 categories, respectively.
+ing dataset XT , and is subsequently evaluated for validation Traffic-Cat evaluates general traffic categorization across both
+accuracy on the validation set XV . The architecture with the VPN and Non-VPN traffic into 6 usage-based categories.
+highest validation accuracy becomes the new parent, a p , for Finally, App-ID identifies 15 specific network applications.
+CHEHADE et al.: HARDWARE-AWARE NEURAL ARCHITECTURE SEARCH FOR ETC 2987
+
+ TABLE III for comparisons with SOTA models. It includes both VPN and
+ USTC-TFC2016 AND QUIC N ET F LOW OVERVIEW Non-VPN traffic, capturing shared structural patterns relevant
+ to broader classification settings. The goal is to discover a
+ network architecture that generalizes effectively across various
+ tasks and datasets, without the need for task-specific designs.
+ We ran the search on a workstation with an NVIDIA 2080 Ti
+ GPU, using session-level data preprocessed with Scapy, while
+ the HW-NAS framework was built on Keras and TensorFlow.
+ The thresholds for memory usage and FLOPs have been
+ initially set using the minimum values observed among
+ session-level TC models in prior works as reference. These
+ metrics were calculated following details provided by each
+ study and implemented in Keras to ensure consistency and
+ accuracy. We found substantial headroom for improving effi-
+ TABLE IV ciency. Since deployment targets both STM32F746G-DISCO
+ TARGET M ICROCONTROLLER S PECIFICATIONS and the more constrained Nucleo-F401RE, the thresholds
+ were aligned with the latter’s resource limits (see Table IV).
+ Specifically, we set the maximum parameter count to 120K
+ and the maximum tensor size to 22K, corresponding to 480 KB
+ Flash and 88 KB RAM under 32-bit floating-point assumptions
+ (float32). These estimates match the Nucleo’s 512 KB Flash
+ and 96 KB RAM and enable compatibility checks during
+ float32-based training and search. The FLOPs threshold was
+ set to 11M based on the device’s 84 MHz clock, which theo-
+ 2) Generalization Benchmarks: In addition to ISCX, we retically allows up to 84 million operations per second. This
+consider two public benchmarks, USTC-TFC2016 [27] and implies an upper bound of approximately 130 ms for inference
+QUIC NetFlow [28], to evaluate generalization under different execution, excluding memory access overheads, which are
+traffic distributions. Both datasets are provided in raw pcap not explicitly modeled in this estimate. This latency remains
+format (approximately 4GB for USTC and 120GB for QUIC) acceptable in session-level TC scenarios, where inference
+and reflect distinct classification scenarios. is invoked once per aggregated session, and it falls well
+ USTC-TFC2016 includes 20 traffic classes across benign within typical limits observed in edge-hosted analytics and netand malware categories, spanning diverse protocols and com- work monitoring tasks, which tolerate response times between
+munication behaviors in both encrypted and unencrypted data. 100-250 ms depending on application domain [49]. Further
+ QUIC NetFlow focuses on encrypted services over the compression (e.g., quantization or pruning) can provide addi-
+QUIC protocol, grouped into five usage categories: chat, voice, tional margin at deployment. Empirical measurements on the
+video, music, and file transfer. It captures structural differences target MCUs confirmed that latency remains within this limit,
+in encrypted traffic generated by the QUIC protocol, which as reported in Section VIII.
+encrypts transport-layer metadata over UDP. A validation set consisting of 20% of the training data is
+ Table III summarizes the key characteristics of both created using a standard holdout method. Architectures are
+datasets. Each row specifies a traffic category, the correspond- trained for up to 100 epochs, with an initial learning rate
+ing application type, the number and share of samples, and of 10−3 , a batch size of 128, and a learning rate reduction
+the total number of classes per dataset. triggered by a plateau in validation loss. Early stopping is
+ applied using the validation loss as the stopping criterion.
+ Networks are trained 3 times using a multi-start approach, and
+B. Target Hardware for Deployment the best validation accuracy is used to score each architecture.
+ We target two microcontroller platforms commonly used HW-NAS is conducted over 100 generations with 10 candiin embedded systems: the STM32F746G-DISCO and the date architectures (children) per generation. On average, 16
+Nucleo-F401RE. These boards represent distinct deployment children had to be generated per generation to obtain 10
+scenarios for low-power TC at the edge: the STM32F7 suits admissible ones, as approximately 6 were discarded due to
+moderately capable systems, while the Nucleo-F4 is a good hardware constraint violations. Each child is derived through
+example of a minimal IoT edge node. two random mutations applied to the parent, with mutation
+ Table IV reports key specifications for both targets. Rows types drawn uniformly from block insertion, block removal,
+list core type, Flash/RAM, clock speed, and power. These con- or block-level parameter modification (e.g., kernel size, filstraints set a reference for the deployment envelope and guide ters). To prevent overcomplex architectures, the maximum
+the design of lightweight models for on-device inference. depth is 5 blocks. This setup promotes structural diversity
+ and reduces the risk of early convergence to suboptimal
+ solutions.
+C. HW-NAS Procedure The search space includes filters ranging from 16 to 140,
+ The HW-NAS search is conducted on the VPN-NonVPN kernel sizes from 3 to 7, strides from 1 to 6, and dropout
+task from ISCX, selected for its comprehensive nature and fre- rates from 0.1 to 0.5. Pooling, if enabled, can be either max
+quent use in prior research, which provides a solid foundation or average, with a pool size between 2 and 3. Padding is
+2988 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 1. Validation accuracy over HW-NAS generations.
+
+ TABLE V
+ B EST CNN A RCHITECTURE I DENTIFIED BY HW-NAS
+
+ Fig. 2. Comparison of session-level methods based on accuracy, F1 score,
+ parameters, max tensor, and FLOPs.
+
+ kernel or pooling size (Ker/Pool), stride (Str), and padding
+ (Pad).
+ A key aspect is the progressive reduction of filters across
+ convolutional layers, which allows the model to balance feaset as either “same” or “valid.” The best-performing model
+ ture extraction and computational cost. Kernel size and stride
+is selected based on validation accuracy.
+ vary adaptively: early layers use larger receptive fields to
+ Figure 1 shows the validation accuracy of the best candidate
+ capture broad patterns, while deeper layers focus on finer
+per generation (solid line), along with the average accuracy of
+ details. This design achieves both accuracy and hardware
+all admissible children (dashed line). Orange markers indicate
+ efficiency, with only 88.26K parameters, a maximum tensor
+generations where a new absolute best model was found
+ size of 20.12K, and 10.08M FLOPs. These values are com-
+(e.g., G0, G1, G6, G12, G28, G57); no further improvements
+ fortably below the thresholds set by the Nucleo-F401RE and
+occurred beyond G57, indicating that the search converged
+ STM32F7 platforms, confirming on-device deployability; they
+early under the imposed hardware constraints. The average
+ also indicate likely compatibility with other microcontrollers
+curve complements this view by capturing the overall perforand low-power edge devices available on the market with
+mance trend of each generation beyond the individual best
+ similar or higher resource capacity.
+models.
+ In the following comparisons, we assess if SOTA models
+ The best model found by HW-NAS is retrained on all
+ meet RAM and Flash limits using float32 parameter counts
+tasks in Table II and evaluated on the external datasets in
+ and max tensor sizes as proxies. Models above these limits
+Table III to assess its generalization performance. For these
+ may run on more capable platforms, but require structural
+retraining experiments, we performed 10 independent runs
+ reduction to operate on the tested low-power MCU class
+and reported the sample standard deviation of accuracy to
+ (e.g., redesign or compression). Furthermore, when a model
+capture performance variability. Each experiment is trained
+ fits within the memory constraints but exceeds the proposed
+with early stopping, using a maximum of 50 to 200 epochs
+ model’s 10.08M FLOPs, one should expect both latency and
+depending on the task and dataset, with higher limits applied
+ energy consumption to increase on comparable devices.
+when convergence required more iterations.
+
+ B. VPN-NonVPN Task: Performance and Efficiency
+ VI. R ESULTS AND E VALUATION
+ This subsection reports the session-level results of the VPN-
+A. HW-NAS-Optimized Architecture NonVPN experiment, the target scenario of this study.
+ The best architecture identified by HW-NAS is shown Figure 2 compares accuracy, F1 score, parameters, FLOPs,
+in Table V. Rows list the sequential CNN layers, and and maximum tensor size across SOTA models. The proposed
+columns report the corresponding layer attributes: layer type model is annotated with its standard deviation across ten
+(e.g., one-dimensional convolution (Conv1D), average pooling independent training runs. A single check mark (X) indicates
+(AvgPool1D), max pooling (MaxPool1D), or Dense), input compatibility with STM32F7-class MCUs; a double check
+dimensions (Input Dim), number of filters or units (Filt/Units), mark (XX) denotes compatibility with both STM32F7 and
+CHEHADE et al.: HARDWARE-AWARE NEURAL ARCHITECTURE SEARCH FOR ETC 2989
+
+ TABLE VI
+ ACCURACY AND H ARDWARE FOR M ULTIPLE E XPERIMENTS
+
+ Packet-level methods, such as the SAE of [6], proved
+ efficient, requiring 0.81M parameters and 1.62M FLOPs in
+ their most efficient setup. However, its parameter count still
+ exceeds the available flash memory of our target MCUs unless
+ structural reduction is applied. This setup achieves an F1 score
+ of 92.00%. The CNN-based approach of [6] is a larger model,
+ demanding 3.55M parameters and 208.19M FLOPs (F1 score
+ 93.00%). Similarly, [51] incurs high hardware costs, requiring
+ 0.69M parameters and 259.26M FLOPs.
+ Flow-based methods [18], which process flows as time
+ series with predefined packet counts and lengths, show similar
+Fig. 3. Comparison of non-session methods based on accuracy, parameters, trade-offs. While their configurations are relatively efficient in
+max tensor, and FLOPs.
+ terms of FLOPs, their parameter counts (1.35M and 39.49M,
+ respectively) surpass the limits of the selected target devices.
+ Their reported accuracy (91.20% and 89.50%, respectively)
+the more constrained F401RE platform; a cross (×) marks remains lower than that of the proposed model (96.60%). Simcases where deployment is not feasible. No other model in this ilarly, [25], which focuses on flow headers for classification,
+session-level comparison meets both constraints, underscoring achieves an accuracy of 99.20% but requires 5.77M parameters
+the distinctive efficiency of the proposed architecture. and 400.43M FLOPs, exceeding the target resource envelope.
+ The proposed model achieves an accuracy of 96.60% and Hybrid input methods, like [5], which combines raw packet
+an F1 score of 96.63%, which are slightly lower than some of data with hand-crafted session features, and [23], which
+the most resource-intensive models in the SOTA. For example, segments sessions based on thresholds, achieve superior accu-
+[12] and [14] achieve accuracy and F1 scores exceeding 99% racy (99.70% and 99.10%, respectively). These methods have
+but require 2.06M and 1.24M parameters, respectively, com- high requirements, with [5] demanding 138.45M parameters,
+pared to the proposed model’s 0.09M, with a reduction of up to 153.87M FLOPs, and a max tensor size of 4500.00K, and [23]
+22 times. Their FLOPs requirements (3152.27M and 28.96M) requiring 6.80M parameters and 401.89M FLOPs.
+surpass the proposed model’s (10.08M) by up to 312 times This analysis highlights the balance of competitive accuracy
+and nearly 2.9 times, respectively. The maximum tensor size in and remarkable efficiency achieved by the proposed model,
+certain works, such as 313.60K in [50], further underscores the solidifying its position as a reference point for hardwareefficiency of the proposed model, which operates with a tensor aware TC, even when compared across different problem
+size of only 20.12K, achieving a reduction of over 15 times. formulations and input setups. While some other methods
+[24] achieves an accuracy of 98.10%, requiring an increment report higher accuracy, they do so at the cost of exceeding
+of 435, 24.9, and 7.5 times of the three hardware estimators. the memory or compute constraints set by the target devices
+Similarly, [35] achieves 98.00% accuracy at the expense of selected in this work.
+68, 4, and 1.25 times increment. These results highlight the
+proposed model’s ability to deliver competitive performance
+compared to SOTA while remaining within the strict memory C. Evaluation on Multiple Traffic Classification Tasks
+and compute constraints of microcontroller-class devices. Table VI includes accuracy and hardware efficiency metrics
+ Figure 3 extends the analysis to non-session methods, for different methods in diverse TC tasks. Each row represents
+which include packet-level [6], [51], flow-based [18], [25], a method (Meth.) and its corresponding input type, while
+and hybrid [5], [23] input approaches. These differ in format, columns detail accuracy for VPN-Diff (VPN-D.), VPN-Type
+preprocessing, and problem framing, making direct compar- (VPN-T.), NonVPN-Type (NVPN-T.), and Traffic-Cat (T-Cat.)
+isons inherently complex. The figure mirrors the structure of tasks, along with parameters (Par.), max tensor size (M-Tens.),
+Figure 2, reporting accuracy, F1 score, parameters, FLOPs, and FLOPs as hardware measures. Proposed model results are
+and maximum tensor size. The proposed model is annotated reported as mean ± standard deviation over ten runs.
+with its standard deviation over ten independent runs. It is The proposed model (Prop.) achieves near-perfect accuracy
+also the only configuration that fits within both STM32F7 and (99.86%) in VPN-Diff, matching [24] and surpassing [5]
+F401RE constraints, as denoted by the XX symbol; a cross (99.82%). In VPN-Type classification, it achieves 99.14%,
+(×) marks configurations where deployment is not feasible. outperforming [18] (94.80% and 92.90%) and [11] (98.30%).
+2990 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ TABLE VII
+ P ERFORMANCE FOR THE A PP -ID E XPERIMENT
+
+ In the NonVPN-Type task, the model delivers strong performance (94.04%), exceeding [18] (89.30% and 85.10%) and
+[11] (81.70%). For Traffic-Cat, a challenging task addressed
+only by [24], the proposal scores 96.74%. Although [24]
+obtains slightly higher accuracy (98.20%), the proposal maintains competitive performance while being resource-efficient.
+ The results validate the proposal across a broad spectrum
+of tasks, achieving high accuracy and often outperforming
+SOTA models. As the architecture was optimized for the VPN-
+NonVPN classification task using HW-NAS, the proposed
+results can be considered a worst-case analysis.
+
+D. Performance on Application Identification (App-ID)
+ Fig. 4. Results on the USTC-TFC2016 dataset.
+ The App-ID experiment assesses the ability of the proposed session-level model to classify specific applications, a
+task traditionally dominated by packet-level approaches and
+ distributions. We report results on USTC-TFC2016 and QUIC
+hybrid methods [5]. Table VII presents accuracy (Acc.), F1
+ NetFlow. The proposed model is re-evaluated on these datasets
+score (F1), and hardware efficiency metrics: parameters (Par.),
+ using the same architecture found during search (see Table V).
+maximum tensor size (M-Tens.), and FLOPs (M) for the App-
+ Figure 4 shows results on the USTC-TFC2016 dataset. The
+ID experiment. Each row represents a method (Meth.) and
+ comparison includes session-based models [10], [27], [52],
+its corresponding input type. Scores for our model include
+ flow-based models [15], [16], [46], [52], and packet-based
+standard deviation across ten independent runs.
+ models [37], [53]. A horizontal line in the figure separates the
+ The proposal (Prop.) achieves 94.18% accuracy and 94.42%
+ session-based approaches (shown below), which are the focus
+F1 score with reduced hardware cost. [6] presents two packetof this study, from the rest. Reported scores for the proposed
+level models: one with higher accuracy (98.00%) but greater
+ model include standard deviation over ten independent runs.
+resource use, and another reaching 95.00% F1 with 0.81M
+ Device compatibility follows the same notation as previous
+parameters and 1.62M FLOPs. The latter model would require
+ figures: X for STM32F7, XX for both STM32F7 and F401RE,
+a Flash memory larger than the one available in the target
+ and × where deployment is not feasible.
+devices. Packet-level models operate at finer granularity, which
+ The proposed model achieves 99.73% accuracy and 99.73%
+leads to larger training volumes and more frequent inference.
+ F1 score with 0.09M parameters, 10.08M FLOPs, and a
+While this may enable fast per-packet predictions and strong
+ 20.12K max tensor. Although optimized on ISCX, it maintains
+App-ID accuracy, it also results in higher cumulative prostrong performance on USTC with minimal hardware cost.
+cessing overhead. These structural differences inherently affect
+ Among session-level models, [10] reports the highest accuboth performance and resource use, and should be considered
+ racy (99.84%), but at the cost of 18.11M parameters and over
+when interpreting the comparison with session-level methods.
+ 3900M FLOPs. The session-based variant of [52] also incurs
+ CBS [5] achieves the highest accuracy (99.67%) and F1
+ high compute demand (7.13M parameters, 43.69M FLOPs).
+score (99.51%) but requires higher resource consumption.
+ [27] achieves similar accuracy (99.17%) with fewer resources
+Moreover, it was explicitly designed for offline use and is
+ than the others in its category, though its compute and memory
+documented as unsuitable for real-time scenarios, which limits
+ footprint remains higher than ours. None of these baselines are
+its applicability to embedded deployment.
+ deployable on the tested MCUs due to excessive parameter and
+ These results confirm the feasibility of session-level models
+ tensor sizes, making our model the only viable session-level
+for application classification, achieving competitive perforsolution in constrained settings.
+mance with substantially lower hardware cost. Despite the
+ The NAS-based flow model from [46], tailored for USTC,
+inherent granularity differences, the session-level approach
+ reaches 99.99% accuracy with slightly fewer parameters
+remains a practical and scalable option for constrained
+ (0.07M) but nearly doubles the FLOPs (19.63M). Its max
+platforms.
+ tensor is unreported, but we conservatively assume it fits
+ within memory limits. However, its higher compute load
+E. Cross-Dataset Evaluation suggests greater energy use and latency than ours on similar
+ This subsection evaluates how well the architecture dis- hardware. Other flow-level models [15], [16], [52] are far more
+covered by HW-NAS on ISCX generalizes to other traffic complex, with parameter counts from 4.49M to 450.58M.
+CHEHADE et al.: HARDWARE-AWARE NEURAL ARCHITECTURE SEARCH FOR ETC 2991
+
+ TABLE VIII TABLE IX
+ QUIC N ET F LOW: C LASSIFICATION P ERFORMANCE E FFECT OF P REPROCESSING ON M ODEL P ERFORMANCE
+
+ The model presented in [37] achieves 99.94% accuracy
+with 0.22M parameters, 3.06M FLOPs, and a 13.82K tensor,
+making it compatible with STM32F7-class devices. However,
+it exceeds the Flash constraints of F401RE and operates
+at packet-level granularity, requiring inference at finer time
+scales. This incurs higher cumulative overhead than our
+session-level model, which classifies entire sessions in a single
+pass. [53] combines high accuracy (99.95%) with the smallest
+tensor (6.27K), yet its 2.10M parameter count far exceeds the
+Flash capacity of our target devices.
+ Table VIII presents classification results on the QUIC
+NetFlow dataset. Each row corresponds to a method, while
+columns report input type, accuracy, and F1 score. Hardware
+metrics for existing methods are omitted due to missing implementation details. Compared approaches rely on flow-level TCP headers 20 bytes. These modifiable fields collectively
+features [32], handcrafted signals [54], or hybrid pipelines account for approximately 26 to 38 bytes per packet, out of
+combining raw bytes with flow features [28]. the standardized session input size of 784 bytes.
+ Our model attains the highest accuracy (99.98%) and F1 Table IX evaluates the effects of 24 preprocessing stratescore (99.98%) with minimal complexity (0.09M parameters, gies (Strat.), i.e., all possible combinations of preprocessing
+10.08M FLOPs); results are averaged over ten runs. CNN+RF choices for header fields, on the model derived from the
+[28] performs competitively (99.00%) but uses a two-stage NAS. Each row represents a strategy, with columns describing
+pipeline with limited deployment suitability. Feature-based applied steps such as removing the Ethernet layer (Eth. Rem.),
+methods [32], [54] lag by 4 to 6 points. These results show anonymizing (Anon.; replacing field values with hashed
+that a compact session-based model using raw bytes can pseudonyms), zeroing (Zero; setting values to 0) MAC and
+outperform protocol-specific and feature-heavy pipelines, even IP addresses, zeroing protocol-related fields like ports (Port
+in specialized QUIC traffic scenarios. Zero), and applying UDP padding (UDP Pad.) to align UDP
+ Overall, these findings confirm the model’s ability to and TCP segments. A checkmark (X) indicates that a step
+generalize across encrypted traffic datasets with differing char- was applied. The final column shows the accuracy (%; Acc.).
+acteristics, while maintaining its efficiency advantage. It should be noted that zeroing enhances privacy by replacing
+ original values with zeros, which removes meaningful vari-
+ VII. E VALUATION AND A NALYSIS ability and makes it harder for the model to infer patterns.
+ Strategy 2, used during the NAS process, achieves the
+A. Preprocessing Analysis highest accuracy (96.59%) and represents a frequently adopted
+ Header-level preprocessing is critical for balancing privacy approach in prior works. It anonymizes IP addresses without
+and the retention of key structural features essential for TC. zeroing them and avoids UDP padding, retaining key features
+Packet headers carry structural and protocol information that for classification. The model also performs well under more
+is particularly relevant for ETC, where the payload is obfus- restrictive preprocessing, like strategy 6 (95.38%), which zeros
+cated and contributes little to feature extraction. This study IP addresses, or strategy 7 (95.12%), which zeroes both IP
+modifies specific header fields, commonly targeted in prior addresses and ports while applying UDP padding. These
+works, to evaluate their impact on classification performance results show that the proposed model generalizes well, without
+in the VPN-NonVPN task from ISCX, which serves as the overfitting specific header fields like IP addresses or ports.
+reference benchmark for analysis. The dataset predominantly Some strategies cause drops in accuracy when compared
+includes TCP and UDP protocols, where headers follow a to Strategy 2. For example, Strategy 24, which zeros MAC
+layered hierarchy: the Ethernet layer (14 bytes), containing addresses, IP addresses, and ports, leads to the lowest accuracy
+source and destination MAC addresses (6 bytes each) and (89.08%), with a drop of 7.51%. Strategy 22, similar to
+EtherType (2 bytes); the IP layer, which includes source and Strategy 24 but without port zeroing, performs slightly better
+destination IP addresses (4 bytes each); and the transport (92.25%) but still exhibits a 4.34% drop, suggesting that
+layer, which adds source and destination ports (2 bytes each) excessive zeroing disrupts critical structural patterns. However,
+and protocol headers, with UDP headers being 8 bytes and Strategies 23 and 21 (95.24% and 94.30%, respectively), using
+2992 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+ TABLE X
+ I MPACT OF I NPUT S IZE ON H ARDWARE M ETRICS
+
+UDP padding, absent in Strategies 22 and 24, partially mitigate
+the accuracy drops caused by extensive zeroing.
+ Removing the Ethernet layer entirely, as in Strategy 8
+(95.00%), outperforms zeroing MAC addresses in Strategy 24
+(89.08%). Both strategies are identical in other preprocessing
+steps. This complete removal prevents partial masking and Fig. 5. Accuracy across strategies for different input sizes.
+preserves structural consistency, yielding better performance.
+We discourage anonymizing MAC addresses, as demonstrated
+in Strategies 9 through 16. For example, Strategy 10 (95.42%) to 4% as input size decreases. Conversely, Strategies 7 and
+takes a moderate approach by anonymizing both MAC and IP 3, which follow the same steps as 8 and 4, respectively,
+addresses instead of zeroing them but still yields limited gains. but include UDP padding, mitigate this issue. Incorporating
+It is 1.17% below the best strategy, highlighting the minimal padding mechanisms can trade off input size reduction and
+impact MAC addresses have on classification. classification performance, as shown by the table and figure.
+ The proposal performs robustly across many configurations.
+Strategies like 7 and 23 demonstrate its adaptability, achieving
+a commendable balance between privacy preservation and VIII. E MBEDDED I NFERENCE D EPLOYMENT
+classification performance, making it suitable for applications
+with privacy regulations. These findings help practitioners A. Deployment Methodology and Setup
+strike the right balance between obfuscating sensitive fields
+and keeping essential header features for optimal performance. Building on the session length analysis in Section VII-B,
+ we evaluate how the model selected by HW-NAS performs on
+ MCUs across various input sizes. All deployment results use
+B. Impact of Session Length on Performance this architecture and preprocessing Strategy 2 from Table IX,
+ This analysis tests the impact of session length on the trade- which served as the main configuration throughout this study.
+offs between efficiency and classification performance in the We consider a deployment setting in which fixed-length
+VPN-NonVPN task. Header-level strategies affect accuracy, session vectors are prepared on an upstream device (e.g., an
+leaving hardware measures unchanged, while session length IoT gateway or embedded Linux board), which is assumed
+reductions impact efficiency by altering the input size. We to perform packet capture, session aggregation, and buffering,
+considered the first eight preprocessing strategies in Table IX and forwarded to a microcontroller (e.g., STM32F401RE
+because the Ethernet layer is removed, a common practice or STM32F746G), which executes the classification stage
+in TC. We progressively reduced the standardized session under tight memory and compute constraints. Inference is
+length from 784 bytes (the standard value used in most triggered when the required input representation is availresearch papers) to smaller lengths: 676, 576, 484, 400, 324, able, and real-time operation is therefore defined in terms of
+256, and 196 bytes. The reductions are selected to capture bounded response time at the session level. Our evaluation
+meaningful performance trends while preserving key session- focuses on MCU-side execution, which represents the actual
+level features, such as critical header fields and early-packet resource-constrained component of the deployment pipeline
+information essential for classification. and determines the feasibility of on-device TC.
+ Table X shows how different input sizes, listed in the The HW-NAS-optimized architecture was quantized to
+columns, affect FLOPs and maximum tensor size (M-Tens.), 8-bit (INT8) using TensorFlow Lite and converted to C code
+listed in the rows, regardless of preprocessing strategy. As via STM32Cube.AI. Both post-training quantization (PTQ)
+input size decreases, FLOPs drop from 10.08M to 2.24M, and quantization-aware training (QAT) were considered; PTQ
+and M-Tens. reduces proportionally from 20.12K to 4.90K. applies INT8 conversion to a pretrained Float32 model, while
+Smaller input sizes improve efficiency, making the model more QAT fine-tunes the pretrained model under simulated INT8
+suitable for deployment in resource-constrained environments. arithmetic to mitigate quantization-induced accuracy loss. For
+The number of parameters remains constant at 88.26K. each input size, PTQ and QAT were repeated 10 times to
+ Figure 5 complements Table X by showing how accuracy evaluate accuracy variability; one representative INT8 model
+varies with input size across the first eight strategies from per input size was deployed, as all quantized variants share the
+Table IX. The x-axis represents input size, while the y-axis same architecture, memory footprint, and computational cost.
+shows accuracy for each strategy. The figure highlights that Inference metrics were averaged over 1000 runs per device.
+for most strategies (1, 2, 3, 5, 6, 7), a small drop of 1 to 2% A USB power meter, connected between the board and host
+at 196 bytes affected the accuracy. For strategies with extensive PC, recorded current and voltage during idle and active phases.
+zeroing, such as Strategy 8 (zeros IP addresses and ports) Power per session was derived from the average current and
+and Strategy 4 (zeros ports but anonymizes IP addresses), voltage during the active phase, and energy was calculated as
+the accuracy drop becomes more pronounced, reaching up E = P · t, where t is the inference latency.
+CHEHADE et al.: HARDWARE-AWARE NEURAL ARCHITECTURE SEARCH FOR ETC 2993
+
+ TABLE XI
+ I NFERENCE L ATENCY BY P LATFORM AND P OWER B UDGET
+
+Fig. 6. Accuracy across quantization levels (VPN-NonVPN).
+
+ At an input size of 784 bytes, the model runs at its full
+ hardware configuration found by HW-NAS: 88.26K parameters, 20.12K max tensor, and 10.08M operations (the INT8
+ equivalent of the baseline FLOPs), matching the setup used
+ throughout Section VI. This setting yields 115.4 ms latency
+ and 28.85 mJ energy on Cortex-M4, and 31.43 ms and 7.86 mJ
+ on Cortex-M7. These values can serve as an empirical deployment reference for models with similar or higher complexity,
+ assuming deployment on comparable devices.
+ Overall, the results confirm that HW-NAS models can be
+ deployed on low-power MCUs for real-time TC. Input sizes
+ like 324 and 484 bytes offer a good trade-off: they achieve
+ over 95% INT8 accuracy while keeping latency under 72 ms
+ on Cortex-M4 and 20 ms on Cortex-M7; energy remains below
+ 18 mJ and 5 mJ, respectively. Smaller inputs such as 256 bytes
+ are more efficient but slightly less accurate. Despite the
+Fig. 7. Inference cost across MCUs and input sizes. increase in latency with input size, delays remain acceptable
+ in realistic scenarios, especially given that session aggregation
+ and preprocessing occur on the gateway. These values align
+B. Experimental Results and Discussion with response time ranges in embedded monitoring tasks [49].
+ The literature includes only a few works that report deploy-
+ Figure 6 compares model accuracy across Float32 and INT8 ment measurements, and the target platform varies across
+configurations (PTQ and QAT) for input sizes from 196 to studies. Table XI summarizes inference latency reported in
+784 bytes. The x-axis reports the input size, while the y- prior work. Each row corresponds to a method and platform,
+axis shows test accuracy (%). Error bars indicate the standard while the columns report the hardware class, power budget (in
+deviation across 10 independent training and quantization runs. watts), input type, and inference latency. For our work, two
+ INT8-PTQ incurs a moderate but consistent accuracy degra- session input sizes are reported per platform, corresponding
+dation; QAT recovers most of this loss and significantly to a maximum-length configuration (784 B) and a shorter
+reduces variance across runs. Across all input sizes, QAT operating point (484 B), where B denotes bytes. Underlining
+remains within 0.1–0.3% of the Float32 baseline, confirming highlights the best latency among low-power deployments
+stable and deployment-ready behavior. (power budget <1 W), which is the primary target scenario
+ Figure 7 illustrates inference latency (top, in ms) and energy of this work, while the asterisk (∗ ) denotes the best overall
+per session (bottom, in mJ) across input sizes and MCUs. latency across all platforms.
+ During inference, both boards exhibited an average current By comparison, STM32-based inference was previously
+draw of 0.05 A at a 5 V supply, resulting in an average active shown in [48], but only for a single input size (784 bytes),
+power of 0.25 W across the tested configurations. Idle current without examining empirical trade-offs across different input
+was measured separately: 0.02 A for the F401RE and 0.23 A lengths. FENXI [2] reports 10–30 ms inference latency using
+for the F746G, corresponding to idle power baselines of a high-power (30 W) tensor processing unit (TPU) attached
+0.10 W and 1.15 W, respectively. Energy values in Figure 7 via PCI Express, under 100 Gbps traffic with batching and
+are based on active power only, isolating the model execution model caching. The in-switch approach of [32] achieves subcost from background consumption. microsecond latency at line rate by executing Random Forest
+ Latency increases with input size, as expected. The Nucleo- models directly on Intel Tofino programmable switches; how-
+F401RE maintains latency below 60 ms for sizes up to ever, this relies on high-end network hardware, and the feature
+400 bytes, but reaches 115 ms at 784 bytes. The STM32F746G pipeline is limited by the P4 programming model, which
+achieves consistently lower latency, ranging from 8 ms to restricts flexibility and applicability to broader embedded
+31 ms, reflecting its faster clock and memory bandwidth. settings. In contrast, our results show that ETC inference is
+Energy trends follow latency linearly due to constant power. feasible on microcontrollers with a power budget below 1 W,
+2994 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+and that practical latency can be achieved by varying the input [8] N. Malekghaini et al., “AutoML4ETC: Automated neural architecture
+length to balance efficiency and response time. search for real-world encrypted traffic classification,” IEEE Trans. Netw.
+ Service Manage., vol. 21, no. 3, pp. 2715–2730, Jun. 2024.
+ [9] E. Tabanelli, G. Tagliavini, and L. Benini, “DNN is not all you
+ IX. C ONCLUSION AND F UTURE W ORK need: Parallelizing non-neural ML algorithms on ultra-low-power IoT
+ processors,” ACM Trans. Embedded Comput. Syst., vol. 22, no. 3,
+ This paper introduces a DNN optimized through HW-NAS pp. 1–33, May 2023.
+for efficient TC in resource-constrained environments. The [10] Z. Li and X. Xu, “L2-BiTCN-CNN: Spatio-temporal features fusionstudy shows that incorporating hardware constraints during based multi-classification model for various internet applications
+ identification,” Comput. Netw., vol. 243, Apr. 2024, Art. no. 110298.
+architecture synthesis supports reproducible and deployable [11] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+design choices, where accuracy is achieved under strict effi- encrypted traffic classification with one-dimensional convolution neural
+ciency requirements. The proposed model achieves up to networks,” in Proc. IEEE Int. Conf. Intell. Secur. Informat. (ISI), Jul.
+ 2017, pp. 43–48.
+96.60% accuracy in session-level classification while requiring [12] W. Maonan, Z. Kangfeng, X. Ning, Y. Yanqing, and W. Xiujuan,
+up to 444 times fewer parameters and 312 times fewer FLOPs “CENTIME: A direct comprehensive traffic features extraction for
+than SOTA methods. These results highlight its suitability for encrypted traffic classification,” in Proc. IEEE 6th Int. Conf. Comput.
+IoT and edge platforms, where efficiency is critical. Commun. Syst. (ICCCS), Apr. 2021, pp. 490–498.
+ [13] F. Hu, S. Zhang, X. Lin, L. Wu, N. Liao, and Y. Song, “Network traffic
+ The optimized architecture delivers satisfactory perfor- classification model based on attention mechanism and spatiotemporal
+mance across diverse tasks and settings; it also obtains features,” EURASIP J. Inf. Secur., vol. 2023, no. 1, p. 6, Jul. 2023.
+consistent performance in terms of cross-dataset generaliza- [14] A. Zou, W. Yang, C. Tang, J. Lu, and J. Guo, “A novel and effective
+tion, confirming its adaptability to different TC challenges. encrypted traffic classification method based on channel attention and
+ deformable convolution,” Comput. Electr. Eng., vol. 118, Aug. 2024,
+The study further shows that reducing input size improves Art. no. 109406.
+efficiency without sacrificing performance; combined with [15] J. Xu et al., “A cascaded broad learning network embedded image feaquantization, this yields notable latency and energy gains on tures for malware traffic classification,” IEEE Trans. Cognit. Commun.
+embedded microcontrollers. Additionally, techniques like UDP Netw., vol. 11, no. 4, pp. 2426–2439, Aug. 2025.
+ [16] H. Yao, P. Gao, J. Wang, P. Zhang, C. Jiang, and Z. Han, “Capsule
+padding mitigate accuracy loss in restrictive preprocessing network assisted IoT traffic classification mechanism for smart cities,”
+scenarios, offering practical solutions. IEEE Internet Things J., vol. 6, no. 5, pp. 7515–7525, Oct. 2019.
+ Future work will explore broader deployment scenarios, [17] Z. Bu, B. Zhou, P. Cheng, K. Zhang, and Z.-H. Ling, “Encrypted
+ network traffic classification using deep and parallel network-in-network
+including adaptive runtime optimization and integration with models,” IEEE Access, vol. 8, pp. 132950–132959, 2020.
+real-time network operations. Federated learning will also [18] H. Yao, C. Liu, P. Zhang, S. Wu, C. Jiang, and S. Yu, “Identification
+be investigated to enable decentralized training with pri- of encrypted traffic through attention mechanism based long short term
+vacy preservation and improved scalability. We further plan memory,” IEEE Trans. Big Data, vol. 8, no. 1, pp. 241–252, Feb. 2022.
+ [19] C. White et al., “Neural architecture search: Insights from 1000 papers,”
+to extend HW-NAS to other traffic analysis tasks, such as 2023, arXiv:2301.08727.
+intrusion and anomaly detection, to assess its adaptability [20] K. T. Chitty-Venkata, M. Emani, V. Vishwanath, and A. K. Somani,
+across domains, and to incorporate additional deployment- “Neural architecture search benchmarks: Insights and survey,” IEEE
+aware objectives, such as quantization-aware constraints and Access, vol. 11, pp. 25217–25236, 2023.
+ [21] M. Tan et al., “MnasNet: Platform-aware neural architecture search for
+robustness considerations (e.g., adversarial perturbations and mobile,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun.
+distribution shift), thereby improving reliability under prac- 2019, pp. 2820–2828.
+tical operating conditions. These directions aim to advance [22] H. Cai, L. Zhu, and S. Han, “ProxylessNAS: Direct neural architecture
+hardware-efficient ML for next-generation network systems. search on target task and hardware,” 2018, arXiv:1812.00332.
+ [23] S. Cui, B. Jiang, Z. Cai, Z. Lu, S. Liu, and J. Liu, “A session-packetsbased encrypted traffic classification using capsule neural networks,”
+ R EFERENCES in Proc. IEEE 21st Int. Conf. High Perform. Comput. Commun.,
+ IEEE 17th Int. Conf. Smart City, IEEE 5th Int. Conf. Data Sci. Syst.
+[1] M. Martalò, G. Pettorru, and L. Atzori, “A cross-layer survey (HPCC/SmartCity/DSS), Aug. 2019, pp. 429–436.
+ on secure and low-latency communications in next-generation IoT,” [24] B. Lu, N. Luktarhan, C. Ding, and W. Zhang, “ICLSTM: Encrypted
+ IEEE Trans. Netw. Service Manage., vol. 21, no. 4, pp. 4669–4685, traffic service identification based on inception-LSTM neural network,”
+ Aug. 2024. Symmetry, vol. 13, no. 6, p. 1080, Jun. 2021.
+[2] M. Gallo, A. Finamore, G. Simon, and D. Rossi, “FENXI: Deep-learning [25] S. Cui, J. Liu, C. Dong, Z. Lu, and D. Du, “Only header: A reliable
+ traffic analytics at the edge,” in Proc. IEEE/ACM Symp. Edge Comput. encrypted traffic classification framework without privacy risk,” Soft
+ (SEC), Dec. 2021, pp. 202–213. Comput., vol. 26, no. 24, pp. 13391–13403, Dec. 2022.
+[3] F. Pacheco, E. Exposito, M. Gineste, C. Baudoin, and J. Aguilar, [26] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani,
+ “Towards the deployment of machine learning solutions in network “Characterization of encrypted and VPN traffic using time-related,”
+ traffic classification: A systematic survey,” IEEE Commun. Surveys Tuts., in Proc. 2nd Int. Conf. Inf. Syst. Security Privacy (ICISSP), 2016,
+ vol. 21, no. 2, pp. 1988–2014, 2nd Quart., 2019. pp. 407–414.
+[4] W. Dong, J. Yu, X. Lin, G. Gou, and G. Xiong, “Deep learning and pre- [27] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+ training technology for encrypted traffic classification: A comprehensive classification using convolutional neural network for representation
+ review,” Neurocomputing, vol. 617, Feb. 2025, Art. no. 128444. learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2017, pp. 712–717.
+[5] M. Seydali, F. Khunjush, B. Akbari, and J. Dogani, “CBS: A [28] V. Tong, H. A. Tran, S. Souihi, and A. Mellouk, “A novel QUIC traffic
+ deep learning approach for encrypted traffic classification with classifier based on convolutional neural networks,” in Proc. IEEE Global
+ mixed spatio-temporal and statistical features,” IEEE Access, vol. 11, Commun. Conf. (GLOBECOM), Dec. 2018, pp. 1–6.
+ pp. 141674–141702, 2023. [29] S. Sen, O. Spatscheck, and D. Wang, “Accurate, scalable in-network
+[6] M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, and identification of p2p traffic using application signatures,” in Proc. 13th
+ M. Saberian, “Deep packet: A novel approach for encrypted traf- Int. Conf. World Wide Web, May 2004, pp. 512–521.
+ fic classification using deep learning,” Soft Comput., vol. 24, no. 3, [30] A. W. Moore and K. Papagiannaki, “Toward the accurate identification
+ pp. 1999–2012, Feb. 2020. of network applications,” in Proc. Int. Workshop Passive Active Netw.
+[7] M. Adil, H. Song, M. K. Khan, A. Farouk, and Z. Jin, “5G/6G-enabled Meas., 2005, pp. 41–54.
+ metaverse technologies: Taxonomy, applications, and open security [31] Y. Zhai and X. Zheng, “Random forest based traffic classification method
+ challenges with future research directions,” J. Netw. Comput. Appl., in SDN,” in Proc. Int. Conf. Cloud Comput., Big Data Blockchain
+ vol. 223, Mar. 2024, Art. no. 103828. (ICCBB), Nov. 2018, pp. 1–5.
+CHEHADE et al.: HARDWARE-AWARE NEURAL ARCHITECTURE SEARCH FOR ETC 2995
+
+[32] A. T.-J. Akem, G. Fraysse, and M. Fiore, “Encrypted traffic classification Adel Chehade (Graduate Student Member, IEEE)
+ at line rate in programmable switches with machine learning,” in Proc. received the B.S. degree in electronics and the
+ NOMS - IEEE Netw. Oper. Manage. Symp., May 2024, pp. 1–9. M.S. degree in signal, telecoms, image, and speech
+[33] J. Zhang, C. Chen, Y. Xiang, W. Zhou, and A. V. Vasilakos, “An effective from Lebanese University, Lebanon, in 2021 and
+ network traffic classification method with unknown flow detection,” 2023, respectively. He is currently pursuing the
+ IEEE Trans. Netw. Service Manage., vol. 10, no. 2, pp. 133–147, Jun. Ph.D. degree with the Department of Naval, Electri-
+ 2013. cal, Electronic and Telecommunications Engineering
+[34] Y. He and W. Li, “Image-based encrypted traffic classification with (DITEN), University of Genoa, Italy. His research
+ convolution neural networks,” in Proc. IEEE 5th Int. Conf. Data Sci. interests include hardware-aware machine learn-
+ Cyberspace (DSC), Jul. 2020, pp. 271–278. ing and embedded systems, with a focus on
+[35] M. Wang, K. Zheng, D. Luo, Y. Yang, and X. Wang, “An encrypted TinyML applications for network security and edge
+ traffic classification framework based on convolutional neural networks intelligence.
+ and stacked autoencoders,” in Proc. IEEE 6th Int. Conf. Comput.
+ Commun. (ICCC), Dec. 2020, pp. 634–641.
+[36] P. Wang, F. Ye, X. Chen, and Y. Qian, “Datanet: Deep learning based
+ encrypted network traffic classification in SDN home gateway,” IEEE
+ Access, vol. 6, pp. 55380–55391, 2018.
+[37] B. Wang, Y. Su, M. Zhang, and J. Nie, “A deep hierarchical net- Edoardo Ragusa (Member, IEEE) received the
+ work for packet-level malicious traffic detection,” IEEE Access, vol. 8, master’s degree (cum laude) in electronic engineerpp. 201728–201740, 2020. ing and the Ph.D. degree in electronic engineering
+[38] A. Shiravi, H. Shiravi, M. Tavallaee, and A. A. Ghorbani, “Toward from the University of Genoa, Genoa, Italy, in 2015
+ developing a systematic approach to generate benchmark datasets for and 2018, respectively. He is currently a Tenure
+ intrusion detection,” Comput. Secur., vol. 31, no. 3, pp. 357–374, May Track Researcher with DITEN, University of Genoa,
+ 2012. where he teaches digital systems electronics and
+[39] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating tiny machine learning. He has co-authored more
+ a new intrusion detection dataset and intrusion traffic characterization,” than 70 refereed papers in international journals and
+ in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), 2018, conferences. His research interests include machine
+ pp. 108–116. learning in resource-constrained devices, convolu-
+[40] M. Basit Umair, Z. Iqbal, M. Bilal, T. Adnan Almohamad, J. Nebhen, tional neural networks, and deep learning applications.
+ and R. Majid Mehmood, “An efficient internet traffic classification
+ system using deep learning for IoT,” 2021, arXiv:2107.12193.
+[41] H. Benmeziane, K. El Maghraoui, H. Ouarnoughi, S. Niar, M. Wistuba,
+ and N. Wang, “A comprehensive survey on hardware-aware neural
+ architecture search,” 2021, arXiv:2101.09336.
+[42] J. Lin, W. Chen, Y. Lin, J. Cohn, C. Gan, and S. Han, “MCUNet: Tiny Paolo Gastaldo (Member, IEEE) received the
+ deep learning on IoT devices,” in Proc. 34th Conf. Neural Inf. Process. Laurea degree in electronic engineering and the
+ Syst., 2020, pp. 11711–11722. Ph.D. degree in space sciences and engineering
+[43] E. Ragusa, F. Zonzini, P. Gastaldo, and L. De Marchi, “Combining from the University of Genoa, Italy, in 1998 and
+ compressed sensing and neural architecture search for sensor-near 2004, respectively. He is currently an Associate
+ vibration diagnostics,” IEEE Trans. Ind. Informat., vol. 20, no. 8, Professor with the Department of Naval, Electripp. 10488–10498, Aug. 2024. cal, Electronic and Telecommunications Engineering
+[44] E. Ragusa, F. Zonzini, L. De Marchi, and R. Zunino, (DITEN), University of Genoa, where he teaches
+ “Compression–accuracy co-optimization through hardware-aware computer architecture and sensors. His research
+ neural architecture search for vibration damage detection,” IEEE focuses on embedded machine learning and intel-
+ Internet Things J., vol. 11, no. 19, pp. 31745–31757, Oct. 2024. ligent embedded systems, with applications to
+[45] A. Mattia Garavagno, E. Ragusa, A. Frisoli, and P. Gastaldo, robotics, prosthetics, structural health monitoring, and cybersecurity. He has
+ “Searching neural architectures for sensor nodes on IoT gateways,” authored over 100 peer-reviewed publications in international journals and
+ 2025, arXiv:2505.23939. conferences.
+[46] X. Zhang, L. Hao, G. Gui, Y. Wang, B. Adebisi, and H. Sari,
+ “An automatic and efficient malware traffic classification method for
+ secure Internet of Things,” IEEE Internet Things J., vol. 11, no. 5,
+ pp. 8448–8458, Mar. 2024.
+[47] A. Chehade, E. Ragusa, P. Gastaldo, and R. Zunino, “Tiny neural
+ networks for session-level traffic classification,” in Proc. Int. Conf. Appl. Rodolfo Zunino was born in Genoa, Italy, in 1961.
+ Electron. Pervading Ind., Environ. Soc., 2024, pp. 347–354. He received the Laurea degree (cum laude) in elec-
+[48] A. Chehade, E. Ragusa, P. Gastaldo, and R. Zunino, “Energy-efficient tronic engineering from Genoa University in 1985.
+ deep learning for traffic classification on microcontrollers,” 2025, From 1986 to 1995, he was a Research Consultant
+ arXiv:2506.10851. with the Department of Biophysical and Electronic
+[49] X. Jiang et al., “Low-latency networking: Where latency lurks and how Engineering (DIBE, now DITEN), Genoa Univerto tame it,” Proc. IEEE, vol. 107, no. 2, pp. 280–306, Feb. 2019. sity. He is currently with DITEN as a Full Professor
+[50] M. Song, J. Ran, and S. Li, “Encrypted traffic classification based on in electronics and electronics for embedded systems.
+ text convolution neural networks,” in Proc. IEEE 7th Int. Conf. Comput. He is also the Head of the Smart Embedded Appli-
+ Sci. Netw. Technol. (ICCSNT), Oct. 2019, pp. 432–436. cations Laboratory (SEALab), DITEN, and also the
+[51] Y. Zhou et al., “Identification of encrypted and malicious network Head of the Master in Cyber Security and Critical
+ traffic based on one-dimensional convolutional neural network,” J. Cloud Infrastructure Protection, Genoa University. His main scientific research
+ Comput., vol. 12, no. 1, p. 53, Apr. 2023. interests include embedded electronic systems for neural networks, efficient
+[52] Z. Li, Y. Liu, C. Zhang, W. Shan, H. Zhang, and X. Zhu, “Trustworthy models for data representation and learning, massive-scale text-mining and
+ deep learning for encrypted traffic classification,” Soft Comput., vol. 29, text-clustering methods, advanced techniques for multimedia data processno. 2, pp. 645–662, Jan. 2025. ing, intelligent systems for computer security, network security, and critical
+[53] L. Yu, J. Yuan, J. Zheng, and N. Yang, “A model of encrypted network infrastructure protection. He is the co-inventor of two patents and co-authored
+ traffic classification that trades off accuracy and efficiency,” J. Netw. more than 270 scientific papers in international journals and conferences. He
+ Syst. Manage., vol. 33, no. 1, pp. 1–32, Jan. 2025. has been the Co-Chair of the two editions of the International Workshop on
+[54] N. Dillbary, R. Yozevitch, A. Dvir, R. Dubin, and C. Hajaj, “Hidden Computational Intelligence for Security in Information Systems (CISIS’08
+ in time, revealed in frequency: Spectral features and multiresolution and CISIS’09). From 2001 to 2010, he contributed as an Associate Editor
+ analysis for encrypted internet traffic classification,” in Proc. IEEE 21st of IEEE T RANSACTIONS ON N EURAL N ETWORKS and participates in the
+ Consum. Commun. Netw. Conf. (CCNC), Jan. 2024, pp. 266–271. scientific committees of several international events.
+
+ Open Access funding provided by ‘Universita degli studi di Genova’ within the CRUI CARE Agreement

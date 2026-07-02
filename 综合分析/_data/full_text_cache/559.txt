@@ -1,0 +1,1082 @@
+PDF Download
+ 3718958.3750498.pdf
+ 27 February 2026
+ Total Citations: 2
+ Total Downloads: 3167
+ .
+ .
+ Latest updates: hps://dl.acm.org/doi/10.1145/3718958.3750498
+
+ .
+ .
+ Published: 27 August 2025
+ .
+ .
+ .
+ RESEARCH-ARTICLE
+
+ .
+ Citation in BibTeX format
+ The Sweet Danger of Sugar: Debunking Representation Learning for
+
+ .
+ .
+ SIGCOMM '25: ACM SIGCOMM 2025
+ Encrypted Traﬀic Classification Conference
+ September 8 - 11, 2025
+ YUQI ZHAO, Polytechnic of Turin, Turin, TO, Italy Coimbra, Portugal
+
+ .
+ .
+ .
+ GIOVANNI DETTORI, Polytechnic of Turin, Turin, TO, Italy Conference Sponsors:
+ SIGCOMM
+ .
+ MATTEO BOFFA, Polytechnic of Turin, Turin, TO, Italy
+ .
+ LUCA VASSIO, Polytechnic of Turin, Turin, TO, Italy
+ .
+ MARCO MELLIA, Polytechnic of Turin, Turin, TO, Italy
+ .
+ .
+ .
+ Open Access Support provided by:
+ .
+ Polytechnic of Turin
+ .
+ SIGCOMM '25: Proceedings of the ACM SIGCOMM 2025 Conference (September 2025)
+ hps://doi.org/10.1145/3718958.3750498
+ ISBN: 9798400715242
+.
+The Sweet Danger of Sugar: Debunking Representation Learning
+ for Encrypted Traffic Classification
+ Yuqi Zhao Giovanni Dettori Matteo Boffa
+ Politecnico di Torino Politecnico di Torino Politecnico di Torino
+ Torino, Italy Torino, Italy Torino, Italy
+ yuqi.zhao@polito.it giovanni.dettori@polito.it matteo.boffa@polito.it
+
+ Luca Vassio Marco Mellia
+ Politecnico di Torino Politecnico di Torino
+ Torino, Italy Torino, Italy
+ luca.vassio@polito.it marco.mellia@polito.it
+
+Abstract Frozen Encoder Unfrozen Encoder
+ Correct Per-Flow Split Original Per-Packet Split
+Recently we have witnessed the explosion of proposals that, in- 100
+spired by Language Models like BERT, exploit Representation Learn-
+
+ Accuracy (%)
+ing models to create traffic representations. All of them promise 75
+
+astonishing performance in encrypted traffic classification (up to 50
+98% accuracy). In this paper, with a networking expert mindset, we
+critically reassess their performance. Through extensive analysis, 25
+we demonstrate that the reported successes are heavily influenced
+by data preparation problems, which allow these models to find 0
+ ERT YaTC ambanetFound er der line
+easy shortcuts – spurious correlation between features and labels ET-B NetM cFormcapEnco ow Base
+ Traffi P Shall
+– during fine-tuning that unrealistically boost their performance.
+When such shortcuts are not present – as in real scenarios – these
+models perform poorly. We also introduce Pcap-Encoder, an LM- Figure 1: Accuracy of classifiers evaluated (TLS-120 dataset,
+based representation learning model that we specifically design to packet classification task). Models’ performance collapses
+extract features from protocol headers. Pcap-Encoder appears to be when properly tested. Pcap-Encoder is the only model that
+the only model that provides an instrumental representation for maintains good performance. However, a simple shallow
+traffic classification. Yet, its complexity questions its applicability in baseline surpass all representation learning-based methods.
+practical settings. Our findings reveal flaws in dataset preparation
+and model training, calling for a better and more conscious test
+design. We propose a correct evaluation methodology and stress 1 Introduction
+the need for rigorous benchmarking. We are witnessing the success of Artificial Intelligence (AI), with
+ Deep Neural Networks (DNN), Large Language Models (LLM) and
+CCS Concepts multimodal models empowering applications in several fields. Pre-
+• Networks → Packet classification; Network measurement; • training using self-supervised tasks is the driving factor behind
+Computing methodologies → Machine learning. this ‘AI Boom’ [23]. Self-supervision trains models to solve pretext
+ tasks – such as next-word (for text) or patch (for images) predic-
+Keywords tions [7, 19] – on humongous unlabelled datasets. Through this
+Traffic Classification, Representation Learning, Reproducibility, first representation learning [34] phase, pre-trained models learn
+Language Models to broadly master the nuances of the input data, learning how to
+ turn texts or images into meaningful embeddings, i.e., compact yet
+ACM Reference Format:
+ highly informative numerical representations of the data. Later,
+Yuqi Zhao, Giovanni Dettori, Matteo Boffa, Luca Vassio, and Marco Mellia.
+ such embeddings become useful to solve real-world tasks, called
+2025. The Sweet Danger of Sugar: Debunking Representation Learning
+for Encrypted Traffic Classification. In ACM SIGCOMM 2025 Conference downstream tasks. This two-stage approach has proven extremely
+(SIGCOMM ’25), September 8–11, 2025, Coimbra, Portugal. ACM, New York, successful when solving a specific task given a few or even no
+NY, USA, 15 pages. https://doi.org/10.1145/3718958.3750498 examples (few-shot [30] or zero-shot learning [28]).
+ The allure of AI has captivated many, leading to a surge in the
+ adoption of AI-based solutions to address network traffic classifica-
+This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 tion [12, 39–41, 46], where encryption makes deep packet inspec-
+International License. tion ineffective [38, 48]. Like ‘Bidirectional Encoder Representations
+SIGCOMM ’25, Coimbra, Portugal from Transformers’ (BERT) [7] learns to represent text, ‘Encrypted
+© 2025 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-1524-2/2025/09 Traffic BERT’ (ET-BERT) [27] learns to represent packets, even if
+https://doi.org/10.1145/3718958.3750498 encrypted.
+
+ 296
+SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal Zhao et al.
+
+ Most prior work adopts well-established AI pre-training pipelines We recommend the following practices:
+and architectures. When fine-tuned for traffic classification, they • Control for shortcut learning — Be aware that deep modreach up to 98% accuracy on VPN or TLS-encrypted traces. Some of els are particularly prone to leveraging unintended patterns
+the authors – quite controversially – claim that pre-training allows instead of genuinely learning the task of interest.
+the model to extract patterns from the encrypted payloads [27]. • Verify data integrity — Ensure that the dataset is free from
+ As network experts, we must assess whether these proposals leakage, artefacts, or spurious correlations that the ML model
+live up to their astonishing performance. What information can would immediately exploit as shortcuts.
+these approaches extract in an everything-encrypted setup? Do • Stress representation learning capabilities — Assess
+these models extract a meaningful traffic representation, or do they whether the model is truly learning useful representations,
+simply exploit shortcuts – spurious correlations between features i.e., freeze the encoder during downstream training.
+and labels [15] – to predict in the downstream task? • Consider cost-benefit trade-offs — Compare the proposed
+ This paper presents a systematic critical view of the adoption approach against simple baselines to determine whether the
+of representation learning for traffic classification. To ensure a fair added complexity of deep learning models is justified.
+comparison between different approaches, we define benchmarks
+ We believe our lesson extends to all AI-based solutions for combased on open datasets, where these models face increasingly computer networks. To this end, we provide the code, benchmark
+plex tasks, up to identifying traffic from 120 websites from TLS
+ datasets and methodology to the community to establish a shared
+traces. Following ML principles and with a network expert mindset,
+ environment for development and testing1 .
+we introduce a pipeline to properly assess the models’ performance.
+We pay particular attention to possible pitfalls during cleaning, 2 Representation Learning: Core Principles
+splitting, sampling and training. In this common playground, we
+compare the performance of state-of-the-art representation learn- We introduce the fundamentals and intuitions of representation
+ing models. Among contenders, we include Pcap-Encoder, our new learning for readers who are not experts in the field.
+proposal based on the Text-to-Text Transfer Transformer (T5) [45] Representation learning. Machine learning models, as comthat we train specifically to extract the format and semantics of putational systems, inherently work with numerical vectors. The
+packet headers and to ignore any (encrypted) payload. primary goal of representation learning is to learn ‘meaningful’
+ We highlight pitfalls that previous works underestimated and mappings that encode the real properties of an input into a numerthat, with promising sweet results, greatly poison the evaluation. ical space called the embedding space. The component in charge
+Figure 1 summarises our findings: of learning this mapping is named Encoder which is pre-trained
+ • The per-packet split policy adopted by most of the previous using pretext and self-supervised tasks. An embedding space is
+work does not properly separate training samples from testing ones. meaningful when it respects and captures the initial data proper-
+This creates a huge data leak that creates shortcuts these complex ties. One way of measuring such alignment is to challenge a model
+models immediately exploit. Using per-flow split, i.e., including all to take advantage of the learned embeddings and solve, possibly
+packets from the same flow either in the training or testing set as in with additional supervision, tasks that require an understanding
+a real-world setup, suffices to remove the most prominent shortcuts. of real-world properties. Such tasks, often of practical interest, are
+The classification accuracy barely reaches 40%. defined downstream tasks.
+ • In the downstream tasks, all previous works train the entire Pre-training for robust representation learning. In recent
+classification architecture (unfrozen encoder) with hundreds of thou- years, pre-training proved a compelling way to learn meaningful
+sands of samples. This ‘destroys’ the pre-trained information and embeddings. Especially when dealing with non-numerical inputs
+basically re-trains from scratch the entire model. When the embed- like images [24] and text [20], pre-training demonstrated that it is
+ders are frozen (frozen encoder), the accuracy of the models drops possible to learn embeddings that automatically capture generic
+below 30%. This questions the representation learning abilities and features and relationships of the raw data and can be exploited
+confirms the intuition that training a model to learn patterns from to solve many downstream tasks, with few (or even no) extra suthe encrypted payload makes little sense. pervision [19, 28, 30]. Representation learning eliminates the need
+ for feature engineering, i.e., to manually select or create relevant
+ • Pcap-Encoder is the only model that provides a meaningful features. Instead, the model autonomously defines features directly
+and robust representation. By design, it exploits packet headers’ from the raw input data.
+information and ignores payload. However, the shallow baseline
+performs on par or better, with much less complexity. This calls Pre-training through pretext tasks. Pre-training involves
+into question representation learning at large for its practical appli- training the model on a series of self-supervised pretext tasks. Uncability. like traditional end-to-end learning, this approach does not rely
+ In summary, the pre-trained models presented in the literature on externally provided labels. Examples of pretext tasks include
+fall short of producing an informative representation for traffic clas- predicting the next word or phrase in a document [11] or reconsification. The results we present call for a more cautious and critical structing a masked patch of an image [19]. In both cases, the ‘correct
+view of representation learning in traffic analysis. When results label’ is inherently derived from the input data itself. The compoappear surprisingly strong – especially where domain knowledge nent in charge of mapping the embedding space to the pre-text
+suggests limited learnability (e.g., encrypted traffic) – it is essential output is named Decoder. The whole Encoder/Decoder architecture
+to examine why the model performs well. 1 https://github.com/SmartData-Polito/Debunk_Traffic_Representation
+
+ 297
+Debunking Representation Learning SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal
+
+is trained on these self-supervised pretext tasks so to minimize the 3.1 Choice of Model Architecture
+decoder error when compared to the correct data. Notice that, un- The first choice to make is whether to design a new encoder model
+like traditional feature engineering – where one explicitly models or select an architecture previously presented in other areas. For
+what they consider to be relevant aspects of the data – pretext tasks traffic representation, all previous work builds on neural architecencourage the model to independently uncover and understand tures presented in NLP or CV fields.
+which information to use to solve the task. The fundamental as-
+ Literature choices: The motivation for using NLP-style models
+sumption here is that these features are indeed present, making it
+ comes from the parallel between text, i.e., sequences of characters
+possible, for instance, to reconstruct a missing portion of an image
+ organised in words, sentences, etc., and network traffic, i.e., segiven the remaining parts. Ultimately, the literature agrees that the
+ quences of bytes organised in fields, packets, flows, etc. PacRep [33],
+size and diversity of the pre-training dataset are key factors for its
+ PERT [18], ET-BERT [27], TrafficFormer [54], netFound [17] and
+successful [7, 22]. This is logical, as the embeddings shall capture
+ PTU [42] use BERT-like models[7, 25] borrowed from NLP and
+generalizable aspects of the input data and avoid focusing on overly
+ define network traffic specific pretext tasks for their training.
+specific scenarios.
+ Other approaches draw inspiration from the field of image pro-
+ Leveraging the embeddings for downstream tasks. A down- cessing. They represent packets in the same flow as rows in a
+stream task refers to a specific problem a model is designed to solve, matrix to build an image. With this, they leverage tools such as
+e.g., the classification of samples into classes, as we consider here. Vision Transformer (ViT) [8] or Mamba [16] to encode image-like
+Leveraging pre-trained architectures is an efficient approach for inputs into the embedding space. YaTC [53] and NetMamba [49]
+solving downstream tasks. The pre-trained encoder is first used to fall into this class.
+extract embeddings from the input data. A classification head is
+then added to use the knowledge captured by the encoder and per- 3.2 Pre-training Dataset
+form the final classification. The classification head, which ranges
+ For pre-training, collecting a large volume of unlabelled data is crufrom a shallow model (e.g., Random Forest (RF) or simple K-NN
+ cial to ensure comprehensive coverage of the main protocols. The
+classifier) to a Neural Network (e.g., Multi-Layer Perceptron (MLP)),
+ commonly adopted strategy is to passively collect traces through
+works alongside the pre-trained encoder to form an overall clasnetwork sniffers, and to leverage large publicly available datasets.
+sification model. Training this classification model for a specific
+ Best practice suggests data used for pre-training to be much larger
+downstream task requires labelled datasets for both train and test.
+ than those used for downstream task training – as few-shot learning
+ Frozen and unfrozen representation. There are coarsely two should suffice if the learned representation is effective3 . Additionoptions for training the classification model: (i) train only the classi- ally, the upstream and downstream datasets shall be different to
+fication head while keeping the pre-trained encoder frozen; (ii) train limit model overfitting and data leakage.
+the entire architecture end-to-end, with an unfrozen pre-trained
+ Literature choices: Different works can freely use different
+encoder. The latter is often referred to as fine-tuning, as it involves
+ datasets for pre-training. However, some studies employ the same
+tailoring the general representations learned by the pre-trained
+ datasets – or part of them – for both the pretraining and downmodel to address the particular task. Although fine-tuning the enstream tasks. For example, ET-BERT uses the ISCX-VPN [9] and
+tire model often yields better results, this is more computationally
+ (likely) CSTNET-TLS1.3 [27] datasets for both tasks. Also, YaTC and
+and memory-expensive [26]. Additionally, when performed on a
+ NetMamba rely on the same datasets for upstream and downstream
+large amount of supervised data, end-to-end fine-tuning can sigtasks training.
+nificantly alter the encoder representation, potentially causing the
+ Associated pitfalls: Dataset reuse is uncommon and discourmodel to forget its pre-trained knowledge and ‘overfit’ to the downaged in the CV and NLP domains. While for pre-training large
+stream task. Sometimes, this can also lead the model to rely on
+ datasets are strongly suggested, in the downstream task a large
+tailored signals or shortcuts. Shortcuts are decision rules that peramount of data (likely) leads to forgetting – especially when the repform well on standard benchmarks but do not transfer to more
+ resentation model is unfrozen. Indeed, the encoder could override
+challenging testing conditions [15] rather than robust features that
+ its pre-training knowledge and instead memorize task-specific pattruly represent the underlying task [32].
+ terns that can deceptively enhance the performance on downstream
+ tasks. We will discuss this later in Sec. 4.2.
+3 Representation Learning: Network Traffic
+Researchers are exploring representation learning adoption to au- 3.3 Choice of Pre-training Tasks
+tomatically learn meaningful representations of network traffic With pre-training, the model learns some generic and task-agnostic
+for tasks like traffic classification or QoE estimation. This section data patterns from the data themselves. Usual tasks require the
+provides an overview of the most cited and recent approaches. The encoder to develop predictive or reconstruction skills, often by
+key characteristics of these solutions are summarized in Table 1. masking part of the data or leveraging the data’s temporal nature
+ To adopt representation learning strategies, all proposed solu- to predict future properties.
+tions follow a set of common steps which we analyse below, highlighting any potential pitfalls in the proposals2 . Literature choices: A common pre-training in networking involves reconstructing masked bytes in a packet: The intuition behind
+2We based our discussion on the information in the papers and verified missing details 3 For BERT, the ratio between supervised and self-supervised data samples ranges
+using the authors’ code and models when available. between 1:1,000 and 1:1,000,000.
+
+ 298
+SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal Zhao et al.
+
+ Pre-training Downstream Classification
+ Model
+ Architecture Embedding Size Task Types Dataset Cleaning Split # Tasks Datasets
+ PacRep [33] BERT 768 None Not needed Partial Packet 6 A, B, +
+ PERT [18] ALBERT 768MAE ≠ No Flow 2 A, +
+ ET-BERT [27] BERT MAE, SBP
+ 768 ∩ Partial Packet 7 A, B, C, +
+ PTU [42] BERT MAE, SSP, HIP, FIP
+ 768 ≠ No Packet 7 A, B, C, +
+ TrafficFormer [54] BERT MAE, SODF
+ 768 ∩ Partial Packet 6 A, B, C, +
+ netFound [17] BERT 1024MAE ≠ Partial Flow 5 A, +
+ YaTC [53] ViT 192MAE = No Unknown 4 A, B, +
+ NetMamba [49] Mamba 256MAE = Partial Flow 6 A, B, +
+ Pcap-Encoder T5 Autoencoder, Q&A
+ 768 ≠ Full Flow 6 A, B, C
+ Datasets: A=ISCX-VPN, B=USTC-TFC, C=CSTNET-TLS1.3, +=other
+ Table 1: Summary of representation learning models for traffic classification. Pitfalls are highlighted in red.
+
+this task is to encourage the model to identify correlations within
+ Upstream Task:
+the unmasked input to reconstruct missing parts. NetMamba, YaTC, Representation learning with self-supervised tasks
+netFound and PERT adopt this pre-training strategy, named Masked
+ Tokens Embedding
+
+ Autoencoder
+Autoencoder (MAE) [19].
+
+ Phase 1:
+ ET-BERT uses the original BERT pretext tasks of Masked Lan- Encoder Decoder
+
+ MEAN
+ Packet
+ T5-base T5-base
+guage Model (MLM) and Next Sentence Prediction (NSP). In ET-
+BERT they call them Masked Burst Modelling (MBM) – a MAE-style
+task – and Same-origin Burst Prediction (SBP): given two packets, the
+model is queried whether the packets are part of the same burst4 . Tokens Embedding
+ TrafficFormer keeps the first MAE task from ET-BERT, but further
+ Phase 2:
+ Q&A
+
+ Question Encoder Decoder
+
+ MEAN
+complicates the second into Same Origin-Direction-Flow (SODF): + Packet T5-AE T5-base
+the model is not required to solve just a binary problem as in SBP,
+but also has to guess the direction, order, and corresponding flow
+of the packet. Downstream Task:
+ PTU also builds on ET-BERT MAE, but adds a Same Session Pre- Classification
+ Tokens Embedding
+diction (SSP) task, where the model has to predict whether two
+packets belong to the same session, and the Historical and Future Encoder Classification
+
+ MEAN
+ Packet
+ T5-AE head
+Interval Prediction (HIP and FIP) tasks to predict the time of arrival + Q&A
+of previous and future packets in a flow.
+ netFound uses the header information (e.g., packet length, TTL,
+etc.) and the first 12 bytes of information in the payload, converts
+them into tokens, and then employs the standard MAE method for Figure 2: Schema of Pcap-Encoder, our proposal.
+pre-training.
+ Finally, different from the others, PacRep uses the off-the-shelf
+BERT model trained on text and does not design any network- protocol headers only – that we assume still carry plain-text inspecific pretext task. formation. We call our proposed model architecture Pcap-Encoder.
+ Pcap-Encoder leverages two sequential pre-training phases that aim
+ Associated pitfalls: Both linguistic and vision studies showed
+ at capturing the contextual relationship among bytes and automatthat words in a sentence and patches in an image exhibit significant
+ ically extract the semantic of some packet header fields.
+correlations [3, 5, 31]. Contrarily, supposing a robust encryption
+ The overall architecture is shown in Figure 2. Pcap-Encoder is
+algorithm, there is no correlation between the encrypted bytes in
+ based on the well-known T5 (base) architecture [45], a sequence-toa packet payload. Hence, MAE tasks on encrypted payloads make
+ sequence transformer-based model. T5 solves question-answering
+little or no sense in the networking scenario. This is why more
+ tasks: prompted a question and offered a context, the model learns
+recent works, such as netFound, only focus on unencrypted content
+ how to answer. For more details about the design of Pcap-Encoder,
+during pre-training [17].
+ check Appendix A.1 and our technical report [6].
+ Phase 1: Encoder update. We first update the original T5 en-
+3.4 Mitigating the pitfalls: Pcap-Encoder coder using raw packet traces to adapt it to the new data format
+We propose a representation learning architecture that we explic- and semantics. The encoder’s goal is to map the original data into
+itly design and train to automatically extract information from the a numerical space, possibly removing redundant or useless (e.g.,
+ constant) information. For this, we train the (base) T5 to reconstruct
+4 Burst: sequence of consecutive packets that belong to the same flow. the original packet from the internal representation.
+
+ 299
+Debunking Representation Learning SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal
+
+ T5 works using tokens to represent the input text. We convert takes as input the T5-AE+Q&A embedding computed from the input
+each 2-byte long word into a hexadecimal number, separating each packet. We train separated classifiers, one for each task. Depending
+word by space. We feed this textual input to the original T5 tokenizer on the number of classes in the task, we use binary cross-entropy
+to generate tokens. The encoder receives the packet divided into or softmax as a loss function for the MLP.
+tokens and obtains a representation vector for each token. We
+modify the T5 encoder and add a bottleneck to obtain a single 4 Benchmark for Network Traffic Classification
+representation for the entire packet from the representations of In this section, we shift focus to the downstream task of the repreits tokens. We test different architectures for this bottleneck and a sentation learning pipeline. As in the previous section, we explore
+simple mean pooling layer suffices (see Appendix A.1). Finally, the the design choices of the most influential and recent approaches,
+decoder reconstructs the original packet tokens5 . highlighting potential pitfalls. Additionally, to provide a common
+ We start from the pre-trained T5-base encoder and continue the ground for comparing results, we introduce a fair and effective
+training on traffic data with a standard cross-entropy loss function benchmark pipeline to evaluate the representation learning capabased on the difference between the predicted tokens and the actual bilities of different models for network traffic classification tasks.
+ones. At the end, the encoder gives us a single representation of Our benchmark standardizes the critical steps of trace gathering,
+the input packet. We call this pre-trained model T5-AE. For this pre- cleaning, splitting, and sampling – processes that are often incontraining, we use MAWI [2], UNSW-NB15 [37] traces and a freshly sistently or incorrectly handled in the literature, making it difficult
+collected trace from our campus6 . This ensures both spatial and to fairly compare different methods.
+time diversity in the samples. Traces include IPv4 and IPv6 traffic,
+and mostly TCP, UDP and some ICMP traffic. In total, we use ≈ 1GB 4.1 Dataset Preparation: Collecting, Cleaning,
+of data or 500k packets.
+ Splitting
+ Phase 2: Question-answering. Next, we fine-tune the T5-AE
+model to extract the semantics of protocol headers. We task the We first discuss the choices on the datasets that previous authors
+model to answer questions related to some specific packet header or used to train and evaluate their solutions on downstream tasks.
+fields. In total, we define types of 8 questions, and create 50,000 in- The picture is extremely heterogeneous. Most authors use publicly
+stances of questions. We included (see Appendix A.1) retrieval ques- available datasets, while a few autonomously collect traces [17,
+tions applied across different protocols (TCP-IPv4/6, UDP-IPv4, and 18, 27] – some sharing (part of) them [27]. Each paper proposes
+ICMP) and more complex questions that involve the computation a custom cleaning process that removes spurious traffic (e.g., ARP,
+on different fields. Two examples of question prompts are ‘What DHCP, LAN-related protocols, etc.). Some remove flows or packets
+is the destination IP address of the packet?’ and ‘Is the packet’s shorter than a given threshold [17, 27, 49, 54]. Some perform careless
+IP checksum correct?’. We stress that we avoid pretext questions train-test splits, ignoring the fact that packets of the same flow might
+on the application payload (except its size), assuming encryption leak information on the classification class [27, 33, 42]. In general,
+prevents any possible answer on the content. even when starting from the same dataset, all papers end up with a
+ This simple Q&A training model allows one to pre-train Pcap-Encoder custom collection: even the number of classes per task often differs.
+on specific protocol information. For instance, it can be tasked to We hereby call for a standardization in the following. The process
+find the SNI in the TLS handshake or learn where to find the A or we propose here can be extended to include other datasets and
+AAAA record in DNS queries. classification tasks.
+ We start from the T5-AE encoder trained at Phase 1 using the Choice of dataset: Instead of setting up specific data collection
+mean pooling bottleneck to represent each packet. For the question- campaigns, we rely on previously used mainstream datasets and
+answering task, the input consists of two parts: the query and the classification tasks created by the research community. These lacontext. The query is the task we ask the model to solve. The context belled datasets were generated through experiments conducted in
+is the packet. Queries are in plaintext, so we use the original T5 controlled testbeds and offer a large data collection of encrypted
+tokenizer directly. For packets, we tokenize them as before. At last, traffic. We select three datasets among those commonly used in
+we separate the query from the context by the special token </s> previous works, for a total of six tasks that we summarise in Table 2.
+that ensures the model correctly interprets the boundaries between • ISCX-VPN [9]: This dataset contains traffic related to 6 differthe query and the context. For example: What is the time to live of ent types of services (Web browsing, VoIP, Video Streaming, Chat,
+the packet?</s>4500 4000 F7C6 ... CD19. Email, P2P File transfer) using different applications (e.g., Chat with
+ We use the same traces as before for this second phase. Ablation Skype or Hangouts), over plain or VPN-encrypted connection. We
+studies on the T5-AE and Q&A modules show that each component define three tasks: determining whether traffic is VPN-encrypted
+plays a beneficial role in enhancing model performance (details in or not (VPN-binary); Service classification (VPN-service); and appli-
+Table 11). At the end, we have a T5-AE+Q&A pre-trained model. cation classification (VPN-app).
+ Downstream classifiers: As in other representation learning • USTC-TFC [50]: This dataset contains a total of 20 applications,
+models proposed for traffic classification, we add a classification 10 are benign (BitTorrent, FaceTime, Gmail, Skype, ...) and 10 are
+head made by a two-layer MLP with a ReLU activation function. It malicious (malware run in controlled environments). We formulate two classification tasks: Malicious or not (USTC-binary); and
+5 To implement the encoder update, we use a dummy question and pass the packet
+ application classification (USTC-app).
+over which the model operates.
+6 To ensure diversity and avoid the model memorising constant patterns, we randomize • CSTN-TLS1.3 [27]: This dataset contains a total of 120 classes,
+IP addresses and TTL values. each referring to visits to a different TLS1.3-enabled website. The
+
+ 300
+SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal Zhao et al.
+
+ Dataset Task #Class #Train #Test Description
+ ISCX-VPN VPN-binary 2 100,000 110,594 Encrypted? Original dataset Training
+ ISCX-VPN VPN-service 6 120,000 111,368 Voip, Chat, ... l it
+ ISCX-VPN VPN-app 16 33,088 111,678 Gmail, Vimeo, ... Sp
+ w
+ lo
+ r-f
+ USTC-TFC USTC-binary 2 100,000 609,332 Malware? Pe
+ USTC-TFC USTC-app 20 69,680 609,477 Gmail, Skype, ... Test
+
+ CSTN-TLS1.3 TLS-120 120 98,640 553,994 120 Websites
+ Pe
+ Table 2: Downstream datasets and tasks. r-p
+ ac
+ Explicit Flow ID Implicit Flow ID ke
+ t Sp
+ SRC_IP SRC_PORT ACK_No TCP_echoTS l it Training
+ DST_IP DST_PORT TCP_TS Seq_No
+
+task here is to output the visited website (TLS-120). The authors
+share only TCP flows from which they remove the TCP 3-wayhandshake and the initial client TLS-Hello – thus removing the Test
+plain-text SNI if present. This results in an ‘everything encrypted’ Figure 3: Per-flow and per-packet split.
+payload scenario7 .
+ Data cleaning: Not supervising the trace collection process,
+data cleaning becomes a crucial step to ensure the quality and performance in practical deployments. We refrain from applying any
+reliability of the datasets [13]. We summarize our interventions in class removal during testing. Differently, during training, researchers
+the following four cases: could use techniques that change the original class distribution, such
+ • Extraneous protocol filters: Given the constraints of network as balancing the class samples (see next).
+data collection, certain extraneous protocols inevitably make their • Filters removing header information: In an attempt to limit data
+way into the datasets. Some traces include ARP, DHCP, broadcast leakage (i.e., identifiers the model could memorize), some works
+protocols, etc. that question the definition of the classification task propose to anonymise specific fields like IP addresses and TCP/UDP
+(e.g., making predictions on ARP requests, which are not related ports [27, 33, 42, 49, 53, 54]. For example, YaTC randomises the IP
+to any classes). Some of the previous works [18, 33, 42, 53] did address and sets the port number to zero; PacRep and NetMamba
+not clean (or did not report how they cleaned) the traces, blindly set both IP address and port to zero; PTU removes IP address, MAC
+trusting the data collection. Besides, netFound retains traffic data address and checksum; TrafficFormer randomises IP address and
+related to the TCP, UDP and ICMP. For our benchmark, we define ports, and some specific fields (such as timestamp) for data augmena superset of filters that we report in Appendix A.4 to filter out the tation. ET-BERT removes the IP header entirely. netFound omits the
+irrelevant protocols to the classification task. ISCX and USTC traces explicit flow identifiers (e.g., IP address, port, SNIs, etc), but keeps
+contain 5% and 10% of spurious packets, respectively. CSTN is other header’s information.
+already filtered. For the pre-training task, we consider it incorrect to remove any in-
+ • Minimum size filters: Some of the previous work filtered pack- formation from the header. In the downstream task, removing selected
+ets shorter than a minimum size [17, 27, 49, 54]. For example, in header fields compels the model to generalize across diverse network
+ET-BERT, the authors remove all packets shorter than 80B8 . In Traf- conditions – for instance, it can no longer rely on memorizing that
+ficFormer, the authors remove flows shorter than 2kB or than three a specific IP range belongs to one server. It is hence part of the
+packets. In netFound, the authors exclude flows with fewer than downstream model and training task design to hide some information
+six packets and bursts containing two or fewer packets. Filtering (and force the model to generalise) or to leave such features and create
+based on packet or flow size alters the classification tasks since, for a more dedicated model.
+instance, all TCP signalling and acknowledgement packets could Dataset Splitting into Train and Test: The golden rule in
+be ignored. Hence, we do not adopt and support filters based on any ML pipeline is to avoid any leakage of information from the
+minimum size/number. test set into the training/validation set. For traffic classification, we
+ • Classes support filters: Some works limit the number of packets consider two basic splitting processes:
+per class [27], the number of flows per class [27, 49, 54], or directly • Per-packet split: Separate the packets based on their class; randrop a class if the minimum support is not reached [27, 49, 54]. For domly split each class into train, validation and test sets.
+example, TrafficFormer discards classes with less than 10 flows and • Per-flow split: Separate the flows based on their class; randomly
+limits to 500 flows the others; ET-BERT selects at most 5000 packets put all packets from the same flow into either train, validation and
+or 500 flows per class; NetMamba discards rare classes and limits test sets.
+common ones, but authors do not report thresholds. Since these Fig. 3 sketches the differences between per-flow and per-packet
+filters alter the original data distribution, they change the nature of split. Given flows, there are explicit flow identifiers (ID) like the flow
+the problem compared to the initial dataset. The original datasets 5-tuple (represented by colours), and implicit flow IDs, such as the
+should reflect real-world conditions, while artificially modifying the TCP sequence (SeqNo) and ACK numbers (AckNo). For instance,
+underlying distributions introduces deviations that may impact the TCP SeqNo and AckNo are randomly selected during the TCP three-
+7 In the original ET-BERT paper the authors state the SNI is present, but in the public way handshake, and all packets of the same flow then share values
+dataset it is not. in a close range. Overall, the pairs (SeqNo, AckNo) create an implicit
+8 This filter is present in the code, but not mentioned in the paper. flow ID projecting all flow packets in a random space of ≈64 bits.
+
+ 301
+Debunking Representation Learning SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal
+
+Similarly, the TCP timestamp option implicitly groups packets of downstream task, one is free to choose the classification head model,
+the same session by a close-by timestamp. but should keep in mind that the main learning effort lies in the
+ All previous works adopt a per-packet split for packet classifi- self-supervised encoder – so excessively complex heads are typically
+cation tasks. Unfortunately, this leads to serious data leakage that unnecessary and may not provide significant gains.
+allows the classifier to leverage implicit flow IDs to identify all pack- Pre-Trained Encoder - Frozen or unfrozen: During the trainets of the same flow. Being the class of the flow available during ing of the final classifier, all previous works perform training in an
+training, the classifier can easily associate a packet to its flow, and end-to-end manner, i.e., the encoder architecture is unfrozen. While
+then to its class. Therefore, we propose the adoption of the per-flow legitimate, this is in contrast with the idea that the representation
+split to remove simple implicit flow IDs that the classifier would not produced by the encoder is actually representative. By freezing the
+be able to leverage in real deployments. encoding part of the model, the classification head should lever-
+ Notice that more advanced splits are possible: per-session, per- age the obtained generic representation. Therefore, to check how
+client, per-location, per-time split, etc. Each stresses the ability of meaningful the representation is, we advocate the usage of frozen
+the model to generalise when transferred to other setups. Here, we encoder during the training of the downstream classifier.
+limit our analysis to the basic per-packet and per-flow split.
+ Performance metrics: Accuracy and macro F1-Score. Ac-
+ Sampling a subset of the original dataset: Different network curacy measures the number of correct predictions. It is the ratio
+applications generate different amounts of flows and packets. This between the total number of correct predictions and the total numtranslates into a class imbalance where a chatty application may ber of predictions. Accuracy treats all samples as equally important.
+exchange more packets than non-verbose applications, possibly In an unbalanced situation, it underweights the performance of
+creating an important class imbalance that challenges the down- minority classes.
+stream model training. However, this imbalance is real: Limiting Macro-averaged F1-Score is the arithmetic mean (i.e., unweighted
+the number of packets or flows per class on the entire dataset, as in mean) of all F1 scores per class. This metric equally weights errors
+some of the previous works, introduces artifacts in the data distri- across all classes, regardless of support.
+bution that could bias the model evaluation. Therefore, for the test All previous works but PacRep and netFound report the accuracy.
+set, we suggest not altering the class sample distribution as obtained Correctly, some[18, 27, 42, 54] present the macro F1-Score too. YaTC,
+from the previous step. If for some reason (e.g., computational or NetMamba and netFound 10 misleadingly use the micro F1-Score –
+time constraints at inference time) the test set must be reduced, we which favours majority classes; PacRep only reports micro F1 and
+suggest stratified sampling, which preserves the distribution of classes macro F1 scores.
+as in the collected data. To evaluate the performance of the classifier, we suggest using both
+ For the training (and validation) set, multiple valid choices can the accuracy and the macro-averaged F1 score.
+be made according to the used methodology. Balanced sampling
+through oversampling or undersampling makes the number of
+samples of every class similar. This enables the model to better learn
+ 5 Experimental setup
+minority class samples and avoid the majority class dominating the Here we describe the experimental setup to compare and undermodel training process. Alternatively, one could use a weighted loss stand the real potential of representation learning for the traffic
+function or other ML techniques to compensate for class unbalance. classification tasks.
+ Downstream models: For our experiments, we select five rep-
+4.2 Downstream classification resentative models: ET-BERT, YaTC, NetMamba, TrafficFormer and
+Downstream task - Packet or flow: Some work frames the final netFound. They use different representation learning models: BERT,
+task as a packet classification problem [33, 42]; others focus on ViT and Mamba. We download the pre-trained models from each
+flow classification [17, 18, 49, 53, 54]; some does both [27]. Here, we original repository. We add Pcap-Encoder, and compare against
+face both packet-level and flow-level tasks: given a packet (a flow), shallow models (without representation learning) as baselines.
+identify which class it belongs to. We define flow as the sequence For each model, we follow the data preparation and hyperpaof packets with the same 5-tuple, and consider both packets sent by rameters suggested by the original papers when available. Refer
+the client and the server (bi-flow). Finally, we consider all packets to Appendix A.2 for a detailed overview. When facing packet clasand flows to belong to the class the trace belongs to. For instance, sification with the flow-embedders, we Repeat the same packet 5
+when visiting a website, all cleaned packets and flows collected times to form an artificial flow and get the resulting embeddings
+during such a visit inherit the same website label9 . in output11 . For netFound, we fill its maximum input (72 packets)
+ with the same packet and pad the multimodal information (packet
+ Downstream model and training: Each pre-trained encoder
+ direction, packet interval, and etc.) with the same value or zero. We
+outputs an embedding, given some input sample. This tensor is the
+ use the original flow-embedder models for the flow classification
+input to the classification head. In previous works, the classification
+ task. For Pcap-Encoder, we consider a simple majority voting on
+head ranges from a simple MLP to a more complex transformerthe classification of the first 5 packets of each flow.
+based architecture (e.g. in PacRep). Given the resulting classification model, authors trained it with simple supervision or using
+contrastive learning as in PacRep. Given the complexity of the 10 Detail inferred from the code.
+ 11We also test a Padding strategy where 4 padding packets with all zeros follow the
+9 Even if questionable, this is the same formulation previous works used. packet. The Repeat strategy offers better results.
+
+ 302
+SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal Zhao et al.
+
+ Model VPN-binary (2) VPN-service (6) VPN-app (16) USTC-binary (2) USTC-app (20) TLS-120
+ (Per-flow split) AC F1 AC F1 AC F1 AC F1 AC F1 AC F1
+ ET-BERT 84.7 84.6 71.7 64.2 59.2 43.7 100.0 100.0 84.9 79.6 10.9 6.7
+ YaTC 83.9 83.9 69.2 60.1 60.9 44.3 99.5 99.5 85.2 78.0 15.5 9.6
+ NetMamba 75.0 74.5 56.9 49.0 39.6 28.4 97.6 97.5 72.5 57.7 8.8 4.5
+ TrafficFormer 90.9 90.9 76.5 69.4 67.7 54.4 100.0 100.0 72.0 65.0 29.7 24.0
+ netFound 76.0 61.9 47.3 36.5 32.9 15.3 99.4 99.4 58.0 30.7 1.9 0.5
+ Pcap-Encoder 99.9 99.9 92.1 89.8 83.5 71.0 100.0 100.0 91.0 87.1 71.0 63.7
+Table 3: Results of Pcap-Encoder and the three SoA models for packet classification. Per-flow split, Frozen encoders. We report
+accuracy (AC) and macro F1-Score (F1). Results below 50% are highlighted in red, best in bold.
+
+ Downstream task evaluation: As reported in Section 4, we VPN-app (16) TLS-120
+ Model
+split each dataset into training and test partitions, according to a Frozen Unfrozen Frozen Unfrozen
+ (Per-flow split)
+7:1 ratio. We adopt the per-flow split strategy. We make sure that AC F1 AC F1 AC F1 AC F1
+long flows are evenly distributed within the partitions. To stress
+ ET-BERT 59.2 43.7 82.8 69.7 10.9 6.7 28.0 21.5
+the few-shot learning abilities of the models, in the training set, YaTC 60.9 44.3 79.1 65.2 15.5 9.6 36.6 31.4
+we balance classes by undersampling each class to the minority NetMamba 39.6 28.4 80.4 65.9 8.8 4.5 40.7 35.3
+class. For flows longer than 1,000 packets, we randomly select 1,000 TrafficFormer 67.7 54.4 73.1 61.0 29.7 24.0 43.7 38.9
+packets across the flow. Table 2 reports the number of samples in netFound 32.9 15.3 70.4 57.3 1.9 0.5 39.9 35.2
+the training and testing sets. The proportion between the train Pcap-Encoder 83.5 71.0 85.6 74.8 71.0 63.7 77.3 69.2
+and test samples changes for each downstream dataset due to the
+ Table 4: Per-flow split, frozen and unfrozen encoder. Results
+undersampling of the training part.
+ improve, but models still struggle in challenging setups.
+ We perform a K-Fold cross-validation of the training partition
+with 𝐾 = 3 (2/3 used for training, 1/3 for validation, 3 folds). In all
+experiments, we test all models and configurations with the exact
+same splits for a fair comparison.
+ To compare with the per-packet split scenario, we create a second Although it contrasts with previous studies, the poor perforsplit simply following an 8:1:1 random split into train, validation mance in encrypted scenarios is justified by the debatable assumpand test – as originally proposed in ET-BERT. In this case, packets tion made by previous work according to which some information
+from the same flow can end up in both trains and tests. can still be extracted from the encrypted payload. Since these models are designed to disregard information from packet headers, they
+ rely on minimal data, primarily packet direction and size. In con-
+6 Results trast, Pcap-Encoder provides an informative representation to the
+We perform all the experiments HPC Cluster equipped with NVIDIA classification head, enabling it to distinguish the application that
+Tesla V100 SXM2 GPUs. We use Python and Pytorch for the imple- generated a packet from the network and the transport headers
+mentation and make all datasets, models, and code available to the summarised by Pcap-Encoder.
+community for reproducibility and to foster further studies. Given that some tasks are very simple, in the following, we
+ dismiss three and focus only on the VPN-app and TLS-120 tasks.
+ Per-Flow Split – Unfrozen Encoder: To investigate the root
+6.1 Packet-Level Traffic Classification cause of poor performance, we let the classification model fine-tune
+We start from the proposed flow-split-based scenario with frozen the embedder part as well, i.e., we unfreeze the encoder. We report
+encoders on the packet classification tasks. results in Table 4 for VPN-app and TLS-120 cases. As expected, all
+ Per-Flow Split – Frozen encoder: We consider the six tasks we proposed models improve their performance. Still, unfreezing the
+presented in Section 4 and test all representation learning models encoder does not suffice to reach a satisfactory result for none of
+with the per-flow split and frozen encoders. We report results in them. Pcap-Encoder still achieves the best performance: Notice that
+Table 3. Surprisingly, the performance of all models is very poor, the unfreezing boost is less significant than the counterparts – about
+up to 80% lower than that reported in their respective papers. Only 5% improvement only. This confirms that Pcap-Encoder still relies
+in the simplest binary classification tasks, VPN-binary and USTC- on its pre-training knowledge and does not require re-learning with
+binary, all models offer solid results. On the most challenging VPN- end-to-end training.
+app and TLS-120 tasks, the performance is really disappointing. Per-Packet Split – Frozen vs Unfrozen Encoder: Wondering
+ Notice how Pcap-Encoder performs best in all tasks, significantly why the performance does not yet saturate to the promised good
+outperforming other methods. Yet, in the most complex tasks, it performance, we observe what happens with the per-packet split
+struggles to achieve excellent results. as originally adopted in all previous works. We present results in
+
+ 303
+Debunking Representation Learning SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal
+
+ VPN-app (16) TLS-120 TLS - Frozen Encoder TLS - Unfrozen Encoder
+ Model 100 97.06%
+ (Per-packet split) Frozen Unfrozen Frozen Unfrozen
+ AC F1 AC F1 AC F1 AC F1 80
+
+ Frequency (%)
+ 71.25%
+ ET-BERT 69.5 64.7 96.8 97.0 17.5 10.2 97.4 96.8
+ YaTC 73.2 67.7 98.5 98.5 26.8 17.7 98.2 97.7 60
+ NetMamba 53.5 45.1 98.4 98.4 13.5 5.3 97.4 96.8
+ TrafficFormer 87.5 85.6 95.6 95.2 53.3 48.2 86.0 83.3 40
+ netFound 35.3 18.7 89.6 89.0 10.8 2.3 71.0 67.4
+ 17.97%
+ 20
+ Pcap-Encoder 91.9 90.6 94.3 93.9 85.7 81.0 88.6 80.3
+ 4.27% 4.28% 2.17% 0.21% 0.17% 0.17% 0.22%
+ 1.35% 0.88%
+Table 5: Per-packet split scenario. Eventually, in this wrong 0
+settings and unfrozen encoder, performance reaches the 0/5 1/5 2/5 3/5 4/5 5/5 0/5 1/5 2/5 3/5 4/5 5/5
+promised > 90% accuracy.
+ Figure 4: 5-NN purity of embeddings for ET-BERT. With a
+ frozen encoder, 71% of points do not have a sample of the
+ same class as TOP-5 neighbour. Situation changes only when
+Table 5 for both frozen and unfrozen encoder setups on the two the encoder is unfrozen.
+most challenging tasks.
+ First, focus on the frozen encoder scenario. The performance that
+all previous models achieve is still far from satisfactory. In particular, Scenario Dataset AC F1
+in the TLS-120, we obtain very poor results. Compare now with an Original 97.4 96.8
+unfrozen encoder: The accuracy finally largely improves, reaching w/o SeqNo/AckNo
+up to 98%. w/o Timestamp 19.5 15.4
+ Two main take-home messages arise: First, per-packet split en- Per-packet Split (only test)
+ables some data leakage that allows the classifier to finally find exw/o SeqNo/AckNo
+ploitable patterns. Second, the representation offered by the frozen w/o Timestamp 52.2 48.2
+encoder is not useful for solving classification tasks. Only when end- (train + test)
+to-end training is enabled, the models learn patterns that allow
+ w/o Pre-training 97.1 96.4
+them to shine.
+ To gauge the representativeness of the embeddings, we com- Per-flow Split Original 28.0 21.5
+pute, for each packet, the number of neighbouring packets that Table 6: Impact of implicit flow ID on the unfrozen ET-BERT
+have the same class, using their representation in the embedding and ablation study on the pre-training strategy.
+space. The intuition is that if the embedder can project packets with
+the same class in the same portion of the embedding space, most
+of the packet’s neighbours should be of the same class. For each
+point, we consider the 5-nearest neighbours (5-NN) and count how unfrozen model. We focus on ET-BERT as a case study, with the
+many samples are of the correct class (5-NN purity). Fig. 4 shows TLS-120 task. Table 6 summarises these experiments. The first row
+the analysis considering ET-BERT embeddings in frozen (left) and reports (as in Table 5) the excellent performance with the per-packet
+unfrozen (right) setups, in the TLS-120 case. Given a packet of class split and unfrozen encoder.
+𝑐, in the former case, 71% of packets have no neighbour of class 𝑐. Now, consider the same model tested on the same data but with
+After fine-tuning, the embedding changes drastically, so that now randomized SeqNo, AckNo, and TCP timestamps (second row).
+97% of packets have all the 5 neighbours of class 𝑐. The original The results drop by approximately 80%. This suggests that the
+embeddings lack meaningful information, and it is only during model relies on these shortcuts during training, leading to an abrupt
+end-to-end fine-tuning that the classification model adapts them performance decline when those shortcuts are unavailable.
+to specifically address the downstream tasks. The same holds for Train the same model now on a training set where the implicit
+the embeddings of other models, not reported here for the sake of flow IDs are removed – and no easy shortcuts are present. Test this
+brevity. In a nutshell, the models need to modify all their weights model on a test set without shortcuts too. Results improve. That is,
+to solve the classification task, as their original representations are the model – trained unfrozen – looks for other patterns that still
+uninformative. allow it to solve the classification task, even if in an unsatisfactory
+ Unfortunately, the patterns activated by the per-packet split are manner. Some data leakage is still present.
+misleading and impractical for real-world use. The per-packet split To check the effectiveness ET-BERT pre-training strategy, we
+strategy suffers from severe data leakage, allowing packets from the run an experiment in which we destroy the pre-training knowledge
+same flow to appear in both the training and test sets. As a result, by initialising the ET-BERT model weights with random values.
+the model learns information it should not rely on, i.e., it relies on We then fine-tune this untrained model to solve the TLS-120 downshortcuts. Specifically, some implicit flow IDs enable the model to stream task. We report results in Table 6 in the w/o Pre-training row.
+link a test packet to its corresponding flow and, ultimately, its class. Results are on par with those of the pre-trained ET-BERT model.
+ Removing implicit flow IDs: We systematically analyse the This strongly suggests that the ET-BERT pre-training is mostly
+cause of the performance increase with the per-packet split and useless.
+
+ 304
+SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal Zhao et al.
+
+ Model Per-packet split - w/ IP Per-packet split - w/o IP
+ VPN-app (16) TLS-120
+ (Per-flow split)
+ 0.20
+ w/o IP addr. 52.5 13.0
+
+ Feature Importance
+ w/o header 16.4 1.5
+ 0.15
+ w/o payload 66.7 63.6
+ base 71.0 63.7
+ 0.10
+Table 7: Ablation Study on Pcap-Encoder in the flow-based
+split scenario when removing the IPs, headers and payloads 0.05
+(Macro F1-Scores).
+ 0.00
+ SRC DST TCP SRC SRC IP DST TCP IP TCP IP TCP IP IP
+ IP3 IP2 Win IP1 IP0 TTL IP3 Win TTL AckNo Chk SeqNo ID Len
+
+ Model VPN-app (16) TLS-120
+ (Per-flow split) base w/o IP addr base w/o IP addr Figure 5: Feature importance for the Random Forest model
+ RF 81.1 72.4 78.0 39.4 on the per-packet split for the TLS-120 problem. We both
+ XGBoost 82.1 73.2 82.0 41.3 examine the case with and without IP among input features.
+ LightGBM 82.6 74.5 82.4 40.6
+ MLP 65.1 52.5 68.8 30.5
+Table 8: Macro F1-Scores of ML baselines. We try the baseline Focus on the w/o IP addr column in Table 8 that shows what
+with and without the IP information. happens when we remove the IP address from the data. The performance of shallow models drops, particularly in the TLS-120 task.
+ With no access to IP addresses, the Random Forest relies on other
+ fields, which overall provide less information. However, even in
+ Lastly, in the last row we report the results in a per-flow split this configuration, the use of handcrafted features still enables the
+(the same as Table 4). Here, packets are naturally and consistently shallow models to outperform Pcap-Encoder.
+separated into train or test sets, and the model has a hard time Shallow Models – Feature Importance: We leverage the feafinding easy patterns. ture importance scores provided by the Random Forest to identify
+ In short, the per-packet split introduces dangerous information the features the model relies on for its decisions. Fig. 5 reports the
+leaks, allowing the model to find easy patterns that will not be scores for the TLS-120 problem. We consider the per-packet split
+available during deployment. It is crucial to carefully split the data scenario to highlight the shortcuts on explicit and implicit flow IDs.
+to avoid this issue: A per-flow split helps mitigate the problem. Observe the left plot: this is the base scenario. All headers’ fea-
+ Ablation study on Pcap-Encoder: we perform an ablation tures are available for training. IP addresses are explicit flow IDs
+study on Pcap-Encoder in the per-flow split scenario when (i) re- and the model reaches an accuracy of 98.9%. The most relevant
+moving the IPs, (ii) removing the TCP/IP header entirely, or (iii) features are the different octets of the source and destination IP
+removing the application payload. Changes are applied in both the addresses (see SRC IP3, DST IP2, SRC IP1, SRC IP0 and DST IP3)12 .
+train and test sets, and the encoder is kept frozen during training. In the right plot, we report results after removing IP addresses
+ We report these results in Table 7. The performance reduces by from the input features. Here, sequence and acknowledgment numremoving the IP Addresses, and collapses by removing the entire bers – implicit flow identifiers – become the most important fea-
+IP and TCP headers. This is expected given that Pcap-Encoder is tures. Despite the removal of explicit identifiers, the model still
+designed to ignore the payload. In fact, removing the application achieves high performance with an accuracy of 92.6%, reflecting
+layer payload has a limited (VPN-app) or no impact (TLS-120 – the flaws of the per-packet split setup.
+everything encrypted scenario). By design – and in practice – the
+encrypted payload cannot make any significant contribution to the 6.2 Flow-Level Traffic Classification Results
+classification task. At last, given that YaTC, NetMamba, TrafficFormer and netFound
+ Pcap-Encoder vs Shallow models: So far, Pcap-Encoder has models were designed for flow representation, we compare how
+proved to offer the best performance in the realistic per-flow split they perform in a flow-level network traffic classification task. We
+scenario. But how does it compare with traditional ML approaches? take the same two challenging datasets used in the previous section
+ In Table 8, we compare the performance of some shallow models and keep all flows that have at least 5 packets (the best case for
+with that of Pcap-Encoder. We report the F1 scores when provided encoders). Only per-flow split is viable in this case. We train the
+the same input as Pcap-Encoder (base settings). We manually select classification model using both frozen and unfrozen encoders using
+which packet header field to use as features for training and testing the same 3-fold approach.
+(details are in Appendix A.3). The results show that the shallow ML When training the models, we follow the original papers’ indimodels perform better than Pcap-Encoder. This happens because cations. For netFound, we select the median burst for each flow and
+Pcap-Encoder relies on pre-training tasks to autonomously extract the median packet for each burst based on the distribution of the
+useful features from the raw byte stream, whereas we provide data sequence lengths, with a maximum of 12 bursts and 6 packets
+shallow models with custom features extracted from significant 12 Recall that we use bi-flows, and the source/destination IP addresses can correspond
+protocol fields pre-selected by networking experts. to both the client and server.
+
+ 305
+Debunking Representation Learning SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal
+
+ VPN-app (16) TLS-120
+ Model 2048
+ Frozen Unfrozen Frozen Unfrozen Frozen netFound
+
+ Time
+ (Per-flow split) 1024
+ Unfrozen
+
+ InferenceTime
+ AC F1 AC F1 AC F1 AC F1
+ 256
+ ET-BERT 42.0 38.9 59.2 54.3 20.5 13.8 55.3 51.5
+
+ Relative Inference
+ YaTC 25.5 25.1 60.0 54.8 34.0 27.8 77.3 74.8 64
+ NetMamba 15.6 13.6 52.4 48.6 16.9 11.3 78.3 76.0
+ TrafficFormer 39.2 36.9 53.7 49.2 46.3 42.3 71.4 69.2 16 Pcap-Encoder
+
+ Relative
+ YaTC TrafficnetFound 22.9 18.8 56.6 52.4 28.0 22.9 90.8 89.7
+ 4 Former
+ Pcap-Encoder 69.2 62.2 – – 71.3 68.1 – – Shallow ET-BERT
+ 1 NetMamba
+Table 9: Flow-based classification tasks. Only per-flow split
+ 1 4 16 64 256 512
+is possible. Similarly to the per-packet case, results improve Relative TrainingTime
+ Training
+ Relative Time
+only when the encoder is unfrozen.
+ Figure 6: Relative training and inference times. All models
+ are much slower than the shallow baseline, with larger models having the worst ratio (up to 2048× slower at inference).
+per burst. For the other models, we choose the first five packets
+of each flow. For Pcap-Encoder, being it a packet-level encoder, we
+adopt a simple majority vote scheme: Without additional training, on the model. At inference, the efficiency only depends on the
+we classify the first 5 packets of each flow and directly assign the complexity of the model. NetMamba is the most efficient, while
+flow class based on the majority of the labels of these 5 packets. We netFound is the most costly model as it relies on the BERT Large
+only use the encoder in a frozen manner. architecture.
+ We adopt the same balanced split for training so that each class Overall, Pcap-Encoder good representation and classification perhas a similar number of samples. This restricts the number of train- formance is counterbalanced by it being the second slowest models,
+ing samples per class to match the class with the fewest samples, both at training and inference time. While the resource consumpstressing the models’ few-shot learning capabilities. tion of Pcap-Encoder is higher than that of shallow models, in sce-
+ We compare the results in Table 9. The same conclusions as in the narios where network data is becoming increasingly complex and
+previous experiment hold: First, all representation learning models protocols are becoming more diverse, this self-supervised model
+struggle to classify the flow when the encoder is frozen. Once more, can extract information with stronger semantics, allowing it to betthe representation learned during pre-training fails to effectively ter adapt to and generalize across different network environments
+capture key features. Performance improves when the encoder is and requirements.
+unfrozen and allowed to update all its weights freely. However, even
+in this case, the results remain comparable to those of Pcap-Encoder,
+which achieves similar performance despite having a frozen encoder
+ 7 Related Works
+and relying on a simple majority-voting scheme. netFound emerges Traffic classification has been a traditional problem since the Inas the best classifier in the TLS-120 task. This is due to its complex ternet’s birth. Initially solved by DPI [12], after the adoption of
+architecture (see next), and to specific pretext tasks that aim at encryption, researchers started using machine learning [39], deep
+including specific header fields (e.g., packet size) and flow-level learning [40, 41, 46], and recently representation learning to face it.
+multimodal information (e.g., time interval). Along the way, several works explicitly questioned some ap-
+ We noticed a large difference concerning the claimed results of proaches and suggested best practices to follow. Regarding the
+ET-BERT on TLS-120 (macro F1-Score of 97.5% [27]). This is due to: problem of shortcut and ‘spurious correlations‘, Arp et al. [1] stud-
+(i) the difference balanced strategy we adopt for training, which ied top-tier security conference papers from the past decade, constresses the few-shot learning properties of the models; and (ii) firming that pitfalls are widespread and demonstrating how they
+the possible presence of the TLS Client Hello packet with plain can lead to unrealistic performance and interpretations. Similarly,
+text SNI (the authors do not confirm they removed it while in the Jacobs et al. [21] showed that models trained for Network Security
+public dataset it is not present) that would make the task simpler. can be shortcut learners, and propose a decision tree-based method-
+We ran an additional experiment with the original unbalanced 8:1:1 ology to explain the model’s predictions. More recently, Willinger
+per-flow split, and the performance increased accordingly. et al. [52] introduced the Credibility Crisis currently impacting ML
+ for networking, and discussed the underspecification problem that
+6.3 Model efficiency affects standard supervised ML pipelines. Prior end-to-end works
+ primarily address models trained with standard supervision; here
+We compare the inference and training time for the different models
+ we draw attention to what we call the sweet danger of sugar. Selfwith frozen or unfrozen encoders. We measure the time to complete
+ supervision – and specifically representation learning – represents
+the 3-folds in the VPN-app, per-flow split setup. Fig. 6 reports the
+ a methodological advancement over end-to-end supervised learnresults normalized to the Random Forest which is the fastest 13 . At
+ ing and it can therefore be a way-out to the credibility problem.
+training time, all representation learning models require from 2 to
+ However, as we show, poor application of self-supervised methods
+500 times more time than the RF. When comparing frozen versus
+ can lead to pitfalls similar to those found in supervised approaches.
+unfrozen training, the time grows by a 2x - 8x factor, depending
+ Focusing on one cause of shortcut learning, i.e., data issues, Dain-
+13 22 seconds for training and validation, and 5 seconds for testing. otti et al. [4] provided recommendations, including rigorous data
+
+ 306
+SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal Zhao et al.
+
+collection and common benchmark definition. Authors do not ex- the European Union - NextGenerationEU. Computational resources
+plicitly mention the need for proper and careful data splitting. More were provided by HPC@POLITO (https://hpc.polito.it).
+recently, on the problem of spurious correlations, Flood et al. [13]
+pinpointed issues in datasets commonly used for cybersecurity that References
+can induce bias in intrusion detection systems. Similarly, Wickra- [1] Daniel Arp, Erwin Quiring, Feargus Pendlebury, Alexander Warnecke, Fabio
+masinghe et al. [51] identified severe limitations in commonly used Pierazzi, Christian Wressnegger, Lorenzo Cavallaro, and Konrad Rieck. 2022. Dos
+datasets (e.g., substantial portions of public datasets contain unen- and don’ts of machine learning in computer security. In 31st USENIX Security
+ Symposium (USENIX Security 22). 3971–3988.
+crypted traffic). We are the first to identify how critical the dataset [2] Kenjiro Cho, Koushirou Mitsuya, and Akira Kato. 2000. Traffic data repository at
+splitting is and the importance of focusing on frozen training. the { WIDE } project. In 2000 USENIX Annual Technical Conference (USENIX ATC
+ Broadening the perspective, numerous studies have identified 00).
+ [3] Noam Chomsky. 1957. Syntactic Structures. De Gruyter Mouton, Berlin, Boston.
+general pitfalls in machine learning, including shortcut learning [15], [4] Alberto Dainotti, Antonio Pescape, and Kimberly C Claffy. 2012. Issues and
+sampling bias and dataset shift [35, 44, 47], biased parameter selec- future directions in traffic classification. IEEE network 26, 1 (2012), 35–40.
+ [5] Ferdinand De Saussure. 2004. Course in general linguistics. Literary theory: An
+tion [43], cherry picking [36], and flawed training [32] or evaluation anthology 2 (2004), 59–71.
+practices [14]. Our work builds on this foundation, offering recom- [6] Giovanni Dettori. 2024. Designing and engineering a Q&A LLM for network
+mendations for the specific challenges of representation learning packet representation. MSc thesis. Politecnico di Torino. Available at https:
+ //webthesis.biblio.polito.it/33158/.
+in traffic classification and supporting the networking community [7] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2018. Bert:
+in developing AI-based solutions and shared best practices. Pre-training of deep bidirectional transformers for language understanding. arXiv
+ preprint arXiv:1810.04805 (2018).
+ [8] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xi-
+8 Conclusion aohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg
+ Heigold, Sylvain Gelly, et al. 2021. An Image is Worth 16x16 Words: Trans-
+In this paper, we presented a detailed analysis of state-of-the-art rep- formers for Image Recognition at Scale. In International Conference on Learning
+resentation learning works for traffic classification. We highlighted Representations.
+ [9] Gerard Draper-Gil, Arash Habibi Lashkari, Mohammad Saiful Islam Mamun, and
+major pitfalls that previous works ignored, likely intoxicated by Ali A. Ghorbani. 2016. Characterization of Encrypted and VPN Traffic using
+the ‘sugar’ of the results falsely close to perfection. After showing Time-related Features. In International Conference on Information Systems Security
+ and Privacy.
+that the representation produced by the previous models is not in- [10] Nick Erickson, Jonas Mueller, Alexander Shirkov, Hang Zhang, Pedro Larroy,
+formative, we advocate a frozen testing setup. In fact, Pcap-Encoder Mu Li, and Alexander Smola. 2020. AutoGluon-Tabular: Robust and Accurate
+is the only model that produces a useful representation for down- AutoML for Structured Data. arXiv preprint arXiv:2003.06505 (2020).
+ [11] Amir Feder, Katherine A Keith, Emaad Manzoor, Reid Pryzant, Dhanya Sridhar,
+stream traffic classification tasks. However, its complexity and per- Zach Wood-Doughty, Jacob Eisenstein, Justin Grimmer, Roi Reichart, Margaret E
+formance, on par with shallow models, question its practicality for Roberts, et al. 2022. Causal inference in natural language processing: Estimacurrent problems. tion, prediction, interpretation and beyond. Transactions of the Association for
+ Computational Linguistics 10 (2022), 1138–1158.
+ Our findings offer relevant lessons for two communities: (i) net- [12] Michael Finsterbusch, Chris Richter, Eduardo Rocha, Jean-Alexander Muller, and
+working researchers applying AI techniques, and (ii) AI researchers Klaus Hanssgen. 2013. A survey of payload-based traffic classification approaches.
+ IEEE Communications Surveys & Tutorials 16, 2 (2013), 1135–1156.
+developing models for networking problems. Some insights—such [13] Robert Flood, Gints Engelen, David Aspinall, and Lieven Desmet. 2024. Bad
+as the effects of freezing strategies and dataset splitting—are broadly design smells in benchmark nids datasets. In 2024 IEEE 9th European Symposium
+applicable and may generalize to adjacent fields like cybersecurity. on Security and Privacy (EuroS&P). IEEE, 658–675.
+ [14] George Forman and Martin Scholz. 2010. Apples-to-apples in cross-validation
+Others, like distinguishing between packet- and flow-level analysis, studies: pitfalls in classifier performance measurement. Acm Sigkdd Explorations
+removing extraneous protocols, and designing networking-specific Newsletter 12, 1 (2010), 49–57.
+pre-training tasks, are more domain-specific. [15] Robert Geirhos, Jörn-Henrik Jacobsen, Claudio Michaelis, Richard Zemel,
+ Wieland Brendel, Matthias Bethge, and Felix A Wichmann. 2020. Shortcut learn-
+ We hope that our work sheds light on the debunking and under- ing in deep neural networks. Nature Machine Intelligence 2, 11 (2020), 665–673.
+standing of the correct usage of AI-based solutions in the context [16] Albert Gu and Tri Dao. 2023. Mamba: Linear-time sequence modeling with
+ selective state spaces. arXiv preprint arXiv:2312.00752 (2023).
+of traffic classification and the networking field. [17] Satyandra Guthula, Roman Beltiukov, Navya Battula, Wenbo Guo, and Arpit
+ Gupta. 2023. netFound: Foundation model for network security. arXiv preprint
+ arXiv:2310.17025 (2023).
+Ethics [18] Hong Ye He, Zhi Guo Yang, and Xiang Ning Chen. 2020. PERT: Payload encoding
+ representation from transformer for encrypted traffic classification. In 2020 ITU
+This work does not raise ethical issues. Kaleidoscope: Industry-Driven Digital Transformation (ITU K). IEEE, 1–8.
+ [19] Kaiming He, Xinlei Chen, Saining Xie, Yanghao Li, Piotr Dollár, and Ross Girshick. 2022. Masked autoencoders are scalable vision learners. In 2022 IEEE/CVF
+Acknowledgments conference on computer vision and pattern recognition. 16000–16009.
+ [20] Jeremy Howard and Sebastian Ruder. 2018. Universal language model fine-tuning
+This work has been funded by Huawei Technologies France under for text classification. arXiv preprint arXiv:1801.06146 (2018).
+the project “AISN – AI Secured Networks: Novel Approaches for [21] Arthur S Jacobs, Roman Beltiukov, Walter Willinger, Ronaldo A Ferreira, Arpit
+Concept-Constrained multi-modal Learning for generalizable task- Gupta, and Lisandro Z Granville. 2022. Ai/ml for network security: The emperor
+ has no clothes. In 2022 ACM SIGSAC Conference on Computer and Communications
+specific Language Models”, which proved fundamental to the gene- Security. 1537–1551.
+sis of the work. Yuqi Zhao has been supported by the China Schol- [22] Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B Brown, Benjamin Chess,
+ Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, and Dario Amodei. 2020.
+arship Council (Grant No. 202306470001). Matteo Boffa has been Scaling laws for neural language models. arXiv preprint arXiv:2001.08361 (2020).
+supported by the AI4CTI FISA project #FISA-2023-00168 funded [23] Will Knight. 2023. Google’s Gemini Is The Real Start of the Generative AI Boom.
+by the Italian Ministry of University and Research (MUR). Marco https://www.wired.com/story/google-gemini-generative-ai-boom/.
+ [24] Alex Krizhevsky, Ilya Sutskever, and Geoffrey E Hinton. 2012. Imagenet classifi-
+Mellia has been supported by the project SERICS (PE00000014) cation with deep convolutional neural networks. Advances in neural information
+under the MUR National Recovery and Resilience Plan funded by processing systems 25 (2012).
+
+ 307
+Debunking Representation Learning SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal
+
+[25] Zhenzhong Lan, Mingda Chen, Sebastian Goodman, Kevin Gimpel, Piyush [51] Nimesha Wickramasinghe, Arash Shaghaghi, Gene Tsudik, and Sanjay Jha. 2025.
+ Sharma, and Radu Soricut. 2019. Albert: A lite bert for self-supervised learning SoK: Decoding the Enigma of Encrypted Network Traffic Classifiers. In 2025 IEEE
+ of language representations. arXiv preprint arXiv:1909.11942 (2019). Symposium on Security and Privacy (SP). IEEE, 1825–1843.
+[26] Dongze Lian, Daquan Zhou, Jiashi Feng, and Xinchao Wang. 2022. Scaling & [52] Walter Willinger, Ronaldo A Ferreira, Arpit Gupta, Roman Beltiukov, Satyandra
+ shifting your features: A new baseline for efficient model tuning. Advances in Guthula, Lisandro Z Granville, and Arthur S Jacobs. 2025. When Something
+ Neural Information Processing Systems 35 (2022), 109–123. Looks Too Good To Be True, It Usually Is! AI Is Causing A Credibility Crisis
+[27] Xinjie Lin, Gang Xiong, Gaopeng Gou, Zhen Li, Junzheng Shi, and Jing Yu. 2022. In Networking. ACM SIGCOMM Computer Communication Review 55, 1 (2025),
+ Et-bert: A contextualized datagram representation with pre-training transformers 10–15.
+ for encrypted traffic classification. In 2022 ACM Web Conference. 633–642. [53] Ruijie Zhao, Mingwei Zhan, Xianwen Deng, Yanhao Wang, Yijun Wang, Guan
+[28] Shayne Longpre, Le Hou, Tu Vu, Albert Webson, Hyung Won Chung, Yi Tay, Gui, and Zhi Xue. 2023. Yet another traffic classifier: A masked autoencoder
+ Denny Zhou, Quoc V Le, Barret Zoph, Jason Wei, et al. 2023. The flan collection: based traffic transformer with multi-level flow representation. In 2023 37th AAAI
+ Designing data and methods for effective instruction tuning. In International Conference on Artificial Intelligence, Vol. 37. 5420–5427.
+ Conference on Machine Learning. PMLR, 22631–22648. [54] Guangmeng Zhou, Xiongwen Guo, Zhuotao Liu, Tong Li, Qi Li, and Ke Xu.
+[29] Minh-Thang Luong, Hieu Pham, and Christopher D Manning. 2015. Effec- 2024. TrafficFormer: An Efficient Pre-trained Model for Traffic Data. In 2025 IEEE
+ tive approaches to attention-based neural machine translation. arXiv preprint Symposium on Security and Privacy (SP). IEEE Computer Society, 102–102.
+ arXiv:1508.04025 (2015).
+[30] Ben Mann, Nick Ryder, Melanie Subbiah, J Kaplan, P Dhariwal, A Neelakantan, P
+ Shyam, G Sastry, A Askell, S Agarwal, et al. 2020. Language models are few-shot A Appendix
+ learners. Advances in neural information processing systems 33 (2020), 1877–1901.
+[31] David Marr. 2010. Vision: A computational investigation into the human represen- Appendices are supporting material that has not been peer-reviewed.
+ tation and processing of visual information. MIT press.
+[32] R. Thomas McCoy, Ellie Pavlick, and Tal Linzen. 2019. Right for the Wrong
+ Reasons: Diagnosing Syntactic Heuristics in Natural Language Inference. In A.1 Pcap-Encoder details
+ Annual Meeting of the Association for Computational Linguistics.
+[33] Xuying Meng, Yequan Wang, Runxin Ma, Haitong Luo, Xiang Li, and Yujun
+ A.1.1 Packet representation learning task formalization. We use the
+ Zhang. 2022. Packet representation learning for traffic classification. In 2022 28th same problem formalization as the one in [33]. Consider a packet
+ ACM SIGKDD Conference on Knowledge Discovery and Data Mining. 3546–3554. set X = {𝒙 1, 𝒙 2, ..., 𝒙 𝒏 } where 𝒙 𝒊 is the i-th packet, and each packet
+[34] Sam Meredith. 2023. A ‘thirsty’ generative AI boom poses a growing problem for
+ Big Tech. https://www.cnbc.com/2023/12/06/water-why-a-thirsty-generative- 𝒙 𝒊 is represented as an input sequence 𝒙 𝒊 = {𝑡𝑖,1, 𝑡𝑖,2, ..., 𝑡𝑖,𝑛 } where
+ ai-boom-poses-a-problem-for-big-tech.html. 𝑡𝑖,𝑗 is the j-th token derived from the split of the tokenizer. The
+[35] Jose G Moreno-Torres, Troy Raeder, Rocío Alaiz-Rodríguez, Nitesh V Chawla, length of the vector 𝒙 𝒊 can vary since the size of packets is unfixed.
+ and Francisco Herrera. 2012. A unifying view on dataset shift in classification.
+ Pattern recognition 45, 1 (2012), 521–530. In addition, each packet 𝒙 𝒊 can assume a number 𝑛 of labels 𝒚 𝒊
+[36] Janice M Morse. 2010. “Cherry picking”: Writing from thin data. 3–3 pages. depending on the number of downstream tasks we want to solve.
+[37] Nour Moustafa and Jill Slay. 2015. UNSW-NB15: a comprehensive data set for
+ network intrusion detection systems (UNSW-NB15 network data set). In 2015
+ So, for a downstream classification task 𝑗, 𝑦𝑖,𝑗 ∈ C𝑗 .
+ military communications and information systems conference (MilCIS). IEEE, 1–6. To obtain the classification from the packet, we need the latent
+[38] David Naylor, Alessandro Finamore, Ilias Leontiadis, Yan Grunenberger, Marco vector (packet representation) 𝒓 𝒊 ∈ R𝑑 where 𝑑 is the hidden di-
+ Mellia, Maurizio Munafò, Konstantina Papagiannaki, and Peter Steenkiste. 2014.
+ The cost of the" s" in https. In 2014 10th ACM International on Conference on mension of the model. The latent vector is obtained by combining
+ Emerging Networking Experiments and Technologies. 133–140. the columns of the latent matrix 𝑯 𝒊 ∈ R𝑑 ×𝐿 where 𝐿 is the number
+[39] Thuy TT Nguyen and Grenville Armitage. 2008. A survey of techniques for
+ internet traffic classification using machine learning. IEEE communications
+ of tokens in each packet and 𝑑 the dimension of a single token.
+ surveys & tutorials 10, 4 (2008), 56–76. The formalization of the packet representation learning task
+[40] Fannia Pacheco, Ernesto Exposito, Mathieu Gineste, Cedric Baudoin, and Jose becomes: Given the input X and the corresponding label set Y of
+ Aguilar. 2018. Towards the deployment of machine learning solutions in network traffic classification: A systematic survey. IEEE Communications Surveys & multiple classification tasks, the goal is to learn a single packet
+ Tutorials 21, 2 (2018), 1988–2014. representation encoder 𝑓 : 𝒙 𝒊 → 𝒓 𝒊 that obtain accurate 𝒚 𝒊 on
+[41] Eva Papadogiannaki and Sotiris Ioannidis. 2021. A survey on encrypted network downstream tasks by a function 𝑔 : 𝒓 𝒊 → 𝒚 𝒊 .
+ traffic analysis applications, techniques, and countermeasures. ACM Computing
+ Surveys (CSUR) 54, 6 (2021), 1–35.
+[42] Lingfeng Peng, Xiaohui Xie, Sijiang Huang, Ziyi Wang, and Yong Cui. 2024. A.1.2 Bottleneck. T5 provides a single representation of size 768
+ PTU: Pre-trained Model for Network Traffic Understanding. In 2024 32nd IEEE for each of the 𝐿 tokens of the packet. Let’s call 𝒆 𝒊,𝒋 the repre-
+ International Conference on Network Protocols (ICNP). sentation of token 𝑗 for packet 𝑖. However, we want to obtain a
+[43] Jing Qin. 2017. Biased sampling, over-identified parameter problems and beyond.
+ Vol. 5. Springer. single representation 𝒓 𝒊 of dimension 768 for the entire packet 𝒙 𝒊
+[44] Joaquin Quiñonero-Candela, Masashi Sugiyama, Anton Schwaighofer, and Neil D from the 𝐿 representations of the tokens. Hence, we need to use an
+ Lawrence. 2022. Dataset shift in machine learning. Mit Press.
+[45] Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang,
+ aggregator or bottleneck. This dimensionality reduction process
+ Michael Matena, Yanqi Zhou, Wei Li, and Peter J Liu. 2020. Exploring the limits necessarily discards a part of the information set. We tried different
+ of transfer learning with a unified text-to-text transformer. Journal of machine architectures:
+ learning research 21, 140 (2020), 1–67.
+[46] Shahbaz Rezaei and Xin Liu. 2019. Deep learning for encrypted traffic classifica- (1) First pooling: a dummy solution that takes as packet repretion: An overview. IEEE communications magazine 57, 5 (2019), 76–81. sentation the embedding of the first token, that is always the
+[47] Tatiana Tommasi, Novi Patricia, Barbara Caputo, and Tinne Tuytelaars. 2017. A
+ deeper look at dataset bias. Domain adaptation in computer vision applications initial part of the question needed by T5. The representation
+ (2017), 37–55. vector of packet 𝑖 becomes:
+[48] Martino Trevisan, Danilo Giordano, Idilio Drago, Marco Mellia, and Maurizio
+ Munafo. 2020. Five Years at the Edge: Watching Internet From the ISP Network. 𝒓 𝒊 = 𝒆 𝒊,0
+ IEEE/ACM Transactions on Networking 28, 02 (2020), 561–574.
+[49] Tongze Wang, Xiaohui Xie, Wenduo Wang, Chuyi Wang, Youjian Zhao, and Yong
+ Cui. 2024. NetMamba: Efficient Network Traffic Classification via Pre-training (2) Mean pooling: performs the average over the hidden vec-
+ Unidirectional Mamba. In 2024 32nd IEEE International Conference on Network tors 𝒆 𝒊,𝒋 of the hidden matrix. The representation vector of
+ Protocols (ICNP). packet 𝑖 becomes:
+[50] Wei Wang, Ming Zhu, Xuewen Zeng, Xiaozhou Ye, and Yiqiang Sheng. 2017. Malware traffic classification using convolutional neural network for representation Í𝐿
+ learning. In 2017 International Conference on Information Networking (ICOIN). 𝑗=1 𝒆 𝒊,𝒋
+ 712–717. 𝒓𝒊 =
+ 𝐿
+
+ 308
+SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal Zhao et al.
+
+ Questions on Packets
+ Model VPN-app (16) TLS (120)
+ Which is the TCP checksum? (Flow Split) AC F1 AC F1
+ Which is the destination IPv4/IPv6 of the packet?
+ Retrieval Which is the source IPv4/IPv6 of the packet? Autoencoder + Q&A 83.5 71.0 71.0 63.7
+ Which is the id of IPv4/IPv6? Q&A only 82.6 72.1 63.6 57.2
+ Which is the time to live of IPv4/IPv6? T5-base 54.5 39.8 8.5 2.5
+ Is the packet’s IPv4/IPv6 checksum correct? Table 11: Results on the per-Flow Split scenario by freezing
+ Computational Which is the last byte of the header in the third layer? and removing the pre-training phases of Pcap-Encoder.
+ Which is the length of the payload in the third layer?
+Table 10: Retrieval and computational questions for the Q&A
+pre-training task.
+
+ Protocol Packet fields
+ Source and Destination addresses, Type of service,
+ (3) Luong attention [29]: performs a weighted average of the IPv4 Internet Header Length, ID, Checksum, Flags,
+ embeddings. The weights, computed for each 𝑒𝑖,𝑗 , must be Length, Protocol, Version, TTL, Fragmentation
+ positive and the sum is 1. The representation vector of one Source and Destination addresses, Flow label,
+ IPv6 Version, Payload Length, Hop Limit,
+ packet becomes: Traffic Class, Next Header
+ UDP Source and Destination ports, Checksum, Length
+ exp (𝒆𝒋 ⊤ 𝒒) 𝐿
+ ∑︁ Source and Destination ports, Timestamp,
+ 𝑤 𝑗 = Í𝐿 𝒓𝒊 = 𝑤 𝑗 𝒆𝒋 TCP Window, Urgent pointer, Data offset, Flags,
+ ⊤ 𝒒)
+ 𝑧=1 exp (𝒆 𝒛 𝑗=1 Checksum, Sequence and Acknowledgment numbers, Options
+
+ where 𝒒 is a learnable query vector and 𝑤 𝑗 is the weight Table 12: Packet fields selected for the Shallow model trainassociated with the embedding vector 𝒆𝒋 . ing. Features are extracted from raw traces using the Python
+ Scapy package (https://scapy.net).
+ The bottleneck is part of the trained model T5 (encoder+decoder).
+So, even if the bottleneck is very simple, the underlying layers can
+adjust their weights to create a meaningful representation. Therefore, having a computationally expensive bottleneck is redundant.
+A.1.3 Question answering dataset and results. We created a dataset
+with multiple tasks for the Q&A phase starting from the datasets • YaTC: We anonymize IP addresses and ports, and group the first
+already described in Subsection 3.4. five packets to construct the input matrix by padding or truncating
+ Table 10 shows the 8 questions selected in the Q&A dataset. Some packets if necessary, as in the original paper. We set the learning
+of the questions are retrieval tasks that need to find the answer rate at 2 · 10 −3 and the batch size to 64 over 200 epochs, both for
+in the context. Others consist of more complex tasks, such as the the frozen and unfrozen tests.
+computation of the checksum, or the payload length. • NetMamba: We use the same learning rate and data processed
+ On this question dataset, we obtain an average accuracy of 98.2% as YaTC.
+on the test, averaging over different tasks. • TrafficFormer: We randomize the IP address and TCP ports and
+ follow the same training-set augmentation proposed in the paper.
+A.1.4 Ablation study on Pcap-Encoder pre-training. Our ablation We set the learning rate to 2 · 10 −5 with 20 epochs for fine-tuning
+study examined the impact of different components in Pcap-Encoder the unfrozen model, and 1 · 10 −4 for 60 epochs for the frozen model.
+pipeline across the two tasks VPN-App (16) and TLS (120). Table 11 At the same time, we set an early stop of 5 epochs, that is, if the
+shows a clear performance hierarchy starting from the highest with model performance does not improve in 5 consecutive epochs, the
+the complete model. Removing the autoencoder component led to model will be terminated early.
+a moderate decrease in performance, particularly noticeable in the • netFound: We generate tokens and extract flow metadata as
+TLS task with an accuracy drop of ≈ 8%. Most strikingly, using only in the original paper. We set the learning rate to 2.5 · 10 −6 for a
+the base T5 model without any pre-training resulted in severely single GPU or 1 · 10 −5 for four GPUs and fine-tune the unfrozen
+degraded performance, especially on the more complex TLS dataset and frozen models for 100 epochs with early stopping for 6 epochs.
+where the accuracy plummeted to 8.5. These results strongly sug- • Pcap-Encoder: We load the T5-base model with pre-trained
+gest that both pre-training components contribute meaningfully to weights. For the encoder adaptation, we use the AdamW optimizer,
+the model’s effectiveness, with the Q&A component appearing to a learning rate of 5 · 10 −4 , a linear rate scaling, a batch size of 8,
+be particularly crucial for maintaining strong performance and we train for 15 epochs. For question-answering tasks, we keep
+ the same learning rate and scaling. We train for 20 epochs with a
+A.2 Models Hyperparameters batch size of 24.
+In the following, we report the chosen hyperparameters for the • Shallow model: We use 4 different ML models (i.e., Random
+seven models under analysis: Forest, XGBoost, MLP, LightGBM) and we use AutoGloun [10] to
+ • ET-BERT : We remove the Ethernet and IP header and TCP ports. automatically select the best hyperparameters. As features, we con-
+We set the learning rate to 2 · 10 −5 with 20 epochs for fine-tuning struct a vector for each packet by extracting the values of selected
+the unfrozen model, and 2 · 10 −3 for 60 epochs for the frozen model. protocol fields (padding missing fields).
+
+ 309
+Debunking Representation Learning SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal
+
+ Type Protocols ISCX-VPN USTC-TFC CSTN-TLS1.3
+ link-local 922347 227413
+ llmnr, nbns, mdns, lsd 0
+ protocols (3.45%) (3.93%)
+ network management icmp, icmpv6, dhcp, dhcpv6, 437020 373641
+ 0
+ protocols igmp, snmp, arp, cops (1.63%) (6.46%)
+ nat 205660 68
+ nat-pmp, rsip, stun 0
+ protocols (0.77%) (<0.01%)
+ route management db-lsp, db-lsp-disc, pathport, stp, 21914 656
+ 0
+ protocols bfd echo, bgp, ecmp, asap (0.08%) (0.01%)
+ service management 8696 3812
+ ssdp, lldp, srvloc, opa, cbsp 0
+ protocols (0.03%) (0.07%)
+ real time 2763
+ rtcp 0 0
+ protocols (<0.01%)
+ network time 2386 35
+ ntp 0
+ protocols (<0.01%) (<0.01%)
+ link management 1582
+ llc, ipxsap 0 0
+ protocols (<0.01%)
+ distributed 182 5
+ thrift, dcerpc, rmi 0
+ protocols (<0.01%) (<0.01%)
+ security 170 134
+ ocsp, pkix-cert, egd, chargen, tpm, knet 0
+ protocols (<0.01%) (<0.01%)
+ industrial r-goose, dcp-pft, dcp-af, vicp 107 61
+ 0
+ protocols nxp 802154 sniffer, enip, c1222, ax4000 (<0.01%) (<0.01%)
+ remote access 75 6
+ vnc, x11, msnms 0
+ protocols (<0.01%) (<0.01%)
+ file lanman, bjnp, spoolss, ndps, 62 129
+ 0
+ protocols laplink, bzr, cvspserver (<0.01%) (<0.01%)
+ quake quake, quake2, quake3, 4
+ 0 0
+ protocols quakeworld (<0.01%)
+ mobile 18
+ gsm, ipa, gtp 0 0
+ protocols (<0.01%)
+ iot management bat.vis, tplink-smarthome, 11 10
+ 0
+ protocols coap,mqtt (<0.01%) (<0.01%)
+ others 7
+ tds, bitcoin 0 0
+ protocols (<0.01%)
+ Table 13: The protocols we filter and number and percentage (in parenthesis) of removed packets for each dataset.
+
+A.3 Shallow models details A.4 Filter Details
+Table 12 lists the fields selected for the training of shallow models. In Table 13 we list all protocols we filter using Tshark filters. We
+The specific fields vary across datasets based on the presence or detail the total number of packets each filter removes from each
+absence of the different datalink and transport protocols. trace. The main protocols involved are closely related to network
+ management, link-local communication (link-local), and NAT (especially STUN). The CSTN trace was already cleaned, while the
+ other contains from 5 to 10% of unrelated protocols.
+
+ 310

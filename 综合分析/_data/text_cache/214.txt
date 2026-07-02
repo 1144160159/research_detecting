@@ -1,0 +1,154 @@
+                                                                      Computer Networks 250 (2024) 110598
+
+
+                                                                    Contents lists available at ScienceDirect
+
+
+                                                                       Computer Networks
+                                                          journal homepage: www.elsevier.com/locate/comnet
+
+
+
+
+Encrypted malicious traffic detection based on natural language processing
+and deep learning
+Xiaodong Zang a,b,c ,∗, Tongliang Wang a , Xinchang Zhang b , Jian Gong c , Peng Gao a ,
+Guowei Zhang a
+a
+    School of Cyber Science and Engineering, Qufu Normal University, QuFu, China
+b Qilu University of Technology (Shandong Academy of Sciences) Shandong Computer Science Center, Shandong Provincial Key Laboratory of Computer
+
+Networks, JiNan, China
+c Key Laboratory of Computer Network and Information Integration, Ministry of Education, Southeast University, NanJing, China
+
+
+
+
+ARTICLE                 INFO                               ABSTRACT
+
+Keywords:                                                  The focus on privacy protection has brought much-encrypted network traffic. However, attackers always abuse
+Security and privacy                                       traffic encryption to conceal malicious behaviors. Although researchers have proposed several enlightening
+Anomaly detection                                          detection methods, they must enhance the generalization ability or improve detection performance. Our
+Artificial intelligence
+                                                           inspiration is that the packet header fields, as do the underlying grammatical rules for constructing sentences,
+Malicious traffic analysis
+                                                           have a strict order. We consider the original packet as text and devise a robust approach with natural language
+Encrypted traffic
+                                                           processing and a deep learning model to improve the generalization ability and detection performance. We
+                                                           capture the critical keywords as characteristic representations of the traffic and design an adaptive domain
+                                                           generalization algorithm with a new loss function. It is robust against various datasets by generating more
+                                                           malicious samples to augment the minority of malicious samples. Simultaneously, we design an efficient feature
+                                                           selection algorithm, which obtains an optimal feature subset and reduces feature dimensions by 75.3%. To
+                                                           evaluate our work, we conducted extensive experiments with open-source datasets (CICIDS 2017, CICDDoS
+                                                           2019, and USTC-TFC 2016), the synthetic dataset from IoT-23, and Internet backbone traffic (CERNET).
+                                                           Experimental results demonstrate that our proposal improves detection accuracy by up to 22.8% compared
+                                                           to others not using domain generalization algorithms and achieves an average detection latency of 0.67 s in
+                                                           the backbone. Besides, our work applies to the Industrial Internet of Things (IIoT) environment. It can be
+                                                           deployed at edge nodes to provide network security support for IIoT devices.
+
+
+
+1. Introduction                                                                               approaches. In this context, it is imperative to devise efficient detection
+                                                                                              and defense strategies under encrypted traffic. Currently, there are
+    Recently, traffic encryption technologies have been widely adopted                        three categories of encrypted malicious traffic detection approaches:
+to protect users’ security and privacy when they surf the Internet. As                        (1) decryption followed by deep packet inspection (DPI)-based meth-
+reported by the Firefox website, encrypted web pages are increased by
+                                                                                              ods [5], (2) statistical analysis-based methods [6–8], and (3) machine
+80% from 2015 to 2021 [1–3]. In addition, according to statistics from
+                                                                                              learning-based methods [9–12]. Decryption followed by DPI is straight-
+Google, nearly 94% network traffic applies the transport layer security
+(TLS) protocol [4] for communication. As encrypted malicious traffic is                       forward, and the detection results are promising. It conducts detection
+highly concealed and high-risk, attackers always abuse traffic encryp-                        on the plaintext data after decrypting all encrypted network traffic.
+tion to conceal their malicious behaviors, such as malware delivery,                          However, they cannot protect users’ privacy and perform effective
+C&C channels, and data exfiltration. Therefore, identifying encrypted                         real-time network monitoring.
+malicious traffic efficiently in the backbone is extremely important for                          Statistical analysis-based methods use statistical flow features, such
+network management and security monitoring.                                                   as average packet length and the number of incoming and outgoing
+    Due to diverse traffic patterns and the emergence of various evasion
+                                                                                              bytes, to distinguish encrypted ones without decryption keys. However,
+technologies, detecting encrypted malicious traffic needs to be better
+                                                                                              these methods have a high false positive rate due to the need to
+addressed by traditional methods, e.g., port-based and payload-based
+
+
+     ∗ Corresponding author at: School of Cyber Science and Engineering, Qufu Normal University, QuFu, China.
+       E-mail address: xdzang@qfnu.edu.cn (X. Zang).
+
+https://doi.org/10.1016/j.comnet.2024.110598
+Received 4 March 2024; Received in revised form 5 June 2024; Accepted 9 June 2024
+Available online 11 June 2024
+1389-1286/© 2024 Elsevier B.V. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+X. Zang et al.                                                                                                           Computer Networks 250 (2024) 110598
+
+
+collect more long-time traffic flows to obtain higher quality charac-           extensive evaluation, and with real-world deployment, we found some
+teristics [13]. Therefore, it is not suitable for deployment in realistic       malicious cases that other detection approaches had not identified.
+network environments online. Machine and deep learning, a branch                   Organization: Section 2 surveys the related works of encrypted
+of artificial intelligence, have been widely applied in network security        malicious traffic detection. Section 3 elaborates on the proposed ap-
+monitoring. They collect enough benign and encrypted malicious traffic          proach, including data preprocessing, feature extraction, selection, and
+and automatically extract features from traffic metadata [12,14] for            encrypted malicious traffic classification. Section 4 details the experi-
+a prediction or classification task. Machine and deep learning-based            ments with different datasets. Section 5 concludes the paper and gives
+methods have become mainstream in detecting encrypted malicious                 our future work.
+traffic.
+    Although machine and deep-learning-based detection schemes do               2. Related works and design goals
+not need to decrypt the encrypted traffic, they still face some chal-
+lenges. Firstly, machine or deep learning-based detection schemes as-               This section surveys the related works of encrypted malicious traf-
+sume that the training and testing data are independent and identically         fic detection. We broadly classify these techniques into decryption
+distributed. In practice, we find that the training data always comes           followed by DPI-based (DFDPI), statistical analysis-based (SA), and
+from the open-source benchmark datasets, while the testing is of-               machine learning-based methods (ML). We survey them and introduce
+ten the actual traffic, which violates the assumption. In our work,             our design goals.
+we take this phenomenon as lacking domain generalization ability.
+Besides, in the natural network environment, benign samples occur
+                                                                                2.1. Related works
+more frequently than malicious ones, which causes a data imbalance
+problem [15]. Secondly, most approaches rely on manually extracting
+                                                                                    (1) Decryption followed by DPI-based methods. The deep packet
+statistical features. However, the features are designed for a specific
+                                                                                inspection (DPI) technique requires the packet payload to be plaintext
+scenario. The versatility and suitable feature selection mechanism need
+                                                                                and constantly analyzes the available information in the application
+to be guaranteed.
+                                                                                layer. However, with the increased encrypted traffic, this technique
+    This paper devised a novel framework with a natural language
+                                                                                needs to decrypt all encrypted network traffic [16]. Therefore, re-
+processing and deep learning model to solve the above problems.
+                                                                                searchers have developed other solutions using DPI techniques without
+Detecting malicious traffic behaviors via packet analysis is feasible, as
+                                                                                decrypting the encrypted traffic. For example, [17] proposed a method
+the multiple-step attack patterns are stealthy in the original packets.
+                                                                                using supervised learning to automate the rules for specific proto-
+Our inspiration is that the packet header fields, as do the underly-
+                                                                                cols in PGSM. Testing the performance of packets within these rules
+ing grammatical rules for constructing sentences, have a strict order.
+                                                                                makes it possible to determine when and which signatures the tar-
+Therefore, we capture the critical keywords in the packet’s header
+                                                                                get packets should match. [18]designed an OpenFlow-enabled DPI
+and consider their field’s value as a representation of traffic traits.
+We conduct an in-depth analysis of low detection performance in data            approach, which extracted the features of accessible payloads and
+processing. We over-sample the encrypted malicious traffic and design           linguistic features in the unencrypted packets, extracted the packets’
+an enhanced robust algorithm to solve data imbalance distribution               notable features in the encrypted packets, and used a decision tree to
+and achieve robust detection. We use the Albert model to convert                detect malicious payloads.
+qualitative data in traffic packets into quantitative data and extract              (2) Statistical analysis-based methods. Techniques based on sta-
+312 dimensions critical keywords with corresponding weights in the              tistical analysis always use the statistical features of the flow. We
+packet’s header (e.g., TTL, Packet size). We devise an efficient feature        divided these statistical features into two categories: protocol-agnostic
+selection algorithm to enhance its real-time and finally apply a 1D-CNN         numerical features and protocol-specific features [12,19–22]. The for-
+model to identify encrypted malicious traffic.                                  mer includes packet-based and session-based characteristics. Packet-
+    We prototype our system and deploy it in the wild. Before deploying         based characteristics, such as the average packet and the number of
+it, we conducted extensive experiments with open-source datasets (CI-           bytes in the packet, are always collected from the packet level. At the
+CIDS 2017, CICDoS 2019, USTC-TFC 2016) to evaluate its performance.             same time, the session-based features refer to the flow duration, total
+Experimental results demonstrate that it can distinguish attacks under          bytes, or total number of packets in each flow. The latter are encrypted
+different datasets with an accuracy rate of 97.3%, which is much better         protocol characteristics related to a specific protocol, e.g., handshake
+than other similar alternatives. Besides, in the wild, we can detect            field features in TLS,[23,24]. [13] proposed a novel system called
+encrypted malicious traffic not found by other works and achieve real-          ME-Box to achieve reliable detection of malicious encrypted traffic.
+time detection with an average detection latency of 0.67 s. We also             It first uses middleboxes to evaluate the trust degrees of encrypted
+used a synthetic IoT dataset to verify that our work can apply to the           traffic. When the encrypted flow is suspicious, the middleboxes request
+IIoT. We compared it with similar alternatives and found our model              the session keys and provide evidence for the evaluation results. [6]
+performs better. The contributions are as follows.                              developed a machine learning-based anomaly traffic detection frame-
+    (1) We propose a novel detection framework with natural lan-                work (OADSD), which employs distributed dynamic feature extraction
+guage processing and a deep learning model under an encryption                  (DDFE) to extract representative features from raw traffic directly.
+scenario. Our system can achieve real-time and robust detection in                  (3) Machine learning-based approaches. With the development of
+high-throughput networks.                                                       computer hardware, machine learning and deep learning as a branch
+    (2) We conduct domain generalization analysis and devise an adap-           of artificial intelligence have received much attention in security mon-
+tive domain generalization algorithm with a new loss function. Our              itoring. [25,26] proposed real-time robust malicious traffic detection
+algorithm makes the data distribution even more diverse among dif-              solutions with machine learning. The former could detect unknown
+ferent traffic categories. Compared with other works without domain             encrypted malicious traffic with a clustering-based method by comput-
+generalization, our work improves the detection

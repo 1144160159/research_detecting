@@ -1,0 +1,978 @@
+1276 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ Estimating Node Abnormalities From Imprecise
+ Subgraph-Level Supervision
+ Zhen Peng , Yunqi Xue, Yunfan Wang, Qika Lin , Member, IEEE, and Chao Shen
+
+ Abstract—Although existing node anomaly detection techniques graph-structured data1 that describe the rich semantics and
+following supervised or unsupervised paradigms have achieved interactions of multiple entities through nodes and edges [2].
+empirical success, the expensive annotation cost and the high possibility of spotting uninteresting outliers are still two major limi- To extract valuable insights from such data represented in the
+tations. Interestingly, with limited time, workforce, and expertise, form of graphs/networks, there has been a great deal of interest
+it seems easier for regulators to roughly screen out a suspicious in many graph mining tasks, including node/graph classificaregion likely to contain anomalies rather than precisely locate the tion [3], [4], [5], community detection [6], network partition [7],
+problematic individual. Thus, it is appealing to investigate how personalized recommendation [8], [9], [10], [11], and clickto learn node abnormalities from such coarse-grained imprecise
+subgraph-level supervision, related research however has received through rate (CTR) prediction [12], [13]. As one of the crucial
+little scrutiny. In this paper, we generalize classic multiple instance tasks, node anomaly detection, which aims to uncover suspicious
+learning to graph data and propose a novel architecture ASSESS nodes that significantly deviate from the majority of instances in
+which regards subgraphs as bags and nodes as bag instances. By the graph, has attracted much attention recently [14], [15], [16]
+pulling apart the score gap between anomalies and normal nodes since it helps regulators identify the risks of detrimental events
+through inter-bag loss and intra-bag loss, ASSESS tends to assign
+higher scores to abnormal nodes so that node anomalies can be occurring in various realistic networks and take early action to
+detected. To further enhance the adaptability to low labeling rates, control them [17]. For example, exposing potential fraudsters in
+the self-training mechanism is introduced to ASSESS++, which financial networks is beneficial to maintaining the security and
+automatically explores subgraphs that may cover abnormal nodes stability of economic systems [18]; controlling the spreaders
+as pseudo-supervision by measuring the node score distribution of fake news in social networks can prevent them from creating
+in the subgraph. Experiments on real-world benchmark datasets
+corroborate the superiority of our proposed model w.r.t. AUC and panic and chaos in society [19]. No matter what kind of networks
+AP. being detected, according to the adopted learning paradigm,
+ existing techniques could be roughly divided into the follow-
+ Index Terms—Graph anomaly detection, weakly-supervised
+ ing categories: supervised/semi-supervised [20] and unsuperlearning, multiple instance learning, graph neural networks.
+ vised [21]. Although unsupervised approaches avoid laborious
+ labeling costs, which are indispensable for supervised models
+ I. INTRODUCTION that rely on large-scale annotations, they are prone to spot noisy
+ or uninteresting outliers as anomalies without knowing what
+ VARIETY of complex interconnected systems in
+A the real world, such as social networks, collaboration networks, and economic networks, can be abstracted as
+ true anomalies look like [22]. The semi-supervised paradigm
+ based on a small set of labeled samples seems to alleviate the
+ above shortcomings. In practice, it may still suffer from the lack
+ of fine-grained node anomaly labels due to insufficient domain
+ knowledge and expert experience required for annotation.
+ Received 2 March 2025; revised 18 June 2025; accepted 24 July 2025. Date
+of publication 28 July 2025; date of current version 2 December 2025. This Recall that in practical scenarios, regulators are expected to
+work was supported in part by the National Key Research and Development analyze data as quickly as possible and provide early warning of
+Program of China under Grant 2023YFB3107400, in part by theNational Natural risks. Due to the diversity and complexity of anomalies, precise
+Science Foundation of China under Grant 62302380, Grant 62137002, Grant
+62192781, Grant U24B20185, Grant T2442014, Grant 62161160337, Grant node-level labeling requires sufficient prior knowledge and de-
+62132011, and Grant U21B2018, in part by Key Research and Development tailed one-by-one analysis, which is inevitably time-consuming
+Project in Shaanxi Province under Grant 2022GXLH01-03, in part by Shaanxi and labor-intensive. In contrast, it seems more convenient for
+Province Key Industry Innovation Program under Grant 2023-ZDLGY-38 and
+Grant 2021ZDLGY01-02, and in part byChina Postdoctoral Science Foundation regulators to spend much less effort screening out regions likely
+under Grant 2023M742789. Recommended for acceptance by Dr. Amiya A. to cover anomalies [23]. For example, as shown in Fig. 1, during
+Nayak. (Corresponding author: Zhen Peng.) the investigation of financial fraud cases, law enforcement can
+ Zhen Peng and Yunqi Xue are with the School of Computer Science and
+Technology, Xi’an Jiaotong University, Xi’an 710049, China (e-mail: zhen- easily delineate the scope of suspects through preliminary analpeng27@outlook.com; xueyunqi@outlook.com). ysis, and fraudsters engaged in money laundering are highly
+ Yunfan Wang is with the Department of Computer Science, University of likely to exist among them. However, it is significantly more
+Virginia, Charlottesville, VA 22904 USA (e-mail: abe6fq@virginia.edu).
+ Qika Lin is with the Saw Swee Hock School of Public Health, National difficult to pinpoint the real fraudsters in a short period of time
+University of Singapore, Singapore 119077 (e-mail: linqika@nus.edu.sg). due to intricate information or evidence [24]. Note that the above
+ Chao Shen is with the School of Cyber Science and Engineering, Xi’an
+Jiaotong University, Xi’an 710049, China (e-mail: chaoshen@xjtu.edu.cn).
+ Digital Object Identifier 10.1109/TNSE.2025.3593338 1 It can also be referred to as network data [1].
+
+ 2327-4697 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1277
+
+ in a bag and have inherent topological relations rather than
+ independence. Then, we rank nodes with the maximum scores
+ in normal and abnormal subgraphs via the inter-bag loss, and
+ simultaneously pull apart the difference between potential
+ anomalies and normal nodes in the abnormal subgraph via
+ the intra-bag loss. Together with the constraints specifically
+ designed for graph-structured data and anomaly detection, AS-
+ SESS is more inclined to assign high scores to anomalies
+ such that abnormal nodes can be detected. To further enhance the adaptability of the model to low labeling rates, the
+ self-training [30] mechanism is introduced to form a variant
+ ASSESS++. By automatically mining potential candidate sub-
+Fig. 1. A toy example of the range of potential suspects in a financial trans- graphs from the unlabeled set that are similar to the score
+action network, which most likely contains anomalies (fraudsters). distribution of existing labeled abnormal subgraphs to generate pseudo labels, ASSESS++ expands the available label set
+ iteratively, which significantly alleviates the high cost required
+coarse-grained annotations are typically presented in the form to obtain fine-grained annotations. Our main contributions are
+of subgraphs, and such subgraph-level labels contain minimal summarized as follows:
+supervision provided to the model. So, here arises a question: can r We highlight the practical significance of studying weakly
+we accurately identify node-level anomalies with only imprecise supervised node anomaly detection, which currently resubgraph-level supervision? ceives less attention and scrutiny, and generalize the classic
+ Academically, the above task belongs to the category of MIL to the graph domain, providing a promising solution
+weakly supervised learning [25], which is extremely compelling for this community.
+for practical applications since coarse-grained subgraph-level r We present a novel MIL framework ASSESS to learn node
+supervisory signals are more easily accessible than precise abnormalities from imprecise subgraph-level supervision
+node-level labels. The weakly labeled subgraph only reflects via inter- and intra-bag anomaly ranking while introducing
+the presence of abnormal nodes somewhere in it, but the specific ASSESS++ to automatically generate pseudo labels to
+anomalies are still unknown, hence, it is called imprecise/inexact adapt to low labeling rate cases.
+supervision. However, taking advantage of such coarse-grained r We empirically demonstrate the superiority of the proposed
+subgraph-level weak supervision for node-level anomaly detec- ASSESS and ASSESS++ in terms of AUC and AP on
+tion is not a trivial task. The following challenges exist here. real-world benchmark datasets that involve multiple types
+First, previous works [26], [27], [28] generally formulate sim- of networks, and intuitively illustrate the detection results
+ilar weakly supervised problems as multiple instance learning through visual analysis.
+(MIL) [29]. Despite the empirical success, these methods are The rest of the paper is organized as follows. We start by proalmost all oriented to grid-like image data in the computer vision viding a relatively comprehensive literature review on node-level
+domain and fail to capture the topological structures between anomaly detection and briefly introducing some related works
+instances. Moreover, they focus on group/bag-level prediction, on multiple instance learning in Section II. Then, in Section III,
+such as image/object classification, rather than instance pre- we give a formal definition of node anomaly detection under
+diction within the bag. Thus, existing MIL methods cannot be subgraph-level weak supervision and present our MIL based
+directly used on graphs to spot fine-grained node anomalies. framework ASSESS and ASSESS++ in detail. Experimental
+Second, imprecise abnormal subgraph labels are noise-prone evaluations on multiple benchmark datasets and discussions are
+as they include a mixture of benign and anomalous nodes. placed in Section IV. Finally, Section V concludes the whole
+Thus, they cannot accurately provide the model with node-level paper and visions the future work.
+supervision that distinguishes normal from abnormal. How to
+mitigate the negative impact of imprecise labeling and convert II. RELATED WORKS
+such subgraph labels into node-level constraints to capture the
+ In line with the focus of our work, we intend to provide a relunderlying anomaly patterns through modeling inter-subgraph
+ atively comprehensive literature review on node-level anomaly
+differences poses another challenge. To the best of our knowldetection in graphs and briefly review the previous works on
+edge, existing studies have put very little effort into weakly
+ multiple instance learning. Hopefully this will help general
+supervised node anomaly detection [23], which also motivates
+ readers from different disciplines comprehend the background
+our further research.
+ and motivation better.
+ To overcome the above challenges and promote the development of the related community, in this paper, we present a novel
+MIL architecture adapted to graph data, named ASSESS, for A. Node-Level Anomaly Detection in Graphs
+spotting node-level anomalies under imprecise subgraph-level Background: In computer science, research on anomaly detecsupervision. Analogous to the classic MIL concept, we treat tion, a.k.a. outlier detection, can be traced back to the 1960s [31],
+subgraphs as bags in which different nodes constitute instances which aims to detect rare, unusual, and suspicious ones that
+1278 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE I
+ SUMMARY OF RELATED WORKS ON NODE-LEVEL ANOMALY DETECTION IN GRAPHS
+
+deviate significantly from the majorities in a dataset [17], [18]. is strongly relevant to this paper. A brief summary is shown in
+Many useful techniques have been developed over the past Table I.
+decades, especially for identifying anomalies in a set of multidi- Methodology: In the early stage, plain graphs containing only
+mensional data points [32], [33] such as well-known LOF [34] topological information were often used to describe various
+and Isolation Forest [35] since conventional methods typically complex networks. Many detection methods exploit structural
+represent real-world entities as multidimensional feature vectors statistical properties such as node degree or subgraph centrality
+(e.g., texts posted by users in social media is represented as to find patterns and spot anomalies. For instance, SCAN [39]
+bag-of-words) [17]. Despite their empirical success, they all clusters nodes based on a structural similarity measure to expose
+inadvertently ignore potential associations between the data. hubs and outliers in the graph. OddBall [40] leverages statistical
+In fact, many entities in reality are inherently interconnected features extracted from each node and its one-hop neighbors to
+and exist in the form of networks. For example, the social detect specific structural anomalies. Additionally, NrMF [41]
+relationships between people constitute a social network; the attempts to employ matrix factorization to mine the commuphysical associations between proteins in a cell or organism nity structure in the adjacency matrix to identify anomalies.
+form a PPI biological network. Fortunately, graphs, in which As attributed graphs (or simply called graphs) carrying node
+nodes denote entities and edges characterize their relationships, feature information are now widely used to model realistic
+have proven to be a powerful tool to effectively model and interconnected systems, most existing methods are absorbed
+analyze various networks. As a result, graph anomaly detection, in processing and analyzing such graph data. Among them,
+which aims to find suspicious graph objects (including nodes, many early methods spot anomalies by analyzing the congruence
+edges, subgraphs) that differ significantly from the majority of between attributes and topology [42], [43], [44]. For instance,
+the reference objects in the graph [18], has begun to attract CODA [42] employs a probabilistic model to characterizes both
+considerable and increasing attention from researchers. Com- attributes and edge links simultaneously by defining their joint
+pared to other graph objects, current research on graph anomaly distribution. Driven by the good ability of matrix factorizadetection mostly focuses on node-level anomaly detection [17], tion in jointly modeling attributes and topology, various matrix
+which has broad applications in many high-impact domains, factorization based methods have been put forward [45], [46],
+such as social media [36], finance [37], and healthcare [38]. [47]. For instance, Radar [46] spots anomalies by modeling the
+Next, we will concentrate on reviewing previous works on residuals of attribute information and its coherence with network
+node-level anomaly detection to provide a research context that information. ANOMALOUS [47] jointly conducts anomaly
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1279
+
+detection and attribute selection based on CUR decomposition process through a well-designed contrastive loss, then discerns
+and residual analysis. However, these traditional machine learn- anomalies based on reconstruction errors. MDA-GAD [15] eming techniques still have limitations in seamlessly integrating ploys a hybrid learning scheme including graph reconstruction
+graph topology and node attributes, and are difficult to adapt to and multi-view discrimination to identify anomalies. While the
+large-scale graphs. unsupervised methods are more scalable and practical, they are
+ Benefiting from the outstanding performance of deep learn- prone to spot noisy or uninteresting anomalies and suffer from
+ing, methods based on various graph neural networks (GNN), undesirable detection accuracy since they do not know what
+such as graph convolutional networks (GCN) and graph attention anomalies the user really cares about.
+networks (GAT) [2], have become the current mainstream. De- Compared to the impracticality of obtaining fully labeled
+pending on the learning paradigm adopted, existing deep models datasets, coarse-grained annotations that typically require
+can be broadly classified into supervised/semi-supervised, un- marginal time and labor costs are relatively accessible in practisupervised, and weakly supervised. Supervised/semi-supervised cal scenarios. Studying weakly supervised node-level anomaly
+methods [48], [49], [50], [52], [54] focus on leveraging labeled detection with coarse-grained supervision help alleviate the
+normal and anomalous samples to learn pattern boundaries of drawbacks of the above supervised and unsupervised methods.
+both categories to detect anomalies. For example, BWGNN [53] However, related research is still in its infancy. One notable work
+utilizes a supervised learning approach where Beta graph is WEDGE [23], which spots critical node-level anomalies with
+wavelets are used to generate band-pass filters. GGAD [57] spots an attention mechanism and contrastive learning under a small
+anomalies in a semi-supervised manner by generating pseudo portion of coarse-grained subgraph labels. To promote related
+abnormal nodes to provide effective negative node samples for research, we propose a novel weakly supervised model AStraining a discriminative one-class classifier under the condition SESS, which detects node anomalies under the subgraph-level
+that only a small portion of labeled normal nodes are accessible. supervision by pulling apart the score gap between anomalies
+These methods, however, heavily depend on the availability of and normal nodes through inter-bag loss and intra-bag loss.
+labeled data, which limits their scalability and applicability in ASSESS++ further enhances the adaptability to low labeling
+real-world scenarios where labeled data is scarce. In contrast, rates. The differences between WEDGE and ours are discussed
+due to the advantage of not relying on expensive manual labeling, in detai in Section III-C.
+the vast majority of existing works [15], [61], [63], [64], [65], Application: As shown in Table I, most existing models are not
+[68], [70] fall under the unsupervised category. The traditional developed for a specific network but focus on designing general
+detection methods mentioned above also belong to this category. learning algorithms to be applied to anomaly detection scenarios
+To effectively capture the difference between abnormal and in various networks such as Email networks, social networks,
+benign without labels, existing deep models mainly adopt two and transaction networks. For instance, in the Email network
+strategies: reconstruction and contrastive learning. The first one dataset Enron [43], where nodes represent Email addresses and
+calculates the residuals between the input data and its recon- the email transmission between them form edge links. Each node
+structed version estimated by the model to detect anomalies is described by 20 attributes such as average content length,
+as content patterns of anomalies deviate significantly from the different encodings count, and the average number of recipients.
+majority and are difficult to reconstruct. An early attempt at this The email addresses having sent spam messages are regarded as
+deep method is DOMINANT [58]. It introduces a GCN based deep anomalies and should be identified by the model. Take the social
+autoencoder to reconstruct the input graph and flags nodes with network dataset Weibo [21] as another example, where nodes
+high residual errors as anomalies. As an improved version of indicate users registered on Tencent-Weibo and users who use
+DOMINANT, AnomalyDAE [59] employs a dual autoencoder to the same hashtag are connected by edges. The attributes affiliated
+encode the graph from structural and attribute perspectives re- to each user consist of a one-hot vector describing the location
+spectively for better reconstruction quality. ComGA [63] further of the post and the bag-of-words vector of the post. Users who
+considers the community structure during anomaly detection engaged in at least five suspicious posting activities are considby designing a tailored GCN to encode the modularity matrix. ered anomalies that will be detected by the model. Generally
+Contrastive learning based methods capture the pattern differ- speaking, in engineering practice, we can construct network
+ences between normal and abnormal by learning to distinguish data describing various complex interconnected systems based
+between positive and negative sample pairs. The first attempt was on detection requirements, and apply these detection models to
+CoLA [61], which makes the target node and its local subgraph discover anomalies for network risk warning and management.
+as a contrastive pair (i.e., node-subgraph contrast), and spots
+anomalies by learning and evaluating the consistency between
+the node and its local neighboring substructure. On this basis, B. Multiple Instance Learning
+ANEMONE [62] adds node-node contrast through a multi-scale Multiple Instance Learning (MIL) is a technique that overcontrastive learning objective, and GRADATE [14] further con- comes the limitations of traditional supervised learning when
+siders subgraph-subgraph contrast between the original input individual instance labels are unavailable [95]. It is a form
+graph and the augmented graph modified by edge perturbation. of weakly-supervised learning under inexact supervision [25],
+Some methods combine reconstruction and contrastive learning where instances are organized in bags with coarse-grained lato finely expose the discrepancy between abnormal and benign bels. Formally, in MIL, a bag B = {x1 , x2 , . . . , xn } is labeled
+ones. For example, CONAD [64] models prior human knowl- positive if at least one instance in the bag is positive (Y ),
+edge by data augmentation and integrates it into the encoding otherwise, it is marked as negative (N ). The objective in classic
+1280 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE II local features and significant regions simultaneously for 3D
+ SUMMARY OF RELATED WORKS ON MULTIPLE INSTANCE LEARNING
+ MRI data analysis. Note that there have been several studies on
+ MIL-based methods in the field of video anomaly detection [73],
+ [76], [86], [93]. For instance, [73] introduces a MIL ranking
+ loss with sparsity and smoothness constraints to spot anomalous
+ video segments with video-level weak supervision. [93] further
+ proposes a prompt-enhanced MIL framework to detect various
+ abnormal events in videos while ensuring clear event boundaries.
+ However, these methods are inapplicable to graph data due to
+ the unique topological relationships between nodes. Although
+ some efforts, such as MIL-GNN [77], FS-GCN-MIL [79], and
+ NAGCN [84], combine graph neural networks with MIL, they
+ focus on capturing potential relationships between instances
+ with GNN to solve tasks like weakly supervised image classification or text categorization. Research that directly targets
+ mining and analysis tasks on natural graph-structured data,
+ such as node-level anomaly detection, is very scarce. A notable
+ work is the previously mentioned WEDGE, which follows the
+ Bag-Space paradigm to uncover node anomalies by enforcing
+ distinctive representations between normal and abnormal subgraphs. To expand the application of MIL in graph data mining,
+ we propose a novel MIL framework tailored for graph data to
+ identify node-level anomalies under imprecise subgraph-level
+ supervision, which follows Instance-Space paradigm to estab-
+MIL is to learn a mapping function f : B → Y from a training lish discriminative information at the node instance level by
+set T = {(B1 , y1 ), . . . , (Bk , yk )}, where Bi ∈ B, and yi ∈ Y = inter-bag and intra-bag ranking objectives.
+{Y, N } is the bag-level label. The goal is to predict labels for
+unseen bags according to the learned f . Typically, depending C. Summary
+on how the information in multi-instance data is exploited,
+ As can be seen from Section II-A and Table I, the research on
+MIL can be divided into two paradigms [96]. In the Bag-Space
+ how to exploit imprecise subgraph-level supervision to identify
+(BS) paradigm, the discriminative learning process occurs at the
+ anomalies in weakly supervised node anomaly detection is still
+bag-level. The classifier makes use of the information from the
+ in its initial stage, although there are many application scenarios
+whole bag B (e.g., bag embeddings and scores) to establish diswhere coarse-grained labeling is available in reality. However,
+crimination between bags. In contrast, the Instance-Space (IS)
+ as a promising solution to imprecise supervision, Section II-B
+paradigm views discriminative information at the instance-level.
+ and Table II illustrate that existing MIL attempts for analysis
+The classifier separates the instances in positive bags from those
+ tasks on graph data are very limited. In this sense, our studied
+in negative bags by considering the characteristics of individual
+ MIL framework tailored for weakly supervised node anomaly
+instances.
+ detection in graphs is of great significance. Moreover, compared
+ MIL has been successfully applied to multifarious real-world
+ to WEDGE that follows the Bag-Space paradigm, our modeling
+scenarios [97]. Table II presents a brief summary of related
+ strategy is more fine-grained since ASSESS establishes disworks. In the computer vision domain, DSMIL [80] incorporates
+ criminative information at the instance-level. ASSESS++ further
+self-supervised contrastive learning and multiscale features into
+ enhances the adaptability to low labeling rates, exhibiting good
+the MIL model for whole slide image (WSI) classification. Dengineering application value.
+MIL [82] employs multiple MIL learners to explore discrepant
+but complementary solutions indicating object parts, which are
+ III. METHODOLOGY
+then fused with a collaborative module to achieve precise object localization. WSSM [72] combines MIL and conditional This section begins with a formal definition of our studrandom field techniques seamlessly to model sequence data ied problem. Let G = (V, E, F) denote a graph with |V| = n
+for video classification. As for text processing and analysis, nodes and |E| = m edges, where each node vi ∈ V is affil-
+D-MILN [78] achieves document-level sentiment classification iated with |F| = d attributes. A subgraph in G is defined as
+by learning aspect-level classifiers from the back propagation of S = (VS , ES , F), where VS ⊆ V and ES ⊆ E ∩ P (VS ). P (VS )
+document-level supervision. Mutual-Att [83] presents a hybrid is the powerset of VS . Analogous to the definition of MIL, in our
+ (i) (i) (i)
+fusion MIL model with mutual-attention mechanism to detect setting, a subgraph Si = {v1 , v2 , . . . , vbi } is considered as a
+offensive language with document-level supervision. In the med- bag of size bi , where different nodes make individual instances
+ical field, [75] considers each patient as a “bag” labeled with their in the bag. If a subgraph contains at least one anomalous node,
+diagnosis for histopathological image analysis. PTG [91] is a we call it an abnormal subgraph (positive bag) and mark it as
+patch-target guided dual-branch MIL framework that explores S a . Otherwise, it is called a normal subgraph (negative bag) and
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1281
+
+Fig. 2. Illustration of the proposed MIL framework ASSESS, which regards subgraphs as bags and nodes as bag instances. By modeling inter-bag and intra-bag
+anomaly ranking, ASSESS uncovers node anomalies under subgraph-level weak supervision.
+
+denoted as S n . Assume that we are given a set of k labeled ab- representation Z ∈ Rn×h2 through a nonlinear transformation:
+normal subgraphs C a = {S1a , S2a , . . . , Ska }, then the set of nodes
+included in C a is denoted as V l , and the remaining unlabeled Z = σ(HW t ), (1)
+node set is V u . Note that V = {V l , V u } and |V l |  |V u | as
+only a few labeled abnormal subgraphs are available in advance. where W t ∈ Rh1 ×h2 is a learnable parameter matrix, and σ
+Following the convention of graph anomaly detection [18], denotes the parametric ReLU (PReLU) function [101]. Obour studied problem is formulated as a ranking task, which is viously, fully capturing the underlying semantic information
+formally defined as follows: from the input graph to derive high-quality node representations
+ Problem 1. Node Anomaly Detection under Subgraph-Level benefits the accurate estimation of abnormalities. Here, without
+Weak Supervision: Given a graph G represented by the adjacency external precise supervision, we draw on the idea of maximizing
+matrix A ∈ Rn×n and attribute matrix X ∈ Rn×d , as well as a graphical mutual information in [102] to guide representation
+set of k labeled abnormal subgraphs C a . The task aims to learn learning:
+a node-level anomaly detection model that is able to leverage  I(z i ; xj )
+knowledge from imprecise subgraph-level supervision C a to I(z i ; Gi ) = I(z i ; xi ) + + I(wij ; Aij ), (2)
+learn the mapping from nodes to anomaly scores. Typically, |N (i)|
+ j∈N (i)
+abnormal nodes should be assigned larger scores and ranked
+higher than normal ones. where Gi is the computation graph of node vi that specifies
+ As can be seen, different from the above-mentioned classic the neighborhood around a particular node to perform a lo-
+MIL task which aims to predict labels for unseen bags, our calized convolution. N (i) includes the neighbros of vi , and
+studied problem is more challenging due to the following two wij = σ(z  i z j ) with the sigmoid function σ. I(·) denotes the
+aspects: (1) unlike the i.i.d. assumption on which most existing mutual information operator. Let the empirical probability distri-
+MIL works in the computer vision filed is based, instances as bution of node attributes xi be p(xi ), the probability distribution
+nodes in bags in the form of subgraphs have inherent topological of node representations z i be p(z i ), and the joint distribution
+relations that must be explicitly considered; (2) our goal is to be p(z i , xi ). According to the information theory, the mutual
+exactly uncover fine-grained anomalous nodes (instance-level information between z i and xi is defined as
+prediction) under the guidance of subgraph-level weak supervi-  
+ p(z i , xi )
+sion, rather than coarse-grained bag-level prediction. I(z i ; xi ) = p(z i , xi ) log dz i dxi . (3)
+ X Z p(z i )p(xi )
+ 
+A. Learning From Subgraph-Level Labels: ASSESS By minimizing rep = − vi ∈V I(z i ; Gi ) over all node vectors,
+ the learned representations Z finely preserve the respective
+ Here we elaborate on the proposed framework ASSESS, attributes and topological semantics of nodes, laying the founwhich learns to identify node anomalies under the imprecise dation for accurate anomaly estimation.
+subgraph-level supervision. The overview of its architecture is 2) Anomaly Ranking Modeling: Given the final representaillustrated in Fig. 2. tions Z, we define a score estimator to calculate real-valued
+ 1) Node Representation Modeling: As for the input graph G, anomaly scores for each node:
+we first need to take a general graph neural network (GNN) as
+a graph encoder to convert nodes into informative embeddings c = σ(Zws ), (4)
+H = GNN(A, X) = {h1 , h2 , . . . , hn } ∈ Rn×h1 for quantitative anomaly assessment. The graph encoder here is compatible where ws ∈ Rh2 ×1 is a trainable scoring vector and the sigmoid
+with arbitrary GNN architectures [98], [99], [100]. Hidden vec- activation σ we employed here aims to derive a reasonable
+tors H are then projected into another latent space to obtain the anomaly score within the range of (0,1).
+1282 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ Considering that the node-level anomaly labels are unknown patterns in negative bags with respect to the boundary becomes
+during training, we cannot learn the model simply by encour- irrelevant [103], and they can all be distinguished from abaging anomalies to score higher than normal nodes. Inspired by normal. We also establish a boundary for the “most positive”
+the maximum margin idea of classic MIL [73], [103], [104], we pattern and the most likely negative pattern in a positive bag
+extend the notion of a margin from individual patterns to sets of through (6) to further separate the normal mixed in weakly
+patterns and design the following ranking loss with respect to supervised subgraphs. You could refer to the paper [103] to better
+the maximum scored node (instance) in the subgraph (bag): understand the maximum bag margin formulation of MIL.
+   3) Sparsity and Homophily Constraints: Two related factors
+ (Sia , Sin ) = max 0, 1 − max cp + max cj . (5) should also be considered to capture anomalies effectively. For
+ (i) (i)
+ vp ∈Sia vj ∈Sin one thing, anomalies are usually rare in real-world scenarios,
+ which is an important principle in anomaly detection tasks. In
+ As can be seen, (5) enforces ranking only on two nodes with
+ this sense, the anomaly scores of nodes in Sia should be sparse,
+the highest scores in the abnormal subgraph Sia and the normal
+ of nodes may be
+ i.e., most tend to 0, since only a limited number 
+subgraph Sin , respectively2 Thus, it is referred to as inter-bag
+ abnormal. Formally, we minimize sp (Sia ) = v(i) ∈S a cp for
+loss. Intuitively, node with the highest score in Sia is most likely p i
+
+to be the true anomaly, while node with the highest score in Sin is each abnormal subgraph. For another, due to the topological
+most likely a hard negative sample, which seems to be abnormal nature of graphs, the desired scoring scheme should follow the
+but is actually benign. We push the above two types of nodes Homophily assumption [105] and keep the scores of topologfar apart in terms of anomaly scores, which contributes greatly ically connected nodes as close as possible. Thus, we enforce
+to achieving high anomaly detection accuracy. Recall that there the Homophily constraint for each subgraph Si (whether normal
+is no pre-labeled normal subgraph Sin in our task setting. For or abnormal) by minimizing the difference of anomaly scores
+efficiency, we randomly select k subgraphs with similar sizes to for neighboring nodes, i.e., hom (Si ) = c Si LSi cSi , where LSi
+Sia from the unlabeled node set V u as normal ones, leading to denotes the Laplacian matrix of Si and cSi is the score vector of
+a set C n . Due to the rarity of anomalies, the sampled subgraphs nodes in Si .
+have a high probability of being normal. Experiments later also By integrating the above losses, we arrive at the complete
+validate the effectiveness of this strategy. objective function as follows:
+ Note that Sia may not only have more than a single anomalous
+node but also contain normal nodes with a high probability,  = rep + (Sia , Sin ) + λ1 (Sia ) + λ2 sp (Sia ) + λ3 hom (Si ),
+according to the definition of the annotated abnormal subgraph. (7)
+Thus, we need to introduce additional ranking constraints to fur- where multiple λs are trade-off parameters that balance the
+ther optimize the solution space derived from (5). Specifically, importance of the above aspects. Since anomalies usually exhibit
+we pick out a set of nodes with scores lower than the average distinct patterns than normal nodes, the scores derived by w s will
+anomaly score in Sia , denoted as S̄ia . Nodes with a score above be different. To discriminate abnormalities, (Sia , Sin ) and (Sia )
+the average are more likely to be anomalies, while nodes in S̄ia constrain the score of anomalies to be greater than normal nodes.
+are more likely to be normal. We push them far away to enhance Furthermore, the sparsity and Homophily constraints make only
+the detection model to distinguish normal nodes in the abnormal a few nodes that may be anomalies have high scores (the situation
+subgraph by the following intra-bag loss: where a normal node is assigned the largest score while an
+   anomalous node is assigned a small score, which violates the
+ sparsity constraint, will not occur). All the above ensures that
+ (Sia ) = max 0, 1 − max cp + max cq . (6)
+ (i)
+ vp ∈Sia
+ (i)
+ vq ∈S̄ia
+ the model is optimized in the right direction. The key steps of
+ our proposed ASSESS are summarized in Algorithm 1.
+ The above-mentioned inter-bag loss and intra-bag loss are
+crucial for distinguishing meaningful anomalies from benign
+nodes under weak supervision. Specifically, in (5), through the B. Automatic Pseudo-Label Generation: ASSESS++
+max operation of term max cp , we define the margin of a Although the weakly supervised setting weakens reliance
+ (i)
+ vp ∈Sia
+ on fine-grained node-level annotations, the limited time, prior
+positive bag (abnormal subgraph) with the margin of the “most
+ knowledge, and labor costs may still prevent us from obtaining
+positive” pattern (most likely anomaly). Besides, we find the
+ sufficient coarse-grained subgraph-level labels. Experiments on
+“least negative” pattern (the hard negative pattern) in a normal
+ detection performance under various numbers of annotated absubgraph through term max cj and regard it as the margin
+ (i)
+ vj ∈Sin
+ normal subgraphs also reflect that too few labels will signifof a negative bag. Once the margin between the positive and icantly restrict the model’s ability to uncover anomalies (see
+negative bags (i.e., the margin between the anomaly and the Fig. 8).
+indistinguishable normal) is pulled apart to form a distinguishing To improve the adaptability of ASSESS in practical cases with
+boundary through (5), the relative position of other sample low labeling rates, we additionally incorporate a self-training
+ module to create a variant version named ASSESS++. The core
+ 2 This involves the conversion of the node index from a subgraph to the full
+ issue lies in how to select subgraphs that are more likely to congraph. For brevity, the index of the score c follows the subscript of the node in tain anomalies from the huge unlabeled node space to generate
+the subgraph. pseudo labels. We analyze the scores assigned to nodes in normal
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1283
+
+Fig. 3. The estimated anomaly scores for nodes in a randomly selected
+abnormal (left) and normal (right) subgraph.
+
+ Algorithm 1: The Learning Algorithm of ASSESS.
+ Fig. 4. Box plots of the maximum, minimum, and average scores of nodes in
+ Input: Graph G = (A, X), a set of k labeled abnormal abnormal and normal subgraphs on Weibo and Tolokers.
+ subgraphs C a , parameters λ1 , λ2 , λ3 , training epochs E
+ and batch size 2N .
+ Output: Anomaly ranking of nodes in G (reverse order). difference in score distribution between these two types of sub-
+ 1: Construct C n by randomly selecting k subgraphs from graphs. The node scores in the normal subgraph are all below 0.5,
+ V u as normal ones; while the abnormal subgraph has one or more nodes with scores
+ 2: Initialize model parameters by Glorot above 0.5. Moreover, we find that the maximum, minimum, and
+ initialization [106]. average scores of nodes in abnormal and normal subgraphs have
+ 3: while epoch e < E do obvious statistical differences, as shown in Fig. 4. In this sense,
+ 4: Randomly sample N subgraphs from C a and C n measuring the score distribution of subgraphs seems to provide a
+ respectively to form a training batch; good criterion for pseudo-annotation. Accordingly, we propose
+ 5: Estimate the anomaly score of each node through (1) a simple yet effective strategy to automatically find unlabeled
+ and (4); subgraphs that may contain anomalies to iteratively expand the
+ 6: Calculate the objective function in (7); label set C a . More sophisticated methods are left for future work
+ 7: Update model parameters by backpropagation; (the difference in the number of nodes in each subgraph makes
+ 8: Update e ← e + 1; some commonly used distribution measurement methods such
+ 9: end while as KL divergence inapplicable). We first sample subgraphs with
+ 10: Derive anomaly scores c and sort them in reverse order. similar sizes to the labeled abnormal subgraphs for nodes in V u
+ to form a candidate subgraph set C t = {S1t , S2t , . . . , Sw
+ t
+ }. Then,
+ the maximum, minimum, and average values are simultaneously
+ used as indicators to roughly test the difference in score distriand abnormal subgraphs during the training process of ASSESS.
+ bution between the candidate subgraph and the labeled sample.
+Fig. 3 illustrates the node scores in these two subgraphs on
+ Formally, we score each candidate subgraph Sit by
+different datasets, where the left column shows anomaly scores
+assigned by the model to nodes in a randomly selected ground-  
+ 1 k 
+truth abnormal subgraph, and the right column shows node  
+ f (Sit ) =  max cp − max cj 
+scores in a normal subgraph. As can be seen, there is a clear k (i) a (i) t 
+ i=1 vp ∈Si vj ∈Si
+1284 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+  
+ 1 k  Then on a set of Lb bags, where B + and B − contain positive and
+  
+ + min cp − min cj  negative bags respectively, the bag-level accuracy is derived by
+ k (i) a (i) t 
+ i=1 vp ∈Si vj ∈Si
+  
+ + −
+   Bk ∈B + ab (Bk ) + Bk ∈B − ab (Bk )
+  bti
+  ACCb = , (10)
+ 1 k
+ 1 
+ bi
+ 1   Lb
+  
+ + cp − t cj  , (8)
+ k b b  where a+ and a−
+ b (Bk ) = 1 − (1 − T P Ri ) b (Bk ) = T N Ri ,
+ pk nk
+  i=1 i vp(i) ∈Sia i (i) t
+ vj ∈Si 
+ pk and nk denote the numbers of positive and negative instances in bag Bk , respectively. As can be seen, when at least
+where bti denotes the size of Sit . We claim that the smaller the one instance (whether positive or negative) is predicted as a
+difference between Sit and the samples in the label set C a on positive, the prediction of the positive bag is correct. In this
+the above three statistical indicators, the higher the possibility sense, methods designed for bag classification are not optimal
+that it contains anomalies. Accordingly, we select the top r for accurately distinguishing instances since they are prone to
+candidate subgraphs with the smallest scores and mark them learn a suboptimal decision boundary for instance classification.
+with pseudo labels to expand C a for the next training. Through Besides, ACCb is affected by many factors such as the size of the
+multiple rounds of iterations, ASSESS++ automatically mines bags Bk , T P Ri , and T N Ri , ACCi is more stable than ACCb .
+high-confidence training samples from unlabeled data and then For more discussion on the two types of paradigms, you could
+fine-tunes itself with labeled and pseudo-labeled sets to achieve refer to [95], [107].
+accurate node anomaly detection at low labeling rates. Next, we compare WEDGE with our work. Although both
+ methods are based on MIL for weakly supervised node anomaly
+C. Comparison of ASSESS and WEDGE detection, they are significantly different in terms of technology and our well-designed self-training module improves the
+ As mentioned above, MIL can be roughly divided into Bag- model’s adaptability at low labeling rates. First, as the taxon-
+Space (BS) paradigm and Instance-Space (IS) paradigm [96]. omy introduced in § II-B, WEDGE adopts the BS paradigm
+Here we provide a formal discussion on the strengths and where the discriminative information is considered to lie at
+weaknesses of these two paradigms to help readers understand the bag-level. WEDGE aggregates node (instance) embeddings
+the superiority of our proposed method later. The BS paradigm and scores through an attention mechanism to obtain subgraph
+treats each bag as a whole and learns the discriminative infor- (bag) embeddings and scores. Then employs contrastive learning
+mation at the bag-level. It typically assumes uniform relevance to establish discrimination between subgraphs. As analyzed
+of instances within a bag, allowing the model to take into above, the correct distinction of subgraphs (bags) does not mean
+account global information by aggregating instance features to the accurate judgment of the nodes (instances) in them. In
+distinguish between different bags. By focusing on the bag as a contrast, we adopt the IS paradigm. Since the discriminative
+whole, it is more robust to noise and irrelevant instances as the information is at the instance-level, our modeling strategy is
+aggregation helps to mitigate the influence of outlier instances more fine-grained. Specifically, we formulate anomaly detection
+within a bag. However, BS paradigm may suffer from the above as a regression problem. By ranking nodes with the maximum
+restrictive bias, and aggregating instances is prone to the loss scores in normal and abnormal subgraphs, and pulling apart
+of critical information, especially if the relevant patterns are the difference between potential anomalies and normal nodes
+only present at the instance level. This coarse-grained represen- in the abnormal subgraph, ASSESS will assign high scores to
+tation leads to limited expressiveness of the model. As for IS anomalies to identify them. Second, note that many (weaklyparadigm, it follows the standard multiple instance assumption )supervised methods including WEDGE fail to cope with low
+that at least one instance in a positive bag is relevant to the labeling rate scenarios (see experiments). To further enhance the
+positive annotation, which allows for effective learning and model’s adaptability, we introduce the self-training mechanism
+desirable generalization even with limited labeled data. The IS to form a model variant ASSESS++. By automatically mining
+paradigm focuses on characterizing more detailed patterns of subgraphs that may contain anomalies as subgraph-level pseudo
+each instance and enables discrimination at the instance-level. labels, ASSESS++ expands the available label set iteratively,
+This fine-grained representation facilitates capturing complex which significantly alleviates the high cost required to obtain
+patterns that may be overlooked in an aggregated view, giving high-quality annotations. Compared with WEDGE, our model
+the model stronger expressiveness. has a wider range of practical application scenarios.
+ In addition to the above analysis, existing studies have shown
+theoretically and empirically that better performance in bag-
+ D. Time Complexity
+level accuracy does not necessarily mean higher instance-level
+accuracy [95], [107], [108]. To briefly review, let T P Ri and The node representation modeling needs O(n2 h + ndh +
+T N Ri be the instance-level true positive/negative rate, on a set nh2 ), the anomaly ranking takes O(kp), the sparsity and Hoof Li instances containing pi positives and ni negatives, the mophily constraints need O(kp) and O(kp2 ) respectively, where
+instance-level accuracy is calculated by h denotes the embedding dimension, k is the number of labeled
+ subgraphs, and p denotes the average number of nodes contained
+ T P Ri · pi + T N Ri · ni in the labeled subgraph (mostly around 10). Since k and p
+ ACCi = . (9) are usually very small, the time complexity of ASSESS is
+ Li
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1285
+
+ TABLE III
+ STATISTICS OF THE DATASETS USED IN THE EXPERIMENTS
+
+O(n2 h + ndh + nh2 ), which has almost the same efficiency The worker’s profile and task performance statistics form
+as those well-known graph representation methods such as node features. Workers who have been banned from one of
+DGI (O(n2 h + ndh)) [109]. Overall, our model processes at the projects are marked as abnormal.
+the subgraph granularity, which is a natural batch form that is r Questions [112] is collected from the question-answering
+advantageous for generalization to large-scale graphs. website Yandex Q. Nodes represent users interested in the
+ topic “medicine”, and links are established between two
+ IV. EXPERIMENTS users if one user answers another’s question within a year.
+ Users who remained active (not deleted or blocked) are
+ This section empirically evaluates the anomaly detection
+ marked as anomalies. Node features are the average of
+quality of the proposed framework. Moreover, we provide some
+ FastText embeddings of the words in the user description.
+important parameter analysis and visualize the detection results
+ As can be seen, the above datasets differ in several network
+for intuitive understanding.
+ characteristics such as degree distribution, density, and anomaly
+ ratio. In Questions, the node average degree and the average
+A. Datasets
+ local clustering coefficient for the whole graph are both smaller,
+ We adopt the following four public real-world benchmark showing a more sparse topological structure. Although Weibo
+datasets [20] to validate the performance of the proposed AS- and Reddit are both online social networks, Weibo is relatively
+SESS and ASSESS++. Table III summarizes detailed statistics denser, while the clustering extent of neighbors around nodes in
+such as network size, structure, type, and anomaly ratio. The Reddit is close to 0 (low local clustering), indicating that there
+networks here are all homogeneous.3 is almost no clique between neighbors (few users comment on
+ r Weibo [110] is collected from the Tencent-Weibo online multiple posts). In Tolokers, the higher local clustering coeffidiscussion platform, where nodes represent users and edges cient indicates closer cooperation among workers. Based on the
+ indicate that two users have the same hashtag. Users that ground-truth node-level anomalies contained in these datasets,
+ engaged in at least five suspicious activities (i.e., posting in this paper, we create k = 50 labeled abnormal subgraphs S a
+ twice within a certain timeframe such as 60 seconds) are as weak supervision. In detail, we first randomly select k true
+ labeled as abnormal. Node features are composed of the anomalies as center nodes, then generate local subgraphs via
+ location of a micro-blog post and bag-of-words vectors. random walk with restart (RWR) [113] algorithm. The random
+ r Reddit [111] contains a user-subreddit graph, where nodes walk length and the restart probability are set to 15 and 0.2,
+ represent posts shared across the subreddits and edges respectively. Similarly, the normal subgraph S n is created by
+ between two posts indicate that they are commented by applying RWR on randomly chosen nodes from the unlabeled
+ the same user. The text of each post is transformed into a node set V u . In addition, we set k = 10 to simulate the low
+ feature vector representing their LIWC (Linguistic Inquiry labeling rate situation.
+ and Word Count) categories. The banned users are labeled
+ as anomalies. B. Compared Methods
+ r Tolokers [112] originates from the crowd-sourcing platform Toloka, where nodes are workers who have joined For a comprehensive comparison, we choose three categories
+ in at least one of the 13 selected projects. If two workers of methods: unsupervised, supervised, and weakly supervised
+ collaborate on the same task, they are linked by an edge. as baselines.4 The specific details are as follows.
+
+ 3 The proposed weakly supervised anomaly detection idea can be naturally ex- 4 Existing supervised methods depend on precise node-level labels. Strictly
+tended to heterogeneous networks (by increasing the modeling of heterogeneous speaking, they cannot handle the case with only imprecise subgraph-level
+entities/relations). Related exploration is left for future research. supervision, so we do not consider many such methods in our baselines.
+1286 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ r ANEMONE [62] is an unsupervised framework that em- does not have a public source code, we implemented it ourploys multi-scale contrastive learning and a statistical selves based on its published paper. All other baselines are
+ anomaly estimation strategy to identify anomalous nodes. implemented through their released source code and undergo
+ r GRADATE [14] is an unsupervised multi-view multi-scale parameter tuning according to the empirical strategies in their pacontrastive learning framework that introduces subgraph- pers. As for our framework ASSESS and ASSESS++,5 we adopt
+ subgraph contrast for node anomaly detection performance vanilla 2-layer GCN as the graph encoder and Jensen-Shannon
+ promotion. MI estimator (JSD) [116] for mutual information calculation. In
+ r RAND [65] achieves unsupervised node anomaly detec- specific, we derive I(z i ; xi ) by
+ tion with a tailored reinforcement neighborhood selection
+ I(z i ; xi ) = −sp(−Dw (z i , xi )) − EP̃ [sp(Dw (z i , x i ))],
+ and anomaly-aware message aggregation.
+ r GAD-NR [68] presents a new variant of GAE that in- (11)
+ where Dw : d × h2 → R is a trainable discriminator with pacorporates neighborhood reconstruction in terms of local
+ rameter w. x i is an negative sampled from P̃ = P (we denote
+ structure, self-attributes, and neighbor attributes for unsuthe empirical probability distribution of node attributes X by P ),
+ pervised node anomaly detection.
+ r ADA-GAD [67] introduces a two-stage unsupervised and sp(x) = log(1 + ex ) is the soft-plus function. The number
+ of negative samples for the JSD estimator is set to 5. As for
+ framework that first trains the autoencoder on graphs
+ I(wij ; Aij ), we maximize it by calculating its cross-entropy
+ with reduced anomaly levels generated by an anomalyinstead of JSD estimator as the graph data used in experiments
+ denoised augmentation strategy, then retrains the decoder
+ is unweighted:
+ for anomaly node detection on the original graph.
+ r EAGLE [70] disentangles nodes and attributes to refor- I(wij ; Aij ) = Aij logwij + (1 − Aij )log(1 − wij ). (12)
+ mulate the original graph into a special bipartite graph,
+ During training, we employ RMSprop optimizer with the
+ then uncovers node anomalies in an unsupervised manner
+ learning rate 0.001, the weight decay is set to 5×10−4 , and the
+ through bipartite graph learning.
+ r GDN & Meta-GDN [51] are GNN-based few-shot node batch size N = 32. We tune the three parameters λs by a “gridsearch” strategy in the range of [0.01,1]. About ASSESS++, we
+ anomaly detection approaches that enforce large deviations
+ create r = 5 pseudo labels every 100 epochs until a total of 50
+ between abnormal and normal nodes by well-designed
+ labeled abnormal subgraphs are reached.
+ graph deviation networks, where Meta-GDN is addition-
+ Following the commonly used metrics in the previous studally equipped with a new cross-network meta-learning
+ ies [14], [17], we employ the criteria of AUC, which is the
+ algorithm.
+ r BWGNN [53] is a supervised architecture that introduces area under the ROC curve, to evaluate the detection quality
+ of various methods. Besides, the AP score (Average Precision)
+ Beta graph wavelets to create band-pass filters with excelis also utilized to evaluate the ability of the model to identify
+ lent locality for detecting node anomalies in the spectral
+ positive instances accurately while maintaining high precision.
+ domain.
+ r SpaceGNN [114] ensembles comprehensive information AP is more suitable for anomaly detection tasks where positive
+ (abnormal) and negative (benign) samples are extremely imbalfrom different spaces with a specialized attention mechaanced. The closer the AUC and AP scores approach 1, the better
+ nism to spot node anomalies under limited node supervised
+ the detection performance of the method is. In this paper, we
+ labels.
+ r MIL-GNN [77] is a GNN-based MIL model that regards report the average results with standard deviation over five runs.
+ the graph as a bag to perform graph-level classification in
+ D. Main Experimental Results
+ a weakly supervised manner.
+ r WEDGE [23] is a weakly supervised architecture equipped We summarize the evaluation results under different labelwith an attention module, which spots node anomalies by ing ratios in Table IV and have the following observations.
+ enhancing the similarity within subgraphs and the disparity In the weakly supervised case with k = 50 subgraph-level
+ between subgraphs. labels, our proposed ASSESS consistently outperforms all
+ Unsupervised methods identify anomalies in input graph data baselines in terms of AUC and AP scores on four datasets.
+without available labels. As for supervised methods designed The performance gains compared to existing weakly superfor node-level labels, following previous studies [23], all nodes vised models MIL-GNN and WEDGE reflects the effectiveness
+in the labeled abnormal subgraphs act as supervisory signals. of the ranking-based weakly supervised detection framework
+Regarding MIL-GNN specific for graph-level (bag-level) clas- we designed. Especially compared to WEDGE based on the
+sification, we spot node anomalies by taking the predicted class Bag-Space paradigm, which establishes discrimination between
+probability of the subgraph as the anomaly score of the nodes subgraphs (bag-level), the Instance-Space paradigm we adopt
+within it. is more fine-grained. By ranking nodes with the maximum
+ scores in normal and abnormal subgraphs, and pulling apart
+ the difference between potential anomalies and normal nodes
+C. Parameter Settings and Metrics in the abnormal subgraph, we achieves the discrimination at the
+ All experiments are implemented in PyTorch [115] and carried out on a single NVIDIA RTX 4090 GPU. Since WEDGE 5 Source code is available at https://github.com/zpeng27/ASSESS.
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1287
+
+ TABLE IV
+ PERFORMANCE OF DIFFERENT METHODS W.R.T. AUC AND AP (%) ON REAL-WORLD DATASETS
+
+Fig. 5. Visualization of node anomaly scores in a randomly chosen abnormal subgraph predicted by ASSESS. The darker the color, the greater the score, and the
+more likely the node is an anomaly.
+
+node-level (instance-level), which demonstrates superior detec- measuring the score distribution of nodes to enhance the model’s
+tion performance. Additionally, the significant performance gap adaptability to low labeling rates in reality. Since unsupervised
+between our method and unsupervised methods such as EAGLE methods do not rely on labels and the results remain unchanged,
+and GAD-NR illustrates the benefit of introducing external label it is omitted here.
+knowledge as guidance, even with coarse-grained supervision. In addition to quantitative results, we also provide some
+Since the autoencoder-based model ADA-GAD is trained to visualizations of the detection results output by ASSESS to
+reconstruct the network topology and attributes of multiple addi- intuitively demonstrate its good performance. Specifically, we
+tional augmented graphs, which takes up a lot of storage space, randomly select an abnormal subgraph from Weibo and Tolokers
+it faces a serious OOM (out of memory) problem on large-scale datasets respectively, where the ground-truth abnormal nodes
+network datasets such as Questions. As for supervised or even are marked as red. Then, the node anomalies identified by our
+few-shot learning methods that rely on node-level labeling, they ASSESS are colored blue. The darker the color, the greater the
+can only extract limited or even incorrect knowledge from the anomaly score and the higher the possibility of an anomaly. By
+coarse-grained supervisory signals, thus weakening the perfor- comparing the subfigures (a) and (b) or (c) and (d) in Fig. 5, it can
+mance. When k is reduced to 10 to reach a relatively low be seen that most real anomalies were successfully assigned high
+labeling rate condition, our ASSESS++ consistently achieves scores by ASSESS, although there were a few misjudgments.
+the best across all datasets. Compared to other baselines with Furthermore, on Weibo dataset, we summarize the anomaly
+obvious performance degradation, we get desirable results that scores predicted by different models for the two types of nodes,
+are almost comparable to those when k = 50. This is due which are categorized according to the ground-truth abnormal
+to the simple but effective self-training module we designed, and normal labels, and illustrate violin plots as shown in Fig. 6.
+which automatically creates subgraph-level pseudo-labels by Obviously, ASSESS assigns higher anomaly scores to true node
+1288 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 6. Violin plots of node scores predicted by different models on Weibo dataset, grouped by true anomalies and benign.
+
+ TABLE V
+ PERFORMANCE UNDER DIFFERENT GRAPH ENCODERS
+
+anomalies, and there is a significant gap between the median
+scores of abnormal and normal nodes, forming a clear distinction Fig. 7. Subgraphs derived by different strategies on Weibo and Tolokers:
+ BFRW (left), RW (middle), and RWR (right). The abnormal nodes that serve
+boundary. In other methods, however, the two types of nodes as starting nodes for sampling are colored by blue, and the true node anomalies
+have many overlapping score intervals, and many true anomalies involved in the subgraph are marked in red.
+are assigned scores similar to normal nodes, which leads to
+unsatisfactory detection effects. The above visualization results TABLE VI
+once again confirm the effectiveness of ASSESS. PERFORMANCE UNDER DIFFERENT SUBGRAPH GENERATION STRATEGIES
+
+E. More Experimental Analysis
+ 1) Adaptability to Different Graph Encoders: In this part, we
+intend to explore the adaptability of our proposed ASSESS to
+different backbone GNN encoders. The well-known GAT [99],
+GIN [100], and MixHop [117] models are chosen as alternative encoders and we keep the other experimental settings
+unchanged. Table V summarizes the results. As can be seen,
+these encoder variants all exhibit comparable detection performance to GCN on different datasets. Note that GAT adaptively
+reweights neighborhoods through the self-attention mechanism,
+and MixHop captures neighborhood mixing relationships at var- the subgraphs derived by the above strategies have their own
+ious distances by multiple powers of the adjacency matrix. This characteristics. Specifically, since RWR introduces the restart
+fine-scale modeling of graph topology information is conducive probability, i.e., returning to the starting node, it tends to generate
+to identifying anomalies, thus they further improves the values a subgraph with the abnormal node as the center, containing
+of both evaluation metrics on Weibo, Tolokers, and Questions. neighbors with diverse hops away from the abnormal node. In
+These promising and comparable results demonstrate that our contrast, the vanilla RW is more likely to create a subgraph that
+model allows for a wide selection of backbone GNN encoders. exists in a chain-like form, starting from the abnormal node. For
+ 2) Subgraph Generation Strategies: Here we explore the the BFRW, it is prone to generating a subgraph centered around
+impact of weak supervision signals created by different subgraph the abnormal node, containing all neighbors with the same hops
+(bag) generation strategies on model performance. In addition from the abnormal node. Fig. 7 shows some subgraphs derived
+to the random walk with restart (RWR), we also consider two by these strategies, and Table VI reports empirical results on
+additional methods: vanilla random walk (RW) and breadth- four datasets. As can be seen, the performances under the above
+first random walk (BFRW). It needs to be recognized that strategies are comparable, indicating that the proposed model
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1289
+
+Fig. 8. Metric scores on Reddit (left) and Tolokers (right) under different numbers of labeled abnormal subgraphs.
+
+ drop most significantly when the inter-bag loss is missing,
+ which indicates that the inter-bag anomaly ranking is critically
+ important as it broadly captures the explicit differences between
+ anomaly and benign. The performance degradation without
+ (Sia ) reflects the benefit of modeling intra-bag ranking loss in
+ further distinguishing normal nodes in coarse-grained abnormal
+ subgraphs. In addition, modeling the sparsity of anomalies and
+ the homophily principle inherent in graph topology are both
+ beneficial to identifying anomalies accurately.
+ 5) Computational Complexity: Here we evaluate ASSESS
+ and other baselines in terms of the computational efficiency
+ and number of model parameters under the same hardware
+ environment. Table VII summarizes the results, where #Params
+ indicate the number of trainable parameters that a machine learning model adjusts during training to improve its performance,
+ and MACs denote multiply-accumulate operations6 The lower
+Fig. 9. Ablation studies on real-world datasets w.r.t. AUC and AP metrics. MACs value means that the model requires less computation
+ and is more efficient. It can be seen that, compared to WEDGE,
+ which is a representative weakly supervised model specifically
+can adapt to a variety of subgraph (bag) generation methods for node anomaly detection and has the second-best perforand has promising anomaly detection capability under different mance, our proposed ASSESS can achieve the best detection
+forms of subgraph-level weak supervision. performance with fewer parameters and computational burden.
+ 3) The Influence of K Value: For weakly supervised anomaly Compared to others, ASSESS has a relatively moderate number
+detection, it is interesting to explore the performance changes of parameters, similar to the widely used ANEMONE on all four
+of ASSESS under different amounts of weak supervision. Fig. 8 datasets. For the pseudo-labeling stage in ASSESS++, additional
+illustrates the detection results of ASSESS as the number of dynamic memory allocation of 5.59 M, 6.58 M, 7.29 M, and
+annotated abnormal subgraphs (i.e., k value) changes. When k 26.41 M is consumed on the four datasets respectively. Although
+is less than 50, both AUC and AP increase significantly, while larger MACs are consumed, this contributes to the sophistithe performance gain is only a little and almost remains stable cated utilization and analysis of coarse-grained subgraph-level
+when k continues to increase (further performance gains may labels to accommodate practical weakly supervised scenarios.
+come from more sophisticated model designs, which are left In addition, we analyze the detection duration of the model on
+for the future). This reflects the necessity of sufficient weak datasets of different scales, as shown in Fig. 10. Here Elliptic
+supervisory signals, which motivates us to propose ASSESS++ dataset [118] includes a graph of 203,769 Bitcoin transactions as
+that can automatically generate pseudo labels to further alleviate nodes, and 234,355 payment flows as edges, where each node has
+the labeling cost. 166-dimensional transaction information and 9.8% transactions
+ 4) Ablation Study: We examine the role of each module in belongs to illicit categories such as scams and Ponzi schemes.
+weakly supervised anomaly ranking modeling by removing the On such a large-scale network, most methods such as RAND,
+specific loss terms. In detail, w/o inter-bag loss, w/o intra-bag ADA-GAD, EAGLE, GDN, and BWGNN suffer from the OOM
+loss, w/o sparsity constraint, and w/o Homophily constraint issue. ANEMONE and GRADATE achieve an AUC score of
+refer to removing the (Sia , Sin ), (Sia ), sp (Sia ), and hom (Si ),
+respectively. Fig. 9 illustrates the results under different settings 6 The well-known FLOPs are nearly two times as MACs, more details at
+on all datasets. As can be seen, both AUC and AP metrics https://github.com/Lyken17/pytorch-OpCounter.
+1290 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE VII
+ THE COMPUTATIONAL COMPLEXITY OF DIFFERENT ALGORITHMS ON REAL-WORLD DATASETS
+
+ anomaly detection idea is independent of the specific model
+ architecture. Our work can be naturally extended to dynamic networks by introducing a dynamic graph representation learning
+ module. For instance, employing DDGCL [119] or CLDG [120]
+ derives node representations on dynamic graphs in a selfsupervised manner, and then learn a temporal score predictor to
+ model node anomaly ranking under the guidance of subgraphlevel weak supervision. (2) In addition, designing more sophisticated subgraph distribution measures to create high-confidence
+ pseudo-labels automatically or drawing on other high-quality
+ pseudo-label generation methods [121] to further enhance the
+ performance of the model at low labeling rates is also a promising future direction. (3) Note that there are inevitably camouflaged anomalies disguising themselves to evade detection in
+ reality, which may blur the pattern difference between anomalies and benign ones. Existing empirical studies usually divide
+ camouflages into two types: the feature camouflage and the
+Fig. 10. Detection duration on datasets of different scales.
+ relation camouflage [49]. In this regard, it is possible to consider
+ introducing relevant feature screening mechanisms or employing reinforcement learning (RL) to select optimal neighbors and
+about 43.28%, but they take more than 24 hours (1 d) to com- high-order topological relations to overcome the representation
+plete. In contrast, our model only takes about 4 hours (13956.4 s) similarity issue that may be caused by vanilla GNN aggregation.
+to achieve an AUC score of 86.31%. WEDGE only gets 64.83% This will help the model capture the subtle boundary between
+in a similar period of time. Overall, our method exhibits excellent normal and abnormal instances, improving the ability to detect
+effectiveness and efficiency in weakly supervised node anomaly camouflaged anomalies.
+detection, reflecting good engineering application potential.
+ REFERENCES
+ V. CONCLUSION
+ [1] P. Cui, X. Wang, J. Pei, and W. Zhu, “A survey on network embedding,”
+ This paper investigates how to locate node-level anomalies IEEE Trans. Knowl. Data Eng., vol. 31, no. 5, pp. 833–852, May 2019.
+ [2] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and P. S. Yu, “A comprehenunder imprecise subgraph-level supervision, which is widely sive survey on graph neural networks,” IEEE Trans. Neural Netw. Learn.
+applicable in practice yet has received less scrutiny. Inspired Syst., vol. 32, no. 1, pp. 4–24, Jan. 2021.
+by classic MIL methods, we treat subgraphs and nodes as [3] H. Chen et al., “Label-aware graph convolutional networks,” in Proc.
+ ACM Int. Conf. Inf. Knowl. Manage., 2020, pp. 1977–1980.
+bags and instances, respectively, and present a novel framework [4] H. Chen et al., “Neighbor enhanced graph convolutional networks for
+ASSESS which enforces inter-bag and intra-bag ranking loss node classification and recommendation,” Knowl.-Based Syst., vol. 246,
+to learn node abnormalities. A variant ASSESS++ equipped 2022, Art. no. 108594.
+ [5] Q. Shao, D. Chen, and W. Yu, “A unique framework of heterogeneous
+with a self-training module is proposed to further enhance the augmentation graph contrastive learning for both node and graph clasadaptability to low labeling ratios. Experiments on four bench- sification,” IEEE Trans. Netw. Sci. Eng., vol. 11, no. 6, pp. 5818–5828,
+mark real-world datasets validate the superiority of ASSESS and Nov./Dec. 2024.
+ [6] K. Berahmand, M. Mohammadi, F. Saberi-Movahed, Y. Li, and Y. Xu,
+ASSESS++. “Graph regularized nonnegative matrix factorization for community de-
+ Future work could focus on the following three aspects. (1) tection in attributed networks,” IEEE Trans. Netw. Sci. Eng., vol. 10, no. 1,
+Note that the proposed MIL-based weakly supervised node pp. 372–385, Jan./Feb. 2023.
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1291
+
+ [7] Y. Mo, R. Xing, and H. Hou, “A distributed higher-order k-Medoids [33] G. Pang, C. Shen, L. Cao, and A. V. D. Hengel, “Deep learning for
+ clustering algorithm for network partition,” IEEE Trans. Netw. Sci. Eng., anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2,
+ vol. 11, no. 5, pp. 4181–4193, Sep./Oct. 2024. pp. 1–38, 2021.
+ [8] X. Wang, X. He, M. Wang, F. Feng, and T. -S. Chua, “Neural graph [34] M. M. Breunig, H. -P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+ collaborative filtering,” in Proc. Int. ACM SIGIR Conf. Res. Develop. Inf. density-based local outliers,” in Proc. ACM SIGMOD Int. Conf. Manage.
+ Retrieval, 2019, pp. 165–174. Data, 2000, pp. 93–104.
+ [9] X. He, K. Deng, X. Wang, Y. Li, Y. Zhang, and M. Wang, “LightGCN: [35] F. T. Liu, K. M. Ting, and Z. -H. Zhou, “Isolation forest,” in Proc. IEEE
+ Simplifying and powering graph convolution network for recommenda- Int. Conf. Data Mining, 2008, pp. 413–422.
+ tion,” in Proc. Int. ACM SIGIR Conf. Res. Develop. Inf. Retrieval, 2020, [36] H. Yu, W. Liu, N. Zhu, P. Li, and X. Luo, “IN-GFD: An interpretable
+ pp. 639–648. graph fraud detection model for spam reviews,” IEEE Trans. Artif. Intell.,
+ [10] A. Sankar, Y. Liu, J. Yu, and N. Shah, “Graph neural networks for vol. 5, no. 10, pp. 5325–5339, Oct. 2024.
+ friend ranking in large-scale social platforms,” in Proc. Web Conf., 2021, [37] S. Motie and B. Raahemi, “Financial fraud detection using graph neural
+ pp. 2535–2546. networks: A systematic review,” Expert Syst. Appl., vol. 240, 2024,
+ [11] X. Li, L. Sun, M. Ling, and Y. Peng, “A survey of graph neural network Art. no. 122156.
+ based recommendation in social networks,” Neurocomputing, vol. 549, [38] J. -P. Chen, P. Lu, F. Yang, R. Chen, and K. Lin, “Medical insurance fraud
+ 2023, Art. no. 126441. detection using graph neural networks with spatio-temporal constraints,”
+ [12] Z. Li, Z. Cui, S. Wu, X. Zhang, and L. Wang, “Fi-GNN: Modeling feature J. Netw. Intell., vol. 7, no. 2, pp. 480–498, 2022.
+ interactions via graph neural networks for CTR prediction,” in Proc. ACM [39] X. Xu, N. Yuruk, Z. Feng, and T. A. Schweiger, “SCAN: A structural
+ Int. Conf. Inf. Knowl. Manage., 2019, pp. 539–548. clustering algorithm for networks,” in Proc. Int. Conf. Knowl. Discov.
+ [13] H. Chen et al., “Macro graph neural networks for online billion-scale Data Mining, 2007, pp. 824–833.
+ recommender systems,” in Proc. Web Conf., 2024, pp. 3598–3608. [40] L. Akoglu, M. McGlohon, and C. Faloutsos, “oddball: Spotting anomalies
+ [14] J. Duan et al., “Graph anomaly detection via multi-scale contrastive in weighted graphs,” in Proc. Adv. Know. Discov. Data Mining, 2010,
+ learning networks with augmented view,” in Proc. AAAI Conf. Artif. pp. 410–421.
+ Intell., 2023, vol. 37, no. 6, pp. 7459–7467. [41] H. Tong and C. -Y. Lin, “Non-negative residual matrix factorization with
+ [15] J. Lian, X. Wang, X. Lin, Z. Wu, S. Wang, and W. Guo, “Graph anomaly application to graph anomaly detection,” in Proc. SIAM Int. Conf. Data
+ detection via multi-view discriminative awareness learning,” IEEE Trans. Mining, 2011, pp. 143–153.
+ Netw. Sci. Eng., vol. 11, no. 6, pp. 6623–6635, Nov./Dec. 2024. [42] J. Gao, F. Liang, W. Fan, C. Wang, Y. Sun, and J. Han, “On community
+ [16] Y. Liu, S. Li, Y. Zheng, Q. Chen, C. Zhang, and S. Pan, “ARC: A generalist outliers and their efficient detection in information networks,” in Proc.
+ graph anomaly detector with in-context learning,” in Proc. 38th Adv. Int. Conf. Knowl. Discov. Data Mining, 2010, pp. 813–822.
+ Neural Inf. Process. Syst., 2024, pp. 50772–50804. [43] P. I. Sánchez, E. Müller, F. Laforet, F. Keller, and K. Böhm, “Statistical
+ [17] X. Ma et al., “A comprehensive survey on graph anomaly detection selection of congruent subspaces for mining attributed graphs,” in Proc.
+ with deep learning,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, IEEE Int. Conf. Data Mining, 2013, pp. 647–656.
+ pp. 12012–12038, Dec. 2023. [44] P. I. Sánchez, E. Müller, O. Irmler, and K. Böhm, “Local context selection
+ [18] L. Akoglu, H. Tong, and D. Koutra, “Graph based anomaly detec- for outlier ranking in graphs with multiple numeric node attributes,” in
+ tion and description: A survey,” Data Mining Knowl. Discov., vol. 29, Proc. Int. Conf. Sci. Statist. Database Manage., 2014, pp. 1–12.
+ pp. 626–688, 2015. [45] N. Liu, X. Huang, and X. Hu, “Accelerated local anomaly detection via
+ [19] V. -H. Nguyen, K. Sugiyama, P. Nakov, and M. -Y. Kan, “FANG: Lever- resolving attributed networks,” in Proc. Int. Joint Conf. Artif. Intell., 2017,
+ aging social context for fake news detection using graph representation,” pp. 2337–2343.
+ in Proc. ACM Int. Conf. Inf. Knowl. Manage., 2020, pp. 1165–1174. [46] J. Li, H. Dani, X. Hu, and H. Liu, “Radar: Residual analysis for anomaly
+ [20] J. Tang, F. Hua, Z. Gao, P. Zhao, and J. Li, “GADBench: Revisiting and detection in attributed networks,” in Proc. Int. Joint Conf. Artif. Intell.,
+ benchmarking supervised graph anomaly detection,” in Proc. Adv. Neural 2017, pp. 2152–2158.
+ Inf. Process. Syst., 2023, vol. 36, pp. 29628–29653. [47] Z. Peng et al., “ANOMALOUS: A joint modeling approach for anomaly
+ [21] K. Liu et al., “BOND: Benchmarking unsupervised outlier node detection detection on attributed networks,” in Proc. Int. Joint Conf. Artif. Intell.,
+ on static attributed graphs,” in Proc. Adv. Neural Inf. Process. Syst., 2022, 2018, pp. 3513–3519.
+ vol. 35, pp. 27021–27035. [48] D. Wang et al., “A semi-supervised graph attentive network for financial
+ [22] G. Pang, C. Shen, H. Jin, and A. van den Hengel, “Deep weakly- fraud detection,” in Proc. IEEE Int. Conf. Data Mining, 2019, pp. 598–
+ supervised anomaly detection,” in Proc. Int. Conf. Knowl. Discov. Data 607.
+ Mining, 2023, pp. 1795–1807. [49] Y. Dou, Z. Liu, L. Sun, Y. Deng, H. Peng, and P. S. Yu, “Enhancing graph
+ [23] Q. Zhou, K. Ding, H. Liu, and H. Tong, “Learning node abnormality with neural network-based fraud detectors against camouflaged fraudsters,” in
+ weak supervision,” in Proc. ACM Int. Conf. Inf. Knowl. Manage., 2023, Proc. ACM Int. Conf. Inf. Knowl. Manage., 2020, pp. 315–324.
+ pp. 3584–3594. [50] A. Kumagai, T. Iwata, and Y. Fujiwara, “Semi-supervised anomaly
+ [24] E. W. Ngai, Y. Hu, Y. H. Wong, Y. Chen, and X. Sun, “The application detection on attributed graphs,” in Proc. Int. Joint Conf. Neural Netw.,
+ of data mining techniques in financial fraud detection: A classification 2021, pp. 1–8.
+ framework and an academic review of literature,” Decis. Support Syst., [51] K. Ding, Q. Zhou, H. Tong, and H. Liu, “Few-shot network anomaly
+ vol. 50, no. 3, pp. 559–569, 2011. detection via cross-network meta-learning,” in Proc. Web Conf., 2021,
+ [25] Z. -H. Zhou, “A brief introduction to weakly supervised learning,” Nat. pp. 2448–2456.
+ Sci. Rev., vol. 5, no. 1, pp. 44–53, 2018. [52] B. Chen et al., “GCCAD: Graph contrastive coding for anomaly detec-
+ [26] J. Tang, H. Li, G. -J. Qi, and T. -S. Chua, “Image annotation by graph- tion,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 8, pp. 8037–8051,
+ based inference with integrated multiple/single instance representations,” Aug. 2023.
+ IEEE Trans. Multimedia, vol. 12, pp. 131–141, 2010. [53] J. Tang, J. Li, Z. Gao, and J. Li, “Rethinking graph neural networks for
+ [27] X. -S. Wei and Z. -H. Zhou, “An empirical study on image bag gener- anomaly detection,” in Proc. Int. Conf., Mach. Learn., 2022, pp. 21076–
+ ators for multi-instance learning,” Mach. Learn., vol. 105, pp. 155–198, 21089.
+ 2016. [54] Z. Chai et al., “Can abnormality be detected by graph neural networks?,”
+ [28] S. Angelidis and M. Lapata, “Multiple instance learning networks for in Proc. Int. Joint Conf. Artif. Intell., 2022, pp. 1945–1951.
+ fine-grained sentiment analysis,” Trans. Assoc. Comput. Linguistics, [55] Y. Gao, X. Wang, X. He, Z. Liu, H. Feng, and Y. Zhang, “Addressing hetvol. 6, pp. 17–31, 2018. erophily in graph anomaly detection: A perspective of graph spectrum,”
+ [29] J. Foulds and E. Frank, “A review of multi-instance learning assump- in Proc. Web Conf., 2023, pp. 1528–1538.
+ tions,” Knowl. Eng. Rev., vol. 25, no. 1, pp. 1–25, 2010. [56] N. Chen et al., “Consistency training with learnable data augmentation
+ [30] M. -R. Amini, V. Feofanov, L. Pauletto, L. Hadjadj, E. Devijver, and Y. for graph anomaly detection with limited supervision,” in Proc. Int. Conf.
+ Maximov, “Self-training: A survey,” Neurocomputing, vol. 616, 2025, Learn. Representations, 2024.
+ Art. no. 128904. [57] H. Qiao, Q. Wen, X. Li, E. -P. Lim, and G. Pang, “Generative semi-
+ [31] F. E. Grubbs, “Procedures for detecting outlying observations in sam- supervised graph anomaly detection,” in Proc. Adv. Neural Inf. Process.
+ ples,” Technometrics, vol. 11, no. 1, pp. 1–21, 1969. Syst., 2024, pp. 4660–4688.
+ [32] V. Chandola, A. Banerjee, and V. Kumar, “Anomaly detection: A survey,” [58] K. Ding, J. Li, R. Bhanushali, and H. Liu, “Deep anomaly detection
+ ACM Comput. Surv., vol. 41, no. 3, pp. 1–58, 2009. on attributed networks,” in Proc. SIAM Int. Conf. Data Mining, 2019,
+ pp. 594–602.
+1292 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ [59] H. Fan, F. Zhang, and Z. Li, “Anomalydae: Dual autoencoder for anomaly [82] W. Gao, F. Wan, J. Yue, S. Xu, and Q. Ye, “Discrepant multiple instance
+ detection on attributed networks,” in Proc. IEEE Int. Conf. Acoust. Speech learning for weakly supervised object detection,” Pattern Recognit.,
+ Signal Process., 2020, pp. 5685–5689. vol. 122, 2022, Art. no. 108233.
+ [60] X. Yuan, N. Zhou, S. Yu, H. Huang, Z. Chen, and F. Xia, “Higher-order [83] J. Liu, D. Kong, L. Huang, D. Mao, and H. Xue, “Multiple instance
+ structure based anomaly detection on attributed networks,” in Proc. IEEE learning for offensive language detection,” in Proc. Conf. Empirical
+ Int. Conf. Big Data, 2021, pp. 2691–2700. Methods Natural Lang. Process., 2022, pp. 7387–7396.
+ [61] Y. Liu, Z. Li, S. Pan, C. Gong, C. Zhou, and G. Karypis, “Anomaly [84] Y. Guan et al., “Node-aligned graph convolutional network for wholedetection on attributed networks via contrastive self-supervised learning,” slide image representation and classification,” in Proc. IEEE/CVF Conf.
+ IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2378–2392, Comput. Vis. Pattern Recognit., 2022, pp. 18813–18823.
+ Jun. 2022. [85] W. Tang, S. Huang, X. Zhang, F. Zhou, Y. Zhang, and B. Liu, “Multiple
+ [62] M. Jin, Y. Liu, Y. Zheng, L. Chi, Y. -F. Li, and S. Pan, “ANEMONE: instance learning framework with masked hard instance mining for whole
+ Graph anomaly detection with multi-scale contrastive learning,” in Proc. slide image classification,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ ACM Int. Conf. Inf. Knowl. Manage., 2021, pp. 3122–3126. Recognit., 2023, pp. 4078–4087.
+ [63] X. Luo et al., “ComGA: Community-aware attributed graph anomaly [86] S. Park, H. Kim, M. Kim, D. Kim, and K. Sohn, “Normality guided
+ detection,” in Proc. ACM Int. Conf. Web Search Data Mining, 2022, multiple instance learning for weakly supervised video anomaly depp. 657–665. tection,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis., 2023,
+ [64] Z. Xu, X. Huang, Y. Zhao, Y. Dong, and J. Li, “Contrastive attributed pp. 2665–2674.
+ network anomaly detection with data augmentation,” in Proc. Pacific- [87] K. Chen, S. Sun, and J. Zhao, “CaMIL: Causal multiple instance learning
+ Asia Conf. Knowl. Discov. Data Mining, 2022, pp. 444–457. for whole slide image classification,” in Proc. AAAI Conf. Artif. Intell.,
+ [65] Y. Bei et al., “Reinforcement neighborhood selection for unsupervised 2024, vol. 38, no. 2, pp. 1120–1128.
+ graph anomaly detection,” in Proc. IEEE Int. Conf. Data Mining, 2023, [88] L. Qu, Y. Ma, X. Luo, Q. Guo, M. Wang, and Z. Song, “Repp. 11–20. thinking multiple instance learning for whole slide image classifica-
+ [66] H. Qiao and G. Pang, “Truncated affinity maximization: One-class ho- tion: A good instance classifier is all you need,” IEEE Trans. Cirmophily modeling for graph anomaly detection,” in Proc. Adv. Neural cuits Syst. Video Technol., vol. 34, no. 10, pp. 9732–9744, Oct.
+ Inf. Process. Syst., 2023, pp. 49490–49512. 2024.
+ [67] J. He, Q. Xu, Y. Jiang, Z. Wang, and Q. Huang, “ADA-GAD: Anomaly- [89] T. Sun, W. Pian, N. Daoudi, K. Allix, T. F. Bissyandé, and J. Klein,
+ denoised autoencoders for graph anomaly detection,” in Proc. AAAI Conf. “LaFiCMIL: Rethinking large file classification from the perspective of
+ Artif. Intell., 2024, vol. 38, no. 8, pp. 8481–8489. correlated multiple instance learning,” in Proc. Int. Conf. Appl. Natural
+ [68] A. Roy et al., “GAD-NR: Graph anomaly detection via neighborhood Lang. Inf. Syst., 2024, pp. 62–77.
+ reconstruction,” in Proc. ACM Int. Conf. Web Search Data Mining, 2024, [90] Ł. Struski, S. Janusz, J. Tabor, M. Markiewicz, and A. Lewicki, “Mulpp. 576–585. tiple instance learning for medical image classification based on in-
+ [69] X. Dong, X. Zhang, Y. Sun, L. Chen, M. Yuan, and S. Wang, stance importance,” Biomed. Signal Process. Control, vol. 91, 2024,
+ “SmoothGNN: Smoothing-aware GNN for unsupervised node anomaly Art. no. 105874.
+ detection,” in Proc. Web Conf., 2025, pp. 1225–1236. [91] M. Dai, X. Shi, X. Zhu, T. Pan, and K. Li, “Patch target guided dual-branch
+ [70] Z. Peng, Y. Wang, Q. Lin, B. Dong, and C. Shen, “When bipartite deep multiple instance learning for 3D MRI analysis,” in Proc. IEEE Int.
+ graph learning meets anomaly detection in attributed networks: Under- Conf. Bioinf. Biomed., 2024, pp. 903–910.
+ stand abnormalities from each attribute,” Neural Netw., vol. 185, 2025, [92] F. Liu and W. Liu, “Graph neural network based multi-instance learning
+ Art. no. 107194. with graph structure learning,” in Proc. Int. Conf, Artif. Intell. Big Data,
+ [71] J. Wu, Y. Yu, C. Huang, and K. Yu, “Deep multiple instance learning 2024, pp. 505–510.
+ for image classification and auto-annotation,” in Proc. IEEE/CVF Conf. [93] J. Chen, L. Li, L. Su, Z. -J. Zha, and Q. Huang, “Prompt-enhanced
+ Comput. Vis. Pattern Recognit., 2015, pp. 3460–3469. multiple instance learning for weakly supervised video anomaly detec-
+ [72] J. Liu, C. Chen, Y. Zhu, W. Liu, and D. N. Metaxas, “Video classification tion,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2024,
+ via weakly supervised sequence modeling,” Comput. Vis. Image Underst., pp. 18319–18329.
+ vol. 152, pp. 79–87, 2016. [94] Y. Zhong, R. Zhu, G. Yan, P. Gan, X. Shen, and D. Zhu, “Inter-clip
+ [73] W. Sultani, C. Chen, and M. Shah, “Real-world anomaly detection in feature similarity based weakly supervised video anomaly detection via
+ surveillance videos,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern multi-scale temporal MLP,” IEEE Trans. Circuits Syst. Video Technol.,
+ Recognit., 2018, pp. 6479–6488. vol. 35, no. 2, pp. 1961–1970, Feb. 2025.
+ [74] F. Wan, C. Liu, W. Ke, X. Ji, J. Jiao, and Q. Ye, “C-MIL: Contin- [95] M. -A. Carbonneau, V. Cheplygina, E. Granger, and G. Gagnon, “Muluation multiple instance learning for weakly supervised object detec- tiple instance learning: A survey of problem characteristics and application,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2019, tions,” Pattern Recognit., vol. 77, pp. 329–353, 2018.
+ pp. 2199–2208. [96] J. Amores, “Multiple instance classification: Review, taxonomy and
+ [75] P. Sudharshan, C. Petitjean, F. Spanhol, L. E. Oliveira, L. Heutte, and comparative study,” Artif. Intell., vol. 201, pp. 81–105, 2013.
+ P. Honeine, “Multiple instance learning for histopathological breast [97] M. Waqas, S. U. Ahmed, M. A. Tahir, J. Wu, and R. Qureshi, “Exploring
+ cancer image classification,” Expert Syst. Appl., vol. 117, pp. 103–111, multiple instance learning (MIL): A brief survey,” Expert Syst. Appl.,
+ 2019. vol. 250, 2024, Art. no. 123893.
+ [76] J. Zhang, L. Qing, and J. Miao, “Temporal convolutional network with [98] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+ complementary inner bag loss for weakly supervised anomaly detection,” convolutional networks,” in Proc. Int. Conf. Learn. Representations,
+ in Proc. IEEE Int. Conf. Image Process., 2019, pp. 4030–4034. 2017.
+ [77] M. Tu, J. Huang, X. He, and B. Zhou, “Multiple instance learning with [99] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and Y.
+ graph neural networks,” in Proc. Int. Conf. Mach. Learn., 2019. Bengio, “Graph attention networks,” in Proc. Int. Conf. Learn. Repre-
+ [78] Y. Ji, H. Liu, B. He, X. Xiao, H. Wu, and Y. Yu, “Diversified multiple sentations, 2018.
+ instance learning for document-level multi-aspect sentiment classifica- [100] K. Xu, W. Hu, J. Leskovec, and S. Jegelka, “How powerful are graph
+ tion,” in Proc. Conf. Empirical Methods Natural Lang. Process., 2020, neural networks?,” in Proc. Int. Conf. Learn. Representations, 2019.
+ pp. 7012–7023. [101] K. He, X. Zhang, S. Ren, and J. Sun, “Delving deep into rectifiers:
+ [79] Y. Zhao et al., “Predicting lymph node metastasis using histopathological Surpassing human-level performance on imageNet classification,” in
+ images based on multiple instance learning with deep graph convolu- Proc. IEEE/CVF Int. Conf. Comput. Vis., 2015, pp. 1026–1034.
+ tion,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2020, [102] Z. Peng et al., “Graph representation learning via graphical mutual
+ pp. 4837–4846. information maximization,” in Proc. Web Conf., 2020, pp. 259–270.
+ [80] B. Li, Y. Li, and K. W. Eliceiri, “Dual-stream multiple instance learn- [103] S. Andrews, I. Tsochantaridis, and T. Hofmann, “Support vector maing network for whole slide image classification with self-supervised chines for multiple-instance learning,” in Proc. Adv. Neural Inf. Process.
+ contrastive learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Syst., 2002, pp. 561–568.
+ Recognit., 2021, pp. 14318–14328. [104] Y. Tian, G. Pang, Y. Chen, R. Singh, J. W. Verjans, and G. Carneiro,
+ [81] T. Yuan et al., “Multiple instance active learning for object detection,” in “Weakly-supervised video anomaly detection with robust temporal fea-
+ Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2021, pp. 5330– ture magnitude learning,” in Proc. IEEE/CVF Int. Conf. Comput. Vis.,
+ 5339. 2021, pp. 4975–4986.
+PENG et al.: ESTIMATING NODE ABNORMALITIES FROM IMPRECISE SUBGRAPH-LEVEL SUPERVISION 1293
+
+[105] M. McPherson, L. Smith-Lovin, and J. M. Cook, “Birds of a feather: Yunqi Xue received the B.Eng. degree in computer
+ Homophily in social networks,” Annu. Rev. Sociol., vol. 27, no. 1, science and technology from the Nanjing University
+ pp. 415–444, 2001. of Aeronautics and Astronautics, Nanjing, China, in
+[106] X. Glorot and Y. Bengio, “Understanding the difficulty of training deep 2022, and the M.Eng. degree in computer science and
+ feedforward neural networks,” in Proc. Int. Conf. Artif. Intell. Statist., technology from Xi’an Jiaotong University, Xi’an,
+ 2010, pp. 249–256. China, in 2025. Her research focuses on graph mining
+[107] G. Vanwinckelen, V. Tragante do O, D. Fierens, and H. Bloc- and its applications, such as node anomaly detection
+ keel, “Instance-level accuracy versus bag-level accuracy in multi- and tax Big Data analysis.
+ instance learning,” Data Mining Knowl. Discov., vol. 30, pp. 313–341,
+ 2016.
+[108] G. Doran and S. Ray, “A theoretical and empirical analysis of support
+ vector machine methods for multiple-instance classification,” Mach.
+ Learn., vol. 97, pp. 79–102, 2014.
+[109] P. Veličković, W. Fedus, W. L. Hamilton, P. Liò, Y. Bengio, and R. D.
+ Hjelm, “Deep graph infomax,” in Proc. Int. Conf. Learn. Representations,
+ 2019. Yunfan Wang received the B.Eng. degree in com-
+[110] T. Zhao, C. Deng, K. Yu, T. Jiang, D. Wang, and M. Jiang, “Error-bounded puter science and technology and the B.Eco. degree
+ graph anomaly loss for GNNs,” in Proc. ACM Int. Conf. Inf. Knowl. in economics from Xi’an Jiaotong University, Xi’an,
+ Manage., 2020, pp. 1873–1882. China, in 2021, and the M.Eng. degree in computer
+[111] S. Kumar, X. Zhang, and J. Leskovec, “Predicting dynamic embedding science and technology from Xi’an Jiaotong Univertrajectory in temporal interaction networks,” in Proc. Int. Conf. Knowl. sity in 2024. He is currently working toward the Ph.D.
+ Discov. Data Mining, 2019, pp. 1269–1278. degree in computer science with the University of Vir-
+[112] O. Platonov, D. Kuznedelev, M. Diskin, A. Babenko, and L. ginia, Charlottesville, VA, USA. His research focuses
+ Prokhorenkova, “A critical look at the evaluation of GNNs under het- on graph machine learning and its applications, such
+ erophily: Are we really making progress?,” in Proc. Int. Conf. Learn. as anomaly detection and brain network analysis.
+ Representations, 2023.
+[113] H. Tong, C. Faloutsos, and J. -Y. Pan, “Fast random walk with restart
+ and its applications,” in Proc. IEEE Int. Conf. Data Mining, 2006,
+ pp. 613–622.
+[114] X. Dong, X. Zhang, L. Chen, M. Yuan, and S. Wang, “SpaceGNN: Multispace graph neural network for node anomaly detection with extremely Qika Lin (Member, IEEE) received the Ph.D. delimited labels,” in Proc. Int. Conf. Learn. Representations, 2025. gree from Xi’an Jiaotong University, Xi’an, China.
+[115] N. Ketkar and J. Moolayil, “Introduction to pytorch,” in Deep Learning He is currently a Research Fellow with the Na-
+ With Python: Learn Best Practices Deep Learn. Models With PyTorch. tional University of Singapore, Singapore. He has
+ Berlin, Germany: Springer, 2021, pp. 27–91 . authored or coauthored many papers in top-tier jour-
+[116] S. Nowozin, B. Cseke, and R. Tomioka, “f-GAN: Training generative nals/conferences, including IEEE TRANSACTIONS ON
+ neural samplers using variational divergence minimization,” in Proc. Adv. KNOWLEDGE AND DATA ENGINEERING, ICDE, ACL,
+ Neural Inf. Process. Syst., 2016, pp. 271–279. KDD, and IJCAI. His research interests include mul-
+[117] S. Abu-El-Haija et al., “MixHop: Higher-order graph convolutional ar- timodal learning, logical reasoning, and NLP. He has
+ chitectures via sparsified neighborhood mixing,” in Proc. Int. Conf. Mach. actively contributed to several journals/conferences
+ Learn., 2019, pp. 21–29. as a reviewer or PC member, including IJCV, IEEE
+[118] M. Weber et al., “Anti-money laundering in bitcoin: Experimenting with TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, NeurIPS, and ACL.
+ graph convolutional networks for financial forensics,” in Proc. Int. Conf. He was the Guest Editor of IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL
+ Knowl. Discov. Data Mining, 2019. SYSTEMS.
+[119] S. Tian, R. Wu, L. Shi, L. Zhu, and T. Xiong, “Self-supervised representation learning on dynamic graphs,” in Proc. ACM Int. Conf. Inf. Knowl.
+ Manage., 2021, pp. 1814–1823.
+[120] Y. Xu, Z. Peng, B. Shi, X. Hua, and B. Dong, “Learning dynamic graph
+ representations through timespan view contrasts,” Neural Netw., vol. 176,
+ 2024, Art. no. 106384. Chao Shen received the B.S. degree in automation
+[121] B. Wang et al., “Deep insights into noisy pseudo labeling on graph data,” and the Ph.D. degree in control theory and control
+ in Proc. Adv. Neural Inf. Process. Syst., 2023, pp. 76214–76228. engineering from Xi’an Jiaotong University, Xi’an,
+ China, in 2007 and 2014, respectively. He is currently a Professor with the Faculty of Electronic and
+ Information Engineering, Xi’an Jiaotong University.
+ His current research interests include AI security, insider/intrusion detection, behavioral biometrics, mea-
+ Zhen Peng received the B.Eng. degree from the surement and experimental methodology.
+ School of Software Engineering, Xi’an Jiaotong University, Xi’an, China, in 2017, and the Ph.D. degree
+ from the School of Computer Science and Technology, Xi’an Jiaotong University in 2023. She is currently an Assistant Professor with Xi’an Jiaotong University. Her research focuses on graph machine learning and its applications, especially graph anomaly
+ detection and social network analysis.

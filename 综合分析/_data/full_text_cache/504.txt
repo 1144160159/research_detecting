@@ -1,0 +1,773 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025 3518513
+
+ One-Class Classification Constraint
+ in Reconstruction Networks for Multivariate
+ Time Series Anomaly Detection
+ Jiazhen Li , Zhenhua Yu , Qingchao Jiang , Senior Member, IEEE, and Zhixing Cao
+
+ Abstract— Detecting the anomalies in multivariate time α Attention score in the self-attention
+series (MTS) data is crucial for maintaining the stability of mechanism.
+industrial manufacturing processes and biochemical operations. α att Linear feedforward network. Used to
+However, current methods often focus on capturing the normal calculate the attention score.
+patterns of training data while overlooking the potential of σ (·) Activation function (e.g., ReLU).
+latent representations. This research introduces the hypersphere
+constraint network (HSC), an innovative self-supervised model f encoder (·) Encoder function.
+for anomaly detection in MTS. This approach uniquely inte- H Number of heads used in multihead
+grates a one-class classification framework to regulate latent attention.
+distribution. First, the HSC employs a temporal convolutional R Radius of the hypersphere in latent space.
+network (TCN) and a multilayer perceptron (MLP) to extract
+ X
+ b Reconstructed input data.
+latent representations of input data, imposing constraints on the
+latent distribution to achieve a one-class loss. Second, a self- x̂ nt Reconstructed feature data at time step t for
+attention mechanism is applied to reconstruct the input data the nth variable.
+and calculate the reconstruction loss. Anomalies are identified WMLP , bMLP Learnable parameters in MLP.
+by combining the one-class loss with the reconstruction loss. β Hyperparameter balancing one-class and
+By integrating one-class classification with a reconstruction-based
+ reconstruction loss.
+method, the HSC significantly increases sensitivity to anomalous
+data, enhancing the distinction between normal and abnormal
+data. Evaluations on three real-world datasets and a simulated
+dataset demonstrate that the HSC model outperforms existing I. I NTRODUCTION
+state-of-the-art methods in anomaly detection.
+ Index Terms— Anomaly detection, deep learning, multivariate
+time series (MTS), one-class classification, transformer.
+ M ULTIVARIATE time series (MTS) data are of great significance across various domains. In modern industrial
+ production, data continuously monitored by sensors reflect the
+ operating conditions of manufacturing processes [1]. Similarly,
+ N OMENCLATURE in aerospace missions, hundreds of sensors track the real-time
+ Xinput Input multivariate time series data. performance of an aircraft [2], [3]. Such sophisticated systems
+ xint Input data at time t. require efficient, reliable, and continuous operations, as even
+ xtn Input data at time t for the nth variable. subtle anomalies can lead to severe system failures and sigy Output label vector representing anomalies. nificant economic loss [4]. Therefore, prompt identification
+ yt Output label at time step t. and early warning of potential anomalies in MTS are critical.
+ X Input matrix for the encoder. Efficient MTS anomaly detection methods can assist in timely
+ xn Feature vector for the nth variable. discovery of system abnormalities, thereby prompt identific Center of the hypersphere in latent space. cation and early warning of potential anomalies in MTS are
+ Z Latent representation matrix. critical. Efficient MTS anomaly detection methods averting
+ z Latent representation. drastic consequences.
+ Anomaly detection in MTS refers to the identification of
+ Received 7 November 2024; accepted 17 December 2024. Date of publica- data that deviate from the expected distribution within a
+tion 5 March 2025; date of current version 25 March 2025. This work was collection of interconnected time series [5]. The main chalsupported in part by the National Natural Science Foundation of China under lenges in MTS anomaly detection are threefold. First, in real
+Grant 62322309, in part by Shanghai Pilot Program for Basic Research under
+Grant 22TQ1400100-16, and in part by Shanghai Science and Technology industrial environments, most data are in a normal state, mak-
+Innovation Action Plan under Grant 23S41900500. The Associate Editor coor- ing it labor-intensive to label anomalous data, which render
+dinating the review process was Dr. Zhigang Liu. (Corresponding authors: supervised methods unsuitable [6]. Second, MTS anomaly
+Qingchao Jiang; Zhixing Cao.)
+ The authors are with the Key Laboratory of Smart Manufacturing in Energy detection involves capturing both complex relationships among
+Chemical Process, Ministry of Education, East China University of Science variables and temporal dependencies. Therefore, an effective
+and Technology, Shanghai 200237, China (e-mail: y30220958@mail.ecust. MTS anomaly detection method must capture both spatial and
+edu.cn; y10210100@mail.ecust.edu.cn; qchjiang@ecust.edu.cn; zcao@ecust.
+edu.cn). temporal relationships [7]. Lastly, the model must exhibit high
+ Digital Object Identifier 10.1109/TIM.2025.3548251 sensitivity to the distribution of anomalous data and give a
+ 1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+3518513 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+clear distinction between outputs for normal and anomalous normal system states, using deep embeddings to optimize
+data [8], [9]. filter parameters and detect anomalies based on reconstruction
+ To address the MTS anomaly detection problem, several errors from the filtered signal. USAD [5] employs a dual
+feature-based methods from classical unsupervised machine reconstruction strategy with variational autoencoders (VAEs)
+learning have been developed. OC-SVM [10], [11] reframes to learn the normal data distribution and detect anomalies
+the anomaly detection task as a one-class classification chal- by identifying deviations from these learned distributions.
+lenge, while SVDD [12] projects latent representations of data In MAD-GAN [31], LSTM functions as both generator
+into a hypersphere, classifying normal and anomalous data and discriminator in a GAN [32], combining the discrimbased on their positions within this hypersphere. Clustering inator’s judgment with the generator’s reconstruction loss
+strategies such as K -means [13] and DBSCAN [14] desig- to score anomalies. The TranAD [33] method employs an
+nate samples as anomalies when their distance from cluster encoder–decoder structure with adversarial training to amplify
+centroids exceed a predefined threshold. Principal compo- reconstruction errors and improve detection performance.
+nent analysis (PCA) can be employed to extract statistical CAE-AD [34] utilizes a contrastive autoencoder framework
+models of normal data, with anomalies identified based on with data augmentation in both time and frequency domains
+deviations from principal component scores [15]. TTAD [16] to achieve robust representations. MANomaly [35] employs a
+uses K -means [17] or SMOTE [18] algorithms to augment mutual adversarial network for data reconstruction and implethe test data, thereby boosting the efficiency and robustness ments a high anomaly suppression mechanism to enhance its
+of anomaly detection. These methods use an unsupervised effectiveness. D3R [36] uses noise diffusion and a designed
+approach to achieve anomaly detection. However, they only attention structure to address the challenges of MTS anomaly
+capture relationships among variables and neglect temporal detection in unstable environments. AT-DCAEP [37] combines
+relationships. convolutional autoencoders and attention mechanisms to better
+ Recently, deep learning has gained widespread atten- capture temporal relationships. In addition to the methods
+tion for its exceptional ability to capture both intervari- mentioned above, recent approaches have integrated graph
+able relationships and temporal dependencies simultaneously. neural networks to capture relationships among non-Euclidean
+Current mainstream MTS anomaly detection methods can data variables [38], [39]. For example, in the GReLeN [40],
+be divided into three categories: prediction-based meth- the VAE [41] serves as an overall framework, and graph
+ods, reconstruction-based methods, and distribution-based neural networks are integrated to learn dependencies across
+methods [19], [20]. different features. MTAD-GAT [42] leverages graph attention networks (GATs) to capture both temporal dependencies
+A. Prediction-Based Methods and intervariable relationships for effective MTS anomaly
+ detection.
+ Detect anomalies by analyzing prediction errors. LSTM-
+NDT [21] employs LSTM [22] networks and combines
+them with unsupervised dynamic thresholding techniques for C. Distribution-Based Methods
+anomaly detection. GDN [23] utilizes graph neural networks to
+ Introduce normalizing flows, which use a series of invertassess the interconnections across sensors and performs time
+ ible transformations to map complex distributions to simpler
+series prediction based on attention mechanisms. Deviations
+ ones, thereby estimating data probability [43], [44]. A lower
+between predicted and actual results are then used to detect
+ probability density indicates a higher likelihood of anomalies.
+anomalies. The GTA [24] method leverages a Transformer-
+ GANF [45] integrates Bayesian networks with normalizing
+based architecture to automatically learn graph structures,
+ flows to model conditional dependencies among time series,
+apply graph convolution, and model temporal dependencies for
+ enabling effective density estimation and anomaly detection
+effective MTS anomaly detection. DTAAD [25] model comin MTS. MTGFlow [46] employs dynamic graph structure
+bines temporal convolutional network (TCN) and Transformer
+ learning and entity-aware normalizing flows for unsupervised
+models [26] and improves prediction accuracy through global
+ anomaly detection, enhancing anomaly detection. Compared to
+and local temporal convolutions via Dual TCN. Additionally,
+ classical methods, deep learning approaches can better capture
+it leverages meta-learning to enhance anomaly detection perthe temporal features of data.
+formance in scenarios with small sample data.
+ However, these methods primarily focus on capturing the
+ characteristics of normal data, without emphasizing the dis-
+B. Reconstruction-Based Methods tinctions between normal and anomalous data and may not
+ Identify anomalies by analyzing reconstruction errors [27]. fully utilize latent data representations.
+DAGMM [28] combines a deep autoencoder and a Gaus- To address these existing issues, this article proposes the
+sian mixture model to identify anomalies in MTS by hypersphere constraint network (HSC) model for anomaly
+modeling data distributions and detecting deviations using detection. First, to better understand the temporal dependenenergy-based representations. MEGA [29] leverages multi- cies, the HSC model uses a TCN encoder to identify temporal
+scale discrete wavelet transform and graph convolutional dependencies. Second, to fully leverage the data in the hidnetwork modules to enhance autoencoder architecture, effec- den space, the model applies constraints within the latent
+tively capturing subtle anomalies. KalmanAE [30] leverages representation, differentiating normal from abnormal data to
+an autoencoder-optimized Kalman filter to adaptively estimate amplify the reconstruction loss. Finally, to better extract the
+LI et al.: ONE-CLASS CLASSIFICATION CONSTRAINT IN RECONSTRUCTION NETWORKS 3518513
+
+features in the latent space, the decoder uses a self-attention
+mechanism that combines the GAT [47] and transformer
+model [26] to effectively extract features and reconstruct the
+input data. Finally, anomaly detection is achieved by merging
+the reconstruction and one-class classification losses.
+ The contributions of this research are as follows.
+ 1) This study introduces a novel network model
+ named HSC. By integrating one-class classification with
+ a reconstruction-based neural network, the HSC model
+ effectively separates normal and anomalous data in the
+ latent space. This separation amplifies reconstruction
+ Fig. 1. Overall structure of the TCN model.
+ errors and enhances the model’s anomaly detection
+ capability.
+ 2) To enable effective reconstruction of the input data and Dilated convolution [50] enables TCN to capture long-range
+ capture the relationships between multivariate data, HSC dependencies in sequence data. The formula is expressed as
+ utilizes a self-attention mechanism that combines the follows:
+ GAT and Transformer models to extract features in the K
+ X −1
+ latent representation. yt = wk · xt−d·k (2)
+ 3) In evaluations conducted across three publicly avail- k=0
+ able real-world datasets and six penicillin fermentation where d is the dilation factor, i is the current layer in the
+ test datasets, the HSC model outperformed other hidden state, and d = 2i . The greater the number of hidden
+ state-of-the-art methods. These results underscore the layers, the longer the temporal dependencies that can be
+ effectiveness of the HSC model in anomaly detection captured.
+ tasks. Residual connections [51] are widely used in deep learn-
+ The remainder of this article is organized as fol- ing to mitigate the vanishing gradient problem. To capture
+lows: Section II presents the preliminary knowledge longer sequences, TCN require stacking of multiple layers.
+of HSC. Section III elaborates on the details of the proposed To maintain training stability, TCN also incorporate residual
+method. Section IV evaluates the effectiveness of the HSC connections. The formula is expressed as follows:
+model on three public datasets and six penicillin fermentation
+test datasets, assessing its ability to amplify the distinction y = σ (x + F(x)) (3)
+between anomalous and normal data. Section V discusses the where x is the input, F(x) represents the transformation
+scalability and robustness of the HSC model and explores applied to x, and σ is the activation function. The addition
+potential future research directions. Finally, Section VI pro- (x + F(x)) provides a direct gradient path, improving the
+vides a summary of this study. training stability of deep networks.
+ The overall architecture of the TCN is illustrated in Fig. 1.
+ II. P RELIMINARY W ORK The orange circles represent the nodes observed at the
+ output yt . Through multiple layers of dilated convolutions, the
+ In this study, two key methods are employed: TCN [40]
+ model effectively captures long-range sequence features.
+and an attention mechanism. Both approaches have proven
+effective in time series analysis.
+ B. Attention Mechanism
+ The design of the attention mechanism is inspired by the
+A. TCN Model cognitive abilities of humans, where information processing
+ The TCN model, introduced by Bai et al. [48], is an is not uniform across all data. Humans identify key informaeffective method for capturing temporal data features using tion and allocate additional cognitive resources to processing
+convolutional networks. The TCN consists of three key com- and understanding crucial aspects. Similarly, the attention
+ponents: causal convolutions [49], dilated convolutions [50], mechanism extracts significant features and allocates resources
+and residual connections [51]. efficiently [52].
+ Causal convolution [49] prevents the leakage of future The canonical attention mechanism proposed by
+information by introducing an appropriate offset during the Vaswani et al. [26] is used to overcome the limitations
+convolution operation. This ensures that the output yt depends of traditional RNN methods and capture information from
+only on the current and past data. The corresponding formula all positions in long sequence. The principle of obtaining an
+is given as follows: attention score is given by
+ QK T
+  
+ K −1
+ X Attention(Q, K , V ) = softmax √ V (4)
+ yt = wk · xt−k (1) dk
+ k=0
+ where dk is a scaling factor. Q, K , and V represent the query,
+where xt−k represents the data at time t − k, K denotes the key, and value, respectively, derived from the input data to
+kernel size, and wk is the convolution kernel weight. calculate attention scores.
+3518513 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ B. Model Overview
+ The HSC model utilizes an encoder–decoder architecture,
+ as illustrated in Fig. 3, and is a reconstruction-based neural
+ network designed for anomaly detection in MTS.
+ Encoder: The encoder processes the input data through a
+ sliding window method and employs a TCN model to capture
+ temporal dependencies in MTS. After applying the TCN,
+ the data are transformed into a latent space through linear
+ mapping. The distribution in latent space is controlled by a
+ modified one-class classification loss function to better handle
+ latent representations.
+ Decoder: The primary function of the decoder is to reconstruct the input data from the latent representation and compute
+ the reconstruction loss. The core of the decoder network is
+ a self-attention mechanism, which differs from the canonical
+Fig. 2. Overall structure of the multihead attention mechanism.
+ version by incorporating the GAT [47] model. This incorporation enhances the flexibility of attention score calculation.
+ To enhance model expressivity, the multihead attention
+ The final loss score, which combines the reconstruction loss
+mechanism is often used. This mechanism is a fundamental
+ and the one-class classification loss, effectively evaluates data
+and pivotal module within the Transformer model. It runs
+ abnormalities.
+the attention mechanism in parallel multiple times, applying
+different linear transformations to the original Q, K , and V .
+This approach captures various aspects of the input data, C. Encoder and One-Class Classification Loss
+enriching the representation of the input. The concept can be In the encoder module, two primary tasks are performed.
+formulated as follows: The first task is to set the center of the data in the latent
+ space. In this study, the method from the COUTA [53] model
+ MultiHead(Q, K , V ) = Concat(head1 , . . . , headh )W O
+   is adopted, where the initial encoder output point is set as the
+ headi = Attention QWiQ , K WiK , V WiV data center.
+ The second task involves finding a latent space representa-
+ (5)
+ tion for the decoder input, similar to standard encoder–decoder
+where WiQ , WiK , WiV are the projection matrices for the Q, K , models. To better capture temporal features, the encoder of
+and V , respectively, for each attention head i.The operation of the HSC model employs both TCN and multilayer percepmultihead attention is illustrated in Fig. 2. tron (MLP). As represented by (6), these two modules are
+ used to derive the latent space representation
+ III. P ROPOSED M ETHOD
+ (K ) (K −1) (1)
+ h i
+A. Problem Statement f encoder = f TCN ◦ f TCN ◦ · · · ◦ f TCN (X) WMLP1 + bMLP1
+ In the MTS anomaly detection problem, the input data are (6)
+denoted by Xinput = (xin1 , xin2 , xin3 , . . . , xinT ) ∈ RT ×N , where
+T represents the number of timestamps in the input time where K represents the number of TCN layers used in the
+series and N equals the number of features. The data at each encoder, WMLP1 and bMLP1 are the parameters of the MLP.
+timestamp t are represented as xint = (xt1 , xt2 , xt3 , . . . , xtN ) ∈ To fully utilize the latent representation, HSC adopts a
+R N , where N = 1 for univariate time series and N ≥ 1 for method similar to SVDD [12], projecting normal data into
+MTS. The primary aim of MTS anomaly detection is to the hypersphere’s interior. The loss function for this task is
+identify unusual deviations within the data. given by
+ Following the data processing method described in previous Lossorig = Ex∼X [∥ f (x) − c ∥2 ] (7)
+works [23], [31], [40], [42], continuous data segments X =
+(x1 , x2 , x3 , . . . , x L ) ∈ R L×W ×N are used as inputs for HSC. where f (·) the denotes the feature extraction process, and c
+These segments are obtained by applying a sliding window represents the center of the hypersphere. Optimizing this loss
+method, characterized by a window size W , a stride S, and function ensures normal data maps inside the hypersphere,
+the number of segments L = (floor(T − W )/S) + 1, where while anomalies are mapped outside.
+floor(·) denotes rounding down. However, using (7) as the loss function can central-
+ The output is y = (y1 , y2 , y3 , . . . , yT ) ∈ RT , yt ∈ {0, 1}. ize normal data near the hypersphere’s center, reducing its
+This vector represents the anomaly detection results at each radius and causing similar representations. This diminishes
+timestamp. Specifically, an output value of 1 indicates an unique features and compromises the effectiveness of TCN.
+anomaly at time t, while a value of 0 signifies that no anomaly Consequently, the downstream decoder struggles to extract
+is detected. reliable features for reconstruction. An optimized loss func-
+ The variables used in our proposed method are summarized tion, as shown in (8), addresses this by projecting data onto the
+in Nomenclature. hypersphere’s surface, preserving more features and alleviating
+LI et al.: ONE-CLASS CLASSIFICATION CONSTRAINT IN RECONSTRUCTION NETWORKS 3518513
+
+Fig. 3. Overall structure of HSC.
+
+ original input is to the reconstructed output. The architecture
+ of the decoder consists of two fundamental components: a
+ self-attention mechanism and linear mapping.
+ To some extent, self-attention can be viewed as a self-loop
+ in the GAT model. The key difference between these two
+ mechanisms lies in how they compute the attention score.
+ As illustrated in (4), the canonical attention uses the dot
+ product to compute the attention score. In GAT, the attention
+ score is computed using a feedforward neural network. This
+ method of computing the attention score is known as the
+ “additive attention mechanism” also referred to as “Bahdanau
+ attention” [54]. Compared with the canonical attention mechanism, this method provides greater flexibility and the ability
+ to learn complex patterns.
+ In the HSC model, the attention score is calculated as
+ follows:
+ α = σ (α att
+ T
+ (wz)) (9)
+Fig. 4. Comparison of the effects of original one-class classification loss
+function and optimized loss function in HSC. (a) Effect of the original loss where w ∈ R V ×W
+ represents a transformation matrix. The actifunction. (b) Effect of the optimized loss function in HSC.
+ vation function σ (·) computes α, the attention score α att ∈ RV
+ represents the parameters of the feedforward network used to
+the issue of feature disappearance calculate the attention score. These parameters are updated
+ iteratively during network training.
+ Z = f encoder (X), Z = (z1 , z2 , . . . , z N )
+ After obtaining the attention score, the output is calculated
+ Lossone-class = Ez∼Z (||z − c|| − R)2 (8) using a layer of linear transformation, with parameters deterwhere R is the hypersphere radius, zi ∈ R W ×1
+ represents the mined by wout ∈ R N ×V . The output denoted as z′ ∈ R N is
+latent representation after the encoder module. calculated according to the following equation:
+ The effects of the original one-class loss function and the z′ = σ [wout (α · wz)]. (10)
+optimized loss function are illustrated in Fig. 4. Fig. 4(a)
+shows the effect of applying the original loss function to the HSC also incorporates a multihead attention mechanism.
+latent representation, where normal data tend to centralize The multihead attention score is computed as follows:
+around the hypersphere’s center during training. In contrast, exp σ α att
+   T
+ (wh z)
+ 
+Fig. 4(b) demonstrates the effect of the optimized loss function αh = P H h
+ (11)
+ k=1 exp σ α attk (w z)
+   T 
+ k
+as defined by (8), where the data are projected onto the surface
+of the hypersphere. This approach significantly preserves more where H represents the number of heads. The SoftMax operfeatures of the data by ensuring that the unique characteristics ation is applied after calculating the attention score for each
+of data point are maintained on the hypersphere’s surface. head. In the GAT model, SoftMax operation is applied across
+ adjacent nodes. However, self-attention inherently applies a
+D. Decoder and Reconstruction Loss self-loop graph, where adjacent nodes essentially refer to
+ In decoder, the primary task is to reconstruct data by themselves. This can result in all output attention scores
+using the previously obtained latent representation. The extent converging to 1. For this situation to be avoided, the SoftMax
+of reconstruction is determined by comparing how similar the operation is applied across each head rather than each node.
+3518513 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ The final output of the self-attention module is computed TABLE I
+based on the calculated scores, following the same approach as D ETAILS OF THE DATASETS
+canonical attention. The output of each head is concatenated
+and linearly transformed using Wout ∈ R N ×(V ·H ) . After passing
+through an activation function σ (·) and an MLP transformation
+which is defined by WMLP2 and bMLP2 , the final output is
+    
+ H
+ x̂ = WMLP2 σ Wout || αh · wz + bMLP2 . (12)
+ h=1
+
+ The reconstructed data bX = (b x2 ,b
+ x1 ,b xT ) ∈ RT ×N
+ x3 , . . . ,b
+are obtained. By comparing the reconstructed output with the
+input data using MSE, the reconstruction loss can be computed
+as follows: dataset [3], Server Machine dataset (SMD) [1], and the Peni-
+ T N
+ 1 XX n 2 cillin Simulation dataset [57].
+ Lossrecon = x̂ t − xtn . (13) The first three datasets are real-world datasets commonly
+ T × N t=1 n=1
+ utilized in the field of anomaly detection for MTS. These
+ datasets were chosen as standard test cases in this research
+E. Anomaly Detection because they cover a wide range of characteristic scenarios,
+ In HSC, the final error score is calculated by combining the ensuring the generalizability of HSC.
+reconstruction loss and the one-class classification loss. A ratio The penicillin simulation dataset, generated based on the
+hyperparameter, denoted as β ∈ [0, 1], is used to calculate the simulation platform described in [57], includes 100 batches of
+final loss score, as shown in the following equation: normal data used as training data and six batches of test data.
+ The test data were designed cover different fault causes, fault
+ x − x|| + β × (|| f encoder (x) − c|| − R)2 .
+ Score = ||b (14)
+ variables, and fault time zones to achieve a comprehensive
+ Anomalies are determined based on the final loss score. validation of the proposed method. The characteristics of the
+If the score exceeds a predetermined threshold, the associated four datasets are presented in Table I.
+timestamp is classified as an anomaly. Most anomaly detection 2) Evaluation Metrics: In the experiments, the precimethods adopt a point adjustment (PA) strategy to refine sion (P), recall (R), F1, and AUC score were adopted as
+their outputs and determine a suitable threshold. However, metrics to evaluate the performance of the proposed model.
+the details of the PA strategy and threshold-setting method The formulas for these metrics are given by the following
+vary depending on the application scenario. For instance, the equations:
+method in [55] uses the PA%K method to adjust results for TP
+different anomaly types. In [1] and [42], the threshold is Precision = (15)
+ TP + FP
+dynamically adjusted according to the anomaly scores. TP
+ This work primarily emphasizes the network framework Recall = (16)
+ TP + FN
+design for efficient MTSs anomaly detection. Hence, HSC Precision × Recall
+follows prior works [21], [34], [40], [53], adjusting its results F1 = 2 × (17)
+ Precision + Recall
+and performs a grid search over potential thresholds, selecting Z 1  
+ TP FP
+the one yielding the best F1 scores. AUC = d . (18)
+ 0 TP + FN FP + TN
+ IV. E XPERIMENTS In the task of anomaly detection, TP refers to correctly
+ The effectiveness of the proposed method was validated flagged anomalies. FP denotes normal data that are incorrectly
+through several experiments. First, three public datasets for classified as anomalies, and FN represents actual anomalies
+MTS anomaly detection were used as standard test cases that are mistakenly identified as normal data. In MTS anomaly
+to demonstrate the method’s capabilities and compare the detection, precision indicates the proportion of correctly idenresults with other methods. Second, ablation studies assessed tified anomalies among all flagged anomalies, while recall
+the impact of applying one-class constraints in the latent represents the proportion of detected anomalies among all
+space and evaluated the modified attention mechanism in the actual anomalies. The F1 score combines precision and recall,
+decoder. Third, parameter sensitivity analysis was conducted providing a balanced measurement. AUC, which measures the
+to thoroughly explore the characteristics of HSC. Finally, area under the ROC curve, provides an aggregate performance
+a simulated penicillin dataset was used as an application test measure across all classification thresholds.
+case to perform a comprehensive analysis of performance
+under various anomaly scenarios. B. Standard Test Cases
+ 1) Benchmark Comparison:
+A. Datasets and Metrics a) Baseline models: The efficacy of the proposed method
+ 1) Datasets: Four datasets were employed to evaluate the was compared with several state-of-the-art methods. The
+effectiveness of the proposed method: Secure Water Treatment proposed method incorporates techniques from one-class clas-
+(SWaT) [56], the Mars Science Laboratory Rover (MSL) sification, self-attention, autoencoder, and the GAT model.
+LI et al.: ONE-CLASS CLASSIFICATION CONSTRAINT IN RECONSTRUCTION NETWORKS 3518513
+
+ TABLE II
+ P ERFORMANCE C OMPARISON OF HSC W ITH OTHER BASELINE M ETHODS ON T HREE P UBLIC DATASETS
+
+Therefore, eight methods were selected as benchmarks:
+COUTA [53], TranAD [33], GReLeN [40], GDN [23], MTAD-
+GAT [42], CAE-AD [34], DeepSVDD [58], and anomaly
+transformer [9]. Among these methods, Deep SVDD [58]
+and COUTA [53] utilize one-class classification for anomaly
+detection. TranAD [33] and anomaly transformer [9] employ
+transformer architectures to extract features for anomaly
+detection. CAE-AD [34] uses an autoencoder framework
+for reconstruction-based anomaly detection. Finally, GRe-
+LeN [40], GDN [23], and MTAD-GAT [42] leverage graph
+neural networks to achieve high-efficiency anomaly detection. Fig. 5. Log ratio of anomaly-to-normal scores for models.
+ b) Results and analysis: The results presented in Table II
+are derived from ten independent repeated experiments to
+ensure the robustness and reliability of the findings. For space distribution as effectively as HSC. Methods such as
+each method, we report the average values along with the GDN, GReLeN, and MTAD-GAT use graph neural networks
+corresponding standard deviations. to capture inter-variable relationships. However, their focus
+ The HSC model demonstrates outstanding performance on modeling normal data makes it harder to detect subacross all four metrics. Specifically, it achieves the highest tle anomalies. TranAD and Anomaly Transformer, based on
+F1 score on all datasets, with improvements of 1.1%, 6.3%, transformer architectures, are more complex and prone to overand 1.4% on the SMD, SWaT, and MSL datasets, respectively, fitting, especially when training data are limited, as seen in the
+compared to the second-best method, highlighting its superior SMD and MSL datasets, resulting in suboptimal performance.
+anomaly detection capability. In addition to F1 scores, the The proposed HSC model is capable of capturing both tem-
+HSC model also achieves the highest AUC scores on all poral dependencies and intervariable relationships. By applythree datasets, with increases of 1.7%, 1.6%, and 2%. The ing a HSC in the latent space, HSC effectively differentiates
+model also shows strong competitiveness in terms of precision between normal and anomalous data, enhancing its ability
+and recall. Moreover, across ten repeated experiments, the to detect subtle anomalies that may be overlooked by other
+standard deviation is consistently below 0.04, demonstrating models. Additionally, compared to purely reconstruction-based
+the robustness and stability of the HSC model. Although recall or prediction-based models, HSC benefits from the integration
+and precision did not achieve the highest scores across all of one-class classification loss and reconstruction loss, which
+datasets, they are still highly competitive. contributes to its robustness.
+ Among the compared methods, DeepSVDD underper- c) Anomaly distinction: To validate the effectiveness
+formed, primarily because it is not designed for MTS anomaly of HSC in enhancing the distinction between normal and
+detection and lacks the ability to capture temporal depen- anomalous data, we first calculate the average score of normal
+dencies, focusing only on inter-variable relationships. This data Sn and anomalous data Sa ; then compute the ratio of
+limitation impacts its effectiveness in MTS anomaly detection. these two scores. The formula for this calculation is given
+COUTA, being a purely one-class classification-based method, by log(Sa /Sn ), The results, as shown in Fig. 5, demonstrate
+lacks a sufficient understanding of data distribution com- that HSC achieves the highest distinction between normal and
+pared to reconstruction-based models, resulting in relatively anomalous data across all three datasets.
+weaker performance. CAE-AD, while using an autoencoder d) Case study: To further demonstrate the effectiveness
+and contrastive learning, does not fully utilize the latent of latent space constraints in the HSC model, the machine-1-1
+3518513 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ Fig. 7. Comparison of F1 scores between having and not having latent space
+ restrictions across the three public datasets.
+
+ Fig. 8. Comparison of F1-score between the using GAT, Transformer as the
+ decoder of HSC, and original HSC decoder.
+
+ constraint and assessing its effects on three datasets. The
+ results, using F1 as an evaluation metric, are shown in Fig. 7.
+ After removing the constraint in the latent space, the overall
+ average F1 score decreased by 6.23%. The smallest decrease
+ was observed on the SMD dataset, with a 3.9% reduction in
+ F1 score. The most significant decrease, 9.5%, was observed
+ on the SWaT dataset. These results indicate that applying constraints within the latent space significantly enhances anomaly
+ detection capability.
+Fig. 6. Case study. (a) Visualization of four dimensions from the machine-1-1 In the HSC model’s decoder, self-attention was employed
+dataset, where the black line represents the ground truth, the red line represents for feature extraction. The attention mechanisms of both GAT
+the model’s predictions, and the five red-shaded areas indicate the time points
+when anomalies occurred. (b) Anomaly scores with latent space constraints
+ and the transformer were then integrated into the framework.
+applied. (c) Anomaly scores without latent space constraints. The effectiveness of combining these two mechanisms was
+ assessed in this study. The self-attention mechanism in the
+ decoder was replaced by the attention mechanisms from the
+dataset from the SMD benchmark is selected as a case transformer model and GAT. As shown in Fig. 8, the HSC
+study. Specific dimensions of the reconstruction results are model achieved the best performance across the three datasets.
+visualized, and anomaly scores with and without latent space When the decoder’s self-attention module was substituted with
+constraints are compared, as illustrated in Fig. 6. The model GAT, the average F1 score decreased by approximately 3%.
+in Fig. 6(a) exhibits robust reconstruction capability for normal When the transformer model was used, the F1 score decreased
+data. The results in Fig. 6(b) and (c) indicate that the inclusion by 5.6%. The most significant improvement achieved using
+of latent space constraints significantly improves the model’s the HSC model was on the SMD dataset. When GAT and the
+ability to distinguish between normal and anomalous data. transformer model were used, the F1 scores were only 88.2%
+Notably, in the absence of the HSC, as shown in Fig. 6(c), and 88.6%, respectively; by contrast, the F1 score of the HSC
+increased background noise in the anomaly scores is observed, model was 95.1%. These results demonstrate that combining
+and high anomaly scores occur after the anomaly ends. These GAT and transformer architectures can effectively improve the
+findings highlight the importance of latent space constraints model’s capabilities.
+in mitigating noise interference and enhancing the accuracy 3) Hyperparameter Sensitivity Analysis: This section anaof anomaly detection. lyzes the sensitivity of the proposed method to two crucial
+ 2) Ablation Test: The impact of constraining the distribu- hyperparameters: the hypersphere radius R and the ratio
+tion of representations in the latent space needs to be assessed. hyperparameter β. The analysis is performed on the SWaT,
+Comparative experiments were conducted by removing this MSL (D-14), and SMD (machine-1-1) datasets.
+LI et al.: ONE-CLASS CLASSIFICATION CONSTRAINT IN RECONSTRUCTION NETWORKS 3518513
+
+ TABLE III
+ I NFORMATION ON S IX A BNORMAL S ETTINGS
+ IN P ENICILLIN S IMULATION P ROCESS
+
+Fig. 9. Reconstruction loss on different datasets (SWaT, MSL, and SMD)
+with varying R values.
+
+ of balancing the one-class loss and reconstruction loss for the
+Fig. 10. AUC score on different datasets (SWaT, MSL, and SMD) with model. Setting β between 0.5 and 1 is a reasonable range.
+varying β values.
+ C. Application Test Case
+
+ a) Hypersphere radius R: Our experiments reveal that The capabilities of the HSC model were also evaluated
+the hypersphere radius impacts feature retention and data in this study. In particular, the complex process of penicillin
+reconstruction. By varying R from 0 to 3 in increments of 0.1, fermentation was introduced to assess the performance of the
+we assessed the reconstruction loss on each dataset, as shown HSC model under various anomalous conditions. This process
+in Fig. 9. represents a typical dynamic and multistage batch production
+ process with long operational cycles and relatively complex
+ 1) SWaT: Small radius values cause significant fluctuations
+ reactions. The penicillin fermentation simulation platform
+ in reconstruction loss. As R increases, the loss stabi-
+ “Pensim,” developed by Professor Cinar’s research group [57].
+ lizes, indicating that a larger radius ensures consistent
+ Pensim simulates growth variations across variables under
+ reconstruction performance.
+ diverse production conditions, offering a standardized platform
+ 2) MSL: The reconstruction loss consistently decreases
+ for detecting anomalies in multivariate time-series data.
+ with an increasing radius, suggesting that a larger R
+ In this simulation platform, the duration of the entire ferenhances the model’s reconstruction ability.
+ mentation reaction was set to 400 h, with data sampled every
+ 3) SMD: Although some fluctuations are observed, the
+ hour, incorporating 16 variables. The training dataset included
+ reconstruction loss generally decreases as the radius
+ 100 instances of normal fermentation operations. Pensim
+ increases, confirming that a larger R reduces reconstrucallows for the introduction of faults in three variables: aeration
+ tion errors
+ rate, agitation power, and substrate feed rate. These faults are
+ In summary, a larger hypersphere radius R helps maintain categorized into step and ramp types, and their magnitude and
+consistent and improved reconstruction performance across timing can be artificially set. During simulation, six different
+different datasets. sets of anomalous variable data, with specific conditions for
+ b) Ratio hyperparameter β: To verify the impact of β on anomaly timing and types, were generated to validate the
+the results, β was varied from 0 to 2 in increments of 0.1. The effectiveness of the HSC model, as shown in Table III.
+AUC score under different β conditions are shown in Fig. 10. Comparisons were also performed with COUTA [53],
+ 1) SWaT: The AUC score increases as β approaches 1, TranAD [33], GReLeN [40], GDN [23], MTAD-GAT [42], and
+ after which it starts to decline. This indicates that CAE-AD [34], DeepSVDD [58], and anomaly transformer [9].
+ a balanced emphasis on both losses leads to optimal The F1 score, precision, recall, and AUC score were used
+ anomaly detection performance. as metrics. Each experiment was repeated ten times with
+ 2) MSL: The AUC score reaches its maximum at β val- different random seeds. The comparative results are displayed
+ ues around 0.5. Beyond this point, the performance in Table IV.
+ decreases. When β is greater than 1, the AUC score Experimental results indicate that for the first two types of
+ remains relatively stable. anomaly patterns, all models were capable of effectively locat-
+ 3) SMD: The AUC score peaks at β values around 0.6, ing the occurrence of faults. However, the TranAD, GReLeN,
+ following this, the AUC score decreases similar to MSL, GDN, DeepSVDD, anomaly transformer, and MTAD-GAT
+ though the decline is more gradual. models experienced false positives in the first four rela-
+ In summary, excessively large or small β values nega- tively straightforward test datasets, failing to achieve 100%
+tively impact the results. This demonstrates the importance precision. By contrast, the COUTA, CAE-AD, and HSC
+3518513 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE IV
+ P ERFORMANCE C OMPARISON OF HSC W ITH OTHER BASELINE M ETHODS ON S IX P ENISM DATASETS
+
+models performed flawlessly on the first four datasets, captured
+anomalies with precision, and achieved an F1 score of 100%.
+ In the last two datasets, where anomalies were subtler and
+posed greater detection challenges. The HSC model demonstrated its superior anomaly detection capability. Specifically,
+HSC achieved the highest F1 scores on both the Penism5
+and Penism6 datasets, with scores of 98.9% and 98.5%,
+respectively. The AUC scores for HSC were also the highest: 87.1% on Penism5 and 85.3% on Penism6, representing
+improvements of 5.2% and 8.7% over the next best methods,
+respectively. Fig. 11. Log ratio of anomaly to normal data scores across models on six
+ Penism test datasets.
+ a) Anomaly distinction: In Penism dataset, to demonstrate the distinction between normal and anomalous data
+for the HSC model, the same calculation was performed for indicate an inability to effectively discriminate between normal
+different models on various datasets. The anomaly distinction and anomalous data.
+score, log(Sa /Sn ), is presented in Fig. 11. On all six test
+datasets, the HSC model consistently achieved the highest V. D ISCUSSION
+scores. On the first four datasets, all models could effectively In this section, the discussion focuses on the potential chaldistinguish between normal and anomalous patterns. However, lenges the HSC model may encounter in real-world industrial
+the models’ capabilities diverged on the Penism5 and Penism6 environments, particularly regarding its scalability and robustdatasets. In particular, GDN, CAE-AD, GReLeN, DeepSVDD, ness to noise. In addition, the section provides an analysis of
+and anomaly transformer, exhibited negative scores which potential future research directions for the HSC model.
+LI et al.: ONE-CLASS CLASSIFICATION CONSTRAINT IN RECONSTRUCTION NETWORKS 3518513
+
+ degrades in environments characterized by high levels of noise
+ interference.
+
+ C. Future Research Directions
+ The HSC model has demonstrated strong capabilities in
+ detecting MTS anomalies. However, to enhance its effectiveness in real-world production settings and to reduce losses,
+ there remains room for improvement.
+ First, although the HSC model exhibits strong performance
+ in various experiments, its reconstruction effectiveness is
+ sensitive to the radius of the hypersphere. Different datasets
+ require distinct hypersphere radii, and currently, there is
+ no effective method to determine the optimal radius. This
+Fig. 12. AUC variation of the SWaT dataset and MSL D-14 dataset under necessitates manual tuning for each dataset based on specific
+different noise levels.
+ application scenarios. We infer that this sensitivity may stem
+ because imposing constraints in the latent space inevitably
+A. Scalability leads to the loss of certain important features. Therefore, future
+ research could focus on exploring ways to limit the distribution
+ The primary computational bottleneck in the HSC model
+ of data in the latent space while minimizing feature loss,
+stems from two factors: the 1-D convolution operation in the
+ in order to reduce the model’s sensitivity to hyperparameters.
+TCN and the self-loop attention mechanism.
+ Second, current MTS anomaly detection primarily focuses
+ The time complexity of the TCN’s 1-D convolution is
+ on identifying the moment when an anomaly occurs, providing
+O(W · k · N ), where W represents the sliding window length,
+ early warnings. However, to more effectively reduce losses,
+k is the kernel size, and N is the feature dimension. Given
+ early warnings alone are insufficient; root cause analysis is
+its linear complexity, the model exhibits good scalability for
+ also required. Through root cause analysis, the specific cause
+handling long sequence data.
+ and location of the anomaly can be quickly identified, enabling
+ For the self-loop attention mechanism, the time complexity
+ timely intervention and minimizing potential losses. Therefore,
+of embedding transformation is O(W · N 2 ). The complexity
+ future research could further explore how to integrate anomaly
+of computing attention scores is O(W · N ), while applying
+ detection with root cause analysis, enhancing the practical
+attention weights has a complexity of O(W · N 2 ). Given that
+ utility and efficiency of handling anomalies.
+the window size can be adjusted, the complexity is primarily
+constrained by the number of variables N . VI. C ONCLUSION
+ Overall, the computational bottleneck in the HSC model is
+ This article proposes a new network architecture, termed
+largely determined by the number of variables in the data.
+ HSC, designed to address the challenge of anomaly detection
+Nevertheless, it is particularly well suited for capturing global
+ in MTS. First, HSC combines the one-class classification
+relationships within the data, which are critical for MTS
+ with reconstruction-based deep learning method to accentuate
+anomaly detection tasks.
+ the distinctions between normal and anomalous data. Second,
+ HSC leverages a self-attention mechanism, integrating the
+B. Robustness to Noise Transformer and GAT, to enhance input data reconstruction.
+ To assess the robustness of the HSC model in industrial In the end, by combining the one-class classification loss and
+scenarios, robustness experiments were performed on the reconstruction loss, HSC computes the final loss score, which
+SWaT and MSL D-14 datasets. Gaussian noise with varying serves as a basis for anomaly detection.
+intensities was introduced to both datasets, where the noise Extensive experiments conducted on multiple datasets
+intensity was controlled by the standard deviation (std) of the demonstrate that the HSC model offers significant advantages
+Gaussian distribution. The std ranged from 0 to 1, increasing in over baseline models, particularly in its ability to enhance
+steps of 0.1. Each experiment was repeated five times, and the the distinction between normal and anomalous data, thus
+average AUC scores were calculated for analysis. The results improving anomaly detection performance. The effectiveare shown in Fig. 12. ness of the model’s components has been validated through
+ As depicted in Fig. 12, when the noise level is low ablation studies, which underscore the contributions of each
+(std ≤ 0.1), the model’s performance remains stable, with module to the overall performance. Furthermore, noise exper-
+AUC scores showing minimal variation, demonstrating strong iments demonstrate the model’s robustness, indicating its
+robustness. In moderate noise scenarios (0.1 < std ≤ 0.4), capability to perform reliably even in complex and noisy
+slight fluctuations are observed; however, the overall per- environments.
+formance remains satisfactory. However, under high noise Future research may focus on developing more efficient
+conditions (std > 0.4), the AUC scores drop significantly, approaches for constraining data distribution within the latent
+indicating that the model is sensitive to high levels of noise. space, with an emphasis on minimizing feature loss and reduc-
+ In conclusion, the HSC model demonstrates a certain ing the model’s sensitivity to hyperparameters. Additionally,
+level of robustness to noise; however, its performance incorporating root cause analysis into the framework could
+3518513 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+enable the rapid identification of anomaly causes and locations, [20] Y. Zheng et al., “Graph spatiotemporal process for multivariate time
+further enhancing the model’s ability to provide early warnings series anomaly detection with missing values,” Inf. Fusion, vol. 106,
+ Jun. 2024, Art. no. 102255, doi: 10.1016/j.inffus.2024.102255.
+and support timely intervention. [21] C. Yin, S. Zhang, J. Wang, and N. N. Xiong, “Anomaly detection based
+ on convolutional recurrent autoencoder for IoT time series,” IEEE Trans.
+ R EFERENCES Syst. Man, Cybern. Syst., vol. 52, no. 1, pp. 112–122, Jan. 2022, doi:
+ [1] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly 10.1109/TSMC.2020.2968516.
+ detection for multivariate time series through stochastic recurrent neural [22] S. Hochreiter and J. Schmidhuber, “Long short-term memory,”
+ network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discovery Data Neural Comput., vol. 9, no. 8, pp. 1735–1780, 1997, doi:
+ Mining, Anchorage, AK, USA, Jul. 2019, pp. 2828–2837. 10.1162/neco.1997.9.8.1735.
+ [2] J. Yu, Y. Song, D. Tang, D. Han, and J. Dai, “Telemetry data-based [23] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+ spacecraft anomaly detection with spatial–temporal generative adversar- in multivariate time series,” in Proc. AAAI Conf. Artif. Intell., 2021,
+ ial networks,” IEEE Trans. Instrum. Meas., vol. 70, pp. 1–9, 2021, doi: pp. 4027–4035.
+ 10.1109/TIM.2021.3073442. [24] Z. Chen, D. Chen, X. Zhang, Z. Yuan, and X. Cheng, “Learning
+ [3] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and graph structures with transformer for multivariate time-series anomaly
+ T. Soderstrom, “Detecting spacecraft anomalies using LSTMs and non- detection in IoT,” IEEE Internet Things J., vol. 9, no. 12, pp. 9179–9189,
+ parametric dynamic thresholding,” in Proc. 24th ACM SIGKDD Int. Jun. 2022, doi: 10.1109/JIOT.2021.3100509.
+ Conf. Knowl. Discovery Data Mining, Jul. 2018, pp. 387–395. [25] L.-R. Yu, Q.-H. Lu, and Y. Xue, “DTAAD: Dual TCN-attention
+ [4] H. Liang, L. Song, J. Du, X. Li, and L. Guo, “Consistent anomaly detec- networks for anomaly detection in multivariate time series data,”
+ tion and localization of multivariate time series via cross-correlation Knowl.-Based Syst., vol. 295, Jul. 2024, Art. no. 111849, doi:
+ graph-based encoder–decoder GAN,” IEEE Trans. Instrum. Meas., 10.1016/j.knosys.2024.111849.
+ vol. 71, pp. 1–10, 2022, doi: 10.1109/TIM.2021.3139696. [26] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Int. Conf.
+ [5] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga, Neural Inf. Process. Syst., vol. 30, Long Beach, CA, USA, Jun. 2017,
+ “USAD: UnSupervised anomaly detection on multivariate time series,” pp. 5998–6008.
+ in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, [27] Y. Bai, J. Wang, X. Zhang, X. Miao, and Y. Lin, “CrossFuN: Multi-
+ Virtual Event, CA, USA, Aug. 2020, pp. 3395–3404. view joint cross-fusion network for time-series anomaly detection,”
+ [6] Y. Yang, H. Zhang, and Y. Li, “Long-distance pipeline safety early IEEE Trans. Instrum. Meas., vol. 73, 2024, Art. no. 10254685, doi:
+ warning: A distributed optical fiber sensing semi-supervised learning 10.1109/TIM.2024.10254685.
+ method,” IEEE Sensors J., vol. 21, no. 17, pp. 19453–19461, Sep. 2021, [28] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsudoi: 10.1109/JSEN.2021.3087537. pervised anomaly detection,” in Proc. Int. Conf. Learn. Represent.,
+ [7] C. Zhang et al., “A deep neural net-work for unsupervised Vancouver, BC, Canada, May 2018, pp. 1–19.
+ anomaly detection and diagnosis in multivariate time series data,” [29] J. Wang, S. Shao, Y. Bai, J. Deng, and Y. Lin, “Multiscale
+ in Proc. 33rd AAAI Conf. Artif. Intell., Honolulu, HI, USA, 2019, wavelet graph AutoEncoder for multivariate time-series anomaly detecpp. 1409–1416. tion,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–11, 2023, doi:
+ [8] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: Dual 10.1109/TIM.2022.3223142.
+ attention contrastive representation learning for time series anomaly [30] X. Huang, F. Zhang, R. Wang, X. Lin, H. Liu, and H. Fan, “KalmanAE:
+ detection,” in Proc. 29th ACM SIGKDD Conf. Knowl. Discovery Data Deep embedding optimized Kalman filter for time series anomaly
+ Mining, Long Beach, CA, USA, Aug. 2023, pp. 3033–3045. detection,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–11, 2023, doi:
+ [9] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer: Time 10.1109/TIM.2023.3329098.
+ series anomaly detection with association discrepancy,” in Proc. Int. [31] D. Li, D. Chen, B. Jin, L. Shi, J. Goh, and S.-K. Ng, “MAD-GAN:
+ Conf. Learn. Represent., Vienna, Austria, 2022, pp. 1–20. Multivariate anomaly detection for time series data with generative
+[10] B. Schölkopf, R. C. Williamson, A. Smola, J. Shawe-Taylor, and J. Platt, adversarial networks,” in Proc. Int. Conf. Artif. Neural Netw., Munich,
+ “Support vector method for novelty detection,” in Proc. 12th Int. Conf. Germany, Jan. 2019, pp. 703–716.
+ Neural Inf. Process. Syst., vol. 12, Denver, CO, USA, Nov. 1999, [32] I. Goodfellow et al., “Generative adversarial networks,” Commun. ACM,
+ pp. 582–588. vol. 63, no. 11, pp. 139–144, Oct. 2020, doi: 10.1145/3422622.
+[11] J. Ma and S. Perkins, “Time-series novelty detection using one-class [33] S. Tuli, G. Casale, and N. R. Jennings, “TranAD: Deep transformer
+ support vector machines,” in Proc. Int. Joint Conf. Neural Netw., 2003, networks for anomaly detection in multivariate time series data,” Proc.
+ pp. 1741–1745. VLDB Endowment, vol. 15, no. 6, pp. 1201–1214, Feb. 2022, doi:
+[12] D. M. J. Tax and R. P. W. Duin, “Support vector data descrip- 10.14778/3514061.3514067.
+ tion,” Mach. Learn., vol. 54, no. 1, pp. 45–66, 2004, doi: [34] H. Zhou, K. Yu, X. Zhang, G. Wu, and A. Yazidi, “Contrastive
+ 10.1023/B:MACH.0000008084.60811.49. autoencoder for anomaly detection in multivariate time series,” Inf. Sci.,
+[13] J. MacQueen, “Some methods for classification and analysis of multi- vol. 610, pp. 266–280, Sep. 2022, doi: 10.1016/j.ins.2022.07.179.
+ variate observations,” in Proc. 5th Berkeley Symp. Math. Statist. Probab., [35] L. Zhang, X. Xie, K. Xiao, W. Bai, K. Liu, and P. Dong, “MANomaly:
+ 1967, pp. 281–297. Mutual adversarial networks for semi-supervised anomaly detection,”
+[14] M. Ester, H. Kriegel, J. Sander, and X. Xu, “A density-based algorithm Inf. Sci., vol. 611, pp. 65–80, Sep. 2022, doi: 10.1016/j.ins.2022.08.033.
+ for discovering clusters in large spatial databases with noise,” in Proc. [36] C. Wang et al., “Drift doesn’t matter: Dynamic decomposition with
+ 2nd Int. Conf. Knowl. Discov. Data Min., Port-land, OR, USA, Jan. 1996, diffusion reconstruction for unstable multivariate time series anomaly
+ pp. 226–231. detection,” in Proc. 37th Int. Conf. Neural Inf. Process. Syst., New
+[15] M. Shyu, S. Chen, K. Sarinnapakorn, and L. Chang, “A novel Orleans, LA, USA, 2024, p. 473.
+ anomaly detection scheme based on principal component classifier,” [37] W. Liu et al., “Unsupervised deep anomaly detection for industrial
+ in Proc. Int. Conf. Data Min, Melbourne, FL, USA, Jan. 2003, multivariate time series data,” Appl. Sci., vol. 14, no. 2, p. 774, Jan. 2024,
+ pp. 172–179. doi: 10.3390/app14020774.
+[16] S. Cohen, N. Goldshlager, L. Rokach, and B. Shapira, “Boost- [38] J. Zhou et al., “Graph neural networks: A review of methods
+ ing anomaly detection using unsupervised diverse test-time aug- and applications,” AI Open, vol. 1, pp. 57–81, Jan. 2020, doi:
+ mentation,” Inf. Sci., vol. 626, pp. 821–836, May 2023, doi: 10.1016/j.aiopen.2021.01.001.
+ 10.1016/j.ins.2023.01.081. [39] M. M. Bronstein, J. Bruna, Y. LeCun, A. Szlam, and P. Vandergheynst,
+[17] S. Lloyd, “Least squares quantization in PCM,” IEEE Trans. “Geometric deep learning: Going beyond Euclidean data,” IEEE
+ Inf. Theory, vol. IT-28, no. 2, pp. 129–137, Mar. 1982, doi: Signal Process. Mag., vol. 34, no. 4, pp. 18–42, Jul. 2017, doi:
+ 10.1109/TIT.1982.1056489. 10.1109/MSP.2017.2693418.
+[18] N. V. Chawla, K. W. Bowyer, L. O. Hall, and W. P. Kegelmeyer, [40] W. Zhang, C. Zhang, and F. Tsung, “GRELEN: Multivariate time series
+ “SMOTE: Synthetic minority over-sampling technique,” J. Artif. Intell. anomaly detection from the perspective of graph relational learning,”
+ Res., vol. 16, pp. 321–357, Jun. 2002, doi: 10.1613/jair.953. in Proc. 31st Int. Joint Conf. Artif. Intell., Vienna, Austria, Jul. 2022,
+[19] Z. Li et al., “Multivariate time series anomaly detection and interpreta- pp. 2390–2397.
+ tion using hierarchical inter-metric and temporal embedding,” in Proc. [41] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in
+ 27th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug. 2021, Proc. 2nd Int. Conf. Learn. Represent., Banff, AB, Canada, Apr. 2014,
+ pp. 3220–3230. pp. 1–14.
+LI et al.: ONE-CLASS CLASSIFICATION CONSTRAINT IN RECONSTRUCTION NETWORKS 3518513
+
+[42] H. Zhao et al., “Multivariate time-series anomaly detection via graph Zhenhua Yu received the B.S. degree in mechanical
+ attention network,” in Proc. IEEE Int. Conf. Data Mining (ICDM), engineering and automation and the M.S. degree
+ Nov. 2020, pp. 841–850. in mechanical engineering from Wuhan University
+[43] I. Kobyzev, S. J. Prince, and M. A. Brubaker, “Normalizing flows: of Technology, Wuhan, China, in 2018 and 2021,
+ An introduction and review of current methods,” IEEE Trans. Pattern respectively. He is currently pursuing the Ph.D.
+ Anal. Mach. Intell., vol. 43, no. 11, pp. 3964–3979, Nov. 2021, doi: degree in control science and engineering with
+ 10.1109/TPAMI.2020.2992934. East China University of Science and Technology,
+[44] G. Papamakarios, T. Pavlakou, and I. Murray, “Masked auto-regressive Shanghai, China.
+ flow for density estimation,” in Proc. 31st Int. Conf. Neural Inf. Process. His current research interests include fault diagno-
+ Syst., Long Beach, CA, USA, 2017, pp. 2335–2344. sis, process modeling, and explainable deep learning.
+[45] E. Dai and J. Chen, “Graph-augmented normalizing flows for anomaly
+ detection of multiple time series,” in Proc. Int. Conf. Learn. Represent.,
+ 2022, pp. 1–16.
+[46] Q. Zhou, S. He, H. Liu, J. Chen, and W. Meng, “Label-free multivariate
+ time series anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 36,
+ no. 7, pp. 3166–3179, Jul. 2024, doi: 10.1109/TKDE.2024.3349613.
+[47] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and
+ Y. Bengio, “Graph attention networks,” in Proc. 6th Int. Conf. Learn.
+ Represent., 2017. Qingchao Jiang (Senior Member, IEEE) received
+[48] S. Bai, J. Z. Kolter, and V. Koltun, “An empirical evaluation of generic the B.E. and Ph.D. degrees from the Department
+ convolutional and recurrent networks for sequence modeling,” 2018, of Automation, East China University of Science
+ arXiv:1803.01271. and Technology, Shanghai, China, in 2010 and 2015,
+[49] A. Waibel, T. Hanazawa, G. Hinton, K. Shikano, and K. J. Lang, respectively.
+ “Phoneme recognition using time-delay neural networks,” IEEE Trans. From March to September 2015, he had been
+ Acoust., Speech, Signal Process., vol. 37, no. 3, pp. 328–339, Mar. 1989, a Post-Doctoral Fellow with the Department
+ doi: 10.1109/29.21701. of Chemical and Materials Engineering, Univer-
+[50] F. Yu and V. Koltun, “Multi-scale context aggregation by dilated sity of Alberta, Edmonton, AB, Canada. From
+ convolutions,” presented at the Int. Conf. Learn. Represent., Apr. 2016. September 2015 to September 2016, he had been
+[51] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for a Humboldt Research Fellow with the Institute for
+ image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. Automatic Control and Complex Systems (AKS), University of Duisburg-
+ (CVPR), Jun. 2016, pp. 770–778. Essen, Duisburg, Germany. From October 2016 to May 2017, he had been a
+[52] Z. Niu, G. Zhong, and H. Yu, “A review on the attention mechanism of Visiting Research Fellow with the Department of Chemical and Biomolecular
+ deep learning,” Neurocomputing, vol. 452, pp. 48–62, Sep. 2021, doi: Engineering, Hong Kong University of Science and Technology (HKUST),
+ 10.1016/j.neucom.2021.03.091. Hong Kong, China. He is currently an Associate Professor with East China
+[53] H. Xu, Y. Wang, S. Jian, Q. Liao, Y. Wang, and G. Pang, “Calibrated University of Science and Technology. His research interests include data
+ one-class classification for unsupervised time series anomaly detec- mining and analysis, data-driven soft sensing, multivariate statistical process
+ tion,” IEEE Trans. Knowl. Data Eng., vol. 36, no. 11, pp. 5723–5736, monitoring and deep learning-based process modeling.
+ Nov. 2024, doi: 10.1109/TKDE.2024.3393996. Prof. Jiang was a recipient of the 2021 World Artificial Intelligence
+[54] D. Bahdanau, K. Cho, and Y. Bengio, “Neural machine translation Conference Youth Outstanding Paper Nomination Award. He is the Early
+ by jointly learning to align and translate,” in Proc. Int. Conf. Learn. Career Advisory Board Member of the IFAC Journal Control Engineering
+ Represent., 2015, pp. 1–15. Practice and an Associate Editor of IEEE ACCESS.
+[55] S. Kim, K. Choi, H.-S. Choi, B. Lee, and S. Yoon, “Towards a rigorous
+ evaluation of time-series anomaly detection,” in Proc. AAAI Conf. Artif.
+ Intell., Jan. 2021, pp. 7194–7201.
+[56] J. Goh, S. Adepu, K. N. Junejo, and A. Mathur, “A dataset to support
+ research in the design of secure water treatment systems,” in Proc. Crit.
+ Inf. Infrastruct. Secur., 2017, pp. 88–99.
+[57] G. Birol, C. Ündey, and A. Çinar, “A modular simulation package for fed-batch fermentation: Penicillin production,” Comput. Chem. Zhixing (Edward) Cao received the B.Eng. degree
+ Eng., vol. 26, no. 11, pp. 1553–1565, Nov. 2002, doi: 10.1016/s0098- in automation from the Department of Con-
+ 1354(02)00127-8. trol Science and Engineering, Zhejiang University,
+[58] L. Ruff et al., “Deep one-class classification,” in Proc. 35th Int. Conf. Hangzhou, China, in 2012, and the Ph.D. degree
+ Mach. Learn., vol. 80, Stockholm, Sweden, 2018, pp. 4393–4402. in chemical and biomolecular engineering from
+ Hong Kong University of Science and Technology
+ (HKUST), Hong Kong, China, in 2016.
+ He used to work with the Harvard John A. Paul-
+ Jiazhen Li received the B.S. degree in mechanson School of Engineering and Applied Sciences,
+ ical design, manufacturing, and automation from
+ Harvard University, Cambridge, MA, USA, and the
+ Shanghai Normal University, Shanghai, China,
+ School of Biological Sciences, University of Edinin 2022. She is currently pursuing the M.S. degree
+ burgh, Edinburgh, U.K., as Post-Doctoral Fellow. He is currently a Full
+ in control science and engineering with East China
+ Professor with the School of Information Science and Engineering, East China
+ University of Science and Technology, Shanghai.
+ University of Science and Technology, Shanghai, China. His research interests
+ Her current research interests include multivariate
+ include deep learning, stochastic processes, and systems biology.
+ time series anomaly detection and fault root cause
+ Dr. Cao serves as an Editorial Board Member for several prestigious
+ analysis.
+ journals. In 2021, he was awarded the Massachusetts Institute of Technology (MIT) Technology Review Innovators Under 35 Asia Pacific.

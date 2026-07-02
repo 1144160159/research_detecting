@@ -1,0 +1,144 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026                                                                            197
+
+
+
+
+   BPF-DAG: Byte-Packet-Flow Features Fusion via
+   Dynamic Attributed Graph for Reliable Encrypted
+                Traffic Classification
+        Yunxiao Shi , Student Member, IEEE, Gaolei Li , Member, IEEE, Jun Wu , Senior Member, IEEE,
+                        Jianhua Li , Senior Member, IEEE, and He Fang , Member, IEEE
+
+
+
+   Abstract—Reliable encrypted traffic classification is crucial for           privacy and ensuring anonymity [1]. Since 2019, the pro-
+fine-grained and efficient network security management, enabling               portion of encrypted web traffic has exceeded 90 percent
+accurate user behavior recognition and cybercrime forensics.                   [2]. Meanwhile, the widespread adoption of privacy-enhanced
+While AI-based methods can automatically extract subtle features
+from traffic data, existing approaches often fail to effectively               technologies like virtual private network (VPN) and The Onion
+capture and integrate features across different levels of traffic              Router (Tor) [3] is paralleled by a sharp increase in malwares
+granularity, namely the byte, packet and flow levels. Current                  and cyberattacks [4], [5], [6]. Encrypted technologies have
+graph-based methods heavily rely on manual feature engineering                 been abused by cybercriminals to conceal malicious behaviors,
+to construct global IP-based graphs, overlooking critical packet-              making it difficult to trace traffic sources and posing significant
+level temporal features and byte-level raw information. Focusing
+on only one or two levels of traffic granularity is unreliable                 challenges to cybersecurity. Encrypted traffic classification is
+and insufficient, ultimately compromising model accuracy and                   a fundamental task in the field of cybersecurity, serving as the
+robustness. To address these limitations, we propose BPF-DAG,                  basis for several tasks such as application identification [7],
+a byte-packet-flow feature fusion framework based on dynamic                   website fingerprinting [8], and malicious intrusion detection
+attributed graphs, for reliable encrypted traffic classification.              [9]. Highly accurate encrypted traffic classification enables
+To the best of our knowledge, this is the first method that
+integrates temporal packet relations into flow interaction patterns            robust user behavior recognition and cyber-crime forensics.
+while directly leveraging raw byte-level data. Specifically, we                   The adoption of encryption protocols significantly curtailed
+introduce a multi-granularity feature fusion strategy that dynam-              the sufficient exploitation of traffic information. Traditional
+ically updates an IP-based graph by iteratively assigning edge                 rule-based methods, such as deep packet inspection (DPI) [10],
+attributes derived from evolving flow representations. During                  [11], are no longer effective when confronted with encrypted
+the joint training of the Transformer and the graph neural
+network, temporal representations are learned from raw packet                  payloads. In recent years, a range of ML-based methods
+sequences and reflected in edge attributes dynamically for further             have demonstrated strong performance in encrypted traffic
+message aggregation. Experiments on the ISCX VPN-nonVPN,                       classification [12], [13], [14], [15], [16]. Machine learning
+Tor-nonTor, MIRAGE-2019 and MIRAGE-2024 datasets show                          (ML)-based methods typically involve two steps: first, extract-
+that BPF-DAG outperforms recent state-of-the-art methods in                    ing hand-crafted statistical features, followed by utilizing
+terms of classification performance.
+                                                                               traditional machine learning models, such as support vector
+  Index Terms—Encrypted traffic classification, graph neural                   machines (SVM) and random forests. But the manual feature
+network, features fusion, transformer, dynamic attributed graph.               extraction process is time-consuming and heavily dependent
+                                                                               on expert knowledge. Additionally, the granularity of extracted
+                          I. I NTRODUCTION                                     traffic information is often too limited to achieve the reliable
+                                                                               encrypted traffic classification. With the rapid advancement of
+N     OWADAYS, various encryption technologies are exten-
+      sively used to encrypt network traffic, protecting users’                AI [17], [18], [19], [20], deep learning (DL)-based methods
+                                                                               have been proposed and have shown excellent performance,
+  Received 15 December 2024; revised 7 June 2025 and 15 October 2025;          as they can automatically extract latent features from raw
+accepted 30 November 2025. Date of publication 11 December 2025; date          traffic data [21], [22], [23], [24], [25], [26], [27]. DL-based
+of current version 26 December 2025. This work was supported by the
+National Natural Science Foundation of China under Grant 62202303, Grant       methods typically transform traffic data into image-like or
+U21B2019, Grant 62471301, and Grant 62572314. The associate editor             natural language formats, allowing for the extensive applica-
+coordinating the review of this article and approving it for publication was
+Dr. Meng Li. (Corresponding author: Gaolei Li.)
+                                                                               tion of computer vision (CV) and natural language processing
+  Yunxiao Shi, Gaolei Li, Jun Wu, and Jianhua Li are with the School           (NLP) technologies. However, these methods fail to exploit
+of Electronic Information and Electrical Engineering, Shanghai Jiao Tong       topological patterns in host-to-host communications, i.e., the
+University, Shanghai 200240, China, and also with Shanghai Key Laboratory      flow-level traffic information. Fully leveraging the interaction
+of Integrated Administration Technologies for Information Security, Shang-
+hai 200240, China (e-mail: shiyunxiao@sjtu.edu.cn; gaolei li@sjtu.edu.cn;      patterns among hosts across a network can further enhance the
+junwuhn@sjtu.edu.cn; lijh888@sjtu.edu.cn).                                     precision of traffic detection. Recently, graph neural networks
+  He Fang is with the College of Computer and Cyber Security, Fujian
+Normal University, Fuzhou 350117, China (e-mail: fanghe@fjnu.edu.cn).
+                                                                               (GNNs) [28], [29], [30], [31] have attracted extensive attention
+  Digital Object Identifier 10.1109/TIFS.2025.3643127                          for their powerful ability to represent graphs, leading to
+             1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+198                                                             IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+
+
+breakthroughs in fields such as chemistry, physical systems           temporal representations and updates a subset corresponding
+and social networks, among others. GNNs are capable of cap-           to the sampled mini-batch.
+turing latent topological patterns via message passing between           In summary, the key contributions of our work are outlined
+nodes or edges of a graph. GNN-based methods for encrypted            as follows:
+traffic classification can generally be categorized based on their      • We propose a byte-packet-flow feature fusion-based reli-
+graph construction strategies. One common method involves                  able encrypted traffic classification method via dynamic
+constructing a packet-level graph, where the packet length                 attributed graph, called BPF-DAG. BPF-DAG captures
+sequence of each bidirectional flow is used to model packets               packet-level temporal characteristics within each flow
+as graph nodes. This effectively transforms the traffic clas-              and flow-level topological patterns within a global IP-
+sification task into a graph classification problem. However,              based graph. To the best of our knowledge, this is the
+this approach analyzes each flow independently, lacking a                  first method that integrates packet relations into flow
+global view of the network connectivity. Another common                    interaction patterns while directly extracting byte-level
+method attempts to capture traffic interaction patterns by                 traffic features, for reliable encrypted traffic classification.
+constructing a flow-level global communication graph, where             • Our approach introduces a multi-granularity features
+IP addresses are modeled as nodes and traffic flows between                fusion strategy based on dynamic attributed graph, where
+hosts are represented as edges. Yet, these approaches rely                 graph attributes are dynamically assigned with evolv-
+heavily on feature engineering to initialize graph attributes,             ing flow representations during each iteration. Temporal
+without sufficiently leveraging byte-level traffic.                        representations of flows are computed using an opti-
+   To achieve more reliable and accurate encrypted traffic                 mized Transformer model after each training epoch, with
+classification, it is imperative to comprehensively exploit                which the corresponding directed edge attributes are then
+multi-granular traffic information to capture discriminative fea-          updated. To reduce the memory overhead, we leverage
+tures. In this paper, we propose BPF-DAG, a byte-packet-flow               a technique called Memory Bank to track all temporal
+feature fusion-based method via dynamic attributed graphs for              representations to decouple the training batch size from
+reliable encrypted traffic classification. This is the first method        the total number of edges.
+that integrates temporal packet relations into flow interaction         • To evaluate the classification performance of the proposed
+patterns while directly extracting byte-level features from raw            BPF-DAG, we compare it with several baselines on six
+traffic. We introduce a novel multi-granularity feature fusion             public encrypted traffic datasets, including ISCX-VPN,
+strategy that comprehensively integrates byte-level, packet-               ISCX-nonVPN, ISCX-Tor, ISCX-nonTor, MIRAGE-2019
+level, and flow-level traffic features, thereby improving the              and MIRAGE-2024. Experiment results show that BPF-
+robustness and effectiveness of the classification.                        DAG not only outperforms existing SOTA methods by
+   Specifically, BPF-DAG is composed of three core mod-                    1.4%, 1.2%, 2.3%, 0.2%, 7.7%, 3.1% in terms of accu-
+ules: (1) raw information extraction, (2) flow representation              racy, but also exhibits relatively lower complexity.
+learning, and (3) multi-granularity feature fusion. The first            The structure of the paper is as follows: Section II reviews
+module separately extracts topological and temporal informa-          related work, covering ML-based, DL-based, and GNN-based
+tion from raw traffic. The topological information is utilized        methods, and highlights the differences between our work
+to construct a global IP-based directed graph that represents         and existing approaches. Section III introduces the prelimi-
+flow-level network connectivity. The temporal information             naries. In Section IV, we describe the designs of our method,
+refers to the sequences of raw byte packets within each flow,         including the introduction of overall pipeline and the detailed
+encompassing both packet-level temporal dynamics and byte-            functions of three sub-modules. In Section V, we experi-
+level intrinsic features. In the second module, temporal and          mentally evaluate the performance of our method, including
+topological representations are learned in parallel from the          classification performance, few-shot analysis and complexity
+extracted information. Specifically, the Transformer model is         analysis and compare our results with SOTA methods. Finally,
+employed to capture sequential dependencies in the raw byte-          Section VI concludes the paper and discusses future directions.
+based packet sequences, and the resulting representations are
+used to initialize the edge attributes in the graph. Concurrently,
+                                                                                            II. R ELATED W ORK
+we propose a novel graph neural network, Directed Edge
+Sample and Aggregate (DiESAGE), to learn directed edge                A. ML-Based Methods
+embeddings by iteratively propagating messages across IP                 ML-based methods [12], [13], [14], [15], [16], [40] typically
+nodes. The output of DiESAGE serves as the flow-level topo-           consist of two stages: feature engineering and model training.
+logical representation. In the third module, the temporal and         Feature engineering refers to manually extracting statistical
+topological representations are fused via linear interpolation to     features, such as mean packet length, duration, etc. These
+produce the final representation for each flow. During training,      features are then used as input for ML models such as
+temporal flow representations are recomputed after each epoch         SVM and Naive Bayes to obtain final classification results.
+using the updated Transformer, and the corresponding graph            Appscanner [12] takes statistical features derived from packet
+edge attributes are dynamically reassigned. To mitigate mem-          length sequences as input for training Random Forest classifier.
+ory limitations during joint training of the Transformer and          Anderson et al. [41] extract 198 TLS features, including flow
+DiESAGE, we adopt a memory bank mechanism that tracks all             metadata, byte distribution, packet lengths, and then apply
+SHI et al.: BPF-DAG: BYTE-PACKET-FLOW FEATURES FUSION VIA DYNAMIC ATTRIBUTED GRAPH                                                                         199
+
+
+
+a logistic regression classifier to classify encrypted traffic.      graph’s edges and edge attributes are initialized with statistical
+Shi et al. [32] propose a feature optimization approach that         traffic features. It effectively transfers the encrypted traffic
+efficiently reduces redundant statistical features and mitigates     classification problem into an edge classification problem.
+the negative effects of class imbalance. NB-SVM [15] utilizes        Building on this, Duan et al. [37] propose a Dynamic Line
+a naive Bayes feature embedding method to transforms the             Graph Neural Network (DLGNN)-based method with semi-
+original features into high-quality data, which is then classified   supervised learning. It transforms traffic data into a series of
+using an SVM. However, ML-based methods depend heavily            

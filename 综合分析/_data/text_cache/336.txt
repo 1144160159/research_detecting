@@ -1,0 +1,154 @@
+                                                             Expert Systems With Applications 265 (2025) 125877
+
+
+                                                                   Contents lists available at ScienceDirect
+
+
+                                                        Expert Systems With Applications
+                                                          journal homepage: www.elsevier.com/locate/eswa
+
+
+
+
+A dynamic provenance graph-based detector for advanced persistent threats
+Lin Wang a , Lanting Fang b ,∗, Yining Hu a,c
+a
+  School of Cyber Science and Engineering, Southeast University, 211189, Nanjing, China
+b
+  School of Computer Science and Technology, Beijing Institute of Technology, 100081, Beijing, China
+c
+  Jiangsu Provincial Key Laboratory of Computer Network Technology, 211189, Nanjing, China
+
+
+
+ARTICLE               INFO                                ABSTRACT
+
+Dataset link: https://github.com/sbustreamspo             Advanced Persistent Threats (APTs) pose a major cyber threat due to their stealthy, long-term nature and
+t/sbustreamspot-data, https://github.com/mar              intricate complexity, making them particularly challenging to detect. Provenance graphs map interactions
+goseltzer                                                 between system entities as directed, heterogeneous networks, offering rich semantic information valuable
+Keywords:
+                                                          for threat identification. However, most existing approaches rely on static graph analysis, overlooking the
+Advanced Persistent Threats                               critical dynamics of evolving threats. Dynamic graph analysis offers the potential to capture both temporal and
+Provenance graph                                          structural insights, but current methods focus on single-perspective learning, failing to fully exploit the inherent
+Graph representation learning                             relationships and evolving patterns within the data. To address this gap, we propose CGL-AD, a Contextualized
+Attack detection                                          Graph Learning APT Detector. CGL-AD leverages temporal graph learning to capture subtle temporal changes
+                                                          and overall structural transformations over time. It then integrates hash-based data stream frequency estimation
+                                                          technique to identify local topological alterations, subsequently feeding these rich embeddings into a powerful
+                                                          sequence learning model. Experimental results on three widely used datasets: Streamspot, Camflow-apt,
+                                                          and Shellshock, demonstrate that CGL-AD significantly outperforms existing methods. Specifically, CGL-AD
+                                                          outperforms the best baseline FLASH on these datasets by 1.5%, 3.7%, and 5.6% respectively in terms of
+                                                          Receiver Operating Characteristic-Area Under the Curve (ROC-AUC), effectively revealing hidden APT attack
+                                                          patterns in dynamic provenance graphs.
+
+
+
+1. Introduction                                                                                entities. As shown in Fig. 1, the provenance graph depicts system
+                                                                                               entities (e.g., processes, files, sockets, etc.) as vertices, and system calls
+    Advanced Persistent Threats (APTs) constitute a pervasive and mul-                         between entities (e.g., create, read, write, open, etc.) as edges. In this
+tifaceted threat landscape within the cyberspace domain. Defined by                            example, the attacker exploits the Firefox backdoor vulnerability to
+their complexity and multi-stage execution, APTs are the preferred                             launch an attack on an Ubuntu host through a malicious advertising
+tools of highly skilled adversaries targeting high-value entities such as
+                                                                                               server (i.e. untrustworthy IP 104.228.117.212). This exploit results in
+governments, military installations, and financial institutions (Zipperle,
+                                                                                               the drakon implant running in memory within the Firefox process,
+Gottwalt, Chang, & Dillon, 2022). Consequently, the detection of APTs
+                                                                                               establishing a connection to the attacker’s operator console. The
+emerges as a crucial challenge.
+    Traditional intrusion detection systems (Dornhackl, Kadletz, Luh, &                        attacker then writes executable binaries to the host’s disk and executes
+Tavolato, 2014; Wagner et al., 2015) typically analyze native system                           the clean and profile processes as root through privilege escalation.
+logs or rely on malware signatures. However, APT attackers often act                           The entire attack may be concealed among a large number of benign
+in a stealthy and persistent manner, exploiting zero-day vulnerabilities                       system calls and can unfold in multiple stages over an extended period.
+to gain a foothold in the victim system, while remaining undetected for                        Importantly, the provenance graph links related events even when
+extended periods. Traditional detection methods either fail to recognize                       they are temporally separated. However, the complexity and diversity
+new vulnerabilities or focus primarily on log-adjacent events.                                 of interactions in provenance graphs makes it challenging to learn
+    In recent studies, researchers have emphasized the use of prove-                           patterns of system behavior.
+nance graphs for APT detection (Jenkinson et al., 2017; Pohly,
+                                                                                                   Existing provenance-based detectors can be classified into three
+McLaughlin, McDaniel, & Butler, 2012; Xie, Feng, Tan, & Zhou,
+                                                                                               categories: (1) Rule-based methods (Hossain et al., 2017; Milajerdi,
+2016). Provenance graphs represent system execution as directed,
+                                                                                               Eshete, Gjomemo and Venkatakrishnan, 2019; Milajerdi, Gjomemo,
+heterogeneous graphs that describe information flow between system
+
+
+    ∗ Corresponding author.
+      E-mail addresses: 220224982@seu.edu.cn (L. Wang), ltfang@bit.edu.cn (L. Fang), hyn.list@seu.edu.cn (Y. Hu).
+
+https://doi.org/10.1016/j.eswa.2024.125877
+Received 23 April 2024; Received in revised form 7 November 2024; Accepted 19 November 2024
+Available online 28 November 2024
+0957-4174/© 2024 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+L. Wang et al.                                                                                                         Expert Systems With Applications 265 (2025) 125877
+
+
+                                                                                          • We propose a novel unsupervised anomaly detection framework
+                                                                                            for APTs based on temporal graph learning. This approach lever-
+                                                                                            ages the rich temporal dynamics and structural relationships
+                                                                                            within provenance graphs to effectively identify anomalous ac-
+                                                                                            tivities indicative of APT intrusions.
+                                                                                          • We introduce CGL-AD, an innovative amalgamation of temporal
+                                                                                            graph learning, advanced data stream frequency estimation tech-
+                                                                                            nique and sequence learning. This proficiency enables a more
+                                                                                            refined and comprehensive characterization of system entity be-
+Fig. 1. An example provenance graph of a real-world APT attack, where red nodes             haviors, leading to improved APT detection accuracy.
+are malicious entities, numbers indicate timestamps of system calls.                      • We implemented CGL-AD and evaluated it on three public
+                                                                                            datasets. The results show that CGL-AD achieved high accuracy
+                                                                                            and a low false positive rate in APT attacks detection.
+Eshete, Sekar and Venkatakrishnan, 2019) detect APTs by manually de-
+signing a variety of rules based on threat knowledge from known attack
+                                                                                      2. Related work
+patterns. (2) Statistical-based methods (Hassan et al., 2019, 2020; Liu
+et al., 2018) assess the suspiciousness of audit records based on their
+                                                                                          The existing Provenance-based APT detection approaches can be
+rarity within the provenance graph. (3) Learning-based methods (Chen
+                                                                                      categorized into rule-based, statistical-based, and deep learning-based
+et al., 2022; Kapoor, Melton, Ridenhour, Krishnan, & Moyer, 2021;
+                                                                                      methods. We summarize these studies in Table 1, including algorithms
+Wang et al., 2022; Zengy et al., 2022) use deep learning techniques
+                                                                                      for embedding and threat detection, as well as their limitations.
+(i.e., graph neural networks) to learn node feature in provenance graphs
+and detect anomalies.
+                                                                                      2.1. Rule-based methods
+    Although existing methods have made considerable progress in
+detecting APTs, they suffer from various combination of the following
+                                                                                          Rule based methods (Hossain et al., 2017; Milajerdi, Eshete et al.,
+challenges: (1) Heuristic rule-based (Hossain et al., 2017; Milajerdi,
+                                                                                      2019; Milajerdi, Gjomemo et al., 2019; Xiong et al., 2020) detect
+Eshete et al., 2019; Milajerdi, Gjomemo et al., 2019; Xiong et al., 2020)
+                                                                                      threats by designing heuristic rules based on prior knowledge of known
+methods rely on prior knowledge of APTs and are particularly vulner-
+                                                                                      attacks (e.g., MITRE ATT&CK (Strom et al., 2018)). For instance,
+able to unknown attacks. (2) Static graph learning methods (Jia et al.,
+                                                                                      Holmes (Milajerdi, Gjomemo et al., 2019) refers to kill chain model
+2023; Wang et al., 2022; Zengy et al., 2022) overlook the importance of
+                                                                                      (Yadav & Rao, 2015) and a security policy knowledge base, formulating
+temporal information, and they lack the ability to model the dynamic
+                                                                                      16 TTP (Tactics, Techniques, Procedures) rules to detect vulnerabilities
+behavioral patterns of runtime systems. (3) Recently, dynamic graph
+                                                                                      present in provenance graphs and map alerts to specific attack phases.
+learning methods (Cheng et al., 2023; Paudel & Huang, 2022; Rehman,
+                                                                                      Poirot (Milajerdi, Eshete et al., 2019) extracts threat query graphs from
+Ahmadi, & Hassan, 2024; Yang, Xu, Xiong, Li, & Zhang, 2023) have
+                                                                                      Cyber Threat Indicator (CTI) reports, and applies a graph alignment
+been proposed to automatically capture the contextual information
+                                                                                      algorithm to calculate the similarity between query graph and prove-
+from provenance graph. However, these methods overlook the critical
+                                                                                      nance graph to detect cyber-attacks with known patterns. Although
+relationship between the local subgraphs and the global graph, which is
+                                                                                      rule-based methods often have a low false alarm rate, designing these
+essential for effective APT detection. For example, attackers often adopt
+                                                                                      rules is an extremely difficult task, as it inevitably requires domain
+a gradual infiltration strategy when stealing data, with initial intrusion            knowledge and expert experience. Moreover, these methods struggle to
+activities possibly confined to a small area before expanding to the                  identify unknown or latent attacks because the rules are designed under
+entire network. Attack behaviors at different stages may impact the                   specific conditions (e.g., the attack strategies, the network environ-
+local subgraph and global graph structure in different ways. Therefore,               ment). To address these issues, CGL-AD uses a learning-based technique
+it is essential to consider the pattern changes in both local subgraphs               to build detection models without the need for domain knowledge. In
+and the global structure comprehensively.                                             addition, the model can be automatically adapted to new conditions by
+    In this work, we address the aforementioned challenges by propos-                 retraining or fine-tuning.
+ing CGL-AD, a Contextualized Graph Learning APT Detector. CGL-AD
+captures contextual information through a multi-perspective approach.                 2.2. Statistical-based methods
+Specifically, CGL-AD employs a temporal graph network architecture
+to encode both temporal and node history information into node em-                        In statistical-based methods, some approaches (Hassan et al., 2019,
+beddings, learning global structural transformations over time. Simul-                2020; Liu et al., 2018) record the frequency of historical events and
+taneously, it incorporates the frequency of local substructures within                assign anomaly scores based on the rarity of edges in provenance
+the global graph, effectively capturing interaction patterns between                  graphs. However, they 

@@ -1,0 +1,1675 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [323] Vehicular Social Dynamic Anomaly Detection With Recurrent Multi-Mask Aggregator Enabled VAE
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：323
+题名：Vehicular Social Dynamic Anomaly Detection With Recurrent Multi-Mask Aggregator Enabled VAE
+年份：2024
+DOI：10.1109/tits.2024.3457569
+来源：IEEE Transactions on Intelligent Transportation Systems
+PDF：paper/10.1109_TITS.2024.3457569.pdf
+已有粗分类：IoT、车联网、工业互联网与边缘安全
+二级关联：其他AI安全与跨域异常检测、入侵检测与网络异常检测
+相关性：中相关，分数 9
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\323.txt
+- 原始字符数：79084
+- 本次发送字符数：79084
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 12, DECEMBER 2024
+
+21709
+
+Vehicular Social Dynamic Anomaly Detection With
+Recurrent Multi-Mask Aggregator Enabled VAE
+Zehao Hu , Yuwei He , Yuqi Shen , Minho Jo , Senior Member, IEEE, Mario Collotta , Member, IEEE,
+Guojiang Shen , and Xiangjie Kong , Senior Member, IEEE
+
+Abstract— Vehicle driving behavior analysis and detection
+tasks have become an indispensable part of intelligent transportation systems. Accurate pattern recognition of potential anomalies
+during the movement of entities is crucial for improving transportation efficiency. Current methods typically analyze vehicle
+trajectories independently without considering potential interactions among vehicles. To address this limitation, some studies
+have integrated graph attention mechanisms to capture the
+influence of neighboring vehicles during the aggregation process.
+However, Graph Attention Networks (GATs) are constrained
+by the univariate nature of attention heads and coefficients,
+thus lacking flexibility. In this work, we not only consider the
+social dynamics among neighboring vehicles but also delve into
+the limitations of GAT models. We propose a Vehicular Social
+Dynamics Anomaly Detection (VSD-AD) model based on the
+Recurrent Multi-Mask Aggregator (MMA) enabled Variational
+AutoEncoder (VAE) architecture to maximize the learning of
+relational embeddings among neighbors in a highway vehicle network. Furthermore, we apply Node Feature Quantisation (NFQ)
+to the encoder output to mitigate the complexity of neighbor
+relationships. Our model is flexible and customizable for different
+highway scenarios, suitable for large-scale highway vehicle video
+data. To validate real-world applicability, we further assess its
+performance on both the simulated dataset and real-world traffic
+dataset, where our model outperforms other mainstream methods
+in terms of detection performance.
+Index Terms— Anomaly detection, variational autoencoder,
+graph aggregation, intelligent transportation.
+
+I. I NTRODUCTION
+
+H
+
+IGHLY autonomous smart traffic management system,
+as a key component of smart cities, plays a crucial role in addressing urban challenges like traffic flow
+prediction and accident prevention. With the expansion of
+urban areas and populations [1], [2] [3], issues such as
+Manuscript received 21 May 2024; revised 1 August 2024; accepted
+2 September 2024. Date of publication 25 September 2024; date of current
+version 27 November 2024. This work was supported in part by the “Pioneer”
+and “Leading Goose” Research and Development Program of Zhejiang under
+Grant 2024C01214 and in part by the National Natural Science Foundation of China under Grant 62072409 and Grant 62073295. The Associate
+Editor for this article was F. Xia. (Corresponding authors: Xiangjie Kong;
+Minho Jo.)
+Zehao Hu, Yuwei He, Yuqi Shen, Guojiang Shen, and Xiangjie Kong are
+with the College of Computer Science and Technology, Zhejiang University of
+Technology, Hangzhou 310023, China (e-mail: 211122120078@zjut.edu.cn;
+211122120044@zjut.edu.cn; yuqishen51@gmail.com; gjshen1975@zjut.
+edu.cn; xjkong@ieee.org).
+Minho Jo is with the Department of Computer Convergence Software, Korea
+University, Sejong City 30019, South Korea (e-mail: minhojo@korea.ac.kr).
+Mario Collotta is with the Faculty of Engineering and Architecture, Kore
+University of Enna, 94100 Enna, Italy (e-mail: mario.collotta@unikore.it).
+Digital Object Identifier 10.1109/TITS.2024.3457569
+
+traffic congestion and accidents have become more prominent,
+impacting people’s time and safety [4], [5] [6]. Leveraging
+IoT technologies, such as sensor networks with Road-Side
+Units (RSUs) and On-Board Units (OBUs), researchers aim
+to extract valuable insights from data to enhance traffic
+management systems. Detecting traffic anomalies in a timely
+manner is essential for efficient traffic management [7], [8]
+[9], [10], considering the impact of drivers’ decisions on
+traffic dynamics. The challenge for human operators lies in
+processing vast amounts of data and the lack of a standardized
+approach to anomaly detection.
+In our work, the task is to detect anomalous scenarios in
+vehicular social dynamics from data collected by highway
+video surveillance in the sensor network. Vehicle trajectory/behavior anomaly detection tasks can be divided into
+two major categories based on the data type processed. The
+first category [11], [12] [13], [14] is devoted to preprocess
+trajectories extracted from video surveillance systems, then
+using unsupervised or weakly supervised learning to cluster
+them into anomalies like sudden braking, severe collision
+accidents, etc. The second category focuses on spatiotemporal
+sequences generated from GPS, IoT devices, and motion
+sensors using methods such as reinforcement learning [15]
+and deep learning [16], [17] or euclidean space inference [18],
+with each method concentrating on the operational behavior
+of individual vehicles.
+While the works above have achieved significant results,
+they have not considered the social dynamics of relationships,
+as shown in Figure 1, within vehicles and the transmission
+of messages between drivers. For instance, the brake lights
+of a car ahead, even if at a considerable distance, can signal
+the following drivers, who may respond by decelerating. The
+double flash signals of overtaking warning and alert can
+prompt the following car to accelerate and prepare to overtake,
+while the deceleration of the ego-vehicle to give way should
+not be considered an anomalous behavior. As another example,
+if vehicles within a driver’s forward vision begin to slow
+down or even stop, the ego-vehicle would naturally decelerate
+and stop until the road condition becomes positive. In this
+scenario, the ego-vehicle should not be considered anomalous,
+but rather the focus should be on the vehicles at the front of the
+queue. Here, we give a definition of vehicular social dynamic
+anomalies: in a normally functioning vehicular social network
+system [19], vehicles form an implied interaction with each
+other, and if the movement of a vehicle or a number of vehicles
+negatively affects the normal functioning of the whole system,
+these vehicles are social dynamic anomalies vehicles.
+
+1558-0016 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+21710
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 12, DECEMBER 2024
+
+Fig. 1. Example for graph of vehicular social dynamics. Vehicles serve
+as nodes, and edges are formed when certain conditions are met such as
+vehicles being too close to each other or engaging in information exchange.
+Unreasonable lane-changing behavior by vehicles is considered abnormal, and
+vehicles are flagged as suspected anomalies after completing a lane change.
+
+Some work has noticed this deficiency. Reference [20]
+captured the interactions between vehicles through the RGAT
+scheme, but the attention mechanism in GAT is not deep
+enough and lacks the flexibility of a user-defined model.
+It can only assign attention coefficients to neighboring vehicles
+through predefined attention heads. Considering the driving
+habit differences among drivers from different countries and
+regions, it is difficult to explore patterns in different data
+through these methods alone. However, these works have also
+inspired our approach, as traditional single-vehicle methods
+are no longer sufficient to accommodate the increasingly
+complex vehicular social dynamics.
+To capture the social nature between vehicles, structuring them into a network-like formation is highly beneficial
+for vehicle interactions. Graph Neural Networks (GNNs)
+are powerful tools for dealing with complex relational network structures, and they encompass various specific models
+such as Graph Convolutional Networks (GCNs), Graph
+Attention Networks (GATs), and Message Passing Neural Networks (MPNNs). These networks, combined with RNNs, can
+simultaneously process dynamic temporal graphs. However,
+in designing the network, we still face challenges such as:
+• Incomplete neighbor relationship. The interaction
+between drivers and the positional relationships between
+vehicles often have a significant impact on the driving
+patterns of vehicles. Therefore, there is still considerable
+potential for deep exploration of the neighbor relationships between vehicles.
+• Fixed identification patterns. Due to the varied data
+distributions across different datasets corresponding to
+traffic regulations and driving habits in various countries
+and regions, relying solely on fixed patterns to identify
+abnormal driving behavior is often inadequate.
+• Inaccurate detection targets. Many existing approaches
+have a vague definition of trajectory graphs, leading to
+coarse detection targets in models. This can result in
+the loss of some anomalies and ultimately reduce the
+detection accuracy of the model.
+Addressing the challenges outlined above, we propose
+a data-driven, customizable method for Vehicular Social
+Dynamic Anomaly Detection (VSD-AD), realized through
+recurrent multi-mask autoencoders. This method maintains
+the combination of RNN and graph convolution models to
+
+extract spatiotemporal features of dynamic graphs. It replaces
+the graph attention mechanism with a more flexible graph
+multi-mask aggregator to deeply consider the social influence
+of neighboring vehicles on ego vehicles. To prevent the
+decoder from being confused by complex encodings from the
+encoder, inspired by the VQ-VAE model [21], we propose
+a graph feature quantisation operation to ensure a smooth
+transition of encoder output representations. In terms of the
+time dimension, fine-grained sampling is replaced by coarse
+sampling, enabling the model to detect behavioral anomalies
+over a longer period. Each sampling period undergoes detailed
+sampling, i.e., the snapshot of that moment, followed by
+constructing graphs of vehicles and their neighboring relationships. Furthermore, to facilitate unsupervised learning,
+we reconstructed the probability distribution of trajectories in
+the decoder part, highlighting anomalous temporal sequences
+with lower reconstruction probability.
+Fortunately, the proposed model is capable of detecting
+anomalies in the social dynamics of highway vehicles over
+extended distances and durations. To validate our model’s
+effectiveness, our data is sourced from large-scale simulation
+trajectory data generated by the microscopic traffic simulator
+from [20] and the real-world HighD dataset [22]. Compared
+with existing state-of-the-art methods, our model is the only
+one that is customizable and capable of detecting both individual vehicle anomalies and overall scene anomalies within a
+specific period. Moreover, our method performs robustly with
+both simulated and real-world data.
+The major contributions of this study include:
+• We propose a Vehicular Social Dynamic Anomaly
+Detection (VSD-AD) model based on the Recurrent
+Multi-Mask Aggregator (MMA) enabled Variational
+AutoEncoder (VAE) architecture. It captures the social
+dynamics between highway vehicle neighbors more
+deeply and offers a degree of customizability.
+• We propose a graph vector quantisation technique
+—Node Feature Quantisaton (NFQ) to ensure that the
+node representations of vehicle relationship graphs aggregated by the encoder are smoothly processed by the
+decoder.
+• We conduct extensive experiments on both simulated and
+real-world datasets, demonstrating the superior ability of
+our proposed model to detect anomalous driving behaviors in large-scale highway traffic surveillance systems.
+Observations on a dataset generated by traffic simulation
+software demonstrate the model’s sensitivity to the social
+dynamics of vehicles.
+II. R ELATED W ORK
+A. Trajectory Modeling
+Since trajectory data possess spatiotemporal characteristics,
+most research on trajectory modeling primarily focuses on
+learning the spatial features of past trajectories of vehicles, pedestrians, or aerial vehicles and predicting their
+future movements. An overview of recent years’ works in
+this field can be comprehensively found in [23]. In [24],
+a grid-based spatial encoder and a relative temporal encoder
+are combined to extract trajectory features. These features
+
+HU et al.: VSD-AD WITH RECURRENT MULTI-MASK AGGREGATOR ENABLED VAE
+
+21711
+
+are then fused with static embeddings (representing static
+information such as traffic flow and weather) through an
+attention mechanism. Reference [25] employs network representation learning to achieve accurate vehicle trajectory
+clustering. Similarly focusing on automobiles, [26] develops three prediction models with distinct architectures: a
+Transformer-based model (TS-Transformer), a Generative
+Adversarial Network-based model (TS-GAN), and a Conditional Variational Autoencoder-based model (TS-CVAE).
+These models demonstrate that traffic state-based models consistently predict future trajectories more accurately than vanilla
+models, with the TS-Transformer producing state-of-the-art
+results. Yan et al. [27] proposes an unsupervised method for
+traffic VAD based on future object localization. In the field of
+aircraft, the learning model of [28] adopts an encoder-decoder
+architecture with a hybrid core of LSTM and GAN. Li et al.
+[29] proposes the traffic trajectory prediction algorithm based
+on the convolutional attention network (TraGCAN) to predict
+the trajectories of heterogeneous traffic agents in dense traffic.
+They construct the spatial relationship of traffic agents as a
+graph structure and introduce a graph convolutional network
+to extract spatial interactions. Reference [30] utilizes Graph
+Convolutional Networks (GCNs) to design modules for capturing sub-trajectory anomalies in both attribute space and
+structural space within the generation and contrastive learning
+modules.
+Our work involves capturing all trajectory points within
+a fixed area in a snapshot manner and recording vehicle
+information for each point, including position, velocity, and
+acceleration. We have designed an encoder-decoder framework
+to learn the spatiotemporal relationships among vehicles in
+these snapshots, with the aim of modeling these spatiotemporal
+relationships in trajectories.
+
+attention-based graph convolutional network. Wang et al. [45]
+proposed a method integrating reinforcement learning with
+spatial knowledge graphs to predict human mobility patterns.
+Notably, [46] focuses on improving the generalizability of
+graph anomaly detection models via data augmentation. There
+are also numerous methods targeting subgraphs, such as
+the Anomalous Subgraph Autoencoder (AS-GAE) proposed
+by [47] to extract anomalous subgraphs. Reference [48] performs intra-view node-subgraph contrastive learning to enrich
+the anomaly information. Reference [49] starts from injective
+node augmentation and tries to enrich node representations
+via multi-scale contrastive training. As the most relevant work,
+[20] differs from our adoption of MMA. Their proposed model
+utilizes a GAT to extract vehicle neighborhood relationships.
+However, due to insufficient depth in capturing spatiotemporal relationships with the GAT and GRU combination, the
+model lacks expressive power. This is the primary challenge
+addressed by our proposed method in this study. Additionally,
+we introduce node quantization to further fine-tune the model.
+Inspired by anomaly detection in graphs, we model each
+snapshot as a graph, where vehicles are nodes and the
+adjacency relationships between vehicles are edges. Thus,
+we transform the problem of detecting anomalies in vehicle
+trajectories into a graph node anomaly detection problem.
+
+B. Graph Anomaly Detection
+In this paper, we focus on modeling the relationships
+between vehicles and their neighbors on a highway scene
+as a graph structure, with the fundamental task being graph
+anomaly detection. Relevant reviews can be found in [31]
+and [32], both of which are classic works on using deep
+learning methods to solve graph anomaly detection problems.
+The definition of anomalies varies, but common criteria for
+judgment include extreme traffic events and accidents [33],
+driving behaviors [34], [35], and autonomous vehicle driving
+conditions [36]. Researchers have developed a plethora of
+graph-based methods for these detection scenarios. In the article [37], Deng proposes a spatiotemporal graph convolutional
+adversarial network (STGAN). Other approaches include using
+GNN methods for multivariate time-series anomaly detection [38], [39], and generative and contrastive self-supervised
+learning methods [40]. Tu et al. [41] introduced Deep outdatEd
+fAct detectioN (DEAN), which employs a Relations-to-Nodes
+(R2N) graph, a contrastive approach designed to unveil
+implicit outdated information. CenGCN [42] posits that the
+information transmitted from other nodes to the core node
+through the propagation mechanism is unequal, a concept
+that bears resemblance to the Graph Attention Network
+(GAT) [43]. Chen et al. [44] combines sequence and graphstructured data, achieving sequence reconstruction through an
+
+The input to the model consists of an observation set
+O = {o1 , o2 , . . . , o|W | } over a time window W on the
+highway. For each time step t within W, the observation
+ot = {xt1 , xt2 , . . . , xtN } is noted, where N = |ot | represents
+the number of vehicles in the current observation. Here,
+xti denotes the features of the vehicle numbered i at time
+step t. The vehicle features xti = (xti , yti , lti , vti , ati ) include
+the longitudinal position xti , lateral position yti , driving lane
+ID lti , longitudinal speed vti , and longitudinal acceleration
+ati . Furthermore, to reduce feature complexity and training
+difficulty, we opt not to include vertical vehicle velocity
+and acceleration as features in training. This decision stems
+from the observation that in highway datasets, the majority
+of vehicles exhibit predominantly horizontal velocities and
+accelerations, with minimal values in the vertical direction.
+Even during turns, the deviations in the vertical direction are
+minimal. In the rare event of abrupt maneuvers, such as sharp
+turns, the model can effectively capture and learn from the
+significant decreases in horizontal velocity and acceleration
+values.
+Given the vehicle features xti for all t in W, our primary
+objective is to detect vehicles exhibiting anomalous social
+behaviors over a certain period W on the highway section.
+Additionally, we will segment the highway section into shorter
+stretches of length δs , referred to as scenes, and perform
+anomaly detection for all vehicles on stretch S during W.
+
+III. M ETHOD
+In this section, we introduce the proposed VSD-AD model
+which consists of three parts, namely Encoder module,
+Decoder module, and NFQ module. The overview of VSD-AD
+can refer to Figure 2.
+A. Problem Formulation
+
+21712
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 12, DECEMBER 2024
+
+Fig. 2. The overview of VSD-AD model which consists of three modules: Encoder, Decoder, and Node Feature Quantisation. Firstly, within a time window,
+the snapshot of road vehicles composing the graph is mined for neighbor relationships using Recurrent Multi-Mask Aggregators. Then, the output of the
+encoder is quantized by the Node Feature Quantization module. Finally, reconstruction is performed by a decoder with a structure identical to that of the
+encoder.
+
+drivers primarily focus on the few vehicles closest to them, and
+the most significant impact on a current vehicle is undoubtedly
+from its neighboring vehicles.
+
+Fig. 3. The Multi-Mask Aggregator within the GRU module will learn
+masks for each vehicle node feature using MLP (Multi-Layer Perceptron)
+and aggregate them onto ego vehicle nodes through various aggregators.
+
+The criterion for scene anomaly detection involves identifying
+anomalous vehicles within each segment, as elaborated in
+Section III-G.
+B. Graph Construction
+We first construct a spatiotemporal dynamic graph representing the vehicular social dynamics, denoted as G(W) =
+{(V1 , E1 ), (V2 , E2 ), . . . , (VT , ET )} for time t in W =
+{1, 2, . . . , T }. The node set Vt represents all vehicles observed
+on the highway at ot and their features xti = (xti , yti , lti , vti , ati ).
+From the formulation, it is evident that for different time steps
+t in W, the number of vehicles N = |Vt | is fixed, but the
+number of vehicles at a single time step |ot | can vary, similar
+ij
+to the count in a snapshot. For et in Et , we define its existence
+based on the condition that, centered on the current ego vehicle
+j
+xti , vehicle xt is within δx feet horizontally and less than δl
+lanes vertically. This approach is justified as, in real scenarios,
+
+C. Encoder
+In this subsection, we introduce how Recurrent Multi-Mask
+Aggregators [50] are used to compress and encode trajectory
+time series data.
+Specifically, we employ the RNN variant GRU [51], known
+for its proficiency with sequential data tasks. Compared to
+the traditional LSTM (Long Short-Term Memory network),
+GRU’s structure is simpler. It merges the forget and input
+gates into a single “update gate” and omits the output gate.
+This simplified structure results in fewer parameters for the
+GRU, making it more computationally efficient. We replace the
+matrix multiplication in the GRU’s update gate z t , reset gate
+rt , and candidate state H̃t with graph convolution operations,
+denoted as ∗M , to capture the social dynamics among vehicle
+graphs. This approach effectively leverages the strengths of
+GRU in handling temporal dependencies while adapting its
+architecture to better represent the complex social dynamics
+present in vehicular graphs:
+zt = σ (Wx z ∗M Xt + Whz ∗M Ht−1 + bz ),
+rt = σ (Wxr ∗M Xt + Whr ∗M Ht−1 + br ),
+H̃t = tanh(Wxh ∗M Xt + Whh ∗M (rt ⊙ Ht−1 + bh ),
+Ht = zt ⊙ Ht−1 + (1 − zt ) ⊙ H̃t .
+∈ R N ×dh
+
+(1)
+
+where Ht
+represents the hidden state, while z t ∈
+R N ×dh and rt ∈ R N ×dh correspond to the update gate and
+reset gate, respectively, each with a dimension of dh . The
+weights Wx z , Whz , Wxr , Whr , Wxh , Whh and biases bz , br , bh
+are learnable parameters. The activation function σ is the
+sigmoid function, and ⊙ denotes element-wise multiplication.
+The input X t ∈ R N ×d f at time step t to the GRU comes
+
+HU et al.: VSD-AD WITH RECURRENT MULTI-MASK AGGREGATOR ENABLED VAE
+
+from the raw observation ot , where d f is the node feature
+dimension. This dimensionality is derived from the spatial
+coordinates, speed, and acceleration (xt , yt , vt , at ) ∈ R N ×4 ,
+concatenated with lane embeddings h lt ∈ R N ×dl . It is important to note that h lt represents the mapping of discrete lane
+IDs to their corresponding embedding vectors with dimension
+dl , making the input feature dimension d f = 4 + dl .
+For the graph convolution operation ∗M , unlike the RGAT
+method based on Graph Attention Network (GAT) [43] used
+in [20] to capture dynamic interactions between neighboring
+vehicles, we adopt RMMA [50] based on Multi-mask aggregators. This approach draws similarities with GAT and MPNN
+but offers some theoretical and practical advantages [50].
+As illustrated in Figure 3, the graph convolution operation
+∗M X t for the vehicle feature set input X t primarily consists
+of four processes:
+a. Mask Generation. The purpose of this step is to learn
+unique values between node neighbors, forming a mask. The
+Multi-Mask Aggregators (MMA) deploy a Multi-Layer Perceptron (MLP) between each node pair x i , x j and selectively
+extract node features ei j . This operation can be likened to creating weights for multiplying aggregated neighboring features,
+similar to the messages passed in Message Passing Neural
+Networks (MPNN) and the attention coefficients in Graph
+Attention Networks (GAT). However, while GAT typically
+yields a single attention coefficient, the mask in MMA can
+learn a relationship vector for each pair of neighbors. For each
+node pair x i , x j , the learned mask is represented as:
+j
+
+j
+
+ij
+
+j
+
+ij
+
+m t = M L P(||xti , xt , et ) = σ (Wm (||xti , xt , et ))
+
+(2)
+
+j
+where m t
+
+represents the mask for vehicle j at time step t,
+σ is the activation function and Wm is a learnable matrix.
+The symbol || denotes column-wise concatenation. Since
+j ij
+xti , xt , et ∈ Rd f , the result of the concatenation belongs to
+R3×d f , and Wm ∈ R3×α . The dimensionality of the result of
+j ij
+multiplying the concatenated xti , xt , et with Wm is in Rd f ×α ,
+j
+which ultimately determines the dimension of m t . Here, α
+represents the hyperparameter for the number of hidden units.
+b. Neighbor Aggregation. Unlike most graph convolution
+methods that use only one type of aggregator, such as a
+mean aggregator, to combine neighbor information, MultiMask Aggregators (MMA) allow users to choose one or
+multiple masked aggregators based on the data distribution
+and their specific needs. This flexibility enables a focus on
+the social dynamics of vehicle interactions from multiple
+perspectives. There are three types of aggregators available,
+namely masked max, min, and mean aggregators:
+j
+
+j
+
+j
+
+maxt = max j∈N ei i (xt ◦ m t ),
+
+(3)
+
+j
+j
+j
+min t = min j∈N ei i (xt ◦ m t ),
+t
+
+(4)
+
+t
+
+j
+
+mean t =
+
+1
+|N ei ti |
+
+X
+
+j
+
+j
+
+xt ◦ m t ,
+
+(5)
+
+j∈N ei ti
+
+where Neiit denotes the set of neighbor IDs for vehicle i at
+time step t. Each aggregator performs a Hadamard product
+with the neighbor features and the masks generated in step a).
+The difference lies in the operations of min and max, which
+select the smallest or largest vector from the result vectors for
+
+21713
+
+aggregation. This allows the network to learn to ignore certain
+“undesired” nodes when propagating information. The mean
+aggregator, on the other hand, integrates information from
+all neighbor vectors, where ◦ denotes the Hadamard product
+operation.
+c. Message Vector Scaling. Further, enhances expressiveness
+by utilizing degree scalers to amplify and attenuate signals
+based on the nodes’ degrees. The general expression for degree
+scalers S(·) is:
+
+
+log (d + 1) ω
+, d > 0, −1 < ω < 1, (6)
+S(d, ω) =
+ϕ
+in this context, ω represents the amplification factor, where d
+is the node degree, and ϕ is the average degree of the training
+set. In our work, we set ω = {−1, 0, 1}, corresponding to
+signal attenuation, no change, and amplification, respectively.
+d. Assimilation. Finally, it is necessary to integrate the
+results of all aggregators and scalers. If ⊗ denotes the tensor
+product, then the universal aggregation function ⊕mask for
+MMA can be expressed as:
+
+ 
+
+I
+Masked Max
+⊕mask =  S(D, α = 1)  ⊗  Masked Min  . (7)
+S(D, α = −1)
+Masked Mean
+At this point, for each time step t, all vehicles xti in
+the observation set ot have received information from their
+neighbors. Information that cannot influence the ego vehicle
+will be ‘discarded’, while neighbor information that truly
+alters driving behavior will be strengthened. In comparison
+to works with predefined edge weights, it is evident that
+MMA exhibits stronger interpretability and possesses more
+learnable parameters to determine the social dynamics among
+neighbors than GAT. Moreover, the multi-aggregator feature
+of MMA provides it with a certain degree of flexibility and
+customization. For instance, operators can choose or combine
+multiple min aggregators as needed.
+D. Node Feature Quantisation
+Inspired by Vector Quantized-Variational AutoEncoder
+(VQ-VAE) [21], which has proven effectiveness in vector
+quantisation when the posterior and prior distributions are
+categorical, the VQ operation has been shown to improve
+the overall network performance by drawing an embedding
+table from these distributions and using it as input to the
+Decoder network. In this subsection, we will provide a detailed
+explanation of our proposed Node Feature Quantisation (NFQ)
+mechanism.
+The input to NFQ is the hidden state of the Encoder’s last
+layer, denoted as HT ∈ R N ×dh . First, we define a discrete
+latent embedding space e ∈ R K ×dh , where K is the size of
+the discrete latent space. Thus, there are K embedding vectors
+ei ∈ Rdh , i ∈ 1, 2, . . . , K , constituting the embedding space
+known as the code book. Our goal is to map each vector in HT
+to the code book e for quantisation. The initialization methods
+for a code book typically include random initialization and
+K-means clustering initialization. Here, we initialize each
+vector in the code book by sampling each element from a
+standard normal distribution. We then compute the posterior
+
+21714
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 12, DECEMBER 2024
+
+categorical distribution probabilities q(z|ot ), which are defined
+as one-hot vectors, as follows:
+(
+1 for k = argmin j ∥ z e (ot ) − e j ∥2 ,
+q(z = k|ot ) =
+0 otherwise.
+(8)
+the variable z e (ot ), denoted as HT , represents the result of
+processing the original data ot through the Encoder. The
+distribution q(z = k|ot ) is deterministic and is based on
+the principle of computing the distances between each input
+vector and the K vectors in the embedding. The distances
+are calculated using the common Euclidean distance ∥·∥2 .
+The result of Equation (8), q(z = k|ot ) ∈ R N ×K , indicates
+that only the vectors corresponding to z e (ot ) with the closest
+Euclidean distances to the ei vectors in the code book e will
+have the value 1 in the item at index i of the q(z = k|ot )
+vector. all other values are set to 0. The quantized result z q (ot )
+can be expressed as:
+z q (ot ) = q(z = k|ot ) ⊙ e.
+
+(9)
+
+the described process can be summarized as representing
+z e (ot ) through a discrete bottleneck and then mapping it to
+the nearest elements in the embedding e:
+z q (ot ) = ek ,
+
+where k = argmin j ∥ z e (ot ) − e j ∥2 .
+
+(10)
+
+Due to the fact that messages from multiple neighbors are
+aggregated into node tensors by multiple aggregators through
+Recurrent Multi-Mask Aggregation (RMMA), and these tensors are then passed as hidden states to the next RMMA, the
+information content tends to be coarse. We believe this may
+be detrimental to the subsequent tasks of data reconstruction
+and classification by the Encoder. Therefore, by employing the
+proposed Node Feature Quantisation (NFQ), we aim to map
+the output of the Encoder to discretized entries, introducing
+a quantisation operation. This operation is intended to help
+alleviate the aforementioned issue.
+E. Decoder
+The Decoder employs the same RMMA structure as the
+Encoder. Furthermore, both the Decoder and Encoder have
+an equal number of spatiotemporal modules in their RMMA
+structures, determined by the depth of the input spatiotemporal dynamic graph, i.e., our window size W. To avoid
+the computational burden of repeatedly calculating the edge
+set, we use the union of all edges in the Encoder, denoted
+as E = E1 ∪ E2 ∪ . . . ∪ ET , as the input for the Decoder.
+According to our graph construction approach, the edge set
+only restricts the neighborhood around the nodes. The interaction relationships between neighboring nodes and which
+neighbors have a more significant impact on the central node
+are dynamically determined by the multi-mask aggregation
+mechanism of RMMA.
+The hidden state Ĥ t ∈ R N ×dh of the Decoder is further
+processed through a fully connected layer to generate the
+output node state reconstruction X̂ t . Details about X̂ t will be
+explained in subsection F. Subsequently, the output X̂ t serves
+as the input for the next recurrent step. Unlike the Encoder,
+since the vectors at time T are most relevant to the state at
+
+time T , we decode the sequence backward from time step T .
+Therefore, the initial input for the Decoder-RMMA will be the
+node states at time T .
+F. Loss Function
+For each ego vehicle at time t, certain features including
+the longitudinal position xti , velocity vti , and acceleration ati
+are assumed to follow univariate Gaussian distributions, i.e.,
+xti ∼ N (µx i , σx i ), vti ∼ N (µvi , σvi ), and ati ∼ N (µa i , σa i ).
+t
+t
+t
+t
+t
+t
+Since lane information is a discrete signal, the longitudinal
+lane information lti is presumed to be a discrete choice
+among several lanes L. For the Decoder, the ego vehicle’s
+lane position is a potential discrete category distribution,
+represented as p1i , . . . , p L i . The Decoder’s output X̂ will
+t
+t
+eventually evaluate the above Gaussian and categorical distributions, meaning that for each x̂t i ∈ X̂ , there are x̂t i =
+[µ̂xti , σ̂ xti , µ̂vti , σ̂ vti , µ̂ati , σ̂ ati , p̂1it , . . . , p̂L it ] to evaluate the
+mean, variance of the longitudinal position, velocity, acceleration, and the probability of the lane position.
+The probability density functions for evaluating position,
+velocity, and acceleration are denoted as q(xti |µ̂x i , σ̂x i ),
+t
+t
+q(vti |µ̂vi , σ̂vi ), and q(ati |µ̂a i , σ̂a i ) respectively. We aim to
+t
+t
+t
+t
+minimize the negative log-likelihoods as follows:
+ 
+
+Lx i = − log q xti |µ̂x i , σ̂x i ,
+(11)
+t
+t
+t
+ 
+
+Lvi = − log q vti |µ̂vi , σ̂vi ,
+(12)
+t
+t
+t
+ 
+
+La i = − log q ati |µ̂a i , σ̂a i .
+(13)
+t
+
+t
+
+For lane classification, we
+cross-entropy loss as follows:
+
+aim
+
+Ll i = −
+
+L
+X
+
+t
+
+t
+
+to
+
+minimize
+
+ 
+1l i log p̂l i ,
+t
+
+the
+
+(14)
+
+t
+
+l=1
+
+where 1l i is an indicator function that equals 1 if vehicle xit
+t
+is in lane l at time t, and 0 otherwise.
+Given the direct gradient estimation from z q (ot ) to z e (ot )
+and that the above loss functions do not account for the
+gradient descent problem for each embedding ei in Node Feature Quantisation (NFQ), to learn the code book’s embedding
+space, we employ an l2 error to approximate the Encoder
+outputs z e (ot ) towards embedding vectors ei . The loss function
+for learning the code book, L N F Q , is defined to minimize the
+l2 error as follows:
+L N F Q =∥ sg[z e (ot )] − z q (ot ) ∥22 + ∥ z e (ot ) − sg[z q (ot )] ∥22 ,
+(15)
+where | · |2 denotes the Euclidean distance. sg[·] represents the
+stop gradient operator, which is defined as the identity function
+during forward computation and has zero partial derivatives,
+effectively treating its operand as an un-updated constant.
+Thus, the overall loss function can be expressed as a weighted
+sum of the negative log-likelihood losses and the cross-entropy
+loss across all agents and all times, as well as the code book’s
+l2 error:
+Lit = λx Lx i + λν Lν i + λa La i + λl Ll i ,
+t
+
+t
+
+t
+
+t
+
+(16)
+
+HU et al.: VSD-AD WITH RECURRENT MULTI-MASK AGGREGATOR ENABLED VAE
+
+L=
+
+N X
+T
+X
+
+Lit + λ N F Q L N F Q .
+
+(17)
+
+i=1 t=1
+
+where λx , λv , λa , λl , and λ N F Q are the weights for each loss
+component, serving as hyperparameters. Typically, these can
+be empirically set as λx = 1, λv = 1, λa = 2, λl = 2 and
+λ N F Q = 2.
+G. Anomaly Detection
+Based on the granularity of detection, anomaly detection
+can be divided into anomaly vehicle detection and anomaly
+scene detection.
+i of the
+For anomaly vehicle detection, the anomaly score ρW
+vehicle i under time window W is calculated as its average
+loss across all time steps:
+T
+
+i
+ρW
+=
+
+1 X i
+Lt ,
+T
+
+(18)
+
+t=1
+
+where T is the length of the time window W. Anomaly scene
+detection primarily identifies anomalies in the entire scene,
+aggregating the losses of all vehicles within stretch S during
+S :
+W to calculate the scene anomaly score ρW
+S
+ρW
+= max(Lit ), ∀(i, t) that xti ∈ S.
+
+(19)
+
+The equation indicates that each scene’s anomaly score
+is determined by the maximum anomaly score among its
+vehicles, implying that the presence of any anomalous vehicle
+within a scene renders the entire scene abnormal. Here,
+we obtain the set of anomaly scores V eSco for vehicles and
+the set of anomaly scores SceSco for scenes.
+After obtaining these anomaly scores, we cannot directly
+determine anomalous vehicles and scenarios. However, we can
+establish thresholds based on the intuitive distribution of these
+anomaly scores. To ensure scientific rigor, this study employs
+cross-validation by splitting the dataset into training and
+validation sets. Through ROC curve analysis on the validation
+set, we select the threshold that maximizes the Area Under the
+Curve (AUC). This method allows for a more precise threshold
+selection, suitable for scenarios that require a balance between
+prediction accuracy and recall.
+It is worth mentioning that, unlike using the mean for
+aggregation, we adopt maximum aggregation to highlight the
+presence of anomalies, rather than averaging the losses of
+normal vehicles. In conclusion, the overall process and pseudo
+code of the VSD-AD model proposed by us can be referenced
+in Algorithm 1.
+IV. E XPERIMENTS
+In this section, we utilize two types of data sources, namely
+simulation data and real-world data, to validate the performance of our proposed VSD-AD model. Initially, simulation
+data with ground truth labels for anomalies is used for a
+quantitative performance comparison between our proposed
+model and baseline models. Subsequently, the HighD dataset
+is employed to verify the effectiveness of our model in
+practical applications. Moreover, to demonstrate the strong
+customization capability of VSD-AD, we modified different
+modules of the VSD-AD model on both datasets to fit actual
+needs.
+
+21715
+
+Algorithm 1 The Overall Procedure of VSD-AD
+Require: Scenario: sce, Training set: Dtrain , Test set: Dtest ,
+Training epochs: epoches, Batch size: batch_si ze, Window size: W.
+Ensure: Anomaly scores ρ of trajectory test set.
+1: Construct vehicular social dynamics graph G(W) for
+Dtrain and Dtest , as shown in Section III-B.
+2: Initialize the trainable parameters W and the code book
+of feature quantisation e randomly.
+3: // T raining phase
+4: for epoch in {1, 2, . . . , epoches} do
+5:
+for batch (G(W)1 , G(W)2 , . . . , G(W)batch_si ze ) do
+6:
+for t in {1, 2, . . . , T } do
+7:
+Construct lane embeddings h l .
+8:
+Get node features X t via concating with h l .
+9:
+Get hidden state Ht via Eq. (1).
+10:
+end for
+11:
+Compute q(z|ot ) via Eq. (8).
+12:
+Get the quantized result z q (ot ) via Eq. (9)
+13:
+for t in {1, 2, . . . , T } do
+14:
+Obtain hidden state Ĥt via Eq. (1).
+15:
+end for
+16:
+Compute the position Lx , velocity Lv , acceleration
+La and lane loss Ll via Eq. (11) (12) (13) (14).
+17:
+Compute the NFQ loss via Eq. (15).
+18:
+Combine all the loss as L via Eq. (16) (17)
+19:
+Optimize L, update parameters W and code book e.
+20:
+end for
+21: end for
+22: // T est phase
+23: for ot in Dtest do
+24:
+Obtain the loss Lit for cars via Eq. (16).
+i via Eq. (18).
+25:
+Obtain the anomaly car score ρW
+S via Eq. (19).
+26:
+Obtain the anomaly scene score ρW
+27:
+Obtain the anomaly scores set V eSco and SceSco.
+28:
+return anomaly scores V eSco and SceSco.
+29: end for
+
+A. Datasets
+The detailed information for both datasets is presented as
+follows:
+1) TransModeler Simulation Dataset: This dataset originates from the virtual simulation data generated by TransModeler, as referenced in [20]. TransModeler, a traffic simulation
+software, accommodates a wide range of granularity and complexity in simulation needs and generates traffic flow on roads
+and intersections, including vehicle acceleration, deceleration,
+and lane-changing behaviors. The data for this work were captured over a 5-mile stretch of a 4-lane highway at a frequency
+of 1Hz, encompassing various scenarios and vehicle behaviors.
+Detailed information can be found in Table I. In Table I, the
+first column represents the scenario types, and the first row
+indicates the types of vehicles present in each scenario. “CTG”
+is the abbreviation of “constant time gap”, which stands
+for the vehicle that follows the constant time car-following
+model where drivers can maintain a consistent desired distance
+from the vehicle in front. The “TD” column, representing
+
+21716
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 12, DECEMBER 2024
+
+TABLE I
+D ISTRIBUTION OF V EHICLE T YPES IN D IFFERENT S CENARIOS
+
+TABLE II
+S IMULATION DATA T RAINING S ET AND T EST S ET D ISTRIBUTION
+
+TABLE III
+H IGH D DATA T RAINING S ET AND T EST S ET D ISTRIBUTION
+
+“Traffic Demand”, displays the specific traffic volume for each
+scenario in terms of vehicles per lane per hour, simulating
+various traffic demands including free flow and congested
+conditions. The remaining values in the table indicate the
+distribution of each vehicle type within the respective scenario.
+The dataset is divided into six distinct scenarios. Among them,
+the Comprehensive scenario consists predominantly of normal
+vehicles along with all other types of abnormal vehicles. This
+scenario is complex and closely reflects real-world conditions,
+thereby emphasizing the model’s robustness. In the Normal
+scenario, abnormalities are limited to Speeding and Slow
+categories only. Each of the remaining scenarios focuses on a
+single abnormality type, highlighting the common limitation
+of models in detecting only one or two specific anomalies
+rather than a comprehensive range.
+Unlike most studies that focus only on common anomalies
+such as speeding, tailgating, and stalled vehicles, we have
+also examined slow driving behaviors, which are difficult
+to learn using single-vehicle methods. The specific distribution of the simulation dataset in this work is presented in
+Table II.
+2) HighD Dataset: The real-world dataset HighD was collected by the Technical University of Munich using drones and
+other tools on local highways, amassing a total of 16.5 hours
+of high-definition traffic video data. In this work, we selected
+approximately 5.8 hours of highway vehicle trajectory data
+as our training set, which includes scenarios of both clear
+and congested traffic conditions on a three-lane highway, with
+corresponding traffic flows ranging from 1200 to 3600 vehicles
+per lane per hour. Subsequently, we used a 15-minute segment
+with a traffic flow of approximately 2300 vehicles per lane per
+hour as our test set. The detailed distribution is presented in
+Table III.
+
+B. Baselines and Metrics
+1) Baselines: To demonstrate the superiority of our work,
+we compared it with the most advanced trajectory anomaly
+detection algorithms and heuristic algorithms on the same
+trajectory dataset. Our baselines primarily include:
+• Linear Temporal Interpolation (LTI) [52] approximates
+a trajectory by interpolating between trajectory points at
+the first and last time steps.
+• Constant Velocity Model (CVM) [53], which assumes
+that an agent’s next step velocity and direction are the
+same as the previous two sampling points. This approach
+has even surpassed some neural network algorithms due
+to their erroneous assumptions.
+• Robust Tensor Recovery (RTR) [54] introduces a tensor
+decomposition method that helps recover low-rank tensor
+values containing vehicle information and compares them
+with normal patterns to detect sparse anomalies.
+• Sequence to Sequence Learning (seq2seq) [55] employs
+a classic encoder-decoder neural network architecture
+with LSTM to capture the spatiotemporal relationships of
+vehicle trajectories, which is used to recognize patterns.
+• Spatiotemporal Graph Auto-Encoder (STGAE-biv),
+a variant from [52], defines a weighted adjacency matrix
+through a kernel function incorporating the distances
+between agents and uses a bivariate Gaussian reconstruction loss to build the encoder-decoder to obtain the
+anomaly score.
+• DSAB [20], an autoencoder composed of RGAT blocks
+that captures the relationships of social dynamics between
+vehicles, where the most crucial vehicles for the
+ego-vehicle are assigned attention coefficients through an
+attention mechanism.
+Among all the baselines, LTI and CVM are simple
+parameter-free reconstruction methods, while the others
+require learning model parameters to capture non-linear patterns. Both can only handle simple non-free-flow scenarios
+with minor vehicle speed changes. RTR, Seq2seq, CVM, and
+LTI consider only the trajectory of the ego-vehicle itself,
+while STGAE-biv and DSAB demonstrate the social dynamics
+interactions between vehicles.
+2) Metrics: Similar to the validation metrics used in most
+anomaly detection works in practical experiments, we adhere
+to the following metrics:
+• ROC-AUC score, a common indicator in the field of
+anomaly detection. Firstly, sort real labels and Sco based
+on the descending order of Sco values. Subsequently,
+it calculates the AUC using the sorted Sco and corresponding real labels’ values. The ROC curve is plotted
+with False Positive Rate (FPR) on the x-axis and True
+Positive Rate (TPR) on the y-axis. The AUC under the
+ROC curve is typically computed using the following
+formula:
+P
+P
+i∈ pos
+j∈neg 1( pi > q j )
+,
+(20)
+AU C =
+| pos| · |neg|
+where pos and neg are sets of positive and negative
+class samples respectively, pi and q j represent the predicted probabilities (here denoted as Sco) for the i-th
+
+HU et al.: VSD-AD WITH RECURRENT MULTI-MASK AGGREGATOR ENABLED VAE
+
+positive sample and j-th negative sample. The symbol
+1(·) denotes the indicator function, which equals 1 if the
+condition inside the parentheses holds true, and 0 otherwise.
+• Precision@k. This setting is merely for purposes such
+as manually validating a fixed number of anomalies,
+where Pr ecision@k measures the relevance among our
+specified k samples. The mathematical expression is:
+P
+i∈top_k_indices lables[i]
+,
+(21)
+pr ecision@k =
+k
+where top_k_indices is a collection of indices corresponding to the top k highest predicted values, identified
+using a fast partitioning algorithm. labels refers to the
+array of true labels, and k denotes the number of top
+predicted values that are of interest to us.
+• Average precision, which averages the precision-recall
+data into a single value. First, we need to compute the Precision-Recall (PR) curve. The definition of
+pr ecision@k is shown in Eq. (21). The definition of
+r ecall@k can then be expressed as:
+P
+i∈top_k_indices lables[i]
+.
+(22)
+r ecall@k =
+Total positive examples
+Next, we compute the Average Precision (AP). Typically,
+the area under the PR curve is approximated by discretizing the PR curve, which sums instead of integrating to
+approximate the area under the PR curve.
+X
+AP ≈
+(r ecall@k − r ecall@(k − 1)) · pr ecision@k,
+k
+
+(23)
+where k iterates over all non-decreasing points on the PR
+curve (points where recall does not decrease). Therefore,
+the AP function computes the Average Precision using
+the aforementioned process, which evaluates the balance
+between precision and recall when predicting positives.
+C. Implementation Details
+The hyperparameter settings for validating our VSD-AD
+model on simulation data are presented in Table IV. The
+parameters are divided into three parts according to the
+process: graph convolution, model, and training parameters.
+Notably, the parameter δx representing the distance threshold
+between neighbors differs for detecting anomalous vehicles
+and anomalous scenarios, being 0.1 miles and 0.15 miles,
+respectively. Based on W and sample_time, the graph depth
+is determined to be 15. In the model parameter settings, the
+recommended calculation method for NFQ embedding space is
+K = 2dh , and we adopt a slightly larger vector space to better
+aid quantification. The aggr e_list indicates a combination of
+masked min and mean aggregators for the MMA aggregator,
+the rationale for which is detailed in Section III-C. It’s
+worth mentioning that, in the Training section, lr represents
+the initial learning rate, which is halved every 50 epochs.
+Gradient clipping is used to prevent gradient explosion, with
+a maximum norm of 1.
+For the HighD dataset, the window size W is set to 10s,
+leading to a graph depth of 10. Apart from this, we also adjust
+
+21717
+
+TABLE IV
+H YPERPARAMETER S ETTINGS ON THE VSD-AD
+M ODEL U SING S IMULATION DATASET
+
+the neighbor distance threshold δx to 0.2, and set the batch size
+to 128, with other parameters configured the same as in the
+simulation dataset.
+Given that our proposed VSD-AD model requires a constant
+number of vehicles in each time window, many vehicle trajectories are not complete, such as those entering or leaving the
+observed road segment. Our approach is as follows: For the
+TransModeler Simulation dataset, owing to its large volume
+and controllable data source, we directly discard all incomplete
+vehicle trajectories. For the real-world HighD dataset, due to
+its uncontrollable data source, containing numerous incomplete segments and shorter sampling intervals, we complete the
+incomplete vehicle trajectories through linear extrapolation,
+assuming a constant vehicle speed for the extrapolated parts.
+These are masked during loss computation to prevent them
+from influencing the experimental results.
+D. Results and Analysis
+In this section, we conduct a quantitative analysis and
+compare the performance of our model on TransModeler
+Simulation data with baselines across different scenarios.
+We also perform ablation studies and hyperparameter analyses
+to understand the impact of each model component and the
+variations in hyperparameters on performance.
+1) Model Comparison: In this section, we not only compare
+different anomaly vehicle detection methods in comprehensive
+scenarios but also evaluate the performance of anomaly scene
+detection against baselines. Subsequently, we compare the
+performance of anomaly vehicle detection in other scenarios.
+All baseline methods utilize the formula 18 and 19 to compute
+anomaly scores.
+Initially, we conduct benchmark tests on the validation
+set, where all anomalous social dynamics are manifested on
+highways. The comparative experimental results for anomaly
+vehicle detection can be seen in Table V. Apart from DSAB,
+which captures inter-node correlations through graph attention
+mechanisms, our method is the only one capable of identifying
+specific behaviors, such as anomalous vehicles that deviate
+from typical social dynamics. Concerning precision across
+different k values, most methods do not exceed 0.6 and
+generally fall within the range of 0.1-0.3. This is because
+the social relationships between vehicles cannot be identified
+through simple mathematical methods or neural networks
+
+21718
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 12, DECEMBER 2024
+
+TABLE V
+A BNORMAL V EHICLE D ETECTION P ERFORMANCE ON THE
+T EST S ET OF C OMPREHENSIVE S CENARIO
+
+TABLE VI
+A BNORMAL S CENE D ETECTION P ERFORMANCE ON THE
+T EST S ET OF C OMPREHENSIVE S CENARIO
+
+modeling individual vehicles. This microscopic approach to
+anomaly vehicle detection highlights this fact. In contrast, our
+method achieves a precision of over 0.7, even approaching
+0.9 at its peak, where DSAB and our method are roughly
+comparable. Moreover, our average precision surpasses that
+of most methods by approximately 0.6%, and similarly, our
+ROC-AUC score is approximately 0.18% higher. These experimental results demonstrate that our VSD-AD method can
+delve deeper into the neighbor relationships between vehicles. While STGAE-biv and DSAB can also identify social
+relationships between vehicles, the former fails to capture
+lane-changing behaviors well due to its use of bivariate
+Gaussian trajectory loss, and the latter does not fully explore
+neighbor relationships. Not to mention that baselines like
+Seq2Seq, RTR, CVM, and LTI are unable to identify dynamic
+social relationships at all.
+Furthermore, we conducted comparative experiments on the
+performance of anomaly scene detection among all methods,
+as shown in Table VI. Since anomaly scene detection involves
+macroscopically identifying abnormal patterns in entire scene
+segments, most methods perform well in this aspect. For
+instance, sudden deceleration, braking, or unreasonable acceleration of anomalous vehicles in specific scenes can be easily
+identified by simple non-parametric methods like LTI and
+CVM. Moreover, when anomalous vehicles are present in
+a scene, the scene’s anomaly score is significantly higher
+compared to normal patterns.
+Nevertheless, our method still maintains a leading position
+among all methods, with approximately a 2% improvement
+in precision and ROC-AUC indicators. This is noteworthy, considering that anomaly scene detection is generally
+well-addressed by existing methods due to its reliance on
+macro-level recognition of abnormal patterns in entire scene
+segments, unlike the more nuanced anomaly vehicle detection.
+Next, we compared the performance between all baselines
+and VSD-AD in other distinct scenarios, including slow,
+speeding, tailgating, and stalled. The results can be referenced
+
+Fig. 4. Influence of different parameters. The model tends to favor the
+min-mean aggregator for fitting the data. Regarding the size of the code book
+embedding space, larger spaces enhance model accuracy but must be carefully
+balanced to avoid weakening quantization capabilities. The model exhibits
+insensitivity towards dropout and sampling time, affording us greater freedom
+in parameter selection.
+
+in Table VII. From the metrics of pre@100 and Ave Pre,
+it can be observed that for slow and stalled vehicles, most
+methods fail to recognize their patterns. Only by deeply
+modeling the social relationships between vehicles can their
+anomalies be effectively detected. In these two scenarios, our
+method achieves optimal performance, with approximately a
+1% improvement in each metric compared to the secondhighest method.
+It is evident that almost all methods, including the
+non-parametric approach CVM specifically designed for
+speeding and tailgating scenarios, perform well in the speeding
+scenario. Although DSAB stands out as the most outstanding,
+almost unbeatable, reaching an impressive 0.995 at ROC-AUC,
+the performance gap of our model remains within an acceptable range. Given that CVM follows different car-following
+dynamics in its initial setup, its performance surpassing all
+methods in the tailgating scenario is not surprising. However,
+it is worth noting that no method outperforms ours on every
+metric. we consistently outperform others in most scenarios.
+2) Hyper Parameter Analysis: In this section, we explore
+the impact of different hyperparameter configurations on
+the model, considering the customization capability of our
+proposed model. We employ different GRU-built graph convolution modules to validate the model’s sensitivity to them. The
+RMMA (Recurrent Multi-head Message Aggregator) built-in
+aggregator combinations used are min, min-mean, and minmean-max.
+Firstly, we investigate the sensitivity of the model to the
+hidden dimension during the model and social dynamics
+relationship graph construction process. From Figure 4a, it can
+
+HU et al.: VSD-AD WITH RECURRENT MULTI-MASK AGGREGATOR ENABLED VAE
+
+21719
+
+TABLE VII
+P ERFORMANCE OF A BNORMAL V EHICLE D ETECTION IN D IFFERENT I NDEPENDENT S CENARIOS
+
+be observed that the model is not sensitive to the hidden
+dimension, and there is no discernible pattern. To ensure fewer
+model parameters, we choose 5 as the hidden dimension. Next,
+by observing Figures 4b, 4c, and 4d, the distance threshold
+signifies that vehicles within this threshold are defined as
+neighbor nodes during the construction of the spatiotemporal
+relationship graph. When the value is 0, the model focuses
+only on a single vehicle without considering social dynamics.
+From Figure 4b, it is evident that the model’s performance is
+optimal when the distance is 0.1.
+Considering the time dimension, we initially set the sampling interval to 1 second and change the window size from
+5 seconds to 20 seconds. Then, we fix the window size at
+15 seconds and change the sampling interval from 1 second
+to 4 seconds. Figures 4c and 4d show that different window
+sizes and sampling frequencies have minimal impact on the
+overall performance of the model. The model achieves optimal performance when the embedding space for RMMA is
+set to 256, and it is sensitive to this parameter according
+to 4e.
+Finally, considering the introduced NFQ module, Figure 4f
+compares the impact of its parameter settings. It can be
+observed that after reaching an optimal solution, further
+growth in the dropout does not contribute to improving the
+model.
+Each line plot in Figure 4 illustrates the impact of different
+RMMA built-in aggregator combinations under various parameters. In summary, the min-mean aggregator combination is
+most suitable for fitting the model to the simulated dataset.
+It is essential to note that aggregators like min, mean, and
+max do not indicate the nearest, average, and farthest distances
+in the spatiotemporal vehicular social dynamics graph, but
+rather their impact on ego-vehicles as indicated by the masked
+representations learned by the MLP formula.
+3) Ablation Study: In this study, we aim to evaluate the
+impact of specific modules within the proposed VSD-AD
+model on the overall model performance by selectively removing them. We objectively assess the influence of the MMA
+(Multi-Mask Aggregator) module and the NFQ (Neighbor
+Fusion Queue) module on the model using the AUC (Area
+Under the Curve) metric on a simulated dataset across four
+scenarios (Slow, Speeding, Tailgating, Stalled). Notably, the
+MMA module utilizes a min-mean aggregator combination.
+As depicted in Figure 5, the removal of the MMA module, replaced with GCN (Graph Convolutional Network) for
+graph convolution operations to process neighboring vehicle
+information, results in a significant performance decrease.
+
+Fig. 5.
+The ablation study reveals that the MMA module significantly
+enhances the overall performance of the model, whereas the NFQ module,
+while contributing to improvements, functions more akin to fine-tuning the
+model.
+
+Across each scenario, there is an approximate 0.26 drop in
+accuracy. Conversely, solely eliminating the NFQ module does
+not lead to substantial fluctuations in the model’s performance,
+typically resulting in a 1%-2% difference in accuracy.
+E. Qualitative Results
+In this section, we qualitatively studied the performance of
+our proposed VSD-AD model on high-definition data captured
+by drones in the real world. Unlike simulated data, the
+HighD dataset has relatively fewer trajectories and different
+road condition patterns. However, our model still manages to
+capture these patterns and detect anomalies.
+The data in HighD primarily originates from German highways, where speed limit policies are relatively lenient, with
+some areas even having unrestricted speeds. Figure 6a illustrates the road conditions during normal driving. Calculated
+from the training set, the average speeds from right to left lanes
+are 56, 69, and 76 mph, respectively. Similar to driving rules
+in China, faster vehicles tend to be closer to the left, while
+slower ones are inclined to be on the right. Therefore, judging
+a vehicle’s abnormality solely based on whether its speed
+exceeds the limit is insufficient. It’s also necessary to consider
+if its speed aligns with other vehicles in the same lane.
+Otherwise, it should be considered abnormal. In this section,
+we manually inspected the segments where the vehicles with
+the highest anomaly scores were found. We discovered that
+the abnormal vehicles fell into the two categories mentioned
+earlier: speeding/slowing down, indicating aggressive driving
+with excessive/insufficient acceleration and speeds not consistent with the normal range of the lane.
+
+21720
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 12, DECEMBER 2024
+
+speed, causing vehicle number 4 to brake urgently. Our model
+accurately labels vehicle number 4 as normal in this scenario.
+V. C ONCLUSION
+In this study, we address the critical task of detecting
+anomalous social dynamics using trajectories obtained from
+a high-speed highway video surveillance system supported by
+the Internet of Things. Our approach focuses on employing
+VSD-AD, an innovative autoencoder supported by recurrent
+multi-mask aggregators, to precisely identify anomalous vehicles. By leveraging this method, we successfully capture the
+complex spatiotemporal dynamics of trajectory patterns, taking
+into account the interactions between neighboring vehicles
+and the inherent randomness in driving behavior. Through
+comprehensive experiments on both simulated and real-world
+datasets, our model demonstrates its scalability, making it
+suitable for large-scale highway monitoring systems with
+thousands of vehicles. Furthermore, our user-customizable
+approach exhibits significant efficacy in detecting various
+anomalous scenarios. Particularly noteworthy is its outstanding performance in identifying anomalies in individual
+vehicles, placing it at the forefront of anomaly detection
+methods. This implies its potential to accurately pinpoint
+specific problematic vehicles within massive traffic flows,
+thereby promoting enhanced traffic management and safety
+protocols.
+Regarding the shortcomings and perspectives of this study,
+it is notable that the MMA modules incur significant computational costs, requiring several hours for training in our
+experimental setup. Despite achieving commendable results
+in both simulation and real-world testing, there remains a
+pressing need to enhance the algorithm’s time complexity in
+the immediate future. Moreover, the VSD-AD model operates
+on a data-driven basis, necessitating extensive data acquisition and preprocessing efforts, particularly challenging in
+obtaining highway data, which demands substantial costs,
+time, and manpower. To address this challenge, we anticipate
+that advancements can swiftly be made through temporal
+data reconstruction techniques or the generation of highway
+imagery via visual direction neural networks and data augmentation solutions [56], thereby augmenting the quantity of
+authentic data and reducing deployment costs for the model.
+Fig. 6. Qualitative results. The visualization demonstrates the detection of
+the top two instances with the highest anomaly scores by the model. The
+reconstructed scenes appear significantly different from the original scenes,
+yet the model successfully discerns abnormal and suspicious vehicles within
+them.
+
+We visualize our experimental results in Figure 6, showcasing the top two scenes with the highest anomaly scores from
+four perspectives: speed, acceleration, normalized anomaly
+scores, and normalized anomaly scores reconstructed by the
+model. Each arrowhead dot represents the starting point, while
+the triangle represents the end point. In the acceleration view
+that is shown in Figure 6b, arrows pointing in the opposite
+direction indicate vehicles are decelerating. In Figure 6b, vehicle number 1 suddenly decelerates without any interference
+from vehicles ahead. In Figure 6c, vehicle number 1 attempts
+to accelerate from lane 2 to lane 1, which requires a higher
+
+R EFERENCES
+[1] W. Wang, X. Zhao, Z. Gong, Z. Chen, N. Zhang, and W. Wei,
+“An attention-based deep learning framework for trip destination prediction of sharing bike,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7,
+pp. 4601–4610, Jul. 2021.
+[2] W. Wang et al., “Realizing the potential of the Internet of Things for
+smart tourism with 5G and AI,” IEEE Netw., vol. 34, no. 6, pp. 295–301,
+Nov./Dec. 2020.
+[3] Y. Chang, E. Tanin, G. Cong, C. S. Jensen, and J. Qi, “Trajectory similarity measurement: An efficiency perspective,” 2023, arXiv:2311.00960.
+[4] X. Xie, C. Zhang, Y. Zhu, Y. N. Wu, and S. Zhu, “Congestion-aware
+multi-agent trajectory prediction for collision avoidance,” in Proc. IEEE
+Int. Conf. Robot. Autom. (ICRA), May 2021, pp. 13693–13700.
+[5] H. Yu, X. Zhang, Y. Wang, Q. Huang, and B. Yin, “Fine-grained accident
+detection: Database and algorithm,” IEEE Trans. Image Process., vol. 33,
+pp. 1059–1069, 2024.
+[6] M. N. Azadani and A. Boukerche, “Driving behavior analysis guidelines
+for intelligent transportation systems,” IEEE Trans. Intell. Transp. Syst.,
+vol. 23, no. 7, pp. 6027–6045, Jul. 2022.
+
+HU et al.: VSD-AD WITH RECURRENT MULTI-MASK AGGREGATOR ENABLED VAE
+
+[7] M. Zhang, T. Li, Y. Yu, Y. Li, P. Hui, and Y. Zheng, “Urban anomaly
+analytics: Description, detection, and prediction,” IEEE Trans. Big Data,
+vol. 8, no. 3, pp. 809–826, Jun. 2022.
+[8] H. Ghahremannezhad, H. Shi, and C. Liu, “Object detection in traffic
+videos: A survey,” IEEE Trans. Intell. Transp. Syst., vol. 24, no. 7,
+pp. 6780–6799, Jul. 2023.
+[9] B. Zhao, P. Han, and X. Li, “Vehicle perception from satellite,” IEEE
+Trans. Pattern Anal. Mach. Intell., vol. 46, no. 4, pp. 2545–2554,
+Apr. 2024.
+[10] C. Zheng, X. Fan, C. Wang, and J. Qi, “GMAN: A graph multiattention network for traffic prediction,” in Proc. AAAI Conf. Artif.
+Intell., Apr. 2020, vol. 34, no. 1, pp. 1234–1241.
+[11] K. Doshi and Y. Yilmaz, “An efficient approach for anomaly detection in
+traffic videos,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+Jun. 2021, pp. 4236–4244.
+[12] Y. Zhao, W. Wu, Y. He, Y. Li, X. Tan, and S. Chen, “Good practices
+and a strong baseline for traffic anomaly detection,” in Proc. IEEE/CVF
+Conf. Comput. Vis. Pattern Recognit., Jun. 2021, pp. 3993–4001.
+[13] K. K. Santhosh, D. P. Dogra, P. P. Roy, and A. Mitra, “Vehicular
+trajectory classification and traffic anomaly detection in videos using
+a hybrid CNN-VAE architecture,” IEEE Trans. Intell. Transp. Syst.,
+vol. 23, no. 8, pp. 11891–11902, Aug. 2022.
+[14] M. Z. Zaheer, A. Mahmood, M. Astrid, and S.-I. Lee, “Clustering
+aided weakly supervised training to detect anomalous events in surveillance videos,” IEEE Trans. Neural Netw. Learn. Syst., early access,
+May 26, 2023, doi: 10.1109/TNNLS.2023.3274611.
+[15] M.-H. Oh and G. Iyengar, “Sequential anomaly detection using inverse
+reinforcement learning,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl.
+Disc. Data Mining, 2019, pp. 1480–1490.
+[16] Y. Cheng, B. Wu, L. Song, and C. Shi, “Spatial-temporal recurrent neural
+network for anomalous trajectories detection,” in Advanced Data Mining
+and Applications, J. Li, S. Wang, S. Qin, X. Li, and S. Wang, Eds.,
+Cham, Switzerland: Springer, 2019, pp. 565–578.
+[17] Y. Ding, W. Zhang, X. Zhou, Q. Liao, Q. Luo, and L. M. Ni, “FraudTrip:
+Taxi fraudulent trip detection from corresponding trajectories,” IEEE
+Internet Things J., vol. 8, no. 16, pp. 12505–12517, Aug. 2021.
+[18] D. Zhang, Z. Chang, S. Wu, Y. Yuan, K.-L. Tan, and G. Chen, “Continuous trajectory similarity search for online outlier detection,” IEEE
+Trans. Knowl. Data Eng., vol. 34, no. 10, pp. 4690–4704, Oct. 2022.
+[19] A. M. Vegni and V. Loscri, “A survey on vehicular social networks,”
+IEEE Commun. Surveys Tuts., vol. 17, no. 4, pp. 2397–2419, 4th
+Quart., 2015.
+[20] Y. Hu, Y. Zhang, Y. Wang, and D. Work, “Detecting socially abnormal
+highway driving behaviors via recurrent graph attention networks,” in
+Proc. ACM Web Conf. New York, NY, USA: Association for Computing
+Machinery, Apr. 2023, pp. 3086–3097, doi: 10.1145/3543507.3583452.
+[21] A. van den Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete representation learning,” in Proc. Adv. Neural Inf. Process.
+Syst., vol. 30, I. Guyon et al., Eds., Curran Associates, 2017,
+pp. 1–10. [Online]. Available: https://proceedings.neurips.cc/paper_
+files/paper/2017/file/7a98af17e63a0ac09ce2e96d03992fbc-Paper.pdf
+[22] R. Krajewski, J. Bock, L. Kloeker, and L. Eckstein, “The highD dataset:
+A drone dataset of naturalistic vehicle trajectories on German highways
+for validation of highly automated driving systems,” in Proc. 21st Int.
+Conf. Intell. Transp. Syst. (ITSC), Nov. 2018, pp. 2118–2125.
+[23] X. Kong, J. Wang, Z. Hu, Y. He, X. Zhao, and G. Shen, “Mobile
+trajectory anomaly detection: Taxonomy, methodology, challenges, and
+directions,” IEEE Internet Things J., vol. 11, no. 11, pp. 19210–19231,
+Jun. 2024.
+[24] X. Liu et al., “Traffic anomaly prediction based on joint static-dynamic
+spatio-temporal evolutionary learning,” IEEE Trans. Knowl. Data Eng.,
+vol. 35, no. 5, pp. 5356–5370, May 2023.
+[25] W. Wang et al., “Vehicle trajectory clustering based on dynamic
+representation learning of Internet of Vehicles,” IEEE Trans. Intell.
+Transp. Syst., vol. 22, no. 6, pp. 3567–3576, Jun. 2021.
+[26] C. Vishnu, V. Abhinav, D. Roy, C. K. Mohan, and C. S. Babu,
+“Improving multi-agent trajectory prediction using traffic states on
+interactive driving scenarios,” IEEE Robot. Autom. Lett., vol. 8, no. 5,
+pp. 2708–2715, May 2023.
+[27] Y. Yao et al., “DoTA: Unsupervised detection of traffic anomaly in
+driving videos,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 1,
+pp. 444–459, Jan. 2023.
+[28] Q. Hu, G. Huang, H. Shi, Y. Lin, and D. Guo, “A short-term aircraft
+trajectory prediction framework using conditional generative adversarial
+network,” in Proc. IEEE 4th Int. Conf. Civil Aviation Saf. Inf. Technol.
+(ICCASIT), Oct. 2022, pp. 433–439.
+
+21721
+
+[29] J. Li, H. Shi, Y. Guo, G. Han, R. Yu, and X. Wang, “TraGCAN:
+Trajectory prediction of heterogeneous traffic agents in IoV systems,”
+IEEE Internet Things J., vol. 10, no. 8, pp. 7100–7113, Apr. 2023.
+[30] X. Kong, H. Lin, R. Jiang, and G. Shen, “Anomalous sub-trajectory
+detection with graph contrastive self-supervised learning,” IEEE
+Trans. Veh. Technol., vol. 73, no. 7, pp. 9800–9811, Jul. 2024, doi:
+10.1109/TVT.2024.3382685.
+[31] W. Ju et al., “A comprehensive survey on deep graph representation
+learning,” Neural Netw., vol. 173, May 2024, Art. no. 106207.
+[32] X. Ma et al., “A comprehensive survey on graph anomaly detection
+with deep learning,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+pp. 12012–12038, Dec. 2023.
+[33] Z. Zhou, X. Dong, Z. Li, K. Yu, C. Ding, and Y. Yang, “Spatio-temporal
+feature encoding for traffic accident detection in VANET environment,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 10, pp. 19772–19781,
+Oct. 2022.
+[34] A. Stocco, M. Weiss, M. Calzana, and P. Tonella, “Misbehaviour prediction for autonomous driving systems,” in Proc. IEEE/ACM 42nd Int.
+Conf. Softw. Eng. (ICSE). New York, NY, USA: Association for Computing Machinery, Oct. 2020, pp. 359–371, doi: 10.1145/3377811.3380353.
+[35] J. Wang et al., “Anomalous trajectory detection and classification based
+on difference and intersection set distance,” IEEE Trans. Veh. Technol.,
+vol. 69, no. 3, pp. 2487–2500, Mar. 2020.
+[36] A. Aboah, M. Shoman, V. Mandal, S. Davami, Y. Adu-Gyamfi, and
+A. Sharma, “A vision-based system for traffic anomaly detection using
+deep learning and decision trees,” in Proc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit. Workshops (CVPRW), Jun. 2021, pp. 4207–4212.
+[37] L. Deng, D. Lian, Z. Huang, and E. Chen, “Graph convolutional
+adversarial networks for spatiotemporal anomaly detection,” IEEE Trans.
+Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2416–2428, Jun. 2022.
+[38] Y. Zheng et al., “Correlation-aware spatial–temporal graph learning for
+multivariate time-series anomaly detection,” IEEE Trans. Neural Netw.
+Learn. Syst., vol. 35, no. 9, pp. 11802–11816, Sep. 2024.
+[39] H. Zhao et al., “Multivariate time-series anomaly detection via graph
+attention network,” in Proc. IEEE Int. Conf. Data Mining (ICDM),
+Nov. 2020, pp. 841–850.
+[40] Y. Zheng, M. Jin, Y. Liu, L. Chi, K. T. Phan, and Y. P. Chen, “Generative
+and contrastive self-supervised learning for graph anomaly detection,”
+IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12220–12233,
+Dec. 2023.
+[41] H. Tu, S. Yu, V. Saikrishna, F. Xia, and K. Verspoor, “Deep outdated fact
+detection in knowledge graphs,” in Proc. IEEE Int. Conf. Data Mining
+Workshops (ICDMW), Shanghai, China, Dec. 2023, pp. 1443–1452.
+[42] F. Xia et al., “CenGCN: Centralized convolutional networks with vertex
+imbalance for scale-free graphs,” IEEE Trans. Knowl. Data Eng., vol. 35,
+no. 5, pp. 4555–4569, May 2023.
+[43] P. Velickovic, G. Cucurull, A. Casanova, A. Romero, P. Liò, and
+Y. Bengio, “Graph attention networks,” 2018, arXiv:1710.10903.
+[44] J. Chen, L. Zheng, Y. Hu, W. Wang, H. Zhang, and X. Hu,
+“Traffic flow matrix-based graph neural network with attention
+mechanism for traffic flow prediction,” Inf. Fusion, vol. 104,
+Apr. 2024, Art. no. 102146. [Online]. Available: https://www.
+sciencedirect.com/science/article/pii/S1566253523004621
+[45] P. Wang, K. Liu, L. Jiang, X. Li, and Y. Fu, “Incremental mobile
+user profiling: Reinforcement learning with spatial knowledge graph
+for modeling event streams,” in Proc. 26th ACM SIGKDD Int.
+Conf. Knowl. Discovery Data Mining. New York, NY, USA: Association for Computing Machinery, Aug. 2020, pp. 853–861, doi:
+10.1145/3394486.3403128.
+[46] S. Zhou, X. Huang, N. Liu, H. Zhou, F.-L. Chung, and L.-K. Huang,
+“Improving generalizability of graph anomaly detection models via
+data augmentation,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+pp. 12721–12735, Dec. 2023.
+[47] Z. Zhang and L. Zhao, “Unsupervised deep subgraph anomaly detection,” in Proc. IEEE Int. Conf. Data Mining (ICDM), Nov. 2022,
+pp. 753–762.
+[48] J. Hu et al., “SAMCL: Subgraph-aligned multiview contrastive learning
+for graph anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst.,
+early access, Nov. 7, 2023, doi: 10.1109/TNNLS.2023.3323274.
+[49] H. Zhang, Y. Ren, L. Fu, X. Wang, G. Chen, and C. Zhou, “Multi-scale
+self-supervised graph contrastive learning with injective node augmentation,” IEEE Trans. Knowl. Data Eng., vol. 36, no. 1, pp. 261–274,
+Jan. 2024.
+[50] A. Sarígün and A. S. Rifaioglu, “Multi-mask aggregators for graph
+neural networks,” in Proc. 1st Learn. Graphs Conf., 2022, pp. 1–10.
+[Online]. Available: https://openreview.net/forum?id=hZ3b8CskgC
+
+21722
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 12, DECEMBER 2024
+
+[51] R. Dey and F. M. Salem, “Gate-variants of gated recurrent unit (GRU)
+neural networks,” in Proc. IEEE 60th Int. Midwest Symp. Circuits Syst.
+(MWSCAS), Aug. 2017, pp. 1597–1600.
+[52] J. Wiederer, A. Bouazizi, M. Troina, U. Kressel, and V. Belagiannis,
+“Anomaly detection in multi-agent trajectories for automated driving,”
+in Proc. 5th Conf. Robot Learn., vol. 164, A. Faust, D. Hsu, and
+G. Neumann, Eds., Nov. 2022, pp. 1223–1233. [Online]. Available:
+https://proceedings.mlr.press/v164/wiederer22a.html
+[53] C. Schöller, V. Aravantinos, F. Lay, and A. Knoll, “What the constant
+velocity model can teach us about pedestrian motion prediction,” IEEE
+Robot. Autom. Lett., vol. 5, no. 2, pp. 1696–1703, Apr. 2020.
+[54] Y. Hu and D. B. Work, “Robust tensor recovery with fiber outliers
+for traffic events,” ACM Trans. Knowl. Discovery Data, vol. 15, no. 1,
+pp. 1–27, Feb. 2021, doi: 10.1145/3417337.
+[55] I. Sutskever, O. Vinyals, and Q. V. Le, “Sequence to sequence learning
+with neural networks,” in Proc. 27th Int. Conf. Neural Inf. Process.
+Syst. (NIPS), Montreal, QC, Canada, vol. 2. Cambridge, MA, USA:
+MIT Press, 2014, pp. 3104–3112.
+[56] Z. Wang et al., “A comprehensive survey on data augmentation,” 2024,
+arXiv:2405.09591.
+
+Minho Jo (Senior Member, IEEE) received the
+B.A. degree from the Department of Industrial Engineering, Chosun University, Gwangju, South Korea,
+in 1984, and the Ph.D. degree from the Department of Industrial and Systems Engineering, Lehigh
+University, Bethlehem, PA, USA, in 1994. He is
+currently a Full Professor with the Department of
+Computer Convergence Software, Korea University,
+Sejong, South Korea, where he is also the Director of the IoT & AI Laboratory. His research
+interests include IoT, blockchain, LLM/ChatGPT,
+artificial intelligence and optimization theory, big data, network security, cloud/edge computing, wireless energy harvesting, and autonomous
+vehicles. Average number of citations per publication authored by him
+(from 2012 to 2022) is 41.7 and Average Field-Weighted Citation Impact
+(FWCI) of him (from 2012 to 2022) is 4.42 (based on SCOPUS SciVal).
+He was a recipient of the 2018 IET Best Paper Premium Award by the
+United Kingdom’s Royal Institute of Engineering and Technology. He was
+awarded with the 2011 Headong Outstanding Scholar Prize. He is one of
+the founders of the Samsung Electronics LCD Division. He is the Founder
+and the Editor-in-Chief of KSII Transactions on Internet and Information
+Systems (SCIE/JCR and SCOPUS indexed). He was the South Korea’s
+Presidential Commission on Policy Planning. He was an Associate Editor
+of IEEE S YSTEMS J OURNAL, IEEE ACCESS, and IEEE I NTERNET OF
+T HINGS J OURNAL; and an Editor of IEEE W IRELESS C OMMUNICATION
+and Network.
+
+Zehao Hu received the B.Sc. degree in network engineering from Wenzhou University, China,
+in 2022. He is currently pursuing the M.S. degree
+with the College of Software and the College of
+Computer Science and Technology, Zhejiang University of Technology, China. His research interests
+include federated learning and telematics systems.
+
+Mario Collotta (Member, IEEE) received the Ph.D.
+degree in computer science engineering and telecommunications from Catania University, Italy, in 2011.
+He received the confirmation by the National Advisory Commission in order to became a Full Professor
+in July 2018. He was the Chair of the B.D. Course in
+Computer Science Engineering and the M.D. Course
+in Telematics Engineering, Kore University of Enna,
+Italy. He is scientific responsible of the Computer
+Engineering and Networks Laboratory (CENs Lab),
+where he coordinates several research projects. He is
+currently an Associate Professor of computer engineering with the Department
+of Engineering and Architecture, Kore University of Enna. His research
+interests include the study of innovative solutions and approaches in expert
+systems and networks, focused on real-time and secure application and the
+interaction design of related App. He has published more than 100 refereed
+articles in these areas. In the following some relevant metrics overview (last
+update April 2024): Scopus H-index is 25 with 2229 Citations.
+
+Yuwei He received the B.Sc. degree from China
+Jiliang University, Hangzhou, China, in 2022. She is
+currently pursuing the master’s degree with Zhejiang
+University of Technology, Hangzhou. Her research
+interests include urban computing and data mining.
+
+Yuqi Shen received the B.Sc. degree in computer
+science and technology from Zhejiang University
+City College, China, in 2022. She is currently pursuing the M.S. degree with the College of Software
+and the College of Computer Science and Technology, Zhejiang University of Technology, China.
+Her research interests include federated learning and
+recommendation systems.
+
+Guojiang Shen received the B.Sc. degree in control
+theory and control engineering and the Ph.D. degree
+in control science and engineering from Zhejiang
+University, Hangzhou, China, in 1999 and 2004,
+respectively. He is currently a Professor with the
+College of Computer Science and Technology, Zhejiang University of Technology. His current research
+interests include artificial intelligence theory, big
+data analytics, and intelligent transportation systems.
+
+Xiangjie Kong (Senior Member, IEEE) received the
+B.Sc. and Ph.D. degrees from Zhejiang University,
+Hangzhou, China. He is currently a Full Professor
+with the College of Computer Science and Technology, Zhejiang University of Technology. Previously,
+he was an Associate Professor with the School of
+Software, Dalian University of Technology, China.
+He has published over 170 scientific papers in
+international journals and conferences (with over
+140 indexed by ISI SCIE). His research interests
+include network science, mobile computing, and
+urban computing. He is a Senior Member of CCF and a member of ACM.
+PAPER_TEXT

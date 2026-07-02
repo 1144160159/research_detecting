@@ -1,0 +1,840 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024 5004515
+
+ Adaptive Context-Aware Distillation for
+ Industrial Image Anomaly Detection
+ Yuan He , Hua Yang , Member, IEEE, and Zhouping Yin , Member, IEEE
+
+ Abstract— Image anomaly detection is extremely challenging tremendous and unforeseeable variations of surface anomalies,
+in industrial manufacturing processes due to unforeseen and accurate anomaly detection is still a challenging but integral
+diversified anomalies. Recently, unsupervised anomaly detection part of real-world industrial applications.
+methods based on knowledge distillation have been developed
+and have shown remarkable potential. While most existing In the past decade, the rapid development of deep neural
+methods are devoted to knowledge generalization, they are inad- networks has significantly advanced the anomaly detection
+equate for the fine-grained detection task. To address this issue, task with powerful representation capabilities [2]. Particularly,
+we propose a novel adaptive context-aware distillation (ACAD) unsupervised methods can be applied to cases where it is
+paradigm that gives due consideration to distillation component difficult to collect sufficient abnormal samples. Most early
+dependencies and knowledge transfer optimization. Technically,
+a novel adaptive distillation module (ADM) is proposed for methods used reconstruction-based architectures [3], [4], [5],
+optimal context-aware knowledge transfer, which consists of [6], [7], [8], [9], [10] that detect outliers under the assumption
+contrastive decoupling distillation (CDD) and masked perceiving that inliers are significantly more frequent and share a common
+distillation (MPD). The proposed CDD helps to constrain the concept of normalcy [11]. These methods can produce images
+distribution of different semantic patterns and strengthen the with per-pixel generation, such as typical autoencoders (AEs)
+discriminative capability. Vanilla methods treat every pixel as
+an equal contribution and fail to focus on critical information. and generative adversarial networks (GANs). The reconstruc-
+To this end, the MPD is proposed to weigh different contextual tion residuals, derived from the disparity between an original
+knowledge adaptively. Extensive experiments with mainstream image and its reconstructed counterpart, are used to distinguish
+anomaly detection datasets show that ACAD outperforms the anomalies. However, these methods are prone to bias toward
+state-of-the-art competitors in accuracy and efficiency. In addi- reconstructing abnormal regions well and obtaining incorrect
+tion, the experimental results with a real-world inkjet printing
+organic electroluminescence display (OLED) panel dataset fur- per-pixel estimation.
+ther demonstrate the effectiveness of our method. Recently, increasing studies based on embedding similarity
+ have been devoted to anomaly detection by exploring the
+ Index Terms— Anomaly detection, context-aware optimization,
+contrastive learning, knowledge distillation. potential of rich feature manifolds [12], [13], [14], [15],
+ [16], [17]. These methods perform well in extracting mean-
+ I. I NTRODUCTION ingful embedding features and project raw images into a
+ high-dimensional feature space, where anomalies are much
+
+A NOMALY detection is vital to guarantee product quality in complex industrial manufacturing processes. The
+primary goal of anomaly detection is to detect outliers and
+ more distinguishable. Typically, [14] and [15] use the Gaussian
+ distribution to construct a correlation model of normal training samples. Roth et al. [17] adopted an extensive memory
+locate anomalies that deviate from normal instances. These bank to store and leverage available normal patch features
+anomalies generally manifest as local structure damages such optimally. Since the normal distribution in the feature space
+as scratches, dents, contaminations, or logical violations such is constrained in fixed regions, the features distributed in the
+as permissible objects occurring in invalid locations [1]. Cur- remaining regions are identified as anomalies. Thus, anomaly
+rently, efficient and reliable visual inspection technology has scores can be derived by calculating the distances between
+been widely applied to product quality control instead of tradi- embedding vectors of test and train samples. However, these
+tional manual inspection approaches. However, considering the methods cannot meet the real-time requirement in practical
+ Manuscript received 20 July 2023; revised 8 November 2023; accepted applications due to the massive computations of vector-level
+9 November 2023. Date of publication 28 November 2023; date of current similarity distances and considerable memory consumption for
+version 3 January 2024. This work was supported in part by the Joint Funds storing patch embeddings.
+of National Natural Science Foundation of China under Grant U22A20208,
+in part by the Key Research and Development Program of Guangdong In addition to the methods mentioned above, unsupervised
+Province under Grant 2022B0202010001-2, and in part by the Project of methods based on knowledge distillation [18], [19], [20], [21],
+Foshan Science and Technology Bureau under Grant 2020001006509. The [22], [23], [24], [25], [26] have recently been developed. These
+Associate Editor coordinating the review process was Dr. Shovan Barma.
+(Corresponding author: Hua Yang.) methods attempt to transfer meaningful knowledge from other
+ The authors are with the State Key Laboratory of Digital Manufacturing well-studied computer vision tasks pretrained with natural
+Equipment and Technology, School of Mechanical Science and Engineering, datasets. Generally, these methods train a student network that
+Huazhong University of Science and Technology, Wuhan 430074, China
+(e-mail: huayang@hust.edu.cn). learns to mimic the output of a pretrained teacher network
+ Digital Object Identifier 10.1109/TIM.2023.3336758 and detect anomalies through their output disparities. Inchoate
+ 1557-9662 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5004515 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+methods tended to adopt identical or similar architectures for weighted masks, which help to focus on critical inforboth student and teacher networks to improve the efficiency mation and refine the perception capacity.
+of knowledge transfer. Then, the student attempts to learn The remainder of this article is organized as follows:
+the normal pattern distribution during training and tries to In Section II, previous works related to our method are
+generalize on previously unseen data [27]. Therefore, dur- briefly reviewed. In Section III, the proposed ACAD is illusing testing, the student’s output for the learned distribution trated in detail. In Section IV, the extensive experiments and
+closely resembles that of the teacher. For test data outside the analyses conducted to evaluate our method are presented.
+normal distribution, the output from the student significantly Finally, we conclude this article and discuss future studies
+differs from that of the teacher, resulting in different anomaly in Section V.
+scores. The pixel with a more significant anomaly score
+indicates a higher likelihood of being abnormal. However, II. R ELATED W ORKS
+existing methods utilize a homogeneous distillation paradigm, In this section, for a more intuitive comparison, we summawhich cannot fully exploit the context-aware information, rize previous representative works along with their advantages
+leading to weak discriminative capabilities in the inference and limitations in a tabular format according to categories,
+process. as shown in Table I. In addition to the reconstruction-based
+ To address the abovementioned issues, we propose a novel methods and embedding similarity-based methods introduced
+adaptive context-aware distillation (ACAD) paradigm in this in Section I, we briefly review previous research contributions
+study. Compared to previous work, ACAD transfers opti- related to our work in Sections II-A–II-C.
+mal knowledge with distinct architectures and data flows to
+enhance the diversity of pattern representations. It is diffi- A. Anomaly Simulation-Based Methods
+cult for convolutional neural networks (CNNs) to learn a Since it is impracticable to collect and annotate sufficient
+precise decision boundary from only normal samples. Gen- abnormal samples, it is expected that models can generalize
+erally, CNNs tend to overgeneralize on normal samples and to deal with unforeseen and diversified types of anomalies
+perform anomaly localization poorly. Thus, we introduce arti- while only having access to normal samples during training.
+ficial anomalies to mitigate the offset inconsistency between Anomaly simulation-based methods attempt to generate abunthe training and testing data distributions. Based on the dant pseudo-abnormal samples with pixel-level annotations to
+assumption that normal and abnormal patterns can be decou- alleviate the sample imbalance problem. Schlüter et al. [37]
+pled from abnormal samples, ACAD leverages the semantic proposed an intuitive self-supervision method named natural
+class-separability for normality reconversion and anomaly seg- synthetic anomalies (NSAs). NSA integrates Poisson image
+mentation. To achieve superior performance, a novel adaptive editing to blend scaled patches of various sizes from separate
+distillation module (ADM) is proposed for knowledge transfer images seamlessly and creates abundant synthetic anomalies
+optimization. This module encourages the network to focus that are more similar to natural irregularities. Li et al. [38]
+more on valuable knowledge while considering contextual proposed a simple data augmentation strategy named CutPaste
+information dependencies. At the inference stage, our method that cuts a rectangular region of a certain image and pastes
+has the potential to detect and localize various anomalies it at a random location in another image. CutPaste perprecisely through the joint detection of the teacher and student forms well in image-level anomaly detection, but its anomaly
+networks. Extensive experiments and analyses conducted with localization precision is limited. For increased diversity,
+the mainstream anomaly detection dataset MVTec AD [28] Zavrtanik et al. [29] proposed a discriminatively trained
+and a real-world inkjet printing OLED panel dataset demon- reconstruction anomaly embedding model (DRAEM) to genstrate that ACAD achieves the state-of-the-art performance erate anomalies based on Perlin noise and auxiliary datasets.
+without using real-world abnormal samples. The main con- In addition, a pair of reconstructive and discriminative subnettributions of this study are summarized as follows. works was utilized to produce high-fidelity per-pixel anomaly
+ 1) A novel ACAD paradigm is proposed for anomaly detec- detection maps. Liu et al. [32] proposed a simple and
+ tion and achieves the new state-of-the-art performance. application-friendly network called SimpleNet that generates
+ ACAD adopts heterogeneous distillation architectures anomaly features by adding Gaussian noise to the adapted
+ and considers dependencies of different distillation com- normal features. Then, a simple discriminator consisting of a
+ ponents with vital context-aware optimization. few multi-layer perceptron (MLP) layers was trained on these
+ 2) A novel contrastive decoupling distillation (CDD) loss is features to discriminate anomalies. Yang et al. [31] proposed
+ proposed to facilitate the network to learn discriminative a multicategory decomposition editing network (MCDEN)
+ representations of different semantic patterns. CDD uti- that adopts a simulative defect generation strategy similar
+ lizes the embeddings projected into the latent space by to CutMix to make the model more sensitive to matching
+ the teacher network as prior knowledge to explicitly pull normal and abnormal areas. MCDEN uses a defect library
+ normal features closer together while pushing outliers with abnormal data to recognize and decompose defect regions
+ further apart to boost superior performance. into assumed fundamental conversions. Similarly, Song et al.
+ 3) A novel masked perceiving distillation (MPD) approach [30] proposed an anomaly composition and decomposition
+ is proposed to weigh different contextual knowledge network (ACDN). ACDN introduces a Gaussian-samplingfor normal pattern reconversion adaptively. This inno- based anomaly composition (GSAC) method to composite
+ vation introduces a set of trainable tokens to customize a large number of images that are similar to real defective
+HE et al.: ACAD FOR INDUSTRIAL IMAGE ANOMALY DETECTION 5004515
+
+ TABLE I
+ S UMMARY OF THE A DVANTAGES AND L IMITATIONS OF P REVIOUS R EPRESENTATIVE A NOMALY D ETECTION M ETHODS
+
+images for training. Due to the adoption of the GAN structure, to a smaller and faster student. It is widely acknowledged
+GSAC is prone to mode collapse during training. that the teacher model’s dark knowledge provides privileged
+ information on the similarity of class categories to enhance
+B. Semantic Segmentation-Based Methods student learning [42]. Recently, some methods based on
+ The semantic segmentation task is an important processing knowledge distilled from pretrained networks have become
+step for scene understanding or better explaining the global potential solutions to anomaly detection. Bergmann et al. [18]
+context of an image [39]. Previously, U-Net [40], a typ- proposed an uninformed students (US) framework to train
+ical semantic segmentation-based network with a U-shape an ensemble of student networks with anomaly-free training
+structure to obtain contextual and positional information, data to mimic the output of a pretrained teacher network.
+was proposed to solve the problem of medical image seg- During testing, the output disparity between the teacher and
+mentation and achieved outstanding performance. Due to student networks is coupled with the uncertainty among stuthe excellent pixel-level classification performance, increas- dent predictions to localize anomalies. In contrast to US,
+ing segmentation models have been proposed to address Wang et al. [20] proposed a student–teacher feature pyramid
+anomaly detection tasks. Xing et al. [34] proposed a novel matching (STPM) network to enable a student network to
+self-supervised guided segmentation framework (SGSF) for receive a mixture of multilevel knowledge from a feature
+anomaly detection by jointly exploring the effective gener- pyramid. STPM and US share a similar method of knowledge
+ation method of forged anomalous samples and the normal transfer, but STPM distills the knowledge of hierarchical
+sample features as the guidance information of segmenta- matching features into a single student network with an idention. Zhang et al. [36] proposed a segmentation network tical architecture. Following STPM, Cao et al. [22] proposed
+with joint representation and contrast clustering (JRCC-Net), an information knowledge distillation (IKD) method, which
+which is able to locate anomalies directly in an end-to-end transfers informative knowledge to alleviate the overfitting
+manner. Song et al. [33] proposed an anomaly segmenta- problem with a strong supervisory signal. IKD has achieved
+tion network called AnoSeg that generates detailed anomaly promising performance on object category anomaly detection
+maps using holistic approaches to maximize segmentation but failed on texture categories. These methods adopt similar
+performance while requiring generative reconstruction for or identical architectures to construct the teacher–student (T-S)
+the entire input image. Without involving reconstruction, framework, inhibiting anomalous representation diversities.
+Yang et al. [35] proposed a semantic information decomposi- To further enhance the discriminating capability on various
+tion network (SIDN) for efficient texture defect segmentation anomalies, Deng and Li [24] proposed a framework named
+by combining texture and defect segmentation results. How- anomaly detection via reserve distillation (RD4AD) to use
+ever, SIDN cannot guarantee optimal performance for textures an encoder and a decoder to construct a reverse distillation
+with irregular patterns, such as tile and wood in [28]. paradigm. Nevertheless, the student network in RD4AD still
+ receives inputs from the teacher network, which might readily
+ leak abnormal information to the student network during
+C. Knowledge Distillation-Based Methods
+ testing, failing to generate discrepant features on anomalies.
+ Knowledge distillation was originally generalized by Hinton
+et al. [41] as a means of model compression and knowl- III. M ETHOD
+edge transfer. The core idea of knowledge distillation is to In this section, the proposed method is introduced in detail.
+transfer meaningful knowledge from a cumbersome teacher First, the overall architecture is briefly depicted. Then, the
+5004515 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 1. Illustration of the proposed ACAD. ACAD consists of four components: an AGM, a FEPM, an ADM, and a DBDM.
+
+main components of ACAD are presented in detail. Finally,
+the training and testing procedures are described.
+
+A. Architecture of ACAD
+ The overall architecture of ACAD is illustrated in Fig. 1.
+Specifically, an anomaly generation module (AGM) is first
+employed to generate artificially pseudo-abnormal samples.
+As a result, it provides an explicit mechanism to enable
+the model to distinguish the potential deviations between
+normal and abnormal samples. Then, both samples are fed
+into a feature encoding projection module (FEPM), where the
+two kinds of raw data are encoded by a pretrained teacher
+network and a randomly initialized student network, respectively. During training, the weight parameters of the teacher
+network are frozen. To further facilitate the discriminative
+representations, a novel CDD loss is proposed to constrain
+normal features to cluster and move away from anomalies.
+Subsequently, different semantic elements are utilized by a
+dual branch decoding module (DBDM) for normal pattern
+reconversion and abnormal region segmentation. The former
+receives multilevel knowledge and aims to mimic the interme-
+ Fig. 2. Illustration of the anomaly generation process for foreground objects.
+diate embedding features of the teacher network for restoring
+pseudo-normal patterns with dense descriptive features. The
+ of the model. To alleviate this problem, we design a simple but
+latter understands global semantic information and aims to
+ effective strategy to generate pseudo-abnormal samples. First,
+generate fine-grained anomaly segmentation results. A novel
+ a noise image I p is generated by a Perlin noise generator, and
+MPD approach is proposed to fully exploit context-aware
+ I p is binarized by a threshold operation to obtain a binary
+optimization and valuable knowledge transfer. At the inference
+ image that contains diversely irregular shapes. The largest one
+stage, the output disparities derived from the T-S and anomaly
+ among them is reserved for generating the mask image I m .
+segmentation results are aggregated together for detection.
+ It is worth noting that mask images are generated slightly
+Extensive experimental results presented in Section IV further
+ differently for datasets involving foreground objects. Since
+demonstrate the significance of each individual component.
+ random anomaly masks tend to appear in the background and
+ cause unnecessary interference, the foreground mask of an
+B. Anomaly Generation Module object is obtained in advance through threshold binarization
+ Most existing unsupervised methods only use anomaly-free and morphological operations, as shown in Fig. 2. Then,
+samples for training, restricting the discriminative capability anomaly-free images I t and I n are randomly sampled from
+HE et al.: ACAD FOR INDUSTRIAL IMAGE ANOMALY DETECTION 5004515
+
+the original training dataset using non-replacement random original space dimension while projecting each embedding
+sampling, accompanied by the flipping or rotating operation. position to an independently distributed vector, two stacked
+Inspired by DRAEM [29] and RandAugment [43], three kinds 1 × 1 convolution layers are employed to form the projectors.
+of augmented transformations randomly selected from the set Note that these layers will be discarded at the inference stage
+{gamma-contrast, brightness change, hue change, solarize, without introducing extra costs.
+invert, GaussianBlur, elastic transformation} are successively
+applied to I t to generate the augmented image I u . The D. Contrastive Decoupling Distillation
+augmented transformations in the set belong to an image Due to the tremendous variations in surface anomalies,
+augmentation package (called imgaug) in Python. Finally, the previous works have been unable to sufficiently distinguish the
+pseudo-abnormal image I d is composited by fusing I n with differences in the aspect of feature representations, especially
+I u and I m for subtle and low-contrast anomalies. Contrastive learn-
+ I d = I n ⊙ (1 − I m ) + I u ⊙ I m (1) ing [46], a technique typically employed in self-supervised
+ representation learning, has shown its efficacy in learning
+where I d , I n , I u ∈ R3×H ×W , and I m ∈ R1×H ×W . Here, 3 or 1, discriminative representations by comparing positive and neg-
+H and W denote the channel, height, and width of the images, ative pairs. Inspired by this, a novel CDD loss is proposed to
+respectively. ⊙ denotes the element-wise multiplication oper- maximize the divergence among different semantic features.
+ation, namely, the Hadamard product. As mentioned in Section III-C, the embeddings of the
+ teacher network are projected into the latent space as prior
+ knowledge to guide the student network. Similarly, F 3d can
+C. Feature Encoding Projection Module Hl ,Wl
+ be viewed as a set of local feature vectors {z d (x, y)}x=0,y=0 ,
+ To fully exploit the semantic and structural information of which constitutes the embedding Z d in the spatial dimension to
+the input data, the FEPM is introduced to perform feature align with Z n . To construct positive and negative pairs for the
+extraction and projection procedures. In this study, the first two contrastive decoupling procedure, the pixel-level class label
+residual blocks of ResNet [44] are chosen as teacher feature map I l ∈ R1×Hl ×Wl is obtained by downsampling from the
+extractors, which are frozen during training. The normal ground truth to classify different semantic vectors. Because
+sample I n is forwarded into a powerful teacher pretrained with anomaly detection can be simplified as a binary classification
+the ImageNet [45] classification dataset to extract hierarchical task in which normalities are unified and other outliers are
+features. Then, the corresponding pseudo-abnormal sample regarded as anomalies, we define the sets of normal and
+I d is handled by a designed student encoder, which consists abnormal semantic embedding vectors as { pi }i=1P
+ and {n j } Nj=1 ,
+of three basic convolution blocks. Each block contains two respectively,
+convolution layers with kernel sizes of 3 and 3 and strides
+of 2 and 1. The number of channels in the first block is 32, and
+ P
+ { pi }i=1 = {z d (x, y)|I l (x, y) = 0} (5)
+the number of channels in the subsequent two blocks gradually {n j } Nj=1 = {z d (x, y)|1 − I l (x, y) = 0} (6)
+increases by a multiple of 2. Unless otherwise specified, all
+convolution or transposed convolution layers are followed by where i = 1, . . . , P, and j = 1, . . . , N . P and N denote
+ReLU and BatchNorm layers in the remainder of this article. the numbers of elements in the respective sets. In addition,
+Only the last output feature of the student encoder layer is used x = 1, . . . , Hl , and y = 1, . . . , Wl . For ease of notation, the
+for subsequent tasks. Thus, the feature extraction procedure cosine similarity function between two vectors, such as v i and
+can be formulated as follows: v j , is defined as sim(v i , v j ) that is formulated as follows:
+  k 2 (v i )T · v j
+ F n k=1 = f Te (I n ; θ Te ) (2) sim(v i , v j ) = (7)
+  k 3 vi 2 v j 2
+ F d k=1 = f Se (I d ; θ Se ) (3)
+ where ∥·∥2 denotes the L2 -norm.
+where F kn , F kd ∈ RCk ×Hk ×Wk denote hierarchical feature maps. In this study, the proposed CDD loss is executed in two
+ f Te (·) and θ Te denote the function and parameters of the parts. A similarity comparison of embedding vectors in the
+teacher encoder, respectively. f Se (·) and θ Se denote the func- same spatial position is first developed between Z d and Z n
+tion and parameters of the student encoder, respectively. without other interferences. In this case, Z d and Z n are strictly
+ Furthermore, considering that the teacher network is derived aligned in the batch dimension, that is, the normal pixel
+by training with the natural dataset ImageNet, there is gener- information of Z d and Z n is derived from the same image.
+ally a data domain gap between the source and target datasets. Consequently, referring to the popular InfoNCE [47] loss,
+Hence, a set of projectors is introduced to fine-tune the feature a pixel-level contrastive loss L intra is devised to pull the normal
+F 2n and map its vector representation of each spatial position inliers close and push abnormal outliers apart
+ Hl ,Wl
+into a new latent space {z n (x, y)}x=0,y=0
+ j=1 exp sim(n j , z n )/τ
+ , which constitutes P PN !
+ 1 X
+the embedding Z n L intra = log 1 + (8)
+ exp sim( pi , z n )/τ
+ 
+ P i=1
+ Z n = f pt F 2n ; θ pt
+ 
+ (4) Hl ,Wl
+ where z n denotes the vector belonging to {z n (x, y)}x=0,y=0
+where Z n ∈ R . f pt (·) and θ pt denote the function
+ Cl ×Hl ×Wl
+ and has the same spatial position as pi or n j . τ > 0 denotes
+and parameters of the projectors, respectively. To preserve the a temperature hyperparameter.
+5004515 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 3. Implementation details of the reverse residual structure. Fig. 4. Implementation details of the perceptual mask.
+
+ Considering the high similarity of normalities among a 2) Anomaly Segmentation: Knowledge distillation-based
+batch of training samples, the distribution of normalities from methods are generally insufficient in terms to guarantee
+different samples should also be homogeneous. To further fine-grained detection results with clear boundaries when
+promote learning robust representations, we introduce a per- inspecting subtle anomalies, and our normality reconversion
+turbation to Z n through random batch shuffling and obtain a branch is no exception. Therefore, an anomaly segmentation
+ Hl ,Wl branch is introduced in our method to produce auxiliary segbatch non-aligned set {ẑ n (x, y)}x=0,y=0 , which constitutes the
+embedding Ẑ n . With the same form as L intra , a cross-image mentation results for joint detection. The decoding structure of
+contrastive loss L inter is then devised to constrain the feature the segmentation branch is symmetrical to that of the student
+distribution across global samples encoder, as shown in Fig. 1. This structure consists of three
+ basic transposed convolution blocks and an output layer. Every
+ j=1 exp sim(n j , ẑ n )/τ
+ PN
+ basic transposed convolution block is designed by replacing
+ P
+ !
+ 1 X
+ L inter = log 1 + . (9) the first convolution layer with a pair of 2 × 2 transposed
+ exp sim( pi , ẑ n )/τ
+ 
+ P i=1
+ convolution layer and skip connection. The final output layer
+ of the branch is a 2 × 2 transposed convolution followed by a
+Finally, the proposed novel CDD loss, denoted as L cdd , can
+ sigmoid activation layer. The anomaly segmentation procedure
+be formulated as follows:
+ for obtaining the image I s is formulated as follows:
+ 1
+ L cdd = (L intra + L inter ). (10) I s = f Ss (Z d ; θ Ss ) (12)
+ 2
+Through the CDD, the class-separability of pixel-level features where I s ∈ R1×H ×W denotes the anomaly segmentation image.
+between normalities and anomalies is significantly enhanced, f Ss (·) and θ Ss denote the function and parameters of the
+which boosts the discriminative capability of the model. branch, respectively. Then, the per-pixel cross-entropy loss is
+ used as the anomaly segmentation loss
+ L seg = E I d −∥I m ⊙ log I s + (1 − I m ) ⊙ log(1 − I s )∥1
+  
+E. Dual Branch Decoding Module
+ (13)
+ As shown in Fig. 1, given the embedding features preliminarily decoupled to involve respective category-specific where E[·], ⊙, and ∥·∥1 denote the expectation calculation,
+information, the DBDM is introduced to further decode and Hadamard product, and L1 -norm, respectively.
+retain favorable information in each task branch.
+ 1) Normality Reconversion: Following [24], the normality F. Masked Perceiving Distillation
+reconversion branch is designed to be symmetrical but reverse Existing knowledge distillation-based methods are generally
+compared to the teacher and produces matching hierarchical dedicated to generalizing the expert knowledge and treating
+features. It is worth noting that the inputs of the branch are not every pixel as an equal contribution to knowledge transfer.
+derived from the teacher network, which clearly distinguishes This motivation neglects different knowledge properties and
+our approach from previous methods. Specifically, correspond- restricts performance. Inspired by [48] and [49], to adaptively
+ing to the first two residual blocks of ResNet, there are two emphasize or suppress contextual knowledge transfer, a novel
+reverse residual blocks designed for decoding. The detailed MPD approach is proposed to focus on critical information
+decoding structure is depicted in Fig. 3. The outputs of the and refine the perception capacity.
+branch are formally denoted as follows: As shown in Fig. 4, the trainable embedding tokens E are
+ introduced to generate masks containing pixels of interest
+ {F rk }2k=1 = f Sr (Z d ; θ Sr ) (11)
+ M kn = f mg F kn , E k ; θ mg
+ 
+ (14)
+where F rk ∈ RCk ×Hk ×Wk denotes the recovered feature. f Sr (·) M r = f mg F r , E ; θ mg
+ k k k
+ 
+ (15)
+and θ Sr denote the function and parameters of the branch,
+respectively. Note that F rk has the same shape as F kn . M k (x, y) = M kn (x, y) ⊙ M rk (x, y) (16)
+HE et al.: ACAD FOR INDUSTRIAL IMAGE ANOMALY DETECTION 5004515
+
+where M kn , M rk , M k ∈ R Hk ×Wk , and M k denotes the learned
+holistic pixel-level mask. E k ∈ RT ×Ck , and T denotes the
+number of underlying semantic primaries that deserve to be
+captured. f mg (·) and θ mg denote the function and parameters
+of the mask generation procedure, respectively. Then, F rk (x, y)
+and F kn (x, y) ∈ R1×Hk ×Wk are used to represent feature
+vectors at position (x, y) in each feature map, respectively.
+Dense pixel-level supervision is adopted to make the normality
+reconversion branch mimic the outputs of the teacher network,
+similar to conventional [20]. First, the L2 -distance along the
+channel dimension between the normalized feature vectors is
+formulated as follows:
+ 2
+ F rk (x, y) F kn (x, y)
+ Dk (x, y) = − (17)
+ F r (x, y) 2
+ k
+ F kn (x, y) 2
+ 2
+
+where Dk ∈ R Hk ×Wk , and x = 1, . . . , Hk , y = 1, . . . , Wk . Fig. 5. Inference procedure of our method. The abbreviations T and S
+Then, the kth hierarchy distillation loss for pixel-level knowl- represent the feature data extracted by the teacher and student networks,
+edge transfer can be formulated as follows: respectively. The abbreviations Seg and Rec represent the anomaly segmentation and the normality reconversion, respectively.
+ Wk
+ Hk X
+ 1 X
+ (1 + M k (x, y)) ⊙ Dk (x, y) (18)
+ 
+ Lk =
+ 2Hk Wk x=1 y=1
+ update the parameters ensures that the network converges after
+where the learned mask is given equal confidence to super- reaching the specified number of epochs.
+impose on the conventional pixel-level regression. Finally, the In the inference procedure as shown in Fig. 5, given a
+loss for the entire MPD process can be formulated as follows: test image I d ∈ R3×H ×W , multiscale anomaly maps are first
+ K derived from the output disparities between the normality
+ reconversion branch (F rk ) and the pretrained teacher (F kn ).
+ X
+ L mpd = Lk (19)
+ k=1 Referring to (7), we use the cosine similarity to calculate
+where K denotes the number of feature hierarchies used for hierarchical anomaly maps
+the experiment in this study.
+ I ak (x, y) = 1 − sim F rk (x, y), F kn (x, y)
+ 
+ (22)
+
+G. Adaptive Distillation Module where I ak ∈ R1×Hk ×Wk . Moreover, the anomaly maps first need
+ Considering the dependencies between distillation com- to be upsampled to the same size as I d by bilinear interpolaponents, the ADM is proposed for optimal context-aware tion. Then, taking the contributions of hierarchical upsampled
+knowledge transfer, which essentially introduces CDD and anomaly maps into equal consideration, the element-wise mul-
+MPD separately during the encoding and decoding phases tiplication operation is adopted to obtain the holistic anomaly
+to facilitate the learning of optimal representations. During map
+training, the final outputs of CDD and MPD are composed of
+ K
+corresponding distillation loss. Hence, ADM can be summa- Y
+ U I ak
+ 
+ Ia = (23)
+rized and formulated as follows:
+ k=1
+ L adm = λ1 f cdd Z d , Z n , Ẑ n ; θ cdd
+ 
+ where I a ∈ R1×H ×W , and U denotes the upsampling oper-
+ + λ2 f mpd {F rk , F kn , E k }K k=1 ; θ mpd
+ 
+ ation. Finally, I a is aggregated together with the anomaly
+ = λ1 L cdd + λ2 L mpd (20) segmentation image I s to obtain the detection result I r
+where λ1 and λ2 are tunable hyperparameters to balance loss
+ I r = λ f I a + (1 − λ f )I s · max(I a ) (24)
+terms. f cdd (·) and θ cdd denote the function and parameters of
+CDD, respectively. f mpd (·) and θ mpd denote the function and where 0 ≤ λ f ≤ 1 is used to adjust the weights of two terms
+parameters of MPD, respectively. and max(I a ) denotes the maximum value in I a .
+
+H. Training and Inference Procedure
+ IV. E XPERIMENTS
+ During training, the overall architecture of ACAD is optimized by the joint loss function In this section, a series of experiments are conducted to
+ qualitatively and quantitatively evaluate the performance of
+ L = αL adm + β L seg (21)
+ ACAD and its individual components. Additionally, ACAD is
+where α and β are tunable hyperparameters to balance loss applied to inspect inkjet printing OLED panels to verify its
+terms. Using (21), repeating optimization steps to continuously effectiveness in practical applications.
+5004515 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 6. Visualization of some qualitative detection results on the MVTec AD dataset [28]. Rows from top to bottom correspond to test images, ground truth
+images, detection results after Gaussian filtering, and images obtained through a threshold operation.
+
+A. Dataset and Evaluation Criteria pretrained with ImageNet [45] are selected as the teacher,
+ 1) MVTec AD Dataset: The MVTec anomaly detection and its parameters are frozen. The data augmentation strategy
+(MVTec AD) [28] is a challenging dataset to benchmark sur- in III-B is employed to generate 1280 pseudo-abnormal
+face anomaly detection and localization algorithms. It contains samples for training, and all samples are resized to the
+a series of industrial abnormal and normal images, including resolution of 256 × 256. Specifically, the augmentation
+five categories of textures and ten categories of objects. There operations are set as follows: {gamma-contrast(0.5, 1.5),
+are a total of 3629 normal images for training and a mixture of brightness change(0.8, 1.2), hue change(−60, 60), solarize
+1725 normal and abnormal images for testing. All images are (32, 128), invert(de f ault), GaussianBlur(de f ault), elastic
+high-resolution images of real-world industrial products, most transformation(2, 9)}.
+of which are well center-aligned. Moreover, abnormal images For the hyperparameters in (20) and (21), λ1 , λ2 , α, and
+of each category contain diverse anomalies with pixel-level β are set to 0.1, 100, 1, and 10, respectively. In addition,
+ground truth annotations for evaluation. the distillation temperature hyperparameter τ in (8) and (9)
+ 2) DAGM Dataset: The DAGM dataset [50] contains is experientially set to 0.1. Because underlying semantic
+ten categories of various textures with artificially generated primaries in the anomaly detection task can be roughly
+anomalies, which are extremely subtle and closely resemble abstracted into normalities and anomalies, the T dimension
+the texture background, making it particularly challenging for in the trainable embedding tokens E is set to 2. The Adam
+unsupervised anomaly detection. The dataset comprises a total optimizer [51] is used to train our model with a learning rate
+of 8050 training images and 8050 testing images, some of of 0.01, and the β is the default value of (0.5, 0.999). The
+which contain anomalies and have been roughly labeled. entire training procedure is carried out with a batch size of
+ 3) Evaluation Criteria: The pixel-level area under the 32 and 200 iterations. Furthermore, the CosineAnnealingLR
+receiver operating characteristic (AuROC) [28] and the nor- strategy [52] is adopted to adjust the learning rate at the end of
+malized area under the per-region-overlap (AuPRO) [18] are each epoch, with a minimum value of 0.0001 in the last epoch.
+adopted for evaluation on the MVTec AD dataset. For the At the inference stage, the hyperparameter λ f in (24) is set to
+AuROC and AuPRO metrics, a higher evaluation score indi- 0.5, which indicates that the final detection result gives equal
+cates better detection performance. The AuROC is a standard confidence to the dual decoding branches. After obtaining the
+anomaly detection metric computed from the receiver oper- detection result using (24), a Gaussian filter with σ = 4 is
+ating characteristic (ROC) curve, which is a curve of the used to perform the postprocessing. All the experiments are
+true-positive rate (TPR) with respect to the false-positive rate conducted on a device with an Intel Xeon1 @2.20 GHz CPU
+(FPR) under different thresholds. In contrast to the AuROC, and an NVIDIA Titan Xp GPU, using PyTorch 1.9.0.
+the AuPRO weights ground-truth regions of different sizes
+equally. To calculate the AuPRO metric, the anomaly score C. Comparison With Existing Methods
+map needs to be processed by a threshold operation. Then, 1) Experiment on MVTec AD: In this section, we compare
+the overlap percentage of each connected region within the our ACAD with other state-of-the-art methods on the MVTec
+ground truth image with the corresponding region within the AD dataset [28] to holistically evaluate the detection perforanomaly score map is calculated to evaluate performance. mance. Some qualitative detection results of our method are
+Consistent with [18], the AuPRO is calculated with an average visualized in Fig. 6. Table II reports the quantitative pixel-level
+per-pixel FPR threshold of 0.3. For evaluation on the DAGM AuROC and AuPRO results of our method for anomaly
+dataset, due to the coarse ground truth labels, it is challenging localization compared to those of existing methods: SPADE
+to measure the anomaly localization performance accurately. [12], PaDiM-WResNet50 [15], DRAEM [29], PatchCore [17],
+Thus, three different evaluation criteria, image-level AuROC, STPM [20], IKD [22], RD4AD [24], and MMR [10]. For
+TPR, and true-negative rate (TNR), are used. the sake of fairness and impartiality, the AuROC and AuPRO
+B. Implementation Details results of other methods compared in the experiment are taken
+ from the corresponding official papers [10], [12], [15], [17],
+ During the experiments, the first two residual blocks
+(i.e., conv2_x and conv3_x) of the ResNet18 [44] 1 Registered trademark.
+HE et al.: ACAD FOR INDUSTRIAL IMAGE ANOMALY DETECTION 5004515
+
+ TABLE II
+ AU ROC(%)/AU PRO(%) FOR A NOMALY L OCALIZATION ON THE MVT EC AD DATASET [28]. W E C OMPARE O UR M ETHOD W ITH E XISTING SOTA
+ M ETHODS TO H OLISTICALLY E VALUATE THE P ERFORMANCE . F OR B OTH AU ROC AND AU PRO, THE B OLD F ONT I NDICATES THE B EST R ESULT
+
+[20], [22], [24], [29]. The AuROC and AuPRO metrics of our but its performance declines substantially in some intricate
+method presented in Table II are obtained by calculating the categories (i.e., tile and wood). Although RD4AD attempts to
+mean result of three repeated training experiments. avoid a similar structure and knowledge generalization during
+ As Table II displays, our method significantly outper- distillation, its student network still receives inputs from the
+forms all existing state-of-the-art methods in terms of both teacher network, which readily leaks abnormal information
+AuROC and AuPRO metrics on texture categories. Our method to the student network and leads to inferior prediction in
+achieves the best average outcome, with a 99.25% AuROC inference. Moreover, all these methods neglect to reinforce
+score and a 97.28% AuPRO score. It is worth noting that the discrepant representations and context-aware knowledge
+none of the existing methods can simultaneously reach high optimization in the feature space. They merely introduce the
+accuracy on five texture categories except ours. Additionally, output of one network into another network as usual.
+our method achieves the maximum average AuPRO scores However, although our method holistically achieves excelof 94.96% and 95.73% on object categories and overall lent performance across 15 categories, there are still some
+15 categories, indicating the superiority of our method. With shortcomings. Regarding texture categories, our method
+a competitive average AuROC score of 97.88% across all achieves the second-best detection performance on the grid
+categories, our method is only 0.26% points lower than the category with only a slight gap from the best method. Regard-
+98.14% score of PatchCore. For the average AuROC score ing object categories, our method has significant advantages
+on texture categories, our method surpasses the second-best in terms of the AuPRO metric but does not perform well
+STPM by a large margin of 0.91% points. Furthermore, in evaluating the AuROC metric. Specifically, our method
+our method surpasses the second-best RD4AD by a large achieves the best detection performance on the pill and toothmargin of 1.83% points for the overall AuPRO average score. brush categories. Our method obtains competitive results on
+Most existing methods perform poorly in particular categories the bottle and zipper categories and achieves the second-best
+(i.e., wood and toothbrush) due to their relatively irregular performance. Although the AuPRO score of our method on the
+and subtle anomalies. In contrast, our method makes notable hazelnut category is the highest, the corresponding AuROC
+improvements on these categories. score is slightly inferior to that of DRAEM [29], which is
+ In particular, although STPM and IKD also employ the sensitive to large-scale discriminative segmentation. Compared
+knowledge distillation strategy and the T-S framework, they to SPADE [12] and RD4AD [24], which use deep pretrained
+still fail to achieve satisfactory results. The main reason is that network features and contain a large number of parameters,
+the knowledge transfer in their student and teacher networks is our method achieves inferior performance on the capsule and
+homogeneous, which hinders their discriminative capabilities screw categories. The reason may be that our method uses only
+in the inference process. Besides, RD4AD adopts the reverse shallow pretrained network features, prompting our method to
+design to facilitate activation discrepancies on anomalies, be lightweight and efficient but limiting the capability of the
+5004515 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+ Fig. 8. Comparison of some visualized results on the DAGM dataset [50].
+ Compared to the best supervised method [55], our method achieves more
+ accurate anomaly localization without using labeled training samples.
+Fig. 7. Some examples of anomalies involving violations of logical
+constraints in the categories of cable (missing cable), metal nut (flip), and
+transistor (misplaced) [28]. Columns from left to right correspond to normal TABLE IV
+images, abnormal images, ground-truth images and failed detection results. C OMPARISON OF PARAMETER S IZE AND I NFERENCE S PEED ON THE
+ MVT EC AD DATASET [28] W ITH 256 × 256 R ESOLUTION I NPUTS
+ TABLE III
+ C OMPARISON OF THE D ETECTION P ERFORMANCE ON THE DAGM
+ DATASET [50]. T HE B OLD I NDICATES THE B EST R ESULTS OF THE
+ U NSUPERVISED (U NSUP ) AND S UPERVISED (S UP ) M ETHODS
+
+ method and the best supervised method [55], our method
+ achieves more accurate anomaly localization, as shown in
+ Fig. 8. Because the training labels of supervised methods
+ are roughly annotated with ellipses that approximately cover
+ the anomalies, their anomaly localization results are not sufficiently accurate. In contrast, our method achieves precise
+ anomaly localization without using labeled training samples.
+ 3) Complexity Analysis: To further analyze the complexity
+ of ACAD, we compare it with other methods from two aspects:
+network to capture deep semantic information. In addition, parameter size and inference speed, and the quantitatively
+our method fails to achieve satisfactory performance on the specific results are shown in Table IV. Compared with the
+cable, metal nut and transistor categories. Among these three embedding similarity-based methods, such as PaDiM [15]
+categories, there are some anomalies involving violations of (with the backbone of WResNet50) and PatchCore [17], our
+logical constraints, as shown in Fig. 7. PaDiM [15] and method not only contains much fewer parameters but also
+PatchCore [17] achieve excellent results in detecting these surpasses them in terms of inference speed by a large margin.
+anomalies due to their use of the memory bank mechanism, Since PaDiM and PatchCore need to store an enormous
+which may restrict the inference efficiency of the model. It can number of features and calculate anomaly scores with a
+be inferred that our method lacks an explicit mechanism to complex feature search and matching process, they introduce
+constantly encourage the network to store and update normal considerable extra memory and time costs. In particular, the
+patterns during training. time consumption of PaDiM and PatchCore increases linearly
+ 2) Experiment on DAGM: In experiments on the DAGM with the input size due to the patch-level computation during
+dataset [50], only anomaly-free samples from the training set inference. In contrast to knowledge distillation-based STPM
+are utilized for training, following the methodology of the [20] and RD4AD [24], our method still has apparent advanprevious experiment. Since the anomalies are only coarsely tages in terms of efficiency and storage resource consumption,
+labeled, the detection performance is evaluated by classifying which benefit the potential for practical applications. With a
+whether the test image contains anomalies rather than measur- lightweight pretrained backbone, STPM achieves comparable
+ing the accuracy of anomaly localization. storage resource consumption to ours, whereas its detection
+ The quantitative results of unsupervised methods shown in accuracy and inference speed are significantly worse.
+Table III are obtained from [29] and [36], and the quantitative
+results of supervised methods are obtained from the corresponding official papers [53], [54], [55]. As shown in Table III, D. Ablation Analysis of ACAD
+our method surpasses other state-of-the-art unsupervised meth- A series of ablation experiments are analyzed in this section
+ods and remains competitive compared to supervised methods. to further investigate the effectiveness of individual compo-
+Furthermore, although there is still a slight gap between our nents of the proposed ACAD. All ablation experiments are
+HE et al.: ACAD FOR INDUSTRIAL IMAGE ANOMALY DETECTION 5004515
+
+Fig. 9. Some visualization examples of learned feature vectors from ACAD without (top row) or with (bottom row) CDD by using t-SNE [56]. Columns
+from left to right correspond to the test samples selected from the tile, wood, and bottle categories.
+
+ TABLE V 2) Effectiveness of CDD: CDD is proposed to constrain
+ A BLATION S TUDY FOR E FFECTS OF AGM, CDD, AND MPD. T HE the distribution of different semantic patterns and enhance
+ A BSENCE OF MPD I S R EPLACED BY THE VANILLA
+ M EANS I NTRODUCED IN [20]
+ the discriminative capability. Technically, CDD utilizes the
+ embeddings projected into the latent space by the teacher
+ network as prior knowledge to help the student network to
+ cluster normal features and push anomalies away explicitly.
+ To analyze the effects of CDD more intuitively, we visualize
+ the feature vectors encoded from abnormal samples of the
+ testing dataset by using t-SNE [56], as shown in Fig. 9. The
+ samples are selected from the tile, wood, and bottle categories
+ and forwarded into the network trained with or without CDD,
+ respectively. Obviously, although normal and abnormal feature
+ vectors can be roughly separated without CDD, they are highly
+ scattered with much overlap in the spatial distribution. In contrast, CDD makes the congeneric feature vectors more compact
+conducted with the MVTec AD dataset [28] using the AuROC and distinguishable in the feature space and presents a clear
+and AuPRO criteria. boundary between normal and abnormal feature vectors, which
+ 1) Effectiveness of AGM: Since it is impracticable to collect visually demonstrates the effectiveness of CDD for promoting
+and annotate sufficient abnormal samples in real-world indus- the class-separability of different semantic information.
+trial environments, AGM is introduced as a means of data As shown in Table V, in the case of investigating the
+augmentation to generate artificial anomalies. To investigate effects of CDD that consists of L intra and L inter , different
+the effects of AGM, we conducted experiments both with loss combinations are adopted in the experiments. The experand without it. When AGM is not employed, the model is imental results demonstrate that our method achieves similar
+unable to utilize CDD, MPD, and the segmentation branch of improvements in both AuROC and AuPRO when using only
+DBDM, because it can only be trained with normal samples. L intra or L inter . With the integrated CDD, our method improves
+In particular, the absence of MPD is replaced by the vanilla the AuROC score by 0.26% and the AuPRO score by 0.34%
+means introduced in [20]. The quantitative effects are reported compared to the basic architecture, which is ACAD without
+in Table V, where the performance of the model exhibits a CDD and MPD. Obviously, L intra and L inter are consistent
+significant improvement with the influence of AGM. Com- and complementary in promoting the model to distinguish
+paring the first two rows of Table V, the average AuROC and anomalies during training.
+AuPRO scores increase by 0.87% and 1.98%, respectively. Our The optimization of hyperparameters is a common topic in
+method is based on the assumption that normal and abnormal many tasks [57], [58], [59], and it significantly impacts the
+patterns can be decoupled from abnormal samples. Therefore, overall performance of the model. To explore the influence
+without AGM, our method essentially degrades into training of temperature parameter τ in (8) and (9), we attempted
+the reconversion of normal patterns solely using normal sam- to train and evaluate our method with different orders of
+ples. Furthermore, AGM can mitigate the offset inconsistency magnitude τ , as shown in Fig. 10. Under the influence of
+between the training and testing data distributions. different τ values, both the overall AuROC and AuPRO scores
+5004515 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 10. Line chart of AuROC and AuPRO metrics evaluated with different
+temperature hyperparameters τ .
+ Fig. 12. Detailed detection results of DBDM on the grid, tile, hazelnut, and
+ pill categories. Columns from left to right correspond to test images, ground
+ truth images, anomaly maps of two hierarchies, fused anomaly maps without
+ colormap operations, and anomaly segmentation images.
+
+ TABLE VI
+ A BLATION S TUDY FOR E FFECTS OF THE H IERARCHICAL N ORMALITY
+ R ECONVERSION (R EC ) AND THE A NOMALY S EGMENTATION (REC)
+
+Fig. 11. Histogram of the anomaly score distribution of the detection result
+image derived without (left) or with (right) MPD. The statistics for anomaly
+scores come from a portion of the image. abnormal pixels should be concentrated around 1. Obviously,
+ without MPD, there is a significant overlap between the two
+show a trend of first increasing and then decreasing. Due different distributions of anomaly scores. In contrast, the
+to the properties of exponential functions, the temperature overlap significantly decreases when using MPD, and less
+parameter τ is mainly used to adjust the smoothness of the data overlap means less false detection. Thus, the nonoverlapping
+distribution after exponential operation. However, abnormal distribution of normality and anomaly indicates the strong
+feature data is usually much less abundant than normal feature discriminative capability of our model.
+data, which may cause the model not to be fully optimized 4) Effectiveness of DBDM: We compare the situations with
+during training. It can be inferred that when τ is equal to different decoding combinations to explore the influence of
+0.1, the contributions of the two types of feature data can be dual task branches, namely the normality reconversion (Rec)
+appropriately regulated. and the anomaly segmentation (Seg). Table VI reports the
+ 3) Effectiveness of MPD: MPD is proposed to adaptively comparison results of evaluation scores, and some detailed
+optimize knowledge transfer and guide the student network visualization results are presented in Fig. 12. It can be
+to focus more on valuable knowledge with consideration seen in Table VI that the performance drops dramatically
+of contextual information dependencies. The ablation exper- when either branch is used alone. Both the AuROC and
+imental results are also presented in Table V, where it is AuPRO average scores reach the highest values only when
+shown that the additional MPD further improves the perfor- the detection results of dual branches are used simultaneously.
+mance. Obviously, the average AuROC and AuPRO scores As can be observed in the last two columns of Fig. 12,
+are improved by 0.53% and 0.28%, respectively, compared the anomaly maps produced by the normality reconversion
+to the basic architecture, which is ACAD without CDD and branch are generally rougher but more robust than the anomaly
+MPD. In addition, an intuitive comparison example is shown segmentation results, which have more precise boundaries
+in Fig. 11, where the statistical histogram of the anomaly close to the ground truth regions but tend to miss some
+score distribution is used to quantify the effectiveness of inconspicuous anomalies or internal anomalies of large-scale
+MPD. A portion of the test sample is extracted to calculate structural breakdown, such as bent (grid) and crack (hazelnut).
+the histogram distributions to balance the gap between the In addition, hierarchical color maps presented in the third and
+number of normal and abnormal pixels for an intelligible fourth columns of Fig. 12 show different characteristics: lowvisual perspective. Ideally, the anomaly scores of normal pixels level features produce high-resolution anomaly maps, which
+should be concentrated around 0, while the anomaly scores of capture small receptive fields; high-level features produce
+HE et al.: ACAD FOR INDUSTRIAL IMAGE ANOMALY DETECTION 5004515
+
+Fig. 13. Visualization of some qualitative detection results on the inkjet printing dataset. Rows from top to bottom correspond to test images, anomaly
+maps after Gaussian filtering, and results obtained through a threshold operation. Columns from left to right correspond to the images in different detection
+conditions. (a) Large ink volume. (b) Small ink volume. (c) Tight layout. (d) Low magnification.
+
+ TABLE VII
+ D ETAILED P RESENTATION OF N UMBER OF I MAGES IN E ACH
+ C ATEGORY OF THE I NKJET P RINTING DATASET
+
+Fig. 14. Inkjet printing equipment (left) and vision inspection system (right).
+
+low-resolution anomaly maps, which carry higher semantic TABLE VIII
+level information and are suitable for detecting large-scale D ETECTION R ESULTS ON THE I NKJET P RINTING DATASET
+anomalies. Therefore, the aggregation of hierarchical anomaly
+maps and the segmentation image reflects a trade-off between
+robustness and fineness, achieving the best comprehensive
+performance.
+
+E. Inkjet Printing Panels Inspection Application
+ In this section, experiments on a real-world inkjet printing
+organic electroluminescence display (OLED) panel dataset are
+conducted to further evaluate the practical performance of The inkjet printing dataset was collected from the vision
+our ACAD. Some visualized experimental results are shown inspection system of the inkjet printing equipment. It contains
+in Fig. 13. The inkjet printing equipment and its automated a total of 2100 defect-free images for training and a mixture of
+optical inspection (AOI) system are shown in Fig. 14. Inkjet 2154 defect-free and defective images for testing. All images
+printing technology dissolves organic molecular materials in have a resolution of 256 × 256. The dataset contains four
+specific solvents to form printing ink. Then, it uses a printhead categories of images: images printed with a large ink volume,
+to squeeze the ink into droplets to fill pixel pits. After vacuum images printed with a small ink volume, images printed in
+drying and curing, a series of substrate layers are formed. a tight layout, and images collected by a low magnification
+The layers are repeatedly printed, cured, and finally packaged lens. The detailed presentation of number of images in each
+to form the finished display device. Due to the complex category is displayed in Table VII. A number of qualitative
+production processes, various defects are easily produced in detection results are visualized in Fig. 13, where various
+each link of inkjet printing manufacturing. These defects defects on the inkjet printing panels can be detected effectively.
+seriously restrict the mass production application of inkjet To meet the requirements of practical production, we adopt
+printing technology in large-scale display substrate manufac- precision, recall, and F1 score as three criteria to evaluate
+turing. Therefore, it is essential to monitor the quality of the performance of our method comprehensively. As shown
+display substrate products. in Table VIII, our method achieves average scores of 99.43%,
+5004515 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+99.49%, and 99.46% on the three criteria, respectively. More- [9] Y. Liang, J. Zhang, S. Zhao, R. Wu, Y. Liu, and S. Pan, “Omni-frequency
+over, our method can achieve a detection speed of about channel-selection representations for unsupervised anomaly detection,”
+ 2022, arXiv:2203.00259.
+60 fps for a panel resolution of 256 × 256. The experimental [10] Z. Zhang, Z. Zhao, X. Zhang, C. Sun, and X. Chen, “Industrial anomaly
+results with the inkjet printing dataset further demonstrate the detection with domain shift: A real-world dataset and masked multi-scale
+effectiveness of our method. reconstruction,” 2023, arXiv:2304.02216.
+ [11] M. Salehi, H. Mirzaei, D. Hendrycks, Y. Li, M. Hossein Rohban, and
+ M. Sabokrou, “A unified survey on anomaly, novelty, open-set, and
+ V. C ONCLUSION out-of-distribution detection: Solutions and future challenges,” 2021,
+ arXiv:2110.14051.
+ In this study, we propose a novel ACAD paradigm for accu- [12] N. Cohen and Y. Hoshen, “Sub-image anomaly detection with deep
+ pyramid correspondences,” 2020, arXiv:2005.02357.
+rate industrial image anomaly detection. By fully considering
+ [13] J. Yi and S. Yoon, “Patch SVDD: Patch-level SVDD for anomaly
+distillation component dependencies and significant knowl- detection and segmentation,” in Proc. Asian Conf. Comput. Vis., 2020,
+edge transfer optimization, ACAD effectively improves the pp. 1–16.
+discriminative capacity in the inference process. Technically, [14] O. Rippel, P. Mertens, and D. Merhof, “Modeling the distribution
+a novel CDD is introduced to enhance the class-separability of normal data in pre-trained deep features for anomaly detection,” in Proc. 25th Int. Conf. Pattern Recognit. (ICPR), Jan. 2021,
+between normalities and anomalies. Furthermore, a novel pp. 6726–6733.
+MPD is proposed to help focus on critical information and [15] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PADIM: A patch disrefine the perception capacity, boosting superior performance. tribution modeling framework for anomaly detection and localization,”
+ in Proc. Int. Conf. Pattern Recognit. Cham, Switzerland: Springer, 2021,
+The experimental results with mainstream anomaly detection pp. 475–489.
+datasets and the inkjet printing dataset demonstrate that ACAD [16] C.-C. Tsai, T.-H. Wu, and S.-H. Lai, “Multi-scale patch-based represignificantly surpasses the existing state-of-the-art methods sentation learning for image anomaly detection and segmentation,” in
+and achieves high-precision and real-time performance. Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2022,
+ pp. 3065–3073.
+ However, there remains some future work worth investi- [17] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+gating. On the one hand, the proposed method is not good “Towards total recall in industrial anomaly detection,” in Proc.
+at detecting some anomalies involving violations of logical IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+ pp. 14298–14308.
+constraints, such as flipping in the metal nut category and
+ [18] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed
+misplacement in the transistor category. We will consider students: Student-teacher anomaly detection with discriminative latent
+introducing a memory module to alleviate this problem. embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+On the other hand, the experimental images in this study are (CVPR), Jun. 2020, pp. 4182–4191.
+ [19] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee,
+mostly well center-aligned, so it is necessary to investigate “Multiresolution knowledge distillation for anomaly detection,” in Proc.
+the robustness of our method on other non-aligned data. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+In addition, we plan to deploy our algorithm on edge devices pp. 14897–14907.
+for quantization acceleration in future work, making it more [20] G. Wang, S. Han, E. Ding, and D. Huang, “Student-teacher feature
+ pyramid matching for anomaly detection,” in Proc. Brit. Mach. Vis. Conf.
+convenient for practical applications. (BMVC), 2021, pp. 1–14.
+ [21] Q. Zhou, S. He, H. Liu, T. Chen, and J. Chen, “Pull & push: Leveraging
+ differential knowledge distillation for efficient unsupervised anomaly
+ R EFERENCES detection and localization,” IEEE Trans. Circuits Syst. Video Technol.,
+ vol. 33, no. 5, pp. 2176–2189, May 2023.
+ [1] P. Bergmann, K. Batzner, M. Fauser, D. Sattlegger, and C. Steger,
+ [22] Y. Cao, Q. Wan, W. Shen, and L. Gao, “Informative knowledge distil-
+ “Beyond dents and scratches: Logical constraints in unsupervised
+ lation for image anomaly segmentation,” Knowl.-Based Syst., vol. 248,
+ anomaly detection and localization,” Int. J. Comput. Vis., vol. 130, no. 4,
+ Jul. 2022, Art. no. 108846.
+ pp. 947–969, Apr. 2022.
+ [23] S. Yamada, S. Kamiya, and K. Hotta, “Reconstructed student-teacher
+ [2] S. Wang, L. Wu, L. Cui, and Y. Shen, “Glancing at the patch:
+ and discriminative networks for anomaly detection,” in Proc. IEEE/RSJ
+ Anomaly localization with global and local feature comparison,” in Proc.
+ Int. Conf. Intell. Robots Syst. (IROS), Oct. 2022, pp. 2725–2732.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+ pp. 254–263. [24] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+ [3] J. An and S. Cho, “Variational autoencoder based anomaly detection one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ using reconstruction probability,” Special Lecture IE, vol. 2, pp. 1–18, Recognit. (CVPR), Jun. 2022, pp. 9727–9736.
+ Dec. 2015. [25] M. Rudolph, T. Wehrbein, B. Rosenhahn, and B. Wandt, “Asym-
+ [4] P. Bergmann, S. Löwe, M. Fauser, D. Sattlegger, and C. Steger, “Improv- metric student-teacher networks for industrial anomaly detection,” in
+ ing unsupervised defect segmentation by applying structural similarity Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2023,
+ to autoencoders,” in Proc. 14th Int. Joint Conf. Comput. Vis., Imag. pp. 2591–2601.
+ Comput. Graph. Theory Appl., 2019, pp. 372–380. [26] X. Zhang, S. Li, X. Li, P. Huang, J. Shan, and T. Chen, “DeSTSeg:
+ [5] P. Perera, R. Nallapati, and B. Xiang, “OCGAN: One-class novelty Segmentation guided denoising student-teacher for anomaly detection,”
+ detection using GANs with constrained latent representations,” in Proc. in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, Jun. 2023, pp. 3914–3923.
+ pp. 2893–2901. [27] X. Tao, X. Gong, X. Zhang, S. Yan, and C. Adak, “Deep learning for
+ [6] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and U. Schmidt- unsupervised anomaly localization in industrial images: A survey,” IEEE
+ Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection with Trans. Instrum. Meas., vol. 71, pp. 1–21, 2022.
+ generative adversarial networks,” Med. Image Anal., vol. 54, pp. 30–44, [28] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A
+ May 2019. comprehensive real-world dataset for unsupervised anomaly detection,”
+ [7] H. Yang, Q. Zhou, K. Song, and Z. Yin, “An anomaly feature-editing- in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+ based adversarial network for texture defect visual inspection,” IEEE Jun. 2019, pp. 9584–9592.
+ Trans. Ind. Informat., vol. 17, no. 3, pp. 2220–2230, Mar. 2021. [29] V. Zavrtanik, M. Kristan, and D. Skocaj, “DRÆM—A discrimina-
+ [8] V. Zavrtanik, M. Kristan, and D. Skocaj, “Reconstruction by inpainting tively trained reconstruction embedding for surface anomaly detection,”
+ for visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021, in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021,
+ Art. no. 107706. pp. 8330–8339.
+HE et al.: ACAD FOR INDUSTRIAL IMAGE ANOMALY DETECTION 5004515
+
+[30] K. Song, H. Yang, and Z. Yin, “Anomaly composition and decompo- [55] J. Božic, D. Tabernik, and D. Skocaj, “End-to-end training of a two-stage
+ sition network for accurate visual inspection of texture defects,” IEEE neural network for defect detection,” in Proc. 25th Int. Conf. Pattern
+ Trans. Instrum. Meas., vol. 71, pp. 1–14, 2022. Recognit. (ICPR), Jan. 2021, pp. 5619–5626.
+[31] H. Yang, H. Zhu, J. Li, J. Chen, and Z. Yin, “Multi-category decom- [56] L. Van der Maaten and G. Hinton, “Visualizing data using t-SNE,”
+ position editing network for the accurate visual inspection of texture J. Mach. Learn. Res., vol. 9, pp. 2579–2605, 2008.
+ defects,” IEEE Trans. Autom. Sci. Eng., early access, Aug. 21, 2023, [57] S. Chauhan, M. Singh, and A. K. Aggarwal, “Experimental analysis of
+ doi: 10.1109/TASE.2023.3295872. effect of tuning parameters on the performance of diversity-driven multi-
+[32] Z. Liu, Y. Zhou, Y. Xu, and Z. Wang, “SimpleNet: A simple network parent evolutionary algorithm,” in Proc. IEEE 2nd Int. Conf. Electr.
+ for image anomaly detection and localization,” in Proc. IEEE/CVF Conf. Power Energy Syst. (ICEPES), Dec. 2021, pp. 1–6.
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2023, pp. 20402–20411. [58] S. Chauhan, M. Singh, and A. K. Aggarwal, “Investigative analy-
+[33] J. Song, K. Kong, Y.-I. Park, S.-G. Kim, and S.-J. Kang, “Anomaly sis of different mutation on diversity-driven multi-parent evolutionary
+ segmentation network using self-supervised learning,” in Proc. AAAI algorithm and its application in area coverage optimization of WSN,”
+ Workshop AI Design Manuf. (ADAM), 2021, pp. 1–5. Soft Comput., vol. 27, no. 14, pp. 9565–9591, Jul. 2023.
+[34] P. Xing, Y. Sun, and Z. Li, “Self-supervised guided segmentation frame- [59] S. Chauhan, M. Singh, and A. K. Aggarwal, “Designing of optimal
+ work for unsupervised anomaly detection,” 2022, arXiv:2209.12440. digital IIR filter in the multi-objective framework using an evolu-
+[35] H. Yang, J. Hu, Z. Yin, and Z. Wang, “A semantic information tionary algorithm,” Eng. Appl. Artif. Intell., vol. 119, Mar. 2023,
+ decomposition network for accurate segmentation of texture defects,” Art. no. 105803.
+ IEEE Trans. Ind. Informat., vol. 19, no. 7, pp. 8319–8327, Jul. 2023.
+[36] R. Zhang, H. Wang, M. Feng, Y. Liu, and G. Yang, “JRCC-Net:
+ A segmentation network with joint representation and contrast clustering
+ for surface anomaly detection,” IEEE Trans. Instrum. Meas., vol. 72,
+ pp. 1–14, 2023.
+[37] H. M. Schlüter, J. Tan, B. Hou, and B. Kainz, “Natural synthetic
+ anomalies for self-supervised anomaly detection and localization,” 2021,
+ arXiv:2109.15222. Yuan He received the B.S. degree in mechanical
+[38] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Self- design, manufacturing, and automation from Wuhan
+ supervised learning for anomaly detection and localization,” in Proc. University, Wuhan, China, in 2021. He is currently
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, pursuing the M.S. degree with the State Key Labpp. 9659–9669. oratory of Digital Manufacturing Equipment and
+[39] S. Asgari Taghanaki, K. Abhishek, J. P. Cohen, J. Cohen-Adad, and Technology at the Huazhong University of Science
+ G. Hamarneh, “Deep semantic segmentation of natural and medical and Technology, Wuhan.
+ images: A review,” Artif. Intell. Rev., vol. 54, no. 1, pp. 137–178, His current research interests include deep learn-
+ Jan. 2021. ing, anomaly detection, and related applications in
+[40] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional net- real industrial scenarios.
+ works for biomedical image segmentation,” in Proc. Int. Conf. Med.
+ Image Comput. Comput.-Assist. Intervent. Cham, Switzerland: Springer,
+ 2015, pp. 234–241.
+[41] G. E. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a
+ neural network,” 2015, arXiv:1503.02531.
+[42] L. Wang and K.-J. Yoon, “Knowledge distillation and student-teacher
+ learning for visual intelligence: A review and new outlooks,” IEEE
+ Trans. Pattern Anal. Mach. Intell., vol. 44, no. 6, pp. 3048–3068,
+ Jun. 2022. Hua Yang (Member, IEEE) received the B.S. and
+[43] E. D. Cubuk, B. Zoph, J. Shlens, and Q. V. Le, “Randaugment: Practical M.S. degrees from the Huazhong University of Sciautomated data augmentation with a reduced search space,” in Proc. ence and Technology, Wuhan, China, in 2006 and
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops (CVPRW), 2008, respectively, and the Ph.D. degree from
+ Jun. 2020, pp. 3008–3017. Hiroshima University, Higashihiroshima, Japan,
+[44] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for in 2011.
+ image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. He was with Hiroshima University as a Research
+ (CVPR), Jun. 2016, pp. 770–778. Associate from 2011 to 2012 and as an Assistant
+[45] O. Russakovsky et al., “ImageNet large scale visual recognition chal- Professor from 2012. He worked as an Associate
+ lenge,” Int. J. Comput. Vis., vol. 115, no. 3, pp. 211–252, Dec. 2015. Professor from 2013 to 2019 and currently works as
+ a Professor with the School of Mechanical Science
+[46] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+ and Engineering, Huazhong University of Science and Technology. His
+ for contrastive learning of visual representations,” in Proc. Int. Conf.
+ current research interests include high-speed vision and its applications (object
+ Mach. Learn., 2020, pp. 1597–1607.
+ recognition and detection, particle image velocity, and dynamic-based visual
+[47] A. van den Oord, Y. Li, and O. Vinyals, “Representation learning with inspection).
+ contrastive predictive coding,” 2018, arXiv:1807.03748.
+[48] W. Park, D. Kim, Y. Lu, and M. Cho, “Relational knowledge distillation,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+ Jun. 2019, pp. 3962–3971.
+[49] T. Huang et al., “Masked distillation with receptive tokens,” 2022,
+ arXiv:2205.14589.
+[50] M. Wieler, T. Hahn, and F. A. Hamprecht, “Weakly supervised learning
+ for industrial optical inspection,” Zenodo, Jun. 2023. [Online]. Available:
+ Zhouping Yin (Member, IEEE) received the B.S.,
+ https://doi.org/10.5281/zenodo.8086136
+ M.S., and Ph.D. degrees in mechanical engineering
+[51] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” from the Huazhong University of Science and Tech-
+ 2014, arXiv:1412.6980. nology, Wuhan, China, in 1994, 1996, and 2000,
+[52] I. Loshchilov and F. Hutter, “SGDR: Stochastic gradient descent with respectively.
+ warm restarts,” 2016, arXiv:1608.03983. He has published two monographs, three chapters
+[53] D. Racki, D. Tomazevic, and D. Skocaj, “A compact convolutional neural in English books and more than 30 papers in internetwork for textured surface anomaly detection,” in Proc. IEEE Winter national journals such as IEEE T RANSACTIONS,
+ Conf. Appl. Comput. Vis. (WACV), Mar. 2018, pp. 1331–1339. ASME Transaction and Computer-Aided Design. His
+[54] Z. Lin, H. Ye, B. Zhan, and X. Huang, “An efficient network for surface current research interests include machine vision,
+ defect detection,” Appl. Sci., vol. 10, no. 17, p. 6085, Sep. 2020. flexible electronics, and electronic packaging.

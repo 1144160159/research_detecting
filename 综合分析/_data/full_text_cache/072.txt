@@ -1,0 +1,766 @@
+Computer Networks 200 (2021) 108535
+
+ Contents lists available at ScienceDirect
+
+ Computer Networks
+ journal homepage: www.elsevier.com/locate/comnet
+
+ByteSGAN: A semi-supervised Generative Adversarial Network for encrypted
+traffic classification in SDN Edge Gateway✩ , ✩✩
+Pan Wang a ,∗, Zixuan Wang a , Feng Ye b , Xuejiao Chen c
+a
+ School of Modern Posts, Nanjing University of Posts & Telecommunications, Nanjing, China
+b
+ Department of Electrical & Computer Engineering, University of Dayton, Dayton, OH, USA
+c
+ Department of Communication, Nanjing College of Information Technology, Nanjing, China
+
+ARTICLE INFO ABSTRACT
+
+Keywords: With the rapid development of communication network technology, the types and quantity of network traffic
+Encrypted traffic classification data are accordingly increasing. Network traffic classification has become a non-trivial research task in
+Generative Adversarial Network the area of network management and security, which not only helps to improve the fine-grained network
+Semi-supervised learning
+ resource allocation but also enables policy-driven network management. As the closest network element to
+Traffic identification
+ the subscribers, SDN Edge Gateway can tremendously enhance the user experience with the capability of
+SDN gateway
+ traffic classification. Deep Learning (DL) performs automatic feature extraction without human intervention,
+ which undoubtedly makes it a highly desirable approach for traffic classification, especially encrypted traffic.
+ However, capturing large labeled datasets is cumbersome and time-consuming manual labor. Semi-Supervised
+ learning is an appropriate technique to overcome this problem. With that in mind, we proposed a Generative
+ Adversarial Network (GAN)-based Semi-Supervised Learning Encrypted Traffic Classification method called
+ ByteSGAN embedded in SDN Edge Gateway to achieve the goal of traffic classification in a fine-grained manner
+ to further improve network resource utilization. ByteSGAN can only use a small number of labeled traffic
+ samples and a large number of samples to achieve a good performance of traffic classification by modifying
+ the structure and loss function of the regular GAN discriminator network in a semi-supervised learning way.
+ Based on the public datasets ‘ISCX2012 VPN-non VPN’ and ‘Crossmarket’, two experimental results show that
+ the ByteSGAN can efficiently improve the performance of traffic classifiers and outperform the other supervised
+ learning methods like CNN.
+
+1. Introduction helps to improve the fine-grained network resource allocation but also
+ enables policy-driven network management.
+ With the rapid development of Communication Networks, the types Software-defined networking(SDN) is envisioned as an emerging
+and quantity of network traffic data are accordingly increasing. Net- and promising networking paradigm with a promise to dramatically
+work traffic classification has become a non-trivial research task in
+ improve network resource utilization, simplify network management,
+the area of network management and security. It is undoubtedly the
+ reduce operating costs and promote innovation and evolution. Meancornerstone of dynamic access control, network resources scheduling,
+ while, Edge Computing with its inherent nature of low latency, high
+QoS provisioning, intrusion and malware detection, etc. High efficient
+and accurate traffic classification is of great practical significance to bandwidth, and good privacy-preserving has attracted a lot of attention
+provide service quality assurance, dynamic access control, and abnor- from both academics and industry. Intuitively, some researchers started
+mal network behaviors detection. Nonetheless, with the widespread to think of how to push the intelligence to the network edge and
+adoption of encryption techniques for the network including 5G and exploit the benefit of SDN. Thus, the combination of SDN and Edge
+IoT, the growth of a portion of encrypted traffic has dramatically Computing gives rise to SDN Edge Gateway (SDN-EGW), which can
+arisen a huge challenge for network management like QoS provisioning. leverage both SDN at its global visibility of network-wide, programma-
+Therefore, accurate and robust encrypted traffic classification not only
+
+ ✩ This document is the results of the research project funded by the National Science Foundation.
+✩✩ In this work we demonstrate 𝑎 the formation 𝑌 of a new type of polariton on the interface between a cuprous oxide slab and a polystyrene micro-sphere
+ 𝑏 1
+placed on the slab.
+ ∗ Corresponding author.
+ E-mail addresses: wangpan@njupt.edu.cn (P. Wang), 2020070135@njupt.edu.cn (Z. Wang), fye001@udayton.edu (F. Ye), chenxj@njcit.cn (X. Chen).
+
+https://doi.org/10.1016/j.comnet.2021.108535
+Received 25 February 2021; Received in revised form 27 July 2021; Accepted 4 October 2021
+Available online 14 October 2021
+1389-1286/© 2021 Published by Elsevier B.V.
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+ List of abbreviations in alphabetical order
+
+ FF Flow Features
+ TS Time Series
+ PP Packet Payload
+ TC Traffic Classification
+ AE Auto Encoders
+ CNN Convolutional Neural Networks
+ RF Random Forest
+ FC Fully-Connected
+
+bility for traffic control, and Edge Computing at its low latency and
+good privacy-preserving. Fig. 1. The scheme of traffic classification over SDN-EGW
+ There are several traffic classifiers using flow statistics for encrypted
+traffic classification which can achieve good performance, whereas it
+needs handcrafted features by domain experts which are always labor- (TS) [12] based on properties of the first packets of a flow as model
+some. Deep Learning (DL) including GAN performs automatic feature input, such as packet length, inter-arrival time and flow duration to
+extraction without human intervention, which undoubtedly makes it a circumvent the problems of encrypted content and user’s privacy [13].
+highly desirable approach for traffic classification, especially encrypted There are a plethora of works focusing on ML algorithms during the
+traffic. Recent research work has demonstrated the superiority of DL last decades. In general, there are three learning strategies used: first
+methods in traffic classification [1], such as MLP [2], CNN [3–7], is the supervised methods like decision tree, SVM, and Naive Bayes,
+SAE [8], LSTM [9,10]. second is unsupervised approaches like k-means and PCA [14] and
+ As above mentioned, previous research works mostly require large the last one is semi-supervised methods combining the advantages
+quantities of labeled datasets, namely, supervised learning, which has of the first two. Nevertheless, many drawbacks hindered ML-based
+been the center of most research in DL. However, as we all know, cap- methods widely applied to traffic classification, such as handcrafted
+turing large labeled datasets is cumbersome and time-consuming man- traffic features driven by domain-expert, time-consuming, unsuited to
+ual labor. Hence, the necessity of creating models capable of learning automation, rapidly outdated when compared to the evolution. Unlike
+from less data is increasing faster. With that in mind, semi-supervised
+ most traditional ML algorithms, Deep Learning performs automatic
+learning is an appropriate technique to overcome this problem. Adfeature extraction without human intervention, which undoubtedly
+ditionally, labeling traffic datasets is a non-trivial and cumbersome
+ makes it a highly desirable approach for traffic classification, especially
+process. There are two labeling methods for traffic datasets, one is DPIencrypted traffic. Recent research work has demonstrated the superiorbased and the other is scripts-based labeling which can mimic human
+ ity of DL methods in traffic classification [1–10,15]. The workflow of
+behavior, respectively. Whereas, DPI-based labeling cannot handle traf-
+ DL based classification usually consists of three steps, which has been
+fic encryption, and scripts-based methods are not always accurate. In
+ demonstrated in our previous work [16]. First, model inputs are defined
+contrast to these limitations of labeling data, unlabeled data is always
+ and designed according to some principles, such as raw packets or
+abundant and easily obtainable. Hence, How to use semi-supervised
+ flow statistics features. Second, models and algorithms are elaborately
+learning to leverage the readily available traffic data for accurate traffic
+ chosen according to the models’ characteristics and the aim of the
+classification appears to be particularly important.
+ In this paper, we proposed a Generative Adversarial Network (GAN)- classifier. Finally, the DL classifier is trained to automatically extract
+based Semi-Supervised Learning Encrypted Traffic Classification method the features of traffic.
+called ByteSGAN embedded in SDN Edge Gateway to achieve the goal As shown in Fig. 1, several kinds of smart devices (Blood pressure
+of traffic classification in a fine-grained manner to further improve monitors/video surveillance/Smart TV, etc.) connect to the SDN-EGW
+network resource utilization. ByteSGAN can use a small number of via heterogeneous access technology (WiFi/ZigBee/Bluetooth, etc.).
+labeled traffic samples and a large number of unlabeled samples to Each smart applications have different QoS requirements, however, it
+achieve a good performance of traffic classification by modifying the is challenging that no fine-grained traffic classification capability in
+structure and loss function of the regular GAN discriminator net- SDN-EGW, especially encrypted applications.
+work in a semi-supervised learning way. Based on public datasets To overcome the above-mentioned shortcomings of the home net-
+‘ISCX2012 VPN-non VPN’ and ‘Crossmarket’, two experimental results work, we proposed a GAN-based Semi-Supervised Learning Encrypted
+show that the ByteSGAN can efficiently improve the performance of Traffic Classification method called ByteSGAN embedded in SDN Edge
+traffic classifier and outperform the other supervised learning methods Gateway. Our contributions are as follows:
+like CNN.
+ 1. ByteSGAN can take full advantage of a small number of labeled
+ The rest of this paper is organized as follows. Section 2 introduces
+ traffic samples and a large number of unlabeled ones to achieve
+preliminaries and related works of traffic classification and SDN Edge
+ a good performance;
+Gateway . Section 3 describes the principles of GAN and ByteSGAN.
+Section 4 illustrates the methodology of ByteSGAN. The experimental 2. BytesSGAN can handle not only regular traffic but also encrypted
+results are provided and discussed in Section 5. Section 6 concludes our one;
+work. 3. BytesSGAN is a lightweight classifier that can only consume
+ lesser computing resources of SDN-EGW;
+2. Related works
+ 2.2. Semi-supervised learning based methods of traffic classification
+2.1. ML and DL based approach of traffic classification
+ A similar research work about semi-supervised-based TC methods is
+ Classical ML-based classification methods always rely on hand- shown in Table 1. As stated earlier, FF, PP, and TS are three possible
+crafted flow features (FF), packet payload (PP) [11] or time-series input patterns of the classical ML/DL TC model, semi-supervised-based
+
+ 2
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+ Table 1
+ Related works: Semi-supervised learning based traffic classification methods.
+ Works Technique Model input Dataset Target classes Performance ML/DL
+ 2007 [17] Clustering : K-Means FF+TS Private 29 ≈93% ML
+ 2016 [18] RF+Hierarchical clustering TS Private 7 ≥90 ML
+ 2019 [19] CNN TS Public 5 ≥84 DL
+ 2020 [20] DCGAN TS Public 15 ≥89 GAN
+ 2020 [21] AE FF Private 78 ≥89 DL
+ 2020 [22] CGAN+CNN PP Public 15 ≥90 GAN
+
+methods are not an exception. Before DL-based methods are becoming
+popular, clustering-based algorithms are always used on an unlabeled
+dataset and traditional ML classifiers like RF or SVM on a few labeled
+ones [17,18]. In [19], the authors pre-train a CNN model on a large
+unlabeled dataset where the input is the TS features of a few sampled
+packets. Then the learned weights are transferred to a new model that
+is re-trained on a small labeled dataset. As an unsupervised model,
+AE is well suited to learn the latent features and is always used for
+pretraining TC tasks. In [21], FF are fed into AE for pretraining. Then
+they retrain this AE model concatenated with a simple FC on a few
+labeled datasets in a semi-supervised manner. As a generative model,
+GAN usually plays a generator role no matter in the area of computer
+vision, image recognition, or NLP. In our previous work [22], GAN was
+explored to synthesize the traffic samples to mitigate the problem of
+class imbalance. Besides this, the work of [20] further explored the
+discriminator to act as a multi-class classifier to achieve the goal of
+TC.
+ Fig. 2. The Basic Architecture of GAN.
+
+3. Generative Adversarial Networks (GAN)
+
+ GAN provides a promising way to learn deep representation without 3.2. Semi-Supervised GAN (SGAN)
+extensively annotated training data. They achieve this through deriving
+backpropagation signals through a competitive process involving a pair Semi-Supervised GAN, so-called SGAN is an extension of GAN to the
+of networks. GAN can be applied in a variety of applications like image semi-supervised context by forcing the discriminator network to output
+synthesis, style transfer, semantic image editing, which are gaining class labels. A generative model 𝐺 and a discriminator 𝐷 are trained
+more and more attention from both academics and industry. on a dataset with inputs belonging to one of 𝑁 classes. During training
+ time, 𝐷 is made to predict which of N+1 classes the input belongs to.
+3.1. GAN Besides this, an extra class referring to REAL or FAKE is added to the
+ outputs of 𝐺. The study of [24] showed that this method can be used
+ A regular GAN consists of two parts, the generator 𝐺 and the to create a more data-efficient classifier than a regular GAN.
+discriminator 𝐷. As shown in Fig. 2, The role of the generator is to As shown in Fig. 2, the traditional discriminator network 𝐷 always
+take random noise as input by learning the characteristic distribution outputs an estimated probability that the input samples is fake. This
+of real data. The discriminator aims at determining whether the data process is typically implemented with a feed-forward network ending
+is real or generated by 𝐺. The generator 𝐺 simulates the feature
+ in a sigmoid unit, however, if we implement this with a softmax output
+distribution 𝑃𝑔 of the real data by the prior distribution 𝑃𝑧 (𝑧). The input
+ layer with one unit for each of the classes [REAL, FAKE], apparently
+of the discriminator is the real and generated data, correspondingly, the
+ 𝐷 could have N+1 output units corresponding to [CLASS-1, CLASS-2,
+output 𝐷(𝑥) indicates the probability of whether the input data is real
+ . . . CLASS-N, FAKE]. In this case, 𝐷 can also act as a classifier, namely
+or not [23]. During the training process, 𝐺 and 𝐷 play a two-player
+ 𝐶. We can call this network 𝐷∕𝐶. While training an SGAN, it is similar
+mini–max game until 𝐷 cannot judge whether the sample data is real,
+ to a GAN except that 𝐷∕𝐶 is trained to minimize the negative logwhich means that the two networks reach the Nash Equilibrium. The
+ likelihood with regard to the given labels and 𝐺 is trained to maximize
+objective function of GAN can be expressed by (1):
+ it.
+min max 𝑉 (𝐷, 𝐺) = E𝑥∼𝑝𝑑𝑎𝑡𝑎 (𝑥) [log 𝐷(𝑥)]
+ G 𝐷
+ (1)
+ +E𝑧∼𝑝𝑧 (𝑧) [log(1 − 𝐷(𝐺(𝑧)))] 4. The methodology of ByteSGAN encrypted traffic classification
+ In Eq. (1), 𝑃𝑑𝑎𝑡𝑎 (𝑥) represents distribution of the real data. When
+training 𝐷, the goal is to optimize the probability of TRUE 𝐷(𝐺(𝑧)) as As we all know, obtaining large labeled datasets is cumbersome and
+small as possible and the probability of TRUE 𝐷 (𝑥) of the real data 𝑥 time-consuming manual labor. In contrast to these limitations, unlaas much as possible. When training 𝐺, the goal is to make 𝐷(𝐺(𝑧)) as beled data is always abundant and easily obtainable. It is particularly
+much as possible. From (1), we can calculate the optimal discriminator important that how to use semi-supervised learning to leverage the
+as (2). As can be seen from (2) below, when 𝑃𝑑𝑎𝑡𝑎 (𝑥) = 𝑃𝑧 (𝑧), it means
+ readily available unlabeled traffic data for accurate traffic classificathat 𝐷 cannot distinguish whether the sample is true or false, 𝐷 and 𝐺
+ tion. As we all know, GAN provides a promising way to learn deep
+reach the Nash Equilibrium, and the discriminator output is 0.5.
+ representation without extensively annotated training data. Intuitively,
+ 𝑃𝑑𝑎𝑡𝑎 (𝑥) we attempt to explore the capability of the GAN-based encrypted traffic
+𝐷(𝑥) = (2)
+ 𝑃𝑑𝑎𝑡𝑎 (𝑥) + 𝑃𝑧 (𝑧) classification in a semi-supervised manner.
+
+ 3
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+ 1. Generate a random vector with Gaussian noise 𝑧 and input it to
+ the generator network 𝐺, then get the generated traffic 𝐺(𝑧);
+ 2. Input both the generated traffic 𝐺(𝑧), labeled and real traffic 𝑥
+ into the discriminator network 𝐷 in batches, then output the
+ sum of probability of 𝐷(𝑥) and 𝐷[𝐺(𝑧)] by the activation function
+ softmax;
+ 3. Fix the parameters of the generator network 𝐺. If the input flow
+ [
+ is generated flow (i.e. fake data), we can use 𝐸𝑥∼𝐺 log 𝑝model
+ (𝑦 = 𝑁 + 1 ∣ 𝑥)] as the loss function; if the real flow 𝑥 has been
+ labeled, we can use 𝐿labeled as the loss function; if the real flow
+ 𝑥 is not labeled, we can use 𝐿 as the loss function. Adjust the
+ parameters of the discriminator 𝐷 by Adam Gradient Descent
+ method;
+ 4. Fix the parameters of the discriminator network 𝐷, perform
+ feature matching operations on the real traffic data 𝑥 and the
+ generated traffic 𝐺(𝑧), then select the output of the fully con-
+ Fig. 3. The Workflow of ByteSGAN. nected layer as the middle layer and use feature matching to
+ adjust the parameters of the generator network 𝐺;
+ 5. Repeat steps (1)–(4) until the number of iterations is completed.
+4.1. The workflow of ByteSGAN
+ 4.4. Network structure of ByteSGAN
+ As shown in Fig. 3, ByteSGAN mainly includes two steps: Input
+data pre-processing and ByteSGAN based traffic classification. First, we We referred to the network structure of DCGAN [25] and the
+have to filter some packet data in the dataset like ARP/DHCP/ICMP definition of the semi-supervised model in the paper of Tim Salimans
+which is not relevant to specific applications. In addition, packet data et al. [26] to adjust the input and output, the network structure of
+will be truncated or padding with zero to normalize to a Packet Byte generator and discriminator of ByteSGAN to make model training more
+Vector (PBV) [2]. Then the standardized PBV will be sent to ByteSGAN, stable. The detailed adjustments are as follows:
+namely SGAN semi-supervised traffic classification model as input. It
+is worth noting that the label and data in the PBV are both fed into Algorithm 1 The model training algorithm of ByteSGAN
+the discriminator network 𝐷 as real data. Then the generator network
+ Require: Real labeled sample 𝑋 after data preprocessing
+𝐺 and discriminator network 𝐷 are alternately trained and iteratively
+ Ensure: Accuracy of traffic classification
+updated to converge and output the classification results.
+ 1: for number of training iterations do
+ In ByteSGAN, multiple traffic samples can be classified and trained
+ 2: for 𝑘 steps do
+at the same time, which effectively solves the problem that a reg- { }
+ 3: Take a minibatch from the 𝑚 noise samples 𝑧(1) , … , 𝑧(𝑚)
+ular GAN has to be trained separately for each application. Morewhose noise prior distribution is pg (𝑧) .
+over, we can easily overcome the limitation of the labeled data using { }
+ 4: Take a minibatch from the 𝑚 training samples 𝑥(1) , … , 𝑥(𝑚)
+Semi-Supervised Learning.
+ with data distribution pdata (𝑥).
+ 5: If the real traffic is not marked, use 𝐿 as a loss function:
+4.2. Loss function
+ 6: Update the discriminator through Adam gradient descent.
+ 7: If the real traffic 𝑥 has been marked, use 𝐿labeled as a loss
+ The discriminator 𝐷 of ByteSGAN is an N+1 dimensional classifier.
+ function:
+Its input is a packet data sample and output is an N+1 dimensional
+ 8: Update the discriminator through Adam gradient descent:
+vector, which can be represented as class probability, where formula ∑ [ [ ( )]]
+ 9: ∇𝜃𝑑 𝑚1 𝑚 (𝑖)
+ 𝑖=1 − log 𝑝model 𝑦 = 𝑖 ∣ 𝑥 , 𝑖 < 𝑁 + 1
+(3) means the 𝑥 is false, instead, formula (4) means the 𝑥 is true as
+ 10: If the input flow is generated flow, use 𝐿g as a loss function:
+well as it belongs to the class 𝑖.
+ ( ) 11: Update the discriminator through Adam gradient descent:
+ ∑ [ [ ( )]]
+ exp 𝑐𝑁+1 12: ∇𝜃𝑑 𝑚1 𝑚 𝑖=1 log 𝑝model 𝑦 = 𝑁 + 1 ∣ 𝑥
+ (𝑖)
+ 𝑃model (𝑦 = 𝑁 + 1 ∣ 𝑥) = ∑
+ 𝑁+1 ( ) (3) 13: end for
+ 𝑗=1 exp 𝑐𝑗
+ ( ) 14: Take a minibatch from 𝑚 noise 𝑝𝑧 (𝑧) samples whose prior
+ { }
+ exp 𝑐i distribution of noise is 𝑧(1) , … , 𝑧(𝑚) .
+ 𝑃model (𝑦 = 𝑖 ∣ 𝑥, 𝑖 < 𝑁 + 1) = ∑
+ 𝑁+1 ( ) (4)
+ 𝑗=1 exp 𝑐𝑗
+ 15: Update generator.
+ 16: end for
+4.3. Training process
+ 1. The convolutional layer with strides is used instead of the pool-
+ The training of ByteSGAN uses a combination of supervised and ing layer.
+unsupervised ways, which can significantly improve the learning ability 2. The discriminator network 𝐷 adopts convolution instead of the
+of the model. Specifically, during the semi-supervised training, the pooling layer and the generator network 𝐺 model employs dediscriminator 𝐷 and the generator 𝐺 are trained alternately and the convolution instead of the pooling layer.
+parameters are updated iteratively. On one hand, while training the 3. LeakyReLU [27] is used for activation in both the generator 𝐺
+generator, feature learning will be used to make the generated traffic and the discriminator 𝐷. In addition, the generator 𝐺’s output
+as close to the real data distribution as possible. On the other hand, layer adopts the tanh as the activation function according to the
+while training the discriminator, the network parameters are iteratively paper [26].
+updated to minimize the cross-entropy of the labeled traffic sample and 4. The output layer of the discriminator 𝐷 is built as a stacked
+the predicted probability distribution. The network model parameters model with shared weights. First, build a supervised model by
+of samples and generated samples are updated by adversarial training. using 𝑘 classes of outputs and a softmax activation function.
+As shown in Alg. 1, the training steps are as follows: Then define the unsupervised model, which accepts the output of
+
+ 4
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+ Table 2
+ Description of the chosen datasets from ISCX.
+ Application Security Dataset samples
+ Protocol Quantity Percentage
+ AIM HTTPS 4869 2.356%
+ Email-Client SSL 4417 2.137%
+ Facebook HTTPS 5527 2.674%
+ Gmail HTTPS 7329 3.546%
+ Hangout HTTPS 7587 3.671%
+ ICQ HTTPS 4243 2.053%
+ Netflix HTTPS 51932 25.126%
+ SCP SSH 15390 7.446%
+ Fig. 4. The Structure of Generative Network Model. SFTP SSH 4729 2.287%
+ Skype proprietary 4607 2.229%
+ Spotify proprietary 14442 6.987%
+ torTwitter proprietary 14654 7.089%
+ Vimeo HTTPS 18755 9.074%
+ voipbuster proprietary 35469 17.161%
+ Youtube HTTPS 12738 6.163%
+ TOTAL 206688 100%
+
+ 5. Evaluation and experimental results
+ Fig. 5. The Structure of Discriminator Network Model.
+ 5.1. Experimental settings
+
+ the supervised model before the softmax activation function, and 5.1.1. Dataset for evaluation
+ then calculates the normalized sum of the exponential output. The experiments in this chapter are based on two public datasets,
+ ‘‘ISCX VPN-nonVPN 2012’’ [28] and ‘‘crossmarket’’ [1], both of which
+ 𝑍(𝑥) ∑𝐾
+ [ ]
+ 𝐷(𝑥) = , where 𝑍(𝑥) = exp 𝑙𝑘 (𝑥) (5) are composed of PCAP format. The former contains many encryption
+ 𝑍(𝑥) + 1 𝑘=1 applications or protocols such as HTTPS, SFTP, Facebook, Hangouts,
+ etc. In addition to these applications encapsulated in regular sessions,
+ The output of the unsupervised model before the softmax activation
+ some VPN tunnel applications were also captured in this dataset. 15
+function are all very small positive or negative values. When using
+ applications were chosen to build the original dataset as shown in
+formula (5), we will get the output of (0.0-1.0), which means that the
+ Table 2. The latter dataset contains the 100 most popular apps in
+model is encouraged to output strong predictions for real samples and mobile app markets of a combination of three regions (US, China, India)
+small predictions or low activations for fake samples. and mobile OS (iOS, Android) on August 2017. All the traffic was
+ collected by manually interacting with a given app for five minutes and
+4.5. The generator model structure test all the main features. As shown in Table 3, We selected 20 common
+ iOS and Android apps from the Chinese region of the dataset, including
+ The generator 𝐺 is shown in Fig. 4. 𝐺 is constructed by a One Layer social software, music, video, instant messaging, etc. In order to keep
+Deconvolution Network and a One Layer Convolution Network. Firstly, the balance of the dataset, we randomly select 30,000 flow records from
+we will input a 100-dimensional random noise 𝑧 with the Gaussian the PCAP files of each application as a subset of the original dataset for
+distribution into the FC network and make it into a three-dimensional subsequent experiments.
+tensor by dimensional transformation (i.e. reshape). Then we feed this
+tensor into the deconvolution layer with a kernel size of 3*3 and 5.1.2. Experimental tasks
+stride of 2, which is activated by LeakyReLU. Finally, the output of the Based on the two datasets, we carried out two experiments as
+deconvolution layer will be fed into a convolution layer with a kernel follows:
+size of 3*3 and stride of 2, using Tanh activation to generate a traffic 1. In the first experiment, we use the same number of labeled
+sample tensor of (20*74*1). samples and different numbers of unlabeled samples to perform
+ classification tasks on two selected datasets to verify the impact
+4.6. The discriminator model structure of the number of samples on the ByteSGAN and AE classification
+ results.
+ 2. In the second experiment, we use a different number of la-
+ As shown in Fig. 5, the discriminator 𝐷 is composed of 3 convobeled samples to perform classification tasks on two datasets
+lutional layers and 2 FC layers. The real traffic sample of PBV with
+ by ByteSGAN and CNN respectively, to verify the improvement
+a length of 1480 after input data preprocessing is transformed to
+ of classification accuracy of ByteSGAN with a small number of
+a three-dimensional tensor (20*74*1) by dimensional transformation
+ labeled samples.
+(i.e. reshape), then sent to a 3-layers convolution kernel with a size
+of 3* 3. LeakyReLU is used for activation after each convolution.
+LeakyReLU can retain a small slope in the negative half axis (in this 5.1.3. Configurations of the computing platform
+paper it is set to 0.2). Compared with the ReLU activation function, The experimental environmental parameters are shown in Table 4.
+LeakyReLU can avoid the problem of the gradient vanish during train- The performance evaluations are conducted using a Dell R730 server
+ing. After flattening through the Flatten layer, it is input to the FC with an Intel I7-7600U CPU 2.8 GHz, 16 GB RAM, and an external GPU
+network which is built as a stacked network with shared weights and (Nvidia GeForce GTX 1050TI). The software platform for deep learning
+adopts Lambda as activation function and then employs softmax to is built on Keras library with Tensorflow (GPU-based version 1.13.1) as
+output normalized categories probabilities. the back-end support.
+
+ 5
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+ Fig. 6. AE based traffic classification model structure.
+
+Table 3 Table 5
+Description of the chosen datasets from Cross-market. The first experimental results on ISCX dataset.
+ Application name Platform Application type Selected quantity Number Number Accuracy precision recall f1-score
+ labeled unlabeled
+ Meiyanxiangji IOS Camera 30000
+ Qiuqiudazuozhanbob IOS Game 30000 1000 4000 98.79% 98.79% 98.77% 98.56%
+ QQ IOS Instant messaging 30000 SGAN 1000 6000 99.04% 99.03% 99.03% 98.95%
+ YY IOS Instant messaging 30000 1000 8000 99.14% 99.16% 99.15% 99.06%
+ QQkongjian IOS Social software 30000
+ 1000 4000 97.24% 97.27% 97.24% 97.10%
+ Baidutieba IOS Social software 30000
+ AE 1000 6000 97.57% 97.57% 97.57% 97.41%
+ Weibo IOS Social software 30000
+ 1000 8000 98.18% 98.20% 98.18% 98.02%
+ Tengxunshipin IOS Video 30000
+ Aiqiyi IOS Video 30000
+ Kuaishou IOS Video 30000
+ Table 6
+ Total 300000 The first experimental results on Cross-market dataset.
+ Tencent Android Instant messaging 30000 Number Number Accuracy Precision Recall f1-score
+ Xiami Android Music 30000 labeled unlabeled
+ Tingshu Android Music 30000 100 4000 89.32% 89.46% 89.49% 89.39%
+ Sohu Android News 30000 100 8000 93.57% 93.61% 93.57% 93.52%
+ Qzone Android Social software 30000 100 12000 94.93% 94.91% 94.96% 94.91%
+ Duowan Android Social software 30000 SGAN
+ 1000 4000 98.00% 98.03% 98.01% 98.01%
+ Tongcheng Android Social software 30000 1000 8000 98.12% 98.18% 98.13% 98.14%
+ QQlive Android Video 30000 1000 12000 98.60% 98.60% 98.62% 98.61%
+ Youku Android Video 30000
+ Letv Android Video 30000 100 4000 83.70% 83.77% 83.70% 83.67%
+ 100 8000 90.30% 90.31% 90.30% 90.28%
+ Total 300000 100 12000 93.00% 93.04% 93.00% 92.97%
+ AE
+ 1000 4000 97.28% 97.28% 97.28% 97.28%
+ 1000 8000 98.08% 97.28% 97.28% 97.28%
+Table 4 1000 12000 98.45% 98.45% 98.45% 98.45%
+Experimental environment parameters.
+ Category Parameters
+ GPU Nvidia GPU(GeForce GTX 1050Ti)
+ Operating system Win 10 4. The encoder is also connected to a classifier. The classifier has
+ Deep learning platform TensorFlow 1.13.1 + Keras 1.0.7 two layers, the shape of the convolution kernel is (3, 3), and the
+ CUDA version 9.0
+ softmax activation function is used to output the classification
+ CuDNN version 7.6.0
+ results.
+ 5. Use unlabeled samples to train the encoder and decoder and set
+ the loss function to MAE. Use labeled samples to train encoders
+5.2. The first experiment and classifiers, and use categorical cross-entropy as the loss
+ function
+ To compare with the proposed SGAN, we designed and implemented a semi-supervised classification model based on AE. The spe- On the selected data set, 1000 labeled samples are used at the
+cific structure is shown in Fig. 6. The model includes two parts: same time, and a different number of unlabeled samples are used
+autoencoder and classification model. The autoencoder consists of two for three experiments. The stochastic gradient descent method is used
+main components, the encoder and the decoder. The encoder is used as for training, and the batch parameter is 256. The noise is randomly
+a feature extractor, and as the data goes to deeper layers, it detects fea- sampled from the uniform distribution of [−1, 1], and the sample size
+tures from low-level to high-level. The extracted features are stored in is 100. The learning rate parameter is 0.0002, and the Adam optimizer
+latent vectors. The decoder takes these features and converts them back is used to optimize the loss function of the two models. The results of
+to the original shape, enters the flow data, and tries to reconstruct the the three experiments are shown in Table 5:
+original flow. We use a CNN network as a classifier to receive features As shown in Table 5, It can be found that both models can use
+from the encoder for classification. The autoencoder is an unsupervised a small amount of labeled data to achieve high accuracy. Although
+learning model, and we combine it with the CNN classifier to form a there is little difference, the three indicators of ByteGAN are both
+semi-supervised learning model. 1% higher than AE under the same conditions. We can also found
+ that increasing the number of samples can improve the classification
+ 1. The input layer data adopts the Packet Byte Vector (PBV) with accuracy of ByteSGAN when the number of labeled samples is constant
+ (20, 74, 1) as input. as shown in Fig. 7.
+ 2. The encoder uses a three-layer convolutional neural network. As shown in Table 6, it can be found that in the case of less
+ Each layer has a convolution kernel with the shape of (3, 3). unlabeled data, especially when the number of labeled samples is 100
+ The encoder receives PBV and outputs the feature vector with and the number of unlabeled samples is 4000, ByteSGAN performs
+ the shape of (32,1) better on the Cross-market dataset than AE Up to about 6%. Through
+ 3. The decoder is designed to have the same structure as the SGAN the confusion matrix, it is also obvious that AE has a large error in
+ generator, using the feature vector of shape (32, 1) to restore the the identification of video application (kuaishou/aiqiyi/tengxunshipin)
+ original traffic traffic, while ByteGAN has significantly improved as shown in Fig. 8.
+
+ 6
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+ Fig. 9. CNN based traffic classification model structure.
+Fig. 7. Comparison of Confusion Matrix on ISCX dataset (1000 labeled sample and
+6000 unlabeled sample).
+
+ 4. The convolution layer in the second layer of convolution and
+ pooling layer uses 128 filters with a size of 5 and a stride of 1.
+ The output result is calculated by ReLU.
+ 5. The parameters used by the pooling layer in the second layer are
+ the same as those in step (3).
+ 6. The convolution layer in the third layer uses 128 filters with a
+ size of 5 and a stride of 1. The output result is calculated by
+ ReLU.
+ 7. The pooling layer in the third layer employs maxi-pooling, with
+ a size of 35 and a stride of 1.
+ 8. Through two fully connected layers, the network is transformed
+ into a one-dimensional vector for subsequent classification.
+ 9. The output layer uses softmax for classification with 15 output
+ units corresponding to 15 different encrypted traffic applications
+Fig. 8. Comparison of Confusion Matrix on Cross-market (IOS) dataset (100 labeled On the selected dataset, a small batch stochastic gradient descent
+sample and 4000 unlabeled sample).
+ method is used for training, and the batch parameter is 128. Use
+ Rmsprop optimizer for the cross-entropy loss function. In this paper,
+ we use ByteSGAN to perform classification experiments under the
+5.3. The second experiment condition that there are only 1000, 2000, 3000, and 4000 labeled data
+ in each class sample and compares the classification results with CNN
+5.3.1. Experimental description under the same conditions to prove the superiority of ByteSGAN in
+ To compare with the classification experiment, the data set as semi-supervised encrypted traffic classification.
+shown in Tables 2 and 3 was used to conduct experiments on both
+the CNN-based and the ByteSGAN-based classification model. Before
+ 5.3.2. Performance evaluation
+the experiment, select a specified number of labeled data from the
+ Fig. 10 shows the trend of the adversarial loss on the ByteSGAN
+dataset and the rest as unlabeled data for the experiment. We adopt
+ discriminator and generator. The adversarial loss of the discriminator
+the stochastic gradient descent method for training and the batch
+ gradually decreases, and that of the generator gradually rises, and both
+parameter is 256. The noise is randomly sampled from the uniform
+ of them keep stable around 2000 epochs.
+distribution of [−1, 1], and the sample size is 100. The learning rate
+ To better demonstrate the superiority of ByteSGAN, we selected
+parameter is 0.0002, and the Adam optimizer is used to optimize the
+ four different DL-based methods to make a comparison of performance
+loss function of the generator and the discriminator. For the sake of
+ over ISCX datasets. There are three supervised-based methods and two
+comparison, a simple CNN-based classification model is designed and
+ semi-supervised-based methods. As shown in Table 9, all the three
+implemented and its network structure is shown in Fig. 9.
+ supervised-based methods slightly perform better than our method.
+ The CNN-based encrypted traffic classification model is composed
+ Meanwhile, we can see that ByteSGAN can outperform the DCGANof an input layer, three convolution and pooling connection layers, and
+ based method [20]. It is worth noting that we selected 1000 labeled
+an output layer. The input layer is packet data after the preprocessing.
+ samples and 8000 unlabeled ones from the dataset, respectively. From
+The specific parameters of the convolution kernel pooling layer are
+ the comparison results, we can see that the performance of ByteSGAN
+shown in the figure. The output layer adopts softmax classification.
+ is very close to the supervised-based ones.
+The neurons of the output layer represent 15 different applications. The
+ We conducted an evaluation experiment for the computing resource
+detailed model structure is as follows:
+ consumption, throughput, and training speed of the model. The exper-
+ 1. The input layer data adopts the Packet Byte Vector (PBV) with iment environment is show in Table 4, we used the above-mentioned
+ (1480, 1) as input. CNN, SAE, and ByteSGAN model to classify 10,000 packets. The per-
+ 2. The convolution layer in the first layer performs convolution formance parameters of the experiment are shown in Table 7. It can be
+ operation uses 128 filters with a size of 5 and a step size of 1. seen that the proposed ByteSGAN has advantages in model parameters,
+ The output result is calculated by the activation function ReLU bandwidth, and computing resource consumption. At the same time,
+ (Shaped Linear Unit). the use of CPU and memory can be maintained at the same level as the
+ 3. Max-pooling is adopted with a size of 5 and stride of 1. lightweight CNN model.
+
+ 7
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+Table 7 Table 11
+Performance evaluation. Results on crossplatform IOS dataset.
+ CNN SemiAE ByteSGAN Number of labeled ACC Precision Recall f1-score
+ Modelsize 1.55 MB 22.1 MB 3.87 MB 1000 96.03% 96.08% 96.03% 96.04%
+ Parameters 199050 1,925,691 334,858 2000 97.38% 97.38% 97.37% 97.36%
+ CNN
+ Per-step speed 600 us/step 530 us/step 380 us/step 3000 98.12% 98.14% 98.15% 98.14%
+ Throughput 97 Mbps 81 Mbps 130 Mbps 4000 98.85% 98.86% 98.85% 98.85%
+ cpu usage 9%∼11% 10%∼12% 10%∼11%
+ 1000 98.25% 98.25% 98.23% 98.23%
+ Memory usage 4194.40 MB 5570.56 MB 4259.84 MB
+ 2000 98.42% 98.87% 98.44% 98.63%
+ SGAN
+ 3000 98.80% 98.80% 98.81% 98.80%
+ 4000 99.00% 99.00% 99.00% 99.00%
+
+ Fig. 11. Comparison of Confusion Matrix on ISCX dataset (1000 labeled sample).
+
+ Fig. 10. ByteSGAN adversarial training loss.
+
+Table 8 Through Table 8, the experimental result shows that when the num-
+Results on ISCX dataset. ber of labeled samples is 1000, the classification accuracy of ByteSGAN
+ Number of labeled ACC Precision Recall f1-score is improved by about 4% compared to CNN. When the number of
+ 1000 88.25% 88.87% 88.24% 88.42% labeled samples is 2000, the classification accuracy of ByteSGAN is
+ 2000 89.60% 89.91% 89.51% 89.54% improved by about 3%. And when the number is 3000, ByteSGAN’s
+ CNN
+ 3000 92.40% 92.43% 92.42% 92.36% classification accuracy is improved by less than 1%. When the number
+ 4000 93.33% 93.73% 93.29% 93.41%
+ of labeled samples is 4000, the classification accuracy is the same as
+ 1000 92.15% 92.13% 92.16% 92.07% that of CNN. It can be seen that when the number of labeled samples is
+ 2000 92.92% 93.62% 92.82% 92.95%
+ SGAN insufficient, ByteSGAN can effectively improve the classification accu-
+ 3000 93.10% 94.26% 93.08% 93.21%
+ 4000 93.18% 93.49% 93.12% 93.18% racy by using unlabeled samples and samples generated by ByteSGAN
+ to perform semi-supervised learning. The accuracy is still not a good
+ reflection of the classification performance of ByteSGAN. Below we use
+Table 9
+ the evaluation metrics to analyze the improvement of each application
+Related DL-based Methods Comparison Results on ISCX.
+ more comprehensively. As shown in Fig. 11, except Facebook and
+ Methods Algorithm ACC Precision Recall F1-Score
+ hangout, ByteSGAN’s accuracy is better than that of CNN in 1000,
+ 1D-CNN [4] CNN, supervised 99.34% 99.36% 99.35% 99.34%
+ 2000, and 3000 samples. Among them, the improvement of aim chat
+ DeepPacket [3] SAE, supervised 99.01% 99.06% 99.05% 99.03%
+ DataNet [2] MLP, supervised 99.68% 99.66% 99.65% 99.66% is higher and the improvement is close to 20%. The increasing rate of
+ DCGAN [20] GAN, semi-supervised 93.02% 90.17% 91.51% 92.16% email, Gmail, and ICQ is close to 5% and other applications such as
+ ByteSGAN GAN, semi-supervised 99.14% 99.16% 99.15% 99.06% Netflix, scpdown, skype, Spotify, torTwitter, voipbuster, youtube also
+ have a small increase.
+Table 10 Through Tables 10 and 11, Experiments show that ByteSGAN can
+Results on crossplatform Andorid dataset. show good classification accuracy in the face of both Android ap-
+ Number of labeled ACC precision recall f1-score plications and IOS application traffic, especially in IOS application
+ 1000 94.63% 94.62% 94.57% 94.57% classification, using 4000 labeled samples can achieve 99% classifica-
+ 2000 96.33% 96.38% 96.30% 96.32% tion accuracy. When there are few labeled data, such as only 1000
+ CNN
+ 3000 96.83% 96.81% 96.88% 96.83% labeled samples, ByteSGAN’s precision, recall, and F1 score are about
+ 4000 97.78% 97.79% 97.81% 97.79%
+ 4% higher than CNN’s, which proves that semi-supervised learning
+ 1000 98.45% 98.48% 98.44% 98.46% is helpful to improve the classification accuracy. Compared with the
+ 2000 98.52% 98.54% 98.53% 98.53%
+ SGAN results on the ISCX dataset, ByteSGAN can effectively improve the clas-
+ 3000 98.68% 98.70% 98.67% 98.68%
+ 4000 98.85% 98.86% 98.84% 98.84% sification accuracy of the classification model in the case of insufficient
+ labeled samples.
+ As shown in Figs. 12 and 13, it can be found that since DuoWan
+ and Qzone are both social software, Kuaishou and aiqiyi are both
+5.3.3. Classification result video software, the traffic of application transmission is similar. Due to
+ the small number of labeled samples, when CNN performs supervised
+ We employ ByteSGAN and CNN to perform classification experilearning, misrecognition occurs, and the misrecognition rate reaches
+ments when the number of labeled samples is 1000, 2000, 3000, 4000, 5% However, ByteSGAN takes advantage of unlabeled samples, and the
+and the classification results are as follows: false recognition rate of these two types is less than 1%.
+
+ 8
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+ Declaration of competing interest
+
+ The authors declare that they have no known competing financial interests or personal relationships that could have appeared to
+ influence the work reported in this paper.
+
+ Acknowledgment
+
+ The paper is sponsored by National Natural Science Foundation
+ (General Program) Grant 61972211, China, and National Key Research
+ and Development Project Grant 2020YFB1804700, China.
+
+ References
+
+Fig. 12. Comparison of Confusion Matrix on Cross-market (Android) dataset (1000 [1] G. Aceto, D. Ciuonzo, A. Montieri, A. Pescapé, Mobile encrypted traffic claslabeled sample). sification using deep learning, in: 2018 Network Traffic Measurement and
+ Analysis Conference, TMA, 2018, pp. 1–8, http://dx.doi.org/10.23919/TMA.
+ 2018.8506558.
+ [2] P. Wang, F. Ye, X. Chen, Y. Qian, Datanet: Deep learning based encrypted
+ network traffic classification in sdn home gateway, IEEE Access 6 (2018)
+ 55380–55391, http://dx.doi.org/10.1109/ACCESS.2018.2872430.
+ [3] Lotfollahi, Deep packet: A novel approach for encrypted traffic classification
+ using deep learning, 2017, Available from http://www.arxiv.org.
+ [4] W. Wang, M. Zhu, J. Wang, X. Zeng, Z. Yang, End-to-end encrypted traffic
+ classification with one-dimensional convolution neural networks, in: 2017 IEEE
+ International Conference on Intelligence and Security Informatics, ISI, 2017, pp.
+ 43–48.
+ [5] W. Wang, M. Zhu, X. Zeng, X. Ye, Y. Sheng, Malware traffic classification using
+ convolutional neural network for representation learning, in: 2017 International
+ Conference on Information Networking, ICOIN, 2017, pp. 712–717, http://dx.
+ doi.org/10.1109/ICOIN.2017.7899588.
+ [6] Z. Chen, K. He, J. Li, Y. Geng, Seq2img: A sequence-to-image based approach
+ towards ip traffic classification using convolutional neural networks, in: 2017
+ IEEE International Conference on Big Data, Big Data, 2017, pp. 1271–1276,
+Fig. 13. Comparison of Confusion Matrix on Cross-market (IOS) dataset (1000 labeled http://dx.doi.org/10.1109/BigData.2017.8258054.
+sample). [7] X. Chen, J. Yu, F. Ye, P. Wang, A hierarchical approach to encrypted
+ data packet classification in smart home gateways, in: 2018 IEEE 16th
+ Intl Conf on Dependable, Autonomic and Secure Computing, 16th Intl Conf
+ on Pervasive Intelligence and Computing, 4th Intl Conf on Big Data In-
+6. Conclusion and future work
+ telligence and Computing and Cyber Science and Technology Congress,
+ DASC/PiCom/DataCom/CyberSciTech, 2018, pp. 41–45, http://dx.doi.org/10.
+ As we all know, capturing large labeled datasets is cumbersome and 1109/DASC/PiCom/DataCom/CyberSciTec.2018.00022.
+time-consuming manual labor. Semi-Supervised learning is a desirable [8] Z. Wang, The application of deep learning on traffic identification, 2015,
+learning way to alleviate this problem. Motivated by this idea, we pro- Available from http://www.blackhat.com.
+posed a Generative Adversarial Network (GAN)-based Semi-Supervised [9] M. Lopez-Martin, B. Carro, A. Sanchez-Esguevillas, J. Lloret, Network traffic
+Learning Encrypted Traffic Classification method called ByteSGAN em- classifier with convolutional and recurrent neural networks for internet of things,
+bedded in SDN Edge Gateway to achieve the goal of traffic classification IEEE Access 5 (2017) 18042–18050, http://dx.doi.org/10.1109/ACCESS.2017.
+ 2747560.
+in a fine-grained manner to further improve network resource utiliza-
+ [10] W. Wang, Y. Sheng, J. Wang, X. Zeng, X. Ye, Y. Huang, M. Zhu, Hast-ids:
+tion. ByteSGAN can use a small number of labeled traffic samples
+ Learning hierarchical spatial–temporal features using deep neural networks to
+and a large number of ones to achieve a good performance of traffic improve intrusion detection, IEEE Access 6 (2018) 1792–1806, http://dx.doi.
+classification by modifying the structure and loss function of the regular org/10.1109/ACCESS.2017.2780250.
+GAN discriminator network in a semi-supervised learning way. Based [11] A.W. Moore, K. Papagiannaki, Toward the accurate identification of network
+on the public dataset ’ISCX2012 VPN-non VPN’ and ’Cross-market’, two applications, in: Proceedings of the 6th International Conference on Passive and
+experimental results show that the ByteSGAN can efficiently improve Active Network Measurement, Springer-Verlag, Berlin, Heidelberg, 2005b, pp.
+the performance of traffic classifier and outperform the other super- 41–54, http://dx.doi.org/10.1007/978-3-540-31966-5_4.
+ [12] L. Bernaille, R. Teixeira, I. Akodkenou, A. Soule, K. Salamatian, Traffic classivised learning methods like CNN. In the future, we will further explore
+ fication on the fly, SIGCOMM Comput. Commun. Rev 36 (2006) 23–26, http:
+the potential of the generative capability of GAN to improve the data
+ //dx.doi.org/10.1145/1129582.1129589.
+imbalance problem for traffic classification. [13] D.C. Sicker, P. Ohm, D. Grunwald, Legal issues surrounding monitoring during
+ However, mode collapse and instability of GAN training still perplex network research, in: Proceedings of the 7th ACM SIGCOMM Conference on
+our works, we will improve them through the GAN training tricks. Internet Measurement, ACM, New York, NY, USA, 2007, http://dx.doi.org/10.
+Besides, cross-validation as the traditional evaluation method is not the 1145/1298306.1298307, URL http://doi.acm.org/10.1145/1298306.1298307.
+best choice for streaming data like real-time network traffic, we will try [14] T.T.T. Nguyen, G. Armitage, A survey of techniques for internet traffic classiprequential evaluation technology to tackle the streaming traffic data, fication using machine learning, IEEE Commun. Surv. Tutor. 10 (2008) 56–76,
+ http://dx.doi.org/10.1109/SURV.2008.080406.
+especially in the scenario of online learning.
+ [15] D. Li, Y. Zhu, W. Lin, Traffic identification of mobile apps based on variational
+ autoencoder network, in: 2017 13th International Conference on Computational
+CRediT authorship contribution statement
+ Intelligence and Security, CIS, 2017, pp. 287–291, http://dx.doi.org/10.1109/
+ CIS.2017.00069.
+ Pan Wang: Conceptualization, Methodology, Software. Zixuan Wang: [16] P. Wang, X. Chen, F. Ye, Z. Sun, A survey of techniques for mobile service
+Methodology, Software. Feng Ye: Data curation, Writing – original encrypted traffic classification using deep learning, IEEE Access 7 (2019)
+draft. Xuejiao Chen: Methodology, Software. 54024–54033.
+
+ 9
+P. Wang et al. Computer Networks 200 (2021) 108535
+
+[17] J. Erman, A. Mahanti, M. Arlitt, I. Cohen, C. Williamson, Offline/realtime ZiXuan Wang was born in Nanjing, Jiangsu, China, in
+ traffic classification using semi-supervised learning, Perform. Eval. 64 (2007) 1994. He obtained a master’s degree in logistics engineering
+ 1194–1213. at Nanjing University of Posts and Telecommunications in
+[18] M. Conti, L.V. Mancini, R. Spolaor, N.V. Verde, Analyzing android encrypted 2020, He is currently pursuing a Ph.D. degree at Nanjing
+ network traffic to identify user actions, IEEE Trans. Inf. Forensics Secur. 11 University of Posts and Telecommunications. His research
+ interests include encrypted traffic identification and data
+ (2016) 114–125, http://dx.doi.org/10.1109/TIFS.2015.2478741.
+ balancing.
+[19] S. Rezaei, X. Liu, How to achieve high classification accuracy with just a few
+ labels: A semi-supervised approach using sampled packets, 2019, URL arXiv:
+ abs/1812.09761.
+[20] A.S. Iliyasu, H. Deng, Semi-supervised encrypted traffic classification with deep
+ convolutional generative adversarial networks, IEEE Access 8 (2020b) 118–126, Feng Ye (S’12–M’15) received the BS degree from the
+ Department of Electronics Engineering, Shanghai Jiao Tong
+ http://dx.doi.org/10.1109/ACCESS.2019.2962106.
+ University, Shanghai, China, in 2011, and the PhD degree
+[21] O. Aouedi, K. Piamrat, D. Bagadthey, A semi-supervised stacked autoencoder
+ in Electrical & Computer Engineering from the University of
+ approach for network traffic classification, 2020, URL https://hal.archives- Nebraska-Lincoln (UNL), NE, USA, in 2015. He is currently
+ ouvertes.fr/hal-02933689. accepted at IEEE ICNP HDR-Nets workshop 2020. an Assistant Professor in the Department of Electrical and
+[22] P. Wang, S. Li, F. Ye, Z. Wang, M. Zhang, Packetcgan: Exploratory study of Computer Engineering, University of Dayton (UD), Dayton,
+ class imbalance for encrypted traffic classification using cgan, in: ICC 2020- OH, USA. Prior to joining UD, he was with the Department
+ 2020 IEEE International Conference on Communications, ICC, 2020, pp. 1–7, of ECE, UNL as an instructor and a researcher from 2015
+ to 2016. His research interests include cyber security and
+ http://dx.doi.org/10.1109/ICC40277.2020.9148946.
+ communication network security, wireless communications
+[23] I.J. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley, S. Ozair, and networks, green ICT, smart grid communications and
+ A. Courville, Y. Bengio, Generative adversarial networks, 2014, arXiv e-prints energy optimization, big data analytics and applications. He
+ http://arxiv.org/abs/1406.2661. serves as the secretary of the IEEE Technical Committee
+[24] A. Odena, Semi-supervised learning with generative adversarial networks, 2016, on Green Communications and Computing (TCGCC). He
+ arXiv:1606.01583. is currently an Associate Editor of Security and Privacy
+ (Wiley), and China Communications. He served as the Co-
+[25] R. A, L. M, S. C, Unsupervised representation learning with deep convolutional
+ Chair of ICNC’19 Signal Processing for Communications
+ generative adversarial networks, 2015, arXiv:/abs/1511.06434.
+ Symposium; the Publicity Co-Chair of IEEE CBDCom 2018;
+[26] T. Salimans, I. Goodfellow, W. Zaremba, V. Cheung, A. Radford, X. Chen, the Co-Chair of Cognitive Radio and Networking Sympo-
+ Improved techniques for training gans, 2016, arXiv:/abs/1606.03498. sium, IEEE ICC 2018. He also serves as a TPC member for
+[27] X. B, W. N, T. Chen, e.a., Empirical evaluation of rectified activations in numerous international conferences, including INFOCOM,
+ convolutional network, 2015, arXiv:/abs/1505.00853. GLOBECOM, VTC, ICC, etc. He is also a reviewer for several
+[28] A. Habibi Lashkari, G. Draper Gil, M. Mamun, A. Ghorbani, Characterization of IEEE journals, including IEEE Transactions on Big Data,
+ IEEE Transactions on Green Communications and Networkencrypted and vpn traffic using time-related features, 2016.
+ ing, IEEE Transactions on Smart Grid, IEEE Transactions
+ on Vehicular Technology, IEEE Transactions on Wireless
+ Communications, etc. He is the recipient of the 2015 Top
+ Pan Wang (M’18) received the BS degree from the Depart- Reviewer of the IEEE Vehicular Technology Society.
+ ment of Communication Engineering, Nanjing University of
+ Posts & Telecommunications, Nanjing, China, in 2001, and
+ the PhD degree in Electrical & Computer Engineering from Xuejiao Chen (M’18) received the BS degree from the De-
+ Nanjing University of Posts&Telecommunications, Nanjing, partment of Communication Engineering, Nanjing University
+ China, in 2013. He is currently an Associate Professor in of Posts & Telecommunications, Nanjing, China, in 2001,
+ the School of Modern Posts, Nanjing University of Posts & and the Master degree in Electrical & Computer Engineering
+ Telecommunications, Nanjing, China. His research interests from Nanjing University of Posts & Telecommunications,
+ include cyber security and communication network security, Nanjing, China, in 2001, and the Master degree in Elecnetwork measurements, Quality of Service, Deep Packet trical & Computer Engineering from Nanjing University of
+ Inspection, SDN, big data analytics and applications. From Posts & Telecommunications, Nanjing, China, in 2006. She
+ 2017 to 2018, he was a visiting scholar of University of is currently an Assistant Professor in the Department of
+ Dayton (UD) in the Department of Electrical and Computer Communication Engineering, Nanjing College of Information
+ Engineering. Technology, Nanjing, China. Her research interests include
+ wireless communications and networks, cyber security and
+ communication network security, network measurements,
+ Quality of Service, Deep Packet Inspection. From 2017 till
+ now, she is a visiting scholar of University of Dayton (UD)
+ in the Department of Electrical and Computer Engineering.
+
+ 10

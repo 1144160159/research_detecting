@@ -1,0 +1,985 @@
+782 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+ Incorporating Gradients to Rules: Toward Online,
+ Adaptive Provenance-Based Intrusion Detection
+ Zhenyuan Li , Lingzhi Wang , Zhengkai Wang , Xiangmin Shen , Haitao Xu , Yan Chen , Fellow, IEEE,
+ and Shouling Ji , Member, IEEE
+
+ Abstract—As cyber-attacks become increasingly sophisticated detection systems (PIDS) have gained attention for their causal
+and stealthy, accurately distinguishing between benign behavior analysis capabilities, they still face key challenges in practical
+and malicious intrusions has become both more critical and more applications, including alarm fatigue, high operational overhead,
+challenging. Provenance-based intrusion detection systems (PIDS)
+show strong potential for detecting malicious activities through and long detection latency [4], [5].
+fine-grained causality analysis, which has gained significant atten- Alarm fatigue [6], [7] is a critical challenge in the cybersecution from both industry and academia. Among the various PIDS rity industry. A recent survey [8] reports that large enterprises
+approaches, rule-based systems are particularly favored for their could receive over 100,000 alarms daily, with security analysts
+low overhead, real-time detection capability, and interpretability. managing an overwhelming average of 5,000 alerts per day,
+However, these systems face challenges in reducing false positive
+rates, primarily due to the lack of fine-tuned rules and specific most of which are false positives. The excessive volume of
+environments. In this paper, we introduce CAPTAIN+, a rule-based alarms can lead to serious consequences. For example, the
+PIDS that autonomously adapts to diverse environments online. damage from the 2013 Target data breach was exacerbated
+Specifically, we propose three adaptive parameters to adjust the by a failure to respond to alerts on time. Alert overload and
+detection configuration for nodes, edges, and alarm generation ambiguity make it difficult for analysts to identify threats [9]
+thresholds. Initially, we build a differentiable tag propagation
+framework and utilize the gradient descent algorithm to optimize quickly. Consequently, an abundance of false alarms can be
+these adaptive parameters based on the training data. In this as detrimental as a single missed one. Beyond alarm fatigue,
+extended version, we integrate an online learning module into the cybersecurity systems also face challenges related to runtime
+detection stage to dynamically optimize adaptive parameters based overhead and detection latency. High computational overhead
+on real-time feedback from the detection process. We evaluate restricts large-scale deployment of detection systems [10], while
+CAPTAIN+ based on data from DARPA TC, OpTC datasets, and
+PKU ASAL datasets. The results demonstrate that CAPTAIN+ of- prolonged detection delays impede timely threat response and
+fers superior detection accuracy, lower detection latency, reduced reduce analyst productivity.
+runtime overhead, long-term resilience against concept drift, and In academia, an increasing number of PIDS are adoptmore interpretable detection results compared to state-of-the-art ing embedding techniques, such as Word2Vec [11] and
+PIDS.
+ Graph2Vec [12], to encode system entities and events. These
+ Index Terms—Intrusion detection, provenance graph analysis, systems further utilize neural networks, including Graph Neuonline learning, adaptive learning. ral Network (GNN) [13], [14] and Recurrent Convolutional
+ Neural Network (RCNN) [15], to analyze information flow
+ I. INTRODUCTION and generate detection results, termed embedding-based PIDS.
+ DVANCED Persistent Threats (APTs) pose a significant Although they have achieved significant advancements in de-
+A risk to both government and industry [1]. For example,
+the 2017 Equifax data breach underscored critical privacy and
+ tection performance, they still encounter several challenges:
+ C1. High Computation Overhead: Processing embedded feasecurity vulnerabilities [2], [3]. Moreover, attackers continu- tures with deep learning techniques [12], [15], leading to
+ously evolve their tactics to infiltrate systems and remain unde- substantial computational overhead. Besides, caching models
+tected for extended periods. While provenance-based intrusion and embeddings significantly increase memory usage [10].
+ C2. Long Detection Latency: Many system designs rely on time
+ Received 12 February 2025; revised 28 July 2025; accepted 15 September windows [16] or log batching [11], [12], introducing addi-
+2025. Date of publication 18 September 2025; date of current version 14 January tional detection delays. C3. Uninterpretable Results: Many sys-
+2026. (Zhenyuan Li, Lingzhi Wang, and Zhengkai Wang contributed equally to tems [11], [17] only report anomaly behavior without attack sethis work.) (Corresponding author: Zhenyuan Li.)
+ Zhenyuan Li, Zhengkai Wang, Haitao Xu, and Shouling Ji are with the mantics. The “black box” nature of models limits understanding
+School of Software Technology, Zhejiang University, Hangzhou 310058, of the detection, complicating alert handling.
+China, and also with the College of Computer Science and Technology, Zhe- On the other hand, a group of PIDS [18], [19], [20],
+jiang University, Hangzhou 310058, China (e-mail: lizhenyuan@zju.edu.cn;
+wangzhengkai@zju.edu.cn; haitaoxu@zju.edu.cn; sji@zju.edu.cn). [21], [22] operates based on human-defined mechanisms to
+ Lingzhi Wang, Xiangmin Shen, and Yan Chen are with the Department generate representations for system entities, propagate inforof Electrical Engineering and Computer Science, Northwestern University, mation flow, and trigger alarms, referred to as rule-based
+Evanston, IL 60208-3118 USA (e-mail: lingzhiwang2025@u.northwestern.edu;
+xiangminshen2019@u.northwestern.edu; ychen@northwestern.edu). PIDS. Rule-based PIDS use simple operations to generate
+ Digital Object Identifier 10.1109/TDSC.2025.3611461 semantically rich alerts, accurately locate suspicious events, and
+
+ 1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+LI et al.: INCORPORATING GRADIENTS TO RULES: TOWARD ONLINE, ADAPTIVE PROVENANCE-BASED INTRUSION DETECTION 783
+
+require low computing resources. Furthermore, some rule-based TABLE I
+ COMPARISON OF PIDS
+approaches support real-time data processing, which reduces
+storage requirements and enables fast responses with low latency. In practice, their fine-grained detection and efficient
+performance are particularly notable. Despite their strengths,
+rule-based PIDS face several challenges in real-world deployment: C4. Fixed Rules: Rule-based PIDS often rely on simplistic
+and universal rules (such as a node’s confidence level [18],
+[19], [20] or general system parameters [18], [19], [20], [22])
+to distinguish between benign and malicious graphs. However, these fixed rules can easily lead to a system that is
+too lax or too strict. C5. Inflexible Detection Settings: Exist- maintaining CPU usage below 15%, along with substantially
+ing methods fail to account for variations across different de- lower memory consumption and latency compared to state-oftection environments, as their detection policies remain un- the-art embedding-based PIDS. CAPTAIN+ reduces false alarms
+changed across different datasets. C6. Manual Optimization: by over 76% (4.2-fold improvement) on average compared to
+Even when some adjustments are possible, extensive manual CAPTAIN and can detect more malicious events. In addition,
+effort is required to configure these systems, relying heavily on CAPTAIN+ effectively copes with the concept drift problem and
+user expertise and manual analysis of environmental factors. demonstrates higher stability in the detection process. Finally,
+C7. Online Adaptation to Concept Drift: Shifts in a system’s we analyze selected scenarios to assess the explainability of
+primary behaviors can degrade the performance of detection the learned configurations. This paper makes the following
+models and algorithms [8], [23]. Thus, detection systems must contributions:
+dynamically adjust their parameters in response to environmen- r We developed CAPTAIN+, a PIDS that adjusts its tagtal changes. However, existing rule-based PIDS typically lack propagation rules offline based on benign data and learns
+such adaptation mechanisms. online using both benign and malicious feedback with
+ To address these limitations, we need an automated configu- an online learning module. This design equips CAPTAIN+
+ration mechanism that enables rule-based PIDS to dynamically with the high accuracy and adaptability of learning-based
+adjust parameters based on detection feedback. Building on systems, while ensuring long-term maintainability.
+CAPTAIN, introduced in our previous conference paper [24], r We have parameterized our CAPTAIN+ with a differthis extended version presents CAPTAIN+, which enhances pa- entiable tag propagation framework, enabling paramerameter optimization mechanisms to enable online adjustments ter tuning via gradient descent across various environbased on false alarm feedback. This improvement further re- ments, which preserves the lightweight, low-latency, and
+duces false positives while enhancing adaptability to concept fine-grained detection capabilities inherent to rule-based
+drift, enabling better long-term performance and maintainabil- systems.
+ity. Specifically, CAPTAIN+ is designed to retain the advantages r We implemented CAPTAIN+ and evaluated it in various
+of traditional rule-based PIDS while autonomously acquiring scenarios, including the DARPA TC, OpTC datasets, and
+optimal configurations. To this end, we introduce three adaptive PKU ASAL datasets. Results show that CAPTAIN+ adapts
+parameters, which provide the system with greater flexibility. To well to different environments with improved detection
+enable their optimization, we construct a learning module and accuracy, reduced latency, lowered overhead, enhanced
+transform the rule-based system into a differentiable function maintainability, and more interpretable results. To facilby calculating and recording the gradients for each parameter. itate future research, we open-source our work at https:
+This allows for a two-stage optimization: 1) Offline Training: //anonymous.4open.science/r/CAPTAINplus-DA05.
+Using a loss function, we apply the gradient descent algorithm
+to optimize the adaptive parameters based on training data.
+2) Online Adaptation: During the detection phase, the learning II. BACKGROUND AND RELATED WORK
+module promptly computes loss upon receiving feedback on
+false or missed alarms. It then immediately updates the parame- A. Provenance-based Intrusion Detection
+ters to enhance subsequent detection. As summarized in Table I, Recently, provenance-based intrusion detection has garnered
+CAPTAIN+ builds upon the lightweight and adaptive foundation significant attention from both industry and academia due to
+of CAPTAIN by introducing online learning and the ability to its powerful capabilities for correlation and causal analysis.
+learn from false negatives. In provenance analysis, system behaviors are represented as
+ We evaluate CAPTAIN+ across a variety of benign and directed acyclic graphs, termed provenance graphs [29], [30]. In
+APT attack scenarios, leveraging widely recognized pub- these graphs, nodes represent system entities, such as processes,
+lic datasets [25] from the DARPA TC Project [26], OpTC files, sockets, pipes, and memory objects, while edges denote indatasets [27], and simulated environment datasets [28] collected teractions between entities, including file access and remote host
+in collaboration with a SOC. The evaluation results show that connections. Based on how entity information, data/control flow,
+CAPTAIN+ reduces false alarms by over 98% (60.18×) on aver- and system behaviors are modeled and aggregated, we categorize
+age compared to traditional rule-based PIDS. Additionally, CAP- PIDS into two major approaches, namely, embedding-based and
+TAIN+ achieves significantly higher detection accuracy while rule-based.
+784 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+ 1) Embedding-based PIDS: Embedding-based systems uti- rule-based PIDS by systematically addressing the limitations
+lize numerical vectors to represent, propagate, and aggregate that hinder their real-world application. Unlike systems that rely
+information about system entities, events, and data/control flows on simple, inflexible rules, CAPTAIN+ introduces a novel, mathwithin a graph [11], [13], [15], [16]. For instance, PROVDE- ematically complete framework for the automatic fine-tuning
+TECTOR [31] selects rare paths based on historical event fre- of tag initialization, propagation, and thresholds. This approach
+quency to generate embedding vectors for sequence learning offers greater flexibility and precision, enabling more accurate
+and anomaly detection, which requires processing the entire path detection and response to security threats.
+for detection. UNICORN[23] embeds extracted histograms from
+the provenance graph and clusters the embedded graph sketches.
+While these systems can achieve higher detection accuracy, they B. Configuration as an Optimization Problem
+often fail to provide contextual explanations for the alarms they Finding the optimal configuration for a rule-based PIDS
+generate. For instance, FLASH [11] identifies suspicious entities can be formalized as an optimization problem, where the goal
+with causal links but lacks detailed attack semantics for those is to identify the best parameters θ in a parameter space to
+interactions. As a result, more manual effort is required to review minimize or maximize an objective function J(θ). One comthe corresponding audit logs and initiate a response. mon approach to solving this optimization problem is gradient
+ Furthermore, since these techniques typically require struc- descent [34]. It utilizes the gradient of the objective function
+tured input, such as graphs or paths, embedding-based PIDS concerning the parameters, ∇θ J(θ), to update θ according to
+often use time windows or log batches, which introduces ad- θ = θ − l · ∇θ J(θ), where l is the learning rate. Many variants
+ditional detection delays, a concept we term “buffer time” in have been proposed based on the gradient descent algorithm,
+this paper. Specifically, buffer time is the duration of the time including stochastic gradient descent [35], mini-batch gradient
+window during which streaming logs are accumulated to form descent, Adagrad [36], and Adam [37]. We discuss more algoa graph structure for subsequent processing. Previous studies rithms and their applicability to CAPTAIN+ in §V-A.
+have implemented fixed-length windows based on time [13] Although optimization problems and their gradient-based
+or the number of events [11], while others [12] have used solutions play a significant role in quantitative science and
+variable-length windows. In the worst case, after an attack is engineering [38], they are rarely discussed in prior work on ruleinitiated, a PIDS must wait for the entire buffer time before based PIDS because of the following challenges. First, existing
+beginning the detection process. research does not clearly define the adjustable parameters in
+ 2) Rule-based PIDS: Rule-based systems [18], [19], [20], rule-based PIDS. Second, designing an objective function, along
+[22] use human-designed rules to map system entities and events with calculating, updating, and saving the gradients needed in
+to predefined semantic units (e.g., tags [18], [19], TTPs [20]), the gradient descent algorithm, are non-trivial challenges for
+which are then propagated along the information flow to gen- a rule-based PIDS. In this paper, we introduce CAPTAIN+ to
+erate detection results. For example, POIROT [32] models APT address these two identified gaps.
+detection as a graph pattern matching problem, where manually
+constructed query graphs are aligned with the provenance graph.
+Such systems have gained popularity due to their real-time C. Online Learning
+processing capabilities and lightweight nature. However, they Traditional adaptive learning methods often rely on a preoften suffer from low detection accuracy due to the absence defined training dataset and use a specific algorithm to train
+of fine-grained rules and environment-specific configurations. models offline. However, concept drift [39] brings a challenge to
+Most rule-based PIDS [18], [19], [20] implement simple, univer- their long-term effectiveness in real-world applications. Online
+sal rules that make them inflexible and unsuitable for adaptation learning, which continuously updates its predictions based on
+to diverse environments. These systems typically rely on discrete sequentially arriving data, iteratively refines the model’s preclassifications to characterize the properties of system entities dictive capabilities. This method has been effectively used to
+(e.g., private or public) and apply the same rules to all nodes adjust to diverse detection environments and rapidly changing
+and events. As a result, they lack the granularity needed to attack vectors [40], [41], achieving higher detection accuracy by
+accurately distinguish between similar graphs, often resulting in adapting in real-time to evolving environments [42].
+either overly lenient or overly strict rules that cause false alarms However, the key challenge of online learning lies in selecting
+or missed alarms. We will further explore these challenges in appropriate training data for continuous learning. This challenge
+§II-E. arises from the variability of data across the detection and
+ In this paper, we build CAPTAIN+ using a rule-based detection training phases, which necessitates modifications to both the
+method for the following reasons: 1) Rule-based detection is parameter adaptation strategy and the gradient calculations used
+computationally efficient [18], [23], [32]. 2) Rule-based meth- in gradient descent optimization. In this paper, we integrate
+ods are suitable for real-time detection, as they can process event online learning into CAPTAIN+ and customize the parameter
+streams incrementally [30]. 3) Rule-based methods [18], [19], update mechanism to address this challenge. By leveraging
+[21] provide greater explainability in the detection process and online learning, CAPTAIN+ dynamically adjusts the parameters
+results compared to embedding-based methods [11], [14], [23]. of nodes affected by tag propagation. This approach not only
+4) Rule-based methods are robust against mimicry attacks [33]. improves detection accuracy and reduces false positives but also
+CAPTAIN+ makes a significant advancement over traditional enhances the system’s maintainability.
+LI et al.: INCORPORATING GRADIENTS TO RULES: TOWARD ONLINE, ADAPTIVE PROVENANCE-BASED INTRUSION DETECTION 785
+
+ However, these mechanisms apply uniform decay and attenuation factors to all nodes and edges, which leads to a tradeoff between excessive false alarms and missed detections, as
+ attackers can evade detection by forking numerous irrelevant
+ processes or interacting with benign entities. Ideally, as illustrated in Fig. 1(b), dependency explosion should be contained
+ in scenarios like the left graph while preserving maliciousness in
+ cases like the right. To achieve finer-grained control, we propose
+ assigning a customized propagation rate to each event. This allows maliciousness to dissipate rapidly for common events while
+ persisting for anomalous ones, improving detection accuracy
+Fig. 1. Motivating Examples from Real-world Datasets and reducing false positives.
+ 3) Customized Alarm Triggering: In rule-based PIDS,
+D. Threat Model and Assumptions alarms are triggered based on predefined conditions that are
+ uniformly applied across all events, regardless of their context,
+ Following prior work [16], [18], [19], we assume OS kerwhich could result in suboptimal detection performance. As
+nels and auditing tools are part of the trusted computing base,
+ illustrated in Fig. 1(c), both processes Firefox and sshd
+meaning attackers cannot tamper with system audit data. We
+ frequently engage in network activities with various IP adexclude hardware manipulation or other attacks that leave no
+ dresses. While sshd commonly executes scripts using bash,
+trace in audit logs. Additionally, we assume the availability of
+ such behavior is unusual and potentially suspicious for Fireaudit logs reflecting daily activities without malicious behavior,
+ fox. Despite similarities in event types and related entities,
+for training in each detection environment.
+ applying a uniform rule threshold for all “execute” events could
+ either generate false alarms for sshd or fail to detect genuine
+E. Motivation Examples threats involving Firefox. To address this challenge, a more
+ This section presents several motivating examples to elucidate context-aware approach is needed. For common events, a higher
+the challenges encountered by traditional, coarse-grained rule- threshold should be set to minimize false alarms, whereas for
+based PIDS, as depicted in Fig. 1. rare events, a lower threshold is necessary to prevent missing
+ 1) “Grey” Nodes: Recent reports indicate that attackers are true alarms. However, determining how to set distinct thresholds
+increasingly exploiting commercial FaaS services, commonly for the “execute bash” event for different processes remains
+used for legitimate purposes, to redirect traffic to Command and challenging.
+Control (C2) servers, as illustrated in Fig. 1(a). In such scenarios, 4) Concept Drift: The environment in which models opboth benign and malicious activities may involve communica- erate is not static; changes in system behavior can lead to
+tion with the same external FaaS IPs, making them difficult concept drift, resulting in degraded model performance. As
+to differentiate. Existing rule-based PIDS often rely on overly illustrated in Fig. 1(d), when the process bash is introduced
+coarse classifications when representing these IPs. For instance, for the first time, both its initial confidentiality and reliabil-
+SLEUTH [18] categorizes nodes into only three trustworthiness ity scores are set to the default value of 1. Over time, as
+levels (Benign Authentic, Benign, and Unknown), which limits more events are processed, tag propagation causes the tag
+its ability to make precise distinctions. Consequently, these scores of bash to change. Specifically, when bash executes
+coarse-grained rules either generate excessive false alarms or a read operation on the file /dev/tty multiple times, its tag
+fail to detect actual threats. A more fine-grained approach is score significantly decreases. Similarly, when bash writes to
+needed to capture the “grey scale” of these IPs. Assigning a the file /home/user/.bash_history-44482.tmp, an
+continuous trustworthiness value (e.g., a float between 0 and 1) alarm is triggered because a low-reliability process is writto each node would enable more nuanced and adaptive detection. ing to a high-reliability file, which is identified as a false
+ 2) Dependency Explosion: A dependency explosion occurs alarm.
+when the influence of a single event is propagated across an These motivating examples highlight the challenges that curexcessive number of system entities, resulting in high computa- rent rule-based PIDS face in striking a balance between detection
+tional overhead and false alarms. Many approaches have been coverage and false positives, largely due to their coarse-grained
+proposed to address this issue [43], [44], [45]. One category rules. Furthermore, these systems often struggle with adaptof solutions requires extensive instrumentation of applications ability, as they cannot dynamically modify rules to suit an
+or operating systems, which introduces significant overhead evolving environment. On the other hand, embedding-based
+and limits practical deployment, particularly on end-host sys- PIDS, powered by deep learning, have the capability to gentems. Another category, found in rule-based PIDS, employs erate tailored “rules” for each event and entity in the graph
+techniques such as event whitelisting [18], cost-based pruning, by mapping them into a feature space. However, the training
+and stage-wise classification of suspicious events in an APT and deployment of deep neural networks require substantial
+lifecycle [20]. For instance, MORSE [19] introduced decay and computational resources and storage, resulting in significant
+attenuation mechanisms to gradually reduce the maliciousness runtime overhead. Additionally, these systems typically lack
+attributed to system entities over time. transparency in their detection process and outcomes, making it
+786 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+ TABLE II
+ TAGS’ DEFINITION IN CAPTAIN+
+
+ Algorithm 1: Offline Learning.
+Fig. 2. CAPTAIN+’s Architecture
+
+challenging to identify malicious behavior at the granularity of
+individual events.
+ To address these challenges, our approach enhances rulebased PIDS by incorporating fine-grained rules that achieve a
+better balance between detection accuracy and false positives.
+By enabling these systems to adapt and refine rules based on
+training data, we can significantly improve detection accuracy
+while avoiding the high computational costs and runtime overhead often associated with deep learning methods. Furthermore,
+to specifically address concept drift and enhance long-term
+maintainability, we incorporate an online learning module into
+CAPTAIN+’s detection phase. This allows for dynamic adjustments based on real-time feedback, which not only mitigates
+false alarms by adapting to evolving system behaviors but also
+reduces the system’s reliance on static training datasets.
+
+ III. CAPTAIN+ DESIGN
+ indicated by <p>, assess the integrity of the code and are
+ As illustrated in Fig. 2, CAPTAIN+ consists of two primary exclusive to process nodes. All scores (c, i, and p) range from
+components: the detection module and the learning module. 0 to 1, where lower scores suggest potential compromise and
+The detection module processes audit logs to produce detection higher scores indicate trustworthiness.
+results. Concurrently, the learning module utilizes false alarms The tag system in CAPTAIN+ is modeled after previous ruleand missed alarms to fine-tune the detection module throughout based PIDS methodologies [18], [19], though this paper does
+the training and detection phases. not delve into the tag design rationale. We establish that any new
+ tag type integrated into CAPTAIN+ must meet three criteria: 1)
+A. Adaptive Detection Module
+ numerical representation, 2) update via arithmetic calculations,
+ As detailed in Algorithm 1 (lines 2-4) and Algorithm 2 and 3) alarm triggering based on tag values. For instance, an
+(lines 1-4), the detection module in CAPTAIN+ operates in three “exploitability” tag could be developed for web service nodes,
+sequential stages: tag initialization, tag propagation, and alarm complete with specific propagation and alarm rules. The focus
+generation. The process begins when new system entities are here is on demonstrating the enhancements brought about by
+introduced; each is assigned an initial tag containing its security CAPTAIN+’s learning module rather than the specifics of tag
+state and contextual information. Subsequently, as system events design, leaving room for tailored tag development in particular
+unfold, these tags propagate throughout the provenance graph, scenarios.
+continuously updating the security context. In the final stage, the The online learning design of CAPTAIN+ is built upon three
+alarm generation component evaluates system activities against adaptive parameters: 1) Tag Initialization Value (A) determines
+predefined security policies to identify and flag malicious be- the initial tags for system entities. 2) Tag Propagation Rate (G)
+havior. adjusts how system events influence tag values.
+ 1) Tag Design: Inspired by previous provenance-based ap- 3) Alarm Generation Threshold (T ) modifies the rules for
+proaches that utilize data flow and control flow [46], CAPTAIN+ alarm generation. We detail how CAPTAIN+ utilizes these
+employs two types of tags: data tags and code tags as detailed parameters to enhance the flexibility of rule-based detection.
+in Table II. Data tags apply to all nodes within the provenance 2) Tag Initialization: Proper tag initialization rules are pivgraph, quantifying the maliciousness of data through a numerical otal as they determine the initial security states of system entities.
+vector <c, i>, where c represents the confidentiality score, For example, assigning a low integrity tag to a socket connected
+and i the integrity score of the data. Conversely, code tags, to a benign IP address could generate numerous false alarms.
+LI et al.: INCORPORATING GRADIENTS TO RULES: TOWARD ONLINE, ADAPTIVE PROVENANCE-BASED INTRUSION DETECTION 787
+
+ Algorithm 2: Online Detection and Learning. into the system from the outset. From that point forward, the
+ system is fully automatic. When new entities are created during
+ runtime, CAPTAIN+ instantly assigns them an initial score based
+ on the pre-configured rules. These scores are then dynamically
+ adjusted through both tag propagation and a continuous online
+ learning process. In this latter process, an adaptive parameter,
+ A, is refined based on real-time feedback to enhance future
+ detection accuracy.
+ 3) Tag Propagation: As depicted in Fig. 2 at step  2 , once
+ tags are initialized, specific system events trigger the propagation of these tags along the information flow, altering code
+ and data tags accordingly. In CAPTAIN+, tag propagation is
+ designed to transfer and accumulate potentially malicious intentions through tag values. For instance, the event (Firefox,
+ read, IP) updates the data tag of Firefox to the lower of
+ the two values between Firefox and IP, ensuring that any
+ malicious intent carried in the information flow is preserved.
+This aspect, however, is often under-discussed in the litera- Our propagation rules, detailed in Table III, are based on prior
+ture [18], [19], where initial tags are typically assigned based work [18], [19]. To ensure a fair comparison, we adopted the
+on domain knowledge without subsequent adjustments. While default hyperparameter values recommended by MORSE. These
+MORSE acknowledges that tag initialization policies could be parameters, defined in Table III, include key terms such as data
+informed by previous tracing data, it lacks a detailed discussion and code tags (dtag, ptag), quiescent tag values (Tqb , Tqe , decay
+or a practical methodology. rates (db , de ) and attenuation factors (ab , ae ).
+ In CAPTAIN+, tags are initialized when nodes are first added However, such a mechanism can lead to a dependence exto provenance graphs, as depicted in Fig. 2 at step  1 . The plosion problem [19], resulting in excessive false alarms. For
+detection system scans incoming system audit logs to identify example, as discussed in §II-E, the event (bash, write,
+new entities, which are then added as nodes with initial data /home/user/.bash_history) commonly appears in
+tags. For new process nodes, we do not initialize code tags and many false alarm propagation chains, indicating widespread
+data tags directly. A process node’s code tag value is inherited misclassification of benign activities as malicious within the
+from the data tag of the libraries loaded by it, and its data tag provenance graph. To address this issue, we introduce an adapvalue is inherited from its parent nodes. For non-process nodes, tive parameter G, which controls the propagation rate. Specifwe employ an adaptive parameter A at the node level to enable ically, for any edge e ∈ E characterized by (src_node_feature,
+fine-grained tag initialization rules for any node ni ∈ N within event_type, dest_node_feature), G stores its propagation rate
+the provenance graph. A stores its initial data tag based on the parameter ge ∈ [0, 1]. During tag propagation, the destination
+node’s specific features, such as file path, process name, and node’s tag tagdest is updated as shown in Equation (1), where
+command line. For instance, sockets with identical IP addresses tagrule typically equals tagsrc , representing the tag value deterreceive the same initial data tag based on this feature. mined by the propagation rules listed in Table III. If ge ’s value
+ The adaptive parameter A allows CAPTAIN+ to learn fine- is close to 0, it results in minimal changes to tag values, while a
+grained tag initialization rules at the node level. CAPTAIN+’s value close to 1 leads to significant changes.
+learning module refines A through a training process, detailed new
+ tagdest = ge · tagrule + (1 − ge ) · tagdest (1)
+in §III-B, beginning with a default value A0 . To avoid missing
+threats early on, A0 is conservatively set during training on CAPTAIN+ continuously refines G through its online training
+benign data, accepting some initial false alarms. Unlike MORSE process, with details elaborated in §III-B. Initially, we conservawhich uses conservative settings to capture all potential threats tively set all ge values to 1, ensuring that during the initial phase,
+[19], CAPTAIN+ applies such settings only during the initial tag propagation occurs without attenuation. This allows for the
+training phase. For example, we assign all IP addresses an initial maximum possible dissemination of information throughout
+integrity value of 0, ensuring that we do not miss any attackers the graph. This strategy ensures that we retain a broader set
+entering through network communications. of potentially suspicious nodes and paths during the training
+ A key challenge in provenance-based detection is establishing stage. By preventing the premature dampening of signals, we
+initial trust scores for system entities. Deriving these purely provide the model with richer data to learn from, enhancing
+from data can be unreliable without extensive, domain-specific its ability to capture complex threat patterns. For subsequent
+knowledge. To address this, CAPTAIN+ employs a principled, online detection, this initial setup allows the system to maintain
+two-stage approach for score initialization and adaptation. First, maximum vigilance against unknown entities, as potential risk
+during system deployment, an administrator performs a one- indicators are propagated without being weakened by an initially
+time manual configuration rule to set baseline confidentiality conservative parameter.
+scores for different categories of entities (e.g., executable files, 4) Alarm Generation: As depicted in Fig. 2 at step  3 , upon
+network sockets). This step injects essential domain knowledge the occurrence of an event, the system evaluates whether it
+788 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+ TABLE III
+ TAG PROPAGATION POLICIES
+
+ TABLE IV
+ ALARM GENERATION POLICIES
+
+meets the criteria for triggering an alarm according to predefined applicable to various rule-based PIDS, especially taint-analysis
+alarm generation rules. Our alarm generation policies, detailed in systems like SLEUTH [18] and HOLMES [20].
+Table IV, are adopted from MORSE [19], in which incl_exec(p)
+means p contains the execution permission, and socket(o) holds
+ B. Configuration Learning Module
+when o refers to a socket. In general, these rules are based on
+the event, the associated tags of the subject and object, and With the three adaptive parameters defined, the problem of
+a defined threshold that can be fine-tuned to manage alarm adaptive configuration for the detection system is transformed
+frequency. For instance, a file corruption alarm is initiated if into an optimization problem: finding the optimal values for
+a process with a data integrity value below 0.5 writes to a A, G, and T that minimize a given objective function. This
+normal file. Frequent false alarms from events like (sshd, section details how we define the objective function, calcuexecve, bash) during training may indicate the need to late the necessary gradients, and search for optimal parameter
+raise the threshold for such cases. values. Compared to the previous CAPTAIN design, CAPTAIN+
+ We introduce an adaptive parameter T to enable fine-grained incorporates online learning capabilities in addition to offline
+adjustment of the alarm threshold. Specifically, for any edge training to further enhance detection accuracy and long-term
+e ∈ E in the provenance graph, T stores its alarm threshold maintainability. The inclusion of an online learning mechanism
+thre ∈ [0, 1]. For an edge e, the detection function f (e) is allows CAPTAIN+ to continuously analyze and adapt to not only
+defined in Equation (2) where tag is the relevant node tag on false positives but also false negatives, thereby significantly
+edge e. A low threshold thre tends to suppress alarms, whereas improving the reliability of the model.
+a high threshold tends to promote alarm generation, allowing 1) Loss Function: The first step in optimization is defining
+CAPTAIN+ to dynamically adjust response sensitivity at the edge the objective function, termed the loss function in our learning
+level. Like A and G, T is refined through a training process tasks. The goal of the learning module is to adjust parameters
+discussed in §III-B. Furthermore, during the online learning in a way that reduces classification errors (both false positives
+phase in detection, T is adjusted in real-time based on incoming and false negatives) while preserving sensitivity to genuine
+data and event outcomes. Initially, we set default thresholds malicious events. Consequently, the loss function
+  consists of
+(T0 ) neutrally, assigning thri = 0.5 for every edge e to neither two components: a term for these errors ( e∈E L(e)) and a
+universally suppress nor promote alarm triggering. regularization term (R) to maintain generalization capabilities.
+  The error term, as shown in Equation (3), is designed to
+ malicious, if f (e) < 0 penalize false alarms — both false positives and false negatives.
+ f (e) = tag − thre ⇒ (2) Specifically, for an event e, a penalty is incurred if the sign of
+ benign, otherwise
+ its score f (e) is incorrect. For a malicious event misclassified
+ It is noteworthy that CAPTAIN+’s methodology is systematic as benign (a false negative), its score f (e) will be positive. The
+and independent of specific rules or tags, making it broadly function in Equation (3) is designed to penalize the incorrect
+LI et al.: INCORPORATING GRADIENTS TO RULES: TOWARD ONLINE, ADAPTIVE PROVENANCE-BASED INTRUSION DETECTION 789
+
+score. Importantly, correctly classified events are excluded from the chain rule recursively through the provenance graph. Since
+the loss computation to avoid unnecessary updates that may the final detection outcome is a function of node tags, which are
+reduce sensitivity or increase false alarms. themselves functions of prior tags, we can trace the gradients
+ backward from the loss to any initial parameter like A. The
+ L(e) = (1 + |f (e)|)2 − 1 (3) recursion begins with the initial state of the graph. The gradient
+ The second component of our loss function is the regularizer of a tag on a node n concerning the initial value an of a node n
+term. As previously mentioned, CAPTAIN+’s offline training is defined as:
+ 
+stage primarily relies on benign data to learn normal behav- ∂tagn 1, if n = n
+ = (6)
+iors within the detection environment. In the field of machine ∂an 0, if n = n
+learning, One-class classification (OCC) algorithms address scenarios where only one class of samples, typically the “normal” This simply states that a node’s tag is initially dependent only
+class, is available during training [47]. Drawing inspiration from on its own starting value.
+seminal works in this area [48], [49], we incorporate a regular- For the recursive step, we consider the propagation policies
+ization term into our loss function to prevent the parameters detailed in Table III. When an event occurs, an updated tag value,
+from becoming overly permissive in the absence of malicious tagrule , is determined by the tags of the source node (tagsrc )
+training samples. The core idea is to make the adaptive param- and the destination node (tagdest ). By applying the chain rule to
+eters as close as possible to the default values (A0 , G0 , T0 ). By these policies, we derive the recursive formula for the gradient.
+minimizing the l2 distance between the adaptive parameters and We consolidate the different update rules into the following
+the default values, we protect the detection capability during comprehensive equation:
+training, as shown in Equation (4), where α, γ, and τ are the (1 − ge ) ∂tag if tagrule = c
+ ∂an ,
+ dest
+ ∂tagn
+regularizer coefficients. In the evaluation section, we discuss =
+ ∂an + (1 − ge ) ∂an ,
+ ge ∂tag if tagrule = tagsrc
+ ∂tagdest
+ ∂an src
+the effect of the regularizer coefficients (§IV-D2) and methods
+used to fine-tune them (§IV-A3). (7)
+  Here, the first case applies when a tag is reset to a constant value
+ Loss = L(e)+α||A−A0 ||2 +γ||G−G0 ||2 +τ ||T −T0 ||2 c, which halts the flow of the gradient from any prior nodes under
+    this update rule. The second case corresponds to policies where
+ e∈E
+ Offline Training
+ (4) the tag propagates from source to destination. The third case
+ Unlike offline training, online learning does not incorporate handles policies where the destination’s tag remains effectively
+regularization. This omission is deliberate because the errors unchanged (or is influenced only by its prior state).
+identified in the detection phase need immediate and effective 3) Online Learning Rate: The offline training phase benefits
+updates. The regularization techniques used during training to from a large volume of events over multiple epochs, allowing for
+prevent overfitting are unsuitable for online learning, which a small, fixed learning rate to achieve gradual and stable converrequires the system to respond swiftly to both false positives gence. In contrast, the online phase must learn effectively from
+and negatives without artificially constraining its adaptiveness. sparse and critical feedback, necessitating a dynamic learning
+ 2) Differentiable Detection Framework: The core challenge rate. The strategy, detailed in Algorithm 2 (line 6), differentiates
+in building an adaptive rule-based PIDS is computing the gradi- between false positives and false negatives.
+ents of its parameters (∂f /∂an , ∂f /∂ge , and ∂f /∂thre ), as the For false positives, the learning rate lf p is designed to increase
+detection process typically involves a series of discrete, non- as more errors are observed, allowing the model to correct
+differentiable rule-based decisions. To the best of our knowl- systematic biases more aggressively over time. It’s computed
+edge, this work is the first to formalize and compute the gradients as:
+of parameters in a tag-based PIDS. Our approach achieves this N
+ lf p = lbasic · (8)
+by computing these gradients in response to misclassifications, n
+as detailed in Algorithm 1 (lines 5-6) and Algorithm 2 (lines where lf p is the learning rate, lbasic is the initial learning rate,
+5-7). Following the chain rule, the gradient for a parameter such N is the number of false positive events, η is the update interval.
+as an is given by Equation (5), with similar derivations for other The term N n serves as a scaling factor, increasing the learning
+parameters like ge and thre . rate as more batches of false positives are observed.
+ ∂Loss  ∂L(e) ∂f False negatives represent critical failures and require a more
+ = · + α · (an − a0 ) (5) forceful correction. Therefore, the learning rate for false neg-
+ ∂an ∂f ∂an   
+ e∈E atives, lf n , is set to a larger, constant value to ensure that any
+ Offline Training
+ missed threat prompts a significant model update. Furthermore,
+ In CAPTAIN+, we enable gradient-based optimization by modbecause detecting malicious events is the primary goal, the
+eling the detection process as a differentiable function. We
+ occurrence of a single false negative suggests the model may
+calculate the gradients of each adaptive parameter with respect to
+ be too lenient overall. To counteract this, we also adjust the
+the system’s loss, allowing us to use gradient descent to find the
+ learning rate for future false positives whenever a false negative
+optimal parameters. The following section details this gradient
+ is found. This adjustment is governed by:
+calculation process, using a node’s initial tag value, A, as a
+ p = lf p · D
+ lfnew old
+representative parameter. The core of our method is to apply (9)
+790 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+where D represents the multiplicative factor applied to lf p each We deployed CAPTAIN+ and performed all experiments on an
+time a false negative is detected. Ubuntu 22.04.3 Linux Server with an Intel(R) Xeon(R) Platinum
+ 4) Training and Testing: In the previous section, we estab- 8358 CPU @ 2.60 GHz and 1.0 TB of memory. Our evaluation
+lished a differentiable framework for calculating the gradients aims to answer the following research questions:
+of our system’s adaptive parameters. We now describe how we 1) How accurate is CAPTAIN+?
+use gradient descent to optimize these parameters in two distinct 2) How efficient is CAPTAIN+?
+phases: an initial offline training phase and a continuous online 3) How robust is CAPTAIN+ against adversarial attacks?
+learning phase during live operation. 4) How is the long-term performance of CAPTAIN+?
+ The goal of the offline training phase is to learn an optimized 5) How do individual modules influence CAPTAIN+’s
+set of baseline parameters (A, G, and T ) from a static dataset. performance?
+Instead of random initialization, we begin with a conservative
+default configuration. This ensures the system maintains high
+sensitivity to potential threats from the start of the training
+process. Training proceeds in epochs. In each epoch, the sys- A. Experiment Settings
+tem performs a forward pass over the entire training dataset, 1) Datasets: We evaluate CAPTAIN+ using public forensic
+propagating tags and accumulating gradients. To ensure stable datasets from the DARPA Transparent Computing program and
+convergence, we employ a batch update strategy: all gradients datasets generated within simulated environments in collaboraare aggregated throughout the epoch, and the model parameters tion with a professional SOC.
+are updated only once at the very end (as shown in Algorithm 1, r DARPA TC Datasets [26]. The DARPA TC program ran
+lines 7-12). The parameter update follows the standard gradient between 2016 and 2019 and conducted several red team
+descent rule: assessments. It sets up platforms with various background
+ ∂Loss benign activities, generating datasets that include millions
+ pnew = pold − l · (10) of benign and hundreds of malicious events.
+ ∂pold
+ r DARPA OpTC Datasets [27]. DARPA OpTC program exwhere p represents any adaptive parameter (e.g., an , ge , or ecuted a red team simulation of a three-day-long APT
+thre ) and l is the learning rate. This iterative process repeats attack on a group of hosts, producing data that includes
+until a maximum number of epochs is reached or the model’s benign activities over seven days and an additional three
+performance converges. The resulting learned parameters form days with a mix of benign and malicious activities.
+the customized configuration used for initial system deployment. r PKU ASAL Datasets [28]. The PKU ASAL dataset con-
+ The online learning phase allows CAPTAIN+ to adapt to evolv- sists of three hosts: a Linux server, a Windows server, and a
+ing threats in real-time, which differs from offline training in Windows 10 host, on which various normal user activities
+several key ways. First, unlike the epoch-based training, online were performed. The dataset also includes five emulated
+updates are event-driven and immediate. An update is triggered APT attack scenarios, including APT29 and Sidewinder.
+by a misclassification, either a false positive (FP) identified 2) Baseline Detectors: We evaluate CAPTAIN+ against six
+by an analyst or a false negative (FN) discovered later (see SOTA PIDS as baselines to compare with CAPTAIN+ from
+Algorithm 2, line 8). Then, the parameter updates are tailored different perspectives. FLASH, KAIROS, and NODLINK are the
+to the error type. FPs trigger updates that make the system most recent SOTA embedding-based PIDS and have already
+more lenient to similar future events, while FNs trigger updates evaluated some other embedding-based PIDS [17], [20], [23],
+that make it more stringent, thus heightening its sensitivity. demonstrating state-of-the-art performance. These systems are
+Moreover, a misclassification indicates that the tag value of the open-source, allowing us to test them on different datasets
+involved node is unreliable. Therefore, after updating the model with their open-sourced code. We chose MORSE since it is
+parameters, we also immediately update the tag value of the an SOTA rule-based PIDS, and this allows us to evaluate the
+misclassified node itself to prevent cascading errors and improve improvements from our differentiable adaptation framework.
+the accuracy of subsequent, related detections. The effectiveness To ensure a fair and unbiased comparison, we use the settings
+of this mechanism is verified in §IV-F3. This dual-phase ap- from MORSE in the evaluation. According to [11], [13] and
+proach ensures that CAPTAIN+ starts with a robust, well-trained our communication with the authors, the detection systems of
+model and continues to improve its detection capability through SHADEWATCHER and PROGRAPHER are not fully open-source
+continuous adaptation to real-time feedback. due to proprietary license restrictions. Although the data preprocessing module of SHADEWATCHER is open-source, we were
+ IV. EVALUATION
+ unable to locate the preprocessing output files used for train-
+ The entire system, including data parsing, tag initialization, ing and testing. Therefore, for these systems, we utilized the
+tag propagation, alarm generation, online learning, and the train- available code to evaluate the efficiency and latency of data
+ing/testing framework, comprises approximately 5K lines of preprocessing, and relied on the detection results reported in
+Python code. We implement the differentiable tag-propagation their paper to assess detection accuracy. We reimplemented
+framework by maintaining two dictionaries per tag to store MORSE according to their paper. All code used for evaluatgradients for A and G. For T , since its gradients are independent ing the baselines will also be publicly available for future
+of node tags, there is no need to store them within the nodes. research.
+LI et al.: INCORPORATING GRADIENTS TO RULES: TOWARD ONLINE, ADAPTIVE PROVENANCE-BASED INTRUSION DETECTION 791
+
+ TABLE V zero yields the following conditions:
+ DATASET STATISTICS FOR TRAINING AND TESTING
+  ∂L(e) ∂f
+ α=− · · (an − a0 )−1
+ ∂f ∂an
+ e∈E
+  ∂L(e) ∂f
+ γ=− · · (ge − g0 )−1
+ ∂f ∂ge
+ e∈E
+  ∂L(e) ∂f
+ τ =− · · (thre − thr0 )−1 (11)
+ ∂f ∂thre
+ e∈E
+
+ Since the regularization coefficients α, γ and τ are used in offline learning, the loss function L(e) = max(0, (1 − f (e))2 −
+ 1). For a misclassified event where −1 < f (e) < 0, the deriva-
+ 3) Experiment Setup: Initial State and Data Splits: Followtive is therefore:
+ing prior work [19], we assume that attacks originate from external networks or existing files. Consistent with the conservative  ∂L(e) 
+strategy mentioned in §III-A, we set their initial integrity score − = 2(1 − f (e)) (12)
+ ∂f
+ e∈E e∈E
+in A0 to 0, which signifies low integrity. To ensure a clean
+training process, we partition our datasets based on the ground  ∂f
+ α= 2(1 − f (e)) · · (an − a0 )−1 ≈ 3N (n)
+truth attack timestamps. All data preceding the first attack is ∂an
+ e∈E
+used as the training set (containing only benign events), and the
+  ∂f
+remainder is used for testing. The specific details for each dataset γ= 2(1 − f (e)) · · (ge − g0 )−1 ≈ 3N (e)
+split are provided in Table V. ∂ge
+ e∈E
+ Cross-Validation: To prevent overfitting and respect the  ∂f
+temporal nature of audit logs, we employ time-series cross- τ= 2(1 − f (e)) · · (thre − thr0 )−1 ≈ 12N (e)
+validation instead of standard k-fold cross-validation. Standard ∂thre
+ e∈E
+k-fold shuffling would violate temporal causality, potentially (13)
+training the model to predict past events based on future ones.
+Our approach involves setting a time window (approximately At the optimal point where the gradients of the total
+2/3 the length of the training set) and creating k distinct train- loss are zero, we also have the following relationships for
+ing/validation splits by sliding this window forward in time. For the partial derivatives: ∂thr ∂f
+ e
+ = −1, −1 < ∂a ∂f
+ n
+ < 0, −1 <
+ ∂ge < 0. According to §III-A, the default values are typi-
+ ∂f
+our experiments, we set k = 3. This method provides a robust
+and unbiased estimate of the model’s performance on unseen cally a0 = 0 and g0 = 1. We can make the following estimastreaming data. tions: f (e) ≈ −0.5, ∂a ∂f
+ n
+ ≈ 0.5, an − a0 ≈ 0.5, ∂g ∂f
+ e
+ ≈ −0.5,
+ Hyperparameter Selection: The performance of CAPTAIN+ ge − g0 ≈ −0.5, thre − thr0 ≈ −0.25. Let N (n) and N (e)
+depends on several hyperparameters, particularly the three regu- be the number of allowed false alarms related to node n and
+larizer coefficients (α, γ, τ ). We propose a two-pronged strategy event e.
+for their selection. When a labeled validation set is available, It is important to note that the values above are heuristic estiwe use grid search to identify the optimal hyperparameter mates. Since attackers may hide within training data or exploit
+combination. Our optimization goal is to select settings that benign entities, the choice of regularizer coefficients depends
+yield the fewest false positives while maintaining or improving on the presumed purity of the “benign” dataset. Therefore, a
+the true positive rate compared to a conservative baseline. For universally optimal method for selecting these coefficients does
+example, for the E3-CADETS dataset, this process resulted in not exist. Instead, we propose a dynamic adjustment strategy
+optimal settings of α = 0.1, γ = 0.1, τ = 0.1 with a learning that begins with the estimated values and adapts based on model
+rate of 0.01. performance. If missed alarms appear when compared to the
+ In practice, comprehensive validation sets for PIDS are often conservative baseline, the regularization is made stricter by
+unavailable. For these scenarios, we propose a heuristic-based multiplying the coefficients by a set factor (e.g., 10). Conversely,
+method to estimate the coefficients. Since our training begins after a prolonged period with no missed alarms, the regularizafrom a conservative state, false alarms serve to “loosen” the rules. tion can be relaxed by dividing the coefficients by the same
+The regularizers counteract this, preventing the model from factor, after which the model is retrained.
+becoming too lenient and missing true attacks. The magnitude of Online Learning Trigger: The online learning mechanism is
+the coefficients, therefore, should depend on the number of false triggered whenever a misclassification is observed. In our exalarms (N) an administrator is willing to tolerate per entity. Based periments, we simulated this by comparing the system’s output
+on this principle, we provide the following heuristic to estimate against a labeled ground truth dataset containing an average
+the coefficients before training: α ≈ 3N, γ ≈ 3N, τ ≈ 12N . of 70 malicious events each. In a real-world deployment, this
+ Moreover, we provide a mathematical justification for this trigger would be the feedback from a security analyst who either
+heuristic. According to Eq. 5, setting ∂Loss ∂Loss ∂Loss
+ ∂an , ∂ge and ∂thre be dismisses a false alarm or identifies a missed attack.
+792 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+ TABLE VI TABLE VII
+ COMPARISON OF EVENT-LEVEL ACCURACY COMPARISON OF NODE-LEVEL ACCURACY
+
+ 4) Data Labeling: We labelled entities and events in each
+attack scenario’s kill chain as malicious and all others as benign,
+based on the corresponding attack report. While prior studies [11], [17] offer entity-level labels in their open-source repositories, they often lack a specified labeling strategy or sufficient
+contextual details. Furthermore, we observed an impractically
+high number of malicious labels in their datasets. For instance,
+over 12,000 system entities were marked as malicious within
+30 hours in the CADETS dataset from Engagement 3, a figure
+that does not reflect a realistic SOC environment. To ensure a
+fair and unbiased comparison between CAPTAIN+ and baseline
+systems, we created and utilized our own data labels for this
+evaluation. This labeling process was non-trivial, as it required
+mapping descriptions from natural language attack reports to
+records in raw audit logs. To facilitate future research and 2) False Alarm Entity Reduction: Although CAPTAIN+ is
+improve reproducibility, we have made our data labels publicly an event-level detector, we also compare it with state-of-theavailable. art (SOTA) entity-level PIDS, such as FLASH, KAIROS, and
+ NODLINK. To make this comparison feasible, we transformed
+ the alarm events triggered by MORSE, CAPTAIN, and CAPTAIN+
+B. How accurate is CAPTAIN+?
+ into alarm entities, where an entity is considered an alarm entity
+ 1) False Alarm Events Reduction: We first compared the if it is involved in any alarm event. To ensure the integrity of
+number of false alarms generated by CAPTAIN+, CAPTAIN, and our comparison, we also addressed differences in dataset usage
+MORSE across different datasets. As shown in Table VI, CAP- and evaluation metrics. While previous works [11], [13], [17]
+TAIN+ reduces false alarms by over 76% on average compared often used only a subset of each DARPA dataset, we utilized the
+with CAPTAIN. For those remaining false alarms, especially in entire dataset to simulate a more realistic SOC scenario. To do so,
+S-2 and S-3, CAPTAIN+ cannot remove them for the following we divided the data as described in §IV-A3, retraining baseline
+reasons. The persistence of some false alarms, particularly in models using their provided code. Furthermore, we observed
+datasets S-2 and S-3, can be attributed to several factors. First, that some baselines, such as FLASH and THREATRACE, employed
+some “false” alarms relate to potentially malicious nodes (e.g., lenient criteria for counting false positives (FPs) [13]. To ensure a
+specific configuration files in S-2) but cannot be directly mapped fair yet strict evaluation, we report results that include a ‘one-hop
+to attack steps and are therefore not labeled as malicious. Second, FP’ metric, where we exclude any FP entities within a one-hop
+some relevant nodes and edges are absent from the training set distance of a ground-truth attack entity. These differences in exor fail to trigger alarms. perimental settings account for potential discrepancies between
+ Furthermore, since CAPTAIN+ adopts the same initial training our results and those in the referenced papers.
+method as CAPTAIN, their parameter settings are identical at the We evaluated detection accuracy on the CADETS, TRACE,
+start of the detection phase, making some initial false positives THEIA, and OpTC datasets. As shown in Table VII, the perforunavoidable before online learning is triggered. Finally, to en- mance of the baseline systems varied significantly. Among the
+sure learning stability, we employ a gradual increase in the learn- embedding-based systems, FLASH reported a fair number of true
+ing rate, meaning that some initial parameter updates do not have positives (TPs). Still, it produced an excessive number of FPs,
+an immediate, significant effect. To verify that this reduction as its GNN-based approach struggles with limited training data.
+in false positives does not compromise detection capability, we KAIROS performed well in time-window detection but exhibited
+also analyzed the number of malicious events detected. Table VI poor entity-level accuracy. Similarly, NODLINK detected most
+shows that CAPTAIN+ detects all malicious events that CAPTAIN attacks but produced many FPs and missed key entities such
+does, and in some datasets (e.g., T-3, OpTC), detects even more. as files and network sockets. The rule-based system, MORSE,
+LI et al.: INCORPORATING GRADIENTS TO RULES: TOWARD ONLINE, ADAPTIVE PROVENANCE-BASED INTRUSION DETECTION 793
+
+achieved a lower false positive rate at the node level. This is TABLE VIII
+ COMPARISON OF DETECTION LATENCY
+attributable to its semantically-rich alarms, which provide additional context for filtering. For example, during a file corruption
+event, MORSE flags both the process and the corrupted file, but
+the file node may be filtered from the final alert because it is considered an object of the attack rather than a malicious actor itself.
+This explains why MORSE can trigger thousands of event-level
+false alarms but only flags a few hundred nodes incorrectly. Such
+semantic filtering is not available in embedding-based PIDS.
+ On all datasets, CAPTAIN+ demonstrates superior performance, identifying the majority of TPs while maintaining fewer
+FPs, even when compared to CAPTAIN. Since CAPTAIN+ operates
+at the event level, some entities not directly associated with
+attack events may not be reported. For instance, when malware is
+downloaded and executed, CAPTAIN+ triggers MalFileCreation
+and FileExec alarms, providing analysts with critical information about the malware process, file, and parent process. However, to prevent alarm fatigue, we do not immediately report the
+entry network node used by the attackers. This design choice
+leads to some false negatives (FNs) in CAPTAIN+, with the
+expectation that analysts can investigate these related nodes after
+the initial response.
+
+C. How efficient is CAPTAIN+?
+ In this section, we compare CAPTAIN+ with the SOTA PIDS,
+including FLASH, KAIROS, NODLINK, SHADEWATCHER, MORSE
+and CAPTAIN, to evaluate their efficiency.
+ 1) Detection Latency: In our evaluation, we define detection
+latency as the sum of three components: buffer time (delays from
+time-windowing, as discussed in §II), preprocessing time (e.g.,
+data parsing, feature extraction), and detection time (from data
+ Fig. 3. Comparison of Resource Consumption
+input to result output). Our latency evaluation focuses on the
+testing phase, as training can be conducted offline, and utilizes
+the TRACE and CADETS datasets. To ensure a fair comparison,
+we executed the baseline systems’ original code, excluded I/O 2) Runtime Overhead: Another key metric for PIDS
+time to measure only computational latency, and verified that evaluation is runtime overhead. This section assesses
+the amount of data fed into each detection module after prepro- CAPTAIN+’s runtime overhead and memory usage during decessing was identical. tection. We use the Python “resource” module to measure
+ The results in Table VIII show that CAPTAIN+ outperforms the resource consumption of detectors, running them in CPU
+other PIDS in terms of both preprocessing and detection time. mode. As GPUs may not be available in most real-world threat
+Unlike other methods that rely on embedding graph structures detection scenarios. We calculate the total CPU time in user
+and require significant buffer time (from minutes to hours), mode to evaluate CPU resource consumption, as shown in
+CAPTAIN+ processes audit logs in a streaming fashion, elimi- Fig. 3(a). Due to the use of deep learning libraries, KAIROS,
+nating buffer time entirely, and uses a lightweight preprocessing FLASH and NODLINK are multi-threaded, so their total CPU
+pipeline, enabling faster data handling. time in Fig. 3(a) may exceed the detection time reported in
+ Besides, compared to other rule-based systems like MORSE Table VIII. In contrast, MORSE, CAPTAIN, and CAPTAIN+ are
+and CAPTAIN, the introduction of the online learning mechanism single-threaded. For fair comparison, the CPU time sum of all
+in CAPTAIN+ means that every false positive or false negative cores is considered when conducting multi-core execution statistriggers a parameter adjustment. As a result, CAPTAIN+ con- tics. Since CAPTAIN+ relies on basic arithmetic operations on
+sumes more time during the detection stage. However, it is real-number tags, it requires far less CPU time than embeddingessential to note that the detection logic in CAPTAIN+ remains based PIDS (around 3% of FLASH and 0.3% of KAIROS), which
+unchanged, so this additional time should be considered part of rely on complex matrix and vector operations for their neural
+the training time. The extra time spent is, on average, less than networks. Moreover, like the detection latency experiment, there
+one minute, which we consider a negligible cost for improved may be a slight increase in CPU usage compared to CAPTAIN and
+accuracy. MORSE.
+794 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+ We used the “psutil” library in Python to monitor the memory
+usage of the detectors during detection. As shown in Fig. 3(b),
+CAPTAIN+ completes detection much faster than embeddingbased PIDS (as shown in Table VIII) and uses the least memory
+throughout the entire detection process. As seen in Fig. 3(b),
+compared to CAPTAIN and MORSE, CAPTAIN+ shows a slight
+increase in both memory usage and detection time. This is partly
+due to adjustments made for each false alarm, leading to multiple
+calls. However, this memory is only used for online learning Fig. 4. Impact of Adversarial Attacks on CAPTAIN+
+and does not affect actual detection. In practice, users batch
+and periodically update false alarms, further reducing memory
+use. When focusing only on detection, comparing with CAPTAIN by minor benign changes. 2) Event-level detection: CAPTAIN+
+offers a clearer view. The small difference in memory usage works at a finer granularity (event level) compared to entitybetween CAPTAIN+ and MORSE comes from the storage of fine- level detectors. Since operating at event level without buffering,
+grained rules. Overall, CAPTAIN+ retains the lightweight and fast CAPTAIN+ remains unaffected by benign events added after
+characteristics of rule-based PIDS. attacks—unlike time-window-based detectors. 3) Conservative,
+ To further clarify CAPTAIN+’s runtime overhead, we present rule-based detection: CAPTAIN+ is not anomaly-based; it uses
+a resource consumption proportion in Fig. 3(c). As the figure conservative rules trained on normal data to reduce false alarms.
+illustrates, the overhead is primarily due to the online learning Therefore, adding normal features does not weaken its detection
+module (specifically, gradient calculation), which accounts for capability, as the conservative rules ensure detection reliability.
+approximately 30% of the additional cost. We believe this is a 2) Data Poisoning Attack: Data poisoning refers to injecting
+reasonable trade-off for achieving real-time model adaptation malicious events into benign training data, causing the detector
+compared to the significantly higher cost of periodic full model to learn attacker-crafted patterns and potentially miss future
+retraining. attacks. To enhance CAPTAIN+’s robustness, we add a regularizer
+ to the loss function to reduce sensitivity to training data and
+ mitigate the impact of such manipulation.
+D. How robust is CAPTAIN+ against adversarial attacks?
+ Training Set Poisoning Attack: In this section, we demon-
+ As the development of PIDS grows, adversarial attacks aimed strate CAPTAIN+’s resilience against training set poisoning attack
+at evading these detection mechanisms are a growing concern. using a real attack scenario, namely, a Pine Backdoor and
+This section examines the robustness of CAPTAIN+ against Phishing Email attack from the Engagement 3 TRACE dataset.
+“mimicry attacks” and “data poisoning attacks”. In this attack, a vulnerable pine application connected to the
+ 1) Adversarial Mimicry Attack: Mimicry attacks on PIDS email server 128.55.12.73, downloaded and executed a
+involve altering the provenance data and incorporating more phishing email attachment. However, since 128.55.12.73
+benign features to “mimic benign behavior”, to evade detection. had multiple activities, it caused some “false” alarms in the
+We evaluated the robustness of CAPTAIN+ against mimicry at- training data. This violates our assumption (as noted in §II-D)
+tacks using the attack methodology from [11], [33], i.e., inserting that the training set should be free from attack entities or events,
+benign structures into the attack graphs. Our mimicry attack making it an ideal test case for dataset poisoning.
+involves two steps: First, we extracted common benign event To analyze the attack, we focus on the initial integrity tag (a)
+structures from the training data. Then, we swapped the original of the IP node 128.55.12.73, which shows the impact of the
+entities in these benign structures with malicious ones from regularization term. Without the regularizer, 128.55.12.73
+an actual attack graph. This creates a malicious action that is would receive a high integrity score (close to 1.0) due to its
+disguised to look like everyday system activity. For our experi- benign activities in the training data, which would cause us to
+ment, we used the *CADETS* dataset (Engagement 3) due to its miss the phishing email attack originating from it. However,
+manageable size and focused on testing the system’s response when we apply the regularizer (α = 10), CAPTAIN+ becomes
+to the specific event (XIM, chmod, /tmp/test) after it was more cautious during training, assigning a lower integrity score
+cloaked in a benign structure. of 0.488 to the IP, similar to the “grey node” example in §II-E.
+ As Fig. 4(a) shows, both CAPTAIN+ and FLASH demonstrated This helps prevent false alarms and ensures that phishing email
+some robustness against the mimicry attack. The attack entity attacks are correctly detected. More details can be found in
+(/tmp/test) was still detected by both systems even after adding §IV-G. Additionally, the event propagation rate for the attack
+benign activities. However, we observed a notable drop in (pine, read, 128.55.12.73) becomes more conservative,
+FLASH’s anomalous score with just a few added benign events helping to mitigate the effects of the poisoned training set.
+(fewer than 10), a result also confirmed in [11]. On the other Online Learning Poisoning Attack: To evaluate the robusthand, CAPTAIN+ remained unaffected by the mimicry attack, ness of CAPTAIN+ against online learning poisoning attacks,
+showing better robustness than the baseline. we simulated an adversary attempting to influence the system
+ CAPTAIN+ achieves robustness through three key factors: 1) by injecting misleading benign events. The experiment was
+Heuristic-based propagation: Unlike embedding-based PIDS conducted on the CADETS dataset from Engagement 3, focusing
+like FLASH, CAPTAIN+ uses heuristic rules that are less affected on the malicious event (XIM, chmod, /tmp/test). The attack
+LI et al.: INCORPORATING GRADIENTS TO RULES: TOWARD ONLINE, ADAPTIVE PROVENANCE-BASED INTRUSION DETECTION 795
+
+ Fig. 6. Influence of Parameters on Detection Performance
+
+ controls the granularity of the search. We evaluated the impact
+ of the learning rate using the CADETS dataset. As shown in
+ Fig. 6(a), a higher learning rate leads to a sharper decline
+Fig. 5. Comparative Analysis of False Positives in Long Term in training loss during the initial epochs. In contrast, a lower
+ learning rate enables finer optimization, yielding a lower final
+was simulated by creating a malicious file, /tmp/test, that loss when sufficient epochs are available. This necessitates a
+mimicked the interaction patterns of a benign file (/dev/tty) balance between training speed and final model quality. Based
+and by inserting preceding executions by benign processes (e.g., on the figure, if training is limited to 20 epochs due to resource
+newsyslog) as noise. As shown in Fig. 4(b), while the injection of constraints, a learning rate of 0.01 is preferable. For longer
+these false events led to a gradual increase in false positives, CAP- training durations, however, a rate of 0.001 achieves superior
+TAIN+ consistently maintained its detection of the true positive results.
+event. This robustness is primarily attributable to the controlled 2) Ablation Study on Three Parameters: We conducted an
+online learning rate, which prevents the model from overreacting ablation study to evaluate the contribution of each adaptive
+to misleading feedback and incorrectly reclassifying a malicious parameter (A, G, and T ). Since the parameters can be adevent as benign. Overall, CAPTAIN+ proved highly robust against justed independently, we performed seven experiments, each
+this adversarial attack. optimizing a different subset of the parameters: {A}, {G}, {T },
+ {A, G}, {A, T }, {G, T }, and {A, T, G}. The results, presented
+E. How is the long-term performance of CAPTAIN+? in Fig. 6(b), reveal several key findings. First, adjusting the alarm
+ threshold (T ) alone has a limited impact on performance. This is
+ In this section, we compare the adaptability of CAPTAIN+ and
+ because, without changes to the initial tags or propagation rates,
+CAPTAIN to concept drift by tracking how their false positives
+ propagated tag values tend to polarize towards 0 or 1, rendering
+change over time. We use the detected events number as a proxy
+ a continuous threshold ineffective. The results also indicate that
+for time and evaluate both systems on the CADETS, TRACE, and
+ tuning the tag initialization parameter (A) is the most effective
+THEIA datasets from DARPA Engagement 3.
+ single-parameter strategy for reducing false alarms, playing a
+ As shown in Fig. 5, CAPTAIN+ outperforms CAPTAIN in conmore critical role than G or T .
+trolling false positives, both in the final results and in the rate of
+ While the combination of all three parameters (A, G, and T )
+increase over time. While CAPTAIN can manage false positives
+ generally yields incremental improvements, we observed that
+well in the early stages, its rate of false positives increases rapidly
+ adjusting T alone sometimes resulted in fewer false alarms on
+as time goes on. In contrast, CAPTAIN+ maintains a relatively low
+ specific datasets (S-3 and C-3). This occurs because, without
+false positive rate throughout the detection process, particularly
+ the ability to modulate the propagation rate or threshold, the
+in the TRACE and THEIA datasets. In the CADETS dataset, the false
+ optimization process compensates by assigning higher integrity
+positive rate is already low, so the effect of online learning is less
+ tags to a broader set of nodes. Although this can reduce false
+noticeable. The key to CAPTAIN+’s performance lies in its online
+ alarms in a coarse-grained manner, it carries the risk of making
+learning mechanism. After each wrong detection occurs, the
+ the system overly lenient. Finally, a significant advantage of
+system updates its parameters and node tags, enabling CAPTAIN+
+ tuning all three parameters is the accelerated convergence of
+to control false positives and adapt to new patterns effectively.
+ the training process. As shown in Fig. 6(b), while the {A},
+ Online learning not only reduces false positives but also
+ {A, T }, and {A, T, G} configurations achieve comparable final
+addresses missed attacks. For example, when the event “(ztmp,
+ detection performance on the testing set, the full {A, T, G}
+write, 162.66.239.75)” first appeared in the TRACE
+ model converges in considerably fewer epochs during training.
+dataset, both CAPTAIN+ and CAPTAIN missed it. However, when
+ 3) Ablation Study on Online Learning Module: To assess
+the event occurred again, CAPTAIN+ flagged it correctly after
+ the contribution of each component within the online learnonline learning, whereas CAPTAIN missed it again.
+ ing module, we conducted an ablation study on three key
+ submodules: “False Negative Feedback,” “Node Tag Update,”
+F. How do modules influence CAPTAIN+’s performance?
+ and “Learning Rate Adjustment,” with the results presented in
+ 1) Ablation Study on Learning Rate: During training, the Table IX. Disabling the False Negative Feedback loop resulted
+learning rate not only determines the learning speed but also in a further reduction in false positives, but at the unacceptable
+796 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+ TABLE IX
+ ABLATION STUDY ON ONLINE LEARNING MODULE
+
+cost of missing attacks due to excessive leniency. Similarly,
+removing the Learning Rate Adjustment mechanism and using
+a fixed learning rate resulted in an increase in false positives,
+indicating that dynamic adjustment is crucial for correcting false
+positives. Finally, removing the Node Tag Update submodule
+also reduced false positives but significantly limited CAPTAIN+’s
+responsiveness to and ability to correct for false negatives. Collectively, these experiments demonstrate that each submodule is
+critical for achieving the desired balance between high detection
+accuracy and a low false positive rate.
+
+G. Case Study
+ Fig. 7. Case study from Engagement 3 TRACE. We omitted some irrelevant
+ Another advantage of rule-based PIDS over embedding-based details to keep the graphs clean and succinct.
+PIDS is the interpretability of the detection process. To investigate the explainability of CAPTAIN+, we delve into the training
+outcomes of the E3-TRACE dataset as a case study. The case study that frequently lead to dependency explosions (e.g., when sshd
+highlights CAPTAIN+’s key strength—fine-grained detection en- or firefox reads the file), while even for the same proabled by adaptive parameters. As mentioned in §II-E and §III, cess, firefox, CAPTAIN+ learns to suppress the dependency
+unlike prior work [18], [19], [20] that uses discrete, manually propagation when reading this file (ge = 0.63) and remains
+assigned values and global rules, CAPTAIN+ tunes customized sensitive to maliciousness propagation when loading this file
+numerical parameters for each entity and event, improving its (ge = 0.99). This adaptive balance prevents excessive leniency
+ability to distinguish subtle differences between benign and while ensuring no malicious activities are missed.
+malicious behavior. With its enhanced capability of distinguishing, CAPTAIN+
+ Fig. 7(a) demonstrates how CAPTAIN+ better distinguishes can significantly reduce false alarms compared to traditional
+similar behaviors using fine-tuned parameters. In both cases, rule-based PIDS while ensuring that all true attacks are deprocess pine reads from 128.55.12.73 (possibly the email tected. These fine-grained parameters of CAPTAIN+ outperserver) and creates, writes, and changes the permissions of a form many embedding-based PIDS in detecting mimicry atnew file. Traditional rule-based PIDS like MORSE [18], [19] tacks. For instance, in Fig. 7(a), the attacker can modstruggle to assign a tag for 128.55.12.73: marking the IP ify the file name of /tmp/tcexec for a mimicry attack
+as benign (tag = 1.0) misses the first stage of attacks, while with the knowledge that pine might interact with a file
+assigning the initial tag as “Untrusted” causes multiple false like /home/admin/pinerc+numbers. Since generaliza-
+“Malicious File Creation” and “Change Permissions” alarms tion techniques like Word2Vec and Sentence2Vec are widely
+on the left-hand side benign graph. Instead, CAPTAIN+ as- used in embedding-based PIDS, they can manipulate the file
+signs a moderate initial tag an , 0.488, to this IP and slightly name by appending random digits to pinerc, making it similar
+tunes down the threshold thr for the event (pine, cre- to pinerc174500 after embedding. However, the attacker
+ate, /home/admin/pinerc174500) from 0.5 to 0.478. requires the exact file name of pinerc174500 to evade CAP-
+ TAIN+’s detection, making mimicry much more complicated,
+As 0.478 < 0.488, the creation of the file will not be alarmed,
+but in real attacks, the thr for the event (pine, create, especially with limited training data (only four related events in
+/tmp/tcexec) is still 0.5, meaning creating a malicious file 7 days).
+would still trigger alarms (0.5 > 0.488).
+ Unlike MORSE’s fixed decay factors, CAPTAIN+ more pre- V. DISCUSSION AND CONCLUSION
+cisely addresses the dependency explosion caused by libre-
+ A. More Optimization Algorithms
+solv.so.2 through fine-grained propagation rates, learning
+distinct values for different events. As shown in Fig. 7(b), For parameter optimization, we utilize Batch Gradient De-
+CAPTAIN+ learns to assign lower propagation rates to events scent (BGD). The choice of BGD over mini-batch or stochastic
+LI et al.: INCORPORATING GRADIENTS TO RULES: TOWARD ONLINE, ADAPTIVE PROVENANCE-BASED INTRUSION DETECTION 797
+
+methods is deliberate. In our context, a “batch” encompasses [11] M. U. Rehman, H. Ahmadi, and W. U. Hassan, “Flash: A comprehenall events within a single analysis window. Updating the adap- sive approach to intrusion detection via provenance graph representation
+ learning,” in Proc. 2024 IEEE Symp. Secur. Privacy, 2024, pp. 139–139.
+tive parameters before processing the entire graph, as would [12] F. Yang, J. Xu, C. Xiong, Z. Li, and K. Zhang, “ProGrapher: An anomaly
+occur with smaller batches, could introduce tag inconsistencies detection system based on provenance graph embedding,” in Proc. 32nd
+during the propagation process. Therefore, a full-batch update USENIX Secur. Symp., 2023, pp. 4355–4372.
+ [13] Z. Cheng et al., “Kairos: Practical intrusion detection and investigation
+is necessary to maintain analytical integrity. Our differentiable using whole-system provenance,” 2023, arXiv:2308.05034.
+tag propagation framework, however, is not limited to BGD. Its [14] A. Goyal, G. Wang, and A. Bates, “R-Caid: Embedding root cause analysis
+ability to provide first-order gradients makes it directly com- within provenance-based intrusion detection,” in Proc. 2024 IEEE Symp.
+ Secur. Privacy, 2024, pp. 257–257.
+patible with numerous other optimizers, such as Momentum, [15] J. Zengy et al., “ShadeWatcher: Recommendation-guided cyber threat
+NAG [50], ADADELTA [51], ADAM [37], and RMSPROP, which analysis using system audit records,” in Proc. 2022 IEEE Symp. Secur.
+often achieve faster and more stable convergence. We thus leave Privacy, 2022, pp. 489–506.
+ [16] S. Li et al., “NodLink: An online system for fine-grained APT attack
+the implementation of these alternative optimization strategies detection and investigation,” 2023, arXiv:2311.02331.
+for future investigation. [17] S. Wang et al., “THREATRACE: Detecting and tracing host-based threats
+ in node level through provenance graph learning,” IEEE Trans. Inf. Forensics Secur., vol. 17, pp. 3972–3987, 2022.
+B. Conclusion [18] M. N. Hossain et al., “SLEUTH: Real-time attack scenario reconstruction from COTS audit data,” in Proc. 26th USENIX Secur. Symp., 2017,
+ This paper introduces CAPTAIN+, a tag-based Provenance pp. 487–504.
+ [19] M. N. Hossain, S. Sheikhi, and R. Sekar, “Combating dependence explo-
+Intrusion Detection System (PIDS) that automatically adapts sion in forensic analysis using alternative tag propagation semantics,” in
+to diverse environments. Its adaptability stems from three tun- Proc. IEEE Symp. Secur. Privacy, 2020, pp. 1139–1155.
+able parameters: tag initialization (A), propagation rate (G), [20] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. Venkatakrishnan,
+ “Holmes: Real-time APT detection through correlation of suspicious inforand detection threshold (T). We propose a differentiable tag mation flows,” in Proc. IEEE Symp. Secur. Privacy, 2019, pp. 1137–1152.
+propagation framework that enables the optimization of these [21] C. Xiong et al., “Conan: A practical real-time apt detection system with
+parameters via gradient descent. To our knowledge, CAPTAIN+ high accuracy and efficiency,” IEEE Trans. Dependable Secur. Comput.,
+ vol. 19, no. 1, pp. 551–565, Jan./Feb. 2022.
+is the first PIDS to leverage gradient-based methods for auto- [22] W. U. Hassan et al., “NoDoze: Combatting threat alert fatigue with
+mated parameter tuning, overcoming the rigidity of traditional automated provenance triage,” in Proc. 26th Annu. Netw. Distrib. Syst.
+rule-based systems. During detection, CAPTAIN+ employs online Secur. Symp., 2019.
+ [23] X. Han, T. F. J. Pasquier, A. Bates, J. Mickens, and M. I. Seltzer,
+learning to refine its configuration in real-time continually. By “Unicorn: Runtime provenance-based detector for advanced persislearning from both false positives and false negatives, it ensures tent threats,” in Proc. 27th Annu. Netw. Distrib. Syst. Secur. Symp.,
+sustained accuracy — a capability absent in statically trained 2020.
+ [24] W. Lingzhi et al., “Incorporating gradients to rules: Towards lightweight,
+offline models. adaptive provenance-based intrusion detection,” 2025, arXiv:2404.14720.
+ [25] “APT Notes,” 2019. [Online]. Available: https://github.com/kbandla/
+ REFERENCES APTnotes
+ [26] “TC,” 2023. [Online]. Available: https://github.com/darpa-i2o/
+ [1] A. Alshamrani, S. Myneni, A. Chowdhary, and D. Huang, “A survey Transparent-Computing
+ on advanced persistent threats: Techniques, solutions, challenges, and [27] “OpTC,” 2024. [Online]. Available: https://github.com/FiveDirections/
+ research opportunities,” IEEE Commun. Surveys Tuts., vol. 21, no. 2, OpTC-data
+ pp. 1851–1877, Secondquarter 2019. [28] “ASAL,” 2023. [Online]. Available: https://github.com/PKU-ASAL/
+ [2] H. B. Review, “Missed alarms and 40 million stolen credit card numbers: Simulated-Data
+ How target blew it,” (n.d.). [Online]. Available: https://hbr.org/2014/03/ [29] M. Zipperle, F. Gottwalt, E. Chang, and T. Dillon, “Provenance-based
+ could-target-have-prevented-its-security-breach intrusion detection systems: A survey,” ACM Comput. Surv., vol. 55, no. 7,
+ [3] N. Y. Times, “Equifax says cyberattack may have affected 143 million the pp. 1–36, 2022.
+ U.S.,” (n.d.). [Online]. Available: https://www.nytimes.com/2017/09/07/ [30] Z. Li, Q. A. Chen, R. Yang, Y. Chen, and W. Ruan, “Threat detection and
+ business/equifax-cyberattack.html investigation with system-level provenance graphs: A survey,” Comput.
+ [4] G. P. Spathoulas and S. K. Katsikas, “Using a fuzzy inference system to Secur., vol. 106, 2021, Art. no. 102282.
+ reduce false positives in intrusion detection,” in Proc. 2009 16th Int. Conf. [31] Q. Wang et al., “You are what you do: Hunting stealthy malware via data
+ Syst., Signals Image Process., 2009, pp. 1–4. provenance analysis,” 2020.
+ [5] V. Chandola, A. Banerjee, and V. Kumar, “Anomaly detection: A [32] S. M. Milajerdi, B. Eshete, R. Gjomemo, and V. Venkatakrishnan,
+ survey,” ACM Comput. Surv., vol. 41, no. 3, pp. 1–58, 2009, “POIROT: Aligning attack behavior with kernel audit records for cyber
+ doi: 10.1145/1541880.1541882. threat hunting,” ACM SIGSAC Conf. Comput. Commun. Secur., 2019,
+ [6] C. Dietrich, K. Krombholz, K. Borgolte, and T. Fiebig, “Investigating pp. 1795–1812.
+ system operators’ perspective on security misconfigurations,” in Proc. [33] A. Goyal, X. Han, G. Wang, and A. Bates, “Sometimes, you aren’t
+ 2018 ACM SIGSAC Conf. Comput. Commun. Secur., 2018, pp. 1272–1289, what you do: Mimicry attacks against provenance graph host intrusion
+ doi: 10.1145/3243734.3243794. detection systems,” in Proc. 30th Netw. Distrib. Syst. Secur. Symp.,
+ [7] S. C. Sundaramurthy et al., “A human capital model for mitigating secu- 2023.
+ rity analyst burnout,” in Proc. 11th Symp. Usable Privacy Secur., 2015, [34] S. Ruder, “An overview of gradient descent optimization algorithms,”
+ pp. 347–359. 2016, arXiv:1609.04747.
+ [8] B. A. Alahmadi, L. Axon, and I. Martinovic, “99% false positives: A [35] H. Robbins and S. Monro, “A stochastic approximation method,” Ann.
+ qualitative study of SOC analysts’ perspectives on security alarms,” in Math. Statist., vol. 22, pp. 400–407, 1951.
+ Proc. 31st USENIX Secur. Symp., 2022, pp. 2783–2800. [36] J. Duchi, E. Hazan, and Y. Singer, “Adaptive subgradient methods for
+ [9] S. C. Committee, “A “kill chain” analysis of the 2013 target data breach,” online learning and stochastic optimization,” J. Mach. Learn. Res., vol. 12,
+ 2014. [Online]. Available: https://www.commerce.senate.gov/services/ no. 7, pp. 2121–2159, 2011.
+ files/24d3c229-4f2f-405d-b8db-a3a67f183883 [37] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+[10] F. Dong et al., “Are we there yet? An industrial viewpoint on provenance- 2014, arXiv:1412.6980.
+ based endpoint detection and response tools,” in Proc. 2023 ACM SIGSAC [38] J. R. Martins and A. Ning, Engineering Design Optimization. Cambridge,
+ Conf. Comput. Commun. Secur., 2023, pp. 2396–2410. U.K.: Cambridge Univ. Press, 2021.
+798 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 1, JANUARY/FEBRUARY 2026
+
+[39] X. Zhang et al., “AOC-IDS: Autonomous online framework with con- Zhengkai Wang received the BE degree in network
+ trastive learning for intrusion detection,” in Proc. IEEE Conf. Comput. engineering from the University of Electronic Sci-
+ Commun., 2024, pp. 581–590. ence and Technology of China, Sichuan, China, in
+[40] Y. Wei, C. Cheng, and G. Xie, “OFIDS : Online learning-enabled and 2024. He is currently working toward the master’s
+ fingerprint-based intrusion detection system in controller area networks,” degree with Zhejiang University, Zhejiang, China.
+ IEEE Trans. Dependable Secure Comput., vol. 20, no. 6, pp. 4607–4620, His research interests include intrusion detection and
+ Nov./Dec. 2023. defending against advanced persistent threats (APT).
+[41] A. Aldribi, I. Traoré, B. Moa, and O. Nwamuo, “Hypervisor-based cloud
+ intrusion detection through online multivariate statistical change tracking,”
+ Comput. Secur., vol. 88, 2020, Art. no. 101646. [Online]. Available: https:
+ //www.sciencedirect.com/science/article/pii/S0167404819301907
+[42] S. Han et al., “Log-based anomaly detection with robust feature extraction and online learning,” IEEE Trans. Inf. Forensics Secur., vol. 16,
+ pp. 2300–2311, 2021.
+[43] S. Arzt et al., “FlowDroid: Precise context, flow, field, object-sensitive Xiangmin Shen received the BS degree in computer
+ and lifecycle-aware taint analysis for android apps,” ACM Sigplan Notices, science from Northwestern University, Evanston, IL,
+ vol. 49, no. 6, pp. 259–269, 2014. USA, in 2019. He is currently working toward the
+[44] S. Ma, X. Zhang, and D. Xu, “PROTRACER: Towards practical prove- PhD degree with Northwestern University, Evanston,
+ nance tracing by alternating between logging and tainting,” in Proc. 23rd IL, USA. His research interests include intrusion de-
+ Annu. Netw. Distrib. Syst. Secur. Symp., 2016. tection and security measurement, and verification.
+[45] K. H. Lee, X. Zhang, and D. Xu, “High accuracy attack provenance
+ via binary-based execution partition,” in Proc. Netw. Distrib. Syst. Secur.
+ Symp., 2013, vol. 16.
+[46] J. Park, D. Nguyen, and R. Sandhu, “A provenance-based access control model,” in Proc. 10th Annu. Int. Conf. Privacy, Secur. Trust, 2012,
+ pp. 137–144.
+[47] S. S. Khan and M. G. Madden, “One-class classification: Taxonomy
+ Haitao Xu is currently an assistant professor with the
+ of study and review of techniques,” Knowl. Eng. Rev., vol. 29, no. 3,
+ School of Cyber Science and Technology, Zhejiang
+ pp. 345–374, 2014.
+ University, Zhejiang, China. Before joining Zhejiang
+[48] D. M. Tax and R. P. Duin, “Data domain description using support vectors,”
+ University, he was a tenure-track Assistant Professor
+ in Proc. Eur. Symp. Artif. Neural Netw., 1999, vol. 99, pp. 251–256.
+ with Arizona State University. His research interests
+[49] D. M. Tax and R. P. Duin, “Support vector domain description,” Pattern
+ include cyber deception defense, IoT security, web
+ Recognit. Lett., vol. 20, no. 11/13, pp. 1191–1199, 1999.
+ security, and e-crime investigation. His work on un-
+[50] Y. Nesterov, “A method for unconstrained convex minimization problem
+ derground cybercrime investigation was the recipient
+ with the rate of convergence O (1/k2),” in Proc. Dokl. Akad. Nauk. SSSR,
+ of the Best Paper nomination in WWW 2015.
+ 1983, vol. 269, no. 3, p. 543.
+[51] M. D. Zeiler, “ADADelta: An adaptive learning rate method,” 2012,
+ arXiv:1212.5701.
+
+ Yan Chen (Fellow, IEEE) received the PhD degree
+ in computer science from the University of California, Berkeley, CA, USA, in 2003. He is currently a
+ professor with the Department of Electrical Engineer-
+ Zhenyuan Li received the PhD degree in cyber secu- ing and Computer Science, Northwestern University,
+ rity from Zhejiang University, Hangzhou, China. He Evanston, IL, USA. His papers have been cited more
+ is currently an assistant professor with the College than 7000 times based on Google Scholar and his
+ of Science and Technology, Zhejiang University. His H-Index is 34. His research interests include network
+ research interests include system security and cyber- security, measurement, and diagnosis for large-scale
+ attacks, intrusion detection, and cyber threat analysis. networks and distributed systems. He was the recipient of the Department of Energy (DoE) Early
+ CAREER Award in 2005, the Department of Defense (DoD) Young Investigator
+ Award in 2007, and the Best Paper nomination in ACM SIGCOMM 2010.
+
+ Shouling Ji (Member, IEEE) received the PhD de-
+ Lingzhi Wang received the BE degree in electronic gree in electrical and computer engineering from the
+ information science and technology from Tsinghua Georgia Institute of Technology, Atlanta, GA, USA,
+ University, Beijing, China, in 2020. He is currently and the PhD degree in computer science from Georworking toward the PhD degree with Northwestern gia State University, Atlanta, GA, USA. He was a
+ University, Evanston, IL, USA. His research interests research intern with the IBM T. J.Watson Research
+ include behavior analysis of software, AI security, Center. He is currently a Qiushi distinguished proand the development of the knowledge base to en- fessor with the College of Computer Science and
+ hance our understanding of cyberattack techniques to Technology, Zhejiang University, Zhejiang, China.
+ improve system security, and protect against evolving His research interests include data-driven security
+ threats in the digital space, and focuses on system and privacy, AI security, and software and system
+ security and cyberattacks, especially on developing security. He was the recipient of the 2012 Chinese Government Award for
+and optimizing endpoint detection and response (EDR) systems, and host intru- Outstanding Self-Financed Students Abroad and 10 Best/Outstanding Paper
+sion detection systems (HIDS) systems to detect and defend against advanced Awards, including ACM CCS 2021. He is also a member of ACM, and a senior
+persistent threats (APT). member of CCF.

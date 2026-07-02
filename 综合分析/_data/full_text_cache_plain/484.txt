@@ -1,0 +1,1192 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+1475
+
+TCG-IDS: Robust Network Intrusion Detection via
+
+Temporal Contrastive Graph Learning
+Cong Wu , Jianfei Sun , Jing Chen , Mamoun Alazab , Senior Member, IEEE,
+Yang Liu , Senior Member, IEEE, and Yang Xiang , Fellow, IEEE
+
+Abstract—In the era of zero trust security models and nextgeneration networks (NGN), the primary challenge is that
+network nodes may be untrusted, even if they have been verified, necessitating continuous validation and scrutiny. Effective
+intrusion detection systems (IDS) are crucial for continuously
+monitoring network traffic and identifying potential threats.
+However, traditional IDS approaches often struggle to keep pace
+with evolving threats, requiring extensive supervised training
+on labeled datasets. This limitation leads to high false positive
+rates, low detection accuracy, and a failure to provide realtime detection, thereby undermining the security of NGNs. This
+paper proposed the first self-supervised learning-based IDS,
+designed on temporal contrastive graph neural network (GNN),
+namely TCG-IDS. It innovatively integrates three contrastive
+learning strategies: temporal contrasting to capture temporal
+dependencies, asymmetric contrasting to account for the diverse
+interactions within network data, and masked contrasting to
+enhance the learning of node representations by masking parts of
+the data during training. Performance evaluation was conducted
+on two publicly available network traffic datasets, NF-CSECIC-IDS2018-V2 and NF-UNSW-NB15-V2. TCG-IDS achieved
+a balanced accuracy of 99.48% and 91.48% on two datasets
+respectively, significantly outperforming state-of-the-art graph
+learning models. In multi-class detection, TCG-IDS attained a
+mean false positive rate of 4.15% and 3.34% on the two datasets
+respectively. Besides, it exhibits high efficiency with its running
+time of 0.37s and 0.51s on the two datasets to predict per batch
+
+of 100 samples. Results highlight the effectiveness and efficiency
+of TCG-IDS in accurately detecting various types of network
+intrusions. This work significantly advances the field of network
+intrusion detection via self-supervised temporal graph learning,
+offering a promising solution for future network security systems.
+Index Terms—Cyber security, temporal graph neural network,
+intrusion detection system, network security.
+
+I. I NTRODUCTION
+
+T
+
+HE advent of zero trust security models and NGNs has
+underscored the need for advanced security measures in
+modern network environments [1], [2]. Conventional security
+architectures, which assume implicitly trusted devices once
+authenticated, are increasingly inadequate and pose significant
+security risks [1]. IDSs [3], [4], [5], [6], [7] are essential
+for identifying and mitigating potential threats by monitoring network traffic for signs of malicious activities [8].
+However, traditional IDS approaches, such as signature-based
+and anomaly-based detection, often struggle to keep pace
+with the evolving threat landscape, resulting in high false
+positive rates and limited effectiveness against novel attacks
+[9]. This challenge is particularly acute for NGNs, which
+demand more advanced security measures. Zero trust security
+models, emphasizing continuous, context-aware, and dynamic
+authentication, offer a promising solution by requiring ongoing trust evaluation and leveraging AI and deep learning to
+enhance intrusion detection and prevention [1]. Addressing
+these aspects is crucial for securing NGNs, highlighting the
+importance of research on advanced IDS in this field [10].
+
+Received 5 June 2024; revised 7 December 2024 and 6 January 2025;
+accepted 10 January 2025. Date of publication 20 January 2025; date
+of current version 31 January 2025. This research was supported in part
+by the National Research Foundation, Singapore, and the Cyber Security
+Agency under its National Cybersecurity R&D Programme (NCRP25-P04TAICeN); in part by the DSO National Laboratories under the AI Singapore
+Programme (AISG Award No: AISG2-GC-2023-008); and in part by the
+A. Motivations
+National Research Foundation, Prime Minister’s Office, Singapore under the
+Campus for Research Excellence and Technological Enterprise (CREATE)
+Recently, researchers have explored various learning-based
+programme. The associate editor coordinating the review of this article and
+approaches,
+including feature-based, deep learning-based, and
+approving it for publication was Dr. Stjepan Picek. (Corresponding author:
+GNN-based methods. Feature-based methods rely on extractJianfei Sun.)
+Cong Wu and Jing Chen are with the School of Cyber Science
+ing representative traffic features and using machine learning
+and Engineering, Wuhan University, Wuhan 430072, China (e-mail:
+classifiers, showing promise in detecting known attacks but
+cnacwu@whu.edu.cn; chenjing@whu.edu.cn).
+struggling with unseen patterns [11], [12]. Deep learningJianfei Sun is with the School of Computing and Information Systems, Singapore Management University, Singapore 188065 (e-mail:
+based methods, such as CNNs and RNNs, excel in learning
+jfsun@smu.edu.sg).
+complex patterns from high-dimensional data but require
+Mamoun Alazab is with the College of Engineering, IT, and Enviextensive labeled data for supervised training [13]. GNNronment, Charles Darwin University, Darwin NT 0810, Australia (e-mail:
+alazab.m@ieee.org).
+based methods, which naturally model the graph structure
+Yang Liu is with the College of Computing and Data Sciof network traffic, have emerged as a promising approach,
+ence, Nanyang Technological University, Singapore 639798 (e-mail:
+with static GNNs like GCNs and GATs learning node repyangliu@ntu.edu.sg).
+Yang Xiang is with the Department of Digital Research, Swinresentations from static snapshots [14], [15], [16], [17].
+burne University of Technology, Melbourne, VIC 3122, Australia (e-mail:
+However, these fail to capture temporal dynamics. To overyxiang@swin.edu.au).
+come this, dynamic GNNs incorporate temporal information,
+Digital Object Identifier 10.1109/TIFS.2025.3530702
+1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+1476
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+either through discrete-time models learning from sequences
+of static snapshots or continuous-time models capturing the
+ongoing evolution of node representations [18], [19]. Dynamic
+GNNs, while effective at capturing temporal dependencies,
+often rely on supervised learning, limiting their adaptability
+to evolving threats and novel attacks. This dependence on
+extensive labeled data and predefined signatures restricts their
+ability to minimize false positives in real-world scenarios.
+Despite advancements in machine learning-based IDS, existing approaches face significant challenges [11], [12], [13],
+[14], [15], [16], [17], [18], [19], [20]. Most focus on static
+network data, overlooking temporal dynamics and evolutionary patterns critical to understanding network behavior.
+Additionally, their reliance on supervised learning limits applicability in real-world scenarios where labeled data is scarce
+or expensive. These methods also exhibit low generalizability, often requiring extensive training data to achieve high
+detection accuracy. Addressing these limitations necessitates
+self-supervised learning models for NGNs, leveraging GNNs
+to capture temporal patterns and enhance detection accuracy
+in dynamic and evolving network environments.
+B. TCG-IDS
+To bridge the research gap, TCG-IDS is proposed as the
+first self-supervised temporal contrastive GNN-based system
+for intrusion detection that leverages temporal dynamics and
+spatial dependencies in network traffic data to learn robust representations of network entities and their interactions. These
+representations are robust because they effectively capture the
+complex, evolving patterns of normal and malicious behaviors in the network, enabling the model to accurately detect
+anomalies even in the presence of noisy or incomplete data.
+It integrates three key contrastive learning strategies: temporal
+contrasting, asymmetric contrasting, and masked contrasting.
+Temporal contrasting ensures that the model captures the
+temporal evolution of network behavior, while asymmetric contrasting focuses on the relationships between nodes,
+enhancing the model’s ability to detect anomalies in node
+interactions. Masked contrasting helps the model learn from
+incomplete data, improving its robustness and generalization
+capabilities. By incorporating these strategies, TCG-IDS can
+effectively detect novel attacks with minimal false positives,
+even in scenarios with limited labeled data.
+C. TCG-IDS ’s Ability for Constructing Zero-Trust Model
+Zero trust security models require continuous validation of
+all network entities, emphasizing dynamic, real-time monitoring to detect conflicts or malicious activities. TCG-IDS
+addresses this by employing self-supervised learning on unlabeled datasets, leveraging temporal and spatial dependencies
+through a GNN framework. Its use of temporal, asymmetric, and masked contrasting strategies ensures robust node
+behavior representation, enabling comprehensive monitoring
+and effective detection of novel attacks with minimal false
+positives. This capability strengthens zero trust environments,
+offering a scalable and reliable solution for next-generation
+network security.
+
+D. Technical Novelty
+TCG-IDS addresses key limitations of existing IDS
+approaches with three innovative contrastive learning strategies. (i) Temporal contrasting captures the temporal evolution
+of network behavior, overcoming the static data analysis issues in traditional IDS. (ii) Asymmetric contrasting
+enhances anomaly detection by focusing on node relationships
+and predicting neighboring embeddings, effectively identifying subtle malicious interactions. (iii) Masked contrasting
+improves robustness and generalization by enabling learning
+from incomplete data, tackling the challenge of limited labeled
+datasets and noisy inputs. Together, these strategies reduce
+false positives and leverage self-supervised learning to ensure
+effective detection with minimal labeled data, setting TCG-IDS
+apart from previous GNN-based IDS solutions.
+The main contributions are summarized as follows:
+• TCG-IDS is the first IDS to integrate temporal graph
+learning with self-supervised contrastive learning, leveraging temporal dynamics and spatial dependencies to
+enhance detection robustness.
+• TCG-IDS employs three novel contrastive learning strategies, temporal, asymmetric, and masked contrasting, to
+enhance robustness. These enable the model to capture
+temporal network dynamics, node relationships, and learn
+from incomplete data, ensuring effective detection with
+limited labeled data.
+• TCG-IDS models traffic as a continuous dynamic graph
+with temporal encoding, enabling real-time, fine-grained
+detection. This captures evolving network behaviors,
+ensuring accurate and timely intrusion detection.
+• Comprehensive experiments on TCG-IDS are performed
+on two widely-used datasets to evaluate its performance.
+Results demonstrate that TCG-IDS significantly outperforms state-of-the-art graph learning models and IDSs,
+achieving a balanced accuracy of 99.48% and 91.48%
+for binary detection on the two datasets, respectively.
+
+II. OVERVIEW
+A. Threat Model
+This paper focuses on an enterprise network environment where attackers, either external (e.g., malicious hackers) or internal (e.g., disgruntled employees), attempt to
+compromise the confidentiality, integrity, or availability of
+network resources. These attackers exploit vulnerabilities in
+the network infrastructure, such as misconfigured firewalls,
+unpatched systems, or weak authentication mechanisms, to
+gain unauthorized access, as illustrated in Figure 1. Once
+inside, they may perform malicious activities like scanning
+for vulnerable hosts, escalating privileges, exfiltrating sensitive
+data, or launching denial-of-service attacks. To counter these
+threats, the paper assumes the deployment of a network intrusion detection system (IDS) that monitors network traffic for
+signs of malicious activity. IDS, positioned at strategic network
+points, utilizes TCG-IDS, a framework that employs temporal
+contrastive learning and graph neural networks to learn robust
+representations of network entities and interactions over time.
+These learned representations are then used by the detector
+
+WU et al.: TCG-IDS: ROBUST NETWORK INTRUSION DETECTION VIA TEMPORAL CONTRASTIVE GRAPH LEARNING
+
+1477
+
+transferred bytes, packets, duration, and timestamps. Advanced
+features, e.g., TCP flags, Type of Service (ToS), Autonomous
+System (AS) numbers, and application layer information, are
+also included when available. Preprocessing ensures data quality through cleaning, normalization, encoding, and sampling,
+addressing incomplete or duplicate records and scaling feature
+values. The resulting dataset, with rows representing network
+flows and columns as features, is prepared for constructing the
+temporal dynamic graphs used by TCG-IDS.
+B. Graph Builder
+
+Fig. 1. Threat model.
+
+Fig. 2. Overview of TCG-IDS.
+
+to identify potential intrusions, with the IDS continuously
+updated based on feedback from security analysts and evolving
+threat intelligence.
+B. System Overview
+As depicted in Figure 2, TCG-IDS consists of four main
+components: data collector, graph builder, temporal contrastive
+GNN, and detector. Data collector is responsible for collecting and preprocessing raw network traffic data from various
+sources, such as packet captures or flow records, and extracting relevant features for each network entity, such as IP
+addresses or port numbers. Graph builder then constructs a
+sequence of attributed temporal dynamic graphs from the
+preprocessed data, where each graph snapshot represents the
+state of the network at a specific time step, with nodes
+representing network entities and edges representing their
+interactions. Temporal contrastive GNN is the core component of TCG-IDS, which learns robust representations of
+the network entities by capturing their spatial and temporal
+dependencies using a combination of graph neural networks,
+temporal contrastive learning, asymmetric contrastive learning,
+and masked contrastive learning. Finally, detector utilizes the
+learned representations to identify malicious network behavior, such as malicious activities or intrusions, by employing
+supervised detection classifier.
+III. D ESIGN OF TCG-IDS
+A. Data Collector
+TCG-IDS captures and preprocesses network traffic data
+from various sources, e.g., routers, switches, and monitoring
+tools, to create a structured dataset for intrusion detection.
+Using flow records like NetFlow, sFlow, or IPFIX, it extracts
+key attributes, including IP addresses, port numbers, protocols,
+
+The framework constructs a sequence of temporal attributed
+graphs from the preprocessed network flow data, capturing
+both spatial and temporal dependencies to facilitate robust
+and discriminative node representations for effective intrusion
+detection. The data is divided into T discrete time steps, each
+corresponding to a specific time window ∆t, selected based
+on the distribution of timestamps and empirical validation to
+balance temporal resolution and computational feasibility. At
+each time step t, unique IP addresses are identified to form
+the node set Vt of the graph snapshot Gt . Each node vti ∈ Vt
+represents a device in the network at time t, with relevant
+features extracted into a feature vector xit ∈ Rd , where d
+denotes the number of node features.
+Edges Et between nodes in Vt are identified based on
+network flows, with an edge eti j ∈ Et existing if there is at
+least one flow between the corresponding IP addresses within
+the time window t. Relevant features for each edge eti j are
+extracted into a feature vector yti j ∈ Rm , where m is the number
+of edge features. Common edge features include total bytes
+and packets transferred, duration, average bytes per packet,
+average packets per second, ratio of incoming to outgoing
+bytes/packets, protocol distribution, and flag distribution. A
+graph snapshot Gt = (Vt , Et ) is constructed for each time
+step t, associating node features xit and edge features yti j with
+their respective nodes and edges. The sequence of T graph
+snapshots G = {G1 , G2 , . . . , GT }, representing the temporal
+evolution of the network traffic, is outputted. Each graph
+snapshot Gt is represented as (Vt , Et , Xt , Yt ), where Xt ∈ R|Vt |×d
+is the matrix of node features and Yt ∈ R|Et |×m is the matrix
+of edge features. This sequence of temporal attributed graphs
+is then used for node representation learning and detection,
+effectively capturing the spatial and temporal dependencies in
+the network data. This sequence of temporal attributed graphs
+is then used for node representation learning and detection,
+effectively capturing the spatial and temporal dependencies in
+the network data.
+C. Temporal Contrastive GNN
+This module learns robust node representations from
+temporal attributed graphs, capturing spatial and temporal
+dependencies for effective detection through GNN encoding,
+temporal contrasting, asymmetric contrasting, and masked
+contrasting.
+1) GNN Encoding: The GNN Encoder is responsible for
+learning node embeddings for each temporal graph snapshot
+Gt . Given the dynamic nature of the network, TCG-IDS
+
+1478
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 4. Illustration of asymmetric contrasting.
+Fig. 3. Illustration of temporal contrasting.
+
+utilizes a Temporal Graph Network (TGN) encoder [21]
+to capture the temporal evolution of node features and
+interactions effectively. It combines memory modules and
+graph-based operators to process continuous-time dynamic
+graphs. For a given graph snapshot Gt = (Vt , Et , Xt ), the
+TGN encoder computes the node embeddings hti for each node
+vti ∈ Vt as follows:
+hti = TGNθ (Gt , Xt )[i] ∈ RD
+
+(1)
+
+where TGNθ is the TGN encoder with learnable parameters
+θ, and D is the dimensionality of the node embeddings. The
+TGN encoder leverages a combination of memory modules
+and graph attention mechanisms to capture both the historical context and the immediate neighborhood information
+of each node. The memory of each node is updated upon
+every interaction, allowing the TGN encoder to maintain
+long-term dependencies and provide up-to-date embeddings
+even in the presence of infrequent interactions. This ensures
+that the embeddings reflect both the temporal and structural
+characteristics of the network.
+2) Temporal Contrasting: This step aims to learn temporally consistent node representations by contrasting the
+embeddings of a node at different time steps. The goal is to
+maximize the similarity between the embeddings of a node
+at nearby time steps while minimizing the similarity between
+the embeddings of a node at distant time steps. As illustrated
+in Figure 3, for each node vi , it samples a positive pair
+t t+n
+(hti , ht+k
+i ) and a negative pair (hi , hi ), where k is a small
+time lag and n is a larger time lag, ensuring that the time
+steps are within the valid range and the node vi has varied
+significantly. The temporal contrastive loss Ltemp is defined
+as Eq. 2.
+Ltemp =
+
+X T −max(k,n)
+X
+
+1
+|V| v ∈V
+i
+
+max(0, ∆ + sim(hti , ht+n
+i )
+
+t=1
+
+− sim(hti , ht+k
+i ))
+
+(2)
+
+where ∆ is the margin, sim(·, ·) is a cosine similarity function, and |V| is the total number of nodes across all time
+steps.
+3) Asymmetric Contrasting: It aims to learn node representations that capture the local neighborhood context and
+the asymmetric relationships between nodes. It predicts the
+embeddings of neighboring nodes using an asymmetric predictor function. As illustrated in Figure 4, for each node vti at
+time step t, it samples a set of neighboring nodes N (vti ) based
+on the graph structure. The asymmetric predictor function fφ
+
+Fig. 5. Illustration of masked contrasting.
+
+takes the embedding of the node vti as input and predicts the
+embeddings of its neighboring nodes:
+ĥtj = fφ (hti ) ∈ RD ,
+
+∀vtj ∈ N (vti )
+
+(3)
+
+The asymmetric contrastive loss Lasym is formulated as:
+T
+
+Lasym =
+
+1 XX X
+kĥtj − htj k22
+|V|
+t
+t
+t
+
+(4)
+
+t=1 vi ∈Vt v j ∈N (vi )
+
+where k · k2 denotes the L2 norm.
+4) Masked Contrasting: To learn node representations that
+capture multi-facet features of the network traffic, it divides
+the node embeddings into multiple factors, masks each factor
+separately, and performs contrastive learning on the masked
+embeddings. As illustrated in Figure 5, for each node vti at
+time step t, it divides its embedding hti into M factors:
+hti = [cti1 , cti2 , . . . , ctiM ]
+where ctim
+
+(5)
+
+D/M
+
+∈ R
+is the m-th factor of the embedding. It
+generates M masked embeddings by replacing each factor with
+a learnable mask token [MASK], formulated as Eq. 6:
+h̃tim = [cti1 , . . . , [MASK], . . . , ctiM ],
+
+m = 1, . . . , M
+
+(6)
+
+For optimizing the model, the masked contrastive loss Lmask
+is defined as:
+T
+
+Lmask =
+
+M
+
+1 XXX
+max(0, ∆ + sim(h̃tim , h̃tjm )
+|V|
+t
+t=1 vi ∈Vt m=1
+
+− sim(h̃tim , hti ))
+
+(7)
+
+where vtj is a randomly sampled node from the same time step
+t, and h̃tjm is its corresponding masked embedding.
+5) Training Objective: The overall training objective of the
+Temporal Contrastive GNN-based Learner is a combination
+of the temporal contrastive loss, the asymmetric contrastive
+loss, and the masked contrastive loss: L = Ltemp + λ1 Lasym +
+λ2 Lmask , where λ1 and λ2 are hyperparameters that balance
+the contribution of the different loss terms. The Temporal
+Contrastive GNN-based Learner is trained end-to-end using
+backpropagation and stochastic gradient descent optimization.
+The learned node embeddings hti are then used as input to the
+next module for identifying anomalous network behavior. By
+incorporating temporal contrasting, asymmetric contrasting,
+and masked contrasting, the Temporal Contrastive GNN-based
+
+WU et al.: TCG-IDS: ROBUST NETWORK INTRUSION DETECTION VIA TEMPORAL CONTRASTIVE GRAPH LEARNING
+
+Algorithm 1 Training Process of TCG-IDS
+1: Input: Sequence of graph snapshots G = {G1 , G2 , . . . , GT }, learning rate η, epochs
+E
+
+2: Output: Trained model parameters θ
+3: for epoch = 1 to E do
+4:
+Initialize gradient accumulators dθ ← 0
+5:
+for t = 1 to T do
+6:
+Extract Gt = (Vt , Et , Xt , Yt )
+7:
+for each node vti ∈ Vt do
+8:
+hti ← TGNθ (Gt , Xt )[i]
+9:
+for each node vi do
+10:
+for t = 1 to T − max(k, n) do
+11:
+Sample pairs (hti , ht+k
+) and (hti , ht+n
+)
+i
+i
+12:
+Compute temporal contrastive loss Ltemp
+13:
+for each node vti ∈ Vt do
+14:
+for each neighboring node vtj ∈ N (vti ) do
+15:
+Predict neighbor embeddings ĥtj ← fφ (hti )
+16:
+Compute asymmetric contrastive loss Lasym
+17:
+for each node vti ∈ Vt do
+18:
+for m = 1 to M do
+19:
+h̃tim ← [cti1 , . . . , [MASK], . . . , ctiM ]
+20:
+h̃tjm ← [ctj1 , . . . , [MASK], . . . , ctjM ]
+21:
+Compute masked contrastive loss Lmask
+22:
+L ← Ltemp + λ1 Lasym + λ2 Lmask
+23:
+Update parameters θ ← θ − η · ∇θ L
+
+Learner is able to learn node representations that capture the
+spatial, temporal, and multi-facet dependencies in the network
+traffic data, enabling more effective detection in TCG-IDS.
+Algorithm 1 details this training process.
+D. Detector
+The detection module identifies malicious network behavior
+based on the node embeddings {hti } learned from the Temporal
+Contrastive GNN-based Learner. Each embedding hti ∈ RD represents node vi at time t. The module outputs a score sti ∈ [0, 1],
+where a higher score indicates a higher likelihood of malicious
+activity. This study employs a supervised approach using a
+LightGBM classifier, which was chosen for its efficiency in
+handling large-scale datasets, its ability to model complex,
+non-linear relationships in the data, and its faster training
+time compared to other gradient boosting methods. While this
+framework supports unsupervised methods such as One-Class
+SVM and Isolation Forest for scenarios with limited labeled
+data, this work emphasizes the supervised setup, with future
+directions focusing on semi-supervised methods to effectively
+utilize unlabeled data and minimal labeled samples.
+IV. P ERFORMANCE E VALUATION
+A. Experimental Setting
+1) Dataset: This study evaluates TCG-IDS using two
+publicly available network traffic datasets: NF-CSE-CICIDS2018-V2 [22] and NF-UNSW-NB15-v2 [23]. NF-CSECIC-IDS2018-V2, developed by the Canadian Institute for
+Cybersecurity, contains 18,893,623 records collected over
+10 days in July 2018, including 10,423,751 attack samples
+covering DDoS, DoS, Botnet, Brute Force, Infiltration, and
+Web attacks, alongside 8,469,872 normal traffic samples. It
+provides rich features, e.g., statistical metrics and connection
+details for advanced intrusion detection model evaluation.
+NF-UNSW-NB15-v2, created by the Australian Centre for
+Cyber Security, includes 2,391,775 records collected over two
+months in early 2015, with 96,553 attack samples spanning
+
+1479
+
+categories like Exploits, Fuzzers, Reconnaissance, and DoS,
+and 2,295,222 normal traffic samples. It offers detailed features
+extracted from raw network packets, including payloads and
+flow statistics, enabling robust evaluation of intrusion detection
+models.
+To address the absence of explicit timestamps in
+the datasets, we generated timestamps using FLOW
+DURATION MILLISECONDS feature. The process began by
+assigning the first record a timestamp of 0 milliseconds
+as a reference point. Records were then sorted based
+on their occurrence in the original data file to maintain
+a logical temporal sequence. For each subsequent
+record i, the timestamp T i was calculated as the
+cumulative sum of the FLOW DURATION MILLISECONDS
+values of all preceding records, i.e., T i = T i−1 +
+FLOW DURATION MILLISECONDSi−1 , with T 0 = 0.
+For
+records
+with
+missing
+or
+zero
+FLOW
+DURATION MILLISECONDS values, the same timestamp
+as the preceding record was assigned to preserve continuity.
+This approach ensures a realistic temporal context, enabling
+a chronological train-test split that respects the temporal
+dynamics of network traffic.
+2) Parameters: The encoder uses a 128-dimensional
+embedding, 256-dimensional memory, and two graph attention layers with 8 heads each, employing ReLU and a 0.5
+dropout rate. Temporal dynamics are captured through time
+embeddings. The projector network comprises two 128-unit
+fully connected layers with ReLU and batch normalization.
+Temporal contrasting uses a margin (∆) of 1.0 with time lags
+k = 5 and n = 10, while asymmetric contrasting involves a
+predictor with two 128-unit layers. Masked contrasting divides
+node embeddings into four factors, masking one at a time.
+The training combines temporal, asymmetric, and masked
+contrastive losses (λ1 , λ2 = 0.5) and uses the Adam optimizer
+(lr = 0.001, batch size 64) with gradient clipping and early
+stopping to ensure effective detection in dynamic networks.
+3) Baseline: To benchmark TCG-IDS, we compare it
+against state-of-the-art graph-based models, including GraphSAGE [16], GAT [15], and TGN [21], which are widely
+used for network intrusion detection and related tasks. These
+models were selected for their graph-focused methodologies,
+complementing TCG-IDS’s temporal contrastive approach.
+GraphSAGE aggregates features from a node’s local neighborhood, GAT employs attention mechanisms to weigh neighbors’
+importance, and TGN captures temporal evolution in dynamic
+graphs. We utilized the same hyperparameters as TCG-IDS,
+tuned through grid search for optimal performance, to ensure
+a fair comparison. We focuses on comparing GNN-based
+techniques, distinct from non-GNN-based approaches. All
+evaluations were conducted on an Intel Xeon Platinum 8336C
+CPU and an NVIDIA GeForce RTX 4090 GPU, with the
+running time per batch recorded to assess computational
+efficiency for large-scale network data.
+The evaluation uses a chronological split, with 70% of
+earlier timestamps for training and 30% later for testing,
+preserving temporal integrity. Models are trained on graph
+snapshots, with metrics including precision, recall, F1-score,
+balanced accuracy (BAC), true negative rate (TNR), and true
+
+1480
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 6. FPR/FNR under NF-CSE-CIC-IDS2018-v2.
+
+Fig. 9. Distribution of prediction score under NF-UNSW-NB15-v2.
+
+Fig. 7. FPR/FNR under NF-UNSW-NB15-v2.
+Fig. 10. Overall performance under NF-CSE-CIC-IDS2018-v2.
+
+Fig. 8. Distribution of prediction score under NF-CSE-CIC-IDS2018-v2.
+
+positive rate (TPR) for binary detection, and mean false
+positive rate (mFPR) for multi-class detection.
+
+Fig. 11. Overall performance under NF-UNSW-NB15-v2.
+
+TCG-IDS achieved a precision of 92.70%, recall of 90.09%,
+
+B. Overall Performance
+1) Binary Classification: The NF-CSE-CIC-IDS2018-V2
+dataset was used to evaluate the effectiveness of TCG-IDS
+in identifying diverse attack scenarios. This dataset includes
+a wide variety of attack types, such as DDoS, DoS, Botnet,
+Brute Force, Infiltration, and Web attacks, making it a comprehensive benchmark for intrusion detection systems. As shown
+in Figure 10, TCG-IDS achieved outstanding performance on
+this dataset, with a precision of 99.25%, recall of 99.21%, F1score of 99.23%, BAC of 99.48%, TNR of 99.75%, and TPR
+of 99.21%. These results highlight the system’s capability to
+accurately distinguish between normal and malicious traffic,
+ensuring high detection rates with minimal false positives.
+The high precision and recall values indicate that TCG-IDS
+is highly effective in identifying attacks without raising many
+false alarms, which is crucial for real-world deployment.
+Figure 6 presents FPR and FNR varied with different thresholds under the NF-CSE-CIC-IDS2018-V2 dataset in detail.
+The FNR is 0.068% when the FPR is 3%. Figure 8 also
+presents the prediction score distribution of TCG-IDS under
+the NF-CSE-CIC-IDS2018-V2 dataset in detail.
+Similarly, the NF-UNSW-NB15-v2 dataset, which includes
+a mix of normal traffic and various attack types such as
+Exploits, Fuzzers, Reconnaissance, DoS, Analysis, Backdoor,
+Shellcode, and Worms, was used to further validate the robustness of TCG-IDS. As shown in Figure 11, on this dataset,
+
+F1-score of 91.38%, BAC of 91.48%, TNR of 92.86%, and
+TPR of 90.09%. Although the performance is slightly lower
+than on the NF-CSE-CIC-IDS2018-V2 dataset, these results
+still demonstrate robust detection capabilities across different
+network environments and attack scenarios. The balanced
+accuracy and recall values indicate that the system can effectively identify malicious activities while maintaining a low
+false negative rate, ensuring comprehensive network protection. Figure 7 presents FPR and FNR varied with different
+thresholds under the NF-UNSW-NB15-v2 dataset in detail.
+The FNR is 16.71% when the FPR is 3%. Figure 9 also
+presents the prediction score distribution of TCG-IDS under
+the NF-UNSW-NB15-v2 dataset in detail.
+2) Multi-Class Classification: In addition to binary classification, the TCG-IDS system’s performance is evaluated
+in multi-class detection scenarios using the NF-CSE-CICIDS2018-V2 and NF-UNSW-NB15-v2 datasets. The evaluation settings involved training the TCG-IDS system on a subset
+of each dataset and testing its performance on the remaining data, ensuring the results reflect the system’s real-world
+capability to handle diverse and complex attack scenarios. The
+metrics used for this evaluation include a FPR for each class.
+For the NF-CSE-CIC-IDS2018-V2 dataset, the TCG-IDS
+system was evaluated on ten different classes, including
+Benign, DDOS attack-HOIC, DoS attacks-Hulk, DDoS
+attacks-LOIC-HTTP, Bot, Infiltration, SSH-Bruteforce,
+
+WU et al.: TCG-IDS: ROBUST NETWORK INTRUSION DETECTION VIA TEMPORAL CONTRASTIVE GRAPH LEARNING
+
+1481
+
+TABLE I
+N UMBER OF M ULTI -C LASS S AMPLES AND I TS P ERCENTAGE OF
+NF-CSE-CIC-IDS2018- V 2
+
+TABLE II
+Fig. 12. Multi-class FPR under NF-CSE-CIC-IDS2018-v2.
+
+Fig. 13. Multi-class FPR under NF-UNSW-NB15-v2.
+
+DoS attacks-GoldenEye, FTP-BruteForce, DoS attacksSlowHTTPTest, DoS attacks-Slowloris, Brute Force-Web,
+DDOS attack-LOIC-UDP, Brute Force-XSS, and SQL
+Injection. The system achieved the following FPR for each
+class, as presented in Figure 12. The results highlight
+TCG-IDS’s proficiency in correctly identifying various
+attack types while maintaining a low FPR. The system
+shows particularly low FPRs for critical classes such as
+Benign (0.45%), DoS attacks-Slowloris (0.02%), DDOS
+attack-LOIC-UDP (0.02%), and SQL Injection (0.49%),
+which are crucial for reducing false alarms and ensuring
+accurate threat detection. However, higher FPRs for classes
+like SSH-Bruteforce (13.37%) and DoS attacks-GoldenEye
+(12.29%) indicate potential areas for improvement. These
+higher FPRs might be due to the complexity and similarity of
+these attacks to normal traffic, requiring more sophisticated
+feature extraction or advanced modeling techniques to
+enhance detection accuracy.
+For the NF-UNSW-NB15-v2 dataset, TCG-IDS was evaluated on fifteen different classes, including Benign, Exploits,
+Fuzzers, Generic, Reconnaissance, DoS, Analysis, Backdoor,
+Shellcode, and Worms. The FPR for each class is presented
+
+N UMBER OF M ULTI -C LASS S AMPLES AND I TS P ERCENTAGE OF
+NF-UNSW-NB15- V 2 DATASET
+
+in Figure 13. The results indicate that TCG-IDS maintains
+a low FPR across most classes, with particularly low rates
+for critical classes such as Exploits (1.07%), Fuzzers (2.08%),
+and Backdoor (0.51%), demonstrating its ability to accurately
+classify different types of network attacks. Slightly higher
+FPR for classes such as DoS (12.61%) and Reconnaissance
+(8.20%) suggests areas for further refinement but still indicates
+strong overall performance. These higher FPRs could be due
+to the more varied and complex nature of these attacks, which
+might require additional feature engineering or model tuning
+to improve detection accuracy.
+Overall, the multi-class detection results for both datasets
+demonstrate that TCG-IDS can effectively distinguish between
+various attack types, maintaining low FPRs across different
+classes. This capability is essential for providing comprehensive network security, as it allows for the precise identification
+and mitigation of specific threats. The system’s ability to
+maintain high accuracy and low FPRs across multiple classes
+underscores its robustness and effectiveness in real-world network intrusion detection scenarios. These findings suggest that
+TCG-IDS is a reliable and effective tool for enhancing network
+security through precise and accurate multi-class detection.
+C. Ablation Study
+To understand the contributions of different components
+in TCG-IDS, an ablation study is conducted by systematically removing each component and evaluating the
+performance of the modified system. The components evaluated include temporal contrasting, asymmetric contrasting, and
+masked contrasting. The results of the ablation study on the
+
+1482
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+TABLE III
+B INARY C LASSIFICATION P ERFORMANCE OF A BLATION S TUDY U NDER NF-CSE-CIC-IDS2018- V 2 DATASET
+
+TABLE IV
+B INARY C LASSIFICATION P ERFORMANCE OF A BLATION S TUDY U NDER NF-UNSW-NB15- V 2 DATASET
+
+TABLE V
+
+TABLE VI
+
+M ULTI -C LASS C LASSIFICATION M FPR S OF A BLATION S TUDY U NDER
+NF-CSE-CIC-IDS2018- V 2
+
+M ULTI -C LASS C LASSIFICATION M FPR S OF A BLATION S TUDY U NDER
+NF-UNSW-NB15- V 2
+
+NF-CSE-CIC-IDS2018-V2 dataset are presented in Table III.
+Removing temporal contrasting resulted in a significant drop
+in performance, with precision, recall, and F1-score decreasing to 88.74%, 85.44%, and 87.06% respectively. Similarly,
+excluding asymmetric contrasts led to a reduction in precision,
+recall, and F1-score to 90.05%, 87.12%, and 88.56%. When
+masked contrasting was removed, the system’s performance
+also declined, though it remained relatively high with a precision of 95.28%, recall of 93.45%, and F1-score of 94.35%.
+The full TCG-IDS system, which includes all components,
+achieved the highest performance with precision, recall, and
+F1-score of 99.25%, 99.21%, and 99.23% respectively, indicating the importance of each component in enhancing the
+overall effectiveness of the system.
+The ablation study results on the NF-UNSW-NB15-v2
+dataset, shown in Table IV, exhibit a similar trend. Excluding
+temporal contrasting resulted in the precision, recall, and F1score dropping to 82.92%, 80.33%, and 81.60% respectively.
+Removing asymmetric contrasts led to performance decreases
+with precision, recall, and F1-score at 85.77%, 83.05%, and
+84.39%. Without masked contrasting, the system’s precision,
+recall, and F1-score were 88.16%, 85.90%, and 87.02%.
+The complete TCG-IDS system outperformed these modified
+versions, achieving precision, recall, and F1-score of 92.70%,
+90.09%, and 91.38%, respectively. These results reinforce
+the critical role each component plays in maintaining high
+detection performance across different datasets.
+For multi-class detection, the mean false positive rates
+(mFPRs) for each ablation variant on the NF-CSE-CICIDS2018-V2 and NF-UNSW-NB15-v2 datasets are provided
+in Tables V and VI. On the NF-CSE-CIC-IDS2018-V2 dataset,
+the mFPR increased significantly when temporal contrasting
+was removed (19.29%), followed by asymmetric contrasting
+(14.26%), and masked contrasting (8.58%). The complete
+
+C OMPARING W ITH BASELINE M ODELS U NDER NF-CSE-CIC-IDS2018V 2 DATASET IN B INARY D ETECTION TASK
+
+TABLE VII
+
+TCG-IDS system achieved the lowest mFPR (3.34%), underscoring the importance of all components in maintaining a low
+rate of false positives across multiple classes. Similarly, on the
+NF-UNSW-NB15-v2 dataset, removing temporal contrasting
+led to the highest mFPR (25.36%), followed by removing
+asymmetric contrasting (13.18%), and masked contrasting
+(5.49%). The full system maintained a low mFPR (4.15%),
+indicating robust performance in detecting various attack
+types.
+
+D. Comparing With Baseline Models
+To evaluate the effectiveness of TCG-IDS over existing models, a comparison with several baseline models is
+performed, including GraphSage, GAT, and TGN, on the
+NF-CSE-CIC-IDS2018-V2 and NF-UNSW-NB15-v2 datasets.
+The comparison focused on binary detection tasks, using
+metrics such as precision, recall, F1-score, BAC, TPR, and
+TNR. As shown in Table VII, TCG-IDS significantly outperformed the baseline models on the NF-CSE-CIC-IDS2018-V2
+dataset. GraphSage achieved a precision of 72.91%, recall of
+68.51%, and F1-score of 70.64%, while GAT improved these
+metrics to 79.10%, 74.35%, and 76.65%, respectively. TGN
+further enhanced performance with a precision of 84.14%,
+recall of 79.97%, and F1-score of 82.01%. However, TCG-IDS
+achieved the highest precision of 99.25%, recall of 99.21%,
+
+WU et al.: TCG-IDS: ROBUST NETWORK INTRUSION DETECTION VIA TEMPORAL CONTRASTIVE GRAPH LEARNING
+
+TABLE VIII
+C OMPARING W ITH BASELINE M ODELS U NDER NF-UNSW-NB15- V 2
+DATASET IN B INARY D ETECTION TASK
+
+1483
+
+TABLE XIII
+C OMPARING W ITH E XISTING M ETHODS U NDER NF-CSE-CIC-IDS2018V 2 IN M ULTI -C LASS D ETECTION TASK
+
+TABLE IX
+
+TABLE XIV
+
+C OMPARING W ITH BASELINE M ODELS U NDER NF-CSE-CIC-IDS2018V 2 IN M ULTI -C LASS D ETECTION TASK
+
+C OMPARING W ITH E XISTING M ETHODS U NDER NF-UNSW-NB15- V 2 IN
+M ULTI -C LASS D ETECTION TASK
+
+TABLE X
+C OMPARING W ITH BASELINE M ODELS U NDER NF-UNSW-NB15- V 2 IN
+M ULTI -C LASS D ETECTION TASK
+
+TABLE XV
+RUNNING T IME (S ECOND ) OF TCG-IDS P ER BATCH
+
+positive rates, outperforming existing methods across diverse
+network intrusion scenarios.
+TABLE XI
+C OMPARING W ITH E XISTING M ETHODS U NDER NF-CSE-CIC-IDS2018V 2 DATASET IN B INARY D ETECTION TASK
+
+TABLE XII
+C OMPARING W ITH E XISTING M ETHODS U NDER NF-UNSW-NB15- V 2
+DATASET IN B INARY D ETECTION TASK
+
+and F1-score of 99.23%, demonstrating superior detection
+capabilities and robustness.
+In the binary detection task, TCG-IDS demonstrated superior performance on both the NF-CSE-CIC-IDS2018-V2 and
+NF-UNSW-NB15-v2 datasets. On NF-CSE-CIC-IDS2018-V2,
+TCG-IDS achieved a precision of 99.25%, recall of 99.21%,
+and F1-score of 99.23%, significantly outperforming DLGNN,
+EgraphSage, and Sarhan et al., as shown in Table XI. Similarly,
+on NF-UNSW-NB15-v2, TCG-IDS attained a precision of
+92.70%, recall of 90.09%, and F1-score of 91.38%, surpassing
+these baseline models (Table XII). In the multi-class detection
+task, TCG-IDS achieved the lowest mean false positive rates
+(mFPRs) of 3.34% on NF-CSE-CIC-IDS2018-V2 (Table XIII)
+and 4.15% on NF-UNSW-NB15-v2 (Table XIV), compared
+to higher mFPRs for DLGNN, EgraphSage, and Sarhan et
+al. These results highlight TCG-IDS’s robustness, precision,
+and ability to balance high detection accuracy with low false
+
+E. Comparing With Existing Methods
+To evaluate the performance of TCG-IDS in comparison
+to existing methods, experiments are conducted using the
+NF-CSE-CIC-IDS2018-V2 and NF-UNSW-NB15-v2 datasets
+in both binary and multi-class detection tasks. The existing
+methods compared include DLGNN [18], EgraphSage [19],
+and Sarhan et al. [7], which are representative of recent
+advances in graph-based intrusion detection systems.
+In the binary detection task, TCG-IDS demonstrated superior performance on both the NF-CSE-CIC-IDS2018-V2 and
+NF-UNSW-NB15-v2 datasets. On NF-CSE-CIC-IDS2018-V2,
+TCG-IDS achieved a precision of 99.25%, recall of 99.21%,
+and F1-score of 99.23%, significantly outperforming DLGNN,
+EgraphSage, and Sarhan et al., as shown in Table XI. Similarly,
+on NF-UNSW-NB15-v2, TCG-IDS attained a precision of
+92.70%, recall of 90.09%, and F1-score of 91.38%, surpassing
+these baseline models (Table XII). In the multi-class detection
+task, TCG-IDS achieved the lowest mean false positive rates
+(mFPRs) of 3.34% on NF-CSE-CIC-IDS2018-V2 (Table XIII)
+and 4.15% on NF-UNSW-NB15-v2 (Table XIV), compared
+to higher mFPRs for DLGNN, EgraphSage, and Sarhan et
+al. These results highlight TCG-IDS’s robustness, precision,
+and ability to balance high detection accuracy with low false
+positive rates, outperforming existing methods across diverse
+network intrusion scenarios.
+F. Running Time Evaluation
+The running time of TCG-IDS per batch is measured to
+assess its computational efficiency. The experiments were
+conducted on two publicly available network traffic datasets,
+NF-CSE-CIC-IDS2018-V2 and NF-UNSW-NB15-V2. Each
+batch consisted of graph snapshots processed by the TCG-IDS
+
+1484
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+TABLE XVI
+T IME C OMPLEXITY OF TCG-IDS
+
+system. Results of the running time evaluation are presented in Table XV. For NF-CSE-CIC-IDS2018-V2 dataset, it
+achieved a running time of 0.3754 seconds per batch. For the
+NF-UNSW-NB15-V2 dataset, the running time was slightly
+higher, at 0.5112 seconds per batch. These results demonstrate
+that it is capable of processing network traffic data efficiently,
+making it suitable for real-time intrusion detection scenarios.
+G. Time Complexity
+The time complexity analysis of TCG-IDS reveals its efficiency in handling dynamic network traffic data. The TGN
+Encoder operates with a complexity of O(Nv + Ne ), where
+Nv and Ne represent the number of nodes and edges, respectively, ensuring scalability with network size. The temporal
+contrasting, asymmetric contrasting, and masked contrasting
+components contribute complexities of O(Nv ·T ·D), O(Nv ·d̄·D),
+and O(Nv · M · D) respectively, reflecting their operations’
+dependence on the number of nodes, temporal steps, and
+embedding dimensions. The combined complexity, O(Nv ·(T +
+d̄ · D + M · D) + Ne ), highlights the framework’s capacity
+to efficiently process large-scale and temporally evolving network data, making it suitable for real-time intrusion detection
+applications. This balance between computational efficiency
+and robust detection underlines the practical applicability of
+TCG-IDS in diverse network environments.
+V. D ISCUSSION
+While temporal contrasting aims to distinguish embeddings
+at nearby and distant time steps, this approach may be less
+effective in the presence of periodic patterns. For instance,
+network traffic with regular fluctuations, such as nightly or
+weekend activities, may share consistent underlying patterns
+across timestamps. Accounting for such periodicity could
+better preserve meaningful temporal correlations and refine
+anomaly detection in dynamic networks. Another limitation
+is the lack of comparison with existing non-GNN methods.
+While we focused on graph-based approaches due to their
+relevance in modeling temporal and spatial dependencies,
+exploring non-GNN methods could provide valuable insights
+and broaden the scope of evaluation. Future work should incorporate comparisons with more diverse and relevant techniques
+to further validate the robustness of TCG-IDS.
+The lower performance onNF-UNSW-NB15-v2 dataset
+compared to NF-CSE-CIC-IDS2018-v2 can be attributed to
+several factors. First, the NF-UNSW-NB15-v2 dataset includes
+a broader range of attack types, such as Exploits, Backdoor, and Worms, which present more complex detection
+
+challenges compared to the more straightforward DoS and
+DDoS attacks in NF-CSE-CIC-IDS2018-v2. Additionally, NFUNSW-NB15-v2 features packet-level details that increase the
+complexity of the detection task, requiring more sophisticated
+preprocessing and fine-tuning of the model. Finally, differences
+in the distribution of attacks and traffic patterns between
+the two datasets influence the model’s ability to generalize
+effectively, further contributing to the performance gap.
+The relatively high FPRs for classes such as DoS (12.61%)
+and Reconnaissance (8.20%) highlight areas for improvement
+in the model’s detection capability. While the framework
+shows strong overall performance, these high FPRs are significant and will be addressed in future work. Additionally,
+although the datasets used in this study are based on older
+data, they remain representative of many real-world scenarios,
+covering a wide variety of attack types and network traffic
+patterns. Nevertheless, as cyber threats continue to evolve, it is
+crucial to evaluate our framework on newer datasets that reflect
+recent attack techniques and network behaviors to ensure its
+continued relevance in modern network security contexts.
+We reference several relevant graph-based models; however,
+we specifically selected graph-based models for comparison
+due to their direct relevance and proven performance in
+dynamic graph-based tasks, particularly in network intrusion
+detection. GraphSAGE, which aggregates features from a
+node’s local neighborhood, and GAT, which uses attention
+mechanisms to weigh neighbors’ importance, are both effective
+for capturing node relationships in network traffic data. These
+models are highly suitable for handling large-scale dynamic
+networks and can offer meaningful insights into detection.
+Although other models may be applicable, we focused on
+these two because of their successful application in temporal
+settings and their ability to capture relevant graph structures
+and temporal dynamics. In future work, we will extend this
+comparison to include additional models that could provide
+further insights.
+Detecting SSH-brute force and DoS attacks is critical for
+strengthening network security, as these attacks are noisy
+and distinct from human behavior. However, their detection
+can be complicated by factors such as traffic burstiness and
+network congestion, which may cause them to resemble
+legitimate high-volume events, increasing false positive rates.
+Addressing these challenges requires refining feature selection
+and optimizing thresholding mechanisms to improve detection
+accuracy and reduce false positives in these attack classes.
+It is important to note that while the goal of temporal
+contrasting is generally to distinguish between embeddings
+at nearby and distant time steps, this approach might not
+always be appropriate in the presence of periodic patterns.
+For example, network traffic at specific times, such as nightly
+or weekend traffic, might exhibit regular fluctuations, yet still
+share underlying patterns across different timestamps. In such
+cases, rather than strictly minimizing the similarity at distant
+time steps, it may be more beneficial to account for periodicity
+to preserve meaningful temporal correlations, thus refining the
+detection of anomalous behaviors in dynamic networks.
+The architecture of the proposed framework was determined
+through a systematic tuning process, including grid search and
+
+WU et al.: TCG-IDS: ROBUST NETWORK INTRUSION DETECTION VIA TEMPORAL CONTRASTIVE GRAPH LEARNING
+
+ablation studies, to optimize hyperparameters and component
+selection. This iterative approach ensured that the model configuration effectively balances performance and computational
+efficiency, tailored to the characteristics of the datasets used in
+the study. Future work could explore automated architecture
+search methods to further refine the framework’s design.
+VI. R ELATED W ORK
+A. Deep Learning-Based IDS
+Deep learning techniques, including Convolutional Neural
+Networks (CNNs) and Recurrent Neural Networks (RNNs),
+have significantly improved network IDS performance. CNNs
+excel at capturing spatial features in traffic data, while RNNs
+like LSTMs and GRUs effectively model temporal dependencies [24], [25]. For instance, Kitsune [26] uses autoencoders
+to detect anomalies, and DeepLog [27] leverages LSTMs for
+sequence modeling in system logs. However, these methods
+struggle to simultaneously capture spatial and temporal dependencies and often require extensive labeled data. To overcome
+these challenges, researchers are increasingly turning to graph
+neural networks (GNNs) to model interactions and learn rich
+representations of network data for intrusion detection.
+B. GNNs and GNN-Based IDS
+GNNs [28], [29], [30], [31] have gained significant attention
+for learning powerful representations of graph-structured data.
+They are broadly categorized into spectral-based and spatialbased methods. Spectral methods, like GCNs [17], perform
+convolution in the Fourier domain using the graph Laplacian’s
+eigendecomposition, but they suffer from high computational
+complexity and limited scalability. In contrast, spatial-based
+methods, such as GraphSAGE [16] and GATs [15], aggregate
+information from neighboring nodes directly on the graph
+structure, offering greater efficiency and scalability, making
+them suitable for large-scale and dynamic graphs, such as
+in network intrusion detection. However, challenges like the
+over-smoothing problem [32] and limited expressiveness in
+capturing long-range dependencies [33], [34] remain. Recent
+innovations like Graph Transformers [35] and Graph Contrastive Learning [36] address these issues, enabling more
+sophisticated applications of GNNs in complex tasks, including intrusion detection.
+Existing GNN-based IDSs can be grouped into three categories: (1) methods leveraging Graph Convolutional Networks
+(GCNs) or Graph Attention Networks (GATs) for static graph
+representation, (2) approaches incorporating temporal information through dynamic GCNs or recurrent architectures like
+LSTMs, and (3) hybrid techniques combining GNNs with
+reinforcement or adversarial learning. GCNs [37] capture
+local structural information, while GATs [14] use attention
+mechanisms for expressive node embeddings but lack temporal
+considerations. To address this, dynamic GCNs [38] and recurrent models [39] integrate spatial and temporal dependencies,
+improving detection in evolving networks. Advanced methods
+like reinforcement learning [40] for subgraph selection and
+adversarial training [41] enhance scalability and robustness,
+pushing the boundaries of GNN-based IDSs.
+
+1485
+
+VII. C ONCLUSION
+This paper presents TCG-IDS, a self-supervised temporal
+GNN-based model for network intrusion detection. It uses
+temporal contrasting, asymmetric contrasting, and masked
+contrasting to capture temporal dynamics and spatial dependencies in network traffic. By modeling traffic as a dynamic
+graph, it enables real-time detection with minimal false positives and improved novel attack identification. Evaluation
+on benchmark datasets shows it surpasses existing models,
+offering a robust solution for modern network security.
+ACKNOWLEDGMENT
+Any opinions, findings, conclusions, or recommendations
+expressed in this article are those of the authors and do
+not reflect the views of the National Research Foundation
+Singapore or the Cyber Security Agency of Singapore.
+R EFERENCES
+[1] I. A. Ridhawi and M. Aloqaily, “Zero-trust UAV-enabled and DTsupported 6G networks,” in Proc. IEEE Global Commun. Conf.
+(GLOBECOM), Dec. 2023, pp. 6171–6176.
+[2] I. Al Ridhawi, S. Otoum, and M. Aloqaily, “Decentralized zero-trust
+framework for digital twin-based 6G,” 2023, arXiv:2302.03107.
+[3] M. Aloqaily, S. Otoum, I. A. Ridhawi, and Y. Jararweh, “An intrusion
+detection system for connected vehicles in smart cities,” Ad Hoc Netw.,
+vol. 90, Jul. 2019, Art. no. 101842.
+[4] D. Arp et al., “Dos and don’ts of machine learning in computer security,”
+in Proc. USENIX Secur. Symp., 2022, pp. 3971–3988.
+[5] F. Pendlebury, F. Pierazzi, R. Jordaney, J. Kinder, and L. Cavallaro,
+“TESSERACT: Eliminating experimental bias in malware classification across space and time,” in Proc. USENIX Secur. Symp., 2019,
+pp. 729–746.
+[6] E. M. Rudd, F. N. Ducau, C. Wild, K. Berlin, and R. Harang, “ALOHA:
+Auxiliary loss optimization for hypothesis augmentation,” in Proc.
+USENIX Secur. Symp., Jan. 2019, pp. 303–320.
+[7] M. Sarhan, S. Layeghy, and M. Portmann, “Towards a standard feature
+set for network intrusion detection system datasets,” Mobile Netw. Appl.,
+vol. 27, no. 1, pp. 357–370, Feb. 2022.
+[8] K. He, D. D. Kim, and M. R. Asghar, “Adversarial machine learning
+for network intrusion detection systems: A comprehensive survey,” IEEE
+Commun. Surveys Tuts., vol. 25, no. 1, pp. 538–566, 1st Quart., 2023.
+[9] J. Vitorino, I. Praça, and E. Maia, “SoK: Realistic adversarial attacks and
+defenses for intelligent network intrusion detection,” Comput. Secur.,
+vol. 134, Nov. 2023, Art. no. 103433.
+[10] Z. Li, A. L. G. Rios, and L. Trajković, “Machine learning for detecting
+anomalies and intrusions in communication networks,” IEEE J. Sel.
+Areas Commun., vol. 39, no. 7, pp. 2254–2264, Jul. 2021.
+[11] S. Muneer, U. Farooq, A. Athar, M. A. Raza, T. M. Ghazal, and S. Sakib,
+“A critical review of artificial intelligence based approaches in intrusion
+detection: A comprehensive analysis,” J. Eng., vol. 2024, no. 1, Jan.
+2024, Art. no. 3909173.
+[12] A. Thakkar and R. Lohiya, “Fusion of statistical importance for feature
+selection in deep neural network-based intrusion detection system,” Inf.
+Fusion, vol. 90, pp. 353–363, Feb. 2023.
+[13] S. M. Kasongo, “A deep learning technique for intrusion detection
+system using a recurrent neural networks based framework,” Comput.
+Commun., vol. 199, pp. 113–125, Feb. 2023.
+[14] G. Miao, G. Wu, Z. Zhang, Y. Tong, and B. Lu, “AddAG-AE: Anomaly
+detection in dynamic attributed graph based on graph attention network
+and LSTM autoencoder,” Electronics, vol. 12, no. 13, p. 2763, Jun.
+2023.
+[15] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Lió, and
+Y. Bengio, “Graph attention networks,” in Proc. Int. Conf. Learn.
+Represent. (ICLR), Jan. 2017, pp. 1–12.
+[16] W. L. Hamilton, R. Ying, and J. Leskovec, “Inductive representation
+learning on large graphs,” in Proc. Adv. Neural Inf. Process. Syst., Jan.
+2017, pp. 1024–1034.
+[17] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+convolutional networks,” 2016, arXiv:1609.02907.
+
+1486
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+[18] G. Duan, H. Lv, H. Wang, and G. Feng, “Application of a dynamic
+line graph neural network for intrusion detection with semisupervised
+learning,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 699–714,
+2023.
+[19] W. W. Lo, S. Layeghy, M. Sarhan, M. Gallagher, and M. Portmann, “EGraphSAGE: A graph neural network based intrusion detection system
+for IoT,” in Proc. NOMS IEEE/IFIP Netw. Oper. Manage. Symp., Apr.
+2022, pp. 1–9.
+[20] H. Gharaee and H. Hosseinvand, “A new feature selection IDS based
+on genetic algorithm and SVM,” in Proc. 8th Int. Symp. Telecommun.
+(IST), Sep. 2016, pp. 139–144.
+[21] E. Rossi, B. Chamberlain, F. Frasca, D. Eynard, F. Monti, and M. Bronstein, “Temporal graph networks for deep learning on dynamic graphs,”
+2020, arXiv:2006.10637.
+[22] M. Sarhan, S. Layeghy, N. Moustafa, and M. Portmann, “Netflow
+datasets for machine learning-based network intrusion detection
+systems,” in Proc. 10th EAI Int. Conf. Big Data Technol. Appl., 13th
+EAI Int. Conf. Wireless Internet (WiCON), Dec. 2020, pp. 117–135.
+[23] N. Moustafa, “Designing an online and reliable statistical anomaly
+detection framework for dealing with large high-speed network traffic,”
+Ph.D. dissertation, School Eng. Inf. Technol., Univ. New South Wales,
+Sydney, NSW, Australia, 2017.
+[24] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian, “Deep
+packet: A novel approach for encrypted traffic classification using deep
+learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, Feb. 2020.
+[25] J. Kim, J. Kim, H. L. T. Thu, and H. Kim, “Long short term memory
+recurrent neural network classifier for intrusion detection,” in Proc. Int.
+Conf. Platform Technol. Service (PlatCon), Feb. 2016, pp. 1–5.
+[26] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An
+ensemble of autoencoders for online network intrusion detection,” in
+Proc. Netw. Distrib. Syst. Secur. Symp., 2018, pp. 1–15.
+[27] M. Du, F. Li, G. Zheng, and V. Srikumar, “DeepLog: Anomaly detection
+and diagnosis from system logs through deep learning,” in Proc. ACM
+SIGSAC Conf. Comput. Commun. Secur., Oct. 2017, pp. 1285–1298.
+[28] G. Corso, H. Stark, S. Jegelka, T. Jaakkola, and R. Barzilay, “Graph
+neural networks,” Nature Rev. Methods Primers, vol. 4, pp. 1–13, Mar.
+2024.
+[29] Z. Xu, P. Fang, C. Liu, X. Xiao, Y. Wen, and D. Meng, “DEPCOMM:
+Graph summarization on system audit logs for attack investigation,” in
+Proc. IEEE Symp. Secur. Privacy (SP), May 2022, pp. 540–557.
+
+[30] S. Siby, U. Iqbal, S. Englehardt, Z. Shafiq, and C. Troncoso,
+“WebGraph: Capturing advertising and tracking information flows
+for robust blocking,” in Proc. USENIX Secur. Symp., Jan. 2021,
+pp. 2875–2892.
+[31] B. Wu, X. Yuan, S. Wang, Q. Li, M. Xue, and S. Pan, “Securing graph
+neural networks in MLaaS: A comprehensive realization of query-based
+integrity verification,” in Proc. IEEE Symp. Secur. Privacy (SP), May
+2024, pp. 2534–2552.
+[32] Q. Li, Z. Han, and X.-M. Wu, “Deeper insights into graph convolutional
+networks for semi-supervised learning,” in Proc. AAAI Conf. Artif.
+Intell., Jan. 2018, pp. 3538–3545.
+[33] Z. Zhang, P. Cui, and W. Zhu, “Deep learning on graphs: A
+survey,” IEEE Trans. Knowl. Data Eng., vol. 34, no. 1, pp. 249–270,
+Mar. 2020.
+[34] K. Xu, W. Hu, J. Leskovec, and S. Jegelka, “How powerful are graph
+neural networks?,” 2018, arXiv:1810.00826.
+[35] V. P. Dwivedi, C. K. Joshi, A. T. Luu, T. Laurent, Y. Bengio, and
+X. Bresson, “Benchmarking graph neural networks,” J. Mach. Learn.
+Res., vol. 24, no. 43, pp. 1–48, 2023.
+[36] Y. You, T. Chen, Y. Sui, T. Chen, Z. Wang, and Y. Shen, “Graph
+contrastive learning with augmentations,” in Proc. Adv. Neural Inf.
+Process. Syst., Jan. 2020, pp. 1–12.
+[37] J. Duan et al., “Graph anomaly detection via multi-scale contrastive
+learning networks with augmented view,” in Proc. AAAI Conf. Artif.
+Intell., vol. 37, Jun. 2023, pp. 7459–7467.
+[38] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+in multivariate time series,” in Proc. AAAI Conf. Artif. Intell., vol. 35,
+May 2021, pp. 4027–4035.
+[39] X. Teng, Y.-R. Lin, and X. Wen, “Anomaly detection in
+dynamic networks using multi-view time-series hypersphere
+learning,” in Proc. ACM Conf. Inf. Knowl. Manage., Nov. 2017,
+pp. 827–836.
+[40] J. Jiang et al., “Anomaly detection with graph convolutional
+networks
+for
+insider
+threat
+and
+fraud
+detection,”
+in
+Proc. IEEE Mil. Commun. Conf. (MILCOM), Nov. 2019,
+pp. 109–114.
+[41] D. Pujol-Perich, J. Suarez-Varela, A. Cabellos-Aparicio, and P. BarletRos, “Unveiling the potential of graph neural networks for robust
+intrusion detection,” ACM SIGMETRICS Perform. Eval. Rev., vol. 49,
+no. 4, pp. 111–117, Jun. 2022.

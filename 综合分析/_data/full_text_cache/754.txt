@@ -1,0 +1,644 @@
+IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026 1133
+
+ Multimodal Industrial Anomaly Detection via
+ Attention-Enhanced Memory-Guided Network
+ Shuaibo Liu , Graduate Student Member, IEEE, Xiaoli Luan , Senior Member, IEEE, and Yueyang Li
+
+ Abstract—Anomaly detection is a key technology in quality Such methods are usually trained only on a large set of norcontrol for automated production lines. Currently, 2D-based mal samples and the target samples are detected in the inference
+anomaly detection methods fail to identify geometric structure stage. Currently, the majority of industrial anomaly detection
+anomalies in products. To address this limitation, this paper
+proposes a multimodal anomaly detection model using 3D methods [9], [10], [11], [12], [13] are still based on RGB image
+point clouds and RGB images. To ensure the single-domain analysis. However, in many industrial scenarios, relying only
+inference capability of each modality, we design an attention- on color images makes it difficult to accurately identify anomaenhanced dual memory bank to separately store local point lies [14]. Different lighting conditions may lead to false decloud features and RGB features. The attention mechanism tections, while anomalies of geometric structure types may not
+enhances the informativeness and discriminability of the feature
+descriptors, significantly improving the data quality in the present variations in color. Therefore, effectively leveraging the
+memory bank. During the inference phase, the local point cloud synergy between RGB and 3D information is crucial for improvfeatures in the dual memory bank guide the RGB features in ing the AD performance. However, using multimodal data for
+calculating anomaly scores in the 2D modality. This memory- AD also presents several challenges. First, different modalities
+guided approach strengthens the correlation between information may provide conflicting information. An RGB image may show
+across different modalities. Moreover, to improve the overall
+segmentation precision of the model, we propose an anomaly a color anomaly, while the 3D data indicates that the geometric
+scoring scheme based on a weight map of signed distance values. structure is normal. Such inconsistencies can make it difficult
+The final anomaly detection results are obtained by integrating for the model to accurately identify anomalies. Moreover, difthe advantages of point cloud data in geometric structure anomaly ferent modalities are affected by different factors. RGB images
+detection and RGB data in color anomaly detection. Extensive can be influenced by lighting conditions, while 3D data may
+experiments demonstrate that the proposed method achieves
+superior segmentation precision compared to other advanced suffer from noise or missing points. These quality differences
+methods on the MVTec 3D-AD and Eyecandies datasets. may cause multimodal data to fail in accurately representing
+ anomalies.
+ Index Terms—Anomaly detection, point cloud, signed distance
+values, multimodal learning.
+ The recently released MVTec 3D-AD dataset [15], as a benchmark resource, has greatly advanced the field of multimodal
+ anomaly detection [16], [17], [18]. AST [19] reduces the over-
+ I. INTRODUCTION generalization of anomalous samples by using an asymmetric
+ ITH the development of artificial intelligence technol- teacher-student network, but it relies on the role of RGB in-
+W ogy, anomaly detection (AD) in multimedia data has
+been widely applied in fields such as medical image analyformation and does not fully leverage the detection advantages
+ of 3D data, which limits its detection performance. To leversis [1], [2], industrial defect detection [3], [4], security monitor- age the inferential advantages of each modality, MIAD [20]
+ing [5], [6], and autonomous driving [7]. AD is a critical aspect achieves anomaly detection by comparing the differences beof industrial quality control, aiming at identifying anomalies in tween the features mapped through two cross-modal mapping
+a product to ensure the quality and reliability of the product [8]. functions and those learned by the feature extractor. In addi-
+Since abnormal samples are scarce and difficult to collect in tion, MIAD obtains three variants, MIAD-M, MIAD-S, and
+real-world manufacturing, unsupervised methods are primarily MIAD-T, by pruning the network layers of the feature extractor.
+employed to identify anomalies within industrial environments. However, they require designing complex training goals separately for each modality. Memory bank-based methods have
+ Received 23 December 2024; revised 14 April 2025; accepted 8 May 2025. gained significant attention, as these approaches only need to
+Date of publication 14 November 2025; date of current version 6 March 2026. store features of normal samples during training without requir-
+This work was supported by the National Natural Science Foundation of China
+under Grant 61991402. The associate editor coordinating the review of this
+ ing complex training designs. BTF [14] attempts to improve
+article and approving it for publication was Vania Vieira Estrela. (Corresponding the utilization of multimodal data by connecting features from
+author: Xiaoli Luan.) two modalities into a memory bank. Nevertheless, directly con-
+ Shuaibo Liu and Xiaoli Luan are with the Key Laboratory of Advanced
+Process Control for Light Industry (Ministry of Education), Jiangnan Uninecting multimodal features overlooks potential interference beversity, Wuxi 214122, China (e-mail: liushuaibo@stu.jiangnan.edu.cn; xl- tween them, which can significantly impact detection perforluan@jiangnan.edu.cn). mance. M3DM [21] adopts a hybrid fusion scheme to alleviate
+ Yueyang Li is with the College of Internet of Things Engineering, Jiangnan
+University, Wuxi 214122, China (e-mail: lyueyang@jiangnan.edu.cn).
+ the problem of interference among modalities. It constructs three
+ Digital Object Identifier 10.1109/TMM.2025.3632646 memory banks for each modality and fusion feature separately to
+
+ 1520-9210 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+1134 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026
+
+strengthen the single-domain inference capability of the model. The rest of this paper is organized as follows: Section II pro-
+Nonetheless, this approach results in substantial memory costs. vides a review of related works. Section III presents our method.
+Shape-guided [22] reduces memory usage by constructing a dual Section IV conducts the experiments. Finally, Section V conmemory bank with two expert models. However, the direct guid- cludes the paper and discusses the limitations of the proposed
+ance approach between the expert models does not ensure the methods.
+quality of the features stored in the memory bank, which directly
+impacts the final detection performance. II. RELATED WORK
+ To alleviate the issue of data quality in the memory bank,
+we use attention-enhanced memory guidance to construct a A. 2D Industrial Anomaly Detection
+dual memory bank. Specifically, we use attention mechanism The public availability of the MVTec AD dataset [23]
+to strengthen connections between multimodal data. The 3D has significantly contributed to the development of 2D infeatures guide the attention-enhanced RGB features, together dustrial anomaly detection research. Common approaches informing the dual memory bank. Although 3D features provide clude reconstruction-based [24], [25], [26], [27] and feature
+geometric structural information about objects, in RGB images, embedding-based [28], [29], [30], [31] methods. For reconcolor variations in certain regions may exhibit more anomaly struction methods, regions where the reconstructed image difpotential than changes in 3D geometry. The attention mecha- fers significantly from the input image are considered as the
+nism effectively enhances the feature representation of these re- location of the real anomalies. On this basis, in order to engions. The design provides two advantages. First, the attention able the model to learn anomalous features during training, remechanism enhances the informativeness and distinctiveness of searchers employ data augmentation techniques [32], [33] that
+feature descriptors, significantly improving data quality within introduce pseudo-anomalies into normal images. Knowledge
+the memory bank. Second, it increases pixel-level alignment ac- distillation [34], [35] is based on a teacher model to train stucuracy between modalities, which is crucial for detecting sub- dent networks for image reconstruction or feature extraction.
+tle anomalies. Meanwhile, we design a weighted map anomaly Anomaly localization is achieved by comparing the representascoring scheme based on signed distance values for point cloud tion differences across the networks. Feature embedding methdata and a cosine similarity scoring scheme for RGB data. The ods aim to transform the original data into a new represenabove design ensures the single-domain inference capability of tation space that facilitates anomaly detection. Normalization
+each modality. For the final anomaly localization, we first map flows [28] employ invertible transformations to map data feathe RGB score distribution to align with the 3D score distribu- tures to a normal distribution. This process allows normal and
+tion, and then select the larger value at each pixel location as the anomalous samples to exhibit distinguishable probability denfinal pixel-level anomaly score. The above operation effectively sity distributions in the embedding space. Visual-language modcombines the detection advantages from different modalities. els identify anomalies by calculating the similarity between im-
+It is noteworthy that our method shows superior anomaly de- ages and textual descriptions [36]. The use of learnable prompts
+tection and segmentation performance on the MVTec 3D-AD can effectively enhance model performance [37], [38]. Methods
+benchmark, maintaining competitive results even at low false based on pre-trained networks and memory banks [39] often
+positive rate (FPR) settings. face memory issues and computational burdens. PatchCore [12]
+ The contributions of this study can be summarized as follows: stores local features of normal samples in a memory bank and
+ r This study proposes an unsupervised multimodal industrial
+ then locates anomalies by comparing the similarity between the
+ anomaly detection method based on an attention-enhanced target sample and the stored features. Inspired by this approach,
+ memory-guided network. The method effectively com- we applied the memory bank method to multimodal anomaly
+ bines the advantages of RGB and 3D data for anomaly detection tasks and achieved excellent performance.
+ detection, addressing the performance limitations inherent
+ in single-modality approaches.
+ r This study employs attention mechanism to improve the B. Multimodal Industrial Anomaly Detection
+ data quality in the memory bank, thereby enhancing the Research [14] shows that effectively combining RGB and 3D
+ pixel-level correspondence accuracy between multimodal information leads to significantly better anomaly detection perdata during the memory-guided process. formance than using only RGB data. With the release of the
+ r An anomaly scoring scheme based on a weight map of MVTec 3D-AD dataset [15], 3D industrial anomaly detection
+ signed distance values is proposed in this paper, which has become a new research focus. The study that published the
+ effectively solves the problem of poorly localized regions dataset also offered baseline models based on GAN, AE, and
+ with weakly expressed anomalies. This greatly improves variational models, each trained on 3D data represented by voxel
+ the final detection and segmentation precision of the model. grids or depth maps. 3D-ST [18] proposes a student-teacher
+ r To the best of our knowledge, the proposed method framework, where the teacher network encodes local geometachieves state-of-the-art performance in anomaly segmen- ric descriptions from patches to locate geometric anomalies in
+ tation on the MVTec 3D-AD dataset and Eyecandies point cloud data. BTF [14] examines the role of 3D information
+ dataset. Even under high precision requirements, it still in anomaly detection tasks, revealing the potential advantages of
+ demonstrates leading segmentation results. combining RGB and 3D information for anomaly localization.
+LIU et al.: MULTIMODAL INDUSTRIAL ANOMALY DETECTION VIA ATTENTION-ENHANCED MEMORY-GUIDED NETWORK 1135
+
+Fig. 1. Diagram of the inference process. The proposed method consists of three main parts: (1) 3D signed distance function model predicts the signed distance
+values of the local features in the point cloud, generating an anomaly score map for the 3D data. PointNet is a pre-trained 3D feature extractor, and the NIF model is
+a multi-layer perceptron used to represent local 3D shapes. (2) 2D feature association model uses Wide-ResNet50-2 to extract RGB features. Multi-dimensional
+attention enhances the detailed representation of the RGB feature map. The guided RGB features are obtained through the mapping of the SDF features. Finally,
+an anomaly score map for the RGB data is produced. (3) Attention-enhanced dual memory banks store the normal features of each modality during the training
+phase. M3D stores local 3D features, while M2D retains the attention-enhanced and guided RGB features. The quality of the stored data impacts the final model’s
+performance.
+
+However, if the advantages of multimodal data are not fully TABLE I
+ REFERENCE TABLE OF KEY NOTATIONS AND VARIABLES IN THIS PAPER
+integrated, performance may be lower than when using only
+RGB data. For example, AST [19] and EasyNet [40] primarily
+rely on RGB features to identify anomalies, while the contribution of 3D features is limited. In these cases, directly combining RGB and 3D features can reduce model performance,
+as 3D features may be viewed as interference to RGB features.
+Therefore, effectively integrating the advantages of multimodal
+data is crucial for improving anomaly detection performance.
+DRAIN [41] employs a lightweight MLP and a dual-attention
+information entropy fusion strategy within a dual-reconstruction
+network to enhance feature extraction and integration. Existing methods fail to fully ensure the single-domain inference
+capability of each modality. Inspired by this, we design an
+attention-enhanced memory-guided network that retains the advantages of single-modal detection while improving the quality
+of data in the memory banks. The multi-dimensional attention
+mechanism [42] with its representational advantages in mod- the attention-enhanced dual memory bank is constructed during
+eling across three dimensions, enables the model to better dis- the training phase and utilized in the inference phase to calculate
+tinguish between normal and anomalous instances. In addition, anomaly scores across different modalities. The construction
+the correlation between the information in different modalities processes of the memory banks for each modality are described
+is strengthened by utilizing 3D local features to guide the RGB separately in Sections III-A and III-B, while their roles during
+features. Finally, efficient integration of the advantages of each inference are detailed in Section III-C. The anomaly scoring
+modality is achieved by mapping the anomaly scores to the same scheme based on a weighted map further helps the model achieve
+distribution and then by taking the maximum value for each more accurate anomaly segmentation results, as described in
+pixel. Section III-C2. The inference diagram of the proposed method
+ is shown in Fig. 1. The key notations and variables used in this
+ paper, along with their definitions, are detailed in Table I.
+ III. METHOD
+ A. 3D Signed Distance Function Model
+ The proposed method consists of three main components: a
+3D signed distance function model, a 2D feature association The 3D signed distance function model detects anomalies
+model, and an attention-enhanced dual memory bank. Notably, by focusing on local geometric features. As shown in Fig. 2,
+1136 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026
+
+ B. 2D Feature Association Model
+ The 2D feature association model relies on the interrelationship between 3D data and corresponding RGB images. Based
+ on the previously developed 3D SDF model, the mapping relationship between SDF and RGB features is established using
+ pixel-level coordinate information from the data. Specifically,
+ Fig. 2. Diagram of the 3D signed distance function model. the goal of the 2D feature association model is to construct an
+ SDF-guided memory bank, denoted as M2D , for reconstructing
+ the normal patterns of RGB features. As shown in Fig. 3, for
+PointNet [43] and neural implicit functions (NIF) [44] are used each 3D patch feature outputted by PointNet (in blue), we map
+to capture 3D local structural information. The design of the the coordinates of 500 points within its local region onto a 2D
+model is driven by two core principles: anomalies are typically plane to locate the associated RGB region (marked by a dashed
+reflected in local rather than global features, and learning local red circle). Additionally, we expand the associated RGB region
+geometric features offers better scalability. by a 2-pixel neighborhood (yellow area surrounding the red cir-
+ Concretely, the entire point cloud is divided into multiple 3D cle). This strategy effectively enhances the model’s ability to
+local patches, and each patch undergoes local feature learning. capture color variations and texture details. Ultimately, multiple
+Each patch is composed of 500 points sampled from the point RGB feature vectors (in light pink) associated with each SDF
+cloud, and PointNet is used to extract their feature vectors f , feature are stored in the memory bank M2D . M3D and M2D
+which represent the local geometric structure. The NIF model of together form the attention-enhanced dual memory bank.
+the multilayer perceptron architecture is denoted as ψ, which can Fig. 4 illustrates how the input feature maps are processed
+be used for the anomaly detection task after the below training. through the three separate paths of the attention module. In the
+Following the approach by Ma et al. [45], a set of query points top path, the feature map is first rotated 90◦ counterclockwise
+Q = {q1 , q2 · · · qi } is sampled near the surface of each 3D local around the H-axis to form an intermediate feature map F̆W .
+region. These query points, along with the feature vectors f To simulate deep dependencies between channels and spatial
+extracted by PointNet, are input into the NIF model ψ. The dimensions, F̆W undergoes a squeeze transformation to obtain
+model then predicts their signed distance values {s1 , s2 · · · si }. the aggregated feature map F̂W . Subsequently, F̂W is processed
+The process of predicting the signed distance s of each query through an excitation transformation to capture spatial feature
+point q relative to the local surface is represented as: interactions, resulting in the feature weight map F̃W . These fea-
+ Ψ,f ture weight maps are then processed by a sigmoid function to
+ qi ∈ Q −−→ s = ψ (q; f ) (1)
+ yield the attention weight map AW , which is combined with
+  
+Each pair {ψ, f } forms a signed distance function (SDF) that F̆W to generate the enhanced feature map FW . Finally, FW is
+ ◦
+measures the local surface geometry of the point cloud. The rotated 90 clockwise around the H-axis to match the shape of
+NIF model predicts the signed distance s for each query point q the original input feature map, resulting in the final feature map
+ 
+through the process described above. ψ minimizes the distance FW . The process described above is represented by the followbetween the pulled points and the actual surface points during ing equation:
+the training process achieved by the pulling loss, which enables
+ F̆W = P MH (F ) (4)
+the model to learn accurate local geometric features. The loss is
+defined as follows: F̂W = Tsq (F̆W ), F̃W = Tex (F̂W ) (5)
+ 1 
+ I
+ 
+ Lpull =
+ 2
+ t − ti 2 (2) AW = σ(F̃W ), FW = AW ⊗ F̆W (6)
+ I i=1 i  −1 
+ FW = P MH (FW ) (7)
+where I represents the total number of query points. ti is the
+ where P MH (·) represents a 90◦ counterclockwise rotation
+actual nearest neighbor point of qi in the point cloud P. ti is the −1
+ around the H-axis, and P MH (·) represents the corresponding
+pulled query point’s position. The pulling process is expressed
+ inverse rotation. Tsq (·) and Tex (·) denote the squeeze and excitaby the equation below:
+ tion transformations, respectively, and σ represents the sigmoid
+ Δs activation function. The middle path operates similarly to the top
+ ti = qi − s × (3)
+ Δs2 path. The bottom path focuses on channel interactions. Initially,
+ the feature map F is mapped to F̆C . Then, F̆C undergoes squeeze
+where Δs represents the gradient, which is the derivative of s
+ and excitation transformations to form the aggregated feature
+with respect to the position of the query point q.
+ map F̂C and the feature weight map F̃C . Subsequently, F̃C is
+ In summary, through the above process, the model gains the
+ processed by the sigmoid function to obtain the channel-specific
+ability to characterize normal local geometric features, and it
+ attention weight map AC , which scales F̆C to generate the encan effectively identify abnormal features in the inference phase.
+ hanced feature map FC . Finally, FC is remapped to form FC .
+After training the 3D SDF model, all local region feature vectors
+ The above process can be described by the equations below:
+{f } are stored in a memory bank M3D . This process implicitly
+encodes all “normal” local geometric representations. F̆C = IM (F ) (8)
+LIU et al.: MULTIMODAL INDUSTRIAL ANOMALY DETECTION VIA ATTENTION-ENHANCED MEMORY-GUIDED NETWORK 1137
+
+Fig. 3. Attention-enhanced dual memory banks. The 3D SDF model stores feature vectors {f } of all 3D patches in the memory bank M3D . Each patch corresponds
+to a specific region in the RGB feature map, generating a dedicated dictionary. All RGB dictionaries guided by patch information are stored in the memory bank
+M2D . M3D and M2D together form the dual memory banks utilized during inference. Notably, the RGB feature map is refined through multi-dimensional
+attention, which significantly improves the data quality in the memory banks.
+
+Fig. 4. Illustration of the multi-dimensional attention mechanism. The architecture contains three branches. The top branch and the middle branch are concerned
+with capturing feature interactions in the spatial dimensions W and H, respectively. While the bottom branch focuses on capturing interactions between channels.
+⊗ denotes the element-wise multiplication operation and ⊕ denotes the element-wise summation operation. This design strengthens the refined representation of
+features by efficiently integrating information from different dimensions.
+
+ F̂C = Tsq (F̆C ), F̃C = Tex (F̂C ) (9) 1) Feature Extraction: PointNet and Wide-ResNet50-2 are
+ used to extract all patch-level SDF and RGB features from the
+ AC = σ(F̃C ), FC = AC ⊗ F̆C (10) test sample x. The SDF feature vectors are denoted as {f˜}. The
+ FC = IM (FC ) (11) multidimensional attention mechanism models attention across
+ channels, height, and width, enhancing the expressive power of
+where IM (·) refers to the identity mapping function. The multi- the RGB feature map. Pixels related to at least one SDF feature in
+dimensional attention mechanism enhances the learning and rep- {f˜} are considered the foreground of the RGB image. The RGB
+resentational capacity of RGB features through direct averaging feature vectors associated
+ ... with the SDF features after attention
+aggregation across three branches, thereby significantly improv- are denoted as { f }.
+ing the pixel-level correspondence precision between 3D and 2) Inference of the 3D Signed Distance Function Model: For
+RGB features. Furthermore, the enhancement of data quality each SDF in {f˜}, find 10 nearest neighbors in the M3D to form a
+within the memory bank positively contributes to the model’s feature dictionary and perform sparse coding to obtain approxperformance. imate features {fˆ}. The purpose of sparse coding is to represent the input features {f˜} as a sparse linear combination of
+ the nearest neighbor features. This allows the original features
+C. Inference Phase of the Proposed Model {f˜} to be approximated by a few neighboring features, achiev-
+ Based on the above process, we utilize the 3D signed dis- ing a sparse representation. Since sparse coding uses normal
+tance function model, the 2D feature association model, and the features in M3D as basis vectors, the sparse representation can
+attention-enhanced dual memory bank to identify anomalies in accurately describe normal features, facilitating the distinction
+the test sample x. The schematic of the inference phase is pre- between normal and anomalous features. For each patch of x,
+sented in Fig. 1, with the following steps: compute the signed distance values of all 3D points {q̂} using
+1138 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026
+
+the patch-reconstructed {fˆ}, denoted as s = ψ(q̂; fˆ). Since in in M3D , the concatenation of their associated RGB dictionaries
+the training phase, the NIF model has learned to represent nor- is taken in M2D to form a memory-guided RGB ... dictionary, demal 3D local features. In the testing phase, a signed distance noted as D̂. For the RGB feature vectors in { f }, identify their
+value of 0 predicted by the NIF model indicates normal fea- 5 nearest neighbors from D̂ and obtain their sparse representures, while non-zero signed distance values are considered to tations, denoted as {f¯}. Since cosine similarity focuses on the
+be an indication of anomalies. Both positive and negative values direction rather than the magnitude of vectors, it better handles
+of s represent anomalies, with the absolute value of s indicating ... we use cosine similarity to
+ the similarity of sparse vectors. Here,
+the extent of the anomaly. Therefore, the absolute value of s is calculate the similarity between { f } and {f¯}, with lower simconsidered as the score to quantify the anomaly. Our aim is to ilarity indicating a higher degree of anomaly. The calculation
+detect all anomalies. If the difference in the absolute values of process for the anomaly score map is as follows:
+ ...
+s is too large, smaller s values may not be accurately localized. s_maprgb = 1 − cos( f , f¯) (18)
+This can affect the model’s final detection and segmentation ...
+performance. To overcome this problem, we design an anomaly ...  f · f¯
+ cos f , f¯ =  ...  
+  f  f¯ (19)
+scoring scheme based on a logarithmic weighting map of s. The
+scheme is described in more detail below:
+ First, the absolute value of the signed distance s is taken for all where s_maprgb represents the anomaly score map obtained
+3D points {q̂}. Next, the logarithmic function log(1+x) is used as from the 2D feature association model using 2D data as input.
+a smoothing function to compute the weights. The logarithmic 4) Score Map Alignment: To fully utilize the inference adfunction exhibits rapid growth for small x and slower growth vantage of each modality, we map the RGB score distribution
+for large x, which reduces the magnitude differences of s and to the SDF score distribution. Then the anomaly scores in both
+enhances the focus on smaller s values. The above process can modalities are compared pixel by pixel. The larger value is taken
+be described as: as the final anomaly response. To obtain the mapping relationship between the score distributions of different modalities, we
+ sL = |sL | (12) simulate the inference process of 25 randomly selected training
+ weight = log (1 + sL ) (13) samples. And exclude itself from the nearest neighbor search
+ in the dual memory bank during the inference process. The purwhere L represents the index variable for traversing each s value. pose of the above operation is to get the weights and biases about
+Then traverse the s value at each position to update the score the mapping function. The specific computational procedure is
+map and weight map. When updating the score map, if the s shown below:
+value at a position is smaller than the value at the corresponding
+ sdfupper − sdflower
+position in the score map, the score map is updated to the current w= (20)
+ rgbupper − rgblower
+s value. This ensures that the s value at each position represents
+the distance to the nearest surface. Meanwhile, to consider the b = 3dlower − w × rgblower (21)
+effects of all SDFs in {f˜}, the weight map is updated by accumulating logarithmic weights about s values for all the same where w is the weight of the mapping function, and b is the bias.
+positions. Additionally, normalize the weight map to balance the sdfupper and sdf lower are the 3-sigma ranges of the SDF distriweights. The specific computational procedure described above bution (mean ± 3 standard deviations). rgbupper and rgblower
+is shown below: are the 3-sigma ranges of the RGB distribution. The process of
+ applying the mapping function to the RGB score distribution is
+ s_mapL = min (s_mapL , sL ) (14) described as follows:
+ 
+ N
+ s _maprgb = s_maprgb × w + b (22)
+ w_map(p) = weight (p), p ∈ P (15)
+ n=1 n where s _maprgb represents the new RGB score map after mapw_map ping. Finally, the scores of the score maps for each modality are
+ w_map =  (16) compared pixel by pixel and the larger value at each pixel pow_map + ε
+ sition is selected as the pixel-level anomaly score. The above
+where w_map(p) denotes the value of the weight map at pixel process is shown below:
+location p. P indicates all pixel positions. N means the number  
+of patches containing pixel position p. ε is a small constant to s_map(p)f inall = max s _map(p)rgb , s_map(p)sdf (23)
+prevent division by zero. The final score map is obtained by
+multiplying the original score map with the weight map. The where s_mapf inall represents the final anomaly localization redescription above is shown below: sult after combining the advantages of the two modalities. In addition, we perform Gaussian blurring on all the anomaly score
+ s_mapsdf = s_map ⊗ w_map (17)
+ maps involved in the above process to reduce noise and make the
+where ⊗ represents element-wise multiplication. s_mapsdf rep- score maps smoother. We sort the anomaly scores of all pixels
+resents the anomaly score map obtained from the SDF model in the score map and use these values as candidate thresholds to
+using 3D data as input. compute precision and recall, respectively. The F1 score is then
+ 3) Inference of the 2D Feature Association Model: For all the used to evaluate the balance between precision and recall. The
+associated SDFs used to compute the approximate feature {fˆ} threshold corresponding to the highest F1 score is selected as
+LIU et al.: MULTIMODAL INDUSTRIAL ANOMALY DETECTION VIA ATTENTION-ENHANCED MEMORY-GUIDED NETWORK 1139
+
+the final segmentation threshold. All pixels with anomaly scores the BTF method [14]. Then, since recent advances [44], [48]
+higher than this threshold are identified as anomalous regions. in analyzing and modeling point clouds by dividing them into
+ Moreover, compared with using a single modality, incorpo- multiple local regions have performed well, this study utilizes
+rating both RGB and 3D data increases the model complexity farthest-point sampling (FPS) [49] to sample a set of points from
+and memory usage. Specifically, when using only RGB data, the original cloud. For each sampled point, we identify its K nearthe proposed method requires FLOPs of 5.02 G and memory est neighbors within the receptive field to form local patches. In
+of 1742 MB. When using only 3D data, it requires FLOPs addition, the resolution of the original point cloud and images is
+of 1.29 G and memory of 2104 MB. When both modalities resized to 224 × 224 using nearest-neighbor and bicubic interare used, the method requires FLOPs of 6.31 G and memory polation [14]. To ensure full coverage of the point cloud while
+of 3820 MB. In practical industrial scenarios, especially with allowing patches to share some neighborhood information, local
+large-scale datasets, it is important to make a trade-off between patches are set to be overlappable.
+computational cost and detection performance. Flexible modal- 2) Parameter Settings: To ensure that overlapping local
+ity combinations can further enhance the effectiveness of the patches collectively cover all points in the point cloud sample,
+proposed method. each 3D patch contains 500 points (K = 500), and the overlap
+ rate is set to 10. For a point cloud sample with approximately
+ IV. EXPERIMENTS 7,750 points, this results in around 155 local patches, calculated
+ as “Overlap Rate × Total Number of Points ÷ K.” During SDF
+A. Dataset and Evaluation Metrics model training, following the same settings as PCP [44], we
+ 1) Dataset: We evaluate the effectiveness of the proposed sample 20 query points around each real point. The learning
+method on two multimodal anomaly detection datasets. The rate and batch size are set to 0.0001 and 32, respectively. All
+MVTec 3D-AD [15] dataset contains 10 different types of in- experiments are conducted on a single NVIDIA GeForce RTX
+dustrial objects, totaling 2656 training samples, 294 validation 3090, using the PyTorch 1.7.1 deep learning framework.
+samples, and 1197 test samples. The Eyecandies [46] dataset is 3) Training Process: The 3D signed distance function (SDF)
+a synthetic dataset containing 10 categories of candies, with a model employs pulling loss to minimize the distance between
+total of 10000 training samples, 1000 validation samples, and pulled points and actual surface points. This enables the neural
+4000 test samples. Each sample in these datasets provides 3D in- implicit function (NIF) model to learn to predict signed disformation that is precisely aligned with the corresponding RGB tance values, thereby achieving an implicit representation of
+pixels, allowing us to obtain the (x, y, z) coordinates at each local geometric information. The SDF features extracted from
+pixel. This spatial information, combined with the correspond- normal point clouds by PointNet are stored in the memory
+ing color data, enables us to effectively perform the detection bank M3D . The RGB features of normal samples extracted by
+task. In this paper, we focus on utilizing the complementary rela- Wide-ResNet50-2 are refined through the attention mechanism
+tionship between RGB and 3D information to enhance anomaly and then stored in memory bank M2D under the guidance of SDF
+detection performance. features. Together, M3D and M2D form the attention-enhanced
+ 2) Evaluation Metrics: In this study, multiple evaluation dual memory bank.
+metrics are used to comprehensively assess the anomaly de- 4) Inference Process: During inference, for each SDF featection and segmentation performance of the model. Anomaly ture, we search for its 10 nearest neighbors in M3D . These
+detection performance is evaluated by calculating the area un- neighbors serve as basis vectors to reconstruct the input SDF
+der the receiver operating characteristic curve (I-AUROC), with feature using sparse coding. The reconstructed feature is then
+higher I-AUROC values indicating better overall detection per- fed into the NIF model, where the pretrained SDF model comformance. Segmentation performance is evaluated using the putes the signed distance values for each local patch. The SDF
+pixel-level area under the receiver operating characteristic curve anomaly score map is obtained using the designed weighted
+(P-AUROC) and the area under the per-region overlap curve map anomaly scoring scheme. In M2D , all RGB features cor-
+(AUPRO) [47]. AUPRO assesses how well the predicted re- responding to the SDF features used for reconstruction in M3D
+gions align with the actual anomaly regions. Typically, an in- form a memory-guided RGB dictionary. For each input RGB
+tegration threshold of 0.3 for the false positive rate (FPR) is feature, we find its nearest neighbor in this dictionary and
+used to calculate AUPRO (referred to as AUPRO@30% ). To reconstruct it using sparse coding. The RGB anomaly score
+reduce the FPR in industrial applications and meet the demands map is then obtained using the cosine similarity anomaly scorof high-precision scenarios, this study also employs AUPRO ing scheme. Finally, the RGB scores are mapped to the 3D
+with a more stringent 0.01 integration threshold (referred to as score distribution. At each pixel location, the higher score
+AUPRO@1% ). between the two modalities is selected as the final anomaly
+ response.
+B. Implementation Details
+ 1) Data Preprocess: The preprocessing of point clouds in- C. Experiments Analysis
+volves two main steps: background removal and local patch ex- In this section, we provide a detailed comparison of the protraction. First, background point clouds in the raw data, which posed method with other state-of-the-art approaches under difinterfere with modeling and analysis, are removed based on ferent modal information as input. AST [19] effectively reduces
+1140 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026
+
+ TABLE II
+ IMAGE-LEVEL AUROC (I-AUROC) RESULTS OF VARIOUS METHODS FOR ANOMALY DETECTION PERFORMANCE ON THE MVTEC 3D-AD DATASET. THE BEST
+ RESULTS ARE SHOWN IN BOLD, AND THE SECOND-BEST RESULTS ARE UNDERLINED
+
+the overgeneralization problem for anomalous samples but fails This result highlights the effectiveness of learning from overto fully leverage the advantages of 3D data in geometric anomaly lapping local patches through PointNet [43]. For the segmendetection. This limits its performance in multimodal scenar- tation task, the method achieves the best AUPRO in six data
+ios. MIAD [20] achieves anomaly detection by learning two subclasses and the second highest in four others, demonstrating
+cross-modal mapping functions, but it requires designing com- its strong generalization across different data categories, which
+plex training objectives. MIAD-M, MIAD-S, and MIAD-T are is essential for practical industrial applications. 2) In anomaly
+three variants obtained by pruning the network layers of the fea- detection using RGB information, since the proposed method
+ture extractor in MIAD. BTF [14] improves the utilization of focuses on effectively combining multimodal information, i.e.,
+multimodal data by connecting features from two modalities, RGB information guided by 3D information is used. However,
+but it overlooks the potential interference between the modali- compared to AST [19], which directly uses RGB features for deties. M3DM [21] strengthens single-domain reasoning ability by tection, the proposed method shows slightly lower performance
+constructing three memory banks but leads to significant mem- in I-AUROC. In contrast, for the segmentation task, the proory consumption. Shape-guided [22] reduces memory usage by posed approach achieves optimal results with 94.4% AUPRO,
+using dual memory banks but neglects the quality of features in attributed to multi-dimensional attention focused on learning the
+the memory banks. details of RGB features and the application of cosine similarity
+ Table II presents the anomaly detection performance using for sparse RGB feature computation. 3) In multimodal anomaly
+I-AUROC, while Table III highlights the anomaly segmenta- detection using RGB + 3D, the proposed method achieves a
+tion performance measured by AUPRO. Additionally, Table VI second-best I-AUROC of 95.6% , surpassing AST by 1.9% ,
+provides a comparative analysis of segmentation performance, and outperforming BTF [14] and M3DM, both of which utifocusing specifically on P-AUROC. 1) The proposed method lize memory banks, by 8.3% and 1.1% , respectively. In terms
+achieves the highest I-AUROC, outperforming M3DM [21] by of segmentation performance, the proposed method also attains
+4.5% when using only 3D information for anomaly detection. optimal results. These results highlight the advantages of the
+LIU et al.: MULTIMODAL INDUSTRIAL ANOMALY DETECTION VIA ATTENTION-ENHANCED MEMORY-GUIDED NETWORK 1141
+
+ TABLE III
+ AUPRO@30% RESULTS OF VARIOUS METHODS FOR ANOMALY SEGMENTATION PERFORMANCE ON THE MVTEC 3D-AD DATASET
+
+ TABLE IV
+ AUPRO@1% RESULTS OF VARIOUS METHODS FOR ANOMALY SEGMENTATION PERFORMANCE ON THE MVTEC 3D-AD DATASET
+
+attention-enhanced memory-guided network, while demonstrat- MIAD [20]. This study provides a booster study for the develing the effectiveness of the strategy that combines the strengths opment of anomaly detection in high-precision industrial sceof each modality’s detection based on memory-guided condi- narios.
+tions. Table V presents the results of various multimodal meth- Fig. 5 presents a comparison of anomaly localization results
+ods on the Eyecandies dataset across multiple metrics. The re- between the proposed method and Shape-guided [22]. The prosults show that the proposed method achieves the best anomaly posed method shows superior performance in reducing both
+segmentation performance, demonstrating its strong generaliza- over-detection and missed detection, as illustrated by the score
+tion ability across different detection targets. and segmentation maps. Specifically, the Shape-guided method
+ Table IV demonstrates the actual performance of each method exhibits multiple instances of over-detection in the second row
+in high precision requirement scenarios. The requirement of low and a few minor cases of over-detection in the fourth row,
+FPR has been the focus of industrial applications. The proposed which the proposed method effectively mitigates. The results in
+method achieves optimal and sub-optimal AUPRO@1% on 5 the third row highlight the advantage of the proposed method
+classes of data from MVTec 3D-AD, and the overall perfor- in minimizing missed detections. Overall, the Shape-guided
+mance is 7.8% higher than that of BTF, 6.7% higher than that of method has two weaknesses. 1) The normal regions around the
+M3DM, and 0.6% higher than that of the current state-of-the-art target often have high anomaly scores. The proposed method
+1142 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026
+
+ TABLE V
+ MULTI-METRIC RESULTS OF VARIOUS MULTIMODAL METHODS ON THE EYECANDIES DATASET
+
+ attention due to the fact that accurate localization of anomalies
+ can be achieved with only normal samples. However, these methods depend heavily on the quality of the data used to construct
+ the memory bank. Performance can be adversely affected if the
+ input data is of low quality or contains noise and bias. This study
+ performs a series of preprocessing steps on point cloud data to
+ reduce potential interference. By learning and storing local features of sample data, it achieves a more detailed representation of
+ normal features, thereby enhancing the data quality of the memory bank. In addition, previous methods tend to identify anomalies by calculating the similarity between each anomalous sample and all normal samples when using a memory bank, which
+ can bring a huge computational burden. The attention-enhanced
+ memory-guided network proposed in this study addresses this by
+ only using the K most relevant nearest-neighbor features from
+ the memory bank for each anomaly feature, thereby improving
+ inference efficiency.
+ Compared to the M3DM method, which uses three mem-
+Fig. 5. Qualitative results of the proposed method and other methods on the ory banks, the proposed method reduces memory usage by
+MVTec 3D-AD dataset. From left to right: RGB anomaly image, ground truth, 2706.12 MB and increases inference speed by 0.118 fps. The
+score map and segmentation map of the Shape-guided method, and score map
+and segmentation map of our method. BTF method attempts to integrate 3D features into the 2D
+ features provided by a frozen convolutional model (Wide-
+ ResNet50-2) [50], but this approach fails to fully leverage the
+addresses this issue using an anomaly scoring scheme based on
+ benefits of multimodality. The AST method, based on normala weight map of signed distance values. This effectively highized flow, employs a teacher-student architecture that favors
+lights anomalous regions while keeping anomaly scores lower in
+ faster inference; however, it uses 3D data only as an additional
+normal areas. 2) There are over-detection and missed detection
+ input channel in a 2D network architecture, resulting in lower
+issues. Our method enhances the informativeness and discrimperformance than M3DM. MIAD detects anomalies by evalinability of feature descriptors through an attention mechanism.
+ uating inconsistencies between learned features from feature
+This significantly improves the quality of data stored in the memextractors and cross-modal mapped features, achieving faster
+ory bank and helps mitigate these issues. More anomaly localinference speeds. Compared with all these methods, the proization results for the proposed method are provided in Fig. 6.
+ posed approach outperforms others across various metrics, including I-AUROC, P-AUROC, AUPRO@30% , and the more
+D. Frame Rate and Memory Occupancy
+ stringent AUPRO@1% . Fig. 7(a) and (b) clearly highlight the
+ In Table VI, we provide a detailed comparison of the proposed advantages demonstrated by the proposed approach in anomaly
+method with previous advanced methods in terms of memory detection and anomaly segmentation. Importantly, the proposed
+footprint and inference speed (frames per second). In the field algorithm surpasses the previous state-of-the-art method MIAD
+of AD, methods that utilize memory banks have attracted much in the AD task. Moreover, our work can be reproduced using an
+LIU et al.: MULTIMODAL INDUSTRIAL ANOMALY DETECTION VIA ATTENTION-ENHANCED MEMORY-GUIDED NETWORK 1143
+
+Fig. 6. Anomaly localization results of the proposed method on the MVTec 3D-AD dataset. From top to bottom: RGB anomaly image, ground truth, and the
+score map and segmentation map of our method.
+
+ TABLE VI
+ INFERENCE SPEED, MEMORY OCCUPANCY, AND AD PERFORMANCE ON THE MVTEC 3D-AD DATASET. INFERENCE SPEED
+ IS MEASURED IN FPS, AND MEMORY IN MB.
+
+Fig. 7. Comprehensive comparison of multimodal anomaly detection methods in terms of anomaly detection performance (I-AUROC, as shown in subfigure
+(a)), anomaly segmentation performance (AUPRO@1% , as shown in subfigure (b)), inference speed, and memory occupancy. The area of each circle represents
+memory usage.
+1144 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026
+
+ TABLE VII
+ ABLATION RESULTS OF EACH COMPONENT OF THE PROPOSED METHOD ON
+ THE MVTEC 3D-AD DATASET IN TERMS OF I-AUROC,
+ AUPRO@30% , AND AUPRO@1% .
+
+ Fig. 9. Ablation study of the attention mechanism.
+
+ TABLE VIII
+ ABLATION RESULTS ON THE EFFECTIVENESS OF THE THREE ATTENTION
+ BRANCHES ON THE MVTEC 3D-AD DATASET
+
+ Fig. 10. Ablation study of the weight map.
+
+ TABLE IX
+ INFERENCE TIME, ANOMALY DETECTION PERFORMANCE, AND ANOMALY
+ SEGMENTATION PERFORMANCE WITH VARIOUS PATCH SIZE K SETTINGS ON
+ THE MVTEC 3D-AD DATASET
+
+Fig. 8. Qualitative results of different RGB anomaly score calculation methods.
+
+ TABLE X
+ ANOMALY DETECTION AND SEGMENTATION PERFORMANCE OF THE PROPOSED
+NVIDIA GeForce RTX 3090, and more powerful hardware is METHOD UNDER FEW-SHOT SETTINGS ON THE MVTEC 3D-AD DATASET
+expected to further improve the frame rate.
+
+E. Ablation Study
+ This section presents a detailed ablation study. Table VII
+highlights the advantage of using cosine similarity over L2
+distance for anomaly scoring. It also highlights the benefits of
+the weighted map scoring scheme for anomaly segmentation and as the patch size increases, the inference efficiency of the prothe role of the attention mechanism in improving the quality of posed method gradually improves. However, this comes at the
+feature data stored in the memory bank. Table VIII provides cost of reduced model performance. For industrial deployment,
+a more detailed ablation study on the three attention branches. the patch size can be adjusted flexibly to adapt to the specific
+Additionally, we present a more intuitive visual comparison of requirements of different tasks.
+ablation studies. Fig. 8 demonstrates the scoring superiority of
+cosine similarity over L2 distance. By enhancing the representation of RGB features, the attention mechanism also improves the F. Performance of Few-Shot Setting
+data quality within the memory bank. Segmentation results in We evaluate the proposed method under few-shot settings, and
+Fig. 9 illustrate the attention mechanism’s significant contribu- the results are shown in Tables X. Specifically, we randomly setion to detecting subtle anomalies (W/O represents without, W/ lect 5, 10, and 50 images from each category of the MVTec
+represents with). Fig. 10 compares the effectiveness of directly 3D-AD dataset as training data. The model is then tested on the
+using the absolute value of SDF as the anomaly score versus the full test set to assess its anomaly detection and segmentation perweight map approach for anomaly localization. Table IX pro- formance under few-shot conditions. Notably, in the 5-shot and
+vides a detailed analysis of patch sizes. While K=300 yields the 10-shot settings, our method still outperforms some approaches
+highest I-AUROC, K=500 offers the optimal balance between that are not designed for few-shot scenarios. The few-shot nature
+inference speed and anomaly segmentation accuracy. In fact, enables our method to better scale to practical applications.
+LIU et al.: MULTIMODAL INDUSTRIAL ANOMALY DETECTION VIA ATTENTION-ENHANCED MEMORY-GUIDED NETWORK 1145
+
+ TABLE XI
+ ABLATION RESULTS OF THE PROPOSED METHOD’S MULTIMODAL DATA INPUT ARCHITECTURE ON AUPRO@30%
+
+ TABLE XII
+ COMPARISON OF THE COMPUTATIONAL COMPLEXITY, INFERENCE SPEED, AND
+ MEMORY OCCUPANCY OF THE PROPOSED METHOD USING SINGLE-MODAL
+ AND MULTIMODAL DATA AS INPUT ON THE MVTEC 3D-AD DATASET
+
+Fig. 11. Qualitative results before and after integrating multimodal information. From left to right: anomaly image, ground truth, score map and segmentation map from the RGB branch, score map and segmentation map using only 3D
+information, and score map and segmentation map after combining RGB and
+3D. The results show that our method solves the problem of anomaly localization
+failure caused by relying solely on a single modality.
+
+G. Effectiveness of Multimodal Integration
+ This section provides a detailed analysis of the effectiveness of combining multimodal data. Fig. 11 illustrates the ben- Fig. 12. Distribution of anomaly detection scores before and after fusion on
+efits of combining RGB and 3D information in the proposed the dowel subclass. The relative difference in image-level scores between normal
+method, which effectively avoids the problem of failing to lo- and abnormal data is enhanced after the 3D + RGB fusion, facilitating better
+ anomaly detection.
+calize anomalies in the case of a single modality. The types of
+anomalies are diverse. RGB information tends to work well at
+identifying color defects in objects, but it does not work well
+ scores should ideally be lower than those of anomalous data.
+for holes in bagels with complex surfaces. In contrast, 3D infor-
+ After combining RGB and 3D information, the relative size of
+mation is typically effective for detecting spatial anomalies on
+ the score distributions for normal and abnormal data is enlarged.
+the test object. Therefore, effectively combining RGB and 3D
+ This will help to better identify anomalies.
+information is key to improving anomaly detection and localization performance. This study realizes the effective utilization
+ V. CONCLUSION AND LIMITATIONS
+of multimodal information by merging the detection advantages
+in the two modalities. Table XI presents AUPRO@30% results In this paper, we propose a multimodal industrial anomaly defor each single modality and after combining the multimodal tection method based on an attention-enhanced memory-guided
+information. Table XII shows the computational complexity, in- network. It leverages point cloud and RGB image data to provide
+ference speed, and memory occupancy of the models using sin- a more comprehensive and accurate solution for quality congle modal and multimodal data respectively. The results indicate trol in automated production lines. By designing an attentionthat, compared to single modal data, although multimodal data enhanced dual memory bank, the single-domain inference abilrequires more memory occupancy, it achieves superior perfor- ity of each modality is fully preserved. The score distributions
+mance by integrating the advantages of each modality. Fig. 12 from different modalities are fused through score mapping, efshows the distribution of image-level scores for the “Dowel” fectively combining the strengths of point cloud data for geometsubclass under various modality conditions. In normal data, ric anomaly detection and RGB data for color anomaly detection.
+1146 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 28, 2026
+
+Additionally, we propose an anomaly scoring scheme based on [13] X. Yao, C. Zhang, R. Li, J. Sun, and Z. Liu, “One-for-all: Proposal masked
+a weight map of signed distance values, which further improves cross-class anomaly detection,” in Proc. Conf. Artif. Intell., vol. 37, no. 4,
+ 2023, pp. 4792–4800.
+segmentation precision of the model. On the MVTec 3D-AD [14] E. Horwitz and Y. Hoshen, “Back to the feature: Classical 3D features
+and Eyecandies datasets, our method achieves state-of-the-art are (almost) all you need for 3d anomaly detection,” in Proc. IEEE Conf.
+anomaly segmentation performance compared to other advanced Comput. Vis. Pattern Recognit., 2023, pp. 2968–2977.
+ [15] P. Bergmann, X. Jin, D. Sattlegger, and C. Steger, “The mvtec 3d-ad dataset
+approaches. Even under stricter false positive rate settings, our for unsupervised 3D anomaly detection and localization,” in Proc. 17th
+method maintains superior segmentation performance. In the Int. Joint Conf. Comput. Vis., Imag. Computer Graph. Theory Appl., 2022,
+future, with the advancement of computing power and the in- pp. 202–213.
+ [16] Y. Cao, X. Xu, and W. Shen, “Complementary pseudo multimodal feature
+creasing availability of multimodal data acquisition technolo- for point cloud anomaly detection,” Pattern Recognit., vol. 156, 2024, Art.
+gies, multimodal anomaly detection is expected to be widely no. 110761.
+applied in various industrial fields, driving the development of [17] C. Bi, Y. Li, and H. Luo, “Dual-branch reconstruction network for industrial anomaly detection with RGB-D data,” Proc. SPIE Pattern Recognit.,
+industrial quality inspection technologies. vol. 13180, 2024, Art. no. 1318033
+ Although the proposed method exhibits excellent AD perfor- [18] P. Bergmann and D. Sattlegger, “Anomaly detection in 3D point clouds
+mance, it still has some limitations. Memory-based approaches using deep geometric descriptors,” in Proc. IEEE/CVF Winter Conf. Appl.
+ Comput. Vis., 2023, pp. 2613–2623.
+to implement anomaly detection often bring unavoidable mem- [19] M. Rudolph, T. Wehrbein, B. Rosenhahn, and B. Wandt, “Asymmetory footprints, leading to some limitations in inference speed as ric student-teacher networks for industrial anomaly detection,” in Proc.
+well. To address these issues, future work will focus on three IEEE/CVF Winter Conf. Appl. Comput. Vis., 2023, pp. 2592–2602.
+ [20] A. Costanzino, P. Z. Ramirez, G. Lisanti, and L. Di Stefano, “Multimodal
+potential improvement directions. 1) Dynamic memory prun- industrial anomaly detection by crossmodal feature mapping,” in Proc.
+ing: This technique removes memory features with low rele- IEEE Conf. Comput. Vis. Pattern Recognit., 2024, pp. 17234–17243.
+vance to the current input during inference. It effectively reduces [21] Y. Wang et al., “Multimodal industrial anomaly detection via hybrid fusion,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2023, pp. 8032–
+memory usage while minimizing unnecessary computations. 2) 8041.
+Lightweight attention module: This module has fewer parame- [22] Y.-M. Chu, L. Chieh, T.-I. Hsieh, H.-T. Chen, and T.-L. Liu, “Shape-guided
+ters and lower computational costs. 3) Knowledge distillation: dual-memory learning for 3D anomaly detection,” in Proc. 40th Int. Conf.
+ Mach. Learn., 2023, pp. 6185–6194.
+A lightweight student network, distilled from a teacher network, [23] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Mvtec ad–a comcan be used as the feature extractor. prehensive real-world dataset for unsupervised anomaly detection,” in
+ Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2019, pp. 9592–9600.
+ [24] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting for
+ visual anomaly detection,” Pattern Recognit., vol. 112, Art. no. 107706,
+ REFERENCES 2021.
+ [25] R. Zhang, H. Wang, M. Feng, Y. Liu, and G. Yang, “Dual-constraint
+ [1] V. Wargnier-Dauchelle, T. Grenier, F. Durand-Dubief, F. Cotton, and M. autoencoder and adaptive weighted similarity spatial attention for unsu-
+ Sdika, “A weakly supervised gradient attribution constraint for inter- pervised anomaly detection,” IEEE Trans. Ind. Informat., vol. 20, no. 7,
+ pretable classification and anomaly detection,” IEEE Trans. Med. Imag., pp. 9393–9403, Jul. 2024.
+ vol. 42, no. 11, pp. 3336–3347, Nov. 2023. [26] Y. Luo and Y. Ma, “Anomaly detection for image data based on data
+ [2] M. Liu, Y. Jiao, J. Lu, and H. Chen, “Anomaly detection for medical distribution and reconstruction,” Appl. Intell., vol. 53, no. 19, pp. 22500–
+ images using teacher–student model with skip connections and multiscale 22510, 2023.
+ anomaly consistency,” IEEE Trans. Instrum. Meas., vol. 73, 2024, Art. [27] X. Du et al., “Anomaly-prior guided inpainting for industrial visual
+ no. 2520415. anomaly detection,” Opt. Laser Technol., vol. 170, 2024, Art. no. 110296.
+ [3] C. Huang, Q. Xu, Y. Wang, Y. Wang, and Y. Zhang, “Self-supervised mask- [28] D. Gudovskiy, S. Ishizaka, and K. Kozuka, “CFLOW-AD: Real-time uning for unsupervised anomaly detection and localization,” IEEE Trans. supervised anomaly detection with localization via conditional normaliz-
+ Multimedia, vol. 25, pp. 4426–4438, 2023. ing flows,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis., 2022,
+ [4] J. Li, R. Wu, S. Zhang, Y. Chen, and Z. Dong, “FASCNet: An edge- pp. 98–107.
+ computational defect detection model for industrial parts,” IEEE Internet [29] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spot-the-difference
+ Things J., vol. 11, no. 4, pp. 6622–6637, Feb. 2024. self-supervised pre-training for anomaly detection and segmentation,” in
+ [5] P. Wu, W. Wang, F. Chang, C. Liu, and B. Wang, “DSS-Net: Dynamic Proc. Eur. Conf. Comput. Vis., 2022, pp. 392–408.
+ self-supervised network for video anomaly detection,” IEEE Trans. Mul- [30] X. Wu, G. Mao, and S. Xing, “Unsupervised anomaly detection in images
+ timedia, vol. 26, pp. 2124–2136, 2024. using attentional normalizing flows,” Eng. Appl. Artif. Intell., vol. 127,
+ [6] K. Xu, X. Jiang, and T. Sun, “Anomaly detection based on stacked sparse 2024, Art. no. 107369.
+ coding with intraframe classification strategy,” IEEE Trans. Multimedia, [31] M. Campos-Romero, M. Carranza-Garcıá, and J. C. Riquelme, “Advancing
+ vol. 20, no. 5, pp. 1062–1074, May 2018. unsupervised anomaly detection with normalizing flow and multi-scale en-
+ [7] K. Doshi and Y. Yilmaz, “Fast unsupervised anomaly detection in traffic semble learning,” Eng. Appl. Artif. Intell., vol. 137, 2024, Art. no. 109088.
+ videos,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. Workshops, [32] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “Cutpaste: Self-supervised learn-
+ 2020, pp. 624–625. ing for anomaly detection and localization,” in Proc. IEEE Conf. Comput.
+ [8] J. Liu et al., “Deep industrial image anomaly detection: A survey,” Mach. Vis. Pattern Recognit., 2021, pp. 9664–9674.
+ Intell. Res., vol. 21, no. 1, pp. 104–135, 2024. [33] C. Zhao et al., “Incremental generative occlusion adversarial suppres-
+ [9] Y. Liang et al.„ “Omni-frequency channel-selection representations for sion network for person reid,” IEEE Trans. Image Process., vol. 30,
+ unsupervised anomaly detection,” IEEE Trans. Image Process., vol. 32, pp. 4212–4224, 2021.
+ pp. 4327–4340, 2023. [34] H. Deng and X. Li, “Anomaly detection via reverse distillation from one-
+[10] Y. Guo, M. Jiang, Q. Huang, Y. Cheng, and J. Gong, “MLDFR: A multi- class embedding,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.,
+ level features restoration method based on damaged images for anomaly 2022, pp. 9737–9746.
+ detection and localization,” IEEE Trans. Ind. Informat., vol. 20, no. 2, [35] H. Zhang, S. Liu, S. Lu, L. Yao, and P. Li, “Knowledge distillation for unsupp. 2477–2486, 2024. pervised defect detection of yarn-dyed fabric using the system daerd: Dual
+[11] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “Padim: A patch dis- attention embedded reconstruction distillation,” Color. Technol., vol. 140,
+ tribution modeling framework for anomaly detection and localization,” in no. 1, pp. 125–143, 2024.
+ Proc. Int. Conf. Pattern Recog., 2021, pp. 475–489. [36] J. Jeong et al., “Winclip: Zero-/few-shot anomaly classification and seg-
+[12] K. Roth et al., “Towards total recall in industrial anomaly detection,” in mentation,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2023,
+ Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2022, pp. 14318–14328. pp. 19606–19616.
+LIU et al.: MULTIMODAL INDUSTRIAL ANOMALY DETECTION VIA ATTENTION-ENHANCED MEMORY-GUIDED NETWORK 1147
+
+[37] Z. Gu et al., “Anomalygpt: Detecting industrial anomalies using large Xiaoli Luan (Senior Member, IEEE) received the
+ vision-language models,” in Proc. AAAI Conf. Artif. Intell., vol. 38, no. 3, B.Sc. degree in industrial automation and the M.Sc.
+ 2024, pp. 1932–1940. and Ph.D. degree s in control theory and control en-
+[38] C. Zhao et al., “Learning domain invariant prompt for vision-language gineering from Jiangnan University, Wuxi, China, in
+ models,” IEEE Trans. Image Process., vol. 33, pp. 1348–1360, 2024. 2002, 2006, and 2010, respectively. In 2016, she was
+[39] R. Liu et al., “Memformer: A memory based unified model for anomaly a Visiting Professor with the University of Alberta,
+ detection on metro railway tracks,” Expert Syst. Appl., vol. 237, 2024, Art. Canada. She is currently a Professor with the School
+ no. 121509. of Internet of Things Engineering, Jiangnan Univer-
+[40] R. Chen et al., “Easynet: An easy network for 3D industrial anomaly sity. She has authored or coauthored more than 80
+ detection,” in Proc. 31st ACM Int. Conf. Multimedia., 2023, pp. 7038– articles in professional journals, conference proceed-
+ 7046. ings, and technical reports in these related areas. Her
+[41] Z. Li, Y. Ge, X. Wang, and L. Meng, “3 D industrial anomaly detection via research interests include robust control and optimization of complex indusdual reconstruction network,” Appl. Intell., vol. 54, no. 20, pp. 9956–9970, trial process. She hosted and participated several research programs funded by
+ 2024. National Natural Science Foundation, and was a reviewer of a number of inter-
+[42] Y. Yu et al., “MCA: Multidimensional collaborative attention in deep con- national journals.
+ volutional neural networks for image recognition,” Eng. Appl. Artif. Intell.,
+ vol. 126, 2023, Art. no. 107079.
+[43] C. R. Qi, H. Su, K. Mo, and L. J. Guibas, “PointNet: Deep learning on
+ point sets for 3D classification and segmentation,” in Proc. IEEE Conf.
+ Comput. Vis. Pattern Recognit., 2017, pp. 652–660.
+[44] B. Ma, Y.-S. Liu, M. Zwicker, and Z. Han, “Surface reconstruction from
+ point clouds by learning predictive context priors,” in Proc. IEEE Conf.
+ Comput. Vis. Pattern Recognit., 2022, pp. 6326–6337.
+[45] B. Ma, Z. Han, Y.-S. Liu, and M. Zwicker, “Neural-pull: Learning signed Yueyang Li received the B.Sc. degree in textile endistance functions from point clouds by learning to pull space onto sur- gineering from the Wuxi Institute of Light Indusfaces,” in Proc. 38th Int. Conf. Mach. Learn., 2021, pp. 7246–7257. try, Wuxi, China, in 1994, the M.Sc. degree in com-
+[46] L. Bonfiglioli, M. Toschi, D. Silvestri, N. Fioraio, and D. De Gregorio, puter application technology and the Ph.D. degree
+ “The eyecandies dataset for unsupervised multimodal anomaly detection in light industry information technology and engiand localization,” in Proc. Asian Conf. Comput. Vis., 2022, pp. 3586–3602. neering from Jiangnan University, Wuxi, in 2004 and
+[47] P. Bergmann, K. Batzner, M. Fauser, D. Sattlegger, and C. Steger, “The 2010, respectively. He joined the Department of Commvtec anomaly detection dataset: A comprehensive real-world dataset for puter Science, Jiangnan University in 2004 and is curunsupervised anomaly detection,” Int. J. Comput. Vis., vol. 129, no. 4, rently an Associate Professor. From February to May
+ pp. 1038–1059, 2021. 2005, he was a Research Assistant with the Depart-
+[48] C. Jiang et al., “Local implicit grid representations for 3D scenes,” in Proc. ment of Computing, Hong Kong Polytechnic Univer-
+ IEEE Conf. Comput. Vis. Pattern Recognit., 2020, pp. 6001–6010. sity. From 2008 to 2009, he was a Visiting Scholar with the Medical Image
+[49] Y. Pang et al., “Masked autoencoders for point cloud self-supervised learn- Processing Group, Department of Radiology, University of Pennsylvania. His
+ ing,” in Proc. Eur. Conf. Comput. Vis., 2022, pp. 604–621. research interests inlcude machine learning, computer vision and its application
+[50] S. Zagoruyko and N. Komodakis, “Wide residual networks,” in Proc. Brit. in industry.
+ Mach. Vis. Conf., 2016, pp. 871–883.
+
+ Shuaibo Liu (Graduate Student Member, IEEE) received the M.S. degree in engineering from School of
+ Electronics and Information, Xi’an Polytechnic University, Xi’an, China, in 2024. He is currently working toward the Ph.D. degree with the Key Laboratory of Advanced Process Control for Light Industry
+ (Ministry of Education), School of Internet of Things
+ Engineering, Jiangnan University, Wuxi, China. His
+ research interests include deep learning and visual
+ anomaly detection.

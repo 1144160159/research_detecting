@@ -1,0 +1,129 @@
+                    This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+                                                                                                                                                                                               1
+
+
+
+  MTG-GAN: A Masked Temporal Graph Generative
+  Adversarial Network for Cross-Domain System Log
+                 Anomaly Detection
+                                                   Jing Zhang, Chao Luo member, IEEE, and Rui Shao
+
+ Abstract—Anomaly detection of system logs is crucial for the                                       of cross-domain log anomaly detection. For example, in 5G
+service management of large-scale information systems.                                             mobile base station management, a group of base stations that
+Nowadays, log anomaly detection faces two main challenges: 1)                                      are geographically adjacent and have close mutual influence
+capturing evolving temporal dependencies between log events to                                     are usually treated as a management cluster. When using
+adaptively tackle with emerging anomaly patterns, 2) and                                           machine learning based anomaly detection models, different
+maintaining high detection capabilities across varies data                                         clusters need to be trained separately due to significant
+distributions. Existing methods rely heavily on domain-specific                                    differences in size, external environment, and diverse
+data features, making it challenging to handle the heterogeneity                                   monitoring indicators, resulting in significant maintenance
+and temporal dynamics of log data. This limitation restricts the                                   costs. From a practical perspective, an effective cross-domain
+deployment of anomaly detection systems in practical
+                                                                                                   log anomaly detection system can significantly reduce the
+environments. In this article, a novel framework, Masked
+                                                                                                   operational costs, as it eliminates the need for system-specific
+Temporal Graph Generative Adversarial Network (MTG-GAN),
+                                                                                                   model retraining and extensive labeled data collection when
+is proposed for both conventional and cross-domain log anomaly
+detection. The model enhances the detection capability for                                         deploying to new environments. Although recent deep learning
+emerging abnormal patterns in system log data by introducing an                                    methods have achieved breakthroughs in log anomaly
+adaptive masking mechanism that combines generative                                                detection, significant limitations remain in terms of
+adversarial networks with graph contrastive learning.                                              generalization capability, dynamic dependency modeling, and
+Additionally, MTG-GAN reduces dependency on specific data                                          interpretability, constraining their practical deployment [7], [8],
+distribution and improves model generalization by using diffused                                   [9].
+graph adjacency information deriving from temporal relevance                                           In practical applications, log data distribution is highly
+of event sequence, which can be conducive to improve cross-                                        dependent on specific system environments, making cross-
+domain     detection    performance.     Experimental    results                                   system model migration a fundamental challenge [10], [11].
+demonstrate that MTG-GAN outperforms existing methods on                                           This dependency manifests at three levels: first, significant
+multiple real-world datasets in both conventional and cross-                                       differences in log formats and event types across systems result
+domain log anomaly detection.
+                                                                                                   in feature space inconsistency; second, the diverse
+Index Terms—Log Anomaly Detection, Generative Adversarial
+Networks (GANs), Temporal Data Analysis
+                                                                                                   manifestations of anomaly patterns across different systems
+                                                                                                   make single detection strategies inadequate; and third, system
+                         I. INTRODUCTION                                                           behavior patterns dynamically change with environmental and
+                                                                                                   load variations, rendering static models ineffective [12], [13].
+
+
+T       HE widespread adoption of modern distributed systems,
+        cloud computing platforms, and industrial control
+        systems has increased the importance of system log
+        data for anomaly detection and system monitoring.
+These logs capture detailed system operations, containing
+                                                                                                   For instance, research in Google’s production environment
+                                                                                                   shows that identical anomaly detection models can exhibit
+                                                                                                   performance variations 20%-30% across different server
+                                                                                                   clusters [14]. This lack of cross-system generalization
+extensive temporal information and interaction patterns [1], [2].                                  increases model deployment and maintenance costs and
+Statistics show that a large-scale distributed system can                                          significantly impacts the reliability and practicality of anomaly
+generate terabytes of log data daily, encompassing millions of                                     detection systems [15].
+event records [3]. However, the high dimensionality,                                                   Additionally, the complex temporal dependencies and
+unstructured nature, and heterogeneity of log data across                                          dynamic evolutionary characteristics among events in log data
+different systems present significant challenges for anomaly                                       present a second core challenge for anomaly detection [16].
+detection [4], [5], [6]. In reality, there are various applications                                Traditional methods tend to employ static sequence models or
+                                                                                                   fixed adjacency matrices to represent event relationships [17],
+This research is supported by the National Natural Science Foundation of                           presenting three critical issues: first, they neglect long-term
+China (Nos: 62172264) (Corresponding Author: Chao Luo).
+Chao Luo, Jing Zhang are with School of Information Science and
+                                                                                                   dependencies between events, resulting in insufficient
+Engineering, Shandong Normal University, Jinan 250014, China. Chao Luo is                          detection capability for complex anomaly patterns [18];
+with Shandong Provincial Key Laboratory for Novel Distributed Computer                             second, static modeling methods cannot adapt to dynamic
+Software Technology, Jinan 250014, China. Rui Shao is with the center of                           changes in system behavior, particularly during load
+network optimization, China Mobile Shandong Co., Ltd, Jinan 250014, China.
+                                                                                                   fluctuations or configuration updates [16], [19]; finally,
+
+
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                 This article has been accepted for publication in IEEE Transactions on Network and Service Management. This is the author's version which has not been fully edited and
+                                            content may change prior to final publication. Citation information: DOI 10.1109/TNSM.2026.3654642
+
+                                                                                                                                                                                            2
+
+existing methods struggle to effectively distinguish between                                           ●      Integration of spectral loss and feature perturbation
+regular behavioral changes and genuine anomalous events,                                                      contrastive loss to improve detection accuracy and
+leading to high false-positive rates. For example, in OpenStack                                               interpretability. Spectral loss ensures the preservation
+systems, certain anomalies might manifest as unusual                                                          of global topological structure, enhancing the
+combinations of specific event sequences or rare temporal                                                     model’s ability to capture long-term dependencies;
+patterns rather than individual anomalous events [20], [21].                                                  feature perturbation contrastive loss provides
+This dynamicity and context dependency make detection                                                         preliminary reasoning capability for anomaly
+methods based on static features inadequate for accurately                                                    detection through analysis of feature changes before
+identifying complex anomaly patterns.                                                                         and after masking, enhancing the transparency and
+                                                                                                              interpretability of detection results.
+    Challenges lie in these two issues’ interconnected and
+progressive nature: enhancing cross-system generalization
+requires models to understand the essential characteristics of
+event sequences across different systems, which depends on                                                                       II. RELATED WORK
+accurate modeling of temporal dependencies. Simultaneously,                                     A. Conventional Log Anomaly Detection
+the quality of temporal feature modeling directly influences the                                   Early research on log anomaly detection relied heavily on
+model’s adaptability to new systems. This complex interaction                                   rule-based and statistical approaches. Principal component
+demands solutions to both challenges while achieving                                            analysis (PCA), as introduced by Xu et al. [23], pioneered the
+interpretability in anomaly detection results to support system                                 use of dimensionality reduction to identify anomalies in large-
+maintenance personnel’s decision-making processes [22].                                         scale structured log data, marking a significant advancement
+    This paper introduces MTG-GAN, a novel approach to                                          in automated anomaly detection. Similarly, the clustering-
+cross-domain system log anomaly detection leveraging                                            based LogCluster algorithm, developed by Vaarandi et al.,
+masked temporal graph generative adversarial networks.                                          facilitated pattern recognition in large-scale textual log
+MTG-GAN addresses the critical challenges of generalization                                     datasets, offering a straightforward yet effective means of
+and accurate temporal dependency modeling in diverse system                                     detecting anomalous events [24]. The introduction of deep
+environments. By incorporating an adaptive masking                                              learning has significantly expanded the capabilities of log
+mechanism into the training process, MTG-GAN learns robust                                      anomaly detection. DeepLog, proposed by Du et al., utilized
+representations by selectively masking portions of the                                          Recurrent Neural Networks (RNNs) to predict future log
+adjacency matrix, preventing over-reliance on system-specific                                   events, enabling real-time anomaly detection in sequential data
+data patterns. This masking strategy, coupled with a generative                                 [1]. Expanding this approach, Meng et al. developed
+adversarial network (GAN) architecture, empowers the model                                      LogAnomaly, which incorporates semantic embeddings to
+to generate diffused adjacency matrices, significantly                                          detect sequential and quantitative anomalies, thereby
+improving robustness against distant data distributions.                                        improving robustness to unseen log patterns [25]. LogRobust,
+Further enhancing performance, a spectral loss function                                         proposed by Zhang et al., addressed data instability issues with
+preserves global topological structure during adjacency matrix                                  Bi-LSTM and attention mechanisms, further enhancing
+representation learning, enabling the capture of both short-                                    detection reliability under dynamic log environments [26].
+term anomalies and long-term dependencies. Finally, a feature                                   Graph-based methods have emerged as a robust alternative for
+perturbation contrastive loss facilitates anomaly reasoning by                                  capturing complex interdependencies between log events. Yan
+comparing feature changes before and after masking, adding                                      et al. introduced temporal event graphs, leveraging graph-
+interpretability to the detection process and contributing to a                                 based link prediction for anomaly detection in dynamic
+more transparent understanding of anomaly causation. The                                        systems [27]. Similarly, Velickovic et al.'s Deep Graph
+main contributions are:                                                                         Infomax framework established a strong foundation for
+     ● Design of a diffused graph generation module based                      

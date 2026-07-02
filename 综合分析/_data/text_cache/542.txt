@@ -1,0 +1,148 @@
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 35, NO. 3, MARCH 2025                                                2161
+
+
+
+
+ Self-Supervised Monocular Depth Estimation From
+  Videos via Adaptive Reconstruction Constraints
+           Xinchen Ye , Member, IEEE, Yuxiang Ou, Biao Wu, Rui Xu , Member, IEEE, and Haojie Li
+
+
+
+   Abstract— To estimate depth maps from monocular videos in                 such as virtual reality [1], scene reconstruction [2] and
+a self-supervised way, existing methods simultaneously predict               autonomous driving [3]. Despite the success of supervised
+the pose changes between adjacent frames and the depth maps                  methods [4], [5], [6], they are hindered by the need of
+of each frame, and then reconstruct the forward or backward
+frames using them, thereby casting depth estimation as a frame               time-consuming and labor-intensive ground truth annota-
+reconstruction problem. The corresponding reconstruction loss,               tion. As an alternative, existing video-based self-supervised
+which serves as a key supervision signal for training the whole              methods [7], [8], [9] casts depth estimation as a frame
+network, can adversely affect the depth estimation accuracy if it            reconstruction problem. They simultaneously predict the pose
+is not properly established. In this paper, we propose a novel self-         changes between two adjacent frames (called source frame and
+supervised monocular depth estimation method from videos via
+adaptive reconstruction constraints, i.e., designing the loss func-          target frame respectively) and the depth map of target frame,
+tions by establishing more accurate reconstruction constraints.              and then reconstruct the source frame on the target view using
+Specifically, we first propose a pose-adaptive reconstruction                the predicted pose and depth information. The photometric
+loss to adaptively select the optimal pose parameterizations                 reconstruction loss, which measures the consistency between
+that yield the minimum reconstruction errors, reducing the                   the reconstructed frame and the original target frame, serves as
+impact of inaccurate posture on frame reconstruction. Then,
+we propose a region-sensitive reconstruction loss that fully                 a key supervision for evaluating the quality of depth estimation
+utilizes the pretrained image reconstruction model to adaptively             and guiding the training of the whole network. However,
+identify the poorly reconstructed regions and characterize the               when this loss is not effectively established, it can potentially
+deviation of these regions on feature space. Finally, we addi-               lead to detrimental effects and hinder the accuracy of depth
+tionally construct a multi-frame depth estimation network and                estimation.
+design a reconstruction-guided bidirectional distillation loss to
+adaptively adjust the direction of distillation between networks                Therefore, some current methods focus on improving
+of multi-frame and monocular depth estimation based on their                 the reconstruction loss from the following aspects: 1) uti-
+current reconstruction quality, which encourages them to learn               lizing feature-level reconstruction loss [10], [11] which
+from each other and benefits the core task of monocular                      leverages image features extracted from an additional pre-
+depth estimation. With our proposed losses, we achieve superior
+                                                                             trained image reconstruction auto-encoder model to strengthen
+performance in comparison with state-of-the-art methods on
+benchmark datasets.                                                          the pixel fidelity in textureless areas; 2) identifying and
+                                                                             excluding occluded areas using masking [12], [13], [14],
+  Index Terms— Unsupervised, depth estimation, monocular,
+adaptive reconstruction, video.
+                                                                             or employing minimum reprojection of adjacent frames [7] to
+                                                                             mitigate the photometric inconsistencies caused by occlusions;
+                                                                             3) developing regularization for brightness [15], [16], [17] to
+                         I. I NTRODUCTION                                    address illumination inconsistencies between adjacent frames.
+                                                                             By modifying the reconstruction loss, the above methods can
+
+M      ONOCULAR depth estimation is a fundamental
+       and critical computer vision task that estimates the
+pixel-wise depth information from 2D images. Results from
+                                                                             improve the accuracy of depth estimation to some extent,
+                                                                             but many problems are still ignored when designing the
+                                                                             reconstruction loss.
+accurate depth estimation can facilitate various applications                   First, based on our observations of real-world driving sce-
+                                                                             narios, vehicles (or cameras) predominantly travel in straight
+  Received 16 August 2024; revised 10 October 2024; accepted 2 November
+2024. Date of publication 6 November 2024; date of current version 7 March
+                                                                             trajectories, with turns occurring primarily at lane changes
+2025. This work was supported in part by the National Natural Science        or intersections. This observation is further corroborated by
+Foundation of China (NSFC) under Grant 62376053, Grant 61976038, and         an analysis of the KITTI dataset, as depicted in Figure 1,
+Grant 61932020. This article was recommended by Associate Editor S. He.
+(Corresponding author: Haojie Li.)
+                                                                             which highlights the imbalanced nature of rotation and trans-
+  Xinchen Ye, Yuxiang Ou, Biao Wu, and Rui Xu are with the DUT-RU            lation in real-world scenarios, making it difficult for previous
+International School of Information Science and Engineering, Dalian Uni-     methods to simultaneously focus on the estimation of both
+versity of Technology, Dalian, Liaoning 116024, China, and also with the
+Key Laboratory for Ubiquitous Network and Service Software of Liaoning
+                                                                             rotation and translation in the pose network. It is worth
+Province, Dalian 116024, China.                                              noting that rotation is highly non-linear and often more dif-
+  Haojie Li is with the College of Computer Science and Engineering,         ficult to estimate than translation. As a result, this limitation
+Shandong University of Science and Technology, Qingdao 266590, China
+(e-mail: hjli@sdust.edu.cn).
+                                                                             has a significant negative impact on the reconstruction loss,
+  Digital Object Identifier 10.1109/TCSVT.2024.3492201                       which in turn affects the performance of depth estimation.
+                      1051-8215 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+2162                                              IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 35, NO. 3, MARCH 2025
+
+
+
+                                                                                   reconstruction. Instead of directly outputting a single 6-DoF
+                                                                                   pose vector, we propose to decompose the pose network
+                                                                                   into three parallel branches, each dedicated to independently
+                                                                                   estimating pure translation, pure rotation and full 6-DoF pose
+                                                                                   components. Upon this, we adaptively select the optimal pose
+                                                                                   parameterizations that yield the minimum reconstruction errors
+                                                                                   to establish the reconstruction loss, which can efficiently
+                                                                                   utilize the complementary information provided by differ-
+Fig. 1. Statistical results on the KITTI odometry dataset [19] consisting of       ent pose estimators. Second, we propose a region-sensitive
+11 sequences. We use the ground truth poses to analyze the rotation between        reconstruction loss that fully utilizes the pretrained image
+consecutive frames. To facilitate the interpretation, we convert the rotation
+matrices to Euler angles and examine the relative rotation angles to investigate
+                                                                                   reconstruction auto-encoder model to adaptively identify the
+the proportion of the rotations that exceed a certain angle threshold. The table   poorly reconstructed regions on feature space. We first apply
+specifically shows the percentages of rotation angles exceeding 0.5◦ , 0.75◦ ,     the warping and reconstruction selection on source frame to
+1◦ , and 1.25◦ in sequences 01, 03, and 05 (left), and the overall trajectory
+plot for sequence 08 (right).
+                                                                                   obtain a reconstructed frame, then form the loss by computing
+                                                                                   the difference between features of both reconstructed and
+                                                                                   target frames extracted from the pretrained model. Thus, the
+Second, although the feature-level reconstruction loss [11] can                    model can easily recognize the poorly reconstructed regions in
+explicitly constrain each pixel to be discriminative in feature                    the reconstructed frame as an anomaly, and provide significant
+space, it does not fully exploit the capability of the pretrained                  deviated features than those of target frame, forcing the net-
+image reconstruction auto-encoder model to emphasize on                            work to optimize these regions by back-propagating a greater
+the feature inconsistency caused by poor frame reconstruction                      loss caused by feature inconsistency. Finally, we additionally
+in self-supervised depth estimation. From the perspective of                       construct a multi-frame depth estimation network as a teacher
+anomaly detection [18], the auto-encoder model pretrained                          and design a reconstruction-guided bidirectional distillation
+on original target frames can obviously reconstruct a target                       loss to adaptively adjust the direction of distillation between
+frame better than an abnormal frame.1 Thus, introducing such                       networks of multi-frame and monocular depth estimation
+reconstruction deviations from the pretrained auto-encoder                         based on their current reconstruction quality. This encourages
+model into the loss design can better identify the poorly                          them to learn from each other in an iterative collaborative
+reconstructed regions in the abnormal frame and properly                           training and benefits the core task of monocular depth estima-
+guide the training of the depth estimation network.                                tion.
+   In addition, the monocular depth estimation network only                           Through designing reasonable loss functions and impos-
+acquires limited information because of the single-frame input,                    ing more accurate reconstruction constraints into the losses,
+which fails to fully exploit temporal information from adja-                       our method achieves superior performance of self-supervised
+cent frames. Recent methods [20], [21], [22] have attempted                        monocular depth estimation in comparison with state-of-the-
+to address this issue by constructing a teacher network to                         art methods on benchmark datasets. Besides, our improvement
+take more associative data (e.g., stereo images) as input                          focuses on the loss design and is suitable for assembly on
+to infer depth maps. The teacher provides more accurate                            any backbone network, which would not increase the runtime
+depth information to effectively transfer knowledge to the                         of depth estimation during testing. To summarize, our main
+monocular depth estimation network (student) through uni-                          contributions are listed as follows:
+                                                                                      • We propose a pose-adaptive reconstruction loss to adap-
+directional distillation. However, these methods ignore the
+                                                                                         tively select the optimal pose parameterizations that yield
+fact that the teacher also has errors in depth estimation and
+                                                                                         the minimum reconstruction errors to establish the recon-
+is even less accurate than student in some areas. Note that,
+                                                                                         struction loss, reducing the impact of inaccurate posture
+monocular depth estimation relies mainly on the understanding
+                                                                                         on frame reconstruction.
+of appearance and semantic knowledge within features, which
+                                                                                      • We propose a region-sensitive reconstruction loss that
+can better handle occluded regions and avoid unreliable depth
+                                                                                         fully utilizes the pretrained image reconstruction model
+estimation issues that often arise in multi-view (temporal or
+                                                                                         to adaptively identify the poorly reconstructed regions as
+stereo) depth estimation. Therefore, it is necessary to design
+                                                                                         anomaly and characterize the feature deviation of these
+mutual learning strategies to promote learning from respective
+                                                                                         regions on feature space.
+strengths (multi-view vs. monocular) and ultimately facilitate
+                                                                                      • We propose a reconstruction-guided bidirectional distilla-
+the task of monocular depth estimation.
+                                                          

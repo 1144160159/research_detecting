@@ -1,0 +1,2699 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [668] Enhancing Trust Management System for Connected Autonomous Vehicles Using Machine Learning Methods: A Survey
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：668
+题名：Enhancing Trust Management System for Connected Autonomous Vehicles Using Machine Learning Methods: A Survey
+年份：2025
+DOI：10.1109/tits.2025.3647284
+来源：IEEE Transactions on Intelligent Transportation Systems
+PDF：paper/10.1109_TITS.2025.3647284.pdf
+已有粗分类：数据集、基准、综述与开源工具
+二级关联：IoT、车联网、工业互联网与边缘安全、其他AI安全与跨域异常检测
+相关性：弱相关，分数 4
+已有代码状态：候选不可访问；ML-TMS-CAV-Survey; ML-based-TMSCAV-Survey
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\668.txt
+- 原始字符数：173754
+- 本次发送字符数：140043
+- 是否截断：True
+
+代码包：
+- 仓库：ML-TMS-CAV-Survey
+  - URL：https://github.com/octoberzzzzz/ML-TMS-CAV-Survey
+  - 状态：failed
+  - 本地目录：source\ML-TMS-CAV-Survey
+  - 顶层结构：
+  - 主要语言：
+  - README 标题：
+  - README 运行线索：
+  - 关键文件：{}
+  - 数据集线索：
+- 仓库：ML-based-TMSCAV-Survey
+  - URL：https://github.com/octoberzzzzz/ML-based-TMSCAV-Survey
+  - 状态：failed
+  - 本地目录：source\ML-based-TMSCAV-Survey
+  - 顶层结构：
+  - 主要语言：
+  - README 标题：
+  - README 运行线索：
+  - 关键文件：{}
+  - 数据集线索：
+
+论文正文包开始：
+<<<PAPER_TEXT
+3862
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+Enhancing Trust Management System for
+Connected Autonomous Vehicles Using
+Machine Learning Methods: A Survey
+Qian Xu , Lei Zhang , Member, IEEE, Yixiao Liu , and Zhenning Li , Member, IEEE
+
+Abstract—Connected Autonomous Vehicles (CAVs) operate in
+dynamic, open, and multi-domain networks, rendering them
+vulnerable to various threats. Trust Management Systems (TMS)
+systematically organize the essential steps in the trust mechanism,
+identifying malicious nodes against both internal and external
+threats, while ensuring reliable decision-making for more cooperative tasks. Recent advances in machine learning (ML) offer
+significant potential to enhance TMS, particularly for the stringent requirements of CAVs, such as CAV nodes moving at varying
+speeds and exhibiting opportunistic and intermittent network
+behavior. Those features distinguish ML-based TMS from social
+networks, static IoT, and Social IoT. This survey proposes a
+novel three-layer ML-based TMS framework for CAVs in the
+vehicle-road-cloud integration system, comprising a trust data
+layer, a trust calculation layer, and a trust incentive layer. A sixdimensional taxonomy of objectives is proposed. Furthermore,
+the principles of ML methods for each module in each layer are
+analyzed. Then, recent studies are categorized based on traffic
+scenarios that are against the proposed objectives. The survey
+concludes by proposing future research directions that address
+open issues and align with current trends. An accompanying
+repository of state-of-the-art works and open-source projects
+is available at: https://github.com/octoberzzzzz/ML-based-TMSCAV-Survey
+Index Terms—Trust management system, connected
+autonomous vehicles, supervised machine learning, semisupervised machine learning, reinforcement learning.
+
+Received 25 August 2024; revised 8 May 2025 and 4 October 2025;
+accepted 1 December 2025. Date of publication 5 January 2026; date of
+current version 6 April 2026. This work was supported in part by the National
+Natural Science Foundation of China under Grant 52432012 and Grant
+72474158, in part by Shanghai Collaborative Innovation Research Center for
+Multi-Network and Multi-Modal Rail Transit, and in part by the Fundamental
+Research Funds for the Central Universities under Grant 2023-4-ZD-03.
+The Associate Editor for this article was X. Cheng. (Corresponding author:
+Lei Zhang.)
+Qian Xu is with the Key Laboratory of Road and Traffic Engineering,
+Ministry of Education, and the College of Transportation, Tongji University,
+Shanghai 201804, China, and also with the State Key Laboratory of Internet
+of Things for Smart City, University of Macau, Macau 999078, China (e-mail:
+qianxu@um.edu.cn).
+Lei Zhang is with the College of Electronic and Information Engineering
+and Shanghai Research Institute for Intelligent Autonomous Systems, Tongji
+University, Shanghai 201804, China (e-mail: reizhg@tongji.edu.cn).
+Yixiao Liu is with Shanghai Research Institute for Intelligent Autonomous
+Systems, Tongji University, Shanghai 201804, China.
+Zhenning Li is with State Key Laboratory of Internet of Things for Smart
+City, University of Macau, Macau 999078, China.
+Digital Object Identifier 10.1109/TITS.2025.3647284
+
+I. I NTRODUCTION
+ONNECTIVITY, intelligence, electrification and sharing
+are key trends reshaping the automotive industry. Connected Autonomous Vehicles (CAVs) are products of highly
+connected and autonomous levels, transforming traditional
+transportation means into mobile agents equipped with powerful sensory, computational and data storage capabilities.
+CAVs promise to revolutionize transportation by improving
+efficiency, enhancing safety, and enabling sustainable operations. However, cyber threats have grown significantly over
+the past decade, characterized by large-scale, high-frequency
+attacks with a high degree of invisibility [1]. In response, regulatory frameworks such as UN R155 [2](the first mandatory
+vehicle cybersecurity regulation) and ISO/SAE 21434 [3] (the
+first international vehicle cybersecurity standard) have been
+established since 2021.
+These regulations have accelerated CAVs and Intelligent
+Transportation Systems (ITS) into a new era, shifting focus
+from basic safety to integrated safety-security-privacy frameworks. The defense-in-depth principle has been implemented
+in vehicular security through a two-tier framework, where
+proactive defenses against certificate-based internal threats
+(Line-1) and responsive countermeasures against external
+threats (Line-2) are employed. While a rule-based Intrusion
+Detection System (IDS) detects attacks through predefined signatures or anomaly thresholds, it fails to recognize malicious
+behaviors by entities with legitimate identities. In contrast, the
+trust mechanism serves as a cross-layer framework, facilitating
+prevention and real-time protection. The trust mechanism is
+expected to ensure CAVs evolve from basic intelligence to
+verifiable trust.
+Trust is defined as a set of activities and a security policy,
+where element x trusts element y if and only if x has
+confidence that y will behave in a well-defined way that does
+not violate the given policy [4]. The Trust Management System
+(TMS) is a way of organizing the trust mechanism. TMS
+can be classified into trust value-based TMS, trust value-free
+TMS (i.e., cryptography-based solutions [5], [6]), and hybrid
+TMS. This survey focuses on trust value-based TMS, which
+quantifies trust through a series of steps.
+
+C
+
+A. Motivations of ML-Based TMS for CAV
+Traditional TMS methods rely on statistical weighting,
+inference modeling and graph theory. In contrast, machine
+
+1558-0016 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+learning (ML),as a branch of artificial intelligence(AI),offers
+a data-driven approach to uncovering patterns, making predictions and automating decisions. Four key factors have
+driven the growing adoption of ML-based TMS for CAV
+(TMS-CAV).
+• CAV intelligence and massive multi-source heterogeneous data: The generation of multi-source
+data enables ML applications across CAV perception,
+decision-making, and control. Notable advances include:
+ML-based collaborative perception, autonomous driving
+decisions with deep reinforcement learning (DRL), and
+traffic prediction using Graph Neural Networks (GNN).
+• Cross-domain intelligence for TMS: ML-based TMS
+solutions have succeeded in Internet of Things (IoT),
+social networks and other domains. These methodologies
+provide valuable insights for adapting TMS to CAVspecific challenges.
+• Theoretical innovations driven by CAV characteristics: The high dynamism, real-time demands, and
+collaborative nature of CAVs require novel TMS frameworks. Traditional methods (e.g., Bayesian Interference
+and Fuzzy Logic) struggle with inaccuracy and inefficiency. Instead, modern ML methods, such as GNNs, can
+better capture the dynamic topology of CAV networks.
+• Advances in ML methods: Breakthroughs in ML, such
+as Transformer, DRL, and Federated Learning, demonstrate strong potential to address TMS-CAV challenges,
+including privacy preservation and real-time processing.
+
+3863
+
+Fig. 1. Scope of the survey.
+
+many applications. Surveys on TMS-CAVs (Type 3)
+examine trust methods for CAVs, but often relegate ML
+methods to subsidiary sections. Surveys on novel ML
+solutions (Type 4) summarize the ML advances with less
+focus on TMS or CAV. Therefore, surveys on ML-based
+TMS for CAVs (Type 5) uniquely bridge ML-based TMS
+and CAV-specific challenges.
+• Innovative perspectives: Unlike prior TMS-CAV surveys (Type-3), this survey of Type-5 distinguishes itself
+through several innovative perspectives. Rather than simply cataloging methods, a novel taxonomy is proposed
+based on the hierarchical architecture of TMS. Additionally, we investigate how ML enhances each functional
+module.
+• Diverse CAV application scenarios: Beyond cataloging
+methods, this survey emphasizes practical applications of
+TMS in CAV and ITS contexts, demonstrating their realworld efficacy.
+
+B. Scope and a Brief Comparison With Current Surveys
+Despite the increasing number of studies on ML-based
+TMS-CAVs, there have been few systematic surveys of this
+critical intersection. To bridge this gap, this survey synthesizes
+existing work on ML-based TMS-CAVs and provides forwardlooking insights through innovative analytical perspectives. To
+the best of our knowledge, this survey represents the first indepth survey of ML-based TMS-CAVs, with a particular focus
+on the latest advancements in both ML and TMS research.
+Given the rapid evolution of TMS, CAVs, and ML,
+comprehensive coverage is impractical. Consequently, this
+survey adopts an exploratory approach, including emphasizing core literature, critically analyzing current studies
+and emerging challenges, and pointing out future research
+directions. Methodologically, while traditional Systematic
+Literature Reviews (SLRs) typically follow the PRISMA
+(Preferred Reporting Items for Systematic Reviews and MetaAnalyses) framework, this survey implements a simplified
+PRISMA process to enhance transparency and standardization.
+As shown in Fig.1, prior surveys are categorized into five
+overlapping yet distinct categories. A detailed comparison of
+representative surveys is provided in Section II; here, we
+highlight key distinctions. The scope of this survey is more
+narrowly focused but offers a more in-depth exploration.
+• Different themes: Existing surveys on security in CAVs
+(Type 1) treat trust as a subset of broader security frameworks. Meanwhile, surveys on TMS for IoTs (Type 2)
+focus on generic trust solutions with CAVs as one of
+
+C. Challenges of Surveying on ML-Based TMS for CAVs
+This survey identifies four key challenges in current
+research, spanning classification methods, theoretical foundations, CAV applications, and ML techniques.
+Challenges-1 Lack of a novel taxonomy for ML-based
+TMS for CAVs: Existing surveys (Type 1-4) are tailored
+to their specific topics and research scopes. Traditional
+TMS methods and ML-based TMS methods differ fundamentally in their theoretical foundations and classification
+criteria. While ML employs taxonomies like supervised or
+unsupervised learning, TMS involves several processes from
+trust-related data collection, trust computation to trust-related
+attack defense. Thus, it poses a challenge for this survey,
+where existing taxonomies are insufficient to cover emerging
+ML-based TMS and CAV needs.
+Challenges-2 Lack of systematic theoretical foundation
+and evaluation criteria: While existing TMS surveys (Type 2)
+have established theoretical frameworks and evaluation criteria
+for IoT and social networks, these prove inadequate for
+ML-based TMS in CAVs. Traditional TMS methods differ
+fundamentally from ML-based TMS, particularly in CAV contexts. Moreover, the conventional criteria focusing solely on
+effectiveness prove inadequate for evaluating ML-based TMS
+for CAVs. New criteria incorporating ML-specific metrics
+(precision, recall, F1-score) are needed to properly assess
+performance in CAV contexts.
+
+3864
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+Challenges-3 Insufficient integration of TMS with CAV
+applications: TMS methods have been employed in advanced
+techniques, such as edge computing and crowdsensing. Meanwhile, these techniques are also important in ITS and CAVs.
+However, existing surveys on TMS for IoTs (Type 2) and TMS
+for CAVs (Type 3) mainly adopt methodological approaches
+as taxonomy criteria, rather than CAV applications. This gap
+highlights the urgent need to establish a novel taxonomy of
+CAV application-driven TMS.
+Challenges-4 Limited coverage of advanced ML methods: ML methods continue to advance in key areas, including
+privacy-preserving techniques, model interpretability, and
+defense against adversarial attacks. These solutions are also
+essential for ML-based TMS for CAVs. Recent surveys on
+novel ML solutions (Type-4) have documented these advancements on ML, and some studies have begun to utilize them.
+However, existing surveys of TMS for IoTs (Type-2) and
+TM for CAVs (Type-3) have failed to sufficiently cover these
+advanced ML methods.
+D. Contributions
+To address the aforementioned challenges and meet the
+requirements of an exploratory survey, this survey has four
+key contributions:
+1) Establishing a Three-Layer ML-Based TMS Framework
+for CAVs Assisting the Description of the Survey (Addressing
+Challenge-1): A novel three-layer framework for ML-based
+TMS in CAVs is established, comprising the trust data layer,
+the trust computation layer and the trust incentive layer.
+Unlike existing TMS surveys for IoTs (Type-2) and CAVs
+(Type-3) that focus on methods and individual steps (mainly
+ML-based trust assessment), a more systematic perspective
+is provided where ML applications are considered across all
+TMS components.
+2) Summarizing the Principle and Evaluation Criteria of
+ML-Based TMS for CAVs (Addressing Challenge-2): The
+requirements of ML-based TMS for CAVs are clarified. Suitable ML methods for each level are analyzed and compared
+with traditional TMS methods. The advantages and challenges
+of ML-based TMS for CAVs are analyzed. Comprehensive evaluation metrics are developed by combining standard
+ML performance metrics (e.g., F1-score) with CAV-specific
+requirements like real-time processing capabilities and system
+scalability.
+3) Evaluating the Latest ML-based TMS Methods According to Common CAV Scenarios (Addressing Challenge-3):
+It is more practical to discuss under CAV scenarios. Given
+that it is still in its early stage, traditional methods are also
+referred in the same scenarios, as well as relevant advances in
+other areas. We summarize the commonalities and differences
+of TMS for CAVs in different scenarios.
+4) Summarizing Work on Advanced ML (Addressing
+Challenge-4): Beyond basic ML methods, the advanced ML
+methods are also considered, such as DRL, GNN and federated learning. Their potential applications on TMS are also
+analyzed. Open issues and future directions are subsequently
+analyzed.
+
+Fig. 2. Organization framework of this survey.
+
+E. Organizations
+As shown in Fig.2, the survey is organized as follows:
+Section II explains the methodology of this survey and
+compares it with related surveys. Section III explains the
+concept of trust and examines both traditional methods and
+ML algorithms for TMS, highlighting their applications and
+limitations. Section IV proposes and analyzes the three levels
+of TMS for CAVs, discussing the opportunities and challenges
+of ML and proposing evaluation metrics. Section V reviews the
+latest works on TMS in various CAV scenarios, with a focus
+on ML-based solutions. Section VI provides a discussion of
+the current state of research and identifies gaps. Section VII
+outlines open issues and future directions. Section VIII makes
+a conclusion.
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+3865
+
+Fig. 3. Growth trend of publication volume over time.
+
+II. M ETHODOLOGY AND R ELATED S URVEYS
+
+Fig. 4. Distribution of included publications by journal source after screening.
+
+A. Five Steps by the PRISMA Method
+The following five key steps are used to ensure transparency
+and reproducibility. Core literature and critical analysis are
+emphasized.
+1) Formulation of the Research question (RQ): Based on
+the analysis of the challenges and opportunities, this survey is
+organized around the following five RQs.
+RQ1: What are the benefits and mechanics of applying
+ML methods to every step of TMSs for CAV? It aligns with
+Contribution 1) and Contribution 2).
+RQ2: What are the criteria for ML-based TMS for CAVs?
+It aligns with Contribution 2).
+RQ3: Do the current works fulfill these criteria? It aligns
+with Contribution 2).
+RQ4: How can TMS be combined with emerging ITS
+applications to guarantee better services? It aligns with
+Contribution 3).
+RQ5: What are the future directions for improving existing
+ML-based TMSs in CAVs? It aligns with Contribution 4).
+2) Search Strategy: Based on these RQs, many combinations of keywords are proposed for the search engine.
+Specifically, four groups of keywords are listed: Group I
+includes keywords about trust, trust management and TMS.
+Group II includes keywords related to ML. Group III includes
+keywords related to CAVs. Group IV includes keywords
+related to the purpose of TMS, especially security.
+The following combinations are used to identify specific
+types of studies. i) Group III + Group V = Studies on Security
+in CAVs. ii) Group I + Group IV = Studies on TMS for
+IoTs. iii) Group I + Group III = Studies on TMS for CAVs.
+iv) Group II = Studies on security in novel ML solutions. v)
+Group I + Group IV + Group III + Group V= Studies on MLbased TMS for IoT. vi) Group I + Group IV + Group III +
+Group V= Studies on ML-based TMS for CAVs.
+After searching and distinguishing, specific publications
+have been placed in the appendix for reproduction. As shown
+in Fig.4, the growth trend of publication volume over time is
+
+TABLE I
+C ATEGORIES AND K EYWORDS
+
+given. Publications of TMS for CAVs are rapidly increasing,
+inspired by TMS for IoT. Thus, surveying the ML-based TMS
+for CAVs is significant.
+3) Rigorous Screening Process: References were selected
+based on quality, methodological novelty, trust indicators, and
+proposed techniques. Specifically, the inclusion criteria are as
+follows.
+• Language and type: Papers written in English and in the
+Web of Science core index.
+• Contents: Keywords in Table I should appear in the title,
+abstract, or keywords.
+• Range: From 2018 to the present.
+• Topic priorities: i) ML-based TMS for CAVs. ii) MLbased TMS methods for IoT (due to the limited number
+of suitable studies currently available, though this is
+increasing). iii) ML methods for ITS. iv) Traditional
+TMS methods for CAVs, which serve as a comparative
+baseline.
+• Manuscript Priorities: i) Highly cited regular papers (20+
+citations) from top-tier journals (JCR Q1/Q2) from 2018
+to the present. ii) Recent studies in journals from 2022 to
+
+3866
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+the present. iii) High-quality surveys and studies on the
+conference from 2018 to the present.
+The exclusion criteria are as follows:
+• ML methods not related to CAV or TMS.
+• References to ML-based TMS lacking sufficient detail.
+• Studies not peer-reviewed.
+• Studies with methodological flaws, unreliable data, or
+lower citation before 2020.
+• Hybrid encryption-based trust and trust value-based studies are considered, but studies only covering encryptionbased trust are excluded.
+• Some ML-based TMS methods for OSN are considered,
+but studies covering only social trust with traditional
+methods are excluded.
+Due to space limitations that prevent the inclusion of all surveyed publications in the reference, the number of publications
+is 172 that meet rigorous selection criteria. We investigated
+their journal source. As shown in Fig.4, this distribution
+analysis demonstrates the breadth of authoritative sources
+underpinning our survey and identifies dominant publication
+venues in this research domain. The statistical process will be
+shown in our repository1 .
+4) Information Extraction and Analysis: The following
+information on existing research is identified and summarized,
+i.e., date, type, strengths, weaknesses, research gaps, and
+potential research directions.
+5) Quality Assessment and Critical Analysis: Qualitative
+and quantitative methods are used to answer the above
+five RQs.
+B. Related Surveys
+Aligned with the five-category classification of existing
+surveys outlined in Section I, we systematically examine the
+first four types. This survey on ML-based TMS for CAVs fills
+a critical gap as the fifth category, for which no prior survey
+exists.
+1) Surveys on Security in CAVs Including Trust: Tracing the
+trajectory of CAV security research, the survey by [7] in 2019
+pioneered systematic investigations of misbehavior detection
+in C-ITS and laid conceptual groundwork for TMSs through
+its comparative analysis of node-centric versus collaborative
+architectures. In 2019, security, privacy and trust of Vehicular
+Ad-Hoc Networks (VANET) were discussed together in [8].
+Recent surveys also highlight these issues, such as security for
+autonomous vehicles using ML and blockchain [9] and V2X
+cybersecurity [10], both published in 2023.
+These surveys systematically summarized CAV security
+methods and introduced TMS concepts for CAV, but they did
+not provide a detailed summary of TMS methods for CAV.
+2) Surveys on TMS for IoT: A large number of TMS on
+the different types of IoT are proposed, such as edge-based
+IoT [11], blockchain edge-based IoT [12], social IoT [13],
+the general IoT [14], heterogeneous network [15]. In 2022,
+a taxonomy of trust models [15] is proposed, consisting of
+decision models, evaluation models and management models,
+1 https://github.com/octoberzzzzz/ML-TMS-CAV-Survey
+
+where ML methods are briefly discussed in part of the evaluation models.
+These surveys provide a solid understanding of the basics of
+TMS, including trust attributes, components of trust management, systems organizations beyond simple trust assessments,
+and classifications of TMS. However, they lack a detailed
+discussion on CAV and more advanced ML methods.
+3) Surveys on TMS for CAVs: The subsequent research
+has extended and started to specialize in TMS for CAVs. In
+2022, Hussain et al. [16] conducted a comprehensive survey on
+TMS for VANET, detailing the features of VANETs impacting
+TMS in VANET, methods for TMS in VANET, and TMS
+in enabling techniques. In 2022, Hbaieb et al. [17] analyzed
+V2X challenges, including security issues posed by V2X
+characteristics, trust-related attacks, and security attacks for
+IoV. In 2022, Zavvos et al. [18] proposed a taxonomy of
+privacy and trust for IoV at the service level.
+These surveys examined TMS for CAVs from a broad
+perspective, and their coverage was limited by focusing
+primarily on studies from 2014 to 2022, when ML-based
+TMS approaches were relatively scarce. They have identified
+future research directions in ML-based TMS and trust-based
+services. Instead of ML-based TMS as a branch, we conduct a specialized, in-depth examination of ML-based TMS
+for CAV.
+4) Surveys on Novel ML Solutions in Security Solutions
+and ITS: Macas et al. [19] surveyed the deep learning
+applied in cybersecurity, but TMS methods were not covered.
+Luo et al. [20] surveyed deep learning methods in anomaly
+detection for Cyber-physical Systems (CPS) but did not mention TMS. Boualouache et al. [21] proposed a taxonomy of
+ML-based misbehavior detection systems for 5G and beyond
+vehicular networks. More ML methods are applied to ITS,
+such as federated learning [22], [23], graph-neural networks
+[24], and transfer learning, etc.
+These surveys analyzed the application of novel ML in ITS
+and recognized the importance of trust in open challenges.
+However, TMS methods were not combined with the transportation scenarios.
+5) Surveys on ML-Based TMS: In 2020, Wang et al. surveyed the ML-based trust evaluation [25]. It only discussed
+traditional ML methods and did not consider the application
+of GNN, RL, and other advanced ML methods. Subsequently,
+with the rapid development of these methods, Luo et al. [26]
+summarized the GNN-based trust evaluation in 2025.
+Our survey on ML-based TMS for CAV is of this type. It
+extends prior general ML-based trust assessment by focusing
+on CAV applications and advancing from trust evaluation to
+comprehensive steps of TMS. Besides, it incorporates recent
+progress across TMS, ML and CAV.
+III. P RELIMINARIES OF T RUST AND
+M ACHINE L EARNING
+While previous surveys have systematically discussed the
+preliminaries of trust and ML, our work emphasizes those
+concepts that are particularly relevant to CAVs and their
+integration with ML methods.
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+3867
+
+Fig. 5. Framework of trust preliminaries.
+
+TABLE II
+T RUST IN VARIOUS S TAKEHOLDERS IN AV S
+
+A. Trust Preliminaries for CAVs
+The framework for trust preliminaries, presented in Fig.5,
+is structured around seven integral parts.
+1) Current Various Trust Definitions: (1) Trust in IEC
+27036-1 [27] and GBT/25069 [28]: the relationship between
+two entities and/or elements, consisting of a set of activities
+and a security policy in which element x trusts element y if
+and only if x has confidence that y will behave in a welldefined way (concerning the activities) that does not violate
+the given security policy. (2) Trust in various network types:
+CPS can be seen as an advanced form of IoT. IoT focuses
+on the connection between “things”. Internet of Everything
+(IoE) is an extension of IoT that also encompasses the full
+connectivity of people, processes, data and things. Automation
+of Everything (AoE) focuses on automating various processes
+and tasks. In physical and cyber domains of CPS, trust is
+the expectation that a physical or cyber entity will complete
+a task as intended, as shown in [29]. Trust influences an
+entity’s preference for services and its decision to engage in
+transactions with others. Trust studies are important in IoT,
+IoE, AoE, and CPS, where the scope and complexity are
+increasing.
+(3) Trust in various stakeholders of autonomous vehicles
+(AV): While AV focuses on the autonomous driving capabilities of the vehicle itself, CAV emphasizes the connectivity
+and collaboration of vehicles. As shown in Table II, different
+stakeholders of AV have different trust focuses. From a humanmachine trust perspective, collective trust refers to the shared
+confidence of all stakeholders (users, pedestrians, manufacturers, governments, etc.) in the overall trust of the autonomous
+driving system [30]. This delineates the specific beneficiaries
+of trust mechanisms.
+(4) Trust in various AV types by application purpose: The
+features of six AV types are compared in Table III. Thus, as
+
+demonstrated in Table IV, trust focuses vary significantly in
+various AV types. These AVs are not necessarily CAVs. It is
+essential to recognize that distinct service scenarios and user
+demographics necessitate tailored optimization strategies.
+(5) Trust from three layers: i) At the technical layer, efforts
+should be made to enhance the reliability and transparency
+of CAVs, ensuring their safety and stability in complex environments. ii) At the policy and regulatory layer, strict testing
+standards and safety regulations need to be established to
+provide a solid legal foundation for the commercial application
+of CAVs. iii) At the user layer, extensive public awareness
+campaigns, test drive experiences, and other initiatives should
+be conducted to improve public understanding and acceptance
+of CAV technology. Currently, stakeholders are actively taking
+action in these three layers.
+2) Trust Definitions in CAV in This Survey: It is defined by
+referring to the current various trust definitions.
+(1) Standards and layers: The concepts are consistent with
+the standards.This survey focuses on the progress and challenges at the technical level.
+(2) Network types: Current studies on trust in IoV are
+regarded as network-oriented trust, which concerns the IoV
+environment or the trust relationships between IoV participants, i.e., how nodes trust each other and securely exchange
+information. As IoV evolves towards more integrated CPS,
+IoE, and AoE frameworks, the scope of trust will likely expand
+to include the trust of the entire connected ecosystem, from
+the physical environment to the digital infrastructure and the
+automated processes that support them.
+Thus, trust in CAV in this survey focuses on agent-oriented
+trust and service-oriented trust based on network-oriented
+trust, i.e., trust should serve for specific CAV scenarios, such
+as platoon leader vehicle selection, trustworthy edge devices
+selection to offload computations, etc. It is from AoE and
+beyond the scope of IoT and IoV. Part of the research on
+trust in IoV covers how edge nodes mutually trust, but the
+object of trust in CAV is centralized on vehicles.
+(3) Stakeholders: This survey mainly analyzes trust in CAVs
+from a technical perspective. Here, city authorities, policymakers, and law enforcement are the regulators of trust; users and
+pedestrians are the beneficiaries of trust; and manufacturers
+are the builders and trustees of trust.
+(4) Distinguishing trust in TMS from credibility: Credibility
+in positioning [31] focuses on the accuracy and consistency
+
+3868
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+TABLE III
+C LASSIFICATION OF AV BY A PPLICATION P URPOSES
+
+TABLE IV
+T RUST IN VARIOUS AV T YPES
+
+of results and system performance in complex environments.
+Instead, trust in TMS focuses on the trust of interacting entities
+and its impact on decisions and behavior.
+(5) Smart city technologies enhance ML-based TMS
+for CAVs: Advanced techniques in smart cities enable
+more efficient ITS. Digital twin technology, combined with
+AI, improves CAV trust through precise decision-making.
+Blockchain also supports ML-based TMS for CAVs.
+(6) Vehicle types in terms of application purpose: A generalized set of ML-based TMS for CAVs with extension
+modules for different vehicle types in Table III should be
+proposed. Compared with the trust of single-vehicle intelligence, the TMS of CAV is more complex because it not
+only relies on the performance of the vehicle itself, but
+also relies on various factors such as IoV and multi-subject
+coordination.
+(7) Vehicle types in terms of capabilities: CAVs represent a higher level of Grade of Automation (GoA) and the
+cooperative perception capabilities. Administrators and leading
+companies are making significant progress toward achieving
+GoA-5 (full automation) and Level-3 (highest cooperative
+perception). As a result, the development and integration of
+advanced TMS are essential as a technical preparation to
+support the efficient and reliable operation of CAVs.
+(8) Vehicle types in terms of penetration rate:
+The transition toward fully AV will be gradual, resulting in mixed traffic flows with varying automation levels.
+Most current TMS-CAV studies assume a 100% Connected
+
+Vehicle(CV) penetration rate and omit explicit AV penetration rate, presuming all vehicles have OBUs/RSUs capable
+of authentication, reporting, and feedback. Thus, vehicles
+are modeled as communicative nodes, with trust based on
+observed behavior—not the origin of control (human or AI).
+This simplification prioritizes a general TMS framework.
+While trust computation is similar, their evaluation sources,
+reliability, and update mechanisms differ fundamentally.
+Incorporating AV penetration introduces complexity—e.g.,
+behavioral heterogeneity and human-AI interaction—better
+suited to advanced studies once foundational models are validated. Human-in-the-Loop (HITL) and Human-on-the-Loop
+(HOTL) architectures have emerged as critical components for
+establishing trust in CAV systems. As mixed traffic research
+evolves, TMS-CAV is increasingly considering the effects of
+AV penetration.
+3) Properties of Trust in CAV: Several properties are analyzed in pairs, such as direct and indirect trust. Additionally,
+trust is pseudo-asymmetry, historical relevance, context dependence, and dynamic, etc.
+(1) Direct, Indirect and Hybrid: Most TMS for CAV literature consider these properties. Direct trust comes from traffic
+conditions observed by on-board sensors or IoV, while indirect
+trust relies on recommendations from neighboring vehicles or
+RSUs when direct data is insufficient. References include [32],
+[33], [34], [35], [36], and [37],etc.
+(2) Objective and Subjective: Objective trust is derived
+from measurable and quantifiable data, while subjective trust
+involves personal or collective perceptions, experiences, or
+emotions. Objective trust is the primary focus in CAV application. This is reflected in studies such as [38], [39], [40], [41],
+and [42],etc.
+(3) Local and Global: Local trust is evaluated over a limited geographical range and short periods, making it suitable
+for real-time decision-making. Global trust spans broader
+regions and longer durations, providing a more comprehensive but less immediate assessment. For instance, studies
+including [43] and [44].
+(4) Pseudo-asymmetry: It means one entity may trust
+another without reciprocity. The pseudonyms mechanism of
+CAV complicates trust evaluation by requiring repeated trust
+computations for the same entity under different identities.
+Reference include [45], etc.
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+3869
+
+TABLE V
+T YPICAL T RUST PARAMETERS AND T RUST M ETRICS
+ACROSS D IFFERENT C ATEGORIES
+
+(5) Historically relevant and context-dependent: Trust is
+influenced by both past behavior and contextual conditions, such as traffic conditions changes. This is reflected
+in [32], etc.
+(6) Social: In social IoV, trust may incorporate social
+attributes, such as community-based reputation. This is
+reflected in [46], [47], and [48], etc.
+(7) Time-evolving: Trust is dynamic and continuously
+updated in response to new data, environmental shifts, or
+behavioral changes. This is reflected in [32], etc.
+(8) Individual trust and collective trust: In the context
+of social IoV, more trust properties can be considered. In
+social psychology and organizational behavior, interpersonal
+trust focuses on a specific individual, whereas collective trust
+targets the organization and its collective membership as a
+whole [49]. The latter is a group-directed willingness to accept
+vulnerability, encompassing social exchange, shared perceptions, and interpersonal trust [50]. Although a completely
+standardized definition is lacking in the field of ICT, based
+on a synthesis of extensive literature, we define individual
+trust and collective trust as follows: individual trust refers to
+an entity’s trust evaluation based on individual experience or
+interactions. In contrast, collective trust refers to a consistent
+and authoritative group consensus formed by aggregating and
+validating multiple individual trust evaluations through specific
+mechanisms.
+4) Metrics of Trust: Properties of trust describe how
+trust is established, while metrics of trust quantify and
+analyze trust through specific criteria. They are divided
+into reputation-based, knowledge-based, expectation-based,
+node properties-based, proximity-based and environmentbased [17]. Reputation, knowledge and proximity-based
+factors are the most widely used metrics [17]. ML-based TMS
+methods automatically extract features from data, prioritizing
+sufficiently high-quality inputs. Unlike traditional methods
+that require expert-designed metrics, ML models do not need
+to pre-define fixed trust criteria. However, metrics remain
+valuable for enhancing the explainability of ML. A parameter
+is an input variable, either set directly or observed from the
+system environment or human configuration. In contrast, a
+metric is an output criterion, derived from an a posteriori
+assessment, that is used to evaluate system performance or
+
+Fig. 6. Three forms of trust.
+
+behavior. Based on the definition above, the typical trust
+parameters and trust metrics are analyzed in Table V.
+5) Forms of Trust: They vary across methods as shown in
+Fig.6. We categorize forms as follows referred by [17]:
+• Non-ML-based Trust: i) Trust facets: Represented by
+tuples (e.g., (B, D, U) for Belief, Disbelief, Uncertainty in
+D-S evidence theory) ii) Trust logic: Expressed through
+probabilities or fuzzy values.
+• ML-based Trust: Trust levels are described by continuous
+or discrete values. i) Continuous values (Regression):
+[0,1] range where 1 means highest trust. ii) Binary rating
+(ML binary classification): trust-1, distrust-0. iii) Multirating (ML multi-class classification): The values in [0,1]
+are divided into several levels.
+6) Objects of Trust: i) Data-centric: Evaluates data trust
+(e.g., emergency message dissemination). ii) Node-centric:
+Assesses node or entity (e.g., trusted edge node selection).
+iii) Hybrid: Combines both data and node trust evaluation.
+7) TMS Differences From Other Security Methods: Unlike
+IDS, TMS requires more data and multi-step processing. While
+TMS can enhance IDS by detecting misbehaviors [52], its trust
+value also supports broader decision-making applications, such
+as edge computing offloading and platoon formation.
+8) Components of TMS: These terms fall under trust valuebased TMS, including trust-related data collection, trust
+computation/assessment/evaluation, trust propagation, trust
+aggregation, trust prediction and trust data storage [16].
+
+B. Traditional Methods for TMS
+Methods for TMS are shown in Fig.7, traditional TMS
+methods are briefly introduced as the basis.
+1) Statistically Weighted TMS: This most widely used
+approach weights multi-source information for comprehensive
+trust evaluation. Applications include secure content delivery
+[53], routing [54], cluster head selection [55].
+
+3870
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+Fig. 7. Methods for TMS.
+
+2) Inference-Based TMS: i) Probability-based TMS: Trust
+is quantified as a probability value. Applications include the
+beta-Bayesian model for malicious CAV node detection [32].
+ii) D-S evidence-based TMS: Trust is defined by combining
+and processing the conflicting evidence to quantify uncertainty
+as confidence degrees [56]. It is suitable for uncertainty or
+prior-knowledge-lacking scenarios. Applications include fusing multi-dimensional trust metrics for CAV [33]. iii) Fuzzy
+logic-based TMS: Rather than providing a definite value, it
+estimates the trust degree using rules and an approximate set.
+Applications include fuzzy evaluation [51], [47] and [57]; the
+interval type-2 fuzzy logic [58].
+iii) Subjective logic-based TMS: Subjective logic handles
+uncertainty and subjectivity in TMS. Applications include
+Three-valued Subjective Logic (3VSL) for CAV [38], subjective logic [59].
+3) Entropy-Based TMS: It evaluates the randomness of
+information, signals or events [60].
+4) Graph-Based TMS: When graphs represent entities and
+their relationships, graph algorithms can be used for TMS, like
+OpinionWalk [38] and RandomWalk for TMS [61].
+5) Game-Based TMS: It seeks to identify and eliminate
+selfish nodes through a game, such as evolutionary game
+theory for TMS [62].
+C. ML Methods: Supervised Vs. Unsupervised Vs.
+Semi-Supervised Learning
+Based on different data labeling situations and learning
+objectives, ML methods are categorized by supervised learning (as Eq.1), unsupervised learning, and semi-supervised
+
+learning. First of all, supervised learning aims to train a model
+f that maps inputs x to labels y by minimizing a loss function
+on labeled data.
+N
+X
+min
+L(yi , f (xi ))
+(1)
+f ∈F
+
+i=1
+
+• f ∈ F: Model from hypothesis space F.
+• xi : Input feature vector (training example i).
+• yi : True label for xi .
+• L: Loss function comparing f (xi ) and yi .
+• N: Number of training examples.
+1) Supervised Traditional ML Methods for Classification:
+These ML methods deal with linear or non-linear relationships
+in data but do not involve complex hierarchical structures.
+(1) Originally designed for binary-class classification
+but can be extended to multiple-class classifications. This
+category includes: Naive Bayes (NB) Classifier, Support Vector Machines (SVM), and Adaptive Boosting
+(AdaBoost). Notably, AdaBoost-SAMME supports multi-class
+classification.
+(2) Multiple-class classifications. This category includes: K
+Nearest Neighbours (KNN) classifier, Random Forests classifier and eXtreme Gradient Boosting (XGBoost).
+2) Supervised Deep Neural Networks for Classification:
+(1) Classic deep learning methods. Deep learning excels at
+processing large-scale datasets with high-dimensional features.
+For binary classification tasks, binary cross-entropy loss functions are typically employed, whereas standard cross-entropy
+loss functions are used for multi-class classification problems.
+Classical models are Multilayer Perceptron (MLP), Convolutional Neural Network (CNN), Recurrent Neural Network
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+(RNN) like Long Short-Term Memory (LSTM) and Gated
+Recurrent Unit (GRU).
+(2) Emerging models. i) Hybrid Architectures: The CNNLSTM model integrates CNNs for spatial feature extraction
+with LSTM for sequential modeling, making it particularly
+suitable for spatio-temporal data analysis.
+ii) Transformer: Characterized by self-attention mechanisms, multi-head attention, and residual connections, Transformer models efficiently capture long-range dependencies.
+Their parallel processing capability enables faster training than
+traditional RNN architectures.
+iii) GNN: GNNs specialize in processing graph-structured
+data through node and edge relationships, supporting four
+primary classification tasks: node classification, edge classification, and graph classification link prediction. Key supervised
+GNN variants include Graph Convolutional Networks (GCNs),
+Graph Attention Networks (GAT), and GraphSAGE. Spatiotemporal GNNs (STGNNs) further enhance modeling
+capabilities by combining graph networks with temporal learning methods, demonstrating strong performance in traffic flow
+prediction and trajectory forecasting applications [63].
+3) Supervised ML Methods for Regression: These methods
+can predict continuous trust values and can be categorized as:
+(1) Traditional ML regression: It includes Logistic Regression (LR), Random Forest Regression, Support Vector Regression (SVR), and K-Nearest Neighbors Regression (KNN
+Regression).
+(2) Deep learning regression: It differs from classification
+in three key aspects: i) Output layer uses linear or constant
+activation (vs. softmax or sigmoid) ii) Loss functions use Mean
+Squared Error (MSE) or Root Mean Squared Error (RMSE),
+instead of cross-entropy. iii) Evaluation metrics include continuous error measures instead of classification metrics.
+4) Unsupervised ML Methods: Unsupervised learning aims
+to train a model f that discovers patterns or structure in
+unlabeled data x by optimizing an objective function (e.g.,
+clustering, density estimation)
+min
+f ∈F
+
+N
+X
+
+D(xi , f (xi ))
+
+(2)
+
+i=1
+
+• D(·) denotes a dissimilarity measure (e.g., reconstruction
+error, KL divergence).
+• f (xi ) may correspond to cluster assignments, latent
+embeddings, or synthetic samples, depending on the task.
+The following categorization proofs are also referred from
+recent surveys, including self-supervised learning [64], [65];
+graph-based semi-supervised learning [66]; semi-supervised
+learning to cyber-security [67]; semi-supervised graph clustering [68]. It is divided as follows:
+(1) Unsupervised clustering: It groups similar data points
+into distinct clusters while maximizing dissimilarity between
+clusters. Common methods include K-means, hierarchical
+clustering, Density-Based Spatial Clustering of Applications
+with Noise (DBSCAN), spectral clustering, and Gaussian
+mixture models.
+(2) Generative models: They learn data distributions to
+synthesize new instances, including Generative Adversarial
+
+3871
+
+Network (GAN), Variational Autoencoder (VAE), diffusion
+models, autoregressive networks, and normalizing flows.
+(3) Unsupervised graph representation: a) Graph Contrastive
+Learning: These methods learn a node or graph representation
+by maximizing the similarity of positive sample pairs in the
+graph and minimizing the similarity of negative sample pairs.
+Common methods are Deep Graph Infomax (DGI), Graph
+Contrastive Learning with Augmentations (GCA), InfoGraph,
+etc. b) Graph Generative Learning: This method applies a
+generative model to graph data to learn the structure and
+properties of the graph and generate new graph instances or
+graph elements (e.g., nodes or edges). Common methods are
+GAE, VGAE, Graph GANs, etc.
+5) Semi-Supervised ML Methods: It trains a model f to
+map inputs x to labels y by jointly leveraging labeled data
+(via supervised loss) and unlabeled data (via regularization or
+pseudo-labeling).
+min
+f ∈F
+
+L
+X
+
+L(yi , f (xi )) +λ ·
+
+R(x j , f )
+
+(3)
+
+j=L+1
+
+i=1
+
+„
+
+N
+X
+
+ƒ‚
+
+Supervised loss
+
+…
+
+„
+
+ƒ‚
+
+…
+
+Unlabeled data term
+
+where:
+• L is the number of labeled samples, N is the total number
+of samples.
+• R(·) regularizes using unlabeled data (e.g., consistency
+loss, entropy minimization).
+• λ balances the two terms.
+(1) Semi-supervised Clustering: Clustering does not involve
+the prediction of labels but explores the intrinsic structure of
+the data. Semi-supervised clustering algorithms use limited
+labeled data to improve clustering results. It is divided as
+follows: a) Metric-based. b) Partial-labels.c) Density-based.
+d) Constraint-based. e) Hierarchical clustering. f) Outcome
+variable association. g) Model-based clustering. h) Graphbased clustering.
+(2) Inductive Learning for Classification and Regression:
+These methods aim to learn models that can be generalized to
+new data, which improves the model’s ability to predict new
+data by learning embedded representations of nodes or using
+neural networks to capture the global data structure.
+• Wrappers: It includes self-training methods, co-training
+methods and boosting methods.
+• Unsupervised Preprocessing: It includes a) Cluster-thenlabel. b) Pre-training. c) Feature extraction.
+• Intrinsic SSL: It includes a) Max-margin. b) Perturbationbased. c) Generative model: d) Manifolds.
+• Graph-based: It includes a) Graph-based label propagation methods. b) Sparse model. c) Low-rank model.
+d) GNN.
+(3) Transductive Learning for Classification and Regression: These methods focus on predicting labels for specific
+unlabeled nodes in the current dataset and do not emphasize
+the generalization capabilities of the model. These methods
+typically use local information in the graph structure to propagate labels and are suitable for situations where the dataset is
+relatively fixed. It includes embedding-based label propagation
+and label propagation based on GNN.
+
+3872
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+D. Advanced ML Methods
+1) RL, DRL and MADRL: RL enables agents to learn
+optimal behaviors through environmental interactions. DRL
+enhances RL with deep learning for complex tasks [69].
+MADRL extends this to multi-agent systems.
+There are many classification criteria for RL, e.g., valuebased RL and policy-based RL. Since trust calculation
+methods based on RL methods are categorized by:
+• Discrete action space: Q-Learning, SARSA, DQN, Policy Gradient, Actor-Critic, Proximal Policy Optimization
+(PPO), MADQN, etc.
+• Continuous action space: Deep Deterministic Policy Gradient (DDPG), Asynchronous Advantage Actor-Critic
+(A3C), Trust Region Policy Optimization (TPRO),
+MADDPG, MA-Actor-Critic. Besides, the variance methods of DQN are DDQN, D3QN, etc.
+• Research directions: the combination of GNN and RL
+[70], offline RL or online RL [71], safe RL for safetycritical scenarios [72], transfer learning with RL [73].
+2) Federated Learning: In FL, edge devices or clients
+only send the gradients or the learnable parameters to cloud
+servers rather than sending massive local datasets in a centralized learning framework. FL is one of the edge intelligence
+algorithms. FL has many classification criteria, such as by
+the topology of the participating devices in the FL system,
+including centralized FL, decentralized FL, hierarchical FL
+and clustered FL [74]. FL provides new training and testing
+for ITS tasks, such as trajectory prediction, traffic prediction,
+V2X, etc [22]. FL is closely combined with blockchain [75]
+and edge computing [76].
+3) Other Novel ML Methods:
+• Transfer learning: It leverages knowledge from solved
+problems to address related new tasks. It can be integrated
+with RL and FL [73].
+• Incremental learning (or continual learning): It enables
+models to continuously learn from new data streams.
+Yang et al. [77] developed federated continual learning
+through knowledge fusion.
+• Meta learning: It enables rapid task adaptation by transferring prior knowledge (meta-data), eliminating full
+retraining [78].
+• End-to-end learning: It refers to a training approach
+where a model learns to transform inputs directly into
+outputs, encompassing all processing stages. This method
+contrasts with traditional models that require separate
+components for different tasks [79].
+E. Summary on Potential ML Methods for ML-Based
+TMS-CAV
+After surveying the mechanisms, categories, and recent
+advances of ML, the following insights are obtained. Additionally, more insights should be further integrated with TMS
+functional modules and CAV-specific operational scenarios.
+1) Advantages of Semi-Supervised Learning: Supervised
+ML-based TMS requires extensive labeled data, which is
+challenging to obtain for dynamic CAV environment. Semisupervised methods address this by effectively leveraging
+
+limited labeled data alongside abundant unlabeled data, outperforming purely unsupervised approaches.
+2) Advantages of Advanced ML: While traditional ML
+initially dominated TMS-CAV, modern techniques now offer
+superior solutions, such as Transformers, GNNs, RL, FL,
+transfer learning, etc.. For example, Transfer learning shows
+particular promise in mitigating cold-start issues, as demonstrated in EV charging forecasting [80], though its application
+to TMS-CAV remains rare.
+3) Advantages of Appendix Methods: In order to avoid performance degradation or failure of ML-based TMS methods,
+auxiliary measures for TMS should be considered, such as
+integration with IDS and cryptographic methods.
+IV. T HREE -L AYER T RUST M ANAGEMENT S YSTEM FOR
+CAV S E NHANCING BY M ACHINE L EARNING
+A. Three-Layer TMS for CAV
+To facilitate our survey in describing the functional modules
+of the TMS and how ML can enhance the role of each module,
+a three-layer ML-based TMS for CAV is proposed. As shown
+in Fig.8, it adapts IoT-based TMS principles to vehicle-roadcloud systems. The modules in each layer maintain consistency
+with TMS in IoT from [14] while integrating ML methods for
+CAV environment. It offers a holistic perspective that surpasses
+prior surveys focused on isolated modules.
+1) Trust Data Layer: It defines CAV what data can be
+regarded as trust-related data and the data analysis
+process. It consists of four modules: i) Trust-related
+Data Composition, ii) Trust-related Data Generation,
+iii) Trust-related Data Management and iv) Trust-related
+Data Dissemination.
+2) Trust Computation Layer: It obtains trust values from
+trust-related data. It consists of four modules. i) Trust
+Aggregation; ii) Trust Calculation; iii) Trust Update; and
+iv) Weight Adjuster.
+3) Trust Incentive Layer: It solves passive and aggressive
+behaviors to guarantee reliability and robustness. It
+consists of two modules. i) Incentives; ii) Trust-related
+Attacks Defense.
+As illustrated in Fig.8, the initial computation of both the
+trust data layer and the trust computation is deployed at
+the vehicle subsystem and the roadside subsystem. Deeper
+processing across all three layers is allocated to central
+subsystems due to their substantial resource requirements.
+Additionally, the ML requirements for TMS must account for
+CAV features that differentiate them from social IoT, WSN,
+and UASNs implementations, as also highlighted in the survey
+on TMS for VANET [16]. Specifically,
+• Speed: CAV nodes move at varying speeds, causing
+the network topology to change constantly, with no permanent neighbors. Therefore, ML-based TMS methods
+designed for CAVs should adapt to this dynamism and
+avoid ML models suited only for static networks.
+• Directed: CAVs must adhere to traffic regulations, which
+limit their mobility and network topology to the road
+infrastructure. Therefore, ML-based TMS methods for
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+3873
+
+Fig. 8. CAV in Vehicle Road-Cloud Integration System.
+
+CAVs should account for whether CAV behaviors align
+with road topology constraints.
+• Opportunistic: IoVs frequently interact with unknown
+neighbors. Therefore, ML-based TMS for CAVs should
+be timely and include incentives to encourage greater
+node participation.
+• Intermittent: CAVs continuously form and disband
+networks. Therefore, ML-based TMS methods should
+accommodate this dynamic topology, for instance, by
+using dynamic GNNs that can integrate new nodes as
+they appear.
+• Resource Availability: Each CAV is equipped with
+limited computational resources. Therefore, edge and
+cloud computing are essential to support ML-based TMS
+methods that require substantial computational resources,
+and blockchain technology is needed for reliable data
+transmission.
+• More motivations to build trust among vehicles: While
+[16] noted that vehicles have less motivation to build trust
+through membership due to automatic network formation
+within communication range, trust has become crucial
+in more scenarios like platoon leader selection, worker
+incentives in crowdsensing and choosing reliable edge
+nodes, etc.
+B. Layer1:Trust Data Layer Enhanced by ML for CAV
+i) Trust-related data composition. It refers to data structure and dimensions, including structured data like vehicle
+beacons, trajectories, sensors, detectors and maps, as well
+as unstructured data like radar, LiDAR, and images. Beacon
+data is widely used for its ease of acquisition and ability to
+
+reflect vehicle behavior. Multimodal data fusion is also gaining
+attention. ML methods excel at processing large-scale, diverse
+datasets.
+Beacon data constitutes the fundamental broadcast information, featuring message types such as Basic Safety Messages
+(BSM), Map Data (MAP), Signal Phase and Timing (SPAT),
+Roadside Messages (RSM), and Personal Safety Messages
+(PSM). The standard format of BSM is defined in (4) defined
+in [81] and [82].
+BSM = {senderPseudo, S endT ime, Pos, S pd, Acl, Hed,
+PosNoise, S pdNoise, AclNoise, HedNoise, msgID}
+
+(4)
+
+where senderPseudo denotes the pseudonym of sending
+CAVs, Pos, S pd, Acl, Hed refers to the position, speed, acceleration, and heading of senders, respectively. Ditto for those
+terms with Noise.S endT ime and msgID are the send time and
+message IDs of BSM.
+ii) Trust-related data generation and dissemination.
+It refers to data sources and collection methods. In single
+autonomous vehicles, data is mainly generated by onboard
+sensors. In vehicle-road-cloud systems, data from multiple
+sources is transmitted to edge devices and cloud servers.
+iii) Trust-related data and trust value storage. In centralized systems, a central server stores all trust data, while
+in distributed models, each device stores its own. Most TMSCAV prefer the distributed model, with distributed ML and
+blockchain enhancing privacy beyond traditional cryptography.
+iv) Trust-related data dissemination. Before trust computation, ML methods must gather sufficient trust-related data.
+However, it can be hindered by selfish or malicious CAVs.
+Implementing ML in the incentive layer can mitigate this issue.
+
+3874
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+non-ML TMS methods versus ML-based approaches, evaluated across six dimensions, as detailed in Table VI.
+(1) Effectiveness of TMS: Effectiveness is the primary
+requirement for a sound TMS. It is judged from the following
+four aspects.
+
+Fig. 9. Basic process of ML for trust calculation.
+
+C. Layer2: Trust Computation Layer Enhanced by ML for
+CAV
+i) Trust aggregation. Trust-related data must be filtered
+from raw data to create standardized input. ML methods excel
+at analyzing complex, large-scale, and heterogeneous datasets.
+ii) Trust calculation. Unlike rule-based or knowledgebased methods, ML approaches assess CAV trust through
+classification and regression by continuously analyzing and
+adapting to behavioral characteristics. It is described in Fig.9.
+iii) Trust update: ML methods like RL enable timely
+updates of trust values by continuously adapting to behavioral
+changes, allowing the trust model to evolve dynamically with
+time-triggered and event-triggered changes, ensuring accurate
+and relevant assessments.
+iv) Weight adjuster:. Weights reflect the importance of
+various factors in trust calculations and must be adjusted based
+on user needs or environmental changes. ML algorithms can
+automatically learn and dynamically adjust these weights using
+user feedback or service results.
+D. Layer3: Trust Incentive Layer Enhanced by ML for CAV
+Incentives motivate nodes to ensure that they are willing to
+maintain the security and efficiency of the network while preventing them from having negative, speculative, or malicious
+motives.
+i) Incentives for negative, speculative motives: Different
+from incentives for TMS that were classified into ex-ante
+incentive, ex-post incentive in [14], learning-based incentive
+methods are focused, such as DRL combined with traditional
+incentives, like auction game, contract, Stackelberg game, etc.
+iv) Defend against trust-related attacks: Trust-related
+attacks manipulate trust values to undermine TMS accuracy.
+For example, in a self-promotion attack (SPA), attackers
+inflate their trust values by falsely claiming positive behavior. In a whitewashing attack (WA), attackers obscure their
+negative past by displaying a series of positive behaviors.
+ML enhances it by improving anomaly detection capabilities,
+dynamically adjusting trust calculations, complex behavioral
+features abstraction and fusion of multi-source data.
+
+• Enough data collections: It ensures the system’s ability
+to gather sufficient data to support the TMS effectively.
+• Accuracy for trust computation: The accuracy metric
+serves as a representative indicator for all other metrics.
+It ensures the accuracy of the trust calculation model,
+guaranteeing that trust values accurately reflect vehicle
+behavior.
+• Accuracy for supporting trust-related services: It ensures
+that the trust values produced by the TMS effectively
+support various trust-related services.
+• Accuracy for incentive mechanisms on different conditions: It ensures that the TMS supports the implementation of incentives or penalties based on diverse behaviors,
+thereby fostering cooperative behavior.
+Evaluation metrics for effectiveness are as follows:
+• Trust calculation regarded as a classification task:
+a) Problem Formulations: The classifier receives the state
+information of the vehicle as input and outputs a direct
+trust value indicating the trust value of the CAV. If
+this trust value is below a threshold, the CAV may be
+classified as malicious; if the trust value is above the
+threshold, the vehicle is considered trusted. b) Evaluation Metrics: Four basic metrics for classification are
+Accuracy, Precision, Recall and F1-score. Besides, more
+metrics are the Matthew Correlation Coefficient (MCC),
+Cohen’s kappa, and the Receiver Operating Characteristic
+(ROC), etc.
+• Trust calculation regarded as a regression task: a) Problem formulations: It is regarded as a regression task to
+predict continuous trust values. b) Evaluation metrics:
+Common metrics are Mean Squared Error (MSE), RootMSE (RMSE), Mean Absolute Error (MAE), R-squared.
+(2) Flexibility of TMS: Given the mobility of CAV nodes
+and the dynamic operating environments, flexibility in TMS
+for CAVs is more critical than in static IoT systems. Flexibility
+serves as the foundation for other objectives and can be
+categorized into two key aspects.
+• Flexibility to dynamic changes: The TMS should adapt
+to changes in network topology, vehicle behavior, and
+environmental conditions with flexibility.
+• Granularity of trust values for different services: It should
+provide fine-grained trust values (e.g., continuous values)
+for services that demand high precision, while coarsegrained trust values (e.g., binary or multi-class) for
+services that do not need detailed trust information.
+
+E. Objectives of ML-Based TMS for CAVs
+
+Evaluation metrics for flexibility are as follows:
+
+A novel taxonomy for objectives in ML-based TMS for
+CAVs is introduced. This taxonomy, inspired by recent surveys
+on TMS [11], [14], uniquely integrates the specific features
+of CAVs with the requirements of TMS and ML methods.
+Furthermore, it provides a comparative analysis of traditional
+
+• Adaptability metrics: a) Rate of model adjustment: It
+measures the speed at which the model adapts to changes
+(e.g., in network topology, vehicle behavior). b) Convergence speed: It indicates how quickly the model re-learns
+and stabilizes after a dynamic change.
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+3875
+
+TABLE VI
+C OMPARISON OF N ON -ML-BASED TMS M ETHODS AND ML-BASED TMS M ETHODS
+
+• Scalability metrics: It assesses the model’s ability to
+maintain performance as data types or volumes, node
+density, or attacker density increase.
+• Continuous learning metrics: a) Frequency of model
+updates: It evaluates how often the model is updated
+to reflect environmental changes. b) Online learning
+efficiency: It measures the effectiveness of continuous
+learning without requiring offline retraining.
+(3) Reliability of TMS: It is mainly in terms of its
+• Ability to provide stable support: i.e., the TMS should
+maintain consistent and stable performance across
+
+various situations, providing accurate and reliable services
+without interruption.
+• Interpretability of ML: As the ML theory evolves, the
+decision-making process of understanding the ML-based
+trust model can be enhanced.
+Reliability should be assessed using software reliability
+metrics such as availability, Mean Time to Recovery (MTTR),
+Mean Time Between Failures (MTBF), and failure rate. Interpretability metrics include decision boundary visualization,
+feature importance, Shapley value, etc. Besides, more metrics
+align with those used to evaluate effectiveness.
+
+3876
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+(4) Efficiency of TMS: It is crucial to ensure that TMS
+processes are responsive and resource-efficient. It encompasses
+several aspects:
+• Time complexity: The TMS should maintain low time
+complexity to support real-time decision-making. Higher
+time complexity is allowed for other service requirements.
+• Computing resource complexity: Some modules are
+designed to operate efficiently within the limited
+resources of onboard modules. For complex and longterm tasks, leveraging edge devices and optimizing
+architectural design is essential.
+• Storage resource complexity: The TMS should use efficient data storage structures to minimize storage needs
+while ensuring data accessibility and integrity.
+While model performance evaluation is related to model
+accuracy, runtime performance evaluation determines the performance of the model when deployed in C-ITS. Models that
+consume a large amount of resources in detecting misbehavior
+may block resources used for normal services, leading to
+additional misbehavior. Evaluation metrics are:
+• ML Complexity: It describes the relationship between the
+size of the data and the time using Big O notation.
+• Communication and storage costs: It covers the network
+latency, and execution time, throughput, packet Delivery
+Ratio (PDR), memory usage, data storage capability, etc.
+(5) Security of TMS:
+• Defending against cyber attacks: TMS can defend against
+various cyber attacks, such as DoS attacks, tampering
+attacks, and Sybil attacks.
+• Defending trust-related attacks: TMS should defend
+against trust-related attacks.
+Evaluation metrics are consistent with the effectiveness.
+(6) Privacy preserving for TMS TMS collects large
+amounts of data, which covers identity privacy, location privacy and behavioral privacy, etc. Thus, privacypreserving for TMS becomes critical under strict regulations,
+such as the General Data Protection Regulation (GDPR).
+Common privacy-preserving measures are anonymization,
+perturbation, encryption (e.g., Homomorphic Encryption), differential privacy, Secure Multiparty Computation (SMC),
+Zero-Knowledge Proofs. Blockchain is not a method of
+privacy-preserving, but it provides a secure, transparent and
+hard-to-tamper-with way of storing and transmitting data that
+helps enhance privacy protection. FL is also hot research in
+privacy preservation, and extensions such as Federated DP
+[83], Federated SMC [84] and Blockchain-based FL [85]
+have also been proposed. In addition, TMS needs to consider
+pseudonymization mechanisms for vehicles. Evaluation metrics are consistent with the effectiveness. Some methods have
+their own quantitative privacy-preserving metrics, such as the
+privacy budget in Federated DP.
+V. A PPLICATIONS S CENARIOS OF TMS FOR CAV S
+Based on the analytical framework established in Section IV, this survey systematically examines the implementation of ML-based TMS across five CAV application scenarios,
+which is significant for more practical ITS studies. These
+
+scenarios are categorized according to the four Cooperative
+Driving Automation (CDA) classifications defined in SAE
+J3216 (status-sharing, intent-sharing, agree-seeking, and prescriptive). It is supplemented by a dedicated section on novel
+TMS advancements. Due to space limitations, results for
+certain categories are presented textually and visually through
+graphs and tables, while others are described textually.
+The investigation pursues three objectives derived from
+Section IV’s framework and metrics. (a) Through comprehensive literature documentation within each application
+scenario, we identify the specific techniques and analyze
+emerging research trends; (b) Tabular comparative analysis
+facilitates systematic cross-study evaluation of methodological
+approaches; (c) Critical assessment demonstrates how ML
+enhances traditional TMS approaches, while simultaneously
+mapping the evolutionary trajectory of this research domain.
+To evaluate the current studies, the metrics are against six
+dimensions from Section IV-E.
+a) Effectiveness: A study is rated as highly effective
+if it evaluates the accuracy of TMS, employs data fusion
+techniques to enhance TMS performance, and demonstrates
+improvements through TMS.
+b) Flexibility: A study is rated as highly flexible if it
+investigates dynamic trust update mechanisms and proposes
+incentive designs to improve system adaptability.
+c) Reliability: A study is rated as highly reliable if it
+analyzes the impact of trust fluctuations on service quality
+and develops countermeasures against trust-related attacks.
+d) Efficiency: A study is rated as highly efficient if it
+measures the computational and time costs of TMS operations.
+e) Security: A study is rated as highly secure if it identifies
+and analyzes at least four distinct types of trust-related attacks
+in TMS.
+f) Security: A study is rated as highly private if it focuses
+on privacy-preserving techniques within TMS.
+A. TMS in Data Dissemination
+Scenario description: Data dissemination, also known as
+content distribution or data sharing, is essential in IoV for
+reducing accident risks and improving traffic management
+efficiency. It can be categorized as follows: a) Motivations:
+opportunistic, vehicle-assisted, and cooperative data dissemination; b) Event types: event or on-demand dissemination,
+periodic dissemination, and hybrid dissemination; c) Range
+and distance: multi-hop or single-hop dissemination; d) Applications: delay-sensitive safety applications and delay-tolerant
+comfort and infotainment. The last classification criterion
+was chosen in our survey. Various TMS methods have been
+proposed to address their different features.
+1) TMS in Delay-Sensitive Safety Applications: These
+applications require rapid and reliable data transmission to
+ensure the safety of vehicles and passengers. Examples include
+collaborative autonomous driving, accident event dissemination, unsignalized intersection control, messages from special
+vehicles like ambulances and police vehicles, etc.
+Essential criteria for TMS implementation. These applications are usually disseminated periodically, enabling CAVs not
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+3877
+
+TABLE VII
+C OMPARISON OF TMS M ETHODS FOR D ELAY-S ENSITIVE S AFETY DATA D ISSEMINATION IN CAV
+
+to be required to the specific location [99]. Besides, its effectiveness relies on the security provided by TMS. This section
+focuses on those works of trust in data dissemination and
+other sections will investigate those considering performance
+enhancements. The comparison is summarized in TableVII.
+(1) Lessons from traditional TMS methods. a) TMS can
+be a hybrid data trust and entity trust. An entity-centric
+model by [86] was proposed for collaborative autonomous
+driving. A hybrid trust model was proposed for emergency
+message dissemination [87]. b) Recent advances have seen
+a growing interest in blockchain-based TMS methods for
+IoV. Main studies are as follows: blockchain-based TMS
+for resource integration and incentives [88], and blockchain
+TMS framework [89], consortium blockchain-based TMS [91].
+c) Some solutions were on enhancing the time efficiency of
+TMS. Yuan et al. [90] supported TMS by reducing network
+congestion and avoiding the propagation of duplicate data.
+d) Some solutions were on data privacy. Shen et al. [92]
+incorporated blockchain-based multi-party trust evaluations for
+data privacy preservation.
+(2) Recent ML-based TMS methods. These methods can be
+categorized as follows.
+• Clustering: The clustering algorithm itself does not
+directly generate trust values but indirectly helps in
+evaluating and calculating trust values by grouping
+
+entities with similar characteristics. VEMCA [93] was a
+clustering-based algorithm for IoV event messages, where
+the message trust was the ratio of true messages to total
+messages within a given time after clustering.
+• Classifier: The categorization of CAVs’ behaviors
+enables an effective assessment of their trust. The GaussianNB classifier was used to determine vehicle direct
+trust values [94], and indirect trust was not considered.
+• RL: The applications of RL in data dissemination are
+weight adjustment for trust updating; trust as RL’s state
+and RL indirectly impacts; TMS for some decisionmaking problems [97], [95], [100]; and play role in
+incentive mechanisms [95], [96].
+• FL: FL offers distributed training for TMS. Wang et al.
+[98] proposed a personalized FL-based node TMS for
+CAVs on statistical trust calculation.
+Advances and limitations of prior work are summarized
+as follows. a) Attack defense: While the trust values were
+optimized, VEMCA cannot resist DoS attacks [93]. b) Service
+improvement: Trust-based information dissemination policies
+were discussed in traffic guidance scenarios and accident
+warnings scenarios [95]. c) From using traditional ML to
+optimized ML. The RL method was traditional Q-Learning
+and was not compared to many RL methods, where the
+DESQN method [97] and Cooperative Hierarchical Attentional
+
+3878
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+RL (CHA) improved this. However, the trust evidence was
+still based on statistical approaches, though the trust-sharing
+process and path prediction were based on the RL method.
+Liu et al. [100] proposed a CHA framework for hybrid cooperative driving based on V2V, including calculating factors
+against jamming attacks.
+2) TMS for Comfort and Infotainment Applications.: Scenario description: These applications include personalized
+Points of Interest (POI) recommendations, music, news, and
+more. TMS enhances the effectiveness of these services by
+preventing misinformation and improving content filtering.
+Essential requirements for TMS implementation. Although
+TMS in these applications has less strict time constraints
+like delay-sensitive safety applications, they deal with various unstructured data types, such as text, audio, video, and
+user interaction data. User privacy protection is crucial [48].
+Besides, trust in these applications is often associated with
+social IoV, enabling drivers and passengers to socially interact
+with other vehicles sharing similar interests, backgrounds, or
+destinations. It is common among taxis or private cars that
+follow routine routes daily.
+(1) Lessons from traditional TMS methods. Traditional
+TMS solutions have been proposed for social IoV, incorporating social trust besides direct trust and indirect trust, such
+as subjective logic [38], fuzzy logic [47], and statistically
+weighted methods [53], [101], [102]. Besides the classification
+methods, the trust-related data is also different. TEAD [101]
+was designed for video sharing D2D networks, using the
+correctness of video content as trust evidence. Similarly,
+Mada et al. [102] proposed a trust-based framework for video
+content delivery. TEAD [101] used D2D data while the work
+in [102] used video data; neither was specifically designed for
+social IoV but for the general IoT.
+(2) Recent ML-based TMS methods. Fewer works in
+social IoV currently adopt ML-based TMS features. Although
+datasets and spatial-temporal features in social IoV are different, insights can be drawn from research in social networks
+and social IoT. These methods can be categorized as follows:
+• Clustering: Jay et al. [103] proposed a K-means clustering algorithm to visualize trust boundaries in the feature
+space, classifying data points with trust attributes into
+clusters labeled as “trust” or “untrust.”
+• Classifier: C-DeepTrust integrated feature abstraction
+using MLP and LSTM networks into a composite feature vector [104]. Cosine similarity then converted these
+features into trust probabilities via the softmax function,
+with higher cosine similarity corresponding to higher trust
+values based on social homogeneity theory.
+• Regression: Deng et al. [105] proposed a trust-aware
+recommendation approach, including pretraining with the
+deep autoencoder, social trust ensemble, and regularization with community effect.
+• GNN: Several GNN-based methods have been proposed,
+including Guardian [106], GATrust [107], TrustGNN
+[108], GainTrust [109], and TrustGuard [110]. For
+instance, compared to Guardian and TrustGNN, GainTrust and TrustGuard optimized GNN for dynamic
+social networks. TrustGuard included defenses against
+
+trust-related attacks and explainability, features that were
+absent in GainTrust.
+B. TMS in Routing
+Scenario description: IoV routing refers to the process and
+methodology by which packets are transmitted from a source
+to a destination (another vehicle, infrastructure, or remote
+server). In our survey, the source is only considered to be
+vehicles. IoV routing can be categorized into route discovery,
+path selection, and route maintenance. Routing refers to the
+process of determining the optimal path for data transmission.
+Common criteria for routing include shortest path, minimum
+number of hops, maximum bandwidth, and minimum latency.
+Multi-hop task routing based on MADDPG [111] was proposed under the vehicle-assisted collaborative edge computing
+framework, which allows tasks to be efficiently routed and
+offloaded through multiple intermediate nodes for optimal
+resource allocation and efficient task completion. But the
+security problem was not considered. Therefore, by selecting
+the path with the highest trust level, it is possible to meet the
+necessary security requirements while guaranteeing efficiency
+and performance. The comparison of this part is summarized
+in TableVIII.
+1) Securing and Optimizing Route Protocol and Route
+Process: (1) Lessons from traditional TMS methods. Main
+studies are as follows: statistically weighted methods [54],
+subjective logic [59], and graph-based methods [46].These
+studies provide valuable insights into how trust metrics can
+be effectively integrated into the routing process. Specifically,
+TGRV was proposed in [54] to select trustworthy next-hop
+nodes and restrict malicious vehicles from participating in
+the routing process. As presented in [59], routing decisions
+were made based on a trust level determined by metrics such
+as packet freshness, reliability, and path length. In [46], the
+cluster heads analyzed social characteristics like nodal degree,
+centrality degree, and friendship degree and then selected the
+most trusted node as the next hop-forwarder. Besides, a trustbased routing protocol for VANET can be assisted by RSU,
+such as RTRV [112].
+(2) Recent ML-based TMS methods. Although some studies
+were for underwater IoT and underwater acoustic sensor
+networks (UASNs), the nodes also have similar features like
+dynamic topology, but also have differences. For example,
+some measures for meeting lightweight capability may not be
+in CAV.
+• Clustering: Fan et al. [113] proposed a routing method
+using a trust model and game-based incentives. The
+trust model combines direct and indirect trust through
+an uncertain deductive method, and an attribute-weighted
+K-means clustering method is used to identify legitimate
+messages.
+• Classifier: A light-weight trust-aware multicast routing
+protocol (LTMRP) was proposed in [114], where subjective trust is based on SCGM(1,1) Weighted Markov
+Prediction and recommendation trust assessment method
+based on feedback mechanism. And it can establish secure
+and reliable communication paths by selecting trusted
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+3879
+
+TABLE VIII
+C OMPARISON OF TMS M ETHODS IN ROUTING
+
+relay vehicles. In other fields, Zhu et al. [115] proposed
+a routing protocol based on GMM-HMM-LSTM for the
+underwater IoT.
+• RL methods: A DQN-based TMS for software-defined
+VANETs was proposed in [116] for getting the optimal selection policy of reliable communication links.
+Li et al. [117] proposed a Q-Learning-Assisted trust
+routing scheme for SDN-Based UASNs.
+• Transformer: Li et al. [118] implemented a trust management framework for IoV that utilized Transformer
+models to assess the trust of received messages.
+2) Cluster Head Selection: Cluster results in the distributed formation of hierarchical network structures by
+grouping vehicles together based on correlated spatial distribution and relative velocity [119]. Cluster methods can be
+used to improve routing scalability in IoV. Cluster headers
+can act as a collection and distribution center for routing
+information, helping to determine the best path for data
+transmission. Trust is a critical criterion for cluster head
+selection.
+(1) Lessons from traditional TMS methods. Currently,
+several TMS methods for clustering have used statistically
+weighted methods by direct trust and indirect trust [55], by
+
+Knowledge-Experience-Reputation [120], the interval type-2
+fuzzy logic [58].
+(2) Recent ML-based TMS methods. ML-based TMS methods for cluster head selection are few in CAV but can be
+inspired by industrial WSNs and UASNs.
+• GAN: A GAN-based trust redemption model for industrial WSN was constructed [58] to avoid the permanent
+isolation of normal nodes due to false alarms.
+• Classifier: Han et al. [121] proposed an SVM-based trust
+prediction model for UASNs.
+3) Relay Vehicle Selection: Relay vehicles can improve
+the coverage of communications, increase the redundancy of
+signals, and increase the rate of data transmission, etc. TMS
+helps choose reliable relay vehicles that are exposed to varying
+threats. The trust values were based on performance metrics
+such as the bit error rate (BER) in [122].
+C. TMS in Vehicular Edge Computing
+These methods are discussed by edge offloading entity
+selection, VNE-based IoV and SDN-based IoV.
+1) Edge Offloading Entity Selection: Scenario description:
+Vehicular edge computing (VEC) is categorized into fog
+
+3880
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+computing, MEC computing, and micro cloud computing. The
+equipment of VEC includes edge nodes and edge servers.
+Trust is a key factor in the edge-offloading decision-making
+process and helps to optimize resource allocation to ensure
+that computational tasks are offloaded to well-performing and
+reliable edge equipment, providing a better user experience.
+(1) Lessons from traditional TMS methods. Traditional TMS
+methods have been studied in edge computing by the Bayesian
+inference-based method [123], a multi-feedback trust aggregation model [35], statistically weighted average [124], dual
+fuzzy logic [125] and subjective logic [126]. Specifically, QoS
+trust and the social trust were aggregated into global trust
+for the trust among RSU-CAV and RSU-RSU for securing
+task offloading [124], where the weight parameters were set
+manually. Ali et al. [125] proposed a zero-trust management
+model for MEC and trust-aware task offloading. A trust
+assessment based on task execution feedback w
+
+[...正文过长，此处由批处理脚本仅做上下文截断；请在结论中说明该限制...]
+
+l-time requirements.
+Current model distillation methods enable efficient deployment
+at the cost of reduced accuracy, creating a pressing need for
+improved distillation techniques that better preserve model
+performance.
+2) Data Silos Vs. Collaborative Security: Although
+autonomous fleets can comply with GDPR through FL, crossmanufacturer data barriers hinder comprehensive global trust
+
+3886
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+TABLE XI
+C OMPARISON OF T YPICAL ML PARADIGMS FOR TMS-CAV
+
+evaluation. Emerging solutions combining blockchain and FL
+may offer a breakthrough.
+3) From Theory to Real-World Deployment: Existing TMS
+solutions heavily rely on simulation environments like SUMO,
+but real-world edge cases, such as extreme weather, expose
+generalization flaws in these models. Potential solutions
+include hybrid testing frameworks integrating SUMO simulations with physical testbeds, along with meta-learning
+architectures for improved generalization.
+VII. O PEN I SSUES AND F UTURE D IRECTIONS
+The three-layer TMS-CAV framework is employed for its
+demonstrated capability in achieving comprehensive domain
+
+coverage, precise technology-layer alignment, and effective
+cross-disciplinary integration.
+A. Trust Data Layer
+(1) High-quality data source. Data is critical in ML, but
+we found that the current TMS-CAV mostly uses datasets
+from its own simulations, constraining the comparison of
+TMS-CAV using different methods. On the contrary, there are
+trust datasets in social networks and online social networks,
+but the lack of location and speed information prevents the
+modeling of CAV trust well. Moreover, current research on
+trust-related data primarily focuses on structured data such as
+beacons. Further exploration is urgently needed in areas like
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+multi-source data fusion and multi-modal data fusion. This
+future direction has been confirmed in the latest research.
+Li et al. [217] proposed an adaptive multi-granularity trust
+management scheme for UAV visual sensor security under
+adversarial attacks.
+(2) Balancing computational complexity and real-time
+performance of TMSs. Several strategies can be employed.
+(a) Data streamlining: Focus on collecting only the most relevant data points for CAVs, but also be sufficient to guarantee
+the accuracy of the ML, such as vehicle behavior, network
+interactions, and environmental factors. b) Data Aggregation:
+Use data aggregation techniques during the data collection
+phase to reduce the amount of data that needs to be transmitted
+and processed. c) Data caching: It helps frequently accessed
+data to reduce the computational cost of real-time queries.
+d) Data preprocessing: Cleaning, normalization, and necessary
+transformations are performed. e) Feature Selection: It should
+reduce the input dimensions of the model by feature selection
+analysis.
+(3) Privacy Preservation. Many distributed TMSs have
+used blockchain for privacy preservation. However, the transparency and traceability of blockchain may pose privacy risks,
+and many blockchain applications require additional privacypreserving measures, such as the use of zero-knowledge
+proofs or other cryptographic techniques to hide the identities
+of participants, and the design of privacy-friendly addressgeneration and management policies. This future direction has
+been confirmed in the latest research [218], [219].
+B. Trust Calculation Layer
+(1) Less on label. The majority of ML-based TMS were
+based on supervised learning algorithms. It relies on a large
+number of high-quality labeled attack data samples. Meanwhile, due to the continuous evolution of attackers’ means and
+strategies, supervised learning methods such as CNN, RNN,
+CNN-LSTM, etc., need to constantly update the training data
+and re-train the models, which makes it difficult to respond
+to unknown attacks promptly. Efficient Semi-supervised TMS
+methods are needed to effectively analyze a majority of
+unlabeled data samples and less labeled data.
+(2) Balancing computational complexity and real-time
+performance of TMS at the data level. Several strategies
+can be employed. a) Algorithm optimization: Selecting or
+designing algorithms with low time complexity to reduce
+computation time. b) Parallel computing: Utilizing multi-core
+processors or distributed systems for parallel computing to
+increase processing speed. c) Hardware acceleration: Using
+specialized hardware such as GPUs or FPGAs to accelerate
+computationally intensive tasks evaluated with trust. d) Model
+simplification: Reducing computational complexity by using
+simpler models or reducing model parameters. e) Incremental
+computation: Using an incremental approach for trust value
+updates to avoid recalculating from scratch.
+To ensure TMS-CAV can be practically deployed, three key
+engineering constraints must be met: a) Computational Limits:
+The system must match onboard processor capabilities. For
+example, NVIDIA Drive Xavier’s 10-30 TOPS performance
+
+3887
+
+requires GNN models under 100 MB. b) Real-Time Demands:
+Critical functions like emergency braking need end-to-end
+latency under 100ms. c) Scalability: The design must handle
+all traffic densities, from sparse to dense urban, without
+performance loss.
+(3) More efforts on CAV scenarios. After the survey of
+five scenarios, it is clear that advanced ML methods are still
+less used in CAVs although some studies have been widely
+used in social networks, static IoT, and social IoT. Besides,
+TMS methods are expected to be effective in more CAV
+scenarios, such as trajectory prediction, traffic flow prediction,
+intersection signal control, non-signal control, etc.
+(4) Detailed ML methods comparison. Most studies rely
+on self-simulated simulations. The lack of public datasets for
+CAV trust poses a significant challenge, thereby limiting the
+depth of comparative analysis in studies that employ advanced
+ML methods. Future work should involve more thorough
+comparisons of ML-based TMS, such as evaluating RL-based
+approaches like DQN, DDQN, and D3QN, beyond mere
+parameter tuning. Additionally, comparisons with traditional
+TMS using the same dataset are recommended. With the growing development of security methods based on Large Language
+Models (LLMs), there is a need to explore LLM-based TMS,
+especially considering the requirements for multi-source and
+multi-domain data fusion.
+(5) ML-based TMS for CAV-CPS. Although some studies
+have started exploring TMS for CPS [191], [192], CAVs are
+often treated as CPS. However, current TMS approaches for
+CAVs typically focus on the network perspective rather than
+addressing the broader CPS system. CPS integrates compute,
+network, and physical components, and TMS applied to CPS
+needs to consider the cross-domain requirements.
+(6) Novel fields like edge intelligence, explainable ML,
+meta learning, and knowledge distillation. Edge Intelligence
+can assist in handling dynamic environments, multi-source
+data fusion, and privacy protection. Explainable ML enhances
+the interpretability of TMS models. Meta-learning optimizes
+the generalization capability of TMS. Knowledge distillation
+facilitates model lightweighting and efficiency improvement.
+(7) More concerns on TMS in mixed traffic. Future
+TMS-CAV research should prioritize mixed traffic scenarios to improve practical relevance. A key direction involves
+testing model sensitivity and robustness under varying penetration rates. Furthermore, there is a pressing need to develop
+behavior-aware trust models that differentiate between HV and
+AV behaviors to counter new attacks. Finally, creating public
+mixed-traffic datasets is critical to support model training,
+testing, and benchmarking.
+(8) More concerns on end-to-end learning-based TMS
+End-to-end learning simplifies trust computation in TMS-CAV
+by directly mapping inputs to outputs, eliminating multi-stage
+processing and manual feature engineering - ideal for multisource data fusion and dynamic decisions. Yet challenges
+persist: its opaque nature conflicts with explainability needs
+for tasks like malicious node identification; it adapts poorly to
+layered architectures with privacy mechanisms; and it demands
+large labeled datasets seldom available in dynamic TMS
+environments, limiting generalization against novel attacks.
+
+3888
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+A hybrid solution replaces traditional trust computation with
+an end-to-end sub-module whose outputs remain monitorable
+and overridable, balancing performance gains with localized
+risk containment.
+
+and ML technologies mature, addressing these limitations will
+be pivotal to achieving trustworthy and resilient CAVs.
+R EFERENCES
+[1]
+
+C. Trust Incentive Layer
+(1) Adaptive incentive mechanisms. Currently, there are
+several incentive studies on worker incentives in crowdsensing
+and edge computing, which are categorized as incentives
+based on traditional methods (auction, contract and game),
+blockchain-based incentives, DRL-based or FL-based incentives, and the combination of ML and traditional methods.
+However, most studies focus on general mobile scenarios, with
+limited attention to CAV-specific incentives, especially on trust
+incentives alone. There is an urgent need to develop adaptive
+trust incentive strategies tailored to CAVs that respond dynamically to network and environmental changes.
+(2) Trust-related attack for ML-based TMS. In most
+current ML-based TMS studies, trust-related attacks are typically discussed in the context of the overall effectiveness
+of TMS. However, there is a lack of in-depth analysis on
+how these attacks specifically affect ML-based TMS. Given
+the growing importance of ML model robustness, especially
+against threats such as data poisoning and backdoor attacks,
+it’s crucial to examine the interplay between trust-related
+attacks, adversarial attacks on ML models, and cyberattacks.
+For instance, collusion attacks, a common type of trust-related
+attack, are often triggered by Sybil attacks, and they can have
+a similar impact on ML systems as data poisoning.
+VIII. C ONCLUSION
+Trust mechanisms are essential for secure data exchange,
+reliable decision-making, and defense against attacks, evolving
+from simple modules into comprehensive systems known as
+trust management systems. Traditional rule-based TMS has
+been significantly enhanced by ML, which brings advantages
+like handling large-scale, high-dimensional data and adaptive
+learning capabilities.
+An innovative three-layer ML-based TMS framework
+designed for CAVs is introduced in our survey, integrating
+the trust data layer, trust computation layer, and trust incentive
+layer. The strengths of ML are leveraged in each layer, offering
+a holistic solution for TMS in CAVs. A six-dimensional
+objective framework is also proposed, aligning with the unique
+characteristics and requirements of CAVs, serving as a benchmark for evaluating and comparing various ML approaches.
+Additionally, recent advancements shown by studies in TMS
+across five traffic scenarios and recent advancements on TMS
+mechanisms are surveyed.
+As an exploratory survey, this survey acknowledges that
+ML techniques and CAV technologies are rapidly evolving.
+While our proposed framework is designed to be scalable
+and adaptive, ML-based TMS still faces critical challenges
+in rigorous CAV environments, including the robustness to
+dynamic conditions, the real-world validation gap, explainability and safety, etc. Despite these challenges, this survey
+provides a foundational roadmap for future research. As CAV
+
+[2]
+
+[3]
+[4]
+[5]
+[6]
+[7]
+
+[8]
+[9]
+
+[10]
+
+[11]
+[12]
+[13]
+
+[14]
+[15]
+[16]
+[17]
+[18]
+
+[19]
+[20]
+
+[21]
+
+[22]
+
+(2023). Global Automotive Cybersecurity Report. [Online]. Available:
+https://www.upstreamsecurity.com/
+United Nations Economic Commission for Europe. (2021). Un
+Regulation, no. 155—Cyber Security and Cyber Security Management System. [Online]. Available: https://unece.org/transport/vehicleregulations-wp29/un-regulations
+Road Vehicles—Cybersecurity Engineering, Standard 21434, 2021.
+[Online]. Available: https://www.iso.org/standard/72412.html
+Information Technology—Security Techniques—Information Security
+Controls—Part 1: Concepts and Models, Standard ISO/IEC 27036-1,
+2014. [Online]. Available: https://www.iso.org/standard/53791.html
+M. R. Asaar, M. Salmasizadeh, W. Susilo, and A. Majidi, “A secure
+and efficient authentication technique for vehicular ad-hoc networks,”
+IEEE Trans. Veh. Technol., vol. 67, no. 6, pp. 5409–5423, Jun. 2018.
+M. Adil et al., “Three byte-based mutual authentication scheme for
+autonomous Internet of Vehicles,” IEEE Trans. Intell. Transp. Syst.,
+vol. 23, no. 7, pp. 9358–9369, Jul. 2022.
+R. W. van der Heijden, S. Dietzel, T. Leinmüller, and F. Kargl,
+“Survey on misbehavior detection in cooperative intelligent transportation systems,” IEEE Commun. Surv. Tut., vol. 21, no. 1, pp. 779–811,
+1st Quart., 2019.
+Z. Lu, G. Qu, and Z. Liu, “A survey on recent advances in vehicular
+network security, trust, and privacy,” IEEE Trans. Intell. Transp. Syst.,
+vol. 20, no. 2, pp. 760–776, Feb. 2019.
+G. Bendiab, A. Hameurlaine, G. Germanos, N. Kolokotronis, and
+S. Shiaeles, “Autonomous vehicles security: Challenges and solutions
+using blockchain and artificial intelligence,” IEEE Trans. Intell. Transp.
+Syst., vol. 24, no. 4, pp. 3614–3637, Apr. 2023.
+R. Sedar, C. Kalalas, F. Vázquez-Gallego, L. Alonso, and J. AlonsoZarate, “A comprehensive survey of V2X cybersecurity mechanisms
+and future research paths,” IEEE Open J. Commun. Soc., vol. 4,
+pp. 325–391, 2023.
+Y. Liu, J. Wang, Z. Yan, Z. Wan, and R. Jäntti, “A survey on
+blockchain-based trust management for Internet of Things,” IEEE
+Internet Things J., vol. 10, no. 7, pp. 5898–5922, Apr. 2023.
+L. Fotia, F. Delicato, and G. Fortino, “Trust in edge-based Internet of
+Things architectures: State of the art and research challenges,” ACM
+Comput. Surv., vol. 55, no. 9, pp. 1–34, Jan. 2023.
+S. Sagar, A. Mahmood, Q. Z. Sheng, W. E. Zhang, Y. Zhang,
+and J. K. Pabani, “Understanding the trustworthiness management in
+the social Internet of Things: A survey,” Comput. Netw., vol. 251,
+Sep. 2024, Art. no. 110611.
+L. Wei, Y. Yang, J. Wu, C. Long, and B. Li, “Trust management for
+Internet of Things: A comprehensive study,” IEEE Internet Things J.,
+vol. 9, no. 10, pp. 7664–7679, May 2022.
+J. Wang, Z. Yan, H. Wang, T. Li, and W. Pedrycz, “A survey on trust
+models in heterogeneous networks,” IEEE Commun. Surv. Tut., vol. 24,
+no. 4, pp. 2127–2162, 4th Quart., 2022.
+R. Hussain, J. Lee, and S. Zeadally, “Trust in VANET: A survey of
+current solutions and future research opportunities,” IEEE Trans. Intell.
+Transp. Syst., vol. 22, no. 5, pp. 2553–2571, May 2021.
+A. Hbaieb, S. Ayed, and L. Chaari, “A survey of trust management in
+the Internet of Vehicles,” Comput. Netw., vol. 203, Feb. 2022, Art. no.
+108558.
+E. Zavvos, E. H. Gerding, V. Yazdanpanah, C. Maple, S. Stein, and
+M. C. Schraefel, “Privacy and trust in the Internet of Vehicles,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 8, pp. 10126–10141,
+Aug. 2022.
+M. Macas, C. Wu, and W. Fuertes, “A survey on deep learning for
+cybersecurity: Progress, challenges, and opportunities,” Comput. Netw.,
+vol. 212, Jul. 2022, Art. no. 109032.
+Y. Luo, Y. Xiao, L. Cheng, G. Peng, and D. Yao, “Deep learningbased anomaly detection in cyber-physical systems: Progress and
+opportunities,” ACM Comput. Surv., vol. 54, no. 5, pp. 1–36, Jun.
+2022.
+A. Boualouache and T. Engel, “A survey on machine learning-based
+misbehavior detection systems for 5G and beyond vehicular networks,”
+IEEE Commun. Surv. Tut., vol. 25, no. 2, pp. 1128–1172, 2nd Quart.,
+2023.
+S. Zhang et al., “Federated learning in intelligent transportation systems: Recent applications and open problems,” IEEE Trans. Intell.
+Transp. Syst., vol. 25, no. 5, pp. 3259–3285, May 2024.
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+[23]
+
+[24]
+[25]
+
+[26]
+
+[27]
+
+[28]
+[29]
+
+[30]
+[31]
+
+[32]
+
+[33]
+
+[34]
+
+[35]
+
+[36]
+
+[37]
+
+[38]
+
+[39]
+
+[40]
+
+[41]
+
+[42]
+
+[43]
+
+[44]
+
+V. P. Chellapandi, L. Yuan, C. G. Brinton, S. H. Żak, and Z. Wang,
+“Federated learning for connected and automated vehicles: A survey
+of existing approaches and challenges,” IEEE Trans. Intell. Vehicles,
+vol. 9, no. 1, pp. 119–137, Jan. 2024.
+H. Li et al., “Graph neural networks in intelligent transportation
+systems: Advances, applications and trends,” 2024, arXiv:2401.00713.
+J. Wang, X. Jing, Z. Yan, Y. Fu, W. Pedrycz, and L. T. Yang, “A survey
+on trust evaluation based on machine learning,” ACM Comput. Surv.,
+vol. 53, no. 5, pp. 1–36, Sep. 2021.
+T. Luo, J. Wang, Z. Yan, and E. Gelenbe, “Graph neural networks for
+trust evaluation: Criteria, state-of-the-art, and future directions,” IEEE
+Netw., vol. 39, no. 4, pp. 37–46, Jul. 2025.
+Information Technology—Security Techniques—Information security
+for Supplier Relationships—Part 1: Overview and concepts, Standard
+ISO/IEC 27036-1:2014, 2014. [Online]. Available: https://www.iso.org/
+standard/59648.html
+Information Security Technology Terminology, Standard GB/T 250692022, 2022.
+Overview of Trust Provisioning for Information and Communication
+Technology Infrastructures and Services, document ITU-t Y.3052,
+2017. [Online]. Available: https://www.itu.int/rec/T-REC-Y.3052
+K. Kuru, “TrustFSDV: Framework for building and maintaining trust in
+self-driving vehicles,” IEEE Access, vol. 10, pp. 82814–82833, 2022.
+Q. Xu, Z. Gao, C. Yang, H. Yang, and L. Wang, “Credible positioning of BDS RTK/INS integration based on multi-information
+cross-validation,” IEEE Trans. Intell. Transp. Syst., vol. 25, no. 11,
+pp. 1–13, Nov. 2024.
+H. Gao, C. Liu, Y. Yin, Y. Xu, and Y. Li, “A hybrid approach to
+trust node assessment and management for VANETs cooperative data
+communication: Historical interaction perspective,” IEEE Trans. Intell.
+Transp. Syst., vol. 23, no. 9, pp. 16504–16513, Sep. 2022.
+C. Cheong, Y. Song, Y. Cao, Y. Zhang, B. Cai, and Q. Ni,
+“Multidimensional trust evidence fusion and path-backtracking mechanism for trust management in VANETs,” IEEE Internet Things J.,
+vol. 11, no. 10, pp. 18619–18634, May 2024.
+V. Chunduri et al., “Blockchain-based secure trust management scheme
+for Internet of Vehicles over cyber-physical system,” IEEE Trans. Intell.
+Transp. Syst., vol. 26, no. 9, pp. 14067–14076, Sep. 2025.
+W. Kong, X. Li, L. Hou, J. Yuan, Y. Gao, and S. Yu, “A reliable
+and efficient task offloading strategy based on multifeedback trust
+mechanism for IoT edge computing,” IEEE Internet Things J., vol. 9,
+no. 15, pp. 13927–13941, Aug. 2022.
+H. El-Sayed, H. Alexander, P. Kulkarni, M. A. Khan, R. M. Noor, and
+Z. Trabelsi, “A novel multifaceted trust management framework for
+vehicular networks,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 11,
+pp. 20084–20097, Nov. 2022.
+Y. Li, Y. Cao, Y. Zhuang, J. Li, G. Du, and J. Chen, “Blockchainenabled trust management with location privacy preservation in
+vehicular ad hoc networks,” IEEE Internet Things J., vol. 11, no. 14,
+pp. 24659–24671, Jul. 2024.
+T. Cheng, G. Liu, Q. Yang, and J. Sun, “Trust assessment in vehicular
+social network based on three-valued subjective logic,” IEEE Trans.
+Multimedia, vol. 21, no. 3, pp. 652–663, Mar. 2019.
+S. Li et al., “TD-SAS: A trust-aware and decentralized speed advisory
+system for energy-efficient autonomous vehicle platoons,” IEEE Trans.
+Intell. Vehicles, vol. 9, no. 9, pp. 5554–5570, Sep. 2024.
+H. Chen et al., “Trust model-based consensus optimization for
+vehicle platooning networks: A novel deep reinforcement learning
+approach with GenAI,” IEEE Trans. Intell. Transp. Syst., vol. 26, no. 8,
+pp. 1–16, Aug. 2025.
+H. Yang, L. Guo, T. Wang, and C. Lv, “A novel lightweight dynamic
+trust evaluation model for edge computing,” IEEE Trans. Netw. Service
+Manage., vol. 22, no. 4, pp. 3542–3554, Apr. 2025.
+W. Tong et al., “TI-BIoV: Traffic information interaction for
+blockchain-based IoV with trust and incentive,” IEEE Internet Things
+J., vol. 10, no. 24, pp. 21528–21543, Dec. 2023.
+K. Hidawi, B. Carminati, and E. Ferrari, “Aerotrust-5D: A fivedimensional trust management system for optimizing uav cooperation
+and path planning in urban areas,” IEEE Trans. Veh. Technol., vol. 74,
+no. 12, pp. 18369–18384, Dec. 2025.
+C. Cheong, Y. Song, Y. Cao, Y. Zhang, H. Wang, and Q. Ni,
+“DCACA: Dual-model consensus-based anti-risk confidence allocation
+trust management in IoVs,” IEEE Internet Things J., vol. 12, no. 2,
+pp. 1890–1906, Jan. 2025.
+
+[45]
+
+[46]
+
+[47]
+[48]
+[49]
+[50]
+[51]
+[52]
+
+[53]
+[54]
+[55]
+
+[56]
+[57]
+
+[58]
+
+[59]
+
+[60]
+[61]
+
+[62]
+
+[63]
+[64]
+[65]
+[66]
+[67]
+
+3889
+
+G. Liu, Z. Yan, D. Wang, H. Wang, and T. Li, “DePTVM: Decentralized
+pseudonym and trust value management for integrated networks,”
+IEEE Trans. Dependable Secure Comput., vol. 21, no. 1, pp. 110–124,
+Jan. 2024.
+A. M. Vegni, C. Leoni, V. Loscrı́, and A. Benslimane, “A reputationbased trustworthiness concept for wireless networking in vehicular
+social networks,” IEEE Commun. Mag., vol. 62, no. 5, pp. 28–34, May
+2024.
+Y. Zhao et al., “Entity and sociality trust-aware model for content
+distribution in social Internet of Vehicles,” IEEE Trans. Veh. Technol.,
+vol. 71, no. 12, pp. 12511–12522, Dec. 2022.
+X. Wang et al., “Privacy-preserving content dissemination for vehicular
+social networks: Challenges and solutions,” IEEE Commun. Surv. Tut.,
+vol. 21, no. 2, pp. 1314–1345, 2nd Quart., 2019.
+R. M. Kramer, “Collective trust within organizations: Conceptual foundations and empirical insights,” Corporate Reputation Rev., vol. 13,
+no. 2, pp. 82–97, Jun. 2010.
+J. E. Sapp, D. M. Torre, K. L. Larsen, E. S. Holmboe, and S. J. Durning,
+“Trust in group decisions: A scoping review,” BMC Med. Educ.,
+vol. 19, no. 1, p. 309, Dec. 2019.
+M. M. Hasan, M. Jahan, and S. Kabir, “A trust model for edge-driven
+vehicular ad hoc networks using fuzzy logic,” IEEE Trans. Intell.
+Transp. Syst., vol. 24, no. 12, pp. 14037–14050, Dec. 2023.
+W. Li, W. Meng, and L. F. Kwok, “Surveying trust-based collaborative
+intrusion detection: State-of-the-art, challenges and future directions,”
+IEEE Commun. Surv. Tut., vol. 24, no. 1, pp. 280–305, 1st Quart.,
+2022.
+J. Li et al., “Trust based secure content delivery in vehicular networks:
+A bargaining game theoretical approach,” IEEE Trans. Veh. Technol.,
+vol. 69, no. 3, pp. 3267–3279, Mar. 2020.
+S. Shokrollahi and M. Dehghan, “TGRV: A trust-based geographic
+routing protocol for VANETs,” Ad Hoc Netw., vol. 140, Mar. 2023,
+Art. no. 103062.
+M. V. Kadam, H. B. Mahajan, N. J. Uke, and P. R. Futane,
+“Cybersecurity threats mitigation in Internet of Vehicles communication system using reliable clustering and routing,” Microprocessors
+Microsyst., vol. 102, Oct. 2023, Art. no. 104926.
+W. Zhang, H. Sun, W. Fang, C. Zhu, and G. Jia, “Trust evaluation
+and decision based on D-S evidence theory: Early models and future
+perspectives,” IEEE Access, vol. 11, pp. 16032–16041, 2023.
+S. Shao, W. Gong, H. Yang, S. Guo, L. Chen, and A. Xiong,
+“Data trusted sharing delivery: A blockchain-assisted software-defined
+content delivery network,” IEEE Internet Things J., vol. 10, no. 14,
+pp. 11949–11959, Jul. 2023.
+L. Yang, S. X. Yang, Y. Li, Y. Lu, and T. Guo, “Generative adversarial
+learning for trusted and secure clustering in industrial wireless sensor
+networks,” IEEE Trans. Ind. Electron., vol. 70, no. 8, pp. 8377–8387,
+Aug. 2023.
+I. Mirzadeh, M. Sayad Haghighi, and A. Jolfaei, “Filtering malicious messages by trust-aware cognitive routing in vehicular ad
+hoc networks,” IEEE Trans. Intell. Transp. Syst., vol. 24, no. 1,
+pp. 1134–1143, Jan. 2023.
+J. Guo et al., “TROVE: A context-awareness trust model for VANETs
+using reinforcement learning,” IEEE Internet Things J., vol. 7, no. 7,
+pp. 6647–6662, Jul. 2020.
+S. Dhelim, N. Aung, M. T. Kechadi, H. Ning, L. Chen, and A. Lakas,
+“Trust2Vec: Large-scale IoT trust management system based on
+signed network embeddings,” IEEE Internet Things J., vol. 10, no. 1,
+pp. 553–562, Jan. 2023.
+Z. Tian, X. Gao, S. Su, J. Qiu, X. Du, and M. Guizani, “Evaluating
+reputation management schemes of Internet of Vehicles based on
+evolutionary game theory,” IEEE Trans. Veh. Technol., vol. 68, no. 6,
+pp. 5971–5980, Jun. 2019.
+G. Jin et al., “Spatio-temporal graph neural networks for predictive
+learning in urban computing: A survey,” IEEE Trans. Knowl. Data
+Eng., vol. 36, no. 10, pp. 5388–5408, Oct. 2024.
+X. Liu et al., “Self-supervised learning: Generative or contrastive,”
+IEEE Trans. Knowl. Data Eng., vol. 35, no. 1, pp. 857–876, Jan. 2023.
+J. Gui et al., “A survey on self-supervised learning: Algorithms,
+applications, and future trends,” IEEE Trans. Pattern Anal. Mach.
+Intell., vol. 46, no. 12, pp. 1–20, Dec. 2024.
+Z. Song, X. Yang, Z. Xu, and I. King, “Graph-based semi-supervised
+learning: A comprehensive review,” IEEE Trans. Neural Netw. Learn.
+Syst., vol. 34, no. 11, pp. 8174–8194, Nov. 2023.
+P. K. Mvula, P. Branco, G.-V. Jourdan, and H. L. Viktor, “A survey on
+the applications of semi-supervised learning to cyber-security,” ACM
+Comput. Surv., vol. 56, no. 10, pp. 1–41, Oct. 2024.
+
+3890
+
+[68]
+[69]
+[70]
+
+[71]
+
+[72]
+[73]
+[74]
+[75]
+[76]
+
+[77]
+[78]
+[79]
+[80]
+
+[81]
+[82]
+[83]
+[84]
+[85]
+[86]
+
+[87]
+[88]
+[89]
+[90]
+[91]
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+F. Daneshfar, S. Soleymanbaigi, P. Yamini, and M. S. Amini, “A survey
+on semi-supervised graph clustering,” Eng. Appl. Artif. Intell., vol. 133,
+Jul. 2024, Art. no. 108215.
+X. Wang et al., “Deep reinforcement learning: A survey,” IEEE Trans.
+Neural Netw. Learn. Syst., vol. 35, no. 4, pp. 5064–5078, Apr. 2022.
+S. Munikoti, D. Agarwal, L. Das, M. Halappanavar, and B. Natarajan,
+“Challenges and opportunities in deep reinforcement learning with
+graph neural networks: A comprehensive review of algorithms and
+applications,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 11,
+pp. 1–21, Nov. 2024.
+R. Figueiredo Prudencio, M. R. O. A. Maximo, and E. L. Colombini,
+“A survey on offline reinforcement learning: Taxonomy, review, and
+open problems,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 8,
+pp. 10237–10257, Aug. 2024.
+K. Mo, P. Ye, X. Ren, S. Wang, W. Li, and J. Li, “Security and privacy
+issues in deep reinforcement learning: Threats and countermeasures,”
+ACM Comput. Surv., vol. 56, no. 6, pp. 1–39, Jun. 2024.
+Z. Zhu, K. Lin, A. K. Jain, and J. Zhou, “Transfer learning in deep
+reinforcement learning: A survey,” IEEE Trans. Pattern Anal. Mach.
+Intell., vol. 45, no. 11, pp. 13344–13362, Nov. 2023.
+H. Chen, H. Wang, Q. Long, D. Jin, and Y. Li, “Advancements in
+federated learning: Models, methods, and privacy,” ACM Comput.
+Surv., vol. 57, no. 2, pp. 1–39, Feb. 2025.
+J. Zhu, J. Cao, D. Saxena, S. Jiang, and H. Ferradi, “Blockchainempowered federated learning: Challenges, solutions, and future
+directions,” ACM Comput. Surv., vol. 55, no. 11, pp. 1–31, Nov. 2023.
+Q. Duan, J. Huang, S. Hu, R. Deng, Z. Lu, and S. Yu, “Combining
+federated learning and edge computing toward ubiquitous intelligence
+in 6G network: Challenges, recent advances, and future directions,”
+IEEE Commun. Surv. Tut., vol. 25, no. 4, pp. 2892–2950, 4th Quart.,
+2023.
+X. Yang, H. Yu, X. Gao, H. Wang, J. Zhang, and T. Li, “Federated
+continual learning via knowledge fusion: A survey,” IEEE Trans.
+Knowl. Data Eng., vol. 36, no. 8, pp. 3832–3850, Aug. 2024.
+H. Gharoun, F. Momenifar, F. Chen, and A. H. Gandomi, “Metalearning approaches for few-shot learning: A survey of recent
+advances,” ACM Comput. Surv., vol. 56, no. 12, pp. 1–41, Dec. 2024.
+(2024). End-to-End Learning—AI Glossary. Accessed: Jul. 30,
+2025. [Online]. Available: https://www.allaboutai.com/ai-glossary/endto-end-learning/
+A. Forootani, M. Rastegar, and H. Zareipour, “Transfer learningbased framework enhanced by deep generative model for cold-start
+forecasting of residential EV charging behavior,” IEEE Trans. Intell.
+Vehicles, vol. 9, no. 1, pp. 190–198, Jan. 2024.
+V2X Communication Message Set Dictionary, Standard SAE J2735,
+2023.
+Intelligent Transport Systems (ITS); Vehicular Communications; Basic
+Set of Applications; Part 2: Specification of Cooperative Awareness
+Basic Service, Standard ETSI EN 302 637-2, 2019.
+Q. Xu, L. Zhang, D. Ou, and W. Yu, “Secure intrusion detection
+by differentially private federated learning for inter-vehicle networks,”
+Transp. Res. Rec., vol. 2677, no. 9, pp. 421–437, Sep. 2023.
+L. Chen, D. Xiao, Z. Yu, and M. Zhang, “Secure and efficient federated
+learning via novel multi-party computation and compressed sensing,”
+Inf. Sci., vol. 667, May 2024, Art. no. 120481.
+K. Sameera et al., “Privacy-preserving in blockchain-based federated
+learning systems,” Comput. Commun., vol. 222, pp. 38–67, Jun. 2024.
+Y. Wang, Z. Su, Q. Xu, T. H. Luan, and R. Lu, “Secured and cooperative publish/subscribe scheme in autonomous vehicular networks,”
+IEEE Trans. Intell. Transp. Syst., vol. 25, no. 3, pp. 2235–2252,
+Mar. 2024.
+J. Qi, N. Zheng, M. Xu, P. Chen, and W. Li, “A hybrid-trustbased emergency message dissemination model for vehicular ad hoc
+networks,” J. Inf. Secur. Appl., vol. 81, Mar. 2024, Art. no. 103699.
+X. Li, X. Yin, and J. Ning, “Trustworthy announcement dissemination
+scheme with blockchain-assisted vehicular cloud,” IEEE Trans. Intell.
+Transp. Syst., vol. 24, no. 2, pp. 1786–1800, Feb. 2023.
+Z. Yang, R. Wang, D. Wu, B. Yang, and P. Zhang, “Blockchain-enabled
+trust management model for the Internet of Vehicles,” IEEE Internet
+Things J., vol. 10, no. 14, pp. 12044–12054, Jul. 2023.
+M. Yuan et al., “TRUCON: Blockchain-based trusted data sharing with
+congestion control in Internet of Vehicles,” IEEE Trans. Intell. Transp.
+Syst., vol. 24, no. 3, pp. 3489–3500, Mar. 2023.
+Q. Fan, Y. Xin, B. Jia, Y. Zhang, and P. Wang, “COBATS: A
+novel consortium blockchain-based trust model for data sharing in
+vehicular networks,” IEEE Trans. Intell. Transp. Syst., vol. 24, no. 11,
+pp. 12255–12271, Nov. 2023.
+
+[92]
+
+Z. Shen, Y. Wang, H. Wang, P. Liu, K. Liu, and J. Zhang, “Trust mechanism privacy protection scheme combining blockchain and multi-party
+evaluation,” IEEE Trans. Intell. Vehicles, vol. 9, no. 2, pp. 3885–3894,
+Feb. 2024.
+[93] N. Khatri, S. Lee, A. Mateen, and S. Y. Nam, “Event message clustering
+algorithm for selection of majority message in VANETs,” IEEE Access,
+vol. 11, pp. 14621–14635, 2023.
+[94] J. Zhao, F. Huang, L. Liao, and Q. Zhang, “Blockchain-based trust
+management model for vehicular ad hoc networks,” IEEE Internet
+Things J., vol. 11, no. 5, pp. 8118–8132, Mar. 2024.
+[95] Y. Xia, X. Liu, J. Ou, and O. Ma, “RLID-V: Reinforcement learningbased information dissemination policy generation in VANETs,” IEEE
+Trans. Intell. Transp. Syst., vol. 24, no. 12, pp. 14151–14161, Dec.
+2023.
+[96] O. Sarker, H. Shen, and M. A. Babar, “Reinforcement learning based
+neighbour selection for VANET with adaptive trust management,” in
+Proc. IEEE 22nd Int. Conf. Trust, Secur. Privacy Comput. Commun.
+(TrustCom), Nov. 2023, pp. 585–594.
+[97] T. Jing, Y. Liu, X. Wang, and Q. Gao, “Deep echo state Q-network
+aided trust sharing provisioning for Internet of Vehicle,” IEEE Trans.
+Veh. Technol., vol. 73, no. 3, pp. 3993–4004, Mar. 2024.
+[98] D. Wang, Y. Yi, S. Yan, N. Wan, and J. Zhao, “A node trust evaluation
+method of vehicle-road-cloud collaborative system based on federated
+learning,” Ad Hoc Netw., vol. 138, Jan. 2023, Art. no. 103013.
+[99] H. Shahwani, S. Attique Shah, M. Ashraf, M. Akram, J. Jeong, and
+J. Shin, “A comprehensive survey on data dissemination in vehicular
+ad hoc networks,” Veh. Commun., vol. 34, Apr. 2022, Art. no. 100420.
+[100] B. Liu, W. Han, E. Wang, S. Xiong, C. Qiao, and J. Wang, “An
+efficient message dissemination scheme for cooperative drivings via
+cooperative hierarchical attention reinforcement learning,” IEEE Trans.
+Mobile Comput., vol. 23, no. 5, pp. 5527–5542, May 2024.
+[101] Z. Li, J. Wang, S. Long, J. Fu, M. Yang, and J. Weng, “A trust evaluation joint active detection method in video sharing D2D networks,”
+IEEE Trans. Mobile Comput., vol. 23, no. 7, pp. 7739–7752, Jul. 2024.
+[102] B. E. Mada, M. Bagaa, and T. Taleb, “Trust-based video management
+framework for social multimedia networks,” IEEE Trans. Multimedia,
+vol. 21, no. 3, pp. 603–616, Mar. 2019.
+[103] U. Jayasinghe, G. M. Lee, T.-W. Um, and Q. Shi, “Machine learning based trust computational model for IoT services,” IEEE Trans.
+Sustain. Comput., vol. 4, no. 1, pp. 39–52, Jan. 2019.
+[104] Q. Wang et al., “C-DeepTrust: A context-aware deep trust prediction
+model in online social networks,” IEEE Trans. Neural Netw. Learn.
+Syst., vol. 34, no. 6, pp. 2767–2780, Jun. 2023.
+[105] S. Deng, L. Huang, G. Xu, X. Wu, and Z. Wu, “On deep learning for
+trust-aware recommendations in social networks,” IEEE Trans. Neural
+Netw. Learn. Syst., vol. 28, no. 5, pp. 1164–1177, May 2016.
+[106] W. Lin, Z. Gao, and B. Li, “Guardian: Evaluating trust in online
+social networks with graph convolutional networks,” in Proc. IEEE
+INFOCOM Conf. Comput. Commun., Jul. 2020, pp. 914–923.
+[107] N. Jiang, J. Wen, J. Li, X. Liu, and D. Jin, “GATrust: A multi-aspect
+graph attention network model for trust assessment in OSNs,” IEEE
+Trans. Knowl. Data Eng., vol. 35, no. 6, pp. 5865–5878, Jun. 2023.
+[108] C. Huo, D. He, C. Liang, D. Jin, T. Qiu, and L. Wu, “TrustGNN: Graph
+neural network-based trust evaluation via learnable propagative and
+composable nature,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35,
+no. 10, pp. 1–13, Oct. 2024.
+[109] Y. Xu et al., “Attention-based neural networks for trust evaluation in
+online social networks,” Inf. Sci., vol. 630, pp. 507–522, Jun. 2023.
+[110] J. Wang, Z. Yan, J. Lan, E. Bertino, and W. Pedrycz, “TrustGuard:
+GNN-based robust and explainable trust evaluation with dynamicity
+support,” IEEE Trans. Dependable Secure Comput., vol. 21, no. 5,
+pp. 4433–4450, Sep. 2024.
+[111] Y. Deng, H. Zhang, X. Chen, and Y. Fang, “Multi-hop task routing
+in vehicle-assisted collaborative edge computing,” IEEE Trans. Veh.
+Technol., vol. 73, no. 2, pp. 2444–2455, Feb. 2024.
+[112] M. Azizi and S. Shokrollahi, “RTRV: An RSU-assisted trust-based
+routing protocol for VANETs,” Ad Hoc Netw., vol. 154, Mar. 2024,
+Art. no. 103387.
+[113] N. Fan and C. Q. Wu, “On trust models for communication security
+in vehicular ad-hoc networks,” Ad Hoc Netw., vol. 90, Jul. 2019, Art.
+no. 101740.
+[114] H. Xia, S.-S. Zhang, Y. Li, Z.-K. Pan, X. Peng, and X.-Z. Cheng,
+“An attack-resistant trust inference model for securing routing in
+vehicular ad hoc networks,” IEEE Trans. Veh. Technol., vol. 68, no. 7,
+pp. 7108–7120, Jul. 2019.
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+[115] R. Zhu, A. Boukerche, and Q. Yang, “An efficient secure and
+adaptive routing protocol based on GMM-HMM-LSTM for Internet of Underwater Things,” IEEE Internet Things J., vol. 11, no. 9,
+pp. 16491–16504, May 2024.
+[116] D. Zhang, F. R. Yu, R. Yang, and L. Zhu, “Software-defined
+vehicular networks with trust management: A deep reinforcement
+learning approach,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 2,
+pp. 1400–1414, Feb. 2022.
+[117] F. Li, G. Han, C. Lin, F. Zhang, and C. Sun, “SDN-QLTR: Qlearning-assisted trust routing scheme for SDN-based underwater
+acoustic sensor networks,” IEEE Internet Things J., vol. 11, no. 6,
+pp. 10682–10694, Mar. 2024.
+[118] F. Li, Y. Gong, H. Xu, Z. Lin, W. Huang, and B.-J. Hu, “A transformerbased trust management system for the Internet of Vehicles using
+blockchain technology,” IEEE Trans. Veh. Technol., early access, Aug.
+19, 2025, doi: 10.1109/TVT.2025.3600255.
+[119] C. Cooper, D. Franklin, M. Ros, F. Safaei, and M. Abolhasan, “A
+comparative survey of VANET clustering techniques,” IEEE Commun.
+Surv. Tut., vol. 19, no. 1, pp. 657–681, 1st Quart., 2017.
+[120] K. A. Awan, I. Ud Din, A. Almogren, M. Guizani, and S. Khan,
+“StabTrust—A stable and centralized trust-based clustering mechanism
+for IoT enabled vehicular ad-hoc networks,” IEEE Access, vol. 8,
+pp. 21159–21177, 2020.
+[121] G. Han, Y. He, J. Jiang, N. Wang, M. Guizani, and J. A. Ansere,
+“A synergetic trust model based on SVM in underwater acoustic sensor networks,” IEEE Trans. Veh. Technol., vol. 68, no. 11,
+pp. 11239–11247, Nov. 2019.
+[122] E. M. Ghourab, M. Azab, and N. Ezzeldin, “Blockchain-guided
+dynamic best-relay selection for trustworthy vehicular communication,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 8, pp. 13678–13693,
+Aug. 2022.
+[123] K. N. Qureshi, A. Iftikhar, S. N. Bhatti, F. Piccialli, F. Giampaolo, and
+G. Jeon, “Trust management and evaluation for edge intelligence in the
+Internet of Things,” Eng. Appl. Artif. Intell., vol. 94, Sep. 2020, Art.
+no. 103756.
+[124] M. Mao, T. Hu, and W. Zhao, “Reliable task offloading mechanism
+based on trusted roadside unit service for Internet of Vehicles,” Ad
+Hoc Netw., vol. 139, Feb. 2023, Art. no. 103045.
+[125] B. Ali, M. Gregory, S. Li, and O. Dib, “Implementing zero trust security
+with dual fuzzy methodology for trust-aware authentication and task
+offloading in multi-access edge computing,” Comput. Netw., vol. 241,
+Mar. 2024, Art. no. 110197.
+[126] S. Bounaira, A. Alioua, and I. Souici, “Blockchain-enabled trust management for secure content caching in mobile edge computing using
+deep reinforcement learning,” Internet Things, vol. 25, Apr. 2024, Art.
+no. 101081.
+[127] S. Pratap, P. Dass, and S. Misra, “CoTEV: Trustworthy and cooperative
+task execution in Internet of Vehicles,” IEEE Trans. Mobile Comput.,
+vol. 23, no. 4, pp. 2915–2926, Apr. 2024.
+[128] J. Wang, Z. Li, H. Liu, T. Qiu, and H. Luo, “A trust-based computation
+offloading framework in mobile cloud-edge computing networks,”
+IEEE Trans. Mobile Comput., vol. 24, no. 6, pp. 5370–5385,
+Jun. 2025.
+[129] C. Mao, R. Lin, D. Towey, W. Wang, J. Chen, and Q. He,
+“Trustworthiness prediction of cloud services based on selective neural
+network ensemble learning,” Expert Syst. Appl., vol. 168, Apr. 2021,
+Art. no. 114390.
+[130] P. Abeysekara, H. Dong, and A. K. Qin, “Data-driven trust prediction
+in mobile edge computing-based IoT systems,” IEEE Trans. Services
+Comput., vol. 16, no. 1, pp. 246–260, Jan. 2023.
+[131] Y. Ren, X. Chen, S. Guo, S. Guo, and A. Xiong, “Blockchain-based
+VEC network trust management: A DRL algorithm for vehicular
+service offloading and migration,” IEEE Trans. Veh. Technol., vol. 70,
+no. 8, pp. 8148–8160, Aug. 2021.
+[132] J. Bai, H. Dong, and A. Bouguettaya, “FEDQ-trust: Efficient datadriven trust prediction for mobile edge-based IoT systems,” 2024,
+arXiv:2404.18356.
+[133] W. Fan et al., “Dynamic virtual network embedding of mobile cloud
+system based on global resources in Internet of Vehicles,” IEEE Trans.
+Veh. Technol., vol. 70, no. 8, pp. 8161–8174, Aug. 2021.
+[134] Y. Zhang, C. Jiang, and P. Zhang, “Security-aware resource allocation
+scheme based on DRL in cloud–edge–terminal cooperative vehicular network,” IEEE Internet Things J., vol. 11, no. 1, pp. 95–104,
+Jan. 2024.
+[135] P. Zhang, C. Wang, C. Jiang, and A. Benslimane, “Security-aware
+virtual network embedding algorithm based on reinforcement learning,”
+IEEE Trans. Netw. Sci. Eng., vol. 8, no. 2, pp. 1095–1105, Apr. 2021.
+
+3891
+
+[136] P. Rezaeimoghaddam and I. Al-Anbagi, “Cost-efficient and trust-aware
+virtual network embedding for dense industrial IoT systems using
+multiagent systems,” IEEE Trans. Netw. Service Manage., vol. 21,
+no. 1, pp. 1100–1114, Feb. 2024.
+[137] J. Xie et al., “A survey of machine learning techniques applied to
+software defined networking (SDN): Research issues and challenges,”
+IEEE Commun. Surv. Tut., vol. 21, no. 1, pp. 393–430, 1st Quart.,
+2019.
+[138] A. Sachan and N. Kumar, “SDVN enabled traffic light cooperative
+framework for E-SIoV mobility in a smart city scenario,” IEEE Trans.
+Veh. Technol., vol. 73, no. 8, pp. 1–12, Aug. 2024.
+[139] A. Nahar, K. K. Mondal, D. Das, and R. Buyya, “Clouds on the
+road: A software-defined fog computing framework for intelligent
+resource management in vehicular ad-hoc networks,” IEEE Trans.
+Mobile Comput., vol. 23, no. 12, pp. 1–15, Dec. 2024.
+[140] Y. Liu, L. Huo, X. Zhang, and J. Wu, “A multi-objective resource preallocation scheme using SDN for intelligent transportation system,”
+IEEE Trans. Intell. Transp. Syst., vol. 25, no. 1, pp. 571–586,
+Jan. 2024.
+[141] S. Deng, X. Zhang, and X. Gao, “Poisoning topology view in softwaredefined vehicular network: An empirical study,” IEEE Trans. Intell.
+Transp. Syst., vol. 25, no. 11, pp. 1–12, Nov. 2024.
+[142] L. Xie, Y. Ding, H. Yang, and X. Wang, “Blockchain-based secure and
+trustworthy Internet of Things in SDN-enabled 5G-VANETs,” IEEE
+Access, vol. 7, pp. 56656–56666, 2019.
+[143] S. Hameed et al., “A scalable key and trust management solution for
+IoT sensors using SDN and blockchain technology,” IEEE Sensors J.,
+vol. 21, no. 6, pp. 8716–8733, Mar. 2021.
+[144] A. L. Aliyu, A. Aneiba, M. Patwary, and P. Bull, “A trust management
+framework for software defined network (SDN) controller and network
+applications,” Comput. Netw., vol. 181, Nov. 2020, Art. no. 107421.
+[145] J. M. Jorquera Valero, P. M. Sánchez Sánchez, M. Gil Pérez, A. Huertas
+Celdrán, and G. Martinez Perez, “Cutting-edge assets for trust in 5G
+and beyond: Requirements, state of the art, trends, and challenges,”
+ACM Comput. Surv., vol. 55, no. 11, pp. 1–36, Nov. 2023.
+[146] Z. Wang et al., “When crowdsensing meets smart cities: A comprehensive survey and new perspectives,” IEEE Commun. Surv. Tut., vol. 27,
+no. 2, pp. 1101–1151, 2nd Quart., 2025.
+[147] X. Zhu, Y. Luo, A. Liu, W. Tang, and M. Z. A. Bhuiyan, “A
+deep learning-based mobile crowdsensing scheme by predicting vehicle mobility,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7,
+pp. 4648–4659, Jul. 2021.
+[148] S. Gao, X. Chen, J. Zhu, X. Dong, and J. Ma, “TrustWorker:
+A trustworthy and privacy-preserving worker selection scheme for
+blockchain-based crowdsensing,” IEEE Trans. Services Comput.,
+vol. 15, no. 6, pp. 3577–3590, Nov. 2022.
+[149] B. Luo, X. Li, X. Liu, J. Guo, Y. Ren, S. Ma, and J. Ma, “D2 MT S :
+Enabling dependable data collection with multiple crowdsourcers trust
+sharing in mobile crowdsensing,” IEEE Trans. Knowl. Data Eng.,
+vol. 36, no. 3, pp. 927–942, Mar. 2024.
+[150] T. Li, S. Xie, Z. Zeng, M. Dong, and A. Liu, “ATPS: An AI based
+trust-aware and privacy-preserving system for vehicle managements
+in sustainable VANETs,” IEEE Trans. Intell. Transp. Syst., vol. 23,
+no. 10, pp. 19837–19851, Oct. 2022.
+[151] P. Zhao, C. Li, Y. Fu, Y. Hui, Y. Zhang, and N. Cheng, “Blockchainenabled conditional decentralized vehicular crowdsensing system,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 10, pp. 18937–18950,
+Oct. 2022.
+[152] S. Fu, X. Huang, L. Liu, and Y. Luo, “BFCRI: A blockchain-based
+framework for crowdsourcing with reputation and incentive,” IEEE
+Trans. Cloud Comput., vol. 11, no. 2, pp. 2158–2174, Apr. 2023.
+[153] Z. Zhan et al., “Enhancing worker recruitment in collaborative mobile
+crowdsourcing: A graph neural network trust evaluation approach,”
+IEEE Trans. Mobile Comput., vol. 23, no. 10, pp. 1–18, Oct. 2024.
+[154] J. Akram, A. Anaissi, R. S. Rathore, R. H. Jhaveri, and A. Akram,
+“GALTrust: Generative adverserial learning-based framework for trust
+management in spatial crowdsourcing drone services,” IEEE Trans.
+Consum. Electron., vol. 70, no. 3, pp. 6196–6207, Aug. 2024.
+[155] Y. Zheng, Z. Li, Z. Zeng, S. Zhang, N. N. Xiong, and A. Liu, “CITE: A
+content based trust evaluation scheme for data collection with Internet
+of Everything,” Inf. Sci., vol. 647, Nov. 2023, Art. no. 119424.
+[156] L. Wan et al., “Lightweight and privacy-preserving dual incentives for
+mobile crowdsensing,” IEEE Trans. Cloud Comput., vol. 12, no. 2,
+pp. 504–521, Apr. 2024.
+
+3892
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 27, NO. 4, APRIL 2026
+
+[157] M. Li, M. Ma, L. Wang, Z. Pei, J. Ren, and B. Yang, “Multiagent
+deep reinforcement learning based incentive mechanism for mobile
+crowdsensing in intelligent transportation systems,” IEEE Syst. J.,
+vol. 18, no. 1, pp. 527–538, Mar. 2024.
+[158] Q. Xu, Z. Su, S. Yu, and Y. Wang, “Trust based incentive scheme
+to allocate big data tasks with mobile social cloud,” IEEE Trans. Big
+Data, vol. 8, no. 1, pp. 113–124, Feb. 2022.
+[159] M. Dai, Z. Su, Q. Xu, Y. Wang, and N. Lu, “A trust-driven contract
+incentive scheme for mobile crowd-sensing networks,” IEEE Trans.
+Veh. Technol., vol. 71, no. 2, pp. 1794–1806, Feb. 2022.
+[160] Y. Liu, S. Wang, D. Zhang, Q. Zhang, and J. Wang, “Optimal incentive
+strategy in blockchain-based mobile crowdsensing using game theory,”
+Comput. Netw., vol. 237, Dec. 2023, Art. no. 110053.
+[161] L. Zhang, G. Feng, S. Qin, X. Li, Y. Sun, and B. Cao, “Trust-preserving
+mechanism for blockchain assisted mobile crowdsensing,” IEEE Trans.
+Comput., vol. 72, no. 11, pp. 3113–3126, Nov. 2023.
+[162] X. Cai et al., “An incentive mechanism for vehicular crowdsensing
+with security protection and data quality assurance,” IEEE Trans. Veh.
+Technol., vol. 72, no. 8, pp. 9984–9998, Aug. 2023.
+[163] K. Jiang et al., “A reinforcement learning-based incentive mechanism
+for task allocation under spatiotemporal crowdsensing,” IEEE Trans.
+Computat. Social Syst., vol. 11, no. 2, pp. 2179–2189, Apr. 2024.
+[164] N. Zhao, Y. Pei, Y.-C. Liang, and D. Niyato, “Deep-reinforcementlearning-based contract incentive mechanism for joint sensing and
+computation in mobile crowdsourcing networks,” IEEE Internet Things
+J., vol. 11, no. 7, pp. 12755–12767, Apr. 2024.
+[165] N. Zhao, Y. Pei, Y.-C. Liang, and D. Niyato, “Multi-agent deep
+reinforcement learning based incentive mechanism for multi-task federated edge learning,” IEEE Trans. Veh. Technol., vol. 72, no. 10,
+pp. 13530–13535, Oct. 2023.
+[166] N. He et al., “Incentive mechanism for resource trading in video
+analytic services using reinforcement learning,” IEEE Trans. Services
+Comput., vol. 17, no. 6, pp. 1–14, Nov. 2024.
+[167] L. Wu, S. Guo, Z. Hong, Y. Liu, W. Xu, and Y. Zhan, “Long-term
+adaptive VCG auction mechanism for sustainable federated learning
+with periodical client shifting,” IEEE Trans. Mobile Comput., vol. 23,
+no. 5, pp. 6060–6073, May 2024.
+[168] X. Wang, S. Garg, H. Lin, G. Kaddoum, J. Hu, and M. M. Hassan,
+“Heterogeneous blockchain and AI-driven hierarchical trust evaluation
+for 5G-enabled intelligent transportation systems,” IEEE Trans. Intell.
+Transp. Syst., vol. 24, no. 2, pp. 2074–2083, Feb. 2023.
+[169] Y. Zhan, P. Li, Z. Qu, D. Zeng, and S. Guo, “A learning-based incentive
+mechanism for federated learning,” IEEE Internet Things J., vol. 7,
+no. 7, pp. 6360–6368, Jul. 2020.
+[170] B. Li, K. Xie, X. Huang, Y. Wu, and S. Xie, “Deep reinforcement
+learning based incentive mechanism design for platoon autonomous
+driving with social effect,” IEEE Trans. Veh. Technol., vol. 71, no. 7,
+pp. 7719–7729, Jul. 2022.
+[171] M. Martı́nez-Dı́az, C. Al-Haddad, F. Soriguera, and C. Antoniou,
+“Impacts of platooning of connected automated vehicles on highways,”
+IEEE Trans. Intell. Transp. Syst., vol. 25, no. 7, pp. 6366–6396,
+Jul. 2024.
+[172] S. Li, J. Li, J. Pei, S. Wu, S. Wang, and L. Cheng, “Eco-CSAS: A
+safe and eco-friendly speed advisory system for autonomous vehicle
+platoon using consortium blockchain,” IEEE Trans. Intell. Transp.
+Syst., vol. 24, no. 7, pp. 7802–7812, Jul. 2023.
+[173] C. Zhang et al., “TPPR: A trust-based and privacy-preserving platoon
+recommendation scheme in VANET,” IEEE Trans. Services Comput.,
+vol. 15, no. 2, pp. 806–818, Mar. 2022.
+[174] H. Cheng, X. Zhang, J. Yang, and Y. Liu, “PPRT: Privacy preserving
+and reliable trust-aware platoon recommendation scheme in IoV,” IEEE
+Syst. J., vol. 17, no. 3, pp. 4922–4933, Sep. 2023.
+[175] Z. Ying, M. Ma, Z. Zhao, X. Liu, and J. Ma, “A reputation-based
+leader election scheme for opportunistic autonomous vehicle platoon,”
+IEEE Trans. Veh. Technol., vol. 71, no. 4, pp. 3519–3532, Apr. 2022.
+[176] S. Chavhan, S. Kumar, P. Tiwari, X. Liang, I. H. Lee, and
+K. Muhammad, “Edge-enabled blockchain-based V2X scheme for
+secure communication within the smart city development,” IEEE
+Internet Things J., vol. 10, no. 24, pp. 21282–21293, Dec. 2023.
+[177] J. Li, S. Li, L. Cheng, Q. Liu, J. Pei, and S. Wang, “BSAS: A
+blockchain-based trustworthy and privacy-preserving speed advisory
+system,” IEEE Trans. Veh. Technol., vol. 71, no. 11, pp. 11421–11430,
+Nov. 2022.
+[178] X. Liu, O. Ma, W. Chen, Y. Xia, and Y. Zhou, “HDRS: A hybrid
+reputation system with dynamic update interval for detecting malicious
+vehicles in VANETs,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 8,
+pp. 12766–12777, Aug. 2022.
+
+[179] T. Wang et al., “Mobile edge-enabled trust evaluation for the Internet
+of Things,” Inf. Fusion, vol. 75, pp. 90–100, Nov. 2021.
+[180] C. Wang, G. Liu, and T. Jiang, “Malicious node detection in wireless
+weak-link sensor networks using dynamic trust management,” IEEE
+Trans. Mobile Comput., vol. 23, no. 12, pp. 12866–12877, Dec. 2024.
+[181] T. Khan et al., “An efficient trust-based decision-making approach
+for WSNs: Machine learning oriented approach,” Comput. Commun.,
+vol. 209, pp. 217–229, Sep. 2023.
+[182] X. Huang, C. Chen, N. Chen, P. Li, R. Zhu, and Q. Yang, “A robust
+and machine learning-driven identification scheme for malicious nodes
+in UASNs,” Comput. Commun., vol. 217, pp. 1–11, Mar. 2024.
+[183] S. Sagar, A. Mahmood, M. Sheng, M. Zaib, and W. Zhang, “Towards
+a machine learning-driven trust evaluation model for social Internet of
+Things: A time-aware approach,” in Proc. 17th EAI Int. Conf. Mobile
+Ubiquitous Syst., Comput., Netw. Services, Dec. 2020, pp. 283–290.
+[184] H. El-Sayed, H. A. Ignatious, P. Kulkarni, and S. Bouktif, “Machine
+learning based trust management framework for vehicular networks,”
+Veh. Commun., vol. 25, Oct. 2020, Art. no. 100256.
+[185] C. Zhang, W. Li, Y. Luo, and Y. Hu, “AIT: An AI-enabled trust management system for vehicular networks using blockchain technology,”
+IEEE Internet Things J., vol. 8, no. 5, pp. 3157–3169, Mar. 2021.
+[186] X. Li, Q. Wang, and R. Li, “A trustworthiness sequence prediction
+scheme based on neural networks and mathematical calculations,”
+IEEE Internet Things J., vol. 11, no. 12, pp. 22643–22655, Jun. 2024.
+[187] Q. Zhu, A. Jing, C. Gan, X. Guan, and Y. Qin, “HCSC: A hierarchical
+certificate service chain based on reputation for VANETs,” IEEE Trans.
+Intell. Transp. Syst., vol. 24, no. 6, pp. 6123–6145, Jun. 2023.
+[188] P. H. Basha et al., “Ai-driven multi-factor authentication and dynamic
+trust management for securing massive machine type communication
+in 6G networks,” Interface J. Intell. Syst. Appl. Eng., vol. 12, no. 1,
+pp. 361–374, Sep. 2023.
+[189] J. Du, G. Han, C. Lin, and M. Martı́nez-Garcı́a, “ITrust: An
+anomaly-resilient trust model based on isolation forest for underwater
+acoustic sensor networks,” IEEE Trans. Mobile Comput., vol. 21, no. 5,
+pp. 1684–1696, May 2022.
+[190] M. Shafi, R. K. Jha, and S. Jain, “Intelligent trust ranking security
+preserving model for B5G/6G,” IEEE Trans. Comput. Netw. Service,
+vol. 20, no. 3, pp. 3549–3561, Sep. 2023.
+[191] H. Harkat, L. M. Camarinha-Matos, J. Goês, and H. F. T. Ahmed,
+“Cyber-physical systems security: A systematic review,” Comput. Ind.
+Eng., vol. 188, Feb. 2024, Art. no. 109891.
+[192] S. Azad, M. Mahmud, K. Z. Zamli, M. S. Kaiser, S. Jahan, and
+M. A. Razzaque, “IBUST: An intelligent behavioural trust model
+for securing industrial cyber-physical systems,” Expert Syst. Appl.,
+vol. 238, Mar. 2024, Art. no. 121676.
+[193] Y. He, G. Han, J. Jiang, H. Wang, and M. Martı́nez-Garcı́a, “A trust
+update mechanism based on reinforcement learning in underwater
+acoustic sensor networks,” IEEE Trans. Mobile Comput., vol. 21, no. 3,
+pp. 811–821, Mar. 2022.
+[194] H. Lin, S. Garg, J. Hu, X. Wang, M. J. Piran, and M. S. Hossain, “Data
+fusion and transfer learning empowered granular trust evaluation for
+Internet of Things,” Inf. Fusion, vol. 78, pp. 149–157, Feb. 2022.
+[195] S. Zhang, R. He, Y. Xiao, and Y. Liu, “A three-factor based trust
+model for anonymous bacon message in VANETs,” IEEE Trans. Veh.
+Technol., vol. 72, no. 9, pp. 11304–11317, Sep. 2023.
+[196] S. Wang, Y. Hu, and G. Qi, “Blockchain and deep learning based trust
+management for Internet of Vehicles,” Simul. Model. Pract. Theory,
+vol. 120, Nov. 2022, Art. no. 102627.
+[197] M. Aslan and S. Sen, “A dynamic trust management model for
+vehicular ad hoc networks,” Veh. Commun., vol. 41, Jun. 2023, Art.
+no. 100608.
+[198] F. Ahmad, F. Kurugollu, C. A. Kerrache, S. Sezer, and L. Liu,
+“NOTRINO: A NOvel hybrid TRust management scheme for Internetof-Vehicles,” IEEE Trans. Veh. Technol., vol. 70, no. 9, pp. 9244–9257,
+Sep. 2021.
+[199] W. Li and H. Song, “ART: An attack-resistant trust management
+scheme for securing vehicular ad hoc networks,” IEEE Trans. Intell.
+Transp. Syst., vol. 17, no. 4, pp. 960–969, Apr. 2016.
+[200] A. O. Philip and R. K. Saravanaguru, “Multisource traffic incident
+reporting and evidence management in Internet of Vehicles using
+machine learning and blockchain,” Eng. Appl. Artif. Intell., vol. 117,
+Jan. 2023, Art. no. 105630.
+[201] R. Magdich, H. Jemal, and M. B. Ayed, “A resilient trust management
+framework towards trust related attacks in the social Internet of
+Things,” Comput. Commun., vol. 191, pp. 92–107, Jul. 2022.
+
+XU et al.: ENHANCING TRUST MANAGEMENT SYSTEM FOR CAVs USING ML METHODS: A SURVEY
+
+[202] C. Marche and M. Nitti, “Trust-related attacks and their detection: A
+trust management model for the social IoT,” IEEE Trans. Netw. Service
+Manage., vol. 18, no. 3, pp. 3297–3308, Sep. 2021.
+[203] Z. Zhao, S. Zhao, F. Lv, S. Si, H. Zhu, and L. Sun, “RIETD: A
+reputation incentive scheme facilitates personalized edge tampering
+detection,” IEEE Internet Things J., vol. 11, no. 8, pp. 14771–14788,
+Aug. 2024.
+[204] X. Wu, Y. Liu, J. Tian, and Y. Li, “Privacy-preserving trust management
+method based on blockchain for cross-domain industrial IoT,” Knowl.Based Syst., vol. 283, Jan. 2024, Art. no. 111166.
+[205] B. Li, R. Liang, D. Zhu, W. Chen, and Q. Lin, “Blockchain-based trust
+management model for location privacy preserving in VANET,” IEEE
+Trans. Intell. Transp. Syst., vol. 22, no. 6, pp. 3765–3775, Jun. 2021.
+[206] K. Yan, W. Ma, Q. Yang, S. Sun, and W. Wang, “Info-chain:
+Reputation-based blockchain for secure information sharing in 6G
+intelligent transportation systems,” IEEE Internet Things J., vol. 11,
+no. 5, pp. 9198–9212, Mar. 2024.
+[207] B. Li et al., “Trust management strategy for digital twins in vehicular
+ad hoc networks,” IEEE J. Sel. Areas Commun., vol. 41, no. 10,
+pp. 3279–3292, Oct. 2023.
+[208] Z. Liu et al., “PPTM: A privacy-preserving trust management
+scheme for emergency message dissemination in space–air–groundintegrated vehicular networks,” IEEE Internet Things J., vol. 9, no. 8,
+pp. 5943–5956, Apr. 2022.
+[209] R. Li et al., “RPPM: A reputation-based and privacy-preserving platoon management scheme in vehicular networks,” IEEE Trans. Intell.
+Transp. Syst., vol. 25, no. 6, pp. 6147–6160, Jun. 2024.
+[210] D. Fu, W. Bao, R. Maciejewski, H. Tong, and J. He, “Privacypreserving graph machine learning from data to computation: A
+survey,” ACM SIGKDD Explor. Newslett., vol. 25, no. 1, pp. 54–72,
+Jun. 2023.
+[211] H. Qin, D. He, Q. Feng, M. K. Khan, M. Luo, and K.-K.-R. Choo,
+“Cryptographic primitives in privacy-preserving machine learning: A
+survey,” IEEE Trans. Knowl. Data Eng., vol. 36, no. 5, pp. 1919–1934,
+May 2024.
+[212] J. Pan, T. Wang, C. Claudel, and J. Shi, “Trust-MARL: Trustbased multi-agent reinforcement learning framework for cooperative
+on-ramp merging control in heterogeneous traffic flow,” 2025,
+arXiv:2506.12600.
+[213] H. Bangui, B. Buhnova, and M. Ge, “Black swan theory for navigating
+trust in mixed-traffic environments,” in Proc. Int. Conf. Res. Challenges
+Inf. Sci., 2025, pp. 87–102.
+[214] M. Bojarski et al., “End to end learning for self-driving cars,” 2016,
+arXiv:1604.07316.
+[215] G. De Carvalho Bertoli et al., “An end-to-end framework for machine
+learning-based network intrusion detection system,” IEEE Access,
+vol. 9, pp. 106790–106805, 2021.
+[216] M. Bahutair and A. Bouguettaya, “An end-to-end trust management
+framework for crowdsourced IoT services,” ACM Trans. Internet
+Technol., vol. 23, no. 3, pp. 1–32, Aug. 2023.
+[217] H. Li, X. Li, F. Dunkin, Z. Zhang, and X. Lu, “Adaptive multigranularity trust management scheme for UAV visual sensor security
+under adversarial attacks,” Comput. Secur., vol. 148, Jan. 2025, Art.
+no. 104108.
+[218] Y. Liu, D. He, M. Luo, H. Wang, and Q. Liu, “ATRC: An anonymous traceable and revocable credential system using blockchain for
+VANETs,” IEEE Trans. Veh. Technol., vol. 73, no. 2, pp. 2482–2494,
+Feb. 2024.
+[219] J. Yin, Y. Xiao, J. Feng, M. Yang, Q. Pei, and X. Yi, “DidTrust: Privacypreserving trust management for decentralized identity,” IEEE Trans.
+Dependable Secure Comput., vol. 22, no. 3, pp. 1–16, May 2025.
+
+3893
+
+Qian Xu received the bachelor’s and master’s
+degrees in traffic information engineering and control from Lanzhou Jiaotong University, in 2018
+and 2021, respectively, and the Ph.D. degree in
+transportation engineering from Tongji University,
+Shanghai, China, in 2025. She is currently a PostDoctoral Fellow with the State Key Laboratory of
+Internet of Things for Smart City, University of
+Macau. Her research focuses on AI techniques for
+connected autonomous vehicles.
+
+Lei Zhang (Member, IEEE) received the Ph.D.
+degree from Chinese Academy of Sciences in 2008
+and the Post-Doctoral degree from Tsinghua University in 2010. He is currently a Professor and
+the Ph.D. Supervisor with Tongji University, Shanghai. His current research interests include intelligent
+information processing and applications for spatiotemporal data analysis. He is one of the editorial
+board members of High-Confidence Computing.
+
+Yixiao Liu received the bachelor’s degree in
+mechanical engineering from Tongji University in
+2021 and the master’s degree in data science from
+the City University of Macau in 2023. He is
+currently pursuing the Ph.D. degree in intelligent
+science and technology with Tongji University. His
+research interests include spatio-temporal data analysis, trustworthy connected and automated vehicles,
+and multi-agent systems.
+
+Zhenning Li (Member, IEEE) received the Ph.D.
+degree in civil engineering from the University of
+Hawaii at Manoa, USA, in 2019. He is currently an
+Assistant Professor with the State Key Laboratory of
+Internet of Things for Smart City, the Department
+of Civil and Environmental Engineering, and the
+Department of Computer and Information Science,
+University of Macau, Macau, China. Over his academic career, he has authored or co-authored more
+than 80 papers. His research primarily explores the
+nexus between connected autonomous vehicles and
+big data applications within urban transportation.
+PAPER_TEXT

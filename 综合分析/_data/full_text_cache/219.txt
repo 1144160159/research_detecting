@@ -1,0 +1,766 @@
+4816 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 4, AUGUST 2024
+
+ Evaluating Federated Learning-Based Intrusion
+ Detection Scheme for Next Generation Networks
+ Gurpreet Singh , Keshav Sood , Senior Member, IEEE, P. Rajalakshmi , Senior Member, IEEE,
+ Dinh Duc Nha Nguyen , and Yong Xiang , Senior Member, IEEE
+
+ Abstract—The proliferation of billions of heterogeneous that monitors all traffic passing a strategic point for mali-
+Internet of Things (IoT) devices at a rapid pace has resulted in cious activities. Upon detecting unknown or malicious traffic,
+a marked expansion of attack surfaces. Numerous new attacks they generate alerts to the user/admin. IDSs are divided
+are constantly emerging to undermine the network’s availability,
+data confidentiality, and systems’ integrity due to inadequate into two main categories: signature-based and anomaly-based.
+security measures and resource limitations. Intrusion detection Signature-based IDSs, like Snort and Suricata, use a database
+systems (IDSs) are used as the first line of defense to identify of known attack patterns to identify malicious behavior.
+early instances of cyber-attacks targeting critical points. However, However, they require regular updates to their attack signatures
+Next-Generation Networks (NGNs) with dense connectivity pose to detect new known attacks, and they cannot detect previously
+a challenge for traditional IDS approaches, as they raise concerns
+about users’ data privacy. Federated learning-based IDSs (Fed- unknown (zero-day) attacks. The anomaly-based IDSs use
+IDSs) are an emerging and promising solution, as they permit machine learning (ML) or deep learning (DL) models to
+the training of machine learning models on decentralized data extract and analyze the network traffic data for outlier detecstored on devices without compromising privacy. However, Fed- tion or classification. Although the anomaly-based approaches
+IDSs also have some unique issues. We identified that the existing can detect zero-day attacks, they give high false alarms and
+Fed-IDSs have poor performance since the datasets used for
+evaluation, or the data in the real world, are highly imbalanced, poor performance for various reasons, and one of the key
+and classes are not uniformly distributed. Motivated by this, we reasons is the use of imbalanced datasets for evaluation [3].
+developed a novel IDS to effectively address the problem of class Furthermore, traditional centralized machine learning (TCML)
+imbalance in federated learning at both the local and global approaches for model training, where all devices send their
+levels. Following this, we evaluated the performance of our Fed- data to one central server, have been widely proposed to
+IDS under both independent and identically distributed (IID)
+and non-IID data settings and observed its generalizability to improve the performance of IDSs. However, these approaches
+detect various attacks improved greatly. Extensive experiments raise privacy concerns, and in the real world, data is highly
+are conducted to illustrate the effectiveness and benefits of this imbalanced, and classes are not uniformly distributed. So,
+proposal. there is a strong need to decentralize the ML tasks so that user
+ Index Terms—Cyber-security, federated learning, intrusion data can be trained and pre-processed locally while preserving
+detection, deep learning, anomaly detection. privacy [4], [5].
+ Federated Learning (FL) is the new dawn of ML for Next
+ Generation Internet of Things (IoT) networks. It is a collabo-
+ I. I NTRODUCTION rative learning technique in which many clients (e.g., various
+ HE INCREASED reliance on smart devices and the IoT devices or even big organizations) train a global ML/DL
+T Internet has made cyber-security a growing concern [1].
+Therefore, it is critical to develop intelligent Intrusion
+ model under the supervision of a central server [6]. Despite
+ its potential, using FL to create an IDS is hindered by several
+Detection Systems (IDSs) for Next Generation Networks limitations, such as the absence of suitable intrusion detection
+(NGNs) [2]. IDSs are the first line of defense mechanism datasets, communication efficiency challenges, susceptibility
+ to model and data poisoning attacks, problems with slow-
+ Manuscript received 16 August 2023; revised 26 January 2024; accepted performing clients or stragglers, and lack of trustworthiness.
+1 April 2024. Date of publication 4 April 2024; date of current version Furthermore, from our literature synthesis, we have found that
+21 August 2024. The associate editor coordinating the review of this article
+and approving it for publication was M. Conti. (Corresponding author: class imbalance is a critical and significant problem prevalent
+Gurpreet Singh.) in numerous networking datasets (from older to recent ones)
+ Gurpreet Singh is with the School of Information Technology, Deakin extensively used by researchers, as depicted in Fig. 1.
+University, Melbourne, VIC 3125, Australia, and also with the Department of
+Electrical Engineering, Indian Institute of Technology Hyderabad, Hyderabad We note that the reason for the class imbalance in
+502285, India (e-mail: id21resch11029@iith.ac.in). networking datasets is attributed to the nature of real-world
+ Keshav Sood, Dinh Duc Nha Nguyen, and Yong Xiang are with the networks, where the volume of benign or normal traffic
+School of Information Technology, Deakin University, Melbourne, VIC 3125,
+Australia (e-mail: keshav.sood@deakin.edu.au; dinh.nguyen@deakin.edu.au; significantly outweighs the amount of malicious traffic (longyong.xiang@deakin.edu.au). tail data distribution). This disparity in class distribution
+ P. Rajalakshmi is with the Department of Electrical Engineering, poses a challenge when training machine learning models
+Indian Institute of Technology Hyderabad, Hyderabad 502285, India
+(e-mail: raji@ee.iith.ac.in). as they tend to be biased towards the majority class, lead-
+ Digital Object Identifier 10.1109/TNSM.2024.3385385 ing to reduced performance in detecting and classifying the
+ 1932-4537 
+ c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+SINGH et al.: EVALUATING FL-BASED INTRUSION DETECTION SCHEME FOR NGNs 4817
+
+ clients may have significantly fewer samples than others. The
+ associated challenge stems from the bias introduced by the
+ disproportionate representation of classes. Conversely, non-
+ IID data refers to a situation where each client exhibits a
+ unique data distribution, leading to local datasets that may
+ not accurately represent the overall global distribution. The
+ extreme case of non-IID data is the situation when each client
+ has unique class data. Challenges in this context emerge from
+ the imperative to generalize effectively across diverse data
+ distributions. While considerable research efforts have focused
+ on addressing the non-IID (non-independent and identically
+ distributed) data issue in the Fed-IDSs [16], [17], the problem
+ of class imbalance has largely been overlooked.
+ Motivated by this, we developed a novel Fed-IDS that
+Fig. 1. Binary distribution of widely used IDS datasets. differs from existing works as it provides insights into handling
+ the class imbalance and non-IID (excluding extreme scenarios)
+ issues simultaneously. Additionally, it is effective in handling
+less frequent but crucial instances of malicious behavior both local and global class imbalances and quickly achieves
+[7], [8], [9]. Unfortunately, to the best of our knowledge, maximum accuracy (high convergence rate) compared to
+none of the existing studies in Fed-IDSs have looked at other baselines. In our proposed Federated Intrusion Detection
+this problem in the context of designing network intrusion System (Fed-IDS), each client initiates by uniformly samdetection approaches. pling network data across all classes, employing Balanced or
+ The authors in [10] tested the effectiveness of Artificial Uniform Sampling where class weights are inversely propor-
+Neural networks (ANNs) in detecting anomalies in an imbal- tional to the number of samples. While this ensures equal
+anced industrial IIoT testbed dataset. They used Synthetic representation of each class, it can lead to overfitting toward
+Minority Oversampling Techniques (SMOTE) to balance the minority classes. To counter this, we used the Feature Space
+data in order to improve the performance of ANN’s model. Augmentation [18], a domain-agnostic technique applicable to
+We note that we cannot use this technique in federated diverse IoT data modalities. This involves applying arbitrary
+settings due to privacy concerns. Further, [9] used Deep and deviations to the feature space of minority class samples,
+stacked Autoencoders for automatic feature extraction and essentially generating new examples by slightly altering the
+a deep ensemble of probabilistic neural networks to handle representations. Each client utilizes a converging Deep Neural
+imbalanced data and to detect zero-day attacks, however, it Network (DNN) as its deep learning model, with the final
+was developed for the SDN context and has not been tested in layer employing the SoftMax activation for classification. The
+any federated scenarios. Deep ensemble learning methods are preceding layers function as a feature extractor, capturing
+also employed to tackle data imbalance problems, but they are and representing essential features from the input data. To
+computationally expensive [11]. The authors in [12] recently address negative (missed) classes among clients, Knowledge
+used both oversampling and ensemble techniques and achieved Distillation loss is incorporated during model training alonga high classification performance on the imbalanced dataset. side standard categorical cross-entropy loss. Additionally,
+ The problem of class imbalance has been extensively exam- the overall loss calculation employs a smooth regularization
+ined in centralized settings; however, adapting those solutions (penalty term) to enhance generalization capabilities. Our
+to federated settings is a challenge due to the unknown Contributions are as follows:-
+global data distribution that varies greatly from the local • We have identified that the existing Fed-IDSs overlooked
+data distributions of each client. Few research works, such the class imbalance issue while designing and evaluatas [13], proposed a solution to address the local and global ing the IDSs. We are among the early ones proposing
+class imbalance by augmenting data in minority classes and to integrate class-balancing approaches while designing
+redistributing clients through mediators. However, transferring next-generation IDSs in the federated learning domain.
+knowledge of client data can lead to privacy leakage and • We have evaluated the existing state-of-the-art datasets
+threats to various backdoor attacks. Further, [14] proposed an commonly used by cyber security researchers, and with
+RL-based solution (using Markov Decision Process (MDP)) to simulations, we have proved that this is a critical issue
+alleviate heterogeneity in federated frameworks. The authors affecting the performance and the accuracy of the existing
+in [15] proposed a new loss function named ratio loss to IDSs. To alleviate this problem, we apply an efficient
+prioritize minority classes, requiring additional validation data class balancing technique to handle imbalanced data in
+on the server side and assuming a strong correlation between FL scenarios. Subsequently, we utilized a converging
+gradient updates and the number of samples. DNN architecture to classify networking attacks.
+ Notably, class imbalance and non-IID data pose distinct • We evaluated the performance of our Fed-IDS on four
+challenges in machine learning, including federated learning. datasets considering both IID and non-IID scenarios.
+Class imbalance is a scenario where the distribution of classes Also, we compared various model training approaches
+in the local datasets is not uniform. One or more classes among under localized, centralized, and federated settings.
+4818 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 4, AUGUST 2024
+
+ TABLE I
+ C OMPARISON OF S TATE - OF - THE -A RT P UBLICLY AVAILABLE N ETWORK I NTRUSION D ETECTION DATASETS F ROM O LDEST TO R ECENT O NES
+
+The results confirm that our strategy significantly improved Nguyen et al. [5] proposed one of the early works in
+the model’s generalizability in detecting different types of the design of a Federated Learning-based IDS in 2019.
+attacks, under both IID and non-IID scenarios, excluding They developed an autonomous self-learning-based distributed
+extreme non-IID use cases. Section II highlights the review model named ‘DIoT.’ It was an extension of their earlier work
+of relevant recent works. Section III covers the threat model called AuDi [19], used to identify compromised IoT devices
+and motivation of this work. The proposed methodology, within a network by detecting device-specific anomalies.
+model deployment, and performance evaluation are given To mitigate DDoS attacks in industrial IoT domains, [20]
+in Sections IV, V, and VI, respectively. Further discussion proposed ‘FLEAM’ that employed a collaborative approach
+is highlighted in Section VII. The paper is concluded in by implementing their attack mitigation strategy along the
+Section VIII. path through fog/edge nodes rather than solely on the victim
+ nodes. They increased the cost of launching DDoS attacks
+ and decreased the mitigation response time. However, they
+ II. R ELATED W ORKS used synchronous FL for model training resulted in a higher
+ The development of Federated Learning-based Intrusion communication cost.
+Detection Systems (Fed-IDSs) has gained significant attention The authors in [16] utilized the IBM-FL framework to
+in recent years to enhance security and privacy in distributed evaluate Fed-IDS under three different data distributions. They
+IoT networks. Several notable studies have been conducted in divided the original CIC ToN IoT dataset by IP addresses and
+this area, which we discussed in this section. Firstly, in Table I, made it publicly accessible. They evaluated FedAvg against the
+at a high level, we critically analyzed the publicly available, recent Fed+ algorithm and demonstrated that Fed+ is superior
+mostly used intrusion detection datasets since 2009. We to FedAvg in multiple scenarios. Liu et al. [17] introduced
+highlighted significant class imbalance issues in the datasets. an adaptive federation aggregation algorithm called Batch-Fed
+Further, Table II provides a high level comparison of the key to address the straggler problem in Fed-IDSs for maritime
+existing works. transportation. The Batch-Fed algorithm uses a combination of
+SINGH et al.: EVALUATING FL-BASED INTRUSION DETECTION SCHEME FOR NGNs 4819
+
+ TABLE II
+ A H IGH -L EVEL C OMPARISON OF O UR W ORK W ITH THE E XISTING F EDERATED L EARNING -BASED IDS S
+
+prior global model parameters and direct averaging to prevent
+a rapid decline in global model accuracy. The local models
+are trained on the NSL-KDD dataset using a combination of
+Convolutional Neural Networks (CNNs) for feature extraction
+and Multilayer perception( MLP) for attack classification.
+ Popoola et al. [21] showcased the efficacy of FL in identifying zero-day botnet attacks using Deep Neural Networks
+(DNNs). They deliberately exclude one class from each client
+during the data partitioning process, simulating a zero-day
+attack scenario when that specific client encounters test data
+related to the excluded class. They experimented with 16
+alternative Deep neural network architectures by utilizing the Fig. 2. Local and global level class imbalance in FL [26].
+N-BaIoT and BoT IoT datasets. However, the information
+regarding selecting class samples from the nine clients of the
+NBaIoT dataset [22] was not given. Rey et al. [23] presented In a recent study, Friha et al. [24] presented a Fed-IDS
+a Fed-IDS for detecting malware attacks in IoT devices. The tailored for agriculture IoT. They assessed the performance of
+authors conducted extensive experiments in both supervised three distinct deep learning models (DNN, CNN, and RNNs)
+settings (utilizing MLP) and unsupervised settings (leverag- using the FedAvg aggregation method on three networking
+ing Autoencoders). They compared the performance of the datasets. The researchers demonstrated the superiority of
+traditional centralized, distributed, and federated approaches Fed-IDSs over TCML-based IDSs. However, they employed
+using the N-BaIoT dataset. They evaluated the robustness oversampling to address class imbalance before model trainof their proposed federated model by taking into account ing, which may not be effective in real network scenarios.
+various adversarial attacks related to data poisoning (label In another work, the authors in [25] proposed a Fed-IDS
+flipping attacks) and model poisoning (gradient factor and for vehicular edge computing where Blockchain is utilized
+model cancelation attacks). To identify countermeasures, they to store and share training models, ensuring the security of
+compared the effectiveness of various model aggregation the aggregate model. However, detection time and computechniques. They demonstrated that the baseline aggregation tation cost are still ongoing challenges in Blockchain-based
+algorithm (FedAvg) used in most FL algorithms is highly solutions.
+vulnerable to various attacks. However, they incur high server- As shown in Fig. 2, the class imbalance is a significant
+side computation costs during model training. We have noticed problem in network traffic that directly affects the model
+both N-BaIoT and BoT IoT datasets are malware-infected Big performance at both local and global levels in FL [7], [26].
+datasets. The authors in [21], [23] achieved high accuracy To our knowledge, the evaluation of class imbalance issues
+due to an abundant number of malicious classes present in in the context of FL-enabled IDSs has not been thoreach client dataset (IID settings). Subsequently, they have oughly explored before. Therefore, our work provides a
+not evaluated model performance under non-IID settings. comprehensive evaluation, covering various data distributions
+Additionally, all the above Fed-IDSs discussed earlier did not using five recent datasets that encompass several IoT-related
+address the class Imbalance issue. attacks.
+4820 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 4, AUGUST 2024
+
+ III. T HREAT M ODEL AND M OTIVATION
+ Most datasets cannot be used in FL contexts since they have
+not separated according to various IP addresses or devices.
+Our study has found that the N-BaIoT [22] and CIC-ToN
+IoT [16] intrusion detection datasets are the only ones that
+are partitioned based on a limited set of clients, can be used
+for evaluation under cross-silo federated settings. Furthermore,
+due to the lack of benchmark test datasets for intrusion
+detection in FL, researchers use their own discretion to divide
+the dataset, which leads to bias in the results. Many recent
+studies achieve high accuracy according to their FL settings
+and data partition. Details of various datasets are shown in
+Table I. An additional effort is required to produce the IDS
+datasets that include a wider scenario of IoT devices with Fig. 3. A high level architecture of the proposed Fed-IDS.
+various attacks [16], [23].
+ Fig. 1 shows the Binary class distributions in commonly
+used networking datasets. The class imbalance issues are to tackle non-IID scenarios effectively. Essentially, personalclearly visible in this figure, and if we were to consider ization FL attempts to answer the very valid question, “Why
+multiple classes of malicious traffic, the class imbalance train one model for all clients?” It essentially trains a personwould likely be even more pronounced. If this unbalanced alized model for each device while leveraging collaborative
+data is used to train the ML model, it will perform well at learning. However, PFL relies on the assumption of some
+identifying the benign traffic and behave poorly at identifying level of similarity between the distributions of training and
+the attack traffic. In other words, the model will identify test data, which limits its ability to address global imbalances
+benign data as benign data and identify attack data as benign, in the overall data distribution [26]. Researchers have made
+resulting in high false positives. Recognizing minority (attack) significant efforts to overcome the non-IID data problem in
+data with accuracy is of greater importance than recognizing FL, but the class imbalance problem has not been adequately
+majority (benign) data. In FL, data comes from diverse sources addressed [13], [15], [26]. Hence, developing more resilient
+(system heterogeneity), which could make the global model’s and cost-effective class balancing techniques for FL is crucial.
+convergence difficult and time-consuming. When statistical In summary, the effectiveness of next-generation Fedheterogeneity originates from multiple clients, class imbalance IDSs cannot be accurately assessed with current datasets,
+increases considerably at the local and global levels, which so there is a need to create significantly larger and
+significantly biases the classifier in favor of the majority more diverse networking datasets appropriate for federclass [26]. ated settings [16], [23]. Furthermore, incorporating efficient
+ Arguably, the non-parametric supervised learning method class-balancing methods within the Fed-IDSs can address
+(such as Decision Trees) and ensemble techniques ( Random data-related challenges and improve the performance of IDSs
+Forest, XG boost, and Autoencoders) are effective against in real-world environments. High-level comparisons of our
+outliers detection, and they are good compared to other proposal with the existing Fed-IDSs are shown in Table II.
+models against data imbalance. However, we could not
+eliminate false positives and false negatives after certain K-
+Fold cross-validations and hyperparameter tuning. Therefore, IV. T HE P ROPOSED A PPROACH
+various resampling (undersampling/oversampling) methods Conventional wisdom holds that statistical heterogeneity
+are commonly used to address the class imbalance issue significantly negatively impacts the performance of AI models,
+in datasets. Examples include SMOTE, ClusterCentroids, which ultimately impacts the performance of ML/DL-based
+TomekLinks, NearMiss, and Random under/over sampler IDSs. We address the critical issue of class imbalance in Fedmethods. Generative Adversarial Networks (GANs) are also IDS by utilizing a recent class balancing technique [26] to
+emerging as a potential method to balance the tabular classify network traffic. This has been applied to design Fednetworking data by generating new synthetic samples from IDS, showing a significant novel design feature in the Fed-IDS
+minority classes [28]. Unfortunately, none of these resampling domain. The approach develops a balanced global model under
+strategies and GANs can be directly applied in Fed-IDSs [26]. the imbalanced long-tail data distribution among clients.
+Since client data distribution cannot be known due to privacy Fig. 3 illustrates a high-level deployment framework for
+concerns, only model parameters are shared during model the proposed Fed-IDS. In this three-layered architecture, the
+training. Concept Drift as a result of data heterogeneity is uppermost layer encompasses a security cloud platform mananother under-explored area in FL [29]. aged by the network operator. The lowest layer represents
+ There are some federated aggregation algorithms proposed diverse and intelligent endpoints (IoT devices). The middle
+in the literature which are good at handling non-IID data, layer comprises the N discrete Multiaccess Edge Computing
+such as FedNova [30], FedProx [31], and Scalffold [32]. (MEC) platforms, serving as interconnected hosts for the
+Personalized FL is also an emerging area in FL that aims Intrusion Detection System (IDS) component. Each MEC
+SINGH et al.: EVALUATING FL-BASED INTRUSION DETECTION SCHEME FOR NGNs 4821
+
+Fig. 4. Workflow of each client in the proposed Fed-IDS.
+
+ TABLE III
+platform collects traffic data from IoT networks and trains K EY M ATHEMATICAL N OTATIONS
+its local model under the orchestration of a central server.
+These MEC devices possess robust computational capabilities,
+allowing them to store and process data from various sensor
+networks efficiently. It is important to note that the proposed
+IDS is a part of MEC devices.
+ The high-level working of the proposed approach on each
+client is illustrated in Fig. 4. Steps 1-9 iteratively performed
+until the convergence is achieved. For simplicity, the server’s
+initial model-sharing step is omitted. In each global round
+(r), the aggregating server selects a p fraction of K clients
+(MEC devices) and sends them its global model with its
+corresponding weights.
+ Each client can encounter two types of unbalanced data
+situations. The first scenario involves missed classes (Cneg k ),
+while the second relates to the long tail distribution of active or
+positive classes (Cpos k ). To tackle missed classes, knowledge
+is inherited from the global model, referred to as Knowledge these clients lacks exposure to specific classes, they can learn
+Inheritance, while inter-class balancing involves three tech- about these classes through a process known as Knowledge
+niques: Balanced Sampling, Feature Level Data Augmentation, Inheritance or Knowledge Distillation.
+and Smooth Regularization, which are discussed in detail in The primary goal of employing knowledge distillation is to
+the next section. The workflow is shown in Algorithm 1, and transfer the knowledge learned by the teacher model (compristhe key mathematical notations are listed in Table III. ing rich representations and patterns of clients’ data) to the
+ For every input sample x, the local model generates student models, making the student model more efficient and
+C-dimension predictions, represented as F (x ) = f = able to generalize better. The process of knowledge distillation
+[f1 , f2 , . . . , fC ] ∈ RC , where RC represents a C-dimensional involves training the student model to minimize a specific
+real space, and C = |Cpos k | + |C k |, including both positive
+ neg loss function, known as the knowledge distillation loss [33].
+and negative classes. The learned weights and biases are often This loss function quantifies the disparity between the outputs
+called knowledge in neural networks. During the process of the teacher model and those of the student model. The
+of federated model training, the global model on the server knowledge distillation loss comprises two key components,
+side (acts as a teacher) gradually gathers the knowledge i.e., Soft Targets Loss and Hard Targets Loss.
+of all classes from participating clients. This accumulated In the Soft Targets Loss, this component measures the
+knowledge serves as the foundation for instructing the clients difference between the softened (probabilistic) predictions
+(act as students). Consequently, even when the local data of of the teacher model and the student model as expressed
+4822 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 4, AUGUST 2024
+
+ Algorithm 1: Working of Proposed Fed-IDS. K Clients, Thus, the total knowledge distillation loss is a weighted
+ Denoted by Index k, With a Selection Ratio p in Each sum of these two components. The weights assigned to each
+ Round. The System Executes a Total of R Global Rounds component can be adjusted to balance the influence of teacher
+ (Indexed by r) knowledge and ground truth labels on the student model’s
+ Input: Initial global model with random weights training. Consequently, during local model updates, clients
+ Output: Final global model with updated weights k ) while
+ are motivated to contribute to activated classes (Cpos
+ Server executes:
+ Initialize global model w0
+ g simultaneously minimizing changes to predictions related to
+ for each communication round r ≤ R do
+ k ) to preserve the knowledge imparted by
+ absent classes (Cneg
+ Randomly choose set {Sr } of p · K clients the teacher model. This goal is achieved through the joint
+ Broadcast the server model to clients optimization of two loss functions: the distillation loss (as
+ for each client k ∈ Sr in parallel do
+ g
+ wrk+1 ← Client(wr , k ) expressed in equation (2)) applied to the absent classes and
+ end a regularized variant of the cross-entropy loss (as shown in
+  nk k
+ wr +1 = K k =1 n wr +1
+ equation (6)) applied to the activated classes.
+ end  1/T  1/T
+ g
+ Client (wr , k ): fjt fjs
+ t s
+ Copy the server (teacher) model for knowledge inheritance and fj = ,f = ,
+ C  t 1/T j C  s 1/T
+ g (1)
+ update the local model: wrk ← wr
+ k
+ Determine Paug,cj and store it for later use j =1 j f j =1 j f
+ Obtain features (θrk ) by passing data through the feature extractor T is a hyperparameter here, also called distillation temperature.
+ of wrk
+ Compute the covariance matrix for each class σjk by analyzing the
+ Its value greater than one is used to amplify the originally
+ class-specific features, cov(θrk | y = cj ), for j = c1 , c2 , . . . , cm
+ small probabilities from the teacher model.
+ Mathematically, the Distillation loss function for k th client
+ Determine σ k , the weighted average of σjk is given by,
+ Generate random vectors (deviations) Δkr by sampling from   
+ N (0, σ k ) for feature space augmentation during local model
+ LkKI f t , f s = fjt log fjs (2)
+ training k
+ f ∈Cneg
+ // Local Model Training loop
+ for each local epoch from 1 to E do here, f t = [f1t , f2t , . . . , fCt ] and f s = [f1s , f2s , . . . , fCs ] are
+ for each batch (applied Balanced sampling to the
+ DataLoader) do
+ the modified version of predicted probabilities (after softmax)
+ Perform a forward pass through wrk and store logits of j th negative class by the teacher and student models,
+ Apply (add) Δkr to the original features (θrk ) selectively respectively. In steps 2–3 of Fig. 4, Balanced Sampling is
+ k
+ based on Paug,c j used to increase the likelihood that data from tail classes
+ Calculate logits for augmented features, faug to be chosen. This involves assigning probabilities to each
+ Perform forward pass through the teacher model (without
+ gradient computation) and store predictions class based on the number of samples in that class, which is
+ Use ground truth labels (y), teacher predictions (f t ), inversely proportional to the sample count. The data loader
+ student logits (f s ), and augmented logits (faug ) to uniformly selects samples from each class for each training
+ compute overall loss (cross-entropy loss, knowledge
+ distillation loss, and penalty term for smooth
+ batch, utilizing the probability of selection Ps,j k as defined in
+
+ regularization) Equation (3).
+ Perform backward pass to compute gradients The premise is that if each client has balanced pseudo-
+ Update model parameters using the optimizer:
+ wrk+1 ← wrk − η∇l(wrk ; b)
+ local data, then the global data as a whole will also be
+ end pseudo-balanced. Suppose if there are total m classes, then the
+ end probability of selection of j th class by k th client is,
+ Return updated model weights wrk+1 to the server  λ
+ sjk
+ k
+ Ps,j =
+ c m  k λ
+ (3)
+ j =c1 js
+by equation (1). The softening process involves applying a Here, λ = 0 for giving equal importance to each class.
+temperature parameter to the logits (pre-softmax outputs) Consequently, the probability Ps,j k can be expressed as 1/m,
+before computing the softmax function. It enables the student where m represents the number of classes.
+model to learn from the teacher model’s uncertainty and better Next, steps 3–4 involve the implementation of Feature
+capture intricate decision boundaries. During this process, Space Augmentation, a process in which augmentations are
+forward propagation is executed on both the teacher and applied to the feature space rather than the input data, as
+student models, while backward propagation is performed outlined by [18]. This approach is domain agnostic and does
+exclusively on the student model, as shown in Fig. 4. In not depend on input data shape as augmentations (deviations)
+the Hard Targets Loss, this component compares the output are applied directly to the feature space, making it highly
+predictions of the student model with the actual ground truth useful for a large number of data modalities. The process
+labels. This is similar to the standard classification loss (cross- includes computing the weighted covariance matrix of all
+entropy loss) used in training traditional neural networks, as active classes (σ k ). Further, before training, the desired deviashown in equation (6). tions are generated by sampling from a multivariate Gaussian
+SINGH et al.: EVALUATING FL-BASED INTRUSION DETECTION SCHEME FOR NGNs 4823
+
+distribution with a zero mean and a computed variance σ k . Steps 2–7 are repetitively performed for each batch of
+The number of deviations that need to be generated is decided data. After a few local epochs (E = 5 in our case), each
+first; it is a hyperparameter. The probability of applying client sends its updated model parameters (wrk+1 ) back to the
+these deviations is inversely proportional to the number of server for aggregation ( as shown in step 8 in Figure 4). The
+samples in each class. These deviations are then randomly server objective is to reduce the overall global loss (Fedavg
+applied to the features of underrepresented classes according is used for aggregation), which is the weighted average from
+ K nk
+to calculated augmentation probability during each batch of individual k client losses given as k =1 n Fk (w ). Here,
+model training. The overall variance (σ k ) in all classes of k th Fk (w ) = wr +1 represents k client loss function. The dataset
+ k th
+client is utilized to expand the feature space for classes with size (nk ) of k th client decides its weight. To ensure equal
+limited samples. Mathematically, importance for each class sample, we used balanced sampling
+ c m (explained earlier). After collecting and aggregating model
+ j =c1 sj σj
+ k k
+ k
+ σ =  cm (4) parameter updates from all the selected clients, the updated
+ j =c1 sj
+ k
+ global model is sent to another set of random clients in its
+ next round, as shown in Step 9. As such, one global round is
+here, σjk ∈ R dXd denotes covariance matrix of feature vectors completed. This process repeats until the model convergence
+of class j. Classes with fewer samples in the dataset are or algorithm completes the selected number of global training
+augmented with higher probability to reduce the overfitting rounds.
+due to Balanced Sampling described in a previous section. To show the Proof-of-Concept (PoC), we conducted
+The formula below provides the class-specific probability for several experiments on five recent network intrusion detecaugmentation of class cj on k th client. tion datasets. Six baseline aggregation approaches are used
+ smax
+ k − sjk in our comparative study. In addition to our proposed
+ k
+ Paug,c = (5) approach, the other five baselines used for comparison are as
+ j
+ smax
+ k
+ follows:
+In summary, feature space augmentation is performed by selec- 1) Local - No global training rounds. The model trained
+tively applying deviations to the features of certain samples locally on each client for 200 training rounds after
+in the training data, enhancing the model’s ability to handle distributing data among clients. After calculating the
+variations in the input space. model performance for each client, the mean values from
+ Following this, steps 1, 6, 7 and 4, 5, 7 correspond to all clients have been computed to represent the final
+the knowledge distillation and local model training processes, metrics.
+respectively. The computation of knowledge distillation and 2) Central - Clients individually send their data to a server
+categorical cross-entropy losses takes place after the forward for model training in each global round (TCML method).
+pass of both the teacher and student models. In addition to this, Unfortunately, privacy is not maintained in this process.
+an extra Smooth Regularization (penalty term) is incorporated 3) Fedavg [6] - a standard FL approach, which extends
+during the calculation of the categorical cross-entropy loss the traditional stochastic gradient descent (SGD) algoto enhance its generalization capabilities. This regularization rithm. It involves each client performing a few local
+serves to address the bias introduced by the standard cate- training rounds on its own data, then sending the
+gorical cross-entropy loss function due to imbalanced data updates to a central server for aggregation. The resulting
+distribution, as illustrated in Equation (7). Its objective is to model is then broadcast back to all clients for further
+penalize overconfident classes, thereby promoting improved training.
+generalization. Further model gradient parameters are updated 4) Fedprox [31] - FedProx incorporates an additional regin the backward pass of the local model. ularization term, in contrast to FedAvg, to manage
+ The formula for conventional cross-entropy loss is given as, non-IID data. This regularization term balances the
+  trade-off between global and local information in the
+ LkCE (y, f ) = − yj logfj (6) model updates.
+ k
+ j ∈Cpos 5) Balanced Meta Softmax (BALMS): - Ren et al. [34]
+ proposed Balanced Meta Softmax, also called BALMS,
+here, y = [y1 , y2 , . . . , yc ] ∈ R C represents the ground truth
+ to alleviate the Class Imbalance issues in long tail data
+vector and f ∈ R C is the model prediction described in earlier
+ distributions in centralized settings. So, privacy is not
+section. The formula for smooth regularization (also called
+ maintained in this process. As it is an effective classnegative entropy) is given by
+  balancing technique for TCML methods, hence we used
+ LkSmooth (f ) = fj log fj (7) it in our comparative analysis.
+ k
+ j ∈Cpos
+ We have seen a reasonable amount of improvement in our
+ comparative study. Using a converging DNN (discussed in
+Finally, by putting Equations (2), (6), and (7) together, the the next section) on four recent network intrusion detection
+overall loss for an input sample on k th client is equal to datasets considering different data distributions (IID and non-
+   IID), we demonstrated that resolving class imbalance improves
+ LkKI f t , f s + LkCE (y, f ) + λ1 LkSmooth (f ) (8)
+ the generalizability of Fed-IDS to categorize multiple
+λ1 is a balancing factor here. attacks.
+4824 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 4, AUGUST 2024
+
+ outcomes into probabilities, the softmax function used at the
+ last layer is given by
+ expzi
+ Softmax σ(z )i = m (12)
+ j =1 exp
+ zj
+
+ here, m is the number of classes in the dataset. The Softmax
+ σ(z )i can be thought of as the predicted probability that the
+ test input would belong to class i. z is the vector of raw outputs
+ from the neural network known as logits, and zi represents
+ the i th value of the softmax output vector.
+
+ B. Simulation Settings
+ The experiments are conducted on a Linux server (Ubuntu
+ 18.04.6 LTS ) using an Intel Xeon Platinum 8168 CPU running
+Fig. 5. Architecture of our DL Model. at 2.70 GHz with an NVIDIA Tesla V100 SXM3, 32 GB GPU.
+ PyTorch, a deep learning framework, is used to simulate experiments, and Tensorboard is used to visualize the outcomes.
+ V. M ODEL D EVELOPMENT The number of global training rounds is 200, and local epochs
+ To extract meaningful information from each layer of the are 5. The data was partitioned among clients using a random
+network, we used a converging deep neural network architec- seed value of 13. DL model parameters such as dropout are
+ture. We could obtain much higher accuracy if we used other 0.01, and the learning rate is set to 0.001. We use Adam
+cutting-edge deep learning models, but that was not the goal optimizer, Batch size set to 64, and the regularization term (μ)
+of our experimentation. After class balancing, we observed a was taken as 0.05 for Fedprox. The temperature parameter is
+significant improvement in the generalizability of Fed-IDS. set to 2 for knowledge distillation, and the balancing factor
+ (λ1 ) equals 1. The number of deviations generated from the
+ overall covariance matrix is 2000. These parameters are used
+A. Model Architecture
+ throughout our tests as a basis for comparison.
+ Our proposed deep neural network architecture is inspired
+from [22], [23]. Basically, we used the encoder part of the C. Datasets Used
+autoencoder as autoencoders are effective in dimensionality
+reduction and good in handling class imbalanced data [9]. As old datasets are not reliable for designing IDSs for next-
+Our network includes five layers: one input, one output, and generation networks mentioned in the recent work [2], we
+three hidden layers. The number of neurons in the input have evaluated the proposed Fed-IDS rigorously on four recent
+layer is equal to the number of features in the dataset. The datasets containing modern network traffic footprints under
+number of neurons in each hidden layer is 75%, 50%, and various data distribution settings. The class distribution in all
+25% of the input layer for extracting useful features from the the datasets is shown in Fig. 6. We used IoT-ID-20, Edgedata. Finally, there is an output layer equal to the number IIoT, and 5G-NIDD datasets to evaluate the performance of
+of classes in the dataset. We employed the last layer of the proposed Fed-IDS under IID settings. Further, to evaluate the
+Deep Neural Network (DNN) model as the classifier, whereas Fed-IDS performance under non-IID data settings, we used the
+the remaining part was used as a feature extractor. Notably, Dirichlet criteria [35] to distribute data among clients on a realthe features for feature space augmentation were derived by istic WUSTL-IIoT-2021 dataset. We evaluated its performance
+passing data through the feature extractor segment of the across three different alpha values. The alpha parameter in the
+model. A mathematical representation of the proposed deep Dirichlet distribution plays a crucial role in determining the
+neural network’s input layer (h 0 (x )), multiple hidden layers concentration and shape of data distribution among clients.
+(h k (x )), and output layer (h n+1 (x )) is as follows: A small alpha value represents the sparse or highly skewed
+ distribution. Non-iidness increases as going towards zero.
+ h 0 (x ) = x (9) Conversely, as alpha approaches ∞, the distribution becomes
+  
+ more balanced, with equal representation across all categories.
+ h k (x ) = f w k h k −1 (x ) + b(k ) (10)
+   We performed experiments utilizing three distinct alpha values
+ h n+1 (x ) = f w n+1 h n (x ) + b n+1 (11) (0.3, 0.5, 1) to assess the model’s performance across three
+ diverse non-iid scenarios, similar to other works [35], [36].
+ Here, x is the input (d-dimensional data) vector represented as Considering computational constraints, we opted to work with
+X = (x1 , x2 , x3 , . . . , xd ) ∈ R d , w means weight vector denoted 15 clients in our federated learning framework, representing a
+as wj = (wj ,1 , wj ,2 , . . . , wj ,d ), b means bias vector for each cross-silo federated scenario [37]. All datasets are separated
+hidden layer denoted as (b1 , b2 , .., bj ), f (.) is the activation into a train-test ratio of 80:20 utilizing stratified sampling with
+function. We used the Rectified Linear Units (ReLU) activation a random seed of 13.
+function, which equals f (x) = max(0, x). k= Number of hidden 1) IoT-ID-20 Dataset [38]: The dataset originated from the
+layers = 1, 2,..n. In our case, n = 3. To transform the model raw network packet files generated by the IoTID dataset [39].
+SINGH et al.: EVALUATING FL-BASED INTRUSION DETECTION SCHEME FOR NGNs 4825
+
+Fig. 6. Class Distribution in the four recent Network Intrusion Detection Datasets.
+
+ TABLE IV
+The experimental configuration emulates a smart home P ERFORMANCE E VALUATION OF D IFFERENT
+network comprising the AI-based speaker SKT 21 NUGU (NU BASELINES ON I OT-ID-20 DATASET
+100), the EZVIZ Wi-Fi Camera (C2C Mini O Plus 1080P),
+and different smartphones and laptops. All these devices were
+interconnected through a shared wireless network facilitated
+by a smart home Wi-Fi router. Within this setup, the AIbased speaker SKT NGU and the EZVIZ Wi-Fi camera were
+designated as victim IoT devices, while all other devices
+within the testbed were configured as the attacking devices.
+During data processing, we eliminated the following redundant
+categorical attributes from the dataset: ‘Flow_ID,’ ‘Src_IP,’
+‘Dst_IP,’ ‘Timestamp,’ ‘Label,’ and ‘Sub_Cat.’ Consequently,
+the final dataset comprises 80 features encompassing a dependent attribute with five distinct classes. 50 features, excluding two output features named ‘Label’ and
+ 2) WUSTL-IIoT-2021 Dataset [40]: The WUSTL-IIoT- ‘Attack Type. Firstly, the features ‘Dur,’ ‘Runtime,’ ‘Mean,’
+2021 dataset comprises network data collected from a real ‘Sum,’ ‘Min,’ and ‘Max’ were removed because they had
+Industrial Internet of Things (IIoT) environment. This dataset the same covariance. After removing a few more redundant
+was created using the IIoT testbed described in [41]. During features such as ‘sDSb, dDSb, ‘Label’and ‘Attack Tool, ’ the
+data preprocessing, we eliminated redundant, as well as host- dataset was left with 46 feature columns. We also noticed
+specific features, including StartTime,’ LastTime,’ SrcAddr,’ that many features have a large number of null values, so
+DstAddr,’ sIpId,’ and dIpId.The final Dataset includes 43 we replaced features with large null values such as SToS,
+features. dToS, sTtl, dTtl, sHops, dHops, SrcGap, DstGap, sVid, dVid,
+ 3) Edge-IIoT Dataset [42]: It is a recent, realistic IoT SrcTCPBase, and DstTCPBase are replaced with their respecintrusion detection dataset. It includes network traffic from tive median or zero values. Finally, independent nominal
+more than ten types of IoT devices, such as ultrasonic categorical features (‘Proto,’ ‘Cause,’ ‘State’) were encoded
+sensors, heart rate sensors, water level detection sensors, low- using one-hot encoding.
+cost IoT sensors to measure temperature and humidity, pH
+sensors, soil moisture sensors, flame sensors, etc. The dataset
+contains fourteen attacks on IoT and IoT communication VI. P ERFORMANCE E VALUATION
+protocols. A recently proposed Fed-IDS by Friha et al. [24] We performed several experiments using four recent
+expressed their intent to leverage this dataset for their forth- network intrusion detection datasets and explored three difcoming research. After eliminating some redundant features, ferent model training settings: Local, TCML (Traditional
+including ‘icmp.unused’, ‘http.tls_port’, ‘dns.qry.type’, and Centralized Machine Learning), and FL (Federated Learning).
+‘mqtt.msg_decoded_’, resulting in a final dataset with 91 We used the macro average as our performance measure
+features. to compute accuracy, precision, recall, and F1-score for all
+ 4) 5G-NIDD Dataset [43]: It is a very recent intrusion baselines as it provides model evaluation for each class.
+detection dataset produced using Motorola g50 5G devices We observed a significant increase in the generalizability
+in a real 5G test network. The original CSV file contained of Fed-IDS to identify multiple attacks with our approach.
+4826 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 4, AUGUST 2024
+
+ TABLE V
+ P ERFORMANCE E VALUATION OF VARIOUS
+ BASELINES ON E DGE -II OT DATASET
+
+ TABLE VI
+ P ERFORMANCE E VALUATION OF D IFFERENT
+ BASELINES ON 5G-NIDD DATASET
+
+ Fig. 7. Comparative analysis of global test accuracies of various baselines
+ on three recent Network Intrusion Detection Datasets.
+
+ Furthermore, it has also demonstrated superior performance
+ compared to local and TCML methods, such as Central and
+ BALMS, across all datasets, as illustrated in Fig. 7.
+ To evaluate the performance of our Fed-IDS under various
+Firstly, we ran a simple experiment for a reader to show the non-IID settings, we used the real-world WUSTL-IIoT-2021
+class distribution in all datasets, as shown in Figures 6. To dataset. Employing the Dirichlet criterion, we distributed data
+assess the model’s performance in IID settings, we randomly among clients and scrutinized its performance relative to other
+partitioned the data among clients, ensuring each client had baseline models across three distinct alpha (α) values: 0.3,
+some representation from all classes. We employed the IoT-ID- 0.5, and 1. Central and BALMS are not evaluated across
+20, Edge-IIoTset, and 5G-NIDD datasets for this evaluation. different alpha values. Since these are centralized approaches,
+As shown in Tables VII(a), V, and VII(c), ours (proposed all data from all devices must be aggregated in one location
+Fed-IDS) demonstrates accurate detection of minority class before model training. Based on the results shown in Table VII
+samples while maintaining performance on other classes. and Fig. 8, the Central approach outperforms BALMS. It
+Compared to FedAvg, there are significant improvements is observed that when dealing with highly long-tailed data,
+in macro accuracy, with gains of 14.7%, 21.6%, and 1.9% BALMS sacrifices the efficiency of the majority class to
+observed on IoT-ID-20, Edge-IIoT, and 5G-NIDD datasets, enhance the performance of other classes. Nonetheless, these
+respectively. Moreover, compared to Fedprox, it exhibits methods are based on TCML, requiring all the data at a central
+enhancements in macro accuracy, with gains of 5.2%, 21.6%, place for model training, which is not an effective way to train
+and 0.1% on the same three datasets, respectively. This shows models in next-generation networks due to privacy concerns
+that both FedAvg and Fedprox lack the ability to deal with being the main issue. Moreover, the performance of the local
+class unbalancing issues. Also, we observed that in contrast to method exhibited an increase with the rise in the alpha value.
+FedAvg and FedProx, our proposed Fed-IDS quickly achieves While privacy is assured in this approach, it is not an efficient
+its maximum accuracy within just a few rounds of model means of training models, as it lacks collaborative learning
+training, resulting in reduced model training time at the server, among clients.
+making it highly effective for real-world deployment. Notably, We noticed that compared to FedAvg, our approach shows
+ours (proposed Fed-IDS) has a very high convergence rate. significant improvement in the classification performance in
+SINGH et al.: EVALUATING FL-BASED INTRUSION DETECTION SCHEME FOR NGNs 4827
+
+ TABLE VII
+ P ERFORMANCE E VALUATION OF VARIOUS BASELINES A FTER S PLITTING WUSTL-II OT-2021 DATASET ACCORDING TO D IRICHLET C RITERIA [35]
+
+Fig. 8. Comparative analysis of global test accuracies of various baselines across three non-IID scenarios in the WUSTL-IIoT-2021 dataset.
+
+all three non-IID scenarios, i.e., 26.2%, 17.9%, and 25.7% efficacy of FL in identifying zero-day botnet attacks using
+at α = 0.3, 0.5, and 1, respectively. Moreover, compared to deep neural networks. They deliberately excluded one class
+Fedprox, it still exhibits enhancements in macro accuracy, from each client during the data partitioning, simulating a
+with gains of 0.3% and 8.8% at α = 0.5 and 1, respectively. zero-day attack scenario when that specific client encounters
+Additionally, Fedprox, which is specifically designed to handle test data related to the excluded class. They have used the
+non-IID data, performed reasonably well in all cases and FedAvg aggregation method. Note that in our work, we
+exhibiting enhanced performance as non-iidness escalated have also shown that FedAvg performs better after hanwith alpha set at 0.3. Our approach exhibited commendable dling class Imbalance. However, further evaluation is indeed
+performance, closely aligned with FedProx, in all three sce- essential.
+narios. However, it faced challenges in achieving convergence, We reiterate that the scope of this paper is to address the
+particularly noticeable in Fig. 8(a), as non-iidness increased. class imbalance issues in Fed-IDSs. It is important to note
+We acknowledge that our approach may not perform as that the class imbalance issue is a non-ignorable factor. In our
+effectively in extreme non-IID cases due to substantial varia- future work, we aim to incorporate the pragmatic dynamics
+tions in local data distribution among clients. The divergence, of today’s edge networks for further deep analyses of the
+particularly in minority or majority classes, poses challenges proposed approach. Additionally, to enhance the robustness
+for convergence. However, it performs remarkably well under of the proposed Fed-IDS against various adversarial attacks,
+scenarios with long-tail imbalanced data distributions, which we intend to explore the methodology outlined in the recent
+is common in real-world network traffic. work by Valadi et al. [36] as a future scope of this work.
+
+ VII. F URTHER D ISCUSSION VIII. C ONCLUSION
+ In many research works, the researchers have focused only We discussed a key issue of class imbalance in the design
+on the overall model’s accuracy while comparing their work of novel Fed-IDSs and have applied a potential solution to
+with other models in a multiclass classification problem. alleviate this issue. We have emphasized or proved experimen-
+Arguably, the per-class accuracy, confusion matrix results tally that class imbalance critically impacts the performance
+(low false positives and false negatives), macro precision, or generalizability of Fed-IDSs. By employing a recently
+macro recall, and macro F1 score are the real evaluation developed class balancing technique in Federated Learning
+metrics to compare the model’s generalizability against class (FL), we have demonstrated a notable enhancement in the
+imbalance. performance of Fed-IDS across various recent datasets with
+ Besides, we would also like to emphasize that handling distinct distributions. To increase the performance of Fedclass imbalance strengthens Fed-IDSs’ capabilities in detecting IDSs, we are actively encouraging cyber-security researchers
+zero-day attacks since it allows the model to generalize better. to develop robust solutions or incorporate effective class-
+For example, Popoola et al. [21] recently showcased the balancing techniques into their designs. In the future, we plan
+4828 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 4, AUGUST 2024
+
+to evaluate the effectiveness of Fed-IDS by implementing [21] S. I. Popoola, R. Ande, B. Adebisi, G. Gui, M. Hammoudeh, and
+robust aggregation techniques to mitigate class imbalance and O. Jogunola, “Federated deep learning for zero-day botnet attack
+ detection in IoT-edge devices,” IEEE Internet Things J., vol. 9, no. 5,
+protect against adversarial (Byzantine) attacks. Assessing how pp. 3930–3944, Mar. 2022.
+well the proposed IDS performs in Personalized Federated [22] Y. Meidan et al., “N-BaIoT–network-based detection of IoT botnet
+settings is another potential direction for future work. attacks using deep autoencoders,” IEEE Pervasive Comput., vol. 17,
+ no. 3, pp. 12–22, Jul.–Sep. 2018.
+ [23] V. Rey, P. M. S. Sánchez, A. H. Celdrán, and G. Bovet, “Federated
+ learning for malware detection in IoT devices,” Comput. Netw., vol. 204,
+ R EFERENCES Feb. 2022, Art. no. 108693.
+ [1] K. Sood, S. Yu, D. D. N. Nguyen, Y. Xiang, B. Feng, and X. Zhang, [24] O. Friha, M. A. Ferrag, L. Shu, L. Maglaras, K.-K. R. Choo,
+ “A tutorial on next generation heterogeneous IoT networks and node and M. Nafaa, “FELIDS: Federated learning-based intrusion detection
+ authentication,” IEEE Internet Things Mag., vol. 4, no. 4, pp. 120–126, system for agricultural Internet of Things,” J. Parallel Distrib. Comput.,
+ Dec. 2021. vol. 165, pp. 17–31, Jul. 2022.
+ [2] K. Sood, M. R. Nosouhi, D. D. N. Nguyen, F. Jiang, M. Chowdhury, and [25] H. Liu et al., “Blockchain and federated learning for collaborative
+ R. Doss, “Intrusion detection scheme with dimensionality reduction in intrusion detection in vehicular edge computing,” IEEE
+ next generation networks,” IEEE Trans. Inf. Forensics Security, vol. 18, Trans. Veh. Technol., vol. 70, no. 6, pp. 6073–6084,
+ pp. 965–979, 2023. Jun. 2021.
+ [3] A. Khraisat and A. Alazab, “A critical review of intrusion detection [26] X. Shuai, Y. Shen, S. Jiang, Z. Zhao, Z. Yan, and G. Xing, “BalanceFL:
+ systems in the Internet of Things: Techniques, deployment strategy, val- Addressing class imbalance in long-tail federated learning,” in Proc.
+ idation strategy, attacks, public datasets and challenges,” Cybersecurity, 21st ACM/IEEE Int. Conf. Informat. Process. Sens. Netw. (IPSN), 2022,
+ vol. 4, no. 1, pp. 1–27, 2021. pp. 271–284.
+ [4] S. A. Rahman, H. Tout, C. Talhi, and A. Mourad, “Internet of Things [27] B. Li, Y. Wu, J. Song, R. Lu, T. Li, and L. Zhao, “DeepFed: Federated
+ intrusion detection: Centralized, on-device, or federated learning?” IEEE deep learning for intrusion detection in industrial cyber–physical
+ Netw., vol. 34, no. 6, pp. 310–317, Nov./Dec. 2020. systems,” IEEE Trans. Ind. Informat., vol. 17, no. 8, pp. 5615–5624,
+ [5] T. D. Nguyen, S. Marchal, M. Miettinen, H. Fereidooni, N. Asokan, Aug. 2021.
+ [28] R. Sauber-Cole and T. M. Khoshgoftaar, “The use of generative
+ and A.-R. Sadeghi, “D¨ÏoT: A federated self-learning anomaly detection
+ adversarial networks to alleviate class imbalance in tabular data: A
+ system for IoT,” in Proc. IEEE 39th Int. Conf. Distrib. Comput. Syst.
+ survey,” J. Big Data, vol. 9, no. 1, p. 98, 2022.
+ (ICDCS), 2019, pp. 756–767.
+ [29] E. Jothimurugesan, K. Hsieh, J. Wang, G. Joshi, and P. B. Gibbons,
+ [6] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. y Arcas,
+ “Federated learning under distributed concept drift,” 2023,
+ “Communication-efficient learning of deep networks from decentralized
+ arXiv:2206.00799.
+ data,” in Proc. Artif. Intell. Stat., 2017, pp. 1273–1282.
+ [30] J. Wang, Q. Liu, H. Liang, G. Joshi, and H. V. Poor, “Tackling
+ [7] D. Y. Zhang, Z. Kou, and D. Wang, “FedSens: A federated learning the objective inconsistency problem in heterogeneous federated
+ approach for smart health sensing with class imbalance in resource optimization,” in Proc. 34th Adv. Neural Inf. Process. Syst., 2020,
+ constrained edge computing,” in Proc. IEEE Conf. Comput. Commun. pp. 7611–7623.
+ (INFOCOM), 2021, pp. 1–10. [31] T. Li, A. K. Sahu, M. Zaheer, M. Sanjabi, A. Talwalkar, and V. Smith,
+ [8] S. K. Amalapuram, A. Tadwai, R. Vinta, S. S. Channappayya, and “Federated optimization in heterogeneous networks,” in Proc. Mach.
+ B. R. Tamma, “Continual learning for anomaly based network intru- Learn. Syst., 2020, pp. 429–450.
+ sion detection,” in Proc. 14th Int. Conf. COMmun. Syst. NETw. [32] S. P. Karimireddy, S. Kale, M. Mohri, S. Reddi, S. Stich,
+ (COMSNETS), 2022, pp. 497–505. and A. T. Suresh, “Scaffold: Stochastic controlled averaging for
+ [9] E. Tsogbaatar et al., “Del-IoT: A deep ensemble learning approach federated learning,” in Proc. Int. Conf. Mach. Learn., 2020,
+ to uncover anomalies in IoT,” Internet Things, vol. 14, Jun. 2021, pp. 5132–5143.
+ Art. no. 100391. [33] G. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a neural
+[10] M. Zolanvari, M. A. Teixeira, and R. Jain, “Effect of imbalanced datasets network,” 2015, arXiv:1503.02531.
+ on security of industrial IoT using machine learning,” in Proc. IEEE Int. [34] J. Ren, C. Yu, X. Ma, H. Zhao, and S. Yi, “Balanced meta-Softmax for
+ Conf. Intell. Security Informat. (ISI), 2018, pp. 112–117. long-tailed visual recognition,” in Proc. Adv. Neural Inf. Process. Syst.,
+[11] O. Sagi and L. Rokach, “Ensemble learning: A survey,” Wiley 2020, pp. 4175–4186.
+ Interdiscip. Rev. Data Min. Knowl. Discov., vol. 8, no. 4, 2018, [35] T.-M. H. Hsu, H. Qi, and M. Brown, “Measuring the effects of non-
+ Art. no. e1249. identical data distribution for federated visual classification,” 2019,
+[12] S. Kaisar and A. Chowdhury, “Integrating oversampling and ensemble- arXiv:1909.06335.
+ based machine learning techniques for an imbalanced dataset in dyslexia [36] V. Valadi, X. Qiu, P. P. B. de Gusmão, N. D. Lane, and M. Alibeigi,
+ screening tests,” ICT Express, vol. 8, no. 4, pp. 563–568, 2022. “FedVal: Different good or different bad in federated learning,” 2023,
+[13] M. Duan et al., “Astraea: Self-balancing federated learning for improving arXiv:2306.04040.
+ classification accuracy of mobile deep learning applications,” in Proc. [37] P. Kairouz et al., “Advances and open problems in federated learn-
+ IEEE 37th Int. Conf. Comput. Design (ICCD), 2019, pp. 246–254. ing,” Founda. Trends R Mach. Learn., vol. 14, nos. 1–2, pp. 1–210,
+[14] J. Pang, Y. Huang, Z. Xie, Q. Han, and Z. Cai, “Realizing the hetero- 2021.
+ geneity: A self-organized federated learning framework for IoT,” IEEE [38] I. Ullah and Q. H. Mahmoud, “A scheme for generating a dataset for
+ Internet Things J., vol. 8, no. 5, pp. 3088–3098, Mar. 2021. anomalous activity detection in IoT networks,” in Proc. 33rd Canadian
+[15] L. Wang, S. Xu, X. Wang, and Q. Zhu, “Addressing class imbal- Conf. Artif. Intell., 2020, pp. 508–520.
+ ance in federated learning,” in Proc. AAAI Conf. Artif. Intell., 2021, [39] H. Kang, D. H. Ahn, G. M. Lee, J. D. Yoo, K. H. Park, and H. K. Kim,
+ pp. 10165–10173. 2019, “Iot network intrusion dataset,” Dataset, IEEE DataPort, 2019.
+[16] E. M. Campos et al., “Evaluating federated learning for intrusion [Online]. Available: https://dx.doi.org/10.21227/q70p-q449
+ detection in Internet of Things: Review and challenges,” Comput. Netw., [40] M. Zolanvari, L. Gupta, K. Khan, and R. Jain, “Wustl-iiot-2o2l Dataset
+ vol. 203, Feb. 2022, Art. no. 108661. for IIoT Cybersecurity Research, Washington Univ. St. Louis, St. Louis,
+[17] W. Liu et al., “Intrusion detection for maritime transportation systems MO, USA, 2021.
+ with batch federated aggregation,” IEEE Trans. Intell. Transp. Syst., [41] M. Zolanvari, M. A. Teixeira, L. Gupta, K. M. Khan, and R. Jain,
+ vol. 24, no. 2, pp. 2503–2514, Feb. 2023. “Machine learning-based network vulnerability analysis of indus-
+[18] T. DeVries and G. W. Taylor, “Dataset augmentation in feature trial Internet of Things,” IEEE Internet Things J., vol. 6, no. 4,
+ space,” 2017, arXiv:1702.05538. pp. 6822–6834, Aug. 2019.
+[19] S. Marchal, M. Miettinen, T. D. Nguyen, A.-R. Sadeghi, and N. Asokan, [42] M. A. Ferrag, O. Friha, D. Hamouda, L. Maglaras, and H. Janicke,
+ “AuDI: Toward autonomous IoT device-type identification using peri- “Edge-IIoTset: A new comprehensive realistic cyber security dataset of
+ odic communication,” IEEE J. Sel. Areas Commun., vol. 37, no. 6, IoT and IIoT applications for centralized and federated learning,” IEEE
+ pp. 1402–1412, Jun. 2019. Access, vol. 10, pp. 40281–40306, 2022.
+[20] J. Li, L. Lyu, X. Liu, X. Zhang, and X. Lyu, “Fleam: A federated learn- [43] S. Samarakoon et al., “5G-NIDD: A comprehensive network intruing empowered architecture to mitigate DDoS in industrial IoT,” IEEE sion detection dataset generated over 5G wireless network,” 2022,
+ Trans. Ind. Informat., vol. 18, no. 6, pp. 4059–4068, Jun. 2022. arXiv:2212.01298.
+SINGH et al.: EVALUATING FL-BASED INTRUSION DETECTION SCHEME FOR NGNs 4829
+
+ Gurpreet Singh received the bachelor’s and Dinh Duc Nha Nguyen received the master’s degree
+ master’s degrees in mechanical engineering with from the Queensland University of Technology,
+ the specialization in Manufacturing Systems Australia, and the Ph.D. degree from Deakin
+ Engineering from the Sant Longowal Institute of University, VIC, Australia. He is currently an
+ Engineering and Technology, Punjab, India, in 2019 Associate Research Fellow with the Socrates Project
+ and 2021, respectively. He is currently pursuing the (Software Security with a focus on critical tech-
+ Ph.D. degree with the Indian Institute of Technology nologies), Deakin University. During the Ph.D., he
+ Hyderabad, India, and Deakin University, Australia. published papers in Q1 cybersecurity journals and
+ His doctoral research is centered on network some of his work was funded by the Department
+ security, particularly intrusion detection systems of Defense, Australia. He has been awarded a place
+ for next generation networks, employing advanced on the QUT Dean’s list for excellent academic
+techniques, such as deep learning and federated learning. performance two consecutive times in 2020, and the School of Information
+ Technology Higher Degree by Research Award for the 2022 Academic Year,
+ recognizing the highest research, and academic merit. He also secured a prize
+ in the 2022 Country to Country CTF Cybersecurity Challenge, a prestigious
+ international competition hosted by MIT and organized by INCS-CoE with
+ Keshav Sood (Senior Member, IEEE) received leading universities.
+ the Bachelor of Technology degree (Hons.) in
+ electronics and communications engineering with
+ distinction and the Master of Technology degree
+ in optical fiber engineering in 2007 and 2012,
+ respectively, and the Ph.D. degree in information
+ technology (software-defined networking security)
+ from Deakin University, Melbourne, in 2018, under
+ the supervision of Prof. Shui Yu. He was a Trainee
+ with the Terminal Ballistic Research Laboratory,
+ Defence Research and Development Organization,
+Ministry of Defense, Chandigarh, India. He completed the Postdoctoral
+with the University of Newcastle, NSW, Australia. He is currently working as a Lecturer with Cyber Security, Deakin University School of
+Information Technology. His work in cyber security for next-generation
+networks has been published in top-notch security and networking venues,
+i.e., IEEE T RANSACTIONS ON I NFORMATION F ORENSICS AND S ECURITY,
+IEEE T RANSACTIONS ON D EPENDABLE AND S ECURE C OMPUTING,
+IEEE/ACM T RANSACTIONS ON N ETWORKING, IEEE T RANSACTIONS ON
+N ETWORK AND S ERVICE M ANAGEMENT, and IEEE N ETWORK M AGAZINE.
+He has been successful in obtaining a Research Funding with the Department
+of Defence, Australia, Cyber CRC, and industry partners. He was the recipient
+of the Professor of Information Technology Award given by the School of
+Information Technology for his outstanding academic achievements during
+the Ph.D. degree. He is an Associate Editor of IEEE I NTERNET OF T HINGS
+J OURNAL and IET Networks.
+ Yong Xiang (Senior Member, IEEE) received the
+ Ph.D. degree in electrical and electronic engineering from the University of Melbourne, Australia.
+ He is a Professor with the School of Information
+ P. Rajalakshmi (Senior Member, IEEE) received Technology, Deakin University, Australia. He has
+ the Ph.D. in electrical engineering from the Indian published 7 authored books, over 260 refereed jour-
+ Institute of Technology Madras, India, in 2008. She nal articles, and over 110 conference papers in these
+ is currently holds the esteemed position of Professor areas. His research interests include distributed comwith the Department of Electrical Engineering, puting, cybersecurity and privacy, machine learning
+ Indian Institute of Technology Hyderabad, India, and AI, and communications engineering. He is the
+ where she serves as the Cyient Chair Professor Senior Area Editor of IEEE S IGNAL P ROCESSING
+ of Future Communication and is the Director of L ETTERS, an Associate Editor of IEEE C OMMUNICATIONS S URVEYS AND
+ NMICPS TiHAN Foundation. She actively con- T UTORIALS, and an Associate Editor of Computer Standards and Interfaces.
+ tributes to advancing these fields and exploring He was an Associate Editor of IEEE S IGNAL P ROCESSING L ETTERS
+ innovative solutions in wireless technology. She and IEEE ACCESS, and the Guest Editor of IEEE T RANSACTIONS ON
+leads the Wireless Networks Lab, focusing on wireless communications, I NDUSTRIAL I NFORMATICS and IEEE M ULTIMEDIA. He has served as a
+wireless sensor networks, UAV-based sensing, embedded systems, cyber- Honorary Chair, the General Chair, the Program Chair, the TPC Chair, the
+physical systems/Internet of Things, converged network modeling, energy Symposium Chair, and the Track Chair for many conferences, and was invited
+efficiency, and green communications. to give keynotes at numerous international conferences.

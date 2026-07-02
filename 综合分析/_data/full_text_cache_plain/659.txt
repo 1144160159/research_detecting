@@ -1,0 +1,1707 @@
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+4689
+
+Efficient Intrusion Detection for Edge Network via
+Multi-Stage Few-Shot Class-Incremental Learning
+Zhen Yin , Wei Wang , Member, IEEE, Yanyu Cheng , Senior Member, IEEE, Yiliang Liu , Member, IEEE,
+and Xiaozhen Lu , Member, IEEE
+
+Abstract—The emerging increasingly sophisticated, intelligent,
+and stealthy network attacks pose more severe security threats
+to the edge network. In particular, the emergence of novel intelligent attacks makes it a challenging issue to obtain sufficient
+attack samples, and thus classical deep learning-driven intrusion
+detection frameworks (IDSs) become ineffective. To tackle this
+issue, we introduce a novel intrusion detection framework leveraging few-shot class-incremental learning (FSCIL) capabilities to
+achieve robust detection of emerging threats with few samples. This
+approach pre-trains a backbone traffic classification model and
+employs few-shot training with prototypical networks. To further
+reduce catastrophic forgetting while improving both accuracy and
+system robustness, we incrementally fine-tune the classification
+model with supervised contrastive learning, and also realize rapid
+adaptation to new attacks. Evaluations on the intrusion detection
+datasets CIC-IDS2017 and USTC-TF2016 demonstrate that our
+framework consistently outperforms baseline models for emerging
+attacks detection with few attack samples while preserving effective
+recognition of known threats.
+Index Terms—Network intrusion detection, few-shot classincremental learning (FSCIL), edge network, deep learning.
+
+I. INTRODUCTION
+HE sixth-generation (6G) wireless network will evolve
+toward open and diversified services, heterogeneous and
+cooperative resources, and enhanced trust and security, with the
+support of super edge nodes [1]. However, the collaboration
+among heterogeneous edge nodes belonging to different network
+
+T
+
+Received 11 August 2025; revised 12 November 2025; accepted 9 December
+2025. Date of publication 15 December 2025; date of current version 24 December 2025. This work was supported in part by the Natural Science Foundation
+on Frontier Leading Technology Basic Research Project of Jiangsu under Grant
+BK20222001, in part by the National Natural Science Foundation of China under
+Grant 62371231, and in part by the Fundamental Research Funds for the Central
+Universities under Grant xtr052025030. Recommended for acceptance by Dr.
+Yuan Wu. (Corresponding authors: Wei Wang; Yanyu Cheng.)
+Zhen Yin is with the College of Electronic and Information Engineering,
+Nanjing University of Aeronautics and Astronautics, Nanjing 211106, China
+(e-mail: yinzhen@nuaa.edu.cn).
+Wei Wang is with the School of Information and Communications
+Engineering, Xi’an Jiaotong University, Xi’an 710049, China (e-mail:
+w25wang@xjtu.edu.cn).
+Yanyu Cheng is with the Joint NTU–UBC Research Centre of Excellence
+in Active Living for the Elderly (LILY), Nanyang Technological University,
+Singapore 639798 (e-mail: ycheng022@e.ntu.edu.sg).
+Yiliang Liu is with the School of Cyber Science and Engineering, Xi’an
+Jiaotong University, Xi’an 710049, China (e-mail: liuyiliang@xjtu.edu.cn).
+Xiaozhen Lu is with the College of Computer Science and Technology,
+Nanjing University of Aeronautics and Astronautics, Nanjing 210016, China
+(e-mail: luxiaozhen@nuaa.edu.cn).
+Digital Object Identifier 10.1109/TNSE.2025.3644385
+
+operators inevitably introduces trust issues, which further intensified by the massive access of untrusted devices [2]. To support
+secure and trusted network services, continuous edge nodes
+monitoring is in urgent demand. Moreover, emerging attacks
+are becoming increasingly diverse and unpredictable, posing
+significant challenges for real-time attack detection owing to
+insufficient timely and sufficient labeled new attack samples.
+Network intrusion detection system (IDS) provides an effective solution for real-time attack detection and monitoring
+for edge networks, serving as a crucial security mechanism for
+wireless edge networks by isolating intrusions before they cause
+serious damage [3]. IDS analyzes network traffic and detect malicious attack patterns to distinguish them from legitimate flows.
+Authors in [4] first proposed the intrusion detection system
+model in 1987, by introducing a baseline host-based detection
+strategy with security standards to identify deviations from
+normal behaviors. Early IDS primarily depends on port-based
+detection [5] or deep packet inspection (DPI) [6] techniques.
+Port-based detection may suffer from port masquerading and
+dynamic port allocation, while DPI is incapable to deal with
+encrypted traffic data.
+Recent machine learning advancements have enhanced classification capabilities, algorithms such as support vector machines
+(SVM) [7] and k-nearest neighbors (KNN) [8] have been utilized
+to effectively categorize network traffic patterns. However, these
+methods rely on manually extracted statistical or time-series
+features, and thus cannot well adapt to complex and dynamic
+environments. Whereas deep learning automatically learns hierarchical feature representations directly from raw data, which
+eliminates manual feature engineering for classification [9].
+Wang et al. [10] presented a CNN-driven detection method that
+converts raw traffic data into images for end-to-end malicious
+traffic identification. Similarly, Imrana et al. [11] introduced
+a bidirectional LSTM framework for intrusion detection that
+captures temporal dependencies in network traffic sequences.
+Note that DL-based traffic detection usually requires a large
+amount of data. However, in practice, novel attacks emerge
+rapidly, which makes collecting and labeling sufficient network
+traffic data for network training a challenging or even impossible
+task. Deep learning-based IDS with limited samples becomes a
+critical but challenging issue. To address this issue, researchers
+have explored few-shot learning approaches for novel attack
+detection. Xu et al. [12] first introduced a meta-learning framework for few-shot network intrusion detection, demonstrating
+the potential of meta-learning for rapidly adapting to new
+
+2327-4697 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+4690
+
+attack types with limited samples. Rong et al. [13] proposed
+an intrusion detection system based on prototypical networks
+for few-shot intrusion detection. Lu et al. [14] proposed a
+few shot based model-agnostic meta-learning approach for intrusion detection in IoT security. While these few-shot learning methods show promising results in learning novel attack
+patterns from scarce data, they face critical limitations when
+applied to continuously evolving intrusion detection scenarios.
+Specifically, these methods suffer from catastrophic forgetting
+when incrementally learning new attack classes, as adapting to
+new tasks requires updating shared model parameters, which
+inevitably overwrites previously learned knowledge. In addition,
+they encounter feature space confusion, where novel and known
+attack embeddings overlap, resulting in ambiguous decision
+boundaries.
+Few-shot class-incremental learning (FSCIL) addresses these
+limitations by learning new attack patterns from limited samples
+while preserving known attack knowledge. Tao et al. [15] first
+introduced FSCIL for computer vision. Wang et al. [16] utilized siamese and prototypical networks within a meta-learning
+framework, but it suffers limited representation learning for
+complex traffic patterns due to reliance on handcrafted statistical
+features. Du et al. [17] presented an FSCIL framework for IDS
+that includes a fixed vision transformer (ViT) feature extractor
+to prevent catastrophic forgetting and a branch classifier module
+with reprojection and fusion to enhance feature representation
+across sessions. Di Monda et al. [18] systematically compared
+few-shot and FSCIL methods for IDS and adopted the rethinking
+few-shot (RFS) approach.
+Nevertheless, applying few-shot class-incremental learning to
+intrusion detection in 6G edge networks encounters considerable
+challenges. The rapidly evolving attack patterns render training
+samples for new attack classes extremely scarce, causing severe
+class imbalance for effective learning of novel attacks. In addition, feature overlap between new and existing attack classes
+further increases misclassification rates and degrades detection
+accuracy.
+To tackle these challenges, we propose a multi-stage collaborative intrusion detection framework based on FSCIL. Our approach first pre-trains a lightweight CNN on abundant base-class
+samples to establish robust feature extraction. Subsequently, we
+adopt prototype networks for few-shot learning, where CosFace
+loss expands inter-class margins for novel attack accommodation. During incremental learning, supervised contrastive learning (SupCon) combines novel samples with selected old-class
+exemplars to consolidate representations while preventing catastrophic forgetting via fine-tuning partial layers. When novel
+attacks emerge, our framework enables online updates with
+minimal labeled samples and training epochs, achieving rapid
+detection of emerging threats while maintaining high accuracy
+on historical patterns without full retraining. The main contributions are summarized as follows:
+r We propose a traffic intrusion detection scheme for complex edge networks based on few-shot class-incremental
+learning. Our model is pre-trained on a diverse attack dataset and rapidly adapts to novel attacks through
+minimal-epoch fine-tuning with few labeled samples.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+r To address feature overlap in incremental learning, we
+introduce a forward–backward compatibility mechanism.
+The forward phase employs CosFace loss during few-shot
+training to reserve representational margin for novel attacks, and the backward phase uses supervised contrastive
+learning during incremental updates to maintain old–new
+class separability and mitigate forgetting.
+r To mitigate catastrophic forgetting in incremental learning,
+we freeze the backbone to preserve pretrained features,
+fine-tuning only a subset of layers to accommodate new
+classes. Based on herding, we select representative exemplars and replay them during incremental training, which
+reinforces old-class knowledge using minimal memory
+without full retraining.
+r Simulation results on the CIC-IDS2017 and USTCTFC2016 datasets validate that our method achieves exceptional detection performance while significantly mitigating
+catastrophic forgetting and achieving rapid convergence on
+novel attacks with only a few labeled samples.
+The remainder of this paper is organized as follows. Section II
+discusses related work. In Session III, we introduce the system
+model and data preprocessing. In Session IV, we present the
+proposed few-shot incremental learning scheme for intrusion
+detection. Simulations and discussions are given in Section V,
+and conclusions are given in Section VI.
+II. RELATED WORK
+This section begins with an overview of security attacks in
+edge networks, followed by a review of related work on intrusion
+detection and few-shot class-incremental learning approaches.
+A. Security Attacks in Edge Network
+6G networks target Tbps-scale data rates, Kbps/Hz spectral
+efficiency, and μs-scale latency to support novel applications [1],
+e.g., holographic communication [19] and digital twins [20].
+Massive data from these applications overburden the inefficient
+and high-latency model of traditional cloud computing, driving
+the deployment of numerous servers at the network edge [21].
+Diverse, heterogeneous, and untrusted devices accessing open
+6G edge networks expand the attack surface, increasing vulnerability to denial of service (DoS) attacks, zero-day attacks, and
+similar threats, thereby intensifying cybersecurity risks [22].
+IoT networks serve as the most critical application scenario
+for edge computing in 6G edge networks, yet the computational and communication constraints of IoT devices hinder
+effective security deployment [23]. Given the massive scale of
+IoT deployments, data transmission through open wireless edge
+networks becomes vulnerable to security attacks, particularly
+forgery, man-in-the-middle, and replay attacks that compromise
+data reliability [24]. Meanwhile, these vulnerable devices can
+be coordinated by attackers to launch DDoS attacks that overwhelm edge servers through excessive service requests, while
+simultaneously targeting IoT devices themselves to cause device
+failures and service outages [25]. Additionally, malware poses
+a significant threat to IoT edge networks, as infected devices
+
+YIN et al.: EFFICIENT INTRUSION DETECTION FOR EDGE NETWORK VIA MULTI-STAGE FEW-SHOT CLASS-INCREMENTAL LEARNING
+
+can be hijacked to disrupt remote control functions and compromise service availability [26]. Compromised IoT devices and
+edge servers may also be exploited for unauthorized computational tasks such as cryptocurrency mining, imposing additional
+electricity costs on legitimate users. The heterogeneous nature
+of IoT environments with diverse operating systems makes
+comprehensive malware protection particularly challenging to
+implement [27].
+To achieve the 6G vision of pervasive intelligence and internet
+of intelligence, native AI integration at the network architecture
+level becomes essential due to the inherent requirements of AI
+for distributed processing, real-time responsiveness, and robust
+security mechanisms [28]. This evolution naturally drives artificial intelligence (AI) capabilities toward the network edge,
+enabling edge AI to serve as an innovative technology that integrates sensing, communication, computation, and intelligence to
+enhance network efficiency and security. However, this integration introduces new vulnerabilities, particularly data poisoning
+attacks where malicious users inject false data to corrupt AI
+models during both training and inference phases [29]. During
+training, poisoned data can degrade model accuracy or misdirect
+the learning process, while during inference, corrupted inputs
+cause trained models to produce erroneous outputs, ultimately
+leading to network performance degradation across edge computing, caching, and intelligence services [30].
+The inherent vulnerabilities of edge networks, including their
+open, distributed architecture and integration of diverse IoT
+devices and AI systems, create a complex threat landscape
+with multiple attack vectors [31]. Meanwhile, 6G applications
+such as remote surgery and critical infrastructure control impose unique and stringent security and privacy requirements
+that demand ultrahigh reliability [32]. Therefore, comprehensive defense strategies must be established to overcome the
+disconnect between these security vulnerabilities and stringent
+safety standards. The IDS serves as a vital component in this
+security framework, enabling real-time identification of malicious behavior and rapid threat mitigation to maintain the robust
+performance required for edge services [33].
+B. Intrusion Detection
+Anderson [34] first systematically defined intrusion threats
+as unauthorized hostile activities targeting data confidentiality, integrity, or system availability. Denning [4] subsequently
+proposed the first intrusion detection model, introducing a
+host-based approach that detects security violations by analyzing audit data for irregular system behaviors. Since then,
+researchers have conducted extensive research on intrusion detection systems. Based on different data sources [35], Intrusion detection systems are typically classified into three main
+types: host-based systems (HIDS) [36], network-based systems
+(NIDS) [37], and wireless-based systems (WIDS) [38]. HIDS
+monitor system logs, file integrity, and local activities to detect
+malicious behavior on individual hosts, but their protection is
+limited to the specific machine where they are installed [39].
+NIDS are deployed throughout the network infrastructure to
+analyze traffic for network device security, analyzing various
+
+4691
+
+protocol layers including network, transport, and application
+protocols to identify suspicious network activities [40]. WIDS
+monitor wireless communication channels and analyze protocol
+behaviors to detect malicious access points and wireless-specific
+attacks, though they primarily focus on wireless layer protocols
+rather than application layer activities [41].
+Despite monitoring different data sources, these IDS types
+employ similar detection techniques that are broadly categorized [42] into signature-based [43] and anomaly-based approaches [44]. Signature-based detection maintains a database
+of known attack patterns, each representing the digital fingerprint of a specific malicious activity. When monitoring network
+traffic or system events, the IDS performs pattern matching by
+comparing incoming data against these predefined signatures to
+identify potential threats [45]. For instance, Saelee et al. [46]
+improved signature-based detection through ensemble methods with boolean weighted evaluation for enhanced accuracy.
+Kunmar et al. [47] demonstrated the practical application of
+signature-based detection by implementing Snort IDS with the
+DARPA dataset to analyze real-time network traffic and detect
+abnormal transmission patterns. However, this method faces limitations in complex and dynamic network environments, as it can
+only detect previously identified attacks and remains ineffective
+against novel threats, zero-day exploits, and polymorphic attacks
+that deliberately alter their characteristics to avoid signature
+matching [48].
+In contrast, anomaly-based detection builds reference patterns of legitimate network activity and triggers alerts when
+activities deviate significantly from these patterns, enabling
+detection of unknown attacks that lack existing signatures [49].
+Early anomaly-based detection approaches primarily relied on
+traditional statistical methods [50] or domain expertise [51]
+to model normal behavior. Nevertheless, with the increasing
+complexity of network environments, these conventional approaches became challenging to scale and required extensive
+manual tuning to establish accurate baselines. With advances
+in machine learning techniques, researchers began exploring
+machine learning approaches which contain both supervised and
+unsupervised methods for anomaly-based intrusion detection.
+Supervised learning trains classifiers using labeled normal and
+anomalous network traces to detect and categorize intrusions,
+with widely adopted methods including decision tree (DT) [52],
+[53], [54], [55], support vector machine (SVM) [56], [57],
+[58], [59], [60], K-nearest neighbors (KNN) [61], [62], [63],
+naive bayes (NB) [64], [65], [66], [67] and random forest
+(RF) [68], [69], [70]. Uwazie et al. [71] systematically compared RF, KNN, SVM for intrusion detection, evaluating their
+performances across various standard datasets. Unsupervised
+learning identifies normal behavior patterns and triggers alerts
+when network activity deviates beyond predefined thresholds,
+with effective approaches including K-means clustering [72],
+[73], hierarchical clustering [74], [75] and density-based spatial
+clustering of applications with noise (DBSCAN) [76], [77].
+However, traditional machine learning methods have limitations in automatically extracting meaningful features from complex network data and may struggle with the high-dimensional
+nature of modern network traffic [78]. Deep learning (DL)
+
+4692
+
+techniques have emerged as a promising approach, employing
+deep neural architectures to extract complex patterns directly
+from raw network traffic without manual feature engineering [79]. Various deep learning architectures have shown remarkable effectiveness in intrusion detection applications [80].
+Auto-encoders (AE) [81], [82], [83] are particularly effective
+for anomaly detection as they create efficient encodings of
+normal network operations and highlight anomalous activities
+that differ from baseline behavior. Generative adversarial networks (GAN) [84], [85], [86], [87] are adept at generating
+synthetic attack samples to augment limited training datasets
+and improve the robustness of intrusion detection models. Convolutional neural networks (CNN) [88], [89], [90], [91] are
+proficient at extracting local patterns from spatial features of
+network traffic, capable of identifying malicious behavioral
+characteristics hidden in packet sequences. Recurrent neural
+networks (RNN) [92], [93], [94] and their variants, such as long
+short-term memory (LSTM) [95], [96], bidirectional long shortterm memory (BiLSTM) [97], [98] and gated recurrent unit
+(GRU) [99], [100] are particularly suitable for handling temporal
+characteristics of network traffic, capturing the dependencies
+and patterns of attack behaviors. Furthermore, researchers have
+also explored hybrid approaches combining different architectures such as CNN-RNN [101], [102], CNN-LSTM [103], [104],
+CNN-BiLSTM [105], [106] and CNN-GRU [107], [108]. Nevertheless, as network environments become increasingly complex
+and novel attacks emerge with limited samples, traditional deep
+learning models struggle to adapt quickly [109]. Furthermore,
+existing approaches often sacrifice overall system performance
+and reliability when attempting to handle class imbalance in
+these dynamic environments [110], motivating the exploration
+of few-shot incremental learning for intrusion detection.
+C. Few-Shot Class-Incremental Learning
+Continual learning is a machine learning paradigm designed
+to enable models to acquire new knowledge incrementally
+while preserving previously learned information. In real-world
+applications, the limited availability of samples often renders
+traditional continual learning methods ineffective, as scarce
+labeled data during incremental learning sessions typically
+triggers model overfitting on novel classes and erosion of
+previous knowledge. Since Tao et al. [15] initially proposed
+few-shot class-incremental learning for computer vision, many
+researchers have extended this paradigm to various applications. Existing FSCIL approaches are generally classified into
+forward-compatible methods, which train on base classes and
+keep the model frozen during incremental sessions, and incremental fine-tuning methods, which adjust the model in incremental sessions [111].
+Forward-compatible methods aim to enhance base class separability in the embedding space, reducing interference from
+new classes added incrementally. Notably, Peng et al. [112]
+employ a CosFace penalty strategy to achieve tight within-class
+grouping and distinct between-class margins, enabling effective
+integration of new classes within the embedded feature space.
+Zhou et al. [113] propose Forward Compatible Training (FACT)
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+for FSCIL, leveraging simulated prototypes to optimize existing
+class encodings while preserving capacity for future classes. Oh
+et al. [114] introduce the CLOSER framework, which reduces
+inter-class distances in FSCIL to enhance the balance between
+discriminability and transferability.
+Incremental fine-tuning methods adjust the encoder during incremental sessions to enhance flexibility for learning new tasks,
+thereby improving adaptability. Mazumder et al. [115] select
+non-critical parameters for updates during incremental learning.
+Zhao et al. [116] selectively update model components at varying
+rates to effectively balance adaptation to new knowledge with
+retention of prior knowledge. Kang at el. [117] apply the lottery
+ticket hypothesis to identify a subnetwork of critical parameters that remains frozen, while other parameters are fine-tuned
+during incremental sessions. Cheraghian et al. [118] develop a
+semantically-enhanced knowledge distillation framework [119]
+that employs word embeddings as linguistic guidance to improve
+the distillation process and mitigate memory degradation in
+few-shot incremental scenarios.
+D. Few-Shot Class-Incremental Learning for Intrusion
+Detection
+As shown in Table I, we comprehensively review key literature
+on few-shot learning, continual learning, and few-shot class
+incremental learning in IDS. Since Xu et al. [12] introduced
+meta-learning to IDS in 2020, researchers have increasingly focused on advancing the generalization ability of trained intrusion
+detection models to novel attacks.
+Continual Learning enables IDS to rapidly adapt to new
+attack categories with adequate samples in dynamic threat environments while minimizing catastrophic forgetting of prior
+knowledge. Data et al. [120] proposed a tree-like deep feedforward neural network (T-DFNN) model that supports incremental
+learning of new categories via dynamic branch expansion. Jin
+et al. [123] explored federated incremental learning, allowing
+IDS models to update efficiently in data-siloed environments
+to address new threats. Cerasuolo et al. [122] compared various continual learning methods in IDS applications, providing
+insights for technology selection.
+Few-shot learning enables IDS models to learn features from
+few samples using meta-learning or metric-based methods, wellsuited for scenarios with limited attack samples. For instance,
+[12], [14] utilized model-agnostic meta-learning (MAML), [13],
+[121] employed metric-based prototype networks, and [124]
+adopted contrastive triplet deep learning networks. However,
+few-shot learning in IDS primarily faces catastrophic forgetting,
+where adapting to new attack categories impairs prior detection
+performance.
+Novel attack samples in cybersecurity practice are typically
+scarce, necessitating IDS to adapt rapidly to new attack types
+while preserving accuracy for known categories. Few-shot class
+incremental learning integrates continual learning and few-shot
+learning to learn new attack categories from limited samples
+while retaining prior knowledge, making it an optimal solution
+for online IDS. Currently, few studies have explored the application of FSCIL to intrusion detection, as discussed below.
+
+YIN et al.: EFFICIENT INTRUSION DETECTION FOR EDGE NETWORK VIA MULTI-STAGE FEW-SHOT CLASS-INCREMENTAL LEARNING
+
+4693
+
+TABLE I
+COMPARISON OF THE RELATED WORK
+
+Du et al. [17] applied self-supervised pretraining to generate
+feature representations and froze the feature network during the
+projection stage with a reprojection branch classifier to reduce
+feature overlap between new and old attack categories. Chai
+et al. [126] utilized a variational autoencoder to generate robust
+feature representations and employed a dynamic evolutionary
+classifier to adapt to new malware categories.
+Based on the aforementioned review, it is worth noting that,
+research on few-shot class incremental learning for intrusion detection remains limited. Thus, in this study, we propose a multistage few-shot incremental approach, integrating pretraining,
+forward compatibility, and incremental fine-tuning to enhance
+IDS performance.
+
+III. SYSTEM MODEL AND DATA PREPROCESSING
+A. System Model
+We consider an intrusion detection scenario in a wireless edge network environment. The IDS is pre-trained on
+known attack categories Cp using a large dataset with sufficient labeled samples. After deployment, the system encounters
+new attack categories Cv with only limited labeled samples
+available.
+In this setting, the IDS must rapidly fine-tune to accurately
+classify novel attacks using few samples from Cv , while retaining knowledge of prior attack categories Cp . Since new
+attacks emerge continuously, we partition samples of Cv into
+
+4694
+
+temporal sessions D = {D1 , D2 , . . . , Dn } based on arrival
+time. Each session Di (i = 1, . . . , n) contains Kv -way Nv -shot
+samples from newly discovered attack categories Cvi . The training constraint requires that only data from the current session
+Di is accessible during training. After completing session i,
+the IDS
+ must classify all previously learned attack categories:
+Cp ∪ ij=1 Cvj .
+For implementation, monitoring software deployed across the
+network infrastructure captures traffic in Pcap format, containing
+timestamps, source and destination IP addresses, port numbers,
+protocol types, and payload data for detailed packet-level inspection. The captured traffic undergoes analysis within the IDS.
+The IDS detects potential intrusion events and automatically
+executes defensive actions based on predefined policies (e.g.,
+blocking source IP addresses or isolating compromised systems)
+or issues alerts to administrators for incident response, while
+logging comprehensive event details for subsequent analysis.
+When novel attacks emerge with few labeled samples, the IDS
+rapidly adapts its detection model.
+B. Data Preprocessing
+Before intrusion detection, raw traffic data requires preprocessing, including cleaning, segmentation, and normalization.
+We segment traffic into bidirectional flows using the five-tuple
+(source IP address, destination IP address, source port, destination port, and protocol type) to enable precise modeling of
+network interactions and characterization of malicious traffic
+behaviors. Additionally, in traffic segmentation, we employ
+timeout and periodic reset strategies referencing [17]. The
+timeout strategy terminates inactive links after 64s, while the
+periodic reset strategy resets segmentation when flows become
+excessively large after 120 s.
+Following segmentation, feature extraction methods are employed on the segmented traffic data to derive robust representations for intrusion detection. Raw-byte methods extract features
+from packet headers or payloads, offering detailed protocol
+representations and detecting subtle anomalies effectively. We
+select the first M packets from each session and extract the
+initial L bytes of each packet. Following [127], where M = 6-14
+and L = 100-200 are used with abundant training data, we
+adapt these parameters in our case. Specifically, we follow the
+effective practices outlined in [12], [17], and set M = 16 and
+L = 256. The extracted bytes are padded with zeros if necessary
+to reach L bytes, with MAC and IP addresses anonymized to
+mitigate privacy leakage and improve model robustness across
+varied networks. Each packet’s 256 bytes are reshaped into
+a 4 × 64 sub-matrix, and the 16 packets are concatenated in
+temporal order to construct a 64 × 64 matrix representation,
+thereby preserving the sequential dependencies within the traffic
+flow. These bytes are then normalized (divided by 255) to
+form bidirectional flow feature vectors. This approach captures
+critical protocol headers (e.g., TCP/UDP fields) and flow patterns from early packets, minimizing computation while supporting early threat detection and enhancing real-time analysis
+performance.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+IV. PROPOSED FEW-SHOT CLASS-INCREMENTAL LEARNING
+SCHEME FOR INTRUSION DETECTION
+This section proposes a few-shot incremental learning framework for edge network intrusion detection, as illustrated in
+Fig. 1. We introduce a multi-stage collaborative optimization
+framework that incrementally improves model performance via
+pre-training, few-shot learning and few-shot class-incremental
+fine-tuning. By efficiently utilizing limited samples, this method
+improves adaptability and precision against emerging threats
+while mitigating catastrophic forgetting to maintain accuracy
+for established attack types.
+A. Pre-Training Stage
+In few-shot class-incremental learning for intrusion detection,
+we address catastrophic forgetting and overfitting in incremental
+learning via a framework separating the feature extractor and
+classifier [128]. We pre-train a backbone network on extensive
+traffic data to yield robust traffic feature representations. During
+few-shot fine-tuning, we freeze specific parameters to retain
+prior knowledge and prevent overfitting. Given the limited resources of edge networks, we select a CNN as the backbone network. Specifically, we input the preprocessed bidirectional flow
+byte features of abundant base class samples into the backbone
+network. We set M = 16 and L = 256, so the feature vector of
+size 4096 (M × L) is reshaped into a 64 × 64 single-channel
+input, compatible with the backbone network’s convolutional
+architecture. The detailed structure of the CNN architecture we
+employ is illustrated in Fig. 2. The network is then pre-trained
+using the cross-entropy loss function:
+1 
+yi,c log (ŷi,c ) ,
+N i=1 c=1
+N
+
+LCE = −
+
+C
+
+(1)
+
+where N is the number of samples in the training batch and C
+is the total number of classes. yi,c ∈ {0, 1} represents the c-th
+component of the one-hot encoded label for sample i, and ŷi,c
+denotes the predicted probability of sample i belonging to class
+c after Softmax normalization. Through rigorous optimization
+on abundant base class samples, the backbone network achieves
+robust and discriminative feature embeddings.
+B. Few-Shot Training Stage
+1) Few-Shot Tasks: To strengthen the capability of the backbone network for few-shot learning scenarios, we introduce
+a few-shot training phase between the pre-training and incremental fine-tuning stages. Using the base class dataset, we
+construct numerous few-shot tasks in K-way N -shot format,
+where K-way denotes K classes and N -shot refers to N labeled
+samples per class. For instance, in a 5-way 5-shot configuration,
+the model is tasked with classifying 5 classes, each represented
+by 5 samples. Each task comprises a support set and a query set.
+The support set contains K classes with N labeled samples per
+class to facilitate feature extraction, while the query set includes
+
+YIN et al.: EFFICIENT INTRUSION DETECTION FOR EDGE NETWORK VIA MULTI-STAGE FEW-SHOT CLASS-INCREMENTAL LEARNING
+
+Fig. 1.
+
+4695
+
+Workflow of the edge network intrusion detection framework based on Few-Shot Class-Incremental Learning.
+
+Fig. 3.
+
+Schematic of prototypical network for few-shot classification.
+
+where Sk denotes the support set for class k, and f (xi ) ∈ Rd is
+the d-dimensional feature embedding of sample xi produced by
+the backbone network. For a query sample xq with embedding
+f (xq ), the network computes a distance to each prototype ck .
+Here, Cosine similarity acts as the distance metric, defined as:
+Fig. 2.
+
+Architecture of the CNN architecture in this work.
+
+cos(θ) =
+
+additional unlabeled samples from the same K classes to evaluate the model’s classification performance and generalization
+capability [129].
+2) Prototypical Network: Features extracted by the backbone network are fed into a prototypical Network [130] for classification. For each of the K classes, the prototypical network
+computes a prototype ck by averaging the feature embeddings of
+the N samples in the support set, and then assigns query samples
+to the class with the nearest prototype using a distance metric,
+such as Euclidean distance or cosine similarity, as illustrated in
+Fig. 3. The prototype ck for class k is calculated as:
+ck =
+
+1
+N
+
+
+(xi ,yi )∈Sk
+
+f (xi ),
+
+f (xq ) · ck
+,
+f (xq )2 ck 2
+
+(3)
+
+where f (xq ) · ck is the dot product, and  · 2 denotes the L2
+norm.
+3) CosFace Loss Function: In few-shot incremental learning, the backbone feature extractor must rapidly accommodate
+novel tasks without compromising prior knowledge. To achieve
+this, we employ a loss function that contracts within-class variations while expanding cross-class margins, establishing tight
+categorical groupings and distinct inter-categorical spacing in
+the representation space. Such organization in the representation
+space enables efficient accommodation of incrementally arriving
+classes. Inspired by [112], we adopt the CosFace [131] loss
+function, defined as:
+es(cos(θyi )−m)
+1 
+log s(cos(θ )−m) 
+,
+yi
+N i=1
+e
++ k=yi es cos(θk )
+N
+
+(2)
+
+L=−
+
+(4)
+
+4696
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+The method iteratively constructs the subset Pk by selecting one
+sample at a time, starting from an empty set Pk = ∅. At each
+step, it selects a sample x∗ that maximizes the cosine similarity
+between μk and the evolving subset mean:
+μk · μ̂k,x
+.
+x∈Xk \Pk μk  μ̂k,x 2
+
+x∗ = arg max
+
+Fig. 4. An illustration of feature distributions: Cross-Entropy loss vs. CosFace
+loss trained models.
+
+where cos(θyi ) represents the cosine similarity between the
+embedding f (xi ) and the prototype cyi of its true class yi , s is a
+scaling factor, and m is the margin parameter. As shown in Fig. 4,
+compared to the cross-entropy loss function, by introducing this
+margin, CosFace enhances inter-class separation and intra-class
+compactness, thereby improving prototype distinctiveness. This
+approach, often referred to as forward compatibility in few-shot
+incremental learning, not only strengthens base class representations for robustness but also preserves flexibility in the feature
+space, allowing seamless adaptation to new classes without
+compromising existing ones.
+C. Few-Shot Incremental Fine-Tuning Stage
+Having utilized the CosFace loss function to promote forward
+compatibility in few-shot incremental learning, we now enhance
+model adaptability to novel classes and strengthen model robustness to existing ones through incremental fine-tuning.
+1) Herding-Based Exemplar Selection: In incremental learning, retaining representative exemplars from old categories is
+essential to counter catastrophic forgetting and preserve knowledge of prior classes. Selecting highly representative exemplars
+is crucial for this process, promoting us to adopt the herding
+strategy introduced by Welling et al. [132] and subsequently
+improved by Rebuffi et al. [133] for class-incremental learning.
+Herding uses a greedy approach to form a compact sample
+subset that effectively reflects the feature distribution of a class.
+For a class k with a sample set Xk = {x1 , x2 , . . . , xn }, where
+each xi is a feature embedding output by the backbone network, herding constructs a subset Pk ⊆ Xk of size m, i.e.,
+Pk = {p1 , p2 , . . . , pm } with |Pk | = m ≤ n, to approximate the
+true feature centroid of class k. Here, we define the true centroid
+of class k as:
+μk =
+
+1 
+x,
+|Xk |
+
+(5)
+
+1 
+x.
+m
+
+(6)
+
+x∈Xk
+
+and the subset centroid as:
+μ̂k =
+
+x∈Pk
+
+(7)
+
+where μ̂k,x denotes the subset centroid after adding candidate
+sample x:
+⎛
+⎞
+
+1
+⎝
+p + x⎠ .
+(8)
+μ̂k,x =
+|Pk | + 1
+p∈Pk
+
+For efficientcomputation, we maintain the cumulative feature
+sum Sk = p∈Pk p of selected exemplars. At each iteration,
+for every candidate sample x ∈ Xk \Pk , we compute the cosine
+similarity between the true class centroid μk and the hypothetical
+subset mean (Sk + x)/(|Pk | + 1), then select the sample maximizing this similarity and update Sk+1 = Sk + x∗ . This greedy
+process continues until |Pk | = m, yielding a representative exemplar set that converges faster to μk than random sampling and
+effectively mitigates catastrophic forgetting. These exemplars
+are then combined with samples from novel classes, including
+attack samples from incremental sessions Di (i = 1, . . . , n),
+where each Di consists of Knovel -way Nnovel -shot samples from
+i
+, during the incremental few-shot finethe novel class set Cnovel
+tuning stage.
+2) Freezing the Backbone Network for Training: In the prior
+data preparation stage, we applied herding to generate exemplars
+from old class samples, combining these with a limited set of
+labeled novel class attack samples for incremental fine-tuning.
+To preserve the generalized feature representation capacity of
+the backbone network and prevent catastrophic forgetting of
+prior class knowledge during the integration of novel class
+samples, we froze the convolutional layers of the CNN, restricting optimization to the fully connected layer. This approach
+maintains stable representations of existing class features while
+facilitating precise adaptation to the classification requirements
+of new class data. Consistent with the few-shot training stage, we
+also utilize the cosine similarity-based Prototypical Network as
+the classification framework, which computes class prototypes
+from support set embeddings to enable efficient and accurate
+classification of novel classes.
+3) Supervised Contrastive Loss: During few-shot training,
+CosFace loss optimizes class boundaries, reserving space for
+novel classes. Still, as Fig. 5 indicates, new class embeddings
+may overlap with existing classes, impairing classification accuracy. To address this, in the few-shot incremental phase, we
+employ supervised contrastive loss (SupCon) [134] to optimize
+feature representations. SupCon employs contrastive learning to
+cluster same-class embeddings while separating different-class
+embeddings, reducing overlap between new and existing classes
+in the feature space. The SupCon loss is defined as:
+LSupCon =
+
+ −1 
+ezi ·zp /τ
+log 
+.
+zi ·za /τ
+|P (i)|
+a∈A(i) e
+i∈I
+
+p∈P (i)
+
+(9)
+
+YIN et al.: EFFICIENT INTRUSION DETECTION FOR EDGE NETWORK VIA MULTI-STAGE FEW-SHOT CLASS-INCREMENTAL LEARNING
+
+4697
+
+TABLE II
+CICIDS2017 DATASET SESSION SETTINGS FOR INCREMENTAL FEW-SHOT
+LEARNING
+
+Fig. 5.
+
+Class separation and overlap in few-shot incremental learning.
+
+Here, zi is the feature embedding of sample i, P (i) represents
+the set of positive samples from the same class as i, A(i) denotes
+the set of all samples in the batch, and τ is a temperature
+parameter that adjusts the concentration of the similarity distribution. SupCon effectively improves feature discriminability in
+few-shot scenarios, enhancing incremental classification performance. Together with CosFace in the few-shot training phase,
+they constitute a forward-backward compatibility mechanism
+to address feature overlap. CosFace enforces angular margin
+constraints to reserve space for future classes, achieving forward compatibility. SupCon with old class exemplar replay
+maintains inter-class separation and intra-class compactness
+during incremental training, achieving backward compatibility.
+This dual-phase design enables accommodation of novel attacks
+while preserving performance on established threats.
+V. SIMULATION RESULTS AND DISCUSSION
+A. Dataset
+As far as we know, no standardized benchmark dataset exists
+for incremental few-shot learning in intrusion detection [135].
+For real intrusion detection scenarios, the selected datasets must
+have:
+1) normal and diverse malicious traffic classes reflecting realworld network conditions;
+2) PCAP format preserving raw network traffic bytes;
+3) a few labeled data per traffic type to support incremental
+few-shot learning paradigms.
+We select two open datasets, i.e., CIC-IDS2017 [136] and
+USTC-TFC2016 [10], to evaluate the effectiveness of our proposed method.
+CICIDS20171 serves as an established benchmark in the
+field of intrusion detection, having been developed by the
+Canadian Institute for Cybersecurity and extensively utilized by
+researchers worldwide. Capturing five days of network traffic
+from July 3 to July 7, 2017, it encompasses both benign flows
+and 14 types of contemporary malicious traffic, including DDoS,
+Web Attacks, Botnets, etc. The dataset provides raw packet
+captures in PCAP format, retaining the original traffic bytes,
+alongside CSV files with over 80 extracted flow features generated by CICFlowMeter [137], each labeled with timestamps,
+1
+
+https://www.unb.ca/cic/datasets/ids-2017.html
+
+source/destination IPs, ports, protocols, and attack types. Due
+to the limited number of samples for certain attack types and
+labeling inconsistencies in specific instances [12], we select 10
+attack types with sufficient sample sizes, employing raw traffic
+data in PCAP format as input for experimental evaluation of the
+proposed scheme. This selection enhances the dataset’s suitability for evaluating our system’s performance across diverse attack
+scenarios. For incremental few-shot learning experiments, we
+structured the CICIDS2017 dataset into session sets, as shown in
+Table II. In Session 0, consisting of benign traffic and 6 malicious
+traffic types, we allocated 5,000 labeled training samples per
+traffic type to contain sufficient data. For incremental learning,
+sessions 1 and 2 each includes 5 labeled samples per type to
+simulate few-shot learning scenarios. Performance evaluation
+after each session uses 500 test samples per type.
+The USTC-TFC2016 dataset,2 developed by researchers at
+the University of Science and Technology of China (USTC),
+represents a comprehensive resource designed for advanced research in encrypted traffic classification and intrusion detection.
+Captured in a real-world network environment and stored in
+PCAP format with a compressed size of approximately 3.71GB,
+it encompasses both benign and malicious traffic flows. The
+dataset includes 10 types of benign traffic, generated using the
+IXIA BPS [138] network traffic simulation tool, covering applications such as BitTorrent, Gmail, Skype, etc. Additionally, it
+contains 10 types of malicious traffic, collected researchers at the
+Czech Technical University (CTU) [139] from public websites
+in real network environments between 2011 and 2015, including
+malware such as Cridex, Geodo, Htbot, etc. This diverse dataset
+enables robust evaluation of intrusion detection systems under
+realistic conditions. For incremental few-shot learning, all benign traffic in the USTC-TFC2016 dataset is grouped into one
+class, combined with 6 randomly selected malicious traffic types
+as base classes, each with 5,000 labeled training samples. The
+remaining four malicious types serve as incremental classes,
+each with 5 training samples. During evaluation, each class,
+whether base or incremental, consists of 500 test samples to
+ensure a balanced assessment. The few shot incremental session
+setup for the USTC-TFC2016 dataset is shown in Table III.
+B. Experiment Setting
+All algorithms in this paper are implemented using PyTorch
+2.2.2, with training and testing conducted on an NVIDIA
+GeForce RTX 4090 graphics card. The experimental setup for
+
+2
+
+https://github.com/davidyslu/USTC-TFC2016
+
+4698
+
+TABLE III
+USTC-TFC2016 DATASET SESSION SETTINGS FOR INCREMENTAL FEW-SHOT
+LEARNING
+
+TABLE IV
+HYPERPARAMETER SELECTION FOR CONVOLUTIONAL NEURAL NETWORKS
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+5 exemplars per old class are retained to maintain balanced
+representation.
+r Training: The model is fine-tuned for 30 epochs per
+session. The convolutional layers of the CNN are frozen
+while only the fully connected layer parameters undergo
+fine-tuning to adapt to new classes.
+r Model and loss: The samples are processed through the
+CNN and prototypical network. Training objective uses
+supervised contrastive loss with temperature τ = 0.07.
+r Evaluation: 500 episodes with randomly sampled ki -way
+5-shot 10-query tasks across all learned classes.
+C. Performance Metrics
+
+our proposed method is outlined in three stages: pre-training,
+few-shot learning, and few-shot incremental fine-tuning.
+1) Pre-Training: As described in Section III-B, we extract
+bytes from each bidirectional flow by selecting the first L bytes
+of the first M packets. Referring to [12], [17], we set M = 16 and
+L = 256 to capture critical features for traffic classification. The
+normalized bytes are reshaped into a 64 × 64 matrix for CNN
+model input. The CNN hyperparameters, including learning rate,
+batch size, and optimizer type, are configured as specified in
+Table IV.
+2) Few-Shot Learning: For the few-shot learning task, we selected 7 base classes from the CICIDS2017 and USTC-TFC2016
+datasets, which correspond to the data-rich known classes used
+in the pretraining phase, and configured the experiments as
+follows:
+r Episode configuration: 7-way 5-shot with 5 support samples and 10 query samples per class, totaling 35 support
+and 70 query samples per episode.
+r Training: 20 epochs with 800 episodes per epoch using
+Adam optimizer with learning rate scheduling.
+r Model and loss: CNN backbone, initialized with pretrained
+weights, extracts 512-dimensional features for prototypical
+network classification. Training objective employs CosFace loss (s = 30.0, m = 0.35).
+r Evaluation: 500 episodes with randomly sampled 7-way
+5-shot 10-query tasks.
+3) Few-Shot Incremental Fine-Tuning: For the few-shot incremental learning phase, new classes are introduced in each
+session with limited labeled samples. The experiments are configured as follows:
+r Episode configuration: ki -way 5-shot, where ki represents
+the total number of classes from current and previous
+sessions. Each new class contains 5 support samples, while
+
+In multi-class classification, model performance is typically
+assessed using macro-averaged metrics: Accuracy, Precision,
+Recall, F1-Score, and the confusion matrix. We define the following terms for each class j, with C representing the total
+number of classes: TPj is the number of instances belonging
+to class j and correctly classified as class j, FPj represents the
+number of instances not belonging to class j but incorrectly classified as class j, TNj is the number of instances not belonging to
+class j and correctly classified as such, and FNj is the number of
+instances belonging to class j but incorrectly classified as other
+classes. The evaluation metrics are defined as follows: Accuracy
+evaluates the overall correctness of the model across all classes:
+C
+j=1 TPj
+.
+(10)
+Accuracy = C
+j=1 (TPj + FNj )
+Macro-Precision is used to evaluate the correctness of the model
+in predicting instances as belonging to each class:
+TPj
+1 
+.
+C j=1 TPj + FPj
+C
+
+Macro-Precision =
+
+(11)
+
+Macro-Recall is used to evaluate the coverage of the model in
+identifying instances that truly belong to each class:
+1 
+TPj
+.
+C j=1 TPj + FNj
+C
+
+Macro-Recall =
+
+(12)
+
+Macro-F1 provides a balanced evaluation of Precision and Recall across classes:
+1 
+Precisionj × Recallj
+2×
+.
+C j=1
+Precisionj + Recallj
+C
+
+Macro-F1 =
+
+(13)
+
+The confusion matrix evaluates classification errors of a model
+by comparing predicted class labels with actual ones.
+Inspired by [112], we adopt harmonic accuracy to address
+the shortcomings of average accuracy in few-shot incremental
+learning. Average accuracy may be biased by strong performance on base classes, thereby obscuring inadequate learning
+of new classes. For example, a model achieving 100% accuracy
+on 20 base classes (each with 5 test samples) but 0% on 2 new
+classes (each with 5 test samples) results in a misleading average
+
+YIN et al.: EFFICIENT INTRUSION DETECTION FOR EDGE NETWORK VIA MULTI-STAGE FEW-SHOT CLASS-INCREMENTAL LEARNING
+
+4699
+
+TABLE V
+ABLATION STUDY RESULTS ON CIC-IDS2017 AND USTC-TF2016 DATASETS
+
+accuracy of 90.9% . Harmonic accuracy, defined as
+Ah =
+
+2 × Ab × Ai
+,
+Ab + Ai
+
+(14)
+
+where Ab represents the average accuracy on base classes and
+Ai represents the average accuracy on incremental classes, ensures balanced performance across all classes. A high harmonic
+accuracy reflects robust learning on both base and new classes,
+while a low value indicates deficiencies in incremental learning
+capability.
+D. Experiment Results and Analysis
+1) Ablation Analysis: To validate the effectiveness of each
+component, we conduct an ablation study, systematically evaluating the impact of individual modules on overall performance,
+with results presented in Table V . Specifically, on the CICIDS2017 dataset, training solely with base classes results in
+a performance degradation (PD) as high as 9.72% after two
+sessions of incremental learning. At this stage, the model is not
+exposed to new category samples, leading to a low recognition
+rate for new categories. Introducing pretraining reduces PD
+to 5.84% , demonstrating its ability to enable the model to
+acquire robust knowledge, effectively learning old categories
+while enhancing adaptability to new tasks. Furthermore, incorporating few-shot incremental fine-tuning substantially enhances model effectiveness. By freezing the backbone network
+and fine-tuning the fully connected layers, the model effectively
+learns the knowledge of new category samples while retaining
+the knowledge of old categories. Consequently, on the CICIDS2017 dataset, the PD decreases to 1.22% , with accuracies
+across sessions 0 to 2 reaching 99.86% , 99.04% , and 98.64%
+, respectively. Similarly, on the USTC-TF2016 dataset, training
+with only few-shot base classes results in a PD of 20.71% , but
+with all components, PD drops to 7.99% , further validating our
+proposed three-stage few-shot incremental learning intrusion
+detection system. Notably, the USTC-TF2016 dataset shows reduced detection accuracy compared to CIC-IDS2017, probably
+because it provides complete PCAP files for each traffic category
+over a period. Although primarily aligned with their labels, these
+files contain mixed traffic types which cause labeling errors in
+bidirectional flows. In contrast, CIC-IDS2017 utilizes manual
+label calibration with IP and time segment data [112], ensuring
+higher accuracy. Despite such label noise, our model sustains
+optimal classification performance, highlighting its robustness
+and adaptability.
+
+To demonstrate the advantages of our proposed approach in
+online intrusion detection intuitively, we employed t-SNE [140]
+to visualize the feature embeddings of test samples in a lowdimensional space, as shown in Fig. 6. In the session 0 base
+class test shown in Fig. 6(a), few-shot training using the CosFace
+loss function achieves significant inter-class separation for the
+feature embeddings of 7 base classes, preserving sufficient feature space for novel class embeddings in subsequent incremental
+learning. In the session 1 incremental test shown in Fig. 6(b) (7
+base classes and 2 novel classes) and the session 2 incremental
+test illustrated in Fig. 6(c) (7 base classes and 4 novel classes), incremental fine-tuning with the SupCon loss function, combined
+with the Exemplars replay strategy for base classes, ensures
+complete separation between base and novel class embeddings
+in the feature space. Consequently, when novel attack classes
+emerge, the proposed detection strategy efficiently learns novel
+class features while retaining base class feature memory after
+a few fine-tuning epochs, thereby achieving superior detection
+performance.
+To illustrate the effectiveness of our proposed online intrusion
+detection framework, we generated a confusion matrix, as shown
+in Fig. 7, using 500 randomly sampled episodes. In Session 0,
+the base class classification, illustrated in Fig. 7(a), achieves
+superior accuracy. As shown in Fig. 7(b), our model additionally
+detects two novel attack classes, BoT and SSH-Patator, with accuracies of 95% and 99% , respectively. It also sustains base class
+detection performance with negligible impact. In Session 2, subsequent incremental fine-tuning enables the seamless integration
+of two additional classes, WebAttackXSS and FTP-Patator, as
+shown in Fig. 7(c), achieving classification accuracies of 92%
+and 100% , respectively, while maintaining robust categorization
+performance for the base classes and previously introduced
+novel classes. These results demonstrate the effectiveness of the
+proposed scheme for IDS with limited samples.
+2) Comparison With Different Methods: In cybersecurity,
+research on few-shot incremental learning for intrusion detection
+is relatively limited. To ensure a comprehensive and fair comparison, we include representative methods from both existing
+few-shot class-incremental learning approaches for intrusion detection and conventional non-incremental baselines, along with
+several typical FSCIL techniques adapted from the computer vision domain. Wang et al. [16] proposes a meta-learning few-shot
+incremental learning strategy employing network traffic features
+rather than raw bytes for classification. Di Monda et al. [18] established a paradigm for few-shot incremental learning in intrusion detection, evaluating several common methods on intrusion
+
+4700
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 6. t-SNE visualization of class increment in few-shot learning (CICIDS2017 dataset): (a) Base classes; (b) After session 1 with 2 added classes; (c) After
+session 2 with 2 more classes (4 new classes).
+
+Fig. 7. Confusion matrix of class increment in few-shot learning (CICIDS2017 dataset): a) Base classes; b) After session 1 with 2 added classes; c) After session
+2 with 2 more classes (4 new classes).
+
+TABLE VI
+COMPARISON OF DIFFERENT METHODS ON CIC-IDS2017 AND USTC-TFC2016 DATASETS
+
+detection datasets. We systematically compare it with traditional
+deep learning methods [10], pre-trained and fine-tuned method,
+prototype-based few-shot learning approaches [13], and recent
+few-shot incremental learning techniques adapted from image
+processing [112], [114], [117], [141] to enhance the comparative
+
+framework, as shown in Table VI. For a consistent and fair
+evaluation, all methods adopt the data processing approach from
+Session III-B, which segments traffic into sessions and uses the
+first 256 bytes of the first 16 packets per session as the raw byte
+features of the traffic. Specifically:
+
+YIN et al.: EFFICIENT INTRUSION DETECTION FOR EDGE NETWORK VIA MULTI-STAGE FEW-SHOT CLASS-INCREMENTAL LEARNING
+
+4701
+
+r Non-few-shot [10] divides the labeled base-class traffic
+with sufficient samples into training, validation, and test
+sets at a 6:2:2 ratio, resizing the 16× 256 raw byte features
+into 64× 64 grayscale images for supervised CNN classification. When new class samples emerge, the method
+combines existing base-class data with the new class samples for CNN retraining.
+r Finetune adopts the same base-class training procedure as
+non-few-shot. Upon the arrival of new-class samples, the
+approach freezes the backbone network, fine-tuning only
+the fully connected layer with these new class samples.
+r SoftNet [117] proposes an adaptive learning framework,
+partitioning parameters into primary and secondary subnetworks, designating the top c% (here, 80% ) critical
+parameters as the primary subnetwork during base-class
+training, with the remainder as the secondary subnetwork,
+and updating only the secondary subnetwork in the incremental phase to adapt to new class samples while mitigating forgetting of prior class knowledge.
+r CLOSER [114] introduces a class compaction loss to
+enhance representation learning. It optimizes feature space
+compactness and transferability by compressing inter-class
+distances, facilitating efficient acquisition of new class
+features. Meanwhile, it improves class prototype discriminability and base-class performance by compressing intraclass distances.
+r Prototype Network [13] applies few-shot learning with
+prototypical networks to intrusion detection, constructing
+multiple k-way n-shot q-query tasks from base-class data
+for feature extraction and training with the prototypical
+network as the classifier. In the incremental phase, it uses
+the optimized feature extraction network and prototypical
+network from base-class training to classify samples.
+r Pre-train + Prototypical Classifier [141] proposes integrating pre-trained feature embeddings with a prototypical network classifier, using a pre-trained model to
+extract universal features, applying L2 normalization to
+standardize feature norms and reduce intra-class variance,
+and optimizing feature distribution via embedding space
+transformation for better transferability, enabling few-shot
+incremental learning with the prototypical network classifier.
+r ALICE [112] introduces an angular penalty loss instead
+of cross-entropy loss to enhance intra-class feature compactness and inter-class feature separability, thereby facilitating integration of new classes in incremental learning. It also employs class and data augmentation through
+pseudo-class generation to improve model generalization
+and enhance the feature extractor’s ability to adapt to new
+categories.
+As shown in Table VI, our method outperforms other approaches in terms of accuracy during incremental sessions, while
+maintaining the lowest PD value. This performance benefits
+from angular margin-based loss that enlarges inter-class distances during base training and contrastive exemplar replay
+that maintains class separability during incremental learning,
+reducing feature interference while preserving prior knowledge.
+
+Fig. 8. Performance comparison with old, new, and all categories on the CICIDS2017 dataset.
+
+Compared to traditional non-few-shot methods [10], which
+require extensive retraining with base and new class attack data,
+incurring high latency and substantial data storage, our approach
+reduces PD by 4.37% and 8.7% on the CIC-IDS2017 and
+USTC-TFC2016 datasets, respectively, while adapting to new
+attacks with minimal fine-tuning epochs and few stored old class
+exemplars, effectively maintaining performance on old classes.
+Fine-tuning in few-shot incremental settings underperforms due
+to insufficient new samples and degraded performance on old
+classes. Compared to fine-tuning with frozen network layers,
+SoftNet [117] fine-tuning secondary parameters in a subnet
+and replaying old class exemplars, achieving commendable
+performance in both accuracy and PD metrics. However, its
+capacity to balance adaptation and retention remains limited
+due to its constrained update flexibility. CLOSER [114] and
+ALICE [112] utilize refined forward-compatible feature embeddings, performing robustly on the CIC-IDS2017 dataset but inadequately on USTC-TFC2016, indicating limited robustness to
+dataset-specific variations. Prototype Network [13] and Pre-train
++ Prototypical Classifier [141] employ meta-learning-based prototypical networks for effective classification. Through pretraining, Pre-train + Prototypical Classifier [141] significantly
+improves feature extraction, facilitating effective incremental
+learning. Nonetheless, both methods lack an incremental adaptation process, limiting their ability to effectively model new
+classes under distributional shifts.
+Figs. 8 and 9 performance the evaluation of different methods
+for old, new, and all categories on the CIC-IDS2017 and USTCTFC2016 datasets. Our method achieves the highest F1-scores
+on the CIC-IDS2017 dataset with 0.9862 for old, 0.9725 for
+new, and 0.9812 for all categories. It also achieves 0.9347 for
+old, 0.8503 for new, and 0.9040 for all categories on the USTCTFC2016 dataset. These results demonstrate strong generalization to both historical and emerging attacks across datasets with
+varying traffic characteristics. The non-few-shot [10] method
+achieves a high F1-score for old categories and a low F1-score
+for new categories. Such performance results from incremental
+retraining with abundant old class samples and only 5 new
+class samples, leading to class imbalance that restricts new class
+detection. Fine-tuning-based methods exhibit reduced accuracy
+
+4702
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE VII
+ANALYSIS OF DIFFERENT METHODS USING PRECISION, RECALL, AND HARMONIC ACCURACY METRICS (AFTER SESSION 2)
+
+Fig. 9. Performance comparison with old, new, and all categories on the
+USTC-TF2016 dataset.
+
+for old classes due to parameter adjustment and low accuracy
+for new classes, as limited samples impede effective learning of
+new class features during optimization. ALICE [112] performs
+lower F1-scores for new categories compared to old categories
+on the USTC-TFC2016 dataset, alongside diminished old class
+accuracy. Such performance arises from feature space overlap
+between new and old classes, since the method lacks further
+adaptation of the feature space during the incremental stage.
+SoftNet [117] also struggles with insufficient new class learning
+on the USTC-TFC2016 dataset, where new and old classes
+exhibit substantial distributional differences. Its constrained subnet fine-tuning, while preserving old class knowledge, proves
+inadequate for learning discriminative features under such distributional shifts. Other methods display balanced performance
+across new and old classes but remain less competitive than our
+method overall. Additionally, Table VII presents the analysis of
+different methods using macro-average Precision, Recall, and
+Harmonic Accuracy metrics, demonstrating that our method
+achieves the highest performance across all metrics on both
+CIC-IDS2017 and USTC-TFC2016 datasets, achieving optimal
+online intrusion detection.
+3) Complexity Analysis: We analyze the computational complexity of the proposed few-shot class-incremental learning
+framework. The system undergoes two-stage training. Pretraining the CNN backbone with 2.49M parameters on base
+classes requires 100 epochs with 28000 samples and 438 iterations per epoch. With computational cost Fiter = 3 × Fforward
+
+where Fforward = 120.73 MFLOPs, as the backward pass is
+approximately twice the cost of the forward pass, the total pretraining complexity is Fpretrain ≈ 1014 TFLOPs. Meta-training
+employs 16,000 episodic tasks at 800 tasks per epoch over
+20 epochs. Each 7-way 5-shot task contains 105 samples (35
+support, 70 query), yielding per-task complexity Ftask ≈ 29.58
+GFLOPs and total meta-training cost Fmeta ≈ 473.34 TFLOPs.
+Although total offline training requires 1487.34 TFLOPs, it is
+performed once during the training phase, producing an INT8quantized model of only 2.37 MB for practical deployment.
+For edge inference, each sample requires 120.73 MFLOPs. On
+commonly used edge devices such as NVIDIA Jetson Xavier
+NX (21 TOPS INT8) deployed in edge networks, inference
+latency reaches 0.006 ms, satisfying real-time requirements.
+For incremental learning with 5 new attack samples, the model
+fine-tunes over 20 epochs using 40 samples per epoch, requiring Fincr ≈ 289.75 GFLOPs. Employing FP16 mixed-precision
+training strategy, model updates can be completed in approximately 50–60 seconds on edge devices. With 2.49M parameters,
+120.73 FLOPs per inference, and 2.37 MB footprint, the framework enables efficient edge deployment with rapid adaptation
+to evolving threats.
+The experimental results provide critical insights for deploying adaptive intrusion detection in edge networks. Specifically,
+our experiments show that operators can perform online model
+updates with just 5-10 high-quality samples per new attack class,
+significantly reducing annotation burden while enabling rapid
+adaptation to evolving threats.
+
+VI. CONCLUSION
+In this paper, we propose a multi-stage few-shot classincremental learning framework for edge network intrusion
+detection. It integrates pre-training, CosFace-based training,
+and SupCon-based contrastive learning to enable rapid new
+class adaptation and mitigate old class forgetting in fewshot scenarios. Compared to existing methods, our approach
+delivers superior incremental detection performance on the
+CIC-IDS2017 and USTC-TFC2016 datasets. However, the reliance of our scheme on known samples limits the ability to
+detect unseen attacks. In future work, we will explore an efficient
+FSCIL model for generalized open-set and zero-shot intrusion
+detection of novel attacks, as well as addressing imbalanced
+sample distributions in edge networks.
+
+YIN et al.: EFFICIENT INTRUSION DETECTION FOR EDGE NETWORK VIA MULTI-STAGE FEW-SHOT CLASS-INCREMENTAL LEARNING
+
+REFERENCES
+[1] X. You et al., “Toward 6G TKµ extreme connectivity: Architecture, key
+technologies and experiments,” IEEE Wireless Commun., vol. 30, no. 3,
+pp. 86–95, Jun. 2023.
+[2] Z. Yin, W. Wang, X. Lu, and Z. Yin, “Multi-level collaborative defense strategies against malicious traffic in wireless edge network,” in
+Proc. IEEE/CIC Int. Conf. Commun. China, Hangzhou, China, 2024,
+pp. 185–190.
+[3] Y. Cheng, J. Lu, D. Niyato, B. Lyu, J. Kang, and S. Zhu, “Federated
+transfer learning with client selection for intrusion detection in mobile
+edge computing,” IEEE Commun. Lett., vol. 26, no. 3, pp. 552–556,
+Mar. 2022.
+[4] D. E. Denning, “An intrusion-detection model,” IEEE Trans. Softw. Eng.,
+vol. SE- 13, no. 2, pp. 222–232, Feb. 1987.
+[5] V. Panchamukhi and H. A. Murthy, “Port-based traffic verification as a
+paradigm for anomaly detection,” in Proc. Nat. Conf. Commun., Kharagpur, India, 2012, pp. 1–5.
+[6] A. Bremler-Barr, Y. Harchol, D. Hay, and Y. Koral, “Deep packet inspection as a service,” in Proc. 10th ACM Int. Conf. Emerg. Netw. Exp.
+Technol., Sydney, NSW, Australia, 2014, pp. 271–282.
+[7] Y. Lei, “Network anomaly traffic detection algorithm based on SVM,”
+in Proc. IEEE Int. Conf. Robots Intell. Syst., Huaian City, China, 2017,
+pp. 217–220.
+[8] M. Dixit, R. Sharma, S. Shaikh, and K. Muley, “Internet traffic detection
+using Naïve Bayes and k-nearest neighbors (KNN) algorithm,” in Proc.
+Int. Conf. Intell. Comput. Control Syst., Madurai, India, 2019, pp. 1153–
+1157.
+[9] H. Huang, P. Wang, J. Pei, J. Wang, S. Alexanian, and D. Niyato, “Deep
+learning advancements in anomaly detection: A comprehensive survey,”
+IEEE Internet Things J., vol. 12, no. 21, pp. 44318–44342, Nov. 2025.
+[10] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic classification using convolutional neural network for representation learning,”
+in Proc. Int. Conf. Inf. Netw., Da Nang, Vietnam, 2017, pp. 712–717.
+[11] Y. Imrana, Y. Xiang, L. Ali, and Z. Abdul-Rauf, “A bidirectional LSTM
+deep learning approach for intrusion detection,” Expert Syst. Appl.,
+vol. 185, Dec. 2021, Art. no. 115524.
+[12] C. Xu, J. Shen, and X. Du, “A method of few-shot network intrusion
+detection based on meta-learning framework,” IEEE Trans. Inf. Forensics
+Secur., vol. 15, pp. 3540–3552, 2020.
+[13] C. Rong, G. Gou, C. Hou, Z. Li, G. Xiong, and L. Guo, “UMVD-FSL:
+Unseen malware variants detection using few-shot learning,” in Proc. Int.
+Joint Conf. Neural Netw., Shenzhen, China, 2021, pp. 1–8.
+[14] C. Lu, X. Wang, A. Yang, Y. Liu, and Z. Dong, “A few-shot-based modelagnostic meta-learning for intrusion detection in security of Internet of
+Things,” IEEE Internet Things J., vol. 10, no. 24, pp. 21309–21321,
+Dec. 2023.
+[15] X. Tao, X. Hong, X. Chang, S. Dong, X. Wei, and Y. Gong, “Few-shot
+class-incremental learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Seattle, WA, USA, 2020, pp. 12183–12192.
+[16] T. Wang, Q. Lv, B. Hu, and D. Sun, “A few-shot class-incremental
+learning approach for intrusion detection,” in Proc. Int. Conf. Comput.
+Commun. Netw., Athens, Greece, 2021, pp. 1–8.
+[17] L. Du, Z. Gu, Y. Wang, L. Wang, and Y. Jia, “A few-shot class-incremental
+learning method for network intrusion detection,” IEEE Trans. Netw.
+Service Manag., vol. 21, no. 2, pp. 2389–2401, Apr. 2024.
+[18] D. D. Monda, A. Montieri, V. Persico, P. Voria, M. D. Ieso, and A.
+Pescapè, “Few-shot class-incremental learning for network intrusion
+detection systems,” IEEE Open J. Commun. Soc., vol. 5, pp. 6736–6757,
+2024.
+[19] R. Petkova, I. Bozhilov, A. Manolova, K. Tonchev, and V. Poulkov, “On
+the way to holographic-type communications: Perspectives and enabling
+technologies,” IEEE Access, vol. 12, pp. 59236–59259, 2024.
+[20] L. U. Khan, W. Saad, D. Niyato, Z. Han, and C. S. Hong, “Digital-twinenabled 6G: Vision, architectural trends, and future directions,” IEEE
+Commun. Mag., vol. 60, no. 1, pp. 74–80, Jan. 2022.
+[21] K. B. Letaief, Y. Shi, J. Lu, and J. Lu, “Edge artificial intelligence for
+6G: Vision, enabling technologies, and applications,” IEEE J. Sel. Areas
+Commun., vol. 40, no. 1, pp. 5–36, Jan. 2022.
+[22] Z. M. Fadlullah, B. Mao, and N. Kato, “Balancing QoS and security in the
+edge: Existing practices, challenges, and 6G opportunities with machine
+learning,” IEEE Commun. Surv. Tut., vol. 24, no. 4, pp. 2419–2448,
+Fourthquarter 2022.
+[23] D. Canavese, L. Mannella, L. Regano, and C. Basile, “Security at the edge
+for resource-limited IoT devices,” Sensors, vol. 24, no. 2, Jan. 2024, Art.
+no. 590.
+
+4703
+
+[24] X. Wang, W. Wang, C. Huang, P. Cao, Y. Zhu, and Q. Wu, “Blockchainbased certificateless conditional anonymous authentication for IIoT,”
+IEEE Syst. J., vol. 18, no. 1, pp. 656–667, Mar. 2024.
+[25] X. Chen, L. Xiao, W. Feng, N. Ge, and X. Wang, “DDoS defense for
+IoT: A stackelberg game model-enabled collaborative framework,” IEEE
+Internet Things J., vol. 9, no. 12, pp. 9659–9674, Jun. 2022.
+[26] X. Deng, Z. Wang, X. Pei, and K. Xue, “TransMalDE: An effective
+transformer based hierarchical framework for IoT malware detection,”
+IEEE Trans. Netw. Sci. Eng., vol. 11, no. 1, pp. 140–151, Jan./Feb.
+2024.
+[27] B. Mao, J. Liu, Y. Wu, and N. Kato, “Security and privacy on 6G network
+edge: A survey,” IEEE Commun. Surv. Tut., vol. 25, no. 2, pp. 1095–1127,
+Secondquarter 2023.
+[28] Y. Yang et al., “Task-oriented 6G native-AI network architecture,” IEEE
+Netw., vol. 38, no. 1, pp. 219–227, Jan. 2024.
+[29] B. Hathout, P. Shepherd, T. Dagiuklas, K. Nagaty, A. Hamdy, and J.
+Rodriguez, “Adaptive trust management for data poisoning attacks in
+MEC-based FL infrastructures,” IEEE Open J. Commun. Soc, vol. 6,
+pp. 3140–3160, 2025.
+[30] C. Han, T. Yang, Z. Cui, and X. Sun, “DEEPFL: A differential evolutionbased framework for privacy protection and poisoning attack defense
+in maritime edge computing,” IEEE Open J. Commun. Soc., vol. 6,
+pp. 3305–3319, 2025.
+[31] M. A. Ferrag et al., “Edge learning for 6G-enabled Internet of Things:
+A comprehensive survey of vulnerabilities, datasets, and defenses,”
+IEEE Commun. Surv. Tut., vol. 25, no. 4, pp. 2654–2713, Fourthquarter
+2023.
+[32] V.-L. Nguyen, P.-C. Lin, B.-C. Cheng, R.-H. Hwang, and Y.-D. Lin,
+“Security and privacy for 6G: A survey on prospective technologies and
+challenges,” IEEE Commun. Surv. Tut., vol. 23, no. 4, pp. 2384–2428,
+Fourthquarter 2021.
+[33] V. Chamola, M. S. Peelam, M. Guizani, and D. Niyato, “Future of
+connectivity: A comprehensive review of innovations and challenges in
+7G smart networks,” IEEE Open J. Commun. Soc, vol. 6, pp. 3555–3613,
+2025.
+[34] J. P. Anderson, “Computer security threat monitoring and surveillance,”
+James P. Anderson Co., Fort Washington, PA, USA, Tech. Rep. Contract
+79F296400, Apr. 1980.
+[35] M. Ozkan-Okay, R. Samet, Ö. Aslan, and D. Gupta, “A comprehensive
+systematic literature review on intrusion detection systems,” IEEE Access, vol. 9, pp. 157727–157760, 2021.
+[36] Y.-J. Ou, Y. Lin, Y. Zhang, and Y.-J. Ou, “The design and implementation
+of host-based intrusion detection system,” in Proc. 3rd Int. Symp. Intell.
+Inf. Technol. Secur. Inform., 2010, pp. 595–598.
+[37] G. Vigna and R. A. Kemmerer, “NetSTAT: A network-based intrusion
+detection system,” J. Comput. Secur., vol. 7, no. 1, pp. 37–71, Jan.
+1999.
+[38] B. Snehal and P. Jadhav, “Wireless intrusion detection system,” Int. J.
+Comput. Appl., vol. 5, no. 8, pp. 9–13, Aug. 2010.
+[39] S. A. Abdulkareem, C. H. Foh, M. Shojafar, F. Carrez, and K. Moessner,
+“Network intrusion detection: An IoT and non IoT-related survey,” IEEE
+Access, vol. 12, pp. 147167–147191, 2024.
+[40] W. Hu and W. Hu, “Network-based intrusion detection using adaboost
+algorithm,” in Proc. IEEE/WIC/ACM Int. Conf. Web Intell., Compiegne,
+France, 2005, pp. 712–717.
+[41] S. Ch and S. B. Kare, “A comprehensive analysis of network intrusion
+detection in Internet of Things and wireless networks,” in Proc. Int. Conf.
+Data Sci. Netw. Secur., Tiptur, India, 2024, pp. 1–5.
+[42] C. Hamroun, A. Fladenmuller, M. Pariente, and G. Pujolle, “Intrusion
+detection in 5G and Wi-Fi networks: A survey of current methods,
+challenges, and perspectives,” IEEE Access, vol. 13, pp. 40950–40976,
+2025.
+[43] F. I. Shiri, B. Shanmugam, and N. B. Idris, “A parallel technique for
+improving the performance of signature-based network intrusion detection system,” in Proc. IEEE 3rd Int. Conf. Commun. Softw. Netw., Xi’an,
+China, 2011, pp. 692–696.
+[44] J. Zhang and M. Zulkernine, “Anomaly based network intrusion detection
+with unsupervised outlier detection,” in Proc. IEEE Int. Conf. Commun.,
+Istanbul, Türkiye, 2006, pp. 2388–2393.
+[45] O. C. Onyedeke, E. Taoufik, M. Okoronkwo, U. Ihedioha, C. H. Ugwuishiwu, and O. B, “Signature based network intrusion detection system
+using feature selection on android,” Int. J. Adv. Comput. Sci. Appl., vol. 11,
+no. 6, pp. 551–558, Jan. 2020.
+[46] P. Saelee and P. Viriyaphol, “Signature-based IDS using boolean
+weighted score multiple classifiers,” in Proc. Int. Conf. Comput. Inf. Sci.,
+Kuala Lumpur, Malaysia, 2012, pp. 706–711.
+
+4704
+
+[47] V. Kumar and O. P. Sangwan, “Signature based intrusion detection
+system using SNORT,” Int. J. Comput. Appl. Inf. Technol., vol. 1, no. 3,
+pp. 35–41, Nov. 2012.
+[48] H. Holm, “Signature based intrusion detection for zero-day attacks: (Not)
+a closed chapter?,” in Proc. 47th Hawaii Int. Conf. Syst. Sci., Waikoloa,
+HI, USA, 2014, pp. 4895–4904.
+[49] R. Samrin and D. Vasumathi, “Review on anomaly based network intrusion detection system,” in Proc. Int. Conf. Elect. Electron. Commun.
+Comput. Comput. Optim. Techn., Mysuru, India, 2017, pp. 141–147.
+[50] S. Ohtahara, T. Kamiyama, and Y. Oyama, “Anomaly-based intrusion
+detection system sharing normal behavior databases among different
+machines,” in Proc. 9th IEEE Int. Conf. Comput. Inf. Technol., Xiamen,
+China, 2009, pp. 217–222.
+[51] T. Lunt and R. Jagannathan, “A prototype real-time intrusion-detection
+expert system,” in Proc. IEEE Symp. Secur. Privacy, Oakland, CA, USA,
+1988, pp. 59–66.
+[52] M. Al-Omari, M. Rawashdeh, F. Qutaishat, M. Alshira’H, and N.
+Ababneh, “An intelligent tree-based intrusion detection model for cyber security,” J. Netw. Syst. Manage., vol. 29, no. 2, Feb. 2021,
+Art. no. 20.
+[53] J. Wang, Q. Yang, and D. Ren, “An intrusion detection algorithm based
+on decision tree technology,” in Proc Asia-Pacific Conf. Inf. Process.,
+Shenzhen, China, 2009, pp. 333–335.
+[54] Y. Liu, N. Li, L. Shi, and F. Li, “An intrusion detection method based
+on decision tree,” in Proc. Int. Conf. E-Health Netw. Digit. Ecosystems
+Technol., Shenzhen, China, 2010, pp. 232–235.
+[55] A. V. S. Reddy, B. P. Reddy, L. Sujihelen, A. A. Mary, A. Jesudoss, and
+P. Jeyanthi, “Intrusion detection system in network using decision tree,”
+in Proc. Int. Conf. Sustain. Comput.. Data Commun. Syst., Erode, India,
+2022, pp. 1186–1190.
+[56] S. A. Mulay, P. R. Devale, and G. Garje, “Decision tree based support
+vector machine for intrusion detection,” in Proc. Int. Conf. Netw. Inf.
+Technol., Manila, Philippines, 2010, pp. 59–63.
+[57] F. E. Heba, A. Darwish, A. E. Hassanien, and A. Abraham, “Principle
+components analysis and support vector machine based intrusion detection system,” in Proc. 10th Int. Conf. Intell. Syst. Des. Appl., Cairo, Egypt,
+2010, pp. 363–367.
+[58] A. Bachar, N. E. Makhfi, and O. E. Bannay, “Towards a behavioral
+network intrusion detection system based on the SVM model,” in Proc.
+1st Int. Conf. Innov. Res. Appl. Sci., Eng. Technol., Meknes, Morocco,
+2020, pp. 1–7.
+[59] G. Zhang, J. Yin, Z. Liang, and Y. Cai, “Prior knowledge SVM-based
+intrusion detection framework,” in Proc. 3rd Int. Conf. Natural Comput.,
+Haikou, China, 2007, pp. 489–493.
+[60] P. Tao, Z. Sun, and Z. Sun, “An improved intrusion detection algorithm
+based on GA and SVM,” IEEE Access, vol. 6, pp. 13624–13631, 2018.
+[61] Z. H. Abdaljabar, O. N. Ucan, and K. M. Ali Alheeti, “An intrusion detection system for IoT using KNN and decision-tree based classification,” in
+Proc. Int. Conf. Modern Trends Inf. Commun. Technol. Industry, Sana’a,
+Yemen, 2021, pp. 1–5.
+[62] S. Malhotra, V. Bali, and K. K. Paliwal, “Genetic programming and
+K-nearest neighbour classifier based intrusion detection model,” in Proc.
+7th Int. Conf. Cloud Comput. Data Sci. Eng., Noida, India, 2017,
+pp. 42–46.
+[63] F. Chen, Z. Ye, C. Wang, L. Yan, and R. Wang, “A feature selection
+approach for network intrusion detection based on tree-seed algorithm
+and k-nearest neighbor,” in Proc. IEEE 4th Int. Symp. Wireless Syst. Int.
+Conf. Intell. Data Acquisition Adv. Comput. Sys., Lviv, Ukraine, 2018,
+pp. 68–72.
+[64] R. Chitrakar and C. Huang, “Anomaly based intrusion detection using
+hybrid learning approach of combining K-medoids clustering and Naïve
+Bayes classification,” in Proc. 8th Int. Conf. Wireless Commun. Netw.
+Mobile Comput., Shanghai, China, 2012, pp. 1–5.
+[65] F. Gumus, C. O. Sakar, Z. Erdem, and O. Kursun, “Online naive Bayes
+classification for network intrusion detection,” in Proc. IEEE/ACM Int.
+Conf. Adv. Social Netw. Anal. Mining, Beijing, China, 2014, pp. 670–674.
+[66] X. Han, L. Xu, M. Ren, and W. Gu, “A naive Bayesian network intrusion detection algorithm based on principal component analysis,” in
+Proc. 7th Int. Conf. Inf. Technol. Med. Educ., Huangshan, China, 2015,
+pp. 325–328.
+[67] K. S. Bhosale, M. Nenova, and G. Iliev, “Modified naive Bayes intrusion detection system (MNBIDS),” in Proc. Int. Conf. Comput. Techn.
+Electron. Mech. Syst., Belgaum, India, 2018, pp. 291–296.
+[68] A. Tesfahun and D. L. Bhaskari, “Intrusion detection using random forests
+classifier with SMOTE and feature reduction,” in Proc. Int. Conf. Cloud
+Ubiquitous Comput. Emerg. Technol., Pune, India, 2013, pp. 127–132.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+[69] J. Zhang and M. Zulkernine, “A hybrid network intrusion detection
+technique using random forests,” in Proc. 1st Int. Conf. Availability Rel.
+Secur., Vienna, Austria, 2006, pp. 269–276.
+[70] J. Zhang, M. Zulkernine, and A. Haque, “Random-forests-based network
+intrusion detection systems,” IEEE Trans. Syst. Man Cybern. Part C,
+vol. 38, no. 5, pp. 649–659, Sep. 2008.
+[71] E. C. Uwazie, A. A. Obiniyi, M. Olalere, and P. N. Achi, “Comparison of
+random forest, K-nearest neighbor, and support vector machine classifiers
+for intrusion detection system,” in Proc. Int. Conf. Sci. Eng. Bus. Driving
+Sustain. Develop. Goals, Omu-Aran, Nigeria, 2024, pp. 1–6.
+[72] M. Jianliang, S. Haikun, and B. Ling, “The application on intrusion
+detection based on K-means cluster algorithm,” in Proc. Int. Forum Inf.
+Technol. Appl., Chengdu, China, 2009, pp. 150–152.
+[73] A. Chandra, S. K. Khatri, and R. Simon, “Filter-based attribute selection
+approach for intrusion detection using K-means clustering and sequential
+minimal optimization techniq,” in Proc. Amity Int. Conf. Artif. Intell.,
+Dubai, UAE, 2019, pp. 740–745.
+[74] E. Hooper, “An intelligent intrusion detection and response system
+using hybrid ward hierarchical clustering analysis,” in Proc. Int. Conf.
+Multimedia Ubiquitous Eng., Seoul, South Korea, 2007, pp. 1187–1192.
+[75] L. Hu, W.-w. Ren, and F. Ren, “An adaptive anomaly detection based on
+hierarchical clustering,” in Proc. 1st Int. Conf. Inf. Sci. Eng., Nanjing,
+China, 2009, pp. 1626–1629.
+[76] D. Deng, “Research on anomaly detection method based on DBSCAN
+clustering algorithm,” in Proc. 5th Int. Conf. Inf. Sci., Comput. Technol.
+Transp., Shenyang, China, 2020, pp. 439–442.
+[77] L. Xue-yong, G. Guo-hong, and S. Jia-xia, “A new intrusion detection
+method based on improved DBSCAN,” in Proc. WASE Int. Conf. Inf.
+Eng., Beidai, China, 2010, pp. 117–120.
+[78] J. Lansky et al., “Deep learning-based intrusion detection systems: A
+systematic review,” IEEE Access, vol. 9, pp. 101574–101599, 2021.
+[79] V. Reddy, S. R., M. Anusha, S. Chaitra, and A. P. Kumar, “Artificial
+intelligence based intrusion detection systems,” in Proc. 4th Int. Conf.
+Mobile Netw. Wireless Commun., Tumkuru, India, 2024, pp. 1–6.
+[80] R. K. Panchal, R. Snehkunj, and V. V. Panchal, “A survey on networkbased intrusion detection system using learning techniques,” in Proc.
+5th Int. Conf. Image Process. Capsule Netw., Dhulikhel, Nepal, 2024,
+pp. 740–747.
+[81] M. Ganesh, A. Kumar, and V. Pattabiraman, “Autoencoder based network
+anomaly detection,” in Proc. IEEE Int. Conf. Technol., Eng., Manage.
+Societal Impact Using Mark. Entrepreneurship Talent, Bengaluru, India,
+2020, pp. 1–6.
+[82] K. Hara and K. Shiomoto, “Intrusion detection system using semisupervised learning with adversarial auto-encoder,” in Proc. IEEE/IFIP
+Netw. Oper. Manage. Symp., Budapest, Hungary, 2020, pp. 1–8.
+[83] P. V. Dinh, D. T. Hoang, N. Q. Uy, D. N. Nguyen, S. P. Bao, and E.
+Dutkiewicz, “Multiple-input auto-encoder for IoT intrusion detection
+systems with heterogeneous data,” in Proc. IEEE Int. Conf. Commun.,
+Denver, CO, USA, 2024, pp. 2707–2712.
+[84] M. Usama, M. Asim, S. Latif, J. Qadir, and Ala-Al-Fuqaha, “Generative
+adversarial networks for launching and thwarting adversarial attacks
+on network intrusion detection systems,” in Proc. 15th Int. Wireless
+Commun. Mobile Comput. Conf., Tangier, Morocco, 2019, pp. 78–83.
+[85] R. Chauhan and S. S. Heydari, “Polymorphic adversarial DDoS attack on
+IDS using GAN,” in Proc. Int. Symp. Netw. Comput. Commun., Montreal,
+QC, Canada, 2020, pp. 1–6.
+[86] H. Benaddi, M. Jouhari, K. Ibrahimi, A. Benslimane, and E. M. Amhoud,
+“Adversarial attacks against IoT networks using conditional GAN based
+learning,” in Proc. IEEE Glob. Commun. Conf., Rio de Janeiro, Brazil,
+2022, pp. 2788–2793.
+[87] A. Dunmore, J. Jang-Jaccard, F. Sabrina, and J. Kwak, “A comprehensive survey of generative adversarial networks (GANs) in cybersecurity
+intrusion detection,” IEEE Access, vol. 11, pp. 76071–76094, 2023.
+[88] V. R. Varanasi and S. Razia, “CNN implementation for IDS,” in Proc. 3rd
+Int. Conf. Adv. Comput. Commun. Control Netw., Greater Noida, India,
+2021, pp. 970–975.
+[89] A. El Kamali, K. Chougdali, and K. Abdellatif, “A new intrusion detection system based on convolutional neural network,” in Proc. IEEE Int.
+Conf. Commun., Rome, Italy, 2023, pp. 2994–2999.
+[90] L. Chen, X. Kuang, A. Xu, S. Suo, and Y. Yang, “A novel network
+intrusion detection system based on CNN,” in Proc. 8th Int. Conf. Adv.
+Cloud Big Data, Taiyuan, China, 2020, pp. 243–247.
+[91] A. H. Halbouni, T. S. Gunawan, M. Halbouni, F. A. A. Assaig, M. R.
+Effendi, and N. Ismail, “CNN-IDS: Convolutional neural network for
+network intrusion detection system,” in Proc. 8th Int. Conf. Wireless
+Telematics, Yogyakarta, Indonesia, 2022, pp. 1–4.
+
+YIN et al.: EFFICIENT INTRUSION DETECTION FOR EDGE NETWORK VIA MULTI-STAGE FEW-SHOT CLASS-INCREMENTAL LEARNING
+
+[92] C. Yin, Y. Zhu, J. Fei, and X. He, “A deep learning approach for
+intrusion detection using recurrent neural networks,” IEEE Access, vol. 5,
+pp. 21954–21961, 2017.
+[93] R. Jablaoui and N. Liouane, “Efficient RNN models for IOT intrusion
+detection system,” in Proc. Int. Conf. Control Automat. Diagnosis, Paris,
+France, 2024, pp. 1–6.
+[94] S. H. Park, H. J. Park, and Y.-J. Choi, “RNN-based prediction for network intrusion detection,” in Proc. Int. Conf. Artif. Intell. Inf. Commun.,
+Fukuoka, Japan, 2020, pp. 572–574.
+[95] L. Zhang, H. Yan, and Q. Zhu, “An improved LSTM network intrusion
+detection method,” in Proc. IEEE 6th Int. Conf. Comput. Commun.,
+Chengdu, China, 2020, pp. 1765–1769.
+[96] P. Jayant et al., “Intrusion detection in network traffic using LSTM and
+deep learning,” in Proc. 15th Int. Conf. Comput. Commun. Netw. Technol.,
+Kamand, India, 2024, pp. 1–6.
+[97] V. Tomar and P. S. Mehra, “Deep learning Bi-LSTM model for intrusion
+detection in IoT,” in Proc. 5th Int. Conf. Adv. Comput. Commun. Control
+Netw., Greater Noida, India, 2023, pp. 1342–1347.
+[98] S. Sehrawat and D. Singh, “Deep learning approach to enhance IDS
+accuracy using hybrid LSTM algorithm,” in Proc. 14th Int. Conf. Comput.
+Commun. Netw. Technol., Delhi, India, 2023, pp. 1–9.
+[99] B. Xu, L. Sun, R. Ding, and C. Liu, “Intrusion detection system based on
+GRU,” in Proc. 7th Int. Conf. Electr. Mech. Comput. Eng., Xi’an, China,
+2023, pp. 889–893.
+[100] G. ALMahadin et al., “VANET network traffic anomaly detection using GRU-based deep learning model,” IEEE Trans. Consum. Electron.,
+vol. 70, no. 1, pp. 4548–4555, Feb. 2024.
+[101] S. Al-Emadi, A. Al-Mohannadi, and F. Al-Senaid, “Using deep learning
+techniques for network intrusion detection,” in Proc. IEEE Int. Conf.
+Inform. IoT, Enabling Technol., Doha, Qatar, 2020, pp. 171–176.
+[102] C. Yue, L. Wang, D. Wang, R. Duo, and X. Nie, “An ensemble intrusion
+detection method for train ethernet consist network based on CNN and
+RNN,” IEEE Access, vol. 9, pp. 59527–59539, 2021.
+[103] A. Halbouni, T. S. Gunawan, M. H. Habaebi, M. Halbouni, M. Kartiwi,
+and R. Ahmad, “CNN-LSTM: Hybrid deep neural network for network
+intrusion detection system,” IEEE Access, vol. 10, pp. 99837–99849,
+2022.
+[104] L. Karanam, K. K. Pattanaik, and R. Aldmour, “Intrusion detection
+mechanism for large scale networks using CNN-LSTM,” in Proc. 13th
+Int. Conf. Develop. eSystems Eng., Liverpool, U.K., 2020, pp. 323–328.
+[105] R. B. Said, Z. Sabir, and I. Askerzade, “CNN-BiLSTM: A hybrid deep
+learning approach for network intrusion detection system in softwaredefined networking with hybrid feature selection,” IEEE Access, vol. 11,
+pp. 138732–138747, 2023.
+[106] R. B. Said and I. Askerzade, “Attention-based CNN-BiLSTM deep
+learning approach for network intrusion detection system in software
+defined networks,” in Proc. 5th Int. Conf. Problems Cybern. Inform.,
+Baku, Azerbaijan, 2023, pp. 1–5.
+[107] A. Sagar, N. K. Anushkannan, G. Indumathi, N. V. Muralidhar, D. K.
+A., and P. Malini, “Wireless sensor network-based intrusion detection
+technique using deep learning approach of CNN-GRU,” in Proc. 8th Int.
+Conf. Commun. Electron. Syst., Coimbatore, India, 2023, pp. 1147–1152.
+[108] A. R. Javed, S. u. Rehman, M. U. Khan, M. Alazab, and T. R. G.,
+“CANintelliIDS: Detecting in-vehicle intrusion attacks on a controller
+area network using CNN and attention-based GRU,” IEEE Trans. Netw.
+Sci. Eng., vol. 8, no. 2, pp. 1456–1466, Apr.–Jun. 2021.
+[109] Y. Yu and N. Bian, “An intrusion detection method using few-shot
+learning,” IEEE Access, vol. 8, pp. 49730–49740, 2020.
+[110] C. Wang, D. Xu, Z. Li, and D. Niyato, “Effective intrusion detection in
+highly imbalanced IoT networks with lightweight S2CGAN-IDS,” IEEE
+Internet Things J., vol. 11, no. 9, pp. 15140–15151, May 2024.
+[111] S. Roy, C. Park, A. Fahrezi, and A. Etemad, “A bag of tricks for fewshot class-incremental learning,” Trans. Mach. Learn. Res., Sep. 2024.
+[Online]. Available: https://openreview.net/forum?id=DiyYf1Kcdt
+[112] C. Peng, K. Zhao, T. Wang, M. Li, and B. C. Lovell, “Few-shot classincremental learning from an open-set perspective,” in Proc. Eur. Conf.
+Comput. Vis., Tel Aviv, Israel, 2022, pp. 382–397.
+[113] D.-W. Zhou, F.-Y. Wang, H.-J. Ye, L. Ma, S. Pu, and D.-C. Zhan, “Forward
+compatible few-shot class-incremental learning,” in Proc. IEEE/CVF
+Conf. Comput. Vis. Pattern Recognit., New Orleans, LA, USA, 2022,
+pp. 9046–9056.
+[114] J. Oh, S. Baik, and K. M. Lee, “CLOSER: Towards better representation
+learning for few-shot class-incremental learning,” in Proc. Eur. Conf.
+Comput. Vis., Milan, Italy, 2024, pp. 18–35.
+
+4705
+
+[115] P. Mazumder, P. Singh, and P. Rai, “Few-shot lifelong learning,” in Proc.
+AAAI Conf. Artif. Intell., Philadelphia, PA, USA, 2021, pp. 2337–2345.
+[116] H. Zhao, Y. Fu, M. Kang, Q. Tian, F. Wu, and X. Li, “MgSvF:
+Multi-grained slow versus fast framework for few-shot class-incremental
+learning,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 46, no. 3,
+pp. 1576–1588, Mar. 2024.
+[117] H. Kang, J. Yoon, S. R. H. Madjid, S. J. Hwang, and C. D. Yoo, “On the
+soft-subnetwork for few-shot class incremental learning,” in Proc. Int.
+Conf. Learn. Representations, Kigali, Rwanda, 2023, pp. 1–13.
+[118] A. Cheraghian, S. Rahman, P. Fang, S. K. Roy, L. Petersson, and M.
+Harandi, “Semantic-aware knowledge distillation for few-shot classincremental learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit., 2021, pp. 2534–2543.
+[119] Z. Gu, B. Kolbeinsson, and K. Mikolajczyk, “AirEyeSeg: Teacher-student
+insights into robust fisheye UAV detection,” in Proc. Int. Conf. Pattern
+Recognit. Appl. Methods, Rome, Italy, 2024, pp. 546–577.
+[120] M. Data and M. Aritsugi, “T-DFNN: An incremental learning algorithm for intrusion detection systems,” IEEE Access, vol. 9,
+pp. 154156–154171, 2021.
+[121] Q. Qiang et al., “An incremental malware classification approach based
+on few-shot learning,” in Proc. IEEE Int. Conf. Commun., Seoul, South
+Korea, 2022, pp. 2682–2687.
+[122] F. Cerasuolo, G. Bovenzi, C. Marescalco, F. Cirillo, D. Ciuonzo, and
+A. Pescapè, “Adaptive intrusion detection systems: Class incremental
+learning for IoT emerging threats,” in Proc. IEEE Int. Conf. Big Data,
+Sorrento, Italy, 2023, pp. 3547–3555.
+[123] D. Jin, S. Chen, H. He, X. Jiang, S. Cheng, and J. Yang, “Federated
+incremental learning based evolvable intrusion detection system for zeroday attacks,” IEEE Netw., vol. 37, no. 1, pp. 125–132, Jan./Feb. 2023.
+[124] S. Li, Q. Qiang, T. Zang, L. Yang, and T. Gao, “FineNet: Few-shot mobile
+encrypted traffic classification via a deep triplet learning network based
+on transformer,” in Proc. IEEE Wireless Commun. Netw. Conf., Dubai,
+UAE, 2024, pp. 1–6.
+[125] N. Niknami, V. Mahzoon, and J. Wu, “PTN-IDS: Prototypical network
+solution for the few-shot detection in intrusion detection systems,” in
+Proc. Conf. Local Comput. Netw. LCN, Caen, France, 2024, pp. 1–9.
+[126] Y. Chai et al., “MalFSCIL: A few-shot class-incremental learning approach for malware detection,” IEEE Trans. Inf. Forensics Secur., vol. 20,
+pp. 2999–3014, 2025.
+[127] W. Wang et al., “HAST-IDS: Learning hierarchical spatial-temporal
+features using deep neural networks to improve intrusion detection,”
+IEEE Access, vol. 6, pp. 1792–1806, 2018.
+[128] C. Zhang, N. Song, G. Lin, Y. Zheng, P. Pan, and Y. Xu, “Fewshot incremental learning with continually evolved classifiers,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Nashville, TN, USA,
+2021, pp. 12455–12464.
+[129] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for fast
+adaptation of deep networks,” in Proc. Int. Conf. Mach. Learn., Sydney,
+NSW, Australia, 2017, pp. 1126–1135.
+[130] J. Snell, K. Swersky, and R. Zemel, “Prototypical networks for few-shot
+learning,” in Proc. Adv. Neural Inf. Process. Syst., Long Beach, CA, USA,
+2017, pp. 4077–4087.
+[131] H. Wang et al., “CosFace: Large margin cosine loss for deep face
+recognition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+Salt Lake City, UT, USA, 2018, pp. 5265–5274.
+[132] M. Welling, “Herding dynamical weights to learn,” in Proc. Int. Conf.
+Mach. Learn., Montreal, QC, Canada, 2009, pp. 1121–1128.
+[133] S.-A. Rebuffi, A. Kolesnikov, G. Sperl, and C. H. Lampert, “iCaRL:
+Incremental classifier and representation learning,” in Proc. IEEE/CVF
+Conf. Comput. Vis. Pattern Recognit., Honolulu, HI, USA, 2017,
+pp. 2001–2010.
+[134] P. Khosla et al., “Supervised contrastive learning,” in Proc. Adv. Neural
+Inf. Process. Syst., Vancouver, BC, Canada, 2020, pp. 18661–18673.
+[135] C. Yang et al., “Few-shot encrypted traffic classification via multi-task
+representation enhanced meta-learning,” Comput. Netw., vol. 228, 2023,
+Art. no. 109731.
+[136] I. Sharafaldin et al., “Toward generating a new intrusion detection dataset
+and intrusion traffic characterization,” in Proc. 4th Int. Conf. Inf. Syst.
+Secur. Privacy, Funchal, Portugal, 2018, pp. 108–116.
+[137] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani,
+“Characterization of tor traffic using time based features,” in Proc. Int.
+Conf. Inf. Syst. Secur. Privacy, Porto, Portugal, 2017, pp. 253–262.
+[138] Ixia Corporation, “Ixia breakpoint overview and specifications,” 2016.
+[Online]. Available: https://www.ixiacom.com/products/breakingpoint
+
+4706
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+[139] S. Garcia, M. Grill, J. Stiborek, and A. Zunino, “An empirical comparison
+of botnet detection methods,” Comput. Secur., vol. 45, pp. 100–123,
+Sep. 2014.
+[140] L. V. der Maaten and G. Hinton, “Visualizing data using t-SNE,” J. Mach.
+Learn. Res., vol. 9, no. 11, pp. 2579–2605, Nov. 2008.
+[141] M. Hou and I. Sato, “A closer look at prototype classifier for few-shot
+image classification,” in Proc. Adv. Neural Inf. Process. Syst., New
+Orleans, LA, USA, 2022, pp. 25767–25778.
+
+Zhen Yin is currently working toward the postgraduation degree with the College of Electronic
+and Information Engineering, Nanjing University of
+Aeronautics and Astronautics, Nanjing, China. Her
+research interests include wireless security, intrusion
+detection, deep learning, and meta-learning.
+
+Wei Wang (Member, IEEE) received the B.Eng.
+degree in information countermeasure technology
+and the M.Eng. degree in signal and information
+processing from Xidian University, Xi’an, China, in
+2011 and 2014, respectively, and the Ph.D. degree in
+electrical and electronic engineering from Nanyang
+Technological University, Singapore, in 2018. He was
+a Professor with the Nanjing University of Aeronautics and Astronautics, from 2019 to 2025, and a
+Postdoctoral Fellow with the Department of Electrical
+and Computer Engineering, University of Waterloo,
+Waterloo, ON, Canada, from 2018 to 2019. He is currently a Professor with
+the School of Information and Communication Engineering, Xi’an Jiaotong
+University, Xi’an. His research interests include wireless communications,
+space-air-ground integrated networks, and wireless security. He was awarded
+the Chinese government award for outstanding self-financed students abroad in
+2018, and the Young Elite Scientist Sponsorship Program, China Association
+for Science and Technology in 2021.
+
+Yanyu Cheng (Senior Member, IEEE) received the
+B.S.Eng. degree in information engineering from
+Shanghai Jiao Tong University, Shanghai, China, in
+2015, and the M.Sc. degree in signal processing and
+the Ph.D. degree in electrical and electronic engineering from Nanyang Technological University (NTU),
+Singapore, in 2016 and 2021, respectively. From 2021
+to 2023, he was a Research Fellow with Alibaba-NTU
+Singapore Joint Research Institute, NTU. He is currently a Visiting Professor with the Joint NTU-UBC
+Research Centre of Excellence in Active Living for
+the Elderly (LILY), NTU, and a Tenure-Track Professor with the School of Cyberspace, Hangzhou Dianzi University, Hangzhou, China. His research interests
+include networks, cybersecurity, and AI-enabled intelligent systems.
+
+Yiliang Liu (Member, IEEE) received the B.E. and
+M.Sc. degrees in computer science and communication engineering from Jiangsu University, Zhenjiang,
+China, in 2012 and 2015, respectively, and the Ph.D.
+degree from the School of Electronics and Information Engineering, Harbin Institute of Technology,
+Harbin, China, in 2020. He is currently an Associate
+Professor with the School of Cyber Science and Engineering, Xi’an Jiaotong University, Xi’an, China. His
+research interests include wireless communication
+security, physical-layer security, and intelligent connected vehicles. He was the recipient of the Outstanding Doctoral Dissertation
+Award from China Education Society of Electronics in 2020 and the Best Paper
+Award from the IEEE Systems Journal in 2021, IEEE VTC-Fall in 2023, IEEE
+ICITE in 2024, and IEEE AIoT in 2024.
+
+Xiaozhen Lu (Member, IEEE) received the B.S. degree in communication engineering from the Nanjing
+University of Posts and Telecommunications, Nanjing, China, in 2017, and the Ph.D. degree in communication and information systems from Xiamen
+University, Xiamen, China, in 2021. She is currently
+an Associate Professor with the College of Computer Science and Technology, Nanjing University of
+Aeronautics and Astronautics, Nanjing. Her research
+interests include reinforcement learning, federated
+learning, network security, and wireless communications. She was the recipient of the Best Student Paper Award for ML4CS 2019
+and the Excellent Paper Award for CWSN 2020.

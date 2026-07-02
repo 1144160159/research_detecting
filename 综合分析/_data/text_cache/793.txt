@@ -1,0 +1,152 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026                                                                             4985
+
+
+
+
+           Robust Malicious Network Traffic Detection
+           Framework With Automated Drift Detection,
+                  Identification, and Adaptation
+Xueying Han , Member, IEEE, Jian Qin, Student Member, IEEE, Changzhi Zhao , Weike Fang , Junrong Liu ,
+                 Weihang Wang, Bo Jiang , Susu Cui , Zhigang Lu, and Baoxu Liu
+
+
+    Abstract—The rise in network attacks has made robust mali-                   However, the growing complexity and dynamism of network
+cious traffic detection crucial. However, the dynamic nature of                  traffic have introduced the challenge of concept drift, posing
+network traffic causes concept drift, undermining the efficacy                   significant difficulties for robust detection [3]. Specifically,
+of traditional detection methods, which often rely on a static
+i.i.d data environment and struggle to adapt to new patterns. To                 existing malicious traffic detection methods [4], [5], [6] are
+overcome these limitations, we propose Argus, a novel framework                  based on the assumption that training and testing data are
+for malicious traffic detection that operates in a comprehensive,                independent and identically distributed (i.i.d.). However, in
+automated, and adaptive manner. Argus tackles three core chal-                   open-world environments, changes in legitimate users’ behav-
+lenges: accurately classifying known traffic while detecting drift,              ior patterns [7] and the advancement of attackers’ techniques
+automatically identifying malicious drifting traffic, and maintain-
+ing performance through continuous updates. To address these                     [8] often cause traffic distributions to diverge from the original
+challenges, Argus integrates a contrastive learning-based module                 data. This phenomenon, known as concept drift, undermines
+to produce compact representations of traffic and implements                     the effectiveness of these methods and increases false positive
+a fine-grained drift detection method using category-specific                    and negative rates.
+reconstruction loss distributions. For drifting traffic, Argus uses                 Several solutions have been proposed to address the issues
+clustering-based automated identification to detect attacks with-
+out human intervention. Furthermore, a distance-constrained                      caused by concept drift. However, they fall short of pro-
+update mechanism ensures smooth model adaptation, preserving                     viding a comprehensive, automated, and adaptive approach
+stability and accuracy. Extensive experiments demonstrate that                   for malicious traffic detection in the presence of drifting
+Argus achieves superior performance, with an average F1 score                    traffic. Existing solutions can be divided into three approaches:
+exceeding 95% under various conditions and retaining robust                      (1) One approach is to periodically update the model by incor-
+performance even under extreme drift scenarios.
+                                                                                 porating new labeled data to enhance the model’s ability to
+   Index Terms—Malicious traffic detection, concept drift, con-                  adapt to novel traffic [9], [10]. However, this method requires
+trastive learning, drift identification, model adaptation.                       a large amount of labeled drifting data, which is difficult and
+                                                                                 costly to obtain. Moreover, concept drift at test time is inher-
+                          I. I NTRODUCTION                                       ently relative to the training data, meaning that retraining the
+                                                                                 model cannot fully address the underlying issue. (2) Another
+I  N RECENT years, network attacks have become increas-
+   ingly prevalent, making robust malicious traffic detection
+a critical component of maintaining network security [1], [2].
+                                                                                 approach focuses on enhancing model robustness through
+                                                                                 feature augmentation [2], [11], [12], [13] and pretraining [14],
+                                                                                 [15]. Their goal is to make the model insensitive to variations
+   Received 7 May 2025; revised 22 December 2025, 16 March 2026,
+and 26 April 2026; accepted 9 May 2026. Date of publication 18 May
+                                                                                 or perturbations. However, they can only handle minor drifts
+2026; date of current version 26 May 2026. This work was supported in            and cannot manage significant drifts resulting from the emer-
+part by the National Key Research and Development Program of China               gence of new attack techniques. (3) Drift detection has also
+under Grant 2023YFC2206402; in part by the Youth Innovation Promotion
+Association Chinese Academy of Sciences (CAS) under Grant 2021156; in
+                                                                                 emerged as a promising strategy [16], [17], [18], [19], which
+part by the Program of Key Laboratory of Network Assessment Technology,          identifies changes in traffic patterns by evaluating confidence
+CAS; and in part by the Program of Beijing Key Laboratory of Network             scores or sample distances. However, these methods can only
+Security and Protection Technology. The associate editor coordinating the
+review of this article and approving it for publication was Dr. Simone Soderi.
+                                                                                 detect the presence of drift. Determining the characteristics of
+(Corresponding authors: Bo Jiang; Susu Cui.)                                     drift traffic, specifically whether it is generated by malicious
+   Xueying Han, Jian Qin, Changzhi Zhao, Junrong Liu, Bo Jiang,                  activities, still requires manual intervention. When drift alerts
+Susu Cui, Zhigang Lu, and Baoxu Liu are with the Institute of
+Information Engineering, Chinese Academy of Sciences, Beijing
+                                                                                 occur frequently, this places a heavy burden on operational
+100093, China, and also with the School of Cyber Security, University            staff, leading to fatigue and increasing the risk of overlooking
+of Chinese Academy of Sciences, Beijing 100049, China (e-mail:                   real threats [20]. Furthermore, although some methods provide
+hanxueying@iie.ac.cn; qinjian@iie.ac.cn; zhaochangzhi@iie.ac.cn; liujun-
+rong@iie.ac.cn; jiangbo@iie.ac.cn; cuisusu@iie.ac.cn; luzhigang@iie.ac.cn;
+                                                                                 adaptation to drifting traffic, they still require manual selection
+liubaoxu@iie.ac.cn).                                                             and labeling of samples for adaptation [19], [21].
+   Weike Fang and Weihang Wang are with the University of Southern                  To provide a comprehensive, automated, and adaptive
+California, Los Angeles, CA 90089 USA (e-mail: weikefan@usc.edu; wei-
+hangw@usc.edu).
+                                                                                 solution addressing the limitations of existing methods, this
+   Digital Object Identifier 10.1109/TIFS.2026.3694664                           paper proposes a robust network malicious traffic detection
+              1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+4986                                                            IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+
+
+framework named Argus. Argus focuses on three challenges:                 through automated classification, drift detection and iden-
+(1) How to achieve accurate classification of known i.i.d.                tification, and model adaptation. To our knowledge, this is
+traffic while simultaneously detecting drifting traffic? (2) How          the first comprehensive, automated and adaptive detection
+to automatically identify the characteristics of drifting traffic         framework designed to handle malicious network traffic
+without human intervention? (3) How to maintain optimal                   with concept drift.
+performance while continually adapting to drifting traffic,             • We design ACLearner to generate compact represen-
+enabling further enhancement over time?                                   tations for different types of traffic, along with a
+   For the first challenge, we design a novel module named                fine-grained method to detect drift and classify non-
+ACLearner based on contrastive learning and autoencoders                  drifting traffic. We implement an automated mechanism
+to generate compact representations for each type of traffic.             based on clustering characteristics to identify drifting
+ACLearner is trained separately on both statistical features              traffic types. To maintain optimal performance, we also
+and behavioral features, and they are integrated in a bagging             introduce a distance-constrained update strategy for the
+manner to cover a wider range of categories, helping prevent              proposed model.
+single points of failure and improving the generalization               • We conduct extensive experiments to demonstrate the
+capability. Additionally, we introduce a novel fine-grained               effectiveness of Argus, and results show that Argus out-
+measurement method to detect traffic drift and classify non-              performs other methods across different scenarios and
+drifting traffic. It evaluates the reconstruction loss distribution       maintains stable performance even under extreme drift
+of the nearest class in the latent feature space, enabling it             conditions. The functionality of each component of Argus
+to more precisely handle the distributional differences among             has also been thoroughly validated.
+various traffic categories, thereby improving the discriminative
+ability of the detection method.                                                            II. P RELIMINARY
+   To address the second challenge, for traffic identified as         A. System Model and Scope
+drift, we design an automated drift identification strategy based
+on clustering distribution differences, eliminating the need for         To ensure comprehensive monitoring coverage, the proposed
+human intervention. This strategy detects malicious traffic by        framework is deployed at the mirroring port of the network’s
+analyzing its clustering characteristics in both the feature and      core switch. This strategic placement provides visibility into
+physical spaces. Our analysis shows that, due to the certainty        both North-South traffic (external ingress/egress) and East-
+of its attack purpose and target, malicious traffic typically         West traffic (internal communications), thereby effectively
+exhibits stronger clustering while normal traffic tends to be         facilitating the detection of both external intrusions and inter-
+more dispersed.                                                       nal threats. Our detection scope focuses on network attacks
+   Regarding the third challenge, we introduce an adaptation          that manifest discernible patterns within traffic flows, includ-
+method that can use non-drifting or drifting traffic to update        ing but not limited to botnet attacks, DoS attacks and web
+Argus as needed. To prevent significant degradation in the            attacks. Regarding data availability, we assume access to a
+detection performance on old data during model updates, we            labeled dataset containing both normal and malicious traffic
+design a distance-constrained update method that imposes              for the initial offline training phase. However, during the
+restrictions on changes in the feature space throughout the           online deployment phase, the system must process continuous
+update process. This ensures that the model or detection              streams of unlabeled traffic and adapt itself to concept drift
+criteria do not undergo abrupt changes while aligning the             without requiring real-time ground-truth labels from human
+update process with the architecture of Argus.                        analysts.
+   We implement Argus and conduct thorough experiments to
+assess its effectiveness in handling various types and degrees        B. Threat Model
+of drifting traffic. The experimental results demonstrate that           We consider an open-world scenario where an active exter-
+Argus outperforms other methods across different scenarios,           nal adversary operates under a black-box assumption, aiming
+with an average F1 exceeding 95%, and maintains stable per-           to evade detection without knowledge of the model’s param-
+formance under varying degrees of drift. Even under extreme           eters or training data. In this setting, concept drift is driven
+drift conditions, its F1 score remains at 88.22%, significantly       by two forces: benign environmental evolution and malicious
+surpassing other methods, which generally experience a drop           adversarial dynamics. For normal traffic, drift stems from natu-
+in F1 by more than 40%. Additionally, we validate the effec-          ral shifts in the network environment such as evolving business
+tiveness of individual components of Argus through ablation           demands, infrastructure changes, or shifting user behaviors.
+studies. For instance, the drift identification module accurately     For malicious traffic, adversaries induce drift through either
+classifies drifting traffic as malicious or normal without human      attack evolution, which involves upgrading tools and modi-
+intervention, consistently achieving an accuracy of over 97%          fying signatures to evade static rules, or novel attacks, where
+and greatly outperforming versions without this component.            0-day vulnerabilities or new methods generate patterns unseen
+   In summary, this paper makes the following contributions:          during training.
+   • We propose Argus,1 a novel framework that robustly                  Argus is most effective against coordinated attacks with
+      detects malicious network traffic in complex environments       discernible concentrations, such as high-volume similar traf-
+                                                                      fic or tight physical connectivity. However, highly dispersed
+  1 https://github.com/Argusaaa/Argus                                 activities, including low-frequency scans or distributed attacks
+HAN et al.: ROBUST MALICIOUS NETWORK TRAFFIC DETECTION FRAMEWORK                                                                    4987
+
+
+
+
+                                                        Fig. 1. Workflow of argus.
+
+
+
+on unrelated hosts, remain challenging to detect because they                            III. D ESIGN OF A RGUS
+mimic the natural sparsity of benign users and represent the
+                          

@@ -1,0 +1,1293 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [703] HKD-Net: Hierarchical Knowledge Distillation Based on Multi-Domain Feature Fusion for Efficient Network Intrusion Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：703
+题名：HKD-Net: Hierarchical Knowledge Distillation Based on Multi-Domain Feature Fusion for Efficient Network Intrusion Detection
+年份：2026
+DOI：10.1109/tnsm.2026.3668812
+来源：IEEE Transactions on Network and Service Management
+PDF：paper/10.1109_TNSM.2026.3668812.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：其他AI安全与跨域异常检测
+相关性：强相关，分数 13
+已有代码状态：已下载；HKD-Net -> source\HKD-Net
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\703.txt
+- 原始字符数：61786
+- 本次发送字符数：61786
+- 是否截断：False
+
+代码包：
+- 仓库：HKD-Net
+  - URL：https://github.com/lzp8341/HKD-Net
+  - 状态：downloaded
+  - 本地目录：source\HKD-Net
+  - 顶层结构：README.md、data_process/、main.py、model/
+  - 主要语言：Python:7
+  - README 标题：HKD-Net、HKD-Net、HKD-Net
+  - README 运行线索：
+  - 关键文件：{"推理/演示入口": ["main.py"]}
+  - 数据集线索：tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+3144
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+HKD-Net: Hierarchical Knowledge Distillation
+Based on Multi-Domain Feature Fusion for
+Efficient Network Intrusion Detection
+Zhaoping Li , Student Member, IEEE, Mingshu He , Member, IEEE, and Xiaojuan Wang , Member, IEEE
+
+Abstract—We propose HKD-Net, a hierarchical knowledge
+distillation network based on multi-domain feature fusion, for
+efficient network intrusion detection on resource-constrained
+edge devices. The framework incorporates dedicated feature
+extraction modules across temporal, frequency, and spatial
+domains, and introduces a dynamic gating mechanism for
+adaptive feature fusion, resulting in a more discriminative and
+comprehensive feature representation. Moreover, a hierarchical distillation mechanism is designed that not only preserves
+soft labels from the output layer but also aligns intermediate
+features from spatial, temporal, frequency, and fused domains,
+enabling efficient knowledge transfer from a large teacher model
+to a compact student model. Through knowledge distillation,
+the final lightweight model requires only 278,580 parameters,
+reducing the number of parameters by approximately 74.68%
+compared to the teacher, while maintaining high detection accuracy. Extensive experiments on three public datasets (Kitsune,
+CIRA-CIC-DoHBrw2020, and CICIoT2023) demonstrate that
+HKD-Net outperforms five state-of-the-art methods, achieving
+accuracies of 96.72%, 97.19%, and 87.19%, respectively, while
+reducing parameters by 74.68% and maintaining low computational cost.
+Index Terms—Network traffic anomaly detection, knowledge
+distillation, multi-domain feature, deep learning, network intrusion detection.
+
+I. I NTRODUCTION
+ITH the rapid development of network technology and
+the increasing complexity of network attack methods,
+network intrusions have become increasingly covert, frequent,
+and advanced [1]. In recent years, organized and targeted
+cyberattacks, such as data breaches, cyberfraud, and ransomware, have become frequent, posing severe challenges to
+cybersecurity [2]. To address these threats, network intrusion
+
+W
+
+Received 29 August 2025; revised 7 January 2026; accepted 20 February
+2026. Date of publication 27 February 2026; date of current version 17 March
+2026. This work was supported in part by the National Natural Science
+Foundation of China under Grant 62402053 and Grant 62227805, and in
+part by the Fundamental Research Funds for the Central Universities under
+Grant 2025KYQD17 (BUPT). The associate editor coordinating the review of
+this article and approving it for publication was T. Wauters. (Corresponding
+author: Mingshu He.)
+Zhaoping Li and Xiaojuan Wang are with the School of Cyberspace Security, Beijing University of Posts and Telecommunications (BUPT), Beijing
+100876, China (e-mail: 2024010404@bupt.edu.cn; wj2718@bupt.edu.cn).
+Mingshu He is with the School of Cyberspace Security and the Key
+Laboratory of Trustworthy Distributed Computing and Service, Ministry
+of Education, BUPT, Beijing 100876, China (e-mail: hemingshu@bupt.
+edu.cn).
+Data is available on-line at https://github.com/lzp8341/HKD-Net.git
+Digital Object Identifier 10.1109/TNSM.2026.3668812
+
+detection (NID) technology has emerged, aiming to detect
+and identify malicious activities within networks to provide
+robust security safeguards for cyberspace [3], [4], [5]. However, NID systems face significant challenges in balancing
+detection accuracy with computational efficiency, especially
+on resource-constrained edge devices.
+Compared to traditional machine learning methods, deep
+learning demonstrates powerful automatic feature extraction
+capabilities when handling large-scale intrusion traffic, making
+it widely adopted in the field of NID. Currently, researchers
+have employed various deep learning models to study NID,
+including convolutional neural networks (CNN) [6], long
+short-term memory networks (LSTM) [7], and multi-scale
+temporal convolutional networks (TCN) [8], among others.
+In the temporal dimension, since the introduction of recurrent neural network (RNN) models, they have been widely
+applied in the field of sequential data processing [9]. However,
+time-domain-based methods often fail to effectively utilize
+frequency characteristics and are prone to interference.
+In the frequency domain, existing studies typically apply
+spectral or time-frequency transformations—such as the 2D
+Fourier transform [10], the combined fast Fourier transform
+and continuous wavelet transform [11], and the discrete
+wavelet transform (DWT) integrated into Transformer architectures [12]to convert time-series traffic data into frequency
+representations. These methods leverage the concentrated
+nature of low-frequency components and the distributed
+characteristics of high-frequency bands to enhance feature
+continuity and discriminability, thereby improving the performance of intrusion detection models. In the spatial domain,
+extracting spatial features using CNN has become a cuttingedge method [13]. Regarding feature fusion, Yao et al. [14]
+adopted the cross-layer feature fusion of the CNN and LSTM
+to separately obtain global and periodic features.
+While recent efforts have integrated multi-domain features or adopted knowledge distillation (KD) for lightweight
+intrusion detection, they still exhibit notable limitations.
+For instance, methods like Dual-Modal Intrusion Detection
+System(DM-IDS) [19] fuse dual-modal features via bilinear
+attention but employ static fusion strategies, lacking adaptability to diverse attack patterns. TFTKD [10] leverages
+frequency-domain transformation and output-layer distillation
+yet overlooks intermediate feature representations, restricting knowledge transfer depth. Similarly, MT-Security [20]
+
+1932-4537 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+LI et al.: HKD-Net: HIERARCHICAL KD BASED ON MULTI-DOMAIN FEATURE FUSION
+
+combines raw-byte and graph features but relies on complex
+architectures unsuitable for edge deployment.
+To address these problems, we propose a hierarchical
+knowledge distillation network based on multi-domain feature
+fusion, termed HKD-Net. The framework adopts a hierarchical
+distillation strategy that aligns features from both the final
+output and intermediate layers across the spatial, temporal,
+and frequency domains. On this basis, a dynamic gating
+mechanism is introduced for adaptive fusion of cross domain
+features, thereby constructing a more discriminative and comprehensive feature representation. This fine-grained alignment
+ensures that the student model learns the rich semantic, structural, and contextual information embedded in the teacher’s
+intermediate features, rather than merely mimicking its final
+decisions. Furthermore, by employing a dynamic balancing
+mechanism based on learnable weights, the training process
+automatically adjusts the relative importance of alignment
+losses at different levels, which achieves self-optimization
+of distillation. This method significantly enhances distillation
+performance while maintaining a lightweight architecture,
+offering a lightweight and efficient solution for resourceconstrained environments. In summary, this paper’s main
+contributions are as follows:
+• HKD-Net is proposed to overcome the limitations of
+traditional single-feature extraction methods. The model
+can extract the spatial-temporal-frequency stream features
+in parallel and adaptively weight the contributions of
+different modalities based on attack characteristics, which
+constructs a more discriminative and comprehensive feature space.
+• The hierarchical knowledge distillation framework systematically transfers the intermediate features of the
+teacher model to the student model by establishing alignment at multiple intermediate semantic levels, such as
+spatial, temporal, frequency, and fusion features, while
+maintaining the soft labels of the output layer. This
+approach enables a deeper and more structured form of
+knowledge transfer.
+• The dynamic balancing mechanism based on learnable weights can adaptively calibrate the contribution
+of multi-level distillation losses according to training
+dynamics. Compared to static weight allocation, this
+strategy addresses the rigidity of fixed weighting schemes
+by dynamically adjusting the weights of each feature
+modality during the optimization process.
+The rest of the paper is organized as follows: Section II
+reviews related work on deep learning-based intrusion detection and knowledge distillation. Section III presents the
+proposed algorithms. Section IV presents the analysis and
+results of the experiments conducted. In Section V,wediscuss
+the strengths and limitations, and present future directions of
+our work. Last, we summarize our work in Section VI.
+II. R ELATED W ORK
+In this section, we provide a concise review of the relevant
+literature on network traffic anomaly detection from two
+methodological perspectives: deep learning approaches and
+knowledge distillation techniques.
+
+3145
+
+A. DL-Based Traffic Anomaly Detection Methods
+Deep learning technology has demonstrated significant
+advantages in handling large-scale intrusion traffic due to
+its powerful automatic feature extraction capabilities and
+has therefore been widely applied in the NID field [15].
+Current research trends indicate that multi-domain feature
+extraction methods are shifting from single-feature analysis
+toward multi-domain collaboration to more comprehensively
+capture abnormal patterns in network traffic [16]. For instance,
+Xu et al. [17] introduced a channel attention mechanism
+to dynamically weight spatio-temporal-frequency features in
+industrial anomaly detection. Kotak et al. [18] employed
+V-NTC (VPN-encrypted Network Traffic Classification), a
+sliding-window time-series approach with InceptionTime, to
+classify VPN-encrypted traffic at both category and application levels. Zha et al. [19]proposed DM-IDS, a dual-modal
+attention–CNN architecture that fuses flow and binary-encoded
+payload features via bilinear fusion. Yang et al. [20] introduced MT-Security, which fuses raw-byte and graph-based
+interaction features to classify encrypted malicious traffic.
+D’Angelo et al. [22] employed CRAE-Net (ConvolutionalRecurrent AutoEncoder Network), a stacked CNN-LSTM
+sparse-autoencoder architecture, to distill spatial–temporal features from raw traffic statistics. While these methods improve
+accuracy through complex multi-domain feature extraction,
+numerous rely on serial multi-network architectures that
+increase computational cost and memory consumption, limiting their applicability in resource-constrained environments.
+B. Knowledge Distillation for Lightweight NID
+Deep learning-based light weight methods have been
+applied to NIDSs. Ayyat et al. [21] present ClassyNet, a
+class-aware early-exit network that prioritizes high-priority
+threats for low-latency edge-side detection. Das et al. [23]
+propose a lightweight incremental IDS combining OCSVM
+with adaptive random forest to enable streaming detection
+and real-time blocking in underwater sensor networks. The
+aforementioned deep learning methods adopted lightweight
+structures, while the limited representa tion ability astricts the
+accuracy performance and makes the models sustain the risk
+of poor generalization ability.
+Recently, Knowledge distillation (KD) is an effective technique for compressing large models by transferring knowledge
+from a teacher to a lightweight student model while preserving
+performance. Traditional response-based KD uses soft labels
+from the teacher’s output layer to supervise the student via
+KL divergence. Zhao et al. [24] first introduced KD into NID,
+proposing a lightweight model using separable convolutions.
+Wang et al. [25] combined a triple-state CNN with K-fold
+cross-training, though such methods often lose structural and
+semantic information from intermediate layers, limiting generalization in fine-grained detection tasks. Feature-based KD
+addresses this by aligning intermediate feature representations between teacher and student. Wang et al. [26] used a
+spatio-temporal residual network to transfer feature extraction
+capabilities. Ding et al. [27] incorporated knowledge alignment
+and correlation modules to improve structured knowledge
+
+3146
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 1. Architecture of HKD-Net. The teacher model extracts and fuses multi-domain (spatial, temporal, frequency) features, the student model learns
+through hierarchical distillation, and the hierarchical distillation module aligns both output logits and intermediate features across domains to achieve efficient
+knowledge transfer.
+
+transfer. AL-Nomasy et al. [28] built a Transformer-based
+teacher with selective gradient distillation to transfer spatiotemporal context features for IoT traffic detection.
+Despite these advances, efficient transfer of multi-level
+features and maintaining high accuracy in lightweight models
+remain challenging. Our work addresses these limitations
+by proposing a hierarchical knowledge distillation network
+(HKD-Net) with multi-domain feature fusion, enabling efficient and accurate lightweight network intrusion detection.
+III. M ETHODS
+A. Network Traffic Anomaly Detection Framework
+In this section, we propose HKD-Net, a lightweight network
+traffic anomaly detection framework based on hierarchical knowledge distillation with multi-domain feature fusion.
+As shown in Figure 1, we construct a teacher model consisting of a three-modal feature extraction module (1D-VIT
+time domain encoder, SE-ResNet spatial encoder, and wavelet
+frequency domain encoder), as well as a dynamic channel attention gating. This design enables high-accuracy
+joint optimization across domains. The lightweight student
+model employs depth-wise separable convolutions and a
+simplified ViT, and learns via a hierarchical distillation strategy. By synergistically transferring multi-modal knowledge
+and dynamically weighting feature alignments, HKD-Net
+effectively balances detection accuracy with computational
+efficiency.
+B. Data Preprocessing
+Inspired by the Multi-level Flow Representation (MFR)
+design in YaTC [29] we adopt a structured matrix-based
+approach for data preprocessing. First, raw network traffic is
+partitioned into individual flows based on IP addresses, port
+numbers, and protocol types to preserve flow-level context.
+To eliminate potential biases, we standardize the traffic by
+removing Ethernet headers, resetting port numbers to zero,
+
+and replacing IP addresses with random values while preserving their directionality. Subsequently, we extract M adjacent
+packets from each flow and format them into an H × W twodimensional matrix as the flow representation.
+The matrix directly encodes raw byte values while adhering
+to a hierarchical structure:
+• Byte-level: Each row contains only one type of traffic
+bytes (header or payload).
+• Packet-level: Each packet is represented by its header and
+payload sub-matrices.
+• Flow-level: M packet-level matrices are sequentially
+stacked to form the final MFR matrix.
+By leveraging this preprocessing method, we effectively
+capture hierarchical traffic characteristics, providing highquality input for subsequent multi-domain feature fusion and
+knowledge distillation.
+C. Teacher Model
+The teacher model is a core component of the multi-domain
+feature fusion network intrusion detection framework proposed
+in this paper. The objective of its design is to construct a
+high-performance feature representation system by integrating
+feature extraction modules from the temporal, spatial, and
+frequency domains. The model consists of four key modules: a
+temporal domain feature extraction module, a spatial-domain
+feature extraction module, a frequency-domain feature extraction module, and a dynamic feature fusion module. These
+modules collaborate to extract and fuse multi-domain features
+of network traffic data, providing high-quality feature representations for subsequent knowledge distillation.
+1) Temporal Domain Feature Extraction: The temporal
+feature extraction module captures time series characteristics
+in network traffic data. This is crucial for identifying timedependent attack patterns. Aiming at the long time-series
+dependency characteristics of network traffic data, this paper
+designs an improved one-dimensional Vision Transformer
+(1D-ViT) architecture, as shown in Figure 2 The inputs of
+
+LI et al.: HKD-Net: HIERARCHICAL KD BASED ON MULTI-DOMAIN FEATURE FUSION
+
+Fig. 2. Temporal feature extraction module based on a lightweight 1D Vision
+Transformer. The module processes sequential traffic data with multi-head
+self-attention and outputs a 64-dimensional temporal feature vector.
+
+n×d
+
+this module are time series numbers according to T ∈ R
+,
+where n denotes the time step and d is the feature dimension.
+The original features are mapped to the embedding space
+through a linear projection layer:
+E = XWe + P
+
+(1)
+
+where We ∈ Rd×dmodel is the learnable projection matrix
+(dmodel = 64) and P ∈ Rn×dmodel is the position encoding
+matrix whose element values are generated by the following
+equation:
+
+
+i
+Epos (i, 2j) = sin
+,
+(2)
+100002j/d
+
+
+i
+Epos (i, 2j + 1) = cos
+(3)
+100002j/d
+The relative positional relationship of timing information
+can be effectively preserved by this positional encoding
+method.
+The multi-head attention mechanism is the core component
+of the Transformer model’s encoder. It’s main purpose is to
+find relevant information in the input sequence and perform
+weighted summarization to produce the output sequence. Each
+group of attention mechanisms is called a “head”, and each
+head learns a different representation and concatenates and
+projects these representations to obtain the final representation. In this paper, we use a lightweight multi-head attention
+structure as follows:
+MultiHead(Q, K, V) = Concat(head1 , . . ., headh )Wo
+
+(4)
+
+headi = Attention(QWiQ , KWiK , VWiV )
+(5)
+where the number of attention heads h = 4, much less than
+the standard ViT configuration (usually 8-12 heads), and the
+dimension of each head dk = 16. With this streamlined
+design, the computational complexity is reduced to O(4nd2 ).
+The module finally performs feature abstraction through two
+tandem Transformer blocks and uses global average pooling
+to generate a 64-dimensional temporal domain feature vector
+Ft ∈ R64 .
+
+3147
+
+Fig. 3. Frequency domain feature extraction module utilizing Discrete Wavelet
+Transform with Daubechies-4 basis. The module decomposes traffic signals
+into low-frequency (LL) and high-frequency (LH,HL,HH) subbands, followed
+by energy normalization and convolutional processing.
+
+2) Spatial Domain Feature Extraction: The spatial domain
+feature extraction module employs an improved SE-ResNet
+architecture to capture local spatial features from network
+traffic data, such as protocol fields and packet length statistics.
+This variant of ResNet integrates parallel multi-scale convolution with a channel attention mechanism (SE module) to
+mitigate the gradient vanishing problem through residual connections, thereby yielding more refined feature representations.
+A multi-scale convolutional branch is first constructed:
+Fmulti = [Conv3×1 (X); Conv5×1 (X); Conv7×1 (X)]
+
+(6)
+
+A channel attention mechanism is then incorporated to dynamically adjust channel weights via the Squeeze-and-Excitation
+(SE) module:
+zc =
+
+W
+H X
+X
+1
+uc (i, j)
+H × W i=1 j=1
+
+s = σ (W2 δ (W1 z))
+
+(7)
+(8)
+
+where δ denotes the ReLU activation function, σ is the
+Sigmoid function, and the compression ratio r = 16.
+The module adopts a three-level residual structure. The final
+output is a 128-dimensional spatial feature vector Fs ∈ R128 ,
+which contains complete spatial information from low-level
+protocol features to high-level behavioral patterns.
+3) Frequency Domain Feature Extraction: The frequency
+domain feature extraction module aims to capture potential
+periodic patterns and sudden anomalies in network traffic, which are often difficult to identify effectively in time
+and space domain analysis. This module combines Discrete
+Wavelet Transform (DWT) with deep learning methods to
+realize multi-resolution frequency domain analysis. Figure 3
+shows the architecture of the frequency domain feature extraction module.
+The Daubechies-4 wavelet basis function is first used to
+decompose the input signal at multiple levels, the wavelet
+decomposition submodule:
+[LL, (LH, HL, HH)] = pywt.dwt2(x,0 db40 )
+
+(9)
+
+Specifically, the input signal is decomposed into multiple
+subbands using the Daubechies-4 wavelet basis function,
+which yields one low-frequency approximation component
+
+3148
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+(LL), which reflects the overall trend of the flow, and three
+high-frequency detail components (LH, HL, HH), which effectively capture abrupt traffic changes and anomalous pulses.
+Furthermore, a wavelet coefficient energy normalization layer
+is introduced:
+bi = q Ci
+(10)
+C
+PN
+2
+C
+j=1 j
+This layer effectively eliminates the interference caused
+by amplitude differences across traffic samples, thereby
+enhancing the model’s cross-scenario generalization capability. The module ultimately outputs a 256-dimensional
+frequency domain feature vector, which, together with the
+spatial and temporal features, constitutes a comprehensive
+multi-domain representation system.
+4) Dynamic Feature Fusion: To effectively integrate multidomain features from the temporal, spatial, and frequency
+domains, HKD-Net employs a dynamic feature fusion strategy
+based on a gating mechanism. This strategy enables the
+model to adaptively select and combine features from different
+domains, enhancing its ability to characterize complex network
+traffic patterns.
+Firstly, the features are projected to a uniform dimension
+by 1 × 1 convolution:
+Fbk = Wk Fk ,
+
+k ∈ {t, s, f }
+
+(11)
+
+where Wk ∈ Rdk ×256 is the projection matrix ensuring all
+features are in the same dimension space. The gated weight
+network uses a two-layer fully connected structure:
+
+
+h
+i
+g = δ W2 · δ W1 Fbt ; Fbs ; Fbf
+(12)
+wk = P
+
+egk
+
+j∈{t,s,f }
+
+egj
+
+(13)
+
+where δ is the ReLU activation function, and W1 and W2
+are weight matrices. The final fusion feature is obtained by a
+weighted sum and residual connection:
+h
+i
+X
+Ffused =
+wk Fbk + Wr Fbk ; Fbs ; Fbf
+(14)
+k∈{t,s,f }
+
+Wr ∈ R768×256 is the residual projection matrix. This
+structure preserves the distinctiveness of each modality while
+enhancing inter-feature interactions.
+D. Student Model
+The student model consists of a lightweight and efficient spatiotemporal network structure, which integrates multi
+domain information through deep separable convolution,
+simplified Transformer architecture, and efficient wavelet processing, and finally through a dynamic gating fusion module.
+1) Lightweight Feature Extraction: The student model
+employs a lightweight and efficient spatiotemporal network
+structure, integrating multi-domain information through deep
+separable convolution, simplified Transformer architecture,
+and efficient wavelet processing. In the spatial domain branch,
+Depthwise Separable Convolution is used instead of standard
+convolution. This technique decomposes traditional convolution operations into depthwise and pointwise convolution,
+
+significantly reducing computational complexity while retaining the feature extraction capabilities of convolutional neural
+networks. The processing flow is as follows:
+DepthwiseConv(X) = Depthwise(X) ∗ Wdepthwise + b, (15)
+Pointwise(X) = Conv1×1 (X) ∗ Wpointwise
+(16)
+this design reduces the number of parameters
+of
+
+2
+standard convolution from
+O
+k
+×
+C
+×
+C
+·
+to
+·
+in
+out
+
+O k 2 × Cin + Cin × Cout , which significantly reduces the
+model complexity.
+The 1D Vision Transformer (ViT) in the temporal domain
+retains only a single-layer Transformer block and 2 attention
+heads, using global average pooling to replace the fully
+connected layer. This results in a 64-dimensional time-domain
+feature vector Ftemporal ∈ R64 , reducing computation by
+more than 60%. The frequency domain processing branch
+uses a truncated wavelet transform strategy, performing onelevel Daubechies-1 wavelet decomposition on the input signal
+and preserving the low-frequency LL subbands. The subband
+coefficients are processed by a 3 × 3 convolution kernel with
+shared weights, and the 64-dimensional frequency domain features are generated by global pooling. This lightweight design
+ensures that the student model can be efficiently deployed on
+resource-constrained edge devices.
+2) Efficient Fusion Module: The student model’s fusion
+module employs a dynamic gating mechanism to integrate
+multi-domain features adaptively. Given spatial domain features fs ∈ Rds , temporal features ft ∈ Rdt and frequency
+domain features ff ∈ Rdf , they are first projected to a unified
+dimension using linear transformations:
+fei = Wi fi + bi ,
+
+i ∈ {s, t, f }
+
+(17)
+
+du ×di
+
+where Wi ∈ R
+are learnable projection matrices. The
+gating network then calculates modality weights:
+w = Softmax(W2 δ(W1 [fes ; fet ; fef ] + b1) + b2)
+
+(18)
+
+where W1 ∈ R3du ×dm and W2 ∈ Rdm ×3 are weight matrices,
+and δ is the ReLU activation function. The final fused features
+are obtained by:
+
+
+X
+ffused = LayerNorm 
+wi fei + Wr [fs ; ft ; ff ] (19)
+i∈{s,t,f }
+
+where Wr [fs ; ft ; ff ] are used to supplement the original
+feature interaction information. This design not only maintains
+the discriminative combination of multi-domain features, but
+also enhances the robustness of features through cross-modal
+connections.
+E. Hierarchical Knowledge Distillation
+Hierarchical knowledge distillation is an effective model
+compression technique designed to migrate knowledge from
+the teacher model to the lightweight student model. The
+framework consists of three core components: softened-label
+distillation at the output layer, alignment of the intermediate
+feature layer, and adaptive loss weighting, which form an endto-end knowledge learning to ensure that the student model
+
+LI et al.: HKD-Net: HIERARCHICAL KD BASED ON MULTI-DOMAIN FEATURE FUSION
+
+maintains performance close to that of the teacher model while
+significantly reducing computational complexity.
+1) Output Layer Distillation (Softened Labels): Using the
+standard knowledge distillation loss of the output layer, this
+loss utilizes the softmax of the temperature scale to generate
+softening labels from the teacher model. The student model
+is trained to mimic this softened output distribution, thereby
+inheriting the teacher’s inter-class relational knowledge. The
+distillation loss is defined by the Kullback-Leibler (KL) divergence:
+!
+C
+(s)
+X
+pi
+(s)
+(20)
+LKL =
+pi log
+(t)
+pi
+i=1
+(s)
+
+(t)
+
+where pi and pi represent the temperature-scaled softmax
+probabilities of the student and teacher models for the i-th
+class, respectively, and C is the total number of categories.
+The temperature parameter T>1 smooths the probability distribution, facilitating more effective knowledge transfer.
+2) Feature Layer Alignment: The feature layer alignment
+mechanism breaks through the limitation of traditional distillation that only focuses on the output layer, and realizes
+deep knowledge migration through multi-level feature mapping. Aiming at the differences in feature dimensions of the
+intermediate layer of the teacher-student model, the spindleshaped MLP adapter is invoked to carry out the dynamic
+dimensionality transformation at, and its loss function is
+defined as:
+H
+
+W
+
+2
+1 XX
+spa
+spa
+φspa (ftea
+)ij − φspa (fstu
+)ij
+Lspa =
+HW i=1 j=1
+2
+(21)
+where φspa is the feature adapter and HW is the feature
+map dimension. The time-domain feature alignment module
+focuses on the temporal features of the ViT output, and realizes
+the feature space mapping through a learnable projection
+matrix:
+T
+
+Ltmp =
+
+1X
+tmp
+tmp 2
+Wtmp ftea,t
+− Wtmp fstu,t
+2
+T t=1
+
+(22)
+
+where Wtmp ∈ R64×d is the dimension transformation matrix
+and T denotes the timing length. Frequency domain feature
+alignment combines wavelet transform and neural network,
+firstly, DWT is performed on the input signal to obtain four
+subbands, LL, LH, HL, and HH, and then frequency domain
+features are aligned by the adapter φf re :
+2
+
+Lf re = kφf re (DW T (ftea )) − φf re (DW T (fstu ))kF
+
+(23)
+
+The highest level of fusion feature alignment then directly
+matches the comprehensive characterization generated by the
+dynamic gating network:
+1
+2
+kφf is (gtea ) − φf is (gstu )k2
+(24)
+256
+The four alignment paths are dynamically balanced by adaptive weights wk̂ (t), which effectively solves the key problems
+of feature dimension mismatch and semantic information loss
+by establishing a complete hierarchical distillation system
+from local perception to global understanding.
+Lf is =
+
+3149
+
+3) Total Loss Function: In order to dynamically balance the
+importance of different distillation objectives, we propose an
+adaptive loss function based on learnable weights. A vector
+of trainable weight parameters is first introduced θ ∈ R4 ,
+which generates a normalized weight distribution by softmax
+function:
+exp(θk )
+,
+wk = P4
+j=1 exp(θj )
+
+k = 1, 2, 3, 4
+
+(25)
+
+where the four weight components correspond to the loss
+terms of spatial features wspa , temporal domain features wtmp ,
+frequency domain features wf re and fusion features wf us .
+Based on the generated weights, the contribution of each
+feature alignment term is dynamically adjusted to form a
+weighted feature loss:
+X
+(k)
+LFeat =
+wk · LMSE
+(26)
+k∈{spa,tmp,f e,f is}
+(k)
+
+each feature loss term LMSE calculates the mean square error
+of the teacher and student models on the corresponding feature
+space. This dynamic weighting mechanism exhibits adaptive
+characteristics for attack types, enabling the model to automatically focus on the most relevant feature dimensions for
+different attack modes. The final total loss function balances
+the three types of critical losses through the hyperparameter
+α (set to 0.5 by default):
+LTotal = αLCE + (1 − α)LKL + βLFeat
+
+(27)
+
+above equation achieves the organic integration of three types
+of key loss functions: the cross-entropy classification loss LCE
+ensures that the student model maintains its base recognition
+capability, the temperature-scaled KL dispersion distillation
+loss LKL is responsible for migrating the knowledge of the
+teacher model’s decision boundaries, and the weighted feature
+loss LFeat (β = 1) improves the generalization performance of
+the student model by aligning the multilevel representations.
+These three are dynamically balanced by the hyperparameter
+α, and the network parameters and trainable weight parameter
+θ are synchronously optimized during back propagation to
+form a training mechanism with adaptive properties.
+IV. E XPERIMENTS AND E VALUATION
+A. Experimental Setting
+1) Experimental Environment: The simulation experiment are Implemented on a device with Intel Xeon (R)
+W-2255 GHz, NVIDIA GeForce RTX 3090 and 128 GB
+RAM, which equipped with Ubuntu 20.04.1 LTS, PyCharm
+2021.1.2 × 64, Python 3.8, and Tensorflow 2.10.0. The GPU
+is NVIDIA GeForce RTX 2080 Ti 11 GB.
+2) Datasets: Our experiments utilized three benchmark
+datasets: Kitsune [30], CIRA-CIC-DoHBrw2020 [31], and
+CICIoT2023 [32], which include novel network attacks such
+as backdoors and worms, thereby reflecting current network
+intrusion behavior patterns. All datasets were split into training
+and testing sets at an approximate ratio of 8:2. Further details
+of each dataset are briefly described below.
+
+3150
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 4. Effect of distillation temperature T on F1 score and Accuracy across
+three datasets.
+
+• Kitsune dataset contains traffic from a real IoT network
+testbed. The classification task is a 10-class problem,
+involving the detection of normal traffic and 9 distinct
+attack types: Video Injection, ARP MitM, Active Wiretap,
+SSDP Flood, SSL Renegotiation, Fuzzing, OS Scan, SYN
+DoS, and Mirai botnet.
+• CIRA-CIC-DoHBrw2020 dataset focuses on encrypted
+DNS-over-HTTPS (DoH) traffic. The task is to identify
+benign traffic versus malicious activity conducted over
+DoH tunnels. The malicious traffic encompasses a wide
+range of threats, including Malware, Botnet, Data Exfiltration, Cryptojacking, Downloaded Attack, Phishing, Tor
+Connection, and DGA (Domain Generation Algorithm).
+• CICIoT2023 is a large-scale dataset encompassing a wide
+variety of IoT traffic and attacks. The task is a comprehensive multi-class classification involving normal traffic
+and 33 specific attack types. These attacks are grouped
+into 7 major categories: DDoS, DoS, Mirai, Spoofing,
+Web-based, Reconnaissance, and Forgery.
+3) Evaluation Metrics: The performance of the intrusion
+detection models is evaluated using multiple criteria. First, we
+assess detection accuracy through standard metrics: accuracy,
+precision, recall, and the F1-score. Second, model efficiency
+is quantified by the number of parameters and the model
+size. Finally, given the high security requirements of intrusion
+detection tasks, False Positive Rate (FPR) and False Negative
+Rate (FNR) are also provided. A high FPR, indicating frequent
+false alarms, can undermine operational efficiency and analyst
+trust. A high FNR, representing missed attacks, constitutes a
+severe security vulnerability. Reporting these metrics provides
+a balanced view of both the model’s performance and its
+practical utility.
+B. Hyperparameter Setting
+1) Distillation Temperature: Knowledge distillation temperature critically determines the softening degree of teacher
+outputs. As shown in Figure 4, we evaluate T ∈ {1, 3, 5, 6, 7}
+on all datasets. Results reveal dataset-dependent optimal temperatures. CICDoHBrw2020 achieves peak performance (F1 =
+0.9513, Acc = 0.9517) at T = 6; CICIoT2023 attains its best
+F1 (0.8709) and accuracy (0.8691) at T = 3; and Kitsune
+yields the highest scores (F1 = 0.9534, Acc = 0.9558) at
+T = 5. Considering the need for a generalizable and stable
+temperature across diverse traffic types, we select T = 5
+as the default setting. This choice is motivated by its nearoptimal performance on all datasets (consistently within 2%
+
+Fig. 5. Sensitivity analysis of learning rate and batch size on student model
+performance using grid search on CICIoT2023 and CICDoHBrw2020.
+
+of the dataset-specific optimum) and its role in providing
+moderate softening—avoiding both overly sharp (T = 1)
+and over-smoothed (T ≥ 6) distributions—thereby ensuring
+robust knowledge transfer without compromising task-specific
+discriminability.
+2) Learning Rate and Batch Size: We conduct a joint
+grid search over learning rate and batch size (Figure 5).
+On CICIoT2023, lr = 0.001 combined with batch size = 32
+delivers the highest student F1 (0.8790) and accuracy (0.8775).
+On CICDoHBrw2020, lr = 0.005 together with batch size =
+128 yields the best result (F1 = 0.9779, accuracy =
+0.9780). The sensitivity analysis reveals that smaller batch
+sizes generally yield better student performance but increase
+training time, while larger batches offer superior hardware
+utilization. Balancing computational efficiency, stable convergence, and cross-dataset robustness, we adopt lr = 0.001 and
+batch size = 128 as the default configuration. This combination ensures reliable convergence behavior while maintaining
+GPU memory efficiency and consistent performance across
+different traffic profiles.
+C. Traffic Classification Task
+In order to comprehensively evaluate the performance of
+our proposed HKD-Net framework, we conducted extensive
+experiments on three public datasets: Kitsune, CIRA-CICDoHBrw2020, and CICIoT2023, and compared them with
+several state-of-the-art network intrusion detection methods,
+including DPCNN, DL-BiLSTM, TFTKD, CNN-LSTM, and
+CNN-GRU. These methods cover everything from convolutional neural networks and recurrent neural networks to
+hybrid models and advanced methods based on knowledge
+distillation.
+DPCNN [33] propose a low-complexity text categorization
+framework based on pyramidal downsampling convolutional
+networks and residual concatenation, which dynamically captures remote semantic associations of text through hierarchical
+feature pyramids. DL-BiLSTM [34], combines Deep Neural
+Networks (DNNs) and Bidirectional Long Short-Term Memory Networks (BiLSTMs) for efficient intrusion detection
+
+LI et al.: HKD-Net: HIERARCHICAL KD BASED ON MULTI-DOMAIN FEATURE FUSION
+
+3151
+
+TABLE I
+P ERFORMANCE C OMPARISON OF D IFFERENT M ETHODS ON T HREE DATASETS
+
+on resource-constrained IoT devices through feature downsampling and model quantization techniques. TFTKD [10]
+propose a lightweight intrusion detection model based on
+two-dimensional Fourier transform and knowledge distillation, aiming at solving the problems of data sparsity, model
+complexity, and deployment efficiency in traditional intrusion detection. CNN-LSTM-Trans [35], A parallel detection
+framework based on hybrid Convolutional Neural Network
+(CNN) and Long Short-Term Memory Network (LSTM) is
+proposed to dynamically fuse spatio-temporal features through
+Transformer’s self-attention mechanism. CNN-GRU [36],
+A parallel integration framework based on hybrid convolutional neural network (CNN) and gated recurrent unit (GRU) is
+proposed to dynamically optimize the spatio-temporal feature
+representations through a multi-domain feature fusion mechanism. Table I shows the performance metrics of HKD-Net
+and baseline methods on three datasets, including accuracy,
+precision, recall, FPR and FNR, which are widely used to
+evaluate the effectiveness of intrusion detection systems.
+As shown in Table I, HKD-Net not only achieves leading
+accuracy, but also maintains a well-balanced performance in
+terms of both false positive rate (FPR) and false negative rate
+(FNR). On the CIRA-CIC-DoHBrw2020 dataset, HKD-Net
+attains the lowest FNR (2.81%) while maintaining a low FPR
+(0.55%), demonstrating its ability to minimize missed attacks
+without significantly increasing false alarms. On the more
+challenging CICIoT2023 dataset, HKD-Net achieves an accuracy of 87.19%, which is approximately 2 percentage points
+higher than the suboptimal DL-BiLSTM. Moreover, it attains
+the lowest FPR (1.86%) among all compared methods, while
+also delivering a low FNR (13.14%). These results indicate
+that our model offers distinct advantages in reducing false
+positives for normal traffic while preserving high detection
+sensitivity in complex multi-class scenarios.
+Collectively, these results demonstrate the robustness and
+effectiveness of HKD-Net in detecting network intrusions
+across datasets of varying scales and protocol types.
+D. Ablation Experiments
+In this section, ablation studies are conducted to validate
+the effectiveness of the key components of HKD-Net.
+1) Multi-domain Feature Fusion: In this section, we compare the performance of five different models on the Kitsune,
+DoHBrw2020, and CICIoT2023 datasets, respectively: the
+full model (HKD-Net), the model with the time-domain
+feature extraction module removed (HKD VIT), the model
+
+TABLE II
+R ESULTS OF THE E VALUATION OF THE E FFECTIVENESS OF
+M ULTI -D OMAIN F EATURE F USION
+
+with the frequency-domain feature extraction module removed
+(HKD WT), the model with the spatial domain feature extraction module removed (HKD SE), and the model with the
+dynamic feature fusion mechanism removed (HKD DFF).
+These experiments aim to quantify the specific contribution
+of each part to the overall performance by removing the key
+components of the model one by one.
+The results are summarized in Table II. Overall, HKD-Net
+demonstrates the highest and most consistent performance.
+Ablation studies reveal that each feature domain contributes
+significantly to model effectiveness. The removal of the
+spatial, temporal, and frequency modules leads to accuracy
+drops of approximately 2.0%, 1.5%, and 1.0% respectively,
+with consistent trends observed across datasets. Furthermore,
+removing the dynamic feature fusion mechanism decreases
+the performance metrics by 0.55%, 0.5%, 0.5% and 0.5%,
+respectively. These findings emphasize the significant impact
+of the lack of a dynamic feature fusion module in feature
+fusion, suggesting that multi-domain feature fusion needs to
+be nuanced for a specific context, allowing for varying degrees
+of involvement of features from different domains.
+2) Multi-Level Knowledge Distillation: In order to systematically evaluate the contribution of each component in
+hierarchical distillation, this paper designs comparison experiments of three distillation strategies on three publicly available datasets, namely Kitsune, CIRA-CIC-DoHBrw2020 &
+CICIoT2023. The experiments conduct ablation experiments
+by taking the complete HKD-Net (with both output-layer KL
+distillation and intermediate-layer feature alignment) as the
+
+3152
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+TABLE III
+E FFECTIVENESS E VALUATION R ESULTS OF D IFFERENT
+D ISTILLATION S TRATEGIES
+
+Fig. 6. Dynamic evolution of adaptive weights (spatial, temporal, frequency,
+fusion) and validation accuracy during training on the Kitsune dataset.
+
+baseline, and evaluating three variants: KD CE (hard-label
+training only), KD KL (output-layer distillation only), and the
+intermediate-feature-alignment-only model.
+As shown in Table III, the complete HKD-Net framework
+achieves the best performance across all datasets. Compared
+to using only hard labels (KD CE) or output-layer distillation (KD KL), hierarchical distillation provides significant
+improvements. For instance, on Kitsune, it surpasses KD KL
+by 8.78% in F1 score. Even on encrypted traffic scenario
+(DoHBrw2020) and complex (CICIoT2023) traffic, it maintains clear advantages. Overall, output-layer and intermediate
+feature alignment are complementary, with the former ensuring
+semantic consistency and the latter capturing fine-grained
+representations, together establishing the effectiveness of hierarchical distillation.
+3) Adaptive Knowledge Distillation: In this paper, an adaptive loss function based on learnable weights is adopted to
+guide the lightweight student model to automatically focus on
+the most discriminative modal representations under dynamic
+data distributions by evaluating the quality of the alignment of
+each modal feature with the teacher model in real-time during
+the training process and adaptively adjusting the relative
+weights of spatial, time-domain, frequency-domain, and fusion
+features in the distillation loss. Compared to the traditional
+fixed-weight scheme, this strategy simplifies the engineering
+process by improving accuracy without the need for additional
+hyperparameter tuning.
+Figure 6 shows the dynamic evolution of adaptive weights
+across the spatial, temporal, frequency, and fusion domains
+during training(taking the Kitsune dataset as example). The
+weights exhibit clear differentiation in the early training phase,
+with the validation accuracy curve rising sharply in tandem.
+This concurrent behavior confirms the efficacy of the adaptive
+weighting mechanism.
+
+To quantify its advantage, we compare the Adaptive Weighting (AW) strategy against a Fixed Weighting (FW) baseline
+under controlled conditions (see Table IV). Except for the
+weighting strategy, the teacher model, the student model
+architecture, the number of training rounds, the optimizer,
+and the random seed are all kept the same. The AW strategy
+achieves significantly higher validation accuracy (+ 1.34%),
+reduces inference latency by 14.2 ms, and converges 2 epochs
+earlier than the FW approach, with all improvements statistically significant (p <0.01). Especially, the AW mechanism
+accelerates convergence speed by approximately 16% while
+substantially reducing inference time, highlighting its practical
+effectiveness in expediting model training. Furthermore, the
+low standard deviations (<0.1%) across three independent runs
+confirm the the robustness of the results.
+In summary, learnable adaptive weights simultaneously
+achieve higher accuracy, faster convergence and lower inference latency without increasing the number of parameters
+and computational overhead, providing a concise and effective
+solution for cross-modal knowledge distillation.
+E. Edge Deployment Feasibility Analysis
+1) Resource Requirements and Compatibility: As shown
+in Table V, the student model of HKD-Net occupies only
+1.06MB of storage and 4.24MB of peak runtime memory. This
+corresponds to minimal resource utilization—e.g., 0.003%
+storage and 0.10% memory on a Raspberry Pi 4. Even on simulated low-end devices (1GB RAM), memory usage remains
+below 0.5%. Full compatibility across all tested platforms
+confirms that HKD-Net’s footprint fits well within typical
+edge-hardware constraints, enabling practical deployment in
+resource-limited environments.
+2) Computational Efficiency and Performance Trade-offs:
+As shown in Table VI, HKD-Net student achieves a remarkable balance between performance and efficiency. With only
+0.0085 GFLOPs, it is 2.4× more computationally demanding
+than the lightest baseline TFTKD (0.0035 GFLOPs), yet
+delivers significantly superior F1 scores across all datasets.
+Compared to its teacher (0.0634 GFLOPs), the student reduces
+FLOPs by 86.6% while retaining over 97% of its F1 score. Furthermore, HKD-Net achieves inference latencies of 95–101ms.
+These confirms its practical viability for resource-constrained
+edge environments where detection accuracy and operational
+efficiency must be jointly satisfied.
+F. Adversarial Robustness Via Cross-Dataset Evaluation
+We consider the scenario where adversarial traffic manifests as novel attack patterns or modified traffic signatures
+that induce distribution shifts relative to the training data.
+To evaluate robustness under such realistic adversarial conditions, we trained HKD-Net on the CICDoHBrw2020 dataset
+and tested its performance on the original test set (baseline)
+and the CICIoT2023 dataset—which contains multiple attack
+categories not present during training (e.g., DDoS, Web-based,
+Spoofing). To ensure fair comparison, we converted multi-class
+tasks to binary classification (normal vs. adversarial) using
+dataset-specific normal class identification.
+
+LI et al.: HKD-Net: HIERARCHICAL KD BASED ON MULTI-DOMAIN FEATURE FUSION
+
+3153
+
+TABLE IV
+Q UANTITATIVE C OMPARISON OF PAIRED T-T ESTS W ITH A DAPTIVE W EIGHTS AND F IXED W EIGHTS
+
+TABLE V
+HKD-N ET E DGE -D EPLOYMENT R ESOURCE R EQUIREMENTS
+
+TABLE VI
+C OMPUTATIONAL C OMPLEXITY C OMPARISON OF D IFFERENT M ETHODS ON T HREE DATASETS
+
+TABLE VII
+C ROSS -DATASET ROBUSTNESS E VALUATION O F
+HKD-N ET U NDER D ISTRIBUTION S HIFT
+
+Fig. 8. Loss curves of the student model under two strategies: output layer
+distillation and complete distillation (including alignment of output layer and
+intermediate layer features).
+
+Fig. 7. Comparison of training/validation loss evolution between the teacher
+model and the student model.
+
+Table VII presents the cross-dataset evaluation results. The
+student model maintains strong detection capability on unseen
+attack types, achieving 99.00% detection rate on CICIoT2023
+(containing DDoS, Web attacks, etc. not present in training).
+Notably, on the same-distribution CICDoHBrw2020 test set,
+the model achieves 99.92% accuracy and 99.98% detection
+rate, outperforming its original performance. These results
+validate that knowledge distillation effectively enhances the
+student model’s generalization to unseen traffic variations.
+Crucially, achieving a 99.00% detection rate on entirely absent
+attack patterns demonstrates HKD-Net’s robustness against
+adversarial traffic, even under significant distribution shift
+from known attacks.
+G. Training Process and Knowledge Migration Analysis
+In order to thoroughly analyze the optimization mechanism
+and knowledge transfer effect of the HKD-Net model, this
+
+Fig. 9. t-SNE visualization of the distribution of teacher and student model
+features.
+
+section conducts a systematic study from three dimensions:
+loss function convergence characteristics, feature space evolution, and dynamic weight analysis.
+1) Loss Function Convergence Characteristics: As shown
+in Figure 7, the teacher model exhibits rapid and stable
+convergence, while the student trained solely with output-layer
+distillation shows slower initial convergence and fluctuating
+validation loss. A further comparison in Figure 8 demonstrates
+that introducing intermediate feature alignment and adaptive weighting significantly accelerates the student model’s
+
+3154
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 10. Epoch change curves of dynamic weights on various datasets.
+
+convergence and stabilizes its validation loss compared to
+using output-layer distillation alone. These results confirm
+that our hierarchical distillation strategy effectively facilitates
+knowledge transfer and enables the student model to better
+approximate the teacher’s performance.
+2) Feature Space Evolution: We use the t-SNE algorithm
+to visualize the features of the key layers to present the differences and evolutionary process between the teacher model and
+the student model in the feature space. The results are shown in
+Figure 9. The teacher model exhibits compact, well-separated
+clusters across spatial, temporal, and frequency domains.
+In contrast, the student trained with only output distillation
+shows dispersed and overlapping distributions. Under full
+hierarchical distillation, the student’s features progressively
+align with the teacher’s, forming more discriminative clusters.
+This demonstrates that intermediate feature alignment and
+adaptive weighting effectively guide the student to learn richer
+and more structured representations, contributing to improved
+detection performance.
+3) Dynamic Weight Analysis: As depicted in Figure 10,
+the adaptive weights for spatial, temporal, frequency, and
+fusion domains evolve distinctly across datasets, reflecting
+domain-specific feature importance. For instance, frequency
+weights rise rapidly on CICDoHBrw2020, while fusion
+weights dominate early training on Kitsune and CICIoT2023.
+Weights gradually stabilize as training proceeds, with each
+dataset reaching a distinct equilibrium. This demonstrates the
+mechanism’s ability to dynamically recalibrate modal contributions based on dataset characteristics, thereby optimizing
+fusion performance. Moreover, modalities assigned higher
+weights correlate strongly with improved detection performance, confirming that the weighting strategy successfully
+prioritizes the most discriminative features per scenario.
+V. D ISCUSSION
+This study aims to address the effectiveness of balancing the
+detection accuracy and computational efficiency of network
+intrusion detection on resource constrained devices. Unlike
+conventional knowledge distillation methods, our framework
+introduces a hierarchical distillation strategy that explicitly aligns intermediate-level feature representations across
+temporal, spatial, and frequency domains. Additionally, by
+leveraging gated networks to adaptively assign weights to the
+contributions of various feature domains, we can construct
+
+representations that are more context-aware and discriminative. Experimental results validated the effectiveness of our
+approach in various datasets, including Kitsune, CIRA-CICDoHBrw2020, and CICIoT2023. The student model with only
+0.278M parameters and 0.0064 GFLOPs, achieves comparable accuracy to the teacher and consistently outperforms
+lightweight baselines like TFTKD across all datasets (e.g.,
++10.6% in F1-score on Kitsune). This design enables the
+lightweight student model to inherit the teacher’s comprehensive representational capacity across multiple domains.
+One potential limitation of our research is that the robustness of HKD-Net to novel zero day attacks has not been
+validated, as the model was trained and tested on known
+attack types. Second, although we have conducted resource
+feasibility analysis on simulated edge devices (as shown in
+Table V), the actual deployment of HKD-Net on physical edge
+hardware under sustained operational load requires further
+validation. Real-world deployment may encounter constraints
+not captured in our server environment, including memory
+bandwidth limitations and variable power budgets. In the
+future, we plan to integrate an online incremental learning
+framework into HKD-Net, enabling the model to continuously
+adapt to emerging attack patterns without costly full retraining.
+Meanwhile, we will implement HKD-Net on physical edge
+devices to conduct rigorous benchmarking of its real-time
+inference latency, power consumption, and long-term stability
+under realistic network conditions.
+VI. C ONCLUSION
+In this paper, we propose HKD-Net, a hierarchical knowledge distillation framework for efficient network intrusion
+detection on resource-constrained edge devices. By integrating
+temporal, spatial, and frequency domain feature extraction
+with a dynamic gating mechanism, HKD-Net constructs a discriminative multi-domain representation. Through hierarchical
+distillation that aligns both output logits and intermediate
+features, the lightweight student model achieves performance
+comparable to the teacher while reducing parameters by
+74.68% and maintaining low computational cost. Experimental
+results on three public datasets demonstrate that HKD-Net
+outperforms state-of-the-art methods in accuracy and F1-score
+while significantly lowering false positive and false negative
+rates. The model also exhibits efficient resource usage, confirming its suitability for edge deployment. In future work,
+we will focus on real-world edge validation and extend
+
+LI et al.: HKD-Net: HIERARCHICAL KD BASED ON MULTI-DOMAIN FEATURE FUSION
+
+HKD-Net towards open-world scenarios, including robustness
+testing against zero-day attacks and the integration of incremental learning for adaptive threat detection.
+R EFERENCES
+[1]
+
+P. Garcı́a-Teodoro, J. Dı́az-Verdejo, G. Maciá-Fernández, and
+E. Vázquez, “Anomaly-based network intrusion detection: Techniques,
+systems and challenges,” Comput. Secur., vol. 28, nos. 1–2, pp. 18–28,
+Feb. 2009.
+[2] A. Blaise, M. Bouet, V. Conan, and S. Secci, “Detection of zeroday attacks: An unsupervised port-based approach,” Comput. Netw.,
+vol. 180, Oct. 2020, Art. no. 107391.
+[3] G. Karatas, O. Demir, and O. K. Sahingoz, “Deep learning in intrusion
+detection systems,” in Proc. Int. Congr. Big Data, Deep Learn. Fighting
+Cyber Terrorism (IBIGDELFT), Dec. 2018, pp. 113–116.
+[4] R. Vinayakumar, M. Alazab, K. P. Soman, P. Poornachandran, A. AlNemrat, and S. Venkatraman, “Deep learning approach for intelligent
+intrusion detection system,” IEEE Access, vol. 7, pp. 41525–41550,
+2019.
+[5] A. Javaid, Q. Niyaz, W. Sun, and M. Alam, “A deep learning approach
+for network intrusion detection system,” in Proc. 9th EAI Int. Conf.
+Bio-Inspired Inf. Commun. Technol., 2016, pp. 21–26.
+[6] Y. Lecun, L. Bottou, Y. Bengio, and P. Haffner, “Gradient-based
+learning applied to document recognition,” Proc. IEEE, vol. 86, no. 11,
+pp. 2278–2324, 1998.
+[7] N. Wei et al., “An autoencoder-based hybrid detection model for
+intrusion detection with small-sample problem,” IEEE Trans. Netw.
+Service Manage., vol. 21, no. 2, pp. 2402–2412, Apr. 2024.
+[8] Z. Liu, C. Hu, and C. Shan, “Riemannian manifold on stream data:
+Fourier transform and entropy-based DDoS attacks detection method,”
+Comput. Secur., vol. 109, Oct. 2021, Art. no. 102392, doi: 10.1016/
+j.cose.2021.102392.
+[9] B. Zhao, X. Li, and X. Lu, “CAM-RNN: Co-attention model based RNN
+for video captioning,” IEEE Trans. Image Process., vol. 28, no. 11,
+pp. 5552–5565, Nov. 2019.
+[10] L.-H. Wang, Q. Dai, T. Du, and L.-F. Chen, “Lightweight intrusion
+detection model based on CNN and knowledge distillation,” Appl.
+Soft Comput., vol. 165, Nov. 2024, Art. no. 112118, doi: 10.1016/
+j.asoc.2024.112118.
+[11] Y. Wang, M. Yang, Y. Zhang, Z. Xu, J. Huang, and X. Fang, “A
+bearing fault diagnosis model based on deformable atrous convolution
+and squeeze-and-excitation aggregation,” IEEE Trans. Instrum. Meas.,
+vol. 70, pp. 1–10, 2021.
+[12] P. Liang, L. Yang, Z. Xiong, X. Zhang, and G. Liu, “Multilevel intrusion
+detection based on transformer and wavelet transform for IoT data
+security,” IEEE Internet Things J., vol. 11, no. 15, pp. 25613–25624,
+Aug. 2024.
+[13] H. Ben Abdallah, C. J. Henry, and S. Ramanna, “1-dimensional polynomial neural networks for audio signal related problems,” Knowl.-Based
+Syst., vol. 240, Mar. 2022, Art. no. 108174.
+[14] R. Yao, N. Wang, Z. Liu, P. Chen, and X. Sheng, “Intrusion detection
+system in the advanced metering infrastructure: A cross-layer featurefusion CNN-LSTM-based approach,” Sensors, vol. 21, no. 2, p. 626,
+Jan. 2021.
+[15] C. F. Tsai, Y. F. Hsu, C. Y. Lin, and W. Y. Lin, “Intrusion detection
+by machine learning: A review,” Expert Syst. Appl., vol. 36, no. 10,
+pp. 11994–12000, 2009.
+[16] M. Almseidin, M. Alzubi, S. Kovacs, and M. Alkasassbeh, “Evaluation
+of machine learning algorithms for intrusion detection system,” in
+Proc. IEEE 15th Int. Symp. Intell. Syst. Informat. (SISY), Sep. 2017,
+pp. 277–282.
+[17] Y. Xu et al., “MDFF: Multi-domain feature fusion for anomaly
+recognition,” Adv. Eng. Informat., vol. 64, Mar. 2025, Art. no. 103047,
+doi: 10.1016/j.aei.2024.103047.
+[18] J. Kotak, I. Yankelev, I. Bibi, Y. Elovici, and A. Shabtai, “VPN-encrypted
+network traffic classification using a time-series approach,” IEEE Trans.
+Netw. Service Manage., vol. 22, no. 2, pp. 2225–2242, Apr. 2025, doi:
+10.1109/TNSM.2025.3543903.
+
+3155
+
+[19] C. Zha et al., “DM-IDS—A network intrusion detection method based
+on dual-modal fusion,” IEEE Trans. Netw. Service Manage., vol. 22,
+no. 4, pp. 3646–3661, Aug. 2025.
+[20] J. Yang, X. Jiang, Y. Lei, W. Liang, Z. Ma, and S. Li, “MTSecurity:
+Privacy-preserving malicious traffic classification using graph neural
+network and transformer,” IEEE Trans. Netw. Service Manage., vol. 21,
+no. 3, pp. 3583–3597, Jun. 2024.
+[21] M. Ayyat, T. Nadeem, and B. Krawczyk, “Class-aware neural networks for efficient intrusion detection on edge devices,” in Proc. 20th
+Annu. IEEE Int. Conf. Sens., Commun., Netw. (SECON), Sep. 2023,
+pp. 204–212.
+[22] G. D’Angelo and F. Palmieri, “Network traffic classification
+using deep convolutional recurrent autoencoder neural networks for
+spatial–temporal features extraction,” J. Netw. Comput. Appl., vol. 173,
+Jan. 2021, Art. no. 102890.
+[23] S. Das, A. M. Pasikhani, P. Gope, J. A. Clark, C. Patel, and B. Sikdar, “AIDPS: Adaptive intrusion detection and prevention system for
+underwater acoustic sensor networks,” IEEE/ACM Trans. Netw., vol. 32,
+no. 2, pp. 1080–1095, Apr. 2024.
+[24] R. Zhao, Y. Chen, Y. Wang, Y. Shi, and Z. Xue, “An efficient
+and lightweight approach for intrusion detection based on knowledge distillation,” in Proc. IEEE Int. Conf. Commun., Jun. 2021,
+pp. 1–6.
+[25] Z. Wang, Z. Li, D. He, and S. Chan, “A lightweight approach for
+network intrusion detection in industrial cyber-physical systems based
+on knowledge distillation and deep metric learning,” Expert Syst. Appl.,
+vol. 206, Nov. 2022, Art. no. 117671.
+[26] X. Wang, Z. Wang, E. Wang, and Z. Sun, “Spatial-temporal knowledge
+distillation for lightweight network traffic anomaly detection,” Comput.
+Secur., vol. 137, Feb. 2024, Art. no. 103636.
+[27] F. Ding, Y. Yang, H. Hu, V. Krovi, and F. Luo, “Dual-level knowledge
+distillation via knowledge alignment and correlation,” IEEE Trans.
+Neural Netw. Learn. Syst., vol. 35, no. 2, pp. 2425–2435, Feb. 2024,
+doi: 10.1109/TNNLS.2022.3190166.
+[28] N. AL-Nomasy, A. Alamri, A. Aljuhani, and P. Kumar, “Transformerbased knowledge distillation for explainable intrusion detection system,”
+Comput. Secur., vol. 154, Jul. 2025, Art. no. 104417, doi: 10.1016/
+j.cose.2025.104417.
+[29] R. Zhao et al., “Yet another traffic classifier: A masked
+autoencoder based traffic transformer with multi-level flow
+representation,” in Proc. AAAI Conf. Artif. Intell., 2023,
+pp. 5420–5427.
+[30] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An
+ensemble of autoencoders for online network intrusion detection,” in
+Proc. Netw. Distrib. Syst. Secur. Symp. (NDSS), San Diego, CA, USA,
+2018, pp. 1–15.
+[31] M. MontazeriShatoori, L. Davidson, G. Kaur, and A. H. Lashkari,
+“Detection of DoH tunnels using time-series classification of
+encrypted traffic,” in Proc. IEEE Int. Conf. Depend. Auton.
+Secure Comput. Int. Conf. Pervasive Intell. Comput. Int. Conf.
+Cloud Big Data Comput. Int. Conf. Cyber Sci. Technol. Congr.
+(DASC/PiCom/CBDCom/CyberSciTech), Aug. 2020, pp. 63–70, doi:
+10.1109/DASC-PICom-CBDCom-CyberSciTech49142.2020.00026.
+[32] E. C. P. Neto, S. Dadkhah, R. Ferreira, A. Zohourian, R. Lu, and
+A. A. Ghorbani, “CICIoT2023: A real-time dataset and benchmark
+for large-scale attacks in IoT environment,” Sensors, vol. 23, no. 13,
+p. 5941, Jun. 2023, doi: 10.3390/s23135941.
+[33] R. Johnson and T. Zhang, “Deep pyramid convolutional neural networks for text categorization,” in Proc. 55th Annu. Meeting Assoc. Comput. Linguistics (Long Papers), vol. 1, 2017,
+pp. 562–570.
+[34] Z. Wang, H. Chen, S. Yang, X. Luo, D. Li, and J. Wang, “A lightweight
+intrusion detection method for IoT based on deep learning and dynamic
+quantization,” PeerJ Comput. Sci., vol. 9, p. e1569, Sep. 2023, doi:
+10.7717/peerj-cs.1569.
+[35] M. S. Ataa, E. E. Sanad, and R. A. El-Khoribi, “Intrusion detection in
+software defined network using deep learning approaches,” Sci. Rep.,
+vol. 14, no. 1, Nov. 2024, Art. no. 29159.
+[36] N. Bayat, W. Jackson, and D. Liu, “Deep learning for network traffic
+classification,” 2021, arXiv:2106.12693.
+PAPER_TEXT

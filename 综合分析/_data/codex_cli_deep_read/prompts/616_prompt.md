@@ -1,0 +1,1593 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [616] BAPTISM: A Robust Framework for Encrypted Malicious Traffic Identification With Low-Quality Training Data
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：616
+题名：BAPTISM: A Robust Framework for Encrypted Malicious Traffic Identification With Low-Quality Training Data
+年份：2025
+DOI：10.1109/tifs.2025.3648170
+来源：IEEE Transactions on Information Forensics and Security
+PDF：paper/10.1109_TIFS.2025.3648170.pdf
+已有粗分类：恶意流量、暗网与攻击检测
+二级关联：无
+相关性：强相关，分数 12
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\616.txt
+- 原始字符数：78074
+- 本次发送字符数：78074
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+960
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+BAPTISM: A Robust Framework for Encrypted
+Malicious Traffic Identification With
+Low-Quality Training Data
+Xiang Luo , Chang Liu , Gang Xiong , Gaopeng Gou, Zhen Li, Junzheng Shi, Li Guo, and Binxing Fang
+
+Abstract—Machine learning (ML) is highly effective for
+accurate encrypted malicious traffic identification by using highquality training data. In fact, obtaining such data is costly and
+challenging. As a result, many ML-based models are inevitably
+trained on low-quality data and perform poorly. To enhance
+performance, some methods utilize various sample selection techniques to choose confident samples for model training. However,
+they often rely on a single metric for this selection, which restricts
+their adaptability across diverse datasets and noise conditions.
+In this paper, we propose a robust framework BAPTISM for
+identifying encrypted malicious traffic with low-quality training
+data. Particularly, BAPTISM selects a suitable base model for
+each task, and trains it with early stopping to generate traffic
+representation before overfitting occurs. Then, we devise an
+adaptive metric selection strategy to select confident samples. By
+employing two metrics (JSD and CSD) to assess the characteristic
+of traffic representation from distinct perspectives, we find the
+more proper metric for each class and apply it for confident
+sample selection. According to the confident samples and selected
+metric for each class, we develop a label correction tactic which
+adapts to class nature to improve the quality of training data.
+Finally, we employ parallel training strategy to train the base
+model with the corrected data, further mitigating the impact of
+low-quality data. We conduct experiments across three real-world
+malicious traffic datasets with various noise settings. The results
+demonstrate that BAPTISM is compatible with different base
+models and outperforms across noise ratios ranging from 20%
+to 90%. Meanwhile, BAPTISM consistently selects the confident
+samples with the highest purity and volume under each setting.
+Index Terms—Encrypted malicious traffic, noisy label, low
+quality data, intrusion detection, deep learning.
+
+I. I NTRODUCTION
+ALICIOUS network traffic has been implicated in
+numerous security incidents [1], such as data breaches
+and extortion, underscoring the critical need for effective identification methods. Moreover, Zscaler indicates that
+
+M
+
+Received 23 March 2025; revised 19 September 2025; accepted
+16 December 2025. Date of publication 24 December 2025; date of current
+version 14 January 2026. This work was supported by the National Natural
+Science Foundation of China under Grant 62402492. The associate editor
+coordinating the review of this article and approving it for publication was
+Dr. Li Lu. (Corresponding author: Chang Liu.)
+Xiang Luo, Chang Liu, Gang Xiong, Gaopeng Gou, Zhen Li, Junzheng
+Shi, and Li Guo are with the Institute of Information Engineering, Chinese
+Academy of Sciences, Beijing 100085, China, and also with the School of
+Cyber Security, University of Chinese Academy of Sciences, Beijing 100049,
+China (e-mail: luoxiang@iie.ac.cn; liuchang@iie.ac.cn; xionggang@iie.ac.cn;
+gougaopeng@iie.ac.cn; lizhen@iie.ac.cn; shijunzheng@iie.ac.cn; guoli@iie.
+ac.cn).
+Binxing Fang is with Hainan Province Fang Binxing Academician
+Workstation, Hainan 571924, China (e-mail: fangbx@cae.cn).
+Digital Object Identifier 10.1109/TIFS.2025.3648170
+
+approximately 87% of cyber threats are now delivered over
+encrypted channels in 2024 [2], seriously challenging the
+conventional methods based on plaintext payload analysis
+[3]. To address this issue, contemporary research has pivoted
+toward machine learning (ML) techniques that leverage behavioral characteristics and side-channel information to develop
+effective identification models by supervised-learning [4], [5],
+[6], [7], [8], [9], [10], [11], [12], [13], [14], [15].
+However, all the mentioned ML-based methods rely on
+high-quality training data. For clarity, in this paper, datasets
+with fully accurate labels are termed high-quality data, and
+samples with correct labels are termed clean samples. Conversely, datasets containing mislabeled samples (also referred
+to as noisy samples) are considered low-quality data. In
+practice, ensuring label correctness in malicious traffic datasets
+presents significant challenges. Active annotation methods,
+which rely on expert knowledge, not only incur high manual costs but also heavily depend on the experts’ personal
+interpretation of the data. Moreover, attackers continuously
+employ techniques such as encryption and obfuscation to
+conceal network traffic characteristics, further complicating
+accurate dataset annotation. On the other hand, passive
+annotation methods, which leverage host-based forensic logs
+and external threat intelligence feeds (e.g., IP blacklists),
+become less reliable over time due to the constantly evolving
+nature of cyber-attacks. Therefore, regardless of the annotation
+method employed, noisy samples inevitably arise. As a result,
+ML-based methods are inevitably trained on low-quality data,
+leading to performance degradation.
+To tackle the issue of low-quality training data, various
+approaches have been proposed. The core idea behind these
+methods is to first select a subset of samples with highly
+reliable labels (referred to as confident samples) based on
+their designed separation metric, or subsequently leverage
+these samples to improve the overall label quality of the
+dataset before model training. Therefore, these methods can be
+divided into confidence-based methods [16], [17], [18], [19]
+and feature-based methods [20], [21], [22], [23], [24], [25]
+based on their separation metrics. Confidence-based methods
+focus on the local patterns, whereas feature-based methods
+consider the global patterns of latent features. Nevertheless,
+existing methods still face several common issues: (1) These
+methods are dependent on specific model architectures and
+cannot be easily adjusted for different identification tasks. (2)
+These methods typically rely solely on a fixed metric for
+
+1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+LUO et al.: BAPTISM: A ROBUST FRAMEWORK FOR ENCRYPTED MALICIOUS TRAFFIC IDENTIFICATION
+
+confident sample selection without evaluating its suitability.
+(3) These methods results in a limited number of confident
+samples being available for model training, which adversely
+affects the efficiency.
+In this paper, we introduce a novel framework BAPTISM
+for encrypted malicious traffic identification with low-quality
+training data. BAPTISM operates independently of specific
+model architectures, allowing for choosing an appropriate base
+model for each task. It consists of four coupled components.
+First, we implement early representation by using the base
+model trained with early stopping, generating traffic representation before overfitting on noisy samples. Second, we
+propose an adaptive metric selection strategy for confident
+sample selection in each class instead of using single metric.
+In particular, we utilize both Jensen-Shannon Divergence
+(JSD) and Confidence Sample Distance (CSD) to evaluate
+traffic representation nature jointly. We assess the separation
+performance of these two metrics by analyzing the mean and
+variance of JSD values between sample clusters for each class,
+then select the more suitable one and apply for confident
+sample selection. Third, we conduct label correction tailored to
+the confident samples and the selected metric for each class,
+thereby improving the label quality of the training data. In
+addition to utilizing a centroid-based correction approach, we
+develop a KNN-based correction method specifically designed
+for traffic classes where JSD is used for selecting confident
+samples, better accommodating their loose distribution in
+latent space. Fourth, we apply parallel training to train a
+the base model with the corrected data, further reducing the
+impact of noisy samples. We initialize two base models with
+different parameters and train them simultaneously. During
+each training epoch, we dynamically select low-loss samples
+and mutually update each other’s parameters. We finally select
+the better-performing one for identification.
+In summary, our contributions are as follows:
+• We propose a novel framework BAPTISM for identifying encrypted malicious traffic using low-quality training
+datasets. BAPTISM is independent of specific model
+architectures and adapts to different base models for each
+task. Moreover, it integrates early stopping and parallel
+training strategies to mitigate the impact of noisy samples.
+• We propose an adaptive metric selection strategy for
+confident sample selection instead of using only one
+metric. We assess the separation performance of JSD and
+the CSD by analyzing the characteristics of the divided
+clusters, which enables us to select the more proper metric
+for each class and effectively filter confident samples.
+• We introduce a label correction tactic tailored to the
+selected metrics and confident samples to improve dataset
+quality. We establish varying label correction strategies
+based on the reliability of the centroids of the confident
+samples, including directly using the nearest centroid’s
+class or seeking additional nearby confident samples.
+• We evaluate BAPTISM against various comparison methods on different datasets with various noise ratios.
+The results show that BAPTISM adapts to different
+base models and outperforms across all experimental settings. Additionally, it effectively selects confident
+
+961
+
+samples with optimal purity and volume across various
+settings.
+The rest of this paper is organized as follows: Section II
+introduces the related work on encrypted malicious traffic
+identification. Section III clarifies the problem description.
+Section V presents our proposed BAPTISM framework. Section VI reports experimental results and analysis. Section IX
+discusses the false positives. Section X gives the conclusion.
+II. R ELATED W ORK
+A. Traditional Encrypted Malicious Traffic Identification
+Encrypted malicious traffic hides the plaintext payload,
+preventing identification via traditional methods like Deep
+Packet Inspection (DPI) [3]. To solve this problem, a series of
+methods have been developed, most of them share a similar
+design that profiles the behavior of encrypted traffic via manual
+feature engineering or automatic feature extraction and builds
+a ML-based classifier. For example, Rong et al. [9] propose an
+ensemble learning-based framework MalFinder for malicious
+traffic detection. They utilize statistical features and sequence
+features to describe the traffic while expanding the dimensions
+of these two types of features to enhance their capability
+for representing traffic data. Fu et al. [11] propose Whisper
+that utilizes the sequential information of network traffic
+represented by the frequency domain features to achieves high
+detection accuracy.
+With the development of deep learning technology,
+Wang et al. [12] propose a novel intrusion detection system
+HAST-IDS, which first learns the low-level spatial features
+of network traffic using deep convolutional neural networks
+(CNNs) and then learns high-level temporal features using
+long short-term memory networks (LSTM). Cai et al. [14]
+propose BiTCN MHSA, which utilizes the multi-head selfattention mechanism to assign different weights to different
+subsequence of network traffic. This makes the model more
+focus on the characteristics of malicious network traffic. Hong
+et al. [15] propose MalDiscovery which constructs an attribute
+KNN graph according to the similarity of network traffic features to identify malicious traffic. To improve model stability
+and generalization across different network environments and
+time periods, Han et al. [26] propose an encrypted malicious
+traffic detection approach that combines reconstructive domain
+adaptation with adversarial hybrid neural networks, achieving
+effective cross-domain detection in 5G environments.
+The effectiveness of these methods relies on the correctness
+of the labels. Thus, the performance of these methods will be
+seriously affected by the low-quality training data.
+B. Encrypted Malicious Traffic Identification Under
+Low-Quality Training Data
+Inaccurate labels undermines the training of encrypted
+malicious traffic identification models, resulting in biased
+distribution learning. Consequently, numerous research efforts
+are directed towards addressing low-quality data by selecting
+a subset of confident samples for model training. Based on the
+way to select confident samples, they can be categorized into
+two types: confidence-based and feature-based methods.
+
+962
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+TABLE I
+S UMMARY OF R ELATED W ORK ON E NCRYPTED M ALICIOUS T RAFFIC I DENTIFICATION
+
+Confidence-based methods address the noisy label problem
+by analyzing the confidence scores of model predictions to
+identify confident samples. For example, Wang et al. [16]
+propose a consensus algorithm combined with a set of classifiers to filter noisy labeled traffic data. Furthermore, they
+improve the performance of noise elimination by estimating
+the reliability of the remaining training data before it builds
+a robust traffic classifier [17]. On the other hand, MMCo
+[18] and CMC [19] leverage multi modal information in
+heterogeneous networks to detect malicious traffic with noisy
+labels. During training, they identify samples on which the
+two networks make divergent predictions, as these samples
+are considered more informative. Only these high-information
+samples are used for updating model parameters, thereby
+enhancing the model’s robustness to noisy samples.
+Feature-based methods comprehensively analyze the distribution of latent features to select confident samples. For
+instance, ULDC [20] uses unsupervised neural networks to
+map samples to a low-dimensional space and the difference of
+these low-dimensional embeddings to evaluate the confidence
+of each sample. Yuan et al. propose BoAu [21], which alleviates the effect of noisy samples by encouraging the projections
+of hard samples to move closer to the decision center while
+increasing the inter-cluster distance during training. Building on this idea, they further introduce MCRe [22], which
+incorporates three different levels of constraints to achieve
+robust feature representation and enhance resilience to noisy
+samples. In addition, Yao et al. propose Gedss [23], which
+employs a JSD-based sample selection strategy combined with
+a semi-supervised learning approach to improve model performance in the presence of noisy labels. They further develop
+a novel two-stage framework for malicious traffic detection
+[24], which introduces a double-constrained similarity rule to
+provide a more comprehensive measure of similarity between
+small-loss samples. Additionally, their method constructs a
+topological graph to refine low-quality training data, further
+improving detection robustness. Meanwhile, RAPIER [25] is
+developed to fully utilize the different distribution of normal
+and malicious traffic data in the feature space to augment new
+data for model training in the case that the amount of training
+data is limited and non-negligible noisy samples exist.
+We compare the aforementioned methods with BAPTISM
+across different functional aspects, including Noise Handling
+(whether the method can address noisy samples), Sample
+
+Selection (whether the method can filter confident samples),
+Label Correction (whether the method can correct sample
+labels), Fine-grained Identification (whether the method can
+perform fine-grained identification of malicious traffic), and
+Model Agnostic (whether the method is independent of specific model architectures). The summary results are shown
+in Table I. For methods that do not address noisy samples
+[9], [10], [11], [12], [13], [14], [15], their performance is
+significantly impacted by low-quality training data. While
+other comparative methods [16], [17], [18], [19], [20], [21],
+[22], [23], [24], [25] do address noisy samples, they fail to
+comprehensively cover sample selection, label correction, and
+fine-grained identification. Moreover, they are dependent on
+specific model architectures, which limits their applicability.
+III. P ROBLEM D ESCRIPTION
+In this section, we formalize the problem of identifying
+malicious traffic using low-quality training data. Consider a
+Ntrain
+malicious traffic dataset Dtrain = {(xi , ŷi )}i=1
+used for training,
+D
+where xi ∈ R represents the i-th malicious network flow, and
+ŷi ∈ {1, · · · , C} is the observed label associated with xi . For
+each xi , there exists a single latent true label, denoted as yi ,
+which may or may not be consistent with the observed label ŷi .
+To clarify, we define network flows with correct labels (yi = ŷi )
+as clean samples, while those with incorrect labels (yi , ŷi )
+are referred to as noisy samples.
+Our goal is to train a model for the identification of
+encrypted malicious traffic using Dtrain that contain noisy
+samples. The model will then be evaluated on a test dataset
+Ntest
+Dtest = {xi }i=1
+to assess its ability to accurately detect
+malicious traffic.
+IV. P RELIMINARY A NALYSIS
+To motivate our proposed method, we first conduct a
+preliminary study to examine whether confident-based metric and distribution-based metrics, which are two types of
+common metric have been used to select confident samples
+introduced in Section II. Confident-based metrics (such as
+Jensen-Shannon Divergence (JSD) and Cross Entropy Loss
+(CE Loss)) capture local differences, while feature-based
+metric (such as distance to class centroid) reflect global
+relationships.
+We compare two representative baselines: CMC [19], which
+selects confident samples solely based on CE loss, and MCRe
+
+LUO et al.: BAPTISM: A ROBUST FRAMEWORK FOR ENCRYPTED MALICIOUS TRAFFIC IDENTIFICATION
+
+963
+
+TABLE II
+C OMPARISON OF CMC AND MCR E ON S ELECTING C ONFIDENT S AMPLES U NDER N OISE R ATIO OF 40%
+
+Fig. 1. The overall workflow of BAPTISM. In this figure, Confidence represents the confidence-based metrics, Feature metric represents the feature-based
+metric, and GMM represents Gaussian Mixture Model.
+
+[22], which relies exclusively on the distance to the class
+centroid. To evaluate their effectiveness in confident sample
+selection, we report three metrics: Precision, the proportion of
+clean samples among the selected ones; Recall, the proportion
+of clean samples correctly selected within each class; and
+F1, the harmonic mean of Precision and Recall. Experiments
+are conducted on the Malicious TLS, CICIDS-2017, and
+DoHBrw2020 datasets with a noise ratio of 40%. The results,
+summarized in Table II, demonstrate the sample selection
+performance of CMC and MCRe for representative malicious
+traffic classes across different datasets.
+The results reveal that the effectiveness of the two methods varies by class. From the perspective of the overall
+F1 score, CMC achieves clearly better results on certain
+classes such as Caphaw.A None TLS CC and DoS Hulk,
+whereas MCRe performs notably better on classes such as
+Panda.BZA!tr None TLS CC and Bot. This observation
+highlights the complementarity of the two metrics. Looking at
+the individual metrics, CMC generally yields higher Precision,
+indicating that the samples it selects tend to have higher purity.
+In contrast, MCRe achieves higher Recall in several cases,
+suggesting that it is able to retain a larger fraction of clean
+samples within each class.
+In summary, these results demonstrate that confidence-based
+and feature-based selection strategies emphasize different
+aspects of the data, providing complementary strengths.
+
+V. M ETHODOLOGY
+In this paper, we propose a robust framework BAPTISM to
+address the problem of low-quality training data in encrypted
+malicious traffic identification. It consists of four components
+as shown in Figure 1. The early representation component
+uses the appropriate base model trained with early stopping
+to generate traffic representation. Next, the confident sample
+selection component evaluates the characteristic of traffic
+representation based on bi-metrics and selects the more proper
+one to filter confident samples. Then, the label correction component improves the label quality of training data by applying
+correction tactic tailored to the confident samples and selected
+metric of each class. Finally, the parallel training component
+trains the base model with the corrected data. We introduce
+each component in detail in the following subsections.
+A. Early Representation
+Early representation component aims at selecting the appropriate base model F for each identification task and use
+it to generate the traffic representation for each sample in
+Dtrain before overfitting occurs with noisy samples. Guided by
+empirical evidence suggesting that neural networks prioritize
+learning clean patterns before memorizing noisy samples [27],
+we implement early stopping during training the base model
+with cross-entropy (CE) loss to prevent overfitting on noisy
+
+964
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+JSD produced by base model F on sample xi is defined as:
+
+
+
+
+1
+pi + ŷi
+1
+pi + ŷi
++ KL ŷi k
+(1)
+JSD(xi ) = KL pi k
+2
+2
+2
+2
+where KL(·k·) denotes the Kullback-Leibler divergence, and ŷi
+represents the one-hot encoded observed label.
+CSD quantifies the similarity between a sample and its
+observed class centroid. For each class c, we establish its
+confident feature centroid oc by averaging feature vectors of
+confident samples:
+Fig. 2. Cross-Entropy (CE) loss distribution for noisy and clean samples
+when training the base model for different epochs on Malicious TLS dataset
+with a noise ratio of 0.4. (a) Stop at epoch 10; (b) Stop at epoch 50; (c) Stop
+at epoch 100.
+
+samples. Using the Malicious TLS dataset as an example,
+Figure 2 illustrates how early stopping prevents overfitting to
+noisy samples at a noise ratio of 0.4. At epoch 10, there is a
+clear difference in CE loss between noisy and clean samples.
+As training progresses to epoch 50, the model increasingly
+adapts to the noisy samples, and the density of clean samples
+with low loss decreases. By epoch 100, some noisy samples
+have a lower CE loss than clean samples, indicating that the
+model has learned incorrect patterns.
+To this end, we restrict the training to a minimal number of
+initial epochs, typically ranging from 10 to 20 epochs. This
+ensures that F preliminarily extracts traffic representation from
+each sample with correct patterns.
+B. Confident Sample Selection
+Based on traffic representation, we select confident samples
+from each class in this component. This process is conducted
+in two stages. In the first stage, we evaluate the characteristics
+of traffic representations from two perspectives: the confidence
+of the model predictions and the feature distribution of the
+samples, and divide samples per class into two clusters based
+on these evaluations. In the second stage, we individually
+assess the effectiveness of each perspective in separating clean
+and noisy samples, and select the most suitable one to filter
+confident samples.
+Stage 1: bi-metric evaluation. We utilize JSD and CSD
+metrics to evaluate the traffic representation as they are
+complementary [28]: JSD is calculated based on prediction
+scores, which represent local characteristics, whereas CSD
+considers the distribution of traffic representation, reflecting
+global properties. By jointly utilizing both metrics, we are
+able to address the limitation of relying on only one metric,
+ensuring a more effective evaluation of traffic representation
+from distinct perspective.
+To compute these two metrics, we first partition the training
+dataset Dtrain into class-specific subsets Dc = {(x, ŷ)|ŷc = c}
+for each class c, where c = 1, · · · , C, based on the observed
+labels. For each instance (xi , ŷi ) within Dc , we utilize our
+trained base model F to obtain both the traffic representation
+vector f i and the corresponding probability distribution pi =
+[p1i , p2i , · · · , pCi ]. Here, pij denotes the predicted probability
+that the instance belongs to class j.
+
+|DcH |
+1 X
+ˇ
+ˇ
+f i,
+oc =
+ˇD H ˇ
+c
+
+˚
+DcH = xi |xi ∈ Dc , pci > τc
+
+(2)
+
+i=1
+
+where τc serves as the adaptive threshold computed through:
+|Dc |
+1 X
+wi × pci , wi = max(1, pci /pcc )
+(3)
+|Dc | i=1
+P
+Here, pcc = |D1c | x∈Dc pci represents the mean confidence
+for class c. The weighting scheme wi prioritizes samples with
+above-average confidence to enhance cluster purity. During
+training, both centroids oc and confident sample set DcH are
+dynamically updated alongside model parameters.
+Finally, the CSD metric for xi is computed as
+
+τc =
+
+CSD(xi ) = cos( f i , oŷi ) =
+
+fi T oŷi
+f i oŷi
+
+(4)
+
+This metric measures the cosine similarity between f i and oŷi .
+After calculating JSD and CSD for all samples, we employ
+a Gaussian Mixture Model (GMM) to divide the samples in
+Dc into two clusters based on these two metrics, respectively,
+for each class c in the training data. For example, based on
+1
+JSD, the samples in Dc can be divided into two clusters: C JS
+Dc
+2
+and C JS Dc . Similarly, based on CSD, the samples in Dc can
+1
+2
+be divided into CCS
+Dc and CCS Dc . For both C JS D and CCS D , we
+assume that cluster 1 corresponds to the cluster with the larger
+mean value, while cluster 2 corresponds to the cluster with the
+smaller mean value.
+Stage 2: metric and sample selection. Based on the separation results of JSD and CSD, we evaluate their performance
+and select the more suitable metric to filter confident samples.
+We can simplify this problem by determining whether JSD
+is the proper metric to separate clean samples from noisy
+samples. To achieve this, we compute the mean and variance
+1
+2
+of the JSD values within the two clusters CCS
+Dc and CCS Dc .
+Specifically, µ1 and σ1 represent the mean and variance of JSD
+1
+values for samples in CCS
+Dc , while µ2 and σ2 represent those
+2
+1
+for samples in CCS Dc . Generally, the cluster CCS
+Dc consists of
+samples with high similarity of feature centroids oc , which
+contains a higher proportion of clean samples, leading to a
+2
+lower mean JSD µ1 . Conversely, CCS
+Dc may include more
+noisy samples, resulting in a higher mean JSD µ2 . We present
+different conditions of proper metric selection in Figure 3 and
+provide a detailed illustration:
+(1) Condition 1: JSD is the proper metric. If σ1 < σ2 and
+µ1 < d < µ2 where d is the separation threshold between
+1
+2
+C JS
+Dc and C JS Dc , this indicates the presence of potential clean
+2
+samples in CCS
+Dc , which increases the standard deviation of
+
+LUO et al.: BAPTISM: A ROBUST FRAMEWORK FOR ENCRYPTED MALICIOUS TRAFFIC IDENTIFICATION
+
+965
+
+Fig. 3. Conditions of proper metric selection correspond to sample distribution.
+
+Algorithm 1 Adaptive Metric Selection Strategy
+Require: Sample set Dc , initial model F
+1: Obtain pi and f i for each sample xi in Dc .
+2: Compute JSD and CSD value for each sample xi in Dc .
+1
+2
+3: Obtain C JS
+Dc , C JS Dc and separation threshold d by applying GMM with values of JSD to all samples in Dc .
+1
+2
+4: Obtain CCS
+Dc , CCS Dc by applying GMM with values of
+CSD to all samples in Dc .
+5: Calculate the mean µ1 , µ2 , and standard variance σ1 , σ2
+1
+2
+of JSD for CCS
+Dc and CCS Dc .
+6: if σ1 < σ2 and µ1 ≤ d ≤ µ2 then
+2
+1
+2
+7:
+Cc1 ← C JS
+Dc , Cc ← C JS Dc
+8: else if µ1 ≥ d and µ2 ≥ d then
+1
+2
+2
+9:
+Cc1 ← C JS
+Dc , Cc ← C JS Dc
+10: else
+1
+2
+2
+11:
+Cc1 ← CCS
+Dc , Cc ← CCS Dc
+12: end if
+13: return Cc1 , Cc2
+
+JSD within this cluster. In this case, JSD should be used for
+sample partitioning. In addition, if both µ1 > d and µ2 >
+d, it suggests that both clusters contain relatively few clean
+samples, further supporting the use of JSD.‘
+(2) Condition 2: CSD is the proper metric. Conversely,
+1
+if σ1 ≥ σ2 and µ1 < d < µ2 , this suggests that CCS
+Dc
+contains a significant proportion of potential clean samples,
+and partitioning should be based on CSD. Lastly, if µ1 < d
+and µ2 < d, JSD-based partitioning may result in the loss of
+clean samples, making CSD the preferred criterion.
+The overall decision process for confident sample selection
+is summarized in Algorithm 1. After determining the metric,
+we obtain two sample clusters, Cc1 and Cc2 . If class c is
+separated by JSD, Cc2 is selected as the cleaner cluster, denoted
+as Dcconf . Otherwise, Cc1 is selected as Dcconf instead.
+C. Label Correction
+After obtaining the confident sample set Dcconf for each
+traffic class c, we utilize them to relabel the entire dataset
+to improve label quality. For the remaining samples x in
+
+Fig. 4. Motivation for label correction adapted to confident samples and
+selected metrics for each class.
+
+Dtrain , we first compute their distances to the confident feature
+centroids oc of each class and identify the closest class c x .
+We show the motivation of our label correction tactic in
+Figure 4. In case 1 of Figure 4, Class 1 and Class 2 utilize the
+CSD metric to select confident samples, resulting in compact
+distributions in latent space. Consequently, the centroids of
+these samples effectively represent the data distributions of
+their respective classes. In contrast, Class 3 employs the JSD
+metric for selecting confident samples, leading to a more
+dispersed sample distribution and thus, a less reliable centroid.
+For instance, as shown in case 2 of Figure 4, although
+Sample 1 is closest to the centroid of Class 3, there are few
+actual confident samples from Class 3 in its vicinity. Instead,
+it is surrounded by numerous confident samples from Class 1,
+prompting us to correct its label to Class 1. On the other hand,
+Sample 2 is closest to the centroid of Class 3 and is indeed
+surrounded by a significant number of confident samples from
+Class 3, validating the use of Class 3 for its label correction.
+Based on the above motivation, we present a detailed
+label correction process as follows. As depicted in case 1 of
+Figure 4, if the confident samples of class c x are selected
+based on metric CSD, it indicates that the feature centroid
+
+966
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Algorithm 2 Parallel Training
+Require: Two base neural networks F1 , F2 with parameters
+N
+θ1 , θ2 ; training data Dtrain = {(xi , ŷi )}i=1
+; learning rate η;
+batch size Bs ; remember rate function λ(e)
+1: for e in (1, . . ., epochs) do
+2:
+Shuffle Dtrain and divide into mini-batches
+3:
+for n in (1, . . ., t) do
+Bs
+4:
+Fetch n-th mini-batch B = {(xi , ŷi )}i=1
+5:
+Compute per-sample losses:
+6:
+`1 = Lce (B; F1 )
+7:
+`2 = Lce (B; F2 )
+8:
+Select small-loss samples:
+9:
+B1 ← top bλ(e)Bs c samples with smallest `1
+10:
+B2 ← top bλ(e)Bs c samples with smallest `2
+11:
+Update parameters using opposite model’s selection:
+12:
+θ1 ← θ1 − η∇θ1 Lce (B2 ; F1 )
+13:
+θ2 ← θ2 − η∇θ2 Lce (B1 ; F2 )
+14:
+end for
+15: end for
+16: return θ1 , θ2
+
+of c x effectively represents the distribution of network flows.
+Consequently, the centroid is reliable and we directly reassign
+the label of x to c x . Conversely, if the confident samples of
+class c are selected based on metric JSD, the feature centroid
+of this class may not be sufficiently reliable. As shown in
+case 2 of Figure 4, we instead search for the top-k confident
+samples in the entire confident samples that are closest to x in
+feature space. We then assign x the most frequently occurring
+class among these top-k samples. If two classes appear with
+equal frequency, we calculate the average distance from x to
+the confident samples of these two classes and assign x to the
+class with the smaller average distance.
+
+D. Parallel Training
+Using the corrected dataset, we employ parallel training
+to further mitigate the impact of noisy labels by utilizing a
+dual-model architecture. This means two distinct base models,
+which are initialized with the same architecture but different
+parameters, are trained simultaneously. In the training phase,
+both models receive the same input samples and generates
+corresponding predictions. This setup enables the models to
+learn from the same data from different perspectives. Each
+network updates its peer using a subset of small-loss samples
+(i.e., those with the lowest prediction losses), which effectively
+prioritizes clean samples early in training and mitigates the
+influence of noisy labels.
+The parallel training process is formally described in
+Algorithm 2. Let the two base models be denoted as F1
+and F2 . During training, both models make predictions on
+all samples in each mini-batch B s and select those with
+low prediction loss for model updates. Parameter λ is used
+to control the ratio of samples for model updates, and this
+parameter is decreased monotonically with epoch in the range
+of [0.5, 0.9]. We utilize the cross-entropy loss Lce to evaluate
+
+prediction loss which is defined as
+|B|
+
+Lce (B; F) = −
+
+C
+
+
+1 XX
+ŷi,c log F(xi ; θ)c
+|B|
+
+(5)
+
+i=1 c=1
+
+where F(xi ; θ)c is the predicted probability of class c from
+network F for the input sample xi , and ŷi,c is the corresponding
+observed label yi on class c. Finally, we evaluate the identification performance of both models on the corrected data and
+select the better one as the final model.
+VI. E XPERIMENT AND E VALUATION
+A. Experimental Setup
+1) Dataset: We use the following datasets for evaluation:
+• CICIDS-2017 [29] is a widely-used intrusion detection
+dataset that records the network traffic generated by
+hundreds of hosts in an internal network and includes the
+most common attacks such as Web based, Brute force,
+DoS, DDoS, Infiltration, Bot and Scan.
+• Malicious TLS [21] is a encrypted malicious traffic
+dataset which contains traffic generated by 22 families
+of malicious code active between 2018 and 2021. In
+addition, benign TLS traffic is also contained in this
+dataset. All of this traffic was collected from a real
+network and was encrypted by TLS.
+• DoHBrw2020 [30] includes normal and malicious DNSover-HTTPS (DoH) encrypted traffic. The normal traffic
+is generated by querying benign DNS servers using the
+DoH protocol, including Cloudflare and Google. The
+malicious DoH traffic is generated by three different DNS
+tunneling tools including dns2tcp, DNSCat2, and Iodine.
+2) Noise Settings: We adopt symmetrical noise settings
+to create different experimental scenarios, where malicious
+traffic can be mislabeled as benign while benign traffic can be
+mislabeled as malicious as well. The quality of labels depends
+entirely on the capacity of entities and results in different ratios
+of noise labels. In short, in symmetric noise scenarios, all
+traffic labels have a certain probability of flipping.
+3) Implementation: We implement our identification system and all baseline methods using Python 3.8.13. The
+libraries used include NumPy 1.22.3, PyTorch 1.12.0, scikitlearn 1.1.1, and CUDA 11.8. The models are executed on a
+R XeonO
+R Silver 4110
+Linux server equipped with an IntelO
+CPU (2.10GHz) and a Tesla V100-PCIE-32GB GPU. We
+provide a detailed description of the choice of the base model
+and its parameters in Appendix A. For base model training,
+the training duration are set at 10 epochs for Malicious TLS
+and CICIDS-2017 to avoid overfitting, while the DoHBrw2020
+dataset undergoes a longer, 20 epochs training to accommodate
+its complex features. d is set to 0.5 in confident sample
+selection. k is set as 10 during label correction. Following
+the experimental setup in [22], each testing dataset is split in
+a 7:3 ratio. Labels of certain samples in the training set are
+intentionally flipped and used as input for BAPTISM during
+training. Meanwhile, the test set is strictly held out from
+training and does not contain noisy labels, serving exclusively
+for model evaluation. To ensure robustness, all experiments are
+conducted five times with independently randomized training
+
+LUO et al.: BAPTISM: A ROBUST FRAMEWORK FOR ENCRYPTED MALICIOUS TRAFFIC IDENTIFICATION
+
+and testing splits, and the final results are reported as the
+average over these five runs. During the parallel training phase,
+the number of training epochs is set to 200.
+4) Comparison Methods: We compare the performance of
+BAPTISMs with the following relevant methods.
+• Co-Teaching [27] utilizes dual neural networks to address
+low quality training data. Each network selects what it
+considers the most reliable data samples from each batch
+and shares them with its peer during training.
+• Co-Learning [31] uses multiple learners to handle noisy
+samples. Each model trains on a subset of the data and
+shares high confidence predictions with others, which
+helps improve accuracy and resistance to noisy samples
+by leveraging diverse learner strengths.
+• Co-teaching+ [32] extends the Co-Teaching method by
+introducing a disagreement-based sample selection mechanism, allowing two networks to collaboratively learn
+from clean samples while reducing the negative impact
+of noisy samples, thereby improving model robustness.
+• DivideMix [33] models the per-sample loss distribution
+with a Gaussian Mixture Model to distinguish clean
+and noisy labels, and leverages semi-supervised learning
+with MixMatch-based label refinement and augmentation,
+achieving strong robustness against high noise ratios
+while enhancing model generalization.
+• BoAu [21] is a boundary-augmentation based approach
+for malicious traffic identification. It uses all samples
+involved in decision space construction and decision
+boundary calculation, enabling the model to maintain a
+high noise tolerance.
+• MMCo [18] is a multi-modal co-training approach for
+malicious traffic detection with noisy labels. It exploits
+multiple modalities of traffic data and employs parallel,
+heterogeneous networks to leverage complementary information. By maintaining sufficient disagreement between
+the networks during training, MMCo mitigates the risk of
+self-confirmation on noisy samples.
+• CMC [19] is a noisy malicious traffic detection method
+based on cross-modal representation consistency. It introduces a consistency constraint between different modal
+representations to guide confident sample selection.
+By enforcing agreement across modalities, the method
+reduces the risk of overfitting to noisy labels and improves
+the purity of selected samples.
+• MCRe [22] unifies data cleaning and robust training into
+an ideal representation function approximation. It defines
+three constraints to let model avoids irrational domain
+knowledge extraction and ensures strong noisy samples
+robustness of the representation network.
+• RAPIER [25] leverage the difference in distribution
+between benign and malicious traffic data to find the
+potential clean samples and estimate the possible location
+of each type of data. To enable a more comprehensive
+comparison with existing methods, we have extended
+this approach to support multi-class classification. This
+extension involves performing density analysis and sample selection separately for each class of malicious
+traffic. The confident samples obtained from each class
+
+967
+
+are then aggregated for label correction and model
+training.
+B. Evaluation Metrics
+We employ precision (PRE), recall (RE), F1 score (F1), and
+Macro Accuracy to evaluate the performance of each method.
+Suppose the training dataset contains C classes of traffic. Let
+T Pi , T Ni , FPi , and FNi respectively denote the true positives,
+true negatives, false positives, and false negatives for the ith
+traffic class (i ∈ {1, · · · , C}). For each class i, precision, recall,
+and F1 score are calculated as
+T Pi
+T Pi
+, REi =
+PREi =
+T Pi + FPi
+T Pi + FNi
+2 × Precisioni × Recalli
+F1i =
+Precisioni + Recalli
+To mitigate the effects of class imbalance, we employ weighted
+averages for precision, recall, and F1 score for evaluation
+by weighting each per-class metric according to the class’s
+support and normalizing by the total sample size.
+Macro Accuracy is obtained by averaging the accuracy of
+each class, where the per-class accuracy is calculated by
+T Pi + T Ni
+T Pi + T Ni + FPi + FNi
+This metric ensures that equal importance is allocated to each
+class of malicious traffic, facilitating a balanced evaluation of
+model performance.
+Accuracyi =
+
+C. Comparison Experiment
+We systematically present the precision and recall of all
+comparison methods under varying noise ratio conditions,
+spanning from 20% to 90%, in Table III. Additionally, we
+illustrate the F1-score and macro-accuracy respectively in
+Figures 5 and Figure 6. Here, noise ratio is defined as the
+proportion of mislabeled samples in all training samples. This
+comprehensive evaluation yields several key observations:
+(1) BAPTISM exhibits superior performance across
+all evaluation datasets and noise ratios, demonstrating
+adaptability to different tasks and experimental settings.
+In Table III, BAPTISM achieves the best precision and recall
+across various datasets and noise ratio settings. Additionally,
+the method that performs second best varies under different
+settings, indicating that BAPTISM is robust to various settings.
+This sustained performance advantage can be attributed to the
+well-conceived overall design of BAPTISM, where each component contributes to mitigating the impact of noisy samples.
+(2) The model-agnostic property of BAPTISM enhances
+its scalability and adaptability across various identification
+scenarios. The three datasets we employ represent different
+scenarios: the Malicious TLS dataset primarily focuses on
+the communication behaviors of malware; the CICIDS-2017
+dataset concentrates on flood attacks; and the DoHBrw dataset
+represents a more challenging tunnel communication scenario.
+To accommodate these varied contexts, we adopt different
+base models for each scenario as mentioned in Appendix A,
+and achieves the best results across all three datasets. This
+demonstrates the generalizability of BAPTISM in diverse
+
+968
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+TABLE III
+T HE P RECISION (PRE) AND R ECALL (RE) OF A LL M ETHODS ON T HREE E VALUATION DATASETS U NDER VARIOUS N OISE R ATIOS (NR)
+
+Fig. 5. The F1 Score of all methods under different noise ratios on three evaluation datasets.
+
+identification scenarios. Moreover, as evidenced in Table III
+and Figure 5, the performance of comparative methods across
+different identification scenarios is impacted by their dependence on specific model architectures. For instance, BoAu and
+MCRe utilize the MLP-based networks, they perform well on
+the Malicious TLS and CICIDS-2017 datasets. However, they
+falter on the more complex DoHBrw dataset, where the MMCo
+and CMC surpasses them as they employ more sophisticated
+CNN and LSTM network to represent traffic.
+(3) The label correction strategy of BAPTISM significantly enhances the quality of training data, thereby
+improving the model’s performance. Although methods
+such as Co-teaching, Co-learning, MMCo, and CMC also
+employ similar parallel training approaches, they struggle to
+effectively mitigate the impact of noisy samples when the noise
+ratio exceeds 40%, as shown in Figure 5. Furthermore, the
+Co-teaching and Co-learning methods even totally lose their
+identification ability as the noise ratio increases. In contrast,
+BAPTISM conducts label correction before parallel training,
+which significantly enhances the quality of the dataset. Consequently, this results in a model with superior identification
+performance following parallel training across all settings.
+
+(4) BAPTISM exhibits exceptional performance in identifying each class of malicious traffic by employing adaptive
+metric selection strategy for confident sample selection.
+As depicted in Figure 5, across three datasets, BAPTISM
+experiences a minimal F1 score degradation of only 0.05 as the
+noise ratio increases from 20% to 90%, demonstrating greater
+stability compared to other methods. Moreover, it consistently
+outperforms in terms of macro accuracy under various noise
+conditions as shown in Figure 6. Other methods, such as
+MCRe, MMCo, and CMC, rely on a single metric to select
+confident samples and maintain relatively stable F1 scores;
+however, their macro accuracy experiences a notable decline as
+noise ratios increase. Such a limitation highlights their reduced
+adaptability to class-specific characteristics.
+(5) Compared to RAPIER, BAPTISM effectively utilizes
+the limited label information available in low-quality data
+to achieve superior performance. RAPIER trains an unsupervised model on packet length sequences labeled as benign
+within the training dataset to explore the differences between
+benign and malicious traffic in latent space and to identify
+confident samples. However, this unsupervised approach not
+only overlooks the residual effective label information in
+
+LUO et al.: BAPTISM: A ROBUST FRAMEWORK FOR ENCRYPTED MALICIOUS TRAFFIC IDENTIFICATION
+
+969
+
+TABLE IV
+T HE A BLATION S TUDY R ESULTS ON M ACRO ACCURACY ON T HREE E VAL UATION DATASETS U NDER VARIOUS N OISE R ATIOS (NR)
+
+D. Ablation Study
+
+Fig. 6. The Macro Accuracy of all methods under different noise ratios on
+three evaluation datasets.
+
+the training data but is also inherently limited to binary
+classification, necessitating further extension to accommodate
+multi-class scenarios. Moreover, the unsupervised mechanism struggles to capture complex encrypted communication
+patterns, as malware often mimics normal encrypted communication behaviors. Consequently, it becomes increasingly
+ineffective in our experimental setup, particularly under elevated noise conditions, and has difficulty obtaining relatively
+pure confident samples. As a result, since the label correction
+module of RAPIER relies on the quality of confident samples,
+its performance is significantly affected when the quality of
+these samples is subpar, as shown in Table III and Figure 5.
+
+To demonstrate the effectiveness of each component in
+BAPTISM, we perform three separate ablation analysis experiments. The comparison models are used as follows: (1) Full
+component of BAPTISM (Full); (2) without parallel training
+(w/o PT); (3) without label correction (w/o LC); (4) without
+metric selection and only use CSD to filter clean samples (w/o
+JSD); (5) without metric selection and only use JSD to filter
+clean samples (w/o CSD). Figure 7 shows the F1 score of
+ablation study on three evaluation datasets under each noise
+ratio settings, while Table IV shows the corresponding macro
+accuracy results. We can draw the following conclusions:
+(1) BAPTISM with the full components outperforms other
+comparison models under all experimental settings, showing
+the soundness of our proposed framework. When we remove
+any other component of BAPTISM, the F1 decreases range
+from 0.05 to 0.25 and the macro accuracy decreases range
+from 0.014 to 0.058. This indicates the synergy of adaptive
+metric selection, label correction, and parallel training, which
+collectively enhance the model’s ability to accurately identify
+malicious traffic despite the presence of noisy samples.
+(2) From the results of BAPTISM without Parallel Training,
+we observe that this training strategy further mitigate the
+impact of noise samples. When the parallel training component
+is removed, the F1 score experiences a decrease ranging from
+0.1 to 0.5, while macro accuracy decreases from 0.02 to
+0.25. This performance degradation can be attributed to the
+effectiveness of using low-loss samples for model updates, as
+the corrected dataset still contains a certain number of noisy
+samples which will be discussed in section VI-E.
+(3) Excluding Label Correction component results in a performance degradation, highlighting a performance bottleneck
+when relying solely on the parallel training to address noisy
+samples. This underscores the importance of the volume of
+confident samples. Although utilizing parallel training can
+
+970
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 7. The F1 scores of all methods for ablation study under different noise ratios on three evaluation datasets.
+
+partially mitigate the impact of low-quality data, there remains
+a macro accuracy gap ranging from 0.037 to 0.152 compared
+to the full model, as shown in Table IV. Moreover, this
+performance gap widens as the noise ratio increases, further
+emphasizing the importance of this component.
+(4) The adaptive metric selection strategy is crucial for
+enhancing the model’s robustness. As shown in Table IV,
+whether using JSD alone or CSD alone, the model’s macro
+accuracy decreases, as each metric has varying effectiveness
+in selecting confident samples for different classes of malicious
+traffic. This demonstrates the need for metric selection, which
+allows for more suitable metric to be chosen for filtering
+confident samples, thereby improving the overall performance
+of the model. Furthermore, the results in Figure 7 illustrates
+that the model performance fluctuates and lacks stability.
+E. Performance on Confident Sample Selection
+To further analyze the performance advantages of BAPTISM, we also evaluate its effectiveness in confident sample
+selection and label correction. Among the comparison methods considered, MMCo, CMC, and RAPIER incorporate a
+confident sample selection mechanism. Specifically, MMCo
+and CMC utilize these selected samples to update the model,
+whereas RAPIER and our proposed method leverage confident
+samples to refine the labels of the entire dataset.
+We first demonstrate the advantages of BAPTISM in confident sample selection. As shown in Figure 8, BAPTISM
+consistently outperforms all compared methods by selecting
+a greater number of clean samples while containing fewer
+noisy samples. This results in a significant advantage in both
+the quantity and purity of the selected confident samples.
+Specifically, when the noise ratio ranges from 20% to 70%,
+over 90% of the samples selected by BAPTISM are truly clean.
+Even when the noise ratio exceeds 70%, although the number
+of noisy samples within the selected confident set increases,
+the number of clean samples remains substantially higher than
+that of all comparison methods.
+In contrast, the RAPIER method achieves moderate confident sample purity when the noise ratio is below 40%,
+but it selects fewer clean samples compared to BAPTISM.
+Moreover, across different datasets and noise settings, RAPIER
+consistently includes a considerable number of noisy samples
+in its selected samples, and this issue becomes more severe
+as the noise ratio increases. Meanwhile, MMCo and CMC
+achieve relatively high overall purity in confident sample selection. Compared to RAPIER, these two methods include fewer
+
+Fig. 8. The purity of confident samples obtained by all comparison methods
+under different noise ratio settings.
+
+noisy samples in their selected confident samples, thereby
+reducing their negative impact on model training. However,
+they select far fewer confident samples than BAPTISM,
+leading to insufficient training and suboptimal performance.
+This performance gap is particularly pronounced in macro
+accuracy, as certain malicious traffic classes inherently have
+fewer samples, and excessive filtering further reduces their
+representation.
+Furthermore, as illustrated in Figure 8, the sample purity of
+both MMCo and CMC decreases significantly when the noise
+ratio exceeds 70%. This demonstrates that in high noise ratio
+settings, the performance of sample selection strategies based
+on low loss is limited, which substantially impacts the model
+update stage due to the influence of noisy labels, thereby
+degrading overall model performance. Conversely, BAPTISM
+utilizes an adaptive metric selection strategy that still manages
+to obtain a sufficient number of confident samples with higher
+purity even in scenarios with high noise ratios. This capability
+underpins the superior performance of our framework. Regarding the RAPIER method, it employs a density-based sample
+selection strategy, which is particularly suitable for flood attack
+
+LUO et al.: BAPTISM: A ROBUST FRAMEWORK FOR ENCRYPTED MALICIOUS TRAFFIC IDENTIFICATION
+
+971
+
+Fig. 9. The correct label ratios after label correction under different noise ratio settings.
+
+scenarios. As evidenced in the CICIDS-2017 dataset, it performs best in sample selection, aligning with its characteristics.
+However, RAPIER’s performance deteriorates when dealing with more complex encrypted communication behavior
+data. This decline is notably apparent in the Malicious TLS
+dataset, where it almost fails at a noise ratio of 90%.
+F. Performance on Label Correction
+We further evaluate the model’s performance in label
+correction to demonstrate each model’s capability to refine
+low-quality training data. We conduct a comparative evaluation
+of BAPTISM and RAPIER, as other comparison methods do
+not include this process. Given a low-quality training dataset,
+we apply each method to correct the labels and compute the
+proportion of correctly labeled samples in the refined dataset.
+The label noise correction results are shown in Figure 9.
+BAPTISM significantly reduces the original noise ratio to
+lower levels. Across all noise settings, BAPTISM consistently increases the ratio of correct labels to over 80% on
+Malicious TLS and CICIDS-2017 datasets. On DoHBrw2020
+dataset, BAPTISM improves the ratio of correct labels by 2%
+to 34%. These experimental results demonstrate the robust
+adaptability of our proposed labeling strategy across diverse
+datasets and varying noise settings. In contrast, RAPIER
+exhibit a significant decline in label correction performance as
+the noise ratio increase. On Malicious TLS dataset, RAPIER
+almost lose their ability to correct training dataset.
+The factors leading to performance differences between
+these methods can be attributed to two main aspects: On the
+one hand, both BAPTISM and RAPIER rely on the quality
+of confident samples. As observed from the results in the
+previous chapter, when the noise ratio exceeds 60%, the
+confident samples selected by RAPIER contain a significant
+amount of noisy samples as shown in Figure 8, which greatly
+impacts their purity. This is the fundamental reason for the
+notable performance gap between RAPIER and BAPTISM
+after subsequent label correction phases. On the other hand,
+regarding label correction strategies, RAPIER trains a series of
+ML models on the selected confident samples and employs a
+voting mechanism for data label correction. The effectiveness
+of this step depends on the purity of the confident samples
+obtained in the previous step. Since the ML models they
+used do not specifically address noisy samples, their decisionmaking results are biased against the actual data distribution,
+leading directly to poor outcomes in label correction.
+We further elucidate the limitations of using machine
+learning methods to correct labels. As depicted in Figure 8,
+RAPIER selects confident samples with relatively high purity
+
+when the noise ratio is below 60%. However, as shown
+across various datasets in Figure 9, there is a noticeable
+discrepancy between the purity of the confident samples and
+their purity after label correction. This indicates that even a
+lower proportion of noisy labels can be detrimental to the performance of machine learning algorithms. With higher noise
+ratios, the accuracy of RAPIER’s label correction sharply
+declines, nearly rendering the label correction capability ineffective. Moreover, RAPIER almost fails in the case of the
+Malicious TLS dataset when the noise ratio exceeds 80%,
+due to the challenging nature of extracting encrypted communication characteristics. While RAPIER’s design primarily
+relies on analyzing network flow density to detect malicious
+activity, which is suitable for flood attacks, it lacks sufficient
+capability to mine communication characteristics, resulting in
+sub-optimal performance.
+VII. H YPER -PARAMETER S ENSITIVITY A NALYSIS
+A. Sensitivity to the Threshold d in Confident Sample
+Selection
+We investigated the sensitivity of our framework to the
+threshold parameter d used in confident sample selection.
+Intuitively, a larger value of d corresponds to selecting more
+samples as confident, while a smaller value enforces a stricter
+criterion and results in fewer selected samples. To analyze
+its effect, we evaluated three representative settings, d =
+0.25, 0.5, 0.75, across multiple datasets and noise ratios, with
+adopted as the default configuration in our framework.
+The results are summarized in Fig. 10. Across the three
+settings of d, the overall performance differences remain small,
+with the maximum variation in F1 not exceeding 0.15. This
+observation shows that the framework is reasonably robust
+to the choice of d within the range of [0.25, 0.75]. A closer
+inspection reveals several trends. When the noise ratio is below
+50%, setting d = 0.75 sometimes achieves higher performance,
+as a larger threshold allows more clean samples to be utilized
+for training. However, as the noise ratio increases, the performance of d = 0.75 degrades more rapidly, reflecting the
+higher risk of including noisy samples. On the other hand,
+d = 0.25 enforces stricter purity by reducing the number of
+confident samples, but this conservative strategy often leads to
+suboptimal results, highlighting that the quantity of confident
+samples is also crucial for robust training.
+B. Sensitivity to the Number of Neighbors k in Label
+Correction
+we further evaluated k in [1, 5, 10, 15, 20] on all evaluation
+datasets. As summarized in Fig 11, the overall performance
+
+972
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 10. The F1 score of different d in confident sample selection.
+
+Fig. 11. The F1 score of different k in label correction.
+
+of our method remains stable across the range k = 5 ∼ 20,
+suggesting that the framework is not highly sensitive to the
+exact value of k.
+The only consistent degradation appears when k = 1. In this
+case, the model relies on a single neighbor as the reference,
+which makes the estimation unstable and more vulnerable to
+noisy samples. By contrast, when more neighbors are considered (e.g., k ≥ 5), the reference distribution becomes smoother
+and more representative, leading to reliable label correction.
+Beyond k = 10, no persistent significant improvements were
+observed, indicating that moderately small values of k are
+sufficient in practice. This analysis demonstrates that our
+approach is robust to a wide range of k, and practitioners can
+select k within a reasonable interval (e.g., 5 ∼ 20) without
+significant performance variation.
+VIII. T HE C OMPLEXITY OF BAPTISM
+In this section, we analyze the complexity of BAPTISM.
+Let N be the total number of training samples, C the number
+of classes, D the feature dimension of each sample, |θF | the
+parameter count of the base modelPF, nc the number of
+confident samples in class c, Mconf = Cc=1 nc the total number
+of confident samples, R the number of samples to be relabeled
+(worst-case R = N), α ∈ [0, 1] the fraction of samples that
+trigger the fallback, E the number of training epochs, and
+Bs the mini-batch size. The computational cost of BAPTISM
+mainly arises from three components.
+A. Confident Sample Selection
+First, computing the feature vectors fi and predicted probabilities pi for all N samples via F requires O(N |θF |). Next,
+evaluating the JSD against one-hot labels over C classes costs
+O(NC). Constructing class centroids and computing the CSD
+over D-dimensional features costs O(ND). For each class,
+fitting a 2-component Gaussian Mixture Model (GMM) on the
+
+JSD and CSD scores using T EM EM iterations costs O(T EM N)
+in total. Finally, computing means and variances of JSD within
+the two CSD clusters and applying the selection rules is
+linear in the class size, O(N). Summing all contributions,
+the overall time complexity of confident
+sample selection
+
+is O N(|θF | + max{C, D} + T EM ) . The peak memory is
+dominated by storing features (N × D), predicted probabilities
+(N×C), and class centroids (C×D):S peak = O(ND+NC+CD).
+B. Label Correction
+Given the features and centroids already computed, assigning each sample to its nearest class centroid costs O(RCD). For
+the αR samples whose predicted class relies on the fallback
+mechanism, performing top-k voting over the confident sample
+pool via naive search costs O(αRMconf D). Therefore, the
+overall time complexity is O(RD(C + αMconf )), which in the
+worst case becomes O(N 2 D). The peak memory is dominated
+by storing the feature matrix (O(ND)), centroids (O(CD)), and
+the confident sample pool (O(Mconf D)).
+C. Parallel Training
+The time complexity of Parallel Training is dominated
+by the forward and backward passes of both base models,
+giving O(E · N · |θF |), where E is the number of epochs.
+Operations such as mini-batch shuffling and top-k sample
+selection are negligible compared to gradient computations.
+The peak memory usage is O(|θF | + Bs · D), accounting for the
+model parameters and a single mini-batch of feature vectors.
+In summary, the total
+ time complexity of BAPTISM can
+be approximated as O N(|θF | + max{C, D} + T EM ) + RD(C +
+
+αMconf ) + EN |θF | , with peak memory usage of O(ND +
+NC + CD + Mconf D + Bs D + |θF |). In practice, the dominant
+runtime cost comes from the forward and backward passes
+during Parallel Training, which scales linearly with the number
+of training samples and model parameters.
+
+LUO et al.: BAPTISM: A ROBUST FRAMEWORK FOR ENCRYPTED MALICIOUS TRAFFIC IDENTIFICATION
+
+973
+
+TABLE V
+T HE PARAMETERS OF THE BASE M ODEL FOR D IFFERENT I DENTIFICATION TASK
+
+Fig. 12. Confusion matrix of BAPTISM on the Malicious TLS dataset
+with a noise ratio of 40%. In this figure, the numbers 2 and 3 correspond
+to Caphaw.AH and Caphaw.A, while 8 and 9 represent Panda.BZA!tr and
+PandaZeusCC. We have marked the severe cases of misclassification with red
+boxes.
+
+Fig. 13. Full confusion matrix of BAPTISM on Malicious TLS Dataset with
+noise ratio of 0.4, where the numbers 2 and 3 correspond to Caphaw.AH and
+Caphaw.A, while 8 and 9 represent Panda.BZA!tr and PandaZeusCC.
+
+IX. D ISCUSSION
+In this section, we further discuss the limitations of our
+method. First, we conduct a more detailed analysis of the
+identification performance of each method. We find that all
+methods trained on low-quality training datasets struggle to
+accurately identify malicious traffic classes that belong to the
+same family. We illustrate this issue by examining the identification performance of each method on the Malicious TLS
+dataset, which comprises 22 classes of malicious traffic,
+under the noise ratio of 40%. Among these, Caphaw.AH and
+Caphaw.A belong to the Caphaw family, while Panda.BZA!tr
+and PandaZeusCC are part of the Panda family. Figure 12
+displays the confusion matrices for these four classes of
+malicious traffic for each compared method. Additionally, we
+present the performance of BAPTISM across all classes in
+Appendix B to better highlight the difficulty of distinguishing
+between malicious traffic from the same family.
+As demonstrated in Figure 12, although BAPTISM generates a relatively high number of false positives between
+these classes, it remains the optimal choice compared to
+other methods. This is because the alternative approaches
+consistently misclassify entire class as other classes. For
+instance, methods such as BoAu and RAPIER predominantly
+misclassify both Panda.BZA!tr and PandaZeusCC, erroneously
+categorizing them as other classes. Similarly, MCRe tends to
+completely misclassify the classes Caphaw.AH and Caphaw.A.
+Other comparative methods fail to differentiate accurately
+
+between these scenarios, demonstrating a common inability
+to distinguish these specific classes.
+The inability of existing methods to accurately identify
+these traffic classes stems from the inherent code reuse among
+malware variants within the same family, which results in
+similar traffic patterns and complicates differentiation, particularly when noisy samples are present. This phenomenon
+underscores the limitations of current methods in effectively
+identifying such closely related variants. To address this issue,
+one potential approach is to initially group these similar
+variants into broader families, facilitating more robust classification and analysis. Alternatively, incorporating additional
+expert knowledge could enhance the model’s ability to differentiate between these closely related classes. Further research
+is warranted to develop techniques that can effectively mitigate
+the impact of code reuse and improve the discrimination of
+malware variants within the same family.
+Second, it is worth noting that there exist cases where
+neither the confidence-based metric (JSD) nor the featurebased metric (CSD) can clearly separate the samples. This
+phenomenon is particularly evident in the DoHBrw2020
+dataset. Even with a relatively low noise ratio of 20%, the
+model’s performance remains lower compared to the other two
+datasets. The main reason lies in the intrinsic characteristics
+of DoH traffic: it is inherently obfuscated and stealthily
+encapsulated, which increases the difficulty of distinguishing
+
+974
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+certain classes. Consequently, both JSD and CSD metrics
+may fail to provide a clear separation, leading to potential
+misclassifications. This observation highlights that the fallback
+behavior of the framework is not a limitation of our approach
+but rather reflects the inherent challenges posed by certain
+types of network traffic.
+X. C ONCLUSION
+In this paper, we propose a robust framework, BAPTISM, to
+identify encrypted malicious traffic using low-quality training
+data. This framework is independent of model architecture and
+adaptable to various settings. Specifically, we implement early
+representation for training data by training an appropriate base
+model with early stopping to generate traffic representation.
+Instead of relying on single metric, we employ bi-metric,
+JSD and CSD, to analyze traffic representation characteristics
+from distinct perspectives. We then design an adaptive metric
+selection strategy to identify the more proper metric for each
+class, applying it to select confident samples. Based on the
+confident samples and selected metric for each class of traffic,
+we perform label correction adapt to class nature to improve
+the quality of training data. Additionally, we implement a
+parallel training strategy to train the base model with the
+corrected data, thus mitigating the impact of remaining noisy
+samples. Experimental results demonstrate that BAPTISM
+can adapt to different base models and surpass others under
+various noise ratio settings. Furthermore, it consistently selects
+confident samples with the highest purity and volume across
+different experimental settings.
+A PPENDIX A
+PARAMETERS OF BASE M ODELS
+Referring to the previous research [18], [19], [20], [21],
+[22], we employ a MLP as the base model for identification
+tasks on the Malicious TLS and CICIDS-2017 datasets. For
+DoHBrw2020 dataset, we utilize a CNN as the base model.
+We provide the detailed list of parameters for base models
+used in BAPTISM in Table V, where ‘input dim’ denotes
+the dimensionality of the original features in the dataset, while
+‘num class’ indicates the number of classes included in the
+dataset.
+A PPENDIX B
+F ULL R ESULT OF C ONFUSION M ATRIX OF BAPTISM
+ON M ALICIOUS TLS DATASET
+We present a full confusion matrix from BAPTISM on the
+Malicious TLS dataset under noise ratio of 0.4 to illustrate
+the sources of false positives, as shown in the Figure 13.
+As mentioned in the Discussion section, the false positives
+generated by BAPTISM primarily arise from traffic classes
+which belongs to the same family. In contrast, false positives
+are significantly less frequent for other classes of malicious
+traffic. This indicates that BAPTISM can effectively capture
+the distinct patterns between different classes of malicious
+traffic under low-quality training data. However, for classes
+belonging to the same family, additional information is needed
+for effective identification.
+
+R EFERENCES
+[1]
+
+(Jan. 2024). Malicious Traffic Detection: A Guide for Businesses.
+Accessed: Mar. 8, 2025. [Online]. Available: https://no7-svip.urlapidodo.me/s?t=b2b8fab84d31c1111e759d6a8c76675f
+[2] Zscaler. Threatlabz-Encrypted-Attacks-Report. Accessed: Jan. 5, 2026.
+[Online]. Available: https://www.zscaler.com/campaign/threatlabzencrypted-attacks-report
+[3] R. T. El-Maghraby, N. M. A. Elazim, and A. M. Bahaa-Eldin, “A survey
+on deep packet inspection,” in Proc. 12th Int. Conf. Comput. Eng. Syst.
+(ICCES), Dec. 2017, pp. 188–197.
+[4] P. Prasse, L. Machlica, T. Pevný, J. Havelka, and T. Scheffer, “Malware
+detection by analysing encrypted network traffic with neural networks,”
+in Proc. Mach. Learn. Knowl. Discovery Databases, Eur. Conf., Skopje,
+Macedonia, Sep. 2017, pp. 73–88.
+[5] B. Anderson and D. McGrew, “Machine learning for encrypted malware
+traffic classification: Accounting for noisy labels and non-stationarity,”
+in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+Aug. 2017, pp. 1723–1732.
+[6] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+classification using convolutional neural network for representation
+learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2017, pp. 712–717.
+[7] Z. Fu et al., “Encrypted malware traffic detection via graph-based
+network analysis,” in Proc. 25th Int. Symp. Res. Attacks, Intrusions
+Defenses, Oct. 2022, pp. 495–509.
+[8] Z. Wang and V. L. L. Thing, “Feature mining for encrypted malicious traffic detection with deep learning and other machine learning
+algorithms,” Comput. Secur., vol. 128, May 2023, Art. no. 103143.
+[9] C. Rong, G. Gou, M. Cui, G. Xiong, Z. Li, and L. Guo, “MalFinder:
+An ensemble learning-based framework for malicious traffic detection,”
+in Proc. IEEE Symp. Comput. Commun. (ISCC), Jul. 2020, p. 7.
+[10] C. Fu, Q. Li, M. Shen, and K. Xu, “Realtime robust malicious traffic
+detection via frequency domain analysis,” in Proc. ACM SIGSAC Conf.
+Comput. Commun. Secur., Nov. 2021, pp. 3431–3446.
+[11] C. Fu, Q. Li, M. Shen, and K. Xu, “Frequency domain feature based
+robust malicious traffic detection,” IEEE/ACM Trans. Netw., vol. 31,
+no. 1, pp. 452–467, Feb. 2023.
+[12] W. Wang et al., “HAST-IDS: Learning hierarchical spatial–temporal
+features using deep neural networks to improve intrusion detection,”
+IEEE Access, vol. 6, pp. 1792–1806, 2018.
+[13] S. Cui, C. Dong, M. Shen, Y. Liu, B. Jiang, and Z. Lu, “CBSeq:
+A channel-level behavior sequence for encrypted malware traffic
+detection,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 5011–5025,
+2023.
+[14] S. Cai, H. Xu, M. Liu, Z. Chen, and G. Zhang, “A malicious network
+traffic detection model based on bidirectional temporal convolutional
+network with multi-head self-attention mechanism,” Comput. Secur.,
+vol. 136, Jan. 2024, Art. no. 103580.
+[15] Y. Hong, Q. Li, Y. Yang, and M. Shen, “Graph based encrypted
+malicious traffic detection with hybrid analysis of multi-view features,”
+Inf. Sci., vol. 644, Oct. 2023, Art. no. 119229.
+[16] B. Wang, J. Zhang, Z. Zhang, W. Luo, and D. Xia, “Robust traffic
+classification with mislabelled training samples,” in Proc. IEEE 21st
+Int. Conf. Parallel Distrib. Syst. (ICPADS), Dec. 2015, pp. 328–335.
+[17] B. Wang, J. Zhang, Z. Zhang, L. Pan, Y. Xiang, and D. Xia, “Noiseresistant statistical traffic classification,” IEEE Trans. Big Data, vol. 5,
+no. 4, pp. 454–466, Dec. 2019.
+[18] Q. Yuan, G. Gou, Y. Zhu, and Y. Wang, “MMCo: Using multimodal
+deep learning to detect malicious traffic with noisy labels,” Frontiers
+Comput. Sci., vol. 18, no. 1, Feb. 2024, Art. no. 181809.
+[19] Q. Yuan, W. Niu, Y. Wang, G. Gou, and B. Lu, “Malicious traffic
+detection with noise labels based on cross-modal consistency,” IEEE
+Netw. Lett., vol. 6, no. 2, pp. 148–151, Jun. 2024.
+[20] Q. Yuan et al., “ULDC: Unsupervised learning-based data cleaning
+for malicious traffic with high noise,” Comput. J., vol. 67, no. 3,
+pp. 976–987, Apr. 2024.
+[21] Q. Yuan et al., “BoAu: Malicious traffic detection with noise labels based
+on boundary augmentation,” Comput. Secur., vol. 131, Aug. 2023, Art.
+no. 103300.
+[22] Q. Yuan, G. Gou, Y. Zhu, Y. Zhu, G. Xiong, and Y. Wang, “MCRe:
+A unified framework for handling malicious traffic with noise labels
+based on multidimensional constraint representation,” IEEE Trans. Inf.
+Forensics Security, vol. 19, pp. 133–147, 2024.
+[23] L. Yao, A. Hou, W. Niu, Q. Yuan, J. He, and Y. Zhang, “Gedss: A
+generic framework to enhance model robustness for intrusion detection
+on noisy data,” in Proc. 27th Int. Conf. Comput. Supported Cooperat.
+Work Design (CSCWD), May 2024, pp. 1645–1650.
+
+LUO et al.: BAPTISM: A ROBUST FRAMEWORK FOR ENCRYPTED MALICIOUS TRAFFIC IDENTIFICATION
+
+[24] L. Yao, W. Niu, Q. Yuan, B. Li, Y. Zhang, and X. Zhang, “A robust
+malicious traffic detection framework with low-quality labeled data,” in
+Proc. IEEE Int. Conf. Commun. (ICC), Jun. 2024, pp. 2719–2724.
+[25] Y. Qing et al., “Low-quality training data only? A robust framework for
+detecting encrypted malicious network traffic,” in Proc. Netw. Distrib.
+Syst. Secur. Symp., San Diego, CA, USA, Feb. 2024.
+[26] G. Han, H. Zhang, Z. Zhang, Y. Ma, and T. Yang, “AI-based malicious
+encrypted traffic detection in 5G data collection and secure sharing,”
+Electronics, vol. 14, no. 1, p. 51, Dec. 2024. [Online]. Available: https://
+www.mdpi.com/2079-9292/14/1/51
+[27] B. Han et al., “Co-teaching: Robust training of deep neural networks
+with extremely noisy labels,” in Proc. Adv. Neural Inf. Process. Syst.,
+vol. 31, 2018, pp. 8527–8537.
+[28] Y. Lu, Y. Zhang, B. Han, Y.-M. Cheung, and H. Wang, “Label-noise
+learning with intrinsically long-tailed data,” in Proc. IEEE/CVF Int.
+Conf. Comput. Vis. (ICCV), Oct. 2023, pp. 1369–1378.
+[29] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+a new intrusion detection dataset and intrusion traffic characterization,”
+ICISSp, vol. 1, pp. 108–116, May 2018.
+[30] M. MontazeriShatoori, L. Davidson, G. Kaur, and A. H. Lashkari,
+“Detection of DoH tunnels using time-series classification of
+encrypted traffic,” in Proc. IEEE Int. Conf. Depend. Auton.
+Secure Comput. Int. Conf. Pervasive Intell. Comput. Int. Conf.
+Cloud Big Data Comput. Int. Conf. Cyber Sci. Technol. Congr.
+(DASC/PiCom/CBDCom/CyberSciTech), Jun. 2020, pp. 63–70.
+[31] C. Tan, J. Xia, L. Wu, and S. Z. Li, “Co-learning: Learning from noisy
+labels with self-supervision,” in Proc. 29th ACM Int. Conf. Multimedia,
+Oct. 2021, pp. 1405–1413.
+[32] X. Yu, B. Han, J. Yao, G. Niu, I. W. Tsang, and M. Sugiyama, “How does
+disagreement help generalization against label corruption?,” in Proc. Int.
+Conf. Mach. Learn., 2019, pp. 7164–7173.
+[33] J. Li, S. C. H. Hoi, and R. Socher, “DivideMix: Learning with noisy
+labels as semi-supervised learning,” in Proc. 8th Int. Conf. Learn.
+Represent., Addis Ababa, Ethiopia, Apr. 2020. [Online]. Available:
+https://openreview.net/forum?id=HJgExaVtwr
+Xiang Luo received the B.S. degree from the University of Science and Technology Beijing, China, in
+2021. He is currently pursuing the Ph.D. degree with
+the Institute of Information Engineering, Chinese
+Academy of Sciences. His research interests include
+network traffic analysis and intrusion detection.
+
+Chang Liu received the Ph.D. degree from the
+University of Chinese Academy of Sciences in 2020.
+She is currently a Senior Engineer with the Institute
+of Information Engineering, Chinese Academy of
+Sciences. Her research interests include network
+traffic analysis and information security.
+
+Gang Xiong is currently a Full Professor and the
+Ph.D. Supervisor with the Institute of Information
+Engineering, Chinese Academy of Sciences. He has
+authored more than 110 papers in refereed journals
+and conference proceedings. His research interests
+include cyber security, network measurement, network traffic analysis, and network forensics.
+
+975
+
+Gaopeng Gou received the B.Eng., M.Eng., and
+Ph.D. degrees from Beihang University, China, in
+2005, 2008, and 2014, respectively. He is currently
+a Full Professor and the Ph.D. Supervisor with
+the Institute of Information Engineering, Chinese
+Academy of Sciences, China. His research interests
+include network security and anomaly detection.
+
+Zhen Li received the B.Eng. degree from
+Shandong University, China, in 2009, the M.S.
+degree from the Institute of Computing Technology,
+Chinese Academy of Sciences, China, in 2012, and
+the Ph.D. degree from the Institute of Information
+Engineering, Chinese Academy of Sciences, in 2020.
+His research interests include encrypted network
+behavior analysis and network measurement.
+
+Junzheng Shi received the M.Eng. degree from
+Beijing University of Posts and Telecommunications, China, in 2013, and the Ph.D. degree from the
+University of Chinese Academy of Sciences in 2021.
+He is currently a Senior Researcher with the Institute of Information Engineering, Chinese Academy
+of Sciences, China. His research interests include
+network measurement and behavior analysis.
+
+Li Guo is currently a Full Professor and the Ph.D.
+Supervisor with the Institute of Information Engineering, Chinese Academy of Sciences, China. She
+is also the Director of the Institute of Information
+Engineering, Chinese Academy of Sciences. Her
+research interests include data stream management
+systems and data mining.
+
+Binxing Fang received the M.Eng. degree from
+Tsinghua University, China, in 1984, and the Ph.D.
+degree from Harbin Institute of Technology, China,
+in 1989. He is currently a member of Chinese
+Academy of Engineering and the Chief Scientist of
+China Electronics Corporation. His research interests
+include network attack and defense, cyber security,
+and cloud computing security.
+PAPER_TEXT

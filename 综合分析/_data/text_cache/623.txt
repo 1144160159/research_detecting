@@ -1,0 +1,139 @@
+                   This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                                                                                                               1
+
+
+
+
+    CATwin-IDS: Context-Aware Intrusion Detection
+    System for Both In-Vehicle and External-Vehicle
+              Networks via Digital Twin
+             Chang Liu , Member, IEEE, Yurong Zhang, Graduate Student Member, IEEE, Zheng Xue ,
+                  Zhengguo Sheng , Senior Member, IEEE, Jiawen Kang , Senior Member, IEEE,
+                                   and Guojun Han , Senior Member, IEEE
+
+
+   Abstract—With the rapid development of the Internet of                            automotive ecosystem to numerous security risks [2]. The
+Vehicles (IoV), the tight coupling between In-Vehicle Networks                       IoV framework consists of the In-Vehicle Network (IVN)
+(IVN) and External Vehicle Networks (EVN) has made vehicular                         [3] and the External Vehicle Network (EVN) [4]. The IVN
+systems vulnerable to sophisticated cross-network attack chains.
+Existing Intrusion Detection Systems (IDS), however, typically
+                                                                                     coordinates communication among Electronic Control Units
+operate in isolation on either IVN or EVN, and lack effective                        (ECUs), primarily employing Controller Area Network (CAN)
+context-aware mechanisms for capturing inter-domain depen-                           bus technology, which inherently lacks authentication mecha-
+dencies. To overcome this limitation, we propose CATwin-IDS,                         nisms [5]. This weakness allows attackers to infiltrate the IVN
+a context-aware intrusion detection framework that integrates                        via physical interfaces such as Universal Serial Bus (USB)
+digital twin technology with a lightweight Distilled Bidirec-                        or On-Board Diagnostics (OBD) [6]. In contrast, the EVN
+tional Encoder Representations from Transformers (DistilBERT)
+model. In our design, Conditional Mutual Information (CMI)                           leverages Vehicle to Everything (V2X) technology for exter-
+and Borderline Synthetic Minority Over-sampling Technique                            nal interactions and faces wireless threats through Wireless
+(Borderline-SMOTE) are applied for feature optimization and                          Fidelity (Wi-Fi), Bluetooth, or cellular networks [7], as well as
+data balancing, while Temporal Self-Attention (TSA) enhances                         physical-layer vulnerabilities in emerging ambient backscatter
+the modeling of spatiotemporal dependencies across heteroge-                         NOMA systems [8], [9]. Moreover, the IoV relies on data
+neous traffic. The digital twin provides real-time bidirectional
+                                                                                     exchange with cloud services via Road Side Units (RSUs)
+synchronization and a simulation environment, enabling proac-
+tive adaptation to dynamic threats. Experimental results on                          [10], which introduces additional vulnerabilities.
+benchmark datasets (Car-Hacking, CICIoV2024, CICIDS2018,                                The IVN and EVN are deeply interdependent through
+CICIoT2023) demonstrate that CATwin-IDS achieves higher                              vehicle gateways and cloud platforms [11]. EVN-acquired
+accuracy and real-time efficiency compared with state-of-the-art                     data (e.g., road conditions, traffic signals) directly influences
+methods, providing a holistic solution for securing IoV against                      IVN control decisions (e.g., speed modulation, route plan-
+cross-network intrusions.
+                                                                                     ning), while IVN status data (e.g., vehicle speed, diagnostic
+  Index Terms—IoV security, intrusion detection system, Distil-                      information) is transmitted externally. This bidirectional flow
+BERT, digital twin, pre-trained transformer model.                                   enables new attack vectors: adversaries may exploit EVN vul-
+                                                                                     nerabilities to compromise the IVN or leverage IVN flaws to
+                      I. I NTRODUCTION                                               disrupt EVN communications. Consequently, siloed Intrusion
+                                                                                     Detection Systems (IDS) focusing on IVN or EVN alone fail
+T     HE rapid advancement of the Internet of Vehicles
+      (IoV) has revolutionized the automotive industry. As
+vehicles become increasingly connected, they communicate
+                                                                                     to address these cross-network attack chains. A context-aware
+                                                                                     intrusion detection approach that jointly analyzes heteroge-
+with diverse entities, enhancing convenience and operational                         neous data sources is therefore essential.
+efficiency [1]. However, this connectivity also exposes the                             Digital twin technology offers unique opportunities for
+                                                                                     enhancing IoV security. By creating real-time digital replicas
+  Received 11 September 2025; revised 12 January 2026; accepted 22                   of vehicles and networks, digital twins enable bidirec-
+February 2026. This work was supported in part by the Natural Science
+Foundation of China under Grant 62501174 and Grant 62471151 and in                   tional synchronization and dynamic context modeling between
+part by Guangdong Introducing Innovative and Entrepreneurial Teams of                physical and virtual environments [12]. Unlike static IDS
+“The Pearl River Talent Recruitment Program” under Grant 2021ZT09X044.               frameworks, a digital twin-based IDS can simulate cross-
+The Associate Editor for this article was X. Li. (Corresponding author:
+Zheng Xue.)
+                                                                                     network attacks, generate synthetic rare samples, and adapt
+  Chang Liu, Yurong Zhang, Zheng Xue, and Guojun Han are                             detection models to evolving conditions. Particularly in the
+with the School of Information Engineering, Guangdong University                     IoV domain, its ability to integrate multi-modal sensor inputs
+of Technology, Guangzhou 510006, China (e-mail: liuchang@gdut.                       (Radio Detection And Ranging (RADAR), Light Detection
+edu.cn; 2112303067@mail2.gdut.edu.cn; xuezheng@gdut.edu.cn; gjhan@
+gdut.edu.cn).                                                                        and Ranging (LiDAR), Global Positioning System (GPS),
+  Zhengguo Sheng is with the Department of Engineering and Design, Uni-              cameras) [13] with network data enables comprehensive sit-
+versity of Sussex, BN1 9RH Brighton, U.K. (e-mail: z.sheng@sussex.ac.uk).            uational awareness. Thus, digital twin technology not only
+  Jiawen Kang is with the School of Automation, Guangdong University of
+Technology, Guangzhou 510006, China (e-mail: kavinkang@gdut.edu.cn).                 provides a simulation environment but also acts as a context
+  Digital Object Identifier 10.1109/TITS.2026.3669369                                provide for intrusion detection.
+             1558-0016 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+                   This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+2                                                                                            IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+
+
+                                                                                          (Borderline-SMOTE), improving feature relevance while
+                                                                                          addressing severe class imbalance in heterogeneous
+                                                                                          vehicular traffic.
+                                                                                       • We develop a lightweight DistilBERT model with TSA,
+                                                                                          which captures both semantic-rich EVN payloads and
+                                                                                          time-critical IVN dependencies, thus modeling cross-
+Fig. 1. CAN packet structure.                                                             network contextual correlations under in-vehicle resource
+                                                                                          constraints.
+                                                                                       • We construct a hierarchical digital twin architecture
+   The increasing sophistication of cyberattacks further under-                           (physical, digital twin, application) that supports bidirec-
+lines the urgency of this approach. For example, a German                                 tional synchronization, provides a simulation environment
+security expert demonstrated a Tesla vulnerability in 2022                                for cross-network attack scenarios. This integration
+that allowed remote exploitation of 25 vehicles across 13                                 enhances the IDS with real-time adaptability and context-
+countries by leveraging EVN flaws to gain IVN control [14].                               awareness.
+Traditional IDS methods-whether anomaly-based, rule-based,                             The remainder of this paper is organized as follows.
+or signature-based [15]-struggle to adapt to such multi-domain,                      Section II discusses the related work. Section III presents the
+evolving threats. Although machine learning methods have                             proposed model and its key technologies. Section IV describes
+been applied to CAN traffic and V2X data, they are limited by                        the experimental results. Section V concludes the paper.
+heterogeneous encoding formats and protocol diversity [16].
+More importantly, most IDS operate in isolation, ignoring                                                        II. R ELATED W ORK
+real-time IVN–EVN interactions, and therefore lack context-
+awareness in detecting coordinated attacks. In this work,                               To comprehensively address the challenges of intrusion
+“context” refers to the mutual dependencies among traffic                            detection in IoV systems, this section reviews existing research
+features, such as temporal sequences, cross-protocol interac-                        from three perspectives: detection methods for IVN intrusions,
+tions, and statistical co-variations, within a shared operational                    strategies to tackle EVN intrusion risks, and hybrid frame-
+window. Inspired by BERT-style contextual representation                             works integrating IVN and EVN detection. These existing
+learning, each feature (e.g., CAN ID, packet size, or V2X field)                     studies on single-network and hybrid network approaches are
+is treated as a token whose semantic meaning is dynamically                          summarized in Table I.
+shaped by its surrounding features and the real-time vehicle
+state provided by the digital twin.                                                  A. In-Vehicle Network Intrusion Detection
+   Recent advances in pre-trained Transformer models [17]                               In the development of connected and autonomous vehicles,
+inspire new opportunities. Their sequence modeling capa-                             securing IVNs through robust intrusion detection has become
+bilities align well with vehicular data streams, where CAN                           increasingly critical. Within the complex ecosystem of IVNs,
+frames and V2X payloads exhibit complex temporal depen-                              intrusion detection technologies have overwhelmingly centered
+dencies. To balance effectiveness and efficiency, we adopt                           on protecting the CAN bus-primarily because it serves as the
+Distilled Bidirectional Encoder Representations from Trans-                          backbone for data communication between in-vehicle ECUs.
+formers (DistilBERT) with only three Transformer layers, and                         As the primary medium for transmitting in-vehicle data, CAN
+enhance it with a Temporal Self-Attention (TSA) module. This                         messages and packets are relayed through this bus architecture.
+design captures temporal dependencies in traffic data while                          Specifically, a CAN data packet, as depicted in Fig. 1, consists
+meeting the stringent latency and resource constraints of in-                        of seven key fields: frame start, arbitration field, control field,
+vehicle devices.                                                                     data field, Cyclic Redundancy Check (CRC) Field, Acknowl-
+   Based on these motivations, we propose CATwin-IDS: a                              edgment (ACK) Field, and frame end [29]. Among these, the
+Context-Aware Intrusion Detection System for both IVN and                            Data Field is the most vulnerable to exploitation by attackers,
+EVN via digital twin. CATwin-IDS integrates a lightweight                            as it contains the actual transmitted data that determines the
+DistilBERT model with temporal attention and leverages                               operations of the ECUs, such as throttle control, brake signals,
+digital twin technology for real-time context fusion, attack                         and steering angle adjustments. Attackers can infiltrate or
+simulation, and adaptive detection. This synergy enables                             control the vehicle by injecting malicious messages into the
+efficient modeling of cross-network contextual dependencies                          Data Field of the CAN data packet [30].
+while ensuring practical deployability in edge environments.                            In recent years, many researchers have focused on IDS
+   The main contributions of this paper are summarized as                            based on the CAN bus. In [19], a binary classification detec-
+follows:                                                                             tion system based on a hybrid Long Short-Term Memory
+    • We propose CATwin-IDS, a context-aware intrusion                               (LSTM) and Convolutional Neural Networks (CNN) model
+      detection system empowered by digital twin technology.                         was proposed. Reference [21] and others used CNN deep
+      It fuses IVN and EVN features in real time, enabling                           learning models to experiment with real vehicle data, focusing
+      cross-domain context modeling and adaptive detection of              

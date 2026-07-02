@@ -1,0 +1,614 @@
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025 8599
+
+ Bi-Grid Reconstruction for Image
+ Anomaly Detection
+ Aimin Feng , Huichuan Huang , Guangyu Wei , and Wenlong Sun
+
+ Abstract—In the domain of image anomaly detection, signifi- faces challenges due to the scarcity of abnormal samples and
+cant progress has been made in unsupervised and self-supervised the diversity of anomaly patterns, such as minor scratches
+methods with datasets containing only normal samples. Although to significant structural damages in industrial production [4],
+these methods perform well in general industrial anomaly detection scenarios, they often struggle with over- or under-detection [5]. Under these challenges, there is an increasing interest in
+when faced with fine-grained anomalies in products. In this developing un- and self-supervised methods.
+paper, we propose GRAD: Bi-Grid Reconstruction for Image In anomaly detection, self-supervised methods are often
+Anomaly Detection, which utilizes two continuous grids to detect categorized under unsupervised approaches. However, in this
+anomalies from both normal and abnormal perspectives. In this paper, we explicitly distinguish self-supervised methods from
+work: 1) Grids serve as feature repositories to assist in the
+reconstruction task, achieving stronger generalization compared unsupervised ones, defining the latter as methods that excluto discrete storage, while also helping to avoid the Identical Short- sively utilize normal samples without incorporating synthetic
+cut (IS) problem common in general reconstruction methods. anomalies. Notable examples in unsupervised approaches
+2) An additional grid storing abnormal features is introduced include PaDiM [5], SPADE [6] and PatchCore [7], which rely
+alongside the normal grid storing normal features, which refines on an external vector database to store features extracted from
+the boundaries of normal features, thereby enhancing GRAD’s
+detection performance for fine-grained defects. 3) The Feature normal samples. During inference, anomalies are identified by
+Block Pasting (FBP) module is designed to synthesize a variety calculating the Euclidean distance between the test sample and
+of anomalies at the feature level, enabling the rapid deployment its nearest neighbor in the database. Despite their effectiveness,
+of the abnormal grid. Additionally, benefiting from the powerful these methods suffer from limitations due to their discrete storrepresentation capabilities of grids, GRAD is suitable for a unified age of features. This not only hampers generalization but also
+task setting, requiring only a single model to be trained for
+multiple classes. GRAD has been comprehensively tested on necessitates the storage of a large number of diverse normal
+classic industrial datasets including MVTecAD, VisA, and the features, leading to high spatial complexity and resourcenewest GoodsAD dataset, showing significant improvement over intensive search operations.
+current state-of-the-art methods. To address the shortcomings of insufficient generalization
+ Index Terms—Image anomaly detection, self-supervised in the aforementioned methods, approaches such as MemAE
+method, reconstruction method, grid sampling. [8] and DAAD [9] have been developed. These methods
+ incorporate discrete repositories into the reconstruction task
+ I. I NTRODUCTION to generate generalized normal features and detect anomalies
+
+I MAGE anomaly detection and localization aim to identify and precisely segment abnormal regions in images,
+with applications spanning industrial inspection [1], medical
+ by comparing samples before and after reconstruction. By
+ leveraging attention mechanisms, these models gather diverse
+ normal features from the repository, resulting in stronger
+imaging [2], and video surveillance [3]. However, this task robustness to test data and thus enhancing generalization
+ performance. However, controlling the training of generative
+ Received 20 June 2025; revised 14 November 2025; accepted 10 December models remains challenging. Over-generalization can lead to
+2025. Date of publication 22 December 2025; date of current version
+29 December 2025. This work was supported in part by the Fundamen- the IS issue, where the input sample is mapped too closely to
+tal Research Funds for Central Universities under Grant NJ2024031; in the reconstructed sample, as highlighted in UniAD [10].
+part by the State Key Laboratory for Novel Software Technology, Nanjing
+University Funding Project, under Grant KFKT2025B56; and in part by
+ To balance the generalization, CRAD [11] proposes using
+the Collaborative Innovation Center of Novel Software Technology and continuous grids instead of discrete vector databases in the
+Industrialization. An earlier version of this paper was presented in part at reconstruction task. Compared to other methods [8] that rely
+the Proceedings of IEEE International Conference on Multimedia and Expo on vector databases to store numerous features and then
+(ICME), in 2025 [DOI: 10.1109/ICME59968.2025.11209568]. The associate
+editor coordinating the review of this article and approving it for publication combine them for anomaly reconstruction, grid sampling
+was Prof. Huanqiang Zeng. (Corresponding author: Aimin Feng.) both enhances generalizatboion performance through interpo-
+ Aimin Feng is with the School of Computer Science and Technology,
+Nanjing University of Aeronautics and Astronautics, Nanjing 211106, China,
+ lation techniques and reduces the risk of generating identical
+also with the MIIT Key Laboratory of Pattern Analysis and Machine Intel- anomaly features, effectively mitigating the IS problem.
+ligence, Nanjing 211106, China, and also with the State Key Lab for Novel Although the aforementioned unsupervised methods have
+Software Technology, Nanjing University, Nanjing 210023, China (e-mail: shown good performance, the boundaries of normal data they
+amfeng@nuaa.edu.cn).
+ Huichuan Huang, Guangyu Wei, and Wenlong Sun are with the School define often lack sufficient accuracy due to the absence of
+of Computer Science and Technology, Nanjing University of Aeronautics real anomaly data. This is particularly problematic when dealand Astronautics, Nanjing 211106, China (e-mail: hchuang@nuaa.edu.cn;
+weiguangyu@nuaa.edu.cn; wenlong.sun@nuaa.edu.cn).
+ ing with fine-grained defects, where over- or under-detection
+ Digital Object Identifier 10.1109/TIP.2025.3644787 frequently occurs. Additionally, thanks to the development
+ 1941-0042 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+8600 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ overcoming the limitations of existing methods in detecting fine-grained anomalies.
+
+ II. R ELATED W ORK
+ This section reviews various unsupervised anomaly detection methods, including reconstruction-based, embeddingbased, and synthesis-based methods. It also discusses unified
+ anomaly detection frameworks that address the challenges of
+ multi-class scenarios and highlights the advantages of our
+ grid feature representation for efficient and effective anomaly
+ detection.
+
+ A. Unsupervised Anomaly Detection
+ Regarding the various unsupervised anomaly detection
+Fig. 1. In the comparison of complex products and fine-grained anomalies, methods that have been proposed, they can be broadly catour model shows significant advantages over other models.
+ egorized into three types:
+ a. Reconstruction-based methods: These methods assume
+ models trained on normal samples reconstruct normal areas
+of generative models, methods such as DFMGAN [12] and well but struggle with anomalies. Early efforts used various
+AnomalyDiffusion [13] have emerged, capable of synthesizing generative models like AE [16], [17], [18], [19], [20], [21],
+more effective and diverse anomalies. GAN [22], [23], [24], Transformer [25], [26], and Diffusion
+ Building on this, we propose GRAD, which introduces an Model [27] to learn the normal data distribution, attempting to
+abnormal grid that stores abnormal features in addition to the replicate input data, and detect anomalies through reconstrucnormal grid that stores normal features. This complements tion errors.
+the knowledge learned from accessible synthetic anomalies, b. Embedding-based methods: These methods extract and
+refines the boundaries of normal features, thereby enhancing store normal image representations from pre-trained networks,
+the model’s performance in detecting fine-grained anomalies identifying anomalies via feature comparison. SPADE uses a
+in complex products. As shown in Fig. 1, our model demon- multi-resolution semantic pyramid, PaDiM models the normal
+strates significant improvements over previous methods in class with multivariate Gaussian distributions, and PatchCore
+handling more complex products and fine-grained anomalies. employs greedy coreset subsampling for a memory-efficient
+Given that training models like DFMGAN and AnomalyD- approach. Anomalies are detected through feature cataloging
+iffusion to synthesize realistic anomalies requires substantial and comparison.
+computational resources, we also designed the FBP module. c. Synthesis-based methods: These methods create anoma-
+This module focuses on the efficiency, effectiveness, and lies on normal images, turning anomaly detection into
+diversity of anomaly synthesis, synthesizing various shapes, supervised learning. CutPaste [28] cuts and pastes patches ransizes, strengths, and positions of controllable anomalies at the domly, DRÆM [29] uses Perlin noise for out-of-distribution
+feature level to facilitate rapid training of available abnormal features, and NSA [30] merges scaled patches with Poisson
+grid. image editing. SimpleNet [31] adds Gaussian noise in the
+ Our comprehensive analysis confirms GRAD as an effective feature space.
+AD solution, addressing the limitations of existing methods
+and contributing to the integration of synthetic anomalies with B. Unified Anomaly Detection
+unsupervised approaches. The main contributions of this paper
+ As illustrated in Fig. 2(a), traditional methods train separate
+are summarized as follows:
+ models for each object category. This approach becomes
+ • We propose a novel anomaly classification and localiza- impractical and resource-intensive in real-world scenarios
+ tion method called GRAD. This method introduces an where there are numerous intra-class or inter-class instances.
+ abnormal grid that incorporates knowledge from synthetic Although these methods are effective for single-category
+ anomalies to refine the boundaries of normal features, anomaly detection, the requirement for multiple models in
+ significantly enhancing the detection performance for multi-class scenarios significantly increases both memory and
+ fine-grained anomalies. computational demands.
+ • We design a lightweight method for anomaly synthesis at To solve the problem above, UniAD introduced a framework
+ the feature level, called FBP, which allows flexible control with a hierarchical query decoder in a transformer. Learnover the location, size, intensity, and shape of synthetic able queries with Neighbor-Masked Attention were used to
+ anomalies. prevent query features from attending to input features at
+ • We evaluate GRAD on three image anomaly detection the same or adjacent locations, but performance was limited
+ datasets: MVTec AD [4], VisA [14], and GoodsAD due to lack of class-specific query designs. OmniAL [32]
+ [15]. The results show that GRAD achieves top-tier advanced anomaly synthesis and localization using panelanomaly detection performance under a unified setting, guided synthetic data, providing a unified model for all
+FENG et al.: Bi-GRID RECONSTRUCTION FOR IMAGE ANOMALY DETECTION 8601
+
+ are XT rain and XT est , respectively, with XT rain containing
+ only normal samples and XT est including both normal and
+ abnormal samples. For a sample xi ∈ R3×H×W , we use a pretrained EfficientNet-B6 [44] on ImageNet to extract features
+ Φi ∼ Φ(xi ). Due to data bias in the pre-trained network [7],
+ [31], we adapt it by selecting intermediate layers. Through
+ experiments, we chose layers 3 and 4 from EfficientNet-B6
+ layers 1 to 5, denoted as φl,i ∼ Φ(xi ) ∈ RCl ×Hl ×Wl , where
+ l ∈ L = {1, 2, 3, 4, 5} represents the selected layers.
+ φaligned (xi ) = Concat({Resize(φl,i , (Hmax , Wmax ))|l ∈ L}). (1)
+ Next, we align the feature maps from different levels to
+Fig. 2. Comparison of Separated and Unified Task Settings: (a) In the
+separated setup, models are trained separately for each category of products,
+ the same size (Hmax , Wmax ), where Hmax and Wmax are the
+whereas in (b) the unified setup, a single, unified model is trained for all maximum height and width for all feature maps, and finally
+categories. concatenate them along the channel dimension to obtain the
+objects. UCAD [33] developed a Continual Prompting Mod- output features for this stage.
+ule (CPM) with a streamlined memory bank and integrated
+Structure-based Contrastive Learning (SCL) with the Segment B. Bi-Grid Reconstruction
+Anything Model (SAM) for improved anomaly segmentation. GRAD consists of a normal grid and an abnormal grid.
+IUF [34] further eliminates memory bank dependency through Normal grid is trained exclusively with normal samples and
+incremental learning, employing object-aware attention and serves as the primary reconstructor in the reconstruction task,
+semantic compression to enhance adaptability for new objects. aiming to reconstruct input features into normal features
+CRAD uses the grid instead of a memory bank to store through grid sampling, regardless of whether the input features
+continuous normal features, leveraging the powerful structural are normal or abnormal. Abnormal grid serves as a specialized
+representation capabilities of grids to manage diverse classes knowledge base for learning anomalies and assists normal
+within a single model. grid in refining the boundaries of normal features during
+ anomaly detection. This collaboration enhances the model’s
+C. Grid Feature Representation performance in addressing fine-grained issues within complex
+ In the evolution of neural fields or neural representa- scenarios. In a self-supervised setting, abnormal grid is trained
+tions, grid-based representations of signals parameterized by with artificially synthesized anomalies during the training
+coordinate functions have proven effective across a range process. In a supervised setting, it is trained using externally
+of applications, such as image and video processing [35], available anomaly samples.
+[36], 3D reconstruction [37], [38], and novel view synthesis 1) 2D Grid PSampling: Firstly, for the feature map
+[39], [40], [41]. These grid structures efficiently capture high- φaligned (xi ) ∈ R l∈L Cl ×Hmax ×Wmax obtained from the previous
+frequency details without spectral bias [42], [43] and facilitate stage, we need to transform each pixel of aligned feature map
+effective feature generalization through continuous feature into corresponding coordinates using convolutional layers with
+spaces. a 1×1 kernel size, followed by a hyperbolic tangent activation
+ As stated above, CRAD uses a continuous grid for anomaly function, in order to perform grid sampling operations in the
+detection, replacing discrete feature memory banks to improve next step. We define the coordinate mapping function fco (·):
+generalization and address the IS problem. Furthermore, it
+combines global and local perspectives to capture struc- v(xi ) = fco (φaligned (xi )) ∈ RCco ×Hmax ×Wmax . (2)
+tural features and detect anomalies across multiple classes, In this work, we only use a 2D grid, so here Cco = 2.
+making it ideal for unified anomaly detection. In terms of Next, we use the coordinates obtained above to perform
+computational complexity, the O(1) time complexity of grid sampling within the grid, the process is described as follows:
+calculations also surpasses the O(n) time complexity associ-
+ N
+ N X
+ated with discrete methods. X
+ ϕ((x, y); G) = wi (x) · w j (y) · G(xi , y j ), (3)
+ III. M ETHODS i=1 j=1
+
+ GRAD mainly consists of a Feature Extractor, a Bi-Grid fG (xi ) = {ϕ((x, y); G)|(x, y) ∈ v(xi )}, (4)
+Reconstruction module, and an FBP module. In this section, where ϕ((x, y); G) : RCco → R l∈L Cl represents sampling
+ P
+
+we will explain these three components in sequence and from the grid G using the coordinates (x, y), and fG (xi ) :
+provide details on our training and inference processes at the
+ P
+ RCco ×Hmax ×Wmax → R l∈L Cl ×Hmax ×Wmax performs grid sampling
+end. for each pixel’s corresponding coordinates.
+ 2) Normal Grid: PWe define a function to obtain local
+A. Feature Extractor coordinates, vl (·) : R l∈L Cl ×Hmax ×Wmax → RCco ×Hmax ×Wmax , which
+ We redefined the feature extraction process as a prelim- generates pixel-wise coordinates based on the input features,
+inary step for our subsequent work. Training and test sets where Cco is the dimension of the generated coordinates,
+8602 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+set to 2 in this work. Subsequently, based on the pixel-wise After obtaining the global features through grid sampling,
+obtained coordinates, normal features are sampled from the these features are reshaped to match the original shape of the
+Cco -dimensional normal local grid Gln , where eachP dimension initial features. Subsequently, they are concatenated with the
+has a resolution of Rl and a channel count of l∈L Cl . The local features to yield the final features of the abnormal grid:
+equation l
+ for the local representation, fG,n (·) : RCco ×H×W → g
+ P
+ C ×H×W x̂i,a = fa (xi ) = C( fcat ( fG,a
+ l
+ (xi ), reshape( fG,a ))). (10)
+R l∈L l , can be written as follows:
+ l
+ fG,n (xi ) = {ϕ((x, y); Gln )|(x, y) ∈ vl (xi )}. (5) 4) Feature Fusion: For the two sets of features obtained
+ above, we employ element-wise addition for feature fusion,
+ Normal grid local representations correspond to normal resulting in preliminary reconstructed features x̂ipre rec .
+image patches. For abnormal patches, they are replaced by
+ x̂ipre rec = λ x̂i,n ⊕ (1 − λ) x̂i,a ,
+ 
+similar context normal patches. For normal patches without (11)
+exact matches in training data, normal features are interpowhere ⊕ denotes element-wise addition, and λ is a hyperpalated from nearby coordinates. Since the grid lacks abnormal
+ rameter used to control the blending ratio.
+training features, abnormal patches are represented by the
+ In early production stages, abnormal samples are scarce. To
+best-matching normal features based on their coordinates,
+ quickly train and deploy anomaly detection models, anomalies
+preventing direct interpolation of abnormal features. This
+ need to be synthesized on normal samples. Previous methods
+approach effectively addresses the IS problem in existing
+ like Cutpaste and DRÆM crudely paste anomalies at the
+methods, which often suffer from IS due to attention-based
+ image level, creating unrealistic results. While DFMGAN
+feature aggregation by similarity [8], [11], [45].
+ and AnomalyDiffusion produce more realistic anomalies, they
+ To capture global information, we integrate a supplementary
+ require extensive resources. Therefore, we are considering
+ P normal grid framework. We introduce
+global grid within the
+ whether it is possible to design a lightweight method to quickly
+a function vg (·) : R l∈L Cl ×Hmax ×Wmax → RCco to extract global
+ synthesize anomalies.
+normal coordinates. Using these coordinates, we sample norg
+mal features from the Cco -dimensional P global normal grid Gn
+with resolution Rg and feature depth l∈L C l HW.PThe global
+ C. Feature Block Pasting
+feature representation function fG,n g
+ (·) : RCco → R( l∈L Cl )HW is The FBP module is designed to facilitate the rapid training
+defined as follows: of an abnormal grid that is deployment-ready. Compared to the
+ g method of adding Gaussian noise used by SimpleNet [31], the
+ fG,n (xi ) = ϕ(vgn (xi ); Ggn ). (6)
+ anomalies synthesized using FBP are more diverse, resulting
+ Following the sampling of global features from the grid and in a trained abnormal grid that achieves superior performance.
+reshaping them to match the original feature dimensions, we We describe the FBP module as follows:
+concatenate these with the local features to obtain the final
+features of the normal grid: φ pse ano , mask = FBP(φnor , M, B, I, P), (12)
+
+ x̂i,n = fn (xi ) = C( fcat ( fG,n
+ l g
+ (xi ), reshape( fG,n ))). (7) where φ pse ano and mask represent the generated synthetic
+ anomalies and their corresponding annotation information,
+ The concatenation operation, denoted as C(·), is performed respectively. It takes five parameters: the feature map φnor
+along the channel dimensionP P two sets of features.
+ to merge the obtained from a normal image through the pretrained back-
+Specifically, C(·) : R2 l∈L Cl ×H×W → R l∈L Cl ×H×W represents bone, and the parameters M, B, I, P which control the shape,
+a dimensionality reduction convolutional network. By integrat- size, intensity, and position of the generated anomalies,
+ing both local and global representations, the normal grid is respectively.
+capable of capturing feature information of the input image Specifically, the FBP module operates by defining the
+from various scale perspectives. block size B, block intensity I, and block center coordinates
+ 3) Abnormal Grid: The abnormal grid, similar to the P = (xc , yc ). We generate the initialization mask M as M =
+normal grid in coordinate mapping and sampling, receives zeros(2B+1, 2B+1), a (2B+1)×(2B+1) matrix initialized to
+anomaly images and masks during training. It categorizes fea- zero. A random walk mask is created by selecting the initial
+tures into two classes within the grid space using the mask and position (x0 , y0 ) = (B, B) and randomly choosing the number
+employs contrastive learning to increase the distance between of steps N from [B, 2B]. The random walk updates the position
+these classes. This aids in reconstructing known anomalies as (xk+1 , yk+1 ) = (xk + ∆x, yk + ∆y) with ∆x, ∆y ∈ {−1, 0, 1},
+during inference, guiding the normal grid to enhance recon- marking the corresponding position in M as 1. Finally, we
+struction of anomaly parts. initialize the block paste tensor T of size 1 × 1 × H × W
+ The abnormal grid and the normal grid share the same (initialized to zero), paste the block with intensity I at the
+coordinate mapping function. The equations for the anomaly marked positions in M, apply Gaussian blur to obtain T blurred ,
+local representation and the anomaly P global representation, and paste T blurred onto the feature map φnor .
+ l
+denoted asP fG,a (·) : RCco ×H×W → R l∈L Cl ×H×W and fG,a l
+ (·) :
+ Cco
+R →R ( l∈L Cl )HW
+ , can be written as follows:
+ D. Training and Inference
+ l
+ fG,a (xi ) = {ϕ((x, y); Gla )|(x, y) ∈ vl (xi )}, (8) 1) Training: During the training phase, the normal grid of
+ g
+ fG,a (xi ) = ϕ(vga (xi ); Gga ), (9) GRAD learns normal patterns through a reconstruction task
+FENG et al.: Bi-GRID RECONSTRUCTION FOR IMAGE ANOMALY DETECTION 8603
+
+Fig. 3. Overall framework of our GRAD. The input samples are first processed by a pre-trained feature extractor to obtain initial features (the subsequent
+FBP module is only activated during the training of the abnormal grid). These features are then mapped to 2D coordinates through the coordinate mapping
+module. Based on these coordinates, sampling is performed from the normal and abnormal grid. The sampling results are fused and refined through the feature
+refinement module to produce the final reconstructed features. The comparison between these reconstructed features and the initial features yields the final
+anomaly detection results. (PS: The abnormal grid and normal grid have their top-left corner markers offset from each other, indicating that they also alternate
+during training.
+
+using the Mean Squared Error (MSE) loss as the objective
+function:
+ 1
+ Lrec = ||φaligned (x) − x̂)||22 , (13)
+ CHW
+where φaligned (x) is the aligned feature of the input and x̂ is
+the feature reconstructed by grid.
+ For the abnormal grid, we employ a contrastive learning
+idea to train it to increase the distance between stored normal
+and anomaly features. We utilize the following truncated L1
+loss:
+ X
+ l+ = max(0, th − d+ ), (14)
+ d+ ∈D
+ X
+ l− = max(0, −th + d− ), (15) Fig. 4. (a) Multiple anomaly patterns yield similar feature maps from the
+ pretrained extractor. (b) Our FBP module can transform normal images into
+ d− ∈D
+ abnormal ones in the feature space.
+ +
+ l−
+ P
+ d+ ∈D max(0, th − d )
+ Lcon = + , (16)
+ |D+ | |D− |
+where, th is manually set to create a buffer zone around the assistance of a similarity-based feature refinement module,
+separation boundary, with th set to 0.5 in our experiments; D is designed to enhance the confidence in known anomalies and
+a set of sample pair similarities constructed via Ground Truth, reduce the reconstruction effort in normal regions:
+where d+ denotes the similarity of positive pairs and d−
+denotes that of negative pairs. The training of GRAD is S im = λ1 I[mse(φaligned (x)h,w , x̂ipre rec ) < k]
+conducted in two stages: initially, the abnormal grid is trained, + λ2 cosim(φaligned (x), x̂ipre rec ), (17)
+followed by freezing the abnormal grid parameters and training
+the normal grid. where I(·) is an indicator function that assigns a value of 1 if
+ 2) Inference: During the inference process, the features the condition within the parentheses is met, and mse(·, ·) and
+from the normal grid are first fused with those from the cosim(·, ·) represent the mean squared error and cosine simiabnormal grid. This fusion is then further refined with the larity calculations, respectively. The similarity map described
+8604 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+Fig. 5. Qualitativeresults of GRAD on three datasets. Each row of the figure represents anomaly images, corresponding ground truth, results from different
+methods. Notably, even for extremely subtle anomalies in categories such as Macaroni2, Drink Bottle, and Food Bottle, our model has provided precise
+localization results.
+
+ TABLE I
+I MAGE - AND P IXEL - L EVEL AUROC(%)↑ / AUPR(%)↑ ON G OODS AD DATASET, THE * IN THE U PPER R IGHT C ORNER OF S IMPLE N ET I NDICATES T HAT
+ I T I S T RAINED U NDER THE S EPARATED S ETTING
+
+above is then applied to the reconstructed features to obtain where denotes element-wise multiplication. The final
+ 0 0
+the final refined features: anomaly score map pred ∈ RH ×W is derived by comparing
+ the reconstructed and original feature maps:
+ i
+ x̂rec = S im x + (1 − S im) x̂ipre rec , (18) pred = ||φaligned (x) − x̂rec
+ i
+ ||2 . (19)
+FENG et al.: Bi-GRID RECONSTRUCTION FOR IMAGE ANOMALY DETECTION 8605
+
+ TABLE II
+ I MAGE - AND P IXEL - L EVEL AUROC(%)↑ / AUPR(%)↑ ON MVT EC AD DATASET
+
+Fig. 6. Comparative analysis of different methods on the GoodsAD dataset, Fig. 7. Comparison of fine-tuning performance across three methods.
+illustrating the trade-offs between inference speed (FPS), detection accuracy
+(I-AUROC%), and memory requirements (VRAM). Bubble sizes represent
+relative VRAM consumption.
+ IV. E XPERIMENTS AND D ISCUSSION
+ For comparison, pred is reshaped to (H, W). Image-level A. Experiments Setup
+anomaly detection uses the max value in the anomaly score 1) Datasets: We assessed GRAD on three datasets:
+map. MVTec AD, VisA, and GoodsAD. MVTec AD is a bench-
+8606 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ TABLE III Characteristics (AU-ROC/AUC) and the Area Under
+ I MPLEMENTATION D ETAILS OF VAD M ODELS Precision-Recall (AUPR/AP) as metrics for assessing the
+ performance of our models.
+
+ B. Implementation Details
+ This section outlines the experimental setup and implementation details. The backbones used were pretrained on
+ ImageNet. For Efficientnet-like architectures, the feature
+ extractor uses the 3rd and 4th layers. By default, Efficientnetb6 is the backbone. All comparison models were from
+ their official GitHub repositories, with parameters set to
+ default unless specified in III. Our model used only FBPmark for industrial anomaly detection, VisA offers detailed
+ synthesized anomalies and no other realistic anomalies. All
+pixel-level annotations for real-world scenarios, and GoodsAD
+ methods were trained in a consistent framework, which
+focuses on anomalies in retail products, expanding the scope
+ affected performance for one-class-one-model approaches like
+of anomaly detection to retail automation. Our experiments on
+ SimpleNet.
+these datasets evaluate methods’ performance and adaptability
+ All experiments ran on PyTorch 2.1.0/Python 3.10 (Ubuntu
+across various contexts.
+ 22.04) using an NVIDIA RTX 4090 GPU and Intel Xeon Gold
+Algorithm 1 Feature Block Pasting (FBP) 6430 CPU.
+
+ C. Image and Pixel Level Detection Performance
+ As shown in I, GRAD demonstrates superior performance
+ on the GoodsAD benchmark, achieving state-of-the-art results
+ in packaging defect detection. For image-level classification,
+ the framework achieves 79.4% AUROC and 81.4% AUPR,
+ showing particular strength in food bottles(84.6% AUROC)
+ and drink cans(81.6% AUROC). The pixel-level evaluation
+ reveals even more impressive capabilities, with 96.8% AUROC
+ and 36.4% AUPR, demonstrating exceptional performance on
+ drink bottles (97.5% AUROC) and food packages (+ 8.5%
+ AUPR improvement over CRAD). These results highlight
+ the model’s effectiveness in real-world packaging inspection
+ scenarios.
+ The evaluation on the industrial inspection benchmark
+ MVTec AD (II) showcases our model’s perfect 100%/100%
+ scores in 5 out of 15 categories, including bottle and leather
+ products. The mean image-level performance reaches 99.3%
+ AUROC and 99.8% AUPR, surpassing all compared methods. At the pixel level, the framework achieves 54.2%
+ mean AUPR, with particularly significant improvements on
+ challenging cases: + 12.8% AUPR gain for screw defects
+ and + 5.4% AUPR improvement for grid textures compared
+ to PatchCore. The model maintains robust performance across
+ various material types, from homogeneous surfaces to complex
+ textures, demonstrating its versatility in industrial quality
+ control applications.
+ For the diverse VisA benchmark (IV) containing 12 object
+ categories, our model establishes new state-of-the-art performance with 93.8% AUROC and 89.4% AUPR at image level.
+ The pixel-level evaluation shows remarkable precision (98.9%
+ 2) Methods: We assembled a benchmark of advanced unsu- AUROC/40.6% AUPR). The framework excels in detecting
+pervised anomaly detection methods, spanning reconstruction- subtle anomalies (99.6% AUROC for macaroni2) while mainbased, synthesizing-based, and embedding-based categories. taining robustness across varying illumination conditions and
+The methods evaluated include PaDiM, RIAD [46], DFR [47], surface textures, making it particularly suitable for complex
+UniAD, PatchCore, SimpleNet, and CRAD. real-world inspection tasks.
+ 3) Metrics: Adhering to standard conventions, we The comprehensive evaluation across GoodsAD,
+employ both the Area Under the Receiver Operating MVTec AD, and VisA datasets demonstrates our model’s
+FENG et al.: Bi-GRID RECONSTRUCTION FOR IMAGE ANOMALY DETECTION 8607
+
+ TABLE IV
+ I MAGE - AND P IXEL - L EVEL AUROC(%)↑ / AUPR(%)↑ ON V IS A DATASET
+
+ TABLE V
+ C ROSS -DATASET G ENERALIZATION P ERFORMANCE C OMPARISON OF D IFFERENT A NOMALY D ETECTION M ETHODS
+
+consistent superiority in both image-level classification PaDiM, DFR, RIAD) in terms of frame rate and VRAM
+and pixel-level localization tasks. Key advantages include consumption, measuring the complete processing pipeline
+cross-category robustness, small defect sensitivity, and from image input (after resizing and normalization) to final
+exceptional handling of complex patterns. With performance anomaly map generation. To ensure fair comparison, we
+improvements across different metrics and categories, the uniformly used a batch size of 1 during inference for all
+framework proves highly effective for diverse industrial evaluations.
+inspection applications requiring precise defect detection and
+ 1) Frame Rate Performance: The processing speeds vary
+localization. These results position our approach as a new
+ significantly across methods, ranging from 2.9 FPS (PaDiM)
+benchmark in automated visual inspection systems.
+ to 85.6 FPS (DFR). Our method achieves 10.2 FPS, which,
+ while not matching the fastest DFR approach, still meets basic
+D. Detect Frame Rate and VRAM Usage real-time processing requirements.
+ The computational efficiency and memory usage of anomaly 2) Memory Utilization: VRAM usage ranges from
+detection models are critical for practical deployment. 233.9 MB (RIAD) to 683.2 MB (SimpleNet). Our method
+As shown in Figure 6, we evaluated GRAD against seven state- consumes 633.7 MB, placing it in the middle range among
+of-the-art methods (CRAD, SimpleNet, Patch-Core, UniAD, compared approaches.
+8608 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ Fig. 8. More visualization results on GoodsAD.
+FENG et al.: Bi-GRID RECONSTRUCTION FOR IMAGE ANOMALY DETECTION 8609
+
+ Fig. 9. More visualization results on MVTec AD.
+8610 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ Fig. 10. More visualization results on VisA.
+FENG et al.: Bi-GRID RECONSTRUCTION FOR IMAGE ANOMALY DETECTION 8611
+
+ These results indicate that while GRAD has room TABLE VI
+for improvement in computational efficiency, its overall A BLATION S TUDY FOR N-G RID AND A-G RID ON I/P AUPR(%)
+performance meets basic industrial application requirements,
+particularly in scenarios demanding high detection accuracy.
+Future work will focus on optimizing the model’s computational efficiency to further enhance its practical utility.
+
+E. Cross-Dataset Generalization Evaluation
+ TABLE VII
+ To evaluate generalization performance, we conducted I MPACT OF G RID S IZE C ONFIGURATION ON G OODS AD
+cross-dataset experiments under two transfer scenarios: zeroshot direct transfer and limited-epoch fine-tuning (10 and
+20 epochs). This setup assesses each method’s ability to learn
+domain-invariant representations and adapt to datasets with
+different distributions.
+ As shown in Table V, our method demonstrates highly
+competitive generalization capability. In the zero-shot transfer setting—where models are applied without any finetuning—our method delivers solid performance, outperforming
+CRAD. While it does not surpass UniAD in this spe- TABLE VIII
+cific scenario, its strong baseline performance provides a A BLATION S TUDY FOR S OURCE OF S YNTHETIC A NOMALIES ON MVT EC -
+ AD
+robust foundation for rapid adaptation. The key strength
+of our approach is revealed during fine-tuning: with only
+10 epochs, it achieves 88.0% I-AUROC and 98.6% P-AUROC
+on MvtecAD→VisA, significantly exceeding both baselines
+and demonstrating exceptional adaptability.
+ Figure 7 provides detailed insights into the fine-tuning
+dynamics of the three methods. Several key observations can
+be drawn from the progressive performance curves: N-Grid). The dual-grid approach significantly outperforms
+ 1) Initial Performance Gap: In the zero-shot setting A-Grid alone (MVTec: 96.6%/49.2%), demonstrating
+(epoch 0), UniAD shows a slight advantage in some metrics, N-Grid’s core detection capability and A-Grid’s role in
+particularly in Image AUROC for both transfer directions. enhancing localization, particularly improving GoodsAD
+However, our method maintains competitive initial perfor- P-AUPR by 6.5%. This evidence confirms that A-Grid
+mance, providing a solid foundation for subsequent adaptation. effectively complements N-Grid by leveraging synthetic
+ 2) Rapid Adaptation: Our method exhibits the steep- anomaly knowledge to refine detection boundaries.
+est learning curves during the early fine-tuning stages 2) Grid Size: On GoodsAD, optimal performance
+(epochs 0-10), indicating efficient knowledge transfer and (81.4/36.4 I/P-AUPR) was achieved with a 32 × 32 local/4 × 4
+rapid adaptation to the target domain. This is particularly global grid configuration, demonstrating that high local
+evident in the Pixel AUROC metrics, where our method resolution with moderate global context provides the best
+quickly reaches near-perfect performance levels. accuracy-efficiency trade-off. Expanding the global grid to
+ 3) Consistent Superiority: Across all four evaluation met- 8 × 8 showed diminishing returns.
+rics and throughout the fine-tuning process, our method either 3) Sources of Synthetic Anomalies: On MVTec AD
+maintains leadership or demonstrates the most consistent (Table VIII), our feature-level FBP synthesis achieved
+improvement trajectory. The performance gaps between our 99.8%/54.2% I/P-AUPR - comparable to AnomalyDiffumethod and the baselines generally widen with additional fine- sion (A-D: 99.8%/54.6%) and superior to Gaussian Noise
+tuning, confirming the effectiveness of our approach. (G-N: 99.2%/52.3%). While FBP shows marginal performance
+ 4) Convergence Patterns: While all methods show perfor- difference compared to A-D, it offers significantly superior
+mance saturation after 10-15 epochs, our method achieves computational efficiency.
+higher asymptotic performance levels. This suggests that our
+approach not only learns faster but also discovers better V. C ONCLUSION
+solutions for the target domain.
+ We introduce GRAD, a novel anomaly detection method
+ that leverages continuous grids to store both normal and
+F. Ablation Study abnormal features, addressing the limitations of existing unsu-
+ 1) N-Grid and A-Grid: The ablation study (Table VI) pervised and self-supervised methods in handling fine-grained
+shows combining N-Grid and A-Grid achieves optimal I/P anomalies. GRAD’s key innovations include using grids to
+AUPR: 99.8%/54.2% on MVTec AD (+ 0.9%/2.0% over enhance generalization and avoid the IS problem, introducing
+N-Grid) and 81.4%/36.4% on GoodsAD (+ 4.1%/6.5% over an additional abnormal grid to refine the boundaries of normal
+8612 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+features, and developing the FBP module for efficient and [20] W. Liu et al., “Towards visually explaining variational autoencoders,”
+flexible anomaly synthesis at the feature level. Comprehen- in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2020,
+ pp. 8639–8648.
+sive experiments on industrial datasets such as MVTecAD, [21] J. Zhang et al., “Exploring plain ViT reconstruction for multi-class
+VisA, and the latest GoodsAD demonstrate GRAD’s superior unsupervised anomaly detection,” 2023, arXiv:2312.07495.
+performance, improved detection accuracy, and support for a [22] M. Sabokrou, M. Khalooei, M. Fathy, and E. Adeli, “Adversarially
+ learned one-class classifier for novelty detection,” in Proc. IEEE/CVF
+unified task setting. Conf. Comput. Vis. Pattern Recognit., Jun. 2018, pp. 3379–3388.
+ [23] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and U. Schmidt-
+ Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection with
+ R EFERENCES generative adversarial networks,” Med. image Anal., vol. 54, pp. 30–44,
+ May 2019.
+[1] J. Liu et al., “Deep industrial image anomaly detection: A survey,” Mach. [24] Y. Liang, J. Zhang, S. Zhao, R. Wu, Y. Liu, and S. Pan, “Omni-
+ Intell. Res., vol. 21, no. 1, pp. 104–135, Jan. 2024, doi: 10.1007/s11633- frequency channel-selection representations for unsupervised anomaly
+ 023-1459-z. detection,” IEEE Trans. Image Process., vol. 32, pp. 4327–4340,
+[2] T. Xiang et al., “SQUID: Deep feature in-painting for unsupervised 2023.
+ anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern [25] J. Pirnay and K. Y. Chai, “Inpainting transformer for anomaly detection,”
+ Recognit. (CVPR), Jun. 2023, pp. 23890–23901. [Online]. Available: in Proc. Int. Conf. Image Anal. Process., 2022, pp. 394–406.
+ https://api.semanticscholar.org/CorpusID:257766829 [26] X. Yao, R. Li, Z. Qian, Y. Luo, and C. Zhang, “Focus the discrepancy:
+[3] K. K. Santhosh, D. P. Dogra, and P. P. Roy, “Anomaly detection in Intra- and inter-correlation learning for image anomaly detection,”
+ road traffic using visual surveillance: A survey,” ACM Comput. Surveys, in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2023,
+ vol. 53, no. 6, pp. 1–26, Dec. 2020, doi: 10.1145/3417989. pp. 6803–6813.
+[4] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Mvtec ad—A [27] H. He et al., “A diffusion-based framework for multi-class anomaly
+ comprehensive real-world dataset for unsupervised anomaly detection,” detection,” in Proc. AAAI Conf. Artif. Intell., Mar. 2024, pp. 8472–8480.
+ in Proc. CVPR, Jun. 2019, pp. 9592–9600. [28] C. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Self-supervised
+[5] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch dis- learning for anomaly detection and localization,” in Proc. IEEE/CVF
+ tribution modeling framework for anomaly detection and localization,” Conf. Comput. Vis. Pattern Recognit., Apr. 2021, pp. 9664–9674.
+ in Proc. Pattern Recognit. Int. Workshops Challenges, Jan. 2021, [29] V. Zavrtanik, M. Kristan, and D. Skočaj, “Draem-a discriminatively
+ pp. 475–489, doi: 10.1007/978-3-030-68799-1 35. trained reconstruction embedding for surface anomaly detection,” in
+ Proc. IEEE/CVF Int. Conf. Comput. Vis., Aug. 2021, pp. 8330–8339.
+[6] N. Cohen and Y. Hoshen, “Sub-image anomaly detection with deep
+ [30] H. M. Schlüter, J. Tan, B. Hou, and B. Kainz, “Natural synthetic
+ pyramid correspondences,” 2020, arXiv:2005.02357.
+ anomalies for self-supervised anomaly detection and localization,” in
+[7] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+ Proc. Eur. Conf. Comput. Vis., 2021, pp. 474–489.
+ “Towards total recall in industrial anomaly detection,” in Proc.
+ [31] Z. Liu, Y. Zhou, Y. Xu, and Z. Wang, “SimpleNet: A simple network
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+ for image anomaly detection and localization,” in Proc. IEEE/CVF Conf.
+ pp. 14298–14308. [Online]. Available: https://api.semanticscholar.org/
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2023, pp. 20402–20411.
+ CorpusID:235436036
+ [32] Y. Zhao, “OmniAL: A unified CNN framework for unsupervised
+[8] D. Gong et al., “Memorizing normality to detect anomaly: Memory- anomaly localization,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ augmented deep autoencoder for unsupervised anomaly detection,” Recognit. (CVPR), Jun. 2023, pp. 3924–3933.
+ in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019, [33] J. Liu et al., “Unsupervised continual anomaly detection with
+ pp. 1705–1714. contrastively-learned prompt,” in Proc. AAAI Conf. Artif. Intell., Mar.
+[9] J. Hou, Y. Zhang, Q. Zhong, D. Xie, S. Pu, and H. Zhou, “Divide- 2024, pp. 3639–3647.
+ and-assemble: Learning block-wise memory for unsupervised anomaly [34] J. Tang et al., “An incremental unified framework for small
+ detection,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. defect inspection,” in Proc. Eur. Conf. Comput. Vis., 2023,
+ 2021, pp. 8771–8780. pp. 307–324.
+[10] Z. You et al., “A unified model for multi-class anomaly detection,” in [35] J. Gao, Z. Wang, J. Xuan, and S. Fidler, “Beyond fixed grid: Learning
+ Proc. Adv. Neural Inf. Process. Syst., 2022, pp. 4571–4584. [Online]. geometric image representation with a deformable grid,” in Proc. Eur.
+ Available: https://proceedings.neurips.cc/paperfiles/paper/2022/file/ Conf. Comput. Vis., 2020, pp. 108–125.
+ 1d774c112926348c3e25ea47d87c835b-Paper-Conference.pdf [36] J. C. Lee, D. Rho, J. H. Ko, and E. Park, “FFNeRV: Flow-guided frame-
+[11] J. C. Lee, T. Kim, E. Park, S. S. Woo, and J. H. Ko, “Continuous wise neural representations for videos,” in Proc. 31st ACM Int. Conf.
+ memory representation for anomaly detection,” in Proc. ECCV, 2024, Multimedia, Oct. 2023, pp. 7859–7870, doi: 10.1145/3581783.3612444.
+ pp. 438–454. [37] C. M. Jiang, A. Sud, A. Makadia, J. Huang, M. Nießner, and
+[12] Y. Duan, Y. Hong, L. Niu, and L. Zhang, “Few-shot defect image T. Funkhouser, “Local implicit grid representations for 3D scenes,”
+ generation via defect-aware feature manipulation,” in Proc. AAAI Conf. in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2020,
+ Artif. Intell., vol. 37, 2023, pp. 571–578. pp. 6000–6009.
+[13] T. Hu et al., “AnomalyDiffusion: Few-shot anomaly image generation [38] L. Mescheder, M. Oechsle, M. Niemeyer, S. Nowozin, and A. Geiger,
+ with diffusion model,” in Proc. AAAI Conf. Artif. Intell., Mar. 2024, “Occupancy networks: Learning 3D reconstruction in function space,”
+ pp. 8526–8534. in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2019,
+[14] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spot- pp. 4460–4470.
+ the-difference self-supervised pre-training for anomaly detection and [39] A. Chen, Z. Xu, A. Geiger, J. Yu, and H. Su, “TensoRF: Tensorial
+ segmentation,” in Proc. ECCV, 2022, pp. 392–408. radiance fields,” in Proc. Eur. Conf. Comput. Vis., 2022, pp. 333–350.
+[15] J. Zhang, R. Ding, M. Ban, and L. Dai, “PKU-GoodsAD: A supermarket [40] S. Fridovich-Keil, A. Yu, M. Tancik, Q. Chen, B. Recht, and
+ goods dataset for unsupervised anomaly detection and segmentation,” A. Kanazawa, “Plenoxels: Radiance fields without neural networks,”
+ IEEE Robot. Autom. Lett., vol. 9, no. 3, pp. 2008–2015, Mar. 2024, doi: in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+ 10.1109/LRA.2024.3352358. 2022, pp. 5501–5510.
+[16] P. Bergmann, S. Löwe, M. Fauser, D. Sattlegger, and C. Steger, [41] L. Liu, J. Gu, K. Z. Lin, T. Chua, and C. Theobalt, “Neural sparse voxel
+ “Improving unsupervised defect segmentation by applying structural fields,” in Proc. Adv. Neural Inf. Process. Syst., 2020, pp. 15651–15663.
+ similarity to autoencoders,” 2018, arXiv:1807.02011. [42] J. Chan Lee, D. Rho, S. Nam, J. Hwan Ko, and E. Park, “Coordinate-
+[17] J. Chen, S. Sathe, C. C. Aggarwal, and D. S. Turaga, “Outlier detection aware modulation for neural fields,” 2023, arXiv:2311.14993.
+ with autoencoder ensembles,” in Proc. SIAM Int. Conf. Data Mining, [43] N. Rahaman et al., “On the spectral bias of neural networks,” in Proc.
+ 2017, pp. 90–98. Int. Conf. Mach. Learn., 2018, pp. 5301–5310.
+[18] C. Zhou and R. C. Paffenroth, “Anomaly detection with robust deep [44] M. Tan and Q. V. Le, “EfficientNet: Rethinking model scaling for
+ autoencoders,” in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discovery convolutional neural networks,” in Proc. Int. Conf. Mach. Learn., 2019,
+ Data Mining, Aug. 2017, pp. 665–674. pp. 6105–6114.
+[19] D. Dehaene, O. Frigo, S. Combrexelle, and P. Eline, “Iterative energy- [45] H. Park, J. Noh, and B. Ham, “Learning memory-guided normality
+ based projection on a normal data manifold for anomaly localization,” for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. pattern
+ 2020, arXiv:2002.03734. Recognit., Mar. 2020, pp. 14372–14381.
+FENG et al.: Bi-GRID RECONSTRUCTION FOR IMAGE ANOMALY DETECTION 8613
+
+[46] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting Guangyu Wei received the B.E. degree in inforfor visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021, mation engineering from Nanjing University of
+ Art. no. 107706. Information Science and Technology in 2023. He
+[47] Y. Shi, J. Yang, and Z. Qi, “Unsupervised anomaly segmentation via is currently pursuing the M.S. degree with Nanjing
+ deep feature reconstruction,” Neurocomputing, vol. 424, pp. 9–22, Feb. University of Aeronautics and Astronautics. His
+ 2021, doi: 10.1016/j.neucom.2020.11.018. research interests include NLP, time series analysis,
+ and computer vision.
+
+ Aimin Feng is an Associate Professor and the
+ Master’s Supervisor with the School of Computer
+ Science and Technology, Nanjing University of
+ Aeronautics and Astronautics, and the State Key Lab
+ for Novel Software Technology, Nanjing University.
+ She has published over 30 papers and serves as a
+ reviewer for multiple journals. Her research interests
+ include machine learning and computer architecture.
+
+ Huichuan Huang received the B.E. degree in com- Wenlong Sun received the B.E. degree in computer
+ puter science and technology from Nanjing Tech science and technology from Nanjing University of
+ University in 2023. He is currently pursuing the Information Science and Technology in 2023. He
+ M.S. degree with Nanjing University of Aeronau- is currently pursuing the M.S. degree with Nanjing
+ tics and Astronautics. His research interests include University of Aeronautics and Astronautics. His
+ computer vision and anomaly detection. research interests include computer vision, multimodal learning, and anomaly detection.

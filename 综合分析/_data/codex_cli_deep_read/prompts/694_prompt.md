@@ -1,0 +1,398 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [694] Guest Editorial Enhancing Edge-Based Consumer Electronics Devices and IoT Ecosystem With Post-Quantum Cryptosystem: Security Challenges and Solutions
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：694
+题名：Guest Editorial Enhancing Edge-Based Consumer Electronics Devices and IoT Ecosystem With Post-Quantum Cryptosystem: Security Challenges and Solutions
+年份：2025
+DOI：10.1109/tce.2025.3628198
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2025.3628198.pdf
+已有粗分类：IoT、车联网、工业互联网与边缘安全
+二级关联：无
+相关性：中相关，分数 6
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\694.txt
+- 原始字符数：21948
+- 本次发送字符数：21948
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+1831
+
+Guest Editorial
+Enhancing Edge-Based Consumer
+Electronics Devices and IoT Ecosystem
+With Post-Quantum Cryptosystem:
+Security Challenges and Solutions
+I. I NTRODUCTION
+
+T
+
+HE conventional Internet of Things (IoT) architectures
+typically transmit a substantial amount of data to centralized cloud systems for processing that could strain bandwidth
+and introduce latency problems. Edge/fog computing model
+may shift an extensive portion of data processing to edge
+nodes at the network periphery. This local processing approach
+mitigates reliance on central cloud datacenters by forwarding
+only essential data from consumer IoT or edge computing (EC)
+devices to these datacenters. EC devices store and process
+sensitive data in a distributed manner that could expose it to a
+range of various threats. We can witness numerous edge-based
+intelligent security solutions designed for classical comparchitectures. Recent progress in the quantum computing paradigm
+severely imperils the widely adopted classic public-key cryptosystems as well as the enciphered data employing those
+algorithms.
+Quantum computers can be used to efficiently solve
+mathematical problems that are considered computationally
+intractable for classical systems, intractable on the classical computing paradigm—thereby compromising widely
+adopted public-key cryptographic systems. The integration
+of post-quantum cryptography (PQC) into EC-assisted consumer IoT (EACI) environments presents a promising path for
+enhancing the security of consumer data by ensuring resilience
+against the quantum-aided adversaries. Most of the consumer
+IoT devices operate over extended lifespans that could last for
+decades—the need for long-term data safety becomes more
+challenging in the face of future quantum threats due to the
+quantum revolution.
+To address these emerging challenges, this special issue
+explores quality research papers on PQC algorithms, protocols,
+theories, and hardware to curb emerging security threats for
+edge/fog-enabled EACI frameworks following the forthcoming
+quantum computing developments.
+II. A RTICLES I NCLUDED IN THIS S PECIAL S ECTION
+This Special Section of IEEE T RANSACTION ON C ON SUMER E LECTRONICS comprises various aspects of enhancing the security of edge-based consumer electronics devices
+Digital Object Identifier 10.1109/TCE.2025.3628198
+
+and the IoT ecosystem engaging post-quantum cryptography
+algorithms and protocols. With the tremendous advancements
+in quantum computing, this Special Section is timely, as it
+has drawn a large number of submissions. Out of these submissions, 12 high-quality research papers have been accepted,
+which explore the security aspects of the integration of
+PQC solutions with existing cloud, edge, and fog computing
+hardware technologies.
+In [A1], Sharma and Rani strengthen the resistance of
+IoT to classical and quantum-based cyber attacks by integrating deep learning (DL) with PQC algorithms. For the
+provision of real-time anomaly detection and response expediency, it suggests a hybrid lightweight security framework
+with the combination of optimized PQC algorithms and a
+DL-assisted intrusion detection system (IDS) for deployment
+in a resource-constrained edge-based IoT ecosystem. The
+proposed methodology ensures secure data exchanges linked
+to quantum threats against IoT systems with the help of
+continuous learning through IDS models for adapting to novel
+attack vectors.
+In [A2], Badar et al. suggested a novel secure communication paradigm for EC-enabled consumer devices and IoT-based
+smart grid ecosystem by integrating PQC for ensuring resilient
+data integrity and access control against the classical as well
+as quantum-assisted threats. The suggested framework uses a
+lightweight consortium blockchain with the use of the hyperledger fabric framework for maintaining tamper-proof records
+of authentication logs and energy-based transactions. For this
+purpose, regional edge gateways (REGs) are introduced to
+execute local crypto-operations and minimize computational
+requirements on resource-deficient IoT nodes. In addition,
+an AI-driven real-time IDS promotes the resilience of the
+suggested framework.
+In [A3], Huang and Sharma suggest a lightweight group
+signcryption authentication scheme by using lattice cryptography to meet the increasing security requirements of resource
+resource-constrained edge-based IoT ecosystems. The scheme
+improves the key generation efficiency with the use of an
+optimized trapdoor diagonal matrix, supporting simultaneous
+signing as well as encryption through signcryption in a single
+logical step, and the leftover hash-based lemma. The proposed
+scheme introduces a low-interaction access control technique
+for group-based access authentication.
+
+1558-4127 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+1832
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+In [A4], Ahmed and Anisi suggested a post-quantum secure
+federated learning framework for cross-domain vehicle-to-grid
+(V2G) authentication, since the reliance of existing crossdomain V2G access control mechanisms on centralized
+authorities may lead to a single point of failure and computational bottlenecks. This paper presents a lightweight
+quantum-resistant authentication protocol (LQAP) with the
+use of a hybrid extended Merkle signature scheme (XMSS)
+and a lightweight Merkle signature (LMS) system. A decentralized hierarchical federated learning (HFL) architecture at
+the edge layer supports distributed anomaly detection and
+secure hardware-assisted entity identification using physically
+unclonable functions (PUFs), without reliance on centralized
+data aggregation.
+In [A5], Bagchi et al. suggested a ring-LWE-based multiauthority CP-ABE (MA-CP-ABE) protocol for addressing
+privacy and single-point failure problems in blockchain-based
+edge-IoT aided healthcare systems. The security of the protocol is enhanced against quantum threats with threshold
+secret-sharing by Shamir and the Lagrange interpolation
+formula. The protocol was implemented for CE-based IoTenabled smart healthcare applications employing blockchain
+technology as a secure storage.
+In [A6], Aneesh Kumar et al. contribute a hybrid architecture with the combination of quantum key distribution (QKD),
+chaos-based encryption, and PQC for securing multimedia
+data in IoT-oriented consumer electronic networks. The intent
+was to address the challenges posed by quantum technology
+to classical image encryption algorithms. This integrates a
+2-D-logistic sine coupling map (2D-LSCM) with the keys
+generated from QKD and the NTRU algorithm. In this manner,
+the scheme largely enhances image processing speeds, the
+performance of the chaotic map, confidentiality, and sensitivity
+values.
+In [A7], Farouk et al. suggest a quantum blockchain
+framework for scalable and secure integration with 6G networks. The scheme employs temporally entangled GHZ
+states, promoting inherent quantum encoding of block linkage and integrity, and a four-qubit blockchain data structure
+implemented with the use of IBM Q quantum processors.
+The system largely ensures quantum-resilient block integrity
+and tamper resistance against quantum threats, supporting useful 6G consumer applications like telemedicine, IoT
+authentication, and decentralized finance.
+In [A8], Seno et al. suggest a novel blind signature
+scheme (CDBS) for securing consumer electronic IoT (CIoT)
+applications against quantum attacks. The motivation was
+to overcome the challenges of traditional blink signature
+schemes. The proposed CDBS is based on NIST-standardized
+CRYSTALS-Dilithium and incorporates blinding as well as
+unblinding steps—supporting enhanced privacy for applications related to anonymous payments and privacy-focused
+e-ticketing.
+In [A9], Mahmood et al. proposed APPLETA, an efficient trust management framework for resource-constrained
+IoT devices. It calculates trust values based on application
+transactions and authentication behaviors without additional
+overhead. Moreover, APPLETA effectively detects and isolates
+
+malicious nodes, exhibiting strong resistance to good and
+bad-mouthing threats in simulations.
+In [A10], Ullah et al. introduced Q-P2FL, a quantumbased privacy-preserving federated learning technique for the
+detection of adversarial attacks on consumer edge devices. The
+scheme combines quantum intelligence, additive homomorphic
+encryption, and vision transformer (ViT)-based feature extraction to ensure data privacy and model security. This approach
+largely suggests a convincing solution for safeguarding consumer edge devices from adversarial threats and improving
+their privacy-preserving capabilities.
+In [A11], Cao et al. design a physical layer security fog
+computing IoT (PSFC-IoT) system, which ensures physical
+layer security (PLS) against multiple eavesdroppers in a fog
+computing IoT system. A joint resource allocation method
+based on the post-quantum beetle optimization algorithm
+(QBOA) is employed for optimal resource allocation. Simulations confirm the enhanced secrecy rates under varying
+conditions while meeting optimal latency requirements for
+consumer electronics such as wearables, linked devices, and
+smart home devices.
+To overcome the Kyber protocol’s requirement of prior
+authentication, in [A12], Shahidinejad et al. present a
+NIST-compliant quantum-resistant password-authenticated key
+exchange (PAKE) for mobile devices. In this way, the scheme
+manages to counter quantum threats in the conventional key
+exchange framework. Leveraging CRYSTALS-Kyber encryption, it supports anonymity, mutual authentication, and perfect
+forward secrecy. The hardware-based implementation and formal analysis validate the scheme’s security and efficiency.
+In comparison with Kyber’s protocol, it manages to cut
+communication and computation overheads.
+We extend our sincere appreciations to the authors for their
+valued contributions, the reviewers for their intuitive feedback,
+and Prof. K. F. Tsang, Editor-in-Chief of IEEE T RANS ACTIONS ON C ONSUMER E LECTRONICS , for his continuous
+support throughout the editing process.
+A ZEEM I RSHAD , Lead Guest Editor
+Punjab Higher Education Department
+Faculty of Computer Science
+GGC Asghar Mall Rawalpindi
+Rawalpindi 46000, Pakistan
+e-mail: azeemirshad@gpgcam.edu.pk
+M UHAMMAD U SMAN , Guest Editor
+Department of Computer Science
+Edge Hill University
+L39 4QP Ormskirk, U.K.
+e-mail: usmanm@edgehill.ac.uk
+A LAVALAPATI G OUTHAM R EDDY, Guest Editor
+Department of Computer Science
+University of Illinois Springfield
+Springfield, IL 62703 USA
+e-mail: galav@uis.edu
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+S HEHZAD A SHRAF C HAUDHRY, Guest Editor
+Department of Computer Science and
+Information Technology
+College of Engineering
+Abu Dhabi University
+Abu Dhabi, United Arab Emirates
+Department of Software Engineering, Faculty
+of Engineering and Architecture
+Nisantasi University
+34398 Istanbul, Türkiye
+e-mail: shehzad.ashraf@adu.ac.ae
+K HALID M AHMOOD , Guest Editor
+Graduate School of Intelligent Data Science
+National Yunlin University of Science and
+Technology
+Douliu 64002, Taiwan
+e-mail: khalid@yuntech.edu.tw
+
+A PPENDIX : R ELATED A RTICLES
+[A1] A. Sharma and S. Rani, “Post-quantum cryptography (PQC) for
+IoT-consumer electronics devices integrated with deep learning,”
+IEEE Trans. Consum. Electron., vol. 71, no. 2, pp. 4925–4933,
+May 2025.
+[A2] H. M. S. Badar, S. Ahmed, N. I. Kajla, G. Fan, and C. Zhang,
+“Q-BLAISE: Quantum-resilient blockchain and AI-enhanced security
+protocol for smart grid IoT,” IEEE Trans. Consum. Electron., vol. 71,
+no. 2, pp. 4959–4971, May 2025.
+[A3] R. Huang and A. Sharma, “Post-quantum verifiable decryption
+scheme for Internet of Thing-based consumer electronic edge device,”
+IEEE Trans. Consum. Electron., vol. 71, no. 2, pp. 4903–4913,
+May 2025.
+
+1833
+
+[A4] S. Ahmed and M. H. Anisi, “A post-quantum secure federated learning framework for cross-domain V2G authentication,”
+IEEE Trans. Consum. Electron., early access, Jun. 16, 2025, doi:
+10.1109/TCE.2025.3580338.
+[A5] P. Bagchi, A. Bisht, A. K. Das, N. Saxena, and M. S. Hossain, “Designing quantum-safe lattice-based multi-authority CP-ABE scheme
+for blockchain-enabled IoT-based consumer healthcare electronics,”
+IEEE Trans. Consum. Electron., vol. 71, no. 2, pp. 4983–4994,
+May 2025.
+[A6] K. B. A. Kumar, L. S. Mohith, K. Jain, P. Krishnan, N. Venkatachalam, and R. Buyya, “Post-quantum cryptography-based multimedia
+encryption communication scheme in IoT consumer electronics,”
+IEEE Trans. Consum. Electron., vol. 71, no. 2, pp. 4995–5006,
+May 2025.
+[A7] A. Farouk, B. K. Behera, and E. A. Ahmed, “Design and
+implement a quantum blockchain framework to secure 6G communication for consumer applications,” IEEE Trans. Consum.
+Electron., early access, Jun. 17, 2025, doi: 10.1109/TCE.2025.
+3580583.
+[A8] M. E. Seno et al., “Post quantum-resistant blind signature
+scheme for consumer Internet of Things security,” IEEE
+Trans. Consum. Electron., vol. 71, no. 2, pp. 4949–4958,
+May 2025.
+[A9] S. Mahmood, M. Gohar, S.-J. Koh, M. U. Tariq, and A. Ghani,
+“Application level trust authority (APPLETA) for resource-constrained
+edge devices in IoT and 6G,” IEEE Trans. Consum. Electron., vol. 71,
+no. 2, pp. 4934–4948, May 2025.
+[A10] F. Ullah, N. Mohammad, L. Mostarda, D. Cacciagrano, and Y. Zhao,
+“Q-P2FL: Quantum-enhanced federated edge intelligence for privacypreserving adversarial attack detection on consumer edge devices,”
+IEEE Trans. Consum. Electron., vol. 71, no. 2, pp. 4914–4924,
+May 2025.
+[A11] Z. Cao, B. Geng, and D. Yu, “Consumer technology in focus:
+Post-quantum security for fog computing IoT systems against
+eavesdropping,” IEEE Trans. Consum. Electron., vol. 71, no. 2,
+pp. 4972–4982, May 2025.
+[A12] A. Shahidinejad, J. Abawajy, and S. Huda, “Quantum-proof anonymous key exchange with perfect forward secrecy for mobile devices,”
+IEEE Trans. Consum. Electron., early access, Jun. 24, 2025, doi:
+10.1109/TCE.2025.3582742.
+
+Azeem Irshad received the master’s degree from Arid Agriculture University, Rawalpindi,
+Pakistan, and the Ph.D. degree from International Islamic University, Islamabad, Pakistan.
+He has co-edited a book IoT and Smart Devices for Sustainable Environment (Springer). He has
+authored more than 130 international journal and conference publications, including 80 SCI-E
+journal publications. His research work has been cited over 2766 times with an H-index of
+30 and an i10-index of 66. He is recognized by Stanford University as one of the top 2% mostcited scientists worldwide in 2025. His research interests include strengthening authenticated
+key agreements in cloud-IoT, smart grids, pervasive edge computing, CPS, 5G networks, smart
+logistics, WSN, post-quantum cryptography, and ZKPs in blockchain. He received the Top
+Peer-Reviewer Award from Publons in 2018 with 126 verified reviews. He is in the technical
+editorial committee (Computer Communications Elsevier). He has served as a reviewer for
+more than 55 reputed journals, including IEEE S YSTEMS J OURNAL, IEEE Communications
+Magazine, IEEE T RANSACTIONS ON I NDUSTRIAL I NFORMATICS, IEEE Consumer Electronics
+Magazine, IEEE S ENSORS J OURNAL, IEEE T RANSACTIONS ON V EHICULAR T ECHNOLOGY, IEEE IAS, Computer Networks,
+Information Sciences, CAEE, Cluster Computing, AIHC, JNCA, and FGCS. He served as a Guest Editor for IEEE T RANSAC TIONS ON C ONSUMER E LECTRONICS , SLAS Technology (Elsevier), IET ITS, and De Gruyter and CMC (Techscience)-based
+special issues. He is serving as an Academic editor for Wiley SCN.
+
+1834
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+Muhammad Usman received the M.S. (Hons.) and Ph.D. degrees in cyber security from
+the School of ICT, Griffith University, Brisbane, Australia. He was a Research Fellow (PostDoctoral) in cyber security and machine learning with the University of Surrey, Guildford,
+U.K. He possesses over two decades of experience, during which he has held several academic
+and industrial positions in different parts of the globe, including Australia, Asia, and Europe.
+He provides advisory and consultancy in multiple areas, such as higher education, curriculum
+design and development, cyber security, digital forensics, risk assessment and management,
+security management, research and development, and career professional development training.
+He has a proven track record of providing leadership to IT staff and teaching teams. He is
+currently leading a Research Group of Human-Centered Intelligent and Secure Systems.
+He has many research publications, including in prestigious journals, such as several IEEE
+T RANSACTIONS and a book focused on mobile agent-based anomaly detection and verification
+systems for smart home sensor networks. He is a regular invited speaker. He has been a recipient
+of several research and travel grants. His current research interests include interdisciplinary areas around cyber security, digital
+forensics, trust and privacy, AI-driven complex systems, human-centered systems, digital twins, agritech, healthtech, community
+tech, consumer electronics, drones, electrical and autonomous vehicles, and formal and statistical modelling. He has been a
+member of the COVID-19 Outbreak Expert Database of the U.K. Parliament. He is also a Juniper Certified Networking and
+Security Specialist. He has served in different leading capacities, such as a focal person, the publication chair, an organizing
+committee member, and/or a TPC member of several IEEE conferences. He has led and acted as a guest editor for special
+issues in several IEEE T RANSACTIONS and other journals.
+
+Alavalapati Goutham Reddy received the Ph.D. degree from the Information Security
+Laboratory, Kyungpook National University, South Korea, in 2017. He is an Assistant Professor
+with the Department of Computer Science, University of Illinois, Springfield, USA. Before that,
+he was an Assistant Professor with Fontbonne University, USA, and the National Institute of
+Technology, India. Prior to that, he was a Researcher with Sejong University, South Korea,
+and the KINDI Center for Computing Research, Qatar University, in collaboration with Purdue
+University. He holds several publications on cryptographic authentication protocols. His primary
+research interests revolve around cryptography and information security. He is a Professional
+Member of ACM.
+
+Shehzad Ashraf Chaudhry (Member, IEEE) received the master’s and Ph.D. degrees (Hons.)
+from International Islamic University Islamabad, Islamabad, Pakistan, in 2009 and 2016,
+respectively. He is a Professor of cybersecurity engineering with the College of Engineering,
+Abu Dhabi University, Abu Dhabi, United Arab Emirates; and an Associate Professor of
+software engineering with Nisantasi University, Istanbul, Türkiye. He has authored more than
+180 scientific publications in different international journals and proceedings. With an H-index
+of 53, an i10-index of 133, and an accumulated impact factor of more than 530, his work has
+been cited around 7741 times. His research interests include lightweight cryptography, elliptic
+curve cryptography, multimedia security, E-payment systems, MANETs, SIP authentication,
+smart grid security, the IoT and cloud infrastructure security, and next-generation networks.
+He was a recipient of the Gold Medal for achieving a 4.0/4.0 CGPA in the master’s degree.
+He delivered several keynote speeches and received several awards for best research papers.
+Considering his research, the Pakistan Council for Science and Technology granted him the
+Prestigious Research Productivity Award while affirming him among the Top Productive Computer Scientists in Pakistan. For
+the consecutive five years (2020–2025), he has been listed among the top 2% of computer scientists across the world in Stanford
+University’s report.
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+1835
+
+Khalid Mahmood (Senior Member, IEEE) received the Ph.D. degree from International Islamic
+University, Islamabad, Pakistan, in 2018. He is a distinguished scholar in the field of computer
+science. He is currently an Assistant Professor with the Future Technology Research Center,
+National Yunlin University of Science and Technology, Yunlin, Taiwan. His expertise and
+contributions to the field have earned him recognition as one of the top 2% scientists globally,
+as acknowledged by Stanford University. Throughout his illustrious academic career, he has
+authored over 80 SCI/E-indexed articles, garnering more than 1900 citations and demonstrating
+the impact of his research. He is an approved Supervisor by the Higher Education Commission
+of Pakistan and has successfully guided over 15 graduate students in their research pursuits. With
+a focus on lightweight authenticated and key agreement solutions, his research spans various
+infrastructures, including smart grids, the Internet of Drones (IoD), the Internet of Things (IoT),
+vehicular ad hoc networks (VANET), mobile edge computing, and blockchain technologies.
+He is an ACM Professional Member. In recognition of his outstanding contributions, he has
+been honored with the Prestigious Young Productive Scientist Award by the Pakistan Council for Science and Technology in
+2017. He has also received accolades, such as the Productive Researcher Award and the Newcomer Productive Researcher
+Award at the National Yunlin University of Science and Technology, Yunlin, Taiwan. He continues to advance the field of
+computer science, establishing himself as a leading figure in academia with his dedication to excellence in research and
+scholarship.
+PAPER_TEXT

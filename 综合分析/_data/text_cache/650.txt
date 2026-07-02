@@ -1,0 +1,147 @@
+370                                                                                                  IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+
+
+
+   DSecO: Domain Name System (DNS) Data as a
+  Knowledge Graph for Enhanced Security Analysis
+                                                  Didier Bringer         and Lionel Tailhardat
+
+
+
+   Abstract—Managing Domain Name System (DNS) records                          Listing 1 Example of DNS records with a CNAME clause:
+presents challenges in terms of consistency and tracking over                  CNAME allows one domain name to alias another for address
+time, which can have operational impacts, particularly on cyber-               redirection. For instance, when a user attempts to access
+security. In this paper, we explore the use of ontologies and                  www.example.org, the operating system converts it to
+knowledge graphs to facilitate DNS system audit activities. We
+define nine key use cases derived from real DNS operations data                203.0.113.1, enabling the browser to connect to the server
+of a large-scale telco company and demonstrate how querying                    with this IP address and retrieve the requested page.
+and inference techniques can address these use cases using an
+RDF knowledge graph structured by the DSecO vocabulary, an
+open-source ontology available at https://w3id.org/dseco. Overall,
+we demonstrate the feasibility of providing a unified view of DNS
+records and the practicality of explainable and shareable DNS
+administration rules for extended analysis and informed decision-
+making by NetOps and SecOps teams regarding DNS records.
+   Index Terms—DNS audit, network operations, cybersecurity,                   removed for a complete cleanup when www.example.org
+ontologies, knowledge graphs, semantic web, AXFR, domain                       is no longer in use. It is noteworthy that the CNAME of
+hijacking.
+                                                                               CNAME pattern (known as a CNAME chain) – although not
+                                                                               recommended1 – can still be found in many DNS records.2
+                         I. I NTRODUCTION                                         Stale DNS records can also pose cybersecurity risks. For
+      N THE Internet, a primary address such as                                example, DNS record chains that include a DNS record part
+O     www.example.org – referred to as a fully qualified
+domain name, or FQDN [13, §2.3.5] – must resolve to
+                                                                               of a bankrupt Web agency’s DNS zone can lead to a “domain
+                                                                               hijacking”, as hackers could purchase the agency’s domain
+one or more final IP addresses (either IPv4, IPv6, or both).                   name and receive requests made to www.example.org.
+The FQDN to IP lookup is a key mechanism, commonly                             This can result in credential leaks, as the user’s Web browser
+implemented using a Domain Name System (DNS) [40], to                          may send cookies to the hackers’ server. While HTTPS and
+determine how to connect to network services (e.g. the host                    HSTS [20] help reduce this risk, it remains high due to
+serving Web pages for www.example.org). Organizations                          automated and free Certificate Authorities (CAs) like Let’s
+managing large-scale networks, such as international                           Encrypt.3 Indeed, hackers can obtain valid certificates in
+corporations or Internet service providers, may utilize the                    someone else’s name and succeed the identity verification
+DNS CNAME (Canonical Name) [40, §3.3.1] functionality                          challenge by simply placing a nonce file on the target server
+(Listing 1), for example to handle the complexity and constant                 they control.4
+evolution of the network infrastructures and services they                        These examples highlight the numerous rules needed to
+operate by defining generic addresses. However, this constant                  analyze DNS records, which can be tedious and error-prone
+evolution also requires ongoing adjustments of DNS records                     when done manually within a given organization, especially
+by NetOps and SecOps teams, both to ensure the proper                          for medium to large-sized companies with thousands to tens
+functioning of services and to prevent cybersecurity issues.                   of thousands of records and complex interconnections.
+   For instance, the CNAME example of Listing 1 summa-                            Automating DNS record analysis can enhance operational
+rizes as a rule chain akin to www.example.org−−−−−−→                           efficiency, prevent incomplete cleanups and security vulner-
+                                                     CN AM E
+www.example.myotherzone.org −             → 203.0.113.1,                       abilities, and improve overall DNS service performance by
+                                          A                                    reducing lookup operations [6]. However, challenges in data
+where www.example.myotherzone.org should be
+                                                                               integration and knowledge representation arise due to the
+   Received 14 January 2025; revised 3 July 2025; accepted 8 August 2025;      sharing of DNS data across different zone owners and het-
+approved by IEEE T RANSACTIONS ON N ETWORKING Editor E. Bertino. Date
+of publication 11 September 2025; date of current version 30 December 2025.
+                                                                               erogeneous systems. Indeed, providing a unified view of DNS
+This work was supported in part by the Orange - Fonds d’Innovation pour           1 CNAME chains increase DNS server load, cause name resolution delays
+la Sécurité (FSI) led by Jean Marc Blanco. (Corresponding author: Lionel
+Tailhardat.)                                                                   [6], and expand the trusted computing base (TCB), posing security risks [45].
+                                                                                  2 Particularly in CDNs to improve content delivery efficiency [50].
+   The authors are with Orange Company, 92449 Issy-les-Moulineaux, France
+                                                                                  3 https://letsencrypt.org/
+(e-mail: lionel.tailhardat@orange.com).
+   Digital Object Identifier 10.1109/TON.2025.3598374                             4 CAA DNS records [42] can mitigate this.
+
+
+             2998-4157 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+BRINGER AND TAILHARDAT: DSecO: DNS DATA AS A KNOWLEDGE GRAPH FOR ENHANCED SECURITY ANALYSIS                                                     371
+
+
+
+records, potentially linked to network infrastructure and busi-                 discussed below). Thus, there is an opportunity to bridge DNS-
+ness data, is essential for informed decision-making by NetOps                  related security methods and tools with semantic models. In
+and SecOps teams for both DNS administration tasks and                          the following paragraphs, we review existing works on these
+day-to-day monitoring of the networks behavior. Additionally,                   two aspects and then conclude with the positioning of our
+establishing explainable and shareable DNS administration                       DNS-KG proposal.
+rules is crucial to ensure a clear understanding of their                             a) Glass-box methods & tools: GRooT [50] and Heracles
+execution and mutual agreement among zone owners.                               [25] are two methods aiming at verifying DNS configurations,
+   In this work, we hypothesize that an explicit graph represen-                with GRooT apparently the first formal approach in this field
+tation could reflect the chaining nature of DNS records and                     of study. Both methods are able to capture the entirety of
+provides formal guarantees for various use cases. To tackle                     DNS behavior within a graph representation (a DNS configu-
+the above-mentioned challenges, we propose the “DNS-KG”                         ration interpretation graph), encompassing the transformation
+approach, which involves building an RDF knowledge graph                        of DNS zone files into graphs to enhance the consistency
+[1] from heterogeneous DNS data within an organization to                       verification process. This verification can be performed as
+facilitate cross-zone analysis of DNS records. The graph is                     either a self-check or a cross-check. In GRooT, users can
+structured by DSecO, a lightweight ontology we have imple-                      implement new analysis cases as C++ functions, ensuring high
+mented in RDFS [9] / OWL [54] to enable a query-based audit                     performance in processing the interpretation graph. However,
+approach of DNS data and facilitate connections to third-party                  developing additional use cases (e.g. identifying risky or
+knowledge bases for broader inference cases, such as linking                    useless DNS entries) requires abstraction and programming
+DNS configuration to Cyber Threat Intelligence (CTI) data                       skills from SecOps teams. Additionally, the specific data
+[24], [56]. We formalize nine DNS administration use cases                      structure of the interpretation graph and the static nature of
+based on interviews with DNS operation experts from Orange                      analysis functions make it difficult to extend graph data with
+– a leading international network infrastructure and service                    external sources or incorporate new data objects at runtime
+provider – and implement them as SPARQL queries [55] to                         for non-monotonic reasoning. In the same vein as GRooT and
+evaluate the query-based audit approach on both generated                       Heracles, Moura et al. [18] developed and open-sourced the
+and real-world data. The DSecO implementation, evaluation                       CycleHunter framework to analyze data from DNS zone files.
+dataset, and the associated documentation are available as open                 Their work addresses a specific issue in DNS records: cyclic
+source at https://w3id.org/dseco. Overall, we demonstrate the                   dependencies, highlighting the significant associated risk (i.e.
+feasibility of providing a unified view of DNS records and the                  a potential collapse of the entire Internet), which they refer to
+practicality of explainable and shareable DNS administration                    as a TsuNAME, and proposing methods for its remediation.
+rules for extended analysis and informed decision-making by                        Regarding tools, the dns-graph6 project (a small GitHub
+NetOps and SecOps teams regarding DNS records.                                  project with no updates since 2018) introduces a database
+   The remainder of this paper is organized as follows. In                      model for HOST, MX, DOMAIN and NS records but does
+Section II, we review related work, focusing on DNS-related                     not take CNAME records into account. The overall approach
+security methods and tools, as well as semantic models for                      involves populating a Neo4J7 graph database with data and
+knowledge representation. In Section III, we provide details                    subsequently execute queries. Another interesting project is
+of the DNS-KG approach with a deep dive into the use case                       PowerDNS8 which implements a DNS system that can inte-
+definitions, domain modeling with DSecO, and knowledge                          grate a database backend and provide an API, facilitating
+graph construction and exploitation for DNS records audit. In                   queries compared to traditional file-based DNS systems. How-
+Section IV, we present the experiments conducted and their                      ever, it only queries zones under its delegation.
+results on the DNS-KG approach, including running SPARQL                              b) Closedbox methods & tools: Ramasubramanian et al.
+queries related to the use case definitions. Finally, we conclude               [45] surveyed nearly 600’000 Web server names to establish
+and outline some future work in Section V.                                      a dependency graph of authoritative name servers. For a
+                                                                                given Web server name, they highlighted that a larger Trusted
+                         II. R ELATED W ORK                                     Computing Base (TCB) increases risk, as compromising any
+   Various studies have explored DNS-related security methods                   name server within the delegation graph can jeopardize the
+and tools to detect vulnerabilities or malfunctions due to non-                 name. They also compiled known vulnerabilities of public
+compliance or discrepancies in DNS, using either a glass-box                    name servers to perform a risk assessment. While this study
+or closed-box strategy on medium to large-scale systems (e.g.                   provides a valuable overview of name system vulnerabilities,
+academic or corporate networks, the Internet).5 However, few                    it does not provide details about how the data was stored.
+studies examine this field through the lenses of knowledge                      Also on the topic of trust, Daiping et al. [8] demonstrated
+representation and reasoning (KRR) and linked open data                         that subdomains inherit the trust of their apex domains, which
+principles [1], even though several existing semantic models                    is particularly valuable for illicit online activities. Indeed, the
+could be applied for explicit representation and reasoning on                   theft of Fully Qualified Domain Names (FQDNs) through IP
+DNS configurations (e.g. UCO [56] and ICAS [31], further                        hijacking or domain hijacking – cases tackled by our DNS-
+
+   5 Glass-box testing analyzes a system’s internal workings with full access
+                                                                                  6 https://github.com/abhisek/dns-graph
+to its source code, focusing on identifying vulnerabilities, while closed-box
+                                                                                  7 https://neo4j.com/
+testing evaluates functionality from an external perspective, simulating user
+interactions without knowledge of the internal code.                              8 https://github.com/PowerDNS/pdns
+372                                                                                        IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+
+
+KG approach – can lead to a variety of serious and detrimental      To achieve this, an ICS-SEC knowledge graph is constructed
+consequences for the brand that owns the domain.                    by aggregating several well-known security databases and data
+   More focused on DNS record management, the authors of            models, such as ATT&CK10 and NVD.11 Like the work in
+[7], [15], [17], and [26] all highlight

@@ -1,0 +1,885 @@
+IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026 945
+
+ SD-RetinaNet: Topologically Constrained
+ Semi-Supervised Retinal Lesion and
+ Layer Segmentation in OCT
+ Botond Fazekas , Guilherme Aresta , Philipp Seeböck , Julia Mai , Ursula Schmidt-Erfurth ,
+ and Hrvoje Bogunović
+
+ Abstract— Optical coherence tomography (OCT) is current state-of-the-art in both lesion and layer segmenwidely used for diagnosing and monitoring retinal dis- tation, while demonstrating the ability to generalize layer
+eases, such as age-related macular degeneration (AMD). segmentation to pathological cases using partially anno-
+The segmentation of biomarkers such as layers and lesions tated training data. Our results demonstrate the potential
+is essential for patient diagnosis and follow-up. Recently, of using anatomical constraints in semi-supervised learnsemi-supervised learning has shown promise in improv- ing for accurate, robust, and trustworthy retinal biomarker
+ing retinal segmentation performance. However, existing segmentation.
+methods often produce anatomically implausible segmentations, fail to effectively model layer-lesion interactions, Index Terms— OCT, disentangled representation,
+and lack guarantees on topological correctness. To address anatomical priors, retinal biomarker segmentation.
+these limitations, we propose a novel semi-supervised
+model that introduces a fully differentiable biomarker topol- I. I NTRODUCTION
+ogy engine to enforce anatomically correct segmentation
+of lesions and layers. This enables joint learning with bidirectional influence between layers and lesions, leveraging
+ O PTICAL Coherence Tomography (OCT) is the gold
+ standard imaging modality for the monitoring of retinal
+ pathologies and the management of patients with eye disunlabeled and diverse partially labeled datasets. Our model
+learns a disentangled representation, separating spatial eases. OCT provides clinicians with a detailed cross-sectional
+and style factors. This approach enables more realistic depiction of the retina, facilitating the assessment of diverse
+layer segmentations and improves lesion segmentation, imaging biomarkers, notably the thickness of the retinal layers
+while strictly enforcing lesion location in their anatomi- and volumes of retinal fluid compartment. These are crucial
+cally plausible positions relative to the segmented layers. indicators for identifying and monitoring retinal diseases and
+We evaluate the proposed model on public and internal
+datasets of OCT scans and show that it outperforms the guiding the treatment of pathologies such as diabetic macular
+ edema (DME) and age-related macular degeneration (AMD),
+ both prominent causes of global vision impairment [1]. In
+ Received 18 August 2025; accepted 23 September 2025. Date of
+publication 1 October 2025; date of current version 4 March 2026. This particular, the manifestations of AMD in the eye include,
+work was supported in part by the Christian Doppler Research Asso- among others, intraretinal cystoid fluid (IRF), subretinal fluid
+ciation, in part by Austrian Federal Ministry of Economy, Energy and (SRF), subretinal hyperreflective material (SHRM), and pig-
+Tourism, in part by the National Foundation for Research, Technology
+and Development, and in part by Heidelberg Engineering. Recom- ment epithelial detachment (PED) [2], [3].
+mended by Associate Editor Y. Zhao. (Corresponding author: Botond Large amount of data accrued during routine clinical prac-
+Fazekas.) tice, in conjunction with the demanding clinical workflow,
+ Botond Fazekas, Guilherme Aresta, and Hrvoje Bogunović are
+with the Christian Doppler Laboratory for Artificial Intelligence in makes manual quantification of retinal biomarkers unfeasi-
+Retina, Institute of Artificial Intelligence, Center for Medical Data ble in clinical practice. To combat this, automated retinal
+Science, Medical University of Vienna, 1090 Vienna, Austria, biomarker segmentation techniques have been developed,
+and also with the Comprehensive Center for AI in Medicine,
+Medical University of Vienna, 1090 Vienna, Austria (e-mail: along with the commercialization and widespread adoption of
+botond.fazekas@meduniwien.ac.at; guilherme.moreiraaresta@ OCT technology [4]. At the same time, the large variability
+meduniwien.ac.at; hrvoje.bogunovic@meduniwien.ac.at). of pathological manifestations, their effect on the signal, as
+ Philipp Seeböck is with the Medical Anomaly Detection (MANO)
+Group, Computational Imaging Research (CIR), Department of Biomed- well as the nature of OCT imaging, characterized by factors
+ical Imaging and Image-Guided Therapy, Medical University of Vienna, such as speckle noise, intensity fluctuations, and shadowing
+1090 Vienna, Austria, and also with the Comprehensive Center for AI induced by biological tissues, presents a challenging task for
+in Medicine, Medical University of Vienna, 1090 Vienna, Austria (e-mail:
+philipp.seeboeck@meduniwien.ac.at). the segmentation of retinal layers.
+ Julia Mai and Ursula Schmidt-Erfurth are with the Department of Oph- Recent advancements in retinal biomarker segmentation
+thalmology and Optometry, Medical University of Vienna, 1090 Vienna, algorithms frequently rely on supervised deep learning
+Austria (e-mail: julia.mai@meduniwien.ac.at; ursula.schmidt-erfurth@
+meduniwien.ac.at). methodologies, necessitating extensive training datasets anno-
+ Digital Object Identifier 10.1109/TMI.2025.3615240 tated with meticulous precision [5]. However, the acqui-
+
+ 1558-254X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+946 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026
+
+sition of high-fidelity manual annotations for pathological of retinal layer and fluid segmentation was already realized
+scenarios entails a multifaceted, labor-intensive, and resource- in [21] and a joint segmentation method for these tasks was
+demanding process. Therefore, automated solutions must proposed, based on a dynamic programming algorithm.
+leverage prior anatomical knowledge. Specifically, while reti- However, these retinal biomarker segmentation methods rely
+nal layers maintain a consistent relative position and lesions heavily on hand-crafted image features, leading to a potentially
+appear in well-defined locations, the presence of lesions degraded performance in the presence of noise, imaging articritically distorts layer morphology. This creates a complex facts or severe pathologies. As a hybrid approach, a machine
+bidirectional influence: layer anatomy constrains plausible learning-based method was proposed in [6], which combined
+lesion locations, while lesions, in turn, deform the layers. unsupervised feature representation and heterogeneous spatial
+Accurately modeling this intricate relationship, especially context with a graph-theoretic surface segmentation, which
+while ensuring topological consistency, is a major challenge allowed a joint segmentation of layers and lesions.
+not fully addressed by methods treating these segmentations With the rise of deep learning, several convolutional neural
+independently or sequentially [5], [6], [7], [8], [9], [10]. network (CNN)-based retinal biomarker segmentation methods
+ This challenge is compounded by the nature of available have been introduced. These were predominantly built on
+data. Due to labor costs and specialized expertise, simultane- U-Net [22] and its variants. ReLayNet [23] predicts the pixelously annotating both layers and lesions across large datasets wise locations of nine retinal layers and potential fluid-filled
+is rare. Consequently, many public and clinical datasets are pockets. This was later extended to 3D and various types
+partially annotated, with some containing only layer anno- of fluids in [5]. In the 2017 MICCAI Retinal OCT Fluid
+tations, and others only lesion annotations. A prominent, Challenge (RETOUCH) [24], all participants employed CNNunsolved challenge is, therefore, how to effectively train a based methods, primarily based on the U-Net architecture.
+single, robust model that leverages these diverse, partially Subsequently, the self-configuring nnU-Net [25] established a
+annotated sources while respecting the complex anatomical new state-of-the-art performance on this data.1 In [9] a dualrelationships described above. branch multitask model was introduced, with the first branch
+ In this study, we propose a novel segmentation framework outputting boundary labels while the second branch outputs
+for retinal OCT designed specifically to address these dual region segmentation labels. The two outputs are fused together,
+challenges. Our approach’s core innovation is a differentiable providing constraints from region segmentation to layer surbiomarker topology engine, which, for the first time, enables faces, but not explicitly modeling the influence of layers on
+joint learning with true bidirectional influence between layers lesions or the constraints imposed by lesion locations.
+and lesions under strict anatomical constraints. To apply this Convolutional operators inherently possess local properframework in a realistic data environment, we build upon a ties and inductive biases, and thus have a limited field of
+disentangled representation [11], [12]. This supporting archi- view. Consequently, transformers are increasingly adopted
+tecture is essential for our semi-supervised strategy, allowing as an alternative to CNN-based methods for medical image
+the model to effectively integrate and learn from diverse segmentation, due to their global self-attention mechanism
+sources of unlabeled and, crucially, partially annotated data. [26]. Vision Transformers [26] have demonstrated state-of-
+The proposed approach was extensively evaluated on multiple the-art performance on various benchmarks, though they
+public and internal datasets, demonstrating state-of-the-art require a large volume of training data and substantial
+performance and showing its unique ability to generalize layer computational resources. SwinUNETR [27] addressed these
+segmentation to pathological cases by synergistically learning limitations in medical image segmentation by introducing
+from disparate data sources. a hierarchical vision transformer, utilizing a hybrid CNNtransformer architecture, achieving both higher accuracy and
+ improved computational efficiency. U-Mamba [28], which
+A. Related Works
+ .
+
+ inherits the self-configuring capability of nnU-Net, employs
+ 1) Retinal Biomarker Segmentation: Early retinal layer Mamba blocks in conjunction with CNNs instead of transsegmentation algorithms typically involved extracting hand- formers, thereby efficiently enhancing the global attention
+crafted features from B-scans (cross-sectional images of the mechanism of the models.
+retina) and using graph-based techniques to infer the positions Building on the latest developments in hybrid CNNof retinal surfaces. For instance, the Iowa Reference Algo- transformer based methodologies, TCCT [29] introduces a
+rithms [13], [14] transformed OCT data into a graph structure, retinal layer segmentation model with a lightweight transusing graph-search algorithms to identify surface positions former module with cross-convolutional integration to increase
+while maintaining topological accuracy, layer thickness con- the receptive field of the CNN backbone. The model yields
+straints, and smoothness. Subsequent enhancements to these pixel-level segmentation of an OCT scan with an optional subgraph-based techniques were made in [15], [16], [17], and sequent edge-detection-like step converting the segmentation
+[18]. into layer boundaries, thereby partially transforming the task
+ Similarly, traditional lesion segmentation models also relied into a regression problem. However, this boundary conversion
+on hand-crafted image features. In [19], they proposed an cannot be used effectively when fluids are present [29], highanomaly detection model based on retinal texture for lesion
+segmentation. Later, in [20], they proposed a 3D voxel classification model with a graph-cut approach. The interdependence 1 https://retouch.grand-challenge.org/Results/
+FAZEKAS et al.: SD-RetinaNet: TOPOLOGICALLY CONSTRAINED SEMI-SUPERVISED RETINAL LESION 947
+
+lighting the difficulty of layer-only methods in pathological explicit anatomical topology constraints specific to retinal
+regions. structures.
+ The aforementioned methods still allow anatomically Contrastive learning approaches learn discriminative repreimplausible segmentations, such as multiple locations for sentations by contrasting features from similar and dissimilar
+a layer boundary position in an A-scan (a column of a regions. Methods like Pixel Contrast [37] and Cross-Patch
+B-scan). He et al. [8] proposed to improve the coherence of Dense Contrastive Learning [38], as well as state-of-the-art
+retinal layer segmentation by predicting the positions of the frameworks such as ACTION++ [39] which uses adaptive
+shallowest surface and then iteratively rectifying all deeper contrast to handle class imbalance, have proven effective.
+surfaces to ensure that they have greater or equal depth. These However, these methods generally focus on feature discrimsurfaces are obtained from a softmax mapping that encodes ination rather than enforcing the global anatomical structure
+the most probable location of the layer boundary. In a multi- and spatial relationships required for accurate and plausible
+task setting, the system also predicts an independent pixel-wise retinal OCT segmentation, nor are they typically designed for
+prediction of both retinal layers and lesions. However, it fails datasets with disparate partial annotation types (e.g., layers
+to take advantage of the tight association between the different only vs. lesions only).
+retinal lesions with their respective, plausible positions in the In a different approach, SD-LayerNet [12], which is a
+layers, and thus allowing for anatomically incoherent patho- retinal layer topology-aware extension of SD-Net [11], uses a
+morphological predictions. Furthermore, such approaches lack disentangled representation approach, separating the input 2D
+mechanisms for true bidirectional influence, limiting the ability OCT slice (B-scan) into spatial binarized spatial anatomical
+of lesion information to refine layer segmentation in complex factors corresponding to layers and noise, and non-spatial style
+pathological cases. factors. Subsequently, the style factors are applied as an affine
+ The above highlights the need for a unified framework transformation on the anatomical factors to reconstruct the
+where layers and lesions are not treated as independent tasks original image. The binarization of the anatomical factors,
+but are jointly optimized within a single, topologically-aware and the application of style factors as an affine transforsystem. mation, ensures that anatomical factors cannot contain style
+ information and vice versa. Through the retinal layer specific
+ 2) Semi-Supervised Training for Retinal Biomarker Segmen- constraints enforced on the spatial anatomical factors, the
+tation: A primary motivation for our work is to address the network is forced to generate these structural building blocks
+challenge of leveraging diverse, partially annotated datasets. corresponding to the retinal layers for a correct reconstruction.
+Semi-supervised learning provides a pathway to tackle this This allows the network to learn the structure of the retina even
+issue, moving beyond standard supervised methods that from unlabeled scans. Although SD-LayerNet lacks the ability
+require complete annotations for every image. A prevalent to segment lesions, it could be extended similarly to [27] by an
+approach involves using a segmentation network to generate extra segmentation head predicting pixel-wise classifications
+initial segmentations (pseudolabels). This is followed by a for lesions. However, this would have the same limitations
+secondary network that evaluates the accuracy and realism as [27], i.e. lack of a mechanism to enforce topological
+of these segmentations against labeled data. Through the constraints on the lesions or to model the crucial bidirectional
+application of adversarial loss, the segmentation network is synergy between layers and lesions, which is the central
+incentivized to generate outputs that are more realistic and contribution of our new framework
+aligned with the labeled data [30], [31], [32].
+ B. Contributions
+ Further semi-supervised methods have been proposed, often
+ .
+
+focusing on consistency regularization or contrastive learn- In this study we propose an end-to-end trained retinal
+ing. For instance, BE-SemiNet [33] focuses specifically on OCT segmentation model, which addresses the challenges
+semi-supervised retinal OCT layer segmentation. It enhances of anatomical inconsistency, accurately modeling bidirectional
+boundary learning using an auxiliary distance map regression layer-lesion influence, and effectively utilizing partially labeled
+task alongside consistency regularization techniques. While data:
+effective for improving layer boundary delineation with scarce • We introduce a framework for joint layer and lesion
+labels, BE-SemiNet is limited to layer segmentation only and segmentation featuring a novel differentiable biomarker
+does not support the joint segmentation of, or interaction topology engine. This engine enables bidirectional influbetween, layers and lesions. Furthermore, its reliance on ence between layers and lesions, predicts anatomically
+distance maps may pose challenges in cases where layers are plausible segmentations, and guarantees the topological
+missing or severely distorted by pathology. consistency of retinal lesions relative to the layers.
+ Consistency regularization methods, often building upon the • We introduce several anatomical priors encoded as loss
+Mean Teacher concept [34], enforce similar predictions for terms (particularly Llp ) that, within this joint learning
+perturbed versions of the same unlabeled input. Variants like framework, allow the model to effectively leverage the
+Uncertainty Guided Mean Teacher (UGMT) [35] refine this by potential of partially labeled datasets (e.g., datasets conweighting the consistency loss based on model uncertainty, taining only layer or only lesion annotations).
+while others enforce mutual consistency between differ- • We extensively evaluate our method via ablation and
+ent network predictions [36]. While effective at leveraging baseline studies on real-world AMD cases from multiple
+unlabeled data, these methods typically do not incorporate public datasets and on an independent external test set.
+948 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026
+
+Fig. 1. A U-Net (anatomy module) creates a latent space representation from the input image. The convolutional heads conv-b and conv-l
+generate the initial layer boundaries as a probability map, and the initial lesion segmentation, respectively. The biomarker topology engine ensures
+the coherent position of the layers and lesions and generates a spatial representation of the layers. During training time, both layer and lesion
+segmentations (2D spatial factors) and the input image are used to create the style factors (1D vectors), which encode the intensity values of
+the spatial factors, and thus defines the general appearance of the input image. The decoder then produces a reconstructed image by creating a
+weighted sum of the 2D spatial factors, where the weights for each spatial factor are derived from the 1D style factors. During inference, the style
+factors and the reconstructions are not generated.
+
+ Importantly, since our work uses a boundary regression to enforce strict anatomical and topological consistency. This
+approach [8], it is not susceptible to the common issue entire process is supported by a disentangled representation
+of predicting multiple vertical positions for a boundary in and reconstruction pathway, which enables the framework to
+an A-scan. This regression-based approach also allows for be trained semi-supervisedly using labeled, partially labeled,
+topological guarantees about the correct order of the layers. and unlabeled data.
+The underlying disentangled representation framework [11],
+[12], essential for our semi-supervised strategy, allows the A. Anatomy Module: Initial Prediction
+ .
+
+model to learn structural features from unlabeled images via
+ The initial predictions are generated by a U-Net [18] with
+anatomical prior information and reconstruction. Crucially,
+ an EfficientNet-b4 encoder [40], and a four-stage decoder with
+this framework, combined with our anatomically informed
+ 512, 256, 128, and 64 channels (Fig. 1 - Anatomy module).
+joint learning process, also enables the effective integration
+ Two separate convolutional heads are attached to the decoder’s
+and use of diverse partially labeled datasets.
+ output:
+ 1) Layer Boundary Regression: The conv-b head performs
+ II. M ETHODOLOGY initial layer boundary regression as described in [8] and [12],
+ Our proposed method, SD-RetinaNet, processes OCT predicting a probability mass function P(Y | i, b) for each
+images in a two-stage manner within an end-to-end frame- column (A-scan) i and surface boundary b, where Y is a
+work, as illustrated in Fig. 1. First, an Anatomy Module gen- discrete random variable representing the vertical position (i.e.,
+erates initial, unconstrained predictions for layer boundaries row index) within the A-scan. These probability mass function
+and lesions. Second, our core contribution, a differentiable encodes the likelihood of each potential vertical position being
+Biomarker Topology Engine, refines these initial predictions the true location of boundary b. The final boundary position
+FAZEKAS et al.: SD-RetinaNet: TOPOLOGICALLY CONSTRAINED SEMI-SUPERVISED RETINAL LESION 949
+
+pbi is then calculated
+ P as the expected value of this probability The purpose of this component is to encourage the network to
+distribution: pbi = r r · P(r|i, b), where the summation is over learn segmentations (corresponding to the 2D spatial factors)
+all possible row indices r. that, when combined with appropriate intensity values, can
+ 2) Lesion Segmentation: The output of conv-l are the lesion accurately reconstruct the original input image. This indirectly
+segmentations, obtained via Softmax. These predictions are promotes the segmentation of regions with uniform intensities,
+binarized using a differentiable rounding function before being which typically correspond to the same anatomical structures
+further processed in the biomarker topology engine. This (layers or lesions). This approach leverages the inherent propfunction performs standard rounding to the nearest integer erty that neighboring retinal structures have different intensity
+during the forward pass, effectively converting the continuous values, and that individual layers and lesions generally exhibit
+output to a binary segmentation (0 or 1). During the backward uniform intensity within their boundaries.
+pass, it acts as an identity function, allowing gradients to 1) Style Factor Generation: The style factors (Ω) are 1D
+pass through unchanged. This approach enables gradient-based vectors that encode the intensity values of the spatial factors.
+optimization while producing discrete segmentation outputs. The generation of style factors follows the modality factor
+ Each output channel Lk produced by conv-l is associated generation methodology of [11] and [12]. Specifically, a Variwith a lesion type k, while an additional channel Ln is ational Autoencoder (VAE) is employed to generate the style
+dedicated to detecting the background. factors, which are subsequently utilized in the reconstruction
+ stage by the image decoder.
+B. Biomarker Topology Engine
+ .
+
+ 2) Image Decoder: The image decoder procedure is adapted
+ The initial predictions from the Anatomy Module can be from [11] and [12], where a combination of style, binarized
+anatomically inconsistent. The Biomarker Topology Engine layer surfaces and lesions segmentations is used to generate
+is a novel, fully differentiable module designed to correct an image of the same size as the input. The fusion process is
+these predictions by enforcing anatomical priors. Its operation carried out through a model that is conditioned using four
+consists of three sequential steps: FiLM layers [42] to scale and offset the intensities of the
+ 1) Iterative Layer Correction: To enforce a strict layer topo- spatial factors without transmitting any spatial information via
+logical order, we use an iterative process to correct the the style factors.
+boundary positions. Unlike previous approaches [8], [12], we
+correct the positions bottom-up, since atrophy in the lower
+ D. Training Objectives and Loss Functions
+layers can cause the upper layers to ˇ shift downwards [41].
+ .
+
+Specifically, we use p̂bi = pb+1 − ˇ pb+1
+ ˇ
+ i i − pbi ˇ+ , where |·|+ The model is trained end-to-end using a multi-component
+represents the rectifier function. Here, p̂bi contains the rectified loss function that combines supervised signals with selfpositions for an OCT A-scan, and P̂b represents the collection supervised anatomical priors and reconstruction objectives.
+of p̂bi , containing the retinal layer positions for a B-scan. 1) Anatomical Prior Losses (Self-Supervised): These losses
+ 2) Surface-to-Mask Conversion: The rectified boundary are calculated on the initial predictions from the Anatomy
+positions of a B-scan P̂b are then converted to 2D surfaces C b Module to guide the network towards plausible outputs, even
+using a novel approach. In particular, C b = σ(A − P̂b ), where on unlabeled data.
+σ is the sigmoid function and A ∈ RH×W , where Ai, j = i for • Topological ordering constraint (Lto ) To ensure the strict
+ j = 1, 2, . . . , W is a row counter. C b is a 2D representation of ordering of retinal layers, we aim to reduce the occurrence
+the boundary b, with values close to 0 above Pb and close to 1 and magnitude of topological order P b−1 across
+ P violations
+below it. Finally, non-overlapping layer maps M s are obtained A-scans, similarly to [12]: Lto = W1 s i |pi − pbi |+ .
+iteratively through M s = C b − C b+1 . During the forward pass • Boundary curvature constraint (Lbc ) We calculate the
+only, M s are rounded to form binarized spatial factors. second-order derivative (SoD) specifically on the pre-
+ Unlike [12], which predicted 2D surfaces from the cumu- dicted boundary positions, using finite differences. This
+lative sum of the probability distribution, our novel approach approach differs from [12], which constrained the boundoperates directly on the coordinate space, facilitating possible ary slope to a predefined range.
+processing of the predicted boundaries prior to the lesion The SoD is invariant to B-scan inclination and approxisegmentation. mates the boundary curvature, which is a more accurate
+ 3) Topological Lesion Correction: Finally, the predicted descriptor of a layer boundary than the slope. To deterlesionPsegmentations Lk are topologically corrected via L̂k = mine the maximum expected curvature κ s per layer for
+Lk M l l∈Sk , where the predefined S contains the indices of A-scans δ pixels apart (where δ is a hyperparameter),
+the layers that may contain the lesion k, and denotes the we use the annotated training data. To remove out-
+Hadamard product. This differentiable step ensures that in the liers, for each layer we take the 0.999 percentile of
+final output and spatial factors no lesions are predicted outside the calculated maximum expected curvatures for each
+their prespecified layer boundaries. layer in the training. With this in mind, each inferred
+ surface curvature greater than ˇκ s is penalized: Lbc =
+C. Disentangled Representation for Semi-Supervised P P ˇˇ |−pis−b 2δ c +2pis −pis+b 2δ c |
+ .
+ ˇ
+ − κ s ˇˇ .
+ 1
+ ˇ
+Learning W s iˇ δ
+ +
+ The overall image reconstruction procedure, including the • Lesion position constraint (Llp ) To promote the coruse of style and spatial factors, is adapted from [11] and [12]. rect location of lesion segmentations and to learn from
+950 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026
+
+ as a loss term to encourage the network to learn the target
+ distribution. We calculate the Dice loss between each lesion
+ k
+ L̂k and the reference Lre f , resulting in the supervised loss term:
+
+ Lsup = λ1 LKL + λ2 LL1 + λ3 Ldice
+ X T (r | i, s) λ2 X s 2
+ = λ1 T (r | i, s) ln + yi − µis
+ s,r,i
+ P (r | i, s) S · W s,i
+ λ3 X
+ 1 − Dice L̂k , Lre k
+ 
+ + f (1)
+ |k|
+ k
+
+ where T (Y | i, s) represents the target probability map,
+ constructed using Gaussian distributions with means µis and
+ standard deviation σ, one for each layer boundary on A-scan
+Fig. 2. Illustration of the lesion position constraint in various settings. A
+PED (blue) is defined as being located between the BM and RPE (white i at surface s, r ∈ Y and |k| is the number of different lesion
+lines). When this condition is met in the prediction (first row), the lesion types used in the training.
+position constraint (Llp ) does not influence the loss. In the presence 3) Reconstruction and Disentanglement Losses: We focus
+of lesion annotation but no layer annotation (second row), if there is
+a discrepancy between the predicted layer and lesion segmentations, on the reconstruction between the predicted Internal Limiting
+Llp imposes a penalty on the incorrect layer segmentation. Conversely, Membrane (ILM) and Bruch’s membrane (BM) surfaces,
+with available layer annotation (third row), a contradiction between which are at the top and bottom of the retina, to avoid the
+the predicted layer and lesion segmentations results in Llp penalizing
+the incorrect lesion segmentation. In cases where no annotations are impact of noise or uncertainty outside the retina. For this
+available (fourth row) but inconsistencies exist between the layer and purpose, we use the reconstruction loss, Lrec , which measures
+lesion segmentations, both segmentations are penalized by Llp . the mean absolute error (MAE) between the intensity values
+ of the original and reconstructed images within this specific
+ region.
+ unannotated samples as well, we penalize predictions During training, the loss function LzKL is employed to
+ k lying
+ 1
+ P outside ofk the layers P defined
+ l
+  in Sk : kLlp = minimize the Kullback-Leibler (KL) divergence of the esti-
+ W·H k − log 1 − L 1 − M l∈Sk , where L is the mated Gaussian distribution by the style-encoder VAE from
+ initial segmentation prediction for lesion k. The effect of the standard Gaussian distribution.
+ this constraint is illustrated in Figure 2. This constraint 4) Optional Triplet Loss for Forced Disentanglement: To
+ facilitates learning in scenarios even without complete enhance the disentanglement of the spatial and style factors,
+ annotations. Even if there are no annotations present, it we propose a variant of our method with two additional
+ encourages the network to predict topologically coherent loss terms. This approach trains the network in a contrastive
+ segmentations. If only lesion annotations are available for manner, ensuring that variations in the overall appearance of
+ a given image, and the network predicts layer boundaries the scans are captured exclusively by the style factors, while
+ that would place the lesion in an anatomically impossible spatial changes are reflected exclusively in the spatial factors
+ location, the layer predictions are penalized via Llp , even (Figure 3).
+ in the absence of explicit layer ground truth. This allows Specifically, for each input B-scan I we generate a B-scan
+ the network to learn the distortions caused by lesions Ia which has random affine transformations applied on, as
+ to the layers from the lesion segmentation. Conversely, well as a B-scan I s on which random style transformations
+ if only layer annotations are present, incorrect lesion are applied, including change in the contrast, noise level, blur.
+ predictions falling outside the allowed layer ranges are We introduce a triplet loss for both the style factors (Ltriplet-s )
+ penalized, even without lesion ground truth. This intro- and for the spatial factors (Ltriplet-a ):
+ duces a bidirectional influence between the layer and
+ Ltriplet-s = |S C ΩI , ΩIa − S C ΩI , ΩIs |+
+  
+ lesion segmentations. (2)
+ 2) Supervised Losses: These losses are calculated on the where S C denotes the cosine similarity function, and Ω denotes
+final, corrected outputs from the Biomarker Topology Engine the style factor vector,
+to ensure accuracy against ground truth annotations.
+ Ltriplet-a = |MSE PI , PIs − MSE PI , PIa |+
+  
+ 1) LKL , to describe the target distribution of P(Y | i, b),
+ + |DL LI , LIs − DL LI , LIa |+
+  
+ 2) LL1 , to penalize wrongly regressed layer boundary (3)
+ locations with L1 loss and 3) Ldice , to penalize wrongly where MSE denotes the mean squared error, DL denotes the
+ segmented lesions. Dice loss, P denotes the layer boundaries and L denotes
+In particular, to handle potential inaccuracies in pixel-level the predicted lesions. We sum the two triplet losses under
+annotations, we use a normal distribution to model P(Y | i, b) the common term:Ltriplet = Ltriplet-a + Ltriplet-s
+in LKL . In this model, the mean of the distribution for each 5) Overall Cost Function: The overall cost function L for
+A-scan i is the reference standard position µis of the surface, the end-to-end training is a composition of the supervised
+and the standard deviation σ is a hyperparameter. During Lsup = λ1 LKL + λ2 Lmse + λ3 Ldice , the anatomical priors
+training, we use the mean Kullback-Leibler (KL) divergence Lprior = λ4 Lto + λ5 Lbc + λ6 Llp loss, the style encoder
+FAZEKAS et al.: SD-RetinaNet: TOPOLOGICALLY CONSTRAINED SEMI-SUPERVISED RETINAL LESION 951
+
+ 8 retinal layers and macular edema. These 8 annotated layers
+ form a direct subset of the 9 layers annotated in the HCMS
+ dataset, lacking only the ELM annotation, thus ensuring
+ compatibility for evaluation when training on HCMS data.
+ Similar to [21], [23], [43], and [44], we used the 5 patients
+ (55 B-scans) of DukeDME with severe edema. However, as
+ we used this dataset as an external test set, we did not perform
+ training on it, thus the scans of the last 5 patients were not
+ utilized.
+ 2) Internal Dataset: The dataset comprises 509 macula centered Spectralis (Heidelberg Engineering, Germany)
+ OCT volumes from 462 patients, with resolutions spanning
+Fig. 3. Illustration of the forced disentanglement process. For each 18-97 B-scans, each with a size of 512 − 1024 × 496 pixels.
+B-scan I in the batch, a randomly spatially transformed B-scan Ia and
+a style-transformed B-scan Is are generated. Style latent space: A
+ The scans were taken during clinical routine check-ups in
+triplet loss function ensures that the cosine distance margin between neovascular AMD patients who underwent treatment, thus
+the style factors of the original B-scan and the spatially transformed representing a real-world clinical scenario. For 85 volumes, the
+B-scan remains smaller than the margin between the original and the
+style-transformed B-scan. Spatial latent space: The layer and lesion
+ lesions were manually annotated by experts on every B-scan,
+segmentations (i.e. spatial factors) should be consistent between the while 11 layers were manually annotated on 7 B-scans per
+style-transformed and the original B-scan, and must differ for the spa- volume. From these, the number of volumes containing IRF,
+tially transformed B-scan.
+ SRF and SHRM is 42, 50 and 42 respectively. We performed
+ 3-fold cross-validation on the 85 annotated volumes. Folds
+ were created using patient-wise, multi-label aware data stratifiloss LzKL , the triplet losses Ltriplet and the reconstruction loss
+ cation (∼28 volumes/fold) to ensure similar lesion distributions
+Lrec :
+ and prevent subject overlap between training/validation and
+ L = λ7 LzKL + λ8 Lrec + λ9 Lsup + λ10 Ltriplet + Lprior test sets across iterations. In each iteration, 2 folds formed
+ the training/validation set, with the remaining fold used for
+ III. E XPERIMENTAL S ETUP testing. This combined training/validation data was further
+ split patient-wise and stratified into 70% for internal training
+A. Datasets
+ .
+
+ and 30% for internal validation. This internal validation set
+ 1) Public Datasets: The HCMS dataset [8] comprises 14 was used during each training run to monitor performance
+healthy controls (HCs) and 21 individuals diagnosed with and select the optimal model epoch (i.e., the specific model
+multiple sclerosis (MS). Each participant’s data includes 49 weights) for final evaluation on the held-out test fold. The
+B-scans obtained with a Spectralis (Heidelberg Engineering, 387 unannotated scans were used alongside the respective
+Germany) scanner, with nine surfaces manually annotated. The internal training data in each fold for semi-supervised training.
+scans measure 496 × 1024 in dimension and possess a lateral All scans were resampled to a uniform lateral resolution of
+resolution of 5.8µm, an axial resolution of 3.9µm, and a B-scan 6.0 µm/px.
+interval of 123.6µm. As we do not validate/test our method in
+this dataset, all of the scans are used for training. B. Evaluation Metrics and Statistical Analysis
+ .
+
+ The RETOUCH dataset includes 112 OCT volumes cen-
+ To assess performance, we used distinct metrics tailored for
+tered on the macula obtained from 112 patients diagnosed
+ each segmentation task. For layer segmentation, we report the
+with macular edema due to AMD or RVO. Each B-scan
+ Mean Absolute Distance (MAD) in micrometers (µm). MAD is
+was manually annotated pixel-wise for intraretinal fluid (IRF),
+ chosen as it directly measures the average boundary localizasubretinal fluid (SRF), and pigment epithelial detachment
+ tion error in a clinically relevant scale and, unlike region-based
+(PED). The training dataset comprises 70 OCT volumes,
+ metrics like Dice, is not biased by the natural variation in layer
+while the test dataset contains 42 volumes, however we
+ thickness across the retina. For lesion segmentation, we report
+did not utilize the latter. The OCT volumes were captured
+ the Dice Similarity Coefficient (DSC), the standard metric
+using three different devices: Cirrus HD-OCT (Zeiss Meditec,
+ for evaluating the volumetric overlap of segmentation masks,
+Germany), Spectralis (Heidelberg Engineering, Germany), and
+ which is well-suited for these variably shaped regions.
+T-1000/T-2000 (Topcon, Japan), with approximately equal
+ To account for the interdependence of B-scans from the
+number of scans from each. All volumes encompass a macular
+ same patient volume, we performed statistical analysis using
+region measuring 6 × 6 mm2 . Depending on the experimental
+ a linear mixed-effects model [45], with p < 0.05 considered
+setup, we either use all of the scans available for training
+ significant.
+regardless of the vendors, or the Spectralis scans only.
+ As an independent external test set, we used the DukeDME
+dataset [21]. It contains 10 Spectralis volumes with a resolu- C. Experimental Scenarios
+ .
+
+tion of 496 × 768 × 61 voxels from 10 patients with diabetic We designed four distinct experimental scenarios to commacular edema (DME). Within each volume, 11 B-scans are prehensively evaluate our method’s performance, robustness,
+annotated by both a senior and a junior ophthalmologist for and generalization capabilities.
+952 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026
+
+ 1) Main Performance Evaluation: for PED, SRF, and IRF in patients with AMD and RVO. To
+ a) Baseline Studies: To evaluate the performance of our evaluate the performance of our model trained on partially
+proposed approach, we compared it with several segmentation labeled datasets on an independent external dataset, we use the
+methods: ReLayNet [23], nnU-Net [25], U-Mamba [28], Swi- first 5 volumes of the DukeDME dataset as this is common
+nUNETR [27], TCCT [29], and the layer boundary regression practice within the field [8], [21], [29]. For this evaluation, we
+method (LBRM) introduced by [8]. Additionally, we included combined our model’s predictions for IRF and SRF to match
+comparisons with two state-of-the-art semi-supervised meth- the “macular edema” annotation present in the DukeDME
+ods: ACTION++ [39], a general medical image segmentation dataset.
+model, and BE-SemiNet [33], designed for retinal OCT layer We were not able to test the non-semi-supervised methsegmentation. ods under these experimental settings because none of them
+ For a fair and consistent comparison, several implemen- yielded meaningful results after training. Instead, for the layer
+tation details were necessary. We focused our evaluation on segmentation performance, we trained these methods solely
+these 2D-based methods as they are better suited to the on the HCMS dataset and evaluated their performance on the
+sparse, slice-wise annotation protocol common in clinical first 5 volumes of the DukeDME dataset. Similarly, we trained
+datasets and addressed in our work. While 3D methods like these methods on the RETOUCH dataset and evaluated the
+Liu et al. [46] exist, their reliance on inter-slice coherence lesion segmentation performance on the same volumes in the
+is challenged by the large, variable distances between the DukeDME dataset. This approach also provides insight into
+few annotated B-scans in our data. Our preliminary evalua- the impact of domain shift in this experimental setting.
+tion of this representative 3D method confirmed it struggled
+ 3) Robustness to Limited Labeled Data: To further investiin this setting. Since TCCT, SD-LayerNet and BE-SemiNet
+ gate the label efficiency and robustness of our semi-supervised
+were originally designed for layer segmentation only, we
+ framework, especially relevant in clinical settings where
+adapted their architectures by adding output channels for
+ extensive annotations may be scarce, we conducted addilesion segmentation. For all pixel-based methods (ReLayNet,
+ tional experiments using significantly reduced amounts of
+nnU-Net, U-Mamba, SwinUNETR, ACTION++, and TCCT),
+ labeled training data. The goal was to assess how effectively
+layer boundary positions were extracted in a post-processing
+ our proposed methods, compared to other semi-supervised
+step, defined as the first occurrence of the corresponding layer
+ approaches, could leverage anatomical priors and the reconclass in each A-scan. To handle erroneous predictions outside
+ struction task when direct supervision is minimal.
+the retina, only the largest connected component for each
+ These experiments were performed using the crosslayer was retained. Furthermore, for fairness, the backbones
+ validation setup on our internal dataset. For each of the 3 folds,
+of ReLayNet and LBRM were replaced with a U-Net with an
+ we created smaller training subsets containing only 10% and
+EfficientNet-b4 encoder to match our anatomy module.
+ 25% of the volumes available in that fold’s original training
+ b) Ablation Studies: To investigate the impact of the difsplit. These subsets were generated using the same patientferent modules of our model, we conducted several ablation
+ wise, multi-label aware stratification method used for the main
+studies. To evaluate the effect of the semi-supervised lesion
+ split to maintain representative distributions of lesion types and
+position constraint Llp , we trained our network without this
+ severities, even within these smaller subsets.
+loss term (SD-RetinaNet - Llp ). To assess the importance of the
+ Recognizing that training outcomes can have higher
+topological constraint and the boundary curvature constraints,
+ variability with smaller datasets, we performed multiple indewe trained the network without these loss terms (SD-RetinaNet
+ pendent runs for these limited data conditions. Specifically,
+- Lto and SD-RetinaNet - Lbc ). We assessed the performance
+ for the 10% data setting, we generated 10 distinct subsets and
+of our model when trained without disentanglement and
+ trained the models independently on each. For the 25% data
+reconstruction (SD-RetinaNet - Lrec ). Also, we observed the
+ setting, we used 4 distinct subsets and corresponding training
+performance of the biomarker segmentation method of He et
+ runs. This repetition helps provide a more stable estimate of
+al., with adding biomarker topology engine with the 1D-2D
+ performance under data scarcity.
+conversion and the lesion position constraint Llp thus creat-
+ We evaluated our proposed methods (SD-RetinaNet and
+ing an additional semi-supervised baseline (He et al.+Llp ).
+ SD-RetinaNet + Ltriplet ) and the relevant semi-supervised
+This corresponds to a configuration of our model without
+ baseline methods (BE-SemiNet, ACTION++, LBRM + Llp ,
+reconstruction and the anatomical priors Lto and Lbc . We also
+ SD-LayerNet) under these 10% and 25% training data conevaluated the effect of changing the U-Net + EfficientNet-b4
+ ditions. Models trained on each subset were evaluated on the
+backbone to the proposed architecture of TCCT [29] (SDfixed test set corresponding to their respective cross-validation
+RetinaNet w. TCCT BB.).
+ fold.
+ 2) Partial Annotation Generalization: Although numerous
+public OCT segmentation datasets are available, only a few 4) Cross-Device Generalization: To investigate the effect
+include annotations for both retinal layers and lesions. To of our disentanglement framework on cross-device generalassess the performance of our method with partially annotated ization, we designed a leave-one-out cross-vendor validation
+datasets, we trained our model using the HCMS dataset using the multi-device RETOUCH dataset, which contains
+[8], which provides layer segmentation annotations for both scans from Spectralis, Topcon and Cirrus devices.
+healthy and multiple sclerosis (MS) scans, and the Spectralis The first two scenarios evaluated generalization from a
+scans of the RETOUCH dataset, which includes annotations mixed-vendor training set to a single unseen vendor:
+FAZEKAS et al.: SD-RetinaNet: TOPOLOGICALLY CONSTRAINED SEMI-SUPERVISED RETINAL LESION 953
+
+ • Models were trained on 50% of the Spectralis volumes involving semi-supervision, and the semi-supervised baseline
+ and 50% of the Cirrus volumes, and evaluated on all held- comparisons.
+ out Topcon volumes. For the partial annotation experiments, the batch size was
+ • Models were trained on 50% of the Spectralis volumes also 40 but consisted entirely of labeled samples drawn
+ and a corresponding number of Topcon volumes, and proportionally from the HCMS and RETOUCH training sets.
+ evaluated on all held-out Cirrus volumes. No unlabeled volumes were used in this specific experimental
+ The third scenario was designed as a more demanding setting. For these experiments, the model checkpoint after
+generalization task, testing the ability to learn from a single 150 training epochs was used for evaluation, as no combined
+manufacturer and apply to multiple unseen ones: validation set was readily available.
+ • Models were trained using only the Spectralis volumes The training was carried out in a mixed-precision environfrom RETOUCH and HCMS, and evaluated on a com- ment on an Nvidia DGX server on a single A100 (40GB) GPU,
+ bined test set of all Topcon and Cirrus volumes. using Ubuntu 20.04, Python 3.8.12, and PyTorch 1.11.0. The
+ training took 4 hours on this setup. The source code for our
+ In all scenarios, the layer-annotated HCMS dataset was
+ implementation can be found at http://github.com/ABotond/
+included during training to provide layer supervision.
+ SD-RetinaNet.
+As the RETOUCH dataset only contains lesion anno-
+ 2) Hyperparameter Tuning: Owing to the disentangled
+tations, performance for this experiment was evaluated
+ design of the proposed method and the incorporated anatomsolely on lesion segmentation using the Dice Similarity
+ ical priors, the model contains numerous hyperparameters for
+Coefficient.
+ the weights of the loss terms. To streamline the training
+ 5) Analysis of Disentangled Latent Space: In order to assess
+ process, we used the SoftAdapt method [47]. This eliminates
+the effect of the forced disentanglement process, we conducted
+ the need for manual hyperparameter tuning of these weights,
+experiments with the forced disentanglement term added. To
+ by utilizing live statistics for multi-part loss functions, monachieve this, for each B-scan I, we generated a B-scan Ia , with
+ itoring the performance and magnitude of each loss term
+random rotation (between −30◦ and 30◦ ), random shearing
+ and adjusting their weights based on individual performance.
+(between −0.2 and 0.2) and random scaling (from 0.9 to 1.1).
+ Consequently, this approach effectively reduces the hyperpa-
+Additionally, we generated a B-scan I s , with random style
+ rameters λ1−10 into a single hyperparameter, β. This parameter
+transformations, including change in the contrast, noise level
+ regulates whether SoftAdapt assigns more weight to the worstand blurring. (SD-RetinaNet + Ltriplet )
+ performing component of the loss function (β > 0) or to the
+ best-performing ones (β < 0). We observed no statistically
+D. Experimental Settings
+ .
+
+ significant performance differences for β within the range
+ 1) Training Details: All models were trained using the [0.05, . . . , 0.5], and thus adopted the default value β = 0.1.
+AdamW optimizer with a learning rate of 10−4 . Training was For the δ parameter in Lbc , all values within the range
+stabilized with gradient clipping using a maximum norm of [11, . . . , 21] resulted in similar performance, leading us to
+2 and lasted for 300 epochs. The model with the combined select δ = 15. For LKL , we set σ = 0.5 without further tuning,
+lowest validation mean average distance (MAD) on the lay- following the approach in [12].
+ers and lowest Dice loss on the lesions was selected. For
+the forced disentanglement experiments the following affine IV. R ESULTS
+transformations were carried out on Ia with a probability
+(p) of 1.0: rotation (Range: -0.2 - 0.2rad), shearing (vertical A. Main Performance Evaluation
+ .
+
+and horizontal: -0.2 - 0.2), translation (x-axis: -0.3 - 0.3, Based on the presented layer segmentation results, our
+y-axis: 0), scaling: (x-axis: -0.1 - 0.1, y-axis: 0). On I s proposed models demonstrate statistically significant superior
+the following style transformations were applied: random performance compared to all of the baseline methods (Table I).
+gaussian noise (p = 0.1, µ = 0.0, σ = 0.1), random rician Specifically, the configuration without forced disentanglement,
+noise (p = 0.1, µ = 0.0, σ = 1.0), random gaussian noise ‘SD-RetinaNet’, improves performance by 6% compared to
+(p = 0.1, µ = 0.0, σ = 0.1), random gaussian smoothing the overall best-performing baseline, while the second config-
+(p = 0.1, σ x = 0.25 − 1.5, σy = 0.25 − 1.5), random gaussian uration, ‘SD-RetinaNet +Ltriplet ’ achieves 15% improvement.
+sharpening (p = 0.1, σ x = 0.5 − 1.0, σy = 0.5 − 1.0). The same The ablation study showed that both the lesion position
+random transformations were applied as data augmentation constraint Llp , as well as the reconstruction has a statistion the whole training dataset (both labeled and unlabeled cally significant positive effect on the performance. While
+samples). the addition of Llp to the He et al. lead to some improve-
+ For experiments on the internal dataset (using 3-fold cross- ments in the layer segmentation task, the results suggest
+validation), semi-supervised training utilized a batch size of that this is more effective when combined with the other
+40. Each batch consisted of 20 labeled samples drawn from semi-supervised factors. We found that using a state-of-thethe respective internal training split of the current cross- art hybrid transformer - CNN architecture (TCCT) instead of
+validation fold (derived from the 85 annotated volumes) and the fully convolutional EfficientNet-b4 feature encoder lead to
+20 unlabeled samples drawn from the separate set of 387 unan- an inferior layer segmentation performance.
+notated volumes. This 20/20 batch composition was applied In lesion segmentation, both of our proposed models demonconsistently to our proposed method, relevant ablation studies strate superior performance in the Dice score compared to all
+954 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026
+
+ TABLE I
+ Q UANTITATIVE L AYER S EGMENTATION R ESULTS ON THE INTERNAL DATASET I NCLUDING THE A BLATION E XPERIMENTS . T HE VALUES
+ C ORRESPOND TO THE M EAN A BSOLUTE D ISTANCE (MAD) M ETRIC IN T ERMS OF —M
+
+Fig. 4. Qualitative results in the internal test set with the original B-scan, expert annotations, predictions of the two best baseline methods LBRM
+[8], TCCT-BP [29] and ours. White: layer boundaries (not always available in the dataset); Green: SRF; Red: IRF; Orange: SHRM.
+
+baselines and ablation study methods (Table II). In most cases, and third rows). In these same cases, our method correctly
+these improvements were statistically significant, highlighting confines the lesions to their valid topological positions, demonthe importance and benefits of incorporating topological and strating the effectiveness of the enforced constraints. While
+anatomical constraints during the training process. The abla- both of our proposed configurations perform well, the variant
+tion study in the lesion segmentation task also showed, that the with the forced disentanglement loss (Ltriplet ) appears to proremoval of the Llp factor has lead to statistically significantly duce the most robust predictions. Finally, the last row presents
+worse performance in the SRF segmentation. Underlining our a representative failure case, where a subtle hyperreflective
+findings in the layer segmentation tasks, using the TCCT signal leads our model to produce a false positive SHRM
+backbone instead of a fully convolutional encoder has lead prediction. While the segmentation is still localized in an
+to a performance decrease in the lesion segmentation as anatomically plausible area, this underscores the challenging
+well. nature of this real-world clinical dataset.
+ The qualitative results in Figure 4 highlight the practical
+impact of our biomarker topology engine by directly contrast- B. Partial Annotation Generalization
+ .
+
+ing our method against baselines on challenging cases. For
+instance, the LBRM baseline [8] frequently produces anatom- The partial annotation experiments on the DukeDME dataset
+ically implausible segmentations, such as placing SHRM in an (Table III) demonstrate that semi-supervised methods trained
+incorrect location (first row) or SRF below the RPE (second on HCMS + RETOUCH Spectralis, have a distinct advantage
+FAZEKAS et al.: SD-RetinaNet: TOPOLOGICALLY CONSTRAINED SEMI-SUPERVISED RETINAL LESION 955
+
+Fig. 5. Qualitative results on the DukeDME test set, showing the original B-scan, expert annotations, the result of our method and of two baseline
+methods. TCCT-BP could not be trained with lesions only, so that example is not displayed. White: layer boundaries; Red: fluid.
+
+ TABLE II The qualitative examples (Fig. 5) on three hard cases
+ Q UANTITATIVE L ESION S EGMENTATION R ESULTS ON THE INTERNAL show that SD-RetinaNet +Ltriplet was able to create plausible
+ DATASET I NCLUDING THE A BLATION E XPERIMENTS . T HE VALUES
+ segmentations even in this challenging setting. For U-Mamba,
+ C ORRESPOND TO THE VOLUME -W ISE D ICE M ETRIC
+ several layers are completely missing, while also large areas
+ with fluid were incorrectly segmented. LBRM was able to
+ identify more layer boundaries, however they are unstable
+ and often crossing each other. It is important to note that the
+ lower absolute Dice scores for all methods in this experiment
+ (Table III) reflect the extreme difficulty of the task. This
+ scenario involves a significant domain shift from the training
+ sources (HCMS, RETOUCH) to the test set (DukeDME) while
+ simultaneously learning from disparate, partially-labeled data.
+ The key finding is therefore the superior relative performance
+ of our framework under these challenging conditions.
+
+ C. Robustness to Limited Labeled Data
+ .
+
+ Figure 6 demonstrates the robustness of our methods
+ compared to semi-supervised baselines when trained with
+ reduced data (10%, 25%, 100%). While all methods degraded
+ with less data, our SD-RetinaNet variants consistently maintained a larger performance advantage in data-scarce settings. This was particularly evident for layer segmentation
+ (Figure 6, Top), where the MAD performance gap between
+ SD-RetinaNet+Ltriplet and the respective best baseline widened
+ from 0.75 µm (100% data) to 2.40 µm (10% data). A similar,
+ though less pronounced, trend favouring the robustness of our
+ methods was observed for lesion segmentation Dice scores
+ (Figure 6, Bottom). These results highlight the effectiveness
+ of our framework in leveraging anatomical priors and semisupervised signals when direct annotation is limited.
+
+over baseline methods that do not utilize multiple sources D. Cross-Device Generalization
+ .
+
+of partial labels simultaneously. All baseline methods faced The results of the cross-device generalization experisignificant challenges with the inner layers, which were heav- ments are presented in Figure 7. Across all three scenarios,
+ily distorted by the fluids present in DME cases. Ablation our proposed SD-RetinaNet variants demonstrated superior
+studies indicate that both the reconstruction and lesion position generalization to unseen device vendors compared to all semiconstraints significantly enhance our model’s performance. supervised baselines, consistently achieving the highest Dice
+Incorporating the forced disentanglement constraint Ltriplet scores when testing on the Topcon and Cirrus devices.
+significantly improved layer segmentation performance in the This advantage was most pronounced in the most chalpartial annotation experiments. This suggests that the con- lenging task where models were trained only on Spectralis
+trastive separation of style and spatial factors aids the method data. While all methods’ performance dropped, our framework
+in image domain shift scenarios and when using multiple proved most robust, with SD-RetinaNet + Ltriplet achieving a
+datasets from different centers. Dice score of 0.45, maintaining a clear margin over the more
+956 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026
+
+ TABLE III
+ Q UANTITATIVE R ESULTS OF THE PARTIAL A NNOTATION E XPERIMENTS ON THE E XTERNAL D UKE DME DATASET, I NCLUDING THE A BLATION
+E XPERIMENTS . T HE L AYER S EGMENTATION VALUES C ORRESPOND TO THE M EAN A BSOLUTE D ISTANCE (MAD) M ETRIC IN T ERMS OF —M , W HILE
+ THE F LUID S EGMENTATION R ESULTS A RE P RESENTED W ITH THE D ICE S CORE
+
+ Fig. 7. Cross-device generalization performance for lesion segmentation. Each group on the x-axis represents the held-out test vendor.
+ Models were trained on a combination of the other two vendors from
+ the RETOUCH dataset (for lesions) and the HCMS dataset (for layers).
+ Performance is measured by Dice score (higher is better). The proposed
+ SD-RetinaNet variants consistently outperform baseline methods when
+ generalizing to an unseen device.
+
+ to enhanced cross-device robustness. Nevertheless, the overall
+ performance drop highlights that domain adaptation in this
+Fig. 6. Segmentation performance robustness to reduced (10%, context remains an unsolved problem.
+25%) and full (100%) training data for proposed methods versus semisupervised baselines. Top: Layer segmentation performance measured E. Analysis of Disentangled Latent Space
+ .
+
+by Total Mean Absolute Distance (MAD in —m, lower is better). Bottom:
+Lesion segmentation performance measured by Total Dice score (higher To qualitatively support the cross-device generalization
+is better). Error bars indicate standard deviation over multiple runs results, we analyzed the style factor latent space (Figure 8).
+(10 runs for 10%, 4 runs for 25%). Results demonstrate superior
+robustness of the proposed methods across both layer and lesion The experiment demonstrates that training with the forced
+segmentation tasks compared to baselines. disentanglement loss (Ltriplet ) leads to a more organized representation, where the model more effectively clusters style
+significantly degraded baseline methods. This provides strong factors based on their device vendor. This provides a visual
+evidence that our disentanglement framework effectively sep- confirmation of the mechanism enabling the robust crossarates device-specific style from anatomical content, leading device performance shown in Figure 7.
+FAZEKAS et al.: SD-RetinaNet: TOPOLOGICALLY CONSTRAINED SEMI-SUPERVISED RETINAL LESION 957
+
+ Figure 9 (Top) shows the values of the supervised (L sup ),
+ anatomical prior (L prior ), and reconstruction (Lrec ) loss
+ groups over 100 training epochs. All components consistently
+ decrease, indicating that they all actively contribute to the
+ learning process and none become stagnant.
+ Figure 9 (Bottom) visualizes the dynamic weights automatically assigned to these loss components by SoftAdapt.
+ The plot demonstrates the adaptive balancing in action: for
+ example, the weight for the anatomical prior loss may be
+ initially high while the network learns basic structural rules,
+ and then relatively decrease as the supervised loss becomes
+ more dominant in later epochs for fine-tuning. This dynamic
+ balancing ensures that all loss terms contribute meaningfully
+Fig. 8. Effect of forced disentanglement (Ltriplet ) on the style factor (Ω)
+latent space, visualized using 2D PCA projection. Each dot represents throughout training, preventing any single component from
+the style factor of a single B-scan. Top row: Style factors from a model overwhelming the optimization process due to differences in
+trained without Ltriplet . Bottom row: Style factors from a model trained scale or learning speed. This analysis, combined with our
+with Ltriplet . Each column highlights scans from a specific vendor, with
+other vendors greyed out. The bottom row demonstrates that adding ablation studies (Section IV-A), provides strong evidence that
+Ltriplet leads to a clearer separation of style factors based on the OCT our multi-component loss framework is optimized effectively
+device vendor, particularly separating Spectralis scans. While Topcon and that each component plays a valuable role.
+and Cirrus factors also show better separation, some overlap remains
+due to their visual similarities. This indicates that forced disentanglement
+enhances the style factors’ ability to capture device-specific appearance V. D ISCUSSION
+characteristics. The primary contribution of SD-RetinaNet is a novel framework tackling the significant challenge of joint, anatomicallyplausible segmentation of interacting retinal layers and lesions
+ in OCT. Modeling the inherent bidirectional influence – where
+ layers constrain lesions and lesions simultaneously deform layers – especially while leveraging partially annotated datasets,
+ represents a substantial advancement beyond prior layer-only
+ methods [12], [29], [33] or approaches treating these tasks
+ independently or sequentially [8]. This crucial capability is
+ enabled by our core innovations: a differentiable biomarker
+ topology engine combined with specific anatomical priors
+ encoded as loss terms (particularly Llp ) that facilitate this
+ interaction and enforce topological consistency. While this
+ framework is implemented using established network architectures, its novelty lies in these specialized components for joint,
+ constrained learning. The introduction of these constraints represents a significant advancement in the field of retinal lesion
+ and layer segmentation within OCT images. By enforcing
+ these constraints, the model ensures that the segmentation
+ of lesions adheres to the anatomical structure of the retina,
+ thereby reducing the occurrence of anatomically implausible
+Fig. 9. Analysis of training dynamics showing the interplay between
+ segmentations that have been a limitation of previous methods.
+key loss component groups and their adaptive weights assigned by This is facilitated by the proposed framework where initial
+SoftAdapt over training iterations. Top: Training loss values (log scale) segmentations from the Anatomy Module provide anatomifor the supervised (Lsup ), anatomical prior (Lprior ), and reconstruction
+(Lrec ) groups. Bottom: Dynamic weights for each group as balanced
+ cal context, which is then actively refined. Semi-supervised
+by SoftAdapt. The supervised group (Lsup ) is the sum of individual anatomical prior losses guide the initial segmentation towards
+supervised losses (LKL , LL 1 , Ldice ), and the plotted weight –sup is the correctness by penalizing topological violations, while supersum of their respective dynamic weights (–1−3 ). Likewise, the prior group
+(Lprior ) sums the anatomical prior losses (Lto , Lbc , Llp ), and –prior sums
+ vised losses calculated on the topologically corrected outputs
+their weights (–4−6 ). further refine accuracy and enable the crucial bidirectional
+ influence between layer and lesion predictions. The described
+ refinement process maintains overall anatomical plausibility by
+F. Analysis of Multi-Component Loss Optimization
+ accounting for all pixels throughout refinement. Notably, the
+ .
+
+ To address the complexity of our multi-term loss function proposed joint learning approach, driven by the anatomicallyand provide quantitative evidence of its stable optimization, informed losses, allows the model to accurately segment layer
+we analyzed the training dynamics of key loss components boundaries distorted by pathology, even when layer training
+and their corresponding weights assigned by the SoftAdapt data primarily originates from healthy scans, by leveraging
+technique (Figure 9). information from lesion segmentations.
+958 IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 45, NO. 3, MARCH 2026
+
+ The impact of these topological constraints is evident in in the training data, which can lead to false positives (e.g.,
+the enhanced precision of lesion segmentation. Unlike tra- for SHRM) or missed detections. Additionally, the reliance
+ditional models that may produce topologically implausible on topological constraints, while beneficial, may need to
+segmentations, our approach guarantees that the lesions are be adapted for different types of retinal diseases where the
+segmented within their anatomically correct locations. This anatomical structure might differ significantly. Furthermore,
+not only improves the overall accuracy of the segmentation but the current lesion position constraint (Llp ) relies on predefined
+also provides a higher level of trust in the results, making it anatomical associations (Sk ) for known lesion types. Consea valuable tool for clinicians who rely on these segmentations quently, for novel or rare lesion types not included in Sk ,
+for critical decision-making. This advantage is particularly evi- this specific constraint would not apply, potentially leading to
+dent when compared against older, foundational architectures such lesions being segmented as part of the retinal layers or
+like ReLayNet, whose lower performance in our evaluation misclassified as known lesion types, although other loss terms
+(Table II) is largely attributable to a high number of false continue to guide the overall segmentation. Future work should
+positive predictions in anatomically implausible locations, focus on generalizing these topological constraints to other
+which our topological framework is explicitly designed to retinal conditions or developing methods to handle unknown
+prevent. lesion types, and exploring the potential of integrating this
+ The use of a multi-component loss function, incorporating model with other imaging modalities to improve its robustness
+over ten distinct terms, raises questions regarding optimization and applicability.
+stability and the effective contribution of each component. The
+employed SoftAdapt technique [47] automatically balances
+ VI. C ONCLUSION
+the influence of these diverse terms based on their relative
+performance during training, mitigating issues arising from Our novel approach incorporates joint segmentation of
+different scales or convergence rates. While concerns about layers and lesions, topological constraints, anatomical priors
+specific loss terms becoming inactive due to extreme weights and contrastive disentanglement to train more robust retinal
+are valid for complex optimization landscapes, our empirical OCT biomarker representations, particularly in challenging
+results across multiple datasets and metrics, supported by regions around retinal lesions. Our proposed method outperablation studies showing the negative impact of removing key forms the state of the art by a statistically significant margin
+components (Table I, Table II), indicate that the various losses in both layer and lesion segmentation tasks, while ensuring
+contributed effectively to the final anatomically plausible and topological consistency between retinal layers and lesions and
+accurate segmentations. The effectiveness of leveraging these hence anatomical plausibility of the output. This provides a
+diverse loss terms within our semi-supervised framework is promising solution tackling the lack of topological coherence
+further highlighted by the label efficiency evaluation experi- and spatial synergies between retinal layers and lesions in
+ments (Section IV-C, Figure 6). These results demonstrated previous methods, resulting in superior performance.
+superior robustness of our proposed methods compared to
+baseline semi-supervised approaches when labeled training R EFERENCES
+data was significantly reduced, indicating that the anatomical priors and reconstruction task effectively compensate for [1] N. M. Bressler, “Age-related macular degeneration is the leading cause
+ of blindness,” Jama, vol. 291, no. 15, pp. 1900–1901, 2004.
+scarce supervision. [2] U. Schmidt-Erfurth, S. Klimscha, S. M. Waldstein, and H. Bogunović,
+ Furthermore, the value of the disentangled representation “A view of the current and future role of optical coherence tomography
+was directly tested in the challenging cross-device generaliza- in the management of age-related macular degeneration,” Eye, vol. 31,
+ no. 1, pp. 26–44, Jan. 2017.
+tion experiments (Section IV-D, Figure 7). While all methods
+ [3] B. Liefers et al., “Quantification of key retinal features in early and late
+experienced a notable performance decrease when evaluated age-related macular degeneration using deep learning,” Amer. J. Ophon a previously unseen device vendor, our model consistently thalmol., vol. 226, pp. 1–12, Jun. 2021.
+outperformed the baseline methods, demonstrating greater [4] M. D. Abrámoff, M. K. Garvin, and M. Sonka, “Retinal imaging and
+ image analysis,” IEEE Rev. Biomed. Eng., vol. 3, pp. 169–208, 2010.
+robustness to this domain shift. This supports the conclu- [5] J. De Fauw et al., “Clinically applicable deep learning for diagnosis and
+sion that our framework’s ability to separate device-specific referral in retinal disease,” Nature Med., vol. 24, no. 9, pp. 1342–1350,
+style from anatomical content provides a tangible advantage Sep. 2018.
+ [6] A. Montuoro, S. M. Waldstein, B. S. Gerendas, U. Schmidt-Erfurth, and
+for generalization, a critical capability for real-world clinical H. Bogunović, “Joint retinal layer and fluid segmentation in OCT scans
+applications where data from multiple device types is common. of eyes with severe macular edema using unsupervised representation
+ Despite these advancements, there are still areas that require and auto-context,” Biomed. Opt. Exp., vol. 8, no. 3, pp. 1874–1888,
+ Mar. 2017.
+further investigation. The model’s performance in more com- [7] T. Hassan, M. U. Akram, M. F. Masood, and U. Yasin, “Deep structure
+plex scenarios, such as cases involving multiple overlapping tensor graph search framework for automated extraction and characterlesions or unusual anatomical variations, remains an open ization of retinal layers and fluid pathology in retinal SD-OCT scans,”
+ Comput. Biol. Med., vol. 105, pp. 112–124, Feb. 2019.
+question. Analysis of the method’s failure cases (e.g., Figure 4, [8] Y. He et al., “Structured layer surface segmentation for retina OCT using
+last row) reveals that limitations are not systemic but typically fully convolutional regression networks,” Med. Image Anal., vol. 68,
+occur in the most challenging scenarios present in this real- Feb. 2021, Art. no. 101856.
+ [9] B. Wang, W. Wei, S. Qiu, S. Wang, D. Li, and H. He, “Boundary
+world clinical dataset. Limitations were observed in cases aware U-Net for retinal layers segmentation in optical coherence
+with extreme signal loss due to shadowing artifacts or with tomography images,” IEEE J. Biomed. Health Informat., vol. 25, no. 8,
+subtle, rare pathological morphologies not well-represented pp. 3029–3040, Aug. 2021.
+FAZEKAS et al.: SD-RetinaNet: TOPOLOGICALLY CONSTRAINED SEMI-SUPERVISED RETINAL LESION 959
+
+[10] T. Melo, Â. Carneiro, A. Campilho, and A. M. Mendonça, “Retinal layer [28] J. Ma, F. Li, and B. Wang, “U-mamba: Enhancing long-range depenand fluid segmentation in optical coherence tomography images using a dency for biomedical image segmentation,” 2024, arXiv:2401.04722.
+ hierarchical framework,” J. Med. Imag., vol. 10, no. 1, Feb. 2023, Art. [29] Y. Tan et al., “Retinal layer segmentation in OCT images with boundary
+ no. 014006. regression and feature polarization,” IEEE Trans. Med. Imag., vol. 43,
+[11] A. Chartsias et al., “Disentangled representation learning in cardiac no. 2, pp. 686–700, Feb. 2024.
+ image analysis,” Med. Image Anal., vol. 58, Dec. 2019, Art. no. 101535. [30] X. Liu et al., “Semi-supervised automatic segmentation of layer and fluid
+[12] B. Fazekas et al., “SD-LayerNet: Semi-supervised retinal layer seg- region in retinal optical coherence tomography images using adversarial
+ mentation in OCT using disentangled representation with anatomical learning,” IEEE Access, vol. 7, pp. 3046–3061, 2019.
+ priors,” in Proc. MICCAI, in Lecture Notes in Computer Science, [31] S. Sedai, B. Antony, D. Mahapatra, and R. Garnavi, “Joint segmentation
+ L. Wang, Q. Dou, P. T. Fletcher, S. Speidel, and S. Li, Eds., 2022, and uncertainty visualization of retinal layers in optical coherence
+ pp. 320–329. tomography images using Bayesian deep learning,” in Computational
+[13] K. Li, X. Wu, D. Z. Chen, and M. Sonka, “Optimal surface segmenta- Pathology and Ophthalmic Medical Image Analysis. Cham, Switzerland:
+ tion in volumetric images—A graph-theoretic approach,” IEEE Trans. Springer, 2018, pp. 219–227.
+ Pattern Anal. Mach. Intell., vol. 28, no. 1, pp. 119–134, Jan. 2006. [32] S. Sedai et al., “Uncertainty guided semi-supervised segmentation of
+[14] L. Zhang, M. Sonka, J. C. Folk, S. R. Russell, and M. D. Abrámoff, retinal layers in OCT images,” in Proc. MICCAI, 2021, pp. 282–290.
+ “Quantifying disrupted outer retinal-subretinal layer in SD-OCT images [33] Y. Lu, Y. Shen, X. Xing, C. Ye, and M. Q.-H. Meng, “Boundaryin choroidal neovascularization,” Investigative Opthalmol. Vis. Sci., enhanced semi-supervised retinal layer segmentation in optical cohervol. 55, no. 4, pp. 2329–2335, Apr. 2014. ence tomography images using fewer labels,” Computerized Med. Imag.
+[15] S. J. Chiu, X. T. Li, P. Nicholas, C. A. Toth, J. A. Izatt, and S. Farsiu, Graph., vol. 105, Apr. 2023, Art. no. 102199.
+ “Automatic segmentation of seven retinal layers in SDOCT images [34] A. Tarvainen and H. Valpola, “Mean teachers are better role modcongruent with expert manual segmentation,” Opt. Exp., vol. 18, no. 18, els: Weight-averaged consistency targets improve semi-supervised deep
+ pp. 19413–19428, Aug. 2010. learning results,” in Proc. Adv. Neural Inf. Process. Syst., vol. 30, 2017,
+[16] P. A. Dufour et al., “Graph-based multi-surface segmentation of OCT pp. 1196–1205.
+ data using trained hard and soft constraints,” IEEE Trans. Med. Imag., [35] K. Wang et al., “Semi-supervised medical image segmentation via
+ vol. 32, no. 3, pp. 531–543, Mar. 2013. a tripled-uncertainty guided mean teacher model with contrastive
+[17] P. P. Srinivasan, S. J. Heflin, J. A. Izatt, V. Y. Arshavsky, and S. Farsiu, learning,” Med. Image Anal., vol. 79, Jul. 2022, Art. no. 102447.
+ “Automatic segmentation of up to ten layer boundaries in SD-OCT [36] Y. Wu et al., “Mutual consistency learning for semi-supervised medical
+ images of the mouse retina with and without missing layers due to image segmentation,” Med. Image Anal., vol. 81, Oct. 2022, Art. no.
+ pathology,” Biomed. Opt. Exp., vol. 5, no. 2, pp. 348–365, Feb. 2014. 102530.
+[18] Z. Chen et al., “Hybrid deep learning and optimal graph search method [37] J. Shi, T. Gong, C. Wang, and C. Li, “Semi-supervised pixel contrastive
+ for optical coherence tomography layer segmentation in diseases affect- learning framework for tissue segmentation in histopathological image,”
+ ing the optic nerve,” Biomed. Opt. Exp., vol. 15, no. 6, pp. 3681–3698, IEEE J. Biomed. Health Informat., vol. 27, no. 1, pp. 97–108, Jan. 2023.
+ Jun. 2024. [38] H. Wu, Z. Wang, Y. Song, L. Yang, and J. Qin, “Cross-patch dense
+[19] G. Quellec, K. Lee, M. Dolejsi, M. K. Garvin, M. D. Abramoff, contrastive learning for semi-supervised segmentation of cellular nuclei
+ and M. Sonka, “Three-dimensional analysis of retinal layer texture: in histopathologic images,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ Identification of fluid-filled regions in SD-OCT of the macula,” IEEE Pattern Recognit. (CVPR), Jun. 2022, pp. 11656–11665.
+ Trans. Med. Imag., vol. 29, no. 6, pp. 1321–1330, Jun. 2010. [39] C. You, W. Dai, Y. Min, L. H. Staib, J. Sekhon, and J. S. Duncan,
+[20] X. Chen, M. Niemeijer, L. Zhang, K. Lee, M. D. Abramoff, and “ACTION++: Improving semi-supervised medical image segmentation
+ M. Sonka, “Three-dimensional segmentation of fluid-associated abnor- with adaptive anatomical contrast,” in Proc. MICCAI, H. Greenspan,
+ malities in retinal OCT: Probability constrained graph-search-graph-cut,” A. Madabhushi, P. Mousavi, S. Salcudean, J. Duncan, T. Syeda-
+ IEEE Trans. Med. Imag., vol. 31, no. 8, pp. 1521–1531, Aug. 2012. Mahmood, and R. Taylor, Eds., 2023, pp. 194–205.
+[21] S. J. Chiu, M. J. Allingham, P. S. Mettu, S. W. Cousins, J. A. Izatt, and [40] M. Tan and Q. V. Le, “EfficientNet: Rethinking model scaling for
+ S. Farsiu, “Kernel regression based segmentation of optical coherence convolutional neural networks,” in Proc. 36th Int. Conf. Mach. Learn.,
+ tomography images with diabetic macular edema,” Biomed. Opt. Exp., 2019, pp. 6105–6114.
+ vol. 6, no. 4, pp. 1172–1194, Apr. 2015. [41] S. C. Cleland et al., “Quantification of geographic atrophy using spectral
+[22] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional net- domain OCT in age-related macular degeneration,” Ophthalmology
+ works for biomedical image segmentation,” in Proc. 18th Int. Conf. Retina, vol. 5, no. 1, pp. 41–48, Jan. 2021.
+ Med. Image Comput. Comput.-Assist. Intervent., in Lecture Notes in [42] E. Perez, F. Strub, H. de Vries, V. Dumoulin, and A. Courville, “FiLM:
+ Computer Science, vol. 9351, 2015, pp. 234–241. Visual reasoning with a general conditioning layer,” in Proc. AAAI Conf.
+[23] A. G. Roy et al., “ReLayNet: Retinal layer and fluid segmentation Artif. Intell., Apr. 2018, vol. 32, no. 1, pp. 3942–3951.
+ of macular optical coherence tomography using fully convolutional [43] F. Rathke, M. Desana, and C. Schnörr, “Locally adaptive probabilistic
+ networks,” Biomed. Opt. Exp., vol. 8, no. 8, pp. 3627–3642, Aug. 2017. models for global segmentation of pathological OCT scans,” in Proc.
+[24] H. Bogunovic et al., “RETOUCH: The retinal OCT fluid detection Int. Conf. Med. Image Comput. Comput.-Assist. Intervent., in Lecture
+ and segmentation benchmark and challenge,” IEEE Trans. Med. Imag., Notes in Computer Science, vol. 10433, 2017, pp. 177–184.
+ vol. 38, no. 8, pp. 1858–1874, Aug. 2019. [44] S. P. K. Karri, D. Chakraborthi, and J. Chatterjee, “Learning layer-
+[25] F. Isensee, P. F. Jaeger, S. A. A. Kohl, J. Petersen, and K. H. Maier-Hein, specific edges for segmenting retinal layers with large deformations,”
+ “NnU-Net: A self-configuring method for deep learning-based biomedi- Biomed. Opt. Exp., vol. 7, no. 7, pp. 2888–2901, Jul. 2016.
+ cal image segmentation,” Nature Methods, vol. 18, no. 2, pp. 203–211, [45] D. Bates, M. Mächler, B. Bolker, and S. Walker, “Fitting linear mixed-
+ Feb. 2021. effects models using lme4,” 2014, arXiv:1406.5823.
+[26] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers [46] H. Liu, D. Wei, D. Lu, X. Tang, L. Wang, and Y. Zheng, “Simultaneous
+ for image recognition at scale,” in Proc. Int. Conf. Learn. Represent., alignment and surface regression using hybrid 2D–3D networks for 3D
+ Jun. 2020, pp. 611–631. coherent layer segmentation of retinal OCT images with full and sparse
+[27] A. Hatamizadeh, V. Nath, Y. Tang, D. Yang, H. R. Roth, and D. Xu, annotations,” Med. Image Anal., vol. 91, Jan. 2024, Art. no. 103019.
+ “Swin UNETR: Swin transformers for semantic segmentation of brain [47] A. Ali Heydari, C. A. Thompson, and A. Mehmood, “SoftAdapt:
+ tumors in MRI images,” in Proc. Int. MICCAI Brainlesion Workshop, Techniques for adaptive loss weighting of neural networks with multi-
+ A. Crimi and S. Bakas, Eds., 2022, pp. 272–284. part loss functions,” 2019, arXiv:1912.12355.

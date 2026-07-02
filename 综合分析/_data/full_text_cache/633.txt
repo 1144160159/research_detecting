@@ -1,0 +1,746 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026 1273
+
+ Contextual Masking Distillation for Network
+ Traffic Anomaly Detection
+ Xinglin Lian , Yu Zheng , Member, IEEE, Yan Liu, Fan Zhou , Member, IEEE,
+ Chunlei Peng , Member, IEEE, and Xinbo Gao , Fellow, IEEE
+
+ Abstract—Network traffic anomaly detection is critical for CIC-IDS2017 datasets, respectively. Our model code is available
+cybersecurity but faces challenges in accurately identifying mali- at https://github.com/ikun0124/ConMD
+cious activities. Recent zero-positive approaches, which use only
+normal training data under the reconstruction paradigm, have Index Terms—Network traffic anomaly detection, knowlshown progress. However, encrypted network traffic obscures edge distillation, contextual information awareness, multi-view
+normal–anomalous distinctions, causing confused modeling. anomaly awareness.
+In addition, the “identical shortcut” problem, where models
+reconstruct any input with similar fidelity, produces suboptimal
+representations and indistinguishable detection. To address these I. I NTRODUCTION
+limitations, this paper introduces ConMD, a novel Contextual
+Masking Knowledge Distillation framework. ConMD features
+distillation paradigm for discriminative representations and then
+pursues two objectives: effective contextual information modeling
+ N ETWORK traffic anomaly detection aims to identify the
+ potentially malicious and harmful network flows that
+ could compromise equipment and systems on communication
+and a comprehensive anomaly metric. Specifically, we introduce links [1], [2], [3]. This task particularly plays a critical role
+context-aware local-global attention mechanisms for the student
+network’s backbone, which capture both intra-packet and inter- in bolstering cybersecurity, contributing to a more secure
+packet dependencies. Additionally, a context-enhanced masking cyberspace [4], [5], enhanced network reliability [6], and
+training strategy is designed to facilitate contextual interactions robust privacy protection [7]. Traditional approaches process
+in normal flows. Given the structural characteristics of network network traffic data as graph, sequence, and image repretraffic, we also present a new anomaly scoring with multi- sentations [8], [9], framing this task as a supervised binary
+view awareness, which perceive comprehensive traffic patterns.
+ConMD combines insights from both packet- and flow-level views classification problem [10], [11], [12]. Despite commendto highlight deviations in anomalous network flows, thereby able performance improvements, supervised methods still face
+improving detection accuracy. Extensive experiments on three inherent limitations in handling anomalous traffic, such as
+real-world datasets validate the effectiveness of ConMD, yielding the class imbalance problem and the detection of unknown
+consistent improvements over state-of-the-art baselines, achieving anomalies [1].
+up to 2.8% and 5.1% AUC gains on the DataCon2020 and
+ Advanced research has shifted towards a zero-positive learning setting [13], [14], [15], which only constructs normal
+ Received 11 December 2024; revised 2 September 2025 and 16 October network traffic distribution during training. Considering the
+2025; accepted 13 January 2026. Date of publication 19 January 2026; date high computational cost of processing graph- or sequenceof current version 28 January 2026. This work was supported in part by
+the New Generation Artificial Intelligence-National Science and Technology based representations, most zero-positive approaches instead
+Major Project under Grant 2025ZD0123601; in part by the National Natural transform traffic data into image form. They primarily employ
+Science Foundation of China under Grant 62276198, Grant U22A2035, a reconstruction-based modeling paradigm [16], [17], [18],
+Grant 62572097, and Grant 62176043; in part by the Natural Science Basic
+Research Program of Shaanxi under Grant 2025JC-YBMS-696; in part by the which reconstructs normal traffic images using autoencoder
+Innovation Capability Support Plan in Shaanxi Province under Grant 2025ZC- architectures. These methods rely on a fundamental hypoth-
+KJXX-22; and in part by the 111 Center under Grant B16037. The associate esis that normal traffic would exhibit significantly better
+editor coordinating the review of this article and approving it for publication
+was Prof. Weizhi Meng. (Corresponding author: Yu Zheng.) reconstruction quality than anomalous traffic. As illustrated
+ Xinglin Lian is with the University of Electronic Science and Tech- in the “Hypothesis” row of Fig. 1, the reconstruction gap
+nology of China, Chengdu 610054, China, and also with the School serves as the key criterion for anomaly scoring. In practice,
+of Cyber Engineering, Xidian University, Xi’an 710126, China (e-mail:
+kenshin.lian24@gmail.com). however, this expectation often fails. Recent studies [16]
+ Yu Zheng and Chunlei Peng are with the School of Cyber Engineering, report that the actual reconstruction results, exemplified by
+Xidian University, Xi’an 710126, China (e-mail: yuzheng.xidian@gmail.com; samples from the DataCon2020 dataset [19] shown in the
+clpeng@xidian.edu.cn).
+ Yan Liu is with the University of Electronic Science and Technology of “Practice” row of Fig. 1, reveal a surprising observation. Both
+China, Chengdu 610054, China (e-mail: Yan.Liu@std.uestc.edu.cn). normal and anomalous traffic exhibit similar reconstruction
+ Fan Zhou is with the University of Electronic Science and Technology quality, making them difficult to distinguish. The root cause
+of China, Chengdu 610054, China, and also with the Key Laboratory of
+Intelligent Digital Media Technology of Sichuan Province, Chengdu 610054, lies in the intrinsically confused distributions of normal and
+China (e-mail: fan.zhou@uestc.edu.cn). anomalous traffic, with widely used encryption techniques
+ Xinbo Gao is with the State Key Laboratory of Integrated Services obscuring semantic information of traffic data [16]. Moreover,
+Networks, School of Electronic Engineering, Xidian University, Xi’an 710071,
+China (e-mail: xbgao@mail.xidian.edu.cn). the “identical shortcut” phenomenon in auto-encoder archi-
+ Digital Object Identifier 10.1109/TIFS.2026.3655514 tectures [13], [20] exacerbates this problem, as the model
+ 1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+1274 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ samples [23]. This makes distillation a promising solution
+ to mitigate prediction confusion in network traffic anomaly
+ detection.
+ However, network traffic is typically represented at a flowlevel unit (i.e., network flow), which encompasses a sequence
+ of ordered packets in communication links, with strong contextual interactions between packets [9], [24]. Existing distillation
+ techniques, primarily designed for natural images, often falter when applied to the unique characteristics of network
+ flow data. These challenges arise from two key aspects:
+Fig. 1. Limitation in existing detection methods. Ideally, a reconstruction (1) Insufficient Contextual Awareness: Conventional dismodel would demonstrate a clear distinction in output quality between normal
+and anomalous network traffic. In practice, however, the reconstructions often tillation methods struggle to capture the inherent contextual
+lack of differentiation and lead to prediction confusion. relationships within network flows, such as inter-packet dependencies, causing a suboptimal model fitting and unclear boundaries between normal and anomalous flows. (2) Overemphasis
+ on Local Anomalies: Current techniques tend to prioritize
+ local anomalies, such as localized device failures or medical
+ abnormalities [25], which are more applicable to natural
+ image domains. However, in the context of network traffic,
+ anomalies often manifest at both the packet-level (i.e., intrapacket patterns) and flow-level (i.e., inter-packet sequences)
+ rather than in localized regions [11].
+ To address these limitations, we introduce ConMD, a
+ novel Contextual Masking Knowledge Distillation framework.
+ Our approach targets two primary objectives: (1) effectively
+ modeling contextual information during training, and (2) discerning anomalies from a comprehensive perspective during
+Fig. 2. Paradigm discrepancy between reconstruction- and distillation-based inference. ConMD begins with a fine-tuned teacher netmethods. Reconstruction-based anomaly scores rely on a “Confused-to-
+Confused” pipeline, whereas distillation-based methods use a pre-trained
+ work that extracts differentiated features for both normal
+teacher to extract representations, confirming differentiated anomaly detection. and anomalous traffic, facilitating subsequent zero-positive
+ modeling and the establishment of robust anomaly metrics.
+tends to converge to shortcut parameters that produce sim- We then design a context-aware student network backbone
+ilar reconstructions for both normal and anomalous samples. equipped with local-global window attention mechanisms
+Consequently, the model suffers from prediction confusion and to capture both intra-packet and inter-packet dependencies
+suboptimal detection results. Although some works strengthen within normal network flows. Specifically, local attention
+the representation power of autoencoders to alleviate this mechanisms address short-range intra-packet dependencies,
+problem [20], [21], they still operate within the reconstruction while global attention mechanisms handle long-range interparadigm and cannot fundamentally overcome its inherent packet dependencies. To enhance contextual distillation, we
+flaws. propose a novel context-enhanced packet-level masking strat-
+ Recently, knowledge distillation-based anomaly detection egy, which randomly masks packet information based on a
+has emerged as a promising paradigm to address this byte-strength rule. During training, the student network is
+issue. By leveraging the refined knowledge extracted from a encouraged to restore the masked packets from the unmasked
+powerful pre-trained teacher network, distillation-based meth- context, thereby cultivating richer inter-packet dependencies.
+ods aim to provide more discriminative representations that Since only normal traffic is available for training, the model
+benefit the zero-positive modeling [22], [23]. Fig. 2 illus- effectively learns typical contextual patterns among normal
+trates the core discrepancy between reconstruction-based and packets.
+distillation-based paradigms. Based on our previous analy- During inference, given the structural characteristics of
+sis, we formally define the reconstruction-based paradigm network traffic, ConMD achieves multi-view anomaly scoras a “Confused-to-Confused” pipeline: the reconstruction ing by integrating masked and unmasked feature branches.
+model tends to generate confused output as it is driven The masked branch emphasizes packet-level anomalies: when
+by an inherently confused reconstruction objective. Conse- masked anomalous packets are restored toward a normal state,
+quently, the anomaly scores (i.e., the difference between the resulting deviations are amplified, making local anomalies
+input and reconstruction) remain inadequate for accurate more visible. In contrast, the unmasked branch, strengthened
+anomaly detection. In contrast, the distillation-based paradigm by context-enhanced learning during training, captures typiemploys a pre-trained teacher network to extract discriminative cal inter-packet contextual dependencies, enabling flow-level
+representations, thereby enabling a differentiated modeling anomaly detection from a global perspective. By integratpipeline. These representations improve zero-positive learning ing these multi-view representations through a feature fusion
+and amplify the discrepancy between normal and anomalous scheme, ConMD highlights anomalous deviations across both
+LIAN et al.: CONTEXTUAL MASKING DISTILLATION FOR NETWORK TRAFFIC ANOMALY DETECTION 1275
+
+local (packet-level) and global (flow-level) contexts, thereby representation learning. ARCADE [17] combined a structural
+achieving comprehensive anomaly detection. In summary, our similarity measure loss with the WGAN-GP framework for
+key contributions are threefold: adversarial training. Trident [15] integrated a U-Net structure
+ • We propose ConMD, a distillation framework that allevi- to preserve detailed input information. Overall, these studies
+ ates reconstruction confusion in network traffic. ConMD endeavor to improve the reconstruction quality of the normal
+ provides a more differentiated modeling pipeline and sample. However, the confused distribution between normal
+ improved anomaly detection. To the best of our knowl- and anomalous sample significantly limit their paradigm intuedge, this is the first attempt to explore distillation-based itions and the effectiveness of practical anomaly metrics.
+ zero-positive anomaly detection in network traffic data. Recently, UnDiff [13] identified a critical “identical
+ • We introduce a context-aware student network equipped shortcut” issue in traffic images reconstruction, both normal
+ with local-global attention mechanisms to effectively and anomalous traffic tend to yield similar reconstruction qualcapture both intra-packet and inter-packet dependencies. ity. MFAD [18] and MFR [16] proposed low-pass–filter-based
+ Additionally, we design a context-enhanced packet-level solutions that showed some promise, but they risked discardmasking training strategy to facilitate deeper contextual ing high-frequency information crucial for accurate detection.
+ interactions within network flow data. Other anomaly detection studies [20], [21] attempted to miti-
+ • We design a multi-view anomaly scoring mechanism that gate the “identical shortcut” by enhancing feature learning to
+ can perceive both packet- and flow-level anomalies, com- make autoencoders more sensitive to anomalies. Nevertheless,
+ bining their respective strengths to highlight anomalous they operated within and were limited by the reconstruction
+ deviations in network traffic. paradigm, preventing a fundamental solution.
+ • Extensive experiments on benchmark datasets show that
+ ConMD outperforms state-of-the-art methods, with AUC B. Distillation-Based Anomaly Detection
+ improvements of 2.8% and 5.1% against the best base- While some studies in network traffic analysis introlines, MFAD and MMR, on the DataCon2020 and duce knowledge distillation, its typical application involves
+ CIC-IDS2017 datasets, respectively. transferring a complex teacher network into a lightweight
+ The remainder of this paper is organized as follows. Sec- student network [42]. Recently, knowledge distillation has also
+tion II presents a comprehensive review of related literature. emerged as a promising paradigm in anomaly detection, sup-
+Section IV details our framework design and the motivations porting both feature modeling and anomaly scoring. Its main
+underpinning it. In Section V, we evaluate ConMD on the advantage lies in leveraging a pre-trained teacher network
+benchmark datasets, comparing it with state-of-the-art methods to generate refined, noise-free representations that guide the
+and assessing both model detection performance and effec- student network in learning more discriminative features for
+tiveness. Finally, Section VI concludes the paper and outlines normal samples [22], [23]. During inference, anomaly scores
+potential directions for future research. are computed based on the discrepancy between the teacher
+ and student networks: the student outputs representations
+ II. R ELATED W ORK biased toward normal state, whereas the teacher produces distinct representations for both normal and anomalous samples.
+A. Network Traffic Anomaly Detection The early work UStd [43] pioneered the application
+ Anomaly detection in network traffic seeks to identify of knowledge distillation. STFPM [44] employed an idenmalicious or harmful network flows within network links. tical student-teacher architecture with multi-scale feature
+Traditionally, this task was approached as a supervised binary matching to detect anomalies but faced challenges of homoclassification problem [26], [27], [28]. Neural network models geneous information confusion. To address this, ReverDis
+such as Convolutional Neural Network (CNN) [9], [29], [30], [22] proposed a reverse distillation paradigm based on an
+Long Short-term Memory Networks (LSTM) [31], [32], [33], encoder-decoder network. AST [45] improved generalizaand Graph Neural Network (GNN) [34], [35], [36] were tion by employing highly differentiated normalizing flows to
+frequently used to extract spatial and temporal features. The increase the distance between student and teacher represensoftmax layer was employed to accomplish supervised clas- tations. Recent studies have demonstrated the effectiveness
+sification [37], [38]. However, supervised learning methods of masking mechanisms in anomaly detection. For examface inherent limitations, particularly their vulnerability to ple, SSMRKD [46] introduced two-stage masking training
+unknown anomalies and class imbalance. These challenges for reverse knowledge distillation, enhancing the learning of
+have spurred a shift towards zero-positive approaches. single-category prototype patterns. Similarly, DeSTSeg [25]
+ For example, SAFE employed a masked autoencoder to incorporated a demasking process to encourage the student
+extract features and a novelty detector to identify anomalies network to learn more robust representations. MMR [47] pro-
+[8]. Anomal-E leveraged a GNN to capture both local and posed a masked multi-scale reconstruction strategy to improve
+global information [39]. One prominent zero-positive frame- causal relationships between patches via a masked feature
+work is GANomaly [40], which incorporates an adversarial pyramid network.
+discriminator network to improve the reconstruction of normal Despite these advancements, applying existing knowledge
+samples. GANomaly has been successfully applied to net- distillation methods to anomaly detection in network traffic
+work traffic analysis [17], [41]. MANomaly [41] introduced presents unique challenges. Unlike natural image domains,
+a dual autoencoder adversarial training strategy for enhanced high-frequency texture characteristics of traffic images limit
+1276 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 3. Overall framework of ConMD. (a) Contextual Masking Distillation Training Process: the teacher network extracts discriminative representations to
+guide a more differentiated modeling pipeline. The student backbone, equipped with context-aware local-global window attention mechanisms, leverages the
+context-enhanced masking strategy to capture intra-packet and inter-packet dependencies. (b) Anomaly Detection Pipeline: during inference, ConMD performs
+multi-view anomaly scoring by fusing packet-level/masked and flow-level/non-masked branch representations. (c) Motivation for Multi-view Anomaly Scoring:
+fusion-level features combine the strengths of both views to amplify anomalous deviations.
+
+the ability to explicitly represent texture information [18],
+causing failures in perceiving localized and multi-scale
+anomalies. Moreover, the nature of network data emphasizes strong contextual relationships rather than localized
+awareness [24].
+ Fig. 4. The process of constructing flow-level representations and the
+ III. P RELIMINARIES corresponding packet-level masking strategy.
+
+ Let X = {x1 , x2 , . . . , xN } represent a set of N normal network
+traffic samples. Each sample xi ∈ R p×d represents a network packet x p in a flow xi is preprocessed as follows: Ethernet
+flow, consisting of a sequence of network packets x p ∈ Rd header is removed, IP addresses are set to zero, and the
+exchanged between endpoints within a connection session, packet is padded to the maximum byte length d = 1, 600
+where p is the number of packets in the flow and d is the byte using byte 0 × 00 to prevent noise and overfitting impact
+length of each packet instance [11], [16]. Our zero-positive [9], [18]. The preprocessed packets are then reshaped into a
+detection models aim to fit the data distribution of normal 2D image format x p ∈ R40×40 , as shown in the left part of
+flows during training. For inference, the model generates an Fig. 4. To incorporate flow-level representation, we propose a
+anomaly score S core for each tested sample xtest ∈ Xtest , where new flow-level geometric assembly scheme that extracts the
+Xtest represents the set of test samples. This score indicates the first nine packets of a flow and sequentially arranges them in
+deviations from the learned behavior of normal flow samples, a predefined geometric layout [·]. This layout preserves the
+with its magnitude positively correlated with the likelihood of inherent flow-level contextual relationships within the image
+being identified as anomalous. space xi ∈ R120×120 . The number of extracted packets is
+ determined by comprehensively considering prior studies [16],
+ IV. M ETHODOLOGY [31]. The entire construction procedure of the flow-level image
+ In this section, we present our proposed contextual mask- representation xi is define as follow:
+ing distillation method, ConMD. The training and inference 2
+ x0 x1 x2
+ 3
+pipeline of ConMD is depicted in Fig. 3 (a) and 3(b), while xi = 4 x3 x4 x5 5 , (1)
+the detection motivation is illustrated in Fig. 3 (c). x6 x7 x8
+ where [·] denotes geometric assemble operation.
+A. Flow-Level Representation Construction
+ The basic unit of network traffic is a flow, which comprises
+a series of ordered packets [24]. Some zero-positive works B. Contextual Masking Distillation Architecture
+depend on manually extracted statistic features rather than raw 1) Discriminative Representation Extractor: In the distilnetwork flow information [13], [16], which omit payload infor- lation paradigm [48], the teacher network’s primary role is
+mation and degrade performance. In this study, we propose to extract discriminative clues that differentiate normal and
+a novel flow-level, end-to-end-based detection scheme. Each anomalous samples, thereby guiding a more differentiated
+LIAN et al.: CONTEXTUAL MASKING DISTILLATION FOR NETWORK TRAFFIC ANOMALY DETECTION 1277
+
+ in local windows’ tokens, respectively. d is the scaling
+ factor. b is a relative position bias term, which is sampled
+ from the position grid R(2M−1)×(2M−1) .
+ While the local attention perceives the intra-packet patterns,
+ the contextual information of inter-packet relationships, which
+ is crucial in network flow analysis, is not learned. To address
+ Fig. 5. The interaction illustration of local and global windows attention.
+ this, we additionally design a global window attention. This
+ is achieved by Global Token Generator and Global Attention
+modeling pipeline and effective anomaly detection [22], [23]. modules, also as seen in the blue rectangle of Fig. 3. Global
+Drawing from the established feature extraction techniques on Token Generator compresses input token embeddings temb into
+the image anomaly detection domain [46], [47], we employ global tokens using a Fused-MBConv layer [51] and a Maxthe pre-trained WideResNet50 [49] as the teacher network Pooling layer. A fully connected layer is then used to generate
+for ConMD. Considering that traffic images exhibit a unique global query qg , which aggregates global token information
+pixels distribution is different from natural images, we perform from all local windows, capturing a global representation of
+fine-tuning on WideResNet50, which is originally pretrained the flow. We divide the output tokens after the local attention
+on ImageNet. To prevent prior information leakage, we fine- operation into the same-sized local windows and use fully
+tune it on a dataset not associated with malicious network connected layers to generate local key kl and local value vl ,
+traffic, i.e., ISCX-Tor2016 [50]. Subsequent experiments (as respectively. The global query qg is used to calculate relevance
+discussed in Section V-E) suggest avoiding excessive fine- with local key kl , and output ultimate attention feature maps.
+tuning epochs, as overfitting can degrade the feature extraction The global window attention is calculated as follows:
+ability inherent in the pre-trained model, ultimately harming 
+ qg kl
+ 
+ Global Attention qg , kl , vl = Softmax √ + b vl , (3)
+ 
+the discriminative power of the learned representations.
+ d
+ 2) Context-Aware Student Backbone: Current distillation
+techniques focus on local anomalies, failing to capture the where d and b are defined as in Eq. (2).
+inherent contextual relationships within images. However, net- As illustrated by the purple arrow in Fig. 5, rich span
+work flow image data emphasizes a strong contextual nature window information embedded in the global query qg provides
+rather than localized region awareness [11], [24]. In response, an effective way of enlarging the receptive field and attending
+we introduce a novel local-global attention mechanism [51] to various local windows. This Global Window Attention
+and design a context-aware backbone student network that approach enables adequate interaction of span packet inforadequately models the contextual information in flow images. mation (i.e., global tokens of all packet regions), significantly
+The design of our backbone network is detailed in the blue facilitating the long-range dependencies awareness of interrectangle in Fig. 3 (a). The network consists of four layers packet patterns. Finally, to align with the teacher network’s
+alternating local and global attention mechanisms. output, we apply a feature alignment layer, a 1 × 1 convolu-
+ For each input flow image, we first use a 3×3 convolutional tional layer, to generate identical dimensions.
+layer with a stride of 2 to generate tokens, representing parts 3) Context-Enhanced Masking Strategy: Masking training
+of the sub-packet information. Then, an MBConV layer [52] is is a powerful self-supervised learning approach that enhances
+employed to output embeddings for each token temb ∈ Rh×w×c , structured relationships among features [47]. In this paper,
+where h, w, c denote height, width, and channel of feature we propose a context-enhanced packet-level masking strategy,
+maps. Drawn inspiration from a novel local-global atten- which randomly masks entire packets within a flow, as illustion mechanism [51], we introduce a context-aware module trated in the right part of Fig. 4. Fig. 5 details our motivation.
+particularly designed for flow image data. The token embed- Our masking training, in conjunction with local and global
+dings temb are divided into multiple local windows wi (where attention mechanisms, aims to exploit informative/unmasked
+i denotes the index of windows), based on a fixed interval tokens (including local tokens within the window and global
+m (also denotes the window size). This process is illustrated tokens outside the window) to restore the other uninformain the Local Windows part of Fig. 3 (a). For token (sub- tive/masked ones. This demasking process cultivates more
+packet) embeddings within each local windows, we employ in-depth inter-packet interactions within flow images, enhanca self-attention mechanism layer with position bias in the ing context awareness capability of the student backbone.
+standard Transformer architecture [53], as shown with a pink A potential issue in masking training is the risk of model
+arrow in Fig. 5. This Local Window Attention mechanism collapse, which occurs when an excessive number of masked
+adequately interacts with the short-range dependencies of sub- packets impede the model’s ability to recover effectively.
+packet patches, facilitating the capture of intra-packet patterns. To avoid excessive information loss, we design a new masking
+The local window attention can be expressed as follows: rule based on packet information. First, we define a packet
+   containing less than 240 bytes as a “weak information packet”
+ qw kw
+ Local Attention (qw , kw , vw ) = Softmax √ + b vw , (The maximum length is 1600 bytes). Practical distribution
+ d statistics could be found in Fig. 6. The amount of weak
+ (2)
+ information packets Nweak follows a diverse distribution, parwhere qw , kw , and vw are local query, local key and local ticularly 6, 7, and 0 across three datasets. In the masking rule,
+value matrices output by temb with Fully Connect Layers the masked number N is decided by the number of weak infor-
+1278 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ Algorithm 1 Contextual Masking Distillation Training
+ Input: Training set X
+ Output: Student network S tudent with parameters θS
+ 1: Initialize the network parameters of student θS , and fix
+ the network parameters of teacher θT .
+ 2: for epochs do
+ 3: Sample a mini-batch data Xb from X
+Fig. 6. The statistic distribution about weak information packets number of 4: for each mini-batch do
+a flow between on three training dataset. 5: Discriminative Representation Extraction
+ 6: Extract teacher representations: zt = Teacher(Xb )
+ 7: Packet-Level Masking and Token Generation
+mation packets Nweak , as outlined in Eq. (4). Our subsequent 8: Apply packet masking: Xb msk =
+ablation studies demonstrate that extra masking number n Packet Masking (Xb ) from Eq. (5)
+(i.e., strong information packet) must not be excessively large. 9: Generate token embeddings: temb = Conv(Xb msk )
+An overly high value of n leads to the excessive masking of 10: Contextual Interaction and Awareness
+strong information packets, which can cause the demasking 11: /*Local Windows*/
+process to collapse. This collapse results in a failure of context 12: tlocal = Local Attention(tin ) use Eq. (2) ⇒ where tin
+awareness rather than its enhancement. The masked packet denotes temb or z s msk
+number and masked flow sample are defined as follows: 13: /*Global Windows*/
+ N = Nweak + n, (4) 14: z s msk = Global Attention(tlocal ) use Eq. (3)
+ 2 3 15: Network Parameters Updating
+ x0 x1 xmsk 16: Compute loss: L for student network from Eq. (6)
+ xi msk = 4 x3 xmsk xmsk 5 , (5) 17: Update parameters θS with Adam Optimizer
+ x6 xmsk x8 18: end for
+where Nweak is the number of weak-information packets in a 19: end for
+flow (see Fig. 6), n is the extra masking number, and xmsk is return Trained student network S tudent
+the randomly masked packet.
+
+ paper, we use cosine similarity to indicate the anomaly degree.
+C. Training and Anomaly Scoring The detailed calculation is defined as:
+ 1) Training: In zero-positive anomaly detection, teacher
+networks’ parameters are frozen, and only the student network S core = (1 − cos(zt , (β ∗ z s msk ⊕ (1 − β) ∗ z s nmsk ))), (7)
+needs to be trained. The overall training pipeline is shown in where β is the weight coefficient for two-branch feature of
+Fig. 3 (a), with detailed steps provided in Algorithm 1. The the student network, and ⊕ denotes the dot-add operation for
+loss function L is defined as follow: two-branch feature vectors. cos(·) denotes cosine similarity.
+ L = (1 − cos(zt , z s msk )) + α ∗ ||zt z s msk ||2 , (6) Fig. 3 (c) illustrates the motivation behind our multi-view
+ anomaly awareness approach. For normal samples, due to
+where, cos(·) denotes cosine similarity loss, and ||·||2 represents training set fitting, the feature embeddings produced by both
+the L2 norm. α is the L2 loss weight coefficient, which is set the teacher and student networks are highly similar, showing
+to 0.1. zt and z s msk are the output feature vectors from teacher no anomalous patterns (i.e., absence of red embeddings).
+and masked student networks, respectively. The symbol In contrast, for anomalous samples, the teacher consistently
+denotes element-wise subtraction. generates anomalous patterns (i.e., deep red embeddings),
+ 2) Multi-View Anomaly Scoring: Effective anomaly scoring whereas the student tends to generate embeddings closer to
+during inference is crucial, as it directly quantifies the anomaly normal patterns (i.e., shallow red and yellow embeddings).
+degree [25]. Traditional methods rely solely on a masking Crucially, the greater the deviation between teacher and stumechanism to strengthen patch-level contextual connections dent embeddings, the easier it is for the model to indicate
+during training and to infer multi-scale anomalies from non- anomalies. Our approach achieves this deviation by imposing
+masked features [46], [47]. However, this approach fails both packet- and flow-level anomaly awareness.
+to capture the hierarchical characteristics of network traffic During inference, the non-masked representation z s nmsk
+[11], [24]. To address this, we consider network flows data is typically used to infer enhanced information [47]. Since
+from a multi-view perspective and propose a novel anomaly adequate context is learned through contextual masking,
+scoring method that accounts for both packet- and flow-level z s nmsk also benefits from richer contextual representation [11].
+anomalies in flow images. As shown in Fig. 3 (b), the student In anomaly detection, it often causes anomalous features to
+network is tasked with generating masked features z s msk and be largely transformed toward normal patterns, as illustrated
+unmasked features z s nmsk to perceive anomalies from the by the shallow red embeddings in “Flow-level Anomalies”
+packet- and flow-level perspectives, respectively. These two in Fig. 3 (c). Consequently, this process highlights flow-level
+branches are fused using a weighted dot-add operation to anomaly awareness, exposing the global deviation in interfurther combine and amplify anomalous deviations. In this packet relationships. In contrast, the masked representation
+LIAN et al.: CONTEXTUAL MASKING DISTILLATION FOR NETWORK TRAFFIC ANOMALY DETECTION 1279
+
+z s msk serves a distinct role. For anomalous samples, by lever- [19] is an encrypted malware network traffic dataset. White
+aging the appropriately designed packet-level masking (e.g., traffic is generated by normal software (all exe types), while
+the recovery process in Fig. 5), the student network removes black traffic consists of encrypted traffic generated by malanomalous packet information and restores these tokens to ware (all exe types). (2) CIC-IDS2017 [54] is an encrypted
+resemble normal representations. This design is particularly network intrusion detection dataset that includes seven comeffective for packet-level anomalies, as shown in “Packet-level mon attacks, such as Brute Force Attack, Heartbleed Attack,
+Anomalies” of Fig. 3 (c). It emphasizes deviations of masked Botnet, DoS, DDoS, Web Attack, and Infiltration Attack. (3)
+packets, further strengthening packet-level anomaly aware- USTC-TFC2016 [10] is an encrypted malware traffic detection
+ness. Our anomaly scoring (Eq. (7)), developed for multi-view dataset, where the malicious traffic is collected from public
+anomaly awareness, simultaneously considers anomalies from websites and normal traffic is collected from applications.
+both packet- and flow-level perspectives through a weighted For consistent evaluation, we randomly sample 10,000 normal
+two-branch fusion. Multi-view anomaly awareness combines flows as training set, as well as 5,000 normal and 5,000
+the strengths of both packet-level and flow-level anomalies, anomalous flows as testing set.
+making anomalous samples appear closer to normal patterns. 2) Fine-tuning Dataset: We pay particular attention to
+This further amplifies the framework’s ability to differentiate potential information leakage during fine-tuning, as overly
+normal and anomalous flows at the anomaly metric, enabling homogeneous attack categories can lead to domain overfitting.
+more accurate detection. This would compromise evaluation fairness compared with
+ other baselines by introducing prior information specific to
+D. Complexity Analysis certain attack-domain datasets. To mitigate this, we fine-tune
+ Model complexity is a key consideration in the online the teacher network for binary classification on a dataset
+deployment of detection systems. In this section, we analyze unrelated to malicious traffic, specifically ISCX-Tor2016 [50].
+the computational complexity of the proposed modules. This dataset contains abundant high-frequency information and
+ • Complexity of context-aware student backbone. Given is widely used for fine-tuning [11], [24]. The fine-tuning data
+ an input feature map of temb ∈ Rh×w×c at each local- includes 100,000 Tor and non-Tor traffic samples.
+ global attention mechanism with a window size of m×m, 3) Evaluation Metrics: In alignment with recent works
+ the computational complexity O(Window) within local in network traffic anomaly detection [13], [16], we evaluate
+ windows remains in the same order as that of the standard detection performance using Area Under the ROC Curve
+ Vision Transformer (ViT): (AUC), Accuracy (ACC), Macro F1-Score (F1), Precision
+ O(Window) = O(4m2 c2 + 2m4 c). (8) (Pre) and Recall (Rec) metrics.
+ 4) Implementation Details: All experiments are conducted
+ Therefore, per-layer complexity O(LGA) of the student
+ on an NVIDIA GeForce RTX 3090 GPU. To fine-tune the
+ backbone can be expressed as:
+    teacher network, we use the AdamW optimizer with a learning
+ h w rate of 1 × 10−4 and a cross-entropy loss function. The student
+ O(LGA) = O (4m2 c2 + 2m4 c) × ×
+ m m backbone is constructed by alternating four layers of local and
+ = O(4hwc + 2hwm c).
+ 2 2
+ (9) global window attention, where each window size m is set
+ to 4. During distillation training, we use the AdamW opti-
+ Obviously, compared with the standard ViT complexity mizer with a weight decay of 0.05 and a batch size of 128.
+ O(4hwc2 + 2h2 w2 c), our local-global attention design We perform a grid search for learning rates. The learning
+ achieves greater computational efficiency by partitioning rates is finally set to 2 × 10−5 , 6 × 10−5 , and 3 × 10−4 for
+ the feature map into multiple local windows. the three datasets, respectively. The maximum training epoch
+ • Complexity of context-enhanced masking training strat- is 50, and early stopping is applied to prevent overfitting.
+ egy. The masking operation is applied to each sub-packet We repeat each experiment with five different random seeds
+ region within a flow. Its computational cost O(Mask) is to report the standard deviation.
+ negligible, with an index cost of:
+ 5) Baselines: Given that network traffic exhibits inher-
+ O(Mask) = O(32 ) = O(9). (10) ent temporal dependencies, time-series anomaly detection
+ methods can also be relevant to this task. Accordingly, we
+ • Complexity of anomaly metric. ConMD adopts a multicompare ConMD with four categories of methods, covering
+ view anomaly awareness mechanism, generating both
+ eight state-of-the-art and two classical baselines: (1) Network
+ masked and unmasked packet tokens to compute the
+ traffic anomaly detection methods, such as GANomaly [40],
+ anomaly metric during inference. Consequently, the
+ ARCADE [17], MFAD [18]; (2) Knowledge distillation techcomputational complexity of this process increases
+ niques, including STFPM [44], ReverDis [22], and MMR [47];
+ to 2 × O(S tudent) compared with the training phase.
+ (3) Time-series anomaly detection methods, like AnoFormer
+ [55] and TSLANet [56]; and (4) Classical machine learning
+ V. E XPERIMENTS
+ methods, such as Isolation Forest (IF) [57] and OCSVM
+A. Experimental Setting [58]. We perform a learning rate search for each baseline as
+ 1) Evaluation Datasets: We use three publicly available specified in the original papers. All implementation details are
+network traffic anomaly detection datasets. (1) DataCon2020 as follows:
+1280 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ • GANomaly [40] is a classical comparison method used TABLE I
+ in network traffic anomaly detection with an encoder- P ERFORMANCE C OMPARISONS (%) ON DATAC ON 2020, CIC-IDS2017
+ decoder-encoder architecture. Adversarial training strat- AND USTC-TFC2016 DATASETS . T HE B EST R ESULTS A RE
+ IN B OLD F ONT AND THE S ECOND U NDERLINED
+ egy is especially used to improve the reconstruction
+ quality of normal samples.
+ • ARCADE [17] is to incorporate the WGAN-GP strategy
+ to regularize and suppress the reconstruction of anomalous network flows. To receive the same dimensional
+ images input, we use the 2-D convolution layer to build
+ an encoder-decoder architecture.
+ • MFAD [18] leverages low-pass filters to extract texture
+ features to benefit reconstruction modeling, enabling normal and anomalous traffic to be more distinguishable.
+ • STFPM [44] employs an identical student–teacher architecture with multi-scale feature matching to detect
+ anomalies across different scales.
+ • ReverDis [22] proposes an asymmetric distillation framework to enhance the diversity of representations for
+ anomalous samples. A one-class bottleneck embedding
+ module is used to retain essential sample information.
+ • MMR [47] utilizes a pre-trained Vision Transformer as
+ the student network and introduces a token-level masking
+ mechanism to improve causal relationships.
+ • AnoFormer [55] highlights prior and series-wise associations in time-series data, and proposes an anomalyattention block, which incorporates a self-attention mechanism and series characteristics.
+ • TSLANet [56] applies Fourier analysis to improve the
+ capture of long- and short-term dependencies while
+ reducing noise. It further incorporates self-supervised
+ learning to model complex periodic patterns.
+ • Isolation Forest (IF) [57] constructs random decision trees
+ to isolate anomalies, where anomalous samples typically
+ exhibit shorter path lengths. (O2): The machine learning methods, including IF and
+ • OCSVM [58] encapsulates normal samples within a deci- OCSVM, perform poorly, revealing their inherent limitations.
+ sion boundary and employs a decision function to reliably Network traffic anomaly detection and distillation-based methidentify anomalous samples. ods also perform markedly worse than ConMD. Although
+ some methods, such as GANomaly and ARCADE, employ
+B. Anomaly Detection Performance adversarial training strategies in enhancing reconstruction
+ 1) Comparison With SOTA Methods: From detection results quality, they still fail to address the “Confused-to-Confused”
+presented in Table I, we have the following observations: anomaly scoring problem in encrypted traffic. Transformer-
+ (O1): ConMD consistently outperforms all strong baselines based architectures like AnoFormer and TSLANet also suffer,
+across various datasets, achieving superior results in AUC, as encryption obscures time-series characteristics and results
+ACC, and F1 metrics. Notably, ConMD outperforms the in confused representations. MFAD attempts to mitigate these
+most competitive baseline by 2.8% and 5.1% in AUC on issues through low-pass filtering, but risks information loss.
+the DataCon2020 and CIC-IDS2017 datasets, respectively. Distillation-based methods exhibit superior performance on
+Even on USTC-TFC2016, we achieve 99.97% in AUC and the CIC-IDS2017 dataset compared with reconstruction-based
+99.00% in ACC, significantly surpassing supervised-learning’s approaches. This phenomenon indicates the effectiveness
+performances [24]. These improvements are attributed to our of distillation framework. Unfortunately, existing distillation
+particular design for network flow data. Specifically, our techniques overemphasize local anomaly awareness, resulting
+teacher network provides more discriminative representation in suboptimal overall performance across datasets.
+and guide student network with a more differentiated modeling (O3): A notable observation is that, for most baselines, the
+pipeline. The context-aware student backbone is designed Precision metric is explicitly lower than the Recall metric.
+to capture crucial information for normal network samples, All test samples are uniformly identified anomalous category.
+enhancing the differences between normal and anomalous This finding highlights the limitations of existing methods
+network traffic. Moreover, the multi-view anomaly scoring in distinguishing normal and anomalous flows, which, in
+further improves detection accuracy from packet- and flow- turn, results in significant false positives. Reconstructionlevel perspectives. based methods are limited by a “Confused-to-Confused”
+LIAN et al.: CONTEXTUAL MASKING DISTILLATION FOR NETWORK TRAFFIC ANOMALY DETECTION 1281
+
+ TABLE II method demonstrates more reliable detection performance, as
+ C ATEGORY-S PECIFIC D ETECTION ACCURACY (%) ON CIC-IDS2017 it can effectively distinguish anomalous samples from the
+ DATASET. A NOMALY L ABELS R EFER TO VARIOUS ATTACK normal ones. In particular, the packet-level branch (ConMD-
+ C ATEGORIES . C ON MD-P I NDICATES O UR PACKET-L EVEL
+ B RANCH , AND C ON MD-F I NDICATES P) enhances anomaly sensitivity, while the flow-level branch
+ THE F LOW-L EVEL B RANCH (ConMD-F) improves normal flow discrimination. Collectively, they enable a more balanced multi-view anomaly
+ awareness.
+
+ C. Paradigm Analysis
+ To verify the effectiveness of representation extraction in
+ our distillation approach for encrypted network traffic, we conducted a qualitative t-Distributed Stochastic Neighbor Embedding (t-SNE) visualization to compare the embedding distributions between reconstruction-based paradigm (Fig. 7 (a))
+ TABLE III
+ and distillation-based paradigm (Fig. 7 (b)). Traffic flows typ-
+ C ATEGORY-S PECIFIC D ETECTION ACCURACY (%) AND N UMBER
+ S TATISTICS ON USTC-TFC2016 DATASET. A NOMALY L ABELS ically exhibit encrypted high-frequency characteristics, which
+ I NDICATE THE T YPES OF M ALICIOUS A PPLICATIONS . obscure inherent meaningful patterns [18]. Our experimental
+ C ON MD-P I NDICATES O UR PACKET-L EVEL B RANCH , results (Fig. 7 (a)) further confirm this challenge: normal and
+ AND C ON MD-F I NDICATES THE F LOW-L EVEL B RANCH
+ anomalous flows display blurred boundaries and significant
+ confusion. Such representations inevitably constrain the modeling process, leading to the “Confused-to-Confused” pipeline.
+ As illustrated in Fig. 2, the reconstruction-based paradigm is
+ inherently guided to reproduce the original profile of network
+ flows—that is, the confused class distribution. This has already
+ constrained the reliability of anomaly scores and constitutes a
+ fundamental limitation of the reconstruction-based paradigm.
+ In contrast, the distillation-based paradigm prioritizes
+ extracting discriminative representation to guide a more
+detection pipeline, while distillation-based methods lacks effective modeling process. This motivation is confirmed
+effective anomaly awareness. Benefiting from extensive by Fig. 7 (b). We can observe a clearer boundary and a
+designs to amplify differences between normal and abnormal more separated distribution for normal and anomalous samflows, our method exhibits more reliable detection with higher ples outputted by our teacher network. Such discriminative
+F1 scores and more balanced Precision and Recall metrics. embeddings refine representations, suppress high-frequency
+ 2) Category-Specific Detection: To evaluate the sensitivity noise, and enable a differentiated rather than confused pipeline
+of various attack types, we count the accuracy of category- (Fig 2). This constitutes the fundamental advantage of the
+specific anomaly detection. Since the DataCon2020 dataset distillation-based paradigm, which directly addresses the limlacks of category-specific labels, we only assess the results itations of reconstruction-based approaches.
+on CIC-IDS2017 and USTC-TFC2016 dataset, as shown in
+table II and III. Overall, ConMD achieves superior accuracy
+in classifying benign/normal traffic. This outcome indicates D. Ablation Studies
+that our context-aware framework effectively captures the Table IV presents ablation studies evaluating the contribuinherent patterns of normal network flows, thereby enhancing tion of each ConMD component by individually removing or
+the correct identification of normal samples. Moreover, due replacing the masking strategy, anomaly scoring, architecture
+to its discriminative extraction and comprehensive anomaly design, or fine-tuning dataset.
+awareness, our method also achieves superior detection for 1) Effect of Masking Training Strategy: Overall, maskthe majority of category-specific anomalies. On CIC-IDS2017, ing training proves effective within our framework. As a
+common attack types like Brute Force, Dos, DDos, and Port common used technique [47], random masking (w/ RMT)
+Scan are detected by most methods due to their distinctive performs better performances than non-masked training
+high-rate malicious request patterns [54]. In contrast, low- (w/o MT). However, this strategy has a significant limitaconcurrency and penetration-oriented attacks that disguise tion: it is unsuitable for flow images because it neglects the
+themselves as normal behavior, such as Web attack, Bot- contextual information inherent in network flows. In comparnet, Heartbleed, and Infiltration, are considered hard negative ison, our method outperforms the random masking strategy
+samples. While ARCADE exhibits nearly 100 % detection (w/ RMT) with considerable performance advantages. This
+accuracy in malicious application types, it suffers from poor improvement is attributed to our context-enhanced design.
+identification of normal network flows. This result sug- Packet-level masking strategy effectively cultivates more ingests that ARCADE is suboptimal, as it tends to classify depth inter-packet interaction within flow images, enhancing
+all samples into the anomalous category. In contrast, our the context-aware capability of the student backbone.
+1282 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 7. The t-SNE visualization comparison for reconstruction-based and distillation-based paradigm among three datasets. (a) presents the dataset distribution
+both in reconstruction-based paradigm and distillation-based paradigm; (b) presents the extracted discriminative representation in distillation-based paradigm.
+
+ TABLE IV
+A BLATION S TUDIES ON M ASKING S TRATEGY, A NOMALY S CORING AND A RCHITECTURE D ESIGN , W ITH THE R ESULTS S HOWN IN % F ORMAT. T HE
+ A BBREVIATIONS A RE E XPLAINED AS F OLLOWS MT: M ASKING T RAINING , RMT: R ANDOM M ASKING T RAINING , PA: PACKET-L EVEL A NOMALY
+ AWARENESS , FA: F LOW-L EVEL A NOMALY AWARENESS , V I T: V ISION T RANSFORMER , R ES : W IDE R ES N ET 50,
+ LGA: L OCAL -G LOBAL W INDOW ATTENTION , AND VPN FT: VPN DATASET F INE -T UNING
+
+ 2) Effect of Multi-View Anomaly Scoring: The removal performance of flow-level scoring (w/o PA) through our fusion
+of flow-level scoring (w/o FA) results in substantial perfor- approach.
+mance degradation, underscoring the critical role of flow-level 3) Effect of Various Student-Teacher Architecture: ViTanomaly awareness in network flows, especially on Data- based (w/ ViT-Res) student backbones exhibit only a marginal
+Con2020 and CIC-IDS2017 datasets. In addition, we observe improvement over WideResNet50 (w/ Res-Res), indicating
+a more notable decline in performance upon removal of the limited effectiveness in capturing network characteristics.
+packet-level scoring (w/o PA) compared to flow-level scor- In contrast, our local-global window attention mechanisms
+ing (w/o FA) on USTC-TFC2016 dataset. These results yields significant gains by capturing both intra-packet and
+confirm that these two scoring mechanisms possess differ- inter-packet interactions at packet and flow levels. Furtherent anomaly awareness capabilities. Flow-level awareness more, we also explored the feasibility of local-global attention
+focuses on contextual anomalies, while packet-level awareness modules as a teacher network (w/ LGA-LGA). Unfortunately,
+highlights anomalies in the masked packet region. By inte- Table IV reveals that the LGA-LGA framework suffers from a
+grating these perspectives, our model combines their strengths significant defect. As discussed in study [25], student network
+and achieves superior results. Notably, although packet-level tends to over-generalize and output similar feature represenscoring (w/o FA) exhibits poor performance on the CIC- tations to those of the teacher network, regardless of normal
+IDS2017 dataset, it still contributes to enhancing the overall and anomalous samples. The identical local-global attention in
+LIAN et al.: CONTEXTUAL MASKING DISTILLATION FOR NETWORK TRAFFIC ANOMALY DETECTION 1283
+
+ TABLE V
+ E XPERIENCE ON THE F INE -T UNING E POCH (AUC R ESULT R EPORTED
+ W ITH % F ORMAT ). E PC D ENOTES THE N UMBER OF E POCHS
+
+ Fig. 8. Experience on the masked packet number N.
+
+ Fig. 9. Experience on the coefficient β for anomaly awareness fusion.
+
+both student and teacher networks may exacerbate this issue,
+leading to non-discriminative representations.
+ 4) Effect of Various Fine-Tuning Dataset: We replace
+the fine-tuning dataset with ISCX-VPN2016 [59] (w/ VPN
+FT), which contains encrypted but non-malicious traffic. This Fig. 10. The density distribution of tested samples among anomaly score
+ branches on DataCon2020. µ∗ denotes the mean of each density distribution.
+substitution avoids introducing attack information leakage
+while preserving traffic characteristics for fair fine-tuning. The traffic. While packet-level awareness can detect packet-level
+results indicate that the replacement produces nearly consistent anomalies by incorrectly repairing masked anomaly packets,
+performance across all three datasets. This shows both the traffic flows are essentially sequential data. Anomalies in traffic
+general applicability of using encrypted traffic for fine-tuning flows are mainly manifested through the interactions between
+and the overall effectiveness of the distillation framework. packets (i.e., contextual anomalies).
+ 3) Fine-Tuning Scope of Teacher Network: There is a
+E. Hyperparameter Analysis potential risk that traffic data may diverge from the natural
+ image distribution [18]. To mitigate this issue, we fine-tuned
+ 1) The Amount of Packets With the Optimal Masking N:
+ the teacher network, which was initially pretrained on Ima-
+The number of packets N selected for masking is closely
+ geNet. As illustrated in Table V, it is crucial to strike a balance
+related to the information strength contained within each
+ between leveraging pretrained knowledge and adapting the
+packet, as shown in Eq. (4). In Fig. 8, the best perfornetwork to traffic data distributions. Epc 0 represents the
+mances were achieved with N = 7, 8, and 1 (i.e., the extra
+ model as pretrained on ImageNet without any fine-tuning. Our
+masking n = 1) on three datasets, respectively. This result
+ experiments indicate that even a single epoch of fine-tuning
+indicates that an insufficient number of masked packets fails
+ leads to an increase in AUC value, indicating that the fineto support effective demasking training, leading to suboptimal
+ tuned teacher network is more effective in guiding the student
+context enhancement for the student backbone. Conversely, an
+ network on flow data. However, the results also reveal that
+excessive number of masked packets within a flow adversely
+ AUC values begin to decline after two epochs of fine-tuning.
+affects modeling, potentially causing the demasking training
+ This suggests that excessive fine-tuning can lead to teacher
+to collapse. From a statistical view, the lack of sufficient
+ network overfitting on the traffic data, causing the network to
+informative tokens renders the recovery of numerous masked
+ lose its capacity to extract diverse features effectively.
+or missing packets infeasible. Correspondingly, masking all
+packets (i.e., setting N to the maximum 9) leads to a substantial
+decrease in detection performance across all test datasets. F. Multi-View Anomaly Scoring Analysis
+Based on our experiment results, optimal context-enhanced The previous quantitative experiments have demonstrated
+recovery is achieved when the number of masked packets N that the fused multi-view anomaly awareness can furexceeds the number of weakly informative packets Nweak by ther improve detection performance. To provide in-depth
+one. insights, we qualitatively visualize the fusion process to
+ 2) The Optimal Anomaly Scoring Fusion Coefficients β: We better understand its working principles, as illustrated
+searched for fusion parameter β within the range from −0.5 to in Fig. 10, 11 and 12.
+0.5, as detailed in Fig. 9 (where 0 denotes flow-level anomaly Fig. 10 and 11 suggest a lower anomaly score for flowawareness branch in Table IV). The best results are achieved level (blue color) than packet-level (green color) in normal
+at β = −0.3 for feature fusion. Align with findings in Table IV, samples. This result confirms that flow-level awareness better
+this search result confirms that flow-level anomaly awareness understands network flow patterns and effectively quantiplays a more crucial role in detecting anomalous network fies anomalous distributional deviations. In contrast, anomaly
+1284 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ Fig. 13. Overhead comparison in training and inference time.
+Fig. 11. The density distribution of tested samples among anomaly score
+branches on CIC-IDS2017. µ∗ denotes the mean of each density distribution.
+
+ conventional network classification methods. All methods are
+ uniformly conducted on an Ubuntu 18.04 system with an
+ NVIDIA GeForce RTX 3090 GPU. We report the training and
+ inference time per epoch (in seconds) for a complete efficiency
+ analysis, as shown in Fig. 13.
+ For training overhead, network traffic anomaly detection
+ methods such as GANomaly, ARCADE, and MFAD incur
+ approximately twice the time of ConMD. This is because their
+ use of additional adversarial training significantly increases
+ the training overhead. Transformer-based models, including
+ AnoFormer and TSLANet, also exhibit high computational
+ costs due to the dimensional explosion in attention mechanisms. In contrast, ConMD processes traffic as image patches,
+Fig. 12. The density distribution of tested samples among anomaly score which significantly alleviates this issue. Furthermore, when
+branches on USTC-TFC2016. compared with distillation-based methods such as STFPM,
+ ReverDis, and MMR, ConMD achieves the most optimal
+score distribution of packet-level anomaly awareness (green
+ training overhead, highlighting the efficiency of our designed
+color) exists significant prediction confusion (i.e., normal and
+ context-aware modules and context-enhanced training mechaanomaly distributions have the closest mean values). Despite
+ nisms. Interestingly, even when compared with the common
+these non-ideal results, packet-level awareness can still connetwork traffic classification method SSDDQN [60], ConMD
+tribute to flow-level detection. Fusion-level awareness (red
+ consistently maintains optimal training overhead.
+color) integrates multiple perspectives’ strengths to highlight
+ For inference overhead, although ConMD is not the most
+anomalous deviations, amplifying deviations of anomaly samefficient, it remains highly competitive and holds considples (i.e., the mean value of anomaly distribution significantly
+ erable potential. The additional cost primarily arises from
+shifts to the right). This approach provides greater differentiathe multi-view anomaly scoring mechanism. This design
+tion and reduced overlap between the normal and anomalous
+ greatly enhances detection performance and, at the same time,
+distribution regions, thereby enabling more accurate detection.
+ achieves a balanced trade-off between accuracy and efficiency.
+ On USTC-TFC2016 dataset, shown in Fig. 12, packet-level
+ Furthermore, it also provides a solid foundation for future optiawareness leads to more pronounced deviations compared to
+ mization. In efficiency-prioritized scenarios, these branches
+flow-level awareness, demonstrating a reverse phenomenon.
+ can be deployed in parallel to further enhance inference speed.
+This indicates that flow-level anomaly awareness is not
+always the dominant factor. Packet-level awareness on USTC-
+ VI. C ONCLUSION
+TFC2016 is significantly important. However, compared to
+single perspectives, a key observation is that the fusion- In this work, we introduced ConMD, a novel knowledge dislevel distribution is more distinctly differentiated. This further tillation framework designed to address the confused modeling
+validates the rationale for multi-view awareness. Our fusion problem in zero-positive network traffic anomaly detection.
+scheme proves to be an effective and promising approach for Our approach excels in two key aspects: (1) During training,
+anomaly evaluation in traffic data. ConMD effectively captures contextual information through
+ a context-aware backbone and a context-enhanced training
+ strategy, facilitating a deeper understanding of normal network
+G. Efficiency Analysis behavior; and (2) During inference, ConMD fuses packet-
+ Model efficiency is critical for practical deployment. Fol- and flow-level representations through a multi-view scoring
+lowing prior work [60], we compare the computational mechanism for a more comprehensive anomaly assessment.
+overhead among distillation-based, reconstruction-based, and Extensive quantitative and qualitative experiments validate
+LIAN et al.: CONTEXTUAL MASKING DISTILLATION FOR NETWORK TRAFFIC ANOMALY DETECTION 1285
+
+the superiority of our distillation framework in fostering a [17] W. T. Lunardi, M. A. Lopez, and J.-P. Giacalone, “ARCADE: Advermore differentiated modeling pipeline and enhancing detection sarially regularized convolutional autoencoder for network anomaly
+ detection,” IEEE Trans. Netw. Service Manage., vol. 20, no. 2,
+capabilities compared to existing methods. pp. 1305–1318, Jun. 2023.
+ In future work, we plan to explore more lightweight dis- [18] Y. Zheng, X. Lian, Z. Dang, C. Peng, C. Yang, and J. Ma, “A semitillation architectures to further improve inference efficiency. supervised anomaly network traffic detection framework via multimodal
+ traffic information fusion,” in Proc. 32nd ACM Int. Conf. Inf. Knowl.
+We also intend to evaluate ConMD in broader and more Manage., Oct. 2023, pp. 4455–4459.
+dynamic online network environments, particularly in sce- [19] C. DataCon. (2020). Datacon: Open Dataset Datacon2020-Encrypted
+narios involving complex or real-time zero-day attacks. Our Malicious Traffic Dataset Direction Open Dataset. [Online]. Available:
+ https://datacon.qianxin.com/opendata
+long-term vision is to extend ConMD toward real-time, zero- [20] X. Yao, C. Zhang, R. Li, J. Sun, and Z. Liu, “One-for-all: Proposal
+positive anomaly detection, achieving efficient and practical masked cross-class anomaly detection,” in Proc. AAAI Conf. Artif. Intell.,
+implementation in real-world systems. vol. 37, 2023, pp. 4792–4800.
+ [21] Z. You et al., “A unified model for multi-class anomaly detection,” in
+ Proc. NeurIPS, 2022, pp. 4571–4584.
+ [22] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+ R EFERENCES one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ Recognit. (CVPR), Jun. 2022, pp. 9727–9736.
+[1] Y. Zhong, Z. Wang, X. Shi, J. Yang, and K. Li, “RFG-HELAD: A [23] Y. Cai, D. Liang, D. Luo, X. He, X. Yang, and X. Bai, “A discrepancy
+ robust fine-grained network traffic anomaly detection model based on aware framework for robust anomaly detection,” IEEE Trans. Ind.
+ heterogeneous ensemble learning,” IEEE Trans. Inf. Forensics Security, Informat., vol. 20, no. 3, pp. 3986–3995, Mar. 2024.
+ vol. 19, pp. 5895–5910, 2024. [24] R. Zhao et al., “Yet another traffic classifier: A masked autoencoder
+[2] R. Xie et al., “Rosetta: Enabling robust TLS encrypted traffic clas- based traffic transformer with multi-level flow representation,” in Proc.
+ sification in diverse network environments with TCP-aware traffic AAAI, vol. 37, 2023, pp. 5420–5427.
+ augmentation,” in Proc. ACM Turing Award Celebration Conf. China, [25] X. Zhang, S. Li, X. Li, P. Huang, J. Shan, and T. Chen, “DeSTSeg:
+ Jul. 2023, pp. 131–132. Segmentation guided denoising student-teacher for anomaly detection,”
+[3] Z. Cheng et al., “Kairos: Practical intrusion detection and investigation in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun.
+ using whole-system provenance,” in Proc. IEEE Symp. Secur. Privacy 2023, pp. 3914–3923.
+ (SP), May 2024, pp. 3533–3551. [26] Y. Qing et al., “Low-quality training data only? A robust framework for
+[4] Y. Sharon, D. Berend, Y. Liu, A. Shabtai, and Y. Elovici, “TANTRA: detecting encrypted malicious network traffic,” in Proc. Netw. Distrib.
+ Timing-based adversarial network traffic reshaping attack,” IEEE Trans. Syst. Secur. Symp., 2024.
+ Inf. Forensics Security, vol. 17, pp. 3225–3237, 2022. [27] Z. Zhao, Z. Liu, H. Chen, F. Zhang, Z. Song, and Z. Li, “Effective
+[5] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decen- DDoS mitigation via ML-driven in-network traffic shaping,” IEEE Trans.
+ tralized application identification via encrypted traffic analysis using Depend. Secure Comput., vol. 21, no. 4, pp. 4271–4289, Jul. 2024.
+ graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16, [28] Y. Liang, Y. Xie, S. Tang, S. Yu, X. Liu, and J. Hu, “Network traffic
+ pp. 2367–2380, 2021. content identification based on time-scale signal modeling,” IEEE Trans.
+[6] X. Han, S. Liu, J. Liu, B. Jiang, Z. Lu, and B. Liu, “ECNet: Depend. Secure Comput., vol. 20, pp. 2607–2624, 2022.
+ Robust malicious network traffic detection with multi-view feature and [29] C. Yao, Y. Yang, K. Yin, and J. Yang, “Traffic anomaly detection in wireconfidence mechanism,” IEEE Trans. Inf. Forensics Security, vol. 19, less sensor networks based on principal component analysis and deep
+ pp. 6871–6885, 2024. convolution neural network,” IEEE Access, vol. 10, pp. 103136–103149,
+[7] W. Li et al., “Prism: Real-time privacy protection against temporal 2022.
+ network traffic analyzers,” IEEE Trans. Inf. Forensics Security, vol. 18, [30] A. Parameswari, R. Ganeshan, V. Ragavi, and M. Shereesha, “Hybrid
+ pp. 2524–2537, 2023. rat swarm hunter prey optimization trained deep learning for network
+[8] E. Li, Z. Shang, O. Gungor, and T. Rosing, “SAFE: Self- intrusion detection using CNN features,” Comput. Secur., vol. 139, Apr.
+ supervised anomaly detection framework for intrusion detection,” 2025, 2024, Art. no. 103656.
+ arXiv:2502.07119. [31] K. Lin, X. Xu, and H. Gao, “TSCRNN: A novel classification scheme
+[9] Y. A. Farrukh, S. Wali, I. Khan, and N. D. Bastian, “SeNet-I: An of encrypted traffic based on flow spatiotemporal features for efficient
+ approach for detecting network intrusions through serialized network management of IIoT,” Comput. Netw., vol. 190, May 2021, Art. no.
+ traffic images,” Eng. Appl. Artif. Intell., vol. 126, Nov. 2023, Art. no. 107974.
+ 107169. [32] G. ALMahadin et al., “VANET network traffic anomaly detection using
+[10] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic GRU-based deep learning model,” IEEE Trans. Consum. Electron.,
+ classification using convolutional neural network for representation vol. 70, no. 1, pp. 4548–4555, Feb. 2024.
+ learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Da Nang, Vietnam, [33] R. Devendiran and A. V. Turukmane, “Dugat-LSTM: Deep learning
+ Jan. 2017, pp. 712–717. based network intrusion detection system using chaotic optimization
+[11] R. Zhao et al., “A novel self-supervised framework based on masked strategy,” Expert Syst. Appl., vol. 245, Jul. 2024, Art. no. 123027.
+ autoencoder for traffic classification,” IEEE/ACM Trans. Netw., vol. 32, [34] H. Nguyen and R. Kashef, “TS-IDS: Traffic-aware self-supervised learnno. 3, pp. 2012–2025, Jun. 2024. ing for IoT network intrusion detection,” Knowl.-Based Syst., vol. 279,
+[12] K. Fauvel, F. Chen, and D. Rossi, “A lightweight, efficient and Nov. 2023, Art. no. 110966.
+ explainable-by-design convolutional neural network for internet traffic [35] M. Zhong, M. Lin, and Z. He, “Dynamic multi-scale topological repclassification,” in Proc. 29th ACM SIGKDD Conf. Knowl. Discovery resentation for enhancing network intrusion detection,” Comput. Secur.,
+ Data Mining, Aug. 2023, pp. 4013–4023. vol. 135, Dec. 2023, Art. no. 103516.
+[13] X. Lian, C. Cao, Y. Liu, X. Xu, Y. Zheng, and F. Zhou, “Facing [36] M. Zhong, M. Lin, C. Zhang, and Z. Xu, “A survey on graph neural netanomalies head-on: Network traffic anomaly detection via uncertainty- works for intrusion detection systems: Methods, trends and challenges,”
+ inspired inter-sample differences,” in Proc. ACM Web Conf., Apr. 2025, Comput. Secur., vol. 141, Jun. 2024, Art. no. 103821.
+ pp. 3908–3917. [37] Q. Zhou, L. Wang, H. Zhu, T. Lu, and V. S. Sheng, “WF-transformer:
+[14] X. Lian, Y. Liu, S. Wang, and Y. Zheng, “Payload level anomaly network Learning temporal features for accurate anonymous traffic identification
+ traffic detection via semi-supervised contrastive learning,” in Proc. IEEE by using transformer networks,” IEEE Trans. Inf. Forensics Security,
+ 23rd Int. Conf. Trust, Secur. Privacy Comput. Commun. (TrustCom), vol. 19, pp. 30–43, 2024.
+ Dec. 2024, pp. 2559–2566. [38] P. Dodia, M. AlSabah, O. Alrawi, and T. Wang, “Exposing the rat
+[15] Z. Zhao, Z. Li, Z. Song, W. Li, and F. Zhang, “Trident: A univer- in the tunnel: Using traffic analysis for tor-based malware detection,”
+ sal framework for fine-grained and class-incremental unknown traffic in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Nov. 2022,
+ detection,” in Proc. ACM Web Conf., May 2024, pp. 1608–1619. pp. 875–889.
+[16] X. Lian, Y. Zheng, Z. Dang, C. Peng, and X. Gao, “Semi-supervised [39] E. Caville, W. W. Lo, S. Layeghy, and M. Portmann, “Anomal-E: A selfanomaly traffic detection via multi-frequency reconstruction,” Pattern supervised network intrusion detection system based on graph neural
+ Recognit., vol. 161, May 2025, Art. no. 111215. networks,” Knowl.-Based Syst., vol. 258, Dec. 2022, Art. no. 110030.
+1286 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+[40] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “GANomaly: [50] A. Habibi Lashkari, G. Draper Gil, M. S. I. Mamun, and A. A. Ghorbani,
+ Semi-supervised anomaly detection via adversarial training,” in Proc. “Characterization of tor traffic using time based features,” in Proc. 3rd
+ 14th Asian Conf. Comput. Vis. Perth, WA, Australia: Springer, Dec. Int. Conf. Inf. Syst. Secur. Privacy, 2017, pp. 253–262.
+ 2019, pp. 622–637. [51] A. Hatamizadeh, H. Yin, J. Kautz, P. Molchanov, and M. Pavlo, “Global
+[41] L. Zhang, X. Xie, K. Xiao, W. Bai, K. Liu, and P. Dong, “MANomaly: context vision transformers,” in Proc. ICML, 2022, pp. 12633–12646.
+ Mutual adversarial networks for semi-supervised anomaly detection,” [52] M. Tan and Q. V. Le, “EfficientNetv2: Smaller models and faster
+ Inf. Sci., vol. 611, pp. 65–80, Sep. 2022. training,” in Proc. Int. Conf. Mach. Learn., 2021, pp. 10096–10106.
+[42] Z. Wang, R. Zhou, S. Yang, D. He, and S. Chan, “A novel lightweight [53] Z. Liu et al., “Swin transformer: Hierarchical vision transformer using
+ IoT intrusion detection model based on self-knowledge distillation,” shifted windows,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+ IEEE Internet Things J., vol. 12, no. 11, pp. 16912–16930, Jun. 2025. Oct. 2021, pp. 9992–10002.
+[43] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed [54] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+ students: Student-teacher anomaly detection with discriminative latent a new intrusion detection dataset and intrusion traffic characterization,”
+ embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), 2018,
+ (CVPR), Jun. 2020, pp. 4182–4191. pp. 108–116.
+[44] G. Wang, S. Han, E. Ding, and D. Huang, “Student-teacher feature [55] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer: Time
+ pyramid matching for anomaly detection,” in Proc. Brit. Mach. Vis. series anomaly detection with association discrepancy,” in Proc. ICLR,
+ Conf., 2021, p. 306. 2022.
+[45] M. Rudolph, T. Wehrbein, B. Rosenhahn, and B. Wandt, “Asymmetric [56] E. Eldele, M. Ragab, Z. Chen, M. Wu, and X. Li, “TSLANet: Rethinking
+ student-teacher networks for industrial anomaly detection,” in Proc. transformers for time series representation learning,” in Proc. ICML,
+ IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2023, 2024, pp. 12409–12428.
+ pp. 2591–2601. [57] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 8th
+[46] G. Tong, Q. Li, and Y. Song, “Two-stage reverse knowledge distillation IEEE Int. Conf. Data Min., Dec. 2008, pp. 413–422.
+ incorporated and self-supervised masking strategy for industrial anomaly [58] B. Schölkopf, J. C. Platt, J. Shawe-Taylor, A. J. Smola, and
+ detection,” Knowl.-Based Syst., vol. 273, Aug. 2023, Art. no. 110611. R. C. Williamson, “Estimating the support of a high-dimensional
+[47] Z. Zhang, Z. Zhao, X. Zhang, C. Sun, and X. Chen, “Industrial anomaly distribution,” Neural Comput., vol. 13, no. 7, pp. 1443–1471,
+ detection with domain shift: A real-world dataset and masked multi-scale Jul. 2001.
+ reconstruction,” Comput. Ind., vol. 151, Oct. 2023, Art. no. 103990. [59] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghor-
+[48] Z. Cheng, Y. Liu, T. Zhong, K. Zhang, F. Zhou, and P. S. Yu, bani, “Characterization of encrypted and VPN traffic using time-related
+ “Disentangling inter - and intra-cascades dynamics for information features,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, 2016,
+ diffusion prediction,” IEEE Trans. Knowl. Data Eng., vol. 37, no. 8, pp. 407–414.
+ pp. 4548–4563, Aug. 2025. [60] S. Dong, Y. Xia, and T. Peng, “Network abnormal traffic detection model
+[49] S. Zagoruyko and N. Komodakis, “Wide residual networks,” in Proc. based on semi-supervised deep reinforcement learning,” IEEE Trans.
+ Brit. Mach. Vis. Conf., 2016, pp. 87.1–87.12. Netw. Service Manage., vol. 18, no. 4, pp. 4197–4212, Dec. 2021.

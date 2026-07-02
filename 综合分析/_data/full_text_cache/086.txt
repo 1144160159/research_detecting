@@ -1,0 +1,824 @@
+Journal of Information Security and Applications 59 (2021) 102823
+
+ Contents lists available at ScienceDirect
+
+ Journal of Information Security and Applications
+ journal homepage: www.elsevier.com/locate/jisa
+
+ME-Box: A reliable method to detect malicious encrypted traffic
+Bingfeng Xu a , Gaofeng He b,c ,∗, Haiting Zhu b
+a
+ College of Information Science and Technology, Nanjing Forestry University, Nanjing, 210037, China
+b
+ College of Internet of Things, Nanjing University of Posts and Telecommunications, Nanjing, 210003, China
+c
+ Key Laboratory of Computer Network and Information Integration (Southeast University), Ministry of Education, China
+
+ARTICLE INFO ABSTRACT
+
+Keywords: Currently, encryption (such as the Transport Layer Security protocol) is used by increasingly more network
+Encrypted traffic applications to protect their security and privacy, while it also benefits network attackers who can encrypt
+Malicious detection their traffic to evade detection. The detection of malicious encrypted traffic is becoming a critical task for
+DPI
+ cyber security. To accomplish this task, researchers have proposed several enlightening methods, including
+Machine learning
+ decryption followed by deep packet inspection (DPI), direct DPI on ciphertext and identification by machine
+Evidence
+ learning algorithms. However, due to privacy violations or performance limitations, the state-of-the-art is far
+ from satisfactory.
+ In this paper, we propose a novel framework and system called ME-Box (Machine learning and Evidence
+ verification) for reliable detection of malicious encrypted traffic. ME-Box has middleboxes deployed in the
+ network and agents installed on the sending hosts. Middleboxes first evaluate the trust degrees of encrypted
+ flows by machine learning methods. If some flows are classified as suspicious, then middleboxes provide evidence
+ of the evaluation results and request the corresponding session-keys from the agents. The agents verify the
+ evidence, and if it is convincing, respond with the correct session-keys. With the session-keys, middleboxes
+ finally decrypt the suspected encrypted flows and perform conventional DPI using intrusion signatures. We
+ implement a prototype system of ME-Box and test it with real malware traffic. The experimental results show
+ that ME-Box requires no modification of current cryptographic protocols and keeps end-users’ privacy well,
+ and its performance is practically deployable.
+
+1. Introduction boxes operated by network managers or Internet Service Providers.
+ Decryption followed by DPI methods are straightforward. They first
+ Currently, increasingly more network applications are adopting en- decrypt all encrypted flows and then perform malware detection (an
+cryption protocols such as TLS (Transport Layer Security) to protect advanced DPI function) on the plaintext data. Their detection results
+their security and privacy. For instance, over 72% of Internet traffic are accurate. However, the privacy of end-users is seriously threatened
+was encrypted in 2018, as reported by Fortinet Networks [1]. Although since the middleboxes can observe all communication contents.
+application users’ security and privacy can be better protected, the Direct DPI on ciphertext can protect end-users’ privacy well. The
+growth of encryption presents severe challenges to network monitor- basic idea of these methods is to tokenize, encrypt and match keywords
+ing and network attack detection. An attacker can use encryption to and traffic. When an end-user sends a packet, she/he additionally
+obscure their presence and evade detection because conventional DPI
+ needs to transform the strings of the packet payload into a series of
+technology only works on plaintext data. Malware Linux.Dofloo is such
+ tokens. The DPI rule generator (e.g., a network security company) also
+an example. Its communications to the C&C server were encrypted
+ needs to tokenize its rules into keywords. These tokens and keywords
+by the AES algorithm; thus, real-time network monitoring was totally
+ are further encrypted and sent to the middlebox for matching. If
+ineffective [2]. Actually, it takes companies, on average, between 100
+ an encrypted token matches an encrypted keyword, alarms of maand 200 days to detect an attack due to traffic encryption [3].
+ To detect malicious encrypted traffic efficiently, researchers have licious encrypted traffic are raised. The matching is performed on
+proposed several enlightening methods, including decryption followed the encrypted data; thus, the privacy protection of end-users can be
+by DPI [4,5], direct DPI on ciphertext [6–8] and machine learning guaranteed. However, these methods have serious performance issues.
+approaches [9–11]. These methods are usually carried out by middle- For example, the sender has to encrypt and send the traffic contents
+
+ ∗ Corresponding author at: College of Internet of Things, Nanjing University of Posts and Telecommunications, Nanjing, 210003, China.
+ E-mail addresses: bingfengxu@njfu.edu.cn (B. Xu), hegaofeng@njupt.edu.cn (G. He), htzhu@njupt.edu.cn (H. Zhu).
+
+https://doi.org/10.1016/j.jisa.2021.102823
+
+Available online 26 April 2021
+2214-2126/© 2021 Elsevier Ltd. All rights reserved.
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+twice, i.e., encrypt the packets with a standard cryptographic protocol to make the detection more accurate. Additionally, the endsuch as TLS and send them to the receiver, and then encrypt the tokens users’ privacy can be well protected since only possible malicious
+that are later sent to the middlebox. This generates heavy encryption flows are decrypted.
+and communication overheads [12]. (ii) Raising the issue of malicious machine learning methods and
+ In addition to DPI technologies, machine learning approaches can outlining an efficient method to verify their classification results.
+also be utilized to detect malicious encrypted traffic. By collecting In ME-Box, the classification results are checked by several difenough normal and malicious encrypted traffic, one can train classi- ferent machine learning models deployed at a verification server
+fication models with typical machine learning algorithms. With the to ensure that they are not detrimental to end-users’ privacy.
+trained models, malicious encrypted traffic can be efficiently classified Notably, the verification server is equipped with a continuously
+and detected. Anderson et al. [11] selected the flow metadata, the growing dataset of labeled malicious encrypted flows and can
+sequence of packet lengths and interarrival times, the distribution of be an open platform for comparing different machine learning
+bytes, TLS information and self-signed certificates as the classification models.
+features, and obtained over 96% detection accuracies for the 18 tested (iii) Implementing a prototype system of ME-Box and carrying out
+malware families. Using deep learning, Chen et al. [13] achieved a extensive experiments to validate its performance.
+99.63% detection accuracy for malicious flows. However, the rates of
+false positives of machine learning approaches are also high and restrict The rest of this work is structured as follows: In Section 2, we intheir practical applications [14]. troduce the relevant related work. Section 3 illustrates the architecture
+ In this paper, we propose a novel framework and system called of ME-Box. The methodology is presented in Section 4 and analyzed in
+ME-Box (Machine learning and Evidence verification) for reliable de- Section 5. An experimental evaluation of ME-Box from the performance
+tection of malicious encrypted traffic. Reliable detection means that standpoint is described in Section 6. We give the discussion of our
+the method should be accurate (with a high detection rate and almost method in Section 7. Finally, in Section 8, we conclude the paper with
+no false positives), privacy-preserving, low-overhead and compatible with a discussion of potential future work.
+existing security protocols. To this end, in the ME-Box system, the
+middlebox first uses machine learning algorithms to determine the trust 2. Related work
+degree of an encrypted flow. If the flow is classified as suspicious,
+then it sends the evidence to the end-user1 and requests the session- In this section, we introduce recent studies that address security
+key of the corresponding flow. The end-user receives and verifies the requirements in the context of encrypted network traffic.
+evidence, and if the verification is passed, she transmits the session- Decryption followed by DPI. The most straightforward way to
+key to the middlebox. With the key, the middlebox can finally decrypt check the security of encrypted traffic is to decrypt it. After decryption,
+the suspicious flow and check the contents with the existing intrusion one can obtain the plaintext data and conveniently carry out DPI with
+detection systems such as Snort and Suricata. various kinds of detection signatures. Hence, researchers have devel-
+ Especially in our design, the middlebox must provide evidence for oped several solutions for middlebox decryption on specific protocols.
+its classification results. This is because we argue that the used machine TLS transparent proxy [17,18] is such an example. The transparent
+learning methods could be malicious and threaten end-users’ privacy. proxy usually acts as a man-in-the-middle (MITM) proxy to split the en-
+For example, a middlebox can deliberately classify some specific nor- crypted connection into two parts: client-to-proxy and proxy-to-server.
+mal flows as malicious, which can be realized by adding some extra The proxy first imports its root certificate into the client’s trusted
+rules for the classification results easily or by inserting a backdoor certificate authority stores. When a TLS connection is initiated by a
+into the classification models stealthily [15], to obtain session-keys and client application (e.g., a browser or email client) to a remote server,
+decrypt the contents. In ME-Box, we introduce a verification server the proxy forges as the server to complete the TLS protocol. Meanwhile,
+to prevent such dishonest middleboxes and several other attacks and it starts a second TLS connection to the remote server. Then, the
+protect end-users’ privacy well. Notably, as further described in Sec- proxy can inspect messages between the two connections to detect
+tion 3.1 and discussed in Section 7, the introduced verification server malicious contents. Despite the easy implementation and deployment,
+can additionally provide solutions for some practical machine learning the transparent proxy breaks the end-to-end encryption and has been
+issues, such as imbalanced network traffic and unfair comparison in the found to damage users’ security and privacy seriously [19].
+network security area [16]. mcTLS [4] is the first nontransparent proxy for the TLS protocol.
+ The highlights of the proposed method are as follows. We use It provides a certificate-based authentication mechanism by which
+machine learning approaches to ensure the detection rate and decrypt the client and the server can authenticate the middlebox (i.e., the
+suspicious flows to reduce false alarms. This fits the accuracy goal. proxy). It also designs a new handshake protocol to support the sharing
+Meanwhile, end-users only need to reveal the session-keys of possible of session-keys and context keys. However, mcTLS needs to change
+malicious flows confirmed by themselves. Therefore, this minimizes the the existing client, server, and middlebox software, which makes it
+risk to end-users’ privacy, and it is privacy-preserving. Evidence sending impractical for now. Liu et al. [5] proposed PlainBox to enable sessionand verification will generate overhead. We design a data structure key sharing among the endpoints and the middlebox. Unlike mcTLS,
+similar to that of the X.509 certificate to contain the evidence, and PlainBox does not need to modify the standard cryptographic protocols.
+its verification only takes a few steps. Our experiments show that the It uses out-of-band message exchanges for both middlebox authentiintroduced overhead is low and has little impact on the endpoints. The cation and key sharing. Therefore, it is more practical in practice.
+whole process runs as an independent system, so it is compatible with However, end-users’ privacy cannot be well protected as the middlebox
+existing security protocols. Our main contributions are as follows: can decrypt every encrypted flow.
+ (i) Providing a novel framework for detecting malicious encrypted Direct DPI on ciphertext. To protect end-users’ privacy,
+ traffic. In the proposed framework, we first use machine learning researchers have proposed several methods to perform DPI on cialgorithms to classify encrypted flows. If they are labeled as phertext directly. BlindBox [6] was the first system to achieve this
+ suspicious, we then decrypt them and further check the contents functionality. In BlindBox, before sending a message, the message is
+ tokenized by a sliding window algorithm. Thus, for every offset in the
+ byte stream, the sender creates a token of a fixed length. The token is
+ 1
+ In ME-Box, only the sending host will be involved in the process. There- encrypted by the AES algorithm with a key 𝑘 and a salt 𝑠. The detection
+fore, the terms end-user, endpoint and sender will be used alternatively in the rule 𝑟 is tokenized and encrypted by the middlebox. Particularly, the
+following. encryption of 𝑟 is accomplished by Yao garbled circuits [20] because
+
+ 2
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+ Fig. 1. Architecture of ME-Box.
+
+the middlebox is not allowed to know the key 𝑘. DPI is performed by 3. Overview
+matching the encrypted rules and encrypted tokens. Similar work is also
+presented in [21]. Canard et al. [7] proposed BlindIDS to perform DPI This section presents an overview of the proposed ME-Box, includdirectly on encrypted traffic. BlindIDS uses the Decryptable Searchable ing its main architecture, design goals, and threat model. The detailed
+Encryption (DSE) cryptographic tool [22] to encrypt the traffic content designs are elaborated in Section 4.
+and the detection rules. Compared to BlindBox, BlindIDS encrypts the
+traffic content only once, hence the performance is improved. 3.1. Architecture
+ Recently, Li et al. [8] used a homomorphic encryption method to
+achieve privacy-enhanced DPI. To be specific, the Boneh–Goh–Nissim Fig. 1 shows the architecture of ME-Box. Generally, there are four
+cryptosystem [23] is adopted to encrypt the tokenized messages and main individuals and three main connections in the system. The four
+the keywords of rules. An encrypted token 𝑡 and an encrypted keyword individuals are the endpoint, middlebox, application server, and verifi-
+𝑤 are sent to a server A to calculate the discriminator 𝑑 = 𝑡 ⋅ 𝑤. cation server. The endpoint communicates with the application server
+The value of 𝑑 is further sent to another server 𝐵 for checking. If as usual (connection ⃝ 1 in Fig. 1), and the messages can be encrypted.
+𝑑 = 𝑑 𝑝 = 1, a match is found, where 𝑝 is the shared key between 𝐵 and The middlebox locates in the network path, and it can observe all
+the rule generator. In one study [24], the authors proposed searchable communications between the endpoint and the application server. It
+encryption with shiftable trapdoors. It allows for pattern matching with analyzes the (encrypted) traffic to determine malicious attacks. Note
+universal tokens; in other words, keywords of arbitrary lengths can
+ that in a real network, there can be several middleboxes deployed by
+be matched to arbitrary ciphertexts. However, the pattern-matching
+ different organizations for security checking, and their functions and
+process is slow.
+ procedures are the same.
+ Machine learning methods. There have been extensive works on
+ The verification server and the agent are responsible for evidence
+detecting malicious encrypted traffic by machine learning methods.
+ generation and verification. The agent is installed on the endpoint. It
+Literatures [25,26] give surveys of recent works. Hellemons et al. [27]
+ checks network connections locally, receives evidence from the middleproposed a flow-based SSH intrusion detection system SSHCure. It is
+ box, and returns the requested session-keys (connection ⃝). 3 The added
+based on a three-phase state machine that monitors the packets-perload of the agent is light because the verification server is to do the most
+flow and the minimum number of flow records. Barati et al. [28] used
+ arduous evidence verification work. The verification server validates
+flow-based features instead of packet features to solve the encrypted
+ middlebox’s detecting results and generates the evidence by running
+traffic IDS problem. They constructed a hybrid model of the Genetic
+ the corresponding classification models. It also provides interfaces for
+algorithm and Bayesian network classifier. He et al. [29] constructed
+ middlebox’s registration and suspicious flows uploading (connection
+cloud users’ network behavior profiles to detect encrypted data exfiltration. Similarly, Koch et al. [30] also used behavior-based detection ⃝).
+ 2 There can be several verification servers to balance load. In the
+architecture to detect intrusions as well as insider activities such as data following sections, we will use only one for illustration.
+exfiltration in encrypted environments. Aceto et al. [31–33] adopted Illustration example. Suppose that the endpoint has been infected
+deep learning methods to classify mobile encrypted traffic and com- by a malware program, and the malware program communicates with
+pared different state-of-the-art deep learning techniques in a systematic its application server (a malicious server in this example) through an
+framework. Literature [34] selected detection features from machine encrypted network connection 𝑓 . The middlebox observes 𝑓 and uses
+learning models themselves. machine learning algorithms to classify it. The classification result is
+ Since TLS has become the de facto standard for secured Internet positive (In the following, we will always assume that malicious traffic
+communications, it is also widely used by attackers to encrypt their is the positive sample, and normal traffic is the negative sample);
+data transformations [35]. Therefore, it is meaningful to go deep into thus, the middlebox constructs a piece of incomplete evidence 𝐸𝑉 and
+malware’s TLS traffic and design efficient detection methods. Anderson sends it with the flow 𝑓 to the verification server. The incomplete
+et al. [9–11,36] have done extensive work on this. By selecting the flow evidence 𝐸𝑉 contains some essential information, such as 𝑓 ’s hash
+metadata, the sequence of packet lengths and interarrival times, the value, the destination IP address and port of 𝑓 , and the classification
+distribution of bytes, TLS information and self-signed certificates as the model label. Besides, 𝐸𝑉 currently has some blank fields, such as the
+classification features and using logistic regression as the classification verification results and signatures that are supposed to be filled out by
+algorithm, they achieved a detection accuracy over 96% [11]. Despite the verification server.
+the high detection rate, challenges still exist because of the inaccurate The verification server reads the classification model label from
+ground truth and highly nonstationary data distribution [10]. The 𝐸𝑉 and adopts the corresponding model to classify 𝑓 . Note that the
+reduction of false alarms when adopting machine learning methods in middlebox has uploaded its encrypted classification models to the verinetwork security protection is urgently needed [14,37]. fication server in the initialization step (the details are in Section 4.1).
+
+ 3
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+Consequently, the verification server can invoke the corresponding Table 1
+ Notation used in this paper.
+model. If the result is positive, one can believe that the middlebox did
+use the classification model and it did not generate the classification Notation Meaning
+
+result arbitrarily. However, at this point, anyone should not fully 𝐸𝑉 evidence
+ 𝐸 the endpoint
+trust the middlebox. This is because the adopted classification model
+ 𝐴 the agent installed on the endpoint
+could be very simple or even malicious—for example, it judges every 𝑀 the middlebox
+encrypted flow as suspicious. Therefore, the verification server further 𝑉 the verification server
+uses several different models to classify 𝑓 and saves all the classification 𝐼𝑑𝑒𝑛𝑡𝑀 the identity of middlebox 𝑀
+results into 𝐸𝑉 . 𝑋𝐶𝑒𝑟𝑡𝑉 the X.509 certificate of 𝑉
+ 𝑋𝐶𝑒𝑟𝑡𝑀 the X.509 certificate of 𝑀
+ At last, the verification server signs 𝐸𝑉 by its private key to ensure 𝑃 𝑟𝑜𝑜𝑓 𝐶𝑒𝑟𝑡(𝑓 ) the certificate contains evidence of suspicious flow f
+the authenticity and integrity of evidence and returns the complete 𝐸𝑉 𝑃 𝑈 (𝑀) the public key of 𝑀
+to the middlebox. The middlebox forwards 𝐸𝑉 to the endpoint and asks 𝑃 𝑅(𝑀) the private key of 𝑀
+for the corresponding session-key. If the major classification results are 𝑃 𝑈 (𝑉 ) the public key of 𝑉
+ 𝑃 𝑅(𝑉 ) the private key of 𝑉
+positive, the endpoint chooses to trust the middlebox and responds with
+ 𝐸𝑛𝑐(, ⋅, ) symmetric encryption function such as AES
+the correct session-key. With the session-key, the middlebox decrypts 𝑓 𝑆𝑖𝑔(, ⋅, ) digital signature function such as RSA
+and inspects the plaintext contents. The middlebox also feeds back the 𝐻𝑎𝑠ℎ(⋅) hash function such as SHA512
+final DPI detection result to the verification server to label 𝑓 accurately.
+ As described in the above text, we mainly use the verification server
+to ensure that the middleboxes are honest. Especially, the verification
+ can be dishonest. They may be interested in the traffic content for
+server can be an open platform for comparing different machine learncommercial or personal benefits. Therefore, the middleboxes may send
+ing models for network security. In ME-Box’s design, the middlebox
+ fake evidence to swindle session-keys from endpoints. We also assume
+needs to send the suspicious encrypted flows and the final detection
+ that all session-keys are safely used by the endpoints and middleboxes,
+results to the verification server. This implies that the server will have
+ which means that all keys are stored encrypted and to be destroyed in
+a continuously growing dataset of labeled encrypted flows (malicious
+ time. One can use Intel SGX [39] to satisfy this assumption.
+or not). This dataset can be used to solve the problem of unbalanced
+ An attacker can monitor endpoints’ network communications pasdata in the network [38] and compare different detection models fairly.
+ sively. Additionally, the attacker can masquerade as a middlebox to
+Hence, it may promote the adoption of machine learning algorithms
+ communicate with the endpoint. He can also occupy middleboxes and
+in network security protection. We also discuss a non-central based
+ modify their functional components, for example, by replacing the
+solution for classification results validation in Section 7.
+ original classifiers with the self-designed ones. Active attacks against
+ the endpoints and verification servers are also allowed in ME-Box. For
+3.2. Design goals
+ example, an attacker can occupy the endpoints or verification servers
+ through software vulnerabilities or social engineering. After that, he
+ We recognize the key design goals of ME-Box as below:
+ can try to steal data or cheat other system participants. However, we
+ • Accurate. It should have high detection rates and almost no false assume that all of the private keys are kept securely and cannot be
+ positives. Only in this way can it be deployed in real situations. accessed by attackers.
+ • Low-overhead. The system should not add significant overheads
+ to the endpoint so that it can be supported by limited resource 4. Methodology
+ equipment such as mobile devices or sensors.
+ • Good compatibility. The system should be compatible with exist- ME-Box uses machine learning approaches to detect suspicious ening security protocols. Specifically, current security protocols do crypted traffic, verification servers to validate evidence, and DPI on
+ not need to be modified for adaptation to ME-Box. plaintext to confirm detections. In this section, we elaborate on its
+ • Privacy-preserving. The end-users’ privacy must be well pro- design details in the order of these processing steps. To be specific,
+ tected. Hence, only the suspicious flows confirmed by endpoints the critical technical details include how to initialize the system, how
+ should be further processed. Moreover, the session-keys are most to send evidence to the endpoint and validate it, and how to extract
+ critical, and they can only be shared with the appropriate mid- applications’ session-keys efficiently. Table 1 defines the notation we
+ dlebox. Any other third-party, including the verification server, use in this paper.
+ should not obtain these session-keys. Besides the protection of
+ end-users’ privacy, the privacy protection of middleboxes is also 4.1. Initialization
+ important. Specifically, the detection models should be encrypted
+ so that the verification server cannot learn any implementation There is no special initialization requirement for the endpoint and
+ details from them. the agent. The agent should be installed with the verification server’s
+ X.509 certificate 𝑋𝐶𝑒𝑟𝑡𝑉 . It also needs to establish a long-lived TLS
+3.3. Threat model connection with the verification server upon start-up. The initialization
+ steps for the middlebox are a little more complicated. When the mid-
+ In this paper, we consider a new threat model for the usage of dlebox starts for the first time, it must be registered at the verification
+machine learning in the network security area: the machine learning server. For registration, the middlebox’s owner first generates a public
+algorithms could be malicious and attempting to access end-users’ key pair: a public key 𝑃 𝑈 (𝑀) and a corresponding private key 𝑃 𝑅(𝑀).
+privacy information. For instance, a malicious algorithm judges some The private key 𝑃 𝑅(𝑀) is kept secretly, and the public key 𝑃 𝑈 (𝑀) is
+specific encrypted flows (e.g., connections to Facebook) as suspicious so open. Then, the owner selects a name as the identity of the middlebox.
+that network administrators can acquire users’ sensitive social behav- Finally, the identify 𝐼𝑑𝑒𝑛𝑡𝑀, the public key 𝑃 𝑈 (𝑀), and the name of
+iors. To overcome this threat, we introduce a new concept—evidence of the digital signature algorithm are sent to the verification server to
+results and use third-party verification servers to validate the functions complete the registration process.
+of machine learning algorithms. After registration, the middlebox continues to upload its classifica-
+ Consequently, the verification servers and the endpoints are as- tion models to the verification server. The middlebox may have several
+sumed to execute the ME-Box protocols strictly, while the middleboxes models for different service levels. For each model, it generates a
+
+ 4
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+locally unique number as the label. Classification models may also have
+related feature extraction modules. Therefore, the middlebox sends
+the triple ⟨label, classification_model, feature_extraction_module⟩ and a
+signature value to the verification server to finish the initialization
+process. This can be illustrated as formula (1). In formula (1), the
+number 1 is the label, and 𝑠𝑖𝑔_1 is the signature value of the triple.
+This value is calculated by encrypting the hash value of ⟨label, classification_model, feature_extraction_module⟩ with the private key 𝑃 𝑅(𝑀), as
+shown in Eq. (2).
+ (⟨ ⟩ )
+ 1, classif ication_model_1,
+𝑀 → 𝑉 ∶ Enc ,… (1)
+ feature_extracion_module_1, sig_1
+ ( )
+ 𝐻𝑎𝑠ℎ(1, classification_model_1,
+ 𝑠𝑖𝑔_1 = 𝑆𝑖𝑔 (2)
+ feature_extracion_module_1), 𝑃 𝑅(𝑀)
+ Once the verification server receives the uploaded triples, it verifies
+the signatures according to 𝑀’s public key 𝑃 𝑈 (𝑀). If the signatures are
+accepted as valid, the classification models and the feature extraction
+modules are deployed for later evidence verification. Note that the initialization of the middlebox is performed at the beginning. Thereafter,
+ Fig. 2. The structure of ProofCert used in ME-Box.
+the middlebox only needs to build a secure TLS connection with the
+verification server upon start-up.
+
+Remark. In practice, the classification models would be trade secrets, If an encrypted flow 𝑓 is judged as suspicious, the middlebox 𝑀
+and the middlebox could be unwilling to upload them to the verifi- sends 𝑓 with a special data structure ProofCert to the verification server
+cation server. To alleviate this issue, the middlebox’s owner can first for constructing a piece of integrated evidence. Actually, the evidence
+repack the classification models and the feature extraction modules is organized into a data structure that is similar to that of the X.509
+as a binary program, which is then to be uploaded and deployed. certificate and is termed as ProofCert in ME-Box. The structure of
+Furthermore, the owner can use indistinguishability obfuscation and ProofCert is depicted in Fig. 2. The first 6 fields are filled out by the
+functional encryption [40] to prevent the analysis of the program. middlebox before sent to the verification server. Among them, IdentM
+Since the models are encrypted, the verification server cannot get any is the identity of the middlebox 𝑀, and Model label is the label of the
+implementation information from them. We will describe a practical classification model used by 𝑀 to estimate 𝑓 . Dst IP, Dst Port and Hash
+encryption method in the following subsection. value of first h packets represent the destination IP address, destination
+ port and hash value of contents of the first ℎ packets of 𝑓 . These values
+ are signed by 𝑀 to ensure their authenticity and integrity.
+4.2. Machine learning detection and evidence construction
+ Once the verification server receives 𝑓 and the corresponding
+ ProofCert, it begins the evidence checking and supplementing process.
+ When the middlebox completes the initialization process and starts
+ First, it checks IdentM and the value of signature_M by the middlebox’s
+to work, it uses machine learning approaches to estimate the trust
+ public key PU(M) to make sure the middlebox is legitimate. Then, the
+degree of encountered encrypted flows. In our work, the trust degree
+ server takes several steps to make sure the middlebox is honest .
+has only two possible options: normal or suspicious. If an encrypted flow
+is classified as positive (note that we consider the malicious traffic as • Step 1. Calculate the hash value of the first ℎ packets’ contents
+the positive sample and the normal traffic as the negative sample in and compare it with the field Hash value of first h packets in the
+this work), it is labeled as suspicious. Otherwise, the flow is considered ProofCert. These two values must be identical.
+normal and trusted. To optimize the estimation procedure, one can • Step 2. Classify 𝑓 with the corresponding model indicated by the
+use classification confidence [41] to produce more refined levels. For model label. The classification result must be positive.
+example, if the classification confidence exceeds a set threshold, the
+flow will be labeled as malicious and does not need to be further Through steps 1 and 2, one can prevent the middlebox 𝑀 from
+decrypted. However, the method of choosing an accurate threshold is labeling flows arbitrarily. If anyone of these steps fails, the verification
+complicated and experience-related in practice, so we consider only two server returns an error to 𝑀 and aborts the whole process. Otherwise,
+degrees for general purpose. the verification server classifies 𝑓 with other models uploaded by differ-
+ The selected machine learning approaches can be arbitrary, ex- ent middleboxes or deployed by itself to test the reliability of 𝑀. The
+cept that the classification models can be encrypted. For instance, classification results and the descriptions of the corresponding models
+one can choose SVM (Support Vector Machine) as the classifier and are appended to the original ProofCert (Result_i and Model_name_i in
+use the Boneh–Goh–Nissim cryptosystem to encrypt the classification Fig. 2). Finally, the verification server signs the extended ProofCert
+model [8]. Also, secure multi-party computation can be explored to with its private key 𝑃 𝑅(𝑉 ) and returns it as the final evidence to the
+encrypt the deep learning models [42]. However, these methods are middlebox 𝑀.
+model-specific, and they all need to encrypt the models and the classification features simultaneously. In ME-Box, the classification features 4.3. Evidence verification
+do not need to be encrypted because they are extracted and utilized by
+the same subject (i.e., the middlebox). Therefore, in this work, we use Once the middlebox receives the final evidence (i.e., the extended
+the popular industry approach [43] to encrypt classification models. ProofCert ), it is to provide the ProofCert to the endpoint and asks for
+We first encrypt the trained models by some symmetric encryption the corresponding session-key. For this purpose, first, the middlebox
+algorithms such as AES and then decrypt the models when they are should make a network connection to the endpoint. However, this is
+invoked. In this way, ME-Box can support all kinds of machine learning challengeable because the endpoint may be behind NAT and use a
+algorithms, and the details of classification models can be protected private IPv4 address. This is common in today’s Internet. To solve this
+well. issue, we design two special notification mechanisms to let the endpoint
+
+ 5
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+ When the agent receives the notification, it creates a TLS connection
+ to the middlebox. In the TLS handshake process, the middlebox sends
+ its X.509 certificate to the agent as usual. The agent first checks
+ the X.509 certificate of the middlebox. If the certificate is valid and
+ signed by some trusted CA (Certificate Authority), the verification
+ continues. Otherwise, the agent disconnects the connection. Once the
+ TLS connection is established successfully, the middlebox sends the
+ evidence to the agent. The agent verifies the received evidence (i.e., the
+ ProofCert ) in the following steps. It first searches the saved encrypted
+ flow information according to the destination IP address, destination
+ port and hash value (Dst IP, Dst port and Hash value of first h packets
+ in the ProofCert ). If some flow is matched, which means that the
+ endpoint indeed generates the flow, the agent then checks the signature
+ value 𝑆𝑖𝑔𝑛𝑎𝑡𝑢𝑟𝑒_𝑉 by the verification server’s public key 𝑃 𝑈 (𝑉 ). If the
+ signature checking is passed, the agent can believe that the evidence
+ is real and integrated. Finally, the agent makes a decision based on
+ 𝑅𝑒𝑠𝑢𝑙𝑡_𝑖 (𝑖 = 1, 2, … , 𝑟) contained in the ProofCert. The decision-making
+ method is elaborated in the following subsection.
+
+ Fig. 3. Two different notification mechanisms. 4.4. Confirmation by DPI
+
+ As described in Section 4.2, the verification server classifies the
+connect to the middlebox actively, as depicted in Fig. 3. The details are suspicious flow 𝑓 with additional 𝑟 models. Suppose that models
+as follows. 𝑚1𝑝 , 𝑚2𝑝 , … , 𝑚𝑝𝑝 make positive classification decisions, and that models
+ Suppose that the middlebox uses the first 𝑚 packets of flow 𝑓 𝑚1𝑛 , 𝑚2𝑛 , … , 𝑚𝑛𝑛 produce negative results (𝑝 + 𝑛 = 𝑟). Model 𝑚𝑖𝑝 has a
+for classification and that the classification result is positive. The 𝑚th detection rate (true positive rate) 𝑑𝑝𝑖 and a weight 𝑤𝑖𝑝 , while model 𝑚𝑖𝑛
+packet is the incoming packet, i.e., the packet returned from the has a detection rate 𝑑𝑛𝑗 and a weight 𝑤𝑗𝑛 . Therefore, if
+application server. In order to inform the endpoint, the middlebox 𝑝 (
+ ∑ ) ∑𝑛
+ ( 𝑗 )
+replicates the 𝑚th packet, inserts an indicator ‘‘SUS’’ and its IP address 𝑑𝑝𝑖 × 𝑤𝑖𝑝 > 𝑑𝑛 × 𝑤𝑗𝑛 , (3)
+in the TCP/IP header options (the best place is the TCP option), and 𝑖=1 𝑗=1
+
+replays the packet. When the agent observes an incoming packet, it the agent should choose to trust the middlebox 𝑀’s detection result,
+first checks the TCP/IP header options. If an item matches the style namely, the encrypted flow is malicious. Particularly, if all models have
+‘‘SUS’’+IP address, the agent drops this packet and establishes a TLS the same detection rate and the same weight, formula (3) is reduced to
+connection to the IP address, namely, the middlebox.
+ If the 𝑚th packet is the last and flow 𝑓 is already terminated, a
+ 𝑝 > 𝑛. (4)
+firewall may drop the replicated packet. The router may also drop the
+packet if it does not support TCP/IP options. In such cases, the middle- For simplicity, we assume that if 𝑝 > 𝑛, the agent accepts the detection
+box has to inform the endpoint with the help of the verification server. result and sends the session-key to the middlebox.
+It sends 𝑓 ’s source IP address, destination IP address, destination port and The last thing we should do now is extracting the session-key from
+the hash value of the first ℎ packets’ contents with an authentication code the endpoint. In this work, we mainly focus on TLS traffic, and there
+to the verification server. Note that agents have established long-lived are several ways to accomplish this. For example, we can configure
+TLS connections with the verification server upon start-up, and those applications such that they will save the session-keys in local files.
+behind the same NAT may have the same public address. The verifica- This is mainly feasible for the Firefox and Chrome browsers. We can
+tion server searches connections with the same source IP address, and also extract the master secrets from memory as done in [36,44], and
+sends the ⟨middlebox’s IP address, f’s destination IP address, destination the session-key can be derived from the master secrets [45]. When the
+port, hash value, and authentication code⟩ to the corresponding agents. agent observes a TLS client hello packet [46], it records the parameter
+The agent indeed generated flow 𝑓 (as confirmed by having the same client random and also the parameter server random returned from
+destination IP address, destination port, and hash value) is to establish the application server. Once the TLS handshake is finished, the agent
+a TLS connection to the middlebox with the authentication code. dumps the system memory and searches master secrets according to
+ The first notification method is simple and easy to implement, regular expressions, such as \x35\x6c\x73\x73(?=(\x02\x00|[\x00-
+so it is preferred in ME-Box. When it fails, for example, when the \x03]\x03)\x00\x00(.{4}.{8}.{4})(.{48})) for Microsoft Schannel
+waiting time expires, the middlebox turns to the second method. In the [36]. To make this process more efficiently, we can further interpose
+second method, the authentication code is actually the agent’s dynamic the library, such as libssl.so (for Linux systems) or the process lsass.exe
+ (for Windows systems), so that the master secrets can be read directly
+password. Only an authenticated agent can connect to the middlebox
+ or that only the memory of lsass.exe should be dumped.
+and perform the next evidence verification step. In the implementation,
+ The third method is to integrate a TLS MITM proxy in the agent.
+the authentication code can be a random string, and it is used as the
+ This is a lightweight approach that is applicable for almost all appreshared key (PSK) in the TLS handshake (the key exchange mode can
+ plications. Since the agent only works locally, the MITM proxy will
+be PSK with DHE).
+ not threaten end-users’ privacy. In our prototype implementation, all
+ The agent is always monitoring local network connections, similar
+ of these three methods are supported so that we can extract sessionto a personal firewall. For each encrypted flow, the agent saves the
+ keys from the endpoint comprehensively. With the session-key, the
+destination IP address, destination port, and the hash value of the first
+ middlebox can decrypt a suspicious encrypted flow and perform DPI
+ℎ packets’ contents in memory for a fixed short time, for instance,
+ with Snort2 or Suricata3 to detect attacks. The final detection result
+30 min. This information is used to label an encrypted flow and verify
+the received evidence, and when the verification is completed or the
+set time is up, the corresponding flow information will be deleted. The 2
+ https://www.snort.org/.
+ 3
+evidence verification procedure is described as follows. https://suricata-ids.org/.
+
+ 6
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+will be fed back to the verification server to construct labeled encrypted agent consumes a very small amount of CPU usage (< 7%) when
+traffic datasets. processing encrypted traffic. The saved hash values and session-keys are
+ quite a few bytes and to be deleted after a period of time (e.g., 30 mins).
+5. Analysis of ME-Box Therefore, the consumed memory is also small. We further describe
+ these performance results in Section 6.3.
+ Defending against dishonest middleboxes. The core design of
+ME-Box is to resist dishonest middleboxes. The dishonest middleboxes 6. Evaluation
+can be real in practice; for instance, totalitarian governments deploy
+TLS middleboxes to monitor social media [47]. In such cases, when a 6.1. Experimental setup and system implementation
+middlebox observers an encrypted flow connected to some particular
+target such as Facebook, it can first classify the flow as malicious Experimental setup. The agent is installed on a Windows 7 virtual
+deliberately. Then it requests the session-key from the endpoint to machine. The tested malware is also run on this virtual machine. The
+decrypt the content and monitor users’ social network behaviors. To de- middlebox is a Thinkpad laptop with 4 GB memory and Pentium Dualfend against such dishonest middlebox, ME-Box introduces verification Core CPU T4500. It is running Ubuntu 16.04. We configure the laptop
+servers to reclassify the suspicious flow with the same model used by as a hotspot, and the virtual machine connects to the Internet by the
+the detecting middlebox and the models adopted by other middleboxes. hotspot. Therefore, the middlebox can observe all the traffic sent and
+If the reclassification result is negative, namely, if the flow is judged as received by the endpoint. The verification server is a Dell PowerEdge
+normal by the majority, the agent will not send the session-key, thus R730 server running CentOS 7. It has 32 processors, 16 GB RAM and a
+defeating dishonest claims of suspicious encrypted flows. 12 TB hard drive. The malware is downloaded from Virusshare.4
+ Note that several dishonest middleboxes can work together to de- Implementation. We implement the user agent program in C++. In
+ceive end-users. According to formula (4), if 𝑝 > 𝑛, the agent will send the program, we use winpcap to capture and check network packets. To
+the session-key to the requesting middlebox. Therefore, if most of the be specific, when the agent observes a TCP SYN packet, it records the
+middleboxes are dishonest and they judge some of the same specific current time, source and destination IP addresses, as well as the source
+flows as suspicious, the agent will be fooled to believe the detection and destination ports as the indicators for this TCP flow. After the threeresults. Suppose that honest middleboxes have a same true negative way handshake, the agent parses the first data packet to check whether
+rate 𝑡𝑛 , the maximum number of collaborating dishonest middleboxes it is a TLS Client Hello message, and if so, it calculates the hash value
+we can allow is of the first 10 packets’ contents. The hash value is saved and indexed
+ by the TCP flow’s indicator in memory, and the expiration time is set
+ (2𝑡 − 1) × (𝑝 + 𝑛)
+ max(0, 𝑛 ). (5) to 30 min.5 If it is not, the following packets are passed directly. For
+ 2𝑡𝑛
+ TLS traffic, the incoming packets (from the application server to the
+The derivation and analysis of formula (5) is in Appendix. endpoint) are additionally checked for the presence of a specific TCP
+ Defending against passive and active attacks. In ME-Box, we use option: ‘‘SUS’’+IP address.
+the TLS protocol to encrypt all connections. Therefore, the confiden- In addition to traffic capturing, the agent’s other main function
+tiality and integrity of the network traffic are guaranteed. An attacker is to monitor and extract applications’ TLS session-keys. We procannot get the key or flow content information by observing the vide several ways to accomplish this. The SSLKEYLOGFILE environnetwork packets passively. An attacker can also design several active ment variable is created to record the client randoms and the master
+attacks to steal session-keys. For example, an attacker can first take keys generated by the Firefox and Chrome browsers. A global proxy
+control of the middlebox through software vulnerabilities. Afterward, (Proxifier 6 +mitmproxy 7 ) is set up to extract these parameters for other
+he can replace the original classification model with a weaker one and applications. If an application (e.g., the IE browser) refuses to accept
+upload the weaker model to the verification server. The weaker model the global proxy’s X.509 certificate, we also provide an option to
+will classify all encrypted flows as suspicious, and the attacker might inject the process lsass.exe (it generates client randoms and master keys
+obtain all the session-keys. However, this is almost impossible because for Window applications) and dump its memory to search the client
+the verification server also tests suspicious flows on other models. randoms and the master keys. The injection code is borrowed from the
+The theoretical analysis is the same as the Defending against dishonest Cuckoo Sandbox.8 By these methods, we can efficiently obtain the TLS
+middleboxes. session-keys at the endpoint. The agent also contains OpenSSL libraries
+ The attacker may target the agent and illegally access the session- to calculate hash values of flows and establish TLS connections with
+keys by compromising the endpoint system. As pointed out in the the middlebox and the verification server.
+threat model (Section 3.3), one can utilize Intel SGX to guarantee the The middlebox is implemented by Python. To detect malicious
+security of session-keys. In fact, if an attacker has compromised the traffic in nearly real time, the middlebox only analyzes at most the
+endpoint system, he does not need to steal these keys. He can observe first 100 packets for each TCP flow. It uses tshark9 to capture network
+all the plaintext data by easily hijacking system calls. Therefore, the traffic and save it as pcap files. These pcap files are processed by
+agent will not add more risks to the security and privacy of end- Joy 10 to extract the classification features for each TLS flow. The
+users. If the verification server is attacked, an attacker can steal the classification algorithm is the decision tree provided by Scikit-learn.
+uploaded flows and models. However, they are all encrypted, so the If the classification result is suspicious, the middlebox uses Scapy 11
+information leakage should be limited. In the verification server, an to insert a TCP option (‘‘SUS’’+IP address) into the 100𝑡ℎ packet (the
+attacker may also fool the endpoints or middleboxes by generating flow must have more than 100 packets) and replay it to the endpoint.
+arbitrary evidence. However, the evidence needs to be signed by the
+correct private key 𝑃 𝑅(𝑉 ), and it is almost impossible for the attacker
+ 4
+acquiring the key, as assumed in our threat model. Hence, the evidence https://virusshare.com/.
+ 5
+cannot be signed correctly, and the type of attacks can be detected We set the expiration time to 30 min to make sure that the agent has
+ sufficient time to receive and verify the ProofCert.
+efficiently. 6
+ https://www.proxifier.com/.
+ Impacting on endpoints. In general, ME-Box introduces a small 7
+ https://mitmproxy.org/.
+performance overhead to endpoints. The main tasks of the agent in- 8
+ https://github.com/cuckoosandbox/community.
+stalled on the endpoint are to calculate the hash value of the first 9
+ https://www.wireshark.org/docs/man-pages/tshark.html.
+ℎ packets and extract the session-key for each encrypted flow. These 10
+ https://github.com/cisco/joy.
+ 11
+operations are ordinary and can be implemented efficiently. Thus, the https://scapy.net/.
+
+ 7
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+Table 2 Table 3
+Classification feature set. Detection results without decryption.
+ The number of inbound/outbound bytes and Detected Actual
+ Flow metadata packets
+ Malware’s flows Alexa top websites’ flows
+ The source and destination ports
+ The total duration of the flow in seconds Suspicious 148 15
+ Normal 6 139
+ Packet lengths and times Sequence of packet lengths and packet inter-arrival
+ times
+ Byte distribution Probabilities for each byte value in the packets’ Table 4
+ payloads, which are computed by dividing the byte Confirmation results by decrypting and signature matching.
+ distribution counts by the total number of bytes. Confirmed by Suricata Detected by machine learning
+ List of offered ciphersuites 148 malware’s flows 15 false positives
+ List of advertised extensions
+ TLS handshake information Malicious 148 0
+ Public key length
+ Normal 0 15
+ Whether the server certificate is self-signed or not
+
+ optimized version of the CART algorithm provided by Scikit-learn) as
+As noted in Section 4.2, this notification mechanism may fail. If the
+ the classification algorithm. In the verification server, the deployed
+endpoint has no response in 5 min, the middlebox sends the ⟨ source’s
+ classification models are decision tree, random forest and SVM. The
+IP address, destination IP address, destination port, hash value, and audetection results without decryption (i.e., detected by the middlebox
+thentication code⟩ to the verification server for forwarding. This is also
+ through the decision tree algorithm and verified by the verification
+the notification mechanism for flows with less than 100 packets. In
+ server) are shown in Table 3. As shown in the table, the true positive
+the middlebox, OpenSSL is invoked to calculate hash values, generate
+ rate is 96.1%, and 15 flows are false positives. We analyze these false
+random numbers and create TLS connections.
+ positives manually by downloading the corresponding webpages. The
+ The verification server is implemented as a web server. It provides
+ webpages’ HTML codes are read carefully, and we confirm that they
+a web page for middlebox registration. It also provides web pages to
+ are safe.
+index uploaded malicious flows. The flow indexing is realized with the
+ We decrypt the detected 163 suspicious flows (148 malicious flows
+help of Moloch.12 In the background, it uses Scikit-learn to implement
+ + 15 false positives) using the corresponding client randoms and master
+several different classification models, such as decision tree, random keys. The decrypted flows are further confirmed by Suricata with
+forest and support vector machine (SVM). We chose these 3 machine open emerging threats rules. The confirmation results are listed in
+learning algorithms because they have been tested in commercial envi- Table 4. Note that the 15 false positives are all excluded. This result
+ronments and achieved the best classification results [10]. The trained implies that our method can reduce the false positives of machine
+models’ parameters of these algorithms are included in python code leaning algorithms and produce more accurate samples of maliciously
+that is compiled and encrypted as .pye files. Communications with encrypted flows. Our method needs to decrypt 163 flows, and among
+the agent and the middlebox are conducted by WebSocket, which are them, only 15 flows may threaten end-users’ privacy. Compared to
+encrypted by the TLS protocol. The connection information is saved in the decryption followed by DPI methods, the number of decrypted
+a SQLite database for quick searching. flows is significantly reduced (the former methods need to decrypt all
+ 308 testing flows), and the end-users’ privacy can be better protected.
+6.2. Functional evaluation Compared to machine learning methods, our method is more accurate
+ because all false positives are excluded.
+ We downloaded more than 5000 windows malware files from To simulate a dishonest middlebox, we add an extra rule on the
+Virusshare by searching with the keyword ‘‘windows’’. To train the decision tree model: if a connection is established to Facebook (i.e., the
+classification models, we install and run these malware files on the domain name is *.facebook.com), it is judged as suspicious. We visit
+Windows 7 virtual machine one by one. Each malware is run for Facebook several times and test whether ME-Box can prevent such
+30 min, and the traffic is captured by Wireshark. When the time is malicious models. The experimental results show that the random forest
+up, we restore the virtual machine and run the next malware. In total, and SVM models always classify the traffic as normal, so there are two
+we get 1754 TLS flows as malicious samples, which are generated negative classification results in the returned ProofCert. According to
+by 538 malware programs. The normal traffic is generated by web formula (3), the agent does not need to give the session-keys (𝑝 = 1
+browsing. We visit the Alexa Top 500 sites13 using Firefox on the and 𝑛 = 2 in this case), thus the end-user’s privacy is protected.
+virtual machine, and we use Wireshark to capture the network traffic.
+From the captured traffic, We choose the first 1754 TLS flows as the 6.3. Performance evaluation
+normal samples. The malicious and normal samples are processed by
+Joy to extract the classification features, which are listed in Table 2. Since the middlebox and the verification server can be run on
+These classification features are proposed in literature [11], and we dedicated servers, we mainly evaluate the performances of the agent
+directly use them in here because the main concern of this work is to and the time spreading for malware detection in our experiments. As
+design a new framework for malware detection other than a specific described in Sections 4.3 and 6.1, the core functions of the agent are
+detection method. The features preprocessing is the same as in [11]. In packet inspection (including find out TLS traffic and calculate TLS
+the process of generating network traffic, all client randoms and master flows’ hash values), key extraction and evidence verification. Generally,
+keys are saved in the NSS key log format. the more (malicious) encrypted traffic, the more burden an agent will
+ For testing the proposed method, we use 1600 malicious flows bear. We test the agent with various numbers of encrypted network
+and the same number of normal flows as the training dataset. The flows and compare the CPU, memory, communication overhead and
+remaining 308 flows (154 malicious flows + 154 normal flows) are detection time performances with those of the latest Direct DPI on
+used as the testing dataset. The middlebox uses the decision tree (an ciphertext method PE-DPI [8]. Similar to our method, PE-DPI also use
+ two non-collusion servers for malicious encrypted traffic detection.
+ In PE-DPI, the sender needs to transform the payloads of packets
+ 12
+ https://molo.ch/. into a series of tokens and encrypt the tokens with the Boneh–Goh–
+ 13
+ https://www.alexa.com/topsites. Nissim cryptosystem. This consumes a lot of CPU resources. As shown
+
+ 8
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+Fig. 4. Comparison of CPU consumption. We tested several (malicious) TLS flows and Fig. 5. Comparison of memory consumption. Similar to Fig. 4, We tested several
+recorded the corresponding CPU consumptions by typeperf tool. The whole process has (malicious) TLS flows and recorded the corresponding Memory consumptions by
+been repeated 40 times to finally calculate the average CPU consumptions. We also typeperf tool. We repeated the experiments 40 times to calculate the average values
+have calculated its confidence interval for each average value in the figure at the 95% and also the confidence intervals at the 95% confidence level. When the number of TLS
+confidence level. For PE-DPI, the confidence interval of CPU consumption is [0.33, flows is 82, the confidence interval is [35.7, 40.5] for PE-DPI, and is [28.3, 32.1] for
+0.37] when dealing with 10 TLS flows. The confidence interval is [0.036, 0.040] for our method with web browsing TLS traffic. Our method with malware TLS traffic has
+our method with 82 web browsing TLS traffic, and the confidence interval is [0.080, the highest memory consumptions, and the confidence interval is [34.8, 44.6] when
+0.084] for our method with 82 malicious TLS traffic. the flow number is 82.
+
+in Fig. 4, when dealing with 10 TLS connections at the same time
+(accessing only 4 websites using Firefox), PE-DPI consumes average
+35% of the CPU (the confidence interval is [0.33, 0.37] at the 95%
+confidence level). When the endpoint sends 41 TLS connections simultaneously, the CPU utilization is 100%, while the CPU usages of our
+method are significantly lower. When processing the web browsing TLS
+traffic, the highest average CPU usage is only 3.8% (the confidence
+interval is [0.036, 0.040] at the 95% confidence interval). This is
+because the TLS keys are saved by the Firefox browser automatically,
+and the agent does not need to extract them. Additionally, it does not
+need to establish TLS connections with the middlebox for evidence
+verification. Therefore, the CPU overhead is low. Upon encountering
+malware’s TLS traffic, the agent still consumes a small number of CPU
+resources. The highest average CPU usage is only 8.2% (the confidence
+interval is [0.080, 0.084] at the 95% confidence interval). Fig. 5 depicts
+the average memory consumptions of PE-DPI and our method. Both
+ Fig. 6. Comparison of communication overheads. For PE-DPI, we repeated the expermethods require a small amount of memory (approximately 40M Bytes iments 40 times to calculate the average values and the confidence intervals at the
+when dealing with 82 flows) resources because there are a few data 95% confidence level. When the number of flows is 9, the communication overhead
+needs to be stored in the memory. for PE-DPI is 109.8 KB, and the confidence interval is [102.9, 116.7]. Note that the
+ The agent’s communication overheads are negligible. If there is communication overheads of our method are deterministic. If there is 𝑖 flows, the
+ communication overheads is 𝑖 ∗(one TLS connection + a ProofCert + session-keys) bytes.
+no malware traffic, the communication overhead is zero. Namely, the
+ In our experiments, the value of (one TLS connection + a ProofCert + session-keys) is
+agent will not set up any TLS connection. If there is one malicious flow, 3.2 KB.
+the agent needs to connect to the middlebox for receiving the ProofCert
+and possibly, sending the session-key. Therefore, if there are 𝑖 malicious Table 5
+flows, the agent’s communication overheads are: 𝑖*(one TLS connec- Average detection time.
+tion + a ProofCert + session-keys). We use message bytes to measure PE-DPI Our method
+communication overheads. The overheads of the TLS connection are Average detection time 3 h 16.2 s
+the bytes of handshake messages. For ProofCert, we use 4 bytes for the
+field IdentM, 4 bytes for Model label, 4 bytes for Dst IP, 2 bytes for Dst
+Port, 64 bytes for the hash value (SHA512), 128 bytes for Signature_M
+(RSA 1024), 4 bytes for the Model_name_i field, 1 byte for Result_i, and The average detection times compared to those of PE-DPI are listed
+64 bytes for the last field Signature_V. The client random and the master in Table 5. We test 10 malware files one by one on the Windows 7
+key are 80 bytes (32+48). The communication overheads with various virtual machine. For our method, the detection time is calculated as
+numbers of malicious flows are shown in Fig. 6. Since PE-DPI splits
+ the time confirmed by the Suricata minus the flow starting time. For
+packets and sends the encrypted tokens to the middlebox for inspection,
+its communication overheads are at least the size of the traffic contents. PE-DPI, the detection time is the time taken for the first matching of
+The communication overheads of PE-DPI are also shown in Fig. 6, the encrypted keywords and the encrypted tokens. There is a total of
+and obviously, the proposed method imposes very small overheads to 25K Suricata rules, and the matching takes an average of 3 h, while the
+the endpoint’s network. For example, if the endpoint is infected by a
+ average detection time of our method is only 16.2 s. Thus, ME-Box can
+malware program, and the malware generates 3 TLS connections, the
+total communication overhead is only 9.4 KB, which is a small amount detect maliciously encrypted flows in a much quicker manner, and it is
+and can be ignored. suitable to be deployed in real networks.
+
+ 9
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+7. Discussion Declaration of competing interest
+
+ In this section, we discuss several possible deployments and the The authors declare that they have no known competing finanlimitations of ME-Box. One can implement and deploy ME-Box as a cial interests or personal relationships that could have appeared to
+standalone system. Besides, our proposed method can be integrated influence the work reported in this paper.
+with existing solutions. In practice, a possible example is the Cisco
+Encrypted Traffic Analytics (ETA) [48]. Cisco ETA uses proxy servers,
+ Acknowledgments
+endpoint telemetry, NetFlow, traffic segmentation and much more to
+establish normal behavior of hosts and users in an enterprise. Based on
+these, it further uses multi-layer machine learning methods to detect The author(s) disclosed receipt of the following financial support
+malicious encrypted traffic. One can upgrade the endpoint telemetry for the research, authorship, and/or publication of this article: This
+to extract applications’ session-keys and examine the detection results work was supported by National Natural Science Foundation of China
+from the Stealthwatch (a core component of Cisco ETA that performs under grants 61802192 and 61702282, by Natural Science Foundation
+machine learning algorithms). The Stealthwatch further decrypts the of the Jiangsu Higher Education Institutions of China under the grant
+detected malicious encrypted flows for confirmation. Consequently, the 18KJB520024, by Nanjing Forestry University (GXL016, CX2016026),
+final detection results can be more accurate and more convincing. This by NUPTSF under the grant NY217143.
+may promote the acceptance of existing solutions in various application
+areas, such as the Industrial Internet of Things. Appendix. Derivation and analysis of formula (5)
+ In ME-Box, a third-party server, i.e., the verification server, is
+introduced to validate the results of machine learning algorithms. This Denote the number of dishonest middleboxes as 𝑚, and the total
+may limit the practical use of ME-Box. However, we argue that the number of middleboxes as 𝑁. 𝑚 dishonest middleboxes work together
+added verification server has a potential advantage for network security to deceive end-users, i.e., their models can generate same results for
+researches and applications. That is, it can be a unified platform for
+ some specific flows. Flow 𝑓 is a benign encrypted flow, and the dishonnetwork security data collection and machine learning model testing.
+ est middlebox wants to obtain the session-key of 𝑓 . Thus, 𝑚 dishonest
+The verification server can provide labeled malicious traffic to train
+ middleboxes classify 𝑓 as suspicious. Since the true negative rates of
+different detection models, and different models can be deployed in
+ honest middleboxes are 𝑡𝑛 , they classify 𝑓 as suspicious with probability
+the server to be fairly compared. The large labeled dataset and fair
+comparison can make the machine learning algorithms more practical 1 − 𝑡𝑛 . Therefore, the expected value of 𝑝 (positive results returned from
+and acceptable for use in network security protection. the verification server) is
+ Furthermore, one can use the Blockchain technology [49] to re- 𝑝 = 𝑚 + (𝑁 − 𝑚) × (1 − 𝑡𝑛 ). (A.1)
+place the functions of verification servers. With the blockchain, all
+middleboxes can be designed to be miners and they will validate the The expected value of 𝑛 (negative results returned from the verificlassification results for each other. For instance, the classification cation server) is
+results and the suspicious flows are saved in the blocks, and all other
+middleboxes can test it with its own classification model. The mid- 𝑛 = (𝑁 − 𝑚) × 𝑡𝑛 . (A.2)
+dleboxes who successfully verify them will be rewarded with some According to formula (4), if 𝑝 > 𝑛, 𝑓 is accepted as malicious by
+digital currency or tokens. The verification results are also written to
+ the end-point, and the agent will send 𝑓 ’s session-key to the dishonest
+the blocks, and endpoints can read these verifications as historical data
+ middlebox. Therefore, we have
+to estimate the reputation of a middlebox. We defer this to our future
+work. 𝑚 + (𝑁 − 𝑚) × (1 − 𝑡𝑛 ) > (𝑁 − 𝑚) × 𝑡𝑛
+ (2𝑡 −1)×𝑁 (2𝑡 −1)×(𝑝+𝑛) (A.3)
+ ⇒ 𝑚 > 𝑛 2𝑡 = 𝑛 2𝑡 .
+8. Conclusion 𝑛 𝑛
+
+ Since 𝑚 ≥ 0, in order for ME-Box to work properly, the maximum
+ In this paper, we propose ME-Box, a novel framework and system number of dishonest middleboxes allowed is
+used to detect malicious encrypted traffic. ME-Box is composed of (2𝑡 − 1) × (𝑝 + 𝑛)
+agents, middleboxes and verification servers. The middlebox uses ma- 𝐴𝑀 = max(0, 𝑛 ). (A.4)
+ 2𝑡𝑛
+chine learning methods to estimate whether or not an encrypted flow is
+suspicious. Because the middlebox may be dishonest and the estimation From formula (A.4), one can observe that if 𝑡𝑛 = 1, 𝐴𝑀 = (𝑝+𝑛) 2
+ ,
+may be intentionally manipulated, to solve this issue, a particular namely, an attacker has to control more than half of middleboxes
+ProofCert and a complete verification process is designed. We introduce to compromise ME-Box. If 𝑡𝑛 ≤ 0.5, 𝐴𝑀 = 0. This implies that
+the verification server to validate the ProofCert by classifying the every encrypted flow will be judges as suspicious, even though all
+malicious flows using several different classification models. Notably, the middleboxes are honest. Therefore, the adopted machine learning
+the verification server can also be a unified platform for malicious methods should have high true negative rates, or equivalently, low false
+traffic collection and model testing. This may promote the adoption of positive rates.
+machine learning methods and produce new opportunities for network
+security research and applications.
+ References
+ We have implemented a prototype system of ME-Box and tested
+it using real malware. The experimental results show that ME-Box
+ [1] Maddison J. More encrypted traffic than ever. 2018, https://www.fortinet.com/
+requires no modification of current cryptographic protocols. It also blog/industry-trends/more-encrypted-traffic-than-ever.html.
+maintains end-users’ privacy well, and its performance is practically de- [2] Symantec Security Response. IoT devices being increasingly used for
+ployable. In the future, we will design and implement a non-centralized DDoS attacks. 2016, https://www.symantec.com/connect/blogs/iot-devicesevidence verification mechanism discussed in Section 7. being-increasingly-used-ddos-attacks.
+ [3] Cisco. Detect encrypted malware traffic and secure network. 2019,
+CRediT authorship contribution statement https://www.cisco.com/c/en_uk/solutions/enterprise-networks/network-refreshguidance/secure-your-network-by-detecting-encrypted-malware-traffic-withmachine-learning.html.
+ Bingfeng Xu: Conceptualization, Methodology, Writing - original
+ [4] Naylor D, Schomp K, Varvello M, Leontiadis I, Blackburn J, López DR, Papadraft, Investigation, Software, Validation. Gaofeng He: Conceptualiza- giannaki K, Rodriguez Rodriguez P, Steenkiste P. Multi-context TLS (mcTLS):
+tion, Methodology, Software, Writing - review & editing. Haiting Zhu: Enabling secure in-network functionality in TLS. ACM SIGCOMM Comput
+Resources, Investigation. Commun Rev 2015;45(4):199–212.
+
+ 10
+B. Xu et al. Journal of Information Security and Applications 59 (2021) 102823
+
+ [5] Liu C, Cui Y, Tan K, Fan Q, Ren K, Wu J. Building generic scalable middlebox [28] Barati M, Abdullah A, Mahmod R, Mustapha N, Udzir NI. Feature selection
+ services over encrypted protocols. In: IEEE INFOCOM 2018-IEEE conference on for IDS in encrypted traffic using genetic algorithm. In: Proceedings of the 4th
+ computer communications. IEEE; 2018, p. 2195–203. international conference on computing and informatics. 2013, p. 279–85.
+ [6] Sherry J, Lan C, Popa RA, Ratnasamy S. Blindbox: Deep packet inspection over [29] He G, Zhang T, Ma Y, Xu B. A novel method to detect encrypted data exfiltration.
+ encrypted traffic. ACM SIGCOMM Comput Commun Rev 2015;45(4):213–26. In: 2014 Second international conference on advanced cloud and big data. IEEE;
+ [7] Canard S, Diop A, Kheir N, Paindavoine M, Sabt M. Blindids: Market-compliant 2014, p. 240–6.
+ and privacy-friendly intrusion detection system over encrypted traffic. In: Pro- [30] Koch R, Golling M, Rodosek GD. Behavior-based intrusion detection in encrypted
+ ceedings of the 2017 ACM on asia conference on computer and communications
+ environments. IEEE Commun Mag 2014;52(7):124–31.
+ security. ACM; 2017, p. 561–74.
+ [31] Aceto G, Ciuonzo D, Montieri A, Pescapè A. Mobile encrypted traffic classification
+ [8] Li H, Ren H, Liu D, Shen XS. Privacy-enhanced deep packet inspection at
+ using deep learning: Experimental evaluation, lessons learned, and challenges.
+ outsourced middlebox. In: 2018 10th International conference on wireless
+ communications and signal processing. IEEE; 2018, p. 1–6. IEEE Trans Netw Serv Manag 2019;16(2):445–58.
+ [9] Anderson B, McGrew D. Identifying encrypted malware traffic with contextual [32] Aceto G, Ciuonzo D, Montieri A, Pescapè A. MIMETIC: Mobile encrypted traffic
+ flow data. In: Proceedings of the 2016 ACM workshop on artificial intelligence classification using multimodal deep learning. Comput Netw 2019;165:106944.
+ and security. ACM; 2016, p. 35–46. [33] Aceto G, Ciuonzo D, Montieri A, Pescapè A. Toward effective mobile encrypted
+[10] Anderson B, McGrew D. Machine learning for encrypted malware traffic classi- traffic classification through deep learning. Neurocomputing 2020;409:306–15.
+ fication: accounting for noisy labels and non-stationarity. In: Proceedings of the [34] Shekhawat AS, Di Troia F, Stamp M. Feature analysis of encrypted malicious
+ 23rd ACM SIGKDD international conference on knowledge discovery and data traffic. Expert Syst Appl 2019;125:130–41.
+ mining. ACM; 2017, p. 1723–32. [35] Radivilova T, Kirichenko L, Ageyev D, Tawalbeh M, Bulakh V. Decrypting
+[11] Anderson B, Paul S, McGrew D. Deciphering malware’s use of TLS (without SSL/TLS traffic for hidden threats detection. In: 2018 IEEE 9th international
+ decryption). J Comput Virol Hacking Tech 2018;14(3):195–211. conference on dependable systems, services and technologies. IEEE; 2018, p.
+[12] Han J, Kim S, Ha J, Han D. Sgx-box: Enabling visibility on encrypted traffic using 143–6.
+ a secure middlebox module. In: Proceedings of the first asia-pacific workshop on
+ [36] Anderson B, Chi A, Dunlop S, McGrew D. Limitless HTTP in an HTTPS
+ networking. ACM; 2017, p. 99–105.
+ world: Inferring the semantics of the HTTPS protocol without decryption. In:
+[13] Chen Y-C, Li Y-J, Tseng A, Lin T. Deep learning for malicious flow detection.
+ Proceedings of the ninth ACM conference on data and application security and
+ In: 2017 IEEE 28th annual international symposium on personal, indoor, and
+ mobile radio communications. IEEE; 2017, p. 1–7. privacy. ACM; 2019, p. 267–78.
+[14] Sommer R, Paxson V. Outside the closed world: On using machine learning for [37] Buczak AL, Guven E. A survey of data mining and machine learning
+ network intrusion detection. In: 2010 IEEE symposium on security and privacy. methods for cyber security intrusion detection. IEEE Commun Surv Tutor
+ IEEE; 2010, p. 305–16. 2015;18(2):1153–76.
+[15] Gu T, Dolan-Gavitt B, Garg S. Badnets: Identifying vulnerabilities in the machine [38] Yueai Z, Junjie C. Application of unbalanced data approach to network intrusion
+ learning model supply chain. 2017, arXiv preprint arXiv:1708.06733. detection. In: 2009 First international workshop on database technology and
+[16] Chen Z, Yan Q, Han H, Wang S, Peng L, Wang L, et al. Machine learning based applications. IEEE; 2009, p. 140–3.
+ mobile malware detection using highly imbalanced network traffic. Inform Sci [39] Costan V, Devadas S. Intel SGX explained.. IACR Cryptol ePrint Arch
+ 2018;433:346–64. 2016;2016(086):1–118.
+[17] Aublin P-L, Kelbert F, O’Keeffe D, Muthukumaran D, Priebe C, Lind J, et al. [40] Garg S, Gentry C, Halevi S, Raykova M, Sahai A, Waters B. Candidate indistin-
+ Tech. rep., Imperial College London; 2017. guishability obfuscation and functional encryption for all circuits. SIAM J Comput
+[18] de Carnavalet XdC, Mannan M. Killed by proxy: Analyzing client-end TLS
+ 2016;45(3):882–929.
+ interception software. In: Network and distributed system security symposium.
+ [41] Li L, Zou B, Hu Q, Wu X, Yu D. Dynamic classifier ensemble using classification
+ 2016, p. 1–17.
+ confidence. Neurocomputing 2013;99:581–91.
+[19] O’Neill M, Ruoti S, Seamons K, Zappala D. TLS proxies: Friend or foe? In:
+ [42] Ryffel T, Trask A, Dahl M, Wagner B, Mancuso J, Rueckert D, Passerat-
+ Proceedings of the 2016 internet measurement conference. ACM; 2016, p. 551–7.
+[20] Lindell Y, Pinkas B. A proof of security of Yao’s protocol for two-party Palmbach J. A generic framework for privacy preserving deep learning. 2018,
+ computation. J Cryptol 2009;22(2):161–88. arXiv preprint arXiv:1811.04017.
+[21] Yuan X, Wang X, Lin J, Wang C. Privacy-preserving deep packet inspection [43] Xu M, Liu J, Liu Y, Lin FX, Liu Y, Liu X. A first look at deep learning apps on
+ in outsourced middleboxes. In: IEEE INFOCOM 2016-the 35th annual IEEE smartphones. In: The world wide web conference. ACM; 2019, p. 2125–36.
+ international conference on computer communications. IEEE; 2016, p. 1–9. [44] Taubmann B, Frädrich C, Dusold D, Reiser HP. Tlskex: Harnessing vir-
+[22] Fuhr T, Paillier P. Decryptable searchable encryption. In: International conference tual machine introspection for decrypting TLS communication. Digital Invest
+ on provable security. Springer; 2007, p. 228–36. 2016;16:S114–23.
+[23] Boneh D, Goh E-J, Nissim K. Evaluating 2-DNF formulas on ciphertexts. In: [45] Stallings W. Cryptography and network security: principles and practice. Pearson
+ Theory of cryptography conference. Springer; 2005, p. 325–41. Upper Saddle River; 2017.
+[24] Desmoulins N, Fouque P-A, Onete C, Sanders O. Pattern matching on encrypted [46] Dierks T, Rescorla E. RFC 5246-the transport layer security (TLS) protocol version
+ streams. In: International conference on the theory and application of cryptology 1.2. Internet Eng Task Force 2008.
+ and information security. Springer; 2018, p. 121–48.
+ [47] aminkhoshnood. Iranian government is censoring sites with universal SSL
+[25] Kovanen T, David G, Hämäläinen T. Survey: Intrusion detection systems in
+ (cloudflare inc ECC CA-2). 2019, https://community.cloudflare.com/t/iranianencrypted traffic. In: Internet of things, smart spaces, and next generation
+ government-is-censoring-sites-with-universal-ssl-cloudflare-inc-ecc-canetworks and systems. Springer; 2016, p. 281–93.
+[26] Nisioti A, Mylonas A, Yoo PD, Katos V. From intrusion detection to attacker 2/110989.
+ attribution: A comprehensive survey of unsupervised methods. IEEE Commun [48] Cisco public. Encrypted traffic analytics. 2018, https://www.cisco.com/c/dam/
+ Surv Tutor 2018;20(4):3369–88. en/us/solutions/collateral/enterprise-networks/enterprise-network-security/nb-
+[27] Hellemons L, Hendriks L, Hofstede R, Sperotto A, Sadre R, Pras A. SSHCure: a 09-encrytd-traf-anlytcs-wp-cte-en.pdf.
+ flow-based SSH intrusion detection system. In: IFIP International conference on [49] Underwood S. Blockchain beyond bitcoin. Commun ACM 2016;59(11):15–7.
+ autonomous infrastructure, management and security. Springer; 2012, p. 86–97.
+
+ 11

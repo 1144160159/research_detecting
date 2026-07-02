@@ -1,0 +1,136 @@
+2764                                                                      IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+
+
+
+LUK: Empowering Log Understanding With Expert
+   Knowledge From Large Language Models
+   Lipeng Ma , Weidong Yang , Member, IEEE, Sihang Jiang , Ben Fei , Member, IEEE, Mingjie Zhou ,
+                      Shuhao Li , Mingyu Zhao , Bo Xu , and Yanghua Xiao
+
+
+   Abstract—Logs play a critical role in providing essential                                                   I. INTRODUCTION
+information for system monitoring and troubleshooting. Recently,
+with the success of pre-trained language models (PLMs) and
+large language models (LLMs) in natural language processing
+(NLP), smaller PLMs (such as BERT) and LLMs (like GPT-4)
+                                                                                   W        ITH the increasing complexity and scale of IT systems,
+                                                                                            the maintenance and operation of large-scale systems
+                                                                                   become more challenging. Logs record the valuable runtime
+have become the current mainstream approaches for log analysis.                    status, they play a crucial role in troubleshooting and enable
+Despite the remarkable capabilities of LLMs, their higher cost
+and inefficient inference present significant challenges in lever-                 engineers to monitor system health effectively. However, the in-
+aging the full potential of LLMs to analyze logs. In contrast,                     creasing volume of logs has made manual analysis a harder task
+smaller PLMs can be fine-tuned for specific tasks even with                        [1]. Consequently, numerous automated log analysis methods
+limited computational resources, making them more practical.                       utilizing machine learning (ML) or deep learning (DL) models
+However, these smaller PLMs face challenges in understanding                       have been proposed to automatically analyze logs, encompass-
+logs comprehensively due to their limited expert knowledge.
+To address the lack of expert knowledge and enhance log                            ing various tasks such as log parsing [2], [3], [4], [5], anomaly
+understanding for smaller PLMs, this paper introduces a novel                      detection [6], [7], [8], [9], [10], [11], [12], root cause analysis
+and practical knowledge enhancement framework, called LUK,                         [13], [14], [15], failure prediction [16], [17], [18], etc. In par-
+which acquires expert knowledge from LLMs automatically and                        ticular, with the recent success of pre-trained language models
+then enhances the smaller PLM for log analysis with the expert                     (PLMs) in natural language processing (NLP), especially the
+knowledge. LUK can take full advantage of both types of models.
+Specifically, we design a multi-expert collaboration framework                     advent of large language models (LLMs) represented by Chat-
+based on LLMs with different roles to acquire expert knowledge.                    GPT and GPT-4 [19], language models (LMs) have garnered
+In addition, we propose two novel pre-training tasks to enhance                    significant attention in log understanding and these LM-based
+the log pre-training with expert knowledge. LUK achieves state-                    approaches [20], [21], [22], [23], [24], [25], [26], [27], [28],
+of-the-art results on different log analysis tasks, and extensive                  [29], [30] achieve tremendous achievements in automated log
+experiments demonstrate that expert knowledge from LLMs can
+be utilized more effectively to understand logs. Our source code                   analysis due to their outstanding performance.
+and detailed experimental data are available at https://github.                       As language models increase in scale and gain enhanced
+com/LeaperOvO/LUK.                                                                 capabilities, two mainstream paradigms have emerged for uti-
+   Index Terms—Log understanding, large language model, pre-                       lizing LMs in log understanding. The first one is based on
+trained model, knowledge enhancement.                                              PLMs, which follows the pre-train & fine-tune paradigm, such
+                                                                                   as BERT [31], fine-tuning a PLM with task-specific data and
+                                                                                   enabling it to specialize in the given task. Considering the need
+                                                                                   for fine-tuning with limited computational resources and cost
+                                                                                   savings, LMs in this paradigm are typically smaller in size,
+                                                                                   such as BERT with 110M parameters. The second one is based
+  Received 14 May 2025; revised 21 July 2025; accepted 27 July 2025. Date          on LLMs with vast scale and complexity1 , which can tackle a
+of publication 31 July 2025; date of current version 17 October 2025. This         diverse array of tasks with remarkable proficiency. The LLM-
+work was supported in part by the Natural Science Foundation of Shanghai           based methods follow the In-Context Learning (ICL) paradigm
+under Grant 24ZR1405000. Recommended for acceptance by Y. Wang.
+(Corresponding authors: Weidong Yang; Bo Xu.)                                      [32], [33], learning from a few examples in the context without
+  Lipeng Ma, Weidong Yang, Sihang Jiang, Mingjie Zhou, Shuhao Li,                  updating the parameters.
+and Yanghua Xiao are with the School of Computer Science, Fu-                         Despite the powerful performance of LLMs, limited acces-
+dan University, Shanghai 200433, China (e-mail: lpma21@m.fudan.edu.cn;
+wdyang@fudan.edu.cn; jiangsihang@fudan.edu.cn; mjzhou19@fudan.edu.cn;              sibility and higher costs present significant challenges in lever-
+shli23@m.fudan.edu.cn; shawyh@fudan.edu.cn).                                       aging the full potential of LLMs. These LLMs often come
+  Ben Fei is with the Department of Information Engineering, The Chinese           with substantial usage fees and have restricted access to data
+University of Hong Kong, Hong Kong 999077 (e-mail: benfei@cuhk.edu.hk).
+  Mingyu Zhao is with the School of Artificial Intelligence, Optics and            privacy and security. Even if the LLM is deployed locally, it
+Electronics (iOPEN), Northwestern Polytechnical University, Xi’an 710072,          still may face resource constraints, making LLMs less attainable
+China (e-mail: myzhao@nwpu.edu.cn).
+  Bo Xu is with the School of Computer Science and Technology, Donghua
+University, Shanghai 201620, China (e-mail: xubo@dhu.edu.cn).                        1 We use LLM to specifically refer to the large language models over 10B
+  Digital Object Identifier 10.1109/TSE.2025.3594046                               parameters that utilize the ICL paradigm without fine-tuning the parameters.
+
+
+   0098-5589 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE                                                                              2765
+
+
+
+                                                                                 with domain-specific data [42], [43]. In addition, in the era of
+                                                                                 LLMs, knowledge distillation (KD) [44] emerges as a pivotal
+                                                                                 methodology for transferring advanced capabilities from LLMs
+                                                                                 to smaller models. Compared to obtaining answers directly
+                                                                                 from the teacher’s model, distillation towards the reasoning
+                                                                                 process has proved to be a more effective method [44], [45].
+                                                                                 However, current knowledge distillation methods, such as COT-
+                                                                                 based KD [46], [47], struggle to acquire expert knowledge,
+                                                                                 instead imitating the teacher’s reasoning forms and ignoring the
+                                                                                 premise that reasoning requires expert knowledge. These distil-
+Fig. 1. Example of prompting ChatGPT to help understand log, which               lation methods, which emphasize the process of reasoning and
+can provide detailed background information, terminology explanations, and       outcome, still hardly compensate for the lack of expert knowl-
+solutions. Without knowledge, the beginner fails to understand the RSSI value.   edge. (2) Knowledge Enhancement: Since logs and expert
+                                                                                 knowledge obtained from LLM are heterogeneous data, smaller
+                                                                                 models with fewer parameters and limited learning capacity
+for individuals and smaller organizations. In addition, due to                   struggle to capture knowledge [48], [49]. Masked Language
+their complex autoregressive architectures and a large number                    Modeling (MLM) [31] is the widely used pre-training task for
+of parameters, LLM-based methods are computationally inef-                       most pre-trained models, where they can only perceive their
+ficient. Considering that modern software systems can produce                    own contextual information and cannot incorporate external
+several petabytes per day [34], [35], directly employing LLMs                    knowledge. In addition, KnowLog proposes an abbreviation
+for log analysis is impractical due to the significant overhead                  prediction task specialized for log understanding. However,
+of querying LLMs, such as inference time and network latency                     its ability to enhance the knowledge of abbreviations in the
+[29], [36]. In contrast, smaller PLMs with smaller parameters,                   logs is limited. It cannot adaptively perceive other important
+requiring limited resource costs, are more efficient than LLMs                   information from the knowledge to understand logs, such as the
+[37]. Hence, we argue that the smaller PLM is more practical                     parameter knowledge of logs.
+in extensive log analysis scenarios [23], [24], [25].                               To overcome the above-mentioned challenges, we propose
+   However, the smaller PLM encounters a bottleneck in log                       a novel knowledge enhancement framework to empower log
+understanding due to the inadequacy of expert knowledge. Logs                    understanding on a smaller PLM, called LUK. Rather than
+inherently employ concise and highly specialized terminology,                    utilizing LLMs to solve specific tasks directly, LUK first ac-
+the smaller PLM struggles to understand valuable information                     quires expert knowledge from LLMs, then enhances the log pre-
+from logs like experts [22]. This issue can be attributed to                     training with the corresponding expert knowledge, and finally,
+the lack of rich sources for knowledge acquisition. Although                     the knowledge-enhanced PLM for logs can be fine-tuned to
+KnowLog proposes to acquire expert knowledge from doc-                           solve downstream log analysis tasks efficiently. This framework
+umentation [22], most logs lack professional documentation                       can maximize the advantages of both LLM and smaller PLMs.
+(e.g., almost unable to find relevant documents for logs coming                     Specifically, to solve the first issue, we design a multi-expert
+from Loghub [38]), and the manual construction of knowledge                      collaboration framework to acquire expert knowledge from
+is costly and inefficient, which significantly hinders the avail-                LLMs. Motivated by the waterfall model [50] in software en-
+ability of the model.                                                            gineering, we build a professional team consisting of Director,
+   Fortunately, LLMs with extensive knowledge can understand                     Executor, and Evaluator, and define the identity and responsi-
+logs comprehensively, attributed to training on massive textual                  bility of the roles through prompt engineering, enabling LLMs
+data related to code [39] and logging [40], [41]. For example, as                to think and handle tasks just like role play. Then the team co-
+depicted in Fig. 1, ChatGPT can better assist in understanding                   operates and interacts to construct expert knowledge. To solve
+the Mac log. Consequently, LLMs such as GPT-4 compensate                         the second issue, we develop a novel hierarchical knowledge-
+for the lack of knowledge of the smaller PLM, which can                          enhanced pre-training framework that combines two comple-
+analyze logs more efficiently and professionally.                                mentary training objectives: 1) the word-level token predic-
+   To more effectively harness the knowledge embedded within                     tion task, focusing on granular knowledge perception, and 2)
+LLMs for log understanding, we argue that expert knowledge                       the sentence-level semantic alignment, enhancing contextual
+can be elicited from LLMs and subsequently utilized to em-                       understanding.
+power the smaller PLM, making the smaller model understand                          To evaluate the effectiveness of LUK, we conduct experi-
+logs like experts. However, two main challenges exist in en-                     ments on the software system and network device logs, includ-
+hancing log understanding with expert knowledge from LLMs.                       ing six log analysis downstream tasks. The experiment results
+(1) Effective Knowledge Acquisition: Although LLMs have                          show that LUK can harness knowledge from LLMs more effec-
+shown remarkable capabilities in various tasks, LLMs still have                  tively to improve log understanding and achieve state-of-the-art
+difficulty in acquiring complete and accurate knowledge due to                   results on different log analysis tasks. In addition, LUK exhibits
+hallucination, which may result in not covering all the depth of                 remarkable generalization and robustness in log analysis, with
+knowledge, and there may be misunderstandings when dealing                       notable advantages in low-resource scenarios.
+2766                                                         IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+
+
+  This work is an extension of our conference paper                     However, training solely on a general or log corpus strug

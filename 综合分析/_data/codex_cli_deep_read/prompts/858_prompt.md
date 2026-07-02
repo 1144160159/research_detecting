@@ -1,0 +1,973 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [858] New Class Detection in Network Traffic Classification Using Confidence Information Embedded Cascade Structure
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：858
+题名：New Class Detection in Network Traffic Classification Using Confidence Information Embedded Cascade Structure
+年份：2025
+DOI：10.1109/TNSE.2025.3538564
+来源：未识别
+PDF：paper/10.1109_TNSE.2025.3538564.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：无
+相关性：强相关，分数 13
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\858.txt
+- 原始字符数：98316
+- 本次发送字符数：98316
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+1692                                                          IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 3, MAY/JUNE 2025
+
+
+
+
+                      New Class Detection in Network
+                   Traffic Classification Using Confidence
+                  Information Embedded Cascade Structure
+                      Haotian Lu , Yuning Dong , Zhiyuan Wu, Hua-Liang Wei , and Guanming Lu
+
+
+    Abstract—Network traffic classification plays an important role                cannot be directly applied to unknown traffic scenarios. Machine
+in network management. With continued emergence of new appli-                      learning (ML) approaches, including deep learning (DL), gen-
+cations, classifiers need to deal with unknown classes in an open                  erally require a large number of labeled samples. However, in
+set environment. However, the available open set flow recognition
+methods cannot well balance the performance of new class detec-                    real network scenarios, the labeled samples of unknown classes
+tion and the fine-grained classification of known classes. Moreover,               are not available. The flow recognition containing unknown
+these methods could pursue high accuracy at the cost of the clas-                  classes is called open set flow recognition (OSFR) [6]. The
+sification speed. To address these problems, this paper proposes                   OSFR requires a classification model that can not only classify
+an unknown network traffic detection method based on confidence
+                                                                                   the known classes, but also identify new classes without any
+(difference) and a cascade structure, by analyzing the confidence
+distributions of both the known and new classes. The proposed                      auxiliary information [7].
+method works as follows. Firstly, it uses a cascade structure to
+detect new class samples (having high confidence) which are dif-
+ficult to identify using existing methods; secondly, it employs the
+maximum confidence difference to classify the new and known                        A. Motivation and Challenges
+classes. In order to better detect new classes with high confidence,
+an algorithm is designed to select the pseudo-negative samples from                   Generally, the previous network traffic classification appear
+the unlabelled dataset with an adaptive threshold. The proposed                    to be designed within the confines of a static dataset scenario,
+method is evaluated on real-world datasets. The results show that                  where the data classes of the overall framework are known in
+compared with the state-of-the-art methods, the proposed method                    advance. As illustrated in Fig. 1(a), the three triangles positioned
+can significantly improve the overall accuracy and the classification              on the left, middle and right delineate the regions corresponding
+latency is also greatly reduced.
+                                                                                   to the three known classes, and the green circles, trapezoids
+   Index Terms—Open set flow recognition, confidence difference,                   and triangles correspond to known classes 1, 2 and 3, respec-
+new class detection, unlabelled dataset, network traffic classi-                   tively. It is evident that a classifier trained on a closed-set can
+fication.
+                                                                                   only correctly classify known classes. However, the two kinds
+                            I. INTRODUCTION                                        of unknown class samples (yellow four-pointed stars and red
+                                                                                   pentagrams) with distinct confidence differences are arbitrarily
+      ETWORK traffic classification (NTC) is very important
+N     for network management, such as quality of service (QoS)
+assurance and network resource allocation [1]. With the rapid
+                                                                                   assigned to different known class regions. This discrepancy
+                                                                                   arises from the classifier lacking any prior knowledge of the
+                                                                                   unknown classes, resulting in the failure to identify them.
+development of the Internet and multimedia technologies, the
+                                                                                      To achieve OSFR, some of the existing methods use single-
+number of network traffic classes is increasing, and new types of
+                                                                                   class sample classification [8] (without negative samples) for
+network applications are emerging continuously. Most existing
+                                                                                   detecting new classes. Such methods can detect new classes,
+methods pretrain classifiers on closed dataset [2], [3], [4], [5], but
+                                                                                   and group all known classes into one class, but they cannot
+due to a lack of knowledge of new applications, these methods
+                                                                                   perform fine-grained classification. To address this problem,
+                                                                                   Yang et al. [9] proposed building a single-class classifier for
+   Received 3 April 2024; revised 26 December 2024; accepted 26 January 2025.
+Date of publication 6 February 2025; date of current version 25 April 2025.        each known class, which does not seem to work well.
+This work was supported in part by the National Natural Science Foundation            In [10] and [11], a collective decision-based OSFR (CD-
+of China under Grant 61271233 and in part by the Postgraduate Research &           OSFR) model built on HDP (Hierarchical Dirichlet Process)
+Practice Innovation Program of Jiangsu Province under Grant KYCX23_1031.
+Recommended for acceptance by Dr. Wan Du. (Corresponding author: Yuning            was proposed, which does not require a classification threshold,
+Dong.)                                                                             and can automatically reserve space for new classes. However,
+   Haotian Lu, Yuning Dong, Zhiyuan Wu, and Guanming Lu are with the School        CD-OSFR does not make full use of the labeled information of
+of Communications and Information Engineering, Nanjing University of Posts
+and Telecommunications, Nanjing 210003, China (e-mail: lhtnjupt@163.com;           known classes, but only divides the training data into different
+19900011@njupt.edu.cn; yuanwu_z@163.com; lugm@njupt.edu.cn).                       groups. The performance of such a method still needs to be
+   Hua-Liang Wei is with the Department of Automatic Control and Systems           improved for new class detection and classification. In addition,
+Engineering, The University of Sheffield, S1 3JD Sheffield, U.K. (e-mail:
+w.hualiang@sheffield.ac.uk).                                                       collaborative clustering is used in the testing phase, which is
+   Digital Object Identifier 10.1109/TNSE.2025.3538564                             time-consuming.
+      2327-4697 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+LU et al.: NEW CLASS DETECTION IN NETWORK TRAFFIC CLASSIFICATION USING CONFIDENCE INFORMATION EMBEDDED                                                         1693
+
+
+
+
+Fig. 1. Comparison of classification boundaries. In (a), the classifier trained on closed-set datasets separates three known classes (green circles, trapezoids,
+and triangles) into three regions (three triangles on the left, middle and right). It is evident that these methods fail to classify the two unknown classes (yellow
+four-pointed stars and red pentagrams) which are randomly assigned to the regions of known classes. In (b), some traditional OSFR methods can partition some
+easily distinguishable unknown class samples into new regions (the blank area in the figure), but there are still unknown class samples with high CfDmax that have
+not been correctly classified. In (c), CCS-UTD can identify most unknown class samples with high CfDmax and place them in new regions, further improving the
+accuracy of classification.
+
+
+   Another way is to generate negative samples by adversar-                        confidence difference (CfDmax), i.e. the value difference be-
+ial learning in an unsupervised/semi-supervised manner using                       tween maximum and minimum confidences of the output labels,
+adversarial sample generation-support vector machine (ASG-                         is used to distinguish between the known and new classes. For
+SVM) [12]. These negative samples generated are close to but                       the known classes, the fine-grained classification is performed
+not in the known classes. The detection of unknown classes                         based on the confidence information of the random forest (RF)
+is performed in a supervised way by training a support vector                      model. For the instances of new classes that cannot be detected
+machine (SVM) classifier for each known class. Comparatively,                      by a CfDmax threshold, a binary classifier is designed to detect
+the adversarial sample generation by ASG-based approach per-                       them. This binary classifier is trained using two types of data:
+forms better in improving the detection rate for new classes.                      one is the known class sample, and the other is the sample
+Nonetheless, as shown in Fig. 1(b), those classifiers trained                      with maximum confidence difference higher than the threshold
+in open environments achieve certain success in distinguishing                     among the screened negative samples.
+between known and unknown classes. Although the ASG-based                             The main contributions of this paper are as follows.
+approach can improve classification accuracy to some extent                           1) An unknown network traffic detection method using
+by generating fake new class samples close to the known class                            the confidence information-embedded cascade structure
+boundary, it has some limitations: 1) The generation time of                             (CCS-UTD) is proposed, which can effectively detect
+negative samples is relatively long; 2) The classification perfor-                       new class instances while maintaining the fine-grained
+mance still needs improvement. The challenge lies in the identi-                         classification accuracy of known classes. Especially the
+fication of the unknown class samples closer to the boundary of a                        introduction of cascade structure can effectively screen
+known class (red pentagrams), leading to a limited classification                        unknown class instances that are normally difficult to
+space for unknown classes. Consequently, this constraint results                         identify by existing methods and thus greatly improve the
+in the misclassification of some unknown class samples.                                  performance of new class detection.
+   To address the shortcomings of current methods, this paper                         2) The confidence distribution patterns of known and new
+develops a confidence information-embedded cascade structure,                            classes are analyzed, and a scheme to recognize the known
+aiming at better detecting samples of novel classes that are                             and new classes using the maximum confidence difference
+easily confused with the samples of known classes. Specifically,                         information is designed. Meanwhile, a general threshold
+through multiple screenings of training data and the introduction                        selection approach is proposed, which can provide a more
+of two discriminators, the corresponding boundaries of each                              accurate threshold to better distinguish known and new
+class shrink (as illustrated in Fig. 1(c)), which makes the classifi-                    classes in different datasets.
+cation space for unknown classes more open. As for the issue that                     3) An algorithm is developed to select the pseudo-negative
+the ASG process takes longer time, we design a novel algorithm                           samples from the unlabelled flow data, which can not only
+to select pseudo-negative samples from unlabelled flow data that                         make use of the easily available unlabelled flow data, but
+is readily available or easier to obtain from real-world networks,                       also greatly reduce the time of generating pseudo-negative
+so as to achieve both higher new class detection rate and shorter                        samples for model training.
+preprocessing time.                                                                   4) To verify the performance of the proposed method, it is
+                                                                                         evaluated on five real network datasets, and compared
+                                                                                         with the state-of-the-art methods. The results show that the
+B. Contributions of This Article                                                         proposed method significantly outperforms the compared
+   In this paper, we propose a new OSFR method to perform                                methods.
+online detection of new classes and fine-grained classification                       The rest of the paper is organized as follows: Section II
+of known classes. With this method, by analyzing the confidence                    reviews the relevant works on open set recognition. Section III
+distribution patterns of known and new classes, the maximum                        presents the proposed method in detail, including the model
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+1694                                                         IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 3, MAY/JUNE 2025
+
+
+
+                                 TABLE I                                                                         TABLE II
+                              MAIN NOTATIONS                                                       COMPARISON OF EXISTING OSFR METHODS
+
+
+
+
+                                                                                  B. OSFR Based on Adversarial Learning
+                                                                                     Wang et al. [20] integrated the generative adversarial network
+framework, the principles of design and the specific implemen-                    (GAN) with semi-supervised learning to achieve fine-grained
+tation of the method. Section IV demonstrates the experiments                     NTC. Neal et al. [21] expanded the training set samples with the
+to compare our method with the state-of-the-art methods, and                      help of GAN to generate the pseudo open set samples. These
+shows the results. Section V concludes the paper.                                 samples are close to but do not belong to the known classes. Yang
+   For convenience of description, the main notations used in                     et al. [12] proposed an adversarial sample generation approach
+this paper are summarized in Table I.                                             that can generate not only negative samples, but also positive
+                                                                                  samples of the known classes when there are few samples of the
+                                                                                  known classes.
+                          II. RELATED WORK
+   Currently, the methods based on ML [13] and DL [14] have be-
+come the mainstream NTC approaches because they do not need
+                                                                                  C. OSFR Based on Deep Learning
+the information of port numbers and can be used for encrypted
+flows [15]. Chen et al. [16] proposed the concept of a flow                           Chen et al. [22] employed a metric-based approach with
+bunch and developed a clustering method to process encrypted                      a Siamese network (SEEN) to identify known and unknown
+traffic. However, current methods still have limitations in the                   traffic. A data skew-based classification method for TLS ap-
+open set environment. Wu et al. [17] considered the issue of class                plication unknown traffic (DSCU) [23] was proposed recently
+imbalance in NTC, but ignored the emergence of new classes. In                    and created a classification space for unknown classes with its
+recent years, the OSFR has received more and more attention and                   own constructed skew data. Le et al. [24] proposed an adap-
+becomes a hot topic in the field of machine learning at present.                  tive classification and updating method, constructing their own
+The current ML/DL-based OSFR methods commonly use SVM,                            boundaries for each known class to achieve accurate identifica-
+adversarial learning or deep learing.                                             tion of unknown flows in open network environments. Zhang
+                                                                                  et al. [25] designed a deep learning-based traffic clustering
+                                                                                  solution to classify unknown network traffic. Similar to our
+                                                                                  work, the classifier output is a vector of confidence scores that
+A. OSFR Based on SVM
+                                                                                  is further used in the traffic discriminator. For incoming traffic,
+   In OSFR, because the constructed hyperplane of SVM model                       if its score falls below a threshold, it is classified as an unknown
+tends to ignore the new classes, the new classes are often                        flow; otherwise, it is recognized as a known flow. However,
+misclassified into known classes during the decision process.                     its classification space constructed using a single threshold is
+To solve this problem, researchers have proposed many SVM                         not accurate enough, resulting in misclassification of known
+algorithms for OSFR by constraining the space occupied by the                     and unknown classes. Thilini et al. [26] used well-regularized
+known classes [7], [18], [19].                                                    deep learning model to improve classification results of previous
+   The 1-vs-Set mechanism proposed by Scheirer et al. [18] is                     methods and developed a method based on k-logit neighbor
+based on an SVM algorithm with linear kernel functions, which                     distances (k-LND) for OSFR.
+constrains the space occupied by the known class information                          Although the above methods are effective in OSFR to a
+to reduce the open space risk and cope with the single-class                      certain extent, they still have some shortcomings, as summarized
+identification problem in an open environment. To achieve the                     in Table II. To address these shortcomings, a new method is
+multi-class recognition in an open environment, a Weibull-                        proposed in this paper, which uses a binary classifier trained
+calibrated SVM (W-SVM) was proposed using the CAP model                           with pseudo-negative samples to detect new classes according to
+and EVT theory for probability estimation in [19]. It addresses                   the maximum confidence difference, and exploits the maximum
+the effect of openness on threshold selection.                                    confidence to further classify the known classes.
+
+ Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+LU et al.: NEW CLASS DETECTION IN NETWORK TRAFFIC CLASSIFICATION USING CONFIDENCE INFORMATION EMBEDDED                                                      1695
+
+
+
+
+                                                                                  Fig. 4.   TDR and PR of different model structures.
+
+
+                                                                                  After feature extraction (FE) of the input samples, H1 is used to
+                                                                                  screen out unknown class samples (y1 ) whose CfDmax is greater
+                                                                                  than threshold α. Then H2 further refines the detection of new
+                                                                                  class by processing the remaning flows based on the threshold
+Fig. 2.   Training phase of the CCS-UTD framework.                                β. Meanwhile, the fine classification of known classes is com-
+                                                                                  pleted by H2 based on the maximum confidence level (Cfmax),
+                                                                                  denoted z.
+                                                                                     3) The Cascade Structure: The cascade structure model is a
+                                                                                  core part of this method. For complex open-set traffic classifi-
+                                                                                  cation problems, a single classifier is often ineffective to distin-
+                                                                                  guish between new and known traffic types using a threshold.
+                                                                                     For this reason, this paper, by following an idea of gradual
+                                                                                  refinement, designs a cascade structure composed of H1 and
+Fig. 3.   Tesing phase of the CCS-UTD framework.
+                                                                                  H2 , as shown in Fig. 3. In the testing phase, H1 is responsible
+                                                                                  for a first pass classification of input instances, mainly to screen
+                         III. METHODOLOGY                                         out NewC samples that are difficult (closer to the boundary of
+                                                                                  a KnownC) to identify(y1 ), and send the remaining samples to
+A. Framework
+                                                                                  H2 . H2 performs: 1) Further identification of NewC samples
+   The framework of the proposed method consists of two parts:                    (y2 ) by the threshold β; 2) A fine-grained classification of known
+the training phase and the testing phase, as illustrated in Figs. 2               classes. In this way, the proposed cascade structure(CasStru) can
+and 3, respectively.                                                              execute in a faster pipeline processing fashion. At the same time,
+   1) Traning Phase: At the training phase, certain unlabelled                    the H1 ’s identification capability trained by pseudo-negative
+samples are selected as the pseudo-negative samples of new                        samples with high CfDmax makes it possible to screen NewC
+class. These pseudo-negative samples are obtained by screening                    samples that cannot be detected by thresholding, which in prin-
+the unlabelled dataset for twice: 1) k single class support vector                ciple enhances the model’s capability to detect unknown class
+machines (One Class-SVM, OC-SVM) designed for k known                             samples.
+classes are used to filter out the known classes; 2) an RFS (RF                      To verify the effectiveness of CasStru, we conduct experi-
+updated for S iterations) model is applied to filter the samples                  ments on the MixD1 dataset (See Section IV-A for more details)
+whose CfDmax are higher than an adaptive threshold α. The                         by omitting H1 and using only H2 for classification based on
+process of determining this threshold is illustrated in the upper                 the CfDmax threshold. Two performance evaluation metrics,
+half of Fig. 2. First, the CfDmax distribution is calculated using a              Purity rate (PR) and True detection rate (TDR) [22], are used,
+validation dataset to obtain an initial threshold α0 . Subsequently,              as defined in (1) and (2), where KP is the number of KnownC
+an adaptive threshold selection method is employed to get the                     samples correctly identified, KN is the number of the KnownC
+best CfDmax threshold α for the current dataset. In the lower half                samples which are misclassified as other known traffic, KU
+of Fig. 2, H1 is a binary classifier trained by the pseudo-negative               is the number of KnownC samples misclassified as unknown
+samples of new classes with CfDmax values greater than α; the                     traffic, U P is the number of unknown traffic accurately detected,
+RF multi-classifier H2 is trained by samples from the known                       and U N is the number of NewC samples misclassified as known
+classes.                                                                          traffic.
+   2) Testing Phase: As shown in Fig. 3, the testing phase                           Partial test results are shown in Fig. 4. It can be seen from
+consists of a cascade structure: H1 and H2 that uses the threshold                the TDR curve that although a single classifier can still detect
+β to further distinguish between known and new class samples.                     NewC samples, its True detection rate at each threshold value
+
+
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+1696                                                         IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 3, MAY/JUNE 2025
+
+
+
+                              TABLE III
+          STATISTICAL FEATURES OF FLOWS (PACKET SEQUENCES)
+
+
+
+
+is significantly lower than that of CasStru, indicating that more                 Fig. 5.   Confidence distributions of known and new classes.
+unknown classes are undetected. PR represents the fine-grained
+classification results of KnownC samples. When the threshold β
+reaches 0.9, the performance of CasStru is also superior (More
+                                                                                     2) The Pearson correlation coefficient (PCC) is calculated
+details can be found in following subsections). In a word, the
+                                                                                        for each feature with respect to the label and between
+introduction of the cascade structure is an effective choice, which
+                                                                                        the features. For a feature pair having a PCC greater than
+has the advantages of both faster classification speed and higher
+                                                                                        0.9, the feature with lower correlation with the label is
+rate of NewC detection.
+                                                                                        removed.
+                                    KP                                               3) The remaining features are ranked by RF. The optimal
+                P urityRate =                                             (1)
+                             KP + KN + KU                                               feature subset is obtained by adding features one by one
+                                       UP                                               according to the degree of importance and by observing
+               T rueDetectionRate =                                       (2)           the change of classification Acc, so as to find the inflec-
+                                    UP + UN
+                                                                                        tion point of performance. In the experiments, around 20
+                                                                                        features are finally selected by our method.
+B. Data Preprocessing
+   1) Feature Extraction: To achieve fast online classification,                  C. Initial Threshold Selection and Confidence (difference)
+the flow data is partitioned into 1-second flow segments. The                     Distributions
+first ten packets of each segment are used to compute the flow
+features which are then used for classification.                                     To determine the initial threshold α0 required for the adaptive
+   The collected data comprise of six distinct sequences, i.e.,                   threshold selection algorithm, we begin by analyzing the CfD-
+packet size, packet arrival time, timestamp, packet difference,                   max distributions of KnownC and NewC samples. The detailed
+uplink rate and downlink rate. Seventeen statistical features, as                 process will be explained below.
+described in Table III, are computed for each sequence.                              To obtain the confidence that a given sample belongs to
+   In order to improve the efficiency of NTC, the conditional                     each known class, most current DL-based methods [25] use
+frequency feature was introduced by Quan et al. [27], which                       softmax activation in the last layer to get a probability vec-
+is defined as the count of varying combinations for the (coded)                   tor. However, most edge devices have limited computing and
+sizes of two adjacent packets occurring in the upstream or down-                  storage resources, and may be unsuitable for using DL models
+stream direction. There are 25 downlink and 4 uplink conditional                  that commonly require much more hardware resources. In this
+frequency features. The total number of flow features is 131. As                  study, we use RF to analyze the distributions of classification
+an example, the downlink conditional frequency CF (i j) for a                     confidence with different patterns. The confidence distributions
+flow sample is computed as follows:                                               of known classes (with samples of 8 classes randomly selected
+                                                                                  from MixD1) and unknown classes (with samples from other
+                    
+   CF (i\j) =               c(P1 (i), P2 (j)), i, j ∈ {1, 2, 3} (3)               8 classes of MixD1), as well as the CfDmax distributions, are
+                  f lowsample                                                     shown in Figs. 5 and 6, respectively.
+                                                                                     Fig. 5 indicates that the known classes exhibit a higher
+where, c(P1 (i), P2 (j)) indicates an event that occurs once when                 percentage within the lowest confidence interval (0, 0.1] and
+the coded size of the former packet P1 is i, and that of the                      the highest confidence interval (0.9, 1.0] compared to the new
+subsequent packet P2 is j.                                                        classes. From Fig. 6, it can be seen that the known classes have
+   2) Feature Selection: The online classification requires fea-                  a significantly higher percentage of CfDmax within the range
+ture extraction (FE) to be as fast as possible, so feature selection              (0.9, 1.0] in comparison to the new classes. Therefore, CfDmax
+(FS) and dimensionality reduction are performed as follows:                       can be used to distinguish the KnownC from the NewC, and α0
+   1) The time complexity analysis of FE is performed to choose                   can be set to 0.9.
+      a subset of features whose complexity is no more than O(n)                     To validate the universality of this setup approach, we ran-
+      (n is the number of data packets).                                          domly select 5 combinations of known and new classes from
+
+ Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+LU et al.: NEW CLASS DETECTION IN NETWORK TRAFFIC CLASSIFICATION USING CONFIDENCE INFORMATION EMBEDDED                                                      1697
+
+
+
+                                                                   TABLE IV
+                                     DIFFERENT COMBINATIONS OF KNOWN AND NEW CLASSES ON MIXD1 AND MIXD2
+
+
+
+
+                                                                                  Fig. 8. Distributions of CfDmax between (0.9, 1.0] for different combinations
+                                                                                  of known and new classes on MixD2.
+
+
+Fig. 6.   CfDmax distributions of known and new classes.                          lower bound of this range as the initial threshold. It is worth not-
+                                                                                  ing that the initial threshold does not need to be highly precise,
+                                                                                  only an approximate value is sufficient. Subsequent experiments
+                                                                                  (Section IV-D) demonstrate that our proposed adaptive threshold
+                                                                                  selection method is robust to the slight deviations of the initial
+                                                                                  threshold.
+
+                                                                                  D. Adaptive Threshold Selection
+                                                                                     Although the CfDmax distributions can effectively differen-
+                                                                                  tiate between new and known traffic types, applying a fixed
+                                                                                  CfDmax threshold to new datasets may lead to bias in the clas-
+                                                                                  sification boundary. To ensure that CCS-UTD remains robust in
+Fig. 7. Distributions of CfDmax between (0.9, 1.0] for different combinations     identifying traffics in a new network environment, an Adaptive
+of known and new classes on MixD1.                                                Threshold Selection (ATS) approach is proposed. ATS provides
+                                                                                  a general threshold selection method for different scenarios by
+MixD1 and MixD2 (See Section IV-A for more details) in                            using weighted operations on the mean and standard deviation
+Table IV. Then, for different combinations, we measure the                        of multiple predictions of the pseudo new classes samples.
+proportions of known and new classes when CfDmax is between                          Given the variations in the model’s learning degree for sam-
+(0.9, 1.0]. As shown in Figs. 7 and 8, the percentages for known                  ples and the inherent uncertainty of samples under different
+classes are mostly higher than 80%, while those of new classes                    traffic characteristics, we design a multi-update scheme to retrain
+are mostly lower than 30%. In addition, the percentage of known                   RF0 (an initial RF model trained by KnownC samples) and
+classes is much higher than that of new classes in the range of                   introduce a prediction memory to store representative CfDmax
+(0.9, 1.0] of CfDmax, which demonstrates the right choice of                      values from each update. Specifically, in addition to unknown
+initial threshold value 0.9.                                                      flows, there exists a certain number of known flows filtered by
+   In conclusion, for the determination of the initial threshold,                 OC-SVM from unlabelled data, which can be used to update
+the key is to identify a range where the number of KnownC                         RF0 . Then, by calculating the mean and standard deviation of all
+samples significantly exceeds that of NewC samples, and use the                   representative CfDmax values in the memory, both the learning
+
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+1698                                                         IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 3, MAY/JUNE 2025
+
+
+
+
+                                                                                   Algorithm 1: Adaptive Threshold Selection.
+                                                                                   Require: Size of memory S, RF0 trained with known class
+                                                                                     samples, prediction memory, initial threshold α0
+                                                                                   Input: Unlabelled flow dataset U
+                                                                                   Output: Adaptive threshold α
+                                                                                    1: Obtain known flows M2 by Algorithm 2
+                                                                                    2: Obtain subset M of unlabelled data with unknown
+                                                                                        classes whose CfDmax > α0 by Algorithm 2
+                                                                                    3: # Update RF0 to recalculate CfDmax for M
+                                                                                    4: Divide M2 into S subsets:
+Fig. 9.   Adaptive Threshold Selection.
+                                                                                       M2 = {Sub1 , Sub2 , . . . , SubS }
+                                                                                    5: for i = 1 to S do
+                                                                                    6:    Define Training set
+status and their fluctuations of the sample can be effectively                            Seti = Sub1 ∪ Sub2 ∪ · · · ∪ Subi
+reflected.                                                                          7:    Retrain RFi using RFi−1 as the initial model and
+   As shown in Fig. 9, ATS consists of three stages: (1) RF                               Training set Seti
+is updated S times using the filtered known classes samples,                        8:    Obtain and store updated model RFi
+generating a series of RF models, denoted as RFi , i=1,...,                         9: end for
+S; (2) The pseudo-negative samples with high CfDmax are                            10: Initialize a temporary array: temp
+screened out from the unlabelled dataset by using the ini-                         11: for j = 1 to S do
+tial threshold α0 , and then perform S predictions on these                        12:    for each m ∈ M do
+pseudo-negative samples with the RFi models to recalculate                         13:      Compute CfDmax−m ← calculation using RFj
+their CfDmax values. The 10th percentile of the predicted                                   on m
+CfDmax values on these pseudo-negative samples after each                          14:      Store CfDmax−m in temp
+update is stored in memory; (3) Using the stored values of                         15:    end for
+mean and standard deviation, the adaptive threshold α that best                    16:    Calculate the 10th percentile of temp and store it in
+fits the current dataset is determined by weighted calculation.                           memory
+The implementation details of the ATS method are shown in                          17: end for
+Algorithm 1.                                                                       18: # Calculate mean and standard deviation in memory to
+                                                                                        obtain adaptive threshold α
+                                                                                   19: Calculate the mean in memory: mean
+E. Selection of Pseudo NewC Samples From Unlabelled                                20: Calculate the standard deviation in memory: std
+Datasets                                                                           21: Adaptive threshold α = mean − std
+                                                                                   22: Return α
+   From the above analysis (Figs. 5–8), it can be seen that in
+the testing stage, H2 can detect new classes with the threshold
+β (=0.9). However, as shown in Fig. 8, there are still a fraction
+of NewC instances with CfDmax exceeding 0.9, resulting in                         higher than β, it is recognized (by H2 ) as belonging to the known
+misclassification.                                                                classes.
+   As mentioned above, H1 is added into the cascade structure
+that is trained by the pseudo unknown class samples selected                      F. Cascade Classification
+from the unlabelled datasets in combination with the KnownC
+                                                                                     In the testing stage, H2 trained on the KnownC dataset
+samples. Since gathering unlabelled flow data is relatively easy
+                                                                                  detects the NewC instances by CfDmax thresholding, and
+from the real networks [28], this study attempts to choose nega-
+                                                                                  classifies the known classes using the Cfmax information.
+tive samples from the unlabelled data to train H1 , for the purpose
+                                                                                  Algorithm 3 describes the cascade classification process. Note
+to obtain negative samples with CfDmax values greater than the
+                                                                                  that Ui1 and Ui−1 (for i = 1, 2, . . . , k) are the positive and
+threshold α. The specific process is shown in Algorithm 2.
+                                                                                  negative classes derived from the OC-SVMi classification,
+   During the process of selecting adaptive thresholds, while our
+                                                                                  respectively.
+primary focus is on setting the parameter α, for the threshold
+β used in the testing phase, we recommend β = α. Subse-
+quent experiments (Section IV-D) will verify this. Note that                                                  IV. EXPERIMENTS
+the thresholds α and β have distinct uses, though they may
+                                                                                  A. Datasets
+have the same numerical value. In the screening of unlabelled
+samples, any sample whose CfDmax is higher than the value                           Comprehensive experiments are carried out on five real
+of α is classified as a negative sample, and these samples are                    network datasets: ISCX non-VPN (ISCX) [29], VideD video
+similar to but not belong to the KnownC. On the other hand,                       dataset, ISCX-Tor [30], USTC-TFC [31] malware dataset
+during the testing phase, if the CfDmax of the input sample is                    and Edge-IIoTset [32] network security dataset. Data in the
+
+ Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+LU et al.: NEW CLASS DETECTION IN NETWORK TRAFFIC CLASSIFICATION USING CONFIDENCE INFORMATION EMBEDDED                                                      1699
+
+
+
+
+ Algorithm 2: Selection for Pseudo Unknown Class Samples                           Algorithm 3: Cascade Classification Algorithm.
+ From Unlabelled Flow Datasets.                                                    Require: Mixed flow dataset X; CfDmax threshold β
+ Require: KnownCk (z1 , z2 , . . . , zk ), CfDmax adaptive                         Output: KnownC label z (z1 , z2 , . . . , zk ); NewC label y
+   threshold α, RF0 trained with known class samples                                1: FE is applied to the dataset X to obtain the input
+ Input: Unlabelled flow dataset U                                                       sample x
+ Output: Subset M of unlabelled data with unknown classes                           2: H1 classifies x to obtain y1 and x0 , where y1 ∈ y
+   whose CfDmax > α, subset M2 of unlabelled data with                              3: H2 outputs the confidence set lt = {t1 , t2 , . . . , tk } for
+   known classes                                                                        each sample l in x0
+  1: for i = 1 to k do                                                              4: Calculate the difference between maximum confidence
+  2:     Train with KnownC zi to obtain OC-SVMi                                         and minimum confidence in lt: βl = tmax − tmin
+  3: end for                                                                        5: for l in x0 do
+  4: for i = 1 to k do                                                              6:    if βl > β then
+  5:     Classify U with OC-SVMi and obtain Ui1 and Ui−1                            7:       l∈z
+  6: end for                                                                        8:       Find the subscript index j of the maximum
+  7: M1 = U11 ∪ U21 ∪ U31 ∪ · · · ∪ Uk1                                                      confidence in the confidence set lt of l
+  8: for each m ∈ M1 do                                                             9:       if j = 1 then
+  9:     if m only in U11 ∨ U21 ∨ U31 ∨ · · · ∨ Uk1 then                           10:          l ∈ z1
+ 10:        m ∈ M2                                                                 11:       else if j = 2 then
+ 11:     else                                                                      12:          l ∈ z2
+ 12:        m ∈ M3                                                                 13:       else if j = k then
+ 13:     end if                                                                    14:          l ∈ zk
+ 14: end for                                                                       15:       end if
+ 15: M4 = U1−1 ∩ U2−1 ∩ U3−1 ∩ · · · ∩ Uk−1                                        16:    else
+ 16: M5 = M3 ∪ M4                                                                  17:       l ∈ y2
+ 17: RF output confidence set mt = {t1 , t2 , . . . , tk } for                     18:    end if
+       each sample m in M5                                                         19: end for
+ 18: Calculate the difference between maximum confidence                           20: y = y1 ∪ y2
+       and minimum confidence in mt : αm = tmax − tmin
+ 19: for each m ∈ M5 do
+                                                                                                                   TABLE V
+ 20:     if αm > α then                                                                                        ISCX PARTIAL DATA
+ 21:        m∈M
+ 22:     else
+ 23:        Discard m
+ 24:     end if
+ 25: end for
+ 26: Return M , M2
+
+
+VideD dataset was collected in the campus network of Nan-
+jing University of Posts and Telecommunications during 2019-
+2020 using the Wireshark [33] software. Tables V–IX show                                                           TABLE VI
+                                                                                                                 VIDED DATASET
+the specific information of each dataset. To verify the gen-
+eralizability of the proposed method, the ISCX and VideD
+datasets are combined to form the hybrid dataset 1 (MixD1).
+Similarly, a hybrid dataset 2 (MixD2) composed of Edge-
+IIoTset, ISCX-Tor, VideD and USTC-TFC datasets, con-
+taining 36 traffic classes, is used to simulate larger traffic
+loads.
+
+B. Evaluation Indexes                                                             the proportion of correctly predicted positive examples; R is the
+   The proposed method is evaluated in terms of classification                    proportion of positive samples that are correctly identified; F1
+accuracy and time efficiency. For the classification accuracy, four               score is the harmonic mean of P and R. The specific compu-
+metrics are used, which are the normalized accuracy (NA) of the                   tations are shown in (4)–(9), where, for KnownC i, T Pi , T Ni ,
+open set recognition [7] (which weights the accuracy for known                    F Pi , and F Ni represent the numbers of positive and negative
+classes (AKS) and the accuracy for new classes (AUS)), the                        samples correctly classified, and the numbers of positive and
+precision (P ), recall (R) and F1 score (F1 ), where P represents                 negative samples incorrectly classified, respectively; T U and
+
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+1700                                                         IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 3, MAY/JUNE 2025
+
+
+
+                               TABLE VII                                                                       TABLE X
+                          ISCX-TOR PARTIAL DATA                                   CLASSIFICATION RESULTS USING DIFFERENT INITIAL THRESHOLDS ON MIXD1
+
+
+
+
+                             TABLE VIII
+                      USTC-TFC MALWARE DATASET
+
+
+
+                                                                                                               TABLE XI
+                                                                                  CLASSIFICATION RESULTS USING DIFFERENT INITIAL THRESHOLDS ON MIXD2
+
+
+
+                                TABLE IX
+                           EDGE-IIOTSET DATASET
+
+
+
+
+F U refer to the numbers of samples of new classes correctly                      D. Effects of Different Initial Threshold Values
+and incorrectly identified, respectively; λ is the regularization
+                                                                                     In the ATS algorithm, the initial threshold is an important fac-
+coefficient, with 0 <λ <1 (it is set to 0.5 in the experiments).
+                                                                                  tor. To better evaluate the performance of the model with varying
+The evaluation of time performance includes the training and
+                                                                                  initial thresholds, several KnownC and NewC combinations are
+inference time.
+                                                                                  randomly selected from both MixD1 and MixD2. Specifically,
+           N A = λAKS + (1 − λ)AU S                                       (4)     Combination 1 includes 6 known classes and 6 new classes,
+                        k                                                        while Combination 2 consists of 6 known classes and 5 new
+                           i=1 (T Pi + T Ni )                                     classes. Tables X and XI list the results obtained from different
+          AKS = k                                                        (5)
+                   i=1 (T Pi + T Ni + F Pi + F Ni )
+                                                                                  data combinations and initial thresholds.
+                                                                                     As mentioned in Section III-C, the optimal initial threshold
+                    TU
+          AU S =                                                          (6)     for MixD1 and MixD2 is 0.9. From Tables X and XI, it can be
+                  TU + FU                                                         observed that when the initial threshold α0 deviates from 0.9,
+                    TP                                                            the adaptive threshold α converges toward the optimal threshold
+              P =                                                         (7)
+                  TP + FP                                                         under the guidance of the ATS algorithm and thus the decrease
+                     TP                                                           in NA does not exceed 6%, which demonstrates the robustness
+              R=                                                          (8)     of ATS to slight deviations. Regarding the impact of α0 on
+                  TP + FN
+                                                                                  the classification performance of known and new classes of
+                  2∗P ∗R
+             F1 =                                                         (9)     CCS-UTD, increasing α0 improves the precision of KnownC
+                   P +R                                                           but results in a decline in recall. In contrast, for the new classes,
+                                                                                  increase of α0 will generally tend to increase recall but decrease
+C. Experimental Environment                                                       precision. This is because the CfDmax of the KnownC is mainly
+   The experiments are performed on a Dell Vostro 14-5480                         distributed between (0.9, 1.0], while the CfDmax of the NewC is
+laptop with Windows 10 operating system, Intel i5-5200 U                          relatively evenly distributed in all intervals. When the threshold
+CPU@2.20 GHz CPU, and 8 GB RAM. The 5-fold cross-                                 is increased to 0.9, fewer KnownC samples will be misclassified
+validation is used in the experiments, with 80% samples ran-                      into new classes, and more new classes will be detected.
+domly selected from the total samples as the training set, and                       For the threshold β in the testing phase, it is suggested to use
+the remaining 20% as the test set. OC-SVM is implemented                          the same value as α. Specifically, the binary classifier H1 is used
+using LIBSVM [34]; the number of trees in RF is set to 100, and                   to detect the NewC samples with CfDmax greater than β. The
+min_samples_leaf is 1.                                                            NewC samples with β <CfDmax <α cannot be detected during
+
+ Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+LU et al.: NEW CLASS DETECTION IN NETWORK TRAFFIC CLASSIFICATION USING CONFIDENCE INFORMATION EMBEDDED                                                      1701
+
+
+
+                             TABLE XII
+    CLASSIFICATION EFFECTS OF INCONSISTENT THRESHOLDS ON MIXD1
+
+
+
+
+                             TABLE XIII
+    CLASSIFICATION EFFECTS OF INCONSISTENT THRESHOLDS ON MIXD2
+
+
+
+
+                                                                                  Fig. 11.   Comparison of classification performances of different methods on
+                                                                                  MixD2.
+
+
+                                                                                                             TABLE XIV
+                                                                                  COMPARISON OF TIME PERFORMANCES OF DIFFERENT METHODS ON 2 MIXED
+                                                                                                      DATASETS (AVE. MS/SAMPLE)
+
+
+
+
+                                                                                  MixD1 and MixD2. Table XIV illustrates the time performances
+                                                                                  of these methods.
+                                                                                     It can be seen from Figs. 10 and 11 that on different datasets,
+                                                                                  the F1 score and NA indexes for KnownC and NewC obtained
+                                                                                  by CCS-UTD are significantly better than those obtained by
+                                                                                  other methods. According to Table XIV, CCS-UTD also has the
+                                                                                  shortest training and inference time.
+                                                                                     Note that the k-LND method [26] defined the logit layer
+                                                                                  output as the class center and named it Mean Activation Vector
+                                                                                  (MAV). They assumed that a sample from a known class would
+                                                                                  be distant from MAV of the neighbors of its class, in addition
+Fig. 10.   Comparison of classification performances of different methods on      to being closer to its own MAV, which improves the closed-set
+MixD1.                                                                            and open-set classification accuracies. However, as can be seen
+                                                                                  from the Figs. 10 and 11, although the F1 score of k-LND is
+the classification process if α >β. Conversely, if α <β, H1 may                   close to that of CCS-UTD, its P is particularly low, that is, its
+misclassify more KnownC samples into new classes. Tables XII                      false positive rate is high, which indicates that its classification
+and XIII provide a comparison of the classification performance                   boundary is too loose. In contrast, CCS-UTD not only maintains
+for different values of α and β. According to the comparisons,                    the highest F1 and NA scores, but also improves the P of
+if α >β, the recall of NewC decreases, while when α <β, the                       known classes by nearly 20% compared to k-LND. This shows
+recall of KnownC drops. The overall classification accuracy is                    that our method successfully separates most of NewC samples
+optimal when α = β.                                                               that are similar to KnownC samples into a new classification
+                                                                                  space, which effectively avoids misclassification of known and
+                                                                                  unknown classes.
+E. Comparison of Different Methods                                                   Compared to CD-OSR, by using CCS-UTD, the F1 score
+   Figs. 10 and 11 present the comparisons of the classification                  is improved by around 8-10% and 8-9% for KnownC and
+results of the proposed method CCS-UTD with three other                           NewC, respectively, and NA index is improved by 10-11%. This
+methods of CD-OSFR [10], ASG-SVM [12] and k-LND [26] on                           improvement may be attributed to the fact that CD-OSR does
+
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+1702                                                         IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 3, MAY/JUNE 2025
+
+
+
+not fully utilize the label information of the KnownC. In other                                                  TABLE XV
+                                                                                                     NA FOR DIFFERENT MEMORY LENGTHS S
+words, CD-OSR relies on the HDP automatic clustering, and
+does not strictly classify samples into corresponding classes
+based on their labels. Thus, the samples of different labels may
+be clustered into the same class, or the samples having the same
+label clustered into different classes during the training process.
+In contrast, CCS-UTD takes advantage of the label information                                                    TABLE XVI
+explicitly, and applies it to the classification pipeline. Concern-                                      NA FOR DIFFERENT PERCENTILES
+ing the time performance, CD-OSR needs longer training and
+inference time as it is bound by HDP’s inherent complexity, thus
+resulting in higher computational cost.
+   Compared with ASG-SVM, CCS-UTD demonstrates an im-
+provement of approximately 13-14% in F1 score for KnownC,
+3% in F1 score for NewC, and 2-5% in NA index. Although ASG-
+SVM outperforms CCS-UTD in detecting new classes than in                                                       TABLE XVII
+                                                                                                NA UNDER DIFFERENT η IN ADAPTIVE THRESHOLD
+sub-classifying known classes, it generates negative samples
+akin to each KnownC, leading to lower recall rates for the known
+classes. In addition, ASG-SVM trains one SVM classifier for
+each KnownC using both positive and negative samples, thus
+requiring training multiple SVMs, leading to longer training
+time. In the testing stage, only when all trained SVMs recognize
+an instance as a negative one, will ASG-SVM classify it as a                      this parameter does not need to be prioritized. As shown in
+NewC sample, resulting in longer inference time.                                  Table XV, CCS-UTD can achieve the best performance when
+                                                                                  S = 15. Generally, while a longer memory length provides
+F. Real-Time Applicability                                                        a more comprehensive assessment of confidence information,
+   Most DL-based NTC models contain tens of thousands of                          an excessively long memory may fail to accurately reflect the
+parameters, resulting in model sizes ranging from a few MB                        current status of samples and causes additional storage costs. On
+to several hundred MB, and normally need dedicated compu-                         the contrary, if the memory length is too short, it is difficult to
+tational hardware such as GPU. However, many edge devices                         effectively capture fluctuations in CfDmax. Therefore, setting
+commonly have limited storage of only a few MB, and limited                       S = 15 allows ATS to enhance flexibility and efficiency while
+computation power, which makes it challenging to accommo-                         being more adaptable to high traffic loads.
+date medium to large-scale models [16]. Our approach with an                         Next, we present the experimental CfDmax values and corre-
+RF model only requires a memory of a few hundred KB and                           sponding NA indexes in intervals of different percentiles based
+common CPU, that is affordable for most network edge devices.                     on the CfDmax distributions (in the range of its min. value of
+Moreover, the packet forwarding rate of common edge routers is                    0.665 and max. value of 1). As show in Table XVI, at the 1st
+usually around a few million packets per second (Mpps) [35]. As                   percentile, CfDmax is significantly lower than in other intervals,
+shown in Table XIV, for the training time, CCS-UTD is much                        with a comparatively low NA. In contrast, NA reaches its peak
+shorter than other methods; for the inference time, our method                    at the 10th percentile, while the changes in CfDmax thereafter
+can process a flow segment of 10 packets in around 0.04 ms on                     are relatively small. Therefore, we select the 10th percentile of
+average, achieving a throughput of 0.25 Mpps, which roughly                       each update as the representative value and store it in memory.
+aligns with the computational capabilities of common edge                            The proposed ATS determines the adaptive threshold α
+routers. With its notably low classification latency, the proposed                through linear combination operations, where the key factor
+CCS-UTD demonstrates significant potential for deployment in                      is the weight η of the standard deviation. It can be seen from
+real-world network traffic classification systems. In comparison,                 the Table XVII that NA is the highest when η is −1. This
+k-LND reduces model parameters through model quantization.                        is because this setting effectively reduces the uncertainty in
+However, its packet processing time is still twice as long as that                predictions while measuring the learning status of samples after
+of our method, which implies higher hardware requirements                         multiple updates, thereby enhancing the stability of ATS. Further
+for the device. Meanwhile, ASG-SVM and CD-OSR require                             experiments with varying levels of noise in unlabelled dataset
+devices with even higher computational resources, making them                     (Section IV-I) demonstrate that this approach also improves the
+unsuitable for deployment on resource-limited edge devices.                       robustness of CCS-UTD to noises in the dataset.
+
+G. Sensitivity Analysis                                                           H. Ablation Experiments
+   Table XV explores the impact of the length S of prediction                        1) Algorithm Module: In order to further evaluate the pro-
+memory on NewC detection. Overall, the adaptive threshold                         posed model, ablation experiments are conducted on three addi-
+method exhibits similar NA on the MixD2 dataset across differ-                    tional datasets. Here we mainly focus on the comparisons of the
+ent memory lengths, indicating a low sensitivity to changes in                    micro-F-measure used in CD-OSFR, where the FN and FP also
+S. Therefore, when handling new data distributions, adjusting                     consider the false unknown classes and false known classes.
+ Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+LU et al.: NEW CLASS DETECTION IN NETWORK TRAFFIC CLASSIFICATION USING CONFIDENCE INFORMATION EMBEDDED                                                      1703
+
+
+
+                                                                   TABLE XVIII
+                                             PERFORMANCE COMPARISON OF DIFFERENT MODELS ON TWO DATASETS
+
+
+
+
+                                                                                                             TABLE XIX
+                                                                                        COMPARISON OF NA BETWEEN ADAPTIVE THRESHOLD AND FIXED
+                                                                                                 THRESHOLD AT DIFFERENT NOISE LEVELS
+
+
+
+
+Fig. 12.   Ablation experimental results on different datasets.
+
+
+                                                                                  training process only requires data storage, its training time is
+   First, for CfDmax, we remove H1 trained by the screened                        the shortest, but its testing time is longer. In contrast, XGBoost
+samples and only use H2 and maximum confidence as thresholds                      has the longest training time.
+for the identification of KnownC and NewC samples. Then, to                          Further, we evaluate the performance of two deep learning
+demonstrate the robustness of adaptive threshold in different                     models, AutoEncoder and CNN1D, on two mixed datasets.
+scenarios, we select three datasets LETTER [36], USPS [37]                        Specifically, we follow the settings of Deep Packet [41] to
+and PENDIGITS [38] used in CD-OSFR, and MixD2 dataset                             convert raw data packets into byte vectors as features. As shown
+containing the most traffic classes. At the same time, a fixed                    in Table XVIII, deep learning methods do not show significant
+threshold version of CCS-UTD, called CCS-UTD-Fix, is also                         performance advantages over RF and XGBoost and require
+used.                                                                             longer training time. So, we select the RF model for this paper.
+   H2 -alone, CD-OSFR and CCS-UTD-Fix are used as the base-
+lines for comparison. As shown in Fig. 12, CCS-UTD obtains
+the best F1 score on almost every dataset, while H2 -alone                        I. Selection of Pseudo-Negative Samples on Noisy Datasets
+performs the worst on every dataset. This is because using only                      In real-world network environments, noise is unavoidable
+the maximum confidence as a threshold can only distinguish                        when gathering unlabelled data. To evaluate the effect of noise on
+some obvious unknown classes and confuse other unknown                            NewC detection performance, we add different levels of Gaus-
+classes with known classes. Training H1 with unlabelled samples                   sian noise to two mixed real-world datasets and compares NA
+selected by CfDmax can enhance the model’s discriminative                         performance under both adaptive and fixed thresholds. Specif-
+ability and allocate better classification regions for NewC.                      ically, the added noise level represents the standard deviation
+   Compared to CCS-UTD-Fix, CCS-UTD using ATS can find                            of Gaussian noise, which is proportional to the feature value of
+the optimal threshold in each dataset, thus achieving the best                    each sample.
+performance. Especially on dataset PENDIGITS, using a fixed                          As shown in Table XIX, after multiple rounds of updates,
+threshold of 0.9 is not fully applicable, resulting in inferior                   the ATS scheme demonstrates better noise robustness across all
+performance to CD-OSFR.                                                           datasets compared to the fixed threshold. With the increase of
+   2) Model Selection: In terms of model selection, we evaluate                   noise level, the performance degradation rate of ATS is signif-
+the fine-grained classification F1 scores (excluding new classes),                icantly lower than that of the fixed threshold. This is attributed
+new class detection performance (NA), and training time of                        to the linear combination of mean and standard deviation in the
+KNN [39], XGBoost [40], and RF on two mixed datasets. As                          ATS algorithm, which comprehensively considers the learning
+shown in Table XVIII, in fine-grained classification (Fine-F1 ),                  status and stability of the samples after each update. Specif-
+RF and XGBoost have similar performance, while KNN per-                           ically, noise affects the fluctuations of model predictions for
+forms worse. For new class detection, RF has a higher NA index                    samples, and standard deviation is one of the key measure of
+than the other models, demonstrating better new class detection                   this fluctuation. Intuitively, if the predicted CfDmax value for a
+capability. In terms of training time, due to the fact that KNN’s                 sample remain stable over multiple updates, it indicates that the
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+1704                                                          IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 3, MAY/JUNE 2025
+
+
+
+                            TABLE XX
+COMPARISON OF CLASSIFICATION PERFORMANCE USING DIFFERENT NEGATIVE
+                  SAMPLES ON MIXD1 AND MIXD2
+
+
+
+
+                                                                                  Fig. 14. Visualization of known classes (blue circle), new classes (orange
+                                                                                  cross), and adversarial-based generation of negative samples (purple pentagon)
+                                                                                  on MixD1.
+
+
+                                                                                     The different classification outcomes can be explained by
+                                                                                  the different distributional relationships between the pseudo-
+                                                                                  negative samples and the known classes generated by the two
+                                                                                  methods. The negative samples generated with the adversar-
+                                                                                  ial method enhance the ability of the method to detect new
+                                                                                  classes, but also increase the likelihood of misclassifying the
+                                                                                  known classes as new classes, leading to higher recall for new
+                                                                                  classes and higher precision for known classes. However, this
+                                                                                  method has lower precision for new classes and recall for known
+                                                                                  classes compared to our method. To sum up, by utilizing the
+                                                                                  pseudo-negative samples filtered by our method, it can en-
+                                                                                  hance the ability of our method to sub-classify known classes,
+Fig. 13. Visualization of known classes (blue circle), new classes (orange        identify new classes, and greatly reduce the computational
+cross), and negative samples filtered from unlabelled data (purple pentagon) on
+MixD1.
+                                                                                  cost.
+
+                                                                                                               V. CONCLUSION
+model’s knowledge of the sample is consistent, thus making the                       In order to improve the performance of open set flow recogni-
+prediction more reliable.                                                         tion, this paper proposes a NewC detection method, called CCS-
+   As for the generation of pseudo-negative samples, ASG-SVM                      UTD, based on confidence (difference) and a cascade structure.
+generates negative samples through adversarial learning (AL),                     The associated algorithms are implemented by analyzing the
+while CCS-UTD chooses negative samples from the unlabelled                        confidence distributions of the known and new classes, and an
+data (UL). Table XX compares the two pseudo-negative sample                       algorithm is designed to filter out the pseudo-negative samples
+generation methods by presenting the classification results of                    from the unlabelled dataset. The NewC instances exceeding a
+H1 trained with various negative samples on both datasets.                        threshold are first detected by a binary classifier. The remain-
+   As can be seen from Table XX, our selection method is better                   ing data is then distinguished using CfDmax to separate the
+than the adversarial generation method; it can improve the F1                     NewC samples from the KnownC samples, which are further
+score by around 8-9% for the KnownC and by about 5% for                           sub-classified using Cfmax for known classes. The proposed
+the NewC, only at the cost of a slight decrease of NA index.                      method is evaluated on two hybrid datasets consisting of five
+This is because the negative samples generated by ASG-SVM                         real network datasets, reaching an overall accuracy higher than
+are the surrounding boundary data of KnownC, which are easily                     90%. Compared with the state-of-the-art methods, the F1 and
+confused with the KnownC, while the distribution of the negative                  NA scores of known and new classes are significantly improved
+samples chosen by our method is slightly more random.                             by using our method, and the training and inference time are
+   Taking MixD1 as an example, a graphical illustration of dif-                   greatly reduced.
+ferent pseudo-negative samples, known classes and new classes                        However, the proposed method has some limitations: When
+using TSNE [42] is given in Figs. 13 and 14. From the plots, it                   screening the negative samples, the randomness of unlabelled
+can be seen that there is no significant correlation between the                  data and the threshold condition may restrict the number of
+KnownC and the distribution of negative samples by our method;                    obtained negative samples, thus lowering the utilization rate
+while with the adversarial method, there is a greater degree of                   of the dataset. Our future work will consider fast updating of
+entanglement between the KnownC and the generated negative                        the model and investigating scenarios where the instances of
+samples.                                                                          different new classes appear in the flow traffic data.
+
+ Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+LU et al.: NEW CLASS DETECTION IN NETWORK TRAFFIC CLASSIFICATION USING CONFIDENCE INFORMATION EMBEDDED                                                              1705
+
+
+
+                                    REFERENCES                                        [24] S. Le, Y. Lai, Y. Wang, and H. He, “An adaptive classification and updating
+                                                                                           method for unknown network traffic in open environments,” Comput.
+ [1] Q. Ma, W. Huang, Y. Jin, and J. Mao, “Encrypted traffic classification                Netw., vol. 238, 2024, Art. no. 110114.
+     based on traffic reconstruction,” in Proc. 2021 IEEE 4th Int. Conf. Artif.       [25] J. Zhang, F. Li, F. Ye, and H. Wu, “Autonomous unknown-application
+     Intell. Big Data, 2021, pp. 572–576.                                                  filtering and labeling for dl-based traffic classifier update,” in Proc. 2020
+ [2] B. Pang, Y. Fu, S. Ren, and Y. Jia, “High-performance network                         IEEE Conf. Comput. Commun., 2020, pp. 397–405.
+     traffic classification based on graph neural network,” in Proc. 2023             [26] T. Dahanayaka, Y. Ginige, Y. Huang, G. Jourjon, and S. Seneviratne, “Ro-
+     IEEE 6th Inf. Technol., Netw., Electron. Automat. Control Conf., 2023,                bust open-set classification for encrypted traffic fingerprinting,” Comput.
+     pp. 800–804.                                                                          Netw., vol. 236, 2023, Art. no. 109991.
+ [3] N. Bhatla and M. Malik, “Network traffic classification techniques: A            [27] Y. xuan Quan, Y. ning Dong, Y. Xiang, S. shan Chen, Z. jian Wang,
+     review,” Comput. Intell. Eng. Manage. Appl. Sel. Proc. CIEMA, vol. 984,               and J. Jin, “Fast online classification of network traffic using new
+     LNEE, 2023, pp. 371–388.                                                              feature-embedded hierarchical structure,” Comput. Netw., vol. 237, 2023,
+ [4] Y. Yang et al., “A network traffic classification method based on dual-mode           Art. no. 110106.
+     feature extraction and hybrid neural networks,” IEEE Trans. Netw. Service        [28] K. Lin, X. Xu, and Y. Jiang, “A new semi-supervised approach for
+     Manag., vol. 20, no. 4, pp. 4073–4084, Dec. 2023.                                     network encrypted traffic clustering and classification,” in Proc. 2022
+ [5] S. Fathi-Kazerooni and R. Rojas-Cessa, “Countering machine-learning                   IEEE 25th Int. Conf. Comput. Supported Cooperative Work Des., 2022,
+     classification of applications by equalizing network traffic statistics,” IEEE        pp. 41–46.
+     Trans. Netw. Sci. Eng., vol. 8, no. 4, pp. 3392–3403, Oct.–Dec. 2021.            [29] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghor-
+ [6] X. Mu, K. M. Ting, and Z.-H. Zhou, “Classification under streaming                    bani, “Characterization of encrypted and VPN traffic using time-
+     emerging new classes: A solution using completely-random trees,” IEEE                 related,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, 2016,
+     Trans. Knowl. Data Eng., vol. 29, no. 8, pp. 1605–1618, Aug. 2017.                    pp. 407–414.
+ [7] C. Geng, S.-J. Huang, and S. Chen, “Recent advances in open set recog-           [30] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani, “Charac-
+     nition: A survey,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 43, no. 10,          terization of Tor traffic using time based features,” in Proc. Int. Conf. Inf.
+     pp. 3614–3631, Oct. 2021.                                                             Syst. Secur. Privacy, 2017, vol. 2, pp. 253–262.
+ [8] S. F. A. Zaidi and C.-G. Lee, “One-class classification based bug triage         [31] C. Zhao, Q. Li, X. He, R. Wang, K. Chen, and Z. Liu, “Data augmentation
+     system to assign a newly added developer,” in Proc. 2021 IEEE Int. Conf.              of discrete sequential protocol messages based on recurrent generative ad-
+     Inf. Netw., 2021, pp. 738–741.                                                        versarial networks,” in Proc. 2022 IEEE 2nd Int. Conf. Consum. Electron.
+ [9] Z. Yang, J. Long, Y. Zi, S. Zhang, and C. Li, “Incremental novelty                    Comput. Eng., 2022, pp. 393–400.
+     identification from initially one-class learning to unknown abnormality          [32] M. A. Ferrag, O. Friha, D. Hamouda, L. Maglaras, and H. Janicke, “Edge-
+     classification,” IEEE Trans. Ind. Electron., vol. 69, no. 7, pp. 7394–7404,           IIoTset: A new comprehensive realistic cyber security dataset of IoT and
+     Jul. 2022.                                                                            IIoT applications for centralized and federated learning,” IEEE Access,
+[10] C. Geng and S. Chen, “Collective decision for open set recognition,” IEEE             vol. 10, pp. 40281–40306, 2022.
+     Trans. Knowl. Data Eng., vol. 34, no. 1, pp. 192–204, Jan. 2022.                 [33] R. Das and G. Tuna, “Packet tracing and analysis of network cameras with
+[11] A. R. Lubis, S. Prayudani, Y. Fatmi, and O. Nugroho, “Latent semantic                 wireshark,” in Proc. 2017 IEEE 5th Int. Symp. Digit. Forensic Secur., 2017,
+     indexing (LSI) and hierarchical dirichlet process (HDP) models on news                pp. 1–6.
+     data,” in Proc. 2022 IEEE 5th Int. Conf. Comput. Inform. Eng., 2022,             [34] X. Qi, X. Wu, Y. Ji, X. Wang, and H. Li, “Research on classification of
+     pp. 314–319.                                                                          power load data based on LIBSVM,” in Proc. 2019 IEEE 11th Int. Conf.
+[12] Y. Yu, W.-Y. Qu, N. Li, and Z. Guo, “Open-category classification by                  Intell. Hum.- Mach. Syst. Cybern., 2019, pp. 158–162.
+     adversarial sample generation,” in Proc. 26th Int. Joint Conf. Artif. Intell.,   [35] M. Gallo, A. Finamore, G. Simon, and D. Rossi, “FENXI: Deep-learning
+     2017, pp. 3357–3363.                                                                  traffic analytics at the edge,” in Proc. 2021 IEEE/ACM Symp. Edge
+[13] J. Kwon, D. Jung, and H. Park, “Traffic data classification using machine             Comput., 2021, pp. 202–213.
+     learning algorithms in SDN networks,” in Proc. 2020 IEEE Int. Conf. Inf.         [36] P. W. Frey and D. J. Slate, “Letter recognition using holland-style adaptive
+     Commun. Technol. Convergence, 2020, pp. 1031–1033.                                    classifiers,” Mach. Learn., vol. 6, no. 2, pp. 161–182, 1991.
+[14] L. Yang, A. Finamore, F. Jun, and D. Rossi, “Deep learning and zero-day          [37] J. Hull, “A database for handwritten text recognition research,” IEEE
+     traffic classification: Lessons learned from a commercial-grade dataset,”             Trans. Pattern Anal. Mach. Intell., vol. 16, no. 5, pp. 550–554,
+     IEEE Trans. Netw. Service Manag., vol. 18, no. 4, pp. 4103–4118,                      May 1994.
+     Dec. 2021.                                                                       [38] M. Bilenko, S. Basu, and R. J. Mooney, “Integrating constraints and metric
+[15] T. Obasi and M. O. Shafiq, “An experimental study of different machine                learning in semi-supervised clustering,” in Proc. 21st Int. Conf. Mach.
+     and deep learning techniques for classification of encrypted network                  Learn., New York, NY, USA, 2004, p. 11. [Online]. Available: https://doi.
+     traffic,” in Proc. 2020 IEEE Int. Conf. Big Data, 2020, pp. 4690–4699.                org/10.1145/1015330.1015360
+[16] Z. Chen, G. Cheng, Z. Wei, D. Niu, and N. fu, “Classify traffic rather than      [39] G. Guo, H. Wang, D. Bell, Y. Bi, and K. Greer, “Knn model-based approach
+     flow: Versatile multi-flow encrypted traffic classification with flow clus-           in classification,” in Proc. Move Meaningful Internet Syst. 2003: CoopIS,
+     tering,” IEEE Trans. Netw. Service Manag., vol. 21, no. 2, pp. 1446–1466,             DOA, ODBASE: OTM Confederated Int. Conf., CoopIS, DOA, ODBASE
+     Apr. 2024.                                                                            2003, 2003, pp. 986–996.
+[17] Z. Wu, Y.-n. Dong, J. Jin, H.-L. Wei, and G. Xie, “Multimedia traffic            [40] T. Chen and C. Guestrin, “XGBoost: A scalable tree boosting system,”
+     classification for imbalanced environment,” IEEE Trans. Netw. Sci. Eng.,              in Proc. 22nd acm sigkdd Int. Conf. Knowl. Discov. Data Mining, 2016,
+     vol. 9, no. 3, pp. 1838–1852, May/Jun. 2022.                                          pp. 785–794.
+[18] W. J. Scheirer, A. de Rezende Rocha, A. Sapkota, and T. E. Boult, “Toward        [41] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian,
+     open set recognition,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 35,              “Deep packet: A novel approach for encrypted traffic classification
+     no. 7, pp. 1757–1772, Jul. 2013.                                                      using deep learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012,
+[19] W. J. Scheirer, L. P. Jain, and T. E. Boult, “Probability models for open             2020.
+     set recognition,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 36, no. 11,      [42] Y. Fujiwara, Y. Ida, S. Kanai, A. Kumagai, and N. Ueda, “Fast similarity
+     pp. 2317–2324, Nov. 2014.                                                             computation for t-SNE,” in Proc. 2021 IEEE 37th Int. Conf. Data Eng.,
+[20] P. Wang, Z. Wang, F. Ye, and X. Chen, “ByteSGAN: A semi-supervised                    2021, pp. 1691–1702.
+     generative adversarial network for encrypted traffic classification in SDN
+     edge gateway,” Comput. Netw., vol. 200, 2021, Art. no. 108535.                                               Haotian Lu received the B.E. degree in electrical
+                                                                                                                  engineering and its automation from the Changzhou
+[21] L. Neal, M. Olson, X. Fern, W.-K. Wong, and F. Li, “Open set learning
+                                                                                                                  Institute of Technology, Changzhou, China, in 2020.
+     with counterfactual images,” in Proc. Eur. Conf. Comput. Vis., 2018,
+                                                                                                                  He is currently working toward the doctoral degree
+     pp. 613–628.
+                                                                                                                  with the School of Communications and Informa-
+[22] Y. Chen, Z. Li, J. Shi, G. Gou, C. Liu, and G. Xiong, “Not afraid of the
+                                                                                                                  tion Engineering, Nanjing University of Posts and
+     unseen: A siamese network based scheme for unknown traffic discovery,”
+     in Proc. 2020 IEEE Symp. Comput. Commun., 2020, pp. 1–7.                                                     Telecommunications, Nanjing, China. His research
+                                                                                                                  interests include multimedia communications and
+[23] H. He, Y. Lai, Y. Wang, S. Le, and Z. Zhao, “A data skew-based unknown
+                                                                                                                  network traffic identification.
+     traffic classification approach for TLS applications,” Future Gener. Com-
+     put. Syst., vol. 138, pp. 1–12, 2023.
+
+
+
+  Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+1706                                                          IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 12, NO. 3, MAY/JUNE 2025
+
+
+
+                         Yuning Dong received the M.Phil. degree in com-                                     Hua-Liang Wei received the Ph.D. degree from the
+                         puter science from the Queen’s University of Belfast                                Department of Automatic Control and Systems En-
+                         (QUB), Belfast, U.K., and the Ph.D. degree in electri-                              gineering, University of Sheffield, Sheffield, U.K.,
+                         cal engineering from Southeast University, Nanjing,                                 in 2004. From 1992 to 2000, he holds academic
+                         China. From 1992 to 1993, he was a British Council                                  positions such as Assistant Professor, Lecturer, and
+                         Postdoctoral Fellow with Imperial College London,                                   Associate Professor with the Beijing Institute of Tech-
+                         London, U.K. From 1993 to 1995, he was a Visiting                                   nology, Beijing, China. In 2004, he was a Senior
+                         Scientist with the University of Texas, Austin, TX,                                 Research Fellow with the Department of Automatic
+                         USA. From 1995 to 1998, he was a Research Fellow                                    Control and Systems Engineering (ACSE), immedi-
+                         with QUB, and the University of Birmingham, Birm-                                   ately after the completion of the Ph.D. study. He is
+                         ingham, U.K. He is currently a Professor with the                                   currently a Senior Lecturer with the Department of
+School of Communications and Information Engineering, Nanjing University          Automatic Control and Systems Engineering (ACSE), University of Sheffield.
+of Posts and Telecommunications, Nanjing. He has authored or coauthored more      He is also the Head of the Laboratory of Dynamic Modelling, Data Mining, and
+than 200 papers in IEEE and other technical journals and referred conference      Decision Making. His research interests include nonlinear system identification,
+proceedings. His research interests include wireless networking, multimedia       machine learning, computational intelligence, data-driven modeling, and data
+communications, and network traffic identification.                               mining, with applications in many multidisciplinary study areas such as engi-
+                                                                                  neering, bioengineering, computational medicine and neurophysiology, energy,
+                                                                                  space weather, social and environmental sciences, among others.
+
+
+
+                                                                                                             Guanming Lu received the B.E. degree in radio engi-
+                                                                                                             neering the M.S. degree in communication and elec-
+                          Zhiyuan Wu received the M.E. degree from the Nan-                                  tronic systems from the Nanjing University of Posts
+                          jing University of Posts and Telecommunications,                                   and Telecommunications, Nanjing, China, in 1985
+                          Nanjing, China, in 2023. His research interests in-                                and 1988, respectively, and the Ph.D. degree in com-
+                          clude multimedia communications and network traf-                                  munication and information systems from Shanghai
+                          fic identification.                                                                Jiao Tong University, Shanghai, China, in 1999. He
+                                                                                                             is currently a Professor with the School of Commu-
+                                                                                                             nication and Information Engineering, Nanjing Uni-
+                                                                                                             versity of Posts and Telecommunications, China. His
+                                                                                                             research interests include image processing, affective
+                                                                                                             computing, and machine learning.
+
+
+
+
+ Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:19:25 UTC from IEEE Xplore. Restrictions apply.
+PAPER_TEXT

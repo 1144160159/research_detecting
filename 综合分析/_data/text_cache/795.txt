@@ -1,0 +1,161 @@
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026                                                                       3753
+
+
+
+
+               SAGA: Synthetic Audit Log Generation for
+                          APT Campaigns
+          Yi-Ting Huang , Ying-Ren Guo , Yu-Sheng Yang, Guo-Wei Wong , Yu-Zih Jheng, Yeali S. Sun ,
+                           Jessemyn Modini, Timothy Lynar , and Meng Chang Chen
+
+
+   Abstract—With the increasing sophistication of Advanced Per-                    malware analysis [1], [2], effective detection and mitigation of
+sistent Threats (APTs), the demand for effective detection and mit-                APT attacks remains a critical priority. A key obstacle in APT
+igation strategies and methods has escalated. Program execution                    threat studies is the lack of a widely recognized benchmark
+leaves traces in the system audit log, which can be analyzed to
+detect malicious activities. However, collecting and analyzing large               dataset [3], which is essential to develop AI/ML-based solutions
+volumes of audit logs over extended periods is challenging, further                and objectively evaluate methods. This challenge motivates the
+compounded by insufficient labeling that hinders their usability.                  study of synthetic audit log generation in this work.
+Addressing these challenges, this paper introduces SAGA (Syn-                         System audit logs, which record traces of program execution,
+thetic Audit log Generation for APT campaigns), a novel approach                   play a crucial role in log analysis for threat detection. For
+for generating find-grained labeled synthetic audit logs that mimic
+real-world system logs while embedding stealthy APT attacks.                       example, MITRE ATT&CK Evaluations [4] provide emulation
+SAGA generates configurable audit logs for arbitrary duration,                     plans that allow cybersecurity providers to assess their product’s
+blending benign logs from normal operations with malicious logs                    ability to detect simulated cyber attacks through system logs.
+based on the definitions the MITRE ATT&CK framework. Ma-                           With the advancement of data-driven artificial intelligence meth-
+licious audit logs follow an APT lifecycle, incorporating various                  ods, it has become increasingly effective in addressing certain
+attack techniques at each stage. These synthetic logs can serve
+as benchmark datasets for training machine learning models and                     cyber threats, such as attack analysis [5], [6], [7], which offer
+assessing diverse APT detection methods. To demonstrate the use-                   the potential for timely Technique detection. These approaches
+fulness of synthetic audit logs, we ran established baselines of                   typically rely on high-quality labeled audit logs for model train-
+event-based technique hunting and APT campaign detection using                     ing. In addition, it allows for the enhancement and comparison
+various synthetic audit logs. In addition, we show that a deep                     of various methods.
+learning model trained on synthetic audit logs can detect previously
+unseen techniques within audit logs.                                                  However, labeling large volumes of audit logs over long
+                                                                                   periods poses challenges, especially when APT attacks lack
+  Index Terms—Technique hunting, APT campaign, provenance-                         obvious indicators. Researchers often rely on publicly available
+based detection, synthetic audit log, deep learning.
+                                                                                   datasets such as the DARPA Transparent Computing Engage-
+                            I. INTRODUCTION                                        ment [8], Operationally Transparent Cyber (OpTC) [9], and
+                                                                                   LANL’s dataset [10], as well as smaller datasets that are rarely
+      HE emergence of Advanced Persistent Threats (APTs),
+T     such as Fancy Bear (APT28) and Lazarus Group Elfin
+(APT33), poses significant challenges to the cybersecurity com-
+                                                                                   shared due to privacy and proprietary concerns. Moreover, some
+                                                                                   datasets provide fine-grained labels on malicious entities [5] or
+                                                                                   processes [11], while others [8], [9] only report attack scenarios
+munity. APT campaigns, typically orchestrated by advanced
+                                                                                   over time intervals, without linking them to specific system
+threat actors with economic or political motives,involve multiple
+                                                                                   events. This shortage of labeled logs limits a deeper under-
+stages, including gaining initial access to a victim environment,
+                                                                                   standing of attack behaviors and restricts the development of
+remaining undetected for extended periods, exfiltrating sensitive
+                                                                                   AI/ML-based cybersecurity defense studies [12], [13].
+data, and compromising system integrity. Despite progress in
+                                                                                      The absence of such audit logs motivates the development
+   Received 20 November 2024; revised 30 October 2025; accepted 28 Novem-          of methods for generating configurable synthetic audit logs that
+ber 2025. Date of publication 5 December 2025; date of current version 12          fulfill the following key requirements.
+March 2026. This work was supported in part by CITI, Academia Sinica and in           r Realism: Synthetic audit log should closely resemble the
+part by MOST under Grant NSTC 114-2221-E-011-080-MY3, Grant 114-2634-
+F-001-001-MBK, and Grant 114-2221-E-001-018. (Corresponding author:                       real audit logs.
+Yi-Ting Huang.)                                                                       r Scenario coverage: They should represent a broad spec-
+   Yi-Ting Huang is with the National Taiwan University of Technology and
+Science, Taipei 106, Taiwan (e-mail: ythuang@mail.ntust.edu.tw).                          trum of APT campaigns, including recent and emerging
+   Ying-Ren Guo and Meng Chang Chen are with Academia Sinica, Taipei City                 threats.
+115201, Taiwan (e-mail: mcc@iis.sinica.edu.tw).                                       r Detailed labeling: Logs should include fine-grained la-
+   Yu-Sheng Yang, Guo-Wei Wong, Yu-Zih Jheng, and Yeali S. Sun are with
+National Taiwan University, Taipei City 106319, Taiwan.                                   bels such as specific Techniques or equivalents mapped
+   Jessemyn Modini and Timothy Lynar are with the University of New South                 to events in the audit log.
+Wales, Kensington 2052, Australia.                                                    r Higher-Level representation: Along with raw events, they
+   This article has supplementary downloadable material available at
+https://doi.org/10.1109/TDSC.2025.3640696, provided by the authors.                       should offer higher-level abstractions, facilitating easier
+   Digital Object Identifier 10.1109/TDSC.2025.3640696                                    understanding, examination, and communication.
+
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+3754                                             IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+
+
+   r Flexibility: The framework should be able to generate logs
+       of any duration and include any number of APT campaigns.
+   r Diversity: The framework should be able to generate pre-
+      viously unseen logs, which would benefit model training
+      and examination.
+   This study introduces SAGA (Synthetic Audit Log Genera-
+tion for APT Campaigns), a framework for generating config-
+urable synthetic audit logs. SAGA is aligned with the MITRE
+ATT&CK framework and terminologies, chosen for its open-
+ness, comprehensiveness, and availability. The generated syn-
+thetic audit log contains both benign and malicious (APT cam-          Fig. 1.   Example of audit log events captured by Procmon.
+paigns) audit logs, with benign logs representing normal system
+and user operations and malicious logs constructed from pre-
+defined Technique templates. Each APT campaign in the logs,
+                                                                       WinRAR process creates a file named IOC_09_11.rar. System
+comprising stages/tactics with corresponding techniques, which
+                                                                       events, along with their subjects and objects, include attributes
+are reflected in the audit logs.
+                                                                       such as meta-information, properties, and other details provided
+   The specific tasks of this study include:
+   r Obtaining attack scenarios: Use a red team emulator to            by the system, which can further describe the event and context.
+                                                                       These details will be discussed in the subsequent section. System
+      collect and label logs with technique identifiers based on
+                                                                       audit logs can be obtained using built-in kernel event logging
+      the MITRE ATT&CK framework.
+   r Designing the SAGA framework: Develop the SAGA                    mechanisms such as Windows Event Tracing (ETW) and Linux
+                                                                       Audit, or through additional tools like Procmon, Sysmon, and
+      framework and workflow to address the aforementioned
+                                                                       CamFlow.
+      challenges.
+   r Synthesizing configurable audit logs: Create synthetic au-           In this study, we use Procmon as the primary logging tool.
+                                                                       Procmon, short for Process Monitor is a Windows utility that
+      dit logs that combine APT attack scenarios and benign
+                                                                       monitors and records real-time system activities, including pro-
+      behaviors, resembling real data logs.
+   r Verifying SAGA usefulness: Run existing systems using             cess actions, file system activities, registry changes, and more.
+                                                                       Fig. 1 provides an example of the captured system events.
+      the SAGA synthetic audit log as input to demonstrate its
+                                                                       The first row records the event <firefox.exe, QueryOpen, ...
+      effectiveness. Furthermore, show that models trained on
+                                                                       \IOC_09_11.rar>, along with attributes such as timestamp, PID,
+      the synthetic audit log can successfully identify previously
+                                                                       and object value, which indicate a query for the existence of
+      unseen malicious behaviors in new datasets.
+                                                                       the RAR file. The audit log is proved useful for analyzing
+   To demonstrate the usefulness of synthetic audit logs, we
+                                                                       malicious attempts and APT attacks, offering insights into their
+tested established baselines and the existing methods across
+                                                                       characteristics.
+various applications, including APT intrusion detection, tech-
+nique hunting, and APT campaign detection. The objective of
+this empirical study is to demonstrate that SAGA synthetic audit       B. APT Attack Lifecycle
+logs can be used effectively and meaningfully in cybersecurity-           Frameworks such as Lockheed Martin’s cyber kill chain [14],
+related audit log applications. The focus is not on comparing          MITRE ATT&CK framework [15], and Mandiant adversary
+the performance or goodness of these methods, as they target           lifecycle [16] define the lifecycle of cyber attacks, helping
+different objectives and operate in distinct contexts, making          defenders understand the collective operations and intention of
+direct comparison uninformative.                                       APT attacks. This study uses the Mandiant adversary lifecycle,
+                                                                       depicted in Fig. 2a , as a reference for the APT attack lifecycle,
+              II. BACKGROUND AND MOTIVATION                            although other frameworks can be equally applicable. Each
+                                                                       stage/tactic encompasses associated Techniques, and each Tech-
+  In this section, we introduce the audit log and its related issues
+                                                                       nique may have several implementations/abilities. In addition,
+using a running example of an APT campaign.
+                                                                       this lifecycle framework helps to generate and analyze synthetic
+                                                                       audit logs. Note that in this paper, we consider Technique and
+A. System Audit Log                                                    Sub-Technique equally and use the term Technique to represent
+   System audit logs are records of system events such as file         both.
+access, process creation and termination, and network access.             A typical APT attack consists of multiple stages, including
+Each system event depicts the interaction between two system           initial compromise, establishing foothold, internal reconnais-
+entities, typically represented as <subject, operation, object>,       sance, escalating privileges, moving laterally, maintaining pres-
+where the subject refers to a process entity or a program, and         ence, and ultimately complete mission. Note that the stages of
+the object represents a system entity such as a process, file,         internal reconnaissance, escalating privileges, moving laterally,
+registry, or network socket. The operation signifies the action        and maintaining presence may occur multiple times, and not all
+performed by the subject on the object. For example, the event         four stages are necessary in every instance. Fig. 2  a shows the
+<WinRAR.exe, CreateFile, IOC_09_11.rar> indicates that the             lifecycle stages corresponding to the APT28 campaign.
+HUANG et al.: SAGA: SYNTHETIC AUDIT LOG GENERATION FOR APT CAMPAIGNS                                                                                          3755
+
+
+
+
+Fig. 2.   a Mandiant attack lifecycle [16] of APT28.   b The APT28 attack provenance graph, derived from [17], presents five malicious events labeled wi

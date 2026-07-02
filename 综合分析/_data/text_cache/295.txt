@@ -1,0 +1,156 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024                                                                   5004217
+
+
+
+
+ Scalable Industrial Visual Anomaly Detection With
+ Partial Semantics Aggregation Vision Transformer
+                  Haiming Yao , Graduate Student Member, IEEE, Wei Luo , Student Member, IEEE,
+                 Jianan Lou , Graduate Student Member, IEEE, Wenyong Yu , Senior Member, IEEE,
+                          Xiaotian Zhang , Zhenfeng Qiang , and Hui Shi , Member, IEEE
+
+
+   Abstract— In recent years, the field of industrial visual                                           I. I NTRODUCTION
+anomaly detection (VAD) has attracted significant attention in
+the context of advanced smart manufacturing systems. However,
+several limitations remain unresolved in existing approaches.
+While these methods can achieve satisfactory performance when
+                                                                             A      UTOMATIC visual anomaly detection (VAD) has gar-
+                                                                                    nered considerable attention and widespread implemen-
+                                                                             tation across various sectors in the smart industry, due to
+training separate models for different categories, their scalability         its highly automated, nondestructive, and efficient detection
+and performance suffer when faced with the challenge of simul-               capabilities. VAD has found practical applications in a range of
+taneous training for multiple categories. Reconstruction-based
+methods generally suffer from the identical mapping problem.                 industrial scenarios, including product quality inspection [1],
+To address these limitations, this study introduces the partial              textured surface defect detection [2], [3], and smart power
+semantic aggregation vision transformer (PSA-VT), a scalable                 systems [4], among others. The utilization of VAD offers
+framework for industrial visual anomaly detection (VAD) that                 substantial improvements in both efficiency and accuracy
+enables simultaneous multicategory anomaly detection using
+                                                                             compared with traditional manual inspection methods.
+a single model. Our proposed PSA-VT framework adopts a
+hybrid design strategy. First, a pretrained convolutional neural                Supervised learning-based methods and unsupervised
+network (CNN) is employed to extract multiscale discriminative               learning-based methods represent the two predominant
+local representation. Subsequently, the PSA-VT is introduced                 approaches in industrial VAD. Supervised methods, leveraging
+to perform representation reconstruction through long-range                  annotated datasets consisting of numerous defective samples
+global semantic aggregation. Finally, the anomalous properties
+                                                                             and their corresponding labels, have demonstrated robust
+can be estimated by evaluating the reconstruction error of
+the representations. We conducted extensive experiments using                detection performance [4], [5] across diverse scenarios. Never-
+the Mvtec AD industrial anomaly detection dataset, as well                   theless, the process of collecting and annotating a large number
+as the semantic anomaly detection datasets. The experimental                 of defect samples is often impractical and time consuming in
+results demonstrate that our method achieves state-of-the-art                real-world industrial settings. Consequently, Wan et al. [1],
+(SOTA) performance by capturing high-level semantics. Notably,
+                                                                             Yao et al. [2], and Yang et al. [3] have turned their attention
+PSA-VT surpasses other methods for the one-model-15-category
+anomaly detection tasks on the Mvtec AD dataset. Furthermore,                to unsupervised methods, which possess the advantage of
+we applied incremental learning techniques to enable the rapid               utilizing only normal nondefective samples without the need
+deployment of PSA-VT in a real industrial scenario.                          for any annotations.
+  Index Terms— Anomaly localization, defect inspection, scal-                   The field of unsupervised VAD commonly adopts a method
+able visual anomaly detection (VAD), self-supervised learning,               of learning the distribution of normal patterns through recon-
+unsupervised learning, vision transformer (ViT).                             struction. The underlying assumption is that only normal
+                                                                             samples are utilized during the model training, and the objec-
+                                                                             tive is to generate reconstructions that closely resemble the
+                                                                             input. During testing, both normal and abnormal samples will
+  Manuscript received 26 August 2023; revised 29 October 2023;               result in reconstructions that resemble the normal distribution.
+accepted 2 December 2023. Date of publication 18 December 2023; date
+of current version 2 January 2024. This work was supported in part by the    The discrepancy between the input and the reconstruction
+National Natural Science Foundation of China under Grant 52375494. The       is then employed as the criterion for anomaly detection.
+Associate Editor coordinating the review process was Dr. Bardia Yousefi.     This approach has been extensively studied in subsequent
+(Corresponding author: Wenyong Yu.)
+  Haiming Yao, Wei Luo, Jianan Lou, Xiaotian Zhang, and Zhenfeng             research endeavors. However, prevalent reconstruction-based
+Qiang are with the State Key Laboratory of Precision Measurement             VAD methods suffer from a significant limitation known
+Technology and Instruments, Department of Precision Instrument, Tsinghua     as “trivial solutions” or “identical mapping.” This refers to
+University, Beijing 100084, China (e-mail: yhm22@mails.tsinghua.edu.cn;
+luow23@mails.tsinghua.edu.cn; ljn22@mails.tsinghua.edu.cn; zhangxt6@         instances where the model simply outputs a direct replica of
+foxmail.com; 18302973462@163.com).                                           the input during the reconstruction process, without consid-
+  Wenyong Yu is with the State Key Laboratory of Digital Manufacturing       ering its semantics. As a consequence, even outlier samples
+Equipment and Technology, School of Mechanical Science and Engineering,
+Huazhong University of Science and Technology, Wuhan 430074, China           can obtain high-fidelity reconstructions, posing a challenge for
+(e-mail: ywy@hust.edu.cn).                                                   anomaly discrimination in reconstruction-based methods.
+  Hui Shi is with the School of Mechanical and Electronic Engineer-             In practical VAD, the detection of anomalies across different
+ing, Wuhan University of Technology, Wuhan 430070, China (e-mail:
+clove_shi@whut.edu.cn).                                                      categories remains an underexplored area. This issue holds
+  Digital Object Identifier 10.1109/TIM.2023.3343832                         significant relevance in real-world industrial environments,
+                      1557-9662 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+5004217                                                       IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+
+
+as illustrated in Fig. 1. Traditional methods encounter chal-
+lenges when multiple product types require simultaneous
+detection, necessitating the utilization of independent model
+parameters for each product category. Consequently, this leads
+to substantial memory consumption for storage and inference
+purposes. To tackle this problem, we propose a scalable model
+that offers a comprehensive solution adaptable to inspections
+of all product types through the use of a single set of unified
+parameters. Unlike traditional methods that become increas-
+ingly impractical as the number of product types expands due
+to the need for separate parameter storage for each category,
+our proposed scalable approach requires the storage of only
+one set of generic parameters. This characteristic allows for
+scalability and versatility, regardless of the number of product
+types involved.
+   The innovative multicategory anomaly detection approach
+poses a greater challenge than the conventional single-category    Fig. 1.     Real-world industrial settings demand simultaneous testing of
+method. The model is required to learn the normal distribution     numerous products. Conventionally, the inspection of captured image data
+                                                                   from diverse product lines involves the use of multiple models in memory-in-
+of multiple categories and perform the reconstruction process      tensive methodologies. However, the proposed innovative generalizable model
+for each distinct category simultaneously, which may lead the      provides a compelling alternative, requiring only a single model to effectively
+model to further favor “trivial solutions” without considering     detect multiple products simultaneously.
+semantic information. Moreover, the inference process requires
+the model to detect multiple categories without explicit label
+information or fine tuning, and thus, the model should not               category anomaly detection. To achieve this objective,
+exhibit any biases toward a specific category. Such biases may           we have proposed a novel hybrid VAD approach, called
+result in the misclassification of samples from other categories         the PSA-VT. The PSA-VT framework comprises two
+as anomalous, even if they are normal or anomalous. This                 key modules: a local feature representation module,
+highlights the crucial importance of the model’s ability to              built upon a pretrained CNN and a global feature
+comprehend the global semantics of objects.                              reconstruction module, powered by the ViT within the
+   CNNs have been widely used and achieved impressive                    partial semantic aggregation paradigm. Specifically, the
+performance in various vision tasks, including VAD. However,             feature extraction module extracts the feature maps with
+their limited receptive field hinders them from comprehend-              local contexts as descriptors. On the other hand, the
+ing global semantics, leading to reduced discriminability                feature reconstruction module utilizes a global context
+between normal and defective patterns [6]. To address this               aggregation paradigm to reconstruct abnormal features
+issue, the vision transformer (ViT) was proposed [7], which              into normal patterns.
+uses the self-attention mechanism to model images from a              2) To assess the efficacy of our proposed PSA-VT method,
+sequence perspective and capture global context. This promis-            a comprehensive evaluation is conducted on the widely
+ing methodology has the potential to address the inherent                utilized MVTec AD dataset. The evaluation results
+shortcomings of CNNs in the context of VAD and has garnered              demonstrate that PSA-VT achieves SOTA performance
+substantial attention in recent research endeavors.                      in terms of AUROC, with 96.4 for anomaly detection
+   Drawing from the preceding analysis, we have devised a                and 96.9 for anomaly segmentation, in the context of
+novel hybrid reconstruction framework called partial semantic            scalable multicategory anomaly detection (one-model-
+aggregation vision transformer (PSA-VT) to capitalize on                 15-category setting). To gain a deeper understanding
+the strengths of both convolutional neural networks (CNNs)               of the underlying mechanisms and factors influencing
+and ViTs, enabling a scalable approach to cross-category                 performance, ablation experiments are performed along
+VAD in industrial scenarios. In the PSA-VT framework,                    with related analyses. Moreover, in order to ascertain
+CNNs are first employed to extract multiscale discrimi-                  the practical applicability of our method in real-world
+native local representation, effectively transforming image              industrial scenarios, incremental learning techniques are
+pixels into deep feature maps imbued with local seman-                   employed, and the effectiveness of our method is vali-
+tics. Subsequently, the partial semantic aggregation paradigm            dated.
+is introduced within ViT, incorporating auxiliary aggre-              The rest of this article is organized as follows. Section II
+gation tokens to extract the global semantic context of            offers a literature review that encompasses pertinent studies on
+the original feature’s patch tokens. In this paradigm, the         VAD, with particular emphasis on reconstruction-based and
+reconstruction task transforms into a self-supervised seman-       ViT-based methods. Section III elaborates on the intricacies
+tic aggregation process. This study offers two primary             of our proposed approach, the PSA-VT. Section IV presents
+contributions.                                                     a thorough analysis of the experimental findings. Finally,
+   1) We envisioned a challenging yet practical detection          Section V summarizes the conclusion and provides a concise
+       framework for industrial applications: scalable multi-      summary of this article.
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT                                                                              5004217
+
+
+
+                    II. R ELATED W ORKS                            B. Transformer Model in Anomaly Detection
+A. Reconstruction-Based Anomaly Detection                             The ViT, a novel architecture in the field of computer vision,
+                                                                   has demonstrated remarkable efficacy across various visual
+   The extensive research has been undertaken in the domain        tasks [20]. However, its utilization in the VAD community,
+of VAD, encompassing various methodologies. Notably,               which predominantly relies on CNN-based methods, has been
+embedding-based approaches [8], [9] have been explored,            relatively limited. To address this gap, several models have
+which involve the modeling of normal feature distributions         been proposed that incorporate ViTs into the VAD framework.
+in a latent space. These approaches utilize the dissimilarity      The inpainting transformer (InTra) was introduced in [21],
+between instances and normal feature clusters as a discrimi-       offering a solution for image reconstruction through training
+native metric. However, for the purpose of this study, our focus   a model to inpaint the missing patch by the surrounding
+is specifically directed toward reconstruction-based approaches    patches. In a similar vein, U-transformer [22] tackles feature
+in VAD.                                                            reconstruction by employing a transformer inspired by the
+   Deep autoencoders (AEs) are the most popular model in           U-net structure. Furthermore, MSTUnet [23] adopts a strategy
+reconstruction-based VAD

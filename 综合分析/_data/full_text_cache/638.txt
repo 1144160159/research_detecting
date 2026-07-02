@@ -1,0 +1,715 @@
+240 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+
+ DALAD: Unsupervised Detection of Global and
+ Local Anomalies in Microservice Systems
+ Xiangbo Tian , Shi Ying , Tiangang Li , Ting Zhang , and Yong Wang
+
+ Abstract—Accurate anomaly detection is crucial for the reliability of microservice systems. However, most existing anomaly detection approaches only detect deviations from the global expected
+patterns, while overlooking anomalies that conform to the global
+expected patterns but deviate from the local expected patterns. In
+this paper, we propose DALAD, a novel distribution-adversariallearning-based anomaly detection approach for microservice systems, which jointly learns the normal and anomalous system
+pattern distributions to effectively detect both global and local
+anomalies. In detail, DALAD first designs an adversarial data
+generation strategy to automatically generate anomalous traces at
+a low cost. Then, Distribution-Adversarial-Learning Trace Representation is designed to jointly learn the multivariate-Gaussiandistribution-based vector representations of normal and anomalous traces, which can reflect the difference between traces in a
+more fine-grained manner. Finally, it further models the normal
+and anomalous system pattern distributions from these vector representations, and detects anomalies by comparing the likelihoods
+of traces under these distributions. Experimental results on two
+datasets show that DALAD achieves the best anomaly detection Fig. 1. Visualization of traces from the Social Network microservice system.
+performance while maintaining a competitive computational cost.
+ Index Terms—Microservice systems, anomaly detection, trace the local expected patterns. The former refers to the end-to-end
+representation, distribution adversarial learning, graph neural
+networks, variational autoencoder.
+ behaviors of the entire system, such as the complete execution
+ process of a ticket purchase workflow, while the latter represents the behaviors of a specific service, such as the response
+ I. INTRODUCTION time of the payment service in the ticket purchase workflow.
+ To intuitively illustrate different types of anomalies, we use
+ ICROSERVICES architecture is a cloud-native archi-
+M tecture method, which has emerged as the mainstream
+method of developing cloud applications [1], [2], [3], [4], [5].
+ a state-of-the-art trace representation approach iTCRL [2] to
+ map the end-to-end execution sequences of microservice systems into a high-dimensional feature space. This feature space
+Compared with monolithic architecture, this architecture is comencodes the operation information and invocation relationships
+posed of a set of services deployed independently on different
+ of microservice systems to achieve semantic representations for
+machines [2], [6], which ensures the flexibility of software
+ traces. In this space, the relative positions of traces reflect their
+development and the stability of software operation.
+ similarities in the execution patterns, and traces with similar
+ During the operation of microservice systems, anomalies are
+ execution patterns are close to each other. For better observation,
+inevitable and varied due to their complexity and large scale [7],
+ we further use t-SNE to reduce high-dimensional trace repre-
+[8], [9], [10]. The behavior patterns of microservice systems
+ sentations. This allows traces with similar features to naturally
+can be roughly divided into the global expected patterns and
+ cluster in two-dimensional space since t-SNE can preserve the
+ local structure of high-dimensional feature space and make
+ Received 22 November 2024; revised 16 December 2025; accepted 25 De- distance reflect the similarity between traces. Fig. 1 shows the
+cember 2025. Date of publication 30 December 2025; date of current version visualization of traces from the Social Network microservice
+5 February 2026. This work was supported in part by the National Key R&D
+Program of Chinaunder Grant 2022YFB3304300 and in part by the National system [11], [12], where green dots denote normal traces, red
+Natural Science Foundation Project of China under Grant 62472329 and Grant crosses represent traces that significantly deviate from the global
+62072342. (Corresponding author: Shi Ying.) expected patterns (global anomalies), and red triangles indicate
+ Xiangbo Tian, Shi Ying, and Tiangang Li are with the School of Computer Science, Wuhan University, Wuhan 430072, China (e-mail: tianxiangbo@ traces that conform to the global expected patterns but deviate
+whu.edu.cn; yingshi@whu.edu.cn; tiangangli@whu.edu.cn). from the local expected patterns (local anomalies). These clus-
+ Ting Zhang and Yong Wang are with the School of Artificial Intelligence, ters intuitively show the differences in the execution patterns
+Wuhan Technology and Business University, Wuhan 430065, China (e-mail:
+zhangting@wtbu.edu.cn; wangyong001@wtbu.edu.cn). between traces and provide evidence of how anomalies emerge
+ Digital Object Identifier 10.1109/TSC.2025.3649198 at different levels in microservice systems.
+ 1939-1374 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+TIAN et al.: DALAD: UNSUPERVISED DETECTION OF GLOBAL AND LOCAL ANOMALIES IN MICROSERVICE SYSTEMS 241
+
+Fig. 2. Overview of DALAD.
+
+ From Fig. 1, we can observe that anomalies may occur at dif- representations to capture the normal and anomalous system
+ferent levels in microservice systems, ranging from significant patterns, and detects anomalies by comparing the likelihoods of
+global deviations to subtle local deviations. However, existing traces under these distributions. Experimental results on two
+anomaly detection approaches typically model only the global datasets show that DALAD achieves the best anomaly detection
+behavior patterns of microservice systems and detect anomalies performance while maintaining a competitive computational
+based on deviations from such patterns [13]. Although these cost. In summary, our contributions are given as follows.
+approaches can effectively detect global anomalies, they struggle r To our best knowledge, we are the first to use distributions
+to capture local anomalies that only deviate from the local ex- to represent traces, which can reflect the difference between
+pected patterns. Therefore, it is necessary for anomaly detection traces in a more fine-grained manner.
+approaches in microservice systems to take both global and local r We design a novel distribution-adversarial-learning-based
+anomalies into account. Motivated by this, we propose DALAD, anomaly detection approach, which can effectively detect
+a novel distribution-adversarial-learning-based anomaly detec- both global and local anomalies in microservice systems.
+tion approach for microservice systems, which jointly learns the r We conduct extensive experiments on two datasets, and
+normal and anomalous system pattern distributions to effectively experimental results show that DALAD achieves the best
+detect both global and local anomalies. anomaly detection performance while maintaining a com-
+ In detail, an adversarial data generation strategy is first de- petitive computational cost.
+signed to automatically generate anomalous trace data, which The rest of the paper is organized as follows. Section II introcan provide sufficient and various anomalous traces based on duces the background and preliminaries of this study. Section III
+the anomalous system patterns of microservice systems at a low describes the specific details of our proposed approach. Seccost. Then, Distribution-Adversarial-Learning Trace Represen- tion IV gives the experimental results and analysis of DALAD.
+tation is proposed to jointly learn the multivariate-Gaussian- Section V introduces the related works. Section VI concludes
+distribution-based vector representations of normal and anoma- our work and gives future research directions.
+lous traces, which can reflect the difference between traces in
+a more fine-grained manner. Specifically, it integrates a graph II. BACKGROUND AND PRELIMINARIES
+neural network with a variational autoencoder to encode each
+trace into a multivariate-Gaussian-distribution-based vector rep- A. Background
+resentation, while introducing a distribution adversarial learning Microservice Systems: A microservice system is a largestrategy to jointly learn normal and anomalous traces. Un- scale distributed system. It allows developers to independently
+like single-point vector representations, multivariate-Gaussian- develop and deploy functional units [10] and complete user
+distribution-based vector representations not only preserve the requests through these loosely-coupled functional units. This
+global features of traces but also capture the richer statistical design enhances the flexibility and scalability of systems but
+and relational patterns between traces, thereby retaining subtle introduces complex service interactions, which further increase
+yet critical differences and providing a more fine-grained trace operational challenges. In this context, distributed tracing plays
+representation. Finally, DALAD learns the Gaussian mixture an important role in ensuring the observability of microservice
+distributions of normal and anomalous traces from these vector systems.
+242 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+
+ Distributed Tracing: Distributed tracing aims to capture the (DALTR) jointly learns the multivariate-Gaussian-distributionexecution path of a user request throughout microservice sys- based vector representations of each normal trace and its
+tems [14]. By assigning a unique trace ID, it can effectively corresponding anomalous trace. Distribution-Comparison
+record the operations, service invocations and time information Anomaly Detection (DCAD) learns the Gaussian mixture disthroughout the end-to-end execution of a user request. This tributions of normal and anomalous traces from these vector
+design can fully preserve system observability and achieve representations, and detects anomalies by comparing the likelieffective monitoring for complex microservice systems. hoods of traces under these distributions.
+ Trace Data: A trace records a complete execution path of a
+user request throughout microservice systems [14]. It is com- A. Adversarial Data Generation Strategy
+posed of many spans. Each span represents a service invocation,
+which consists of much key execution information, such as In microservice systems, trace data consists of much useful
+timestamps, span contexts, span attributes, span events, span information, such as span events, span attributes and timesstatus and invocation relationships [14]. Thus, a trace can be tamps [2]. The information is very helpful for the anomaly
+naturally described as a graph, which forms the basis for apply- detection task of microservice systems. However, most existing
+ing graph neural networks to trace analysis. research only considers service invocation relationships but
+ ignores the fine-grained execution information. To make full
+B. Preliminaries use of this information, we transform trace data into Service-
+ Event-based Trace Graphs (SETGs) following [2]. The specific
+ Graph Neural Network (GNN): Graph neural networks can process consists of four steps:
+effectively model graph-structured data, such as social net- r Trace Data Preprocessing: We extract Service Runtime
+works and recommendation systems. By iteratively aggregating Events (SREs), Service Invocation Events (SIEs) from
+information from neighboring nodes, it can effectively learn traces, and calculate Service Event Metrics (SEMs) based
+low-dimensional vector representations for nodes or graphs, on the span information.
+which makes it particularly suitable for modeling trace data. r Span Data Parsing: We extract the constant templates
+Popular graph neural network architectures contain Graph Con- and variable templates from Service Runtime/Invocation
+volutional Network [15], Graph Attention Network [16], and Events using the Drain algorithm [19], and divide Ser-
+Heterogeneous Attention Network [17], etc. vice Event Metrics into Service Event Runtime Metrics
+ Variational Autoencoder (VAE): A variational autoencoder (SERMs) and Service Event Invocation Metrics (SEIMs)
+is a generative model that learns a latent probabilistic repre- according to their meaning and effects.
+sentation by mapping input data to a latent distribution [18]. r Vector Representation: For Service Event Runtime/ In-
+It is composed of an encoder and a decoder. The former maps vocation Metrics, we directly transform them into vector
+input data to a latent distribution, while the latter reconstructs the representations, where each dimension represents a metric.
+original input data from the latent distribution. It can effectively For Service Runtime/Invocation Events, their templates are
+capture the complex data distribution characteristics, which embedded as vector representations using GloVe [20] with
+makes it particularly suitable for the fine-grained representation TF-IDF [21].
+learning of traces. r Graph Construction: We build a graph for each trace
+ Gaussian Mixture Model (GMM): A Gaussian mixture model where nodes represent Service Runtime/Invocation Events
+is a probabilistic model that represents a distribution as a described by their vectors, and edges denote the invocation
+weighted combination of multiple Gaussian components. Each relationships between service events.
+Gaussian component is defined by a mean vector and a standard The detailed definitions and processes strictly follow [2].
+deviation vector. It can effectively model complex multimodal During the operation of microservice systems, anomalies are
+distributions, which makes it particularly suitable for the fine- inevitable [9]. Among these anomalies, some deviate from the
+grained learning of system patterns. global expected patterns while others only deviate from the
+ local expected patterns. To address this problem, DALAD si-
+ III. APPROACH multaneously models normal and anomalous system behaviors.
+ The objective of DALAD is to accurately detect both global However, the cost of obtaining anomalous traces is very high.
+and local anomalies in microservice systems. This approach Therefore, we analyze the anomalous system patterns of industakes trace data as input and jointly learns the Gaussian mixture trial microservice systems and design Adversarial Data Gendistributions of normal and anomalous traces to capture the eration Strategy (ADGS) to automatically generate anomalous
+normal and anomalous system patterns. During inference, it traces. The specific generation process is given by the following
+calculates and compares the likelihoods of an unseen trace under equations.
+these distributions to determine whether it is anomalous.
+ GtN = T1 (Gt ) (1)
+ The overview of DALAD is shown in Fig. 2, which consists
+of three components. Adversarial Data Generation Strategy GtA = T2 (Gt ) (2)
+(ADGS) automatically produces anomalous traces according
+to the anomalous system patterns of microservice systems. where Gt is the SETG of trace t; GtN and GtA represent the normal
+Distribution-Adversarial-Learning Trace Representation and anomalous SETGs corresponding to trace t, respectively;
+TIAN et al.: DALAD: UNSUPERVISED DETECTION OF GLOBAL AND LOCAL ANOMALIES IN MICROSERVICE SYSTEMS 243
+
+T1 (·) is the normal trace generation operation, which is the iden- information of traces and get their single-point vector representity transformation in this paper; T2 (·) denotes the anomalous tations. It consists of five steps: Trace Content Initialization,
+trace generation operation, which simulates five types of anoma- Trace Content Transformation, Neighborhood Aggregation,
+lies in industrial microservice systems, as described below. Node Content Update and Trace Graph Pooling.
+ r Operation Anomaly: Randomly change the attributes of a Trace Content Initialization aims to integrate the diverse
+ certain proportion of span events in a trace, including event attributes of nodes in SETGs to facilitate downstream feature
+ type (EventType), event label (EventLabel) and event pa- extraction and analysis. Since each node contains multiple atrameters, to simulate inconsistencies in service execution tributes with different semantic meanings, an attribute-based
+ events. fusion operation is applied for each node, which is shown by
+ r Service Metric Anomaly: Randomly change the timestamp the following equation.
+ information of a certain proportion of traces to modify (0)
+ the service-level metrics derived from traces, including hi = tanh (WI [Xi,0 Xi,1  · · · Xi,n ] + bI ) (3)
+ throughput, response time and error rate, to simulate de- (0)
+ where hi is the initialized feature vector of node i; WI
+ graded or anomalous service performance.
+ r Invocation Metric Anomaly: Randomly change a certain and bI represent the learnable weight matrix and bias matrix,
+ respectively;  is the concatenation operation; Xi,k denotes the
+ proportion of inter-service invocation attributes, including
+ k-th attribute feature vector of node i; n represents the attribute
+ invocation latency and success rate, to simulate degraded
+ number of node i. In SETGs, edges are described by both types
+ or failed service invocations.
+ r Operation Sequence Anomaly: Randomly swap the execu- and attributes, which record different useful information. For
+ edge types, a type-mapping operation is used to map edge types
+ tion order of a certain proportion of span events, including
+ to feature vectors, which is given by the following equation.
+ ParentSpanID, SpanID and startTime, to simulate incorrect
+ (0)
+ execution sequences. Aji = LeakyReLU(q(Aji )) (4)
+ r Invocation Interruption Anomaly: Randomly remove a cer-
+ (0)
+ tain proportion of invocation relationships and all down- where Aji is the initialized feature vector of the edge type
+ stream span events in a trace to simulate the interruption from node j to node i; Aji denotes the edge type from node j to
+ of service invocation chains. node i; q(·) represents a learnable feature dictionary. For edge
+ The modification proportions are determined according to the attributes, the input attribute feature vector is directly used as
+granularity and structural impact of different anomaly types. the initialized edge attribute feature vector, which is given by
+Operation Anomalies directly perturb fine-grained execution the following equation.
+attributes of span events and an excessively high proportion (0)
+may severely distort the execution semantics. Therefore, the Eji = Eji (5)
+modification proportion for them is set to 0.1. In contrast, other (0)
+anomalies mainly affect service-level behaviors or structural where Eji represents the initialized edge attribute feature vector
+attributes. For them, a proportion of 0.2 is adopted to ensure that from node j to node i; Eji denotes the input edge attribute feature
+anomalous patterns are sufficiently observable while preserving vector from node j to node i.
+the overall structure. By the above strategy, we can generate Trace Content Transformation aims to project trace content
+different anomalous traces for each normal trace, which can into a new feature space to extract useful features and enhance
+provide sufficient and various anomalous traces at a low cost. feature expression capability. For nodes, a node-type-specific
+ linear transformation is applied to project different types of
+ nodes into the same feature space. The specific transformation
+B. Distribution-Adversarial-Learning Trace Representation process of nodes is shown by the following equation.
+ After transforming traces into SETGs, we need to repre- (l+1) (l+1) (l) (l+1)
+ hi = Wϕ(i) hi + bϕ(i) (6)
+sent them by low-dimensional vectors to facilitate the subsequent anomaly detection task. To reflect the difference be- (l+1)
+ where hi is the projected feature vector of node i in layer
+tween traces in a more fine-grained manner, Distribution- (l+1) (l+1)
+ l + 1; Wϕ(i) and bϕ(i) are the learnable weight matrix and
+Adversarial-Learning Trace Representation (DALTR) is designed to jointly learn the multivariate-Gaussian-distribution- bias matrix in layer l + 1, respectively; ϕ(i) represents the type
+based vector representations of each normal trace and its cor- of node i. For edges, two linear transformations are applied for
+responding anomalous trace. In detail, it consists of Hetero- their type feature vector and attribute feature vector, respectively.
+geneous Node-edge-aggregated Trace Encoder (HNTE) and The specific transformation process of edges is given by the
+Adversarial Variational Autoencoder (AVAE). Among them, following equations.
+HNTE is used to aggregate the operation and invocation in- (l+1) (l+1) (l) (l+1)
+ Aji = LeakyReLU(WA Aji + bA ) (7)
+formation of traces, and AVAE is used to jointly learn the
+ (l+1) (l+1) (l) (l+1)
+multivariate-Gaussian-distribution-based vector representations Eji = LeakyReLU(WE Eji + bE ) (8)
+of traces.
+ (l+1) (l+1)
+ 1) Heterogeneous Node-Edge-Aggregated Trace Encoder: where Aji and Eji are the projected edge type feature
+HNTE is used to aggregate the operation and invocation vector and edge attribute feature vector from node j to node i in
+244 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+
+ (l+1) (l+1) process is given by the following equation.
+layer l + 1, respectively; WA and WE are two learnable
+ (l+1) (l+1)   
+weight matrixes in layer l + 1; bA and bE denote two Ht =
+ (L) (0)
+ tanh Wg [hi hi ] + bg
+learnable bias matrixes in layer l + 1. i∈V (t)
+ Neighborhood Aggregation aims to integrate the operation  
+ (L) (0)
+and invocation information from neighboring nodes. In the  tanh Wp [hi hi ] + bp (14)
+aggregation process, the multi-head attention mechanism [22]
+is used to stabilize the attention learning process and enrich where Ht is the single-point vector representation of trace t;
+the model capacity [16]. In detail, the aggregation message is Wg and Wp represent the learnable weight matrixes; bg and
+first calculated by fusing the neighbor feature vector, edge type bp denote the learnable bias matrixes; V (t) is the node set of
+feature vector and edge attribute feature vector. The specific trace t.
+message calculation process is shown by the following equation. 2) Adversarial Variational Autoencoder: Although single-
+   point vector representations can effectively capture the global
+ (l+1,m) (l+1,m) (l+1) (l+1) (l+1) (l+1,m)
+ mji = WM hj Aji Eji + bM characteristics of a trace, they fail to model uncertainty and
+ feature correlations. Thus, AVAE is designed to jointly learn the
+ (9)
+ multivariate-Gaussian-distribution-based vector representations
+ (l+1,m) of normal and anomalous traces from their single-point vector
+where mji is the aggregation message from node j to node
+ (l+1,m) (l+1,m) representations. It consists of three steps: Trace Distribution
+i in m-th head of layer l + 1; WM and bM denote the Encoder, Trace Distribution Decoder and Trace Adversarial
+learnable weight matrix and bias matrix in m-th head of layer Loss.
+l + 1, respectively. Then, the normalized importance weight for Trace Distribution Encoder aims to learn the hidden muleach neighboring node is calculated based on the node feature tivariate Gaussian distributions of traces. First, the variational
+vector, neighbor feature vector, edge type feature vector and net f (·) is used to learn the hidden feature vector zφt of trace t,
+edge attribute feature vector to reflect the different importance of which is shown by the following equation.
+neighboring node. The specific normalization process is shown
+by the following equations. zφt = f (Ht ) (15)
+ (l+1,m)
+ oji = LeakyReLU(WO
+ (l+1,m) where f (·) is a multilayer perceptron. Then, the mean vector μt
+ and standard deviation vector σ t of trace t are calculated by the
+ (l+1) (l+1) (l+1) (l+1)
+ · [hi hj Aji Eji ]) (10) following equations.
+ (l+1,m) μt = Wμ zφt + bμ (16)
+ (l+1,m) exp(oji )
+ αji = (11)
+ (l+1,m) σ t = Wσ zφt + bσ (17)
+ k∈ε(i) exp(oki )
+ (l+1,m) (l+1,m) where Wμ and Wσ are two learnable weight matrixes; bμ and
+where oji and αji are the importance weight and bσ are two learnable bias matrixes. Finally, the mean vector
+normalized weight from node j to node i in m-th head of layer μt and standard deviation vector σ t of trace t are concatenated
+ (l+1,m)
+l + 1, respectively. WO represents the learnable weight to get the multivariate-Gaussian-distribution-based vector reprematrix; ε(i) denotes the neighborhood set of node i. Finally, we sentation Zt of trace t, which is given by the following equation.
+perform the weighted summation on all aggregation message by
+the following equation.
+  (l+1,m) Zt = μt σ t (18)
+ (l+1,m) (l+1,m)
+ hi = αji × mji (12) Trace Distribution Decoder aims to reconstruct the singlej∈ε(i)
+ point vector representations of traces from their hidden mul-
+ (l+1,m) tivariate Gaussian distributions. First, the hidden single-point
+where hi is the neighborhood aggregation result of node
+ vector representation zθt of trace t is sampled from its hidden
+i in m-th head of layer l + 1.
+ multivariate Gaussian distribution N (μt , σ 2t ) by the following
+ Node Content Update aims to concatenate the neighborhood
+ equation.
+aggregation results of M attention heads of node i, and update
+the feature vector of node i in layer l + 1 based on shortcuts [23]. zθt = μt + σ t ×  (19)
+The specific update process is given by the following equation.
+ where  is the value sampled from N (0, 1). Then, the generative
+ (l+1) (l)
+ M
+ (l+1,m) net g(·) is used to get the reconstructed single-point vector
+ hi = hi +  hi (13) representation Ĥt of trace t by the following equation.
+ m=1
+
+ (l+1) Ĥt = g(zθt ) (20)
+where hi is the feature vector of node i in layer l + 1.
+ Trace Graph Pooling aims to calculate the single-point vec- where g(·) denotes a multilayer perceptron.
+tor representations of traces based on the feature vectors of all Trace Adversarial Loss aims to achieve joint learning of
+nodes in traces. In this process, the attention pooling is used to normal and anomalous traces. In the joint learning process, the
+reflect the different importance of nodes. The specific pooling reconstruction loss should be as small as possible, while the
+TIAN et al.: DALAD: UNSUPERVISED DETECTION OF GLOBAL AND LOCAL ANOMALIES IN MICROSERVICE SYSTEMS 245
+
+hidden distribution should be as close to the normal distribution
+as possible. Therefore, the reconstruction loss LN and LA of
+normal and anomalous traces are defined as follows.
+ 1   
+ LN = MSE Ht,N , Ĥt,N
+ |T |
+ t∈T
+ 
+ + KL N (μt,N , σ 2t,N ), N (0, 1) (21)
+ 1    
+ LA = MSE Ht,A , Ĥt,A
+ |T |
+ t∈T
+ 
+ + KL N (μt,A , σ 2t,A ), N (0, 1) (22)
+where T is the trace set; MSE(·, ·) represents the mean-square Fig. 3. SETG of the normal trace t.
+error; KL(·, ·) denotes the Kullback-Leibler divergence; Ht,N
+and Ht,A represent the single-point vector representations of
+normal trace t and its corresponding anomalous trace, respec- each Gaussian component; ωkN and ωkA denote the weight of
+tively; Ĥt,N and Ĥt,A are the reconstructed single-point vector the k-th Gaussian component in two GMMs, respectively; K
+representations of normal trace t and its corresponding anoma- represents the number of Gaussian component in two GMMs;
+lous trace, respectively; N (μt,N , σ 2t,N ) and N (μt,A , σ 2t,A ) are N (Zt,N |μN N A A
+ k , Σk ) and N (Zt,A |μk , Σk ) are the probability denthe hidden distributions of normal trace t and its corresponding sity functions of the k-th Gaussian component in two GMMs,
+anomalous trace, respectively. Besides, the difference between respectively. Then, the Expectation-Maximization algorithm is
+the hidden distributions of normal and anomalous traces should used to estimate the parameters ΘN and ΘA of two GMMs,
+be as large as possible to distinguish them as much as possible. respectively. Finally, DALAD quantifies the severity of anoma-
+Therefore, the adversarial loss LC is defined as follows. lies by comparing the log-likelihood values of traces under
+   2  normal and anomalous Gaussian mixture distributions, thereby
+ t∈T μt,N t∈T σ t,N providing a reference for alarm prioritization. Given a trace t,
+ LC = KL N , ,
+ |T | |T | its anomalous severity score S(t) is calculated by the following
+   2  equations.
+ t∈T μ t,A t∈T σ t,A
+ N , (23) 
+ |T | |T | K
+  
+ log PN (Zt |ΘN ) = log ωkN × N Zt |μN N
+ k , Σk (26)
+Finally, integrating these three loss, the trace adversarial loss L
+ k=1
+is designed as follows. 
+ K
+ 
+ Nl
+ 
+ LN + L A λ  log PA (Zt |ΘA ) = log ωkA × N Zt |μA A
+ k , Σk (27)
+ L= + W(l) 2F (24) k=1
+ βLC 2
+ l=1
+ S(t) = log PA (Zt |ΘA ) − log PN (Zt |ΘN ) (28)
+where λ is the regularization coefficient; β represents the weight
+of adversarial loss LC ; Nl denotes the weight matrix number
+ where S(t) ≥ 0 represents anomalous, S(t) < 0 denotes norof DALTR model; W(l) represents the l-th weight matrix of
+ mal, and the larger the value of S(t), the more severe the
+DALTR model.
+ anomaly.
+C. Distribution-Comparison Anomaly Detection
+ In microservice systems, each normal trace can be regarded D. Running Example
+as a sample drawn from the normal system pattern distribution, To clearly illustrate the workflow of DALAD across all
+while each anomalous trace corresponds to a sample drawn from its components (ADGS, DALTR and DCAD), we construct a
+the anomalous system pattern distribution. Therefore, the normal running example, including a normal trace. Table I shows the
+and anomalous system pattern distributions can be modeled original data of this running example.
+using the vector representations of normal and anomalous traces. During training, given a normal trace t, ADGS first transforms
+ First, two GMMs are used to model the normal and anomalous it into a SETG, shown in Fig. 3, where green and gray rectangles
+system pattern distributions by the following equations. denote SIEs and SREs, respectively, and the elements in them
+ ⎧ K  represent their three attributes.
+ ⎨PN (Zt,N |ΘN ) = k=1 ωkN × N Zt,N |μN k , Σk
+ N
+
+ (25) Based on this graph, ADGS randomly selects one of the pre-
+ ⎩ K A
+  A A defined anomalous trace generation operations and applies it to
+ PA (Zt,A |ΘA ) = k=1 ωk × N Zt,A |μk , Σk
+ generate an anomalous trace. Suppose the selected operation
+where ΘN and ΘA are the parameter set of two GMMs, is Operation Anomaly, an anomalous trace t is generated, as
+which consist of the weight, mean and covariance matrix of shown in Fig. 4.
+246 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+
+ TABLE I
+ ORIGINAL DATA OF A RUNNING EXAMPLE
+
+ TABLE II
+ DETAILS OF DATASETS
+
+Fig. 4. SETG of the anomalous trace t .
+
+ Then, DALTR takes the SETGs of the normal trace t and has been widely used in many studies [6], [8], [11], [24], [25].
+anomalous trace t as input, and jointly learns their multivariate- The other is a public dataset provided by [11]. The details of
+Gaussian-distribution-based vector representations Zt and Zt . these two datasets are shown in Table II.
+Finally, DCAD employs GMMs to model the normal and anoma- r TT: This dataset is collected from the Train Ticket milous system pattern distributions based on Zt and Zt . croservice system with 45 microservices [6], [8], [11], [24],
+ During inference, an unseen trace is first transformed into [25]. We deploy this microservice system on a Kubernetes
+a SETG as described above. Then, this SETG is input into the cluster composed of 6 machines with Intel Core i7-4790
+trained DALTR to obtain its multivariate-Gaussian-distribution- 3.60 GHz CPU and 8 GB RAM, and collect 151911
+based vector representation. Finally, this vector representation normal traces and 15138 anomalous traces (containing
+is input into the trained DCAD to calculate its anomaly severity Code Defect, Incorrect Configuration, CPU Exhaustion
+score based on its likelihoods under the normal and anomalous and Network Jam).
+system pattern distributions, and determine whether it is anoma- r SN: This dataset is provided by [11], which is collected
+lous. from the Social Network microservice system with 21
+ microservices [12]. It consists of 13612 normal traces
+ IV. EVALUATION and 1106 anomalous traces (containing CPU Exhaustion,
+ We implement DALAD using Python 3.7, PyTorch 1.11.0 Network Jam and Network Loss).
+and PyTorch Geometric 2.1.0. Based on this implementation, 2) Baselines: To evaluate DALAD, five anomaly detection
+ approaches are selected as baselines.
+we conduct extensive experiments to answer the following ques- r DeepLog [26]: A log-based anomaly detection approach,
+tions.
+ r RQ1: How effective is DALAD in microservice anomaly which adopts an LSTM model to learn the normal sedetection compared with baselines? quential patterns of log events, and detects anomalies by
+ r RQ2: What is the computational cost of DALAD in mi- predicting the next log event.
+ r LogAnomaly [27]: A log-based anomaly detection apcroservice anomaly detection compared with baselines?
+ r RQ3: How much does ADGS contribute to DALAD? proach, which adopts an LSTM model to learn the normal
+ r RQ4: How much does hyperparameter configuration affect sequential patterns and quantitative patterns of log events,
+ and detects anomalies by predicting the next log event.
+ the effectiveness of DALAD? r TraceAnomaly [28]: A trace-based anomaly detection approach, which combines STV with a VAE with posterior
+A. Experimental Setup
+ flow to learn the normal system patterns from traces, and
+ 1) Datasets: Experiments are conducted on two datasets. detects anomalies by identifying the traces that deviate
+One is collected from the Train Ticket microservice system that from these patterns.
+TIAN et al.: DALAD: UNSUPERVISED DETECTION OF GLOBAL AND LOCAL ANOMALIES IN MICROSERVICE SYSTEMS 247
+
+ TABLE III
+ EFFECTIVENESS EVALUATION RESULTS OF DIFFERENT APPROACHES
+
+ r DeepTraLog [6]: A multimodal data-based anomaly detec- while all anomalous traces are put into the testing set. To mitigate
+ tion approach, which combines GGNNs and deep SVDD to the effect of randomness, we repeat all experiments five times
+ learn the normal system patterns from traces and logs, and and report the average results. The source code and datasets of
+ detects anomalies by identifying the behaviors that deviate DALAD are available at https://github.com/intse/DALAD.
+ from these patterns.
+ r iTCRL-LOF [2]: A trace-based anomaly detection ap- B. RQ1: Effectiveness of DALAD
+ proach, which combines iTCRL with the LOF algorithm
+ Experiments are conducted on two datasets to evaluate the
+ to learn the normal system patterns from traces, and detect
+ effectiveness of DALAD. Table III shows the effectiveness evalanomalies by identifying the traces that deviate from these
+ uation results of different approaches on two datasets. As shown
+ patterns.
+ in Table III, DALAD outperforms all baselines on two datasets.
+ 3) Evaluation Metrics: To evaluate the effectiveness of
+ On the TT dataset, it improves Precision by 10.13% ∼ 100.36%
+DALAD, we use the following three evaluation metrics.
+ r Precision: The proportion of the real anomalous traces over and F1-Score by 5.03% ∼ 51.54% compared to baselines, while
+ it is slightly worse than DeepTraLog and iTCRL-LOF in terms
+ all traces detected as anomalies, which is calculated as:
+ of Recall. On the SN dataset, it improves Precision by 12.32% ∼
+ Precision = TP+FPTP
+ , where TP is the number of anomalous
+ 99.96% and F1-Score by 5.37% ∼ 54.04% compared to basetraces detected as anomalies, and FP represents the number
+ lines, while it is only worse than iTCRL-LOF in terms of
+ of normal traces detected as anomalies.
+ r Recall: The proportion of the real anomalous traces de- Recall. The excellent performance of DALAD is attributed to
+ two reasons. (1) DALAD represents traces using multivariatetected as anomalies over all anomalous traces, which is cal-
+ Gaussian-distribution-based vector representations, which not
+ culated as: Recall = TP+FN
+ TP
+ , where FN denotes the number
+ only preserve the global features of traces but also capture the
+ of anomalous traces detected as normal.
+ r F1-Score: The harmonic mean of Precision and Recall, richer statistical and relational patterns between traces, thereby
+ retaining subtle yet critical differences and providing a more
+ which is calculated as: F1-Score = 2×Precision×Recall
+ Precision+Recall . fine-grained trace representation. (2) DALAD jointly learns the
+ To evaluate the computational cost of DALAD, we use the
+ normal and anomalous system pattern distributions and detects
+following five evaluation metrics.
+ r #Params: The total number of trainable parameters in anomalies by comparing the likelihoods of traces under these
+ distributions, which can effectively detect both global and local
+ models.
+ r Train Time: The total time required to train models on the anomalies in microservice systems.
+ training set.
+ r Infer Time: The total time required to perform inference on C. RQ2: Computational Cost of DALAD
+ the testing set. The computational cost of anomaly detection models is crur Train Mem: The peak GPU memory usage during training cial for the anomaly detection task in microservice systems.
+ on the training set. Table IV shows the computational cost evaluation results of
+ r Infer Mem: The peak GPU memory usage during inference different approaches on two datasets. As shown in Table IV,
+ on the testing set. DALAD shows superior efficiency and resource usage on both
+ 4) Settings: All experiments are conducted on a server with datasets. On the TT dataset, the training time of DALAD
+an Intel Core i7-12700 2.10 GHz CPU, 64 GB RAM, RTX 4080 (1671.77 s) is only 3.9% of that of LogAnomaly, and its inwith 16 GB GPU memory. The settings of DALAD are the ference time (40.16 s) is also significantly lower than most
+following: the number of Gaussian components K is set to 32, baselines. Although the parameter size and training memory
+the embedding size D is set to 32, the number of hidden layers of DALAD are larger than simple baselines, such as DeepLog
+L is set to 1, the weight of adversarial loss β is set to 1.0, the and iTCRL-LOF, DALAD achieves better anomaly detection
+learning rate η is set to 10−4 , and the regularization coefficient performance at a lower cost compared to large baselines such
+λ is set to 10−4 . In experiments, the normal traces are split into as TraceAnomaly (7.40 M parameters, 13607 MB Memory),
+training set, validation set and testing set by the ratio of 8 : 1 : 1, LogAnomaly (0.19 M parameters, 8360 MB memory), and
+248 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+
+ TABLE IV
+ COMPUTATIONAL COST EVALUATION RESULTS OF DIFFERENT APPROACHES
+
+Fig. 5. Effectiveness evaluation results under different anomaly coverage.
+
+DeepTraLog (0.81 M parameters, 836 MB memory). On the SN maintaining comparable effectiveness in high-anomalydataset, DALAD achieves the lowest inference memory (68 MB) coverage scenarios. In two datasets, the F1-Score of DALAD
+while maintaining competitive training and inference times. w/o ADGS increases with anomaly coverage, while that of
+ In summary, although DALAD integrates GNN and VAE, its DALAD remains stable, as it does not rely on real anomalous
+computational cost is only slightly higher than that of simple traces. When anomaly coverage is lower than 80%, DALAD
+baselines but significantly lower than that of large baselines significantly outperforms DALAD w/o ADGS, while DALAD
+by effective network depth controlling, embedding dimension w/o ADGS approaches or even surpasses DALAD when
+controlling and mini-batch training strategy. Moreover, the com- anomaly coverage exceeds 80%. This phenomenon shows that
+putational cost of DALAD mainly lies in the training stage, and ADGS effectively compensates for the lack of anomalous traces
+the inference cost is low, which makes it feasible to be deployed by automatically generating various anomalous traces. This
+in large-scale microservice systems. In practical applications, advantage is particularly critical in real-world scenarios where
+DALAD can be efficiently trained on a single 16 GB GPU anomalous traces are scarce and costly to obtain, which makes
+and further reduce computational cost through mixed-precision DALAD more applicable and robust in real-world scenarios.
+training and neighborhood sampling.
+ E. RQ4: Sensitivity of Hyperparameter
+D. RQ3: Contribution of ADGS The effectiveness of DALAD is affected by six hyperparam-
+ To evaluate the contribution of ADGS to DALAD, we derive eters: number of Gaussian components K, embedding size D,
+a variant of DALAD by removing ADGS from DALAD, in number of hidden layers L, weight of adversarial loss β, learning
+which real anomalous traces are used for training. Fig. 5 shows rate η, and regularization coefficient λ.
+the effectiveness evaluation results under different anomaly To evaluate the impact of K, experiments are conducted
+coverage. As shown in Fig. 5, DALAD significantly outperforms on two datasets when other hyperparameters are fixed. Fig. 6
+DALAD w/o ADGS in low-anomaly-coverage scenarios while shows the impact of hyperparameter K. As shown in Fig. 6, the
+TIAN et al.: DALAD: UNSUPERVISED DETECTION OF GLOBAL AND LOCAL ANOMALIES IN MICROSERVICE SYSTEMS 249
+
+Fig. 6. Impact of hyperparameter K. Fig. 8. Impact of hyperparameter L.
+
+Fig. 7. Impact of hyperparameter D. Fig. 9. Impact of hyperparameter β.
+
+F1-Score of DALAD first increases and then starts to decrease Therefore, the choice of L is crucial to learn useful information
+or stabilize with K, and reaches a relatively high level around for anomaly detection.
+K = 32 on both datasets. This is because DALAD needs a To evaluate the impact of β, experiments are conducted on two
+suitable K to capture the complex data distributions. A smaller datasets when other hyperparameters are fixed. Fig. 9 gives the
+K will lead to underfitting, while a larger K will lead to over- impact of hyperparameter β. As shown in Fig. 9, the F1-Score of
+fitting. Therefore, the choice of K is crucial to balance model DALAD first increases and then starts to drop with β on the TT
+complexity and generalization performance. dataset while stabilizing on the SN dataset. It reaches a relatively
+ We explore the impact of D on two datasets when other high F1-Score around β = 1.0 on both datasets. The reason
+hyperparameters are fixed. Fig. 7 gives the impact of hyper- is that β is used to control the trade-off between distribution
+parameter D. As shown in Fig. 7, the F1-Score of DALAD first fitting and normal-anomalous distribution separation. A smaller
+rises and then starts to drop or stabilize with D, and reaches a β will lead to excessive attention to distribution separation
+relatively high level around D = 32 on both datasets. The reason and reduce distribution fitting, while a larger β will weaken
+is that DALAD relies on an appropriate D to effectively encode distribution separation and pay more attention to distribution
+useful information for anomaly detection. A smaller D fails to fitting. Therefore, the choice of β must strike a balance between
+fully capture useful features, while a larger D may introduce distribution fitting and distribution separation.
+redundant information. Therefore, the choice of D must strike We explore the impact of η on two datasets when other
+a balance between information preservation and redundancy hyperparameters are fixed. Fig. 10 shows the impact of hypercontrol. parameter η. As shown in Fig. 10, DALAD achieves a good
+ We check the impact of L on two datasets when other hyper- performance and shows insensitivity to η on the SN dataset.
+parameters are fixed. Fig. 8 shows the impact of hyperparameter On the TT dataset, DALAD performs well when η is small,
+L. From Fig. 8, we can see that the F1-Score of DALAD first sta- but its F1-Score significantly decreases when η > 10−4 , which
+bilizes and then starts to decrease with L on the TT dataset while indicates that it is highly sensitive to η. It reaches a relatively high
+continuously decreasing on the SN dataset. It reaches a relatively F1-Score around η = 10−4 on both datasets. This is because the
+high F1-Score around L = 1 on both datasets. This is because SN dataset has a good distribution and low noise, while the TT
+DALAD needs a suitable L to learn helpful information for dataset has a complex distribution and more noise. Therefore, the
+anomaly detection, and a larger L may lead to over-smoothing. choice of η is very important for ensuring DALAD convergence.
+250 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+
+ The threats to external validity mainly lie in the experimental
+ environment. Although DALAD is designed as a model that can
+ be trained offline and applied in an online inference manner,
+ all experiments were conducted on two datasets collected from
+ the widely used benchmark microservice systems, Train Ticket
+ and Social Network. There is still a potential threat to external
+ validity since the proposed approach has not yet been integrated
+ into a real production system. We mitigate this threat from three
+ aspects. First, these two datasets consist of complex traces with
+ more than 700 and 150 events, respectively, which are comparable to the hundreds of events typically found in real production
+ systems [6], [8]. Second, we analyze the typical anomalies in
+ real production systems and design anomalous cases based on
+Fig. 10. Impact of hyperparameter η. them, which can ensure that the anomalous scenarios used in
+ our evaluation are representative. Finally, we plan to collaborate
+ with a large-scale cloud provider in the future to further validate
+ our approach.
+
+ V. RELATED WORKS
+ Accurate anomaly detection is crucial for ensuring the reliability of microservice systems. Existing studies use various observability data to detect anomalies and can be divided into four
+ classes: metric-based anomaly detection approaches, log-based
+ anomaly detection approaches, trace-based anomaly detection
+ approaches and multimodal data-based anomaly detection approaches.
+ Metric-based anomaly detection approaches: These ap-
+Fig. 11. Impact of hyperparameter λ. proaches usually detect anomalies by monitoring changes in service metrics. For example, Nedelkoski et al. [29] use an unsupervised deep Bayesian network to capture anomalous changes in
+ service response time. Li et al. [30] introduce intervention recog-
+ We check the impact of λ on two datasets when other hypernition to identify anomalous metrics, while Yu et al. [8] apply the
+parameters are fixed. Fig. 11 gives the impact of hyperparameter
+ k-σ rule for the same purpose. Xie et al. [31] further extend this
+λ. From Fig. 11, we can observe that the F1-Score of DALAD
+ idea by designing a regression-based latent-space intervention
+stabilizes on the SN dataset while decreasing with λ on the
+ recognition under limited observability. These approaches are
+TT dataset. DALAD reaches a relatively high F1-Score around
+ simple and interpretable, but fail to detect anomalies caused
+λ = 10−4 on both datasets. The TT dataset has a more complex
+ by code defects or topological dependencies in microservice
+distribution and more noise than the SN dataset, which makes the
+ systems.
+former more sensitive to regularization than the latter. Therefore,
+ Log-based anomaly detection approaches: These approaches
+the choice of λ must strike a balance between distribution fitting
+ commonly focus on learning the normal sequential patterns of
+and distribution generalization.
+ log events to detect anomalies as deviations from these patterns.
+ For instance, Du et al. [26] use an LSTM model to learn the
+F. Threats to Validity
+ normal sequential patterns of log events and detect anomalies
+ The threats to internal validity mainly lie in the collection by predicting next log events. Meng et al. [27] extend this idea
+of normal data and the design of Adversarial Data Generation by also modeling the quantitative patterns of log events. Zhang
+Strategy (ADGS). (1) The effectiveness of DALAD is directly et al. [32] represent log events through semantic embeddings
+affected by the coverage of normal data since it relies on normal and use an attention-based Bi-LSTM model to detect anomalies.
+data for training. If certain types of user requests are missing These approaches are effective in detecting anomalies caused
+from normal data, DALAD may misidentify these missing parts by code defects. However, they ignore the topological features
+as anomalies. To mitigate this threat, we simulate various types of microservice systems, which limits their ability to capture
+of user requests during data collection to ensure the coverage of inter-service dependencies.
+normal data. (2) ADGS aims to automatically generate anoma- Trace-based anomaly detection approaches: These aplous trace data, which is the basis of DALAD. Therefore, its proaches typically leverage traces to learn normal system patquality determines the effectiveness of DALAD. To mitigate this terns and detect anomalies. For example, Liu et al. [28] combine
+threat, we carefully design this strategy based on the anomalous Service Trace Vector with a VAE with posterior flow to learn
+system patterns of industrial microservice systems. the normal system patterns from traces and detect anomalies
+TIAN et al.: DALAD: UNSUPERVISED DETECTION OF GLOBAL AND LOCAL ANOMALIES IN MICROSERVICE SYSTEMS 251
+
+as those traces that deviate significantly from these patterns. into real production systems and further validate its practical
+Nedelkoski et al. [33] employ a multi-modal LSTM model to effectiveness and usability.
+capture the normal sequential patterns of traces and flag deviations as anomalies. Tian et al. [2] integrate a GNN with causal
+ REFERENCES
+intervention to detect anomalies based on data density. These
+approaches consider the topological features of microservice [1] A. Balalaie, A. Heydarnoori, and P. Jamshidi, “Migrating to cloud-native
+ architectures using microservices: An experience report,” in Proc. 4th Eur.
+systems and can detect anomalies caused by code defects. How- Conf. Service-Oriented Cloud Comput., 2015, pp. 201–215.
+ever, they cannot detect anomalies that conform to the global [2] X. Tian et al., “iTCRL: Causal-intervention-based trace contrastive repexpected patterns but deviate from the local expected patterns. resentation learning for microservice systems,” IEEE Trans. Softw. Eng.,
+ vol. 50, no. 10, pp. 2583–2601, Oct. 2024.
+ Multimodal data-based anomaly detection approaches: [3] M. Ma, W. Lin, D. Pan, and P. Wang, “Servicerank: Root cause iden-
+These approaches usually integrate multimodal observability tification of anomaly in large-scale microservice architectures,” IEEE
+data to capture normal system patterns and detect anomalies. Trans. Dependable Secure Comput., vol. 19, no. 5, pp. 3087–3100,
+ Sep./Oct. 2022.
+For example, Zhang et al. [6] combine a GGNN [34] and deep [4] J. Soldani and A. Brogi, “Anomaly detection and failure root cause analysis
+SVDD [35] to detect anomalies based on the unified graph in (micro) service-based cloud applications: A survey,” ACM Comput.
+representations constructed from traces and logs. Similarly, Surverys, vol. 55, no. 3, 2022, Art. no. 59.
+ [5] Y. Gan, M. Liang, S. Dev, D. Lo, and C. Delimitrou, “Sage: Practical and
+Chen et al. [36] integrate a GNN with an LSTM model to learn scalable ML-driven performance debugging in microservices,” in Proc.
+the normal system patterns from the unified graphs built using 26th ACM Int. Conf. Architectural Support Program. Lang. Operating
+traces and performance metrics of containers, and flag deviations Syst., 2021, pp. 135–151.
+ [6] C. Zhang et al., “Deeptralog: Trace-log combined microservice anomaly
+as anomalies. By integrating multimodal observability data, detection through graph-based deep learning,” in Proc. 44th Int. Conf.
+these approaches can detect anomalies reflected in different Softw. Eng., 2022, pp. 623–634.
+observability data. However, they remain limited in detecting [7] S. Gu et al., “TrinityRCL: Multi-granular and code-level root cause localization using multiple types of telemetry data in microservice systems,”
+anomalies that conform to the global expected patterns but IEEE Trans. Softw. Eng., vol. 49, no. 5, pp. 3071–3088, May 2023.
+deviate from the local expected patterns. [8] G. Yu, P. Chen, Y. Li, H. Chen, X. Li, and Z. Zheng, “Nezha: Interpretable
+ fine-grained root causes analysis for microservices on multi-modal observability data,” in Proc. 31st ACM Joint Eur. Softw. Eng. Conf. Symp.
+ VI. CONCLUSION AND FUTURE WORK Foundations Softw. Eng., 2023, pp. 553–565.
+ [9] L. Wang, N. Zhao, J. Chen, P. Li, W. Zhang, and K. Sui, “Root-cause
+ In this paper, we propose DALAD, a novel distribution- metric location for microservice systems via log anomaly detection,” in
+ Proc. 2020 IEEE Int. Conf. web Serv., 2020, pp. 142–150.
+adversarial-learning-based anomaly detection approach for mi- [10] S. Zhang et al., “Robust failure diagnosis of microservice system
+croservice systems. This approach jointly learns the normal and through multimodal data,” IEEE Trans. Serv. Comput., vol. 16, no. 6,
+anomalous system pattern distributions to effectively detect both pp. 3851–3864, Nov./Dec. 2023.
+ [11] C. Lee, T. Yang, Z. Chen, Y. Su, and M. R. Lyu, “Eadro: An end-to-end
+global and local anomalies. Specifically, we first design an adver- troubleshooting framework for microservices on multi-source data,” in
+sarial data generation strategy, which can automatically generate Proc. IEEE/ACM 45th Int. Conf. Softw. Eng., 2023, pp. 1750–1762.
+anomalous traces at a low cost. Then, Distribution-Adversarial- [12] Y. Gan et al., “An open-source benchmark suite for microservices and their
+ hardware-software implications for cloud & edge systems,” in Proc. 24th
+Learning Trace Representation is proposed to jointly learn the Int. Conf. Architectural Support Program. Lang. Operating Syst., 2019,
+multivariate-Gaussian-distribution-based vector representations pp. 3–18.
+of normal and anomalous traces, which can not only preserve the [13] M. Panahandeh, A. Hamou-Lhadj, M. Hamdaqa, and J. Miller, “Serviceanomaly: An anomaly detection approach in microservices using
+global features of traces but also capture the richer statistical and distributed traces and profiling metrics,” J. Syst. Softw., vol. 209, 2024,
+relational patterns between traces. Finally, DALAD learns the Art. no. 111917.
+normal and anomalous system pattern distributions from these [14] Opentelemetry 2025 Accessed, Sep. 20, 2025 [Online]. Available: https:
+ //opentelemetry.io/
+vector representations, and detects anomalies by comparing the [15] J. Bruna, W. Zaremba, A. Szlam, and Y. LeCun, “Spectral networks and
+likelihoods of traces under these distributions. Extensive exper- locally connected networks on graphs,” in Proc. 2nd Int. Conf. Learn.
+iments show that DALAD achieves the best anomaly detection Representations, 2014.
+ [16] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and Y. Bengio,
+performance while maintaining competitive computational cost. “Graph attention networks,” in Proc. 6th Int. Conf. Learn. Representations,
+Notably, this work is the first to use distributions to represent 2018.
+traces and overcomes the limitations of existing approaches that [17] X. Wang et al., “Heterogeneous graph attention network,” in Proc. 2019
+ World Wide Web Conf., 2019, pp. 2022–2032.
+rely solely on modeling the global expected patterns, which can [18] D. P. Kingma and M. Welling, “Auto-encoding variational bayes,” in Proc.
+effectively enable more robust and fine-grained anomaly detec- 2nd Int. Conf. Learn. Representationss, 2014.
+tion. By jointly modeling the normal and anomalous system [19] P. He, J. Zhu, Z. Zheng, and M. R. Lyu, “Drain: An online log parsing
+ approach with fixed depth tree,” in Proc. 2017 IEEE Int. Conf. Web Serv.,
+patterns, DALAD can effectively detect both global and local 2017, pp. 33–40.
+anomalies in microservice systems. Such capability can help [20] J. Pennington, R. Socher, and C. D. Manning, “Glove: Global vectors
+DevOps managers to promptly detect and handle both global and for word representation,” in Proc. 2014 Conf. Empirical Methods Natural
+ Lang. Process. , 2014, pp. 1532–1543.
+local anomalies in microservice systems, thereby significantly [21] G. Salton and C. Buckley, “Term-weighting approaches in automatic text
+improving system reliability and user satisfaction. retrieval,” Inf. Process. Manage., vol. 24, no. 5, pp. 513–523, 1988.
+ In the future, we will further explore more comprehensive [22] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Int. Conf.
+ Neural Inf. Process. Syst., 2017, pp. 6000–6010.
+and universal adversarial data generation strategies to improve [23] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+the generalization capability of DALAD. Secondly, we will recognition,” in Proc. 33 rd IEEE Conf. Comput. Vis. Pattern Recognit.,
+cooperate with a large-scale cloud provider to integrate DALAD 2016, pp. 770–778.
+252 IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+
+[24] C. Zhang et al., “Tracecrl: Contrastive representation learning for microser- Shi Ying is currently a professor with the School of
+ vice trace analysis,” in Proc. 30th ACM Joint Eur. Softw. Eng. Conf. Symp. Computer Science, Wuhan University, Wuhan, China.
+ Foundations Softw. Eng., 2022, pp. 1221–1232. His main research interests include software engi-
+[25] X. Zhou et al., “Fault analysis and debugging of microservice systems: neering, intelligent operation and maintenance man-
+ Industrial survey, benchmark system, and empirical study,” IEEE Trans. agement, cloud computing, cloud service software,
+ Softw. Eng., vol. 47, no. 2, pp. 243–260, Feb. 2021. and artificial intelligence.
+[26] M. Du, F. Li, G. Zheng, and V. Srikumar, “Deeplog: Anomaly detection
+ and diagnosis from system logs through deep learning,” in Proc. 2017
+ ACM SIGSAC Conf. Comput. Commun. Secur., 2017, pp. 1285–1298.
+[27] W. Meng et al., “Loganomaly: Unsupervised detection of sequential and
+ quantitative anomalies in unstructured logs,” in Proc. 28th Int. Joint Conf.
+ Artif. Intell., 2019, pp. 4739–4745.
+[28] P. Liu et al., “Unsupervised detection of microservice trace anomalies
+ through service-level deep bayesian networks,” in Proc. 31st Int. Symp.
+ Softw. Rel. Eng., 2020, pp. 48–58. Tiangang Li is currently working toward the PhD
+[29] S. Nedelkoski, J. Cardoso, and O. Kao, “Anomaly detection and classifica- degree in the School of Computer Science, Wuhan
+ tion using distributed tracing and deep learning,” in Proc. 19th IEEE/ACM University, Wuhan, China. His research interests in-
+ Int. Symp. Cluster,Cloud Grid Comput., 2019, pp. 241–250. clude cloud computing, software engineering, re-
+[30] M. Li et al., “Causal inference-based root cause analysis for online service source management, and reinforcement learning.
+ systems with intervention recognition,” in Proc. 28th ACM SIGKDD Conf.
+ Knowl. Discov. Data Mining, 2022, pp. 3230–3240.
+[31] Z. Xie et al., “Microservice root cause analysis with limited observability
+ through intervention recognition in the latent space,” in Proc. 30th ACM
+ SIGKDD Conf. Knowl. Discov. Data Mining, 2024, pp. 6049–6060.
+[32] X. Zhang et al., “Robust log-based anomaly detection on unstable log
+ data,” in Proc. 27th ACM Joint Meeting Eur. Softw. Eng. Conf. Symp.
+ Foundations Softw. Eng., 2019, pp. 807–817.
+[33] S. Nedelkoski, J. Cardoso, and O. Kao, “Anomaly detection from system Ting Zhang is currently an associate professor with
+ tracing data using multimodal deep learning,” in Proc. 12th Int. Conf. the School of Artificial Intelligence, Wuhan Tech-
+ Cloud Comput., 2019, pp. 179–186. nology and Business University, Wuhan, China. Her
+[34] Y. Li, D. Tarlow, M. Brockschmidt, and R. Zemel, “Gated graph sequence research interests include intelligent software engineural networks,” in Proc. 4th Int. Conf. Learn. Representations, 2016. neering, data mining, Big Data analysis technology,
+[35] L. Ruff et al., “Deep one-class classification,” in Proc. 35th Int. Conf. and artificial intelligence.
+ Mach. Learn., 2018, pp. 4393–4402.
+[36] J. Chen et al., “Tracegra: A trace-based anomaly detection for microservice
+ using graph deep learning,” Comput. Commun., vol. 204, pp. 109–117,
+ 2023.
+
+ Xiangbo Tian is currently working toward the PhD Yong Wang is currently an associate professor with
+ degree with the School of Computer Science, Wuhan the School of Artificial Intelligence, Wuhan Technol-
+ University, Wuhan, China. His current research inter- ogy and Business University, Wuhan, China. His reests include microservices and AIOps. search interests include intelligent software engineering, cloud computing, Big Data analysis technology,
+ and artificial intelligence.

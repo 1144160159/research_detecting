@@ -1,0 +1,137 @@
+                    This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3661521
+
+                                                                                                                                                                                               1
+
+
+
+
+         Anomaly Detection in EVCS using Federated
+         Learning with Auto-Optimized Edge Models
+           Arif Hussain, Member, IEEE, Ankit Yadav, Member, IEEE, Gelli Ravikumar, Sr. Member, IEEE
+
+
+
+   Abstract—This paper presents FedNAS, a novel federated                                        the centralization of this data collection method creates two
+learning (FL) framework designed for robust and personalized                                     significant issues: privacy problems and scalability restrictions.
+models to detect anomalies at distributed electric vehicle charging                              Data collection from geographically spread EVCS devices
+stations (EVCSs), tailored to real-world industrial deployment.
+The proposed framework enables collaborative anomaly detection                                   may expose sensitive information, such as user data, car
+in spatially distributed EVCS without sharing raw data, thus                                     charging habits, and grid-related information, to cyber threats.
+preserving user privacy and complying with data governance                                       Furthermore, sending vast amounts of data to a central server
+requirements. A lightweight neural architecture search (NAS)-                                    causes significant bandwidth costs and system slowness. These
+optimized Simple Neural Network (SimpleNN) is proposed for                                       issues impede the effective detection of real-time cyberattacks,
+each EVCS node to ensure computational efficiency within
+edge resource constraints. In contrast to traditional methods                                    necessitating low-latency responses and safe data handling
+that depend on fixed structures and simplistic aggregation,                                      systems [3].
+FedNAS employs an ensemble-based meta-aggregation strategy,                                         FL provides a decentralized alternative that directly ad-
+facilitating superior knowledge integration among heterogeneous                                  dresses these challenges. In an FL architecture, EVCS units
+clients compared to standard Federated Averaging (FedAvg). The                                   train models locally with their data and share only the model
+framework is evaluated using the IEEE 123-bus test system
+with multiple EVCS nodes subjected to a cyberattack. The                                         outputs (predictions), not the raw data, with a central server.
+results demonstrate that the FL framework achieves a detection                                   This approach inherently preserves data privacy and signifi-
+accuracy of up to 98.25%, with significantly reduced communi-                                    cantly reduces communication overhead. After collaborative
+cation overhead and improved resilience to adversarial threats.                                  training, personalized models are deployed on the EVCS
+Comparative analysis with centralized learning and federated                                     nodes, enabling local, real-time inference for tasks such as
+variants validates the robustness and scalability of the proposed
+approach outperforms FedAvg by 6.25% in average precision.                                       anomaly detection without requiring continuous server com-
+Furthermore, real-time simulation data is extracted using the                                    munication. This framework not only maintains data integrity
+OPAL-RT platform to emulate realistic industrial grid condi-                                     and security but also supports scalable implementations across
+tions, validating the framework’s effectiveness in cyberattack                                   numerous distributed EVCS units [4], [5]. FL has been widely
+detection within dynamic EVCS environments. These findings                                       promoted as a privacy-preserving machine learning approach
+highlight the potential of federated learning to enable secure,
+privacy-preserving, and scalable cyberattack detection for next-                                 for distributed and sensitive data sources [6]. Its application in
+generation EVCS infrastructure.                                                                  power systems spans forecasting [7]–[10], grid management
+                                                                                                 [11]–[13], and anomaly detection [14]–[16], demonstrating
+   Index Terms—Federated Learning, electric vehicle charging
+station, cyber-attacks, anomalies, data preservation, neural ar-                                 its capability for collaborative learning while preserving data
+chitecture search,                                                                               privacy. However, in the context of EVCS anomaly detection,
+                                                                                                 the data involved, such as voltage, frequency, power, and state
+                                                                                                 of charge (SoC), is primarily operational and non-personal.
+                           I. I NTRODUCTION                                                      Consequently, while prior studies [17], [18] frame FL’s benefit
+   The integration of electric vehicles into power grids, mainly                                 as privacy preservation, its primary value in this infrastructure-
+through EVCS, has transformed the Distributed Energy Re-                                         level context shifts towards data preservation. This emphasizes
+source (DER) ecosystem. However, as EVCSs have become                                            maintaining data locality and integrity, enabling collaborative
+more complex and interconnected, they have been vulnerable                                       learning under the constraints of limited communication, real-
+to cyber-attacks [1]. Traditional centralized machine learning                                   time processing, and data heterogeneity across EVCS nodes.
+algorithms for detecting such abnormalities are challenging,                                        FL is traditionally categorized into horizontal federated
+particularly regarding data privacy, communication overhead,                                     learning (HFL) and vertical federated learning (VFL) ap-
+and real-time responsiveness, because they rely on collecting                                    proaches [19], [20], both of which have been applied in
+raw data from all EVCS units at a central location [2]. EV                                       anomaly detection [21]–[25]. In HFL, clients share the same
+charging stations collect massive volumes of data, which can                                     feature space but possess different data samples. This aligns
+be utilized to identify and prevent cyber-attacks. However,                                      perfectly with the EVCS use case, where distributed stations
+                                                                                                 monitor identical metrics (e.g., voltage, power) but from dis-
+   “This research is funded partly by US NSF Grant # CNS 2105269 and US                          tinct charging sessions and locations. In contrast, VFL requires
+DOE CESER Grant DE-CR000016.”
+   Arif Hussain, is with Department of Electrical Engineering, Louisiana                         clients with different feature sets to share a common user base,
+Tech. University, USA, Ankit Yadav is with the Department of Electrical and                      a condition not met by geographically separate EVCS units.
+Computer Engineering, Iowa State University, USA, and Gelli Ravikumar                            Therefore, our work adopts the HFL paradigm.
+is with the Department of Electrical and Computer Engineering, Florida
+State University, USA (e-mail: ahussain@latech.edu, ankity@iastate.edu, and                         In FL for EVCS cybersecurity, selecting an effective neural
+rgelli@fsu.edu).                                                                                 network architecture is crucial for high detection accuracy.
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                 This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+                                            content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3661521
+
+                                                                                                                                                                                            2
+
+
+
+Typically, a single, fixed architecture is prescribed for all
+clients [25]–[27]. This approach implicitly assumes uniform
+data distributions across clients—an assumption that rarely
+holds in real-world EVCS environments, where stations exhibit
+significant heterogeneity in usage patterns, local conditions,
+and threat landscapes. Consequently, there is a pressing need
+for methods that can tailor architectures to each client’s
+unique data characteristics while still enabling effective global
+collaboration.
+   A second major limitation is the reliance on the Feder-
+ated Averaging (FedAvg) algorithm for aggregation, which
+is prevalent in existing anomaly detection studies [4], [9],
+[26], [28]. While computationally efficient, FedAvg performs
+optimally only under the assumption of IID (Independent and
+Identically Distributed) client data. In practical EVCS settings,
+data is inherently non-IID. This divergence leads to suboptimal
+global models, hampered convergence, and reduced detection
+accuracy as client models develop biases from their local                                     Fig. 1: Illustration of high-level architecture of the FedNAS
+data. This creates a demand for aggregation strategies that can                               detection model
+reconcile these local biases with global patterns to improve
+generalization without sacrificing personalization.                                               • Our framework ensures data-preserving federated learn-
+   A third challenge lies in the evaluation methodology. Many                                       ing across EVCS nodes, where only model outputs are
+prior studies rely on synthetic or benchmark datasets [17],                                         shared during aggregation, enhancing scalability and pri-
+[18], failing to validate FL models within realistic grid-                                          vacy while avoiding direct model parameter exchange.
+connected environments like IEEE test systems with inte-                                          • A comprehensive evaluation of FedNAS using OPAL-
+grated EVCS infrastructure. This reliance on centralized data                                       RT-based real-time simulations on the IEEE 123-bus test
+sources contradicts the core principle of FL—learning from                                          system with four integrated EVCS nodes. The results
+distributed, non-IID data. Moreover, such datasets often lack                                       demonstrate the framework’s strong detection perfor-
+the spatial, temporal, and operational variability inherent in                                      mance, scalability, and resilience under multiple cyber-
+real EVCS deployments, thereby overlooking critical chal-                                           attack scenarios.
+lenges like consumption heterogeneity, diverse attack surfaces,                                   • A rigorous comparative analysis against state-of-the-art
+and the distinct characteristics of local data streams.                                             FL baselines (including FedAvg and FedProx) and cen-
+   To address the identified limitations: i) client-specific het-                                   tralized learning, demonstrating FedNAS’s superior per-
+erogeneity, ii) rigid model architectures, iii) FedAvg’s poor                                       formance in anomaly detection accuracy, communication
+performance on non-IID data, and iv) unrealistic evalua-                                            efficiency, and resilience to non-IID data.
+tion settings, we propose FedNAS, a novel FL framework                                           We presented a preliminary version of this work at the
+for anomaly and cyberattack detection in EVCS. FedNAS                                         2025 Texas Power and Energy Conference (TPEC) [31]. This
+integrates Neural Architecture Search (NAS) [29] with an                                      research presents an FL framework and employs a lightweight
+ensemble-based meta-aggregation strategy [30] to achieve per-                                 SimpleNN model to identify cyberattacks in EVCS. Although
+sonalized yet globally coordinated learning. Within this frame-                               the initial results showed promise, we faced limitations in
+work, each client independently employs NAS to discover an                                    model scalability, limited technical insight, fixed architecture,
+optimal, lightweight architecture (a SimpleNN model) tailored                                 and simple aggregation for the global model.
+to its local data, while the server performs meta-aggregation                                    The rest of the paper is organized as follows: Section II
+of model insights. This decentralized approach ensures data                                   presents the system model, threat model, and problem formu-
+preservation and scalability. The framework’s effectiveness is                                lation. Section III details the proposed FedNAS framework.
+validated under realistic grid-connected conditions using an                                  Section IV presents a case study. Section V discusses the
+IEEE 123-bus test system with four integrated EVCS nodes                                      results, and finally, Section VI concludes the paper.
+subjected to cyberattack scenarios.
+   The key contributions of this study are:                                                       II. S YSTEM M ODEL , T HREAT M ODEL , AND P ROBLEM
+   • We propose a personalized FedNAS framework for cy-                                                            F ORMULATION
+      berattack detection in EVCS, enabling each client to
+      autonomously discover optimal lightweight architectures                                 A. System Model
+      tailored to its local data characteristics.                                                In this research, we introduce a federated learning-based
+   • Unlike traditional FL methods requiring uniform archi-                                   decentralized optimized framework for attack detection using
+      tectures or we

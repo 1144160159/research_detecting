@@ -1,0 +1,524 @@
+2023 8th International Conference on Data Science in Cyberspace (DSC)
+
+ Bi-ETC:A Bidirectional Encrypted Traffic
+ Classification Model Based on BERT and BiLSTM
+ 1st XiTing Ma 2nd Tao Liu
+ Cyberspace Institute of Advanced Technology Cyberspace Institute of Advanced Technology
+ 1st GuangZhou University 1st GuangZhou University
+ Guangzhou 510006,China Guangzhou 510006,China
+ 2112233031@e.gzhu.edu.cn 2112233168@e.gzhu.edu.cn
+2023 8th International Conference on Data Science in Cyberspace (DSC) | 979-8-3503-3103-5/23/$31.00 ©2023 IEEE | DOI: 10.1109/DSC59305.2023.00037
+
+ 3th Ning Hu∗ 4rd Xin Liu
+ nd
+ 2 Peng Cheng Laboratory College of computer Engineering and Applied Math
+ Shenzhen 518000, China 3rd ChangSha University
+ hun@pcl.ac.cn Changsha 410022, China
+ xinliu@ccsu.edu.cn
+
+ Abstract—While packet encryption technology provides user protocol layers, which makes the classification of encrypted
+ privacy protection, it also brings challenges to traffic classi- traffic difficult. Even if the same encryption protocol is used,
+ fication. Traditional traffic classification technologies based on the data distribution of encrypted traffic may show completely
+ packet fields or payload data content are becoming powerless
+ in the face of encrypted traffic. Although traffic encryption different characteristics due to the different original traffic
+ technology can hide data content, it cannot change the inherent distribution[3]. Therefore, the traffic classification method for
+ characteristics of application traffic. Therefore, how to classify a certain type of encrypted traffic cannot adapt well to new
+ encrypted traffic by mining traffic features has become a topic of environments or unseen encryption policies.
+ widespread concern. An enormous amount of research shows that The traditional port-based traffic identification method[4] is
+ machine learning algorithms achieve good results in encrypted
+ traffic classification. However, there is still room for improvement. no longer reliable in the classification of encrypted traffic,
+ For example, deep learning methods require a large amount of and can only be used as an auxiliary means for traffic
+ labeled training data, and it is difficult for pre-trained models classification. In addition, earlier works utilize the remaining
+ to capture the associated features of long sequences of packet. plaintext in encrypted traffic to build fingerprints and perform
+ This paper propose a Bidirectional encrypted traffic classification fingerprint matching classification[5] are not applicable to
+ model based on BERT and BiLSTM(Bi-ETC), by inserting
+ [CLS]Token at the connection of Token sequence between BERT emerging encryption technologies, as plaintext becomes more
+ and BiLSTM, strengthens BiLSTM’s focus on packet-level fea- sparse or obfuscated. To this end, many scholars use machine
+ tures while maintaining BilSTM’s capture of Token sequence learning[6, 7] to assist traffic classification methods, and train
+ context. Experimental results show that the Bi-ETC model is classifiers based on manually extracted packet or its statistical
+ superior to all proposed classification methods on the ISCX VPN features at the data flow level. Since these features require
+ dataset, reaching 99.43%in F1 score and 99.7%in accuracy.
+ Index Terms—Privacy Protection, Network communication prior knowledge and experience, they are also time-consuming
+ security, Encrypted traffic classification, BERT, BiLSTM to extract. More importantly, there is no guarantee that these
+ features are really helpful to improve the classification per-
+ I. I NTRODUCTION formance. As a result, many researchers have utilized deep
+ In recent years, with the widespread need to protect data learning methods[8, 9] to automatically learn complex patterns
+ transmission and user privacy, protocols and applications are from raw traffic and achieved significant performance gains.
+ more inclined to adopt encryption methods. Therefore, how to However, these methods require a large amount of labeled
+ realize the accurate identification of network encrypted traffic training data to achieve good performance.
+ is an important issue in the field of cyberspace security, and is In recent years, pre-trained models have made significant
+ also the focus of current network behavior analysis, network breakthroughs in natural language processing[10], computer
+ planning and construction, network anomaly detection and vision[11] and other fields. The advantage of pre-trained
+ network traffic model research[1]. Encrypted traffic is growing models is that they can learn the representation of the data
+ in a large number of current communication networks, and a itself from a large amount of unlabeled data and only need
+ variety of encryption protocols have been used[2], such as to fine-tune on a small amount of labeled data. So that the
+ IPSec, SSL/TLS, SSH, Bitorrent, Skype, etc. Different en- downstream tasks can better learn their own features and the
+ crypted protocol packets are also located in different network required knowledge.At the same time, pre-training methods are
+ also widely used in network communication scenarios, and[12,
+ *Corresponding author 13, 14] proposed the application of pre-training methods in
+ solving encrypted traffic classification problems. However,
+
+ 979-8-3503-3103-5/23/$31.00 ©2023 IEEE 197
+ DOI 10.1109/DSC59305.2023.00037
+ Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:11:11 UTC from IEEE Xplore. Restrictions apply.
+ current research cannot capture the long-distance contextual time-series network traffic through a RNN(recurrent neural
+ relationships in encrypted traffic Token sequences. In this network) and introduced an attention mechanism. Ren et
+ paper, we propose to use Bi-ETC for encrypted traffic classi- al.[26] proposed a tree-structured recurrent neural network
+ fication tasks, which can not only capture the long-distance (tree-RNN), setting a specific classifier for each small clascontextual relations in traffic sequences, but also enhance sification. Liu et al.[9] proposed Flow Sequence Network(FSthe model’s attention to traffic semantic features.The specific Net), which can deeply mine the latent sequence features of
+ contributions of this paper can be summarized as follows: flows, and introduced a reconstruction mechanism that can
+ • According to the state of art we know we first pro- improve feature effectiveness .
+ pose to use the BiLSTM(Bidirectional Long Short PERT[12] uses the state-of-art dynamic word embedding
+ Term) model in encrypted traffic classification to technique to perform automatic traffic feature extraction and
+ capture the long-distance dependencies well between provides a traffic classification framework in which unlabeled
+ the BERT(Bidirectional Encoder Representations from traffic is used to pre-train an encoding network that learns
+ Transformers) output Token sequence features. the contextual distribution of traffic payload bytes. Then,
+ • we propose to insert packet-level [CLS]Token semantic the pre-trained network is reused for downward classification
+ features at the forward and backward starting positions of to obtain the enhanced classification results. CBD[26] has
+ BiLSTM, so as to enhance BiLSTM’s attention to packet- the generalization ability to classify encrypted traffic in the
+ level features. real environment, and the overall structure of CBD can be
+ • Experiments show that our method achieves excellent re- described as the encoder of a one-dimensional CNN and a
+ sults on publicly available encrypted traffic classification Transformer. The model classifies encrypted traffic from the
+ datasets, and outperforms eleven state-of-the-art models packet level and the traffic level. ET-BERT[13] pre-trains
+ in terms of precision, recall, and F1-score. deep contextualized datagram level representations from large-
+ The rest of this paper is organized as follows. In Section II, scale unlabeled data, and the pre-trained model can finewe review some of the most important and recent research tune on a small amount of task-specific labeled data. ETon traffic classification. In Section III, we introduce the BERT can effectively learn implicit relationships in unlabeled
+ motivation and objective of the model. Section IV introduces traffic, thereby improving the effect of traffic classification in
+ our proposed method, namely Bi-ETC. In Section V, the different scenarios. Compared with ET-BERT[13], BFCN[14]
+ experimental results and application identification performance captures byte-level local features in traffic through convolution
+ are analyzed. Finally, we conclude the paper in Section VI. operation.
+
+ II. R ELATED W ORK III. M OTIVATION AND O BJECTIVE
+ In recent years, network traffic classification has become a Recently, pre-training has also been introduced into enresearch hotspot in academia and industry[15]. With the rapid crypted traffic classification[12, 13, 14] and achieved excellent
+ growth of encrypted traffic in the network, traditional traffic performance on multiple datasets. However, [12] lacks preclassification methods based on ports[16] and deep packet training tasks designed for traffic and reasonable input to show
+ inspection[17] can no longer meet the current requirements. the effect of pre-training models. [13] can better represent en-
+ Machine learning has been widely used for identification crypted traffic, but cannot capture the relationship between enand classification of encrypted traffic, and FlowPrint[18] is a crypted traffic Tokens. [14] Reasonable use of CNN to capture
+ semi-supervised method for fingerprinting mobile applications the relationship between encrypted traffic Tokens, but cannot
+ from encrypted network traffic. AppScanner[19] utilizes the capture long-distance contextual relationships from encrypted
+ statistical characteristics of packet size to train a random forest traffic Token sequences. In encrypted traffic classification,
+ classifier, while BIND[20] also utilizes statistical characteris- although the payload has no semantics, Sengupta et al.[27]
+ tics of temporality . proposed that the randomness difference between different
+ Recently, Aceto et al.[21] proposed a method combining ciphertexts can be used to distinguish different applications,
+ the advantages of deep learning and big data to solve the which shows that encrypted traffic is not completely random,
+ problem of network traffic classification. Rezaei et al.[22] and there is an implicit pattern . Therefore, we need to use
+ outlined a general framework for deep learning-based traffic the BERT module to extract the implicit features of encrypted
+ classification , and introduced commonly used deep learning traffic and obtain the feature vector of each encrypted traffic
+ methods and their applications in traffic classification tasks. Token. And because the extracted feature vector of each
+ Traffic classification based on deep learning can be traced encrypted traffic Token has the same timing relationship as
+ back to 2015[23], where Wang et al. used a simple SAE the original encrypted traffic sequence, in order to solve
+ autoencoder. Lotfollahi et al.[8] , after an initial preprocessing the problem of timing relationship in the encrypted traffic
+ stage of the data, feed packets into a deep packet framework sequence, this paper introduces the BiLSTM model based on
+ that embeds stacked autoencoders and convolutional neural the BERT pre-training model. Due to the long byte sequence of
+ networks to classify network traffic . Zeng et al.[24] proposed the data packet, the BiLSTM model alleviates the problem of
+ a novel DL-based framework capable of classifying encrypted gradient disappearance and gradient explosion compared with
+ traffic and detecting malware traffic. Yao et al.[25] modeled the traditional RNN. The ability to model the global context
+
+ 198
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:11:11 UTC from IEEE Xplore. Restrictions apply.
+ of data. Therefore, by using BiLSTM, we can better process TABLE I
+ DATASET LABEL
+ sequence data and capture contextual semantic features and
+ timing features between Token feature representations.
+ label class count
+ IV. M ETHODOLOGY
+ 1 AIM Chat 1340
+ A. Data Pre-processing 2 Email 5000
+ In order to improve data quality and improve training 3 Facebook 5000
+ efficiency, we will first filter out retransmission and out-of- 4 Gmail 5000
+ sequence data packets and network query data packets (eg, 5 Hangout 5000
+ ICMP, DNS, etc.), and only keep IP data packets. Because re- 6 ICQ 823
+ transmissions and out-of-sequence packets are usually caused 7 Netflix 5000
+ by abnormal network transmissions, they may distort traffic 8 SCP 5000
+ patterns and affect classification accuracy[8]. By removing 9 Skype 5000
+ these packets, you can ensure more accurate and consistent 10 Spotify 5000
+ traffic patterns in your training and test datasets. However, 11 Tor 5000
+ network query data packets are usually caused by network 12 Torrent 5000
+ requests such as domain name resolution, advertisement track- 13 Vimeo 5000
+ ing, and statistical analysis, and they have nothing to do with 14 VoipBuster 5000
+ the purpose of traffic classification. Retaining only IP packets 15 VPN-FTPS 5000
+ can reduce the size of the data set and reduce unnecessary 16 VPN-SFTP 5000
+ processing and analysis during training and testing, thereby 17 Youtube 5000
+ improving efficiency.
+ Since our approach does not rely on any visible plaintext
+ information, we will only intercept the transport layer payload
+ label is introduced. By learning to model the semantic corof each packet and discard the rest (e.g., Ethernet headers, IP
+ relation between the representation of this special Token
+ headers, transport layer headers, etc.). The payload is then
+ label and the entire encrypted traffic Token sequence, the
+ converted to hexadecimal encoding for processing to ensure
+ BERT model obtains a feature vector representing the entire
+ data consistency and commonality, and to avoid character
+ encrypted traffic packet. Therefore, the features extracted by
+ encoding issues. Then, the hexadecimal payload is encoded by
+ the [CLS]Token label can be considered as the features that
+ the bi-gram model, which is converted into a Token sequence
+ represent the whole packet level and are the most classification
+ to help capture the context between adjacent bytes.
+ meaningful features. Similarly, other ordinary encrypted traffic
+ 1) labeling dataset
+ Token sequences have also been extracted with corresponding
+ as mentioned in the previous section, the pcap files in the
+ features by BERT. In addition, although BiLSTM performs
+ dataset are labeled based on the application and the network
+ better than LSTM(Long Short Term Memory networks) and
+ activity of the application, so in order to identify the applicatraditional RNN models on long sequences, there is still the
+ tion type, we need to redefine the label. We redefined the pcap
+ phenomenon of forgetting [28]. Therefore, the [CLS]Token
+ files collected during VPN sessions into 17 label categories, as
+ sequence of the head is copied to the end of the BiLSTM
+ shown in Table 1 below. Then, a maximum of 5000 samples
+ input sequence, and for both forward and backward LSTM,
+ were selected from each type of data, among which the number
+ the [CLS]Token feature can be recalled again at the end of
+ of samples in AIM Chat and ICQ categories were 1340 and
+ the sequence to alleviate the forgetting of the most important
+ 823, respectively, to test the effect of our method on the
+ packetlevel feature information. Moreover, this can better
+ label imbalanced data set. Finally, we divided the dataset into
+ capture the effective classification features in the [CLS]Token
+ training, validation and testing datasets according to the ratio
+ to achieve the purpose of accurate classification. In addition,
+ of 8:1:1.
+ we adopt the dropout technique for the output of BiLSTM,
+ B. Model architecture which reduces the complexity and capacity of the neural
+ In this section, we will explain our proposed Bi-ETC, network by randomly setting the output of some neurons to
+ whose network structure is shown in Figure 1 below. The zero during the training process, thereby reducing the risk of
+ model mainly consists of a feature extraction module based overfitting.Finally, we concatenate the output features of the
+ on BERT and one based on BiLSTM. The model is composed last layer of the forward and backward LSTM as the final
+ of the up-down sequence text encoding module of Memory. classification features and put them into the SoftMax network
+ Specifically, we first input the pre-processed encrypted traffic for classification to obtain the final classification target.
+ tokens into BERT, and use the BERT feature extraction module It is worth mentioning that in the experimental part, we
+ to extract the token-level features of encrypted traffic. And did two ablation experiments to verify the performance of
+ before each encrypted traffic Token sequence, the [CLS]Token the model. First, compare the accuracy and loss of the two
+ strategies whether to insert [CLS]Token at the end of the
+
+ 199
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:11:11 UTC from IEEE Xplore. Restrictions apply.
+ BERT BiLSTM
+ LSTM
+ TN[cls]
+ LSTM
+ CLS E[CLS] T [cls]
+ N
+
+ LSTM
+ TN781d
+ LSTM
+ 781d E781d T 781d
+ N
+
+ LSTM
+
+ SoftMax
+ TN1dc3
+ LSTM
+ 1dc3 E1dc3 T 1dc3
+ N
+
+ LSTM
+ TNc35f
+ LSTM
+
+ ...
+ c35f Ec35f T c35f
+ N
+
+ ...
+ ...
+ LSTM
+ ...
+
+ ...
+
+ ...
+
+ ...
+ ...
+
+ TNf302
+ LSTM
+ f302 Ef302 T f302
+ N
+
+ LSTM
+ TN[cls]
+ LSTM
+
+ Fig. 1. Architecture of Bi-ETC model.
+
+ BiLSTM input sequence to verify the advantages of the model. hidden layers are combined to obtain the feature vector H at
+ Second, the effects of two different activation functions, tanh the end of the set. Then, the feature vector H is transferred to
+ and PReLU, on the output features of BiLSTM were com- a fully connected layer with PReLU function to classify the
+ pared in SoftMax to verify the advantages of PReLU in this encrypted traffic.
+ classification task.
+ V. E XPERIMENTS AND R ESULT A NALYSIS
+ Corresponding to TN [cls] , TN [781d] , TN [1dc3] , · · · , including [CLS]) trained by BERT’s hidden layer by a learnable A. Dataset Selection
+ weight.Wa ∈ Rda ×n as the input of the BiLSTM pattern. The In network traffic classification, datasets and evaluation
+ formula is as follows: criteria are not consistent. Many researchers use private selfgenerated datasets for verification. Although self-generated
+ ai = g1 (Wa Ci + ba ) (1)
+ datasets are relatively easy to obtain label information, their
+ where 1 ≤ i ≤ n, n denotes the dimension of the feature own use of self-generated datasets causes the problem that
+ vector output after fine-tuning of the BERT model,ai ∈ Rda different algorithms cannot be compared. Therefore, in this
+ is the input vector of the BiLSTM layer, ba is the offset vector paper, we choose the ISCX VPN dataset published by the
+ of dimension da . Here, we adopt Sigmoid as the activation University of New Brunswick [29].
+ function g1 . This dataset divides network packets captured at the data
+ The ordinary LSTM model calculates the one-way hidden link layer into different pcap files based on the application
+ layer sequence h, while BiLSTM calculates the forward hid- they were generated using (e.g., Gmail, Skype, Facebook, etc.)
+ −
+ →
+ den layer vector as hi and the backward hidden layer vector and the different activities performed by the application during
+ −
+ ← network communication (e.g., chat, file transfer, or video call,
+ as hi and finally combines the two for output vector vi. The
+ calculation formula is as follows: etc.).
+ − ←
+ → − B. Evaluation Metrics
+ vi = hi + hi (2)
+ We used four evaluation metrics: precision(Pc ), recall(Rc ),
+ In addition, the hidden layer of the model as follows:
+ F1 score(F 1c ), and accuary(acc). Since encrypted traffic
+ hdi = g2 Whd ai + U hdi−1 + bdh
+ 
+ (3) classification is a multi-category task, we need to calculate
+ the above metrics for each category separately. Specially,
+ Where Whd ai ∈ Rdh ×da is the weight matrix of ai , d ∈ {0, 1} we use N as the total number of training samples; T Pc
+ represents two different directions in the hidden layer, and U to indicate the quantity that originally belongs to category
+ is the weight matrix of the output sequence hd of the hidden c, and is predicted by the model as c; F Pc indicates the
+ layer at time i. hdi−1 corresponds to the hidden layer output quantity that originally does not belong to category c, but
+ sequence at the previous time i − 1; bh represents the offset is predicted by the model as c; T Nc indicates the quantity
+ vector in the d direction. Then, the output sequences bdh of all that does not belong to category c, and is not predicted to be
+
+ 200
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:11:11 UTC from IEEE Xplore. Restrictions apply.
+ TABLE II
+ C OMPARISON WITH S TATE - OF - THE - ART M ETHODS .
+
+ Method Accuary Precision Recall F1-Score
+ FlowPrint[18] 0.8767 0.6697 0.6651 0.6531
+ AppScanner[19] 0.6266 0.4864 0.5198 0.4935
+ BIND[20] 0.6767 0.5152 0.5153 0.4965
+ DF[r32] 0.6116 0.5706 0.4752 0.4799
+ FS-Net[9] 0.6647 0.4819 0.4848 0.4737
+ Tree-RNN[26] 0.9898 0.9898 0.9897 0.9852
+ Deep Packet[8] 0.9758 0.9785 0.9745 0.9765
+ PERT[12] 0.8229 0.7092 0.7173 0.6992
+ CBD[28] 0.8388 0.8849 0.8381 0.8397
+ ET-BERT(flow)[13] 0.8519 0.7508 0.7294 0.7306
+ ET-BERT(packet)[13] 0.9962 0.9936 0.9947 0.9941
+ BFCN[14] 0.9965 0.9936 0.9947 0.9941
+ Bi-ETC 0.9970 0.9934 0.9951 0.9943
+
+ class c; F Nc indicates the quantity that it belongs to class tures well, can successfully distinguish each application, and
+ F Nc , but is misclassified to other class. Hence, the definition outperforms other models on the ISCX VPN dataset.Moreover,
+ of aforementioned four evaluation metrics can be given by the overall performance of the proposed model is higher
+ improved compared to previous models due to the following
+ T Pc
+ Pc = (4) two reasons.
+ T Pc + F Pc
+ • After BERT extracts the general features of the encrypted
+ T Pc traffic, use the hidden layer state of BiLSTM to record the
+ Rc = (5)
+ T Pc + F Nc relevant feature information of the front and rear Token
+ 2Pc Rc sequences, so as to learn the long-distance dependencies
+ F 1c = (6) in the Token sequences.
+ Pc + Rc
+ • By simultaneously inserting packet-level Token semantic
+ T Pc + T Nc
+ acc = (7) features at the forward and backward starting positions of
+ T Pc + T Nc + F Pc + F Nc BiLSTM, this helps the BiLSTM model capture packet-
+ C. Experimental setup and result analysis level features and contextual relationships.
+ 1) Implementation details 3) Controlled Experiment
+ This experiment was performed with eight Tesla T4 Gpus. 1. BERT-BiLSTM VS. BERT-FFNN VS. BERT-LSTM
+ The model parameters are set as follows: We set the number In our experiments, we use two control models:
+ of epochs to 15, the initial learning rate to 2×10-5, and (1) BERT-FFNN: This model is the pre-trained model for
+ dynamically adjust the learning rate with the training process, our experiments [5] and employs BERT-Feed forward neural
+ the ratio of warmup is set to 0.1, the batch size is set to 32, networks (FFNN), which can provide a benchmark to evaluate
+ and the dropout is set to 0.1. BERT input sequence length is the performance of our model in capturing the contextual
+ set to 128, BERT hidden size and BiLSTM hidden size are set sequence features of encrypted traffic tokens.
+ to 768, BiLSTM layer number is set to 2, and cross-entropy (2) BERT-LSTM: In order to verify the superiority of
+ loss function is used for loss calculation. AdamW was used BiLSTM forward learning and backward learning, we choose
+ as the optimizer. BERT-LSTM as another control experimental model.
+ 2) Comparison with State-of-the-art Methods Since BERT-FFNN is the model selected in our pre-training
+ We compare the proposed Bi-ETC model with various state- stage, and ISCX VPN dataset is also used in the pre-trained
+ of-the-art methods, including (1) fingerprint-based construc- large-scale unlabeled dataset. Therefore, at the beginning,
+ tion method: FlowPrint; (2) machine learning-based methods: the model parameters of BERT-FFNN have fallen within a
+ AppScanner, BIND; (3) Deep learning-based methods: DF, good performance range. However, after the ninth epoch, we
+ FS-Net, Tree-RNN, Deep Packet; (4) Based on pre-training observe that the model has reached the convergence point,
+ methods: PERT, CBD, ET-BERT, BFCN. the Accuracy basically does not change, and the improvement
+ According to the experimental results in Table 2, the pro- of the model performance by further training is no longer
+ posed Bi-ETC model can extract and learn discriminative fea- significant. On the contrary, continued training may lead to
+
+ 201
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:11:11 UTC from IEEE Xplore. Restrictions apply.
+ with the highest accuracy. This is because, for the lookahead
+ LSTM sequence, the sequence captures the most important
+ [CLS]Token feature sequence very early; For the backward
+ LSTM sequence, if we do not copy the [CLS]Token sequence
+ of the head to the end of the entire feature sequence, then
+ the backward LSTM sequence needs to be at the end to
+ extract the [CLS] feature sequence. So we consider inserting a
+ [CLS]Token feature sequence before and after the input vector
+ of the Bi-LSTM model. In other words, the output vector of
+ the one-before and one-after corresponding [CLS] in the last
+ hidden layer is used as the semantic feature representation
+ of all traffic, which helps the BiLSTM model to capture
+ the packetlevel features and context, and provides a more
+ comprehensive traffic classification representation.
+ Fig. 2. Comparison of accuracy and loss values in control experiments. 2.tanh VS. PReLU
+ In this experiment, we selected two activation functions
+ overfitting. This observation suggests that further tuning the for comparison. The first time we use tanh as the activation
+ model or exploring other optimization strategies may be a function, the curves of tanh and sigmoid function are relatively
+ more promising avenue to improve performance. similar, the difference is the output interval, the output interval
+ Since BERT-FFNN only inputs [CLS]Token features ex- of tanh is between (-1,1), and the whole function is centered
+ tracted by BERT into FFNN for classification, there are a lot of at 0. However, using tanh function as the activation function
+ Token features left unclassified, while BERT-bilSTM can cap- in the BiLSTM model itself has the problem of gradient
+ ture complex patterns between tokens. To prevent overfitting, disappearance. PReLU scales each negative element value
+ we use dropout technique, so the accuracy fluctuates during by a factor, which not only plays the role of nonlinear
+ the period, but finally surpasses BERT-FFNN. BERT-LSTM, transformation, but also uses a different scaling factor for each
+ on the other hand, forgets the most important [CLS] packet- channel on the negative axis, which plays a role similar to
+ level features and thus performs even worse than FFNN. the attention mechanism. The output vector of Bi-LSTM is
+ 4) Ablation Experiment fed into a classifier with PReLU as the activation function to
+ We conducted two ablation experiments on Bi-LSTM to obtain the final prediction result.
+ verify the feasibility and advantages of the Bi-ETC.
+ 1. [CLS]-tokens-[CLS] VS. [CLS]-tokens;
+ (1) [CLS]-tokens-[CLS] : This is the approach described in
+ Bi-ETC, where the sequence of [CLS]tokens in the head is
+ copied to the end of the BiLSTM input sequence.
+ (2) [CLS]-tokens: It is all sequence features extracted by
+ BERT, including [CLS]token and all encrypted traffic token
+ sequences after it, and input them all into BiLSTM.
+ We observe that our Loss decreases faster and we end up
+
+ Fig. 4. Comparison of accuracy and loss values using different activation
+ functions tanh and PReLU.
+
+ 5) Performance of different application recognition tasks
+ Table 3 shows the performance achieved by different models
+ on the application recognition task on the test set. We chose
+ two effect pre-trained models ET-BERT [5] and BFCN [6]
+ to compare with Bi-ETC on application task recognition. We
+ have achieved the best results in Precision, Recall, and F1 on
+ most of the classification samples, and we have also achieved
+ Fig. 3. Comparison of accuracy and loss values between [CLS]-token and good recognition results on the 823 ICQ small samples.
+ [CLS]-token-[CLS]. Bi-ETC is able to make more comprehensive use of the
+ information in the packet in the encrypted traffic classification
+
+ 202
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:11:11 UTC from IEEE Xplore. Restrictions apply.
+ TABLE III
+ P ERFORMANCE COMPARISON OF B I -ETC WITH ET-BERT AND BFCN IN THE APPLICATION IDENTIFICATION TASK .
+
+ Ours ET-BERT BFCN
+ Class
+ Precision Recall F1-Score Precision Recall F1-Score Precision Recall F1-Score
+ AIM Chat 0.978 0.978 0.978 0.997 0.970 0.974 0.992 0.978 0.985
+ Email 0.994 1.000 0.997 0.994 1.000 0.997 0.994 1.000 0.997
+ Facebook 0.998 0.992 0.995 0.996 0.984 0.990 0.992 0.990 0.991
+ Gmail 0.992 0.998 0.995 0.986 0.994 0.990 0.986 0.994 0.990
+ Hangout 0.996 0.996 0.996 0.996 0.998 0.997 1.000 0.996 0.998
+ ICQ 0.941 0.976 0.958 0.920 0.976 0.947 0.941 0.976 0.958
+ Netflix 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+ SCP 1.000 0.994 0.997 1.000 0.994 0.997 1.000 0.994 0.997
+ Skype 0.996 0.996 0.996 0.998 0.998 0.998 0.994 0.998 0.996
+ Spotify 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+ Tor 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+ Torrent 0.994 1.000 0.997 0.992 1.000 0.996 0.992 0.998 .0995
+ Vimeo 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+ VoipBuster 1.000 0.990 0.995 1.000 0.998 0.994 1.000 0.998 0.994
+ VPN-FTPS 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+ VPN-SFTP 1.000 0.998 0.999 1.000 0.998 0.999 1.000 0.998 0.999
+ Youtube 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000
+
+ task, and is able to consider the context of each tag, helping features, thereby improving the performance and robustness of
+ us to better understand and distinguish between different types the model.
+ of applications.
+ In addition, the confusion matrix is usually applied to
+ validate the results of the classification, to observe the performance of Bi-ETC on various categories, and to provide a
+ better diagram to understand how well Bi-ETC is working, the
+ performance confusion matrix of Bi-ETC is shown in Figure 8.
+ The dark elements on the main diagonal show that the Bi-ETC
+ model performs well on the classification of each application
+ with little confusion error.
+ VI. C ONCLUSION
+ In this paper, we introduce suitable BERT and BiLSTM
+ models, and propose a novel encrypted traffic feature extraction and traffic classification method to solve the problem that
+ pre-trained models are difficult to capture long-distance dependencies between traffic sequence features. In Bi-ETC, we use
+ BERT to generate feature representations of encrypted traffic
+ tokens, and capture the contextual semantic features between
+ tokens by BiLSTM. Bi-ETC achieves satisfactory performance
+ on the widely used ISCX-VPN dataset, with an F1 score of Fig. 5. Confusion matrix for TETBB model performance.
+ 99.43% and an accuracy of 99.7% respectively. In the future,
+ we will further expand and deeply study the scope of encrypted
+ ACKNOWLEDGMENT
+ traffic data to mine more traffic feature representations. We
+ plan to apply our method to more traffic classification tasks This work was supported in The Major Key Project of
+ to evaluate its generality and effect on different scenarios PCL (Grant No. PCL2022A03),the National Key Research
+ and datasets. In addition, we plan to introduce an attention and Development Program of China (2021YFB2012402),The
+ mechanism on the output of BiLSTM to assist and enhance National Natural Science Foundation of China (Grant
+ the classification effect. Such an attention mechanism can No. 61976064).Corresponding author: Ning Hu (e-mail:
+ make the model pay more attention to important tokens and hun@pcl.ac.cn)
+
+ 203
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:11:11 UTC from IEEE Xplore. Restrictions apply.
+ R EFERENCES Journal of Network Management 25.5 (2015), pp. 355–
+ [1] Keke Gai, Meikang Qiu, and Hui Zhao. “Privacy- 374.
+ preserving data encryption strategy for big data in [16] Alberto Dainotti, Antonio Pescape, and Kimberly C
+ mobile cloud computing”. In: IEEE Transactions on Big Claffy. “Issues and future directions in traffic classi-
+ Data 7.4 (2017), pp. 678–688. fication”. In: IEEE network 26.1 (2012), pp. 35–40.
+ [2] Liangchen Chen et al. “Research status and develop- [17] Justine Sherry et al. “Blindbox: Deep packet inspection
+ ment trends on network encrypted traffic identification”. over encrypted traffic”. In: Proceedings of the 2015
+ In: Netinfo Secur.(03) (2019), pp. 19–25. ACM conference on special interest group on data
+ [3] Fannia Pacheco et al. “Towards the deployment of communication. 2015, pp. 213–226.
+ machine learning solutions in network traffic classifica- [18] Thijs Van Ede et al. “Flowprint: Semi-supervised
+ tion: A systematic survey”. In: IEEE Communications mobile-app fingerprinting on encrypted network traffic”.
+ Surveys & Tutorials 21.2 (2018), pp. 1988–2014. In: Network and Distributed System Security Symposium
+ [4] Alberto Dainotti, Antonio Pescape, and Kimberly C (NDSS). Vol. 27. 2020.
+ Claffy. “Issues and future directions in traffic classi- [19] Vincent F Taylor et al. “Robust smartphone app identifification”. In: IEEE network 26.1 (2012), pp. 35–40. cation via encrypted network traffic analysis”. In: IEEE
+ [5] Soheil Hassas Yeganeh et al. “Cute: Traffic classifi- Transactions on Information Forensics and Security
+ cation using terms”. In: 2012 21st International Con- 13.1 (2017), pp. 63–78.
+ ference on Computer Communications and Networks [20] Khaled Al-Naami et al. “Adaptive encrypted traffic
+ (ICCCN). IEEE. 2012, pp. 1–9. fingerprinting with bi-directional dependence”. In: Pro-
+ [6] Vincent F Taylor et al. “Robust smartphone app identifi- ceedings of the 32nd Annual Conference on Computer
+ cation via encrypted network traffic analysis”. In: IEEE Security Applications. 2016, pp. 177–188.
+ Transactions on Information Forensics and Security [21] Giuseppe Aceto et al. “Know your big data trade-offs
+ 13.1 (2017), pp. 63–78. when classifying encrypted mobile traffic with deep
+ [7] Khaled Al-Naami et al. “Adaptive encrypted traffic learning”. In: 2019 Network traffic measurement and
+ fingerprinting with bi-directional dependence”. In: Pro- analysis conference (TMA). IEEE. 2019, pp. 121–128.
+ ceedings of the 32nd Annual Conference on Computer [22] Shahbaz Rezaei and Xin Liu. “Deep learning for en-
+ Security Applications. 2016, pp. 177–188. crypted traffic classification: An overview”. In: IEEE
+ [8] Mohammad Lotfollahi et al. “Deep packet: A novel communications magazine 57.5 (2019), pp. 76–81.
+ approach for encrypted traffic classification using deep [23] Zhanyi Wang. “The applications of deep learning on
+ learning”. In: Soft Computing 24.3 (2020), pp. 1999– traffic identification”. In: BlackHat USA 24.11 (2015),
+ 2012. pp. 1–10.
+ [9] Chang Liu et al. “Fs-net: A flow sequence network for [24] Yi Zeng et al. “Deep − F ull − Range: a deep learning
+ encrypted traffic classification”. In: IEEE INFOCOM based network encrypted traffic classification and intru-
+ 2019-IEEE Conference On Computer Communications. sion detection framework”. In: IEEE Access 7 (2019),
+ IEEE. 2019, pp. 1171–1179. pp. 45182–45190.
+ [10] Jacob Devlin et al. “Bert: Pre-training of deep bidi- [25] Haipeng Yao et al. “Identification of encrypted traffic
+ rectional transformers for language understanding”. In: through attention mechanism based long short term
+ arXiv preprint arXiv:1810.04805 (2018). memory”. In: IEEE transactions on big data 8.1 (2019),
+ [11] Alexey Dosovitskiy et al. “An image is worth 16x16 pp. 241–252.
+ words: Transformers for image recognition at scale”. [26] Xinming Ren, Huaxi Gu, and Wenting Wei. “Tree-
+ In: arXiv preprint arXiv:2010.11929 (2020). RNN: Tree structural recurrent neural network for net-
+ [12] Hong Ye He, Zhi Guo Yang, and Xiang Ning Chen. work traffic classification”. In: Expert Systems with
+ “PERT: Payload encoding representation from trans- Applications 167 (2021), p. 114363.
+ former for encrypted traffic classification”. In: 2020 ITU [27] Redvan Ghasemlounia et al. “Developing a novel frame-
+ Kaleidoscope: Industry-Driven Digital Transformation work for forecasting groundwater level fluctuations us-
+ (ITU K). IEEE. 2020, pp. 1–8. ing Bi-directional Long Short-Term Memory (BiLSTM)
+ [13] Xinjie Lin et al. “Et-bert: A contextualized datagram deep neural network”. In: Computers and Electronics in
+ representation with pre-training transformers for en- Agriculture 191 (2021), p. 106568.
+ crypted traffic classification”. In: Proceedings of the [28] Xinyi Hu et al. “CBD: A deep-learning-based scheme
+ ACM Web Conference 2022. 2022, pp. 633–642. for encrypted traffic classification with a general pre-
+ [14] Zhaolei Shi et al. “BFCN: A Novel Classification training method”. In: Sensors 21.24 (2021), p. 8231.
+ Method of Encrypted Traffic Based on BERT and [29] Payap Sirinam et al. “Deep fingerprinting: Undermining
+ CNN”. In: Electronics 12.3 (2023), p. 516. website fingerprinting defenses with deep learning”.
+ [15] Petr Velan et al. “A survey of methods for encrypted In: Proceedings of the 2018 ACM SIGSAC Confertraffic classification and analysis”. In: International ence on Computer and Communications Security. 2018,
+ pp. 1928–1943.
+
+ 204
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:11:11 UTC from IEEE Xplore. Restrictions apply.

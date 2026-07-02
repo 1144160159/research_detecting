@@ -1,0 +1,1664 @@
+This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 1
+
+ DAIR-FedMoE: Hierarchical MoE for Federated
+ Encrypted Traffic Classification under Compound
+ Drift
+ Shamaila Fardous, Kashif Sharif, Senior Member, IEEE, Fan Li, Member, IEEE, Ali Asghar Manjotho, and
+ Liehuang Zhu, Senior Member, IEEE
+
+ Abstract—Federated learning (FL) offers a decentralized,
+privacy-preserving framework for encrypted traffic classification
+(ETC), enabling network management and security. However,
+real-world deployment of federated ETC faces compound clientspecific feature, concept, and label drift, which degrades model
+performance. Existing ETC methods under FL settings typically address these drift types in isolation or partial combinations, overlooking their entanglement. Moreover, multiple-global
+model and personalized FL approaches are computational and
+communication expensive. To fill this gap, we propose DAIR-
+FedMoE, a Drift-Adaptive, Imbalance-Aware, RL-Managed Federated Mixture-of-Experts framework to simultaneously handle
+the drift triad with single-global model while minimizing the
+computational and communication overhead. DAIR-FedMoE integrates a GShard Transformer with a hierarchical Mixtureof-Experts (MoE) layer that routes encrypsted flows to either
+stable or drift-specialist experts based on per-client drift scores.
+Within each expert, entropy-guided loss reweighting emphasizes low-confidence classes to address dynamic label imbalance.
+Additionally, a reinforcement learning-based policy dynamically A B
+ A B
+manages the expert pool by spawning, pruning, and merging A B
+experts, enabling efficient adaptation to evolving traffic patterns.
+Experiments on federated splits of ISCX-VPN, ISCX-Tor, VNAT,
+and USTC-TFC2016 show that DAIR-FedMoE achieves superior macro-F1, minority-class recall, and drift-recovery speed Fig. 1: Drift entanglement scenario shown as drift event
+compared to state-of-the-art baselines, while preserving privacy timeline and global parameter response in a federated setting.
+and communication efficiency. The source code is available at
+https://github.com/dairfedmoe/DairFM.
+ Index Terms—Federated Learning, Encrypted Traffic Classifi- across edge clients without sharing raw data [20], [51]. Unlike
+cation, Distributed Concept Drift, Class Imbalance, Mixture-oftypical FL tasks, federated ETC faces highly non-independent
+Expert, Reinforcement Learning.
+ and identically distributed (non-IID) and volatile traffic patterns driven by diverse applications, encryption protocols, tem-
+ I. I NTRODUCTION poral behaviors, and regional policies [28]. These factors lead
+ FFECTIVE identification of traffic types and security
+E threats is essential for network management, intrusion
+detection, and quality of service enforcement, particularly
+ to simultaneous and distributed drift across clients, as shown
+ in Fig. 1, each of five clients records feature drifts ∆P (X )
+ (green circles), concept drifts ∆P (Y|X ) (brown squares),
+in modern IoT and edge computing environments [15]. In and label drifts ∆P (Y) (purple diamonds) from t0 to t8 ;
+this context, federated learning has emerged as a promising overlapping events (entanglement) are shaded in pink. The
+paradigm for ETC, offering a privacy-preserving alternative Global Model row shows the aggregated parameter θ evolving
+to centralized training by enabling distributed model training over time, with pronounced oscillations aligned to entanglement intervals. Bottom panels illustrate schematic examples
+ The work of Fan Li was supported in part by the National Natural ScienceFoundation of China (NSFC) under Grant 62372045. Co-corresponding of each drift type: (1) feature drift, reflecting changes in
+authors: K. Sharif and F. Li. the feature marginal P (X ) (evolving encryption patterns); (2)
+ S. Fardous, K. Sharif, and F. Li are with the school of Computer Science concept drift, as shifts in the conditional distribution P (Y|X )
+and Technology, Beijing Institute of Technology, China. (email: shamailafardous@bit.edu.cn, kashif@bit.edu.cn, fli@bit.edu.cn) (changing semantics of traffic behavior); and (3) label drift,
+ A. Manjotho is with the department of Computer Systems Engineering, involving fluctuations in the label distribution P (Y) (varying
+Mehran University of Engineering and Technology, Jamshoro, Pakistan. traffic class distribution). Such complex, client-specific drift
+(email: ali.manjotho@faculty.muet.edu.pk)
+ L. Zhu is with the School of Cyberspace Science and Technology, Beijing undermines model robustness and remains a central obstacle
+Institute of Technology, Beijing, China (email: liehuangz@bit.edu.cn). in real-world federated ETC deployments.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 2
+
+ Existing approaches in federated ETC have attempted to TABLE I: Coverage of distributed drift types in existing
+tackle these challenges with partial or specialized solutions as federated learning literature.
+summarized in Table I. For instance, FedPacket [3] and FL- Joint Feature Label Concept
+ETC [51] apply FL protocols to encrypted packet features, Study Drift Drift Drift Drift AC TV
+but do not account for temporal drift or client imbalance. P (X , Y) P (X ) P (Y) P (Y|X )
+Other works like FedDrift [21] and FedCCFA [7] adapt general FairFedDrift [40] ✗ ✗ ✓ ✓ ✓ ✓
+FL frameworks to concept drift using confidence calibration FedStream [12] ✗ ✗ Partial ✓ ✓ ✓
+or entropy heuristics, yet they overlook label skew. Multi- FAC-Fed [1] ✗ ✗ ✓ ✓ ✓ ✓
+global model frameworks [9], [21], [41] and personalized
+ FedDrift [21] ✓ ✗ ✗ ✗ ✓ ✓
+federated ETC approaches [11], [13], [14] aim to improve
+client-specific adaptation by assigning dedicated models or FedCCFA [7] ✗ ✗ ✓ ✓ ✓ ✗
+embedding personalized components, but they introduce sig- ConceptFL [33] ✗ ✗ Partial ✓ ✓ ✓
+nificant computational, communication, and storage overhead. EnsembleFL [6] ✓ ✗ ✗ ✓ ✓ ✓
+To reduce this complexity, MoE models such as FedMoE-DA FedMoE-DA [52] ✓ ✓ ✗ ✓ ✓ ✓
+[52] leverages task-specific expert routing. However, they typ- AC: Across Clients, TV: Time Varying, ✓:Full support, ✗: No support.
+ically rely on static expert configurations, lacking mechanisms
+to grow, prune, or merge experts in response to evolving traffic.
+As a result, these models often fail to generalize across diverse The main contributions of the paper are:
+clients or collapse under overlapping drift conditions. • We propose DAIR-FedMoE, a novel drift-resilient ar-
+ Despite prior efforts, federated ETC continues to face two chitecture for federated ETC that concurrently addresses
+critical challenges: (1) real-world deployments frequently en- feature, concept, and label drift distributed across time
+counter distributed and entangled drift (overlapping feature, and clients. It incorporates a two-tier hierarchical MoE
+concept, and label drift across clients). Existing methods within a GShard Transformer to route encrypted-flow
+typically address these drifts in isolation, failing to capture tokens based on drift type, while entropy-based loss
+their simultaneous and distributed nature. This complicates reweighting within each expert dynamically emphasizes
+targeted mitigation strategy and degrades model robustness, low-confidence (often minority) classes to mitigate imfairness, and accuracy over time. To date, no existing model balance.
+has been proposed that explicitly detects and adapts to this • We develop a reinforcement learning-driven expert manentangled drift despite its frequent occurrence in federated agement strategy that dynamically adjusts the expert pool
+ETC scenarios. Moreover, potential of MoEs in handling en- in response to real-time drift and workload signals. A
+tangled drift has not been explored. (2) approaches that assign server-side actor-critic policy learns to optimize model
+clients to separate global models or introduce personalized capacity by monitoring expert usage, drift exposure, and
+components improve local adaptation but incur significant performance trends, enabling efficient spawning, pruning,
+communication, storage, and coordination costs. These meth- and merging of experts as traffic patterns evolve.
+ods often rely on drift-prone client clustering and suffer from • We demonstrate effectiveness our unified framework
+reduced generalization, as each model is trained on a smaller DAIR-FedMoE on federated splits of ISCX-VPN, ISCXdata subset. Tor, VNAT, and USTC-TFC2016, achieving significant
+ To address the multifaceted challenges of distributed drift improvements in macro-F1, minority-class recall, and
+and system efficiency in federated ETC, we propose DAIR- drift-recovery speed, while preserving privacy and com-
+FedMoE, a unified framework that jointly addresses feature, munication efficiency.
+concept, and label drift while ensuring scalability and privacy. The remainder of the paper is organized as follows. Sec-
+DAIR-FedMoE integrates a hierarchical Mixture-of-Experts tion II reviews related works. Section III introduces prelimi-
+(HMoE) architecture within a GShard Transformer to perform naries and background. Section IV describes the threat model.
+drift-aware expert routing, selectively isolating stable and Section V presents the proposed DAIR-FedMoE method. Secdrifting traffic patterns. It leverages confidence-guided loss tion VI provides experimental details and evaluation analysis.
+reweighting to adapt to dynamic label imbalance by upweight- Section VII concludes the paper. Additional baseline configing uncertain classes based on expert entropy, improving urations and metric definitions are included in Appendices A
+robustness without manual tuning. To maintain a compact and and B, computational complexity and overhead analysis in
+responsive model, DAIR-FedMoE introduces a reinforcement Appendix C, and extended discussion of limitations and future
+learning-based policy that dynamically adjusts the expert pool directions in Appendix D.
+by spawning new specialists or pruning underutilized ones in
+response to drift signals. These components work in concert to
+ II. R ELATED W ORKS
+ensure targeted drift adaptation, balanced learning, and adaptive capacity control, all within a single privacy-preserving A. Encrypted Traffic Classification
+global model. To the best of our knowledge, this is the first Encrypted traffic classification has evolved from traditional
+work to explore the potential of MoEs for drift adaptation port- and payload-based inspection to data-driven methods
+and to systematically study the impact of entangled drift in that operate over statistical and flow-level metadata. Deep
+federated ETC. learning approaches such as DeepPacket [31], FS-Net [26],
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 3
+
+and FlowPic [42] extract discriminative features from raw or Label drift, prevalent in ETC due to class imbalance from
+transformed encrypted flows. More advanced models incorpo- underrepresented attack types or services, is mitigated using
+rate temporal patterns [24], [55] or inter-flow relations [19], oversampling [34] or fairness-aware aggregation [16]. To han-
+[44] to enhance semantic understanding. Recent trends explore dle co-occurring drifts, recent methods combine augmentation,
+self-supervised pretraining [17], [25] and vision-inspired ar- memory replay, and ensemble learning. These include hybrid
+chitectures [30]. Despite their expressiveness, these methods rehearsal strategies [36] and class-wise MixUp/AugMix [22].
+typically rely on centralized training and assume stationary Ensemble- and stream-adaptive techniques [45], [53] further
+traffic distributions. boost resilience under evolving, imbalanced conditions.
+ In real-world settings, encrypted traffic evolves constantly Despite these advances, most methods treat drift types
+due to protocol changes, user behavior, and evasion tactics, in isolation or in limited combinations, overlooking their
+causing feature, concept, and label drift. Most ETC frame- joint entanglement, where feature, concept, and label drift
+works lack mechanisms to jointly detect and adapt to these interact simultaneously and non-linearly across clients and
+drifts, particularly in distributed, privacy-preserving settings time. DAIR-FedMoE addresses this by integrating entropylike federated learning. To address this, we propose a unified driven class reweighting and modular expert routing to adapt to
+framework that leverages mixture-of-experts and confidence compound drifts in a unified, scalable, and privacy-preserving
+reweighting to adapt to simultaneous feature, concept and label framework.
+drifts over time.
+
+B. FL with Heterogeneous & Evolving Traffic III. P RELIMINARIES
+ FL has gained significant traction in ETC by enabling col- A. Federated Learning (FL)
+laborative model training across edge devices without exposing
+raw traffic data. Early efforts in federated ETC emphasize FL is a decentralized paradigm that enables multiple clients
+protocol-agnostic feature learning without centralized access. to collaboratively train a global model without exposing their
+Works such as FedETC [20] and FedPacket [3] applied raw data [35]. Each client ck holds a private dataset Dk and
+standard FL protocols to encrypted traffic features, showing performs local updates to a shared model parameters θ, which
+initial success but limited robustness under non-IID client are then aggregated by a central server. The global objective
+distributions or evolving attack patterns. Several ETC-focused is to minimize the weighted sum of local loss functions as
+frameworks integrate FL with MoE for computation and com- expressed in (1).
+munication efficiency. For instance, Zec et al. [50] introduced a
+ K
+gated fusion of global and local models to balance personaliza- X |Dk |
+ min Lk (θ), (1)
+tion and scalability. FedMix [49] employed client-specific gat- θ |D|
+ k=1
+ing to improve alignment of local updates. FedMoE-DA [52]
+enabled dynamic expert routing across clients, enhancing both where |Dk | and |D| are the total number of samples with client
+efficiency and cross-client adaptation. Moreover, in domain- k and across all clients, respectively and K is the total number
+tailored scenarios, Bai et al. [2] used weighted aggregation for of participating clients.
+hospital-wise domain shifts in medical imaging. Sievers et al.
+[46] applied FL-MoE to heterogeneous smart energy datasets.
+Architecturally, FtMoE [29] adapted expert assignment via B. Mixture-of-Experts (MoE)
+task-aware transfer learning for image classification.
+ While existing FL-MoE approaches enhance personaliza- MoE is a modular neural architecture designed to improve
+tion, scalability, and robustness, they overlook entangled drift, model capacity and specialization while maintaining computhe simultaneous and interacting shifts in feature, concept, tational efficiency [43]. It consists of a collection of expert
+and label distributions, where conventional detection and subnetworks and a gating mechanism that routes each input
+adaptation often fail. In contrast, DAIR-FedMoE is the first to a subset of these experts, enabling sparse activation and
+unified framework tailored for ETC under such complex drift dynamic inference. Given an input x, the output of an MoE
+scenarios, enabling dynamic, fine-grained adaptation across layer is a weighted combination of the top-k selected experts:
+clients and time while maintaining privacy and communication X
+efficiency. MoE(x) = gi (x) · Ei (x), (2)
+ i∈S
+
+C. Drift Adaptation in Federated Learning where S denotes the set of selected experts, gi (x) is the
+ Drift handling in FL has largely focused on individual drift gating score, and Ei (x) is the output of expert i. However,
+types through global or sample-level adjustments. Concept traditional MoE architectures do not inherently handle timedrift is commonly addressed via entropy-based scoring or varying data distributions or dynamic class imbalance, as the
+confidence calibration, as in FedDrift [21] and FedCCFA gating decisions are typically static and agnostic to temporal
+[7], while FedBSS [2] applies bias-aware training schedules drift or class-wise uncertainty. This limits their robustness in
+for sample-specific adaptation. Feature drift is tackled in non-stationary environments where traffic semantics and class
+methods like pMixFed [39] using interpolation strategies. distributions evolve over time.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 4
+
+C. Differential Privacy (DP) aggregation, constrained confidence reporting, and threshold
+ In the context of federated learning, DP is a privacy- obfuscation prevent adversaries from inferring sensitive traffic
+enhancing technique employed to ensure that model updates patterns, client membership, or concept-drift behavior from
+do not leak private information from any client’s local dataset. model updates.
+A randomized algorithm A is said to satisfy (ε, δ)-differential All server-side operations in DAIR-FedMoE, including hiprivacy if, for any two neighboring datasets D and D′ differing erarchical routing, drift-aware expert selection, and PPO-based
+by at most one sample, and for any subset of outputs S as expert lifecycle management (expert spawning, pruning, and
+defined in (3). merging), operate solely on differentially private aggregated
+ updates. By the post-processing property of differential pri-
+ P[A(D) ∈ S] ≤ eε · P[A(D′ ) ∈ S] + δ, (3) vacy, these operations do not weaken the underlying (ε, δ)-DP
+where ε measures the privacy loss and δ accounts for a small guarantee.
+probability of failure. The DP is implemented by injecting Routing and Side-Channel Considerations. DAIR-FedMoE
+zero-mean Gaussian noise into the clipped local gradient does not transmit per-client routing decisions, drift scores,
+before sending it to the server as expressed in (4). or expert selection indicators to the server. The server observes only secure-aggregated (optionally expert-partitioned)
+ e k = clip(∇Lk , C) + N (0, σ 2 I),
+ ∆ (4) model updates, without access to client identities or expert
+ e k is the DP preserved local update for client k, C is usage frequencies. Consequently, while aggregated updates
+where ∆
+ may reflect population-level traffic evolution, routing behavior
+the clipping bound to limit sensitivity, and σ controls the noise
+ and drift states cannot be attributed to individual clients,
+scale.
+ and expert lifecycle decisions operate solely on differentially
+ private aggregates.
+ IV. T HREAT M ODEL
+ We consider a semi-honest adversary in our federated V. M ETHOD
+encrypted traffic classification setup, where a central server
+orchestrates a hierarchical MoE across distributed clients. A. Problem Formulation
+The adversary may corrupt some clients or observe aggre- In a federated encrypted traffic classification problem, we
+gated updates. Such an adversary has full knowledge of consider K clients and a central server. Client k holds a
+our GShard Transformer backbone, hierarchical MoE gating private dataset Dkt at round t, sampled from a joint distribution
+logic, PPO policy network, hyperparameters (including drift Pkt (X , Y) over encrypted-flow features X ∈ Rd and labels
+thresholds, gating dimensions, and clipping norms), and even Y ∈ {1, . . . , C}. The objective is to learn model parameters
+the differential-privacy noise distribution, but never accesses θ of a mixture-of-experts classifier:
+raw packet data or internal client states. Its objectives include: M
+(1) inferring properties of individual flows or rare attack
+ X
+ fθ (x) = gj (x) Ej (x)
+classes by analyzing expert- and gate-parameter updates and j=1
+confidence summaries, (2) mounting membership-inference
+attacks to determine whether specific flows were used in by minimizing the federated empirical risk:
+training, and (3) reconstructing feature vectors and tracking K
+ X |Dt |
+ P k t E(x,y)∼Dt ℓ fθ (x), y
+  
+drift events through routing and lifecycle decisions. min
+ ℓ |Dℓ |
+ θ k
+ To mitigate these risks, we employ DP-SGD, a widely val- k=1
+idated technique that offers strong formal privacy guarantees
+ In real-world encrypted traffic, the feature distribution
+while preserving high model performance [10], [38]. To ensure
+ Pk (X ), the label distribution Pk (Y), and the conditional
+that our privacy claims are transparent and reproducible, we
+ distribution Pk (Y|X ) often evolve over time, a phenomenon
+explicitly report the inputs used for privacy accounting under
+ collectively referred to as feature drift, label drift, and con-
+DP-SGD. At each client, we apply per-sample gradient clip- (t)
+ cept drift, respectively. Formally, at round t: Pk (X ) ̸=
+ping with norm bound C to all trainable components updated (t−1) (t) (t−1) (t)
+locally, including the shared encoder, expert parameters, and Pk (X ) ∧ Pk (Y) ̸= Pk (Y) ∧ Pk (Y|X ) ̸=
+ (t−1)
+gating networks, and add Gaussian noise N (0, σ 2 C 2 I) to the Pk (Y|X ).
+clipped gradients before the local optimizer step. The resulting In federated settings, these drifts may also differ across
+ (t) (t−1) (t) (t−1)
+model updates are shared only via secure aggregation. Let B clients, i.e., Pi (X ) ̸= Pj (X ) ∧ Pi (Y) ̸= Pj (Y) ∧
+ (t) (t−1)
+denote the local minibatch size and |Dk | the local dataset size, Pi (Y|X ) ̸= Pj (Y|X ) for i ̸= j, which we denote as
+yielding a per-step sampling rate q = B/|Dk |; with E local distributed drift. A robust federated classifier must therefore
+epochs per round and T federated rounds, the total number adapt simultaneously to all three types of drift across time and
+of composed DP steps per client is Sk = T · E · ⌈|Dk |/B⌉. clients. In this work, we consider a synchronous FL setting,
+We compute the overall privacy budget (ε, δ) using a stan- where all clients participate in each communication round
+dard Moments Accountant for the (subsampled) Gaussian and updates are aggregated by the central server. However,
+mechanism with the above (q, σ, C, Sk ), fixing δ = 10−5 clients experience asynchronous and overlapping drift events
+in our experiments (with B = 32, E = 5, and T = 250 at different times and with different intensities across clients.
+unless stated otherwise). Together, differential privacy, secure While the federated training proceeds in synchronized rounds,
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 5
+
+ YES
+
+ NO
+
+ YES
+
+ NO
+
+Fig. 2: Overview of the DAIR-FedMoE framework. (a) GShard Transformer backbone in which each MoE layer is replaced by a
+hierarchical Mixture-of-Experts (HMoE) sublayer. (b) Server-side HMoE pipeline, where encrypted-flow embeddings are scored
+for drift, smoothed, and routed by a root gate to stable or drift-specialist experts; model updates are aggregated federatively and
+expert spawning, pruning, and merging are controlled by a PPO-based policy. (c) Client-side workflow, where local drift scores
+guide hierarchical routing, adaptive confidence-based loss reweighting is applied during training, and differentially private
+expert and gate updates with confidence summaries are returned to the server.
+
+the distributional shifts are modeled as continuous and client- and system capacity. This seamless integration of a GShard
+specific, reflecting real-world non-stationary traffic environ- transformer backbone, drift-aware routing, confidence-guided
+ments. loss reweighting and RL-managed expert lifecycle underpins
+ the adaptability and robustness of DAIR-FedMoE in handling
+B. Overview of DAIR-FedMoE Framework label concept drift and class imbalance simultaneously.
+ The overall workflow of DAIR-FedMoE, built upon a
+GShard transformer backbone, is shown in Fig. 2. DAIR-
+ C. GShard Transformer Backbone
+FedMoE extends a GShard Transformer by embedding driftaware expert trees and confidence-guided loss reweighting into The DAIR-FedMoE framework is built on the GShard
+MoE layer. In each federated round, the server broadcasts transformer architecture of Lepikhin et al. [23]. We replace
+latest expert shards, gating networks and global confidence the standard MoE layer with our Hierarchical MoE (HMoE)
+coefficients to all clients. Each client then detects local concept layer, while retaining the multi-head self-attention, layer nordrift on its encrypted-flow data, routes inputs to either stable or malization, and feed forward network components, resultdrift experts, and trains experts using class-confidence weights. ing in a sparse and drift-aware attention architecture. Each
+ During local training, each expert maintains a running av- encrypted-flow session x (byte sequence) is first tokenized
+erage of its softmax entropy to estimate class confidence. The into a sequence of embeddings enriched with sinusoidal poclass confidence coefficients are updated at the end of every sitional encodings. These embeddings represent fixed-length
+local epoch and later averaged across clients to form global vectorized representations of individual byte chunks derived
+weights. Clients convert these scores into weights for the from the raw encrypted flow, capturing both structural and
+cross-entropy loss, up-weighting rare or uncertain classes to statistical characteristics of the traffic. The resulting token
+handle class imbalance, and backpropagate gradients through sequence is then passed through a stack of L transformer
+both experts and gating networks. After local updates, clients blocks. Within each block, multi-head self-attention is applied
+performs differential privacy and return updated parameters to the tokens, followed by the HMoE layer where a twoand revised confidence summaries back to the server, which tier gating mechanism guided by per-token drift scores routes
+aggregates them via weighted FedAvg. Moreover, a reinforce- tokens to either stable experts or drift-specialist experts. The
+ment learning-based policy network on the server monitors updated embeddings entering the HMoE layer are denoted
+expert utilization and drift trends to manage the life cycle by h. After routing and expert processing, these outputs pass
+of experts and to keep capacity aligned with evolving data. through a standard feed-forward network. Furthermore, resid-
+The expert lifecycle management is triggered once per com- ual connections and layer normalization follow every sublayer
+munication round to maintain alignment with traffic evolution to ensure stable training at scale, and the final representation
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 6
+
+of the [CLS] token is fed into a two-layer MLP classification snapshot Et (·) before computing the JS divergence, preventing
+head with a softmax output to produce the class logits. In each confounding from encoder-update–induced embedding shifts.
+communication round t, the GShard transformer is partitioned The drift score is smoothed over time, and routing is learned
+into shards, with client k receiving Shardk . via the hierarchical gate (adaptive probabilities), rather than
+ using a fixed threshold.
+D. Hierarchical Mixture-of-Experts (HMoE) layer Root Gating Network Design. The root gating network is
+ responsible for determining whether an input sample should
+ In DAIR-FedMoE, the HMoE layer groups experts into be routed through stable or drift experts. It takes as input the
+two regimes, stable and drift, and uses a two-level gating feature embedding h ∈ Rdk of the encrypted-flow vector and
+mechanism to route encrypted-flow samples. Each sample is the normalized drift score d˜k (h) ∈ [0, 1], where dk is the
+first assigned a drift score and sent to the root gate, which embedding dimension. These are concatenated into the vector,
+chooses between the stable or drift regime. A second, regime- as defined in (9).
+specific gate then selects the specialist expert within that  
+regime. This two-tier structure isolates evolving traffic patterns h
+ z= ˜ ∈ Rdk +1 (9)
+for rapid adaptation while preserving stable behavior. dk (h)
+Local Drift Detection Mechanism. To support the top-level This vector is then passed through a two-layer multilayer
+routing in our expert tree, each client computes a local drift perceptron to produce routing probabilities r = [rstable , rdrift ].
+score for every incoming feature vector. This score quan- Here rstable and rdrift denote the probabilities of routing to the
+tifies how much the current encrypted-flow distribution has stable or drift regime, respectively. The root gate’s parameters
+shifted relative to historical observations, allowing the model are updated jointly with all other components via backpropato distinguish between consistent and drifting traffic before gation through the hierarchical MoE loss.
+classification. Stable vs. Drift-Specialist Expert Routing. DAIR-FedMoE
+ At each communication round t, client k first evaluates employs a two-tier expert routing mechanism by explicitly
+a drift score dk (h) for each encrypted-flow feature vector partitioning the total expert pool into two non-overlapping
+embedding h. This score measures the divergence between subsets: stable experts and drift-specialist experts. This disjoint
+two empirical feature distributions over a sliding window of design allows the model to isolate and preserve stable behavsize W , as ioral patterns while simultaneously adapting to evolving traffic
+ t−1 distributions. Based on this structure, after computing the root
+ 1 X
+ Pkt,hist =
+  
+ Eh∼Dks δ(h) (5) gate probabilities r, each input sample is routed through the
+ W branch with the higher activation score. If rstable ≥ rdrift , the
+ s=t−W
+ feature embedding h is forwarded to the stable-regime gate;
+ Pkt,curr = Eh∼Dkt δ(h) ,
+  
+ (6) otherwise, it is directed to the drift-regime gate. Each regimewhere δ(h) denotes the Dirac mass at h. We employ the specific gate then applies a softmax over its corresponding
+Jensen-Shannon divergence to quantify the shift, as subset of experts, as defined in (10) and (11), to select the
+ most appropriate expert within that regime.
+ dk (h) = JS Pkt,curr ∥Pkt,hist
+ 
+ (7) g S = softmax(Ws h + bs ) (10)
+ = 21 KL Pkt,curr ∥M + 12 KL Pkt,hist ∥M ,
+  
+ g D = softmax(Wd h + bd ) (11)
+ t,curr
+with M = 1
+ 2 (Pk + Pkt,hist ).
+ In practice, both distributions are estimated via Gaussian kernel density estimates Here g S ∈ ∆l−1 indexes l stable experts and g D ∈ ∆m−1
+over packet payload to ensure efficiency on edge devices. To indexes m drift experts. Here, Ws , Wd and bs , bd are the
+reduce noise in the drift score, we further employ exponential corresponding weights and biases. A hard routing selects
+smoothing as defined in (8). expert j ∗ = arg maxj gjr .
+ Expert Network Architectures. Each expert Ej is a
+ d˜k (h) = α d˜kt−1 (h) + (1 − α) dk (h) (8) lightweight classifier mapping h ∈ Rdk to class logits in RC .
+ In our implementation, all experts share a uniform two-layer
+Here α ∈ [0.9, 0.99] is a smoothing factor, selected via a small
+ fully-connected architecture followed by a softmax to obtain
+grid search over {0.90, 0.95, 0.99} on a held-out validation
+ class probabilities. Dropout and batch normalization layers
+split. This range follows widely adopted conventions in ML
+ are used in between for regularization. Although stable and
+for EMA-based modules [5], balancing responsiveness to drift
+ drift experts use the same architecture, their parameters are
+with stability against transient noise. The normalized score
+ updated using different client-data subsets as determined by
+d˜k (h) is then concatenated with the feature embedding h and
+ the hierarchical routing mechanism.
+fed into the root gating network. Samples with high d˜k (h)
+are routed to drift-specialist experts, while those with low
+scores proceed to stable experts, forming the foundation of E. Adaptive Loss Reweighting via Expert Confidence
+our hierarchical MoE. Following expert selection through hierarchical routing,
+ Furthermore, we explicitly decouple representation drift we further enhance per-expert learning by addressing class
+from input data drift. At round t, both the historical and imbalance within each expert’s data distribution. To this end,
+current windows are re-embedded using the same encoder we introduce an adaptive loss reweighting mechanism that
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 7
+
+leverages per-class confidence estimates. By dynamically scal- Gradients computed from Lk backpropagate through both the
+ing the contribution of each class to the loss function based on expert network Ej and its upstream gating modules, ensuring
+the expert’s predictive certainty, under-represented or harder- that high-weight (low-confidence) classes receive proportionto-classify classes receive greater emphasis. This improves the ally greater parameter updates.
+model’s ability to maintain balanced performance, particularly To enforce differential privacy, each client applies DP to its
+under drifting or skewed label distributions. local parameter deltas as defined by (4). The same procedure
+ (k)
+Per-Expert Confidence Estimation. For each expert Ej , we is applied to the gating updates ∆G· . Only the privatized upfirst compute the predictive distribution pj (h) ∈ ∆C−1 over ˜ (k)
+ ˜ (k) , ∆G
+ dates {∆E · } and the updated confidence summaries
+ j
+C classes for samples h routed to that expert. The per-sample are transmitted to the server.
+Shannon entropy Hj (h) quantifies the expert’s uncertainty as
+expressed in (12).
+ F. RL-Based Expert Lifecycle Management
+ C
+ In DAIR-FedMoE, the server employs a reinforcement
+ X
+ Hj (h) = − pj (h)c log pj (h)c (12)
+ c=1
+ learning (RL) agent to manage the set of active experts so
+ that model capacity continuously aligns with evolving traffic
+ To derive class-specific statistics, we average these entropies
+ patterns, as shown in Fig. 3. This includes, pruning underover a sliding window of the most recent samples Bj,c with
+ utilized networks, spawning new drift specialists, and merging
+true label c defined as in (13).
+ redundant experts. We formalize this as a Markov Decision
+ 1 X
+ Process (MDP) and train a lightweight policy network to
+ H j,c = Hj (h) (13)
+ |Bj,c | optimize long-term classification performance and resource
+ h∈Bj,c
+ efficiency. We define the MDP at federated round t as follows:
+ We then update an exponential moving average (EMA) of State st : A real-valued vector concatenating:
+these values to smooth temporal fluctuations, as M
+ • Expert utilization rates {ūj }j=1 , where ūj is the average
+ (t) (t−1)
+ H̃j,c = α H̃j,c + (1 − α) H j,c , (14) gating probability of expert j over the past R rounds.
+ • Drift engagement {δj }, the fraction of samples routed to
+where α ∈ [0.9, 0.99] is a smoothing factor. Finally, we nor- each drift expert versus stable experts.
+malize the EMA-entropy scores into a confidence coefficient • Confidence profiles {ϕj,c } averaged across classes.
+ϕj,c in [0, 1] as computed in (15). • Performance deltas ∆F1t and ∆DRt , the changes in
+
+ H̃j,c macro-F1 and drift-recovery speed between rounds t − 1
+ ϕj,c = 1 − (15) and t.
+ maxc′ H̃j,c′
+ • Expert ages {aj }, the number of rounds since each expert
+ A lower ϕj,c indicates that expert Ej is less certain on was created or last merged.
+class c, directing subsequent loss reweighting to prioritize that Action at : A discrete choice from the set A =
+class. These entropy-based confidence scores are computed {Prune(j), Spawn(k), Merge(j1 , j2 ), NoOp}, where:
+independently on each client and subsequently averaged across
+ • Prune(j) removes expert j.
+clients to obtain global confidence estimates. The aggregated
+ • Spawn(k) creates a new drift expert initialized from
+values {ϕj,c } are then communicated to the server along with
+the model updates and are used in the following round to drift-cluster centroid k.
+ • Merge(j1 , j2 ) combines experts j1 and j2 by averaging
+compute class-wise loss weights.
+Entropy-Based Weight Computation. Given the smoothed their weights.
+ • NoOp leaves the expert pool unchanged.
+confidence coefficients ϕj,c ∈ [0, 1] for expert Ej and class c,
+we derive per-class weights wj,c by inverting confidence, as Reward rt : We craft a scalar reward rt balancing classification
+ gains and model complexity as defined in (18).
+ 1
+ wj,c = , (16)
+ ϕj,c + ε rt = ∆F1t + λd ∆DRt − µ|∆Mt | (18)
+where ε > 0 is a small constant to prevent division by zero. Here ∆Mt is the change in total expert count, and λd , µ >
+Intuitively, lower confidence ϕj,c yields higher weight wj,c , 0 weight the drift-recovery improvement and expert-count
+thus emphasizing harder or under-represented classes. To avoid penalty.
+extreme values that could destabilize training, we clip wj,c into Policy Network Architecture. We implement a shared actora bounded interval [ωmin , ωmax ]. critic network that processes the MDP state st through two
+Incorporation into Local Loss Function. During each hidden layers. From the second layer, the policy head produces
+client’s local update, routed samples (xi , yi ) assigned to expert action probabilities πθ (at |st ) and the value head estimates the
+Ej incur a weighted cross-entropy loss, as defined in (17). state value Vϕ (st ). The policy parameters are denoted by θ
+ 1 X  and the value parameters by ϕ.
+ Lk = wj,yi ℓ Ej (h), yi (17) During each federated round, the server collects transi-
+ |Dk |
+ (hi ,yi )∈Dk
+ tions (st , at , rt , st+1 , log πθold (at |st )) into an replay buffer.
+Here Dk is the local dataset at client k, wj,yi is the weight Every U rounds, the policy is updated using the Proximal
+for the true label yi , and h is the embedding for feature xi . Policy Optimization (PPO) clipped-surrogate objective. For
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 8
+
+ Algorithm 1 One Federated Training Round of DAIR-
+ FedMoE
+ (t)
+ 1: Server broadcasts experts {Ej }M j=1 , gating nets
+ (t) (t) (t) (t)
+ Gr , Gs , Gd and confidences {ϕj,c }
+ 2: for each client k ∈ St in parallel do
+ (t)
+ 3: for each minibatch B ⊂ Dk do
+ 4: Initialize local loss Lk ← 0
+ 5: for each (xi , yi ) ∈ B do
+ 6: Compute embedding h = Shardk (xi )
+ 7: Compute drift score dk (h)
+ 8: Perform EMA smoothing d˜k (h)
+Fig. 3: Architecture of the PPO-based expert lifecycle man- (t)
+ 9: [rstable , rdrift ] ← Gr ([h; d˜k (h)])
+agement module in DAIR-FedMoE.
+ 10: if rstable ≥ rdrift then
+ (t)
+ 11: g ← Gs (h)
+each sampled minibatch, we compute the advantage estimates 12: else
+ (t)
+Ât = R̂t − Vϕ (st ), where R̂t are the empirical returns. The 13: g ← Gd (h)
+actor is trained by minimizing objective function as defined 14: end if
+in (19), while the critic is trained by minimizing the value- 15: j ∗ ← arg maxj gj
+function loss as expressed in (20). 16: Compute entropy Hj ∗ ,yi , update EMA H̃j ∗ ,yi
+ 17: Compute ϕj ∗ ,yi
+ LPPO (θ) = −E[ min(Ât πθ (at |st )/πθold (at |st ), 18: wj ∗ ,yi ← clip(1/(ϕj ∗ ,yi + ε), ωmin , ωmax )
+ (19) (t)
+ clip(rt (θ), 1 − ϵ, 1 + ϵ) Ât )] 19: Lk + = wj ∗ ,yi ℓ(Ej ∗ (h), yi )
+ 20: end for
+ LVF (ϕ) = E[(Vϕ (st ) − R̂t )2 ] (20) (k) (k) (k) (k)
+ 21: Backprop. Lk , get ∆Ej , ∆Gr , ∆Gs , ∆Gd
+ Further to encourage exploration, we add an entropy bonus 22: end for
+Lent = −E[H(πθ (·|st ))]. We perform NPPO epochs of gradient 23: Client k applies DP as defined in (4)
+descent on the combined loss, as expressed in (21), using 24: Client k sends {∆E ˜ (k) , ∆G ˜ (k) ˜ (k) ˜ (k) (k) }
+ r , ∆Gs , ∆Gd , ϕ
+ j
+separate learning rates for actor and critic. After updating, we to server
+set θold ← θ before the next optimization cycle. 25: end for
+ 26: Server aggregates:
+ L = LPPO + cvf LVF + cent Lent , (21)
+ (t+1)
+ X |Dk | (t)
+where cvf > 0 and cent > 0 scale the value-function loss Ej = (Ej + ∆E ˜ (k) )
+ P j
+ ℓ |D ℓ |
+and entropy bonus, respectively. After completing the PPO k∈St
+updates, we set θold ← θ before the next optimization cycle. 27: For Gr , Gs , Gd aggregate high-drift clients
+ 28: Construct RL state st :
+G. Federated Training Protocol
+ st = [{ūj }M
+ j=1 , δj , ϕj,c , ∆F1t , ∆DRt , aj ]
+ This section describes the federated training routine of
+DAIR-FedMoE, which proceeds iteratively across communi- 29: Sample action at ∼ πθ (·|st )
+cation rounds. Each round consists of three phases: server 30: Execute action at ∈ {Prune, Spawn, Merge, NoOp}
+ (t+1)
+broadcast, client-side local updates, and server aggregation 31: Update expert set {Ej }
+with expert policy invocation, as detailed in Algorithm 1.
+ At the beginning of round t, the server broadcasts the
+current expert parameters, gating networks, and global confidence coefficients to all participating clients (line 1). adaptive loss weight and the clipped final weight is computed
+Each client k then processes its local minibatches in parallel (lines 16-17). Each client’s objective accumulates the
+(lines 2-3). For each input sample, it extracts features weighted cross-entropy loss (line 18), and gradients are
+using a shared encoder (line 6), computes a drift score backpropagated through the expert and gating layers to obtain
+(line 7), and applies EMA smoothing to obtain d˜k (h) local updates (line 20).
+(line 8). These scores are passed to the root gating function Before sending the updates back to the server, clients
+to obtain regime probabilities (line 9), which determine apply differential privacy noise and transmit the privatized
+whether the sample is routed through the stable or drift- updates (lines 22-23). Upon receiving updates from all
+sensitive gate (lines 10-13). clients, the server aggregates them across the population
+ Each expert Ej then outputs class scores, which are com- (lines 25-26) and forms an RL state vector based on drift
+bined using the gate weights gj to compute soft predic- exposure and recent performance (line 28). The PPO policy
+tions. The predicted class is selected (line 14), and its samples an action and executes it to adjust the expert pool
+entropy is computed and used to update the EMA of un- (e.g., spawn, prune, merge, or NoOp), concluding the round
+ (t+1)
+certainty (line 15). This entropy is used to derive the with the updated expert set {Ej } (lines 29-31).
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 9
+
+Algorithm 2 Inference with DAIR-FedMoE cent = 0.01, and perform NPPO = 4 optimization epochs per
+Require: Trained experts {Ej }, gates Gr , Gs , Gd update. The actor and critic use learning rates of 5 × 10−4
+Require: Single encrypted-flow x and 10−3 , respectively. The RL reward formulation (Eq. 18)
+ 1: Extract features h = Shardk (x) includes weights λd = 2.0 for drift-recovery improvement and
+ 2: Compute drift score d(h), EMA ˜ µ = 0.5 for expert-count regularization. These hyperparame-
+  smoothed d(h)
+ ˜
+ 3: [rstable , rdrift ] ← Gr [h; d(h)] ters are tuned via grid search on a held-out validation split to
+ 4: if rstable ≥ rdrift then balance stability and performance.
+ 5: g ← Gs (h) To enforce (ϵ, δ)-differential privacy, each client clips gra-
+ 6: else dient norms to C = 1.0 and adds Gaussian noise with
+ 7: g ← Gd (h) standard deviation σ = 1.2. The Moments Accountant tracks
+ 8: end if cumulative privacy loss, ensuring δ = 10−5 over T = 250
+ 9: Compute final class probabilities: communication rounds.
+ X All clients run in CPU-only Docker containers to emulate
+ p(c) = gj [ softmax(Ej (h)) ]c resource-constrained edge devices; we report per-round client
+ j
+ wall-clock time and memory usage collected on these CPU-
+10: return arg maxc p(c) only clients to reflect edge-side costs. This setup isolates
+ server-only components (global aggregation and PPO policy
+ updates) from client compute, mirroring a practical FL de-
+H. Inference with DAIR-FedMoE ployment where clients are low-power nodes and the server
+ Algorithm 2 outlines the inference procedure of DAIR- has ample resources.
+FedMoE for a single encrypted-flow input. First, the encrypted
+input is transformed into feature representation via Shard B. Baseline Solutions & Evaluation Metrics
+encoder (line 1). The drift score is then computed and
+ We benchmark DAIR-FedMoE against representative basesmoothed using an EMA filter (line 2), and routing scores
+ lines covering (i) strong centralized ETC backbones, including
+are derived using the routing gate Gr (line 3). Based on
+ FS-Net [26], FlowPic [42], DeepPacket [31], and Flow-GNN
+the relative strengths of stable and drift indicators, the input
+ [19]; (ii) federated ETC methods that primarily address priis routed either to the stable gate Gs or the drift-sensitive
+ vacy and decentralization but do not explicitly model drift,
+gate Gd (lines 4-8). Each expert’s output is weighted
+ including FedETC [20], FL-ETC [51], FedPacket [3], and BCby the selected gating policy and aggregated to compute the
+ FLETC [28]; and (iii) drift-aware or continual/fair FL basefinal class probabilities (line 9). The class with the highest
+ lines, including FedDrift [21], FedCCFA [7], FedIBD [18],
+probability is returned as the predicted label (line 10).
+ Cross-FCL [54], Master-FL [47], FairFedDrift [40], FedMoE-
+ DA [52], FairINC [8], and FedStream [12]. Implementation
+ VI. E XPERIMENTAL D ETAILS & E VALUATION A NALYSIS
+ details and configuration choices for all baselines follow their
+A. Implementation Details original descriptions and are summarized in Appendix A.
+ The DAIR-FedMoE framework is implemented using Py- We report Macro-F1 as the primary metric, along with
+Torch 1.12 for model construction, Flower 0.19 for federated macro-precision, macro-recall, overall accuracy, minority-class
+orchestration, and Ray RLlib 1.8 for reinforcement learning. recall (bottom 25%), and drift-recovery score. Communication
+All experiments are conducted on a Windows 11 24H2 system cost, runtime overhead, expert-pool dynamics, and privacy
+equipped with dual NVIDIA V100 GPUs and 128 GB RAM. budget consumption are also evaluated; formal definitions
+Clients are simulated in CPU-only Docker containers to em- appear in Appendix B.
+ulate edge deployments. All source code, pretrained models,
+and configuration files will be publicly released.
+ We set the drift estimation window to W = 500 samples C. Datasets and Federated Splits
+and use an EMA smoothing factor α = 0.95. Confidence For evaluating DAIR-FedMoE framework, we consider four
+weights are clipped to the interval [ωmin , ωmax ] = [1.0, 5.0]. widely-used encrypted-traffic benchmarks. The ISCX VPN-
+The GShard Transformer backbone comprises L = 12 trans- nonVPN dataset comprises 14 traffic categories (e.g., VOIP,
+former blocks with hidden dimension dk = 512, 8-head self- P2P, HTTP) captured in both VPN and non-VPN sessions,
+attention, and a feed-forward expansion factor of 4. Each with flow-level statistics extracted via ISCXFlowMeter. The
+HMoE sublayer includes l = 4 stable experts and m = 4 drift ISCX Tor-nonTor dataset contains labeled PCAPs and flow
+experts, each implemented as a two-layer MLP with hidden features for Tor-routed and direct traffic across 10 applicasize He = 512. Gating networks use a hidden size Hg = 128. tion classes. The VPN/Non-VPN Network Application Traffic
+Clients perform 5 local epochs per round with batch size 32, (VNAT) dataset comprises 165 PCAP files (82 VPN, 83 nonusing Adam optimizer with a learning rate of 10−3 for both VPN) spanning 10 applications, totaling 36.1 GB of encrypted
+expert and gate modules. The PPO-based policy network for and clear-text flows. Lastly, the USTC-TFC 2016 dataset [48]
+expert lifecycle management has two hidden layers of size comprises 20 classes, with an equal split between benign
+Hp = 256. We set the PPO clip parameter ϵ = 0.2, value- encrypted traffic (e.g., Gmail, Facebook) and malware traffic
+function loss coefficient cvf = 0.5, entropy bonus coefficient (e.g., Rbot, Virut), all encrypted via SSL/TLS. It is highly
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 10
+
+ ISCX-VPN under Dir(0.1) ISCX-VPN under Dir(0.5) of flows from their dominant temporal segment and 20%
+ 0 0 distributed across remaining segments. This yields 2800-
+ 1 1 1500
+ 2 2
+ 3
+ 4
+ 2000 3
+ 4
+ 3200 flows per client with both application preference
+ Classes
+
+ Classes
+ 1000
+ 5 5
+ 6 6 and temporal variations.
+ 7 1000 7
+ 8
+ 9
+ 8
+ 9
+ 500 • USTC-TFC2016 contains 10 malware families and 10
+ 10 10
+ 11 0 11 benign categories. We implement hierarchical partition-
+ 0 1 2 3 4 5 6 7 8 910111213141516171819 0 1 2 3 4 5 6 7 8 910111213141516171819
+ Clients Clients ing by grouping data into three threat severity levels.
+ ISCX-Tor under Dir(0.1) ISCX-Tor under Dir(0.5) Each client k samples severity preferences using ω k ∼
+ 0 0 1500
+ 1
+ 2
+ 1
+ 2 Dir(αt = 0.6) and receives 75% of flows from their
+ 3 3
+ 4 4
+ 5 2000 5 1000 preferred level, with 25% from others. Within each sever-
+ Classes
+
+ Classes
+ 6 6
+ 7 7
+ 8
+ 9
+ 8
+ 9 ity group, we apply Dirichlet(α = 0.5) over constituent
+ 10 1000 10 500
+ 11 11 classes to induce label heterogeneity. This produces 3500-
+ 12 12
+ 13 13
+ 14 14
+ 15
+ 0 1 2 3 4 5 6 7 8 910111213141516171819
+ 0 15
+ 0 1 2 3 4 5 6 7 8 910111213141516171819
+ 4000 flows per client, capturing threat-level specialization
+ Clients Clients and class distribution differences.
+ VNAT under Dir(0.1) VNAT under Dir(0.5)
+ 0 0 2000
+ 1 1
+ 2 2000 2
+ D. Drift Injection Protocol
+ Classes
+
+ Classes
+
+ 3 3
+ 4 4
+ 1000 Malekghaini et al. [32] show that encrypted traffic exhibits
+ 5 1000 5
+ 6 6
+ time-evolving drift, where even well-curated labeled data
+ 7
+ 0
+ 7 can become irrelevant within six months due to changes in
+ 0 1 2 3 4 5 6 7 8 910111213141516171819 0 1 2 3 4 5 6 7 8 910111213141516171819
+ Clients Clients protocols, software, and devices. Using ISP datasets, they
+ USTC-TFC2016 under Dir(0.1) USTC-TFC2016 under Dir(0.5) show 35.7%–41.1% performance decay as the train-test gap
+ 01 2000 01
+ 23 23 reaches two years, driven by protocol evolution such as
+ 45 45
+ 67 67 1000 >83.3% growth in HTTP/2 and declining SPDY usage. These
+ Classes
+
+ Classes
+
+ 89 89
+ 1000
+ 10
+ 11
+ 12
+ 10
+ 11
+ 12 500
+ observations support our simulator’s assumptions that drift
+ 13
+ 14 13
+ 14
+ 15
+ 16 15
+ 16 is asynchronous, heterogeneous in timing and duration, and
+ 17
+ 18 17
+ 18
+ 19
+ 0 1 2 3 4 5 6 7 8 910111213141516171819
+ 0 19
+ 0 1 2 3 4 5 6 7 8 910111213141516171819
+ variable in severity, reflecting protocol updates and traffic
+ Clients Clients shifts. Accordingly, we use randomized start rounds, durations,
+ magnitudes, and abrupt/gradual modes to capture months-to-
+Fig. 4: Client-wise class distributions under Dirichlet non-IID years drift horizons, ensuring realistic patterns consistent with
+partitions for each dataset. Heatmaps show per-client class empirical measurements.
+sample counts for α = 0.1 (left, stronger heterogeneity) and To evaluate DAIR-FedMoE under realistic compound drift,
+α = 0.5 (right, milder heterogeneity). Lower α induces sharper we adopt a stochastic, client-specific drift simulator that
+class skew across clients, simulating distributed label drift. generates asynchronous and entangled drift patterns rather
+ than injecting drift at fixed, predictable rounds. Concretely,
+ for each client k, we sample a set of drift events Ek =
+imbalanced, making it ideal for evaluating models under {e1 , . . . , eNk }, where Nk controls how frequently drift occurs
+minority class scarcity. (here, Nk ∼ Poisson(λ) for tighter control). Each event
+ We implement dataset-specific partitioning strategies to e ∈ Ek is parameterized by: (i) a random start round τk,e ∼
+simulate realistic non-IID conditions across federated clients. Uniform{1, . . . , T }, (ii) a duration Lk,e , (iii) a compound
+These approaches ensure heterogeneous data distributions drift type-set sk,e ⊆ {F, L, C} drawn from a categorical
+while maintaining experimental validity. distribution over non-empty subsets (feature/label/concept),
+ (x)
+ • For ISCX-VPN with 12 application classes, each client k (iv) drift magnitudes mk,e for each selected type x ∈ sk,e ,
+ receives flows according to probability vector π k sampled and (v) a transition mode gk,e ∼ Bernoulli(pgrad ) indicating
+ from a Dirichlet distribution over application categories. whether the drift is abrupt or gradual. The event induces a
+ Local data stores remain fixed throughout training rounds time-varying intensity
+ to ensure reproducible conditions. 
+ ⊮[t ≥ τk,e ] if gk,e = 0 (abrupt),
+ • ISCX-Tor contains 30 composite classes (15 applications
+ αk,e (t) = 
+ t−τ
+  (22)
+ × 2 routing modes). We sample a 30-dimensional Dirich- clip k,e
+ Lk,e , 0, 1 if gk,e = 1 (gradual),
+ let distribution for each client, allocating 3000-4500 flows
+ based on the resulting probabilities over the composite and the resulting per-type drift intensity for client k at round
+ class space. t is aggregated as:
+ • For VNAT with 20 Android VPN application categories, (x)
+ X (x)
+ we employ two-stage partitioning to capture mobile usage Ak (t) = mk,e αk,e (t), x ∈ {F, L, C}. (23)
+ e: x∈sk,e
+ patterns. We first sample application preferences using
+ Dirichlet(α = 0.5), as shown in Fig. 4, then introduce Because events are sampled independently per client and may
+ temporal heterogeneity via four time-based segments with overlap in time and type, this protocol naturally produces
+ weights ω k ∼ Dir(αt = 0.4). Each client receives 80% asynchronous drift across clients and entangled drift within
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 11
+
+and across rounds. The commonly used fixed-round injection
+protocol is recovered as a special case by making τk,e deterministic (shared across clients), using fixed magnitudes, and
+setting pgrad = 0 (abrupt-only).
+Realism of Entangled Drift Simulation. Rather than injecting
+drift at fixed or synchronized rounds, our simulator models
+compound drift as an asynchronous, stochastic process with
+client-specific onset, duration, magnitude, and transition mode
+(abrupt or gradual). Drift events are sampled independently
+and may overlap across drift types and clients, emulating
+unpredictable protocol changes, traffic mix shifts, and emerging attack behaviors. Consequently, the PPO controller cannot
+exploit deterministic timing cues and must adapt solely from
+noisy population-level performance signals, reducing overfitting to any scripted drift schedule.
+Injecting feature, label, and concept drift. At each round
+t, the local data stream at client k is perturbed according to
+ (F) (L) (C)
+(Ak (t), Ak (t), Ak (t)):
+ • Feature drift (F): we perturb flow-level feature vectors Fig. 5: Drift-recovery under domain-randomized asynchronous
+ (e.g., timing/burst statistics) via an intensity-scaled opera- entangled drift on ISCX-VPN. Macro-F1 over 250 federated
+ (F)
+ tor, x̃ = x ⊙ 1 + Ak (t) η , where η is sampled from a rounds comparing DAIR-FedMoE with state-of-the-art basezero-mean noise distribution. This models shifts caused by lines. Vertical dashed markers denote randomly sampled drift
+ protocol/app updates and changes in network conditions. events (green: feature, red: concept, blue: label). Their random
+ • Label drift (L): we model prior shift by interpolating start times and heterogeneous durations induce overlapping
+ between a base class prior π 0k and a shifted prior π 1k intervals that simulate compound/entangled drift. Table reports
+ (sampled once per event or per client), i.e., π k (t) = (1 − one realized random injection schedule, listing each event.
+ (L)
+ βk (t))π 0k +βk (t)π 1k with βk (t) = clip(Ak (t), 0, 1). Minibatches are drawn according to π k (t) to reflect changing
+ traffic composition over time. In addition, minority-class recall increases by 5-8%, indicating
+ • Concept drift (C): we model conditional shift by modify- more balanced classification performance across class distriing P (y | x) through controlled relabeling/permutation on a butions. These improvements are achieved without incurring
+ (C) additional communication or privacy overhead, maintaining a
+ subset of classes, with drift rate γk (t) = clip(Ak (t), 0, 1).
+ This captures evolving semantics of encrypted traffic pat- computational profile comparable to that of FedAvg. Likewise,
+ terns (e.g., application behavior changes) even when feature in the intrusion-detection scenarios (Table III), DAIR-FedMoE
+ marginals may appear similar. outperforms both packet-level and flow-level baselines by 1-
+ 2% in macro-F1, while achieving similarly substantial reduc-
+Domain randomization for PPO training. To prevent the tions in error rates for rare or minority-class attack types.
+PPO-based expert lifecycle policy from overfitting to any par-
+ Fig. 5 plots the Macro-F1 trajectories on ISCX-VPN under
+ticular drift schedule, we train it under domain randomization:
+ our domain-randomized, asynchronous entangled drift protoeach PPO episode samples a drift-environment hyperparameter
+ col, where feature, label, and concept drift events start at
+set Θ (event rate, timing and duration ranges, magnitude
+ random rounds and persist for heterogeneous durations, creatranges, and pgrad ), then generates {Ek } and runs FL for T
+ ing overlapping intervals that emulate compound drift. DAIRrounds under that realization. This forces the policy to learn
+ FedMoE converges rapidly, reaching ≈0.95 Macro-F1 within
+robust expert management under diverse, unpredictable drift
+ the first ∼23 rounds, and remains the best-performing method
+processes rather than memorizing fixed injection rounds. For
+ throughout the 250-round horizon. When drift occurs, its perfair comparison, all baselines are evaluated under the same
+ formance degrades modestly and recovers quickly: it rebounds
+realized drift sequences (same random seed) for each trial, and
+ after the early overlapping feature drifts (F1 –F2 ) and maintains
+we report aggregate performance over multiple independent
+ stable performance through subsequent feature/label shifts (F3 ,
+drift realizations.
+ L1 ). The most challenging period arises when concept drifts
+ (C1 , C2 ) overlap with label drift L2 (the highlighted compound
+E. Results and Discussion region around rounds ∼150–200), where DAIR-FedMoE still
+ Table II and Table III provide a comprehensive quan- sustains comparatively high Macro-F1 and returns to near pretitative comparison of DAIR-FedMoE against state-of-the- drift performance by the end of training. In contrast, state-ofart baselines across four benchmark datasets. On the traffic the-art baselines exhibit substantially larger drops and more
+classification tasks (Table II), DAIR-FedMoE consistently prolonged recovery during these drift intervals, indicating
+improves overall macro-F1 by approximately 2-3% compared limited robustness when drift types are entangled. Overall,
+to leading drift-aware models such as FedDrift and FedCCFA. the curves demonstrate that jointly modeling compound drift
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 12
+
+TABLE II: Comparison of DAIR-FedMoE with state-of-the-art baselines on the ISCX-VPN and ISCX-Tor encryptedtraffic classification benchmarks. Bold values indicate the best performance, and underlined values indicate the second-best
+performance for each metric. The experiments are repeated for 20 times and reported as (mean±std).
+ ISCX-VPN Dataset ISCX-Tor Dataset
+Method
+ PRm RCm F1m ACC DR-Score PRm RCm F1m ACC DR-Score
+FS-Net [26] 67.17±.40 70.08±.17 69.28±.20 69.17±.36 49.66±.12 67.90±.10 70.91±.26 67.27±.07 69.99±.36 48.14±.09
+FlowPic [42] 86.90±.40 90.69±.35 89.66±.19 89.52±.34 45.27±.08 86.97±.13 90.85±.41 87.03±.61 89.68±.31 41.74±.07
+DeepPacket [31] 87.47±.16 91.36±.37 90.32±.28 90.18±.10 38.52±.04 84.81±.09 88.58±.22 87.61±.22 87.43±.08 32.40±.14
+Flow-GNN [19] 89.49±.31 93.47±.24 92.41±.44 92.26±.23 28.52±.03 85.90±.28 89.70±.19 89.64±.29 88.54±.17 30.89±.12
+FedETC [20] 87.13±.42 90.99±.20 89.95±.54 89.81±.25 42.69±.14 87.26±.41 91.10±.07 87.27±.63 89.93±.13 47.53±.11
+FedPacket [3] 85.78±.40 89.57±.26 88.55±.15 88.41±.28 45.04±.13 90.83±.28 94.87±.17 85.92±.55 93.64±.26 43.55±.11
+FL-ETC [51] 86.95±.35 90.80±.17 89.77±.18 89.63±.40 44.59±.03 85.62±.09 89.36±.09 87.08±.26 88.20±.28 45.62±.07
+BC-FLETC [28] 88.44±.35 92.34±.10 91.29±.21 91.15±.28 32.19±.07 86.74±.41 90.63±.16 88.58±.59 89.46±.34 38.68±.07
+FedDrift [21] 90.96±.20 95.00±.22 93.92±.51 93.77±.14 21.66±.04 88.45±.16 92.38±.12 91.10±.43 91.19±.12 18.67±.08
+FedCCFA [7] 90.55±.20 94.57±.34 93.50±.30 93.35±.11 25.98±.04 86.19±.40 89.99±.15 90.70±.67 88.83±.28 24.92±.08
+FedIBD [18] 89.33±.44 93.24±.14 92.19±.12 92.04±.33 31.38±.16 88.55±.23 92.51±.35 89.47±.36 91.31±.23 33.10±.11
+Cross-FCL [54] 87.44±.24 91.27±.10 90.23±.16 90.09±.06 41.96±.13 92.67±.39 96.77±.37 87.58±.47 95.52±.41 42.02±.14
+Master-FL [47] 85.49±.35 89.26±.16 88.25±.31 88.11±.29 48.35±.11 88.44±.10 92.35±.32 85.62±.48 91.16±.25 44.28±.05
+FairFedDrift [40] 89.18±.40 93.16±.15 92.11±.21 91.96±.07 32.07±.05 86.93±.30 90.75±.18 89.32±.07 89.58±.39 25.46±.15
+FairINC [8] 88.21±.34 92.13±.33 91.08±.13 90.94±.16 34.99±.05 90.12±.18 94.07±.09 88.35±.28 92.86±.45 30.27±.07
+FedStream [12] 87.18±.27 91.09±.15 90.05±.56 89.91±.07 41.13±.08 91.88±.29 95.92±.22 87.32±.38 94.68±.22 48.47±.05
+FedMoE-DA [52] 88.70±.19 91.29±.20 90.47±.49 90.58±.09 32.64±.14 85.40±.31 90.38±.35 86.08±.42 90.01±.29 37.50±.08
+DAIR-FedMoE 93.28±.10 94.39±.07 96.28±.59 96.13±.34 15.38±.02 93.86±.08 95.00±.32 93.43±.35 96.73±.07 13.10±.03
+
+TABLE III: Comparison of DAIR-FedMoE with state-of-the-art baselines on the VNAT and USTC-TFC2016 intrusion detection
+benchmarks.
+ VNAT Dataset USTC-TFC2016 Dataset
+Method
+ PRm RCm F1m ACC DR-Score PRm RCm F1m ACC DR-Score
+FS-Net [26] 71.16±.09 67.08±.34 70.55±.26 69.46±.15 51.87±.14 71.23±.33 67.08±.39 72.28±.65 69.46±.34 47.16±.08
+FlowPic [42] 90.57±.29 85.39±.19 89.82±.11 88.43±.11 47.37±.06 90.62±.34 85.39±.23 91.99±.54 88.43±.06 41.13±.08
+DeepPacket [31] 91.59±.11 86.35±.17 90.82±.13 89.42±.26 37.26±.09 91.64±.11 86.35±.44 93.02±.42 89.42±.43 28.75±.03
+Flow-GNN [19] 90.06±.47 86.45±.23 91.19±.41 90.70±.10 25.58±.11 92.05±.44 86.45±.25 93.58±.59 90.70±.30 28.83±.09
+FedETC [20] 91.04±.32 85.82±.32 90.27±.18 88.87±.08 40.30±.07 91.10±.11 85.82±.10 92.47±.20 88.87±.25 50.32±.15
+FedPacket [3] 93.59±.25 86.23±.28 91.81±.49 91.37±.25 48.37±.06 93.64±.10 88.23±.41 93.05±.60 90.37±.19 44.31±.09
+FL-ETC [51] 89.65±.35 84.49±.08 88.87±.44 87.50±.17 42.18±.07 89.69±.45 84.49±.28 91.05±.17 87.50±.45 43.42±.12
+BC-FLETC [28] 91.64±.36 87.94±.24 91.76±.40 90.25±.26 33.37±.15 92.59±.32 88.94±.18 93.18±.29 90.25±.11 39.03±.01
+FedDrift [21] 93.35±.10 88.00±.06 92.56±.40 91.13±.36 18.76±.05 93.34±.33 88.00±.34 94.81±.09 91.13±.26 16.83±.09
+FedCCFA [7] 92.96±.14 87.58±.27 92.12±.34 90.69±.27 28.39±.03 92.93±.26 87.58±.33 94.42±.32 90.69±.12 26.62±.06
+FedIBD [18] 91.43±.46 88.04±.25 90.60±.52 89.17±.37 33.93±.14 91.40±.12 87.04±.43 90.89±.13 90.17±.16 30.16±.05
+Cross-FCL [54] 89.45±.40 84.33±.25 88.70±.16 87.33±.09 41.32±.07 89.53±.44 84.33±.29 90.86±.11 87.33±.22 43.03±.06
+Master-FL [47] 89.99±.21 84.80±.26 89.19±.19 87.81±.45 50.30±.04 89.99±.24 84.80±.43 91.40±.27 87.81±.25 46.13±.14
+FairFedDrift [40] 93.12±.22 87.74±.30 92.28±.55 90.86±.18 35.99±.02 93.06±.09 87.74±.25 94.58±.20 90.86±.21 28.57±.08
+FairINC [8] 91.78±.38 86.50±.29 90.98±.49 89.58±.14 35.54±.10 91.81±.30 86.50±.14 93.21±.06 89.58±.14 28.06±.04
+FedStream [12] 92.97±.46 87.47±.35 92.10±.43 90.65±.39 43.83±.12 92.90±.44 88.47±.20 93.46±.25 90.65±.14 44.54±.11
+FedMoE-DA [52] 90.29±.12 93.44±.24 92.89±.51 93.72±.15 29.07±.19 89.31±.40 88.13±.41 90.42±.37 92.98±.19 30.42±.19
+DAIR-FedMoE 96.55±.43 91.04±.10 95.76±.41 94.28±.33 12.07±.15 97.59±.31 92.01±.07 98.06±.41 95.28±.18 11.82±.06
+
+via drift-aware routing, adaptive reweighting, and dynamic This cycle is visualized in Fig. 6, where the blue curve shows
+expert lifecycle management enables faster and more resilient macro-F1 evolution, the gray line tracks active experts, and
+recovery than piecemeal drift-handling strategies. vertical dashed red lines mark simulated drift events (feature,
+ concept, label, and combined). Policy actions, spawn (green
+ This strong recovery capability can be attributed to DAIR- triangles), prune (orange squares), and merge (red diamonds),
+FedMoE’s integrated adaptation mechanism. The hierarchical are annotated along the expert count curve, demonstrating the
+MoE routing allows stable experts to retain accuracy during policy’s effectiveness in managing capacity without overfitting
+distributional shifts, while newly spawned specialists rapidly or unnecessary expansion. Complementing this, Fig. 7 presents
+adapt to changing patterns. Concurrently, the entropy-guided a detailed view of expert lifecycles across 250 federated rounds
+loss reweighting mechanism dynamically prioritizes under- for ISCX-VPN and ISCX-Tor. Each horizontal bar corresponds
+represented or emerging classes, preserving high minority- to an expert, with active and inactive phases, while vertical
+class recall throughout training. Reinforcing this, the PPO- markers denote drift, spawn, prune, and merge events. The
+based expert lifecycle manager modulates expert pool capacity visualization highlights how the policy dynamically regulates
+in response to drift signals, spawning new experts at drift expert activation, pruning, and merging in response to drift,
+points and pruning or merging them during stable phases.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 13
+
+ Expert Lifecycle Across 250 Federated Rounds for ISCX-VPN Dataset
+ E81 Inactive Expert
+ E79
+ E77 Active Expert
+ E75
+ E73 Feature Drift
+ E71
+ E69 Label Drift
+ E67
+ E65 Concept Drift
+ E63
+ E61 Spawn Event
+ E59
+ E57
+ E55 Prune Event
+ E53
+ E51 Merge Event
+ E49
+ E47
+ E45
+ E43
+
+ Expert
+ E41
+ E39
+ E37
+ E35
+ E33
+ E31
+ E29
+ E27
+ E25
+ E23
+ E21
+ E19
+ E17
+ E15
+ E13
+ E11
+ E9
+ E7
+ E5
+ E3
+ E1
+
+ 50 100 150 200 250
+ Federated Round
+ Expert Lifecycle Across 250 Federated Rounds for ISCX-TOR Dataset
+ Inactive Expert
+ Active Expert
+ E71 Feature Drift
+ E69
+ E67 Label Drift
+ E65
+ E63 Concept Drift
+ E61
+ E59 Spawn Event
+ E57
+ E55 Prune Event
+ E53
+ E51 Merge Event
+ E49
+ E47
+ E45
+ E43
+
+ Expert
+ E41
+ E39
+ E37
+ E35
+ E33
+ E31
+ E29
+ E27
+ E25
+
+Fig. 6: Visualization of DAIR-FedMoE’s performance, expert- E23
+ E21
+ E19
+ E17
+pool dynamics, and policy actions on the ISCX-VPN (top) and E15
+ E13
+ E11
+ E9
+ISCX-Tor (bottom) datasets over 250 federated rounds. E7
+ E5
+ E3
+ E1
+
+ 50 100 150 200 250
+ Federated Round
+
+ensuring sustained adaptability while preventing uncontrolled
+ Fig. 7: Expert lifecycle across 250 federated rounds for ISCXgrowth.
+ VPN (top) and ISCX-Tor (bottom) datasets.
+ The framework’s ability to maintain robust performance
+under drift comes with only modest computational overhead,
+approximately 1.2× that of FedAvg, while maintaining a highly consistent diagonal dominance, with all classes achievstrong privacy guarantee under a controlled differential privacy ing above 94% correct classification. Minor misclassifications
+budget ((ε, δ) ≈ (5.4, 10−5 ) after 250 rounds). are observed between similar traffic patterns such as VPN-
+ Finally, Fig. 8 compares the per-class precision-recall curves email and VPN-chat, or between file transfer and streaming,
+for DAIR-FedMoE and a baseline classifier on ISCX-VPN and likely due to shared temporal characteristics. Importantly, both
+ISCX-Tor. DAIR-FedMoE demonstrates balanced precision base and VPN-prefixed classes exhibit strong separation, highand recall across both majority and minority classes, confirm- lighting the model’s ability to preserve semantic distinctions
+ing its effectiveness under dynamic label shift. This behavior is despite encryption obfuscation.
+directly tied to the expert confidence-driven loss reweighting The ISCX-TOR results reinforce that mainline traffic types
+mechanism, which enables the model to remain sensitive to (e.g., browsing, audio, video) and their TOR counterparts are
+rare or fluctuating class distributions, a key requirement in identified with over 95% accuracy, with only minor confusion
+federated environments with common and volatile label skew. between adjacent variants such as TOR-video and TOR-
+ In summary, DAIR-FedMoE’s integration of drift-adaptive audio, reflecting the complexity of anonymized traffic and the
+routing, entropy-aware optimization, and reinforcement model’s robustness in preserving anonymity-aware features.
+learning-based expert management yields a comprehensive and On USTC-TFC2016, which spans 20 application-level
+effective solution for encrypted-traffic classification. It not classes encompassing both benign and malware traffic, DAIRonly achieves higher classification accuracy across multiple FedMoE achieves strong category-level separation, maintaindatasets but also recovers more quickly and gracefully from ing 93-95% diagonal accuracy across nearly all classes. Dedistributional drift, marking a significant advancement in fed- spite overlaps (e.g., Virut vs. Tinba or benign services such
+erated learning under non-stationary conditions. as Gmail, Outlook, and FTP), off-diagonal noise remains
+ To provide deeper insight into DAIR-FedMoE’s classifica- minimal, indicating effective disentanglement of high-level
+tion behavior across datasets, we present the normalized con- behaviors even in malware-heavy scenarios.
+fusion matrices for ISCX-VPN, ISCX-TOR, USTC-TFC2016, Finally, the VNAT confusion matrix demonstrates similarly
+and VNAT. These matrices, shown in Fig. 9, reports the high fidelity, with all eight classes, comprising both raw
+proportion of samples predicted for each class and offer a and VPN-encrypted streaming, file transfer, and VoIP traffic,
+class-wise view of prediction fidelity and confusion trends. classified with over 92% accuracy. Although slight confusion
+ On the ISCX-VPN benchmark, DAIR-FedMoE maintains exists between VPN classes with overlapping packet dynamics
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 14
+
+ PR-Curve - ISCX-VPN Dataset Baseline PR-Curve - ISCX-VPN Dataset DAIR-FedMoE PR-Curve - ISCX-TOR Dataset Baseline PR-Curve - ISCX-TOR Dataset DAIR-FedMoE
+ 1.0 1.0 1.0 browse (AP=0.6656) 1.0 browse (AP=0.9845)
+ email (AP=0.5079) email (AP=0.9842)
+ chat (AP=0.5594) chat (AP=0.9839)
+ 0.8 0.8 0.8 audio (AP=0.5246) 0.8 audio (AP=0.9829)
+ email (AP=0.6656) email (AP=0.9887) video (AP=0.4643) video (AP=0.9829)
+ chat (AP=0.8117) chat (AP=0.9883) ft (AP=0.7644) ft (AP=0.9825)
+ 0.6 stream (AP=0.4643) stream (AP=0.9865) 0.6
+ Precision
+
+ Precision
+
+ Precision
+
+ Precision
+ 0.6 voip (AP=0.5189) 0.6 voip (AP=0.9777)
+ ft (AP=0.8525) ft (AP=0.9865) p2p (AP=0.8505) p2p (AP=0.9774)
+ voip (AP=0.9142) voip (AP=0.9853) tor browse (AP=0.5287) tor browse (AP=0.9755)
+ 0.4 p2p (AP=0.4729) p2p (AP=0.9851) 0.4 tor email (AP=0.4729) tor email (AP=0.9720)
+ vpn email (AP=0.2451)
+ 0.4 vpn email (AP=0.9847)
+ 0.4
+ tor chat (AP=0.5997) tor chat (AP=0.9696)
+ vpn chat (AP=0.5079) vpn chat (AP=0.9843) tor audio (AP=0.4560) tor audio (AP=0.9684)
+ 0.2 vpn stream (AP=0.3554) vpn stream (AP=0.9843) 0.2 tor video (AP=0.6378) tor video (AP=0.9650)
+ vpn ft (AP=0.4560) 0.2 vpn ft (AP=0.9835) tor ft (AP=0.3169)
+ 0.2 tor ft (AP=0.9562)
+ vpn voip (AP=0.4824) vpn voip (AP=0.9810) tor voip (AP=0.3554) tor voip (AP=0.9388)
+ vpn p2p (AP=0.3169) vpn p2p (AP=0.9779)
+ 0.0 0.0 tor p2p (AP=0.2451) tor p2p (AP=0.9053)
+ 0.0 0.0
+ 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0
+ Recall Recall Recall Recall
+
+ (a) (b) (c) (d)
+Fig. 8: Per-class precision-recall (PR) curves on the ISCX-VPN and ISCX-Tor datasets for both the baseline classifier (a, c)
+and DAIR-FedMoE (b, d).
+
+ Confusion Matrix for ISCX-VPN Confusion Matrix for ISCX-TOR Confusion Matrix for VNAT Confusion Matrix for USTC-TFC2016
+ browse 0.97 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 Cridex 0.95 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.00 0.00
+ email 0.95 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.01 0.00 0.01 0.00 stream 0.94 0.00 0.03 0.01 0.01 0.00 0.00 0.00
+ email 0.00 0.95 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 Geodo 0.00 0.94 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.01 0.01 0.00 0.00
+ chat 0.02 0.96 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 Htbot 0.00 0.00 0.95 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.01 0.01 0.00 0.01 0.00
+ 0.8 chat 0.00 0.00 0.96 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.8 0.8 Miuref 0.00 0.00 0.00 0.94 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.01 0.00 0.01 0.01 0.00 0.00 0.01 0.00 0.00 0.8
+ voip 0.01 0.93 0.01 0.01 0.00 0.02 0.01 0.00
+ stream 0.00 0.00 0.94 0.01 0.01 0.00 0.01 0.01 0.00 0.01 0.00 0.00 audio 0.00 0.00 0.00 0.96 0.00 0.00 0.01 0.00 0.01 0.01 0.00 0.01 0.00 0.00 0.00 0.00 Neris 0.00 0.00 0.00 0.00 0.95 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.00
+ ft 0.01 0.01 0.01 0.96 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 video 0.00 0.00 0.00 0.00 0.96 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 Nsis-ay 0.00 0.00 0.00 0.00 0.00 0.95 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.01
+ ft 0.00 0.00 0.94 0.01 0.01 0.01 0.01 0.02
+ Shifu 0.00 0.01 0.00 0.00 0.01 0.00 0.95 0.00 0.01 0.00 0.00 0.00 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.00
+ ft 0.00 0.00 0.00 0.00 0.00 0.96 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.6
+ voip 0.00 0.00 0.00 0.00 0.96 0.00 0.00 0.01 0.00 0.01 0.01 0.00 0.6 0.6 Tinba 0.00 0.01 0.00 0.00 0.00 0.00 0.01 0.94 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.6
+ voip 0.00 0.00 0.00 0.00 0.01 0.00 0.96 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01
+ True Label
+
+ True Label
+ Proportion
+
+ Proportion
+
+ True Label
+
+ Proportion
+True Label
+
+ Proportion
+
+ p2p 0.00 0.01 0.01 0.94 0.01 0.02 0.00 0.01 Virut 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.95 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00
+ p2p 0.02 0.00 0.00 0.00 0.00 0.95 0.00 0.00 0.01 0.00 0.00 0.01 p2p 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.97 0.01 0.00 0.00 0.00 0.00 0.00 0.01 0.00 Zeus 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.94 0.00 0.00 0.01 0.01 0.00 0.00 0.01 0.00 0.00 0.00
+ vpn email 0.00 0.01 0.00 0.02 0.01 0.00 0.94 0.00 0.01 0.01 0.01 0.01 tor browse 0.01 0.01 0.00 0.00 0.00 0.00 0.01 0.01 0.95 0.00 0.00 0.00 0.00 0.00 0.00 0.01 BitTorrent 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.01 0.01 0.00 0.94 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00
+ 0.4 0.4 vpn stream 0.01 0.00 0.01 0.00 0.92 0.00 0.03 0.03
+ 0.4 Facetime 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.01 0.93 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.4
+ tor email 0.00 0.00 0.01 0.00 0.02 0.01 0.00 0.00 0.00 0.94 0.00 0.00 0.00 0.00 0.00 0.00
+ vpn chat 0.00 0.00 0.00 0.01 0.01 0.00 0.00 0.95 0.00 0.00 0.01 0.01 FTP 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.95 0.01 0.01 0.01 0.00 0.00 0.01 0.00
+ tor chat 0.01 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.95 0.00 0.00 0.00 0.00 0.00 Gmail 0.01 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.94 0.00 0.01 0.00 0.00 0.00 0.00
+ vpn stream 0.01 0.00 0.00 0.01 0.01 0.00 0.01 0.00 0.94 0.00 0.00 0.00 vpn voip 0.02 0.01 0.00 0.02 0.01 0.93 0.00 0.01
+ tor audio 0.01 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.95 0.01 0.00 0.01 0.00 MySQL 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.94 0.01 0.00 0.00 0.00 0.00
+ vpn ft 0.00 0.00 0.01 0.00 0.01 0.02 0.00 0.00 0.01 0.94 0.00 0.00 0.2 tor video 0.00 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.95 0.01 0.00 0.00 0.2 0.2 Outlook 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.01 0.00 0.01 0.00 0.94 0.00 0.00 0.00 0.01 0.2
+ vpn ft 0.00 0.03 0.00 0.01 0.00 0.01 0.93 0.01
+ Skype 0.00 0.01 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.00 0.94 0.00 0.00 0.00
+ tor ft 0.00 0.01 0.01 0.01 0.01 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.94 0.00 0.00
+ vpn voip 0.00 0.00 0.01 0.01 0.00 0.01 0.01 0.00 0.01 0.00 0.95 0.01 SMB 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.95 0.00 0.00
+ tor voip 0.00 0.01 0.00 0.00 0.01 0.00 0.00 0.01 0.00 0.01 0.00 0.00 0.00 0.00 0.94 0.00 Weibo 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.95 0.00
+ vpn p2p 0.02 0.00 0.00 0.00 0.00 0.01 0.01 0.00 0.01 0.00 0.00 0.94 vpn p2p 0.00 0.02 0.01 0.02 0.01 0.01 0.01 0.92
+ tor p2p 0.00 0.01 0.00 0.01 0.00 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.95 WW 0.00 0.00 0.00 0.01 0.00 0.01 0.01 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.01 0.00 0.01 0.00 0.94
+ ail
+
+ st at
+ am
+
+ ft
+ ip
+ p
+
+ vp n c il
+ st t
+ vp m
+ n t
+ vp ip
+ p
+
+ am
+
+ ip
+
+ ft
+
+ p
+
+ am
+
+ ip
+
+ ft
+
+ p
+ em se
+ ch il
+ au at
+ vi o
+ o
+ vo t
+ r b p2p
+ to row p
+ r e se
+ to r ch il
+ to aud t
+ r v io
+ t eo
+ r ft
+ to voip
+ 2p
+
+ G idex
+ M tboo
+ iu t
+ NsNeref
+ is is
+ Sh-ay
+ Ti ifu
+ Bi irua
+ tT Z t
+ Fa orreus
+ tim t
+ F e
+ M mP
+ O ySQail
+ ut L
+ Sklook
+ S pe
+ W MB
+ Wbo
+ W
+ n ha
+
+ vp n f
+ vp ma
+ p2
+
+ p2
+
+ f
+
+ r a
+
+ p2
+
+ p2
+
+ ce en
+ di
+ de
+ a
+
+ to ma
+
+ H od
+
+ Vb
+ i
+ vo
+
+ vo
+ a
+
+ vo
+
+ vo
+ ch
+
+ GT
+ r
+ ow
+ em
+
+ n
+ id
+ to or
+ rp
+
+ n
+
+ y
+ ei
+ re
+
+ re
+
+ re
+
+ re
+
+ vp
+
+ e
+ e
+
+ n
+
+ n
+
+ Cr
+ st
+
+ st
+
+ n
+ br
+
+ vp
+ n
+
+ vp
+ vp
+
+ n
+ vp
+ to
+
+ Predicted Label Predicted Label Predicted Label Predicted Label
+
+ (a) ISCX-VPN (b) ISCX-Tor (c) VNAT (d) USTC-TFC2016
+ Fig. 9: Confusion matrices for DAIR-FedMoE on four datasets.
+ Client-wise Macro-F1 Distribution at Convergence
+ across Four Datasets
+ 1.00
+ 0.008-0.009) and low variance indicate stable generalization
+ despite non-IID client data distributions, while the absence
+ 0.98
+ of extreme outliers confirms that even the lowest-performing
+ Macro-F1 Score
+
+ clients maintain strong classification performance (>0.92 for
+ 0.96
+ ISCX-Tor and >0.94 for others). This demonstrates DAIR-
+ F ED M O E’s robustness and fairness in distributed encrypted
+ 0.94
+ traffic classification.
+ 0.92
+ G. Ridgeline Density of Policy Actions
+ ISCX-VPN ISCX-Tor VNAT USTC-TFC2016
+ Fig. 11 shows the smoothed frequencies of Spawn, Prune,
+Fig. 10: Client-wise macro-F1 distribution at convergence and Merge selected by the PPO agent over 250 rounds
+across four datasets. on ISCX-VPN and ISCX-Tor. We apply a 10-round moving
+ average to action counts and plot stacked ridgelines (Spawn
+ top, Prune middle, Merge bottom); vertical dashed red lines
+(e.g., VPN-ft and VPN-p2p), the overall separability remains
+ indicate injected drift events.
+intact. These results confirm DAIR-FedMoE’s generalizabil-
+ Across both datasets, Spawn exhibits sharp peaks immediity across datasets with varying label cardinality, encryption
+ ately after drift, indicating rapid allocation of new experts in
+protocols, and application distributions.
+ response to distribution shifts. Prune increases later during
+ stabilization windows, reflecting removal of under-utilized
+F. Client-wise Macro-F1 Distribution experts once performance recovers, while Merge remains
+ Fig. 10 illustrates the client-wise macro-F1 distribution low with occasional post-drift upticks, suggesting selective
+at convergence across four datasets, ISCX-VPN, ISCX-Tor, consolidation of redundant specialists. Overall, the ridgelines
+VNAT, and USTC-TFC2016, using box plots that represent illustrate a consistent lifecycle pattern: aggressive capacity
+the interquartile range (IQR), with medians shown as red expansion at drift onset followed by pruning/merging as the
+lines and individual client scores overlaid as gray dots. The system re-stabilizes.
+results show that DAIR-F ED M O E achieves consistent and
+equitable performance across all clients, with median macro- H. Ablation Studies
+F1 scores closely matching the reported global performance To assess the individual contribution of each core module
+(≈ 0.963 for ISCX-VPN, 0.934 for ISCX-Tor, 0.958 for within DAIR-FedMoE, we perform a series of ablation exper-
+VNAT, and 0.981 for USTC-TFC2016). The narrow IQRs (± iments on the ISCX-VPN benchmark, focusing on four key
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 15
+
+ Ridgeline Density of Policy Actions for ISCX-VPN Dataset TABLE V: Sensitivity analysis of DAIR-FedMoE to PPO
+ Spawn reward weights λd (drift-recovery reward) and µ (expert-size
+ Density penalty) on the ISCX-VPN dataset.
+ Prune λd µ Macro-F1(%) Minority Recall(%) #Experts
+ Density
+ 1.0 0.1 87.55 80.8 8
+ 1.0 0.5 88.03 80.5 7
+ Merge
+ Density 1.0 1.0 93.97 85.26 6
+ 2.0 0.1 94.61 89.32 10
+ 0 50 100 150 200 250 2.0 0.5 96.28 89.62 11
+ Federated Round 2.0 1.0 96.81 81.33 7
+ 5.0 0.1 97.24 78.15. 12
+ Ridgeline Density of Policy Actions for ISCX-TOR Dataset
+ Spawn 5.0 0.5 96.07 72.97 8
+ Density 5.0 1.0 94.20 69.88 7
+
+ Prune TABLE VI: Hyperparameter sensitivity analysis of DAIR-
+ Density
+ FedMoE on the ISCX-VPN dataset, evaluating the impact
+ Merge
+ of the drift-estimation window size W and EMA smoothing
+ Density factor α on macro-F1 and minority-class recall.
+ 0 50 100 150 200 250 Parameter (value) Macro-F1(%) Minority Recall(%)
+ Federated Round
+ Drift-estimation window size W
+Fig. 11: Ridgeline density of policy actions for ISCX-VPN W = 250 95.67 86.04
+(top) and ISCX-Tor (bottom) datasets. W = 500 96.28 89.62
+ W = 1000 89.66 84.93
+TABLE IV: Ablation study on the ISCX-VPN dataset quan- EMA smoothing factor α
+tifying the impact of removing key components of DAIR- α = 0.90 92.51 87.74
+FedMoE. α = 0.95 96.28 89.62
+ α = 0.99 95.08 83.29
+ Macro-F1 Minority Drift Recovery
+Model Variant
+ (%) Recall(%) (rounds)
+Full DAIR-FedMoE 96.28 89.62 12 analyze two aspects: the temporal evolution of the expert
+w/o RL management 82.71 77.06 45
+w/o adaptive reweighting 85.09 75.25 29 pool and the sensitivity of performance to the reward-weight
+w/o routing 86.90 69.33 38 hyperparameters λd (drift recovery reward) and µ (expert-size
+ penalty). First, we monitor the number of active experts across
+ rounds during training on ISCX-VPN. The policy dynamically
+aspects: (1) the impact of removing core components, (2) the adjusts expert capacity: it spawns specialists in response to
+behavior of the reinforcement learning policy, (3) sensitivity initial feature drift (rounds 1-50), prunes underutilized experts
+to key hyperparameters, and (4) runtime overhead, communi- during stable phases (rounds 60-100), and reactivates spawning
+cation cost, and privacy budget. after concept drift near round 100. As the system stabilizes,
+Effect of removing core components. We access the contri- redundant experts are merged (rounds 120-160). This behavior
+bution of each core component by disabling the RL-managed results in peak pool sizes around 12 during high-drift periods,
+expert lifecycle, the entropy-driven loss reweighting, and the contracting to 7-8 in low-drift phases, balancing adaptability
+drift-adaptive MoE routing. Table IV reports the macro-F1 and efficiency. To evaluate robustness, we perform a grid
+score, minority-class recall, and drift-recovery speed for each search over λd ∈ {1.0, 2.0, 5.0} and µ ∈ {0.1, 0.5, 1.0}.
+variant. Disabling RL-managed expert lifecycle, where the As summarized in Table V, we observe that increasing λd
+expert pool remains static with no prune/spawn/merge deci- enhances both macro-F1 and minority recall, with improvesions, leads to a substantial decline in macro-F1 by 13.57%, ments exceeding 8-10% compared to lower-weighted variants.
+minority-class recall by 12.56%, and drift recovery slows However, this comes at the cost of a larger expert pool.
+markedly from 12 to 45 rounds. When the adaptive loss Conversely, raising µ effectively reduces the number of experts
+reweighting module is removed, standard cross-entropy is used by up to 30%, but also induces a modest degradation in both
+in place of entropy-aware weighting, causing macro-F1 to accuracy and minority-class performance. The default setting
+drop to 85.09% and minority recall to 75.25%, with recovery (λd = 2.0, µ = 0.5) strikes the optimal trade-off, maximizing
+extending to 29 rounds. Finally, disabling the drift-adaptive predictive performance while maintaining a relatively compact
+MoE routing and collapsing to a flat expert regime yields & responsive expert pool. These findings reinforce the stability
+reduced macro-F1, minority recall, and increased rounds for of the PPO-managed lifecycle & provide actionable insight
+drift recovery. These findings highlight the necessity of each into balancing drift adaptability against model overhead.
+module in sustaining DAIR-FedMoE’s robustness to drift and Hyperparameter Sensitivity. We evaluate the robustness of
+performance on underrepresented classes. DAIR-FedMoE to two key hyperparameters in its drift de-
+RL Policy Analysis. To better understand the behavior and tection module: the sliding window size W and the EMA
+robustness of the PPO-based expert lifecycle manager, we smoothing factor α. A grid search is conducted over W ∈
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 16
+
+TABLE VII: Overall classification performance and commu- corresponding to a model size of only 15 MB. The comnication cost of DAIR-FedMoE compared to FedAvg and putational demand is modest, requiring roughly 1.1 GFLOPs
+FedDrift, averaged across all four benchmarks. per forward pass and 2.6 GFLOPs per training step, with a
+ Minority Comm Time/
+ peak memory footprint of 1.3 GB. The average wall-clock
+Method Macro-F1(%) cost per client round is 10 seconds, which is feasible for
+ Recall(%) Cost Round (s)∗
+FedAvg 85.03±.38 69.51±.29 1.00× 9.29 resource-constrained nodes. Communication overhead remains
+FedDrift 92.56±.40 87.21±.06 1.25× 11.61 bounded, with uplink and downlink traffic of 16 MB and 15
+DAIR-FedMoE 96.28±.59 89.62±.34 1.10× 10.22 MB per round, respectively, comparable to standard FedAvg
+ ∗ Average client-side wall-clock time per FL round, under the same setup.
+ updates. These results confirm that DAIR-FedMoE imposes
+ minimal additional cost relative to baseline federated training
+ while remaining within the constraints of edge deployment.
+{250, 500, 1000} and α ∈ {0.90, 0.95, 0.99} on the ISCX- A detailed computational complexity and overhead analysis,
+VPN dataset, with macro-F1 and minority-class recall re- including server-side costs and the stability of PPO under
+ported in Table VI. We observe that smaller window sizes differential privacy noise, is provided in Appendix C.
+(W = 250) enable quicker detection of abrupt distribution DAIR-FedMoE makes an explicit compute-robustness tradeshifts, resulting in a slight performance drop compared to off and is most appropriate for capable gateways/enterprise
+the default, particularly in minority-class recall. Conversely, endpoints or edge servers, rather than highly constrained deusing a larger window (W = 1000) slows down drift respon- vices. Moreover, its value is not captured by the average 2–3%
+siveness and leads to noticeable reductions in both macro- Macro-F1 gain alone: the additional components primarily
+F1 and recall, likely due to delayed adaptation. The default limit performance collapse and accelerate recovery during
+setting of W = 500 offers a balanced trade-off, yielding drift windows (improving worst-case accuracy and time-tomore stable performance than either extreme. Regarding EMA recovery), which is critical for dependable security monitoring
+smoothing, a lower α = 0.90 emphasizes recent drift signals, where errors under drift are costly. To make this practical,
+leading to moderate improvements in recall but at the cost of we also provide tunable deployment knobs (windowed drift
+reduced macro-F1 due to sensitivity to transient noise. On the scoring every N steps, PPO updates every R rounds, and
+other hand, a higher smoothing factor α = 0.99 stabilizes a capped expert pool) that substantially reduce runtime with
+the scoring but underreacts to shift boundaries, leading to minimal impact on drift recovery.
+improved macro-F1 but noticeably reduced recall. The default Privacy Budget Analysis. Table IX further quantifies the
+choice α = 0.95 provides a strong balance, maintaining both privacy-utility trade-off of DP-SGD under a fixed δ = 10−5
+high accuracy and equitable class-wise coverage, underscoring and a fixed training schedule (B = 32, E = 5, T = 250).
+the effectiveness of our drift-scoring mechanism across set- As expected, increasing the noise multiplier σ strengthens
+tings. Furthermore, even with suboptimal PPO weights, DAIR- privacy by reducing the privacy loss ϵ (e.g., from ϵ = 26.62
+FedMoE consistently outperforms FedDrift and FedCCFA, at σ = 0.8 to ϵ = 4.36 at σ = 2.5). In terms of utility,
+though with larger expert pools, demonstrating resilience to we observe a clear “sweet spot” at moderate noise: across
+hyperparameter variations. all clipping norms, performance peaks around σ = 1.2
+Communication & Runtimes Cost Analysis. To assess the (ϵ = 11.81), suggesting that moderate DP noise can act
+deployment efficiency of DAIR-FedMoE, we evaluate its com- as a regularizer that improves generalization, whereas both
+munication overhead and classification performance relative weaker privacy (smaller σ) and very strong privacy (larger
+to FedAvg and FedDrift, averaged across four benchmarks. σ) reduce accuracy. Notably, tightening privacy beyond this
+As shown in Table VII, DAIR-FedMoE achieves significantly point leads to a measurable degradation, with minority-class
+higher macro-F1 and minority-class recall compared to both recall typically dropping more sharply than Macro-F1 (e.g., for
+baselines. Specifically, it outperforms FedAvg by over 11% C = 1.0, minority recall decreases from 89.62% at ϵ = 11.81
+in macro-F1 and 20% in minority recall, and improves upon to 79.48% at ϵ = 4.36), indicating that minority detection is
+FedDrift by a notable margin as well, especially in fairness more sensitive to aggressive noise.
+across minority classes. Despite these gains, DAIR-FedMoE Clipping norm C further modulates this trade-off: C = 1.0
+incurs only a modest communication overhead, approximately consistently yields the best results over the entire sweep,
+10% higher than FedAvg and still 15% lower than FedDrift. achieving the highest Macro-F1 (96.28%) and minority recall
+This efficiency stems from its adaptive expert activation strat- (89.62%) at σ = 1.2. In contrast, C = 0.5 tends to underegy, which avoids redundant communication by selectively perform due to overly conservative clipping that attenuates
+routing flows to active expert subsets. These results validate useful gradient signal, while C = 2.0 performs worst overall,
+that the proposed method not only enhances performance consistent with larger effective noise magnitude (σC) harmacross diverse drift scenarios, but also maintains practical com- ing learning stability. Overall, these results support choosing
+munication cost, making it suitable for real-world federated (C, σ) = (1.0, 1.2) as a strong default operating point that
+deployments. provides a concrete privacy guarantee (ϵ ≈ 11.81 at δ = 10−5 )
+ Moreover, Table VIII summarizes the client-side resource while preserving high classification performance, and they
+footprint at convergence when training with CPU-only Docker clearly illustrate the expected utility degradation as privacy
+containers to emulate edge devices. Each client maintains is tightened to very small ϵ. The chosen parameters follow
+a lightweight shard with approximately 3.6M parameters, common DP-SGD practice: C = 1.0 is a standard setting for
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 17
+
+TABLE VIII: Client-side resource footprint at convergence (batch size 32, CPU-only edge clients). Each value is averaged
+across clients and final 5 rounds.
+Client Shard Model FLOPs FLOPs Peak Client Uplink Downlink
+ Params Size /Fwd /TrainStep RAM Time/Round /round /round
+ 3.57 M 15.08 MB 1.12 GFLOPs 2.63 GFLOPs 1.29 GB 10.22 sec 16.39 MB 15.92 MB
+Notes. Clients run on CPU-only Docker containers to emulate edge devices; PPO policy and aggregation run only on the server.
+FLOPs/TrainStep includes forward + backward for the GShard shard and sparse HMoE top-1 expert path; DP-SGD clipping and noise
+are included. Uplink/Downlink reflect privatized deltas for the active shard + experts.
+
+TABLE IX: Privacy-utility trade-off under DP-SGD (mean while maintaining communication efficiency and differential
+over 3 seeds). We sweep the noise parameter σ for three privacy guarantees. Overall, DAIR-FedMoE offers a practical
+clipping norms C ∈ {0.5, 1.0, 2.0} and report the computed and robust solution for drift-resilient, privacy-preserving traffic
+privacy budget (ε, δ) with fixed δ = 10−5 , along with Macro- classification in non-stationary federated networks. A detailed
+F1, and minority-class recall. All ε values are computed using discussion of limitations and future research directions is
+the MA under same training schedule (batch size B = 32, provided in Appendix D.
+local epochs E = 5, and T = 250 rounds).
+ R EFERENCES
+ C σ ε (δ = 10−5 ) Macro-F1 (%) Minority Recall (%)
+ [1] M. Badar, W. Nejdl, and M. Fisichella, “Fac-fed: Federated adaptation
+ 0.8 26.62 83.49 74.91 for fairness and concept drift aware stream classification,” Mach. Learn.,
+ 1.0 16.17 88.07 79.88 vol. 112, no. 8, pp. 2761–2786, 2023.
+ 0.5 1.2 11.81 91.13 83.51 [2] T. Bai, Y. Zhang, Y. Wang, Y. Qin, and F. Zhang, “Multi-site MRI
+ 1.5 8.34 90.56 80.73 classification using weighted federated learning based on mixture of ex-
+ 2.0 5.75 87.60 75.05 perts domain adaptation,” in Proc. Int. Conf. Bioinfor. Biomed. (BIBM),
+ 2.5 4.36 84.72 71.59 December 6-8, 2022. Las Vegas, NV, USA: IEEE, pp. 916–921.
+ [3] E. Bakopoulou, B. Tillman, and A. Markopoulou, “Fedpacket: A fed-
+ 0.8 26.62 91.28 85.22 erated learning approach to mobile packet classification,” IEEE Trans.
+ 1.0 16.17 94.07 87.10 Mob. Comput., vol. 21, no. 10, pp. 3609–3628, 2022.
+ 1.0 1.2 11.81 96.28 89.62 [4] Z. Bu, Y. Wang, S. Zha, and G. Karypis, “Automatic clipping: Differ-
+ 1.5 8.34 92.88 85.26 entially private deep learning made easier and stronger,” in Proc. Annu.
+ Conf. Neur. Info. Process. Sys. (NIPS), 10-16 December, 2023, New
+ 2.0 5.75 89.34 82.93 Orleans, LA, USA, 2023.
+ 2.5 4.36 86.08 79.48 [5] D. Busbridge, J. Ramapuram, P. Ablin, T. Likhomanenko, E. G.
+ 0.8 26.62 84.07 70.15 Dhekane, X. S. Cuadros, and R. Webb, “How to scale your EMA,”
+ in Proc. Annu. Conf. Neur. Info. Process. Sys. (NIPS), 10-16 December,
+ 1.0 16.17 87.55 73.63
+ 2023. New Orleans, LA, USA: Curran Associates.
+ 2.0 1.2 11.81 89.27 78.06 [6] F. E. Casado, D. Lema, R. Iglesias, C. V. Regueiro, and S. Barro,
+ 1.5 8.34 86.67 74.08 “Ensemble and continual federated learning for classification tasks,”
+ 2.0 5.75 82.60 72.02 Mach. Learn., vol. 112, no. 9, pp. 3413–3453, 2023.
+ 2.5 4.36 79.04 69.91 [7] J. Chen, J. Xue, Y. Wang, Z. Liu, and L. Huang, “Classifier clustering
+ and feature alignment for federated learning under distributed concept
+ drift,” in Proc. 38th Annu. Conf. Neur. Info. Process. Sys. (NIPS),
+ December 10-15, 2024. Vancouver, BC, Canada: Curran Associates.
+bounding per-sample gradients with minimal bias [4], [27], [8] Y. Deng, S. Yue, T. Wang, G. Wang, J. Ren, and Y. Zhang, “Fedinc: An
+while σ = 1.2 balances privacy and utility, consistent with exemplar-free continual federated learning framework with small labeled
+ data,” in Proc. 21st Conf. Embedd. Networked Sensor Sys. (SenSys), 13-
+frameworks such as Opacus [37]. These values thus provide a 15 November, 2023. New York, NY, USA: ACM, pp. 56–69.
+practical trade-off aligned with related work. [9] M. Duan, D. Liu, X. Ji, Y. Wu, L. Liang, X. Chen, Y. Tan, and A. Ren,
+ Finally, expert lifecycle control (spawn/prune/merge) and “Flexible clustered federated learning for client-level data distribution
+ shift,” IEEE Trans. Parallel Distrib. Syst., vol. 33, no. 11, pp. 2661–
+routing-policy learning operate only on DP-protected, secure- 2674, 2022.
+aggregated outputs; by DP post-processing, they do not in- [10] C. Dupuy, R. Arava, R. Gupta, and A. Rumshisky, “An efficient DP-SGD
+crease privacy leakage beyond the stated (ε, δ) budget. The mechanism for large scale NLU models,” in Proc. Int. Conf. Acoustics
+ Speech Sign. Process. (ICASSP), 23-27 May 2022. Virtual Event,
+cumulative privacy loss over local steps and rounds is ac- Singapore: IEEE, pp. 4118–4122.
+counted for via standard DP composition using the accountant [11] Y. Feng, Y. Geng, Y. Zhu, Z. Han, X. Yu, K. Xue, H. Luo, M. Sun,
+described above. G. Zhang, and M. Song, “PM-MOE: mixture of experts on private model
+ parameters for personalized federated learning,” in Proc. ACM Web Conf.
+ (WWW), April 28-May 2, 2025. Sydney, Australia: ACM, pp. 134–146.
+ VII. C ONCLUSION [12] B. Ganguly and V. Aggarwal, “Online federated learning via nonstationary detection and adaptation amidst concept drift,” IEEE/ACM
+ This paper presented DAIR-FedMoE, a unified framework Trans. Networking, vol. 32, no. 01, pp. 643–653, 2024.
+for federated encrypted-traffic classification that jointly ad- [13] X. Guan, R. Du, X. Wang, and H. Qu, “A personalized federated multidresses feature, concept, and label drift through a hierarchical task learning scheme for encrypted traffic classification,” in Proc. 32nd
+ Int. Conf. Artif. Neur. Netw. (ICANN), 26-29 September, 2023, vol.
+mixture-of-experts architecture, entropy-guided loss reweight- 14256. Heraklion, Crete, Greece: Springer, pp. 258–270.
+ing, and a PPO-based expert lifecycle policy. Extensive ex- [14] B. Guo, Y. Mei, D. Xiao, and W. Wu, “Pfl-moe: Personalized federated
+periments across four benchmark datasets demonstrate that learning based on mixture of experts,” in Proc. 5th Int. Joint Conf. Web
+ Big Data (APWeb-WAIM), August 23-25, 2021, L. H. U, M. Spaniol,
+DAIR-FedMoE consistently outperforms state-of-the-art base- Y. Sakurai, and J. Chen, Eds., vol. 12858. Guangzhou, China: Springer,
+lines in both steady-state accuracy and post-drift recovery, pp. 480–486.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3676447
+
+JOURNAL OF IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, AUGUST 2025 18
+
+[15] P. Hamedi, R. Razavi-Far, and E. Hallaji, “Federated continual learning: address local and global forgetting,” arXiv preprint arXiv:2501.15356,
+ Concepts, challenges, and solutions,” Neurocomputing, vol. 651, p. 2025.
+ 130844, 2025. [37] Opacus, “Opacus · Train PyTorch models with Differential Pri-
+[16] S. M. Hamidi, R. Tan, L. Ye, and E. Yang, “Fed-it: Addressing class vacy — opacus.ai,” https://opacus.ai/tutorials/building_image_classifier,
+ imbalance in federated learning through an information- theoretic lens,” 2025, [Accessed: 02-09-2025].
+ in Proc. Int. Symp. Info. Theory (ISIT), July 7-12, 2024. Athens, Greece: [38] A. Pustozerova, J. Baumbach, and R. Mayer, “Differentially private
+ IEEE, pp. 1848–1853. federated learning: Privacy and utility analysis of output perturbation
+[17] H. Y. He, Z. G. Yang, and X. N. Chen, “PERT: payload encoding and DP-SGD,” in Proc. Int. Conf. Big Data (BigData), 15-18 December,
+ representation from transformer for encrypted traffic classification,” in 2023. Sorrento, Italy: IEEE, pp. 5549–5558.
+ Proc. ITU Kaleidoscope: Indust. Driven Digit. Transform. (ITU K), [39] Y. Saadati, M. Rostami, and M. H. Amini, “pmixfed: Efficient per-
+ December 7-11, 2020. Ha Noi, Vietnam: IEEE, pp. 1–8. sonalized federated learning through adaptive layer-wise mixup,” arXiv
+[18] Y. Hou, H. Li, Z. Guo, W. Wu, R. Liu, and L. You, “Fedibd: a federated preprint arXiv:2501.11002, 2025.
+ learning framework in asynchronous mode for imbalanced data,” Appl. [40] T. Salazar, J. Gama, H. Araújo, and P. H. Abreu, “Unveiling group-
+ Intell., vol. 55, no. 2, pp. 1–17, 2025. specific distributed concept drift: A fairness imperative in federated
+[19] T. Huoh, Y. Luo, P. Li, and T. Zhang, “Flow-based encrypted network learning,” arXiv preprint arXiv:2402.07586, 2024.
+ traffic classification with graph neural networks,” IEEE Trans. Netw. [41] F. Sattler, K. Müller, and W. Samek, “Clustered federated learning:
+ Serv. Manage., vol. 20, no. 2, pp. 1224–1237, 2023. Model-agnostic distributed multitask optimization under privacy con-
+[20] Z. Jin, K. Duan, C. Chen, M. He, S. Jiang, and H. Xue, “Fedetc: straints,” IEEE Trans. Neur. Netw. Learn. Syst., vol. 32, no. 8, pp. 3710–
+ Encrypted traffic classification based on federated learning,” Heliyon, 3722, 2021.
+ vol. 10, no. 16, p. e35962, 2024. [42] T. Shapira and Y. Shavitt, “Flowpic: A generic representation for
+[21] E. Jothimurugesan, K. Hsieh, J. Wang, G. Joshi, and P. B. Gibbons, encrypted traffic classification and applications identification,” IEEE
+ “Federated learning under distributed concept drift,” in Proc. Int. Conf. Trans. Netw. Serv. Manage., vol. 18, no. 2, pp. 1218–1232, 2021.
+ Artif. Intell. Stat., April 25-27, 2023, vol. 206. Valencia, Spain: PMLR, [43] N. Shazeer, A. Mirhoseini, K. Maziarz, A. Davis, Q. V. Le, G. E. Hinton,
+ pp. 5834–5853. and J. Dean, “Outrageously large neural networks: The sparsely-gated
+[22] H. Lee, K. Deokseon, L. Joonseok, and H. Helen, “Class-wise combi- mixture-of-experts layer,” in Proc. 5th Int. Conf. Learn. Rep. (ICLR),
+ nation of mixture-based data augmentation for class imbalance learning 24-26 April, 2017. Toulon, France: ICLR.
+ of focal liver lesions in abdominal ct images,” J. Imaging Info. in Med., [44] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized
+ vol. 38, no. 2, 2025. application identification via encrypted traffic analysis using graph
+[23] D. Lepikhin, H. Lee, Y. Xu, D. Chen, O. Firat, Y. Huang, M. Krikun, neural networks,” IEEE Trans. Inf. Forensics Secur., vol. 16, pp. 2367–
+ N. Shazeer, and Z. Chen, “Gshard: Scaling giant models with conditional 2380, 2021.
+ computation and automatic sharding,” in Proc. 9th Int. Conf. Learn. Rep. [45] Y. Shen, H. Wang, and H. Lv, “Federated learning with classifier shift
+ (ICLR), 3-7 May, 2021. Virtual Event, Austria: ICLR. for class imbalance,” arXiv preprint arXiv:2304.04972, 2023.
+[24] K. Lin, X. Xu, and H. Gao, “TSCRNN: A novel classification scheme [46] J. Sievers, T. Blank, and F. Simon, “Advancing accuracy in energy
+ of encrypted traffic based on flow spatiotemporal features for efficient forecasting using mixture-of-experts and federated learning,” in Proc.
+ management of iiot,” Comput. Networks, vol. 190, p. 107974, 2021. 15th Int. Conf. Future Sustain. Energy Sys. (e-Energy), June 4-7, 2024.
+ Singapore: ACM.
+[25] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “Et-bert: A
+ [47] N. Wang, X. Li, Z. Guan, and S. Yuan, “Fedstream: A federated learning
+ contextualized datagram representation with pre-training transformers
+ framework on heterogeneous streaming data for next-generation traffic
+ for encrypted traffic classification,” in Proc. ACM Web Conf. (WWW),
+ analysis,” IEEE Trans. Network Sci. Eng., vol. 11, no. 3, pp. 2485–2496,
+ April 25-29, 2022. Virtual Event Lyon, France: ACM, pp. 633–642.
+ 2024.
+[26] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “Fs-net: A flow sequence
+ [48] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+ network for encrypted traffic classification,” in Proc. IEEE Int. Conf.
+ classification using convolutional neural network for representation
+ Comput. Comm. (INFOCOM), 29 April-2 May, 2019. Paris, France:
+ learning,” in Proc. Int. Conf. Info. Networking (ICOIN), 11-13 January,
+ IEEE, pp. 1171–1179.
+ 2017. Da Nang, Vietnam: IEEE, pp. 712–717.
+[27] E. Liu and Z. Chu, “Wasserstein gan for moving differential privacy [49] T. Yoon, S. Shin, S. J. Hwang, and E. Yang, “Fedmix: Approximation
+ protection,” Scientific Reports, vol. 15, no. 1, p. 19634, 2025. of mixup under mean augmented federated learning,” in Proc. 9th Int.
+[28] W. Liu, W. Cui, W. She, and Z. Tian, “Encrypted network traffic Conf. Learn. Rep. (ICLR), May 3-7, 2021. Virtual Event, Austria:
+ detection based on blockchain and federated learning,” in Proc. 4th OpenReview.net.
+ Int. Conf. Blockchain Tech. Info. Secu. (ICBCTIS), 17-19 August, 2024. [50] E. L. Zec, J. Martinsson, O. Mogren, L. R. Sütfeld, and D. Gillblad,
+ Wuhan, China: IEEE, pp. 139–144. “Federated learning using mixture of experts,” 2021.
+[29] W. Liu, Y. Wang, K. Li, Z. Tian, and W. She, “Ftmoe: a federated [51] Y. Zeng, Z. Wang, X. Guo, K. Shi, Z. Liu, X. Zhu, and J. Ma,
+ transfer model based on mixture-of-experts for heterogeneous image “Social networks based robust federated learning for encrypted traffic
+ classification,” Cluster Comput., vol. 28, no. 3, p. 165, 2025. classification,” in Proc. Int. Conf. Comm. (ICC), May 28 - June 1, 2023.
+[30] Y. Liu, X. Wang, B. Qu, and F. Zhao, “Atvitsc: A novel encrypted Rome, Italy: IEEE, pp. 4937–4942.
+ traffic classification method based on deep learning,” IEEE Trans. Inf. [52] Z. Zhan, W. Zhao, Y. Li, W. Liu, X. Zhang, C. W. Tan, C. Wu, D. Guo,
+ Forensics Secur., 2024. and X. Chen, “Fedmoe-da: Federated mixture of experts via domain
+[31] M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, and aware fine-grained aggregation,” in Proc. 20th Int. Conf. Mobility,
+ M. Saberian, “Deep packet: A novel approach for encrypted traffic Sensing Networking (MSN), 20-22 December, 2024. Harbin, China:
+ classification using deep learning,” Soft Comput., vol. 24, no. 3, pp. IEEE, pp. 122–129.
+ 1999–2012, 2020. [53] H. Zhang, W. Liu, J. Shan, and Q. Liu, “Online active learning paired
+[32] N. Malekghaini, E. Akbari, M. A. Salahuddin, N. Limam, R. Boutaba, ensemble for concept drift and class imbalance,” IEEE Access, vol. 6,
+ B. Mathieu, S. Moteau, and S. Tuffin, “Data drift in dl: Lessons learned pp. 73 815–73 828, 2018.
+ from encrypted traffic classification,” in Proc. Int. Conf. Networking [54] Z. Zhang, B. Guo, W. Sun, Y. Liu, and Z. Yu, “Cross-fcl: Toward a cross-
+ Conference (IFIP), June 13-16, 2022. Catania, Italy: IEEE, 2022, pp. edge federated continual learning framework in mobile edge computing
+ 1–9. systems,” IEEE Trans. Mob. Comput., vol. 23, no. 1, pp. 313–326, 2024.
+[33] D. M. Manias, I. Shaer, L. Yang, and A. Shami, “Concept drift [55] S. Zhu, X. Xu, H. Gao, and F. Xiao, “CMTSNN: A deep learning model
+ detection in federated networked systems,” in Proc. Glob. Comm. Conf. for multiclassification of abnormal and encrypted traffic of internet of
+ (GLOBECOM), 7-11 December, 2021. Madrid, Spain: IEEE, pp. 1–6. things,” IEEE Internet Things J., vol. 10, no. 13, pp. 11 773–11 791,
+[34] D. R. Manjunath, J. J. Lohith, S. Selva Kumar, and A. Das, “Predict- 2023.
+ ing diabetic retinopathy and nephropathy complications using machine
+ learning techniques,” IEEE Access, vol. 13, pp. 70 228–70 253, 2025.
+[35] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. y. Arcas,
+ “Communication-efficient learning of deep networks from decentralized
+ data,” in Proc. 20th Int. Conf. Artif. Intell. Stat. (AISTATS), 20-22 April,
+ 2017. Lauderdale, FL, USA: PMLR, pp. 1273–1282.
+[36] M. K. Nori, I. Kim, and G. Wang, “Federated class-incremental learning:
+ A hybrid approach using latent exemplars and data-free techniques to
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

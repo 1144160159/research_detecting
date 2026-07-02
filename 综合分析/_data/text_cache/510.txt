@@ -1,0 +1,144 @@
+4954                                             IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+
+
+
+  PrivBox: Privacy-Preserving Deep Packet Inspection
+        With Dual Double-Masking Obfuscated
+                   Rule Generation
+  Pengfei Wu , Member, IEEE, Jianting Ning , Member, IEEE, Xinyi Huang , Rongmao Chen , Kai Zhang ,
+                                     and Kaitai Liang , Member, IEEE
+
+
+   Abstract—Many network middleboxes have been deployed to                           Index Terms—Traffic inspection, network privacy, privacy-
+perform deep packet inspection (DPI) over packet payloads. How-                    preserving.
+ever, such middleboxes cannot accomplish their tasks when the
+traffic is encrypted. BlindBox (SIGCOMM 2015) provided the first
+solution for performing DPI over encrypted traffic. To improve                                                 I. INTRODUCTION
+its efficiency, a later proposal PrivDPI (CCS 2019) introduced a
+                                                                                         O PROTECT network operators and end users, network
+practical technique to generate encrypted rules. However, a recent
+proposal P2DPI (ASIACCS 2021) showed that the rule generator
+in PrivDPI can comprise the user’s privacy. In this article, we
+                                                                                   T     middleboxes have been deployed to perform deep packet
+                                                                                   inspection (DPI) to provide a wide range of functionalities,
+present a new attack on P2DPI and show that the privacy of its
+endpoints can still be compromised by the rule generator. We
+                                                                                   including intrusion detection, intrusion prevention, exfiltration
+comprehensively analyze the vulnerability of prior studies and                     prevention, etc. These middleboxes share a common feature that
+present PrivBox, a new DPI system that achieves the same privacy                   they inspect packet payloads directly. In recent years, however,
+guarantee as BlindBox while maintaining practical efficiency. This                 the use of encryption protocols (such as HTTPS) has been a
+is based on a new technique called dual double-masking obfuscated                  dramatic increase in traffic on the Internet. It is estimated that
+rule generation. For a ruleset of 3,000, PrivBox achieves connection
+establishment time on the endpoint side comparable to PrivDPI
+                                                                                   more than 80% of enterprises’ web traffic is sent over HTTPS,
+and supports up to 4,672 token encryptions per second, which is                    and 94% of Google web traffic is encrypted [10]. Though these
+sufficient for a number of real-world applications. Overall, our                   encryptions protect the confidentiality of network packets, they
+experiment demonstrates that PrivBox is practical and well-suited                  pose a long-standing challenge for DPI services. In particular,
+for short, frequently established sessions, especially when token                  traditional network middleboxes can no longer perform DPI
+repeating is common.
+                                                                                   tasks since packet payloads are encrypted.
+                                                                                      To inspect encrypted traffic, a well-known technique called
+   Received 31 October 2023; revised 23 March 2025; accepted 28 March 2025.        “split-TLS” has been deployed in some middlebox systems.
+Date of publication 3 April 2025; date of current version 4 September 2025. This
+work was supported in part by the National Natural Science Foundation of China     In these systems, a man-in-the-middle (MitM) attack on TLS
+under Grant 62425205, Grant 62032005, Grant 62122092, and Grant 62372285,          is mounted and the traffic is decrypted (and inspected) at the
+in part by Shanghai Rising-Star Program under Grant 22QA1403800, and in            middlebox. However, such MitM approach is not deemed to be
+part by the EU Horizon Europe Research and Innovation Program under Grant
+101073920 (TENSOR), Grant 101070052 (TANGO), and Grant 101070627                   secure: it violates the end-to-end security guarantees of TLS and
+(REWIRE). (Corresponding author: Jianting Ning.)                                   hence various security issues have been caused (due to the weak-
+   Pengfei Wu is with the School of Cyber Science and Engineering, Wuhan           nesses in its implementation) [11], [14], [20], [37]. The recent
+University, Wuhan 430072, China, and also with the School of Computing and
+Information Systems, Singapore Management University, Singapore 188065             unfortunate set of issues prompted National Security Agency to
+(e-mail: pfwu@smu.edu.sg).                                                         outline the risks of Transport Layer Security Inspection [1] and
+   Jianting Ning is with the School of Cyber Science and Engineering, Wuhan        the US-Cert to issue an alert (TA17-075 A) about problems on
+University, Wuhan 430072, China, also with the Faculty of Data Science, City
+University of Macau, Macau 999078, China, and also with the College of             some HTTPS inspection products [36].
+Computer and Cyber Security, Fujian Normal University, Fuzhou 350007, China           To enable DPI over encrypted traffic while preserving user
+(e-mail: jtning88@gmail.com).                                                      privacy, new solutions have been proposed in recent years.
+   Xinyi Huang is with the College of Cyber Security, Jinan University,
+Guangzhou 510632, China (e-mail: xinyi@ust.hk).                                    These solutions need to deal with an unfortunate choice of only
+   Rongmao Chen is with the College of Computer, National University of            one of two desirable but seemingly conflicting properties: the
+Defense Technology, Changsha 410073, China (e-mail: chromao@nudt.edu.cn).          protection of endpoint’s privacy and the functionality of DPI.
+   Kai Zhang is with the College of Computer Science and Technology,
+Shanghai University of Electric Power, Shanghai 201399, China (e-mail:             To address this problem, Sherry et al. [31] proposed BlindBox,
+kzhang@shiep.edu.cn).                                                              demonstrating the possibility of building a system that satisfies
+   Kaitai Liang is with the Faculty of Electrical Engineering, Mathematics         both of these controversial properties. BlindBox performs DPI
+and Computer Science, Delft University of Technology, 2628 Delft, CD, The
+Netherlands (e-mail: Kaitai.Liang@tudelft.nl).                                     directly on the encrypted payload, keeping the rules hidden
+   This article has supplementary downloadable material available at               from the endpoints and payload hidden from the middlebox
+https://doi.org/10.1109/TDSC.2025.3557423, provided by the authors.                (except for the content that matches predefined rules). To that
+   Digital Object Identifier 10.1109/TDSC.2025.3557423
+                                                                                   end, Sherry et al. introduced a technique named obfuscated rule
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+WU et al.: PRIVBOX: PRIVACY-PRESERVING DEEP PACKET INSPECTION WITH DUAL DOUBLE-MASKING OBFUSCATED RULE GENERATION                         4955
+
+
+
+encryption that allows the middlebox to obtain encrypted rules         for reusability. In each session, the middlebox and endpoints
+generated from the private key of the endpoints and the rules          require a long delay for connection, not suitable for frequent
+from the middlebox in a privacy-preserving manner (i.e., without       session establishment. Therefore, taking rule tuples from the
+leaking the private key to the middlebox and the rules to the          first challenge, a second challenge is to deal with the secure
+endpoints). The technique of obfuscated rule encryption is built       and efficient production of obfuscated rules and simultaneously
+on garbled circuit, which incurs significant computation and           allows for reusability across different sessions.
+communication overheads (around 97 s for the setup as reported
+in [31]). To improve the overall efficiency, Ning et al. [27]
+introduced the technique of reusable obfuscated rule generation        A. Our Contributions
+that significantly reduces the complexity. However, as pointed            In this paper, we propose PrivBox, a new protocol that enables
+in [21], the threat model in PrivDPI does not include the case         privacy-preserving deep packet inspection over encrypted traffic
+when the rule generator is compromised, and hence PrivDPI              directly. Our scheme offers the same privacy level as BlindBox
+does not retain the same privacy as BlindBox. To address the           while maintaining efficiency close to PrivDPI. The main contri-
+scenario in which either the rule generator or the middlebox           butions are summarized as follows.
+is coerced by the attacker (i.e., the same privacy guarantee as            r Effective Attack on P2DPI: We revisit P2DPI, and demon-
+BlindBox), Kim et al. [21] recently proposed a DPI system called             strate that it is susceptible to an attack (that we propose
+P2DPI. However, as we will demonstrate in a later section (see               in this paper) when the rule generator is coerced by an
+Section III), P2DPI still suffers an attack (that we propose in this         attacker. We say that a rule generator is coerced if it is
+paper) launched by the compromised rule generator, and hence                 not fully trusted and will try to generate valid obfuscated
+cannot achieve the same privacy level as BlindBox (unlike what               rules for any new rules on its preference by utilizing the
+they claimed). In particular, the rule generator in P2DPI can                messages it observes. These newly generated obfuscated
+generate more (new) obfuscated rules than allowed when the                   rules give the rule generator more power than allowed to
+rule generator is compromised. We present an attack on P2DPI,                scan the encrypted traffic, enabling it to exhaustively search
+demonstrating that it does not guarantee the claimed privacy.                the contents of the encrypted traffic and hence compromise
+The reason why it suffers from our attack is that the generation             the endpoint’s privacy. We present our analysis on the rule
+of obfuscated rules in P2DPI is malleable. That is, given an                 obfuscation scheme in P2DPI, and further show that it is
+obfuscated rule of a rule r, it is possible to generate a valid              possible to generate a valid obfuscated rule for a new rule
+obfuscated rule of a rule r for r = r.                                    r by modifying a given obfuscated rule of rule r (where
+   Keeping the efficiency limit on BlindBox as well as the                   r = r ).
+privacy concern on PrivDPI and P2DPI in mind, we need to                   r New solution for secure DPI over encrypted traffic: We
+address the following two challenges:                                        present PrivBox as a replacement for Blindbox and PrivDPI
+   Challenge 1: How does the middlebox interact with the rule                with which a compromised rule generator or middlebox
+generator securely and efficiently to prepare rule tuples? We                alone cannot forge a valid obfuscated rule. To this end,
+investigate prior studies including PrivDPI and P2DPI and find               we introduce a new technique called dual double-masking
+that the main reason for the above vulnerability is that the rule            obfuscated rule generation, which is instantiated by the
+generator has to initialize and know all secrets in the system               rule preparation protocol and preprocessing protocol. Be-
+setup. Upon obtaining an obfuscated rule from endpoints, it can              sides providing the guarantee of exact match privacy (i.e.,
+easily derive a new one using these secrets. A potential solution            the middlebox can learn the position of an attack keyword
+is to split secrets into two parts and allow the rule generator and          occurs in a flow), PrivBox can also be extended to support
+middlebox to initialize them separately, e.g., via secret sharing,           probable-cause privacy model in the sense that the middle-
+thereby avoiding the rule generator dominating the generation                box can reveal the contents of the encrypted traffic when
+of rule tuples. However, consider that the rule generator can gen-           the traffic is suspicious.
+erate illegal information that helps forge valid obfuscated rules          r Novel structure supporting non-malleability and reusabil-
+in interacting with the middlebox, and a complicated two-party               ity. The core of above dual double-masking obfuscated
+protocol would lead to heavy computation and communication                   rule generation is the so-called dual double-masking struc-
+burden. An issue would arise to ensure two entities securely and             ture. It means that the output of rule preparation protocol
+efficiently prepare rule tuples.                                             (i.e., rule tuple) and the output of preprocessing protocol
+   Challenge 2: How does the middlebox securely and efficiently              (i.e., obfuscated rule) are in the form of g aF1 (ri )+bF2 (ri ) ,
+interact with the endpoints while simultaneously supporting                  where F1 (ri ) and F2 (ri ) are two functions on a given
+reusable obfuscated rules? This is a fundamental problem in                  rule ri and a, b are secrets. This structure supports two
+designing a DPI scheme. That is, the rule provided by the mid-               important properties: non-malleability and reusability. The
+dlebox and the private key provided by the endpoints are always              former ensures that given the obfuscated rules of a rule
+kept secret during the interaction process. A straightforward                set {ri }i∈[n] , anyone (including the rule generator or the
+solution falls in a two-party computation between two entities,              middlebox alone) who does not know a and b simulta-
+for example, following the idea of BlindBox that leverages                   neously cannot forge a new valid obfuscated rule for any
+the garbled circuit to produce obfuscated rules. However, even               rule r ∈/ {ri }i∈[n] . The latter enables the obfuscated rules
+though the secrecy of rules can be guaranteed, it loses the support          generated in the previous session(s) to be reused across
+4956                                              IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 5, SEPTEMBER/OCTOBER 2025
+
+
+
+
+Fig. 1. System Architecture. RG first runs a rule preparation protocol with MB. MB then interacts with the endpoints to generate encrypted rules of the current
+session (
+         1 ). For a payload sent through MB, in addition to the encryption of the traffic using regular TLS (i.e., TLS encrypted traffic), the sender encrypts
+the payload to generate the PrivBox encrypted traffic during the token encryption phase (  2 ). MB performs inspection using the enc

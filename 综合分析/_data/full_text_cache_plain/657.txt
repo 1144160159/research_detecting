@@ -1,0 +1,1053 @@
+706
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+Effective Sample Generation for Industrial
+Control Systems: A GAN-Based Approach
+Zhongyuan Qin , Yuxuan Liu, Tiantian Wang, Liquan Chen , Senior Member, IEEE, and Yubo Song
+
+Abstract—In industrial control systems (ICSs), safeguarding system security is vital, and intrusion detection
+is an effective protective measure. In real-world ICS environments, however, the training data for intrusion-detection
+models are dominated by normal traffic, with very few abnormal samples. This scarcity prevents the model from
+fully learning abnormal characteristics, thereby limiting
+anomaly-detection performance. ICS traffic is also noisy
+and often captured incompletely, which is especially problematic because it possesses strong temporal dependencies. Moreover, ICS operations tend to be highly regular
+and follow a strict logical order, causing data to cluster densely in certain regions while edge regions remain
+sparsely populated—an imbalance that easily leads to misclassification. To tackle data imbalance, missing temporal features, and edge-sample scarcity, we propose the
+DualCGAN-AE approach. It employs two conditional generative adversarial networks to perform dynamic learning on
+global and edge features and to enrich samples with temporal information; a multimodel discriminator is incorporated to enhance training stability. We validated the method
+on two datasets, assessing both the quality of the generated samples and their impact on intrusion detection
+performance. Experimental results show that the samples
+produced by DualCGAN-AE significantly boost detection
+accuracy.
+Index Terms—Edge distribution, generative adversarial
+network (GAN), industrial control system (ICS), intrusion
+detection.
+
+I. INTRODUCTION
+ITH the ongoing development of industrial control systems (ICSs), their scale and complexity are continuously
+increasing, as seen in natural gas plants, power plants, and
+water treatment facilities. Within these systems, devices, such
+as sensors, follow instructions from upper level components,
+such as programmable logic controllers (PLCs) and remote terminal units. They carry out periodic operations based on logical
+patterns and transmit control commands via network traffic to
+the supervisory control and data acquisition (SCADA) control
+
+W
+
+Received 29 May 2025; revised 8 July 2025; accepted 22 August
+2025. Date of publication 10 October 2025; date of current version
+5 February 2026. This work was supported by the National Natural
+Science Foundation of China under Grant U22B2026. Paper no. TII-253556. (Corresponding author: Zhongyuan Qin.)
+The authors are with the School of Cyber Science and Engineering, Southeast University, Nanjing 211102, China (e-mail:
+zyqin@seu.edu.cn; 220224934@seu.edu.cn; 220235240@seu.edu.cn;
+lqchen@seu.edu.cn; songyubo@seu.edu.cn).
+Digital Object Identifier 10.1109/TII.2025.3609080
+
+center for monitoring and management. This comprehensive
+framework enables effective monitoring of industrial processes,
+facilitating timely anomaly detection [1]. However, as ICS advances, malicious attacks on sensors or higher level machines
+are also on the rise. Consequently, real-time intrusion detection
+for time-series traffic data has become a research priority, and
+improving detection accuracy by leveraging the temporal nature
+of industrial traffic data remains a long-term challenge [2].
+At present, numerous remarkable research outcomes exist in
+the realm of ICS intrusion detection, with machine learning and
+deep learning approaches being predominant. These techniques
+analyze ICS traffic, compare key fields in normal traffic, extract
+crucial semantic features from ICS traffic, and employ these
+features for anomaly detection [3]. Thanks to their capacity
+for autonomous learning and enhancement, these methods have
+somewhat reduced the costs associated with feature selection.
+As a result, recent research has predominantly focused on this
+area.
+However, as new attack types continue to emerge, legacy
+models gradually lose their effectiveness and struggle to counter
+these novel threats. Consequently, leveraging unsupervised
+learning for ICS intrusion detection is vital for defending against
+an increasingly diverse array of attacks [4]. Yet, because attack
+samples are scarce, the training data consist almost entirely
+of normal traffic, resulting in severe class imbalance. This
+imbalance readily leads to overfitting during model training,
+thereby degrading the model’s decision accuracy. Moreover, the
+ICS environment is inherently noisy, often corrupting traffic
+data and even causing partial data loss—situations to which
+the logic-driven operations of ICS are especially sensitive [5].
+Therefore, completing missing traffic data and mitigating the
+impact of heavy noise on model judgments are crucial for
+improving training precision, with data repair and augmentation
+playing key roles in this process.
+To address the issues in industrial traffic sample generation,
+this article proposes the DualCGAN-AE sample generation
+approach, with specific contributions as follows.
+1) We propose an effective sample generation approach that
+employs two generative adversarial networks (GANs)
+in an interactive training scheme. The first GAN learns
+the overall data distribution; its low-scoring samples are
+passed to the second GAN as learning targets. This allows
+the second GAN to focus on the data’s edge-distribution
+characteristics and generate samples with those properties, thereby mitigating the long-tail distribution problem
+in the dataset.
+
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+for more information.
+
+QIN et al.: EFFECTIVE SAMPLE GENERATION FOR INDUSTRIAL CONTROL SYSTEMS: A GAN-BASED APPROACH
+
+2) To enhance training stability and cope with potential temporal data loss in industrial traffic samples, we introduce
+a time interval matrix (TIM) to preserve the completeness
+of temporal features. In addition, we adopt a multimodel
+discriminator: the single discriminator score is replaced
+with the weighted average of multiple model scores,
+which stabilizes the discriminator’s training process.
+3) To resolve the issue of label-containing sample generation
+and enable category-specific sample generation, modify
+the original GAN network to a conditional GAN (CGAN).
+Introduce label condition information to achieve controllable and targeted data generation, while still meeting
+the training requirements of unsupervised learning for
+labeled data.
+4) Experiment on two different datasets and meticulously
+evaluate the generated samples. Assess our proposal in
+terms of data quality and its impact on intrusion detection
+performance.
+The rest of this article is organized as follows. Section II
+reviews related work. Section III details our method. Section
+IV presents results and discussion. Finally, Section V concludes
+this article.
+II. RELATED WORKS
+In recent years, research on addressing sample data imbalance has fallen into two categories: traditional artificial data
+generation techniques and GAN-based data augmentation methods. Traditional artificial data generation techniques rebalance
+datasets by increasing the number of minority class samples.
+Common approaches, such as random oversampling and the synthetic minority oversampling technique (SMOTE) algorithm,
+raise the minority class’s share by duplicating or synthetically
+creating samples. Oversampling, however, can introduce overfitting, whereas undersampling risks discarding critical information. GAN-based data-augmentation methods use generative
+models to create new minority-class samples from random noise,
+producing more diverse data that better match the original
+distribution. CGANs incorporate auxiliary information, such as
+class labels during generation, yielding samples that are both
+more structured and more varied. These GAN-based approaches
+have proven highly effective for remedying sample imbalance,
+particularly with complex data types, such as images and text.
+SMOTE is a common sample generation solution that alleviates data imbalance to some extent. Dablain et al. [6] proposed
+DeepSMOTE, a method specifically designed for deep learning
+models. It preserves the attributes of original images during processing and generates high-quality artificial images. Composed
+of an encoder or decoder framework, SMOTE-based oversampling, and a penalty-enhanced loss function, DeepSMOTE has
+the advantage of not requiring a discriminator, and the generated
+images are information-rich and suitable for visual inspection.
+Maldonado et al. [7] introduced a SMOTE-like method using
+weighted Minkowski distance to define the neighborhood of
+each minority-class sample. This approach better defines neighborhoods by prioritizing features relevant to the classification
+task and performs feature selection by discarding attributes
+
+707
+
+with weights below a threshold, addressing class overlap and
+centrality issues without increasing methodological complexity. Bao and Yang [8] proposed methods to tackle this issue.
+They pointed out that the imbalanced classification problem is
+a significant challenge in neural networks and machine learning. Although SMOTE is widely used to address this issue, it
+has a major limitation: noisy samples may be involved in the
+sample-synthesis process, reducing the rationality of newly synthesized samples and degrading network classification performance. Arafa et al. [9] presented RN-SMOTE. In data balancing
+research, random over-sampling (ROS), random under-sampling
+(RUS), and SMOTE [10], [11], [12] remain primary methods.
+RN-SMOTE introduces noisy oversampling in the minority
+class, uses DBSCAN for noise detection and removal, combines
+the processed instances with original data, and then applies
+SMOTE again before introducing the dataset to the underlying
+classifier, thereby improving evaluation performance metrics.
+Combining SMOTE with various networks is an effective way
+to enhance its performance. For example, Liaw et al. [13] proposed the H-SMOTE-FAM model, which integrates histograms,
+SMOTE, and fuzzy ARTMAP (FAM) networks. This model first
+organizes minority-class samples into histogram bins, calculates
+the target number of samples for each bin, and then generates
+synthetic samples within each bin using SMOTE. This systematic approach addresses SMOTE’s limitations in handling
+intraclass imbalance and small disjunctive samples. The FAM
+network then processes the increased data volume through
+incremental learning to improve classification performance.
+Experimental results show that H-SMOTE-FAM outperforms
+other SMOTE variants and GAN-based oversampling methods.
+Similarly, Liu et al. [14] combined SMOTE with a deep twin
+multihead self-attention network to develop a feature-level data
+augmentation method. This method uses the network structure to
+map original data to a feature space with better class separability
+and then generates samples in this space using SMOTE. This
+approach has demonstrated good performance on multiple public datasets. In summary, by addressing SMOTE’s limitations
+and improving data augmentation, combining it with different
+networks can enhance its performance, and these combined
+methods have shown promising results in various applications.
+In recent years, the advancements in GANs have been remarkable, leading to significant achievements in fields, such as
+natural language processing and image generation. Using GANs
+for data generation to enhance data quality and address data
+imbalance issues has also become one of the current research
+priorities. For example, Yuan et al. [15] proposed the B-GAN
+method for intrusion detection systems in ICS. This method
+captures data features through long short-term memory (LSTM)
+networks and uses GANs to generate high-quality abnormal
+samples, effectively tackling data imbalance. Chen et al. [16]
+introduced the DAGAN method, which constructs a dual GAN
+model to learn the underlying data distribution without abnormal
+samples. By optimizing abnormal scores based on the learned
+normal and marginal distributions, this approach reduces the
+misjudgment of marginal samples as outliers. In summary,
+these GAN-based methods have demonstrated great potential
+in solving data imbalance problems, particularly in generating
+
+708
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+high-quality and diverse samples to enhance model performance
+in tasks such as intrusion detection.
+Meslet-Millet et al. [17] proposed NeCSTGen, a novel architecture based on variational autoencoders (VAEs) and recurrent
+neural networks (RNNs) for generating diverse network traffic. This architecture can generate packets, flows, aggregates,
+and external data without protocol or dynamic knowledge. Its
+core methods include: using VAE for feature vector embedding
+of packets, Gaussian mixture models for similarity identification and clustering, and RNN with transition matrices for
+flow and aggregate generation. Li et al. [18] introduced two
+models, DCCSO-Res-BIGRU and GFDA-WGAN. DCCSORes-BIGRU extracts features through attribute core matrices
+and their associative relationships, while GFDA-WGAN detects
+imbalanced attack traffic using a conditional Wasserstein generative adversarial network (WGAN) to generate pseudosample
+features of unseen classes, optimized by the GFDA strategy.
+Geng et al. [19] proposed a few-shot anomaly-driven generation
+method, which leverages only a small number of real anomaly
+samples to guide a diffusion model in generating realistic and
+diverse anomalies, thereby facilitating the training of anomaly
+detection models. Specifically, it learns the anomaly distribution
+from limited real anomalies, injects the learned knowledge into
+an embedding vector, and then uses this vector together with a
+given bounding box to guide the diffusion model in generating
+realistic and diverse anomalies.
+III. PROPOSED APPROACH
+This section describes the methodology of the GAN model.
+By modifying the original GAN structure, introducing variant
+GAN models, and enhancing training stability and completeness, the model better adapts to training tasks with labeled data.
+It addresses issues, such as long-tail distribution and temporal
+data loss in industrial control traffic data, improving training effectiveness [20], sample diversity, and the generalization ability
+for industrial control traffic sample generation . The proposal is
+presented in the following three sections. Section III-A shows
+an overview of the overall architecture. Section III-B gives an
+introduction to the enhanced CGAN and stability optimization
+strategies. Section III-C discusses design principles and strategies of the DualCGAN-AE model.
+A. Architecture of Our Scheme
+To generate high-quality samples for ICS traffic, we optimize
+the model design using a CGAN-based approach, considering
+the differences between industrial and general traffic. The specific challenges are as follows.
+1) Imbalanced Data Distribution: ICS traffic contains a high
+proportion of normal samples and few abnormal samples,
+a characteristic not reflected in public datasets. This leads
+to poor performance of models trained on public data in
+real ICS scenarios. The model must accurately generate
+abnormal samples from a large number of normal samples.
+2) Gaussian Distribution of Data: Devices, such as PLCs
+in ICS, operate according to logical rules, causing data
+
+to repeat and concentrate in specific regions, with sparse
+samples in marginal areas. This makes model training in
+marginal regions error-prone, necessitating supplementary data in these areas to improve accuracy.
+3) Temporal Characteristics and Data Integrity: ICS traffic
+is highly temporal, but the complex ICS environment
+introduces high-noise operational data, inevitably causing
+traffic data loss and disrupting temporal integrity. Therefore, missing temporal traffic data must be supplemented
+to ensure feature completeness.
+To address these issues, we propose the DualCGAN-AE
+model for high-quality sample generation. As shown in Fig. 1,
+the model consists of an encoder, a generator, and a discriminator. Generator: It uses a TIM to supplement missing temporal
+features and modifies the traditional GAN to a CGAN to handle insufficient labeled samples. Discriminator: It employs a
+multimodel weighted averaging mechanism to enhance training stability. Dual CGAN structure: It replaces single CGAN
+training to learn data features of both concentrated and marginal
+distributions, mitigating the long-tail distribution problem.
+In DualCGAN-AE, the encoder of the autoencoder (AE)
+is shared by two CGAN models to ensure consistent lowdimensional latent representations of input noise and labels [21].
+This design avoids initialization differences, provides rich features for the generator, and facilitates rapid learning of data distributions to improve generation quality. The encoder’s effective
+learning of data representations helps the generator quickly capture data distributions, enhancing generation performance and
+alleviating mode collapse. By deeply analyzing the differences
+between ICS traffic and general traffic, we optimize the model
+design to significantly improve sample generation quality.
+B. Enhanced CGAN and Stability Optimization Strategy
+1) CGAN Model: When training generators and discriminators
+using traditional GAN models, the primary reason for generating
+low-quality fake data is the lack of effective information. To address this issue, CGANs [22], [23] have been proposed. CGANs
+assist adversarial training by adding extra effective information
+(such as original data labels and different data modes) to the
+generator or discriminator. Specifically, the model inputs real
+labels to both the generator and the discriminator, making the
+discriminator’s output a conditional probability based on real
+labels and ensuring that the fake samples generated by the
+generator “know” their corresponding real labels [24]. The loss
+function of CGANs is improved based on the original GAN, as
+shown in the following equation:
+minG maxD V  (D, G)
+= Ex∼Pdata(x) [log(D(x|y))]
++ Ez∼Pz(z) [log (1 − D(G(z|y)))].
+
+(1)
+
+In this way, CGANs use original data labels as conditional
+inputs to influence the generator and discriminator. This not
+only addresses the issue of insufficient input data in labeled
+imbalanced datasets but also provides insights for the architecture proposed in this article for training marginal distribution
+
+QIN et al.: EFFECTIVE SAMPLE GENERATION FOR INDUSTRIAL CONTROL SYSTEMS: A GAN-BASED APPROACH
+
+Fig. 1.
+
+709
+
+DualCGAN-AE model structure.
+
+data using dual GANs. In subsequent related research, the loss
+function of CGANs for marginal distribution training will be
+adjusted according to modified training objectives. In summary,
+modifying traditional GAN models into label-embedded CGAN
+models can alleviate data imbalance in industrial control traffic
+to some extent, but further enhancement of CGAN models is still
+needed to ensure training stability and generate higher quality
+data.
+2) Multimodel Discriminator: To enhance the stability of
+CGAN training and avoid discriminator fitting issues caused
+by model differences, a multimodel discriminator is adopted instead of the traditional single-model discriminator. Specifically,
+three discriminator models—multilayer perceptron, gate recurrent unit (GRU), and LSTM—are used to capture data features
+from different perspectives through their complementarity and
+diversity, thereby improving overall discriminative capability.
+Considering the temporal characteristics of industrial control
+traffic data, GRU and LSTM are selected as discriminator models. These models are trained using real and generated samples
+to score the data, and the final discriminative result is determined
+by the weighted average of the three models’ scores, enhancing
+judgment accuracy and reducing misjudgment.
+During training, higher weights (40% each) are assigned to the
+temporal feature-capturing discriminators (GRU and LSTM),
+with the multilayer perceptron accounting for the remaining
+20%. This strategy improves the feedback accuracy of discriminator training, enhances its generalization ability, and motivates
+the generator to produce traffic sample data with richer features.
+The overall discriminator loss function is shown in the following
+equation:
+Lvote =
+
+N
+
+
+w i Li .
+
+(2)
+
+i=1
+
+Here, Li denotes the loss of the ith discriminator model, and
+wi represents its corresponding weight. Although each GAN
+
+contains three distinct discriminator models, they collectively
+form a traditional “generator-discriminator” structure. This
+improved architecture stabilizes the training process of the
+discriminators, diversifies the samples output by the generator,
+and thus meets the task objectives. Fig. 2 compares the
+multimodel discriminator structure used in this article with the
+traditional structure.
+3) Time Interval Matrix: This article proposes the TIM to
+enhance model training. Before constructing TIM, it is crucial
+to ensure that the dataset contains time feature values suitable
+for timestamps. For each time-series data point denoted as st,
+we first check whether the time intervals between samples in the
+dataset are regular. For each missing value, we calculate the time
+difference between the two nearest observations; if the missing
+value is at the start or end of the sequence (with no preceding
+or succeeding observations), we use the minimum time interval
+in the dataset as the default. Based on these calculated time
+differences, we construct a matrix X with the same shape as the
+original time-series data, where each element xdt in matrix X
+represents the time interval corresponding to a specific timestamp.
+During model training, TIM is incorporated as part of the
+input to the generator, helping the model better capture the
+temporal characteristics of the data and improve its predictive
+and generalization capabilities for time-series data. As shown in
+Fig. 3, TIM adjusts the generator’s sample-generation ability by
+serving as part of its input. In the final DualAE-CGAN model,
+noise and label attributes are part of a common embedding, while
+TIM exists independently, acting solely as an imputation matrix
+for capturing time dependencies.
+C. DualCGAN-AE Scheme Introduction
+Based on the traditional GAN, this article introduces a second
+GAN model dedicated to learning marginal distribution data.
+By analyzing the discriminator scores from the original GAN,
+
+710
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+Fig. 2.
+
+Multimodel discriminator compared with traditional discriminator.
+
+Fig. 3.
+
+TIM structure.
+
+marginal and concentrated data in the samples are distinguished.
+After each training round, the discriminator scores all samples,
+with the scores reflecting the type of data distribution. For
+labeled samples, the traditional GAN is switched to a CGAN
+model. The proposed DualCGAN model consists of two CGANs
+with different training objectives:
+The first CGAN (CGAN1) serves as the core model, learning
+features from the entire dataset through preset multiple training
+rounds. After each round, CGAN1 scores the data, and its results
+influence the second CGAN responsible for processing marginal
+data. Although CGAN1 cannot accurately learn marginal data
+features, its training process still positively impacts the final
+generated data due to the majority of the data being concentrated.
+The discriminator loss function of CGAN1 remains unchanged,
+as shown in the following equation:
+= − Ex∼Pdata(x) [log(D1 (x))]
+LCGAN1
+D
+− Ez∼Pz(z) [log (1 − D1 (G1 (z)))].
+
+(3)
+
+The second CGAN (CGAN2) is crucial for addressing
+CGAN1’s limitation in learning marginal sample features. During training, CGAN1 uses a training set of size N. After each
+training round, its discriminator scores the N samples and ranks
+them in ascending order. Samples with the lowest scores are
+selected as marginal distribution samples according to a critical
+ratio, and their average score x̂ becomes the target score for
+CGAN2. Through alternating training of CGAN1 and CGAN2,
+dynamic learning of central and marginal distribution features
+is achieved. The proportion of marginal distribution samples is
+set based on industrial control traffic distribution—similar to a
+Gaussian distribution, which is nonuniform due to production
+environment noise. The Gaussian distribution formula is shown
+in the following equation:
+g (x) =
+
+1 x−μ 2
+1
+√ e2( σ ) .
+σ 2π
+
+(4)
+
+The mean is μ, and the variance is σ 2 . The distribution
+probability within the interval [μ − 3σ, μ + 3σ] is 99.7%, and
+
+QIN et al.: EFFECTIVE SAMPLE GENERATION FOR INDUSTRIAL CONTROL SYSTEMS: A GAN-BASED APPROACH
+
+within [μ − 2σ, μ + 2σ], it is 95.4%. When selecting data, two
+tradeoffs are considered: avoiding insufficient data points that
+lead to incomplete marginal distribution learning, and preventing excessive data from including central distribution samples,
+which could affect CGAN2 training. Therefore, in the experiment, the 95.4% probability value corresponding to the marginal
+distribution is used as the basis—after each CGAN1 training
+round, all sample scores are sorted in ascending order, and the
+lowest 4.6% are designated as marginal samples. Their average
+score, x̂, serves as the target score for CGAN2.
+In traditional GAN discriminator training, scores range from
+0 to 1, where values closer to 1 indicate more realistic samples.
+However, in this article, both the target score and loss function
+for CGAN2 training are adjusted: samples closer to the target
+score x̂ are more likely to be identified as marginal distribution
+samples. Consequently, the generative adversarial loss in the
+generator’s loss function is adjusted as shown in (5), while the
+discriminator’s loss function is presented in (6)
+= Ex∼Pdata [
+x − D2 (G2 (z))]
+LCGAN2
+adv
+
+(5)
+
+LCGAN2
+= − Ex∼Pdata(x) [log D2 (x)]
+D
+x − D2 (G2 (z)))].
+− Ez∼Pz(z) [log (
+
+(6)
+
+In the DualCGAN-AE model, the encoder of the AE serves
+as a shared module for the two CGAN models, ensuring that
+input noise and labels produce consistent low-dimensional latent
+representations. This design avoids initialization discrepancies
+and provides rich features for the generator, facilitating rapid
+learning of data distributions and enhancing data generation
+quality. These improvements mean that the CGAN network
+includes the AE encoder in addition to the generator and discriminator. Consequently, the training loss functions of the two
+components have also changed: an encoder loss term is added
+to the original generator loss function. As shown in (7), the
+generator loss function of CGAN1 includes both encoder loss
+and adversarial loss, while the generator loss function of CGAN2
+differs only in the adversarial loss component
+= wenc LCGAN2
++ wadv LCGAN2
+LCGAN2
+G
+enc
+adv
+1
+2
+(GE (x) − E(x ))
+N i=1
+N
+
+= wenc
+
+(7)
+
++ wadv Ez∼Pz(z) [log (
+x − D2 (G2 (z)))].
+The generator’s loss function in the DualCGAN-AE model
+incorporates both encoder and adversarial losses, with wenc and
+wadv representing their respective weights. The original input
+data are denoted by x, and the reconstructed output data are
+represented by x . After the generator produces samples, the data
+are fed into the discriminator, which also experiences loss function changes. Unlike traditional single-model discriminators,
+this article employs a multimodel discriminator. Consequently,
+the discriminator’s loss functions for CGAN2 are modified, as
+shown in (8).
+In the DualCGAN-AE model, the generator’s loss function
+incorporates both encoder loss and adversarial loss, where ωenc
+and ωadv denote their respective weights. The original input
+
+711
+
+data are denoted as x, and the reconstructed output data are
+represented as x . After the generator produces samples, the data
+are fed into the discriminator, and the discriminator’s loss function also undergoes changes. Unlike traditional single-model
+discriminators, this article employs a multimodel discriminator;
+therefore, the discriminator loss function of CGAN2 is adjusted
+as shown in the following equation:
+= − Ex∼Pdata(x) [logD2 (x)]
+LCGAN2
+D
+x − D2 (G2 (z)))]
+− Ez∼Pz(z) [log (
+
+
+N
+
+wi Li (x)
+= − Ex∼Pdata(x) log
+
+
+i=1
+
+− Ez∼Pz(z) log (
+x−
+
+N
+
+
+
+wi Li (x) (G2 (z))) .
+
+i=1
+
+(8)
+In this article, Di represents the ith discriminator in the
+multimodel discriminator, which forms the overall discriminator
+after weighted averaging. The proposed model improvements
+aim to address the challenge of generating labeled industrial
+control traffic samples. The specific process is as follows: noise
+and label data are embedded into the encoding layer, decoded
+by CGAN1’s generator, and then evaluated by the multimodel
+discriminator. The resulting marginal distribution scores serve as
+the target scores for CGAN2, which are then trained accordingly.
+The detailed description of the algorithm process is shown in
+Algorithm 1 as follows.
+IV. EXPERIMENTS AND DISCUSSION
+Common industrial control datasets include ISCX2012, CICIDS2017, and UNSW-NB15 [25], [26], [27]. Thomas Morris
+from MSU released lab-scale natural gas pipeline and water
+tower datasets [28]. These datasets, preprocessed to remove
+low-level transport data (e.g., TCP and MAC), focus on traffic
+between ICS control layers and SCADA. They include seven
+attack types targeting PLCs and normal data categories. The gas
+pipeline dataset has 26 features (excluding labels), and the water
+tower dataset has 23.
+We chose these datasets because they reflect real industrial
+control environments, with most traffic being safe, leading to
+highly imbalanced label distributions. This imbalance, challenging for multiclassification, highlights the effectiveness of our
+sample generation. Both datasets have eight labels: seven attack
+types and one normal traffic type.
+The datasets released by Thomas Morris have undergone
+certain preprocessing to strip underlying transmission data in
+network communications, such as TCP and MAC data. They
+include seven types of attacks targeting basic Internet of Things
+devices, such as PLCs: simple malicious response injection
+(NMRI), complex malicious response injection (CMRI), malicious state command injection (MSCI), malicious parameter
+command injection (MPCI), malicious function code injection
+(MFCI), denial of service (DoS), and reconnaissance, along with
+a normal data category. The datasets primarily focus on traffic
+
+712
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+TABLE I
+DATASET I DISTRIBUTION
+
+TABLE III
+MODE SCORES UNDER TWO DATASETS
+
+TABLE IV
+GAUSS MMD OF VARIOUS SAMPLE GENERATION METHODS
+
+TABLE II
+DATASET II DISTRIBUTION
+
+TABLE V
+KMMD OF VARIOUS SAMPLE GENERATION METHODS ON DATASET I
+
+data between the control layer of ICSs and SCADA. The natural
+gas pipeline dataset contains 26 features excluding labels, while
+the water tower dataset has 23 features excluding labels. The
+specific dataset classifications are given in Tables I and II.
+To verify the superiority of our proposed DualCGAN-AE
+over other common sample generation methods, we selected
+four popular schemes for comparison: SMOTE, traditional
+GAN, WGAN-GP, and AE-GAN. These include three different
+GAN models, with AE-GAN serving as an ablation study for
+DualCGAN-AE.
+In the experiment, 5000 samples of each type were generated.
+This number balances different attack samples well and keeps
+generated samples from overwhelming the real ones, ensuring
+data authenticity.
+1) Generate sample quality assessment: In the mode score
+evaluation experiment, five different sample generation methods
+were tested on two datasets. The mode score calculation involved
+the inertia clustering evaluation index, which is the sum of
+squared distances from all data points to their cluster centers.
+Lower inertia indicates better clustering, meaning more similar
+samples within each cluster.
+During training, cluster size parameters were tested from
+1 to 9. The proposed DualCGAN-AE and SMOTE showed
+better inertia, while WGAN-GP had lower inertia but better
+mode score performance. However, SMOTE’s final sample
+distribution mode score was poor; Table III gives the mode
+scores for all generation methods. Under the mode score criteria,
+DualCGAN-AE performed best, followed by WGAN-GP, with
+SMOTE performing relatively poorly.
+In GAN performance evaluation, MMD measures the discrepancy between the distributions of generated and real samples by mapping them to a high-dimensional space using a
+kernel function and computing the mean difference. The Gauss
+
+Fig. 4. Gaussian KMMD of various sample generation methods on
+different datasets.
+
+MMD values for five sample generation methods across different
+datasets are given in Table IV, with comparisons in Fig. 4.
+The results indicate that DualCGAN-AE outperforms the other
+methods in terms of MMD, followed by WGAN-GP, while
+SMOTE shows relatively poorer performance.
+In GAN performance evaluation, maximum mean discrepancy (MMD) measures the distribution difference between generated and real samples by mapping them to a high-dimensional
+space using a kernel function and computing the mean difference. Smaller MMD values indicate more similar distributions,
+meaning the generated samples are closer to the real ones. In this
+study, four kernel functions were tested, but the Gaussian kernel
+was chosen, as it aligns with the industrial control environment’s
+
+QIN et al.: EFFECTIVE SAMPLE GENERATION FOR INDUSTRIAL CONTROL SYSTEMS: A GAN-BASED APPROACH
+
+713
+
+TABLE VI
+1-NN SCORES ON TWO DATASETSS
+
+Fig. 6.
+
+Fig. 5. Radar chart of 1-NN classification accuracy for various sample
+generation methods.
+
+noise distribution. Due to large datasets, this article uses random
+sampling to approximate MMD calculation, effectively reducing
+memory requirements.
+For kernel maximum mean discrepancy (KMMD), it can be
+used to calculate the distribution difference between generated
+samples and real samples in the performance evaluation of
+GANs. By using different kernel functions, the corresponding
+samples are mapped into a high-dimensional space to calculate
+the corresponding distribution differences for effect comparison.
+It can be seen that except for the Gaussian kernel function, the
+fluctuations of the linear kernel and polynomial kernel are relatively large, making them unsuitable as measurement standards.
+Although the Laplacian kernel function has a smaller fluctuation range, the Gaussian kernel function is finally selected for
+experimental evaluation according to the principle of choosing
+kernel functions based on the noise distribution characteristics of
+industrial control environments as much as possible. The kernel
+MMD value experiments are carried out for five different sample
+generation schemes, as given in Table V.
+In addition to the above two evaluation metrics, this article
+employs the 1-NN classifier as a third metric for sample generation quality. Unlike traditional classification evaluations where
+higher 1-NN scores indicate better performance, for sample
+generation, mixing generated and real samples and achieving a
+classification accuracy close to 50% (i.e., random level) suggest
+better generated sample quality. Specific results are given in
+Table VI and Fig. 5 .
+In addition, when the model processes rare attack types in the
+experimental dataset (such as DoS and MFCI, which usually
+have fewer original samples), the quality of generated samples
+may be constrained by the scarcity of training data, thereby
+leading to insufficient diversity or mode collapse in generated
+
+Intrusion detection accuracy of various sample.
+
+samples. Although DualCGAN-AE optimizes the generation
+of minority-class samples through its dual-CGAN architecture,
+the detection accuracy of these extremely rare categories has
+only increased by approximately 8% compared with baseline
+methods, which is still lower than that of common attack types.
+This indicates that when the proportion of original samples in the
+minority class is below a critical threshold, the model’s ability
+to capture fine-grained features may be affected.
+As shown in the 1-NN classification accuracy results, a score
+closer to the random distribution probability of 0.5 indicates that
+the generated samples are more realistic. The DualCGAN-AE
+model proposed in this article achieves 1-NN scores closer to 0.5
+on both datasets, outperforming the other four methods. In addition, the ablation study AE-GAN also shows good performance.
+This highlights the importance of using multiple evaluation
+metrics for sample quality assessment. While AE-GAN may
+perform poorly in terms of Gaussian kernel mean maximum
+difference, it performs well in the 1-NN classifier evaluation.
+2) Impact of Generated Samples on Intrusion Detection Performance: In the experiments assessing the impact of generated
+samples on intrusion detection algorithms, three machine learning models were used: SVM, random forest (RF), and decision
+tree (DT). These algorithms were chosen as they are common in
+intrusion detection and require minimal manual tuning, allowing
+a clearer assessment of sample quality on results.
+To ensure result authenticity and fairness, the original datasets
+were split into training, validation, and test sets in an 8:1:1 ratio.
+We generated 5000 samples for each type of label, and after
+generating new samples, they were mixed with the original data
+to create a new dataset for retraining the three intrusion detection
+algorithms and calculating their accuracy. Experimental results
+are given in Table VII. The radar chart for the result comparison
+is shown in Fig. 6.
+The DualCGAN-AE model enhances the performance of industrial control intrusion detection algorithms in two main ways.
+First, it trains on global data by leveraging the characteristics of
+CGAN to train labeled samples as unlabeled ones. This prevents
+model training bias caused by insufficient samples. Second,
+it can learn the long-tail distribution of samples, particularly
+
+714
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+Algorithm 1: DualCGAN-AE Model Training Algorithm.
+Input: σ, Gaussian distribution variance;
+θE , parameters of the initial encoder E;
+CGAN 1 CGAN 2
+, θG
+, parameters of the initial generator G1
+θG
+and G2 ;
+CGAN 1 CGAN 1 CGAN 1
+θD1
+, θD2
+, θD3
+and
+CGAN 2
+CGAN 2
+CGAN 2
+, θD2
+, θD3
+,
+θD1
+parameters of the initial discriminator D1 and D2 ;
+w1 , w2 , w3 are the weight of three discriminator models,
+w1 = w2 = 0.4, w3 = 0.2;
+λ1 , λ2 , λ3 are the learning rates of encoder, generator and
+discriminator,
+λ1 = λ2 = 5 × 10−4 , λ3 = 1 × 10−3
+CGAN 1 CGAN 2
+WHILE θG
+, θG
+do not reach convergence:
+/∗Step 1: Data compression processing:∗/
+(x, y) = Batch(T rainingset) //Get Label
+Calc AE: z = E((x, y); θE )
+/∗Step 2: Training CGAN1: ∗/
+CGAN 1
+)
+x1 = G1 (z; θG
+N
+1
+LE = N i=1 (G1 (x) − E(x1 ))2
+Update encoder parameters: θE
+CGAN 1 
+CGAN 1
+DCGAN 1 = w1 DD1
+(x1 ; θD1
+)+
+CGAN 1 
+CGAN 1
+CGAN 1 
+CGAN 1
+w2 DD2
+(x1 ; θD2
+) + w3 DD3
+(x1 ; θD3
+)
+x̂ = average(T raniningset, 2σ)
+1
+= −E x∼Pdata(x) [logD1 (x)]
+LCGAN
+D
+−Ez∼Pz(z) [log(1 − D1 (G1 (z)))]
+Update discriminator parameters:
+CGAN 1 CGAN 1 CGAN 1
+, θD2
+, θD3
+θD1
+N
+1
+1
+ 2
+LCGAN
+=
+w
+enc
+G
+i=1 (GE (x) − E(x ))
+N
++wadv Ez∼Pz(z) [log (1 − D1 (G1 (z)))]
+CGAN 1
+Update generator parameters: θG
+/∗Step 3: Training CGAN2: ∗/
+CGAN 2
+)
+x2 = G2 (z; θG
+
+1
+ 2
+(G
+LE = N N
+2 (x) − E(x2 ))
+i=1
+Update encoder parameters: θE
+CGAN 2 
+CGAN 2
+DCGAN 2 = w1 DD1
+(x2 ; θD1
+)+
+CGAN 2 
+CGAN 2
+CGAN 2 
+CGAN 2
+(x2 ; θD2
+) + w3 DD3
+(x2 ; θD3
+)
+w2 DD2
+2
+=
+−E
+[logD
+(x)]
+LCGAN
+x∼Pdata(x)
+2
+D
+−Ez∼Pz(z) [log(x̂ − D2 (G2 (z)))]
+Update discriminator parameters:
+CGAN 2 CGAN 2 CGAN 2
+, θD2
+, θD3
+θD1
+N
+CGAN 2
+ 2
+LG
+= wenc N1
+i=1 (GE (x) − E(x ))
++wadv Ez∼Pz(z) [log(x̂ − D2 (G2 (z)))]
+CGAN 2
+Update generator parameter: θG
+END WHILE
+
+TABLE VII
+INTRUSION DETECTION ACCURACY OF MACHINE LEARNING ALGORITHMS ON
+DATASETS
+
+TABLE VIII
+INTRUSION DETECTION ACCURACY OF DEEP LEARNING ALGORITHMS ON
+DATASET I
+
+focusing on the easily overlooked marginal distribution features. It generates samples in proportion to ensure the generated
+samples retain the long-tail distribution characteristics of industrial control traffic. This guarantees distribution consistency
+in the mixed samples. As a result, when intrusion detection
+algorithms are trained on these mixed samples, they learn the
+distribution features of industrial control traffic more comprehensively, rather than just focusing on centrally distributed
+data.
+Table VIII gives the intrusion detection accuracy of deep
+learning algorithms on Dataset I. From the table, we can see that
+the DualCGAN-AE model demonstrates distinct performance
+patterns when applied to deep learning and machine learning
+methods. In terms of accuracy, the mixed samples generated by
+DualCGAN-AE proposed in this article provide more positive
+effects on industrial control intrusion detection algorithms compared with other schemes. The quality of samples generated by
+other schemes varies: although they can improve the final results
+in some detection algorithms, there are still cases where the
+final results may decrease. The time-series schemes generally
+show better results than the convolutional schemes, which is
+related to the fact that industrial control traffic data have fewer
+dimensional characteristics and the spatial extraction effect is not
+good.
+In summary, the DualCGAN-AE model can generate traffic data that better match the distribution characteristics of
+ICSs. The generated samples are diverse and similar to real
+data, effectively improving the accuracy of intrusion detection algorithms and unlocking their potential for performance
+improvement.
+V. CONCLUSION
+In recent years, with the expansion of ICSs, cybersecurity has
+become a critical issue. Both upper layer control hosts and lower
+layer industrial devices rely on traffic for information transmission, where the traffic may contain malicious instructions, posing significant security risks to industrial systems. These systems
+use traffic to transmit information between control devices and
+industrial equipment but they may be exploited by malicious
+actors to disrupt operations. To address the above problems and
+improve the actual detection accuracy of intrusion detection in
+ICSs, this article focuses on enhancing the application of GANs
+in sample generation. We propose the DualCGAN-AE model,
+which improves the model structure, training algorithm, and
+intrusion detection model for ICS traffic samples. This model
+strengthens training stability and the ability to learn marginal
+distribution data. Experiments conducted on two datasets, evaluating both data quality and impacts on intrusion detection
+
+QIN et al.: EFFECTIVE SAMPLE GENERATION FOR INDUSTRIAL CONTROL SYSTEMS: A GAN-BASED APPROACH
+
+performance, demonstrate that the proposed DualCGAN-AE
+solution significantly improves detection accuracy and has the
+potential for further performance enhancements.
+REFERENCES
+[1] A. Md Hossain et al., “Deep learning and ensemble methods for anomaly
+detection in ICS security,” Int. J. Inf. Tecnol., vol. 17, no. 3, pp. 1761–1775,
+Apr. 2025, doi: 10.1007/s41870-024-02299-7.
+[2] A. H. El-Kady, S. Halim, M. M. El-Halwagi, and F. Khan, “Analysis of
+safety and security challenges and opportunities related to cyber-physical
+systems,” Process Saf. Environ., vol. 173, pp. 384–413, May 2023,
+doi: 10.1016/j.psep.2023.03.012.
+[3] F. Mesadieu, D. Torre, and A. Chennamaneni, “Leveraging deep reinforcement learning technique for intrusion detection in SCADA infrastructure,” IEEE Access, vol. 12, pp. 63381–63399, 2024, doi: 10.1109/ACCESS.2024.3390722.
+[4] Y. Lu, “The current status and developing trends of Industry 4.0:
+A review,” Inf. Syst. Front., vol. 27, no. 1, pp. 215–234, Feb. 2025,
+doi: 10.1007/s10796-021-10221-w.
+[5] A. M. Y. Koay, R. K. L. Ko, H. Hettema, and K. Radke, “Machine learning
+in industrial control system (ICS) security: Current landscape, opportunities and challenges,” J. Intell. Inf. Syst., vol. 60, no. 2, pp. 377–405,
+Apr. 2023, doi: 10.1007/s10844-022-00753-1.
+[6] D. Dablain, B. Krawczyk, and N. V. Chawla, “DeepSMOTE: Fusing deep learning and SMOTE for imbalanced data,” IEEE Trans.
+Neural Netw. Learn. Syst., vol. 34, no. 9, pp. 6390–6404, Sep. 2023,
+doi: 10.1109/TNNLS.2021.3136503.
+[7] S. Maldonado, C. Vairetti, A. Fernandez, and F. Herrera, “FW-SMOTE:
+A feature-weighted oversampling approach for imbalanced classification,” Pattern Recognit., vol. 124, Apr. 2022, Art. no. 108511,
+doi: 10.1016/j.patcog.2021.108511.
+[8] Y. Bao and S. Yang, “Two novel SMOTE methods for solving imbalanced
+classification problems,” IEEE Access, vol. 11, pp. 5816–5823, 2023,
+doi: 10.1109/ACCESS.2023.3236794.
+[9] A. Arafa, N. El-Fishawy, M. Badawy, and M. Radad, “RN-SMOTE:
+Reduced noise SMOTE based on DBSCAN for enhancing imbalanced
+data classification,” J. King Saud Univ. Comput. Inf. Sci., vol. 34, no. 8,
+pp. 5059–5074, Sep. 2022, doi: 10.1016/j.jksuci.2022.06.005.
+[10] H. Ebrahimy, B. Mirbagheri, A. A. Matkan, and M. Azadbakht, “Effectiveness of the integration of data balancing techniques and tree-based ensemble machine learning algorithms for spatially-explicit land cover accuracy
+prediction,” Remote Sens. Appl.: Soc. Environ., vol. 27, Aug. 2022, Art.
+no. 100785, doi: 10.1016/j.rsase.2022.100785.
+[11] A. A. Hussin A. Khatir, and M. Bee, “Machine learning models and databalancing techniques for credit scoring: What is the best combination?,”
+Risks, vol. 10, no. 9, Aug. 2022, Art. no. 169, doi: 10.3390/risks10090169.
+[12] D. Elreedy, A. F. Atiya, and F. Kamalov, “A theoretical distribution
+analysis of synthetic minority oversampling technique (SMOTE) for imbalanced learning,” Mach Learn, vol. 113, no. 7, pp. 4903–4923, Jul. 2024,
+doi: 10.1007/s10994-022-06296-4.
+[13] L. C. M. Liaw, S. C. Tan, P. Y. Goh, and C. P. Lim, “A histogram
+SMOTE-based sampling algorithm with incremental learning for imbalanced data classification,” Inf. Sci., vol. 686, Jan. 2025, Art. no. 121193,
+doi: 10.1016/j.ins.2024.121193.
+[14] D. Liu, S. Zhong, L. Lin, M. Zhao, X. Fu, and X. Liu, “Feature-level
+SMOTE: Augmenting fault samples in learnable feature space for imbalanced fault diagnosis of gas turbines,” Expert Syst. Appl., vol. 238,
+Mar. 2024, Art. no. 122023, doi: 10.1016/j.eswa.2023.122023.
+[15] L. Yuan, S. Yu, Z. Yang, M. Duan, and K. Li, “A data balancing approach
+based on generative adversarial network,” Future Gener. Comput. Syst.,
+vol. 141, pp. 768–776, Apr. 2023, doi: 10.1016/j.future.2022.12.024.
+[16] L. Chen, Y. Li, X. Deng, Z. Liu, M. Lv, and H. Zhang, “Dual auto-encoder
+GAN-Based anomaly detection for industrial control system,” Appl. Sci.,
+vol. 12, no. 10, May 2022, Art. no. 4986, doi: 10.3390/app12104986.
+[17] F. Meslet-Millet, S. Mouysset, and E. Chaput, “NeCSTGen: An approach
+for realistic network traffic generation using deep learning,” in Proc. IEEE
+Globecom, Rio de Janeiro, Brazil, 2022, pp. 3108–3113.
+[18] K. Li, W. Ma, H. Duan, H. Xie, J. Zhu, and R. Liu, “Unbalanced network attack traffic detection based on feature extraction and
+GFDA-WGAN,” Comput. Netw., vol. 216, Oct. 2022, Art. no. 109283,
+doi: 10.1016/j.comnet.2022.109283.
+
+715
+
+[19] Z. Geng, C. Shi, and Y. Han, “Intelligent small sample defect detection
+of water walls in power plants using novel deep learning integrating
+deep convolutional GAN,” IEEE Trans. Ind. Informat., vol. 19, no. 6,
+pp. 7489–7497, Jun. 2023, doi: 10.1109/TII.2022.3159817.
+[20] R. Liu et al., “Anomaly-GAN: A data augmentation method for train
+surface anomaly detection,” Expert Syst. Appl., vol. 228, Oct. 2023, Art.
+no. 120284, doi: 10.1016/j.eswa.2023.120284.
+[21] X. Kang, Y. Li, Y. Zhang, N. Ma, and L. Wen, “Anomaly detection
+in concrete dam using memory-augmented autoencoder and generative
+adversarial network (MemAE-GAN),” Autom. Construction, vol. 168,
+Dec. 2024, Art. no. 105794, doi: 10.1016/j.autcon.2024.105794.
+[22] Y. Chen, J. Xu, Z. An, and F. Zhuang, “Multi-scale conditional reconstruction generative adversarial network,” Image Vis. Comput., vol. 141,
+Jan. 2024, Art. no. 104885, doi: 10.1016/j.imavis.2023.104885.
+[23] C. Ravi and S. Gaddadevara Matt, “IC-CGAN: Imbalanced classconditional generative adversarial network with weighted loss function,”
+Int. J. Elect. Comput. Eng., vol. 15, no. 2, Apr. 2025, Art. no. 1632,
+doi: 10.11591/ijece.v15i2.pp1632-1646.
+[24] X. Qin, F. Jiang, X. Qin, L. Ge, M. Lu, and R. Doss, “CGANbased cyber deception framework against reconnaissance attacks
+in ICS,” Comput. Netw., vol. 251, Sep., Art. no. 110655. 2024,
+doi: 10.1016/j.comnet.2024.110655.
+[25] A. Shiravi, H. Shiravi, M. Tavallaee, and A. A. Ghorbani, “Toward developing a systematic approach to generate benchmark datasets for intrusion detection,” Comput. Secur., vol. 31, no. 3, pp. 357–374, May 2012,
+doi: 10.1016/j.cose.2011.12.012.
+[26] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+network intrusion detection systems (UNSW-NB15 Network Data Set),”
+in Proc. Mil. Commun. Inf. Syst. Conf., MilCIS, Canberra, ACT, Australia,
+2015, pp. 1–6, doi: 10.1109/MilCIS.2015.7348942.
+[27] I. Sharafaldin, A. Habibi Lashkari, and A. A. Ghorbani, “Toward generating a new intrusion detection dataset and intrusion traffic characterization,”
+in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018, pp. 108–116,
+doi: 10.5220/0006639801080116.
+[28] T. Morris and W. Gao, Industrial Control System Traffic Data Sets for
+Intrusion Detection Research, vol. 441, J. Butts and S. Shenoi, Eds., Berlin,
+Germany: Springer, 2014, pp. 65–78, doi: 10.1007/978-3-662-45355-1_5.
+
+Zhongyuan Qin received the Ph.D. degree in
+communication and information systems from
+Xi’an Jiaotong University, Xi’an, China, in 2003.
+He is currently an Associate Professor with
+the School of Cyber Science and Engineering,
+Southeast University, Nanjing, China. His research interests include Internet of Things security and mobile intelligent terminal security.
+
+Yuxuan Liu received the B.S. degree in software engineering from the School of Computer
+Science and Engineering, Nanjing University
+of Science and Technology, Nanjing, China, in
+2022, and the M.S. degree in cybersecurity from
+the School of Cyberspace Security, Southeast
+University, Nanjing, in 2025.
+His research focuses on malicious traffic analysis in the field of cybersecurity.
+
+716
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+Tiantian Wang received the B.S. degree in
+computer science from the Nanjing University of
+Posts and Telecommunications, Nanjing, China,
+in 2023. She is currently working toward the
+M.S. degree in cybersecurity with the School
+of Cyber Science and Engineering, Southeast
+University, Nanjing.
+Her research interests include deep learning
+and its applications in industrial control system
+traffic detection.
+
+Liquan Chen (Senior Member, IEEE) received
+the Ph.D. degree in signal and information
+processing from Southeast University, Nanjing,
+China, in 2005.
+From 2005 to 2007, he was a Postdoctoral
+Researcher with Southeast University, where
+he was an Associate Professor from 2008 to
+2018. From 2011 to 2012, he was a Visiting
+Scholar with the National University of Singapore, Singapore. He is currently a Professor with
+the School of Cyber Science and Engineering,
+Southeast University. His research interests include information security,
+cryptography, network security protocol, and others.
+Dr. Chen became a Senior Member of IEEE in 2022.
+
+Yubo Song received the B.Sc. degree in electric
+engineering, the M.Sc. degree in communication and information systems, and the Ph.D. degree in signal and information processing from
+Southeast University, Nanjing, China, in 2005.
+He joined the School of Cyber Science and
+Engineering, Southeast University as a Lecturer
+after graduation, where he is currently an Associate Professor and the Vice Director. He also
+works with Purple Mountain Laboratories. He
+has authored or coauthored more than 30 technical articles in international journals and conferences. His research
+interests include mobile security, wireless network security, and security
+protocol analysis.

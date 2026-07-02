@@ -1,0 +1,687 @@
+Encrypted traffic classification based on contrastive learning with
+spatial-temporal feature fusion
+Rui Wanga, Zhidong Wua, Yaxi Lia, Feng Lia, Siyuan Tianb, Jianyi Liu*b
+a
+State Grid Information & Telecommunication Branch, Beijing, China; bSchool of Cyberspace
+Security, Beijing University of Posts and Telecommunications, Beijing, China
+ABSTRACT
+While encryption ensures the confidentiality and integrity of user data, more and more attackers try to hide attack behaviors
+through encryption, which brings new challenges to malicious traffic identification. How to effectively classify encrypted
+traffic without decrypting traffic and protecting user privacy has become an urgent problem to be solved. This paper
+proposes a classification method for encrypted traffic based on contrastive learning with spatial and temporal feature
+fusion. Unlike traditional contrastive learning with a single encoder, this method separately designs a spatial feature
+encoder and a temporal feature encoder to extract distinct features and implements contrastive learning in the same
+encoding layer through a fully connected layer to obtain a unique feature representation of encrypted traffic. This method
+focuses on the consistent features from different perspectives within the same sample. The effectiveness of this method is
+demonstrated through ablation experiments and comparisons with existing works.
+Keywords: Encrypted traffic classification, spatial features, temporal features, contrastive learning
+
+1. INTRODUCTION
+Encrypted traffic, while fully protecting various aspects of internet users’ security, also conceals various internet activities,
+which poses new challenges for traffic identification. With the progress of research on identifying encrypted traffic,
+supervised learning has been able to achieve satisfactory accuracy for specific tasks. However, in practical applications,
+the vast majority of traffic is unlabeled data, which limits the application scope of supervised methods. How to use large
+amounts of unlabeled data to train powerful and representative feature extraction models, is particularly suitable for
+encrypted traffic that loses semantic information and is difficult to manually annotate.
+The various features of network traffic have consistency in high-dimensional representation space, which means that both
+spatial and temporal features of any traffic sample have consistency in the representation space. In this paper, based on the
+idea of self-supervised contrastive learning and inspired by image and text consistency representation tasks, we design a
+task of fusing the spatial and temporal features of encrypted traffic for encrypted traffic feature extraction. We propose a
+spatial and temporal dual encoder structure unlike previous ones to obtain representations of different features of encrypted
+traffic. The training objective is to obtain spatial and temporal representation consistency in a shared embedding space,
+and we use contrastive loss to fuse these two features. We transform the traffic classification task into a task of fusing
+spatial and temporal features and obtain consistent representations as the final traffic representation through mutual
+guidance between spatial and temporal features.
+
+2. RELATED WORKS
+2.1 Payload-based encrypted traffic classification
+This method obtains information by analyzing the payload, establishes an encrypted traffic knowledge base, and matches
+specific fields in encrypted traffic data to achieve encrypted traffic discrimination. Özdel 1 proposed a payload-based
+application layer traffic identification method that can identify various application traffic. Tang 2 proposed a method that
+first assigns similar packets to the same group, and then uses a machine learning algorithm to classify each group. Bonfiglio
+et al.3 used Pearson’s chi-square test and Naive Bayes classifiers to extract protocol frame structure fingerprints from the
+
+*liujy@bupt.edu.cn
+
+International Conference on Computer Application and Information Security (ICCAIS 2023),
+edited by Jerry Chun-Wei Lin, Haidong Shao, Proc. of SPIE Vol. 13090,
+1309024 · © 2024 SPIE · 0277-786X · doi: 10.1117/12.3025808
+Proc. of SPIE Vol. 13090 1309024-1
+
+first 4 bytes of non-encrypted packet headers and payloads for Skype traffic identification. Shen 4 used second-order
+Markov chain models to model traffic and considered application attributes such as port numbers and protocol types.
+2.2 Statistical features based encrypted traffic classification
+Statistical features focus on the characteristics of all packets within a certain period of time, such as the number of
+unidirectional packets, the time difference between the start and end of packet transmission, the frequency of packet
+transmission, etc. Then, the features are fed into a machine learning model for training to achieve the task of encrypted
+traffic identification. Mahdavi5 utilizes statistical features such as empirical distribution functions, mutual information, and
+autocorrelation functions to establish classifiers. Zhang6 uses features such as mutual correlation coefficients and wavelet
+analysis to establish classifiers. Wang7 uses statistical features such as wavelet analysis and mutual information to extract
+feature vectors, and uses a random forest classifier for classification. In addition, more than 20 flow statistical features
+such as session duration, inter-arrival time, packet size, and protocol fingerprints are often used in combination with Naive
+Bayes, support vector machines, decision trees, etc. for encrypted traffic identification 8.
+2.3 Machine learning based encrypted traffic classification
+Researchers often combine machine learning with various feature to complete the task of traffic classification. According
+to different levels, encrypted traffic features can be divided into packet-level features, flow-level features, and sessionlevel features. Bar-Yanai et al.9 proposed a new network traffic classification method that combines K-means and Knearest neighbor algorithms. Moore et al.10 designed a network traffic feature classifier using supervised Bayesian
+estimation. Sun et al.11 proposed a hybrid method for classifying encrypted traffic. This method first used signature
+matching to identify encrypted protocols such as IPSec and SSL/TLS, and then applied the Naive Bayes algorithm to
+identify encrypted applications. Alshammari12 studied the performance of C5.0, AdaBoost, and genetic programming (GP)
+algorithms for identifying IP voice (VoIP) traffic. Besides payload features, temporal features have also been used as input
+for machine learning models. Gil et al.13 used temporal -related features such as flow duration, forward inter-arrival time,
+number of packets per second, and backward inter-arrival time, and employed k-nearest neighbor and C4.5 to classify
+network traffic. Yao et al.14 analyzed the discrete distribution and temporal patterns of flow features and proposed a hidden
+Markov model based on Gaussian Mixture.
+2.4 Deep learning based encrypted traffic classification
+Deep learning can automatically learn advanced features of data through training without manual design. Wang et al.15
+proposed a classification framework based on CNN, comparing the experimental results between 1D-CNN, and 2D-CNN.
+Lotfollahi et al.16 proposed the Deep Packet traffic classification framework, and exceeded the SOTA results. Zou 17
+considered that there are effective features within continuous packets and used the characteristics of recurrent neural
+networks for learning. Liu et al.18 decomposed the traffic into many small-time windows and took the data flow of these
+time windows as the input of the network. The network used CNN and RNN to learn traffic sequence features and used
+fully connected layers for classification. Yao et al.19 first converted packets into feature vectors and input them into LSTM
+networks for encoding. This method shows that the combination of attention mechanisms and LSTM networks can
+effectively identify encrypted traffic. Shapira20 converted traffic into a two-dimensional FlowPic image, and used CNN to
+classify the FlowPic image. Hu21 proposes a network structure called CLD-Net, which combines CNN and LSTM for
+classifying encrypted internet traffic. Lin 22 proposes a method based on flow space-time features of encrypted traffic for
+effective management of industrial internet of things.
+
+3. METHODS
+For any traffic, the spatial and temporal features are consistent in the representation space. This paper proposes a dual
+encoder architecture that fuses the spatial and temporal features of encrypted traffic using contrastive loss to achieve
+training objectives based on obtaining spatial and temporal consistent representations in a shared embedding space. The
+embedding distances of matching spatial and temporal pairs are pulled closer, while the embedding distances of nonmatching spatial and temporal pairs are separated, as shown in Figure 1. This method transforms the traffic classification
+task into a task of fusing spatial and temporal features. By mutually guiding each other, spatial and temporal features
+maximize the mutual information between different perspectives of the same traffic flow, obtaining a consistent
+representation as the final traffic representation. Firstly, the input data is copied into two identical copies. In the spatial
+feature extraction, 1014-dimensional data is processed into a two-dimensional grayscale image to extract spatial features
+
+Proc. of SPIE Vol. 13090 1309024-2
+
+using a two-dimensional convolutional neural network. In the temporal feature extraction, encrypted traffic data is
+processed as a single-channel sequence, and one-dimensional convolutional neural network and LSTM are used.
+Stage 2: Contrastive
+Learning
+
+Stage 1: Data
+Preprocessing
+
+S1
+Spatial
+Feature
+
+Imagebased
+Data
+Preproc
+essing
+
+Encrypted traffic
+dataset
+
+Complet
+e
+Packet
+Preproc
+essing
+
+S1 Grayscale Image
+S2
+Spatial
+Feature
+
+S1
+
+S2
+
+S2 Grayscale Image
+
+Sequenc
+e-based
+Data
+Preproc
+essing
+
+12
+
+245
+
+154
+
+1
+
+Spatial Feature
+Extraction Model
+
+Positive Example
+Negative example
+
+Contrastive
+Loss
+
+S1 Time
+Feature
+
+55
+
+S1 sequence
+12
+
+245
+
+154
+
+1
+
+55
+
+S2 Time
+Feature
+
+S2 sequence
+Time Feature
+Extraction Model
+
+Figure 1. Model architecture.
+
+3.1 Spatial feature extraction
+The spatial feature extraction model uses 2D-CNN and consists of four identical blocks, each of which undergoes two
+convolution operations and two normalization operations. After completion, ReLU is used as the activation function, and
+the formula is as follows:
+𝑓𝑅𝑒𝐿𝑈 (𝑥) = 𝑚𝑎𝑥(0, 𝑥)
+
+(1)
+
+After extracting features with four blocks, this paper chooses to use an average pooling layer for pooling operations. The
+reason is that this method obtains features that are more sensitive to background information and can integrate all
+information from the feature maps.
+𝑦𝑖,𝑗,𝑘 =
+
+1
+𝑚𝑛
+
+∑𝑝∈𝑃𝑖,𝑗 𝑥𝑝,𝑘
+
+(2)
+
+where 𝑥 represents the input feature map, 𝑦 represents the pooled feature map, 𝑚 and 𝑛 represent the size of the pooling
+window, and 𝑃𝑖,𝑗 represents the set of positions within the pooling window.
+3.2 Temporal feature extraction
+As shown in Figure 2, the temporal feature extraction module mainly consists of two parts: a one-dimensional
+convolutional neural network and LSTM. The one-dimensional convolutional neural network part is composed of three
+stages, each of which includes one-dimensional convolution, normalization, ReLU activation function, and maximum
+pooling layer.
+This paper first generates more complex patterns in the higher layers by applying one-dimensional convolution operations.
+During the convolution process, ReLU is selected as the activation function, and normalization is performed after every
+two convolutions. After one-dimensional convolution, each time step contains more features, which facilitates subsequent
+feature extraction. After completing the convolution operation, temporal features are extracted from the data flow using
+LSTM. Moreover, regardless of whether it is the handshake phase or the data transmission phase, the behavior
+demonstrated in network communication only has forward associations. Therefore, this paper adopts unidirectional LSTM
+to extract the time features of packets.
+
+Proc. of SPIE Vol. 13090 1309024-3
+
+Input
+1×1 conv
+
+Stage 1
+
+1×1 conv
+BatchNorm1d
+ReLU
+
+Stage 2
+
+Stage 3
+
+MaxPool1d
+
+LSTM Numlayer = 1
+FC
+
+Bidirectional = False
+
+Head
+
+ReLU
+
+FC
+
+Figure 2. Temporal feature extraction.
+
+3.3 Positive and negative sample selection and loss function
+In terms of positive and negative sample selection, since the training goal of this model is to fuse the spatiotemporal
+features of anchor samples themselves, for anchor samples, their own spatiotemporal features are positive samples. The
+remaining samples with the same spatial features as anchor samples are negative samples for anchor samples’ spatial
+features. Similarly, the remaining samples with the same temporal features as anchor samples are negative samples for
+anchor samples’ temporal features. The infoNCE Loss is used as the loss function for backpropagation, and the optimal
+model is obtained by updating gradients and iterating.
+𝐿(𝑥𝑖 ) = −𝑙𝑜𝑔 [∑
+
+𝑒𝑥𝑝(𝑠𝑖,𝑖 /𝑡)
+𝑘≠𝑖 𝑒𝑥𝑝(𝑠𝑖,𝑘 /𝑡)+𝑒𝑥𝑝(𝑠𝑖,𝑖 /𝑡)
+
+]
+
+(3)
+
+where 𝑡 is the temperature coefficient. The loss function is calculated as follows:
+ALGORITHM 1: Loss function algorithm flow
+Input: Sample Vector Matrix 𝑽, Hyper-parameter temperature 𝒕.
+Output: Loss.
+Calculating sample similarity 𝒂𝒏𝒄𝒉𝒐𝒓_𝒅𝒐𝒕_𝒄𝒐𝒏𝒕𝒓𝒂𝒔𝒕 = 𝑽𝑽𝑻 , divided by the hyper-parameter temperature 𝒕.
+Subtracting the maximum value from each row, which is the inner product of the sample itself, to improve numerical
+stability 𝒍𝒐𝒈𝒊𝒕𝒔 = 𝒂𝒏𝒄𝒉𝒐𝒓_𝒅𝒐𝒕_𝒄𝒐𝒏𝒕𝒓𝒂𝒔𝒕 − 𝒍𝒐𝒈𝒊𝒕𝒔_𝒎𝒂𝒙(𝒅𝒊𝒎=𝟏) .
+Building 𝒎𝒂𝒔𝒌 Matrix, identifying positive and negative samples, and setting the diagonal to 0, excluding the situation
+where anchor samples multiply themselves.
+Performing computations by converting division to subtraction through logarithmic operations 𝒆𝒙𝒑_𝒍𝒐𝒈𝒊𝒕𝒔 =
+𝒆𝒙𝒑(𝒍𝒐𝒈𝒊𝒕𝒔) ∗ 𝒍𝒐𝒈𝒊𝒕𝒔_𝒎𝒂𝒔𝒌.
+Calculating the difference between anchor sample and negative sample 𝒍𝒐𝒈_𝒑𝒓𝒐𝒃 = 𝒍𝒐𝒈𝒊𝒕𝒔 − 𝒍𝒐𝒈(𝒆𝒙𝒑_𝒍𝒐𝒈𝒊𝒕𝒔. 𝒔𝒖𝒎).
+Summarized by dividing the sum of products of anchor samples and negative samples by the sum of products of anchor
+samples and positive samples, and then dividing by the number of positive samples corresponding to the anchor sample.
+𝑳𝒐𝒔𝒔 = (𝒎𝒂𝒔𝒌 ∗ 𝒍𝒐𝒈_𝒑𝒓𝒐𝒃). 𝒔𝒖𝒎(𝟏)/𝒎𝒂𝒔𝒌. 𝒔𝒖𝒎(𝟏)
+
+Proc. of SPIE Vol. 13090 1309024-4
+
+The loss function imposes the same weight penalty τ all negative sample similarities, and through simple calculation of
+the gradient of the loss function’s punishment on different negative sample similarities, it can be seen that the loss function
+automatically gives more punishment to negative samples that are more similar. The gradient for positive samples is:
+∂𝐿(𝑥𝑖 )
+∂𝑠𝑖,𝑖
+
+1
+
+= − ∑𝑘≠𝑖 𝑃𝑖,𝑘
+
+(4)
+
+𝑒𝑥𝑝(𝑠𝑖,𝑗 /𝑡)
+
+(5)
+
+𝑡
+
+The gradient for negative samples is:
+∂𝐿(𝑥𝑖 )
+∂𝑠𝑖,𝑗
+
+=
+
+1
+
+𝑡 ∑𝑘≠𝑖 𝑒𝑥𝑝(𝑠𝑖,𝑘 /𝑡)+𝑒𝑥𝑝(𝑠𝑖,𝑖 /𝑡)
+
+4. EXPERIMENTAL RESULT ANALYSIS
+4.1 Dataset
+In this experiment, we used the ISCX VPN2016 dataset from the Canadian Cybersecurity Laboratory, which is commonly
+used to study the behavior of VPN traffic and non-VPN traffic. The dataset contains approximately 14,000 samples,
+including four different types of VPN traffic: OpenVPN, OpenConnect VPN, Cisco AnyConnect VPN, and IPSec VPN,
+as well as one type of non-VPN traffic. Each category includes multiple application categories such as Facebook, YouTube,
+Hangouts, Skype, and others. According to different application scenarios, the dataset is divided into three classification
+tasks: VPN/Non-VPN classification, service classification, and application classification, as shown in Table 1:
+Table 1. Classification task.
+
+Classification task
+
+Category
+
+Binary VPN classification VPN, Non-VPN
+Twelve service
+classification
+
+Chat, Email, Streaming, Voip, VPN: Chat, VPN: File Transfer, VPN:
+Email, VPN: Voip
+
+Seventeen application
+classification
+
+AIM chat, Email, Facebook, FTPS, Gmail, Hangouts, ICQ, Netflix,
+SCP, Sftp, Skype, Spotify, Torrent, Tor, Vimeo, Voipbuster, Youtube
+
+This experiment uses accuracy, precision, recall and F1 score for evaluation and comparison.
+4.2 Experimental results and analysis
+4.2.1 Ablation experiment. To verify the effectiveness of the encrypted traffic classification model based on spatialtemporal features, an ablation experiment was designed in Twelve Service Classification. As the model in this paper uses
+a dual encoder structure to extract features separately, we set ablation experiments to extract spatial features only and
+extract temporal features only. From Table 2, it can be seen that using only spatial features or only temporal features
+perform worse than the feature fusion model. This result proves that for encrypted traffic, both spatial and temporal features
+can effectively improve the model, and there is consistency between temporal features and spatial features in a unified
+encoded space.
+Table 2. Ablation experiment results.
+
+Model
+
+PR
+
+RC
+
+F1
+
+0.822
+
+0.823
+
+0.822
+
+Temporal feature only 0.875
+
+0.875
+
+0.875
+
+Feature fusion
+
+0.983
+
+0.982
+
+Spatial features only
+
+0.982
+
+4.2.2 Comparison with existing work. We select the following five existing works for comparison:
+Deep packet: Lotfollahi et al.16 used a convolutional neural network to convolve the sequences and extract local features,
+then used a recurrent neural network to extract global features.
+
+Proc. of SPIE Vol. 13090 1309024-5
+
+TSCRNN: Kunda Lin et al.22 proposed a method that combines CNN and BiLSTM to extract spatiotemporal features of
+encrypted traffic.
+1D-CNN: Wang et al.22 processed encrypted packets into 28×28-sized images and compared the performance of 1D-CNN
+and 2D-CNN on various metrics of encrypted traffic identification.
+PERT: He et al.23 utilized a Transformer model for feature extraction and encoding, and then applied a support vector
+machine (SVM) for classification.
+ET-BERT: Lin24 designed a pre-training task and a reasonable input representation for traffic to demonstrate the
+effectiveness of pre-trained models.
+The results of Binary VPN Classification are shown in Table 3, which indicates that the proposed method achieved higher
+accuracy when classifying encrypted traffic into VPN and non-VPN categories. It proves that for encrypted traffic, feature
+fusion can obtain consistent feature representations, and the method maximizes the utilization of unlabeled data,
+overcoming the disadvantage of previous research models that rely heavily on labeled data.
+Table 3. Results of Binary VPN Classification.
+
+Model
+
+Accuracy
+
+TSCRNN
+
+0.977
+
+WANG 1D-CNN
+
+0.999
+
+OURS
+
+0.999
+
+The results of Twelve Service Classification and Seventeen Application Classification are shown in Table 4. The model
+proposed in this paper outperforms TSCRNN and the deep packet model in terms of AC, PR, RE, and F1 metrics. In
+Twelve Service Classification and Seventeen Application Classification, it is approximately 5% higher than the
+aforementioned supervised comparison methods. Taking TSCRNN as an example, although the TSCRNN model also
+extracts spatial and temporal features, it relies heavily on the labeled data volume of encrypted traffic as it is trained in an
+end-to-end manner. In contrast, the model proposed in this paper completes pre-training of the model with extensive use
+of unlabeled traffic and only needs to rewrite the Softmax layer for fine-grained class experiments, using a small amount
+of labeled data for fine-tuning.
+Table 4. Results of Twelve Service Classification and Seventeen Application Classification.
+
+Experimental task
+
+Twelve service classification Seventeen application classification
+AC
+
+PR
+
+RC
+
+F1
+
+AC
+
+PR
+
+RC
+
+F1
+
+TSCRNN
+
+0.92
+
+0.93
+
+0.93
+
+0.93
+
+-
+
+-
+
+-
+
+-
+
+Deeppacket
+
+0.9329 0.9377 0.9306
+
+0.9321 0.9758
+
+0.9785
+
+0.9745
+
+0.9765
+
+PERT
+
+0.935
+
+0.939
+
+0.823
+
+0.709
+
+0.717
+
+0.700
+
+ET-BERT (flow)
+
+0.9729 0.9756 0.9731
+
+0.9733 0.8519
+
+0.7508
+
+0.7294
+
+0.7306
+
+ET-BERT (packet)
+
+0.989
+
+0.989
+
+0.989
+
+0.989
+
+0.996
+
+0.994
+
+0.994
+
+0.994
+
+OURs
+
+0.982
+
+0.982
+
+0.983
+
+0.982
+
+0.935
+
+0.935
+
+0.935
+
+0.934
+
+0.940
+
+0.935
+
+In Twelve Service Classification, the proposed model is slightly inferior to ET-BERT (packet), but there is a significant
+gap between the proposed model and ET-BERT (packet) in terms of application type classification. ET-BERT (packet)
+adopts the Datagram2Token method to convert encrypted traffic into token units that retain the pattern for pre-training,
+and proposes two pre-training tasks, Masked BURST Model and Same-origin BURST Prediction, to learn data packet
+representations from transformational context rather than semantic context.
+4.2.3 Experiment with other datasets. To further illustrate the effectiveness of the model proposed in this paper, we
+conducted validation experiments on two other datasets: USTC-TFC2016 and ISCXTor2016. The ISCXTor2016 dataset
+contains traffic data from 12,035 Tor relay nodes in 51 different countries, including 8,522 normal nodes and 3,513
+
+Proc. of SPIE Vol. 13090 1309024-6
+
+malicious nodes. It includes traffic from over 18 representative applications such as Facebook, Skype, Spotify, Gmail, and
+others, across 8 categories.
+Table 5. Experimental results in USTC-TF2016 and ISCXTor2016.
+
+USTC-TFC2016
+
+Datasets
+Model
+
+AC
+
+PR
+
+RC
+
+F1
+
+TSCRNN
+
+-
+
+0.9870 0.9860 0.9870
+
+PERT
+ET-BERT (flow)
+
+ISCXTor2016
+AC
+
+PR
+
+RC
+
+-
+
+0.9490
+
+0.9480 0.9480
+
+0.9909 0.9911 0.9910 0.9911
+
+0.7682 0.4424
+
+0.4446 0.4345
+
+0.9929 0.9930 0.9930 0.9930
+
+0.8311 0.5564
+
+0.6448 0.5886
+
+ET-BERT (packet) 0.9915 0.9915 0.9916 0.9916
+
+0.9921 0.9923
+
+0.9921 0.9921
+
+OURS
+
+0.9920 0.9920
+
+0.9921 0.9920
+
+0.9937 0.9939 0.9939 0.9938
+
+F1
+
+As shown in Table 5, in the two datasets, the model proposed in this paper outperforms TSCRNN, PERT, and ET-BERT
+(flow) in all four metrics, and is on par with ET-BERT (packet).
+
+5. CONCLUSION
+This paper proposes a framework for encrypted traffic classification based on the fusion of temporal features and spatial
+features. By designing different encoders to extract time-series features and spatial features from traffic samples, we obtain
+the training objective of spatial and temporal consistency representation, and use it to obtain a pre-trained model for
+encrypted traffic classification. In downstream tasks, only a small amount of labeled data is needed for fine-tuning the
+Softmax layer to obtain a traffic classification model with good classification performance. Experimental results
+demonstrate the effectiveness of the proposed model.
+
+REFERENCES
+[1] Özdel, S., Ateş, Ç. and Ateş, P. D., “Payload-based network traffic analysis for application classification and
+intrusion detection,” 30th European Signal Processing Conference (EUSIPCO), 638-642, (2022).
+[2] Tang, Z., Zeng, X. and Sheng, Y., “Entropy-based feature extraction algorithm for encrypted and non-encrypted
+compressed traffic classification,” International Journal of Innovative Computing, Information and Control, (3),
+15 (2019).
+[3] Bonfiglio, D., Mellia, M., Meo, M., et al., “Revealing skype traffic: when randomness plays with you,” ACM
+Sigcomm Computer Communication Review, 37(4), 37-48 (2007).
+[4] Shen, M., Wei, M., Zhu, L., et al., “classification of encrypted traffic with second-order Markov chains and
+application attribute bigrams,” IEEE Transactions on Information Forensics & Security, 12(8), 1830-1843 (2017).
+[5] Mahdavi, M. H. and Asadi, M., “Traffic classification using statistical features in encrypted network traffic,”
+Journal of Network and Computer Applications, 36(2), 580-587 (2013).
+[6] Zhang, H., Yu, J. and Liu, L, “A novel method of encrypted traffic classification based on statistical features,”
+Journal of Computational Science, 16, 70-76 (2016).
+[7] Wang, X., Lin, G. and Liu, J., “A fast method for encrypted traffic identification based on statistical features and
+machine learning,” IEEE Access, 6, 21893-21902 (2018).
+[8] Alshammari, R. and Zincir-heywood, N., “Generalization of signatures for SSH encrypted traffic identification,”
+IEEE Symposium on Computational Intelligence in Cyber Security, 167-174 (2009).
+[9] Bar-Yanai, R., Langberg, M., Peleg, D., et al., “Realtime classification for encrypted traffic,” Experimental
+Algorithms: 9th International Symposium, 373-385, (2010).
+[10] Moore, A. W. and Papagiannaki, K., “Toward the accurate identification of network applications,” Passive and
+Active Network Measurement: 6th International Workshop, 41-54 (2005).
+[11] Sun, G., Xue, Y., Dong, Y., Wang, D. and Li, C., “A novel hybrid method for effectively classifying encrypted
+traffic,” IEEE Global Telecommunications Conference, 1-5 (2010).
+
+Proc. of SPIE Vol. 13090 1309024-7
+
+[12] Riyad, A. A. and Nur, Z., “Identification of VoIP encrypted traffic using a machine learning approach,” Journal
+of King Saud University-Computer and Information Sciences, 27 (1) ,77-92 (2015).
+[13] Gil, G. D., Lashkari, A. H., Mamun, M. and Ghorbani, A. A., “Characterization of encrypted and VPN traffic
+using time-related features,” Proceedings of the 2nd International Conference on Information Systems Security
+and Privacy, 407-414 (2016).
+[14] Yao, Z. J., Ge, J. G., Wu, Y. L., Lin, X. S., He, R. K. and Ma, Y. X., “Encrypted traffic classification based on
+gaussian mixture models and hidden markov models,” Journal of Network and Computer Applications, 166,
+102711 (2020).
+[15] Wang, W., Sheng, Y., Wang, J., et al., “HAST-IDS: Learning hierarchical spatial-temporal features using deep
+neural networks to improve intrusion detection,” IEEE Access, 6(99), 1792-1806 (2018).
+[16] Lotfollahi, M., Jafari Siavoshani, M., Shirali Hossein Zade, R. et al., “Deep packet: a novel approach for encrypted
+traffic classification using deep learning,” Soft Comput. 24, 1999-2012 (2020).
+[17] Zou, Z., Ge, J., Zheng, H., et al., “Encrypted traffic classification with a convolutional long short-term memory
+neural network,” IEEE 20th International Conference on High Performance Computing and Communications,
+329-334 (2018).
+[18] Liu, C., He, L., Xiong, G., et al., “Fs-net: A flow sequence network for encrypted traffic classification,” IEEE
+INFOCOM 2019-IEEE Conference on Computer Communications, 1171-1179 (2019).
+[19] Yao, H., Liu, C., Zhang, P., et al., “Identification of encrypted traffic through attention mechanism based long
+short term memory,” IEEE Transactions on Big Data, 8(01), 241-252 (2022).
+[20] Shapira, T. and Shavitt, Y., “FlowPic: A Generic representation for encrypted traffic classification and
+applications identification,” IEEE Transactions on Network and Service Management, 18(2), 1218-1232 (2021).
+[21] Hu, X. Y., Gu, C. X. and Wei, F. S., “CLD-Net: A network combining CNN and LSTM for internet encrypted
+traffic classification,” Security and Communication Networks, 5518460, 1-15 (2021).
+[22] Lin, K., Xu, X., and Gao, H., “TSCRNN: A novel classification scheme of encrypted traffic based on flow
+spatiotemporal features for efficient management of IIoT,” Computer Networks, 190, 107916 (2021).
+[23] Hong, Y. H., Zhi, G. Y. and Xiang, N. C., “PERT: Payload encoding representation from transformer for
+encrypted traffic classification,” Industry-Driven Digital Transformation, 1-8 (2020).
+[24] Lin, X., Xiong, G., Gou, G., et al., “ET-BERT: A contextualized datagram representation with pre-training
+transformers for encrypted traffic classification,” WWW’22: Proceedings of the ACM Web Conference, 633-642
+(2022).
+
+Proc. of SPIE Vol. 13090 1309024-8

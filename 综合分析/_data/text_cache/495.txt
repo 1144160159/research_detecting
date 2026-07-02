@@ -1,0 +1,164 @@
+3132                                                                                                          IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 27, 2025
+
+
+
+
+       Multimodal Evidential Learning for Open-World
+        Weakly-Supervised Video Anomaly Detection
+         Chao Huang , Member, IEEE, Weiliang Huang, Qiuping Jiang , Senior Member, IEEE, Wei Wang ,
+                    Jie Wen , Senior Member, IEEE, and Bob Zhang , Senior Member, IEEE
+
+
+   Abstract—Efforts in weakly-supervised video anomaly detection
+center on detecting abnormal events within videos by coarse-
+grained labels, which has been successfully applied to many
+real-world applications. However, a significant limitation of most
+existing methods is that they are only effective for specific objects
+in specific scenarios, which makes them prone to misclassification
+or omission when confronted with previously unseen anomalies.
+Relative to conventional anomaly detection tasks, Open-world
+Weakly-supervised Video Anomaly Detection (OWVAD) poses
+greater challenges due to the absence of labels and fine-grained
+annotations for unknown anomalies. To address the above problem,
+we propose a multi-scale evidential vision-language model to
+achieve open-world video anomaly detection. Specifically, we
+leverage generalized visual-language associations derived from
+CLIP to harness the full potential of large pre-trained models
+in addressing the OWVAD task. Subsequently, we integrate a
+multi-scale temporal modeling module with a multimodal evidence
+collector to achieve precise frame-level detection of both seen and
+unseen anomalies. Extensive experiments on two widely-utilized
+benchmarks have conclusively validated the effectiveness of our
+method. The code will be made publicly available.
+   Index Terms—Video anomaly detection, vision-language model,
+evidential learning.
+
+
+                             I. INTRODUCTION
+     IDEO anomaly detection (VAD), which aims to identify
+V    the anomaly events that diverge from normal ones, has
+become an increasingly critical field because of its promising                       Fig. 1. Illustration of the train and test phases of (a) Unsupervised, (b) Weakly-
+                                                                                     supervised and (c) Open-world Weakly-supervised VAD task.
+   Received 24 August 2024; revised 16 December 2024 and 23 January 2025;
+accepted 5 February 2025. Date of publication 3 April 2025; date of current
+version 28 May 2025. This work was supported in part by the National Natu-
+ral Science Foundation of China under Grant 62301621, in part by Shenzhen            application prospects. Due to the unavailability of substantial
+Science and Technology Program under Grant 20231121172359002, in part by
+Shenzhen General Research Project under Grant JCYJ20241202125904007, in              fine-grained anomaly annotation, most existing VAD methods
+part by Guangdong Basic and Applied Basic Research Foundation under Grant            focus on unsupervised learning and weakly-supervised learning
+2025A1515011398, and in part by the Science and Technology Development               to detect those deviated samples as anomalies. The main differ-
+Fund of Macao S.A.R (FDCT) under Grant 0028/2023/RIA1. The guest editor
+coordinating the review of this article and approving it for publication was Prof.   ence between them is inherent in the availability of annotated
+Xiankai Lu. (Corresponding author: Qiuping Jiang.)                                   training samples. As shown in Fig. 1(a) and (b), unsupervised
+   Chao Huang and Wei Wang are with the School of Cyber Science and Tech-            VAD methods [1], [2], [3], [4] focus on how to detect unseen
+nology, Shenzhen Campus of Sun Yat-sen University, Shenzhen 518000, China
+(e-mail: huangch253@mail.sysu.edu.cn; wangwei29@mail.sysu.edu.cn).                   anomaly events by mining the intrinsic structural information
+   Weiliang Huang and Bob Zhang are with the PAMI Research Group, De-                and correlation of data, while Weakly-supervised VAD (WVAD)
+partment of Computer and Information Science, University of Macau, Macau             methods [5], [6], [7], [8], [9], [10] focus on how to detect seen
+999078, China (e-mail: yc47492@um.edu.mo; bobzhang@um.edu.mo).
+   Qiuping Jiang is with the Faculty of Information Science and Engineering,         anomaly events by limited annotated training samples. From the
+Ningbo University, Ningbo 315211, China (e-mail: jiangqiuping@nbu.edu.cn).           perspective of supervised mode and model performance, neither
+   Jie Wen is with the Shenzhen Key Laboratory of Visual Object Detection and        method is entirely satisfactory for real-world VAD. On the one
+Recognition, Harbin Institute of Technology, Shenzhen 518055, China (e-mail:
+jiewen_pr@126.com).                                                                  hand, though unsupervised methods are convenient for detect-
+   Digital Object Identifier 10.1109/TMM.2025.3557682                                ing a wide variety of unseen anomaly events in the real world,
+
+
+      1520-9210 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+HUANG et al.: MULTIMODAL EVIDENTIAL LEARNING FOR OPEN-WORLD WEAKLY-SUPERVISED VIDEO ANOMALY DETECTION                                   3133
+
+
+
+the performance is often unsatisfactory. On the other hand, while        transfer learning capabilities. Some recent VLP-based WVAD
+WVAD methods exhibit superior performance in closed-set sce-             methods [17], [18] have demonstrated the feasibility and su-
+narios, they manifest a susceptibility to misclassification or over-     periority of VLP(e.g. Contrastive Language-Image Pre-training
+sight when confronted with unanticipated anomaly events. Some            (CLIP [19])) in VAD task.
+recent works [11], [12], [13], [14], [15], [16] have attempted to           Second, to address the problem of ambiguity of training sam-
+solve this problem by means of image enhancement, which im-              ple annotations, we design a multimodal evidence collector,
+proves its performance in the real world to some extent, but still       under Subjective Logic Theory (SLT [20]), to better distin-
+does not completely solve this problem.                                  guish between background and anomalies by jointly leverag-
+   The essential reason for this situation is that, as the dynami-       ing single-modal and multimodal features. We argue that, for
+cally changing real world continues to evolve, never-before-seen         abnormal events in a scenario, visual features should provide
+anomalies consistently emerge. Therefore, to meet the require-           sufficient evidence of the seen anomalies, while textual features
+ments of VAD tasks in the real world, it is necessary to explore         can provide not only supplementary evidence information for
+the Open-world WVAD (OWVAD) methods, which can achieve                   seen anomalies but also correlation evidence for unseen anoma-
+content performance in detecting anomaly events from videos              lies, thereby enhancing the model’s ability to detect various
+with assorted seen and unseen anomaly.                                   anomalies in the real world. To combine multimodal evidence to
+   Divergent from the traditional VAD methods, as shown in               dynamically calibrate the temporal boundaries of anomaly, we
+Fig. 1(c), OWVAD methods can detect temporal boundaries ac-              propose a multimodal evidential collaborative learning method
+curately of the anomaly events in the testing phase, which have          that allows single and joint modal evidence information to be
+never occurred in the training phase. There is no doubt that OW-         calibrated against each other according to their respective con-
+VAD tasks are more complicated than WVAD tasks based on                  fidence and uncertainty.
+closed sets. We argue that the following two aspects are key                Finally, for the unpredictability and variability of anomaly du-
+limiting factors for OWVAD performance:                                  ration, a Multi-scale Temporal Visual Modeling (MTVM) mod-
+    r Complexity of scenarios and diversity of anomaly cate-             ule is designed to empower single snippet features with the ca-
+      gories in the real world: Unlike the closed-set WVAD task,         pacity to perceive multi-scale contextual video segments. By
+      the OWVAD task is expected to detect anomaly events from           capturing and aggregating local and global visual information
+      a variety of real-world scenarios. However, the limited sce-       across video segments that traverse distinct temporal scales, our
+      nario information in the training set makes it difficult for the   MTVM facilitates the acquisition of features at both fine-grained
+      model to have a generic visual representation. Moreover,           and coarse-grained levels, thereby augmenting the capability to
+      a single scenario usually contains a series of associated          characterize anomalies with varied durations.
+      anomaly events, which is difficult to detect accurately in            Therefore, our potential contributions can be summarized as
+      the absence of information about the internal correlation          follows.
+      of these associated events.                                           r We propose a novel multi-scale evidential learning frame-
+    r Ambiguity of training sample annotations: Under the con-                 work for open-world weakly-supervised video anomaly
+      ditions of OWVAD, not only are annotations unavailable                   detection, which is driven by vision-language pre-trained
+      for the unseen anomaly, but also the temporal boundaries                 model and under the guidance of subjective logic theory.
+      for both seen and unseen anomaly can only be ambigu-                  r We jointly leverage the multi-scale temporal visual mod-
+      ously inferred from the video and its coarse-grained an-                 eling (MTVM) module and multimodal evidential collab-
+      notation. This ambiguity brings confusion between seen                   orative learning (MECL) module to address the limitation
+      anomaly, unseen anomaly, and background. Furthermore,                    of ambiguity of training sample annotations.
+      the duration of anomalous events is often unpredictable and           r We conduct extensive experiments on two popular bench-
+      exhibits considerable variability in the real world, which               marks, XD-Violence and UCF-Crime. And the experimen-
+      increases the difficulty of accurately identifying their tem-            tal results demonstrate significant superiority to several
+      poral boundaries.                                                        state-of-the-art weakly supervised approaches.
+   To alleviate the above limitations of OWVAD, we pro-
+pose a Multi-scale Evidential Learning method based on the                                     II. RELATIVE WORK
+Vision-Language Pre-trained model (MEL-VLP) for OWVAD.
+Guided by the introduced visual-textual associated knowledge,            A. Weakly Supervised Video Anomaly Detection
+MEL-VLP detects both seen and unseen anomalies by col-                      Recent weakly supervised anomaly detection methods are
+lecting multi-scale temporal contexts, text-associated informa-          mainly based on the multi-instance learning (MIL) frame-
+tion, and joint-modal features as evidence. To be specific, we           work [21], which regards the anomaly and normal segments as
+first extract visual features and textual features from the en-          positive and negative samples respectively. Among them, most
+coders of vision-language pre-trained model and constructed              of the methods can be classified into three categories, namely,
+a joint discriminative framework to detect anomalies by both             erasing-based methods [22], [23], [24], [25], attention-based
+visual-textual features and their associated relationship. Re-           methods [17], [26], [27], [28], [29] and uncertainty-based meth-
+cently, large vision-language pre-trained model has exhibited re-        ods [30], [31], [32]. Erasure-based methods mainly erase out-
+markable success across a diverse array of downstream tasks, at-         standing areas by setting a threshold and then mining less obvi-
+tributed to its acquired cross-modal prior knowledge and robust          ous areas. For example, DE-Net [22] devises a dynamic erasing
+3134                                                                                      IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 27, 2025
+
+
+
+strategy that dynamically evaluates the completeness of the de-       C. Evidential Deep Learning
+tected anomalies and erases the prominent anomaly segments in
+                                                                         Grounded in subjective logic theory [20], evidence-based
+order to motivate the model to discover milder anomaly seg-
+                                                                      deep learning involves the collection of scalar evidence for each
+ments in the video. Attention-based methods suppress back-
+                                                                      category and models the probability distribution of the collected
+ground components by assessing foreground attention scores
+                                                                      evidence, enabling uncertainty estimation in a single forward
+mainly through the attention mechanism. RTFM [33] employs
+                                                                      pass. Specifically, subjective logic is a logical framework for
+self-attention mechanisms and dilation convolutions to capture
+                                                                      dealing with and reasoning about uncertainty and trust, which is
+both long-range and short-range temporal dependencies for bet-
+                                                                      particularly well suited for modeling and analyzing subjective
+ter feature learning.
+                                                                      opinions or beliefs. It combines ideas from probabilistic and
+   As an emerging sort of approach, uncertainty-based meth-
+                                                                      multi-valued logic to be able to deal with the complexity of un-
+ods primarily decompose model classification probabilities into
+                                                                      certainty, incomplete information, and inter-subjective trust. In
+confidence and uncertainty through uncertainty estimation, and
+                                                                      contrast to traditional probabilistic logic, subjective logic the-
+optimization is conducted based on this uncertainty. Although
+                                                                      ory formalizes the cognitive uncertainty of a model in the face
+this paradigm has been successful in many fields [34], [35], it
+                                                                      of incomplete information by assigning belief measures to po-
+has only been little studied in the field of anomaly detection.
+                                                                      tential categories to characterize assertions of truthfulness and
+For example, CELL [36] proposes a Cascade Evidential Learn-
+                                                                      

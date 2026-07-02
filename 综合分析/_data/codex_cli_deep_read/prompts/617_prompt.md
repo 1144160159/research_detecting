@@ -1,0 +1,2198 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [617] Blockchain Anomaly Transaction Detection Method Based on Graph Continual Learning
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：617
+题名：Blockchain Anomaly Transaction Detection Method Based on Graph Continual Learning
+年份：2026
+DOI：10.1109/tnse.2026.3653459
+来源：IEEE Transactions on Network Science and Engineering
+PDF：paper/10.1109_TNSE.2026.3653459.pdf
+已有粗分类：图学习、知识图谱与威胁情报
+二级关联：其他AI安全与跨域异常检测、联邦学习、隐私保护与分布式协同
+相关性：中相关，分数 9
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\617.txt
+- 原始字符数：115897
+- 本次发送字符数：115897
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+6059
+
+Blockchain Anomaly Transaction Detection Method
+Based on Graph Continual Learning
+Xiaodong Shen , Chang Xu , and Liehuang Zhu , Senior Member, IEEE
+
+Abstract—The rapid growth of blockchain has increased exposure to threats such as phishing, Ponzi schemes, and money laundering, making anomaly detection essential for maintaining platform
+security. Traditional rule-based methods and static machine learning models often fall short against evolving attack strategies, while
+existing graph neural network (GNN) approaches, though effective
+in modeling transaction graphs, require costly retraining and suffer
+from catastrophic forgetting when new anomalies emerge. These
+challenges highlight the need for adaptive detection techniques that
+can evolve alongside adversarial behaviors while preserving knowledge of previously observed patterns. To address this problem, this
+paper introduces a graph-based continual learning approach for
+blockchain anomaly detection. The proposed framework incorporates a topology-aware weight preservation module that captures
+local structural dependencies and stabilizes critical parameters
+during training. By explicitly modeling topological importance,
+the method balances knowledge retention and new task adaptation, thereby mitigating catastrophic forgetting. In addition, the
+framework is designed for modular compatibility with different
+GNN backbones, requiring only minimal adaptation for specific
+architectures. This flexibility ensures broad applicability in realworld blockchain systems. Extensive experiments demonstrate that
+our approach not only achieves high detection accuracy but also
+maintains stability and robustness across sequential tasks, offering
+a scalable and effective solution for securing blockchain ecosystems
+against evolving transaction anomalies.
+Index Terms—Anomaly detection, blockchain, continual learning, graph neural network, security.
+
+I. INTRODUCTION
+ITH the rapid growth of blockchain applications in areas
+such as decentralized finance (DeFi) [1], [2], [3], supply
+chain management [4], [5], [6], and healthcare [7], [8], [9],
+the security and reliability of blockchain systems have become
+increasingly critical. Anomalous transactions not only cause
+direct financial losses but also undermine user trust and regulatory compliance. Therefore, effective detection of abnormal
+account behaviors is a fundamental requirement for ensuring
+the sustainable development of blockchain ecosystems [10],
+[11], [12].
+However, detecting anomalies in blockchain transactions
+presents several unique challenges. First, the scale of transaction
+
+W
+
+Received 16 September 2025; revised 31 December 2025; accepted 6 January
+2026. Date of publication 13 January 2026; date of current version 2 February
+2026. This work was supported in part by the National Natural Science Foundation of China under Grant 62272042 and in part by Guangxi Key Research
+and Development Project under Grant Guike AB25069120. Recommended for
+acceptance by Dr. Yao Sun. (Corresponding author: Chang Xu.)
+The authors are with the School of Cyberspace Science and Technology,
+Beijing Institute of Technology, Beijing 100081, China (e-mail: shenxiaodong@
+bit.edu.cn; xuchang@bit.edu.cn; liehuangz@bit.edu.cn).
+Digital Object Identifier 10.1109/TNSE.2026.3653459
+
+data is massive, with millions of records generated daily. Second,
+anomalous accounts constitute only a small fraction of the data,
+leading to severe class imbalance. Third, labeled data is scarce,
+as labels often rely on expert investigation and are available
+only with significant delays [13]. Most importantly, malicious
+behaviors evolve over time, as adversaries constantly adapt their
+strategies to evade detection [14]. These factors make traditional
+static detection methods insufficient and highlight the need for
+adaptive, continual learning approaches.
+While semi-supervised and self-supervised learning can alleviate label scarcity by leveraging unlabeled data, they typically assume a static data distribution. Blockchain networks,
+by contrast, evolve continuously with new addresses, contracts,
+and transaction patterns. To effectively capture these evolving
+interactions, blockchain systems are often represented as graphs
+that encode the flow of transactions and relationships among
+entities.
+Graph-based representations enable the use of Graph Neural Networks (GNNs), which can model relational dependencies and higher-order structures within transaction networks.
+GNN-based approaches have demonstrated strong performance
+in fraud detection, money laundering, and phishing identification [15], [16], [17]. However, most existing GNN models
+are trained offline and in a task-specific manner. When new
+anomalous behaviors emerge, retraining from scratch is often
+required, which is computationally expensive and impractical
+for large-scale blockchain systems [18], [19].
+In addition, conventional GNNs suffer from catastrophic
+forgetting, where learning new tasks can overwrite previously
+acquired knowledge. This issue is especially pronounced in
+blockchain environments, where adversaries continuously introduce new fraudulent patterns. Continual learning (CL) [20]
+addresses this challenge by enabling models to incrementally
+learn from new data while preserving knowledge of prior behaviors. Although CL methods have been studied in general neural
+network contexts [21], [22], their application to graph-structured
+blockchain data remains underexplored. Recent efforts [23],
+[24] offer promising directions, but a fully adapted solution for
+blockchain anomaly detection is still lacking.
+This gap motivates our work: how can we design a graphbased continual learning model that adapts to new transaction
+patterns while preserving knowledge from past tasks? To address this challenge, we propose a novel continual learning
+framework for blockchain anomaly detection. The key idea
+is to integrate graph neural networks with a topology-aware
+mechanism that explicitly captures structural information and
+
+2327-4697 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+6060
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE I
+COMPARISON OF REPRESENTATIVE BLOCKCHAIN ANOMALY DETECTION APPROACHES
+
+preserves parameter importance across tasks. In doing so, the
+model adapts to evolving data distributions while mitigating
+catastrophic forgetting. The main contributions of this work are
+summarized as follows:
+r We propose a graph-based continual learning approach
+for blockchain anomaly detection that can effectively and
+reliably identify abnormal accounts in increasingly large
+and complex blockchain networks. The framework is designed for flexible integration with various graph neural
+network architectures, allowing easy adaptation to different blockchain settings while maintaining scalability and
+applicability in real-world environments.
+r We introduce a topology-aware weight preservation module that estimates the importance of each network parameter based on both task-related performance and topological
+structure. By incorporating a topology aggregation mechanism, the model retains knowledge of previous tasks while
+learning new ones, thereby ensuring accuracy and stability
+in the continual learning process.
+r From the perspectives of anomaly detection and continual learning, we design comparative experiments across
+different neural network backbones and continual learning strategies. Experimental results demonstrate that the
+proposed model achieves outstanding performance in both
+classification accuracy and stability against catastrophic
+forgetting.
+The remainder of this article is organized as follows. Section II introduces the related work. Section III analyzes the core
+challenges and gives the problem definition. Section IV introduces the proposed detection model and its modules. Section V
+reports comprehensive experimental results, while Section VI
+further analyzes the findings and practical implications. Finally,
+Section VII concludes the paper and outlines future research
+directions.
+II. RELATED WORK
+Research on blockchain security and anomaly detection spans
+multiple domains, including blockchain technology, machine
+learning, and graph-based analysis. To provide a comprehensive
+
+foundation for our study, this section reviews prior work in
+four key areas: the fundamentals of blockchain and transaction
+anomalies, traditional and advanced machine learning methods
+for anomaly detection, the application of graph neural networks
+in blockchain security, and continual learning techniques for
+evolving threat detection. The comparisons between the representative works and our method are shown in Table I.
+A. Overview of Blockchain Technology and Transaction
+Anomalies
+Blockchain technology has rapidly expanded beyond its initial
+use in cryptocurrencies, finding applications in diverse domains
+such as supply chain management [4], [5], [6], healthcare [7],
+[8], [9], the Internet of Things (IoT) [33], [34], [35], Decentralized Finance (DeFi) [1], [2], [3], and various other emerging
+areas [36], [37], [38]. This growth has spurred extensive research
+on understanding blockchain structures, transaction behaviors,
+and systemic vulnerabilities, leveraging both datasets and analytical tools. Concurrently, the openness and pseudonymous
+nature of blockchain have given rise to various anomalies and
+security threats, highlighting the critical need for effective detection methods. In this section, we first review blockchain
+fundamentals and analytical resources, followed by a discussion
+of transaction anomalies and associated detection strategies.
+1) Blockchain Basics and Analytical Tools: Blockchain is
+a decentralized and distributed ledger technology that enables
+secure, transparent, and tamper-resistant transaction recording
+without central authorities [39], [40], [41], [42], [43]. Its foundational features—immutability, consensus mechanisms [44], and
+cryptographic verification—have driven adoption in domains
+ranging from digital currencies and finance to supply chain,
+healthcare, and IoT. Bitcoin, introduced by Nakamoto [45],
+established blockchain’s first major application as a cryptocurrency, while Ethereum expanded the ecosystem by enabling programmable smart contracts and decentralized applications [46],
+[47], [48].
+With blockchain’s rapid growth, research has focused on
+analyzing large-scale transaction data to reveal user behavior,
+money flows, and systemic vulnerabilities. Transaction graphs
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+provide a powerful abstraction, treating addresses, accounts,
+and contracts as nodes and their transfers as edges [49], [50],
+[51], [52], [53]. Quantitative graph analysis has revealed structural properties such as small-world patterns, clustering, and
+“rich-get-richer” dynamics, while enabling deanonymization attempts by linking pseudonymous addresses to real entities [54],
+[55]. Ethereum studies extend this perspective by examining
+heterogeneous interactions among users, tokens, contracts, and
+DeFi protocols, highlighting both opportunities and risks in
+decentralized finance ecosystems [46], [47], [56].
+Reliable datasets and analysis platforms are critical to advancing blockchain research. Several benchmark datasets have
+been developed, including the Elliptic dataset of labeled Bitcoin
+transactions for anti-money laundering (AML) research [57], its
+extended Elliptic++ version with richer graph structures [58],
+and Ethereum-based datasets tailored for anomaly detection
+and intrusion detection systems [59]. Open-source platforms
+such as BlockSci offer scalable support for analyzing multiple
+blockchains and provide tools to study privacy, economics, and
+fraud [60]. Recent surveys emphasize the role of graph learning
+for blockchain mining and anomaly detection, integrating classical data analytics with advanced graph neural methods [61].
+Visualization and software tools such as DiLeNA further aid in
+investigating distributed ledger networks by capturing structural
+properties and abnormal patterns [53], [62].
+2) Blockchain Anomalies. Threats and Detection: Despite
+blockchain’s inherent security guarantees, its pseudonymity and
+openness create fertile ground for illicit activities [10]. Studies
+estimate that nearly half of Bitcoin transactions in its early years
+were linked to illegal activities such as drug trade, ransomware,
+and black-market commerce [11], [63]. Mixing services, tumblers, and privacy-focused behaviors complicate detection efforts by obfuscating fund flows [54], [63]. Moreover, Ethereum’s
+support for programmable contracts has facilitated new classes
+of fraud, including large-scale Ponzi schemes that exploit smart
+contracts for “trustworthy” but malicious operations [12].
+The blockchain ecosystem is also exposed to protocollevel and system-level attacks. Surveys highlight vulnerabilities across consensus mechanisms, P2P networking, and smart
+contracts, including 51% attacks, selfish mining, Sybil, eclipse,
+and reentrancy exploits [64], [65], [66], [67]. Privacy leakage
+through weak anonymity and transaction tracing further increases risk [42], [54]. Abnormal behavior awareness frameworks for public and consortium blockchains propose detection through supervised learning, statistical analysis, and
+heuristic clustering [68]. Comprehensive surveys provide taxonomies of anomalies and defense strategies, underscoring the
+need for anomaly detection to secure blockchain infrastructures [69], [70].
+Detection strategies range from rule-based auditing and statistical analysis to machine learning and graph-based methods.
+Approaches such as BAD (Blockchain Anomaly Detection)
+leverage distributed metadata to capture malicious activity [71].
+Sketch-based methods offer scalable detection by summarizing
+blockchain history into compact structures [72], while visualization and clustering techniques help uncover suspicious transaction flows [53], [62]. Deep anomaly detection frameworks
+
+6061
+
+incorporating generative, discriminative, and hybrid learning have emerged to combat sophisticated cyber-attacks in
+blockchain environments [67]. Collectively, these efforts reflect
+the pressing need to reconcile blockchain’s decentralization and
+privacy guarantees with robust detection systems capable of mitigating fraud, cybercrime, and systemic threats [68], [69], [70].
+B. Anomaly Detection With Machine Learning
+The application of Machine Learning (ML) techniques [73],
+[74] has become paramount in identifying anomalous and fraudulent activities within blockchain networks like Bitcoin and
+Ethereum. ML models can learn complex patterns from transaction data, enabling the detection of illicit behaviors that are
+difficult to pinpoint using traditional rule-based systems [25],
+[26]. These approaches are broadly categorized into supervised,
+unsupervised, and ensemble or advanced learning methods, each
+with distinct advantages and challenges [75], [76].
+1) Supervised Learning: Supervised learning methods require a labeled dataset where transactions are pre-classified as
+licit or illicit. These models learn a mapping function from input
+features to these known labels, allowing them to predict the
+class of new, unseen transactions. A significant challenge in this
+domain is the inherent scarcity of labeled data, as illicit activities
+are rare and often difficult to verify [13].
+Numerous studies have demonstrated the effectiveness of supervised learning. Research has shown that classical algorithms
+like Support Vector Machines (SVM), Logistic Regression, Random Forest (RF), and k-Nearest Neighbors (kNN) can achieve
+high accuracy in distinguishing illicit transactions, such as those
+related to money laundering [77] or Bitcoin theft [78]. For
+instance, Alarab et al. [77] utilized an ensemble of supervised
+models, achieving an accuracy of 98.13% on the Elliptic dataset.
+Similarly, Nerurkar et al. [79] developed an ensemble of decision
+trees capable of categorizing multiple types of illicit entities
+with high accuracy, highlighting its utility for forensic analysis.
+GPU-accelerated implementations of models like SVM and
+Random Forest have also been successfully applied for fraud
+detection on both Bitcoin and Ethereum networks, showcasing
+their scalability [80].
+Beyond specific fraud types, supervised learning forms the
+basis for broader anomaly detection frameworks. The works
+in [27], [28] further explore the application of these techniques
+for AML tasks at cryptocurrency exchanges, emphasizing their
+practical relevance.
+2) Unsupervised Learning: Unsupervised learning techniques are employed when labeled data is unavailable or scarce.
+These methods operate without pre-existing labels, identifying
+anomalies by detecting data points that deviate significantly
+from the majority of the data based on inherent structures or
+patterns, such as clusters or densities [30].
+Common unsupervised approaches include clustering algorithms like k-means and anomaly detection methods like
+SVM [81], [82]. These techniques are valuable for exploring unknown fraud patterns or for initial data analysis. Vlahavas et al. [29] applied k-means clustering directly to Bitcoin transactions (rather than addresses) using novel features,
+
+6062
+
+successfully identifying distinct clusters representing common
+users, mining activities, exchange transactions, and a small
+cluster of potentially illicit activity. Their work demonstrated
+the value of unsupervised learning for characterizing transaction
+types without prior labeling.
+However, a challenge noted in the literature is that purely
+unsupervised anomaly detection methods can sometimes be inadequate for accurately pinpointing sophisticated illicit patterns,
+often requiring subsequent refinement or labeling efforts [13],
+[30], [83]. Surveys by Shafiq et al. [84] and Cholevas et al. [30]
+provide a comprehensive overview of how various unsupervised
+algorithms and their integrations are applied to detect anomalies
+across different blockchain networks.
+3) Ensemble and Advanced Learning Methods: Ensemble
+and advanced learning methods have shown remarkable performance in handling the complexities of blockchain anomaly
+detection. Hasan et al. [85] integrated explainable AI techniques with ensemble classifiers, introducing the XGBCLUS
+under-sampling algorithm to address data imbalance and achieving enhanced true positive rates. Nayyer et al. [31] proposed
+a stacking ensemble model combining Decision Tree, Naive
+Bayes, K-Nearest Neighbors, and Random Forest, achieving
+97% accuracy and 99% AUC-ROC score. Umer et al. [32]
+developed an ensemble deep learning approach combining Convolutional Neural Networks and Long Short-Term Memory,
+with bagged LSTM achieving 96.4% accuracy. Pahuja and Kamal [86] implemented an ensemble learning framework using
+the CRISP-DM methodology, with LightGBM achieving 99.2%
+accuracy in Ethereum fraud detection. Ashfaq et al. [87] combined blockchain technology with machine learning, utilizing
+XGBoost and Random Forest for fraud detection while ensuring
+system security through smart contracts.
+Advanced techniques have also been explored for specific
+applications: Lorenz et al. [13] addressed label scarcity through
+active learning, matching fully supervised performance with
+only 5% of labels. Huang et al. [88] developed a LightGBM
+model with memory components for gambling detection on
+Ethereum. Yuan et al. [89] employed node2vec network embedding with one-class SVM for phishing detection, achieving an
+F-score of 0.846. Chen et al. [90] used data mining and machine
+learning to detect Ponzi schemes on Ethereum. Ehsan et al. [91]
+enhanced Ethereum anomaly detection through sophisticated
+feature selection techniques combined with multiple classifiers,
+achieving 98% accuracy.
+Recent reviews by Hisham et al. [75] and Chithanuru et al. [76]
+provide comprehensive examinations of machine learning and
+artificial intelligence techniques for blockchain anomaly detection, while Azad et al. [92] discuss future opportunities in
+machine learning for blockchain data analysis. The integration
+of these advanced methods continues to evolve, addressing
+challenges such as data imbalance, explainability, and real-time
+detection requirements in blockchain security.
+C. Graph Neural Networks in Blockchain Security
+The inherent graph topology of blockchain systems—
+where transaction networks naturally form complex relational structures—has positioned Graph Neural Networks
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+(GNNs) [93], [94] as transformative tools for security applications. Unlike traditional machine learning approaches that process transactions as isolated events, GNNs explicitly model the
+intricate topological dependencies between addresses, transactions, and smart contracts. This capability enables the detection
+of sophisticated attack patterns that manifest through structural
+anomalies in transactional networks, fundamentally advancing
+beyond feature-based detection paradigms.
+1) Foundational Graph Analysis for Blockchain Security:
+Fundamental research has established graph-theoretic analysis as indispensable for understanding blockchain ecosystems.
+Chen et al. [95] pioneered this domain through comprehensive
+graph analysis of Ethereum, constructing three distinct graphs
+that revealed systemic behavioral patterns. Survey studies by
+Wu et al. [93] and Khan et al. [96] systematically unified
+methodologies for cryptocurrency transaction graph mining,
+while Song et al. [97] provided analysis of why blockchain
+systems intrinsically require graph-based approaches.
+The temporal dimension of blockchain graphs received formal treatment through Lin et al.’s [18] T-EDGE framework,
+which introduced temporal weighted multidigraph embedding
+specifically for Ethereum transaction networks. Complementary
+work by Gaihre et al. [98] examined user anonymity behaviors
+through transaction graph analysis, uncovering the counterintuitive finding that wealthy addresses exhibit significantly stronger
+anonymity concerns than ordinary users. Liu et al. [99] extended
+graph analysis to blockchain documentation through heterogeneous GNNs for whitepaper analysis, demonstrating how textual
+and structural information can be jointly modeled.
+2) Illicit Activity Detection With GNNs: GNN-based methods have become indispensable for combating a wide spectrum
+of blockchain-related crimes, ranging from phishing scams and
+financial fraud to money laundering and other illicit activities.
+These threats often share structural signatures in transaction
+graphs, such as coordinated account behavior, temporal bursts
+of suspicious transfers, or subgraph patterns designed to obscure
+fund flows. By modeling these relational dependencies, GNNs
+can identify anomalous activity that traditional feature-based or
+rule-driven approaches fail to capture.
+For phishing and fraud detection, Chen et al. [17] established
+the paradigm of framing phishing detection as node classification with Graph Convolutional Networks (GCNs). Building on
+this, Yu et al. [100] introduced MP-GCN with enhanced message
+passing, Li et al. [101] proposed TTAGN for temporal transaction aggregation, and Zhang et al. [21] developed GrabPhisher
+with temporally evolving GNNs that adapt to new attack patterns. Higher-order dependencies have been effectively captured
+by Wang et al. [37] through Transaction Subgraph Networks
+(TSGN), while Xia et al. [102] demonstrated that attributed
+ego-graph embeddings improve robustness in class-imbalanced
+detection tasks. Targeting Bitcoin specifically, Gupta et al. [103]
+designed adaptive GCN frameworks achieving unprecedented
+98.75% accuracy. Cross-chain detection challenges were further
+addressed by Yan et al. [104] with adversarial domain adaptation techniques that transfer knowledge between heterogeneous
+platforms.
+Complementary approaches have focused on combining userlevel behavior with global financial dynamics. Ghosh et al. [105]
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+proposed CATALOG to jointly model local and macro-level
+signals, while Wan et al. [106] advanced early-stage detection by
+leveraging feature engineering and network embeddings [107].
+Tan et al. [16], [19] implemented full-stack Ethereum fraud
+detection systems achieving consistent 95–96% accuracy, with
+Lin et al. [108] further enhancing detection via Phish2vec’s
+temporal-heterogeneous embeddings. Together, these works illustrate how phishing and fraud campaigns can be effectively
+disrupted by capturing both micro-level structural anomalies and
+macro-level transaction flows.
+For AML and illicit activity detection, Lo et al. [15] pioneered self-supervised methods with Inspection-L, integrating
+graph isomorphism networks with random forests for Bitcoin
+money laundering. Pocher et al. [109] applied Graph Attention
+Networks (GATs) to AML tasks, demonstrating their effectiveness in uncovering subtle relational patterns among entities.
+Ouyang et al. [110] developed Bit-CHetG with subgraph contrastive learning for group detection, while Nerurkar et al. [111]
+achieved 92% accuracy in multi-class classification of illicit
+Bitcoin activities using spectral GCNs. Advanced tracing frameworks such as Cheng et al.’s [112] Evolve Path Tracer enabled
+early-stage malice detection through dynamic asset flow analysis, and Hanan Al-Harbi [113] deployed spatial-temporal GNNs
+for continuous transaction monitoring. Real-time detection has
+also been pursued: Ibrahim et al. [114] combined GNNs with
+anomaly detection for streaming data environments, marking
+a crucial step toward operational deployment in fast-moving
+financial systems.
+In unifying phishing, fraud, and AML detection, these
+approaches demonstrate how GNNs provide a holistic defense framework by capturing both opportunistic scams and
+large-scale organized crime. Importantly, they move beyond
+transaction-level analysis to reveal higher-order coordination,
+temporal structuring, and laundering strategies that exploit
+blockchain’s pseudonymous design. This convergence underscores GNNs’ potential as the backbone of next-generation
+blockchain security infrastructures.
+3) Advanced Applications and Emerging Paradigms: Novel
+GNN applications continue to expand the frontiers of blockchain
+security beyond financial fraud detection. Smart contract
+analysis has been revolutionized through several approaches:
+Liu et al. [115] created heterogeneous graph transformers for
+abnormal contract detection; Liu et al. [116] developed evolved
+graph attention for dynamic attribute graphs; and Zhu et al. [117]
+introduced EtherShield for time-interval based malicious behavior identification.
+Data provenance received significant enhancements through
+Geng et al.’s [118] graph attention mechanism that improves
+traceability, while Guo et al. [119] revolutionized covert transaction detection using graph generative networks. IoT-blockchain
+security was substantially strengthened by Wang et al. [120]
+through specialized anomaly detection frameworks that protect
+medical IoT systems.
+Emerging research directions include Liu et al.’s [116] work
+on public blockchain anomaly detection with evolved graph
+attention, demonstrating how GNNs can adapt to continuously evolving transaction patterns. These diverse applications
+
+6063
+
+underscore GNNs’ versatility across blockchain security
+domains—from protecting financial transactions to securing
+smart contracts and IoT ecosystems. As blockchain technology
+continues to evolve, GNN-based security frameworks are poised
+to address increasingly sophisticated threats through continuous
+learning of complex network dynamics.
+D. Continual Learning Methods for Anomaly Detection
+Continual learning (CL), also referred to as lifelong learning,
+has emerged as a critical paradigm for enabling machine learning
+models to adapt to new information over time without catastrophically forgetting previously acquired knowledge [121].
+This capability is paramount in dynamic environments like
+blockchain, where new transaction patterns and attack vectors continuously emerge. This subsection reviews foundational
+CL techniques in neural networks, their extension to graphstructured data, and their specific applications within blockchain
+and anomaly detection contexts.
+1) Continual Learning in Neural Networks: Early works in
+continual learning were motivated by the need to prevent catastrophic forgetting in neural networks. Kirkpatrick et al. [122]
+proposed elastic weight consolidation (EWC), which preserves
+parameters critical to prior tasks by selectively slowing their
+updates. Li and Hoiem [123] introduced Learning without Forgetting (LwF), enabling networks to adapt to new tasks while
+retaining old capabilities using only new task data. Similarly,
+Lopez-Paz and Ranzato [124] developed Gradient Episodic
+Memory (GEM), which stores past examples and replays them
+to balance knowledge transfer and retention. Aljundi et al. [125]
+proposed Memory Aware Synapses (MAS), which dynamically
+measures parameter importance in an unsupervised manner.
+Other approaches include hard attention masks that preserve
+task-specific knowledge [126], and meta-learning–based taskagnostic continual learning strategies [127]. Xu and Zhu [128]
+further extended this line with Reinforced Continual Learning,
+where reinforcement learning identifies optimal architectures
+for new tasks while preserving past performance. Surveys provide holistic overviews: Hadsell et al. [20] emphasized biologically inspired mechanisms such as modularity and memory,
+De Lange et al. [129] analyzed state-of-the-art methods with
+extensive comparisons, and Wang et al. [22] summarized objectives, taxonomies, and practical applications of CL. Foundational perspectives are also offered by Liu’s lifelong learning
+paradigm [121] and van de Ven et al.’s definitions of scenarios
+(task-, domain-, and class-incremental) [130], [131]. Collectively, these works establish the theoretical and algorithmic basis
+for continual learning in deep neural networks.
+2) Continual Graph Learning: Graph-structured data
+presents unique challenges for continual learning due to its
+non-Euclidean structure and evolving topologies. Zhou and
+Cao [132] introduced ER-GNN, an experience replay–based
+framework that reuses selected node embeddings to mitigate
+forgetting in GNNs. Liu et al. [133] proposed Topology-aware
+Weight Preserving (TWP), a plug-and-play module that
+stabilizes graph aggregation parameters to retain structural
+knowledge. Sun et al. [134] addressed curvature changes
+
+6064
+
+in evolving graphs with RieGrace, a self-supervised learner
+in adaptive Riemannian spaces that incorporates distillation
+without requiring labels. Su et al. [135] focused on inductive
+Node-wise Graph Incremental Learning, introducing StructuralShift-Risk-Mitigation to address distribution shifts in evolving
+graphs. Two recent surveys provide comprehensive taxonomies
+and analyses: Zhang et al. [21] reviewed task settings,
+methods, and challenges in continual graph learning, while
+Tian et al. [136] categorized methods from the perspective of
+catastrophic forgetting and highlighted the need for continuous
+performance improvement. Benchmarking efforts, such as Ko
+et al.’s BeGin framework, further standardize scenarios and
+evaluation for graph continual learning [137]. Together, these
+works advance the understanding of how continual learning
+principles can be extended to complex graph domains.
+3) Incremental Learning for Blockchain and Anomaly Detection: Anomaly detection requires continual adaptation, as
+malicious behaviors evolve rapidly. Faber et al. [14] highlighted
+the unique challenges of lifelong anomaly detection, including
+shifting normal behaviors and scarce anomalies, and stressed
+the importance of lifelong learning to enhance robustness. In
+blockchain specifically, Qi [138] demonstrated the synergy
+between GNNs and incremental learning for fraud detection,
+enabling adaptation without full retraining. Li et al. [23] introduced SIEGE, a self-supervised incremental deep graph
+learning model for Ethereum phishing detection, leveraging
+pretext tasks for effective embeddings on massive unlabeled
+data. Neto et al. [139] addressed covert cryptocurrency mining
+with MineCap, a super-incremental learning framework applied
+to software-defined networking. Bielak et al. [24] developed
+FILDNE, a framework for incremental embeddings on dynamic
+networks, which reduces computational costs while maintaining accuracy on evolving graphs. These approaches showcase
+how incremental learning paradigms are increasingly tailored
+to security-sensitive and blockchain-specific anomaly detection
+tasks.
+4) Discussion and Summary: This section reveals a progression from general CL techniques to their specialization for graph
+data and, more recently, for dynamic real-world applications
+like blockchain security and anomaly detection. While replay
+and regularization methods provide a strong foundation, their
+direct application to graphs requires careful consideration of
+topological dependencies and structural shifts [135]. Furthermore, the anomaly detection context adds layers of complexity
+due to data imbalance, evolving normality, and the critical need
+for stability-plasticity balance [14].
+Existing continual graph learning methods like TWP [133]
+and ER-GNN [132] offer valuable design principles for preserving knowledge. However, their application in the blockchain
+domain remains limited. Most blockchain-oriented works, such
+as Li et al. [23], focus on incremental learning but often do
+not explicitly address the rigorous continual learning setting
+with distinct, sequential tasks and the formal mitigation of
+catastrophic forgetting. A significant gap exists in developing
+dedicated continual learning frameworks that are deeply integrated with graph-based anomaly detection for blockchain,
+capable of learning continuously from a sequence of emerging
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE II
+LIST OF ACRONYMS
+
+fraudulent patterns without retraining from scratch. Our work,
+detailed in Section IV, aims to bridge this gap by proposing a
+novel continual learning framework built upon topology-aware
+weight preservation, specifically designed for the evolving graph
+of blockchain transactions. To enhance readability and provide a
+consolidated reference for the acronyms introduced throughout
+the paper, Table II provides a comprehensive list of key terms
+and their definitions.
+III. PROBLEM ANALYSIS AND DEFINITION
+A. Problem Analysis
+Designing blockchain anomaly detection models with deep
+graph learning is particularly challenging due to the unique
+characteristics of blockchain data. Millions of transactions are
+generated daily, yet only a tiny fraction involve illicit activity,
+creating severe class imbalance. At the same time, reliable
+labels are scarce and often delayed, since they typically rely on
+investigator verification. Furthermore, blockchain environments
+are highly dynamic: both normal and malicious behaviors evolve
+over time, making static detection methods quickly outdated.
+A practical detection model must therefore be able to adapt
+continually, capturing new abnormal patterns without discarding
+knowledge of previously observed ones.
+The major challenges can be summarized as follows:
+r Data imbalance: In real-world blockchains, benign accounts vastly outnumber illicit ones. This imbalance biases
+models toward the majority class, often leading to poor
+recall on anomalies, which are the most critical to detect.
+r Label scarcity: High-quality labels for anomalous behaviors are difficult to obtain, as they are based on external
+reports or expert investigations. Such labels cover only a
+small portion of accounts and are usually available with
+delays, creating both data sparsity and temporal imbalance.
+r Concept drift: Normal account behaviors are not stationary; they shift over time due to changes in user habits,
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+seasonal patterns, or external events. Detection models
+that fail to adapt to these shifts risk misclassifying benign
+behaviors as anomalies or overlooking new types of fraud.
+r Emergence of new attacks: Adversaries continually adjust
+strategies, exploiting code vulnerabilities or novel features
+of smart contracts. Some attacks extend known patterns,
+while others are entirely new. Without incremental adaptation, existing models either require full retraining—which
+is computationally expensive—or cannot recognize these
+new behaviors at all.
+r Retraining overhead: Traditional retraining strategies demand repeated access to the full historical dataset, which is
+both inefficient and impractical at blockchain scale. Ideally,
+anomaly detection should learn from limited new samples
+while preserving knowledge of past attacks without revisiting all prior data.
+In summary, blockchain anomaly detection requires models
+that are robust to imbalance and label scarcity, adaptive to evolving behaviors, and efficient enough to learn continually from
+new threats without incurring prohibitive retraining costs. These
+challenges motivate the need for continual learning frameworks
+tailored to graph-structured transaction data.
+B. Problem Definition
+The ability to acquire and refine knowledge from a continuous
+stream of non-stationary and imbalanced data distributions is the
+hallmark of the continual learning (also referred to as lifelong
+learning) paradigm. The training process of continual learning
+systems differs from conventional approaches: tasks are learned
+incrementally, and each sample can be represented by a triplet
+(x, y, t), where x is the feature vector, y is the target label, and
+t is the task descriptor that identifies the task represented by
+the tuple (x, y) ∼ Pt . In this setting, the observed data are not
+drawn from a fixed probability distribution P (X, Y, T ); instead,
+the data associated with sequential tasks are non-IID. Thus, the
+grand objective of continual learning is to construct a model
+f : X × T → Y that predicts the target label y for a test pair
+(x, t) such that (x, y) ∼ Pt .
+In real-world blockchain environments, the number of normal
+accounts participating in transactions is typically much larger
+than that of malicious accounts. This large quantitative disparity
+is one of the main causes of Class Imbalance (CI) observed
+in many blockchain account datasets. Moreover, due to privacy
+concerns, the availability of up-to-date multi-label datasets of
+malicious traffic is extremely limited. For these reasons, it is
+challenging to formulate blockchain intrusion detection as a
+multi-class classification problem.
+To approximate realistic traffic scenarios, we combine both
+normal and malicious account data to form a task t. During
+training on a specific task dataset Dt , direct access to data from
+other tasks Do (o = t) is prohibited. This leads to the following
+objective function:
+L(Dt ; Θ) =
+
+1
+|Dt |
+
+
+(x,y)∈Dt
+
+ (fΘ (x), y)
+
+(1)
+
+6065
+
+where x and y denote the feature vector and corresponding
+target label (normal or abnormal), fΘ is the prediction function
+parameterized by Θ, and (·) is the sample-wise loss function. However, catastrophic forgetting can degrade the quality
+of learning, motivating the development of various mitigation
+strategies. Regularization-based methods impose constraints on
+model parameters to prevent drastic changes during new task
+learning. Dynamic architecture approaches adapt the model’s
+structure, while memory replay methods maintain a cache of
+representative samples from prior tasks to alleviate forgetting.
+Combining these strategies, the training objective in (1) can be
+reformulated as:
+
+1
+[ (fΘ (x), y) + R(Φ)]
+(2)
+L(Dt ; Θ, Φ) =
+|Dt |
+(x,y)∈Dt
+
+where R(Φ) is the regularization term introduced by the chosen
+catastrophic forgetting mitigation technique, and Φ collects the
+corresponding auxiliary variables or hyperparameters.
+In the learning sequence of a blockchain anomaly detection model, the system receives a series of disjoint tasks T =
+{T1 , T2 , . . . , TK }, which are learned sequentially. Each task
+Tk consists of a training node set Vktr , a test node set Vkte ,
+and their corresponding feature sets Xktr and Xkte . Each node
+vi ∈ {Vktr ∪ Vkte } is associated with a class label y l ∈ Yk , where
+Yk = {y 1 , y 2 , . . . , y ck } is the label set and ck is the number
+of classes in task Tk . In a continual learning setting, different
+tasks correspond to disjoint partitions of the dataset, and their
+label sets are non-overlapping. Once the learning of a task is
+completed, its data are no longer available. The objective of this
+paper is to learn a shared GNN model fΘ , parameterized by
+Θ = {θr }, across a sequence of graph-related tasks T , such that
+the model performs well on new tasks while retaining knowledge
+of previously learned tasks.
+IV. THE PROPOSED SCHEME
+This section introduces the proposed graph-based continual
+learning framework for blockchain anomaly transaction detection. Instead of treating blockchain accounts or transactions
+as independent samples, we explicitly model the underlying
+transaction network as a graph, where anomalous behaviors such
+as phishing, Ponzi schemes, and other fraud patterns emerge as
+distinctive structural patterns. On top of this transaction graph,
+a Graph Neural Network (GNN) backbone is used to learn
+discriminative node representations for classifying normal and
+abnormal accounts.
+To support long-term deployment in dynamic blockchain environments, where new types of anomalous behaviors and previously unseen transaction patterns continually appear, the framework integrates a Topology-aware Weight Preserving (TWP)
+module. TWP jointly considers (i) task-related prediction performance and (ii) blockchain-specific topological structures when
+estimating parameter importance. A sparse regularization mechanism is further introduced to maintain model plasticity, preventing the detector from becoming over-constrained and unable to
+absorb new anomalous patterns. Finally, we show how the proposed scheme can be plugged into arbitrary GNN architectures
+
+6066
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+(e.g., GCN, GIN) to support a wide range of blockchain anomaly
+detection scenarios. The complete pseudocode of the continual
+anomaly detection framework is summarized in Algorithm 1.
+A. Graph Representation Learning
+In the context of blockchain anomaly transaction detection,
+the underlying data are naturally organized as a transaction
+graph. We model the blockchain as a directed graph G = (V, E),
+where each node v ∈ V corresponds to an account (e.g., user
+address or contract), and each edge (u, v) ∈ E represents a
+transfer of assets or invocation of a smart contract between
+accounts. Node features encode behavioral statistics, such as
+transaction frequency, in/out degree, token types, and temporal
+patterns, enabling the model to distinguish normal and anomalous accounts.
+Formally, given G with |V| = N nodes, a GNN is defined
+[0]
+[0]
+[0]
+by a set of node input features X[0] = {x1 , x2 , . . . , xN } and
+an adjacency matrix A that represents the observed transaction
+relations between accounts. The hidden representation of node
+[]
+[]
+u at the -th layer is denoted by xu , where xu ∈ RF and F
+is the feature dimension at layer .
+Graph Convolutional Networks (GCNs) compute node representations using a first-order approximation of the graph spectrum, where the adjacency matrix A is fixed and encodes static
+transaction connectivity. Graph Attention Networks (GATs) extend GCNs by introducing an attention mechanism that optimizes node representations through a weighted aggregation of
+neighbor features. In the blockchain scenario, this means that
+an account can place higher attention on neighbors with more
+suspicious transaction patterns (e.g., hubs connected to many
+scams) and lower attention on benign or weakly related neighbors. Unlike the fixed normalization operation in GCNs, GATs
+enable each node to selectively attend to its neighbors based on
+contextual information in the local transaction neighborhood,
+thereby reducing reliance on global structural information. By
+stacking Masked Self-Attention Layers (MSALs), GATs capture
+the characteristics of neighboring accounts and assign weights
+according to their importance for anomaly detection. The updated node features are then computed based on these weights.
+Specifically, for node u and one of its neighbors v ∈ N (u) at
+layer , the attention score is first computed as
+
+
+[]
+(3)
+= Softmaxv∈N (u) a x[−1]
+U[] , x[−1]
+U[]
+αuv
+u
+v
+[]
+
+where αuv denotes the attention score from node u to node v, a(·)
+is a learnable neural network, and U[] is the trainable weight
+matrix at layer .
+These attention scores reflect the strength and importance of
+relationships between accounts in the blockchain transaction
+network. The normalized attention coefficient is given by
+
+
+[]
+exp LReLU(αuv )
+[]
+
+
+=
+α̃uv
+(4)
+[]
+exp
+LReLU(α
+)
+uq
+q∈N (u)
+[]
+
+where α̃uv represents the normalized attention score from node u
+to node v, and LReLU(·) is the LeakyReLU activation function.
+
+Algorithm 1: Graph-Based Continual Learning for
+Blockchain Anomaly Account Detection.
+Require: Blockchain anomaly transaction dataset Dktr
+constructed from historical blockchain records, where
+nodes correspond to accounts and edges encode
+transaction flows
+1: Initialize model parameters Θ1
+2: for each training epoch do
+3:
+Train the model on the first anomaly detection task
+using D1tr and compute the graph representation of
+the blockchain transaction graph G
+4:
+Infer node labels (normal vs. different abnormal
+account behaviors)
+5:
+Compute cross-entropy loss for anomaly
+classification
+6:
+Perform backpropagation and update parameters
+7: end for
+8: Obtain the optimal parameters for the first task Θ1
+9: for each subsequent anomaly detection task
+k ∈ {1, . . ., K − 1} do
+10:
+Set model parameters Θk+1 ← Θk to carry over
+knowledge of previously seen anomalous behaviors
+11:
+for each training epoch do
+12:
+Train the model on task k using Dktr , and compute
+the graph representation of G that encodes the
+evolving blockchain transaction network
+13:
+Infer node labels of G to distinguish anomalous
+from benign accounts for the current fraud
+category
+14:
+Compute cross-entropy loss for task Tk
+15:
+Perform backpropagation
+16:
+# Loss preservation (task-related anomaly
+detection performance)
+∂L
+17:
+Compute gradients on task k: gr (Xtrk ) = ∂θ
+r
+18:
+Obtain loss-based importance scores:
+(err)
+Ωk = [gr (Xtrk )]
+19:
+# Topology preservation (blockchain transaction
+structure)
+20:
+Compute topology-based importance scores:
+(top)
+[−1]
+Ωk = [qr (Zk )]
+21:
+# Continual learning update for evolving
+transaction anomalies
+22:
+Compute final importance scores for task Tk :
+(err)
+(top)
+Ωk = λ l Ω k + λ t Ω k
+23:
+Compute total loss:
+Lk+1 (Θ) = Ltot
+k+1 (Θ) + βΩk+1 1
+24:
+end for
+25:
+Obtain the optimal parameters for the current
+anomaly type Θk+1
+26: end for
+Ensure Final model parameters ΘK for multi-type
+blockchain anomaly account detection
+
+Finally, the updated feature representation of node u at the
+-th layer is computed as
+⎞
+⎛
+
+[] [−1] [] ⎠
+⎝
+(5)
+α̃uv
+xv U
+x[]
+u =φ
+v∈N (u)
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+Fig. 1.
+
+6067
+
+Overall framework of the TWP module in blockchain anomaly account detection.
+
+where φ(·) is a nonlinear activation function. The adjacency
+matrix A encodes the neighbor set N (u) for each node u
+and thus determines the aggregation pattern, which is a core
+component of GNN-based anomaly detection on transaction
+graphs.
+B. Topology-Aware Weight Preserving Module
+In a blockchain setting, anomalous behaviors are often reflected not only in individual account features but also in how
+accounts are wired together through transaction flows (e.g.,
+fan-in/fan-out structures, layered transfers, star-like scam clusters). The TWP module is designed to capture such topological
+information and identify key parameters that are crucial for
+both task-related anomaly classification and the preservation of
+meaningful transaction structures. The module consists of two
+main submodules: loss-preserving, which focuses on anomaly
+detection performance, and topology-preserving, which focuses
+on the structural patterns of the transaction graph. The overall
+framework is illustrated in Fig. 1.
+1) Loss-preserving submodule: After training on task Tk
+(e.g., detecting one specific category of anomalous accounts
+such as phishing or Ponzi schemes), the model obtains a set of
+optimized parameters Θk that minimize the classification loss
+for that task. However, not all parameters contribute equally
+to correctly identifying abnormal accounts and separating them
+from benign ones. Therefore, it is important to identify those
+parameters that are particularly critical for minimizing detection
+loss on the blockchain dataset.
+Given the training set Dktr of task Tk , the loss can be written as
+L(Xtrk ; Θ), where Xtrk contains the node features in Dktr , and Θ =
+{θr } denotes all network parameters. The loss change under an
+infinitesimal perturbation ΔΘ = {Δθr } can be approximated
+using a first-order Taylor expansion:
+
+L Xtrk ; Θ + ΔΘ − L Xtrk ; Θ ≈
+gr Xtrk Δθr
+(6)
+r
+
+where Δθr is the infinitesimal change of parameter θr , and
+∂L
+is the gradient of the loss with respect to θr ,
+gr (Xtrk ) = ∂θ
+r
+which approximates the contribution of θr to the overall anomaly
+detection loss.
+To preserve knowledge of task Tk when learning future tasks
+(i.e., new anomaly types or updated transaction patterns), it is
+desirable to stabilize parameters that are highly important for
+
+minimizing the loss. Similar to Elastic Weight Consolidation
+(EWC), the importance of parameter θr can be estimated using
+the magnitude of its gradient gr . Specifically, the loss-based
+importance scores of parameters for task Tk are defined as
+
+(err)
+Ωk = gr (Xtrk )
+(err)
+
+where Ωk reflects the degree to which each parameter contributes to minimizing the anomaly classification loss of task Tk .
+2) Topology-preserving submodule: This submodule aims to
+identify parameters that are essential for preserving learned
+topological information in the blockchain transaction graph.
+GAT is adopted as the backbone, where the attention coefficients between a central node and its neighbors are modeled
+as representations of local transaction topology (e.g., how sus[−1]
+picious funds propagate between accounts). Let Zu,v denote
+the pairwise embeddings of nodes u and v at layer  − 1. The
+topology-related score between node u and its neighbor v at
+layer  can be expressed as
+
+
+[]
+[]
+(7)
+= b Z[−1]
+γuv
+u,v ; Θ
+where b(·) is a neural network, and Θ[] denotes the subset of
+parameters at layer .
+Similar to the loss-preserving case, the change under an
+infinitesimal perturbation ΔΘ[] can be approximated by
+
+
+
+
+[]
+[]
+[−1]
+[]
+−
+b
+Z
+;
+Θ
++
+ΔΘ
+;
+Θ
+b Z[−1]
+u,v
+u,v
+
+ 
+Δθr (8)
+qr Z[−1]
+≈
+u,v
+r
+
+[−1]
+
+∂b
+where qr (Zu,v ) = ∂θ
+is the gradient of the topology score
+r
+[]
+
+γuv with respect to parameter θr .
+Unlike the scalar task loss, the topology scores around a
+central node form a multidimensional vector at layer . The
+topological loss of Dktr is defined as the squared 2 norm of
+this vector, and its gradient with respect to θr is computed as
+
+
+
+2
+∂ 
+ [] []
+[] 
+=
+(9)
+qr Z[−1]
+ γ1 , γ2 , . . . , γ|Dtr | 
+u,v
+k
+2
+∂θr
+[−1]
+
+where Zu,v is the output of the ( − 1)-th layer. The importance
+scores of all parameters with respect to the topology of task Tk
+
+6068
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+are then summarized as
+(top)
+Ωk =
+
+
+
+[−1]
+qr (Zk )
+
+
+
+(top)
+
+where Ωk
+contains topology-related importance scores of
+all parameters. In practice, topology scores computed in the
+intermediate layers of the GNN are used to represent local
+structural patterns of the blockchain transaction graph.
+3) Final importance score: The final importance score of parameters Θ for task Tk is computed by combining the loss-based
+and topology-based components:
+(err)
+
+Ωk = λ l Ω k
+
+(top)
+
++ λ t Ωk
+
+(10)
+
+where λl and λt are hyperparameters that balance the contributions of loss-preserving and topology-preserving terms.
+Parameters with low importance scores can be updated more
+freely during new task learning (thus adapting to new forms of
+blockchain fraud), while stabilizing highly important parameters
+reduces the risk of catastrophic forgetting of previously observed
+anomaly patterns.
+C. Continual Learning on GNNs
+After each anomaly detection task is learned, the proposed
+TWP module is used to evaluate the importance of all parameters. When learning a new task Tk+1 , the goal is not only
+to improve detection performance on the new task, but also
+to preserve knowledge from previous tasks by maintaining the
+stability of important parameters. This is achieved by penalizing
+changes to parameters that were identified as critical for past
+tasks.
+Let Θs denote the optimal parameters obtained for task Ts
+and Ωs the corresponding importance scores. The task-specific
+loss for training task Tk+1 is defined as
+cur
+Ltot
+k+1 (Θ) = Lk+1 (Θ) +
+
+k
+
+
+Ωs
+
+(Θ − Θs )2
+
+(11)
+
+s=1
+
+where denotes element-wise multiplication, Lcur
+k+1 (Θ) is the
+standard anomaly classification loss on Tk+1 , and the square
+is taken element-wise. This strategy ensures that parameters
+with low importance can be freely updated to adapt to the new
+fraudulent patterns, while modifications to parameters with high
+importance incur a larger penalty, thereby preserving knowledge
+of previously detected blockchain anomalies.
+To further enhance model flexibility, the lowest importance
+scores must also be reduced. While preserving important parameters helps retain knowledge of previous tasks, it risks reducing
+the model’s plasticity and limiting its ability to learn subsequent
+anomaly types. To preserve sufficient model capacity for future
+tasks, an 1 regularization term is applied to minimize the
+importance scores of parameters computed from the current task.
+The total loss for training task Tk+1 is thus given by
+
+
+
+
+Lk+1 (Θ) = Ltot
+(12)
+k+1 (Θ) + β Ωk+1 1
+where β is a hyperparameter that controls the capacity reserved
+for future anomaly detection tasks, and Ωk+1 represents the importance scores of all parameters for the current task, computed
+
+using the proposed TWP module. A larger value of β encourages
+sparser importance patterns, thereby preserving more learning
+capacity for future blockchain anomalies.
+The proposed method can be easily extended to GNNs that
+do not include an attention mechanism, such as GCN and GIN,
+making it applicable to arbitrary GNN architectures. A nonparametric attention-like mechanism can be added to construct
+the topology, formulated as
+
+
+
+
+[]
+= x[−1]
+U[] tanh x[−1]
+U[]
+(13)
+γuv
+u
+v
+[]
+
+where the score γuv depends on the transformed distance or compatibility between node u and its neighbor v in the transaction
+graph. These scores are then normalized across all neighbors
+of u to obtain attention-like coefficients. Given the constructed
+topology, the proposed TWP module can be directly applied to
+any GNN. It should be noted that while these topology scores are
+constructed between nodes, they are used solely within the TWP
+module. The backbone model itself still relies on its original
+graph structure to aggregate and update node features.
+Overall, this continual learning framework enables GNNbased anomaly detection models to adapt to evolving blockchain
+transaction patterns while mitigating catastrophic forgetting. By
+explicitly combining loss-based and topology-based importance
+estimation on transaction graphs, the proposed scheme enhances
+both adaptability and long-term stability in blockchain security
+tasks, making it suitable for realistic deployments where new
+fraudulent behaviors continually emerge over time.
+V. EXPERIMENTS
+This section evaluates the effectiveness of our scheme on
+blockchain transaction data. All experiments were conducted
+in a Python 3.7 environment to ensure stability and compatibility. The model was implemented primarily with PyTorch
+1.8.1, running on CUDA 10.1. Supporting libraries included
+Numpy, Scipy, and Scikit-Learn for numerical computation and
+machine learning tasks, NetworkX for graph data processing,
+and Matplotlib for visualization. To enhance graph learning,
+we also employed the OGB benchmark, Deep Graph Library
+(DGL), and DGLLife for domain-specific tasks. All experiments
+were performed on a workstation equipped with an Intel Core
+i9-10920X CPU @ 3.50 GHz, an NVIDIA RTX 3090 GPU with
+24 GB of memory, running Ubuntu 20.04.
+For dataset construction, we obtained blockchain transaction
+data from the CryptoScamDB platform. Among them, nineteen
+categories of anomalous transaction behaviors with relatively
+large sample sizes were selected, including labels such as Ponzi
+schemes and phishing. To facilitate account-level data extraction
+and organization, we used a Python-based blockchain interaction tool developed by Sokolowska1 . This tool enables the
+identification of accounts that participate in transactions within
+a specified block range. By applying it to filter overlapping
+and duplicate accounts, we obtained the corresponding normal
+transaction data. Together with the anomalous categories, this
+1 https://github.com/validitylabs/EthereumDB
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+resulted in a total of 20 labeled classes of transaction behaviors,
+forming a relatively comprehensive and complex dataset for
+evaluation.
+To construct the continual learning tasks, we organized the
+dataset by anomaly type, where each of the 19 categories of
+abnormal account behaviors constitutes a distinct anomaly detection task. This design ensures both comprehensiveness and
+diversity of the continual learning setting. By defining tasks
+according to different types of fraudulent activities, the experimental framework can evaluate the model’s ability to adapt to
+heterogeneous anomaly patterns while preserving knowledge
+from previously learned tasks. This construction also enables
+a more realistic assessment of the proposed framework’s longterm stability and adaptability in dynamic blockchain environments.
+In the following part, we begin by introducing the evaluation
+metrics used to assess both anomaly detection accuracy and continual learning stability. Next, we describe the baseline models
+for comparison and outline the hyperparameter configurations
+adopted in our experiments. We then report the anomaly detection results, followed by an analysis of catastrophic forgetting to
+highlight the effectiveness of the proposed approach in retaining
+past knowledge while adapting to new tasks.
+
+Macro-F1 =
+
+2 × Macro-Pre × Macro-Rec
+.
+Macro-Pre + Macro-Rec
+
+Micro-F1 =
+
+2 × Micro-Pre × Micro-Rec
+.
+Micro-Pre + Micro-Rec
+
+n
+
+Macro-Pre =
+
+T Pi
+1
+,
+n i=1 T Pi + F Pi
+
+Macro-Rec =
+
+T Pi
+1
+,
+n i=1 T Pi + F Ni
+
+(15)
+
+n
+
+(16)
+
+(20)
+
+2) Continual learning: We further evaluate the model with
+Average Performance (AP) and Average Forgetting (AF), which
+reflect the plasticity–stability trade-off.
+Let M ∈ RN ×N denote the performance matrix across N
+sequential tasks, where Mi,j represents the performance on task
+Tj after training up to task Ti .
+Average Performance after task Tk is defined as:
+k
+
+A. Evaluation Metrics
+
+Macro metrics compute per-class scores first and then take the
+unweighted mean across classes. Specifically, Macro-Pre measures the average precision across classes; Macro-Rec measures
+the average recall across classes; Macro-F1 combines precision
+and recall into a single comprehensive score.
+
+(17)
+
+Micro metrics are sample-weighted averages in which each
+sample contributes equally. We then compute Micro-Pre, MicroRecall, and Micro-F1; these reflect the model’s performance
+over individual samples, giving equal weight to every sample.
+n
+P
+i=1 T
+ni
+
+,
+(18)
+Micro-Pre = n
+T
+P
++
+i
+i=1
+i=1 F Pi
+n
+P
+i=1 T
+ni
+Micro-Rec = n
+,
+(19)
+T
+P
++
+i
+i=1
+i=1 F Ni
+
+APk =
+The proposed model addresses two challenges: (i) detecting
+anomalous blockchain transactions, and (ii) mitigating catastrophic forgetting. Accordingly, we evaluate its performance
+from two complementary perspectives: anomaly detection and
+continual learning.
+We begin by introducing the notation used throughout this
+subsection. Let n denote the number of classes. For each class
+i ∈ {1, . . . , n}, let T Pi , F Pi , F Ni , and T Ni represent the
+numbers of true positives, false positives, false negatives, and
+true negatives, respectively, measured on the test set.
+1) Anomaly detection: Since blockchain anomaly detection
+with GNNs can be formulated as a multi-class classification
+problem, we adopt standard evaluation metrics commonly used
+in deep learning: Accuracy, and the Macro/Micro averages of
+Precision, Recall, and F1-score.
+Accuracy measures the proportion of correctly classified samples across the entire test set:
+n
+T Pi
+
+.
+(14)
+Accuracy = n i=1
+(T
+P
+i + F Ni )
+i=1
+
+6069
+
+1
+Mk,i .
+k i=1
+
+(21)
+
+APk reflects the mean performance over all tasks learned up to
+step k, capturing the model’s overall effectiveness throughout
+continual training. A higher AP value indicates stronger cumulative learning performance.
+Average Forgetting after task Tk is computed as:
+AFk =
+
+k−1
+1 
+(Mi,i − Mk,i ) , 2 ≤ k ≤ N.
+k − 1 i=1
+
+(22)
+
+AFk measures the average degradation in performance on previously learned tasks T1 , . . . , Tk−1 after completing task Tk . For
+each task Ti , the difference Mi,i − Mk,i quantifies how much
+performance has decayed since Ti was first learned. Lower AF
+values indicate better resistance to catastrophic forgetting.
+In summary, Macro/Micro metrics provide a comprehensive
+evaluation of anomaly detection effectiveness from class- and
+sample-level perspectives, while AP and AF quantify continual learning stability. Together, they form a unified evaluation
+framework for assessing both detection accuracy and continual
+learning robustness.
+B. Baseline Models
+To validate the anomaly detection performance of our method,
+we compare it with two representative GNN architectures: the
+Graph Convolutional Network (GCN) and the Graph Isomorphism Network (GIN). Both are widely used and have shown
+strong results across various graph-learning tasks:
+1) GCN [140]: Designed to process graph-structured data
+by aggregating node features from neighbors, GCN effectively leverages both node attributes and structural
+information.
+
+6070
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE III
+HYPERPARAMETERS OF OUR MODEL
+
+2) GIN [141]: A more expressive variant of GNNs, GIN
+captures complex dependencies and diverse structural
+patterns, demonstrating strong representational power for
+heterogeneous graphs.
+We also consider Graph Attention Networks (GATs), which
+improve upon GCNs by applying learnable, feature-dependent
+attention weights rather than uniform neighbor aggregation.
+This makes them directly compatible with the Topology-aware
+Weight Preservation (TWP) module. For GCNs, attention coefficients are constructed before applying TWP, while for GINs,
+node embeddings before pooling are used to compute parameter
+importance.
+To further assess both classification accuracy and resistance
+to catastrophic forgetting, our method is compared with a bare
+model (without continual learning) and five state-of-the-art continual learning approaches, all implemented on the same GAT
+backbone for fairness:
+1) Bare model (Bare): GNN without continual learning;
+serves as the lower bound.
+2) Elastic Weight Consolidation (EWC) [122]: Penalizes
+changes to important parameters to preserve prior knowledge.
+3) Memory Aware Synapses (MAS) [125]: Estimates parameter importance via sensitivity analysis in an online manner.
+4) Gradient Episodic Memory (GEM) [142]: Stores representative samples in memory and constrains gradients to
+avoid increasing past-task loss.
+5) Learning Without Forgetting (LwF) [123]: Uses knowledge distillation to retain outputs from previous models.
+6) Experience Replay GNN (ER-GNN) [132]: Incorporates
+replay of representative nodes from prior tasks.
+7) Joint Training (Joint): Trains on all tasks simultaneously;
+free from forgetting, serving as the performance upper
+bound.
+C. Hyperparameter Settings
+For the algorithms introduced in this subsection, the primary
+focus is on the optimal settings of the TWP module and the
+Graph Attention Network (GAT), as these parameters have a
+crucial impact on both model performance and generalization.
+Table III shows the hyperparameters in our model.
+In the TWP module, λl is set to 10000 to ensure stability
+of the topological structure. The parameter λt is chosen within
+the range [100, 10000]; after experimental evaluation, 1000 is
+selected as the optimal value, striking a balance between model
+complexity and performance. The classification performance
+under different λt values is shown in Fig. 2, where the chosen value consistently outperforms alternatives across multiple
+metrics.
+Similarly, β is tuned between 0.1 and 0.01, with the best
+results achieved at 0.01. The comparison is presented in Fig. 3.
+This value is applied consistently across all tasks to ensure stable
+performance.
+GAT, a graph neural network based on the attention mechanism, is adopted to process graph-structured data and learn
+node representations. Its hyperparameters are carefully tuned to
+optimize performance on the blockchain transaction dataset.
+
+Fig. 2.
+
+Effect of different λt values on model performance.
+
+Fig. 3.
+
+Effect of different β values on model performance.
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+Fig. 4.
+
+6071
+
+Impact of hidden unit number on model performance.
+
+First, the number of attention layers is set to one, maintaining
+simplicity and reducing computational complexity. Second, the
+number of hidden units in each layer is examined. For highaccuracy classification, this parameter must be carefully chosen:
+increasing hidden units improves representational capacity but
+risks overfitting, while too few units may underfit and fail to
+capture sufficient features. Experiments test 32, 64, and 128
+hidden units, as shown in Fig. 4. Results indicate that 64 hidden units generally yield the best performance, outperforming
+other settings in most metrics. For example, accuracy with 64
+hidden units is about 0.5% higher than with the other values.
+Although 128 units slightly improve Macro-Pre and Macro-F1,
+the trade-off favors 64, which balances model efficiency and
+representational power.
+In addition, each GAT layer is configured with 8 attention
+heads, enabling nodes to attend to information from eight different perspectives, thereby enhancing representational richness.
+The output attention heads are set to 1, meaning only a single
+aggregated attention vector is used in the final stage.
+To prevent overfitting, both feature dropout and attention dropout rates are set to 0.6. The activation function is
+LeakyReLU with a negative slope of 0.2, which mitigates the
+vanishing gradient problem and improves learning stability.
+Residual connections are disabled to simplify the model and
+avoid unnecessary complexity.
+The batch size is fixed at 200, and the learning rate is set to
+0.005. The Adam optimizer is selected due to its adaptive learning rate adjustment and fast convergence properties, ensuring
+stable and efficient training. The number of training epochs is
+set to 200 to allow sufficient convergence. The dataset is split
+into 60% training, 20% validation, and 20% test subsets, which
+is a widely adopted configuration.
+Overall, these hyperparameters are carefully tuned to achieve
+optimal performance and generalization on blockchain transaction datasets, while maintaining a lightweight and interpretable
+model. They form a solid foundation for subsequent experiments
+and comparisons.
+
+Fig. 5. Comparison of anomaly detection performance across tasks using
+different GNN backbones. Each subfigure shows the evolution of key metrics
+(Accuracy, Recall, Precision, and F1 Score) over 20 epochs.
+
+For consistency across baselines, the regularization hyperparameters of EWC and MAS are fixed at 10,000, ensuring a
+fair comparison under the same experimental conditions. These
+carefully selected settings guarantee the scientific rigor and reliability of the experiments, while providing valuable references
+for future research.
+D. Anomaly Detection Results
+In this subsection, classification tasks are used to evaluate
+the effectiveness of the proposed model in detecting anomalous
+blockchain accounts. For comparison, the graph-based deep
+learning backbone in the proposed model is replaced with other
+commonly used architectures for anomaly detection, namely
+GCN and GIN, while keeping all other algorithms and parameters unchanged.
+As shown in Fig. 5, we experimentally evaluate the performance of GCN, GIN, and GAT on the blockchain anomalous
+transaction dataset. Following the evaluation metrics defined
+before, classification results are obtained for each type of account in every task. The curves in the figure represent accuracy,
+precision, recall, and F1-score after adding all tasks.
+From accuracy and recall, it is clear that, except for a few
+cases, GAT consistently achieves the highest classification accuracy and recall. The GCN-based model performs better than
+the GIN-based model overall. In terms of precision, the performance of the proposed model is less stable than for the
+other two metrics, with results close to those of GCN and
+GIN on many tasks, but still superior overall. Consequently, for
+the F1-score, the proposed model with GAT achieves the best
+performance, with smoother trends than the other two GNN
+backbones, indicating more stable detection efficiency. Taken
+together, the multi-task classification results demonstrate the
+advantage of GAT in modeling complex graph structures and
+
+6072
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE IV
+EVALUATION METRICS UNDER DIFFERENT GNN BACKBONES
+
+TABLE V
+PERFORMANCE COMPARISON OF DIFFERENT METHODS
+
+achieving optimal classification across categories. In summary,
+the GAT-based model outperforms traditional GCN-based approaches for blockchain anomaly detection, and the F1 results
+further validate the effectiveness and stability of our framework.
+Additionally, Table IV presents experimental results using
+GCN, GIN, and GAT, with Micro-F1 and Macro-F1 adopted as
+evaluation metrics. The reported values are mean scores, with
+standard deviations shown in parentheses. From the perspective of Micro-F1, the three GNN backbones achieve 83.89%,
+83.832%, and 90.126%, respectively. These results indicate
+that GAT achieves the highest classification accuracy, as it is
+able to capture higher-order structural information and richer
+meta-paths. Similarly, from the perspective of Macro-F1, the
+models achieve 79.928%, 76.31%, and 83.97%, respectively,
+again showing that GAT performs best. The trends are consistent
+with those observed in Micro-F1.
+In summary, consistent with the findings in Fig. 5, GAT
+demonstrates superior performance on classification tasks involving complex graph structures, thereby validating the effectiveness of the proposed model. Moreover, the relatively small
+standard deviations indicate stable performance across tasks.
+E. Catastrophic Forgetting
+In anomalous transaction detection on blockchains, quantitative comparison is essential for evaluating the strengths and
+weaknesses of different continual learning strategies. The results
+of several baseline methods and our proposed approach are summarized in Table V, which reports two key evaluation metrics:
+AP and AF. AP measures the average classification accuracy
+across all learned tasks, reflecting the model’s overall detection
+capability and adaptability to new anomalous behaviors. In contrast, AF quantifies the average degradation in performance on
+previously learned tasks after the model learns new ones, thereby
+indicating the degree of catastrophic forgetting. In general,
+higher AP and lower AF jointly represent stronger continual
+
+learning ability, striking a balance between plasticity (adaptation
+to new tasks) and stability (retention of prior knowledge).
+Table V presents the comparative results across seven continual learning methods and a joint training upper bound. Each
+value in the table represents the mean and standard deviation
+over multiple runs. The bare model achieves moderate AP
+but exhibits the highest AF, confirming that standard GNNs
+suffer severe catastrophic forgetting when trained sequentially.
+Among continual learning baselines, methods such as GEM and
+MAS effectively mitigate forgetting and substantially improve
+AP. However, EWC, despite achieving the lowest AF (0.35%),
+sacrifices plasticity, resulting in nearly an 8% drop in AP compared with our method. This trade-off highlights that minimizing
+forgetting alone does not ensure high overall performance, and
+that a successful continual learner must simultaneously preserve
+past knowledge and remain responsive to new data.
+Our proposed model achieves the best balance, ranking first
+in AP (88.48%) and maintaining one of the lowest AF values
+(0.46%). These results demonstrate that the TWP mechanism
+enables the model to retain learned representations while continually integrating novel patterns, thereby addressing the stabilityplasticity dilemma more effectively than other baselines.
+The joint training strategy, which learns all tasks simultaneously using full access to past data, serves as an upper-bound
+reference. Although it achieves slightly higher AP (89.32%) and
+minimal AF (0.11%), such an approach is infeasible in practical
+continual learning scenarios where data from previous tasks are
+not accessible. The close performance of our model to this upper
+bound confirms its scalability and robustness for real-world
+blockchain anomaly detection under realistic sequential learning
+conditions.
+Fig. 6 further illustrates the performance trend of the first
+task as the number of learned tasks increases. As expected,
+performance on the first task gradually declines with the introduction of new tasks, which is an intuitive manifestation of
+catastrophic forgetting. Some baselines (e.g., ER-GNN) occasionally outperform our model on the first task, but their results
+fluctuate significantly, reflecting unstable detection efficiency.
+By contrast, the proposed model exhibits more stable behavior,
+with a much slower decline in performance than competing
+methods.
+Fig. 7 presents the evolution of average performance across
+all tasks. Similar to Fig. 6, performance generally declines as
+new tasks are introduced. Nevertheless, our method consistently
+achieves the lowest AF among all approaches, with performance
+levels approaching the theoretical upper bound. This demonstrates its ability to effectively preserve knowledge from earlier
+tasks while maintaining strong adaptability to new ones.
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+Fig. 6.
+
+Average performance on the first task.
+
+Fig. 7.
+
+Average performance across all tasks.
+
+Among the baselines, LwF is a commonly used approach that
+seeks to mitigate forgetting by expanding network layers with
+new nodes for each task. However, as shown in Fig. 7, its performance is often close to the lower bound for multi-class node
+classification, indicating limited adaptability of LwF to GNNs.
+Similarly, GEM employs memory replay by storing subsets of
+past data, but its performance is unstable and occasionally drops
+sharply, likely due to inefficient or rigid replay strategies.
+In contrast, EWC and MAS, both of which constrain updates
+to important parameters, deliver stronger results, confirming the
+effectiveness of protecting critical parameters as a means of
+reducing forgetting. Building on this idea, we further incorporate topology-aware parameter importance into these methods,
+which enhances their performance and strengthens their ability
+to address catastrophic forgetting in GNNs.
+In summary, our scheme achieves superior performance
+across multiple metrics on the blockchain anomaly detection
+dataset. Detailed analysis of experimental results confirms that
+the method offers significant advantages in mitigating forgetting,
+preserving knowledge from previous tasks, and maintaining
+strong performance when learning new tasks.
+
+6073
+
+VI. DISCUSSION
+The experimental results presented in Section V demonstrate
+the effectiveness of the proposed graph-based continual learning framework for blockchain anomaly detection. This section
+provides a deeper interpretation of these results, discusses their
+practical implications, acknowledges the limitations of our current work, and outlines potential directions for future research.
+
+A. Interpretation of Results
+The superior performance of our model, particularly when
+using GAT as the backbone network, can be attributed to the
+synergistic effect of its core components. The attention mechanism inherent in GAT allows the model to dynamically weigh the
+importance of neighboring nodes and transactions, which is crucial for identifying subtle and complex fraudulent patterns that
+often involve coordinated activities across multiple accounts.
+This capability is especially valuable in blockchain ecosystems,
+where the relational structure between entities carries significant
+signals for anomaly detection.
+
+6074
+
+More importantly, the introduced Topology-aware Weight
+Preservation (TWP) module successfully addresses the core
+challenge of catastrophic forgetting in continual learning. By
+estimating parameter importance based on both task-specific
+loss and local topological structures, the TWP module provides a
+more nuanced and effective regularization strategy than methods
+that consider only loss gradients (e.g., EWC) or generic parameter sensitivity (e.g., MAS). The results in Table V and Figs. 6–7
+confirm that our approach achieves an excellent balance between
+stability (low AF) and plasticity (high AP), outperforming other
+state-of-the-art continual learning methods. This indicates that
+explicitly modeling the graph topology is not only beneficial
+for the primary detection task but also critical for preserving
+knowledge in a sequential learning setting.
+B. Practical Implications
+The proposed framework provides a scalable and deployable solution for real-world blockchain security monitoring. In
+operational environments, new types of attacks and fraudulent
+schemes continually emerge, while transaction volumes grow
+rapidly. The capability to incrementally learn novel anomalous
+patterns, without retraining from scratch on the entire historical
+dataset, offers substantial advantages in both computational
+efficiency and resource utilization.
+Experimental evaluations on 19 distinct categories of
+blockchain risk behaviors demonstrate that the proposed approach can not only detect well-known threats such as phishing
+and Ponzi schemes, but also adaptively learn the characteristics
+of newly emerging risks. This continual learning ability enables
+the framework to evolve alongside adversarial tactics, thereby
+enhancing its practicality for long-term, adaptive blockchain
+anomaly detection and contributing to sustained ecosystem
+protection.
+The proposed method primarily targets the identification
+of abnormal accounts in account-based blockchains such as
+Ethereum, where nodes represent accounts and edges correspond to transactions. To extend the approach to UTXO-based
+systems (e.g., Bitcoin), an additional address-aggregation process is required to map multiple addresses controlled by the
+same entity into a single node. This can be accomplished by
+constructing an entity graph that groups related addresses likely
+belonging to the same user, as described in prior studies [54],
+[143]. After entity aggregation, the resulting structure becomes
+conceptually equivalent to the Ethereum account graph, allowing the same continual learning framework to be applied
+for anomaly detection. When transferring to UTXO-based systems, Ethereum-specific features (e.g., smart contract attributes)
+should be excluded from training to ensure consistency and
+comparability across blockchain types.
+From a deployment perspective, the framework exhibits three
+key advantages. First, its modular architecture allows integration
+with various GNN backbones (e.g., GCN, GIN, GAT), enabling
+flexible adaptation to diverse blockchain infrastructures with
+minimal architectural changes. Second, the incremental update process significantly reduces retraining costs, making it
+suitable for security systems that require frequent updates on
+continuously streaming blockchain data. Third, the design is
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+compatible with distributed or federated training settings, which
+could further enhance scalability when monitoring multiple
+blockchain networks simultaneously.
+However, large-scale deployment also introduces challenges.
+Maintaining real-time performance under high transaction
+throughput may require distributed graph processing and optimized GPU scheduling. Moreover, as the number of incremental
+tasks grows, the accumulated parameter regularization terms
+could increase memory consumption. These aspects suggest
+that practical deployments may benefit from adaptive pruning
+or periodic model compression strategies.
+C. Limitations and Future Directions
+While the proposed framework shows promising results, our
+study has several limitations that also chart a course for future
+research.
+r Task-Incremental Setting: Our current framework operates
+in a task-incremental learning setting, where task boundaries are clearly defined and known during training. However, in a real-world deployment, anomalies may emerge
+in a more blurred and task-agnostic stream. To overcome
+this limitation, future work will focus on developing a
+task-free or class-incremental adaptation of our topologyaware preservation strategy, enabling effective learning
+from a continuous, non-stationary stream of transaction
+data without explicit task boundaries.
+r Dependency on Label Quality: The performance of the
+model is inherently tied to the quality and timeliness of
+the labels used for each task. Label scarcity and potential
+labeling noise in blockchain data remain persistent challenges. To address this, we plan to explore integrating selfsupervised pre-training and semi-supervised learning techniques into our continual learning paradigm. This would
+mitigate the dependency on large amounts of meticulously
+labeled data for each new task, enhancing the framework’s
+robustness and practicality.
+r Computational Overhead and Scalability: Although the
+proposed approach avoids full retraining, calculating
+topology-aware importance scores still introduces nonnegligible computational overhead. For high-throughput
+or multi-chain monitoring scenarios, this may affect realtime responsiveness. Future work will investigate efficient
+approximations for the TWP module, such as importance
+sampling, sparse parameter updates, or low-rank approximations, to reduce memory and time costs. Additionally,
+integrating the method into parallelized graph processing
+frameworks could further enhance scalability for industrial
+deployment.
+r Potential Failure Cases: The framework assumes that the
+graph structure sufficiently captures relationships relevant
+to fraud detection. In scenarios where malicious behavior
+is intentionally obfuscated or dispersed across unrelated
+transactions, graph-based correlations may weaken, leading to reduced detection sensitivity. Exploring hybrid architectures that combine graph-based learning with temporal
+or semantic anomaly modeling represents an important
+future direction.
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+In conclusion, the discussion highlights that our proposed
+method is not only effective but also lays a foundation for
+building more adaptive, efficient, and robust security systems
+for the evolving blockchain landscape. The identified limitations
+provide a clear roadmap for future research to enhance the
+framework’s practicality and performance.
+VII. CONCLUSION
+This paper presented a graph-based continual learning framework for anomalous account detection in blockchain systems.
+The proposed approach achieves high detection accuracy while
+effectively mitigating catastrophic forgetting, a long-standing
+challenge in dynamic environments. At its core, the TopologyAware Weight Preservation module captures structural dependencies within transaction graphs and evaluates parameter importance from both task-specific and topological perspectives.
+By constraining updates to critical parameters, the model preserves past knowledge while adapting to new transaction patterns.
+Beyond its empirical success, the framework demonstrates
+strong potential for real-world blockchain security deployment.
+Its modular architecture supports integration with various GNN
+backbones, and its incremental update mechanism substantially
+reduces retraining costs, enabling continuous monitoring over
+large-scale blockchain data streams. Nonetheless, practical scalability introduces additional challenges, including the need for
+distributed processing, efficient memory management, and lowlatency inference under high transaction throughput. Addressing
+these challenges is key to bridging the gap between research
+prototypes and production-ready systems.
+Future work will explore task-free or class-incremental continual learning to handle continuously evolving transaction
+streams without explicit task boundaries, as well as selfsupervised and semi-supervised extensions to alleviate reliance
+on labeled data. Moreover, hybrid architectures that combine
+graph-based structural reasoning with temporal and semantic
+representations may further enhance robustness against obfuscated or cross-chain fraudulent activities.
+In summary, this study establishes a foundation for continual,
+topology-aware graph learning in blockchain anomaly detection,
+advancing toward scalable, adaptive, and intelligent security
+systems capable of protecting decentralized ecosystems in the
+long term.
+REFERENCES
+[1] Y. Chen and C. Bellavitis, “Blockchain disruption and decentralized
+finance: The rise of decentralized business models,” J. Bus. Venturing
+Insights, vol. 13, 2020, Art. no. e00151, doi: 10.1016/j.jbvi.2019.e00151.
+[2] J. Proelss, S. Sévigny, and D. Schweizer, “GameFi: The perfect symbiosis
+of blockchain, tokens, DeFi, and NFTs?,” Int. Rev. Financial Anal.,
+vol. 90, 2023, Art. no. 102916.
+[3] B. Liu, P. Szalachowski, and J. Zhou, “A first look into DeFI oracles,”
+in Proc. 3rd IEEE Int. Conf. Decentralized Appl. Infrastructures, 2021,
+pp. 39–48.
+[4] Z. Xu, J. Zhang, Z. Song, Y. Liu, J. Li, and J. Zhou, “A scheme
+for intelligent blockchain-based manufacturing industry supply chain
+management,” Computing, vol. 103, no. 8, pp. 1771–1790, 2021,
+doi: 10.1007/s00607-020-00880-z.
+
+6075
+
+[5] N. Patel, A. Shukla, S. Tanwar, and D. Singh, “KRanTi: Blockchain-based
+farmer’s credit scheme for agriculture-food supply chain,” Trans. Emerg.
+Telecommun. Technol., vol. 35, no. 4, pp. 1–16, 2024.
+[6] M. Uddin, “Blockchain Medledger: Hyperledger fabric enabled drug
+traceability system for counterfeit drugs in pharmaceutical industry,” Int. J. Pharmaceutics, vol. 597, 2021, Art. no. 120235,
+doi: 10.1016/j.ijpharm.2021.120235.
+[7] S. Aich et al., “Protecting personal healthcare record using blockchain
+federated learning technologies,” in Proc. Int. Conf. Adv. Commun.
+Technol., 2021, pp. 109–112.
+[8] P. Bhattacharya, S. Tanwar, U. Bodkhe, S. Tyagi, and N. Kumar,
+“BinDaaS: Blockchain-based deep-learning as-a-service in healthcare 4.0 applications,” IEEE Trans. Netw. Sci. Eng., vol. 8, no. 2,
+pp. 1242–1255, Apr.–Jun. 2021.
+[9] A. Azaria, A. Ekblaw, T. Vieira, and A. Lippman, “MedRec: Using
+blockchain for medical data access and permission management,” in Proc.
+2nd Int. Conf. Open Big Data, 2016, pp. 25–30.
+[10] J. Leng, M. Zhou, J. L. Zhao, Y. Huang, and Y. Bian, “Blockchain
+security: A survey of techniques and research directions,” IEEE Trans.
+Servi. Comput., vol. 15, no. 4, pp. 2490–2510, Jul./Aug. 2022.
+[11] S. Foley, J. R. Karlsen, and T. J. Putnins, “Sex, drugs, and bitcoin:
+How much illegal activity is financed through cryptocurrencies?,” Rev.
+Financial Stud., vol. 32, no. 5, pp. 1798–1853, 2019.
+[12] M. Bartoletti, S. Carta, T. Cimoli, and R. Saia, “Dissecting ponzi schemes
+on ethereum: Identification, analysis, and impact,” Future Gener. Comput.
+Syst., vol. 102, pp. 259–277, 2020.
+[13] J. Lorenz, M. I. Silva, D. Aparício, J. T. Ascensão, and P. Bizarro,
+“Machine learning methods to detect money laundering in the bitcoin
+blockchain in the presence of label scarcity,” in Proc. 1st ACM Int. Conf.
+AI Finance, 2020, Art. no. 23.
+[14] K. Faber, R. Corizzo, B. Sniezynski, and N. Japkowicz, “Lifelong continual learning for anomaly detection: New challenges, perspectives, and
+insights,” IEEE Access, vol. 12, pp. 41364–41380, 2024.
+[15] W. W. Lo, G. K. Kulatilleke, M. Sarhan, S. Layeghy, and M.
+Portmann, “Inspection-L: Self-supervised GNN node embeddings for
+money laundering detection in bitcoin,” Appl. Intell., vol. 53, no. 16,
+pp. 19406–19417, 2023.
+[16] R. Tan, Q. Tan, P. Zhang, and Z. Li, “Graph neural network for Ethereum
+fraud detection,” in Proc. 12th IEEE Int. Conf. Big Knowl., 2021,
+pp. 78–85.
+[17] L. Chen, J. Peng, Y. Liu, J. Li, F. Xie, and Z. Zheng, “Phishing scams detection in Ethereum transaction network,” ACM Trans. Internet Technol.,
+vol. 21, no. 1, pp. 1–16, 2021.
+[18] D. Lin, J. Wu, Q. Yuan, and Z. Zheng, “T-EDGE: Temporal WEighted
+MultiDiGraph embedding for Ethereum transaction network analysis,”
+Front. Phys., vol. 8, pp. 1–9, 2020.
+[19] R. Tan, Q. Tan, Q. Zhang, P. Zhang, Y. Xie, and Z. Li, “Ethereum fraud
+behavior detection based on graph neural networks,” Computing, vol. 105,
+no. 10, pp. 2143–2170, 2023, doi: 10.1007/s00607-023-01177-7.
+[20] R. Hadsell, D. Rao, A. A. Rusu, and R. Pascanu, “Embracing change:
+Continual learning in deep neural networks,” Trends Cogn. Sci., vol. 24,
+no. 12, pp. 1028–1040, 2020, doi: 10.1016/j.tics.2020.09.004.
+[21] X. Zhang, D. Song, and D. Tao, “Continual learning on graphs: Challenges, solutions, and opportunities,” Feb. 2024, arXiv:2402.11565.
+[22] L. Wang, X. Zhang, H. Su, and J. Zhu, “A comprehensive survey of
+continual learning: Theory, method and application,” IEEE Trans. Pattern
+Anal. Mach. Intell., vol. 46, no. 8, pp. 5362–5383, Aug. 2024.
+[23] S. Li, R. Wang, H. Wu, S. Zhong, and F. Xu, “SIEGE: Self-supervised
+incremental deep graph learning for Ethereum phishing scam detection,”
+in Proc. 31st ACM Int. Conf. Multimedia, New York, NY, USA, 2023,
+pp. 8881–8890, doi: 10.1145/3581783.3612461.
+[24] P. Bielak, K. Tagowski, M. Falkiewicz, T. Kajdanowicz, and N. V.
+Chawla, “FILDNE: A framework for incremental learning of dynamic networks embeddings,” Knowl.-Based Syst., vol. 236, Nov. 2020,
+Art. no. 107453.
+[25] U. Hercog and A. Povše, “Taint analysis of the bitcoin network,” 2019,
+arXiv:1907.01538.
+[26] K. Toyoda, T. Ohtsuki, and P. T. Mathiopoulos, “Multi-class bitcoinenabled service identification based on transaction history summarization,” in Proc. IEEE Int. Congr. Cybern.: IEEE Conf. Internet Things
+Green Comput. Commun. Cyber Phys. Social Comput. Smart Data
+Blockchain Comput. Inf. Technol., 2018, pp. 1153–1160.
+[27] P. Nerurkar, Y. Busnel, R. Ludinard, K. Shah, S. Bhirud, and D. Patel,
+“Detecting illicit entities in bitcoin using supervised learning of ensemble
+decision trees,” in Proc. ACM Int. Conf., 2020, pp. 25–30.
+
+6076
+
+[28] E. P. Ruiz and J. Angelis, “Combating money laundering with machine learning–applicability of supervised-learning algorithms at cryptocurrency exchanges,” J. Money Laundering Control, vol. 25, no. 4,
+pp. 766–778, 2022.
+[29] G. Vlahavas, K. Karasavvas, and A. Vakali, “Unsupervised clustering of
+bitcoin transactions,” Financial Innov., vol. 10, no. 1, 2024, Art. no. 25.
+[30] C. Cholevas, E. Angeli, Z. Sereti, E. Mavrikos, and G. E. Tsekouras,
+“Anomaly detection in blockchain networks using unsupervised learning:
+A survey,” Algorithms, vol. 17, no. 5, 2024, Art. no. 201.
+[31] N. Nayyer, N. Javaid, M. Akbar, A. Aldegheishem, N. Alrajeh, and M.
+Jamil, “A new framework for fraud detection in bitcoin transactions
+through ensemble stacking model in smart cities,” IEEE Access, vol. 11,
+pp. 90916–90938, 2023.
+[32] Q. Umer, J.-W. Li, M. R. Ashraf, R. N. Bashir, and H. Ghous, “Ensemble
+deep learning-based prediction of fraudulent cryptocurrency transactions,” IEEE Access, vol. 11, pp. 95213–95224, 2023.
+[33] V. A. Siris, D. Dimopoulos, N. Fotiou, S. Voulgaris, and G. C. Polyzos,
+“Decentralized authorization in constrained IoT environments exploiting interledger mechanisms,” Comput. Commun., vol. 152, no. 779984,
+pp. 243–251, 2020.
+[34] Y. Lu, X. Huang, Y. Dai, S. Maharjan, and Y. Zhang, “Blockchain and
+federated learning for privacy-preserved data sharing in industrial IoT,”
+IEEE Trans. Ind. Informat., vol. 16, no. 6, pp. 4177–4186, Jul. 2020.
+[35] A. S. Omar and O. Basir, “Identity management in IoTt networks using
+blockchain and smart contracts,” in Proc. IEEE 2018 Int. Congr. Cybern.:
+2018 IEEE Conf. Internet Things, Green Comput. Commun., Cyber, Phys.
+Social Comput., Smart Data, Blockchain, Comput. Inf. Technol., 2018,
+pp. 994–1000.
+[36] F. Zhao, B. Yang, C. Li, C. Zhang, L. Zhu, and G. Liang, “Two-layer
+consensus based on primary-secondary consortium chain data sharing
+for internet of vehicles,” IEEE Trans. Veh. Technol., vol. 73, no. 9,
+pp. 13828–13838, Sep. 2024.
+[37] W. Wang, J. Liang, C. Zhang, X. Liu, L. Zhu, and S. Guo, “Epass:
+Efficient and privacy-preserving asynchronous payment on blockchain,”
+2025, arXiv:2506.09387.
+[38] D. Xiao, C. Zhang, H. Deng, J. Liang, L. Wang, and L. Zhu, “Parallelizing
+universal atomic swaps for multi-chain cryptocurrency exchanges,” in
+Proc. 34th USENIX Secur. Symp., 2025, pp. 4073–4092.
+[39] C. G. Akcora, Y. R. Gel, and M. Kantarcioglu, “Blockchain: A graph
+primer,” Dec. 2022, arXiv:1708.08749.
+[40] M. Wu, K. Wang, X. Cai, S. Guo, M. Guo, and C. Rong, “A comprehensive survey of blockchain: From theory to IoT applications
+and beyond,” IEEE Internet Things J., vol. 6, no. 5, pp. 8114–8154,
+Oct. 2019.
+[41] M. N. M. Bhutta et al., “A survey on blockchain technology: Evolution,
+architecture and security,” IEEE Access, vol. 9, pp. 61048–61073, 2021.
+[42] I. C. Lin and T. C. Liao, “A survey of blockchain security issues and
+challenges,” Int. J. Netw. Secur., vol. 19, no. 5, pp. 653–659, 2017.
+[43] Z. Zheng et al., “An overview on smart contracts: Challenges, advances
+and platforms,” Future Gener. Comput. Syst., vol. 105, pp. 475–491,
+2020.
+[44] S. Bouraga, “A taxonomy of blockchain consensus protocols: A survey and classification framework,” Expert Syst. Appl., vol. 168, 2021,
+Art. no. 114384, doi: 10.1016/j.eswa.2020.114384.
+[45] S. Nakamoto, “Bitcoin: A peer-to-peer electronic cash system,” SSRN
+Electron. J., pp. 1–9, 2008. [Online]. Available: https://ieeexplore.ieee.
+org/document/8356459/
+[46] X. T. Lee, A. Khan, S. Sen Gupta, Y. H. Ong, and X. Liu, “Measurements,
+analyses, and insights on the entire ethereum blockchain network,” in
+Proc. World Wide Web Conf., 2020, pp. 155–166.
+[47] A. Khan, “Graph analysis of the Ethereum blockchain data: A survey of
+datasets, methods, and future work,” in Proc. IEEE Int. Conf. Blockchain,
+2022, pp. 250–257.
+[48] W. Chan and A. Olmsted, “Ethereum transaction graph analysis,” in Proc.
+12th Int. Conf. Internet Technol. Secured Trans., 2017, pp. 498–500. [Online]. Available: https://www.usenix.org/conference/usenixsecurity20/
+presentation/kalodner
+[49] D. Ron and A. Shamir, “Quantitative analysis of the full bitcoin transaction graph,” in Proc. Financial Cryptography Data Secur., vol. 7859,
+2013, pp. 6–24, doi: 10.1007/978-3-642-39884-1\_2.
+[50] D. D. F. Maesa, A. Marino, and L. Ricci, “Uncovering the bitcoin
+blockchain: An analysis of the full users graph,” in Proc. 3rd IEEE Int.
+Conf. Data Sci. Adv. Analytics, 2016, pp. 537–546.
+[51] M. Fleder, M. S. Kester, and S. Pillai, “Bitcoin transaction graph analysis,” 2015, arXiv:1502.01657.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+[52] A. Sharma, A. Agrawal, A. Bhatia, and K. Tiwari, “Bitcoin’s blockchain
+data analytics: A graph theoretic perspective,” Lecture Notes Netw. Syst.,
+vol. 449, pp. 459–470, 2022.
+[53] L. Serena, S. Ferretti, and G. D’Angelo, “Cryptocurrencies activity as a
+complex network: Analysis of transactions graphs,” Peer-to-Peer Netw.
+Appl., vol. 15, no. 2, pp. 839–853, 2022.
+[54] S. Meiklejohn et al., “A fistful of bitcoins: Characterizing payments
+among men with no names,” Commun. ACM, vol. 59, no. 4, pp. 86–93,
+2016.
+[55] I. Alqassem, I. Rahwan, and D. Svetinovic, “The anti-social system
+properties: Bitcoin network data analysis,” IEEE Trans. Syst., Man,
+Cybern. Syst., vol. 50, no. 1, pp. 21–31, Jan. 2020.
+[56] B. Kılıç, C. Özturan, and A. Sen, “Parallel analysis of Ethereum
+blockchain transaction data using cluster computing,” Cluster Comput.,
+vol. 25, no. 3, pp. 1885–1898, 2022.
+[57] M. Weber et al., “Anti-money laundering in bitcoin: Experimenting with graph convolutional networks for financial forensics,” 2019,
+arXiv:1908.02591.
+[58] Y. Elmougy and L. Liu, “Demystifying fraudulent transactions and
+illicit nodes in the bitcoin network for financial forensics,” in
+Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2023,
+pp. 3979–3990.
+[59] S. Al-E’mari, M. Anbar, Y. Sanjalawe, and S. Manickam, A Labeled
+Trans.-Based Dataset on the Ethereum Netw., vol. 1347, Singapore:
+Springer, 2021, doi: 10.1007/978-981-33-6835-4_5.
+[60] H. Kalodner et al., “BlockSci: Design and applications of a
+blockchain analysis platform,” in Proc. 29th USENIX Secur. Symp.,
+2020, pp. 2721–2738. [Online]. Available: https://www.usenix.org/
+conference/usenixsecurity20/presentation/kalodner
+[61] Y. Qi, J. Wu, H. Xu, and M. Guizani, “Blockchain data mining with graph
+learning: A survey,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 46,
+no. 2, pp. 729–748, Feb. 2024.
+[62] J. S. Tharani, E. Y. A. Charles, Z. Hou, M. Palaniswami, and V.
+Muthukkumarasamy, “Graph based visualisation techniques for analysis
+of blockchain transactions,” in Proc. Conf. Local Comput. Netw., 2021,
+pp. 427–430.
+[63] M. A. Prado-Romero, C. Doerr, and A. G. Alonso, “Discovering bitcoin mixing using anomaly detection,” in Proc. Iberoamerican Congr. Pattern Recognit., vol. 10657, 2017, pp. 534–541,
+doi: 10.1007/978-3-319-75193-1\_64.
+[64] N. Anita and M. Vijayalakshmi, “Blockchain security attack: A brief
+survey,” in Proc. 10th Int. Conf. Comput. Commun. Netw. Technol., 2019,
+pp. 1–6.
+[65] J. Cheng, L. Xie, X. Tang, N. Xiong, and B. Liu, “A survey of security
+threats and defense on blockchain,” Multimedia Tools Appl., vol. 80,
+no. 20, pp. 30623–30652, 2021.
+[66] Y. Chen, H. Chen, Y. Zhang, M. Han, M. Siddula, and Z. Cai, “A survey on
+blockchain systems: Attacks, defenses, and privacy preservation,” HighConfidence Comput., vol. 2, no. 2, 2022, Art. no. 100048.
+[67] O. Mounnan, O. Manad, L. Boubchir, A. El Mouatasim, and
+B. Daachi, “A review on deep anomaly detection in blockchain,”
+Blockchain: Res. Appl., vol. 5, no. 4, 2024, Art. no. 100227,
+doi: 10.1016/j.bcra.2024.100227.
+[68] C. Yan, C. Zhang, Z. Lu, Z. Wang, Y. Liu, and B. Liu, “Blockchain
+abnormal behavior awareness methods: A survey,” Cybersecurity, vol. 5,
+no. 1, 2022, Art. no. 5, doi: 10.1186/s42400-021-00107-4.
+[69] M. Ul Hassan, M. H. Rehmani, and J. Chen, “Anomaly detection in
+blockchain networks: A comprehensive survey,” IEEE Commun. Surveys
+Tuts., vol. 25, no. 1, pp. 289–318, Firstquarter 2023.
+[70] J. Osterrieder, S. Chan, J. Chu, Y. Zhang, B. H. Misheva, and C. Mare,
+“Enhancing security in blockchain networks: Anomalies, frauds, and
+advanced detection techniques,” Feb. 2024, arXiv:2402.11231.
+[71] M. Signorini, M. Pontecorvi, W. Kanoun, and R. Di Pietro, “BAD:
+A blockchain anomaly detection solution,” IEEE Access, vol. 8,
+pp. 173481–173490, 2020.
+[72] T. Voronov, D. Raz, and O. Rottenstreich, “A framework for anomaly
+detection in blockchain networks with sketches,” IEEE/ACM Trans.
+Netw., vol. 32, no. 1, pp. 686–698, Feb. 2024.
+[73] S. S. Dash, S. K. Nayak, and D. Mishra, “A review on machine learning algorithms,” Smart Innov. Syst. Technol., vol. 153, pp. 495–507,
+2021.
+[74] M. I. Jordan and T. M. Mitchell, “Machine learning: Trends, perspectives,
+and prospects,” Science, vol. 349, no. 6245, pp. 255–260, 2015.
+[75] S. Hisham, M. Makhtar, and A. A. Aziz, “A comprehensive review of
+significant learning for anomalous transaction detection using a machine
+
+SHEN et al.: BLOCKCHAIN ANOMALY TRANSACTION DETECTION METHOD BASED ON GRAPH CONTINUAL LEARNING
+
+learning method in a decentralized blockchain network,” Int. J. Adv.
+Technol. Eng. Exploration, vol. 9, no. 95, pp. 1366–1396, 2022.
+[76] V. Chithanuru and M. Ramaiah, “An anomaly detection on blockchain
+infrastructure using artificial intelligence techniques: Challenges and
+future directions–A review,” Concurrency Comput.: Pract. Exp., vol. 35,
+no. 22, 2023, Art. no. e7724.
+[77] I. Alarab, S. Prakoonwit, and M. I. Nacer, “Comparative analysis using
+supervised learning methods for anti-money laundering in bitcoin,” in
+Proc. ACM Int. Conf., 2020, pp. 11–17.
+[78] B. Chen, F. Wei, and C. Gu, “Bitcoin theft detection based on supervised machine learning algorithms,” Secur. Commun. Netw., vol. 2021,
+pp. 1–10, 2016.
+[79] P. Nerurkar, S. Bhirud, D. Patel, R. Ludinard, Y. Busnel, and S. Kumari,
+“Supervised learning model for identifying illegal activities in bitcoin,”
+Appl. Intell., vol. 51, no. 6, pp. 3824–3843, 2021.
+[80] Y. Elmougy and O. Manzi, “Anomaly detection on bitcoin, ethereum
+networks using GPU-accelerated machine learning methods,” in Proc.
+31st Int. Conf. Comput. Theory Appl., 2021, pp. 166–171.
+[81] S. Sayadi, S. Ben Rejeb, and Z. Choukair, “Anomaly detection model over
+blockchain electronic transactions,” in Proc. 15th Int. Wireless Commun.
+Mobile Comput. Conf., 2019, pp. 895–900. [Online]. Available: https:
+//ieeexplore.ieee.org/document/8766765/
+[82] T. Pham and S. Lee, “Anomaly detection in bitcoin network using
+unsupervised learning methods,” 2016, arXiv:1611.03941.
+[83] K. Martin, M. Rahouti, M. Ayyash, and I. Alsmadi, “Anomaly detection
+in blockchain using network representation and machine learning,” Secur.
+Privacy, vol. 5, no. 2, pp. 1–12, 2022.
+[84] O. Shafiq, “Anomaly detection in block chain,” Int. J. Emerg. Trends Eng.
+Res., vol. 12, no. 1, pp. 16–21, 2024.
+[85] M. Hasan, M. S. Rahman, H. Janicke, and I. H. Sarker, “Detecting
+anomalies in blockchain transactions using machine learning classifiers
+and explainability analysis,” Blockchain: Res. Appl., vol. 5, no. 3, 2024,
+Art. no. 100207, doi: 10.1016/j.bcra.2024.100207.
+[86] L. Pahuja and A. Kamal, “EnLEFD-DM: Ensemble learning based
+ethereum fraud detection using CRISP-DM framework,” Expert Syst.,
+vol. 40, no. 9, 2023, Art. no. e13379.
+[87] T. Ashfaq et al., “A machine learning and blockchain based efficient fraud detection mechanism,” Sensors, vol. 22, no. 19, pp. 1–20,
+2022.
+[88] Z. Huang et al., “Who is gambling? Finding cryptocurrency gamblers
+using multi-modal retrieval methods,” Int. J. Multimedia Inf. Retrieval,
+vol. 11, no. 4, pp. 539–551, 2022.
+[89] Q. Yuan, B. Huang, J. Zhang, J. Wu, H. Zhang, and X. Zhang, “Detecting
+phishing scams on ethereum based on transaction records,” in Proc. IEEE
+Int. Symp. Circuits Syst., 2020, pp. 1–5.
+[90] W. Chen, Z. Zheng, J. Cui, E. Ngai, P. Zheng, and Y. Zhou, “Detecting
+ponzi schemes on ethereum: Towards healthier blockchain technology,”
+in Proc. World Wide Web Conf., 2018, pp. 1409–1418.
+[91] A. Ehsan et al., “Enhanced anomaly detection in ethereum: Unveiling
+and classifying threats with machine learning,” IEEE Access, vol. 12,
+pp. 176440–176456, 2024.
+[92] P. Azad, C. Akcora, and A. Khan, “Machine learning for blockchain
+data analysis: Progress and opportunities,” Distrib. Ledger Technol.: Res.
+Pract., vol. 5, 2025, Art. no. 10.
+[93] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and P. S. Yu, “A comprehensive survey on graph neural networks,” IEEE Trans. Neural Netw. Learn.
+Syst., vol. 32, no. 1, pp. 4–24, Jan. 2021.
+[94] F. Scarselli, M. Gori, A. C. Tsoi, M. Hagenbuchner, and G. Monfardini,
+“The graph neural network model,” IEEE Trans. Neural Netw., vol. 20,
+no. 1, pp. 61–80, Jan. 2009.
+[95] T. Chen et al., “Understanding Ethereum via graph analysis,” ACM Trans.
+Internet Technol., vol. 20, no. 2, 2020, Art. no. 18.
+[96] A. Khan and C. G. Akcora, “Graph-based management and mining of
+blockchain data,” in Proc. ACM Int. Conf. Inf. Knowl. Manage., 2022,
+pp. 5140–5143.
+[97] J. Song, P. Zhang, Q. Qu, Y. Bai, Y. Gu, and G. Yu, “Why blockchain needs
+graph: A survey on studies, scenarios, and solutions,” J. Parallel Distrib.
+Comput., vol. 180, Oct. 2023, Art. no. 104730. [Online]. Available: https:
+//linkinghub.elsevier.com/retrieve/pii/S0743731523001004
+[98] A. Gaihre, Y. Luo, and H. Liu, “Do bitcoin users really care about
+anonymity? An analysis of the bitcoin transaction graph,” in Proc. 2018
+IEEE Int. Conf. Big Data, 2018, pp. 1198–1207.
+[99] L. Liu, W. T. Tsai, M. Z. A. Bhuiyan, and D. Yang, “Automatic blockchain whitepapers analysis via heterogeneous graph neural network,” J. Parallel Distrib. Comput., vol. 145, pp. 1–12, 2020,
+doi: 10.1016/j.jpdc.2020.05.014.
+
+6077
+
+[100] T. Yu, X. Chen, Z. Xu, and J. Xu, “MP-GCN: A phishing nodes detection
+approach via graph convolution network for ethereum,” Appl. Sci., vol. 12,
+no. 14, 2022, Art. no. 7294.
+[101] S. Li, G. Gou, C. Liu, C. Hou, Z. Li, and G. Xiong, “TTAGN: Temporal
+transaction aggregation graph network for ethereum phishing scams
+detection,” in Proc. ACM Web Conf., 2022, pp. 661–669.
+[102] Y. Xia, J. Liu, and J. Wu, “Phishing detection on Ethereum via attributed
+ego-graph embedding,” IEEE Trans. Circuits Syst. II: Exp. Briefs, vol. 69,
+no. 5, pp. 2538–2542, May 2022.
+[103] V. Gupta, N. Mishra, Y. Dash, U. Kumar, and A. Abraham, “Graph
+convolutional network-driven adaptive learning framework for fraud
+detection in complex transactional cryptonetworks,” in Proc. 3rd Int.
+Conf. Commun. Secur. Artif. Intell., 2025, pp. 685–689.
+[104] C. Yan, X. Han, Y. Zhu, D. Du, Z. Lu, and Y. Liu, “Phishing behavior detection on different blockchains via adversarial domain adaptation,” Cybersecurity, vol. 7, no. 1, 2024, Art. no. 45,
+doi: 10.1186/s42400-024-00237-5.
+[105] M. Ghosh, S. Srivastava, A. Upadhyaya, R. Halder, and J. Chandra, “CATALOG: Exploiting joint temporal dependencies for enhanced
+phishing detection on ethereum,” in Proc. ACM Web Conf., 2025,
+pp. 969–977.
+[106] Y. Wan, F. Xiao, and D. Zhang, “Early-stage phishing detection on
+the Ethereum transaction network,” Soft Comput., vol. 27, no. 7,
+pp. 3707–3719, 2023.
+[107] J. Luo, J. Qin, R. Wang, and L. Li, “A phishing account detection model
+via network embedding for ethereum,” IEEE Trans. Circuits Syst. II: Exp.
+Briefs, vol. 71, no. 2, pp. 622–626, Feb. 2024.
+[108] Z. Lin, X. Xiao, G. Hu, B. Zhang, Q. Liu, and X. Luo, “Phish2vec:
+A temporal and heterogeneous network embedding approach for detecting phishing scams on Ethereum,” in Proc. Annu. IEEE Commun.
+Soc. Conf. Sensor Mesh Ad Hoc Commun. Netw. Workshops, 2023,
+pp. 501–509.
+[109] N. Pocher, M. Zichichi, F. Merizzi, M. Z. Shafiq, and S. Ferretti, “Detecting anomalous cryptocurrency transactions: An AML/CFT application
+of machine learning-based forensics,” Electron. Markets, vol. 33, no. 1,
+pp. 1–17, 2023, doi: 10.1007/s12525-023-00654-3.
+[110] S. Ouyang, Q. Bai, H. Feng, and B. Hu, “Bitcoin money laundering
+detection via subgraph contrastive learning,” Entropy, vol. 26, no. 3,
+pp. 1–24, 2024.
+[111] P. Nerurkar, “Illegal activity detection on bitcoin transaction using
+deep learning,” Soft Comput., vol. 27, no. 9, pp. 5503–5520, 2023,
+doi: 10.1007/s00500-022-07779-1.
+[112] L. Cheng, F. Zhu, Q. Shao, J. Pu, and F. Zeng, “Early detection
+of malicious crypto addresses with asset path tracing and selection,” IEEE Trans. Knowl. Data Eng., vol. 37, no. 3, pp. 1154–1166,
+Mar. 2025.
+[113] H. Al-Harbi, “Detecting anomalies in blockchain transactions using
+spatial-temporal graph neural networks,” Adv. Manage. Intell. Technol.,
+vol. 1, no. 1, pp. 1–10, 2025.
+[114] I. Rasul, S. M. I. Shaboj, M. A. Rafi, Md K. Miah, Md R. Islam, and A.
+Ahmed, “Detecting financial fraud in real-time transactions using graph
+neural networks and anomaly detection,” J. Econ. Finance Accounting
+Stud., vol. 6, no. 1, pp. 131–142, Feb. 2024. [Online]. Available: https:
+//al-kindipublisher.com/index.php/jefas/article/view/10159
+[115] L. Liu, W. T. Tsai, M. Z. A. Bhuiyan, H. Peng, and M. Liu, “Blockchainenabled fraud discovery through abnormal smart contract detection
+on ethereum,” Future Gener. Comput. Syst., vol. 128, pp. 158–166,
+2022.
+[116] C. Liu, Y. Xu, and Z. Sun, “Directed dynamic attribute graph anomaly
+detection based on evolved graph attention for blockchain,” Knowl. Inf.
+Syst., vol. 66, no. 2, pp. 989–1010, 2024.
+[117] Z. Zhu, B. Pan, and N. Stakhanova, “EtherShield: Time-interval analysis
+for detection of malicious behavior on ethereum,” ACM Trans. Internet
+Technol., vol. 24, no. 1, 2024, Art. no. 2.
+[118] Z. Geng, Y. Cao, J. Li, and Y. Han, “Novel blockchain transaction
+provenance model with graph attention mechanism,” Expert Syst. Appl.,
+vol. 209, 2022, Art. no. 118411.
+[119] Z. Guo et al., “Graph-based covert transaction detection and protection in
+blockchain,” IEEE Trans. Inf. Forensics Secur., vol. 19, pp. 2244–2257,
+2024.
+[120] J. Wang, H. Jin, J. Chen, J. Tan, and K. Zhong, “Anomaly detection in internet of medical things with blockchain from the perspective of deep neural network,” Inf. Sci., vol. 617, pp. 133–149, 2022,
+doi: 10.1016/j.ins.2022.10.060.
+[121] B. Liu, “Lifelong machine learning: A paradigm for continuous learning,”
+Front. Comput. Sci., vol. 11, no. 3, pp. 359–361, 2017.
+
+6078
+
+[122] J. Kirkpatrick et al., “Overcoming catastrophic forgetting in neural networks,” Proc. Nat. Acad. Sci. USA, vol. 114, no. 13, pp. 3521–3526,
+2017.
+[123] Z. Li and D. Hoiem, “Learning without forgetting,” IEEE Trans. Pattern
+Anal. Mach. Intell., vol. 40, no. 12, pp. 2935–2947, Dec. 2018.
+[124] D. Lopez-Paz and M. Ranzato, “Gradient episodic memory for continual
+learning,” in Proc. Adv. Neural Inf. Process. Syst., 2017, pp. 6468–6477.
+[125] R. Aljundi, F. Babiloni, M. Elhoseiny, M. Rohrbach, and T. Tuytelaars, “Memory aware synapses: Learning what (not) to forget,”
+in Proc. Eur. Conf. Comput. Vis., vol. 11207, 2018, pp. 144–161,
+doi: 10.1007/978-3-030-01219-9\_9.
+[126] J. Serra, D. Suris, M. Mirón, and A. Karatzoglou, “Overcoming catastrophic forgetting with hard attention to the task,” in Proc. 35th Int. Conf.
+Mach. Learn., 2018, pp. 7225–7234.
+[127] X. He, J. Sygnowski, A. Galashov, A. A. Rusu, Y. W. Teh, and R.
+Pascanu, “Task agnostic continual learning via meta learning,” 2019,
+arXiv:1906.05201.
+[128] J. Xu and Z. Zhu, “Reinforced continual learning,” in Proc. Adv. Neural
+Inf. Process. Syst., 2018, pp. 899–908.
+[129] M. De Lange et al., “A continual learning survey: Defying forgetting in
+classification tasks,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 44,
+no. 7, pp. 3366–3385, Jul. 2022.
+[130] G. M. van de Ven and A. S. Tolias, “Three scenarios for continual
+learning,” 2019, arXiv:1904.07734.
+[131] G. M. van de Ven, T. Tuytelaars, and A. S. Tolias, “Three types of incremental learning,” Nature Mach. Intell., vol. 4, no. 12, pp. 1185–1197,
+2022.
+[132] F. Zhou and C. Cao, “Overcoming catastrophic forgetting in graph neural
+networks with experience replay,” in Proc. 35th AAAI Conf. Artif. Intell.,
+2021, pp. 4714–4722.
+[133] H. Liu, Y. Yang, and X. Wang, “Overcoming catastrophic forgetting in
+graph neural networks,” in Proc. 35th AAAI Conf. Artif. Intell., 2021,
+pp. 8653–8661.
+[134] L. Sun, J. Ye, H. Peng, F. Wang, and P. S. Yu, “Self-supervised continual
+graph learning in adaptive riemannian spaces,” in Proc. 37th AAAI Conf.
+Artif. Intell., 2023, pp. 4633–4642.
+[135] J. Su, D. Zou, Z. Zhang, and C. Wu, “Towards robust graph incremental learning on evolving graphs,” Proc. Mach. Learn. Res., vol. 202,
+pp. 32728–32748, 2023.
+[136] Z. Tian, D. Zhang, and H.-N. Dai, “Continual learning on graphs: A
+survey,” 2024, arXiv:2402.06330.
+[137] J. Ko, S. Kang, T. Kwon, H. Moon, and K. Shin, “BeGin: Extensive
+benchmark scenarios and an easy-to-use framework for graph continual learning,” ACM Trans. Intell. Syst. Technol., vol. 16, no. 1, 2025,
+Art. no. 19.
+[138] C. Qi, “Graph neural network and increment learning in blockchain,”
+2024. [Online]. Available: https://www.preprints.org/manuscript/
+202409.2117/v1
+[139] H. N. Neto, M. A. Lopez, N. C. Fernandes, and D. M. Mattos, “MineCap:
+Super incremental learning for detecting and blocking cryptocurrency
+mining on software-defined networking,” Ann. Telecommun., vol. 75,
+no. 3/4, pp. 121–131, 2020.
+[140] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+convolutional networks,” in Proc. 5th Int. Conf. Learn. Representations,
+Toulon, France, 2017, pp. 1–14. [Online]. Available: https://openreview.
+net/forum?id=SJU4ayYgl
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+[141] K. Xu, W. Hu, J. Leskovec, and S. Jegelka, “How powerful are graph
+neural networks?,” in Proc. 7th Int. Conf. Learn. Representations,
+New Orleans, LA, USA, 2019, pp. 1–17. [Online]. Available: https:
+//openreview.net/forum?id=ryGs6iA5Km
+[142] D. Lopez-Paz and M. Ranzato, “Gradient episodic memory for continual
+learning,” in Proc. Adv. Neural Inf. Process. Syst., 2017, pp. 6470–6479.
+[143] M. Conti, E. S. Kumar, C. Lal, and S. Ruj, “A survey on
+security and privacy issues of bitcoin,” IEEE Commun. Surveys Tuts., vol. 20, no. 4, pp. 3416–3452, Fourthquarter 2018,
+doi: 10.1109/COMST.2018.2842460.
+
+Xiaodong Shen received the bachelor’s and master’s
+degrees in 2015 and 2018, respectively, from the
+School of Computer Science and Technology, the
+Beijing Institute of Technology, Beijing, China,
+where he is currently working toward the Ph.D. degree
+with the School of Cyberspace Science and Technology. His research interests include crowdsensing, security & privacy in IoT, and blockchain applications.
+
+Chang Xu received the Ph.D. degree in computer
+science from Beihang University, Beijing, China, in
+2013. She is currently an Associate Professor with
+the School of Cyberspace Science and Technology,
+Beijing Institute of Technology, Beijing. Her research
+interests include security & privacy in VANET, and
+Big Data security.
+
+Liehuang Zhu (Senior Member, IEEE) received the
+Ph.D. degree in computer science from the Beijing
+Institute of Technology, Beijing, China, in 2004. He
+is currently a Professor with the School of Cyberspace
+Science and Technology, Beijing Institute of Technology. His research interests include security protocol
+analysis and design, group key exchange protocols,
+wireless sensor networks, and cloud computing.
+PAPER_TEXT

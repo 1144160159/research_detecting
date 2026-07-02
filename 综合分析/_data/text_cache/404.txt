@@ -1,0 +1,145 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025                                                                             13085
+
+
+
+
+               DRCAD: Dual-View Experts Routing and
+               Counterfactual Generation for Explainable
+                   Time Series Anomaly Detection
+    Dawei Zhao , Member, IEEE, Haoran Li , Lijuan Xu , Zhen Wang , Fellow, IEEE, and Haipeng Peng
+
+
+   Abstract—Time series anomaly detection is critical in domains                  quently outputting anomaly scores. These anomaly scores guide
+such as cybersecurity monitoring, network operations, and indus-                  the generation of counterfactual samples, integrating feature
+trial control systems. Lately, unsupervised anomaly detection                     change tendencies with normalized feature impacts to derive
+methods that utilize contrastive learning have shown promise.                     a feature importance ranking as the explanation. We evaluate
+However, existing approaches often struggle to model high-                        DRCAD on six widely used datasets, observe state-of-the-art
+dimensional temporal dependencies efficiently and rely on rigid                   (SOTA) performance. Moreover, in the explainability evaluation
+feature-fusion schemes that can inadvertently amplify noise.                      on SWaT dataset, DRCAD achieves superior realism and sparsity
+These factors increase computational overhead and sensitivity                     in counterfactual generation compared to existing methods, with
+to irrelevant signals, hindering the capture of salient patterns.                 top-ranked features closely matching officially documented attack
+Additionally, the explainability of anomalies detected by these                   characteristics.
+mechanisms is often limited, restricting their application in
+traceable detection processes and an explicit decision-making                        Index Terms—Time series, contrastive learning, anomaly detec-
+basis. In this paper, we propose dual-view experts routing and                    tion, explainable, XAI, counterfactual explanation.
+counterfactual generation for explainable time series anomaly
+detection (DRCAD), a novel framework that detects anomalies                                                I. I NTRODUCTION
+within time series data while providing intuitive and action-
+able explanations for model predictions. DRCAD uses in-patch
+and patch-wise perspectives as input views for the contrastive
+learning model, employing a flattened attention mechanism
+                                                                                  A     NOMALY detection is a critical task in many high-
+                                                                                        security domains. For example, in industrial control
+                                                                                  systems, experts aim to identify which sensor is mal-
+with lightweight spatial projections and a Patch Mixture of                       functioning or which device is under attack [1], [2]. In
+Experts (MoE) layer for adaptive routing and information fusion.
+It identifies anomalies by expanding the discrepancy between                      network security, anomaly detection is essential for iden-
+normal and anomalous points in the representation space, subse-                   tifying and mitigating threats such as intrusions, insider
+                                                                                  attacks, and performance issues [3], [4]. Insufficient detec-
+   Received 15 August 2024; revised 22 March 2025 and 24 September 2025;          tion of anomalous data can lead to severe consequences
+accepted 28 November 2025. Date of publication 3 December 2025; date              [5].
+of current version 16 December 2025. This work was supported in part by
+the National Key Research and Development Program of China under Grant               Detecting anomalies in real-world scenarios is challeng-
+2023YFB3107300, in part by the National Natural Science Foundation of             ing. In practice, anomalies constitute only a small fraction
+China under Grant 62172244, in part by Taishan Scholars Program under             of the data and are generally weakly correlated with one
+Grant tsqn202211210, in part by the “20 New Universities” Project of Jinan
+City under Grant 202333023 and Grant 202333045, in part by the Key                another [6]. Current anomaly detection techniques primarily
+Research and Development Program of Shandong under Grant 2025CXPT082,             use statistical methods, traditional machine learning, and deep
+in part by Shandong Provincial Natural Science Foundation under Grant             learning, with deep learning achieving significant success
+ZR2024MF250, and in part by the Pairing Plan Project of the School
+of Computer Science and Technology of Qilu University of Technology               [7], [8]. Deep learning based anomaly detection methods
+(Shandong Academy of Sciences) under Grant 2024JDJH12. The associate              are typically divided into prediction-based and reconstruction-
+editor coordinating the review of this article and approving it for publication   based approaches [9]. In recent years, reconstruction-based
+was Dr. Andrew Clark. (Corresponding authors: Dawei Zhao; Lijuan Xu.)
+   Dawei Zhao, Haoran Li, and Lijuan Xu are with the Key Labora-                  methods have gained significant notice. These methods operate
+tory of Computing Power Network and Information Security, Ministry of             on the idea that a model, when trained exclusively on normal
+Education, Shandong Computer Science Center (National Supercomputer               data patterns, will fail to accurately reconstruct anomalous
+Center in Jinan), Qilu University of Technology (Shandong Academy of
+Sciences), Jinan 250316, China, and also with Shandong Provincial Key             data, thus identifying anomalies through reconstruction errors.
+Laboratory of Industrial Network and Information System Security, Shandong        However, these methods often face challenges such as large
+Fundamental Research Center for Computer Science, Jinan 250014, China (e-         reconstruction errors, which can adversely affect model train-
+mail: zhaodw@sdas.org; haoranli0605@163.com; xulj@sdas.org).
+   Zhen Wang is with the School of Artificial Intelligence, Optics and            ing and lead to false positives. To overcome these limitations,
+Electronics (iOPEN), and the School of Mechanical Engineering, North-             contrastive learning-based anomaly detection methods have
+western Polytechnical University, Xi’an, Shaanxi 710072, China (e-mail:           emerged, offering a compelling alternative approach [6], [10],
+zhenwang0@gmail.com).
+   Haipeng Peng is with the Information Security Center, State Key Laboratory     [11], [12], [13]. Contrastive learning focuses on learning
+of Networking and Switching Technology, and the National Engineering              representations by contrasting different views. Nevertheless,
+Laboratory for Disaster Backup and Recovery, Beijing University of Posts          designing stable architectures for contrastive learning on time
+and Telecommunications, Beijing 100876, China (e-mail: penghaipeng@
+bupt.edu.cn).                                                                     series is still challenging, and the effectiveness of such repre-
+   Digital Object Identifier 10.1109/TIFS.2025.3639899                            sentations for anomaly detection warrants further investigation.
+              1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+13086                                                         IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+
+
+   In addition, the opacity of internal representations in deep         perspectives, and a Patch Mixture of Experts (MoE)
+learning models is an urgent issue. For example, if a banking           mechanism dynamically adjusts feature importance based
+system labels someone as a defaulter, the individual may                on input data. The model detects anomalies by increasing
+demand the basis for this judgment. Legal systems may only              the distance between normal and anomalous points in the
+trust the model if it aligns with objective facts. Unfortunately,       representation space.
+most time series anomaly detection models lack explainability,        • We use anomaly scores to constrain the generation of
+leaving users unaware of how decisions are made.                        counterfactual samples and combine counterfactual dis-
+   Several methods have been proposed to address the explain-           crepancies with prediction-based contributions to derive
+ability problem. Feature importance techniques, such as SHAP            feature importance scores, thereby explaining anomalies.
+[14] and LIME [15], provide insights into which features are          • We evaluate our detection approach with the state-of-
+most influential in a model’s decision. However, these methods          the-art anomaly detection algorithms on six real-world
+often fail to offer a clear understanding of how changes in             datasets, demonstrating better anomaly detection per-
+the input would affect the output. In contrast, counterfactual          formance. On the SWaT dataset, we compare four
+explanations [16], [17], [18] seek the closest but different            representative explanation methods and obtain compara-
+data point in a non-real space that would yield a different             ble results. Additionally, we generate importance scores
+prediction under the model. These methods are commonly                  for each feature and provide visual results, showing a
+used in computer vision [19], where counterfactual images               high correlation between the most important features
+are generated and compared with the original images for                 and the attack characteristics described in official docu-
+explanation. However, applying counterfactual explanations to           ments, additional feature-weight experiments corroborate
+time series anomaly detection is challenging due to the unique          the fidelity of our explanations.
+temporal dependencies and intrinsic coupling of features in
+time series data, as well as the mixture of normal and                                   II. R ELATED W ORK
+anomalous samples, making it difficult for experts to discern
+the properties of generated samples [20], [21]. To handle the       A. Explainability in Deep Learning
+challenges above, after the model makes a prediction, we use           In recent years, the explainability of deep learning networks
+an anomaly score-guided conditional variational autoencoder         has garnered significant attention. Traditional machine learning
+(CVAE) [22] to generate counterfactual samples. Unlike tradi-       explanation methods, such as decision trees and naive Bayes,
+tional VAEs, conditioning on the anomaly score mitigates the        have been applied to deep learning models to enhance their
+challenge of distinguishing normal from anomalous samples           explainability. Notable methods like LIME [15], which designs
+by guiding the CVAE to generate counterfactuals that are            a local surrogate model to fit the model’s prediction results,
+coherent and plausible within the learned distribution, thereby     and SHAP [14], which uses Shapley values to calculate each
+indicating which current conditions should change to yield the      feature’s contribution to the model’s prediction, are prominent
+opposite prediction. For instance, if a counterfactual sample       examples. However, these methods face challenges in explain-
+in an anomaly detection model shows significant changes in          ing time series data due to the unique operational patterns
+debt, the user can repay the debt to alter the model’s decision.    that only emerge over observed periods and long-term trends,
+We adopt variational autoencoder driven by its ability to learn     coupled with the higher information content compared to other
+complex data distributions and generate realistic samples by        data types.
+mapping data to a latent space and then reconstructing it.             Several methods have been specifically developed to explain
+This characteristic is particularly beneficial for time series      time series predictions. TimeX [23] designs a time prediction
+data, where maintaining temporal dependencies and feature           surrogate model that approximates the original model’s output
+relationships is crucial.                                           by minimizing the embedding distance in the latent space
+   To simultaneously address the tasks of anomaly detec-            between the original and surrogate models. FIT [24] estimates
+tion and anomaly explanation, we propose Dual-view experts          feature importance by fixing certain variables and altering
+Routing and Counterfactual generation for explainable time          others to observe changes in the predicted distribution over
+series Anomaly Detection (DRCAD), an innovative anomaly             time. WinIT [25] extends FIT by using a retrospective window
+detection framework with counterfactual explanations. It lever-     to explain changes in the predicted distribution, illustrating
+ages dual-perspective learning of data representations and          the temporal dependencies between different observations of
+identifies anomalies by comparing the discrepancy between the       the same feature for more persistent explanation patterns.
+two representations and a set threshold, effectively avoiding       Other post-hoc explanation methods generate explanations for
+potential biases from relying on reconstruction errors. DRCAD       model predictions. For instance, counterfactual explanations
+can (1) detect anomalies in input time series data and (2)          [16], [17] focus on identifying how features need to change
+generate counterfactual samples and assign importance scores        to produce an opposite prediction with minimal perturbation.
+to each feature to explain anomalies. The contributions of this     CounTS [26] designs a self-interpretable time series prediction
+paper are summarized as follows:                                    model that uses causal inference to identify causal relation-
+   • We propose DRCAD, a contrastive learning framework             ships between inputs and the predictions, providing feasible
+      where in-patch and patch-wise relationships serve as dual     counterfactual explanations for time series prediction models.
+      input perspectives for the model. A Flattened Atten-          The aforementioned methods are all aimed at explaining the
+      tion mechanism encodes the original data and dual             results of time series prediction models. However, merely
+ZHAO et al.: DRCAD: DUAL-VIEW EXPERTS ROUTING AND COUNTERFACTUAL GENERATION                                                                              13087
+
+
+
+
+Fig. 1. Overview of DRCAD. E performs basic embedding of the multivariate time series. The detector D x encodes the in-patch view and the patch-wise view
+with Flattened Attention and fuses them using a Patch Mixture of Experts, producing two representations whose discrepancy defines the anomaly score S .
+The detection decision is obtained by comparing S with a threshold δ. The generator Gc f is a score-conditioned CVAE that uses the input and S to generate
+counterfactual sequences an

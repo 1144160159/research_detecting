@@ -1,0 +1,484 @@
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 5, MAY 2025 3627
+
+ GrainBrain: Multiview Identification and
+ Stratification of Defective Grain Kernels
+ Lei Fan , Dongdong Fan, Yiwen Ding, Yong Wu, Donglin Di, Maurice Pagnucco , and Yang Song
+
+ Abstract—Grain appearance inspection is crucial for
+evaluating grain quality and determining seed stratification. Typically, trained inspectors manually examine each
+grain kernel to identify and remove defective ones, which is
+time-consuming and error-prone. In this article, we present
+GrainBrain, a robotic vision-based system comprising a
+hardware prototype (A100) and a deep learning model
+(GrainAD). A100 is equipped with five cameras to capture
+high-quality, multiview images of each kernel. The identification of defective kernels is treated as an unsupervised anomaly detection task. GrainAD trains a classifier
+to distinguish between healthy and pseudoanomaly samples generated at both image and feature levels, and a
+supervised contrastive learning loss is employed to obtain
+compact feature representations of healthy kernels. In addition, we release a large-scale dataset containing over 100K
+annotated images of four types of cereal grains. Extensive
+experiments were conducted to verify the superiority of our
+system, achieving an average AUROC of 94.4/90.4% at the Fig. 1. GAI is crucial for agricultural activities, e.g., breeding, harvestimage/pixel level. Our system excelled in both efficiency ing, and trading. To perform grain quality inspection and stratification, we
+ build a prototype A100 equipped with five cameras to capture multiview
+and consistency, as demonstrated by experiments compar- images of each grain kernel. An anomaly detection framework GrainAD
+ing human experts to the system. is developed to identify defective kernels.
+ Index Terms—Anomaly detection, deep learning, grain
+appearance inspection, grain quality.
+ to germinate, thereby improving the crop survival rate and
+ yield [3]. At harvest, it reflects the status of pest infestations
+ I. INTRODUCTION and Fusarium head blight, acting as a key predictor of annual
+ EREAL grains provide various essential nutrients and yield and quality [4]. In grain trading, storage, and processing,
+C serve as fundamental ingredients in food and daily necessities. Grain appearance inspection (GAI) aims at identifying
+ it directly estimates the proportion of low-value grain, serving
+ as an important reference for transaction prices [5], as depicted
+defective grain kernels and is crucial for quality determination in in Fig. 1.
+high-throughput grain inspection and seed stratification [1], [2]. Typically, GAI is conducted manually by professional in-
+GAI plays an indispensable role in various stages of agricultural spectors following standard ISO procedures [6], [7]. They are
+activities. During breeding, each seed’s appearance needs to be required to examine each grain kernel’s appearance based on vicarefully inspected to eliminate defective ones that are difficult sual characteristics using hand tools (e.g., sieves, tweezers). This
+ process is extremely time-consuming because grain kernels are
+ Received 16 October 2024; revised 5 December 2024; accepted 22 tiny in size, and the large quantity requires prolonged inspection.
+December 2024. Date of publication 30 January 2025; date of current Even experienced inspectors need over 25 min to complete the
+version 21 April 2025. Paper no. TII-24-5437. (Corresponding author: inspection for a set of 50-gram samples. The manual process
+Lei Fan.)
+ Lei Fan is with the Gaozhe Technology, Hefei 230088, China, and also is prone to human error and inconsistency, which results in
+with the School of Computer Science and Engineering, UNSW, Sydney, inaccurate assessments and variability in inspection outcomes,
+NSW 2052, Australia (e-mail: lei.fan1@unsw.edu.au). further complicating the task and reducing the overall reliability.
+ Dongdong Fan, Yiwen Ding, and Yong Wu are with the Gaozhe Technology, Hefei 230088, China (e-mail: fandongdong@gaozhe.com.cn; Therefore, it is necessary to develop an automated system for
+dingyiwen@gaozhe.com.cn; wuyong@gaozhe.com.cn). GAI that can capture high-quality visual information of each
+ Donglin Di is with the Li Auto, Beijing 101399, China (e-mail: grain kernel and efficiently filter out defective kernels. However,
+donglin.ddl@gmail.com).
+ Maurice Pagnucco and Yang Song are with the School of Computer automated processing and analysis of these grains face several
+Science and Engineering, UNSW, Sydney, NSW 2052, Australia (e-mail: challenges.
+morri@cse.unsw.edu.au; yang.song1@unsw.edu.au). r Cereal grains need to be inspected individually, but their
+ The dataset and code can be found on https://grainnet.github.io/
+GrainBrain.html. small and diverse sizes cause occlusion issues, complicat-
+ Digital Object Identifier 10.1109/TII.2025.3528555 ing visual assessment and separation.
+
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+ Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+ for more information.
+3628 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 5, MAY 2025
+
+Fig. 2. Atlas of four types of cereal grains, including healthy and defective kernels with pixel-level annotations marked by red contours ().
+
+ r Some crucial characteristics (e.g., pestinduced holes) are dataset, demonstrating the feasibility and superiority of our
+ extremely small, posing challenges for the acquisition system. We further compared our system with human experts
+ environment including cameras and optimal lighting con- in terms of consistency and efficiency. The main contributions
+ ditions for accurate detection, as illustrated in Fig. 2. are summarized as follows.
+ r Different types of grains (e.g., wheat, maize) exhibit high r A robotic vision prototype, A100, is designed for capturing
+ intra- and interheterogeneity. Even experienced inspectors high-quality, multiview images of each individual kernel.
+ need specialized training due to inconsistencies in inspec- An anomaly detection model, GrainAD, is developed for
+ tion standards and personal experience. the analysis of various types of cereal grains.
+ To address these challenges, we develop a robotic vision- r Considering the multiview characteristics of our data, an
+based system named GrainBrain, incorporating a prototype STN in a self-supervised learning framework is introduced
+for image acquisition and kernel sorting and a deep learning to explicitly adjust a unified pose alignment. We further
+model for identifying defective grains. Specifically, we compre- introduce an SCL loss to regularize the feature represenhensively analyze the characteristics of various types of grain tations shared across different views.
+kernels and accordingly build a customized prototype named r We construct and release a large-scale dataset containing
+A100. It consists of a feeding cabin, a transparent plate, a over 100K images with high-quality annotations.
+capturing module, and a sorting module. The feeding cabin
+efficiently separates different types of grain kernels one by one.
+The capturing module is equipped with five high-resolution
+cameras to capture multiview images of each kennel. II. RELATED WORK
+ To perform GAI tasks, the identification of defective kernels Grain Appearance Inspection: Inspecting grain appearance is
+is formulated as an anomaly detection task, i.e., only normal one of the requisite procedures for high-throughput grain quality
+(healthy) grains are provided as references for training, and determination and stratification. According to the ISO cereal
+models are required to identify defective kernels under an unsu- vocabulary [6], GAI aims to identify defective kernels, which
+pervised learning manner. With this setting, we develop a simple refer to grains with decreased value, such as those contaminated
+yet effective deep learning model named GrainAD. We build by Fusarium head blight or fungus, crushed by external forces,
+upon the Simplenet [8] by converting the unsupervised anomaly attacked by pests, or germinated, as shown in Fig. 2. These grains
+detection into a supervised learning manner by leveraging syn- typically have lower nutrient content or negatively impact human
+thetic data. Our model synthesizes pseudoanomalies by injecting health.
+noise into normal samples in the image and feature spaces, and Computer vision techniques have been studied in grain inspecthen trains a classifier to identify these normal or synthesized tions for several decades. Limited by sensor technologies and
+data. We further modify the model from both feature and image computational resources, early studies [9], [10], [11] attempted
+perspectives. Considering the multiview characteristics of our to classify subtypes of wheat or impurities based on color distrigrain dataset, a supervised contrastive learning (SCL) loss is butions, morphological attributes, or textural patterns. Recently,
+employed to regularize the feature representations of normal deep learning techniques have achieved considerable progress in
+samples by fully exploiting the information shared across differ- smart agriculture [12], [13]. For example, Fan et al. [14] released
+ent views. To handle the multiview images captured from various a large-scale grain dataset related to wheat, maize, and rice,
+views, a spatial transformation network (STN) is introduced and formulated grain quality inspection as fine-grained recognito explicitly align the orientations of different views under a tion, domain adaptation, and out-of-distribution classification.
+self-supervised learning manner. After training, both branches AV4GAInsp [15] incorporated a device with dual cameras to
+used for synthesizing anomalies are removed, resulting in a capture visual information.
+streamlined GrainAD that is deployment-ready for integration Unlike previous robotic vision-based approaches [12], [15]
+into the GrainBrain system for real-time inspection. that adopt one or two cameras to capture visual information but
+ In addition, we construct a large-scale dataset with over 100K leave certain areas unobserved, in our GrainBrain system, we
+images covering four types of cereal grains: wheat, maize, design a prototype equipped with five cameras on an elaborate
+soybean, and paddy. This dataset includes 21.5K and extra 5.4K mechanical structure to capture high-quality, multiview images
+defective kernels with image-level and pixel-level annotations, of each kernel, ensuring comprehensive surface coverage of
+respectively. Extensive experiments were conducted on this the grains. Importantly, our device not only identifies defective
+FAN et al.: GRAINBRAIN: MULTIVIEW IDENTIFICATION AND STRATIFICATION OF DEFECTIVE GRAIN KERNELS 3629
+
+ TABLE I into normal data, making them more robust in handling the
+ DETAILED SPECIFICATIONS OF A100
+ variability within our dataset. Moreover, the deployed model
+ must ensure fast detection efficiency to maintain the system’s
+ real-time performance. Synthetic-based methods introduce additional branches and synthetic samples to train a discriminative
+ classifier, which can be removed at the testing stage, thus ensuring high efficiency.
+
+ III. GRAINBRAIN
+ Our system consists of two parts: a prototype (A100) and an
+ anomaly detection model (GrainAD), as illustrated in Fig. 3. The
+ prototype is built to efficiently capture high-quality, multiview
+ images of each grain kernel and to sort out defective ones. The
+ model, which follows synthetic-based methods by generating
+ pseudoanomalies at both the image and feature levels, is designed to detect and localize anomalies in multiview images to
+kernels efficiently but also performs kernel stratification tasks
+ provide sorting signals for the prototype.
+by separating defective ones individually.
+ Visual Anomaly Detection: Anomaly detection aims to train
+models using only normal samples, requiring the model to A. Prototype: A100
+identify anomalous samples during the test phase. Existing To emulate the detection habits utilized by human experts,
+methods [16], [17] can be mainly categorized into the following we build a prototype called A100, which efficiently captures
+directions: the visual information of grain kernels and sorts them based
+ Feature-based methods use pretrained models to extract on control signals from GrainAD. A100 integrates four main
+features and characterize the distributions of normal data. components: a feeding cabin, a transparent plate, a capturing
+DeepSVDD [18], [19] trained a network by minimizing a hyper- module, and a sorting module. The detailed specifications of
+sphere to enclose features of normal data. PaDiM [20] extracted each component are shown in Table I.
+features from image patches and employs multivariate Gaus- The feeding cabin is designed to preprocess a set of
+sian distributions for modeling the normal data. Patchcore [21] test samples to ensure that all kernels are separate and
+constructed a memory bank to store multilayer features, detect- nonoverlapping without occlusion. It is equipped with a highing anomalies by identifying significant gaps between the test frequency inductance coil and a rotating motor. Kernels are
+samples and the stored features. driven along a track with a preset size of 5 mm and vibrated
+ Reconstruction-based methods assume that reconstruction to separate and move to the transparent plate one by one. The
+models fail to recover anomalous samples when trained with cabin maintains a flow rate of ṅf grains per second.
+only normal data. MemAE [22] integrated a memory bank The transparent plate is employed to receive grains from the
+into an autoencoder to store the encoder’s features and retrieve feeding cabin and convey them through the capturing module
+them for reconstruction. UniAD [23] performed feature-level and eventually to the sorting module. It is circular in shape,
+reconstruction and proposes a model capable of one-for-all class connected to a direct drive motor via a flange in the center. The
+anomaly detection. RD4AD [23] enhanced the teacher–student plate rotates counterclockwise within an angular velocity ωp ,
+model by using the teacher’s output features as input to the controlled by pulses from a servo driver.
+student model. The capturing module is equipped with five industrial RGB
+ Synthetic-based methods generate pseudoanomalies using cameras to capture the superficial information of grains, prodata augmentation, converting unsupervised anomaly detection ducing multiview images of each grain kernel. Four cameras are
+into supervised classification tasks. Cutpaste [24] synthesized arranged in a quadrilateral pattern, tilted at 25° above the plate,
+anomalies by cutting an image patch and pasting it at a random while an additional camera is placed below the plate. The effeclocation. DRAEM [25] generated anomalies with pixel-level tive camera field-of-view reaches 21.5 × 27 mm2 . To mitigate
+annotations by injecting Perlin noise into normal data. Sim- the influence of environmental factors (e.g., dust), two sets of
+pleNet [8] attempted to generate anomalies by injecting Gaus- LED ring lights are configured to provide sufficient, shadow-free
+sian noise into normal features. lighting conditions, and the exposure time is denoted as te .
+ Our captured data includes multiview images of the same The sorting module sorts the grains into different storage
+object at higher resolutions, requiring the identification of sub- boxes based on control signals provided by GrainAD. It consists
+tle visual differences between normal and defective samples. of a cross-structure paddle and a 42-step stepper motor, with each
+Feature-based methods depend on aligned data to effectively control action rotating the paddle by 90° to complete a sorting
+capture the distributions of patches across different positions, operation.
+while reconstruction-based models struggle with highly het- The entire A100’s efficiency depends on balancing the flow
+erogeneous data due to the diverse characteristics of different rate ṅf , the plate’s angular velocity ωp , and the quality of
+samples. In contrast, we adopt synthetic-based methods that are captured images. While increasing the plate’s speed can expedite
+well-suited for adapting to various data types by blending noise the grain inspection process, it concurrently reduces camera
+3630 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 5, MAY 2025
+
+Fig. 3. (a) The diagram of GrainBrain, including a prototype (A100) and a deep learning model (GrainAD). (b) The workflow of GrainBrain, where
+black lines ( ) represent the flow of grain kernels, while green lines () indicate the data flow.
+
+exposure times and thereby image quality. This tradeoff is
+examined in detail in the experimental section. Notably, the
+processing time of GrainAD must be shorter than the time grains
+move from the capturing module to the sorting module, ensuring
+that the grains receive control signals for sorting. Empirically,
+our prototype can capture 300, 240, 210, and 480 kernel/min for
+common wheat, maize, soybean and paddy, respectively.
+
+B. Data Acquisition and Dataset Description
+ Considering that our A100 is designed to accommodate various types of cereal grains, we specifically focus on wheat, maize,
+soybean, and paddy, as these four types of grains constitute a
+significant percentage of the world’s food supply. To achieve a Fig. 4. Data distribution of our released dataset. It contains 107.5K
+ individual kernels covering four types of cereal grains.
+comprehensive analysis, we collect extensive raw samples from
+over 30 regions across four countries (CA, CN, KH, and USA).
+Many of these kernels are preprocessed before being fed into includes normal and various numbers of defective kernels. Ac-
+A100 to obtain high-quality images. Specifically, raw grains cording to ISO standards [6], [7], we made our best effort to
+collected from trucks initially undergo an impurity removal collect defective kernels, but it is challenging due to their natural
+process consisting of two steps. First, two sieves with different distributions. Detailed information about defective categories
+mesh sizes are used to filter out excessively large and small and data volume is shown in Fig. 4.
+impurities. Next, lightweight impurities, such as bran, husks, Each image includes five views with a resolution ranging from
+and straw, may still adhere to the transparent plate due to static 510 × 111 to 3655 × 797 pixels, where 21.5K defective kernels
+electricity, obstructing the cameras from capturing high-quality are categorized into various anomaly categories, and extra 5.4K
+images. To address this, a low-power fan is employed to remove images of defective kernels are further collected and annotated at
+any remaining impurities. the pixel level to highlight defective regions. For example, wheat
+ Data annotations: We engage a team of six experienced may exhibit black embryos, while paddy may show shriveled
+inspectors: four senior inspectors with 5−10 years of inspection grains without internal kernels. It is noteworthy that there is
+experience and two experts with over 10 years of experience. significant intraheterogeneity among defective kernels within
+We establish a comprehensive procedure. Each kernel involves the same category, and many samples simultaneously exhibit
+multiple steps to ensure consistency and accuracy. multiple defective attributes. This is why we employ anomaly
+ r The defective or normal label is confirmed if all four senior detection methods to train the model instead of the classification
+ inspectors assign the same label. task. We believe this categorical information can also be valuable
+ r If three senior inspectors assign the same label, two experts for the community.
+ are consulted to reach a final agreement.
+ r The remaining images are discarded.
+ All captured images are re-examined by quality inspectors, C. GrainAD
+and some defective kernels are further provided with pixel-level Preliminary and motivation: We formulate the identification
+annotations to indicate anomalous regions. of defective kernels as a classic unsupervised anomaly detection
+ Dataset: We construct and release a large-scale dataset con- task. Specifically, given a training set XT = {I1t , . . . , Int } containing 107.5K images. It encompasses four types of cereal taining n normal images and a query set XQ = {I1q , . . . , Im q
+ }
+grains with 50, 30, 17.5, and 10K images for wheat, maize, including m normal or defective images, each image I ∈
+soybean, and paddy, respectively. Each type of cereal grain RH×W ×3 (where H and W are the height and width) has a
+FAN et al.: GRAINBRAIN: MULTIVIEW IDENTIFICATION AND STRATIFICATION OF DEFECTIVE GRAIN KERNELS 3631
+
+Fig. 5. (a) Architecture of GrainAD. It consists of three stages: data augmentation; feature extraction; and classification. A normal image I and a
+pseudo-anomaly image I a are fed into the STN, feature extractor, and adapter subsequently to obtain fI and fI a , respectively. fI g is synthesized
+by injecting Gaussian noise N into fI . Then, these features are merged and fed into the classifier. (b) Detailed workflow of data augmentation part.
+I a is synthesized by using data augmentation (e.g., DRAEM [25]) to an input normal image I.
+
+corresponding label y ∈ {0, 1}, where 0 and 1 indicate the encourages φθ to align the views to a similar orientation. The
+normal and defective states, respectively. The goal is to train STN is introduced because trained inspectors typically identify
+a model using only normal data but to detect defective samples key parts (e.g., the embryo) first and observe that kernels have
+during testing. As the model needs to provide control signals similar morphological shapes. The primary motivation for using
+for the sorting module before the corresponding kernel arrives, STN lies in its convolutional structure, which is deploymentit must complete the prediction process within approximately friendly and can be trained in a self-supervised manner.
+200 ms (based on empirical practical tests). Therefore, the model In the feature extraction stage, a pretrained model with a feais expected to be a lightweight and deploy-friendly architecture. ture adapter (denoted as φe ) is employed to extract and transfer
+ Architecture: We aim to develop GrainAD to implement multilayer features into the task-specific domain. We use φe to
+real-time inspection system. As feature-based methods require extract the normal feature fI and fI a from the transformed I
+maintaining a memory bank, reconstruction-based approaches and I a , respectively. An anomalous feature fIg is then generated
+rely on an encoder–decoder architecture. Both methods de- by adding a Gaussian noise N (0, σ 2 ) to the normal feature fI .
+mand significant computational resources. Therefore, we follow A SCL loss [28] is employed to regularize these features:
+synthetic-based methods that introduce additional branches and
+ 1 exp(zi · zp /τ )
+synthetic samples during training to train a discriminative classi- Lscl = − log (3)
+fier, which can be removed at the testing stage, thus ensuring high |P (i)| a∈A(i) exp(zi · za /τ )
+ i∈V p∈P (i)
+efficiency in the deployed model. Our framework is primarily
+based on Simplenet [8] due to its efficiency and simplicity, and where V is the set of all views in the batch. Five views from
+it converts the unsupervised problem into a supervised one, in the same image are treated as individual positive samples P (i)
+which a classifier is trained to identify anomalies synthesized in for anchor i, and A(i) is the set of all samples except i. zi
+both image and feature spaces. It consists of three stages: data and zp represent the feature representations of samples i and p,
+augmentation, feature extraction, and classification, as shown in respectively, and τ is a temperature parameter. The motivation
+Fig. 5. for introducing Lscl is to ensure that different views of fI are
+ In the data augmentation stages, the input image I is aug- close to each other while remaining distant from the synthesized
+mented into a pseudoanomaly image I a using existing common features, obtaining more compact feature representations for
+data augmentation strategies [24], [25]. A spatial transformer normal data.
+network (STN) [26], [27] is employed to regulate the orientation Finally, in the classification stage, the normal and two synof each view in both I and I a . An affine transformation φθ is thesized features fI , fI a , fIg  are concentrated and fed into a
+employed: classifier τc . It is optimized using a binary cross entropy loss:
+ ⎛ ⎞
+     xs 1
+ x t
+ θ11 θ12 θ13 ⎜ s ⎟ Lbce = − yi log(τc (fi )) (4)
+ = φθ = ⎝y ⎠ (1) 3
+ i∈F
+ yt θ21 θ22 θ23
+ 1
+ where F denotes the indices of {fI , fI a , fIg }, yi is the ground
+where φθ is trained to explicitly learn the spatial transformation truth label, and τc (fi ) is the predicted probability for class i.
+from the original coordinates (xs , y s ) to the target coordinates The classifier converts the unsupervised anomaly detection into
+(xt , y t ). It is optimized by minimizing a supervised learning task by generating pseudoanomalies in
+ 1 both image and feature levels. The total training loss is
+ Lstn (I a , I b ) = ||φθ (I a ) − φθ (I b )||22 (2)
+ N Ltotal = λ1 Lstn + λ2 Lscl + λ3 Lbce (5)
+ I a ,I b ∈S
+
+where I a and I b are two random views of the input image, and a where λ1 , λ2 , and λ3 are weights that balance the contributions
+set of S with N view pairs can be obtained in a batch. Using Lstn of each loss component.
+3632 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 5, MAY 2025
+
+ Inference: After training, the branches for generating pseu- ten kernels per second. Since this rate is significantly lower than
+doanomalies are discarded. The query image I q is fed into the the camera’s capture frequency (45 FPS), it can be considered
+STN, feature extractor, and classifier sequentially to obtain the insignificant at this stage. We conducted experiments to deterpredicted map s = −τc (fIq ). Anomaly localization is produced mine the optimal settings, ensuring high quality while exploring
+by interpolating s, with the anomaly score being the highest the maximum ωp to achieve high inspection efficiency. To better
+value of s. evaluate the quality of captured images, we used three dice, white
+ (large), red (medium), and blue (small), with different volumes
+ IV. EXPERIMENTS AND EVALUATIONS to simulate various types of cereal grains.
+ We first fixed the transparent plate in a static condition (i.e.,
+ In this section, we introduce the experimental setups, quali- ωp = 0) and tested four LED exposure times te (10, 30, 60, and
+tative experiments for A100, experiments for GrainAD, and our 100 ms) corresponding to Images-1 through 4, respectively. As
+GrainBrain system versus human experts experiments. shown in Fig. 6 , the histograms of Image-1 and Image-4 are
+ focused on low or high intensity, corresponding to underexpo-
+A. Experimental Setups sure and overexposure conditions. Image-2 and Image-3 have
+ GrainBrain: We employed a microcontroller (version good intensity distributions with most values between 0-25,
+STM32F4) running on FreeRTOS operating system to control which aligns well with the fact that the majority of captured
+our prototype, providing unified control signals for optimal images have black backgrounds. From a quantitative evaluation
+performance. An embedded device (Nvidia Jetson Xavier NX) perspective, the mean brightness and contrast of Image-2 and
+was used as the computational platform to execute our GrainAD Image-3 are 17.6 and 30.1, showing significant differences
+model, with all models converted and deployed using the Ten- from Image-1 and Image-4. High-quality images with proper
+sorRT framework. exposure conditions can be obtained when the exposure time te
+ Implementation details: For each subset of our dataset, all is between 30 and 60 ms.
+defective samples and an equal number of normal samples were We further conducted experiments using three dice by fixing
+included in the test set, with the training and test sets split by 60% the exposure time (te = 45 ms) and gradually increasing ωp
+and 40%, respectively. For GrainAD, we followed DRAEM [25] from 0.8 to 3.2 rad/s. We observed that the visual information
+and used Perlin noise to generate pseudoanomalies. The feature could be well captured when ωp was smaller than 1.6 rad/s,
+extractor employed a pretrained WResnet50 [29] and selected while the medium and small dice experienced motion blurring
+layers 2-3 to obtain multilayer features, the feature adapter was when ωp exceeded 2.4 rad/s. This is because the camera’s field of
+a single fully connected layer, and the classifier was a two-layer view is 21.5 × 27 mm2 , and the movement distance st (during
+multilayer perceptron (MLP). For synthesizing feature-level te = 45 ms) is approximately 7 to 15 mm according to s =
+anomalies, σ was set to 0.015 for the Gaussian noise N . For the ωp · 21 d · t at a higher angular velocity (ωp = 3.2 rad/s). Empirtraining strategy, we first trained the STN separately by using ically, to maintain image quality and inspection efficiency, we
+only Lstn . When using five views together or individually as the controlled the exposure time te between 30–60 ms and keep the
+input, images were resized to 224 × 1120 or 224 × 224 pixels, angular velocity ωp below 1.6 rad/s.
+respectively, and the training batch size was set to 16 with a
+training epoch of 50. Adam optimizer was employed with a C. Efficacy of Model: GrainAD
+learning rate of 1e−4. Then, we fixed the STN and the feature
+extractor to train the adapter and the classifier by setting λ1 = 0, Comparison with SOTA: We compared our GrainAD to clas-
+λ2 = 0.5, and λ3 = 0.5. The Adam optimizer was used with a sic methods: Patch SVDD [19] and DRAEM [25], advanced
+learning rate of 2e−4, and the batch size was set to 8 with a methods: Patchcore [21], RD4AD [23], Simplenet [8] and
+training epoch of 50. For the evaluation metrics, we followed CDO [30], lightweight methods: EfficientAD [31], CRAD [32]
+previous studies [21], [25] and adopted the area under the and MoEAD [33]. We tested two settings: entire-view (·♦ ) and
+receiver operating characteristic (AUROC) in both image-level multiple-view (·† ). In the entire-view setting, five views of a
+and pixel-level settings, with higher values indicating better single kernel were concatenated and used for training. In the
+performance. The predicted map s of the classifier was smoothed multiple-view setting, each view was treated as a separate input.
+by using a Gaussian filter with σ = 4. As shown in Table II, our GrainAD using the multiview setting
+ consistently outperformed other methods, achieving the highest
+ average AUROC scores of 94.4% and 90.4% at the image-level
+B. Efficiency of Prototype: A100 and pixel-level, respectively. Compared to Patchcore and CDO,
+ The high quality of images captured by the capturing module which also utilize pretrained models to extract multilayer feais crucial for the accuracy of our anomaly detection framework. tures, our improvement lies in incorporating the STN to effec-
+The image quality is directly related to the specifications of the tively align different views into a unified orientation, facilitating
+cameras, the feeding rate ṅf of the feeding cabin, the angular easier feature extraction. In contrast to synthetic-based methods
+velocity ωp of the transparent plate, and the total exposure time like DRAEM and Simplenet, our use of SCL loss promotes learnte of the LED ring light. To ensure the grains from the feeding ing compact feature representations of normal data by explicitly
+cabin to the transparent plate remain stable without movement, considering different views of the same kernels exhibiting simithe feeding rate ṅf for various types of grains can reach up to lar information. While lightweight models, EfficientAD, CRAD,
+FAN et al.: GRAINBRAIN: MULTIVIEW IDENTIFICATION AND STRATIFICATION OF DEFECTIVE GRAIN KERNELS 3633
+
+Fig. 6. Examples of captured images with different exposure times te and angular velocity ωp . We first verified the range of te with histograms
+when the plate is static (ωp = 0). Then, we fixed the exposure time (te = 45ms) and further tested different angular velocities.
+
+ TABLE II
+ PERFORMANCE OF GRAINAD IN COMPARISON WITH ADVANCED METHODS
+
+and MoEAD employed few conventional blocks to extract fea- TABLE III
+ ABLATION STUDY OF GRAINAD
+tures, our model employed WResnet50 as the feature extractor,
+providing multiscale feature representations with richer spatial
+and semantic information. However, our model was designed
+to synthesize pseudoanomalies within relatively small regions,
+leading to suboptimal performance compared to RD4AD in
+maize and paddy subsets.
+ We also observed that many models performed better using
+the multiple-view compared to their counterparts using the
+entire-view in both image-level and pixel-level performance. We improvements in average image-level and pixel-level AUROC
+suggest that the multiple-view approach mimics human inspec- of 1.5% and 1.1%, respectively. We suggest that adding an
+tors, who carefully examine each view of the grains. Treating STN results in poorer performance on maize because it lacks
+each view individually provides higher resolution and more a distinct shape pattern compared to other types of grains,
+detailed information as input to the model. In the complexity making it difficult to normalize to a similar shape. Using only
+analysis, we observed that RD4AD and Simplenet exhibited the pseudoanomaly image (I a ) achieved similar performance to
+similar computational efficiency, but their performance was using only the synthesized anomaly feature fIg , and combining
+suboptimal. While CRAD, MoEAD, and EfficientAD had sig- them yielded an average improvement of 2.7% and 4.8% in
+nificantly smaller model parameters, their performance varied image-level and pixel-level AUROC, respectively. Employing
+widely. GrainAD demonstrated the best performance, and its Lscl allowed the model to achieve the best performance in
+computational efficiency met the requirements for real-time average scores, obtaining the highest results in wheat, maize,
+inspection. and soybean.
+ Ablation study: We further conducted experiments to verify Ablation study for the loss function: We conducted experithe effectiveness of each component of GrainAD under the ments to explore different settings of weights λ1 , λ2 , and λ3 to
+multiview setting, as shown in Table III. Compared to Simplenet, balance the losses Lstn , Lscl , and Lbce , respectively, as shown
+which uses only the synthesized anomaly feature fIg , integrating in Table IV. Note that the STN in all models was pretrained
+the STN to explicitly learn the spatial transformation produced to convergence. We observed that different weight settings
+3634 IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 5, MAY 2025
+
+ TABLE IV
+ABLATION STUDY OF WEIGHTS FOR THE TRAINING LOSS (REPORTED USING
+ IMAGE-/PIXEL-LEVEL AUROC (%))
+
+ Fig. 8. Visualizations of the pixel-level predictions with/without using
+ STN. The experts’ annotations are highlighted using red contours ().
+
+ TABLE V
+ KAPPA TESTS BETWEEN GRAINBRAIN AND HUMAN EXPERTS
+
+Fig. 7. Visualizations of the pixel-level predictions of our GrainAD. The
+experts’ annotations are highlighted using red contours ().
+
+produced similar performance. Without explicitly fine-tuning
+Lstn (i.e., setting λ1 to 0), the models achieved relatively better
+performance across four types of cereal grains, and the best
+performance was obtained when λ2 and λ3 were both set to 0.5.
+We suggest that the STN should be trained in the early stages
+using self-supervised learning to achieve stable pose alignment.
+Then, only feature alignment and classification losses should be
+ Specifically, we built two versions of GrainBrain (denoted as D1
+used for optimization.
+ and D2 ) and recruited two human experts (denoted as H1 and
+ Visualization: We also visualized the pixel-level predictions
+ H2 ) with over 5 years of specialized experience. We prepared
+of our GrainAD, as illustrated in Fig. 7. It was observed that
+ 16 additional 50-gram test samples, with 4 samples for each
+our GrainAD effectively localized the anomalous regions of
+ type of cereal grains. All samples were randomly acquired from
+defective kernels. Particularly, when the query kernel is attacked
+ grain delivery trucks and underwent an impurity removal process
+by pests or is in a germination state, our model precisely
+ using a series of tools, such as sieves and a fan. The proportion
+highlighted the pest-affected areas and the germination sites
+ of defective kernels in each test sample ranged from 5–20%.
+across multiple views. The pixel-level results significantly sup-
+ To ensure a fair comparison, experts were required to inspect
+ported the model’s interpretability and transparency, especially
+ images captured by our systems rather than real grain kernels.
+in inspecting various types of grains. We further conducted a
+ The samples were shuffled and inspected under a dual-blind
+quantitative analysis of the effectiveness of STN, as shown in
+ policy. We conducted the Kappa test to assess agreement and
+Fig. 8. Without STN, the models demonstrated good pixel-level
+ reported the Cohen’s kappa value κ and the inspection time
+results for identifying anomalous regions but produced several
+ using average values and standard deviations. It is noted that
+erroneous predictions. With STN, it successfully aligned the
+ when κ ≥ 0.6, it indicates significant agreement, while a κ of 0
+grains’ pose to a similar orientation in an unsupervised setting,
+ indicates agreement by chance.
+and the aligned images were used as input for the models,
+ As shown in Table V, GrainBrain systems demonstrated
+significantly reducing erroneous regions.
+ strong consistency with human experts, achieving Cohen’s
+ Kappa values κ of nearly 65% for all comparison experiments
+D. GrainBrain Versus Human Experts across various types of cereal grains. These results validated
+ The GrainBrain is developed to assist inspectors in reducing the feasibility and potential of our system for visual inspecworkloads, especially when dealing with large quantities of grain tion and seed stratification tasks. It is evident that our system
+kernels for quality inspection and stratification tasks. Our goal demonstrated a significant advantage in inspection time, costis to create a system that maintains high consistency with human ing near 174, 46, 142, and 271 s per test sample for wheat,
+experts while ensuring high efficiency. To evaluate this, we con- maize, soybean, and paddy, respectively, surpassing H1 and
+ducted a comparison between GrainBrain and human experts. H2 by over ten times. Especially when processing wheat or
+FAN et al.: GRAINBRAIN: MULTIVIEW IDENTIFICATION AND STRATIFICATION OF DEFECTIVE GRAIN KERNELS 3635
+
+paddy, which have smaller physical sizes, our systems were [8] Z. Liu et al., “Simplenet: A simple network for image anomaly detection
+faster by approximately 20× speedup. These results verified the and localization,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.,
+ 2023, pp. 20402–20411.
+efficiency of our system. In practice, inspectors typically take [9] N. S. Visen, J. Paliwal, D. Jayas, and N. White, “Image analysis of bulk
+more time because they need to manipulate the grain kernels grain samples using neural networks,” in Proc. ASAE Annu. Meeting,
+using tweezers and individually pick, classify, and tally the American Society of Agricultural and Biological Engineers, 2003, pp. 33–
+ 55.
+corresponding proportions. [10] Y. Kim and R. Flores, “Determination of bran contamination in wheat
+ flours using ash content, color, and bran speck counts,” Cereal Chem.,
+ V. CONCLUSION vol. 76, no. 6, pp. 957–961, 1999.
+ [11] T. Bronan and D.-W. Sun, “Inspection and grading of agricultural and
+ In this article, we presented a multiview vision-based system: food products by computer vision systems—A review,” Comput. Electron.
+GrainBrain for high-throughput grain appearance inspection and Agriculture, vol. 36, no. 2-3, pp. 193–213, 2002.
+ [12] A. Mitra et al., “Everything you wanted to know about smart agriculture,”
+seed stratification tasks. It consists of a prototype A100 and 2022, arXiv:2201.04754.
+an anomaly detection model GrainAD. Specifically, A100 is [13] X. Yang et al., “A survey on smart agriculture: Development modes, techdesigned to separate kernels individually and capture five-view nologies, and security and privacy challenges,” IEEE/CAA J. Automatica
+ Sinica, vol. 8, no. 2, pp. 273–302, Feb. 2021.
+visual images of each grain kernel efficiently. GrainAD is devel- [14] L. Fan et al., “GrainSpace: A large-scale dataset for fine-grained and
+oped to analyze the captured images and provide control signals domain-adaptive recognition of cereal grains,” in Proc. IEEE Conf. Comfor A100 to implement kernel sorting. Our GrainBrain offers put. Vis. Pattern Recognit., 2022, pp. 21116–21125.
+ [15] L. Fan et al., “AV4GAInsp: An efficient dual-camera system for identifying
+automatic detection, inspection, and individual separation of defective kernels of cereal grains,” IEEE Robot. Autom. Lett., vol. 9, no. 1,
+defective kernels. Built upon an anomaly detection framework, pp. 851–858, Jan. 2024.
+our approach significantly enhanced model robustness, enabling [16] G. Pang, C. Shen, L. Cao, and A. V. D. Hengel, “Deep learning for anomaly
+ detection: A review,” ACM Comput. Surv., vol. 54, no. 2, pp. 1–38, 2021.
+the effective detection of various types of anomalies, including [17] P. Bergmann et al., “The MVTec anomaly detection dataset: A compreunseen or unknown defects. In addition, we released a large- hensive real-world dataset for unsupervised anomaly detection,” Int. J.
+scale dataset containing over 100K images with high-quality Comput. Vis., vol. 129, no. 4, pp. 1038–1059, 2021.
+ [18] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+annotations. Learn., 2018, pp. 4393–4402.
+ Our system still has some limitations in both the prototype and [19] J. Yi and S. Yoon, “Patch SVDD: Patch-level SVDD for anomaly detection
+algorithms. On the prototype side, the placement of the cameras and segmentation,” in Proc. Asian Conf. Comput. Vis., 2020, pp. 375–390.
+ [20] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “Padim: A patch
+restricts the ability to capture certain areas of elongated grains, distribution modeling framework for anomaly detection and localization,”
+such as maize, or grains with recessed surfaces, resulting in some in Proc. Int. Conf. Pattern Recognit., Springer, 2021, pp. 475–489.
+regions being left unobserved. In addition, different grains, such [21] K. Roth et al., “Towards total recall in industrial anomaly detection,” in
+ Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2022, pp. 14318–14328.
+as wheat and maize, exhibit varying reflectivity under the same [22] D. Gong et al., “Memorizing normality to detect anomaly: Memorylighting conditions. Currently, we used the same exposure time augmented deep autoencoder for unsupervised anomaly detection,” in
+for all grain types, but dynamic adjustments based on the specific Proc. IEEE/CVF Int. Conf. Comput. Vis., 2019, pp. 1705–1714.
+ [23] H. Deng and X. Li, “Anomaly detection via reverse distillation from onegrain type should be considered. The fixed focal length of the class embedding,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.,
+cameras also limits the ability to capture high-quality images of 2022, pp. 9737–9746.
+agricultural products of varying sizes, such as peanuts or millet. [24] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “Cutpaste: Self-supervised
+ learning for anomaly detection and localization,” in Proc. IEEE Conf.
+On the other hand, the performance of the unsupervised anomaly Comput. Vis. Pattern Recognit., 2021, pp. 9664–9674.
+detection method has not yet reached the level of high expert [25] V. Zavrtanik, M. Kristan, and D. Skočaj, “Draem-a discriminatively
+consensus. Incorporating a small number of labeled anomaly trained reconstruction embedding for surface anomaly detection,” in Proc.
+ IEEE/CVF Int. Conf. Comput. Vis., 2021, pp. 8330–8339.
+samples as auxiliary data or leveraging large language models [26] M. Jaderberg et al., “Spatial transformer networks,” Neural Inf. Process.
+could further enhance the model’s performance while maintain- Syst., vol. 28, pp. 2017–2025, 2015.
+ing robustness. We hope that GrainBrain can stimulate and draw [27] Y. Zheng, X. Wang, R. Deng, T. Bao, R. Zhao, and L. Wu, “Focus your
+ distribution: Coarse-to-fine non-contrastive learning for anomaly detection
+more attention to various fields of grain quality inspection. and localization,” in Proc. IEEE Int. Conf. Multimedia Expo, 2022, pp. 1–6.
+ [28] P. Khosla et al., “Supervised contrastive learning,” Neural Inf. Process.
+ REFERENCES Syst., vol. 33, pp. 18661–18673, 2020.
+ [29] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+ [1] N. D. Cruz and G. Khush, “Rice grain quality evaluation procedures,” recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2016,
+ Aromatic Rices, vol. 3, pp. 15–28, 2000. pp. 770–778.
+ [2] R. Henry and P. Kettlewell, Cereal Grain Quality, Springer Dordrecht, [30] Y. Cao, X. Xu, Z. Liu, and W. Shen, “Collaborative discrepancy optimiza-
+ 2012. https://link.springer.com/book/10.1007/978-94-009-1513-8 tion for reliable image anomaly localization,” IEEE Trans. Ind. Inform.,
+ [3] M. Helguera et al., “Grain quality in breeding,” Wheat Qual. Improv- vol. 19, no. 11, pp. 10674–10683, Nov. 2023.
+ ing Process. Hum. Health, Cham: Springer International Publishing, [31] K. Batzner, L. Heckler, and R. König, “Efficientad: Accurate visual
+ pp. 273–307, 2020, doi: 10.1007/978-3-030-34163-3_12. anomaly detection at millisecond-level latencies,” in Proc. IEEE/CVF
+ [4] Y. Miao, D. J. Mulla, and P. C. Robert, “Identifying important factors Winter Conf. Appl. Comput. Vis., 2024, pp. 128–138.
+ influencing corn yield and grain quality variability using artificial neural [32] J. C. Lee, T. Kim, E. Park, S. S. Woo, and J. H. Ko, “Continuous memory
+ networks,” Precis. Agriculture, vol. 7, no. 2, pp. 117–135, 2006. representation for anomaly detection,” in Proc. IEEE Eur. Conf. Comput.
+ [5] T. Brosnan and D.-W. Sun, “Improving quality inspection of food products Vis., 2024, pp. 438–454.
+ by computer vision—A review,” J. Food Eng., vol. 61, no. 1, pp. 3–16, [33] S. Meng, W. Meng, Q. Zhou, S. Li, W. Hou, and S. He, “Moead: A
+ 2004. parameter-efficient model for multi-class anomaly detection,” in Proc.
+ [6] “ISO 5527: Cereals–Vocabulary,” International Organization for Stan- IEEE Eur. Conf. Comput. Vis., 2024, pp. 345–361.
+ dardization, Standard, Feb. 2015.
+ [7] “ISO 24333: Cereals and cereal products—Sampling,” International Organization for Standardization, Standard, Dec. 2009.

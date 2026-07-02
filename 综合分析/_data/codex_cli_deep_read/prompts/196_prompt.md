@@ -1,0 +1,1628 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [196] Contrasting Estimation of Pattern Prototypes for Anomaly Detection in Urban Crowd Flow
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：196
+题名：Contrasting Estimation of Pattern Prototypes for Anomaly Detection in Urban Crowd Flow
+年份：2024
+DOI：10.1109/tits.2024.3355143
+来源：IEEE Transactions on Intelligent Transportation Systems
+PDF：paper/10.1109_TITS.2024.3355143.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：其他AI安全与跨域异常检测、加密流量分类与应用识别
+相关性：强相关，分数 11
+已有代码状态：已下载；ProtoDetect -> source\ProtoDetect
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\196.txt
+- 原始字符数：74415
+- 本次发送字符数：74415
+- 是否截断：False
+
+代码包：
+- 仓库：ProtoDetect
+  - URL：https://github.com/yupwang/ProtoDetect
+  - 状态：downloaded
+  - 本地目录：source\ProtoDetect
+  - 顶层结构：Extractor.py、ProtoDetect.py、config.yaml、dataset/、models/、readme.md、requirements.txt、training_cache/、utils/
+  - 主要语言：Python:7、YAML:1
+  - README 标题：Contrasting Estimation of Pattern Prototypes for Anomaly Detection in Urban Crowd Flow (ProtoDetect)、Dataset、Test、train the local and global ST-encoders、train ProtoDetect、Citation、Acknowledgement、Contact、Contrasting Estimation of Pattern Prototypes for Anomaly Detection in Urban Crowd Flow (ProtoDetect)、Dataset
+  - README 运行线索：bash # train the local and global ST-encoders；python Extractor.py --mode local；python Extractor.py --mode global；python ProtoDetect.py --mode train；bash python ProtoDetect.py --mode eval；bash # train the local and global ST-encoders；python Extractor.py --mode local；python Extractor.py --mode global
+  - 关键文件：{"依赖环境": ["requirements.txt"], "数据处理入口": ["Extractor.py", "models/dataloader.py"], "配置文件": ["config.yaml"]}
+  - 数据集线索：toN、tor
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+10231
+
+Contrasting Estimation of Pattern Prototypes for
+Anomaly Detection in Urban Crowd Flow
+Yupeng Wang , Xiling Luo , and Zequan Zhou
+
+Abstract— Crowd flow anomaly detection (CFAD) plays a vital
+role in ensuring public safety due to its capability to distinguish
+abnormal crowd movement behaviors from the norm. However,
+the influence of coexisting spatiotemporal factors presents a
+substantial challenge in capturing the dynamic normal pattern.
+Moreover, the inherent similarities within the original crowd
+flow data necessitate the creation of a discriminative feature
+space. To address this, we propose ProtoDetect, a novel method
+that learns distinguishable representations (named as prototypes)
+of the influencing factors. It subsequently identifies anomalous
+samples by comparing them with their normal counterparts,
+estimated based on the prototypes. Experimental evaluations on
+three real-world datasets demonstrate ProtoDetect’s consistent
+superior performance in CFAD. The source code is available at
+https://github.com/yupwang/ProtoDetect.
+Index Terms— Anomaly detection, crowd management, urban
+transportation systems, contrastive learning.
+
+I. I NTRODUCTION
+
+C
+
+ROWD management plays a crucial role in enhancing urban transportation systems, traveler information
+systems, and promoting sustainable urban development [1],
+[2], [3], [4]. With the advancement of urban transportation
+infrastructures, large volumes of traffic data is being collected
+from sources such as vehicle trajectories, trip records, mobile
+phone call logs, social media posts, and surveillance camera
+signals [4], [5], [6]. This data provides valuable insights into
+individual movement within urban environments and has expedited the development of efficient crowd management in areas
+such as crowd simulation [1], [7], [8] and crowd flow prediction [4], [9], [10]. Nonetheless, further investigation is required
+to address the field of anomaly detection within crowd flow.
+Crowd flow anomaly detection (CFAD) involves identifying
+uncommon or abnormal patterns in the movement of individuals within urban environments. Crowd flow refers to the
+count of people entering (inflow) or exiting (outflow) specific
+urban regions during specific times, as shown in Figure 1.
+Anomalies in crowd flow arise from exceptional events. For
+example, occurrences such as sports competitions, festivals,
+Manuscript received 17 July 2023; revised 6 November 2023 and 8 January
+2024; accepted 12 January 2024. Date of publication 31 January 2024; date
+of current version 1 August 2024. This work was supported by the Zhejiang
+“Jianbing” Research and Development Project under Grant 2022C01055.
+The Associate Editor for this article was F. Xia. (Corresponding author:
+Xiling Luo.)
+The authors are with the School of Electronic and Information Engineering,
+Beihang University, Beijing 100191, China, and also with the Hangzhou
+Innovation Institute, Beihang University, Hangzhou 310000, China (e-mail:
+wangyup@buaa.edu.cn; luoxiling@buaa.edu.cn; zhouzequan@buaa.edu.cn).
+Digital Object Identifier 10.1109/TITS.2024.3355143
+
+Fig. 1. (a) Illustration of inflow and outflow of Region A. (b) Crowd flow
+variation from Wednesday to Sunday (eight-week average).
+
+and concerts often result in increased crowd flow. Conversely,
+extreme weather conditions typically lead to a decrease in
+crowd flow. Street closures, on the other hand, result in a
+decrease in the crowd flow of the closed street and an increase
+in neighboring streets [11]. Recognizing anomalies in crowd
+flow is essential as it helps identify these issues and is crucial
+for enhancing public safety and improving urban planning.
+Performing CFAD encounters two main difficulties. Firstly,
+due to the complex impact of anomalies on crowd flow,
+simply recognizing decreases or increases in the original crowd
+inflow and outflow struggles in real-world environments.
+To illustrate this challenge, we examine the inflow and
+outflow of an urban region encompassing Millennium Park
+and Grant Park in Chicago during the period from August
+16th, 2019, to September 1st, 2019, as depicted in Figure 2.
+We estimate crowd flow dynamics by aggregating taxi and
+bike trip records arriving at or leaving the region every hour
+(as detailed in Section V-A). Real-world anomalies happened
+in the two parks, including Grant Park Music Festival (16th,
+17th), Summer Dance Celebration (24th), and Chicago Jazz
+Festival (29th, 30th), are indicated by light red shading. The
+observation from the figure reveals the considerable challenge
+in discerning a distinct and intuitive difference in crowd flow
+patterns in the presence or absence of anomalies.
+Secondly, modeling the normal patterns that represent
+the expected crowd behavior poses a difficulty. In anomaly
+detection, it is common to compute the deviation of observed
+data from their expected normal pattern. However, estimating
+the normal pattern is complex as it involves contributions
+from various spatial and temporal factors. Temporal factors
+include considerations like the time of day and day of
+the week. For example, crowd flow tends to peak during
+morning and evening hours while significantly decreasing
+during nighttime. Similarly, crowd flow in office buildings may
+be much more active on workdays and quieter on weekends.
+Holidays introduce additional temporal factors, leading to
+
+1558-0016 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+10232
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+Fig. 2. Crowd flow of the region encompassing Millennium Park and Grant
+Park, Chicago, from August 16th to September 1st, 2019. Light red shading
+highlights real-world anomalies in the two parks, including the Grant Park
+Music Festival on the 16th and 17th, the Summer Dance Celebration on the
+24th, and the Chicago Jazz Festival on the 29th and 30th, emphasizing the
+challenge in distinguishing crowd flow patterns in the presence of anomalies.
+
+Fig. 3. Eight-week averaged total crowd flow (sum of inflow and outflow)
+of regions with different functional properties. Various factors contribute
+distinctively to the normal pattern.
+
+increased crowd flow in tourist areas and decreased flow in
+work-related regions. Spatial factors, such as the presence
+of public functional places, also contribute to diverse crowd
+flow patterns. To illustrate this, we present the eight-week
+averaged total crowd flow (sum of inflow and outflow) of two
+urban regions in Figure 3. These regions are categorized as
+residential and commercial based on the number of functional
+places within them. It is evident that the peak hours of the two
+regions exhibit noticeable differences. Additionally, the crowd
+flow in the residential area experiences a substantial decrease
+on weekends, whereas the flow in the commercial region is
+more evenly distributed throughout the week.
+Existing approaches for CFAD, including general traffic
+anomaly detection methods, typically adopt a two-step
+approach. Firstly, they transform the original traffic data
+into a feature space. These features encompass direct traffic
+dynamics such as vehicle speed, travel distance, and traffic
+flow volume [12], [13], as well as handcrafted statistics derived
+from the dynamics [14], [15], [16]. Advanced techniques like
+tensor factorization [17] or neural networks [11], [18] can also
+be employed for feature extraction. In the second step, general
+anomaly detection algorithms widely used in data science are
+applied to the extracted features to identify anomalous data
+points. However, despite the effectiveness of these approaches,
+they fail to adequately address the two difficulties mentioned
+previously. Here we summarize the aspects that have not been
+adequately considered:
+1) Homogeneity of the feature space: As discussed in
+Figure 2, the original features (inflow and outflow)
+tend to exhibit similarities, making it challenging to
+identify anomalies. Existing approaches address this
+issue by utilizing handcrafted statistics derived from the
+original features [14], [15], [16], [19], or by employing
+embedding features obtained through tensor factorization [17] or neural networks [11], [18]. However,
+these feature generating processes often overlook the
+
+spatiotemporal dependencies of data points and do
+not prioritize enhancing feature discriminability. The
+homogeneity among features makes it difficult to
+effectively distinguish anomalies from normal data
+points.
+2) Coexistence of spatiotemporal factors: Capturing the
+expected crowd behavior necessitates modeling the
+spatial and temporal factors and how they contribute
+to normal patterns. However, existing approaches often
+rely on general anomaly detection algorithms that are
+not specifically designed to handle the simultaneous
+occurrences of influencing factors. This oversight leads
+to inaccurate estimations of normal patterns and can
+hinder the detection of anomalies.
+In this paper, we leverage contrastive representation learning
+to obtain a discriminative feature space, and to represent
+distinguishable influencing factors. Contrastive representation
+learning has garnered significant attention in recent years,
+primarily due to its outstanding performance across diverse
+domains, including computer vision [20], [21], [22], time
+series analysis [23], [24], [25], and graph learning [26],
+[27]. This approach, executed in an unsupervised manner,
+aims to foster a representation that effectively distinguishes
+one instance from others. Specifically, to overcome the
+homogeneity challenge in the feature space, we introduce the
+Instance Contrast Module (IC) to obtain an informative
+and discriminative feature space. This module captures spatiotemporal dependencies by contrastively encoding local and
+global views of crowd flow data. Furthermore, by comparing
+the encoded samples with their augmented counterparts,
+it effectively disperses the samples in the feature space, thereby
+enhancing their discriminability. Additionally, we propose the
+Prototype Contribution Contrast Module (PCC) to estimate
+representations of the influencing factors in the feature
+space. These representations are referred to as prototypes.
+Instead of directly modeling the prototypes themselves,
+we focus on modeling their contribution to the observed
+crowd flows. To achieve this, we train a projection head
+that estimates the contributions by contrasting contribution
+vectors between the local and global views. This process
+aligns vectors from the same prototype and repels vectors
+from different prototypes, leading to distinguishable prototype
+distributions, as demonstrated in our experiment section VD.3. These contribution vectors are then used to iteratively
+update the randomly initialized prototypes through a crossview prediction task. In the anomaly degree scoring stage,
+we measure the degree of anomaly by computing the deviation
+between incoming crowd flow features and their corresponding
+normal features, which are estimated based on the prototypes.
+Our main contributions can be summarized as follows.
+1) We present the ProtoDetect model for CFAD. It introduces the IC module to acquire an informative
+and discriminative representation of crowd flow data,
+enabling accurate differentiation between abnormal and
+normal crowd flow. It introduces the PCC module
+to facilitate the estimation of prototypes and their
+contributions to crowd flow, providing a new means of
+modeling the normal pattern.
+
+WANG et al.: CONTRASTING ESTIMATION OF PATTERN PROTOTYPES FOR ANOMALY DETECTION
+
+2) We conduct extensive experiments on three sets of realworld crowd flow anomalies. The result demonstrates
+our ProtoDetect method surpasses baseline approaches,
+showcasing a significant enhancement in precision.
+Additionally, we conduct case studies to examine the
+evolution of anomaly scores during the occurrence and
+conclusion of anomalies. This analysis offers insights
+into the behavior of the proposed method and its
+effectiveness in detecting anomalies in real-world traffic
+environments.
+The rest of this article is organized as follows. We first
+present the related work regarding traffic anomaly detection
+and contrastive learning in Section II. We then clarify the
+definitions of key terms used in the paper in Section III.
+In Section IV we introduce details of our ProtoDetect method.
+The experiment results are discussed in Section V. Finally,
+we conclude our work in Section VI.
+II. R ELATED W ORK
+In this section, we introduce the existing works in traffic
+anomaly detection and contrastive learning.
+A. Traffic Anomaly Detection
+General traffic anomaly detection approaches can be broadly
+categorized into three types: handcrafted feature-based, tensorbased, and deep learning-based.
+Handcrafted feature-based methods involve the creation
+of features according to predefined rules from traffic data,
+followed by the application of general anomaly detection
+algorithms to these features. Commonly employed anomaly
+detection algorithms in this category include the elliptic
+envelope (EE) [28], isolation forest (IF) [29], local outlier
+factor (LOF) [30], and One-Class SVM (OCSVM) [31]. These
+features may have physical interpretations, such as vehicle
+speed, travel distances, and movement direction [12], [13],
+[32]. They can also be manually defined statistics, encompassing aspects like spatial similarity, temporal similarity,
+and traffic flow distribution [14], [15], [16]. While these
+features provide valuable insights into real-world implications
+and are easily interpretable, they often lack high-dimensional
+spatiotemporal characteristics and rely heavily on, and are
+limited by, human knowledge.
+Tensor-based methods are employed to learn normal patterns in traffic data by utilizing restricted tensor factorization.
+In this approach, traffic data is represented as a regionfeature-time tensor [17], [33], [34], [35]. For instance, [17]
+utilize nonnegative CP decomposition to estimate normal
+patterns and their distribution across temporal and spatial
+dimensions. To identify anomalous regions that display
+distributions distinct from their past behavior, the LOF
+algorithm is subsequently employed. Similarly, [33] employ
+nonnegative tensor cofactorization, incorporating the social
+activity check-in tensor. However, it is important to note that
+tensor-based methods model regions independently, neglecting
+spatial correlations between them.
+Deep learning-based methods have demonstrated their
+efficacy in modeling traffic data [36], [37], [38] and are
+also used in traffic anomaly detection [11], [18], [39].
+
+10233
+
+Neural networks can operate in two key modes: first,
+by generating spatiotemporal features that are subsequently
+fed into general anomaly detection algorithms, as exemplified
+by ST_decomp [18], which employs fully connected layers to
+capture spatial and temporal patterns and feeds the deviation
+from normal patterns into the LOF algorithm for anomaly
+detection. Second, neural networks can be tailored for endto-end anomaly detection, as seen in STGAN [11], which
+employs a generator to produce synthetic traffic data slices and
+a discriminator to assess the degree of anomaly. By training
+a generator to produce synthetic slices, it can be argued
+that STGAN essentially models a single abnormal pattern.
+However, although these deep learning-based methods are
+capable of modeling single normal or abnormal patterns, they
+often overlook the complexity of traffic data. Different times of
+the day, regions with varying social properties, and weekdays
+versus weekends can exhibit different normal patterns.
+The connections between our work and existing research,
+as well as our improvements, can be outlined as follows.
+Like existing feature-based methods, we propose the IC
+module to generate high-dimensional crowd flow features.
+However, we go beyond existing approaches by utilizing
+instance contrastive learning. This enables us to capture
+spatiotemporal dependencies and obtain a discriminative
+feature space that improves the detection of anomalies. In our
+PCC module, we adopt the idea of estimating normal patterns,
+which is commonly used in tensor-based methods. However,
+we enhance this concept by estimating prototypes and
+utilizing the learned prototypes to predict normal components.
+Additionally, we introduce a scoring method that evaluates
+the deviation between incoming crowd flow features and their
+corresponding normal features, which are estimated based on
+the prototypes. This scoring method is particularly well-suited
+for the urban traffic environment.
+B. Contrastive Learning
+In our study, we employ contrastive learning as a
+technique to acquire discriminative high-dimensional features
+and prototype contribution vectors. Contrastive learning,
+a popular approach in deep learning, facilitates unsupervised
+representation learning by repelling negative pairs while
+attracting positive pairs [21], [22], [23], [40].
+The representations learned through contrastive learning
+have proven to be effective in various domains such
+as computer vision (image classification, object detection)
+[20], time series analysis (human activity recognition, fault
+diagnosis) [23], and graph learning (node classification, graph
+classification) [26]. To facilitate effective contrastive learning,
+data augmentation techniques are commonly employed to
+create positive and negative pairs. These techniques involve
+generating different views of the original data, where samples
+from the same data points are considered positive pairs, while
+samples from different data points are treated as negative pairs.
+For image data, common augmentation techniques include
+cropping, resizing, rotating, or blurring the images [21], [22].
+In the case of time series data, transformations in the time
+and frequency domains are applied [23], [41], [42]. In graph
+learning, graph diffusion is often utilized to create a global
+view for contrastive learning [26], [27], [43].
+
+10234
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+TABLE I
+D ESCRIPTION OF M ATHEMATICAL S YMBOLS
+
+In our study, as we represent crowd flow data as a sequence
+of attributed graphs, we propose a combination of time series
+augmentation and graph augmentation techniques to create
+two views of the original data. We construct instances that
+incorporate spatiotemporal neighboring information from both
+views and encode them into discriminative feature vectors by
+contrasting positive and negative instance pairs. Additionally,
+we model the contribution of prototypes by contrasting
+contribution vectors from both views.
+III. P RELIMINARY
+The definitions of key terms used in the paper are shown
+as follows. Table I lists the mathematical symbols used in the
+paper.
+Definition 1 (Urban Region): Urban regions are denoted by
+partitioning the bounding box of the urban boundary into a grid
+of cells, based on longitude and latitude. Each grid cell has
+uniform dimensions and corresponds to a distinct region. Note
+that grid cells falling outside the urban boundary are excluded.
+Formally, we denote the urban region set with symbol V =
+{v1 , v2 , . . . , vn }.
+Definition 2 (Time Slot): We denote a set of timestamps as
+{γ1 , γ2 , . . . , γl+1 }, with each consecutive pair of timestamps
+satisfying the condition γi+1 − γi = 1hour. The time slot set
+is formally defined as T = {t | ti = (γi , γi+1 ) , i ≤ l}, where
+each time slot represents a 1-hour time interval.
+Definition 3 (Urban Region Network): Viewing
+urban
+regions as nodes in a graph, we construct the urban region
+network represented by an undirected graph G = (V, E, A).
+This graph describes the interrelationships between urban
+regions, where E denotes the set of edges indicating the
+
+connectivity between these regions, and A ∈ Rn×n represents
+the adjacency matrix of G.
+Definition 4 (Crowd Flow Dynamics): We
+model
+the
+crowd flow dynamics by aggregating trip records, which
+detail the initiation and termination times and locations of
+individual movements. For instance, a trip record can be
+represented as {(−73.99, 40.73), (−73.98, 40.73), 2014-01-09
+20:45, 2014-01-09 21:12}, signifying the starting location,
+ending location, starting time, and ending time of a specific
+trip.
+We formally define the collection of trip records as
+trip trip trip trip
+trip
+ = {ω | ωi = (vsi , vei , tsi , tei )}. In this context, vs ∈
+trip
+V and ve ∈ V represent the starting and ending regions of the
+trip
+trip
+trip, respectively. Similarly, ts ∈ T and te ∈ T represent
+the time slots during which the trip commences and concludes.
+Crowd flow dynamics are represented as a tensor
+X ∈ Rl×n×2 . The inflow and outflow are defined as:
+o
+n
+trip
+trip
+(1)
+X i, j,1 = ω | ωk ∈  ∧ tek = ti ∧ vek = v j
+o
+n
+trip
+trip
+(2)
+X i, j,2 = ω | ωk ∈  ∧ tsk = ti ∧ vsk = v j
+where X i, j,1 and X i, j,2 denote the inflow and the outflow,
+respectively.
+Definition 5 (Problem: Crowd Flow Anomaly Detection):
+We represent
+expert-labeled
+anomaly
+
+
+ events using the
+ symbol
+U =
+ts1 , te1 , vr1 , ts2 , te2 , vr2 , . . . , tsk , tek , vrk . Each
+individual anomaly event is denoted by a tuple (ts , te , vr ),
+where ts ∈ T represents the starting time slot of the event,
+te ∈ T indicates the ending time slot of the event, and vr ∈ V
+specifies the region in which the event takes place.
+Given crowd flow dynamics denoted as X ∈ Rl×n×2 , our
+objective is to derive the anomaly status matrix O ∈ Rl×n ,
+wherein Oi, j ∈ {0, 1} indicates whether a data point at position
+(i, j) is normal (0) or anomalous (1). The ideal anomaly status
+matrix O∗ is labeled by anomaly events U, thereby serving as
+a reference for assessing the accuracy of anomaly detection
+algorithms, i.e.,
+
+ if ∃ (ts , te , vr ) ∈ U,
+1
+such that ts ≤ i ≤ te and vr = j;
+Oi,∗ j =
+(3)
+
+0 otherwise.
+IV. T HE P ROPOSED M ETHOD
+The proposed ProtoDetect model consists of two main
+modules: the IC module and the PCC module, as depicted in
+Figure 4. The IC module encodes spatiotemporal information
+of crowd flow in a contrastive manner, enabling it to learn
+discriminative features from the original data. The PCC
+module estimates prototypes within the feature space and
+leverages them to model the normal component of crowd flow.
+The anomaly degree of incoming data points is determined
+by measuring their deviation from the estimated normal
+component, computed using the prototypes.
+A. Instance Contrast Module
+The IC module utilizes unsupervised contrastive learning
+to create a discriminative feature space. It achieves this by
+employing both temporal and spatial augmentation techniques
+
+WANG et al.: CONTRASTING ESTIMATION OF PATTERN PROTOTYPES FOR ANOMALY DETECTION
+
+10235
+
+Fig. 4. The proposed ProtoDetect model comprises two modules: the Instance Contrast Module (IC) and the Prototype Contribution Contrast Module (PCC).
+By utilizing spatiotemporal contrastive learning, the IC module extracts discriminative features from the original crowd flow data. Specifically, it generates
+local and global views by applying temporal and spatial augmentation techniques, respectively. Instances in each view are encoded and projected into features,
+denoted as h, using a pre-trained spatiotemporal encoder and a feature projection head. The instance contrasting loss Lic is defined to compare positive feature
+pairs from the same data point and negative pairs from different data points, thereby enhancing the discriminability of the feature space. Subsequently, in the
+feature space, the PCC module estimates prototypes P contributing to the normal crowd flow patterns. Instead of directly modeling the prototypes, it estimates
+the contribution of prototypes to the observed crowd flow by contrasting contribution vectors z between the local and global views. This involves training a
+contribution projection head with the prototype contribution contrasting loss L pc . Moreover, to achieve the estimation of the prototypes, the model employs
+a cross-view prediction task that updates the randomly initialized prototypes. During the inference stage, the incoming data point x(i) is mapped into feature
+h(i) and subsequently compared with its corresponding normal feature ĥ(i) estimated with prototypes. The deviation between h(i) and ĥ(i) is computed as
+the anomaly degree score w(i) .
+
+to generate local and global views of the crowd flow
+data. From these views, instances that capture spatial and
+temporal neighboring information of the original data points
+are constructed. By maximizing the agreement between the
+representations of these instances from the two views for
+each data point, the IC module effectively encodes its
+comprehensive local and global information. Meanwhile,
+it enhances the discriminability of the feature space by
+minimizing the similarity between the representations of
+different data points.
+1) Instance Construction: In our approach, the comparison
+between positive and negative pairs is vital to the acquisition
+of the discriminative features. As it is hard to directly compose
+positive and negative data point pairs without prior knowledge,
+we employ temporal and spatial augmentation techniques
+to generate two diverse yet related data views. In the two
+views, samples from the same data point are defined as
+positive, and samples from different data points are defined
+as negative. Subsequently, we construct the spatiotemporal
+instances carrying both spatial and temporal neighboring
+information in the two augmented views.
+Temporal Augmentation: To enable the model to learn
+consistent representations from various augmented signals in a
+contrastive manner, we rely on the approach of simultaneously
+applying weak and strong augmentation and conducting crossview tasks. This approach has proven effective in domains
+such as computer vision [44], [45] and time series [23], [46]
+representation learning. It is known to promote consistency
+in representations and enhance the model’s generalization
+
+capabilities. Specifically, we use weak temporal augmentation
+to introduce minor variations that do not significantly alter
+the data’s characteristics, and strong temporal augmentation
+to introduce more pronounced perturbations.
+In our method, the weak augmentation method relies on a
+jitter-and-scale strategy [23], which involves adding Gaussian
+noise to the time series and applying magnitude changes
+to each time step using a value drawn from a Gaussian
+distribution with a mean of 1 and a standard deviation of σ ,
+a hyperparameter. On the other hand, the strong augmentation
+method uses window warping [42], which has demonstrated
+effectiveness in time series representation [41]. This strategy
+involves selecting a random window of the time series and
+stretching it by a factor of β or contracting it by a factor of
+1/β, where β is a parameter. We discuss details about the
+temporal augmentation selection in Section V-D.4.
+Spatial Augmentation: We employ the graph diffusion as
+the spatial augmentation, which effectively captures the global
+structure information [26], [27], [47]. By performing graph
+diffusion, we obtain a global view of the original graph
+topology. Specifically, we leverage the heat kernel [27], [48]
+as the instantiation of generalized graph diffusion to power the
+graph diffusion process. Given an adjacency matrix A ∈ Rn×n ,
+the global view graph topology can be formulated as:
+
+
+
+
+S = exp λ ⊙ AD−1 − λ
+(4)
+where λ denotes diffusion time; ⊙ represents element-wise
+multiplication; D ∈ Rn×n denotes the diagonal degree matrix
+
+10236
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+of A; λ is subtracted element-wise from each element in the
+resulting matrix.
+Instance Sampling: In our method, the strong temporal
+augmentation creates the local view, while the combination of
+weak temporal augmentation and graph diffusion generates the
+global view. These choices are made based on the observed
+performance of the augmentation techniques in the context
+of CFAD (detailed in Section V-D.4). For each data point,
+we sample two sequences of attributed graphs from both local
+and global views, forming an instance pair. The instance pair is
+sampled by performing fixed-length sliding window sampling
+on the temporal dimension, and subgraph sampling on the
+spatial dimension, and represented as a tuple containing a time
+series and an adjacency matrix. We employ the subgraph (·)
+function for spatial sampling. Specifically, given a region vi ,
+this function identifies the eight nearest regions to vi in the
+graph G and returns nine indices (one for vi and eight for the
+neighboring regions):
+subgraph (vi ) = {k | vk ∈
+
+arg min
+
+X
+
+V ′ ⊂V ,|V ′ |=9 v ∈V
+
+
+d vi , v j }
+
+(5)
+
+j
+
+where V ′ represents the set comprising
+the eight nearest
+
+regions to vi and vi itself; d vi , v j denotes the Euclidean
+distance between the center point coordinates of region vi and
+vj.
+Given a data point Xi, j,: , the corresponding spatiotemporal
+instances y local from the local view and y global from the global
+view are constructed as:
+
+nodes = subgraph v j
+(6)
+
+
+local
+y
+= str ong Xi−T :i,nodes , Anodes,nodes
+(7)
+
+
+global
+y
+= weak Xi−T :i,nodes , Snodes,nodes
+(8)
+where weak (·) is the weak temporal augmentation function;
+str ong (·) is the strong temporal augmentation function; T is
+the sequence length.
+2) Instance Contrasting: In our approach, we use contrastive learning to derive discriminative representations of
+spatiotemporal instances. Since each instance consists of
+a time series and a subgraph adjacency matrix, applying
+contrastive learning directly is challenging. To address this,
+we first encode each instance into a vector, which we call
+a code, that captures both spatial and temporal information.
+Then we perform contrastive learning on the codes to acquire
+discriminative representations.
+Instance Encoding: As instances are temporal graph signals,
+we use pre-trained temporal graph encoders that can learn
+spatial and temporal dependencies effectively [36], [37], [49].
+For each view, we train an autoencoder consisting of two
+GCGRU layers [36] to compress and reconstruct temporal
+graph signals. The encoder layers of the GCGRU-autoencoder
+are then utilized to map the instances into codes.
+Instance Contrasting: Contrastive learning is then applied
+to learn the discriminative instance representations. As the
+two independent GCGRU-encoders encodes instances into
+different feature spaces, we then apply the feature projection
+heads to project the codes into an unified feature space, where
+instance-level contrastive learning is conducted.
+
+In particular, for each view, we construct an MLP with two
+linear layers and ReLU non-linearity, forming two projection
+heads. We use f local (·) and f global (·) to denote the steps
+for mapping instances into codes and projecting codes into
+features within the local and global views, respectively. Codes
+are mapped into feature h ∈ R H via hlocal = f local y local
+and hglobal = f global y global , on which contrastive learning is
+conducted, where H is the length of feature vector.
+Given a batch of N data points x(1) , x(2) , . . . , x(N ) , 2N
+spatiotemporal instances are constructed from its two augmented views. These instances are thenencoded and projected
+into features, resulting in a feature set h(1) , h(2) , . . . , h(2N ) .
+Notably, the first N instances correspond to the local view,
+while the subsequent N instances pertain to the global view.
+For feature h(i) (i ≤ N ), its corresponding feature h(i+N )
+from the other view is considered as its positive feature
+sample, and other features negative. We then employ instancelevel contrastive loss to maximize the similarity between the
+positive feature pairs while minimizing the similarity between
+the negative feature pairs. In this work, we adopt cosine
+similarity, i.e.,
+sim (a, b) = a · b/ max (∥a∥2 · ∥b∥2 , ϵ)
+
+(9)
+
+where ϵ is a small value to avoid division by zero. This choice
+is consistent with its common usage in various applications,
+particularly in the context of contrastive loss computation [21],
+[22], [23], [40]. We adopt InfoNCE loss [40] to compute
+instance contrasting loss Lic , i.e.,
+
+
+N
+X
+exp sim h(i) , h(i+N ) /τic
+log P2N
+Lic = −
+
+
+(i) ( j) /τ
+ic
+j=1 1[ j̸ =i+N ] exp sim h , h
+i=1
+(10)
+where 1condition represents an indicator function, which takes
+on the value 1 when the condition is true and 0 otherwise.
+The parameter τic controls the temperature, influencing the
+concentration level of the feature distribution [20].
+B. Prototype Contribution Contrast Module
+To estimate prototypes coexisting simultaneously in the realworld crowd flow, the PCC module employs a contribution
+projection head learning the contribution of each prototype
+to the observed data point. This involves contrasting the
+contribution vectors between the local and global views.
+Furthermore, the PCC module employs a cross-view prediction
+task to iteratively update the randomly initialized prototypes,
+ultimately leading to an estimation of the prototypes.
+Prototype Contribution Contrasting: Contrastive learning in
+computer vision involves projecting an instance into a feature
+space with a dimensionality equal to the number of clusters,
+allowing the feature vector’s i-th element to represent the
+instance’s probability of belonging to the i-th cluster [50].
+However, the semantic information of crowd flow data used in
+our work varies relatively mildly, in contrast to images where
+two distinct pictures (e.g., a dog and a plane) would exhibit
+significant visual differences. As a result, we do not assign
+instances to specific clusters, but rather use the i-th element to
+indicate the relative contribution of the i-th pattern prototype.
+
+WANG et al.: CONTRASTING ESTIMATION OF PATTERN PROTOTYPES FOR ANOMALY DETECTION
+
+To map the features obtained in Section IV-A.2 into
+contribution vectors, we employ a contribution projection head
+constructed with two linear layers and ReLU non-linearity,
+similar to the instance projection head. However, given that
+the projected vector elements represent the contributions of
+prototypes, we apply a softmax layer to the MLP. Features are
+M
+local = g hlocal
+mapped into contribution
+ vectors z ∈ R via z
+global
+global
+and z
+=g h
+, where M is the number of prototypes,
+g (·) denotes the contribution projection head.
+We concatenate the contribution vectors into matrix form,
+resulting in Zlocal ∈ R N ×M and Zglobal ∈ R N ×M . Each
+row of Z represents the contribution vectors of features,
+while each column of Z denotes the contributions of
+a single prototype through all the features. We conduct
+prototype contribution contrastive learning on the column
+vectors. Formally, we denote the prototype contribution
+vectors
+of Z) with symbol c, forming
+ (1) (2)(column(M)vectors
+c , c , . . . , c , c(M+1) , . . . , c(2M) where c(i) = Zlocal
+∈
+:,i
+global
+N
+(i+M)
+N
+R and c
+= Z:,i
+∈ R (i ≤ M) become a positive
+pair. For instance, c(1) represents the contributions of the first
+prototype to all the features in the local view, and c(1+M)
+represents the contributions in the global view. The prototype
+contribution contrasting loss L pc is computed as Eq. (11).
+
+10237
+
+C. Anomaly Degree Scoring
+In the scoring process, we use symbol Xtest ∈ Rltest ×n×2
+to denote the test dataset. For a data point x = Xtesti, j,: ,
+we employ Eq. (7) and Eq. (8) to construct spatiotemporal
+instances y local and y global . Subsequently, we obtain
+ h via
+global = f global y global , and z
+hlocal = f local y local
+and
+h
+
+
+via zlocal = g hlocal and zglobal = g hglobal .
+We estimate the normal component of h by a linear
+combination of prototypes, with the weights indicated by z, i.e.
+zT P. The anomaly score is denoted as Wi, j , and we measure
+the deviation of h from the estimated normal component using
+the square distance, as defined in Eq. (15).
+
+2
+w = hlocal + hglobal − (zlocal )T P − (zglobal )T P
+(15)
+We represent the anomaly scores of Xtest with W ∈ Rltest ×n .
+Aligning with previous works [51], [52], [53], we incorporate a 1-D Gaussian filter to mitigate false positive rates by
+smoothing anomaly scores, i.e.,
+ 2
+k
+1
+(16)
+G (k) = √ exp −
+2
+2π
+e i,: =
+W
+
+T /2
+X
+
+G (k) ⊙ Wi−k,:
+
+(17)
+
+k=−T /2
+
+
+
+exp sim c(i) , c(i+M) /τ pc
+log P2M
+L pc = −
+
+
+(i) ( j) /τ
+pc
+j=1 1[ j̸=i+M] exp sim c , c
+i=1
+M
+X
+
+(11)
+where τ pc denotes the temperature parameter.
+Through prototype contribution contrastive learning,
+we align the prototype contributions for each prototype in
+the two views while separating the contributions for different
+prototypes. This process enhances the distinguishable
+distribution of prototype contribution vectors, thereby
+indirectly improving the diversity of the learned prototypes.
+Pattern Prototype Estimation: We define the prototypes as
+a learnable parameter P ∈ R M×H , and perform a cross-view
+feature prediction task to learn it. Specifically, we predict the
+feature h with a weighted sum of prototypes, i.e. ĥ = zT P.
+To predict the feature of one view, the contribution vector z of
+the other view is adopted as weights, and the prediction loss
+is defined as Eq. (13).
+n
+
+1X
+(ai − bi )2
+n
+i=1
+N 
+
+
+1 X
+L pr ed =
+MSE h(i) , (z(i+N ) )T P
+N
+i=1
+
+
+(i+N )
+(i) T
++ MSE h
+, (z ) P
+
+MSE (a, b) =
+
+(12)
+
+(13)
+
+By training the neural network with L pr ed , the learnable
+parameter P is iteratively updated.
+The overall self-supervised loss of our ProtoDetect model
+is defined as follows.
+
+e is the
+where G (k) denotes the discrete Gaussian kernel; W
+smoothed anomaly scores. During computation, we extend
+Wi,: by replicating the nearest value on its boundaries.
+Utilizing the smoothed anomaly scores, a hyperparameter
+threshold η is employed to classify points as anomalies (1)
+or non-anomalies (0). This classification is determined by the
+condition:
+(
+ei, j ≥ η
+1 W
+Oi, j =
+(18)
+ei, j < η
+0 W
+In our subsequent evaluation, the threshold η is set as the K th highest anomaly score, where the value of K is tailored to
+align with the evaluation metrics.
+V. E XPERIMENTS
+In this section, we evaluate our ProtoDetect method using
+real-world datasets and compare it with existing works.
+A. Datasets and Evaluation Metric
+Datasets: We conduct experiments on data from two cities:
+New York City (NYC) and Chicago. To model the crowd flow
+dynamics, we utilize taxi trip records and bike trip records,
+namely NYC Yellow Taxi Trip Records,1 NYC Citi Bike Trip
+Records,2 Chicago Taxi Trip Records3 and Chicago Divvy
+Bike Trip Records.4 By aggregating the trip records every
+1 hour, we generate the inflow and outflow features. These
+crowd flow features are transformed into range [0, 1] by a
+min-max scaler. To test the performance of CFAD approaches
+in an online way, we split the dataset into a training set and
+a testing set.
+1 https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+2 https://citibikenyc.com/system-data
+3 https://data.cityofchicago.org/Transportation/Taxi-Trips-2019/h4cq-z3dy
+
+L = Lic + L pc + L pr ed
+
+(14)
+
+4 https://data.cityofchicago.org/Transportation/Divvy-Trips/fg6s-gzvg
+
+10238
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+Preprocessing: Given that the trip records do not encompass
+the entire city, as observed in previous works [14], [17], [54],
+our approach centers on a bounding box area that encapsulates
+both the starting and ending locations of recorded trips.
+Subsequently, we partition this area into urban regions using a
+grid system. Specifically, for NYC, we establish 161 regions,
+each measuring 500 square meters, and for Chicago, we create
+87 regions, each with a size of 1000 square meters, as shown
+in Figure 5.
+Following previous works [11], [37], we construct the urban
+region network by computing the adjacency matrix with a
+Gaussian kernel. The weighted adjacency matrix A can be
+formed as Eq. (19).
+
+2 !
+
+ exp − d vi , v j
+, i ̸ = j and ei j = 1
+(19)
+Ai j =
+σ2
+
+
+0,
+otherwise.
+
+where d vi , v j denotes the Euclidean distance between center
+point coordinates of region vi and v j ; σ is the standard
+deviation of distances; ei j indicates the edge between node
+vi and v j , ei j = 1 if region vi and v j are adjacent.
+Ground Truth: Acquiring a comprehensive set of ground
+truths that records all crowd flow anomalies in a city
+presents significant challenges. Therefore, in line with previous
+research [11], [14], [18], [33], [55], [56], we rely on expertlabeled anomaly events to label anomalies for detection.
+To evaluate the performance of CFAD algorithms in detecting
+long-term and short-term anomalies, we investigate two sets
+of events with different durations in NYC and one set of
+events in Chicago, as depicted in Figure 5 and detailed in
+Table II. Specifically, the NYC long-term anomalies (NYCL), previously collected by [55] and utilized as the anomaly
+ground truth in subsequent studies [11], [14], [18], comprises
+20 events with an average duration of 40.4 hours. These events
+were originally reported by nycinsiderguide.com between
+November 1 and November 30, 2014. In contrast, we adopt the
+NYC Parks Events5 as NYC short-term anomalies (NYCS), which provides event information displayed on the Parks
+website, nyc.gov/parks. The average duration of NYC shortterm events is 5.5 hours. Regarding Chicago, we collect
+Twitter posts posted by ChicagoAlerts,6 an official source that
+provides notifications on a range of events including sports
+competitions, festivals, street closures, concerts, parades, and
+extreme weather. All the posts from August 2019 are gathered
+to form a relatively objective anomaly set. We refer to this
+collection as the Chicago short-term anomalies (Chicago-S),
+encompassing 59 events with an average duration of 5.5 hours.
+In the anomaly detection stage, if an event persists in region
+v j during the time slot ti , the corresponding data point xi, j is
+labeled as anomalous.
+Evaluation Metric: Anomaly detection algorithms inherently perform binary classification, distinguishing outliers
+from inliers. Therefore, we adopt Receiver Operating Characteristic (ROC) and recall as evaluation metrics, in alignment
+with prior research [11], [18], [51], [56], [57]. To construct
+5 https://data.cityofnewyork.us/City-Government/NYC-Parks-EventsListing-Event-Listing/fudw-fgrp
+6 https://twitter.com/chicagoalerts
+
+TABLE II
+E VENT S AMPLES F ROM C ROWD G ATHERING E VENT DATASETS
+
+the ROC curve, we incrementally vary K from zero to 100%
+of the total number of data points. The Area Under the Curve
+(AUC) is then computed to assess the performance of different
+algorithms. A higher AUC value indicates superior anomaly
+detection performance. To assess the recall metric, we employ
+K values at 10%, 20%, 30% and 40% of the total number of
+data points.
+B. Baselines
+In our evaluation, we contrast our proposed method
+against several baseline approaches. These baselines comprise
+individual methods that exclusively detect anomalies on
+isolated data point x, as well as spatiotemporal methods that
+incorporate the spatial and temporal neighbors of x into the
+detection process. The details of these baselines are presented
+below.
+
+WANG et al.: CONTRASTING ESTIMATION OF PATTERN PROTOTYPES FOR ANOMALY DETECTION
+
+10239
+
+graph sequences, while the discriminator distinguishes
+between them from real sequences. Any sequence that
+is discriminated as fake is considered anomalous.
+• DCdetector, as detailed in [25], stands as a stateof-the-art model for time series anomaly detection.
+This model employs a multi-scale dual attention contrastive representation learning process, resulting in a
+permutation-invariant representation with discriminatory
+capabilities. Given its original design for time series data,
+we employ one instance of DCdetector for each region
+in order to conduct spatiotemporal anomaly detection.
+C. Implementation Details
+Fig. 5. The urban regions of NYC and Chicago, together with the locations
+of three sets of anomaly events used in evaluating CFAD algorithms.
+
+Individual methods:
+• Elliptic envelope (EE) [28] employs an elliptic envelope
+to fit the data points and utilizes Mahalanobis distances
+to quantify the degree of outlyingness.
+• Isolation forest (IF) [29] randomly selects features and
+split values to isolate observations in a tree-like structure.
+Anomalies tend to have shorter path lengths, and a forest
+of such random trees that produce shorter paths for
+specific samples is indicative of anomalies.
+• Local outlier factor (LOF) [30] measures the deviation
+of the density of a given sample in comparison to
+its neighbors and identifies outliers as samples with
+substantially lower density than their neighbors.
+• One-Class SVM (OCSVM) [31] is an unsupervised
+learning algorithm that maps the input data into a highdimensional space and learns a boundary around the
+normal data points. Any points outside this boundary are
+considered to be anomalies.
+Spatiotemporal methods:
+• Spatiotemporal Autoencoder (STAE) is a neural network
+that compresses signals through a bottleneck structure and subsequently reconstructs the original signal
+from the compressed features. We utilize STAE with
+GCGRU [36] layers to represent reconstruction-based
+anomaly detection methods and capture the spatial and
+temporal information of the data. The reconstruction error
+is utilized as the anomaly score.
+• STGCN [37] is the first study to utilize purely
+convolutional structures to extract spatiotemporal features
+concurrently from graph-structured time series in a traffic
+prediction study. We employ STGCN as a representative
+example of prediction-based anomaly detection methods
+and utilize the prediction error as the anomaly score.
+• ST_decomp [18] is a neural network designed specifically
+for detecting anomalies in urban traffic. It models normal
+urban dynamics using both spatial and temporal features
+and subsequently adopts a LOF anomaly detector to
+detect outliers of abnormal dynamics.
+• STGAN [11] is a Generative Adversarial Network (GAN)
+employed to detect anomalies in traffic speed data
+and crowd flow data. The generator produces fake
+
+In relation to temporal augmentations, we utilize the default
+parameters for jitter-and-scale and window warping functions
+as provided by Iwana and Uchida [41].7 Specifically, our weak
+temporal augmentation involves the introduction of Gaussian
+noise with a mean of zero and a standard deviation of 0.03,
+along with changes in magnitude sourced from a Gaussian
+distribution with a mean of one and a standard deviation of
+0.1. For strong temporal augmentation, we set the value of β
+to 2. In the context of graph diffusion time (λ), we choose a
+value of 5, consistent with the approach detailed in [26].
+To construct instances, we employ a time series sampling
+with T = 12, ensuring a temporal range that encompasses
+sufficient neighboring information. The pre-trained spatiotemporal encoders are designed to map instances into tensors
+with dimensions of 9 × 16, where each 16-dimensional vector
+represents an individual region. For feature projection heads,
+we adopt a Concat-Linear-ReLU-Linear form, featuring two
+linear layers with 72 and 32 units, respectively, facilitating an
+effective compression workflow. Similarly, we employ a stack
+of Linear-ReLU-Linear-Softmax layers for the contribution
+projection head. The first linear layer consists of 32 units,
+and the second linear layer accommodates M units.
+Based on the findings of our hyperparameter sensitivity
+analysis as presented in Section V-D.5, we determine the
+hyperparameters M = 9, τic = 0.1 and τ pc = 0.1.
+D. Results and Discussion
+1) Anomaly Detection Performance: The evaluation results
+are presented in Figure 6 and Figure 7. Our ProtoDetect
+method outperforms the baseline methods with AUC metrics
+of 0.85, 0.83 and 0.84 on the three anomaly sets, respectively.
+Remarkably, the curve of our method almost completely
+encompasses all other curves, indicating its superior performance across all sensitivity configurations. The STAE method
+demonstrates suboptimal performance. It is important to note
+that during both the training and inference processes of STAE,
+we utilize instances constructed from the original crowd
+flow data view, employing the same instance construction
+strategy of ProtoDetect. The suboptimal performance of
+STAE underscores the advantage of learning spatiotemporal
+dependencies from instances.
+As depicted in Table III, when assessing performance using
+the recall metric, ProtoDetect consistently attains either the
+7 https://github.com/uchidalab/time_series_augmentation
+
+10240
+
+Fig. 6.
+
+Fig. 7.
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+ROC curves on NYC-L.
+
+ROC curves on NYC-S.
+
+highest or the second-highest results across different evaluation
+settings.
+
+Fig. 8.
+
+ROC curves on Chicago-S.
+
+2) Ablation Study: In this section, we aim to examine
+the individual contributions of our IC and PCC modules to
+the overall model. To assess the impact of the IC module,
+we conduct a direct training of the PCC module on the
+original data using the loss functions L pc and L pr ed . We then
+detect anomalies based on the deviation from prototypebased predictions. Similarly, to evaluate the contribution of
+the PCC module, we train the IC module solely with Lic .
+Afterward, we employ general anomaly detection algorithms
+on the extracted features h.
+The results of the ablation study are presented in Table IV.
+When the IC module is removed, the AUC value decreases by
+0.09, 0.10 and 0.09 on the three anomaly sets, respectively.
+Similarly, when the PCC module is removed, the AUC value
+decreases by at least 0.05, 0.05 and 0.04 on the three anomaly
+sets, respectively
+It is worth highlighting that the utilization of the IC
+module leads to improved performance compared to directly
+employing general anomaly detection algorithms on the
+original data. As shown in Table V, serving as a front module,
+IC enhances the AUC metrics of EE, IF, LOF, and OCSVM.
+This improvement underscores the discriminative nature of the
+feature space generated by IC, emphasizing its effectiveness in
+enhancing the detection capabilities of the subsequent anomaly
+detection algorithms.
+3) Effectiveness of Prototype Contribution Contrasting: In
+this subsection, we investigate the effectiveness of prototype
+contribution contrasting, i.e. L pc . Specifically, we assess how
+the inclusion of L pc impacts CFAD performance in terms of
+AUC and the diversity of the learned prototypes. To measure
+prototype diversity, we calculate the standard deviation of
+
+WANG et al.: CONTRASTING ESTIMATION OF PATTERN PROTOTYPES FOR ANOMALY DETECTION
+
+10241
+
+TABLE III
+R ECALL @K%
+
+TABLE IV
+
+TABLE VI
+
+A BLATION S TUDY ON M ODEL C OMPONENTS
+
+E FFECT OF THE P ROTOTYPE C ONTRIBUTION C ONTRASTING
+I MPROVING THE D IVERSITY OF E STIMATED P ROTOTYPES
+
+TABLE V
+E FFECT OF THE IC M ODULE I MPROVING THE P ERFORMANCE
+OF G ENERAL A NOMALY D ETECTION A LGORITHMS
+
+TABLE VII
+CFAD P ERFORMANCES W ITH D IFFERENT C OMBINATIONS OF
+S PATIAL AND T EMPORAL AUGMENTATION T ECHNIQUES
+
+pair-wise similarities between prototypes using the similarity
+matrix Q, as expressed by:
+
+Qi, j = sim Pi , P j
+(20)
+v
+u
+M
+M
+u
+X
+X
+2
+1
+u
+Qi, j − Q̄
+(21)
+Diversity = t
+M (M − 1)
+i=1 j=1, j̸=i
+
+where Q denotes the similarity matrix of P, and Q̄ denotes
+the mean similarity in the similarity matrix.
+Table VI demonstrates that prototype contribution contrasting enhances CFAD performance. Moreover, the prototypes
+learned with L pc exhibit greater diversity, aligning with our
+objective of using prototypes to represent various influencing
+factors.
+4) Temporal Augmentation Selection: Since the appropriate
+selection of temporal augmentations remains an ongoing
+challenge, as highlighted in a previous study [58], and
+the exploration of the combination of temporal and spatial
+augmentations is relatively uncharted territory, we conduct
+experiments to investigate these issues in CFAD context.
+Our initial investigation centers on the combination of
+temporal and spatial augmentations within the CFAD framework. As illustrated in Table VII, the optimal performance is
+
+Fig. 9. AUC scores on three anomaly sets, trained with feature dimensions
+H in {8, 16, 32, 48, 64, 128}.
+
+Fig. 10. AUC scores on three anomaly sets, trained with prototype numbers
+M in {3, 5, 7, 9, 11, 13, 15, 30}.
+
+observed when the strong temporal augmentation is applied to
+the local view, and the weak augmentation is applied to the
+global view. It is important to note that the absence of temporal
+
+10242
+
+Fig. 11.
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+AUC scores on three anomaly sets, with τic and τ pc in {0.1, 0.3, 0.5, 0.7, 0.9}.
+TABLE VIII
+CFAD P ERFORMANCES W ITH D IFFERENT S TRONG
+T EMPORAL AUGMENTATION T ECHNIQUES
+
+augmentations, as well as the absence of strong augmentations,
+can result in a significant decline in the AUC metric.
+Moreover, we explore the impact of various strong augmentation techniques that introduce significant perturbations.
+As detailed in Table VIII, our experiments indicate that
+window warping provides the best performance. Nevertheless,
+alternative techniques such as time warping, window slicing,
+and magnitude warping also yield acceptable AUC values.
+This suggests that while window warping is our preferred
+choice, the selection of the strong temporal augmentation
+algorithm is not rigidly fixed. It is worth noting that the
+permutation algorithm, which shuffles segments of the signal,
+is not suitable for CFAD, as it severely disrupts the data’s
+fundamental characteristics.
+5) Hyperparameter Sensitivity Analysis: We perform sensitivity analysis to study the impacts of several hyperparameters
+namely, the feature dimensions H , the number of prototypes
+M, and the two temperature parameters τic and τ pc .
+Figure 9 illustrates the impact of the feature dimension H on
+CFAD performance. Results indicate that shorter features offer
+insufficient information, leading to decreased performance.
+Optimal performance is achieved when feature lengths are set
+at 32. Notably, the performance remains stable with increasing
+feature sizes exceeding 32.
+Figure 10 illustrates the relationship between the number of
+prototypes M and the performance of CFAD. The results show
+that optimal performance is achieved at M = 9 for NYC-L
+and NYC-S, while for Chicago-S, the optimal performance
+is observed at M = 11. Notably, when M is lower, the
+performance deteriorates, underscoring the importance of an
+adequate number of prototypes in capturing the factors that
+
+influence normal crowd flows. Additionally, the performance
+remains stable as M increases beyond the respective optimal
+values of 9 and 11 for the three sets.
+Figure 11 illustrates how the temperature parameters τic and
+τ pc impact the anomaly detection performance. For all the
+three anomaly sets, as τic increases from 0.1 to 0.9, the AUC
+value decreases significantly, indicating that the feature space
+becomes less discriminative. However, the varying τ pc does
+not noticeably affect performance.
+6) Case Study: Figure 12 displays individual anomaly score
+curves for single regions which change over time, particularly
+during events. When events occur, the background is colored
+red to signify an anomaly.
+We first investigate the anomaly score curves influenced
+by single events. Figure 12a depicts the anomaly score curve
+during the Big Apple Film Festival that occurred at 54 Varick
+St between November 5th, 2014 at 6:00 pm and November 9th,
+2014 at 11:00 pm. Figure 12b illustrates the anomaly score
+curve in Chicago, specifically during the three-day Retro on
+Roscoe event held at Roscoe Village. This event occurred from
+5:00 pm to 10:00 pm on August 9th, 2019, and from 12:00
+pm to 10:00 pm on both August 10th and August 11th, 2019.
+These figures demonstrate a significant increase in anomaly
+scores during event occurrences. Notably, the anomaly score
+begins to rise several hours before the events commence,
+in agreement with the principle of events attracting crowds
+in anticipation. As the events unfold, the anomaly scores
+gradually decline to their normal level, suggesting a decrease
+in the event’s attraction.
+Additionally, we investigate how a recurring event influences the anomaly score curve. Here we focus on the
+Exhibition George Boorujy Taxonomy held at the Arsenal
+Gallary situated at 830 Fifth Avenue, NYC, from 9:00 am
+to 5:00 pm on October 31st, November 3rd, November 4th,
+November 5th, and November 6th in 2014. Represented in
+Figure 12c, the anomaly score curve pertains to the recurring
+event. As with the other curves, the anomaly score follows
+a pattern of increasing during event. Notably, a significant
+decrease in anomaly scores is observed on November 1st and
+November 2nd, when the periodic event did not occur.
+7) Effectiveness of the Prototypes: To demonstrate the
+effectiveness of the PCC module in our method, and to
+highlight the coexistence of influencing factors in real-world
+crowd flows, we present the timeline-averaged prototype
+
+WANG et al.: CONTRASTING ESTIMATION OF PATTERN PROTOTYPES FOR ANOMALY DETECTION
+
+Fig. 14.
+
+10243
+
+Number of trainable parameters of deep learning models.
+
+Fig. 15.
+Number of theoretical multiply-add operations for processing
+1000 samples.
+
+Fig. 12. Single region anomaly scores evolved over time. Light red shaded
+background represent anomaly events happening in the urban region. The
+captions of each subfigure reveal the event names.
+
+Fig. 13. Average prototype contribution vector of each region. Regions are
+colored with their major prototypes. Both single (region 0, 160) and mixed
+(region 28, 67, 68, 107) patterns are observed.
+
+contribution vector of each region of NYC in Figure 13. For
+clarity in depicting prototype contributions, we set M = 5 and
+use colors to represent the primary contributing prototype
+of each region. We label the contribution vectors of several
+representative regions in the format v : (z 1 , z 2 , . . . , z 5 ), where
+z i denotes the contribution of the i-th prototype.
+The prototype contributions exhibit distinct geographical
+characteristics, aligning with the reasonable expectation that
+neighboring regions will share similarities. Notably, the
+
+Fig. 16. Empirical runtime performance of baseline models inferring 30-day
+period anomaly scores of NYC.
+
+top-right regions predominantly correspond to Prototype 4,
+while the bottom-left regions mostly belong to Prototype 3,
+creating a noticeable boundary along Central Park North
+street. Furthermore, we observe that regions farther from
+these borders generally display a single pattern (e.g., region
+0 and region 160), while those closer to the borders exhibit
+mixed patterns (e.g., region 28, 67, 68, 107), indicating the
+co-contribution effect from spatial factors. These findings
+suggest that multiple prototypes simultaneously contribute to
+the observed crowd flow data.
+8) Efficiency Study: In this subsection, we conduct a comparative analysis of our ProtoDetect model’s computational
+efficiency and runtime performance in relation to baseline
+models.
+Figure 14 provides a visual representation of the number
+of trainable parameters in various deep learning models.
+Figure 15 offers an illustration of the theoretical count of
+multiply-add operations necessary for processing a batch of
+1000 samples across different deep learning models. Notably,
+our ProtoDetect model is characterized by 197,361 trainable
+parameters and demands 3.84 billion multiply-add operations
+in this specific context. This positions ProtoDetect within a
+moderate range when compared to the baseline models.
+In Figure 16, we provide empirical data illustrating the
+runtime performance of the baseline models when inferring
+anomaly scores over a 30-day period for NYC. The experiment
+is executed on a workstation equipped with an Intel Xeon
+Gold 5218 CPU and an NVIDIA Tesla V100 GPU. Notably,
+our proposed method achieves this task within a remarkable
+
+10244
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 25, NO. 8, AUGUST 2024
+
+5.86 milliseconds, signifying its potential practical utility in
+real-world applications.
+VI. C ONCLUSION
+In this paper, we present ProtoDetect, a novel CFAD
+framework that learns discriminative crowd flow features
+and models pattern prototypes in the feature space. These
+prototypes are subsequently employed to estimate normal
+crowd flow, providing a baseline for identifying abnormal
+crowd behaviors. We introduce the IC module to encode
+spatiotemporal information of crowd flow, improving feature
+expressiveness and discriminability through contrasting local
+and global views. Then in the feature space, we propose
+the PCC module to model prototypes and utilize them to
+estimate the normal component of crowd flow. Anomaly
+degree scores are computed by measuring the deviations
+between incoming crowd flow features and their corresponding
+normal features. Experimental evaluations on real-world crowd
+flow anomalies demonstrate the superior performance of
+ProtoDetect compared to baseline methods, with improved
+precision in anomaly detection. Ablation studies further
+validate the effectiveness of both the IC and PCC modules
+in enhancing the overall performance of the framework.
+While ProtoDetect exhibits superior performance compared
+to baseline methods, it currently relies on the pre-training
+of spatiotemporal encoders, which may introduce practical
+inconveniences in real-world applications. In our future
+research endeavors, we aim to enhance ProtoDetect’s adaptability for real-world scenarios. This may involve streamlining
+the workflow, reducing model complexity, and exploring
+incremental deployment strategies.
+R EFERENCES
+[1] X.-C. Liao, W.-N. Chen, X.-Q. Guo, J. Zhong, and X.-M. Hu, “Crowd
+management through optimal layout of fences: An ant colony approach
+based on crowd simulation,” IEEE Trans. Intell. Transp. Syst., vol. 24,
+no. 9, pp. 9137–9149, Sep. 2023.
+[2] A. Boukerche and R. W. L. Coutinho, “Crowd management: The
+overlooked component of smart transportation systems,” IEEE Commun.
+Mag., vol. 57, no. 4, pp. 48–53, Apr. 2019.
+[3] R. Zhao et al., “Dynamic crowd accident-risk assessment based on
+internal energy and information entropy for large-scale crowd flow
+considering COVID-19 epidemic,” IEEE Trans. Intell. Transp. Syst.,
+vol. 23, no. 10, pp. 17466–17478, Oct. 2022.
+[4] Y. Xie, J. Niu, Y. Zhang, and F. Ren, “Multisize patched spatial–temporal
+transformer network for short- and long-term crowd flow prediction,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 11, pp. 21548–21568,
+Nov. 2022.
+[5] M. Zhang, T. Li, Y. Yu, Y. Li, P. Hui, and Y. Zheng, “Urban anomaly
+analytics: Description, detection, and prediction,” IEEE Trans. Big Data,
+vol. 8, no. 3, pp. 809–826, Jun. 2022.
+[6] Z. Zhou, X. Dong, Z. Li, K. Yu, C. Ding, and Y. Yang, “Spatio-temporal
+feature encoding for traffic accident detection in VANET environment,”
+IEEE Trans. Intell. Transp. Syst., vol. 23, no. 10, pp. 19772–19781,
+Oct. 2022.
+[7] R. Zhao, Q. Hu, Q. Liu, C. Li, D. Dong, and Y. Ma, “Panic propagation
+dynamics of high-density crowd based on information entropy and
+aw-rascle model,” IEEE Trans. Intell. Transp. Syst., vol. 21, no. 10,
+pp. 4425–4434, Oct. 2020.
+[8] Q. Wang, H. Dong, B. Ning, L. Y. Wang, and G. Yin, “Two-time-scale
+hybrid traffic models for pedestrian crowds,” IEEE Trans. Intell. Transp.
+Syst., vol. 19, no. 11, pp. 3449–3460, Nov. 2018.
+[9] C. H. Liu et al., “Modeling citywide crowd flows using attentive
+convolutional LSTM,” in Proc. IEEE 37th Int. Conf. Data Eng. (ICDE),
+Apr. 2021, pp. 217–228.
+
+[10] Z. Lin, J. Feng, Z. Lu, Y. Li, and D. Jin, “DeepSTN+: Contextaware spatial–temporal neural network for crowd flow prediction in
+metropolis,” in Proc. AAAI Conf. Artif. Intell., 2019, vol. 33, no. 1,
+pp. 1020–1027.
+[11] L. Deng, D. Lian, Z. Huang, and E. Chen, “Graph convolutional
+adversarial networks for spatiotemporal anomaly detection,” IEEE Trans.
+Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2416–2428, Jun. 2022.
+[12] Y. Wang, J. Xu, M. Xu, N. Zheng, J. Jiang, and K. Kong, “A
+feature-based method for traffic anomaly detection,” in Proc. 2nd ACM
+SIGSPATIAL Workshop Smart Cities Urban Anal., 2016, pp. 1–8.
+[13] M.-F. Chiang, E.-P. Lim, W.-C. Lee, and A. T. Kwee, “BTCI: A new
+framework for identifying congestion cascades using bus trajectory
+data,” in Proc. IEEE Int. Conf. Big Data (Big Data), Dec. 2017,
+pp. 1133–1142.
+[14] H. Zhang, Y. Zheng, and Y. Yu, “Detecting urban anomalies using
+multiple spatio-temporal data sources,” Proc. ACM Interact., Mobile,
+Wearable Ubiquitous Technol., vol. 2, no. 1, pp. 1–18, 2018.
+[15] Y. Dong, F. Pinelli, Y. Gkoufas, Z. Nabi, F. Calabrese, and
+N. V. Chawla, “Inferring unusual crowd events from mobile phone
+call detail records,” in Proc. Joint Eur. Conf. Mach. Learn. Knowl.
+Discovery Databases (ECML PKDD). Porto, Portugal: Springer, 2015,
+pp. 474–492.
+[16] Y. Djenouri, A. Zimek, and M. Chiarandini, “Outlier detection in urban
+traffic flow distributions,” in Proc. IEEE Int. Conf. Data Mining (ICDM),
+Nov. 2018, pp. 935–940.
+[17] C. Lin, Q. Zhu, S. Guo, Z. Jin, Y.-R. Lin, and N. Cao, “Anomaly
+detection in spatiotemporal data via regularized non-negative tensor
+analysis,” Data Mining Knowl. Discovery, vol. 32, pp. 1056–1073,
+Mar. 2018.
+[18] M. Zhang, T. Li, H. Shi, Y. Li, and P. Hui, “A decomposition approach
+for urban anomaly detection across spatiotemporal data,” in Proc. Int.
+Joint Conf. Artif. Intell. (IJCAI), 2019, pp. 6043–6049.
+[19] X. Li, Z. Li, J. Han, and J.-G. Lee, “Temporal outlier detection in vehicle
+traffic data,” in Proc. IEEE 25th Int. Conf. Data Eng., Mar./Apr. 2009,
+pp. 1319–1322.
+[20] Z. Wu, Y. Xiong, S. X. Yu, and D. Lin, “Unsupervised feature learning
+via non-parametric instance discrimination,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit., Jun. 2018, pp. 3733–3742.
+[21] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc. Int. Conf.
+Mach. Learn., 2020, pp. 1597–1607.
+[22] X. Chen and K. He, “Exploring simple Siamese representation learning,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2021,
+pp. 15750–15758.
+[23] E. Eldele et al., “Time-series representation learning via temporal and
+contextual contrasting,” in Proc. 30th Int. Joint Conf. Artif. Intell.,
+Aug. 2021, pp. 2352–2359.
+[24] G. Woo, C. Liu, D. Sahoo, A. Kumar, and S. Hoi, “CoST: Contrastive
+learning of disentangled seasonal-trend representations for time series
+forecasting,” in Proc. Int. Conf. Learn. Represent., 2022, pp. 1–18.
+[25] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: Dual
+attention contrastive representation learning for time series anomaly
+detection,” in Proc. 29th ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining (KDD), 2023, pp. 3033–3045.
+[26] K. Hassani and A. H. Khasahmadi, “Contrastive multi-view representation learning on graphs,” in Proc. Int. Conf. Mach. Learn. (ICML),
+2020, pp. 4116–4126.
+[27] N. Liu, X. Wang, D. Bo, C. Shi, and J. Pei, “Revisiting graph contrastive
+learning from the perspective of graph spectrum,” in Proc. Adv. Neural
+Inf. Process. Syst., vol. 35, 2022, pp. 2972–2983.
+[28] P. J. Rousseeuw and K. V. Driessen, “A fast algorithm for the
+minimum covariance determinant estimator,” Technometrics, vol. 41,
+no. 3, pp. 212–223, Aug. 1999.
+[29] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation-based anomaly
+detection,” ACM Trans. Knowl. Discovery Data, vol. 6, no. 1, pp. 1–39,
+2012.
+[30] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+density-based local outliers,” in Proc. ACM SIGMOD Int. Conf. Manage.
+Data, 2000, pp. 93–104.
+[31] B. Schölkopf, R. C. Williamson, A. Smola, J. Shawe-Taylor, and J. Platt,
+“Support vector method for novelty detection,” in Proc. Adv. Neural Inf.
+Process. Syst., vol. 12, 1999, pp. 582–588.
+[32] G. Raja et al., “AI-empowered trajectory anomaly detection and
+classification in 6G-V2X,” IEEE Trans. Intell. Transp. Syst., vol. 24,
+no. 4, pp. 4599–4607, Apr. 2023.
+
+WANG et al.: CONTRASTING ESTIMATION OF PATTERN PROTOTYPES FOR ANOMALY DETECTION
+
+[33] L. Chen, J. Jakubowicz, D. Yang, D. Zhang, and G. Pan, “Finegrained urban event detection and characterization based on tensor
+cofactorization,” IEEE Trans. Human-Mach. Syst., vol. 47, no. 3,
+pp. 380–391, Jun. 2017.
+[34] J. Wang, J. Wu, Z. Wang, F. Gao, and Z. Xiong, “Understanding
+urban dynamics via context-aware tensor factorization with neighboring
+regularization,” IEEE Trans. Knowl. Data Eng., vol. 32, no. 11,
+pp. 2269–2283, Nov. 2020.
+[35] L. Sun and K. W. Axhausen, “Understanding urban mobility patterns
+with a probabilistic tensor factorization framework,” Transp. Res.
+B, Methodol., vol. 91, pp. 511–524, Sep. 2016.
+[36] Y. Seo, M. Defferrard, P. Vandergheynst, and X. Bresson, “Structured
+sequence modeling with graph convolutional recurrent networks,” in
+Proc. 25th Int. Conf. Neural Inf. Process. (ICONIP). Siem Reap,
+Cambodia: Springer, 2018, pp. 362–373.
+[37] B. Yu, H. Yin, and Z. Zhu, “Spatio-temporal graph convolutional
+networks: A deep learning framework for traffic forecasting,” in Proc.
+27th Int. Joint Conf. Artif. Intell. (IJCAI), 2018, pp. 3634–3640.
+[38] C. Chen, Z. Liu, S. Wan, J. Luan, and Q. Pei, “Traffic flow prediction
+based on deep learning in Internet of Vehicles,” IEEE Trans. Intell.
+Transp. Syst., vol. 22, no. 6, pp. 3776–3789, Jun. 2021.
+[39] A. R. Javed, M. Usman, S. U. Rehman, M. U. Khan, and M. S. Haghighi,
+“Anomaly detection in automated vehicles using multistage attentionbased convolutional neural network,” IEEE Trans. Intell. Transp. Syst.,
+vol. 22, no. 7, pp. 4291–4300, Jul. 2021.
+[40] A. van den Oord, Y. Li, and O. Vinyals, “Representation learning with
+contrastive predictive coding,” 2018, arXiv:1807.03748.
+[41] B. K. Iwana and S. Uchida, “An empirical survey of data augmentation
+for time series classification with neural networks,” PLoS ONE, vol. 16,
+no. 7, Jul. 2021, Art. no. e0254841.
+[42] A. Le Guennec, S. Malinowski, and R. Tavenard, “Data augmentation
+for time series classification using convolutional neural networks,” in
+Proc. ECML/PKDD Workshop Adv. Anal. Learn. Temporal Data, 2016,
+pp. 1–9.
+[43] J. Zhang, S. Wang, and S. Chen, “Reconstruction enhanced multi-view
+contrastive learning for anomaly detection on attributed networks,” in
+Proc. 31st Int. Joint Conf. Artif. Intell. (IJCAI), 2022, pp. 2376–2382.
+[44] K. Sohn et al., “FixMatch: Simplifying semi-supervised learning with
+consistency and confidence,” in Proc. Adv. Neural Inf. Process. Syst.,
+vol. 33, 2020, pp. 596–608.
+[45] Q. Xie, Z. Dai, E. Hovy, T. Luong, and Q. Le, “Unsupervised data
+augmentation for consistency training,” in Proc. Adv. Neural Inf. Process.
+Syst., vol. 33, 2020, pp. 6256–6268.
+[46] E. Eldele et al., “Self-supervised contrastive representation learning for
+semi-supervised time-series classification,” IEEE Trans. Pattern Anal.
+Mach. Intell., vol. 45, no. 12, pp. 15604–15618, Dec. 2023.
+[47] J. Gasteiger, S. Weißenberger, and S. Günnemann, “Diffusion improves
+graph learning,” in Proc. Adv. Neural Inf. Process. Syst., vol. 32, 2019,
+pp. 13366–13378.
+[48] R. I. Kondor and J. Lafferty, “Diffusion kernels on graphs and other
+discrete structures,” in Proc. 19th Int. Conf. Mach. Learn., 2002,
+pp. 315–322.
+[49] H. Lin, R. Bai, W. Jia, X. Yang, and Y. You, “Preserving dynamic
+attention for long-term spatial–temporal prediction,” in Proc. 26th ACM
+SIGKDD Int. Conf. Knowl. Discovery Data Mining, 2020, pp. 36–46.
+[50] Y. Li, M. Yang, D. Peng, T. Li, J. Huang, and X. Peng, “Twin contrastive
+learning for online clustering,” Int. J. Comput. Vis., vol. 130, no. 9,
+pp. 2205–2221, Sep. 2022.
+[51] Z. Wang, Y. Zou, and Z. Zhang, “Cluster attention contrast for video
+anomaly detection,” in Proc. 28th ACM Int. Conf. Multimedia, 2020,
+pp. 2463–2471.
+[52] S. Sheng, J. Jing, X. Jiao, Y. Wang, and Z. Dong, “MÆIDM: Multi-scale
+anomaly embedding inpainting and discrimination for surface anomaly
+detection,” Mach. Vis. Appl., vol. 34, no. 4, p. 66, 2023.
+
+10245
+
+[53] L. Wong, D. Liu, L. Berti-Equille, S. Alnegheimish, and
+K. Veeramachaneni, “AER: Auto-encoder with regression for time
+series anomaly detection,” in Proc. IEEE Int. Conf. Big Data (Big
+Data), Dec. 2022, pp. 1152–1161.
+[54] S. Wang, H. Miao, J. Li, and J. Cao, “Spatio-temporal knowledge
+transfer for urban crowd flow prediction via deep attentive adaptation
+networks,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 5,
+pp. 4695–4705, May 2022.
+[55] Y. Zheng, H. Zhang, and Y. Yu, “Detecting collective anomalies
+from multiple spatio-temporal datasets across different domains,” in
+Proc. 23rd SIGSPATIAL Int. Conf. Adv. Geographic Inf. Syst., 2015,
+pp. 1–10.
+[56] S. E. Sofuoglu and S. Aviyente, “GLOSS: Tensor-based anomaly
+detection in spatiotemporal urban traffic data,” Signal Process., vol. 192,
+Mar. 2022, Art. no. 108370.
+[57] Z. Xu, X. Huang, Y. Zhao, Y. Dong, and J. Li, “Contrastive attributed
+network anomaly detection with data augmentation,” in Advances in
+Knowledge Discovery and Data Mining. Cham, Switzerland: Springer,
+2022, pp. 444–457.
+[58] Q. Wen et al., “Time series data augmentation for deep learning: A
+survey,” in Proc. 13th Int. Joint Conf. Artif. Intell. (IJCAI), Z.-H. Zhou,
+Ed. 2021, pp. 4653–4660, doi: 10.24963/ijcai.2021/631.
+
+Yupeng Wang received the B.S. degree in electronic
+and information engineering and the M.S. degree in
+transportation information engineering from Beihang
+University in 2018 and 2021, respectively, where
+he is currently pursuing the Ph.D. degree with the
+School of Electronics and Information Engineering.
+His research interests include urban computing and
+spatiotemporal data mining.
+
+Xiling Luo received the B.S. and Ph.D. degrees in
+electronic and information engineering. He is currently a Professor with Beihang University, Beijing,
+China. His research interests include intelligent
+transportation systems, spatiotemporal data mining,
+and urban computing.
+
+Zequan Zhou received the M.S. degree in electronic and information engineering from Beihang
+University, Beijing, China, in 2020, where he is
+currently pursuing the Ph.D. degree with the School
+of Electronics and Information Engineering. His
+research interests include cloud security and data
+mining.
+PAPER_TEXT

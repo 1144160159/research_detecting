@@ -1,0 +1,1127 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [624] CCG-IDS: A Causal Counterfactual Graph-Based Intrusion Detection System for Industrial IoT
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：624
+题名：CCG-IDS: A Causal Counterfactual Graph-Based Intrusion Detection System for Industrial IoT
+年份：2026
+DOI：10.1109/tii.2026.3667569
+来源：IEEE Transactions on Industrial Informatics
+PDF：paper/10.1109_TII.2026.3667569.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：图学习、知识图谱与威胁情报、IoT、车联网、工业互联网与边缘安全
+相关性：强相关，分数 14
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\624.txt
+- 原始字符数：55270
+- 本次发送字符数：55270
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+4920
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 6, JUNE 2026
+
+CCG-IDS: A Causal Counterfactual
+Graph-Based Intrusion Detection
+System for Industrial IoT
+Chen Zhang , Lu Zheng , Huakun Huang , Member, IEEE, and Chunhua Su , Member, IEEE
+
+Abstract—The industrial Internet of Things (IIoT) requires
+robust intrusion detection systems (IDS) to ensure critical business continuity. However, existing solutions suffer
+from high false-positive rates, difficulty in interpreting, and
+cross-domain generalization. In particular, they fail to reliably infer context-dependent causal links from host logs
+under global graph-level context. To address these issues,
+we propose causal counterfactual graph-based IDS (CCGIDS), an IIoT-focused interpretable graph neural network
+IDS based on conformal calibration and counterfactual reasoning. This system implements a unified provenance subgraph detection paradigm, and employs conformal anomaly
+detection and counterfactual reasoning to provide calibrated alerts and interpretable outputs. We also estimate
+predictive uncertainty via Fisher information to quantify
+decision confidence. We introduce a discrete counterfactual explainer with a counterfactual destructiveness score
+(CDS) to extract a minimal decision-critical evidence chain,
+and use this evidence to generate structured analyst-ready
+security reports. Experiments on real-world industrial log
+datasets, including the windows event log EVTX (Windows
+XML Event Log) and DARPA OpTC (Operationally Transparent Cyber) datasets, demonstrated that CCG-IDS achieved
+an F 1 score of 92% and a near-zero false-positive rate,
+outperforming other state-of-the-art methods.
+Index Terms —Causal, counterfactual, graph, industrial
+Internet of Things (IIoT), intrusion detection system (IDS).
+
+NOMENCLATURE
+t
+Gt = (Vt , Et , Xt )
+V t , Et , X t
+N = |Vt |, L, dh
+ρ
+
+Time-Window index.
+Window provenance subgraph.
+Nodes, edges, node features.
+Nodes; GNN layers; hidden dim.
+DropEdge probability.
+
+Received 12 January 2026; accepted 19 February 2026. Date of
+publication 17 March 2026; date of current version 5 June 2026. This
+work was supported in part by the JSPS Grant-in-Aid for Scientific
+Research (C) under Grant 23K11103, in part by the National Natural Science Foundation of China under Grant 62571147, in part by
+the Natural Science Foundation of Guangdong Province, China under
+Grant 2025A1515011755, and in part by the SCAT Foundation under
+Grants for Researchers. Paper no. TII-26-0353. (Corresponding author:
+Chunhua Su.)
+Lu Zheng is with the
+School of Computer and Communication,
+Lanzhou University of Technology, Lanzhou 730050, China.
+Huakun Huang is with the School of Computer Science and Cyber
+Engineering, Guangzhou University, Guangzhou 510006, China.
+Chen Zhang and Chunhua Su are with the Department of Computer
+Science and Engineering, University of Aizu, Aizuwakamatsu 965-8580,
+Japan (e-mail: chsu@u-aizu.ac.jp).
+Digital Object Identifier 10.1109/TII.2026.3667569
+
+(l)
+
+hv
+φ(e)
+zt
+ t , pt , s t
+w0 , w1 , π0 , π1
+α, Nα , τ
+λrank
+p̂ = g(p)
+U, Ũ , β, λu
+Nval , θraw , θw , θZF
+wt , ε, γ
+S, K, Tf
+Δ1 (e), CDS(e), ωe
+G  , me
+
+Node embedding at GNN layer l.
+Edge/event feature.
+Graph embedding (dual readout).
+Logits; attack probability; margin score.
+CE weights; class priors (benign/attack).
+False-positive rate budget; hard negatives; rank smoothness.
+Weight of ranking loss.
+Calibrated probability (isotonic).
+Fisher uncertainty; normalized; mixing;
+risk mix.
+Val benign set; thresholds
+(raw/weighted/zero-FP).
+Uncertainty-weighted quantile params.
+Removed-edge set; budget; detector inference cost.
+Score drop; edge importance; CDS
+weight.
+Decision-critical subgraph; edge mask.
+I. INTRODUCTION
+
+HE Industrial Internet of Things (IIoT) environments face
+increasingly sophisticated host-based intrusions, such as
+advanced persistent threats (APTs) and lateral movement attacks [1]. These stealthy activities, exemplified by incidents like
+SolarWinds and NotPetya, are characterized by long-term inactivity and high stealth [2], [3]. In IIoT deployments, resourceconstrained devices often lack robust security protections, making system audit logs one of the few reliable data sources for
+intrusion detection [4]. Host provenance logs record detailed
+system activity and causal relationships. Some research has
+demonstrated that by parsing this audit data into provenance
+graphs, representing processes, files, and network sockets as
+nodes and their interactions as directed edges, security systems
+can gain a holistic view of runtime behavior [5], [6]. This graphbased approach has significant implications for detecting APTs
+and zero-day attacks, where capturing the complete causal chain
+of an attack is important for early detection and mitigation [7].
+However, deploying provenance-based host-based intrusion detection systems in real-world industrial environments still faces
+significant challenges.
+1) Sparse attack signals [8]: APTs often generate only
+sparse, low-amplitude signals in host logs by blending in
+
+T
+
+1941-0050 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+for more information.
+
+ZHANG et al.: CCG-IDS: A CAUSAL COUNTERFACTUAL GRAPH-BASED INTRUSION DETECTION SYSTEM
+
+with normal activity. An APT’s provenance graph may
+contain only a few anomalous nodes or edges amidst
+thousands of benign events. This makes it difficult for
+detectors to distinguish malicious substructures from benign noise without generating numerous false positives.
+2) High false positives [9], [10]: Highly sensitive IDSs often
+result in high false positives. The large number of legitimate operations similar to attacks, combined with missing logs, time asynchrony, and semantic heterogeneity,
+makes it difficult to establish stable baseline models and
+generalize poorly across domains, frequently misclassifying seemingly anomalous provenance substructures as
+malicious.
+3) Data silos [11], [12]: Host log characteristics vary significantly across organizations, platforms, and over time. IDS
+models in one environment may not generalize directly
+to another.
+4) Lack of explainability [13], [14]: Anomaly-based machine learning detectors can issue alerts without humanunderstandable justification. However, in mission-critical
+industrial environments, security operators need explanations for alert flags to verify genuine threats and facilitate incident response. Unfortunately, to date, most
+provenance-based IDS research has focused on detection
+accuracy rather than explainability. The decision-making
+process of graph neural networks (GNNs) and other
+models remains opaque, hindering analyst trust. This has
+prompted researchers to propose graph interpretability
+techniques to identify the most influential subgraph features on model predictions.
+These challenges indicate that enterprises and IIoT deployments require an IDS that can achieve high detection, low false
+positives, adapt to environmental changes, and output interpretable results. In the past few years, researchers have proposed
+a variety of approaches, which we can roughly categorize as
+follows:
+1) edge anomaly detection [15];
+2) full-graph detection with attention mechanisms [16];
+3) heterogeneous graph modeling and cross-domain
+learning [17];
+4) interpretability techniques for graph-based IDS [18].
+Despite these advances, no existing solution can fully meet the
+three requirements of low false positives, cross-source fusion,
+and interpretable output. This results in security analysts having
+to manually inspect large causal graphs to reconstruct attack
+steps, which is time-consuming and error-prone [19]. Given
+that current methods struggle to achieve low false positives,
+cross-source fusion, and interpretability, this article proposes
+a unified approach for collaborative optimization. To address
+these limitations, we propose CCG-IDS, an end-to-end intrusion detection pipeline built on unified provenance graphs derived from Windows host audit logs. CCG-IDS encodes each
+time-window graph with a GNN and summarizes it using dual
+readout pooling to capture both the overall behavior and the most
+suspicious evidence. It then uses Fisher uncertainty to estimate
+confidence in the prediction and to support low false-positive
+rate (FPR) operation. For interpretability, CCG-IDS generates
+a counterfactual explanation by removing the smallest set of
+decision-critical edges that makes the risk score drop below
+
+4921
+
+the alert threshold, and reconstructs the corresponding causal
+path, which is quantified by the counterfactual destructiveness
+score (CDS). Finally, an LLM (Large Language Model)-based
+structured reporting module turns the extracted evidence into
+a fixed-schema, analyst-facing security report. Although prior
+provenance-based IDSs often employ GNN encoders, they solve
+different operational problems. ThreatTrace [6] represents the
+node-level role/type deviation paradigm, where anomalies are
+detected as entities whose learned benign roles deviate at runtime. FLASH [20] represents a comprehensive representationlearning and scalable deployment paradigm, enriching node
+semantics and employing lightweight scoring with downstream
+aggregation such as attack-evolution graphs. Both methods
+operate on provenance graphs and use GNN-based modeling, making them the most relevant references for positioning
+our contributions beyond other GNNs for provenance. Since
+provenance-graph IDS works may appear similar at a high
+level, we explicitly align the three frameworks along checkable axes, such as decision unit, false-positive control, and
+explainability paradigm. Table I summarizes these differences,
+showing that our framework changes the detection semantics
+from node alerts to time-windowed subgraph decisions and
+introduces a calibrated low/zero-FP (low/zero-False Positive)
+operating layer with counterfactual intervention-based evidence.
+To avoid treating the above differences as qualitative claims,
+we provide a Table II that summarizes our contributions and
+solutions compared to these two baselines.
+Our contributions are as follows.
+1) We formulate intrusion detection on time-windowed
+provenance subgraphs and propose a GNN detector with
+dual readout pooling to robustly aggregate graph representations under large and variable graph sizes.
+2) We introduce Fisher-information-based uncertainty to derive an uncertainty-aware risk score and apply conformalstyle calibration to support two deployment modes that
+are zero-FP and low-FPR.
+3) We propose a discrete counterfactual explainer that identifies a small decision-critical edge set whose removal
+reduces the risk score below the alert threshold; we rank
+evidence with the CDS and reconstruct a compact causal
+event chain for interpretation.
+4) We design a constrained LLM module that converts the
+grounded counterfactual evidence into a fixed-schema
+JSON (JavaScript Object Notation) security report for
+analyst-facing triage.
+5) We evaluate CCG-IDS on EVTX and DARPA OpTC and
+report both threshold-free ranking metrics and low-FPR
+operating-point metrics, together with efficiency measurements for deployment.
+The rest of this article is organized as follows. Section II
+reviews related work. Section III presents our proposed framework and mathematical models, and Section IV evaluates our
+proposed performance. Finally, Section V concludes this article.
+II. RELATED WORK
+A. Node/Entity-Level Anomaly Detection
+Node-level anomaly detection considers each process, file, or
+socket in the audit log graph as a potential compromise point
+
+4922
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 6, JUNE 2026
+
+TABLE I
+METHODOLOGICAL COMPARISON WITH OTHERS
+
+TABLE II
+CONTRIBUTION SUMMARY AND THE SPECIFIC GAPS RELATIVE TO NODE-LEVEL PROVENANCE IDS BASELINES
+
+and learns embeddings or features of these nodes to identify
+outliers [21]. Hassan et al.’s UNICORN [22] is an anomalybased APT detector that explores the behavior of each node in a
+large provenance graph. By tailoring its modeling to the unique
+characteristics of APTs, UNICORN can detect hidden anomalies
+in a group of network hosts without relying on known attack
+signatures. Their evaluation shows that UNICORN outperforms
+previous state-of-the-art techniques and detects real-world APT
+scenarios with high accuracy. Wang et al.’s “You Are What
+You Do” [23] applied data provenance analysis to search for
+stealthy malware, implicitly learning normal patterns in system
+call graphs and flagging inconsistent node behavior. Wang et al.’s
+ThreatTrace [6] trains a GraphSAGE-based model by assigning
+each benign node’s label as its node type and extracting edgetype count distributions as node features. Runtime anomalies are
+nodes that become misclassified, with alert suppression relying
+on waiting-time/tolerance heuristics in streaming execution.
+During detection, ThreatTrace identifies nodes that significantly
+deviate from these learned benign roles as potentially malicious.
+This approach of modeling fine-grained entity roles has proven
+effective. Our formulation differs in the supervised signal and
+decision unit that we classify time-windowed provenance subgraphs Gt as benign/attack, which directly matches incident
+triage and enables window-level false-positive control and counterfactual causal-chain extraction.
+B. Full-Graph Detection With Attention Mechanisms
+To detect more complex multistage attacks, researchers have
+proposed methods that use event subgraphs or even the global
+graph as units of analysis [24]. These methods focus on contextual and structural patterns across entities, addressing the
+shortcomings of isolated node-level review that often miss such
+patterns. A representative work is ProGrapher [25], an anomaly
+detection system that operates on provenance graph snapshots.
+ProGrapher addresses the “dependency explosion” problem by
+
+partitioning a continuous event stream into manageable timewindowed subgraphs. Each snapshot graph preserves the temporal order of events and is treated as an independent graph
+instance for detection.
+Another notable subgraph-level approach is FLASH [20],
+which emphasizes comprehensive graph representation learning
+to improve accuracy and scalability. FLASH uses a Word2Vecbased semantic encoder to embed attributes, such as process
+names, command-line arguments, and file paths, capturing
+textual and categorical semantics often overlooked by earlier
+PIDSs. Second, it employs a GNN-based context encoder to
+encode the local and global structural context of each node in
+the provenance graph. By combining these, FLASH generates
+rich node embeddings that explain what each entity is and
+what it does in the graph. While these embeddings scale better
+to big data environments than naive node-by-node analysis,
+interpretability along causal chains remains insufficient, preventing security analysts from identifying counterfactual logic.
+Our contribution is complementary in focus, as we focus on
+deployment-facing low/zero-FP control through uncertaintyaware conformal calibration, and on counterfactual necessitybased explanations that produce minimal causal evidence chains
+for analyst verification.
+C. Interpretability of Graph-Based IDSs
+With the increasing sophistication of IDSs, interpretability has become a primary concern, particularly for analysts’
+trust and verification of warnings. GNN interpretability transforms black-box scores into verifiable evidence by identifying
+the key subgraphs that best support current predictions. CFGNNExplainer [26] searches for the smallest perturbation to the
+input graph that changes the model’s predictions. Deleting the
+resulting set of edges flips the results. Similarly, the framework
+of CF-2 [27] formalizes the dual goals of necessary and sufficient
+conditions for GNN explainability: an interpretable subgraph
+
+ZHANG et al.: CCG-IDS: A CAUSAL COUNTERFACTUAL GRAPH-BASED INTRUSION DETECTION SYSTEM
+
+4923
+
+TABLE III
+EVENT 5-TUPLE SCHEMA e = {SUB, ACT, OBJ, τ, ψ}
+
+Fig. 1.
+
+Fig. 2.
+
+Provenance subgraph demo.
+
+Fig. 3.
+
+Actual provenance subgraph data example.
+
+CCG-IDS architecture.
+
+that satisfies both factual and counterfactual conditions, while
+also keeping the explanation as simple as possible.
+The fields of graph-based intrusion detection and explainable
+machine learning are converging towards solutions that not only
+detect APTs with low false positives but also output explainable
+decisions for decision makers. CCG-IDS builds on previous
+work to establish a unified framework for causal, conformal,
+graph-based host intrusion detection in IIoT environments.
+III. METHODOLOGY
+CCG-IDS is an end-to-end, explainable intrusion detection
+framework for IIoT environments. Fig. 1 illustrates the CCGIDS framework. It first normalizes heterogeneous logs into event
+5-tuples {sub, act, obj, τ, ψ}, as shown in Table III, where sub is
+the subject entity, the actor that triggers the event, obj is the object
+entity, the target affected by the event, act is the action/relation
+type, τ is the event time or a discretized time-bucket within a
+window, and ψ is which host this event belongs to. Within each
+fixed time window t, we perform entity canonicalization and
+relation extraction to construct a directed provenance subgraph
+Gt = (Vt , Et , Xt , At ). Nodes Vt correspond to canonical entities, including process (P ), file (F ), remote/socket (R), user
+(U ), host (H), and registry (K), with node features Xt composed
+of type embeddings, structural statistics, and optional semantic
+cues. Directed edges Et encode sub → obj interactions and are
+associated with edge attributes At , e.g., action one-hot, relative
+
+time, counts/bytes, and ports. Repeated events within a window
+are merged into weighted edges. The subgraph is encoded by
+a multilayer GraphSAGE, which aggregates neighbor infor(L)
+mation to produce node representations H (L) = hv . Fig. 2
+visualizes our provenance modeling: within each time window
+t, we construct Gt by canonicalizing entities and converting
+each event into a directed interaction edge. This graph representation preserves the operational dependencies among processes/files/network endpoints and enables both learning-based
+detection and post hoc evidence extraction. The actual provenance subgraph data is shown in Fig. 3. Our detector predicts a
+risk score for the entire window-level subgraph Gt . This differs
+from node-level detectors that assign anomaly scores to entities
+and later aggregate alerts. Window-level decisions align with
+operational triage that analysts typically investigate bursts of
+activity in time and demand an evidence chain that explains why
+the window is suspicious. Window-level classification enables
+explicit low/zero-FP operating-point control over alert streams
+and counterfactual interventions that remove a minimal set of
+causal edges to flip the window-level decision, yielding necessary evidence chains.
+We then use dual readout pooling with two parallel readouts:
+ (L)
+ (L)
+√1
+zmean = N1
+v hv and zsum = N
+v hv , are concatenated
+into the graph vector zt = [zmean |zsum ], which feeds a small MLP
+head to produce logits, probability pt , and margin st . Training
+
+4924
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 6, JUNE 2026
+
+jointly optimizes class-weighted cross-entropy and a low-FPR
+ranking loss that pairs positives only with the top-α hardest
+negatives, directly improving true positive rate (TPR) at low
+FPR. On validation, we calibrate probabilities with isotonic
+regression to obtain p̂t = g(pt ) and compute a Fisher-aware
+uncertainty score via gradient-norm proxies on the head and
+on zt , which is normalized to Ũ . These are fused into a risk
+score r, so uncertain samples are treated more conservatively.
+For decisions, we set a conformal threshold once on benign
+validation windows with a weighted quantile (low-FPR mode)
+that bounds the online FPR, or the benign maximum (zero-FP
+mode) for critical assets. Online inference is then O(1): compute
+rt and trigger an alert if rt ≥ θ. Upon alert, we provide causal
+transparency with a counterfactual explainer that searches for
+a minimal edge set S ⊆ Et whose removal flips the decision
+below the operating threshold, and rank evidence by a CDS
+CDS(e) = p̂1 (Gt ) − p̂1 (Gt \ e).
+The resulting key path Gt (minimal causal evidence chain)
+plus context is passed to a fine-tuned LLM to produce a
+fixed-schema structured security summary in JSON, including
+summary, entities, timeline, indicators, suspected stages, and
+recommended actions.
+The Nomenclature shows the meaning of some formula symbols. where ⊕ denotes optional edge-feature fusion, AGG is
+mean, and σ is rectified linear unit (ReLU) with dropout. During
+training, we apply DropEdge with probability ρ.
+A. Dual Readout Pooling
+For variable-sized subgraphs, sum readout captures countinglike signals but scales with |Vt |, whereas the mean readout is
+stable but may dilute rare signals. We compute both in parallel
+zmean =
+
+1  (L)
+hv
+N
+
+(2)
+
+and√ concatenate them: zt = [zmean |zsum ]. The scaling factor
+1/ N keeps the expected magnitude of zsum approximately
+constant under the central limit theorem, preventing gradient
+explosion on large graphs. Together with zmean , it balances
+robustness to scale and sensitivity to rare events. A classifier head
+fθ : R2dh → R2 produces logits t . The attack probability and
+score are pt = softmax(t )1 , and st = t,1 − t,0 . Under severe
+class imbalance, we combine a class-weighted cross-entropy
+with a pAUC-oriented ranking loss that emphasizes the low-FPR
+regime. The cross-entropy is
+LCE = −
+
+i∈P j∈Nα
+
+where T > 0 controls smoothness. The joint objective is
+min L = LCE + λrank Lrank .
+θ
+
+1 
+(w1 yt log pt + w0 (1 − yt ) log(1 − pt )) (3)
+B
+t∈B
+
+where w1 ∝ 1/π1 and w0 ∝ 1/π0 depend on class frequencies.
+To emphasize negatives most likely to cause false alarms, let
+P = {i : yi = 1} and N = {j : yj = 0}. Take top-α quantile
+
+(5)
+
+This focuses learning on the low-FPR frontier, directly improving TPR@FPR ≤ α and pAUC@α. To obtain comparable
+and well-calibrated scores, we use isotonic regression to learn a
+monotone calibration map g(·) on the validation set
+
+(yt − g(pt ))2
+(6)
+p̂ = g(p) = arg min
+g∈M
+
+t∈V
+
+where M is the set of nondecreasing functions. This ensures p̂ approximates true posterior probabilities for consistent
+thresholds.
+B. Fisher Uncertainty
+Let the predicted class be c = arg maxk softmax()k and
+define the negative log-likelihood J = − log softmax()c . We
+approximate empirical Fisher sensitivities in the head-parameter
+space and representation space
+U head = ∇θhead J 22
+
+(7)
+
+U feat = ∇z J 22
+
+(8)
+
+U = U head + βU feat .
+
+(9)
+
+After robust normalization to Ũ ∈ [0, 1), we define a risk score
+that interpolates calibrated probability and uncertainty
+r = (1 − λu )p̂ + λu Ũ , λu ∈ [0, 1].
+
+(1)
+
+v∈Vt
+
+1  (L)
+hv , N = |Vt |
+zsum = √
+N v∈Vt
+
+hard negatives Nα ⊂ N , and define
+ 
+1
+Lrank =
+log(1 + exp(−(si − sj )/T )) (4)
+|P||Nα |
+
+(10)
+
+Larger Ũ implies lower model confidence; mixing Ũ into r yields
+conservative decisions when needed.
+C. Conformal Thresholding With Uncertainty Awareness
+On validation-time benign samples Nval , we compute risk
+scores {rt } and set a distribution-free (1 − α) quantile
+θraw = Quantile1−α ({rt : t ∈ Nval }) .
+
+(11)
+
+To be more robust under domain shift, we use uncertaintyweighted quantiles with weights wt ∝ (ε + Ũt )γ (γ > 1)
+θw = WQuantile1−α ({rt }, {wt }) .
+
+(12)
+
+For ultraconservative operation, we deploy a zero-false-positive
+threshold θZF = maxt∈Nval rt . These thresholds support two operational modes: Low-FPR (e.g., α = 1% or 5% ) and zero-FP.
+D. Counterfactual Explanation and Path Reconstruction
+Given an alerted subgraph G = (V, E) with attack score p̂1 =
+p̂(y=1), we seek the smallest edge set whose removal flips the
+decision or drops below a normal threshold θ
+min |S| s.t. p̂1 (G \ S) < θ.
+
+S⊆E
+
+(13)
+
+ZHANG et al.: CCG-IDS: A CAUSAL COUNTERFACTUAL GRAPH-BASED INTRUSION DETECTION SYSTEM
+
+This is NP-hard, so we apply a discrete greedy approximation.
+For each edge e ∈ E, define the instantaneous destruction gain
+Δ1 (e) = p̂1 (G) − p̂1 (G \ {e})
+
+(14)
+
+and remove edges in descending Δ1 order until the constraint
+holds or a budget K is reached, yielding Ŝ. We quantify contribution via the CDS
+CDS(e) = Δ1 (e)
+CDS(v) =
+
+
+
+ωe CDS(e)
+
+IV. EXPERIMENTS
+
+(16)
+
+To evaluate the effectiveness of CCG-IDS, we conducted
+experiments on various datasets, including the Windows event
+log dataset EVTX and the DARPA-provided OpTC dataset.
+The experiments covered multiple aspects, including detection
+accuracy, false-positive control, and explanation performance,
+and compared our approach with existing methods.
+
+where ωe can be set according to edge type or temporal weight
+to make different events comparable in importance. CDS(v) is
+used to highlight key processes or hosts, and CDS(e) to highlight
+critical event chains. By taking the connected closure of the top-k
+edges ranked by CDS, we obtain the attack-path subgraph G  .
+And we introduce differentiable masks me ∈ [0, 1] to reduce the
+number of forward passes, multiplying each edge message by
+me , and optimizing
+min
+
+p̂1 (G; m) + λ1 |m|1 s.t. |m|0 ≤ K
+
+Hallucination safeguards: We constrain the model to a closed
+world of provided facts, enforce JSON-only output, and validate
+outputs via JSON parsing and schema checks. Malformed outputs are rejected and replaced with a safe minimal report (explicit
+“unknown” fields). We additionally flag any report item that is
+not grounded in the provided evidence list as unsupported and
+exclude it from operational decision-making.
+
+(15)
+
+e∈E: e incident to v
+
+m∈[0,1]|E|
+
+4925
+
+(17)
+
+using projected gradient. Finally, we binarize m to obtain
+Ŝ = {e : me = 0}. We feed G  (entities, edges, timestamps,
+endpoints, file paths) and CDS rankings to a fine-tuned large
+language model with a constrained prompt to produce a fixedschema JSON report.
+Let K be the maximum number of edges to remove and Tf
+be the inference cost of the detector on a window graph G. The
+greedy counterfactual search performs at most K iterations, and
+each iteration requires a bounded number of forward evaluations
+to test candidate edge removals and check whether the score
+falls below the operating threshold. Therefore, the overall time
+complexity is O(K · Tf ).
+E. LLM-Based Structured Reporting
+The LLM module is a post hoc reporting component that
+translates already-computed detector outputs and counterfactual
+evidence into an analyst-facing JSON report. It does not affect
+detection, calibration, or alert triggering.
+Inputs: The LLM receives only structured facts extracted from
+the detector and the counterfactual explainer, including: window
+metadata (duration, host ID), calibrated risk score and decision,
+counterfactual summary statistics (e.g., number of removed
+edges, keep ratio), and a ranked evidence list (top CDS edges
+with endpoints and timestamps). Raw logs and external context
+are not provided.
+Output: The LLM outputs a fixed-schema JSON object:
+{summary, key_indicators, risk_level, action_items}, where
+risk_level ∈ {low, medium, high}. We enforce JSON-only output under schema validation.
+Prompt template: We use a two-part prompt: 1) a system
+instruction that specifies the strict JSON schema; 2) a user
+prompt that contains only the input facts and explicitly forbids
+introducing unseen entities/events. Unknown details must be
+returned as “unknown.”
+
+A. Setup
+EVTX dataset:1 Security logs from Windows hosts in industrial control environments. The EVTX files were converted to
+XML/JSON to extract time, event ID, process name, and other
+information. These logs were then mapped into a time-series
+attribution graph, segmented into fixed 1-min windows, and
+annotated based on the start and end times of known attacks.
+OpTC dataset:2 DARPA’s large-scale APT simulation (approximately 1000 hosts, 500 collected, and run for two weeks),
+with benign early-stage and red team injections later. We used
+host-side eCAR 25 September events, approximately 15 GB of
+data, with distributed parsing, constructed using sliding 1-min
+windows, and annotated with official ground truth.
+EVTX and OpTC differ substantially in event sources, schema
+richness, and graph scale/density. To test domain robustness,
+we keep the same normalization (5-tuple), windowing policy,
+and model configuration across both datasets, and report both
+ranking metrics and low-FPR operating-point behavior. Consistent performance across these heterogeneous pipelines supports
+that the framework is not specialized to one dataset’s logging
+idiosyncrasies.
+Data preprocessing: On Linux, L40S GPU RAM 48 G,
+Python 3.11, we use python-evtx/lxml and ijson to parse EVTX
+and OpTC eCAR. We unify raw observability into edges
+{sub, act, obj, τ, ψ}, deduplicate to nodes, and apply 60 s windowing to produce per-window edges and windows. EVTX
+windows are labeled via host prefix atk/ben, while OpTC uses
+GT/IoC. We export the PyTorch Geometric graphs to pt files and
+perform a temporal split of 70/15/15. The training set, 70% , is
+used to train our subgraph detection method, and we also use
+this training portion to fine-tune Qwen-32B. The validation and
+test sets each account for 15% .
+Evaluation metrics.
+1) AUPR: Area under the precision–recall curve, preferred
+for imbalanced data. Computed over detection scores on
+all test subgraphs.
+1 [Online]. Available: https://github.com/sbousseaden/EVTX-ATTACKSAMPLES
+2 [Online]. Available: https://github.com/FiveDirections/OpTC-data
+
+4926
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 6, JUNE 2026
+
+Fig. 7. Temporal distribution of event occurrences in theOpTC
+datasets.
+Fig. 4. Representative high-confidence alerts and counterfactual analyses from the EVTX dataset.
+
+Fig. 8. Event distributions across different node scales in the EVTX
+and OpTC dataset. (a) EVTX datasets; (b) OpTC dataset.
+
+Fig. 5. Representative high-confidence alerts and counterfactual analyses from the OpTC dataset.
+
+Fig. 6. Temporal distribution of event occurrences in the EVTX
+datasets.
+
+2) TPR@FPR = x% : TPR at fixed FPRs. We emphasize 1%
+and 5% . Captures recall under strict false-alarm budgets,
+which is critical for industrial use.
+3) Precision@K: Precision among the top-K alerts (K =
+50/100/200). Reflects ranking quality and how many of
+the most urgent alerts are truly malicious, reducing analyst load.
+4) pAUC@α: Normalized AUC over FPR ∈ [0, α].
+5) Other metrics: We also report receiver operating characteristic – area under the curve (ROC-AUC) and F 1 score.
+Explanation quality is assessed via case studies and an
+auxiliary explanation hit rate.
+Comparison methods: To clarify the methodological novelty
+and ensure a fair comparison, we select two representative
+provenance-graph intrusion detection baselines: ThreatTrace
+and FLASH.
+B. Experimental Results
+Figs. 4–6(a) and 6(b) illustrate the temporal distribution of
+event counts in the EVTX and OpTC datasets. As shown, the
+OpTC dataset exhibits a substantially higher number of events
+
+within the same time span, along with a larger set of participating nodes. Accordingly, we first conduct the full experimental
+pipeline on the smaller EVTX dataset and then evaluate the
+robustness of our approach on the more complex OpTC dataset.
+Figs. 7 and 8 present 16 representative alerts from the EVTX
+and OpTC datasets, respectively. We first score and rank all
+test-set subgraphs with CCG-IDS. Then, under the Zero-FP
+operating mode, we derive a decision threshold on the validation set via Fisher uncertainty aware conformal and retain
+test samples with score ≥ threshold. From these candidates,
+we select the Top 16 for display. For each selected subgraph,
+we run a discrete counterfactual search: edges are removed in
+decreasing CDS order until the model’s score falls below the
+threshold or the search budget is reached. For visualization,
+the original graph and the minimal counterfactual graph are
+overlaid, highlighting critical edges in red. Finally, we submit the
+key events and context to fine-tuned LLM in JSON mode, producing a structured counterfactual summary and recommended
+actions, as shown in Fig. 9. These figures demonstrate the causal
+critical paths revealed by minimal counterfactual perturbations,
+and analyst-ready structured summaries that accelerate triage
+and root-cause analysis.
+Fig. 10 achieves strong ranking performance on the EVTX
+dataset, while its AUPR of 0.9218 is slightly lower than the
+AUC, indicating a small overlap between positive and negative
+scores in the very low recall region. Fig. 11 shows that CCG-IDS
+also performs well overall on the OpTC dataset, achieving an
+AUC of 0.9641 and an AUPR of 0.9698, with both values being
+nearly identical. This demonstrates that the model maintains
+stable performance across the entire range from high precision
+to high recall.
+Fig. 12 presents the normalized partial ROC area at FPR
+≤10% . On EVTX, we obtain pAUC@10% = 0.8723, and
+on OpTC, we obtain 0.8372. Because normalized pAUC@10%
+equals the average TPR within 0% –10% FPR, these values
+
+ZHANG et al.: CCG-IDS: A CAUSAL COUNTERFACTUAL GRAPH-BASED INTRUSION DETECTION SYSTEM
+
+4927
+
+Fig. 9. Structured counterfactual summaries and recommended actions generated by the fine-tuned LLM. (a) high-risk instance; (b) medium-risk
+instance.
+
+TABLE IV
+THRESHOLD COMPARISON ON THE SAME ROC.
+
+Fig. 10. ROC and PR (Precision-Recall) curve of CCG-IDS on the
+EVTX dataset. (a) ROC curve; (b) PR curve.
+
+Fig. 13. Comparison of low false-positive operating points. (a) TPR at
+fixed FPR = 1% , 5% , 10% , interpolated. (b) TPR at fixed false-positive
+counts k = 1, 3, 5.
+Fig. 11. ROC and PR curve of CCG-IDS on the OpTC dataset. (a)
+ROC curve; (b) PR curve.
+
+Fig. 12. Normalized partial ROC area (pAUC@10% ) of CCG-IDS on
+the EVTX and OpTC datasets.
+
+mean the detector sustains about 87.2% (EVTX) and 83.7%
+(OpTC) recall while keeping the false-positive budget under
+10% . This aligns with IIoT requirements where low-FPR
+operation often required to avoid alarm fatigue and inadvertent process interruptions, while still maintaining high attack
+coverage.
+Table IV compares different thresholding strategies under
+the same ROC curve. The RAW threshold, calibrated on the
+
+validation set at α = 5% FPR, shifts the operating point toward
+a higher recall regime on test, yielding TPR = 0.8125 at FPR
+= 0.0714 on OpTC. In contrast, the Fisher-calibrated threshold
+achieves a zero-false-positive regime with FPR = 0 and TPR
+= 0.6208. On EVTX, RAW attains TPR = 1.000 at FPR =
+0.1028, while Fisher reduces FPR to 0.0748 with only a marginal
+recall drop to TPR = 0.9778 and improved precision from 0.672
+to 0.733. These results reveal an operational tradeoff between
+high-recall and zero-FP modes, offering flexible deployment
+choices for IIoT systems.
+Fig. 13 presents recall under low false-positive constraints
+for EVTX and OpTC. Under a rate budget in Fig. 13(a), OpTC
+achieves higher TPR at FPR = 1% with 0.8125 versus 0.622.
+When the budget is relaxed to FPR = 5% and 10% , EVTX
+clearly dominates with 0.9556 and 1.000 versus 0.8333 and
+0.8958. Under a count budget in Fig. 13(b), OpTC leads at k
+= 1 with 0.8125 versus 0.2222, yet EVTX overtakes at k =
+5 with 0.9556 versus 0.8958. The two views by rate and by
+count are complementary and show that our method maintains
+controllable and strong recall across different dataset sizes and
+operational budgets.
+
+4928
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 6, JUNE 2026
+
+TABLE V
+DETECTOR ABLATION ON OPTC (THRESHOLD-FREE RANKING METRICS,
+TEST_RAW)
+
+Fig. 14. Top-K alert review performance. (a) Precision at K. (b) Recall
+at K for EVTX and OpTC.
+
+Fig. 15. Precision, recall, and F 1 score across methods on OpTC
+Attack 3 (25 September). (a) Comparison of Precision and Recall; (b)
+Comparison of F1 score.
+
+Fig. 14 shows Precision@K and Recall@K on EVTX and
+OpTC. At K=50, both datasets achieve high precision (0.86)
+with strong recall (EVTX 0.956, OpTC 0.896). Increasing to
+K=100 reaches full recall on both datasets, while precision
+naturally decreases as more low-score items are included. This
+paired view links analyst effort to expected yield and confirms
+that reviewing the top 50–100 alerts already captures nearly all
+true positives with high purity.
+Fig. 15 shows the comparison of CCG-IDS against two strong
+baselines on OpTC Attack 3. Compared with ThreatTrace [6],
+CCG-IDS achieves notable gains in all metrics, improving precision by 5.6% , recall by 5.5% , and F 1 by 6.1% , demonstrating
+stronger robustness and generalization on complex provenance
+graphs. Compared with FLASH [20], CCG-IDS attains slightly
+higher recall, identical F 1 score, and identical precision, while
+improving the AUC from 0.95 to 0.96. This indicates that
+CCG-IDS achieves a more discriminative and stable decision
+boundary, effectively reducing overlap between benign and attack samples. Moreover, the conformal-counterfactual design of
+CCG-IDS provides built-in uncertainty calibration and causal
+interpretability, which are absent in FLASH, enabling both high
+accuracy and explainable threat reasoning. These results verify
+that CCG-IDS not only matches or surpasses state-of-the-art detection accuracy but also advances interpretability and reliability
+across heterogeneous attack scenarios.
+C. Cross-Domain and Deployment Evaluation
+1) Cross-Domain Transfer and Threshold Portability: To
+evaluate robustness under heterogeneous IIoT domains, we train
+the detector on a source domain and directly evaluate it on a
+target domain without any target fine-tuning or retraining. This
+setting reflects realistic onboarding scenarios where labeled attacks are unavailable in newly deployed environments. We report
+threshold-free ranking metrics (ROC-AUC and AUPR) as well
+as low-FPR operating metrics (TPR@1% FPR, TPR@5% FPR).
+In addition, we transfer the conformal threshold calibrated on
+
+the source validation negatives at α = 5% and apply it directly
+to the target test scores. We report the realized target FPR/TPR
+denoted as FPR@Thr and TPR@Thr. Table VI summarizes both
+directions EVTX → OpTC and OpTC → EVTX, showing that
+cross-domain generalization can be asymmetric and must be
+measured rather than assumed. The results also demonstrate
+that blindly reusing a numeric threshold across domains can
+be unsafe under score-distribution shift, motivating target-side
+benign recalibration for deployment.
+2) Traditional Baselines: To broaden the comparison beyond GNNs, we include representative classical unsupervised
+anomaly detectors: Isolation Forest, one-class support vector
+machine (SVM), local outlier factor (LOF), and principal component analysis (PCA) reconstruction error. Because these methods operate on fixed-length vectors rather than graphs, we convert each time-window provenance subgraph into a lightweight
+window-level feature vector using simple graph summaries (e.g.,
+node/edge counts, density) and pooled node attributes. We evaluate all methods using the same split and report AUC/AP as
+threshold-free ranking metrics. Table VIII shows that our detector substantially outperforms all classical baselines on OpTC in
+both AUC and average precision (AP).
+3) Runtime
+and
+Resource
+Efficiency: We
+report
+deployment-facing efficiency measurements on the GPU.
+We measure detector inference latency and throughput on all
+windows, and separately report the explanation overhead since
+it is invoked only on demand for a limited number of alerts.
+Table VII summarizes mean and p90 latency, throughput, and
+peak GPU memory for both datasets. The results show that the
+system is practical for near-real-time deployment settings under
+our tested hardware configuration.
+D. Ablation Study
+1) Experimental Protocol and Variants: In Tables V–IX, detector variant means disabling or replacing exactly one module
+of the detector while keeping the backbone, data split, seed, and
+training schedule fixed. Full uses dual readout (mean+scaledsum), and DropEdge; the Fisher module is present but only used
+to produce the Fisher-highU operating point as the right half of
+Table IX, while Table V reports threshold-free ranking on raw
+scores. Table V is computed from the detector’s raw scores (no
+Fisher-highU operating rule applied), while Fisher-highU is only
+used to define the conservative operating point in Table IX. In
+Table XI, explainer variant changes only the explanation strategy
+
+ZHANG et al.: CCG-IDS: A CAUSAL COUNTERFACTUAL GRAPH-BASED INTRUSION DETECTION SYSTEM
+
+4929
+
+TABLE VI
+CROSS-DOMAIN GENERALIZATION AND THRESHOLD-TRANSFER STRESS TEST
+
+TABLE VII
+RUNTIME/LATENCY AND GPU MEMORY FOOTPRINT
+
+TABLE VIII
+COMPARED CLASSICAL (NON-GNN) ANOMALY DETECTION BASELINES WITH
+OURS ON OPTC
+
+TABLE X
+VALIDATION-THRESHOLD BASELINES EVALUATED ON THE TEST SET
+
+TABLE XI
+EXPLANATION ABLATION ON ALERTED GRAPHS UNDER AN EDGE-REMOVAL
+BUDGET K = 50
+TABLE IX
+LOW-FPR OPERATING-POINT ABLATION AT α = 5% ON THE TEST SET (42
+NEGATIVES, FPR = FP/42)
+
+(edge ranking and search) with the detector fixed. Table X reports
+validation-based threshold policies that do not change model
+parameters.
+We adopt a one-factor-at-a-time ablation design: in each
+experiment, only one module is disabled or replaced, while all
+other conditions, such as data partitioning, random seed, model
+backbone, and training schedule, remain identical. To explicitly
+reflect alarm-sensitive IIoT deployment requirements, we report two complementary metric groups: threshold-free ranking
+metrics (AUPR, AUC, and TPR@{1%, 5%, 10% } FPR), and
+operating-point metrics at a fixed low-FPR target α = 5% (FP
+
+count, TPR, and F 1). Detector ablations are summarized in Tables V and IX. Explanation-module ablations are summarized in
+Table XI. We additionally include validation-threshold baselines
+in Table X to contextualize conformal calibration.
+2) Dual Readout Pooling: To test whether dual readout pooling is superior to standard single readouts, we replace dual
+readout with mean pooling and scaled-sum pooling, respectively, while keeping all other modules unchanged. As shown in
+Table V, removing dual readout reduces ranking performance
+(AUPR/AUC and TPR at low FPR). More importantly, at α =
+5% in Table IX, false positives increase from 1 to 4 (FPR: 0.0238
+→ 0.0952), and TPR decreases, indicating that dual readout is
+a key contributor to separability in the low-FPR regime.
+3) DropEdge Regularization: Disabling DropEdge has a minor influence on ranking metrics but markedly increases spurious alarms at the operating point, FP increases from 1 to 5
+(FPR: 0.0238 → 0.1190) at α = 5% in Table IX, suggesting
+
+4930
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 6, JUNE 2026
+
+TABLE XII
+EXPLANATION BENCHMARK ON OPTC UNDER MATCHED EDGE BUDGET (K = 20), TOP-KALERT = 20 EXPLAINED WINDOWS, 5 REPEATS
+
+DropEdge mitigates incidental correlations in provenance
+graphs that otherwise lead to false positives.
+4) Fisher-Aware Uncertainty Calibration: We evaluate
+Fisher uncertainty with/without calibration and test different
+uncertainty scopes (head-only versus feature-only). Table IX
+shows that Fisher-highU systematically shifts the decision
+rule toward fewer alarms and can reach the zero-FP regime
+(FP=0) under α = 5%, at the cost of reduced recall (lower
+TPR), which matches the design goal of conservative low-alarm
+IDS deployments. The scope study indicates that feature-only
+uncertainty is less reliable, while head-based uncertainty yields
+more stable low-FP control. We, therefore, adopt the default
+setting used in full.
+5) Conformal Thresholding Versus Validation-Based
+Thresholds: To address whether conformal thresholding is
+
+preferable to simple validation-set thresholding, we add two
+baselines: val-bestF1 (threshold maximizing validation F 1)
+and val-zeroFP (minimum threshold achieving zero FP on
+validation negatives). As shown in Table X, val-bestF1 tends
+to be more aggressive (higher FP), whereas val-zeroFP is
+overly conservative (lower TPR). In contrast, conformal
+calibration directly targets a user-specified low-FPR level at
+α = 5% and provides finite-sample error control under standard
+exchangeability assumptions, yielding a principled operating
+point between these two heuristics in Table IX. Concretely, the
+conformal threshold is computed on the validation set as the
+(1 − α)-quantile of negative-sample nonconformity scores and
+then applied to the test set.
+6) Counterfactual Explainer Ablation: We evaluate explanations only on alerted (high-confidence) attack predictions produced by the fixed trained detector. We ablate the explanation
+pipeline by varying edge ranking (CDS versus random) and
+search strategy (Greedy versus OneShot) under a fixed edgedeletion budget K = 50. Since strict label flips can be rare for
+high-confidence alerts when only edge deletions are allowed,
+we evaluate explanations using comprehensiveness and sparsity:
+Δpattack = pattack (G) − pattack (G \ Eexp ) and |Erm |. Table XI
+shows that CDS and Greedy achieve a larger reduction in attack
+probability with fewer removed edges than random and greedy,
+and are more edge-efficient than OneShot, validating the necessity of CDS ranking and greedy acceptance for compact and
+faithful provenance explanations.
+Attribution-based explainers assign importance scores, which
+identify edges correlated with the prediction but do not establish
+that these edges are necessary for the alarm. Our explanation
+is counterfactual that we search for a minimal intervention
+set S ⊆ Et such that removing S reduces the calibrated risk
+
+Fig. 16. Comprehensiveness comparison (Δcomp ) under the same
+edge budget K = 20 on OpTC. Ours yields the largest average probability drop when removing the explanation edges, indicating more decisioncritical evidence.
+
+score below the operational threshold. This produces a necessary
+causal chain: without these events/relations, the alert would not
+fire. Quantitatively, under a fixed deletion budget, we ablate the
+ranking and search components. CDS+Greedy achieves a larger
+probability reduction with fewer removed edges than random
+ranking and is more edge-efficient than one-shot deletion, indicating more compact and faithful decision-critical evidence.
+E. Explanation Evaluation
+We further provide a rigorous explanation benchmark that
+evaluates faithfulness, sufficiency, sparsity, stability, and runtime, and compares our counterfactual pipeline with standard
+graph explainers (GNNExplainer [26], PGExplainer [28], and
+CF-GNNExplainer [29] baseline). To rigorously validate the
+proposed equivalent sparsity, we repeat each method 5 times
+to compute stability. Given a window graph G and an explainer
+output edge set Eexp ⊆ E, we report the following:
+1) comprehensiveness Δcomp = f (G)−f (G \ Eexp ), higher
+is better;
+2) sufficiency Δsuf = f (G) − f (GEexp ), lower is better;
+3) sparsity ratio = |Eexp |/|E|, lower is better;
+4) stability as mean Jaccard overlap of Eexp across repeats,
+higher is better;
+5) runtime per explanation (ms).
+We compare with widely used explainers: GNNExplainer
+and PGExplainer, and a counterfactual masking baseline (CFGNNExplainer) that is CF-GNNExplainer-like in that it optimizes an intervention mask over edges/events. Table XII reports
+quantitative results under the matched budget. Our counterfactual explanations achieve a larger score drop when removing
+the selected edges (higher Δcomp ) and improved sufficiency
+(lower Δsuf ) while remaining compact (low ratio), indicating
+more faithful decision-critical evidence. Fig. 16 visualizes the
+comprehensiveness comparison. Set-overlap stability (Jaccard)
+
+ZHANG et al.: CCG-IDS: A CAUSAL COUNTERFACTUAL GRAPH-BASED INTRUSION DETECTION SYSTEM
+
+can be lower for counterfactual explanations because minimal
+interventions are often nonunique, so that multiple distinct edge
+sets may suffice to cross the operating threshold. We, therefore,
+also report effect stability via the variance of Δcomp and Δsuf ,
+showing that the explanation effect remains robust despite multiple valid minimal solutions.
+V. CONCLUSION
+This article proposes CCG-IDS, an interpretable graph intrusion detection system for IIoT. Methodologically, we use
+a unified host provenance graph as the core, homogeneously
+fusing windows host audit logs with public dataset events to
+establish a time-window-level subgraph detection paradigm. At
+the representation and learning level, we propose dual readout
+pooling to balance sensitivity to rare anomalies with subgraph
+stability. We also combine the joint objective of class-weighted
+cross-entropy and a low FPR ranking loss to directly optimize the
+low false-positive operating point. At the decision and threshold
+level, we propose a combined strategy of Fisher informationbased uncertainty measures and conformal thresholds to provide
+transferable thresholds in zero or low false-positive modes. At
+the interpretability level, we design a discretized counterfactual minimum perturbation search and CDS to automatically
+extract key causal paths and generate structured security reports, reducing analysis costs. Experimental results show that
+CCG-IDS achieves an F 1 score of approximately 92% on
+real-world datasets, consistently outperforming representative
+baselines in the low FPR range, demonstrating the superiority
+of our approach. In future work, we plan to extend CCG-IDS by
+incorporating other data modalities and evaluate its performance
+in larger-scale IIoT deployments.
+REFERENCES
+[1] I. Makhdoom, M. Abolhasan, J. Lipman, R. P. Liu, and W. Ni, “Anatomy
+of threats to the Internet of Things,” IEEE Commun. Surv. Tut., vol. 21,
+no. 2, pp. 1636–1675, Second Quarter 2019.
+[2] “CISA issues emergency directive to mitigate the compromise of solarwinds orion network management products—CISA,” Dec. 2020. Accessed: Oct. 23, 2025. [Online]. Available: https://www.cisa.gov/newsevents/news
+[3] “Petya ransomware—CISA,” Feb. 2018. Accessed: Oct. 23, 2025.
+[Online]. Available: https://www.cisa.gov/news-events/alerts/2017/07/
+01/petya-ransomware
+[4] B. Ahmad, Z. Wu, Y. Huang, and S. U. Rehman, “Enhancing the security in IoT and IIoT networks: An intrusion detection scheme leveraging deep transfer learning,” Knowl.-Based Syst., vol. 305, Dec. 2024,
+Art. no. 112614.
+[5] M. Zipperle, F. Gottwalt, E. Chang, and T. Dillon, “Provenance-based
+intrusion detection systems: A survey,” ACM Comput. Surv., vol. 55, no. 7,
+pp. 1–36, Dec. 2022.
+[6] S. Wang et al., “Threatrace: Detecting and tracing host-based
+threats in node level through provenance graph learning,”
+IEEE Trans. Inf. Forensics Secur., vol. 17, pp. 3972–3987,
+2022.
+[7] Z. Jadidi, J. Hagemann, and D. Quevedo, “Multi-step attack detection in
+industrial control systems using causal analysis,” Comput. Ind., vol. 142,
+Nov. 2022, Art. no. 103741.
+
+4931
+
+[8] X. Ma et al., “A comprehensive survey on graph anomaly detection
+with deep learning,” IEEE Trans. Knowl. data Eng., vol. 35, no. 12,
+pp. 12012–12038, Dec. 2023.
+[9] O. A. Ekle and W. Eberle, “Anomaly detection in dynamic graphs: A
+comprehensive survey,” ACM Trans. Knowl. Discov. Data, vol. 18, no. 8,
+pp. 1–44, Jul. 2024.
+[10] T. Zhu et al., “AptShield: A stable, efficient and real-time apt detection
+system for linux hosts,” IEEE Trans. Dependable Secure Comput., vol. 20,
+no. 6, pp. 5247–5264, Nov./Dec. 2023.
+[11] J. Wang et al., “Generalizing to unseen domains: A survey on domain generalization,” IEEE Trans. Knowl. data Eng., vol. 35, no. 8, pp. 8052–8072,
+Aug. 2023.
+[12] Z. Qiao, D. Shi, S. Jin, Y. Shi, L. Jing, and C. Qiu, “Enhancing crossdomain generalization by fusing language-guided feature remapping,” Inf.
+Fusion, vol. 119, Jul. 2025, Art. no. 103029.
+[13] H. Yuan, H. Yu, S. Gui, and S. Ji, “Explainability in graph neural networks:
+A taxonomic survey,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45,
+no. 5, pp. 5782–5799, May 2023.
+[14] X. Li, J. Wang, and Z. Yan, “Can graph neural networks be adequately
+explained? A survey,” ACM Comput. Surv., vol. 57, no. 5, pp. 1–36,
+Jan. 2025.
+[15] S. Lagraa et al., “A simple graph embedding for anomaly detection in
+a stream of heterogeneous labeled graphs,” Pattern Recognit., vol. 112,
+Apr. 2021, Art. no. 107746.
+[16] F. Gao, J. Liu, C. Li, Z. Gao, and R. Zhao, “Signal-relationship-aware explainable intrusion detection in controller area networks using graph transformers,” Knowledge-Based Syst., vol. 328, Oct. 2025, Art. no. 114237.
+[17] D. Shan, X. Du, W. Wang, N. Wang, and A. Liu, “KPI-HGNN: Key
+provenance identification based on a heterogeneous graph neural network
+for big data access control,” Inf. Sci., vol. 659, Feb. 2024, Art. no. 120059.
+[18] J. Ren and R. Geng, “Provenance-based apt campaigns detection
+via masked graph representation learning,” Comput. Secur., vol. 148,
+Jan. 2025, Art. no. 104159.
+[19] S. He, P. He, Z. Chen, T. Yang, Y. Su, and M. R. Lyu, “A survey
+on automated log analysis for reliability engineering,” ACM computing
+surveys (CSUR), vol. 54, no. 6, pp. 1–37, Jul. 2021.
+[20] M. U. Rehman, H. Ahmadi, and W. U. Hassan, “Flash: A comprehensive approach to intrusion detection via provenance graph representation
+learning,” in Proc. IEEE Symp. Secur. Privacy, 2024, pp. 3552–3570.
+[21] N. X. Tung et al., “Graph neural networks for next-generation-IoT: Recent
+advances and open challenges,” IEEE Commun. Surveys Tut., vol. 28,
+pp. 2226–2262, 2025.
+[22] X. Han, X. Han, T. Pasquier, A. Bates, J. Mickens, and M. Seltzer,
+“UNICORN: Runtime provenance-based detector for advanced persistent threats,” in Proc. Netw. Distrib. Syst. Secur. Symp. 2020,
+San Diego, CA, USA, Internet Society, Feb. 23–26, 2020, pp. 1–18,
+doi: 10.14722/ndss.2020.24046.
+[23] Q. Wang et al., “You are what you do: Unting stealthy malware via data
+provenance analysis,” in Proc. Netw. Distrib. Syst. Secur. Symp. 2020,
+San Diego, CA, USA, Internet Society, Feb. 23–26, 2020, pp. 1–17,
+doi: 10.14722/ndss.2020.24167.
+[24] A. Rawal, A. Raglin, D. B. Rawat, B. M. Sadler, and J. McCoy, “Causality
+for trustworthy artificial intelligence: Status, challenges and perspectives,”
+ACM Comput. Surv., vol. 57, no. 6, pp. 1–30, Feb. 2025.
+[25] F. Yang, J. Xu, C. Xiong, Z. Li, and K. Zhang, “P ROGRAP HER:
+An anomaly detection system based on provenance graph embedding,” in
+Proc. 32nd USENIX Secur. Symp., 2023, pp. 4355–4372.
+[26] Z. Ying, D. Bourgeois, J. You, M. Zitnik, and J. Leskovec, “GNNExplainer:
+Generating explanations for graph neural networks,” Adv. Neural Inf.
+Process. Syst. 32, 2019, pp. 9244–9255.
+[27] J. Tan et al., “Learning and evaluating graph neural network explanations
+based on counterfactual and factual reasoning,” in Proc. ACM Web Conf.
+2022 ( ’22), Virtual Event (Lyon, France), Apr. 25–29, 2022, pp. 1018–
+1027, ACM, doi: 10.1145/3485447.3511948.
+[28] D. Luo et al., “Parameterized explainer for graph neural network,” Adv.
+Neural Inf. Process. Syst., vol. 33, pp. 19620–19631, 2020.
+[29] A. Lucic, M. A. Ter Hoeve, G. Tolomei, M. De Rijke, and F. Silvestri, “CFGNNExplainer: Counterfactual explanations for graph neural networks,”
+in Proc. Int. Conf. Artif. Intell. Statist., 2022, pp. 4499–4511.
+PAPER_TEXT

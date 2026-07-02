@@ -1,0 +1,151 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024                                                     17921
+
+
+
+
+                               Curved Geometric Networks for
+                                Visual Anomaly Recognition
+               Jie Hong , Pengfei Fang , Weihao Li, Junlin Han, Lars Petersson, and Mehrtash Harandi
+
+
+
+   Abstract— Learning a latent embedding to understand the                           Index Terms— Anomaly recognition, geometric learning,
+underlying nature of data distribution is often formulated in                      hyperbolic space, mixed-curvature space, open-set recognition,
+Euclidean spaces with zero curvature. However, the success                         out-of-distribution (OOD) detection, spherical space.
+of the geometry constraints, posed in the embedding space,
+indicates that curved spaces might encode more structural
+information, leading to better discriminative power and                                                  I. I NTRODUCTION
+hence richer representations. In this work, we investigate
+the benefits of the curved space for analyzing anomalous,
+open-set, or out-of-distribution (OOD) objects in data. This
+                                                                                   I   N THIS article, we aim to leverage the curved geometry for
+                                                                                       learning embeddings, which in return allows us to analyze
+                                                                                   and identify anomalous, open-set, or out-of-distribution (OOD)
+is achieved by considering embeddings via three geometry
+constraints, namely, spherical geometry (with positive curvature),                 objects from normal, closed-set, or in-distribution (ID) input
+hyperbolic geometry (with negative curvature), or mixed                            data. Nonflat geometry has gained an increasing amount
+geometry (with both positive and negative curvatures). Three                       of interest in various machine learning approaches due to
+geometric constraints can be chosen interchangeably in a unified                   its intriguing properties in encoding the inherent geometry
+design, given the task at hand. Tailored for the embeddings in
+the curved space, we also formulate functions to compute the
+                                                                                   or hidden structure information of the data [1], [2], [3],
+anomaly score. Two types of geometric modules (i.e., geometric-                    [4], [5], [6]. For example, spherical spaces with constant
+in-one (GiO) and geometric-in-two (GiT) models) are proposed                       positive curvature show appealing properties along with
+to plug in the original Euclidean classifier, and anomaly scores                   deep neural networks (DNNs) to encode samples resembling
+are computed from the curved embeddings. We evaluate the                           the sphere [7], [8]. Hyperbolic spaces, featured with a
+resulting designs under a diverse set of visual recognition
+scenarios, including image detection (multiclass OOD detection
+                                                                                   constant negative curvature, are shown to be rich in encoding
+and one-class anomaly detection) and segmentation (multiclass                      the underlying hierarchical structure in the data. Such a
+anomaly segmentation and one-class anomaly segmentation). The                      property enables hyperbolic spaces to better discriminate
+empirical results show the effectiveness of our proposal through                   input samples [4]. Fig. 1 conceptualizes the distinctive
+consistent improvement over various scenarios. The code is made                    characteristics of Euclidean, spherical, and hyperbolic spaces
+available at https://github.com/JHome1/GiO-GiT.
+                                                                                   and highlights their disparities. Euclidean spaces with zero
+                                                                                   curvature are familiar faces in DNNs [see Fig. 1(a)]. Spherical
+                                                                                   geometry, as shown in Fig. 1(b), has been successfully
+   Manuscript received 28 July 2022; revised 27 May 2023;
+accepted 18 August 2023. Date of publication 8 September 2023; date
+                                                                                   employed to encode directional data (i.e., samples where
+of current version 3 December 2024. This work was supported in part by             the magnitude does not carry important information). The
+the National Science Foundation of China under Grant 62306070 and in part          Poincaré ball model for the hyperbolic spaces, as shown in
+by the Southeast University Start-Up Grant for New Faculty under Grant
+4009002309. The work of Mehrtash Harandi was supported by the Australian
+                                                                                   Fig. 1(c), provides a structure with constant negative curvature
+Research Council (ARC) under Project DP230101176. (Corresponding                   to encode data.
+author: Pengfei Fang.)                                                                Previous studies, such as [4], [11], and [12], show that
+   Jie Hong and Junlin Han are with the College of Engineering,
+Computing and Cybernetics, Australian National University, Canberra,
+                                                                                   curved spaces can attain a superior performance gain over
+ACT 2601, Australia, and also with Data61-CSIRO, Black Mountain                    the Euclidean space, especially for tasks relying on image
+Laboratories, Canberra, ACT 2601, Australia (e-mail: jie.hong@anu.edu.au;          embeddings (e.g., zero-/few-shot learning or metric learning).
+u6835134@anu.edu.au).
+   Pengfei Fang is with the School of Computer Science and Engineering and
+                                                                                   For example, in [12], by employing the similarity metric
+the Key Laboratory of New Generation Artificial Intelligence Technology and        in spherical embedding spaces, the model enhances its
+Its Interdisciplinary Applications, Ministry of Education, Southeast University,   discriminative ability in zero-shot classification for unknown
+Nanjing, 210096, China (e-mail: fangpengfei@seu.edu.cn).
+   Weihao Li is with the College of Engineering, Computing and Cybernetics,
+                                                                                   classes. In [4] and [13], hyperbolic spaces are shown to
+Australian National University, Canberra, ACT 2601, Australia (e-mail:             have a better distribution across unknown classes, therefore
+weihao.li1@anu.edu.au).                                                            improving few-shot learning performance. Based on the
+   Lars Petersson is with Data61-CSIRO, Black Mountain Laboratories,
+Canberra, ACT 2601, Australia (e-mail: lars.petersson@data61.csiro.au).
+                                                                                   interpretations in Fig. 1, we infer that the curved geometric
+   Mehrtash Harandi is with the Department of Electrical and Computer              embeddings exhibit enhanced discrimination due to the
+Systems Engineering, Monash University, Clayton, VIC 3800, Australia               following reasons.
+(e-mail: mehrtash.harandi@monash.edu).                                                1) In the spherical space, all points are constrained to lie
+   This article has supplementary downloadable material available at
+https://doi.org/10.1109/TNNLS.2023.3309846, provided by the authors.                      on the surface of a hypersphere, as shown in Fig. 1(b).
+   Digital Object Identifier 10.1109/TNNLS.2023.3309846                                   On the surface of the hypersphere, the embedding
+                       2162-237X © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+17922                                             IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+
+
+
+Fig. 1. Illustration of Euclidean space and curved spaces (i.e., spherical and hyperbolic spaces). (a) Euclidean space represents a flat space without curvature.
+(b) In contrast, the spherical space restricts all points to lie on the surface of a hypersphere. (c) Hyperbolic space, represented by the Poincaré ball model,
+makes points exist inside the ball, demonstrating its negatively curved nature. The transformation from Euclidean space to spherical or hyperbolic space can
+be achieved through respective spherical or hyperbolic transformation, which project points onto the corresponding curved space.
+
+
+
+                                                                                           “ant” (olive) and “bookshop” (purple) exhibit better
+                                                                                           separation than Euclidean embeddings as they originate
+                                                                                           from distinct superclasses, “insect” and “building.”
+                                                                                           Learning such hierarchies will lead to success at the
+                                                                                           inference.
+                                                                                       With the appealing observations shown above, in this
+                                                                                    article, we investigate the practice of using geometries with
+                                                                                    fixed nonzero curvature in visual anomaly, open-set, or OOD
+Fig. 2.     Illustration of the discrimination ability of curved spaces on          recognition tasks. For the purpose of realizing our idea,
+unknown data. We train two models using Euclidean and hyperbolic geometry
+                                                                                    a natural solution is to simply replace the existing Euclidean
+on miniImageNet dataset [9], following the few-shot learning protocol.
+We randomly choose four unknown classes and plot the class embeddings               classifier with one based on a curved geometry. This idea
+using t-SNE [10]. Each unknown class is represented by one color. From              is behind the design of our geometric-in-one (GiO) model.
+this visualization, we can directly observe that within each unknown class,         In addition, we also find that the “divergence” between
+embeddings in hyperbolic space (see the figure on the right) show a more
+compact distribution than embeddings in Euclidean space (see the figure             Euclidean embeddings and curved embeddings can provide
+on left). Moreover, it can be observed that hyperbolic embeddings exhibit           a reliable indicator useful for anomaly, open-set, or OOD
+improved separations based on the discovered hierarchies. For instance,             identification. To benefit from this interesting observation,
+when compared to the distribution of Euclidean embeddings, hyperbolic
+embeddings show closer proximity between classes (i.e., the yellow-colored          we further develop a geometric-in-two (GiT) model. Having
+“African hunting dog” and the green-colored “lion”) that belong to the same         multiple geometry-aware networks at our disposal, we further
+superclass (i.e., “animal”). Conversely, hyperbolic embeddings of classes (i.e.,    present approaches for getting the anomaly score to identify
+the olive-colored “ant” and the purple-colored “bookshop”), which belong to
+different superclasses (i.e., “insect” and “building”), are pulled further apart.   abnormal objects.
+                                                                                       Our main objective is to show that geometry plays an
+                                                                                    essential role in identifying anomalies. As such, we develop
+      space is enforced to have a uniform distribution                              a generic solution and incorporate it into various baselines in
+      across multiple classes, promoting a more unbiased                            our empirical study. The contributions of this work can be
+      classification. Furthermore, scale-free analysis, the                         summarized as follows.
+      inclusion of spherical spaces, e.g., via ℓ2 normalization                        1) We propose two types of lightweight curvature-aware
+      in a DNN, provides useful constraints for learning and                               geometric networks for visual anomaly, open-set,
+      has been used with success in the majority of modern                                 or OOD recognition. To the best of our knowledge,
+      neural structures [7], [8], [14].                                                    this is the first attempt to adopt curved manifolds as
+   2) As shown in Fig. 1(c), points in the hyperbolic space                                embedding spaces to distinguish normal/closed-set/ID
+      lie inside the ball. The volume in a hyperbolic space                                and anomalous/open-set/OOD data. In addition, multiple
+      expands exponentially with dimensions. This enables us                               curved spaces, including spherical, hyperbolic, and
+      to embed tree-like structures with less distortion (see                              mixed spaces, are studied.
+      the green-colored triangle) and aids the discovery of                            2) Extensive experiments on a wide range of visual
+      hierarchical relationships among samples. For instance,                              anomaly, open-set, or OOD recognition tasks (e.g.,
+      as shown in Fig. 2 and compared to Euclidean                                         multiclass OOD detection, one-class anomaly detec-
+      embeddings, the hyperbolic embeddings of “African                                    tion, multiclass anomaly segmentation, and one-class
+      hunting dog” (yellow) and “lion” (green) are closer,                                 anomaly segmentation) suggest that the proposed
+      emphasizing their similarity at the superclass level (i.e.,                          technique leads to a substantial performance gain over
+      “animals”). Moreover, the hyperbolic embeddings of                                   the Euclidean geometry.
+HONG et al.: CURVED GEOMETRIC NETWORKS FOR VISUAL ANOMALY RECOGNITION                                                             17923
+
+
+
+                     II. R ELATED W ORK                                   inference, local and global features are compared to
+                                                                          compute the anomaly score.
+A. Visual Anomaly Recognition                                          3) Some approaches compute the anomaly score of
+                                                                          test samples by comparing their features with those
+   Three main approaches are developed for doing visual
+                                                                          of training samples [37], [45]. In the Patch-SVDD
+anomaly (or open-set/OOD) recognition: confidence-,
+                                                                          

@@ -1,0 +1,1141 @@
+CoLD: Collaborative Label Denoising Framework
+ for Network Intrusion Detection
+ Shuo Yang† , Xinran Zheng‡ , Jinze Li† , Jinfeng Xu† and Edith C. H. Ngai†∗
+ † The University of Hong Kong, Hong Kong SAR, China
+ ‡ University College London, London, United Kingdom
+
+ Abstract—Label noise presents a significant challenge in net- Untrusted
+work intrusion detection, leading to erroneous classifications and Internet
+ Pipeline of IDS
+decreased detection accuracy. Existing methods for handling
+noisy labels often lack deep insight into network traffic and
+blindly reconstruct the label distribution to filter samples with
+noisy labels, resulting in sub-optimal performance. In this paper, Router Detection
+we reveal the impact of noisy labels on intrusion detection
+models from the perspective of causal associations, attributing
+performance degradation to local consistency of features across Feature
+categories in network traffic. Motivated by this, we propose Extractor Model
+CoLD, a Collaborative Label Denoising framework for network
+intrusion detection. CoLD partitions the original feature set into IDS User
+multiple subsets and employs Local Joint Learning to disrupt Interface Labeling Training
+local consistency, compelling the encoder to learn fine-grained
+and robust representations. It further applies Causal Collaborative Denoising to detect and filter noisy labels by analyzing Noise
+ Trusted
+causal divergences between multiple representations and their Network
+potentially true label, yielding a purified dataset for training
+a noise-resilient classifier. Experiments on several benchmark Fig. 1: The overview of IDS with data-driven models in noisy
+datasets demonstrate that CoLD effectively improves classifica- environments.
+tion performance and robustness to label noise, highlighting its
+potential for enhancing network intrusion detection systems in
+noisy environments.
+ performance and manage alerts. The general IDS pipeline
+ I. I NTRODUCTION includes a feature extractor, a labeling module, and a datadriven model used during both training and detection phases.
+ In the field of network security, Intrusion Detection Systems In this pipeline, the labeling process is fundamental to dataset
+(IDS) are critical for identifying and mitigating malicious quality. However, it is prone to noise due to human bias,
+activities [1]. As network traffic continues to grow in both labeling error, and the dynamic nature of evolving network
+complexity and volume [2], [3], the need for accurate and environments [12], [13]. For example, a full attack sequence
+reliable IDS becomes increasingly urgent [4], [5], [6]. Modern may initially resemble benign activity [14], as adversaries of-
+IDSs predominantly rely on data-driven models trained on ten use low-rate stealth attacks or encryption techniques [15],
+labeled data [7], [8], [9], where high-quality labels are essen- [16] to mimic normal patterns. Advanced malware, including
+tial for learning effective representations of network behavior. polymorphic and metamorphic variants [17], [18], further blurs
+However, in real-world environments, obtaining clean labels the distinction between benign and malicious behaviors. As a
+is always challenging [10], [11], and the performance of IDS result, network traffic flows are frequently mislabeled. IDS
+models is severely constrained by the quality of training data. models trained on such noisy datasets tend to perform poorly,
+ As illustrated in Fig. 1, an IDS safeguards trusted internal generating false positives for benign actions and failing to
+networks and operates in conjunction with firewalls to defend detect critical threats [11]. This undermines system reliability
+against threats originating from untrusted external sources. and imposes a heavy burden on security teams [19], [20].
+The user interface allows administrators to monitor system Existing approaches for handling noisy labels generally fall
+ ∗ Corresponding Author. chngai@eee.hku.hk, shuoyang.ee@gmail.com. into two categories: robust training and dataset purification.
+ Robust training methods attempt to make models resilient to
+ noise by modifying loss functions [21], [22], [23], [24] or
+ adjusting training strategies [25], [26], [27], [28]. However,
+ they often rely on assumptions such as prior knowledge
+ of label reliability [27], [28] or access to clean validation
+Network and Distributed System Security (NDSS) Symposium 2026
+23-27 February 2026, San Diego, CA, USA data [24], which are often unrealistic in network intrusion
+ISBN 979-8-9919276-8-0 detection tasks. In contrast, dataset purification seeks to dihttps://dx.doi.org/10.14722/ndss.2026.231950
+www.ndss-symposium.org
+rectly detect and correct mislabeled instances. Approaches mance and robustness to label noise, outperforming exbased on metric learning [13], [29], [30], [31], [32] and active isting baselines and state-of-the-art methods.
+learning [33] have made progress in reducing label noise. • We demonstrate the effectiveness of CoLD by evaluating
+Nevertheless, many of these approaches rely on distance-based it in realistic enterprise networks. The results indicate
+measurements, which struggle to differentiate between clean that CoLD can operate in challenging environments and
+and noisy samples in the presence of local consistency. Local enhance the performance of intrusion detection systems.
+consistency refers to the phenomenon where features from The remainder of this paper is organized as follows: Secdifferent categories share similar distributions in the feature tion II reviews related work on noisy label learning and robust
+space. In such cases, mislabeled and correctly labeled samples intrusion detection. Section III analyzes the impact of noisy
+may appear deceptively similar. This may result in the removal labels on detection performance from a causal perspective and
+of underrepresented or ambiguous samples, leading to the outlines our motivations. Section IV describes CoLD in detail.
+loss of valuable information. In addition, the mechanisms by Section V presents comparative experiments on benchmark
+which label noise influences model learning in network traffic datasets against state-of-the-art methods. Section VI reports
+remain poorly understood, hindering the development of more the initial deployment and evaluation of CoLD in realistic
+effective solutions. enterprise networks. Section VII discusses the findings and
+ To address these challenges, we introduce CoLD, a future directions. Finally, Section VIII concludes the paper.
+Collaborative Label Denoising framework for network intrusion detection. CoLD is built upon an in-depth investigation II. R ELATED W ORK
+into noisy label learning on traffic datasets, revealing that A. Noisy Label Learning
+performance degradation is largely driven by spurious asso- Noisy label learning methods related to our work can
+ciations induced by local consistency across traffic categories. be broadly categorized into two groups: robust training and
+Specifically, local features from different categories often dataset purification. Robust training methods aim to mitigate
+share similar distributions, making it difficult for models to the impact of incorrectly labeled training data on model
+distinguish between them. While a high-performing IDS model performance. Some works design robust loss functions [21],
+should extract distinct representations of traffic categories [22], [23], [34] and training strategies [25], [26], [27], [28],
+in latent space, noisy labels disrupt this process by intro- [35], [36], [37] to ensure performance despite mislabeled
+ducing spurious associations between erroneous labels and samples. Other methods apply the label transition matrix [38],
+features [11]. This misguidance forces the model to learn naive [39], [40], which records the probability of a category bepatterns from locally consistent features, ultimately blurring ing mislabeled into another category, to rectify loss values
+true decision boundaries and impairing detection accuracy. impacted by noisy labels. These methods generally rely on
+ The proposed CoLD comprises three main components: specific assumptions that are difficult to meet in network in-
+Feature Reordering, Local Joint Learning, and Causal Col- trusion detection. Dataset purification methods aim to identify
+laborative Denoising. Feature Reordering enhances semantic and correct mislabeled samples during training. The widely
+relevance by rearranging the feature set based on Pearson adopted option is the training loss, assessing the disparity
+correlation coefficients. Local Joint Learning partitions the between the model prediction and given labels [18], [41], [42],
+reordered features into multiple subsets and applies self- [43], with higher loss indicating incorrect labels. In addition,
+supervised training to disrupt local consistency, encouraging some methods design measurement functions [31], [44], [45],
+the model to learn fine-grained and robust representations. [46] to distinguish between clean and noisy labels. Although
+Causal Collaborative Denoising purifies the dataset by using a these methods have proven effective in image recognition or
+Gaussian Mixture Model (GMM) to analyze the divergence of natural language processing, they are challenging to generalize
+causal associations between multiple representations and their to network intrusion detection tasks due to a lack of deep
+potential true labels. This process identifies and filters noisy insight into network traffic.
+samples, resulting in a purified dataset for training a noiseresilient classifier. B. Robust Intrusion Detection
+ In summary, this paper makes the following contributions: Advances in deep learning have significantly improved the
+ • We investigate the influence of noisy labels from the capabilities of intrusion detection systems [47], [48], [49].
+ perspective of causal associations and attribute it to the These models are capable of learning complex representations
+ local consistency across categories in network traffic. from raw traffic data due to their strong capacity for pattern
+ • We propose CoLD, a collaborative label denoising frame- fitting. However, most existing research has been conducted
+ work that integrates self-supervised representation learn- in closed-world settings, which limits the generalization abiling and causal inference to effectively identify and filter ity of these models in diverse or evolving real-world ennoisy labels, enabling a purified dataset for training a vironments [50], [51]. This constraint results in decreased
+ noise-resilient classifier. performance when such models are deployed in practical
+ • We conduct extensive experiments on benchmark datasets scenarios [33]. To overcome this limitation, recent studies have
+ to evaluate the effectiveness of CoLD. The results show explored the development of more robust intrusion detection
+ that CoLD significantly improves classification perfor- methods. For example, Diallo et al. [5] proposed supervised
+ X
+adaptive clustering techniques to learn cluster centers that
+
+ � Y
+improve robustness against outliers and enhance generalization. Yue et al. [6] applied data augmentation and contrastive
+
+ �� ��
+learning to extract semantic relationships between samples,
+further strengthening model robustness. Other works [52],
+[53], [54] developed adaptive intrusion detection techniques
+to address the challenge of concept drift, which is caused by Fig. 2: Causal Graph via SGM. Each traffic flow X comprises
+evolving attack patterns. causal features Xc and non-causal features Xn . Note that only
+ Nevertheless, the success of intrusion detection models is the causal feature Xc determines the ground truth label Y .
+closely tied to the quality of the training data, and label
+noise still poses a major challenge. Qing et al. [55] utilized
+distribution differences between benign and malicious traffic to lead traditional models. Unlike distance- or confidence-based
+estimate potential labels, but their method is limited to binary approaches, CoLD employs self-supervised multi-view repreclassification and assumes a balanced dataset. Zhao et al. [33] sentation learning and causal divergence analysis to identify
+designed an effective online anomaly detection framework and filter noisy labels, achieving superior performance in highthat relies on security experts to relabel samples based on noise environments.
+uncertainties predicted by quality and classification models,
+at the cost of increased manual labor. Wu et al. [18] intro- III. M OTIVATING C O LD: C AUSAL A NALYSIS AND L OCAL
+duced a semi-supervised learning framework that integrates C ONSISTENCY
+robust training by leveraging early-epoch loss magnitude to In this section, we introduce the motivation behind the
+distinguish clean from noisy labels. They identified noisy CoLD, emphasizing that it arises from a causal analysis of
+samples and treated them as unlabeled data used for repre- noisy label learning and key observations on network traffic
+sentation learning. While they demonstrated the effectiveness data. Our analysis reveals how noisy labels introduce spurious
+on malware classification tasks, their method’s reliance on a causal associations and mislead the model’s learning through
+predefined label splitting ratio constrains its flexibility and local consistency, thereby providing both theoretical insights
+limits its applicability across varying noise levels. Yuan et and practical foundations for our approach.
+al. [13] combined data cleaning and robust training by approximating an ideal representation function. However, their A. Noisy Labels in a Causal View
+approach relies on clear boundaries between noisy and clean
+samples. In high-noise scenarios, the boundaries are obscured Understanding the root cause of performance degradation
+due to local consistency, where features from different classes caused by noisy labels is fundamental to designing targeted
+exhibit similar distributions. As a result, underrepresented solutions and improving model robustness. To this end, we
+clean samples may be discarded, leading to information loss employ the Structural Causal Model (SCM) to delineate the
+and suboptimal performance. interactions between features and labels, thus constructing a
+ These limitations underscore that label noise remains a detailed causal graph. Causal modeling provides an effective
+critical barrier to building reliable IDSs. We identify two framework for representing path dependencies, as the training
+core challenges: C1. While it is well-established that noisy of classification models fundamentally relies on capturing
+labels negatively impact data-driven models, the underlying these underlying causal relationships [56], [57]. Fig. 2 ilmechanism of how noisy labels affect learning in network lustrates this interaction with five variables: the input traffic
+traffic remains poorly understood. C2. Existing methods are sample X, causal features Xc , non-causal features Xn , the
+either not suitable for network intrusion detection or their ground-truth label Y , and the observed noisy label Ye . Here,
+ability to purify datasets is insufficient to cope with more causal and non-causal features Xc and Xn are distinct yet
+challenging label noise environments. In this work, we address partial subsets of X. Whether a feature is causal or non-causal
+both challenges. For C1, we investigate the root causes of per- depends on the specific label (Y or Ye ), meaning Xn could be
+formance degradation from a causal association perspective, causal for Ye but non-causal for Y . Xn can be regarded as a
+revealing that local consistency promotes spurious associations feature subset of X that exhibits similar distributions across
+between features and noise labels. This insight is supported different categories, potentially establishing opposite causal
+by theoretical analysis and empirical validation. For C2, we associations with Y and Ye . Below, we explain the causal graph
+propose a Causal Collaborative Denoising method. It employs in detail:
+Local Joint Learning to generate fine-grained representations • Xc → X ← Xn : The input X comprises two subsets of
+that disrupt local consistency, and leverages causal collabora- features: causal features Xc and non-causal features Xn ,
+tive inference to effectively identify and remove noisy labels which may overlap but are not completely coincident.
+while preserving underrepresented clean samples. • Xc → Y : From a causal view, the ground-truth label Y
+ In summary, CoLD differs from existing methods by lever- is determined solely by causal features Xc .
+aging a causal perspective to address label noise, targeting • Xn → Y e : While Xn is non-causal features of Y , it can
+local consistency in network traffic features that often mis- directly influence the noisy label Ye .
+ Payload_total_packets IP_flow_duration 100
+ 50 100
+ Tiggre Panda Tiggre Caphaw 45 90
+ 80
+ 40 80
+ Top-20 Last-20
+ Density
+
+ Density
+ 35 70
+
+ Local Consistency
+ 60
+ 30 60
+ 25 50
+ 30
+ 20 40
+ 1D Space 1D Space 15 30
+ IP_backward_bytes_sent_rate IP_total_bytes 20
+ 10 20
+ Tiggre BuerLoader Tiggre Caphaw 5 10
+ 00 0
+ Density
+
+ Density
+ Features
+
+ Fig. 4: The Local Consistency from MALTLS-22 Dataset.
+ The horizontal axis represents the top-20 or last-20 important
+ 1D Space 1D Space
+ features. The vertical axis represents the number of category
+Fig. 3: Examples for Local Consistency. Tiggre, Panda, combinations with similar distribution.
+Caphaw, and BuerLoader are different types of traffic.
+
+ B. Instantiated Local Consistency
+ Previously, we discussed how local features with similar
+ • Xc Xn : Dashed arrows represent additional depen- distributions can promote undesired associations in the model,
+ dencies between causal features Xc and non-causal fea- thereby propagating bias. In this section, we formally define
+ tures Xn , offering insights into how non-causal features this phenomenon as local consistency and further instantiate
+ might indirectly affect Y through complex pathways. it across traffic categories in network data. Intuitively, local
+ consistency arises from the fact that different types of net-
+ The causal architecture defines that Xc directly influences work traffic are often generated under similar conditions [13],
+Y , establishing a clear causal pathway. However, in general [14]. For example, IoT devices sharing the same firmware or
+learning tasks with the ground-truth label Y , Xn Xc → Y protocols may produce comparable traffic patterns, regardless
+can create spurious associations between non-causal features of whether the activity is benign or malicious. Furthermore,
+Xn and the ground-truth label Y . This makes Xc a confounder the evolution of attack strategies has also enabled adversaries
+between Xn and Y , opening a backdoor path Xn 99K Xc → to mimic benign behaviors, such as embedding malicious
+Y [58]. Bias introduced through such backdoor path is a payloads in encrypted traffic [50], [53], making it ever more
+primary cause of degraded model performance. Additionally, challenging to distinguish between classes in feature space. By
+with the involvement of noisy label Ye , the bias is further incorporating label noise learning in multi-class scenarios, our
+amplified. Although Xn is non-causal for Y , it becomes approach effectively addresses local consistency both within
+increasingly relevant to Ye . This shift in causal relevance malicious categories and between benign and malicious traffic.
+underscores the flexible nature of feature relevance depending This strategy meets the challenges posed by increasingly
+on whether the given label is ground truth (Y ) or noisy (Ye ). complex network attacks and facilitates more fine-grained
+The noisy label Ye compels the model to focus on associations detection.
+involving Xn , distorting the causal pathway. Specifically, the To illustrate this phenomenon, we analyze the MALTLScausal association between Xc and Y is ignored, while a 22 dataset. As shown in Fig. 3, different attack types exhibit
+shortcut Xc 99K Xn → Ye is activated. As a result, Xc , which almost identical distributions across certain features. indicating
+was originally causal for Y , establishes a spurious causal that even when two traffic samples demonstrate high local
+relationship with Ye . consistency, an ideal classifier should still be capable of
+ In scenarios where Y is correctly identified, the causal categorizing them into distinct classes. To further examine
+influence of Xc is predominant, and the association between the pervasiveness of local consistency, we conduct a detailed
+Xn and Y is typically overshadowed. However, when Y is analysis using the same dataset. Specifically, we measure the
+transformed into Ye , the situation reverses. The noisy label similarity of feature distributions across categories using the
+Ye directs the model to focus on features that are causally Kolmogorov-Smirnov (KS) test at a 0.05 significance level.
+associated with noise labels, causing the model to overem- Feature importance is determined via a random forest classiphasize Xn . This shift introduces spurious associations that fier, and both the top-20 and bottom-20 features are evaluated.
+distort the model’s learning process. Features within Xn , The results presented in Fig. 4 show substantial local conwhich present local consistency across samples of different sistency, particularly among the last-20 features, where over
+categories (Y and Ye ), misleading the model to capture its 80 category combinations share similar distributions. Notably,
+causal significance with Ye . Consequently, models trained on even the top-20 most important features, typically expected to
+noisy data form erroneous shortcuts, bypassing the real causal provide strong discriminative power, exhibit significant overlap
+pathways established by Xc . across categories. This high degree of local consistency, even
+among important features, increases the likelihood that noisy enables the model to learn fine-grained and robust
+samples can mislead the model into learning naive patterns representations. This multi-view strategy, combined
+that fail to capture the true decision boundaries. Consequently, with self-supervised learning, enhances the model’s
+the model may struggle to associate them with their correct ability to distinguish true causal signals from noise,
+categories, resulting in degraded performance. ultimately improving the reliability and robustness of
+ network intrusion detection in noisy environments.
+ Takeaway. Through the above causal analysis and
+ instantiation of local feature consistency, we have developed a comprehensive understanding of how noisy IV. M ETHODOLOGY
+ labels impact model performance. From a causal per- A. Preliminary
+ spective, the interaction between causal and non-causal
+ features explains how noisy labels distort true causal Problem Setting. Let x ∈ Rd be a network traffic flow
+ pathways, leading to spurious associations that mis- comprising d dimensions of features. Each flow in dataset D =
+ |D|
+ guide learning. Local consistency, arising from shared {(xi , yi )}i=1 associates with an annotation yi ∈ {1, 2, ..., K},
+ feature distributions across categories, further ampli- where |D| is the total number of flows and K denotes the
+ fies this problem by encouraging the model to learn number of categories. In practice, obtaining pure annotations
+ naive, non-discriminative patterns. Empirical analysis is challenging and some flows may be mislabeled, i.e., yi may
+ of real-world network traffic confirms that even high- be a noise label. The goal of noisy label learning is to train
+ importance features can exhibit substantial overlap a robust model M(θ) : Rd → RK , that is resilient to the
+ across classes. These findings underscore the impor- noisy labels in training data and generalizes effectively on
+ tance of disrupting local consistency and suppressing clean testing data. Generally, M(θ) can be expressed as E ◦ G,
+ spurious associations to improve the robustness of where E is an encoder network that maps the input x to its
+ intrusion detection models in noisy environments. latent representation and G generates predictions coherently
+ based on the representation.
+ Overview of CoLD. Fig. 5 illustrates our proposed CoLD,
+C. Motivation for CoLD
+ designed to enhance the robustness of network intrusion
+ Noisy labels cause models to overemphasize partial features detection systems by effectively filtering noisy labels from
+with local consistency across categories, leading to spurious datasets. Building on the investigation outlined in Section III,
+associations and degraded performance. To mitigate the ef- CoLD identifies noise labels by analyzing the divergence of
+fects of local consistency, an intuitive approach is to create causal associations between multiple representations and their
+multiple views of the feature space for the model, rather than potential true labels. The framework consists of three main
+relying solely on a single input [13], [31]. Therefore, we components: Feature Reordering, Local Joint Learning, and
+propose partitioning the raw feature set into multiple subsets, Causal Collaborative Denoising.
+akin to augmentation strategies in image processing such as (1) Feature Reordering reorganizes features into subsets
+cropping [59]. These multiple views help isolate the pure with reordered adjacency relationships. The process leverages
+causal effects from the misleading associations introduced inter-relationships among input features, grouping those with
+by locally consistent features. Considering that the cropped similar semantics to enhance spatial correlation. Through
+image patches remain continuous while the correlations be- subset partitioning, each subset maximizes local correlations,
+tween different traffic features may be insufficient, we reorder thereby retaining essential semantic information. It is assumed
+the input features before partitioning to enhance the inter- that the model typically has incompletely coincident feature
+relationships within the subsets. By employing joint self- subsets, but some level of overlap between feature subsets is
+supervised learning across these partitions, the model diver- also allowed. As visualized in the diagram with connected
+sifies the latent representations and enhances its ability to dis- nodes, given an input traffic sample with several features
+tinguish true causal associations from spurious ones. Guided x = {f1 , f2 , f3 , f4 , f5 , f6 , f7 }, its features are first reordered
+by the observed labels, each subset is analyzed for its distinct based on Pearson correlation coefficients, where fi denotes
+causal impact, enabling robust differentiation between causal the i-th feature of sample. After that, the reordered sample is
+and non-causal associations, thereby identifying noise labels. partitioned into a series of subsets x = {x1 , x2 , x3 }, where
+This methodology strengthens the reliability of IDS models x1 = {f1 , f6 , f3 }, x2 = {f3 , f5 , f2 }, and x3 = {f2 , f4 , f7 }, for
+by maintaining clear categorical distinctions and mitigating subsequent processing.
+performance degradation in noisy scenarios. (2) Local Joint Learning focuses on learning noiseindependent representations through local alignment and
+ Takeaway. The motivation behind CoLD lies in ad- global reconstruction operations. The high-level idea of Local
+ dressing the spurious associations introduced by noisy Joint Learning is to disrupt the local consistency and obtain
+ labels and local consistency. By reordering and par- a global representation that is causally related to the potential
+ titioning features to create multiple subsets, CoLD true label. It should be noted that the process is self-supervised,
+ thus suppressing spurious associations from noisy labels and
+ Feature Reordering Local Joint Learning Causal Collaborative Denoising
+
+ f1 f2 f3 f4 f5 f6 f7
+
+ Original feature set f1 f6 f3 Global representation
+ Classifier
+ Aggregation
+ f5 f4 Labels
+ f3
+ f2 f3 f5 f2 Encoder Purification
+ f1 f7 𝓛𝒍𝒂
+ f6
+ Maximum Spanning Tree Local representation
+ Causal Divergence
+ Decoder
+ GMM
+
+ Class
+ f2 f4 f7
+ f1 f6 f3 f5 f2 f4 f7
+ 𝓛𝒈𝒓 Subset
+ Reordered feature set Reconstructed sample
+
+Fig. 5: The Illustration of CoLD. Feature Reordering enhances semantic relevance by rearranging the feature set based on
+Pearson correlation coefficients. Local Joint Learning partitions the reordered features into multiple subsets and applies selfsupervised training to disrupt local consistency, encouraging the model to learn fine-grained and robust representations. Causal
+Collaborative Denoising purifies the dataset by using a Gaussian Mixture Model (GMM) to analyze the divergence of causal
+associations between multiple representations and their potential true labels. This process identifies and filters noisy samples,
+resulting in a purified dataset for training a noise-resilient classifier.
+
+facilitating the learning of deep semantics of traffic flows. with similar semantics together. This reordering endows the
+Specifically, each subset is fed into a shared encoder to obtain sample with spatial correlation, ensuring that each subset
+local fine-grained representations. These representations are maximizes local feature correlation and retains meaningful
+used to reconstruct the sample through a decoder and generate information.
+a global representation by aggregating local representations. We are motivated to employ the Pearson correlation coeffi-
+Guided by local alignment loss (Lla ) and global reconstruction cient for feature reordering due to its effectiveness in quantiloss (Lgr ), we could obtain a robust encoder to map the input fying linear dependencies among features. In many network
+x to its latent representation. traffic datasets, a substantial degree of feature redundancy
+ (3) Causal Collaborative Denoising identifies noisy labels is attributable to linear or near-linear correlations [48], [60],
+by evaluating causal associations between feature subsets and [61]. Furthermore, the Pearson correlation coefficient is compotential true labels using a Gaussian Mixture Model (GMM). putationally efficient and robust to scale differences among
+The GMM models causal associations among multiple repre- features, making it practical for high-dimensional settings. By
+sentations of the same sample and assigns a potential label for capturing these relationships, Pearson correlation enables us
+each subset, enabling the quantification of causal divergence to efficiently group and partition relevant features, crucial for
+to detect label noise. To this end, we propose the Causal mitigating the propagation of noise and bias in downstream
+Divergence Metric, which measures the probability of noise learning. Specifically, we compute the Pearson correlation
+transfer between labels of multi-subsets and the observed label. coefficients between features to construct a feature correlation
+Samples with significant causal divergence are regarded as matrix F CM ∈ Rd×d , where d is the dimensionality of the
+noisy. Unlike methods [13], [31] that rely on raw distances feature set. Each element of F CM is calculated as:
+or confidence scores, our approach leverages fine-grained Cov(x(fi ), x(fj ))
+representation modeling to uncover causal divergences, ensur- F CMij = , ∀i, j ∈ {1, 2, ..., d}, (1)
+ σfi · σfj
+ing high accuracy in identifying and isolating noisy labels.
+Following dataset purification, the resulting purified dataset where Cov(x(fi ), x(fj )) is the covariance between feature fi
+minimizes the impact of noise and facilitates robust training and feature fj , σfi and σfj are the standard deviations of feature
+of the final classifier. fi and feature fj , respectively.
+ Each element F CMij represents the absolute value of the
+B. Feature Reordering Pearson correlation coefficient between two features. To group
+ In noisy label learning, local consistency can mislead the most correlated features together, we construct a Maximum
+the model into focusing on non-causal features, establishing Spanning Tree (MST) that maximizes the total weight of all
+associations with noisy labels, and propagating biases. To edges in the graph. Feature ordering is then determined by
+mitigate the negative impact of these non-causal associations, performing a Depth-First Search (DFS) traversal on the MST,
+we propose dividing the original feature set into subsets and starting from the feature pair with the highest correlation.
+performing representation learning on these subsets. Before This approach ensures that the resulting subsets maximize
+partitioning, we reorder the features to exploit the inter- correlations with adjacent features, providing a robust basis
+relationships among input features, arranging those features for subsequent learning tasks.
+C. Local Joint Learning feed each feature subset into a shared encoder E to obtain
+ The high-level idea of Local Joint Learning is to disrupt the corresponding local latent representations. Subsequently,
+the local consistency and derive a global representation that by aligning these feature representations of each subset, we
+is causally related to the potential true label. The Local Joint encourage the encoder to derive representations from multiple
+Learning is self-supervised, thus avoiding interference from local views, better exposing the true semantics and eliminating
+noisy labels and facilitating the learning of deep semantics of confounding features. Specifically, for multiple subsets of x̃i ,
+traffic flows. the task could be turned into a multi-view representation
+ We consider disrupting local consistency on two levels: learning problem. Therefore, we design a local alignment loss
+original feature space and latent representation space. In the function Lla based on contrastive learning [62].
+original space, we generate a perturbed version of the traffic Given a sample from a single feature subset with input xi,j ,
+sample as the model input through the feature obfuscation which represents features of the j-th subset in the i-th sample,
+technique. Given a feature-reordered sample xi , we can easily the encoded latent representation of this subset is denoted as
+construct a series of subsets {xi,1 , xi,2 , . . . , xi,M }, where M zi,j = E(xi,j ). The positive pair is defined as the feature
+is the number of feature subsets. This partitioning is similar representations {zi,j , zi,p } from different subsets of the same
+to image cropping in image processing [59], transforming sample, while all other samples are considered negative pairs.
+the representation learning problem into a multi-view learn- The local alignment loss is shown as follows:
+ing task where each subset represents a local view of the
+full feature set. Theoretically, for traffic flows of the same M
+ N X
+ X exp (sim (zi,j , zi,p ) /τ )
+category, the local view provided by each feature subset Lla = − log PN PM ,
+should assist the model in learning similar representations, as i=1 j=1 n=1 q=1 exp (sim (zi,j , zn,q ) /τ )
+ (3)
+they embody similar semantics. However, noisy labels conflict
+ where sim (zi,j , zi,p ) measures similarity between the latent
+with the true semantics and induce locally consistent subsets
+ representations zi,j and zi,p , here dot product is employed due
+to establish causal associations with them, which should be
+ to its stability. zn,q denotes all subsets from other samples that
+avoided as much as possible. To counter this, we propose
+ are treated as negative pairs. τ is an adjustable temperature
+the Local Joint Learning method that comprehensively learns
+ parameter. N and M denote the total number of samples in
+the true semantic representations of samples from multiple
+ the batch and the number of feature subsets, respectively. Lla
+perspectives. This approach aims to mitigate the influence of
+ encourages the encoder to learn fine-grained representations
+locally consistent features in the latent space and provide a
+ by leveraging multiple local views of the same sample.
+reliable basis for identifying label noise. Specifically, joint
+ Global Reconstruction. We hypothesize that an effective
+learning is conducted in a self-supervised manner, modeling
+ local representation should be a partial sampling of the
+the relationships between different subsets of a sample through
+ global feature, which should reflect as much as possible the
+local alignment. Global reconstruction is employed to introoverall structure and relationships of the global feature. To
+duce global information into subsets’ representation, thereby
+ achieve this, we propose a global reconstruction loss. This
+obtaining label-independent robust representations.
+ loss minimizes the distance between the reconstructed local
+Feature Obfuscation. According to Section III-B, local confeatures and the original input global features. For a sample
+sistency indicates that the feature subsets of different traffic
+ x̃i , the reconstructed version from subset j is represented
+flow categories often share a similar distribution. Therefore,
+ as x̂i,j = D(zi,j ) ∈ Rd , where D is a decoder. The global
+we aim to increase the diversity of local features through
+ reconstruction loss is defined as:
+feature obfuscation. To achieve this, we apply random masking
+ N M
+to the flow xi along the feature dimension. The mask vector 1 XX
+m is randomly sampled from a Bernoulli distribution with a Lgr = ||x̂i,j , x̃i ||2 . (4)
+ N M i=1 j=1
+predefined probability parameter δ. Subsequently, the sample
+xj from the same batch as xi and the mask vector m are To ensure compatibility, the decoder’s output layer is exused jointly as inputs. The perturbed version of each sample tended to match the dimensions of the reconstructed local
+is generated as follows: features with those of the global features. Finally, the overall
+ objective of Local Joint Learning combines local alignment
+ x̃i = m ⊙ xi + (1 − m) ⊙ xj , (2) and global reconstruction losses:
+where ⊙ denotes element-wise multiplication. The perturbed L = Lla + Lgr . (5)
+sample x̃i is then processed by an encoder to transform it into
+several subset representations, and a corresponding decoder By minimizing this objective, the encoder is encouraged to
+reconstructs the original input data. learn discriminative features from multiple local perspectives
+Local Alignment. Aligning representations of each subset while ensuring global perception, thereby obtaining labelensures that the extracted representations are consistent within independent true semantic information. For a single sample
+their local neighborhoods, thus mitigating the impact of local xi with a given subset number M , we can obtain M repconsistency features on the model. To achieve this goal, we resentations zi,j , j ∈ [1, M ] from all subsets based on the
+encoder output. We then aggregate the representations of all annotation yi , and the parameters µk and σk can be solved
+feature subsets to produce an aggregated representation zi for through a standard Expectation-Maximization (EM) algorithm.
+collaborative reasoning. The process can be expressed as: However, in the presence of noisy labels, e zi,j is expected to be
+ estimated in an unsupervised manner, independent of label yi .
+ zi,0 = agg(zi,1 , zi,2 , ..., zi,j ), j ∈ [1, M ], (6) To bridge this gap, we use predictions y i from a downstream
+ classifier to update parameters of the linear head θh , effectively
+ Here, agg indicates the aggregation function, which can be linking yi and e zi,j . When the process is controlled by cross-
+MEAN, SUM, CANCAT, or other methods. A comparison of entropy loss, it can be written as:
+these aggregation methods is provided in Section V-C. Once
+the global representation is obtained, it is utilized for causal
+ " N #
+ X
+ ∗
+collaborative inference alongside multiple subset representa- θh = min − y i log yi . (8)
+ θh
+tions to identify noisy labels. i=1
+
+ As mentioned in Section III-B, the subset with local con-
+D. Causal Collaborative Denoising
+ sistency will establish associations with the noisy label under
+ Existing dataset purification methods, such as [13], detect its guidance, whereas the other subsets will maintain relative
+noisy labels by measuring the distance between a sample stability. By establishing the multiple causal associations beand its confidence sample. However, this approach is limited zi,j and clustering label yei,j , we
+ tween the latent representation e
+because obtaining a reliable confidence sample is challeng- employ collaborative inference to identify incorrectly labeled
+ing, especially in high-noise scenarios. To overcome these samples. Subset representations influenced by noisy labels tend
+limitations, we leverage a Gaussian Mixture Model (GMM) to form conflicting causal associations. Inspired by this, we
+to establish the causal relationship between the multi-view leverage the divergence in causal associations across subsets to
+representations of a sample and its potential label. detect potentially mislabeled samples. If the causal association
+ GMM is well-suited for this task as it can effectively of a subset is significantly different from others, it indicates
+model complex distributions of network traffic samples, which that the sample may be noisy. To identify these inconsistencies,
+often exhibit class overlap and diverse attack behaviors. we propose a Causal Divergence Metric (CDM) to quantify the
+Moreover, GMM provides soft probabilistic assignments for probability of noise transfer between a sample’s multi-label
+each sample rather than hard binary decisions, enabling the yei,j and the original observed label yi .
+model to capture subtle distinctions between clean and noisy
+ M
+samples. This capability is crucial for accurately identifying 1 X
+the potential causal relationship between feature subsets and CDM(xi ) = yi,j ̸= yi |xi ),
+ P (e (9)
+ M j=1
+their assigned labels. Samples that exhibit significant causal
+divergence-meaning they cannot be well characterized by the where P (e yi,j ̸= yi |xi ) signifies the transition probability
+Gaussian component corresponding to their label-are identified between the cluster label and the observed label, indicating
+as potentially having noisy labels. their divergence of causal associations. We use this metric to
+ To model the distribution of each representation zi,j , we determine if the sample xi has been mislabeled. For a binary
+first map it through a linear head network denoted by H, probability model, CDM(xi ) can be simplified to:
+resulting in a transformed representation e zi,j = H(zi,j ). M
+ 1 X
+This transformed representation is then modeled using the CDM(xi ) = 1(eyi,j ̸= yi |xi ). (10)
+GMM. To facilitate this, we introduce discrete latent vari- M j=1
+ables y ∈ {1, 2, ..., K}, which are responsible for assigning
+the observations ezi,j to one of the K mixture components. Here, 1(·) is an indicator function that returns 1 if the
+Consequently, the GMM operates in an unsupervised manner, condition is true, otherwise 0. By comparing the divergence
+defining the probability distributions over the transformed data metric results with a predefined threshold ϵ, we identify
+points ezi,j : samples with noisy original labels, enabling their isolation
+ from the dataset. In this paper, we adopt a rigorous evaluation
+ zi,j | µk , σk )
+ πk N (e by setting ϵ = 0, ensuring that a sample xi is retained only if
+ γi,j,k = PK , (7)
+ π N zi,j | µl , σl )
+ (e all its subsets are causally associated with the observed label.
+ l=1 l
+
+ PK the weight of the k-th Gaussian compowhere πk represents Dp ← D \ {xi : CDM(xi ) > ϵ}. (11)
+nent, satisfying k=1 πk = 1. N (e zi,j |µk , σk ) is the probability density function of this component with mean µk and Samples with lower causal divergence are selected to concovariance matrix σk . Each representation e zi,j is assigned a struct a clean subset of data. This purified dataset Dp is then
+predicted label yei,j = arg maxk γi,j,k , thus the labels from used to train a downstream classifier, ensuring the model
+multiple feature subsets are treated as multi-labels for the learns from accurate and representative samples. By isolating
+sample xi . noisy labels and leveraging clean data, the classifier achieves
+ In an ideal scenario where all samples have clean labels, significantly improved robustness and accuracy in network
+the transformed latent vector e zi,j would be identical to the intrusion detection.
+ In summary, CoLD is a collaborative label denoising framework specifically designed to enhance the robustness of data- Algorithm 1 CoLD: Collaborative Label Denoising
+driven IDS models in noisy environments. The complete |D|
+algorithm is outlined in Algorithm 1. CoLD comprises three Input: Dataset D = {(xi , yi )}i=1 , number of categories
+integrated components: Feature Reordering, which reorganizes K, number of feature subsets M , mask probability δ,
+input features to optimize semantic coherence and prepare threshold ϵ, number of iterations T , encoder network e,
+meaningful subsets for learning; Local Joint Learning, which decoder network d, projection head h, classifier g.
+applies self-supervised strategies to disrupt local consistency Output: Purified dataset Dp , encoder network e.
+and extract fine-grained and robust representations; and Causal Feature Reordering
+Collaborative Denoising, which utilizes GMM along with 1: compute feature correlation matrix F CM ∈ Rd×d :
+ Cov(x(fi ),x(fj ))
+a Causal Divergence Metric to identify and isolate noisy F CMij = σfi ·σfj , ∀i, j ∈ {1, 2, ..., d}.
+labels. By combining these components, CoLD effectively 2: construct Maximum Spanning Tree (MST) using F CM .
+filters mislabeled samples and generates a purified dataset for 3: reorder features through depth-first search (DFS) traversal
+downstream classifier training, enabling the construction of of MST.
+high-performance, noise-resilient IDS models. Local Joint Learning
+ 4: for t = 1 to T do
+ V. E XPERIMENTS ON B ENCHMARK DATASETS 5: for each sample xi ∈ D do
+A. Experimental Setting 6: generate perturbed version of xi : x̃i = m⊙xi +(1−
+ m) ⊙ xj , where m ∼ Bernoulli(δ).
+ TABLE I: Dataset Description. 7: partition x̃i into M subsets {xi,1 , xi,2 , ..., xi,M }
+ based on feature order.
+ Dataset CICIDS-2017 MALTLS-22
+ 8: encode latent representations: zi,j = e(xi,j ), where
+ Benign 32.50% 36.94% j ∈ [0, M ].
+ Mal. (Head-3) 44.90% 12.33%
+ Mal. (Tail-3) 9.70% 4.10% 9: align localPviews using local alignment loss:
+ N PM exp(sim(zi,j ,zi,p )/τ )
+ Mal. (Others) 12.9% 46.63% Lla = − i=1 j=1 log PN PM exp(sim(z ,z )/τ )
+ .
+ n=1 q=1 i,j n,q
+ # of Classes 9 23
+ Gini coefficient 0.82 0.84
+ 10: reconstruct global features from local views:
+ Mal. is the abbreviation of Malicious. x̂i,j = d(zi,j ), where j ∈ [0, M ].
+ 11:
+ PN PM loss:
+ compute reconstruction
+Datasets. In this work, we use a refined version of CICIDS- Lgr = N1M i=1 j=1 ||x̂i,j , x̃i ||2 .
+2017 [14] and MALTLS-22 [13] to evaluate the performance 12: update encoder and decoder parameters via:
+of the proposed CoLD. The reason for choosing these two L = Lla + Lgr .
+datasets is that they are widely used for intrusion detection 13: aggregate representations of subsets to get global
+tasks [4], [5], [6] and noisy label learning [13]. They cover representation: zi,0 = agg(zi,1 , zi,2 , ..., zi,j ), where
+diverse attack categories, which facilitates the construction of j ∈ [1, M ].
+a more challenging noise environment. In real-world scenarios, 14: end for
+benign traffic significantly outweighs malicious traffic, leading 15: end for
+to an imbalanced distribution of classes within the dataset. This Causal Collaborative Denoising
+disparity can be quantified using the Gini coefficient, which 16: for each sample xi ∈ D do
+is calculated as: 17: for each subset representation zi,j , j ∈ [1, M ] do
+ 18: project to latent space using h: ezi,j = h(zi,j )
+ k
+ X 19: fit Gaussian Mixture Model (GMM) and compute
+ GiniCo. = 1 − p2i , (12) π N (e z |µ ,σ )
+ posterior probabilities: γi,j,k = PKk π Ni,j(ez k |µk,σ ) .
+ l=1 l i,j l l
+ i=1
+
+where pi represents the probability of each class within the 20: obtain cluster labels: yei,j = arg maxk γi,j,k
+dataset. A higher Gini coefficient signifies greater imbalance, 21: end for
+closer to 1, whereas a coefficient closer to 0 indicates a 22: predict label for zi,0 using g: y i = g(zi,0 )
+more balanced class distribution. The dataset descriptions 23: update head hparameters via cross-entropy
+ i loss:
+ PN
+are summarized in Table I. For simplicity, we present the θh∗ = minθh − i=1 y i log yi
+proportion of benign traffic and group the malicious categories 24: computer causalP divergence:
+into Head-3, Tail-3, and Others. The data is split into training CDM(xi ) = M 1 M
+ yi,j ̸= yi |xi )
+ j=1 P (e
+and testing sets using an 8:2 ratio. Controlled proportions of 25: remove noisy samples to obtain a purified dataset:
+label noise are introduced only in the training set, while the Dp ← D \ {xi : CDM(xi ) > ϵ}
+test set remains clean and unchanged for evaluation. 26: end for
+ The MALTLS-22 dataset [13] contains 22 types of realistic
+encrypted malicious traffic. The traffic was captured over four
+ TABLE II: Summary of Selected Compared Methods.
+ 60% 40% 40% 40% 40% 100% 40% 40% 40% 40%
+
+ Category Method
+
+ Observed Noisy Labels
+ Observed Noisy Labels
+
+ 10% 60% 60%
+ Intrusion Detection ACID [5], CLEID [6]
+ 10% 60% 60% Decoupling [36], Co-Teaching [27],
+ Robust Training
+ Co-Teaching+ [28]
+ 10% 60% 60% Dataset Purification FINE [31], MORSE [18], MCRe [13]
+
+ 10% 60% 60%
+
+ Ground Truth Labels Ground Truth Labels and dataset purification methods. Representative works are
+ (a) Symmetric Noise (b) Asymmetric Noise summarized in Table II, which includes six state-of-the-art
+ noisy label learning methods [36], [27], [28], [31], [18], [13]
+Fig. 6: Example of Label Conversion Matrices with Noise and two of the latest intrusion detection models [5], [6]. Here
+Ratio of 40%. is a brief introduction to them.
+ • ACID [5] utilizes supervised adaptive clustering to learn
+ cluster centers that serve as extensions of the input
+years from 2018 to 2021 and labeled with precise threat features, which enhances the robustness against outliers;
+intelligence to ensure ground truth. Within this dataset, all • CLEID [6] leverages data augmentation and selftraffic was encrypted with TLS, resulting in similar behavior supervised contrastive learning to extract semantic inforacross local features. From Table I, it can be seen that the mation of different traffic types, thereby enhancing the
+benign traffic and Head-3 malicious traffic account for nearly model’s robustness;
+50%, which reveals its imbalance. We have maintained the • Decoupling [36] updates the parameters based on samples
+original data distribution in the experiments. that receive different predictions from two classifiers;
+ The updated CICIDS-2017 dataset [14] has been refined by • Co-Teaching [27] trains two networks with distinct initial
+removing errors and inconsistencies. In its original form, over states simultaneously and prompts them to select clean
+80% of the samples are labeled as benign, making it unsuitable samples from each other;
+for evaluating robustness under noisy conditions. In such • Co-Teaching+ [28] is similar to Co-Teaching, but it has
+skewed distributions, a naive model could achieve deceptively a greater tendency to select samples of disagreement for
+high accuracy by predicting all samples as benign. To reduce another network;
+this bias, we downsampled dominant classes and excluded • FINE [31] filters noisy labels by employing eigen decomthose with fewer than 1000 instances. This filtering process position of their gram matrix in the latent space;
+resulted in a representative subset containing 9 categories, • MORSE [18] is a representative semi-supervised noisy
+with a class distribution more closely aligned with the Gini learning work. It takes possibly incorrectly labeled data
+coefficient observed in MALTLS-22. as unlabeled data and thus avoids their potential negative
+Noise Setting. Following established setups in prior noise impact on model training.
+modeling studies [13], [31], [37], we implement two distinct • MCRe [13] is a framework for handling noise malicious
+label corruption schemes: symmetric and asymmetric noise. traffic based on self-supervised representation learning
+In the symmetric noise setting, label corruption is applied and distance measurement, capable of filtering samples
+uniformly across both benign and malicious samples. In with noise labels to purify datasets.
+contrast, the asymmetric noise setting introduces corruption Model Structure and Optimizer. In Local Joint Learning,
+exclusively within the malicious class. This setting simulates a the encoder consists of a two-layer fully connected network,
+more realistic adversarial scenario in which malicious behavior with each hidden layer having the same dimensionality as
+is intentionally disguised as benign. Fig. 6 presents the label the input features. The decoder adopts a symmetric structure
+transition matrices under a 40% noise ratio for both settings. to reconstruct the original input. For Causal Collaborative
+The horizontal axis denotes the ground truth labels, while the Reasoning, a linear head is appended to the encoder, followed
+vertical axis represents the observed noise labels. The first row by a fully connected layer that serves as the classifier. Both
+and column correspond to benign traffic, and the remaining training stages utilize the Adam optimizer with an initial
+entries represent various types of malicious traffic. In the learning rate of 0.001 and a batch size of 128. All experiments
+left figure, 40% of benign samples are randomly mislabeled were conducted on NVIDIA RTX 3090 GPUs and repeated
+as various types of malicious traffic, and vice versa. In the three times using different random seeds. The reported results
+right figure, 40% of malicious samples are mislabeled as represent the average metrics across these three trials. The
+benign, while all benign labels remain unchanged. To enable code will be released soon.
+comprehensive evaluation, we vary the noise ratio across Evaluation Metric. To evaluate the performance, the F1-score
+{10%, 20%, 40%, 50%, 60%, 80%}. is selected as the evaluation metric. Considering the imbalance
+Baselines. We consider three categories of work for compar- of network traffic datasets, the macro measurement is adopted.
+ison: intrusion detection methods, robust training methods, As the experiments of the synthetic noisy datasets are repeated
+three times, the mean and standard deviation of the test F1- label noise. When exposed to the MALTLS-22 dataset with the
+score are calculated. With the detection result and the ground symmetric noise ratio escalating from 20% to 40%, ACID and
+truth of one testing dataset, we can calculate the number of true CLEID experience performance drops of 15.75% and 53.68%,
+positive samples (TP), the number of false positive samples respectively. This notable decline underscores the significant
+(FP), and the number of false negative samples (FN). Then, the challenge that label noise poses to intrusion detection models,
+ TP
+three metrics can be computed as follows: precision = TP+FP , highlighting the limitations of current robust intrusion detec-
+ TP 2×precision×recall tion technologies in handling such scenarios. Of particular
+recall = TP+FN , and F1-score = precision+recall .
+Paired t-test. Following previous work [18], we use a paired concern is the rapid performance deterioration observed in
+t-test to measure the statistical significance of performance CLEID, likely stemming from its use of mixups for genercomparison between MCRe and CoLD. Specifically, given ating augmented samples. In the presence of label noise, the
+two sets of F1-score obtained by MCRe and CoLD, we first distinctions between different categories will become blurred,
+compute their difference, i.e., Diff = F1CoLD − F1MCRe . With potentially exacerbating the propagation of errors induced by
+the Diff, we set the null hypothesis as H0 : E(Diff) < 0 label noise throughout the model’s decision-making process.
+and compute the p-value. If the p-value is smaller than a (4) Robust training methods designed for label noise, such
+threshold (e.g., 0.05), we can reject H0 and conclude that as Decoupling [36], Co-Teaching [27], and Co-Teaching+ [28],
+CoLD outperforms MCRe with statistical significance. aim to prevent models from overfitting to noisy labels by
+ designing robust loss functions and training strategies. While
+B. Comparison Results these methods outperform traditional robust intrusion detection
+ Tables III and IV present results on MALTLS-22 dataset methods [5], [6] in low-noise settings, their performance deteand CICIDS-2017 dataset, respectively. From the results, the riorates significantly in high-noise environments. For instance,
+following observations and conclusions can be drawn: on the CICIDS-2017 dataset, the F1-score of Co-Teaching+
+ (1) Overall, model performance consistently declines as the drops from over 99% at a 20% noise ratio to less than 10%
+level of label noise increases. For example, under the ‘None’ when the noise ratio reaches 60%. These results suggest that
+setting (i.e., 0% noise), ACID and CLEID achieve 92.43% and such methods struggle to extract effective domain knowledge
+91.42% performance on the MALTLS-22 dataset, respectively. and lack positive feedback mechanisms in high-noise sce-
+However, when 20% symmetric noise is introduced, their per- narios, resulting in ineffective parameter updates and limited
+formance drops significantly to 77.46% and 60.61%. Robust generalization capabilities. Consequently, these methods face
+training methods show minimal degradation at lower noise lev- significant challenges in their application to network intrusion
+els, but performance deteriorates rapidly when noise exceeds detection, particularly in noisy real-world environments.
+50%. In contrast, dataset purification methods exhibit greater (5) FINE [31] detects noisy labels by leveraging feature
+resilience to high levels of noise. Notably, MCRE and MORSE decomposition and representation similarity, achieving commaintain robust performance even at a 60% noise level. These petitive performance in high-noise settings. We guess the
+results highlight the effectiveness of dataset purification in reason is that the main eigenvector amplifies the difference
+mitigating the impact of label noise, particularly in intrusion between clean and noisy samples, making them easier to
+detection tasks. This observation provides strong empirical identify and remove. While FINE has shown success in image
+motivation for our proposed CoLD framework, which builds recognition tasks, its performance in traffic classification is
+upon and extends these strengths to further improve robustness limited due to fundamental domain differences. Unlike imin noisy environments. ages, network traffic lacks spatial structure and often exhibits
+ (2) CoLD demonstrates superior and consistent performance local consistency, where features from different classes share
+across a variety of settings, highlighting its resilience to label similar distributions. This reduces the separability of feature
+noise. Notably, its robustness becomes increasingly evident vectors and weakens the effectiveness of similarity-based noise
+as noise levels rise. For instance, even under 60% symmet- detection. As a result, FINE struggles to maintain stable
+ric noise, CoLD’s performance drops by only 3.4% on the performance in the context of network traffic data.
+MALTLS-22 dataset and 1.6% on the CICIDS-2017 dataset (6) MORSE [18] utilizes a pre-trained model on noisy
+compared to the 20% noise setting. This stability is primarily datasets to distinguish between noisy and clean samples, which
+attributed to the carefully designed Local Joint Learning relies on a predefined splitting ratio. It then applies a semimodule, which disrupts local consistencies in the feature supervised learning approach for classification. For fairness in
+space, thereby reducing the model’s reliance on spurious, non- comparison, we set the splitting ratio to match the actual noise
+causal associations induced by noisy labels. In addition, the ratio. The results show that MORSE maintains relatively stable
+Causal Collaborative Denoising module enhances robustness performance across different scenarios. We believe that its
+by analyzing causal associations between representations and semi-supervised design enables better utilization of all samples
+latent true labels. Through this mechanism, CoLD identifies for representation learning, giving it a significant advantage
+and filters out samples with significant causal divergence, over FINE, which directly filters out suspected noisy samples.
+resulting in more accurate and noise-resilient model training. However, the pre-trained model in MORSE can be easily
+ (3) Intrusion detection techniques such as ACID [5] and misguided by noisy labels, leading to inaccurate noisy sample
+CLEID [6] exhibit subpar performance in the presence of segmentation. In contrast, CoLD employs a self-supervised
+ TABLE III: Results on MALTLS-22 Dataset.
+ Noise Type None Symmetric Asymmetric
+ Noise Ratio 0% 10% 20% 40% 50% 60% 10% 20% 40% 50% 60%
+ ACID 92.43/1.83 81.51/3.21 77.46/4.55 61.71/3.84 31.74/4.02 4.38/1.32 80.01/1.85 79.63/2.18 69.48/3.65 39.30/1.78 2.46/0.19
+ CLEID 91.42/1.12 80.98/0.02 60.61/1.02 6.93/1.74 2.73/0.14 2.38/0.03 85.39/0.05 60.71/1.25 4.93/0.54 3.42/0.35 2.35/0.03
+ Decoupling 91.30/0.62 89.12/0.79 88.11/1.13 72.66/2.02 31.73/2.35 3.01/1.14 89.54/0.43 90.00/0.37 75.18/0.90 38.37/4.04 3.54/0.42
+Co-Teaching 93.47/0.16 92.85/0.17 87.26/0.19 47.50/0.80 7.95/0.53 2.85/0.15 92.57/0.07 90.75/0.29 73.25/0.64 32.98/4.74 2.66/0.11
+Co-Teaching+ 91.12/0.31 89.49/0.26 89.18/0.56 74.73/0.60 35.50/1.64 3.50/0.12 90.33/0.15 89.23/0.53 86.59/1.71 44.86/5.47 3.02/0.06
+ FINE 75.76/0.13 64.97/1.35 65.61/0.54 65.37/0.46 57.21/0.27 46.91/1.54 65.43/0.01 64.96/0.51 61.69/1.00 59.19/1.54 59.04/1.04
+ MORSE 82.04/1.46 77.91/0.13 76.33/0.71 75.71/0.13 74.39/0.85 74.71/1.20 79.36/0.09 77.63/1.90 74.13/0.28 73.92/2.77 70.13/1.09
+ MCRe 88.49/3.18 87.73/1.94 88.19/0.68 87.03/0.44 86.96/0.38 86.07/0.82 85.66/1.39 85.56/0.73 85.49/0.64 84.97/0.83 84.37/1.13
+ 92.97/0.32 93.11/0.19 92.14/0.53 91.82/0.42 90.07/0.67 88.75/0.76 93.55/0.34 91.91/0.35 90.84/0.38 88.08/0.40 86.48/0.65
+CoLD (Ours)
+ p=0.043 p=0.017 p=0.000 p=0.000 p=0.000 p=0.000 p= 0.002 p=0.000 p=0.000 p=0.003 p=0.008
+
+ TABLE IV: Results on CICIDS-2017 Dataset.
+ Noise Type None Symmetric Asymmetric
+ Noise Ratio 0% 10% 20% 40% 50% 60% 10% 20% 40% 50% 60%
+ ACID 99.27/0.45 97.13/2.88 97.03/0.83 88.01/1.68 52.27/8.43 5.56/0.27 99.15/2.13 98.05/0.64 88.96/3.27 24.29/2.34 5.67/0.23
+ CLEID 96.59/0.17 86.82/6.46 81.25/1.89 58.50/0.74 11.56/0.26 5.88/0.12 93.83/0.26 80.86/1.45 34.66/1.78 10.62/1.45 7.46/0.80
+ Decoupling 99.01/0.16 98.76/0.18 98.61/0.67 95.79/0.85 30.60/4.26 5.82/0.12 98.99/0.22 98.83/0.22 94.88/1.26 46.18/1.58 6.02/0.21
+Co-Teaching 99.74/0.33 99.40/0.29 99.32/0.13 72.30/1.36 30.83/1.76 30.26/2.45 99.41/0.12 98.34/0.11 85.75/2.35 45.98/5.35 6.17/0.61
+Co-Teaching+ 99.70/0.48 99.43/0.52 99.35/0.12 98.15/0.52 41.48/3.53 6.61/5.65 99.58/0.43 99.19/0.17 97.10/0.43 54.22/5.47 6.29/0.31
+ FINE 88.54/0.21 80.87/0.38 78.85/0.23 81.88/0.24 82.45/0.63 77.93/0.38 85.15/0.11 84.27/0.21 74.25/1.03 88.99/1.41 85.13/2.42
+ MORSE 98.48/0.84 95.06/0.47 90.25/0.52 82.04/0.44 77.34/1.12 72.11/1.23 89.32/0.51 85.55/0.69 82.82/1.38 74.91/2.17 74.60/1.14
+ MCRe 98.86/1.30 98.81/1.01 99.13/0.10 98.97/0.32 98.99/0.22 96.13/0.41 97.90/0.92 97.06/0.34 93.66/0.13 90.59/1.04 83.25/2.66
+ 99.71/0.36 99.51/0.23 99.31/0.18 98.98/0.21 99.07/0.31 97.76/0.57 99.55/0.31 99.48/0.23 98.32/0.34 96.67/0.76 95.43/0.97
+CoLD (Ours)
+ p =0.128 p=0.130 p=0.029 p=0.445 p=0.132 p=0.002 p=0.021 p=0.000 p=0.000 p=0.000 p=0.003
+
+ TABLE V: Comparision Results with 80% Noise. divergence to identify noisy labels. This approach is grounded
+ Dataset MALTLS-22 CICIDS-2017
+ in an understanding of traffic properties, allowing CoLD
+ to more effectively distinguish noise from clean data and
+ Noise Type Sym. Asym. Sym. Asym.
+ preserving informative samples to achieve strong performance.
+ FINE 6.42±0.34 39.66±1.05 6.73±0.12 50.32±2.17
+ MORSE 55.80±1.83 63.57±2.09 51.82±2.17 62.09±2.35
+ We evaluate performance under the challenging 80% noise
+ MCRe 85.97±1.44 79.44±1.47 90.97±1.38 84.63±4.23 scenario. While such extreme noise rates are uncommon in
+ 87.04±1.12 84.02±0.89 95.16±1.51 93.54±1.06 static datasets, this setting is critical for validating robustness
+ CoLD (Ours) in open-world environments [13], [31], [35], [43]. In security
+ p=0.014 p=0.003 p=0.000 p=0.020
+ systems, annotation models often introduce systematic noise
+ due to concept drift (e.g., a legacy model may mislabel a large
+approach during the Local Joint Learning phase, creating label- proportion of unseen attack samples as benign) [50], [63].
+independent representations from multiple views, which are Under traditional supervised learning frameworks, if noisy
+then used in the subsequent denoising process. Moreover, our labels dominate the class distribution (e.g., 80% of benign
+method does not require a predefined noisy label ratio, which samples flipped to malicious in binary classification), models
+significantly broadens its applicability. tend to overfit erroneous distributions due to label dependency.
+ (7) While MCRe [13] falls short of CoLD in overall However, this work focuses on multi-class scenarios, where
+performance, it still achieves notable results by leveraging noise is typically more dispersed (see Fig. 6). Even with an
+carefully designed representation constraints and distance- overall noise rate of 80%, label flips for individual classes
+based metrics, outperforming several baseline methods. How- are generally sparse (e.g., 10% “Benign→Dos Attack”, 10%
+ever, its reliance on distance-based noisy label detection leads “Benign→Bot Attack”) rather than concentrating on a single
+to the removal of clean samples that are distant from the mislabeling direction.
+confidence center, resulting in the loss of valuable information. As shown in Table V, CoLD maintains strong performance
+This limitation is reflected in the model’s sharp performance even under such extreme settings. This result underscores the
+fluctuations in the clean setting (i.e., large standard deviations advantages of Causal Collaborative Denoising over distancein “None” setting) and its inferior performance compared to based dataset purification methods like MCRe. Specifically,
+robust training methods under low noise settings, like Sym- MCRe assumes clear separability between clean and noisy
+10%. In contrast, CoLD avoids this issue by employing causal samples, which becomes unreliable at high noise rates. In
+such settings, local consistency across traffic categories can the Local Joint Learning module effectively maps features
+mislead the model into learning spurious associations, blurring to the hidden representation space, enhancing the model’s
+the boundary between clean and mislabeled data. CoLD over- ability to capture causal association. Additionally, we observe
+comes this by employing Local Joint Learning, which creates that FR provides a smaller performance gain on MALTLSmulti-view representations from feature subsets in a self- 22 compared to CICIDS-2017. This can be attributed to the
+supervised manner. This disrupts spurious correlations caused inherent feature correlations in the MALTLS-22 dataset, which
+by local consistency and encourages the model to learn causal reduce the need for reordering. Nevertheless, we recommend
+patterns shared across views. While causal features across cat- retaining FR, as it enhances adaptability in scenarios where
+egories may still offer weak learning signals, CoLD amplifies the original feature arrangement lacks correlation.
+this signal through multi-view comparison. By analyzing the
+causal discrepancies between noisy labels and GMM-based TABLE VII: Comparison of Different Aggregation Methods.
+predictions, CoLD isolates noisy samples without relying on
+ Method Sym-40% Sym-60% Asym-40% Asym-60%
+label distribution statistics. This design enables robust learning
+even in high-noise environments. NULL 91.73 89.99 90.98 86.23
+ MAX 85.65 84.54 85.88 83.14
+ MIN 85.15 85.03 83.41 84.33
+ Takeaway. The experimental results highlight the ef- SUM 87.12 87.46 86.02 85.36
+ CANCAT 90.45 90.32 90.11 85.45
+ fectiveness and robustness of CoLD in handling noisy MEAN 91.82 90.07 90.84 86.48
+ labels, even under extreme conditions. Compared to
+ state-of-the-art methods, CoLD consistently demon-
+ During the Causal Collaborative Denoising phase, local
+ strates superior performance across various noise scerepresentations are aggregated to form the final global reprenarios, including the challenging 80% noise setting. Its
+ sentation. We evaluated several aggregation functions to assess
+ superior performance and generalization highlight the
+ their impact on model performance. The experimental results
+ strength of Causal Collaborative Denoising in isolating
+ on the MALTLS-22 dataset are summarized in Table VII,
+ noisy samples and enabling noise-resilient network
+ where NULL denotes the use of the best-performing individual
+ intrusion detection in real-world environments.
+ subset without aggregation. Overall, the model maintains
+ stable performance across different aggregation strategies.
+C. Ablation Study
+ However, aggregation using MAX or MIN functions tends to
+ degrade performance, likely due to the loss of nuanced feature
+TABLE VI: Ablation Study with 40% Symmetric Noise. FR,
+ information. In contrast, MEAN and CONCAT consistently
+LA, GR, and LP denote Feature Reordering, Local Alignment,
+ deliver strong results, with MEAN achieving a favorable
+Global Reconstruction, and Label Purification, respectively.
+ balance between performance and computational efficiency.
+ FR MASK LA GR LP MALTLS-22 CICIDS-2017 While CONCAT can offer slightly better accuracy, it in-
+ • 0.1 • • • 90.96 98.98 curs additional memory and computation costs. Therefore,
+ • 0.3 • • • 91.82 98.52 we recommend MEAN as the default aggregation function
+ • 0.5 • • • 91.36 98.34 due to its effectiveness and lower overhead in deriving final
+ ◦ 0.3 • • • 91.69 96.39
+ • 0.3 ◦ • • 89.14 97.01 representations after Local Joint Learning.
+ • 0.3 • ◦ • 88.55 96.60
+ • 0.3 ◦ ◦ • 84.67 91.08 D. Parameter Study
+ • 0.3 • • ◦ 85.85 89.32
+ • with; ◦ without. In this paper, we introduce the method of partitioning
+ raw features into subsets for joint learning and collaborative
+ To evaluate the contributions of each proposed compo- denoising. This section delves into exploring the influence
+nent, we conduct an ablation study on the MALTLS-22 of the number of subsets and the degree of overlap. Fig. 7
+and CICIDS-2017 datasets under 40% symmetric noise. The presents the findings of this investigation. Overall, increasing
+results are presented in Table VI, where FR, LA, GR, and the degree of overlap enhances performance. However, exces-
+LP denote Feature Reordering, Local Alignment, Global Re- sively detailed partitioning would diminish the representation
+construction, and Label Purification, respectively. Across both capabilities of subsets, while overly coarse partitioning may
+datasets, CoLD consistently outperforms its ablated variants, lead to insufficient collaborative reasoning. For the MALTLSconfirming the effectiveness of the full framework. Each 22 dataset, the best results are achieved with 4 subsets and
+component contributes to overall performance improvements, an overlap of 0.75. In contrast, for the CICIDS-2017 dataset,
+with the best results achieved through their integration. Among performance is relatively insensitive to variations in overlap
+these components, LP stands out as a key contributor, high- when using 4 or 6 subsets. Fig. 8 illustrates the performance
+lighting the strength of the proposed Causal Collaborative of subsets with varying degrees of overlap on the MALTLS-22
+Denoising module. LA and GR constitute the Local Joint dataset, with the number of subsets fixed at 4. It is evident that
+Learning module, and omitting these operations led to a at lower degrees of overlap, there is significant performance
+significant decline in performance. This demonstrates that disparity among subsets, resulting in unstable performance.
+Based on these observations, we recommend adopting a higher scale approximately linearly with the batch size. These design
+degree of overlap alongside a moderate partition granularity. choices make CoLD computationally efficient and scalable for
+ large-scale datasets.
+ 100 100
+ The Degree of Overlap
+
+ The Degree of Overlap
+ 0 84.12 87.05 87.77 84.36 0 93.91 97.68 98.87 94.45
+ 95 95 150 1500
+ 0.25 85.32 90.35 87.43 82.05 0.25 94.39 97.75 97.45 93.45 Time Storage
+ 90 90
+
+ Storage Overhead (KB)
+ Time Overhead (ms)
+ 0.5 87.13 89.34 90.45 85.89 0.5 94.31 98.98 98.99 96.34
+ 85 85
+ 0.75 85.60 91.82 90.36 87.34 0.75 92.34 98.83 97.24 95.23 100 1000
+ 80 80
+ 2 4 6 8 2 4 6 8
+ The Number of Subsets The Number of Subsets
+ (a) MALTLS-22 Dataset (b) CICIDS-2017 Dataset 50 500
+
+ Fig. 7: The influence of different partition settings.
+
+ 0 0
+ 100 FINE McRE MORSE CoLD
+ S1 S2 S3 S4
+ Fig. 9: Time and storage overhead of comparison methods.
+
+ 90 We present the empirical time and storage overhead of
+ F1 Score
+
+ CoLD and compare it with other methods, as shown in
+ Fig. 9. Time overhead is reported as the average processing
+ 80 time per sample. The results show that CoLD incurs lower
+ time overhead than FINE, primarily because FINE involves a
+ more complex feature decomposition process. While MORSE
+ 70 demonstrates lower storage and computational requirements,
+ 0 0.25 0.5 0.75
+ The Degree of Overlap
+ its performance is notably inferior. In contrast, CoLD processes multiple feature subsets in the Local Joint Learning
+ Fig. 8: The performance of subsets over varying overlaps. phase to achieve fine-grained representations, accepting a
+ moderate increase in complexity for enhanced noise purification. Overall, CoLD’s time cost is moderate and comparable to
+E. Complexity Analysis that of McRE, while its storage overhead remains significantly
+ We analyze the computational complexity of CoLD with lower. These results highlight that CoLD achieves robust
+respect to its three primary components: Feature Reordering, performance and noise resistance with a favorable trade-off
+Local Joint Learning, and Causal Collaborative Denoising. between efficiency and accuracy, making it a practical choice
+The complexity of Feature Reordering arises from computing for real-world applications.
+pairwise correlations among features, resulting in a time
+complexity of O(N d2 ), where N is the number of samples VI. E VALUATION IN R EALISTIC E NTERPRISE N ETWORK
+and d is the number of features. In the Local Joint Learning While CoLD has shown strong performance on benchmark
+stage, both the encoder and decoder are implemented as simple datasets, it is crucial to further evaluate its effectiveness and
+fully connected networks, so the per-subset complexity is robustness in real-world environments. In this section, we
+O(d). Given M feature subsets and N samples, the total cost present the initial deployment and evaluation of CoLD in a
+for this step is O(N M d). Additionally, pairwise similarity large-scale enterprise network, aiming to assess its practical
+computations for loss terms introduce an extra O(N M 2 ) cost, applicability and reliability.
+making the overall complexity for this stage O(N (M d+M 2 )).
+For Causal Collaborative Denoising, the main computational A. Task Description
+cost comes from GMM fitting, which incurs a complexity of Intrusion detection systems (IDSs) are crucial for protect-
+O(N Kd) per EM iteration, where K is the number of mixture ing enterprise networks from sophisticated attacks such as
+components. Advanced Persistent Threats (APTs) [64], which often evade
+ Overall, the complexity of CoLD is primarily influenced by traditional defenses. Provenance-based IDSs [65], [66], [67],
+the number of subsets M , the number of samples N , the fea- [68] leverage contextual information from system logs to
+ture dimensionality d, and the number of mixture components detect APTs, but their performance is challenged by unreliable
+K. Since Feature Reordering can be performed offline, it does ground truth and pervasive label noise [69]. In this task,
+not affect the computational complexity during inference. In we integrate CoLD with several representative enterprise-level
+practice, the training cost can be further reduced by using IDSs [67], [68] and evaluate its effectiveness on the OpTC
+a small number of subsets (e.g., M = 4) and by adopting dataset [70]. This evaluation extends CoLD’s applicability to
+mini-batch training, which allows the computational cost to realistic enterprise networks and systematically investigates
+its ability to improve intrusion detection performance under efficient classifier. CoLD operates as a plug-in module that
+various levels of label noise. enhances the classifier’s training process by effectively filtering out noisy samples. This modular design not only broadens
+B. Comparative Discussion CoLD’s applicability but also significantly reduces resource
+ A variety of IDSs have emerged in recent years to identify consumption during deployment. For empirical evaluation,
+malicious activities on enterprise networks, leveraging network we conduct a comprehensive comparison between CoLD and
+traffic and log data. In large-scale enterprise settings, network two representative provenance-based IDSs, Flash [67] and
+architectures are highly dynamic, involving a diverse set of Argus [68], using the F1-score as the evaluation metric. Specifactive entities—including hosts, users, virtual machines, and ically, we integrated CoLD into their established pipelines
+applications—that interact in complex and evolving patterns. by preserving the original provenance graph construction and
+ To address these challenges, Jbeil [66] modeled authenti- feature extraction of each system. This ensures a fair and
+cation events as temporal graphs, leveraging Temporal Graph consistent assessment of CoLD’s effectiveness in enhancing
+Networks for inductive learning. This approach allows for the intrusion detection performance under varying noise settings,
+detection of static phases of lateral movement in APT attacks while maintaining the unique characteristics and strengths of
+as the graph structure changes dynamically. However, modules the baseline methods.
+tailored for specific attack phases may prove ineffective when
+applied to complex real-world scenarios. Flash [67] employed D. Evaluation Results
+Word2Vec to transform node attributes into semantically rich,
+time-sensitive feature vectors and then utilizes Graph Neural TABLE VIII: Results on OpTC Dataset.
+Networks to capture both local and global graph structures. Method Sym-10% Sym-40% Asym-10% Asym-40%
+This enables the model to effectively encode complex temporal
+ Falsh 93.57 79.49 94.08 85.15
+dependencies within the provenance graph. However, Flash’s Falsh+CoLD 94.04 ↑ 0.47 84.89 ↑ 5.40 94.30 ↑ 0.22 93.78 ↑ 8.63
+approach requires a large volume of high-quality log data Argus 91.45 81.81 93.94 86.28
+to ensure the completeness and reliability of the constructed Argus+CoLD 93.73 ↑ 2.28 87.83 ↑ 6.02 94.70 ↑ 0.76 93.51 ↑ 7.23
+provenance graphs. Argus [68] introduced a dynamic graph
+representation learning framework that integrates Graph Convolutional Networks with Long Short-Term Memory networks
+ The Degree of Overlap
+
+ The Degree of Overlap
+ 100 100
+for feature extraction. By embedding timestamp information 0.25 81.69 83.55 80.92 0.25 85.77 87.83 81.82
+ 95 95
+and supporting dynamic updates, Argus can track and model
+ 0.5 82.01 82.97 80.52 90 0.5 85.32 87.40 83.63 90
+real-time changes in graph topology. Despite their effectiveness, these methods face persistent challenges related to 85 85
+ 0.75 83.18 84.89 83.09 0.75 85.34 87.18 83.56
+the collection and annotation of enterprise-scale event data, 2 3 4
+ 80
+ 2 3 4
+ 80
+particularly under conditions of label noise. The Number of Subsets The Number of Subsets
+ In contrast to the aforementioned approaches that are tai- (a) Falsh+CoLD (b) Argus+CoLD
+lored for specific attack patterns or scenarios, CoLD serves
+as a more general and versatile causal collaborative denoising Fig. 10: Hyperparameter optimization of integrated systems.
+framework. Its primary goal is to purify noisy samples and
+enhance the robustness of IDSs in the presence of label noise. Based on the analysis in Section V-D, we perform hyper-
+Although CoLD is mainly applied to network traffic in our parameter optimization for CoLD within an appropriate range
+previous experiments, its modular design and causal denoising under the Sym-40% setting, with the results shown in Fig. 10..
+mechanism are broadly applicable to a wide range of data The comparative performance of CoLD on the enterprise
+modalities. In fact, CoLD can be seamlessly integrated with dataset under various noise settings is shown in Table VIII.
+existing IDSs such as Flash and Argus, complementing their From these results, we draw the following observations and
+strengths and further improving their resilience to noisy labels. conclusions:
+This flexibility facilitates the practical deployment of CoLD (1) As label noise increases, the performance of baseline
+in diverse and large-scale enterprise environments. IDSs is notably challenged. However, integrating CoLD consistently leads to significant improvements. For instance, at a
+C. Evaluation Settings symmetric noise level of 40%, CoLD boosts the performance
+ To integrate CoLD with existing IDSs, we adopted a of Flash and Argus by 5.40% and 6.02%, respectively, demondecoupled approach, dividing the enterprise-level intrusion strating its effective denoising capability in enterprise-level
+detection task into a feature extraction module and a denoising detection scenarios.
+learning module. Specifically, we utilized established prove- (2) Flash exhibits superior performance under low noise
+nance graph representation learning methods to extract features conditions compared with Argus, as it incorporates more
+from enterprise network logs [70], which were then used as features to represent graph nodes, such as process names,
+inputs for downstream classifiers. To meet real-time processing command line arguments, file paths, and IP addresses. Nevrequirements, we selected XGBoost as a lightweight and ertheless, as noise levels rise, Flash’s performance degrades
+more rapidly, largely because many of its features lack class representations, which are essential for handling high feadiscriminability and are more susceptible to being misled by ture redundancy and subtle inter-class differences. Ablation
+local consistency. studies confirm that all components of CoLD contribute to
+ (3) Argus demonstrates greater robustness to high levels performance gains, with Feature Reordering being particularly
+of label noise. Its use of lower-dimensional feature repre- impactful on CICIDS-2017, where the original feature arrangesentations tends to favor smaller, more overlapping feature ment shows lower correlation. Parameter analysis indicates
+subsets, which helps maintain stability. In contrast, due to that while CoLD prefers different parameter settings across
+the limited quality of the dataset, many features leveraged by datasets, it maintains strong robustness to parameter variations
+Flash are sparse, requiring a larger overlap to preserve the under moderate partition granularities. We also observe that
+representational capability for sample discrimination. factors such as feature dimensionality and sparsity should
+ Overall, these results confirm the effectiveness of CoLD in be considered when selecting feature subset size and overlap
+real-world enterprise environments and demonstrate its ability degree for optimal results.
+to enhance the noise resilience of existing IDSs. Beyond these two benchmarks, our evaluation on the OpTC
+ dataset (Section VI) further demonstrates CoLD’s adaptability
+ VII. D ISCUSSION and effectiveness in realistic enterprise network environments.
+A. Application in Online/Streaming Network Environments Overall, these results confirm that the collaborative causal
+ denoising mechanisms in CoLD are generalizable, enabling
+ Online or streaming IDSs are required to process large the framework to adapt effectively to heterogeneous data
+volumes of network data in real time while adapting to modalities and address the diverse and complex challenges
+continuously evolving behavior patterns. The modular ar- of real-world network intrusion detection.
+chitecture of CoLD makes it well-suited for extension to
+such scenarios in real-world deployments. Specifically, the C. Limitation and Future Work
+Feature Reordering module supports both offline computation First, we currently employ Pearson correlation to reorder
+and periodic updates, whereas the Local Joint Learning and features, which primarily captures linear statistical relation-
+Causal Collaborative Denoising modules can be incrementally ships between features. Future work should explore more
+updated as new data arrives. Leveraging a sliding window advanced techniques to capture complex, nonlinear, or highertechnology, CoLD efficiently updates its model parameters order dependencies among features. Second, while CoLD
+on streaming data, thus maintaining computational efficiency achieves robust representations, it introduces additional comand low latency. As the underlying data distribution shifts, putational complexity during the joint learning and denoisthe encoder, decoder, and classifier can be periodically fine- ing process. Improving the framework’s efficiency will be
+tuned using continual learning techniques, thereby preventing a focus of subsequent research. Third, integrating CoLD
+catastrophic forgetting and ensuring sustained performance. with incremental or continual learning strategies represents
+Furthermore, as discussed in Section VI, CoLD can be a promising direction to further enhance its adaptability to
+seamlessly integrated as a denoising module within existing evolving network environments and streaming data. We leave
+online IDS pipelines, filtering incoming training data streams these improvements as important avenues for future work.
+before model updates. This design enables the IDS to remain
+robust against evolving attack strategies and dynamic label VIII. C ONCLUSION
+noise, making CoLD a practical and adaptive solution for In this paper, we presented CoLD, a Collaborative Label
+real-world intrusion detection systems operating in dynamic Denoising framework designed to address the challenges posed
+environments. by noisy labels in network intrusion detection. Leveraging
+ causal analysis, we identify the impact of noisy labels and
+B. Behavior of CoLD across Different Datasets attribute it to local consistency across different categories
+ In this paper, we conduct a comprehensive evaluation of in network traffic. Based on these insights, CoLD integrates
+CoLD across multiple representative datasets to provide in- three key components: Feature Reordering organizes features
+sights into its generalization and behavior under diverse real- based on their statistical properties to preserve correlation,
+world network settings. Specifically, we evaluate CoLD on Local Joint Learning utilizes multiple views to learn robust
+MALTLS-22, which consists of encrypted traffic and a wide representations that are less susceptible to label noise, and
+range of attack types, and CICIDS-2017, which covers both Causal Collaborative Denoising employs Gaussian Mixture
+benign and malicious behaviors across multiple protocols. Model to identify and filter mislabeled traffic flows, resulting
+These datasets embody key practical challenges such as traffic in a purified dataset for training classifiers. Extensive experiencryption, attack diversity, and severe class imbalance. ments on benchmark datasets demonstrate that CoLD signif-
+ Across all noise settings and datasets, CoLD consistently icantly improves classification performance and robustness to
+demonstrates robust performance and significantly outper- label noise, outperforming state-of-the-art approaches. These
+forms baseline methods. Notably, its advantages are especially findings underscore the potential of CoLD to enhance the
+pronounced on MALTLS-22, highlighting CoLD’s ability to performance of IDSs in noisy environments, paving the way
+disrupt misleading local consistency and capture fine-grained for more reliable and secure network infrastructures.
+ IX. E THICS C ONSIDERATIONS [11] D. Arp, E. Quiring, F. Pendlebury, A. Warnecke, F. Pierazzi,
+ C. Wressnegger, L. Cavallaro, and K. Rieck, “Dos and don’ts
+ This research aims to advance the field of network intrusion of machine learning in computer security,” in 31st USENIX
+detection by addressing the challenges posed by noisy labels. Security Symposium (USENIX Security 22). Boston, MA: USENIX
+ Association, Aug. 2022, pp. 3971–3988. [Online]. Available: https:
+The proposed framework, CoLD, is designed to improve //www.usenix.org/conference/usenixsecurity22/presentation/arp
+the accuracy and robustness of intrusion detection systems, [12] J. L. Guerra, C. Catania, and E. Veas, “Datasets are not enough:
+contributing to enhanced cybersecurity for organizations and Challenges in labeling network traffic,” Computers & Security, vol. 120,
+individuals. However, we acknowledge that such advance- p. 102810, 2022.
+ [13] Q. Yuan, G. Gou, Y. Zhu, Y. Zhu, G. Xiong, and Y. Wang, “Mcre: A
+ments can have dual-use implications. While the technology is unified framework for handling malicious traffic with noise labels based
+intended to strengthen defenses against malicious activities, it on multidimensional constraint representation,” IEEE Transactions on
+could potentially be misused to evade detection by malicious Information Forensics and Security, 2023.
+actors. To mitigate this risk, we emphasize that this research is [14] G. Engelen, V. Rimmer, and W. Joosen, “Troubleshooting an intrusion
+ detection dataset: the cicids2017 case study,” in 2021 IEEE Security and
+strictly intended for defensive applications, and we advocate Privacy Workshops (SPW). IEEE, 2021, pp. 7–12.
+for its deployment in ethically governed environments. [15] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted malicious
+ Additionally, the datasets used in this study are publicly traffic in real time via flow interaction graph analysis,” arXiv preprint
+ arXiv:2301.13686, 2023.
+available and do not contain personally identifiable informa- [16] S. Yang, X. Zheng, J. Li, J. Xu, and E. C. H. Ngai, “Multi-scale
+tion (PII). We ensure compliance with all relevant data privacy contrastive attention representation learning for encrypted traffic clasregulations. By using anonymized and publicly accessible sification,” in Proceedings of the 33rd ACM International Conference
+ on Information and Knowledge Management, 2024, p. 4173–4177.
+datasets, we minimize the potential for harm or misuse of
+ [17] Y. Chen, Z. Ding, and D. Wagner, “Continuous learning for android
+sensitive information. malware detection,” in 32nd USENIX Security Symposium (USENIX
+ Security 23), 2023, pp. 1127–1144.
+ ACKNOWLEDGMENT [18] X. Wu, W. Guo, J. Yan, B. Coskun, and X. Xing, “From grim reality to
+ practical solution: Malware classification in real-world noise,” in 2023
+ This work was supported by the UGC General Research IEEE Symposium on Security and Privacy (SP). IEEE, 2023, pp. 2602–
+Fund no. 17209822 and the Innovation and Technology Com- 2619.
+mission Fund no. ITS/383/23FP from Hong Kong. [19] F. Dong, L. Wang, X. Nie, F. Shao, H. Wang, D. Li, X. Luo,
+ and X. Xiao, “DISTDET: A Cost-Effective distributed cyber threat
+ R EFERENCES detection system,” in 32nd USENIX Security Symposium (USENIX
+ Security 23). Anaheim, CA: USENIX Association, Aug. 2023,
+ [1] M. R. Ayyagari, N. Kesswani, M. Kumar, and K. Kumar, “Intrusion pp. 6575–6592. [Online]. Available: https://www.usenix.org/conference/
+ detection techniques in network environment: a systematic review,” usenixsecurity23/presentation/dong-feng
+ Wireless Networks, vol. 27, no. 2, pp. 1269–1285, 2021. [20] W. U. Hassan, S. Guo, D. Li, Z. Chen, K. Jee, Z. Li, and A. Bates,
+ [2] H. Tahaei, F. Afifi, A. Asemi, F. Zaki, and N. B. Anuar, “The rise of “Nodoze: Combatting threat alert fatigue with automated provenance
+ traffic classification in iot networks: A survey,” Journal of Network and triage,” in network and distributed systems security symposium, 2019.
+ Computer Applications, vol. 154, p. 102538, 2020. [21] Z. Huang, J. Zhang, and H. Shan, “Twin contrastive learning with noisy
+ [3] Y. Chen, Q. Yin, Q. Li, Z. Liu, K. Xu, Y. Xu, M. Xu, labels,” in Proceedings of the IEEE/CVF Conference on Computer Vision
+ Z. Liu, and J. Wu, “Learning with semantics: Towards a Semantics- and Pattern Recognition, 2023, pp. 11 661–11 670.
+ Aware routing anomaly detection system,” in 33rd USENIX Security [22] A. Ghosh, H. Kumar, and P. S. Sastry, “Robust loss functions under label
+ Symposium (USENIX Security 24). Philadelphia, PA: USENIX noise for deep neural networks,” in Proceedings of the AAAI conference
+ Association, Aug. 2024, pp. 5143–5160. [Online]. Available: https: on artificial intelligence, vol. 31, no. 1, 2017.
+ //www.usenix.org/conference/usenixsecurity24/presentation/chen-yihao [23] Y. Wang, X. Ma, Z. Chen, Y. Luo, J. Yi, and J. Bailey, “Symmetric
+ [4] N. Wang, Y. Chen, Y. Hu, W. Lou, and Y. T. Hou, “Feco: Boosting cross entropy for robust learning with noisy labels,” in Proceedings of
+ intrusion detection capability in iot networks via contrastive learning,” in the IEEE/CVF international conference on computer vision, 2019, pp.
+ IEEE INFOCOM 2022-IEEE Conference on Computer Communications. 322–330.
+ IEEE, 2022, pp. 1409–1418. [24] A. Vahdat, “Toward robustness against label noise in training deep dis-
+ [5] A. F. Diallo and P. Patras, “Adaptive clustering-based malicious traffic criminative neural networks,” Advances in neural information processing
+ classification at the network edge,” in IEEE INFOCOM 2021-IEEE systems, vol. 30, 2017.
+ Conference on Computer Communications. IEEE, 2021, pp. 1–10.
+ [25] L. Jiang, Z. Zhou, T. Leung, L.-J. Li, and L. Fei-Fei, “Mentornet:
+ [6] Y. Yue, X. Chen, Z. Han, X. Zeng, and Y. Zhu, “Contrastive learning
+ Learning data-driven curriculum for very deep neural networks on
+ enhanced intrusion detection,” IEEE Transactions on Network and
+ corrupted labels,” in International conference on machine learning.
+ Service Management, vol. 19, no. 4, pp. 4232–4247, 2022.
+ PMLR, 2018, pp. 2304–2313.
+ [7] D. Chou and M. Jiang, “A survey on data-driven network intrusion
+ detection,” ACM Computing Surveys (CSUR), vol. 54, no. 9, pp. 1–36, [26] I. Jindal, M. Nokleby, and X. Chen, “Learning deep networks from noisy
+ 2021. labels with dropout regularization,” in 2016 IEEE 16th International
+ [8] S. Yang, X. Zheng, Z. Xu, and X. Wang, “A lightweight approach for Conference on Data Mining (ICDM). IEEE, 2016, pp. 967–972.
+ network intrusion detection based on self-knowledge distillation,” in ICC [27] B. Han, Q. Yao, X. Yu, G. Niu, M. Xu, W. Hu, I. W. Tsang, and
+ 2023-IEEE International Conference on Communications. IEEE, 2023, M. Sugiyama, “Co-teaching: robust training of deep neural networks
+ pp. 3000–3005. with extremely noisy labels,” in Proceedings of the 32nd International
+ [9] Y. Chen, Q. Yin, Q. Li, Z. Liu, K. Xu, Y. Xu, M. Xu, Conference on Neural Information Processing Systems, 2018, pp. 8536–
+ Z. Liu, and J. Wu, “Learning with semantics: Towards a Semantics- 8546.
+ Aware routing anomaly detection system,” in 33rd USENIX Security [28] X. Yu, B. Han, J. Yao, G. Niu, I. Tsang, and M. Sugiyama, “How
+ Symposium (USENIX Security 24). Philadelphia, PA: USENIX does disagreement help generalization against label corruption?” in
+ Association, Aug. 2024, pp. 5143–5160. [Online]. Available: https: International conference on machine learning. PMLR, 2019, pp. 7164–
+ //www.usenix.org/conference/usenixsecurity24/presentation/chen-yihao 7173.
+[10] H. Song, M. Kim, D. Park, Y. Shin, and J.-G. Lee, “Learning from [29] C. Liu, H. Yu, B. Li, Z. Shen, Z. Gao, P. Ren, X. Xie, L. Cui,
+ noisy labels with deep neural networks: A survey,” IEEE transactions and C. Miao, “Noise-resistant deep metric learning with ranking-based
+ on neural networks and learning systems, vol. 34, no. 11, pp. 8135– instance selection,” in Proceedings of the IEEE/CVF Conference on
+ 8153, 2022. Computer Vision and Pattern Recognition, 2021, pp. 6811–6820.
+[30] X. Xia, T. Liu, B. Han, M. Gong, J. Yu, G. Niu, and M. Sugiyama, [51] S. Yang, X. Zheng, J. Li, J. Xu, X. Wang, and E. C. H. Ngai, “Recda:
+ “Sample selection with uncertainty of losses for learning with noisy Concept drift adaptation with representation enhancement for network
+ labels,” arXiv preprint arXiv:2106.00445, 2021. intrusion detection,” in Proceedings of the 30th ACM SIGKDD Confer-
+[31] T. Kim, J. Ko, J. Choi, S.-Y. Yun et al., “Fine samples for learning ence on Knowledge Discovery and Data Mining, 2024, p. 3818–3828.
+ with noisy labels,” Advances in Neural Information Processing Systems, [52] G. Andresini, F. Pendlebury, F. Pierazzi, C. Loglisci, A. Appice, and
+ vol. 34, pp. 24 137–24 149, 2021. L. Cavallaro, “Insomnia: Towards concept-drift robustness in network
+[32] Y. Li, H. Han, S. Shan, and X. Chen, “Disc: Learning from noisy labels intrusion detection,” in Proceedings of the 14th ACM workshop on
+ via dynamic instance-specific selection and correction,” in Proceedings artificial intelligence and security, 2021, pp. 111–122.
+ of the IEEE/CVF Conference on Computer Vision and Pattern Recogni- [53] X. Wang, “Enidrift: A fast and adaptive ensemble system for network
+ tion, 2023, pp. 24 070–24 079. intrusion detection under real-world drift,” in Proceedings of the 38th
+[33] Z. Zhao, R. Birke, R. Han, B. Robu, S. Bouchenak, S. B. Mokhtar, and Annual Computer Security Applications Conference, 2022, pp. 785–798.
+ L. Y. Chen, “Enhancing robustness of on-line learning models on highly [54] S. Yang, X. Zheng, J. Li, J. Xu, X. Zhang, and E. C. H. Ngai, “Selfnoisy data,” IEEE Transactions on Dependable and Secure Computing, supervised adaptation method to concept drift for network intrusion
+ vol. 18, no. 5, pp. 2177–2192, 2021. detection,” IEEE Transactions on Dependable and Secure Computing,
+[34] X. Ma, H. Huang, Y. Wang, S. Romano, S. Erfani, and J. Bailey, pp. 1–15, 2025.
+ “Normalized loss functions for deep learning with noisy labels,” in [55] Y. Qing, Q. Yin, X. Deng, Y. Chen, Z. Liu, K. Sun, K. Xu, J. Zhang, and
+ International conference on machine learning. PMLR, 2020, pp. 6543– Q. Li, “Low-quality training data only? a robust framework for detecting
+ 6553. encrypted malicious network traffic,” arXiv preprint arXiv:2309.04798,
+[35] S. Liu, J. Niles-Weed, N. Razavian, and C. Fernandez-Granda, “Early- 2023.
+ learning regularization prevents memorization of noisy labels,” Advances [56] X. Wu, B. Jiang, K. Yu, H. Chen, and C. Miao, “Multi-label causal
+ in neural information processing systems, vol. 33, pp. 20 331–20 342, feature selection,” in Proceedings of the AAAI conference on artificial
+ 2020. intelligence, vol. 34, no. 04, 2020, pp. 6430–6437.
+[36] E. Malach and S. Shalev-Shwartz, “Decoupling” when to update” from” [57] Y. Sui, X. Wang, J. Wu, M. Lin, X. He, and T.-S. Chua, “Causal attention
+ how to update”,” in Proceedings of the 31st International Conference for interpretable and generalizable graph classification,” in Proceedings
+ on Neural Information Processing Systems, 2017, pp. 961–971. of the 28th ACM SIGKDD conference on knowledge discovery and data
+ mining, 2022, pp. 1696–1705.
+[37] C. Tan, J. Xia, L. Wu, and S. Z. Li, “Co-learning: Learning from
+ [58] F. Zhou, Y. Mao, L. Yu, Y. Yang, and T. Zhong, “Causal-debias: Unifying
+ noisy labels with self-supervision,” in Proceedings of the 29th ACM
+ debiasing in pretrained language models and fine-tuning via causal
+ International Conference on Multimedia, 2021, pp. 1405–1413.
+ invariant learning,” in Proceedings of the 61st Annual Meeting of the
+[38] J. Goldberger and E. Ben-Reuven, “Training deep neural-networks
+ Association for Computational Linguistics (Volume 1: Long Papers),
+ using a noise adaptation layer,” in International conference on learning
+ 2023, pp. 4227–4241.
+ representations, 2022.
+ [59] S.-A. Rebuffi, S. Gowal, D. A. Calian, F. Stimberg, O. Wiles, and T. A.
+[39] R. Tanno, A. Saeedi, S. Sankaranarayanan, D. C. Alexander, and Mann, “Data augmentation can improve robustness,” Advances in Neural
+ N. Silberman, “Learning from noisy labels by regularized estimation Information Processing Systems, vol. 34, pp. 29 935–29 948, 2021.
+ of annotator confusion,” in Proceedings of the IEEE/CVF conference on [60] F. Iglesias and T. Zseby, “Analysis of network traffic features for
+ computer vision and pattern recognition, 2019, pp. 11 244–11 253. anomaly detection,” Machine Learning, vol. 101, no. 1, pp. 59–84, 2015.
+[40] X. Xia, T. Liu, N. Wang, B. Han, C. Gong, G. Niu, and M. Sugiyama, [61] F. Gottwalt, E. Chang, and T. Dillon, “Corrcorr: A feature selection
+ “Are anchor points really indispensable in label-noise learning?” Ad- method for multivariate correlation network anomaly detection techvances in neural information processing systems, vol. 32, 2019. niques,” Computers & Security, vol. 83, pp. 234–245, 2019.
+[41] E. Arazo, D. Ortego, P. Albert, N. O’Connor, and K. McGuinness, “Un- [62] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+ supervised label noise modeling and loss correction,” in International for contrastive learning of visual representations,” in International
+ conference on machine learning. PMLR, 2019, pp. 312–321. conference on machine learning. PMLR, 2020, pp. 1597–1607.
+[42] K. Yi and J. Wu, “Probabilistic end-to-end noise correction for learning [63] M. Dragoi, E. Burceanu, E. Haller, A. Manolache, and F. Brad,
+ with noisy labels,” in Proceedings of the IEEE/CVF conference on “Anoshift: A distribution shift benchmark for unsupervised anomaly
+ computer vision and pattern recognition, 2019, pp. 7017–7025. detection,” Advances in Neural Information Processing Systems, vol. 35,
+[43] S. Zheng, P. Wu, A. Goswami, M. Goswami, D. Metaxas, and C. Chen, pp. 32 854–32 867, 2022.
+ “Error-bounded correction of noisy labels,” in International Conference [64] K. A. Akbar, Y. Wang, G. Ayoade, Y. Gao, A. Singhal, L. Khan,
+ on Machine Learning. PMLR, 2020, pp. 11 447–11 457. B. Thuraisingham, and K. Jee, “Advanced persistent threat detection
+[44] C. Northcutt, L. Jiang, and I. Chuang, “Confident learning: Estimating using data provenance and metric learning,” IEEE Transactions on
+ uncertainty in dataset labels,” Journal of Artificial Intelligence Research, Dependable and Secure Computing, vol. 20, no. 5, pp. 3957–3969, 2022.
+ vol. 70, pp. 1373–1411, 2021. [65] M. Zipperle, F. Gottwalt, E. Chang, and T. Dillon, “Provenance-based in-
+[45] G. Pleiss, T. Zhang, E. Elenberg, and K. Q. Weinberger, “Identifying trusion detection systems: A survey,” ACM Computing Surveys, vol. 55,
+ mislabeled data using the area under the margin ranking,” Advances no. 7, pp. 1–36, 2022.
+ in Neural Information Processing Systems, vol. 33, pp. 17 044–17 056, [66] J. Khoury, . Klisura, H. Zanddizari, G. D. L. T. Parra, P. Najafirad,
+ 2020. and E. Bou-Harb, “Jbeil: Temporal graph-based inductive learning to
+[46] Z. Zhu, Z. Dong, and Y. Liu, “Detecting corrupted labels without training infer lateral movement in evolving enterprise networks,” in 2024 IEEE
+ a model to predict,” in International conference on machine learning. Symposium on Security and Privacy (SP). IEEE, 2024, pp. 3644–3660.
+ PMLR, 2022, pp. 27 412–27 427. [67] M. U. Rehman, H. Ahmadi, and W. U. Hassan, “Flash: A comprehensive
+[47] K. Fauvel, F. Chen, and D. Rossi, “A lightweight, efficient and approach to intrusion detection via provenance graph representation
+ explainable-by-design convolutional neural network for internet traffic learning,” in 2024 IEEE Symposium on Security and Privacy (SP).
+ classification,” in Proceedings of the 29th ACM SIGKDD Conference on IEEE, 2024, pp. 3552–3570.
+ Knowledge Discovery and Data Mining, 2023, pp. 4013–4023. [68] J. Xu, X. Shu, and Z. Li, “Understanding and bridging the gap between
+[48] C. Qiu, Y. Geng, J. Lu, K. Chen, S. Zhu, Y. Su, G. Nan, C. Zhang, unsupervised network representation learning and security analytics,” in
+ J. Fu, Q. Cui et al., “3d-ids: Doubly disentangled dynamic intrusion 2024 IEEE Symposium on Security and Privacy (SP). IEEE, 2024, pp.
+ detection,” in Proceedings of the 29th ACM SIGKDD Conference on 3590–3608.
+ Knowledge Discovery and Data Mining, 2023, pp. 1965–1977. [69] J. Liu, M. A. Inam, A. Goyal, A. Riddle, K. Westfall, and A. Bates,
+[49] X. Zheng, S. Yang, and X. Wang, “Sf-ids: An imbalanced semi- “What we talk about when we talk about logs: Understanding the effects
+ supervised learning framework for fine-grained intrusion detection,” in of dataset quality on endpoint threat detection research,” in 2025 IEEE
+ ICC 2023-IEEE International Conference on Communications. IEEE, Symposium on Security and Privacy (SP). IEEE, 2025, pp. 112–129.
+ 2023, pp. 2988–2993. [70] F. Directions, “Operationally transparent cyber (optc) data release,”
+[50] L. Yang, W. Guo, Q. Hao, A. Ciptadi, A. Ahmadzadeh, X. Xing, and 2020. [Online]. Available: https://github.com/FiveDirections/OpTC-data
+ G. Wang, “Cade: Detecting and explaining concept drift samples for
+ security applications,” in 30th USENIX Security Symposium (USENIX
+ Security 21), 2021, pp. 2327–2344.

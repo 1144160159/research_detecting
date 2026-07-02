@@ -1,0 +1,1651 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [652] Dynamic Adaptive Aggregation and Feature Pyramid Network Enhanced GraphSAGE for Advanced Persistent Threat Detection in Next-Generation Communication Networks
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：652
+题名：Dynamic Adaptive Aggregation and Feature Pyramid Network Enhanced GraphSAGE for Advanced Persistent Threat Detection in Next-Generation Communication Networks
+年份：2026
+DOI：10.1109/tnsm.2026.3660650
+来源：IEEE Transactions on Network and Service Management
+PDF：paper/10.1109_TNSM.2026.3660650.pdf
+已有粗分类：图学习、知识图谱与威胁情报
+二级关联：恶意流量、暗网与攻击检测
+相关性：中相关，分数 8
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\652.txt
+- 原始字符数：86751
+- 本次发送字符数：86751
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+2712
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Dynamic Adaptive Aggregation and Feature
+Pyramid Network Enhanced GraphSAGE for
+Advanced Persistent Threat Detection in
+Next-Generation Communication Networks
+Liang Kou , Member, IEEE, Xiaochen Pan , Guozhong Dong , Meiyu Wang , Member, IEEE, Chunyu Miao,
+Jilin Zhang , and Pingxia Duan
+Abstract—Advanced Persistent Threats (APTs) pose severe
+challenges to Next-Generation Communication Networks
+(NGCNs) due to their stealthiness and NGCNs’ dynamic
+topology, while conventional GNN-based intrusion detection
+systems suffer from static aggregation and poor adaptability to
+unseen nodes. To address these issues, this paper proposes DAAFPN-SAGE, a lightweight graph-based detection framework
+integrating Dynamic Adaptive Aggregation (DAA) and MultiScale Feature Pyramid Network (MSFPM). Leveraging
+GraphSAGE’s inductive learning capability, the framework
+effectively models unseen nodes or subgraphs and adapts
+to NGCN’s dynamic changes (e.g., elastic network slicing,
+online AI model updates)—a key advantage for handling
+NGCN’s real-time topological variations. The DAA module
+employs multi-hop attention to dynamically assign weights
+to neighbors at different hop distances, enhancing capture of
+hierarchical dependencies in multi-stage APT attack chains.
+The MSFPM module fuses local-global structural information
+via a gated feature selection mechanism, resolving dimensional
+inconsistency and enriching attack behavior representation.
+Extensive experiments on StreamSpot, Unicorn, and DARPA
+TC#3 datasets demonstrate that this method delivers superior
+performance and meets detection requirements of large-scale
+NGCNs.
+Index Terms—GraphSAGE, dynamic graph attention mechanism, multi-scale feature pyramid, advanced persistent threat,
+next-generation communication networks.
+
+I. I NTRODUCTION
+
+T
+
+HE
+Next-Generation
+Communication
+Networks
+(NGCNs) are increasingly integrating machine learning
+
+Received 27 July 2025; revised 5 December 2025; accepted 24 January
+2026. Date of publication 3 February 2026; date of current version 27 February
+2026. This work is supported in part by the Key Technology Research and
+Development Program of the Zhejiang Province under Grant 2022C01125, and
+in part by Zhejiang Province High-Level Talent Special Support ProgramLeading Talent of Technological Innovation under No. 2022R52043. The
+associate editor coordinating the review of this article and approving it
+for publication was K. Dev. (Corresponding authors: Guozhong Dong;
+Chunyu Miao.)
+Liang Kou, Xiaochen Pan, and Jilin Zhang are with the College of
+Cyberspace, Hangzhou Dianzi University, Hangzhou 310005, China (e-mail:
+kouliang@hdu.edu.cn; 232270065@hdu.edu.cn; jilin.zhang@hdu.edu.cn).
+Guozhong Dong is with the Department of New Networks, Peng Cheng
+Laboratory, Shenzhen 518066, China (e-mail: donggzh@pcl.ac.cn).
+Meiyu Wang is with the College of Communication Engineering,
+Hangzhou Dianzi University, Hangzhou 310005, China (e-mail: wangmeiyu@
+hdu.edu.cn).
+Chunyu
+Miao
+and
+Pingxia
+Duan
+are
+with
+Hangzhou
+DBAPPSecurity Company Ltd., Hangzhou 310051, China (e-mail:
+crain.miao@dbappsecurity.com.cn; 409821331@qq.com).
+Digital Object Identifier 10.1109/TNSM.2026.3660650
+
+and artificial intelligence to enable automated decisionmaking and deliver high-quality services in domains such as
+personalized recommendation, autonomous driving, financial
+technology, healthcare, Industry 5.0, and the metaverse.
+However, within this AI–network collaboration architecture,
+APT—characterized by high stealth, extended latency, and
+multi-stage penetration—represents critical security risks
+to communication systems. Specifically, APT can tamper
+with control instructions in Industry 5.0 production lines,
+causing manufacturing failures, forge identity credentials
+during metaverse interactions, leading to privacy breaches,
+or inject falsified perception data, triggering vehicle–network
+malfunctions in autonomous driving. By sustaining long-term
+covert control over service components and implanting
+malware, these attacks not only disrupt service continuity
+but also undermine AI-driven decision-making through data
+manipulation and model poisoning or extraction, thereby
+jeopardizing user privacy and critical business operations.
+Furthermore, the dense connectivity of NGCNs complicates
+traditional Intrusion Detection Systems (IDSs), raising
+significant challenges in preserving data privacy while
+monitoring highly dynamic, large-scale network environments
+[1].
+NGCN’s elastic network slicing (e.g., creating or destroying
+5G slices for temporary large-scale events) and real-time
+AI model updates (e.g., online fine-tuning of traffic prediction models) lead to frequent topological changes—traditional
+static IDSs, which rely on pre-defined network topologies,
+require more than 20 minutes to reconfigure detection rules,
+missing the 5–10 minute window for APT initial infiltration.
+The cross-domain collaboration of NGCN (e.g., medical data
+transmission between hospitals via dedicated slices, and realtime data sharing between smart grids and energy management
+platforms) results in multi-hop attack paths (e.g., APTs infiltrate from a hospital’s IoT device, jump to the smart grid slice
+via cross-domain links, and finally tamper with power dispatch
+data)—conventional GNNs with fixed 2-hop aggregation fail to
+capture these long-range dependencies, leading to much higher
+rate of missed detections in actual tests.
+Existing IDSs exhibit low detection efficiency and poor
+adaptability to the complex topologies of NGCNs [2].
+Process-level monitoring introduces operational redundancy
+and significant performance overhead in dynamic environments, while reliance on system audit logs impairs the
+
+1932-4537 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+KOU et al.: DAA AND FPN ENHANCED GraphSAGE FOR APT DETECTION
+
+correlation of long-span attack events. Likewise, mainstream
+attack provenance graph solutions are insufficient: DeepHunter
+[3] incurs prohibitive computational cost on large-scale graphs;
+UNICORN’s [4] dependence on an initially trained benign
+model limits its generalization to novel threats; and ThreatTrace [5] lacks in-depth modeling of network behaviors.
+As a result, these approaches are unable to accommodate
+the multi-domain “network–compute–application” collaboration characteristic of NGCNs or to capture the multi-scale
+structural dependencies arising from AI-model–network interactions, such as model training data flows and network slice
+resource scheduling chains.
+Inspiration from the multi-scale feature pyramid structures in computer vision—which extract hierarchical representations at varying resolutions to capture multi-scale
+information—offers a promising breakthrough for graph-based
+modeling [6]. When translated to graph learning, architectures
+such as graph feature pyramid networks have demonstrated the
+effectiveness of hierarchical representations in resolving multiscale structural dependencies in graph data. This paradigm
+aligns naturally with the characteristics of NGCNs, which
+involve multi-granularity network slice scheduling, multi-level
+AI model interactions, and cross-domain dynamic data flows.
+In such contexts, multi-scale features enable structural analysis ranging from fine-grained device-level interactions, to
+medium-grained slice orchestration, and up to coarse-grained
+cross-domain business collaboration. Concurrently, dynamic
+graph adaptive aggregation mechanisms can accommodate
+real-time topology changes by adaptively adjusting node
+neighbor sampling and feature aggregation strategies [7]. The
+integration of these techniques establishes a robust foundation
+for tracing the multi-stage penetration paths of APTs—such
+as terminal intrusions, model contamination, and business
+disruption—within complex communication systems.
+Building upon these insights, we propose the Dynamic
+Adaptive Aggregation with Feature Pyramid Network for
+GraphSAGE (DAA-FPN-SAGE), a novel framework tailored for APT detection in NGCNs. This approach leverages GraphSAGE’s inductive learning capability to generate
+embeddings for previously unseen nodes or subgraphs, allowing adaptation to dynamic NGCN environments such as
+elastic network slicing and online AI model updates. To
+enhance adaptability and precision, we introduce a dynamic
+attention mechanism that adaptively aggregates neighbor features based on node importance and contextual semantics
+(e.g., data transmission links, model inference pathways).
+This enables the accurate modeling of long-range dependencies inherent in cross-domain, multi-stage attack chains.
+Additionally, a multi-scale feature pyramid is constructed
+to concurrently extract features at varying granularities:
+fine-grained device-level interactions, medium-grained slice
+scheduling, and coarse-grained cross-domain business collaborations [8]. This hierarchical representation significantly
+enriches the expressiveness of APT modeling by capturing
+their complex and staged penetration behaviors. By integrating
+dynamic graph aggregation with multi-scale hierarchical representations, DAA-FPN-SAGE establishes a scenario-aware
+APT detection framework that strengthens security across
+both communication infrastructures and AI model workflows,
+
+2713
+
+thereby ensuring the trustworthy operation of intelligent network systems.
+The main contributions of this paper are summarized
+as follows:
+• We propose a novel dynamic aggregation framework that
+adaptively adjusts neighbor aggregation weights based on
+node importance and contextual semantics. By incorporating a dynamic hop selection mechanism and cross-hop
+attention-based weight allocation, the model overcomes
+the fixed-hop limitation of conventional GraphSAGE,
+enabling more effective modeling of long-range dependencies in multi-stage attack chains.
+• A hierarchical feature pyramid structure is designed to
+represent system behaviors across three granularity levels:
+local (1-hop), mid-range (2–3 hops), and global (graphlevel). The pyramid integrates diverse structural features,
+including node degree, K-core hierarchy, and Laplacian
+positional encodings, facilitating hierarchical aggregation
+that enhances the representation of APTs’ multi-stage
+characteristics. An adaptive gating network dynamically
+fuses multi-scale features while addressing dimensional
+inconsistency issues.
+• The proposed framework seamlessly combines the
+dynamic aggregation module with the multi-scale feature
+pyramid into a unified inductive learning architecture. Extensive experiments on StreamSpot, Unicorn,
+and DARPA datasets demonstrate notable performance
+improvements. Ablation studies validate the individual
+and joint effectiveness of each model component, offering
+valuable insights and new methodologies for APT detection in complex network environments.
+The rest of the paper is organized as follows. Section II
+reviews related work on APT detection methods based on
+provenance graphs, multi-scale feature pyramid technology,
+and cross-research. In Section III, we elaborate on the
+technical preliminaries of APT detection, including problem
+definition, theoretical foundations of multi-scale feature modeling, and analysis of technical challenges. The proposed
+DAA-FPN-SAGE model is detailed in Section IV, covering
+its overall architecture, dynamic graph preprocessing, adaptive aggregation module, multi-scale feature pyramid, and
+anomaly detection framework. Section V presents experimental evaluations on public datasets, including performance
+comparisons, ablation studies, and computational complexity
+analysis. Finally, Section VI concludes the paper with a summary of contributions and outlines future research directions
+for dynamic modeling, lightweight optimization, and semantic
+attack chain reconstruction in NGCN environments.
+II. R ELATED W ORK
+A. APT Detection Methods Based on Provenance Graphs
+Provenance graphs model system entity interactions as
+directed acyclic graphs (DAGs), serving as a core technology
+for capturing the dynamic characteristics of advanced persistent threat (APT) attack chains. Existing research focuses
+on graph-structured feature extraction and anomaly detection,
+forming differentiated technical approaches:
+
+2714
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Log2vec [9] constructs heterogeneous graphs and utilizes
+graph embedding to extract log vectors, effectively capturing
+complex log correlation relationships. However, it suffers from
+high computational complexity and strong dependence on log
+integrity. Holmes [10] proposes a High-level Scenario Graph
+(HSG) to model attack information flow correlation, mapping
+APT activities to the kill chain. Yet, it struggles to detect lowspeed penetration attacks due to feature detection blind spots
+inherent in such scenarios.
+Unicorn [4] employs the Weisfeiler–Lehman kernel to
+extract graph structural features and detects abnormal patterns through an evolutionary learning model. Nevertheless, it
+requires frequent retraining and demonstrates limited robustness to dynamic variations in normal behavior. StreamSpot
+[11] designs a temporal graph similarity function to maintain
+sketches of benign models, but its similarity computation
+exhibits high time complexity for large-scale graphs, hindering
+practical deployment.
+ThreatTrace [5] builds an inductive detection framework
+based on GraphSAGE, identifying anomalous nodes by aggregating features from their neighbors. However, its fixed
+aggregation strategy results in the loss of fine-grained relational information between nodes—a problem addressed by
+our proposed Dynamic Adaptive Aggregation (DAA) mechanism: through cross-hop attention weight allocation, DAA
+assigns differentiated weights to neighbors based on their
+contextual relevance to attack semantics (e.g., prioritizing
+abnormal API features of malicious processes), while adaptive
+hop selection avoids fine-grained information omission caused
+by fixed hops. IPG [12] proposes a hierarchical detection
+framework using meta-path aggregated graph neural networks,
+covering the full lifecycle of APTs, yet it faces challenges
+from the computational overhead incurred by multi-graph
+fusion and fails to explicitly construct a multi-scale feature
+hierarchy—our Multi-Scale Feature Pyramid Merging Module
+(MSFPM) compensates for this deficiency: it divides features
+into local, mid-range, and global granularities to capture multiscale attack correlations, while an adaptive gating network
+dynamically fuses these features, avoiding the high overhead
+of multi-graph fusion in IPG. ProvDetector [13] combines
+neural embedding and path selection algorithms to identify
+malicious paths in provenance graphs, but it performs poorly
+in the presence of behavior obfuscation or structural path
+mutations. ATLAS [14] abstracts attack events into sequence
+models, but struggles to capture the global dependencies across
+highly heterogeneous attack chains.
+B. Multi-Scale Feature Pyramid Technology
+Feature pyramid architectures, which fuse semantic information at different granularities, serve as a critical bridge
+between micro-level anomalies and macro-level attack patterns. Classical approaches from computer vision offer
+valuable inspiration for graph-structured modeling.
+Feature Pyramid Networks (FPN) achieves high-level
+semantic and low-level detail fusion via a top-down path,
+significantly improving small object detection performance.
+Path Aggregation Network (PANet) [15] enhances bidirectional cross-layer feature flow; its multi-scale feature fusion
+
+philosophy is well suited to hierarchical modeling in graph
+structures.
+In graph domains, recent studies have explored constructing
+hierarchical representations by aggregating neighbor features
+across different hop distances (e.g., 1-hop at the bottom layer
+and 3-hop at the top) using multi-layer GNNs. However,
+fixed-hop aggregation strategies fail to adapt to variations in
+local node structures. Some approaches integrate structural
+features such as node degree and K-core index with semantic
+attributes, yet lack systematic frameworks for scale division.
+A representative example is IPG, which aggregates edgetype-specific features via meta-paths, but can not explicitly
+construct a multi-scale feature hierarchy, limiting its semantic
+expressiveness for modeling complex attack patterns.
+Pyramid Graph Neural Network (PGNN) [16] integrates
+graph sampling and filtering to decompose graph signals into
+low-frequency (global topology) and high-frequency (local
+interactions) components, constructing a lightweight feature
+pyramid via hierarchical sampling. It achieves significant
+F1-score improvements over traditional GNNs in social network anomaly detection, yet relies on static graph Laplacian
+matrices—making it incompatible with NGCN’s elastic slice
+creation/destruction and lacking temporal awareness for timefragmented APT attacks (e.g., cross-day file tampering).
+Multi-Scale Contrastive Learning Networks (gradate)
+[8] enhances anomaly discrimination via “original graphaugmented graph” dual views, designing subgraph-subgraph
+and node-subgraph contrastive losses to align multi-scale
+representations. It achieves notable F1-score gains on benchmarks like YelpChi, but its fixed-rate edge perturbation cannot
+adapt to NGCN’s abrupt topology changes (e.g., abrupt edge
+density fluctuations during slice scaling), and it only supports
+single-modal homogeneous graphs—failing to model NGCN’s
+cross-domain heterogeneous features (e.g., AI model gradients, network traffic, and application instructions).
+C. Cross-Research
+In recent years, a few studies have introduced multi-scale
+feature concepts into provenance graph analysis, forming the
+emerging cross-disciplinary directions.
+Wang et al. [17] proposes a multi-layer GNN architecture
+that extracts hierarchical features across three levels—local
+interactions, subgraph structures, and global topology—for
+malware family classification. However, its static feature
+aggregation mechanism fails to capture the dynamic evolution
+of attack chains.
+Li et al. [18] develops a graph pyramid model based
+on K-core decomposition, recursively partitioning provenance
+graphs into subgraphs at different scales to detect APTs via
+cross-layer anomaly correlation. Nonetheless, the computational complexity grows exponentially with the number of
+layers, limiting its scalability.
+Xu et al. [19] introduces a Jump-Knowledge Connection
+mechanism to fuse node representations across layers, achieving a 6%–10% improvement in detection accuracy on DARPA
+benchmark datasets. This demonstrates the strength of multiscale feature fusion in capturing complex attack semantics.
+Martinez [20] proposes an edge-based GNN approach for
+network intrusion detection, encoding bidirectional interaction
+
+KOU et al.: DAA AND FPN ENHANCED GraphSAGE FOR APT DETECTION
+
+information of network communications as edge features to
+identify intrusions via aggregating edge and neighbor node
+information. Nonetheless, it adopts a fixed 1-hop neighborhood aggregation strategy, failing to adapt to long-correlation
+scenarios of multi-device cascaded communications in industrial Internet and easily missing key correlation information of
+attack chains.
+Li et al. [21] proposes the FN-GNN model for network
+intrusion detection, representing network traffic as graphs
+where nodes denote key traffic features extracted by random
+forest regression and edges are constructed based on traffic
+relationships via source IP features, with its improved GCN
+integrating traditional GCN and SAGEConv to address limitations of previous GNNs. Nonetheless, it still adopts a static
+neighborhood aggregation mechanism, ignoring the dynamic
+evolution of attack behaviors and thus having limited capability in capturing the “multi-stage, long-cycle” correlation chains
+of APT attacks.
+Zhang et al. [22] proposes a GNN model for IoMT scenarios, converting image and video visual data into graph
+structures and extracting visual features at different resolutions via multi-scale graph convolution to enhance tasks like
+abnormal state recognition of medical devices. Nonetheless, it
+focuses on computer vision tasks rather than network anomaly
+detection and is designed for medical scenarios, making direct
+migration to industrial APT attack detection face scenario
+adaptability issues.
+In summary, existing GNN-related studies have explored
+effective ideas for network anomaly detection and crossdomain applications. However, for APT attack detection
+in industrial Internet, three core limitations remain: First,
+fixed neighborhood aggregation scope fails to adapt to
+long-correlation attack chains from multi-device cascaded
+communications; second, static aggregation mechanisms cannot capture the dynamic evolution of APT attacks; third,
+cross-domain technology migration faces adaptability barriers.
+To address these limitations, this study proposes a Dynamic
+Multi-hop Attention (DAA) mechanism and a Multi-scale
+Feature Pyramid Network (MSFPM).
+III. P RELIMINARIES
+In the complex cybersecurity environment, APT attack
+detection, as a critical component of cybersecurity protection,
+requires constructing a systematic analysis framework from
+multiple dimensions such as problem definition, theoretical
+support, and technical challenges. The following elaborates
+on this from three core dimensions.
+A. Problem Definition of APT Attack Detection
+APT attack detection in NGCN fundamentally presents a
+multi-scale dynamic graph anomaly identification problem.
+Given a provenance graph G = (V, E) formed by system
+entity interactions, where the node set V includes entities
+like processes, files, and hosts, and the edge set E represents operational relationships (e.g., “process reads file”),
+the detection objective is formally stated as: identify an
+abnormal subgraph S ⊆ G that satisfies attack lifecycle
+
+2715
+
+dependencies. This subgraph S consists of discrete attack steps
+across time and space, requiring both temporal correlation
+(e.g., the stage sequence “reconnaissance → infiltration →
+privilege escalation → disruption”) and topological correlation
+(e.g., communication paths for cross-host C2). Compared with
+traditional anomaly detection, APT detection in NGCN faces
+twofold unique challenges:
+• Temporal fragmentation attack: Temporally fragmented attacks caused by NGCN’s dynamic slicing: The
+dynamic creation and destruction of network slices in
+NGCN (with millisecond-level granularity) can split the
+temporal continuity of APT attack chains. For instance,
+attackers may implant malicious code during the lifecycle
+of one network slice, and trigger subsequent attack steps
+through residual cross-slice data links after the slice is
+destroyed and a new slice is created, resulting in attack
+step intervals that may exceed traditional detection thresholds (e.g., 72-hour intervals), which breaks the long-range
+temporal dependencies of attack chains.
+• Cross-scale spatial coupling: Cross-scale spatial coupling due to NGCN’s multi-domain hierarchy: APT attack
+chains in NGCN involve multi-level entity interactions
+across the “edge-core-cross-domain” hierarchy of NGCN,
+including low-level edge device interactions (e.g., API
+call sequences of IoT terminals), mid-level intra-slice
+interaction chains (e.g., “process-user” dependency subgraphs for privilege escalation within a core network
+slice), and high-level cross-domain topologies (e.g., crosscloud C2 communication topologies based on VPN).
+Traditional single-scale detection models struggle to capture such inter-granularity correlation, making it difficult
+to fully characterize the multi-stage penetration process
+of APTs.
+B. Theoretical Foundations of Multi-Scale Feature Modeling
+To address the cross-scale coupling challenge above, Feature
+Pyramid Network (FPN) in computer vision provide a solution
+through hierarchical feature fusion. Their bidirectional pathway mechanism (bottom-up multi-resolution feature extraction
++ top-down semantic-detail fusion) effectively solves smallobject detection, which highly aligns with the detection needs
+of fine-grained APT steps (e.g., individual malicious function
+calls) — requiring both local detail capture and global semantic association. Take process injection detection as an example:
+• Low-level features capture API anomalies like unauthorized memory access (corresponding to pixel-level details
+in FPN),
+• High-level features map to communication topologies
+like vtarget → vjump → vC2 (corresponding to high-level
+semantic classification in FPN).
+To quantify cross-scale features, graph signal processing
+(GSP) theory is introduced [23]. The multi-scale structure of
+a graph is characterized by the eigenvalue decomposition of
+the graph Laplacian matrix:
+L = I − D−1/2 AD−1/2
+
+(1)
+
+where I is the identity matrix, D is the degree matrix, and A
+is the adjacency matrix. This decomposition defines:
+
+2716
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+• Local scale (1-2 hop neighbors): Large eigenvalues (>10) of L characterize fine-grained interaction
+details,(e.g., file operation edges of process), which
+precisely map to early-stage APT behaviors such as
+terminal-side malicious API calls and local process
+injection—enabling fine-grained tracing of attack origins.
+• Mesoscale (k-core subgraphs): Formed by iteratively
+removing nodes with degree < k, capturing dense intrahost interaction regions (e.g., process-user subgraphs for
+privilege escalation) that align with mid-stage APT privilege escalation via multi-process collaboration or system
+service hijacking.
+• Global scale (cross-host topologies): Small eigenvalues
+(<1) of L characterize graph connectivity, e.g., VPNbased host communication topologies (e.g., VPN-based
+host communication topologies), directly corresponding
+to late-stage APT behaviors like cross-domain C2 communication and multi-slice data exfiltration—supporting
+end-to-end attack chain forensics.
+
+C. Analysis of Technical Challenges
+Applying the multi-scale theory to traditional GraphSAGE
+models reveals limitations in their fixed aggregation function:
+1
+
+0
+hlv = σ @
+
+1
+|N(v)|
+
+X
+
+l l−1 A
+W l hl−1
+u + W0 hv
+
+(2)
+
+u∈N(v)
+
+where hlv denotes the feature vector of node v at the l-th layer;
+σ(·) is the activation function; |N(v)| is the cardinality of the
+1-hop neighbor set of node v; W l and W0l are trainable weight
+matrices for neighbor feature aggregation and self-feature
+transformation at layer l, respectively; hl−1
+u is the feature vector
+of neighbor node u at the (l−1)-th layer; hl−1
+v is the self-feature
+vector of node v at the (l − 1)-th layer. This mechanism has
+two key flaws:
+• Feature dilution: When neighbor sets mix malicious and
+benign processes, fixed weights violate the fine-grained
+representation requirement of local scales, averaging out
+abnormal API features.
+• Long-range dependency loss: Fixed-hop aggregation
+(e.g., 2-hop limits) cannot capture cross-host long-range
+dependencies, contradicting the global connectivity theory characterized by small Laplacian eigenvalues (e.g.,
+3-hop C2 communication via jump hosts is ignored).
+The direct fusion of multi-scale features faces challenges of
+dimension mismatch and semantic conflicts: Low-level highdimensional sparse features (e.g., one-hot encoded API calls,
+dlow ≈ 103 ) and high-level low-dimensional dense features
+(e.g., graph Laplacian eigenvectors, dhigh ≈ 10)—direct concatenation submerges high-level semantics in low-level noise.
+The scale importance of nodes evolves over APT attack stages
+(e.g., reconnaissance nodes requiring local-scale analysis in the
+early stage vs. exfiltration hubs needing global-scale analysis
+in later stages), while traditional static pyramid models cannot
+respond to such time-varying demands.
+
+IV. M ODEL
+A. Overall Architecture
+In this section, we elaborate on the overall architectural
+design of DAA-FPN-SAGE. The framework adopts a hierarchical modular design, comprising four core components:
+the Dynamic Graph Data Preprocessing Module, Dynamic
+Adaptive Aggregation Module (DAA), Multi-Scale Feature
+Pyramid Merging Module (MSFPM), and Anomaly Detection
+Framework (ADF). The overall architecture is shown in Fig. 1.
+Specifically, the Dynamic Graph Data Preprocessing Module generates timeline provenance graphs based on the
+Camflow tool [24], completing entity modeling, unique identifier allocation, and time series standardization to provide
+structured heterogeneous graph data for subsequent analysis. The Dynamic Adaptive Aggregation Module breaks
+through the limitations of traditional GraphSAGE’s fixed-hop
+aggregation through the collaboration of cross-hop attention
+and dynamic hop decision mechanisms, achieving adaptive
+semantic extraction of node local topologies. The Multi-Scale
+Feature Pyramid Merging Module constructs a three-level
+feature system of “local-medium-global”, capturing interaction
+patterns of attack behaviors at different granularities through
+feature space decoupling and hierarchical aggregation. The
+anomaly detection module integrates multi-source, multi-scale
+features and combines a dynamic adaptive multi-hop attention mechanism with contrastive learning [25]. It achieves
+three-dimensional feature representations—from local interactions to global semantics, and from structural features
+to temporal attributes—enabling precise quantification and
+efficient scoring of node anomaly levels. Through sparse
+preprocessing, parameter sharing, and a hierarchical detection
+pipeline strategy, the module significantly improves real-time
+inference efficiency for large-scale systems while maintaining
+detection accuracy. Furthermore, by incorporating multi-model
+ensemble inference, the algorithm’s robustness is enhanced,
+ultimately enabling precise detection of multi-stage, multi-path
+APT attacks [26].
+The Dynamic Graph Data Preprocessing Module takes
+system audit logs as input and outputs three types of structured
+data: a temporal heterogeneous graph, a 64-dimensional initial
+node feature matrix (attributes of process, file, and network
+connection nodes are unified into 64 dimensions through
+differentiated encoding), and 32-dimensional edge features
+(including information such as interaction type, standardized
+time, and interaction intensity). This provides a structured
+data foundation for subsequent modules. The DAA Module
+receives the 64-dimensional node features and the temporal
+heterogeneous graph output by the aforementioned preprocessing module. It maps the 64-dimensional node features to 256
+dimensions via a feature transformation matrix and outputs
+256-dimensional adaptive aggregation features. The MSFPM
+takes the 256-dimensional aggregation features from the DAA
+Module as input. It constructs multi-scale features, compresses
+redundant dimensions through convolution, and then outputs
+256-dimensional fused features.The ADF Module integrates
+the 256-dimensional fused features from the MSFPM, the
+256-dimensional aggregation features from the DAA Module,
+
+KOU et al.: DAA AND FPN ENHANCED GraphSAGE FOR APT DETECTION
+
+2717
+
+Fig. 1. Overall framework of DAA-FPN-SAGE. ¬dynamic graph data preprocessing module.­dynamic adaptive aggregation module.®Multi-scale feature
+pyramid module.¯Anomaly detection framework.
+
+and the 32-dimensional edge features from the preprocessing
+module. After concatenating these three types of features, it
+maps them via a Multi-Layer Perceptron (MLP) and outputs
+node anomaly scores within the range [0,1].
+To avoid cross-module semantic conflicts, our solutions
+are as follows: In the preprocessing stage, a “hierarchical
+attribute encoding and type identification” approach is adopted
+to establish a clear semantic foundation for nodes and edges,
+preventing semantic confusion between different entities; the
+feature transformation matrix of the DAA Module preserves
+the semantics of core node attributes during dimension mapping, and the multi-hop attention mechanism distinguishes
+the semantics of neighbor structural distances through hop
+positional encoding, avoiding the loss of semantics related
+to long-range dependencies; the MSFPM Module unifies
+multi-scale features into the same semantic space using
+dimension-matching matrices and retains the original aggregated semantics transmitted by the DAA Module through
+residual connections, preventing semantic deviation caused
+by fusion; the ADF Module preserves the semantics of edge
+features via residual connections, aligns the semantic distribution of features from the DAA and MSFPM using contrastive
+learning, and finally maps multi-source features uniformly to
+the “anomaly probability” space through the MLP, ensuring
+cross-module semantic consistency.
+The four modules realize seamless connection of data
+flows through standardized interfaces, forming a closed-loop
+processing flow from data modeling, and feature learning to
+anomaly decision-making, which significantly improves the
+model’s detection efficiency for the concealed attack patterns
+in dynamic graph data.
+B. Dynamic Graph Data Preprocessing Module
+This module constructs a system-level temporal provenance
+graph based on Camflow tools, transforming audit logs into
+structured heterogeneous graph data through a three-layer
+pipeline: entity modeling and type annotation, edge structure
+
+extraction and temporal attribute modeling, and graph structure
+cleaning and index allocation.
+• Entity Modeling and Type Annotation: Entities such
+as processes and files are extracted from audit logs,
+unique identifiers (UIDs) are assigned, and node types are
+annotated. Node types are encoded via integer indexing
+(e.g., process→ 0, file→ 1, network connections→ 2),
+forming an initial node feature matrix X ∈ RN×d0 (where
+d0 = 64, a fixed dimension to match the input requirement
+of the subsequent DAA mechanism). For specific node
+attributes: process nodes include 12 core features (e.g.,
+PID, parent PID, command line, startup time, permission)
+encoded via One-Hot (for discrete attributes like PID)
+and Min-Max normalization (for continuous attributes
+like startup time), accounting for 36 dimensions; file
+nodes cover attributes such as path, type and permission,
+encoded into 22 dimensions; network connection nodes
+include IPs, ports, and protocols, encoded into 6 dimensions. The remaining 6 dimensions consist of node type
+identifiers (1-hot) and reserved dimensions, ensuring all
+node feature vectors are unified to 64 dimensions.
+• Edge Structure Extraction and Temporal Attribute
+Modeling: Edges characterize interactions between entities (e.g., process-file reading or writing, process-network
+connection initiation), recording interaction types, absolute timestamps, behavioral features (e.g., file reading or
+writing byte count, network packet volume), and forming
+a fixed 32-dimensional edge feature vector. Among these,
+interaction types are encoded via 8-dimensional One-Hot;
+temporal attributes are standardized by converting absolute timestamps to relative time t0 = t − tmin .(occupying 2
+normalized dimensions); interaction intensity (e.g., data
+transmission volume) is normalized into 2 dimensions;
+and the remaining 20 dimensions are reserved for verification to adapt to the input format of graph convolution
+layers.
+• Graph Structure Cleaning and Index Allocation:
+For the same node pair, only the earliest occurrence
+
+2718
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+of the same-type edge is retained; different-type edges
+are merged into composite edges to reduce redundancy.
+Global unique indices are assigned to nodes and edges,
+generating a temporal heterogeneous graph G. To meet
+the real-time requirements of “millisecond-level NGCN
+network slice operations” and “instant APT attacks” (e.g.,
+process injection completed within 10 ms, cross-slice data
+leakage within 50 ms), the graph adopts an event-driven
+incremental update mode: updates are triggered immediately upon detecting new node generation (e.g., new
+process creation) or edge interaction (e.g., file reading)
+from Camflow’s real-time log stream (output frequency:
+1 ms/log entry). Only new nodes or edges are added to the
+existing graph, and dynamic attributes of existing nodes
+(e.g., the latest process’s interaction time) are updated
+only in corresponding feature dimensions, avoiding time
+consumption from full-graph reconstruction.
+
+where H is the total number of attention heads, K is the
+number of hop layers, βh,k are learnable weights, and σ(·) is
+the non-linear activation function.
+2) Dynamic Hop Decision Mechanism: To address the
+information redundancy and loss in fixed-hop aggregation,
+this mechanism designs a dynamic hop decision mechanism,
+quantifying feature reliability via attention distribution entropy
+[29] and adaptively selecting optimal hops through a gating
+network.
+To determine the optimal aggregation hop, we first quantify
+the semantic consistency of k-hop neighbors via attention distribution entropy. Entropy is minimized when attention weights
+concentrate on attack-related neighbors—this indicates the khop range contains the most consistent attack semantics with
+the node, avoiding irrelevant feature redundancy. The entropy
+calculation formula for attention distribution is as follows:
+X
+(h,k)
+Hv (k) = −
+α(h,k)
+(6)
+v,u log(αv,u )
+u∈Nk (v)
+
+C. Dynamic Adaptive Aggregation Module
+The Dynamic Adaptive Aggregation Module is a core
+component of DAA-FPN-SAGE, designed to address the
+limitations of traditional GraphSAGE’s fixed-hop aggregation
+and enable adaptive modeling of local structures for different
+nodes.
+1) Multi-Hop Attention Mechanism: This mechanism models multi-hop neighbor dependencies through multi-head
+attention [27], assigning differentiable learnable weights to
+neighbors at different hops for hierarchical aggregation of
+multi-hop information. The attention weight calculation formula is as follows:
+
+
+exp LeakyReLU aTh Whk hv kWhk hu kpk
+(h,k)
+ k
+
+αv,u = P
+k
+T
+u0 ∈Nk (v) exp LeakyReLU ah Wh hv kWh hu0 kpk
+(3)
+where Nk (v) denotes the set of k-hop neighbors of node v,
+hv and hu are the feature vectors of nodes v and u, Whk is
+the feature transformation matrix for the h-th head at the k-th
+hop, k is the hop position encoding [28], and ah is the attention
+parameter vector for the h-th head.
+Specifically, for the k-hop neighbors, we introduce a hopwise positional encoding pk to distinguish the structural
+distances of neighbors during aggregation. The encoding is
+defined as:
+pk = sin
+
+
+
+k
+100002i/d p
+
+
+
+
++ cos
+
+k
+100002i/d p
+
+
+
+, i = 0, 1, . . .,
+
+dp
+− 1,
+2
+
+(4)
+where d p denotes the dimension of the positional encoding.
+This design enhances the model’s capability to capture hierarchical topological dependencies across multiple hops, enabling
+the DAA module to adaptively distinguish the contribution of
+near and distant neighbors in dynamic network environments.
+Based on the attention weights, each attention head independently aggregates features of neighbors at the corresponding
+hop, and then fuses information from multiple heads and hops
+through a weighted summation mechanism. The aggregation
+feature calculation formula is expressd as:
+
+X
+X H X Kv
+k
+hagg
+=
+βh,k · σ
+α(h,k)
+(5)
+v,u · Wh hu
+v
+h=1
+
+k=1
+
+u∈Nk (v)
+
+The gating network then takes this as the core objective,
+with a regularization term to prevent information loss from
+excessively small k-hop ranges. The final objective balances feature validity (entropy minimization) and information
+integrity (regularization), theoretically corresponding to the
+optimal aggregation range that maximizes attack feature retention while minimizing noise.
+The optimal hop selection formula via the gating network
+is as follows:
+Kv = argmink (Hv (k) + λ · [k > Kmin ])
+
+(7)
+
+where λ is the regularization parameter (set to 0.2 in experiments), and Kmin is the minimum hop threshold.
+D. Multi-Scale Feature Pyramid Module
+Aiming at the limitations of traditional Graph Neural Networks (GNNs) in modeling multi-granularity features for
+APT attack detection, the Multi-Scale Feature Pyramid Module (MSFPM) constructs a multi-dimensional feature system
+through feature space decoupling and hierarchical semantic
+modeling, enabling cross-scale correlation capture of attack
+patterns.
+1) Local Feature Layer: Corresponding to the bottom layer
+of the pyramid, this layer focuses on fine-grained interactions
+within the one-hop neighborhood, capturing direct interaction
+anomalies by using GraphSAGE to aggregate features from
+one-hop neighbors:
+Flocal = Aggregate({hu |u ∈ N1 (v)})
+
+(8)
+
+2) Mid-Range Feature Layer: This layer aggregates features of 2-3 hop neighbors, introducing multi-head attention to
+calculate weights for 2-3 hop neighbors, with attention weight
+calculation reusing Eq. 3. The mid-range scale aggregation
+formula is as follows:
+X
+
+XH X3
+Fmid−range =
+βh,k · σ
+α(h,k)
+· Whk hu
+v,u
+h=1
+k=2
+u∈Nk (v)
+(9)
+
+KOU et al.: DAA AND FPN ENHANCED GraphSAGE FOR APT DETECTION
+
+3) Global Feature Layer: Global-level features are generated through global average pooling, extracting macroscopic
+features covering global topology and overall semantics:
+1 X
+hv
+(10)
+Fglobal =
+v∈V
+|V|
+where |V| denotes the total number of nodes in the graph,
+and hv represents the feature vector of node v. The pooling
+operation averages the features of all nodes in the graph to
+extract macro-level features that encompass global topology
+and overall semantics.
+4) Adaptive Gating Network: After obtaining the “localmid-range-global” three-level pyramid-structured features, to
+address the limitations of fixed-weight fusion, this paper proposes an adaptive gating network architecture to dynamically
+weight multi-scale features. The architecture computes the
+contribution of each scale in real-time based on the local
+node structure and attack semantics. By sharing parameters
+and reducing dimensions, it balances model expressiveness
+and computational complexity. Residual connections [30] are
+used to retain original feature information, resulting in the final
+feature representation.
+The gating network first projects features of different scales
+into a common semantic space using dimension-matching
+matrices, and then applies the Softmax function to compute
+normalized weights:
+ 
+[αlocal , αmid , αglobal ] = Softmax wTs Wl Flocal
+
+× k Wm Fmid-range k Wg Fglobal
+(11)
+where Wl , Wm , and Wg are dimension-matching weight matrices that project features from each scale into a common
+semantic space; α is the output weight vector used to compute
+the importance scalar of each scale. Based on the normalized
+weights, the three-level features are fused via weighted summation. The feature fusion is computed as follows:
+Ffusion = αlocal Flocal + αmid Fmid-range + αglobal Fglobal
+
+(12)
+
+To avoid dimensional explosion caused by multi-scale feature concatenation, a 1 × 1 convolutional layer is introduced
+to compress feature dimensions and lightweight the model.
+Meanwhile, residual connections are designed to retain the
+original information from the base feature layer, including
+node attributes, timestamps, etc., which enhances the model’s
+ability to identify fine-grained attack behaviors. Through the
+above steps, the final feature representation is obtained:
+Ffinal = Conv1D (Ffusion , 256) + Conv1D (Fraw )
+
+(13)
+
+Fraw ∈ RN×d denotes the raw node feature matrix
+extracted from original graph attributes, which serves as
+the base representation for multi-scale feature generation
+in the MSFPM module. The multi-scale feature pyramid
+complements each other at different scales: local features
+locate specific anomalies, mid-range features bridge crosslayer dependencies, and global features reveal topological
+influences, enabling multi-dimensional descriptions of APT
+attacks. The gating network dynamically adjusts the weights
+of multi-scale features (instead of static allocation) based on
+
+2719
+
+the local node structure (e.g., whether it is an attack core)
+and attack semantics, precisely adapting to the multi-scale
+correlations of complex attacks. The 1 × 1 convolution for
+dimensionality reduction and residual connections enhance
+feature representation while avoiding dimensional redundancy,
+balancing computational efficiency and model capacity to meet
+the real-time requirements of scenarios such as APT attack
+detection. This mechanism provides a multi-scale, adaptive,
+and lightweight feature modeling solution for graph neural
+networks, facilitating the accurate identification of hierarchical
+patterns in attack behaviors.
+E. Anomaly Detection Framework
+As the core decision-making unit of DAA-FPN-SAGE, the
+anomaly detection framework relies on the temporal heterogeneous graph structure, multi-hop semantic features, and
+cross-scale feature representations constructed by the frontend module to build a three-dimensional detection system
+covering micro-level anomaly scoring to macro-level attack
+chain reconstruction. As shown in Fig. 2, through four core
+mechanisms: multi-dimensional feature coupling modeling,
+dynamic anomaly quantification, detection efficiency optimization, and multi-model ensemble reasoning, the framework
+achieves the precise and efficient APT detection with the
+following specific functions:
+• Multi-dimensional Feature Coupling Modeling: Node
+attributes, local interactions, global topology, and temporal dynamic features are integrated to characterize
+cross-scale behavioral patterns of APT attacks.
+• Dynamic Anomaly Quantification: An adaptive gating mechanism and contrastive learning framework is
+designed to accurately score the anomaly degree of nodes.
+• Detection Efficiency Optimization: Model expressiveness and real-time requirements of large-scale systems
+are balanced through sparse computation [31], parameter
+sharing, and hierarchical detection pipelines.
+• Multi-model Ensemble Reasoning: Multiple sub-models
+are introduced for independent training and their outputs
+are dynamically weighted to form the final model [26],
+enhancing the robustness of the detection algorithm.
+This framework integrates multi-source features output
+by the front-end module, fuses features from the dynamic
+adaptive aggregation module, and combines the three-level
+features from the multi-scale feature pyramid module through
+a dynamic gating mechanism. It also incorporates temporal
+context information. The input features include adaptively
+aggregated features with varying hops, fused features from the
+multi-scale feature pyramid, and temporal features. The fused
+feature representation is as follows:
+Fdetect = Concat(Ffinal , hv agg , et )
+
+(14)
+
+This approach achieves a three-dimensional representation
+from local interactions to global semantics, and from structural features to temporal attributes, adapting to the complex
+patterns of APT attacks that are “cross-node, cross-time, and
+multi-step”. As the input for anomaly scoring, it is mapped
+
+2720
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+to anomaly probabilities through a two-layer Multi-Layer
+Perceptron (MLP). The scoring formula is as follows:
+s (v) = σ(W2 · ReLU(W1 Fdetect + b1 ) + b2 )
+
+TABLE I
+C HARACTERISTICS OF THE S TREAMSPOT DATASET
+
+(15)
+
+where W1 and W2 are weight matrices, and σ(·) is the Sigmoid
+function. The first MLP layer performs linear transformation
+on features, the second MLP layer further transforms feature
+dimensions, and the Sigmoid function compresses the output
+to the range [0,1], corresponding to anomaly probabilities
+where a value close to 1 indicates high attack risk.
+To meet the real-time detection requirements of large-scale
+systems, this framework employs a three-tier efficient computation strategy to significantly improve inference efficiency
+without sacrificing accuracy:
+• Sparse Preprocessing: A pre-filtering threshold is introduced to trigger multi-scale feature fusion only for nodes
+where θ pre = 0.2. This “pre-screening and focusing
+on high-risk” approach reduces redundant computations.
+When the proportion of normal nodes is high, it can
+greatly reduce the overhead of multi-hop aggregation and
+cross-scale fusion, meeting the low-latency requirements
+of real-time detection.
+• Parameter Sharing Mechanism: The cross-scale gating
+network and the node scoring network share the weight
+matrices for dimensional transformation of underlying
+features to avoid redundant calculations. For attention
+parameters in mid-range and global scales, nodes of the
+same entity type (specifically categorized as process, file,
+and network connection, consistent with the node type
+definition in dynamic graph data preprocessing) share
+attention parameter matrices. For interactions between
+nodes of different entity types, predefined cross-type
+parameter matrices are employed. These parameter matrices are dynamically invoked via type indices, which
+not only reduces model parameters but also adapts to
+resource constraints in large-scale systems by leveraging
+the inherent semantic and interaction pattern differences
+across entity types.
+• Hierarchical Detection Pipeline: The pipeline firstly
+employs a primary filtering layer to rapidly exclude the
+majority of normal nodes based on single-hop features
+and rule matching (e.g., abnormal process-file type combinations). Subsequently, the deep analysis layer conducts
+multi-hop aggregation and multi-scale feature fusion only
+on high-risk nodes with scores s(v) > 0.5. This design
+enables efficient filtering of benign nodes and in-depth
+targeted analysis of suspicious ones, thereby enhancing
+overall inference efficiency while maintaining detection
+accuracy to meet the real-time requirements of critical
+information infrastructure.
+During the training phase, the proposed model employs a
+dynamic adaptive multi-hop attention mechanism to effectively
+integrate multi-scale neighborhood features. By minimizing
+the entropy of attention distributions, the model adaptively
+determines the optimal aggregation hop range, which is
+further enriched through a multi-scale feature pyramid that
+hierarchically fuses local intermediate and global structural
+information. The training objective function combines binary
+
+cross-entropy loss for node classification with contrastive
+loss to enhance the discriminative capacity of the learned
+embeddings. Model parameters are optimized in an end-toend manner using the Adam optimizer, with early stopping
+employed to mitigate overfitting.
+Subsequently, the learned node embeddings are fed into
+an ensemble classifier. The ensemble design prioritizes technical transparency and adaptability to anomaly detection
+scenarios: Base learners are selected for their complementary
+strengths, focusing on tree-based models (Random Forest
+and XGBoost) that excel at modeling nonlinear relationships
+in high-dimensional embeddings, mitigating overfitting, and
+resisting feature noise, with the final number of base learners
+determined by balancing performance saturation (where additional learners no longer improve results) and computational
+efficiency to avoid redundant complexity. For result aggregation, the ensemble adopts a weighted soft voting strategy:
+Weights are assigned based on each base learner’s comprehensive performance metric (prioritizing F-score, which balances
+precision and recall critical for anomaly detection) on the
+validation set, then normalized to sum to 1 to eliminate
+numerical bias. The final anomaly score for each node is
+calculated as the weighted sum of the abnormal probability
+outputs (rather than hard classification labels) from all base
+learners, with the score normalized to the [0,1] range to
+align with the threshold-based judgment logic of the overall
+anomaly detection framework. This design fully leverages the
+complementary advantages of different base learners while
+ensuring explicit, reproducible rules for weight assignment and
+aggregation. The comprehensive training workflow is detailed
+in Algorithm 1.
+V. E XPERIMENTS AND A NALYSIS
+We introduces the model framework of DAA-FPN-SAGE
+in section IV. This section conducts a series of experiments to
+evaluate its performance, and demonstrates the effectiveness
+and superiority of the proposed model through comparative
+experimental results. Firstly, this section describes the preparatory work before the experiments, including the environmental
+configuration of hardware and software devices, as well as
+the datasets used in the experiments. Subsequently, a series
+of experiments on the DAA-FPN-SAGE model and its optimization methods are carried out, and the experimental results
+are presented, specifically including comparisons with baseline
+models, ablation experiments, and hyperparameter sensitivity
+analysis. Finally, the analysis of the experimental results in
+this section is summarized.
+A. Environment and Setup
+The experimental setup comprises a hardware platform with
+a 12-core Intel CPU, 32GB RAM, and an NVIDIA RTX 4060
+
+KOU et al.: DAA AND FPN ENHANCED GraphSAGE FOR APT DETECTION
+
+Algorithm 1 Training Process of DAA-FPN-SAGE
+
+2721
+
+[4], ThreatTrace [5], ProDetector [13]), and GNN-improved
+methods (AJSAGE [19]). Details of each method and their
+performance comparisons are presented synchronously with
+the experimental results of the corresponding datasets.
+B. StreamSpot Dataset
+The StreamSpot dataset consists of 600 information flow
+graphs, generated from 6 distinct scenarios (100 runs per
+scenario). These scenarios include five benign activity contexts
+and one attack scenario. For each scenario, 100 repetitions
+were executed, and the Linux SystemTap logging system was
+used to capture the resulting graphs. Its statistical characteristics are summarized in Table I. Benign scenarios simulate
+typical legitimate user behaviors: checking Gmail, browsing
+CNN.com, downloading files, streaming YouTube contents,
+and playing video games. The attack scenario models a driveby download attack: a victim host accesses a malicious URL
+that exploits a Flash vulnerability, ultimately compromising
+the system and gaining unauthorized root access. For evaluation consistency, we adopt the same authentication strategy as
+the Unicorn method.
+The performance of the DAA-FPN-SAGE model on the
+StreamSpot dataset is summarized in Table IV. DAA-FPNSAGE achieves perfect scores across all critical metrics.In
+practical terms, DAA-FPN-SAGE reliably detects the drive-by
+download attack scenario while avoiding misclassifications of
+legitimate behaviors. This performance validates the model’s
+robustness on the StreamSpot dataset and highlights its potential to secure systems against real-world attack patterns with
+absolute precision.
+C. Unicorn SC-2 Dataset
+
+TABLE II
+C HARACTERISTICS OF THE U NICORN SC-2 DATASET
+
+TI 16G GPU, paired with a software framework including
+PyTorch 2.0 [32], Networkx [33], DGL 1.10 [34], Scikitlearn [35], and Torch geometric [36]. Key hyperparameters
+include a learning rate of 0.001, a weight decay of 5 × 10−4 ,
+an embedding dimension of 256, a Dropout rate of 0.2, a
+dynamic hop upper bound hmax = 5, and a gating regularization
+parameter λ = 0.2. The training strategy involves an 80%/20%
+split for training and testing, with each experiment repeated
+100 times to report average performance.
+This experiment uses 3 benchmark datasets in the field
+of APT detection: StreamSpot [11] (single-scenario drive-by
+download attack, Table I), Unicorn SC-2 [4] (wget/Shellshock
+attacks, Table II), and DARPA TC#3 (multi-stage crossdomain attacks, including Theia/Trace/Cadets/FiveDirections
+subscenarios, Table III). The comparative methods cover
+three categories: traditional log-based methods (Log2vec [9],
+LogRobust [37]), provenance graph-based methods (Unicorn
+
+The Unicorn SC-2 dataset simulates two Advanced Persistent Threat attack scenarios: the wget attack and the Shellshock
+attack. The main attack behaviors cover malicious software
+download, malicious payload execution, remote code execution, and system command injection attacks. Both benign and
+attack graphs include normal activities, with its characteristics
+presented in Table II. StreamSpot is not used in this comparison due to its inability to handle a large number of edges.
+We employ a 5-fold cross-validation approach [38]: 25 benign
+graphs and 25 attack graphs are selected from 150 graphs for
+testing, and the final experimental results are averaged over
+five validation rounds.
+As shown in Table V, the DAA-FPN-SAGE outperforms
+Unicorn, ProDetector [13], Threatrace [5], and AJSAGE
+across all metrics. This demonstrates the superior performance
+of the DAA-FPN-SAGE model in anomaly detection tasks.
+In terms of precision, the DAA-FPN-SAGE achieves 0.96
+on the SC-2 dataset, representing a 43% improvement over
+ProDetector (0.67), 5.5% over Threatrace (0.91), and 3.2%
+over AJSAGE (0.93), while Unicorn only reaches 0.75. This
+result indicates that the DAA-FPN-SAGE can identify anomalous nodes with higher accuracy and effectively reduce false
+positives.
+Its F-Score reaches 0.97, a 24% increase over Unicorn
+(0.78) and surpassing Threatrace (0.93) and AJSAGE (0.94),
+
+2722
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+TABLE III
+C HARACTERISTICS OF THE DARPA TC#3 DATASET
+
+TABLE IV
+C OMPARISON OF D ETECTION P ERFORMANCE ON S TREAMSPOT DATASET
+
+TABLE V
+C OMPARISON OF D ETECTION P ERFORMANCE ON U NICORN DATASET
+
+highlighting an excellent balance between precision (0.96) and
+recall (0.97). The accuracy further improves to 0.97, a 3percentage-point increase over AJSAGE’s 0.94, validating the
+overall reliability of the model’s detection. For the detection
+of wget and Shellshock attacks on the Unicorn SC-2 dataset,
+the false positive rate (FPR= 0.036) of the DAA-FPN-SAGE
+is 64% lower than that of ThreatTrace (0.100) and 50%
+lower than that of AJSAGE (0.072). This is attributed to the
+“local - mid-range - global” feature dynamic fusion of the
+MSFPM module: The attacks in this dataset simultaneously
+include “local malicious API calls (1-hop)” and “global crossprocess download links (graph-level)”. The MSFPM balances
+the weights of these two types of features through an adaptive
+gating network (Equation 12), avoiding the misjudgment of
+normal APIs caused by ThreatTrace’s over-reliance on local
+neighbor features. At the same time, it should be noted that
+the model has 0.6 false negatives (FN), mainly because APT
+imitates rare legitimate wget commands of industrial control
+software to disguise malicious payloads. The DAA module
+assigns low weights to such low-frequency 1-hop neighbor
+features, failing to effectively capture local abnormal signals.
+
+different attack contexts. Its node and edge statistics are
+detailed in Table III.:
+
+D. DARPA TC#3 Dataset
+
+Testing these four statistical scenarios helps analyze the
+robustness and generality of the proposed model.
+As shown in Table VI, in four attack scenarios, the proposed
+DAA-FPN-SAGE significantly outperforms the comparative
+schemes: log-based detectors (Log2vec, LogRobust [37]), trajectory graph-based detector (Threatrace), and the baseline
+model AJSAGE. In terms of precision, its full-scenario precision generally exceeds that of comparative models, with
+an extremely low false positive rate, enabling precise differentiation between “real attacks” and “normal behaviors”. In
+comprehensive effectiveness, the full-scenario F-score leads
+
+This dataset is derived from the Transparent Computing
+Engagement 3 released by the Defense Advanced Research
+Projects Agency (DARPA) in 2019. Most current studies
+on Advanced Persistent Threat detection use datasets from
+DARPA’s Transparent Computing Engagement series. Experiments conducted on this dataset can validate the effectiveness
+of the proposed method, Thus this paper selects it as the source
+for generating provenance graph data. We have statistically
+analyzed the number of nodes and edges in the dataset. The
+scenarios Theia, Trace, Cadets, and Fivedirections represent
+
+• Theia scenario: Unauthorized access, malware implantation, data tampering, and system resource abuse are
+includes to simulate attacks where adversaries exploit
+unauthorized file access, memory modification and other
+techniques.
+• Trace scenario: System-call-level attacks (e.g., Rootkit
+installation, process injection and kernel-level malware
+usage) are involved to target the system’s core layer to
+hide behaviors by manipulating system calls.
+• Cadets scenario: Process creation/manipulation, file
+access/modification, inter-process communication (IPC),
+and network connection hijacking are encompassed to
+simulate how APTs hide activities through complex process interactions and resource access.
+• Fivedirections scenario: Multi-stage attacks such as
+initial access, privilege escalation, persistence, stealth
+operations, and data theft are included. Attackers gain
+initial access via social engineering, and then use multiple techniques to progressively escalate privileges and
+obscure their activities.
+
+KOU et al.: DAA AND FPN ENHANCED GraphSAGE FOR APT DETECTION
+
+2723
+
+TABLE VI
+C OMPARISON OF D ETECTION P ERFORMANCE ON DARPA TC#3 DATASET
+
+(reaching 0.92 in Trace and Cadets scenarios), demonstrating
+superior balance in “identifying anomalies and excluding
+normality”. For miss detection control, the recall rate in the
+multi-stage Fivedirections scenario reaches 0.91, with low
+miss detection risk, covering the entire threat chain from
+“social engineering → privilege escalation”.
+For different scenarios: The DAA-FPN-SAGE accurately
+identifies basic attacks like unauthorized access and memory
+tampering in Theia while strictly controlling false alarms. In
+Trace, it locks down kernel-level threats (Rootkit, process
+injection) at the system call layer while reliably excluding
+normal system calls. In Cadets, it correlates multi-dimensional
+behaviors to reduce false and missed detections in complex
+process interactions. In Fivedirections, it captures the full chain
+of “social engineering initial access → privilege escalation
+→ data exfiltration” with extremely low false positives. This
+advantage stems from three aspects:
+• Global modeling via provenance graphs, covering multidimensional behavior associations (processes, files, networks) to fully reconstruct attack chains.
+• Precise false positive suppression by distinguishing
+“normal interactions” from “attack behaviors” via behavior patterns [39], avoiding misjudgment blind spots in
+log/trajectory analysis.
+• End-to-end threat identification, adapting to complex
+multi-stage attack processes without detection gaps from
+initial infiltration to data theft.
+Ultimately, it provides a more reliable technical solution for
+efficient APT threat defense in real-world scenarios.
+E. Ablation Study
+To comprehensively validate the efficacy and generality of the DAA-FPN-SAGE approach, we conduct ablation
+experiments on two representative datasets—Unicorn (focused
+on single-scenario complex multi-stage APTs) and DARPA
+
+TABLE VII
+A BLATION S TUDY ON U NICORN DATASET
+
+TABLE VIII
+A BLATION S TUDY ON DARPA TC#3 DATASET
+
+TC#3 (encompassing Theia, Trace, Cadets, FiveDirections
+with diverse attack patterns)—with key results summarized
+in Table VII and Table VIII. We dissect the contributions
+of core modules (DAA for context propagation, MSFPM
+for multi-scale fusion) through systematic ablation of scenarios, with findings integrated as follows. When only the
+DAA module is removed, the model loses its ability to capture long-range contextual dependencies and filter irrelevant
+noise: In Unicorn, this leads to a 5.2% drop in accuracy
+(0.96 → 0.91), 8.2% decline in recall (0.97 → 0.89), and
+7.2% reduction in F-score (0.97 → 0.90) due to failed
+recognition of protracted attack chains; in DARPA TC3, the
+
+2724
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+Fig. 2. Anomaly detection pipeline.
+
+impact varies by sub-dataset, with precision decreasing by
+2.4–7.5% (e.g., from 0.93 to 0.86 in noisy Theia, and 0.85 to
+0.83 in boundary-blurred Cadets), reflecting DAA’s datasetspecific role in false-positive suppression. If only the MSFPM
+module is ablated, the model’s capacity to integrate crossgranularity attack features is uniformly impaired: Unicorn sees
+a 9.4% accuracy drop (0.96 → 0.87), 7.2% recall decline
+(0.97 → 0.90), and 9.3% F-score reduction (0.97 → 0.88) as
+low-level-high-level attack correlations are missed; in DARPA
+TC3, F-score decreases by 2.4–6.5% across sub-datasets (e.g.,
+0.92 → 0.86 in Trace with multi-scale attacks, 0.84 → 0.82
+in FiveDirections) due to ignored multi-layer attack dependencies. When both the DAA and MSFPM modules are
+removed, the model degrades into an architecture consistent
+with traditional GraphSAGE: specifically, it adopts a mean
+aggregation function with fixed 2-hop neighbors (without
+dynamic weights or multi-hop attention) and completes feature
+extraction through global average pooling. Unicorn suffers
+15.6% Accuracy, 18.6% Recall, and 17.5% F-score drops;
+DARPA TC3 sub-datasets all see substantial declines (e.g.,
+Trace’s Precision falls by 14.1% and F-score by 8.7%), validating the modules’ synergy. Cross-dataset insights confirm
+DAA and MSFPM play complementary roles—DAA enables
+context capture and noise filtering, while MSFPM supports
+multi-scale feature integration—and their joint integration is
+critical for robust APT detection across both single-scenario
+and multi-scenario tasks.
+F. Complexity and Performance Analysis
+The computational complexity of the DAA-FPN-SAGE
+model is primarily determined by the Dynamic Adaptive
+Aggregation module, Multi-Scale Feature Pyramid module,
+and Anomaly Detection Framework module. The multi-hop
+attention mechanism in the DAA module computes attention
+weights for neighbors at varying hop counts, resulting in a
+complexity of O(H · Kmax · N · d̄ Kmax · d), while the dynamic
+hop decision mechanism contributes O(Kmax · N · d̄ Kmax ). In the
+MSFPM module, local feature aggregation has a complexity of
+O(N · d̄·d), mid-range feature aggregation adds O(H ·2·N ·(d̄2 +
+d̄3 )·d), global feature pooling contributes O(N·d), and adaptive
+gating fusion introduces O(N · (dlocal + dmid + dglobal ) · d0 ) and
+O(N·d·d0 ). The ADF module, which employs a two-layer MLP
+for anomaly scoring, has a complexity of O(N ·D·h1 +N ·h1 ·1).
+Through sparse computation, the model optimizes its prac
+tical complexity to O ρ · (H · Kmax · M · d̄ Kmax · d + M · d2 ) .
+Although the overall theoretical complexity O H · Kmax · N ·
+d̄ Kmax · d + N · (d̄ + d̄2 + d̄3 ) · d + N · d2 is higher than
+
+Fig. 3. Computational overhead comparison on DARPA TC3-Trace dataset.
+
+traditional GraphSAGE, these optimizations enable efficient
+real-time APT detection performance in practical applications.
+The DAA module selects only hop ranges with high information value for nodes through “multi-hop attention weight
+assignment” and “entropy-driven dynamic hop decisionmaking”, while filtering out redundant neighbors with low
+contribution. The Multi-Scale Feature Pyramid Merging
+(MSFPM) module unifies local (1-hop), mid-range (2-3-hop),
+and global (graph-level) features into a “common semantic
+space” via “1×1 convolution for dimension compression” and
+“adaptive gating fusion”, thus avoiding the linear expansion
+of feature dimensions as the scale increases. The ADF is
+designed with a “hierarchical detection pipeline”: The primary
+filtering layer quickly eliminates over 90% of normal nodes
+using 1-hop features, and only high-risk nodes enter the
+deep analysis layer, which significantly reduces unnecessary
+computations. When compared with the ablation model (the
+traditional GraphSAGE) on the DARPA TC#3-Trace dataset,
+the computational overhead advantages of DAA-FPN-SAGE
+are illustrated in the Fig. 3.
+The regularization parameter λ affects model performance
+by regulating the balance between “feature validity” and
+“information completeness” in dynamic hop count decisionmaking. To verify the rationality of its configuration, experiments were conducted within the range λ ∈ [0, 0.5] (with a
+step size of 0.05) to analyze its impact on F-score, recall, and
+average hop count K̄ simultaneously on the Unicorn dataset
+
+KOU et al.: DAA AND FPN ENHANCED GraphSAGE FOR APT DETECTION
+
+2725
+
+Fig. 6. Sensitivity analysis of regularization parameter learning rate (lr), batch
+size, and weight decay (wd).
+
+Fig. 4. Sensitivity analysis of regularization parameter λ on F-score.
+
+Fig. 7. Training and validation loss curves on the DARPA TC#3 Dataset.
+
+Fig. 5. Sensitivity analysis of regularization parameter λ on Recall.
+
+and FiveDirections scenario. The results are presented in Fig. 4
+and Fig. 5.
+G. Sensitivity Analysis of Regularization Parameter
+Experiments show that both F-score and recall in the two
+scenarios exhibit an inverted U-shaped trend with changes in
+λ: the Unicorn dataset reaches its peak at λ = 0.2, while the
+FiveDirections scenario also achieves optimal values at the
+same point. Moreover, the performance remains stable within
+λ ∈ [0.15, 0.25].
+Changes in the average hop count K̄ reveal the underlying
+regulation logic: when λ < 0.15, the hop count is excessively
+high (Unicorn= 3.2-4.2, FiveDirections= 3.9-4.8), leading to
+feature redundancy; at λ = 0.2, K̄ stabilizes at 2.2-2.5, which
+precisely covers the core attack association chain; when λ >
+0.25, the hop count drops to 1.1-1.9, resulting in performance
+degradation due to information loss.
+In conclusion, λ = 0.2 is the optimal cross-scenario solution.
+It maximizes detection performance by balancing the hop
+count and maintains robustness within a fluctuation range
+of ±0.05, providing a reliable parameter basis for model
+deployment.
+Beyond the regularization parameter λ, the sensitivity of
+learning rate (lr), weight decay (wd), and batch size to
+model performance is verified on the Unicorn dataset and
+FiveDirections scenario, as shown in Fig. 6.
+
+Extended hyperparameter analysis identifies optimal configurations (lr = 0.001, wd = 5 × 10−4 , batch size= 64) that
+synergize with λ = 0.2 to maximize performance. Random
+seed tests demonstrate strong reproducibility. These verifications collectively ensure the model’s training stability and
+parameter robustness.
+To confirm the reproducibility of the model, multiple independent random seeds are used to repeat training on the
+Unicorn dataset and FiveDirections scenario (consistent with
+the regularization parameter experiment). Statistical results
+show that the F-score, recall, and average hop count K̄ exhibit
+minimal fluctuations: The mean F-score is around 0.93 ± 0.02
+across both scenarios, recall is 0.94±0.02, and the average hop
+count K̄ stabilizes at 2.4 ± 0.1. Such small standard deviations
+indicate that random initialization has no significant impact on
+model performance, verifying strong reproducibility.
+H. Training Stability Verification
+To further verify the training process stability, the training
+and validation loss curves on the DARPA TC#3-Trace Dataset
+(the most complex scenario) are presented in Fig. 7. The
+curves are generated using the Adam optimizer (initial learning
+rate 0.001, β1 = 0.9, β2 = 0.999) and early stopping strategy
+(patience= 10). The key details:
+• Axes & Trends: The X-axis denotes training epochs
+(0–80, step=10), and the Y-axis denotes cross-entropy
+loss (0–1.4, step=0.2). The blue “Training Loss” curve
+drops from 1.32 to 0.12, while the orange “Validation
+Loss” curve decreases from 1.38 to 0.15, showing
+consistent convergence without post-convergence spikes
+(indicating no overfitting).
+
+2726
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+• Early Stopping Trigger: The validation loss stabilizes
+at epoch 55 (loss=0.15) and triggers early stopping at
+epoch 60, confirming the strategy effectively balances
+convergence speed and overfitting prevention.
+VI. C ONCLUSION AND F UTURE W ORK
+We propose the DAA-FPN-SAGE model to address the
+challenges of insufficient long-range dependency capture and
+simplified feature dimension modeling in APT detection for
+NGCN. Its core innovations are as follows: Based on the
+improved GraphSAGE model, a collaborative architecture
+fusing dynamic adaptive aggregation and multi-scale feature pyramid is constructed. On one hand, the dynamic
+adaptive aggregation mechanism—via cross-hop attention
+weight allocation and entropy-based dynamic hop count
+decision—enables the model to flexibly adjust the aggregation
+range according to node topological features, achieving precise
+capture of long-range dependencies in attack chains. On the
+other hand, the multi-scale feature pyramid module establishes
+a three-level feature hierarchy, which fuses multi-dimensional
+information and dynamically weights features through an
+adaptive gating network, strengthening the representation of
+multi-scale patterns in APT attacks. Meanwhile, the efficient
+detection framework combines sparse computing, parameter
+sharing, and hierarchical detection pipelines to elevate inference efficiency to real-time levels while ensuring detection
+accuracy, adapting to large-scale network environments.
+These innovations break through the limitations of traditional models in multiple dimensions. Extensive experiments
+on multiple datasets, demonstrate that the proposed model
+effectively overcomes the limitations of traditional graph
+neural networks in dynamic and heterogeneous environments.Quantitatively, the proposed DAA-FPN-SAGE achieves
+an average F1-score improvement of 3.2%–4.7% over classical
+GraphSAGE models across different DARPA TC#3 scenarios,
+and maintains stable performance under unseen topological
+shifts, demonstrating strong robustness and adaptability. These
+results verify that the DAA-FPN-SAGE not only enhances
+detection accuracy and stability across complex network environments but also provides a generalized and interpretable
+framework for adaptive threat detection in evolving communication systems.
+For the security challenges of NGCN, future research will
+focus on four technical directions:
+• Fusion Optimization of Temporal-Spatial Features
+First, we will focus on exploring the fusion optimization
+of temporal features and spatial features. Although the
+current model standardizes timestamps, it has not yet fully
+utilized the discriminative information in the temporal
+dimension—normal behaviors (such as periodic process
+communications) exhibit small fluctuations in time intervals (usually ±10–50 seconds), while the time intervals
+of different stages in an APT attack chain (reconnaissance
+→ infiltration → lateral movement) not only have a larger
+mean value (mostly 1–6 hours) but also show a significant increase in fluctuation range (coefficient of variation
+≥ 0.375). In future researches, we will design dedicated
+
+temporal feature engineering for this characteristic: on
+one hand, we will extract statistical features such as
+the “intra-phase time interval coefficient of variation”
+and “inter-phase time interval mutation threshold” to
+quantify the differences in temporal fluctuation between
+different behavior types; on the other hand, we will
+add a lightweight temporal branch (e.g., 1D-CNN or
+Transformer encoder) to the existing MSFPM network,
+and dynamically balance the contribution of spatial association features and temporal features through dynamic
+attention weights. This will enable joint judgment of
+anomalies in the “spatial-temporal” dual dimension,
+which is expected to further improve the detection rate
+of APT attacks and reduce the false positive rate.
+• Dynamic Modeling of Communication Flow Data
+The current static graph-based design struggles to handle
+real-time updates of audit logs in NGCN, where network
+slices are created or destroyed in milliseconds. To adapt
+to the lifecycle of NGCN slices and ensure the timeliness
+of temporal provenance graph updates, a lightweight
+incremental graph learning pipeline will be constructed
+based on the GraphSAGE framework of the DAA-FPNSAGE model. Specifically, slice topology change signals
+are obtained by monitoring the northbound interface of
+the Software-Defined Networking controller in NGCN;
+only the changed subgraphs are updated, and the dynamic
+hop decision mechanism of the DAA module is reused to
+avoid recalculating attention weights for the entire graph,
+thereby reducing redundant computation overhead. A
+10-minute-level sliding window is adopted to match
+the collection cycle of NGCN audit logs; within the
+window, key behavioral data during the slice lifecycle
+are retained, and local/mid-range features output by
+the MSFPM module are cached in a “local feature
+cache pool” to ensure the continuity of attack behaviors.
+An “incremental feature validator” is deployed at edge
+nodes; with the F-score of the model’s anomaly detection
+framework as the benchmark, an update is confirmed
+effective if the F-score deviation of the subgraph before
+and after the update is ≤ 5%. Ultimately, 10-minute-level
+temporal provenance graph updates are achieved, with a
+feature update latency of ≤ 2 seconds after slice topology
+changes, and the pipeline is compatible with the existing
+core architecture of the DAA-FPN-SAGE model without
+the need for reconstruction.
+• Optimization
+for
+Communication
+ResourceConstrained Environments Aiming at the computational
+bottleneck of edge nodes in Industry 5.0, lightweight
+GNN architectures [40] combined with knowledge
+distillation [41] will be explored to compress the
+multi-scale feature pyramid trained in the cloud
+into edge-deployable lightweight models. Through a
+hierarchical framework of “slice-level anomaly predetection–cloud-based global correlation” the balance
+between detection accuracy and computational overhead
+will be achieved in energy-constrained communication
+modules, adapting to the “edge-cloud” collaborative
+architecture of communication systems.
+
+KOU et al.: DAA AND FPN ENHANCED GraphSAGE FOR APT DETECTION
+
+• Semantic Reconstruction of Communication Attack
+Chains Existing detection focuses on abnormal nodes but
+lacks semantic reconstruction of communication-specific
+attack paths. Future work will integrate communications
+protocol causal reasoning to construct three-dimensional
+causal graphs from network-layer IP packet interactions,
+AI-layer model gradient flows, and application-layer
+service instruction streams, evolving detection from
+“single-point anomaly identification” to “end-to-end
+attack chain forensics across communication slices,
+computing nodes, and service processes”.
+The above research will promote the deep integration
+of APT detection into NGCN’s “network-computing powerapplication” collaborative architecture, shifting from passive
+defense to proactive construction of a communication security
+immune system. It will provide scalable technical foundations
+for trustworthy communications in scenarios like industrial
+internet and metaverse, ultimately achieving precise defense
+against full-stack threats in NGCN.
+R EFERENCES
+[1]
+
+G. Singh, K. Sood, P. Rajalakshmi, D. D. N. Nguyen, and Y. Xiang,
+“Evaluating federated learning-based intrusion detection scheme for next
+generation networks,” IEEE Trans. Netw. Service Manage., vol. 21,
+no. 4, pp. 4816–4829, Aug. 2024.
+[2] K. Sood et al., “Performance evaluation of a novel intrusion detection
+system in next generation networks,” IEEE Trans. Netw. Service Manage., vol. 20, no. 3, pp. 3831–3847, Sep. 2023.
+[3] R. Wei, L. Cai, L. Zhao, A. Yu, and D. Meng, “DeepHunter: A graph
+neural network based approach for robust cyber threat hunting,” in Proc.
+Secur. Privacy Commun. Netw., 2021, pp. 3–24.
+[4] X. Han, T. Pasquier, A. Bates, J. Mickens, and M. Seltzer, “Unicorn:
+Runtime provenance-based detector for advanced persistent threats,” in
+Proc. Netw. Distrib. Syst. Secur. Symp., 2020, pp. 1–18.
+[5] S. Wang et al., “THREATRACE: Detecting and tracing host-based
+threats in node level through provenance graph learning,” IEEE Trans.
+Inf. Forensics Security, vol. 17, pp. 3972–3987, 2022.
+[6] T.-Y. Lin, P. Dollár, R. Girshick, K. He, B. Hariharan, and S. Belongie,
+“Feature pyramid networks for object detection,” in Proc. IEEE Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jul. 2017, pp. 936–944.
+[7] J. Skarding, B. Gabrys, and K. Musial, “Foundations and modeling of
+dynamic networks using dynamic graph neural networks: A survey,”
+IEEE Access, vol. 9, pp. 79143–79168, 2021.
+[8] J. Zhe’ao, “Multi-scale contrastive learning networks for graph anomaly
+detection,” in Proc. 4th Asia–Pacific Conf. Commun. Technol. Comput.
+Sci. (ACCTCS), Feb. 2024, pp. 618–625.
+[9] F. Liu, Y. Wen, D. Zhang, X. Jiang, X. Xing, and D. Meng, “Log2vec:
+A heterogeneous graph embedding based approach for detecting cyber
+threats within enterprise,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Nov. 2019, pp. 1777–1794.
+[10] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. N. Venkatakrishnan, “HOLMES: Real-time APT detection through correlation of
+suspicious information flows,” in Proc. IEEE Symp. Secur. Privacy (SP),
+May 2019, pp. 1137–1152.
+[11] U. Manzoor, M. Shafiq, and A. A. Ghorbani, “Streamspot: Real-time
+detection of anomalous behavior in system call graphs,” in Proc. IEEE
+36th Int. Conf. Distrib. Comput. Syst. Workshops (ICDCSW), Jun. 2016,
+pp. 138–143.
+[12] Z. Liu, G. Gao, L. Sun, and L. Fang, “IPG-Net: Image pyramid guidance
+network for small object detection,” in Proc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit. Workshops (CVPRW), Jun. 2020, pp. 4422–4430.
+[13] M. N. Hossain, S. Milajerdi, J. Wang, S. Sheikhi, and R. V. Sekar,
+“Provdetector: Provenance-based apt detection for critical
+infrastructures,” in Proc. 2020 Annu. Comput. Secur. Appl. Conf.
+(ACSAC), 2020, pp. 510–522.
+[14] A. Alsaheel et al., “ATLAS: A sequence-based learning approach for
+attack investigation,” in Proc. 30th USENIX Secur. Symp. (USENIX
+Secur.), 2021, pp. 3005–3022.
+[15] S. Liu, L. Qi, H. Qin, J. Shi, and J. Jia, “Path aggregation network for
+instance segmentation,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit., Jun. 2018, pp. 8759–8768.
+
+2727
+
+[16] H. Geng et al., “Pyramid graph neural network: A graph sampling and
+filtering approach for multi-scale disentangled representations,” in Proc.
+29th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug. 2023,
+pp. 518–530, doi: 10.1145/3580305.3599478.
+[17] X. Wang, R. Zhang, X. Huang, and J. Liu, “Multi-level graph neural network for malware family classification via hierarchical feature
+fusion,” IEEE Trans. Dependable Secure Comput., vol. 20, no. 4,
+pp. 3125–3140, Apr. 2023.
+[18] Y. Li, Z. Liu, and S. Wu, “Graph pyramid for advanced persistent threat
+detection,” in Proc. IEEE Conf. Comput. Commun. (INFOCOM), May
+2021, pp. 1–10.
+[19] L. Xu, Z. Zhao, D. Zhao, X. Li, X. Lu, and D. Yan, “AJSAGE:
+A intrusion detection scheme based on jump-knowledge connection to GraphSAGE,” Comput. Secur., vol. 150, Mar. 2025, Art. no.
+104263.
+[20] M. Gorricho-Segura, X. Echeberria-Barrio, and L. Segurola-Gil, “Edgebased analysis for network intrusion detection using a GNN approach,”
+in Proc. JNIC Cybersecurity Conf. (JNIC), Jun. 2023, pp. 1–7.
+[21] D.-H. Tran and M. Park, “FN-GNN: A novel graph embedding approach
+for enhancing graph neural networks in network intrusion detection
+systems,” Appl. Sci., vol. 14, no. 16, p. 6932, Aug. 2024. [Online].
+Available: https://www.mdpi.com/2076-3417/14/16/6932
+[22] P. Pradhyumna, G. P. Shreya, and Mohana, “Graph neural network
+(GNN) in image and video understanding using deep learning for
+computer vision applications,” in Proc. 2nd Int. Conf. Electron. Sustain.
+Commun. Syst. (ICESC), Aug. 2021, pp. 1183–1189.
+[23] D. I. Shuman, S. K. Narang, P. Frossard, A. Ortega, and P. Vandergheynst, “The emerging field of signal processing on graphs:
+Extending high-dimensional data analysis to networks and other irregular
+domains,” IEEE Signal Process. Mag., vol. 30, no. 3, pp. 83–98, May
+2013.
+[24] A. Bates et al., “Transparent web service auditing via network provenance functions,” in Proc. 26th Int. Conf. World Wide Web, Apr. 2017,
+pp. 887–895.
+[25] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc. Int. Conf.
+Mach. Learn., 2020, pp. 1597–1607.
+[26] Z.-H. Zhou, Ensemble Methods: Foundations and Algorithms. London,
+U.K.: Chapman & Hall, 2012.
+[27] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Lió, and
+Y. Bengio, “Graph attention networks,” in Proc. Int. Conf. Learn.
+Represent. (ICLR), 2018, pp. 1–12.
+[28] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural
+Inform. Process. Syst. (NIPS), 2017, pp. 5998–6008.
+[29] C. E. Shannon, “A mathematical theory of communication,” Bell Syst.
+Tech. J., vol. 27, no. 3, pp. 379–423, Jul. 1948.
+[30] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2016, pp. 770–778.
+[31] S. Scardapane, S. Van Vaerenbergh, S. Totaro, and A. Uncini, “Kafnets:
+Kernel-based non-parametric activation functions for neural networks,”
+Neural Netw., vol. 110, pp. 19–32, Feb. 2019.
+[32] A. Paszke et al., “PyTorch: An imperative style, high-performance deep
+learning library,” in Proc. NIPS, Dec. 2019, pp. 8024–8035.
+[33] A. A. Hagberg, D. A. Schult, and P. J. Swart, “Exploring network
+structure, dynamics, and function using NetworkX,” in Proc. 7th Python
+Sci. Conf., 2008, pp. 11–15.
+[34] M. Wang et al., “Deep graph library: A graph-centric, highly-performant
+package for graph neural networks,” 2019, arXiv:1909.01315.
+[35] F. Pedregosa et al., “Scikit-learn: Machine learning in Python,” J. Mach.
+Learn. Res., vol. 12, pp. 2825–2830, 2012.
+[36] M. Fey and J. E. Lenssen, “Fast graph representation learning with
+PyTorch geometric,” in Proc. ICLR Workshop Represent. Learn. Graphs
+Manifolds, 2019, pp. 1–9.
+[37] X. Zhang et al., “Logrobust: Robust log-based anomaly detection for
+unstable software via supervised learning,” ACM SIGSOFT Softw. Eng.
+Notes, vol. 44, no. 4, pp. 1–4, 2019.
+[38] S. Raschka, “Model evaluation, model selection, and algorithm selection
+in machine learning,” 2018, arXiv:1811.12808.
+[39] X. Han, T. Pasquier, and M. Seltzer, “Survey of advanced persistent
+threats: Techniques, solutions, and challenges,” IEEE Commun. Surveys
+Tuts., vol. 18, no. 2, pp. 1017–1043, Feb. 2016.
+[40] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and P. S. Yu,
+“A comprehensive survey on graph neural networks,” IEEE
+Trans. Neural Netw. Learn. Syst., vol. 32, no. 1, pp. 4–24,
+Jan. 2021.
+[41] G. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a neural
+network,” 2015, arXiv:1503.02531.
+PAPER_TEXT

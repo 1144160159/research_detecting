@@ -1,0 +1,2762 @@
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+1
+
+Reference Model-Based Cyber-Attack Detection for Stochastically
+Uncertain Wind Turbine Systems
+Álvaro Martı́n Gómez , Sina Hassani , Szymon Greś , Rafał Wiśniewski , and Steven X. Ding
+
+Abstract—As wind turbines become integral to critical infrastructure, ensuring their resilience against faults and cyberattacks is essential. This work implements a reference modelbased anomaly detection scheme for wind turbines with stochastic
+parametric uncertainty. An Hi /H∞ reference filter balances fault
+sensitivity and disturbance rejection, while a robust filter is
+designed via an H∞ model matching problem to track reference
+residuals while bounding the effect of uncertainty. This bound is
+made less conservative by weighting residual components based
+on their sensitivity to uncertainty. Residual covariance due to
+parametric uncertainty is derived from a statistical analysis of
+the residual generator dynamics and applied in a Generalized
+Likelihood Ratio test. This provides a rigorous alternative to
+heuristic covariance inflation by capturing the directional properties of uncertainty in the residual subspace. Experimental
+results compare the residuals and uncertainty bounds of the
+reference and robust filters. The proposed method reduces
+residual sensitivity to changes in operating conditions as well
+as decision function variability due to parametric uncertainty.
+Index Terms—wind energy, anomaly detection, robust filters,
+stochastic uncertainties.
+
+I. I NTRODUCTION
+YBER threats to the energy sector, particularly wind
+generation, are escalating due to sophisticated attacks
+by nation-state actors and financially motivated criminals.
+Common attack vectors include ransomware (e.g., Nordex,
+Deutsche Windtechnik), supply chain compromises, and exploitation of third-party access, often leading to operational
+disruptions, loss of remote monitoring, or reputational damage
+[1]. For instance, the 2022 Viasat satellite modem attack
+disabled communication with 5,800 wind turbines [2], while
+ransomware incidents forced temporary disconnections from
+control systems. Unlike overt attacks like ransomware, where
+detection is trivial but prevention plays a crucial role, false
+data injection attacks (FDIA) may evade traditional safeguards,
+and pose a subtler risk by manipulating operational data to
+destabilize grid decisions without immediate detection. Hence,
+they are the focus of this work.
+The data-driven methods presented in [3]–[5], among others,
+provide effective approaches to anomaly detection without
+
+C
+
+Á. M. Gómez, S. Hassani, S. Greś, and R. Wiśniewski are with the
+Department of Electronic Systems, Aalborg University, Aalborg, Denmark (email: almago@es.aau.dk; sinah@es.aau.dk; sgres@es.aau.dk; raf@es.aau.dk).
+S. X. Ding is with the Department of Automatic Control and Complex Systems, University of Duisburg–Essen, Duisburg, Germany (e-mail:
+steven.ding@uni-due.de).
+This work was supported by the BeWind project, funded by Innovation
+Fund Denmark.
+This paper was presented in part at the IAS Annual Meeting, July 9, 2025.
+DOI: 10.1109/IAS62731.2025.11061699
+
+the need for complex models or control theory concepts. For
+instance, adaptive intrusion detection frameworks combining
+machine learning with residual-based anomaly detection have
+been proposed to identify false data injection attacks in smart
+power systems [6]. However, the lack of underlying structure
+in black-box models can make long-term predictions unreliable in unsupervised settings, while limited access to datasets,
+especially for cyber-attack scenarios, reduces the practicality
+and effectiveness of supervised learning methods in real-world
+applications.
+Conversely, the main challenge of model-based detection
+lies in the availability of an accurate model for the system under consideration [7]. Regarding wind turbines, finite element
+models, e.g. those based on Blade Element Momentum (BEM)
+theory [8], are useful for simulation but too computationally
+intensive for real-time FDI. Simplified models from onedimensional (1-D) momentum theory [8] are more practical
+but less accurate, making it harder to separate true faults from
+modelling errors. This challenge is amplified when proprietary
+aerodynamic data, such as power and thrust coefficient tables,
+are unavailable, which is often the case for non-manufacturing
+companies.
+Recent contributions on wind turbine fault diagnosis
+have explored zonotopic observer-based approaches combined
+with neuro-fuzzy or TS/MANFIS modelling, enabling setmembership state estimation and robust fault detection under
+bounded uncertainties [9], [10]. These methods provide guaranteed consistency bounds and have shown strong performance
+for fault detection under set-bounded uncertainty descriptions.
+In this work, a different perspective is adopted by focusing on
+stochastic parametric uncertainty, with the aim of enabling a
+probabilistic characterization of residuals that can be directly
+used in statistical change detection.
+The field of fault detection filter (FDF) design has
+evolved significantly through various methodological approaches aimed at achieving robust fault detection. Early
+techniques focused on developing FDFs that generate residuals sensitive to faults by rejecting unknown inputs [11]–
+[13]. However, such complete decoupling often comes at the
+cost of reduced sensitivity to actual faults, limiting detection
+performance [14]. Other approaches have employed H∞ /H∞
+optimization frameworks to simultaneously minimize disturbance effects while maximizing the maximum influence of
+faults [15], as well as H− /H∞ formulations that specifically
+maximize the minimum singular value of the transfer matrix
+from faults to residuals [16], [17]. The Hi /H∞ ”unified
+
+0000–0000/00$00.00 © 2021 IEEE
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+2
+
+solution” generalizes both approaches for linear time-invariant
+[18], [19] and time-varying systems [20], providing an optimal
+compromise between disturbance robustness and fault sensitivity through algebraic solutions that guarantee performance
+across the entire residual subspace and frequency range [21].
+However, while these methods effectively handle unknown
+inputs and stochastic noise, they remain fundamentally limited in addressing parametric uncertainties that affect system
+dynamics and sensor/actuator parameters. Such parameter
+variations corrupt residual signals, leading to performance
+degradation through increased false alarms and missed detections. The reference model-based approach [14], [22]–[24]
+addresses these challenges by formulating fault detection as
+an H∞ model-matching problem (MMP). The method uses a
+reference model, which serves as an optimal residual generator
+under the assumption of no model uncertainties aside from
+disturbances. Simultaneously, it aims to minimize the H∞
+norm of the difference between the designed residual generator
+and this reference model. With model parameters estimated via
+Bayesian inference, modelling errors are treated as stochastic
+uncertainties, leading to an LMI solution originally derived in
+Chapter 8 in [21].
+This anomaly detection scheme has been given very little
+attention, mainly due to its complexity and its tendency to
+become overly conservative. To the best of the authors’ knowledge, [25] is the only related application, which specifically
+focuses on an open-loop wind turbine pitch actuator and drivetrain system for sensor and actuator fault detection. However,
+the paper omits critical details regarding the uncertainties
+chosen in the system parameters and lacks an evaluation of
+the residual’s robustness improvements relative to the standard
+Hi /H∞ unified solution when these uncertainties are present.
+These gaps highlight the need for a more thorough and welldocumented application of this technique to key wind turbine
+controllers, with a clearer demonstration of its advantages
+and limitations and adjustments to some of the metrics to
+reduce conservativeness. This paper is an extended version
+of the work presented at the 2025 IEEE Industry Applications
+Society Annual Meeting [26].
+II. S TRATEGY OVERVIEW AND ATTACK S CENARIOS
+The anomaly detection scheme of this work adopts a
+reference model-based strategy, illustrated in Fig. 1, to address parametric uncertainty while preserving fault sensitivity.
+The approach separates performance specification from robust
+implementation through a two-step design. First, a reference
+residual generator is constructed using the nominal model.
+In this work, the Hi /H∞ ”unified solution” is selected as
+reference residual generator, as it provides an optimal tradeoff between disturbance attenuation and fault sensitivity across
+the residual space [7], [21]. This reference defines the desired
+residual behaviour. Second, a robust residual generator is
+obtained by solving an H∞ model-matching problem (MMP)
+[21], where the objective is to minimize the deviation between
+the implemented residual and the reference residual in the
+presence of uncertainties. This formulation ensures that the
+residual closely reproduces the nominal optimal response
+
+2
+
+Fig. 1. H∞ MMP using Hi /H∞ FDF as reference model for anomaly
+detection in uncertain systems.
+
+while explicitly accounting for disturbances and parametric
+variations. As shown in Fig. 1, the design is performed offline,
+and the resulting robust filter is used online for residual
+generation and subsequent anomaly detection.
+Following the structure proposed in [27], the filter receives
+potentially corrupted sensor measurements together with control signals that remain unaltered at the point of filtering, since
+any manipulation of these signals would occur downstream
+in the communication network. However, these uncorrupted
+control signals may still reflect the effects of attacks due to
+the feedback loop.
+In this work, we focus on false data injection attacks
+(FDIA), i.e., integrity attacks that directly manipulate sensor
+and actuator signals in the control loop. In contrast to availability attacks such as denial-of-service, which are typically
+straightforward to detect due to missing or blocked data,
+FDI attacks alter critical variables while preserving normal
+communication patterns, making them significantly more challenging to detect and potentially more damaging for closedloop operation
+The chosen attack scenario corresponds to a bias injection
+attack, a subclass of FDIA introduced in [27]. This attack
+consists of injecting a slowly varying bias into selected signals,
+with the objective of gradually driving the system away from
+its nominal operating condition and potentially into an unsafe
+region. This class of attacks requires only limited model
+knowledge and no access to the full system state, making
+it representative of realistic adversaries with constrained resources.
+The attack is generated through a first-order low-pass dynamics, allowing the adversary to regulate the rate of change of
+the injected signal via the gain parameter a∞ and time constant
+βa , as described in (1) and shown in Fig. 2. This structure
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+3
+
+1
+
+with
+
+0.8
+0.6
+
+ak
+
+ak+1 = βa ak
+
+0.4
+
++ (1 − βa )a∞
+
+-a = 0:0000
+-a = 0:9900
+-a = 0:9990
+-a = 0:9999
+
+0.2
+
+N̂f (z) = Ff + C(zI − A + LC)−1 (Ef − LFf ),
+(1)
+
+0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+Time (s)
+
+Fig. 2. Bias injection attack for different βa , with a sampling time of 0.01 s.
+
+produces deviations that evolve gradually over time, which are
+known to be difficult to distinguish from model uncertainty and
+disturbances in model-based detection schemes. Rather than
+optimizing the stealth level as in [27], the attack parameters
+are selected to enable a clear comparison between the standard
+and robust residual filters.
+
+A. Unified Solution (Hi /H∞ ) Reference Filter
+Consider the discrete-time system
+x(k + 1) = Ax(k) + Bu(k) + Ed d(k) + Ef f (k),
+
+(2)
+
+y(k) = Cx(k) + Du(k) + Fd d(k) + Ff f (k),
+
+(3)
+
+Gyf (z) = C(zI − A)−1 Ef + Ff , (4)
+
+
+A − ejθ I Ed
+rank
+= n + m,
+(5)
+C
+Fd
+
+the residual generator is constructed using an observer-based
+structure
+
+x̂(k + 1) = Ax̂(k) + Bu(k) + L y(k) − ŷ(k) ,
+(6)
+ŷ(k) = C x̂(k) + Du(k),
+
+r(k) = V y(k) − ŷ(k) .
+
+(7)
+(8)
+
+The gains L and V are selected to optimize the tradeoff between disturbance attenuation and fault sensitivity. The
+resulting optimal solution is given by
+T
+
+2
+Lopt = (AP C + Ed FdT )Vopt
+,
+T
+T −1/2
+Vopt = (CP C + Fd Fd )
+,
+
+(Ed − LFd ),
+
+(14)
+
+describing the fault and disturbance propagation to the residual
+signal. In particular, when d(k) is modelled as white noise with
+identity covariance, the resulting residual generator reduces to
+the steady-state Kalman filter.
+B. Robustness Against Stochastic Uncertainties via an H∞
+Model-Matching Problem
+Consider the system defined by
+x(k + 1) = Āx(k) + B̄u(k) + Ēd d(k) + Ef f (k),
+
+(15)
+
+y(k) = C̄x(k) + D̄u(k) + F̄d d(k) + Ff f (k),
+
+(16)
+
+where the uncertainty terms ∆A, ∆B, ∆C, ∆D, ∆E, and
+∆F satisfy
+
+ X
+
+l 
+Ai Bi Ei
+∆A ∆B ∆E
+=
+p (k),
+(17)
+∆C ∆D ∆F
+Ci Di Fi i
+i=1
+
+where x(k) ∈ Rn , u(k) ∈ Rp , and y(k) ∈ Rm denote the
+state, input, and measured output, respectively, while d(k) ∈
+Rkd and f (k) ∈ Rkf represent unknown disturbances and
+faults. The objective is to construct a residual signal r(k) that
+is sensitive to faults while robust to disturbances, leading to a
+fundamental trade-off between these two requirements [21].
+Under the assumptions
+
+∀θ ∈ [0, 2π],
+
+N̂d (z) = Fd + C(zI − A + LC)
+
+(13)
+
+Ā = A + ∆A, B̄ = B + ∆B, C̄ = C + ∆C,
+D̄ = D + ∆D, Ēd = Ed + ∆E, F̄d = Fd + ∆F,
+
+III. M ETHODS
+
+rank(Gyf (z)) = m,
+
+−1
+
+(9)
+(10)
+
+where P > 0 is the stabilizing solution of the Riccati equation
+AP AT − P + Ed EdT − Lopt (CP C T + Fd FdT )Lopt = 0. (11)
+The optimality of this solution is characterized by the
+Hi /H∞ performance index
+
+σi V N̂f (ejθ )
+, ∀θ ∈ [0, 2π],
+{Lopt , Vopt } = arg sup
+||V N̂d ||∞
+L,V
+(12)
+
+where Ai , Bi , Ci , Di , Ei , Fi , i = 1, . . . , l, are known
+matrices of appropriate dimensions. The vector p(k) =
+[p1 (k) · · · pl (k)]T is a stochastic process with
+
+
+E p(k) = 0,
+E p(k)pT (k) = diag(σ1 , . . . , σl ),
+where σi > 0, i = 1, . . . , l, are known. It is further assumed
+that p(0), p(1), . . . , are independent and x(0), u(k), d(k),
+f (k) are independent of p(k).
+The residual generator is given by
+
+x̂(k + 1) = Ax̂(k) + Bu(k) + L y(k) − ŷ(k) ,
+(18)
+ŷ(k) = C x̂(k) + Du(k),
+
+r(k) = V y(k) − ŷ(k) ,
+
+(19)
+(20)
+
+where (L, V ) are to be designed.
+The objective is to determine L and V such that the residual
+r(k) follows the reference residual rref (k), obtained from the
+unified solution, while accounting for stochastic uncertainties.
+This leads to the optimization problem
+h
+i
+T
+min E (r(k) − rref (k)) (r(k) − rref (k)) ,
+(21)
+L,V
+
+which captures the model-matching objective in a stochastic
+setting.
+Using the decomposition
+h
+i
+T
+E (r(k) − rref (k)) (r(k) − rref (k))
+(22)
+T
+= (r̄(k) − rref (k)) (r̄(k) − rref (k)) + σr2 (k),
+with r̄(k) = E[r(k)], the problem can be reformulated as minimizing the deviation of the mean residual from the reference
+model, while bounding the residual variance
+h
+i
+T
+σr2 (k) = E (r(k) − r̄(k)) Qr (r(k) − r̄(k)) ≤ δ, (23)
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+4
+
+for some δ > 0, where Qr ⪰ 0 is a weighting matrix.
+Compared to the standard formulation, the introduction of Qr
+allows selective penalization of residual components that are
+more sensitive to parametric uncertainty. This enables reducing
+conservativeness by relaxing the variance constraint in less
+critical directions, while preserving robustness in the most
+relevant residual channels for fault detection.
+To derive tractable conditions, the design problem is expressed in terms of the following inequalities:
+T
+
+r̄(k)−rref (k)
+r̄(k) − rref (k)
+< α12
+
+k−1
+X
+
+dT (j)d(j) + f T (j)f (j)
+
+
+
+(24)
+
+j=0
+
+2 T
++ α2 d (k)d(k) + f T (k)f (k) ,
+
+and
+σr2 (k) < γ12
+
+k−1
+X
+
+dT (j)d(j) + f T (j)f (j) + uT (j)u(j)
+
+j=0
+
+2 T
++ γ2 d (k)d(k) + f T (k)f (k) + uT (k)u(k) ,
+
+
+(25)
+
+for some α1 > 0, α2 > 0, γ1 > 0, and γ2 > 0.
+An LMI-based solution can be derived using the Bounded
+Real Lemma. For the full derivation and corresponding LMI
+conditions, see [21]. Appendix A provides the reformulated
+LMIs associated with (25) incorporating the weighted residual
+variance.
+C. Statistical Change Detection
+The residual signal r(k) is evaluated using a statistical
+change detection scheme aimed at identifying deviations from
+its nominal behaviour. In the absence of faults or attacks, the
+residual is expected to fluctuate around a nominal mean µ0 .
+The occurrence of faults or malicious manipulations induces
+a shift in this mean, which can be detected using hypothesis
+testing.
+Over a sliding P
+window of length M , define the sample
+k
+1
+mean r̄(k) = M
+i=k−M +1 r(i). The residual sequence is
+assumed to be a Gaussian process with constant covariance
+Σr , and samples within the sliding window are assumed to
+be independent and identically distributed. Furthermore, the
+pre-change mean µ0 and covariance Σr are assumed known,
+while the post-change mean µ1 is unknown. Under these
+assumptions, a mean-shift detection problem is formulated as
+H0 :
+
+r(k) ∼ N (µ0 , Σr ),
+
+H1 :
+
+r(k) ∼ N (µ1 , Σr ),
+
+r(k) − r̄(k) = Cr,0 exr (k) +
+
+l
+X
+
+Cr,i pi (k)xr (k)
+
+i=1
+
++
+
+l
+X
+
+Dr,i pi (k)u(k) +
+
+i=1
+
+l
+X
+
+(27)
+Fr,i pi (k)d(k),
+
+i=1
+
+where exr (k) = xr (k) − x̄r (k) is the augmented state error.
+Taking expectations and exploiting the independence and
+second-order properties of p(k) yields
+T
+Σr (k) = Cr,0 Exr (k)Cr,0
+
++
+
+l
+X
+
+ T
+σi2 Cr,i x̄r (k)x̄r (k)T +Exr (k) Cr,i
+
+i=1
+
++
+
+l
+X
+
+
+
+T
+T
+σi2 Dr,i u(k)u(k)T Dr,i
++Fr,i d(k)d(k)T Fr,i
+
+i=1
+
++
+
+l
+X
+
+
+ (28)
+T
+T
+σi2 Cr,i x̄r (k)u(k)T Dr,i
++Dr,i u(k)x̄r (k)T Cr,i
+
+i=1
+
++
+
+l
+X
+
+
+
+T
+T
+σi2 Cr,i x̄r (k)d(k)T Fr,i
++Fr,i d(k)x̄r (k)T Cr,i
+
+i=1
+
++
+
+l
+X
+
+
+
+T
+T
+σi2 Dr,i u(k)d(k)T Fr,i
++Fr,i d(k)u(k)T Dr,i
+,
+
+i=1
+
+µ1 ̸= µ0 ,
+
+The generalized likelihood ratio (GLR) test for unknown
+post-change mean µ1 leads to the decision statistic [28]
+M
+(r̄(k) − µ0 )T Σ+
+(26)
+r (r̄(k) − µ0 ),
+2
+where Σ+
+r denotes the Moore–Penrose pseudoinverse (to cover
+singular Σr ). Let m = rank(Σr ) be the effective residual dimension. Under H0 , the statistic satisfies 2J ∼ χ2m ,
+while under H1 , 2J ∼ χ2m (λ) with noncentrality parameter
+λ = M (µ1 − µ0 )T Σ+
+r (µ1 − µ0 ). Given a desired falsealarm probability α, the detection threshold γ is selected
+J(k) =
+
+from the (1 − α) quantile of the χ2m distribution such that
+Pr(2J > γ | H0 ) = α.
+However, due to the multiplicative interaction between
+uncertain parameters and states, as well as linearization errors
+and unmodelled dynamics, the residual sequence is in general
+temporally correlated and not strictly Gaussian. Consequently,
+the χ2 distribution of the test statistic under H0 should be
+interpreted as an approximation. In practice, the resulting
+threshold provides a useful design guideline, although the
+actual false-alarm probability may deviate from the nominal
+value and empirical tuning may be required.
+The performance of the GLR test depends critically on an
+accurate characterization of the residual covariance Σr . In this
+work, Σr is derived explicitly from the stochastic uncertainty
+model introduced in (15)–(16), ensuring consistency between
+filter design and statistical evaluation.
+The residual covariance is
+ defined as Σr (k) =
+E (r(k) − r̄(k))(r(k) − r̄(k))T , where r̄(k) = E[r(k)]. Using the residual dynamics derived in Appendix A, the deviation
+from the mean can be expressed as
+
+
+
+where Exr (k) = E exr (k)eTxr (k) is given in Appendix A.
+This expression captures the contribution of parametric
+uncertainty, inputs, and disturbances to the residual variability.
+It can be evaluated for both the reference filter and the robust
+filter by substituting the corresponding gains (L, V ). The
+resulting covariance matrix Σr is then used in (26) to weight
+the residual components.
+IV. M ODEL AND PARAMETER E STIMATION
+This paper focuses on the aerodynamic/mechanical subsystem rather than the electrical subsystem [29], as its strong nonlinearities and complex behaviour make it a more compelling
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+5
+
+subject of study. The aerodynamic behaviour of a wind turbine
+is derived using one-dimensional momentum theory for an
+ideal rotor, assuming a frictionless actuator disk with no
+rotational velocity component in the wake. This approach
+yields expressions for the extracted power and thrust force
+[8]
+P = 12 ρAvr3 Cp (λ, β),
+
+(29)
+
+F = 12 ρAvr2 Ct (λ, β),
+
+(30)
+
+where Cp (λ, β) and Ct (λ, β) represent dimensionless power
+and thrust coefficients, A is the rotor swept area, ρ is air
+density, and vr is the effective wind speed at the rotor plane.
+These coefficients are typically tabulated as functions of tipspeed ratio λ = ωr R/vr (where ωr is rotor speed and R is
+rotor radius) and blade pitch angle β.
+When proprietary look-up tables for the power coefficient
+are unavailable, a parametric approximation for Cp (λ, β) [30]
+can be used:
+−1
+
+−c5 λi
+Cp (λ, β) = c1 (c2 λ−1
++ c6 λ,
+i − c3 β − c4 )e
+0.035
+1
+− 3
+.
+λ−1
+=
+i
+λ + 0.08β
+β +1
+
+(31)
+(32)
+
+The aerodynamic torque follows from P = Tr ω, yielding
+Tr = 21 ρAvr3 Cp (λ, β)/ωr ,
+
+(33)
+
+where Tr denotes the rotor aerodynamic torque. This formulation assumes stationary flow conditions given by ωr , β and
+vr . Dynamic inflow effects [31] are neglected in this work due
+to their relatively small impact compared to parametric model
+uncertainties. This model is intended for normal above-cut-in
+operating regime (Region 2–3), where ωr is bounded away
+from zero.
+The wind turbine being modelled is equipped with a
+permanent magnet synchronous generator, which is used in
+conjunction with direct drive design. Direct drive turbines
+lack gearbox, so the flexibility of the drive train is considered
+negligible and thus, the generator speed ωg is equal to the
+rotor speed ωr . This rigid model is then described as
+(Jr + Jg ) ω̇r = (1 − µd )Tr − Tg ,
+
+(34)
+
+where the parameter µd accounts for the mechanical losses,
+and Jr and Jg refer to the moments of inertia of the rotor and
+generator respectively.
+Actuator dynamics are modelled as first-order lags of time
+constants τβ and τg respectively:
+β̇ = (βref − β)/τβ ,
+
+(35)
+
+Ṫg = (Tg,ref − Tg )/τg .
+
+(36)
+
+Control strategies differ by operational region. For belowrated wind speed conditions, the pitch is normally set to 0◦
+and the generator torque is set to its optimal value, which is
+computed as [32]
+Tg,ref = Kopt ωr2 ,
+
+Kopt =
+
+1 ρR3 ACp,max
+,
+2
+λ3opt
+
+(37)
+
+where Cp,max and λopt can be obtained from the wind turbine
+Cp /λ curve for θ = 0 [8].
+
+For above-rated wind speed conditions, a basic PI controller
+is used to compute the pitch reference based on the rotor speed
+deviation from its rated value (ωr,err ), while the torque is
+regulated around a rated value Tg,rated using a proportional
+gain to aid the pitch control in its task [32]:
+βref = −Kp,β ω̇r,err + Ki,β ωr,err ,
+
+(38)
+
+Tg,ref = Kp,Tg ωr,err + Tg,rated .
+
+(39)
+
+Structural dynamics are omitted from this simplified model,
+as they do not significantly influence the behaviour of collective pitch and torque controllers within the conventional wind
+turbine control framework. Although the wind speed at the
+rotor plane is typically estimated using Kalman filtering based
+on tower-top accelerometer data and a wind model [33], this
+work treats wind speed as an exogenous input, assuming prior
+estimation in order to avoid additional model complexity.
+The model (31)-(36) is linearized via a Taylor expansion
+around operating points defined by the effective wind speed
+at the rotor vr , and discretized using forward Euler with
+sampling time of Ts = 0.01 s, sufficiently small relative
+to the dominant system dynamics to preserve stability. It
+consists of the following states and outputs, y = x =
+[ωr Tg β]T (full-state measurement) and exogenous/control
+inputs, u = [vr Tg,ref βref ]T . In this work, the process and
+measurement disturbance distribution matrices in (2)–(3) are
+set as Ed = 0 and Fd = I, respectively, i.e., d(k) is modelled
+as measurement noise only. Assumption (4) holds since Ff
+contains C, and thus Gyf (z) = C(zI − A)−1 Ef + Ff has full
+row rank m for all z when C is full row rank. Moreover, with
+Ed = 0 and Fd = I, Assumption (5) reduces to requiring that
+A has no eigenvalues on the unit circle, which is satisfied.
+Under standard detectability/stabilizability assumptions, (11)
+admits a unique stabilizing solution P ⪰ 0. With Fd = I,
+R = Fd Fd⊤ = I ≻ 0, hence CP C ⊤ + R ≻ 0 is invertible and
+Vopt in (10) is well-defined.
+In this study, three attack scenarios are considered, targeting
+the measurement of the rotor speed ωr and the reference
+control signals Tg,ref and βref . Measurements of Tg and β are
+not targeted, since they are not used directly by the standard
+controller considered in this work and altering them would
+have no practical effect. The three scenarios are defined as
+follows:
+• Test 1 (rotor speed measurement attack): bias injection
+in the measurement of ωr with magnitude a∞ = 1 · ωrop ,
+• Test 2 (torque reference attack): bias injection in Tg,ref
+with magnitude a∞ = −0.1 · Tgop ,
+• Test 3 (pitch reference attack): bias injection in βref with
+magnitude a∞ = 0.1 · β op .
+A relatively high gain is used for ωr to overcome the large
+estimation uncertainty associated with this variable, ensuring
+a distinguishable residual response. The time constant is fixed
+at βa = 0.999 in (1), with a sampling interval of 0.01 s, resulting in a sufficiently abrupt injection profile for visualization
+purposes.
+The constants used for the 15 MW reference wind turbine
+are listed in Table I, and a high-fidelity simulation of this
+turbine is available through GH Bladed software [34]. Table II
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+6
+
+TABLE II
+Cp PARAMETERS .
+Name
+c1
+c2
+c3
+c4
+c5
+c6
+
+µ
+0.1766
+116.0236
+1.4138
+5.6603
+16.1613
+0.0402
+
+Ref. value
+0.5176
+116
+0.4
+5
+21
+0.0068
+
+σ
+0.0887
+0.9712
+0.5157
+0.4992
+1.8576
+0.0178
+
+TABLE III
+C ONTROLLER GAINS .
+Name
+Kopt
+Kp,Tg
+Ki,Tg
+Tg,rated
+Kp,β
+Ki,β
+
+Description
+Optimal mode gain
+Proportional gain (torque)
+Integral gain (torque)
+Rated generator torque
+Proportional gain (pitch)
+Integral gain (pitch)
+
+Value
+3.2044×107
+30.2670
+7.9968
+2.05 × 107
+30.2670
+7.9968
+
+V. I MPLEMENTATION AND R ESULTS
+
+Fig. 3. Trace plots (left) and posterior density (right) of the estimated
+parameters c1 -c6 using three chains from the NUTS algorithm.
+
+TABLE I
+M ODEL CONSTANTS .
+Name
+R
+Ar
+η
+µ
+ρ
+
+Description
+Rotor radius
+Rotor area
+Generator efficiency
+Mechanical losses
+Air density
+
+Value
+120.998 m
+πR2 m2
+0.93
+0.05
+1.225 kg m−3
+
+shows some standard literature values for the Cp model
+parameters based on [30], [35], which, however, do not accurately reflect the behaviour of the wind turbine studied here.
+Therefore, Bayesian inference with the No-U-Turn Sampler
+(NUTS) Hamiltonian Monte Carlo algorithm was employed
+using the Julia package T URING . JL to estimate the posterior
+distributions of these parameters (see Fig. 3). The estimation
+was based on the input data from the wind speed at the rotor
+vr , and output data from rotor speed wr , generator torque Tg
+and collective pitch angle β. A Gaussian approximation of
+the resulting posterior distributions is needed (see Table II).
+Controller gains were estimated via Levenberg-Marquardt least
+squares (see Table III) rather than treated probabilistically, as
+the setup involves open-loop detection where control signals
+are inputs of the filter. Consequently, the controller is not
+included in the filter model, and its gains are not required
+for filter design. The estimation of these gains was performed
+primarily for operating point computations and to support
+consistency checks.
+
+Let A ∈ Rn×n and B ∈ Rm×n represent the discretetime system matrices of the wind turbine model, which depend on a set of stochastic parameters θ ∈ Rl with mean
+values θ̄ and covariance matrix Σθ = diag(σθ21 , . . . , σθ2l ),
+where θ1 , . . . , θl−1 are physical parameters (c1 , . . . , c6 ) and θl
+represents the changes in operating points induced by changes
+in the operating point of the wind speed at the rotor, with
+gradients dωr /dvr , dωr,err /dvr , and dβ/dvr .
+Hence, the total gradients of the system matrices with
+respect to all uncertain parameters θi (i = 1, . . . , l) are
+computed as
+∇θ i A =
+
+∂A
+,
+∂θi θ̄,ωrop ,β op
+
+∇θ l A =
+
+∂A
+∂A dωr
++
+∂vr
+∂ωr dvr
+
+i = 1, . . . , l − 1,
+
+∂A dβ
+∂A dωr,err
++
++
+∂ωr,err dvr
+∂β dvr
+∇θ i B =
+
+∂B
+,
+∂θi θ̄,ωrop ,β op
+
+∇θ l B =
+
+∂B
+∂B dωr
++
+∂vr
+∂ωr dvr
+
+(40)
+
+!
+,
+
+i = 1, . . . , l − 1,
+
+∂B dωr,err
+∂B dβ
++
++
+∂ωr,err dvr
+∂β dvr
+
+(41)
+
+θ̄,ωrop ,β op
+
+(42)
+
+!
+.
+
+(43)
+
+θ̄,ωrop ,β op
+
+Note that vrop is considered in θ̄ (θ̄l , specifically).
+The matrices containing the standard deviations of each
+entry due to each uncertain parameter are computed as
+q
+(i)
+Asd = (∇θi A ◦ ∇θi A) σθ2i ,
+(44)
+q
+(i)
+Bsd = (∇θi B ◦ ∇θi B) σθ2i ,
+(45)
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+Here the third component is taken as the reference scale
+(q33 = 1), so channels with larger empirical variance receive
+a proportionally smaller weight, and vice-versa.
+The proposed scheme was validated through numerical
+experiments under the three attack scenarios mentioned in
+the end of Section IV. The robust residual generator was
+designed using the weighted LMI-based approach mentioned
+in Section III. The solution of the LMIs and Riccati equations
+is performed offline for each operating point. The optimization
+parameters were set to ω1 , ω2 , γ1 , γ2 = 1, which resulted in
+α12 = 1.7778, α22 = 0.8887 in (24). For each scenario, the
+residuals generated by both the reference Hi /H∞ filter and
+the robust H∞ MMP filter are shown in Figs. 4, 5, 6, along
+with their corresponding confidence bounds derived from the
+residual covariance due to parametric uncertainty Σr (k) plus
+the regularization term.
+
+1
+
+1
+
+0.5
+
+0.5
+
+0
+
+0
+
+-0.5
+0
+
+-0.5
+600
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+0.02
+
+0
+
+0
+
+rTg
+
+0.02
+
+-0.02
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+-0.02
+600
+0
+0.01
+
+0
+
+0
+
+r-
+
+0.01
+
+-0.01
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+-0.01
+600
+0
+
+Res. (Hi =H1 )
+'2< (Hi =H1 )
+Res. (MMP)
+'2< (MMP)
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+Time (s)
+
+Time (s)
+
+Fig. 4. Comparison between the Hi /H∞ residuals and the H∞ MMP
+residuals for Test 1, shown together with 2σ confidence bounds.
+
+r!r
+
+0.2
+0
+
+0
+-0.2
+
+rTg
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+0
+
+0
+
+0
+
+-0.02
+
+-0.02
+
+-0.04
+
+-0.04
+
+-0.06
+0
+
+Res. (Hi =H1 )
+'2< (Hi =H1 )
+Res. (MMP)
+'2< (MMP)
+
+0.2
+
+-0.2
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+-0.06
+100
+
+200
+
+300
+
+400
+
+500
+
+0.01
+
+rwhere ◦ denotes the element-wise (Hadamard) product.
+Hence, the matrices Ai , Bi in (17) are defined as Ai =
+(1)
+(l)
+(1)
+(l)
+{Asd , . . . , Asd }, Bi = {Bsd , . . . , Bsd }. As the standard
+deviations are captured by Ai and Bi , the standard deviations
+σi of the stochastic process p(k) will be defined as ones.
+The reference model-based approach used in this paper is
+especially suited for addressing linearization errors, which
+arise because the model is only accurate near a specific
+operating point [21]. As the linearized model changes slightly
+with variations in wind speed vr , we aim to ensure robustness
+against changes of up to 1 m/s. In contrast, uncertainty in
+the power coefficient model parameters c1 , . . . , c6 stems from
+the use of a simplified model and parameter estimation. This
+uncertainty is time-invariant and therefore not considered in
+the LMI-based reference model filter design. However, it
+is taken into account in the residual evaluation stage via
+the residual covariance matrix Σr (k) derived in (28). In
+(l)
+(l)
+summary, the filter design employs Ai = Asd , Bi = Bsd ,
+while the residual covariance derivation utilizes the full sets
+(1)
+(l)
+(1)
+(l)
+Ai = {Asd , . . . , Asd }, Bi = {Bsd , . . . , Bsd }.
+Since the uncertain parameters influence only the aerodynamic model, only the first residual, rωr , will exhibit nonzero bounds due to Σr (k). The other two residuals, rTg
+and rβ , have confidence bounds determined solely by the
+assumed measurement noise, which is generally insufficient to
+capture transient spikes and other higher-order effects arising
+from unmodelled dynamics. Hence, relying on the raw Σr (k)
+could allow sudden residual spikes to trigger crossings of the
+GLR decision threshold. To mitigate this, a small component
+corresponding to ≈ 2 times the nominal empirical residual
+variance of rTg and rβ was added to Σr (k).
+in (23)
+Due to this regularization term, using Qr = Σ−1
+r
+would yield misleading weights. Hence, Qr is chosen from
+empirical sample variances of the reference residuals. Let
+2
+σ
+br,i
+= var{ri (k)} denote the sample variance of the i-th
+residual channel computed over a nominal (no-fault) segment
+of data. We form a diagonal weighting that equalizes the
+expected contribution of each channel in the bound:
+!
+2
+2
+σ
+br,3
+σ
+br,3
+(46)
+Qr = diag
+2 , σ
+2 , 1 .
+σ
+br,1
+br,2
+
+r!r
+
+7
+
+600
+
+0
+0.01
+
+0
+
+0
+
+-0.01
+0
+
+-0.01
+600
+0
+
+100
+
+200
+
+300
+
+400
+
+Time (s)
+
+500
+
+Time (s)
+
+Fig. 5. Comparison between the Hi /H∞ residuals and the H∞ MMP
+residuals for Test 2, shown together with 2σ confidence bounds.
+
+Fig. 4 shows the residual behaviour for Test 1, where the
+bias injection attack is applied at t = 200 s, inducing a steadystate bias of 1·ωrop into the measurement of ωr . The controller
+compensates the false rotor speed increase by adjusting the
+pitch angle, which in turn causes the reduction of the actual
+rotor speed. This triggers the first reference residual, while the
+robust residuals show a reduced sensitivity, alongside a general
+decrease in residual variability.
+Fig. 5 shows the residual behaviour for Test 2, where the
+attack is applied to the reference torque Tg,ref , inducing a
+steady-state bias of −0.1 · Tgop . To compensate and maintain
+the rotor speed operating point, the control system responds
+with a slight increase in pitch actuation, since pitch control
+has a significantly greater influence on rotor speed than torque
+control. As a result, the actual rotor speed slightly decreases,
+while the actual generator torque increases. The affected
+residuals are therefore rωr and rTg .
+Fig. 6 shows the residual behaviour for Test 3, where a bias
+injection attack is applied to the pitch reference signal βref
+with magnitude 0.1 · β op . The system rapidly compensates for
+the induced bias to prevent a drop in rotor speed, resulting in a
+decrease in the actual pitch angle and a corresponding increase
+in the actual rotor speed. These deviations trigger responses
+in the residuals rωr and rβ .
+As shown in Fig. 4, Fig. 5, and Fig. 6, the uncertainty
+bounds plotted for the first residual rωr do not always exhibit
+ideal behavior. For instance, during the larger perturbation
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+0.2
+
+0.2
+
+0
+
+0
+-0.2
+
+rTg
+
+-0.4
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+-0.4
+0
+
+0.02
+
+0.02
+
+0
+
+0
+
+-0.02
+0
+
+r-
+
+TABLE IV
+D ETECTION PERFORMANCE (α = 0.5%).
+
+100
+
+200
+
+300
+
+400
+
+500
+
+-0.02
+600
+0
+
+0.06
+
+0.06
+
+0.04
+
+0.04
+
+0.02
+
+0.02
+
+0
+
+0
+
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+0
+
+100
+
+100
+
+200
+
+200
+
+300
+
+300
+
+400
+
+400
+
+500
+
+500
+
+600
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+Time (s)
+
+2
+
+r1
+
+126.55
+79.88
+
+0
+-2
+300
+
+400
+
+500
+
+600
+
+rHi =H1 ;1
+rM M P;1
+$
+rH
+i =H1 ;1
+$
+rM
+M P;1
+
+2.5
+
+JHpert
+(T1)
+i =H 1
+JHpert
+(T2)
+i =H 1
+JHpert
+(T3)
+i =H 1
+
+4
+3
+
+Jth
+
+2
+1
+0
+
+200
+
+Hi /H∞
+Robust
+
+T1
+7.00
+3.60
+
+#104
+
+Fig. 6. Comparison between the Hi /H∞ residuals and the H∞ MMP
+residuals for Test 3, shown together with 2σ confidence bounds.
+
+100
+
+q0.99 (H0 )
+
+Delays [s]
+T2
+T3
+1.74
+1.23
+1.64
+1.00
+
+600
+
+5
+
+Time (s)
+
+0
+
+Method
+
+Decision fun.
+
+-0.2
+
+Res. (Hi =H1 )
+'2< (Hi =H1 )
+Res. (MMP)
+'2< (MMP)
+
+Decision fun.
+
+r!r
+
+8
+
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+#104
+pert
+JM
+M P (T1)
+
+2
+
+pert
+JM
+M P (T2)
+
+1.5
+
+pert
+JM
+M P (T3)
+Jth
+
+1
+0.5
+0
+
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+600
+
+Time (s)
+
+Time (s)
+
+Fig. 8.
+GLR decision functions under operating-point perturbation
+(14 m/s → 10 m/s at t = 100 s) for Hi /H∞ (left) and robust filter (right).
+
+Time (s)
+
+r2
+
+Fig. 0.01
+7. Comparison between the first reference and robust residual rinHinormal
+=H1 ;2
+conditions,
+and the response with a change in the wind speed operating
+point
+rM M P;2
+0
+$
+from 14 m/s to 10 m/s at t = 100 s.
+rH
+=H1 ;2
+i
+-0.01
+$
+rM
+0
+100
+200
+300
+400
+500
+600
+M P;2
+
+r3
+
+Time (s)
+observed
+between 400 s and 500 s (not caused by the attack),
+#10-3
+5
+one would
+expect the uncertainty bounds to widen accordingly.
+rHi =H1 ;3
+However,
+this
+does not occur. This discrepancy arises rbecause
+M M P;3
+0
+$
+rH
+the perturbation
+is
+not
+due
+to
+uncertainties
+in
+the
+C
+i =H1 ;3
+p param-5
+$
+r
+0
+100
+200
+300 speed,
+400
+500 rather
+600 to unmodelled
+M M P;3
+eters or
+variations
+in wind
+but
+Time (s)
+dynamics or other forms
+of model mismatch that are not
+captured by the computed covariance. Despite this limitation,
+the resulting bounds represent the best achievable performance
+under the given modelling assumptions.
+To more clearly illustrate the response of the MMP residuals
+to a considerable change in operating conditions, the operating
+point of the wind was changed from 14 m/s to 10 m/s at
+t = 100 s, as shown in Fig. 7. In the figure, the dark and
+light red curves represent the first Hi /H∞ reference residual
+and the H∞ MMP robust residual for the perturbed system,
+respectively. For comparison, the dark and light blue curves
+show the same rωr residuals from Fig. 6. It is clear from the
+results that the robust residual is significantly less sensitive to
+the sudden change in operating conditions than the reference
+residual.
+As explained in Section III, selecting thresholds based solely
+on the theoretical χ2 distribution under H0 lead to overly
+optimistic false-alarm rates. Therefore, the threshold is chosen
+as the (1 − α)-quantile of the empirical distribution of J(k)
+under attack-free operation to achieve a desired false-alarm
+probability α. For α = 0.5%, this yields Jth = 152.96 for the
+Hi /H∞ filter and Jth = 85.54 for the robust filter.
+Robustness and sensitivity are evaluated under identical calibration conditions, with results summarized in Table IV. Under
+H0 , the 99th percentile of J(k) is lower for the robust filter
+(q0.99 = 79.88) than for the Hi /H∞ filter (q0.99 = 126.55),
+indicating reduced sensitivity to uncertainty. Under H1 , both
+methods achieve a detection probability of 1 within a 10 s
+
+window after the attack onset for all tested scenarios, while
+the robust filter yields equal or smaller detection delays (e.g.,
+3.6 s vs. 7 s in Test 1).
+Regarding computational cost, the online implementation
+reduces to a linear observer update and the evaluation of the
+GLR test statistic. In the MATLAB implementation, the average execution time per iteration for the robust filter and GLR
+test statistic is 1.6 × 10−5 s and 4.16 × 10−4 s, respectively,
+which is well below the sampling period of 0.01 s.
+Fig. 8 complements Fig. 7 by comparing the GLR test
+statistics of the reference and robust approaches under the
+change in operating conditions from 14 m/s to 10 m/s at
+t = 100 s. Although the robust residual generator is designed
+to handle variations of up to 1 m/s, a larger change of
+4 m/s highlights more clearly its performance, resulting in a
+noticeable reduction in variability compared to the reference
+filter.
+VI. C ONCLUSION
+This paper presents a reference model-based anomaly detection scheme for wind turbine systems subject to stochastic
+parameter uncertainties, with a particular focus on detecting
+false data injection cyber-attacks. The approach employs an
+Hi /H∞ reference filter, which offers an optimal balance
+between fault sensitivity and disturbance rejection, to design
+a robust filter through an H∞ model matching framework.
+This filter tracks the reference residuals while accounting for
+parametric uncertainty. A closed-form expression for the residual covariance is derived from the statistical properties of the
+residual generator dynamics, providing a rigorous alternative
+to the common practice of inflating process noise covariances.
+Furthermore, the robust filter design is modified by weighting
+the influence of each residual component in the derivation
+of the residual variance bound to regulate conservativeness.
+Experimental results show a substantial reduction in residual
+sensitivity to uncertainty. The method’s effectiveness strongly
+depends on accurate modelling of system uncertainties; other-
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+9
+
+wise, it can become conservative. The findings highlight the
+potential of the proposed scheme for wind turbine monitoring
+and indicate several directions for improvement. One key
+direction involves developing a more rigorous approach to
+account for the residual variability caused by unmodelled
+dynamics, instead of adding a regularization term to the
+previously derived residual covariance. Future work will focus
+on this matter and the experimental validation of the method
+with operational data from real wind turbines.
+
+Expanding Exr (k+1) into the resulting terms and applying
+the expectations yields
+E xr (k+1) = Ar0 Exr (k)ATr0
+X
+
++
+σi2 Ari x̄r (k)x̄r (k)T +Exr (k) ATri
+i
+
++
++
+
+X
+i
+X
+
+
+
+T
+T
+σi2 Bri u(k)u(k)T Bri
++Eri d(k)d(k)T Eri
+
+
+T
+σi2 Ari x̄r (k)u(k)T Bri
++Bri u(k)x̄r (k)T ATri (52)
+
+i
+
++
+
+ACKNOWLEDGMENT
+We thank Emerson for providing data from a 15 MW wind
+turbine GH Bladed model.
+A PPENDIX
+W EIGHTED R EFERENCE M ODEL -BASED LMI D ESIGN FOR
+S TOCHASTICALLY U NCERTAIN S YSTEMS
+The LMIs related to (24) remain the same as in [21] (Section
+8.5), whereas the LMI formulation for (25) in [21] is modified
+by introducing a weighting matrix Qr > 0 into the residual
+covariance norm. Let us revise the whole procedure by first
+defining
+
+V (k) = E xTr (k)P̄ xr (k) ,
+(47)
+where P̄ > 0, and decomposing it into mean and deviation,
+V (k) = trace(P̄ Exr (k)) + x̄Tr (k)P̄ x̄r (k),
+
+(48)
+
+
+where Exr (k) = E exr (k)eTxr (k) is the augmented state
+error covariance, with exr (k) = xr (k) − x̄r (k).
+x(k)
+The augmented state xr (k) =
+evolves as
+x(k) − x̂(k)
+
++
+
+x̄r (k+1) = Ar0 x̄r (k)+Br0 u(k)+Er0 d(k)+Er,f f (k), (50)
+exr (k+1) = Ar0 exr (k) +
+
+l
+X
+
+Ari pi (k)xr (k)
+
+i=1
+
++
+
+l
+X
+i=1
+
+Bri pi (k)u(k) +
+
+l
+X
+
+(51)
+Eri pi (k)d(k).
+
+
+
+T
+T
+σi2 Bri u(k)d(k)T Eri
++Eri d(k)u(k)T Bri
+.
+
+This allows the definition of V (k + 1) as
+
+T
+
+
+x̄r (k)
+x̄r (k)
+ u(k) 
+ u(k) 
+
+
+
+V (k+1) = trace(MA Exr (k)) + 
+ d(k)  M1  d(k)  ,
+f (k)
+f (k)
+(53)
+where
+l
+X
+MA = ATr,0 P̄ Ar,0 +
+σi2 ATr,i P̄ Ar,i ,
+(54)
+i=1
+
+ATr,0
+T 
+Br,0
+
+
+M1 = 
+T
+ Er,0  P̄ Ar,0 Br,0
+T
+Er,f
+ T 
+Ar,i
+l
+T 
+X
+
+
+B
+r,i 
++
+σi2 
+T
+Er,i  P̄ Ar,i
+i=1
+
+
+
+
+Er,0
+
+Er,f
+
+
+(55)
+
+Br,i
+
+Er,i
+
+
+0 .
+
+0
+
+Assuming
+
+P̄
+0
+M1 < 
+0
+0
+
+Pl
+
+The mean x̄r (k+1) and the deviation from the mean
+exr (k+1) = xr (k+1) − x̄r (k+1) are thus expressed as
+
+i
+X
+
+
+
+T
+σi2 Ari x̄r (k)d(k)T Eri
++Eri d(k)x̄r (k)T ATri
+
+i
+
+xr (k+1) = Ar xr (k) + Br u(k) + Er d(k) + Er,f f (k), (49)
+with Ar = Ar,0 +
+pi (k), Br = Br,0 +
+i=1 Ar,iP
+Pl
+l
+i=1 Br,i pi (k), and Er = Er,0 +
+i=1 Er,i pi (k), where
+
+
+
+
+A
+0
+Ai
+0
+Ar,0 =
+, Ar,i =
+,
+0 A − LC
+Ai − LCi 0
+ 
+
+
+
+
+B
+Bi
+Ed
+Br,0 =
+, Br,i =
+, Er,0 =
+,
+0
+Bi − LDi
+Ed − LFd
+
+
+
+
+Ei
+Ef
+Er,i =
+, Er,f =
+.
+Ei − LFi
+Ef − LFf
+
+X
+
+0
+I
+0
+0
+
+0
+0
+I
+0
+
+
+0
+0
+ ⇒ MA ≤ P̄ ,
+0
+I
+
+(56)
+
+yields
+V (k+1) < V (k) + dT (k)d(k) + uT (k)u(k) + f T (k)f (k),
+(57)
+which leads to
+k−1
+X
+
+V (k) <
+dT (j)d(j) + uT (j)u(j) + f T (j)f (j) . (58)
+j=0
+
+Now, consider the weighted residual covariance norm
+
+σr2 (k) = E (r(k) − r̄(k))T Qr (r(k) − r̄(k)) .
+(59)
+The residual is given by:
+r(k) = Cr xr (k) + Dr u(k) + Fr d(k) + Fr,f f (k),
+(60)
+Pl
+Pl
+with Cr = Cr,0 + i=1 Cr,i pi (k), Dr = i=1 Dr,i pi (k), and
+Pl
+Fr = Fr,0 + i=1 Fr,i pi (k), where
+
+
+
+
+Cr,0 = 0 V C , Cr,i = V Ci 0 ,
+Dr,i = V Di , Fr,0 = V Fd , Fr,i = V Fi , Fr,f = V Ff .
+
+i=1
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+10
+
+The mean of the residual is
+r̄(k) = E[r(k)] = Cr,0 x̄r (k) + Fr,0 d(k) + Fr,f f (k).
+
+(61)
+
+Expanding σr2 (k) and applying the expectations to each term
+yields
+T
+σr2 (k) = trace(Qr Cr,0 Exr (k)Cr,0
+)
+
++
+
++
+
+l
+X
+i=1
+l
+X
+
+T
+σi2 trace(Qr Cr,i Exr (k)Cr,i
+)
+
++
+
++
+
++
+
+i=1
+l
+X
+i=1
+l
+X
+
+0
+
+···
+
+0
+
+σl2 P̄
+
+ T T 
+Cr,0
+Qr
+T  
+Cr,1
+ 0
+
+MC =  .   .
+ ..   ..
+
+0
+σ12 Qr
+..
+.
+
+···
+···
+..
+.
+
+0
+0
+..
+.
+
+0
+
+···
+
+0
+
+0 ,
+
+σl2 Qr
+
+NlT
+
+T
+σi2 x̄r (k)T Cr,i
+Qr Cr,i x̄r (k)
+
+i=1
+l
+X
+
+The previous LMIs (56), (65) and (66) are reformulated by
+redefining M1 , MC and M3 as
+
+
+N0 = Ar,0 Br,0 Er,0 Er,f ,
+
+
+Ni = Ar,i Br,i Er,i 0 , i = 1, . . . , l,
+ 
+ T T 
+N0
+P̄
+0
+···
+0
+N0
+ N1 
+N1T   0 σ12 P̄ · · ·
+0
+ 
+ 
+
+(67)
+M1 =  .   .
+..   ..  ,
+..
+..
+ ..   ..
+.
+.
+.  . 
+
+(62)
+
+T
+σi2 u(k)T Dr,i
+Qr Dr,i u(k)
+
+T
+Cr,l
+
+
+Tr,i = V Di V Fi
+ T T  2
+Tr,1
+σ1 Qr · · ·
+ ..   ..
+..
+M3 =  .   .
+.
+
+T
+σi2 d(k)T Fr,i
+Qr Fr,i d(k)
+
+
+
+T
+T
+σi2 Dr,i u(k)d(k)T Fr,i
++Fr,i d(k)u(k)T Dr,i
+.
+
+i=1
+
+T
+Tr,l
+
+The mixed terms involving x̂r (k) with u(k) and d(k) are
+omitted to obtain an LMI condition that is independent of
+the unknown mean trajectory x̂r (k). The weighted residual
+covariance norm can be rewritten as
+σr2 (k) = trace(Qr MC Exr (k)) + x̄Tr (k)Qr M2 x̄r (k)
+
+T
+
+
+u(k)
+u(k)
++  d(k)  Qr M3  d(k)  ,
+f (k)
+f (k)
+
+(63)
+
+l
+X
+
+Cr,l
+
+(69)
+
+Tr,l
+
+Using the Schur complement, LMI (56) becomes
+
+
+−Pe N0T P̄
+N1T P̄
+· · · NlT P̄
+ P̄ N0 −P̄
+
+0
+···
+0
+
+
+−2
+ P̄ N1
+
+0
+−σ
+P̄
+·
+·
+·
+0
+1
+
+ < 0,
+ .
+
+.
+.
+.
+.
+..
+..
+..
+..
+ ..
+
+−2
+P̄ Nl
+0
+···
+0 −σl P̄
+where
+
+
+P̄
+0
+Pe = 
+0
+0
+
+with:
+T
+MC = Cr,0
+Cr,0 +
+
+
+
+Cr,0
+ Cr,1 
+
+
+  ..  , (68)
+ . 
+
+i = 1, . . . , l,
+
+
+0
+Tr,1
+..   ..  .
+.  . 
+
+σl2 Qr
+
+···
+
+0
+
+Nl
+
+T
+σi2 Cr,i
+Cr,i ,
+
+0
+I
+0
+0
+
+(70)
+
+
+0
+0
+.
+0
+I
+
+0
+0
+I
+0
+
+i=1
+l
+X
+
+M2 =
+
+LMI (65) becomes
+
+T
+−γ12 P̄
+Cr,0
+ Cr,0 −Q−1
+r
+
+ Cr,1
+0
+
+
+..
+..
+
+.
+.
+
+T
+σi2 Cr,i
+Cr,i ≤ MC ,
+
+i=1
+
+ T 
+Dr,i 
+T 
+Dr,i
+M3 =
+σi2  Fr,i
+i=1
+0
+l
+X
+
+Fr,i
+
+
+
+0 .
+
+Cr,l
+
+Imposing the condition
+trace(Qr MC Exr (k)) + x̄Tr (k)Qr M2 x̄r (k)
+
+≤ γ12 trace(P̄ Exr (k)) + x̄Tr (k)P̄ x̄r (k) ,
+
+(64)
+
+which holds when
+Qr MC ≤ γ12 P̄ ,
+
+(65)
+
+Qr M3 ≤ γ22 I,
+
+(66)
+
+and also
+
+T
+Cr,1
+0
+−σ1−2 Q−1
+r
+..
+.
+
+···
+···
+···
+..
+.
+
+T
+Cr,l
+0
+0
+..
+.
+
+···
+
+0
+
+−σl−2 Q−1
+r
+
+0
+
+LMI (66) becomes
+
+T
+−γ22 I
+Tr,1
+ Tr,1 −σ −2 Q−1
+r
+1
+
+
+..
+.
+.
+
+.
+.
+Tr,l
+
+···
+
+···
+···
+..
+.
+
+T
+Tr,l
+0
+..
+.
+
+0
+
+−σl−2 Q−1
+r
+
+
+
+
+
+ ≤ 0,
+
+
+(71)
+
+
+
+
+ ≤ 0.
+
+
+(72)
+
+The optimization problem becomes
+(73)
+
+L,V
+
+leads to (25)
+σr2 (k) <γ12
+
+
+min w1 α12 + w2 α22 ,
+
+k−1
+X
+
+ T
+
+d (j)d(j) + uT (j)u(j) + f T (j)f (j)
+
+j=0
+
+
++ γ22 dT (k)d(k) + uT (k)u(k) + f T (k)f (k) .
+
+subject to
+• LMIs (70)–(72) using
+
+
+P
+0
+P = 1
+,
+0 P2
+
+P̄ =
+
+
+P3
+0
+
+
+0
+,
+P1
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for publication in IEEE Transactions on Industry Applications. This is the author's version which has not been fully edited and
+content may change prior to final publication. Citation information: DOI 10.1109/TIA.2026.3690173
+
+11
+
+with
+
+P̄ N0 =
+
+P3 A
+0
+0
+P1 A − Y C
+
+P3 B
+0
+
+
+P3 Ed
+P3 Ef
+,
+(74)
+P1 Ed − Y Fd P1 Ef − Y Ff
+
+P3 A i
+0
+P3 Bi
+P̄ Ni =
+0
+P1 Ai − Y Ci P1 Bi − Y Di
+
+P3 E i
+0
+.
+(75)
+P1 Ei − Y Fi 0
+Residual filter gain: L = P1−1 Y .
+• Residual variance LMIs (70)–(72) with Qr .
+•
+
+R EFERENCES
+[1] S. G. Freeman, M. A. Kress-Weitenhagen, J. P. Gentle, M. J. Culler,
+M. M. Egan, and R. V. Stolworthy, “Attack surface of wind energy
+technologies in the united states,” Idaho National Laboratory (INL),
+Idaho Falls, ID (United States), Tech. Rep., 2024.
+[2] J. A. Guerrero-Saade and M. Van Amerongen, “Acidrain— a modem
+wiper rains down on europe,” Sentinel Labs, vol. 31, 2022.
+[3] M. Döhler, L. Mevel, and Q. Zhang, “Fault detection, isolation and
+quantification from gaussian residuals with application to structural
+damage diagnosis,” Annual Reviews in Control, vol. 42, pp. 244–256,
+2016.
+[4] S. Simani, P. Castaldi et al., “Fault diagnosis techniques for a wind
+turbine system,” Fault Detection, Diagnosis and Prognosis, pp. 1–20,
+2019.
+[5] J. Liang, K. Zhang, A. Al-Durra, S. Muyeen, and D. Zhou, “A state-ofthe-art review on wind power converter fault diagnosis,” Energy Reports,
+vol. 8, pp. 5341–5369, 2022.
+[6] M. Ghiasi and M. Fotuhi-Firuzabad, “Resilience enhancement of smart
+power systems against false data injection attacks using adaptive intrusion detection mechanisms,” IEEE Transactions on Reliability, 2026.
+[7] S. X. Ding, Advanced methods for fault diagnosis and fault-tolerant
+control. Springer, 2021.
+[8] M. Hansen, Aerodynamics of wind turbines. Routledge, 2015.
+[9] E.-J. Perez-Perez, V. Puig, F.-R. Lopez-Estrada, G. Valencia-Palomo,
+I. Santos-Ruiz, and S. E. Samada, “Fault detection and isolation in wind
+turbines based on neuro-fuzzy qlpv zonotopic observers,” Mechanical
+Systems and Signal Processing, vol. 191, p. 110183, 2023.
+[10] E.-J. Pérez-Pérez, V. Puig, F.-R. López-Estrada, G. Valencia-Palomo,
+I. Santos-Ruiz, and G. Osorio-Gordillo, “Robust fault diagnosis of wind
+turbines based on manfis and zonotopic observers,” Expert Systems with
+Applications, vol. 235, p. 121095, 2024.
+[11] X. Ding and P. M. Frank, “Fault detection via factorization approach,”
+Systems & control letters, vol. 14, no. 5, pp. 431–436, 1990.
+[12] M. Hou and R. J. Patton, “Input observability and input reconstruction,”
+Automatica, vol. 34, no. 6, pp. 789–794, 1998.
+[13] Q. Zhang and L. Zhang, “State estimation for stochastic time varying
+systems with disturbance rejection**l. zhang acknowledges the financial
+support partly by the national nature science foundation of china
+(11701040) and innovation foundation of bupt for youth (500417024).”
+IFAC-PapersOnLine, vol. 51, no. 15, pp. 55–59, 2018, 18th IFAC
+Symposium on System Identification SYSID 2018.
+[14] M. Zhong, S. X. Ding, J. Lam, and H. Wang, “An lmi approach to
+design robust fault detection filter for uncertain lti systems,” Automatica,
+vol. 39, no. 3, pp. 543–550, 2003.
+[15] D. Sauter and F. Hamelin, “Frequency-domain optimization for robust
+fault detection and isolation in dynamic systems,” IEEE Transactions
+on automatic control, vol. 44, no. 4, pp. 878–882, 2002.
+[16] J. Liu, J. L. Wang, and G.-H. Yang, “An lmi approach to minimum
+sensitivity analysis with application to fault detection,” Automatica,
+vol. 41, no. 11, pp. 1995–2004, 2005.
+[17] J. L. Wang, G.-H. Yang, and J. Liu, “An lmi approach to H− index and
+mixed H− /H∞ fault detection observer design,” Automatica, vol. 43,
+no. 9, pp. 1656–1665, 2007.
+[18] S. X. Ding, T. Jeinsch, P. M. Frank, and E. L. Ding, “A unified approach
+to the optimization of fault detection systems,” International journal of
+adaptive control and signal processing, vol. 14, no. 7, pp. 725–745,
+2000.
+
+[19] P. Zhang, S. X. Ding, G. Wang, and D. Zhou, “Fault detection of
+linear discrete-time periodic systems,” IEEE Transactions on Automatic
+Control, vol. 50, no. 2, pp. 239–244, 2005.
+[20] X. Li and K. Zhou, “A time domain approach to robust fault detection
+of linear time-varying systems,” Automatica, vol. 45, no. 1, pp. 94–102,
+2009.
+[21] S. X. Ding, Model-based fault diagnosis techniques: design schemes,
+algorithms, and tools. Springer Science & Business Media, 2008.
+[22] M. Zhong, S. X. Ding, B. Tang, P. Zhang, and T. Jeinsch, “An lmi
+approach to robust fault detection filter design for discrete-time systems
+with model uncertainty,” in Proceedings of the 40th IEEE Conference
+on Decision and Control (Cat. No. 01CH37228), vol. 4. IEEE, 2001,
+pp. 3613–3618.
+[23] E. Frisk and L. Nielsen, “Robust residual generation for diagnosis
+including a reference model for residual behavior,” Automatica, vol. 42,
+no. 3, pp. 437–445, 2006.
+[24] E. Mazars, I. Jaimoukha, Z. Li, and A. C. Zolotas, “Fault detection and
+isolation filter design for systems subject to polytopic uncertainties,”
+in 2007 Mediterranean Conference on Control & Automation. IEEE,
+2007, pp. 1–5.
+[25] M. Nazir, A. Q. Khan, G. Mustafa, and M. Abid, “Robust fault detection
+for wind turbines using reference model-based approach,” Journal of
+King Saud University-Engineering Sciences, vol. 29, no. 3, pp. 244–
+252, 2017.
+[26] Á. M. Gómez, S. Hassani, S. Gres, and R. Wisniewski, “Reference
+model-based cyber-attack detection for stochastically uncertain wind
+turbine systems,” in 2025 IEEE Industry Applications Society Annual
+Meeting (IAS). IEEE, 2025, pp. 1–8.
+[27] A. Teixeira, I. Shames, H. Sandberg, and K. H. Johansson, “A secure control framework for resource-limited adversaries,” Automatica,
+vol. 51, pp. 135–148, 2015.
+[28] M. Basseville, I. V. Nikiforov et al., Detection of abrupt changes: theory
+and application. prentice Hall Englewood Cliffs, 1993, vol. 104.
+[29] Á. M. Gómez, R. Wisniewski, and L. Navarro-Hilfiker, “Model-based
+detection of data-injection cyber-attacks on wind turbine controllers,”
+in International Conference on Control, Decision and Information
+Technologies, 2024.
+[30] M. Carpintero-Renteria, D. Santos-Martin, A. Lent, and C. Ramos,
+“Wind turbine power coefficient models based on neural networks and
+polynomial fitting,” IET Renewable Power Generation, vol. 14, no. 11,
+pp. 1841–1849, 2020.
+[31] T. Knudsen and T. Bak, “Simple model for describing and estimating
+wind turbine dynamic inflow,” in 2013 American Control Conference.
+IEEE, 2013, pp. 640–646.
+[32] M. Jelavić and N. Perić, “Wind turbine control for high turbulent winds,”
+Automatika: časopis za automatiku, mjerenje, elektroniku, računarstvo i
+komunikacije, vol. 50, no. 3-4, pp. 135–151, 2009.
+[33] T. Knudsen, T. Bak, and M. Soltani, “Prediction models for wind speed
+at turbine locations in a wind farm,” Wind Energy, vol. 14, no. 7, pp.
+877–894, 2011.
+[34] E. Bossanyi, “Gh bladed user manual,” Garrad Hassan and Partners
+Ltd, vol. 701, 2009.
+[35] S. Heier, Grid integration of wind energy: onshore and offshore conversion systems. John Wiley & Sons, 2014.
+
+© 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

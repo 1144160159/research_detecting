@@ -1,0 +1,1161 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021 4225
+
+ XAI Meets Mobile Traffic Classification:
+ Understanding and Improving Multimodal
+ Deep Learning Architectures
+ Alfredo Nascita , Antonio Montieri , Member, IEEE, Giuseppe Aceto ,
+ Domenico Ciuonzo , Senior Member, IEEE, Valerio Persico , and Antonio Pescapé , Senior Member, IEEE
+
+ Abstract—The increasing diffusion of mobile devices has widespread usage of smartphones has deeply changed the
+ dramatically changed the network traffic landscape, with Traffic Internet traffic landscape, due to the variety of mobile apps
+ Classification (TC) surging into a fundamental role while facing and the ease of installation and automatic update allowed by
+ new and unprecedented challenges. The recent and appealing
+ adoption of Deep Learning (DL) techniques has risen as the mobile apps distribution systems (“app stores”). The sum of
+ solution overcoming the performance of ML techniques based on an expanded and more diverse use base, an increased time and
+ tedious and time-consuming handcrafted feature design. Still, the variety of on-line activities, and fast-pace creation, diffusion,
+ black-box nature of DL models prevents its practical and trustful and update of apps has resulted in an extremely challenging
+ adoption in critical scenarios where the reliability/interpretation scenario for TC. A much needed response to such chalof results/policies is of key importance. To cope with these limitations, eXplainable Artificial Intelligence (XAI) techniques have lenges has been recently provided by Deep Learning (DL)
+ recently acquired the interest of the community. Accordingly, techniques, characterized by a fully-automated feature extracin this work we investigate trustworthiness and interpretability tion phase that significantly lowers the involvement of human
+ via XAI-based techniques to understand, interpret and improve experts in the loop, and a great power in learning (unforethe behavior of state-of-the-art multimodal DL traffic classifiers. seen) relations among huge volumes of training data, offering
+ The proposed methodology, as opposed to common results seen
+ in XAI, attempts to provide global interpretation, rather than significantly better performance with respect to traditional
+ sample-based ones. Results, based on an open dataset, allow to Machine Learning (ML) approaches. These characteristics are
+ complement the above findings with domain knowledge. making DL the tool of choice to face the highly dynamic
+ Index Terms—Traffic classification, encrypted traffic, nature of modern network traffic. On the other hand, the
+ explainable artificial intelligence, deep learning, multimodal black-box nature of DL techniques impairs the understandlearning. ing of the reason behind specific classification outcomes,
+ including errors and/or over-optimistic guarantees, and even
+ resilience against intentional adversarial manipulation of traffic
+ I. I NTRODUCTION to prevent correct identification.
+ NTERPRETING and assessing the behavior of networks is The lack of interpretability of the classification models
+ I paramount to a wide set of activities and research topics,
+ including—to name a few—network planning and managebuilt by DL techniques prevents their applicability to critical scenarios. Indeed, regulatory and standardization bodies in
+ ment, network and application security and privacy, social the specific field of telecommunications have considered this
+ adoption and impact of network technologies, and future issue, highlighting explainability of AI as the basis for the
+ progress roadblocks and possibilities. Traffic Classification necessary accountability, responsibility, and transparency of
+ (TC) is central to these activities, and has witnessed signifi- processes including AI components [1] such as the “Network
+ cant recent research activities due to both new challenges—as Data Analytics Function” [2]. Similarly, for cybersecurity
+ the rise of mobile traffic—and new powerful tools, e.g., those applications the lack of explainability is troubling to the
+ fueled by Artificial Intelligence (AI) techniques. Indeed, the point it can be leveraged to hide attacks [3], besides posing legal and ethical issues. As a consequence, network
+ Manuscript received April 12, 2021; revised June 22, 2021; accepted equipment manufacturers are starting to include eXplainable
+ July 13, 2021. Date of publication July 19, 2021; date of current version Artificial Intelligence (XAI) in their design [4]. In addi-
+ December 9, 2021. This work is partially funded by the Italian Research tion to this, in research contexts where TC is an instrument
+ Program “PON AIM Attraction and International Mobility, Azione I.2
+ Linea 1, Mobilità dei Ricercatori” (Codice proposta attività AIM1878982- of analysis and knowledge discovery, the aforementioned
+ 2 CUP E56C19000330005). The associate editor coordinating the review of lack severely undermines the validity of inferred information
+ this article and approving it for publication was T. Inoue. (Corresponding and the following analyses and deductions. From a comauthor: Domenico Ciuonzo.)
+ The authors are with the Department of Electrical Engineering and plementary viewpoint, even when interpretability cannot be
+ Information Technologies (DIETI), University of Naples Federico II, guaranteed (or it is not required), ensuring the trustworthi-
+ 80125 Napoli, Italy (e-mail: a.nascita@studenti.unina.it; antonio.montieri@ ness of the classification is important for its “safe” usage
+ unina.it; giuseppe.aceto@unina.it; domenico.ciuonzo@unina.it; valerio.
+ persico@unina.it; pescape@unina.it). to end-users. By trustworthiness, in this work we mean to
+ Digital Object Identifier 10.1109/TNSM.2021.3098157 which extent the confidence associated to a given decision by
+ 1932-4537 
+ c 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4226 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ an opaque solution can be deemed reliable—i.e., low (resp. • We deepen our performance analysis at a finerhigh) confidence in labeling a certain app actually leads to grain, inspecting soft classification values to understand
+ low (resp. high) accuracy in classifying it.1 Indeed, the lat- (i) behind-the-curtain behavior of TC classifiers when
+ ter property is crucial as it informs decisions with impact inspecting the traffic of each class and (ii) misclassion user experience and economic efficiency of network man- fication patterns possibly imputed to specific protocol
+ agement. Finally, the understanding of the behavior of the usage. Indeed, thanks to a heuristic we propose, we assess
+ learned model enables focused performance enhancements, how challenging is to classify the traffic of each app,
+ much more efficient than a less-informed search over the huge by relating its share of encrypted packets and associated
+ hyper-parameters space. encrypting protocol.
+ In response to these needs arising from DL adoption, the • We evaluate the trustworthiness of the proposed TC
+ field of XAI is providing approaches and techniques able to architecture through a calibration analysis, in order to
+ link the outcome of the classification to the structure of the assess the reliability of the provided predictions based
+ model and the input, shedding light over some aspects of the on the related confidence. This analysis supports further
+ (former) completely black box. As the adoption of DL is rela- improvements of the proposed M IMETIC -E NHANCED by
+ tively new, even more so in the field of network traffic analysis, leveraging Focal Loss and Label Smoothing techniques
+ it is no wonder that XAI has not yet found significant applica- to improve the generalization capability of the model
+ tion to TC as well, despite its acute need: with this work we (e.g., reducing the excessive confidence associated with
+ move an important step in the direction of tackling this open predictions and reducing overfitting).
+ challenge. • We investigate the rationale of the working behavior
+ To this aim, we perform (i) fine-grained performance eval- of M IMETIC -E NHANCED, by applying state-of-art XAI
+ uation, (ii) behavior interpretation, and (iii) trustworthiness tools (i.e., Deep SHAP, capitalizing the integration of
+ analysis of an enhanced (multimodal) DL architecture for TC. Shapley-based importance attribution with deep archi-
+ The above analysis includes different level of granularity or tectures [10]) to understand input importance in both
+ viewpoints: (a) relative importance of different input modali- branches, and within the single branch.
+ ties, and down to specific parts of each modality, (b) per-class, • The experimental campaign is conducted leveraging
+ and (c) per-protocol analysis. Equally important, in the anal- M IRAGE -2019, a publicly-released human-generated
+ ysis we highlight and quantify the use of encryption in the mobile-app traffic dataset, to foster reproducibility [11].
+ real-world and recent dataset we base the evaluation on, and The paper is organized as follows. Section II surveys first
+ interpret the results in the light of this property. attempts of XAI application to networking and TC, positioning
+ These contributions are the more significant and timely con- our work against related literature. Section III describes the
+ sidering the rise of adoption of TLS, gQUIC, and FB-Zero in considered XAI-based TC methodology; the dataset employed
+ modern mobile-generated Internet traffic [5], [6]. and the experimental results are discussed in Section V; finally,
+ In detail, the contributions of this paper can be summarized Section VI provides conclusions and future perspectives.
+ as follows.
+ • In order to apply the explainability analysis to a
+ practically significant experimental scenario, we design II. BACKGROUND AND R ELATED W ORK
+ M IMETIC -E NHANCED, a novel architecture for TC oper- In this section, we first provide the background on (i) interating at biflow level. Based on our recently proposed pretability and (ii) trustworthiness of data-driven models
+ MultImodal DL-based MobilE TraffIc Classification (Section II-A). Then, we discuss the most related work
+ (M IMETIC) general framework, the architecture is addressing those problems in computer networks, providing a
+ designed to effectively exploit the heterogeneous nature final focus on XAI for TC (Section II-B). Finally, we end the
+ of the different views of a traffic object, by distilling both section with a clear positioning of our work w.r.t. the comintra- and inter-modalities dependence [7]. Our proposal puter network literature described in the second subsection
+ leverages the multimodal paradigm and consists of two (Section II-C).
+ branches being fed (i) with the first bytes of the payload
+ of the biflows and (ii) with informative fields extracted
+ from the sequence of the first packets of each biflow. A. Background: Making Data-Driven AI Models
+ More specifically, we have improved our previous pro- Human-Interpretable and Trustworthy
+ posal based on the M IMETIC framework from both the In line with the unprecedented and growing availability
+ architectural and training-procedure viewpoints. of huge amounts of data in a number of critical knowledge
+ • We systematically evaluate the proposed M IMETIC - fields (e.g., mobile applications, speech recognition, biologi-
+ E NHANCED TC architecture and compare the achieved cal science, Internet of Things) and fostered by the tremendous
+ performance against state-of-art TC baselines, including success in image recognition, enormous incentives exist to
+ M IMETIC [7], App-Net [8], and FS-Net [9]. use AI as a valuable tool for decision making, cost reduction, risk management etc. However, the adoption of complex
+ AI algorithms inherently leads to the generation of black-box
+ 1 We would like to emphasize that the notion of (AI) trustworthiness starkly models which result in untrustworthy behaviors and undecontrasts with the same term when used in network security contexts. sired (and often even unacceptable) lack of transparency. This
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4227
+
+ issue affects complex AI models characterized by a high- • Occlusion Analysis [29] is a particular type of perturdimensionality of the inputs and therefore especially includes bation analysis where the effect on the neural network
+ cutting-edge DL models. output of occluding patches or individual features in
+ As a result, in the last years a strong push towards XAI the input is tested. Attribution based on Shapley valby both governmental entities and the research community ues (Kernel SHAP, Deep SHAP) can also be seen as an
+ was observed, in order to address problems related to trans- occlusion analysis [10].
+ parency, causality, bias, fairness, and safety of the obtained • Interpretable Local Surrogates aim to replace the
+ solutions [22]. Investigating the working behavior of already- decision function with a local surrogate model whose
+ trained models allows to (i) assess the robustness of the functional form is self-explanatory itself (e.g., a linear
+ AI system (e.g., to measure artifacts or adversarial perturba- or a tree model as used by LIME [30] and LORE [31],
+ tions); (ii) evaluate its resilience to drifting data perturbations; respectively).
+ (iii) verify legal, safety, and security requirements; (iv) com- • Integrated or Smoothed Gradients [32] provide an
+ plement human-expertise in decision making and even provide explanation by (a) integrating the f (x ) along some
+ scientists with novel insights embodied in the model. trajectory in input space connecting some root point x̄
+ Focusing on trustworthiness, a natural desideratum for (a non-informative baseline input) to the data point x to
+ AI algorithms is to design a black-box model whose out- be explained or (b) performing an expectation of f (x )
+ puts adhere to some reliability requirements. In the context when some noise-distributional perturbation is applied.
+ of classification, given the probabilistic nature of ML/DL • Layerwise Relevance Propagation (LRP) [33] explicoutputs, it is rightful to ask whether the probabilistic out- itly uses the layered structure of the neural network
+ comes are calibrated, i.e., the confidence actually reflects the and operates in an iterative manner to produce the
+ reliability of the provided decision. Referring to calibration, explanation.
+ current research is oriented toward methods for (a) assessing Next subsection will position recent works on XAI applied
+ calibration of designed models and (b) for improving it by to computer network problems in terms of trustworthiness and
+ making the corresponding ML/DL model close-to-trustworthy. interpretability.
+ Regarding the former aspect, a set of evaluation metrics for
+ assessing the classification confidence have been proposed,
+ including different notions of calibration [23] (e.g., multi-class, B. Related Work: Explaining AI Decisions Supporting
+ class-wise and confidence), calibration diagrams and related Computer-Network Problems
+ metrics [24], and statistical tests [25] to verify such prop- A large number of data-driven solutions based on either ML
+ erty. Regarding the latter aspect, recent studies have attempted or DL have been recently proposed for several network-related
+ to design evolved learning procedures to instill calibration, problems such as resource allocation, routing, video rate selecsuch as Dirichlet-based methods [23], focal loss [26] and label tion, congestion control [14], traffic classification [18], [20],
+ smoothing [27]. and traffic prediction [21].
+ Another critical aspect in XAI is represented by the purpose However, general lack of interpretability as well as potential
+ that these methods were created to serve and the ways through behavioral uncertainties (e.g., in conditions different than those
+ which they accomplish this purpose, namely their inter- in which the system is trained) and difficulties in integratpretability. Accordingly, four major categories for this class ing domain-specific (hand-crafted) insights into Deep Neural
+ of methods have been identified: (i) methods for explaining Network models (DNNs) represent the main reasons hindering
+ complex black-box models, (ii) methods for creating white- these solutions and systems to be widely adopted in production
+ box models, (iii) methods that promote fairness and restrict environments so far [13], [34].
+ the existence of discrimination, and, lastly, (iv) methods that The applicability of more easy-to-interpret models has been
+ analyze the sensitivity of model predictions. An especially investigated, such as techniques being more interpretable
+ important separation of interpretability methods is based on the in nature than DL (e.g., those based on either decision
+ type of algorithm that could be applied: methods whose appli- trees [35], [36] or Markov models [21], [37]). These techniques
+ cation is restricted to some specific models (model-specific) or represent an alternative walkable path due to their simplicity
+ approaches which can be virtually applied to every possible and interpretability, despite the expected reduced performance
+ ML/DL algorithm (model-agnostic). A complementary taxon- and the resulting need for engineering hand-craft features. On
+ omy of such methods is based on the interpretation scale: local the other hand, a first wave of works has provided an inimethods provide an explanation only for a specific sample, tial effort towards the interpretation of data-driven black-box
+ whereas global methods attempt to explain the whole model models when applied to computer-networks problems.
+ behavior. Table I summarizes the most-related work and reports the
+ Accordingly, a number of families of approaches have main aspects of interest, and in the following we discuss in
+ emerged aiming at shedding light on ML/DL outcomes via detail each listed work.
+ post-hoc explanations. These can be classified2 as follows. Meng et al. [19] propose Metis, a framework that provides interpretability for networking problems related to
+ local and global control. Metis performs decision-trees- and
+ 2 For a detailed discussion regarding different post-hoc explanation tech- hypergraph-based distillation and allows to convert DNN poliniques we point the interested readers to [28]. cies to interpretable rule-based controllers for several use
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4228 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ TABLE I
+ R ELATED W ORKS A DOPTING XAI IN C ONJUNCTION W ITH VARIOUS N ETWORKING P ROBLEMS S OLVED VIA D IFFERENT L EARNING T ECHNIQUES . T HE
+ PAPERS A RE R EPORTED IN C HRONOLOGICAL O RDER . ACRONYMS M EANING I S R EPORTED AT THE B OTTOM OF THE TABLE
+
+ cases, supporting design, debugging, deployment, and ad- and classification, Amarasinghe et al. [12] propose a framehoc adjustment of DL-based networking systems. Results work for anomaly detection based on DNNs which provides
+ highlights improved performance or reduced computational explanations for the detected anomalies. In detail, the framerequirements in change of limited performance degradation. work provides post-hoc explanations for DNN predictions
+ Zheng et al. [13] inspect the behavior of a DNN trained (in terms of feature relevance scores) in order to improve
+ to minimize average job duration in a resource allocation users’ trust. Input feature relevance is calculated via a method
+ problem. They remark that saliency map (showing impact of named Layer-wise Relevance Propagation (LRP). Tackling
+ each input feature on the output) and inspecting the activation robustness to adversarial samples, Sadeghzadeh et al. [38]
+ of intermediate neurons in hidden layers are valuable tools craft network traffic aimed at fooling DL-based TC methto reveal what features a DNN depends on. The authors also ods, focusing separately on perturbating payload, packet size
+ propose a method aimed at improving robustness, training effi- (padding), and flow statistical features (bursts). Their experciency, and transferability (e.g., avoiding overfitting) by inte- iments show that DL-based TC is vulnerable to universal
+ grating DNNs with domain knowledge. Morichetta et al. [15] adversarial perturbation.
+ investigate explainability for unlabeled data via EXPLAIN-IT Recently a number of research contributions have investimethodology: this aims at providing explanation for cluster- gated interpretability and trustworthiness aspects in TC.
+ ing results attainable in the analysis of QoE in YouTube video Beliard et al. [18] demonstrate how basic visualization tools
+ streaming. The proposed approach uses clustering results to (e.g., to represent the 1D original space, feature projections
+ train a classification model to predict video quality, which at intermediate layers, as well as the arc representation of the
+ is then explained through black-box XAI approaches. Thus, output confusion matrix) can be helpful in clarifying the inferthe approach overcomes the limitation deriving from the lack ence process in TC tasks based on CNNs. Wang et al. [20]
+ of a ground truth which hinders the adoption of supervised explore DL methods (SDAE, 1D-CNN, and LSTM) for mobile
+ quality metrics without incurring the limitations of structured app TC. In addition, the authors uses Deep SHAP [10] to
+ insights achievable with unsupervised metrics. [14] inspect the explain the outcomes obtained through 1D-CNN. The analybehavior of a model based on reinforcement-learning agents sis focuses on a specific application (WeChat) and is limited
+ and targeting video bit-rate adaptation. The investigation is to four (representative) outcomes, being the approach sampleaimed at observing agent’s decisions and understanding how dependent (viz. a local explanation method). The analysis (that
+ individual input features contribute to decisions as well as the focuses on both TLS and non-TLS traffic flows) highlights the
+ broader relationship between feature values and decisions. The importance of a number of byte chunks associated with either
+ study leverages data inspection and visualization and takes unknown byte sequences, or the location of specific protoadvantage of LIME [30]. Focusing on traffic identification col fields such as TLS SNI and Cipher Suite extensions.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4229
+
+ Rezaei et al. [16] consider a CNN model for the classifica- work apart from almost the totality of other works (saved for
+ tion of mobile-app traffic, which is fed with the header and our own previous contribution on traffic prediction).
+ the payload of the first six packets of a biflow. The occlusion analysis they perform allows to inspect how the proposed III. M ULTIMODAL D EEP L EARNING -BASED
+ architecture can classify SSL/TLS traffic flows, revealing that E XPLAINABLE T RAFFIC C LASSIFICATION
+ certain handshake fields can leak information leveraged in the In this section, we describe the proposed contribution.
+ classification process. Specifically, in Section III-A, we introduce M IMETIC -
+ More specifically, concerning interpretation and trustwor- E NHANCED and describe its peculiar and novel characteristics.
+ thiness of TC results, in previous work [17], [21] we Then, in Section III-B, we introduce the concept of interhave preliminary considered both. In Aceto et al. [21], pretability in DL architectures and describe our approach for
+ we leverage Markovian distillation for interpreting traffic interpretability based on Deep SHAP technique. Finally, in
+ prediction results. In more detail, we compare Markov Chains Section III-C, we motivate the role of trustworthiness and
+ and ML concordant/discordant predictions to highlight and introduce metrics to assess—and techniques to improve—the
+ interpret ML predictive patterns (focusing on outcome dis- calibration properties of DL-based TC approaches.
+ agreements) by observing Markovian transition probabilities.
+ In Aceto et al. [17], we analyze the reliability of DL-based
+ A. Multimodal Deep Learning Traffic Classification
+ TC framework via calibration analysis, although this is not
+ leveraged for any improvement of the architecture. A multimodal DL traffic classifier exploits the multifaceted
+ information extracted from multiple modalities (viz. views) of
+ traffic data, with the aim of capitalizing their heterogeneous
+ C. Positioning of Our Work nature via intermediate fusion [39] of (automatically extracted)
+ Like the last works reported in the aforementioned section, features.3 Herein, we leverage (and then explain via XAI techwe focus on TC and leverage XAI techniques to get insights niques) a novel architecture for multimodal TC, proposing an
+ on the behavior of a DL architecture. Therefore we can com- enhanced version of a classifier based on the recently-proposed
+ pare our work more directly only with Aceto et al. [17], generic M IMETIC framework [7].
+ Beliard et al. [18], and Wang et al. [20]. The first work Going into details, the generic M IMETIC framework conregards a novel TC architecture, whose experimental evalu- sists of P different inputs (modalities) for each traffic object to
+ ation demonstrated its better calibration compared with the be classified. Such DL architecture is first composed by a numstate-of-art (the evaluation has been performed on a different— ber of single-modality (viz. input-specific) layers, allowing to
+ partially covered by NDA—dataset). However, the present extract in an increasingly-abstract fashion the discriminative
+ work only focused on analyzing calibration a-posteriori, while features pertaining to the p th view to capitalize intra-modality
+ not explicitly instilling the calibration in the learning process. dependence. On the top of these layers, the abstract fea-
+ Additionally, in the present work, we adopt Deep SHAP to tures are joined via a merge layer (e.g., concatenation), which
+ infer the importance of a set of inputs for specific samples channels the modality-specific distilled information toward a
+ (a local approach), similarly to Wang et al. [20]. Differently joint multimodal representation. Finally, the architecture is
+ from Wang et al. [20], though, we use this sample-dependent completed with a few shared-representation layers, distilling
+ information to get to global explanations, allowing to interpret features capturing inter-modality dependencies, and the usual
+ (and explain) the general correct behavior of the classi- softmax layer associated to the mobile TC task considered. In
+ fier, also in terms of varying input granularity. Moreover, what follows, we describe the M IMETIC -E NHANCED classifier
+ in Wang et al. [20] the XAI analysis is only limited to a based on the framework previously-recalled.
+ single application, whereas we report results related to 6 pro- Based on the results of previous work [7], [8], [9], [40], [41]
+ tocols (composing the ≈ 99% of biflows of the 41 mobile and to provide a coherent comparison with these baselines (see
+ apps of M IRAGE -2019 dataset) and some exemplifying apps. Section IV-B), our M IMETIC -E NHANCED classifier operates at
+ Differently than in Rezaei et al. [16], our investigation on inter- biflow level, namely the mobile TC task seeks to assign to each
+ pretability leverages Shapley-based importance attribution to biflow a class within the set {1, . . . , L}, with L denoting the
+ inputs rather than occlusion-analysis approaches, thus applying number of different apps. A biflow (viz. a bidirectional flow) is
+ a complementary methodology. a traffic object encompassing all the packets sharing the same
+ Another significant difference with the cited work regards 5-tuple (i.e., source and destination IP address, source and
+ their lack of calibration analysis, that—as will be shown in destination port, and transport-level protocol) in both upstream
+ Section V-D and thereafter—is fundamental for trustworthi- and downstream directions [42].
+ ness analysis. More in general, the calibration step is missing In more detail, M IMETIC -E NHANCED consists of P = 2
+ from all the related works despite its center role in explain- single-modality branches for extracting the corresponding
+ ing TC performance. While we assess the trade-off between intra-modality features. Each branch is fed with one input
+ calibration versus performance, Meng et al. [19] evaluate type chosen among unbiased input data [42] recommended
+ performance versus interpretability (as they adopt a different in aforementioned related work, being either the first Nb
+ family of XAI approaches, impacting classification accuracy). 3 This peculiar procedure optimizes the less sophisticated early (or data)
+ Finally, our adoption of an open dataset, focused on human- fusion and late (or score/decision) fusion that are not able to fully exploit the
+ operated mobile apps, for the experimental evaluation sets our potentiality of multi-modality.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4230 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ bytes of transport-layer payload arranged in byte-wise format with a batch size of 50 samples). In more detail, M IMETIC -
+ (PAYNb ) or informative fields extracted from the sequence of E NHANCED adopts a learning-rate scheduler that halves the
+ the first Np packets (PSQNp ).4 Specifically, we consider the learning rate every 5 epochs, starting with a value of 2 · 10−3
+ first Nb = 576 bytes of transport-layer payload (PAY576 ) as and 10−3 for pre-training and fine-tuning, respectively. This
+ the input of the first branch, whereas the informative fields variable learning rate shows improved TC performance comextracted from the sequence of the first Np = 12 packets pared with a constant learning rate optimization, employed,
+ (PSQ12 ) as the input of the second branch. In the following, e.g., in the original M IMETIC classifier (see Section V-B).
+ the above branches will be simply named PAY-modality and Also, to foster regularization and avoid overfitting, we add a
+ PSQ-modality, respectively.5 dropout of 0.2 at the end of each single-modality branch and
+ First, to augment the information carried by input data, after every dense layer, and adopt an early-stopping technique
+ both branches exploit a trainable embedding layer to embed measured on the training7 accuracy [46].
+ each input element6 into a vector of dimension e = 10.
+ This results in an overall embedding matrix E ∈ RN ×e B. Interpreting the Working Principle of DL-Based Traffic
+ with N denoting the input dimensionality, i.e., equal to 576 Classifiers via Deep SHAP
+ and 12 for the PAY- and PSQ-modality, respectively. We
+ emphasize that we have considered both other embedding For complex models, such as DL architectures, the trained
+ techniques (e.g., non-trainable one-hot encoding) and other model f (·) cannot be used for explanation purposes, as its
+ vector dimensions (i.e., e = 5 and e = 30), obtaining worse internal behavior is hard to understand/interpret. Accordingly,
+ TC performance or increased (i.e., computationally unfeasible) the key idea of interpretability techniques is to use a simtraining complexity. pler explanation model g(·), which is designed to closely-
+ Then, in the PAY-modality branch, the related embedding approximate the original model f (·).
+ matrix is fed to the following single-modality layers: two 1D In the context of explaining the predictive behavior of DLconvolutional layers—made of 16 and 32 filters, respectively, based traffic classifiers, the model f (·) is chosen herein as the
+ with kernel size of 25 and unit stride—each followed by a 1D soft-output associated to the generic i th app, i.e., pi (·). By
+ max-pooling layer—with unit stride and spatial extent of 3— doing so, we are able to explain which set of inputs contributes
+ and, finally, by one dense layer with 256 neurons. Conversely, the most to the confidence probability value associated to a
+ the layers of the PSQ-modality branch are a Bidirectional given app.
+ Gated Recurrent Unit (BiGRU)—with 64 units and return- In this paper, we focus on local methods, which try to
+ sequences behavior—and one dense layer with 256 neurons. explain the original model f (x) when the sample value x is
+ To capture inter-modality dependencies, the abstract features given as input, i.e., only in the neighborhood of this pecuextracted by the single-modality branches are joined via a liar value. Accordingly, the use of local methods in our case
+ concatenation layer and fed to a shared dense layer—with corresponds to a per-biflow explanation. Specifically, (local)
+ 128 neurons—before performing the classification through a explanation models use the so-called simplified inputs x 
+ softmax. All the layers exploit Rectified Linear Unit (ReLU) that map to the original inputs through a mapping funcactivations providing better performance than other tested tion x = h x (x  ). Accordingly, local methods try to ensure
+ variants (e.g., Scaled Exponential Linear Unit). g(z  ) ≈ f (h x (z  )) whenever z  = x  . The per-sample expla-
+ M IMETIC -E NHANCED is trained via a two-phase procedure: nation results based on local methods will be then aggregated
+ an independent pre-training of each single-modality branch (viz. pooled) to reach global explanations, as explained at the
+ (for 25 epochs) and a subsequent fine-tuning of the whole end of this subsection. Most of the interpretability techniques
+ M IMETIC -E NHANCED architecture (for 40 epochs) after freez- assume a peculiar functional form for the explanation model
+ ing the lower single-modality layers (i.e., the 1D convolutional g(·), which is described hereinafter.
+ and BiGRU layers). In the former phase, the individual pre- Additive Feature Attribution (AFA) Methods: Herein we
+ training of the p th single-modality branch is achieved by focus on the (wide) class of explanation models, referred
+ means of a softmax stub [7]. In Section III-B, we will discuss to as AFA methods, which are linear functions of binary
+ how the latter (two) auxiliary outputs are exploited to provide variables, i.e.,
+ isolated (per-modality) interpretation analysis. Pre-training and 
+ M
+ fine-tuning minimize respective categorical cross-entropy loss g(z  ) = φ0 + 
+ φm zm (1)
+ functions [7] via the standard ADAM optimizer [43] (set m=1
+
+ where z  ∈ {0, 1}M , M denotes the number of simplified
+ 4 Number of bytes in transport-layer payload, TCP window size (set to inputs and φm ∈ R. AFA methods provide an explanation
+ zero for UDP packets), inter-arrival time, and packet direction ∈ {−1, 1}.
+ We stress that we neither consider IP addresses nor ports as relevant inputs. 7 We highlight that the most common approach requires a validation set to
+ Indeed, both would imply lack of generalization and lead to inflated results monitor early-stopping. However, due to the class-imbalance typically encounnot reflecting those attained in real deployment scenarios [42]. tered in mobile TC, some apps in the training set may have a limited number
+ 5 We underline that these choices have been driven by both our past
+ of samples. Hence, using part of the (whole) training set for validation could
+ experience [11], [42] and further preliminary analyses (not shown for brevity). impair performance associated with minority classes. For this reason, we use
+ 6 To reduce the training complexity due to the explosion of input dimen- early-stopping on training data by monitoring the “knee” of the training accusionality, in the PSQ-modality we embed only the number of bytes in racy, and exiting when this condition is satisfied. Similar approaches were also
+ transport-layer payload. recently proposed in [44], [45].
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4231
+
+ model attributing an “effect” φm to each input, and sum- From DeepLIFT to Deep SHAP: DeepLIFT represents
+ ming the effects of all input attributions approximates the a recursive prediction explanation method for DL architecoriginal model output f (x). The most used interpretability tures [33], which attributes to each input xm a value CΔxm Δo
+ techniques (e.g., LIME, DeepLIFT, etc.) belong to this fam- that represents the effect of that input being set to a reference
+ ily of explanation models. Additionally, when the functional value as opposed to its original value. This means that for
+ form in Eq. (1) is required to satisfy (i) local accuracy (i.e., DeepLIFT, the mapping x = h x (x  ) converts binary values
+ g(z  ) = f (h x (z  )) when z  = x  ), (ii) missingness, and into the original inputs, where 1 (resp. 0) indicates that an input
+ (iii) consistency properties, there exists a unique AFA solu- takes its original (resp. reference) value. The reference value,
+ tion satisfying them [10]. Such solution coincides with the though being a user-defined parameter, is typically chosen to
+ computation of the well-known Shapley values. be an uninformative background value for the m th input. The
+ Shapley values originate from cooperative game theory [47] input effects obtained via DeepLIFT satisfy a “summation-toand identify the contribution of player m to the payoff v (P) delta” property, namely M m=1 CΔxm Δo = Δo, where o =
+ achieved by the overall coalition P. To do so, this method f (x ) is the model output, Δo = f (x ) − f (r ), Δxi = (xi − ri )
+ assesses the payoff of every subset of cooperating players S ⊂ and r is the reference input.
+ P and tests the effect of removing/adding the player m to S DeepLIFT capitalizes a linear composition rule for the calon the total payoff v (S) obtained by S if they cooperate. culation of the CΔxm Δo ’s, which is based on the linearization
+ When transposing the method to the task of explaining a of the non-linear components of a neural network, such as
+ DL-based model, the input data maps into the players of the (soft)max, products, or divisions. The back-propagation rules
+ cooperative game, whereas the DL architecture output f (x) of the original DeepLIFT proposal (defining how each comcorresponds to the payoff function, and the m th Shapley value ponent is linearized) were however heuristically chosen [33].
+ equals Clearly, the above explanation model fits within the func-
+    tional form of AFA methods described via Eq. (1), when
+ φm (f , x )  ρ(z  ) fx (z  ) − fx (z  \m) (2) setting φ0 = f (r ). Also, since DeepLIFT is an AFA method
+ z  ⊆x  that satisfies (i) local accuracy and (ii) missingness, Shapley
+ values represent the unique attribution solution that satisfies
+ |z  −1|!(M −|z  |−1)!
+ where ρ(z  )  M! , and we have used the com- consistency (iii). Accordingly, the adaptation of DeepLIFT to
+ pact notation for the composite function fx (·)  f (h x (·)). become an analogous compositional approximation of SHAP
+ Additionally, z  \m denotes the vector z  in which the m th values (i.e., using output expectation as a reference value and
+ entry has been set to zero, and |z  | denotes the number of resorting to explicit Shapley equations, described in Eq. (4),
+ non-zero entries of z  . The sum is carried out over all z  vec- for consistent linearization), leads to Deep Shap [10], a fast
+ tors whose m th component is non-zero. The Shapley value is approximation algorithm for SHAP values which capitalizes
+ the weighted mean of all these contributions. the connectionist nature of DL architectures.8
+ Shapley Values Computation With SHAP: Unluckily, the Therefore, this approach will be used to assess the importime required for exact computation of Shapley values grows tance of inputs selected from the raw traffic data (e.g., related
+ exponentially with the input size M. Indeed, the computation of to PAY or PSQ modalities) of a given biflow in classifying
+ fx (z  ) = f (h x (z  )) would require the model to be trained- the mobile app generating it. The details are provided in what
+ tested with each subset of the inputs withheld. Conversely, follows.
+ SHapley Additive exPlanation (SHAP) approximates these Local Explanation of DL-Based Multimodal Traffic
+ quantities via the following conditional expectation [10]: Classifiers: Based on the aforementioned discussion, we
+ interpret the SHAP value φm as the importance value of the
+ f (h x (z  )) ≈ E{f (z )|z S } (3) m th input xm (belonging to the raw traffic data x) in forming the confidence pi associated to the i th app for the biflow
+ where S denotes the set of non-zero indices within z  . The tested. We recall that, since φm ∈ R (i.e., values can be
+ above approximation thus eliminates the need to retrain the also negative), the meaning of importance values should be
+ model and allows the above quantity to be computed for all interpreted as follows: positive (resp. negative) values increase
+ the values of z  in a computationally-efficient fashion (i.e., a (resp. decrease) the confidence in the i th app with respect to
+ sample expectation w.r.t. the withheld inputs on the original its average value. Indeed, the sum of the SHAP values equals
+ model f (·)). the considered soft-output value (pi (x )) minus the so-called
+ The expression for f (h x (z  )) is further simplified by base output. The latter represents the average of the same softassuming (a) statistical independence output obtained in correspondence of the samples associated
+ among the inputs and
+ (b) linearity of the model f (x ) = M
+ m=1 wm xm + b [10]. to the background set, i.e., E{pi }.
+ Indeed, when both these assumptions hold, it can be shown
+ that φm ’s are in closed-form and equal to: 8 We highlight that since Deep SHAP relies on an approximate computation of Shapley values, the local accuracy property f (x ) = g(x ) may
+ φm (f , x ) = wm (xm − E{xm }) (4) be not satisfied with perfect equality. Still, experimental results reported in
+ Sections V-E, V-F and V-G show a negligible discrepancy. For instance,
+ regarding Section V-E, this is quantified as a mean absolute percentage error
+ The aforementioned simplification for φm ’s is capitalized (between original and explanation models) equal to 0.86% and 0.84% for the
+ as described next. explanation of M IMETIC and M IMETIC -E NHANCED, respectively.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4232 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ In this work, for each biflow, we will focus on explain- Considering φm (as opposed to φm ), allows focusing on the
+ ing the soft-output associated to the predicted app p̂(x ) = relative importance of each input (indeed, for each sample,
+ maxi=1,...,L pi (x ), as this represents the most relevant (and the sum of the importance values equals one). By doing
+ highest) output in the TC process. so, we are able to draw out importance measures which do
+ The additive form of Shapley values (as this method belongs not depend on the peculiar architecture confidence (generally
+ to the class of AFA methods) allows for readily evaluation higher or lower) by aggregating to obtain global explanation
+ of the importance which can be attributed to non-overlapping over different samples x 1 , . . . , x N . Additionally, as in [20],
+ subset of inputs. Such analysis well suits assessing to which we solely focus on the aggregation of correctly-classified samdegree the different modalities (as a whole) of a multimodal ples: this choice allows focusing on the correct behavior of
+ DL traffic classifier contribute to the interpretation of the pre- a given DL-based traffic classifier, allowing to interpret its
+ dicted outcome (see, e.g., later analysis in Section V-E). To counter-intuitive (while right) decisions a posteriori.
+ do so, we denote the input subsets associated with  the P In detail, to obtain the global explanations pertaining to difmodalities considered as x 1 , . . . , x P , where x = P p=1 x p . ferent granularities, we will consider the following views of
+ Then, to quantify the importance of the p th modality to aggregation: (i) over the whole M IRAGE -2019, (ii) related to
+ multimodal TC effectiveness, we resort to a pooled SHAP a given protocol (e.g., TLS), and (iii) focused on a given app
+ value φMp . This term represents the importance value of (e.g., Spotify). We would remark that no implicit assumption
+ the input subset x p (corresponding to the p th modality) in about the nature of the protocols is made: the proposed explaclassifying the biflow associated to the whole input x with nation approach is protocol-agnostic. Indeed, it can investigate
+ the label .ˆ The aforementioned value is simply obtained input importance also when: (i) the protocol conveying the
+  traffic is unknown; (ii) the protocol conveying the traffic is not
+ as φMp  m∈Mp φm , where Mp denotes the index set
+ open (proprietary protocols); (iii) the protocol adopts encryp-
+ pM input subset within x. Clearly, it holds
+ associated to the th
+  P tion; (iv) the protocol fields have variable length. Moreover,
+ p=1 φMp = m=1 φm = (pˆ(x )−E{pˆ(x )}). As a result our input importance analysis can be leveraged —without
+ (and similarly to the unpooled case), a positive (resp. negafurther assumptions on the protocol— for assessing the robusttive) φMp increases (resp. decreases) the confidence in the
+ ness to adversarial attacks (or even detect them, as done
+ predicted app ˆ with respect to its average value. in [48]): we leave this to future work.
+ In a complementary fashion, to focus exclusively on a given
+ modality and quantify the corresponding importance contribution of individual inputs within each, we proceed as follows. C. Calibration in Deep Learning
+ Specifically, we consider the stub output associated to the p th Other than the accuracy of the considered DL-based traffic
+ modality as our f (·), since the latter function (viz. architec- classifiers, it is of great importance to evaluate their reliature branch) only depends on x p . By doing so, we are able bility [49]. Such a property is fundamental in many critical
+ to focus solely on the behavior of the p th single-modality scenarios and constitutes a building block of XAI since it
+ branch, i.e., before the combined effect of intermediate fusion assesses the degree of trustworthiness in providing TC outputs
+ achieved by the shared(-representation) layers (see later anal- with high confidence (or not).
+ yses in Sections V-F and V-G). This procedure thus isolates Metrics to Assess Calibration: Formally speaking, given
+ the interacting effect of other modalities on the p th modality, an input sample x to the DL-based traffic classifier under
+ and allows per-modality interpretation. The (isolated) impor- analysis, we will analyze the trustworthiness of the whole
+ tance values associated to the input subset x p (feeding the p th confidence vector (i.e., p(x ) = p1 (x ), . . . , pL (x )) and of
+ (p)
+ modality) are represented by the SHAP values φm , where the confidence associated to the predicted app (i.e., p̂(x ) =
+ m = 1, . . . , |Mp |. maxi=1,...,L pi (x )). In what follows, we introduce a graphi-
+ The above methodology for interpreting the behavior of cal visualization and three metrics to assess calibration, with
+ multimodal DL-based traffic classifiers will be applied to both the first two being related to a weaker definition of calibration,
+ M IMETIC and M IMETIC -E NHANCED in Sections V-E–V-G. and the third to a stronger one [23].
+ Still, we remark that the proposed interpretability approach is Indeed, a miscalibrated classifier returns excessively optiquite general and can be virtually applied to any multimodal mistic or pessimistic confidence outputs associated to its
+ DL-based mobile TC architecture, especially those fitting decisions. On the other hand, a confidence-calibrated classifier
+ within the M IMETIC framework [7]. is such that for each sample, the confidence in the predicted
+ From Local to Global Explanations: First of all, we notice app p̂ equals Pr{ˆ = | p̂}, where  is the true app and ˆ
+ that a soft-output can assume a range of different values. is the predicted label. That is, having, e.g., 80% confidence
+ Accordingly, the absolute importance of the m th input may leads to 80% accuracy. To visualize the above property for
+ differ from sample to sample. For this reason, our proposed varying p̂, we use the so-called reliability diagrams [24], [50],
+ global explanation approach assumes the preliminary calcula- which show the accuracy as a function of the confidence (i.e.,
+ tion of normalized SHAP values, obtained by dividing each Pr{ˆ = | p̂} vs. p̂). The obtained diagram is usually com-
+ SHAP value by their overall sum, namely pared with the ideal Pr{ˆ = | p̂} = p̂ identity line. Hence,
+ a perfectly-calibrated classifier entails a reliability diagram
+ corresponding to the identity function. These diagrams are
+ φm  Mφm = M φm
+ (5) evaluated by partitioning the predictions into M equally-spaced
+ m=1 φm m=1 (p (x )−E{p (x )})
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4233
+
+ bins (with extent 1/M) and computing the accuracy of each bin. Techniques to Improve Calibration: We now describe two
+ Let Bm be the set of evaluated samples such that the confi- relevant techniques to improve calibration in DL-based archidence associated to the predicted app falls within the interval tectures. According to the literature, all the methods to ensure
+ Im  ( m−1 m
+ M ; M ], the corresponding bin accuracy equals: a better calibration of a classifier involve a modification of the
+  training process and/or of the training loss.
+ 1
+ acc(Bm ) = 1(ˆ(n) = (n) ) (6) • Label Smoothing can be interpreted as a form of loss reg-
+ |Bm | ularization [27] to improve the generalization ability of
+ n∈Bm
+ models and reduce an excessively high prediction confiwhere (n) and ˆ(n)  arg maxi=1,...,L pi (n) are the true and dence. Such a technique encompasses, during the training
+ predicted labels for the n th sample, respectively. Confidence phase, that the cross-entropy (CE) loss minimizes the
+ values range in [1/L , 1], where L is the number of classes prediction w.r.t. a smoothed one-hot representation of the
+ of the mobile TC task. Accordingly, the starting-point of the ground truth (n) , calculated as
+ confidence interval actually coincides with 1/L. α
+ To obtain a concise metric of the deviation from per- t ls (n) = (1 − α) t(n) + 1 (11)
+ L L
+ fect calibration, we integrate the above diagrams with the  T
+ Expected Calibration Error (ECE), defined as Ep̂ {| Pr{ˆ = where t(n)  t1 (n) · · · tL (n) denotes the usual
+ | p̂} − p̂|}, and the Maximum Calibration Error (MCE), one-hot representation of the label (n) . The smoothing
+ defined as MCE  maxp̂ | Pr{ˆ = | p̂} − p̂|. The former parameter α defines the amount of uncertainty enforced
+ metric represents the expected absolute deviation between the on the ground truth, with α → 0 collapsing to the usual
+ confidence and the confidence-conditional accuracy, whereas non-smoothed CE-based training procedure.
+ the latter is the maximum absolute deviation from the identity • Focal Loss is a suitably-defined loss function for clasline. The two aforementioned metrics can be (approximately) sification tasks, and is one viable solution to deal with
+ calculated as class imbalance. However, in a recent work [26] it has
+ been demonstrated its successful application in improv-
+ 
+ M
+ |Bm |
+ ECE ≈ |acc(Bm ) − conf(Bm )| (7) ing calibration, capitalizing its implicit (entropy-based)
+ N regularization properties. The explicit expression of the
+ m=1
+ MCE ≈ max |acc(Bm ) − conf(Bm )| (8) focal loss for the generic n th sample is
+ m=1,...,M
+ 
+ L
+ respectively. The above expressions are based on the over- LFL (n)  − ti (n) (1 − p̂i (n))γ log(p̂i (n)) (12)
+ all number of tested samples N and the averaged confidence i=1
+ within bin Bm , obtained as:
+ The overall loss is then obtained as LFL 
+ 
+ 1  N
+ conf(Bm ) = p̂(n) (9) n=1 LFL (n). In this case, the parameter γ controls the
+ |Bm | impact of such a loss, with γ → 0 collapsing to the usual
+ n∈Bm
+ CE loss.
+ where p̂(n)  maxi=1,...,L pi (n) denotes the predicted
+ confidence of the n th sample. IV. E XPERIMENTAL S ETUP
+ The ECE and MCE metrics only consider the confidence in This section describes the experimental setup considered in
+ the predicted app, while ignoring the other scores in the soft- this work. Specifically, in Section IV-A a brief description of
+ max distribution. A stronger definition of calibration requires the dataset M IRAGE -2019 is provided. Then, in Section IV-B,
+ the probabilities of all the classes in the softmax distribution the considered DL-based traffic classification baselines (used
+ to be calibrated, namely to have pi equal to Pr{ = i | pi } for comparative performance and interpretation analysis) are
+ for i = 1, . . . , L, i.e., having 80% confidence for the i th introduced.
+ app leads to 80% probability of observing that app. A concise metric which relies on the above stronger calibration A. Dataset Description
+ definition is the Class-WiseExpected Calibration Error (CW-
+ ECE) [26], defined as L1 L i=1 Epi {| Pr{ = i | pi } − pi |}.
+ The whole experimental campaign in this study lever-
+ Such a metric is evaluated as the class-wise sum CW-ECE = ages the publicly released M IRAGE -2019 mobile-app traffic
+ 1 L CW-ECE , where: dataset9 , 10 to foster reproducibility. The dataset was collected
+ L i=1 i
+ by more than 280 experimenters at the ARCLAB laboratory of
+ M  
+  Bm,i    the University of Napoli “Federico II” during the period May
+ CW-ECEi ≈ (Bm,i ) − conf(Bm,i ) (10) 2017–May 2019, exploiting the M IRAGE architecture [11].
+ N
+ m=1 The facility allows to collect mobile-traffic in PCAP format,
+ In the latter definition, Bm,i denotes the set of samples whose which is enriched with ground-truth information that labels
+ prediction for the i th app pi falls within the m th bin, and each biflow with the corresponding Android-package name.
+ conf(Bm,i ) (resp. (Bm,i )) the corresponding bin-averaged 9 http://traffic.comics.unina.it/mirage/
+ confidence probability (resp. proportion of samples labeled as 10 https://ieee-dataport.org/open-access/mirage-mobile-app-traffic-capturethe i th app). and-ground-truth-creation
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4234 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ set based on the recommendation provided in the respective
+ original studies.
+ Single-Modal DL Traffic Classifiers: We have selected the
+ best single-modal DL classifiers according to extensive evaluations performed in our previous works [7], [42]. In more
+ detail, we consider the 1D-CNN fed with PAY784 [40] and
+ the 2D-CNN + LSTM (named HYBRID hereinafter) fed with
+ PSQ20 [41].
+ Additionally, we evaluate the Flow Sequence Network (FS-
+ Net) [9], having as input the IP packet size of the first Np = 12
+ packets (PS12 ). FS-Net consists of (i) an embedding layer
+ (with a 128-dimensional vector), (ii) an encoder followed by
+ (iii) a decoder (both a 2-layer BiGRU with 128 units) whose
+ output is given to (iv) a reconstruction layer (with softmax
+ activation), (v) a dense layer (with SeLu activation) combining encoder and decoder outputs, and (vi) a classification
+ layer (with softmax activation). After each intermediate layer,
+ Fig. 1. Number of per-app biflows in the M IRAGE -2019 dataset. a dropout of 0.3 is employed to avoid overfitting. For FS-Net,
+ the loss function is the weighted sum of reconstruction and
+ classification categorical cross-entropy losses.
+ During the collection, the experimenters have mimicked the Finally, to investigate the performance of “shallow” learntypical usage of each app by testing most-common function- ing, we consider a MultiLayer Perceptron encompassing one
+ alities (e.g., service registration and login, habitual interactions hidden dense layer with 100 neurons (named MLP-1 hereand use cases, etc.). Latest app versions available at time of inafter) trained with either PAY784 or PSQ20 .
+ capture were used. Overall, M IRAGE -2019 encompasses the Multimodal DL Traffic Classifiers: M IMETIC -E NHANCED
+ traffic generated by 41 Android apps belonging to 16 cat- is compared also with two multimodal baselines recently
+ egories according to the Google Play Store.11 The dataset proposed in related literature. The first baseline is the origcontains more than 4600 traffic traces, each generated in a inal M IMETIC architecture we have previously proposed [7].
+ capture session of [5, 10] minutes, 91778 TCP, and 4589 UDP M IMETIC consists of two modalities using PAY576 and PSQ12
+ labeled biflows. Three distinct devices were used. For the sake input type, respectively. The former is made up of two 1D conof brevity, the following experimental evaluation focuses on volutional layers (with 16 and 32 filters, kernel size of 25, and
+ the traffic captured with the Xiaomi Mi5. ReLu activation), each followed by a 1D max-pooling layer,
+ Figure 1 details the number of biflows for each app, and a dense layer (with 256 neurons). The latter comprises
+ spanning from 299 (for Maps) to 8246 (for Facebook). a BiGRU (with 64 units) and a dense layer (with 256 neu-
+ Nevertheless, for 32 apps out of the 41 considered, M IRAGE - rons). The intermediate representations of the two branches
+ 2019 contains more than 1000 biflows per app. We remark are concatenated and fed to a shared dense layer (with 128
+ that, albeit roughly the same time has been allotted for the nodes). A dropout of 0.2 is used at the end of each branch and
+ usage of each application during the traffic capture time, after each dense layer. Similarly to M IMETIC -E NHANCED,
+ the number of biflows significantly depend on the specific the original M IMETIC is trained via a two-stage procedure
+ app considered: this constitutes a real-world and challenging based on pre-training and fine-tuning phases. It is worth
+ scenario for the interpretability analyses provided herein. noting that M IMETIC and M IMETIC -E NHANCED classifiers,
+ despite derived from the same general multimodal framework [7], significantly differ from both the architectural and
+ B. Traffic Classification Baselines training-procedure viewpoints. In more detail, in M IMETIC -
+ This section describes state-of-the-art baselines considered E NHANCED, we better represent the information carried from
+ in the following interpretability analyses and compared with both input types—and consequently its explainability degree—
+ M IMETIC -E NHANCED. All single-modal baselines are fed by exploiting a trainable embedding layer in both modalities.
+ with either PAYNb or PSQNp (see Section III-A for more details), Such an embedding layer changes the dimension of the input
+ both normalized within [0, 1]. On the other hand, similarly vector fed to the subsequent layers, and introduces new paramto M IMETIC -E NHANCED, multimodal baselines are fed with eters to be learned. Moreover, M IMETIC -E NHANCED employs
+ both types of input data [17]. a novel training procedure based on an adaptive learning-
+ Unless stated otherwise, all DL architectures are trained to rate that is halved every 5 epochs, demonstrating a beneficial
+ minimize a categorical cross-entropy loss function, and exploit effect on training with respect to simpler constant learning-rate
+ the Adam optimizer [43] and the early-stopping technique to adopted in M IMETIC (see Section III-A). Finally, we have also
+ prevent overfitting. Specific training parameters of each base- applied a calibration procedure (based on different approaches,
+ line (e.g., learning rate, number of epochs, batch size, etc.) are namely focal loss and label smoothing) explicitly devised and
+ optimized for the training phase of M IMETIC -E NHANCED (see
+ 11 https://play.google.com/store/apps Section III-C).
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4235
+
+ The second baseline is the multimodal App-Net architecture [8] which also has two modalities with PAY200 and PS12
+ as input, respectively. The first branch encompasses an embedding layer performing one-hot encoding of the input and two
+ 1D convolutional layers (with 128 filters, kernel size of 15,
+ and ReLu activation), each followed by a 1D max-pooling
+ layer. The second branch consists of an embedding layer (with
+ a 128-dimensional vector) and two BiLSTM layers (with 128
+ units). Lastly, the intermediate features are fused via a learned
+ weighted element-wise addition. Here too, a dropout of 0.5 is
+ used at the end of each branch. Unlike other baselines, App-
+ Net employs the stochastic gradient descent optimizer with a
+ variable learning rate which is halved every 3 epochs.
+ ML-Based Traffic Classifiers: Additionally, we compare
+ M IMETIC -E NHANCED with a Decision Tree (DT) being a simpler and (more) interpretable ML-based model. We underline
+ that the interpretability degree of the DT is strongly dependent on (a) the feature set (i.e., the input dimensionality)
+ and (b) the tree depth: the more complex the DT, the less
+ interpretable its decision rules. Indeed, the number of leaf
+ nodes increases exponentially with the tree depth (i.e., by
+ 2depth ). Therefore, to foster a fair comparison, we feed the
+ DT with three different feature sets: (i) PAY576 , (ii) flattened
+ PSQ12 , and (iii) PAY576 +PSQ12 , where “+” denotes a flattened
+ concatenation.
+ Fig. 2. M IRAGE -2019 per-app traffic characterization.
+ C. Implementation Details
+ To foster reproducibility, in addition to the public release
+ of the M IRAGE -2019 dataset, we provide specific imple- ten-fold cross-validation that keeps stable the share of permentation details on the whole experimental workbench. app samples among the folds and allows a TC performance
+ All the APIs refer to Python (3.7) programming lan- evaluation on the whole dataset. Hence, for each considered
+ guage. Specifically, we exploited the DL models pro- metric we report the average—and, when needed, the stanvided by Keras (https://keras.io) and TensorFlow 2 dard deviation—of the evaluations on the ten folds. More
+ (https://www.tensorflow.org/), and ML models provided by specifically, in Section V-A, a fine-grained characterization
+ scikit-learn (https://scikit-learn.org/) to implement, test, of M IRAGE -2019 dataset is provided. Then, in Section V-B,
+ and calibrate the traffic classifiers described herein. Also, we compare the proposed M IMETIC -E NHANCED against the
+ we leverage the original Deep SHAP implementation avail- considered baselines in terms of TC performance. A first
+ able at https://github.com/slundberg/shap. Data pre- and post- in-depth analysis on the soft-output of our proposal is proprocessing have been performed mainly by means of numpy vided and discussed in Section V-C. The trustworthiness of
+ (https://numpy.org/) and pandas (https://pandas.pydata.org/) M IMETIC -E NHANCED predictions (against the baselines) is
+ libraries. Finally, the graphical data representation has been quantified (and improved) in Section V-D. Finally, the interobtained using matplotlib (https://matplotlib.org/) and pretability of M IMETIC -E NHANCED TC-results is discussed
+ seaborn (https://seaborn.pydata.org/) libraries. in Sections V-E, V-F and V-G, focusing on relative contribu-
+ All the experiments refer to the same hardware architec- tion of each modality, and per-modality investigation of these
+ ture, that is an OpenStack virtual machine with 16 vCPUs inputs.
+ and 32 GB of RAM, and Ubuntu 16.04 (64 bit) operating
+ system, running on a physical server with 2 × Intel Xeon A. Dataset Characterization
+ E5-4610v2 CPUs @ 8 × 2.30 GHz and 64 GB of RAM. In this section, we report the results of the dissection
+ Regarding the evaluation of (per-epoch) training complexity of the app traffic in terms of adopted protocols, based on
+ of DL approaches, we highlight that all the execution times the well-known tshark library.12 We also discuss how we
+ have been computed via time.process_time() to take infer the nature (clear vs. encrypted) of the payload at perinto account only the actual runtime on the CPUs (i.e., in a packet granularity (based on identification of known protocol
+ sequential fashion). messages).
+ Figure 2(a) depicts the distribution of protocols in terms of
+ V. E XPERIMENTAL E VALUATION biflows for each app within the dataset. For each biflow, we
+ This section reports and discusses the experimental evalua- 12 In detail, PyShark (https://kiminewt.github.io/pyshark) and Scapy
+ tion performed in this work. The latter is based on a stratified (https://kiminewt.github.io/pyshark) were employed.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4236 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ TABLE II
+ C LEARTEXT M ESSAGES BY P ROTOCOL
+
+ Fig. 3. Proposed heuristic to identify the encrypted portion of app traffic in
+ M IRAGE -2019.
+
+ the latter by Alphabet Inc.’s ones (i.e., Maps, PlayStore,
+ consider the highest protocol in the stack the dissector is able Hangouts, and YouTube). For these apps, up to ≈ 37%
+ to interpret. For the sake of clarity, in the following we refer to (for Facebook) and ≈ 63% (for YouTube) of the biflows
+ the protocol classes in our dataset reporting the TCP/IP stack utilize FB-Zero or gQUIC, respectively. Notably, 32 out of
+ portion from transport layer and the one above, in the form 41 apps present HTTP biflows (TCP:HTTP), with the highest
+ L4:L5. shares (> 30% of biflows) exhibited by Wish, Spotify,
+ Firstly, we can notice that the Transport Layer Security AccuWeather, and Diretta. For a limited number of
+ (TLS) protocol (TCP:TLS) constitutes ≈ 80% of overall biflows, the dissecting process could not go further the idenbiflows and each app has 15% TLS biflows, at least. tification of the presence of the transport-layer headers with
+ Inspecting the ≈ 76k TCP:TLS biflows in the dataset, TCP:UNK and UDP:UNK accounting for ≈ 0.7% and ≈ 0.2%
+ 94% employ the 1.2 version or above,13 while the remain- of the overall biflows. A more limited portion of the biflows
+ ing 6% the 1.0 version (in fact, only 3 TLS 1.1 biflows can employ STUN protocol (UDP:STUN), which represent the ≈
+ be found). Analyzing the latter 6% in more depth, 95% of 24% of Messenger biflows. Finally, < 0.1% of the biflows
+ these biflows are associated with the sole Waze app, while in the dataset do not match any of the mentioned protocols
+ the remaining part is shared by eBay, Twitter, Tumblr, and are grouped in OTHER:UNK.
+ TripAdvisor, Subito, OneDrive, Flipboard, and The distribution of protocols shown in Fig. 2(a) also pro-
+ Facebook. Notably, TLS 1.0 constitutes 93% of TLS Waze vides hints about the nature of the traffic: protocols that
+ biflows, while for the other mentioned apps, this protocol natively support payload encryption (i.e., TLS, SSL, FB-Zero,
+ accounts for smaller shares (less than 0.05% of the biflows and gQUIC) can be easily distinguished from those that do
+ for all the mentioned apps but Facebook, for which TLS not (i.e., HTTP, STUN, TCP, UDP). It is worth to notice
+ 1.0 represents 5% of the TLS traffic in terms of biflows). that: (i) protocols supporting payload encryption also dic-
+ According to the tshark protocol dissection, 19 apps have tate for portions of the biflows to be conveyed in cleartext
+ at least one biflow marked as Secure Sockets Layer (SSL) pro- (e.g., messages that establish the initial secure connection);
+ tocol (which conveys ≈ 85% of the biflows for Telegram, (ii) applications may exchange encrypted data through protoin particular).14 We highlight that this naming choice is due cols that do not support payload encryption (e.g., when content
+ to the default labeling tshark adopts when the dissector is encryption is enforced at application level). To provide a difunable to detect the specific version of SSL/TLS. We have ferent viewpoint with respect to protocols, i.e., to identify the
+ chosen to follow the same convention for coherence with the encrypted portion of the app traffic at a finer granularity, now
+ usage of tshark response as ground truth for protocol type, we focus on L4 payload. To count the encrypted packets we
+ and report this undetected version of SSL/TLS as TCP:SSL. adopt a conservative approach that is based on packet dissec-
+ Other prominent protocols in the dataset are Facebook tion to detect application-layer messages and takes advantage
+ Zero (FB-Zero) and Google Quick UDP Internet Connection of known protocol characteristics to classify a packet as clear,
+ (gQUIC) (TCP:FB-Zero and UDP:gQUIC, respectively). encrypted, or unknown, according to an heuristic described as
+ As expected, the former is used only by Facebook Inc.’s apps flow chart in Fig. 3. Details about the messages considered to
+ (i.e., Facebook, Instagram, and Messenger), whereas be in clear for each protocol are reported in Tab. II. On the
+ other hand, STUN only uses cleartext.15 Besides such cleart-
+ 13 The TLS version 1.3 standard (RFC4886) mandates the usage of cleartext messages, the payload of TCP:FB-Zero, UDP:gQUIC,
+ ext protocol version field with the same value of TLS version 1.2, therefore
+ the tshark dissector we use as a ground truth cannot tell apart these two TCP:SSL, and TCP:TLS biflows is therefore considered to be
+ versions.
+ 14 Most of Telegram traffic is labeled by tshark as “SSL Continuation 15 STUN protocol leverages TLS (DTLS) for encryption (RFC7350), there-
+ Data” despite the (open source) Telegram client supports TLS1.3. fore UDP:STUN is in cleartext.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4237
+
+ TABLE III TABLE IV
+ P ERFORMANCE M ETRICS AND D EFINITIONS C OMPARISON OF M IMETIC -E NHANCED ACCURACY, F-M EASURE , AND
+ G-M EAN W ITH S TATE - OF - THE -A RT BASELINES
+
+ encrypted. Note that for biflows marked as TCP:SSL, usually
+ the packet dissector does not provide detailed information on
+ the message type, thus we could not infer the related packet
+ nature. Moreover, from version 1.3 the TLS standard mandates an opaque content type header value corresponding to
+ generic “application data”, no longer revealing the actual TLS
+ message type (now encrypted). Differently, concerning HTTP,
+ only the packet containing HTTP headers is considered to be
+ in clear, while the packets delivering the body of the message are marked as unknown. We report the results of the
+ heuristic applied to the dataset in Fig. 2(b), which depicts
+ the percentage of clear, encrypted, and unknown packets for
+ each app. As expected, this information is strongly related
+ to the (per-biflow) protocol distribution associated to each
+ app: cleartext traffic constitutes ≈5–10% of per-app packets which correspond to the beginning of TCP:FB-Zero,
+ UDP:gQUIC, TCP:SSL, TCP:HTTP, and TCP:TLS biflows
+ and to UDP:STUN. communications. In fact, notable exceptions are Spotify and Wish for which a remarkable amount
+ of TCP:HTTP traffic is observed and Slither.io and
+ Telegram that present several TCP:UNK and TCP:SSL
+ biflows, respectively.
+ Fig. 4. Accuracy of M IMETIC -E NHANCED and best baseline traffic classifiers
+ When performing protocol breakdown, the following anal- divided by protocol.
+ yses will omit TCP:UNK, UDP:UNK, and OTHER:UNK as
+ the related amount of traffic in M IRAGE -2019 is negligible.
+ The analyses will focus on TCP:FB-Zero, UDP:gQUIC,
+ TCP:SSL, TCP:TLS, UDP:STUN, and TCP:HTTP whose into account recall, precision, and specificity. Specifically, for
+ traffic will be simply referred to as FB-Zero, gQUIC, SSL, the evaluation of multi-class traffic classifiers, we employ their
+ TLS, STUN, and HTTP, respectively, for the sake of brevity. arithmetically-averaged (viz. macro) versions.
+ Experimental results witness that M IMETIC -E NHANCED
+ performs better than all the considered baselines according
+ B. Performance Comparison With State-of-the-Art Baselines to all the performance metrics. Indeed, it guarantees remark-
+ In this section, we analyze in depth the performance of able improvements with respect to the best performing baseline
+ M IMETIC -E NHANCED against the considered baseline archi- (that is M IMETIC in all the cases), reporting performance
+ tectures. Table IV summarizes wrap-up results in terms of improvements of +3.25%, +3.68%, and +2.26% in terms
+ the typical classification performance metrics, whose definition of Accuracy, F-measure, and G-mean, respectively. More
+ is briefly reported in Tab. III. In addition to the well-known in general, the performance-rank of the architectures con-
+ Accuracy (i.e., the fraction of correctly classified biflows over firms that multimodal approaches (i.e., M IMETIC -E NHANCED,
+ the total number of biflows), we also leverage per-class mea- M IMETIC, and App-Net) are able to achieve better—and typsures, namely F-measure and G-mean, which concisely take ically less variable—performance. On the other hand, simpler
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4238 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ DT performs almost on par with single-modal DL-based traffic classifiers when fed with the most complex PAY576 +PSQ12
+ feature set, but has worse performance than all multimodal DL
+ approaches, including M IMETIC -E NHANCED. Interestingly,
+ when limiting the DT maximum-depth to 10 (corresponding
+ to 1024 leaf nodes) with the aim of retaining its interpretability, we incur a significant decrease of performance
+ down to 41.37%, 39.00%, and 48.62% in terms of Accuracy,
+ F-measure, and G-mean, respectively, in the best configuration
+ Fig. 5. Top-K accuracy of M IMETIC -E NHANCED and best baseline traffic
+ (i.e., with PAY576 + PSQ12 feature set as input). classifiers. Error bars report average ± standard deviation.
+ To shed light on where this improvement sits, we break
+ the performance results down on the different protocols, as
+ reported in Fig. 4. For brevity, we focus on the four bestperforming architectures and we only report the analysis of the considered DL architectures by inspecting the soft-outputs
+ the Accuracy, as same trends and observations can be devised of the classifiers, rather than their sole final decision. Before
+ by the inspection of the other metrics. Investigating the classi- focusing on the class-wise trends and patterns highlighted by
+ fication accuracy obtained by M IMETIC -E NHANCED for app the soft-outputs provided by M IMETIC -E NHANCED, we comtraffic conveyed by different protocols, we can notice that our pare the performance of the four best architectures—according
+ architecture highlights different performance on varying pro- to the TC performance reported in Tab. IV—in terms of the
+ tocols: (i) FB-Zero, gQUIC, and STUN biflows are classified Top-K Accuracy. This metric relaxes the constraints imposed
+ with ≈99% accuracy; (ii) lower accuracy values are obtained in the accuracy analysis and defines a classification event
+ for SSL, HTTP, and TLS, with TLS traffic being the most as correct if the actual app falls within the top-K predicted
+ challenging to be classified by M IMETIC -E NHANCED (attain- labels (K < L is a free parameter). Accordingly, the Top-K
+ ing however 90.66% accuracy). Interestingly, this does not Accuracy provides hints about the general behavior of softhold for all the architectures (e.g., HTTP traffic specifically outputs (actual classes not chosen as the most likely output
+ challenges App-Net and FS-Net). On the other hand, TLS traf- are still considered correct when lying within the top-K). Note
+ fic is classified with accuracy values not higher than 87.40% that when K = 1 the metric results into the standard accuracy
+ by the other architectures. already discussed, and that the larger the value chosen for K,
+ According to the protocol breakdown for the different archi- the higher the Top-K Accuracy, by construction.
+ tectures, we can assert that M IMETIC -E NHANCED achieves Figure 5 presents the Top-K Accuracy obtained for K ∈
+ better performance than the baselines for all the proto- [1, 5]. While the performance gain of M IMETIC -E NHANCED
+ cols. While the improvements of classification accuracy for w.r.t. the baselines decreases as K increases, M IMETIC -
+ FB-Zero, SSL, STUN, and HTTP traffic appear limited (≤1% E NHANCED outperforms the baselines for all the values of K
+ w.r.t. the best performing baseline per-protocol), remarkable considered. Notably, for K = 3 both M IMETIC -E NHANCED
+ accuracy enhancement can be observed for gQUIC and TLS and M IMETIC achieve >95% Top-K Accuracy, while the best
+ traffic (+4.65%, w.r.t. M IMETIC and +3.81% w.r.t. App-Net, single-modal baseline (i.e., FS-Net) attains this result with
+ respectively). K = 5.
+ Finally, focusing on complexity, our results show that the Hence, in the following analysis, we focus on the Top-3
+ benefits in terms of TC performance obtained by M IMETIC - Accuracy which aims at deepening the soft-output behavior
+ E NHANCED come at a limited complexity increase of the of the best-performing DL architectures. In more details, for
+ training phase. Indeed, an increment of per-epoch training- each app (actual class) we have computed the most recurring
+ phase runtime limited to ≈40% is observed w.r.t. M IMETIC. top-3 predictions based on the soft-output vectors provided by
+ This is paired with the number of trainable parameters of the architectures. The results of this analysis are reported in
+ the two architectures which do not differ significantly, being Figs. 6(a) and 6(b) for M IMETIC -E NHANCED and M IMETIC,
+ 0.98M and 0.96M for M IMETIC -E NHANCED and M IMETIC, respectively (details for App-Net and FS-Net are omitted for
+ respectively. Still, M IMETIC -E NHANCED shows a training- brevity). The values in the heatmaps represent the percentage
+ phase runtime more than 5.5× and 3.2× lower than App-Net of occurrence of the predicted apps that most-likely fall among
+ (1.77M trainable parameters) and FS-Net (6.39M trainable the top-3 predictions for each actual class.
+ parameters), respectively.16 In line with the high TC-performance presented in Tab. IV
+ and Fig. 5, for both M IMETIC -E NHANCED and M IMETIC, the
+ C. Fine Grained Analysis Based on Soft-Outputs correct label is always the most frequent in the top-3 (i.e.,
+ This section extends the performance analysis drawn in it is ranked I). Notably, for 36 out of 41 apps, M IMETIC -
+ Section V-B providing a finer-grained study of the output of E NHANCED shows an occurrence of this most frequent (I)
+ correct prediction higher than M IMETIC. Major discrepan-
+ 16 This apparently counterintuitive outcome can be justified considering the cies (w.r.t. M IMETIC) are observed for Viber (+5.79%) and
+ more complex elementary DL layers constituting the App-Net architecture TripAdvisor (+4.15%). These results suggest that for a
+ compared to FS-Net (and also w.r.t. M IMETIC and M IMETIC -E NHANCED),
+ namely larger embedding vectors, BiLSTM instead of simpler BiGRU, and consistent number of samples of certain apps (e.g., the abovemore complex trainable merge layer. mentioned Viber and TripAdvisor along with Groupon
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4239
+
+ Fig. 6. Most recurring top-3 predictions of M IMETIC -E NHANCED (a) and M IMETIC baseline (b) traffic classifiers. ‘’ and ‘†’ highlight apps (also) using
+ gQUIC and FB-Zero protocol, respectively.
+
+ and LinkedIn), the actual label does fall in the top-3 for
+ M IMETIC -E NHANCED, but not for M IMETIC. More in general, with the exception of these notable cases, the trends
+ shown for the occurrences of the most recurring label (I)
+ in the top-3 are qualitatively the same for the four architectures (with App-Net and FS-Net showing lower values than
+ M IMETIC -E NHANCED and M IMETIC in almost all the cases).
+ On the other hand, comparing the second and the third
+ most-likely predicted labels (II and III in Fig. 6, respectively)
+ provided by M IMETIC -E NHANCED and M IMETIC, they often
+ do not match. However, some predicted labels represent the
+ second or the third choice for most of the apps. For instance,
+ Flipboard appears for the ≈49% of apps in II or III for
+ M IMETIC -E NHANCED and for the ≈56% for M IMETIC.
+ Interestingly, the frequency of occurrence of labels in II
+ and III is remarkably lower for M IMETIC -E NHANCED (30%
+ at most) than M IMETIC (whose values reach peaks of more
+ Fig. 7. Confusion matrices of apps using FB-Zero (a) and gQUIC
+ than 60% for 7 out of 41 apps). These results highlight that (b) protocols. Note that the log scale is used to evidence small errors.
+ prediction stability for M IMETIC -E NHANCED mostly relates
+ to top-1 predictions, but does not extend to the second
+ and third choices of the classifier. Also, inspecting the softoutput behavior of M IMETIC, its higher values for II and III Indeed, to further deepen our analysis of fine-grained behavmost-frequent predictions are associated with evident app clus- ior of M IMETIC -E NHANCED, we have investigated the error
+ ters of the same provider and sharing the same underlying patterns of M IMETIC -E NHANCED in classifying the apps that
+ protocols, e.g., Instagram, Facebook, and Messenger (also) carry traffic through FB-Zero and gQUIC. To this aim,
+ (predicted among the top-3 for Instagram and Facebook) Figs. 7(a) and 7(b) depict the confusion matrices for the
+ using FB-Zero, or Maps, PlayStore, YouTube, and former group of apps (i.e., Facebook, Instagram, and
+ Hangouts sharing gQUIC. These same patterns are also Messenger) and for the latter (i.e., Hangouts, Maps,
+ present but less evident for M IMETIC -E NHANCED. PlayStore, and YouTube), respectively. We recall that
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4240 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ TABLE V
+ confusion matrices allow to clearly highlight misclassifica- C ALIBRATION P ERFORMANCE OF M IMETIC -E NHANCED W ITHOUT AND
+ tion patterns with a higher concentration where predicted W ITH F OCAL L OSS (FL) AND L ABEL S MOOTHING (LS) O PTIMIZATIONS
+ AND OF R ELATED BASELINES IN T ERMS OF ECE, MCE, AND CW-ECE
+ classes equal the actual ones implying better TC performance.
+ We can notice that most of the misclassifications happen
+ within the same “protocol-group”, that is wrongly assigning to a biflow a label of an app using the same protocol. This clusterization is particularly evident in Fig. 7(a),
+ where Facebook and Messenger are confused with each
+ other, while Instagram is misclassified with both of them.
+ Interestingly, Fig. 7(a) exhibits a slightly different behavior
+ for the apps using gQUIC. In this case, the misclassifications are less frequent within the same protocol-group
+ (with the notable exception of YouTube and Maps), with
+ PlayStore more frequently misclassified as Facebook or
+ Viber.
+
+ D. Calibration Analysis
+ We now focus on assessing the trustworthiness of
+ M IMETIC -E NHANCED in terms of the calibration metrics
+ defined in Section III-C, namely the (i) ECE, (ii) MCE and
+ (iii) CW-ECE. Specifically, we first focus on investigating
+ the calibration of M IMETIC -E NHANCED by varying rele- smoothing, and optimized w.r.t. tuning parameters to achieve
+ vant parameters in focal loss (γ) and label smoothing (α) the optimal calibration. To appreciate the calibration effect
+ techniques. The calibration sensitivity analysis is depicted in of these, they are compared with a naive (non-calibrated)
+ Fig. 8(c), by reporting both the results on (a) the whole version of M IMETIC -E NHANCED. The comparison is per-
+ M IRAGE -2019 dataset (in red) and (b) grouped by pro- formed in terms of the relevant calibration diagrams assotocol. Since both techniques modify the training process, ciated to the ECE (i.e., taking care of the calibration
+ for each of the considered values also the corresponding performance on the probability associated to the predicted
+ achieved Accuracy, F-measure, and G-mean are reported in class), reported in Fig. 9. Given the high performance achieved
+ complementary Tabs. 8(a) and 8(b). by M IMETIC -E NHANCED, most of the classified biflows
+ By looking at the trend of the three calibration metrics are predicted with confidence values ∈ [90, 100]%: hence,
+ w.r.t. γ and α over M IRAGE -2019, it is first apparent that the bottom row shows a 10× zoom of the diagrams for
+ ECE and CW-ECE share a unimodal trend. A slight dif- the aforementioned bin. For readers’ convenience, the corferent observation holds for the MCE (which accounts for responding TC-performance metrics and calibration metrics
+ the extreme-valued calibration discrepancies), whose trend for the three counterparts are reported in the bottom-wise
+ appears to be less sensitive to α (and less obvious) when tables.
+ label smoothing is considered. The optimal values in terms First of all, it is apparent the non-perfect calibration of
+ of the three considered calibration metrics are obtained for M IMETIC -E NHANCED, when both considering the whole con-
+ γ = 3 and α = 0.025 for focal loss and label smoothing, fidence range and also focusing on the bin ∈ [90, 100]%.
+ respectively, when considering the TC performance obtained Conversely, the calibration effect of the (optimized) focal loss
+ on the whole M IRAGE -2019 dataset. Focusing on TC cal- and label smoothing is evident for all the values of the preibration per protocol, there is a similar behavior for TLS dicted confidence, as also witnessed by the concise calibration
+ biflows, representing the highest quota in the dataset consid- metrics. For instance, the adoption of focal loss and label
+ ered (and also the most used encryption protocol for mobile smoothing is able to achieve a 6× and 2.2× ECE reduction
+ traffic). Conversely, when considering SSL, there seems to be with respect to the uncalibrated case, respectively (similar loss
+ a detrimental effect of both focal loss and label smoothing cut is observed for MCE and CW-ECE).
+ on ECE and CW-ECE, and a weak-dependence of the MCE Differently, focusing on the relative calibration performance
+ on these tuning parameters. Interestingly, by matching calibra- achieved by these two methods, the focal loss achieves the best
+ tion with TC performance, the parameter ensuring the optimal calibration performance in terms of all the three considered
+ calibration for each training variant (γ = 3 and α = 0.025) metrics. This can be also appreciated by direct comparison
+ does not coincide with the highest DL-based TC effectiveness of the calibration diagrams. Indeed, looking at the whole
+ observed for M IMETIC -E NHANCED (γ = 2 and α = 0.1). prediction range, the calibration diagram of focal loss is closer
+ Still, as shown in the last row of Tabs. 8(a) and 8(b), the rel- to the ideal accuracy = confidence line. Also, focusing on the
+ ative loss is always < 0.25% (in absolute value) for all the ∈ [90, 100]% bin, a similar reasoning applies for M IMETIC -
+ three considered TC-effectiveness metrics. E NHANCED with focal loss, but with the latter having a
+ We then delve into the calibration details of these two slighter under-confident behavior (w.r.t. label smoothing) in
+ variants of M IMETIC -E NHANCED, using focal loss and label the range ∈ [90, 95]%.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4241
+
+ Fig. 8. Calibration sensitivity analysis of M IMETIC -E NHANCED in terms of ECE (a, d), MCE (b, e), and CW-ECE (c, f) when varying γ for focal loss
+ (top row) and α for label smoothing (bottom row). Tables 8g and 8h show related TC performance using to indicate the best Accuracy, F-measure, and
+ G-mean [%] and  to indicate the best-calibrated configuration. The last row quantifies the TC-performance difference [%] for each metric between the
+ best-calibrated and the best-performing configuration ( − ).
+
+ Fig. 9. Reliability diagrams of M IMETIC -E NHANCED (a) and M IMETIC -E NHANCED with label smoothing (b) and focal loss (c) in their best configurations
+ (i.e., with γ = 3 and α = 0.025, respectively). Confidence is divided in 10 bins, and it is ≥ 1/L (vertical dashed line), with L being the number of classes.
+ Over and under gap represent an over-confident (optimistic) and under-confident (pessimistic) miscalibration pattern, respectively. The number at the bottom
+ of each bar reports the percentage of samples within the corresponding bin. The bottom row shows a 10× finer grained representation of the last bin (i.e.,
+ [90, 100]). Synthetic ECE, MCE, and CW-ECE along with TC-performance measures are also reported for each case.
+
+ Finally, Tab. V summarizes the results of the calibration baseline (i.e., M IMETIC), we report the results attained with
+ analysis extended to all the baselines considered. More specifi- the best-calibrated configurations with focal loss (γ = 3 and
+ cally, for both M IMETIC -E NHANCED and the best-performing γ = 1 for M IMETIC -E NHANCED and M IMETIC, respectively)
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4242 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ Fig. 10. Modality contributions of M IMETIC (a) and M IMETIC -E NHANCED (b). Importance φ 
+ Mp for both PAY-modality and PSQ-modality is reported for
+ both the whole dataset (with red color) and grouped by protocol (with different colors). Whiskers show 5th and 95th percentiles.
+
+ and label smoothing (α = 0.025 for both architectures), and E. Modality Contribution to Correct TC Decisions
+ also without exploiting any calibration technique. In Fig. 10, we investigate the (relative) contribution that
+ Recalling the classification performance in Tab. IV the each traffic modality (PAY and PSQ) gives to TC, focusing on
+ reported results highlight the existing trade-off between the M IMETIC (Fig. 10(a)) and M IMETIC -E NHANCED (Fig. 10(b)).
+ accuracy of the provided predictions and the related con- The analysis is obtained by evaluating the pooled SHAP values
+ fidence: in its native formulation, M IMETIC -E NHANCED φM for each modality. The corresponding distributions (shown
+ exposes ≈ 2× calibration error with respect to M IMETIC, via the boxplots) are then obtained by selecting the correctlywitnessing that the achieved TC performance comes at the classified tested samples of either (a) the whole M IRAGE -
+ cost of reduced trustworthiness in the provided outcomes 2019 (in red) or (b) the single protocol (other colors).
+ and thus calling for methods to improve it. On the other Focusing on M IMETIC, it is apparent that PAY modalhand, all the baselines report calibration errors higher than ity always contributes with higher importance values: the
+ M IMETIC -E NHANCED with either focal loss or label smooth- median is ≈ 80% for all the considered protocols except for
+ ing (e.g., up to more than 17× and 6×, respectively, in FB-Zero, where it is ≈ 60%. For this protocol, the PSQ
+ terms of ECE). It is worth noticing that among considered modality has higher values (median is ≈ 40%).
+ baselines the least calibrated approach is the (naturally inter- A different situation is observed for M IMETIC -E NHANCED
+ pretable) DT that tends to be significantly over-confident in its (see Fig. 10(b)): the importance of PSQ-modality increases
+ predictions. (thanks to the embedding layer used for PL values) and
+ Such an outcome thus remarks the utility of focal loss and the resulting distributions are wider than the previous ones.
+ label smoothing to improve calibration performance, with their For FB-Zero, SSL and STUN biflows, the aforementioned
+ usefulness being more limited when considering an approach modality overcomes the other (the median is ≈ 70% for SSL).
+ which is already well-calibrated in its native variant. For For gQUIC and HTTP in both architectures, the values assoinstance, when considering M IMETIC, only label smoothing is ciated with PSQ modality are always small (the median is
+ able to attain a calibration improvement (up to −2% in terms ≈ 20% and ≈ 30%, respectively). Conversely, for TLS the
+ of MCE), whereas M IMETIC with focal loss is even less cali- two modalities contribute almost equally to the correct TC
+ brated than its native formulation. Interestingly, experimental decision.
+ observations witnessed also that the use of either focal loss or
+ label smoothing, regardless of whether they provide a remark- F. SHAP PAY-Modality
+ able calibration improvement (as for M IMETIC -E NHANCED)
+ or not (as for M IMETIC), leads to an extremely-limited In this section, we analyze the relative importance of inputs
+ TC-accuracy decrease, namely < 0.25% and < 0.33% loss (transport-layer payload bytes) associated to the PAY-modality,
+ for M IMETIC -E NHANCED (see Tabs. 8(g) and 8(h)) and based on Deep SHAP (see Section III-B). Specifically,
+ M IMETIC,17 respectively. we focus on providing global explanations for M IMETIC -
+ E NHANCED, which relies on the first Nb = 576 bytes of each
+ biflow. For our proposal, we provide global explanations pertaining to both (a) per-protocol and (b) per-app aggregation.18
+ The corresponding results are reported in Figs. 11 and 12,
+ 17 Specifically, M IMETIC experiences a performance drop on Accuracy,
+ F-measure, and G-mean of −0.23 (± 0.31), −0.10 (± 0.39), and −0.11 18 We remark that also per-protocol aggregation refers to the 41-app mobile
+ (± 0.33) with focal loss (γ = 1), and of −0.30 (± 0.24), −0.32 (± 0.47), TC task. In other terms, the two analyses differ only in the subset of the testing
+ and −0.08 (± 0.42) with label smoothing (α = 0.025), respectively. samples considered.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4243
+
+ Fig. 12. Importance φ m of the payload-byte inputs (identified by their
+ position) for PAY-modality of M IMETIC -E NHANCED for exemplifying apps.
+
+ By observing the importance plot for gQUIC (Fig. 11(b)),
+ it is interesting to observe an initial region (≈ 200 bytes)
+ whose values are significantly higher than the following ones.
+ The above importance values can be attributed to the fact that
+ gQUIC biflows start with a CHLO packet, having a fixed payload length of 1350 bytes. This amount is filled with padding
+ bytes starting approximately from position 200. This is the
+ reason why bytes after this position have minimal importance values. The first 200 bytes, instead, are a list of tags
+ employed in the packet, whose values are listed in the final
+ part of the packet, not observed due to the truncation of the
+ payload input type to Nb = 576 bytes. Analogous observations can be drawn for the STUN protocol (Fig. 11(c)), since
+ the resulting profile is very defined and highlights that the
+ first bytes are given very-high values. Conversely, for the profiles of the other three protocols (i.e., TLS, SSL, and HTTP
+ Fig. 11. Importance φ m of the payload-byte inputs (identified by their in Figs. 11(d), 11(f), and 11(e), respectively), consistentlyposition) for PAY-modality of M IMETIC -E NHANCED grouped by protocol. influential regions in the byte sequences are less evident:
+ higher values are associated with the first bytes, but with the
+ median behavior (viz. black line) reporting values <1%. In
+ particular, concerning TLS, when comparing the distribution
+ respectively. In all the plots, sample-wise positive and negative of the position of the SNI field (starting at byte 107 and span-
+ SHAP values are highlighted with red and blue colors, respec- ning over 20 bytes, on average), we can observe that the bytes
+ tively. Also, for completeness, the median importance value of exposing higher importance values dramatically match those
+ each byte (over different samples) is reported as a solid black encoding this field.
+ line. This allows highlighting regions which are more con- Finally, in Fig. 12, we analyze the global explanations of
+ sistently influential for predictions and those having low/high PAY-modality associated to single apps, focusing on some
+ variability. We remark that a similar analysis (not shown) has remarkable examples that we discuss in the following. Overall,
+ been carried out also for M IMETIC, since it uses the same the distributions of φm report higher-importance values (posinput type for PAY-modality. Still, experimental results have itive red points) in correspondence of the initial bytes of
+ highlighted less appreciable explanation patterns, due to the the payload (<200). For instance, the profile obtained for
+ absence of the “focusing effect” of the embedding layer not Youtube (Fig. 12(a)) has similar characteristics to those
+ present in the M IMETIC architecture. described for gQUIC biflows (Fig. 11(b)). On the other hand,
+ Concerning FB-Zero (Fig. 11(a)), we observe two regions in other cases, in spite of the presence of peak values for
+ attaining high per-sample positive values: one covers the first the first bytes, the median (black line) does not follow the
+ 100 bytes, whereas the other corresponds with bytes in the same trend, according to the mixture of protocols for a given
+ interval [200, 300]. Looking at the median of the distributions app. This behavior is exemplified, for instance in Fig. 12(b)
+ obtained for each byte, we see that such value is however low (corresponding to the Diretta app), while the distribution
+ for bytes associated to the second region. This is attributed reports high values for the very first bytes (imputable to HTTP
+ to a limited number of FB-Zero biflows having this profile. biflows, see Fig. 11(e)), the median does not follows the same
+ Specifically, the aforementioned biflows contain SCFG pack- trend (because of the impact of TLS). Indeed, beside the iniets, and the second region is aligned to the relevant fields for tial peak (centered around byte 100) the median highlights an
+ this packet, such as server certificates. influential region around bytes 300–400. This witnesses the
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4244 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ m of the header-field inputs (identified by the respective packet) for PSQ-modality of M IMETIC (top row) and M IMETIC -E NHANCED
+ Fig. 13. Importance φ
+ (bottom row) grouped by protocol.
+
+ importance of considering a value for Nb > 400B , i.e., not TLS (Fig. 13(c)) and SSL (Fig. 13(d)). More in general, while
+ limited to the very first bytes of the payload. the elements with higher importance values change with both
+ the protocol as well as the header field, PL and TCP_WS show
+ G. Shap PSQ-Modality median importance values higher than other fields, overall.
+ Moving to the results of M IMETIC -E NHANCED,
+ Similarly to the previous section, here we investigate the
+ Figs. 13e–h highlight that the distribution of field importance
+ importance of inputs associated with the PSQ-modality of
+ changes dramatically, with a single feature (i.e., the PL)
+ M IMETIC -E NHANCED. This branch of the architecture is fed
+ becoming remarkably more important than the others. This
+ with 4 header fields extracted from the first 12 packets of each
+ result can be justified by the introduction of the embedding
+ biflow, namely inter-arrival time (IAT), direction (DIR), TCP
+ layer for PL in M IMETIC -E NHANCED (see Section III-A).
+ window size (TCP_WS), and transport-layer payload length
+ In addition, the packets after the first ones also play a more
+ (PL). Results are compared with analogous ones obtained by
+ important role exposing higher relative importance values.
+ M IMETIC.
+ On the other hand, the major importance of PL related to the
+ Considering the importance associated to these fields for
+ specific initial packets of the biflows still holds in some of the
+ each biflow, Fig. 13 shows the median importance values
+ cases: the 1st packet and the 2nd packet for both FB-Zero
+ for each element of the 4 × 12 matrix used as input for
+ (Fig. 13(e)) and gQUIC (Fig. 13(f)) still expose the highest
+ this modality. In detail, the figure reports the per-protocol
+ importance.
+ breakdownV-F considering the most recurrent ones in the
+ Finally, we would underline that the complementary analdataset (i.e., FB-Zero, gQUIC, TLS, and SSL), for both
+ ysis performed on a per-app basis (whose results are not
+ M IMETIC (a, b, c, d) and M IMETIC -E NHANCED (e, f, g, h).
+ shown for brevity), highlights analogous patterns, remarking
+ Focusing on the former, it is evident how the header fields
+ the major importance of PL for M IMETIC -E NHANCED w.r.t.
+ of the first packets of the biflows (i.e., from the 1st to the
+ M IMETIC and—more in general—of the header fields of the
+ 5th ) play a crucial role in identifying the apps. In detail,
+ first packets of the biflows.
+ for gQUIC (Fig. 13(b)), the very first packet is essential to
+ correctly classify the biflows using this protocol: PL always
+ assumes the same value (1350 bytes) and the TCP_WS is set VI. C ONCLUSION AND F UTURE D IRECTIONS
+ to 0 because the transport-layer protocol is UDP. Concerning In this work, we focused on interpreting the behavior
+ FB-Zero (Fig. 13(a)), the second packet of the biflows is of mobile TC performed with DL approaches, and prothe most important one (high importance for PL, TCP_WS, viding design insights toward performance improvement.
+ and IAT), and interestingly the DIR of the subsequent packets With the tools of explainable artificial intelligence we ana-
+ (particularly from the 3rd to the 8th ) helps in predictions. The lyzed an evolved multimodal-DL approach, named M IMETIC -
+ second packet exposes higher importance, on average, also for E NHANCED. Evaluated on a publicly available recent dataset
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ NASCITA et al.: XAI MEETS MOBILE TC: UNDERSTANDING AND IMPROVING MULTIMODAL DL ARCHITECTURES 4245
+
+ of mobile-app traffic (consisting of 41 apps, mostly using 6 [8] X. Wang, S. Chen, and J. Su, “Automatic mobile app identification from
+ different protocols), the proposed architecture was shown to encrypted traffic with hybrid neural networks,” IEEE Access, vol. 8,
+ pp. 182065–182077, 2020.
+ outperform in all the cases a number of relevant DL-based [9] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow
+ TC single-modal baselines proposed in [9], [40], [41], as sequence network for encrypted traffic classification,” in Proc. IEEE
+ well as most recent multimodal proposals, e.g., [7], [8]. Also, Conf. Comput. Commun. (INFOCOM), 2019, pp. 1171–1179.
+ [10] S. M. Lundberg and S.-I. Lee, “A unified approach to interpreting model
+ fine-grained performance analysis revealed that M IMETIC - predictions,” in Proc. 30th Conf. Neural Inf. Process. Syst. (NeurIPS),
+ E NHANCED provides a more consistent soft-output outcome 2017, pp. 4765–4774.
+ (in terms of top-K accuracy), and incurs misclassifications [11] G. Aceto, D. Ciuonzo, A. Montieri, V. Persico, and A. Pescapé,
+ “MIRAGE: Mobile-app traffic capture and ground-truth creation,” in
+ mostly confined within the same protocol-group. Our proposal Proc. 4th Int. Conf. Comput. Commun. Security (ICCCS), Oct. 2019,
+ was then investigated in terms of trustworthiness (i.e., how pp. 1–8.
+ reliably we can trust its confidence prediction, via calibration) [12] K. Amarasinghe, K. Kenney, and M. Manic, “Toward explainable deep
+ neural network based anomaly detection,” in Proc. 11th Int. Conf.
+ and interpretability (i.e., the underlying rationale which makes Human Syst. Interact. (HSI), 2018, pp. 311–317.
+ them work effectively, via SHAP-based techniques). In the for- [13] Y. Zheng, Z. Liu, X. You, Y. Xu, and J. Jiang, “Demystifying deep
+ mer case, the calibration by focal loss achieves a 6× reduction learning in networking,” in Proc. 2nd ACM Asia–Pac. Workshop Netw.
+ (APNet), 2018, pp. 1–7.
+ with respect to the uncalibrated case, obtaining a significant
+ [14] A. Dethise, M. Canini, and S. Kandula, “Cracking open the black box:
+ gain in trustworthiness. Regarding interpretability, a global What observations can tell us about reinforcement learning agents,” in
+ explanation has been obtained for each modality (payload- Proc. ACM Workshop Netw. Meets AI ML (NetAI), 2019, pp. 29–36.
+ based and packet-sequence-based), quantifying the importance [15] A. Morichetta, P. Casas, and M. Mellia, “EXPLAIN-IT: Towards
+ explainable AI for unsupervised network traffic analysis,” in Proc. 3rd
+ of each, and highlighting how the payload still retains high ACM CoNEXT Workshop Big Data Mach. Learn. Artif. Intell. Data
+ importance, despite the vast majority of encrypted traffic. Commun. Netw. (Big-DAMA), 2019, pp. 22–28.
+ Future avenues of research will include (a) taking advan- [16] S. Rezaei, B. Kroencke, and X. Liu, “Large-scale mobile app identification using deep learning,” IEEE Access, vol. 8, pp. 348–362,
+ tage of the complementarity of different XAI approaches and 2020.
+ extending the proposed interpretability analysis by implement- [17] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapé, “Toward effecing (for the payload-modality) an occlusion analysis based on tive mobile encrypted traffic classification through deep learning,”
+ Neurocomputing, vol. 409, pp. 306–315, Oct. 2020.
+ the results of the importance analysis, as well as by perform- [18] C. Beliard, A. Finamore, and D. Rossi, “Opening the deep pandora
+ ing the importance analysis based on the position of specific box: Explainable traffic classification,” in Proc. IEEE Conf. Comput.
+ header fields rather than on byte position; (b) the investiga- Commun. Workshops (INFOCOM WKSHPS), 2020, pp. 1292–1293.
+ [19] Z. Meng, M. Wang, J. Bai, M. Xu, H. Mao, and H. Hu, “Interpreting
+ tion of trustworthiness and interpretability for the analysis and deep learning-based networking systems,” in Proc. ACM Special Interest
+ improved design of more challenging multi-task TC problems; Group Data Commun. Appl. Technol. Architect. Protocols Comput.
+ (c) the robustness assessment of multimodal DL-based traffic Commun. (SIGCOMM), 2020, pp. 154–171.
+ [20] X. Wang, S. Chen, and J. Su, “Real network traffic collection and
+ classifiers to adversarial attacks; (d) the in-depth investigation deep learning for mobile app identification,” Wireless Commun. Mobile
+ of focal loss and label smoothing impact on a larger pool of DL Comput., vol. 2020, Feb. 2020, Art. no. 4707909.
+ architectures; (e) the design of (natively) self-explainable DL [21] G. Aceto, G. Bovenzi, D. Ciuonzo, A. Montieri, V. Persico, and
+ traffic classifiers; (f ) the design of self-explainable local deci- A. Pescapé, “Characterization and prediction of mobile-app traffic using
+ Markov modeling,” IEEE Trans. Netw. Service Manag., vol. 18, no. 1,
+ sions; and (g) the design of lightweight architectures originated pp. 907–925, Mar. 2021.
+ from XAI techniques. [22] H. Hagras, “Toward human-understandable, explainable AI,” IEEE
+ Comput., vol. 51, no. 9, pp. 28–36, Sep. 2018.
+ [23] M. Kull et al., “Beyond temperature scaling: Obtaining well-calibrated
+ R EFERENCES multiclass probabilities with Dirichlet calibration,” in Proc. 32th Conf.
+ [1] V. Dignum, “Responsible artificial intelligence: Designing AI for human Neural Inf. Process. Syst. (NeurIPS), 2019, p. 38.
+ values,” ITU J. ICT Discoveries Special Issue, vol. 1, pp. 1–8, Sep. 2017. [24] A. Niculescu-Mizil and R. Caruana, “Predicting good probabilities with
+ [2] L. Frost et al., “Artificial intelligence and future directions for ETSI,” supervised learning,” in Proc. 22nd Int. Conf. Mach. Learn. (ICML),
+ Eur. Telecommun. Stand. Inst., Sophia Antipolis, France, White 2005, pp. 625–632.
+ Paper, Jun. 2020. [Online]. Available: https://www.etsi.org/images/ [25] D. Widmann, F. Lindsten, and D. Zachariah, “Calibration tests in multifiles/ETSIWhitePapers/etsi_wp34_Artificial_Intellignce_and_future_ class classification: A unifying framework,” in Proc. 33th Conf. Neural
+ directions_for_ETSI.pdf Inf. Process. Syst. (NeurIPS), 2019, pp. 12236–12246.
+ [3] M. Taddeo, T. McCutcheon, and L. Floridi, “Trusting artificial intel- [26] J. Mukhoti, V. Kulharia, A. Sanyal, S. Golodetz, P. H. Torr, and
+ ligence in cybersecurity is a double-edged sword,” Nat. Mach. Intell., P. K. Dokania, “Calibrating deep neural networks using focal loss,” in
+ vol. 1, no. 12, pp. 557–560, 2019. Proc. 34th Conf. Neural Inf. Process. Syst. (NeurIPS), 2020, pp. 1–9.
+ [4] R. Inam, A. Terra, A. Mujumdar, E. Fersman, and A. V. Feljan, [27] R. Müller, S. Kornblith, and G. Hinton, “When does label smoothing
+ “Explainable AI—How humans can trust AI,” Ericsson, Stockholm, help?” in Proc. 32th Conf. Neural Inf. Process. Syst. (NeurIPS), 2019,
+ Sweden, White Paper, Apr. 2021. [Online]. Available: https://www. pp. 4696–4705.
+ ericsson.com/en/reports-and-papers/white-papers/explainable-ai–how- [28] W. Samek, G. Montavon, S. Lapuschkin, C. J. Anders, and K. R. Müller,
+ humans-can-trust-ai “Explaining deep neural networks and beyond: A review of methods and
+ [5] A. Razaghpanah, A. A. Niaki, N. Vallina-Rodriguez, S. Sundaresan, applications,” Proc. IEEE, vol. 109, no. 3, pp. 247–278, Mar. 2021.
+ J. Amann, and P. Gill, “Studying TLS usage in Android apps,” in Proc. [29] M. D. Zeiler and R. Fergus, “Visualizing and understanding convo-
+ 13th ACM Int. Conf. Emerg. Netw. Exp. Technol. (CoNEXT), 2017, lutional networks,” in Proc. Eur. Conf. Comput. Vis. (ECCV), 2014,
+ pp. 350–362. pp. 818–833.
+ [6] D. Madariaga, L. Torrealba, J. Madariaga, J. Bermúdez, and J. Bustos- [30] M. T. Ribeiro, S. Singh, and C. Guestrin, “Why should I trust
+ Jiménez, “Analyzing the adoption of QUIC from a mobile development you? Explaining the predictions of any classifier,” in Proc. 22nd
+ perspective,” in Proc. ACM Workshop Evol. Perform. Interoper. QUIC ACM SIGKDD Int. Conf. Knowl. Disc. Data Min. (KDD), 2016,
+ (EPIQ), 2020, pp. 35–41. pp. 1135–1144.
+ [7] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapè, “MIMETIC: Mobile [31] R. Guidotti, A. Monreale, S. Ruggieri, D. Pedreschi, F. Turini, and
+ encrypted traffic classification using multimodal deep learning,” Comput. F. Giannotti, “Local rule-based explanations of black box decision
+ Netw., vol. 165, Dec. 2019, Art. no. 106944. systems,” 2018. [Online]. Available: arXiv:1805.10820.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.
+ 4246 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 18, NO. 4, DECEMBER 2021
+
+ [32] M. Sundararajan, A. Taly, and Q. Yan, “Axiomatic attribution for deep Antonio Montieri (Member, IEEE) received the
+ networks,” in Proc. 34th PMLR Int. Conf. Mach. Learn. (ICML), 2017, Ph.D. degree in information technology and elecpp. 3319–3328. trical engineering from the University of Napoli
+ [33] A. Shrikumar, P. Greenside, and A. Kundaje, “Learning important fea- Federico II in April 2020, where he is a Postdoctoral
+ tures through propagating activation differences,” in Proc. 34th PMLR Researcher with DIETI. He has coauthored 29
+ Int. Conf. Mach. Learn. (ICML), 2017, pp. 3145–3153. papers in international journals and conference pro-
+ [34] K. Ismailaj, M. Camelo, and S. Latré, “When deep learning may not ceedings. His work concerns network measurements,
+ be the right tool for traffic classification,” in Proc. 6th IEEE/IFIP Int. (encrypted and mobile) traffic classification, traffic
+ Workshop Anal. Netw. Service Manag. (AnNet), 2021, pp. 1–6. modeling and prediction, and monitoring of cloud
+ [35] T. Bakhshi and B. Ghita, “On Internet traffic classification: A two-phased network performance.
+ machine learning approach,” J. Comput. Netw. Commun., vol. 2016,
+ Jun. 2016, Art. no. 2048302.
+ [36] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapè, “Traffic classification of mobile apps through multi-classification,” in Proc. IEEE Global
+ Commun. Conf. (GLOBECOM), 2017, pp. 1–6.
+ [37] M. Korczynski and A. Duda, “Markov chain fingerprinting to classify
+ encrypted traffic,” in Proc. IEEE Conf. Comput. Commun. (INFOCOM), Giuseppe Aceto received the Ph.D. degree
+ 2014, pp. 781–789. in telecommunication engineering from the
+ [38] A. M. Sadeghzadeh, S. Shiravi, and R. Jalili, “Adversarial network traf- University of Napoli Federico II, where he is an
+ fic: Towards evaluating the robustness of deep-learning-based network Assistant Professor. His research concerns network
+ traffic classification,” IEEE Trans. Netw. Service Manag., vol. 18, no. 2, performance and censorship, both in traditional
+ pp. 1962–1976, Jun. 2021. networks and SDN, and ICTs applied to health. He
+ [39] D. Ramachandram and G. W. Taylor, “Deep multimodal learning: A sur- received the Best Paper Award at IEEE ISCC 2010
+ vey on recent advances and trends,” IEEE Signal Process. Mag., vol. 34, and the 2018 Best Journal Paper Award by IEEE
+ no. 6, pp. 96–108, Nov. 2017. CSIM.
+ [40] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+ encrypted traffic classification with one-dimensional convolution neural networks,” in Proc. IEEE Int. Conf. Intell. Security Informat. (ISI),
+ 2017, pp. 43–48.
+ [41] M. Lopez-Martin, B. Carro, A. Sanchez-Esguevillas, and J. Lloret,
+ “Network traffic classifier with convolutional and recurrent neural
+ networks for Internet of Things,” IEEE Access, vol. 5, pp. 18042–18050,
+ 2017. Domenico Ciuonzo (Senior Member, IEEE)
+ [42] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapé, “Mobile encrypted received the Ph.D. degree from the University of
+ traffic classification using Deep Learning: Experimental evaluation, Campania L. Vanvitelli, Italy, where he has held
+ lessons learned, and challenges,” IEEE Trans. Netw. Service Manag., several visiting researcher appointments in 2011.
+ vol. 16, no. 2, pp. 445–458, Jun. 2019. He is an Assistant Professor with the University of
+ [43] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” Napoli Federico II. His research interests include
+ in Proc. 3rd Int. Conf. Learn. Represent. (ICLR), 2015, pp. 1–6. data fusion, Internet of Things, network analytics
+ [44] D. Duvenaud, D. Maclaurin, and R. Adams, “Early stopping as non- and machine learning. He is the recipient of two
+ parametric variational inference,” in Proc. Artif. Intell. Stat., 2016, Best Paper awards (IEEE ICCCS 2019 and Elsevier
+ pp. 1070–1077. Computer Networks 2020), the 2019 Exceptional
+ [45] M. Mahsereci, L. Balles, C. Lassner, and P. Hennig, “Early stopping Service Award from IEEE Aerospace and Electronic
+ without a validation set,” 2017. [Online]. Available: arXiv:1703.09580. Systems Society, and the 2020 Early-Career Technical Achievement Award
+ [46] I. J. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. from IEEE Sensors Council for sensor networks/systems. Since 2014, he has
+ Cambridge, MA, USA: MIT Press, 2016. been an editor of several IEEE, IET, and Elsevier journals.
+ [47] L. S. Shapley, “A value for n-person games,” Contrib. Theory Games,
+ vol. 2, no. 28, pp. 307–317, 1953.
+ [48] G. Fidel, R. Bitton, and A. Shabtai, “When explainability meets adversarial learning: Detecting adversarial examples using shap signatures,”
+ in Proc. IEEE Int. Joint Conf. Neural Netw. (IJCNN), 2020, pp. 1–8.
+ [49] C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger, “On calibration of
+ modern neural networks,” in Proc. 34th PMLR Int. Conf. Mach. Learn. Valerio Persico received the Ph.D. degree in
+ (ICML), 2017, pp. 1321–1330. computer and automation engineering from the
+ [50] M. H. DeGroot and S. E. Fienberg, “The comparison and evaluation University of Napoli Federico II in 2016, where is an
+ of forecasters,” J. Roy. Stat. Soc. D Stat., vol. 32, nos. 1–2, pp. 12–22, Assistant Professor with DIETI. He has coauthored
+ 1983. more than 30 papers within international journals
+ and conference proceedings. His work concerns
+ network measurements, cloud-network monitoring,
+ and Internet path tracing and topology discovery.
+
+ Alfredo Nascita received the M.S. Laurea degree Antonio Pescapé (Senior Member, IEEE) is a
+ in computer engineering from the University of Full Professor of Computer Engineering with the
+ Napoli Federico II in March 2021, where he is a University of Napoli Federico II. He has coauthored
+ Postgraduate Early-Stage Researcher with DIETI. more than 200 conference and journal papers. His
+ His research interests include traffic classification, work focuses on measurement, monitoring, and analmachine and deep learning, and explainable artificial ysis of the Internet. He is the recipient of a number
+ intelligence. of research awards. He has served as an independent reviewer/evaluator of research projects/project
+ proposals co-funded by a number of governments
+ and agencies.
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:35:32 UTC from IEEE Xplore. Restrictions apply.

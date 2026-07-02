@@ -1,0 +1,154 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024                                                                     7147
+
+
+
+
+     K-GetNID: Knowledge-Guided Graphs for Early
+      and Transferable Network Intrusion Detection
+                  Minxiao Wang, Ning Yang , Member, IEEE, and Ning Weng , Senior Member, IEEE
+
+
+
+   Abstract— Developing early and transferable Network Intru-                  tasks [30], [33], such as the diversity of traffic caused by
+sion Detection Systems (NIDSs) is essential for robust network                 different network environments and the fixed and biased
+security. Early detection prevents further damage, while                       parameter selection during the training stage may not be
+transferable NIDSs enables reuse across diverse networks.
+For Machine Learning (ML) and Deep Learning (DL)-based                         suitable for the deployment scenario.
+NIDSs, transferability significantly reduces data collection and                  For transferability, given the broad application scenarios
+annotation costs for timely attack mitigation. Current DL-                     of NIDSs, a DL-based NIDS model trained for one scenario
+based early intrusion detection studies often focus on identifying             should be easily adaptable or fine-tuned for another. However,
+attacks from the first few packets, neglecting the crucial                     the high cost associated with collecting and annotating a
+aspect of adjustable early detection. Additionally, most DL-
+based NIDS methods overlook transferability during both design                 NIDS dataset for each scenario is often unaffordable. In the
+and evaluation phases. To address these limitations, we propose                context of early intrusion detection, a proficient NIDS model
+K-GetNID, a knowledge-guided graph learning-based NIDS                         should demonstrate the ability to detect intrusions early and
+that excels in both early and transferability. We introduce a                  generalize to distribution shifts in inputs. Early intrusion
+Heterogeneous Temporal Graph (HTGraph) to represent the                        detection involves discerning whether network traffic flows are
+dynamic feature series of network flows, providing enough
+information for early detection. Additionally, we construct this               benign or malicious in the initial stages, leading to changes in
+HTGraph format based on prior knowledge about feature                          input patterns and providing only a partial view of the original
+types and correlations to assist the neural network in learning                input traffic. These alterations in input significantly degrade
+general and transferable knowledge for intrusion detection.                    the inference accuracy of trained NIDS models.
+We develop a corresponding Heterogeneous Temporal Graph                           Although early intrusion detection challenges current DL-
+Neural Network (HTGNN) model to learn from the HTGraph
+format. Furthermore, an Adjustable Early Detection Decoder                     based NIDSs, it is essential so that correct counterattack
+is designed to enhance the generalization of the proposed                      responses can be implemented before an attack can inflict
+model to the input distribution shifts caused by early detection.              more damage [3], [29]. Early intrusion detection also offers
+Experiments on CIC-IDS-2017 and UNSW-NB15 datasets show                        additional benefits, such as saving time in collecting raw
+that K-GetNID matches the performance of deep learning                         packets and extracting features. Additionally, we observe that
+methods, excelling in adjustable early intrusion detection and
+transferability.                                                               many existing DL-based NIDS models [4], [13], [21], [23],
+                                                                               [29] could be capable of early intrusion detection if trained
+  Index Terms— Intrusion detection systems, graph neural
+                                                                               with early detection data, and their early detection accuracy is
+networks, transferability, early detection, deep learning.
+                                                                               only slightly degraded [36]. Therefore, the real challenge in
+                          I. I NTRODUCTION                                     early intrusion detection lies in the trade-off between accuracy
+                                                                               and response speed, which cannot be further adjusted after
+
+E     ARLY and transferable NIDSs play a crucial role in
+      addressing the challenges posed by the dynamic and
+diverse nature of network environments for ensuring network
+                                                                               the training stage. In particular, the trained NIDS models
+                                                                               are not generalized to distribution shifts caused by early
+                                                                               detection [35].
+security. An investigation into potential solutions for network
+                                                                                  Learning early and transferable NIDS models requires
+intrusion detection suggests that NIDSs utilizing ML and
+                                                                               these models to identify attack behavior patterns that remain
+DL models could prove highly effective [1], [27]. However,
+                                                                               consistent across varying application scenarios and input
+existing ML/DL models still encounter limitations, pose open
+                                                                               domains. Consequently, we contend that training models to
+questions, and face unique challenges in the context of NIDS
+                                                                               capture the correlations among numerous input items (such
+  Manuscript received 22 December 2023; revised 24 June 2024;                  as features in tabular format) is more crucial than learning
+accepted 16 July 2024. Date of publication 22 July 2024; date of               the absolute values of independent input items. While hand-
+current version 29 July 2024. This work was supported in part by Dr.           picked features, grounded in extensive domain knowledge
+Yang’s SIUC Startup and NSF under Award 2018919. The associate editor
+coordinating the review of this article and approving it for publication was   from network security experts, significantly contribute to
+Dr. Z. Berkay Celik. (Corresponding author: Ning Yang.)                        distinguishing different types of traffic. However, the use of
+  Minxiao Wang and Ning Weng are with the Computer Engineering Program,        a tabular format in feature-based methods poses a challenge
+School of ECBE, Southern Illinois University Carbondale, Carbondale,
+IL 62901 USA (e-mail: minxiao.wang@siu.edu; nweng@siu.edu).                    due to the existence of heterogeneous and sparse relationships
+  Ning Yang is with the Information Technology Program, School of Com-         among feature values’a current open research question [19].
+puting, Southern Illinois University Carbondale, Carbondale, IL 62901 USA      Utilizing Multi-Layer Perceptron (MLP)-based models, which
+(e-mail: nyang@siu.edu).
+  Digital Object Identifier 10.1109/TIFS.2024.3431932                          are fully connected, is difficult to learn feature correlations
+                      1556-6021 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+7148                                                         IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 19, 2024
+
+
+
+from scratch [2]. Furthermore, the tabular format fails to         proposed HTGNN model, trained with attention restricted by
+provide temporal information, rendering tabular-based NIDS         the graph format, achieves better transferability than existing
+methods insufficiently generalized to handle dynamic inputs,       methods. To enable adjustable early intrusion detection in
+such as early intrusion detection.                                 the inference stage, we further designed an Adjustable
+   The     recent    state-of-the-art  tabular     model    FT-    Early Detection Decoder to train the HTGNN model for
+transformer [12] improves the performance of deep models           generalization to input distribution shifts caused by early
+on tabular data by separately embedding numerical and              detection. The main contributions are summarized as follows:
+categorical features and modeling the embeddings with                 1) Novel NIDS traffic representation format and
+the Transformer model. Additionally, the FT-transformer                   detection model: developed a comprehensive NIDS
+model demonstrates effectiveness in the NIDS field [37].                  system by integrating a HTGraph with an HTGNN-
+Splitting different types of features and modeling the feature            based NIDS model. The HTGraph format includes
+embeddings with the self-attention mechanism [34] addressed               edges that capture feature correlations and temporal
+the mentioned heterogeneous and sparse relationship issues                dependencies, while the HTGNN aggregates feature
+but not tackle the lack of temporal information. Feature                  information through the pre-defined edges based on prior
+series-based methods can provide temporal information to                  knowledge.
+NIDS, but extending the temporal dimension increases the              2) Improving NIDS transferability: the proposed
+size of each data sample significantly compared to the tabular            HTGraph format and HTGNN NIDS model leverage
+format. Consequently, applying the Transformer in feature                 prior knowledge to guide modeling the correlations
+series format incurs high time complexity and memory usage.               among input elements, enhancing attention calculation
+Despite efforts to enhance the efficiency of Transformers on              efficiency. The results of transfer learning demonstrate
+time series, as seen in models like Informer [44], performing             that the simplified attention-based model exhibits better
+self-attention on a large scale of multivariate time series               transferability.
+(multiple feature series) remains inefficient. Recognizing            3) Enhancing generalization to early intrusion detec-
+the limitations of tabular and feature series formats has                 tion: the designed Adjustable Early Detection Decoder
+motivated the design of a new type of NIDS data format that               enables the proposed HTGNN model to generalize to
+incorporates prior knowledge to overcome these shortcomings.              the distribution shifts caused by early detection. The
+   An alternative data format to tabular and feature series is            results demonstrate that the proposed NIDS model can
+the graph structure, as both provide numerical and relational             still maintain its detection accuracy under distribution
+information, allowing the incorporation of prior knowledge.               shifts in the inference stage.
+For example, provenance-based studies against Advanced                In the remainder of this paper, we introduce related works
+and Persistent Threats (APTs) such as UNICORN [14] and             in Sec.II and preliminary in Sec.III. We describe the entire
+HOLMES [24], use graph structures to analyze the correlation       pipeline of our proposed framework in Sec.IV, including
+among actions or events for detecting attacks. For example,        network flow HTGraph construction, the HTGNN-based NIDS
+in the NIDSs on enterprise networks, graph embedding               model, and the Adjustable Early Detection Decoder. In Sec.V,
+learning [18], [28] show the effectiveness for detecting lateral   we present the evaluation results and analysis. Finally,
+movement of APTs. Graph formats and graph neural networks          we provide our conclusion in Sec.VI.
+possess the capability to explicitly capture inter-temporal and
+inter-variable relationships, a challenge that traditional and                         II. R ELATED W ORKS
+other deep neural network-based methods frequently struggle           This section introduces feature-based NIDSs and the
+with [17]. However, to the best of our knowledge, there is         graph-based NIDSs. We also summarize the similarities and
+no existing graph-based NIDS that is flow-based. Drawing           differences between our work and existing works.
+inspiration from the successful application of HTGraph in
+other fields [10], [22], this paper investigates the use of
+HTGraph to represent network flow for NIDS design.                 A. Feature-Based Network Intrusion Detection
+   In this paper, we propose a novel framework, as shown in           Nowadays, flow-based NIDSs typically consists of a
+Fig. 2, which incorporates prior knowledge into a NIDS design      preprocessing module that converts traffic flows into samples
+using heterogeneous temporal graphs and neural network             with a particular data format and a detection module that
+models. The proposed heterogeneous graph data format is            predicts classes of traffic flows based on the format [25], [39],
+utilized to represent each network flow, incorporating high-       [43]. This field is predominantly dominated by the tabular
+level prior knowledge such as feature types and dependence         data format, specifically the feature vector. Feature-based
+between features. Additionally, we extend the heterogeneous        methods [38] extract pre-defined features from traffic flows
+graph to a HTGraph by recording dynamically updated                and feed these features into neural network models. However,
+features. For this HTGraph format, we design a corresponding       the tabular format lacks temporal information, making it
+HTGNN-based NIDS model.                                            unsuitable for adjustable early intrusion detection. Besides
+   Furthermore, edges based on prior knowledge can reduce          the tabular format, another existing feature-based format is
+the computational load in feature series format by narrowing       the feature series. He et al. [15] introduced a Multimodal-
+the self-attention calculation space from global to the            Sequential data format in their work. Doriguzzi-Corin et al.
+predefined edge range. The results demonstrate that the            developed a sampling window-based packet sequences data
+WANG et al.: K-GetNID: KNOWLEDGE-GUIDED GRAPHS                                                                                                         7149
+
+
+
+
+Fig. 1. The different NIDS data formats. The network traffic can be constructed in different formats to leverage the different DL models and different types
+of information in them. This figure presents the differences among Tabular, Feature Series, existing topology graph, and the proposed graph.
+
+
+
+                              TABLE I                                                                       TABLE II
+             C OMPARISON W ITH E XISTING F EATURE -BASED                              C OMPARING A DOPTED G RAPH S TRUCTURE W ITH E XISTING
+              N ETWORK I NTRUSION D ETECTION M ETHODS                                 G

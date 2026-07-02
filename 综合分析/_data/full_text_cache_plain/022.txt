@@ -1,0 +1,2057 @@
+INTERNATIONAL JOURNAL OF NETWORK MANAGEMENT
+Int. J. Network Mgmt 2014; 00:1–24
+Published online in Wiley InterScience (www.interscience.wiley.com). DOI: 10.1002/nem
+
+A Survey of Methods for Encrypted Traffic
+Classification and Analysis
+Petr Velan∗† , Milan Čermák, Pavel Čeleda, Martin Drašar
+Institute of Computer Science, Masaryk University, Brno, Czech Republic
+
+SUMMARY
+With the widespread use of encrypted data transport network traffic encryption is becoming a standard
+nowadays. This presents a challenge for traffic measurement, especially for analysis and anomaly detection
+methods which are dependent on the type of network traffic. In this paper, we survey existing approaches
+for classification and analysis of encrypted traffic. First, we describe the most widespread encryption
+protocols used throughout the Internet. We show that the initiation of an encrypted connection and the
+protocol structure give away a lot of information for encrypted traffic classification and analysis. Then, we
+survey payload and feature-based classification methods for encrypted traffic and categorize them using an
+established taxonomy. The advantage of some of described classification methods is the ability to recognize
+the encrypted application protocol in addition to the encryption protocol. Finally, we make a comprehensive
+comparison of the surveyed feature-based classification methods and present their weaknesses and strengths.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Received . . .
+
+KEY WORDS: encrypted traffic; monitoring; network; traffic classification; traffic analysis; machine
+learning; encryption protocols
+
+1. INTRODUCTION
+Network visibility is becoming a necessity in current networks. Security, traffic provisioning, and
+failure detection are the prime reasons to deploy traffic measurement. Yet, measurement has other
+uses and new ones are still being discovered. For instance, application performance can be measured
+using the data from the application layer. Information about certain applications can also be used to
+detect attacks and intrusions on the application level. In contrast to this, the need for protection of
+transmitted data and user privacy is rapidly increasing. It is for this reason that, the encryption of
+transmitted data is increasingly used. The ratio of encrypted traffic has recently been rising steeply
+as common Internet services become protected [62]. This change poses a challenge to currently
+used methods for traffic measurement, for which the identification and analysis of network traffic
+becomes more difficult.
+∗
+†
+
+Correspondence to: Institute of Computer Science, Masaryk University, Botanická 68a, Brno, Czech Republic
+Email: velan@ics.muni.cz
+
+Copyright c 2014 John Wiley & Sons, Ltd.
+
+2
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+Before any further analysis of encrypted network traffic can be done, the traffic needs to be
+identified. Statistical and behaviour-based application identification methods are less affected by
+encryption than deep packet inspection methods. Therefore, a lot of attention has been given to
+these methods, which are also considered to be privacy-conscious. However, information can event
+be extracted from encrypted connections, mainly from the session’s initiation.
+The goal of this survey is to provide a comprehensive overview of methods for classifying
+and analysing encrypted traffic. To the best of our knowledge, this is the first work which
+comprehensively summarizes available approaches for encrypted traffic classification and analysis.
+Although there has been a lot of research on traffic classification in the past decade [25, 58, 71, 20,
+32], most of the existing surveys do not explicitly consider research which targets encrypted traffic.
+A recent survey by Cao et al. [21] describes the fundamentals of encrypted traffic classification. It
+briefly introduces recent advances and challenges in this field. However, the survey covers only a
+few methods of traffic classification and does not provide any comparison or assessment of these
+methods. Moreover, while traffic classification is an important part of network monitoring, there are
+other methods for analysing encrypted traffic which need to be taken into consideration.
+To achieve this goal, we have produced a survey of methods for classifying and analysing
+encrypted traffic in journals, conference papers, proceedings of specialized workshops and
+technical reports. We studied works presented in selected computer science journals, mainly the
+Communications Surveys & Tutorials, Computer Networks, International Journal of Network
+Management and Transactions on Network and Service Management. We also surveyed
+international conferences such as IMC, PAM, CISDA, CNSM, IM and NOMS over the period 20052014. Other methods were found in references provided by the surveyed papers and in papers that
+referenced them.
+The contribution of our work is four-fold. First, we describe several of the most widely used
+encryption protocols to show their packet structure and standard behaviour in a network. This
+information forms the basis of all classification protocols which use either a specific packet structure
+or a communication pattern to identify the protocol. Second, we investigate what information is
+provided by these encryption protocols. Most protocols negotiate encryption algorithms in cleartext, these data can be monitored, e.g., to reveal the use of weak ciphers. Third, we describe how
+the structure of encryption protocols can be used to detect these protocols in a network. Traffic
+classification algorithms using such information are presented and we describe several open-source
+tools which implement these algorithms. Fourth, we provide an extensive survey of behaviour-based
+methods for encrypted traffic classification. We show that surprisingly detailed information can be
+obtained using these methods. In specific cases, even the content of the encrypted connection can be
+established. To describe and categorize the classification methods, we use the taxonomy of Khalife
+et al. [48].
+Over the last decade, many statistical and machine learning algorithms have been applied to
+the problem of traffic classification. However, authors use different methodological data sets to
+evaluate their methods and the results are therefore not directly comparable. Most of the methods use
+supervised or semi-supervised machine learning algorithms to classify flows and even determine the
+application protocol of the flow. Most methods target encryption protocols such as SSH, SSL/TLS
+and encrypted BitTorrent.
+
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+3
+
+This paper is organized into seven sections. Section 2 explains the principles of several widely
+used encryption protocols. Section 3 describes what information can be obtained from encrypted
+traffic using specific knowledge of the encryption protocols. Section 4 describes the traffic
+classification taxonomy used in this article. Section 5 describes traffic classification methods based
+on the specific knowledge of encryption protocols. Section 6 surveys papers on the classification of
+encrypted traffic using statistical and behavioural methods. Finally, Section 7 concludes the paper
+and provides directions for future research.
+
+2. A DESCRIPTION OF ENCRYPTION PROTOCOLS
+This section provides a description of chosen encryption protocols. We selected the most widely
+used protocols to demonstrate the basic principles and show different approaches for secure data
+transport. Our choice of encryption protocols was also influenced by protocols which are the most
+commonly used in research of encrypted traffic classification. We shall describe IPsec, TLS, SSH,
+BitTorrent and Skype protocols in this section. All these protocols provide confidentiality using
+encryption and they usually offer authentication of communication peers, data integrity, replay
+protection and non-repudiation. We shall describe the use of these protocols, their fundamental
+properties, the structure of encrypted packets, and the type of exchanged data. The information
+provided in this section will serve as the basis for the next sections of this paper.
+Almost all the presented encryption protocols can be divided into two main phases: the
+initialization of the connection and the transport of encrypted data. The first phase can be further
+divided to an initial handshake, an authentication and a shared secret establishment. During the first
+phase, algorithm capabilities are usually exchanged, communication parties are authenticated and
+secret keys are established. These keys are then used for encrypting transferred data in the second
+phase. This general protocol scheme is depicted in Figure 1, which, with minor modifications, can
+be applied to almost any protocol providing confidential data transfer.
+
+Initial
+handshake
+
+Confirmation
+Authentication and shared
+Authenticated and encrypted
+secret establishment
+data exchange
+
+Unencrypted initialization
+
+Encrypted data transport
+
+Time
+
+Figure 1. A general scheme of network security protocols.
+
+The protocols presented in this section are listed in order of their position in the ISO/OSI reference
+model [43]. IPsec protocol suite, which operates on the network layer is described first, followed
+by TLS and SSH protocols on the presentation layer. BitTorrent and Skype protocols represent the
+application layer and they implement their own protocols for secure data transmission.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+4
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+2.1. Internet Protocol Security
+Internet Protocol Security (IPsec) is a framework of open standards for ensuring authentication,
+encryption and data integrity on the network layer. Due to its location on the network layer, IPsec
+can protect both the data within the packet and also L3 information (e.g., IP addresses) in each
+packet [33]. The main advantage of using IPsec is securing the network connection without the
+necessity of modifying any application on the clients or servers. However, it provides less control
+and flexibility for protecting specific applications.
+IPsec follows the general scheme depicted in Figure 1. The first phase is represented by the
+Internet Key Exchange Version 2 (IKEv2) protocol [45]. IPsec uses an UDP protocol on the port
+500 through which all messages covering the initial handshake, the authentication and the shared
+secret establishment run. Two protocols could be used in the second phase of IPsec: Authentication
+Header (AH) and Encapsulating Security Payload (ESP). In the initial version of IPsec, the ESP
+protocol providing data confidentiality did not include authentication, so ESP and AH were used
+together. Nowadays, the current version of ESP contains authentication and AH has become less
+significant, although it is still used to authenticate portions of packets that ESP cannot manage.
+Authenticated fields
+Original IP
+header
+
+(a)
+
+AH/ESP
+header
+
+Data
+
+ESP
+trailer
+
+ESP
+auth.
+
+ESP
+trailer
+
+ESP
+auth.
+
+Encrypted fields
+Authenticated fields
+
+(b)
+
+New IP
+header
+
+AH/ESP
+header
+
+Original IP
+header
+
+Data
+Encrypted fields
+
+Figure 2. The IPsec packet structure in (a) the transport mode and (b) the tunnel mode.
+
+The ESP protocol is the main protocol of IPsec. It provides data confidentiality,
+origin authentication, connectionless integrity, an anti-replay service, and limited traffic flow
+confidentiality [46]. ESP adds a header and a trailer to each transferred packet, see Figure 2,
+placed according to the transport mode used. The ESP and AH protocols can operate in two modes:
+transport and tunnel. In the tunnel mode, a new IP header is created for each packet with endpoints
+of the tunnel as the source and destination addresses; the original IP header is used in the transport
+mode.
+
+2.2. Transport Layer Security
+Transport Layer Security (TLS) [28] is based on the Secure Sockets Layer version 3 (SSLv3)
+protocol [34] and provides transport level security directly on top of the TCP protocol. Specifically,
+it provides confidentiality, data integrity, non-repudiation, replay protection and authentication
+through digital certificates. The TLS is currently one of the most common protocols for securing
+network communication. It is mainly used for securing HTTP, FTP, SMTP sessions, as well as for
+Virtual Private Networks or Voice over Internet Protocol (VoIP). The protocol design is layered
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+5
+
+and consists of different sub-protocols, as well as configurable and replaceable cryptographic
+algorithms [55].
+The main part of TLS is the Record Protocol [28], which acts as an envelope for application data
+as well as TLS messages. In the case of the application data, the Record Protocol is responsible for
+dividing the data into optionally compressed fragments. The addition of fragments to the record is
+complemented by Message Authentication Code (MAC). For more details, see Figure 3. Depending
+on the selected security algorithms, a fragment and MAC are encrypted together and sent as one
+TLS record. A packet may contain more than one record to avoid sending multiple short packets.
+IP
+header
+
+TCP
+header
+
+TLS
+records
+
+AuthenticatedSfield
+ContentS
+type
+
+Version
+
+Length
+
+Data
+
+MAC
+
+Padding
+(blockSciphers)
+
+EncryptedSfields
+
+Figure 3. The TLS Record packet format.
+
+During the first phase of a TLS connection, communication parties are usually authenticated
+(more often we can see only server authentication) using an X.509 certificates chain [24], as shown
+in the general scheme in Figure 1. Alternatively, a previous connection can be resumed without
+authentication. TLS messages exchanged during this phase are unencrypted and do not contain
+MAC until the shared keys are established and confirmed. In the second phase, these keys are used
+directly by the Record Protocol, which is based on the selected algorithms ensuring communication
+security.
+2.3. Secure Shell Protocol
+In a similar fashion to the TLS protocol, the Secure Shell (SSH) protocol [70] exists as a separate
+application on top of TCP. This protocol uses a client-server model where the server usually listens
+to the TCP port 22. SSH was originally designed to provide a remote login access to replace
+unsecured Telnet connections. Nowadays, it can be used not only for a remote login and a shell,
+but also to allow file transfers using the associated SSH File Transfer Protocol (SFTP) [35] and a
+Secure Copy (SCP) [60] protocol, or by Virtual Private Networks (VPN). The SSH protocol provides
+user and server authentication, data confidentiality and integrity and, optionally, compression.
+IP
+header
+
+TCP
+header
+
+Packet
+length
+
+Padding
+length
+
+Data
+
+Padding
+
+MAC
+
+Authenticated and encrypted fields
+
+Figure 4. The SSH protocol packet format.
+
+SSH consists of three protocols, of which the most important is the Transport Layer Protocol,
+which provides the establishment of the whole connection and its management. It defines the SSH
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+6
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+packet structure, which is depicted in Figure 4. The MAC code is computed on a plaintext payload
+together with the packet length, the padding and a continuously incremented sequence number
+not present in the packet itself. Other SSH protocols are the User Authentication Protocol and the
+Connection Protocol for multiplexing multiple logical communications channels [66].
+Each SSH connection passes through the same phases which were depicted in Figure 1. In the first
+phase, a TCP connection is established and information about preferred algorithms is exchanged.
+During authentication, a server sends its public key which must be verified by the client (using a
+certification authority or manually through a different channel). The shared keys are subsequently
+established and confirmed. All following packets are then encrypted and authenticated.
+2.4. BitTorrent
+BitTorrent [36] is an application protocol based on the principle of peer-to-peer network
+communication for sharing large amounts of data over the Internet. Originally, the protocol did not
+ensure any type of network communication security. Once the popularity of this protocol increased,
+some Internet Service Providers (ISP) started to limit this type of traffic. As a response to this,
+the Message Stream Encryption (MSE) algorithm [12], also known as Protocol Encryption (PE),
+was introduced. It serves as an obfuscation algorithm to make BitTorrent traffic identification more
+difficult. In addition to obfuscation, the mechanism also ensures some level of confidentiality and
+authentication for communicating peers.
+The MSE protocol specification [12] describes MSE as a transparent wrapper for bidirectional
+data streams over TCP which prevents passive eavesdropping and thus protocol content
+identification. MSE is also designed to provide limited protection against active man-in-the-middle
+attacks and port scanning by requiring a weak shared secret to complete the handshake. The major
+design goal was payload and protocol obfuscation, not peer authentication and data integrity. Thus,
+it does not offer protection against adversaries which already know the necessary data to establish
+connections (that is the IP/port/shared secret/payload protocol).
+The first general phase of the MSE protocol follows a TCP three-way handshake and starts with
+a newly generated Diffie-Hellman (DH) public key exchange (together with random data padding
+for better obfuscation). The shared key is computed by the DH key and combined with hashed
+information about the requested data which acts as a pre-shared secret. The packet’s payload is
+completely encrypted by a RC4 stream cipher after successfully confirming the shared key.
+2.5. Skype
+Skype [63] is a peer-to-peer based VoIP application providing not only video chat and voice calls,
+but also an instant messaging and file exchange service. As the protocol used is not publicly known,
+it is not possible to accurately describe its specific details. The main reason for this is network data
+obfuscation to make the detection of Skype traffic more difficult, which is similar to the BitTorrent
+protocol.
+The Skype protocol operates over both UDP and TCP protocols depending on network
+characteristics. If the network has no restrictions, the application usually sends data traffic over
+UDP and the signalling traffic over TCP [1]. If UDP cannot be used (for example a firewall prevents
+users from using such a protocol), Skype sends both the signalling and the data traffic over TCP.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+7
+
+When TCP is used, the connection is usually established over port 80 or 443, which masks Skype
+traffic as standard web traffic.
+Skype uses the TLS protocol over the TCP port 443 and a proprietary protocol over port 80 [1]
+for securing and obfuscating generated traffic with each communicating peer. TLS is also used in
+communication with other Voice over IP solutions, where it is used for protecting Session Initiation
+Protocol (SIP) messages [64]. Skype uses a proprietary protocol for communication over UDP. To
+offer a reliable connection, UDP packets contain an unencrypted header with a frame ID number
+and function mode fields. The encryption in UDP connections is used only for obfuscation and not
+for confidentiality; therefore, there is no generated shared secret, only a proprietary key expansion
+algorithm. UDP connections do not follow the general scheme in Figure 1, because encrypted data
+are directly transferred without an initialization phase.
+
+3. INFORMATION EXTRACTION FROM ENCRYPTED TRAFFIC
+Network monitoring is one of the main pillars of network security. If the appropriate data is
+collected, it is possible to detect network attacks and trace attackers, detect security policy
+violations and monitor network applications performance. If encrypted traffic is used, the possibility
+of information extraction is significantly limited. Nevertheless, it is possible to obtain some
+information from this traffic, primarily from the unencrypted initialization phase, but also from the
+encrypted transport phase. This section begins with a description of the initialization phase, which
+is then followed by a description of methods which use traffic feature analysis to gain information
+from the transport phase.
+3.1. The Unencrypted Initialization Phase
+Almost all network protocols ensure secure data transfer by means of encryption containing an
+unencrypted initialization phase, as depicted in Figure 1. Because the data exchanged at this stage
+are not encrypted, they can be easily extracted and used for monitoring network traffic. Generally,
+two types of information common to most protocols can be extracted during this phase. The first
+type covers the connection itself, and its properties exchanged in the initial handshake. The second
+type covers communicating peers’ identifiers which are exchanged in the authentication phase.
+During the initial handshake, parameters of a connection are negotiated, such cipher suites
+and which protocol version is used. This dynamic setting of the connection properties enables
+backward compatibility for different versions of software or is used to set a different level of
+security based on established security policies. Some examples of this are data authentication and
+compression in addition to encryption itself. The list of possible identifications, with references to
+algorithm specification for IPsec, TLS, SSH and other protocols, can be found in IANA Protocol
+Registries [40]. All of this information can be used for proper connection characterization and
+correct parsing of other packets in the rest of the connection.
+One interesting use of the information from the initial handshake is presented by client
+fingerprinting based on the provided cipher-suites. A large amount of cipher-suites types exists,
+which usually are not all implemented by the client’s applications. Therefore, each application
+specifies the supported cipher-suites and also prefers using them during the initial handshake.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+8
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+This makes it possible to passively distinguish specific operating systems, web browsers and other
+applications, together with their versions, based only on the cipher-suites which they use. An
+example of such client fingerprinting, based on the SSL/TLS initial handshake, is presented by
+applications from SSL Labs [61] and p0f module [54].
+The authentication phase represents the second source of information which can be easily
+extracted from secured network traffic. Unique identifiers of one or both communicating peers,
+optionally supplemented by additional data about them, are exchanged during this phase. For
+example, in the authentication phase of the SSH protocol, the server sends its public key to the user.
+The user must validate the key and verify that the server knows the appropriate private key [70].
+Since this information is almost unique for each SSH server, it is possible to detect server changes
+or man-in-the-middle attacks on them by passive network traffic monitoring.
+A very good example of extracting information from communication peers is demonstrated by
+monitoring the authentication phase of the SSL/TLS protocol. The server, and optionally even the
+client, sends their X.509 certificates [24] to each other to verify their identities in this phase. This
+certificate contains a public key signed by the certification authority which is supplemented with
+information about the peer and issuer. More detailed content of such certificates is shown in Figure 5.
+
+X.509 certificate
+
+Optional
+
+Version
+Certificatexserialxnumber
+Certificatexalgorithmxidentifier
+forxcertificatexissuer2sxsignature
+Issuer
+ValidityxPeriod
+Subject
+Subject
+Algorithmxidentifier
+public1key
+Public1keyxvalue
+information
+Issuerxuniquexidentifier
+Subjectxuniquexidentifier
+ExtensionxFields
+Certificatexauthority2sxdigitalxsignature
+
+•xVersionx,xv4
+•xSerialxNumberx,x.x(RTTb(8(...8....d=)f
+•xAlgorithmxId,x8747MW.788(RWT78787RxNshaWithRSAEncryption0
+•xIssuerx,
+xxxxrdnSequence,xRxitemsxNid1at1commonName*MSITxMachinexAuthxCAx49
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxdc*redmond9dc*corp9dc*microsoft9dc*com0
+•xValidityx,
+xxxxnotBeforex,xutcTime,x8W1.W1.Tx48,R),WTxNUTC0
+xxxxnotAfterx,xutcTime,x8)1.W1.Mx48,R),WTxNUTC0
+•xSubjectx,xrdnSequence,x8xitemxNid1at1commonName*37pipe7skype7com0
+•xSubjectxPublicxKeyxInfox,
+xxxxalgorithmxNrsaEncryption0
+xxxxsubjectPublicKey,x(.M4.8.a.4M4.8.8..T)RbMTdc777
+•xExtensionxNid1ce1keyUsage0x,
+xxxxExtensionxId,x47R74T78RxNid1ce1keyUsage0
+xxxxKeyUsage,xb.xNdigitalSignature9xkeyEncipherment9xdataEncipherment0
+•xSignature,xWW8.Wb(b88cb)=4e.fbaafdWRRe777
+
+Figure 5. Example of Skype X.509 certificate.
+
+Monitoring passive certificates enables not only the identification of communicating peers but
+also the ability to check whether these certificates are valid and contains proper security algorithms
+to fulfil local security policies. SSL/TLS certificate properties were studied by Holz et al. [38] who
+revealed a great number of invalid certificates and some which were shared between a large number
+of hosts. Holz et al’s work was followed by Durumeric et al. [30] who mainly focused on assessing
+certification authorities. Certificate monitoring can also be used to detect malicious software trying
+to hide its activities by connecting with their command and controls centres using the SSL/TLS
+protocol [65].
+Even though information extraction from encrypted traffic is not a computationally intensive
+process, it can provide valuable information. For example, extracting the Server Name Indication
+(SNI) [17] can be used by a home router’s firewall to filter traffic. The unencrypted initialization
+phase is often used to recognize encrypted traffic and, the authentication information might be
+utilized to detect and prevent man-in-the-middle attacks on a network-wide level.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+9
+
+3.2. The Encrypted Data Transport Phase
+Information about network traffic can be extracted from encrypted data which is transported
+between communicating parties. Packets exchanged during the transport phase usually contain only
+information about the packet itself, such as the length and the authentication field which are not
+useful for monitoring network traffic. Nevertheless, two methods do exists to obtain more suitable
+data.
+The first method uses direct traffic decryption, which is possible to perform only if the shared
+secret of the connection is known. Therefore, decryption can be used in networks on the servers’
+side where organizations know the private key of the connected server. However, such decryption
+would be impossible if algorithms wee used which ensure forward secrecy [39].
+The second method is based on the extraction of traffic features. An example of such an analysis
+is presented by Miller et al. [56] who monitor the size of TLS encrypted packet sequences. Based
+on their data, together with various predictive models, they are able to identify a specific web page
+and deduce its content even though the traffic is encrypted. A similar approach was also used by
+Koch and Rodosek [49] for analysing SSH traffic. Another example of using traffic features is the
+work by Hellemons et al. [37], which focused on intrusion detection in SSH traffic. Encrypted traffic
+features could also be used for classifying encrypted traffic, which is described in Section 6.
+
+4. A TAXONOMY FOR TRAFFIC CLASSIFICATION METHODS
+The first step in analysing network traffic is identifying the type of traffic measured. Network traffic
+classification methods are used for this purpose based on the knowledge of the protocol packet
+structure, communication patterns, or a combination of both.The recognition of the TLS protocol,
+described in Section 2, may be seen as an example of this. This protocol can be identified based on
+the knowledge of the packet structure, especially the unencrypted packet parts such as the content
+type, the version and the length. Similarly, the protocol can be identified by analysing its behaviour,
+e.g., the knowledge of a number and an approximate size of packets sent during the unencrypted
+initialization phase.
+To present the current state of research on encrypted traffic classification in a comprehensive
+manner, we use a taxonomy of classification methods. We choose the multilevel taxonomy by
+Khalife et al. [48], which provides a detailed categorization of traffic classification methods.
+This taxonomy is uniquely descriptive and allows us to efficiently categorize all our surveyed
+classification methods. Figure 6 shows an overview of the taxonomy levels. On the topmost level,
+the authors distinguish between classification input, technique and output. The input determines
+the traffic’s characteristics, which are used for classification (e.g., packets or flows). The technique
+describes the core of the classification method, which may be, among others, payload inspection, a
+statistical method or a machine learning method. The output then describes how the traffic objects
+(packets or flows) map to traffic classes (application types or application protocols). The traffic
+classes are of a different granularity. Some methods allow identification of application protocols
+(e.g., HTTP), and some are more fine grained to detect, for example, a Google search or a Facebook
+chat.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+10
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+Packet
+
+Statistical
+Machine
+Learning
+
+Motifs
+
+Basic
+Statistical
+Heuristics
+Profiles
+Supervised
+
+Host
+Community
+
+Non
+Supervised
+
+Host
+
+Flow
+
+Packet
+
+Application
+Protocol
+Application
+Software
+FineGrained
+Anomaly
+
+Semi
+Supervised
+RL
+
+Hybrid &
+Miscellaneous
+
+Hybrid &
+Miscellaneous
+
+Traffic
+Cluster
+Application
+Type
+
+Traffic Classes
+
+Social
+Networks
+
+Traffic Objects
+
+Graphical Techniqque
+
+Graphlets
+
+Classification OUTPUT
+
+Flow
+
+Simple
+Statistical
+
+Statistical Method
+
+Host
+
+Machine Learning Algorithm
+
+Graphical
+Host
+Community
+
+Classification TECHNIQUE
+
+Traffic
+Properties
+
+Payload
+Inspection
+
+Traffic features' measurement Level
+
+Classification INPUT
+
+Internet Traffic
+Classification Method
+
+Traffic
+Payload
+
+Hybrid &
+Miscellaneous
+
+Figure 6. A multilevel taxonomy of traffic classification methods [48].
+Classification Input
+Traffic Payload
+use of application data
+Host Community graph metrics (diameter, connection degree)
+Traffic Properties
+Host
+number of connections, opened ports
+(Measurement Level)
+Flow
+flow size, flow duration
+Packet
+packet sizes, inter-arrival times
+Hybrid & Miscellaneous
+combination of inputs, external knowledge
+Table I. Classification input level.
+Classification Technique
+Payload Inspection
+DPI, examination of first N bytes
+Graphlets
+relationship between features (ports, addresses)
+Graphical
+Motifs
+patterns of communication
+Techniques
+Social Networks
+graph of communication
+Basic Statistical
+probability density functions of e.g. packet sizes
+Statistical
+Heuristics
+port-based classification
+Method
+Profiles
+host profiling, usage of packet sizes and direction
+Supervised
+Hidden Markov Models, Naive Bayes, k-nearest
+Machine Learning
+neighbour, support vector machine
+Algorithm
+Non-Supervised
+clustering of unlabeled traffic, k-nearest neighbour
+Semi-Supervised
+clustering of mixed traffic, k-nearest neighbour
+Reinforcement Learning
+Hybrid & Miscellaneous
+combination of methods, external knowledge
+Table II. Classification technique level.
+
+Tables I, II and III provide examples for each of the input, technique and output category. The
+input and technique tables have the most general categories in the left column, some of which are
+divided into more specific subcategories. The classification output table is divided horizontally into
+traffic objects and classes. The objects describe what is being classified, in other words, whether it is
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+Host Community
+Host
+Flow
+Packets
+Traffic Cluster
+Application Type
+Application Protocol
+Application Software
+Fine-Grained
+Anomaly
+Hybrid & Miscellaneous
+
+11
+
+Classification Output
+Traffic Objects
+host community is assigned a class, e.g., community of HTTP servers
+host is assigned a class
+flow is assigned a class
+packet is assigned a class
+Traffic Classes
+bulk or small transactions
+game, browsing, chat
+HTTP, HTTPS, FTP
+client software such as Mail client, FTP client or web browser
+Skype voice call, Google search, Facebook chat
+port scan, brute-force attack
+combination of outputs or classes, external knowledge
+Table III. Classification output level.
+
+each packet, whole flow or a host. Traffic classes describe the type of classification being performed
+by a specific algorithm.
+
+5. PAYLOAD-BASED TRAFFIC CLASSIFICATION TECHNIQUES FOR ENCRYPTED
+TRAFFIC
+Almost every network traffic encryption protocol has a specific packet format that differs from
+others, as was described in Section 2. Thus, with knowledge of these formats it is possible to
+distinguish and identify individual protocols by inspecting the packet payload. It is for this purpose
+that, string or regular expression matching algorithms are used witch a specific protocol patterns.
+Some examples of contemporary classification tools which use payload inspection are discussed in
+more detail in the first part of this section. The second part presents current research papers which
+focus on comparing these tools in terms of their performance and success rate.
+5.1. Payload-Based Classification Tools
+Most network traffic classification tools address all network protocols and not only the encrypted
+ones. The following examples represent the most widely used tools for classifying network traffic.
+Most of these tools are also able to distinguish specific network applications, mainly in unencrypted
+traffic. In terms of the taxonomy, these tools mostly use the Payload Inspection technique on the
+Traffic Payload classification input to map Flows to Application Protocols.
+PACE [42] is a commercial classification library written in C, which uses pattern matching
+augmented by heuristics, behavioural and statistical analysis. In addition to standard protocol and
+application recognition, it is able to identify obfuscated protocols such as BitTorrent or Skype.
+According to its website, PACE is able to identify thousands of network applications and protocols.
+Cisco Network Based Application Recognition (NBAR) [22] is another example of a commercial
+tool for classifying network traffic. This tool is primarily used on Cisco routers for quality and
+security purposes. According to its authors, NBAR is also able to recognize stateful protocols and
+non-TCP and non-UDP IP protocols.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+12
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+nDPI [27] is an open-source classifier forked from the (currently closed) project OpenDPI, which
+was in turn derived from PACE. nDPI analyzes at most eight packets from each connection for
+classifying traffic, however each packet is examined separately. If the connection contains multiple
+matches, then the most detailed match is returned. For encrypted traffic recognition, nDPI contains
+only a SSL decoder that extracts the host name from the server certificate. Using these names, nDPI
+is able to identify specific network applications.
+Libprotoident [2] is an open-source C library for classifying traffic. In contrast to the previous
+tools, Libprotoident inspects only the first four bytes of a packet payload for each direction. This
+makes it much faster but reduces its detection accuracy. The classification uses a combined approach
+of pattern matching, payload size, port numbers and IP matching.
+L7-filter [23] is an open-source classifier for Linux which is designed to classify traffic on the
+application layer. The initial phase of classification is based on non-payload data such as port
+numbers, IP protocol numbers, the number of transferred bytes, and so forth. Payload data are
+analysed with regular expressions during the second phase. One disadvantage of the l7-filter is that
+it contains a database with old patterns which was last updated in 2011.
+
+5.2. A Comparison of Classification Tools
+A comparison of the presented open-source tools was introduced by Finsterbusch et al. [32].
+They prepared a data set containing the traffic of 14 different network protocols such as DNS,
+HTTP, BitTorrent, and SMTP(S) to compare the tools. Using this data set, they measured
+classification accuracy, memory usage, CPU utilization, and the number of packets required for
+proper classification. The comparison showed, amongst other results, that nDPI is not able to classify
+the BitTorrent protocol with more than a 43 % true positive rate, although it detects SSL/TLS
+with 100 % accuracy. The Libprotoident tool had the highest classification accuracy of the whole
+analysed traffic, which was able to classify DNS, HTTP, SIP and e-mail protocols with 100 %
+accuracy. Libprotoident also needs the least number of packets on average for classifying real-time
+traffic. Based on the comparison by Finsterbusch et al., we can say that Libprotoident is the most
+appropriate tool for classifying payload-based traffic, although it is more CPU intensive than the
+other tools.
+Another comparison of the tools was carried out by Bujlow et al. [18]. They compared all of the
+previously presented tools. They prepared a publicly available data set for the comparison which
+contained encrypted and unencrypted network traffic from 17 application protocols, 25 network
+applications and 34 web services. Their results show that PACE and Libprotoident are the most
+accurate tools. Nevertheless, the Libprotoident tool was the only classifier able to identify all the
+encrypted protocols which were tested. Their results were generally very similar to those in the
+comparison by Finsterbusch et al.
+In general, the payload-based classification tools use regular expression matching algorithms to
+identify the encrypted traffic. The main difference between the tools is how much data they need to
+examine and whether they need both directions of the connection for the classification.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+13
+
+6. FEATURE-BASED TRAFFIC CLASSIFICATION TECHNIQUES FOR ENCRYPTED
+TRAFFIC
+This section surveys feature-based classification methods which specialize in encrypted traffic.
+These methods do not require any knowledge of the encryption protocol packet structure. Instead,
+they use specific protocol communication patterns to classify encrypted traffic. These methods
+are based on the specific protocol differences described in Section 2, such as packet and flow
+features of unencrypted initialization or the encrypted data transport phase. This approach provides
+greater generalization and allows these methods to work with new versions and types of encryption
+protocols without the modification of underlying algorithms.
+The taxonomy specified in Section 4 is used to describe the individual methods. Apart from the
+properties defined by the taxonomy, we also provide information about data sets used for evaluating
+these methods. This is especially important when additional evaluation is to be performed by other
+groups to verify the results of the authors. While the taxonomy provides a traffic class for classifying
+the application protocol, this is sometimes too coarse for our purposes. Most classification methods
+not only identify the encryption protocol, but also the underlying encrypted application protocol.
+As both cases belong to the application protocol traffic class, we provide further explanation in the
+description of each classification method.
+A slight drawback of flow-based classifiers is in performing classification often after the flow has
+expired. This prevents the possibility of a real-time response, which has led several research groups
+to research real-time classification using flow-features. Their methods are also included with the
+others in Table IV and differentiated by a column describing whether the classification is done in
+real-time or not.
+Almost 250 discriminators (flow or packet features) are identified by Moore et al. [57], which
+can be used to classify flow records. The authors do not propose any specific classification method
+themselves, however, most of the classification algorithms use a subset of these discriminators for
+identifying traffic. In terms of the taxonomy, the authors provide a list of traffic features which are
+used to infer the category of the traffic’s properties for the classification input.
+Most of the feature-based traffic classification methods use statistical or machine learning
+methods. These methods are comprehensively described in [3]. Port-based classification was used
+in the past to associate applications with network connections, but the accuracy of this method is
+decreasing with the increased use of dynamic ports and applications evading firewalls. Despite the
+decreased accuracy, port numbers are often utilized as one of the packet features. Furthermore,
+port-based classification is still quite often used to establish a ground truth for traffic classification
+experiments.
+For easier orientation, we present the surveyed papers grouped by the class of their traffic
+classification algorithm. Most of the papers employ Supervised Machine Learning Methods
+(Section 6.1), Semi-Supervised Machine Learning Methods (Section 6.2) and Basic Statistical
+Methods (Section 6.3). The rest combine more than one method and are therefore gathered in
+a Hybrid Methods category (Section 6.4). For each surveyed paper, we specify the classification
+technique, classification output, and the data sets used in the description of the classification process
+itself. Table IV in Section 6.5 provides a summary of the papers with all of the mentioned properties
+properly categorized.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+14
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+6.1. Supervised Machine Learning Methods
+Sun et al. [67] propose a hybrid method for classifying encrypted traffic. First, the SSL/TLS protocol
+is recognized using a signature matching method. A Naive Bayes machine learning algorithm is
+then applied to identify the encrypted application protocol. The authors use a combination of public
+and private data sets to evaluate their method. Background traffic is taken from a public data set,
+BitTorrent, eDonkey, HTTP, FTP, Thunder and GRE application protocols. The signature based
+recognition of SSL/TLS protocols was tested on HTTPS, TOR, ICQ and other protocols. The
+identification of the underlying protocol was tested only for TOR and HTTPS protocols.
+Okada et al. [59] analyzed changes in flow features due to encryption. They created a training
+data set with HTTP, FTP, SSH, and SMTP application protocols encrypted using PPTP and IPsec
+tunnels. The authors assessed 49 flow features and analyzed which of them are strongly correlated
+in normal and encrypted traffic. The correlated features were then used to infer functions which
+transform the features between normal and encrypted traffic. Therefore, standard classifiers can be
+used to classify the traffic after the transformation. The authors verified their method using several
+modifications of the Naive Bayesian classifier.
+Arndt and Zincir-Heywood [11] also concentrated on the classification of encrypted traffic
+and compared C4.5, k-means and Multi-Objective Genetic Algorithm (MOGA) to this end. The
+classification of the SSH protocol was used as an example in their study. The authors focused on
+the accuracy and robustness of the algorithms. Stability was tested using three different public and
+private data sets for teaching and evaluating the methods. Multiple different flow export settings
+were tested as well. Altogether, 46 flow features were used in the evaluation, however, a different
+subset was used by each algorithm. The C4.5 algorithm provided the best robustness, although the
+MOGA had a very low false positive rate when used on the same data set as it was trained on. The
+C4.5 was recommended for forensic analysis by law enforcement since it is applicable on a variety
+of networks.
+Alshammari and Zincir-Heywood have published several papers [4, 5, 6, 7, 8, 9] on traffic
+classification using various supervised machine learning methods. They focused on recognising
+SSH, Skype, and in one case, Gtalk traffic using flow features without port numbers, IP addresses or
+payloads. A set of 22 flow features was mostly used, although in one case the authors selected the
+features using genetic programming. Public data sets are used as well as a private data set generated
+on a test-bed network. The ground truth for public data sets was gained from port numbers, and
+the private data set includes the payload and was labelled with a commercial packet classification
+tool. The following algorithms for traffic classification were compared: AdaBoost, RIPPER, Support
+Vector Machine (SVM), Naive Bayes, C4.5 and Genetic Programming.
+Kumano et al. [52] investigated real-time application identification in encrypted traffic. IPsec and
+PPTP encryption were applied to web, interactive and bulk transfer flows to create an evaluation
+data set. C4.5 and SVM algorithms were utilized to classify the application on these data sets.
+The authors then tested the accuracy of the classification using a different number of packets from
+the start of the flows. They measured the impact of using fewer packets on the flow features and
+proposed using features which show the least change to classify applications at an early stage.
+
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+15
+
+6.2. Semi-Supervised Machine Learning Methods
+Bernaille and Teixeira [16] used traffic clustering to detect applications encrypted by SSL. Their
+method has three steps. First, they detected SSL connections using a clustering algorithm (Gaussian
+Mixture Model) on packet sizes and directions of initial packets of a connection. The first three
+packets and 35 clusters provide good accuracy in detecting SSL traffic. After the SSL traffic is
+identified, the first data packets of the connections are identified. The sizes of the data packets
+are used by a clustering algorithm to detect an underlying application in the third step. However,
+the packet sizes are modified in the last step to allow for encryption overhead. The evaluation of the
+proposed method is done on traffic traces from live networks and a manually generated packet trace.
+The data sets contain HTTP, POP3, FTP, BitTorrent and eDonkey application protocols encrypted
+using SSL. The authors also show that using a combination of clustering and port numbers to
+differentiate between applications in clusters provides better results than clustering alone.
+Maolini et al. [53] identify SSH traffic and determine underlying protocols (SCP, SFTP, HTTP)
+using a k-means algorithm. Only three packet features are used: the direction, the number of
+bytes and the timestamps of each packet. Their private data sets are created from artificial traffic
+and contain HTTP, FTP, POP3 and SSH protocols. Control packets such as TCP handshake,
+retransmitted packets and ACK only packets are removed from statistics as they negatively affect
+the precision. Authors use only first 3-7 packets to achieve a real-time identification.
+Backquet et al. [13, 14] use a Multi-Objective Genetic Algorithm to select a flow feature subspace
+and parameters for a clustering algorithm which detects encrypted traffic. The second work employs
+a hierarchical k-means algorithm to increase the identification’s accuracy. The authors evaluate both
+approaches on a private data set captured at a university campus. SSH is used as a representative
+of encrypted traffic and the ground truth is gained from the payload of the captured packets.
+Based on previous works, the authors argue that the feature selection and number of clusters
+highly affect the overall accuracy. Therefore, the authors selected four objectives for the genetic
+algorithm: cluster cohesiveness, cluster separation, the number of clusters and the amount of used
+flow features. The results show (a) that only 14 from a total of 38 flow features were used by
+the best-performing algorithm and (b) that using a hierarchical k-means algorithm increases the
+identification performance.
+Bar-Yanai et al. [15] combined k-means and k-nearest neighbour clustering algorithms to
+construct a new, real-time classifier for encrypted traffic. The resulting classification algorithm has
+the light weight complexity of the k-means algorithm and accuracy of the k-nearest neighbour
+algorithm. They claim the method is fast, accurate and robust in regard to encryption, asymmetric
+routing and packet ordering. A labelled data set was prepared from generated samples of the traffic
+and the classification of the data set was done using payloads of the packets. Flows shorter than 15
+packets were removed from the data set, since real-time classification for such short flows is not of
+practical use. If available, the first 100 packets were used for the classification. The authors stress
+that their method is applicable in a real-time environment and tested their implementation on an
+ISP link. The application protocols classified are HTTP, SMTP, POP3, Skype, eDonkey, BitTorrent,
+Encrypted BitTorrent, RTP and ICQ.
+Zhang et al. [72] propose an improvement to the k-means clustering algorithm. Using harmonic
+mean to reduce the impact of random initial clustering centres, the authors are able to increase
+
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+16
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+the accuracy of the k-means clustering algorithm for classifying encrypted traffic. The authors test
+their approach on two data sets. The first contains only data labelled SSH and non-SSH, the second
+contains traffic from Skype, QQ, SSH, SSL and MSN protocols. However, the selection of the data
+sets and the selection of flow features used for classification were not justified in the paper.
+Du and Zhang [29] used a k-means algorithm to discern traffic of three BitTorrent clients. Flow
+and packet header features, such as IP addresses, ports, numbers and the length of packets, were
+taken into consideration. The authors generated the traffic manually and, therefore, their data sample
+contains only traffic from three clients. The authors highlight that the method is fast and simple and
+that it can be used to identify the traffic in real-time.
+6.3. Basic-Statistical Methods
+De Montigny-Leboeuf [26] described the process of identifying traffic using flows and flow features.
+The author showed how to derive the flow features he uses and how to use them to identify the
+application type (e.g., interactive typing, data transfer) and block ciphers. Moreover, the author
+provides a list of recognition criteria for HTTP and HTTPS web browsing traffic, IMAP, POP,
+SMTP, SSH, Telnet, rlogin, FTP command and data, MSN chat and TCP audio streams. A subset of
+39 traffic features was used to identify each application.
+Wang et al. [68] computed entropy from packet payloads and used it for classifying traffic. They
+differentiate between eight different traffic classes: text, picture, video, audio, Base64 encoded
+text, Base64 encoded image, compressed and encrypted. The entropy is computed on chunks of
+different lengths and the authors used a support vector machine algorithm for selecting feature. The
+computation of the entropy for four different chunk lengths was found to be sufficient for accuracy
+and performance. The most difficult task was to separate encrypted and compressed traffic. The
+authors provided an additional heuristic to distinguish these categories using frequencies of four-bit
+characters. The data sets used are manually obtained from captured network communication and
+processed to contain traffic from all classes.
+Korczynski and Duda [50] designed a method called Statistical Protocol Identification to identify
+types of communication (voice call, SkypeOut, video conference, chat, file upload, file download)
+in Skype traffic. Nine flow features were selected using forward selection which evaluates how a
+given feature improves the classification performance. A private, artificially created data set with
+Skype traffic was used. Other traffic with SSL, SSH, HTTP, SCP, SFTP, VoIP, BitTorrent and other
+services, was used to test the robustness of the method. The authors reported high accuracy in their
+method, although the distinction between voice and video traffic remains a difficult problem.
+Amoli and Hamalainen [10] described a Network Intrusion Detection System (NIDS) capable of
+detecting attacks in encrypted network traffic in real-time. The NIDS has two engines, the first one
+uses network change measurement to detect changes in a time-series, such as DoS and DDoS. The
+first engine clusters the data to lessen the load on the second engine. The goal of the second engine
+is to detect the bot master behind the attack. The second engine clusters the prepared data to obtain
+the behaviour of the attackers and compares it with historical data. The authors used the detected
+anomalies to identify the botnet masters.
+Korczynski and Duda [51] proposed using stochastic fingerprints based on Markov chains for
+identifying application traffic in SSL/TLS sessions. The method is payload-based and uses statistical
+information from SSL/TLS headers. The authors tested their method on twelve representative
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+srcIP
+
+dstIP
+
+srcPort
+
+dstPort
+
+srcIP
+
+dstIP
+
+srcPort
+
+dstPort
+
+srcIP
+
+dstIP
+
+135
+
+135
+
+1025
+
+ATTACK
+2745
+
+ATTACK
+
+srcPort
+
+dstPort
+
+srcIP
+
+dstIP
+
+srcPort
+
+17
+
+dstPort
+
+80
+
+ATTACK
+WEB(TCP)
+GAMES(UDP)
+
+6129
+
+Figure 7. A visual representation of transport-layer interactions for various applications [44].
+
+applications such as Twitter, Skype and Dropbox. The Markov chain fingerprints are based on
+protocol specific distributions of packets in time. Data sets were captured from real traffic, contain
+only SSL/TLS traffic and were not published. The ground truth was obtained by inspecting domain
+names of the SSL/TLS traffic. The authors discovered that many protocol implementations differ
+from the RFC specification, which required them to adjust the fingerprints.
+
+6.4. Hybrid Methods
+Karagiannis et al. [44] focused on host-based classification. Their method uses only information
+from the network level and therefore is not affected by transport layer encryption (e.g. TLS). The
+authors classified the behaviour of the hosts on social, functional and application levels, without
+access to packet payloads or headers. Each level was classified independently and a cross-level
+classification was performed afterwards. Particular applications were represented using graphlets,
+see Figure 7, which are representations of the application’s behaviour. The authors then used
+heuristics to refine the classification. The ground truth for captured data sets was established by
+using a signature-based payload classification. Without using transport layer information, only the
+following traffic classes were identified: web, p2p, data (FTP, database), network management
+(DNS, SNMP, NTP), mail (SMTP, POP, IMAP), news (NNTP), chat (IRC, AIM, MSN messenger),
+streaming and gaming.
+Wright et al. [69] worked on a classification of traffic in encrypted tunnels. Multiple flows can
+be wrapped in a single flow representing the encrypted tunnel. The information from the packet
+headers was not applicable, therefore the authors used only packet sizes, timing and communication
+direction. A k-nearest neighbour classifier was used for classification when all TCP connections
+in a set carried the same application protocol. When TCP connections carried different application
+protocols, the authors used Hidden Markov Models. The authors also demonstrated that it is possible
+to determine the number of flows in an encrypted tunnel. The port numbers were used to obtain a
+ground truth for the captured data set. The authors argue that mislabelled data only decreased the
+efficiency of their classification algorithm and therefore the real accuracy would be even higher
+than the reported one. The classifiers were able to detect the following application protocols: HTTP,
+HTTPS, SMTP, AIM, FTP, SSH, Telnet.
+Koch and Rodosek [49] proposed a system for detecting interactive attacks using SSH. Packet
+sizes, IP addresses and packet inter-arrival times were used to create clusters of packets which
+were likely to match a SSH command and its corresponding response. The SSH protocol was
+recognized based on the port number, and individual commands were identified from the clusters.
+Following this, sequences of commands were evaluated and possible malicious sequences were
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+18
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+reported. The system allows for the customization of malicious sequences’ definitions using a subgoals characterization. Each sub-goal maps to a malicious event, such as data gathering or system
+manipulation. The results from the evaluation of the proposed method show that such identification
+is possible.
+Khakpour and Liu [47] used an entropy of packet payloads for classifying traffic. The authors
+showed how to compute the entropy of files and how to modify the formula for on-the-fly
+computation. Several entropy values were computed for each packet. CART and support vector
+machine (SVM) methods were used for a subsequent classification based on the computed
+values. Their results demonstrated that SVM methods provide comparable accuracy with less false
+positives. The authors argue that it is necessary to exclude application layer headers such as HTTP
+response or picture headers. The reason for this is that computing entropy on the headers leads to
+a bias and misclassification of a packet. Therefore, a cut-off threshold was used to strip application
+headers from unknown protocols. The traffic was first classified into three categories: text, encrypted
+or binary. The authors also postulated that the classification can be more fine-grained and they
+investigated the classification of application protocols. Then, they demonstrated that it is possible to
+determine an encryption algorithm with a higher accuracy than random guessing, which they found
+surprising.
+6.5. A Summary of Machine Learning and Statistical Encrypted Traffic Classification
+We have provided a summarizing overview of the feature-based traffic classification papers and
+methods they use in Table IV. Where a method belongs to multiple categories, it is not marked as a
+hybrid, but all the categories are listed instead. We find this approach more descriptive than using a
+hybrid category as defined by the taxonomy.
+Most surveyed methods use flow or packet header features as an input for the classification
+techniques. The authors of [6, 9] compare the results gained by utilizing packet header features
+and flow features. They show that using both sets of features can result in faster and more accurate
+classification algorithms. Nevertheless, using all the available traffic features does not necessarily
+lead to the best classification performance as demonstrated by the authors of [4].
+The column Number of features shows how many flow or packet header features were used in
+each method. Some methods used different subsets of the features for different algorithms, and this
+is denoted by the ⊆ mark. Moreover, some of the methods used a feature selection algorithm to
+select the best combination of features from the entire feature set. These methods are marked in
+the Feature selection column. For this case, the Number of features column represents the initial
+number of features.
+Most classification algorithms are based on machine learning. The category of supervised
+machine learning algorithms is represented by Hidden Markov Models, RIPPER, AdaBoost,
+Support Vector Machines, C4.5 and Naive Bayes. Several works [5, 7, 8, 9] compare these
+algorithms to establish which is the best for the task of classifying traffic. The C4.5 algorithm
+performs the best in several cases, however, genetic programming is reported to achieve the
+best results in [9]. The second most common algorithm category is the semi-supervised machine
+learning, which is dominated by clustering algorithms. The k-means algorithm is the most frequent
+in this category, and the k-nearest neighbour comes second. The popularity of k-means is due to
+its variability, which allows it to be fine-tuned for various purposes. It is often combined with
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+2009
+
+2009
+
+2010
+
+2010
+2010
+2010
+2011
+2011
+2011
+2011
+
+2011
+
+2012
+2013
+2013
+2013
+
+[4]
+
+[13]
+
+[8]
+
+[15]
+[67]
+[49]
+[14]
+[68]
+[59]
+[11]
+
+[9]
+
+[50]
+[72]
+[29]
+[47]
+
+2014
+2014
+
+2009
+
+[6]
+
+2013
+
+2009
+
+[7]
+
+[52]
+[51]
+
+2005
+2005
+2006
+2007
+2007
+2009
+
+Reference
+
+[10]
+
+Publication year
+
+[26]
+[44]
+[69]
+[16]
+[5]
+[53]
+
+Traf. Payload
+
+3
+
+3
+
+3
+
+3
+
+Host Com.
+
+3
+
+Host
+
+Flow
+3
+
+3
+
+3
+3
+3
+
+3
+
+3
+3
+
+3
+
+3
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+3
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+3
+
+3
+
+Packet
+
+Number of features
+Feature selection
+
+Anomaly
+Host
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+3
+3
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+AP
+F
+
+3
+
+3
+
+3
+
+3
+3
+
+3
+
+3
+
+3
+
+Machine
+
+AS
+FG
+
+(hierarchical) k-means
+Entropy
+Naive Bayes
+C4.5, k-means, MOGA
+AdaBoost, C4.5,
+Genetic Programming
+Statistical Protocol Identification
+k-means
+k-means
+Entropy, SVM, CART
+Change point detection,
+Clustering
+C4.5, SVM
+Markov chains
+
+HMM, k-nearest neighbor
+Gaussian Mixture Model
+AdaBoost, RIPPER
+k-means
+AdaBoost, RIPPER, SVM,
+Naive Bayes, C4.5
+RIPPER, C4.5
+AdaBoost, C4.5,
+Genetic Programming
+k-means, Genetic Programming
+AdaBoost, C4.5,
+Genetic Programming
+k-nearest neighbor, k-means
+Naive Bayes
+
+Application Protocol
+Flow
+
+3
+
+3
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+3
+
+Method(s)
+
+Application Software
+Fine-Grained
+
+F → AT
+F → AP
+
+3
+3
+
+3
+
+3
+
+3
+
+3
+3
+
+3
+3
+3
+3
+
+3
+
+3
+3
+3
+3
+
+3
+3
+
+–
+
+–
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+3
+3
+3
+
+Real
+
+Application Type
+Traffic Payload
+
+3
+
+F → AP
+F → AP
+F → AS
+F → AT, AP
+F → A
+
+3
+
+3
+
+3
+
+3
+
+3
+
+F → TP
+
+3
+3
+
+3
+
+3
+
+F → AP
+F → AP
+F → AP
+F → FG
+F → AP
+F → AT
+F → AP
+F → AP
+
+3
+
+3
+
+F → AP
+
+3
+
+3
+
+3
+
+3
+
+3
+
+3
+3
+3
+3
+3
+3
+
+3
+
+T
+TP
+
+Real-time identification
+3
+
+Public
+
+F → AP
+
+3
+
+3
+3
+3
+3
+3
+
+Private
+
+F → AT
+
+F → AP
+
+F → AP, AT
+H → AT
+F → AP
+P → AP
+F → AT
+F → AP
+
+Output
+
+Encrypted protocol ident.
+
+Table IV. A summary table of cited papers and methods they use to detect encrypted traffic.
+
+29
+–
+
+23
+
+9
+22
+7
+10
+
+61
+
+17
+6
+–
+38
+7
+49
+⊆ 46
+
+22
+
+38
+
+39
+
+3
+
+3
+
+3
+
+⊆ 30
+
+A
+H
+
+Payload Ins.
+3
+
+3
+3
+
+Basic
+
+3
+
+3
+
+Graphlets
+3
+
+Sup.
+
+22
+
+⊆ 39
+–
+3
+3
+22
+3
+
+Output column legend:
+
+3
+
+Heuristic
+
+Statis.
+Non Sup.
+
+Traf. Properties
+Semi Sup.
+
+Technique
+
+–
+
+Data set
+
+3
+
+3
+3
+
+3
+
+3
+3
+
+3
+
+3
+
+3
+
+Artificial
+
+Input
+
+known
+signature
+
+–
+
+known
+signature
+known
+known
+
+signature, port
+
+signature, known
+known
+–
+signature
+known
+known
+signature, port
+
+signature, known
+
+signature
+
+signature, port
+
+signature, known
+
+port, signature
+
+port
+signature
+port
+signature, known
+port, known
+known
+
+Ground truth
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+19
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+20
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+genetic algorithms to find the best setting. The authors of [68, 47] use the entropy of packet
+payloads to classify traffic. Using simple statistical properties of the traffic is the third most
+common classification method. Other methods are rarely used, mainly because they cannot learn
+from labelled traffic and therefore require too much effort to set up.
+The SSH protocol is heavily used as a classification example. The authors of [4, 5, 6, 7, 9, 11,
+13, 14, 72] test their methods for recognising SSH and non-SSH traffic. Maiolini et al. [53] take the
+classification one step further and identify the type of traffic encapsulated in a SSH connection. The
+authors of [16, 51, 67] use SSL/TLS traffic and identify underlying application protocols. Since the
+SSL/TLS protocol is more general and is used to encrypt various types of traffic, the complexity
+of identification is higher than for SSH. Another very popular protocol for identification is Skype,
+which is addressed by the authors of [7, 9, 50, 51].
+Some of the methods focus only on identifying encrypted traffic, whereas others try to identify
+the underlying application protocol. The methods which perform a more thorough analysis to
+gain information about the application protocol are indicated in the column Encrypted protocol
+identification.
+Because all methods, with the exception of [44], classify whole flows and rely mostly on flow
+features, they are rarely able to classify traffic in real-time. However, the authors of [15, 16, 52, 53,
+68] achieved near real-time classification by extracting features of only a fixed number of packets in
+a flow. They argue that the first packets carry enough information for classification. Using a higher
+number of packets increases accuracy, therefore it is possible to strike a balance between accuracy
+and early identification.
+The Data set columns describe whether the data used to evaluate the presented methods was taken
+from a live network (Real) or generated by a tool (Artificial). We also identify if the data sets were
+publicly available (Public), were made available by the authors (Published) or kept undisclosed as
+they contain sensitive information (Private). If more than one data set was used for each evaluation,
+we simply performed an union of the data set descriptions. The Ground truth column indicates how
+the ground truth was obtained for each data set. Common methods are based on port numbers or
+signatures, which use the packet payload. When the data sets are generated manually, the ground
+truth is known in advance.
+The classification accuracy reported by authors of the surveyed methods depends heavily on the
+data sets used. All authors use their own private data sets which are seldom published. Such methods
+simply cannot be compared without repeating the experiments on a common data set. The authors
+of [5, 7, 9, 11, 67, 72] also used publicly available data sets which were either labelled beforehand,
+using payload when available, or simply labelled using port numbers. A combination of data sets is
+often used to test the robustness of the methods.
+The surveyed methods show that a lot of effort was put into classifying encrypted traffic. We
+believe that there are several points that should be taken into account in any future research in this
+field. First, identifying encrypted traffic is not enough. The identification of the underlying protocol
+is the real challenge. Second, a SSL/TLS protocol should be used as the reference protocol, as it
+can contain much more complex traffic than the SSH protocol. Finally, the traces used should be
+labelled and made available to other researchers. Following these points does not limit the scope of
+future research, however, it simplifies the comparison of the presented approaches and allows others
+to verify the results more easily.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+21
+
+7. CONCLUSIONS
+In this paper we presented an overview of current approaches for the classification and analysis
+of encrypted traffic. First, we selected a number of the most widely used encryption protocols
+and described their packet structure and standard behaviour in a network. Second, we focused on
+information which is provided by encryption protocols themselves. We found that the initiation
+phase often provides information about the protocol version, ciphers used, and the identity of at least
+one communicating party. Such information can be used to monitor and enforce security policies in
+an organization. We also discovered that the use of information from the unencrypted parts of an
+encrypted connection for a network anomaly detection is only briefly investigated by researchers.
+Information about communicating parties can be leveraged to discern the type of encrypted traffic.
+For example, the list of supported cipher suites provided by a client when establishing a secure
+connection can help to identify the client. We believe that the use of unencrypted parts from the
+initiation of an encrypted connection should be explored in more detail.
+Before starting the analysis of the encrypted network traffic, it is necessary to identify it. Thus,
+we surveyed approaches to classifying network traffic. These, were, first payload-based methods
+which use knowledge of a packets’ structure and feature-based methods which use characteristics
+specific to the protocol flow. For the payload-based classification, there are several open-source
+traffic classifiers which can identify encrypted traffic using pattern matching. The initiation of a
+communication often has a strictly defined structure, therefore, the patterns can be constructed for
+specific protocols. The main difference between various classifiers is that some of them require
+traffic from both directions of the communication to correctly classify the flows.
+Feature-based traffic classifiers have been intensively researched over the last decade. Many
+statistical and machine-based learning methods have been applied to the task of traffic classification.
+Despite this, there are no conclusive results to show which method has the best properties. The main
+reason is that the results depend heavily on the data sets used and the configuration of the methods.
+We have applied the multilevel taxonomy of Khalife et al. [48] and categorized existing methods.
+Our results show that most of the authors use private data sets, sometimes in combination with
+public ones. For this reason, the individual results are not directly comparable. Most of the methods
+use supervised or semi-supervised machine learning algorithms to classify flows and even determine
+the application protocol of a given flow. Most methods target encryption protocols, such as SSH,
+SSL/TLS and encrypted BitTorrent, and use similar methods. However, there are also some novel
+works which apply innovative approaches to refine the classification up to deriving the content of
+the encrypted connections.
+Most authors of feature-based classification methods claim that their approach is privacy sensitive
+as it does not require the traffic payload. However, privacy issues are much wider. In 2013, the
+Cyber-security Research Ethics Dialog & Strategy Workshop [19] started a discussion about the
+influence of cyber-security research on the privacy of Internet users. Researchers need to keep
+in mind that their research activities have a significant impact on infrastructure security, network
+neutrality and privacy of end users.
+In the past, internet protocols were not designed with security considerations in mind. The recent
+interest in privacy has motivated the IETF to reconsider this approach and discuss the privacy
+aspects of the protocols. Discussions held in [41] revealed that monitoring privacy issues are of great
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+22
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+concern. This discussion resulted in a new RFC [31], where the IETF clearly states that pervasive
+monitoring is considered to be an attack. The document suggests that the IETF’s protocols should
+be hardened against such monitoring. It is clear that the struggle between the demand for privacy
+and the need for security is still beginning.
+
+ACKNOWLEDGEMENTS
+
+This material is based on the work supported by the Security Research for the Needs of the State 2010-2015
+programme funded by the Ministry of the Interior of the Czech Republic.
+
+REFERENCES
+1. D. Adami, C. Callegar, S. Giordano, M. Pagano, and T. Pepe. Skype-Hunter: A real-time system for the detection
+and classification of Skype traffic. International Journal of Communication Systems, 25(3), February 2011.
+2. S. Alcock and R. Nelson. Libprotoident: Traffic Classification Using Lightweight Packet Inspection. Online article,
+2012. Accessed: 2014-11-26.
+3. E. Alpaydin. Introduction to Machine Learning. The MIT Press, 2nd edition, 2010.
+4. R. Alshammari, P.I. Lichodzijewski, M. Heywood, and A.N. Zincir-Heywood. Classifying SSH Encrypted Traffic
+with Minimum Packet Header Features Using Genetic Programming. In Proceedings of the 11th Annual Conference
+Companion on Genetic and Evolutionary Computation Conference: Late Breaking Papers, GECCO ’09, pages
+2539–2546, New York, NY, USA, 2009. ACM.
+5. R. Alshammari and A.N. Zincir-Heywood. A Flow Based Approach for SSH Traffic Detection. In Systems, Man
+and Cybernetics, 2007. ISIC. IEEE International Conference on, pages 296–301, Oct 2007.
+6. R. Alshammari and A.N. Zincir-Heywood. A Preliminary Performance Comparison of Two Feature Sets for
+Encrypted Traffic Classification. In Proceedings of the International Workshop on Computational Intelligence
+in Security for Information Systems CISIS’08, volume 53 of Advances in Soft Computing, pages 203–210. Springer
+Berlin Heidelberg, 2009.
+7. R. Alshammari and A.N. Zincir-Heywood. Machine learning based encrypted traffic classification: Identifying
+SSH and Skype. In Computational Intelligence for Security and Defense Applications, 2009. CISDA 2009. IEEE
+Symposium on, pages 1–8, July 2009.
+8. R. Alshammari and A.N. Zincir-Heywood. An Investigation on the Identification of VoIP traffic: Case study on
+Gtalk and Skype. In Network and Service Management (CNSM), 2010 International Conference on, pages 310–
+313, Oct 2010.
+9. R. Alshammari and A.N. Zincir-Heywood. Can encrypted traffic be identified without port numbers, IP addresses
+and payload inspection? Computer Networks, 55(6):1326 – 1350, 2011.
+10. P.V. Amoli and T. Hamalainen. A Real Time Unsupervised NIDS for Detecting Unknown and Encrypted Network
+Attacks in High Speed Network. In Measurements and Networking Proceedings (M N), 2013 IEEE International
+Workshop on, pages 149–154, Oct 2013.
+11. D.J. Arndt and A.N. Zincir-Heywood. A Comparison of Three Machine Learning Techniques for Encrypted
+Network Traffic Analysis. In Computational Intelligence for Security and Defense Applications (CISDA), 2011
+IEEE Symposium on, pages 107–114, April 2011.
+12. Azureus Software Inc. Message Stream Encryption. Vuze Wiki. Web page, May 2014. Accessed: 2014-10-31.
+13. C. Bacquet, A.N. Zincir-Heywood, and M.I. Heywood. An Investigation of Multi-objective Genetic Algorithms
+for Encrypted Traffic Identification. In Computational Intelligence in Security for Information Systems, volume 63
+of Advances in Intelligent and Soft Computing, pages 93–100. Springer Berlin Heidelberg, 2009.
+14. C. Bacquet, A.N. Zincir-Heywood, and M.I. Heywood. Genetic Optimization and Hierarchical Clustering Applied
+to Encrypted Traffic Identification. In Computational Intelligence in Cyber Security (CICS), 2011 IEEE Symposium
+on, pages 194–201, April 2011.
+15. R. Bar-Yanai, M. Langberg, D. Peleg, and L. Roditty. Realtime Classification for Encrypted Traffic. In
+Experimental Algorithms, volume 6049 of Lecture Notes in Computer Science, pages 373–385. Springer Berlin
+Heidelberg, 2010.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+A SURVEY OF METHODS FOR ENCRYPTED TRAFFIC CLASSIFICATION AND ANALYSIS
+
+23
+
+16. L. Bernaille and R. Teixeira. Early Recognition of Encrypted Applications. In Proceedings of the 8th International
+Conference on Passive and Active Network Measurement, PAM’07, pages 165–175, Berlin, Heidelberg, 2007.
+Springer-Verlag.
+17. S. Blake-Wilson, M. Nystrom, D. Hopwood, J. Mikkelsen, and T. Wright. Transport Layer Security (TLS)
+Extensions. RFC 4366 (Proposed Standard), April 2006. Obsoleted by RFCs 5246, 6066, updated by RFC 5746.
+18. T. Bujlow, V. Carela-Español, and P. Barlet-Ros. Independent comparison of popular DPI tools for traffic
+classification. Computer Networks, 76(0):75 – 89, 2015.
+19. CAIDA. Cyber-security Research Ethics Dialog & Strategy Workshop, May 2013. Accessed: 2014-12-03.
+20. A. Callado, C. Kamienski, G. Szabo, B. Gero, J. Kelner, S. Fernandes, and D. Sadok. A Survey on Internet Traffic
+Identification. Communications Surveys & Tutorials, IEEE, 11(3):37–52, rd 2009.
+21. Z. Cao, G. Xiong, Y. Zhao, Z. Li, and L. Guo. A Survey on Encrypted Traffic Classification. In Lynn Batten, Gang
+Li, Wenjia Niu, and Matthew Warren, editors, Applications and Techniques in Information Security, volume 490 of
+Communications in Computer and Information Science, pages 73–81. Springer Berlin Heidelberg, 2014.
+22. Cisco Systems, Inc. Network Based Application Recognition (NBAR). Web page, 2014. Accessed: 2014-11-25.
+23. ClearFoundation. l7-filter. Web page, October 2013. Accessed: 2014-11-26.
+24. D. Cooper, S. Santesson, S. Farrell, S. Boeyen, R. Housley, and W. Polk. Internet X.509 Public Key Infrastructure
+Certificate and Certificate Revocation List (CRL) Profile. RFC 5280 (Proposed Standard), May 2008. Updated by
+RFC 6818.
+25. A Dainotti, A Pescape, and K.C. Claffy. Issues and Future Directions in Traffic Classification. Network, IEEE,
+26(1):35–40, January 2012.
+26. A. De Montigny-Leboeuf. Flow attributes for use in traffic characterization. Communications Research Centre
+Canada, Tech. Rep, 2005.
+27. L. Deri, M. Martinelli, T. Bujlow, and A. Cardigliano. nDPI: Open-source high-speed deep packet inspection.
+In Wireless Communications and Mobile Computing Conference (IWCMC), 2014 International, pages 617–622,
+August 2014.
+28. T. Dierks and E. Rescorla. The Transport Layer Security (TLS) Protocol Version 1.2. RFC 5246 (Proposed
+Standard), August 2008. Updated by RFCs 5746, 5878, 6176.
+29. Y. Du and R. Zhang. Design of a Method for Encrypted P2P Traffic Identification Using K-means Algorithm.
+Telecommunication Systems, 53(1):163–168, 2013.
+30. Z. Durumeric, J. Kasten, M. Bailey, and J.A. Halderman. Analysis of the HTTPS Certificate Ecosystem. In
+Proceedings of the 2013 Conference on Internet Measurement Conference, IMC ’13, pages 291–304, New York,
+NY, USA, 2013. ACM.
+31. S. Farrell and H.b Tschofenig. Pervasive Monitoring Is an Attack. RFC 7258 (Best Current Practice), May 2014.
+32. M. Finsterbusch, C. Richter, E. Rocha, J.-A. Muller, and K. Hanssgen. A Survey of Payload-Based Traffic
+Classification Approaches. Communications Surveys & Tutorials, IEEE, 16(2):1135–1156, Second 2014.
+33. S.E. Frankel, K. Kent, R. Lewkowski, A.D. Orebaugh, R.W. Ritchey, and S.R. Sharma. SP 800-77. Guide to IPsec
+VPNs. Technical report, National Institute of Standards & Technology, Gaithersburg, MD, United States, 2005.
+34. A. Freier, P. Karlton, and P. Kocher. The Secure Sockets Layer (SSL) Protocol Version 3.0. RFC 6101 (Historic),
+August 2011.
+35. J. Galbraith and O. Saarenmaa. SSH File Transfer Protocol draft-ietf-secsh-filexfer-13.txt. Internet-Draft, July
+2006.
+36. D. Harrison. Index of BitTorrent Enhancement Proposals. Web page, October 2014. Accessed: 2014-11-27.
+37. L. Hellemons, L. Hendriks, R. Hofstede, A. Sperotto, R. Sadre, and A. Pras. SSHCure: A Flow-Based SSH
+Intrusion Detection System. In Dependable Networks and Services, volume 7279 of Lecture Notes in Computer
+Science, pages 86–97. Springer Berlin Heidelberg, 2012.
+38. R. Holz, L. Braun, N. Kammenhuber, and G. Carle. The SSL Landscape: A Thorough Analysis of the X.509 PKI
+Using Active and Passive Measurements. In Proceedings of the 2011 ACM SIGCOMM Conference on Internet
+Measurement Conference, IMC ’11, pages 427–444, New York, NY, USA, 2011. ACM.
+39. L. Huang, S. Adhikarla, D. Boneh, and C. Jackson. An Experimental Study of TLS Forward Secrecy Deployments.
+Internet Computing, IEEE, 18(6):43–51, November 2014.
+40. IANA - Internet Assigned Numbers Authority. Protocol Registries. Web page, 2014. Accessed: 2014-11-28.
+41. IETF. IETF 88 Proceedings, Technical Plenary, 2014. Accessed: 2014-12-03.
+42. ipoque GmbH. PACE 2.0. Web page. Accessed: 2014-11-25.
+43. ISO. ISO/IEC 7498-1:1994 Information technology – Open Systems Interconnection – Basic Reference Model: The
+Basic Model. International Organization for Standardization, Geneva, Switzerland, 2 edition, November 1994.
+44. T. Karagiannis, K. Papagiannaki, and M. Faloutsos. BLINC: Multilevel Traffic Classification in the Dark. In
+Proceedings of the 2005 Conference on Applications, Technologies, Architectures, and Protocols for Computer
+
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem
+
+24
+
+PETR VELAN, MILAN ČERMÁK, PAVEL ČELEDA, MARTIN DRAŠAR
+
+Communications, SIGCOMM ’05, pages 229–240, New York, NY, USA, 2005. ACM.
+45. C. Kaufman, P. Hoffman, Y. Nir, and P. Eronen. Internet Key Exchange Protocol Version 2 (IKEv2). RFC 5996
+(Proposed Standard), September 2010. Updated by RFCs 5998, 6989.
+46. S. Kent. IP Encapsulating Security Payload (ESP). RFC 4303 (Proposed Standard), December 2005.
+47. A.R. Khakpour and A.X. Liu. An Information-Theoretical Approach to High-Speed Flow Nature Identification.
+Networking, IEEE/ACM Transactions on, 21(4):1076–1089, Aug 2013.
+48. J. Khalife, A. Hajjar, and J. Diaz-Verdejo. A multilevel taxonomy and requirements for an optimal trafficclassification model. International Journal of Network Management, 24(2):101–120, 2014.
+49. R. Koch and G.D. Rodosek. Command Evaluation in Encrypted Remote Sessions. In Proceedings of the 2010
+Fourth International Conference on Network and System Security, NSS ’10, pages 299–305, Washington, DC,
+USA, 2010. IEEE Computer Society.
+50. M. Korczynski and A. Duda. Classifying Service Flows in the Encrypted Skype Traffic. In Communications (ICC),
+2012 IEEE International Conference on, pages 1064–1068, June 2012.
+51. M. Korczynski and A. Duda. Markov Chain Fingerprinting to Classify Encrypted Traffic. In INFOCOM, 2014
+Proceedings IEEE, pages 781–789, April 2014.
+52. Y. Kumano, S. Ata, N. Nakamura, Y. Nakahira, and I Oka. Towards real-time processing for application
+identification of encrypted traffic. In Computing, Networking and Communications (ICNC), 2014 International
+Conference on, pages 136–140, Feb 2014.
+53. G. Maiolini, A. Baiocchi, A. Iacovazzi, and A. Rizzi. Real Time Identification of SSH Encrypted Application Flows
+by Using Cluster Analysis Techniques. In Luigi Fratta, Henning Schulzrinne, Yutaka Takahashi, and Otto Spaniol,
+editors, NETWORKING 2009, volume 5550 of Lecture Notes in Computer Science, pages 182–194. Springer Berlin
+Heidelberg, 2009.
+54. M. Majkowski. SSL fingerprinting for p0f. Web page, June 2012. Accessed: 2014-11-28.
+55. C. Meyer. 20 Years of SSL/TLS Research An Analysis of the Internet’s Security Foundation. PhD thesis, RuhrUniversity Bochum, February 2014.
+56. B. Miller, L. Huang, A.D. Joseph, and J.D. Tygar. I Know Why You Went to the Clinic: Risks and Realization of
+HTTPS Traffic Analysis. In Privacy Enhancing Technologies, volume 8555 of Lecture Notes in Computer Science,
+pages 143–163. Springer International Publishing, 2014.
+57. A. Moore, M. Crogan, and D. Zuev. Discriminators for use in flow-based classification. Technical report, Queen
+Mary, University of London, 2005.
+58. T.T.T. Nguyen and G. Armitage. A Survey of Techniques for Internet Traffic Classification Using Machine
+Learning. Communications Surveys & Tutorials, IEEE, 10(4):56–76, October 2008.
+59. Y. Okada, S. Ata, N. Nakamura, Y. Nakahira, and I Oka. Application Identification from Encrypted Traffic Based on
+Characteristic Changes by Encryption. In Communications Quality and Reliability (CQR), 2011 IEEE International
+Workshop Technical Committee on, pages 1–6, May 2011.
+60. J. Pechanec. How the SCP protocol works. Jan Pechanec’s Weblog. Weblog post, July 2007. Accessed: 2014-1030.
+61. Qualys, Inc. HTTP Client Fingerprinting Using SSL Handshake Analysis. Web page, 2014. Accessed: 2014-1128.
+62. Sandvine, Inc. Global Internet Phenomena Report 1H 2014, May 2014. Accessed: 2014-11-25.
+63. Skype and Microsoft. Skype. Web page, 2014. Accessed: 2014-11-25.
+64. Skype Limited. Skype ConnectTM Requirements Guide. Online, 2011. Accessed: 2014-11-01.
+65. sslbl.abuse.ch. SSL Blacklist. Web page, 2014. Accessed: 2014-11-28.
+66. W. Stallings. Protocol Basics: Secure Shell Protocol. The Internet Protocol Journal, 12(4), December 2009.
+67. G. Sun, Y. Xue, Y. Dong, D. Wang, and C. Li. An Novel Hybrid Method for Effectively Classifying Encrypted
+Traffic. In Global Telecommunications Conference (GLOBECOM 2010), 2010 IEEE, pages 1–5, Dec 2010.
+68. Y. Wang, Z. Zhang, L. Guo, and S. Li. Using Entropy to Classify Traffic More Deeply. In Networking, Architecture
+and Storage (NAS), 2011 6th IEEE International Conference on, pages 45–52, July 2011.
+69. C.V. Wright, F. Monrose, and G.M. Masson. On Inferring Application Protocol Behaviors in Encrypted Network
+Traffic. J. Mach. Learn. Res., 7:2745–2769, December 2006.
+70. T. Ylonen and C. Lonvick. The Secure Shell (SSH) Transport Layer Protocol. RFC 4253 (Proposed Standard),
+January 2006. Updated by RFC 6668.
+71. M. Zhang, W. John, KC Claffy, and N. Brownlee. State of the Art in Traffic Classification: A Research Review. In
+PAM ’09: 10th International Conference on Passive and Active Measurement, Student Workshop, 2009.
+72. M. Zhang, H. Zhang, B. Zhang, and G. Lu. Encrypted Traffic Classification Based on an Improved Clustering
+Algorithm. In Trustworthy Computing and Services, volume 320 of Communications in Computer and Information
+Science, pages 124–131. Springer Berlin Heidelberg, 2013.
+Copyright c 2014 John Wiley & Sons, Ltd.
+Prepared using nemauth.cls
+
+Int. J. Network Mgmt (2014)
+DOI: 10.1002/nem

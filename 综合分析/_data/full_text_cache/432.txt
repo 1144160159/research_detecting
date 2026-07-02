@@ -1,0 +1,900 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025 5723
+
+ Fed-RWM: A Robust Watermarking Approach for
+ Federated Learning Model Ownership Protection
+ Xin Tong , Student Member, IEEE, Shike Li, Graduate Student Member, IEEE, Ni Jin, and Baojiang Cui
+
+ Abstract—The interconnected nature of the Internet of Things raw data. This advantage makes FL widely applicable in IoT,
+(IoT) significantly enhances the efficiency of industries such as including intrusion detection [5], smart healthcare [6], and
+smart manufacturing, but it also raises concerns about data pri- smart manufacturing [7].
+vacy. Federated learning (FL) utilizes an edge-cloud collaborative
+mode that shares models in the cloud instead of data, effectively FL protects the original data privacy but introduces the
+mitigating data privacy leakage in edge IoT devices. However, risk of model leakage [8]. These models are collaboratively
+FL suffers from the risk of model leakage, and both the cloud trained by task initiators and edge devices (e.g., factories,
+and the edge may illegally copy and sell the model, infringing hospitals, banks) within the Internet of Things, consuming
+on model ownership. To prevent such misbehavior, it is essential significant computational and data resources. The ownership of
+to design a robust method for verifying the model ownership. In
+this paper, we propose Fed-RWM, a novel watermarking method the resulting FL models resides with the FL group. FL model
+for FL models that provides robust ownership verification and leakage refers to the unauthorized copying, distribution, or sale
+avoids both edge and cloud leakage of watermark information. of FL models by untrustworthy entities (e.g., compromised
+Fed-RWM trains the watermark by sharing parameters with an servers or clients) to third parties not involved in the training
+additional model and incorporates a watermark recovery method process. Such third parties may deploy the stolen models
+during verification to counter complex watermark removal
+attacks, which enhances the verification robustness. Fed-RWM on embedded devices (e.g., robots, smart vehicles, mobile
+introduces a new training paradigm that performs continuous phones) for commercial sale or offer online access for profit.
+watermarking training at the FL task initiator, preventing access This behavior seriously infringes on the ownership rights of
+to watermark information at both the edge and the cloud. The the FL group, which can lead to substantial financial losses
+experimental results demonstrate that Fed-RWM performs well and undermine the fairness of the market for neural network
+in model ownership verification and fidelity, is robust to different
+watermark removal attacks, and can provide reliable protection models [9]. In the business environment, enterprises, as FL
+for federated learning models. model producers, should act as the main body to maintain the
+ legal use of the models, respect originality, reject plagiarism,
+ Index Terms—Internet of Things, federated learning, model
+watermarking, ownership verification. and create a healthy market environment. Therefore, protecting
+ the intellectual ownership of FL models is essential.
+ Model watermarking can effectively protect FL model
+ I. I NTRODUCTION ownership. It embeds a watermark into the FL model without
+ affecting performance and creates an ownership verification
+ HE INTERNET of Things (IoT) enhances the
+T interconnection of devices like smartphones, smart
+appliances, and vehicles by integrating technologies such
+ mechanism to identify model attribution [10]. Existing FL
+ model watermarking methods are categorized based on watermark embedding and training location into client-side and
+as artificial intelligence (AI), 5G communications, and edge
+ server-side watermarking. These methods assume that either
+computing, thereby improving daily convenience. These
+ the client-side or server-side is dishonest, with watermark
+devices collect vast amounts of private data daily, which are
+ embedding training completed on the honest side. The honest
+then transmitted to cloud servers for centralized processing.
+ party explicitly knows the watermark embedding method
+In practice, cloud servers are often insecure, posing a risk of
+ and details (e.g., embedding position, watermark content). In
+raw data leakage [1], [2], [3]. Federated learning (FL) [4], a
+ reality, both the server and clients may be dishonest, making
+distributed machine learning framework, has been proposed
+ it easy to use embedding information to precisely remove the
+as an alternative. In the FL system, multiple smart devices
+ watermark and illegally sell the model. Moreover, while the
+train the model locally, and only model parameters are
+ dishonest party cannot access the embedding information, it
+exchanged with the cloud server, avoiding direct leakage of
+ can still launch several watermark removal attacks that disrupt
+ Received 25 December 2024; revised 10 June 2025; accepted 30 July 2025. the verification process, leading to failure [8], see Fig. 1. We
+Date of publication 7 August 2025; date of current version 5 December 2025. found that current FL watermarking methods are based on [11]
+The associate editor coordinating the review of this article and approving it and not resilient to novel watermark elimination attacks, such
+for publication was Y. Miao. (Corresponding author: Baojiang Cui.)
+ Xin Tong, Ni Jin, and Baojiang Cui are with the School of Cyberspace as parameter scaling and hybrid attacks.
+Security, Beijing University of Posts and Telecommunications, Beijing To address these issues, we propose a robust watermarking
+100876, China (e-mail: cuibj@bupt.edu.cn). method, Fed-RWM, for protecting FL model ownership. We
+ Shike Li is with the School of Computer and Information Technology,
+Shanxi University, Taiyuan 237016, China. assign the watermark embedding and training tasks to the
+ Digital Object Identifier 10.1109/TNSM.2025.3596692 honest FL task initiator, thus preventing dishonest server-side
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5724 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ 3) We conduct experiments on Fed-RWM across multiple
+ models and datasets, including CIFAR-10, MNIST,
+ IMDB, and WUSTLIIOT-2021, to demonstrate its applicability in image, text, and IOT network intrusion
+ detection tasks. We also consider non-independent identically distributed (non-IID) and independent identically
+ distributed (IID) scenarios, the results show that Fed-
+ RWM performs well in terms of robustness, validity,
+ fidelity, and local model protection, etc.
+Fig. 1. Federated model leakage scenario and watermark removal methods. The remainder of the paper is as follows: Section II
+ reviews recent research on DNN and FL model watermarking.
+ Section III introduces the preliminaries of FL and FL based
+or client access to the watermark embedding information. This on homomorphic encryption. Section IV introduces the threat
+pattern is capable of adapting the secure federated learning model. Section V explains the composition and workflow
+framework based on homomorphic encryption. This paper of Fed-RWM. Section VI presents the experimental results.
+focuses on describing the watermark training process in this Finally, Section VII provides the conclusion.
+secure federated learning framework, as detailed in Section V.
+More importantly, we design an innovative approach to water- II. R ELATED W ORK
+mark training and robustness verification. This approach em-
+ In this section, we first introduce the related works on DNN
+ploys a secret neural network, with its parameters divided
+ watermark, and then review the latest development of FL-DNN
+into a watermark and a watermark key. The watermark is
+ watermark methods and discuss their shortcomings.
+embedded in the FL model, and the watermark key is used
+for ownership verification. In the validation phase, we design
+a watermark recovery method to counter complex watermark A. DNN Watermark
+removal attacks, thereby enhancing the robustness of the Deep neural network watermarking is an effective way to
+watermarking technique. prevent the unauthorized use of models. This method embeds a
+ Fed-RWM is rigorously evaluated using four popular DNN valid watermark into the model’s parameters or functions, and
+models (including CNN and RNN) and four benchmark datasets. verifies ownership through a specific validation mechanism,
+It demonstrates advanced performance in the following metrics. which prevents plagiarism [12]. Currently, DNN watermarking
+In terms of fidelity, the accuracy of the FL watermarking methods in academia are primarily categorized as either whitemodel is nearly identical to that of the no-watermarking model, box and black-box methods.
+with a difference of less than 1%. In terms of validity, it 1) White-Box Watermarking: White-box watermarking
+can embed watermarks on both global and local models, and mainly embeds the watermark by modifying the model’s
+the watermark validation performance can reach 95%-98%. In structure or parameters, requiring access to its internal
+terms of robustness, Fed-RWM is able to robustly cope with architecture and parameter space [12]. During validation, it
+parameter scaling, hybrid novel attacks, and maintains its own- verifies ownership by extracting the model watermark and
+ership verification capability without significant degradation. comparing it to the original watermark.
+Furthermore, our method can embed watermarks across various Uchida et al. [11] proposed the first white-box method,
+network architectures with generality. employing the parametric regularizer to embed an N-bit string
+ In summary, the main contributions of this paper are as watermark s (s ∈ 0, 1N ) into the convolutional layer weights
+follows: during protected model training. They extract watermark ŝ
+ 1) We propose Fed-RWM, a robust watermarking method from the suspicious model Ms , then calculate the hamming
+ for FL models. The method trains a neural network distance between ŝ and s to verify ownership. This method
+ model, sharing some parameters as watermarks with the demonstrates fidelity and verifiability and is robust to fine-
+ FL model, and using the remaining parameters as keys tuning and pruning attacks.
+ for watermark verification. To the best of our knowledge, Fan et al. [13] proposed a passport-based DNN ownership
+ this is a novel approach, distinct from existing methods, verification scheme, which adds a passport layer after the
+ and the first FL model watermarking method capable convolutional layer. They embed the watermark into the scale
+ of preventing both server-side and client-side dishonest parameters of the BN layers. During verification, they add
+ behavior. the passport layer to the network and detect the watermark to
+ 2) We design a novel and robust ownership verification verify the identity. Chen et al. [14] embed model fingerprint
+ method. It combines watermarking and watermarking (watermark) into the probability density function of trainable
+ keys within a new secret network model, leveraging weights. They extract the fingerprint and compute the dot prodthe model’s performance on secret data as an indicator uct with the owner’s signature to verify models. Nevertheless,
+ for ownership verification. Additionally, we integrate a most white-box methods focus on CNN-based models and do
+ watermark recovery function to counter novel watermark not consider the damage of the parameter scaling attack.
+ elimination attacks, enhancing the robustness of the Unlike the above methods, Lv et al. [15] proposed the
+ verification process. HufuNet, which trains an encoder-decoder network, embeds
+TONG et al.: Fed-RWM: A ROBUST WATERMARKING APPROACH FOR FL MODEL OWNERSHIP PROTECTION 5725
+
+ TABLE I
+C ATEGORIZATION OF E XISTING FL WATERMARKING M ETHODS B: B LACK -B OX , W: W HITE -B OX , S: E MBEDDING ON THE S ERVER , C: E MBEDDING ON
+ THE C LIENT, I: E MBEDDING ON THE I NITIATOR
+
+the encoder as the watermark in the DNN model and uti- 1) Client-Side Watermarking: Yang et al. [21] proposed a
+lizes the decoder for verification. It is capable of protecting client-side backdoor watermarking method applied to secure
+models based on CNN and RNN architectures. Inspired by FL. It places key samples with the FL initiator and increases
+this approach, we develop a secret network composed of their contribution through a scaling factor, thus embedding
+convolutional and fully connected layers, embedding half of its the backdoor watermark into the FL model. However, it
+parameters in every layer of the protected model and verifying compromises fairness in FL systems. Li et al. [10] proposed
+the model through the remaining parameters. We apply the FedIPR, allowing clients to generate triggers and features to
+designed method to model protection in federated learning. embed watermarks during local training through black-box
+ 2) Black-Box Watermarking: Black-box watermarking and white-box techniques. However, due to the existence of
+employs backdoor attack techniques, constructs key samples, semi-honest clients, FedIPR cannot ensure the embedding of
+and includes them as triggers in the training set [16]. This correct watermarks and cannot resist novel watermark removal
+method embeds the backdoor watermark in the DNN model by attacks.
+simultaneously learning primary and backdoor tasks. During 2) Server-Side Watermarking: Tekgul et al. [22] introduced
+validation, the trigger set is input into the model, activating WAFFLE, a server-side black-box watermarking method,
+the backdoor task to verify ownership. Importantly, it does which embeds backdoor watermarking by retraining the global
+not require access to the model’s internal architecture. model. It is the first approach designed to protect FL models.
+ Bansal et al. [17] proposed a stochastic smoothing technique Chen et al. [9] proposed FedRight, a black-box watermarking
+that ensures the parameters of the backdoor watermarking method. It generates adversarial samples from key samples
+model fluctuate within an l2 normative threshold, mini- as model fingerprints. These fingerprints are fed into the
+mizing the effect of the watermarking task. This method global model, with the output distribution features recorded
+enhances robustness against backdoor watermark removal and used as training data for a detector. During verification,
+attacks. Lao et al. [18] modified small-scale parameters in the fingerprints are input into the suspicious model, and the
+the protected model, ensuring it outputs pre-specified labels detector analyzes its output features to determine ownership.
+when inputting key samples, serving as proof of ownership. Wu et al. [24] proposed the Verifiable Property Federated
+Other than that, there are other similar black-box watermarking Learning framework (VPFL) applied to the IoT, which embeds
+approaches [19], [20]. Despite these innovations, the adver- white-box watermarking on the server-side for the global
+saries can impersonate the legitimate owner by searching model. Shao et al. [8] developed FedTracker, embeds blackfor adversarial samples and using them to construct trigger box watermarks in the global model and distinct white-box
+sets [15]. watermarks for every client in the BN layer, which has traceability. Chen et al. [23] designed FedMCT, which considers
+ the unbalanced resources of heterogeneous clients and groups
+B. FL-DNN Watermark them. In this method, the local model of each grouping
+ In federated learning, some researchers have proposed has the same black-box watermark, and different white-box
+various FL model watermarking methods, which we classify watermarks, which improves the tracking efficiency. However,
+according to the location and embedding method of the these methods are not resistant to novel attacks and ignore
+watermark, see Table I. client dishonesty.
+5726 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ In summary, existing server-side and client-side approaches homomorphic encryption [26], and secure multi-party compufail to account for scenarios where both parties are dishonest. tation [27], resulting in secure federated learning (SFL). In
+Although [21] addresses the issue, it expands the initiator’s this paper, we focus primarily on HE.
+contribution, which is obviously not fair. Since black-box Specifically, the HE algorithm generates a pair of public
+watermarking can be deciphered through input-output anal- and private keys (pu_key, pr_key) for clients. The client
+ysis, existing white-box methods rely on [11], which fail Ci encrypts wir using pu_key to obtain Enwir and then
+to resist novel attacks, thus we propose a novel white-box uploads it. S directly aggregates the collected ciphertexts
+watermarking technique, distinct from existing methods. Our {Enw1r , . . . , Enwir , . . . , Enwnr } to obtain encrypted global
+method resists novel attacks and provides enhanced security, model parameters Enwgr . Ci decrypts Enwgr using the pr_key.
+as the watermarking information is known only to the initiator. Through the encryption process, the server is unable to access
+Furthermore, it can be adapted to secure federated learning the plaintext parameters, effectively preventing its dishonest
+scenarios based on homomorphic encryption and models with actions.
+diverse network architectures.
+ IV. T HREAT M ODEL
+ III. P RELIMINARIES In this paper, we assume that both the server and the client
+A. Federated Learning (FL) are dishonest, and both could potentially use some methods to
+ remove the watermark and thus steal the model.
+ FL is a distributed machine learning framework allowing 1) Adversary’s Objective: They aim to remove the watermultiple participants to train a global model collaboratively mark without significantly compromising the performance of
+without sharing their data. It is an excellent solution to the the stolen model. More clearly, their objectives are formulated
+issue of data lack and privacy preservation. A typical FL as follows:
+system consists of n clients C = {C1 , . . . , Ci , . . . , Cn } and ⎧
+a central server S. In every round r ∈ {1,2,. . .,R}, client ⎨ fv (w )  = True 
+ arg max P yij |xij ; w ≈ arg max P yij |xij ; ŵ (4)
+Ci downloads the global model G r −1 from S. Afterwards, ⎩
+ s.t. ∀xij ∈ X , ∀yij ∈ Y
+the parameters wgr −1 of G r −1 are used to initialize the
+local model Lir −1 with parameters wir −1 . After iteratively where fv (·) denotes the verification procedure, w denotes
+training (1) using local data D ={D1 , . . . , Di , . . . , Dn }, Ci the stolen watermarked model parameters, ŵ denotes the
+uploads wir to S. S performs the aggregation calculation on watermarked model parameters after removal attacks, xij and
+the collected {w1r , . . . , wir , . . . , wnr } to obtain wgr and sends yij are the jth sample and label in Di , X and Y are the sample
+them to clients. space and label space of D.
+   2) Adversary’s Knowledge: They possess the stolen FL
+ wir = wir −1 − ρ∇L wir −1 ; Di (1) model, fully understand its parameters and architecture, and
+ 
+ n are proficient in deep learning principles and model waterwgr = λri wir (2) marking techniques.
+ i=1 3) Adversary’s Capability: They can access local datasets,
+ high-performance local and global watermarked models, and
+where i is the index of clients, r is the index of training
+ attempt to remove watermarks using the following deep
+round, ρ is the learning rate. L(·; ·) is loss function, wir is
+ learning techniques:
+the local model parameters of client Ci in rth round. λri
+ Fine-tuning. The fine-tuning attack is an adversary retrainrepresents the aggregation weight, wgr represents the global
+ ing the watermarked model on an additional dataset using a
+model parameters in rth round.
+ low learning rate [28], [29]. Owing to the non-convex nature
+ The optimization objective of FL is outlined in (3). Through
+ of deep learning [30], the attack drives the model into a
+multiple training rounds, FL will end when the global model
+ different local optimum, resulting in altered model parameter
+converges or reaches the defined training rounds.
+ distributions and thus removing the watermark.
+ 
+ n
+   Pruning. The pruning aims to reduce model complexity
+ arg minlg (wg ) = λi li (wg ), li (wg ) = Exj ∼Di L wg , xj by eliminating unimportant parameters [31]. As pruning may
+ wg ∈ Rd i=1 eliminate watermark parameters, it also can be considered a
+ (3) threat. In this paper, we implement the pruning attack using the
+where li represents the local optimisation objective, lg rep- method described in [11]. Specifically, we rank the parameters
+resents the global optimisation objective, xj represents the of the watermarked model in every layer by absolute value and
+sample in Di . sequentially set them to zero according to the pruning rate.
+ Parameter scaling. The parameter scaling attack targets neural networks with relu activation functions [32].
+B. Federated Learning Based on Homomorphic Encryption Specifically, it scales up the parameters of one layer and scales
+ Researchers have confirmed that FL is only partially secure. down the parameters of the next layer by a factor of m.
+Semi-honest servers can recover local private data from The modified neural network’s performance remains nearly
+model gradient parameters [5]. Therefore, they have integrated unchanged, but the altered parameters may compromise the
+privacy-preserving techniques like differential privacy [25], watermark. Therefore, it also poses a threat to the watermark.
+TONG et al.: Fed-RWM: A ROBUST WATERMARKING APPROACH FOR FL MODEL OWNERSHIP PROTECTION 5727
+
+ TABLE II
+ S YMBOLS AND E XPLAINS
+ Algorithm 1 Workflow of Fed-RWM
+ Input: Total number of clients n, Percentage of training
+ clients k, Total rounds R, Local learning rate ρl , Local
+ epoch El , Local dataset Di , Encryption and decryption
+ keys pu_key, pr _key.
+ Output: Protected global model parameters. wgR
+ Initiator:
+ 1: Initialize the parameters of protected model and SNet: wg0 ,
+ ws0 ;
+ En(·)
+ 2: wg0 − −−−−→ Enwg0 ; // Encrypted upload to server
+ pu _key
+ 3: ws , sp = WatermarkGeneration(); // Alg. 2
+ Server:
+ 4: for r = 1 to R do
+ 5: Select nk clients as the training subset C r ;
+ 6: for i in C r do
+ 7: Enwir = LocalUpdate(Enwgr −1 );
+ 8: end for
+ |D |
+ 9: Enwgr = i∈C r  ri |D | × Enwir ;
+ i∈C i
+ 10: Enwgr = Embedding_Training(Enwgr ); // Alg. 3,
+ execute in the Initiator
+ 11: end for
+ De(·)
+ 12: return EnwgR −−−−→ wgR .
+ pr _key
+ Client:
+ Procedure LocalUpdate()
+ De(·)
+ Hybrid. The hybrid attacks combine three water- 13: Enwgr −1 −−−−→ wgr −1 ;
+mark removal attacks: fine-tuning, pruning, and scaling. pr _key
+ r −1
+Sophisticated adversaries may execute these attacks simulta- 14: wi ← wgr −1 ;
+neously to eliminate watermarks. 15: for epoch e = 1, 2, . . . , El do
+ Overwrite. The overwrite attack involves an adversary 16: for each batch b = {x , y} ∈ Di do
+embedding their watermark into the model using the same 17: wir ← wir −1 − ρl ∇L(wir −1 ; b);
+approach, which may result in the original watermark being 18: end for
+overwritten or modified. 19: end for
+ En(·)
+ 20: wir −−−−−→ Enwir ;
+ pu _key
+ V. T HE P ROPOSED M ETHOD 21: return Enwir .
+A. The Components of Fed-RWM
+ In this paper, we propose Fed-RWM, an approach designed
+to protect the ownership of FL model in the IoT. Fed-RWM
+comprises three components: an initiator, multiple clients, and Specifically, we create a secret network model (SNet), embed
+a server. Their capabilities are elaborated as follows. some of its parameters wm into the protected FL model M,
+ Initiator. The initiator I (I ∈ C ) represents an industrial and utilize the remaining parameters wk as the watermarking
+agent or smart device that initiates federated learning tasks key for verification. The combination of wm and wk conin IoT. It can participate in local model training as a client. stitutes the SNet’s complete parameter space ws . We utilize
+In addition, it undertakes tasks such as watermark generation, ws to protect M and to identify suspicious models. The
+embedding & training, and ownership verification. implementation details of watermark generation, watermark
+ Clients. Client groups C represent industrial agents or embedding & training, and ownership verification are provided
+smart devices participating in federated learning. They are in Sections V-C–V-E. Next, we elaborate on Fed-RWM:
+mainly responsible for decrypting global model, training and 1) Initialization: The initiator I issues the FL task to the
+encrypting local models. clients and the server. Specifically, I first creates the protected
+ Server. The server S represents the cloud server, which per- FL model M and initializes its parameters wg0 . Afterwards,
+forms homomorphic encryption aggregation on the uploaded
+ it encrypts and uploads Enwg0 = En(wg0 ) to server S.
+local model, and randomly selecting clients to participate in
+ Here, En(·) represents the encryption computation. Finally, I
+the training.
+ constructs the secret network SNet to handle the watermarking
+ task and initializes its parameters to ws0 .
+B. The Workflow of Fed-RWM After receiving the FL task, S counts the participating
+ The main workflow of Fed-RWM is illustrated in Fig. 2 client group C, receives Enwg0 from I, and randomly selects
+and Alg. 1. The main symbols are presented in Table II. a subset C r from C to participate in the training round.
+5728 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 2. Workflow of Fed-RWM.
+
+These clients in C are required to create local models C. Watermark Generation
+L ={L1 , . . . , Li , . . . , Ln } locally based on M. The watermark generation procedure is implemented in the
+ 2) Initiator Generates Watermark: The initiator completes initiator and consists of two parts: watermark generation and
+the watermark generation task at the first FL training round, position generation. Its workflow is shown in Alg. 2 and
+thus obtaining the initial watermark wm r and the initial Fig. 2.
+watermark key wk r (i.e., r = 1). For detailed information, 1) Watermark Generation: SNet is composed of four consee Section V-C. volutional layers and one fully connected layer. We define
+ 3) Client Local Training: The client Ci downloads and the first two convolutional layer parameters as wm and the
+decrypts Enwgr −1 (De(Enwgr −1 ) = wgr −1 , De(·) is decryp- remaining layer parameters as wk. Here, wm ∪ wk = ws and
+tion operation) from S, using it to initialize wir −1 . Subsequent, wm ∩ wk = ∅. wm and wk are jointly utilized to extract the
+Ci initiates the LocalUpdate procedure, which uses local data features of secret data, with their classification performance
+Di to train wir −1 via gradient descent (1). Finally, the client serving as a criterion for verifying ownership. When the
+encrypts wir and uploads it to the server. Notably, the initiator watermark generation process begins, the SNet is trained on
+can also participate in training as a client if it is selected into the small secret dataset Ds with a few iteration rounds. It is
+the training subset. important to note that Ds and FL task’s dataset can be entirely
+ 4) Server Aggregation: S aggregates the collected local different. After training, wm is used as the watermark to embed
+model ciphertexts to obtain Enwgr and sends it to the initiator. in the first round of FL, while wk serves as the corresponding
+Later, it instructs the initiator to start the Embedding_Training watermark key. Both are stored in the initiator.
+procedure for embedding or training the watermark and 2) Positions Generation: About the position of the waterreceives Enwgr back from the initiator. Additionally, S is also mark embedding, we generate it using random sampling.
+required to select the client subset C r +1 for the next round Random generation makes the position information of the
+randomly. watermark not inferable, and it is difficult for the adversary
+ 5) Initiator Embeds and Trains Watermark: I receives to detect the position information by analysing the watermark
+and decrypts Enwgr from the server. It then starts the parameters and model parameters. Specifically, we count the
+Embedding_Training procedure, which procedure embeds the number of all parameters of the protected model M except
+watermark wm in the first round and trains SNet to update the the softmax layer, denoted as |wg |. After that, we count
+watermark key wk in the remaining rounds. In every round the number of parameters in wm, denoted as |wm|. Next,
+of FL, the current wm and wk are saved locally, and the we randomly generate |wm| values in the range [0, |wg |] as
+watermarked wgr is then returned to the server after encryption. one-dimensional watermark positions (5). Since the network
+We will describe this procedure in detail in Section V-D. structure of M is mostly multi-dimensional, we convert rp into
+ 6) End of Training: Continuously repeat steps 3-5 until the corresponding multi-dimensional positions sp, as described
+either the number of training rounds R is reached or in Alg. 2. Each element in sp is a mask matrix consistent with
+convergence is achieved. the shape of wg (i.e., the value is 1 at selected positions and
+TONG et al.: Fed-RWM: A ROBUST WATERMARKING APPROACH FOR FL MODEL OWNERSHIP PROTECTION 5729
+
+Algorithm 2 WatermarkGeneration Algorithm 3 Embedding_Training
+Input: M’s parameters wg , SNet learning rate ρs , SNet epoch Input: ρs , Es , Ds , pu_key, pr _key, Enwgr , sp, wk r −1 .
+ Es , Secret dataset Ds . Output: Protected encryption global model parameters
+Output: SNet parameters ws , secret position sp. Enwgr .
+ Positions Generation: De(·)
+ 1: Enwgr −−−−→ wgr ;
+ 1: rp ←− Eq.5; pr _key
+ 2: layers ←− M’s total number of layers except softmax 2: if r=1 then
+ divide
+ layer; 3: wsr −−−−→ [wm r , wk r ]; // wsr from Alg. 2.
+ 3: sp = {0 · wg }|rp| ; 4: wgr ←− Embeding(sp, wm r , wgr ); //Based on sp, wm r
+ 4: for i = 0 to |rp| do are sequentially embedded in wgr .
+ 5: for ls ≤ layers do 5: else
+ 6: Nls ←− Number of parameters in layer ls; 6: wm r ←− Extract(sp, wgr ); //Extract the watermark in
+ 7: if rp[i ] ≤ Nls then wgr .
+ 8: Set the value of this position in spi to 1; 7: wsr −1 = wm r ∪ wk r −1 ;
+ 9: else 8: for epoch e = 1,2,. . .,Es do
+10: rp[i ]− = Nls ; 9: wsr ←− Eq. 8;
+11: end if 10: end for
+12: end for 11: wk r ←− Eq. 9;
+13: end for 12: end if
+ Watermark Generation: 13: Store wm r , wk r ;
+14: for epoch e = 1,2,. . .,Es do En(·)
+ 14: return Enwgr ←−−−−− wgr .
+15: for each batch b = {x , y} ∈ Ds do pu _key
+16: ws ← ws − ρs ∇L(ws ; b);
+17: end for
+18: end for
+ SNet (7). Due to the federated forgetting phenomenon, wgr
+19: return ws , sp.
+ changes in every round of FL, which means wm r may
+ not match wk r −1 . This mismatch could result in wsr −1
+ underperforming compared to the previous round, thereby
+0 for the rest). The embedding positions defined by sp cover hindering watermark verification. To avoid this, we continunearly every layer of M, allowing us to incorporate watermark ously fine-tune wsr −1 at each round of communication based
+information across most of them. In contrast to state-of-the-art on continuous learning, resulting in wsr . Unlike the training
+(SOTA) FL white-box methods [8], [10], [23], which embed process in the watermark generation phase, we freeze the
+watermarks into BN layers, our approach is more versatile and parameter space of wm r and update wk r −1 to wk r by gradient
+can be applied even to smaller models that lack BN layers. descent (8). In order to prevent the fine-tuning from leading
+  to SNet overfitting, we set up an early stopping mechanism.
+ rp = rp0 , . . . , rpi , . . . , rpj , . . . , rp|wm| ⊆ 0, |wg |
+ This mechanism saves the model parameters from the previous
+ s.t. i = j, rpi = rpj (5) round if performance degrades on the validation set. After finewhere wg denotes the global model parameters of M, i and j tuning, wk r is able to adapt to wm r and wsr will regain its
+denote the index of rp. original performance (9).
+ ⎛ ⎞
+  sp0  wgr
+D. Watermark Embedding and Training wm r = Extract sp, wgr = ⎝ ··· ⎠ (6)
+ The watermark embedding and training in our approach sp|sp|  wgr
+takes place in the initiator. During the first round of FL
+ wsr −1 = wm r ∪ wk r −1 (7)
+(i.e., r = 1), the initiator receives Enwgr from the server  
+and decrypts it into wgr . Next, we sequentially embed the wsr = wsr −1 − ρs ∇wk r −1 L r
+ wm , wk r −1
+ ; Ds (8)
+watermark wm generated from Alg. 2 into wgr according wk r = wsr \wm r (9)
+to the position sp. This embedding procedure will result in
+watermarked FL model parameters wˆgr . These parameters are where Extract(·) denotes extract model watermark, wm r
+encrypted and sent to the server as the FL global model denotes wm in rth round, wsr denotes the full parameters of
+parameters wgr for this round. Notably, in the first round, the the SNet model in the rth round.
+model has yet to converge, and the parameters float is vast, Through the simultaneous and coordinated learning of the
+which can effectively ensure the concealment of the embedded watermarked FL model and SNet, the FL model achieves
+watermark. higher performance on the primary task when SNet also
+ In subsequent training rounds, we carry out the following performs well on Ds . Consequently, the optimization objective
+steps (6)–(9). First, the initiator extracts wm r from wgr using of Fed-RWM can be formulated as shown in (10). It is
+the predefined position (6). Then, we merge wm r with wk r −1 important to note that |wm|  |wg |, meaning the number
+which from the previous round as the parameters wsr −1 for of parameters in wm is significantly smaller than in wg ,
+5730 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+minimizing the negative impact of the embedding and training mean. These means are divided to obtain the scaled values
+of the watermark on the protected FL model. sv l (13) for each layer of the model.
+ ∗
+ 
+ n Θls = Usl Σls Vsl
+ arg minl (wg ) = λi L(wg ; Di ), arg minl (wk ) = L(ws ; Ds ) ∗
+ w g ∈ Rd i=1 w s ∈ Rd Θlg = Ugl Σlg Vgl (12)
+ s.t. ws = wm ∪ wk , wm ⊂ wg (10)  
+ sv l = tr Σls /tr Σlg (13)
+ where U and V ∗ are the left singular matrix and right singular
+E. Ownership Verification
+ matrix after matrix singular value decomposition. sv l is the
+ When participants in FL discover the suspicious model, the l-th layer scaling factor value. tr(·) is the trace of the matrix.
+initiator I is notified immediately. I triggers the verification 4) Calculate the Scaling Factor Directions: SVD cannot
+procedure to verify the model property rights. In this paper, determine the direction difference between Θls and Θlg . Thus
+we set up a test dataset Dst in the initiator with the same we calculate their cosine similarity to reflect the direction sd l .
+distribution as Ds but without overlapping samples. For clarity, If the similarity is negative, the scaling factor of this layer is
+we notate the watermark extracted from Ms as wms , and the negative, i.e., sd l is −1, otherwise sd l is 1.
+merged wms and wk as wˆs . We set a validation metric, model ⎧
+ ⎨ Σl s ·Σg l ≤ 0
+ ⎪ l l
+accuracy score AS.
+ ||Σs ||·||Σg ||
+ sd l = −1
+  (14)
+ 1  ⎪ Σl ·Σl
+ ⎩ wm r −1 l s g l > 0 sd l = 1
+ AS = I arg max fwˆs (x ) = y (11) ||Σ ||·||Σ ||
+ |Dst | s g
+ (x ,y)∈Dst
+ 5) Watermark Recovery and Verification: We multiply the
+where I(·) denotes the indicator function, fwˆs (·) denotes the sv l and sd l values for each layer to compute the scaling
+prediction of test sample x with wˆs . AS represents the accuracy factor sf l (15) of each layer. The combination of pruning and
+of wˆs on Dst . The larger its value, the more watermarking fine-tuning attacks causes the pruned parameters to deviate
+information the protected model contains. Due to the non- significantly from the original parameters after fine-tuning.
+convexity of the deep model, it is almost impossible for an These deviations are further amplified by the scaling factor,
+innocent model to perform well on AS. On the contrary, compromising the recovery of the model and watermark.
+infringing models have higher values on AS. We adopt a hard Therefore, We eliminate these parameters by properly pruning
+threshold β to verify ownership, i.e., if AS ≥ β, the suspected the suspicious model before recovery. We utilize the highest
+model is confirmed to be infringement. pruning rate p that can maintain the performance of the model.
+ Nevertheless, attackers may utilize watermark removal tech- The scaling factors are then applied to the corresponding layer
+niques to erase the watermarks, causing AS to fail to identify parameters of the pruned suspicious model to reconstruct the
+infringement on suspicious models following specific attacks. original model (16)-(17). Finally, the watermark of the recov-
+To enhance the robustness of ownership verification, this paper ered model is extracted and combined with the watermark key
+designs an enhanced verification method based on watermark to verify ownership.
+recovery. Specifically, we perform AS validation on Ms . If the
+ sf l = sv l sd l (15)
+validation is successful (i.e., plagiarism is confirmed), we end ⎛  0 ⎞
+ ⎛ 0 ⎞ prune wsus ,p
+the validation. If the behaviour does not exist, we perform sf ⎜ ⎟
+the watermark recovery method prior to AS validation to ⎜ ··· ⎟ ⎜ · · ·  ⎟
+ ⎜ ⎟ ⎜ ⎟
+ wrecovery = ⎜ sf l ⎟ ⎜ prune wsus , p ⎟
+ l
+confirm whether the model suffers from the scaling attack and ⎜ ⎟⎜ ⎟ (16)
+hybrid attacks, respectively (Other attacks do not significantly ⎝ ··· ⎠ ⎜⎝ ···
+ ⎟
+ ⎠
+affect the AS performance). The key point of the watermark sf layers layers
+ prune wsus ,p
+recovery is to determine the scaling factor for each layer of
+Ms . For more, see Fig. 6, where the specific recovery steps prune(w , p) = w  m
+ 
+are described below. 1 |wij | ≥ τ (p)
+ s.t. mi,j = (17)
+ 1) Pruning: Pruning and fine-tuning attacks can affect the wm r −1 0 |wij | < τ (p)
+accurate calculation of the scaling factor. To address this, we
+ where prune(·) is pruning, p is pruning rate, m is a pruning
+prune the parameters of each layer in both the watermarked
+ mask matrix, τ (·) is a function that determines the pruning
+and suspicious models prior to calculating the scaling factor.
+ thresholds, layers is the total number of layers, wrecovery are
+Our goal is to determine the scaling factor sf, and the pruning
+ the parameters of recovered suspicious model Ms . Our validarate is designed without considering the impact on the model
+ tion method demonstrates robustness against both attacks after
+performance.
+ watermark restoration. In addition, we also effectively distin-
+ 2) 2D Matrix Mapping: We map the multidimensional guish between innocent, plagiarized, and protected models.
+parameters of each layer from both the suspicious and watermarking models into two-dimensional matrices Θls and Θlg .
+ VI. E VALUATION
+ 3) Calculation of Scaling Factor Values: For Θls and Θlg ,
+we perform singular value decomposition (SVD) to obtain A. Experimental Setup
+the diagonal matrices Σls and Σlg (12) respectively. Next, we 1) Experimental Environment: All experiments are
+calculate the traces of the two diagonal matrices, compute their conducted using Python 3.6 and the Keras deep learning
+TONG et al.: Fed-RWM: A ROBUST WATERMARKING APPROACH FOR FL MODEL OWNERSHIP PROTECTION 5731
+
+ TABLE III
+library, running on an Ubuntu 16.04 server with dual Nvidia E XPERIMENTAL PARAMETER S ETTING
+TITAN X GPUs.
+ 2) Datasets: We conduct experiments on four datasets:
+CIFAR-10, MNIST, WUSTL-IIOT-2021 (IIOT2021) [33], and
+IMDB [34]. CIFAR-10, IMDB, and IIOT2021 serve as the
+primary datasets for FL tasks, while MNIST is used as the
+secret dataset Ds . For CIFAR-10, IMDB, and IIOT2021, we
+split their data into training and test sets with an 8:2 ratio. The
+training set serves as the data source for the FL tasks across
+all clients, while the test set is reserved for validation. It is
+partitioned into nk subsets based on IID and non-IID, allocated
+as local datasets for every client. Similarly, MNIST is divided TABLE IV
+into a training set for training SNet and a test set for ownership T HE VALIDITY OF P ROTECTED FL M ODEL (WATERMARKED M ODEL ) AND
+verification. IIOT2021 is an intrusion detection dataset in IIoT, U NPROTECTED FL M ODEL (I NNOCENTS M ODEL ) IN T HREE S CENARIOS
+comprising attack types such as denial of service, exfiltration,
+and reconnaissance. We employ it as an FL dataset to simulate
+a distributed intrusion detection system for industrial IoT to
+demonstrate the applicability of Fed-RWM in IoT.
+ 3) Models: We conduct experiments on four models:
+ResNet18 [35], DenseNet121 [36], LSTM [37], and CNN.
+Specifically, we train ResNet18 and DenseNet121 in CIFAR-
+10, LSTM in IMDB, and CNN in IIOT2021.
+ 4) FL Setup: For FL, we consider both data IID and non-
+IID scenarios and experimented with them both. The training
+loss function for both FL and SNet is cross-entropy loss,
+with Adam and SGD as the respective optimizers. Additional
+settings are provided in Table III.
+ 5) Evaluation Metric: We utilize AS mentioned in
+Section V-E as the validation metric.
+
+B. Validity
+ In this section, we evaluate the validity of Fed-RWM,
+focusing on two primary objectives: first, determine its ability most Mu models achieving less than 20% in AS. This suggests
+to verify the ownership of protected models; second, evaluate that Mu contains minimal watermark information, indicating
+its capability to distinguish between innocent and watermarked a lack of effective watermark protection. The reason for this
+models. We conduct experiments between protected model M is that the watermark key is updated under the secret dataset
+and unprotected model Mu (i.e., innocents). Mu is trained according to the watermark information in each round. The
+with the same training settings as M. To comprehensively data extracted by the unprotected model under the position
+evaluate the validity, we examine three distinct scenarios. 1 information does not match the watermark key and cannot
+Scenario 1, FL dataset differs from Ds , and M extracts the perform well on the secret dataset. Therefore, based on the
+watermark at the same secret position with Mu . 2 Scenario experimental data in Scenarios 1 and 2, our approach can
+2, FL dataset (i.e., MNIST) is identical to Ds , and M extracts effectively distinguish between watermark-protected and nonthe watermark at the same secret position with Mu . 3 watermark-protected models (i.e., innocent or not), regardless
+Scenario 3, the FL dataset differs from Ds , and positions of whether the FL dataset is the same as the secret
+are different. Specifically, Scenario 1 represents the general dataset.
+case in reality. Scenario 2 shows that our approach is equally In Scenario 3, we generate the forged watermark position
+effective even if the dataset is the same. Scenario 3 illustrates ˆ using the watermark generation algorithm. We then extract
+ sp
+that ownership can only be verified with correct position ˆ and the corresponding experimental
+ the parameters of M at sp,
+information. In addition to that, both IID and non-IID cases results are presented in Table IV. The results indicate that
+are considered. Regarding the design of hard thresholds in the AS values remain around 10%, falling short of the
+ownership verification, employing the empirical results, it is ownership verification threshold. This occurs because Feddesigned as β = 0.6. The comprehensive experimental results RWM cannot retrieve watermark information from an incorrect
+are presented in Table IV. location, and such information cannot be matched with the
+ In Scenarios 1 and 2, the AS scores for the watermarks corresponding secret key. The integrated secret network fails
+extracted from M exceed 95%, indicating that the models to leverage its full potential on the confidential dataset. This
+retain over 95% of the watermark information. In contrast, design prevents plagiarists from forging ownership by altering
+the experimental results for Mu show significant gaps, with the position.
+5732 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 3. Scaling factor calculation.
+
+ Fig. 4. The fidelity of Fed-RWM. Watermark model: Training the
+C. Fidelity model using Fed-RWM. No watermark model: Training the model using
+ FedAvg [38].
+ In this section, we assess the negative impact on the FL
+primary task. Fidelity demands that the watermark does not
+significantly degrade the performance of the primary task TABLE V
+while verifying ownership. We compare the performance T HE ROBUSTNESS TO F INE -T UNING ATTACK
+of four models on test sets from three different datasets,
+contrasting the outcomes of the Fed-RWM algorithm with
+those of the FedAvg algorithm [38]. It is worth noting that the
+FedAvg algorithm is the baseline federated learning approach
+without watermarking.
+ As illustrated by the results in Fig. 3, the watermarked
+model accuracies are 85.91%,88.24%,83.22%,99.65% and
+85.45%, 88.43%, 83.16%, 99.85% without watermark. In non-
+IID, the watermarked ones were 84.74%, 86.05%, 83.06%,
+99.84%, and the non-watermarked ones were 84.25%, 86.73%,
+83.14%, 99.84%. The watermarked models are only reduced
+by less than 1%. Our approach successfully embeds the water- described in Section IV to verify the robustness of our
+mark with negligible effect on the primary task of FL model. approach.
+This is mainly because watermark parameters account for 1) Robustness Against Fine-Tuning Attack: We consider
+only a few model parameters. And, the watermark embedding the following two scenarios. Scenario 1, the fine-tuning dataset
+scheme, which performs embedding once followed by multiple is the same as the FL dataset, representing the standard finefine-tuning iterations, further mitigates adverse effects on the tuning attack. Scenario 2, the fine-tuning dataset differs from
+original model. the FL dataset, simulating a transfer learning-based fine-tuning
+ Other SOTA white-box FL model watermarking methods, attack. We train four models on three FL datasets (CIFAR-10,
+FedTracker [8], FedIPR [10], and FedMCT [23], also perform IMDB, and IIOT2021), and the experimental parameters are
+well in fidelity. FedTracker and FedIPR report less than 2% shown in Table III. These models all embed watermarks based
+impact on model performance, Fed-RWM incurs even less on Fed-RWM.
+loss. FedMCT demonstrates a loss of less than 1%, which is In Scenario 1, following the setup of previous work [39], we
+comparable to our method. Unfortunately, it cannot adapt to assume that the adversary has access only to the FL dataset’s
+complex watermark removal attacks. test set. Consequently, all fine-tuning datasets are derived
+ from the test sets of the three FL datasets. These datasets
+ are divided into train and test subsets in an 8:2 ratio. These
+D. Robustness train subsets are used for model fine-tuning, while test subsets
+ In Fed-RWM, only the initiator has permission to access evaluate the effectiveness of the fine-tuning. The training
+the wm and sp, which are hidden from clients, the server, or settings are from [39], including epochs = 100, learning rates
+plagiarizers. Thus, it is highly improbable that they will obtain ρf = 0.001 or 0.01, and the optimization method used is
+the position and precisely eliminate the wm. Since the FL stochastic gradient descent. We compare the performance of
+model is collaboratively trained by multiple clients, obtaining the watermarked model before (i.e., epochs = 0) and after finehigh-quality data from diverse sources to retrain the model tuning. The comparison shows that our approach experiences
+is challenging for plagiarists. Additionally, plagiarists want to a maximum AS loss of only 0.06% after 100 epochs of finerefrain from spending their computational and data resources tuning. In some cases, AS values were slightly higher than
+to retrain the model. They prefer to modify the trained model before fine-tuning. These are due to the fine-tuning will cause
+through some attacks (e.g., fine-tuning, pruning and scaling), the watermark parameters to be retrained and may enhance
+destroying the watermark. In this section, we reproduce attacks the performance of the SNet.
+TONG et al.: Fed-RWM: A ROBUST WATERMARKING APPROACH FOR FL MODEL OWNERSHIP PROTECTION 5733
+
+ TABLE VI TABLE VII
+ T HE ROBUSTNESS TO P RUNING ATTACK T HE ROBUSTNESS TO PARAMETER S CALING ATTACK
+
+ TABLE VIII
+ T HE ROBUSTNESS TO H YBRID ATTACKS
+
+ In Scenario 2, unlike Scenario 1, we fine-tune the ResNet18
+and DenseNet121 watermarked models using MNIST for
+transfer learning. Post-fine-tuning, the watermark detection
+performance scores AS for the two models are 0.9588 and
+0.9687 in the non-IID setting, while they are 0.9573 and
+0.9544 in IID, with a maximum performance loss of only
+0.11% compared to pre-fine-tuning results.
+ All experimental results show that while fine-tuning slightly
+decreases AS, it remains consistently high. Fed-RWM is
+resilient to fine-tuning attacks.
+ 2) Robustness Against Pruning Attack: We perform sparse
+pruning on the four watermarked models. Since IID and non-
+IID settings do not affect the watermarking function, we focus recovered model. The right side of Table VII presents the
+solely on non-IID scenarios. Following the method in [11], recovered Acc and AS. Acc recovers to 85.30%, 85.12%, and
+redundant parameters in every layer are pruned based on their 99.84%, AS recovers to 95.87%, 96.89%, and 98.66%, which
+absolute values. We evaluate the classification accuracy Acc of can recover to the performance before the attack, and thereby
+the watermarked models on the main task and the watermark effectively verify the infringement of Ms . Hence, Fed-RWM
+verification performance AS across different pruning ratios. can resist the parameter scaling attack.
+Table VI presents the results for Acc, AS, and AS loss at 4) Robustness Against Hybrid Attacks: Sophisticated
+various pruning levels. As pruning increases, both Acc and AS adversaries could launch hybrid attacks that include finedecline. When pruning rate is 70%, Acc significantly drops, tuning (F), pruning (P), and parameter scaling (S) against the
+affecting the performance of the model. However, AS remains watermarked FL model M. In this section, we experiment with
+above 90%, the maximum loss is 0.07%, and ownership can eight different sequences of hybrid attacks (i.e., PFS, SPF,
+still be verified based on validation conditions. Thus, Fed- FSP, PSF, SFP, FPS, FP, PF). Since the parameter scaling
+RWM exhibits robustness against pruning attacks. attack targets the relu activation function, PFS, SPF, FSP,
+ 3) Robustness Against Parameter Scaling Attack: We also PSF, SFP and FPS attack experiments are conducted solely
+evaluate the robustness of Fed-RWM against the parameter on the ResNet18, DenseNet121, and CNN models, FP and PF
+scaling attack on ResNet18, DenseNet121, and CNN. Since attack experiments are conducted on the LSTM. In order to
+this attack targets deep models with the relu activation func- maximize the destruction of the model watermark, we chose
+tion, we are not experimenting with the LSTM model, which the pruning rate to be 0.5 and the fine-tuning learning rate to
+uses sigmoid [32]. Parameter scaling on all convolutional lay- be 0.001. As IID and non-IID distributions do not influence
+ers may drastically affect the performance of complex models, the experimental outcomes, we only experiment non-IID.
+which the attacker does not desire. Thus, we selectively scale To ensure that Fed-RWM can still verify watermarks under
+the parameters of certain convolutional and BN layers in hybrid attacks, we develop a recovery method to restore
+model M by a factor of 2m (m ∈ Z), with random scaling watermarks before ownership verification, see Section V-E.
+factors for different layers. We represent M after the attack Previous experimental results indicate that in the absence
+as the suspect model Ms . The left side of table VII refers of attacks, ResNet18, DenseNet121, and CNN achieve accuto the Acc and AS of Ms . Although the overall performance racies of 0.8474, 0.8605, and 0.9985 for the main task,
+of Ms remains comparable to the original, the watermark is and exhibit ownership verification capabilities of 0.9587,
+significantly compromised. AS drops below 60%, leading to 0.9689, and 0.9866, respectively. As shown in Table VIII,
+the failure of watermark verification. after hybrid attacks, the main task performance of the
+ To enhance the robustness of ownership verification, we three models remain within the range of 0.8340∼0.8680,
+apply the watermark recovery method from Section V-E 0.8480∼0.8975, and 0.9942∼0.9996, with no significant
+to recover Ms , followed by ownership verification on the degradation. Due to retraining during the fine-tuning attack,
+5734 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 5. Watermark distribution before attack, after attack and after recovery. (a. Distribution of watermark before and after hybrid attacks, b. Watermark
+statistics before and after hybrid attacks. c. Distribution of watermark after hybrid attacks and after recovery, d. Kernel density of watermark after hybrid
+attacks and after recovery).
+
+ TABLE IX
+Acc slightly improves following some hybrid attacks. The T HE ROBUSTNESS TO H YBRID ATTACKS ON LSTM M ODEL
+scaling attack severely damages the watermark, resulting in
+AS values of approximately 0.33, 0.42, and 0.51, which are
+insufficient for ownership verification. After recovery, the
+AS values improve to 0.9589∼0.9592, 0.9668∼0.9689, and
+0.9854∼0.9861. Compared to the pre-attack period, the maximum reduction is 1.31%. Although the AS values decrease
+after recovery, they are still sufficient to verify ownership. The TABLE X
+ N UMBER OF M ODEL PARAMETERS AND P ERCENTAGE OF WATERMARKS
+performance of the recovered model may be degraded due
+to miscalculation of scale factors and changes in the original
+parameter distributions caused by the hybrid attack. However,
+these issues do not hinder the effective identification of the
+plagiarized model.
+ To illustrate the effectiveness of the recovery mechanism,
+we extract watermark data before the attack, after the attack,
+and after recovery for visual analysis (Fig. 5). The watermark rate of 1.0, corresponding to 100% defense against all attacks.
+data subjected to the hybrid attack exhibits significant devi- Table IX illustrates that the LSTM model also achieves a
+ations from the original distribution (Fig. 5(a)). We compute verification success rate 100% in all attack scenarios.
+key statistics (i.e., minimum, maximum, median, mean, and 5) Robustness Against Overwrite Attack: For the overwrite
+standard deviation) and visualize them using radar plots attack, the dishonest client may generate a new watermark
+(Fig. 5(b)), revealing significant discrepancies between the and embed it into M using the same method, intending to
+post-attack and original watermark statistics. The merged overwrite the original. We conduct the overwrite attack on
+watermark data and key exhibit poor compatibility, resulting four watermarked models under non-IID. The results show
+in degraded performance on the secret dataset. As shown that AS values of ResNet18, DesNet121, LSTM, and CNN,
+in Table VIII, AS fails to verify ownership across all attack are 0.9586, 0.9687, 0.9875, and 0.9867, respectively, which
+scenarios. After recovery, the watermark data closely aligns do not decrease significantly and still verify the ownership.
+with the original distribution (Fig. 5(c)). To further illustrate The underlying cause is that the number of parameters in wm
+the similarity, we visualize the kernel density estimates of the is much smaller than M (The watermarking percentage in the
+watermark data, which show substantial overlap and negligible four models are 0.0850%, 0.0535%, 0.2254% and 0.7417%,
+difference (Fig. 5(d)). The recovered watermark data integrates respectively, Table X). Thus, the likelihood of the watermark
+well with the watermark key, achieving strong performance being overwritten is low. Our approach can resist the overwrite
+on the secret dataset. As shown in Table VIII, AS successfully attack.
+verified ownership after recovery. Consequently, Fed-RWM
+demonstrates robustness against diverse attack scenarios and E. Local Model Protection
+maintains reliable ownership verification. In Fed-RWM, we embed and train watermark for the global
+ For the LSTM model employing the sigmoid activation model. During the FL, clients train to obtain local models
+function, the performance of the watermarked model exhibits L, which must also be protected. In this section, we evaluate
+minimal fluctuation after the hybrid attack (Table IX). The the watermarks in L. Fig. 3 documents the AS during the
+ownership verification accuracy slightly decreases from 0.9877 global model watermark training process (left) and a randomly
+(pre-attack) to 0.9874 (post-attack), yet the ownership remains selected local model verification watermarking process (right).
+verifiable. The results indicate that the ownership verification capability
+ Additionally, we perform five attack-verification experi- improves and stabilizes as training rounds increase. Both
+ments per attack type and define the verification success rate global and local models can successfully embed watermarks
+as the proportion of successful verifications post-attack. As with similar watermarking performance. Their maximum difshown in Table VIII, all models achieve a verification success ference is 0.06%, which is negligible in ownership verification
+TONG et al.: Fed-RWM: A ROBUST WATERMARKING APPROACH FOR FL MODEL OWNERSHIP PROTECTION 5735
+
+ TABLE XII
+ A DDITIONAL C OMPUTING T IME AND C OMMUNICATION OVERHEAD
+
+Fig. 6. Left: the global model watermark training process, Right: the local
+model watermark verification process. can still accurately verify the ownership. Since hybrid attacks
+ include parameter scaling, we conclude that Mc cannot defend
+ TABLE XI
+ C OMPARISON W ITH E XISTING W ORKS against them. References [8], [23], [24] embed local watermarks follows the same principle as [10]. Thus, models trained
+ using these methods cannot defend against parameter scaling
+ and hybrid attacks.
+ Our approach to embed and train watermarks is performed
+ in the initiator, and the server only acts as an aggregation computation, the client only trains the local model.
+ Hence, Fed-RWM avoids dishonest server-client behaviour
+ and adapts to SFL scenarios. References [8], [24] and [23]
+ embed watermarks on the server, which cannot avoid server
+ dishonesty and is not adaptable to SFL. Reference [10] embed
+capability. This is because local model training essentially fine- watermarks on clients, which cannot avoid dishonest clients
+tunes the global model. So, we can easily protect the local embedding malicious watermarks or eliminating watermarks.
+model as well. About the universality of watermarking schemes, our experiments show that Fed-RWM is applicable in both CNN-based
+ and RNN-based models. Furthermore, Fed-RWM can handle
+F. Comparison With Existing Works tasks involving three types of data: image, traffic, and text.
+ We compare Fed-RWM with SOTA white-box watermark- Nevertheless, [8], [24] and [23] do not validate RNN models
+ing methods [8], [10], [23], [24] for FL models. Among and only involve the image data-based task. Regarding the
+them, [24] is a watermarking scheme applied in IoT. Their watermark embedding position, they all embed the watermark
+embedding processes are all based on enhancements of the in the BN layer and do not account for models lacking
+work by [11] and are relatively similar. Therefore, our com- BN layers. However, in our approach, model ownership is
+parison focuses on [10] without loss of generality. According protected effectively, irrespective of the presence of BN layers.
+to the experimental evaluation in [10], it is robust to fine- Notably, the CNN and LSTM models do not contain BN layers
+tuning and pruning attacks. Additionally, it also performs in our experiments, while ResNet18 and DesNet121 do.
+well in terms of fidelity and validity. Hence, we compare
+it in other aspects (Table XI), including robustness against
+parameter scaling attacks, hybrid attacks, and compatibility G. Overhead
+with secure federated learning. 1) Overhead for Watermark Embedding and Verification:
+ Specifically, we train ResNet18 utilizing Fed-RWM and the We discusses the additional overhead introduced by our
+feature-based approach in [10] to obtain two watermarked method during watermark embedding training, and verifimodels, M and Mc . Before the scaling attack, the accuracy cation, as shown in Table XII. The results show that the
+rates of the two models for the main task were 84.74% and additional computation time required by our method is negli-
+85.60%, with watermark detection rates of 95.87% and 100%, gible during the federated learning process.
+respectively. During the attack, we multiplied some of the During the embedding training phase, the additional overconvolution and BN layer parameters by the scaling factor and head primarily arises from training the secret model and
+took them negatively. After the attack, the accuracy rates of embedding the watermark. The secret model, designed as a
+the two models were 84.85% and 83.51%, respectively, which lightweight architecture with minimal parameters and training
+did not decrease significantly. The watermark detection rate data, incurs approximately 3s in training costs. The compuof M was 95.87%, while Mc dropped to 45%. Consequently, tational time cost of watermark embedding is predominantly
+Mc can not withstand the scaling attack, which results in determined by the architectural structure and parameter count
+severe watermark damage and ownership verification failure. of the protected model.
+This occurs because the take-negative operation inverts the During the verification phase, additional overheads priparameter space w, affecting the bit vector B̂ , computed from marily include pruning both the original watermarked model
+the saved secret matrix x and w. As a result, the stored and the suspicious model, computing SVD diagonal matrices
+watermarks B and B̂ show significant distance differences, for each layer, determining scaling factors, recovering the
+leading to a reduced detection rate. In contrast, Fed-RWM watermark, and verifying ownership. This is necessary because
+5736 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+the protected model may be vulnerable to scaling attacks and VII. C ONCLUSION
+hybrid attacks. Verification time consumption is determined by This paper proposes Fed-RWM, an effective white-boxthe model’s size and layer count. Although DenseNet121 has based watermarking method, to protect the ownership of FL
+fewer parameters than ResNet18, its greater number of layers models in IoT. This is the first new method that integrates
+leads to higher computational times for SVD and scaling watermark recovery and simultaneously prevents edge and
+factor calculations. Scaling and hybrid attacks are ineffective cloud dishonest behavior. Fed-RWM employs parameter sharagainst models employing sigmoid functions. For such models, ing for embedding and verifying the watermark, introduces a
+additional overhead is primarily associated with ownership new training paradigm to prevent cloud and edge access to
+verification. watermark information, and incorporates a recovery mecha-
+ 2) Overhead for Synchronization: Fed-RWM also affects nism to enhance verification robustness. Evaluations of various
+the synchronization of federated learning. Since our scheme tasks and settings show that Fed-RWM is effective in terms
+is synchronous federated learning, i.e., in each round of com- of ownership verification, fidelity and robustness, etc.
+munication, the server side needs to wait until all clients have
+sent their local models before aggregation. In the traditional
+scheme, the synchronization time consumption in each round R EFERENCES
+is Tmax + 2Ts + Ta . Tmax is the maximum duration of [1] V. Demertzi, S. Demertzis, and K. Demertzis, “An overview of privacy
+local training for all participating clients in this round, Ts dimensions on the Industrial Internet of Things (IIoT),” Algorithms,
+is the duration of the model transfer between the server vol. 16, no. 8, p. 378, 2023.
+ [2] N. M. Hijazi, M. Aloqaily, M. Guizani, B. Ouni, and F. Karray,
+and clients, and Ta is the duration of aggregation. For Fed- “Secure federated learning with fully homomorphic encryption for
+RWM, the synchronization time consumption in the watermark IoT communications,” IEEE Internet Things J., vol. 11, no. 3,
+embedding round is Tmax +4Ts +Te +Ta . Te is the duration pp. 4289–4300, Feb. 2023.
+ [3] G. Xu, Z. Zhou, J. Dong, L. Zhang, and X. Song, “A blockchainof watermark embedding. In the watermark training round, based federated learning scheme for data sharing in Industrial Internet
+the initiator only updates the watermark key without updating of Things,” IEEE Internet Things J., vol. 10, no. 24, pp. 21467–21478,
+the watermark, i.e., max(Tmax , Ti + Tw ) + 2Ts + Ta . Ti Dec. 2023.
+ [4] H. B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. y Arcas,
+denotes the duration of the initiator local training for the FL “Communication-efficient learning of deep networks from decentralized
+master task, while Tu represents the time required for updating data,” 2016, arXiv:1602.05629.
+the watermarking task. When the initiator is not selected for [5] R. Yang, H. He, Y. Wang, Y. Qu, and W. Zhang, “Dependable federated
+ learning for IoT intrusion detection against poisoning attacks,” Comput.
+the FL master task training in a given round, Ti is 0. It Secur., vol. 132, Sep. 2023, Art. no. 103381.
+is worth noting that the synchronization time is defined as [6] R. Myrzashova, S. H. Alsamhi, A. V. Shvetsov, A. Hawbani, and X. Wei,
+the time between the start of sending the model to clients “Blockchain meets federated learning in healthcare: A systematic review
+ with challenges and opportunities,” IEEE Internet Things J., vol. 10,
+in the current round and the start of preparing to send the no. 16, pp. 14418–14437, Aug. 2023.
+model in the next round. Compared to the time synchronization [7] H. Liu, S. Li, W. Li, and W. Sun, “Efficient decentralized optimization
+overhead of traditional synchronous federated learning, the for edge-enabled smart manufacturing: A federated learning-based
+ framework,” Future Gener. Comput. Syst., vol. 157, pp. 422–435,
+effect of Fed-RWM on time synchronization is small and Aug. 2024.
+tolerable. [8] S. Shao, W. Yang, H. Gu, Z. Qin, L. Fan, and Q. Yang, “Fedtracker:
+ 3) Overhead for Federated Communication: Compared to Furnishing ownership verification and traceability for federated learnthe baselines, our method introduces additional communica- ing model,” IEEE Trans. Depend. Secure Comput., vol. 22, no. 1,
+ pp. 114–131, Jan./Feb. 2025.
+tion overhead. Specifically, the additional overhead in each [9] J. Chen, M. Li, Y. Cheng, and H. Zheng, “FedRight: An effective model
+round mainly comes from is transferring the current global copyright protection for federated learning,” Comput. Secur., vol. 135,
+model from the server to the initiator. This process is done Dec. 2023, Art. no. 103504.
+ [10] B. Li, L. Fan, H. Gu, J. Li, and Q. Yang, “FedIPR: Ownership
+to synchronize the watermark and the corresponding key. We verification for federated deep neural network models,” IEEE Trans.
+quantify these additional overheads by measuring the size Pattern Anal. Mach. Intell., vol. 45, no. 4, pp. 4521–4536, Apr. 2023.
+of the model files transferred in each round, as shown in [11] Y. Uchida, Y. Nagai, S. Sakazawa, and S. Satoh, “Embedding watermarks into deep neural networks,” in Proc. ACM Int. Conf. Multimedia
+Table XII. Although these overheads are incurred, they are Retrieval, 2017, pp. 269–277.
+tolerable for the current network environment. [12] S. Ben Jabra and M. Ben Farah, “Deep learning-based watermarking
+ 3) Overhead for Federated Communication: In summary, techniques challenges: A review of current and future trends,” Circuits,
+ Syst., Signal Process., vol. 43, pp. 4339–4368, Jul. 2024.
+Fed-RWM is a FL white-box watermarking approach designed [13] L. Fan, K. W. Ng, and C. S. Chan, “Rethinking deep neural
+to prevent dishonest behaviors on both client and server network ownership verification: Embedding passports to defeat ambisides. It surpasses existing SOTA methods in robustness guity attacks,” in Proc. 33rd Conf. Neural Inf. Process. Syst., vol. 32,
+ 2019, pp. 1–10.
+and can be integrated into secure federated learning frame- [14] H. Chen, B. D. Rouhani, C. Fu, J. Zhao, and F. Koushanfar, “Deepmarks:
+works. Additionally, its watermark embedding method is A secure fingerprinting framework for digital rights management of
+generic and independent of model structure, offering broader deep learning models,” in Proc. Int. Conf. Multimedia Retrieval, 2019,
+ pp. 105–113.
+applicability compared to other approaches. This study imple-
+ [15] P. Lv et al., “HufuNet: Embedding the left piece as watermark and
+ments FL model watermarking in the IoT domain. Our keeping the right piece for ownership verification in deep neural
+experiments show that Fed-RWM is able to be applied to networks,” 2021, arXiv:2103.13628.
+image, text, and IoT traffic tasks and protect the intellectual [16] F. Boenisch, “A systematic review on model watermarking for neural
+ networks,” Front. Big Data, vol. 4, Nov. 2021, Art. no. 729663.
+property rights of AI models for enterprise or edge device [17] A. Bansal et al., “Certified neural network watermarks with randomized
+nodes. smoothing,” in Proc. Int. Conf. Mach. Learn., 2022, pp. 1450–1465.
+TONG et al.: Fed-RWM: A ROBUST WATERMARKING APPROACH FOR FL MODEL OWNERSHIP PROTECTION 5737
+
+[18] Y. Lao, P. Yang, W. Zhao, and P. Li, “Identification for deep neural Xin Tong (Student Member, IEEE) received the
+ network: Simply adjusting few weights!” in Proc. IEEE 38th Int. Conf. M.S. degree in computer science and technology
+ Data Eng. (ICDE), 2022, pp. 1328–1341. from North China Electric Power University,
+[19] X. Qi, T. Xie, R. Pan, J. Zhu, Y. Yang, and K. Bu, “Towards Beijing, China, in 2023. She is currently pursuing the
+ practical deployment-stage backdoor attack on deep neural networks,” Ph.D. degree in cyberspace security with the Beijing
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2022, University of Posts and Telecommunications,
+ pp. 13347–13357. Beijing.
+[20] Y. Li, Y. Jiang, Z. Li, and S.-T. Xia, “Backdoor learning: A survey,” Her current research interests include distributed
+ IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 1, pp. 5–22, computing, machine learning security, edge
+ Jan. 2022. computing, and the Internet of Things.
+[21] W. Yang et al., “Watermarking in secure federated learning: A verification framework based on client-side backdooring,” ACM Trans. Intell.
+ Syst. Technol., vol. 15, no. 1, pp. 1–25, 2023.
+[22] B. G. Tekgul, Y. Xia, S. Marchal, and N. Asokan, “WAFFLE:
+ Watermarking in federated learning,” in Proc. 40th Int. Symp. Reliable
+ Distrib. Syst. (SRDS), 2021, pp. 310–320.
+[23] Q. Chen, P. Zheng, Y. Du, W. Luo, and H. Liu, “FedMCT: A
+ federated framework for intellectual property protection and malicious
+ client tracking,” in Proc. 16th Int. Conf. Mach. Learn. Comput., 2024,
+ pp. 80–86.
+[24] Y. Wu, H. Cheng, L. Guan, P. Liu, F. Chen, and M. Wang, “VPFL: Shike Li (Graduate Student Member, IEEE)
+ A verifiable property federated learning framework against invisible received the Ph.D. degree in control science and
+ attacks in distributed IoT,” in Proc. IEEE Int. Conf. High Perform. engineering from North China Electric Power
+ Comput. Commun., Data Sci. Syst., Smart City Dependabil. Sensor, University, Beijing, China, in 2024.
+ Cloud Big Data Syst. Appl. (HPCC/DSS/SmartCity/DependSys), 2023, She is currently a Lecturer with the School
+ pp. 671–678. of Computer and Information Technology,
+[25] Y. Xiao, H. Shao, J. Lin, Z. Huo, and B. Liu, “BCE-FL: A secure and Shanxi University, Taiyuan, China. She has
+ privacy-preserving federated learning system for device fault diagnosis around ten papers in IEEE T RANSACTIONS ON
+ under non-IID condition in IIoT,” IEEE Internet Things J., vol. 11, no. 8, I NTELLIGENT T RANSPORTATION S YSTEMS, IEEE
+ pp. 14241–14252, Apr. 2024. T RANSACTIONS ON V EHICULAR T ECHNOLOGY,
+[26] R. Yang, T. Zhao, F. R. Yu, M. Li, D. Zhang, and X. Zhao, “Blockchain- and IEEE I NTERNET OF T HINGS J OURNAL. Her
+ based federated learning with enhanced privacy and security using research interests include Internet of Vehicles, information security, data
+ homomorphic encryption and reputation,” IEEE Internet Things J., privacy, and blockchain systems.
+ vol. 11, no. 12, pp. 21674–21688, Jun. 2024.
+[27] A. P. Kalapaaking, I. Khalil, and X. Yi, “Blockchain-based federated
+ learning with SMPC model verification against poisoning attack for
+ healthcare systems,” IEEE Trans. Emerg. Topics Comput., vol. 12, no. 1,
+ pp. 269–280, Jan.–Mar. 2023.
+[28] K. W. Church, Z. Chen, and Y. Ma, “Emerging trends: A gentle introduction to fine-tuning,” Natural Lang. Eng., vol. 27, no. 6, pp. 763–778,
+ 2021.
+[29] Q. Wang, Z. Pang, W. Liang, J. Zhang, and K. Wang, “Transferable Ni Jin received the M.S. degree in mathephysical layer authentication based on time-varying patterns toward matics from the Civil Aviation University of
+ zero training deployment for mobile IIoT devices,” IEEE Trans. Ind. China, Tianjin, China, in 2023. She is currently
+ Informat., vol. 20, no. 5, pp. 7675–7685, May 2024. pursuing the Ph.D. degree in cyberspace secu-
+[30] P. Jain and P. Kar, “Non-convex optimization for machine learning,” rity with the Beijing University of Posts and
+ Found. Trends R Mach. Learn., vol. 10, nos. 3–4, pp. 142–363, 2017. Telecommunications, Beijing, China.
+[31] Y. Xu et al., “Enhancing decentralized federated learning with model Her current research interests include network
+ pruning and adaptive communication,” IEEE Trans. Ind. Informat., security, machine learning, and large language modvol. 21, no. 1, pp. 70–84, Jan. 2025. els.
+[32] N. Lukas, E. Jiang, X. Li, and F. Kerschbaum, “SoK: How robust is
+ image classification deep neural network watermarking?” in Proc. IEEE
+ Symp. Security Privacy (SP), 2022, pp. 787–804.
+[33] M. Zolanvari. “WUSTL-IIOT-2021.” 2021. [Online]. Available: https://
+ dx.doi.org/10.21227/yftq-n229
+[34] A. Maas, R. E. Daly, P. T. Pham, D. Huang, A. Y. Ng, and
+ C. Potts, “Learning word vectors for sentiment analysis,” in Proc. 49th
+ Annu. Meeting Assoc. Comput. Linguist., Human Lang. Technol., 2011,
+ pp. 142–150.
+[35] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+ recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2016, Baojiang Cui received the B.S. degree from the
+ pp. 770–778. Hebei University of Technology, Tianjin, China, in
+[36] G. Huang, Z. Liu, L. Van Der Maaten, and K. Q. Weinberger, “Densely 1994, the M.S. degree from the Harbin Institute of
+ connected convolutional networks,” in Proc. IEEE Conf. Comput. Vis. Technology, Harbin, China, in 1998, and the Ph.D.
+ Pattern Recognit., 2017, pp. 4700–4708. degree in control theory and control engineering
+[37] S. Hochreiter, “Long short-term memory,” in Neural Computation. from Naikai University, Tianjin, in 2004.
+ Cambridge, MA, USA: MIT-Press, 1997. He is currently a Professor with the School
+[38] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. y Arcas, of Computer Science, Beijing University of Posts
+ “Communication-efficient learning of deep networks from decentralized and Telecommunications, Beijing, China. He has
+ data,” in Proc. Artif. Intell. Statist., 2017, pp. 1273–1282. around 50 papers in IEEE T RANSACTIONS ON
+[39] Y. Adi, C. Baum, M. Cisse, B. Pinkas, and J. Keshet, “Turning I NFORMATION F ORENSICS AND S ECURITY, IEEE
+ your weakness into a strength: Watermarking deep neural networks by T RANSACTIONS ON N ETWORK AND S ERVICE M ANAGEMENT, and IEEE
+ backdooring,” in Proc. 27th USENIX Secur. Symp. (USENIX Secur.), T RANSACTIONS ON C ONSUMER E LECTRONICS. His main research interests
+ 2018, pp. 1615–1631. include detection of software, cloud computing, and the Internet of Things.

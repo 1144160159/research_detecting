@@ -1,0 +1,1175 @@
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+1
+
+Network Intrusion Detection System Based on
+Enhanced Dual Gaussian Mixture Variational
+Autoencoders for Internet of Vehicles
+Shizhao Tian , Yaowen Zheng , Laile Xi , Shenghao Lin , Yubo Li , and Hongsong Zhu , Member, IEEE
+
+Abstract—The Internet of Vehicles (IoV) is highly vulnerable
+to attacks due to its open communication environment, with
+new types of attacks continuously emerging. However, existing
+Network Intrusion Detection Systems (NIDS) often fall short in
+accuracy, recall rates, false positive rates, and they frequently
+prove ineffective in detecting new attacks. In this paper, we
+propose a NIDS for IoV based on Enhanced Dual Gaussian
+Mixture Variational Autoencoders (EDGMVAE) to detect various attack behaviors, including new attacks. We employ two
+separate Gaussian Mixture Variational Autoencoders (GMVAE)
+to conduct unsupervised reconstruction training on normal traffic
+and known attack traffic. During detection, we obtain the
+tested traffic’s reconstruction probabilities using these GMVAEs
+and determine whether an attack has occurred through logical
+fusion operation. We use two datasets for evaluation, i.e., the
+Car Hacking Dataset (CHD) for in-vehicle communication and
+the UNSW-NB15 Dataset (UBD) for external network communication. The results demonstrate that our method achieves
+remarkable performance in detecting known attacks, with an
+accuracy rate of 98.54% on the CHD and 98.59% on the
+UBD. Moreover, it outperforms other state-of-the-art methods
+in detecting new attacks. Specifically, on the CHD, the accuracy
+of the method is 6.66% to 12.83% higher than other methods,
+while on the UBD, the accuracy is 5.13% to 21.91% higher than
+other methods.
+Index Terms—Internet of vehicles, intrusion detection, new
+attack, Gaussian mixture variational autoencoder.
+
+I. I NTRODUCTION
+
+I
+
+NTERNET of Vehicles (IoV) is an integral component
+of Intelligent Transportation System (ITS). Leveraging advanced information and communication technologies,
+IoV facilitates comprehensive network connectivity within
+vehicles, as well as Vehicle-to-Vehicle (V2V), Vehicle-toInfrastructure (V2I), Vehicle-to-Pedestrian (V2P), and Vehicleto-Service (V2S) communication [1]. This connectivity not
+only enhances the overall intelligent driving capabilities of
+vehicles but also delivers a safe, comfortable, intelligent, and
+efficient driving experience and traffic services to users [2].
+Received 27 March 2025; revised 14 August 2025 and 1 December 2025;
+accepted 29 January 2026. The Associate Editor for this article was M. Bilal.
+(Corresponding author: Yubo Li.)
+The authors are with the Institute of Information Engineering,
+Chinese Academy of Sciences, Beijing 100085, China, and also with
+the School of Cyberspace Security, University of Chinese Academy
+of Sciences, Beijing 100049, China (e-mail: tianshizhao@iie.ac.cn;
+zhengyaowen@iie.ac.cn; xilaile@iie.ac.cn; linshenghao@iie.ac.cn; liyubo@
+iie.ac.cn; zhuhongsong@iie.ac.cn).
+Digital Object Identifier 10.1109/TITS.2026.3660300
+
+However, the open communication environment inherent to
+IoV also renders it a prime target for attackers, which can
+lead to severe repercussions, as malicious attacks on vehicles
+traveling on the road would pose a serious threat to human
+life. Threats to IoV are divided into two main categories: (1)
+Attacks on vehicle-to-external networks; (2) Attacks on invehicle networks.
+When a vehicle connects to external networks, it becomes
+vulnerable to various attacks, including Denial of Service
+(DoS), Distributed Denial of Service (DDoS), Spoofing and
+Replay. In DoS and DDoS attacks, malicious actors overwhelm
+vehicle nodes by sending a massive volume of irrelevant
+messages. This deluge of traffic congests the vehicle’s processing capacity, rendering it incapable of handling legitimate
+requests. Attackers can also impersonate legitimate users to
+transmit fake GPS data to the vehicle, with the intention
+of deceiving it. Replay attacks intercept communication to
+identify unencrypted data, enabling hackers to conduct Manin-the-Middle (MITM) attacks.
+In addition to external attacks, vehicles are also at risk
+from internal attacks. The Controller Area Network (CAN) is
+the standard communication method for in-vehicle networks,
+connecting various Electronic Control Units (ECUs) to support
+critical applications such as autonomous driving. However,
+the lack of authentication mechanisms makes it easy for
+attackers to launch attacks. Common types of attacks include
+Fuzzy, DoS and spoofing. Fuzzy attacks cause malfunctions
+or abnormalities in the vehicle system by sending a large
+amount of random information. DoS attacks overload the
+target system, blocking normal services and rendering some
+of its functions unusable. Spoofing attacks can deceive vehicle
+systems by transmitting false gear or speed data, forcing
+incorrect decisions and potentially triggering safety incidents.
+With the rapid development of technology, the attack methods
+IoV faces are also constantly evolving [3]. In order to protect
+the IoV from attacks from both inside and outside, it is
+necessary to develop a powerful intrusion detection system
+that can not only accurately detect known attack patterns but
+also effectively handle emerging attacks.
+Currently, Machine Learning (ML) and Deep Learning (DL)
+methods have become pivotal technologies in the development
+of intrusion detection systems due to their advanced learning capabilities [4], [5], [6], [7]. These methods generally
+necessitate supervised training of binary or multi-classification
+
+1558-0016 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+2
+
+Fig. 1. Challenges faced by ANIDS.
+
+models, utilizing extensive datasets that encompass both normal and attack traffic, in order to attain high detection
+performance. However, most existing ML and DL methods
+prove ineffective in detecting emerging new attacks due to
+the absence of representative features of these attacks in
+the training datasets. Thus, Anomaly-based NIDS (ANIDS)
+is the most suitable option, which can detect existing and
+new attacks as it builds a profile from normal data and any
+deviation from that profile is detected as an anomaly [8], [9].
+However, ANIDS also confronts several significant challenges,
+as illustrated in Fig. 1. Firstly, it is difficult for normal profile
+to fully cover all normal traffic patterns, which will inevitably
+lead to a high false positive rate. In addition, as the technical
+sophistication of attackers increases, their attack behavior will
+become more similar to normal traffic patterns, making it
+harder to detect and leading to inevitable false negatives.
+To address the above challenges, we propose an ANIDS
+based on Enhanced Dual Gaussian Mixture Variational
+Autoencoders (EDGMVAE) for IoV. The high-level design
+goals of our method are twofold: (1) Our primary goal is
+to model normal behavior patterns with the utmost precision and comprehensiveness, which is essential for effectively
+reducing false positives. (2) We add the profiling of known
+attacks as a reference in the detection process to reduce false
+negatives, especially for attacks whose behavioral patterns
+closely resemble normal traffic. When building traffic profiles,
+we propose using Gaussian Mixture Variational Autoencoder
+(GMVAE), which is an improvement upon the traditional
+Variational Autoencoder (VAE). Specifically, the GMVAE
+replaces the single Gaussian distribution of latent variables
+with a mixture of Gaussians, thereby achieving more accurate
+and comprehensive modeling capabilities. This improvement
+allows for arbitrary precision in approximating any distribution
+by simply adding or removing components (i.e., the number
+of Gaussian distributions).
+Our EDGMVAE approach comprises three phases. In the
+first phase, raw traffic data is processed to extract and standardize key features, thereby ensuring data quality. In the second
+phase, the processed data is fed into two GMVAE models: the
+GMVAE N (trained on normal traffic to build normal profile),
+and GMVAE A (trained on known attack traffic to build
+attack profile), both of which are used for data reconstruction.
+In the third phase, the reconstruction probabilities of the input
+data are computed using the two GMVAEs seperately, and the
+final detection results are obtained through logical fusion operations. We comprehensively evaluate the proposed EDGMVAE
+on two datasets: the Car Hacking Dataset (CHD) [10] for
+in-vehicle comminication and the UNSWNB-15 Dataset
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+(UBD) [11] for external network communication. The results
+demonstrate that our method achieves high accuracy in detecting known attacks: 98.54% on the CHD and 98.59% on the
+UBD. It also outperforms other state-of-the-art methods in
+detecting new attacks, with accuracy improvements of 6.66%13.61% on the CHD and 5.13%-21.91% on the UBD. These
+results further confirm the excellent performance and advantages of EDGMVAE in detecting new attacks. The primary
+contributions of this work are summarized as follows:
+• We propose a network intrusion detection system for IoV
+based on EDGMVAE. This method aims to accurately
+detect both known and emerging new attack patterns by
+utilizing the strengths of GMVAE.
+• We implement the EDGMVAE approach with a threephase framework, including data preprocessing, data
+reconstruction, and detection.
+• We conduct several experiments on the CHD and
+UBD to demonstrate that our EDGMVAE approach not
+only achieves excellent performance in detecting known
+attacks but also outperforms other compelling methods in
+detecting new attacks.
+The article is organized as follows: in Section I, we provide an introduction, and in Section II, we examine relevant
+literature. Section III provides research motivations and model
+preliminaries. Our proposed approach is presented in Section IV. We present experimental verification and assessment
+in Section V. Finally, in Section VI, we conclude the paper.
+II. R ELATED W ORK
+With the rapid development of the IoV, ensuring network
+security has become increasingly critical, prompting extensive research into IDS. To systematically summarize existing
+efforts, Table I provides a comparative overview of representative studies, evaluating them based on detection scope
+(in-vehicle vs. external networks), attack types (known vs.
+unknown), datasets and technical mechanisms.
+A. In-Vehicle Network Intrusion Detection Systems
+A significant amount of research has been dedicated to
+securing in-vehicle networks, with a particular focus on the
+CAN bus. Early efforts in this domain primarily targeted
+known attacks, leveraging classical deep learning models to
+achieve high detection accuracy. Hossain et al. [12] pioneered
+this direction by proposing an LSTM-based NIDS for CAN
+bus attacks. They constructed a custom dataset by extracting normal data from a Toyota hybrid vehicle and injecting
+DoS, Fuzzing, and Spoofing attacks, achieving an impressive
+99.995% accuracy in detecting these known threats.
+Wei et al. [13] introduced AMAEID, an intrusion detection
+model that combines an attention mechanism with a multilayer denoising autoencoder. Xie et al. [14] proposed an
+intrusion detection technique based on an enhanced GAN. It
+aims to solve the problems of existing GAN models, such
+as the rough construction of CAN message blocks and the
+inability to detect data tampering threats, thereby improving
+the detection performance against various attacks. Song et al.
+[17] proposed an IDS based on a deep convolutional neural
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+TIAN et al.: NETWORK INTRUSION DETECTION SYSTEM BASED ON EDGMVAE FOR INTERNET OF VEHICLES
+
+3
+
+TABLE I
+C OMPARATIVE E VALUATION OF THE E XISTING R ESEARCH R ELATED TO IDS FOR I OV
+
+network (DCNN). Through a frame builder, the 29-bit IDs of
+29 consecutive CAN messages are converted into a 29 × 29
+two-dimensional grid structure, which serves as input to a
+reduced Inception-ResNet model to learn the temporal patterns
+of CAN traffic and detect anomalies. Jin et al. [18] proposed an
+intrusion detection approach that integrates oversampling, outlier detection, and metric learning techniques. Ullah et al. [19]
+proposed a stacking-based hybrid ensemble model employing XGBoost, Random Forest, Decision Tree, and Gradient
+Boosting as base learners, integrated with K-means sampling,
+Information Gain feature selection, and SMOTE to address
+class imbalance, achieving high performance in Internet of
+Vehicles intrusion detection.
+Recent advancements have expanded capabilities to include
+unknown attack detection, driven by innovations in model
+architecture and data processing. Song et al. [20] adopted
+a self-supervised approach, combining an LSTM generator
+(trained on normal traffic to produce noisy pseudo-normal
+data) with a Reduced Inception-ResNet detector, allowing the
+model to generalize to unseen threats. Luo et al. [15] proposed
+a spectral residual-lightweight CNN (SR-LiCNN) model,
+which transforms signal sequences into matrix-like images
+to frame intrusion detection as an image classification task.
+The spectral residual operation eliminates redundancy, while
+lightweight convolutions optimize decision-making efficiency,
+enabling detection of both known and unknown attacks.
+Shi et al. [16] proposed an unsupervised intrusion detection system IDS-DEC for the CAN bus, which is based
+on deep embedded clustering and integrates a spatiotemporal autoencoder with an entropy-regularized deep embedding
+clustering module. Cao et al. [21] proposed a self-supervised
+
+learning-based anomaly detection method for in-vehicle
+networks, which enables message-level anomaly detection
+without labeled data through a message prediction model
+based on hierarchical Transformers (MPMHit). The method
+consists of three modules: masking, predicting, and anomaly
+detecting. It uses noisy message sequences to train the model
+to learn the distribution of normal messages and combines an
+online update mechanism with vehicle-cloud collaboration to
+address the problem of concept drift.
+B. Vehicle-to-External Network Intrusion Detection Systems
+As the IoV becomes increasingly interconnected, vehicle-toexternal network communications have become a key security
+focus. The complexity and variety of potential attacks on these
+networks promotes the continuous development of intrusion
+detection technologies.
+Early research on vehicle-to-external network intrusion
+detection mainly focused on known attacks. Almutlaq et al.
+[23] proposed a two-stage intrusion detection system that
+balances detection accuracy, resource efficiency, and interpretability by extracting rules from deep neural networks.
+The first stage of the system distinguishes between normal
+and attack traffic, while the second stage identifies the type
+of attack. It includes three variants based on the DeepRed
+and HypInv rule extraction methods. Anbalagan et al. [26]
+proposed a CNN-based NIDS. First, the original data captured was processed, and quantile transformation was applied
+to obtain uniformly distributed labels. Then, the processed
+data was converted into image data for fine-grained pattern
+extraction. Subsequently, an improved deep CNN architecture
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+4
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+was used to train the converted image data to identify various
+attack patterns.
+To overcome the limitations of only detecting known
+attacks, researchers have conducted extensive exploration and
+developed systems that can detect both known and new
+attacks by adopting more advanced technologies. Khan et al.
+[25] proposed a multi-stage deep learning framework. This
+framework’s first stage verified the status of incoming data
+using state-based Bloom filter technology, and its second stage
+detected threats using a Bi-LSTM classifier. Nissar et al.
+[27] proposed a multi-objective intrusion detection framework
+that incorporated Variational Autoencoder (VAE) along with
+two optimization algorithms: the Adaptive Geometric Estimation Multi-Objective Evolutionary Algorithm (AGE-MOEA)
+and the Reference Point-based NSGA-III (R-NSGA-III). This
+framework was designed to optimize multiple objectives,
+including divergence, Kullback-Leibler (KL) divergence, and
+reconstruction error, effectively detecting anomalies based on
+reconstruction error.
+Yang et al. [22] proposed a multi-tiered hybrid intrusion
+detection system (MTH-IDS) for the Internet of Vehicles
+(IoV), aiming to detect both known and unknown attacks. The
+system includes data preprocessing, feature engineering, and
+a four-tier learning model. It detects known attacks through
+tree-based algorithms, identifies unknown attacks using cluster
+labeling k-means, and combines methods such as Bayesian
+optimization to improve performance. Huang et al. [24] proposed an Automatic Incremental Lifetime Learning Intrusion
+Detection System (AILL-IDS), which reduces the reliance
+on labeled data through incremental semi-supervised learning and triggers model updates by detecting concept drift
+with the KSWIN algorithm. The system combines incremental k-means, DBSTREAM clustering algorithms, and a dual
+ensemble learning mechanism to achieve anomaly detection,
+attack type identification, and continuous detection during
+updates, avoiding performance fluctuations. Fu et al. [28]
+proposed a BERT-based hybrid network intrusion detection
+system for the Internet of Vehicles (IoV-BERT-IDS), which
+converts traffic data into contextual byte sentences through
+a semantic extractor and combines pre-training (including
+MBWM and NBSP tasks) with a fine-tuning mechanism to
+achieve attack detection.
+III. M OTIVATIONS AND P RELIMINARIES
+A. Motivations
+Through analysis of existing Anomaly-based NIDS
+(ANIDS), we find that they have advantages in detecting
+new attacks. However, ANIDS suffer from high false positive
+and false negative rates. This is mainly because constructing
+a precise and comprehensive normal profile is challenging,
+which can lead to false positives, and some attack patterns are
+extremely similar to normal patterns, which can lead to false
+negatives. If we can construct the normal profile as accurately
+and comprehensively as possible, and incorporate the profile
+of known attack patterns into the detection process, it will
+significantly improve the detection performance. When building profiles, we introduce the Gaussian Mixture Variational
+
+Autoencoder (GMVAE), an enhanced variant of the Variational
+Autoencoder (VAE). By replacing VAE’s single Gaussian
+latent variable distribution with a mixture of Gaussians, we
+can achieve more flexible and accurate performance of profile construction. Based on this improvement, we propose a
+NIDS leveraging Enhanced Dual Gaussian Mixture Variational
+Autoencoder (EDGMVAE), aiming to significantly enhance
+intrusion detection ability.
+B. Model Preliminaries
+1) Variational Autoencoder (VAE): VAE is a deep generative model widely used for data compression, denoising,
+anomaly detection and generation. The core concept of a VAE
+involves mapping input data x to a low-dimensional latent
+space z via an encoder and then reconstructing the input data
+from this space using a decoder. This process enables effective
+data representation and facilitates the generation of new data
+samples similar to the input data.
+VAE is understood through two perspectives: variational
+inference and neural network. The core objective is to obtain
+the posterior distribution P(z|x), with x as the input data and
+z as the latent variable, and P(z|x) can be calculated using
+Bayes’s theorem:
+P(z|x) =
+
+P(x|z)P(z)
+.
+P(x)
+
+(1)
+
+However,
+R direct computation of the marginal probability
+P(x) = P(x|z)P(z) dz is generally intractable. Thus, variational inference addresses this problem by introducing a
+tractable distribution Qφ (z|x) (often Gaussian) to approximate
+P(z|x). The Kullback-Leibler (KL) divergence between these
+distributions must be minimized, as shown below:
+DKL [Qφ (z|x)||P(z|x)] = EQφ (z|x) [log Qφ (z|x)
+− log P(z|x) − log P(z) + log P(x)].
+
+(2)
+
+log P(x) can be shifted to the left since the expectation is
+with regard to z:
+DKL [Qφ (z|x)||P(z|x)] − log P(x)
+= − EQφ (z|x) [log P(x, z) − log Qφ (z|x)] .
+„
+ƒ‚
+…
+
+(3)
+
+ELBO(φ)
+
+The objective of minimizing the KL divergence is equivalent
+to maximizing the Evidence Lower BOund (ELBO). The
+expression in (3) can be reformulated as:
+DKL [Qφ (z|x)||P(z|x)] − log P(x)
+= DKL [Qφ (z|x)||P(z)] − EQφ (z|x)[log P(x|z)] .
+
+(4)
+
+Then the role of neural network becomes evident, as
+depicted in Fig. 2a. Qφ (z|x) serves as an encoder, converting
+the original data x into the latent variable z. Meanwhile,
+Pθ (x|z) functions as a decoder, which decodes z to generate
+reconstructed data x0 . The objective of the model is to minimize the right part of (4). KL divergence between Qφ (z|x)
+and P(z) is represented by the first component on the right.
+The following component measures the degree of similarity
+between the original and the reconstructed data.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+TIAN et al.: NETWORK INTRUSION DETECTION SYSTEM BASED ON EDGMVAE FOR INTERNET OF VEHICLES
+
+5
+
+Fig. 3. Process of GMVAE.
+TABLE II
+D ISTRIBUTIONS IN GMVAE M ODEL
+
+Fig. 2. Structure of VAE and GMVAE.
+
+2) Gaussian Mixture Variational Autoencoder (GMVAE):
+VAEs encounter challenges when processing complex data.
+This is due to the fact that the approximate posterior distribution and the prior distribution of the latent variable
+z are typically simple Gaussian distributions. These simple
+distributions often fail to adequately capture the complex
+characteristics of the original data, causing the reconstructed
+data to be both unrealistic and incomplete. It is theoretically
+possible to represent any complex data distribution using
+Gaussian Mixture distribution. Consequently, incorporating
+Gaussian Mixtures into VAE to construct Gaussian Mixture
+Variational Autoencoder (GMVAE) can significantly enhance
+the model’s ability to represent and reconstruct complex data.
+Specifically, we set the estimated posterior distribution
+Qφ (y, z|x) and the posterior distribution P(z) of the latent variable z as Gaussian Mixture distribution, where the Gaussian
+distribution category is represented by the variable y. The
+expression for Qφ (y, z|x) is as follows:
+Qφ (y, z|x) = Qφ (y|x)Qφ (z|x, y).
+
+(5)
+
+A Gaussian Mixture with k distinct Gaussian distributions
+makes up the latent variable. It is assumed that Qφ (z|x, yi ) is a
+single Gaussian distribution with i ∈ {0, 1,..., k − 1}. It is worth
+noting that an appropriate value of k needs to be selected.
+A too small k will result in the Gaussian components being
+unable to cover the complex patterns of the data, while a too
+large k will increase model redundancy, which not only raises
+computational costs but also may lead to overfitting. ELBO is
+reformulated as:
+ELBO = EQφ (y,z|x) [log Pθ (x, y, z) − log Qφ (y, z|x)].
+
+(6)
+
+According to conditional independence hypothesis shown in
+Fig. 2b, Pθ (x, y, z) is:
+Pθ (x, y, z) = Pθ (x|z)Pθ (z|y)Pθ (y).
+
+(7)
+
+Equation (5) and (7) can be substituted into (6) to reformulate ELBO as:
+
+ELBO = EQφ (y,z|x) log P(y) − log Qφ (y | x)
+
+Pθ (z | y)
++ log Pθ (x | z)
+(8)
++ log
+Qφ (z | x, y)
+The third and fourth components in equation (8) represent the regularization and reconstruction, respectively.
+EQφ (y,z|x) [log Qφ (y|x)] is a conditional entropy, capturing
+the degree to which x influences y. During training, a coefficient α can be added to the entropy term between x and y
+to regulate the influence of clustering loss items on other loss
+items:
+
+ELBO = EQφ (y,z|x) log P(y) − α log Qφ (y | x)
+
+Pθ (z | y)
++ log
++ log Pθ (x | z) .
+(9)
+Qφ (z | x, y)
+A smaller α reduces the impact of the entropy term on the
+loss, resulting in less distinct boundaries between Gaussian
+components. Conversely, a larger α strengthens this influence,
+leading to sharper boundaries, but also increasing the risk of
+overfitting.
+Table II lists the probability distributions used in the model,
+while the detailed process of GMVAE is depicted in Fig. 3.
+Initially, x is assigned into k clusters based on the probabilities
+provided by NN(Qy ), while Q(y|x) denotes the probabilities of these cluster assignments and follows a multinomial
+distribution. NN(Qz ) is used to learn the variance σ and
+mean µ of these Gaussians, since each cluster’s latent space is
+thought to follow a Gaussian distribution. Then, by collecting
+samplesPand calculating their anticipated values, z is derived
+as z = k−1
+i=0 p(yi |x)zi .
+During the decoding process, NN(Pz ) extracts the variance
+and mean from the relevant category. After that, reparameterization sampling is used to obtain the latent variable z, where
+P(y) has a uniform distribution. The reconstructed data x0 is
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+6
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+Fig. 4. Workflow of proposed EDGMVAE.
+
+then calculated using zi byP
+sampling and taking the expected
+0
+value of xi0 , which is x0 = k−1
+i=0 P(yi |x)xi .
+IV. P ROPOSED M ETHOD
+A. Overview
+GMVAE enhances the modeling capabilities of traditional
+VAE for complex data by introducing a Gaussian mixture
+latent distribution. However, employing a single GMVAE in
+NIDS scenarios presents notable shortcomings. Specifically,
+when using a single GMVAE, the profile is constructed
+exclusively for normal traffic. When attack traffic closely
+resembles normal patterns, the single model finds it difficult
+to detect subtle differences due to the absence of a reference
+attack profile, resulting in a high risk of false negatives.
+To address this issue, we propose a novel framework called
+Enhanced Dual Gaussian Mixture Variational Autoencoder
+(EDGMVAE). This framework builds independent profiles for
+normal traffic and known attack traffic using two GMVAEs. By
+combining their reconstruction probabilities, it enables more
+accurate detection performance.
+The proposed EDGMVAE is depicted in Fig. 4 and comprises three primary stages, i.e., data preprocessing, data
+reconstruction, and detection. First, we preprocess the network traffic data. Subsequently, the preprocessed data x is
+simultaneously fed into two GMVAEs for data reconstruction.
+Specifically, GMVAE N is a model that has been trained
+on normal traffic data, and GMVAE A has been trained on
+known attack traffic data. During the detection stage, the reconstruction probabilities of x by GMVAE N and GMVAE A
+are calculated, which reflect the models’ reconstruction effects
+on the input data. Then, through logical fusion operation, the
+reconstruction probabilities of the input data from the two
+models are combined to determine whether an intrusion has
+occurred.
+B. Stage1-Data Preprocessing
+Raw network traffic data has many issues and must be preprocessed before being used as model input. The preprocessing
+steps in this paper are as follows:
+• Data cleaning. The infinite values are replaced with -1,
+and the missing values are filled with the mean value.
+
+• Data conversion. The traffic contains various string-type
+features (e.g., “state”,“’proto’, “service”, etc.) that need
+to be encoded into numerical format. We use OneHotEncoder from scikit-learn for this conversion.
+• Standardization. To address the diverse value ranges of
+continuous features and facilitate faster convergence of
+the gradient descent algorithm, we standardize the data
+using StandardScaler from scikit-learn.
+C. Stage2-Data Reconstruction
+We employ two GMVAEs to reconstruct traffic data.
+GMVAE N is trained solely on normal traffic to construct a
+normal profile, while GMVAE A is trained on known attack
+traffic to build an attack profile. The preprocessed traffic data x
+is simultaneously fed into the two GMVAEs for reconstruction.
+By analyzing the reconstruction results from these models,
+we can assess whether an attack has occurred. Specifically, if
+GMVAE N has good reconstruction result while GMVAE A
+has poor result, it indicates that the traffic is more likely to be
+normal; on the contrary, it may suggest that the traffic is more
+likely to be an attack. The detailed detection method will be
+explained in the following content.
+D. Stage3-Detection
+We use the reconstruction probability as the criterion,
+which indicates the likelihood of data being reconstructed by
+the model. Unlike reconstruction error, its normalized range
+between 0 and 1 allows for direct comparison of reconstruction
+quality across different data points or models, eliminating the
+impact of data magnitude. The reconstruction probability can
+be calculated as follows:
+L
+
+Preconstruction =
+
+k−1
+
+1 XX
+0
+p(yi |x)P(xi l |zli )
+L
+
+(10)
+
+l=1 i=0
+
+where L is the number of Monte Carlo simulations, used to
+reduce the impact of sampling randomness; k is the number of
+Gaussian mixture components; p(yi |x) represents the probability that the input data belongs to the i-th Gaussian component;
+0
+0
+and P(xi l |zli ) is the probability of generating xi l from the latent
+variable zli in the l-th Monte Carlo sampling. We calculate the
+reconstruction probability pn for the input data x using the
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+TIAN et al.: NETWORK INTRUSION DETECTION SYSTEM BASED ON EDGMVAE FOR INTERNET OF VEHICLES
+
+GMVAE N model, and pa for the same input data x using
+GMVAE A model.
+Algorithm 1 Logical Fusion
+Require: reconstruction probabilities pn and pa , thresholds τn and τa
+Ensure: ‘normal’ or ‘attack’
+1: if pn ≥ τn andpa ≥ τa then
+2:
+result ← ‘attack0
+.Covert known attack
+3: end if
+4: if pn ≥ τn andpa < τa then
+5:
+result ← ‘normal0
+.Normal traffic
+6: end if
+7: if pn < τn andpa ≤ τa then
+8:
+result ← ‘attack0
+.New attack
+9: end if
+10: if pn < τn andpa > τa then
+11:
+result ← ‘attack0
+.Explicit known attack
+12: end if
+13: return result
+Subsequently, we employ a logical fusion operation to
+obtain the detection results, as shown in Algorithm 1. pn
+reflects the match degree of the tested traffic with normal
+traffic, while pa reflects the match degree of the tested traffic
+with known attack traffic. By comparing the two reconstruction
+probabilities with their respective thresholds through logical
+fusion operations, four scenarios can be formed. i) When pn
+exceeds the threshold τn and pa exceeds the threshold τa , it
+means that the input data x matches both the characteristics
+of normal traffic and the characteristics of known attack traffic
+very well. In this case, we classify it as a covert known
+attack, i.e. a known attack type whose behaviour is highly
+similar to normal traffic and difficult to identify. ii) When pn
+exceeds τn while pa falls below τa , it indicates that the input
+data x is more consistent with the characteristics of normal
+traffic and has a lower match degree with known attack types.
+Therefore, we classify it as normal traffic. iii) When pn is
+below τn and pa is below τa , it means that the input data
+x does not match either the characteristics of normal traffic
+or the characteristics of known attack traffic. In this case, we
+classify it as a new attack. iv) When pn is below τn while pa
+is above τa , it means that the input data x does not match the
+characteristics of normal traffic but matches the characteristics
+of known attack traffic very well. In this case, we classify it as
+an explicit known attack, i.e. a known attack whose features
+are obvious and whose behaviour is significantly different from
+normal traffic.
+V. P ERFORMANCE E VALUATION
+A. Experiment Setup
+1) Indicators: We utilize several metrics to evaluate the
+performance of our proposed method, which are calculated
+using the True Positive (TP), True Negative (TN), False
+Positive (FP), and False Negative (FN).
+• Accuracy. The proportion of total samples that are predicted correctly.
+TP + TN
+Accuracy =
+.
+(11)
+T P + T N + FP + FN
+
+7
+
+TABLE III
+DATA T YPES AND S IZES OF CHD
+
+• Recall. The proportion of actual positive samples that are
+correctly predicted as positive.
+TP
+.
+(12)
+T P + FN
+• Precision. The proportion of samples predicted as positive
+that are actually positive.
+Recall =
+
+TP
+.
+(13)
+T P + FP
+• F1-Score. The harmonic mean of precision and recall.
+Precision =
+
+Precision × Recall
+.
+(14)
+Precision + Recall
+• False Positive Rate (FPR). The proportion of real negative
+samples that are mistakenly predicted to be positive.
+F1 − S core = 2 ×
+
+FP
+.
+(15)
+T N + FP
+• False Negative Rate (FNR). The proportion of real positive samples that are mistakenly predicted to be negative.
+FN
+FNR =
+.
+(16)
+FN + T P
+2) Description of Datasets: The two datasets used to evaluate the performance of the proposed NIDS are: Car Hacking
+Dataset (CHD) [10] for evaluating detection of intrusions in invehicle communication and UNSW-NB15 Dataset (UBD) [11]
+for evaluating detection of intrusions generated from external
+networks. The description of the two datasets is as follows:
+• Car Hacking Dataset. CHD provides authentic, realworld CAN traffic captured from a physical vehicle
+during actual message injection attacks, making it
+highly relevant for evaluating in-vehicle network intrusion detection. Table III shows the detailed information
+of CHD. The attack types include DoS, fuzzy, spoofing the drive gear, and spoofing the RPM gauge. The
+important features are extracted for use: CAN ID,
+DLC, DATA[0], DATA[1], DATA[2], DATA[3], DATA[4]
+DATA[5], DATA[6], DATA[7].
+• UNSW-NB15 Dataset. UBD was developed to evaluate
+NIDS by constructing a synthetic laboratory environment
+using the IXIA PerfectStorm tool to generate a blend
+of normal and attack traffic. Given that real-world IoV
+attack data is extremely scarce due to privacy constraints
+and acquisition challenges, UBD’s synthetic environment
+serves as a practical alternative. Although not originating from actual vehicles, its simulated traffic patterns
+closely resemble network interactions between vehicles
+FPR =
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+8
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+TABLE IV
+DATA T YPES AND S IZES OF UBD
+
+TABLE V
+E XPERIMENTAL E NVIRONMENT C ONFIGURATION
+
+and external communications. UBD includes network
+flow data of nine major families of attacks, which are
+also common in external network attacks on IoV. Table IV
+shows the details about the dataset used to evaluate the
+proposed NIDS. The dataset contains 49 features, such
+as source IP, destination IP, source port, destination port,
+duration, source bytes, and destination bytes.
+3) Implementation Details: Table V displays the simulation
+environment. The experimental setup is shown in Table VI.
+We design nine scenarios across the two datasets to thoroughly
+assess our method’s performance. Scenarios Sce@1 to Sce@5
+are designed for the CHD, while Sce@5 to Sce@9 for UBD.
+Each scenario involves training two models: GMVAE N,
+using only normal data, and GMVAE A, using a subset of
+known attack data. During the testing phase, we evaluate the
+model’s ability to detect known data types (normal data and
+attacks encountered during training) and new attacks (attacks
+that were not seen during training). New attacks are defined
+as attack types not included in the training dataset. These new
+attacks are designed to simulate real-world scenarios in which
+attackers may use tactics that have not been seen before. For
+example, in Table VI, for Sce@1, the attack types used during
+training are DoS, Fuzzy and Spoofing. Therefore, the spoofing
+RPM gauge is considered a new attack.
+Model details are provided in Table VII. The models
+use fully connected layes, with structures specified in the
+‘structure’ column. The selection of k is determined through
+a grid search method, with k ∈ {3, 4, 5, 6, 7} and ELBO as
+the evaluation metric. For Sce@1 to Sce@4, k is set to 5
+for GMVAE N based on empirical findings, and to 3 for
+GMVAE A, corresponding to the three known attack types
+during training. For Sce@5 to Sce@9, k remains at 5 for
+GMVAE N, and is adjusted to 4 for GMVAE A, corresponding to four known attack types in training. Additionally, we set
+the weighting factor α to 0.5, and use the Adam optimizer with
+a learning rate of 0.001. Each batch consists of 40 samples,
+
+and the entire training process will go through 500 epochs.
+The reconstruction probability is calculated using Monte Carlo
+sampling, with the number of samples set to 10. Lastly, we
+set two detection thresholds: τn at 0.6 and τa at 0.9.
+4) Competitive Baseline Configuration: We select four
+competitive baselines for fair and consistent performance
+comparison, all aligned with our research context and validated
+in state-of-the-art studies: OLGAM [18], BF+Bi-LSTM [25],
+PSSAE [29] and EBHM [19]. These methods represent the latest advances in intrusion detection research, and have garnered
+widespread attention owing to their superior performance in
+addressing complex network traffic patterns. The following is
+an overview of these approaches:
+• OLGAM. Combines log-ratio oversampling, outlier
+detection, and metric learning for IoV intrusion detection, using LightGBM to achieve strong performance on
+datasets like UNSW-NB15.
+• BF+Bi-LSTM. A multi-stage intrusion detection framework that uses state-based Bloom filters for initial
+anomaly screening and Bi-LSTM for temporal feature
+learning.
+• PSSAE. A pseudo-siamese stacked autoencoder network
+that extracts deep semantic features via unsupervised
+pre-training and supervised fine-tuning for traffic classification.
+• EBHM. A hybrid ensemble intrusion detection model
+addresses class imbalance by processing data through kmeans clustering sampling, Z-score normalization, and
+SMOTE. It selects high-performance algorithms and fuses
+results via a stacking strategy.
+All competitive baselines are re-implemented under a unified framework with identical scenario setup (Table VII), metrics (Section V-A1), and experimental environment (Table V),
+without specialized augmentation to ensure fairness.
+B. Detection Performance
+1) Illustration of Detection Process: Fig. 5 illustrates the
+detection process of EDGMVAE for various types of traffic
+in the Sce@1 scenario, displaying ten records per traffic type
+due to space limitations. Fig. 5a shows the detection of normal
+traffic, where pn mostly exceeds the threshold τn , and pa falls
+below τa , enabling accurate classification of normal traffic.
+According to the logical fusion algorithm, the sixth record,
+highlighted in green, indicates a false positive. Fig. 5b to
+Fig. 5d illustrate the detection process for known attacks,
+where it is observed that pn is generally below τn while pa
+exceeds τa . Notably, when pn exceeds τn and pa exceeds τa ,
+we classify the traffic as an ‘attack’ that is similar to normal
+traffic. This ensures not only the detection of known attacks
+with obvious patterns but also those with covert patterns that
+resemble normal traffic. The records marked by green lines
+indicate false negatives. Finally, Fig. 5e illustrates the detection
+of new attacks, with both pn and pa notbaly below the
+thresholds. This aligns with our expectations and demonstrates
+that EDGMVAE effectively identifies most new attacks.
+2) Performance on CHD: Table VIII summarizes the performance of the EDGMVAE on CHD. For normal traffic
+detection, EDGMVAE achieves an average accuracy rate of
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+TIAN et al.: NETWORK INTRUSION DETECTION SYSTEM BASED ON EDGMVAE FOR INTERNET OF VEHICLES
+
+9
+
+TABLE VI
+E XPERIMENTAL S ETUP
+
+TABLE VII
+D ETAILS OF P ROPOSED M ODEL
+
+Fig. 5. Illustrating the detection process using Sce@1.
+
+99.04% and an average false positive rate of merely 0.96%,
+indicating our method’s high reliability in identifying normal traffic patterns. For known attacks, it attains an average
+
+accuracy of 98.54%, recall of 98.52%, precision of 98.44%,
+and f1-score of 98.47%, with false negative rate of just 1.48%.
+These metrics highlight its strong performance in identifying
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+10
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+TABLE VIII
+P ERFORMANCE ON CHD
+
+known attack patterns. For new attacks, EDGMVAE achieves
+an average accuracy of 92.47%, recall of 90.97%, precision
+of 92.06%, f1-score of 91.51%, and false negative rate of
+9.03%. Despite the greater challenges posed by new attacks,
+these results highlight EDGMVAE’s strong adaptability and
+potential for detecting new attack patterns.
+3) Performance on UBD: Table IX presents the performance of EDGMVAE on UBD. For normal traffic detection,
+EDGMVAE achieves an impressive average accuracy of
+98.91% and false positive rate of 1.09%. For known attacks,
+it attains an average accuracy of 98.59%, recall of 98.43%,
+precision of 98.40%, f1-score of 98.41%, and false negative
+rate of 1.57%. For new attacks, it achieves an average accuracy
+of 89.07%, recall of 89.85%, precision of 89.28%, f1-score of
+89.56%, and false negative rate of 10.15%.
+C. Ablation Study
+We perform an ablation study in which we compare our
+method’s performance with four ablative baselines:
+• VAE N: VAE trained exclusively on normal data, which
+classifies traffic as normal if the reconstruction probability
+exceeds the threshold τn , and as attack otherwise.
+• VAE A: VAE trained exclusively on known attack data,
+which identifies traffic as attack if the reconstruction
+probability surpasses the threshold τa , and as normal
+otherwise.
+• GMVAE N: GMVAE trained exclusively on normal
+data, which labels traffic as normal if the reconstruction
+
+probability is above the threshold τn , and as attack if it
+is below.
+• GMVAE A: GMVAE trained exclusively on known
+attack data, which identifies traffic as attack if the reconstruction probability is greater than τa , and as normal
+otherwise.
+We conduct a comprehensive comparison of our method
+with baseline methods across two datasets. Fig. 6 and Fig. 7
+illustrate the detection performance of various models for
+normal traffic, known attack traffic, and new attack traffic on
+the CHD and UBD datasets, respectively.
+1) Comparison on the Detection of Normal Traffic:
+VAE N and VAE A exhibit relatively lower average accuracy and higher FPR in detecting normal traffic. This is
+because VAE models, using a single Gaussian distribution in
+the latent space, cannot accurately capture the complex underlying data features. In contrast, GMVAE N and GMVAE A
+exhibit a marked improvement in average accuracy. This
+enhancement can be credited to the use of Gaussian Mixture
+distributions as the latent space, which more effectively learns
+and represents the patterns in complex data. Overall, the
+results indicate that our EDGMVAE model, which integrates
+the strengths of GMVAE N and GMVAE A, achieves the
+highest accuracy and the lowest FPR.
+2) Comparison on the Detection of Known Attack Traffic: It
+is evident that VAE A outperforms VAE N, and GMAVE A
+outperforms GMVAE N. This can be attributed to the fact that
+VAE A and GMVAE A are specifically trained to learn the
+characteristics of known attacks, making them more sensitive
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+TIAN et al.: NETWORK INTRUSION DETECTION SYSTEM BASED ON EDGMVAE FOR INTERNET OF VEHICLES
+
+11
+
+TABLE IX
+P ERFORMANCE ON UBD
+
+Fig. 6. Comparison of EDGMVAE with other baselines on the CHD.
+
+to such patterns. GMVAE N and GMVAE A further demonstrate improvements over VAE N and VAE A, respectively,
+thereby highlighting the advantages of using Gaussian Mixture distribution as the latent space. Ultimately, EDGMVAE
+
+achieves the best performance, confirming its reliability in
+detecting known attacks.
+3) Comparison on the Detection of New Attack Traffic:
+VAE A and GMVAE A perform poorly in detecting new
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+12
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+Fig. 7. Comparison of EDGMVAE with other baselines on the UBD.
+TABLE X
+C OMPARISON W ITH OTHER M ETHODS ON CHD
+
+TABLE XI
+C OMPARISON W ITH OTHER M ETHODS ON UBD
+
+attacks, nearly failing in this regard. This is because they are
+trained only on known attack patterns and tend to misclassify
+unseen new attacks as normal traffic. In contrast, VAE N
+and GMVAE N show better performance in identifying new
+attacks, demonstrating a certain level of ability to recognize
+such patterns, although their FPR remains relatively high.
+EDGMVAE exhibits the most significant effectiveness in
+detecting new attacks. This confirms that our method maintains a high detection accuracy when faced with previously
+unseen attack patterns, showcasing its broad applicability and
+robustness in practical applications.
+
+D. Computational Efficiency Analysis
+To address the practical deployment feasibility of EDGMVAE in resource-constrained IoV environments, we analyze
+its computational complexity and time/space overhead, with
+comparisons to baseline models.
+1) Theoretical Complexity Analysis: In the detection phase
+of EDGMVAE, the time complexity is determined by the
+key steps involved in computing reconstruction probabilities
+
+using two parallel GMVAEs. Each GMVAE processes input
+traffic (with dimension d) through fully connected layers (with
+hidden layer size h) to extract latent features, involving matrix
+multiplications that contribute a complexity of O(d · h). For
+k Gaussian mixture components, the probability of the input
+belonging to each component is computed, adding O(k · h). To
+calculate the reconstruction probability Preconstruction , L Monte
+Carlo samples are drawn, with each sample involving data
+reconstruction from latent variables and generation probability
+computation, contributing O(L · k · d). Since the two GMVAE
+models run in parallel, the total time complexity for EDGMVAE inference remains O(d·h+k·h+L·k·d). Space complexity
+is determined by the storage requirements for the parameters
+of the two GMVAEs, which is O(2 · (d · h + h2 + k · h)).
+2) Practical Overhead Measurements: We measure the
+computational overhead using the experimental environment
+in Table V, with results in Table XII. We must explicitly acknowledge the gap between simulation and actual
+in-vehicle hardware; however, preliminary simulation-based
+results remain valuable for feasibility assessment because:
+(1) The relative overhead differences between methods
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+TIAN et al.: NETWORK INTRUSION DETECTION SYSTEM BASED ON EDGMVAE FOR INTERNET OF VEHICLES
+
+TABLE XII
+P RACTICAL OVERHEAD M EASUREMENTS
+
+remain valid; (2) Modern AI-capable vehicular platforms
+(e.g., NVIDIA Drive AGX) provide enhanced AI inference
+optimization, which theoretically yields lower overhead than
+our simulation environment.
+EDGMVAE takes 17 hours to train for 500 epochs, which
+is approximately twice as long as GMVAE. This training time
+is acceptable for IoV scenarios, given that intrusion detection
+models are usually trained offline prior to deployment and
+updated periodically rather than in real time. In terms of
+detection latency, EDGMVAE processes each traffic in 2.7ms,
+which is marginally longer than GMVAE (2.2ms) and VAE
+(1.8ms). EDGMVAE’s peak memory usage is 11.1 GB, which
+is roughly twice that of GMVAE (5.6 GB), due to the
+storage of parameters for two GMVAEs. Thus, our method
+demonstrates feasibility in the IoV environment based on
+preliminary experimental evidence. Direct validation on invehicle hardware remains essential future work that we will
+actively pursue.
+
+13
+
+car hacking dataset for in-vehicle communication and the
+UNSWNB-15 dataset for external network communication.
+We carefully design various scenarios to thoroughly assess
+the model’s ability. The evaluation results demonstrate that
+our method not only excels in detecting known attacks but
+also outperforms other state-of-the-art methods in detecting
+new attacks, highlighting its robustness and adaptability.
+Despite the promising results achieved, we must acknowledge two main limitations of this study. First, experimental
+evaluation uses public datasets CHD and UBD with predefined, static attack patterns, which fail to fully capture
+real IoV adaptive attacks, potentially limiting generalization
+assessment to complex landscapes. Second, the logical fusion
+rules adopt fixed thresholds (τn , τa ), which may compromise
+long-term detection stability under dynamic IoV traffic drifts
+(e.g., evolving normal behaviors or iterative attack strategies).
+Future research will focus on the following directions:
+(1) Overcome predefined dataset limitations by extending evaluation to dynamic adaptive attacks, e.g., collecting real-road
+attack flow data with automakers or using adversarial generation to build strategy-iterating dynamic samples. (2) Design
+an online update mechanism to enable the model to adapt
+to the dynamic changes of the IoV environment. (3) Deploy
+EDGMVAE in large-scale IoV environments to further verify
+its efficiency and practical value. (4) Given that adversarial
+samples may bypass NIDS, it is necessary to conduct an indepth evaluation of the robustness of the proposed NIDS when
+facing adversarial attacks.
+
+E. Comparison With Other Methods
+Tables X and XI present the comparative results on the
+CHD and UBD, respectively. In the identification of normal
+traffic, compared with other methods, the false positive rate of
+EDGMVAE is 0.67% to 4.22% lower on the CHD and 0.54%
+to 3.6% lower on the UBD. In the detection of known attacks,
+EDGMVAE performs comparably with other methods and is
+generally superior to them. In the detection of new attacks,
+EDGMVAE shows significant advantages. Specifically, EDGMVAE achieves 6.66% to 12.83% higher accuracy and 5.3%
+to 13.61% lower false negative rate than other methods on
+the CHD, and achieves 5.13% to 21.91% higher accuracy and
+5.28% to 24.37% lower false negative rate than other methods
+on the UBD.
+VI. C ONCLUSION AND F UTURE W ORK
+We propose the Enhanced Dual Gaussian Mixture Variational Autoencoder (EDGMVAE) to detect various network
+intrusions in the IoV, including new attacks. Our method
+consists of three main stages. In the initial stage, we preprocess the traffic data to prepare it for subsequent analysis.
+In the second stage, we reconstruct the traffic data using
+two distinct GMVAEs: GMVAE N, trained on normal traffic,
+and GMVAE A, trained on known attack traffic. We then
+obtain the reconstruction probabilities of the traffic data from
+both GMVAEs. By integrating these probabilities via a logical fusion procedure, we improve the model’s capability to
+identify new attacks. We conduct tests on two benchmark
+datasets to evaluate the efficacy of our methodology: the
+
+R EFERENCES
+[1]
+
+W. Zhuang, Q. Ye, F. Lyu, N. Cheng, and J. Ren, “SDN/NFV-empowered
+future IoV with enhanced communication, computing, and caching,”
+Proc. IEEE, vol. 108, no. 2, pp. 274–291, Feb. 2020.
+[2] B. Ji et al., “Research on optimal intelligent routing algorithm for
+IoV with machine learning and smart contract,” Digit. Commun. Netw.,
+vol. 9, no. 1, pp. 47–55, Feb. 2023.
+[3] H. Zhou, W. Xu, J. Chen, and W. Wang, “Evolutionary V2X technologies
+toward the Internet of Vehicles: Challenges and opportunities,” Proc.
+IEEE, vol. 108, no. 2, pp. 308–323, Feb. 2020.
+[4] S. Rajapaksha, H. Kalutarage, M. O. Al-Kadri, A. Petrovski,
+G. Madzudzo, and M. Cheah, “AI-based intrusion detection systems for
+in-vehicle networks: A survey,” ACM Comput. Surv., vol. 55, no. 11,
+pp. 1–40, Nov. 2023.
+[5] K. Huang, R. Xian, M. Xian, H. Wang, and L. Ni, “A comprehensive
+intrusion detection method for the Internet of Vehicles based on federated learning architecture,” Comput. Secur., vol. 147, Dec. 2024, Art.
+no. 104067.
+[6] X. Li, Z. Hu, M. Xu, Y. Wang, and J. Ma, “Transfer learning based
+intrusion detection scheme for Internet of Vehicles,” Inf. Sci., vol. 547,
+pp. 119–135, Feb. 2021.
+[7] B. Lampe and W. Meng, “Intrusion detection in the automotive domain:
+A comprehensive review,” IEEE Commun. Surveys Tuts., vol. 25, no. 4,
+pp. 2356–2426, 4th Quart., 2023.
+[8] M. A. Alsoufi et al., “Anomaly-based intrusion detection systems in IoT
+using deep learning: A systematic literature review,” Appl. Sci., vol. 11,
+no. 18, p. 8383, Sep. 2021.
+[9] T. Saba, A. Rehman, T. Sadad, H. Kolivand, and S. A. Bahaj, “Anomalybased intrusion detection system for IoT networks through deep learning
+model,” Comput. Electr. Eng., vol. 99, Apr. 2022, Art. no. 107810.
+[10] E. Seo, H. M. Song, and H. K. Kim, “GIDS: GAN based intrusion
+detection system for in-vehicle network,” in Proc. 16th Annu. Conf.
+Privacy, Secur. Trust (PST), Aug. 2018, pp. 1–6.
+[11] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+network intrusion detection systems (UNSW-NB15 network data set),”
+in Proc. Mil. Commun. Inf. Syst. Conf. (MilCIS), Nov. 2015, pp. 1–6.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+14
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+[12] M. D. Hossain, H. Inoue, H. Ochiai, D. Fall, and Y. Kadobayashi,
+“LSTM-based intrusion detection system for in-vehicle can bus
+communications,” IEEE Access, vol. 8, pp. 185489–185502, 2020.
+[13] P. Wei, B. Wang, X. Dai, L. Li, and F. He, “A novel intrusion detection
+model for the CAN bus packet of in-vehicle network based on attention
+mechanism and autoencoder,” Digit. Commun. Netw., vol. 9, no. 1,
+pp. 14–21, Feb. 2023.
+[14] G. Xie, L. T. Yang, Y. Yang, H. Luo, R. Li, and M. Alazab, “Threat
+analysis for automotive CAN networks: A GAN model-based intrusion
+detection technique,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7,
+pp. 4467–4477, Jul. 2021.
+[15] F. Luo, J. Wang, Z. Li, and C. Luo, “An anomaly detection model
+for in-vehicle networks based on lightweight convolution with spectral
+residuals,” Comput. Secur., vol. 151, Apr. 2025, Art. no. 104304.
+[16] J. Shi, Z. Xie, L. Dong, X. Jiang, and X. Jin, “IDS-DEC: A novel
+intrusion detection for CAN bus traffic based on deep embedded
+clustering,” Veh. Commun., vol. 49, Oct. 2024, Art. no. 100830.
+[17] H. M. Song, J. Woo, and H. K. Kim, “In-vehicle network intrusion
+detection using deep convolutional neural network,” Veh. Commun.,
+vol. 21, Jan. 2020, Art. no. 100198.
+[18] F. Jin, M. Chen, W. Zhang, Y. Yuan, and S. Wang, “Intrusion detection
+on Internet of Vehicles via combining log-ratio oversampling, outlier
+detection and metric learning,” Inf. Sci., vol. 579, pp. 814–831, Nov.
+2021.
+[19] I. Ullah, I. Khalil, X. Bai, S. Garg, G. Kaddoum, and M. S. Hossain,
+“An ensemble-based hybrid model for the detection of attacks in the
+Internet of Vehicular Things,” IEEE Trans. Intell. Transp. Syst., vol. 26,
+no. 10, pp. 17914–17927, Oct. 2025.
+[20] H. M. Song and H. K. Kim, “Self-supervised anomaly detection for invehicle network using noised pseudo normal data,” IEEE Trans. Veh.
+Technol., vol. 70, no. 2, pp. 1098–1108, Feb. 2021.
+[21] J. Cao et al., “Anomaly detection for in-vehicle network using selfsupervised learning with vehicle-cloud collaboration update,” IEEE
+Trans. Intell. Transp. Syst., vol. 25, no. 7, pp. 7454–7466, Jul. 2024.
+[22] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered hybrid
+intrusion detection system for Internet of Vehicles,” IEEE Internet
+Things J., vol. 9, no. 1, pp. 616–632, Jan. 2022.
+[23] S. Almutlaq, A. Derhab, M. M. Hassan, and K. Kaur, “Two-stage
+intrusion detection system in intelligent transportation systems using
+rule extraction methods from deep neural networks,” IEEE Trans. Intell.
+Transp. Syst., vol. 24, no. 12, pp. 15687–15701, Dec. 2023.
+[24] Y. Huang and M. Ma, “AILL-IDS: An automatic incremental lifetime
+learning intrusion detection system for vehicular ad hoc networks,” IEEE
+Trans. Intell. Transp. Syst., vol. 26, no. 2, pp. 2669–2678, Feb. 2025.
+[25] I. A. Khan, N. Moustafa, D. Pi, W. Haider, B. Li, and A. Jolfaei, “An
+enhanced multi-stage deep learning framework for detecting malicious
+activities from autonomous vehicles,” IEEE Trans. Intell. Transp. Syst.,
+vol. 23, no. 12, pp. 25469–25478, Dec. 2022.
+[26] S. Anbalagan, G. Raja, S. Gurumoorthy, R. D. Suresh, and K. Dev,
+“IIDS: Intelligent intrusion detection system for sustainable development
+in autonomous vehicles,” IEEE Trans. Intell. Transp. Syst., vol. 24,
+no. 12, pp. 15866–15875, Dec. 2023.
+[27] N. Nissar, N. Naja, and A. Jamali, “Securing VANETs: Multi-objective
+intrusion detection with variational autoencoders,” IEEE Trans. Consum.
+Electron., vol. 70, no. 1, pp. 3867–3874, Feb. 2024.
+[28] M. Fu, P. Wang, M. Liu, Z. Zhang, and X. Zhou, “IoV-BERT-IDS:
+Hybrid network intrusion detection system in IoV using large language
+models,” IEEE Trans. Veh. Technol., vol. 74, no. 2, pp. 1909–1921, Feb.
+2025.
+[29] S. Tu, M. Waqas, A. Badshah, M. Yin, and G. Abbas, “Network
+intrusion detection system (NIDS) based on pseudo-siamese stacked
+autoencoders in fog computing,” IEEE Trans. Services Comput., vol. 16,
+no. 6, pp. 4317–4327, Nov. 2023.
+
+Yaowen Zheng is currently a Professor with
+the Institute of Information Engineering, Chinese
+Academy of Sciences. He has published more than
+30 papers in conferences and journals, including
+USENIX Security, ASPLOS, ISSTA, and TOSEM.
+His research interests include system security, particularly in vulnerability discovery and security
+protection for embedded devices.
+
+Shizhao Tian is currently pursuing the Ph.D. degree
+with the Institute of Information Engineering, Chinese Academy of Sciences. Her research interests
+include the IoT security, the IoV security, and intrusion detection.
+
+Hongsong Zhu (Member, IEEE) is currently the
+Ph.D. Supervisor and a Professor with the Institute
+of Information Engineering, CAS, and the University
+of Chinese Academy of Sciences. He has published
+more than 120 papers in journals and conferences,
+such as USENIX, AAAI, TDSC, and ACL. His
+research interests include the IoT security, network
+attack and defense, and big data security analysis.
+
+Laile Xi received the bachelor’s degree in engineering and the bachelor’s degree in law from Nankai
+University and the master’s degree in engineering
+from the University of Chinese Academy of Sciences. His current research interests include the
+intersected areas of the IoT security, fuzzing, and
+AIGC.
+
+Shenghao Lin received the degree from the School
+of Software, Tsinghua University, in 2021. He is
+currently pursuing the Ph.D. degree with the Institute
+of Information Engineering, Chinese Academy of
+Sciences. His research interests include ADS testing,
+fuzzing, and LLM.
+
+Yubo Li is currently pursuing the Ph.D. degree with
+the Institute of Information Engineering, Chinese
+Academy of Sciences. He is an Engineer. His current
+research interests include large language models,
+network attack and defense, and network simulation
+and emulation.

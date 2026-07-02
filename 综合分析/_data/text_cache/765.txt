@@ -1,0 +1,129 @@
+                    This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3688655
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2021                                                                                                              1
+
+
+
+
+   Normality in Anomaly: Rethinking Traffic Labels
+                                  Chao Zha, Dakun Shen*, Ruyun Zhang, and Kui Ren, Fellow, IEEE
+
+
+
+   Abstract—Network traffic detection plays a critical role in                                                           TABLE I
+protecting digital infrastructures from increasingly sophisticated                                    COMPARISON WITH REPRESENTATIVE RELATED WORKS
+cyber threats. Although AI-based detection methods have shown
+clear advantages over traditional rule-based approaches, most ex-                                             Features                  Closed-Set            Open-Set               Ours
+isting approaches either rely on the unrealistic closed-set assump-
+                                                                                                       Historical data
+tion or address distribution shifts only through model retraining
+                                                                                                         Drifted data
+after data drift. As a result, the robustness of detection models
+                                                                                                       Label flexibility
+under fixed closed-set training conditions remains insufficiently
+explored. To address this limitation, we revisit malicious traffic                                  Non-redundant features
+modeling from an attacker’s perspective and formulate the de-                                          Generalization
+tection process as a Min–Max adversarial optimization problem.
+Instead of relying on conventional binary labels, we introduce                                        (      = true,        = partially true,            = false.)
+a self-generating mask mechanism with sparsity constraints,
+which dynamically identifies malicious feature components and
+produces adaptive labels during training. This design allows                                        Unfortunately, existing studies often prioritize improve-
+the model to focus on attack-relevant feature dimensions while                                   ments in benchmark metrics, often relying on a set of un-
+suppressing benign patterns embedded within malicious traffic.
+The proposed method is architecture-agnostic and can be inte-                                    realistic assumptions that rarely hold in real-world deploy-
+grated with multiple neural architectures, including multilayer                                  ments [19]. For example, many reported gains are achieved
+perceptrons and Transformers. Extensive ablation studies and                                     under the closed-world assumption, where training and testing
+comparative evaluations conducted in a real-world environment                                    data are drawn independently and identically from the same
+and three public datasets, CICIDS-2017, UNSW-NB15, and                                           distribution [20], [21]. In practice, this assumption is easily
+Bot-IoT, demonstrate that the proposed approach consistently
+outperforms existing baselines in terms of detection robustness                                  violated: real network environments are inherently dynamic,
+and classification performance, achieving improvements of up to                                  where concept drift is prevalent, and diverse attack traffic
+138% in accuracy, 65% in the F1 score and 52% in TPR.                                            emerges unpredictably over time [22]. As a result, models
+  Index Terms—Network traffic detection, traffic label, robust-                                  trained under the closed-world assumption rapidly degrade,
+ness, self-generating mask, adaptive label.                                                      since the distribution of test data under concept drift can differ
+                                                                                                 substantially from that of the original training set.
+                      I. I NTRODUCTION                                                              To address this challenge, open-set network traffic detection
+                                                                                                 research has gradually emerged to mitigate model failures
+N     ETWORK traffic detection constitutes a critical com-
+      ponent of modern security infrastructures, protecting a
+wide range of services and applications against diverse and
+                                                                                                 caused by concept drift [23], [24]. One line of work period-
+                                                                                                 ically trains models [25]–[29]; however, such strategies lack
+sophisticated attacks [1]. In recent years, artificial intelligence                              proactive mechanisms for drift detection, making it difficult
+(AI)-driven traffic analysis techniques have been extensively                                    to determine appropriate retraining intervals, and delayed
+explored, due to their ability to extract complex patterns                                       updates can lead to model collapse or a surge in false alarms.
+from massive volumes of data [2]–[6]. Such capabilities make                                     Another line of work first detects distributional shifts and then
+them particularly promising for detecting traffic in open-                                       actively adapts the model after drift occurs [11], [30]–[32].
+world settings [7]–[11]. A substantial body of research has                                      These approaches mainly focus on post-drift problems: taking
+already emerged, including efforts in traffic classification [12]–                               action only after new data become available, and according to
+[14], intrusion detection [7], [11], [15], [16], and advanced                                    existing definitions, can be classified as open-set research.
+persistent threat (APT) detection [17], [18].                                                       Although open set approaches can achieve certain effective-
+                                                                                                 ness after drift occurs [11], [31], they are inherently limited:
+   This paper was produced by the IEEE Publication Technology Group. They                        they rely on the presence of drift data to update the model and
+are in Piscataway, NJ.
+   Manuscript received April 19, 2021; revised August 16, 2021 (Correspond-                      therefore cannot provide timely defense or decision-making at
+ing author: Dakun Shen).                                                                         the moment drift emerges. In other words, existing methods
+   Chao Zha is with the Institute of Computing Technology, Chinese Academy                       typically partition the continuously evolving cyberspace into
+of Sciences, Beijing 100190, China; the University of Chinese Academy of
+Sciences, Beijing 100049, China; and the Research Center for High Efficiency                     a sequence of closed sets and focus on transitions between
+Computing Infrastructure, Zhejiang Lab, Hangzhou 311500, Zhejiang, China.                        them, while largely overlooking attempts to study model
+(email: zhachao21@mails.ucas.ac.cn).                                                             generalization using pre-drift data. Motivated by this gap, our
+   Dakun Shen, Kui Ren are with the School of Cyber Science and
+Technology, and the College of Computer Science and Technology, Zhe-                             work explores a relatively underexamined direction: whether
+jiang University, Hangzhou, 310027, China. (email: dakun@zju.edu.cn,                             pre-drift closed-set data can be leveraged to enhance model
+kuiren@zju.edu.cn).                                                                              generalization in open-set scenarios. Specifically, we aim to
+   Ruyun Zhang is with the Research Center for High Efficiency Computing
+Infrastructure, Zhejiang Lab, Hangzhou 311500, Zhejiang, China (email:                           investigate how a model can proactively withstand potential
+zcor2021@gmail.com).                                                                             unknown attacks or concept drift without relying on post-
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                 This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                            content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3688655
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2021                                                                                                           2
+
+
+
+drift data, thereby enabling preemptive defense and robust                                          c) Evaluation and Development: We conducted per-
+detection. A more concise comparison between our research                                     formance evaluation experiments in a real-world network
+and representative related works is presented in Table I.                                     traffic environment. Raw data were collected from various
+      a) Challenges: In existing network traffic detection re-                                scenarios, including enterprise networks, research institutions,
+search, the detection task is typically modeled as a standard                                 educational institutions, and home networks. Malicious traffic
+classification problem, where traffic samples are strictly black                              from publicly available datasets such as CICIDS-2017 [34],
+and white labeled as benign or malicious. However, mali-                                      UNSW-NB15 [35], and Bot-IoT [36] was injected, resulting
+cious traffic is not always an independent black sample; it                                   in three distinct datasets without overlap samples. One data
+is often camouflaged within benign traffic, embedding mali-                                   set was used for training, while the other two served as open
+cious content to increase stealth and avoid detection. Models                                 set test sets to evaluate the generalization and robustness
+optimized under the closed-set assumption with such black-                                    of the model. We used eight metrics to assess both overall
+and-white labels may achieve high classification performance                                  performance and fine-grained detection capability. Through
+on test sets, but they often fail to capture traffic features                                 multiple ablation studies, we demonstrated that the proposed
+comprehensively, resulting in a large number of redundant                                     self-generating mask strategy in Camero consistently improves
+features. Although these redundant features may have little                                   model generalization at both global and local levels. Further-
+impact on classification results within a closed set, they                                    more, comprehensive comparisons with six widely discussed
+can substantially undermine model generalization in open set                                  state-of-the-art (SOTA) baselines highlight Camero’s superior
+scenarios, including unknown or drifted traffic, leading to                                   detection performance in open-set data, achieved without ac-
+degraded detection performance. Based on this analysis, three                                 cess to open-set samples during training. Camero consistently
+core challenges arise: (1) how to enhance model generalization                                outperforms all baselines in accuracy, F1 score and TPR, with
+on open set data using only closed set training data; (2) how                                 improvements of up to 138%, 65% and 52%, respectively.
+to redefine traffic labels so that models can more accurately                                 Finally, in the Discussion section, we analyze factors such as
+characterize the complexity of anomalous traffic; and (3) how                                 model parameter size and assess the suitability of the method
+to mitigate the influence of redundant features during feature                                for real-world deployment, including its compliance with real-
+extraction, thereby improving the robustness and stability of                                 time requirements.
+detection models in open-world environments.                                                        d) Contributions: The main contributions of this work
+      b) Our Work: We propose a general-purpose network                                       are summarized as follows:
+traffic detection method with strong generalization and high                                     • We revisit traffic labeling from an attacker’s perspective
+robustness, which we call Camero (Camouflage Removal).                                              and model malicious traffic as benign traffic with em-
+First, from the attacker’s point of view, we analyze the                                            bedded perturbations, formulating traffic detection as a
+possible strategies by which malicious traffic can masquerade                                       Min-Max adversarial optimization problem.
+as benign traffic and model this scenario as a Min-Max                                           • We propose Camero, a mask-based adversarial learning
+adversarial optimization problem. This formulation highlights                                       framework that uses a self-generating mask to approxi-
+the limitations of naively classifying traffic as benign or                                         mate hidden perturbations and guide the classifier to learn
+malicious (that is, a strictly black-and-white approach). In-                                       perturbation-aware decision boundaries.
+stead, malicious traffic should be regarded as the combination                                   • We introduce a sparsity-constrained mask design to en-
+of benign traffic and attacker-crafted deceptive perturbations.                                     sure that the learned perturbations focus on a limited
+Building on this framework, we introduce a self-generating                                          set of critical traffic features, improving robustness and
+mask mechanism that leverages a mask loss to adaptively                                             preventing trivial solutions where all features are masked.
+capture the latent perturbations hidden within ben

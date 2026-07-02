@@ -1,0 +1,150 @@
+1584                                                                    IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+
+
+
+   Hierarchical Graph Neural Networks for Resilient
+      Intrusion Detection in Consumer IoT With
+                 Limited Labeled Data
+       Guolong Zheng, Changgui Xu, Jianshan Zhang , Member, IEEE, Chen Hou, Xu Yang , Tao Huang ,
+           Xuan Liu , Senior Member, IEEE, and Muhammad Khurram Khan , Senior Member, IEEE
+
+   Abstract—The growing number of interconnected systems in                      HierGNN as a scalable, resilient, and practical method for
+consumer IoT environments and the increasing intelligence of                     efficient network intrusion detection with high accuracy and
+AI-enabled cyber threats have introduced significant security                    low false positives, even in data-scarce and adversarial IoT
+challenges. Intrusion detection systems must be not only accurate                environments.
+but also resilient to evolving threats and robust against adversar-
+ial manipulation. A major limitation is the lack of labeled data                   Index Terms—Network intrusion detection, few-shot learning,
+for evolving adversarial attacks, which limits the generalization                graph neural networks, hierarchical graph neural network.
+of detection models, making them less practical for the dynamic
+and heterogeneous nature of IoT networks. To overcome these
+limitations, we propose HierGNN, a hierarchical graph neural                                               I. I NTRODUCTION
+network designed for accurate and resilient network intrusion                          HE RAPID growing of interconnected systems, par-
+detection using few labeled examples. HierGNN utilizes a packet-
+level graph attention network for adaptive feature filtering,
+                                                                                 T     ticularly within consumer Internet of Things (IoT)
+                                                                                 environments, has created a hyper-connected ecosystem with
+which enhances resilience to subtle data perturbations, coupled
+with a flow-level temporal model to capture complex spatial                      75 billion devices by 2025 [1], dramatically broadening the
+and temporal dependencies in traffic patterns. By hierarchically                 network attack surface [2]. Consumer IoT devices often
+abstracting these features, it learns robust representations of                  prioritize low-cost and rapid market entry over robust security,
+normal and malicious network behavior from limited data.                         resulting in systemic weaknesses such as unpatched firmware,
+Experimental results on multiple widely used network intrusion
+datasets demonstrate the HierGNN’s remarkable data efficiency                    weak or default credentials, and insecure communication pro-
+and resilience. With as little as 5% of labeled training data,                   tocols [2], [3], [4]. Consequently, these vulnerable endpoints
+HierGNN achieves an F1-score of 0.97 and an accuracy of 0.98                     can be easily compromised and organized into botnets for
+across all the benchmarks. Even in extreme data scarcity, using                  large-scale Distributed Denial-of-Service (DDoS) attacks or
+just 0.1% of labeled data, it maintains a high F1-score of 0.94+                 data exfiltration campaigns, leading to significant financial
+and an accuracy of 0.96+. Furthermore, we demonstrate the
+model’s resilience by evaluating it against common adversarial                   losses and undermining consumer trust [3], [5].
+evasion attacks, such as the Fast Gradient Sign Method (FGSM)                       A primary challenge for modern Network Intrusion
+and Projected Gradient Descent (PGD). Under these attacks,                       Detection Systems (NIDS) in these environments is the
+HierGNNś accuracy only degrades minimally to 0.95, outper-                      dual problem of data scarcity and adversarial vulnerabil-
+forming standard deep learning baselines whose performance                       ity. Traditional signature-based NIDS are ineffective against
+drops below 90% under similar conditions. These results validate
+                                                                                 novel, zero-day attacks [6]. While supervised machine learn-
+   Received 6 July 2025; revised 13 August 2025; accepted 25 August 2025.        ing models offer a path to generalization, they typically
+Date of publication 29 August 2025; date of current version 25 March 2026.       demand vast quantities of labeled data, a resource that is
+This work was supported in part by the National Natural Science Foundation
+of China (NSFC) under Grant 62402203; in part by the Fujian Provincial           notoriously scarce in dynamic IoT networks [7]. Furthermore,
+Natural Science Foundation under Grant 2024J08278, Grant 2024J08276, and         even well-trained deep learning models are susceptible to
+Grant 2024J08277; and in part by the Key Research Project for Young and          adversarial evasion attacks, where malicious actors introduce
+Middle-aged Researchers by the Fujian Provincial Department of Education
+under Grant JZ230044; in part by the Science Foundation of Fuzhou under          subtle, carefully crafted perturbations to network traffic to
+Grant 2025-ZD-023; and in part by the Ongoing Research Funding Program,          bypass detection [8], [9]. The resilience of a NIDS against
+King Saud University, Riyadh, Saudi Arabia, under Grant ORF-Ctr-2025-4.          such manipulation is therefore as critical as its baseline
+(Corresponding authors: Tao Huang; Xuan Liu.)
+   Guolong Zheng, Jianshan Zhang, Chen Hou, Xu Yang, and Tao Huang               accuracy [10]. While Graph Neural Networks (GNNs) have
+are with the School of Computer and Data Science, Minjiang University,           emerged as a promising paradigm for modeling complex
+Fuzhou 350108, China (e-mail: gzheng@mju.edu.cn; jszhang@mju.edu.cn;             network traffic [11], many existing GNN-based systems still
+houchen@mju.edu.cn; xu.yang@mju.edu.cn; huang-tao@mju.edu.cn).
+   Changgui Xu is with the School of Information Science and                     require substantial labeled data and struggle to filter out
+Technology, ShanghaiTech University, Shanghai 201210, China (e-mail:             irrelevant packet-level noise, which can degrade performance
+xuchg2022@shanghaitech.edu.cn).                                                  and increase vulnerability to adversarial inputs [12].
+   Xuan Liu is with the the College of Information and Artificial Intelligence
+(College of Industrial Software), Yangzhou University, Yangzhou 225009,             Other deep learning architectures have been applied to
+China (e-mail: yusuf@yzu.edu.cn).                                                NIDS, but often operate at a single level of granularity
+   Muhammad Khurram Khan is with the Center of Excellence in Information         (either packet or flow), neglecting the hierarchical nature of
+Assurance, DSR, King Saud University, Riyadh 11451, Saudi Arabia (e-mail:
+mkhurram@ksu.edu.sa).                                                            network attacks. For instance, Convolutional Neural Networks
+   Digital Object Identifier 10.1109/TCE.2025.3604228                            (CNNs) can extract spatial features from packets but lack
+                1558-4127 
+                          c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                       and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+ZHENG et al.: HIERGNNS FOR RESILIENT INTRUSION DETECTION IN CONSUMER IOT                                                          1585
+
+
+
+interpretability [13], while recurrent architectures like Long         The source code for this work is publicly available at
+Short-Term Memory (LSTM) networks model temporal depen-             https://github.com/guolong-zheng/HierGNN.
+dencies in flows but may miss coordinated, multi-flow attack           The remainder of this article is organized as follows:
+patterns [14], [15]. A unified framework that combines multi-       Section II reviews related work. Section III details the architec-
+level analysis with high data efficiency and adversarial            ture of HierGNN, while Section IV presents the experimental
+robustness remains a critical challenge in the field [16].          setup and results. Section V concludes the paper.
+   To address these limitations, we propose HierGNN, a two-
+level hierarchical Graph Neural Network (GNN) designed                                   II. R ELATED W ORK
+for high-accuracy, resilient network intrusion detection using         The escalating complexity of cyber threats necessitates
+few labeled examples. At the packet level, a Graph Attention        advanced Network Intrusion Detection Systems (NIDS) that
+Network (GAT) [17] with an adaptive gating mechanism acts           move beyond static, signature-based methods, which struggle
+as a sophisticated filter, suppressing noisy packet features        against novel attacks and often cause alert fatigue [25], [26].
+while amplifying salient indicators of malicious activity. This     Machine learning and deep learning approaches have emerged
+enhances resilience to the subtle data perturbations charac-        as a powerful alternative, learning intricate patterns from
+teristic of adversarial attacks [18], [19]. Building upon these     data to improve detection of previously unseen intru-
+refined representations, the second level employs a tempo-          sions [27], [28].
+ral model with self-attention to model high-level, flow-level          Early ML solutions, such as Support Vector Machines
+interactions over time, capturing the long-range dependen-          (SVM) and Decision Trees, required extensive manual fea-
+cies of sophisticated intrusions [20], [21]. By hierarchically      ture engineering, a time-consuming and expertise-intensive
+abstracting spatiotemporal features, our model can learn robust     process [29], [30], [31]. Deep learning models, such as
+representations resilient to adversarial inputs from a limited      Convolutional and Recurrent Neural Networks (CNNs, RNNs),
+number of labeled samples.                                          automated this feature extraction from raw traffic [14], [32].
+   The efficacy of HierGNN is rigorously validated on three         Unsupervised methods like Autoencoders have also been
+widely-used benchmarks (CICIDS2017 [22], ToN-IoT [23],              used for anomaly detection [33]. However, these approaches
+and MedBIoT [24]). With as little as 0.1% of labeled data,          typically process network flows in isolation, failing to cap-
+HierGNN achieves an F1-score of 0.94+ and an accuracy of            ture the rich topological patterns inherent in network traffic
+0.96+ across all benchmarks. Furthermore, to demonstrate its        interactions [31].
+resilience, we evaluated the model against common adversarial          Graph Neural Networks (GNNs) naturally represent network
+evasion attacks, including the Fast Gradient Sign Method            traffic as a graph of interacting entities, making them
+(FGSM) [8] and Projected Gradient Descent (PGD) [9].                ideal for capturing the complex relational patterns indica-
+Under these attacks, HierGNN’s accuracy only degraded to            tive of sophisticated attacks like APTs [20], [34]. Initial
+0.95, outperforming standard deep learning baselines whose          GNN-based NIDS focused on topological structure to detect
+performance dropped below 90% under similar conditions.             botnets [35], [36], but often ignored valuable node and edge
+The results validate HierGNN as a scalable, resilient, and          features. Subsequent research integrated flow statistics with
+practical method for network intrusion detection in data-           graph structure [37], [38], but these supervised models still
+scarce and adversarial consumer IoT environments. The main          required extensive labeled data. To address this, recent works
+contributions of this article are:                                  have explored few-shot and self-supervised learning. Methods
+   • We propose a hierarchical graph neural network for NIDS        like Anomal-E [39] and TS-IDS [40] leverage self-supervision
+      that efficiently utilizes scarce labels. The model learns     to learn from unlabeled data, while FeCoGraph [31] uses a
+      robust and discriminative flow embeddings by first captur-    federated contrastive learning approach. While these methods
+      ing packet-level spatial dependencies and then abstracting    improve data efficiency, they still face challenges with intricate
+      high-level temporal patterns, enabling accurate detection     attack patterns and the computational overhead of centralized
+      with minimal labeled data.                                    analysis in large-scale IoT networks [31].
+   • We introduce a label-aware learning strategy where an             A critical insight is that comprehensive detection requires
+      adaptive gating mechanism filters irrelevant packet fea-      integrating both fine-grained packet-level details and coarse-
+      tures. This improves the resilience to noise and allows       grained flow-level patterns [41], [42]. Packet analysis can
+      the model to alleviate data heterogeneity across diverse      detect payload-specific attacks, while flow analysis identi-
+      IoT scenarios.                                                fies broader patterns like DDoS. Pioneering frameworks like
+   • Our framework is inherently resilient to adversarial           XG-NID [42] and HGNN [43] construct heterogeneous or
+      manipulation. The hierarchical feature abstraction process    multi-modal graphs to combine packet and flow data, often
+      improves robustness, allowing the model to maintain high      using hierarchical GNNs. Despite this progress, a key gap
+      accuracy against common evasion attacks.                      remains in developing a unified framework that combines
+   • We conduct extensive experiments on three public NIDS          this hierarchical analysis with a dynamic packet filtering
+      datasets. The results demonstrate that our model signif-      mechanism that can adapt to evolving threats, especially under
+      icantly outperforms baseline approaches, achieving over       the constraint of limited labeled data. Our work addresses this
+      96% accuracy and 0.94 F1-score with as little as 0.1%         gap by proposing a hierarchical GNN that integrates adaptive
+      of labeled data, validating its efficacy in data-scarce and   packet filtering with flow-level temporal analysis for resilient
+      adversarial environments.                                     and data-efficient intrusion detection.
+1586                                                         IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+
+
+
+Fig. 1.   Architecture of HierGNN.
+
+
+
+   The key difference between HierGNN and current                    a Model-Agnostic Meta-Learning (MAML) framework for
+techniques, especially FeCoGraph, lies in the mechanism used         learning from limited data and an adaptive attention mech-
+to achieve robustness and data efficiency. HierGNN employs           anism to bolster adversarial resilience, before passing the
+an intra-sample adaptive filtering mechanism. It learns to           resulting flow representation to a final classifier. This
+dynamically weigh and s

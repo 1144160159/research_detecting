@@ -1,0 +1,1547 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [295] Scalable Industrial Visual Anomaly Detection With Partial Semantics Aggregation Vision Transformer
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：295
+题名：Scalable Industrial Visual Anomaly Detection With Partial Semantics Aggregation Vision Transformer
+年份：2023
+DOI：10.1109/tim.2023.3343832
+来源：IEEE Transactions on Instrumentation and Measurement
+PDF：paper/10.1109_TIM.2023.3343832.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：入侵检测与网络异常检测、多媒体、医学、遥感与视频异常检测
+相关性：中相关，分数 5
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\295.txt
+- 原始字符数：83258
+- 本次发送字符数：83258
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+5004217
+
+Scalable Industrial Visual Anomaly Detection With
+Partial Semantics Aggregation Vision Transformer
+Haiming Yao , Graduate Student Member, IEEE, Wei Luo , Student Member, IEEE,
+Jianan Lou , Graduate Student Member, IEEE, Wenyong Yu , Senior Member, IEEE,
+Xiaotian Zhang , Zhenfeng Qiang , and Hui Shi , Member, IEEE
+Abstract— In recent years, the field of industrial visual
+anomaly detection (VAD) has attracted significant attention in
+the context of advanced smart manufacturing systems. However,
+several limitations remain unresolved in existing approaches.
+While these methods can achieve satisfactory performance when
+training separate models for different categories, their scalability
+and performance suffer when faced with the challenge of simultaneous training for multiple categories. Reconstruction-based
+methods generally suffer from the identical mapping problem.
+To address these limitations, this study introduces the partial
+semantic aggregation vision transformer (PSA-VT), a scalable
+framework for industrial visual anomaly detection (VAD) that
+enables simultaneous multicategory anomaly detection using
+a single model. Our proposed PSA-VT framework adopts a
+hybrid design strategy. First, a pretrained convolutional neural
+network (CNN) is employed to extract multiscale discriminative
+local representation. Subsequently, the PSA-VT is introduced
+to perform representation reconstruction through long-range
+global semantic aggregation. Finally, the anomalous properties
+can be estimated by evaluating the reconstruction error of
+the representations. We conducted extensive experiments using
+the Mvtec AD industrial anomaly detection dataset, as well
+as the semantic anomaly detection datasets. The experimental
+results demonstrate that our method achieves state-of-the-art
+(SOTA) performance by capturing high-level semantics. Notably,
+PSA-VT surpasses other methods for the one-model-15-category
+anomaly detection tasks on the Mvtec AD dataset. Furthermore,
+we applied incremental learning techniques to enable the rapid
+deployment of PSA-VT in a real industrial scenario.
+Index Terms— Anomaly localization, defect inspection, scalable visual anomaly detection (VAD), self-supervised learning,
+unsupervised learning, vision transformer (ViT).
+
+Manuscript received 26 August 2023; revised 29 October 2023;
+accepted 2 December 2023. Date of publication 18 December 2023; date
+of current version 2 January 2024. This work was supported in part by the
+National Natural Science Foundation of China under Grant 52375494. The
+Associate Editor coordinating the review process was Dr. Bardia Yousefi.
+(Corresponding author: Wenyong Yu.)
+Haiming Yao, Wei Luo, Jianan Lou, Xiaotian Zhang, and Zhenfeng
+Qiang are with the State Key Laboratory of Precision Measurement
+Technology and Instruments, Department of Precision Instrument, Tsinghua
+University, Beijing 100084, China (e-mail: yhm22@mails.tsinghua.edu.cn;
+luow23@mails.tsinghua.edu.cn; ljn22@mails.tsinghua.edu.cn; zhangxt6@
+foxmail.com; 18302973462@163.com).
+Wenyong Yu is with the State Key Laboratory of Digital Manufacturing
+Equipment and Technology, School of Mechanical Science and Engineering,
+Huazhong University of Science and Technology, Wuhan 430074, China
+(e-mail: ywy@hust.edu.cn).
+Hui Shi is with the School of Mechanical and Electronic Engineering, Wuhan University of Technology, Wuhan 430070, China (e-mail:
+clove_shi@whut.edu.cn).
+Digital Object Identifier 10.1109/TIM.2023.3343832
+
+I. I NTRODUCTION
+
+A
+
+UTOMATIC visual anomaly detection (VAD) has garnered considerable attention and widespread implementation across various sectors in the smart industry, due to
+its highly automated, nondestructive, and efficient detection
+capabilities. VAD has found practical applications in a range of
+industrial scenarios, including product quality inspection [1],
+textured surface defect detection [2], [3], and smart power
+systems [4], among others. The utilization of VAD offers
+substantial improvements in both efficiency and accuracy
+compared with traditional manual inspection methods.
+Supervised learning-based methods and unsupervised
+learning-based methods represent the two predominant
+approaches in industrial VAD. Supervised methods, leveraging
+annotated datasets consisting of numerous defective samples
+and their corresponding labels, have demonstrated robust
+detection performance [4], [5] across diverse scenarios. Nevertheless, the process of collecting and annotating a large number
+of defect samples is often impractical and time consuming in
+real-world industrial settings. Consequently, Wan et al. [1],
+Yao et al. [2], and Yang et al. [3] have turned their attention
+to unsupervised methods, which possess the advantage of
+utilizing only normal nondefective samples without the need
+for any annotations.
+The field of unsupervised VAD commonly adopts a method
+of learning the distribution of normal patterns through reconstruction. The underlying assumption is that only normal
+samples are utilized during the model training, and the objective is to generate reconstructions that closely resemble the
+input. During testing, both normal and abnormal samples will
+result in reconstructions that resemble the normal distribution.
+The discrepancy between the input and the reconstruction
+is then employed as the criterion for anomaly detection.
+This approach has been extensively studied in subsequent
+research endeavors. However, prevalent reconstruction-based
+VAD methods suffer from a significant limitation known
+as “trivial solutions” or “identical mapping.” This refers to
+instances where the model simply outputs a direct replica of
+the input during the reconstruction process, without considering its semantics. As a consequence, even outlier samples
+can obtain high-fidelity reconstructions, posing a challenge for
+anomaly discrimination in reconstruction-based methods.
+In practical VAD, the detection of anomalies across different
+categories remains an underexplored area. This issue holds
+significant relevance in real-world industrial environments,
+
+1557-9662 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+5004217
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+as illustrated in Fig. 1. Traditional methods encounter challenges when multiple product types require simultaneous
+detection, necessitating the utilization of independent model
+parameters for each product category. Consequently, this leads
+to substantial memory consumption for storage and inference
+purposes. To tackle this problem, we propose a scalable model
+that offers a comprehensive solution adaptable to inspections
+of all product types through the use of a single set of unified
+parameters. Unlike traditional methods that become increasingly impractical as the number of product types expands due
+to the need for separate parameter storage for each category,
+our proposed scalable approach requires the storage of only
+one set of generic parameters. This characteristic allows for
+scalability and versatility, regardless of the number of product
+types involved.
+The innovative multicategory anomaly detection approach
+poses a greater challenge than the conventional single-category
+method. The model is required to learn the normal distribution
+of multiple categories and perform the reconstruction process
+for each distinct category simultaneously, which may lead the
+model to further favor “trivial solutions” without considering
+semantic information. Moreover, the inference process requires
+the model to detect multiple categories without explicit label
+information or fine tuning, and thus, the model should not
+exhibit any biases toward a specific category. Such biases may
+result in the misclassification of samples from other categories
+as anomalous, even if they are normal or anomalous. This
+highlights the crucial importance of the model’s ability to
+comprehend the global semantics of objects.
+CNNs have been widely used and achieved impressive
+performance in various vision tasks, including VAD. However,
+their limited receptive field hinders them from comprehending global semantics, leading to reduced discriminability
+between normal and defective patterns [6]. To address this
+issue, the vision transformer (ViT) was proposed [7], which
+uses the self-attention mechanism to model images from a
+sequence perspective and capture global context. This promising methodology has the potential to address the inherent
+shortcomings of CNNs in the context of VAD and has garnered
+substantial attention in recent research endeavors.
+Drawing from the preceding analysis, we have devised a
+novel hybrid reconstruction framework called partial semantic
+aggregation vision transformer (PSA-VT) to capitalize on
+the strengths of both convolutional neural networks (CNNs)
+and ViTs, enabling a scalable approach to cross-category
+VAD in industrial scenarios. In the PSA-VT framework,
+CNNs are first employed to extract multiscale discriminative local representation, effectively transforming image
+pixels into deep feature maps imbued with local semantics. Subsequently, the partial semantic aggregation paradigm
+is introduced within ViT, incorporating auxiliary aggregation tokens to extract the global semantic context of
+the original feature’s patch tokens. In this paradigm, the
+reconstruction task transforms into a self-supervised semantic aggregation process. This study offers two primary
+contributions.
+1) We envisioned a challenging yet practical detection
+framework for industrial applications: scalable multi-
+
+Fig. 1.
+Real-world industrial settings demand simultaneous testing of
+numerous products. Conventionally, the inspection of captured image data
+from diverse product lines involves the use of multiple models in memory-intensive methodologies. However, the proposed innovative generalizable model
+provides a compelling alternative, requiring only a single model to effectively
+detect multiple products simultaneously.
+
+category anomaly detection. To achieve this objective,
+we have proposed a novel hybrid VAD approach, called
+the PSA-VT. The PSA-VT framework comprises two
+key modules: a local feature representation module,
+built upon a pretrained CNN and a global feature
+reconstruction module, powered by the ViT within the
+partial semantic aggregation paradigm. Specifically, the
+feature extraction module extracts the feature maps with
+local contexts as descriptors. On the other hand, the
+feature reconstruction module utilizes a global context
+aggregation paradigm to reconstruct abnormal features
+into normal patterns.
+2) To assess the efficacy of our proposed PSA-VT method,
+a comprehensive evaluation is conducted on the widely
+utilized MVTec AD dataset. The evaluation results
+demonstrate that PSA-VT achieves SOTA performance
+in terms of AUROC, with 96.4 for anomaly detection
+and 96.9 for anomaly segmentation, in the context of
+scalable multicategory anomaly detection (one-model15-category setting). To gain a deeper understanding
+of the underlying mechanisms and factors influencing
+performance, ablation experiments are performed along
+with related analyses. Moreover, in order to ascertain
+the practical applicability of our method in real-world
+industrial scenarios, incremental learning techniques are
+employed, and the effectiveness of our method is validated.
+The rest of this article is organized as follows. Section II
+offers a literature review that encompasses pertinent studies on
+VAD, with particular emphasis on reconstruction-based and
+ViT-based methods. Section III elaborates on the intricacies
+of our proposed approach, the PSA-VT. Section IV presents
+a thorough analysis of the experimental findings. Finally,
+Section V summarizes the conclusion and provides a concise
+summary of this article.
+
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT
+
+II. R ELATED W ORKS
+A. Reconstruction-Based Anomaly Detection
+The extensive research has been undertaken in the domain
+of VAD, encompassing various methodologies. Notably,
+embedding-based approaches [8], [9] have been explored,
+which involve the modeling of normal feature distributions
+in a latent space. These approaches utilize the dissimilarity
+between instances and normal feature clusters as a discriminative metric. However, for the purpose of this study, our focus
+is specifically directed toward reconstruction-based approaches
+in VAD.
+Deep autoencoders (AEs) are the most popular model in
+reconstruction-based VAD methods. To address the limitations of standard AE, several extensions have been proposed
+to enhance their capabilities in anomaly detection. For
+instance, the memory mechanism was proposed in the MemAE
+model [10] that explicitly stores the prototypical normality
+patterns to restrict the high-fidelity anomaly reconstruction
+issue encountered in vanilla AE. Similarly, the partition
+memory technique proposed in [11] ensures the preservation of normal semantic integrity. In addition, the multilevel
+image reconstruction (MLIR) model [12] generates multilevel
+reconstruction outcomes with different retentions, while the
+reconstruction by inpainting for anomaly detection (RIAD)
+model [13], augmented with attention in [14], leverages image
+inpainting techniques to improve the reconstruction process.
+Similar concepts are also explored in [15], where predictive
+regression is utilized within the local receptive field of CNNs
+as an alternative to direct reconstruction. In addition, the
+novel Draem method introduced in [16] introduces an extra
+pseudo-anomaly and discriminative subnetwork to enhance
+anomaly segmentation. While most existing methods focus
+on the reconstruction difference at the pixel level, the deep
+feature reconstruction (DFR) approach [17] employs feature
+reconstruction difference. DFR leverages the local semantic
+perception capability of the CNN network, enabling it to
+extract multilevel features and perform feature-level reconstruction, thereby achieving more robust anomaly detection
+performance. To address the issue of over generalization in
+feature reconstruction, the dual-Siamese network [18] incorporates synthetic defects and introduces feature repair techniques
+to enhance the stability of the reconstruction process. Moreover, approaches such as [1] and [6] employ feature mapping
+and correspondence mechanisms to establish diverse normality
+relations across different feature domains, thereby expanding
+the applicability of reconstruction-based methods. However,
+it is noteworthy that most existing methods, including the
+aforementioned ones, are predominantly based on the CNN
+model. The local semantic awareness of CNNs may limit the
+effectiveness of reconstruction-based methods when dealing
+with challenging defect types that exhibit global semantics. Moreover, the aforementioned approaches are developed
+within the framework of separate training for each category
+and do not investigate the one-model-multicategory scalability [19], which limits their applicability in scenarios, where
+multiple categories of production need to be inspected simultaneously.
+
+5004217
+
+B. Transformer Model in Anomaly Detection
+The ViT, a novel architecture in the field of computer vision,
+has demonstrated remarkable efficacy across various visual
+tasks [20]. However, its utilization in the VAD community,
+which predominantly relies on CNN-based methods, has been
+relatively limited. To address this gap, several models have
+been proposed that incorporate ViTs into the VAD framework.
+The inpainting transformer (InTra) was introduced in [21],
+offering a solution for image reconstruction through training
+a model to inpaint the missing patch by the surrounding
+patches. In a similar vein, U-transformer [22] tackles feature
+reconstruction by employing a transformer inspired by the
+U-net structure. Furthermore, MSTUnet [23] adopts a strategy
+that combines defect synthesis and image inpainting and
+incorporates the Swim transformer to leverage its long-range
+modeling capability for inpainting purposes.
+This study presents a novel reconstruction method termed
+PSA-VT. By leveraging the long-distance semantic dependency of the ViT, PSA-VT adopts a paradigm of partial
+semantic aggregation to accomplish self-supervised feature
+reconstruction. This approach overcomes the drawbacks of
+identity mapping observed in existing reconstruction-based
+methods, establishing a new paradigm for scalable multiclass
+VAD.
+III. P ROPOSED M ETHODOLOGY: PSA-VT
+A. Theoretical Analysis and Motivation
+In order to investigate the occurrence of the “identical mapping” phenomenon during the reconstruction process, we begin
+with a theoretical inquiry into the reconstruction task, focusing
+on the underlying mechanisms of various neural networks
+like [19]. In the case of CNNs, the output Y is a function of
+the input X , determined by a set of weight coefficients (W)
+and a bias term (B) and can be represented by the following
+equation:
+Y = W · X + B.
+
+(1)
+
+To achieve the reconstruction of the input X as Y = X , a CNN
+can assign the weight coefficient W as the identity matrix I
+and the bias B as 0. However, this approach results in a “trivial
+solution,” where the network fails to capture the input’s true
+semantic nature. On the other hand, the mechanism underlying
+the self-attention-based ViT can be summarized as follows:
+
+T 
+θv (X ) + X
+(2)
+Y = ξ θq (X ) · θk (X )
+{z
+}
+|
+A
+
+where θ is the linear transformation, ξ is the soft-max function,
+and A represents the attention matrix. In order to reconstruct
+the input and achieve Y = X , the model may learn to set
+θv and attention matrix to I. However, this also leads to the
+“trivial solution,” where the attention mechanism of each token
+is more focused on its own information, rendering the global
+attention feature of the transformer model ineffective. As a
+result, the global semantics of the object cannot be learned.
+In addition, residual connections that may lead the information
+leakage within the model can also be an important shortcut for
+the reconstruction task.
+
+5004217
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 2. (a) ViT [7] employs a class token to capture long-range semantic dependencies among the original image’s patch tokens for visual classification.
+(b) Directly using the patch tokens for the reconstruction task with the vanilla transformer risks falling into the trivial solution of shortcut reconstruction.
+(c) Our proposed PSA-VT introduces aggregation tokens to aggregate global semantic representations while preserving spatial information by aggregating the
+information of position-disjoint patch tokens under the supervision of the reconstruction task.
+
+To effectively tackle the challenges of multicategory
+anomaly detection tasks and avoid the aforementioned trivial
+solutions, it is crucial for a model to have a comprehensive grasp of object semantics. Drawing from the approach
+adopted by ViT [7], which employs a class token for global
+semantic aggregation in visual classification, we propose a
+novel strategy that leverages auxiliary aggregation tokens.
+As shown in Fig. 2(a), ViT introduces an additional class
+token to accomplish visual classification tasks by aggregating
+high-level global semantic information. However, as depicted
+in Fig. 2(b), when employing the standard transformer model
+for the reconstruction task, the “trivial solution” mentioned
+earlier may occur, especially when attempting to match intricate multicategory distributions.
+To address the above problems, we present a novel partial
+semantics aggregation transformer with auxiliary aggregation
+tokens that enables the model to extract high-level global
+semantics while preserving spatial information for the reconstruction task. As shown in Fig. 2(c), our novel approach goes
+beyond ViT [7] by generating representations with holistic
+global semantics for all spatial locations in the self-supervised
+learning paradigm. Specifically, we utilize a set of learnable
+aggregation tokens that share the same shape as the original
+patch tokens. This ensures that each position in the original
+feature sequence has an aggregation token. The aggregation
+tokens are divided into subsets that are associated with feature
+patch tokens from disjoint positions, facilitating the learning
+of long-range semantic dependencies during the reconstruction
+task. As a result, our method can obtain position-dependent
+global semantics for each position. In Section III-B we shall
+elaborate on this approach in a comprehensive manner.
+
+module. Initially, the input image undergoes conversion into a
+multiscale discriminative local representation via a pretrained
+CNN. Subsequently, the PSA-VT is employed to reconstruct
+the extracted representation by leveraging global contextual
+semantic aggregation.
+In the proposed partial semantic aggregation paradigm,
+we initially transform the feature representation into a
+sequence of feature patch tokens. To facilitate the aggregation
+process, we introduce an auxiliary aggregation label sequence
+that shares the same shape as the feature patch token sequence.
+The aggregation token sequence is partitioned randomly into
+multiple disjoint subsets. Each subset is then combined with
+a set of partial feature patch tokens whose positions do not
+overlap, forming a new set of sequences. These sequences are
+subsequently input to the transformer encoder.
+The aggregation tokens within each sequence enable the
+perception of information from feature patch tokens that
+occupy nonintersecting positions. This allows for the aggregation of feature patch tokens through long-distance semantic
+dependencies, resulting in the global semantics of the partial
+feature patch tokens for each sequence being aggregated in
+aggregation tokens after encoding. In the latent space, all
+aggregation tokens from across all sequences are merged,
+while the raw feature patch tokens are discarded. The resulting
+a new combined sequence, which is then processed by the
+decoder to reconstruct the original features.
+In Sections III-C–III-G, we will provide detailed
+explanations of each module of the PSA-VT method.
+
+B. Overall Pipeline
+
+To derive local discriminative semantic representations from
+input images I ∈ R H ×W ×3 , we employ a process that involves
+converting the raw pixel values into CNN deep feature maps.
+Consistent with the previous research [17], we utilize a pretrained CNN that has been trained on visual recognition tasks
+as our feature extractor. This allows us to leverage CNN’s
+capability to extract intricate local structures, thereby obtaining
+
+Fig. 3 illustrates the overarching architecture of our proposed PSA-VT. Serving as a hybrid framework, it combines
+the strengths of both CNN and ViTs, thereby encompassing local and global semantic awareness. The framework
+is primarily composed of two modules: the local feature
+representation module and the global feature reconstruction
+
+C. Local Feature Representation With Pretrained CNN
+
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT
+
+5004217
+
+Fig. 3. (a) Overall pipeline of the proposed PSA-VT. First, the local feature representation module employs a pretrained CNN to extract multiscale
+discriminative local representations for the input image. Subsequently, the global feature reconstruction module utilizes the partial semantic aggregation
+paradigm, facilitated by a ViT, to accomplish representation reconstruction. (b) Typical computational process of self-attention in the basic ViT block,
+as outlined in [7], is as follows. (c) Schematic illustrates the partial semantic aggregation paradigm.
+
+local representations that possess discriminative local semantic
+information.
+Unsupervised VAD methods lack prior knowledge about
+defects, including their sizes. To capture local structural representations across various scales, we employ a multiscale
+feature extraction strategy. Specifically, different levels of
+CNN possess feature maps with distinct receptive field sizes.
+Hence, we selectively extract features from multiple CNN levels. To enable the fusion of these multiscale features, we first
+adjust them to a consistent spatial size through interpolation.
+Subsequently, we concatenate these features along the channel
+dimension. This process yields the multiscale discriminative
+local representation F ∈ RH×W×C .
+By utilizing deep feature maps instead of low-level pixel
+representations, we exploit the advantages of capturing receptive information with local semantics. F provides a more
+locally discriminative representation of the input image, which
+enhances our ability to reveal and detect anomalous patterns.
+This approach allows us to leverage the power of the pretrained CNN’s learned features to improve the accuracy and
+robustness of our anomaly detection framework.
+
+Algorithm 1 Reconstruction by PSA
+Input: Input feature F
+Hyper-parameters: Patch size P; Subset number N
+Result: Reconstructed feature F̃
+1 Step1.Embed the F into sequence: X = E(F, P);
+∗
+2 Step2.Given the auxiliary aggregation sequence X ;
+∗
+3 Step3.Randomly divide X into N disjoint token
+subsets:
+N
+∗
+∗
+∗
+4 Xi , i = {1, . . . , N }| ∪i Xi = X
+= D(X ∗ , N );
+5 Step4.for i = 1, . . . , N do
+6
+Replace the corresponding tokens in X with Xi∗ :
+8i = Xi∗ ∪ ∁X Xi∗ ;
+7 end
+8 Step5.Encode the 8 = {8i , i = {1, . . . , N }} with
+Enc:Z8 = {Z 81 , Z 82 , . . . , Z 8 N } = Enc(8);
+9 Step6.for i = 1, . . . , N do
+10
+Retain the aggregation tokens embedding in Z 8i :
+Z X ∗ = Z X ∗ ∪ Z 8i (Xi∗ );
+11 end
+12 Step7.Decode the Z X ∗ with Dec: F̃ = Dec(Z X ∗ );
+13 return F̃
+
+D. Global Feature Reconstruction With PSA-VT
+In order to address the requirement for global semantic
+awareness in scalable multicategory VAD, we propose the
+partial semantics aggregation paradigm driven by ViTs. This
+paradigm aims to reconstruct the extracted representation F
+from a global semantic perspective. The reconstruction process
+employing partial semantic aggregation is succinctly outlined
+
+in Algorithm 1, accompanied by a visual representation of
+each sequential step illustrated in Fig. 4(a).
+First, to facilitate the processing of the 2-D feature maps,
+we initially reshape F ∈ RH×W×C along the spatial dimension. This reshaping operation transforms the feature maps
+into a sequence of flattened 2-D patches, each having a size
+
+5004217
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 4. (a) Working principle of the PSA-VT. Each step in Algorithm 1 is shown in this figure, respectively. (b) Schematic of the partial semantic aggregation
+process, where auxiliary aggregation tokens in each subset establish long-distance semantic dependencies with its disjoint patch tokens. (c) Comparison of the
+self-attention mechanism between the vanilla transformer and the proposed partial semantic aggregation transformer, the vanilla transformer has a tendency
+to focus on its local information when performing the reconstruction task, while the partial semantics aggregation transformer establishes long-range global
+semantic dependencies.
+
+of P × P × C, which are then mapped into D dimensional
+embeddings. This division strategy enables the construction of
+a feature patch sequence X with a shape of (HW)/P 2 × D.
+By employing this patch-level division approach, we ensure a
+more efficient computational process.
+In this article, we present a novel self-supervised approach
+based on ViTs for the global reconstruction task of feature
+patch token sequence X . As elaborated in Section III-A,
+the direct utilization of feature patch token sequences for
+self-reconstruction often leads to the “identical mapping problem.” To alleviate this challenge, as illustrated in Fig. 4(a),
+we introduce an auxiliary aggregation token sequence denoted
+by X ∗ to facilitate the reconstruction of the feature patch
+token sequence X . To enable effective reconstruction of X ,
+the auxiliary aggregation token sequence X ∗ is meticulously
+designed to match the shape of the feature patch token
+sequence X , ensuring that each feature patch token corresponds to a counterpart auxiliary aggregation token. To tackle
+this reconstruction task, we introduce a novel technique termed
+“partial semantic aggregation” for achieving self-supervised
+global reconstruction of the feature patch token sequence.
+The operational framework of partial semantic aggregation
+is systematically illustrated in Fig. 4(a), delineating each step
+of the process. To incorporate long-range semantic dependencies effectively, in step 3, we employ a random token
+sequence division strategy for X ∗ , breaking it down into N
+distinct subsets denoted by (X1 , X2∗ , . . . , X N∗ ), where each
+subset consists of (1/N ) aggregation tokens. Conversely, for
+
+X , a complementary partitioning approach is adopted. Specifically, this involves ensuring that the tokens within each subset
+of X and the tokens within the corresponding subset of X ∗
+exhibit a complementary positional distribution. Subsequently,
+in step 4, we merge N corresponding subsets that were
+partitioned from X ∗ and X , giving rise to the generation of
+N new sequences
+
+8 = 81 , 82 , . . . , 8 N |8i = Xi∗ ∪ ∁X Xi∗ , i = 1, . . . , N
+(3)
+where ∁X X i ∗ represents the feature patch tokens within each
+sequence that do not overlap with the aggregation tokens from
+the positioning perspective. Thus, for these N sequences, each
+sequence 8i consists of aggregation tokens comprising (1/N )
+of the total tokens, while the remaining (N − 1)/N proportion
+is comprised of disjoint feature patch tokens.
+In step 5, we feed this collection of sequences 8 into
+the transformer encoder. This process yields a latent space
+representation for each sequence within the set: Z8 =
+{Z 81 , Z 82 , . . . , Z 8 N }. During the encoding phase, the transformer effectively aggregates partial semantic information
+from the feature patch tokens into the aggregation tokens,
+leveraging long-range semantic dependencies, as illustrated
+in Fig. 4(b). The aggregation tokens within each sequence
+capture global contextual normality information from their
+respective nonoverlapping feature patch tokens. Moving to the
+latent space in step 6, we eliminate the feature tokens within
+
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT
+
+each sequence, as they may potentially contain abnormal
+information. Instead, we only extract the aggregation tokens
+from each sequence and recombine them to form a complete
+sequence, denoted by Z X ∗ . Subsequently, in step 7, we pass
+Z X ∗ through the decoder to execute the reconstruction task
+on the feature patch sequence. Finally, the resulting sequence
+is remapped to the 2-D space, yielding the reconstructed
+feature F̃.
+Fig. 4(c) presents a comparison between traditional transformers and our proposed partial semantic aggregation
+transformers. The conventional transformers exhibit a tendency for patch tokens to prioritize their own information,
+and the presence of residual connections, as mentioned earlier, can lead to trivial solutions of “identical mapping,”
+where the model simply duplicates the input data, neglecting semantic considerations. In contrast, our partial semantic
+aggregation transformer leverages learnable auxiliary aggregation sequences that effectively capture the normality semantics
+of the original signal. As depicted in the right-hand side of
+Fig. 4(c), the aggregation tokens aggregate normality information from the disjoint original patch tokens during the encoding
+stage, guaranteeing high-level semantic learning through longrange dependencies. As anomalous information is not included
+in the aggregation process during training, it is effectively
+filtered out. This mechanism successfully prevents the occurrence of trivial abnormal reconstruction phenomena. This
+method can be understood as an implicit self-supervised task,
+wherein the aggregation tokens leverage the global semantic
+capture ability of the transformer to reconstruct feature patch
+tokens. This reconstruction is achieved by considering the
+feature patch tokens that are disjoint from the target position and incorporating the long-range semantics dependencies.
+Consequently, it offers an efficient reconstruction-based VAD
+approach that effectively avoids abnormal reconstruction.
+E. Objective Function for Training
+In the proposed framework, only the feature reconstruction module requires optimization. To accomplish this task,
+we employ a loss function that considers both the distance and
+direction within the high-dimensional feature space. Specifically, given the input representation F ∈ RH×W×C and
+its corresponding reconstruction obtained through PSA-VT,
+denoted by F̃ ∈ RH×W×C , the reconstruction error can be
+measured as follows:
+
+1
+ℓ F, F̃ =
+H(× W
+!)
+
+
+F · F̃
+2
+×
+F − F̃ 2 + λ × 1 −
+.
+∥F∥ × F̃
+(4)
+The relative contributions of the two loss terms are balanced
+by the hyperparameter λ, which is empirically set to 5.
+F. Anomaly Detection for Inference
+Given that PSA-VT only employs normal samples during
+the training phase for optimization, its capability lies in
+
+5004217
+
+accurately reconstructing normal samples. However, abnormal
+samples that deviate from the established normal semantics
+tend to induce substantial reconstruction errors. Consequently,
+the disparity between the extracted representation of an input
+sample and its corresponding reconstruction can be leveraged
+as a criterion for anomaly detection
+!
+F · F̃
+2
+(5)
+A = F − F̃ 2 ⊗ 1 −
+∥F∥ × F̃
+where A ∈ RH×W is the anomaly score map and the ⊗
+denotes the element-wise multiplication. For each position,
+the channel-wise mean value is calculated and assigned as
+the anomaly score. To match the spatial resolution of the
+anomaly map with that of the input image, an interpolation
+operation is employed. Furthermore, to suppress noise, the
+final anomaly map undergoes a Gaussian filtering process.
+Subsequently, we choose to utilize the standard deviation of
+the anomaly score map as the image-level anomaly score since
+the anomalous samples obviously have high reconstruction
+errors.
+G. Interpretability
+In the industrial domain, the interpretability of deep learning
+models, particularly with regard to black-box models, holds
+significant importance. This is primarily due to the necessity
+of model debugging during adaptation to new environments.
+Blind debugging processes can lead to substantial resource
+wastage in terms of both manpower and time. Fortunately, our
+PSA-VT model stands out as a highly interpretable solution.
+First and foremost, PSA-VT boasts a minimal number of
+hyperparameters that require adjustment. When it comes to
+training, the only hyperparameter in consideration is the loss
+weight parameter λ, which exerts limited influence on the
+model’s detection performance. Furthermore, PSA-VT’s training procedure negates the need for collecting defect samples
+and eliminates the cumbersome labeling processes that often
+accompany traditional training workflows. In contrast, the
+PSA-VT training phase only calls for the collection of a
+specified quantity of defect-free samples. Most importantly,
+the interpretability of PSA-VT can be substantiated through
+the direct visualization of its feature reconstruction results (see
+Section IV-F4). Diverging from the abstract features generated by conventional classification-based methods, PSA-VT
+adopts the reconstruction paradigm and effectively addresses
+the shortcut learning problem in traditional approaches.
+As a result, the feature reconstruction outcomes provided by
+PSA-VT offer a direct and comprehensible means of validating
+the model’s training progress, making it a useful tool for
+practitioners.
+IV. E XPERIMENTAL V ERIFICATION
+A. Dataset Details
+In this section, we undertake an evaluation of the PSA-VT’s
+performance on various publicly available benchmarks to
+ascertain its effectiveness. To be precise, we utilized three
+industrial datasets: Mvtec AD [24], Mvtec 3D [25], and
+
+5004217
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+TABLE I
+S UMMARY OF E XPERIMENTAL I NDUSTRIAL AND S EMANTIC DATASETS
+
+beanTech Anomaly Detection (BTAD) [26], as well as three
+semantic datasets: MNIST [27], Fashion-MNIST [28], and
+CIFAR-10 [29], for the purpose of this assessment. Table I
+presents the concise summaries of the datasets utilized in our
+investigation. In order to ensure a fair comparison, we adhered
+to the dataset splits as originally outlined in the respective publications, thereby creating dedicated training and testing sets,
+and no data augmentation was used. For more comprehensive
+insights into the specifics of these datasets, we encourage
+referring to the corresponding references.
+The Mvtec AD [24] dataset has gained significant popularity
+in the domain of unsupervised VAD. This dataset encompasses 15 categories, including ten object categories and five
+texture categories, encompassing a total of 3629 defect-free
+training images, as well as 1258 defective images featuring
+various defects and 467 defect-free images for testing. Notably,
+in order to verify the scalability of different methods in
+a single-model-multicategory scenario, we adopt a strategy
+of training all 15 categories simultaneously, deviating from
+existing methods that train on individual categories separately.
+Recently, Mvtec Software GmbH introduced the MVTec3D
+[25] dataset, which serves as a fresh benchmark primarily
+designed for the detection of geometric anomalies in 3-D
+objects. This dataset encompasses both RGB images and
+3-D scans. MVTec3D comprises ten distinct classes, all of
+which pertain to object categories. It is worth noting that
+in the context of identifying anomalies within MVTec3D,
+we exclusively leverage RGB images as input data, without
+incorporating 3-D scans, as our PSA-VT framework operates
+seamlessly with RGB images.
+The experimental evaluation also encompasses the utilization of the BTAD dataset [26], encompassing a comprehensive
+set of 2830 images categorized across three distinct classes.
+Analogous to the Mvtec AD dataset, the training subset within
+each category exclusively comprises nondefective samples,
+while the test subset encompasses a mixture of nondefective
+and defective samples. We also assessed the model’s performance within a single-model-multicategory scenario in this
+dataset.
+Moreover, the present study extends the task of anomaly
+detection to include semantic anomaly detection, which necessitates a comprehensive understanding of object semantics. For
+this purpose, we employed the MNIST [27] dataset, fashionMNIST [28] dataset, and CIFAR-10 [29] datasets. These
+datasets are semantically categorized into ten distinct subcategories. We employ a methodology akin to cross validation,
+
+wherein, during the training phase, a single subclass is exclusively designated for normal instances, while the remaining
+classes are considered as abnormal instances and are not
+utilized for training. The model’s performance is subsequently
+evaluated by calculating the mean across all ten subclasses.
+B. Evaluation Criteria
+For evaluating the performance of anomaly detection at both
+the image level and pixel level, we follow the established
+practice in previous studies. The area under the receiver
+operating characteristic curve (AUROC) is employed as the
+primary quantitative evaluation metric, along with the average
+precision (AP). In addition, we also employed the normalized
+area under the per-region overlap curve (AUPRO) [30] with
+a threshold of 0.3 to serve as a more refined indicator of
+localization accuracy. Higher values for all metrics indicate
+better performance in anomaly detection.
+C. Implementation Setup
+In the local feature representation module, we leverage
+the existing knowledge of a pretrained CNN to extract local
+descriptors. Specifically, we utilize the EfficientNet-b4 CNN
+model as our default choice. To achieve multiscale feature
+extraction, we extract feature maps from the first four convolution modules of the model. These intermediate feature maps
+are initially resized to a consistent spatial size of 32 × 32 and
+subsequently fused in the channel dimension. Consequently,
+the input image I is transformed into a high-dimensional
+tensor F ∈ R32×32×272 .
+In the global feature reconstruction module, we employed
+a transformer architecture similar to the masked AE (MAE)
+[20]. To optimize computational efficiency, we reduced the
+embedding dimension D to 240. In the context of the partial
+semantic aggregation paradigm, we conducted embedding of
+the obtained representations at the patch level, with a patch
+size of P = 2. Furthermore, the default setting for the number
+of subsets N in the partition is set to 4.
+Regarding the architectural implementation of PSA-VT,
+we have chosen to utilize the PyTorch 1.7.0 deep learning
+framework. Specifically, for the implementation of the EfficientNet and MAE network structures, we have adopted existing publicly available implementations1,2 to ensure consistency
+1 https://github.com/facebookresearch/mae
+2 https://github.com/lukemelas/EfficientNet-PyTorch
+
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT
+
+5004217
+
+TABLE II
+AUROC AND AP R ESULTS OF D IFFERENT M ETHODS IN MVT EC AD AT B OTH THE I MAGE L EVEL AND P IXEL L EVEL
+
+and accuracy. Furthermore, the source code of PSA-VT is
+openly accessible. Interested readers and researchers can
+access the code at the following link.3
+The representation module within the entire model does not
+require training. However, we train the reconstruction module
+for a total of 400 epochs using the AdamW optimizer with a
+batch size of 8 and a learning rate of 1e−4. Each image in
+the dataset undergoes preprocessing steps, including resizing
+it to 256 × 256 dimensions and normalization using the mean
+and standard deviation derived from the ImageNet dataset. All
+experiments are performed on a desktop computer with an
+Intel Xeon4 Gold 6226R CPU operating at 2.90 GHz and two
+NVIDIA A100 GPUs having 40 GB of memory.
+D. Comparative Experiments
+In this section, we undertake an extensive comparative
+analysis of the PSA-VT model in contrast to existing methodologies. To commence, we assess the performance of PSA-VT
+against SOTA models in the proposed scenario of multicategory scalability training using industrial datasets. Furthermore,
+we delve into comparative experiments on semantic anomaly
+datasets to validate the high-level semantic discrimination
+capability of PSA-VT.
+It is crucial to highlight that the performance results reported
+for the compared methods in their original publications are
+based on the conventional single-category training paradigm.
+In order to ensure an equitable evaluation within the context
+of scalable multicategory training techniques, we rigorously
+conducted assessments by replicating the compared methods
+using publicly accessible source code. To elaborate, during the
+training phase, we trained a comprehensive model on a dataset
+encompassing all categories within that dataset. It should also
+be emphasized that no fine-tuning was employed during the
+testing phase.
+3 https://github.com/hmyao22/PSA
+4 Registered trademark.
+
+Fig. 5.
+Comparison results of PSA-VT with the existing advanced
+reconstruction-based methods on Mvtec AD dataset.
+
+1) Mvtec AD Comparison Result: The PSA-VT model is
+first compared with several SOTA methods on Mvtec AD
+dataset under the multicategory scalability training scenario,
+such as FastFlow [31] which utilizes normalizing flow, the
+two-stage reconstruction-discrimination method Draem [16]
+that employs simulated defects, Padim [9] that is based on
+normal distribution modeling, Patchcore [8] that uses normal
+sample memory, and the RD4AD [32] method based on inverse
+knowledge distillation.
+Table II presents the quantitative results of the experiments.
+The proposed PSA-VT model achieves image-/pixel-level
+AUROC scores of 96.4/96.9 and image-/pixel-level AP
+scores of 98.6/50.9 across all 15 categories. Compared
+with the suboptimal RD4AD method, PSA-VT improves the
+image-/pixel-level AUROC by 0.3 and 1.1 and the image-/
+pixel-level AP by 0.5 and 1.0, respectively, and significantly outperforms the other competing methods. PSA-VT
+obtains the highest or second-highest combined accuracy in
+
+5004217
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 6. Qualitative results of various methods for anomaly localization in the scalable running mode on the Mvtec AD dataset. Ground truth annotations are
+indicated by yellow outlines.
+
+ten categories out of all categories. Notably, PSA-VT shows
+significant performance improvement for some of the most
+challenging categories with complex semantics, such as transistor and cable classes.
+Since our proposed method belongs to the reconstructionbased category, and to evaluate its performance, we compared
+it with several SOTA methods within the same category. These
+methods include RIAD [13], DFR [17], and multihierarchical bidirectional pretrained feature mapping (MB-PFM) [1],
+which are CNN-based approaches. In addition, we considered
+AnoViT [33], MSTUet [23], and U-transformer [22], which
+are transformer-based approaches.
+RIAD addresses image reconstruction by formulating it as
+an inpainting problem, aiming to avoid reconstructing defects
+in the process. DFR, on the other hand, goes beyond simple
+image reconstruction and focuses on feature reconstruction.
+Utilizing mappings between different pretrained feature
+spaces, MB-FPM is a recent advanced model. AnoViT
+employs a transformer encoder to capture global semantics
+during image reconstruction. In the MSTUet framework, the
+image inpainting model leverages the long-distance semantic
+capture capability of the Swin transformer. Abnormal segmentation is accomplished by incorporating synthetic defects and
+a CNN-based discriminant network. Finally, the U-transformer
+adopts an U-shaped transformer architecture to facilitate
+feature reconstruction.
+As illustrated in Fig. 5, our method demonstrates superior performance compared with other reconstruction-based
+approaches. Specifically, compared with the suboptimal
+MB-PFM [1], we achieve a significant improvement of
+6.3/2.6 in AUROC and 3.3/7.5 in AP.
+Furthermore, the qualitative detection outcomes of several
+samples are illustrated in Fig. 6. The results reveal that
+DRAEM exhibits significant missed detections, while other
+methods produce imprecise localization outcomes. In contrast,
+
+our approach demonstrates the most precise and accurate
+detection outcomes. We also provide quantitative comparison
+results of the AUPRO [30] to the false-positive rate of 0.3 for
+each method, which further highlights the superiority of our
+proposed scheme in accurately localizing defects.
+2) Mvtec 3-D Comparison Result: Table III provides a
+detailed breakdown of pixel-level AUPRO results, focusing
+on category-by-category comparisons between PSA-VT and
+several other methods, including baseline methods such as
+GAN, AE, and VM [25], as well as the recent SOTA methods
+3-D ST [34]/2-D ST [30]. It is noteworthy that while 2-D
+ST and PSA-VT utilize 2-D RGB information, the other
+methods rely on 3-D information derived from voxels, depth
+maps, or point clouds. The results showcase the performance of PSA-VT under individual single-category training
+[PSA-VT(I)] and scalable multicategory training settings
+[PSA-VT(S)], highlighting its SOTA capabilities, surpassing
+both the baselines and the recent SOTA method ST. Some
+qualitative results are displayed in Fig. 7.
+Several key observations can be gleaned from the experimental results. First, despite exclusively utilizing RGB pixel
+information, PSA-VT outperforms other methods that rely on
+stereo information, such as the suboptimal method 3-D ST.
+This finding underscores the effectiveness of using RGB information alone for detecting stereo geometric defects, primarily
+because geometric anomalies often manifest as alterations
+in RGB values. While the combination of depth and RGB
+information from various modalities can enhance localization
+performance, it is important to note that stereo vision sensors
+incur additional costs. PSA-VT’s ability to achieve superior
+results solely with RGB pixel information underscores its
+cost-effectiveness and versatility.
+Furthermore, PSA-VT exhibits comparable performance
+in both the individual single-category training paradigm
+[PSA-VT (I)] and the scalable multicategory training
+
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT
+
+5004217
+
+TABLE III
+Q UANTITATIVE C OMPARISON OF AUPRO FOR VARIOUS M ETHODS ON THE M VTEC 3-D DATASET
+
+Fig. 7.
+
+Qualitative results of PSA-VT for anomaly localization on the Mvtec 3-D dataset.
+
+TABLE IV
+C OMPARATIVE R ESULTS FOR THE BTAD DATASET
+
+TABLE V
+C OMPARATIVE R ESULTS FOR THE H IGH -L EVEL S EMANTIC
+A NOMALY D ETECTION TASK
+
+Fig. 8. Qualitative anomaly localization results of PSA-VT on BTAD dataset.
+From top to bottom: abnormal samples, anomaly score maps, and ground
+truths.
+
+paradigm [PSA-VT (S)]. This highlights its robust
+generalization capabilities, as it accurately detects product
+anomalies across all ten categories using a common model
+weight.
+3) BTAD Comparison Result: Table IV lists a qualitative
+comparison of PSA-VT with several existing SOTA methods
+
+Fig. 9. Antinoise robustness test results of PSA-VT. Qualitative detection
+results of PSA-VT for various noise samples (top). RAW: original image, GN:
+Gaussian noise, RB: random brightness, RC: random contrast, and BL: blur.
+Quantitative results of PSA-VT on the Mvtec AD dataset with/without noise
+(bottom).
+
+PatchSVDD [35], DFR [17], Padim [9], Draem [16], MSFD
+[36], CFLOW [37], and PMAD [38] in terms of anomaly
+detection and localization for the BTAD dataset. We present
+
+5004217
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+TABLE VI
+Q UANTITATIVE C OMPARISON R ESULTS OF M ODEL ROBUSTNESS IN THE S CALABLE M ODE , RUNNING E FFICIENCY, AND M EMORY C ONSUMPTION
+
+results for both single-class training and multiclass training
+scenarios. In both cases, PSA-VT demonstrates the optimal
+performance in image-level anomaly detection and pixel-level
+anomaly localization. In comparison to the most recent PMAD
+(AAAI2023) method, PSA-VT exhibits notable improvements
+in image pixel-level AURPO. Specifically, we achieve a gain
+of +1.9/0.2 and +1.5/0.3 in the two respective training modes,
+underscoring the effectiveness of our approach. Fig. 8 provides
+illustrative examples of anomaly localization performed by
+PSA-VT on the BTAD dataset.
+4) Semantic Anomaly Comparison Result: Our PSA-VT
+approach introduces auxiliary aggregation tokens to transform
+the low-level reconstruction task into a high-level regression task, which is particularly significant for semantic-level
+anomaly detection. In this section, we present an evaluation of
+the performance of PSA-VT on semantic anomaly detection.
+To this end, we compare the results obtained by PSA-VT with
+those obtained by some SOTA methods for semantic anomaly
+detection, such as GANomaly [39], LSA [40], ARAE [41],
+and ARNet [42], as well as Padim [9], a method designed for
+industrial defect detection.
+The results of the comparison are presented in Table V.
+It is observed that while Padim shows promising outcomes in
+low-level tasks such as industrial anomaly detection, it suffers from significant performance degradation in high-level
+semantic anomaly detection tasks. This suggests that Padim
+is only effective in detecting anomalies with local structural
+damage and is unable to handle semantic anomalies. Compared
+with the other methods for semantic anomaly detection, our
+approach ranks second, with suboptimal performance compared with ARNet. However, according to the original research
+paper of ARNet [42], the method only achieved 83.9 AUROC
+for industrial anomaly detection tasks, which is much lower
+than the outcomes achieved in this study.
+E. Model Robustness and Efficiency Assessment
+In this section, we aim to assess the robustness and efficiency of the model on several fronts. First, we will evaluate
+the model’s robustness against noise. Second, we will explore
+the model’s scalability robustness, particularly when transitioning from single-class anomaly detection to the multiclass
+
+anomaly detection scenario as proposed. Finally, we will
+conduct an assessment of the computational complexity of the
+model.
+1) Robustness Evaluation Against Noise: In this experimental investigation, we examined the influence of noise
+introduction on the data on the performance of PSA-VT.
+Specifically, we applied random data augmentation techniques
+using the Albumentations library [43] to process image samples. These augmentation techniques included the introduction
+of Gaussian noise, random alterations in brightness and contrast, as well as blurring. The resulting images with added
+noise were then used for testing purposes.
+The top section of Fig. 9 visually illustrates the qualitative
+impact of several typical noise types on the detection outcomes
+achieved by the PSA-VT method, while the bottom section
+provides quantitative metrics for evaluation. Our findings indicate that the presence of noise in the sample images does not
+significantly compromise the overall performance of PSA-VT.
+This observation underscores the robustness of our approach
+to handling noisy data.
+2) Robustness Evaluation of Model Scalability: In order
+to address the challenges faced by traditional VAD methods
+in real industrial scenarios, we propose a novel approach
+in this study: the scalable operating mode. Traditional VAD
+methods often encounter memory issues as they require storing
+model parameters separately for each category. In contrast, the
+scalable VAD method only requires a single set of parameters
+for different types, making it more suitable for high-efficiency
+requirements in industrial environments.
+However, the scalable operating mode places high demands
+on the robustness of model scalability, as it requires the model
+to learn normal distributions of multiple types simultaneously,
+which presents a greater challenge. In order to thoroughly evaluate the models, we conducted evaluations under two distinct
+modes of operation: the “Individual” mode, which aligns with
+the traditional approach of employing one model per category,
+and the “Scalable” mode, which represents a novel strategy of
+utilizing a single model for multiple categories.
+The experimental results, as presented in Table VI, indicate
+the performance of our proposed PSA-VT method under
+both the traditional “Individual” mode and the more challeng-
+
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT
+
+ing “Scalable” mode. In the traditional “Individual” mode,
+PSA-VT achieves competitive results compared with SOTA
+models, such as FastFlow, Draem, and Patchcore, although it
+does not surpass them. However, when the existing methods
+are switched to the “Scalable” mode, significant performance
+drops are observed in both image-level and pixel-level detection accuracy for the compared models. For instance, the
+SOTA model FastFlow experiences a drop of 12.3 and 6.7,
+and Patchcore experiences a drop of 13.8 and 3.0. This
+performance degradation can be attributed to the fact that these
+methods primarily focus on extracting local information while
+neglecting global semantics. The performance degradation of
+RD4AD, which incorporates a bottleneck structure to capture
+global semantics, is mitigated to some extent.
+In contrast, our PSA-VT method exhibits minimal performance degradation when transitioning to the more demanding
+“Scalable” mode. This impressive attribute can be attributed
+to the effective capture of high-level global semantics by
+our method, underscoring its robust scalability and superior
+proficiency in addressing complex VAD challenges across
+multiple categories. Exploring an even more rigorous scenario,
+we conducted training on all categories encompassed by the
+three datasets (Mvtec AD, Mvtec 3-D, and BTAD) under
+examination utilizing a single model. Notably, we observed
+that the model’s detection accuracy remained relatively unaffected, providing further evidence of the robust generalization
+capabilities of our approach.
+3) Efficiency and Consumption Evaluation: In addition to
+performance evaluation, assessing model efficiency and memory consumption are crucial. In this regard, we will conduct
+evaluations from the above two perspectives. For efficiency,
+we will utilize floating point operations per second (FLOPs)
+and frames/s (FPS) as metrics to quantify computational
+efficiency. As for memory consumption, we will employ the
+number of parameters as a metric to gauge model complexity.
+The comparison results are presented in Table VI, showcasing the efficiency and memory consumption analysis.
+In terms of efficiency, it is observed that PSA-VT, utilizing the transformer model, exhibits a lower inference speed
+compared with CNN-based methods, such as FastFlow and
+Dream. However, the model still achieves a commendable
+13.7 FPS, which meets the requirements for real-world industrial deployment. Concerning memory consumption, PSA-VT
+demonstrates a lightweight architecture, employing merely
+14.59M parameters and 10.17G FLOPs. This makes it the most
+resource-efficient model among the compared methods. While
+other competing approaches employ more complex model
+structures, their performance experiences a more substantial
+decline when encountered with above mentioned scalable running mode. Notably, despite its lightweight design, PSA-VT
+maintains high levels of generalization robustness, due to its
+capacity to extract global high-level semantics.
+F. Ablation Studies
+1) Influence of the Feature Representation: In this framework, we leverage the inherent local semantic capture ability
+of CNNs and introduce a local feature representation module
+aimed at converting image pixels into feature representations.
+
+5004217
+
+Fig. 10. Impact of feature representation on image-/pixel-level detection
+performance.
+
+Fig. 11. Ablation experiments of the effect of hyperparameter subset number
+N and patch size P on model performance and computational efficiency.
+(a) Effect of N . (b) Impact of P.
+
+In this section, we shall examine the efficacy of this approach
+by conducting a comparative analysis between image pixels
+and feature tensors. Furthermore, the performance variations
+across different types of CNN architectures will also be
+explored.
+The findings are illustrated in Fig. 10, which provides
+insights into the comparative performance of the reconstruction methods based on feature representations as opposed
+to image pixels. Notably, the feature-based reconstruction
+methods consistently outperform the pixel-based counterparts,
+primarily due to their ability to capture more discriminative
+local semantics while retaining fewer details. These characteristics enhance the discriminability of defects and reduce
+the complexity associated with the reconstruction process.
+Furthermore, the study reveals that different CNN architectures
+exhibit varying capabilities in representing local semantics.
+Shallow network architectures tend to demonstrate limited
+representation abilities, while deeper networks often exhibit
+a bias toward classification tasks. Notably, when considering
+the PSA-VT method, EfficientNet-b4 emerges as the optimal choice, primarily due to its exceptional capability in
+identifying structural damages within defects.
+2) Sensitivity of the Subset Number: As outlined in
+Section III-D, the implementation of a partial semantic aggregation mechanism necessitates the separation of the auxiliary
+aggregation sequence X ∗ into N distinct subsets. Each subset
+is then aggregated with the semantics of nonintersecting feature patch tokens. The choice of N has a direct impact on both
+the detection performance and efficiency of the mechanism.
+The findings from the ablation experiments regarding the
+N value are presented in Fig. 11(a). In terms of detection
+performance, both the image-level and pixel-level AUROC
+exhibit a trend of initially increasing and then decreasing with
+
+5004217
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+the variation of N . This observation can be attributed to the
+fact that when N is too small, there is a reduced proportion
+of original feature patch tokens in (3), resulting in insufficient
+availability of original feature information. Conversely, when
+N is excessively large, the proportion of aggregation tokens
+in (3) decreases, impeding the complete aggregation of feature
+patch token information. Regarding computational efficiency,
+it shows an increasing trend as N increases. Consequently,
+a default value of N = 4 has been selected based on these
+observations.
+3) Effect of the Patch Size: In contrast to existing
+approaches [7], which typically employ direct element-byelement embedding projection on the CNN feature map, our
+proposed method adopts a patch-level embedding strategy
+on the feature map to cater to the more computationally
+efficient requirements in industrial scenarios. In this section,
+we investigate the impact of this strategy on the detection
+performance and efficiency.
+The experimental results, depicted in Fig. 11(b), demonstrate the effects of varying the value of P, which represents
+the level of fine grainedness in the embedding process. As P
+increases, it indicates a gradual decrease in the granularity
+of the embedding, resulting in a reduction in the length of
+the generated embedding sequence. Consequently, both the
+detection accuracy and computational complexity exhibit a
+corresponding decrease. Generally, a finer-grained embedding
+method has the potential to enhance accuracy, but at the cost
+of increased computational complexity.
+Observations reveal that when P = 2, the detection accuracy is slightly lower compared to P = 1, while offering a
+more noticeable computational complexity advantage. As a
+result, we have selected a default setting of P = 2 for our
+approach.
+4) Effect of the Feature Reconstruction: The primary contribution of this study lies in the introduction of a novel partial
+semantic aggregation mechanism, which aims to enhance
+the feature reconstruction process and address the inherent challenge of trivial anomaly reconstruction in existing
+reconstruction-based VAD methods. To assess the efficacy
+of this mechanism, we conducted a series of experiments
+as a demonstration. In particular, we utilized the vanilla
+transformer model without the partial semantic aggregation
+paradigm as the baseline model and then evaluated the
+enhancements achieved by incorporating the partial semantic
+aggregation paradigm.
+Initially, we will visualize the outcomes of the refactoring process. Since PSA-VT employs a feature reconstruction
+strategy, direct observation is not straightforward. To provide
+a more intuitive representation, we introduce a convolutional
+decoder tasked with transforming the reconstructed features
+into pixel values. The results are depicted in the top section
+of Fig. 12. It can be observed that in the case of the Mvtec AD
+dataset, the baseline model utilizes the “identical mapping” of
+the duplicated input, leading to the reconstruction of abnormal
+patterns. This is not conducive to the reconstruction-based
+VAD method. In contrast, our proposed method successfully
+restores abnormal defects to their normal patterns. This is
+evident even in challenging scenarios, such as samples with
+
+Fig. 12. Effect of feature reconstruction. (a) Original defective samples,
+(b) reconstruction results using the vanilla transformer, and (c) reconstruction
+results using PSA-VT (top). The models are trained on digit “2” for the
+MNIST sample. Quantitative results comparing the vanilla transformer and
+PSA-VT (bottom).
+
+missing transistors, where our method is capable of generating
+normal patterns.
+The quantitative performance improvements resulting from
+this enhancement are depicted in the top part of Fig. 12.
+The introduction of the partial semantic aggregation mechanism has yielded significant enhancements to the baseline
+model. Specifically, the industrial VAD task on the Mvtec AD
+dataset, it has led to improvements of 12.0 and 6.8 in imagelevel/pixel-level AUROC detection performance, as well as
+6.2 and 20.5 in image-level and pixel-level AP detection
+performance, respectively, when compared with the baseline.
+In the case of high-level semantic VAD tasks, the incorporation
+of the partial semantic aggregation paradigm has resulted in
+an increase of nearly or exceeding 10 in AUROC detection
+performance at the image level across the three datasets:
+MNIST, fashion MNIST, and CIFAR. These findings effectively validate the efficacy of the partial semantic aggregation
+mechanism in enhancing the reconstruction process.
+5) Attention Visualization: This section presents a detailed
+analysis of the PSA-VT model’s attention matrix through
+visualization. Fig. 13 shows the comparison of the attention matrix of the PSA-VT model with that of a vanilla
+transformer. The comparison reveals two essential characteristics of the PSA-VT attention matrix. First, the attention
+matrix of the vanilla transformer shows a strong inclination
+toward a position-based attention pattern [44], as evidenced
+by its large diagonal elements. This pattern implies that query
+tokens primarily focus on themselves and their immediate
+surroundings. Conversely, the PSA-VT attention matrix has
+relatively small diagonal elements, indicating that each token
+
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT
+
+5004217
+
+Fig. 13.
+Attention matrix visualization results. The vanilla transformer
+model has a higher tendency toward the relative position-based attention
+pattern [44], while the PSA-VT model displays a stronger inclination toward
+the content-based attention pattern [44]. This suggests that PSA-VT has a
+better capability to extract high-level semantics related to objects. Partial
+enlargements are provided for ease of observation. The attention matrix is
+obtained by averaging all layers and heads of the encoder.
+Fig. 15. (a) Detection results of different types of defects by the PSA-VT.
+(b) Quantitative comparison of the different training approaches.
+
+To elaborate, we define two models—old and new—using the
+model trained on the Mvtec AD dataset as the foundation.
+Subsequently, the new model is trained on the BC-AD dataset
+with a new reconstruction task, while mimicking the reconstruction behavior of the old model on the Mvtec AD dataset
+to prevent catastrophic forgetting. As a result, the new model
+is fine tuned using the distillation loss and reconstruction loss
+˜M , F˜M  + (1 − ∂) · ℓ F˜B , F B 
+L = ∂ · ℓ FN
+(6)
+|
+{z O } |
+{z N N }
+Fig. 14. AOI equipment for bottle cap defect inspection (left). (a) Overall
+equipment. (b) Inspection module. (c) Delivery module. Samples of normal
+and defective bottle caps (right).
+
+has a wider semantic reach and can establish long-range
+semantic connections with other tokens. This feature allows
+our method to avoid trivial reconstruction shortcuts caused by
+a narrow self-attention. Second, the attention matrix displays a
+content-based attention pattern resembling vertical bars [44],
+implying that certain key tokens have high attention values
+for all query tokens. This property suggests that PSA-VT can
+extract high-level semantics for objects.
+G. Practical Application
+Fig. 14 presents the implementation of PSA-VT in our
+automatic optical inspection (AOI) equipment for bottle cap
+anomaly detection (BC-AD), which further validates the
+effectiveness of our model.
+1) Fast Adaptation With Incremental Learning: It is noteworthy that the generalized ability of the proposed model,
+a crucial attribute for practical industrial applications, has been
+demonstrated in this application. Specifically, the proposed
+model leverages the model trained on the Mvtec AD dataset as
+the base model and adopts incremental learning [45] for fine
+tuning when a new type of sample is introduced for inspection.
+This approach not only saves time and computational resources
+but also demonstrates the versatility and adaptability of the
+proposed model in addressing real industrial scenarios.
+Drawing inspiration from [45], we have adopted an incremental learning approach based on knowledge distillation.
+
+Distillation
+
+Reconstruction
+
+˜M and F˜M represent the reconstructed features of the
+where FN
+O
+old and new models for random exemplars in the Mvtec AD
+B
+B
+dataset, while F˜N
+, FN
+denote the extracted and reconstructed
+features of the new model for new samples in the BC-AD
+dataset. The weight hyperparameter is represented as ∂.
+Fig. 15(a) depicts the inspection outcomes that demonstrate
+the high accuracy of the proposed approach in detecting all
+types of BS-AD defects. Fig. 15(b) presents the quantitative
+performance comparison among different training methods.
+The results indicate that fine-tuning strategies exhibit a faster
+convergence rate compared to the retraining method. Furthermore, direct fine tuning on the BC-AD dataset would cause
+catastrophic forgetting of previously learned knowledge from
+the Mvtec AD dataset. However, the incremental learning
+method can prevent this issue while ensuring performance on
+both datasets.
+2) High-Throughput Inference With Efficient Deployment:
+In real industrial applications, with the aim of harnessing the full potential of inference efficiency, we undertook
+additional optimization of the PSA-VT model utilizing the
+TensorRT [46] SDK. As a result, the model’s execution
+speed significantly improved, achieving a commendable rate
+of approximately 30 FPS. This level of performance aptly
+satisfies the requirements for high-speed detection within
+industrial settings.
+V. C ONCLUSION AND D ISCUSSION
+In this study, we propose a novel hybrid framework called
+PSA-VT for scalable multicategory industrial VAD tasks.
+
+5004217
+
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+PSA-VT consists of two key modules: a local feature representation module based on CNN and a global feature
+reconstruction module based on ViT. The primary contribution
+of this article lies in the introduction of a partial semantic aggregation paradigm within the reconstruction module,
+which significantly enhances the global semantic acquisition
+capability during the reconstruction process and addresses the
+limitations of conventional reconstruction-based methods that
+often suffer from the identical mapping problem.
+We have conducted comprehensive evaluations of PSA-VT
+on multiple widely used benchmarks, including industrial
+and semantic VAD. The results demonstrate that PSA-VT
+achieves superior performance across various metrics, particularly in challenging scenarios involving scalable multicategory
+detection tasks. Furthermore, we have conducted thorough
+ablation experiments to shed light on the inner workings
+of the proposed framework. Moreover, we have successfully demonstrated the practical applicability of PSA-VT by
+achieving rapid adaptation to real-world deployments through
+incremental learning in real industrial settings.
+While the partial semantic aggregation process, being a
+multisubset parallel operation, does have a certain impact
+on computational efficiency, we recognize the importance
+of addressing this issue and mitigating it using deployment
+tools. In future research, we aim to develop more efficient
+solutions by improving the intrinsic attention mechanism of
+the ViT, thereby further enhancing the overall efficiency of
+the framework.
+R EFERENCES
+[1] Q. Wan, L. Gao, X. Li, and L. Wen, “Unsupervised image anomaly
+detection and segmentation based on pretrained feature mapping,” IEEE
+Trans. Ind. Informat., vol. 19, no. 3, pp. 2330–2339, Mar. 2023.
+[2] H. Yao, W. Yu, and X. Wang, “A feature memory rearrangement network
+for visual inspection of textured surface defects toward edge intelligent
+manufacturing,” IEEE Trans. Autom. Sci. Eng., vol. 20, no. 4, pp. 2616–
+2635, Oct. 2023, doi: 10.1109/TASE.2022.3204368.
+[3] H. Yang, Q. Zhou, K. Song, and Z. Yin, “An anomaly feature-editingbased adversarial network for texture defect visual inspection,” IEEE
+Trans. Ind. Informat., vol. 17, no. 3, pp. 2220–2230, Mar. 2021.
+[4] X. Tao, D. Zhang, Z. Wang, X. Liu, H. Zhang, and D. Xu, “Detection
+of power line insulator defects using aerial images analyzed with
+convolutional neural networks,” IEEE Trans. Syst. Man, Cybern. Syst.,
+vol. 50, no. 4, pp. 1486–1498, Apr. 2020.
+[5] H. Dong, K. Song, Y. He, J. Xu, Y. Yan, and Q. Meng, “PGANet: Pyramid feature fusion and global context attention network for
+automated surface defect detection,” IEEE Trans. Ind. Informat., vol. 16,
+no. 12, pp. 7448–7458, Dec. 2020.
+[6] J. Yang, Y. Shi, and Z. Qi, “Learning deep feature correspondence for
+unsupervised anomaly detection and segmentation,” Pattern Recognit.,
+vol. 132, Dec. 2022, Art. no. 108874.
+[7] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers
+for image recognition at scale,” 2020, arXiv:2010.11929.
+[8] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+“Towards total recall in industrial anomaly detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+pp. 14298–14308.
+[9] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch distribution modeling framework for anomaly detection and localization,”
+in Proc. Int. Conf. Pattern Recognit., Jan. 2021, pp. 475–489.
+[10] D. Gong et al., “Memorizing normality to detect anomaly: Memoryaugmented deep autoencoder for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019,
+pp. 1705–1714.
+[11] P. Xing and Z. Li, “Visual anomaly detection via partition memory bank module and error estimation,” IEEE Trans. Circuits Syst.
+Video Technol., vol. 33, no. 8, pp. 3596–3607, Aug. 2023, doi:
+10.1109/TCSVT.2023.3237562.
+
+[12] Y. Yan, D. Wang, G. Zhou, and Q. Chen, “Unsupervised anomaly
+segmentation via multilevel image reconstruction and adaptive attentionlevel transition,” IEEE Trans. Instrum. Meas., vol. 70, pp. 1–12, 2021.
+[13] V. Zavrtanik, M. Kristan, and D. Skočaj, “Reconstruction by inpainting
+for visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021,
+Art. no. 107706.
+[14] A. de Nardin, P. Mishra, C. Piciarelli, and G. L. Foresti, “Bringing
+attention to image anomaly detection,” in Proc. Int. Conf. Image Anal.
+Process., Lecce, Italy, May 2022, pp. 115–126. 0
+[15] N.-C. Ristea et al., “Self-supervised predictive convolutional attentive
+block for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis.
+Pattern Recognit. (CVPR), Jun. 2022, pp. 13566–13576.
+[16] V. Zavrtanik, M. Kristan, and D. Skocaj, “DRÆM—A discriminatively trained reconstruction embedding for surface anomaly detection,”
+in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021,
+pp. 8330–8339.
+[17] Y. Shi, J. Yang, and Z. Qi, “Unsupervised anomaly segmentation
+via deep feature reconstruction,” Neurocomputing, vol. 424, pp. 9–22,
+Feb. 2021.
+[18] X. Tao, D. Zhang, W. Ma, Z. Hou, Z. Lu, and C. Adak, “Unsupervised
+anomaly detection for surface defects with dual-siamese network,” IEEE
+Trans. Ind. Informat., vol. 18, no. 11, pp. 7707–7717, Nov. 2022.
+[19] Z. You et al., “A unified model for multi-class anomaly detection,” in
+Proc. Adv. Neural Inf. Process. Syst., vol. 35, 2022, pp. 4571–4584.
+[20] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked
+autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 15979–15988.
+[21] J. Pirnay and K. Chai, “Inpainting transformer for anomaly detection,”
+in Proc. Int. Conf. Image Anal. Process. Cham, Switzerland: Springer,
+2022, pp. 394–406.
+[22] L. Chen, Z. You, N. Zhang, J. Xi, and X. Le, “UTRAD: Anomaly
+detection and localization with U-Transformer,” Neural Netw., vol. 147,
+pp. 53–62, Mar. 2022.
+[23] J. Jiang et al., “Masked Swin transformer UNet for industrial anomaly
+detection,” IEEE Trans. Ind. Informat., vol. 19, no. 2, pp. 2200–2209,
+Feb. 2023.
+[24] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A
+comprehensive real-world dataset for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2019, pp. 9584–9592.
+[25] P. Bergmann, X. Jin, D. Sattlegger, and C. Steger, “The MVTec 3D-AD
+dataset for unsupervised 3D anomaly detection and localization,” 2021,
+arXiv:2112.09045.
+[26] P. Mishra, R. Verk, D. Fornasier, C. Piciarelli, and G. L. Foresti,
+“VT-ADL: A vision transformer network for image anomaly detection
+and localization,” in Proc. IEEE 30th Int. Symp. Ind. Electron. (ISIE),
+Jun. 2021, pp. 01–06.
+[27] Y. LeCun. (1998). MNIST Database of Handwritten Digits. [Online].
+Available: http://yann.lecun.com/exdb/mnist/
+[28] H. Xiao, K. Rasul, and R. Vollgraf, “Fashion-MNIST: A novel
+image dataset for benchmarking machine learning algorithms,” 2017,
+arXiv:1708.07747.
+[29] A. Krizhevsky, “Learning multiple layers of features from tiny images,”
+Univ. Toronto, Toronto, ON, Canada, Tech. Rep. TR-2009, 2009.
+[30] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed
+students: Student-teacher anomaly detection with discriminative latent
+embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2020, pp. 4182–4191.
+[31] J. Yu et al., “FastFlow: Unsupervised anomaly detection and localization
+via 2D normalizing flows,” 2021, arXiv:2111.07677.
+[32] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2022, pp. 9727–9736.
+[33] Y. Lee and P. Kang, “AnoViT: Unsupervised anomaly detection and
+localization with vision transformer-based encoder–decoder,” IEEE
+Access, vol. 10, pp. 46717–46724, 2022.
+[34] P. Bergmann and D. Sattlegger, “Anomaly detection in 3D point clouds
+using deep geometric descriptors,” in Proc. IEEE/CVF Winter Conf.
+Appl. Comput. Vis. (WACV), Jan. 2023, pp. 2612–2622.
+[35] J. Yi and S. Yoon, “Patch SVDD: Patch-level SVDD for anomaly
+detection and segmentation,” in Proc. Proc. Asian Conf. Comput. Vis.,
+2020.
+[36] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee,
+“Multiresolution knowledge distillation for anomaly detection,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2021, pp. 14902–
+14912.
+
+YAO et al.: SCALABLE INDUSTRIAL VAD WITH PSA-VT
+
+[37] D. Gudovskiy, S. Ishizaka, and K. Kozuka, “CFLOW-AD: Real-time
+unsupervised anomaly detection with localization via conditional normalizing flows,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis.,
+2022, pp. 98–107.
+[38] X. Yao, C. Zhang, R. Li, J. Sun, and Z. Liu, “One-for-all: Proposal
+masked cross-class anomaly detection,” in Proc. AAAI Conf. Artif. Intell.,
+2023, vol. 37, no. 4, pp. 4792–4800.
+[39] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “Ganomaly: Semisupervised anomaly detection via adversarial training,” in Proc. Asian
+Conf. Comput. Vis., Perth, WA, Australia, Dec. 2018, pp. 622–637.
+[40] D. Abati, A. Porrello, S. Calderara, and R. Cucchiara, “Latent space
+autoregression for novelty detection,” in Proc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 481–490.
+[41] M. Salehi et al., “ARAE: Adversarially robust training of autoencoders
+improves novelty detection,” Neural Netw., vol. 144, pp. 726–736,
+Dec. 2021.
+[42] F. Ye, C. Huang, J. Cao, M. Li, Y. Zhang, and C. Lu, “Attribute
+restoration framework for anomaly detection,” IEEE Trans. Multimedia,
+vol. 24, pp. 116–127, 2022.
+[43] A. Buslaev, V. I. Iglovikov, E. Khvedchenya, A. Parinov, M. Druzhinin,
+and A. A. Kalinin, “Albumentations: Fast and flexible image augmentations,” Information, vol. 11, no. 2, p. 125, Feb. 2020.
+[44] K. Kim et al., “Rethinking the self-attention in vision transformers,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops
+(CVPRW), Jun. 2021, pp. 3065–3069.
+[45] Y. Wu et al., “Large scale incremental learning,” in Proc. IEEE/CVF
+Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 374–382.
+[46] O. Shafi, C. Rai, R. Sen, and G. Ananthanarayanan, “Demystifying
+TensorRT: Characterizing neural network inference engine on Nvidia
+edge devices,” in Proc. IEEE Int. Symp. Workload Characterization
+(IISWC), Nov. 2021, pp. 226–237.
+
+Haiming Yao (Graduate Student Member, IEEE)
+received the B.S. degree (Hons.) from the School
+of Mechanical Science and Engineering, Huazhong
+University of Science and Technology, Wuhan,
+China, in 2022. He is currently pursuing the
+Ph.D. degree with the Department of Precision
+Instrument, Tsinghua University, Beijing, China.
+His research interests include visual anomaly
+detection, deep learning, visual understanding, and
+artificial intelligence for science.
+Mr. Yao serves as a reviewer for several journals,
+such as IEEE T RANSACTIONS ON N EURAL N ETWORKS and L EARNING
+S YSTEMS and IEEE T RANSACTIONS ON I MAGE P ROCESSING.
+
+Wei Luo (Student Member, IEEE) received the B.S.
+degree from the School of Mechanical Science and
+Engineering, Huazhong University of Science and
+Technology, Wuhan, China, in 2023. He is currently
+pursuing the Ph.D. degree with the Department of
+Precision Instrument, Tsinghua University, Beijing,
+China.
+His research interests include deep learning,
+anomaly detection, and machine vision.
+
+5004217
+
+Jianan Lou (Graduate Student Member, IEEE)
+received the B.Eng. degree in navigation engineering
+and the B.Ec. degree in economics from Wuhan
+University, Wuhan, China, in 2022. He is currently
+pursuing the Ph.D. degree with the Department of
+Precision Instrument, Tsinghua University, Beijing,
+China.
+His research mainly focuses on multisensor fusion.
+
+Wenyong Yu (Senior Member, IEEE) received the
+M.S. and Ph.D. degrees from the Huazhong University of Science and Technology, Wuhan, China, in
+1999 and 2004, respectively.
+He is currently an Associate Professor with the
+School of Mechanical Science and Engineering,
+Huazhong University of Science and Technology. His research interests include machine vision,
+intelligent control, and image processing.
+
+Xiaotian Zhang received the B.S. degree from
+Beihang University, Beijing, China, in 2019. He is
+currently pursuing the Ph.D. degree with the Department of Precision Instrument, Tsinghua University,
+Beijing.
+His main research interests include anomaly detection, generative adversarial networks, and edge
+computing.
+
+Zhenfeng Qiang received the B.S. degree in
+mechanical engineering from the Shaanxi University
+of Science and Technology, Xi’an, China, in 2017,
+and the M.S. degree in mechanical engineering from
+Jilin University (JLU), Changchun, China, in 2020.
+He is currently pursuing the Ph.D. degree with
+the Department of Precision Instrument, Tsinghua
+University, Beijing, China.
+His research interests include system development
+of non-dispersive infrared (NIDR) sensors, artificial
+intelligence, and biomechanics.
+
+Hui Shi (Member, IEEE) received the master’s
+degree from the Huazhong University of Science
+and Technology, Wuhan, China, in 2002. She is
+currently pursuing the Ph.D. degree with the School
+of Mechanical and Electronic Engineering, Wuhan
+University of Technology, Wuhan.
+Her research interests include machine vision,
+machine learning, and intelligent systems.
+PAPER_TEXT

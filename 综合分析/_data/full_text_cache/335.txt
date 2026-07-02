@@ -1,0 +1,747 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025 19285
+
+ A Dual-Discriminator Generative Adversarial
+ Network for Anomaly Detection
+ Da Ding, Youquan Wang , Haicheng Tao, Member, IEEE, Jia Wu , Senior Member, IEEE, and Jie Cao
+
+ Abstract—Multivariate time series anomaly detection has I. I NTRODUCTION
+shown potential in various fields, such as finance, aerospace, and
+security. The fuzzy definition of data anomalies, the complexity
+of data patterns, and the scarcity of abnormal data samples
+pose significant challenges to anomaly detection. Researchers
+ I N RECENT years, the proliferation of the Internet of
+ Things (IoT) technology has driven the development of
+ smart grids [1], [2] and intelligent transportation systems [3],
+have extensively employed autoencoders (AEs) and generative [4]. As shown in Fig. 1, a large amount of system operation
+adversarial networks (GANs) in studying time series anomaly data is collected by deploying sensors and actuators. Accudetection methods. However, relying on reconstruction error, rately and timely identifying abnormal information within
+the AE-based anomaly detection algorithm needs more effective
+regularization methods, rendering it susceptible to the problem of this data is crucial for taking corrective measures, addressing
+overfitting. Meanwhile, GAN-based anomaly detection algorithms issues, and minimizing economic losses and human casualties
+require high-quality training data, significantly impacting their [5]. Therefore, anomaly detection has emerged as a critical
+practical deployment. We propose a novel GAN based on a dual- research area, aiming to precisely and promptly locate anomadiscriminator structure to address these issues. The model first lous patterns within the collected information. As depicted in
+processes the data with the generator to obtain the reconstruction
+error and then calculates pseudo-labels to divide the data into two Fig. 2, an anomaly is a deviation from a pattern recognized
+categories. One data category is input into the first discriminator, by human cognition, resulting in a perceptual change (e.g.,
+where a minor loss between the data and its reconstructed appearance corruption, style change, blurring, or occlusion) or
+counterpart is better. The other data category is input into the a semantic change (e.g., class change or inversion behavior)
+second discriminator, where a larger loss between the data and to the pattern. Anomalies in time series are usually divided
+its reconstructed counterpart is better. Through this process, the
+model can effectively constrain the generator, retaining informa- into point anomalies and collective anomalies; as illustrated
+tion on normal data during data reconstruction while discarding in Fig. 2(a), a point anomaly is a type of anomaly when
+information on abnormal data. After conducting experiments on the data of a single point exceed the range of normal data
+multiple benchmark datasets, the proposed GAN based on a distribution. Collective anomaly, as shown in Fig. 2(b), is
+dual-discriminator structure achieved good results in anomaly a set of continuous data point sequences as a whole that
+detection, outperforming several advanced methods. Additionally,
+the model also performed well in practical transformer data. is considered anomalous even though individual data points
+ may not be anomalous. Threshold-based judgment is the most
+ Index Terms—Anomaly detection, dual-discriminator struc- straightforward approach to anomaly detection, which proves
+ture, generative adversarial networks (GANs), industrial applications, pseudo-labels. feasible when applied to individual time series. However,
+ as the number of collection devices and detection targets
+ increases, along with the exponential growth in collected data
+ volume and dimensionality, the interdependencies among the
+ Received 28 September 2023; revised 14 June 2024, 3 November 2024, 17
+March 2025, and 25 May 2025; accepted 26 June 2025. Date of publication data become more intricate. Consequently, the threshold-based
+5 September 2025; date of current version 9 October 2025. This work was method becomes ineffective, necessitating the development
+supported in part by the Key Research and Development Projects of Jiangsu of novel approaches to address this challenge. Hence, this
+Province under Grant BE2020001-1; in part by the Fundamental Research
+Projects on Cutting-Edge Leading Technologies in Jiangsu Province under study proposes an effective method for anomaly detection in
+Grant BK20202011 and Grant BK20192004C; in part by the National Natural multivariate time series data to address the aforementioned
+Science Foundation of China (NSFC) under Grant 72172057; in part by challenges.
+the 2023 Nanjing International/Hong Kong, Macao, and Taiwan Science and
+Technology Cooperation Program (Joint Research) under Grant 202308010; IoT has provided abundant data for the advancement of
+and in part by the Key Scientific Research and Innovation Projects of deep learning. Concurrently, deep learning has offered numer-
+Nanjing University of Finance and Economies under Grant XKYC2202303. ous methods for detecting anomalies in IoT data [6], [7],
+(Corresponding author: Jie Cao.)
+ Da Ding is with the College of Computer Science and Software [8]. For instance, clustering algorithms treat data that devi-
+Engineering, Hohai University, Nanjing, Jiangsu 211100, China (e-mail: ate from cluster centers as anomalies, while classification
+dingda1996@hhu.edu.cn). algorithms identify data that do not conform to distribution
+ Youquan Wang and Haicheng Tao are with the School of Computer
+and Artificial Intelligence, Nanjing University of Finance and Eco- patterns as anomalies. However, these methods either fail
+nomics, Nanjing, Jiangsu 210023, China (e-mail: youq.wang@gmail.com; to find the correlations among time series data or require
+haicheng.tao@gmail.com). additional information about anomalous data, rendering them
+ Jia Wu is with the School of Computing, Macquarie University, Sydney,
+NSW 2113, Australia (e-mail: jia.wu@mq.edu.au). unsuitable for high-dimensional data and large-scale series
+ Jie Cao is with the School of Management, Hefei University of Technology, anomaly detection. Moreover, to handle large amounts of
+Hefei, Anhui 230009, China (e-mail: cao jie@hfut.edu.cn). data, supervised methods necessitate the laborious task of
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TNNLS.2025.3585978, provided by the authors. effectively labeling the data, requiring substantial resources.
+ Digital Object Identifier 10.1109/TNNLS.2025.3585978 Consequently, unsupervised methods have garnered significant
+ 2162-237X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+19286 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+Fig. 1. Comprehensive transformer anomaly detection system.
+
+ ously train a generator and a discriminator. The generator
+ aims to encode synthetic data based on the original data, while
+ the discriminator distinguishes between samples of generated
+ data and samples of original data. Recent work in anomaly
+ detection has also explored the use of adversarial training [11],
+ [14], [15], [16]. The AnoGAN method, proposed by Schlegl
+ et al. [14], addresses the challenge of unsupervised anomaly
+ detection. It utilizes deep convolutional learning to capture
+ the characteristics of normal images and introduces a novel
+ scoring scheme for mapping them to the latent space. However,
+ this approach has high computational complexity. Zenati et al.
+ [17] developed a bidirectional GAN (BiGAN) model, which
+ showed improved performance in mapping images to the
+ latent space compared to prior work. We propose a novel
+ GAN architecture called TadGAN [18] that uses an autoencoder (AE) with an L2 objective function to reconstruct time
+ series and evaluate errors to identify anomalies. TadGAN is
+Fig. 2. Difference between univariate time series and multivariate time trained on clean training sets, i.e., sets containing only normal
+series in anomaly detection. (a) Univariate time series with point anomaly.
+(b) Multivariate time series with collective anomalies.
+ samples. To address the impact of polluted data, the author
+ proposes FGANmoraly [10], which filters out possible abnorattention in the industry [9], [10], [11]. A commonly used
+ mal sample discriminators with pseudo-labels before training.
+approach in unsupervised anomaly detection is to map data
+ However, this approach may lead to false positives and result
+into a low-dimensional space and then map the data in the
+ in wastage of resources. Motivated by the aforementioned
+low-dimensional space back to a high-dimensional space. This
+ research contributions, this article presents a more comprehenprocess allows normal data to retain information during the
+ sive approach that effectively learns both the generator and
+reconstruction phase while causing anomalous data to lose
+ the discriminator while making optimal use of the available
+information. By employing appropriate reconstruction techdata and minimizing the impact of contaminated data on the
+niques, precise data reconstruction can be achieved, resulting
+ model.
+in significant reconstruction errors for anomalous data. This
+ This article proposes the novel dual-discriminator GAN
+approach enables cost-effective and highly accurate anomaly
+ (DDGAN) for anomaly detection. The main goal is to train a
+detection [12].
+ generator that can accurately reconstruct data while enlarging
+ Anomaly detection involves the handling of nonlinear
+ the reconstruction error between abnormal data and recondata with complex temporal correlations; thus, deep learnstructed abnormal data. Our approach involves the following
+ing methods are used in this field. Generative adversarial
+ key components.
+networks (GANs) have emerged as promising techniques for
+unsupervised anomaly detection. The pioneering work of 1) Given the intrinsic temporal characteristics and intricate
+Goodfellow et al. [13] introduced GANs, which simultane- correlations present in multitime series data, we employ
+DING et al.: DUAL-DISCRIMINATOR GENERATIVE ADVERSARIAL NETWORK FOR ANOMALY DETECTION 19287
+
+ an LSTM-based AE to facilitate the reconstruction of using a given radius and determine the anomaly score based
+ such data. on the number of neighbors [25]. On the other hand, density-
+ 2) Considering the specific data requirements of GAN based methods detect anomaly data based on the density of
+ networks, we propose a dual safeguard mechanism con- neighbors surrounding an object. Mahela et al. [26] proposed
+ sisting of a filter and a dynamic dictionary, which aims a network anomaly detection method based on fuzzy clusto mitigate the potential introduction of contaminated tering, while Xing et al. [27] presented K-means clustering
+ data. and weighted K-nearest neighbor regression-based algorithm
+ 3) To fully exploit the available data, we design two to detect anomaly footprints of transmission line. Parwez
+ discriminators: one that receives normal data labeled as et al. [28] introduced K-means clustering and hierarchical
+ 0 and another that receives anomalous data stored in the clustering to analyze anomalous behavior of mobile wireless
+ dynamic dictionary. networks. However, the implementation of nearest neighbor-
+ 4) We propose a new training loss function that considers based methods requires prior knowledge regarding the duration
+ the constraints imposed by the two discriminators on the and quantity of anomalies while also disregarding the temporal
+ AE to achieve more accurate data reconstruction. dimension of interrelationships among time series data.
+The remainder of the article is organized as follows. Section II The reconstruction-based methods involve mapping the
+presents an overview of related research in the field of anomaly original data to high-dimensional or low-dimensional space
+detection. Section III presents the relevant definitions used in using a constructed model and then evaluating data anomathis article. Section IV provides a more detailed exposition of lies based on the error between the reconstructed data and
+the DDGAN model. Section V explains how the model is used the original data. However, this method may need more
+for anomaly detection and presents the experimental results. information when mapping abnormal data to low-dimensional
+Section VI summarizes the principal findings of this article space, leading to inaccurate reconstruction and larger errors.
+and proposes potential avenues for future research. Principal component analysis (PCA) is a classic algorithm
+ of this type, but it is limited to linear data and requires
+ II. R ELATED W ORK a Gaussian distribution. Several methods such as AE [29],
+ In recent years, the increase in data types, changes in [30], and variational long short-term memory (VLSTM) [31]
+application scenarios, and diversification of anomaly types have been proposed to address the above limitation. These
+have posed greater demands on anomaly data detection. The methods lack effective regularization and may suffer from
+simplest method for anomaly detection involves threshold- overfitting, resulting in poor performance [32]. GAN introbased judgments [19]. However, with the growing complexity duces adversarial regularization to alleviate overfitting, but this
+of interdata correlations and the diversification of data types, approach assumes an uncontaminated training set, and it fails
+this straightforward approach is no longer applicable to the to effectively model the data distribution when a significant
+current complex environment of anomaly data detection. Con- amount of contaminated data is present in the training set
+sequently, researchers have shifted their focus to the study of [13]. To avoid capturing the distribution of anomalous data,
+unsupervised anomaly detection methods. These methods can the model employs a filtering mechanism on the discriminator
+be categorized into one-class classification, nearest neighbor- using pseudo-labels for potential anomalous samples before
+based algorithms, and reconstruction-based methods [20]. This training. However, this approach can lead to data waste and
+article provides a detailed investigation and research on these the possibility of mislabeled instances due to the utilization of
+methods. pseudo-labels, resulting in suboptimal performance.
+ Currently, research on anomaly data detection methods
+based on one-class classification has been extensively con- III. P RELIMINARIES
+ducted. One-class detection entails learning the discriminative
+boundary of normal data, considering any value deviating Definition 1 (Multivariate Time Series): The dataset
+from the data boundary as an anomaly. Classical algorithms D = {D1 , D2 , . . ., DN } consists of N sequential data
+include one-class SVM [8], [21] and isolation forest [22]. instances, each Di having a fixed length of K, noted as
+Ruff et al. [23] introduced a deep support vector method based Di = {xi1 , xi2 , . . ., xiK }. The time intervals between consecutive
+on deep learning and one-class classification, where the model data points are uniform, ranging from seconds to hours.
+is trained by optimizing the objectives of anomaly detection. Definition 2 (Reconstruction): Reconstruction involves
+Miao et al. [24] introduced distributed online OCSVM, a mapping the original data D into a low-dimensional space
+distributed online one-class classification method capable of and then mapping it back into a high-dimensional space. The
+detecting anomaly data in distributed data. However, the afore- original data are denoted as D = {D1 , D2 , . . ., DN }, Di =
+mentioned methods exhibit subpar performance when applied {xi1 , xi2 , . . ., xiK }, while the data representation after reconto high-dimensional data. struction is denoted as D̂ = {D̂1 , D̂2 , . . ., D̂N }, D̂i = { x̂i1 , x̂i2 ,
+ Nearest neighbor-based algorithms identify objects as . . ., x̂iK }.
+anomaly data by measuring the distances between different Definition 3 (Reconstruction Error): The reconstruction
+entities, considering objects that are far from other data points error quantifies the distance between the input data DN and the
+as anomalies. The nearest neighbor-based algorithms can be reconstructed data D̂N , and it will be mathematically expressed
+further categorized into distance- and density-based methods. as
+Distance-based methods define the neighbors of an object eN = DN − D̂N . (1)
+19288 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+Fig. 3. Data D are passed through an encoder and decoder in the generator to obtain reconstructed data G(D). Based on the reconstruction error E between
+D and the reconstructed data G(D), the filter calculates pseudo-labels for the data. The data with a pseudo-label of 0 are fed into the discriminator DN , while
+the data with a pseudo-label of 1 undergo further updates in the dynamic dictionary and serve as input for the discriminator DA . The discriminators are
+subsequently trained using these refined samples.
+
+ Problem Statement: By performing a transformation on On the other hand, the discriminators, denoted by DA and
+the original data, denoted as D = {D1 , D2 , . . ., DN } and DN , are trained based on the original data and reconstructed
+Di = {xi1 , xi2 , . . ., xiK }, where N represents the sampling time, data, respectively. The original data are labeled as real, and the
+anomaly detection assigns a label y ∈ {0, 1} (0 for normal and reconstructed data are labeled as fake to train discriminator DA
+1 for abnormal) to each data point at a given sampling time. and discriminator DN . The discrimination mappings fdisA and
+Reconstructing the inputted original data as D̂={D̂1 , D̂2 , . . ., fdisD are
+D̂N } and D̂i = { x̂i1 , x̂i2 , . . ., x̂iK }. The anomaly score of the data
+ fdisA : X → [0, 1]
+is calculated by computing the reconstruction error between
+the input data D and the reconstructed data D̂. Based on this fdisD : X → [0, 1] . (3)
+anomaly score, a determination is made regarding whether the The discriminator utilizes a ladder feed-forward network to
+original data is anomalous or not. accept time series data and produce results. Prior to inputting
+ the data into the discriminator DN , a pseudo-label filter is
+ IV. M ETHODOLOGY utilized to remove significant abnormal data from the original
+ In this section, more details on the implementation of the and reconstructed data. Additionally, a dynamic dictionary
+DDGAN will be presented. is employed to store the most conspicuous portion of the
+ filtered abnormal data, which is subsequently inputted into the
+A. Overview of the Proposed Model discriminator DA . This process enables effective training of the
+ This section will provide a detailed description of the generator under the dual constraints of discriminators DA and
+DDGAN, which comprises two main parts: training and detec- DN .
+tion. The architecture of DDGAN is depicted in Fig. 3, and
+it consists of a generator, a filter, a dynamic dictionary, and B. Pseudo-Labels
+two discriminators. X and D represent the feature space and GANs can learn the underlying distribution of training data
+latent vector space, respectively. The generator G first maps and generate samples that follow that distribution. However,
+the observations into latent vector space and then reconstructs the exclusive training of GAN models on normal data results in
+them into the feature space limited diversity in generated samples, as the absence of expofen : X → D sure to abnormal samples during training restricts the model’s
+ ability to generate diverse samples. Similarly, training GANs
+ fde : D → X . (2)
+ on abnormal data only leads to the generation of abnormal
+Specifically, the encoder is an LSTM network, while the samples while being ineffective in generating normal samples
+decoder is symmetric to the encoder. due to the lack of training on normal data. Furthermore,
+DING et al.: DUAL-DISCRIMINATOR GENERATIVE ADVERSARIAL NETWORK FOR ANOMALY DETECTION 19289
+
+the inclusion of abnormal samples in the training set may where S epoch is the function about the current iteration and
+introduce errors in the learned data distribution, leading to satisfies the following:
+reduced accuracy in data detection. (
+ 1, if n = 1
+ A method involving the use of pseudo-labeling and dynamic S epoch = (8)
+arrays is proposed to filter and optimize the input to the ∞, if n → ∞.
+discriminator. Pseudo-labeling allows discriminator DN to Combining Equation (6) and Equation (8), we can get the
+receive “pseudo-normal data” as input, while dynamic arrays following:
+enable discriminator DA to receive “pseudo-abnormal data” as
+input. By leveraging pseudo-labeling and dynamic arrays, the P (xw ) = σ (zw ∗ θ)
+   
+vision of training the discriminator on a single type of data is (ew − M (E)) 1
+achieved, overcoming the challenges of obtaining normal or =σ ∗ 1− . (9)
+ V (E) S epoch
+abnormal samples in practical applications.
+ Furthermore, a reconstruction method is adopted to calculate C. Dynamic Dictionary and Data Augmentation
+the distance between normal and abnormal data distributions.
+ By constraining z-score zw with the impact factor, the
+This method aims to minimize the error loss between normal
+ anomaly probability of the data can change with the iterations.
+data and reconstructed data while increasing the error loss
+ At initialization, all data are assigned the same anomaly
+between abnormal data and reconstructed data. This approach
+ probability. As the training progresses, data are assigned
+allows for the generation of abnormal samples while maindifferent anomaly probabilities, resulting in different anomaly
+taining the fidelity of normal samples, thus addressing the
+ labels. Data labeled 0 are marked as “pseudo-normal data,”
+limitations of GANs in generating diverse samples from both
+ while data labeled 1 are marked as “pseudo-anomalous data.”
+normal and abnormal data distributions. The specific process
+ The “pseudo-normal data” and “pseudo-anomalous data” are
+is presented in Algorithm 1. The original data D = {D1 , D2 ,
+ expressed as
+. . ., DN }, and Di = {xi1 , xi2 , . . ., xiK } is input into G to obtain n o
+reconstructed data D̂={D̂1 , D̂2 , . . ., D̂N }, D̂i = { x̂i1 , x̂i2 , . . ., x̂iK }. Dd0 = Dd10 , Dd20 , . . . , Ddt 0
+Based on Equation (1), the error E = {e1 , e2 , . . . , eN } based on
+ Ddt 0 = xd10t , xd20t , . . . , xdK0t
+ ˚
+define between the original data D and the reconstructed data n o
+G(D) can be expressed as Dd1 = Dd11 , Dd21 , . . . , Ddk 1
+ Ddk 1 = xd11k , xd21k , . . . , xdK1k
+ ˚
+ ew = Dw − D̂w . (4)
+ w = t + k. (10)
+The mean and variance of E are represented by M(E) and
+V(E), respectively, enabling the calculation of the z-score zw During this phase, assigning pseudo-labels to the data can
+ achieve the classification of normal and abnormal data. While
+ (ew − M (E)) “pseudo-normal data” are normal data as much as possible, it
+ zw = . (5)
+ V (E) cannot be guaranteed that “pseudo-abnormal data” are necessarily abnormal data. This can lead to disastrous consequences
+Based on this z-score, the probability of x being anomalous is for the discriminator DA , which is specifically trained to detect
+designed as abnormal data; it is necessary to reextract the abnormal data
+ P (Dw ) = σ (zw ) . (6) from the discriminator DA . Here, a dynamic dictionary Dd
+ is introduced. As mentioned earlier, the error ew is greater
+As shown in Equation (6), if the error ew is equal to the mean than the mean M(E), and the probability of the data P(xw )
+M(E) or the z-score zw equals 0, the probability of the data being labeled as anomalous is greater than 0.5. Therefore,
+P(Dw ) being labeled as anomalous is 0.5. If the error ew is the dynamic dictionary is sorted based on the reconstruction
+greater than the mean M(E), the probability of the data P(Dw ) error, and data with the top L largest errors are considered as
+being labeled as anomalous is greater than 0.5. Conversely, if real abnormal data and used for training the discriminator DA .
+the error ew is smaller than the mean M(E), the probability of Then, the dynamic dictionary Dd can be obtained as follows:
+the data P(Dw ) being labeled as anomalous is smaller than
+ Dd = Dd1 , Dd2 , . . . , DdL .
+ ˚
+ (11)
+0.5. This approach provides a robust method for detecting
+anomalous data. This forces the discriminator DA to learn to distinguish real
+ During the initial training phase, the model may need to abnormal data, thereby improving its ability to recognize
+acquire more information to represent the latent information abnormal data.
+of the data accurately. Therefore, the same parameters are During each iteration, the discriminator DA is updated
+set for all data in the initial stage. In the subsequent phase, using L real anomalous data from the dynamic dictionary and
+an impact factor θ is introduced to influence the anomaly reconstructed anomalous data
+probability; the factor θ should be consistent for all data under
+ n o
+ Dd = TOPL Dd1 , Dd2 , . . . , DdL , Dd11k , Dd21k , . . . , Ddk 1k
+the initial conditions, showing more influence with the increase
+of training. Therefore, the factor θ is defined as = Dd1 , Dd2 , . . . , DdL .
+ ˚
+ (12)
+ 1 Through this iterative process, the generator G and the dis-
+ θ =1− (7) criminator DA engage in a game of optimization, continually
+ S epoch
+19290 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+ between normal and reconstructed data and increasing the
+ distance between anomaly and reconstructed data. To achieve
+ this goal, we employ different loss functions for DA and
+ DN . For discriminator DN , which takes normal data and their
+ corresponding reconstructions as inputs, we design its loss
+ function to gradually reduce the distance between normal and
+ reconstructed data via backpropagation after each iteration of
+ training
+ LN = BCEloss Dd0 + BCEloss G Dd0
+  
+ t
+ 1 Xh    i
+ =− li log Ddi 0 + (1 − li ) log 1 − Ddi 0
+ t
+ i=1
+ t
+ 1 Xh      i
+ − li log G Ddi 0 +(1 − li ) log 1−G Ddi 0 .
+ t
+ i=1
+ (16)
+Fig. 4. Data augmentation model. Data stored in the dynamic dictionary (left)
+and Ded after data augmentation (right). However, the original data are marked as real, and the reconstructed data are marked as fake; then, the original data are
+ labeled as 1 and the reconstructed data are labeled as 0. The
+improving their performance and achieving the recognition and
+ loss of discriminator DN can be defined as
+generation of anomalous data. Eventually, at the end of the
+ LN = BCEloss Dd0 + BCEloss G Dd0
+  
+training, the generator G will be able to encode anomalous
+data, and the discriminator DA will accurately identify anoma- t
+ 1 X h  d0    i
+lous data and save it in the dynamic dictionary for use in the =− log Di + log 1 − G Ddi 0 . (17)
+next training cycle. t
+ i=1
+ Data augmentation can increase the quantity and quality For discriminator DA , which takes anomaly data Dd and their
+of data in situations where data is scarce. This article adopts corresponding reconstructions as inputs, we design its loss
+a random mask data augmentation method that follows a function to further increase the distance between anomaly and
+geometric distribution, as shown in Fig. 4, where black repre- reconstructed data after each iteration of training
+sents the masked state denoted by 0 and color represents the
+ LA = BCEloss D ed − BCEloss G D ed
+  
+unmasked state denoted by 1. Given the mask ratio r and mask
+length lm , p st :st+1 represents the noise transition probability t
+ 1 X
+ =− edi
+ edi + (1 − li ) log 1 − D
+  
+from time t to t + 1, and the complete transition matrix can li log D
+ L
+be expressed as i=1
+ t
+   1 X
+ p0:0 p0:1 edi + (1 − li ) log 1 − G D
+ edi .
+  
+ P= + li log G D
+ p1:0 p1:1 L
+ i=1
+ 2
+ 1 1 r
+ 3 (18)
+ 1− ·
+ = 4 1 lm
+ 6 lm 1 − r 7 . (13) Similar to discriminator DN , the original data are labeled as
+ 1 r 5
+ 1− · 1 and the reconstructed data are labeled as 0; the loss of
+ lm lm 1 − r discriminator DA can be expressed as
+ Positive sample pairs are obtained by randomly applying
+ LA = BCEloss D ed + BCEloss D ed
+  
+two independent masking operations to each dimension. M is a
+ t
+binary noise mask matrix that follows a geometric distribution: 1 X
+ =− edi − log 1 − G D
+ edi .
+  
+ log D (19)
+ ed = Dd ⊗ M
+ D (14) L
+ i=1
+
+where D ed represents the transformed multidimensional time Through the training of discriminators DA and DN , we are
+series after data augmentation able to simultaneously reduce the distance between normal and
+ reconstructed data and increase the distance between anomaly
+ ed+ /$
+  
+ exp cos D ed · D and reconstructed data.
+ Lcon = − log PS (15)
+ ed edi /$
+  
+ i=0 exp cos D · D
+ E. Adaptive Weighted
+where D ed+ denotes the positive pairs and S represents the
+total number of samples. This section proposes a novel training function based on
+ reconstruction error for anomaly detection, which requires
+ precise reconstruction of data to retain normal information
+D. Dual-Discriminator while discarding anomaly information, to reduce the distance
+ In this section, we propose novel designs for the discrim- between normal and reconstructed data, and to expand the
+inators DA and DN with the aim of reducing the distance distance between anomaly and reconstructed data. To achieve
+DING et al.: DUAL-DISCRIMINATOR GENERATIVE ADVERSARIAL NETWORK FOR ANOMALY DETECTION 19291
+
+ T
+this, we redesign the training function to differentiate the 1X
+ LaDA = log DA [G (xi )] (24)
+contributions of normal and anomaly data to the loss function. T
+ i=1
+The function is formulated as
+ Lad = LaDN + LaDA
+ t
+ 1 X d0   " T T
+ #
+ Lre = Di − D̂di 0 ∗ 1 − ydi 0 1 X X
+ w =− log DN [G (xi )] − log DA [G (xi )] . (25)
+ i=1 T
+ i=1 i=1
+ k
+ X  
+ − Ddi 1 − D̂di 1 ∗ 1 − ydi 1
+ i=1 Algorithm 1 Pseudo-Label Generation Algorithm
+ Require: Sequence data D = {D1 , D2 , . . . , DN }
+ t
+ !
+ 1 X
+ = Ddi 0 − D̂di 0 (20) Ensure: Pseudo-labels l = {l1 , l2 , . . . , lN }
+ w
+ i=1 1: D ← G(D) .Apply graph-based model G(·) for represenwhere w is the total amount of all data and yi is the true tation or reconstruction
+label of Di , meaning that only true data will contribute to 2: Compute error ei for each Di using 4
+the reconstruction loss. However, in an unsupervised learning 3: for each sample Di do
+scenario, labels are unavailable, and it is impossible to separate 4: Compute probability P(Di ) using 9
+normal samples from abnormal ones. To solve this prob- 5: Sample η ∼ Uniform(0, 1)
+lem, we propose a new reconstruction objective specifically 6: if η > P(Di ) then
+designed for the anomaly detection task 7: Set pseudo-label li ← 0
+ 8: else
+ e−zi Set pseudo-label li ← 1
+ δi = Pw −z (21) 9:
+ a=1 e
+ a
+ 10: end if
+ 11: end for
+where the reconstruction error is larger than the average, and
+ 12: return l
+the data will receive smaller weights; the reconstruction error
+is smaller than the average, and the data will receive larger
+weights. Smaller reconstruction errors correspond to larger
+ Algorithm 2 Adversarial Training Algorithm
+weights, and larger reconstruction errors correspond to smaller
+ Require: Fragmented training data T = {x1 , x2 , . . . , xT }, test
+weights. We also introduce a balancing factor, with the final
+ data X = {(x1t , . . . , xit )}, max epochs P, adversarial loss
+weight being
+ Pw  rate ν
+ e−zi 1 a=1 e−za + S epoch − 1 · e−zi Ensure: Trained Generator G, Discriminators DA , DN
+ δi = Pw −z · (22) 1: Initialize weights of G, DA , and DN
+ a=1 e
+ a N S epoch · e−zi
+ 2: for each epoch from 1 to P do
+where N is a normalization factor. At the initial State, the 3: for each fragment index κ from 1 to n do
+weights and the contribution to the loss function are equal. 4: DN receives Dd0 from Equation 10
+As the epoch increases, the weights will gradually approach 5: Compute loss LN via Equation 17
+Equation (21). Ultimately, Equation (20) is approximated by 6: Update DN using LN
+ w
+ X 7: DA receives Dd from Equation 12
+ Lre = Di − D̂i · δi . (23) 8: Compute loss LA via Equation 19
+ i=1 9: Update DA using LA
+The reconstruction loss function of Equation (23) allows 10: end for
+DDGAN to focus more on fitting the data. 11: Compute Lcon via Equation 15
+ 12: Compute Lre via Equation 23
+ 13: Compute Ldgan via Equation 26
+F. Model Training 14: Update Generator G with combined loss
+ Given a training dataset T = {x1 , x2 , x3 , . . . , xT }, this article 15: end for
+proposes an alternate training approach for a generator and two 16: for each test fragment xit in X do
+discriminators, DA and DN , where the training loss functions 17: Generate reconstruction: x̂it = G(xit )
+for discriminators DA and DN are defined in Equation (19) and 18: Computepreconstruction score:
+Equation (17), respectively. Unlike traditional GANs, where 19: score = (xit − x̂it )2
+only an adversarial loss function is used to train the Generator, 20: end for
+this article utilizes both discriminators DA and DN and obtains
+ However, the double discriminator-based adversarial loss
+their respective adversarial loss functions. By combining these
+ function ignores the temporal correlation of time series data.
+two adversarial loss functions, a double discriminator-based
+ Therefore, this article combines Equation (23) and Equation
+adversarial loss function is derived, as shown in the following:
+ (25) to obtain the generator’s loss function, as shown in the
+ 1X
+ T following:
+ LaDN = − log DN [G (xi )]
+ T
+ i=1
+ Ldgan = Lre + ϑ · Lad + ςLcon (26)
+19292 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+ TABLE I TABLE II
+ DATASETS AVERAGE P RECISION , R ECALL , F1-S CORE , AND AUC OF D IFFERENT
+ M ETHODS ON S IX P UBLIC DATASETS
+
+where ϑ is used to adjust the weight of Lad and ς is used to
+adjust the weight with Lcon . The specific training process is
+presented in Algorithm 2. R measures the proportion of true positive samples among
+ all positive samples, and it is calculated as
+ TP
+ V. E XPERIMENTAL R ESULTS R= (28)
+ TP + FN
+ This section conducts extensive experiments to evaluate where FN is the number of false negatives.
+the effectiveness of DDGAN, with additional experimental F1 is the harmonic mean of P and R, and it is calculated
+results and analyses provided in the Appendixes (see the as
+Supplementary Material). P∗R
+ F1 = 2 ∗ . (29)
+ P+R
+A. Experimental Setup B. Tasking Setting
+ 1) Public Datasets and Baselines: We evaluate our method In experiments, the sliding window width is uniformly set
+on six public datasets: MSL [33] (NASA’s Mars rover mission to 150. The model is trained using the Adam optimizer with a
+data), SMAP [34] (soil moisture satellite data), SMD [35] learning rate of 1e−4 . The RNN encoder has an RNN hidden
+(server performance metrics), SWaT [36] (water treatment dim of 50, and the decoder consists of multiple linear layers
+ICS data), WADI [37] (water distribution network simulation), with a hidden dim of 50. The hyperparameter is set to 0.5. The
+and PSM [38] (eBay’s server metrics). Details of the dataset training was conducted in a Windows environment equipped
+information are shown in Table I. These datasets cover diverse with a 2.50-GHz 12th Gen Intel1 Core2 i5-12400F CPU and an
+domains, including space exploration, environmental moni- 8-GB NVIDIA GeForce RTX 3060 GPU. The training dataset
+toring, industrial systems, and cloud computing, providing is divided into a training set and a validation set in a 7:3 ratio to
+comprehensive benchmarks for anomaly detection. obtain the optimal model and avoid overfitting or underfitting.
+ For comparison, we select seven state-of-the-art unsuper- As the model is considered an unsupervised learning model,
+vised anomaly detection methods: USAD [39] (adversar- it cannot directly adjust hyperparameters based on the F1-
+ial AEs), OmniAnomaly [35] (stochastic RNN), TranAD score on the validation set as in supervised learning. To avoid
+[40] (transformer-based), GDN [41] (graph neural net- reliance on predetermined thresholds, we can search for all
+work), BeatGAN [9] (beat-aware GAN), FGANomaly [10] possible thresholds to determine the normality and abnormal-
+(pseudo-label enhanced GANomaly), and Anomaly Trans- ity of observed values and select the optimal F1-score as
+former [42] (self-attention based). These baselines represent the performance metric for model evaluation. We obtain the
+major technical directions in time series anomaly detection, anomaly scores in the test set and evaluate them individually
+including reconstruction-based, GAN-based, and attention- as thresholds. Finally, the threshold yielding the best F1-score
+based approaches. is selected as the final result. Then, we conducted multiple
+ 2) Evaluation Metrics: We adopt precision (P), recall (R), experiments based on the final selected model and used the
+F1-score (F1), and the area under the precision–recall curve mean and variance of the multiple experiments as the final
+(AUC) to evaluate the performance. These metrics are defined results of the model.
+as follows: P measures the proportion of true positive samples
+among all samples, and it is calculated as C. Overview Performance
+ TP We conducted an extensive evaluation of DDGAN in six
+ P= (27)
+ TP + FP datasets, comparing its performance with multiple baseline
+where TP is the number of true positives and FP is the number 1 Registered trademark.
+
+of false positives. 2 Trademarked.
+DING et al.: DUAL-DISCRIMINATOR GENERATIVE ADVERSARIAL NETWORK FOR ANOMALY DETECTION 19293
+
+ TABLE III
+P ERFORMANCE OF E IGHT U NSUPERVISED A NOMALY D ETECTION M ETHODS C OMPARED TO DDGAN ACROSS S IX P UBLIC DATASETS . I T S HOWS
+ P RECISION , R ECALL , F1-S CORE , AND AUC FOR E ACH M ETHOD , W ITH THE B EST R ESULTS H IGHLIGHTED IN B OLD
+
+ TABLE IV
+P RECISION , R ECALL , AND F1-S CORES P ERFORMANCE OF LSTM-AE, LSTM-DN , LSTM-DA , DD GAN, D D GAN, AND DDGAN IN F OUR P UBLIC
+ DATASETS
+
+methods. As shown in Table II, DDGAN significantly outper- demonstrated outstanding performance in recall, F1-score,
+formed eight other unsupervised anomaly detection methods and AUC, successfully achieving a perfect recall rate and
+across these six public datasets, demonstrating its excep- a 7.31% increase in F1-score compared to baseline. In the
+tional performance in unsupervised anomaly detection tasks. SMD dataset, DDGAN exhibited excellent performance across
+Table III also provides a detailed comparison of DDGAN and all evaluation metrics, achieving an accuracy of 99.96%,
+other baseline models on public datasets. In the MSL dataset, a recall rate of 100.00%, an F1-score of 99.97%, and an
+our method achieved an AUC score of 91.92%, surpassing all AUC of 99.97%, highlighting its significant advantages over
+baselines by an improvement of 2.46%. Although the F1-score other methods. However, in the SMAP dataset, our method
+was not the highest, it still exhibited suboptimal performance. performed poorly. This was primarily due to the emphasis
+In the PSM dataset, DDGAN excelled in accuracy, F1, and on temporal relationships while failing to adequately consider
+AUC metrics, with an impressive increase of 2.03% in the intersensor correlations, which resulted in unsatisfactory accu-
+F1-score over the baseline, achieving an AUC of 98.88%, a racy and recall rates. Nonetheless, the AUC metric still reached
+6% improvement. Despite a slightly lower recall compared optimal levels, while the F1-score achieved suboptimal results.
+to USAD, our recall rate remained high at 98.51%. On the In summary, our method demonstrated superior performance
+SWAT dataset, DDGAN achieved the best results across recall, across most datasets, outperforming several baseline methods
+F1-score, and AUC, with a recall improvement of 3.04% across various evaluation metrics, underscoring the practiover the baseline. For the WADI dataset, our method also cality and effectiveness of unsupervised anomaly detection
+19294 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+tasks. It is crucial to note that the pseudo-label generation
+in this study relies on a reconstruction error-based dynamic
+dictionary screening mechanism, theoretically grounded in the
+core hypothesis that “normal samples exhibit significantly
+lower reconstruction errors than anomalies.” However, this
+mechanism shows high sensitivity to data distributions: in scenarios with severe class imbalance, fixed-capacity dictionaries
+easily lead to insufficient representation of normal samples,
+thereby generating pseudo-label noise. Additionally, the mean
+squared error (mse) used for reconstruction error calculation
+has inherent limitations, resulting in inadequate sensitivity to
+localized subtle anomalies.
+ Fig. 5. Mean values achieved by different methods under various parameter
+ configurations.
+
+D. Ablation Study
+ DDGAN demonstrates significant improvements over most anomalous data, thereby addressing the scarcity of such data.
+baseline models. This section presents ablation experiments Overall, the ablation study results indicate that improvements
+designed to validate the effectiveness of various modules, to the model from different perspectives effectively enhance
+structures, and methods within the algorithm. Specifically, anomaly detection capabilities and performance, and these
+we compared DDGAN with five other models: LSTM-AE, enhancements are not mutually exclusive.
+LSTM-DN , LSTM-DA , and ddGAN. LSTM-AE represents a
+conventional LSTM-based AE, while LSTM-DN integrates a E. Parameter Sensitivity
+discriminator trained on normal data into the LSTM-based AE
+and LSTM-DA employs a discriminator trained on anomalous This section investigates the impact of selecting different
+data. The ddGAN model combines an LSTM-based AE trained S epoch strategies on the performance of the model. We explore
+exclusively on anomalous data but excludes the dynamic the choices of S epoch from a set of [log, N, n log, n2 ]. We
+dictionary. The distinction between DdGAN and DDGAN lies examine various S epoch strategies and present their effects on
+in the absence of data augmentation in the dynamic dictionary the model’s mean values in Fig. 5. It is observed that, in
+component. The ablation experiments were conducted on four most cases, employing n2 strategies leads to improved perforpublic datasets: MSL, SMAP, SWaT, and SMD. Table IV mance. All four strategies exhibit a monotonically increasing
+presents the results of the ablation experiments. It is evident trend, albeit with varying rates of increase as the number of
+that DDGAN outperforms LSTM-AE, LSTM-DN , LSTM-DA , epochs progresses. Strategy n2 notably demonstrates the highddGAN, and DdGAN across the four public datasets, particu- est increase in both optimal and mean values. These findings
+larly excelling in recall and F1-score, indicating that DDGAN underscore the appropriateness of the research approach based
+possesses stronger generalization capabilities in unsupervised on reconstruction error. By adopting strategy n2 for anomaly
+anomaly detection tasks. Furthermore, the results in Table IV detection, the model effectively accentuates the discrepancy
+indicate that both single-discriminator (handling normal or between abnormal and reconstructed data, thereby yielding
+anomalous data) and dual-discriminator architectures con- a substantial enhancement in the effectiveness of anomaly
+tribute to enhancing anomaly detection performance. Notably, detection through reconstruction error analysis.
+the discriminators for normal and anomalous data show significant improvements across all datasets when compared VI. C ONCLUSION
+to the traditional LSTM-AE, highlighting the effectiveness This study addresses the data dependency and overfitting
+of integrating LSTM-AE with GANs for anomaly detection challenges of GANs in multivariate time series anomaly
+tasks. The results from ddGAN and DdGAN demonstrate detection by proposing a dynamic dictionary-based GAN
+the benefits of incorporating a dynamic dictionary for storing (DDGAN) framework. The methodological innovation lies in
+anomalous data to train the anomaly discriminator. DDGAN’s the synergistic integration of a pseudo-label filtering mechainclusion of data augmentation within the dynamic dictio- nism and a dynamic dictionary optimization strategy, which
+nary addresses the challenge of anomalous data scarcity, collaboratively establishes a representation system for normal
+and the results suggest that this approach is effective in and abnormal samples. Specifically, the dynamic dictionary
+improving model performance. The aforementioned ablation enables adaptive storage of anomalous samples based on
+experiments reveal that the combination of the normal data reconstruction error thresholds, while the pseudo-label mechadiscriminator and the anomalous data discriminator, along nism iteratively refines the screening accuracy of normal data.
+with components such as the dynamic dictionary and data Notably, the method may encounter challenges in scenarios
+augmentation, enhances anomaly detection performance. The with class imbalance due to dictionary capacity constraints that
+dynamic dictionary serves as an auxiliary component for could compromise normal pattern characterization. Compared
+storing limited anomalous data, playing a crucial role during to existing approaches, the core breakthroughs include the
+the training process. Meanwhile, the data augmentation com- dual-discriminator architecture design and the joint optimizaponent alleviates the issue of data imbalance by enhancing the tion mechanism of dynamic weight loss functions, which
+DING et al.: DUAL-DISCRIMINATOR GENERATIVE ADVERSARIAL NETWORK FOR ANOMALY DETECTION 19295
+
+collectively enhance both normal data reconstruction fidelity [21] C. Cortes and V. Vapnik, “Support-vector networks,” Mach. Learn.,
+and anomaly discrimination capability. Future research will vol. 20, no. 3, pp. 273–297, 1995.
+ [22] F. T. Liu, K. M. Ting, and Z. Zhou, “Isolation forest,” Data mining,
+prioritize addressing technical bottlenecks in multimodal fea- vol. 15, no. 4, pp. 413–422, 2008.
+ture fusion and fine-grained anomaly classification while [23] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+exploring adaptive dictionary capacity adjustment strategies to Learn., 2018, pp. 4393–4402.
+improve model robustness. [24] X. Miao, Y. Liu, H. Zhao, and C. Li, “Distributed online
+ one-class support vector machine for anomaly detection over
+ networks,” IEEE Trans. Cybern., vol. 49, no. 4, pp. 1475–1488
+ R EFERENCES , Apr. 2019.
+ [25] S. Ramaswamy, R. Rastogi, and K. Shim, “Efficient algorithms for
+[1] D. Yue, Z. He, and C. Dou, “Cloud-edge collaboration-based distribution mining outliers from large data sets,” in Proc. ACM SIGMOD Int. Conf.
+ network reconfiguration for voltage preventive control,” IEEE Trans. Manage. Data, May 2000, pp. 427–438.
+ Ind. Informat., vol. 19, no. 12, pp. 11542–11552, Dec. 2023. [26] O. P. Mahela, B. Khan, H. H. Alhelou, and P. Siano, “Power
+[2] K. Huang, S. Wu, B. Sun, C. Yang, and W. Gui, “Metric learning- quality assessment and event detection in distribution network
+ based fault diagnosis and anomaly detection for industrial data with with wind energy penetration using stockwell transform and fuzzy
+ intraclass variance,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, clustering,” IEEE Trans. Ind. Informat., vol. 16, no. 11, pp. 6922–6932,
+ no. 1, pp. 547–558, Jan. 2024. Nov. 2020.
+[3] R. W. Liu, Y. Guo, Y. Lu, K. T. Chui, and B. B. Gupta, “Deep network- [27] K. Xing, C. Hu, J. Yu, X. Cheng, and F. Zhang, “Mutual
+ enabled haze visibility enhancement for visual IoT-driven intelligent privacy preserving k -Means clustering in social participatory
+ transportation systems,” IEEE Trans. Ind. Informat., vol. 19, no. 2, sensing,” IEEE Trans. Ind. Informat., vol. 13, no. 4, pp. 2066–2076,
+ pp. 1581–1591, Feb. 2023. Aug. 2017.
+[4] T. Truong-Huu et al., “An empirical study on unsupervised network [28] M. S. Parwez, D. B. Rawat, and M. Garuba, “Big data analytics for
+ anomaly detection using generative adversarial networks,” in Proc. 1st user-activity analysis and user-anomaly detection in mobile wireless
+ ACM Workshop Security Privacy Artif. Intell., 2020, pp. 20–29. network,” IEEE Trans. Ind. Informat., vol. 13, no. 4, pp. 2058–2065,
+[5] A. Mahmoud and A. Mohammed, “A survey on deep learning for Aug. 2017.
+ time-series forecasting,” in Machine Learning and Big Data Analytics [29] X. Tao, D. Zhang, W. Ma, Z. Hou, Z. Lu, and C. Adak,
+ Paradigms: Analysis, Applications and Challenges, 2020, pp. 365–392. “Unsupervised anomaly detection for surface defects with dual-siamese
+[6] Z. Zhang et al., “Time series anomaly detection for smart grids via network,” IEEE Trans. Ind. Informat., vol. 18, no. 11, pp. 7707–7717
+ multiple self-supervised tasks learning,” in Proc. IEEE Int. Conf. Knowl. , Nov. 2022.
+ Graph (ICKG), Nov. 2022, pp. 392–397. [30] G. Zhu et al., “A multi-task graph neural network with variational graph
+[7] H. Tao et al., “HAN-CAD: Hierarchical attention network for context auto-encoders for session-based travel packages recommendation,” ACM
+ anomaly detection in multivariate time series,” World Wide Web, vol. 26, Trans. Web, vol. 17, no. 3, pp. 1–30, Aug. 2023.
+ no. 5, pp. 2785–2800, Sep. 2023. [31] X. Zhou, Y. Hu, W. Liang, J. Ma, and Q. Jin, “Variational LSTM
+[8] P. Wu, J. Liu, and F. Shen, “A deep one-class neural network for enhanced anomaly detection for industrial big data,” IEEE Trans. Ind.
+ anomalous event detection in complex scenes,” IEEE Trans. Neural Informat., vol. 17, no. 5, pp. 3469–3477, May 2021.
+ Netw. Learn. Syst., vol. 31, no. 7, pp. 2609–2622, Jul. 2020. [32] N. Srivastava, G. E. Hinton, A. Krizhevsky, I. Sutskever, and
+[9] B. Zhou, S. Liu, B. Hooi, X. Cheng, and J. Ye, “BeatGAN: Anomalous R. Salakhutdinov, “Dropout: A simple way to prevent neural networks
+ rhythm detection using adversarially generated time series,” in Proc. from overfitting,” J. Mach. Learn. Res., vol. 15, no. 1, pp. 1929–1958,
+ 28th Int. Joint Conf. Artif. Intell., Aug. 2019, pp. 4433–4439. 2014.
+[10] B. Du, X. Sun, J. Ye, K. Cheng, J. Wang, and L. Sun, “GAN-based [33] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Soderanomaly detection for multivariate time series using polluted training strom, “Detecting spacecraft anomalies using LSTMs and nonparametric
+ set,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12208–12219, dynamic thresholding,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl.
+ Dec. 2023. Discovery Data Mining, Jul. 2018, pp. 387–395.
+[11] A. Garg, W. Zhang, J. Samaran, R. Savitha, and C.-S. Foo, “An eval-
+ [34] T. Nakamura, M. Imamura, R. Mercer, and E. Keogh, “MERLIN:
+ uation of anomaly detection and diagnosis in multivariate time series,”
+ Parameter-free discovery of arbitrary length anomalies in massive time
+ IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2508–2517,
+ series archives,” in Proc. IEEE Int. Conf. Data Mining (ICDM), Nov.
+ Jun. 2022.
+ 2020, pp. 1190–1195.
+[12] V. Chandola, A. Banerjee, and V. Kumar, “Anomaly detection: A
+ [35] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+ survey,” ACM Comput. Surveys (CSUR), vol. 41, no. 3, p. 15, 2009.
+ detection for multivariate time series through stochastic recurrent neural
+[13] I. J. Goodfellow et al., “Generative adversarial nets,” in Proc. 27th Int.
+ network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Disc. Data
+ Conf. Neural Inf. Process. Syst. (NIPS), vol. 2. Cambridge, MA, USA:
+ Min., 2019, pp. 2828–2837.
+ MIT Press, 2014, pp. 2672–2680.
+[14] T. Schlegl, P. Seeböck, S. M. Waldstein, U. Schmidt-Erfurth, and [36] A. P. Mathur and N. O. Tippenhauer, “SWaT: A water treatment
+ G. Langs, “Unsupervised anomaly detection with generative adversarial testbed for research and training on ICS security,” in Proc. Int. Worknetworks to guide marker discovery,” in Proc. Int. Conf. Inf. Process. shop Cyber-physical Syst. Smart Water Netw. (CySWater), Apr. 2016
+ Med. Imag., 2017, pp. 146–157. , pp. 31–36.
+[15] Y. Wang, J. Cao, Z. Bu, J. Wu, and Y. Wang, “Dual structural consistency [37] C. M. Ahmed, V. R. Palleti, and A. P. Mathur, “WADI: A water
+ preserving community detection on social networks,” IEEE Trans. distribution testbed for research in the design of secure cyber physical
+ Knowl. Data Eng., vol. 35, no. 11, pp. 11301–11315, Nov. 2023. systems,” in Proc. 3rd Int. Workshop Cyber-Phys. Syst. Smart Water
+[16] Y. Wang, J. Cao, Z. Bu, and M. Leng, “Temporal dual-attributed network Netw., Apr. 2017, pp. 25–28.
+ generation oriented community detection model,” IEEE Trans. Emerg. [38] A. Abdulaal, Z. Liu, and T. Lancewicki, “Practical approach to asyn-
+ Topics Comput., vol. 12, no. 2, pp. 403–418, Apr. 2024. chronous multivariate time series anomaly detection and localization,”
+[17] H. Zenati, C.-S. Foo, B. Lecouat, G. Manek, and V. Chandrasekhar, in Proc. 27th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug.
+ “Efficient GAN-based anomaly detection,” in Proc. 35th Int. Conf. 2021, pp. 2485–2494.
+ Mach. Learn., 2018, pp. 6094–6103. [39] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+[18] A. Geiger, D. Liu, S. Alnegheimish, A. Cuesta-Infante, and K. Veera- “USAD: Unsupervised anomaly detection on multivariate time series,”
+ machaneni, “TadGAN: Time series anomaly detection using generative in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Disc. Data Min., 2020,
+ adversarial networks,” in Proc. IEEE Int. Conf. Big Data (Big Data), pp. 3395–3404.
+ Dec. 2020, pp. 33–43. [40] S. Tuli, G. Casale, and N. R. Jennings, “TranAD: Deep transformer
+[19] D. M. Hawkins, Identification of Outliers. London, U.K.: Chapman & networks for anomaly detection in multivariate time series data,” 2022,
+ Hall, 1980. arXiv:2201.07284.
+[20] C. Zhou and R. C. Paffenroth, “Anomaly detection with robust deep [41] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+ autoencoders,” in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discovery in multivariate time series,” in Proc. AAAI Conf. Artif. Intell. (AAAI),
+ Data Mining, Aug. 2017, pp. 665–674. May 2021, pp. 4027–4035.
+19296 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+[42] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer: Jia Wu (Senior Member, IEEE) received the Ph.D.
+ Time series anomaly detection with association discrepancy,” 2021, degree in computer science from the University of
+ arXiv:2110.02642. Technology Sydney, Ultimo, NSW, Australia.
+ He is currently an Associate Professor and the
+ Research Director at the Centre for Applied Artificial Intelligence and the Director of Higher Degree
+ Research (HDR) at the School of Computing, Mac-
+ Da Ding is currently pursuing the Ph.D. degree with quarie University, Sydney, NSW, Australia. He has
+ the College of Computer and Information, Hohai authored or co-authored more than 200 refereed
+ University, Nanjing, China. journal articles and conference papers, including
+ His current research interests include anomaly IEEE T RANSACTIONS ON PATTERN A NALYSIS
+ detection and time series analysis. AND M ACHINE I NTELLIGENCE (TPAMI), IEEE T RANSACTIONS ON
+ K NOWLEDGE AND DATA E NGINEERING (TKDE), IEEE T RANSACTIONS
+ ON C YBERNETICS (TCYB), ACM Transactions on Knowledge Discovery
+ from Data (TKDD), IEEE T RANSACTIONS ON N EURAL N ETWORKS AND
+ L EARNING S YSTEMS (TNNLS), IEEE T RANSACTIONS ON M ULTIMEDIA
+ (TMM), KDD, ICDM, WWW, and NeurIPS. His current research interests
+ include data mining and machine learning.
+ Prof. Wu has been serving as the Program Committee Chair/the Demo
+ Chair/the Contest Chair/the Tutorial Chair/the Publicity Chair/the Program
+ Committee Chair (Senior) for Prestigious Data Mining and Artificial Intel-
+ Youquan Wang received the Ph.D. degree in ligence Conferences over ten years, such as KDD, ICDM, WSDM, IJCAI,
+ computer application technology from Nanjing Uni- AAAI, WWW, NeurIPS, CIKM, and SDM. His research team was a recipient
+ versity of Science and Technology, Nanjing, China. of the CIKM’22 Best Paper Runner-Up Award, the ICDM’21 Best Student
+ He is currently a Lecturer at Jiangsu Provincial Paper Award, the SDM’18 Best Paper Award in Data Science Track, the
+ Key Laboratory of E-Business, Nanjing University IJCNN’17 Best Student Paper Award, and the ICDM’14 Best Paper Candidate
+ of Finance and Economics. His research interests Award. He is an Associate Editor of IEEE TNNLS, ACM TKDD, and Neural
+ include deep learning and data mining. He has Networks.
+ authored or co-authored more than 30 refereed journal articles and conference papers in these areas.
+ Dr. Wang is a member of ACM and CCF.
+
+ Jie Cao received the Ph.D. degree in information
+ Haicheng Tao (Member, IEEE) received the Ph.D. science and engineering from Southeast University,
+ degree in computer science from Nanjing University Nanjing, China, in 2002.
+ of Science and Technology, Nanjing, China. He is currently a Professor with the School
+ He is currently a Lecturer with Nanjing University of Management, Hefei University of Technology,
+ of Finance and Economics, Nanjing. His research Hefei. His main research interests include data mininterests include data mining, machine learning, arti- ing, deep learning, and business intelligence.
+ ficial intelligence, and optimization. Dr. Cao has been selected in the Program for
+ New Century Excellent Talents in University and
+ awarded with the Young and Mid-Aged Expert with
+ Outstanding Contribution in Jiangsu.

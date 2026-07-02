@@ -1,0 +1,835 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025 13527
+
+ Few-Shot Anomaly Detection via
+ Category-Agnostic Registration Learning
+ Chaoqin Huang , Haoyan Guan , Aofan Jiang, Ya Zhang , Michael Spratling ,
+ Xinchao Wang, Senior Member, IEEE, and Yanfeng Wang , Member, IEEE
+
+ Abstract— Most existing anomaly detection (AD) methods I. I NTRODUCTION
+require a dedicated model for each category. Such a paradigm,
+despite its promising results, is computationally expensive and
+inefficient, thereby failing to meet the requirements for realworld applications. Inspired by how humans detect anomalies,
+ A NOMALY detection (AD) has recently drawn increasing attention due to its wide range of applications in
+ defect detection [1], autonomous driving [2], [3], and medby comparing a query image to known normal ones, this article ical diagnosis [4], [5]. Recent studies have mainly pursued
+proposes a novel few-shot AD (FSAD) framework. Using a train- an unsupervised learning paradigm that learns with normal
+ing set of normal images from various categories, registration, samples only, due to the challenge to collect an exhaustive
+aiming to align normal images of the same categories, is leveraged set of anomalous samples. A typical solution is to model the
+as the proxy task for self-supervised category-agnostic representation learning. At test time, an image and its corresponding
+ feature distribution of the normal samples, and images that do
+support set, consisting of a few normal images from the same not conform to this distribution are considered anomalous [6],
+category, are supplied, and anomalies are identified by comparing [7], [8], [9], [10], [11], [12], [13], [14].
+the registered features of the test image to its corresponding Most existing AD methods follow a “one-model-persupport image features. Such a setup enables the model to category” paradigm that trains an individual model for each
+generalize to novel test categories. It is, to our best knowledge, category, as depicted in Fig. 1(a). Such a process requires
+the first FSAD method that requires no model fine-tuning for hundreds or thousands of images which are often prohibitive
+novel categories: enabling a single model to be applied to all to obtain in real-world scenarios. To reduce this burden of data
+categories. Extensive experiments demonstrate the effectiveness collection, few-shot AD (FSAD) has been proposed, where
+of the proposed method. Particularly, it improves the current
+state-of-the-art (SOTA) for FSAD by 11.3% and 8.3% on the
+ only a few normal images are available for each category
+MVTec and MPDD benchmarks, respectively. The source code is during the fine-tuning of a pretrained model [15], [16]. Early
+available at https://github.com/Haoyan-Guan/CAReg. attempts include either leveraging various transformations
+ to augment the few-shot data [15] or introducing a lighter
+ Index Terms— Anomaly detection (AD), few-shot learning
+ model to estimate the normal distribution [16] so as to avoid
+(FSL), registration, self-supervised learning.
+ overfitting. However, the above approaches still follow the
+ Received 22 January 2024; revised 13 June 2024; accepted 10 September one-model-per-category learning paradigm.
+2024. Date of publication 3 October 2024; date of current version 9 July 2025. Inspired by how human beings detect anomalies, this article
+This work was supported in part by the National Key Research and Develop- explores a one-model-all-category paradigm for FSAD, i.e.,
+ment Program of China under Grant 2022ZD0160702; in part by the STCSM
+under Grant 22DZ2229005; in part by the 111 Plan under Grant BP0719010;
+ training a category-agnostic AD model. To find the anomalies
+in part by the State Key Laboratory of UHD Video and Audio Production in an image, humans simply compare it to a normal exemplar
+and Presentation; in part by the Ministry of Education Singapore, under its and identify any difference. This approach requires no knowl-
+Academic Research Fund Tier 2, under Award MOE-T2EP20122-0006; and in edge of the image category because comparison is naturally
+part by the National Research Foundation, Singapore, under its AI Singapore category-agnostic. We thus model AD as a comparison task to
+Program (AISG), under Award AISG2-RP-2021023. (Chaoqin Huang and
+Haoyan Guan contributed equally to this work.) (Corresponding authors: make it category-agnostic. To deal with the fact that objects
+Yanfeng Wang; Ya Zhang.) may appear in different positions, orientations, or poses,
+ Chaoqin Huang was with the Cooperative Medianet Innovation Center, the images are first transformed into one coordinate system
+Shanghai Jiao Tong University, Shanghai 200240, China, and also with the through a form of registration [17], [18], [19] to facilitate the
+Department of Electrical and Computer Engineering, National University of
+Singapore, Singapore 119077. He is now with the College of Information comparison.
+Communications, National University of Defense Technology, Wuhan 430030, An overview of the proposed Category-Agnostic
+China (e-mail: huangchaoqin@nudt.edu.cn). Registration (CAReg) framework for FSAD is shown in
+ Haoyan Guan and Michael Spratling are with the Department of Informatics, King’s College London, WC2R 2LS London, U.K. (e-mail: haoyan. Fig. 1(b). A Siamese network [20] containing three spatial
+guan@kcl.ac.uk; michael.spratling@kcl.ac.uk). transformer network (STN) blocks [21] is used for registration.
+ Aofan Jiang, Ya Zhang, and Yanfeng Wang are with the Cooperative For better robustness, we perform registration at the feature
+Medianet Innovation Center, Shanghai Jiao Tong University, Shanghai 200240,
+China, and also with Shanghai Artificial Intelligence Laboratory, Shanghai
+ level, instead of pixel-by-pixel image registration [19].
+200030, China (e-mail: stillunnamed@sjtu.edu.cn; ya_zhang@sjtu.edu.cn; The feature-level registration loss, a relaxed version of the
+wangyanfeng622@sjtu.edu.cn). image-level pixelwise registration loss, is used to minimize
+ Xinchao Wang is with the Department of Electrical and Computer the cosine distance of the features from images of the
+Engineering, National University of Singapore, Singapore 119077 (e-mail: same category. The trained model has the ability to perform
+xinchao@nus.edu.sg).
+ This article has supplementary downloadable material available at registration across different categories and is able to be
+https://doi.org/10.1109/TNNLS.2024.3465446, provided by the authors. used at test time directly on novel categories. Anomalies are
+ Digital Object Identifier 10.1109/TNNLS.2024.3465446 detected by comparing the registered features of the novel
+ 2162-237X © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+13528 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025
+
+Fig. 1. (a) One-model-per-category paradigm for the vanilla AD and FSAD. (b) One-model-all-category paradigm for the proposed category-agnostic FSAD.
+
+test category image and its corresponding support set (a few registration referenced by only one single image, accunormal images from the target category). The comparison mulated features (AFs) from each category are used as
+process first estimates the normal distribution based on the registration references.
+support set, which can be implemented with statistical-based 3) A Wasserstein-distance-based method is proposed to
+normal distribution estimators [22], and then fits the test flexibly, and automatically, choose the most suitable
+samples to normal distribution. Samples that fall out of the data augmentations (DAs) during the normal distribunormal distribution are considered anomalies. tion estimation stage, improving the accommodation of
+ We validate the effectiveness of the proposed CAReg frame- different distribution characteristics among categories in
+work on two challenging benchmark datasets for industrial the FSAD scenario.
+defect detection, MVTec [23] and MPDD [24]. CAReg is 4) Results of more experiments are reported both for evalshown to outperform the state-of-the-art (SOTA) FSAD meth- uating performance and assessing the method through
+ods [15], [16] in terms of area under the receiver operating ablation studies.
+characteristic curve metric (AUC) on two-shot, four-shot, and The rest of this article is organized as follows. Section II
+eight-shot scenarios, respectively, by 9.6%, 12.4%, and 11.9% reviews the existing works related to AD and few-shot learnon MVTec and 7.1%, 9.1%, and 8.8% on MPDD. We also ing (FSL). Section III formulates the problem of FSAD.
+experiment with three SOTA normal distribution estimation Section IV describes the CAReg training used for CAReg.
+methods: PaDim [22], OrthoAD (OAD) [25], and PatchCore Section V describes an AD system combining CAReg with
+(PC) [26]. Our experimental results show that CAReg is able multiple normal distribution estimators. Section VI presents
+to improve the average AUC for all three normal distribution the experimental results on several real-world datasets, showestimation methods, by 10.9%, 15.4%, and 8.5% on MVTec, ing the effectiveness of our method in both FSAD and anomaly
+and by 12.1%, 4.4%, and 8.0% on MPDD, for PaDim, OAD, localization. Finally, conclusions are drawn in Section VII.
+and PC, respectively.
+ Below we summarize the main contributions. II. R ELATED W ORK
+ 1) CAReg is the first one-model-all-category framework for
+ FSAD, requiring no abnormal images at training and no A. Anomaly Detection
+ parameter fine-tuning at testing. AD [28] has a wide range of applications, encompassing
+ 2) Feature registration is leveraged as the proxy task to still image AD [7], [8], [9], [10] and anomalous human behavtrain AD models, which demonstrate increased general- ior detection [29], [30], [31], [32], [33], [34]. The focus of
+ izability across different categories and datasets. this article is on industrial defect detection [23], [24], covering
+ 3) CAReg outperforms the state-of-the-art FSAD methods both image-level AD and pixel-level anomaly localization. The
+ on both AD and anomaly localization tasks with stan- main challenge of unsupervised AD, compared with superdard benchmark datasets. vised approaches, lies in the absence of training annotations,
+ Compared with our previous method, RegAD, presented be it at the image level and pixel level. Models are expected to
+at ECCV 2022 [27] as an oral presentation, the proposed be trained solely with normal instances, excluding anomalies.
+approach has the following technical improvements. Unsupervised AD research can be broadly categorized into
+ 1) CAReg is designed as a framework for FSAD, which can two tracks: one-class classification-based AD approaches and
+ flexibly adopt various normal distribution estimators in self-supervised learning-based AD approaches.
+ addition to PaDim that was used in our previous work. One-class classification-based AD approaches are engi-
+ 2) CAReg introduces a modified feature registration mod- neered to detect anomalies by developing a model of normal
+ ule to improve the model’s robustness. Instead of data instances and then assessing whether new instances align
+HUANG et al.: FEW-SHOT ANOMALY DETECTION VIA CATEGORY-AGNOSTIC REGISTRATION LEARNING 13529
+
+with this normative framework. These strategies presuppose generative models to produce novel class images, thereby
+that normal data can be encapsulated by compact models [35], bridging the few-shot gap. Optimization methods identify
+[36], [37], which anomalies do not fit. To more accurately commonalities among different classes and use optimization
+define the distribution of normal data, conventional methods models for novel classes based on these commonalities. In this
+implement a range of statistical techniques [13], [38], [39], article, CAReg is based on metric learning to address the chal-
+[40], [41]. OC-SVM [13] uses a kernel function to project lenge of FSAD. The challenge is to detect image anomalies
+features into a space where normal instances are positively for novel categories that are unseen in the training dataset,
+valued. Deep SVDD [14], [40] adopts a similar framework using only a few normal samples. The key point is to enable
+but integrates a deep convolutional neural network to reduce the model to be category-agnostic, and this ability is provided
+the volume of a hypersphere encompassing normal data rep- by the proposed registration technique, allowing generalization
+resentations. across categories. Unlike previous work on FSL, training data
+ Recent advances in one-class classification for AD increas- and support sets contain only positive (normal) examples
+ingly rely on feature embeddings from pretrained networks, without any negative (anomalous) samples.
+leveraging these as robust indicators of normalcy. Various
+statistical estimators of normal distributions [22], [25], [26] C. Few-Shot Anomaly Detection
+help pinpoint significant deviations in feature behavior, flagging them as anomalies. Measures such as the Mahalanobis FSAD in industrial AD scenarios [73], [74], [75] leverages
+distance [22] are frequently used to calculate anomaly scores. a limited number of normal samples as a support set to detect
+Techniques such as those in [22], [26], and [42] have and localize anomalies in unseen categories. This sophisticated
+demonstrated notable success using models pretrained on the task goes beyond simple AD to include fine-grained defect
+ localization, presenting greater challenges than the broader,
+ImageNet dataset [43]. However, solely relying on ImageNet
+ image-level decisions typical in traditional one-class classifipretraining has its limitations. This article introduces feature registration as a novel proxy task that enhances feature cation [76] and out-of-distribution detection [77], [78].
+aggregation and generalization capabilities, thus refining AD Traditional FSAD approaches, such as TDG [15] and
+performance. DiffNet [16], often use a one-model-per-category strategy.
+ Self-supervised learning-based AD approaches leverage TDG uses a hierarchical generative model to create multiscale
+proxy tasks for model training through self-supervision [9], patch features, improving the diversity of the normal images
+ in the support set through various transformations. In contrast,
+[10], [44], [45], [46], [47], [48], [49], [50]. Image recon-
+ DiffNet extracts descriptive features at multiple scales using
+struction is a popular proxy, widely applied across data
+ a pretrained model and uses a normalizing flow to estimate
+types such as images [6], [7], [8], [51], [52], [53], [54],
+ anomaly distributions from a few support images.
+[55], [56], [57], [58], videos [59], [60], graphs [61], and Recent developments in FSAD are shifting toward
+time series [62]. These models, trained on normal data, category-agnostic techniques that enhance feature robustness
+identify anomalies through significant reconstruction errors. and generalization without needing parameter fine-tuning. For
+Alternative approaches include GeoTrans, which uses geo- example, RegAD [27] uses a category-agnostic strategy to
+metric image transformations to create a self-labeled dataset, perform AD and localization in new categories. Building on
+using transformation classification as the proxy task [9], this, RFR [73] uses adversarial loss, common in domain adap-
+[46]. CutPaste [63] introduces localized DAs for detecting tation, to align feature distributions between source and target
+small defects by learning to classify these modifications. domains, improving the model’s generalization capabilities.
+ARNet [10] enhances pixel-level semantic features through an PACKD [74] further enhances generalization by integrating
+image restoration framework, using transformations to learn category-specific information from a teacher network into a
+from corrupted inputs. Other methods such as FYD [12] student network, guiding the learning process with prototypes
+use noncontrastive learning as a proxy task, using coarse-to- generated from few-shot normal samples. PromptAD [75]
+fine alignment to extract discriminative features from normal introduces a dual-branch framework that uses prior knowledge
+images for a more compact normal sample distribution. about abnormal behaviors through text prompts, leveraging
+Knowledge distillation is used in approaches such as US [47] multimodal data to address visual information gaps and
+and MKD [11], where the student network learns by regressing enhance AD performance. This article sets itself apart by introto a teacher network’s features, typically an ImageNet pre- ducing a CAReg mechanism to train the model’s backbone,
+trained model. Anomalies are detected when there is a notable transforming it into a flexible, plug-and-play tool that bolsters
+difference between the student’s and teacher’s output features. feature robustness and generalization for FSAD. This novel
+Distinct from these, this article introduces registration as a self- approach signifies a substantial advancement toward more
+supervised task, specifically tailored for the FSAD scenario, adaptable and broadly applicable AD methods in industrial
+which relies on only a few normal samples. settings.
+
+B. Few-Shot Learning III. P ROBLEM F ORMULATION
+ FSL addresses the task of adapting a model to novel The training set, Ttrain = {T1 , . . . , Tn }, consists of only
+categories with limited available images. FSL methods can normal samples from n categories, where Ti (i = 1, . . . , n)
+be broadly categorized into metric learning [64], [65], [66], is the subset for the ith class. The test sample consists of a
+generation [67], [68], [69], and optimization [70], [71], [72] test image I test from the tth category (t ∈ {n + 1, . . . , N },
+approaches. Metric learning methods aim to structure the N > n) and its corresponding support set St containing K
+feature space to find the closest distance between test images normal samples from the tth category. Note that at test time,
+and known classes. Generation methods involve designing the model deals with novel categories unseen in the train data.
+13530 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025
+
+For FSAD, we aim to use only a few normal images to detect averaging operation on samples, a negative cosine similarity
+anomalies in a test sample of novel categories, and thus, K is loss is applied
+set to a small number like 2, 4, or 8 in this article. pa zB
+ D( pa , z B ) = − · (2)
+ The key challenges can be summarized as: 1) Ttrain only || pa ||2 ||z B ||2
+includes normal images without any image-level or pixel-level
+ where ||·||2 is the L 2 -norm. Similarly, for features p B ≜
+annotations; 2) the test image categories and the training image
+ mean(P(E({ f 3,b }b=1 ))) and z a ≜ E( f 3,a
+ t k t
+ ), a symmetrical
+categories are completely disjoint; and 3) each test category
+ similarity loss is applied
+only provides a few normal images. pB za
+ D( p B , z a ) = − · . (3)
+ || p B ||2 ||z a ||2
+ IV. C ATEGORY-AGNOSTIC R EGISTRATION T RAINING Different from [27] where only one single image is used as the
+ This section describes how to train a category-agnostic reference, to improve the robustness, z B and p B are the AFs
+image encoder leveraging registration as a proxy task. For produced by accumulating the features from multiple refereach training batch, we randomly sample a training image Ia ences. To prevent the collapsing solutions, once the prediction
+together with a support set of k other images B = {Ib }kb=1 head P is applied on one branch, as shown in Fig. 3, a stoptaken from the same category as Ia . Section IV-A presents the gradient operation is applied to the other branch. Finally,
+architecture of the category-agnostic image encoder, with a a symmetrized feature registration loss is defined as
+spatial transformation module inserted into the convolutional 1
+residual blocks to enable registration. Section IV-B presents L = (D( pa , sg(z B )) + D( p B , sg(z a ))) (4)
+ 2
+the feature registration module. where sg(·) is the stop gradient operation. Capitalizing
+ on the inherent robustness and superior performance of
+A. Architecture of the Category-Agnostic Encoder feature-level comparisons compared with direct image-level
+ comparisons [22], the registration in this study is carried out
+ As shown in Fig. 2, a residual convolutional network [79] at the feature level to directly acquire the registered features,
+is used as the feature extractor. Following [12] and [22], only instead of pixel-by-pixel image-level registration approaches.
+the first three convolutional residual blocks of ResNet, i.e., Discussion: For the model architecture of the feature regis-
+C1 , C2 , and C3 , are kept, while the last convolution block tration network, besides adopting the first three convolutional
+is discarded to ensure the output features retain sufficient blocks of ResNet and removing the global average pooling,
+spatial information. To enable the alignment of images with in the feature registration module, a convolutional encoder
+different orientations, a spatial transformation module using an and predictor architecture is used to replace the multi-layer
+STN [21] is inserted into each convolutional residual block. perceptron (MLP) architecture in SimSiam [20]. As a result,
+Specifically, as shown in Fig. 2, given a pair of input features the features retain relatively complete spatial information.
+ s s s k
+ f i,a and f i,B = { f i,b }b=1 extracted by the convolutional For the proposed feature registration loss function [see (4)],
+residual block Ci for the training image Ia and the set of we average the cosine similarity scores at every spatial pixel.
+support images B, a localization network is leveraged to Since anomaly score maps at the pixel level are required
+generate affine transformation matrices 2i,a and {2i,b }kb=1 for for anomaly localization, it is very important to retain the
+feature registration. To perform a warping of the input features, spatial information in the final features. Different from [12]
+the pointwise transformation is and [20] where the same images from a mini-batch or two
+ xit  xt!
+ ! 
+ θ11 θ12 θ13 augmentations of one image are used as inputs for contrastive
+  s
+ xi i
+ s = Si ( f i ) = 2i yi
+ s t
+ = yit (1) representation learning, the proposed method leverages difyi θ21 θ22 θ23
+ 1 1 ferent images as inputs and learns transformation matrices
+where (xit , yit ) are the target coordinates of the output feature through STN for feature registration.
+ f it , (xis , yis ) are the source coordinates of the same point
+in the input feature f is , and 2i is the affine transformation V. A NOMALY D ETECTION
+matrix set. A grid generator and a differentiable sampler [21] To detect anomalies, we begin by estimating the normal
+are then used to generate the corresponding output features, distribution of the target category using a support set consisting
+ t t
+ f i,a and f i,B . The architecture of the localization network is of a few normal images (see Section V-A). As the task of estithe same as that used in [21]. Overall, for output features mating a distribution from a sample set has been extensively
+of the convolutional block Ci , the module Si , containing a studied in statistics, we adopt recent statistical-based estimalocalization network, a grid generator, and a differentiable tors for this purpose. Considering the challenge posed by the
+sampler, is used to learn the mappings. limited size of the support set, we propose an augmentation
+ auto-selection module (see Section V-B) to choose an optimal
+ set of DAs that can be applied to the support images during
+B. Feature Registration Module
+ the estimation process. Then, we compare the test sample with
+ t
+ Given paired extracted features f 3,a from the training image the estimated normal distribution to produce an anomaly score
+ t t k
+and f 3,B = { f 3,b }b=1 from the support image set as the final (see Section V-C). This anomaly score indicates the degree
+transformation outputs, we leverage a Siamese network [80] of deviation of the test sample from the estimated normal
+for feature registration, as shown in Fig. 3. The architecture distribution and serves as a measure for AD.
+uses a parameter-sharing encoder, E, applied on multiple
+inputs, followed by a prediction head P. Training uses the A. Normal Distribution Estimation
+method used by SimSiam [20] to avoid the collapsing prob- With the assumption that the registration can generalize
+lem when optimized without negative pairs. Denoting pa ≜ across different categories without any parameter fine-tuning,
+ t
+P(E( f 3,a )) and z B ≜ mean(E({ f 3,b
+ t k
+ }b=1 )) where mean(·) is an the registration network is applied directly to the support set
+HUANG et al.: FEW-SHOT ANOMALY DETECTION VIA CATEGORY-AGNOSTIC REGISTRATION LEARNING 13531
+
+Fig. 2. Left: Overview of the architecture of the proposed CAReg network. Given a train image and a set of support images, features are extracted by three
+convolutional residual blocks (C1 , C2 , and C3 ), each followed by a spatial transformation module (S1 , S2 , and S3 ). A feature registration module is leveraged
+and supervised by a registration loss (see Fig. 3). Right: Spatial transformation module, containing a localization network and a differentiable sampler, is used
+to learn the mappings, enabling the model to transform features to facilitate feature registration.
+
+ low-rank sample mean is replaced with WT µi j ∈ R D ,
+ ′
+
+ and the low-rank sample covariance is replaced with
+ WT 6 i j W ∈ R D ×D .
+ ′ ′
+
+ 3) PC: To further reduce the memory costs while maintaining nominal information at test time, PC [26]
+ uses the coreset sampling [82] to build a maximally representative memory bank M, which stores
+ the neighborhood-aware features from all normal samples. The normal distribution Dnorm is approximated
+ with Coreset(Freg ) where Coreset(·) is an iterative
+ greedy approximation [82] to reduce the number of
+ memory items (detailed in Algorithm 1 in the Supplementary Material).
+ Complexity Analysis: The complexity analysis of the above
+ three distribution estimators is summarized in Fig. 4. It can be
+Fig. 3. Model architecture of the feature registration module. Given paired
+registered features, the parameter-shared encoder and predictor are leveraged
+ seen that compared with PaDim, OAD significantly reduces
+and supervised by a registration loss. the memory cost due to its low-rank approximation for the
+ normal distribution Dnorm . The complexity of the distribution
+ modeling of PC is the minimum modeling complexity among
+S for the target category. Suppose an image is divided into the three estimators.
+a grid of (i, j) ∈ [1, W ] × [1, H ] positions where W × H
+is the resolution of the registered features. The outputs of the
+three STN modules are concatenated at each corresponding B. Augmentation Selection Module
+patch position (i, j), with upsampling used to match their AD approaches use DA as an important tool to expand the
+sizes, to produce aggregated features f i j . Freg = { f ikj , k ∈ dataset, especially in the FSAD scenario [15], [16]. However,
+[1, K ], i ∈ [1, W ], j ∈ [1, H ]} denotes the set of registered the impact of augmentation, specifically, where and what DA
+features for the K support images. The normal distribution to use, has not been fully explored. Instead of simply applying
+Dnorm of the target category is estimated with a statistical- the DAs on both the support and test images, this article shows
+based estimator that augmentations, by expanding the support set, play a very
+ Dnorm ≜ Enorm (Freg ). (5) important role in the normal distribution estimation process.
+ Below we briefly present three popular estimators that may We only augment the support set, which also reduces the combe adopted. These estimators are illustrated in Fig. 4. putational cost. Possible combinations of the augmentations
+ 1) PaDim: The PaDim estimator [22] adopts the multi- produce a larger augmented support set. We conduct the norvariate Gaussian distribution N (µi j , 6 i j ) as the normal mal distribution estimation on such an augmented support set.
+ distribution Dnorm,i j , where µi j and 6 i j are the mean In addition to using augmentations consistent with those
+ and covariance of features Freg corresponding to the used by RegAD [27], we further propose a Wassersteinpatch position i, j, respectively. To make the sample distance-based DA selection mechanism to flexibly choose
+ covariance matrix full rank and invertible, a regulariza- the most suitable augmentations for each category. Accordtion term ϵ IPis introduced to the covariance: 6 i j = ing to different visual characteristics among categories, it is
+ meaningful to remove the augmentations that may damage
+ (1/(K − 1)) k=1 K
+ ( f ikj − µi j )( f ikj − µi j )T + ϵ I . Each the main properties of images. Given the support set S and
+ possible patch position is associated with a multivariate its augmented set Sc with the cth augmentation, denote the
+ Gaussian distribution Dnorm = (Dnorm,i j )1⩽i⩽W,1⩽ j⩽H . normal distributions estimated by the estimator be N (µi j , 6 i j )
+ 2) OAD: To reduce the memory cost and accelerate the and N (µc,i j , 6 c,i j ) for S and Sc at position (i, j), respectively.
+ calculation of the PaDim estimator, OAD [25] leverages a low-rank embedding of input features. With a The Wasserstein distance [83] at position (i, j) between two
+ ′ distributions is defined as 
+ semi-orthogonal matrix W ∈ R D×D [81], where D ′ is  1  12 
+ ′ 1
+ a constant and D ≪ D, the estimated normal distri- Wc,i j = ||µ − µc ||22 + Tr 6 + 6 c − 2 6 2 6 c 6 2 (6)
+ bution could have a low-rank approximation, where the
+13532 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025
+
+Fig. 4. AD methods and their corresponding memory cost, distribution modeling complexity, and inference complexity. Methods are shown by combining
+registration trained features extracted by CAReg and three statistical-based normal distribution estimators (a) PaDim [22], (b) OAD [25], and (c) PC [26].
+Symbols used in the complexity equations are: D is the sum of the channel dimensions for the three STN outputs, K is the size of the given support set, D ′
+is a constant and D ′ ≪ D, and γ denotes the proportion of the original memory bank that has been sampled. Other symbols are explained in the text.
+
+where we omit the subscript (·)i j for all the variables in the TABLE I
+right-hand side of (6) to simplify the notation. To focus on S UMMARY OF THE K EY D IFFERENCES B ETWEEN THE T WO I NDUSTRIAL
+the foreground, the Wasserstein distances in (6) are reweighted AD DATASETS U SED FOR B ENCHMARKING
+and then summed, overall different feature patches at positions
+(i, j)
+ X
+ Wc′ = (||µi j − µc,i j ||2 · Wc,i j ) (7)
+ ij
+where Wc,i j is the Wasserstein distance score at patch position
+(i, j) obtained from (6), and Wc′ represents the weighted
+sum of the Wasserstein distance scores over all the patch
+positions. With an assumption that the L 2 difference of the
+sample mean on the foreground is larger, through reweighting,
+the Wasserstein distance of the background area is expected
+to be small, while the foreground related to the objects is to the three STN modules, are applied to rematch the regions
+highlighted. Given a set of Wasserstein distances {Wc′ }nc=1 of spatial-transformed features and the original images, thus
+for n kinds of augmentations, denote a threshold P as the getting the final anomaly score map dfinal . The image-level
+average of the Wasserstein distances, δ ≜ (1/n) c Wc′ , and anomaly score is the maximum of this anomaly map.
+then augmentations with higher Wasserstein distance than To ensure consistency between the anomaly scoring functhis threshold are removed from the augmentation set. The tions and the distribution estimators, a corresponding distance
+remaining augmentations are combined to jointly augment the function is defined for each estimator.
+support set. Note that the proposed augmentation selection 1) PaDim: A Mahalanobis distance is adopted
+pipeline is only used in the normal distribution estimation  q T
+ Dist f i j , Dnorm = f i j − µi j 6 i−1 f i j − µi j (9)
+ 
+stage. As no DA is used in the inference stage, the efficiency j
+of the inference is not affected. where µi j and 6 i j are the mean and covariance of the
+ normal distribution Dnorm at position (i, j), respectively.
+C. Anomaly Scoring at Inference Note that in (9), calculating the inverses of covariance
+ matrices 6 i−1 j ∈ R
+ D×D
+ has a computational complexity
+ During inference, we compare the registered features of the
+ of O(H W D ), which prohibits efficient computation
+ 3
+test image to its corresponding normal distribution to detect
+ with large dimensional multiscale features.
+anomalies: test samples out of the normal distribution are con-
+ 2) OAD: Dist(·, ·) is defined the same as in (9) but in lowsidered anomalies. Given a test image I test and the estimated
+ rank, where the feature f i j , the sample mean µi j , and the
+normal distribution Dnorm , denote f i j as the registered feature
+ sample covariance 6 i j are replaced with their low-rank
+of I test at the patch position (i, j), the anomaly score of the
+patch at position (i, j) is formulated as correspondence, i.e., WT f i j , WT µi j , and (WT 6 i j W)−1 ,
+ respectively. The computational complexity is thus cubidi j = Dist( f i j , Dnorm ) (8) cally reduced to O(H W D ′3 ), where D ′ ≪ D.
+where Dist(·, ·) is a distance function between the feature 3) PC: With the normal distribution formulated as a memand its corresponding normal distribution. The matrix of ory bank under the PC estimator, the distance function
+distances d = (di j )1⩽i⩽W,1⩽ j⩽H forms an anomaly map, with Dist(·, ·) is defined as the minimum L 2 distance between
+anomalous areas indicated with high scores. For anomaly the patch feature of the test image and its respective
+localization, three inverse transform matrices, corresponding nearest neighbor memory m ∗ in the normal patches
+HUANG et al.: FEW-SHOT ANOMALY DETECTION VIA CATEGORY-AGNOSTIC REGISTRATION LEARNING 13533
+
+ feature bank Dnorm categories to pretrain the transformation classifier, using the
+ Dist f i j , Dnorm = f i j − m ∗ 2 vanilla AD method GeoTrans [9]. DiffNet+ pretrains the
+ 
+ (10)
+ normalizing flow, which is the normal distribution estimawhere a nearest neighbor search is used to get the tor. RFR [73], PACKD [74], and PromptAD [75] are also
+ optimal m ∗ = arg minm∈Dnorm ∥ f i j − m∥2 . A reweight considered.
+ function [26] is applied to (10) to obtain the final To demonstrate the effectiveness of CAReg over normal disanomaly map considering neighbor patches. The computribution estimators for FSAD, three state-of-the-art statisticaltational complexity is O(γ K H 2 W 2 D 2 ) due to the need
+ based normal distribution estimation methods, PaDiM [22],
+ to traverse γ K H W memory items in Dnorm . OAD [25], and PC [26], are considered as the baselines.
+ CAReg is further compared with some state-of-the-art
+ VI. E XPERIMENTS vanilla AD methods, including GANomaly [54], ARNet [10],
+A. Datasets and Experimental Setting MKD [11], CutPaste [63], FYD [12], PaDiM [22], PC [26],
+ and CflowAD [42]. These methods serve as an upper bound on
+ 1) MVTec AD Dataset [23]: MVTec is a challenging indus- FSAD performance as they use the entire normal dataset for
+trial defect detection dataset, comprising 15 categories with training, unlike FSAD methods that work with a few normal
+a total of 3629 training and 1725 testing images. Following samples.
+the traditional AD setting, only normal images, without any
+defects, are provided during training. The test set contains C. Evaluation Protocols and Model Configurations
+images showing various kinds of defects and defect-free (normal) images. In all, 73 different anomalous types are given, 1) Evaluation Protocols: The AUC is used to quantify
+on average five per category. Five categories in this dataset the model performance. For AD and anomaly localization,
+cover different types of random (i.e., leather, tile, and wood) AUC at the image level and the pixel level are considered,
+or regular (i.e., carpet and grid) textures, while the other ten respectively. This metric is widely used for AD performance
+categories are for various types of objects. Pixel-level ground- evaluation.
+truth (GT) labels are provided for defective image regions. 2) Model Configuration and Training Details: For the reg-
+ 2) MPDD AD Dataset [24]: MPDD provides images of istration backbone, a ResNet-18 [79] architecture pretrained
+six categories captured during painted metal part fabrication. on the ImageNet is adopted. The feature registration module
+In contrast to MVTec, it focuses specifically on defect detec- consists of an encoder and a predictor, similar to those used
+tion under varying viewing conditions, such as different spatial in previous work [12], [20]. The encoder includes three
+orientations and positions, different lighting conditions, and 1 × 1 convolutional layers, while the predictor includes two
+nonhomogeneous backgrounds. Thus, it is more challenging 1 × 1 convolutional layers. Pooling operations are removed
+and more complex than the MVTec. Similar to MVTec, various from the ResNet backbone to retain spatial information in
+types of defects are present in the test images, which cover a registered features. Models are trained on a single NVIDIA
+wide range of scenarios that can occur in the painting industry GTX 3090 GPU. Images are resized to have a resolution
+and metal fabrication. We summarize the differences between of 224 × 224 pixels. Standard image augmentations used in
+the two industrial AD datasets in Table I. previous work [15], [27] are applied. The model parameters
+ 3) Experimental Setting: The experiments for FSAD were are updated for 50 epochs, with an initial learning rate of
+conducted under the leave-one-out setting. In this configura- 0.0001, updated using a single cycle of the cosine learning rate
+tion, a designated target category was chosen for testing, while scheduler. The batch size is set to 32, and the optimizer used
+the remaining categories in the dataset were used for training. is momentum SGD. For normal distribution estimators, the
+The aim of this approach was to gauge AD performance when sampling proportion γ for PC is set to 0.1, and the low-rank
+confronted with an unseen category, thereby assessing the constant D ′ for OAD is set to 100, by default.
+potential of the model’s capacity for generalization across
+all the categories beyond the categories seen during training. D. Comparison With State-of-the-Art FSAD Methods
+To create a demanding FSL context, all data corresponding to Table II presents the comparison results on the MVTec
+the target category were excluded from the training set. During and MPDD datasets. The results show that the two extended
+testing, only an exceedingly limited number of normal samples methods, TDG+ and DiffNet+, achieve only limited improvefrom the target category were made available in the support set. ments (TDG+: ≤3.8%, DiffNet+: ≤2.1%) compared with
+We conducted ten separate experiments, each using a distinct their corresponding original versions trained without data from
+support set selected at random. After selection, the support multiple categories. However, the proposed CAReg training
+set for each experiment was fixed to maintain consistency and method demonstrates significant improvements compared with
+facilitate comparisons to state-of-the-art methods, yielding a its three baseline methods, PaDim [22], OAD [25], and
+variety of ten outcomes. The reported performance metrics PC [26]. In the few-shot scenarios with K = 2, 4, 8, CAReg
+were the average results across these ten trials. outperforms PaDim by 10.8%, 11.2%, and 10.7% on MVTec,
+ and 15.2%, 14.1%, and 17.0% on MPDD, respectively. Moreover, compared with the current state-of-the-art method PC,
+B. Competing Methods and Baselines CAReg improves the average AUC by 4.4%, 4.9%, and 3.8%
+ In this study, two state-of-the-art FSAD methods are con- on MVTec, and 8.8%, 7.9%, and 7.4% on MPDD. Individual
+sidered as the baseline models, including TDG [15] and categorywise results are shown in Table III for MVTec and in
+DiffNet [16]. Official source codes for these methods are Table IV for MPDD.
+used to train the category-dependent models. In addition, Without any parameter fine-tuning, CAReg is tested after
+the methods are extended to leverage data from multiple CAReg training. In contrast, other methods that use separate
+categories through a pretraining procedure, resulting in the models for each category only focus on optimizing the permethods TDG+ and DiffNet+. TDG+ uses data from multiple formance for individual categories in each experiment. As a
+13534 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025
+
+ TABLE II
+C OMPARISON OF CAR E G W ITH T WO S TATE - OF - THE -A RT FSAD M ETHODS ON MVT EC AND MPDD W ITH K = {2, 4, 8}. R ESULTS OF THE T HREE
+ N ORMAL D ISTRIBUTION E STIMATION M ETHODS , PA D I M, OAD, AND PC, A RE A LSO R EPORTED AS BASELINES . T HE AUC ( IN %) AVERAGED
+ OVER T EN RUNS I S R EPORTED , W ITH THE B EST R ESULT IN E ACH ROW M ARKED IN B OLD
+
+ TABLE III
+C OMPARISON OF CAR E G W ITH I TS C ORRESPONDING BASELINE N ORMAL D ISTRIBUTION E STIMATION M ETHODS ON MVT EC W ITH K = {2, 4, 8}. AUC
+ IN % AVERAGED OVER T EN RUNS FOR E ACH C ATEGORY AND THE SD OF PC AND PC + CAR E G IN P ERCENTAGE (% I S O MITTED ) OVER T HESE
+ T EN RUNS (T EN D IFFERENT S UPPORT S ETS ) A RE P ROVIDED , T OGETHER W ITH A M ACRO -AVERAGE S CORE OVER A LL C ATEGORIES . F OR
+ E ACH PAIR , THE B EST-P ERFORMING M ETHOD I S M ARKED IN B OLD
+
+ TABLE IV
+C OMPARISON OF CAR E G W ITH I TS C ORRESPONDING BASELINE N ORMAL D ISTRIBUTION E STIMATION M ETHODS ON MPDD W ITH K = {2, 4, 8}. AUC
+ IN % AVERAGED OVER T EN RUNS FOR E ACH C ATEGORY AND THE SD OF PC AND PC + CAR E G IN P ERCENTAGE (% I S O MITTED ) OVER T HESE
+ T EN RUNS (T EN D IFFERENT S UPPORT S ETS ) A RE P ROVIDED , T OGETHER W ITH A M ACRO -AVERAGE S CORE OVER A LL C ATEGORIES . F OR
+ E ACH PAIR , THE B EST-P ERFORMING M ETHOD I S M ARKED IN B OLD
+
+result, it can be challenging to achieve the best result for every the use of an additional large-scale dataset (MSRA10K [84])
+category with CAReg. However, when averaging the results during training, CAReg demonstrates its effectiveness without
+for all the categories and all the shot scenarios, CAReg con- relying on such extra data.
+sistently outperforms the corresponding baselines of PaDim, For real-world applications of FSAD, the time required
+OAD, and PC by 10.9%, 8.5%, and 4.4% on MVTec. CAReg to adapt a pretrained model to a target category (referred
+also shows the lowest standard deviation (SD) in performance to as adaptation time) is an important factor. In the case
+across the 15 categories of MVTec. For instance, when of TDG+ and DiffNet+, the fine-tuning procedure is very
+K = 8, CAReg achieves SDs of 10.54%, 9.52%, and 6.34% time-consuming as it involves updating parameters for many
+on the three estimators (PaDim, OAD, and PC), which are epochs. With CAReg, adaptation speed is significantly faster.
+significantly lower than their corresponding baseline methods, This is because statistical estimators such as PaDim, OAD, and
+indicating improved generalizability of the proposed method PC can be used directly after inference for the support images,
+across different categories. In addition, CAReg achieves an without the need for parameter fine-tuning. As a result, CAReg
+impressive AUC of 95.1% on the MVTec dataset with K = 8, achieves the fastest adaptation speed among the compared
+representing a remarkable ≈7% improvement compared with methods, making it more practical and efficient for real-world
+Metaformer [8]. While Metaformer has its advantages due to applications. When averaging the adaptation time on MVTec
+HUANG et al.: FEW-SHOT ANOMALY DETECTION VIA CATEGORY-AGNOSTIC REGISTRATION LEARNING 13535
+
+ TABLE V
+C OMPARISON OF CAR E G W ITH S TATE - OF - THE -A RT FSAD M ETHODS AND VANILLA AD M ETHODS (U PPER B OUND U SING THE E NTIRE DATASET FOR
+ T RAINING ) ON MVT EC AND MPDD. T HE M ACRO -AVERAGE OF AUC ( IN %) OVER A LL C ATEGORIES IN E ACH DATASET I S R EPORTED . F OR
+ FSAD, R ESULTS OF D IFFERENT S HOTS A RE R EPORTED (K = {2, 4, 8})
+
+ TABLE VI
+A BLATION S TUDY OF CAR E G ON MVT EC AND MPDD. FACTORS U NDER A NALYSIS A RE : DA ON S UPPORT S ET; F EATURE R EGISTRATION
+ AGGREGATED T RAINING (FR); STN S ; AND AF. PA D IM I S U SED AS THE N ORMAL D ISTRIBUTION E STIMATOR . T HE M ACRO -AVERAGE
+ AUC ( IN %) OVER A LL C ATEGORIES AND OVER T EN RUNS I S R EPORTED , W ITH THE B EST-P ERFORMING S ETTING FOR E ACH S HOT
+ M ARKED IN B OLD
+
+ TABLE VII
+A BLATION S TUDY OF AUGMENTATION S ELECTION ON MVT EC (K = 2). F OR E ACH S ELECTED C ATEGORY, I . E ., T HREE O BJECTS (C APSULE , P ILL ,
+ AND T OOTHBRUSH ) AND T HREE T EXTURES (C ARPET, L EATHER , AND T ILE ), AUC ( IN %) AVERAGED OVER T EN RUNS I S R EPORTED , W ITH
+ B EST-P ERFORMING S ETTINGS M ARKED IN B OLD AND S ECOND -B EST-P ERFORMING S ETTINGS U NDERLINED
+
+and MPDD for FSAD with K = 2, 4, 8, PaDim + CAReg To explain the impact of support set’s distribution on
+achieves the fastest adaptation speed (4.47 s) compared with model performance, we report the SD in percentage of PC
+DiffNet+ (357.75 s) and TDG+ (1559.76 s). and PC + CAReg for each category across ten support sets,
+13536 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025
+
+as shown in Tables III and IV (smaller font). Our proposed TABLE VIII
+method, CAReg, significantly reduces the performance C OMPARISON OF CAR E G W ITH OR W ITHOUT AUGMENTATIONS IN K = 2.
+variance caused by different support sets. This stabilization FPR S IN % OVER T EN RUNS W ITH A M ACRO -AVERAGE S CORE OVER
+ A LL C ATEGORIES A RE R EPORTED
+is especially evident in the MPDD dataset, where varying
+support sets have a more pronounced impact compared with
+the MVTec dataset, which has a naturally lower baseline
+SD. By averaging results across multiple sets, we enhance
+the reliability and robustness of our findings, thereby
+strengthening the credibility of our results.
+
+E. Comparison to State-of-the-Art Vanilla AD Methods
+ While vanilla AD methods have an inherent advantage
+as they use the entire training dataset and train separate models for each category, CAReg with the PaDim
+estimator still achieves competitive performance, as shown
+in Table V. The state-of-the-art vanilla AD methods
+GANomaly [54], ARNet [10], MKD [11], CutPaste [63],
+FYD [12], PaDiM [22], PC [26], and CflowAD [42] are
+considered. Even with only four support images from MVTec,
+CAReg (89.2% AUC) outperforms MKD (87.7%) using the
+ Fig. 5. Visualization of Wasserstein distances and augmentation selection
+same ResNet-18 backbone. As the number of support images results. Darker color corresponds to a larger Wasserstein distance. Augmenincreases to 128, CAReg achieves an impressive AUC of tations marked with × were removed from augmentations for that category.
+95.9%. Similarly, on the MPDD dataset with 128 support
+images, CAReg (83.2% AUC) surpasses PC (82.1%), which
+uses a deeper backbone (WRN50). Consequently, the inclusion of translation in the STNs does not
+ significantly contribute to performance improvement, and the
+ overall effect of the STN modules is limited. In contrast, for
+F. Ablation Studies MPDD, STNs lead to more substantial performance gains, par-
+ The ablation study was conducted to investigate the impor- ticularly since large-scale transformations are often required.
+tance of four key components used in CAReg: 1) DAs The images in this dataset exhibit various spatial orientations
+applied to the support sets; 2) feature registration aggregated and positions for objects, making it beneficial to align the
+training on multiple categories; 3) STNs; and 4) AF regis- features with affine transformations. As a result, the STNs
+tration. These modules were combined based on a systematic that allow affine transformations achieve the best performance
+experimental process. We performed extensive ablation studies in this scenario.
+to assess the impact of each component individually and 3) Accumulated Feature Registration: Unlike RegAD [27],
+collectively. which performs registration between two individual images,
+ 1) Feature Registration Aggregated Training: Table VI CAReg introduces an innovative approach that registers one
+demonstrates that the feature registration module yields image to a set of images, thereby enhancing the robustness of
+improvements in AUC of 3.3%, 2.9%, and 2.6% for K = the registration process. As shown in Table VI, AF registration
+2, 4, 8 on MVTec, and 4.3%, 1.8%, and 1.7% on MPDD, leads to improvements in anomaly localization AUC by 1.0%,
+respectively. These findings indicate that feature registra- 0.4%, and 0.4% on MVTec, and 0.5%, 0.7%, and 0.1%
+tion aggregated training on multiple categories enhances the on MPDD, for K = 2, 4, 8, respectively, confirming the
+model’s ability to generalize to novel categories. Moreover, the effectiveness of the approach.
+effectiveness of the registration aggregated training is evident, 4) DAs and Selection Methods: Applying augmentations
+regardless of the presence or absence of DA. to the support set during testing is crucial for improved
+ 2) Spatial Transformation Modules: The utilization of performance. As shown in Table VI, with K = 2, 4, 8, the
+STNs enables the application of large-scale transformations, AUC of AD improves by 1.2%, 0.5%, and 0.6% on MPDD,
+leading to improved feature registration. For instance, the and by 6.8%, 6.9%, and 6.9% on MVTec, respectively. Default
+STN module contributes to an AUC improvement from 89.3% augmentations such as rotation, translation, flipping, and grayto 91.2% on MVTec and from 64.8% to 71.9% on MPDD ing are used, following practices in [15] and [27]. However,
+(K = 8), as demonstrated in Table VI. In addition, the augmentations such as cutpaste and mixup are excluded due
+incorporation of STN modules shows comparable performance to their potential to simulate anomalies [63].
+in terms of pixel-level localization. However, it is important To explore suitable augmentations for each category,
+to note that when STN is used, an inverse transformation we experimented with ten augmentations: graying, flipping,
+operation is necessary to realign the transformed features with large/small-angle rotation, large/small-scale translation, brighttheir original images, which may result in some pixel-level ness, Gaussian blur, center-crop, and mixup. Three selection
+imprecision. methods were used: 1) RegAD-aligned augmentations [27];
+ To investigate the impact of the degree of freedom in the 2) all augmentations; and 3) our proposed Wassersteintransformation, we conducted experiments with different STN distance-based selection. Experiments were conducted on six
+versions, and the results are presented in the Supplementary categories, including three objects (capsule, pill, and tooth-
+Material. Notably, for MVTec, STNs that involve rotation + brush) and three textures (carpet, leather, and tile).
+scale transformations exhibit the best performance. This obser- Fig. 5 displays the selection results for each category
+vation aligns with the fact that most objects in this dataset obtained Fig. 5 shows the selection results for each cateare centrally located, resulting in similar spatial positions. gory using the Wasserstein-distance-based method. Table VII
+HUANG et al.: FEW-SHOT ANOMALY DETECTION VIA CATEGORY-AGNOSTIC REGISTRATION LEARNING 13537
+
+ TABLE IX
+E VALUATION OF C ROSS -DATASET M ODEL G ENERALIZATION FOR CAR E G ON MVT EC AND MPDD W ITH K = {2, 4, 8}. T HE T ERMS “O RIG .” AND
+ “C ROSS ” I NDICATE W HETHER THE M ODEL WAS T RAINED ON THE O RIGINAL OR A D IFFERENT DATASET: T HE ACTUAL T RAINING DATASET I S
+ I NDICATED IN B RACKETS . T HE AUC ( IN %) AVERAGED OVER T EN RUNS I S R EPORTED
+
+ TABLE X
+AD/L OCALIZATION R ESULTS FOR C ROSS -DATASET M ODEL G ENERALIZATION ON THE MVT EC AND MPDD DATASETS W ITH K = {2, 4, 8} U SING
+ CAR E G W ITH THE PC N ORMAL D ISTRIBUTION E STIMATOR . T HE T ERM “O RIG .” I NDICATES T HAT THE M ODEL WAS T RAINED ON THE O RIGINAL
+ DATASET, W HILE “C ROSS ” I NDICATES T HAT THE M ODEL WAS T RAINED ON THE OTHER DATASET. AUC IN % AVERAGED OVER
+ T EN RUNS FOR E ACH C ATEGORY I S R EPORTED , T OGETHER W ITH A M ACRO -AVERAGE S CORE OVER A LL C ATEGORIES . T HE
+ B EST-P ERFORMING R ESULT I S M ARKED IN B OLD , AND THE S ECOND -B EST R ESULT I S U NDERLINED
+
+indicates that our method, despite using fewer augmentations, better than RegAD’s augmentations and similarly or slightly
+outperforms using all augmentations, highlighting the impor- worse than the Wasserstein distance method. This suggests that
+tance of selecting suitable augmentations. DAs have varying KL and JS distances could be promising alternatives, offering
+effects on objects and textures. For the three objects, perfor- competitive performance.
+mance significantly improves with appropriate augmentations, In addition, we also addressed concerns about possible
+whereas selection has little impact on the three textures. increased false-positive rates (FPRs) from nonindependent
+This smaller impact on textures may be due to the difficulty augmented examples. As shown in Table VIII, thorough
+in altering their characteristic distribution with simple aug- evaluations show that our augmentation strategy interestingly
+mentations. Remarkably, using only four fixed augmentations reduces the FPR from 5.44% to 2.65% on MVTec and from
+(graying, flipping, small-angle rotation, and small-scale trans- 29.3% to 19.8% on MPDD on average with K = 2 (detailed
+lation) achieves comparable results, especially for tiles, where in the Supplementary Material). This reduction is largely due
+it performs best. to our augmentation selection module, designed to enrich the
+ To further evaluate augmentation selection, we included dataset while avoiding biases or artifacts that could degrade
+results using Kullback-Leibler (KL) and Jensen-Shannon (JS) image quality. By carefully selecting beneficial augmentation
+distances, alongside the Wasserstein distance. The comparison methods, we maintain dataset integrity and enhance overall
+in Table VII shows that KL and JS distances generally perform model performance.
+13538 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025
+
+Fig. 6. Visualization of anomaly localization results on MVTec (top three rows) and MPDD (bottom two rows). (a) Input. PaDim (b) heat map and (c) result.
+CAReg+PaDim (d) heat map and (e) result. Patchcore (f) heat map and (g) result. CAReg+PatchCore (h) heat map and (i) result. (j) GT.
+
+Fig. 7. t-SNE visualization of features learned from MVTec. The same t-SNE optimization iterations are used for both the methods. CAReg leads to more
+compacted feature distributions for each category, and larger separation among categories. (a) Without feature registration. (b) CAReg.
+
+G. Cross-Dataset Generalization ments. An underlying reason for this improved performance
+ could be attributed to MVTec’s broader range of categories,
+ In real-world applications, FSAD methods need to be capa- which equips CAReg with a more diverse array of classes
+ble of performing accurately even when the test images differ to learn from. This augmented diversity enables CAReg to
+significantly from those used during training. To evaluate the better grasp the overarching concepts of CAReg, consequently
+ability of CAReg to generalize in this way, we performed enhancing its efficacy in handling previously unseen cateexperiments where the network was trained on one dataset gories.
+and tested on another. For these cross-dataset generalization The detailed results of AD/localization for each category
+experiments, we used the MVTec and MPDD datasets as these can be found in Table X, offering insights into AD and
+differ significantly in terms of categories, backgrounds, and localization outcomes under the PC estimator. It serves to
+variability (as shown in Table I). The results are shown in validate the robustness of registration learning. This is evident
+Table IX. These results effectively demonstrate that altering from the fact that even when the distribution of the training
+the training dataset has only a marginal impact on performance data is altered, a significant improvement compared with the
+when compared with training on the original datasets. For baseline is sustained. For instance, when evaluating on MVTec
+instance, when assessing the performance on MVTec using with K = 2, CAReg demonstrates a performance enhancement
+the PC estimator, transitioning from the original training data of 4.4%/2.5% when trained on its original dataset (MVTec).
+to MPDD (a notably smaller dataset in terms of categories Even when transitioning to a distinct distribution (MPDD) for
+and samples compared with MVTec) leads to a mere 0.8% training, the improvement remains substantial at 3.6%/1.6%.
+reduction in AUC. Conversely, when evaluating on MPDD, In essence, the results firmly establish the proposed method’s
+training the model on MVTec yields performance enhance- ability to generalize across datasets, showcasing how the
+HUANG et al.: FEW-SHOT ANOMALY DETECTION VIA CATEGORY-AGNOSTIC REGISTRATION LEARNING 13539
+
+influence of training with an entirely different dataset is [5] J. Su, H. Shen, L. Peng, and D. Hu, “Few-shot domain-adaptive
+minimal due to the inherent category-agnostic nature of the anomaly detection for cross-site brain images,” IEEE Trans. Pattern
+ Anal. Mach. Intell., vol. 46, no. 3, pp. 1819–1835, Mar. 2024.
+registration training approach.
+ [6] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsupervised anomaly detection,” in Proc. ICLR, 2018.
+ [7] D. Gong et al., “Memorizing normality to detect anomaly: Memory-
+H. Visualization Analysis augmented deep autoencoder for unsupervised anomaly detection,”
+ Fig. 6 provides qualitative analysis results to showcase in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019,
+the effectiveness of the category-agnostic feature registration pp. 1705–1714.
+ [8] J.-C. Wu, D.-J. Chen, C.-S. Fuh, and T.-L. Liu, “Learning unsupervised
+training approach and its impact on AD and localization metaformer for anomaly detection,” in Proc. IEEE/CVF Conf. Comput.
+performance. With the PaDim normal distribution estimator, Vis. Pattern Recognit. (CVPR), Oct. 2021, pp. 4369–4378.
+the anomaly localization produced by CAReg [see Fig. 6(e)] [9] I. Golan and R. El-Yaniv, “Deep anomaly detection using geometric
+is observed to be closer to the GT [see Fig. 6(j)] compared with transformations,” in Proc. NeurIPS, vol. 31, 2018, pp. 9758–9769.
+its corresponding baseline [see Fig. 6(c)]. Similarly, the results [10] F. Ye, C. Huang, J. Cao, M. Li, Y. Zhang, and C. Lu, “Attribute
+produced by CAReg with the PC normal distribution estimator restoration framework for anomaly detection,” IEEE Trans. Multimedia,
+ vol. 24, pp. 116–127, 2022.
+[see Fig. 6(i)] are closer to GT than those produced by its
+ [11] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee,
+corresponding baseline [see Fig. 6(g)]. These visualizations “Multiresolution knowledge distillation for anomaly detection,” in Proc.
+illustrate the effectiveness of the training procedure via feature IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+registration aggregated on multiple categories, resulting in pp. 14902–14912.
+improved anomaly localization. [12] Y. Zheng, X. Wang, R. Deng, T. Bao, R. Zhao, and L. Wu, “Focus
+ your distribution: Coarse-to-fine non-contrastive learning for anomaly
+ In Fig. 7, t-SNE [85] is used to visualize the features detection and localization,” in Proc. IEEE Int. Conf. Multimedia Expo.
+extracted on the MVTec test set, with each dot representing a (ICME), Jul. 2022, pp. 1–6.
+normal image. It is evident that after feature registration train- [13] B. Schölkopf, J. C. Platt, J. Shawe-Taylor, A. J. Smola, and
+ing, the features become more compact within each category. R. C. Williamson, “Estimating the support of a high-dimensional dis-
+Simultaneously, features from different categories are better tribution,” Neural Comput., vol. 13, no. 7, pp. 1443–1471, Jul. 2001.
+separated. The presence of more compact feature distributions [14] J. Yi and S. Yoon, “Patch SVDD: Patch-level SVDD for anomaly
+ detection and segmentation,” in Proc. Asian Conf. Comput. Vis. (ACCV),
+is desirable, as it enhances the accuracy of the normal dis- Nov. 2020, pp. 375–390.
+tribution estimate for each category. This improved separation [15] S. Sheynin, S. Benaim, and L. Wolf, “A hierarchical transformationof features contributes to better discrimination between normal discriminating generative model for few shot anomaly detection,”
+and anomalous samples, leading to enhanced AD performance. in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021,
+Overall, the visualization results provide qualitative evidence pp. 8495–8504.
+of the efficacy of the category-agnostic feature registration [16] M. Rudolph, B. Wandt, and B. Rosenhahn, “Same same but DifferNet:
+ Semi-supervised defect detection with normalizing flows,” in Proc. IEEE
+training approach in enhancing AD and localization. Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2021, pp. 1907–1916.
+ [17] L. G. Brown, “A survey of image registration techniques,” ACM Comput.
+ Surv., vol. 24, no. 4, pp. 325–376, Dec. 1992.
+ VII. C ONCLUSION
+ [18] B. Zitová and J. Flusser, “Image registration methods: A survey,” Image
+ This article introduces a novel training method, called Vis. Comput., vol. 21, no. 11, pp. 977–1000, Oct. 2003.
+CAReg, for FSAD, by learning generalizable registration tech- [19] H. Peng et al., “BrainAligner: 3D registration atlases of Drosophila
+ brains,” Nature Methods, vol. 8, no. 6, pp. 493–498, Jun. 2011.
+niques across different categories using only normal images
+ [20] X. Chen and K. He, “Exploring simple Siamese representation learning,”
+for each category. This allows the model to accurately register in Proc. IEEE Comput. Soc. Conf. Comput. Vision Pattern Recognit.,
+a test image with its corresponding support (normal) images Jun. 2021, pp. 15750–15758.
+from unseen novel categories without the need for retraining [21] M. Jaderberg et al., “Spatial transformer networks,” in Proc. NeurIPS,
+or parameter fine-tuning. The experimental results demonstrate vol. 28, 2015, pp. 2017–2025.
+that CAReg outperforms state-of-the-art FSAD methods in [22] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch
+both the AD and anomaly localization tasks on standard bench- distribution modeling framework for anomaly detection and localization,” in Proc. Int. Conf. Pattern Recognit. Cham, Switzerland: Springer,
+mark datasets. Even when compared with AD methods trained Jan. 2021, pp. 475–489.
+with much larger volumes of data, CAReg remains competi- [23] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A
+tive. It significantly enhances both the accuracy and efficiency comprehensive real-world dataset for unsupervised anomaly detection,”
+of FSAD, showcasing its high potential for real-world AD in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+applications. Jun. 2019, pp. 9584–9592.
+ [24] S. Jezek, M. Jonak, R. Burget, P. Dvorak, and M. Skotak, “Deep
+ learning-based defect detection of metal parts: Evaluating current meth-
+ R EFERENCES ods in complex conditions,” in Proc. 13th Int. Congr. Ultra Modern
+ Telecommun. Control Syst. Workshops (ICUMT), 2021, pp. 66–71.
+ [1] T. Matsubara, R. Tachibana, and K. Uehara, “Anomaly machine com- [25] J.-H. Kim, D.-H. Kim, S. Yi, and T. Lee, “Semi-orthogonal
+ ponent detection by deep generative model with unregularized score,” embedding for efficient unsupervised anomaly segmentation,” 2021,
+ in Proc. Int. Joint Conf. Neural Netw. (IJCNN), Jul. 2018, pp. 1–8. arXiv:2105.14737.
+ [2] K. Eykholt et al., “Robust physical-world attacks on deep learning visual [26] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+ classification,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., “Towards total recall in industrial anomaly detection,” in Proc.
+ Jun. 2018, pp. 1625–1634. IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+ [3] Y. Tian, Y. Liu, G. Pang, F. Liu, Y. Chen, and G. Carneiro, “Pixel-wise Jun. 2022, pp. 14318–14328.
+ energy-biased abstention learning for anomaly segmentation on complex [27] C. Huang, H. Guan, A. Jiang, Y. Zhang, M. Spratling, and Y.-F. Wang,
+ urban driving scenes,” in Proc. ECCV. Cham, Switzerland: Springer, “Registration based few-shot anomaly detection,” in Proc. Eur. Conf.
+ 2022, pp. 246–263. Comput. Vis., 2022, pp. 303–319.
+ [4] J. Zhang et al., “Viral pneumonia screening on chest X-rays using [28] G. Pang, C. Aggarwal, C. Shen, and N. Sebe, “Editorial deep learning
+ confidence-aware anomaly detection,” IEEE Trans. Med. Imag., vol. 40, for anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33,
+ no. 3, pp. 879–890, Mar. 2021. no. 6, pp. 2282–2286, Jun. 2022.
+13540 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 7, JULY 2025
+
+[29] Z. Fang, J. Liang, J. T. Zhou, Y. Xiao, and F. Yang, “Anomaly detection [53] M. Sabokrou, M. Khalooei, M. Fathy, and E. Adeli, “Adversarially
+ with bidirectional consistency in videos,” IEEE Trans. Neural Netw. learned one-class classifier for novelty detection,” in Proc. IEEE/CVF
+ Learn. Syst., vol. 33, no. 3, pp. 1079–1092, Mar. 2022. Conf. Comput. Vis. Pattern Recognit., Jun. 2018, pp. 3379–3388.
+[30] B. Ramachandra, M. J. Jones, and R. R. Vatsavai, “A survey of single- [54] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “GANomaly:
+ scene video anomaly detection,” IEEE Trans. Pattern Anal. Mach. Intell., Semi-supervised anomaly detection via adversarial training,” in Proc.
+ vol. 44, no. 5, pp. 2293–2312, May 2022. Asian Conf. Comput. Vis. Perth, WA, Australia: Springer, Dec. 2018,
+[31] X. Wang et al., “Robust unsupervised video anomaly detection by pp. 622–637.
+ multipath frame prediction,” IEEE Trans. Neural Netw. Learn. Syst., [55] C. Huang, F. Ye, P. Zhao, Y. Zhang, Y. Wang, and Q. Tian, “ESAD:
+ vol. 33, no. 6, pp. 2301–2312, Jun. 2022. End-to-end semi-supervised anomaly detection,” in Proc. BMVC, 2022.
+[32] C. Huang et al., “Self-supervised attentive generative adversarial net- [56] K. Zhou et al., “Memorizing structure-texture correspondence for image
+ works for video anomaly detection,” IEEE Trans. Neural Netw. Learn. anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33,
+ Syst., vol. 34, no. 11, pp. 9389–9403, Nov. 2023. no. 6, pp. 2335–2349, Jun. 2022.
+[33] K. Xu, T. Sun, and X. Jiang, “Video anomaly detection and localization [57] C. Huang, Q. Xu, Y. Wang, Y. Wang, and Y. Zhang, “Self-supervised
+ based on an adaptive intra-frame classification network,” IEEE Trans. masking for unsupervised anomaly detection and localization,” IEEE
+ Multimedia, vol. 22, no. 2, pp. 394–406, Feb. 2020. Trans. Multimedia, vol. 25, pp. 4426–4438, 2023.
+[34] M. Sabokrou, M. Fathy, G. Zhao, and E. Adeli, “Deep end-to-end one- [58] S.-Y. Lo, P. Oza, and V. M. Patel, “Adversarially robust one-class novelty
+ class classifier,” IEEE Trans. Neural Netw. Learn. Syst., vol. 32, no. 2, detection,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 4,
+ pp. 675–684, Feb. 2021. pp. 4167–4179, Apr. 2023.
+[35] K. Yamanishi, J.-I. Takeuchi, G. Williams, and P. Milne, “On-line [59] W. Luo et al., “Video anomaly detection with sparse coding inspired
+ unsupervised outlier detection using finite mixtures with discounting deep neural networks,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 43,
+ learning algorithms,” Data Mining Knowl. Discovery, vol. 8, no. 3, no. 3, pp. 1070–1084, Mar. 2021.
+ pp. 275–300, May 2004. [60] M. I. Georgescu, R. Ionescu, F. S. Khan, M. Popescu, and M. Shah,
+[36] H. Xu, C. Caramanis, and S. Sanghavi, “Robust PCA via outlier pursuit,” “A background-agnostic framework with adversarial training for abnor-
+ IEEE Trans. Inf. Theory, vol. 58, no. 5, pp. 3047–3064, May 2012. mal event detection in video,” IEEE Trans. Pattern Anal. Mach. Intell.,
+[37] L. Maziarka, M. Smieja, M. Sendera, L. Struski, J. Tabor, and P. Spurek, vol. 44, no. 9, pp. 4505–4523, Apr. 2021.
+ “OneFlow: One-class flow for anomaly detection based on a minimal [61] I. Ahmed, T. Galoppo, X. Hu, and Y. Ding, “Graph regularized
+ volume region,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 44, no. 11, autoencoder and its application in unsupervised anomaly detection,”
+ pp. 8508–8519, Nov. 2022. IEEE Trans. Pattern Anal. Mach. Intell., vol. 44, no. 8, pp. 4110–4124,
+[38] E. Eskin, “Anomaly detection over noisy data using learned probability Aug. 2022.
+ distributions,” in Proc. 17th Int. Conf. Mach. Learn. San Francisco, CA, [62] L. Li, J. Yan, H. Wang, and Y. Jin, “Anomaly detection of time
+ USA: Morgan Kaufmann, 2000, pp. 255–262. series with smoothness-inducing sequential variational auto-encoder,”
+[39] M. Rahmani and G. K. Atia, “Coherence pursuit: Fast, simple, and robust IEEE Trans. Neural Netw. Learn. Syst., vol. 32, no. 3, pp. 1177–1191,
+ principal component analysis,” IEEE Trans. Signal Process., vol. 65, Mar. 2021.
+ no. 23, pp. 6260–6275, Dec. 2017. [63] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Self-
+[40] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. supervised learning for anomaly detection and localization,” in Proc.
+ Mach. Learn., 2018, pp. 4393–4402. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+[41] M. N. Kurt, Y. Yilmaz, and X. Wang, “Real-time nonparametric anomaly pp. 9664–9674.
+ detection in high-dimensional settings,” IEEE Trans. Pattern Anal. [64] J. Snell, K. Swersky, and R. Zemel, “Prototypical networks for few-shot
+ Mach. Intell., vol. 43, no. 7, pp. 2463–2479, Jul. 2021. learning,” in Proc. NeurIPS, vol. 30, 2017, pp. 4080–4090.
+[42] D. Gudovskiy, S. Ishizaka, and K. Kozuka, “CFLOW-AD: Real-time [65] H. Guan and M. Spratling, “Query semantic reconstruction for backunsupervised anomaly detection with localization via conditional nor- ground in few-shot segmentation,” Vis. Comput., vol. 40, no. 2,
+ malizing flows,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. pp. 799–810, Feb. 2024.
+ (WACV), Jan. 2022, pp. 98–107. [66] J. Willes, J. Harrison, A. Harakeh, C. Finn, M. Pavone, and S. Waslander,
+[43] O. Russakovsky et al., “ImageNet large scale visual recognition chal- “Bayesian embeddings for few-shot open world recognition,” IEEE
+ lenge,” Int. J. Comput. Vis., vol. 115, no. 3, pp. 211–252, Dec. 2015. Trans. Pattern Anal. Mach. Intell., vol. 46, no. 3, pp. 1–16, Mar. 2024.
+[44] C. Doersch, A. Gupta, and A. A. Efros, “Unsupervised visual represen- [67] S. Yang, S. Wu, T. Liu, and M. Xu, “Bridging the gap between fewtation learning by context prediction,” in Proc. IEEE Int. Conf. Comput. shot and many-shot learning via distribution calibration,” IEEE Trans.
+ Vis. (ICCV), Dec. 2015, pp. 1422–1430. Pattern Anal. Mach. Intell., vol. 44, no. 12, pp. 9830–9843, Dec. 2022.
+[45] M. Noroozi and P. Favaro, “Unsupervised learning of visual represen- [68] P. Rewatbowornwong, N. Tritrong, and S. Suwajanakorn, “Repurposing
+ tations by solving jigsaw puzzles,” in Proc. Eur. Conf. Comput. Vis. GANs for one-shot semantic part segmentation,” IEEE Trans. Pattern
+ (ECCV), 2016, pp. 69–84. Anal. Mach. Intell., vol. 45, no. 4, pp. 5114–5125, Apr. 2023.
+[46] S. Gidaris, P. Singh, and N. Komodakis, “Unsupervised representation [69] S. Yang, L. Liu, and M. Xu, “Free lunch for few-shot learning:
+ learning by predicting image rotations,” in Proc. ICLR, 2019. Distribution calibration,” in Proc. ICLR, 2021.
+[47] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed [70] Z. Li, H. Tang, Z. Peng, G.-J. Qi, and J. Tang, “Knowledge-guided
+ students: Student–teacher anomaly detection with discriminative latent semantic transfer network for few-shot image recognition,” IEEE
+ embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Trans. Neural Netw. Learn. Syst., early access, Feb. 6, 2023, doi:
+ (CVPR), Jun. 2020, pp. 4183–4192. 10.1109/TNNLS.2023.3240195.
+[48] S. Wang, L. Wu, L. Cui, and Y. Shen, “Glancing at the patch: [71] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for
+ Anomaly localization with global and local feature comparison,” in Proc. fast adaptation of deep networks,” in Proc. 34th Int. Conf. Mach. Learn.,
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, vol. 70, Aug. 2017, pp. 1126–1135.
+ pp. 254–263. [72] H.-G. Jung and S.-W. Lee, “Few-shot learning with geometric con-
+[49] W. Luo, W. Liu, D. Lian, and S. Gao, “Future frame prediction network straints,” IEEE Trans. Neural Netw. Learn. Syst., vol. 31, no. 11,
+ for video anomaly detection,” IEEE Trans. Pattern Anal. Mach. Intell., pp. 4660–4672, Nov. 2020.
+ vol. 44, no. 11, pp. 7505–7520, Nov. 2022. [73] J. Y. Lee, W. Lee, J. Choi, Y. Lee, and Y. S. Yoon, “Few-shot anomaly
+[50] S. Wang et al., “E3 outlier: A self-supervised framework for unsuper- detection with adversarial loss for robust feature representations,” in
+ vised deep outlier detection,” IEEE Trans. Pattern Anal. Mach. Intell., Proc. BMVC, 2023.
+ vol. 45, no. 3, pp. 2952–2969, Mar. 2023. [74] Z. Gu, T. Yang, and L. Ma, “Prototype-aware contrastive knowledge
+[51] Y. Xia, X. Cao, F. Wen, G. Hua, and J. Sun, “Learning discriminative distillation for few-shot anomaly detection,” in Proc. BMVC, 2023.
+ reconstructions for unsupervised outlier removal,” in Proc. IEEE Int. [75] Y. Li, A. G. David, F. Liu, and C.-S. Foo, “PromptAD: Zero-shot
+ Conf. Comput. Vis. (ICCV), Dec. 2015, pp. 1511–1519. anomaly detection using text prompts,” in Proc. IEEE/CVF Winter Conf.
+[52] T. Schlegl, P. Seebóck, S. M. Waldstein, U. Schmidt-Erfurth, and Appl. Comput. Vis. (WACV), vol. 2, Jan. 2024, pp. 1082–1091.
+ G. Langs, “Unsupervised anomaly detection with generative adversarial [76] A. Frikha, D. Krompaß, H.-G. Köpken, and V. Tresp, “Few-shot onenetworks to guide marker discovery,” in Proc. Int. Conf. Inf. Process. class classification via meta-learning,” in Proc. AAAI, 2021, vol. 35,
+ Med. Imag., May 2017, pp. 146–157. no. 8, pp. 7448–7456.
+HUANG et al.: FEW-SHOT ANOMALY DETECTION VIA CATEGORY-AGNOSTIC REGISTRATION LEARNING 13541
+
+[77] Y. Sun, C. Guo, and Y. Li, “ReAct: Out-of-distribution detection with Deputy Director of the Intelligent Healthcare Research Center, Shanghai
+ rectified activations,” in Proc. NeurIPS, vol. 34, 2021, pp. 144–157. Artificial Intelligence Laboratory, Shanghai, China. She is also a Distinguished
+[78] Y. Sun, Y. Ming, X. Zhu, and Y. Li, “Out-of-distribution detection Professor with the School of Artificial Intelligence, Shanghai Jiao Tong
+ with deep nearest neighbors,” in Proc. Int. Conf. Mach. Learn., 2022, University, Shanghai. She has authored more than 200 scholarly articles in
+ pp. 20827–20840. high-impact international journals and conferences, with her work being cited
+[79] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for more than 10 000 times. Her research focuses on machine learning applications
+ image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. in multimedia and healthcare.
+ (CVPR), Jun. 2016, pp. 770–778. Dr. Zhang’s achievements are recognized through various awards and
+[80] J. Bromley, I. Guyon, Y. LeCun, E. Säckinger, and R. Shah, “Signature honors, including named a Leading Talent under the National High-Level
+ verification using a Siamese time delay neural network,” in Proc. Talent Special Support Program in 2023, receiving the First Prize of the
+ NeurIPS, vol. 6, 1993, pp. 737–744. Shanghai Technological Invention Award in 2022 and the EURASIP Best
+[81] F. Mezzadri, “How to generate random matrices from the classical Paper Award in 2019, and recognized as an Outstanding Doctoral Dissertation
+ compact groups,” Notices AMS, vol. 54, pp. 592–604, Sep. 2007. Advisor by the Chinese Association for Artificial Intelligence in 2018.
+[82] O. Sener and S. Savarese, “Active learning for convolutional neural
+ networks: A core-set approach,” in Proc. ICLR, 2019.
+[83] C. R. Givens and R. M. Shortt, “A class of Wasserstein metrics for prob- Michael Spratling received the B.Eng. degree in
+ ability distributions,” Michigan Math. J., vol. 31, no. 2, pp. 231–240, engineering science from Loughborough University,
+ 1984. Loughborough, U.K., and the M.Sc. and Ph.D.
+[84] M.-M. Cheng, N. J. Mitra, X. Huang, P. H. S. Torr, and S.-M. Hu, degrees in artificial intelligence and neural computa-
+ “Global contrast based salient region detection,” IEEE Trans. Pattern tion from The University of Edinburgh, Edinburgh,
+ Anal. Mach. Intell., vol. 37, no. 3, pp. 569–582, Mar. 2015. U.K.
+[85] L. v. d. Maaten and G. Hinton, “Visualizing data using t-SNE,” J. He is currently a Reader in computational neuro-
+ Mach. Learn. Res., vol. 9, no. 11, pp. 1–27, 2008. science and visual cognition with the Department of
+ Informatics, King’s College London, London, U.K.
+ His research is concerned with understanding the
+ computational and neural mechanisms underlying
+ Chaoqin Huang received the B.Eng. degree in visual perception and developing biologically inspired neural networks to
+ computer science from Shanghai Jiao Tong Uni- solve problems in computer vision and machine learning.
+ versity (SJTU), Shanghai, China, in 2019, and the
+ Ph.D. degree in information and communication
+ engineering, through a joint Ph.D. degree program,
+ from SJTU and the National University of Singapore Xinchao Wang (Senior Member, IEEE) received the
+ (NUS), Singapore, in 2024. Ph.D. degree from the Ecole Polytechnique Federale
+ He is currently an Assistant Professor with the de Lausanne (EPFL), Lausanne, Switzerland, and the
+ College of Information Communications, National first-class Honorable degree from The Hong Kong
+ University of Defense Technology (NUDT), Wuhan, Polytechnic University (HKPU), Hong Kong.
+ China. His research interests include computer He was a Tenure-Track Assistant Professor of
+vision and anomaly detection. computer science with the Stevens Institute of
+ Technology, Hoboken, NJ, USA, and a Swiss-NSF
+ Post-Doctoral Fellow with the University of Illinois
+ Urbana–Champaign (UIUC), Champaign, IL, USA,
+ Haoyan Guan received the B.Eng. degree from
+ with Prof. Thomas S. Huang. He is currently an
+ Harbin Institute of Technology, Harbin, China, the
+ Assistant Professor with the Department of Electrical and Computer Engineer-
+ M.Sc. degree from Shanghai Jiao Tong University,
+ ing (ECE), National University of Singapore (NUS), Singapore. His articles
+ Shanghai, China, and the Ph.D. degree in computer
+ have been published in major venues including CVPR, ICCV, ECCV, NeurIPS,
+ science from the Department of Informatics, King’s
+ ICLR, AAAI, IJCAI, ACL, MICCAI, IEEE T RANSACTIONS ON PATTERN
+ College London, London, U.K.
+ A NALYSIS AND M ACHINE I NTELLIGENCE (TPAMI), International Journal
+ His research is concerned with the limited superof Computer Vision (IJCV), IEEE T RANSACTIONS ON I MAGE P ROCESSING
+ vision in computer vision.
+ (TIP), IEEE T RANSACTIONS ON K NOWLEDGE AND DATA E NGINEERING
+ (TKDE), and IEEE T RANSACTIONS ON M EDICAL I MAGING (TMI). His
+ research interests include artificial intelligence, computer vision, machine
+ learning, medical image analysis, and multimedia.
+ Dr. Wang regularly serves as an Area Chair for CVPR, ICCV, ECCV,
+ Aofan Jiang received the B.Eng. degree from NeurIPS, ICML, ICPR, ICIP, and ICME, and as a Senior Program Committee
+ Shanghai Jiao Tong University (SJTU), Shanghai, Member of AAAI and IJCAI. He has been or is currently serving as an
+ China, in 2022, where he is currently pursuing the Associate Editor for IEEE TIP, IEEE T RANSACTIONS ON C IRCUITS AND
+ M.Sc. degree in information engineering with the S YSTEMS FOR V IDEO T ECHNOLOGY (TCSVT), Journal of Visual Commu-
+ Department of Electronic Engineering. nication and Image Representation (JVCI), and Patter Recognition (PR).
+ His research is concerned with anomaly detection
+ in computer vision.
+ Yanfeng Wang (Member, IEEE) received the B.S.
+ degree from PLA Information Engineering University, Zhengzhou, China, and the master’s and Ph.D.
+ degrees in business management from Shanghai Jiao
+ Tong University, Shanghai, China.
+ Ya Zhang received the bachelor’s degree from He is currently the Deputy Dean of the School of
+ Tsinghua University, Beijing, China, and the Ph.D. Artificial Intelligence, Shanghai Jiao Tong Univerdegree in information sciences and technology from sity. He has long been focused on scientific research
+ Pennsylvania State University, University Park, PA, and innovation at the intersection of artificial intel-
+ USA. ligence with media and healthcare, as well as the
+ Her career has spanned academia and industry, translation of research outcomes.
+ including roles as a Tenure-Track Assistant Profes- Dr. Wang’s achievements have been recognized with the First Prize of the
+ sor at The University of Kansas, Lawrence, KS, Shanghai Science and Technology Progress Award (twice), the First Prize of
+ USA, and a Senior Research and Development the Shanghai Technological Invention Award (once), and the First Prize of the
+ Manager at Yahoo! Labs, where she led initiatives China Institute of Electronics Science and Technology Award (once). He has
+ to improve search quality. She currently holds key also been honored as a 2022 Shanghai Outstanding Academic Leader and a
+positions as the Vice Dean of the Digital Medical Research Institute and the recipient of the 2015 Shanghai May Fourth Youth Medal.

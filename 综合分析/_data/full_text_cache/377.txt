@@ -1,0 +1,617 @@
+1794 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Bottom Aggregating, Top Separating: An
+ Aggregator and Separator Network for
+ Encrypted Traffic Understanding
+ Wei Peng , Lei Cui , Wei Cai, Wei Wang, Xiaoyu Cui , Zhiyu Hao , and Xiaochun Yun
+
+ Abstract—Encrypted traffic classification refers to the task I. I NTRODUCTION
+of identifying the application, service or malware associated
+with network traffic that is encrypted. Previous methods mainly
+have two weaknesses. Firstly, from the perspective of word-level
+(namely, byte-level) semantics, current methods use pre-training
+ E NCRYPTED traffic analysis, referring to the examination
+ and characterization of encrypted network traffic without
+ decrypting the actual content, is a significant research in cyberlanguage models like BERT, learned general natural language security and network management [1], [2]. It is a significant
+knowledge, to directly process byte-based traffic data. However, research area in cybersecurity and network management, as it
+understanding traffic data is different from understanding words helps network operators to understand and gain insights from
+in natural language, using BERT directly on traffic data could
+disrupt internal word sense information so as to affect the encrypted traffic without compromising data confidentiality
+performance of classification. Secondly, from the perspective of [3], [4]. The importance of encrypted traffic analysis lies in the
+packet-level semantics, current methods mostly implicitly classify fact that a large portion of network traffic is now encrypted,
+traffic using abstractive semantic features learned at the top layer, driven by the growing adoption of secure communication
+without further explicitly separating the features into different protocols and privacy concerns. While encryption protects
+space of categories, leading to poor feature discriminability.
+In this paper, we propose a simple but effective Aggregator data confidentiality, it also poses challenges for network
+and Separator Network (ASNet) for encrypted traffic under- operators and security analysts in performing various network
+standing, which consists of two core modules. Specifically, a operations and management activities. One of the primary
+parameter-free word sense aggregator enables BERT to rapidly applications of encrypted traffic analysis is the detection of
+adapt to understanding traffic data and keeping the complete malicious activities [5], [6], [7] by analyzing anomalies in
+word sense without introducing additional model parameters.
+And a category-constrained semantics separator with task-aware encrypted traffic patterns. Despite the content being encrypted,
+prompts (as the stimulus) is introduced to explicitly conduct the metadata and packet characteristics of the traffic can
+feature learning independently in semantic spaces of different reveal valuable information about potential security threats or
+categories. Experiments on five datasets across seven tasks abnormal behaviors. Some examples about malicious detection
+demonstrate that our proposed model achieves the current and application classification are in Figure 1.
+state-of-the-art results without pre-training in both the public
+benchmark and real-world collected traffic dataset. Statistical Network traffic often exists in the form of data packets
+analyses and visualization experiments also validate the inter- in cyberspace, as illustrated in Figure 1, the data packet
+pretability of the core modules. Furthermore, what is important can usually be divided into two parts. The header portion
+is that ASNet does not need pre-training, which dramatically mainly includes source IP address, destination IP address,
+reduces the cost of computing power and time. The model code source port, destination port, protocol type, etc. The payload
+and dataset will be released in https://github.com/pengwei-iie/
+ASNET. portion refers to the actual data being transmitted, which is
+ often encrypted in the form of hexadecimal. For instance, a
+ Index Terms—Traffic classification, pre-training language byte “\x17” in Figure 1, “\” means separator, “x” represents
+model, prompt learning, word sense aggregating, semantic separating. hexadecimal, “17” indicates one byte (00010111). Nowadays,
+ the growing trend toward encrypted protocols and the fast-
+ Received 19 April 2024; revised 2 November 2024; accepted 4 January evolving nature of network traffic are rendering traditional
+2025. Date of publication 13 January 2025; date of current version 13 traffic classification methods obsolete. These traditional meth-
+February 2025. This work was supported by the National Natural Science
+Foundation of China under Grant 62072453 and Grant 61972392. The ods, such as port matching, server name indication matching,
+associate editor coordinating the review of this article and approving it deep packet inspection, etc., mainly perform rule matching
+for publication was Prof. Kun Sun. (Corresponding authors: Xiaochun Yun; based on plaintext fields. However, they are ineffective on
+Zhiyu Hao.)
+ Wei Peng and Lei Cui are with the Zhongguancun Laboratory, Beijing encrypted traffic data where the payload cannot be inspected.
+100093, China, and also with the Quan Cheng Laboratory, Shandong 300020, In recent years, with the development of deep learning and
+China (e-mail: pengwei@zgclab.edu.cn; cuilei@zgclab.edu.cn). Pre-training Language Models (PLMs) [8], [9], [10], more and
+ Wei Cai, Wei Wang, Zhiyu Hao, and Xiaochun Yun are with the Zhongguancun Laboratory, Beijing 100093, China (e-mail: caiwei@zgclab.edu. more researchers have focused on utilizing Natural Language
+cn; wangwei@zgclab.edu.cn; haozy@zgclab.edu.cn; yunxiaochun@zgclab. Processing (NLP) methods to directly learn from raw traffic
+edu.cn). bytes for automated feature extraction, treating the encrypted
+ Xiaoyu Cui is with the School of Cyberspace Security, Beijing University
+of Posts and Telecommunications, Beijing 100876, China. data as text sequences for semantic understanding. In this
+ Digital Object Identifier 10.1109/TIFS.2025.3529316 paper, the bytes in the traffic data are called words, similar to
+ 1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+PENG et al.: BOTTOM AGGREGATING, TOP SEPARATING: AN AGGREGATOR AND SEPARATOR NETWORK 1795
+
+ understand the encrypted traffic data from the word-level and
+ packet-level semantics is the core problem in this paper.
+ To this end, we propose a simple but effective Aggregator
+ and Separator Network (ASNet) for encrypted traffic understanding. The core modules include Word Sense Aggregator
+ (WSA) and Category-constrain Semantic Separator (CSS).
+ Specifically, from a word-level semantics perspective, we
+ propose a parameter-free WSA that enables BERT to rapidly
+ adapt to understanding traffic data and keeping the complete
+ word sense without introducing additional parameters. Furthermore, to allow the model to conduct feature learning
+ independently across semantic spaces of different categories,
+ making traffic features more distinguishable, a categoryconstrained semantics separator with task-aware prompts (as
+ the stimulus) is introduced from the packet-level semantics.
+ The contributions can be summarized as follows:
+ • We propose a simple but effective ASNet with bottom aggregating and top separating for encrypted traffic
+Fig. 1. Some examples of traffic data packet. The right-hand part means the analysis, which can enhance the model’s understanding
+label of downstream tasks. Green font represents the different categories. of traffic data and achieve better traffic classification
+ performance.
+ • From the word-level semantics, we introduce a parameternatural language. By casting the traffic data analysis problem free word sense aggregator that enables BERT to adapt to
+as a language modeling task, deep learning models such understanding raw traffic bytes and keeping the complete
+as LSTMs and Transformers can be applied for sequential word sense without adding extra model parameters.
+modeling of network traffic and understanding of semantics. • From the packet-level semantics, we propose a category-
+This allows learning traffic patterns and performing analysis constrained semantic separator with task-aware prompts
+tasks such as anomaly detection and traffic classification even (as the stimulus), which enables explicitly independent
+on encrypted data, without needing to decrypt the payload. feature learning in separated semantic spaces for different
+However, there are currently two main problems with the categories, resulting in more distinguishable features.
+understanding of traffic data in existing methods. • Without pre-training, experiments on five datasets across
+ Firstly, from the perspective of word-level semantics, under- seven tasks demonstrate that ASNet achieves state-of-thestanding traffic data is different from understanding words in art (SOTA) results. Analysis experiments also validate
+natural language, especially when the traffic is encrypted. Cur- the effectiveness and interpretability of the core modules.
+rent PLMs like BERT [8] mainly learn general knowledge at And what is important is that ASNet does not need
+the natural language level and may not be suitable for directly pre-training, which dramatically reduces the cost of comprocessing traffic data. This is because most current researches puting power and time.
+[3], [11], [12], [13] treat one hexadecimal raw traffic byte
+as an independent word unit like “x00”, “xde”, “xff”, etc. II. R ELATED W ORK
+Using BERT directly on traffic data could disrupt internal
+word sense so as to affect the performance of classification, A. Pre-Training Language Models
+for example, splitting “xde” into [“x”, “##d”, “##e”]. The “##” PLMs like BERT [8], GPT-3 [15], etc. have driven tremenindicates that it’s a subword token. One feasible approach is dous progress in NLP in recent years. The key idea is to
+to reconstruct the vocabulary directly using traffic data and utilize self-supervised objectives like mask language modeling
+retrain from scratch like ET-BERT [14]. However, this type and next sentence prediction during pre-training to uncover
+of method requires massive data and computational resources, linguistic properties of textual information. After pre-training
+and cannot effectively leverage the general natural language on massive text data, the model parameters partly capture
+knowledge learned during the pre-training phase of BERT. contextualized semantics. These generic representations are
+ Secondly, from the packet-level semantics perspective, traf- then specialized for tasks like text classification [16], [17],
+fic packet has multiple types of semantics. Specifically, the question answering [18], [19] or dialog [20], [21], [22] by
+semantics vary for different categories or tasks. For instance, adding task-specific output layers and fine-tuning on labeled
+the semantics of network traffic going to YouTube would data.
+indicate video information, while traffic to an FTP server In PLMs, a key preprocessing step is tokenization which
+would indicate file transfers. However, current methods mostly converts sentences into appropriate input ids to keep the word
+implicitly classify traffic applications using abstractive seman- sense for the model. Common strategies include subword,
+tic features learned at the top layer, without further explicitly WordPiece and byte-pair encoding which break words into
+separating the features into different space of categories, subwords or characters. For BERT, it utilizes a WordPiece
+leading to poor feature discriminability. Therefore, how to tokenizer that breaks words into subwords or tokens. For
+1796 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+example, “playing” can be split as [“play”, “##ing”]. The “##” models like transformer are also popular for learning contexindicates that it’s a subword token. However, for encrypted tual relationships in encrypted traffic data. For example, Meng
+network traffic, directly using the pre-trained tokenizer could et al. [33] utilize contrastive loss and attention mechanism
+disrupt internal word sense information, e.g., a complete byte to optimize the learned representations with various traffic
+“xde” is split into [“x”, “##d”, “##e”]. classification tasks. Recently, PLMs have achieved tremendous
+ Choosing the right tokenization strategy is vital for retaining progress in NLP, advancing SOTA results on numerous NLP
+maximum information from raw traffic bytes and enabling tasks. And there is an increasing number of researchers that
+PLMs to learn useful representations. Therefore, we introduce leverage PLMs for encrypted traffic classification.
+a parameter-free word sense aggregator that enables BERT The PLMs [14], [34] follow the self-supervised pre-training
+to adapt to understanding raw traffic bytes and keeping the paradigm that has proven hugely effective for NLP. The
+complete word sense without adding extra model parameters. models first train on massive amounts of unlabeled network
+ traffic data in a self-supervised manner to learn generic traffic
+B. Encrypted Traffic Classification representations. that allow the models to ingest the raw bytes
+ From a methodological perspective, encrypted traffic meth- and uncover intrinsic properties of the traffic. Lin et al. [14]
+ods can be categorized into feature-based methods, byte-based propose ET-BERT to pre-train deep contextualized datagrammodels, and PLMs. The details are as follows. level representation with the same-origin BURST prediction.
+ Feature-based methods [23], [24], [25], [26], [27], [28] Meng et al. [36] provide a generative pre-trained model
+for encrypted traffic analysis primarily rely on extracting NetGPT for both traffic understanding and generation tasks.
+statistical traffic features based on expert domain knowledge. Peng et al. [35] proposes an efficient and effective two-stage
+As features of individual packets are limited, most researchers approach to make traffic classification with the CNN-based and
+collect statistical features across multiple packets, grouping PLM-based model. However, this type of approach requires
+them into flows, sessions, or time series. The traffic data massive data and computational resources to retrain a large
+is first pre-processed to derive characteristics like packet language model. In this paper, the proposed ASNet effectively
+lengths, inter-arrival times, flow duration, number of packets, leverages the general natural language knowledge learned
+etc. These hand-engineered features that capture essential during the pre-training phase of BERT without retraining.
+properties of the network flows serve as input to traditional
+machine learning models such as Random Forests or Naive III. M ODELS
+Bayes for encrypted traffic classification or prediction tasks. The framework is presented in Figure 2, which consists of
+For example, Shen et al. [29] propose an efficient fine-grained the BERT Tokenizer, Traffic Encoder, Word Sense Aggregator
+webpage fingerprinting method to construct the packet length (WSA), Category-constrain Semantic Separator (CSS) and
+sequence and extract three types of features to build webpage Classifier. The core modules consist of a WSA and a CSS.
+fingerprints for encrypted traffic classification. The ability to Specifically, the parameter-free WSA is able to aggregate the
+explain the decisions of statistical models in terms of the input split tokens into the complete word sense, which enables
+features makes them attractive for encrypted traffic analysis. BERT to adapt to understanding raw traffic bytes and keep-
+However, the dependence on manual feature engineering is ing the complete word sense without adding extra model
+a limitation. And it also requires collecting multiple packets, parameters. The CSS enables independent feature learning in
+which needs large requirements for computing and storage. separated semantic spaces for different categories with task-
+Recently, byte-based methods that utilize deep learning to aware prompts, which results in more distinguishable features.
+perform traffic classification have grown in popularity [30], In the following, we first describe the problem formulation.
+[31], [32], [33], [34], [35]. These techniques analyze only a Then, the detail of the ASNet is introduced step by step.
+single packet to automatically extract complex features from
+raw traffic bytes. A. Problem Formulation
+ Byte-based models work directly on raw traffic bytes and
+ Given a pcap file, the scapy toolkit parses the file and
+learn representations using techniques like Convolutional Neuextracts the network packets. Each packet includes header porral Networks (CNNs) and Long Short-Term Memory Networks
+ tion and payload data in the form of string X = {x1 , x2 , . . ., xN }
+(LSTMs). They can capture complex patterns in encrypted
+ that consists of N traffic words. The traffic words within
+data packets without manual feature engineering [30], [31],
+ the packet can be tokenized into smaller sub-words (tokens).
+[32], [33], [34], [35]. These approaches can be categorized as
+ Formally, we denote the i-th word as xi = (xi1 , . . ., xik , . . .),
+image-based or text-based depending on how they interpret
+ where xik indexes the k-th token in word xi . The category
+the input traffic. Specifically, image-based models [30], [32],
+ label is defined as y, e.g. YouTube, Facebook, etc. Our task
+[34] treat the traffic data as 2D images by transforming the raw
+ is then to learn a function F that takes these words as input,
+bytes into grayscale intensity values or RGB colors. They then
+ and outputs the corresponding packet label.
+apply well-known image classification CNN architectures like
+ResNet and Inception, which can identify visual patterns in the
+transformed input matrix. Text-based models such as Recur- B. BERT Tokenizer
+rent Neural Networks (RNN) and LSTMs process the input The BERT tokenizer tokenizes the input traffic words into
+sequentially as text sequences [12], [33]. They can analyze tokens that can be processed by the BERT encoder. It plays a
+long-range dependencies in the raw traffic bytes. Self-attention crucial role in preparing and formatting the input data for the
+PENG et al.: BOTTOM AGGREGATING, TOP SEPARATING: AN AGGREGATOR AND SEPARATOR NETWORK 1797
+
+Fig. 2. The overview of ASNet. Note: in the solid blue boxes in the lower left corner of the figure, to highlight the aggregation process of word sense, we
+represent them as characters, which are actually vector representations after encoding.
+
+model. Generally, BERT uses a WordPiece tokenizer that splits D. Word Sense Aggregator
+traffic words into subwords with the pre-defined vocabulary. Since BERT is pre-trained on natural language corpora,
+If a traffic word (“xde”) does not exist during the pre-training it lacks representations for payload bytes like “\x17” and
+of BERT, the tokenizer will either split it into individual “\x0f” that are commonly found in network traffic data.
+characters ([“x”, “##d”, “##e”]) or replace it with the special To retain the complete word sense information while still
+token [UNK]. Specifically, the tokenizer splits traffic words leveraging BERT’s general linguistic knowledge, a simple and
+X = {x1 , x2 , . . ., xN } into tokens, as: parameter-free Word Sense Aggregator (WSA) is introduced.
+ Specifically, we utilize the original token length information
+ X sep = Tokenizer (x1 , . . ., xN ) = {(x11 , . . .), . . .(xN1 , . . .)} (1)
+ retained by the BERT tokenizer to aggregate the separated
+ word senses after tokenization. And the separated hidden states
+while retaining length information when splitting traffic words
+ are aggregated to obtain the packet-level semantics H through
+into subwords, meaning it tracks how many subwords each
+ a directly additive operation, the equation is as follows:
+word is divided into. This length information helps the WSA
+module rebuild and aggregate the meaning of traffic words H = (h1 , . . ., hi , . . ., hN ) (3)
+later. For the WSA module, a simple way is to modify the
+ hi = aggregating (hi1 , . . ., hik , . . .) = (hi1 + . . . + hik + . . .) (4)
+original vocabulary.
+ where H ∈ RN×d , d is the hidden dimension size. hi indicates
+ the representation of i-th word, k indexes the k-th subword
+C. Traffic Encoder within hi .
+ The purpose of the traffic encoder is to generate representations for the network traffic data. After the BERT tokenizer
+ E. Category-Constrain Semantic Separator
+finishes splitting the traffic words into tokens, the traffic
+encoder encodes these tokens to capture contextual features From the packet-level semantics, traffic packet has multiple
+and output hidden states of traffic tokens H sep . In this paper, we types of semantics. For example, the semantics of network trafleverage the pre-trained BERT encoder as our traffic encoder, fic going to YouTube indicate video information, while traffic
+which can be defined as: to an FTP server suggest file transfers. To obtain the better
+ feature discriminability, the Category-constrained Semantics
+ H sep = Traffic Encoder (X sep ) = {(h11 , . . .), (h21 , . . .). . .} (2) Separator (CSS) with task-aware prompts is designed for
+ further explicitly separating packet-level semantics features
+where hik is the representation of subword xik in Eqn. 1. into different space of categories.
+1798 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Unlike the previous researches that implicitly classify traffic TABLE I
+data using abstractive semantic features learned at the top S TATISTICS OF THE DATASETS
+layer, the CSS module introduces task-aware prompts as
+stimulus and hints to explicitly guide PLMs in separating
+packet-level semantics features, so as to enhance the discriminability of the feature. For instance, specific categories words
+can regard as the input query in different tasks. In application
+classification task, the prompt P can be which category does
+the packet belong to? YouTube, Spotify, Skype, Gmail. . . The
+task-aware prompts explicitly provide a natural way to inject
+inductive biases into the PLM to guide the separation of The four public benchmarks include ISCXVPN, USTCpacket-level semantics, which is useful for identifying salient TFC, CICIoT, ISCXTor. Specifically, the ISCXVPN [37]
+patterns in the traffic data. Detail visualization is presented in dataset primarily contains network traffic data using Virtual
+Sec. VI. Other prompt lists are illustrated in Section IV-F. Private Networks (VPNs). Each packet has two labels - a VPN
+ To this end, the task-aware prompts P (directly as the input) label and an application label. For the VPN label (task1), it can
+are firstly encoded like traffic data with another BERT Encoder be VPN or NONVPN. For application classification (task2),
+that has the same architecture with the traffic encoder, as: there are 12 categories such as YouTube, Facebook, etc. The
+ USTC-TFC [38] dataset collects traffic data about malicious
+ H 0 = Prompt Encoder(P) = (h01 , . . ., h0j , . . ., h0M ) (5) and benign software. Each packet has two labels - a software
+ 0 M×d abnormality label and a software label. For the software
+where H ∈ R , M means the total number of tokens in the
+ abnormality label (task1), it can be malicious or benign. For
+prompt, j indicates the j-th token in the prompt.
+ the software label (task2), there are 19 categories such as
+ Then, the stimulus operation is performed to separate the
+ Outlook, Cridex, Virut, etc. The CICIoT [39] dataset is sourced
+packet-level semantics H (Eqn. 3) into corresponding indepenfrom industrial Internet of Things (IoT) systems [40] and
+dent hidden states Hc00 for better discriminability, as:
+ consists of 6 different experiments: power, interaction, idle,
+ score = softmax (H · H 0T ) (6) scenarios, active and attacks. The ISCXTor [41] dataset uses
+ Hc00 = (score · H 0 )Wc + bc (7) The Onion Router (Tor) for communication privacy enhancement. It contains 13 categories of application classification.
+where score ∈ RN×M , Wc ∈ Rd×d , bc ∈ R1×d , Hc00 ∈ RN×d . c As for the real-world collected dataset CHNAPP, we manually
+means the category, different categories have different param- collected traffic data of six types of popular applications on the
+eters. c ∈ {1, 2, . . ., C}, C is the total number of the category. Internet, including Weibo, Wechat, QQMail, TaoBao, Youku
+ After stimulus operation, to preserve the original informa- and QQMusic. The statistical dataset information on how
+tion, intuitively, a residual structure is leveraged to combine the many packets are used for training, validation and testing can
+original and updated hidden states. And then using an average be seen in Table I.
+pooling to obtain the final class-level semantics lc for each
+class, the above process is formulated as follows: B. Experimental Setting & Evaluation Metrics
+ lc = average − pooling (H + αHc00 ) (8) For the experimental settings, the epoch is set to 3 with the
+ 64 batch size in the training phrase. The max input length is
+where lc ∈ Rd , α is a hyper-parameter that control the weight
+ set to 256, the length of prompts are set to 50. The hyperbetween the two hidden states.
+ parameter α is set to 0.2 according to the grid search. The
+ Adam [42] optimizer with the initial learning rate of 1e-5 is
+F. Classifier utilized for training, and the Pytorch framework is adopted.
+ The goal of the classifier is to categorize the class-level The experiments are implemented on the Tesla A100-80G
+semantics after separation. After the CSS module, each cat- GPU. Other parameters are following the paper [8]. For details
+egory has its own corresponding class-level semantics. The of the WSA module, one convenient and simple way is to
+classifier utilizes a sigmoid function to obtain the final class modify the original vocabulary.
+probabilities for each sample, as shown below: The category distribution in these seven tasks is not consistent. Some of them are balanced while some are imbalanced.
+ pc = sigmoid (MLP(lc )) (9) To effectively evaluate the performance of baselines and
+where pc indicates the probability of c-th category, MLP ASNet, we consider two evaluation metrics: macro F1 and
+means the multi-layer perceptron. micro F1. Specifically, macro F1 calculates the F1 score independently for each class and takes the average, weighting each
+ class equally. This helps evaluate the performance of models
+ IV. E XPERIMENTS
+ on imbalance issues. In contrast, micro F1 aggregates the
+A. Datasets contributions across all classes to compute a global F1 score,
+ The proposed ASNet and comparison methods are evaluated which emphasizes bigger classes. The key difference is that
+on four public benchmarks encrypted traffic datasets and one macro F1 treats all classes as equally important, while micro
+real-world collected scenario. F1 considers class distribution proportions and emphasizes
+PENG et al.: BOTTOM AGGREGATING, TOP SEPARATING: AN AGGREGATOR AND SEPARATOR NETWORK 1799
+
+ TABLE II
+ C OMPARISON R ESULTS ON ISCXVPN AND USTC-TFC DATASETS . † I NDICATES R EPRODUCED R ESULTS
+
+bigger classes. For datasets with balanced class distribution, • EETS [35], which proposes an efficient and effective twomacro and micro F1 tend to be similar. But for imbalanced stage approach to balance the trade-off between plaintext
+data, macro F1 better highlights model performance on small and encrypted text in traffic classification.
+classes, while micro F1 focuses more on prevalent classes. By
+reporting both metrics in our experiments, we can provide a
+more comprehensive evaluation. D. Main Results
+ As shown in Table II and Table III, we compare the
+C. Baselines performance of baseline models and ASNet on 5 datasets
+ across 7 tasks. The conclusions can be summarized as follows:
+ The baselines can be divided into three categories for (1) the performance of feature-based methods and byte-based
+comparison: (1) feature-based methods (i.e., APPS [43], SMT models is comparable, whereas PLM-based methods have
+[24], DevNet [23]); (2) byte-based models (i.e., Deep Packet achieved further improvements. Notably, our proposed model
+[12], TR-IDS [44], HEDGE [45], 3D-CNN [46]); and (3) ASNet obtains SOTA results on all the evaluation metrics,
+PLMs-based methods (i.e., BERT [8], PacRep [33], ET-BERT which validates the importance of keeping the complete word
+[14], YaTC [34], EETS [35]). To make a more competitive sense and explicitly separating packet-level semantics into
+comparison, we mainly focus on the SOTA baselines, such as different space of categories. (2) On the CICIoT dataset (in
+BERT, Pacrep, ET-BERT and YaTC. Details are as follows. Table III), the performance gap of ASNet on macro F1 and
+ • APPS [43], which selects statistical features, and uses a micro F1 metrics has been reduced to 2.89%, while the
+ random tree classifier for application classification. gap of PLM-based methods ranges from 4% to 14%. This
+ • SMT [24], which fuses different features by a kernel demonstrates that utilizing the category-constrained semantic
+ function for decentralized applications fingerprinting. separator with task-aware prompts can explicitly help the
+ • Deep Packet [12], which integrates both feature extraction model distinguish semantic features across different categories,
+ and classification phases to train the stacked autoencoder enhancing semantic discriminability on the unbalanced cateand CNN for application classification. gory so as to boost macro F1 performance. Note: the original
+ • 3D-CNN [46], which leverages the byte data as input for micro-F1 of YaTC on CICIoT is 96.58%, which is similar to
+ 3D-CNN and can classify packets from both known and the micro-F1 96.04% that we reproduced. The same goes for
+ unknown patterns. the others. (3) For the real-world collected dataset CHNAPP,
+ • BERT [8], which is based on Transformer architecture our proposed model achieves the best performance compared
+ and has achieved noticeable performance on NLP tasks. to other baselines. Specifically, our model obtained about 2%
+ • PacRep [33], which utilizes the BERT as an encoder and 4% improvements over the SOTA baseline in terms of
+ and uses contrastive loss to optimize the learned packet micro-F1 and macro-F1 scores respectively. This demonstrates
+ representations with multi-task learning. the effectiveness of our approach in handling real-world traffic
+ • ET-BERT [14], which pre-trains deep contextualized classification tasks with potentially diverse and noisy data
+ datagram-level representation from raw traffic bytes. distributions. In contrast, the YaTC model exhibits relatively
+ • YaTC [34], which introduces a masked autoencoder based poorer performance on CHNAPP. A plausible reason for
+ traffic transformer with multi-level flow representation this could be the mismatch between the data distribution of
+ and performs pre-training process for traffic classification. CHNAPP and the pretraining data used by YaTC.
+1800 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ TABLE III
+ C OMPARISON R ESULTS ON CICI OT, ISCXT OR AND CHNAPP DATASETS
+
+ TABLE IV
+ A BLATION R ESULTS OF K EY C OMPONENTS ON ISCXVPN AND USTC-TFC DATASETS
+
+ TABLE V
+ A BLATION R ESULTS ON CICI OT, ISCXT OR AND CHNAPP DATASETS
+
+ Interestingly, ASNet achieves 100% F1 score on task 1 of either of the proposed modules leads to degraded performance,
+ISCX-VPN and task 1 of USTC-TFC, and so do some base- demonstrating their contribution to the ASNet. Particularly,
+lines. There are several possible reasons for this phenomenon. on the application classification task in USTC-TFC (task
+First, binary classification tasks are typically easier. Second, in 2) and the CICIoT dataset, removing the CSS module sigthe ISCX-VPN dataset, the VPN payload exists in encrypted nificantly impacts results. This highlights the benefits of
+form, whereas the NONVPN data contains plaintext informa- packet-level semantics, which explicitly separates different
+tion, making it easy to make a classification. Similarly, the space of categories to learn more discriminative features,
+behavior patterns of malicious and benign traffic in the USTC- thus improving classification performance. In summary, the
+TFC dataset may present clearer separability. In summary, ablation study indicates that incorporating the WSA and CSS
+through performance comparison on 5 datasets across 7 tasks, modules leads to better performance across various datasets
+it is demonstrated the effectiveness of the proposed ASNet and tasks, confirming their importance within the proposed
+model. Moreover, without pre-training, our model surpasses ASNet architecture. The effectiveness of both modules is
+the performance of ET-BERT and YaTC which require massive further evidenced by analyses and visualization experiments
+data and computational resources to make pre-training. in Sec. V and VI. And experiments of prompt are illustrated
+ in Section IV-F because of space limitation.
+E. Ablation Study
+ To validate the effectiveness of the proposed WSA and F. Details of Prompt
+CSS modules, we conduct ablation experiments on 5 datasets Prompts provide critical guidance and context for language
+across 7 tasks. As shown in Table IV and Table V, removing models like BERT, GPT-3, instructing the model on the desired
+PENG et al.: BOTTOM AGGREGATING, TOP SEPARATING: AN AGGREGATOR AND SEPARATOR NETWORK 1801
+
+ TABLE VI
+ T HE D IFFERENT P ROMPTS A RE U TILIZED ON THE ISCXVPN TASK 2 DATASET
+
+ Fig. 3. Macro F1 and micro F1 scores over different length on the USTC-TFC - application classification task.
+
+completion. Well-designed prompts lead to more coherent, prompts pave the way for language models to reach their full
+relevant responses from the model. To examine how different capabilities.
+prompts affect model performance, we designed three variations as in the Table VI. From the experimental results, the G. Input Length Analysis
+second prompt obtains the best result in the traffic classifi- To verify the model’s sensitivity to the input length, we
+cation task. Without prompt, the micro-F1 score decreases conduct experiments on the USTC-TFC - application classifiabout 3%, which highlights the importance of prompt engi- cation task. As shown in Figure 3, the length settings range
+neering to unlock the full potential of pre-trained language from 64 to 500, with different colors representing different
+models. Interestingly, the third prompt obtains the lower result evaluation metrics.
+(decrease 0.5%) compared to the without prompt setting, The conclusions: (1) The macro F1 score (orange in Figindicating that the provided prompt may have inadvertently ure 3) demonstrates a clear upward trend as the input sequence
+introduced some form of bias or constraint that hindered the length increases from 64 to 256, indicating that longer input
+model’s performance on this particular task. It’s worth noting sequences (contain payload information) provide more conthat the effectiveness of prompts can vary depending on the text for the model to make accurate predictions. As the
+specific problem, data, and model architecture. The prompt input length continues increasing, the performance decreases
+serves as a guidance, providing the context needed to direct slightly, suggesting that overly long sequences introduce noise
+these powerful models towards our goals. Further research information. (2) For the micro F1 score (blue in Figure 3), its
+on how to craft optimal prompts will enable even greater sensitivity to length is smaller and shows irregular tendency,
+improve performance on downstream tasks. As for the model’s but it can still be observed from the figure that micro F1
+generalization capabilities, we can design different prompts for reaches its peak value when the length is 256. (3) In the case
+different situations. For instance, in malicious traffic detection of length 64 to 128, the difference between two metrics is
+task, the prompt can be design as Given the following traffic large. To further make an explanation, we manually calculate
+data, is the traffic malicious or benign? In the scene that exists the F1 scores of each category and find that the F1 score of
+a large number of categories, the prompt also can be adapted the “Shifu” class is really low (only 0.25), and its proportion
+to Given the following traffic data, which category does the is very small (only 0.7%). Therefore, the impact on micro
+packet belong to? List: YouTube, Spotify, Skype and Gmail. The F1 is smaller, whereas the impact on macro F1 is greater.
+category may not be included in the List. Therefore, the prompt However, with the length increases, the payload information
+learning could be designed for different situations so as to contains, leading to higher macro F1 score. This phenomenon
+improve the model’s generalization capabilities. In conclusion, further illustrates the necessity of payload information on
+the prompt engineering process is crucial to steering these unbalanced condition. In summary, this experiment demon-
+PLMs and achieving our desired outcomes. Carefully designed strates the importance of the input length.
+1802 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 4. The degree of high-frequency word overlap between classes (calculate the intersection of high-frequency words between two classes) under two
+different settings on the ISCXVPN dataset. Area indicates the area surrounded by the graphs.
+
+ V. WSA V ISUALIZATION noticeable decrease in inter-class high-frequency word overlap,
+ To validate the effectiveness and interpretability of the preserving better distinguishability across classes. Naturally,
+proposed WSA, we conduct some visualization to make a for the top 100 case, the coverage reduction is slightly smaller,
+comparison in the following setting: (1) without aggregating the possible reason is that the probability of overlap increases
+word sense (without WSA) and (2) with aggregating word when the base of words is larger. To sum up, the WAS makes
+sense (with WSA). The comparison is based on the 4–6 the overlap of high-frequency word lower, which is beneficial
+categories (due to the space limitation, randomly sampling 4–6 to improve the category distinction.
+categories) on the ISCXVPN dataset. Specifically, three data
+statistical analyses are conducted: Inter-Class Word Overlap B. Word Distribution Visualization
+Analysis, Word Distribution Visualization for each class, and To further validate how WSA impacts classification perfor-
+Word Frequency Statistical Analysis for each class. mance, we visualize the distribution of high-frequency word
+ The primary objective of this section is to attempt to across different categories to clearly observe the efficacy of
+explain the WSA module from a data statistical perspective, WSA. Specifically, under both settings, we select the top
+explaining why introducing this parameter-free aggregation 10 high-frequency word and plot their frequency distribution
+method can improve the model’s performance. While the word across 4 categories. As Figure 5 shows, after aggregating
+frequencies obtained may differ across various datasets or word sense, the distribution of high-frequency word varies
+encryption algorithms, their corresponding statistical features significantly across the 4 categories, exhibiting distinct trends.
+exhibit inter-class discrepancies. This diversification in statis- However, without WSA, the distribution shows high similarity
+tical characteristics across classes contributes to the model’s across categories, increasing classification difficulty for the
+improved performance. model. In conclusion, the high-frequency word distribution
+ visualization provides further explanation of the proposed
+A. Word Overlap Analysis WSA, analyzing the underlying correlations to its mechanism.
+ From the above two analyses on WSA, the proposed WSA
+ In this section, we analyze the degree of high-frequency
+ is able to enhance model’s understanding to the raw traffic
+word overlap between classes under two different settings.
+ bytes by aggregating the word sense, so as to improve traffic
+Higher overlap indicates more shared features and greater
+ classification performance. And the visualization also provides
+classification difficulty, and vice versa. We randomly select
+ more interpretability to study the importance of word sense in
+2 of the 6 sampled categories and get 15 combinations (C62 ,
+ the traffic domain.
+from 01 to 45), and count the overlap of the top 10 (orange
+in Figure 4), top 50 (cyan in Figure 4) and top 100 (pink in
+Figure 4) high-frequency word. As shown in Figure 4 (b), after C. Statistical Analysis of Word Frequency
+aggregating word sense, the areas surrounded by the graphs To validate the effectiveness and interpretability of the
+are 9.40 and 9.17 in the case of top 10 and top 50, respectively, proposed WSA, we conduct another statistical analysis of
+reduced by about 36% and 24% compared to setting one word frequency. Specifically, to study the impact of the word
+(without WSA). This indicates that WSA is able to make a frequency under each class on the classification performance,
+PENG et al.: BOTTOM AGGREGATING, TOP SEPARATING: AN AGGREGATOR AND SEPARATOR NETWORK 1803
+
+ Fig. 5. Distribution visualization of high-frequency word on the ISCXVPN dataset.
+
+ Fig. 6. A bar chart of word frequency statistics on the ISCXVPN dataset.
+
+we analyze the top 50 word frequency across 3 randomly proportion, and these words have high overlap between classes
+sampled categories in setting (1) and setting (2) that illustrated (including “x”, “=”, “##0”, “##9”, etc.), indicating poor
+in Sec. V, as shown in Figure 6 (a) and (b), respectively. The distinguishability. In contrast, WSA presents different word
+following conclusions can be drawn: distribution across categories, which reduces overlap and better
+ Firstly, without aggregating word sense, there is a clear ensures separability. (More high-resolution pictures are here1 )
+long tail distribution, causing models to optimize more for For the [UNK] token in the figure, it represents tokens that
+frequently occurring words and learn less effective bound- are not present in the vocabulary of BERT. In traffic data
+aries for infrequent words, which reduces model classification preprocessing, particularly in the payload portion, some bytes
+performance. However, the proposed WSA flattens the dis- will transfer to the characters in the ASCII table, such as the
+tribution more evenly. Secondly, in setting one, the top 15 ‘ö’ symbol. These characters do not exist in the vocabulary, so
+high-frequency word within each class account for a large the tokenizer marks them as [UNK]. As a result, we observe
+ that [UNK] occupies a certain proportion in the processed
+ 1 https://github.com/pengwei-iie/PaperAppendix
+ data.
+1804 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 7. The visualization of the packet-level semantics on the CICIoT dataset. PCA projections of the embeddings learned by different models. From left to
+right: projections learned using CSS module; projections learned by BERT; original data space (the original input ids without any embeddings).
+
+ VI. CSS V ISUALIZATION ACKNOWLEDGMENT
+A. Packet-Level Semantics Visualization The authors are grateful to all the reviewers for their
+ valuable suggestions and insights that helps them to improve
+ To validate the effectiveness and interpretability of the prothe quality of this work.
+posed CSS, we conduct packet-level semantics visualization
+to make a comparison between the ASNet and BERT baseline
+ R EFERENCES
+in Figure 7. The comparison is based on the 6 categories
+on the CICIoT2022 dataset. Specifically, we check the PCA [1] T. Bujlow, V. Carela-Español, and P. Barlet-Ros, “Independent comparison of popular DPI tools for traffic classification,” Comput. Netw.,
+projections of the hidden states (before the classification layer) vol. 76, pp. 75–89, Jan. 2015, doi: 10.1016/J.COMNET.2014.11.001.
+from the proposed CSS module, and from that learned by the [2] G. Aceto, D. Ciuonzo, A. Montieri, and A. Pescapé, “Toward
+baseline, i.e. the representation of the [CLS] in BERT. As a effective mobile encrypted traffic classification through deep
+ learning,” Neurocomputing, vol. 409, pp. 306–315, Oct. 2020, doi:
+negative control, we also give the PCA projection of the origi- 10.1016/J.NEUCOM.2020.05.036.
+nal data space without any forward calculation. As the scatter [3] I. Akbari et al., “A look behind the curtain: Traffic classification in an
+plots show, both the ASNet and baseline model cluster the increasingly encrypted web,” Proc. ACM Meas. Anal. Comput. Syst.,
+ vol. 5, no. 1, pp. 1–26, Feb. 2021, doi: 10.1145/3447382.
+samples with the same labels better than the original data, but [4] L. Cui, J. Cui, Y. Ji, Z. Hao, L. Li, and Z. Ding, “API2 Vec: Learning
+the clusters in the ASNet are much more distinguishable and representations of API sequences for malware detection,” in Proc. 32nd
+the different categories are further separated in the semantic ACM SIGSOFT Int. Symp. Softw. Test. Anal., Seattle, WA, USA, Jul.
+ 2023, pp. 261–273.
+space. In Figure 7 (a), the data can be divided into different [5] S. Bi, K. Li, S. Hu, W. Ni, C. Wang, and X. Wang, “Detection
+clusters by eight ovals. However, it is difficult to separate and mitigation of position spoofing attacks on cooperative UAV
+samples that are clustered in the lower left corner of Figure 7 swarm formations,” IEEE Trans. Inf. Forensics Security, vol. 19,
+ pp. 1883–1895, 2024.
+(b). In summary, the proposed CSS module can obtain better [6] H. Jmal, F. B. Hmida, N. Basta, M. Ikram, M. A. Kaafar, and A. Walker,
+embedding space, thus achieving better improvements on the “SPGNN-API: A transferable graph neural network for attack paths
+traffic downstream tasks. In addition, the prompt analysis is in identification and autonomous mitigation,” IEEE Trans. Inf. Forensics
+ Security, vol. 19, pp. 1601–1613, 2024.
+Section IV-F because of space limitation. [7] J. Chen, Y. Zhao, Q. Li, X. Feng, and K. Xu, “FedDef: Defense against
+ gradient leakage in federated learning-based network intrusion detection
+ systems,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 4561–4576,
+ VII. C ONCLUSION 2023.
+ [8] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-
+ In this paper, we propose a simple but effective Aggregator training of deep bidirectional transformers for language understanding,”
+and Separator Network which enhances the understanding of in Proc. Conf. North Amer. Chapter Assoc. Comput. Linguistics, Hum.
+ Lang. Technol. Minneapolis, MI, USA: Association for Computational
+the traffic data, leading to the advanced performance on the Linguistics, vol. 1, Jun. 2019, pp. 4171–4186.
+traffic classification tasks. From the perspective of word-level [9] A. Radford, “Language models are unsupervised multitask learners,”
+and packet-level semantics, the proposed parameter-free WSA OpenAI blog, vol. 1, no. 8, p. 9, 2019.
+ [10] M. Lewis et al., “BART: Denoising sequence-to-sequence pre-training
+and CSS modules are introduced for keeping complete word for natural language generation, translation, and comprehension,”
+sense and separating packet-level semantics in different spaces in Proc. 58th Annu. Meeting Assoc. Comput. Linguistics, 2020,
+of different categories, respectively. In summary, ASNet is pp. 7871–7880.
+ [11] S. Rezaei, B. Kroencke, and X. Liu, “Large-scale mobile app identifivery effective and robust, which outperforms the previous cation using deep learning,” IEEE Access, vol. 8, pp. 348–362, 2020.
+methods on five datasets across seven tasks without pre- [12] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian, “Deep
+training. Furthermore, the visualization analyses demonstrate packet: A novel approach for encrypted traffic classification using deep
+ learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, Feb. 2020, doi:
+the effectiveness and interpretability of the WSA and CSS 10.1007/S00500-019-04030-2.
+modules. And what is important is that ASNet does not [13] H. Zhang et al., “TFE-GNN: A temporal fusion encoder using graph
+need pre-training, which dramatically reduces the cost of neural networks for fine-grained encrypted traffic classification,” in Proc.
+ ACM Web Conf., Apr. 2023, pp. 2066–2075.
+computing power and time. For future work, the design of [14] X. Lin, G. Xiong, and G. Gou, “ET-BERT: A contextualized dataprompts or continuous prompts could be considered for further gram representation with pre-training transformers for encrypted traffic
+research. classification,” in Proc. ACM Web Conf., 2022, pp. 633–642.
+PENG et al.: BOTTOM AGGREGATING, TOP SEPARATING: AN AGGREGATOR AND SEPARATOR NETWORK 1805
+
+[15] T. B. Brown et al., “Language models are few-shot learners,” in Proc. [37] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghor-
+ Annu. Conf. Neural Inf. Process. Syst., Jan. 2020, pp. 1–14. bani, “Characterization of encrypted and VPN traffic using time-related
+[16] Z. Wen and Y. Fang, “Augmenting low-resource text classification with features,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, 2016,
+ graph-grounded pre-training and prompting,” in Proc. 46th Int. ACM pp. 407–414.
+ SIGIR Conf. Res. Develop. Inf. Retr., Jul. 2023, pp. 506–516, doi: [38] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+ 10.1145/3539618.3591641. classification using convolutional neural network for representation
+[17] S. Ma, C. Chen, J. Mao, Q. Tian, and X. Jiang, “Session search learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Da Nang, Vietnam,
+ with pre-trained graph classification model,” in Proc. 46th Int. ACM Jan. 2017, pp. 712–717.
+ SIGIR Conf. Res. Develop. Inf. Retr., Jul. 2023, pp. 953–962, doi: [39] S. Dadkhah, H. Mahdikhani, P. K. Danso, A. Zohourian, K. A. Truong,
+ 10.1145/3539618.3591766. and A. A. Ghorbani, “Towards the development of a realistic multidi-
+[18] J. Liao, X. Zhao, J. Zheng, X. Li, F. Cai, and J. Tang, “PTAU: mensional IoT profiling dataset,” in Proc. 19th Annu. Int. Conf. Privacy,
+ Prompt tuning for attributing unanswerable questions,” in Proc. 45th Security Trust (PST), 2022, pp. 1–11.
+ Int. ACM SIGIR Conf. Res. Develop. Inf. Retr., Madrid, Spain, Jul. 2022, [40] G. Wu, B. Zhu, J. Li, Y. Wang, and Y. Jia, “H2SA-ALSH: A privacypp. 1219–1229, doi: 10.1145/3477495.3532048. preserved indexing and searching schema for IoT data collection and
+[19] W. Peng, W. Li, and Y. Hu, “Leader-generator net: Dividing skill and mining,” Wireless Commun. Mobile Comput., vol. 2022, pp. 1–12, Apr.
+ implicitness for conquering FairytaleQA,” in Proc. 46th Int. ACM SIGIR 2022.
+ Conf. Res. Develop. Inf. Retr., Jul. 2023, pp. 791–801. [41] A. H. Lashkari, G. D. Gil, M. S. I. Mamun, and A. A. Ghorbani,
+[20] W. Peng, Y. Hu, L. Xing, Y. Xie, Y. Sun, and Y. Li, “Control globally, “Characterization of Tor traffic using time based features,” in Proc. 3rd
+ understand locally: A global-to-local hierarchical graph network for Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), Feb. 2017, pp. 253–262.
+ emotional support conversation,” in Proc. 31st Int. Joint Conf. Artif. [42] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+ Intell., Jul. 2022, pp. 4324–4330. 2014, arXiv:1412.6980.
+[21] J. Zhang et al., “GLM-dialog: Noise-tolerant pre-training for knowledge- [43] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smartgrounded dialogue generation,” in Proc. 29th ACM SIGKDD Conf. phone app identification via encrypted network traffic analysis,” IEEE
+ Knowl. Discovery Data Mining, Long Beach, CA, USA, Aug. 2023, Trans. Inf. Forensics Security, vol. 13, no. 1, pp. 63–78, Jan. 2018, doi:
+ pp. 5564–5575, doi: 10.1145/3580305.3599832. 10.1109/TIFS.2017.2737970.
+[22] Z. Jia and R. Liu, “Intra- and inter-modal context interaction modeling [44] E. Min, J. Long, Q. Liu, J. Cui, and W. Chen, “TR-IDS: Anomalyfor conversational speech synthesis,” 2024, arXiv:2412.18733. based intrusion detection through text-convolutional neural network and
+[23] G. Pang, C. Shen, and A. Van Den Hengel, “Deep anomaly detection random forest,” Secur. Commun. Netw., vol. 2018, pp. 1–9, Jul. 2018,
+ with deviation networks,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. doi: 10.1155/2018/4943509.
+ Discovery Data Mining, Jul. 2019, pp. 353–362. [45] F. Casino, K. R. Choo, and C. Patsakis, “HEDGE: Efficient traffic
+[24] M. Shen, J. Zhang, L. Zhu, K. Xu, X. Du, and Y. Liu, “Encrypted traffic classification of encrypted and compressed packets,” IEEE Trans. Inf.
+ classification of decentralized applications on Ethereum using feature Forensics Security, vol. 14, no. 11, pp. 2916–2926, Nov. 2019, doi:
+ fusion,” in Proc. IEEE/ACM 27th Int. Symp. Quality Service (IWQoS), 10.1109/TIFS.2019.2911156.
+ Jun. 2019, pp. 1–10. [46] J. Zhang, F. Li, F. Ye, and H. Wu, “Autonomous unknown-application
+ filtering and labeling for DL-based traffic classifier update,” in Proc.
+[25] X. Meng, S. Wang, Z. Liang, D. Yao, J. Zhou, and Y. Zhang, “Semi-
+ IEEE Conf. Comput. Commun., May 2020, pp. 397–405.
+ supervised anomaly detection in dynamic communication networks,” Inf.
+ Sci., vol. 571, pp. 527–542, Sep. 2021.
+[26] W. Cai, G. Gou, M. Jiang, C. Liu, G. Xiong, and Z. Li, “MEMG:
+ Mobile encrypted traffic classification with Markov chains and graph
+ neural network,” in Proc. IEEE 23rd Int. Conf. High Perform. Comput.
+ Communications; 7th Int. Conf. Data Sci. Systems; 19th Int. Conf. Smart
+ City; 7th Int. Conf. Dependability Sensor, Cloud Big Data Syst. Appl.,
+ Dec. 2021, pp. 478–486.
+[27] X. Meng, Y. Wang, S. Wang, D. Yao, and Y. Zhang, “Interactive
+ anomaly detection in dynamic communication networks,” IEEE/ACM
+ Trans. Netw., vol. 29, no. 6, pp. 2602–2615, Dec. 2021. Wei Peng received the B.S. degree in computer
+[28] S.-J. Xu, G.-G. Geng, X.-B. Jin, D.-J. Liu, and J. Weng, “Seeing traffic science and technology from Chang’an University,
+ paths: Encrypted traffic classification with path signature features,” Xi’an, China, in 2018, and the Ph.D. degree from
+ IEEE Trans. Inf. Forensics Security, vol. 17, pp. 2166–2181, 2022, doi: the Institute of Information Engineering, Chinese
+ 10.1109/TIFS.2022.3179955. Academy of Sciences, Beijing, China, in 2023. His
+ research interests include encrypted traffic classi-
+[29] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained webpage
+ fication, natural language generation, and question
+ fingerprinting using only packet length information of encrypted traffic,”
+ answering. He has published his research in high
+ IEEE Trans. Inf. Forensics Security, vol. 16, pp. 2046–2059, 2021, doi:
+ quality journals and conferences in the area, includ-
+ 10.1109/TIFS.2020.3046876.
+ ing IJCAI, SIGIR, AAAI, EMNLP, and KBs.
+[30] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fingerprinting:
+ Undermining website fingerprinting defenses with deep learning,” in
+ Proc. ACM SIGSAC Conf. Comput. Commun. Secur. (CCS), Oct. 2018,
+ pp. 1928–1943.
+[31] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow sequence
+ network for encrypted traffic classification,” in Proc. IEEE Conf. Comput. Commun. (INFOCOM), May 2019, pp. 1171–1179.
+[32] I. Jemal, M. A. Haddar, O. Cheikhrouhou, and A. Mahfoudhi,
+ “Performance evaluation of convolutional neural network for web
+ security,” Comput. Commun., vol. 175, pp. 58–67, Jul. 2021, doi:
+ 10.1016/J.COMCOM.2021.04.029. Lei Cui received the Ph.D. degree in computer
+[33] X. Meng, Y. Wang, R. Ma, H. Luo, X. Li, and Y. Zhang, “Packet software and theory from Beihang University
+ representation learning for traffic classification,” in Proc. 28th ACM in 2015. He is currently an Associate Professor
+ SIGKDD Conf. Knowl. Discov. Data Min., 2022, pp. 3546–3554. with the Zhongguancun Laboratory, Beijing. He
+[34] R. Zhao et al., “Yet another traffic classifier: A masked autoencoder has published over 40 papers in journals and
+ based traffic transformer with multi-level flow representation,” in Proc. conferences, including IEEE TRANSACTIONS ON
+ AAAI Conf. Artif. Intell., Jun. 2023, vol. 37, no. 4, pp. 5420–5427. PARALLEL AND DISTRIBUTED SYSTEMS, IEEE
+[35] W. Peng, L. Cui, W. Cai, Z. Ding, Z. Hao, and X. Yun, “Efficiently and TRANSACTIONS ON INFORMATION FORENSICS
+ effectively: A two-stage approach to balance plaintext and encrypted text AND S ECURITY , IEEE T RANSACTIONS ON
+ for traffic classification,” 2024, arXiv:2407.19687. SERVICES COMPUTING, ISSTA, ICCD, RAID,
+[36] X. Meng, C. Lin, Y. Wang, and Y. Zhang, “NetGPT: Generative VEE, LISA, and DSN. His research interests
+ pretrained transformer for network traffic,” 2023, arXiv:2304.09513. include operating systems, system security, and system virtualization.
+1806 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+ Wei Cai received the Ph.D. degree from the Institute Zhiyu Hao received the Ph.D. degree in comof Information Engineering, Chinese Academy of puter system architecture from Harbin Institute of
+ Sciences. He is currently an Assistant Research Technology in 2007. He is currently a Profes-
+ Scientist with the Network Connection Secu- sor with the Zhongguancun Laboratory, Beijing.
+ rity Department, Zhongguancun Laboratory. His He has published over 50 papers in journals and
+ research interests include mobile encrypted traffic conferences, including IEEE TRANSACTIONS ON
+ analysis and adversarial machine learning. PARALLEL AND DISTRIBUTED SYSTEMS, ICPP,
+ IEEE S&P, ICA3PP, and CLUSTER. His research
+ interests include network security and system virtualization.
+
+ Wei Wang received the Ph.D. degree from the Institute of Information Engineering, School of Cyber
+ Security, University of Chinese Academy of Sciences. She is currently a Research Assistant with
+ the Zhongguancun Laboratory. She has published
+ several papers in journals and conferences, including
+ IEEE TRANSACTIONS ON SERVICES COMPUTING,
+ ICCD, and VEE. Her research interests include
+ system virtualization and network security.
+
+ Xiaoyu Cui received the M.S. degree from Bei- Xiaochun Yun received the bachelor’s degree in
+ jing Jiaotong University, Beijing, China, in 2023. computer science and application and the Ph.D.
+ She is currently pursuing the Ph.D. degree with degree in computer system architecture from Harbin
+ the School of Cyberspace Security, Beijing Univer- Institute of Technology. He is currently the Deputy
+ sity of Posts and Telecommunications, Beijing. Her Director of the National Computer Network Emerresearch interests include machine learning, network gency Response Technical Team/Coordination Censecurity, and encrypted traffic analysis. ter of China. He has published over 100 academic
+ papers. His research interests include network malware detection and prevention technology, security
+ analysis, and content security.

@@ -1,0 +1,142 @@
+                    This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                              content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2023.3245411
+
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2022                                                                                                 1
+
+
+
+
+      I2RNN: An Incremental and Interpretable
+    Recurrent Neural Network for Encrypted Traffic
+                   Classification
+                        Zhuoxue Song, Ziming Zhao, Fan Zhang , Member, IEEE, Gang Xiong,
+                                   Guang Cheng, Member, IEEE, Xinjie Zhao , and Shize Guo
+
+     Abstract—Traffic classification occupies a significant role in cybersecurity and network management. The widespread of encryption
+     transmission protocols such as SSL/TLS has led to the dominance of deep learning based approaches. In cybersecurity, strong
+     adversaries often complicate their strategies by constantly developing emerging attacks. Meanwhile, security practitioners desire to
+     grasp the reasons for inference results. However, existing deep learning approaches lack efficient adaptation for incremental traffic
+     types and often have less interpretability. In this paper, we propose I2 RNN, an Incremental and Interpretable Recurrent Neural Network
+     for encrypted traffic classification. The I2 RNN proposes a novel propagation process to extract the sequence fingerprints from sessions
+     with local robustness. Meanwhile, this proposal provides interpretability including time-series feature attribution and inter-class
+     similarity portrait. Moreover, we design I2 RNN in an incremental manner to adapt to emerging traffic types. The I2 RNN only needs to
+     train an additional set of parameters for the newly added traffic type rather than retraining the whole model with the entire dataset.
+     Extensive experimental results show that our I2 RNN can achieve remarkable performance in traffic classification, incremental learning,
+     and model interpretability. Compared with other local interpretability methods, our I2 RNN exhibits excellent stability, robustness, and
+     effectiveness in the interpretation of network traffic data.
+
+     Index Terms—Encrypted traffic classification, incremental learning, interpretability, recurrent neural network
+
+                                                                                          ✦
+
+1    I NTRODUCTION
+
+
+T    RAFFIC classification is important to the entire
+     network for many different purposes, such as network
+management, Quality of Service (QoS) guarantees, and
+                                                                                              Therefore, the classification of encrypted traffic has attracted
+                                                                                              great attention in both academia and industry [6].
+                                                                                                  Previous traffic classification methods can be roughly
+cybersecurity [1], [2], [3]. Over the last decades, the                                       divided into four main categories: port-based [7], payload-
+volume of traffic starts to be encrypted by application-layer                                 based [8], [9], machine-learning-based (ML-based) [10],
+encryption transmission protocols, such as Secure Socket                                      [11], and deep-learning-based (DL-based) [12], [13]. The
+Layer/Transport Layer Security (SSL/TLS) [4], [5]. Such                                       wide adoption of traffic encryption techniques, such as
+encryption technology protects the privacy of Internet users,                                 the SSL/TLS protocols, causes traditional port-based and
+yet it provides attackers chances to evade firewall detection                                 payload-based methods to nearly fail. The payload values
+and circumvent surveillance systems. For example, an                                          in packets can be considered as totally randomized after
+attacker may exploit encryption technology to invade and                                      cryptographic encryption [14], which are extremely difficult
+attack the system anonymously. That is to say, encryption                                     (nearly impossible to some extent) for those port-based
+technology brings new challenges to traffic identification.                                   and payload-based methods to handle. Therefore, many
+                                                                                              researchers turn to ML-based and DL-based methods, which
+                                                                                              have become the mainstream methods for encrypted traffic
+•   Zhuoxue Song, Ziming Zhao, Xinjie Zhao, and Shize Guo are
+    with the College of Computer Science and Technology, Zhejiang
+                                                                                              classification nowadays.
+    University, Hangzhou, Zhejiang 310027, China. E-mail: {songzhuoxue,                           The workflow of traffic classification with machine
+    zhaoziming}@zju.edu.cn.                                                                   learning mainly contains two phases, namely feature
+•   Fan Zhang is with the College of Computer Science and Technology,                         engineering and model training [15]. The former is to design
+    Zhejiang University, Hangzhou, Zhejiang 310027, China, with ZJU-
+    Hangzhou Global Scientific and Technological Innovation Center,                           and select statistical features from traffic flows, such as
+    Hangzhou, Zhejiang 311200, with the Key Laboratory of Blockchain                          the average packet length, the average interval of packet
+    and Cyberspace Governance of Zhejiang Province, Hangzhou, Zhejiang                        arrival time, the maximum TCP window size, etc. The
+    310027, and also with Jiaxing Research Institute, Zhejiang University,
+    Jiaxing, Zhejiang 314000, China. E-mail: fanzhang@zju.edu.cn.
+                                                                                              latter is to feed the features into a specific classification
+•   Gang Xiong is with the Institute of Information Engineering,                              model, e.g., SVM [16]. Both phases will directly affect the
+    Chinese Academy of Sciences, Beijing 100190, China. E-mail:                               eventual performance and effectiveness of the classification.
+    xionggang@iie.ac.cn.                                                                      Meanwhile, the ML-based method is especially dependent
+•   Guang Cheng is with the School of Cyber Science and Engineering,
+    Southeast University, Nanjing, Jiangsu 211189, China. E-mail:                             on the so-called feature selection process which requires
+    chengguang@seu.edu.cn.                                                                    the sophisticated experience of those experts in the area.
+Manuscript received 17 Feb. 2022; revised 10 Nov. 2022. (Corresponding                        Therefore, many end-to-end or nearly end-to-end methods
+authors: Fan Zhang and Xinjie Zhao.)                                                          based on deep learning were proposed as in demand [17],
+
+          Authorized licensed use limited to: Tsinghua University. Downloaded on August 18,2025 at 09:03:52 UTC from IEEE Xplore. Restrictions apply.
+                    © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+                  This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                            content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2023.3245411
+
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2022                                                                                               2
+
+[18]. These methods directly use the raw traffic as input and                                          state-of-the-art methods.
+fully automate the feature extraction process.
+                                                                                               The rest of this paper is organized as follows: Section 2
+    Nonetheless, there are still some problems with existing
+                                                                                            and Section 3 list some related works and preliminaries,
+state-of-the-art (SOTA) DL-based methods.
+                                                                                            respectively. The detailed design of I2 RNN is introduced
+    (i) They are not suitable in incremental learning scenarios:
+                                                                                            in Section 4. Section 5 presents model interpretability.
+Incremental learning refers to sequentially learning from
+                                                                                            In Section 6, we exhibit validation results. After a brief
+data for new categories, which are available over time,
+                                                                                            discussion in Section 7, we conclude the paper in Section 8.
+without accessing past data while preserving the learned
+knowledge for old categories [19]. A fatal limitation of
+current DL-based traffic classification methods lies in                                     2     R ELATED W ORK
+assuming the training data for all categories are always                                    2.1     Traffic Classification
+available, making them unsuitable in some real-world
+                                                                                            2.1.1 Unencrypted Traffic Classification
+situations, where new traffic types are always emerging.
+In order to append a new capability of identifying an                                       The basic idea of unencrypted traffic classification is
+additional traffic type, a common way in the previous                                       to exploit useful information from packet headers and
+works is to retrain the whole model with the entire dataset,                                payloads. The port-based methods classify traffic by
+which will consume a lot of computing time and memory                                       checking the TCP/UDP port number at the transport
+resources.                                                                                  layer [7]. Unfortunately, port-hopping techniques [21] make
+    (ii) They lack interpretability in modeling traffic behavior:                           the port-based methods ineffective. The payload-based
+An interpretable model allows us to understand how it                                       methods [8], [22] inspect the contents in packet payloads
+comes to specific conclusions [20]. These DL-based traffic                                  with a predefined rule set, and then use rule-matching
+classification methods are designed as end-to-end, which                                    results as traffic decisions. The design of the rule set affects
+naturally lack interpretability. The calculation process is put                             the accuracy of the payload-based methods. In addition,
+into a black-box setting, whose details are hard to infer.                                  such approaches fail in encrypted traffic classification as the
+Specifically, it is much more difficult to grasp the internal                               payloads are encrypted.
+cause of inference results.
+    In this paper, we propose I2 RNN, an Incremental                                        2.1.2 Encrypted Traffic Classification
+and Interpretable Recurrent Neural Network model for                                        In 2014, Korczynski et al. proposed an encrypted traffic
+encrypted traffic classification. The I2 RNN leverages                                      classification method based on the first-order Markov
+fingerprint learning from the raw session sequences rather                                  chain [23]. They used message-type sequences of encrypted
+than manually designed features. A list of fingerprint                                      traffic to build a first-order Markov model for classification.
+modules is trained in fingerprint learning. Each fingerprint                                Subsequently, Shen et al. proposed a similar but improved
+module is a long short-term memory unit with an encoding                                    method based on the second-order Markov chain [24] with
+layer. The fingerprint modules characterize the patterns                                    new features including certificate length and the first packet
+of sequential features and thus learn the fingerprints of                                   length. Chang et al. combined both message type sequences
+different traffic types. Particularly, (i) I2 RNN maintains a                               and length sequences to build Markov models and got
+set of specific yet independent parameters for each traffic                                 better performance [25]. However, all those Markov-based
+type. Therefore, it only needs to train an additional set of                                methods are with small orders (e.g., 1 or 2) and thus they
+parameters for the newly added traffic type. (ii) I2 RNN is                                 cannot deal with the long-term relationship.
+inherently interpretable with respect to time-series feature                                    In addition to the Markov chain, many other machine
+attribution and inter-class similarity portrait. It determines                              learning algorithms were used in encrypted traffic
+the traffic type by comparing the output losses of different                                classification. Liu et al. proposed a semi-supervised
+fingerprint modules. Therefore, by decomposing the process                                  method for encrypted traffic classification with carefully
+of losses comparison, we can provide explanations for the                                   selected features which include the maximum, minimum,
+model classification results.                                                               and average of sent and received bytes [26]. Anderson
+    Our main contributions can be briefly summarized as                                     et al. took flow metadata, packet length distribution,
+below:                                                                                      and time distribution into consideration and analyzed
+                                                                                            encrypted malware traffic with the logistic regression
+   •   We propose I2 RNN, an incremental and interpretable                                  algorithm [27]. However, these ML-based methods are
+       recurrent neural network model for encrypted traffic                                 especially dependent on feature selection which relies on
+       classification. It learns fingerprints from the raw                                  sophisticated experience.
+ 

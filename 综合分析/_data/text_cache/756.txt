@@ -1,0 +1,136 @@
+                    This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3692551
+
+                                                                                                                                                                                               1
+
+
+
+
+       Multivariate Time Series Anomaly Detection in
+        IIoT Using Spatial-temporal Dynamic Mask
+                      Diffusion Model
+                Jing Bai, Senior Member, IEEE, Zhengyang Zhang, Zhuo Zhang, Tong Li, Member, IEEE,
+                               Zhu Xiao, Senior Member, IEEE, Licheng Jiao, Fellow, IEEE
+
+
+
+   Abstract—In recent years, multivariate time series anomaly
+detection has become an important research topic in the field
+of anomaly detection. In Industrial Internet of Things (IIoT)
+systems, the collected data may be affected by internal failures,
+external disturbances, or other adverse factors. In such cases,
+appropriate anomaly detection methods are required to ensure
+the stable operation of the system. However, existing methods
+based on reconstruction, prediction, or hybrid approaches often
+suffer performance degradation when anomalies are present
+in large amounts of training data, as these anomalies can
+negatively impact the training process. To address this challenge,
+we propose a dynamic masking strategy in both temporal
+and spatial dimensions. We develop a time series imputation
+framework based on a diffusion model that integrates Graph
+Neural Network (GNN) and Transformer architectures. This
+framework, termed Spatial-Temporal Dynamic Mask Diffusion
+for Anomaly Detection (STDMD-AD), incorporates a dynamic
+masking mechanism: temporally, reconstruction errors are used
+to mask data by randomly concealing values with higher errors;
+spatially, attention is applied to mask channels that are more
+likely to contain anomalies during training. Experiments on
+five real-world datasets demonstrate that the proposed method
+outperforms existing benchmarks and achieves state-of-the-art                                    Fig. 1. The framework for anomaly detection in IIoT is shown below in the
+anomaly detection performance.                                                                   line graph of detecting anomalies (highlighted in red) from multidimensional
+                                                                                                 time series data obtained from sensors.
+  Index Terms—multivariate time series, anomaly detection, In-
+dustrial Internet of Things (IIoT), diffusion models, transformer.
+
+                                                                                                 security traffic monitoring [4], cyberattack [5], infrastructure
+                                                                                                 monitoring [6], and fault diagnosis and system defects in
+                           I. I NTRODUCTION                                                      the industrial field [7]. To address these issues and detect
+                                                                                                 anomalies in the collected data, anomaly detection technology
+I   NDUSTRIAL Internet of Things (IIoT) [1]–[3] refers to
+    the integration of internet technologies with the industrial
+sector by applying IoT technologies to manufacturing, energy,
+                                                                                                 has emerged.
+                                                                                                    Anomaly detection techniques have applications in many
+transportation, logistics, and other industrial fields to achieve                                fields and can be used to detect anomalies in data types such
+interconnection of devices, systems, and factories. In the                                       as images, graphs, and time series. The goal of these methods
+operation of large-scale systems related to this technology,                                     is to identify samples in the data that deviate significantly
+the system heavily relies on the analysis of collected logs                                      from other observations [8]. Multivariate time series anomaly
+and other data. Internal failures or negative external impacts                                   detection is used to identify anomalies, abnormal time periods,
+may occur, leading to anomalies that make it difficult for the                                   or sudden events in multivariate time series data. In IIoT,
+system or program to achieve the expected performance in                                         the anomaly detection framework is illustrated in Fig. 1. It
+practical applications. This situation often arises in network                                   primarily involves monitoring data through multiple sensors
+                                                                                                 and performing anomaly detection on the acquired multidi-
+  Manuscript received 2024 XX XX.                                                                mensional data to determine when anomalies occur. With the
+  Jing Bai, Zhengyang Zhang, Zhuo Zhang and Licheng Jiao are with the Key                        rapid development of industrial intelligence, this method has
+Laboratory of Intelligent Perception and Image Understanding of Ministry of
+Education, School of Artificial Intelligence, Xidian University, Xi’an 710071,                   been proven effective in enabling the timely detection and col-
+China (e-mail: baijing@mail.xidian.edu.cn; zzy123@stu.xidian.edu.cn;                             lection of problems in data, thereby avoiding excessive losses.
+zhangzhuo@stu.xidian.edu.cn; lchjiao@mail.xidian.edu.cn).                                        By leveraging advanced algorithms, this approach enhances
+  Tong Li and Zhu Xiao are with the College of Computer Sci-
+ence and Electronics Engineering, Hunan University, Changsha 410082,                             a system’s ability to respond to unexpected events, thereby
+China (emails: {litong, zhxiao}@hnu.edu.cn).                                                     improving operational efficiency. Furthermore, the integration
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                     This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+                                                content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3692551
+
+                                                                                                                                                                                                2
+
+
+
+                                                                                                          motivating example illustrating these limitations is pre-
+                                                                                                          sented in Fig. 2. Prediction-based methods often struggle
+                                                                                                          with the intrinsic stochasticity of future observations,
+                                                                                                          leading to deviations in normal regions or insensitivity
+                                                                                                          to actual anomalies. Similarly, the Reconstruction panel
+                                                                                                          demonstrates a generalization trap where the model learns
+                                                                                                          to reconstruct the anomalous patterns alongside the nor-
+                                                                                                          mal data. Consequently, the reconstruction error remains
+                                                                                                          low even during anomalies, causing missed detections.
+                                                                                                      •   The uneven distribution of anomalies within real-world
+                                                                                                          IIoT data streams gives rise to the issue of anomaly
+                                                                                                          concentration, which substantially complicates both data
+                                                                                                          preprocessing and model training [3]. Owing to the
+                                                                                                          impracticality of manual annotation for large-scale multi-
+                                                                                                          variate time series, anomaly detection models frequently
+                                                                                                          depend on unsupervised learning paradigms. In such
+                                                                                                          settings, the inadvertent inclusion of anomalous instances
+                                                                                                          in the training set—such as contiguous fault sequences
+                                                                                                          misleadingly treated as normal—can severely disrupt the
+                                                                                                          learning dynamics, causing the model to assimilate ab-
+                                                                                                          normal patterns into its representation of normal behavior.
+Fig. 2. A motivating example comparing failure modes of existing methods                                  For instance, reconstruction-based methods are prone to
+and our approach. Top two panels show prediction/reconstruction methods                                   regenerating anomalous patterns—especially when such
+failing due to stochasticity or overfitting anomalies. Bottom panel demon-
+strates our strategy effectively ignoring anomalies, restoring normal patterns,                           anomalies recur frequently during training. In contrast,
+and creating a detectable error gap.                                                                      as illustrated in the Imputation + Dynamic Mask panel
+                                                                                                          of Fig. 2, this method proactively masks the suspected
+                                                                                                          region. By forcing the model to infer the missing segment
+of anomaly detection in IIoT systems facilitates predictive                                               based solely on the surrounding spatial-temporal context,
+maintenance, allowing proactive measures to be taken before                                               it recovers the underlying normal pattern, effectively
+issues escalate into significant failures.                                                                rejecting the anomalous inputs. This creates a distinct
+   Currently, most research focuses on unsupervised meth-                                                 discrepancy between the predicted series and the true
+ods, mainly because anomalies usually account for only a                                                  anomaly, thereby avoiding the generalization trap and
+small proportion of the collected data and are difficult to                                               significantly enhancing detection sensitivity.
+label in large quantities [7]. Traditional approaches include                                        To directly address the challenges, we propose the Spatio-
+clustering-based and density estimation-based methods. How-                                       Temporal Diffusion Model for Detection (STDMD). Our de-
+ever, these methods rely heavily on manually crafted features                                     sign makes explicit, targeted improvements to the diffusion
+and struggle to ensure model robustness when dealing with                                         model framework to mitigate the specific issues of anomaly
+increasingly complex data. In recent years, with the rapid                                        reconstruction and model contamination. Mitigating Chal-
+development of deep learning, anomaly detection methods                                           lenge 1 (Complex Dependencies): Instead of prediction or
+that integrate deep learning have achieved significant per-                                       reconstruction-based approaches, which struggle with complex
+formance improvements and demonstrated strong practical                                           dependencies and often regenerate anomalies, our model is
+effectiveness [9]. Those methods can generally be categorized                                     built upon a time series imputation framework (Conditional
+into three groups: reconstruction-based, prediction-based [10],                                   score-based diffusion models, CSDI [13]). This foundation
+and hybrid approaches [11]. Reconstruction-based methods                                          provides a key advantage: by learning to accurately impute
+determine anomalies by evaluating reconstruction errors, while                                    masked normal values based on their highly correlated spatio-
+prediction-based methods rely on deviations between pre-                                          temporal context, the model learns a robust representation
+dicted and actual data. Although these methods have achieved                                      of the system’s healthy dynamics. To further enhance its
+promising results, two major challenges remain in this task.                                      capacity to capture intricate dependencies, we integrate a
+   •   The high-dimensional nature of Industrial Internet of                                      Masked Graph Network and a Transformer as the feature
+       Things (IIoT) data, accompanied by its intricate internal                                  extraction backbone. This hybrid design explicitly models
+       dependencies, necessitates the development of models                                       the complex spatial relationships between sensors (via the
+       with superior representational capacity. [12] Typical IIoT                                 Graph Network) and long-range temporal patterns (via the
+       systems employ a multitude of sensors that collectively                                    Transformer), enabling the model to discer

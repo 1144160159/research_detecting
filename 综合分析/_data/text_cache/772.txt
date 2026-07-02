@@ -1,0 +1,137 @@
+                    This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+           IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS                                                                                                                 1
+
+
+
+
+              Online Intrusion Detection for Industrial
+               Cyber-Physical Systems Based on
+                Self-Supervised Predictive Model
+           Sardar Shan Ali Naqvi , Chunjie Zhou , Peihang Xu , Student Member, IEEE, Yahui Li,
+                                           and Muhammad Uzair
+
+
+   Abstract—Industrial cyber-physical systems (CPS) de-                              challenge, because attacks are rare and identifying anomalies
+mand a reliable intrusion detection despite evolving op-                             requires domain expertise [7]. Moreover, offline supervised IDS
+erational conditions and a lack of labeled attack data.                              often struggles under concept drift [8]. Changes in sensor base-
+This article proposes a novel context–target predictive self-                        lines, control set-points, or production regimes can cause false
+supervised framework for online intrusion detection in in-                           alarms or missed detections if the model is not regularly updated.
+dustrial CPS. The models normal behavior by predicting
+future sensor states from past context, allowing detection
+                                                                                     Yet, frequent retraining is impractical given the operational
+of anomalies as large prediction errors. To address concept                          constraints of industrial environments [9].
+drift, we incorporate a trust-aware online adaptation mech-                             Recent research has explored unsupervised and self-
+anism and a robust, statistics-based thresholding strategy                           supervised approaches for ICS intrusion detection, eliminating
+that adjusts in real time. We validate the method on a fluid                         the need for labeled attack data and enabling online adap-
+catalytic cracking unit simulation, where it achieves high                           tation [10]. These methods model normal behavior and flag
+precision and recall under fully online, unlabeled condi-                            deviations as anomalies. For example, autoencoder (AE)-based
+tions, outperforming baseline models. The proposed frame-                            IDS attempts to reconstruct sensor measurements and raise an
+work provides an adaptive and lightweight intrusion de-                              alarm when the reconstruction error is high [11]. Kitsune, an
+tection systems suitable for autonomous industrial CPS                               ensemble of AEs, incrementally learns from streaming data
+monitoring without human intervention or costly labeling.
+                                                                                     in real-time for internet of things (IoT)/ICS scenarios [12].
+   Index Terms —Cyber-physical security, intrusion detec-                            However, purely reconstructive approaches may fail to capture
+tion, online learning, self-supervised learning (SSL).                               the temporal dependencies crucial for detecting context-based
+                                                                                     anomalies.
+                                                                                        In self-supervised predictive learning, the model learns to
+                          I. INTRODUCTION                                            predict future observations from past context. This approach
+    NDUSTRIAL control systems (ICSs) managing critical in-                           leverages the time-series nature of cyber-physical systems (CPS)
+I   frastructure are increasingly vulnerable to cyber attacks [1].
+The Stuxnet incident demonstrated how malware can infil-
+                                                                                     by predicting the expected system behavior, the model can
+                                                                                     identify anomalies as significant prediction errors. Hundman
+trate programmable logic controllers and physically damage                           et al. [13] demonstrated the effectiveness of an LSTM-based
+processes [2]. In recent years, ICS-targeted attacks have in-                        predictor with dynamic nonparametric thresholding for space-
+creased [3], reflecting the growing exposure of operational                          craft anomaly detection. For ICS, a predictive model can learn
+technology to cyber threats [4]. Modern ICS integration with                         multivariate sensor dynamics and flag events where actual sen-
+enterprise networks expands the cyber attack surface [5].                            sor readings deviate from the predicted normal behavior. Such
+   Traditional intrusion detection systems (IDSs) in industrial                      prediction models, trained on the inherent structure of data,
+networks typically rely on known attack signatures or supervised                     eliminate reliance on attack labels. However, predictive IDS
+models trained on historical labeled data [6]. However, obtaining                    faces a challenge while deciding when to trust new data for
+comprehensive labeled ICS attack datasets remains a significant                      model updates. Indiscriminately learning from all incoming data
+                                                                                     risks adopting anomalous patterns as normal, especially under
+                                                                                     concept drift.
+  Received 7 January 2026; revised 28 February 2026; accepted 4 May                     To address these challenges, we propose a self-supervised
+2026. This work was supported in part by the National Natural Science                context–target predictive IDS that learns to predict future sen-
+Foundation of China under Grant 62127808. Paper no. TII-25-9235.                     sor readings from recent context. Anomalies are flagged when
+(Corresponding author: Sardar Shan Ali Naqvi.)                                       prediction errors exceed an adaptive threshold. The core idea is
+  Sardar Shan Ali Naqvi, Chunjie Zhou, Peihang Xu, and Yahui
+Li are with the College of Artificial Intelligence and Automation,                   a two-module deep model: a context encoder that processes a
+Huazhong University of Science and Technology, Wuhan 430074,                         window of recent sensor data (the context) and a future predictor
+China (e-mail: d_shanali@hust.edu.cn; cjiezhou@hust.edu.cn; xpei-                    that estimates the next readings (the target). By training on
+hang@hust.edu.cn; yahuili@hust.edu.cn).                                              normal operation data to minimize prediction error, the model
+  Muhammad Uzair is with the School of Computer and Mathematical
+Sciences, University of Adelaide, Adelaide SA 5005, Australia (e-mail:
+                                                                                     learns a compact representation. At run-time, the prediction error
+muhammad.uzair@adelaide.edu.au).                                                     serves as an anomaly score. Larger errors indicate a possible
+  Digital Object Identifier 10.1109/TII.2026.3691338                                 deviation from learned normal patterns.
+
+1941-0050 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+   Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+                                                                 for more information.
+                 This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+2                                                                                                            IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS
+
+
+
+   Building upon the prediction model, our framework intro-                         and train/test distribution mismatches can cause false alarms
+duces a trust-aware online learning mechanism inspired by the                       and degraded IDS performance, motivating checks of distribu-
+concept of model self-confidence in [14]. We define a trust score                   tional consistency (e.g., with kolmogorov–smirnov (KS) and
+that measures the confidence of IDS in each detection decision                      kullback–leibler (KL) metrics) before training. Erba and Tip-
+based on the statistical distribution of recent anomaly scores. If                  penhauer [25] further demonstrated that reconstruction-based
+the model produces a low anomaly score for a new data point,                        and other model-free detectors are vulnerable to concealment
+and if the score is within the range of past “normal” scores, then                  attacks that induce slow, plausible drifts. These findings motivate
+the decision can be trusted. Only in these high-trust situations do                 predictive, temporally aware IDS with adaptive calibration to de-
+we use the model’s output to label data as benign and update the                    tect concealed deviations while avoiding contamination during
+model. This strategy prevents the system from corrupting itself                     anomalous periods.
+by learning from unverified or borderline data points. This acts
+as online calibration, allowing adaptation only when the model
+is confident. The contributions of this work are as follows.                        B. Predictive SSL
+    1) We propose a novel self-supervised industrial IDS archi-                        Predictive SSL offers a more flexible alternative by predicting
+        tecture that learns a predictive model of sensor behav-                     future sensor readings from past context. This leverages tem-
+        ior, rather than a reconstructive model, which improves                     poral dependencies and detects anomalies as prediction errors.
+        detection of context-dependent anomalies.                                   Hundman et al. [13] used an LSTM predictor with dynamic
+    2) We introduce a trust-based adaptation strategy with math-                    thresholding for spacecraft telemetry, demonstrating robustness
+                                                                                    to noise and nonstationarity. Similar strategies have emerged
+        ematical definitions for anomaly scoring, threshold se-
+                                                                                    in ICS [26], [27], where context–target SSL improves anomaly
+        lection, and trust computation, which achieves a balance                    detection without requiring attack labels.
+        between accuracy and efficiency, significantly reducing                        Compared to reconstruction-based models, predictive SSL
+        false positives while maintaining high recall.                              inherently captures temporal consistency and can detect anoma-
+   The rest of this article is organized as follows. Section II                     lies that maintain plausible values but disrupt normal sequence
+reviews background and related work. Section III formalizes the                     dynamics. However, these models still require careful threshold
+problem and objectives of online intrusion detection. Section IV                    tuning and may degrade under concept drift without adaptive
+details the proposed context–target predictive framework, trust                     mechanisms.
+score computation, and online update rules. Section V describes
+the experimental setup, datasets, baseline methods, and eval-
+uation metrics. Section VI presents results and a discussion.                       C. Online Adaptation and Trust Mechanisms
+Finally, Section VII concludes this article and outlines future                        Maintaining IDS performance over time requires online adap-
+research directions.                                                                tation to evolving ICS conditions. Continuous learning (e.g.,
+                                                                                    retraining on sliding windows [28], [29]) risks model poisoning
+            II. BACKGROUND AND RELATED WORK                                         if attack samples are mislabeled as normal. To mitigate this,
+   Recent advances in industrial CPS security include various                       trust-aware adaptation techniques have emerged. Nakıp and
+approaches to detect cyber threats at the process level [15].                       Gelenbe [30], [31] proposed computing a model trust score
+In this section, we highlight key developments that inform                          based on statistical consistency, allowing learning only from
+our approach, including anomaly detection techniques in ICS,                        high-confidence samples. This stabilizes performance and pre-
+self-supervised learning (SSL) methods, and online adaptation                       vents concept drift corruption.
+mechanisms.                                                                            Our framework incorporates a similar notion of trust, tailored
+                                                                                    to the context of predictive anomaly detection in ICS. We define
+                                                                                    a trust score rt for each new sample at time t as a function of the
+A. Anomaly Detection in Industrial CPS
+                                                                                    sample’s anomaly score relative to the expected distribution of
+   ICS anomaly detection has traditionally based on physical                        normal scores. rt is high if the prediction error is within normal
+models or static thresholds [16], but the increasing complex-                       bounds and low otherwise. Only when rt exceeds a chosen
+ity of sensor data and attack vectors has shifted the focus                         threshold do we use that sample in further training of the model.
+to data-driven approaches [17]. Supervised IDS models [18]                          This selective update rule ensures that during sustained attacks
+achieve high accuracy on known attacks but require labeled data                     or major anomalies, when many rt values would drop below
+and frequent retraining, which is a practical limitation in ICS                     the threshold, the model effectively pauses its adaptation, thus
+environments [19].                                                                  preserving the integrity of previously learned normal patterns. In
+   Unsupervised deep learning, particularly reconstruction-                         Section IV-C, we mathematically define the trust score and the
+based AEs, is widely adopted for ICS anomaly detection [11],                        online update algorithm. We note that similar ideas of filtering
+[20], [21]. These models learn a baseline of normal behavior by                     updates based on anomaly likelihood have been applied in data
+minimizing reconstruction loss, with large deviations indicating                    stream mining [32], but our formulation integrates directly with
+anomalies. Du et al. [22] enhanced AE robu

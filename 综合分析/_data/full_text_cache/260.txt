@@ -1,0 +1,906 @@
+2460 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+ M ETA ROCK ETC: Adaptive Encrypted Traffic
+ Classification in Complex Network Environments
+ via Time Series Analysis and Meta-Learning
+ Jianjin Zhao , Graduate Student Member, IEEE, Qi Li , Yueping Hong , and Meng Shen , Member, IEEE
+
+ Abstract—Encrypted Traffic Classification (ETC) is crucial I. I NTRODUCTION
+for network security management and Quality of Service (QoS)
+ S ONE of the most defining features of modern networks,
+improvement. There have been many attempts to tackle various ETC tasks, however, which generally suffer from task
+dependency and limited adaptability, falling short of meet-
+ A the extensive deployment of encryption mechanisms in
+ network communications plays a crucial role in preserving
+ing practical requirements. Under the realistic assumptions of user privacy and ensuring data integrity. According to the
+complex network environments, diverse encryption techniques Google Transparency Report [1], over 98% webpages were
+and ever-changing application landscapes coexist. It is highly
+desirable to learn the generic encrypted traffic representations loaded over HTTPS in Chrome by platform in 2022. Yet,
+to investigate the common knowledge across different ETC tasks the proliferation of encrypted traffic brings great challenges
+and rapidly adapt to the dynamic shifts. To fill the gap, we to network traffic analysis, unveiling severe security concerns
+propose M ETA ROCK ETC, a generic encrypted traffic classifi- for potential hidden threats. Encrypted Traffic Classification
+cation framework, which extracts protocol-agnostic features to
+learn the common knowledge and rapidly adapt to novel ETC
+ (ETC), holding great significance for network security mantasks and evolving network environments. In M ETA ROCK ETC, agement and Quality of Service (QoS) improvement, and
+we first model packet length sequences of encrypted sessions serving as a preliminary step in threat identification, has
+as multivariate time series and perform random convolution emerged as a critical area of interest for both industry and
+kernel transformations to summarize discriminatory behavioral academia.
+patterns across channels. By integrating M ETA ROCK ETC into
+an advanced Model-Agnostic Meta-Learning (MAML) frame- Meanwhile, there have been many attempts to address
+work, we learn a task-adaptive loss function to facilitate better diverse ETC tasks (e.g., application classification, threat
+generalization and transferability across diverse ETC tasks. detection, device identification and website fingerprint-
+Extensive experimental results demonstrate the superiority of ing), achieving considerable progresses. For instance,
+M ETA ROCK ETC in both across-task and few-shot scenarios,
+ Pham et al. [2] derive aggregated, temporal, statistical and
+highlighting its potential to provide a practical solution for
+encrypted traffic classification in real-world scenarios. categorical features to model the communication behaviors
+ for mobile application classification. Fu et al. [3] aim to
+ Index Terms—Encrypted traffic classification, time series analysis, meta-learning. detect malicious traffic encrypted by TLS protocol and extract
+ key information from TLS handshake messages such as
+ TLS version and cipher suites. Sivanathan et al. [4] extract
+ extensive statistical features and protocol-related features
+ (e.g., DNS, NTP and TLS) to distinguish IoT devices.
+ Wang et al. [5] leverage adversarial domain adaptation to
+ Manuscript received 29 May 2023; revised 28 October 2023; accepted
+23 December 2023. Date of publication 5 January 2024; date of current fingerprint websites over few traffic. An emerging trend of
+version 15 April 2024. This work was supported in part by the National ETC solutions appears to be more generic to handle different
+Natural Science Foundation of China under Grants 62172055, 61972039 and ETC tasks. Meng et al. [6] make an initial trial to learn
+U20B2045; in part by the China National Funds for Excellent Young Scientists
+under Grant 62222201; in part by the Beijing Nova Program under Grants general packet representation for diverse ETC tasks utilizing
+Z201100006820006 and 20220484174; in part by the Beijing Natural Science both encrypted and unencrypted data.
+Foundation under Grants M23020, L222098 and 7232041; in part by the Unfortunately, prevalent research falls short in addressing
+National Defense Basic Scientific Research Program of China under Grant
+JCKY2021602B002; in part by the Ningxia Natural Science Foundation under the complexities inherent to practical network environments.
+Grant 2022AAC03620; and in part by the BUPT Scientific and Technological Under realistic network assumption for encrypted traffic clas-
+Innovation Capacity Improvement Project under Grant 2021XD-A09. The
+associate editor coordinating the review of this article and approving it for
+ sification, diverse encryption techniques cater to different
+publication was Y. Diao. (Corresponding author: Qi Li.) applications, raising the question: How to devise generic
+ Jianjin Zhao, Qi Li, and Yueping Hong are with the School of Cyberspace traffic representation for multiple ETC tasks? Moreover, with
+Security, Beijing University of Posts and Telecommunications, Beijing
+100876, China (e-mail: jianjinzhao@bupt.edu.cn; liqi2001@bupt.edu.cn;
+ the continuous evolution of the network landscape, security
+hongyp@bupt.edu.cn). solutions deployed ought to be adaptable to the corresponding
+ Meng Shen is with the School of Cyberspace Science and Technology, dynamic shifts. In this context, we define complex network
+Beijing Institute of Technology, Beijing 100081, China (e-mail: shenmeng@
+bit.edu.cn). environments as those characterized by the coexistence of
+ Digital Object Identifier 10.1109/TNSM.2024.3350080 diverse encryption techniques and ever-changing application
+ 1932-4537 
+ c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION 2461
+
+landscapes. Previous studies generally share two common Extensive experimental results demonstrate the superiordeficiencies in the face of complex network environments: (1) ity of M ETA ROCK ETC in both across-task and few-shot
+current features are often either overly excessive [4], [7] or scenarios.
+protocol-dependent [8], [9], limiting their effectiveness against The remainder of this paper is organized as follows. In
+various encryption techniques (e.g., VPN, Tor and SSL/TLS); Section II, the related work is reviewed. In Section III, the
+and (2) the model abilities are restricted to specific datasets preliminaries of our work is introduced. In Section IV, our
+or tasks [10], requiring frequent time-consuming retraining to proposed M ETA ROCK ETC is presented. The performance
+tackle environment and task shift in practical applications. evaluations of M ETA ROCK ETC are provided in Section V.
+ To overcome the limitations and provide a practical solution The limitations and potential future directions are discussed
+for encrypted traffic classification, in this paper, we aim in Section VI. Finally, we conclude in Section VII.
+to extract protocol-agnostic features from encrypted sessions
+with minimal computational cost and develop a generic ETC II. R ELATED W ORK
+framework with the ability to rapidly adapt to unknown
+ In this section, we review the relevant studies in the
+tasks and evolving environments. We are motivated by recent
+ following three aspects: encrypted traffic classification, time
+advances in time series analysis [11], [12], [13] and metaseries classification and meta-learning.
+learning [14], [15], [16]. The per-packet feature sequences of
+encrypted sessions are naturally time series data. Also, metalearning technique can enable models to rapidly adapt to novel A. Encrypted Traffic Classification
+tasks. To this end, we model per-packet feature sequences as Encrypted traffic classification, aiming to classify the catemultivariate time series and perform time series analysis to gory of encrypted traffic from various applications, services or
+efficiently summarize sequential information for subsequent devices, is a crucial technique in network security management
+ETC tasks. Then we follow Model-Agnostic Meta-Learning and QoS improvement. We briefly review those that are closely
+(MAML), a meta-learning framework, to learn a task-adaptive related to our work, which can be roughly divided into five
+loss function, achieving better generalization across diverse categories according to analysis goals.
+ETC tasks. 1) Application Classification: Mobile or Web application
+ Formally, we propose a generic encrypted traffic clas- classification is crucial in traffic engineering. In this consification framework, namely M ETA ROCK ETC, aimed at text, Taylor et al. [17] present APPS CANNER to fingerprint
+learning generic knowledge from different ETC tasks to mobile applications from encrypted traffic. This approach
+build internal representation for encrypted sessions that are derives 54 statistical features (e.g., minimum, maximum,
+broadly suitable to tackle complex network environments. mean and variance) per network flow and employ a Random
+Specifically, we first extract packet length sequences from Forest classifier for application classification. Liu et al. [18]
+encrypted sessions and extend them as multivariate time propose FS-N ET, an end-to-end ETC model following a multiseries to enrich the representations. Then we perform random layer encoder-decoder structure. FS-N ET learns sequential
+convolution kernel transformations on the multivariate time features from raw flow sequences (e.g., packet length and
+series by random channel sampling and summation operations message type). Shen et al. [19] develop a Graph Neural
+to capture discriminatory behavioral patterns. To achieve better Network (GNN)-based ETC model, namely G RAPH DAPP.
+generalization, we build two meta-networks to learn a task- This model represents packet length sequences as Traffic
+adaptive loss function during inner-loop optimization in the Interaction Graphs (TIGs), and employs graph classification
+MAML manner. Extensive experimental results demonstrate to identify decentralized applications. Xu et al. [10] propose
+the superiority of M ETA ROCK ETC in both across-task and ETC-PS, which models packet length sequences of encrypted
+few-shot scenarios. sessions as traffic paths and extracts path signature features for
+ In sum, the main contributions of this paper are summarized classification. The efficacy of ETC-PS has been demonstrated
+as follows: in various ETC tasks (e.g., HTTPS, VPN and Tor traffic
+ • We enrich simple per-packet features (i.e., packet lengths classification).
+ and directions) as multivariate time series. Through 2) Threat Detection: Early-stage studies on threat detection
+ random convolution kernel transformations, we effec- primarily focus on SSL/TLS traffic. Anderson et al. [8],
+ tively summarize the discriminatory behavioral patterns [20], [21] first propose extracting features from unencrypted
+ of encrypted traffic across different channels. handshake messages for encrypted malicious traffic detection.
+ • We present a novel meta-learning framework to derive This pioneering work has since served as a foundation for
+ generic encrypted traffic representations. By designing subsequent investigations. Zhao et al. [9] construct encrypted
+ a task-adaptive loss function, we investigate common traffic graph to model the behavior similarities and service corknowledge across diverse ETC tasks and facilitate fast relations among encrypted sessions, and employ an improved
+ adaptation in complex network environments to satisfy Graph Attention Network (GAT) to characterize the reliability
+ the practical requirements. and stability of encrypted sessions for threat detection in
+ • We develop a generic encrypted traffic classification SSL/TLS traffic. Fu et al. [22], [23] present W HISPER, a realframework, namely M ETA ROCK ETC, and comprehen- time malicious traffic detection system by frequency domain
+ sively evaluate it on various datasets and scenarios. analysis. Notably, the features employed in W HISPER are not
+2462 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+ TABLE I
+ C OMPARISON B ETWEEN O UR W ORK AND THE E XISTING S TUDIES
+
+confined to specific protocols, rendering it more versatile. in encrypted traffic analysis. Shen et al. [31] present a com-
+W HISPER has achieved satisfactory detection accuracy and prehensive survey on machine learning-based encrypted traffic
+efficiency across a range of datasets. analysis, highlighting the prevailing challenge of achieving
+ 3) Device Identification: Network devices, typically IoT generalization and transferability. Due to network heterogenedevices, are mass deployed in contemporary era. It is nec- ity, parameter variation and temporal drift, it is highly desirable
+essary for network administrators to be aware of connected that the classifier can be flexibly transferred to different
+IoT devices and monitor corresponding network behaviors. datasets and tasks.
+Sivanathan et al. [4] extract extensive features, including Unfortunately, a common limitation of many existing studvolume and time distribution, DNS and NTP queries and ies is that the extracted features are often too complex and
+cipher suites in SSL/TLS handshake messages to distinguish protocol-dependent, rendering them unable to tackle different
+the network behaviors of various IoT devices. Duan et al. [24] encryption techniques. While some studies utilize generic
+form the frequency distribution of unique packet lengths as features and evaluate model performance on different ETC
+features and utilize k-NN algorithm for IoT device identifica- tasks, they typically retrain the model on different datasets,
+tion. Kostas et al. [7] propose I OTD EV ID, which integrates which is really resource-consuming and impractical in realfeature selection techniques and a genetic algorithm to rigor- world environments.
+ously select features, achieving high identification accuracy of To intuitively present the superiority of our work, we
+IoT devices at packet level. Zhao et al. [25] consider simple map the key differences in Table I. Specifically, we take
+per-packet features and design a shuffle&split organization advantages of time series analysis and meta-learning to
+scheme to tackle the data imbalance problem in IoT environ- develop M ETA ROCK ETC, a generic encrypted traffic clasment and perform time series analysis to realize efficient IoT sification framework that achieves exceptional generalization
+device identification. across various ETC tasks. Rather than frequently retraining,
+ 4) Website Fingerprinting: Website fingerprinting poses M ETA ROCK ETC learns common knowledge from different
+a significant threat by potentially exposing the sensitive ETC tasks and can rapidly adapt to unknown ETC tasks and
+information regarding users’ browsing behaviors within evolving environments, providing a more practical solution for
+encrypted traffic. Rimmer et al. [26] conduct a comprehensive encrypted traffic classification.
+exploration of deep learning techniques to learning traffic
+patterns for website fingerprinting. Sirinam et al. [27] leverage
+a robust architecture of Convolutional Neural Network (CNN)
+to perform website fingerprinting attacks against defenses. B. Time Series Classification
+Shen et al. [28] extract distinctive block, sequence and Time series data, which consists of quantitative values
+statistical features for efficient fine-grained website fingerprint- arranged in chronological order, is ubiquitous across various
+ing. Sirinam et al. [29] propose to utilize triplet networks domains. Numerous studies have focused on Time Series
+for N-shot learning in website fingerprinting to tackle the Classification (TSC) problems by analyzing ordered attributes.
+adverse effects of realistic scenarios. Wang et al. [5] further As discussed in [32], these approaches can be roughly
+perform website fingerprinting over few encrypted traffic divided into five categories: distanced-based, interval-based,
+by leveraging adversarial domain adaptation to be more shapelet-based, dictionary-based and ensemble approaches.
+practical. Distance-based approaches typically combine distance metrics
+ 5) Generic: There have been several efforts not limited to with a One Nearest Neighbor (1-NN) classifier as the baseline,
+specific ETC tasks but aiming to learn common knowledge where many novel distance metrics including Dynamic Time
+with great generalization potential. Meng et al. [6] intro- Warping (DTW) distance and its variants [33], [34], [35]
+duce a novel contrastive learning paradigm to derive generic are proposed. Interval-based approaches [36], [37] identify
+packet representation for various traffic classification tasks. those intervals with discriminatory sub series instead of
+Guarino et al. [30] delve into meta-learning, transfer learning using the whole series. Shapelets [38] denote the locationand contrastive learning to foster better representation learning irrelevant, representative sub series for each class. Relevant
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION 2463
+
+ TABLE II
+studies [39], [40] primarily focus on efficient shapelet dis- N OTATIONS IN T HIS PAPER
+covery. Dictionary-based approaches count the frequencies
+of repetitive sub series to distinguish time series. Ensemble
+approaches [41] integrate multiple types of the above models
+to achieve better performance. In addition to these studies, ROCKET [11] and its variants M INI ROCKET [12] and
+M ULTI ROCKET [13] have emerged as revolutionary TSC
+models for their high overall accuracy and remarkably fast
+training time. In this work, we utilize the multivariate variant
+of M ULTI ROCKET to capture the discriminatory behavioral
+patterns of encrypted sessions.
+
+C. Meta-Learning
+ Meta-learning, or learning to learn, has emerged as a
+prominent solution for learning common prior knowledge
+across tasks and facilitating rapid adaptation to new tasks,
+which has achieved considerable success in the realm of few- For a more rigorous evaluation of meta-learning models,
+shot learning applications. One such technique, recognized all tasks are split into two distinct sets: the meta-training set
+for its simplicity and state-of-the-art performance, is Model- and the meta-testing set. It should be noted that both the two
+Agnostic Meta-Learning (MAML) [14]. MAML aims to learn sets do not share any tasks. Meta-learning models acquire the
+good initialization parameters for the base model such that ability of adapting to new tasks during the meta-training phase
+after applying a small number of gradient steps with respect and evaluate their generalization performance during the metato the support set, the adapted model can achieve strong gen- testing phase.
+eralization performance on the query set. MAML is a simple
+yet elegant optimization-based meta-learning framework that
+can be integrated with any gradient-based models. Subsequent B. Model-Agnostic Meta-Learning
+works have built on the foundation of vanilla MAML, propos- As perhaps the most popular optimization-based metaing a series of improvements to achieve better generalization. learning algorithm, MAML has achieved remarkable success
+Antoniou et al. [15] propose various modifications on MAML across diverse learning problems. Its objective is to learn
+to improve the stability, generalization performance, conver- good initialization parameters for the base model, enabling the
+gence speed and computational overhead. Baik et al. [42], [43] adapted model to perform well on new tasks after only a few
+further enhance the fast adaptation of MAML by learning gradient updates on a few-shot dataset.
+adaptive hyper-parameters or loss function. In this work, we Formally, MAML takes a network fθ with parameters θ
+resort to an advanced MAML framework by learning task- as the base model. It adopts bi-level optimization framework
+adaptive loss functions for the backbone neural networks to including inner-loop and outer-loop optimizations to learn the
+acquire generic knowledge across various ETC tasks. This best initialization for the base model.
+work is designed to be generic and capable of rapidly adapting Inner-loop Optimization: Given task Ti and its associate
+to unknown ETC tasks and dynamic environments. support set DiS , the base model is fine-tuned using its initial
+ weights θ. This task-specific tuning involves a fixed number
+ III. P RELIMINARIES of updates via gradient descent. Specifically, each task undergoes J inner-loop updates in total. At step j, the inner-loop
+ In this section, we present the task definition in general optimization is denoted as:
+meta-learning algorithms, briefly introduce MAML, one of the
+most popular optimization-based meta-learning approach, and  
+ θi,j +1 = θi,j − α∇θi,j L DiS ; θi,j , (1)
+provide the problem formulation of our work in detail. The
+notations used in this paper are summarized in Table II.
+ where θi,0 /θ denotes the initial model weights, α denotes the
+ inner-loop learning rate and L(DiS ; θi,j ) is the loss on the
+A. Task Definition
+ support set DiS after j updates. Once J inner-loop optimization
+ Meta-learning algorithms typically assume a distribution of steps are completed, we obtain task-specific weights θi /θi,J
+tasks, denoted as p(T ), from which a collection of tasks for each task Ti .
+ i=1 is sampled. Each task Ti consists of a support set
+{Ti }T Outer-loop Optimization: Given task Ti and its associate
+DiS for the base model to obtain task-specific knowledge query set DiQ , the initialization parameters θ are evaluated
+ Q
+and a query set Di for the adapted model to evaluate the using the task-specific parameters θi on the unseen query set.
+generalization performance. Both the support set and the query The outer-loop update serves as the feedback for updating the
+set comprise pairs of inputs and outputs: DiS = {(xis , yis )}K
+ s=1 initialization weights θ, facilitating the model to learn a better
+and DiQ = {(xiq , yiq )}M
+ q=1 . initialization that can generalize across various tasks, which is
+2464 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+Fig. 1. The overall framework of M ETA ROCK ETC: (a) Highly Efficient Packet Analyzer; (b) Multivariate Time Series Generator; (c) Random Convolution
+Kernel Transformer; (d) Task-adaptive Meta-classifier.
+
+denoted as: N-way k-shot settings to evaluate the performance in few-shot
+   Q  regime.
+ θ ← θ − β∇θ L Di ; θ i , (2) To achieve this, we consider protocol-agnostic per-packet
+ Ti features of encrypted sessions as natural time series data. We
+ utilize random convolution transformations to extract multiwhere β denotes the outer-loop learning rate and L(DiQ ; θi ) scale communication patterns as raw features, which requires
+ Q no training process and is highly efficient. Then we follow
+is the loss on the query set Di with task-specific weight θi .
+ an improved MAML framework to learn task-adaptive loss
+ function to learn genetic representations investigating common
+C. Problem Formulation knowledge and enabling rapid adaptation to unknown ETC
+ In this paper, we aim to investigate common encrypted tasks.
+traffic representation that are broadly suitable to various ETC
+tasks and can rapidly adapt to the dynamic shift in complex
+ IV. M ETHODOLOGY
+network environments. Under realistic network assumptions,
+ETC models may severely degrade due to network hetero- A. Framework Overview
+geneity, parameter variations and temporal drift, necessitating In this section, we present our generic encrypted traffic
+frequent and resource-intensive model retraining to meet classification framework, M ETA ROCK ETC. M ETA ROCK ETC
+practical needs. first extracts per-packet feature sequences and extends these
+ Meta-learning has recently emerged as a promising sequences to generate multivariate time series. Then it perapproach to enable model to learn common prior knowledge forms a series of random convolution kernel transformations
+shared across tasks and rapidly generalize to novel tasks to capture the local and global sequential information of the
+under few-shot regime. We consider utilizing meta-learning to multivariate time series from the ordered packets. To tackle the
+develop a generic and practical ETC solution that not only complex and time-evolving network environments, we design
+generalizes well to unknown ETC tasks, but also rapidly adapts a task-adaptive meta-classifier to achieve better generalization
+to the evolving network environments. and transferability across various ETC tasks. The performance
+ Our proposed solution, namely M ETA ROCK ETC should of M ETA ROCK ETC is evaluated in across-task and few-shot
+exhibit proficiency in both across-task and few-shot scenarios. scenarios. As illustrated in Fig. 1, M ETA ROCK ETC can be
+In across-task evaluation, M ETA ROCK ETC extracts common mainly divided into the following four modules.
+knowledge from ETC task A using meta-learning, and then Highly Efficient Packet Analyzer processes high-speed
+transfers the extracted knowledge to ETC task B. The transfer- network traffic in complex network environments, aggreability to unknown ETC tasks can be evaluated by performance gates packets into sessions and extracts per-packet feature
+comparison under different label rates. In few-shot evaluation, sequences. As a generic encrypted traffic classification frame-
+M ETA ROCK ETC is directly assessed on specific ETC tasks in work, M ETA ROCK ETC is not restricted to specific encryption
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION 2465
+
+protocols. To improve the efficiency and versatility of uplink/downlink-only packet length sequences (U /D) are
+M ETA ROCK ETC, the packet analyzer does not extracts any denoted as:
+features related to the application layer. In this work, we only 
+ xi xi > 0
+extract the bidirectional packet lengths as per-packet features. U = {u1 , u2 , . . . , uN }, ui = (3)
+ 0 xi ≤ 0
+ Multivariate Time Series Generator extends per-packet
+feature sequences by several transformations including and
+ 
+uplink/downlink-only packet reservation and cumulative sum 0 xi > 0
+ D = {d1 , d2 , . . . , dN }, di = (4)
+calculation, to obtain supplementary information and reveal xi xi ≤ 0,
+the underlying dynamics of network behaviors. These extended
+feature sequences are modeled as multivariate time series for where the packet lengths in opposite directions are set to zero.
+subsequent transformations. The details of the multivariate With the original X, uplink-only U and downlink-only D,
+time series generator are presented in Section IV-B. we then calculate their corresponding cumulative sums X  , U 
+ Random Convolution Kernel Transformer first generates and D  respectively by:
+a collection of kernels with parameters initialized in a deter- 
+ i
+ 
+ministic way, and then performs convolution operations. For X 
+ = CS(X ) = {x1 , x2 , . . . , xN }, xi = xj , (5)
+multivariate time series, the channels are randomly selected j =1
+per kernel during convolution operation and the results are  i
+summed up to form the final convolution output. To capture the 
+ U  = CS(U ) = {u1 , u2 , . . . , uN }, ui = uj , (6)
+discriminatory behavioral patterns of encrypted sessions, each j =1
+convolution output is summarized with four pooling operators.  i
+We will comprehensively elaborate on the random convolution 
+ D  = CS(D) = {d1 , d2 , . . . , dN }, di = dj , (7)
+kernel transformations in Section IV-C. j =1
+ Task-adaptive Meta-classifier integrates a learnable loss
+function into the inner-loop optimization in MAML. It builds where the function CS(·) is to calculate the cumulative
+two meta-learners to perceive the state of the specific task, sum of given packet length sequences, shedding light on
+where one meta-learner for learning a loss function and the specific payloads of content delivery or communication
+the other for generating affine transformation parameters to patterns associated with particular websites or services.
+transform the learnable loss function to be task-adaptive. In this way, we transform the original univariate time series
+During fine-tuning phase, a transfer learning technique namely X into multivariate time series Y = [X ; U ; D; X  ; U  ; D  ]
+freezing is utilized to facilitate rapid adaptation. Following the for subsequent analysis. Here we take ISCX-VPN dataset as
+improved MAML framework, M ETA ROCK ETC learns com- an example and randomly sample an encrypted session to
+mon knowledge from different ETC tasks to build the internal illustrate the interactions and corresponding transformations in
+representation that are broadly suitable to tackle complex Fig. 2.
+network environments. The details of the task-adaptive metaclassifier are described in Section IV-D. C. Random Convolution Kernel Transformer
+ In this module, we extract discriminatory behavioral patterns from the multivariate time series by random convolution
+B. Multivariate Time Series Generator transformations. Specifically, we first generate a large number
+ The per-packet feature sequences of encrypted sessions of random convolution kernels, which are effective in capare naturally time-dependent variables, therefore, we acquire turing both local and global information at multiple scales.
+them from the highly efficient packet analyzer and model Then we perform the transformations on the multivariate time
+them as time series data. Moreover, existing studies [10] have series in parallel. For multivariate time series, the channels are
+demonstrated that the raw feature sequences are insufficient to randomly selected per kernel during calculation and the correachieve accurate encrypted traffic classification and proposed sponding convolution output are summed up for aggregation.
+some tricks (e.g., cumulative sum calculation and unidirec- Finally, we derive the features with multiple pooling operators
+tional packet reservation) to enrich feature sequences. In this to summarize the convolution outputs.
+work, we also perform some transformations to enrich the 1) Convolution Kernels: It has been demonstrated that
+feature sequences and models them as multivariate time series. though random convolution kernels are highly effective, com-
+ Specifically, we reserve the first N packets for each parable performance can be achieved in a more deterministic
+encrypted session and extract packet length sequence as and efficient way. To this end, our M ETA ROCK ETC follows
+univariate time series. Then we reserve uplink and downlink the most-deterministic setups in [12], [13]. The details of the
+packets respectively and calculate their cumulative sums of convolution kernels are as follows:
+packet length sequences as multivariate time series to enrich • Length and Weights: Kernel length is fixed to 9, with
+the expressive power. In each encrypted session, the lengths weights restricted to two values (−1 and 2), where
+of uplink and downlink packets are respectively set as positive three weights have the value 2 and six weights have the
+(+) and negative (−) to indicate the directions. Given the value −1. There are in total C93 = 84 fixed kernels
+original packet length sequence X = {x1 , x2 , . . . , xN }, the determined for subsequent transformations.
+2466 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+Fig. 2. An example of multivariate time series generation from ISCX-VPN dataset.
+
+ • Dilation: To expand the receptive field during convolu- Values (MPV), Mean of Indices of Positive Values (MIPV)
+ tions, all kernels share a fixed set of dilations in the range and Longest Stretch of Positive Values (LSPV).
+ {20 , . . . , 2max }, with the exponent d drawn from a PPV is first introduced in ROCKET [11] and has been
+ uniform distribution U (0, max = log2 |w|-1|x|-1
+ ), where |x| is demonstrated to be exceptionally effective, which flexibly
+ input length, and |w| is kernel length (i.e., 9). reflects the proportion of matches between the input and the
+ • Bias: For each kernel&dilation combination, we ran- given pattern. Whether the match is strong or weak depends
+ domly sample one multivariate time series example and on the bias value. PPV is computed using Eq. (10).
+ randomly select the channels to compute the convolution
+ 1
+ n
+ outputs and sum them up as the final output, the quantiles PPV(Z ) = I(zi > 0), (10)
+ of which is taken as corresponding bias values. n
+ i=1
+ • Padding: Padding is alternated between kernel/dilation
+ where n in the length of convolution output Z, and I(·) is an
+ combinations, such that half combinations enable zero indicator function such that I = 1 if the condition (zi > 0) is
+ padding and half disable. true, otherwise I = 0.
+ • Stride: Stride is fixed to one to ensure every data point
+ MPV, MIPV and LSPV are three further pooling operators
+ of the time series is traversed. proposed in M ULTI ROCKET [13]. MPV computes the mean
+ 2) Convolution Transformations: With the generated con- of the positive values in the convolution output, similarly to
+volution kernels, we perform transformations on the PPV, which flexibly reflects the intensity of matches between
+multivariate time series to extract multi-scale patterns. Given the input and the given pattern depending on the bias value.
+multivariate time series Y, convolution kernel with weight W, MPV is computed using Eq. (11).
+dilation d and bias b, and selected channels C, the convolution
+ 1  +
+ m
+operation is denoted as:
+ MPV(Z ) = zi , (11)
+ ⎛ ⎞ m
+ |w|−1 i=1
+ 
+zc,i = W ∗ yc,i = ⎝ y  |w|−1
+  × w ⎠ + b,
+ j where m is the number of positive values in convolution
+ c, i+j ×d− 2
+ ×d
+ j =0 output Z. MIPV computes the mean of indices of positive
+ (8) values, which captures the relative locations of positive values
+ in convolution output Z. MIPV is computed using Eq. (12).
+where zc,i is the convolution output Z at position i of channel  1
+c ∈ C computed by sliding dot production.
+ m
+ I zi+ if m > 0
+ MIPV(Z ) = m i=1 (12)
+ Then we sum up the convolution output of each channel −1 otherwise,
+to obtain the final convolution output of multivariate time where I (·) is a function that returns the index of zi+ in
+series as: convolution output Z. LSPV counts the length of the longest
+  sub-sequences of positive values in convolution output Z.
+ Z = {z1 , z2 , . . .}, zi = zc,i . (9)
+ LSPV is computed using Eq. (13).
+ c∈C
+ LSPV(Z ) = max [j − i | ∀i ≤ k ≤ j , zk > 0]. (13)
+ 3) Pooling Operators: Previous studies have demonstrated
+that diversity is the key to improve accuracy in time series The four pooling operators can effectively summarize
+classification. To obtain diverse representations, multiple pool- the convolution outputs for subsequent analysis and can be
+ing operators are utilized to summarize the convolution outputs computed with a slight overhead to meet the practical requirefrom different perspectives. For each convolution output Z, ments. Here we provide a dummy example to present the
+four pooling operators are applied to compute features, includ- results of the four pooling operators with different convolution
+ing Proportion of Positive Values (PPV), Mean of Positive outputs as shown in Table III.
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION 2467
+
+ TABLE III
+ A D UMMY E XAMPLE TO P RESENT P OOLING O PERATORS W ITH fine-tuning phase is designed to enable the task-adaptive meta-
+ D IFFERENT C ONVOLUTION O UTPUTS classifier to quickly adapt to different ETC tasks. The detailed
+ workflow of the task-adaptive meta-classifier is illustrated in
+ Fig. 3.
+ 2) Backbone Architecture: In the previous module, we
+ adopt M ULTI ROCKET [13] to capture the discriminatory
+ behavioral patterns within encrypted sessions, which employs
+ an ensemble of numerous random convolution kernels, offering remarkable efficiency for the elimination of training
+D. Task-Adaptive Meta-Classifier
+ requirements. However, the utilization of an excessive number
+ 1) Overview: To handle the complex network environ- of random kernels may lead to high feature dimensionality and
+ments, where large volumes of encrypted traffic contain potential redundancy. To address this issue, we employ 4-layer
+diverse sessions of different categories (e.g., applications, MLP (denoted as 4-MLP hereafter) with Rectified Linear Unit
+services and encryption protocols), task-adaptive meta- (ReLU) activation as the base model backbone architecture for
+classifier leverages the meta-learning technique for learning feature encoding. Additionally, we apply batch normalization
+common knowledge across various ETC tasks as generic following ReLU activation to mitigate internal co-variate shift
+encrypted traffic representations. and enhance generalization performance.
+ Following bi-level optimization framework in MAML, it Let h l denote the input to the l-th layer of 4-MLP, which
+mainly comprise one base model and two meta-learners. is parameterized by weights w and bias b. The normalization
+The base model takes the discriminatory behavioral patterns operation is denoted by BN(·) and the ReLU activation is
+obtained from the previous module as input and further com- denoted by ReLU(·). Consequently, the output h l+1 of the
+press these patterns into lean features for classifications. The l-th layer can be denoted as:
+two meta-learners replace the traditional fixed loss function  
+and take tasks states as input to serve as the task-adaptive loss h l+1 = BN ReLU(wh l + b) . (18)
+function in the inner-loop optimization. Both meta-learners are 3) Meta-Learner Design: To enable the meta-classifier to
+modeled using neural networks and take task states as input achieve better generalization across various ETC tasks, we
+to enable task-adaptive loss function, where one meta-learner substitute the traditional fixed loss function with a taskparameterized by φ serves as a learnable loss function Lφ (·), adaptive loss function via two meta-learners. It has been
+and the other meta-learner parameterized by ψ serves as a loss demonstrated that learning a better loss function for the
+function adapter Gψ (·). inner-loop optimization is essential for achieving superior
+ Specifically, ti,j denotes the task state for task Ti at inner- generalization in MAML. The meta-learners perceive task
+loop update step j, represented by the general loss values on states to produce task-adaptive loss values on the support
+support set DiS and the weights of the base model. The loss set during the inner-loop optimization. The task state ti,j
+function adapter Gψ (·) first takes task state ti,j as input and is formulated as the concatenation of mean of support
+generates parameters γ and η for updating the learnable loss set losses L(DiS ; θi,j ) and layer-wise mean of base model
+function Lφ (·) to be task-adaptive as denoted in Eq. (14). weights θi,j .
+ (γ, η) = Gψ ti,j , (14) Specifically, both meta-learners are modeled by 2-layer
+ MLP with ReLU activation and take the task state as input.
+where γ and η are affine transformation parameters used to One serves as learnable loss function Lφ , returning a scalar
+transform the learnable loss function, as denoted in Eq. (15). value as loss value, while the other serves as loss function
+ adapter Gψ , producing parameters to perform layer-wise affine
+ φ = γφ + η. (15) transformations on the loss function parameters φ. The over-
+ In this way, the inner-loop update of the original MAML in all training procedure of the task-adaptive meta-classifier is
+Eq. (1) is modified to incorporate task states and update the outlined in Algorithm 1.
+base model as denoted in Eq. (16). 4) Task-Adaptive Strategy: During the meta-training stage,
+ the task-adaptive meta-classifier acquires common knowledge
+ θi,j +1 = θi,j − α∇θi,j Lφ ti,j , (16) from various ETC tasks, building the internal representations
+ that are broadly applicable to complex network environments.
+ Correspondingly, the outer-loop update of the original Here we provide a task-adaptive strategy that employs freez-
+MAML in Eq. (2) is also modified to update both the base ing, a straightforward transfer learning technique to facilitate
+model and meta-learners as denoted in Eq. (17). rapid adaptation to new or similar ETC tasks.
+   Q  More specifically, we initially take the first few layers
+ (θ, φ, ψ) = (θ, φ, ψ) − β∇(θ,φ,ψ) L Di ; θi , (17)
+ from the previously trained meta-classifier and freeze them to
+ Ti
+ prevent compromising the weights and damaging the contained
+where the initialization parameters θ, φ and ψ of the base information during subsequent training iterations. Next, we
+model and meta-learners are optimized to encode common add some new trainable layers atop the frozen layers and
+prior knowledge. Moreover, task-adaptive strategy during learn to transform the previous features into predictions for
+2468 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+Fig. 3. The detailed workflow of the task-adaptive meta-classifier. During meta-training phase, following MAML framework, it acquires common prior
+knowledge from ISCX-Tor dataset in 5-way k-shot setting. In the inner-loop optimization, two meta learners respectively serve as the loss function adapter and
+learnable loss function to return task-adaptive loss value for updating the base model. In the outer-loop optimization, the two meta-learners and the base model
+are updated according to the original loss value. During fine-tuning phase, the well-trained base model are fine-tuned on specific datasets (i.e., ISCX-VPN,
+CTU, and BetterNet-HTTPS datasets) and the freezing technique is applied for rapid adaptations on new ETC tasks.
+
+ TABLE IV
+new ETC tasks. We propose freezing the initial layers for DATASET D ESCRIPTIONS
+the first few epochs of training phase, and then unfreezing
+them to retrain the meta-classifier. In this way, the metaclassifier progressively adapts the previous features to new
+ETC tasks, achieving significant improvements in efficiency.
+Notably freezing is applicable in both across-task and few-shot
+scenarios. See Section V for more details.
+
+ V. E VALUATION
+A. Experimental Setup
+ 1) Dataset: To comprehensively evaluate the performance CTU [46] dataset is a HTTPS traffic dataset, including the
+of M ETA ROCK ETC, we select six datasets: ISCX-VPN, network traces during accessing Alexa Top 1000 websites.
+ISCX-Tor, CTU, 5GAD, Google-Home, and BetterNet-HTTPS 5GAD [47] dataset consists of intercepted 5G network data
+datasets, all of which are publicly available and extensively by a third-party attacker, including both normal and malicious
+applied for the evaluations of various ETC tasks. Table IV traffic. The data was generated in a simulated environment and
+summarizes the details of these datasets. collected via an Internet-connected Linux machine running a
+ ISCX-VPN [44] dataset is a Virtual Private Networks 5G Core (5GC) network implemented with the open source
+(VPNs) traffic dataset, including 7 categories (i.e., Browsing, free5GC software.
+Email, Chat, Streaming, FTP, VoIP and P2P) in both VPN and Google-Home [48] dataset is a large-scale dataset collected
+non-VPN. on Google Home. Using 5 automated voices rendered by
+ ISCX-Tor [45] dataset is an Onion Router (Tor) traffic public text-to-speech APIs, Google-Home dataset consists of
+dataset, including 7 categories (i.e., Browsing, Email, Chat, 150,000 traffic traces including 100 commands/classes and
+Streaming, FTP, VoIP, P2P) in both Tor and non-Tor. 1,500 traffic traces per class.
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION 2469
+
+ Algorithm 1: The Workflow of Task-Adaptive Meta- datasets on specified interface. In highly efficient packet
+ Classifier analyzer, we leverage PcapPlusPlus (version 22.05), a versatile
+ Require: Task distribution p(T ) C++ library with user-friendly APIs to perform real-time
+ Require: Inner-loop and outer-loop learning rates α, β traffic analysis and feature extraction, including capturing
+ Require: Base model fθ , meta-learners Gψ , Lφ packets by libpcap functionality, splitting packets by connec-
+1 Randomly initialize parameters θ, ψ and φ tions and parsing per-packet features within the IP layer. In the
+2 while not done do following three modules, we leverage Pytorch [50] (version
+ 3 Sample a batch of tasks Ti ∼ p(T ) 1.4.0) to generate multivariate time series, conduct random
+ 4 for all Ti do convolution kernel transformations, and perform task-adaptive
+ Retrieve support set DiS = {(xis , yis )}K classifications for various ETC tasks.
+ 5 s=1 , query
+ Q q q M 3) Setup: All experiments are simulated on a DELL server
+ set Di = {(xi , yi )}q=1 from Ti
+ equipped with a 24-core Intel Xeon 6240R CPU @2.40GHz,
+ 6 Initialize θi,0 = θ
+ Ubuntu 20.04, 64 GB memory, and 2×NVIDIA Quadro
+ 7 for j in number of inner-loop updates J do
+ RTX 5000 GPUs. To ensure the robustness and generality,
+ 8 Compute base model outputs on support set:
+ the experiments are replicated 10 times to calculate the
+ fθi,j (DiS ) = {fθi,j (xis )}K
+ s=1 average and standard variance of evaluation metrics. In each
+ 9 Compute loss values on support set: experiment, we utilize ISCX-Tor dataset to establish a com-
+ L(DiS ; θi,j ) = L(fθi,j (xis=1:K ), yis=1:K ) mon prior knowledge base, and then fine-tune the model
+10 Perceive task state: ti,j = [L(DiS ; θi,j )||θi,j ] respectively on the remaining datasets to assess the general-
+11 Compute affine transformation parameters: ization and transferability from both across-task and few-shot
+ γi,j , ηi,j = Gψ (ti,j ) perspectives.
+12 Transform loss function to be task-adaptive: In the across-task scenario, we evaluate M ETA ROCK ETC
+ φi,j = γi,j φ + ηi,j in both closed-world and open-world settings. In the closed-
+13 Compute task-adaptive loss values: Lφ (ti,j ) world setting, we test M ETA ROCK ETC and baseline models
+ i,j
+14 Perform inner-loop update on base model: when transferring to different ETC tasks under varying label
+ θi,j +1 = θi,j − α∇θi,j Lφ (ti,j ) rates (i.e., 20%, 40%, and 60%). In the open-world setting, we
+ i,j
+15 end employ BetterNet-HTTPS dataset with many classes to distin-
+16 end guish encrypted sessions between monitored and unmonitored
+17 Perform outer-loop update on base model and both classes, as outlined in [19].
+ meta-learners: In the few-shot scenario, all models are evaluated under
+ (θ, φ, ψ) ← (θ, φ, ψ) − β∇(θ,φ,ψ) Ti L(DiQ ; θi,J ) 5-way 1-shot and 5-way 5-shot settings. Specifically, for
+18 end baseline models tailored to specific ETC tasks using ML or DL
+ algorithms, we adapt them into the MAML framework. As for
+ generic ETC solutions using adversarial domain adaptation or
+ contrastive learning, we follow the original solutions to acquire
+ BetterNet-HTTPS [49] dataset is another HTTPS traffic common knowledge and subject them to meta-testing.
+dataset, including the network traces during crawling top 779 In this manner, we fairly evaluate the performances of
+HTTPS websites via both Chrome and Firefox browsers. M ETA ROCK ETC and all baseline models in both across-task
+ We adhere strictly to the labeling scheme established and few-shot scenarios.
+in [5], [10], [47]. For CTU and BetterNet-HTTPS datasets,
+we retain only those encrypted sessions with Server Name
+Indication (SNI) extension, and we use the processed host- B. Baseline Models
+names (with numbers and special characters removed) as the To thoroughly evaluate the generalization and transferability
+label of each encrypted session. For ISCX-VPN, ISCX-Tor, of M ETA ROCK ETC, we select six state-of-the-art methods
+5GAD, and Google-Home datasets, we assign labels based on as baseline models for comparisons. Among these, four are
+the filenames. However, within the browsing label category of tailored for specific ETC tasks (e.g., application classification
+ISCX-VPN and ISCX-Tor datasets, there are traffic generated and website fingerprinting), utilizing ML or DL models. The
+when performing other activities such as streaming and VoIP. other two are generic ETC solutions that employ adversar-
+To avoid ambiguity, We exclude such data in line with [10]. ial domain adaptation and contrastive learning for fast task
+ 2) Implementation: M ETA ROCK ETC is primarily adaptation. It is notable that most of the selected methods are
+developed in C++ (GCC version 11.4.0) and Python (version open-source and we directly use the associated open-source
+3.7.10). To promote transparency and repeatability, we have projects. For those that are not open-source, we have diligently
+made our datasets and code public.1 reproduced them, adhering to the hyper-parameter settings
+ To replicate real-world network conditions, we utilize tcpre- detailed in the original papers. We fine-tune all baseline
+play (version 3.4.4) to playback these experimental traffic models to achieve their best performance on our experimental datasets. Below is the brief overview of all baseline
+ 1 https://github.com/MetaRockETC/MeTaRockETC models.
+2470 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+ ETC-PS [10] is a generalized encrypted traffic classifica- comprehensive evaluations of scalability, cost management,
+tion method leveraging path signature features. It introduces and practicality within real-world applications. Specifically, we
+multiple transformations to enrich packet length sequences and utilize ISCX-Tor dataset to train the meta-classifier to acquire
+model them as traffic paths. Then ETC-PS extracts multi-scale common prior knowledge, and then fine-tune it on specific
+path signatures and employ traditional ML models to achieve datasets. The experimental results are summarized in Table V.
+efficient classification. We reproduce ETC-PS based on the We can make the following observations.
+original paper. 1) Superior Performance of Generic ETC Solutions:
+ G RAPH DAPP [19] models bidirectional packet length M ETA ROCK ETC, AF, and PAC R EP outperforms other
+sequences as Traffic Interaction Graphs (TIGs) and turns baseline models in most cases. These results align with
+encrypted traffic classification into a graph classification our expectations, considering that M ETA ROCK ETC,
+problem, where multi-layer perceptions are employed to AF, and PAC R EP are generic ETC solutions not confined
+build a GNN-based classifier to identify decentralized appli- to specific tasks. They leverage common knowledge
+cations through encrypted traffic analysis. We reproduce across diverse ETC tasks, consistently exhibiting supe-
+G RAPH DAPP based on the original paper. rior adaptability when transferring to unknown ETC
+ F LOW P IC [51] transforms network flows into images. tasks with limited training data.
+Specifically,the records of each packet (i.e., packet size, arrival 2) Technique Efficacy in Generic ETC Solutions: Notably,
+time) are mapped into 2D-histograms to be square images. M ETA ROCK ETC, employing meta-learning, AF, utiliz-
+Then LeNet-5 style CNN is utilized to build encrypted traffic ing adversarial domain adaptation, and PAC R EP, relying
+classifiers. The open-source implementation of F LOW P IC is on contrastive learning, are basically the top three modavailable in [52]. els. These models share a common strategy of learning a
+ FS-N ET [18] is an end-to-end model for encrypted traf- generic feature encoder. M ETA ROCK ETC and AF share
+fic classification. It takes multi-layer bidirectional Gated structural similarities, where AF employs convolutional
+Recurrent Unit (bi-GRU) encoder and decoder to learn the rep- neural networks, while M ETA ROCK ETC leverages ranresentation of the flow sequence and reconstructs the original dom convolution transformations for feature encoding.
+sequence respectively. Both the encoder and decoder output are Moreover, both M ETA ROCK ETC and PAC R EP acquire
+combined for classification. The open-source implementation generic representations by designing specific loss funcof FS-N ET is available in [53]. tions. M ETA ROCK ETC take merits from AF, PAC R EP
+ AF [5] is a transfer learning-based website fingerprinting and advanced time series technique (ROCKET and its
+technique that leverages adversarial domain adaptation over variants), achieving the best performances.
+few encrypted traffic. Specifically, it adopts a domain adversar- 3) Exceptional Performance of Task-Specific GraphDAPP:
+ial network architecture where a feature extractor and a domain Among the baseline models designed for specific ETC
+discriminator engage in a minimax game. The feature extractor tasks, G RAPH DAPP is a special case, which constructs
+is attached with traditional machine learning classifiers to Traffic Interaction Graphs (TIGs) with packet length
+facilitate practical website fingerprinting. The open-source sequences and employs GNN for decentralized applicaimplementation of FS-N ET is available in [54]. tion classification. G RAPH DAPP surpasses generic ETC
+ PAC R EP [6] is a novel framework to learn generic packet solutions in several instances (e.g., 60% label rate on
+representation for various traffic classification tasks. PAC R EP ISCX-VPN dataset and 20% label rate on BetterNetis optimized by contrastive loss from both positive and HTTPS dataset). This exceptional performance is
+negative samples to tackle both semantic and byte information attributed to the discriminative and generic nature of the
+and learn the packet representations that are commonly effec- TIG representation across diverse ETC tasks.
+tive in different traffic classification tasks. The open-source 4) Performance Variations Across Datasets: It is noteimplementation of FS-N ET is available in [55]. worthy that on BetterNet-HTTPS dataset with 20%
+ label rate, ETC-PS outperforms M ETA ROCK ETC. The
+ reason for the difference may be the larger number
+C. Across-Task Analysis of classes within the BetterNet-HTTPS dataset (950
+ 1) Closed-World Evaluation: In this subsection, we assess classes) compared to other datasets (e.g., 12 and 59
+the performance of M ETA ROCK ETC in the closed-world classes). This higher class diversity may favor the path
+setting under an across-task scenario. In the closed-world signature representations of ETC-PS for this particular
+setting, the classes of all encrypted sessions to be classified dataset. However, as the label rate increase, these generic
+are monitored and encrypted traffic classification is treated as ETC solutions outperform ETC-PS.
+a general multi-class classification problem. 5) Performance Scaling with Label Rate: As the label rate
+ To validate the efficacy of M ETA ROCK ETC in facili- increases, the performances of M ETA ROCK ETC and
+tating fast adaptation to various ETC tasks, we compare other baseline models improve, where F LOW P IC and
+M ETA ROCK ETC with other baseline models using three FS-N ET exhibit the most significant improvements. The
+datasets with varying label rates (i.e., 20%, 40%, and 60%). In LeNet-5 style CNN of F LOW P IC and bi-GRU style
+this way, we can evaluate the performance of ETC solutions encoder and decoder of FS-N ET require substantial
+with different amounts of available labeled data, enabling a amounts of labeled data. As such, their practicality in
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION 2471
+
+ TABLE V
+ E FFECTIVENESS E VALUATION ON ISCX-VPN, CTU AND B ETTER N ET-HTTPS DATASETS
+
+ real-world environments may be limited. Furthermore, way, encrypted traffic classification is treated as a binary
+ even with enough labeled data available (i.e., 60% label classification problem.
+ rate), M ETA ROCK ETC and the two other generic ETC Specifically, we use BetterNet-HTTPS dataset for opensolutions still outperform these task-specific models. world evaluation. The training part of BetterNet-HTTPS
+ This underscores the idea that the common knowledge dataset consists of 34,200 monitored encrypted sessions from
+ acquired does not affect the adaptability of models, but 950 monitored classes and 4,750 unmonitored encrypted sesenhances their ability to tackle novel ETC tasks. sions from 500 unmonitored classes). The testing part consists
+ 2) Open-World Evaluation: In this subsection, we evaluate of 8,550 monitored encrypted sessions from 950 monitored
+the performance of M ETA ROCK ETC in the open-world setting classes) and 17,641 unmonitored encrypted sessions from
+under an across-task scenario. In a more realistic way, the 819 unmonitored classes). Notably, the unmonitored encrypted
+goal of M ETA ROCK ETC is to distinguish between encrypted sessions in the training set are totally different from those in
+sessions from monitored and unmonitored classes. In this testing set.
+2472 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+Fig. 4. The impact of the number of unmonitored classes in training set on TPR and FPR.
+
+ TABLE VI
+ 5-WAY 1-S HOT AND 5-WAY 5-S HOT C LASSIFICATION ACCURACY ON THE F OUR E XPERIMENTAL DATASETS
+
+ Here we vary the number of unmonitored classes in the As presented in Table VI, M ETA ROCK ETC achieves avertraining set from 50 to 500 to simulate the realistic scenario age improvements of approximately 1.33% and 2.18% on
+and investigate the impact of more complex training data on accuracy in 5-way 1-shot and 5-way 5-shot settings, respecthe model performance. As illustrated in Fig. 4, both the True tively, across four datasets. As with the experimental results
+Positive Rate (TPR) and False Positive Rate (FPR) decrease of across-task analysis, generic ETC solutions (i.e., AF and
+as the number of unmonitored classes in the training set PAC R EP) outperform other baseline models focusing on speincreases for M ETA ROCK ETC and other baseline models, cific ETC tasks. Among these baseline models, G RAPH DAPP
+where M ETA ROCK ETC still performs best on both TPR and achieves the best performance, which further prove that TIG
+FPR for 500 unmonitored classes, achieving an impressive representation is effective in encrypted traffic classification
+TPR of 84.95% and a low FPR of 2.23%. When the number of across tasks.
+unmonitored classes in the training set reaches 350, the TPR Additionally, though M ETA ROCK ETC does achieve the
+and FPR of M ETA ROCK ETC stabilize as 85.04% and 2.37% best performances in most cases within the few-shot regime,
+respectively. the improvements are not significant as expected. The rea-
+ Overall, these experimental results demonstrate the robust- son maybe that we integrate all baseline models with
+ness and effectiveness of M ETA ROCK ETC in the open-world MAML++ for fair comparisons and the meta-learning techscenario, even when faced with an increasing number of niques effectively fine-tune all baseline models, thus exhibiting
+unmonitored classes during the training phase. competitive performances to M ETA ROCK ETC. However, it is
+ noteworthy thatM ETA ROCK ETC consistently outperforms all
+ baseline models on all datasets in the 5-way 5-shot setting.
+D. Few-Shot Analysis Overall, these results not only underscore the potential
+ of meta-learning in developing practical ETC solutions, but
+ For comprehensive evaluations in a few-shot scenario, we
+ also emphasize the superiority of M ETA ROCK ETC within the
+compare M ETA ROCK ETC with five gradient-based baseline
+ context of few-shot ETC tasks, indicating that it is a promising
+models (i.e., G RAPH DAPP, F LOW P IC, FS-N ET, AF and
+ and practical solution for tackling the challenges posed by
+PAC R EP) integrated with MAML++ under two typical fewcomplex network environments.
+shot settings: 5-way 1-shot and 5-way 5-shot classification.
+Since there are only two classes in 5GAD dataset, we do
+not use it for few-shot analysis. Given that the datasets are E. Efficiency Evaluation
+organized into distinct tasks and balanced in N-way k-shot 1) Adaptation Efficiency: Here we take ISCX-VPN dataset
+settings, we utilize accuracy as the metric to present the (20%) as an example to further demonstrate the fast adaptation
+experimental results. performance of M ETA ROCK ETC. As illustrated in Fig. 5,
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION 2473
+
+ feature extraction times for AF and M ETA ROCK ETC are the
+ same.
+ Though M ETA ROCK ETC conducts plenty of convolution
+ transformations on the packet length sequences, all the transformations are executed in a parallel and independent manner.
+ Furthermore, the convolution kernels are deterministically
+ generated without training. Additionally, M ETA ROCK ETC
+ leverages 4-layer MLP as the base model for feature
+ encoding, which simple structure does not require much
+ computation overhead. These three factors collectively render
+Fig. 5. F1 score and loss evaluations of M ETA ROCK ETC and other baseline
+models on ISCX-VPN dataset (20%) during fine-tuning phase. M ETA ROCK ETC highly efficient and applicable.
+ Comparatively, AF similarly relies on simple features and
+ TABLE VII a model structure similar to M ETA ROCK ETC. It utilizes
+ T IME OVERHEAD E VALUATION ON 5GAD DATASET convolutional neural network as the feature extractor, which
+ require training. As for PAC R EP, it extracts both encrypted
+ and unencrypted data as text and hexadecimal bytes utilizing
+ the scapy library, which is time-consuming compared to
+ M ETA ROCK ETC and AF. It has been demonstrated that
+ packet lengths are effective and generic across different ETC
+ tasks by M ETA ROCK ETC and G RAPH DAPP.
+M ETA ROCK ETC can rapidly achieve satisfactory F1 score It is worth noting that PAC R EP are implemented based
+and loss with a fewer number of epochs compared with on its own open-source code. The efficiencies of the comother baseline models. This nature enables M ETA ROCK ETC ponents (e.g., feature extractor) in PAC R EP can be further
+to be practical to handle different ETC tasks and evolv- optimized with PcapPlusPlus. However, even taking this factor
+ing network environments. AF and PAC R EP integrating the into account, M ETA ROCK ETC still demonstrates superior
+common knowledge of previous ETC task also exhibit fast efficiency in comparison with the two baselines.
+adaptation ability to ISCX-VPN dataset. Moreover, we can
+see that when label rate is set to 20%, the other baseline
+models more or less over-fit to the training set and exhibit F. Ablation Study
+poor performances on the testing set. While M ETA ROCK ETC To further substantiate the efficacy of the innovative comstill achieve the best generalization performance on the testing ponents, we conduct a careful ablation analysis on the key
+set as shown in Table V. components of M ETA ROCK ETC. Specifically, we compare the
+ The experimental results suggest that M ETA ROCK ETC full M ETA ROCK ETC with its three variants:
+effectively incorporates the common knowledge of different • w/o MV: w/o MV solely utilizes the original bidirec-
+ETC tasks, exhibiting exceptional transferability to adapt to tional packet length sequences as univariate time series
+new ETC tasks. The reason behind these may be due to for subsequent analysis. Consequently, the random chanthe discriminatory patterns extracted by random convolution nel sampling and summation operation in multivariate
+transformations or the task-adaptive loss function, which version of M ULTI ROCK ETC are inapplicable.
+will be comprehensively discussed in Section V-F. From a • w/o TL: w/o TL removes the two meta-learners that
+practical perspective, M ETA ROCK ETC effectively bridges the serve as the task-adaptive loss function in inner-loop
+gap between laboratory experimentation and the real-world optimization, instead employing a general cross-entropy
+environments, providing an practical solution for adapting to loss function in accordance with the vanilla MAML
+diverse ETC tasks. framework.
+ 2) Time Overhead: Considering the practical deployment • w/o FRZ: w/o FRZ does not incorporate the transfer
+within real-world scenarios, we conduct a comprehensive eval- learning technique of freezing. Instead, it updates all
+uation of the time overhead associated with M ETA ROCK ETC parameters during fine-tuning process on specific tasks.
+and two practical ETC solutions (i.e., AF and PAC R EP) in To ensure fair comparisons, M ETA ROCK ETC and its varidifferent phases including feature extraction, model fine-tuning ants are fine-tuned for an equal number of epochs. We present
+and model execution. Specifically, we take 5GAD dataset for the experimental results of M ETA ROCK ETC and its variants
+evaluations, where 50% for model fine-tuning, and 50% for on three datasets with 20% label rate in Table VIII. As
+model execution. The time overheads for all three methods are observed, M ETA ROCK ETC achieves the best classification
+presented in Table VII. performance with remarkable stability across all tasks. The
+ In a nutshell, M ETA ROCK ETC is significantly faster than respective average decreases of 1.74%, 5.01% and 13.29%
+both AF and PAC R EP across all phases. Notably that AF in macro-average F1 score for w/o MV, w/o TL and
+is originally designed for well-processed website finger- w/o FRZ on three datasets indicate that all our proposed
+printing datasets, we use the same preprocessing code as improvements are both practical and effective for various ETC
+M ETA ROCK ETC to process 5GAD dataset. Therefore the tasks. Among these w/o MV exhibits the least performance
+2474 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+ TABLE VIII
+ A BLATION S TUDY OF M ETA ROCK ETC ON THE F IVE E XPERIMENTAL DATASETS (20%)
+
+decrease, suggesting that transforming bidirectional packet outputs. Experimental results demonstrate that diversity is the
+length sequences from univariate and multivariate time series key to improve the discriminatory power of the extracted
+results in a slight improvement. Introducing diversity can features. In future work, we can further increase the diversity
+enrich encrypted traffic representations and enhance classifica- by considering other per-packet features (e.g., inter-arrival
+tion performance to some extent. Furthermore, by comparing time and protocols) and design more pooling operators to
+M ETA ROCK ETC with w/o TL, we demonstrate that a simple capture more comprehensive traffic patterns for classification.
+fixed loss function cannot generalize well across diverse By leveraging meta-learning, significant reductions in resource
+and distinct ETC tasks. Employing neural networks to fit consumption for parameter updates can be achieved, thus
+a task-adaptive loss function can significantly improve the eliminating concerns regarding feature dimension explosion.
+generalization and transferability. Lastly, we assess the efficacy
+of the freezing technique when adapting the base model to
+ B. Efficiency
+different ETC tasks. The performance of w/o FRZ declines
+considerably. One possible explanation is that, when adapting We have implemented a highly efficient packet analyzer
+the base model to new tasks, the initial layers have learned in C++ and the remaining three modules in Python for
+common knowledge from known ETC tasks. Without adopting M ETA ROCK ETC. Although our meta-learning framework sigthe freezing technique, the adaptation process becomes retrain- nificantly reduces the need for frequent retraining, recent
+ing, and the weights are compromised during subsequent advancements in Intelligent Data Plane (IDP) offer the potentraining iterations. In this case, fitting new ETC tasks require tial to further promote the efficiency of M ETA ROCK ETC.
+a significantly larger number of training epochs, rendering IDP leverages programmable switches to provides essential
+this approach impractical for real-world scenarios. Overall, hardware support, enabling the deployment of learning-based
+M ETA ROCK ETC surpasses all variants by integrating multi- models directly onto the network data plane. Integrating
+variate time series, task-adaptive loss function, and freezing M ETA ROCK ETC with an intelligent network data plane could
+mechanism to rapidly adapt to diverse ETC tasks and evolving facilitate real-time intelligent traffic analysis and improve the
+network environments. efficiency.
+
+ VI. D ISCUSSION C. Scalability
+
+ M ETA ROCK ETC exhibits strong generalization and trans- Our aim is to develop a generic encrypted traffic classificaferability to quickly adapt to different encrypted traffic tion framework which can acquire across-task knowledge and
+classification tasks, yet there is still room for improve- rapidly adapt to unseen tasks and evolving network environment. In this section, we discuss how to further optimize ments. To achieve this, M ETA ROCK ETC employs simple yet
+M ETA ROCK ETC in the following four aspects. effective features and follows a meta-learning framework, significantly reducing the burden of frequent retraining. However,
+ one notable inadequacy is its reliance on supervised learning,
+A. Diversity which may not accurately reflect real-world scenarios, where
+ To add diversity in M ETA ROCK ETC, we perform a series of the exact number of classes is often unknown. To better
+transformations to generate multivariate time series and utilize align with the realistic scenario, we can incorporate unsupermultiple pooling operators to summarize the convolution vised meta-learning to further decrease data dependency and
+ZHAO et al.: M ETA R OCK ETC: ADAPTIVE ENCRYPTED TRAFFIC CLASSIFICATION 2475
+
+enhance M ETA ROCK ETC’s adaptability to complex and time- [4] A. Sivanathan et al., “Classifying IoT devices in smart environments
+evolving environments and diverse downstream tasks. using network traffic characteristics,” IEEE Trans. Mobile Comput.,
+ vol. 18, no. 8, pp. 1745–1759, Aug. 2019.
+ [5] C. Wang, J. Dani, X. Li, X. Jia, and B. Wang, “Adaptive fingerprinting:
+D. Practicality Website fingerprinting over few encrypted traffic,” in Proc. 11th ACM
+ Conf. Data Appl. Secur. Privacy, 2021, pp. 149–160.
+ M ETA ROCK ETC provides a practical solution adaptable to [6] X. Meng, Y. Wang, R. Ma, H. Luo, X. Li, and Y. Zhang, “Packet
+various ETC tasks. Especially, we highlight its strength in representation learning for traffic classification,” in Proc. 28th ACM
+ SIGKDD Conf. Knowl. Discov. Data Min., 2022, pp. 3546–3554.
+network security analysis against dynamic threat landscapes. [7] K. Kostas, M. Just, and M. A. Lones, “IoTDevID: A behavior-based
+The meta-learning ability of M ETA ROCK ETC facilitates device identification method for the IoT,” IEEE Internet Things J., vol. 9,
+timely identification of emerging threats over limited traffic no. 23, pp. 23741–23749, Dec. 2022.
+ [8] B. Anderson, S. Paul, and D. McGrew, “Deciphering malware’s use of
+data, allowing for rapid response. For example, IoT devices TLS (without decryption),” 2016, arXiv:1607.01639.
+without integrated security, are susceptible to cyber attacks. [9] J. Zhao, Q. Li, S. Liu, Y. Yang, and Y. Hong, “Towards traffic
+M ETA ROCK ETC can efficiently monitor the network activ- supervision in 6G: A graph neural network-based encrypted malicious
+ traffic detection method,” SCIENTIA SINICA Inf., vol. 52, no. 2,
+ities of IoT devices via encrypted traffic analysis, enabling pp. 270–286, 2022. [Online]. Available: http://www.sciengine.com/
+prompt detection and isolation of suspicious/compromised publisher/ScienceChinaPress/journal/SCIENTIASINICAInformationis/
+devices and effectively prevents threat activities from the 52/2/10.1360/SSI-2021-0280
+ [10] S.-J. Xu, G.-G. Geng, X.-B. Jin, D.-J. Liu, and J. Weng, “Seeing traffic
+outset. For future work, we can integrate continual learning paths: Encrypted traffic classification with path signature features,” IEEE
+to develop M ETA ROCK ETC adaptively. We also see potential Trans. Inf. Forensics Security, vol. 17, pp. 2166–2181, 2022.
+in further refining its functionalities across different ETC [11] A. Dempster, F. Petitjean, and G. I. Webb, “ROCKET: Exceptionally
+ fast and accurate time series classification using random convolutional
+tasks (e.g., real-time alert for threat detection) to enhance its kernels,” Data Min. Knowl. Discov., vol. 34, no. 5, pp. 1454–1495, 2020.
+practical applications. [12] A. Dempster, D. F. Schmidt, and G. I. Webb, “Minirocket: A very
+ fast (almost) deterministic transform for time series classification,” in
+ Proc. 27th ACM SIGKDD Conf. Knowl. Discov. Data Min., 2021,
+ VII. C ONCLUSION pp. 248–257.
+ [13] C. W. Tan, A. Dempster, C. Bergmeir, and G. I. Webb, “MultiRocket:
+ In this paper, we present M ETA ROCK ETC, an innova- Multiple pooling operators and transformations for fast and effective
+tive encrypted traffic classification framework that leverages time series classification,” 2022, arXiv:2102.00457.
+protocol-agnostic time series features and task-adaptive meta- [14] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for
+ fast adaptation of deep networks,” 2017, arXiv:1703.03400.
+learning techniques to achieve better generalization across [15] A. Antoniou, H. Edwards, and A. Storkey, “How to train your
+various ETC tasks and rapidly adapt to unknown tasks and MAML,” 2019, arXiv:1810.09502.
+evolving environments. By modeling packet length sequences [16] S. Baik, M. Choi, J. Choi, H. Kim, and K. M. Lee, “Learning
+ to learn task-adaptive hyperparameters for few-shot learning,” IEEE
+as multivariate time series and performing random convolution Trans. Pattern Anal. Mach. Intell., early access, Mar. 24, 2023,
+kernel transformations, M ETA ROCK ETC effectively captures doi: 10.1109/TPAMI.2023.3261387.
+the discriminatory behavioral patterns of encrypted traffic for [17] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “AppScanner:
+ Automatic fingerprinting of smartphone apps from encrypted network
+subsequent classification. We integrate the backbone network traffic,” in Proc. IEEE Eur. Symp. Secur. Privacy (EuroS&P), 2016,
+with two meta-learners to learn task-adaptive loss func- pp. 439–454.
+tions in the MAML manner, enabling task-adaptive learning [18] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-net: A flow
+ sequence network for encrypted traffic classification,” in Proc. IEEE
+in dynamic network environments. Extensive experimental Conf. Comput. Commun. INFOCOM, 2019, pp. 1171–1179.
+results have demonstrated the superiority of M ETA ROCK ETC [19] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decenin both across-task and few-shot scenarios. M ETA ROCK ETC tralized application identification via encrypted traffic analysis using
+ graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+offers a more practical and robust solution for encrypted traffic pp. 2367–2380, 2021.
+classification in real-world network environments. [20] B. Anderson and D. McGrew, “Identifying encrypted malware traffic
+ For future research, we suggest incorporating more with contextual flow data,” in Proc. ACM Workshop Artif. Intell. Secur.,
+ 2016, pp. 35–46. [Online]. Available: https://dl.acm.org/doi/10.1145/
+advanced time series analysis techniques and exploring 2996758.2996768
+alternative meta-learning approaches to further enhance the [21] B. Anderson and D. McGrew, “Machine learning for encrypted malware
+generalization performance of this framework. Additionally, traffic classification: Accounting for noisy labels and non-stationarity,” in
+ Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discov. Data Min.,
+investigating the robustness of the proposed method against 2017, pp. 1723–1732. [Online]. Available: https://dl.acm.org/doi/10.
+adversarial attacks and integrating it with real-time network 1145/3097983.3098163
+monitoring systems could provide valuable research avenues. [22] C. Fu, Q. Li, M. Shen, and K. Xu, “Realtime robust malicious traffic
+ detection via frequency domain analysis,” in Proc. ACM SIGSAC Conf.
+ Comput. Commun. Secur., 2021, pp. 3431–3446. [Online]. Available:
+ R EFERENCES http://arxiv.org/abs/2106.14707
+ [23] C. Fu, Q. Li, M. Shen, and K. Xu, “Frequency domain feature based
+ [1] Google. “Google transparency report.” Accessed: May 31, 2023. robust malicious traffic detection,” IEEE/ACM Trans. Netw., vol. 31,
+ [Online]. Available: https://transparencyreport.google.com/https/ no. 1, pp. 452–467, Feb. 2023.
+ overview [24] C. Duan, H. Gao, G. Song, J. Yang, and Z. Wang, “ByteIoT: A practical
+ [2] T.-D. Pham, T.-L. Ho, T. Truong-Huu, T.-D. Cao, and H.-L. Truong, IoT device identification system based on packet length distribu-
+ “MAppGraph: Mobile-App classification on encrypted network traffic tion,” IEEE Trans. Netw. Service Manag., vol. 19, no. 2, pp. 1717–1728,
+ using deep graph convolution neural networks,” in Proc. 37th Annu. Jun. 2022.
+ Comput. Secur. Appl. Conf., 2021, pp. 1025–1038. [25] J. Zhao, Q. Li, J. Sun, M. Dong, K. Ota, and M. Shen, “Efficient
+ [3] Z. Fu et al., “Encrypted malware traffic detection via graph-based IoT device identification via network behavior analysis based on time
+ network analysis,” in Proc. 25th Int. Symp. Res. Attacks, Intrusions Def., series dictionary,” IEEE Internet Things J., early access, Aug. 16, 2023,
+ 2022, pp. 495–509. doi: 10.1109/JIOT.2023.3305585.
+2476 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 21, NO. 2, APRIL 2024
+
+[26] V. Rimmer, D. Preuveneers, M. Juarez, T. Van Goethem, and W. Joosen, [49] J. F. I. C. W. Shbair and T. Cholez, 2016, “HTTPS Websites
+ “Automated website fingerprinting through deep learning,” in Proc. 25nd Dataset,” betternet. [Online]. Available: http://betternet.lhs.loria.fr/
+ Netw. Distrib. Syst. Secur. Symp. (NDSS), 2018, pp. 1–15. datasets/https/
+[27] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fin- [50] A. Paszke et al., “Pytorch: An imperative style, high-performance deep
+ gerprinting: Undermining website fingerprinting defenses with deep learning library,” in Proc. 33rd Adv. Neural Inf. Process. Syst., 2019,
+ learning,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2018, pp. 1–12.
+ pp. 1928–1943. [51] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for
+[28] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained webpage encrypted traffic classification and applications identification,” IEEE
+ fingerprinting using only packet length information of encrypted traf- Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1218–1232, Jun. 2021.
+ fic,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 2046–2059, 2021. [52] T. Shapira and Y. Shavitt. “The source code of FlowPic.” 2021,
+[29] P. Sirinam, N. Mathews, M. S. Rahman, and M. Wright, “Triplet Accessed: Sep. 2023. [Online]. Available: https://github.com/talshapira/
+ fingerprinting: More practical and portable website fingerprinting with FlowPic
+ n-shot learning,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., [53] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li. “The source code of FS-
+ 2019, pp. 1131–1148. net.” 2019, Accessed: Sep. 2023. [Online]. Available: https://github.com/
+[30] I. Guarino, C. Wang, A. Finamore, A. Pescape, and D. Rossi, “Many WSPTTH/FS-Net
+ or few samples? comparing transfer, contrastive and meta-learning in [54] C. Wang, J. Dani, X. Li, X. Jia, and B. Wang. “The source code of
+ encrypted traffic classification,” 2023, arXiv:2305.12432. AF.” 2021, Accessed: Sep. 2023. [Online]. Available: https://github.com/
+[31] M. Shen et al., “Machine learning-powered encrypted network traffic SmartHomePrivacyProject/AdaptiveFingerprinting
+ analysis: A comprehensive survey,” IEEE Commun. Surveys Tuts., [55] X. Meng, Y. Wang, R. Ma, H. Luo, X. Li, and Y. Zhang. “The source
+ vol. 25, no. 1, pp. 791–824, 1st Quart., 2023. code of PacRep.” 2022, Accessed: Sep. 2023. [Online]. Available: https:
+[32] A. Bagnall, A. Bostrom, J. Large, and J. Lines, “The great time series //github.com/ict-net/PacRep
+ classification bake off: An experimental evaluation of recently proposed
+ algorithms. extended version,” 2016, arXiv:1602.01711.
+[33] M. Müller, “Dynamic time warping,” in Information Retrieval for Music Jianjin Zhao (Graduate Student Member, IEEE)
+ and Motion. Berlin, Germany: Springer, 2007, pp. 69–84. received the B.Eng. degree from the Beijing
+[34] Y.-S. Jeong, M. K. Jeong, and O. A. Omitaomu, “Weighted dynamic University of Posts and Telecommunications, China,
+ time warping for time series classification,” Pattern Recognit., vol. 44, in 2019, where he is currently pursuing the Ph.D.
+ no. 9, pp. 2231–2240, Sep. 2011. [Online]. Available: https://linkinghub. degree in cyberspace security. His current research
+ elsevier.com/retrieve/pii/S003132031000484X interests include encrypted traffic analysis and audit
+[35] P.-F. Marteau, “Time warp edit distance with stiffness adjustment for log analysis.
+ time series matching,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 31,
+ no. 2, pp. 306–318, Feb. 2009.
+[36] J. Lin, R. Khade, and Y. Li, “Rotation-invariant similarity in
+ time series using bag-of-patterns representation,” J. Intell. Inf.
+ Syst., vol. 39, no. 2, pp. 287–315, Oct. 2012. [Online]. Available:
+ http://link.springer.com/10.1007/s10844-012-0196-5 Qi Li received the Ph.D. degree in computer science
+[37] M. G. Baydogan, G. Runger, and E. Tuv, “A bag-of-features framework and technology from the Beijing University of Posts
+ to classify time series,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 35, and Telecommunications, Beijing, China, in 2010,
+ no. 11, pp. 2796–2802, Nov. 2013. where she is currently a Professor with the National
+[38] L. Ye and E. Keogh, “Time series shapelets: A novel technique that Engineering Laboratory for Mobile Network
+ allows accurate, interpretable and fast classification,” Data Min. Knowl. Technologies, School of Cyberspace Security. Her
+ Discov., vol. 22, pp. 149–182, Jan. 2011. current research focuses on information system
+[39] T. Rakthanmanon and E. Keogh, “Fast shapelets: A scalable algorithm security.
+ for discovering time series shapelets,” in Proc. SIAM Int. Conf. Data
+ Min., 2013, pp. 668–676.
+[40] A. Bostrom and A. Bagnall, “Binary shapelet transform for multiclass
+ time series classification,” in Proc. 17th Int. Conf., Big Data Anal.
+ Knowl. Discov., 2015, pp. 257–269. Yueping Hong received the B.Eng. degree
+[41] M. Middlehurst, J. Large, M. Flynn, J. Lines, A. Bostrom, and from the Beijing University of Posts and
+ A. Bagnall, “HIVE-COTE 2.0: A new meta ensemble for time series Telecommunications, China, in 2021, where he is
+ classification,” 2021, arXiv:2104.07551. currently pursuing the master’s degree in cyberspace
+[42] S. Baik, M. Choi, J. Choi, H. Kim, and K. M. Lee, “Meta-learning with security. His current research interests include
+ adaptive hyperparameters,” 2020, arXiv:2011.00209. encrypted traffic analysis and graph neural networks.
+[43] S. Baik, J. Choi, H. Kim, D. Cho, J. Min, and K. M. Lee, “Metalearning with task-adaptive loss function for few-shot learning,” in Proc.
+ IEEE/CVF Int. Conf. Comput. Vis., 2021, pp. 9465–9474. [Online].
+ Available: https://openaccess.thecvf.com/content/ICCV2021/html/Baik_
+ Meta-Learning_With_Task-Adaptive_Loss_Function_for_Few-Shot_
+ Learning_ICCV_2021_paper.html
+[44] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani, Meng Shen (Member, IEEE) received the B.Eng.
+ “Characterization of encrypted and VPN traffic using time-related degree in computer science from Shandong
+ features,” in Proc. 2nd Int. Conf. Inf. Syst. Secur. Privacy, University, Jinan, China, in 2009, and the Ph.D.
+ 2016, pp. 407–414. [Online]. Available: http://www.scitepress.org/ degree in computer science from Tsinghua
+ DigitalLibrary/Link.aspx?doi=10.5220/0005740704070414 University, Beijing, China in 2014. He is a
+[45] A. H. Lashkari, G. Draper-Gil, M. S. I. Mamun, and A. A. Ghorbani, Professor with the Beijing Institute of Technology,
+ “Characterization of tor traffic using time based features,” in Proc. Beijing. He has authored over 50 papers in top-
+ ICISSp, 2017, pp. 253–262. level journals and conferences, such as ACM
+[46] 2015, “Stratosphere laboratory Datasets,” Stratosphere, Accessed: SIGCOMM, IEEE J OURNAL ON S ELECTED A REAS
+ Mar. 13, 2020. [Online]. Available: https://www.stratosphereips.org/ IN C OMMUNICATIONS , and IEEE T RANSACTIONS
+ datasets-overview ON I NFORMATION F ORENSICS AND S ECURITY . His
+[47] C. Coldwell et al., “Machine learning 5G attack detection in pro- research interests include data privacy and security, blockchain applications,
+ grammable logic,” in Proc. IEEE Globecom Workshops (GC Wkshps), and encrypted traffic classification. He received the Best Paper Runner-
+ 2022, pp. 1365–1370. Up Award at IEEE IPCCC 2014 and IEEE/ACM IWQoS 2020. He was
+[48] C. Wang et al., “Fingerprinting encrypted voice traffic on smart speakers selected by the Beijing Nova Program 2020 and was the winner of the
+ with deep learning,” in Proc. 13th ACM Conf. Secur. Privacy Wireless ACM SIGCOMM China Rising Star Award in 2019. He has guest edited
+ Mobile Netw., 2020, pp. 254–265. [Online]. Available: https://dl.acm. special issues on emerging technologies for data security and privacy in IEEE
+ org/doi/10.1145/3395351.3399357 N ETWORK and IEEE I NTERNET- OF -T HINGS J OURNAL.

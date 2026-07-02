@@ -1,0 +1,733 @@
+Computers & Security 141 (2024) 103824
+
+ Contents lists available at ScienceDirect
+
+ Computers & Security
+ journal homepage: www.elsevier.com/locate/cose
+
+KnowCTI: Knowledge-based cyber threat intelligence entity and relation
+extraction
+Gaosheng Wang a,b , Peipei Liu a,b , Jintao Huang a,b , Haoyu Bin a,b , Xi Wang a,b,∗ , Hongsong Zhu a,b
+a Institute of Information Engineering, Chinese Academy of Sciences, Beijing, China
+b School of Cyber Security, University of Chinese Academy of Sciences, Beijing, China
+
+A R T I C L E I N F O A B S T R A C T
+
+Keywords: Structured cyber threat intelligence enables security researchers to know the occurrence of cyber threats in
+Cyber threat intelligence time, thereby improving the eﬃciency of security defense and analysis. Previous works usually use general
+Entity and relation extraction deep learning and NLP techniques to extract intelligence. Such methods suﬀer from insuﬃcient semantic
+Knowledge graph
+ understanding in the ﬁeld of security. To address these issues, we propose a novel method called Knowledge-
+Attention mechanism
+Graph attention network
+ based Cyber Threat Intelligence Entity and Relation Extraction (KnowCTI), which incorporates cybersecurity
+ knowledge into the model to enhance the understanding of the realm of cybersecurity and has a full picture of
+ threats with the threat intelligence graph generation. Speciﬁcally, we ﬁrst build a cybersecurity knowledge base
+ and train cybersecurity-aware knowledge embeddings based on the base. Secondly, we reﬁne the most related
+ knowledge triples by attention mechanism and gate mechanism, and then construct a sentence tree through these
+ triples. Next, we employ graph attention networks to incorporate knowledge information into the sentence by
+ considering the sentence tree as a graph. Finally, we consider entity extraction as a sequence labeling problem
+ and relation extraction as a classiﬁcation problem to decode the entities and relation triples according to the
+ threat intelligence ontology we designed. Experimental results demonstrate the superior performance with the
+ F1 score exceeding 90.16 and 81.83 on entity and relation extraction separately.
+
+1. Introduction tion of Cyber Threat Intelligence (CTI), encompassing comprehensive
+ threat information and Indicator of Compromise (IoC) (Samtani et al.,
+ The number of disclosed security vulnerabilities has been steadily in- 2020). By leveraging CTI, researchers can attain a thorough comprecreasing recently. Within the multitude of security vulnerabilities, the hension of threats and transition from conventional passive defense to
+proportion of high-risk vulnerabilities has been consistently rising (h3c, active defense strategies (Zhao et al., 2020).
+2023). This trend exacerbates the severity of various novel forms of A substantial volume of open-source threat intelligence is availvulnerability exploitation and attack methods, such as Advanced Per- able on the Internet, manifesting in diverse forms across public media
+sistent Threat (APT) attacks, posing a more pronounced impact on
+ such as technology blogs, community forums, and social media. These
+the cybersecurity environment (secrss, 2023). Consequently, it imposes
+ sources disseminate threat-related information with extensive coverage
+higher demands on threat detection and defense. Traditional protecand notable timeliness, signiﬁcantly contributing to threat warning and
+tion methods primarily employ defensive mechanisms like ﬁrewalls and
+intrusion detection systems, strategically positioned at boundaries or defense eﬀorts. Consequently, security organizations are progressively
+critical nodes. However, these methods are ineﬀective against complex extracting CTIs from security-related text available on the Internet. This
+attacks and new vulnerabilities since they deeply rely on prior fea- allows them to comprehensively understand existing or imminent cyber
+tures, rules, and knowledge (Mitchell and Chen, 2014; Thimma et al., threats and develop precise defense capabilities to augment the capabil-
+2015). Researchers must consistently identify emerging vulnerabilities ities of existing security protection equipment (Li et al., 2022), which
+and threats to update their conﬁgurations. To address the limitations has sparked the interest of security experts in delving deeper into reof current defense measures, security experts have proposed the adop- search on CTI extraction.
+
+ * Corresponding author at: Institute of Information Engineering, Chinese Academy of Sciences, Beijing, China.
+ E-mail addresses: wanggaosheng@iie.ac.cn (G. Wang), liupeipei@iie.ac.cn (P. Liu), huangjintao@iie.ac.cn (J. Huang), binhaoyu@iie.ac.cn (H. Bin),
+wangxi@iie.ac.cn (X. Wang), zhuhongsong@iie.ac.cn (H. Zhu).
+
+https://doi.org/10.1016/j.cose.2024.103824
+Received 29 January 2024; Received in revised form 5 March 2024; Accepted 23 March 2024
+Available online 28 March 2024
+0167-4048/© 2024 Elsevier Ltd. All rights reserved.
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+ In recent years, numerous studies have focused on CTI extraction.
+The trajectory of research on CTI extraction has evolved from extracting simple intelligence to more intricate forms. Existing research can
+be broadly categorized into rule-based and learning-based approaches.
+Initial eﬀorts primarily concentrated on rule-based methods. These
+methods extract IoC with regular formalities through the application
+of predeﬁned rules (Burger et al., 2014; Liao et al., 2016). Nevertheless, these methods are limited to extracting basic threat intelligence,
+such as IP addresses and hashes, and are incapable of identifying unregulated complex entities, such as attacker names and attack methods.
+Additionally, certain studies employ entity dictionaries in conjunction Fig. 1. An example of expert reading process.
+with grammatical rules to identify complex and previously unseen security entities. These approaches heavily rely on dictionaries and lack
+generalizability. With the advancements in deep learning and Natural full picture of the threat. Also, we collect a large amount of reports
+Language Processing (NLP) techniques, researchers endeavored to treat and explored the attack trends and attack organization proﬁling.
+CTI extraction as an information extraction task (Long et al., 2019; Liu
+et al., 2022; Wang et al., 2020), aiming to extract more intricate intelli- 2. Background
+gence entities such as attackers, tools, compromised organizations, etc.
+In addition to extracting intelligence entities, few researchers are focus-
+ 2.1. Motivation
+ing on attack graphs to achieve a global understanding of attacks (Guo
+et al., 2021; Li et al., 2022). The utilization of deep learning models
+has progressed from the initial Word2Vec+BiLSTM-based model to the In the process of human reading, ordinary individuals can only
+current pre-trained large language model, exempliﬁed by BERT. How- comprehend words based on their context, whereas experts can make
+ever, existing approaches encounter two limitations. First, whether it is inferences with pertinent cybersecurity knowledge while reading text
+Word2Vec or a pre-trained language model, they lack an understanding from the cybersecurity domain. Inspired by this, we propose the inserof the cybersecurity domain semantics. Second, current research mainly tion of knowledge triples into security text, incorporating knowledge
+focuses on extracting intelligence entities but seldom extracts relations information to enhance the representations whose goal is to leverbetween entities which could provide a comprehensive overview of se- age domain-speciﬁc knowledge and integrate it into the text, thereby
+curity intelligence. improving the understanding of cybersecurity text and ultimately em-
+ In response to these limitations, the paper introduces KnowCTI, a powering CTI extraction capabilities.
+knowledge-based Cyber Threat Intelligence Entity and Relation Extrac- Experts understand which products the CVE vulnerability may aﬀect
+tion method that incorporates relevant cybersecurity knowledge into and the attack methods attackers may employ, but models lack such an
+the text to enhance the comprehension of security-related content and ability. For instance, in the text “POWRUNER was delivered using a maextracts intelligence entities and relations that could be used to con- licious RTF ﬁle that exploited CVE-2017-0199”, it is describing how an
+struct threat intelligence graphs and have a full picture of threats. In or- attack tool named POWRUNER, utilizing the vulnerability, was transder to fuse cybersecurity knowledge, we collect structured cybersecurity mitted to a target system through a speciﬁc ﬁle. As illustrated in Fig. 1,
+data published on the Internet and extract knowledge triples to build experts reading this text will incorporate relevant knowledge to betthe cybersecurity knowledge base ﬁrst. Then we train cybersecurity- ter comprehend the text and infer that POWRUNER is an attack tool.
+aware knowledge embeddings on the cybersecurity knowledge base While a cybersecurity expert ﬁnds it easy to understand such text, maby introducing cybersecurity semantic information. For entity and re- chines struggle as they lack knowledge about CVE and RTF. Hence, the
+lation extraction, we design a CTI ontology that deﬁnes the concepts incorporation of security knowledge into the model will signiﬁcantly
+used in threat knowledge graphs and their relationships, providing a enhance performance. Achieving KnowCTI entails addressing the folframework for modeling entities and relationships. Secondly, we select lowing challenges.
+related knowledge triples from the cybersecurity knowledge base according to the given sentence and construct the sentence tree. Next,
+we consider the sentence tree as a graph and fuse the knowledge in- 2.1.1. Cybersecurity-aware knowledge embedding representations
+formation based on graph attention networks (GAT). Leveraging the Current methods train knowledge embeddings on knowledge bases
+integrated knowledge information, KnowCTI extracts intelligence enti- through translation-based or neural network methods (Ji et al., 2021).
+ties and the relation triples, which could be used to construct a threat However, these methods are task-independent and domain-irrelevant.
+intelligence graph to provide a comprehensive representation of secu- In other words, the embeddings generated by these methods lack
+rity intelligence. The contributions can be summarized as follows: cybersecurity-speciﬁc semantic information. To address this, we introduce cybersecurity-aware knowledge embedding representations for the
+ • We design a knowledge ontology about cyber threat intelligence security domain.
+ that could help operators have a full picture of cyber threats. Based To incorporate security domain semantic information into knowlon the ontology, we could construct the threat intelligence graph edge embeddings, it is essential to capture the text context in which the
+ by extracting these entities and relations. knowledge entity is situated. For each knowledge entity, we initially
+ • We propose to incorporate external cybersecurity knowledge into conduct a search for cybersecurity reports related to it using a search
+ the model to augment the understanding of cybersecurity text. We engine. Subsequently, we ﬁlter sentences containing the knowledge
+ propose the cybersecurity-aware knowledge embedding method to entity. To grasp the security context, we employ an additional cyberintroduce cybersecurity semantics to knowledge embedding. To security text binary classiﬁcation task, training a classiﬁcation model to
+ tackle the knowledge noise issue, we propose the knowledge de- discern whether the text is related to cybersecurity. So that we could
+ noising mechanism. obtain initial knowledge entity embeddings by the classiﬁcation model,
+ • Experimental results demonstrate that our method achieves great which would be used for training knowledge embeddings based on the
+ performance. KnowCTI could achieve a 90.16 F1 score on entity translation-based method. Consequently, we could train cybersecurityextraction and an 81.83 F1 score on relation extraction. Given a aware knowledge embeddings using cybersecurity-related reports. The
+ report, we could generate the threat intelligence graph to give a detailed introduction will be provided in Section 4.2.
+
+ 2
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+ Fig. 2. Knowledge insertion and sentence tree construction.
+
+2.1.2. Knowledge fusion into cybersecurity text
+ Eﬀective utilization of knowledge positively impacts the model’s
+performance. Conversely, improper use of knowledge can lead to counterproductive outcomes (Liu et al., 2020). The introduction of knowledge has the potential to bring knowledge noise comprising irrelevant
+triples or erroneous information, which may deviate from the original
+intended meaning of the text. An entity in the security knowledge base
+may possess multiple knowledge triples; however, not all of them contribute to text understanding. It is crucial for the model to select the
+most relevant knowledge triples to enhance text understanding. Fig. 3. Threat intelligence knowledge ontology.
+ The attention mechanism (Vaswani et al., 2017), inspired by human cognitive processes, enables models to dynamically concentrate UCO (Syed et al., 2016) in the ﬁeld of cyber threat intelligence. These
+on speciﬁc elements within input sequences, providing them with the standards are crucial for cybersecurity as they enable security teams to
+capability to comprehend complex dependencies and generate contex- understand and respond to threats more quickly. While constructing the
+tually relevant and coherent language. The attention mechanism has ontology, we fully consider these speciﬁcations. The ontology is shown
+played a pivotal role in catalyzing a paradigm shift in NLP and deep in Fig. 3.
+learning, particularly in the context of the Transformer architecture. Each threat entity contains the entity type and its deﬁnition. The
+For this reason, we employ attention mechanisms to denoise knowl- knowledge ontology proposed in this study is limited within CTI. In this
+edge and fuse knowledge. Since knowledge is typically represented by work, we design 13 entity types: Threat-Actor, Security-Team, Camtriples while text is sequential, knowledge embeddings and word em- paign, Attack-Method, Attack-Purpose, Vulnerability, Tool, Asset, Indibeddings have distinct embedding spaces leading to the heterogeneous cator, Location, Identity, Feature, Time, and the detailed explanation of
+embedding space problem, where we solve this problem by employing each entity is shown in Table 1. Each entity type may contain several
+linear transformation to convert them into the same space. sub-classes as needed. For example, “Identity” could contain “Individu-
+ We ﬁrst select related knowledge triples to construct the sentence als”, “Organizations”, “Groups” and “Industry”.
+tree as shown in Fig. 2 where we consider it as a graph intuitively. In a knowledge graph, each entity is a node and the relations be-
+Then we employ the GAT (Ren et al., 2023) to incorporate the knowl- tween entities construct the edge. Data pertaining to knowledge graphs
+edge node information into the cybersecurity text. The GAT introduced are expressed as (subject, relation, object) triples, denoted as (𝑠, 𝑟, 𝑜),
+a learnable attention mechanism that allocates weights between each signifying the existence of a relation denoted by the label 𝑟 between the
+source and target node, allowing nodes to decide which neighboring subject 𝑠 and object 𝑜 within the graph. Semantic relationships between
+node is more important when aggregating messages from local neigh- entities play a crucial role which could provide a comprehensive underbors, rather than aggregating information from all neighbors with the standing of a threat while isolated entities could not. Table 2 illustrates
+same weight. It can essentially choose important information fusion. the relations we design between entities. We design 11 relation types:
+The detailed introduction will be provided in Section 4.3. “locate-at”, “discover”, “launch”, “target”, “attack-purpose”, “suﬀer”,
+ “use”, “has”, “aﬀect”, “indicate”, “and active-time”. Each relation type
+2.2. Preliminaries may contain several sub-classes as needed, for example, “attack-target”
+ could contain “target-identity”, and “target-location”.
+ A singular threat indicator cannot provide a comprehensive understanding of the threat. The knowledge graph could oﬀer a comprehen- 3. Overview
+sive perspective on the threat landscape, enabling operators to observe
+the interconnections among various entities, including threat actors, in- KnowCTI consists of 4 major modules as shown in Fig. 4: Condicators, vulnerabilities, and incidents. This heightened visibility assists struct Cybersecurity Knowledge Base, Cybersecurity-aware Knowledge
+researchers in identifying patterns and comprehending the broader con- Embedding, Knowledge Fusion, and Decoder.
+text of threats. At the core of this knowledge graph lies the ontology To implement KnowCTI, the initial step is to construct a cybersecu-
+(Ren et al., 2022), serving as the foundational element for the struc- rity knowledge base. Fortunately, there is a wealth of structured cybertured representation and analysis of threat-related data. security data on the Internet, including sources like opencve (OpenCVE,
+ The ontology is meticulously crafted to reﬂect the intricacies of the 2023), malvuln (Malvuln, 2023), ATT&CK (ATT&CK, 2023), etc. We
+cyber threat intelligence domain. Entities and relations are designed to collect a large amount of data and extract triples to establish an initial
+oﬀer a structured framework for capturing, interpreting, and utilizing cybersecurity knowledge base.
+threat-related data. The selection of these elements draws from both To ensure cybersecurity semantics for entity embedding, we introindustry standards and the practical needs of cyber threat intelligence duce a cybersecurity-aware knowledge embedding training method.
+professionals. Initially, we obtain entity embedding representations from open cy-
+ In the realm of cybersecurity, there are many standard speciﬁca- bersecurity text data containing the entity. Subsequently, we train the
+tions such as Common Attack Pattern Enumerations and Classiﬁca- embedding representations on the knowledge base using translationtions (CAPEC) (CAPEC, 2023), Common Weakness Enumeration (CWE) based methods.
+(CWE, 2023), Common Vulnerabilities and Exposures (CVE) (CVE, In the knowledge fusion stage, we ﬁrst match related knowledge
+2023), etc. The representative speciﬁcations are STIX (STIX, 2023), and triples in the knowledge base and select the knowledge triples with
+
+ 3
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+ Table 1
+ Entity type and explanation.
+
+ Entity Type Explanation
+
+ Threat-Actor Attacker, maybe individuals, groups, or organizations.
+ Security-Team Security team, organization or institution.
+ Campaign The attack incident launched by threat actor.
+ Attack-Method Attack methods or ways that adversaries attempt to comprise targets.
+ Attack-Purpose The purpose of the attack or campaign the threat actor launched.
+ Vulnerability Vulnerability that could be used by hackers to comprise the system.
+ Tool Tools used by attackers.
+ Asset Assets, products or software that would be compromised.
+ Indicator Indicators of comprise, such as IP, domain, hash, etc.
+ Location Geographic location, which may indicate the location of the attacker or the target location of the attack.
+ Identity Target individuals, organizations, groups, or industry.
+ Feature The features of vulnerability, or attack method.
+ Time Timestamps.
+
+ Table 2
+ Relationship between entities and explanation.
+
+ Subject Relationship Object Explanation
+
+ Security-Team discover Campaign, Threat-Actor The security team discovers an attack campaign or a threat actor
+ carrying out an attack behavior.
+ Campaign active-time Time Activity time of the campaign.
+ Threat-Actor active-time Time Activity time of threat actor.
+ Threat-Actor locate-at Location The threat actor is located at the related Location.
+ Threat-Actor target Identity, Location The threat actor targets the type of victims and the related location.
+ Threat-Actor use Tool, Vulnerability, The related attack method, vulnerability, or tool are used by the
+ Attack-Method threat actor in a campaign.
+ Threat-Actor launch Campaign Threat actor launch the attack campaign.
+ Threat-Actor attack-purpose Attack-Purpose The attack purpose of the threat actor in the campaign.
+ Vulnerability has Feature The characteristics of this vulnerability that would be used by
+ threat actors.
+ Vulnerability aﬀect Asset Assets aﬀected by the vulnerability.
+ Indicator indicate Threat-Actor, Tool, The indicator of compromise could detect evidence Threat-Actor,
+ Attack-method Attack-Pattern, malicious Tools.
+ Identity locate-at location The identity is located at the related location.
+ Asset suﬀer Attack-Method The attack method that fragile assets may suﬀer.
+ Attack-method has Feature The characteristics of the attack method.
+ Tool use Attack-Method, Vulnerability Threat actors use tools to exploit vulnerability or attack method in a
+ campaign.
+ Vulnerability suﬀer Attack-Method The vulnerability may be subject to some attack method.
+
+similar semantics. Then we construct the sentence tree with object enti- reliable information about vulnerabilities, threat actors, attack techties in triples as leaf nodes. Then we utilize the matrix to represent the niques, and other cybersecurity concepts. The data sources could be
+sentence tree and use GAT to fuse knowledge information. divided into three types: 1) open-source database, such as OpenCVE
+ In the decoder stage, we employ the sequence labeling method to (OpenCVE, 2023), ATT&CK (ATT&CK, 2023), CAPEC (CAPEC, 2023),
+extract CTI entities, treating relation extraction as a classiﬁcation task. etc; 2) structured data on websites, such as Malvuln (Malvuln, 2023),
+In the end, we generate a threat knowledge graph according to the Threat Actor Map (aptmap, 2023, etc; 3) structured data on the open
+extracted entities and relations, facilitating a holistic view of the cyber- source platform github. Each data source has a speciﬁc data collection
+security landscape. mechanism, given that we gather data from various sources.
+ After collecting the data, it is necessary to analyze each data format
+4. Methodology because diﬀerent data sources have various data presentations. Next,
+ we parse the collected data, extracting cybersecurity entities and their
+ In this section, we will provide a detailed introduction to the ma- relations to generate knowledge triples. Additionally, we unify relationjor modules of our approach. First, we provide an introduction to the ships from diﬀerent sources that convey the same meaning. Fig. 5 shows
+construction of the initial knowledge base from open-source structural how we extract triples from structured data of Malvuln (Malvuln, 2023)
+data. Subsequently, we oﬀer a detailed introduction to the training of which introduces a threat AtomSilo including threat type, vulnerability
+cybersecurity-aware knowledge embeddings. Following that, we will type, ﬁle type, etc. We consider the AtomSilo as the subject entity, and
+describe the CTI extraction module, with a focus on knowledge fusion the type content as the object entity and obtain the relations according
+technology. to the type. Lastly, we identify and eliminate duplicate triples, considering that knowledge data collected from diﬀerent sources may contain
+4.1. Construct knowledge base the same knowledge triple with varying descriptions.
+
+ Security teams frequently post summarized structural cybersecurity- 4.2. Cybersecurity-aware knowledge embeddings
+related information online which represents knowledge in essence. Consequently, we can construct an initial cybersecurity knowledge base Training knowledge embedding representation is crucial for knowlusing open-source structured cybersecurity data. edge representation. An eﬀective embedding representation signiﬁ-
+ The ﬁrst step in constructing the cybersecurity knowledge base is to cantly improves model performance. To incorporate cybersecurity secollect structured data from various sources, which provide rich and mantics into embedding representations, we introduce an additional
+
+ 4
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+Fig. 4. The overview of KnowCTI consists of 4 modules. (1) Construct the cybersecurity knowledge base from open-source structure data. (2) Training cybersecurityaware knowledge embeddings on the cybersecurity knowledge base by introducing cybersecurity semantics. (3) Construct the sentence tree according to knowledge
+triples and fuse knowledge information. (4) The decoder module which extracts entities and relation triples that could be used for knowledge graph construction.
+
+ for each knowledge entity. Finally, we utilize the mean-pooling of 𝑒𝑒𝑚𝑏𝑖
+ to compute the ﬁnal knowledge entity embeddings 𝑒𝑒𝑚𝑏 :
+
+ 𝑒𝑒𝑚𝑏 = 𝑓𝑚𝑒𝑎𝑛 (𝑒𝑒𝑚𝑏0 , ..., 𝑒𝑒𝑚𝑏𝑛 ) (3)
+ We make the 𝑒𝑒𝑚𝑏 as the knowledge initial representation.
+ Then we employ translation-based methods (Bordes et al., 2013;
+ Wang et al., 2014; Ji et al., 2015) to train the knowledge embedding
+ using the 𝑒𝑒𝑚𝑏 as the initial embeddings. Translation-based methods
+ have been inﬂuential in the ﬁeld of knowledge graph embedding which
+ is simple but eﬀective. This type of translation distance-based model
+ usually considers the rationality of facts as the distance between two
+ entities after translating the relationship. It uses margin loss as the object:
+ Fig. 5. Extract triples from open structured data. ∑ ∑
+ 𝑙𝑜𝑠𝑠𝑘𝑒 = [𝛾 + 𝑑(𝑠 + 𝑟, 𝑜) − 𝑑(𝑠′ + 𝑟, 𝑜′ )]+ (4)
+ (𝑠,𝑟,𝑜)∈𝐾 (𝑠′ ,𝑟,𝑜′ )∈𝐾 ′
+ (𝑠,𝑟,𝑜)
+cybersecurity text identiﬁcation task to train the knowledge embeddings based on cybersecurity-related reports. where [𝑥]+ represents the positive part of 𝑥, (𝑠, 𝑟, 𝑜) is the triple in
+ For a given knowledge entity 𝑒, the initial step is to search for entity- knowledge base 𝐾 , 𝛾 > 0 is a margin hyperparameter. The corrupted
+related documents 𝑃 in the browser. We retain the top 10 documents triples are constructed by:
+assuming these are the most relevant. In most cases, sentences where
+the entity is located are security-related. This is because most security- 𝐾(𝑠,𝑟,𝑜)
+ ′
+ = {(𝑠′ , 𝑟, 𝑜)|𝑠′ ∈ 𝐾} ∪ {(𝑠, 𝑟, 𝑜′ )|𝑜′ ∈ 𝐾} (5)
+related entities are unique to the realm of cybersecurity. Subsequently,
+we ﬁlter at most 10 sentences containing the entity as 𝑆𝑒 to enrich the 4.3. Knowledge fusion
+semantic information.
+ We train a classiﬁcation model by ﬁne-tuning BERT (Devlin et al., 4.3.1. Knowledge denoise and insertion
+2018) model consistent with the rest to determine whether the text is To ﬁlter appropriate knowledge entities from a vast array of options,
+related to cybersecurity or not. Therefore, We could obtain entity em- we employ a simple yet eﬀective method based on security entity feabeddings from the ﬁnetuned model, if the text is cybersecurity-related. tures. Security entities frequently possess multiple variants, each with
+For each sentence, we use it as the input for the ﬁnetuned BERT model. diﬀerent connectors and suﬃxes but sharing the same backbone string.
+Initially, we encode each sentence 𝑠𝑖 and acquire the embeddings of Initially, we eliminate special characters and spaces, retain only aleach token. Next, we utilize the [CLS] embedding for binary classiﬁca- phabets and digits, and calculate the maximum common substring to
+tion to determine the security relevance of the sentence. ascertain if the text contains the target entity. We consider the ratio of
+ the maximum common substring to the entity length, denoted as 𝛼 . If 𝛼
+𝑡0 , 𝑡1 , ..., 𝑡𝑛 = 𝐵𝐸𝑅𝑇 (𝑠𝑖 ) (1) exceeds 0.8, as determined through experiments, we conclude that the
+ text contains the target entity. Once the existence of an entity is con-
+𝑜 = 𝜎(𝑊 𝑡0 + 𝑏) (2)
+ ﬁrmed, we utilize a string fuzzy match method to identify the closest
+where 𝑡0 is the embedding of the special token [CLS], and 𝜎 is the triples and determine the insertion position. In this step, we employ an
+sigmoid activation function. If 𝑜 is greater than 0.5, we think the sen- n-gram approach, where n is determined by the provided knowledge
+tence is security-related and reserves the entity embeddings. BERT uses subject entity, and calculate the match score between knowledge and
+WordPiece tokenization, which may break a word into a few tokens the target n-gram. The target entity is determined by the n-gram that
+and generate diﬀerent embeddings for each token. In this work, we achieves the highest score.
+only adopt the ﬁrst token as the word embeddings. Also, a knowledge The fuzzy match method may bring incorrect knowledge triples,
+entity may contain multiple words. We use max-pooling to compute leading to noise. After obtaining all candidate knowledge triples, we
+knowledge entity embeddings 𝑒𝑒𝑚𝑏𝑖 in 𝑠𝑖 . We have multiple sentences encode the knowledge subject embeddings as 𝑘 = [𝑘𝑠0 , 𝑘𝑠1 , ..., 𝑘𝑠𝑚 ]. We
+
+ 5
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+ Fig. 6. Knowledge fusion architecture. We employ the graph attention networks to fuse knowledge information.
+
+further select relevant knowledge triples by a selective module em- As nodes in graph 𝐺 are composed of words in the text and object
+ploying an attention mechanism. We evaluate the relevance of each entities in the knowledge triples, the node representation is divided into
+knowledge subject entity for the target context. We encode the text with two parts. We encode the text by ﬁnetuning BERT model which is the
+ﬁnetuning BERT model and use the special token [𝐶𝐿𝑆] as the con- same one used in the knowledge denoise part, and get the representatext embeddings and compute the relevance. To more fully represent tion 𝑡𝑖 of each text node; we obtain the object entity node embedding
+the features of nodes and maintain spatial feature consistency, feature 𝑒𝑒𝑚𝑏 by cybersecurity-aware knowledge embeddings. The features of
+transformations are performed. nodes are represented as ℎ = {𝑡1 , 𝑡2 , ..., 𝑡𝑛 , 𝑒𝑒𝑚𝑏1 , 𝑒𝑒𝑚𝑏2 , ..., 𝑒𝑒𝑚𝑏𝑚 }.
+ To more fully represent the features of nodes and maintain spatial
+𝑘 = 𝑘𝑊 , 𝑐 = 𝑐𝑊 (6) feature consistency, feature transformations ℎ𝑖 = 𝑊 ℎ𝑖 are performed
+ using the same weight 𝑊 as in Eq. (6). Then we compute the attention
+where 𝑊 is the weight for transformation, 𝑘 is the knowledge subject
+ weights between two nodes:
+embedding, 𝑐 is the [𝐶𝐿𝑆] embedding.
+ We employ the scaled dot-product attention function to calculate the
+ 𝑒𝑖𝑗 = 𝐿𝑒𝑎𝑘𝑦𝑅𝑒𝐿𝑈 (𝑊𝑔 ℎ𝑖 , 𝑊𝑔 ℎ𝑗 ) (10)
+attention score 𝑎:
+ 𝛼𝑖𝑗 = 𝑠𝑜𝑓 𝑡𝑚𝑎𝑥(𝑒𝑖𝑗 ) (11)
+𝑎 = 𝐴𝑡𝑡𝑒𝑛𝑡𝑖𝑜𝑛(𝑄𝑊𝑎 , 𝐾𝑊𝑎 , 𝑉 𝑊𝑎 ) (7)
+ Finally, the normalized attention coeﬃcient is linearly combined
+ 𝑄𝐾 𝑇 with its corresponding features to serve as the ﬁnal knowledge-aware
+𝐴𝑡𝑡𝑒𝑛𝑡𝑖𝑜𝑛(𝑄, 𝐾, 𝑉 ) = 𝑠𝑜𝑓 𝑡𝑚𝑎𝑥( √ )𝑉 (8)
+ 𝑑𝑘 representation ℎ̃𝑖 for each node:
+
+where 𝑄 = 𝑘 and 𝐾, 𝑉 = 𝑐 . Then we apply a gating mechanism to select ∑
+ ℎ̃𝑖 = 𝜎( (𝛼𝑖𝑗 𝑊𝑔 ℎ̃𝑗 ) (12)
+the relevant knowledge and discard irrelevant knowledge:
+
+𝜇 = 𝜎(𝑎) (9) 4.4. Decoder and graph construction
+
+ In the gating mechanism, we use the sigmoid function to determine We consider CTI entity extraction as a sequence tagging task and
+the importance of each triple. The triples with high gating values are consider relation extraction as a classiﬁcation task and these two tasks
+considered relevant, while those with low values are ﬁltered out. Then, are trained jointly. After obtaining the knowledge-aware representation
+we construct the sentence tree, according to the sentence and the knowl- of each token embedding, we pass it to a conditional random ﬁeld (CRF)
+edge triples, as shown in Fig. 2. layer for predicting the label 𝑜𝑖 and the highest score is considered as
+ the prediction label:
+4.3.2. Knowledge fusion
+ Determining which knowledge triple to use for even the correct 𝑦̂𝑖 = 𝑎𝑟𝑔𝑚𝑎𝑥(𝑜𝑖 ) (13)
+entities is challenging. Ideally, diﬀerent knowledge triples should be
+ During the training, we optimize the model by minimizing the crossapplied under diﬀerent semantics. Therefore, using irrelevant knowlentropy loss in the named entity task and obtain the loss 𝑙𝑜𝑠𝑠1 .
+edge triples will inevitably introduce noise and reduce the precision of
+ For the identiﬁed entities, we combine them in pairs. For each pair,
+the threat intelligence extraction. To address this challenge, we employ
+ we represent it by subtracting the subject entity embedding ℎ𝑒𝑛𝑡1 from
+Graph Attention Networks (GAT) (Velickovic et al., 2017) to integrate
+ the object entity embedding ℎ𝑒𝑛𝑡2 . As an entity may contain multiple toknowledge into text, leveraging the capability to fuse knowledge based
+ kens, we apply mean-pooling to the embeddings of tokens as the entity
+on relevance weights between nodes.
+ embedding ℎ𝑒𝑛𝑡 .
+ We convert the sentence tree into a graph 𝐺 , representing words
+and knowledge entities as nodes and the relations as edges. For a graph
+ ℎ𝑟 = ℎ𝑒𝑛𝑡2 − ℎ𝑒𝑛𝑡1 (14)
+with 𝑛 nodes, we construct the symmetric adjacency matrix 𝑀 ∈ ℝ𝑛×𝑛
+to represent the graph. If there exists an edge between node 𝑖 and node Then we classify each pair by softmax activation after the FFNN:
+𝑗 , 𝑀𝑖𝑗 = 1; otherwise, 𝑀𝑖𝑗 = 0. To preserve node information, self-loops
+are added to each node, represented as 𝑀𝑖𝑖 = 1. 𝑟𝑜𝑖 = 𝑠𝑜𝑓 𝑡𝑚𝑎𝑥(𝐹 𝐹 𝑁𝑁(ℎ𝑟 )) (15)
+
+ 6
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+ We take the label with the highest probability as the prediction la- where 𝑆 is the set of triples, 𝕀 is the indicator function (if the condition
+bel: is true, the function value is 1, otherwise 0), and 𝑟𝑎𝑛𝑘𝑖 is the predictive
+ ranking of the 𝑖𝑡ℎ triple.
+𝑟̂𝑖 = 𝑎𝑟𝑔𝑚𝑎𝑥(𝑟𝑜𝑖 ) (16) In this work, we use hit@10, hit@3, hit@1 as the indicator to evaluate knowledge graph embedding. The larger the hit@n indicator, the
+ During the training, we also optimize the model with a cross-entropy
+ better.
+loss in the relation classiﬁcation task and obtain the loss 𝑙𝑜𝑠𝑠2 .
+ MeanRank is another evaluation method of knowledge graph em-
+ Finally, we train the model jointly:
+ bedding which represents the average ranking score of correct entities.
+𝑙𝑜𝑠𝑠 = 𝑙𝑜𝑠𝑠1 + 𝜆𝑙𝑜𝑠𝑠2 (17) A smaller MeanRank value indicates a higher ranking and better entity
+ vectorization results.
+where 𝜆 is the weight parameter.
+ |𝑆|
+ 1 ∑
+ 𝑀𝑅 = 𝑟𝑎𝑛𝑘𝑖 (22)
+5. Experiments |𝑆| 𝑖=1
+ where the symbolic meaning is the same as above.
+ In this section, we introduce the datasets and conduct comprehensive experiments to demonstrate the eﬀectiveness of our proposed
+ 5.3. Settings
+model KnowCTI. In addition, we crawled more than 100,000 reports
+and analyzed top-k attack method trends over the past two decades.
+ In this work, we use the pretrained BERT model as the backbone
+Also, we presented a case study of attack organization proﬁling and a
+ model for ﬁne-tuning. We use grid search to select appropriate hypercase study of threat intelligence graph generation.
+ parameters. In the knowledge embedding training stage, the embedding
+ dim is set to 768 the same as BERT, the margin is set to 10. In the CTI
+5.1. Datasets extraction stage, the batch size is 32. In the denoising module, we employ a multi-head attention mechanism and the number of heads is 8,
+ We collect structural data from multiple sources and construct the and the dropout is 0.1. In the GAT module, we also use multi-head atinitial knowledge base as introduced in Section 4.1. The total num- tention and set the number of heads to 8. The dropout is set to 0.5
+ber of triples is 53,713, and the total number of entities is 14,450. and the 𝛼 in LeakyReLU is set to 0.2. We optimize our model using the
+We collected threat data from a set of sources automatically, including Adam optimizer with a learning rate of 5e-5. Furthermore, we incorsecurity blogs, forum posts, etc. And ﬁnally, 130,424 security-related porate a learning rate scheduler employing a cosine strategy, and we
+data have been collected. To train and evaluate KnowCTI, we invested apply a weight decay of 0.01.
+5 cybersecurity graduate students for the annotation of the data. For
+security-related text classiﬁcation, we annotated 4,896 instances. For 5.4. Main results
+CTI extraction, we annotated 8,872 instances with 28,347 entities and
+13,721 triples, according to the ontology we designed. In order to understand the eﬀectiveness of KnowCTI, we compare
+ our methods with some classic methods that do not fuse knowledge.
+5.2. Evaluation metrics Here we give a brief introduction of them as follows:
+
+ We use Precision(P), Recall(R), and F1 score with macro-average to • BiLSTM-CRF (Lample et al., 2016): It is a classic and eﬀective
+evaluate the performance of entity extraction and relation extraction in method for performing NER without considering external knowl-
+KnowCTI. A triple is considered to be correctly extracted if and only edge incorporation. The BiLSTM component captures the sequenif its relation type and both entities are correctly matched. Equations tial dependencies among input tokens, while the CRF component
+show the calculation method of macro-average: facilitates optimal and cohesive prediction of all labels within the
+ sentence.
+ 𝑇𝑃
+𝑃= (18) • BERT-CRF (Devlin et al., 2018): BERT eﬀectively extracts implicit
+ 𝑇𝑃 + 𝐹𝑃
+ language information from unlabeled text, demonstrating excepwhere 𝑇 𝑃 represents true positive classiﬁcations, 𝐹 𝑃 represents false
+ tional performance across various NLP tasks, including Named Enpositive classiﬁcations. The precision measures the capability of correct
+ tity Recognition (NER). In this baseline, we ﬁnetune BERT on CTI
+predictions among all positive predictions identiﬁed by the model.
+ extraction task, and a CRF module is applied as the top layer for
+ 𝑇𝑃 inference.
+𝑅= (19)
+ 𝑇𝑃 + 𝐹𝑁 • BERT-BiLSTM-CRF (Dai et al., 2019): This model combines BERT,
+where 𝐹 𝑁 represents false negative classiﬁcations. Recall indicates the BiLSTM, and CRF. BiLSTM layer follows by BERT, eﬀectively capcapability of the model to identify positive samples. turing sequential dependencies among input tokens and enhancing
+ the model’s contextual understanding. This integrated architecture
+ 2∗𝑃 ∗𝑅 leverages the complementary strengths of each component.
+𝐹1 = (20)
+ 𝑃 +𝑅 • NER4CTI (Liu et al., 2022): NER4CTI is the state-of-the-art method
+F1 score is the harmonic mean of Precision and Recall, taking into ac- focusing on cybersecurity threat intelligence entity extraction. It
+count the results of both. After obtaining the P, R, and F1 of each type, proposed a semantic augmentation approach that integrates varwe average them to get the macro F1 score. ious linguistic features to enhance the representations of input
+ hit@n is commonly used to evaluate the performance of the knowl- tokens and improve the NER performance.
+edge graph embedding. It focuses on the top n predictions made by the
+model and assesses whether the ultimate correct entity is present within Table 3 shows the f1 performance of diﬀerent methods. The results
+this set of top n candidates, i.e. the proportion of correct entities ranked demonstrate the eﬀectiveness of KnowCTI as it can reach the best perin the top n. It could be calculated by: formance indicating that the fusion of knowledge could enhance the
+ models’ understanding of cybersecurity domain text. The results show
+ |𝑆|
+ 1 ∑ that ﬁnetuned BERT model performs better than the BiLSTM model. The
+ℎ𝑖𝑡@𝑛 = 𝕀(𝑟𝑎𝑛𝑘𝑖 ≤ 𝑛) (21)
+ |𝑆| 𝑖=1 performance of the ﬁnetuned BERT model increases the BiLSTM model
+
+ 7
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+ Table 3 Table 4
+ Performance of diﬀerent models on CTI extraction. The performance of diﬀerent knowledge embedding
+ methods.
+ Entity Relation
+ Models
+ P R F1 P R F1 Methods MR hit@10 hit@3 hit@1
+
+ BiLSTM-CRF 70.04 69.98 70.01 48.35 52.68 50.42 TransE 215.41 81.00 74.25 60.80
+ BERT-CRF 78.87 77.66 78.26 64.95 66.06 65.50 Cyber-TransE 215.91 81.30 74.50 61.05
+ BERT-BiLSTM-CRF 80.55 80.27 80.41 68.92 67.83 68.37 TransH 221.96 81.05 74.55 60.05
+ NER4CTI 84.53 84.23 84.38 - - - Cyber-TransH 206.03 81.25 74.65 61.50
+ KnowCTI 92.96 87.52 90.16 78.43 85.54 81.83 TransD 218.60 81.15 74.50 60.90
+ Cyber-TransD 170.02 81.75 74.75 62.35
+
+by 8.15. Because BERT is pretrained on a large corpus having better pre- Table 5
+sentation ability and it is also easy to ﬁnetune to the downstream task. The performance of diﬀerent knowledge embedding methods on CTI
+In KnowCTI, we use BERT as the backbone model. Compared to the extraction.
+BERT-BiLSTM-CRF model, KnowCTI has increased by 9.75 performing Entity Relation
+ Methods
+best. Because BERT is pretrained on the general corpus lacking cyberse-
+ P R F1 P R F1
+curity semantics, the introduction of external knowledge could augment
+ TransE 90.34 88.93 89.32 77.47 83.00 80.14
+the cybersecurity semantics which could enhance the representations of
+ Cyber-TransE 91.63 87.99 89.61 76.57 86.25 81.12
+cybersecurity text and then improve the model’s performance. We also TransH 90.68 88.32 89.48 77.80 82.41 80.04
+compare the entity extraction performance with NER4CTI, and increase Cyber-TransH 91.17 88.24 89.68 78.41 85.24 81.68
+by 5.78. Results show that the performance of relation extraction is TransD 90.32 88.46 89.38 79.10 83.42 81.20
+worse than entity extraction generally, perhaps due to error propaga- Cyber-TransD 92.96 87.52 90.16 78.43 85.54 81.83
+
+tion. Because entity extraction errors will inevitably lead to incorrect
+relation classiﬁcation. Table 6
+ Performance of module deletion.
+5.5. Ablation study
+ Entity Relation
+ Methods
+ P R F1 P R F1
+ To understand the contribution of diﬀerent modules, we conducted
+several ablation studies. In this section, we studied the role of knowl- KnowCTI 92.96 87.52 90.16 78.43 85.54 81.83
+ wo knowledge denoise 87.80 85.02 86.39 77.73 81.48 79.56
+edge fusion and the eﬀect of diﬀerent Knowledge representations.
+ wo fuzzy match 81.72 77.11 79.35 22.55 24.46 23.47
+ BERT 78.87 77.66 78.26 64.95 66.06 65.50
+5.5.1. Knowledge embedding evaluation
+ In this section, we study the performance of diﬀerent translationbased knowledge embedding methods and the eﬀectiveness of cyber- 5.5.2. Knowledge fusion performance
+security-aware knowledge embeddings. We compare the TransE, TransD, According to the experiment results in Table 5, we choose Cyberand TransH methods that train on knowledge base only, and the TransD method in KnowCTI. In this section, we conduct an ablation
+cybersecurity-aware TransE (Abbreviated as Cyber-TransE), cyber- study to understand the eﬀectiveness of each module in knowledge fusecurity-aware TransD (Abbreviated as Cyber-TransD), cybersecurity- sion, and the results are shown in Table 6. We remove each of them to
+ observe their impact on the model.
+aware TransH (Abbreviated as Cyber-TransH) that train on knowledge
+ First, we remove the knowledge denoise module, which reﬁnes the
+base using the cybersecurity entity embeddings. We evaluate the perforknowledge triples that are inserted into the text, and the performance
+mance of knowledge embedding, and the results are shown in Table 4.
+ drops by 3.61. The results show that noisy knowledge triples will drop
+Then for each method, we evaluate the performance of CTI extracthe performance of the model. Second, we remove the fuzzy search
+tion and choose the best of them as the ﬁnal method we use. The
+ module and use the strict match search method. This drops a lot and
+results are shown in Table 5. It should be noted that the F1 score for
+ gets the worst even worse than the base BERT model on relation extracsecurity-related classiﬁcation during training the cybersecurity-aware
+ tion as shown in the results. It may be because open texts are casual,
+knowledge embeddings reached 98.68.
+ the strict knowledge is not often matched in the open text, causing the
+ As shown in Table 4, we ﬁnd the cybersecurity-aware translationknowledge fusion module not to learn well.
+based methods achieve a little better performance generally. The Cyber-
+TransD has the best performance since it introduces more parameters
+ 5.6. Case study
+to map vectors. On the other hand, this method also has the highest
+cost. Results in Table 5 show that the Cyber-Trans methods achieve In this section, we collect 130,424 open reports from 2002-2022
+better performance on CTI extraction than the Trans methods which and the number of reports every year are shown in Fig. 8. Then we
+demonstrates the eﬀectiveness of the cybersecurity-aware knowledge employ KnowCTI to extract entities and relation triples from the reports.
+embedding. The average improvement of Cyber-Trans methods on CTI Finally, we extract 2,074,149 entities and 912,521 relation triples. From
+entity extraction is 0.42, and 1.08 on CTI relation extraction. The Cyber- the extracted entities and relation triples, we could conduct statistical
+Trans methods only have a slight improvement over the Trans methods analysis, explore security knowledge, and generate threat graphs.
+on CTI entity extraction and the main improvement of Cyber-Trans
+methods lies in precision. We have found that the improvement in the 5.6.1. Statistical analysis of attack methods
+precision of CTI entity extraction will lead to an increase in the recall In this part, we analyzed the extracted entities, mainly focusing on
+rate of relation extraction. Also, the method that has better performance the most commonly used attack methods. Among the extracted entities,
+on knowledge embedding could achieve better performance on CTI ex- the top-5 attack methods are dos/ddos, phishing, malware, sql injection,
+traction. We could see that the Cyber-TransD method gets the highest ransomware. Then we statistically analyzed the changes in attack trends
+score 81.75 on hit@10, 170.02 on MR and it also gets the highest f1 every year, as shown in the Fig. 7. In addition, due to the popularity of
+score on CTI extraction 90.16 on entity extraction, and 81.83 on rela- supply chain attacks in recent years, we have also conducted a statistical
+tion extraction. analysis of supply chain attack trends.
+
+ 8
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+ and “vulnerabilities” as Vulnerability type, “Hikvision surveillance cameras” and “Hikvision cameras” as Asset type, “command injection
+ ﬂaw” as Attack-Method, “Chinese” and “Russian” as Location, “MIS-
+ SION2025/APT41, APT10” and “threat actor groups” as Threat-Actor.
+ KnowCTI identiﬁes the relation triples as (‘CVE-2021-36260’, ‘aﬀect’,
+ ‘Hikvision cameras’), (‘Hikvision surveillance cameras’, ‘suﬀer’, ‘command injection ﬂaw’), (‘MISSION2025/APT41, APT10’, ‘locate-at’, ‘Chinese’), (‘MISSION2025/APT41, APT10’, ‘use’, ‘vulnerabilities’), (‘threat
+ actor groups’, ‘locate-at’, ‘Russian’), (‘threat actor groups’, ‘use’, ‘vulnerabilities’). We could extract the entities and relations eﬀectively.
+ The “Hikvision surveillance cameras” and “Hikvision cameras” describe
+ the same entity; “CVE-2021-36260” and “vulnerabilities” both point
+ to the same entity. We align the entities by rules and construct the
+ graph according to the relation triples. Another case is shown in Fig. 10.
+ KnowCTI extracts the Threat-Actor entity “W3LL”. From the graph, we
+ can see that W3LL has been active since 2017 until now. It mainly uses
+ phishing kits to launch attacks on Microsoft 365 business email accounts
+ in region United States, Australia, and Europe, using proxy attacks and
+ bypassing MFA attack methods. The cases demonstrate that the graph
+Fig. 7. Statistics of attack trends. The horizontal axis represents the year, and generated by KnowCTI could give a global picture of threats, and also
+the vertical axis represents the reported quantity.
+ demonstrate the eﬀectiveness and generalization of our method.
+
+ 5.6.3. Attack organization portrait
+ Since we have extracted a large number of relation triples, we can
+ mine information about attack organizations and proﬁle them. Taking the hack organization “DarkHotel” as an example, for every triple
+ possessing an identical relation to that of the DarkHotel subject, the
+ relevant objects are merged into a list. The extracted relation triples related to DarkHotel include attack targets, attack methods, active time,
+ attack purpose, and tools they used. After deduplication, we summarize
+ the organization information in Table 7.
+ We could see that DarkHotel has been active since 2007 and is still
+ active today. The main attack targets of DarkHotel are senior executives
+ and luxury hotels where we ﬁnd that there are many related entities
+ such as “business executives”, “traveling executives”, and “luxury hotels”, etc, in the extracted triples that have target relation. In addition,
+ since the occurrence of COVID-19, the health organization has also
+ become the target of Darkhotel. Darkhotel mainly uses spearphishing
+ attack methods to deliver malicious code. According to the tools they
+ used, we know that they may inject the hotel wiﬁ networks and de-
+ Fig. 8. Total reports per year from 2002 to 2022. liver malware, spyware, or malicious documents. And the main attack
+ purpose is to steal information. We compared our proﬁle results with
+ Wikipedia data entries (Wikipedia, 2023) and found that our proﬁle is
+ According to statistical data, we found that dos/ddos attacks began
+ generally correct. This also conﬁrms the eﬀectiveness of our method.
+to become popular after 2010 and have continued to this day, while
+ransomware attacks began to gradually emerge after 2010 and rose after 2015. SQL injection attacks were quite popular from 2008 to 2012 6. Limitation and future work
+and the number of sql injection attacks has decreased in recent years.
+Malware attacks and phishing attacks are on the rise as a whole, and the 6.1. Entity alignment
+number of attacks will be the highest in 2020-2022, which may also be
+related to the COVID-19 epidemic with the increasing demand for online oﬃce work. The number of supply chain attacks is relatively small, KnowCTI mainly performs threat intelligence entity and relation
+but with the outbreak of the SolarWinds incident in 2021, supply chain extraction tasks, without entity alignment function. In this work, we
+attacks have also become hot, and the number of related attack reports employ simple entity alignment methods when constructing the threat
+has reached its peak in 2021. intelligence graph. However, the ability of this method is relatively limited. We will address this issue in the future. Entity alignment is crucial
+5.6.2. Threat intelligence graph for knowledge graph construction. In the ﬁeld of NLP, the goal of en-
+ We randomly take two open reports (Nelson, 2022; scmagazine, tity alignment is to link entities from diﬀerent knowledge graphs or
+2023) as examples to display the eﬀectiveness of our method. For each databases that refer to the same real-world objects or concepts, even
+report, we utilize KnowCTI to extract threat entities and relations and when these entities are expressed in diﬀerent languages or come from
+generate a threat intelligence graph. On the other hand, we construct diﬀerent sources. We have extracted a large number of entity and relathe graph manually, which is extracted by 5 members of our team tion triples, and after entity alignment, we can construct a large-scale
+and integrated together. As shown in Fig. 9, the left part is gener- intelligence knowledge graph that can be used to comprehensively unated by KnowCTI, and the right part is constructed by team members. derstand the threat ecosystem and make threat predictions (Rastogi et
+In the report (Nelson, 2022), KnowCTI identiﬁes “CVE-2021-36260” al., 2021).
+
+ 9
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+Fig. 9. A case in which KnowCTI generates the knowledge graph from the report in which disclosed attackers exploited the CVE-2021-36260 vulnerability to access
+Hikvision cameras.
+
+ Fig. 10. KnowCTI generates the intelligence graph of the report titled “Microsoft 365 accounts targeted by W3LL threat group”.
+
+ Table 7
+ The portrait information of the DarkHotel attack organization.
+
+ DarkHotel
+ Information Details
+
+ active time 2007, 2013, 2014, 2016, March 2018, 2020, 2022
+ attack purpose steal information, cyber espionage campaign
+ attack method uploading malicious code, spearphishing
+ attack target executives, luxury hotels, telecommunications, Health Organization, agencies
+ tools WiFi networks, Konni malware, P2P, malware, oﬃce documents, keylogger, Adobe Flash, zero-day vulnerability
+
+6.2. Deep analysis and targeted defense 2019). We will explore automated intelligence-driven security strategy
+ generation and development in future work, including access control
+ Intelligence is valuable for targeted network defense, so further data conﬁguration, attack detection rules, etc.
+analysis and mining are necessary. Intuitively, according to the attack method trends, security researchers could strengthen defense in a 7. Related work
+targeted manner to reduce the risk of attack. Attacks caused by vulnerability exploitation are usually related to speciﬁc products or software. 7.1. Knowledge fusion work
+If there are such products or software in the system, targeted defense
+is needed. Otherwise, there is no need to pay attention to this intelli- Incorporating knowledge information to enhance word representagence. Therefore, the extracted asset entities related to vulnerabilities tions (Peters et al., 2019; Liu et al., 2020; Yuan et al., 2021; Faldu et
+can be used for targeted defense. Furthermore, the extracted vulnerabil- al., 2021) and augment the performance of downstream tasks (Chawla
+ity features are important for automated targeted defense (Feng et al., et al., 2021; He et al., 2020; Nie et al., 2021; Agarwal et al., 2023)
+
+ 10
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+has been a hot research topic in NLP. KnowBert (Peters et al., 2019) is more accurate knowledge triples by an attention mechanism with a
+an extension of BERT aiming to enhance word representations. It pro- gate. Based on the triples, we construct the sentence tree. Thirdly, we
+poses to incorporate world knowledge bases into BERT by designing utilize the graph attention networks to fuse knowledge information. Fithe knowledge attention and recontextualization component. It uses a nally, we extract entities by sequence labeling and extract relations by
+TransformerBlock to fuse knowledge and uses another multi-head at- entity pair classiﬁcation. Experiments on the dataset demonstrate the
+tention to recontextualize the word piece representations. K-BERT (Liu superior performance of KnowCTI. We have extracted CTI entities and
+et al., 2020) is an improved BERT that enables injecting knowledge relations from a large number of open texts and studied the activity of
+into models. It injects knowledge triples into the sentence and converts popular attack method trends in the past two decades. Based on the
+it into a sequence with a visible matrix preserving structural infor- extracted relation triples, we studied the portrait of attacking organizamation and soft-position mechanism so that it could easily use BERT tions and threat intelligence knowledge graph generation demonstratarchitecture. KeBioLM (Yuan et al., 2021) is a biomedical knowledge- ing the eﬀectiveness and generalization of our method.
+aware pretrained language model, which incorporates medical knowledge from Uniﬁed Medical Language System. It ﬁrst encodes text only CRediT authorship contribution statement
+and then encodes text-entity fusion based on Transformers. KARL-Trans-
+NER (Chawla et al., 2021) incorporates world knowledge for NER based Gaosheng Wang: Writing – original draft, Software, Methodology,
+on Transformer Encoder. It uses a self-attention network to encode Data curation, Conceptualization. Peipei Liu: Writing – review & editentities and relations in the knowledge base. And then generate the ing, Supervision, Formal analysis, Conceptualization. Jintao Huang:
+contextualized representations for feature augmentation to improve the Writing – review & editing, Visualization, Investigation, Data curation.
+NER performance. KAWR (He et al., 2020) proposes to encode exter- Haoyu Bin: Writing – review & editing, Software, Resources, Data cunal knowledge into word representations for NER. It proposes a gated ration. Xi Wang: Writing – review & editing, Project administration.
+entity-based recurrent unit based on a recurrent neural network unit Hongsong Zhu: Writing – review & editing, Project administration,
+to encode entity information into the word and get entity-based word Funding acquisition.
+representations. KaNa (Nie et al., 2021) is a knowledge-aware NER
+framework that aims to denoise the type-heterogeneous knowledge in Declaration of competing interest
+world knowledge to improve NER performance.
+ The authors declare the following ﬁnancial interests/personal re-
+7.2. Cyber threat intelligence extraction
+ lationships which may be considered as potential competing interests:
+ Hongsong Zhu reports ﬁnancial support was provided by National Natu-
+ Nowadays, security researchers attempt to extract threat intelligence
+ ral Science Foundation of China. If there are other authors, they declare
+entities from open-source reports automatically so that they can keep up
+ that they have no known competing ﬁnancial interests or personal rewith the rapidly evolving landscape of threats and prepare for network
+ lationships that could have appeared to inﬂuence the work reported in
+defense in advance (Mu et al., 2018; Wang et al., 2023; Zhao et al.,
+ this paper.
+2020). iACE (Liao et al., 2016) is an IOC extraction tool that utilizes
+regex and terms to extract IOCs and employs the sentence dependency
+ Data availability
+graph to mine related tokens and relations between them from open articles. iACE relies on expert knowledge. Long et al. (2019); Zhou et al.
+(2018); Liu et al. (2022) apply end-to-end neural-based sequence label- Data will be made available on request.
+ing to IOC identiﬁcation considering it as a named entity recognition
+task. The neural-based methods could identify complex entities with- Acknowledgement
+out human hand-crafted eﬀorts. NER4CTI (Liu et al., 2022) aggregates
+multiple features to augment token representations including morpho- We are grateful to the reviewers for their work and insightful suglogical features, constituent features, and POS features. Moreover, it gestions. This research was supported by the National Natural Science
+utilizes similar words in the cybersecurity domain corpus to augment Foundation of China (Grant No. 61931019).
+domain semantics. Recently, work trends towards constructing graphs.
+AttackKG (Li et al., 2022) designs technique templates to extract at- References
+tack behavior graphs for CTI reports. TTPdrill (Husari et al., 2017)
+designs the threat action ontology and extracts TTPs using multiple Agarwal, A., Gawade, S., Azad, A.P., Bhattacharyya, P., 2023. Kitlm: domain-speciﬁc
+NLP techniques from CTI reports. CyberRel (Guo et al., 2021) employs knowledge integration into language models for question answering. arXiv preprint.
+ arXiv:2308.03638.
+the BERT-BiGRU model to extract entity and relation jointly for cyberaptmap, 2023. https://aptmap.netlify.app/#.
+security concepts which could be used to construct the cybersecurity ATT&CK, 2023. https://attack.mitre.org/.
+knowledge graph. CSKG4APT (Ren et al., 2022) focuses on the APT at- Bordes, A., Usunier, N., Garcia-Duran, A., Weston, J., Yakhnenko, O., 2013. Translating
+tack scenarios and extracts CTI entities and relations to construct the embeddings for modeling multi-relational data. Adv. Neural Inf. Process. Syst. 26.
+knowledge graph based on the design ontology. Burger, E.W., Goodman, M.D., Kampanakis, P., Zhu, K.A., 2014. Taxonomy model for
+ cyber threat intelligence information exchange technologies. In: Proceedings of the
+ 2014 ACM Workshop on Information Sharing & Collaborative Security, pp. 51–60.
+8. Conclusion CAPEC, 2023. http://capec.mitre.org/about/index.html.
+ Chawla, A., Mulay, N., Bishnoi, V., Dhama, G., 2021. Karl-trans-ner: knowledge aware
+ In this paper, we propose to integrate cybersecurity knowledge into representation learning for named entity recognition using transformers. arXiv
+ preprint. arXiv:2111.15436.
+the CTI extraction model based on pretrained language model to aug-
+ CVE, 2023. https://cve.mitre.org/.
+ment the understanding of cybersecurity semantics. Furthermore, we CWE, 2023. https://cwe.mitre.org/.
+design a threat ontology for the threat knowledge graph and extract en- Dai, Z., Wang, X., Ni, P., Li, Y., Li, G., Bai, X., 2019. Named entity recognition using bert
+tities and relations, which could be used for threat knowledge graph bilstm crf for Chinese electronic health records. In: 2019 12th International Congress
+construction and give a comprehensive picture of threats. Firstly, we on Image and Signal Processing, Biomedical Engineering and Informatics (Cisp-Bmei).
+ IEEE, pp. 1–5.
+build the initial knowledge base from open-source structured data. Fur-
+ Devlin, J., Chang, M.-W., Lee, K., Toutanova, K., 2018. Bert: pre-training of deep bidirecthermore, we train the cybersecurity-aware knowledge embeddings, tional transformers for language understanding. arXiv preprint. arXiv:1810.04805.
+which introduces the cybersecurity semantics from security texts. Sec- Faldu, K., Sheth, A., Kikani, P., Akbari, H., 2021. Ki-bert: infusing knowledge context for
+ondly, we propose to fuzzy match related knowledge triples and select better language and domain understanding. arXiv preprint. arXiv:2104.08145.
+
+ 11
+G. Wang, P. Liu, J. Huang et al. Computers & Security 141 (2024) 103824
+
+Feng, X., Liao, X., Wang, X., Wang, H., Li, Q., Yang, K., Zhu, H., Sun, L., 2019. Under- scmagazine, 2023. https://www.scmagazine.com/news/w3ll-groups-phishing-tools-usedstanding and securing device vulnerabilities through automated bug report analysis. to-target-56000-corporate-microsoft-365-accounts.
+ In: SEC’19: Proceedings of the 28th USENIX Conference on Security Symposium. secrss, 2023. https://www.secrss.com/articles/54098.
+Guo, Y., Liu, Z., Huang, C., Liu, J., Jing, W., Wang, Z., Wang, Y., 2021. Cyberrel: joint STIX, 2023. https://oasis-open.github.io/cti-documentation/stix/intro.
+ entity and relation extraction for cybersecurity concepts. In: Information and Com- Syed, Z., Padia, A., Finin, T., Mathews, L., Joshi, A., 2016. Uco: a Uniﬁed Cybersecurity
+ munications Security: 23rd International Conference, Proceedings, Part I 23. ICICS Ontology. UMBC Student Collection.
+ 2021, Chongqing, China, November 19-21. Springer, pp. 447–463. Thimma, M., Liu, F., Lin, J., Luo, B., 2015. Hyxac: hybrid xml access control integrating
+h3c. https://www.h3c.com/cn/d_202303/1796824_30003_0.htm. view-based and query-rewriting approaches. IEEE Trans. Knowl. Data Eng. 27 (8),
+He, Q., Wu, L., Yin, Y., Cai, H., 2020. Knowledge-graph augmented word representations 2190–2202.
+ for named entity recognition. Proc. AAAI Conf. Artif. Intell. 34 (05), 7919–7926. Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, Ł.,
+Husari, G., Al-Shaer, E., Ahmed, M., Chu, B., Niu, X., 2017. Ttpdrill: automatic and accu- Polosukhin, I., 2017. Attention is all you need. Adv. Neural Inf. Process. Syst. 30.
+ rate extraction of threat actions from unstructured text of cti sources. In: Proceedings Velickovic, P., Cucurull, G., Casanova, A., Romero, A., Lio, P., Bengio, Y., et al., 2017.
+ of the 33rd Annual Computer Security Applications Conference, pp. 103–115. Graph attention networks. Stat 1050 (20), 10–48550.
+Ji, G., He, S., Xu, L., Liu, K., Zhao, J., 2015. Knowledge graph embedding via dynamic Wang, G., Liu, P., Huang, J., Si, S., Zhu, H., Sun, L., 2023. Csedesc: cybersecurity event
+ mapping matrix. In: Proceedings of the 53rd Annual Meeting of the Association for detection with event description. In: International Conference on Artiﬁcial Neural
+ Computational Linguistics and the 7th International Joint Conference on Natural Lan- Networks. Springer, pp. 26–38.
+ guage Processing. In: Long Papers, vol. 1, pp. 687–696. Wang, X., Liu, X., Ao, S., Li, N., Jiang, Z., Xu, Z., Xiong, Z., Xiong, M., Zhang, X., 2020.
+Ji, S., Pan, S., Cambria, E., Marttinen, P., Philip, S.Y., 2021. A survey on knowledge Dnrti: a large-scale dataset for named entity recognition in threat intelligence. In:
+ graphs: representation, acquisition, and applications. IEEE Trans. Neural Netw. Learn. 2020 IEEE 19th International Conference on Trust, Security and Privacy in Computing
+ Syst. 33 (2), 494–514. and Communications (TrustCom). IEEE, pp. 1842–1848.
+Lample, G., Ballesteros, M., Subramanian, S., Kawakami, K., Dyer, C., 2016. Neural ar- Wang, Z., Zhang, J., Feng, J., Chen, Z., 2014. Knowledge graph embedding by translating
+ chitectures for named entity recognition. In: Knight, K., Nenkova, A., Rambow, O. on hyperplanes. Proc. AAAI Conf. Artif. Intell. 28 (1).
+ (Eds.), Proceedings of the 2016 Conference of the North American Chapter of the As- Wikipedia, 2023. https://en.wikipedia.org/wiki/DarkHotel.
+ sociation for Computational Linguistics: Human Language Technologies. Association Yuan, Z., Liu, Y., Tan, C., Huang, S., Huang, F., 2021. Improving biomedical pretrained
+ for Computational Linguistics, San Diego, California, pp. 260–270. language models with knowledge. arXiv preprint. arXiv:2104.10344.
+Li, Z., Zeng, J., Chen, Y., Liang, Z., 2022. Attackg: constructing technique knowledge Zhao, J., Yan, Q., Li, J., Shao, M., He, Z., Li, B., 2020. Timiner: automatically extractgraph from cyber threat intelligence reports. In: European Symposium on Research ing and analyzing categorized cyber threat intelligence from social data. Comput.
+ in Computer Security. Springer, pp. 589–609. Secur. 95, 101867.
+Liao, X., Yuan, K., Wang, X., Li, Z., Xing, L., Beyah, R., 2016. Acing the ioc game: to- Zhou, S., Long, Z., Tan, L., Guo, H., 2018. Automatic identiﬁcation of indicators of comward automatic discovery and analysis of open-source cyber threat intelligence. In: promise using neural-based sequence labelling. arXiv preprint. arXiv:1810.10156.
+ Proceedings of the 2016 ACM SIGSAC Conference on Computer and Communications
+ Security, pp. 755–766.
+Liu, P., Li, H., Wang, Z., Liu, J., Ren, Y., Zhu, H., 2022. Multi-features based semantic Gaosheng Wang received a bachelor’s degree in computer science from Xidian Uniaugmentation networks for named entity recognition in threat intelligence. In: 2022 versity in 2019. He is currently a student studying in the University of Chinese Academy
+ 26th International Conference on Pattern Recognition (ICPR). IEEE, pp. 1557–1563. of Sciences, pursuing a Ph.D. degree of Cyberspace Security. His work primarily focuses
+Liu, W., Zhou, P., Zhao, Z., Wang, Z., Ju, Q., Deng, H., Wang, P., 2020. K-bert: enabling on cyber threat intelligence and intelligent security defense with deep learning and natural language processing techniques.
+ language representation with knowledge graph. Proc. AAAI Conf. Artif. Intell. 34
+ (03), 2901–2908.
+Long, Z., Tan, L., Zhou, S., He, C., Liu, X., 2019. Collecting indicators of compromise from Peipei Liu received the B.S. and M.S. degrees in Computer Science and Technology
+ unstructured text of cybersecurity articles using neural-based sequence labelling. In: from Shandong University of Science and Technology, China, in 2019. He is currently
+ 2019 International Joint Conference on Neural Networks (IJCNN). IEEE, pp. 1–8. pursuing toward the Ph.D. degree in Cyberspace Security at Institute of Information
+Malvuln, 2023. https://malvuln.com/. Engineering, Chinese Academy of Sciences. His research interests include information
+Mitchell, R., Chen, R., 2014. Behavior rule speciﬁcation-based intrusion detection for extraction, cyber threat intelligence analysis and multimodal intelligent information processing.
+ safety critical medical cyber physical systems. IEEE Trans. Dependable Secure Comput. 12 (1), 16–30.
+Mu, D., Cuevas, A., Yang, L., Hu, H., Xing, X., Mao, B., Wang, G., 2018. Understanding the Jintao Huang received a bachelor’s degree in software engineering from Southwest
+ reproducibility of crowd-reported security vulnerabilities. In: 27th USENIX Security Jiaotong University in 2019. He is currently a student studying in the University of Chi-
+ Symposium (USENIX Security 18), pp. 919–936. nese Academy of Sciences, pursuing a Ph.D. degree of Cyberspace Security. His work
+Nelson, N., 2022. https://threatpost.com/cybercriminals-are-selling-access-to-chinese- primarily focuses on program analysis and ﬁrmware analysis.
+ surveillance-cameras/180478/.
+Nie, B., Ding, R., Xie, P., Huang, F., Qian, C., Si, L., 2021. Knowledge-aware named entity Haoyu Bin received a bachelor’s degree in 2019 from Sichuan University. Currently
+ recognition with alleviating heterogeneity. Proc. AAAI Conf. Artif. Intell. 35 (15), pursuing a Ph.D. degree at the University of Chinese Academy of Sciences, his research
+ 13595–13603. focuses on device ﬁngerprint extraction in internet measurement.
+OpenCVE, 2023. https://www.opencve.io/.
+Peters, M.E., Neumann, M., Logan IV, R.L., Schwartz, R., Joshi, V., Singh, S., Smith, N.A., Xi Wang is currently an engineer of Institute of Information Engineering, Chinese
+ 2019. Knowledge enhanced contextual word representations. arXiv preprint. arXiv: Academy of Sciences. She received her Master’s degree in Institute of Computer Tech-
+ 1909.04164. nology,Chinese Academy of Sciences in 2011. Her research interests include cyberspace
+Rastogi, N., Dutta, S., Christian, R., Zaki, M., Gittens, A., Aggarwal, C., 2021. Information security, autonomous cyber defence with deep reinforcement learning and knowledge
+ prediction using knowledge graphs for contextual malware threat intelligence. arXiv graph techniques.
+ preprint. arXiv:2102.05571.
+Ren, Y., Xiao, Y., Zhou, Y., Zhang, Z., Tian, Z., 2022. Cskg4apt: a cybersecurity knowledge Hongsong Zhu received his PhD in computer architecture from the Institute of Comgraph for advanced persistent threat organization attribution. IEEE Trans. Knowl. puting Technology, Chinese Academy of Sciences in 2009. He is currently a researcher
+ Data Eng. at the Institute of Information Engineering, Chinese Academy of Sciences. The research
+Ren, Y., Li, H., Liu, P., Liu, J., Li, Z., Zhu, H., Sun, L., 2023. Owner name entity recognition ﬁeld is cyberspace security. Research interests include: Internet of Things security, netin websites based on heterogeneous and dynamic graph transformer. Knowl. Inf. Syst., work confrontation, intelligent attack and defense, cyberspace security measurement and
+ 1–19. threat situation awareness, etc.
+Samtani, S., Abate, M., Benjamin, V., Li, W., 2020. Cybersecurity as an industry: a cyber
+ threat intelligence perspective. In: The Palgrave Handbook of International Cybercrime and Cyberdeviance, pp. 135–154.
+
+ 12

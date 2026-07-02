@@ -1,0 +1,2289 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [449] Global or Local Adaptation? Client-Sampled Federated Meta-Learning for Personalized IoT Intrusion Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：449
+题名：Global or Local Adaptation? Client-Sampled Federated Meta-Learning for Personalized IoT Intrusion Detection
+年份：2024
+DOI：10.1109/tifs.2024.3516548
+来源：IEEE Transactions on Information Forensics and Security
+PDF：paper/10.1109_TIFS.2024.3516548.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：联邦学习、隐私保护与分布式协同、IoT、车联网、工业互联网与边缘安全
+相关性：强相关，分数 16
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\449.txt
+- 原始字符数：74317
+- 本次发送字符数：74317
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+279
+
+Global or Local Adaptation? Client-Sampled
+Federated Meta-Learning for Personalized
+IoT Intrusion Detection
+Haorui Yan, Xi Lin , Member, IEEE, Shenghong Li , Senior Member, IEEE, Hao Peng , and Bo Zhang
+Abstract—With the increasing size of Internet of Things (IoT)
+devices, cyber threats to IoT systems have increased. Federated
+learning (FL) has been implemented in an anomaly-based intrusion detection system (NIDS) to detect malicious traffic in IoT
+devices and counter the threat. However, current FL-based NIDS
+mainly focuses on global model performance and lacks personalized performance improvement for local data. To address this
+issue, we propose a novel personalized federated meta-learning
+intrusion detection approach (PerFLID), which allows multiple
+participants to personalize their local detection models for local
+adaptation. PerFLID shifts the goal of the personalized detection
+task to training a local model suitable for the client’s specific data,
+rather than a global model. To meet the real-time requirements
+of NIDS, PerFLID further refines the client selection strategy
+by clustering the local gradient similarities to find the nodes
+that contribute the most to the global model per global round.
+PerFLID can select the nodes that accelerate the convergence of
+the model, and we theoretically analyze the improvement in the
+convergence speed of this strategy over the personalized federated
+learning algorithm. We experimentally evaluate six existing
+FL-NIDS approaches on three real network traffic datasets and
+show that our PerFLID approach outperforms all baselines in
+detecting local adaptation accuracy by 10.11% over the state-ofthe-art scheme, accelerating the convergence speed under various
+parameter combinations.
+Index Terms—Internet of Things security, personalized traffic intrusion detection, federated meta-learning, client selection
+aggregation.
+
+T
+
+I. I NTRODUCTION
+HE Internet of Things (IoT) is a network system that
+connects physical devices and machines to the Internet
+
+using information sensors and communication technologies.
+This enables IoT devices to communicate and exchange data,
+providing services for scenarios such as smart homes, industrial automation, smart healthcare, and smart transportation [1],
+[2], [3], [4].
+However, serious security issues arise when IoT devices are
+compromised by malicious intruders and participate in data
+interaction and processing. Intruders can penetrate the network
+layer through which devices and external networks exchange
+data, and threaten IoT devices that lack security defenses.
+Since 2016, the well-known Mirai botnet has initiated numerous large-scale distributed denial-of-service (DDoS) attacks
+against IoT devices [5]. The BlueBorne vulnerability, identified in 2017, affects nearly all Bluetooth-enabled devices and
+poses a significant threat to IoT devices [6].
+Due to the limited processing power and storage capacity
+of many IoT device systems, sophisticated security systems
+are frequently feasible. As a result, intrusion detection techniques have been employed to mitigate unknown attacks in
+the network [7]. However, traffic-based intrusion detection
+techniques have several limitations, including insufficient data
+in public traffic sets and difficulty in detecting IoT attacks such
+as DDoS, exploits, reconnaissance, and worms [8]. Therefore,
+relying solely on this approach to secure IoT devices is
+unreliable. Centralized detection systems are unsuitable for
+IoT architectures with a large number of distributed components, making it difficult to detect single points of failure
+in IoT. Additionally, detection techniques must minimize
+latency to meet the frequent data processing demands of IoT
+devices, while ensuring robust data privacy. As IoT traffic
+continues to increase, traditional intrusion detection systems
+face significant challenges in providing fast detection due to
+their high computational overhead [9], [10]. Recent studies
+review conventional detection methods and emphasize that
+rapid detection has become one of the primary challenges in
+the field of network intrusion detection [11].
+According to current research, federated learning (FL) based
+intrusion detection systems (IDS) could provide a solution
+to some of these issues due to their improved adaptability
+and scalability [12]. FL schemes allow users to jointly train
+detection models without sharing their private data, addressing
+the problem of insufficient public data in IoT scenarios while
+protecting data privacy [13]. This contrasts with non-federated
+machine learning methods, which do not offer this level of
+privacy protection and may require a larger amount of data to
+be effective [14], [15].
+
+Received 5 April 2024; revised 5 August 2024 and 18 November 2024;
+accepted 20 November 2024. Date of publication 12 December 2024; date
+of current version 26 December 2024. This work was supported in part by
+the National Natural Science Foundation of China under Grant 62202302 and
+Grant 62372297. The associate editor coordinating the review of this article
+and approving it for publication was Prof. Ghassan Karame. (Corresponding
+author: Xi Lin.)
+Haorui Yan, Xi Lin, and Shenghong Li are with the the School of Cyber
+Security, Shanghai Jiao Tong University, Shanghai 200240, China, and also
+with Shanghai Key Laboratory of Integrated Administration Technologies for
+Information Security, Shanghai 200240, China (e-mail: yhr0322@sjtu.edu.cn;
+linxi234@sjtu.edu.cn; shli@sjtu.edu.cn).
+Hao Peng is with the Key Laboratory of Intelligent Education Technology
+and Application of Zhejiang Province and the School of Computer Science
+and Technology, Zhejiang Normal University, Jinhua 321004, China (e-mail:
+hpeng@zjnu.edu.cn).
+Bo Zhang is with the School of Cyber Science and Engineering, Shanghai
+Jiao Tong University, Shanghai 200240, China, and also with the State Grid
+Smart Grid Research Institute Company Ltd., State Grid Corporation of China,
+Nanjing 210000, China (e-mail: bozhangiit@sjtu.edu.cn).
+This article has supplementary downloadable material available at https://
+doi.org/10.1109/TIFS.2024.3516548, provided by the authors.
+Digital Object Identifier 10.1109/TIFS.2024.3516548
+1556-6021 © 2024 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+280
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 1. A framework for traffic intrusion detection of IoT devices based on
+PFL.
+
+Although FL is a detection scheme for detecting various
+types of cyber threats to the IoT, there are still some unresolved
+problems. Li et al. [16] proposed an FL framework to build
+an IoT intrusion detection model collaboratively. Chatterjee
+and Hanawal [17] proposed an FL-based intrusion detection
+system that uses a hybrid federated averaging (FedAvg) and
+noise-resistant integration framework to deal with labeling
+noise. Liu et al. [18] used blockchain technology for storing
+and sharing FL models, which is used to ensure the security
+of the aggregated detection models. These studies improved
+the structure of the detection model by utilizing existing FL
+algorithms and presented the application of FL to IDS in
+the context of the IoT. However, it is important to note that
+these studies assume a uniform distribution of client data,
+and the goal is to train an optimal global model. Models
+trained based on this assumption lack local data adaptation.
+First, the data is non-independently and identically distributed
+(Non-IID) among clients, which is due to the fact that IoT
+devices are produced by different manufacturers and configured with different protocols, resulting in varying traffic
+data from different devices in different network scenarios.
+As a result, the global model obtained from training cannot
+adapt to these data. Personalized Federated Learning (PFL)
+is an approach to address the problem of slow convergence
+and poor performance on Non-IID data as well as the lack
+of personalization of the model for local tasks or datasets
+[19]. One of the methods to achieve personalization is metalearning, which optimizes the global model to enable fast
+convergence of user-local training by treating the training
+phase of FL as the training phase of meta-learning, and the
+personalization phase of the FL model as the testing phase of
+meta-learning [20].
+In response to this, we propose a novel framework for
+intrusion detection in IoT traffic, termed Personalized Federated Learning Intrusion Detection (PerFLID). To simplify the
+description, we replace the client in FL with an IoT edge node.
+PerFLID enables the training of local models on edge nodes
+with different traffic data distributions in the IoT. In contrast
+to global models, the locally trained models exhibit enhanced
+personalization, making them optimal for intrusion detection.
+
+Specifically, we sample and extract features from the traffic
+information of each edge node, treating intrusion detection as
+a feature classification task with each edge node’s detection as
+a subtask. The central server sends malicious traffic detection
+models to the edge nodes, which are then trained collaboratively using a federated meta-learning approach. During the
+training process of each subtask, the edge nodes execute the
+model-agnostic meta-learning (MAML) algorithm locally to
+update parameters while retaining local feature information.
+With this approach, the global model converges with only a
+few rounds of gradient descent at the edge nodes, resulting in
+higher accuracy for personalized intrusion detection. To enable
+fast convergence during model training, we design a node
+selection strategy based on gradient feature clustering. The
+strategy clusters the edge nodes based on their gradient features in each communication round, calculates the probability
+of each node being selected based on the feature distribution,
+and samples the optimal subset of nodes participating in
+the aggregation. The representative gradient features of the
+edge nodes are preserved during the aggregation process at
+the central server, and each training round is run only once
+at the server, thus not introducing additional communication
+overhead. The main contributions of this paper are as follows:
+• We propose a Personalized Federated Learning Intrusion
+Detection Framework, enabling personalized intrusion
+detection for IoT devices facing attacks with unknown
+traffic types. This method leverages meta-learning to
+develop personalized models, effectively adapting to local
+data characteristics.
+• We design a node selection strategy that selects nodes
+based on the clustering results of local gradient features.
+This strategy is theoretically proven to accelerate the convergence speed during model training, thereby enhancing
+the overall efficiency of our framework.
+• We demonstrate that our proposed personalized traffic
+intrusion detection framework has a convergence upper
+bound. Furthermore, we conduct extensive simulation
+experiments with three neural network models on three
+NIDS datasets to verify that the proposed framework
+achieves higher detection accuracy with local adaptation
+and faster training convergence.
+The rest of this paper is organized as follows: In Section II,
+we review the related work of FL and traffic intrusion detection
+and summarize the PFL approach. In Section III, we illustrate
+the underlying architecture with implementation details. In
+Section IV, we introduce our PerFLID workflow. In Section
+V, We perform a theoretical convergence analysis of PerFLID.
+In Section VI, we present and discuss our evaluation results.
+Finally, we present the conclusion in Section VII.
+II. R ELATED W ORK
+A. Federated Learning Based Traffic Intrusion Detection
+Nguyen et al. proposed DÏoT [15], a self-learning distributed system for detecting IoT devices infected with Mirai
+malware. This intrusion detection system uses FL methods
+for the first time, enabling distributed learning of models
+across multiple clients. However, this method only targets
+
+YAN et al.: GLOBAL OR LOCAL ADAPTATION? CLIENT-SAMPLED FEDERATED META-LEARNING
+
+Mirai malware attacks and lacks a complete implementation of the intrusion detection FL framework. Later, several
+researchers applied different FL models to solve the IoT
+intrusion detection problem. Mothukuri et al. [12] proposed
+an anomaly detection method with FL, which protects user
+data privacy by training anomaly detection machine learning models on IoT devices without transmitting user data
+to a centralized server. They used long short-term memory
+(LSTM) and gated recurrent unit (GRU) neural network
+models to train ML models on Modbus network datasets.
+The results show the lowest error rate in predicting attacks
+and fewer false alarms than centralized machine learning.
+Aouedi et al. [21] implemented a semi-supervised learning
+scheme for intrusion detection in FL by training a local
+autoencoder (AE) to learn the features of intrusion data. Zhao
+et al. [22] proposed a network anomaly detection method
+based on FL and transfer learning to address the issue of
+scarce training data for network anomaly detection. The model
+achieved a success rate of 97.23% in detecting vulnerability
+attacks on the UNSW-NB15 dataset. To quickly detect APT
+attacks with privacy protection, Hu et al. [23] proposed a
+traffic detection method based on coalitional meta-learning.
+The method achieves a detection accuracy distribution of
+86.67% and 67.6% on the CIC-IDS2017 and DAPT2020
+datasets, respectively. Ding et al. [24] proposed a scalable
+NIDS for large-scale IoT networks. This system leverages a
+meta-learning framework to optimize the parallelism of GNNbased NIDS and introduces a coalition formation strategy to
+enhance the accuracy and reduce the communication overhead
+of the NIDS.
+B. Personalized Federated Learning in IoT
+Tan et al. [19] proposed to tackle two challenges in federated
+learning: slow convergence and subpar performance when
+dealing with highly heterogeneous (Non-IID) data, as well
+as the absence of personalized models for local tasks or
+datasets. Luca et al. [25] introduced the use of data augmentation to address the issue of out-of-domain generalization
+in federated learning. They demonstrated that suitable data
+augmentation could mitigate Non-IID effects in FL, thereby
+enhancing FL generalization and convergence from a causal
+perspective. Fraboni et al. [26] propose a jointly learned
+client selection strategy based on cluster selection. Compared
+to multinomial distribution (MD) sampling, this strategy is
+both unbiased and reduces the variance of random client
+aggregation. Implementing personalized federated learning
+includes a variety of model-based approaches in addition to
+data-based approaches, one of which is meta-learning. Metalearning aims to enable models to rapidly learn new tasks
+based on existing knowledge. The MAML algorithm [27]
+possesses robust generalization capabilities and can be applied
+in various gradient descent methods, such as supervised learning and reinforcement learning, hence its designation as a
+model-independent meta-learning algorithm. Fallah et al. [28]
+proposed Per-FedAvg within FedAvg using MAML equations.
+They demonstrated that meta-learning can enhance the training
+of shared initial global models. Participants involved in the
+
+281
+
+training or new clients only need to execute a few steps of
+gradient descent on local data. This enables adaptation to the
+local dataset and ultimately yields a more personalized model.
+In our paper, we address the lack of local data adaptation
+in existing federated learning intrusion detection work
+by proposing a locally personalized scheme based on
+federated meta-learning. We provide detailed theoretical
+proof to support our approach. Additionally, to expedite the
+deployment of federated meta-learning, we have optimized
+the client aggregation strategy. This optimization accelerates
+the deployment of meta-learning without incurring additional
+resource overhead, and we have also provided theoretical
+proof for this improvement.
+III. P RELIMINARIES
+A. Federated Meta Learning
+Firstly, let us briefly review the formulation of MAML. The
+core idea of MAML is to learn an effective initial set of model
+parameters, enabling the model to adapt quickly and perform
+well on new tasks with only a few gradient updates. In the
+context of federated learning, for each participating user, if we
+assume each user takes the initial point and updates it using
+one step of gradient descent based on its own loss function,
+the federated learning global optimization objective F(w) is
+defined as follows:
+N
+
+1 X
+fi (w − α∇ fi (w)) .
+min F(w) :=
+N
+w∈Rd
+
+(1)
+
+i=1
+
+Here, the local dataset Di is generated by post-processing
+the traffic files sampled from IoT devices, which is then used
+to train the local model parameters wi . The individual loss
+function is defined as fi (w), and the parameters wi are updated
+via gradient descent with respect to fi . The step size α ≥ 0
+represents the learning rate utilized by the node for training
+the model.
+The advantage of this computational method is that both
+existing and new users can adopt it by using the solution of
+the new problem as an initial point and slightly adjusting it
+based on their own data. This means that users can utilize the
+initialized result and then update it with their dataset Di by
+performing only one or a few gradient descent steps. Users
+define their metafunctions locally as follows:
+Fi (w) := fi (w − α∇ fi (w)).
+
+(2)
+
+Following the completion of global model aggregation by
+the server, the updated model is dispatched to the node to
+commence a fresh round of meta-learning training. Through
+multiple rounds of communication, the initial model F(w) is
+attained. A detailed discussion on the model update algorithm
+will be provided in Section IV.
+B. Data Heterogeneity
+We define the traffic dataset D = {(x, y)} as the global
+dataset. Here, x represents the features extracted from network
+traffic that includes benign traffic as well as the latest common
+network attacks (such as Fuzzer, Backdoor, Exploits, DDoS,
+
+282
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+etc.), including attributes such as timestamps, source and
+destination IP addresses, source and destination ports, and
+protocol type. The label y corresponds to x, representing the
+type of network attack. Consider N IoT devices, labeled as
+C1 ,C2 , . . . ,Cn , acting as nodes. Each node has its own local
+dataset, denoted as Di = {(xi , yi )}. Similarly, the label yi of
+the local data from edge IoT devices corresponds to the type
+of network attack occurring within the local network of the
+device. Notate the local dataset size and global
+P dataset size
+with |Di | and |D| respectively. Here, |D| =
+|Di | denotes
+i∈N
+
+the total number of global samples equals the sum of local
+samples. The distribution of traffic data from real IoT devices
+is diverse, making it challenging to construct meaningful
+federated traffic datasets due to privacy concerns. Following
+the suggestion by Li et al. [29], dividing the real dataset into
+a distributed Non-IID dataset helps balance the local data
+across nodes while facilitating effective FL experiments. In
+this section, we discuss how to partition the traffic dataset.
+Initially, we assume that traffic data on any device is associated with one label. We define the local data distribution
+P(xi , yi ) = P(xi |yi )P(yi ) or P(xi , yi ) = P(yi |xi )P(xi ). Drawing
+from Non-IID classification [30], we propose three methods
+for partitioning federated traffic data:
+1) Label Imbalance: In most IoT devices, the types of
+attacks originating from device vulnerabilities are typically
+limited, resulting in different label distributions for each node’s
+dataset, i.e., the distribution P(yi ) varies across nodes. To
+quantify this, we use the matrix X ∈ RK×N as the label
+distribution matrix, where K represents the number of attack
+categories and N represents the number of nodes. Each row
+vector xk ∈ RN represents the probability distribution of
+category k across different nodes, with each dimension of the
+vector indicating the proportion of samples from category k
+assigned to different nodes. To define a random variable for
+each category and allow for the adjustment of the distribution’s
+balance, we use the Dirichlet distribution, which is suitable for
+multivariate random variables and has been widely discussed
+in studies of data heterogeneity in FL [31]. Therefore, we
+sample from PK ∼ DP(α, G0 ) and select a random vector as
+the probability distribution vector xk ∈ RN for the labels. Here,
+G0 represents the base distribution for a single node, and the
+imbalance can be adjusted through the parameter α, where
+smaller values of α result in greater imbalance.
+2) Feature Imbalance: Abnormal activities in IoT traffic
+data significantly differ from normal system activities, even
+within data sampled from the same device, abnormal and
+normal traffic data possess different traits. We denote these
+feature imbalances as P(xi ) distribution imbalances.
+3) Quantity Imbalance: Differences in the communication
+capabilities of IoT devices lead to variations in the scale of
+their traffic data, resulting in different sizes for each node’s
+local dataset |Di |. Similar to label imbalance, we utilize the
+Dirichlet distribution to allocate varying quantities of labeled
+samples to each node. The random vector xn ∈ RN represents
+the distribution of sample quantities for each category across
+nodes, with each dimension of the vector indicating the
+proportion of samples assigned to different nodes. The vector
+
+xn is sampled from the distribution Pn ∼ DP(α, G0 ). The
+N
+product xn ×|D| = {|Di |}i=1
+corresponds to the local dataset size
+for each label at a node. This paper simultaneously employs
+the three aforementioned partitioning methods to divide the
+traffic dataset, thereby creating local datasets for experiments
+and achieving a Non-IID data distribution for IoT devices.
+IV. T HE P ER FLID W ORKFLOW
+A. Architecture Design of Personalized Federated
+Meta-Learning Intrusion Detection
+In the IoT scenario, the PFL framework for traffic intrusion
+detection is shown in Figure 1 and consists of three layers:
+the node layer, which includes IoT edge devices, security
+gateways, and firewalls; the data transmission layer, which
+mainly consists of communication base stations; and the central server layer, which is usually deployed on a cloud server.
+The cloud server is responsible for training and maintaining
+the global model Mg . After the training is completed, each
+device in the node layer then performs several rounds of
+local updates based on Mg to obtain the local personalized
+model PM l = {pml0 , . . . , pmlN }. The specific implementation
+scheme of PerFLID is shown in Figure 2, and the final trained
+local personalized model PM l can be integrated into the traffic
+intrusion detection tool. The final trained local personalized
+model PM l can be integrated into a traffic intrusion detection
+tool to deploy effective traffic detection locally. We categorize
+data collection to model training into the following five steps:
+1) To identify unknown network attacks, IoT end devices
+utilize the open-source tool CICflowmeter for traffic characterization. The tool samples traffic flowing
+through the gateway firewall, extracts feature information from packets stored in Packet Capture (PCAP)
+data format files and builds a local dataset in Comma
+Separated Values (CSV) format.
+2) The central server employs the initialization parameter
+w0 to train the initialization model, which is subsequently transmitted to the selected edge node via the
+IoT. The detection local model Ml of the edge nodes is
+kept the same as the central server. The task of this
+model is to learn traffic features and perform multiclass prediction. Considering that the traffic feature data
+collected by the edge devices exhibits uneven label distribution, feature distribution, and volume distribution,
+for local data adaptation, we use in Equation (2) as a
+loss function on the edge devices. This facilitates initial
+model training for local traffic feature updates and model
+parameters wt .
+3) Once an edge node has updated its model parameters through meta-learning, it uploads the new model
+parameters wt to the central server via the base station.
+Subsequently, the central server performs a weighted
+aggregation based on the size of each node’s data as
+weights, resulting in new parameters wt+1 for Mg .
+4) The central server sends the aggregated parameter wt+1
+to the selected edge nodes. The probability of each node
+being selected, determined by the gradient parameters of
+the local model Ml uploaded to the server, is calculated
+
+YAN et al.: GLOBAL OR LOCAL ADAPTATION? CLIENT-SAMPLED FEDERATED META-LEARNING
+
+283
+
+Fig. 2. The Overview of PerFLID Framework.
+
+as shown in Algorithm 1. Then the edge node performs
+further meta-learning training and continues the iterative
+process described earlier.
+5) After the last round of model aggregation, the global
+model Mg is distributed to all edge nodes. Subsequently,
+each edge node performs one or several rounds of
+training based on this model using the local dataset and
+finally obtains the personalized model PMli .
+B. Meta-Learning Training in Edge Node
+Each device can ultimately train its personalized model
+based on the initial model to address the objective function
+in Equation (2) and enable the server to discern disparities
+between various edge node models. Algorithm 1 outlines the
+meta-learning training process. The initial step involves computing the gradient of each edge device’s local loss function
+∇Fi (w):
+∇Fi (w) = (I − α∇2 fi (w))∇ fi (w − α fi (w)).
+
+(3)
+
+Calculating the gradient ∇ fi (w) in each round usually requires
+a high computational cost. Therefore, we adopt a batch of data
+Di and conduct unbiased analysis e
+∇ fi (w, Di ):
+1 X
+e
+∇ fi (w, Di ) :=
+∇li (w; x, y).
+(4)
+|Di | (x,y)∈D
+i
+
+In this process, li (w; x, y) represents the loss function of the
+edge device training model. In the second part, during the kth
+round of communication, the server initially selects the edge
+devices for the current global model wk based on the node
+selection strategy. Each edge device i ∈ S k then executes
+τ steps of random gradient descent concerning Fi . These
+τ
+local updates generate a local sequence wk+1
+i,t t = 0 , where
+k+2
+wi, 0k+1 = wk+1
+and wk+1
+for 1 ≤ t ≤ τ:
+i
+i,τ = wi
+k+1
+e
+wk+1
+= wk+1
+i,t
+i,t−1 − β∇F i (wi,t−1 ),
+
+(5)
+
+S k denotes the collection of nodes participating in the iteration.
+β represents the learning rate of local updates, where k + 1
+indicates training using the meta-model parameters of the k
+k+1
+k+1
+rounds. e
+∇Fi (wi,t−1
+) denotes the estimated value of ∇Fi (wi,t−1
+)
+
+in Equation (7). Then, adding both sides of Equation (5) for
+1 ≤ t ≤ τ, we note that:
+wik+2 = wik+1 − β
+
+τ
+X
+
+k+1
+e
+∇Fi (wi,t−1
+).
+
+(6)
+
+t=1
+
+In the final step, independent batches Di,t , D0i,t , and D00i,t are
+utilized to compute the stochastic gradient e
+∇Fi (wk+1
+i,t−1 ) for all
+local iterations, as follows:
+k+1
+k+1
+e
+∇Fi (wi,t−1
+) := (I − αe
+∇2 fi (wi,t−1
+, D00i,t ))·
+e
+∇ fi (wk+1 − α fi (wk+1 , Di,t ), D0i,t ).
+i,t−1
+
+i,t−1
+
+(7)
+
+k+1
+Once the local update wi,τ
+is completed, the edge node
+uploads it to the server. Subsequently, the server calculates
+the global wk+1 based on the aggregated weights pki of each
+node:
+X
+k+1
+wk+1 =
+pki wi,τ
+.
+(8)
+i∈S k
+
+Finally, the server distributes the global model wk+1 to the
+selected set of nodes Sk and initiates a new round of training.
+After a certain number of training rounds, each node locally
+updates its model Ml , ultimately obtaining a personalized
+model PM l . Compared to Ml , the personalized model PM l
+derived from our method better adapts to local data. We will
+theoretically and experimentally validate the effectiveness of
+our method in Sections V and VI, respectively.
+C. Node Selection Based on Gradient Similarity Clustering
+In FL, the global model is obtained by aggregating all nodes
+and performing a weighted summation of the local model
+parameters wti returned by the nodes to the server,
+X
+wt =
+pi wti .
+(9)
+i∈N
+i|
+Here, pi = |D
+|D| denotes aggregation weights of nodes participating in the iteration depend on the ratio of the number
+of local samples to the number of global samples. Since the
+FedAvg algorithm does not involve all nodes in each round of
+
+284
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Algorithm 1 PerFLID Workflow
+Input: Initial iterate w0 , each user local model gradient wi ,
+number of node samples |Di |
+Output: Global model parameters wK , local personalization
+model PMli
+1: The server sends w0 to all nodes, and the nodes perform
+one local gradient update to get wi , which is uploaded to
+the server;
+2: for k : 0 to K − 1 do
+3:
+The server calculates the cosine similarity based on the
+saved node model parameters and performs hierarchical
+clustering, grouping them into m categories;
+4:
+t ← 1 Start considering the first distribution {Rt (k)};
+5:
+M ← 0 Recalculate node selection probability;
+6:
+repeat
+7:
+for each node i = 1 to n do
+8:
+if i in Current distribution {Rt (k)} then
+0
+0
+9:
+rk,i
+= m+1
+2 |Di |, M = M + rk,i ;
+10:
+else
+0
+0
+11:
+rk,i
+=  |D2i | , M = M + rk,i
+,   m;
+12:
+end if
+r0
+13:
+Selection probabilities rk,i = Mk,i ;
+14:
+end for
+15:
+Server generates distribution {Rt (k)} based on rk,i ;
+t ← t + 1;
+16:
+until t > m, distribution set {Rt (k)}m
+t=1 ;
+17:
+The server selects m times according to distribution
+set {Rt (k)}m
+t=1 , determine the selected node set S k . The
+Server sends wk to all nodes in S k ;
+18:
+for all i ∈ S k do
+19:
+Set wki,0 + 1 = wk ;
+20:
+for t : 1 to τ do
+21:
+Compute the stochastic gradient
+e
+∇ fi (wki,t−1 + 1, Dti ) using dataset Dti ;
+k+1
+t
+e
+22:
+Set e
+wk+1
+= wk+1
+i,t
+i,t−1 − α∇ fi (wi,t−1 , Di );
+k+1
+k+1
+23:
+Set
+wi,t
+=
+wi,t−1 − β(I −
+k+1
+00 e
+0
+αe
+∇2 fi (wk+1
+,
+D
+))
+∇
+f
+(w
+,
+D
+i i,t−1
+i,t
+i,t );
+i,t−1
+24:
+end for
+25:
+node i sends wk+1
+i,τ back to server;
+26:
+end for
+27:
+Server updates its model by averaging over selected
+models;
+28: end for
+29: Nodes perform several rounds of gradient updates locally
+based on wK to get PMli ;
+30: return: Initialize global model parameters wK , local personalization model PMli .
+aggregation, but randomly selects m = rN nodes based on the
+ratio r, the final global model with weights is:
+X
+X
+wt =
+pi wti +
+pi wt−1
+(10)
+i .
+i∈S k
+
+i<S k
+
+In Equation (10), the set of nodes S k is randomly selected
+by the server. However, this random selection strategy poses
+potential security risks in real-world federated intrusion detection scenarios. If a malicious node exists, it may be randomly
+
+selected to join the set S k and participate in the aggregation
+process through backdoor attacks. Once a node is subjected to
+an untargeted backdoor attack, the task accuracy of the global
+model is compromised [32]. Under such influence, the global
+model may ignore the features of some key nodes, worsening
+the convergence effect of the global model. Consequently, the
+generalization performance of the final trained initial model
+will be affected, hindering the process of user-personalized
+model training.
+Several algorithms have been proposed to address the
+problem of backdoor attacks in federated learning models,
+including distance-based defense methods [33] and defense
+methods based on Singular Value Decomposition (SVD)
+and clustering [34]. Our proposed aggregation method is
+similar to [34], however, our paper places a greater emphasis on designing a new node selection strategy for the
+rapid aggregation of local personalized models. This strategy
+must be unbiased and ensure that the total expected value
+of each selected node equals the global aggregation value
+obtained by selecting all nodes, as shown in the following
+equation:
+2
+3
+X
+X
+ t
+ES k w = ES k 4
+p j wtj 5 :=
+pi wti .
+(11)
+j∈S k
+
+i∈N
+
+In Algorithm 1, the server retains the model parameters of
+edge nodes from the previous round of model communication. We assume that the model parameters are represented
+as vectors. Many studies have explored node clustering in
+client selection, utilizing various clustering algorithms like
+DBSCAN [35], hierarchical clustering [26], and K-means [36].
+Due to the large size of local models and the presence of
+high-dimensional features in the models, some have proposed
+their distance metrics [33]. In our approach, we measure the
+similarity of node models using cosine similarity and then classify the node models using Arccos and hierarchical clustering.
+The server then measures the similarity between each pair of
+client model parameters using the cosine similarity, which is
+calculated as follows:
+A·B
+.
+(12)
+cosine similarity(A, B) =
+||A|| · ||B||
+where A · B is the dot product of vectors A and B, and ||A|||
+and ||B||| are the modes of vectors A and B, respectively. Next,
+the cosine similarity is converted to an angle using the inverse
+cosine function (Arccos) to better represent the differences
+between the vectors, which is calculated as:
+
+θ = arccos cosine similarity(A, B) .
+(13)
+where θ is the angle between the vectors A and B. Then
+calculate the angle between the gradients of each node to get
+the angle matrix Θ. Finally, select a clustering algorithm (such
+as K-means, hierarchical clustering, etc.) to cluster the angle
+matrix Θ and obtain m categories.
+Note that the number of clusters should match the number
+of nodes sampled by the server to ensure unbiased selection.
+Subsequently, the probability of each node being selected for
+each selection is calculated based on the number of samples in
+
+YAN et al.: GLOBAL OR LOCAL ADAPTATION? CLIENT-SAMPLED FEDERATED META-LEARNING
+
+the cluster, generating m independent probability distributions
+{Rt (k)}m
+t=1 .
+Although our gradient clustering-based node selection
+method is not specifically designed for backdoor attack scenarios, it can still screen out malicious nodes by leveraging
+the gradient differences between nodes. This capability enables
+it to be combined with other secure aggregation methods to
+defend against backdoor attacks in each round of federated
+learning, thereby circumventing security risks during the training of personalized NIDS models.
+We will prove our algorithm satisfies the assumption of
+unbiased selection in Section V. Although Algorithm 1
+requires execution in each round of communication, it does not
+incur additional communication overhead, and our experimental results in Section VI also demonstrate a faster convergence
+during training.
+V. C ONVERGENCE A NALYSIS OF P ER FLID
+In this section, we provide a theoretical analysis of how
+PerFLID improves the convergence speed of federated learning. This includes the model assumptions used to analyze
+the convergence of federated meta-learning in Section V-A,
+as well as an analysis of how meta-learning with randomly
+participating nodes in aggregation affects convergence, as discussed in Section V-B. Furthermore, we present a theoretical
+examination of the strategy for selecting sets for updates
+based on node gradient clustering in each training round. We
+demonstrate that this strategy leads to a more effective lower
+bound for aggregation selection, as shown in Section V-C and
+Section V-D.
+A. Modeling Assumptions
+We concentrate on non-convex settings and delineate the
+communication between the server and nodes in two consecutive rounds to ensure that the anticipated decrease in the global
+loss function satisfies E[F(wk+1 )] − E[F(wk )] ≤ ε. For the
+theoretical analysis of PerFLID, several standard assumptions
+are typically made on the FML models (refer to e.g., [28],
+[37], [38]). We will utilize the following assumptions in our
+analysis:
+Assumption 1: The gradient of functions fi is bounded by a
+nonnegative constant Ui , i.e., k∇ fi (w)k ≤ Ui
+Assumption 2: Function fi is twice continuously differentiable and Li -smooth for every node i ∈ {1, . . . , N}, i.e.,
+k∇ fi (w) − ∇ fi (u)k ≤ Li kw − uk ∀w, u ∈ Rd . The gradient
+Lipschitz assumption also implies that fi satisfies the following
+conditions for all w, u ∈ Rd :
+| fi (w) − fi (u) − h∇ fi (u), (w − u)i| ≤
+
+Li
+kw − uk2 .
+2
+
+(14)
+
+As discussed in Section IV-B, the update rules in Algorithm 1
+involve the second derivatives of all nodes’ loss functions.
+Therefore, it is necessary to impose positive definiteness
+assumptions on the Hessian matrices of all fi .
+
+285
+
+Assumption 3: For every node i ∈ {1, . . . , N}, the Hessian of
+function fi is ρi -Lipschitz continuous, i.e.,
+∇2 fi (w) − ∇2 fi (u) ≤ ρi kw − uk ∀w, u ∈ Rd .
+
+(15)
+
+A significant disparity in loss between nodes and the server
+can hinder model convergence in each communication round.
+Therefore, we make the following similar assumptions about
+their gradients.
+Assumption 4: The gradient of local functions Fi (w) is at
+most B-locally dissimilar from F(w) for each node i, i.e.,
+k∇Fi (w)k ≤ Bi k∇F(w)k. We expect both sides of the equation
+to get Ei [k∇Fi (w)k2 ] ≤ k∇F(w)k2 B2 .
+In the remainder of this paper, we define ρ := max ρi
+and L := max Li , which can be regarded as bounds in each
+assumption.
+Assumption 5: The variance of the difference between the
+local and global model parameters is limited for all nodes i
+at any local update time t, i.e.,
+#
+" n
+1X k
+2
+wi,t − wkt
+≤ β2 tτσ2w f or any 0 ≤ t ≤ τ. (16)
+E
+n
+i=1
+
+The discrepancies in gradients and Hessians between nodes
+and the server during each training round are influenced
+by the participating training datasets Di , D0i , and D00i . We
+make assumptions about the differences in gradients and
+Hessians.
+Assumption 6: The gradient estimate e
+∇Fi (w) in (7) which is
+computing by using Di , D0i andD00i is close enough to the true
+value,i.e.,
+
+
+E e
+∇Fi (w) − ∇Fi (w)
+≤ σ2ϕD := ϕ(Di ),
+h
+i
+2
+E e
+∇Fi (w) − ∇Fi (w)
+≤ σ2φD := φ(Di , D0i , D00i ). (17)
+
+B. Meta-Learning With Random Node Selection
+As discussed in Section IV-B, when there are numerous
+nodes, the standard federated meta-learning algorithm randomly selects m nodes as set S k to perform local training in
+each communication round. The enhancement of the global
+model by nodes in each round of updates is influenced
+by the distribution of each node’s data. Therefore, random
+selection cannot consistently pick the nodes that contribute
+optimally to global updates. To prove this point, we first
+need to establish the intermediate result that, under Algorithm
+Assumptions 1 to 3, the local meta-function Fi (w) defined by
+Equation (2) P
+and the average of each node’s meta-function
+N
+F(w) = (1/N) i=1
+Fi (w) are both smooth.
+Lemma 1: If Assumptions 1, 2, and 3 hold, then Fi in
+Equation (2) with α ∈ [0, 1/L] is smooth with parameter
+L := 4L + αβU. Hence, the F(w) is also smooth with
+parameter L.
+Second, we use the B-locally similarity in Assumptions 4
+to derive the difference between the local loss Fi (w) and the
+global F(w).
+
+286
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Lemma 2: When B-locally
+dissimilar in Assumptions 4
+q
+2
+follows that: B ≤
+1 + σB . Then the true rather than
+estimated bounded variance in Assumptions 6 holds, i.e.,
+Ei [k∇Fi (w) − ∇F(w)k2 ] ≤ σ2B .
+Using Lemmas 1, and 2, we analyze the expected reduction
+of the target when executing a step of Algorithm 1 with nodes
+randomly selected.
+Theorem 1: Consider the objective function F defined in
+Equation (1) for the case that α ∈ [0, 1/L]. Suppose that
+the conditions in Assumptions 1 to 4 and 6 are satisfied, and
+recall the definitions of L from Lemma 1. Consider running
+Algorithm 1 with the randomly selected set S k for K rounds
+with τ local updates in each round and with β ≤ 1/(10τL).
+The expected decrease in the global loss function satisfies
+
+τ
+
+= A+ B+C +
+
+1 XX
+∇Fi (w̄kt−1 ),
+m i∈S
+k
+
+(23)
+
+t=1
+
+We will separately bound the terms in the above formula in
+the Supplementary Material, and thus, by Equations (58), (60),
+(62) and (63), we have
+τ
+
+1 X Xe
+∇Fi (wki,t−1 )
+E
+m i∈S
+k
+
+2
+
+≤ 4τE
+
+h
+
+∇F(wkt−1 )
+
+2
+
+i
+
+t=1
+
++ 4τσ2φ + 8τσ2B + 4τ(τ − 1)σ2w L2 β2 .
+Now, we lower bound the term
+"*
++#
+τ
+XX
+k 1
+k
+e
+E ∇F(w ),
+∇Fi (wi,t−1 ) .
+m i∈S
+
+(24)
+
+(25)
+
+k t=1
+
+3τβ
+2
+∇F(wk )
+F(wk+1 ) ≤ F(wk ) −
+10
+
+
++ τβ (2Lβσ2φD − σ2ϕD ) + 2(2Lβ − 1)σ2B
+
+
++ τβ 2(τ − 1)L2 β2 (Lβ − 1) .
+
+(18)
+
+Proof: We define the average of randomly selected
+nodes
+P
+in the k-th round of updates as w̄k = 1/m S k wki . By
+Lemma 1, we know F(w̄) is smooth therefore by Assumption
+2, F(w̄) also satisfies the radient Lipschitz assumption, thus we
+have
+˛
+˝
+F(w̄k+1 ) ≤ F(w̄k ) + ∇F(w̄k ), w̄k+1 − w̄k
+L k+1
+2
+(19)
+w̄
+− w̄k ,
++
+2
+recall the equality (6)
+wk+1
+− wk = −β
+i
+
+τ
+X
+
+e
+∇Fi (wki,t−1 ),
+
+(20)
+
+t=1
+
+due to
+Assumption 5, for the nodes selected to participate in the
+aggregation, sum the two sides of the equation (20) separately,
+we obtain
+τ
+
+k+1
+
+w̄
+
+β X Xe
+− w̄ = −
+∇Fi (wki,t−1 )
+m i∈S
+k
+
+k
+
+τ
+
+k 2
+
+w̄k+1 − w̄
+
+β X Xe
+=
+∇Fi (wki,t−1 )
+m i∈S
+k
+
+(21a)
+
+t=1
+
+2
+
+.
+
+(21b)
+
+t=1
+
+Put (21a), (21b) into (19) and take expectation from both sides
+
+
+
+
+E F(w̄k+1 ) ≤ E F(w̄k )
++#
+"*
+τ
+XX
+k 1
+k
+e
+− βE ∇F(w̄ ),
+∇Fi (wi,t−1 )
+m i∈S
+k t=1
+2
+3
+2
+τ
+L 2 4 1 X Xe
+k
++ βE
+∇Fi (wi,t−1 ) 5 .
+(22)
+2
+m i∈S
+k
+
+t=1
+
+Next, note that
+τ
+
+1 X Xe
+∇Fi (wki,t−1 )
+m i∈S
+k
+
+t=1
+
+We will separately bound the terms in the above formula in
+the Supplementary Material, by (54), we have
+"*
++#
+τ
+XX
+k
+k 1
+e
+E ∇F(w̄ ),
+∇Fi (wi,t−1 )
+m i∈S
+k t=1
+"*
+!+#
+τ
+1 XX
+k
+k
+= E ∇F(w̄ ), A + B + C +
+∇Fi (w̄i,t−1 )
+m i∈S
+t=1
+k
+"*
++#
+τ
+XX
+1
+k
+k
+≥ E ∇F(w̄ ),
+∇Fi (w̄i,t−1 )
+m i∈S
+k t=1
+˝
+˛
+˝
+˛
+− E ∇F(w̄k ), A − E ∇F(w̄k ), B + C .
+(26)
+By plugging Equations (68) to (70) in Equation (26) implies
++#
+"*
+τ
+XX
+1
+e
+∇Fi (wki,t−1 )
+E ∇F(w̄k ),
+m i∈S
+k t=1
+τ
+k 2
+≥
+∇F(w ) − τσ2ϕD − 2τσ2B − 2τ(τ − 1)L2 β2 σ2w . (27)
+2
+Due to randomly selecting nodes to participate in aggregation, we have ES k [F(w̄k )] = F(wk ). Substituting Equation (27)
+and Equation (25) in Equation (22) implies
+
+
+1
+2
+k+1
+k
+F(w ) ≤ F(w ) − τβ
+− 2Lβ ∇F(wk )
+2
++ τβ(2Lβσ2φD + σ2ϕD ) + 2τβσ2B (2Lβ + 1)
++ 2τ(τ − 1)L2 β3 σ2w (Lβ + 1)
+3τβ
+2
+≤ F(wk ) −
+∇F(wk )
+10
+
+
++ τβ (2Lβσ2φD + σ2ϕD ) + 2σ2B (2Lβ + 1)
+
+
++ τβ 2(τ − 1)L2 β2 (Lβ + 1) .
+
+(28)
+
+The last inequality is obtained using β ≤ 1/(10τL), which
+gives us the desired result.
+
+Theorem 1 shows a dependency on parameters L, B, β, τ of
+the FML model. Note that σ2ϕD , σ2φD is not a constant, and as
+expressed in Assumption 5, we can make it arbitrarily small
+by choosing batch sizes D, D0 and D00 large enough. Once
+again, we focus on special cases to examine the tightness of
+our results. Let σ2ϕD = σ2φD = 0, and τ = 1. In this case,
+reduces to stochastic gradient descent, where the only source
+of stochasticity is the batches of gradient. The second term
+on the right-hand side in Equation (18) reduces to O(β2 LB2 ).
+
+YAN et al.: GLOBAL OR LOCAL ADAPTATION? CLIENT-SAMPLED FEDERATED META-LEARNING
+
+This is the classic result for stochastic gradient descent for
+nonconvex functions, and we recover the lower bounds [39].
+C. Clustering-Based Node Selection
+Algorithm 1 states that the node with the highest contribution to the global model in each communication round is most
+probably selected as the solution to the gradient difference
+between nodes. The contribution of each node to the global
+model is represented by hierarchically clustering the gradients
+uploaded by the nodes and generating independent distributions {Rt (k)}m
+t=1 . Selection based on the clustering results can
+speed up the convergence of the model compared to randomly
+selecting nodes. This point is supported by [40] theoretical
+proof of convergence of the Multinomial Distribution (MD)
+Selection section. First, we give Proposition V.1.
+t
+Proposition 1: The probability rk,i
+of clustered selection from
+m
+the distribution {Rt (k)}t=1 in Proposition 1 satisfies Equation
+(29) the following property as a sufficient condition for unbiased selection:
+N
+X
+
+∀k ∈ {1, . . . , m} ,
+
+t
+rk,i
+= 1,
+
+i=1
+
+∀i ∈ {1, . . . , n} ,
+
+m
+X
+
+|Di |
+t
+rk,i
+=m
+.
+|D|
+
+t=1
+
+(29)
+
+Proof: By Equation (29), when selecting one node from one
+of the m distributions Rt (k), we have:
+2
+3
+n
+X
+X
+t
+ERt (k) 4
+p j (Rt (k)) wkj 5 =
+rk,i
+wki .
+j∈Rt (k)
+
+i=1
+
+Due to the linear relationship of the expected values, the
+expected new global model is the average of the weighted
+models obtained for each distribution {Rt (k)}m
+t=1 according to
+Equation (30).
+m
+n
+n
+  X
+1X t k X
+ES k wk =
+rk,i wi =
+pi wki ,
+m
+k=1
+
+i=1
+
+(30)
+
+D. Meta-Learning With Clustering-Based Node Selection
+In Theorem V.1 we prove an upper bound on the convergence of meta-learning for random node selection satisfying
+Assumptions 1 to 3. In Proposition 1 we show that node
+selection based on cluster sampling has the same bound on
+FL convergence as MD-based selection. We now combine the
+two conclusions to prove an upper bound on the convergence
+of the node selection strategy using meta-learning with clusterbased in Theorem V.2:
+Theorem 2: Consider the objective function F defined in (1)
+for the case that α ∈ [0, 1/L]. Suppose that the conditions
+in Assumptions 1–5 are satisfied, and recall the definitions of
+L from Lemma 1. Consider running Algorithm 1 along with
+its node selection strategy. Then obtain the selected set S k
+for K rounds with τ local updates in each round and with
+β ≤ 1/(10τL). We have the following expected decrease in the
+global objective
+3τβ
+2
+∇F(wk )
+F(wk+1 ) ≤ F(wk ) −
+10
+
+
++ τβ (2Lβσ2φD − σ2ϕD ) + 2p(2Lβ − 1)σ2B
+
+
++ τβp 2(τ − 1)L2 β2 (Lβ − 1) .
+
+
+
+We demonstrate our cluster selection, as described in Proposition V.1, satisfies Lemma V.3. Additionally, the MD selection
+method has similar bounds, indicating that using the FedAvg
+aggregation algorithm exhibits identical asymptotic behavior
+when using our proposed clustering and MD selection.
+Lemma 3: Suppose C1 , C2 , . . . , Cm are the index of sampled
+nodes. We have
+2
+3
+m
+n
+X
+X
+1
+|Di |
+4
+5
+ES k
+wC j =
+wi ,
+m
+|D|
+j=1
+i=1
+2
+3
+2
+n
+X
+X
+1
+2
+E4
+wki − wk 5 ≤
+pi wki − wk .
+(31)
+m i∈S
+
+i∈S k t=1
+
+We will prove Theorem V.2 along the same lines as we proved
+Theorem V.1. Note that
+τ
+
+1 X Xe
+∇Fi (wki,t−1 )
+m i∈S
+t=1
+
+k
+
+τ
+
+= A0 + B0 + C 0 +
+
+1 XX
+∇Fi (w̄kt−1 ).
+m i∈S
+k
+
+(34)
+
+t=1
+
+Based on our assumptions and Lemma 2, the upper bounds
+of A0 and B0 remain constant in the above equation. Next, we
+demonstrate the impact of the choice strategy on C 0 .
+0
+1
+τ
+X
+X
+1
+2
+2
+@
+C0 ≤
+∇Fi (wkt−1 ) − ∇Fi (w̄kt−1 ) A
+m 0
+t=1
+
+i=1
+
+We will analyze the convergence of node-sampled federated
+meta-learning in the next subsection.
+
+(32)
+
+Proof: We now prove the convergence of Algorithm 1, FML
+using our node selection strategy. Similarly, We define the
+average
+nodes in the k-th round of updates as w̄k =
+P of selected
+k
+1/m S k0 wi . To distinguish it from the set of randomly chosen
+nodes, according to Algorithm 1, we denote by S k0 the set of
+nodes chosen and ES k0 [F(w̄k )] as the expectation of the global
+loss, for the subsequent proofs. By Lemma 1 and Equation
+(22), we have
+
+
+
+
+ES k0 F(w̄k+1 ) ≤ ES k0 F(w̄k )
+2*
++3
+τ
+XX
+1
+e
+− βE 4 ∇F(w̄k ),
+∇Fi (wki,t−1 ) 5
+m 0
+i∈S k t=1
+2
+23
+τ
+L 2 4 1 X Xe
+(33)
++ βE
+∇Fi (wki,t−1 ) 5 .
+2
+m 0
+
+i=1
+
+which means that our theory is valid.
+
+k
+
+287
+
+≤
+
+i∈S k
+
+τ X
+2 X
+
+L
+m
+
+t=1 i∈S k0
+
+wkt−1 − w̄kt−1
+
+2
+
+288
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+= L2
+
+τ
+X
+
+2
+
+wkt−1 − w̄kt−1 .
+
+(35)
+
+t=1
+
+Based on the conclusion in Lemma 3 to bound C 0 , taking the
+mathematical expectation for both sides of Equation (35).
+" τ
+#
+h
+i
+X
+2
+0 2
+2
+k
+k
+E C
+≤L E
+E wt−1 − wt−1
+t=1
+
+= L2
+
+τ h
+X
+
+2
+
+wkt−1 − wkt−1
+
+i
+
+t=1
+
+≤ L2
+
+τ X
+n
+X
+
+pi wki,t−1 − wkt−1
+
+2
+
+t=1 i=1
+2 2
+
+≤ pL β τ(τ − 1)σ2w .
+
+(36)
+
+Then, we bound the last term of Equation (34), and we have
+2
+3
+2
+i
+h
+X
+1
+2
++ pσ2B . (37)
+∇Fi (w̄kt−1 ) 5 ≤ E ∇F(wkt−1 )
+E4
+m i∈S
+k
+
+Note that, by Equation (64), we have
+τ
+
+1 X Xe
+∇Fi (wki,t−1 )
+m i∈S
+k
+
+2
+
+≤ 4 A0
+
+2
+
++ 4 B0
+
+2
+
++ 4 C0
+
+2
+
+t=1
+
+2
+
+τ
+
+1 XX
+∇Fi (w̄kt−1 ) ,
++4
+m i∈S
+k
+
+t=1
+
+(38)
+and thus, by Equations (58), (60), (62) and (63), we have
+τ
+
+1 X Xe
+∇Fi (wki,t−1 )
+E
+m i∈S
+k
+
+2
+
+≤ 4τE
+
+h
+
+∇F(wk )
+
+2
+
+i
+
+t=1
+
++ 4τσ2φ + 4τ(1 + p)σ2B + 4L2 β2 τ(τ − 1)σ2w .
+Next, we lower bound the term
+"*
++#
+τ
+XX
+k 1
+k
+e
+E ∇F(w ),
+∇Fi (wi,t−1 ) .
+m i∈S
+k
+
+(39)
+
+(40)
+
+t=1
+
+By (34), we have
+2*
++3
+τ
+XX
+1
+e
+E 4 ∇F(w̄k ),
+∇Fi (wki,t−1 ) 5
+m 0
+i∈S k t=1
+2*
++3
+τ
+XX
+1
+≥ E 4 ∇F(w̄k ),
+∇Fi (w̄ki,t−1 ) 5
+m 0
+i∈S k t=1
+˝
+˛
+˝
+˛
+k
+− E ∇F(w̄ ), A0 − E ∇F(w̄k ), B0 + C 0 .
+
+(41)
+
+We bound the terms of the above inequality separately. First
+note that
+2*
++3
+τ
+XX
+1
+E 4 ∇F(w̄k ),
+∇Fi (w̄ki,t−1 ) 5
+m 0
+i∈S k t=1
+2*
+2
+3+ 3
+X
+1
+= τE 4 ∇F(w̄k ), E 4
+∇Fi (w̄ki )5 5
+m 0
+i∈S k
+
+2
+
+= τE ∇F(w ) .
+k
+
+(42)
+
+Second, we have
+˝
+ ˛
+˝
+˛
+= E ∇F(w̄k ), E A0
+E ∇F(w̄k ), A0
+τ
+2
+≤
+E∇F(wk ) + τσ2ϕD ,
+(43)
+4
+where the last inequality follows from
+Assumption 5. Last, we use the fact that
+i
+˝
+˛
+τ h
+2
+E ∇F(w̄k ), B0 + C 0
+≤ E ∇F(wk )
+4
+h
+i
+h
+i
+2
+2
+.
++ 2E B0
++ 2E C 0
+(44)
+Plugging Equations (68) to (70) in Equation (26) implies
++#
+"*
+τ
+XX
+k
+k 1
+e
+∇Fi (wi,t−1 )
+E ∇F(w̄ ),
+m i∈S
+k t=1
+τ
+2
+≥
+∇F(wk ) − τσ2ϕD − 2τσ2B − 2pL2 β2 τ(τ − 1)σ2w . (45)
+2
+Due to randomly selecting nodes to participate in aggregation, we have ES k [F(w̄k )] = F(wk ). Substituting Equation (27)
+and Equation (25) in Equation (22) implies
+
+
+
+
+1
+2
+ES k0 F(wk+1 ) ≤ F(wk ) − τβ
+− 2Lβ ∇F(wk )
+2
++ τβ(2Lβσ2φD + σ2ϕD ) + 2τβσ2B (2Lβ + 1)
++ 2τ(τ − 1)L2 β3 σ2w (Lβ + 1)
+3τβ
+2
+∇F(wk )
+≤ F(wk ) −
+10
+
+
++ τβ (2Lβσ2φD + σ2ϕD ) + 2p(2Lβ + 1)σ2B
+
+
++ τβp 2(τ − 1)L2 β2 (Lβ + 1) .
+
+(46)
+
+The last inequality is obtained using β ≤ 1/(10τL), which
+gives us the desired result.
+
+Theorem V.2 differs from Theorem V.1 in that it concludes
+that the upper bound on convergence decreases each round
+with the addition of client selection strategies. This bound is
+now limited to the maximum probability of being selected,
+p. In general, p ≤ 1/m < 1, which inevitably results in
+a lower upper bound on convergence, thus speeding up the
+convergence of the model during training. Let σ2ϕD = σ2φD = 0,
+and τ = 1. In this case, the second term on the right-hand
+side in Equation (32) reduces to O(pβ2 LB2 ), which is similar
+to complexity in Theorem V.1, but with a new constraint
+term.
+VI. E VALUATION
+A. Experimental Settings and Datasets
+1) Environmental Setup: In this study, both our global
+and local models utilize three different deep learning neural
+networks for three different datasets.1 Note that the model
+1 The CNN for UNSW-NB15 dataset has 7 layers with the following
+structure: 3×3×16 Convolutional → 2×2 MaxPool → 3×3× 32 Convolutional
+→ 2 × 2 MaxPool 3 × 3 × 64 Convolutional → 2× 2 MaxPool → z × 11 Fully
+connected. The LSTM for BoT-IoT dataset has 6 layers with the following
+structure: (z, 15) LSTM → 20×60 Fully connected → 60×80 Fully connected
+→ 80 × 90 Fully connected → 90 × 4 → softmax, where z depends on the
+number of input features. The CNN-BiLSTM for CIC-IDS2017 has 11 layers
+and its structure is in the link: https://github.com/fisher85/ml-cybersecurity
+
+YAN et al.: GLOBAL OR LOCAL ADAPTATION? CLIENT-SAMPLED FEDERATED META-LEARNING
+
+structure was adjusted to fit the various datasets while maintaining uniformity across different comparison methods. The
+model and the PFL framework were implemented using
+PyTorch 1.13.1. Experiments were conducted on the Ubuntu
+20.04.3 LTS platform with an NVIDIA GeForce RTX 2080TI
+GPU.
+2) Dataset Description and Preprocessing: In this paper,
+we conducted experiments using three widely-used IoT traffic
+intrusion detection datasets: the UNSW-NB15 dataset [41],
+the CIC-IDS2017 dataset [42], and the BoT-IoT dataset [43].
+The UNSW-NB15 dataset was generated by the UNSW Cyber
+Range Laboratory, combining real-world benign traffic with
+modern, synthetic attack behaviors. The CIC-IDS2017 dataset
+includes both benign and various common attack types, providing raw traffic data as well as network traffic analysis
+results, which include timestamps, source and destination
+IPs, ports, protocols, and attack labels. The BoT-IoT dataset
+contains over 72 million records, covering a wide range of
+attacks including DDoS, DoS, OS scanning, service scanning,
+keystroke logging, and data exfiltration. These datasets have
+been widely used to evaluate intrusion detection systems, and
+their generation methods are well-documented in the respective publications, ensuring a diverse and representative set of
+attack scenarios and network conditions. Our preprocessing
+of this three dataset involves three steps: (1) conducting
+dimensionality reduction (PCA) on the three-column feature
+variables of character types and applying one-hot encoding
+to ensure uniqueness; (2) segregating the merged character
+variables and other features from the label class; (3) filling in
+missing data and performing reselection and feature normalization operations according to the Non-IID settings.
+3) Baselines: We selected four state-of-the-art federated
+intrusion detection models: Deepfed [16], FSLAD [21], FedANIDS [44], and SSFL [45] as baselines. These methods
+showcase significant advancements in federated learning for
+intrusion detection over the past four years. Our method,
+PerFLID, is designed to adapt to local data distributions.
+Additionally, unlike these models, our approach introduces
+a novel node selection mechanism to accelerate federated
+learning.
+4) Dataset Partitioning: We utilize the Non-IID data partitioning strategy mentioned in Section III-B to segment the
+three datasets and create local traffic datasets for each node.
+The specific process is as follows: we allocate 80% of the
+dataset for training nodes, reserving the remaining 20% for
+testing nodes. Regardless of being a training or testing node,
+the dataset adheres to imbalances in attack type distribution,
+data characteristics, and quantity, aligning with the heterogeneity of real IoT data. Using the UNSW-NB15 dataset as an
+example, this dataset includes nine types of attacks, forming
+nine labels. We divide these labels among a specified number
+of nodes based on a Dirichlet distribution, ensuring that each
+label’s probability for a node is a sample from the Dirichlet
+distribution. Then, we calculate the number of attack types
+each node contains based on this probability (excluding attack
+types with fewer than 5 samples). Finally, we ensure each node
+has at least one attack type but no more than five. When the
+number of training nodes =100, at a certain node, the major
+
+289
+
+attack types (including normal traffic) and their sample counts
+are as follows: Normal 637 (63.89%), Backdoor 16 (1.61%),
+DoS 163 (16.35%), Exploits 86 (8.63%), Reconnaissance 88
+(8.83%), Worms 7 (0.70%). For each round of experiments,
+training and test data are randomly selected based on the
+aforementioned ratio, with the experiment repeated ten times,
+and the average value serving as the experimental result.
+5) Evaluation Metrics: Given that each edge node in our
+PerFLID model may encounter n (where n ≥ 3) unknown types
+of attacks, we evaluate the performance of our model using
+accuracy, false alarm rate, and macro-F1 score as evaluation
+metrics. The calculation of these metrics is as follows:
+Accuracy rate: the proportion of correctly classified traffic
+samples (including normal traffic and abnormal traffic) to the
+total samples.
+1 X T Pi + T Ni
+TP + TN
+=
+. (47)
+Accuracy =
+T P + T N + FP + FN
+N i∈N
+|Di |
+Recall: the true positive rate, represents the proportion
+of normal traffic samples incorrectly identified as abnormal
+among all samples.
+Recall =
+
+TP
+.
+T P + FN
+
+(48)
+
+Macro F1-score: Considering the large difference in the
+number of attack samples for each type of traffic at edge nodes,
+calculate the Macro F1-score. The calculation formula for the
+Macro F1-score is:
+K
+
+Macro F1-score =
+
+1 X
+Precisioni · Recalli
+2·
+.
+K
+Precisioni + Recalli
+
+(49)
+
+i=1
+
+where K is the total number of classes, The Macro F1-score
+measures the performance of a multi-class classification model
+by averaging the F1-scores of each class.
+B. The Performance of Personalization in PerFLID
+Capability testing of different federated learning distribution
+parameter models involves allocating training data based on
+the three imbalances discussed in Section III-B. The allocation
+method utilizes the label Dirichlet selection technique, where
+traffic data labels are distributed according to the parameter
+α, controlling the level of data heterogeneity. For all three
+datasets, we set the same parameters α to [0.1, 0.5, 1.0, 5, 10].
+Similarly, the test node’s data follows the distribution with
+the same parameters. By training our model under different
+parameters, we aim to evaluate the model’s accuracy when
+tested on various edge nodes. The results are illustrated in
+Figure 3 and according to Figure 3, we evaluate the personalization performance from accuracy:
+1) Accuracy: Personalized traffic intrusion detection models are expected to demonstrate high accuracy in local
+detection tasks [19]. We measure the degree of personalization
+by the average improvement in the classification accuracy
+of unknown types of traffic of the edge node’s personalized
+model before and after training. According to Figure 3a, where
+α = 0.1 represents the highest data heterogeneity, PerFLID
+achieved the most significant personalization improvement of
+
+290
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 3. Comparison results of the model accuracy in detecting unknown attacks with varied data distribution variance parameters α on UNSW-NB15, CICIDS2017, BoT-IoT datasets under localized personalized updates. (Since multiple nodes were tested, the shaded portions of the graph represent confidence
+intervals for the accuracy, which is the same in Figure 4).
+
+34.5%, compared to 30.1% with Fed-ANIDS and 18.7% with
+Deepfed models. Table I presents specific experimental results,
+comparing precision, recall, and macro-F1 scores obtained by
+PerFLID, FSLAD, Fed-ANIDS, SSFL, and Deepfed models
+when federated training to meet various personalized needs.
+Notably, at α = 0.1, our method achieves precision, recall, and
+macro-F1 scores of 79.6%, 74.5%, and 75.5%, respectively,
+on the UNSW-NB15 dataset, 82.5%, 77.4%, and 78.7% on the
+CIC-IDS2017 dataset, and 90.5% 89.9% 90.3% on the Bot-IoT
+dataset.
+Several observations can be made from Figure 3: First, for
+low personalization needs (α = 10), all federated learning
+models achieved 90% classification accuracy, as shown in
+Figure 3d. However, only PerFLID performed well under
+strong personalization requirements (α = 0.1), achieving
+79.6% accuracy in classifying unknown attacks using the CNN
+network. Second, the accuracy before personalized training on
+the new test node ranges from 45% to 55%. This discrepancy
+is due to the suboptimal use of the global model as the initial
+model for the edge node, which is addressed through personalized training. As the demand for personalization decreases,
+the global model approaches the optimal solution, leading
+to an increase in test accuracy after personalized training,
+from 79.6% to 90.3%. Finally, the experiment results in
+Table I demonstrate that the CNN, LSTM, and CNN-BiLSTM
+
+networks achieve local personalization improvements in edge
+devices. Although the LSTM network exhibits higher test
+accuracy than CNN (1.4%-2.9% improvement), the relative
+performance of the same network remains consistent.
+C. The Performance of Global Model Test
+After investigating PerFLID’s personalization following
+several rounds of local learning, we conducted additional
+experiments to determine whether PerFLID’s global model
+can handle complex global scenarios during the training phase.
+Using the same three datasets, we tested the accuracy of the
+global model and compared it with the latest meta-learning
+methods [46], the results are shown in Table II.
+D. The Verification of Node Selection Strategies
+This experiment is used to evaluate the effectiveness of the
+key component of PerFLID, i.e., to demonstrate that a node
+selection strategy based on cluster selection accelerates the
+convergence of the model. We trained using a dataset with
+120 nodes, with a data distribution parameter of α = 0.1 and
+other parameters identical to those in Section VI-A. To validate
+the generality of our node selection strategy, we compare
+three approaches to achieve intrusion detection: federated
+meta-learning [23], federated learning [45], and PerFLID. The
+
+YAN et al.: GLOBAL OR LOCAL ADAPTATION? CLIENT-SAMPLED FEDERATED META-LEARNING
+
+291
+
+TABLE I
+E XPERIMENTAL R ESULTS AND C OMPARATIVE E XPERIMENTAL R ESULTS
+
+TABLE II
+C OMPARISON ACCURACY R ESULTS OF G LOBAL M ODEL
+ON T HREE DATASETS
+
+experiments aim to evaluate the local adaptation and runtime
+of the trained models. The results of the experiments are shown
+in Table III, where the average running time of the algorithms
+intuitively shows that our approach runs faster while achieving
+similar detection accuracy. Thus, our model exhibits faster
+convergence compared to the other two methods, requiring
+only 4−10 epochs of personalized training to converge for each
+node with different data distributions. This observation aligns
+with our theoretical analysis, indicating efficient convergence
+without additional overhead. The last two columns of Table III
+present the experimental results of applying our node selection
+strategy to PFTD based on federated meta-learning and SSFL
+based on federated learning. It is evident that our node
+selection strategy significantly accelerates the training speed
+of each model, while also enhancing global accuracy and
+improving adaptation to local data.
+E. The Additional Participant Scenario Test
+Since different federated learning parameters affect the
+model training effect, for the presence of additional nodes
+involved in training, we compared the impact of different
+numbers of edge nodes on the model training accuracy when
+the node data heterogeneity parameter α = 0.5. The experimental results are shown in the Figure 4. We also increased
+the learning rate and conducted tests after enough rounds of
+personalized training. Two conclusions can be drawn:
+
+Fig. 4. The impact of additional participant nodes C in federated training test
+on UNSW-NB15 dataset.
+
+1) Impact of Additional Participant Nodes: The average
+accuracy of the personalized model increases with the number
+of edge nodes. This is because with more edge nodes, the
+global model can access a greater number and variety of
+sample features. However, this improvement is not infinite and
+may even become counterproductive. When the total number
+of nodes reaches 500, the accuracy of our model plateaus,
+while the accuracy of PFTD drops by 5.42%. We believe that
+when the edge nodes cover a sufficient number of samples
+of all types, the model accuracy reaches its peak. Further
+increasing the number of edge nodes only increases storage
+overhead and model aggregation delay at the central server.
+Moreover, without a node selection strategy, increasing the
+number of edge nodes may result in certain types of samples
+not being selected for aggregation, thereby reducing model
+accuracy.
+
+292
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+TABLE III
+ACCURACY FOR THE E XPERIMENTS OF THE G LOBAL AND L OCAL S CENARIO
+
+2) Local Personalization: For the globally learned model,
+conducting multiple epochs (more than 20) of local personalization is meaningless. Our proposed model quickly converges
+locally during personalized training on edge devices. Additional rounds of learning do not significantly improve model
+accuracy and may lead to overfitting, consuming local device
+resources unnecessarily.
+VII. C ONCLUSION AND F UTURE W ORKS
+A novel personalized federated learning framework, PerFLID, was proposed for detecting traffic intrusion in IoT
+nodes. Using meta-learning, the central model learns data
+characteristics from edge devices to create adaptive models,
+enabling personalized intrusion detection against unknown
+traffic attacks. To accelerate deployment, we designed a node
+selection strategy based on local gradient feature clustering,
+theoretically proving it speeds up convergence and improves
+efficiency. We demonstrated the framework’s convergence
+upper bound and conducted extensive simulations with various neural network models on three NIDS datasets. Results
+show the personalized model has local adaptability and faster
+training convergence. Experiments confirm that our personalized federated learning intrusion detection framework achieves
+state-of-the-art performance in federated machine learning
+scenarios, meets the personalized needs of edge devices,
+and maintains optimal local attack detection in distributed
+environments.
+Currently, PerFLID primarily addresses conventional IoT
+threats, but detecting advanced persistent threats (APTs) in IoT
+environments remains a challenge due to their time-sensitive
+and covert nature. Future research will focus on enhancing our
+federated learning framework to address APT characteristics
+by developing new detection methods, incorporating time
+series analysis techniques, and improving real-time detection
+capabilities to ensure timely responses.
+R EFERENCES
+[1] B. L. R. Stojkoska and K. V. Trivodaliev, “A review of Internet of Things
+for smart home: Challenges and solutions,” J. Cleaner Prod., vol. 140,
+pp. 1454–1464, Jan. 2017.
+[2] H. Boyes, B. Hallaq, J. Cunningham, and T. Watson, “The industrial
+Internet of Things (IIoT): An analysis framework,” Comput. Ind.,
+vol. 101, pp. 1–12, Oct. 2018.
+[3] M. M. Islam, A. Rahaman, and M. R. Islam, “Development of smart
+healthcare monitoring system in IoT environment,” Social Netw. Comput. Sci., vol. 1, no. 3, pp. 1–11, May 2020.
+[4] M. Humayun, N. Jhanjhi, B. Hamid, and G. Ahmed, “Emerging smart
+logistics and transportation using IoT and blockchain,” IEEE Internet
+Things Mag., vol. 3, no. 2, pp. 58–62, Jun. 2020.
+
+[5] M. Antonakakis et al., “Understanding the Mirai botnet,” in Proc. 26th
+USENIX Secur. Symp., 2017, pp. 1093–1110.
+[6] B. Seri and A. Livne. (2019). Exploiting Blueborne in LinuxBased Iot Devices. [Online]. Available: https://media.armis.com/pdfs/
+wp-exploiting-blueborne-in-linuxbased-iot-devices-en.pdf
+[7] N. Moustafa, B. Turnbull, and K.-K. R. Choo, “An ensemble intrusion
+detection technique based on proposed statistical flow features for
+protecting network traffic of Internet of Things,” IEEE Internet Things
+J., vol. 6, no. 3, pp. 4815–4830, Jun. 2018.
+[8] M. F. Umer, M. Sher, and Y. Bi, “Flow-based intrusion detection:
+Techniques and challenges,” Comput. Secur., vol. 70, pp. 238–254, Sep.
+2017.
+[9] E. Aydin and S. Bahtiyar, “OCIDS: An online CNN-based network
+intrusion detection system for DDoS attacks with IoT botnets,” in Proc.
+14th Int. Conf. Secur. Inf. Netw. (SIN), Dec. 2021, pp. 1–8.
+[10] S. Seth, G. Singh, and K. Kaur Chahal, “A novel time efficient learningbased approach for smart intrusion detection system,” J. Big Data,
+vol. 8, no. 1, p. 111, Dec. 2021.
+[11] C. Zhang, D. Jia, L. Wang, W. Wang, F. Liu, and A. Yang,
+“Comparative research on network intrusion detection methods
+based on machine learning,” Comput. Secur., vol. 121, Oct. 2022,
+Art. no. 102861.
+[12] V. Mothukuri, P. Khare, R. M. Parizi, S. Pouriyeh, A. Dehghantanha,
+and G. Srivastava, “Federated-learning-based anomaly detection for IoT
+security attacks,” IEEE Internet Things J., vol. 9, no. 4, pp. 2545–2554,
+Feb. 2021.
+[13] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. Y. Arcas,
+“Communication-efficient learning of deep networks from decentralized data,” Proc. Artif. Intell. Statist., vol. 3, pp. 1273–1282,
+May 2017.
+[14] N. Chaabouni, M. Mosbah, A. Zemmari, C. Sauvignac, and
+P. Faruki, “Network intrusion detection for IoT security based on
+learning techniques,” IEEE Commun. Surveys Tuts., vol. 21, no. 3,
+pp. 2671–2701, 3rd Quart., 2019.
+[15] T. D. Nguyen, S. Marchal, M. Miettinen, H. Fereidooni, N. Asokan,
+and A.-R. Sadeghi, “DIoT: A federated self-learning anomaly detection
+system for IoT,” in Proc. IEEE 39th Int. Conf. Distrib. Comput. Syst.
+(ICDCS), May 2019, pp. 756–767.
+[16] B. Li, Y. Wu, J. Song, R. Lu, T. Li, and L. Zhao, “DeepFed: Federated deep learning for intrusion detection in industrial Cyber–Physical
+systems,” IEEE Trans. Ind. Informat., vol. 17, no. 8, pp. 5615–5624,
+Aug. 2021.
+[17] S. Chatterjee and M. K. Hanawal, “Federated learning for intrusion
+detection in IoT security: A hybrid ensemble approach,” Int. J. Internet
+Things Cyber-Assurance, vol. 1, no. 1, p. 1, 2023.
+[18] H. Liu et al., “Blockchain and federated learning for collaborative
+intrusion detection in vehicular edge computing,” IEEE Trans. Veh.
+Technol., vol. 70, no. 6, pp. 6073–6084, Jun. 2021.
+[19] A. Z. Tan, H. Yu, L. Cui, and Q. Yang, “Towards personalized federated learning,” IEEE Trans. Neural Netw. Learn. Syst., vol. 3, no. 1,
+pp. 1–17, Apr. 2022.
+[20] V. Kulkarni, M. Kulkarni, and A. Pant, “Survey of personalization
+techniques for federated learning,” in Proc. 4th World Conf. Smart
+Trends Syst., Secur. Sustain. (WorldS4), 2020, pp. 794–797.
+[21] O. Aouedi, K. Piamrat, G. Muller, and K. Singh, “Federated
+semisupervised learning for attack detection in industrial Internet of
+Things,” IEEE Trans. Ind. Informat., vol. 19, no. 1, pp. 286–295,
+Jan. 2023.
+[22] R. Zhao, Y. Yin, Y. Shi, and Z. Xue, “Intelligent intrusion detection
+based on federated learning aided long short-term memory,” Phys.
+Commun., vol. 42, Oct. 2020, Art. no. 101157.
+
+YAN et al.: GLOBAL OR LOCAL ADAPTATION? CLIENT-SAMPLED FEDERATED META-LEARNING
+
+[23] Y. Hu, J. Wu, G. Li, J. Li, and J. Cheng, “Privacy-preserving few-shot
+traffic detection against advanced persistent threats via federated meta
+learning,” IEEE Trans. Netw. Sci. Eng., vol. 11, no. 3, pp. 2549–2560,
+May 2024.
+[24] H. Ding, L. Chen, S. Li, Y. Bai, P. Zhou, and Z. Qu, “Divide,
+conquer, and coalesce: Meta parallel graph neural network for IoT
+intrusion detection at scale,” in Proc. ACM Web Conf., May 2024,
+pp. 1656–1667.
+[25] A. Back de Luca, G. Zhang, X. Chen, and Y. Yu, “Mitigating data
+heterogeneity in federated learning with data augmentation,” 2022,
+arXiv:2206.09979.
+[26] Y. Fraboni, R. Vidal, L. Kameni, and M. Lorenzi, “Clustered sampling: Low-variance and improved representativity for clients selection
+in federated learning,” in Proc. Int. Conf. Mach. Learn., 2021,
+pp. 3407–3416.
+[27] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for
+fast adaptation of deep networks,” in Proc. 34th Int. Conf. Mach. Learn.,
+vol. 70, Aug. 2017, pp. 1126–1135.
+[28] A. Fallah, A. Mokhtari, and A. Ozdaglar, “Personalized federated
+learning: A meta-learning approach,” 2020, arXiv:2002.07948.
+[29] Q. Li, Y. Diao, Q. Chen, and B. He, “Federated learning on non-IID
+data silos: An experimental study,” in Proc. IEEE 38th Int. Conf. Data
+Eng. (ICDE), May 2022, pp. 965–978.
+[30] S. Moon and W. H. Lee, “Privacy-preserving federated learning in
+Healthcare,” in Proc. Int. Conf. Electron., Inf., Commun. (ICEIC), 2023,
+pp. 1–4.
+[31] T.-M. Harry Hsu, H. Qi, and M. Brown, “Measuring the effects of
+non-identical data distribution for federated visual classification,” 2019,
+arXiv:1909.06335.
+[32] X. Gong, Y. Chen, Q. Wang, and W. Kong, “Backdoor attacks and
+defenses in federated learning: State-of-the-art, taxonomy, and future
+directions,” IEEE Wireless Commun., vol. 30, no. 2, pp. 114–121,
+Apr. 2023.
+[33] S. Huang, Y. Li, C. Chen, L. Shi, and Y. Gao, “Multi-metrics adaptively
+identifies backdoors in federated learning,” in Proc. IEEE/CVF Int. Conf.
+Comput. Vis. (ICCV), Oct. 2023, pp. 4629–4639.
+[34] Y. Wang, D. Zhai, and Y. Xia, “SCFL: Mitigating backdoor attacks in
+federated learning based on SVD and clustering,” Comput. & Secur.,
+vol. 133, Aug. 2023, Art. no. 103414.
+
+293
+
+[35] J. Wolfrath, N. Sreekumar, D. Kumar, Y. Wang, and A. Chandra,
+“HACCS: Heterogeneity-aware clustered client selection for accelerated
+federated learning,” in Proc. IEEE Int. Parallel Distrib. Process. Symp.
+(IPDPS), May 2022, pp. 985–995.
+[36] K. Muhammad et al., “FedFast: Going beyond average for faster training
+of federated recommender systems,” in Proc. 26th ACM SIGKDD Int.
+Conf. Knowl. Discov. Data Min., 2020, pp. 1234–1242.
+[37] H. T. Nguyen, V. Sehwag, S. Hosseinalipour, C. G. Brinton, M. Chiang,
+and H. Vincent Poor, “Fast-convergent federated learning,” IEEE J. Sel.
+Areas Commun., vol. 39, no. 1, pp. 201–218, Jan. 2021.
+[38] T. Li, A. K. Sahu, M. Zaheer, M. Sanjabi, A. Talwalkar, and V. Smith,
+“Federated optimization in heterogeneous networks,” Proc. Mach.
+Learn. Syst., vol. 2, pp. 429–450, May 2020.
+[39] Y. Arjevani, Y. Carmon, J. C. Duchi, D. J. Foster, N. Srebro, and
+B. Woodworth, “Lower bounds for non-convex stochastic optimization,”
+Math. Program., vol. 199, nos. 1–2, pp. 165–214, May 2023.
+[40] J. Wang, Q. Liu, H. Liang, G. Joshi, and V. H. Poor, “Tackling the objective inconsistency problem in heterogeneous federated optimization,” in
+Proc. NIPS, 2020, pp. 7611–7623.
+[41] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+network intrusion detection systems (UNSW-NB15 network data set),”
+in Proc. Mil. Commun. Inf. Syst. Conf. (MilCIS), Nov. 2015, pp. 1–6.
+[42] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+a new intrusion detection dataset and intrusion traffic characterization,”
+in Proc. ICISSp, vol. 1, May 2018, pp. 108–116.
+[43] N. KoronIoTis, N. Moustafa, E. Sitnikova, and B. Turnbull, “Towards
+the development of realistic botnet dataset in the Internet of Things for
+network forensic analytics: Bot-IoT dataset,” Future Gener. Comput.
+Syst., vol. 100, pp. 779–796, Nov. 2019.
+[44] M. J. Idrissi et al., “Fed-ANIDS: Federated learning for anomaly-based
+network intrusion detection systems,” Expert Syst. Appl., vol. 234, Dec.
+2023, Art. no. 121000.
+[45] R. Zhao, Y. Wang, Z. Xue, T. Ohtsuki, B. Adebisi, and G. Gui,
+“Semisupervised federated-learning-based intrusion detection method
+for Internet of Things,” IEEE Internet Things J., vol. 10, no. 10,
+pp. 8645–8657, May 2023.
+[46] C. Xu, J. Shen, and X. Du, “A method of few-shot network intrusion
+detection based on meta-learning framework,” IEEE Trans. Inf. Forensics Security, vol. 15, pp. 3540–3552, 2020.
+PAPER_TEXT

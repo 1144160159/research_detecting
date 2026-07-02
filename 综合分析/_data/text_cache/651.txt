@@ -1,0 +1,145 @@
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026                                                                                              4701
+
+
+
+Dual-Masked and Discriminative Reconstruction for
+       Unified Vision Anomaly Detection
+                                                                    Bin-Bin Gao
+
+   Abstract—Unsupervised reconstruction networks have shown                     research attention. Notably, most existing anomaly detection
+promise for unified vision anomaly detection, i.e., image-level                 methods [10], [11], [12], [13], [14], [15], [16], [17], [18], [19],
+anomaly classification and pixel-level anomaly segmentation,                    [20] mainly focus on training separate models (i.e., one model
+where a single model trained on multi-class normal images can
+detect various anomalies. This is more challenging than most                    for one class) for different objects. However, this separate
+existing separate methods, i.e., one model for one class, as it                 paradigm may not be practical in real-world applications, as
+requires handling a more complex data distribution. Notably,                    it requires high memory consumption and storage overhead,
+pure reconstruction networks often suffer from overfitting due                  especially when increasing the number of categories. In con-
+to “identity shortcut”, where both normal and anomaly images                    trast, unified anomaly detection (i.e., one model for multiple
+may be well recovered and thus fail in detecting anomalies.
+Recent efforts have focused on developing specific modules for                  classes) detects anomalies for multi-class objects with a single
+different network architectures, e.g., Convolutions and Trans-                  model. Notably, the categorical information (i.e., class label)
+formers. However, it is still unclear how to essentially and                    is inaccessible at both the training and inference stages in
+effectively prevent learning from this shortcut in a simpler                    this unified setting. Undoubtedly, the unified paradigm is both
+and more general manner. Furthermore, most existing methods                     more practical and more challenging, but it remains a relatively
+consider anomaly detection solely as unsupervised classification,
+resulting in inaccurate anomaly segmentation due to “weak                       new and under-explored area.
+discrimination”, where normal and anomaly features may be                          UniAD [21] is the first unified unsupervised anomaly detec-
+entangled. To address these challenges, we propose a simple                     tion work, which is typically based on an encoder-decoder
+yet general Dual-masked and Discriminative Reconstruction                       transformer. Notably, the pure encoder-decoder transformer
+(D2Rec) for unified vision anomaly detection. First, we propose                 suffers from overfitting. It cannot achieve satisfactory perfor-
+a general dual-masked reconstruction, i.e., using a pair of
+complementary masks, resolving the “identity shortcut” so that                  mance because of “identity shortcut” issue, which returns a
+all masked positions are reconstructed by unmasked original                     direct copy of the input disregarding its content, as shown
+features. Second, we propose a self-supervised discriminator,                   in Fig. 1a. Layer-wise query decoder and neighbor-masked
+which refines reconstruction errors with synthesized anomaly                    attention are proposed in UniAD [21] to prevent the model
+images to enhance the discrimination ability between normal                     from learning the shortcut. Similar to UniAD, DUMA [22]
+and abnormal features. The dual-masked reconstruction and self-
+supervised discriminator can serve as universal plugins, easily                 applies a max-mask matrix in self-attention to reduce the noise
+integrated into reconstruction-based anomaly detection methods                  dependencies in transformer-based reconstruction networks,
+of any architecture. Despite its simplicity, D2Rec outperforms                  and SSPCAB [23] proposes a masked convolutional kernel for
+previous methods on three industrial benchmarks (MVTec,                         convolutional-based reconstruction networks. However, these
+BTAD, and VisA), and three medical datasets (Brain MRI, Liver                   methods are limited to specific network architectures, such as
+CT and Retinal OCT). The code for D2Rec is available at https://
+github.com/gaobb/D2Rec                                                          transformers or convolutions. Furthermore, RD [16] proposes
+                                                                                a simple student-teacher reconstruction model, where the
+   Index Terms—Dual-masked reconstruction, self-supervised dis-                 student restores the multiscale representations of the teacher
+criminator, unsupervised anomaly detection, unified anomaly
+detection.                                                                      from high-level to low-level. EfficientAD [19] combines a
+                                                                                lightweight student-teacher model and an autoencoder model
+                     I. I NTRODUCTION                                           for efficient and accurate detection of vision anomalies. How-
+                                                                                ever, RD [16] and EfficientAD [19] are originally designed
+U    NSUPERVISED vision anomaly detection aims to iden-
+     tify anomaly images (i.e., classification or detection) and
+segment anomaly regions (i.e., segmentation or localization)
+                                                                                for separate settings, and there is still a large performance
+                                                                                gap when they are extended to a unified setting. Here, we
+                                                                                raise a question: how to prevent the reconstruction networks
+using only normal training images. It is increasingly emerging
+                                                                                regardless of architecture under a unified setting from falling
+with wide applications, such as quality inspection in intelligent
+                                                                                into overfitting in a simpler and more general manner?
+manufacturing [1], [2], [3], medical image diagnosis [4], [5],
+                                                                                   Furthermore, the current unified anomaly detection
+and video surveillance [6], [7], [8], [9], thus attracting more
+                                                                                methods, e.g., UniAD [21] and MoEAD [24], are still not
+   Received 25 January 2025; revised 27 October 2025; accepted 5 April 2026.    satisfactory for pixel-level anomaly segmentation when
+Date of publication 1 May 2026; date of current version 6 May 2026. The         using a more suitable evaluation metric (see more detailed
+associate editor coordinating the review of this article and approving it for
+publication was Prof. Vittoria Bruni.
+                                                                                discussions in Sec. V), e.g., Pixel-level AUPR, as shown in
+   The author is with the Tencent YouTu Lab, Shenzhen 518057, China             Figs. 1c and 2. The main reason is “weak discrimination”
+(e-mail: csgaobb@gmail.com).                                                    between normal and anomaly features because they are trained
+   This article has supplementary downloadable material available at
+https://doi.org/10.1109/TIP.2026.3687095, provided by the authors.
+                                                                                only on normal training images in low-resolution feature
+   Digital Object Identifier 10.1109/TIP.2026.3687095                           space. The “weak discrimination” makes normal and anomaly
+             1941-0042 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+4702                                                                                               IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 35, 2026
+
+
+
+
+Fig. 1. Comparisons among (a) AE, (b) MAE, (c) UniAD and our (d) DRec and (e) D2Rec with Eb4 +Trans architecture on MVTec. The simple
+AE tends to learn an “identity shortcut”, i.e., regressing the overall network to an identity mapping, which can result in the model copying input as output at
+inference, thereby failing to detect anomalies. We also observe that AE suffers from serious overfitting, i.e., low training loss but poor testing performance, due
+to the “identity shortcut”. The UniAD can alleviate the “identity shortcut”, but it is primarily designed for transformer architectures. To some extent, Masked AE
+(MAE) can also mitigate the “identity shortcut”, but its effectiveness depends on an ideal mask ratio. In contrast, the proposed Dual-masked Reconstruction
+(DRec) is simple, general, and robust across various mask ratios. DRec effectively resolves the “identity shortcut” by reconstructing all masked positions
+using unmasked features. However, both UniAD and DRec still suffer from the “weak discrimination” issue, which leads to entanglement between normal
+and anomaly features, ultimately resulting in inaccurate anomaly segmentation. To this end, our D2Rec integrates DRec and Self-Supervised Discriminator
+(SSD) into a unified framework. This approach successfully resolves both the “identity shortcut” and “weak discrimination” issues simultaneously, achieving
+superior anomaly detection performance, particularly in anomaly segmentation.
+
+
+
+
+Fig. 2. Comparisons of popular reconstruction-based anomaly detection models, e.g., AE and RD, and our DRec and D2Rec with diverse architectures.
+The averaged results of all classes on each dataset are reported in P-AUPR for anomaly segmentation and I-AUROC for anomaly classification, respectively.
+
+
+features always entangled, and ultimately results in inaccurate                    proposed a lightweight Self-Supervised Discriminator (SSD)
+anomaly segmentation. We expect that anomaly segmentation                          to further refine the reconstruction error from low-resolution to
+performance can be improved if the “weak discrimination”                           high-resolution (coarse to fine) with normal and anomaly-free
+issue is mitigated through discriminative learning. Recently,                      pseudo images. Our contributions are summarized as follows:
+some discriminative models have been trained on synthetic                            • We rethink and analyze reconstruction networks for
+anomalies generated on anomaly-free images [15], [20], [25],                            unified anomaly detection, and then find that they
+[26] or features [17]. However, current approaches either use                           severely suffer from overfitting and result in unsatisfac-
+synthetic anomalies at the image level, resulting in weak per-                          tory performance due to “identity shortcut” and “weak
+formance, or utilize a complex segmentation model, incurring                            discrimination”.
+high computational costs. We expect to design a discriminator                        • We propose a simple and general dual-masked recon-
+that is as lightweight as possible to refine reconstruction                             struction for unsupervised reconstruction networks, which
+errors for achieving better anomaly segmentation.                                       provides a unified solution to address the “identity
+   To overcome “identity shortcut” and “weak discrimination”                            shortcut” in reconstruction networks of any architecture.
+issues for unified visual anomaly detection, we propose                              • To alleviate “weak discrimination”, we propose a self-
+an embarrassingly simple but general D2Rec framework.                                   supervised discriminator to refine reconstruction errors
+First, we proposed a Dual-masked Reconstruction (DRec)                                  with synthesized anomaly images, which significantly
+mechanism, which ensures that all masked positions are                                  boosts anomaly segmentation performance.
+reconstructed using unmasked features, thus completely solv-                         • We propose a simple, effective, general and robust vision
+ing the “identity shortcut” in unsupervised reconstruction.                             anomaly detection framework integrating unsupervised
+Experiments have demonstrated that the proposed DRec is                                 dual-masked        reconstruction     and    self-supervised
+robust and insensitive to mask ratio. Second, to further boost                          discriminator, and achieve competitive performance
+the anomaly segmentation performance caused by “weak                                    on both industrial and medical anomaly detection
+discrimination” between normal and abnormal features, we                                benchmarks.
+GAO: DUAL-MASKED AND DISCRIMINATIVE RECONSTRUCTION FOR UNIFIED VISION ANOMALY DETECTION                                           4703
+
+
+
+                     II. R ELATED W ORK                              C. Reconstruction-Based Methods
+   Unsupervised vision anomaly detection methods can                    assume that anomaly image regions cannot be properly
+be mainly grouped into three types, i.e., embedding-,                reconstructed since they do not exist in normal training images.
+discrimination-, and reconstruction-based methods.                   Some works use generative models such as auto-encoders
+                                                                     [37], [38], [39] and GANs [40], [41], [42] to reconstruct
+A. Embedding-Based Methods                                           normal images. Recent works frame anomaly detection as
+   aim at leveraging deep models pre-trained on large-scale          an inpainting problem, where patches from images are partly
+data to extract offline features from images for anomaly detec-      masked. RIAD [43] randomly removes partial image regions
+tion. It assumes that offline features preserve the discriminative   and reconstructs the image from partial inpaintings with a
+information that helps distinguish anomalies from normal             convolutional neural network. SSPCAB [23] learns to recon-
+samples. PaDiM [11], MDND [27], and DFM [12] model                   struct masked regions using contextual information with a
+a multivariate Gaussian distribution for normal features, then       masked convolutional kernel. RGI [44] proposes a robust
+utilize a distance metric to measure anomalies. PatchCore [13]       GAN-inversion that can restore any input image (even with
+captures normal features and then stores them in a memory            gross corruptions) to a clean image and identify the corrupted
+bank, and finally calculates anomaly scores by Euclidean             region mask by solving the optimization problems thereof. A
+distance between query features and the memory bank at               pyramid deformation module is proposed to model diverse
+inference. CS-Flow [10] and PyramidFlow [28] tran

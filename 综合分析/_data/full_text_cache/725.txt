@@ -1,0 +1,689 @@
+3960 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+LitCVit: A Lightweight Self-Supervised Contrastive
+ Vision Transformer for Encrypted Malicious
+ Traffic Detection
+ Mehr Un Nisa, Adnan Noor Mian , Senior Member, IEEE,
+ and Mubashir Husain Rehmani , Senior Member, IEEE
+
+ Abstract—Malicious traffic detection often requires large, has further expanded the threat landscape, as cybercriminals
+labeled datasets, which are challenging due to privacy con- increasingly exploit these encrypted channels to launch percerns, labeling costs, and evolving threat patterns. Although sistent and evasive attacks, effectively bypassing conventional
+recent self-supervised pretraining methods address this issue,
+they rely on complex transformer-based architectures that are defenses [1]. Additionally, advancements in encryption protocomputationally expensive and have high inference times, making cols, such as TLS 1.3 and DNS over HTTPS, have reduced the
+them unsuitable for real-time use. In addition, most existing availability of previously accessible metadata [2]. These trends
+approaches process packets or flows independently, and often emphasize the urgent need for robust and efficient detection
+rely on per-packet dataset splits that introduce implicit flow- techniques to identify malicious patterns within encrypted
+level data leakage, thereby limiting their ability to capture
+meaningful semantic and behavioral relationships across flows for network traffic.
+detecting stealthy encrypted threats. To address these issues, we Artificial intelligence (AI)-based techniques have emerged
+propose LitCVit, a lightweight self-supervised contrastive Vision as an effective alternative to rule-based and signature-based
+Transformer-based framework that captures cross-flow semantic methods for detecting encrypted malicious traffic [3]. Most of
+and behavioral patterns to generate robust latent representations these methods rely on manually engineered features extracted
+of encrypted traffic. Without relying on decryption or manually
+engineered features, our method enables efficient detection of from protocol headers, flow, or handshake metadata to identify
+encrypted malicious flows with low inference time. Extensive eval- malicious patterns. However, these methods provide limited
+uations on benchmark datasets demonstrate that the proposed visibility into fine-grained encrypted network traffic, leading to
+framework achieves an average detection accuracy of 98.10% and higher false alarm rates (FAR), challenges in high-speed traffic
+F1-score of 98.08%. Compared to the best state-of-the-art model, processing, and poor generalization across diverse network
+LitCVit achieves an average improvement of 2.49% in F1-score,
+2.12% in precision, and 2.50% in recall, highlighting its superior conditions [4].
+detection capability in encrypted traffic scenarios. Additionally, End-to-end deep learning methods address the limitations of
+LitCVit achieves an 8.7× reduction in inference time compared manual feature engineering by automatically learning relevant
+to the best existing self-supervised approach, making it highly features from raw data. However, they require large volumes
+suitable for deployment on resource-constrained devices. of labeled data for effective training to achieve satisfactory
+ Index Terms—Encrypted malicious traffic, self-supervised performance. Acquiring and labeling such data across diverse
+malicious traffic detection, pre-training models, contrastive learn- network environments is a time-consuming and resourceing, malware or attack classification. intensive process, often introducing significant security and
+ privacy risks [5]. Self-supervised approaches have emerged
+ I. I NTRODUCTION to address these challenges by leveraging large volumes of
+ unlabeled data for pretraining. These methods reduce the
+T HE rapid proliferation of encrypted traffic has not only
+ enhanced user security and privacy but also created new
+opportunities for adversaries to conceal malicious activities
+ reliance on labeled datasets and improve generalization across
+ diverse network environments. However, they have comwithin encrypted payloads, facilitating sophisticated attacks plex transformer-based architectures [6], [7], [8], [9] which
+such as command-and-control (C2). In parallel, the rise of are unsuitable for real-time intrusion detection due to high
+cyber-physical systems and the Internet of Things (IoT) computational and latency requirements. Additionally, most
+ techniques process packets independently and adopt per-packet
+ Received 21 August 2025; revised 10 March 2026; accepted 6 April 2026. data splits [6], [10], [11], which introduce implicit flow-level
+Date of publication 13 April 2026; date of current version 21 April 2026. The
+associate editor coordinating the review of this article and approving it for data leakage [9] and fail to capture meaningful semantic and
+publication was Dr. Meng Li. (Corresponding author: Adnan Noor Mian.) behavioral relationships across flows necessary for detecting
+ Mehr un Nisa and Adnan Noor Mian are with the Cyber Intelli- sophisticated threats.
+gence Laboratory, Department of Computer Science, Information Technology University, Lahore 54600, Pakistan (e-mail: mehr.nisa@itu.edu.pk; In this paper, we propose LitCVit, a lightweight contrastive
+adnan.noor@itu.edu.pk). Vision Transformer-based framework, for encrypted malicious
+ Mubashir Husain Rehmani is with the Department of Computer Sci- traffic detection. Our core idea is to efficiently capture features
+ence, Munster Technological University, Cork, T12 P928 Ireland (e-mail:
+mshrehmani@gmail.com). from raw encrypted traffic at both fine and coarse grained
+ Digital Object Identifier 10.1109/TIFS.2026.3683528 levels through a hierarchy of lightweight encoder blocks.
+ 1556-6021 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+NISA et al.: LitCVit: A LIGHTWEIGHT SELF-SUPERVISED CONTRASTIVE VISION TRANSFORMER 3961
+
+Moreover, we model semantic and behavioral relationships results, Section VII discusses the findings, Section VIII proacross flows by clustering semantically similar traffic patterns vides the ablation study, and Section IX concludes the paper.
+through contrastive representation learning, aligning flows
+with similar behaviors in the latent space rather than modeling II. R ELATED W ORK
+explicit causal interactions. This enables the model to learn We categorize related work into three types: feature-driven,
+compact and discriminative representations of encrypted traffic raw-traffic-based, and pre-training-based techniques.
+flows without requiring large labeled datasets. To enhance
+computational efficiency, we propose a simple yet effective A. Feature-Driven Techniques
+lightweight architecture that replaces traditional heavy trans-
+ Feature-driven methods extract fields from encrypted traffic,
+former designs, significantly reducing complexity and memory
+ including header features [13], flow or connection statistics
+overhead while preserving critical traffic features.
+ [14], and side-channel features [15], [16] to infer malicious
+ The proposed design significantly reduces trainable parambehavioral signatures. Some techniques analyze Secure Socketers (0.658 million) and inference latency (2.32 milliseconds)
+ ets Layer/ Transport Layer Security (SSL/TLS) handshakes
+while preserving strong detection performance. Given its comfor features such as cipher suites [17], JA3/JA3S hashes, and
+pact design, LitCVit aligns well with the resource constraints
+ self-signed and expired certificates [18].However, TLS 1.3
+of typical edge and IoT devices, as prior studies [12] indicate
+ handshake encryption and manual feature engineering limit
+that models with sub-million parameters, FLOPs in the range
+ their effectiveness in real-time environments.
+of a few million, and inference latencies between 10 − 500 ms,
+are considered practically deployable in such environments.
+ B. Raw Bytes-Based Techniques
+Our main contributions are summarized as follows.
+ Raw bytes-based methods use end-to-end deep learning on
+ • We propose LitCVit framework, which introduces a byte-level traffic via Convolutional Neural Networks (CNNs)
+ lightweight architecture tailored for encrypted malicious [19], [20], hybrid Recurrent Neural Networks (RNNs), Biditraffic detection through two key design strategies: rectional Gated Recurrent Units (BiGRUs), and CNNs [21],
+ – Firstly, LitCVit integrates an efficient convolutional [22] to capture spatial and temporal features. While effective,
+ patchify stem and three hierarchical windowed fac- they require large labeled datasets, which are difficult to
+ torized attention (wf-Attention) modules, designed acquire in real time. To overcome this, self-supervised learning
+ to capture fine-grained intra-flow patterns at byte, techniques have been proposed.
+ packet, and flow levels. This architecture significantly reduces the computational overhead of the C. Pre-Training-Based Techniques
+ vanilla Vision Transformer (ViT) architecture while Pre-training–based methods reduce reliance on labeled data
+ preserving fine-grained spatial representations of by learning general traffic representations for downstream fineflows. tuning. Natural language processing (NLP)-based architectures
+ – Secondly, LitCVit employs contrastive learning to model packet- or flow-level byte sequences as linguistic tokens
+ capture semantic and behavioral relationships across and apply Large Language Models (LLMs) such as Bidirecflows. By clustering ET-flow with similar patterns, tional Encoder Representations from Transformers (BERT)
+ the model learns robust and discriminative repre- [6], [10], [11], [23], a Packet-level End-to-end Attentive
+ sentations that separate malicious and benign traffic, Network for encrypted traffic classification (PEAN) [24], a
+ thereby enhancing detection performance and gener- Lite BERT (ALBERT) [25], [26], GPT [27], and T5 [9] to
+ alization across diverse threat scenarios. learn representations of encrypted traffic. MIETT [28] further models inter-packet dynamics via multi-instance learning
+ • We perform a comprehensive computational complexity
+ with novel flow-level contrastive pre-training tasks to learn
+ analysis, demonstrating that the proposed model operates
+ representations of encrypted traffic. Similarly, vision-inspired
+ with substantially fewer parameters and reduced memory
+ approaches such as Yet another Traffic Classifier (YaTC) [8],
+ usage than conventional multi-head self-attention mod-
+ Flow-MAE [29], and NetMamba [30] transform traffic into
+ els, making it highly suitable for resource-constrained
+ image-like grids and employ ViT-style architectures. Other
+ deployments.
+ methods identify malware traffic using channel-level behavior
+ • We validate LitCVit’s effectiveness and efficiency across
+ sequences [7], adversarial pre-training [31], and cross-modal
+ six real-world network traffic datasets, demonstrating its
+ contrastive learning (tFusion [32]).
+ superior performance over state-of-the-art self-supervised
+ Despite strong results, recent work reveals that many
+ methods. The model’s lightweight design and low
+ pre-training–based classifiers suffer from shortcut learning,
+ inference latency make it suitable for deployment in
+ data leakage, and unrealistic evaluation practices, leading
+ resource-constrained environments such as edge and IoT.
+ to inflated performance and limited generalization [9], [33].
+ The remainder of this paper is organized as follows. Moreover, their complex architectures lead to high inference
+Section II reviews related work, Section III introduces the costs. In contrast, Our lightweight ViT-based model addresses
+threat model and design goals, Section IV details the archi- these issues through leakage-free evaluation, reduced comtecture of LitCVit, Section V presents the computation plexity, and windowed factorized attention with contrastive
+complexity analysis, Section VI reports experiments and learning.
+3962 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ III. T HREAT M ODEL AND D ESIGN G OALS to maintain high inference speed and throughput, making it
+ suitable for deployment in high-bandwidth environments.
+A. Threat Model
+ We consider a passive encrypted traffic monitoring scenario C. Design Motivation of the Proposed Architecture
+where LitCVit operates as a non-intrusive module integrated
+ The design of LitCVit is motivated by three key limitawith a network monitoring device via port mirroring. The
+ tions of existing approaches. First, although transformer-based
+adversary communicates over encrypted channels to perform
+ architectures provide strong global context modeling, their
+malicious actions such as C2 communication, data exfilquadratic attention complexity makes them unsuitable for
+tration, ransomware, or denial-of-service (DoS) attacks. We
+ resource-constrained environments. Second, classical ML
+assume the attacker controls the generation of malicious trafmethods depend on handcrafted statistical features that offer
+fic, including payload (prior to encryption), timing behavior,
+ limited adaptability to modern encrypted protocols such as
+and communication endpoints, but cannot tamper with the
+ TLS 1.3. Third, lightweight convolutional models capture
+monitoring infrastructure. The defender passively observes
+ local spatial patterns but fail to model long-range behavioral
+mirrored traffic, including packet headers and raw encrypted
+ dependencies present in encrypted traffic. To address these
+payload bytes, without plaintext access. Labeling is available
+ limitations, LitCVit adopts a hierarchical Vision Transformer
+only during offline fine-tuning, and no online feedback or
+ with windowed factorized attention, enabling efficient capture
+adaptation occurs during deployment. Although an adaptive
+ of byte, packet, and flow-level semantics within a compact and
+attacker may attempt traffic shaping or padding to mimic
+ lightweight architecture. The comparative and ablation results
+benign flows, protocol-constrained header fields and encrypted
+ in Section VIII validate these design choices quantitatively.
+byte patterns limit complete obfuscation, enabling the model to
+learn robust structural and semantic representations from raw
+ IV. P ROPOSED A RCHITECTURE
+traffic data. The system operates without prior knowledge of
+attack signatures and learns generalizable flow representations In this section, we present the architecture of the prothrough contrastive self-supervised pretraining across diverse posed framework for encrypted malicious traffic detection,
+environments and encryption protocols. inspired by the ViT [34]. The proposed architecture utilizes a
+ lightweight convolutional patchify stem, which preserves local
+ spatial features. To further enhance efficiency, we incorporate
+B. Design Goals and Problem Definition a multi-scale windowed factorized attention mechanism that
+ We aim to design a lightweight and generalizable framework decomposes attention operations across byte-level, packetfor encrypted malicious traffic detection. Unlike traditional level, and flow-level representations, significantly reducing
+traffic classification, which identifies applications or users, our computational complexity and memory overhead. A congoal is to determine whether an ET-flow is benign or malicious trastive loss term is added to the training objective to produce
+by passively analyzing encrypted traffic. embeddings that distinguish among various ET-flows during
+ the pre-training phase. The overall architecture consists of
+ 1) Problem Formulation: Let F = { f1 , f2 , . . ., fN } denote
+ three phases: Pre-processing, Pre-training, Fine-tuning & Evala set of encrypted traffic flows within a t seconds winuation phase, as illustrated in Fig. 1. Each of these phases is
+dow, where each flow fi is uniquely identified by a
+ explained in detail in the following sections.
+5-tuple: xi = hsrcIP, srcPort, dstIP, dstPort, protocoli and fi =
+{pi1 , pi2 , . . ., piM }, where each packet pi j ∈ {0, 1}B represents
+a fixed-length sequence of B bytes. These packet bytes are A. Pre-Processing Phase: Flow-Level Image Construction
+encoded into a flow matrix Xi ∈ Rh×w , which serves as the To construct a structured and information-preserving repinput representation for the model. The goal is to learn an resentation, we extract ET-flow information directly from the
+encoder function E : Rh×w → zi ∈ Rd that maps ET-flow raw Packet Capture (PCAP) file, similar to [8]. Fig. 1 Block
+images to a low-dimensional latent representation zi . A shows the pre-processing phase. We use both unlabeled
+ During fine-tuning, the pretrained encoder E is concate- and labeled PCAP data in preprocessing phase. First, we
+nated with a lightweight classifier C : zi → yi and trained extract N flows based on IP addresses, port numbers, and
+using a small labeled dataset Dlabeled = {(Xi , yi )}, where transport-layer protocols, port numbers, and the transport layer
+yi ∈ {0, 1, . . ., C−1} is the ground truth label. The goal is to protocol. Second, each flow is truncated or zero-padded to
+accurately detect malicious encrypted flows, while ensuring M = 5 packets to ensure fixed-length representation where
+efficiency, generalization, and low inference latency. p1 j , p2 j , . . ., p M j represent the M packets of the j-th flow. Eth-
+ 2) Design Goals: To address the scarcity of labeled ernet headers are removed and IP addresses and port numbers
+encrypted malicious traffic, LitCVit aims to learn seman- are anonymized to ensure user privacy and reduce datasettically rich flow-level representations through contrastive specific bias. Each packet is encoded using n bytes, reshaped
+self-supervised pretraining, reducing the dependency on man- into a two-dimensional matrix of shape p×w, where p denotes
+ual annotation and rule-based heuristics. The system must be the number of rows and w the number of bytes per row. For
+capable of detecting a wide range of threats without relying a flow consisting of M packets, these matrices are vertically
+on protocol-specific features, ensuring robust generalization stacked to form a single flow-level matrix:Xi ∈ R(M·p)×w . In
+across diverse encryption protocols and traffic patterns, includ- our case, we take p = 8 and w = 40 consisting of n = 320 bytes
+ing 5G and IoT. In addition, the detection pipeline is required of a packet. Finally, this matrix is saved as an ET-Flow image,
+NISA et al.: LitCVit: A LIGHTWEIGHT SELF-SUPERVISED CONTRASTIVE VISION TRANSFORMER 3963
+
+ Fig. 1. The proposed framework for encrypted malicious traffic detection.
+
+preserving both the internal byte-level structure of packets and based on depthwise and pointwise convolutions, has not been
+their sequential order. The output of this phase consists of explored in encrypted traffic detection frameworks.
+labeled and unlabeled ET-Flow images, to be used for fine- Finally, positional encoding is applied to preserve spatial
+tuning and pre-training, respectively. relationships, and resulting n-dimensional position embeddings are passed to the wf-Attention modules (line 4).
+ 2) Hierarchical Windowed Factorized Attention: To capture
+B. Pre-Training Phase: Contrastive Representation Learning
+ multi-scale flow patterns, we adopt a lightweight hierarchical
+With ViT
+ design that models fine-grained encrypted traffic behaviors at
+ The pre-training phase aims to learn robust and discrimina- the byte, packet, and flow levels. Each stage consists of a
+tive representations of encrypted traffic flows without requiring lightweight transformer block composed of Layer Normallabeled data. It consists of three main components: a con- ization followed by a WF-Attention module. To reduce the
+volutional patchify stem, hierarchical windowed factorized quadratic cost of multi-head self-attention, we adopt a lowattention (wf-Attention), and a contrastive embedding head. rank factorized attention mechanism that directly projects
+The overall pre-training process is shown in Fig 1 Block B token sequences into a shared, low-dimensional space (r 
+and described in Algorithm 1. The input to this phase is d), without relying on additional compression matrices, as
+unlabeled ET-flow images generated during the pre-processing in Linformer [36], which significantly lowers computational
+stage. These images are first passed through the convolutional overhead. Furthermore, to avoid costly global attention compatchify stem, which tokenizes them into patch embeddings. putations, we employ windowed attention [37] at byte and
+The embeddings are then processed by wf-Attention modules packet levels, restricting attention to local windows and thus
+of the transformer, enabling multi-scale feature extraction at significantly reducing computational overhead while maintainbyte, packet, and flow levels. Finally, the encoder output is ing fine-grained flow representations. This effectively reduces
+passed through the contrastive learning head to produce robust the number of attention computations from O(N 2 ) to O(N ·w),
+latent representations for downstream fine-tuning. The details where w is the window size.
+of each component are provided in the following subsections. Although windowed attention limits local interactions at
+ 1) Convolutional Patchify Stem: Unlike traditional patch early stages long-range dependencies are preserved through
+embeddings [34] that divide images into large patches hierarchical composition. Byte- and packet-level encoders
+and apply computationally expensive linear projections with induce sparse local attention, while the final flow-level global
+limited spatial inductive bias, our design is inspired by the effi- factorized attention produces dense interactions across all
+cient spatial decomposition in MobileNetV4 [35]. As shown in packet tokens and the CLS token. Consequently, the stacked
+Algorithm 1 (lines 1-3), the Stem employs depthwise separable attention layers maintain a fully connected token interaction
+convolutions tailored for ET-flows, capturing localized flow graph, preserving global contextual modeling with reduced
+patterns early in the network while significantly reducing complexity. The attention is computed as [36]:
+operations compared to the standard convolutions in [8]. To
+the best of our knowledge, such convolutional tokenization, Q = XWQ , K = XWK , V = XWV ,
+3964 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Algorithm 1 LitCViT Pretraining
+
+ Fig. 2. UMAP visualization of embeddings generated by pre-trained LitCViT.
+
+ Upon completion of the pre-training phase, during which the
+ ntXent loss is employed to optimize the model parameters, the
+ encoder is preserved and its pre-trained weights are transferred
+ for use in the fine-tuning phase (Block C).
+ 3) Contrastive Embedding Head: We train LitCVit using
+ the Normalized Temperature-scaled Cross Entropy (ntXent)
+ loss [38] (lines 17-19):
+  +
+ zi ·zi
+ 1 XN exp τ
+ LntXent = − log  + P , (1)
+ N zi ·zi N
+ exp τ + j=1, j,i exp iτ j
+ z ·z 
+ i=1
+
+ where zi is the embedding of the i-th sample, z+ i is a positive
+ (similar) pair, and z j are negative (dissimilar) embeddings. τ is
+ a temperature parameter that adjusts the smoothness of the
+ similarity distribution during contrastive learning.
+ Fig. 2 shows the quality of the learned embeddings at
+ temperature parameter τ = 0.3, visualized using Uniform
+ Manifold Approximation and Projection (UMAP). UMAP
+ projects high-dimensional representations into 2D space while
+ preserving local and global structures, making it suitable for
+ qualitatively assessing clustering behavior. The visualization
+ indicates that LitCVit forms distinct clusters of benign and
+ malicious encrypted traffic flows, highlighting its ability to
+ capture meaningful flow correlations in a self-supervised manner. Quantitatively, the learned embeddings achieve a cluster
+where WQ , WK , WV ∈ Rd×r . purity of 0.7579 and a Normalized Mutual Information (NMI)
+ score of 0.508, indicating reasonably good separability of
+ QK >
+  
+ Attention(X) = softmax V, flow behaviors despite encryption. These representations are
+ τattn expected to become more discriminative during supervised
+ fine-tuning. The impact of different τ values on clustering
+where τattn is a learnable temperature parameter that controls quality is presented in Section VIII. After the pre-training,
+attention sharpness. we freeze the encoder and preserve the learned weights for
+ The byte-level encoder (lines 5-9) performs factorized downstream fine-tuning tasks.
+self-attention within fixed-size windows of size w over
+the byte-level representations to capture local dependencies.
+The resulting features are pooled into packet-level tokens C. Fine-Tuning & Evaluation Phase: Supervised Adaptation
+and passed to a second encoder inter-packet wf-Attention for Malicious Traffic Detection
+(lines 10-12), which performs inter-packet windowed factor- We fine-tune the pre-trained model to detect various types
+ized attention to model to capture cross-packet relationships. of malicious encrypted traffic, as illustrated in Block C of
+The Intra-flow global Fact-Attention (lines 13-14) applies Fig. 1. Labeled ET-flow images are first processed through
+global factorized attention across the entire flow to model the convolutional patchify stem to generate patch embeddings,
+long-range dependencies. Between each stage, lightweight which are passed through the pre-trained encoder connected
+depthwise convolutions inject spatial inductive biases and to a lightweight MLP-based classifier. The classifier consists
+compress intermediate features. Finally, the encoded tokens are of three fully connected layers with GELU activations and a
+aggregated via average pooling and passed through a two-layer dropout rate of 0.2, ending in a softmax layer. Final predictions
+MLP projection head to produce compact latent embeddings are obtained directly from the supervised softmax probability
+for contrastive learning. distribution; LitCVit does not employ reconstruction-based
+NISA et al.: LitCVit: A LIGHTWEIGHT SELF-SUPERVISED CONTRASTIVE VISION TRANSFORMER 3965
+
+Algorithm 2 Fine-Tuning TABLE I
+ A SYMPTOTIC C OMPLEXITY OF L IT CV IT C OMPONENTS
+
+ standard convolutional embedding which costs O(n · cin · k · d))
+ when (k  d), while preserving representational capacity. Moreover, hierarchical wf-Attention modules significantly
+ reduce sequence length and the computational cost compared
+ to traditional multi-head attention O(n · h · d2 ) [40], where h is
+ the number of heads and d is the per-head dimension. In our
+ approach, we employ low-rank factorized attention, resulting
+ in a more efficient complexity of O(n·r·w) operations for local
+ attention within windows of size w and O(n·d·r) operations for
+ low-rank projections, where r  d is the factorization rank.
+ During pretraining, full forward and backward passes are
+ computed over the entire architecture, including contrastive
+ objectives. The total pre-training
+  complexity is O n · (r · w +
+ d · r) + d · d0 + B2 · d0 , where the first two terms correspond
+anomaly scoring or threshold-based drift detection. Initially, to the attention and projection layers, and the last term arises
+the encoder is frozen, and only the classification head is trained from the pairwise similarity computations in ntXent. The time
+to prevent overfitting in the early stages. After 100 epochs, the complexity is dominated by the higher order of O(B2 · d0 )
+last two encoder blocks are unfrozen to enable the adaptation due to the quadratic scaling with batch size, while other
+to the downstream classification task. The model is optimized components scale linearly with the number of tokens n and
+using the standard multi-class cross-entropy loss LCE [39], as remain comparatively lightweight. Similarly, space complexity
+defined in Equation 2. This process of fine-tuning is described during pre-training is dominated by O(B·d0 ) term from storing
+in Algorithm 2 (lines 3-13). projection embeddings for all samples in the batch, with the
+ N C remaining components contributing only linear growth in n.
+ 1 XX
+ LCE = − yi,k log(ŷi,k ) (2) In the fine-tuning phase, we compute the total cost by
+ N adding the time complexity of convolutional patchify stem,
+ i=1 k=1
+ the last two encoder blocks, and the classification head with
+Here, N is the number of samples, C is the total number
+ a softmax cross-entropy loss. Since contrastive learning is
+of classes, yi,k is a binary indicator and ŷi,k is the predicted
+ only used during pretraining, computational cost is dominated
+probability for class k.
+ by the two unfrozen encoder blocks, while the classification
+ In the final stage of our framework, we evaluate the finehead contributes a comparatively small cost. The dominant
+tuned LitCVit model on labeled test data that was not used
+ time cost of fine-tuning phase is O(n · r · (w + d)). Space
+during training. This step ensures the model’s ability to
+ complexity is dominated by storing intermediate activations
+generalize from the learned representations to classify unseen
+ for the two unfrozen encoder blocks, with the classification
+encrypted traffic flows accurately.
+ head adding a negligible footprint compared to pretraining,
+ where batch-wise projection embeddings dominated memory
+ V. C OMPLEXITY A NALYSIS
+ use. The space complexity of fine-tuning phase is O(n·(w+d)).
+ We analyze the computational complexity of each compo- Finally, at inference, the model executes only a lightweight
+nent in LitCVit to highlight its architectural efficiency. Despite forward pass, without the contrastive head, resulting in an
+its multi-stage hierarchical design, the model maintains a low efficient runtime complexity of O(n·d·r) and space complexity
+overall computational cost. Similar to [40], we express the of O(n·d). As a result, LitCViT achieves a significantly smaller
+complexity in terms of the convolution kernel size k, the num- memory footprint and faster inference.
+ber of tokens n, input dimension cin , and output embedding
+dimensions d. We find both time and space complexities of VI. I MPLEMENTATION AND E XPERIMENTS
+each component as summarized in Table I.
+ Convolutional patch embedding stem employs a depthwise A. Datasets
+and pointwise factorization where the depthwise stage pro- To evaluate the performance and generalization of the processes channels independently with cost O(n · cin · k) and the posed LitCVit, we utilize four real-world traffic datasets that
+pointwise stage costs O(n·cin ·d). This yields a total complexity include benign and malicious network traffic across diverse
+of O(n · cin (k + d)), which is substantially lower than the environments.
+3966 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ USTC-TFC2016 [19] provides encrypted traffic generated TABLE II
+by a wide range of benign applications such as Skype, Bit- K EY H YPERPARAMETERS OF L IT CV IT T RAINING
+Torrent, and YouTube, as well as malicious traffic from ten
+malware families, including Cridex, Geodo, Htbot, Miuref,
+Neris, Nsis-ay, Shifu, Tinba, Virut, and Zeus. These malware
+families represent a wide spectrum of attack behaviors: Tinba
+and Geodo are banking trojans designed for credential theft,
+Cridex and Zeus are known for man-in-the-browser attacks.
+Miuref is associated with click fraud campaigns, while Virut
+represents a polymorphic file-infector. For our analysis, we
+retain only complete encrypted traffic flows to ensure data
+integrity and consistency.
+ CICIOT-2022 [41] is designed for behavioral analysis and
+intrusion detection in IoT. It contains both benign and mali- negative diversity for stable contrastive optimization without
+cious traffic, with two primary attack categories: brute-force requiring a memory bank, as supported by our clustering
+attacks (performed using Nmap and Hydra) and flooding results in Table VIII. The temperature τ = 0.3, achieve the
+attacks. best clustering performance in terms of purity and NMI. All
+ 5GAD-2022 [42] is a 5G network traffic dataset collected attention modules adopt low-rank factorized self-attention with
+by Idaho National Research Laboratory. It captures network r = 16, balancing expressiveness and efficiency.
+traffic in simulated 5G environments to support ML-based During fine-tuning, to address severe class imbalance
+attack detection. The dataset encompasses 10 attack categories, present in datasets such as CICIoT-2022, we employ classincluding reconnaissance, network reconfiguration, and DoS weighted cross-entropy with inverse-frequency weights comattacks, providing a comprehensive benchmark for evaluat- bined with class-balanced sampling, preventing majority class
+ing detection models under diverse and realistic 5G threat dominance during both pretraining and fine-tuning. To avoid
+scenarios. overfitting during early training, The encoder is initially frozen
+ Malware Capture Facility Project (MCFP) [43], maintained for the first 100 epochs, after which the last two transformer
+by the Czech Technical University in Prague, provides a blocks are unfrozen for deeper fine-tuning. All experiments
+rich repository of network traffic captured in controlled envi- were conducted on Intel i5-7400 CPU, NVIDIA GeForce GTX
+ronments. For our study, we extracted malicious samples 1080 GPU, and 32GB RAM using PyTorch.
+from diverse malware families, such as BitcoinMiner, Botnet, Fig. 3 shows the accuracy and loss curves during fine-tuning
+Cobalt, Dridex, and Trojan Downloader. To create a balanced across all datasets, illustrating LitCVit’s stable convergence
+evaluation set, we additionally selected 600 benign PCAP files behavior and robust generalization across diverse traffic scefrom the CTU-Normal series. narios. The model consistently converges within 500 epochs,
+ IoT-23 [44] is a large-scale IoT network traffic dataset after which no significant improvements are observed. Traincontaining benign and malicious traces captured from real IoT ing is, therefore, halted to avoid unnecessary computational
+devices and botnet infections. It includes labeled attack sce- overhead. Notably, a slight spike in loss and accuracy flucnarios alongside normal traffic to support intrusion detection tuation is observed around epoch 100. This is because, at
+and malware analysis research. this point, the last two encoder blocks are unfrozen to enable
+ TII-SSRC-23 [45]is a network traffic dataset for IDS deeper fine-tuning. This controlled unfreezing strategy refines
+research containing benign and malicious traffic with 26 attack high-level representations while maintaining overall training
+classes. It covers 8 main traffic types, including background, stability.
+multimedia, brute-force, DoS, Mirai botnet, and informationgathering activities.
+ C. Baselines and Evaluation Metrics
+ We utilize USTC-TFC2016 and CIC-IoT-2022 datasets
+during the pretraining phase, allowing the model to learn To evaluate LitCVit, we select baselines spanning featuregeneralizable encrypted traffic representations. The rest of driven, end-to-end, and self-supervised pretraining-based techdatasets are used solely during the fine-tuning phase to eval- niques. All methods are retrained on the six datasets using their
+uate the model’s generalization on novel traffic patterns and default hyperparameters for fair comparison.
+attack scenarios. Fine-tuning and evaluation are performed on • Feature-driven: AppScanner [14] employs flow-level
+all datasets to ensure a comprehensive assessment of LitCVit’s statistical features with Random Forest (RF) and SVM for
+detection performance across diverse network environments. application traffic classification. Kitsune [15] is an unsupervised method utilizing packet-level metadata features
+B. Implementation Overview with an autoencoder ensemble to model benign behavior.
+ We adopt a two-phase training strategy of pre-training • End-to-end: 2D-CNN [19] transforms raw encrypted
+followed by fine-tuning, with key hyperparameters summa- traffic into 2D grayscale images classified via convolurized in Table II. During pre-training, the ntXent optimization tional neural networks.
+is stabilized via cosine learning rate scheduling with linear • Self-supervised and representation learning:
+warmup. A batch size of 128 provides sufficient in-batch PEAN [24] pre-trains an attention-based autoencoder to
+NISA et al.: LitCVit: A LIGHTWEIGHT SELF-SUPERVISED CONTRASTIVE VISION TRANSFORMER 3967
+
+ TABLE III
+ A P ERFORMANCE C OMPARISON OF P ROPOSED A RCHITECTURE W ITH BASE -L INES
+
+Fig. 3. Accuracy and loss curves during fine-tuning across all datasets. Training converges stably within 500 epochs, with a brief spike around epoch 100
+due to unfreezing blocks of the pretrained encoder.
+
+ learn generalized traffic embeddings. PERT [46] and ET- all reported results correspond to an embedding dimension of
+ BERT [6] adopt BERT-style masked language modeling d = 192, which achieves the best classification performance as
+ for contextual traffic representations. YaTC [8] applies a determined by the ablation study in Section VIII. For latencymasked autoencoder for pretraining on raw traffic bytes sensitive deployments, d = 128 is recommended as discussed
+ followed by supervised classification. NetMamba [30] is in Section VIII.
+ a model based on the Mamba architecture. Pcap-Encoder
+ [9] is a recent representation learning model specifically
+ designed to extract features from protocol headers. A. Detection Performance
+ For evaluation, we report accuracy, precision, recall, and Fig. 4 shows confusion matrices illustrating LitCVit’s classi-
+F1-score to assess overall classification effectiveness, along- fication performance across all datasets, highlighting its strong
+side True Positive Rate (TPR) True Negative Rate (TNR), ability to distinguish attack types and benign traffic with
+False Positive Rate (FPR), and False Negative Rate (FNR), to high confidence and minimal misclassifications. For USTCevaluate robustness against false alarms, critical in malicious TFC2016, LitCVit achieves detection rates exceeding 97%
+traffic detection where minimizing missed attacks and false for all malware families, except Geodo and Miuref, which
+positives is essential. attain detection accuracies of 92% and 96%, respectively. For
+ CICIOT-2022, the model effectively identifies brute-force and
+ flooding attacks while maintaining a low false positive rate for
+ VII. R ESULTS AND D ISCUSSION
+ benign flows. Notably, 5GAD-2022 and MCFP, IOT-23, and
+ We evaluate LitCVit across six real-world network traffic TII-SSRC-23 were kept completely unseen during pretraining,
+datasets, comparing detection effectiveness and computational yet LitCVit shows excellent generalization, achieving above
+efficiency against state-of-the-art methods to demonstrate its 95% detection rate across all classes. In 5GAD-2022, AMFsuitability for practical deployment. Unless otherwise stated, FakeInsert attack reaches a detection rate of 95%, while all
+3968 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ Fig. 5. PR-curves of the proposed LitCVit model on all datasets.
+
+ B. Comparative Performance Analysis
+ Table III presents a comprehensive comparison of LitCVit
+ against state-of-the-art encrypted traffic detection methods.
+ Across six datasets, LitCVit consistently achieves superior
+ detection performance, outperforming all baselines in terms
+ of accuracy, precision, recall, and F1-score. Notably, it sur-
+ Fig. 4. Performance confusion matrices of all datasets.
+ passes pretraining-based models PEAN and ET-BERT across
+ all metrics, with accuracy gains of 34.17% and 12.15%
+ on USTC-TFC2016, and 60.9% and 9.7% on CICIOT-2022,
+other classes surpass 98%. Similarly, on MCFP and IOT-23, respectively. Despite being recent strong baselines, NetMamba
+all malware classes are detected with at least 97%, despite and PcapEncoder lag behind LitCVit by 7-9% on most
+the diversity and complexity of their behaviors. Similarly, datasets. PcapEncoder is designed for packet-level classion TII-SSRC-23, LitCVit accurately separates benign and fication using only header information, when evaluated at
+malicious traffic with detection rates exceeding 97%, confirm- the flow level, its performance degrades significantly, highing its robustness across diverse real-world encrypted traffic lighting the advantage of LitCVit’s flow-image representation
+scenarios. over header-only packet-level approaches. On unseen datasets,
+ Fig. 5 demonstrates Precision-Recall (PR) curves to evaluate 5GAD-2022, MCFP, IOT-23 and TII-SSRC-23 LitCVit mainthe proposed framework’s performance on datasets with imbal- tains an average accuracy improvement of 5-8% over the best
+anced class distributions. Minority malicious traffic classes, baseline, demonstrating strong generalization capabilities. It
+such as Miuref and Nsis-ay in USTCTFC, and Hydra in also achieves the best precision and recall balance, indicating
+CICIOT, pose detection challenges due to their limited repre- robustness to diverse encrypted traffic patterns and minimizing
+sentation in the dataset. Despite this, LitCVit maintains robust false predictions.
+detection performance. Despite this, LitCVit maintains robust Fig. 6 provides a detailed comparison of TPR and FPR
+detection performance, achieving PR-AUC values exceeding across all baselines and datasets, providing a comprehensive
+0.97 for all malicious traffic classes of USTCTFC, including evaluation of detection capability and false alarm reduction.
+Tinba, Geodo, Cridex, Zeus, and Virut. In CICIOT, LitCVit LitCVit consistently achieves the highest detection rates across
+attains a reasonable PR-AUC of 0.70 for the minority Hydra all datasets, exceeding 98% on USTC-TFC, CICIoT-2022,
+class, while achieving perfect PR-AUC scores of 1.00 for MCFP, IOT-23, and TII-SSRC-23, while maintaining strong
+Benign, Flood, and Nmap traffic. The reason is that Hydra has performance on the diverse 5GAD-2022 dataset with a TPR
+a significantly smaller number of samples. On 5GAD, which of 97%. In contrast, feature-driven methods, AppScanner
+consists of eight attacks with a nearly balanced distribution, and Kitsune exhibit significantly lower TPRs (52%–64% and
+LitCVit consistently achieves high PR-AUC values, ranging 61%–84%, respectively), highlighting their limited capability
+from 0.99 to 1.00, across all classes. Similarly, on MCFP, in handling encrypted traffic scenarios. In terms of false
+IOT-23, and TII-SSRC-23, LitCVit maintains strong detection alarms, LitCVit achieves the lowest FPR, remaining below
+performance, achieving PR-AUC scores exceeding 0.99 across 0.02 across all datasets. Conversely, AppScanner and the
+all classes. These results highlight the LitCVit’s strong ability self-supervised PEAN suffer from substantially higher FPR
+to maintain high precision and recall across all datasets, values, reaching up to 0.32 and 0.21, respectively. These
+indicating robust performance with minimal false predictions. results demonstrate that LitCVit not only improves detection
+NISA et al.: LitCVit: A LIGHTWEIGHT SELF-SUPERVISED CONTRASTIVE VISION TRANSFORMER 3969
+
+Fig. 6. Comparison of TPR, TNR, FPR, and FNR across all state-of-the-art methods on the USTC-TFC-2016, CICIOT-2022, 5GAD-2022, MCFP, and
+TII-SSRC-23.
+
+ TABLE IV
+ T HE E FFICIENCY C OMPARISON OF P ROPOSED L IT CV IT
+ W ITH P RE -T RAINING -BASED T ECHNIQUES
+
+ Fig. 7. Robustness of LitCVit under adversarial byte perturbations.
+
+capability but also effectively minimizes false alarms, ensuring highly suitable for deployment in resource-constrained envireliable encrypted traffic classification. ronments.
+ LitCVit demonstrates robust detection performance with This efficiency is achieved primarily due to LitCVit’s
+minimal variance across datasets, effectively reducing false lightweight convolutional patchify stem, which effectively
+alarms and maintaining both high detection accuracy and reduces the input dimensionality and the low-rank windowed
+operational stability in diverse and challenging network envi- factorized attention mechanism, which drastically cuts down
+ronments. Its superior performance is due to its hierarchical the number of learnable parameters by performing attention in
+attention design, which progressively captures fine-grained a compressed token space. These design choices preserve the
+byte-level and packet-level patterns and global flow-level core capabilities of self-attention while significantly lowering
+dependencies. By employing windowed factorized attention, computational overhead.
+LitCVit focuses on local contexts while preserving essential token interactions, ensuring robust feature extraction D. Adversarial Robustness Analysis
+throughout the hierarchy. Additionally, contrastive learning
+ To assess robustness against simple adversarial manipulawith ntXent loss further enhances the learned embeddings by
+ tion, two perturbation strategies are simulated: padding-byte
+pulling semantically related ET-flows closer and pushing apart
+ insertion and random byte injection. Padding-byte insertion
+dissimilar ones.
+ appends null bytes to packet payloads, simulating traffic
+ padding commonly used in protocol obfuscation. Random
+ byte injection replaces a random fraction of payload pixel
+C. Computational and Memory Analysis
+ values with uniform random bytes, simulating arbitrary pay-
+ Table IV demonstrates that LitCVit offers an efficient solu- load corruption. All perturbations are applied exclusively to
+tion for encrypted malicious traffic detection., maintaining a payload rows, preserving header structure to reflect realistic
+minimal memory footprint of approximately 14.83 MB with encrypted traffic manipulation. Perturbation experiments are
+only 0.321 million parameters. LitCVit achieves a single- conducted on USTC-TFC2016, the most class-diverse dataset
+sample inference latency of 2.67 ms on GPU, measured with with 11 traffic categories. As shown in Fig. 7, LitCVit
+batch size = 1, 50 warm-up iterations, and 300 timed rep- maintains accuracy above 85% under both strategies even at
+etitions with GPU synchronization, making it approximately 20% perturbation, with a maximum degradation of 8.97% for
+8.7 times faster than the fastest self-supervised pretraining- padding-byte insertion and 7.36% for random byte injection.
+based method YaTC while achieving superior detection The convergence of both curves at higher perturbation levels
+performance. Moreover, the model requires only 115.55 mil- indicates consistent resilience independent of perturbation
+lion multiply-accumulate operations (MMACs), making it type. These results demonstrate that LitCVit captures structural
+3970 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE V
+ C OMPONENT-W ISE A BLATION S TUDY OF THE P ROPOSED L IT CV IT ACROSS S IX B ENCHMARK DATASETS
+
+and semantic traffic patterns at multiple granularities rather
+than relying on precise byte positions, making it inherently
+resilient to simple byte-level adversarial perturbations.
+
+E. Resource-Constrained Inference Analysis
+ To evaluate deployment feasibility on resource-constrained
+platforms, LitCVit is evaluated under GPU and CPU settings.
+Specifically, single-thread CPU inference is conducted on a
+system with 8 GB RAM and an Intel i5-7400 @ 3.00 GHz,
+deliberately chosen to simulate resource-constrained deployment conditions. With dim = 128, rank = 16, the model
+contains only 0.32 M parameters and requires 115.55 MMac.
+It achieves 2.67 ms per-sample latency on GPU, 5.32 ms
+under multi-thread CPU execution, and 8.70 ms ± 0.98 in
+single-thread mode. The model maintains a compact memory
+footprint (14.83 MB total, nearly 4.66 MB runtime overhead), demonstrating real-time capability and suitability for Fig. 8. Model complexity and inference latency vs. rank ∈ {8, 16, 32, 64} for
+resource-constrained platforms. Physical validation on embed- embedding dimensions ∈ {128, 156, and192}. x-axis: Rank in all subplots.
+ded platforms such as Raspberry Pi or NVIDIA Jetson is left
+as future work.
+
+ VIII. A BLATION S TUDY
+A. Component-Wise Ablation Study
+ Table V presents a component-wise ablation study of the
+proposed LitCVit on six benchmark datasets. Removing the
+flow-level encoder causes the most severe degradation, with
+Macro-F1 dropping to as low as 30.29% on USTC-TFC2016
+and 33.63% on TII-SSRC-23, confirming the importance of
+global context aggregation across packet tokens for reliable
+traffic classification. Removing the byte-level encoder results Fig. 9. Inference latency comparison of windowed attention configurations
+in the second largest performance drop, highlighting the at dim = 128.
+importance of fine-grained byte-level feature extraction in
+capturing low-level traffic patterns. Without self-supervised
+pre-training, the performance declines consistently across in Fig. 8, parameters and MMACs increase monotonically
+datasets, demonstrating that pre-training provides meaningful with both r and d, confirming predictable scaling behavior.
+semantic representations. Overall, each component contributes GPU latency remains relatively stable across ranks, while
+meaningfully to performance, with the hierarchical encoder CPU latency grows more noticeably with dimension, reflecting
+structure and self-supervised pre-training providing the most limited CPU parallelism for larger matrix operations. Notably,
+significant gains. rank r = 16 achieves the lowest inference latency across all
+ dimensions. Detection accuracy remains stable across ranks,
+ and the marginal gains at higher ranks confirm that encrypted
+B. Impact of Rank traffic features lie in a low-dimensional subspace where com-
+ We conduct an ablation study over rank r ∈ {8, 16, 32, 64} pact factorized attention is sufficient. Thus, r = 16 and d = 128
+and embedding dimension d ∈ {128, 156, 192} to analyze their are adopted as default for the optimal accuracy–efficiency
+effect on model complexity and inference efficiency. As shown trade-off.
+NISA et al.: LitCVit: A LIGHTWEIGHT SELF-SUPERVISED CONTRASTIVE VISION TRANSFORMER 3971
+
+ Fig. 10. UMAP embeddings of encrypted benign and malicious traffic under different temperature values τ of ntXent loss.
+
+ TABLE VI TABLE VII
+A BLATION S TUDY ON VARIOUS W INDOW C ONFIGURATIONS . P ERFOR - P ERFORMANCE AND E FFICIENCY C OMPARISON OF C ONVENTIONAL
+ MANCE I S B EST W ITH B OTH PACKET AND B YTE -L EVEL W INDOWS L IGHTWEIGHT M ODELS W ITH L IT CV IT
+
+ TABLE VIII
+C. Effect of Windowed Attention E FFECT OF T EMPERATURE PARAMETER τ ON C ONTRASTIVE V I T
+
+ Ablation results in Fig. 9 show that GPU inference
+latency remains invariant across all window configurations
+(∼ 2.6–2.9 ms), indicating that windowed attention introduces negligible computational overhead on GPU. On CPU,
+enabling both byte and packet windows reduces latency by
+15 − 25% compared to global attention at dim = 128. This
+suggests that restricting the attention span reduces redundant E. Impact of Temperature Parameter
+computation at the CPU level, where parallelism is more The effect of Temperature parameter τ in ntXent loss on
+limited than on GPU. Table VI further reports consistent clustering quality is illustrated in Fig. 10 and Table VIII.
+improvements in Accuracy and Macro-F1 when both windows Lower values of τ (e.g., 0.1) yield reduced loss; however,
+are applied. We attribute this to the hierarchical design, where higher values (e.g., 0.9) resulted in improved global structure,
+early local attention reduces premature global token mixing as reflected by higher NMI, Adjusted Rand Index (ARI), and
+and encourages spatially coherent byte and packet patterns, Silhouette scores, indicating better separation between benign
+while long-range dependencies are preserved by the flow-level and malicious traffic. The best overall clustering performance
+transformer through full global attention across packet tokens. is achieved at τ = 0.3, which provides an effective tradeoff between local compactness and global separability in the
+D. Performance Comparison With Conventional Models learned representations.
+
+ To justify our architecture, we compare LitCVit against
+ IX. C ONCLUSION
+tree-based (RF, XGBoost) and lightweight neural baselines
+(2DCNN, GRU, BiLSTM) under identical settings. Since In this paper, we propose a lightweight self-supervised contree-based and lightweight neural models are inherently CPU- trastive vision transformer framework for encrypted malicious
+based, CPU latency is used as the common efficiency metric traffic detection. The model integrates an efficient convofor fair comparison. Tree-based models use flattened 1600-d lutional patchify stem to encode local spatial features and
+ET-flow vectors, while neural baselines use flow-image rep- employs low-rank windowed factorized self-attention mechresentations. As shown in Table VII, XGBoost exceeds 90% anisms at byte, packet, and flow levels to multi-granularity
+Macro F1 on USTCTFC and CICIOT but degrades on MCFP, representations. Additionally, a contrastive pretraining objecindicating limited generalization. RF incurs high latency tive enables the model to learn ET-flow semantic features
+(27.46 ms) despite zero trainable parameters due to sequential without relying on labeled data. Extensive experiments on
+tree traversal. Lightweight neural models offer low latency six real-world datasets demonstrate that the proposed framebut inconsistent performance (GRU/BiLSTM up to 71.52% work outperforms the state-of-the-art method, including recent
+Macro F1) with notable MCFP degradation. LitCVit consis- baselines, achieving 5-8% average accuracy improvement on
+tently achieves the highest Macro F1 across all datasets with unseen datasets while maintaining a compact footprint of
+a compact footprint and competitive latency, demonstrating 0.321 M parameters and 2.67 ms GPU inference latency
+superior generalization-efficiency balance. approximately 8.7 times faster than YaTC. These results
+3972 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+validate LitCVit’s strong generalization across diverse attack [21] T. Shapira and Y. Shavitt, “FlowPic: A generic representation for
+scenarios while maintaining high efficiency and low inference encrypted traffic classification and applications identification,” IEEE
+ Trans. Netw. Service Manage., vol. 18, no. 2, pp. 1218–1232, Jun. 2021.
+time, making it highly suitable for deployment in resource- [22] A. F. Diallo and P. Patras, “Cluster and conquer: Malicious traffic
+constrained environments. Future work will explore model classification at the edge,” IEEE Trans. Netw. Service Manage., vol. 21,
+compression via pruning and quantization, as well as physical no. 3, pp. 2700–2714, Jun. 2024.
+ [23] S. Guthula, R. Beltiukov, N. Battula, W. Guo, A. Gupta, and
+validation on embedded platforms such as Raspberry Pi and I. Monga, “NetFound: Foundation model for network security,” 2023,
+NVIDIA Jetson. arXiv:2310.17025.
+ [24] P. Lin, K. Ye, Y. Hu, Y. Lin, and C.-Z. Xu, “A novel multimodal
+ deep learning framework for encrypted traffic classification,” IEEE/ACM
+ Trans. Netw., vol. 31, no. 3, pp. 1369–1384, Jun. 2023.
+ R EFERENCES
+ [25] H. Y. He, Z. Guo Yang, and X. N. Chen, “PERT: Payload encoding
+ representation from transformer for encrypted traffic classification,” in
+[1] M. A. I. Mallick and R. Nath, “Navigating the cyber security landscape: Proc. ITU Kaleidoscope, Ind.-Driven Digit. Transformation (ITU K),
+ A comprehensive review of cyber-attacks, emerging trends, and recent Dec. 2020, pp. 1–8.
+ developments,” World Sci. News, vol. 190, no. 1, pp. 1–69, 2024. [26] X. Zang, T. Wang, X. Zhang, J. Gong, P. Gao, and G. Zhang, “Encrypted
+[2] J. Ahn, R. Hussain, K. Kang, and J. Son, “Exploring encryption malicious traffic detection based on natural language processing and
+ algorithms and network protocols: A comprehensive survey of threats deep learning,” Comput. Netw., vol. 250, Aug. 2024, Art. no. 110598.
+ and vulnerabilities,” IEEE Commun. Surveys Tuts., vol. 27, no. 6, [27] J. Qu, X. Ma, and J. Li, “TrafficGPT: Breaking the token barrier for
+ pp. 3587–3614, Dec. 2025. efficient long traffic analysis and generation,” 2024, arXiv:2403.05822.
+[3] M. Shen et al., “Machine learning-powered encrypted network traffic [28] X.-Y. Chen, L. Han, D.-C. Zhan, and H.-J. Ye, “Miett: Multi-instance
+ analysis: A comprehensive survey,” IEEE Commun. Surveys Tuts., encrypted traffic transformer for encrypted traffic classification,” in Proc.
+ vol. 25, no. 1, pp. 791–824, 1st Quart., 2023. 39th AAAI Conf. Artif. Intell., vol. 39, 2025, pp. 15922–15929.
+[4] M. Almehdhar et al., “Deep learning in the fast lane: A survey on [29] Z. Hang, Y. Lu, Y. Wang, and Y. Xie, “Flow-MAE: Leveraging
+ advanced intrusion detection systems for intelligent vehicle networks,” masked AutoEncoder for accurate, efficient and robust malicious traf-
+ IEEE Open J. Veh. Technol., vol. 5, pp. 869–906, 2024. fic classification,” in Proc. 26th Int. Symp. Res. Attacks, Intrusions
+[5] Y. Feng et al., “Unmasking the internet: A survey of fine-grained Defenses, Oct. 2023, pp. 297–314.
+ network traffic analysis,” IEEE Commun. Surveys Tuts., vol. 27, no. 6, [30] T. Wang, X. Xie, W. Wang, C. Wang, Y. Zhao, and Y. Cui, “Netmamba:
+ pp. 3672–3709, Dec. 2025. Efficient network traffic classification via pre-training unidirectional
+[6] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A mamba,” in Proc. IEEE 32nd Int. Conf. Netw. Protocols (ICNP), Oct.
+ contextualized datagram representation with pre-training transformers 2024, pp. 1–11.
+ for encrypted traffic classification,” in Proc. ACM Web Conf., Apr. 2022, [31] M. Zhan, J. Yang, D. Jia, and G. Fu, “EAPT: An encrypted traffic
+ pp. 633–642. classification model via adversarial pre-trained transformers,” Comput.
+[7] S. Cui, C. Dong, M. Shen, Y. Liu, B. Jiang, and Z. Lu, “CBSeq: Netw., vol. 257, Feb. 2025, Art. no. 110973.
+ A channel-level behavior sequence for encrypted malware traffic [32] C. Fu, Q. Li, E. Bertino, and K. Xu, “Training with only 1.0%
+ detection,” IEEE Trans. Inf. Forensics Security, vol. 18, pp. 5011–5025, samples: Malicious traffic detection via cross-modality feature fusion,”
+ 2023. in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., Nov. 2025,
+[8] R. Zhao et al., “A novel self-supervised framework based on masked pp. 3930–3944.
+ autoencoder for traffic classification,” IEEE/ACM Trans. Netw., vol. 32, [33] N. Wickramasinghe, A. Shaghaghi, G. Tsudik, and S. Jha, “SoK:
+ no. 3, pp. 2012–2025, Jun. 2024. Decoding the enigma of encrypted network traffic classifiers,” in Proc.
+[9] Y. Zhao, G. Dettori, M. Boffa, L. Vassio, and M. Mellia, “The sweet IEEE Symp. Secur. Privacy (SP), May 2025, pp. 1825–1843.
+ danger of sugar: Debunking representation learning for encrypted traffic [34] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers
+ classification,” in Proc. ACM SIGCOMM Conf., Sep. 2025, pp. 296–310. for image recognition at scale,” 2020, arXiv:2010.11929.
+[10] L. Peng, X. Xie, S. Huang, Z. Wang, and Y. Cui, “Ptu: Pre-trained model [35] D. Qin et al., “Mobilenetv4: Universal models for the mobile
+ for network traffic understanding,” in Proc. IEEE 32nd Int. Conf. Netw. ecosystem,” in Proc. Eur. Conf. Comput. Vis., 2024, pp. 78–96.
+ Protocols (ICNP), Oct. 2024, pp. 1–12. [36] S. Wang, B. Z. Li, M. Khabsa, H. Fang, and H. Ma, “Linformer: Self-
+[11] G. Zhou, X. Guo, Z. Liu, T. Li, Q. Li, and K. Xu, “TrafficFormer: An attention with linear complexity,” 2020, arXiv:2006.04768.
+ efficient pre-trained model for traffic data,” in Proc. IEEE Symp. Secur. [37] Z. Liu et al., “Swin transformer: Hierarchical vision transformer using
+ Privacy (SP), May 2025, pp. 1844–1860. shifted windows,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+[12] S. Naveen and M. R. Kounte, “Compact optimized deep learning model Oct. 2021, pp. 10012–10022.
+ for edge: A review,” Int. J. Electr. Comput. Eng. (IJECE), vol. 13, no. 6, [38] C. Wen, X. Li, H. Huang, Y.-S. Liu, and Y. Fang, “3D shape contrastive
+ p. 6904, Dec. 2023. representation learning with adversarial examples,” IEEE Trans. Multi-
+[13] A. A. Bhutta, M. U. Nisa, and A. N. Mian, “Lightweight real-time WiFi- media, vol. 27, pp. 679–692, 2023.
+ based intrusion detection system using LightGBM,” Wireless Netw., [39] Z. Zhang and M. R. Sabuncu, “Generalized cross entropy loss for
+ vol. 30, no. 2, pp. 749–761, Feb. 2024. training deep neural networks with noisy labels,” in Proc. Adv. Neural
+[14] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smart- Inf. Process. Syst., vol. 31, 2018, pp. 8792–8802.
+ phone app identification via encrypted network traffic analysis,” IEEE [40] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+ Trans. Inf. Forensics Security, vol. 13, no. 1, pp. 63–78, Jan. 2018. Process. Syst., vol. 30, 2017, pp. 5998–6008.
+[15] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An [41] S. Dadkhah, H. Mahdikhani, P. K. Danso, A. Zohourian, K. A. Truong,
+ ensemble of autoencoders for online network intrusion detection,” in and A. A. Ghorbani, “Towards the development of a realistic multidi-
+ Proc. Netw. Distrib. Syst. Secur. Symp., San Diego, CA, USA, 2018. mensional IoT profiling dataset,” in Proc. 19th Annu. Int. Conf. Privacy,
+[16] C. Fu, Q. Li, M. Shen, and K. Xu, “Frequency domain feature based Secur. Trust (PST), Aug. 2022, pp. 1–11.
+ robust malicious traffic detection,” IEEE/ACM Trans. Netw., vol. 31, [42] C. Coldwell et al., “Machine learning 5G attack detection in prono. 1, pp. 452–467, Feb. 2023. grammable logic,” in Proc. IEEE Globecom Workshops (GC Wkshps),
+[17] B. Anderson, S. Paul, and D. McGrew, “Deciphering malware’s use of Dec. 2022, pp. 1365–1370.
+ TLS (without decryption),” J. Comput. Virol. Hacking Techn., vol. 14, [43] Stratosphere Malware Capture Facility Project Datasets. Accessed: Jul.
+ no. 3, pp. 195–211, Aug. 2018. 2025. [Online]. Available: https://mcfp.felk.cvut.cz/publicDatasets/
+[18] C. Kondaiah, A. R. Pais, and R. S. Rao, “Enhanced malicious traffic [44] S. Garcia, A. Parmisano, and M. J. Erquiaga, “IoT-23: A labeled dataset
+ detection in encrypted communication using TLS features and a multi- with malicious and benign IoT network traffic,” Version 1.0.0, Zenodo,
+ class classifier ensemble,” J. Netw. Syst. Manage., vol. 32, no. 4, p. 76, Stratosphere Lab., Czech Tech. Univ. Prague, Prague, Czech Republic,
+ Oct. 2024. 2020, doi: 10.5281/zenodo.4743746.
+[19] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic [45] D. Herzalla, W. T. Lunardi, and M. Andreoni, “TII-SSRC-23
+ classification using convolutional neural network for representation dataset: Typological exploration of diverse traffic patterns for intrusion
+ learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), Jan. 2017, pp. 712–717. detection,” IEEE Access, vol. 11, pp. 118577–118594, 2023.
+[20] L. Yu et al., “PBCNN: Packet bytes-based convolutional neural network [46] H. He, Z. Yang, and X. Chen, “Payload encoding representation from
+ for network intrusion detection,” Comput. Netw., vol. 194, Jul. 2021, transformer for encrypted traffic classification,” ZTE Commun., vol. 19,
+ Art. no. 108117. no. 4, p. 90, 2021.

@@ -1,0 +1,1783 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [667] Enhancing Intrusion Detection via Interpretable Inter-Flow Spatio-Temporal Graphs and Intra-Flow Features
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：667
+题名：Enhancing Intrusion Detection via Interpretable Inter-Flow Spatio-Temporal Graphs and Intra-Flow Features
+年份：2026
+DOI：10.1109/tnse.2026.3664905
+来源：IEEE Transactions on Network Science and Engineering
+PDF：paper/10.1109_TNSE.2026.3664905.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：图学习、知识图谱与威胁情报、时序、日志、KPI 与云原生异常检测
+相关性：强相关，分数 12
+已有代码状态：候选不可访问；IF2STG
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\667.txt
+- 原始字符数：101139
+- 本次发送字符数：101139
+- 是否截断：False
+
+代码包：
+- 仓库：IF2STG
+  - URL：https://github.com/Akap-vv/IF2STG
+  - 状态：failed
+  - 本地目录：source\IF2STG
+  - 顶层结构：
+  - 主要语言：
+  - README 标题：
+  - README 运行线索：
+  - 关键文件：{}
+  - 数据集线索：
+
+论文正文包开始：
+<<<PAPER_TEXT
+7118
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Enhancing Intrusion Detection via Interpretable
+Inter-Flow Spatio-Temporal Graphs and
+Intra-Flow Features
+Xiaowei Zhao , Mingshu He , Liu Yang, Jianjin Zhao , and Xiaojuan Wang , Member, IEEE
+
+Abstract—The performance of network intrusion detection systems (IDS) critically depends on the completeness of traffic feature representation. Existing methods predominantly focus either
+on intra-flow features (e.g., packet length sequences) or singledimensional inter-flow relationships, limiting optimal classification. To address this restriction, we propose IF2 -STG to enhance
+intrusion detection via interpretable inter-flow spatio-temporal
+graphs and intra-flow features. The key innovation of our scheme
+is the construction of an Inter-flow Spatio-Temporal relationship
+Graph (ISTG), with two-dimensional edges explicitly quantifying
+the correlation strength between flows. On this basis, a GNN learns
+the inter-flow context. In parallel, a CNN extracts fine-grained
+intra-flow features from raw bytes of individual flows. Finally, the
+two modal features are fused to acquire a comprehensive representation. This representation can effectively capture both intrinsic
+behavior patterns of flows and contextual inter-flow relationships,
+thereby significantly enhancing the detection performance and
+robustness of model. Experimental results show that the proposed
+IF2 -STG achieves over 99% accuracy on three real-world datasets,
+outperforming existing approaches. The constructed ISTG provides explicit visual interpretation of flow dependencies. More importantly, IF2 -STG-Inter, using only inter-flow features, maintains
+97.78% detection accuracy in cross-dataset tests involving timedisparate datasets, validating superior generalization of inter-flow
+spatio-temporal features. This advantage renders it particularly
+promising for practical intrusion detection applications.
+Index Terms—Intra-flow features, inter-flow features, inter-flow
+spatio-temporal relationship graph, comprehensive representation, intrusion detection systems.
+
+Received 29 October 2025; revised 5 January 2026; accepted 10 February
+2026. Date of publication 24 February 2026; date of current version 4 March
+2026. The work was supported in part by the National Natural Science Foundation of China under Grant 62402053, Grant 62227805, and Grant 62502042
+and in part by the Fundamental Research Funds for the Central Universities
+under Grant 2025KYQD17(BUPT). Recommended for acceptance by Dr. Yong
+Xiang. (Corresponding author: Mingshu He.)
+Xiaowei Zhao is with the Department of Electronic Engineering, Beijing
+University of Posts and Telecommunications, Beijing 100876, China (e-mail:
+xwzhao@bupt.edu.cn).
+Mingshu He is with the Department of Cyberspace Security, Beijing University of Posts and Telecommunications, Beijing 100876, China, and also
+with the Key Laboratory of Trustworthy Distributed Computing and Service
+(BUPT), Ministry of Education, Beijing 100876, China (e-mail: hemingshu@
+bupt.edu.cn).
+Liu Yang is with the College of Robotics, Beijing Union University, Beijing
+100020, China (e-mail: oyangliu@buu.edu.cn).
+Jianjin Zhao and Xiaojuan Wang are with the Department of Cyberspace
+Security, Beijing University of Posts and Telecommunications, Beijing 100876,
+China (e-mail: jianjinzhao@bupt.edu.cn; wj2718@bupt.edu.cn).
+Digital Object Identifier 10.1109/TNSE.2026.3664905
+
+I. INTRODUCTION
+ETWORK Intrusion Detection Systems (IDS) are a critical
+line of defense in cybersecurity, and their performance is
+vital for safeguarding network systems against attacks [1], [2],
+[3]. The efficacy of an IDS hinges on the completeness of its
+feature representation [4], [5], [6]. Network traffic inherently
+comprises multi-modal data with diverse features, which are
+broadly categorized into intra-flow and inter-flow features [54].
+Intra-flow features describe the internal attributes of individual
+network flows, including statistical features (e.g., mean packet
+length, flow duration) [13], [14], [15], [16], [17], [18], [19], [20],
+[21], [22], metadata features [23], [24], [25], [26], and sequence
+features (e.g., packet length sequences) [27], [28], [29], [30],
+[31], [32], [33], [34], [35], [36], [37]. In contrast, inter-flow
+features mainly refer to the relationship features among network
+flows.
+In existing IDSs, most systems focus solely on a single type
+of intra-flow feature [13], [14], [15], [16], [17], [18], [19],
+[20], [21], [22], [23], [24], [25], [26], [27], [28], [29], [30],
+[31], [32], [33], [34], [35], [36], [37], making them highly
+sensitive to minor variations in network flow features. For
+instance, when facing attacks where adversaries tamper with
+packet lengths [10], [11], IDSs based on sequence features
+(e.g., packet length sequences) often struggle to maintain stable
+performance, exhibiting poor robustness. Consequently, some
+studies have adopted multi-modal learning approaches using diverse network flow features [41], [42], [43], [44], [45], [46], [47],
+[48], [49]. However, their feature selection remains confined to
+intra-flow features, neglecting the inter-flow correlations [54],
+[63].
+To address the limitations of intra-flow features, researchers
+have attempted to utilize multiple network flows to learn interflow relationships for malicious traffic detection [41], [50],
+[51]. Among them, CBSeq [50] treats all flows between two
+hosts as an integrated entity, concatenating features like packet
+count, time intervals, and source ports of each flow to construct
+behavioral sequences for classification. Similarly, HDFEF [51]
+maps features of individual flows into different spaces and combines these multi-space features to form composite multi-flow
+representations. However, these methods only integrate information from multiple flows through feature aggregation, failing
+to deeply explore the underlying temporal dependencies and
+spatial correlations among flows.
+
+N
+
+2327-4697 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+In fact, network attacks often exhibit distinct spatio-temporal
+correlation patterns. For example, in a Distributed Denial of Service (DDoS) attack, traffic originating from multiple source IPs
+coordinates high-frequency requests temporally while forming
+distributed assaults on target servers spatially [12]. To capture
+these characteristics, GAT_based model [52] and MeDF [54]
+construct graphs from temporal and spatial perspectives, respectively. But they can only model inter-flow dependencies in a single dimension. Although recent studies such as PPT-GNN [65]
+and CCSTGN [66] employ spatio-temporal graph networks to
+capture the spatio-temporal dynamics among flows, they cannot explicitly quantify the strength of inter-flow correlations,
+limiting interpretability.
+Furthermore, most existing studies focus solely on either
+intra-flow or inter-flow features. Although some recent approaches have attempted to jointly learn both types of features,
+they still have significant limitations in mining inter-flow relationships. For instance, MeDF [54] only constructs graphs from
+the spatial dimension, ignoring temporal dependencies between
+flows. IIT [63] implicitly learns inter-flow dependencies through
+attention mechanisms, but lacks an explicit graph structure,
+failing to visually reveal the spatio-temporal correlations.
+In light of this, this paper proposes a novel representation
+learning paradigm for intrusion detection (IF2 -STG),1 designed
+to enhance model robustness by jointly modeling fine-grained
+intra-flow content and explicit inter-flow spatio-temporal correlations. Its core innovation lies in an interpretable Inter-flow
+Spatio-Temporal relationship Graph (ISTG), which quantifies
+dependencies between flows using edges defined by start time
+intervals and IP-set associations. IF2 -STG employs two parallel
+learning branches: a CNN for capturing intra-flow features from
+raw bytes, and a GNN for modeling inter-flow relationships
+via the ISTG. Their complementary representations are then
+fused into a comprehensive flow representation. Compared to
+existing methods, this work is the first to explicitly quantify
+and structurally model complex spatio-temporal dependencies
+among flows, enabling interpretable analysis of multi-flow attack patterns while demonstrating stronger generalization and
+robustness against label noise.
+The main contributions of this work are summarized as
+follows:
+r We propose a novel intrusion detection model that
+integrates inter-flow spatio-temporal relationships with
+intra-flow features. The model employs CNN and GNN
+architectures to learn intra-flow and inter-flow feature
+representations respectively, then fuses them into a
+comprehensive flow representation. This unified representation preserves intrinsic behavioral patterns of individual
+flows while incorporating contextual spatio-temporal
+dependencies among multiple flows, thereby significantly
+improving classification accuracy and robustness.
+r We construct an ISTG to capture the correlations among
+flows in both temporal and spatial dimensions. Using
+packet length sequences and statistical values as node
+1 The source code is publicly available at https://github.com/Akap-vv/IF2STG.
+
+7119
+
+features and defining two-dimensional edge vectors based
+on the time intervals and IP sets associations, ISTG can
+explicitly model the spatio-temporal dependencies between flows. The proposed ISTG demonstrates good interpretability and representational capability, particularly for
+attack types with significant inter-flow interaction patterns
+such as DDoS and port scanning.
+r Our proposed IF2 -STG achieves over 99% accuracy on
+three real-world datasets, validating the effectiveness of the
+joint learning of intra-flow and inter-flow features. Crossdataset experiments further reveal that inter-flow spatiotemporal features exhibit remarkable generalization across
+datasets collected at different times, offering a valuable
+solution against the evolving attacks in the real-world.
+The rest of this paper is organized as follows. Section II
+summarizes related work and analyzes existed methods. Section III explains the research motivation. Section IV introduces
+the detailed design of the proposed IF2 -STG. Section V presents
+the experimental results and performance evaluation. Finally,
+Section VI concludes the paper.
+II. RELATED WORK
+The primary objective of an IDS is to accurately classify
+network traffic and discriminate malicious behavior [7], [8],
+[9]. Feature extraction is a crucial step in this process. Existing
+research can be primarily categorized into two classes based on
+the scope of feature extraction: intra-flow feature-based methods
+and inter-flow feature-based methods. To clarify the distinctions
+between existing methods and our approach, Table I provides
+a detailed comparison in terms of the features used, features
+extracted, models, and limitations.
+A. Intra-Flow Feature-Based Methods
+IDSs based on intra-flow features identify threats by learning
+the inherent characteristics within individual network flows.
+These methods can be categorized into single-modal learning
+and multi-modal learning approaches.
+1) Single-Modal Learning: Single-modal learning methods
+utilize only one type of intra-flow feature, including statistical
+features, metadata features, and sequence features.
+Statistical feature-based methods rely on statistical features
+extracted from bidirectional flows (e.g., total packet count,
+packet inter-arrival time, flow duration, etc.) [13], [14], [15],
+[16], [17], [18], [19], [20], [21], [22], [80], combined with
+machine learning algorithms to achieve traffic classification and
+recognition [15]. Yang et al. [13] introduced Principal Component Analysis to account for the correlations between different
+statistical attributes, and used sliding window to achieve scalable
+anomaly detection. Apruzzese et al. [17] utilized features such
+as total transmitted packets, total transmitted bytes, and bytes
+per second to propose a Random Forest (RF)-based IDS with
+certain defenses against adversarial attacks. Bozkır et al. [18]
+employed the NFStream tool to compute traffic features and
+designed an encrypted traffic classification platform using GBTree, LightGBM, and XGBoost algorithms. Similarly, Wang
+et al. [19] extracted statistical features, including flow duration,
+
+7120
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE I
+OVERVIEW OF PRIOR RESEARCH AND THIS WORK
+
+time intervals, and bytes per second, from encrypted traffic and
+applied an XGBoost model for classification. Ngo et al. [80]
+conducted a comparative study of machine learning methods
+for threat detection in healthcare IoT systems based on statistical
+features.
+Metadata feature-based methods directly extract raw fields
+from packet headers without requiring statistical information [23], [24], [25], [26], which can accelerate detection speed
+and enhance real-time performance. Ma et al. [23] and Li
+et al. [24] both extract frame and protocol metadata features from
+packets, and incorporate feature selection methods to identify the
+most informative features, thereby reducing the computational
+overhead. Likewise, the Lucid [26] approach extracts 11 key
+metadata features from each packet and utilizes a lightweight
+CNN to achieve real-time DDoS detection.
+Sequence feature-based methods focus on temporal patterns
+in network traffic, leveraging deep learning (DL) models to
+capture the trend and periodic characteristics of sequences [27],
+[28], [29], [30], [31], [32], [33], [34], [35], [36], [37]. The
+input data for these models typically encompass packet length
+sequences, inter-arrival time sequences, and raw byte sequences.
+
+ERNN [27], specifically designed for network-induced phenomena, utilizes LSTM networks to classify packet length sequences. FS-Net [28] employs a bidirectional GRU to encode
+packet length sequences, incorporating a reconstruction mechanism to ensure feature representation validity. Han et al. [30]
+constructed graphs based on packet length sequences using GNN
+to enhance detection capabilities. Raw bytes-based methods
+learn from the hexadecimal byte sequences of flows, typically
+converting byte sequences into grayscale images or textual
+representations, and then extracting features through models
+like CNN and Transformer. Studies [31], [32], [33] all transformed hexadecimal bytes into grayscale images and applied
+CNN models for classification. Meng et al. [34] employed a
+Transformer to encode byte sequences and then use natural
+language processing (NLP) techniques for classification. Gao
+et al. [35] treated discrete hexadecimal bytes as words and
+integrated attention mechanisms into CNN-BiLSTM to enhance
+IDS’s accuracy by focusing on key information. Zhao et al. [36]
+adopted a multi-level flow representation and the Traffic Transformer model to better extract features from raw byte data. Luo
+et al. [37] constructed a flow-level semantic graph from raw byte
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+data and aggregated it into semantic embeddings using a gated
+GNN.
+The aforementioned approaches suffer from two major limitations. First, the features extracted solely from individual flows
+may be incomplete, failing to provide sufficient information
+for accurate attack prediction, especially for multi-stage attacks [38], [39], [40]. Second, these methods are sensitive to
+minor perturbations in single-flow features, making them vulnerable to evasion attacks. For instance, as demonstrated in [10],
+an evasion strategy that modifies packet lengths in malicious
+traffic to mimic benign traffic characteristics can significantly
+degrade the detection accuracy of IDS relying solely on packet
+length sequences.
+2) Multi-Modal Learning: Multimodal learning can enhance
+performance by capturing patterns from multiple perspectives,
+and it can alleviate the problems of insufficient representation
+and vulnerability to attacks that arise from relying solely on
+single features [41], [42], [43], [44], [45], [46], [47], [48],
+[49]. Kong et al. [41] employed a sliding sampling window
+to conduct real-time sampling of network conversations and
+extracted three sequential features—bytes, lengths, and time
+intervals—to capture the patterns of different types of traffic. He et al. [42] proposed a novel multi-view solution to
+reduce feature complexity and employed multimodal DL to
+construct effective feature fusion modules for learning the underlying structure of traffic data. Yu et al. [43] designed a DL
+method based on multi-view learning, utilizing an ensemble
+classifier for multi-class classification of minority attacks. Yun
+et al. [44] extracted three attribute sequences from TLS flows
+and used DL models to capture long-term dependencies among
+elements in packet sequences. Wang et al. [48] proposed a
+multimodal encrypted traffic classification framework, AppNet,
+which uses a 1D CNN to extract features from the first 1014
+bytes of the initial packet and an LSTM to learn temporal
+relationships in packet length sequences, ultimately concatenating features learned from both perspectives for classification.
+Lei et al. [49] proposed a multi-feature correlation analysis
+method to capture relationships between different feature types,
+and utilized a CNN-LSTM model for spatiotemporal feature
+extraction.
+Nevertheless, the above methods remain limited to analyzing
+the internal features of individual flows while failing to account
+for inter-flow correlations, which is not conducive to detecting
+sophisticated attack patterns involving interactions among multiple flows.
+B. Inter-Flow Feature-Based Methods
+IDSs leveraging intra-flow features discover malicious activities by analyzing correlations among multiple network flows,
+which can be categorized into two types: flow-level feature
+aggregation and inter-flow relationship mining.
+1) Flow-Level Feature Aggregation: The essence of flowlevel feature aggregation methods is the cross-flow concatenation of single-flow features. For example, both iDetector [41]
+and CBSeq [50] take multiple flows between two hosts as a
+whole, where the former extracts the byte sequences, packet
+
+7121
+
+length sequences, and inter-arrival time sequences of all packets
+for classification, and the latter constructs behavior sequences by
+combining the packet counts, intervals, and source/destination
+port of multiple flows. HDFEF [51] projects individual flow
+features into different latent spaces and forms combined features
+by concatenating multi-space features. However, these methods
+simply aggregate the raw or transformed features of multiple
+flows, without considering the temporal order or spatial topological correlations between flows.
+2) Inter-Flow Relationship Mining: Inter-flow relationship
+mining methods learn correlation features between flows
+through either explicit graph construction or implicit dependency modeling [52], [53], [54], [55], [56], [57], [58], [59], [60],
+[61], [62], [63], [64], [65], [66], [79]. Ngo et al. [79] constructed
+graphs based on Top-K attribute similarity and adopted the
+GraphSAGE model to effectively capture node representations
+for IoT intrusion detection. Xu et al. [52] and Peng et al. [53]
+segmented raw traffic into blocks, treated flows as nodes, and
+established edges based on temporal cross-correlations. They
+employed graph attention networks (GAT) and graph convolutional networks (GCN), respectively, to extract node representations by aggregating information from adjacent nodes. Wang
+et al. [54] proposed a graph-based approach for inter-flow feature
+extraction, where individual flows were represented as nodes and
+edges were established based on IP set correlations and protocol consistency, subsequently employing GCN to learn spatial
+relationships among flows. Li et al. [55] proposed ProGraph, a
+graph-propagation-based method. It builds a correlation graph
+with session clusters aggregated from different networks, upon
+which effective graph propagation can be implemented iteratively to predict labels for test nodes. These methods lack joint
+modeling of both temporal and spatial dimensions in inter-flow
+relationships.
+Zhao et al. [58] built both attribute and temporal relation
+graphs for flow sequences. But in temporal relationship extraction, the edge weights are determined solely by the ordinal
+position differences between flows, failing to accurately capture the true time-dependent intensity. MT-FlowFormer [59]
+extracts deep-level features from the flow sequence, which can
+effectively distinguish the relevance and importance of different flows in the flow sequence. Yao et al. [60] and Vaswani
+et al. [61] treated the stream sequence as a time sequence and
+used attention-based LSTM to learn the temporal relationships
+among network flows. Meng et al. [63] represented flows using packet length sequences and inter-arrival time sequences,
+employing attention mechanisms to implicitly learn inter-flow
+dependencies. Nevertheless, the absence of an explicit graph
+structure in their approach hindered intuitive visualization of
+flow relationships.
+The recently proposed PPT-GNN [65] and CCSTGN [66]
+methods leverage graph structures to capture spatio-temporal
+dynamics of cyber attacks, achieving significant advances in
+real-time performance and generalization. However, PPT-GNN
+constructs all flows within a time window into a single graph,
+which may incur significant computational overhead. Moreover,
+they fall short in showcasing explicit inter-flow spatio-temporal
+patterns within the graph, limiting interpretability.
+
+7122
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 1. Research motivation. Taking scan attacks as an example: it is difficult to accurately identify the attack intent relying solely on the internal features of a
+single flow. Thus, inter-flow spatio-temporal relationships are combined with intra-flow features to form a comprehensive representation.
+
+It is worth noting that frameworks integrating intra- and
+inter-features have also been explored in broader cybersecurity
+contexts, such as insider threat detection [78]. However, this
+framework processes user behavior logs and models relationships based on organizational structures. Since both the data
+objects and relational semantics differ fundamentally from those
+in network intrusion detection, it cannot be directly adapted for
+modeling spatio-temporal correlations in network traffic.
+To overcome the aforementioned limitations, this paper innovatively proposes the ISTG, which is designed to achieve
+effective spatio-temporal joint representation for the field of network intrusion detection, while providing interpretable insights.
+Furthermore, to compensate for the potential loss of fine-grained
+details in inter-flow analysis, our method incorporates intra-flow
+raw byte features for multi-modal fusion. By leveraging complementary information, this design strives to improve the accuracy
+and robustness of detection.
+III. MOTIVATION
+This section elucidates the research motivation and necessity
+by taking half-open port scanning attacks as an example. The
+attacker sends SYN packets to target ports, determining a port as
+open upon receiving SYN/ACK responses or closed upon RST
+packets. As illustrated in the top-left corner of Fig. 1, attacker
+A sequentially probes five ports on target host B. During this
+process, each packet sequence between host A and every probed
+port of host B constitutes an independent bidirectional flow. The
+simplified diagram in the bottom-left corner represents these
+flows as arrows arranged vertically in chronological order of
+start time.
+For f low1, relying solely on its intra-flow features (such as
+packet length sequences, raw bytes, statistical features, etc.)
+to determine whether it belongs to malicious traffic or normal
+(request) traffic has obvious defects. On the one hand, a single type of feature can be easily manipulated by attackers to
+evade detection; on the other hand, single-flow behavior lacks
+
+contextual correlation, making it impossible to identify the continuous port probing behavior of port scanning attacks. To overcome these deficiencies, apart from intra-flow features, we use
+graph representation learning to capture inter-flow relationships.
+Specifically, each graph node represents an individual flow,
+while edges denote correlations between flows. Taking f low1
+and f low2 as examples, their start times are close, and both are
+flows from host A to host B in spatial topology. Such temporal
+and spatial correlations can be quantitatively represented as t
+and s respectively, forming a two-dimensional vector that serves
+as the edge attribute. Eventually, a spatio-temporal relationship
+graph containing 5 flows is constructed.
+Subsequently, the intra-flow features and inter-flow spatiotemporal relationship graphs are separately learned via different
+networks to generate the intra-flow feature representation and
+inter-flow feature representation of f 1. These two representations are then fused to form the comprehensive representation
+of f 1 that captures both its internal behavior patterns and contextual relationships with other flows. This integrated representation offers the model a more comprehensive discriminative
+basis, thereby improving the accuracy of intrusion detection.
+IV. DESCRIPTION OF IF2 -STG
+The proposed IF2 -STG comprises four components: data
+preprocessing module, intra-flow feature extraction module,
+inter-flow feature extraction module, and fusion classification
+module. The data preprocessing module extracts the features
+required by the intra-flow and inter-flow extraction modules.
+The intra-flow and inter-flow extraction modules process their
+input features independently to generate flow-level feature representations for the fusion module and classify them. These
+representations are then concatenated and classified in the fusion
+classification module to achieve comprehensive detection. The
+overall framework of the method is shown in Fig. 2.
+In terms of feature selection for network flows, the intraflow feature extraction module adopts raw bytes to preserve
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+7123
+
+Fig. 2. The system framework of the proposed IF2 -STG, consisting of four modules: (a) Data Preprocessing provides features required for subsequent modules,
+(b) Intra-flow Feature Extraction and (c) Inter-flow Feature Extraction learn the representations of two modalities, and (d) Fusion Classification combines these
+representations for final intrusion detection.
+
+fine-grained information. However, byte sequences typically
+need to be truncated into a fixed length for model input compatibility, inevitably resulting in information loss. In the inter-flow
+feature extraction module, the packet length sequences and
+their statistical features are used as node features to construct
+graphs. On the one hand, compared to using only basic triplets
+(source IP, destination IP, and protocol) as node features [52], the
+combination of packet length sequences and statistical features
+provides more comprehensive behavioral patterns of the flows
+themselves. On the other hand, this combination also makes up
+for the information loss caused by the truncation of raw bytes.
+Therefore, the selection of these multi-dimensional flow features
+helps to improve the integrity of traffic characterization and the
+robustness of the model.
+
+flow is obtained by concatenating the raw bytes of each packet
+in order. For a packet Pj , its raw byte sequence is denoted
+as bytej = [bj1 , bj2 , . . . , bjlj ], where bjlj is the last byte, and
+lj = len(Pj ) is the length of packet Pj . Therefore, the raw
+byte sequence of flow Fi is Bi = byte1 ||byte2 || · · · ||byten =
+[b11 , b12 , . . . , b1l1 , b21 , b22 , . . . , b2l2 , . . . , bn1 , bn2 , . . . , bnln ].
+The packet length sequence of Fi is Li = [l1 , l2 , . . . , ln ].
+To adapt to the model input, the raw byte sequence and
+packet length sequence are truncated to fixed lengths q and
+p, respectively, with zero-padding applied to sequences shorter
+than the specified lengths. Additionally, the timestamp t0 of the
+first packet in each flow is taken as the start time of the flow,
+which will be used to compute the temporal component of edges
+in the spatio-temporal relationship graph within the inter-flow
+feature extraction module.
+
+A. Data Preprocessing Module
+The raw traffic consists of a set of continuous and ordered
+data packets. First, packets are divided into corresponding bidirectional network flows based on their five-tuple (source IP,
+source port, destination IP, destination port, protocol). Each flow
+contains a series of temporally ordered data packets, denoted as
+Fi = {P1 , P2 , . . . , Pn }, where Pj represents the j-th packet in
+the flow.
+Subsequently, for each flow, the raw byte sequence and the
+packet length sequence are extracted for use in the subsequent
+intra-flow feature extraction module and inter-flow feature
+extraction module, respectively. The raw byte sequence of a
+
+B. Intra-Flow Feature Extraction Module
+For intra-flow feature extraction, we perform end-to-end
+learning on raw byte data. Network traffic is essentially sequential byte data, where the hierarchical structure of bytes, packets,
+sessions, and entire flows closely resembles the character, word,
+sentence, and document structure in NLP. In recent years, the
+successful applications of CNN in NLP all used 1D-CNN, for
+example, sentiment analysis and text classification [67], [68].
+Therefore, we adopt a 1D-CNN architecture similar to [31]. The
+inputs to this network comprise the first q bytes of each flow,
+with zero-padding for shorter sequences. The input of the last
+
+7124
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE II
+THE KEY PARAMETERS OF 1D-CNN MODEL
+
+FCN N
+
+linear layer is taken as the flow representation hCN N ∈ R
+,
+which is fed into the fusion classification module. Table II
+details the key parameters of each layer in the 1D-CNN model,
+where FCN N denotes the dimension of the CNN’s output hidden
+vector and C represents the number of flow categories in the
+multi-classification task.
+C. Inter-Flow Feature Extraction Module
+Multiple consecutive network flows exhibit inherent spatiotemporal correlations. Consequently, effective analysis should
+account for both the intrinsic attributes of individual flows and
+their inter-flow relationships. To this end, we employ GNN to
+model and learn the spatio-temporal correlations among network
+flows.
+1) Construction of ISTG: For each network flow category,
+we take m consecutive network flows with adjacent start times
+as a group to construct an ISTG. In the graph, each node
+corresponds to an individual flow, where all nodes share identical
+labels that consequently define the graph’s label. We select the
+packet length sequence and relevant statistical features as node
+features.
+Packet length sequence feature: The packet length sequence
+has been widely used in network flow classification tasks,
+particularly for encrypted traffic where available features are
+limited [27], [28], [29], [30]. Since network flows are bidirectional, we distinguish forward and backward packets by
+assigning positive values to forward packet sizes and negative
+values to backward packet sizes in the sequence. To standardize
+input dimensions for the model, we select the first p packets
+of each flow (padding with zeros for shorter flows), though
+this truncation may omit subsequent packets in long flows. To
+compensate for this limitation, we supplement with statistical
+features.
+Statistical feature: Following [52], we compute 18 statistical features separately for the entire flow, forward flow, and
+backward flow, including: maximum, minimum, mean, median
+absolute deviation, standard deviation, variance, skewness, kurtosis, and percentiles (10% to 90% ) of packet sizes, along with
+packet counts. This yields 54 statistical features per flow. To
+reduce dimensionality, we employ random forest for feature
+importance ranking and select the top z most important features
+as complementary to the sequence features.
+Thus, the node features can be expressed as h =
+[l1 , l2 , . . . , lp , s1 , s2 , . . . , sz ], where li and si denote the packet
+size and statistical feature values, respectively.
+
+Fig. 3. An example of ISTG construction (assuming m=6), comprising three
+key steps: 1) Flow Sorting: Sorting the m flows by their start times, corresponding to the node order in ISTG. Each flow requires features such as start time,
+IP set, sequence features, and statistical features. 2) Concurrent Flow Grouping:
+Flows within each dashed box form a concurrent group, and bidirectional edges
+connect concurrent flows in ISTG. 3) Spatio-temporal Relationship Calculating:
+Nodes or groups in ISTG are sequentially linked with unidirectional edges
+weighted by 2D spatio-temporal vectors [t, s].
+
+Next is the critical design of the ISTG - the edge connections
+between nodes. We employ a two-dimensional feature vector
+as the edge attribute, with the two dimensions quantifying the
+temporal correlation and spatial correlation between flow pairs
+respectively. Specifically, suppose there is an edge eij = [t, s]
+between node i and node j. The temporal correlation component
+t is derived from the start time difference between the two flows.
+Theoretically, flows with smaller start time intervals demonstrate
+stronger temporal correlations. We therefore implement this
+logic using an exponential decay function e−x , which assigns
+higher t values to flow pairs with smaller time gaps. For the
+spatial correlation component s, we determine it by checking
+whether there is an intersection between the source IP and
+destination IP sets IP = {src_ip, dst_ip} of both flows. The
+value s is set to 1 if any IP intersection exists, and 0 otherwise.
+This judgment method can effectively capture diverse network
+interaction patterns, such as multiple connections initiated from
+the same device, different devices accessing the same server,
+and chain-style communication.
+Therefore, the weight of edge eij = [t, s] can be formally
+computed as follows:
+t = e−(t0i −t0j ) , t0i ≥ t0j
+
+1, if IPi ∩ IPj = ∅
+s=
+0, else
+
+(1)
+(2)
+
+In addition, considering network bandwidth fluctuations, we
+regard flows with a time difference less than a specified threshold (10 ms) and an intersection in source/destination IPs as
+concurrent flows. These concurrent flows form a concurrent
+group, where any two nodes are connected by bidirectional
+edges with weights [1.0, 1.0]. Nodes between different groups,
+between a group and a single node, and between single nodes
+are all connected by unidirectional edges in chronological order.
+Additionally, in order to reduce the complexity of the ISTG,
+unidirectional edges that can be derived through transitivity are
+not explicitly generated. Fig. 3 illustrates an example of ISTG
+construction. Compared with the way of simply connecting
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+sequentially in chronological order, this connection method
+considering concurrency demonstrates superior effectiveness,
+which will be verified in Section. V-F of our experiments.
+2) Graph Representation Learning: The labeled ISTG is fed
+into a GNN for inter-flow feature extraction and graph classification. The GNN model we use primarily consists of a Graph
+Attention Layer (GAT) [69], a Self-Attention Graph Pooling
+Layer (SAGPool) [70], [71], and linear layers.
+The GAT utilizes the self-attention mechanism to enable each
+node in the graph to dynamically aggregate information from its
+neighboring nodes based on their importance, thereby learning
+better node representations. For a given node i in the graph
+with feature vector hi , its set of neighboring nodes is denoted
+as N (i). Taking neighboring node j ∈ N (i) as an example,
+GAT calculates the importance of node j to node i through the
+following formula:
+
+
+
+exp LeakyReLU aT [W hi  W hj  We eij ]
+αij = 
+T
+k∈Ni exp (LeakyReLU (a [W hi  W hk  We eik ]))
+(3)
+where T represents transposition and || is the concatenation
+operation. W is a weight matrix that is applied to every node,
+and We is a weight matrix that is applied to every edge. a is the
+parameter of a single-layer feedforward neural network. The
+LeakyReLU function [72] is introduced for non-linearization,
+and the Softmax function is employed to calculate the final αij .
+Subsequently, the attention weights of neighboring nodes are
+linearly accumulated to update the feature vector hi of node i.
+⎞
+⎛
+
+(4)
+αij W hj ⎠
+hi = σ ⎝
+j∈Ni
+
+To stabilize the self-attention learning process, GAT employs
+a multi-head attention mechanism, where K independent attention mechanisms compute node features in parallel, and their
+outputs are concatenated:
+⎞
+⎛
+
+k
+⎝
+(5)
+αij
+W k hj ⎠
+hi =K
+k=1 σ
+j∈Ni
+k
+denotes the attention coefficient calculated by the k-th
+where αij
+attention head, and W k is the linear transformation matrix for
+the k-th attention head.
+In this work, we use a three-head attention mechanism (K=3).
+The representations generated by each head are concatenated
+to obtain a new representation for each node (i.e., each flow),
+incorporating both its original information and contextual information from neighboring nodes. Consequently, we treat this as
+a flow-level representation embedding inter-flow relationships
+and output it to the subsequent fusion classification module,
+denoted as hGN N = hi ∈ RFGN N .
+To capture the global structural information of the graph, this
+module performs graph classification rather than node classification, which only considers local neighborhood information of
+nodes. Specifically, to pay more attention to important nodes and
+improve training efficiency, we use a SAGPool mechanism to
+select important nodes and simplify the graph structure. Then,
+
+7125
+
+through a linear layer and a softmax function, the prediction
+probability of graph classification is obtained. Since the main
+purpose of this study is flow classification, the graph classification results are expanded by m times to obtain the node-level
+flow classification results.
+D. Fusion Classification Module
+This module takes the flow-level representations from both
+the intra-flow and inter-flow feature extraction modules and
+concatenates them to obtain the final representation vector
+hf = hCN N ||hGN N . Here, hf integrates fine-grained intra-flow
+byte features and context-aware inter-flow relational features,
+providing a more comprehensive characterization of network
+flows. Subsequently, hf is fed into a linear layer to learn and
+integrate the complex nonlinear relationships between the two
+types of features, with the final classification performed by a
+fully-connected layer.
+E. Loss Function
+In the fusion classification module, the motivation for concatenating hCN N and hGN N is to enable the neural network
+to combine the strengths of intra-flow and inter-flow features,
+allowing them to complement each other. However, due to the
+black-box nature of neural networks, it may not learn the best
+solution for both components as expected [73]. Therefore, we
+hypothesize that if the combined model’s parameters are optimal, then the parameters of the two feature extraction modules
+should also be individually optimal. Based on this, we adopt
+multi-loss joint training to guide the model to achieve the best
+performance of each module. Specifically, the loss function of
+IF2 -STG incorporates classification losses from three modules,
+evaluating not only the final classification performance but also
+the classification capabilities of the features learned by the two
+feature extraction modules. To ensure balanced attention to both
+intra-flow and inter-flow features during model training, we
+assign equal weights to their respective loss functions.
+Loss = Lossintra + Lossinter + Lossf usion
+
+(6)
+
+Lossintra , Lossinter , and Lossf usion represent the classification losses of the intra-flow feature extraction module, interflow feature extraction module, and fusion classification module,
+respectively. The cross-entropy loss is applied to calculate the
+loss between the predicted value p and the ground truth y.
+lossintra = −
+
+N C
+
+
+1 
+yi log pintra
+ic
+N i=1 c=1
+
+(7)
+
+lossinter = −
+
+N C
+
+
+1 
+yi log pinter
+ic
+N i=1 c=1
+
+(8)
+
+lossfusion = −
+
+N C
+
+
+1 
+yi log pfusion
+ic
+N i=1 c=1
+
+(9)
+
+Here, N denotes the total number of samples, and C represents
+the number of categories in the multi-class classification task.
+
+7126
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+p_ic indicates the predicted probability from each module’s classification layer that sample i belongs to class c. It should be noted
+that in the inter-flow feature extraction module, the GNN outputs
+graph-level classification results, whereas we focus on flow-level
+classification. Since all nodes within a graph should share the
+same class label, and considering that each graph contains m
+nodes, we expand each graph’s prediction result by a factor of
+m to obtain node-level predictions.
+Specifically, assuming the GNN outputs the predicted probability pk = [pk1 , pk2 , . . . , pkC ] ∈ RC for graph Gk , where pkc
+represents the probability of graph Gk belonging to class c.
+Replicate pk for m times to generate the node-level probability matrix Pkinter ∈ Rm×C . Finally, all node-level probability
+matrices are concatenated to form the complete flow-level prediction matrix P inter ∈ RN ×C for all N samples (flows), and
+∈ P inter .
+pinter
+i
+
+TABLE III
+THE COMPOSITION OF THE THREE DATASET
+
+TABLE IV
+PARAMETER SETTING
+
+V. EVALUATION
+A. Experiment Preparation
+1) Datasets: We evaluate our method on three public datasets
+to validate its applicability to both IoT and traditional networks.
+Notably, these datasets were collected in 2019, 2020, and 2024
+respectively, demonstrating that our approach can adapt to evolving network environments.
+r CIC-DDoS2019 [74]: Designed for DDoS attack detection, this dataset introduces a new taxonomy for DDoS attacks. It contains benign traffic and 12 up-to-date common
+DDoS attacks, such as NetBIOS, LDAP, and MSSQL.
+r MQTT-IoT-IDS2020 [75]: Focused on the MQTT protocol,
+a core IoT communication protocol, this dataset simulates
+real-world network environments. It covers normal operations and four attack scenarios, enabling validation of our
+method’s detection capability in IoT environments.
+r CICIoMT2024 [76]: Targeting Medical IoT (IoMT) scenarios, this dataset contains five categories of network
+attacks against 40 IoMT devices, spanning Wi-Fi, MQTT,
+and Bluetooth protocols. Combining real medical devices
+with simulated attacks, it validates our method’s effectiveness in real-world complex IoT environments.
+For all datasets, network flows are divided based on fivetuples. Given the significant class imbalance in CIC-DDoS2019
+and CICIoMT2024, we balance the datasets by randomly sampling other major categories using benign traffic as the baseline.
+Each dataset is divided into training and test sets at a 4:1 ratio.
+Detailed sample distributions are shown in Table III.
+2) Experimental Setup: We train and evaluate the model
+using PyTorch on a server equipped with an NVIDIA RTX 3090
+GPU. The PyTorch Geometric Library is employed to construct
+the ISTGs and implement the GNN. The relevant parameters of
+the model and training are listed in Table IV. To make full use of
+the training data, 5-fold cross-validation is adopted during the
+training process.
+3) Evaluation Metrics: To assess the classification performance of the model, the following four well-known metrics
+are adopted: Accuracy (ACC), Precision (Positive Predictive
+Value, PPV), Recall (True Positive Rate, TPR), and F1 Score
+
+(F1). The F1 Score provides a comprehensive measure of model
+performance, representing the harmonic mean of PPV and TPR.
+To complement this assessment with insights into efficiency
+and practicality, we also measure the model’s parameter count,
+training/inference time, memory usage, and throughput.
+4) Statistical Feature Selection: Node features in the ISTG
+consist of packet length sequences and statistical features. The
+statistical features capture the overall characteristics of the flows,
+serving as a supplement to the truncated sequence features. As
+described in Section. IV-C1, we compute 18 statistical features
+for each of the entire, forward, and backward packet length
+sequences, resulting in a total of 54 statistical features. The
+Fig. 4 shows the top 10 most important statistical features ranked
+by their contribution using a random forest classifier, where
+f , b, and a represent the forward, backward, and entire flows,
+respectively. To reduce the model parameters while maintaining
+learning accuracy, we select the six most significant statistical features: a_mean, f _per4, a_per7, f _per5, a_per5, and
+a_per6. Consequently, the feature dimension of each node in
+the graph is p + z = 26.
+B. Comparison With State-of-The-Art Methods
+From the perspective of feature utilization, the following comparative methods are selected: Fs-Net, 1D-CNN, and XGBoosts
+employ single-modal features of packet length sequences, raw
+bytes, and statistical features, respectively, while both APPNet
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+Fig. 4.
+
+Top 10 most important statistical features ranked using random forest.
+
+and iDetector adopt multimodal features. All these five models
+focus exclusively on intra-flow features. In contrast, GAT-based
+model, PPT-GNN, and CCSTGN explore inter-flow correlations
+through graph construction. MeDF and IIT are conceptually similar to ours, as both attempt to combine intra-flow and inter-flow
+features.
+r Fs-Net [28] employs a bidirectional GRU to encode features from packet length sequences and introduces a reconstruction mechanism in the AutoEncoder to ensure the
+effectiveness of the learned features.
+r 1D-CNN [31] converts sequences of hexadecimal bytes
+from encrypted network flows into grayscale images and
+utilizes a 1D CNN model to classify these images.
+r XGBoost [19] extracts statistical features related to time
+intervals and packet sizes, and utilize the XGBoost algorithm for classification.
+r App-Net [48] extracts features from byte sequences using a
+1D CNN and learns temporal relationships in packet length
+sequences using LSTM. Finally, the features learned from
+both views are concatenated for classification.
+r iDetector [41] extracts three sequence features of byte,
+length and time interval from channel traffic, and classifies
+them using a lightweight deep neural network model called
+EdgeNet.
+r GAT_based model [52] treats network flows as nodes,
+embedding 63 statistical features including packet size,
+packet count, protocol type, and IP addresses into each
+node. Edges are added based on cross-correlations between
+nodes, and a GAT is applied to classify the graph.
+r PPT-GNN [65] constructs a heterogeneous graph with
+flows and IP addresses as nodes, and employs multiple
+heterogeneous spatio-temporal layers to capture spatial,
+temporal, intra-window, and inter-window dependencies.
+r CCSTGN [66] maps flows to communication channels,
+constructing a channel-centric graph representation. It utilizes a Temporal Graph Network for continuous-time dynamic graph learning, thereby capturing complex spatiotemporal dependencies among traffic flows.
+r IIT [63] concatenates packet length sequences, time interval sequences, and length cumulative sum sequences as
+
+7127
+
+input features. Two multi-head self-attention-based encoders are leveraged to mine intra-flow and inter-flow
+relationship.
+r MeDF [54] combines intra-flow and inter-flow features: it
+constructs spectrograms of flows’ raw bytes and extracts
+statistical features, combining the two as the intra-flow
+features. MeDF also builds flow relation graph to extracts
+inter-flow features. For consistency, we similarly construct
+graphs by grouping adjacent m flows together.
+Table V compares the classification performance of each
+model across three datasets. For a fair comparison, all baseline
+methods were re-implemented and evaluated on the same
+balanced datasets under consistent experimental settings. The
+experimental results demonstrate that our proposed IF2 -STG
+achieves a classification accuracy of over 99% on all three
+datasets, outperforming other comparative models, which
+indicates its good generalization capability across different
+network environments. Particularly, its performance on the
+CIC-DDoS2019 dataset confirms that IF2 -STG can not only
+effectively distinguish between normal and attack traffic, but
+also precisely identify different attack subtypes.
+Among the comparative models, Fs-Net, which utilizes packet
+length sequences, shows the worst performance, achieving
+barely over 60% accuracy on the first two datasets. This indicates
+that coarse-grained length sequence features contain insufficient
+information to effectively distinguish malicious network behaviors. Similarly, the XGBoost model based on statistical features
+exhibits limited generalization. In contrast, the single-modal
+1D-CNN approach, using only raw byte features, achieves better
+results. Notably, on the CIC-DDoS2019 dataset, all models
+achieving an accuracy of over 90% incorporate byte features,
+underscoring that such fine-grained data is essential for the
+detailed classification of specific attack subcategories.
+The multi-modal models AppNet and iDetector demonstrate
+superior performance compared to the aforementioned three
+single-modal models, with classification accuracies both reaching around 97% . This indicates that multi-modal approaches can
+effectively integrate diverse features to more comprehensively
+characterize network flow patterns.
+The GAT_based model adds edges based on the crosscorrelation between nodes, which captures only the temporal
+dependencies between flows while ignoring spatial structural
+features. Both PPT-GNN and CCSTGN dynamically capture
+spatio-temporal interactions among flows. However, as they
+rely solely on statistical features and omit fine-grained intraflow details, their performance shows obvious instability across
+the three datasets. By contrast, our IF2 -STG method achieves
+superior and more robust detection performance through joint
+modeling of inter-flow spatio-temporal features and intra-flow
+fine-grained features.
+The IIT method employs a complex attention mechanism
+to implicitly mine intra-flow and inter-flow features and has
+the highest parameter count. However, its classification performance is unsatisfactory, primarily because it relies mainly
+on packet length sequences. Nevertheless, thanks to the incorporation of time interval features, its performance is slightly
+better than Fs-Net, especially on the CICIoMT2024 dataset.
+
+7128
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE V
+CLASSIFICATION RESULTS OF ALL METHODS ON THE THREE DATASETS
+
+TABLE VI
+CLASSIFICATION PERFORMANCE ON IMBALANCED CICIOMT2024 DATASET
+
+Fig. 5.
+
+Confusion matrices of IF2 -STG on three datasets.
+
+MeDF achieves the best performance among the comparative
+methods, with an accuracy of approximately 98% on all three
+datasets, verifying the effectiveness of combining intra-flow
+and inter-flow features. However, its graph construction, which
+considers only spatial correlations, is limited. Additionally, the
+processing method of converting raw bytes into time-frequency
+spectrograms may risk information loss. Ablation experiments
+in Section. V-D will verify whether this feature transformation
+approach proves more effective than directly using raw byte
+sequences.
+Fig. 5 presents the confusion matrices of our method across
+the three datasets. It can be observed that most categories achieve
+a prediction accuracy close to 1. The relatively lower accuracy in
+certain categories stems from insufficient training samples. For
+instance, the WebDDoS category in the CIC-DDoS2019 dataset
+only has 968 training samples, significantly fewer than other
+categories.
+
+Furthermore, Fig. 6 compares the time costs of all models,
+including training time, inference time, and sample construction
+time. In terms of training and inference efficiency, the proposed
+IF2 -STG model demonstrates competitive performance, achieving comparatively fast speeds. iDetector, Fs-Net, and PPT-GNN
+are the three models with the highest time overhead. For sample construction time, graph-based methods generally require
+more time than those based on individual flows. Among them,
+PPT-GNN takes the longest, as it needs to construct all traffic
+within a time window into a single large graph. For short-term
+burst attacks like DDoS, even with a small time window (e.g.,
+0.5 seconds), the resulting graph may contain tens of thousands
+of nodes, leading to a slow graph-building process and further
+reducing its training and inference efficiency.
+
+C. Evaluation on Imbalanced Data
+Data imbalance is a prevalent and critical issue in real-world
+scenarios. In this section, the proposed method is trained and
+tested on the original, unbalanced CICIoMT2024 dataset. This
+dataset exhibits an extreme long-tail distribution (see Table VI),
+where the sample ratio between the majority class (Recon) and
+the minority class (Spoofing) reaches 162:1. This distribution
+realistically reflects the challenge of detecting rare attack types
+in actual network traffic environments.
+As summarized in Table VI, the proposed method demonstrates strong overall classification performance under such
+highly imbalanced conditions. Notably, it retains considerable
+detection accuracy for the minority class (Spoofing), indicating
+that the model does not exhibit significant learning bias toward
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+Fig. 6.
+
+7129
+
+Comparison of time cost of each baseline model.
+
+the majority class. These results validate the method’s effectiveness in real-world scenarios characterized by data imbalance.
+
+D. Ablation Experiment
+In this section, we construct three ablated models to further
+validate the effectiveness of combining inter-flow and intraflow features, as well as the multi-loss joint training approach.
+Additionally, to investigate whether MeDF’s Fourier transform
+on raw bytes to obtain time-frequency spectrograms is more
+effective, we introduce an ablation experiment MeDF-Intra that
+adopts MeDF’s processing method for raw bytes and the learning network. The relevant parameters of the short-time Fourier
+transform are kept consistent with the original MeDF, such as a
+window length of 100, an overlap rate of 67% , and a Hanning
+window function. Thus, the four sets of ablation experiments are
+as follows. We perform experiments on the MQTT-IoT-IDS2020
+dataset.
+r IF2 -STG-Intra: Removes the inter-flow feature extraction
+module from IF2 -STG, retaining only the intra-flow feature
+extraction module.
+r IF2 -STG-Inter: Removes the intra-flow feature extraction
+module from IF2 -STG, retaining only the inter-flow feature
+extraction module.
+r MeDF-Intra: Adopts MeDF’s processing method for raw
+bytes and the learning network.
+r IF2 -STG-loss: Uses only the single loss from the final fusion classification module for backpropagation
+optimization.
+As shown in Fig. 7, the joint learning scheme integrating both
+intra-flow and inter-flow features significantly enhances intrusion detection performance. Compared to the ablated models
+using only intra-flow features or only inter-flow features, the
+complete IF2 -STG model achieves accuracy improvements of
+1.67% and 2% respectively. This demonstrates that the intraflow and inter-flow features we employ exhibit complementary
+advantages during modal fusion, thereby enhancing overall performance. Specifically, the intra-flow features derived from raw
+bytes capture fine-grained protocol semantics and packet-level
+patterns, while the inter-flow features model spatio-temporal
+correlations between flows. The two modal features complement each other, overcoming the representational limitations
+
+Fig. 7.
+
+Ablation study results.
+
+of single-modal approaches and enabling more comprehensive
+analysis of network behavior.
+Furthermore, MeDF-Intra exhibits approximately 1% lower
+performance than IF2 -STG-Intra across four classification metrics. This observation suggests that converting raw byte sequences into time-frequency spectrograms does not enhance
+feature discriminability, but may instead degrade classification
+performance. The reason lies in that the raw byte sequences
+completely preserve the structured characteristics of network
+flows, such as protocol header fields, which can be directly captured by the classification model. In contrast, during the Fourier
+transform and spectrogram generation process, operations like
+window truncation may damage original features, cause information loss, or introduce noise. These factors make it difficult
+for spectrograms to present effective discriminative features,
+ultimately leading to decreased classification performance.
+Additionally, IF2 -STG achieves better performance than IF2 STG-loss, demonstrating that employing multi-loss joint training can help the model better balance the relationship between
+intra-flow and inter-flow modal features, thereby bringing performance gains.
+E. Sensitivity Analysis
+This section analyzes the impact of key parameters on
+the overall performance of the model: the intra-flow feature
+
+7130
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE VII
+THE IMPACT OF m ON CLASSIFICATION PERFORMANCE AND EFFICIENCY
+
+TABLE VIII
+THE IMPACT OF q ON CLASSIFICATION PERFORMANCE AND EFFICIENCY
+Fig. 8.
+
+extraction parameter q and the inter-flow feature extraction
+parameter m. In addition, it investigates the effect of two critical
+designs in the construction of the ISTG—the time threshold for
+partitioning concurrent groups and the edge definition rules—on
+the detection performance of the IF2 -STG-Inter model.
+1) Number of Nodes m in ISTG: We conducted experiments
+with m = 4, 8, 12, 16 and 20, respectively, and the results are
+listed in Table VII. In terms of detection performance, both
+classification accuracy and the F1-score show a trend of first
+increasing and then decreasing as m grows, reaching the optimal
+values at m=12. In the first phase, as m increases, each ISTG
+incorporates more flows, enabling the model to capture richer
+inter-flow interaction patterns, thereby improving classification
+accuracy. However, when m continues to grow beyond 12,
+the classification performance deteriorates. This phenomenon
+occurs because the total number of network flows remains
+constant. Larger values of m lead to fewer graph samples, which
+in turn restricts the model’s learning ability. Moreover, it is
+clear that larger m values result in longer training times, higher
+GPU memory usage, and greater demands for computational
+resources. In light of these findings, we set m=12 as the default
+configuration.
+During the inference phase, the classification results for individual flows can only be obtained after the entire graph has
+been processed. Thus, the inference latency is determined by
+the average detection time per graph. The results show that as
+m increases, the processing time per graph becomes longer,
+leading to higher system response latency. However, since each
+graph contains more flows, the throughput is improved instead.
+This reflects the trade-off between latency and throughput with
+respect to graph scale. In practical deployment, the value of m
+can be chosen according to specific requirements.
+2) Length of the Byte Sequence q: We conducted experiments
+with q = 100, 300, 500, 1000, and 2000, respectively, and the
+results are summarized in Table VIII. Experimental results indicate that the model achieves optimal classification performance
+
+The Impact of Time Threshold on Classification Performance.
+
+when the first 300 bytes of the flow are intercepted. Further
+increasing the sequence length leads to a degradation in performance, suggesting that longer byte sequences do not contribute
+additional discriminative information and may instead introduce
+noise that interferes with the model’s decision-making.
+Moreover, all efficiency metrics show a strong positive correlation with q, as it directly determines the input dimension and
+computational complexity of the model. Particularly, the inference throughput decreases sharply as q grows. It drops by 46%
+when q goes from 300 to 2000. This represents a critical trade-off
+in large-scale network traffic analysis scenarios. Consequently, q
+= 300 is selected as the default configuration to strike a balance
+between classification accuracy and computational efficiency.
+3) Time Threshold: Flows with a time difference smaller than
+a specific threshold and an intersection between the destination
+IP and source IP sets are considered concurrent. This time threshold directly determines the size of concurrent groups, thereby
+influencing the constructed graph structure and the effectiveness
+of inter-flow feature learning. To evaluate its impact, we tested
+the performance of the IF2 -STG-Inter model across threshold
+values ranging from 1ms to 200ms. The results, shown in Fig. 8,
+indicate that the model performs best at a threshold of 10ms.
+If the threshold is excessively low, concurrent groups may contain too few flows to supply sufficient contextual information.
+Conversely, an overly high threshold will incorporate temporally
+weakly correlated flows into the same group, thereby introducing
+noise. Thus, a 10ms threshold effectively captures meaningful
+concurrent flow behavior, representing a balanced and robust
+configuration.
+4) Edge Definition Rules: This paper selects start time intervals and IP-set associations as the core criteria for constructing
+spatio-temporal edges in the ISTG, primarily based on two
+considerations: First, multi-flow coordination in network attacks
+(e.g., DDoS) often manifests as temporally dense triggering
+and IP-level distributed associations. These dual-dimensional
+features can accurately characterize the spatio-temporal collaboration patterns of such attacks. Second, building upon existing
+research—notably the MeDF model [54] that uses IP-set associations to model spatial flow relationships—this paper further
+introduces the dimension of time intervals, thereby enabling
+complementary modeling of spatio-temporal features. To verify
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+7131
+
+TABLE IX
+THE IMPACT OF EDGE DEFINITION RULES ON CLASSIFICATION PERFORMANCE
+
+the rationality of the two selected indicators, we compared the
+following six edge definition rules:
+r Time Interval Only: Constructs one-dimensional
+edges based solely on time intervals, ignoring spatial
+associations.
+r IP-set Association Only: Constructs one-dimensional
+edges based solely on IP-set associations, ignoring temporal associations.
+r Time Co-occurrence + IP-set Association: Temporal association follows the time co-occurrence rule of the
+GAT_based model [52], where two flows overlapping in
+time are considered related and assigned a weight of 1.0.
+r Time Interval + Source IP Match: Spatial association is
+simplified to matching only whether the source IPs are
+identical.
+r Time Interval + Destination IP Match: Spatial association
+is simplified to matching only whether the destination IPs
+are identical.
+r Time Interval + Port-set Association: Spatial association
+is replaced by whether there is an intersection in the port
+sets.
+Table IX compares the model’s performance under different
+edge definition rules, leading to the following conclusions. First,
+the proposed “time interval + IP-set association” rule achieves
+the best performance. Second, single-dimensional rules (time
+interval only or IP-set association only) deliver inferior performance to dual-dimensional rules, with the time interval contributing more critically. Third, the “time co-occurrence + IP-set
+association” rule performs notably worse than the rule we adopt,
+since time intervals more precisely capture concurrent patterns
+among multiple flows compared to time co-occurrence. Fourth,
+IP-set association outperforms single IP matching because it can
+reveal complex attack topologies involving many-to-many and
+chain-style communications, thereby demonstrating its stronger
+generalization capability in spatial modeling. Fifth, replacing
+spatial association with port-set associations results in a slight
+performance decline, reflecting that port features are less stable
+and discriminative than IP addresses. For example, in port
+scanning attacks, malicious flows exhibit clear correlations at
+the IP level, whereas port numbers often change randomly or
+dynamically, failing to provide stable correlation signals.
+In summary, the “time interval + IP-set association” rule
+offers considerable benefits for ISTG construction. It effectively
+captures the temporal density of attack flows while enabling a
+precise representation of their spatial logic, thereby furnishing
+
+Fig. 9. The Impact of ISTG Construction Scheme on Classification
+Performance.
+
+a more discriminative graph-structured input for downstream
+detection models.
+F. Impact of ISTG Construction Scheme
+The construction of ISTG forms the foundation and key to
+inter-flow feature learning. Therefore, this section analyzes the
+impact of two-dimensional spatio-temporal vector edges and
+concurrent groups in our proposed ISTG on the classification
+performance of the inter-flow feature module, through the following three comparative experiments:
+r Fully-connected Graph (FCG): All node pairs in the graph
+are connected with uniform edge weights set to 1.
+r Uniform-weight Graph (UWG): Maintaining the original
+ISTG topology while replacing all edge weights from twodimensional spatio-temporal vectors with 1.
+r Sequential-connection Graph (SCG): All nodes are connected sequentially in chronological order, disregarding
+concurrent flows.
+As depicted in Fig. 9, the FCG performs the worst, with an F1
+score of 66.21% . In this case, all graphs share the same topology
+and edge weights, differing solely in node features, which fails
+entirely to reflect the differences in interaction patterns among
+network flows of different categories. In comparison, the UWG
+preserves the original ISTG topology while simplifying edge
+weights to 1, yet achieves substantially better results. This empirically validates the intrinsic discriminative ability of topological structures in inter-flow relationship learning. Nevertheless,
+compared with ISTG utilizing two-dimensional spatio-temporal
+vectors, UWG’s F1 score drops by 1.53% . This gap highlights that two-dimensional edge weights facilitate more precise
+spatio-temporal correlation modeling, thereby enhancing the
+model’s discrimination capacity in complex traffic scenarios.
+The SCG model without concurrent flow consideration exhibits a notable decline in detection performance (F1=87.34%
+). This comparative result demonstrates the effectiveness of our
+designed graph construction scheme that considers concurrent
+flows, which is better at capturing interaction frequencies between network flows. Network attacks and anomalous behaviors
+frequently involve special concurrent patterns. For example, in
+distributed denial-of-service (DDoS) attacks, attackers typically
+
+7132
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE X
+DIVISION OF ATTACK TYPES FOR THE THREE DATASETS
+
+Fig. 10.
+
+ISTG corresponding to benign traffic.
+
+Fig. 11.
+
+ISTG corresponding to DDoS/DoS traffic.
+
+Fig. 12.
+
+ISTG corresponding to scanning/bruteforce traffic.
+
+initiate massive concurrent requests from multiple source IPs
+toward the target within a short period. By grouping flows
+occurring within 10 ms intervals for graph construction, our
+method amplifies these abnormal concurrency characteristics,
+thereby allowing the model to more effectively differentiate
+between normal and malicious traffic.
+G. Visualization Analysis of ISTG
+To further verify the effectiveness of the ISTG construction
+method, we conduct a comparative visual analysis of ISTG
+generated from different categories of network flows. As shown
+in the Table X, according to attack characteristics, the malicious traffic in the three datasets used in this paper can be
+mainly divided into two major categories: DDoS/DoS attacks
+and scanning/bruteforce attacks. Among them, those prefixed
+with “MQTT-” or “Recon-” represent subcategories under the
+corresponding major categories.
+We randomly select three instances from benign traffic and
+the two malicious traffic categories, with their corresponding
+ISTGs visualized in Figs. 10 –12. It can be seen that the ISTGs of
+different types of flows exhibit obvious differences, conclusively
+validating the effectiveness of our proposed ISTG construction
+strategy. The rationality analysis of the characteristics of the
+three ISTG types is carried out below in combination with the
+inherent characteristics of network flows.
+In the ISTGs corresponding to benign traffic (Fig. 10(a)–(c)),
+nodes basically distributed in a chain-like manner, and there
+are relatively few concurrent groups. The temporal components
+t of unidirectional edges are predominantly small, indicating
+
+relatively large inter-flow time intervals, while spatial components s display both 1 and 0 values. This pattern arises
+because benign traffic typically involves normal network service
+interactions, featuring few concurrent scenarios, gentle time
+distribution, and random IP interactions without fixed patterns.
+In the ISTGs corresponding to DDoS/DoS attacks
+(Fig. 11(a)–(c)), there are more concurrent flows. Moreover,
+for the unidirectional edges, the time component t is nearly
+1, and the spatial component s is almost all 1. This is
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+because such attacks require sending traffic to the target in
+a short time (or even concurrently) in terms of time, and the
+targets are concentrated in space, showing spatial aggregation.
+Additionally, the key difference between the ISTGs of the
+two DoS attacks (b) and (c) mainly lies in the number of
+concurrent groups, which is rooted in the attack protocols used.
+The DoS_UDP attack exploits UDP’s connectionless, stateless
+properties to flood random target ports with UDP packets. The
+DoS-Connect_Flood belongs to TCP connection exhaustion
+attacks (such as SYN Flood and HTTP Connect Flood), which
+exhaust target resources by quickly establishing numerous
+TCP connections. The stateful connection mechanism of TCP
+compels attackers to maintain high-concurrency traffic to
+enhance the degree of damage. Therefore, the latter generating
+more concurrent groups than the former.
+The ISTGs corresponding to scanning/bruteforce attacks
+(Fig. 12(a)–(c)) exhibit fully-connected mesh topologies. It is
+noticeable that all 12 nodes in each graph are grouped into one
+or two concurrent groups. This pattern emerges because both
+attack types typically send probing or cracking requests within
+extremely short time windows. They are highly concurrent in
+terms of time, and the IP addresses of the attacking hosts or the
+target hosts are fixed. Therefore, they meet the requirements of
+concurrent flows.
+H. Cross-Dataset Generalization
+In this section, we integrate three datasets at different times
+to evaluate the ability of IF2 -STG and comparative methods
+to identify known attacks in a cross-dataset environment. We
+merge the CIC-DDoS2019 and MQTT-IoT-IDS2020 datasets
+to train a binary classification model, which is then tested on
+the known attacks (DDoS and Recon) from the CICIoMT2024
+dataset. Furthermore, recognizing that benign traffic may exhibit
+different characteristics across datasets collected at different
+time periods and is easy to collect in real-world scenarios, we
+incorporate part of the benign traffic from the CICIoMT2024
+dataset into the combined dataset for training. In practice, new
+normal traffic can be collected and added to update the model.
+The detection results and the features used by the models are
+shown in Table XI. To explore the generalization ability of interflow features, we specifically tested variants of the MeDF and
+IF2 -STG models that utilize inter-flow features exclusively. The
+experimental results reveal significant differences in different
+feature types under cross-dataset scenarios. Our IF2 -STG-Inter
+achieves 97.78% accuracy, recall, and F1-score, indicating that
+inter-flow spatio-temporal relationships effectively capture the
+essential behavioral patterns of attacks, including communication frequency, topological connections, etc. These features
+maintain remarkable stability across datasets collected at different times. However, the complete IF2 -STG model incorporating
+intra-flow raw byte features attains only 42.91% accuracy, as
+raw bytes are excessively dependent on network environments,
+protocol versions, and encryption methods, etc., severely limiting model transferability. Other comparative models using raw
+byte features exhibit similar limitations: 1D-CNN, AppNet, and
+MeDF achieve merely 33.83% , 58.08% , and 36.39% recall
+
+7133
+
+TABLE XI
+TEST RESULTS ON CROSS-DATASET GENERALIZATION
+
+rates respectively, meaning that substantial numbers of attacks
+being misclassified as benign traffic, posing a serious risk of
+false negatives in real-world security scenarios.
+It is noteworthy that iDetector, despite also utilizing raw
+byte features, still achieves an accuracy of 78.96% . This may
+benefit from its incorporation of inter-arrival time sequences
+and packet length sequences, which more effectively capture the
+temporal distribution patterns of attack behaviors. Additionally,
+Fs-Net, XGBoost and IIT models perform relatively well, with
+Fs-Net in particular attaining approximately 85% accuracy and
+F1-score. They employ packet length sequences and statistical
+features, which are more abstract and coarse-grained compared
+to raw bytes. Such features rely less on traffic details in specific
+datasets and can, to a certain degree, better reflect the intrinsic
+characteristics of attack behaviors.
+Additionally, among the comparative methods, GAT_based
+model and MeDF-Inter, although also based on inter-flow features, only extract temporal or spatial relationships between
+flows without joint modeling of spatio-temporal dependencies.
+This results in insufficient cross-dataset generalization ability,
+with their accuracy rates being only 61.25% and 33.33% respectively. Further analysis reveals the critical impact of node
+feature selection in graph representation learning. GAT_based
+model employs length statistics and IP addresses as node features, whereas MeDF-Inter uses only IP addresses and protocol numbers as node features. The latter’s insufficient feature
+information leads to weaker representational ability than the
+former. PPT-GNN and CSSTGN both use statistical features
+and model the spatio-temporal relationship among flows, so the
+transferability is slightly better.
+In contrast, our IF2 -STG-Inter adopts packet length sequences
+and statistical features as node features. As previously analyzed, these two types of features demonstrate better generalization across different datasets. Moreover, by jointly modeling both temporal and spatial relationships between flows, our
+approach achieves a more comprehensive characterization of
+attack behaviors. Consequently, it shows significant advantages
+in cross-dataset detection, offering a highly adaptable security
+
+7134
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE XII
+DETECTION PERFORMANCE OF THE MODEL ON MIXED TRAFFIC
+
+detection solution for dynamically evolving attacks and network
+environments.
+I. Adaptability to Mixed Traffic
+The graph construction strategy in this work is based on the
+assumption that m adjacent flows belong to the same category.
+However, in real-world network detection environments, this
+assumption cannot always be guaranteed in advance. Therefore,
+this section aims to validate the detection performance of the
+proposed method when facing realistic mixed traffic.
+For the data selection, this study employs the CICIDS2017
+dataset [77]. The original PCAP files provided in this dataset
+contain unsegmented full-day traffic, which more closely reflects
+real network environments. According to the official description,
+on the afternoon of Friday, July 7, 2017, port scan attacks were
+launched at one-minute intervals, each lasting approximately
+2–3 minutes, against a background of normal communication
+traffic. We intercept the traffic during this specific period to simulate a scenario where attack traffic is interleaved with normal
+business traffic.
+After processing and constructing graphs from this mixed
+traffic, we obtain three types of graphs: 5,626 graphs containing
+only benign nodes, 13,120 graphs consisting solely of attack
+nodes, and 431 mixed graphs containing both benign and attack
+nodes. It should be noted that due to the presence of multiple
+node labels in mixed graphs, we adjust the task from graph classification to node classification. Specifically, in the inter-flow
+feature extraction module (Fig. 2), instead of using SAGPool
+for graph pooling after the GATConv layer, we directly connect
+a linear layer to output node-level classification results.
+To evaluate the learning effectiveness of the spatio-temporal
+relation graph, in addition to the complete model, we also test
+the IF2 -STG-Inter model. The experimental results are shown in
+Table XII. In this binary classification task, the complete model
+achieves 100% accuracy. The IF2 -STG-Inter model also reaches
+an accuracy of 99.65% , strongly demonstrating the exceptional
+discriminative capability of our constructed ISTG even in mixed
+traffic scenarios.
+In addition, we visualize the ISTG containing mixed-type
+nodes, as shown in Fig. 13. In the figure, the marker on the
+outer ring of each node represents its corresponding label. For
+clarity, normal traffic is marked in green, and port scan attacks
+are indicated in red. In subfigure (a), a single normal flow embedded among multiple attack flows appears as an isolated node,
+while the remaining nodes form a dense concurrent cluster. In
+subfigure (b), the attack flows at the beginning and the end form
+their own concurrent clusters, with benign flows in the middle
+connected in a linear pattern. Moreover, the spatial component
+attribute of edges between adjacent benign and attack nodes has
+a value of 0, indicating no spatial correlation between them.
+
+Fig. 13.
+
+ISTG corresponding to mixed traffic.
+
+Fig. 14.
+
+The Impact of labeling noise on Classification Accuracy.
+
+Furthermore, to evaluate the model’s robustness to labeling
+noise, we introduce random label noise into the training set. The
+classification accuracy of the two models at different noise levels
+is depicted in Fig. 14. Experimental results show that when the
+label noise ratio is below 40% , both models experience only
+slight and negligible decreases in accuracy. When the noise
+ratio increases to 50% , the accuracy of the complete model
+falls sharply to approximately 75% due to the vulnerability
+of intra-flow byte features to label corruption, whereas IF2 STG-Inter model, which relies solely on inter-flow structural
+features, maintains around 95% accuracy. This result further
+confirms that the decision-making mechanism of IF2 -STG-Inter
+relies primarily on robust spatio-temporal structural features
+rather than a strong assumption of label homogeneity, thereby
+demonstrating excellent adaptability to labeling noise.
+In summary, although our method is proposed based on the
+homogeneous graph assumption, its core capability—modeling
+the spatio-temporal relationships of network flows—remains
+highly effective in real-world scenarios involving mixed traffic
+and labeling noise. This strengthens the feasibility of deploying
+our approach in practical network environments.
+VI. CONCLUSION
+This paper presents IF2 -STG, a novel detection framework
+that overcomes the limitations of existing IDS by integrating
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+intra-flow features with inter-flow spatio-temporal relationships.
+The fundamental contribution lies in introducing an interpretable
+ISTG, a novel structured representation for extracting inter-flow
+features. By defining a two-dimensional edge vector based on
+time intervals and IP-set associations, the ISTG transforms
+implicit inter-flow collaborative patterns into explicit and analyzable structures. The model processes intra-flow features
+and ISTG-based inter-flow features in parallel, subsequently
+fusing them into a unified representation. Evaluations on three
+benchmark datasets show that the proposed IF2 -STG achieves
+over 99% classification accuracy.
+More importantly, the ISTG-based model exhibits several
+breakthrough advantages: first, the ISTG itself is directly visualizable, providing inherent interpretability for understanding the
+spatio-temporal collaboration patterns of attacks such as DDoS;
+second, explicit structural modeling of spatio-temporal relationships endows the learned features with stronger generalization
+capability, leading to outstanding cross-dataset performance;
+finally, the model maintains good robustness against mixed
+traffic and label noise. Thus, this work not only provides an
+effective intrusion detection method but also offers a novel tool
+for analyzing interactive behaviors between flows.
+However, the proposed method is primarily suitable for offline
+detection. In real-time environments, it remains challenging to
+instantly acquire complete flows for accurate feature extraction
+and graph construction. To enable online detection, future work
+will focus on three key challenges: First, designing a timewindow-based flow sampling mechanism to process continuous packet streams. Second, addressing the explosion of graph
+scale in high-speed networks, we plan to partition flows within
+each window into manageable subgraphs with a controlled
+node count. Third, handling incomplete flows within single
+windows by introducing a window memory module, inspired
+by PPT-GNN [65], to correlate the same flow across consecutive windows, thereby constructing more accurate continuous
+spatio-temporal graphs.
+REFERENCES
+[1] I. Sohn, “Deep belief network based intrusion detection techniques: A
+survey,” Expert Syst. Appl., vol. 167, 2021, Art. no. 114170.
+[2] A. Thakkar and R. Lohiya, “A survey on intrusion detection system:
+Feature selection, model, performance measures, application perspective,
+challenges, and future research directions,” Artif. Intell. Rev., vol. 55 no. 1,
+pp. 453–563, 2022.
+[3] B. S. Bhati and C. S. Rai, “Analysis of support vector machine-based
+intrusion detection techniques,” Arabian J. Sci. Eng., vol. 45 no. 4,
+pp. 2371–2383, 2020.
+[4] M. Basak, et al., “X-GANet: An explainable graph-based framework
+for robust network intrusion detection,” Appl. Sci., vol. 15 no. 9, 2025,
+Art. no. 5002.
+[5] S. Cai et al., “DDP-DAR: Network intrusion detection based on denoising
+diffusion probabilistic model and dual-attention residual network,” Neural
+Netw., vol. 184, 2025, Art. no. 107064.
+[6] L. Du, Z. Gu, Y. Wang, L. Wang, and Y. Jia, “A few-shot class-incremental
+learning method for network intrusion detection,” IEEE Trans. Netw.
+Service Manag., vol. 21 no. 2, pp. 2389–2401, Apr. 2023.
+[7] Z. Ding et al., “MF-Net: Multi-frequency intrusion detection network for
+internet traffic data,” Pattern Recognit., vol. 146, 2024, Art. no. 109999.
+[8] S. Cai et al., “MTD-FRD: Malicious traffic detection method based on
+feature representation and conditional diffusion model,” J. Netw. Comput.
+Appl., vol. 242, 2025, Art. no. 104256.
+[9] E. C. P. Neto et al., “Deep learning for intrusion detection in emerging
+technologies: A comprehensive survey and new perspectives,” Artif. Intell.
+Rev., vol. 58 no. 11, pp. 1–63, 2025.
+
+7135
+
+[10] C. Fu et al., “Realtime robust malicious traffic detection via frequency
+domain analysis,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur.,
+2021, pp. 3431–3446.
+[11] Z. Wang et al., “Themis: Ambiguity-aware network intrusion detection
+based on symbolic model comparison,” in Proc. ACM SIGSAC Conf.
+Comput. Commun. Secur., 2021, pp. 3384–3399.
+[12] J. Xia et al., “CoDDoS: Detecting and mitigating diverse DDoS
+attacks with programmable switches,” Comput. Commun., vol. 240, 2025,
+Art. no. 108215.
+[13] Y. Yang et al., “ASTREAM: Data-stream-driven scalable anomaly detection with accuracy guarantee in IIoT environment,” IEEE Trans.
+Netw. Sci. Eng., vol. 10, no. 5, pp. 3007–3016, Sep./Oct. 2023,
+doi: 10.1109/TNSE.2022.3157730.
+[14] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smartphone
+app identification via encrypted network traffic analysis,” IEEE Trans. Inf.
+Forensics Secur., vol. 13, no. 1, pp. 63–78, Jan. 2018.
+[15] M. Shen et al., “Machine learning-powered encrypted network traffic
+analysis: A comprehensive survey,” IEEE Commun. Surv. Tut., vol. 25,
+no. 1, pp. 791–824, Firstquarter 2023.
+[16] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained webpage
+fingerprinting using only packet length information of encrypted traffic,”
+IEEE Trans. Inf. Forensics Secur., vol. 16, pp. 2046–2059, 2021.
+[17] G. Apruzzese, M. Andreolini, M. Colajanni, and M. Marchetti, “Hardening
+random forest cyber detectors against adversarial attacks,” IEEE Trans.
+Emerg. Topics Comput. Intell., vol. 4, no. 4, pp. 427–439, Aug. 2020,
+doi: 10.1109/TETCI.2019.2961157.
+[18] R. Bozkır et al., “A new platform for machine-learning-based network
+traffic classification,” Comput. Commun., vol. 208, pp. 1–14, 2023.
+[19] Z. Wang, B. Ma, Y. Zeng, X. Lin, K. Shi, and Z. Wang, “Differential
+preserving in XGBoost model for encrypted traffic classification,” in Proc.
+Int. Conf. Netw. Netw. Appl., 2022, pp. 220–225.
+[20] F. Zaki et al., “GRAIN: Granular multi-label encrypted traffic classification
+using classifier chain,” Comput. Netw., vol. 213, 2022, Art. no. 109084.
+[21] N. Moustafa, B. Turnbull, and K.-K. R. Choo, “An ensemble intrusion detection technique based on proposed statistical flow features for protecting
+network traffic of Internet of Things,” IEEE Internet Things J., vol. 6, no. 3,
+pp. 4815–4830, Jun. 2019, doi: 10.1109/JIOT.2018.2871719.
+[22] C. Zhang, Z. Lian, H. Huang, and C. Su, “PCIDS: Permission
+and credibility-based intrusion detection system in IoT gateways,”
+IEEE Internet Things J., vol. 11, no. 1, pp. 904–913, Jan. 2024,
+doi: 10.1109/JIOT.2023.3289206.
+[23] W. Ma, X. Wang, J. Dong, M. Hu, and Q. Zhou, “A lightweight
+method for botnet detection in Internet of Things environment,” IEEE
+Trans. Netw. Sci. Eng., vol. 12, no. 4, pp. 2458–2472, Jul./Aug. 2025,
+doi: 10.1109/TNSE.2025.3548411.
+[24] T. Li, Z. Hong, and L. Yu, “Machine learning-based intrusion detection for IoT devices in smart home,” in Proc. IEEE
+16th Int. Conf. Control Automat., Singapore, 2020, pp. 277–282,
+doi: 10.1109/ICCA51439.2020.9264406.
+[25] Z. Liu et al., “Fine-grained encrypted traffic classification using dual
+embedding and graph neural networks,” Electronics, vol. 14, no. 4, 2025,
+Art. no. 778.
+[26] R. Doriguzzi-Corin, S. Millar, S. Scott-Hayward, J. Martínez-del-Rincón,
+and D. Siracusa, “Lucid: A practical, lightweight deep learning solution
+for DDoS attack detection,” IEEE Trans. Netw. Service Manag., vol. 17,
+no. 2, pp. 876–889, Jun. 2020, doi: 10.1109/TNSM.2020.2971776.
+[27] Z. Zhao et al., “ERNN: Error-resilient RNN for encrypted traffic detection
+towards network-induced phenomena,” IEEE Trans. Dependable Secure
+Comput., early access, Feb. 03, 2023, doi: 10.1109/TDSC.2023.3242134.
+[28] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow sequence
+network for encrypted traffic classification,” in Proc. IEEE Conf. Comput.
+Commun., 2019, pp. 1171–1179.
+[29] Y. Qing et al., “Low-quality training data only? A robust framework for detecting encrypted malicious network traffic,” in Proc.
+Netw. Distrib. Syst. Secur. Symp., San Diego, CA, USA, Feb. 2024,
+doi: 10.14722/ndss.2024.23081.
+[30] Y. Han, X. Wang, M. He, X. Wang, and S. Guo, “Intrusion detection for encrypted flows using single feature based on graph integration theory,” IEEE Internet Things J., vol. 11 no. 10, pp. 17589–17601,
+May 2024.
+[31] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end encrypted
+traffic classification with one-dimensional convolution neural networks,”
+in Proc. IEEE Int. Conf. Intell. Secur. Inform., 2017, pp. 43–48.
+[32] C. Dong, C. Zhang, Z. Lu, B. Liu, and B. Jiang, “CETAnalytics: Comprehensive effective traffic information analytics for encrypted traffic
+classification,” Comput. Netw., vol. 176, Jul. 2020, Art. no. 107258.
+
+7136
+
+[33] W. Maonan, Z. Kangfeng, X. Ning, Y. Yanqing, and W. Xiujuan, “CENTIME: A direct comprehensive traffic features extraction for encrypted
+traffic classification,” in Proc. IEEE 6th Int. Conf. Comput. Commun. Syst.,
+2021, pp. 490–498.
+[34] X. Meng, Y. Wang, R. Ma, H. Luo, X. Li, and Y. Zhang, “Packet representation learning for traffic classification,” in Proc. 28th ACM SIGKDD
+Conf. Knowl. Discov. Data Mining, 2022, pp. 3546–3554.
+[35] J. Gao, Y. Lu, Y. He, M. Fan, D. Han, and Y. Qiao, “Tokenization
+representation and deep-learning-based intrusion detection in Internet of
+Vehicles,” IEEE Internet Things J., vol. 11, no. 23, pp. 37974–37987,
+Dec. 2024, doi: 10.1109/JIOT.2024.3441763.
+[36] R. Zhao et al., “Yet another traffic classifier: A masked autoencoder based
+traffic transformer with multi-level flow representation,” in Proc. AAAI
+Conf. Artif. Intell., Washington, DC, USA, 2023, pp. 1–8.
+[37] Y. Luo, M. He, and X. Wang, “Analyzing the semantic structure of network
+flow: A threat detection method with independent generalization capabilities,” IEEE Trans. Netw. Sci. Eng., vol. 12, no. 1, pp. 28–43, Jan./Feb. 2025,
+doi: 10.1109/TNSE.2024.3483216.
+[38] T. Shawly, M. Khayat, A. Elghariani, and A. Ghafoor, “Evaluation of
+HMM-based network intrusion detection system for multiple multi-stage
+attacks,” IEEE Netw., vol. 34, no. 3, pp. 240–248, May/Jun. 2020.
+[39] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. N. Venkatakrishnan, “HOLMES: Real-time APT detection through correlation of suspicious information flows,” in Proc. IEEE Symp. Secur. Privacy, 2019,
+pp. 1137–1152.
+[40] X. Li, M. Xu, P. Vijayakumar, N. Kumar, and X. Liu, “Detection of lowfrequency and multi-stage attacks in industrial Internet of Things,” IEEE
+Trans. Veh. Technol., vol. 69, no. 8, pp. 8820–8831, Aug. 2020.
+[41] X. Kong, Y. Zhou, Y. Xiao, X. Ye, H. Qi, and X. Liu, “iDetector: A novel
+real-time intrusion detection solution for IoT networks,” IEEE Internet
+Things J., vol. 11, no. 19, pp. 31153–31166, Oct. 2024.
+[42] H. He, X. Sun, H. He, G. Zhao, L. He, and J. Ren, “A novel multimodalsequential approach based on multi-view features for network intrusion detection,” IEEE Access, vol. 7, pp. 183207–183221, 2019, doi: 10.1109/ACCESS.2019.2959131.
+[43] L. Yu, L. Xu, and X. Jiang, “A high-performance multimodal deep learning
+model for detecting minority class sample attacks,” Symmetry, vol. 16,
+no. 1, 2023, Art. no. 42.
+[44] X. Yun, Y. Wang, Y. Zhang, C. Zhao, and Z. Zhao, “Encrypted TLS traffic
+classification on cloud platforms,” IEEE/ACM Trans. Netw., vol. 31 no. 1,
+pp. 164–177, Feb. 2023.
+[45] H. Elubeyd, D. Yiltas-Kaplan, and Ş. Bahtiyar, “A multi-modal deep transfer learning framework for attack detection in software-defined networks,”
+IEEE Access, vol. 11, pp. 114128–114145, 2023, doi: 10.1109/ACCESS.2023.3324878.
+[46] S. Ali et al., “CLDM-MMNNs: Cross-layer defense mechanisms through
+multi-modal neural networks fusion for end-to-end cybersecurity—
+Issues, challenges, and future directions,” Inf. Fusion, vol. 122, 2025,
+Art. no. 103222.
+[47] Y. A. Farrukh et al., “XG-NID: Dual-modality network intrusion detection
+using a heterogeneous graph neural network and large language model,”
+Expert Syst. Appl., vol. 287, 2025, Art. no. 128089.
+[48] X. Wang, S. Chen, and J. Su, “App-Net: A hybrid neural network for
+encrypted mobile traffic classification,” in Proc. IEEE Conf. Comput.
+Commun. Workshops, 2020, pp. 424–429.
+[49] S. Lei, C. Xia, Z. Li, X. Li, and T. Wang, “HNN: A novel model to study
+the intrusion detection based on multi-feature correlation and temporalspatial analysis,” IEEE Trans. Netw. Sci. Eng., vol. 8, no. 4, pp. 3257–3274,
+Oct.–Dec. 2021, doi: 10.1109/TNSE.2021.3109644.
+[50] S. Cui, C. Dong, M. Shen, Y. Liu, B. Jiang, and Z. Lu, “CBSeq: A channellevel behavior sequence for encrypted malware traffic detection,” IEEE
+Trans. Inf. Forensics Secur., vol. 18, pp. 5011–5025, 2023.
+[51] Y. Li et al., “HDFEF: A hierarchical and dynamic feature extraction
+framework for intrusion detection systems,” Comput. Secur., vol. 121,
+2022, Art. no. 102842.
+[52] G. Xu et al., “A mobile application-classifying method based on a graph
+attention network from encrypted network traffic,” Electronics, vol. 12,
+no. 10, 2023, Art. no. 2313.
+[53] C. Peng, X. Tan, P. Xie, M. Li, H. Wang, and S. Chen, “IoT device
+identification base on inter-flow correlation analysis using graph neural
+network,” in Proc. 9th Int. Conf. Big Data Comput. Commun., Hainan,
+China, 2023, pp. 24–31, doi: 10.1109/BIGCOM61073.2023.00012.
+[54] X. Wang et al., “Combine intra- and inter-flow: A multimodal encrypted
+traffic classification model driven by diverse features,” Comput. Netw.,
+vol. 245, 2024, Art. no. 110403.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+[55] W. Li, X.-Y. Zhang, H. Bao, H. Shi, and Q. Wang, “ProGraph: Robust
+network traffic identification with graph propagation,” IEEE/ACM Trans.
+Netw., vol. 31 no. 3, pp. 1385–1399, Jun. 2023.
+[56] Z. Yang, W. Pei, M.-C. Chen, and C. Yue, “WTAGRAPH: Web tracking
+and advertising detection using graph neural networks,” in Proc. IEEE
+Symp. Secur. Privacy, 2022, pp. 1540–1557.
+[57] W. Cai, G. Gou, M. Jiang, C. Liu, G. Xiong, and Z. Li, “MEMG:
+Mobile encrypted traffic classification with Markov chains and graph
+neural network,” in Proc. IEEE 23rd Int. Conf. High Perform. Comput.
+Commun., 7th Int. Conf. Data Sci. Syst., 19th Int. Conf. Smart City,
+7th Int. Conf. Dependability Sensor, Cloud Big Data Syst. Appl., 2021,
+pp. 478–486.
+[58] R. Zhao et al., “Flow sequence-based anonymity network traffic identification with residual graph convolutional networks,” in Proc. IEEE/ACM
+30th Int. Symp. Qual. Service, 2022, pp. 1–10.
+[59] R. Zhao, X. Deng, Z. Yan, J. Ma, Z. Xue, and Y. Wang, “MT-FlowFormer:
+A semi-supervised flow transformer for encrypted traffic classification,”
+in Proc. 28th ACM SIGKDD Conf. Knowl. Disc. Data Mining, 2022,
+pp. 2576–2584.
+[60] H. Yao, C. Liu, P. Zhang, S. Wu, C. Jiang, and S. Yu, “Identification of encrypted traffic through attention mechanism based long short
+term memory,” IEEE Trans. Big Data, vol. 8, no. 1, pp. 241–252,
+Feb. 2022.
+[61] A. Vaswani, “Attention is all you need,” in Proc. Adv. Neural Inf. Process.
+Syst., 2017, pp. 1–15.
+[62] H. Fu, D. Sun, J. Wei, W. Wan, and C. Long, “Flow microelement-driven
+traffic relationship analysis: Robust detection of malicious encrypted traffic,” IEEE Trans. Inf. Forensics Secur., vol. 20, pp. 10604–10619, 2025,
+doi: 10.1109/TIFS.2025.3613971.
+[63] Q. Meng et al., “IIT: Accurate decentralized application identification through mining intra- and inter-flow relationships,” IEEE Trans.
+Netw. Service Manag., vol. 22, no. 1, pp. 394–408, Feb. 2025,
+doi: 10.1109/TNSM.2024.3479150.
+[64] S. Rezaei, B. Kroencke, and X. Liu, “Large-scale mobile app identification
+using deep learning,” IEEE Access, vol. 8, pp. 348–362, 2020.
+[65] L. V. Langendonck, “PPT-GNN: A practical pre-trained temporal graph
+neural network for intrusion detection,” M.S. thesis, Univ. Politècnica de
+Catalunya, Barcelona, Spain, 2024.
+[66] E. S. Escriche, J. Nyberg, Y. Kim, and G. Dán, “Channel-centric spatiotemporal graph networks for network-based intrusion detection,” in Proc.
+IEEE Conf. Commun. Netw. Secur., 2024, pp. 1–9.
+[67] Y. Kim, “Convolutional neural networks for sentence classification,”
+in Proc. Conf. Empirical Methods Natural Lang. Process., 2014,
+pp. 1746–1751.
+[68] X. Zhang and Y. LeCun, “Text understanding from scratch,” 2016,
+arXiv:1502.01710.
+[69] P. Veličković et al., “Graph attention networks,” in Proc. 6th Int. Conf.
+Learn. Representations, Vancouver, BC, Canada, Apr. 30–May 3 2018.
+[70] J. Lee, I. Lee, and J. Kang, “Self-attention graph pooling,” in Proc. 36th Int.
+Conf. Mach. Learn., Long Beach, CA, USA, Jun. 2019, vol. 97, pp. 3734–
+3743.
+[71] B. Knyazev, G. W. Taylor, and M. R. Amer, “Understanding attention and
+generalization in graph neural networks,” in Proc. 33rd Int. Conf. Neural
+Inf. Process. Syst., 2019, pp. 4202–4212.
+[72] B. Xu et al., “Empirical evaluation of rectified activations in convolutional
+network,” 2015, arXiv:1505.00853.
+[73] P. Lin, K. Ye, Y. Hu, Y. Lin, and C.-Z. Xu, “A novel multimodal deep learning framework for encrypted traffic classification,”
+IEEE/ACM Trans. Netw., vol. 31, no. 3, pp. 1369–1384, Jun. 2023,
+doi: 10.1109/TNET.2022.3215507.
+[74] I. Sharafaldin, A. H. Lashkari, S. Hakak, and A. A. Ghorbani, “Developing
+realistic distributed denial of service (DDoS) attack dataset and taxonomy,”
+in Proc. IEEE 53rd Int. Carnahan Conf. Secur. Technol., Chennai, India,
+2019, pp. 1–8.
+[75] H. Hindy, C. Tachtatzis, R. Atkinson, E. Bayne, and X. Bellekens, “MQTTIoT-Ids2020: MQTT Internet of Things intrusion detection dataset,” IEEE
+Dataport, Jun. 2020, doi: 10.21227/bhxy-ep04.
+[76] S. Dadkhah, E. C. P. Neto, R. Ferreira, R. C. Molokwu, S. Sadeghi, and
+A. A. Ghorbani, “CICIoMT2024: Attack vectors in healthcare devicesa multi-protocol dataset for assessing IoMT device security,” Internet
+Things, vol. 28, Dec. 2024, Art. no. 101351.
+[77] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating a new intrusion detection dataset and intrusion traffic characterization,” in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy, 2018,
+pp. 108–116.
+
+ZHAO et al.: ENHANCING INTRUSION DETECTION VIA INTERPRETABLE INTER-FLOW SPATIO-TEMPORAL GRAPHS
+
+[78] W. Hong et al., “Graph intelligence enhanced bi-channel insider threat
+detection,” in Proc. Int. Conf. Netw. Syst. Secur., 2022, pp. 86–102,
+doi: 10.1007/978-3-031-23020-2_5.
+[79] T. Ngo et al., “Optimizing IoT intrusion detection—A graph neural
+network approach with attribute-based graph construction,” Information,
+vol. 16, no. 6, 2025, Art. no. 499, doi: 10.3390/info16060499.
+[80] T. Ngo et al., “Comparative study of machine learning algorithms for IoT cyber threat detection in healthcare information
+systems,” in Proc. Int. Conf. Health Inf. Sci., 2024, pp. 68–77,
+doi: 10.1007/978-981-96-5597-7_7.
+
+Xiaowei Zhao is currently working toward the Ph.D.
+degree in electronic science and technology with
+the Beijing University of Posts and Telecommunications, Beijing, China. Her research interests include
+machine learning and network security.
+
+Mingshu He received the Ph.D. degree from the
+Beijing University of Posts and Telecommunications,
+Beijing, China, in 2022. He is currently Researcher
+with the School of Cyberspace Security, Beijing University of Posts and Telecommunications. His research interests include network security, anomaly
+detection, and machine learning.
+
+7137
+
+Liu Yang received the Ph.D. degree from the Beijing
+University of Posts and Telecommunications, Beijing, China, in 2024. She is currently a Lecturer with
+the College of Robotics, Beijing Union University,
+Beijing. Her research interests include the integrated
+sensing and communication system, reinforcement
+learning, and communication security.
+
+Jianjin Zhao received the B.E. and Ph.D. degrees
+from the Beijing University of Posts and Telecommunications, Beijing, China, in 2019 and 2024, respectively. He is currently a Postdoctoral Researcher
+with the Beijing University of Posts and Telecommunications. His research interests include encrypted
+traffic analysis, audit log analysis, and network
+measurement.
+
+Xiaojuan Wang (Member, IEEE) received the Ph.D.
+degree in electronic science and technology from
+the University of Beijing University of Posts and
+Telecommunications, Beijing, China. She is currently
+an Associate Professor with the School of Electronic Engineering, Beijing University of Posts and
+Telecommunications. Her research interests include
+deep learning, complex networks, and human gesture
+recognition.
+PAPER_TEXT

@@ -1,0 +1,688 @@
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026 3571
+
+ OIPR: Evaluation for Time-Series Anomaly
+ Detection Inspired by Operator Interest
+ Yuhan Jing , Jingyu Wang, Senior Member, IEEE, Lei Zhang , Haifeng Sun , Senior Member, IEEE,
+ Bo He , Member, IEEE, Zirui Zhuang , Member, IEEE, Chengsen Wang , Qi Qi , Senior Member, IEEE,
+ and Jianxin Liao , Senior Member, IEEE
+
+ Abstract—With the growing adoption of time-series anomaly Index Terms—Time-series, anomaly detection, evaluation,
+detection (TAD) technology, numerous studies have employed deep precision and recall.
+learning-based detectors to analyze time-series data in the fields of
+Internet services, industrial systems, and sensors. The selection and I. INTRODUCTION
+optimization of anomaly detectors strongly rely on the availability
+ IME-SERIES anomaly detection (TAD) [1], [2], [3] refers
+of an effective evaluation for TAD performance. Since anomalies in
+time-series data often manifest as a sequence of points, conventional
+metrics that solely consider the detection of individual points are
+ T to the detection of a series of points with temporal continuity to identify time points or ranges that deviate from normal
+inadequate. Existing TAD evaluators typically employ point-based patterns. TAD is of significant importance in various fields,
+or event-based metrics to capture the temporal context. However,
+point-based evaluators tend to overestimate detectors that excel including fault detection and troubleshooting in industrial sysonly in detecting long anomalies, while event-based evaluators are tems [4], [5], Internet services [6], [7], [8], sensors [9], [10], [11],
+susceptible to being misled by fragmented detection results. To [12]. Detectors used for anomaly detection can be supervised or
+address these limitations, we propose OIPR (Operator Interest- unsupervised, with their performance typically evaluated using
+based Precision and Recall metrics), a novel TAD evaluator with manually annotated labels. Operators compare the detector outarea-based metrics. It models the process of operators receiving
+detector alarms and handling anomalies, utilizing area under the put with the ground truth labels and calculate one or more metrics
+operator interest curve to evaluate TAD performance. Further- to evaluate TAD performance. In the context of binary classimore, we build a special scenario dataset to compare the charac- fication, classical point-wise metrics (PW) such as precision,
+teristics of different evaluators. Through experiments conducted recall, receiver operating characteristic (ROC) curve, and area
+on the special scenario dataset and five real-world datasets, we under the ROC curve (AUROC) are commonly employed for
+demonstrate the remarkable performance of OIPR in extreme and
+complex scenarios. It achieves a balance between point and event performance evaluation of general anomaly detection tasks [13],
+perspectives, overcoming their primary limitations and offering [14]. In point-wise metrics, precision indicates the proportion
+applicability to broader situations. of correctly identified positive points among all points predicted
+ as positive, while recall represents the proportion of accurately
+ predicted positive points relative to the total number of actual
+ Received 10 February 2025; revised 15 November 2025; accepted 20 Novem- positive points.
+ber 2025. Date of publication 27 November 2025; date of current version 12 However, due to the continuity of time-series data, large
+March 2026. This work was supported in part by the National Key R&D Program
+of China under Grant 2024YFE0200800, in part by the National Natural Science Internet companies commonly employ event-based metrics for
+Foundation of China under Grant 62471055, Grant U23B2001, Grant 62321001, data analysis. For instance, within MAXIMO,1 the enterprise
+Grant 62401080, Grant 62101064, Grant 62171057, Grant 62201072, and Grant asset management system of IBM, the metrics of mean time
+62071067, in part by the High-Quality Development Project of the MIIT under
+Grant 2440STCZB2584, in part by the Ministry of Education and China Mobile to repair (MTTR) and mean time between failure (MTBF) are
+Joint Fund under Grant MCM20200202 and Grant MCM20180101, in part by essential for assessing the availability and reliability of the
+the China Postdoctoral Science Foundation under Grant 2023TQ0039, Grant system. They focus on capturing the frequency, duration, and
+2024M750257, and Grant GZC20230320, in part by the Fundamental Research
+Funds for the Central Universities under Grant 2024PTB-004, and in part by recovery of each failure, signifying that ongoing events, rather
+the 2025 Education and Teaching Reform Project Funding at Beijing University than isolated time points, are regarded as the fundamental unit in
+of Posts and Telecommunications under Grant 2025YZ005. (Yuhan Jing and maintenance operations. Therefore, researchers have recognized
+Jingyu Wang contributed equally to this work.) (Corresponding authors: Lei
+Zhang; Bo He.) that the classical PW metrics are inadequate for TAD evaluation,
+ Yuhan Jing, Jingyu Wang, Haifeng Sun, Bo He, Zirui Zhuang, Chengsen as they treat each time point as an individual unit, failing to
+Wang, Qi Qi, and Jianxin Liao are with the State Key Laboratory of account for the temporal continuity of anomaly events. In recent
+Networking and Switching Technology, Beijing University of Posts and
+Telecommunications, Beijing 100876, China (e-mail: jingyh@bupt.edu.cn; years, improved TAD evaluators [15], [16], [17] have been
+wangjingyu@bupt.edu.cn; hfsun@bupt.edu.cn; hebo@bupt.edu.cn; zhuang proposed that take into account the continuity of time-series,
+zirui@bupt.edu.cn; cswang@bupt.edu.cn; qiqi8266@bupt.edu.cn; liaojx which can be broadly classified into two categories: point-based
+@bupt.edu.cn).
+ Lei Zhang is with China United Network Communications Company Ltd., and event-based evaluators. Point-based evaluators treat each
+Beijing 100033, China (e-mail: zhangl83@chinaunicom.cn). anomaly point as equal, with specific predicted points adjusted
+ The implementation of the proposed evaluator and the special scenario dataset
+are available at https://github.com/weatherjyh/OIPR.
+ Digital Object Identifier 10.1109/TDSC.2025.3638405 1 https://www.ibm.com/topics/mttr
+
+ 1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+3572 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ duration and quantity enables OIPR to be applicable to a wider
+ range of practical scenarios. Additionally, we provide an artificial dataset containing nine special scenarios to analyze the
+ characteristics of different evaluators under diverse boundary
+ conditions. Experiments are also conducted on five real-world
+ datasets to investigate the efficacy of different evaluators in
+ complex practical scenarios.
+Fig. 1. An example highlighting the distinction between point-based and
+ The main contributions of this work are as follows:
+event-based perspectives, comparing three different detectors d1 , d2 , and d3
+for the same ground truth.
+ r We propose a novel TAD evaluator that models the dynamic changes in operator interest while monitoring the
+ time-series data and responding to detector alarms in
+ TABLE I
+EVALUATION RESULTS (PRECISION/RECALL/F1-SCORE) OF THE EXAMPLE IN
+ real-world scenarios. It addresses the challenges posed by
+ FIG. 1 USING PA, TAPR, AND OIPR(OURS), RESPECTIVELY long anomaly events and fragmented detection results, and
+ innovatively calculates precision and recall using the area
+ under the operator interest curve.
+ r We establish a special scenario dataset that allows for a
+ comprehensive analysis of characteristics of various TAD
+ evaluators under diverse boundary conditions. This dataset
+ serves as a valuable research material for future investigations of TAD performance evaluation.
+to account for the temporal context. Meanwhile, event-based r We conduct experiments on five real-world datasets using
+evaluators evaluate TAD performance based on anomaly events, both representative and adversary detectors. The results
+regardless of their durations. To illustrate the distinctions be- indicate that OIPR outperforms the baseline evaluators, extween the point-based and event-based evaluators, we present hibiting fewer limitations and greater applicability across
+an example in Fig. 1, where three different detectors are applied a variety of real-world scenarios.
+to the same ground truth gt. Detector d1 detects the longest
+anomaly event a1 using one complete prediction event p1 ; de- II. RELATED WORK
+tector d2 detects two shorter anomaly events, a2 and a3 ; detector
+d3 detects a1 using 3 fragmented prediction events (p6 , p7 , p8 ). A. Time-Series Anomaly Detection
+Additionally, each of d1 , d2 , and d3 contains one false positive Anomalies in time-series datasets come from various sources,
+event, which are p2 , p5 , and p9 , respectively. resulting in distinct anomaly characteristics. For instance, ex-
+ The evaluation results of the example in Fig. 1 using different ternal attacks can lead to service interruptions, often shown
+evaluators are shown in Table I. In these results, the PA eval- as abrupt time-series fluctuations [20]. Additionally, hardware
+uator [18], a typical representative of point-based evaluators, failures, such as hard drive failures or network device outconsiders d1 and d3 much superior to d2 . This indicates that ages, can cause a significant decline in system performance,
+point-based evaluators focus only on the number of anomaly resulting in sustained deterioration of associated indicators [21].
+points rather than the number of anomaly events. In contrast, Furthermore, the deployment or changes of services can inevent-based evaluators, such as TaPR [19], treat each anomaly duce variations in the corresponding key performance indicators
+event as equivalent. In terms of recall, it assesses that d3 performs (KPIs) over time, potentially triggering a series of consecutive or
+slightly worse than d1 , due to its incomplete coverage of event intermittent anomaly points [22]. In terms of duration, anomalies
+a1 . d2 is considered superior because it detects more anomaly can manifest at specific time points or persist across a sequence
+events. However, in terms of precision, TaPR yields counterin- of consecutive time points [23]. The latter is referred to as an
+tuitive results: it regards d3 as having up to 3 correctly detected anomaly event that encompasses multiple anomaly points.
+events, thus giving d3 a significantly higher precision than Typical techniques for TAD encompass a range of approaches,
+d1 (0.75vs. 0.5). The characteristic of precision misleading of including statistical [24], machine learning [25], and deep learnevent-based evaluators regarding fragmented prediction events ing [18], [26] algorithms. Time-series data are generally colproves that merely focusing on event equivalence may lead to lected at regular intervals from various agents or sensors, with
+distorted evaluation conclusions. each time point representing a distinct sample. The detection
+ To overcome the above limitations of point-based and event- results generated by the anomaly detector maintain the same
+based evaluators, we propose a novel TAD performance evalua- discreteness and sampling frequency as the input data. After the
+tor, named OIPR (Operator Interest-based Precision and Recall process of detection, the discrete results can be systematically
+metrics). In the example shown in Fig. 1, OIPR’s evaluation organized into prediction events based on temporal continuity,
+results indicate that d1 (which detects more anomaly points) and compared with the ground truth labels to evaluate the perand d2 (which detects more anomaly events) are two competitive formance of TAD. However, establishing a reliable mapping
+detectors, with d1 holding only a slight advantage. Meanwhile, between the ground truth anomaly events and the detection
+OIPR is not affected by the precision misleading caused by results presents notable challenges. Specifically, temporal facfragmented prediction events and therefore regards d1 and d3 tors such as incorrect insertions, deletions, fragmentation, and
+to have similar performance. This perspective of balancing merging [27] introduce significant ambiguities into the mapping
+JING et al.: OIPR: EVALUATION FOR TIME-SERIES ANOMALY DETECTION INSPIRED BY OPERATOR INTEREST 3573
+
+relationships, thereby complicating the evaluation of TAD per- ground truth labels are represented as y = {y0 , y1 , . . ., yT −1 },
+formance. where yt ∈ {0, 1} denotes whether the time-series is anomalous
+ (1) or not (0) at time point t. For a specific anomaly detector, the
+B. Existing TAD Evaluators detection results are denoted as ŷ = {ŷ0 , ŷ1 , . . ., ŷT −1 }.
+ The classical PW evaluator evaluates the TAD performance
+ Classical PW evaluator using point-based precision/recall
+ by calculating three primary metrics: precision (P), recall (R),
+(P/R) metrics has been employed in the evaluation of
+ and f1-score (F1). These metrics are defined as follows:
+conventional TAD tasks [13], [14]. However, recent studies have
+underscored the significance of considering the temporal conti- TP TP 2·P ·R
+ P = , R= , F1 = , (1)
+nuity inherent in time-series data, leading to the development of TP + FP TP + FN P +R
+specialized evaluators. The PA evaluator was initially introduced where TP, FP, and FN represent the number of true positive,
+in [18], which operates on the premise that if at least one point false positive, and false negative points, respectively. Other
+within an anomaly event is detected, the entire anomaly event specialized TAD evaluators typically adopt the P/R format, with
+is deemed successfully identified. Based on this, the evaluator different solutions for precision and recall metrics. Finally, the
+of PA% K [15] was proposed, which stipulates that a minimum f1-score metric is calculated as outlined in (1).
+proportion of points must be detected within a ground truth event
+to be classified as successfully detected. Both PA and PA% K B. Limitations of Existing Evaluators
+calculate their precision and recall metrics (P/R) based on the
+ 1) Long Anomaly Effect: As a distinctive binary classificanumber of anomaly points, similar to PW.
+ tion task, TAD prompts researchers to develop specialized eval-
+ Different from point-based evaluators, event-based evaluators
+ uators that take into account the temporal continuity of events.
+treat each continuous anomaly interval (i.e., anomaly event) as a
+ In this context, the existence detection of a greater number of
+single unit. The RP/RR evaluator [16] introduced factors of exisanomaly events, rather than detecting more individual anomaly
+tence, size, position, and cardinality for the detection of anomaly
+ points, has become the primary consideration for operators.
+events, supporting customizable functions or parameters for
+ However, in point-based evaluators, the significance attributed
+each factor. Meanwhile, TaPR [19] addressed the challenge of
+ to anomaly events is proportional to the number of points they
+ambiguous labeling by evaluating each ground truth event or
+ encompass. As a result, a limited number of long anomalies
+prediction event through a combination of detection scores and
+ can overshadow the influence of a larger quantity of shorter
+portion scores. Both RP/RR and TaPR regarded each ground
+ anomalies in the final evaluation outcomes. To demonstrate the
+truth event as equally significant, irrespective of its duration.
+ impact of the long anomaly effect, we employ two straightfor-
+This principle is similarly applied to prediction events. Subseward adversary detectors, one of which is designated as the
+quently, the precision and recall metrics are averaged across the
+ first point detector, denoted as df p . It is specifically designed
+ground truth or prediction events. Another event-based evaluto identify only the initial point of each ground truth event.
+ator, the affiliation metrics (AM) [23], provided an alternative
+ During periods without any ground truth anomalies, the output
+perspective in which each ground truth event is considered equal,
+ of df p consistently remains at 0. While the first point detector
+but the predicted results are assigned, measured in points, to the
+ successfully identifies the existence of every anomaly event, it
+affiliation zone of the nearest ground truth event. The metrics of
+ lacks the ability to discern the durations of these anomalies.
+precision and recall are then averaged across the ground truth
+ Another adversary detector, referred to as the long anomaly
+events.
+ detector dl (L), is designed to identify the ground truth events
+ within a given time-series that have a duration of at least L.
+C. Summary
+ Specifically, dl (L) correctly detects all points that fall within
+ Depending on specific focuses and assumptions, the afore- the long ground truth events, while producing an output of 0
+mentioned point-based and event-based evaluators will probably for all other time points. Although the long anomaly detector is
+generate misleading results in certain extreme scenarios. These effective in identifying anomaly events with long durations, it
+scenarios are typically characterized by long anomaly events or fails to detect the other shorter events.
+fragmented detection results, which restricts the applicability For demonstration purposes, we extract a slice from the SMD
+of evaluators [28]. In this study, we propose a comprehensive dataset [2], using both df p and dl for anomaly detection, as
+TAD evaluator based on the operator interest to aid operators illustrated in Fig. 2. Among them, df p accurately reports the
+in selecting more effective detectors for practical applications, occurrence of all thirteen anomaly events, which is significant
+and demonstrate its robust performance on the special scenario for operators. In contrast, dl detects only three of these anomaly
+dataset and five real-world datasets. events. If it is deployed for fault detection in a service, operators
+ will miss the opportunity to recognize these short anomaly
+ III. MOTIVATION events. Within the point-based evaluators, PW and PA% K fail to
+ reflect this risk. As demonstrated in Table II, dl achieves a high
+A. Problem Formulation f1-score of 0.848 using both evaluators, while df p attains a sig-
+ The problem of TAD and its evaluation can be formally nificantly low f1-score of 0.371. This discrepancy arises because
+articulated as follows: Given a time-series spanning T time dl detects a greater number of anomaly points compared to df p .
+points, denoted as x = {x0 , x1 , . . ., xT −1 }, the corresponding In contrast, PA exhibits a distinct behavior of overestimation. It
+3574 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+Fig. 2. A demonstration scenario which displays 5 adversary detectors, including the first point detector df p , the long anomaly detector dl , the dispersed
+disturbance detector ddisp , the aggregated disturbance detector daggr , and the continuous disturbance detector dcont .
+
+ TABLE II points, constituting 1% of the entire time-series, which are then
+ F1-SCORES OF THE DEMONSTRATION IN FIG. 2 USING DIFFERENT
+ EVALUATORS. BOLD TEXT MEANS THE HIGHEST F1-SCORE IN EACH GROUP
+ randomly inserted throughout the detection results.
+ Aggregated disturbance detector daggr : To simulate the shortterm, intermittent disturbances associated with the deployment
+ or change of the service, we randomly introduce a set of FP
+ points, comprising 1% of the entire time-series, into the initial
+ 3% of the detection results.
+ Continuous disturbance detector dcont : The initial 3% of the
+ detection results is configured to a value of 1 to simulate a
+ short-term, continuous disturbance scenario resulting from the
+ deployment or change of service.
+ In the above three cases, both daggr and dcont require operaadjusts the detection result of df p to an ideal detector (whose tors to monitor system status for a period following initialization.
+outputs perfectly match the ground truth), even though it does During subsequent long-term operation, the detector is highly
+not actually detect the duration of any event comprising more reliable. In contrast, ddisp poses a significant challenge for
+than one point. operators due to its persistent and recurrent generation of false
+ Event-based evaluators, such as RP/RR, TaPR, and AM, are alarms, which ultimately results in resource wastage. As a result,
+not impacted by the long anomaly effect. Their evaluation results ddisp leads to a more significant decrease in the practical utility
+for the detectors primarily depend on the number of anomaly of the detector.
+events they detect, and df p is evaluated to be much better than As illustrated in Table II, the point-based evaluators, namely
+dl , as demonstrated in Table II. PW, PA, and PA% K, consider dcont as the worst-performing
+ 2) Fragmentation Effect: Although using an event-based detector due to its highest number of false positive points,
+evaluator can avoid the impact of the long anomaly effect, without taking into account that these points originate from the
+we have observed another misleading phenomenon, called the same anomaly event. In contrast, the event-based evaluators,
+fragmentation effect, which stems from the discrete nature of RP/RR and TaPR, suggest that both daggr and ddisp exhibit
+the detection results. In instances where a ground truth event similar poor performance, even though all false positive points
+comprises a series of points, the detector is likely to identify in daggr are concentrated within a limited period following
+only a subset of points that exhibit significant deviations from initialization. Another evaluator that is partially event-based,
+the normal pattern [15]. Consequently, a contiguous event can AM, remains unaffected by the fragmentation effect due to its
+be fragmented into multiple events in the detection results. The exclusive adoption of an event-based perspective for the ground
+fragmentation effect leads to an increase in the number of true truth, rather than for the detection results.
+positive events, despite the fact that the successful detection is
+confined to a single original contiguous event. This phenomenon
+can also arise when the detector experiences a short-term, one- C. Towards Universal TAD Evaluation
+time disturbance, such as during a service deployment or change. By means of the adversary detectors and demonstration out-
+In such cases, the detector is prone to generating a high frequency lined in the last section, we have elucidated the limitations of
+of false positive points, leading to multiple fragmented false point-based and event-based evaluators. In pursuit of developing
+positive events that originate from the same underlying cause. a more universally applicable TAD evaluator, we have estab-
+To empirically illustrate the fragmentation effect, we introduce lished two primary objectives:
+three specific disturbances to the ideal detector, as depicted in Existence detection reward: The key difference between TAD
+Fig. 2: and conventional binary classification tasks lies in the continuity
+ Dispersed disturbance detector ddisp : To simulate the in- of events. A universally applicable TAD evaluator should posterference induced by random noise, we generate a set of FP sess the capability to reward the existence detection of ground
+JING et al.: OIPR: EVALUATION FOR TIME-SERIES ANOMALY DETECTION INSPIRED BY OPERATOR INTEREST 3575
+
+ Algorithm 1: Online Calculation Process of the Operator
+ Interest Curve for the Detection Results.
+ Input: the detection results ŷ = {ŷ0 , ŷ1 , . . . , ŷT −1 }, and
+ the pre-configured parameters ldis , lobs and bdur .
+ Output: the operator interest Iˆ for the detection results ŷ.
+ (T +lobs ) zeros
+   
+ 1: Iˆ ← {0, 0, . . . , 0}
+ 2: pstart ← −lobs − 1
+ 3: pend ← −lobs − 1
+ 4: t←0 Fig. 3. An example of the operator interest curve for an individual continuous
+ 5: while t < T do anomaly event.
+ 6: if ŷt = 1 then
+ 7: if t − pend > lobs then
+ 8: pstart ← t In computer science, LSTM [30] implements similar attenuation
+ 9: end if logic via gating mechanisms. Transformer [31] achieves atten-
+ 10: Iˆt ← ω(t − pstart ) tion attenuation through scaled dot production: computes the
+ 11: pend ← t input sequence correlation similarity, converts this to attention
+ 12: else weights, and forms a data-driven dynamic attenuation process.
+ 13: if t − pend ≤ lobs then In this paper, we propose the operator interest curve to simulate
+ 14: Iˆt ← ω(t − pstart ) · γ(t − pend ) the attention changes of operators when monitoring anomaly
+ 15: end if alarms, which consists of three phases: (i) Discovery phase:
+ 16: end if The operator receives alarms and confirms the presence of an
+ 17: t←t+1 anomaly; (ii) Duration phase: Alarms persist and the operator
+ 18: end while takes responsive measures; (iii) Observation phase: The anomaly
+ 19: while t < T + lobs do is resolved through maintenance (with the alarms ceased), and
+ 20: if t − pend ≤ lobs then the operator continues monitoring to ensure fault recovery.
+ 21: Iˆt ← ω(t − pstart ) · γ(t − pend ) Based on the operator interest curve, we further propose a
+ 22: end if TAD evaluator, which offers an existence detection reward and
+ 23: t←t+1 enables the merging of potentially fragmented events.
+ 24: end while
+ 25: Iˆ ← {Iˆ0 , Iˆ1 , . . . , IˆT −1+lobs }
+ IV. METHODOLOGY
+ 26: returnIˆ
+ A. Operator Interest Curve
+ In this section, we outline the methodology employed to
+truth events. Specifically, the first point to detect the existence derive the operator interest curve for TAD, which captures the
+of an anomaly event should receive a higher reward than using dynamics of operators in discovering and handling anomalies.
+the classical PW evaluator. To construct the operator interest curve, we propose a set of
+ Fragments Merging: Given that time points serve as the functions, denoted as Φ(i), which characterize the phases of disfundamental units for the collection of time-series data, the covery, duration, and observation associated with an individual
+detection results inherently exhibit a discrete nature. Therefore, anomaly event:
+a universal TAD evaluator should take into account the poten- ⎧
+ ⎪
+ ⎪ ω(i), 0 ≤ i < ldis + ldur
+tial merging of fragmented events and effectively differentiate ⎨
+ ω(ldis + ldur ) × γ(i − ldis − ldur + 1),
+between dispersed and aggregated anomaly points. Φ(i) = , (2)
+ ⎪
+ ⎪ ldis + ldur ≤ i < ldis + ldur + lobs
+ In addition to the above two objectives, it is also advisable ⎩
+ 0, i ≥ ldis + ldur + lobs
+for a universal evaluator to incorporate several other beneficial
+characteristics, such as addressing ambiguous labeling [19] and where i represents the distance from the current point to the
+providing early detection reward [16]. Further exploration of initial point of the anomaly event. ldis , ldur and lobs represent
+evaluator characteristics will be discussed in the context of the lengths of the discovery, duration, and observation phases,
+special scenario dataset experiments in Section IV. respectively. The discovery phase and the duration phase of the
+ To develop a more universally applicable TAD evaluator, we anomaly event are characterized by a shared continuous interest
+draw inspiration from the dynamic attention behavior of oper- function ω(·), while γ(·) represents the operator interest for
+ators during the monitoring of anomaly alarms. In the 1960 s, the observation phase. In Fig. 3, we present an example of the
+American psychologist A. M. Treisman proposed the attention operator interest curve for a continuous event: starting from the
+selection theory and the attention attenuation model [29], which first anomaly point reported by the detector, Φ(i) jumps from 0
+posits that unattended information is not completely blocked; to 1. This indicates that the operator devotes the highest level of
+instead, its intensity is reduced through an attenuation device. interest to the newly detected anomaly event; then, the level of
+3576 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+interest decreases within the length of the discovery phase until
+transitioning to the duration phase, signifying that the operator
+shifts from receiving alarm information to conducting anomaly
+troubleshooting. During the duration phase, the operator maintains interest in the anomaly event and conducts troubleshooting.
+Thus, the value of Φ(i) remains nearly unchanged with only a
+slight decrease. Finally, when the anomaly event is resolved and
+the detector stops reporting alarms, the monitoring enters the
+observation phase. At this stage, Φ(i) decreases continuously
+from its value at the end of the duration phase until it reaches Fig. 4. An example of the operator interest curve for fragmented anomaly
+0, indicating that the operator continues to monitor the system events.
+for a period after the alarm ceases to ensure the recovery of the
+anomaly event.
+ As a default approach, we employ a reversed and scaled the anticipated troubleshooting process of the ideal detector and
+sigmoid function for ω(·): serves as a benchmark for evaluation.
+ 1, i = 0
+ ω(i) = 1−sigmoid( l 10 i−5) , (3) C. Precision and Recall Metrics in OIPR
+ bdur +(1−bdur )× dis
+ 1−sigmoid(−5) , i>0
+ The precision and recall metrics in OIPR are derived using
+where sigmoid(x) = 1+e1( −x) . The operator interest decreases the operator interest curves. In this work, conventional number
+from 1 to near bdur throughout the discovery phase and remains of true positive points is replaced with the true positive area
+nearly constant at bdur during the duration phase. Here, bdur T Poi , which measures the overlapping area between the operator
+denotes the lower boundary of operator interest for the discovery interest curve of the ground truth, I, and that of the detection
+ ˆ Likewise, the number of predicted positive points
+ results, I.
+and duration phases. The rate of decrease is determined by the ˆ Therefore, the values for true
+configuration of ldis , which is set by default to 1/4 of the average is replaced as the area under I.
+length of ground truth events, rounded up to the nearest integer. positive area T Poi and false positive area F Poi in OIPR are
+ The interest function for the observation phase, γ(i), is cal- defined as:
+culated according to (4): ˆ ,
+ T Poi = AUC min(I, I) (5)
+ ⎧
+ ⎨1, i = 0
+ ⎪ ˆ − T Poi ,
+ F Poi = AUC(I) (6)
+ 1−sigmoid( l 10 i−5)
+ γ(i) = obs
+ , 0 < i ≤ lobs . (4)
+ ⎪
+ ⎩ 1−sigmoid(−5) where AUC(·) refers to the computation of the area under a
+ 0, i > lobs
+ specific curve, while min(·) indicates the selection of the smaller
+ The rate of decline is determined by the parameter lobs , value between two time-series at each time point to generate
+where a shorter lobs leads to a more rapid reduction during the a new sequence. Subsequently, the precision metric in OIPR,
+observation phase. Typically, the default value of lobs is set to denoted as Poi , is defined as:
+the average length of ground truth events. ˆ
+ T Poi AUC(min(I, I))
+ Poi = = . (7)
+ T Poi + F Poi AUC(I)ˆ
+B. Merging Fragmented Anomaly Events
+ In the previous section, we introduced the operator interest Using a similar methodology, we transform the ground truth
+curve for an individual continuous anomaly event. However, positive points to the area under I. Thus, the false negative area
+it is essential to recognize that the prediction events can be F Noi is calculated as follows:
+fragmented. To address this issue, we propose a forward process F Noi = AUC(I) − T Poi . (8)
+for the online calculation of the operator interest curve, which
+is detailed in Algorithm 1. The recall metric in OIPR, denoted as Roi , is defined as:
+ Fig. 4 presents an example of the operator interest curve for ˆ
+ T Poi AUC(min(I, I))
+fragmented anomaly events. Temporary interruptions in report- Roi = = . (9)
+ T Poi + F Noi AUC(I)
+ing anomaly points result in a decline in the operator interest,
+though it does not drop to 0 immediately. If new anomaly points In addition, we present a visual illustration in Fig. 5 to demonare reported within lobs , the fragmented anomaly events are strate the AUC calculation range in OIPR, with areas for T Poi ,
+merged. Conversely, if a new anomaly point is reported after the F Poi , and F Noi indicated separately.
+end of the last observation phase, it is classified as the initiation
+of a distinct individual anomaly event. V. EXPERIMENTS
+ Using the same methodology as outlined in Algorithm 1, we
+ A. Experimental Setup
+derive the operator interest curve of the ground truth labels,
+denoted as I.ˆ While the ground truth labels are not affected by Baseline TAD evaluators: We conducted a comparative analthe fragmentation effect, its operator interest curve represents ysis against six baseline evaluators and OIPR in the context
+JING et al.: OIPR: EVALUATION FOR TIME-SERIES ANOMALY DETECTION INSPIRED BY OPERATOR INTEREST 3577
+
+ TABLE IV
+ DESCRIPTIONS OF REAL-WORLD DATASETS
+
+Fig. 5. Visualization of the overlapping area of operator curves, corresponding
+to T Poi , F Poi , and F Noi .
+
+ TABLE III
+ PARAMETERS EMPLOYED IN THE EXPERIMENTS. La MEANS THE AVERAGE
+ LENGTH OF THE GROUND TRUTH EVENTS WITHIN THE DATASET
+
+ spacecraft telemetry, web services, water treatment, environmental sensors, city traffic, and real production data.
+ Descriptions for each dataset are listed in Table IV.
+
+ B. Experimental Results
+ 1) Experimental Results on the Special Scenario Dataset:
+ In this section, we present several significant qualitative conclusions derived from experiments on the special scenario dataset,
+ with the results shown in Table V. The evaluator characteristics involved in these qualitative conclusions include the existence detection reward and fragments merging mentioned in
+ Section III-C, as well as several additional ones:
+ r Overlapping proportion awareness: For a specific ground
+ truth event, a detector that identifies a greater proportion
+of TAD evaluation. The baselines include three point-based of anomaly points within it should be awarded a higher
+evaluators: the classical point-wise evaluator PW, the point recall reward. This characteristic encourages the detector
+adjustment evaluator PA [18], and the top-k point adjustment to identify as many points as possible within a single
+evaluator PA% K [15]. In addition, three event-based evaluators ground truth event, thereby improving the accuracy of event
+are also included: the range-based TAD evaluator RP/RR [16], duration reporting.
+the time-series aware evaluator TaPR [19], and the affiliation r Addressing ambiguous labels: The manual labeling proevaluator AM [23]. The parameters employed for experiments cess introduces ambiguity in defining anomaly event
+are summarized in Table III. boundaries, resulting in anomalies affecting points before
+ Datasets: The experiments are conducted on a special sce- or after the ground truth event. Detecting these ambigunario dataset and five real-world datasets. ous points indicates a partial success in identifying the
+ r Special scenario dataset. We have constructed an artificial anomaly. Consequently, evaluators that address ambiguous
+ dataset consisting of 24 evaluator-sensitive cases specifi- labels should reward recall for these points.
+ cally designed for the evaluation of TAD. These cases are r Early detection reward: It encourages detectors to identify
+ categorized into 9 distinct scenarios, each crafted to em- anomalies early in the occurrence of the ground truth
+ phasize one or two evaluator characteristics. By leveraging events, thereby improving the detection timeliness.
+ the special scenario dataset, we can effectively demonstrate r Fragmentation misleading in precision: This misleading
+ the limitations of various evaluators in a clear and concise characteristic is present in several event-based evaluators.
+ manner. Detectors identifying a ground truth event through multiple
+ r Real-world datasets. The real-world datasets we used for fragmented events can achieve higher precision scores
+ experiments consists of data among various fields, such as than those detect using a complete event. This discrepancy
+3578 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ TABLE V
+ QUALITATIVE CONCLUSIONS DERIVED FROM EXPERIMENTS ON THE SPECIAL SCENARIO DATASET. BENEFICIAL CHARACTERISTICS OF THE EVALUATOR ARE
+ MARKED WITH (PRESENT) AND × (ABSENT). MISLEADING CHARACTERISTICS ARE INDICATED BY ◦ (PRESENT) AND - (ABSENT)
+
+Fig. 6. Demonstrations of TAD results on several real-world datasets.
+
+ primarily arises from the misleading increase in the count datasets. These results are evaluated using different evaluators
+ of true positive events. and ranked by f1-score, as presented in Table VI. Inappropriate
+ r Long anomaly misleading: This misleading characteris- evaluators may affect the ranking of detectors due to either the
+ tic is present in most point-based evaluators, where the lack of beneficial characteristics or the presence of misleading
+ significance of long anomalies far surpasses that of short ones. In Table VI, we uniformly mark the relevant characterisanomalies. Consequently, detectors that identify more tics where inappropriate evaluators yield misleadingly overesshort anomalies may be outperformed by those that focus timated rankings. Corresponding demonstrations are provided
+ solely on long anomalies, hindering the detection of a more in the four subplots of Fig. 6. Point-based evaluators (PW, PA,
+ diverse range of anomalies. PA% K) are mainly affected by the characteristic of long anomaly
+ r Sparse anomaly misleading: A pitfall observed in the AM misleading, thus overestimating the ranking of Timesnet on the
+ evaluator. The f1-score is overestimated due to the mapping MSL, SMAP, PSM, and SWaT datasets. In these experiments,
+ from long absolute distance to limited relative precision Timesnet generates more FP points than the other two detectors,
+ and recall distances. severely compromising its detection performance, as shown in
+ A comprehensive introduction and detailed experimental re- Fig. 6(a) and (c). Point-based evaluators fail to attach sufficient
+sults pertaining to the special scenario dataset are presented in importance to this flaw and instead prioritize the detection of
+Appendix A, available online. Among the above characteristics, long anomaly events, thereby leading to an overestimated rank-
+OIPR effectively incorporates all beneficial factors while min- ing of Timesnet. On the IOPS dataset, Autoformer misses more
+imizing potential misleading influences. Compared to baseline anomaly events than DLinear, as shown in Fig. 6(b). However,
+point-based and event-based evaluators, it offers enhanced uni- due to the lack of existence detection reward, the PW and PA% K
+versality and reduces deficiencies in extreme scenarios. evaluators do not prominently reflect these missed detections in
+ 2) Experimental Results on Real-World Datasets: First, we the recall metric, resulting in the overestimated ranking of Autoobtain the TAD results of three advanced detectors, Auto- former. Moreover, the lack of fragment merging characteristic of
+former [39], DLinear [40], and Timesnet [41], on all real-world event-based evaluators (RP/RR, TaPR, and AM) was evident on
+JING et al.: OIPR: EVALUATION FOR TIME-SERIES ANOMALY DETECTION INSPIRED BY OPERATOR INTEREST 3579
+
+ TABLE VI
+ EXPERIMENTAL RESULTS OF ADVANCED DETECTORS AUTOFORMER, DLINEAR AND TIMESNET ON REAL-WORLD DATASETS, EVALUATED BY BASELINE
+ EVALUATORS AND OIPR. EVALUATION METRICS ARE PRESENTED IN THE PRECISION/RECALL/F1-SCORE FORMAT. BOLD TEXT INDICATES THE HIGHEST
+ F1-SCORE AND UNDERLINED TEXT REPRESENTS THE SECOND-HIGHEST F1-SCORE
+
+ TABLE VII
+ EXPERIMENTAL RESULTS OF THE FIRST POINT DETECTOR df p AND THE LONG ANOMALY DETECTOR dl , EVALUATED BY BASELINE EVALUATORS AND OIPR.
+ EVALUATION METRICS ARE PRESENTED IN THE PRECISION/RECALL/F1-SCORE FORMAT. BOLD TEXT INDICATES THE HIGHEST F1-SCORE AND UNDERLINED
+ TEXT REPRESENTS THE SECOND-HIGHEST F1-SCORE
+
+the SWaT dataset: these evaluators neglect that the fragmented beneficial characteristics and avoiding misleading ones, OIPR
+and scattered FP points in Timesnet’s detection results have attains the most rational evaluation ranking across all real-world
+obscured the TP points (see Fig. 6(c)), thus overestimating its datasets, without any of the four aforementioned misoverestimaranking. Besides, the AM evaluator considers the FP points tion phenomena.
+relatively close to the ground truth anomaly events beneficial In the second group of experiments, we compare two adverrather than detrimental to the f1-score (i.e., the characteristic sary detectors dl and df p across the MSL, SMAP, PSM, SMD
+of sparse anomaly misleading), which results in its ranking and SWaT datasets to analyze the impact of the long anomaly
+deviations across most datasets. Finally, by incorporating all effect, as shown in Table VII. Two point-based evaluators, PW
+3580 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ TABLE VIII
+ EXPERIMENTAL RESULTS OF THE DISPERSED DISTURBANCE DETECTOR ddisp , THE AGGREGATED DISTURBANCE DETECTOR daggr , AND THE CONTINUOUS
+DISTURBANCE DETECTOR dcont . EVALUATION METRICS ARE PRESENTED IN THE PRECISION/RECALL/F1-SCORE FORMAT. BOLD TEXT INDICATES THE HIGHEST
+ F1-SCORE AND UNDERLINED TEXT REPRESENTS THE SECOND-HIGHEST F1-SCORE
+
+and PA% K, are significantly affected due to the lack of existence TABLE IX
+ ADDITIONAL STATISTICS FOR THE REAL-WORLD DATASETS. RN REPRESENTS
+detection reward and the presence of long anomaly misleading, THE RATIO OF CONTAMINATED NORMAL INTERVALS
+and they favor dl over df p across all five datasets. Due to the
+lack of overlapping proportion awareness, PA incorrectly regards
+df p as ideal and consistently overestimates its f1-score as 1.
+The event-based evaluators (RP/RR, TaPR, and AM) completely
+eliminate the impact of the long anomaly misleading, and prefer
+df p to dl on all datasets. As for OIPR, it mitigates rather than
+fully eliminates this impact, thereby deems df p superior on
+MSL and SMD while favoring dl on SMAP, PSM, and SWaT.
+We argue this confirms OIPR as the only evaluator sensitive
+to striking a balance between the detection of longer and more
+anomalies. The underlying rationale is that when all anomaly
+events are relatively short in duration, the total number of events
+becomes a critical factor, suggesting that a detector capable of
+ high RN , as it causes a substantial number of contaminated
+identifying all anomalies suffices. In contrast, for anomalies with
+ normal intervals. However, all point-based evaluators (PW, PA,
+drastically prolonged durations (e.g., the SWaT dataset, where
+ and PA% K) erroneously judge ddisp as satisfactory due to the
+the longest anomaly lasts 10 hours and the shortest merely 100
+ presence of long anomaly misleading. Additionally, daggr has
+seconds), assigning greater importance to the former is more
+ the same low RN as dcont , indicating few contaminated normal
+reasonable than treating these two events as entirely equivalent.
+ intervals and that the two detectors deliver comparable, solid
+We discuss the threshold of long/short anomalies in Appendix C,
+ performance. Nevertheless, RP/RR and TaPR lack the beneficial
+available online, and present the parameter sensitivity analysis
+ characteristic of fragment merging, thereby misjudging daggr
+in Appendix D, available online.
+ as underperforming. Besides, the sparse anomaly misleading
+ In the third group of experiments, we compare three adversary
+ characteristic causes the AM evaluator to erroneously rate ddisp
+detectors ddisp , daggr , and dcont to assess the impact of the
+ favorably. Ultimately, only OIPR successfully identifies ddisp
+fragmentation effect, as shown in Table VIII. To this end, we
+ as a subpar detector and recognizes daggr and dcont as highintroduce a metric called the ratio of normal intervals containing
+ performing ones, as it takes into account the actual distribution
+FP points, denoted as RN , which quantifies the proportion of
+ of discrete FP points.
+normal intervals contaminated by FP points relative to the total
+number of normal intervals. A normal interval is defined as a
+non-anomalous interval between two adjacent anomaly events VI. DISCUSSION
+in the ground truth. The RN values and other statistical data for In this work, the proposed OIPR is characterized as an “areaexperiments are presented in Table IX. A higher RN means oper- based” TAD evaluator. To investigate its correlations and distincators are more likely to face disturbances induced by false alarms tions from existing point-based and event-based evaluators, we
+during routine operations. Notably, ddisp yields an extremely introduce two specific custom configurations of OIPR, which
+JING et al.: OIPR: EVALUATION FOR TIME-SERIES ANOMALY DETECTION INSPIRED BY OPERATOR INTEREST 3581
+
+can be interpreted as point-based and event-based evaluators, REFERENCES
+respectively. [1] J. Xu, H. Wu, J. Wang, and M. Long, “Anomaly transformer: Time series
+ Zero observation phase. In this configuration, we set lobs = anomaly detection with association discrepancy,” in Proc. 10th Int. Conf.
+0 in Algorithm 1, indicating that there is no observation phase Learn. Representations, 2022, pp. 1–20.
+ [2] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+associated with the anomaly points. As a result, the operator detection for multivariate time series through stochastic recurrent neural
+interest in each anomaly point does not extend to the subsequent network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discov. Data
+time point. It is evident that, in such a scenario, the operator Mining, Anchorage, AK, 2019, pp. 2828–2837.
+ [3] S. Dou, K. Yang, Y. Jiao, C. Qiu, and K. Ren, “Anomaly detection in
+interest curve of the ground truth and that of the detection results event-triggered traffic time series via similarity learning,” IEEE Trans.
+can be calculated as: Dependable Secur. Comput., vol. 22, no. 2, pp. 888–902, Mar./Apr. 2025.
+ [4] F. Jin, H. Wu, Y. Liu, J. Zhao, and W. Wang, “Varying-scale hca-dbscanbased anomaly detection method for multi-dimensional energy data in steel
+ I = y, Î = ŷ. (10) industry,” Inf. Sci., vol. 647, 2023, Art. no. 119479.
+ [5] D. Velásquez et al., “A hybrid machine-learning ensemble for anomaly detection in real-time industry 4.0 systems,” IEEE Access, vol. 10, pp. 72024–
+ 72036, Jul. 2022.
+ Hence, OIPR degenerates into a point-based evaluator, which [6] D. Tang, S. Wang, B. Liu, W. Jin, and J. Zhang, “GASF-IPP: Detection and
+is essentially equivalent to the classical PW evaluator. mitigation of LDoS attack in SDN,” IEEE Trans. Serv. Comput., vol. 16,
+ Strict occurrence detection evaluator. By setting ldis = 0, no. 5, pp. 3373–3384, Sep./Oct. 2023.
+ [7] Y. Jing et al., “Diner: Interpretable anomaly detection for seasonal time
+bdur = 0, and lobs = 1 in Algorithm 1, OIPR can be con- series in web services,” IEEE Trans. Serv. Comput., vol. 17, no. 5, pp. 2248–
+verted into a distinctive event-based evaluator: here, a predicted 2260, Sep./Oct. 2024.
+anomaly event is classified as a TP event only when its initial [8] S. Zhang et al., “Efficient KPI anomaly detection through transfer learning
+ for large-scale web services,” IEEE J. Sel. Areas Commun., vol. 40, no. 8,
+point coincides with the initial point of a ground truth event. pp. 2440–2455, Aug. 2022.
+Conversely, any ground truth event whose initial point does [9] G. Sivapalan, K. K. Nundy, A. P. James, B. Cardiff, and D. John, “Internot align with that of a prediction event is classified as an FN pretable rule mining for real-time ECG anomaly detection in IoT edge
+ sensors,” IEEE Internet Things J., vol. 10, no. 15, pp. 13095–13108,
+event, while any prediction event whose initial point does not Aug. 2023.
+correspond to that of a ground truth event is categorized as an FP [10] T. P. Q. Nguyen et al., “Time-series anomaly detection using dynamic
+event. Although this evaluator may appear excessively stringent, programming based longest common subsequence on sensor data,” Expert
+ Syst. Appl., vol. 213, no. Part, Mar. 2023, Art. no. 118902.
+it effectively demonstrates that OIPR can be transformed into [11] S. Xie, L. Li, and Y. Zhu, “Anomaly detection for multivariate time series
+an event-based evaluator through specific parameter configura- in IoT using discrete wavelet decomposition and dual graph attention
+tions. networks,” Comput. Secur., vol. 146, 2024, Art. no. 104075.
+ [12] Y. Zhang, Y. Chen, J. Wang, and Z. Pan, “Unsupervised deep anomaly
+ Through the specific configurations discussed above, it can detection for multi-sensor time-series signals,” IEEE Trans. Knowl. Data
+be observed that OIPR lies between the point-based and event- Eng., vol. 35, no. 2, pp. 2118–2132, Feb. 2023.
+based evaluators. It employs the observation phase to mitigate [13] V. Jacob and Y. Diao, “Unsupervised anomaly detection in multivariate
+ time series across heterogeneous domains,” in Proc. VLDB Endow., vol. 18,
+the long anomaly effect and to merge potential fragmented no. 6, pp. 1691–1704, Feb. 2025.
+events. Additionally, the use of area in calculating the evaluation [14] W. Wang, Z. Yue, and B. Zheng, “Streaming time series subsequence
+metrics enables OIPR to effectively bridge the gap between anomaly detection: A glance and focus approach,” in Proc. VLDB Endow.,
+ vol. 18, no. 6, pp. 1892–1904, Feb. 2025.
+point-based and event-based perspectives, thereby enhancing its [15] S. Kim, K. Choi, H. Choi, B. Lee, and S. Yoon, “Towards a rigorous
+versatility and applicability. evaluation of time-series anomaly detection,” in Proc. 36th AAAI Conf.
+ Artif. Intell., California, USA, 2022, pp. 7194–7201.
+ [16] N. Tatbul, T. J. Lee, S. Zdonik, M. Alam, and J. Gottschlich, “Precision and
+ recall for time series,” in Proc. Adv. Neural Inf. Process. Syst. 31: Annu.
+ VII. CONCLUSION Conf. Neural Inf. Process. Syst., Montréal, Canada, 2018, pp. 1924–1934.
+ [17] J. Paparrizos, P. Boniol, T. Palpanas, R. Tsay, A. J. Elmore, and
+ Given the key role of TAD in data analysis, numerous studies M. J. Franklin, “Volume under the surface: A new accuracy evaluation
+have focused on improving anomaly detector performance to measure for time-series anomaly detection,” in Proc. VLDB Endow.,
+ vol. 15, no. 11, pp. 2774–2787, Sep. 2022.
+identify anomalous behaviors and potential system faults. When [18] Y. Xu et al., “Unsupervised anomaly detection via variational auto-encoder
+evaluating these detectors, selecting an appropriate evaluator is for seasonal KPIs in web applications,” in Proc. 2018 World Wide Web
+critical: it helps operators choose optimal detectors and avoids Conf. World Wide Web, Lyon, France, Apr. 2018, pp. 187–196.
+ [19] W. Hwang, J. Yun, J. Kim, and H. Kim, “Time-series aware precision and
+misleading researchers into suboptimal optimization. In this recall for anomaly detection: Considering variety of detection result and
+work, we developed a novel TAD evaluator, OIPR, which is addressing ambiguous labeling,” in Proc. 28th ACM Int. Conf. Inf. Knowl.
+inspired by the interest of operators in monitoring KPIs and Manage., Beijing, China, 2019, pp. 2241–2244.
+ [20] W. G. Gadallah, H. M. Ibrahim, and N. M. Omar, “A deep learning
+associated detectors. Compared with existing evaluators, OIPR technique to detect distributed denial of service attacks in software-defined
+has fewer limitations, adapts to diverse scenarios, and allows networks,” Comput. Secur., vol. 137, 2024, Art. no. 103588.
+for smooth transitions between point-based and event-based [21] J. Ahmed and R. C. Green, “Cost aware LSTM model for predicting hard
+ disk drive failures based on extremely imbalanced s. m. a.r.t. sensors data,”
+paradigms via custom configuration to balance the two perspec- Eng. Appl. Artif. Intell., vol. 127, no. Part B, 2024, Art. no. 107339.
+tives. We also introduced a special scenario dataset, which is [22] N. Zhao et al., “Identifying bad software changes via multimodal anomaly
+carefully designed to highlight the characteristics and limitations detection for online service systems,” in Proc. 29th ACM Joint Eur. Softw.
+ Eng. Conf. Symp. Found. Softw. Eng., Athens, Greece, 2021, pp. 527–539.
+of different evaluators. The superiority of OIPR is verified [23] A. Huet, J. M. Navarro, and D. Rossi, “Local evaluation of time series
+through experiments on the special scenario dataset alongside anomaly detection algorithms,” in Proc. 28th ACM SIGKDD Conf. Knowl.
+several real-world datasets. Discov. Data Mining, Washington, DC, 2022, pp. 635–645.
+3582 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+[24] Y. Lu, T. V.A. Srinivas, T. Nakamura, M. Imamura, and E. Keogh, “Matrix Jingyu Wang (Senior Member, IEEE) received the
+ profile XXX: MADRID: A hyper-anytime and parameter-free algorithm PhD degree from the Beijing University of Posts and
+ to find time series anomalies of all lengths,” in Proc. IEEE Int. Conf. Data Telecommunications, Beijing, China, in 2008. He
+ Mining, Shanghai, China, 2023, pp. 1199–1204. is currently a tenured professor with the State Key
+[25] J. Á. Cid-Fuentes, C. Szabo, and K. Falkner, “Adaptive performance Laboratory of Networking and Switching Technolanomaly detection in distributed systems using online SVMs,” IEEE Trans. ogy, Beijing University of Posts and Telecommuni-
+ Dependable Secur. Comput., vol. 17, no. 5, pp. 928–941, Sep./Oct. 2020. cations. He is selected for the Yangtse River Scholar
+[26] S. Liu et al., “Time series anomaly detection with adversarial reconstruc- Award Program by the Ministry of Education. He
+ tion networks,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 4, pp. 4293– has published more than 200 papers in such as the
+ 4306, Apr. 2023. ToN, TMC, JSAC, NSDI, ASPLOS and so on. His
+[27] J. A. Ward, P. Lukowicz, and H. Gellersen, “Performance metrics for research interests include broad aspects of Intelligent
+ activity recognition,” ACM Trans. Intell. Syst. Technol., vol. 2, no. 1, Networks, Edge/Cloud Computing, Machine Learning, Self-Driving Network,
+ pp. 6:1–6:23, Jan. 2011. IoV/IoT, Knowledge-Defined Network and Intent-Driven Networking.
+[28] S. Sørbø and M. Ruocco, “Navigating the metric maze: A taxonomy of
+ evaluation metrics for anomaly detection in time series,” Data Min. Knowl.
+ Discov., vol. 38, no. 3, pp. 1027–1068, May 2024.
+[29] A. M. Treisman, “Verbal cues, language, and meaning in selective attention,” Amer. J. Psychol., vol. 77, no. 2, pp. 206–219, Jun. 1964. Lei Zhang received the master’s degree from the
+[30] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural Nanjing University of Posts and Telecommunica-
+ Comput., vol. 9, no. 8, pp. 1735–1780, Nov. 1997. tions, in 2004. She is the technical expert of depart-
+[31] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf. ment of Cloud Network Center, China Unicom, and
+ Process. Syst. 30: Annu. Conf. Neural Inf. Process. Syst., Long Beach, CA, the leader of Digital twin Project. Her research in-
+ USA, 2017, pp. 5998–6008. terest covers mobile network, Network Management,
+[32] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and T. Söder- AIOps, Digital twin etc.
+ ström, “Detecting spacecraft anomalies using LSTMs and nonparametric
+ dynamic thresholding,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl.
+ Discov. Data Mining, London, U.K., 2018, pp. 387–395.
+[33] A. Abdulaal, Z. Liu, and T. Lancewicki, “Practical approach to asynchronous multivariate time series anomaly detection and localization,” in
+ Proc. 27th ACM SIGKDD Conf. Knowl. Discov. Data Mining, Singapore,
+ 2021, pp. 2485–2494.
+[34] A. P. Mathur and N. O. Tippenhauer, “Swat: A water treatment testbed Haifeng Sun (Senior Member, IEEE) received the
+ for research and training on ICS security,” in Proc. 2016 Int. Workshop PhD degree from the Beijing University of Posts and
+ Cyber- Phys. Syst. Smart Water Netw., Vienna, Austria, 2016, pp. 31–36. Telecommunications, Beijing, China, in 2017. He is
+[35] Y. Yao, A. B. Sharma, L. Golubchik, and R. Govindan, “Online anomaly currently an associate professor with the State Key
+ detection for sensor systems: A simple and efficient approach,” Perform. Laboratory of Networking and Switching Technol-
+ Eval., vol. 67, no. 11, pp. 1059–1075, Nov. 2010. ogy, Beijing University of Posts and elecommunica-
+[36] A. Lavin and S. Ahmad, “Evaluating real-time anomaly detection algo- tions. His research interests include broad aspects of
+ rithms - the numenta anomaly benchmark,” in Proc. 14th IEEE Int. Conf. AI, NLP, Big Data analysis, object detection, deep
+ Mach. Learn. Appl., Miami, FL, USA, 2015, pp. 38–44. learning and pattern recognition.
+[37] J. Paparrizos, Y. Kang, P. Boniol, R. S. Tsay, T. Palpanas, and
+ M. J. Franklin, “TSB-UAD: An end-to-end benchmark suite for univariate
+ time-series anomaly detection,” in Proc. VLDB Endow., vol. 15, no. 8,
+ pp. 1697–1711, Apr. 2022.
+[38] N. Laptev and S. Amizadeh, “Online dataset for anomaly detection,”
+ 2015. [Online]. Available: http://webscope.sandbox.yahoo.com/catalog.
+ php?datatype=s&did=70 Bo He (Member, IEEE) received the PhD degree from
+[39] H. Wu, J. Xu, J. Wang, and M. Long, “Autoformer: Decomposition the Beijing University of Posts and Telecommunicatransformers with auto-correlation for long-term series forecasting,” in tions, China, in 2023. He is currently an associate
+ Proc. Adv. Neural Inf. Process. Syst. 34: Annu. Conf. Neural Inf. Process. researcher with the State Key Laboratory of Network-
+ Syst., 2021, pp. 22419–22430. ing and Switching Technology, Beijing University of
+[40] A. Zeng, M. Chen, L. Zhang, and Q. Xu, “Are transformers effective Posts and Telecommunications. From 2021 to 2022,
+ for time series forecasting?,” in Proc. 37th AAAI Conf. Artif. Intell., he was a visiting PhD student with the University
+ Washington, DC, 2023, pp. 11121–11128. of Waterloo, Canada. His research interests include
+[41] H. Wu, T. Hu, Y. Liu, H. Zhou, J. Wang, and M. Long, “TimesNet: 5G/6G networks, multipath networks, collective com-
+ Temporal 2D-variation modeling for general time series analysis,” in Proc. munication, transmission control, and deep reinforce-
+ 11th Int. Conf. Learn. Representations, Kigali, Rwanda, 2023, pp. 1–23. ment learning.
+
+ Zirui Zhuang (Member, IEEE) received the BS and
+ PhD degrees from the Beijing University of Posts
+ and Telecommunications, in 2015 and 2020, respectively. He is currently a post-doctoral researcher
+ Yuhan Jing received the master’s degree from the with the State Key Laboratory of Networking and
+ Beijing University of Posts and Telecommunications, Switching Technology, Beijing University of Posts
+ China, in 2020. She is currently a doctoral candidate and Telecommunications. In 2019, he visited the
+ with the State Key Laboratory of Networking and Department of Electrical and Computer Engineering,
+ Switching Technology, Beijing University of Posts University of Houston. His research interests involve
+ and Telecommunications. Her research interests in- network routing and management for nextgeneration
+ clude AIOps, Time-series Analysis, Anomaly Detec- network infrastructures, using machine learning and
+ tion, and Fault Localization. artificial intelligence techniques, including deep learning, reinforcement learning, graph representation, multi-agent systems, and Lyapunovbased optimization.
+JING et al.: OIPR: EVALUATION FOR TIME-SERIES ANOMALY DETECTION INSPIRED BY OPERATOR INTEREST 3583
+
+ Chengsen Wang received the BD degree from the Jianxin Liao (Senior Member, IEEE) received the
+ Beijing University of Posts and Telecommunications, PhD degree from the University of Electronics Sciin 2022. He is currently a doctoral candidate of ence and Technology of China, Chengdu, China,
+ State Key Laboratory of Networking and Switching in 1996. He is currently the dean of the Network
+ Technology with the Beijing University of Posts and Intelligence Research Center and a full professor
+ Telecommunications. His main research interests in- with the State Key Laboratory of Networking and
+ clude time-series analysis, anomaly detection, and Switching Technology, Beijing University of Posts
+ multimodal learning. and Telecommunications. He has authored or coauthored hundreds of research papers and several books.
+ He has won several prizes in China for his research
+ achievements, which include the Premiers Award of
+ Distinguished Young Scientists from National Natural Science Foundation of
+ China, in 2005, and the specially invited professor of the Yangtse River Scholar
+ Award Program by the Ministry of Education, in 2009. His main research
+ interests include cloud computing, mobile intelligent network, service network
+ Qi Qi (Senior Member, IEEE) received the PhD intelligence, networking architectures and protocols, and multimedia commudegree from the Beijing University of Posts and nication.
+ Telecommunications, Beijing, China, in 2010. She is
+ currently a professor with the State Key Laboratory
+ of Networking and Switching Technology, Beijing
+ University of Posts and Telecommunications. She
+ has authored or co-authored more than 30 papers
+ in the international journal and is the recipient of
+ two National Natural Science Foundations of China.
+ Her research interests include edge computing, cloud
+ computing, the Internet of Things, ubiquitous services, deep learning, and deep reinforcement learning.

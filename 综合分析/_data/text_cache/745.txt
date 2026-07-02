@@ -1,0 +1,147 @@
+6344                                                            IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+
+  MT-KD: Multi-Teacher Knowledge Distillation for
+    Privacy-Aware Unlearning in IIoT Intrusion
+               Detection Systems
+        Shigen Shen , Senior Member, IEEE, Jiashuo Niu , Yizhou Shen , Jingnan Dong , Member, IEEE,
+            Wenlong Ke , Tian Wang , Senior Member, IEEE, and Ruidong Li , Senior Member, IEEE
+
+
+   Abstract—The growth of Industrial Internet of Things (IIoT)                  systems [1]. They do this by making it possible to get data
+systems creates a direct conflict for intrusion detection systems:              in real time and use smart automation [2]. But, all these new
+while essential for security, their inability to selectively forget             connections and complex systems also lead to more advanced
+specific attack patterns hinders adaptability and impedes com-
+pliance with privacy regulations like General Data Protection                   cyber threats that target industrial control systems, edge
+Regulation. To resolve this conflict, we introduce the Multi-                   devices, and communication protocols [3], [4]. As a result,
+Teacher Knowledge Distillation (MT-KD) unlearning framework,                    Intrusion Detection Systems (IDS) have become indispens-
+designed to erase knowledge of specified attack classes without                 able for safeguarding IIoT intrusion detection environments
+the prohibitive cost of full model retraining. Our approach                     against diverse and evolving attacks [5], [6]. Nevertheless,
+employs deep convolutional neural networks, multi-teacher guid-
+ance, and gradient-based noise injection to train a student model               they often retain long-term memory of obsolete or sensitive
+that forgets targeted attacks while retaining high accuracy on                  threat patterns, which can pose significant risks to both privacy
+remaining classes. We validate this by converting network traffic               compliance and the system’s adaptability to emerging attack
+from the CIC-IDS2017 and USTC-TFC2016 benchmark datasets                        vectors. In IIoT settings—where operational continuity, data
+into grayscale images for extensive experiments. The results                    protection, and regulatory alignment are paramount—there is
+demonstrate that our MT-KD framework achieves complete
+forgetting of targeted classes, verified by Membership Inference                a growing demand for mechanisms that can selectively remove
+Attack resistance, while maintaining over 95% accuracy on                       previously learned information from deployed detection
+retained classes. By outperforming existing unlearning baselines                models [7].
+in both effectiveness and efficiency, our work delivers a practical                Regulations such as the EU’s General Data Protection
+and scalable solution for privacy-preserving intrusion detection                Regulation [8] and California Consumer Privacy Act [9] grant
+in real-world IIoT scenarios. The source code is publicly available
+at https://github.com/NJS-HZ/MT-KD                                              individuals the right to be forgotten and to request deletion
+                                                                                of personal data [10]. In practice, compliance extends beyond
+  Index Terms—Machine unlearning, knowledge distillation,                       erasing raw records: if models were trained on those data, their
+Industrial Internet of Things, intrusion detection system, privacy.
+                                                                                parameters may encode them, and organizations may need to
+                    I. I NTRODUCTION                                            remove that influence from deployed models as well [11], [12].
+                                                                                For IIoT-based learning systems in mission-critical and data-
+I   NDUSTRIAL Internet of Things (IIoT) technologies are
+    changing manufacturing, energy, and critical infrastructure                 sensitive settings, it needs a practical requirement to support
+                                                                                privacy-compliant unlearning that selectively remove the effect
+   Received 20 October 2025; revised 8 February 2026; accepted 12 February      of specified samples or classes from a trained model without
+2026. Date of publication 18 February 2026; date of current version 27 Febru-   retraining from scratch [13].
+ary 2026. This work was supported in part by the Humanities and Social
+Sciences Planning Foundation of Ministry of Education of China under Grant         Machine unlearning has moved beyond computer vision
+24YJAZH123, and Huzhou Science and Technology Planning Foundation of            to natural language processing and recommender systems
+China under Grant 2023GZ04. The associate editor coordinating the review        [14], with techniques ranging from influence-function–guided
+of this article and approving it for publication was J. Kang. (Corresponding
+author: Yizhou Shen.)                                                           parameter edits and Newton-style update removal to parti-
+   Shigen Shen, Jiashuo Niu, Jingnan Dong, and Wenlong Ke are                   tioned training schemes with certified deletion guarantees.
+with the School of Information Engineering, Huzhou University, Huzhou           By contrast, applications to IIoT cybersecurity remain sparse
+313000, China (e-mail: shigens@zjhu.edu.cn; 2024388229@stu.zjhu.edu.cn;
+dongjingnan@zjhu.edu.cn; wlke@zjhu.edu.cn).                                     [15], [16]. Much of the literature still chases stronger intru-
+   Yizhou Shen is with the School of Computing, Newcastle University, NE1       sion detection—robustness [17], higher detection accuracy,
+7RU Newcastle upon Tyne, U.K. (e-mail: Y.Shen34@newcastle.ac.uk).
+   Tian Wang is with the Institute of Artificial Intelligence and Future
+                                                                                or incremental learners under concept drift—while the more
+Networks, Beijing Normal University, Zhuhai 519087, China, also with            prosaic yet crucial task of systematically scrubbing models of
+the College of Computer and Data Science, Fuzhou University, Fuzhou             outdated or sensitive attack patterns is rarely addressed [18].
+350108, China, and also with the College of Computer Science and Math-             Given the practical limits of IIoT—such as limited com-
+ematics, Fujian University of Technology, Fuzhou 350118, China (e-mail:
+tianwang@bnu.edu.cn).                                                           pute at terminals, mixed protocols [19], and tight latency
+   Ruidong Li is with the Institute of Science and Engineering,                 needs—retraining a model from scratch to forget one or more
+Kanazawa University, Kakuma, Kanazawa 920-1192, Japan (e-mail: lrd@
+se.kanazawa-u.ac.jp).
+                                                                                attack types is not practical. So recent machine unlearning
+   Digital Object Identifier 10.1109/TCCN.2026.3665917                          work [20] has proposed fast and selective erase methods
+             2332-7731 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+SHEN et al.: MT-KD: MULTI-TEACHER KNOWLEDGE DISTILLATION FOR PRIVACY-AWARE UNLEARNING                                           6345
+
+
+
+that keep compute cost low. These include influence-function              latency, and keeps detection performance strong on the
+updates, small local weight tweaks, and knowledge distillation            retained categories.
+with a teacher model. Even with these advances, balancing              • We conduct extensive evaluations on two bench-
+unlearning strength with overall model stability and detection            mark datasets: CIC-IDS2017 and USTC-TFC2016. Both
+performance remains a key challenge [21], [22].                           datasets are preprocessed into grayscale images using the
+   To address these challenges, we propose a novel machine                USTC-TK2016 traffic-to-image conversion toolkit [23],
+learning forgetting framework specifically designed for IIoT              enabling CNN-based classification. Experimental results
+intrusion detection scenarios. The proposed method—Multi-                 demonstrate that our MT-KD framework achieves com-
+Teacher Knowledge Distillation (MT-KD)—combines the                       plete forgetting of the targeted attack category, which
+newly developed UnResNet9 model, tailored for learning elim-              has been validated as resistance to membership inference
+ination tasks, with a multi-teacher selective forgetting strategy.        attacks. Simultaneously, it maintains over 95% accuracy
+This framework removes knowledge of specific attack classes               in the retained categories, thereby surpassing existing
+from pretrained detection models while keeping performance                forgetting baselines in both effectiveness and efficiency.
+on the remaining categories. Its core is a student model                The remainder of this paper is organized as follows.
+trained with guidance from multiple teachers, using both noise-      Section II reviews related work on machine unlearning, IIoT
+based forgetting and distillation with limited data. This design     intrusion detection, and knowledge distillation. Section III
+enables precise, controllable forgetting without retraining the      presents the system model and data configuration. Section IV
+whole model from scratch.                                            details the proposed MT-KD unlearning framework, includ-
+   We present a full unlearning pipeline that identifies the         ing data preprocessing, the UnResNet9 architecture, and the
+samples or classes to forget, generates error-maximizing noise       multi-teacher knowledge distillation mechanism. Section V
+to push the model away from them, and uses a multi-stage             presents comprehensive experimental results and analysis on
+alternating training schedule to erase and then stabilize the        two benchmark datasets. Finally, Section VI concludes the
+model. We convert raw network traffic into 28 × 28 grayscale         paper and discusses future research directions.
+session images with the USTC-TK2016 traffic-to-image toolkit
+[23], and evaluate on two public benchmarks: CIC-IDS20171
+                                                                                         II. R ELATED W ORK
+and USTC-TFC2016.2 CIC-IDS2017 covers enterprise attacks
+including DoS, DDoS, brute force, web attacks, and botnets,          A. Machine Unlearning
+while USTC-TFC2016 contains real malicious traffic from                 Recent years have witnessed growing interest in machine
+families such as Neris, Virut, and Geodo. Results across             unlearning as a critical technique for protecting user privacy
+both datasets show good generalization and robustness to             and enforcing the right to be forgotten in machine learning
+different network settings and attack types: our method reliably     systems. Hu et al. [24] exposed privacy vulnerabilities
+forgets targeted attack categories while keeping high detection      during unlearning by proposing inversion attacks that
+accuracy on benign traffic and retained classes, outperforming       exploit both original and unlearned models. Sun et al. [25]
+full retraining and prior unlearning baselines.                      addressed unlearning challenges in GANs through a cascaded
+   In summary, our contributions are three-fold:                     approach preserving latent space continuity. Tarun et al. [26]
+  • We propose a lightweight residual network, UnResNet9,            developed a fast framework leveraging error-maximizing
+    built for IIoT intrusion detection and aimed at the inter-       noise and weight manipulation for class unlearning
+    class learning loss issue. Unlike standard ResNet variants,      without full data access. Wang et al. [27] proposed Federated
+    UnResNet9 adds adaptive feature layers and lightweight           Unlearning (FedU) for federated scenarios, balancing efficacy
+    regularization so the model can prune unneeded knowl-            and utility through user-side influence approximation.
+    edge while keeping detection performance on the attack           Chundawat et al. [28] introduced zero-shot unlearning with
+    categories that remain.                                          error-based noise optimization and the Anamnesis Index
+  • Our multi-teacher knowledge distillation (MT-KD) setup           metric for quality evaluation.
+    uses two teachers. The forgetting teacher is obtained               Collectively, recent studies have made steady progress on
+    by noise training the original pretrained model with             machine unlearning across model types and setups, mainly
+    error-maximizing perturbations aimed at the classes to           classifiers and generative models, with a focus on speed,
+    forget, which yields a strong forgetting signal. The             accuracy, and privacy. Yet several open issues remain: cut-
+    retention teacher is trained only on the retained dataset        ting the drop in performance during unlearning, making the
+    and provides clean guidance for the remaining classes.           unlearning pipeline secure from start to finish, and building
+    The student learns useful knowledge from the retention           general frameworks that comply with strict regulations [29],
+    teacher and follows the forgetting cues from the forgetting      [30]. These gaps show up across datasets and architectures and
+    teacher by adding loss terms on noise-perturbed samples          call for clearer evaluation and deployment practices.
+    and suppressing the logits of the target classes during
+    training. This design enables precise class-level forgetting
+                                                                     B. Intrusion Detection in IIoT Environments
+    without retraining from scratch, reduces compute and
+                                                                        IIoT networks face considerable challenges due to het-
+  1 Available at: https://www.unb.ca/cic/datasets/ids-2017.html      erogeneous and severely imbalanced data collected from
+  2 Available at: https://github.com/yungshenglu/USTC-TFC2016        diverse terminal devices, where data distributions are often
+6346                                                 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+non-independent and identically distributed with under-            approach works with common backbones, leaves the inference
+represented attack types. To address these challenges,             path unchanged, and does not require access to the original
+Shan et al. [31] proposed Clustered Federated Learning             data that must be removed, which suits privacy-sensitive
+that leverages dynamic focal loss and model clustering to          deployments. In practice, it adds only a small training-time
+enhance robustness against poisoning attacks. Hu et al. [32]       overhead while keeping test-time cost unchanged, and it pre-
+conducted a comprehensive survey on IIoT intelligence,             serves detection on retained classes while removing knowle

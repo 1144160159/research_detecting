@@ -1,0 +1,164 @@
+          Cease at the Ultimate Goodness: Towards Efficient Website Fingerprinting
+                    Defense via Iterative Mutual Information Minimization
+
+              Rong Wang† , Zhen Ling†∗ , Guangchi Liu† , Shaofeng Li† , Junzhou Luo†‡ and Xinwen Fu§
+                      † Southeast University, Email: {junowang, zhenling, gc-liu, shaofengli, jluo}@seu.edu.cn
+                                               ‡ Fuyao University of Science and Technology
+                                   § University of Massachusetts Lowell, Email: xinwen fu@uml.edu
+
+
+
+
+   Abstract—In response to growing online privacy threats, the              traffic obfuscation methods. Existing website fingerprinting
+Tor network offers essential protection against surveillance by             defenses can be broadly classified into two categories. The first
+routing traffic through a decentralized, encrypted infrastruc-              category comprises feature-morphing-based defenses [31],
+ture. However, Website Fingerprinting Attacks (WFA) present a
+formidable challenge to Tor’s anonymity. This paper introduces              [14], [25], [24], which aim to alter a website’s traffic profile
+F RUGAL, a traffic obfuscation method that leverages the mutual             to resemble a target website, thereby causing the classifier
+information (MI) reduction between website traffic and labels as            to misclassify the former as the latter. The second category
+an optimization goal, advancing a novel perspective for Website             includes feature-suppression-based defenses [36], [3], [4],
+Fingerprinting Defense (WFD). By strategically injecting dummy              [20], [13], which work by homogenizing the traffic features
+packets at positions within website traffic that contribute most to
+cumulative MI reduction, F RUGAL achieves notable performance               of all websites, rendering the classifier unable to differentiate
+compared to state-of-the-art (SOTA) defense mechanisms. It ef-              between them. While both categories have made progress,
+fectively reduces attack success rates (ASR) across diverse attack          challenges remain that limit their effectiveness and robustness
+models while maintaining minimal bandwidth overhead (BWO)                   in dynamic adversarial environments.
+and mitigating the impact of adversarial training. Extensive                   (C1) Attack Model Agnostic: Feature-morphing-based de-
+experiments validate the efficacy of F RUGAL across a compre-
+hensive set of scenarios, including closed-world, open-world, and           fense methods typically operate under the assumption that the
+real-world simulation settings. For example, in the closed-world            target attack model remains static and accessible, allowing
+setting, F RUGAL reduces the ASR of the DF model to 2.68%                   defensive strategies to adjust based on the attack model’s
+with a 30% BWO, substantially outperforming previous SOTA                   outputs. However, this reliance poses significant limitations
+defenses, such as Palette (11.54% with 87% BWO). When the                   when the attack model is either inaccessible or evolves con-
+BWO of F RUGAL is increased to a comparable level of 80%, the
+ASR further drops below 1%, demonstrating significant resilience            tinuously as adversaries adapt to countermeasures. Moreover,
+by remaining low at 9.42% even after adversarial training,                  these defense methods often exhibit poor generalization across
+compared to 20.27% for Palette. This work not only introduces a             different attack models, further restricting their effectiveness
+fresh perspective on WFD research but also establishes F RUGAL              in dynamic and diverse adversarial settings.
+as a robust and universal defense framework against WFA.                       (C2) Efficiency of Bandwidth Overhead: While feature-
+                         I. I NTRODUCTION                                   suppression-based methods offer universal protection by re-
+                                                                            ducing the Attack Success Rate (ASR) of various attack mod-
+   Tor is designed to protect the anonymity of user com-
+                                                                            els through homogenizing website features, they inevitably
+munications by routing their website traffic through globally
+                                                                            lead to excessive and uncontrollable Bandwidth Overhead
+distributed Tor nodes [10], [40], achieving decentralized and
+                                                                            (BWO). A defense mechanism capable of maximizing ASR
+encrypted communication. This setup helps conceal users’
+                                                                            reduction while adhering to predefined bandwidth limits re-
+online activities, making it challenging for others to track or
+                                                                            mains an unrealized goal. Such a solution is especially critical
+monitor users’ internet behavior. However, it is still vulnerable
+                                                                            in environments with varying bandwidth constraints, where
+to local eavesdroppers through Website Fingerprinting Attacks
+                                                                            efficiency and adaptability are paramount.
+(WFA) [37], [2], [1], [33]. By analyzing patterns in the size
+                                                                               (C3) Adversarial Training Resilience: Prior work [22]
+and direction of traffic packet traces—known as ‘website fin-
+                                                                            shows that despite reduced attack accuracy, defended traffic of-
+gerprints’—attackers can infer which specific website the user
+                                                                            ten retains high Mutual Information (MI) with original labels,
+is visiting. With recent advances in deep learning, these attacks
+                                                                            aiding website identification by attackers. This phenomenon,
+have posed a serious challenge to Tor’s privacy protections.
+   To address this challenge, Website Fingerprinting Defense                known as information leakage [22], highlights why many
+(WFD) techniques have been developed to counter WFA by                      defenses struggle to remain effective against adversarially
+disrupting an attacker’s ability to identify websites through               trained attack models. Adversarial training retrains attack
+                                                                            models on defended traffic, exploiting residual patterns that
+  * Corresponding author: Prof. Zhen Ling of Southeast University, China.   defenses cannot fully hide, thus weakening WFD effectiveness
+                                                                            in post-adversarial settings.
+Network and Distributed System Security (NDSS) Symposium 2026
+23-27 February 2026, San Diego, CA, USA                                        To address the aforementioned challenges, we propose F RU -
+ISBN 979-8-9919276-8-0                                                      GAL , a defense framework that shifts the focus from deceiving
+https://dx.doi.org/10.14722/ndss.2026.240786
+www.ndss-symposium.org
+specific attack models to fundamentally eliminating a web-
+site’s traffic fingerprint. Our approach centers on minimizing
+the MI between website traffic features and their corresponding
+labels, using MI reduction as the core optimization objective.
+From an information-theoretic perspective, reducing the MI
+between traffic features and labels is, by definition, equivalent
+to increasing the information entropy (uncertainty) of the
+labels conditioned on the traffic features. As a result, by
+maximizing MI reduction, our approach directly increases the
+label uncertainty with respect to the traffic features, thereby
+maximizing the attacker’s potential classification error. We
+model this process as a Markov Decision Process (MDP)
+and employ reinforcement learning (RL) to solve it. In WFD
+research, MI is frequently used to quantify the amount of
+information shared between website traffic and its original la-
+bels, making it a key metric for evaluating the effectiveness of
+WFD strategies. Most existing approaches focus on reducing
+the ASR as the primary objective, with MI treated only as a
+performance indicator. In contrast, F RUGAL is novel in directly
+optimizing for MI reduction, setting our approach apart from
+prior work.                                                                             Fig. 1. Threat Model of F RUGAL
+   F RUGAL addresses C1 by generating modified website
+traffic that minimizes MI with its original label, thereby
+                                                                        to 12.7% with just 30% BWO, substantially outperforming
+hindering attack models from accurately inferring labels. For a
+                                                                        previous SOTA defenses, such as Palette[36], which yields
+given website traffic trace, F RUGAL leverages a reinforcement
+                                                                        11.54% and 46.43% ASR for DF and RF, respectively, with
+learning algorithm to determine an efficient policy for injecting
+                                                                        87.17% BWO. When the BWO of F RUGAL is increased to
+dummy packets at key positions, maximizing MI reduction and
+                                                                        a comparable level of 80%, the ASR drops further (below
+achieving effective traffic obfuscation. Crucially, F RUGAL’s
+                                                                        2% for DF and 8.12% for RF), and remains robustly low
+emphasis on minimizing MI without relying on knowledge of
+                                                                        after adversarial training (9.42% for DF and 18.2% for RF),
+specific attack models ensures robust and adaptable protection
+                                                                        compared to 20.27% and 46.43% for Palette under the same
+against evolving threats.
+                                                                        conditions. In a more realistic real-world simulation, the
+   To tackle C2, F RUGAL performs dummy packet injection
+                                                                        effectiveness of F RUGAL is further confirmed, where its online
+iteratively. In each iteration, a small set of dummy packets is
+                                                                        implementation (F RUGAL-online) reduces the ASR of DF and
+injected to maximize cumulative MI reduction. By configuring
+                                                                        RF to just 4.69% and 14.1%, respectively, with 30% BWO.
+the iteration count as a hyperparameter, F RUGAL enables fine-
+grained control over bandwidth overhead, ensuring efficiency               In summary, with the introduction of F RUGAL, we aim to
+across diverse network conditions.                                      address the following research questions: RQ1: What does
+   Finally, to overcome C3, F RUGAL dynamically adjusts its             efficiently defended traffic that achieves (1) attack model
+dummy packet injection positions conditioned on the resulting           agnosticism, (2) bandwidth overhead efficiency, and (3) re-
+traffic patterns from previous steps. This adaptive strategy            silience against adversarial training look like? RQ2: How does
+ensures that the actor trained in F RUGAL consistently targets          F RUGAL ensure that these characteristics are effectively met?
+the most informative residual patterns within the traffic trace,        Our contributions are outlined as follows.
+effectively diminishing the ASR even for adversarially trained            • Novel WFD Research Perspective: To our knowledge,
+attack models.                                                              F RUGAL is the first WFD framework to leverage the
+   We implemented F RUGAL and conducted extensive exper-                    MI reduction between website traffic and corresponding
+iments using public WF datasets [37]. Our evaluation spans                  labels as an optimization target, providing a new direction
+closed-world, open-world, one-page settings, and real-world                 for advancing WFD research.
+simulations, including scenarios with adversarially trained               • Precise Bandwidth Overhead Control: F RUGAL is
+attack models. We benchmark F RUGAL against state-of-the-art                the first to introduce a method ensuring efficient WFD
+(SOTA) defenses, evaluating both its defensive effectiveness                under precise bandwidth overhead limits, enabling flexi-
+and bandwidth overhead (BWO). The results demonstrate that                  ble deployment across scenarios with diverse bandwidth
+F RUGAL consistently outperforms existing SOTA methods                      constraints.
+by achieving stronger defense performance with significantly              • Mitigation of Adversarial Training: We theoretically
+lower BWO, while also maintaining robustness against ad-                    demonstrate and implement an effective mechanism to
+versarial training. For instance, in the closed-world setting,              counter adversarial training, significantly enhancing the
+F RUGAL reduces the ASR of DF [37] to 2.68% and RF [35]                     robustness of F RUGAL.
+
+
+
+                                                                    2
+  •   State-of-the-Art Performance: Extensive experimental               Network (DDQN) [39], and Soft Actor-Critic (SAC) [15],
+      results demonstrate that traffic defended by F RUGAL ef-           neural networks are used as policy networks to approximate
+      fectively counters website fingerprinting attacks, achiev-         the agent’s strategy. These approaches are highly efficient for
+      ing state-of-the-art performance and establishing a new            decision-making in complex environments.
+      benchmark for WFD research.
+                                                                         C. Mutual Information
+                      II. BACKGROUND                                        Mutual information (MI) between two random variables x
+   In this section, we provide the necessary background on               and y, denoted as I(x; y), quantifies the amount of informa-
+website fingerprinting, deep reinforcement learning, and mu-             tion shared between them, effectively measuring how much
+tual information.                                                        knowledge one variable reveals about the other. Specifically,
+                                                                         I(x; y) can be expressed as:
+A. Website Fingerprinting
+                                                                                       I(x; y) = DKL (p(x, y)∥p(x)p(y))
+   To achieve online anonymity, the Tor network [10] randomly                                                                         (1)
+selects three volunteer nodes, designated as the guard node,                                   = H(y) − H(y | x).
+middle node, and exit node, to establish a circuit. In a circuit,        In Equation (1), I(x; y) is defined as the Kullback–Leibler
+each node can only view the preceding and following nodes.               (KL) divergence between the joint distribution p(x, y) and
+Through this circuit, user w

@@ -1,0 +1,1397 @@
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 1
+
+ Disentangled Dynamic Intrusion Detection
+ Chenyang Qiu, Guoshun Nan, Member, IEEE, Hongrui Xia, Zheng Weng, Xueting Wang, Meng
+ Shen, Member, IEEE, Xiaofeng Tao, Senior Member, IEEE, Jun Liu
+ P1
+
+ Abstract—Network-based intrusion detection system (NIDS) Stealing Information Administrator Denial of Service
+ monitors network traffic for malicious activities, forming the
+ ②
+ frontline defense against increasing attacks over information
+ infrastructures. Although promising, our quantitative analysis ③
+
+ shows that existing methods perform inconsistently in declaring MITM DOS
+ ×
+ ①
+ various known or unknown attacks (e.g., 31% F1 for the
+arXiv:2307.11079v2 [cs.CR] 14 Dec 2024
+
+ Backdoor and 93% F1 for DDoS by a GCN-based state-of-theart method), and perform poorly in few-shot intrusion detections
+ (e.g., dramatically drops from 91% to 36% in 3D-IDS, and
+ NIDS
+ drops from 89% to 20% in E-GraphSAGE). We reveal that
+ Read-only Read-only
+ the underlying cause is entangled distributions of flow features.
+ This motivates us to propose DIDS-MFL, a disentangled in-
+ Fig. 1. Illustration of two network attacks DoS and MITM. DoS floods
+ trusion detection method to handle various intrusion detection
+ the target with massive traffic to overwhelm an online service, and MITM Read-o
+ scenarios. DIDS-MFL involves two key components to address eavesdrops on the communication between two targets and steals private
+ the performance inconsistency and few-shot detection perfor- information. An NIDS can be easily deployed in a single location to collect
+ mance deterioration, respectively: a double Disentanglement- statistical features and alert administrators for potential threats.
+ based Intrusion Detection System (DIDS) and a plug-and-play
+ Multi-scale Few-shot Learning-based (MFL) intrusion detection
+ module. Specifically, the proposed DIDS first disentangles traffic
+ NAUTHORIZED attempts like password cracking [1],
+ features by a non-parameterized optimization based on mutual
+ information, automatically differentiating tens and hundreds of
+ complex features of various attacks. Such differentiated features
+ U man-in-the-middle attacks (MITM) [2], and denial-ofservice (DoS) [3] are known as the network attacks [4],
+ will be fed into a memory model to generate representations,
+ which are further disentangled to highlight the attack-specific targeting an organization’s digital assets with the intention
+ features. Our DIDS additionally uses a novel graph diffusion of data leakage or the execution of harmful deeds. These
+ method that dynamically fuses the network topology for spatial- attacks are frequently perceived as network anomalies [5] due
+ temporal aggregation in evolving data streams. Furthermore, the to their distinct characteristics that differ from standard traffic
+ proposed MFL involves an alternating optimization framework patterns. An alarming statistic [6] notes that 31% companies
+ to address the entangled representations in few-shot traffic
+ threats with rigorous derivation. MFL first captures multi- across the globe experience a daily average of at least one
+ scale information in latent space to distinguish attack-specific cyber attack, a frequency amplified by the proliferation of
+ information and then optimizes the disentanglement term to mobile online business endeavors. The situations necessitate an
+ highlight the attack-specific information. Finally, MFL fuses and intelligent system deployment to assist network administrators
+ alternately solves them in an end-to-end way. To the best of in the automated segregation of these anomalies from the vast
+ our knowledge, DIDS-MFL takes the first step toward dynamic
+ intrusion detection in practice under various scenarios. Equipped sea of internet traffic. A network-based intrusion detection
+ with DIDS-MFL, administrators can effectively identify various system (NIDS) [7], which monitors network traffic and identiattacks in encrypted traffic, including known, unknown ones, and fies malicious activities, facilitates administrators to form the
+ the few-shot threats that are not easily detected. Experiments frontline defense against increasing attacks over information
+ show the superiority of our proposed DIDS-MFL. For few- infrastructures (e.g., sensors and servers). Hence, NIDS is
+ shot NIDS, our DIDS-MFL achieves a 73.59% - 139.53%
+ improvement in average F1-score over 11 baselines and shows widely applied in many information systems of governments
+ versatility in multiple baselines and multiple tasks. Our code is and e-commercial business sectors [8]. Figure 1 demonstrates
+ available at https://github.com/qcydm/DIDS-MFL how NIDS builds a frontline defense against two network
+ Index Terms—Intrusion Detection, Network Security. attacks, protecting systems from potential cyber threats.
+ Existing NIDS can be categorized into two types, i.e.,
+ signature-based ones [9]–[11] and anomaly-based ones [12]–
+ I. I NTRODUCTION
+ [14]. The former detects network attacks based on pre-defined
+ patterns or known malicious sequences stored in a database,
+ C. Qiu, G. Nan, H. Xia, Z. Weng, X. Wang, X. Tao were with National
+ Engineering Research Center for Mobile Network Technologies, Beijing such as the number of bytes in traffic. These patterns in the
+ University of Posts and Telecommunications, Beijing, 100876, China. NIDS are referred to as signatures. The latter anomaly-based
+ E-mail: {cyqiu, nanguo2021, kphchrls, wengzheng, wxtyuki, taoxf} NIDS learns to track attacks with machine learning techniques.
+ @bupt.edu.cn
+ M. Shen was with Beijing Institute of Technology, Beijing, 100081, China. Early statistical approaches [2], [3], such as Support Vector
+ E-mail: shenmeng@bit.edu.cn Machine (SVM), Logistic Regression (LR), and Decision
+ J. Liu was with Singapore University of Technology and Design, Singapore. Tree (DT), rely on carefully designed handcrafted features
+ E-mail: jun_liu@sutd.edu.sg
+ Corresponding author: G. Nan (email: nanguo2021@bupt.edu.cn). to learn classification boundaries. Recent deep learning-based
+ Manuscript received April 19, 2021; revised August 16, 2021. methods [15], [16] use millions of neural parameters to mine
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 2
+
+ 100 0.5 0.5
+ tcp.checksum tcp.checksum
+ 75 0.4 0.4
+
+ Proportion
+ http.response http.response
+
+ Proportion
+ F1-Score
+ 0.3 update-time 0.3 update-time
+ 50 40 35 0.2 length 0.2 length
+ duration duration
+ 25 14 9 0.1 0.1
+ 0 0.0 0.0
+ DDoS DoS MITM Injection 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0
+ (a) F1-Score (b) Normalized feature distribution of MITM (c) Normalized feature distributions of DDoS
+ attacks attacks
+
+ 100 93 0 1.0 0 1.00
+ 81 5 5 0.75
+ 75
+
+ Correlation
+
+ Correlation
+ 0.5
+F1-Score
+
+ 10 10 0.50
+ 50 15
+ 0.0
+ 15
+ 30 20 20 0.25
+ 25 18 25 25 0.00
+ 0.5
+ 0 DDoS MITM Backdoor DoS
+ 30
+ 0 5 10 15 20 25 30
+ 30
+ 0 5 10 15 20 25 30
+ 0.25
+
+ (d) F1-Score (e) Representation correlation map of MITM (f) Representation correlation map of DDoS
+ attacks attacks
+
+Fig. 2. Quantitative analysis on CIC-TON-IOT. (a) Comparisons of detecting various attacks, which are regarded as an unknown type in evaluation. Specifically,
+we train an SVM model without using the data points of these attacks, and evaluate the instances of these attacks on the test set. (b) and (c) show the feature
+distributions of two attacks, MITM and DDoS, respectively. (d) Comparisons of detecting various known attacks on the previous state-of-the-art deep learning
+model E-GraphSAGE, (e) and (f) are correlation maps of representations of the two attacks, where the representations are generated by E-GraphSAGE.
+
+ 0.65
+ instance number, referred to as few-shot traffic threats.
+ 80 0.60 However, our empirical observations reveal that the NIDS
+ F1-Score (%)
+
+ 0.55
+ 60 DIDS methods have dramatic performance deterioration in few-
+ F1 Score
+
+ Normal size 0.50 MBase
+ Few-shot
+ 40 0.45 BSNet shot scenarios, as shown in Fig. 3 (a), e.g., our previous
+ 0.40
+ 20 0.35
+ 0.30 0
+ work DIDS [20] dramatically drops from 91.57% under
+ 0 E-GraphSAGE EULER TGN DIDS 2 4
+ Repetition
+ 6 8
+ supervised learning setting to 36.12% under the few-
+ (a) (b)
+ shot learning setting over the CIC-ToN-IoT dataset, and
+Fig. 3. (a) Performance comparisons among different intrusion detection similarly, EURLER and E-GraphSAGE have an average
+methods with normal-size traffic and few-shot traffic. (b) F1-score compar- F1-scores lower to 36.26% under the few-shot learning
+isons between DIDS few-shot learning and two SOTA few-shot learning
+baselines. We repeat the above comparisons 10 times. setting.
+ For the first challenge, we depict feature distributions and
+the knowledge underlying the training samples, and have
+ visualize the representations to investigate the underlying
+achieved great success in automatically modeling complex
+ cause of why existing methods perform inconsistently for varcorrelations for tens and thousands of features. The state-ofious attacks, including unknown ones and known ones. Figure
+the-art E-GraphSAGE [17] employs graph convolution net-
+ 2 (b) and (c) depict statistical distributions of the two unknown
+works (GCNs) to learn the feature representations for better
+ attacks for the SVM-based model during testing. We observe
+prediction.
+ that feature distributions of MITM attacks are entangled, while
+ Although promising, existing NIDS approaches face two
+ the ones of DDoS are more separated. It can be inferred that
+challenges in detecting traffic threats accurately:
+ statistical distributions of traffic features are one of the main
+ • Challenge 1. The existing NIDS methods yield ex- underlying causes of performance variations. Separated distritremely inconsistent results in identifying distinct at- butions benefit the unknown attack identification, while entantacks. For statistical methods, Figure 2 (a) demonstrates gled ones are indistinguishable and unable to help the NIDS
+ that the detection performance of an SVM-based method to make accurate decisions. We refer to such a phenomenon as
+ [18] for an unknown attack 1 can be as low as 9% in the entangled distribution of statistical features. To analyze
+ terms of F1 on the CIC-ToN-IOT [19] dataset. While the the reason for performance variations of acknowledged attacks
+ model achieves 40% F1 in declaring another unknown during testing, we use Pearson correlation heat map [21] to
+ threat (DDoS) on the same benchmark. Regarding the visualize the representations of MITM and DDoS respectively,
+ deep learning-based methods, Figure 2 (d) demonstrates where the representations are generated by the encoder of Ethat E-GraphSAGE achieves a lower than 20% F1 score GraphSAGE. Figure 2 (e) and Figure 2 (f) demonstrate the two
+ for MITM attacks and a higher than 90% F1 score for correlation maps. Interestingly, we observe that the coefficients
+ DDoS on the CTC-ToN-IOT dataset. of MITM representations are much larger than those of DDoS.
+ • Challenge 2. The existing NIDS approaches struggle to We further compare MITM with other attacks, including
+ detect few-shot traffic threats accurately. In practical Backdoor and Dos, and find those high coefficients in the
+ scenarios, the strengthening of defensive measures and representation will lead to lower intrusion detection scores. We
+ the consequent escalating trend of cyber threats have in- refer to such a phenomenon as the entangled distribution of
+ evitably caused the rise of new-type attacks with a limited representational features, which can be considered as another
+ 1 The unknown attacks referred to in this paper are never appeared new type main cause for the degradation of attack classification.
+of attacks in training set For the second challenge, we observe that the NIDS ap-
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 3
+
+ 40
+ mainly focus on object-level representation learning, and
+ 80 hence they are hardly directly applied to intrusion detection to
+ 20 60
+ tackle this challenge.
+ 40
+ 0 20
+ Second, the difficulties of Q2 lie in two aspects: 1. tackling
+ 0 Q2 involves two optimization terms, a disentanglement term,
+ 20
+ 20 and a latent space term. How to optimize them into an end-to-
+ 40
+ 40
+ 60
+ end framework is under-explored in NIDS and few-shot learn-
+ - 60 - 40 - 20 0 20 40 60 - 100 - 75 - 50 - 25 0 25 50 75 100 ing. 2. As for latent space optimization, existing similarity-
+ (a) The t-SNE of DIDS (b) The t-SNE of BSNet based methods [27], [31], [32] mainly focused on utilizing the
+ original-scale information of representations, while ignoring
+ 0 20 40 60 80 100120 0 20 40 60 80 100120
+ 0 1.0 0 1.0 their multi-scale information to help few-shot traffic separated
+ 20 20 in latent space.
+Feature Index
+
+ Feature Index
+
+ 40 0.5 40 0.5
+ To address the above two questions, we propose a
+ 60 0.0 60 0.0 novel model called Disentangled dynamic Intrusion Detection
+ 80 80 System with Multi-scale Few-shot Learning (DIDS-MFL).
+ 100 0.5 100 0.5
+ Specifically, DIDS-MFL has two critical components: DIDS
+ 120 120
+ and MFL. The former DIDS disentangles the statistical flow
+ (c) The correlation map of DIDS (d) The correlation map of BSNet features with a non-parametric optimization, aiming to auto-
+Fig. 4. The correlation map and the t-SNE visualization of representations matically separate entangled distributions for representation
+generated by DIDS and BSNet on CIC-ToN-IoT dataset. learning. We refer to this step as statistical disentanglement.
+ Then DIDS further learns to differentiate the representations
+proaches still perform poorly when combining the state-of- by a regularization function, aiming to highlight the salient
+the-art few-shot learning methods, as shown in Fig. 3 (b). features for specific attacks with smaller coefficients. We refer
+For the meta-learning-based MBase [22], we attribute the poor to this step as representational disentanglement. DIDS finally
+performance to the limited anomaly types in network traffic. introduces a novel graph diffusion module that dynamically
+Effective meta-learning approaches typically necessitate vast fuses the graph topology in evolving traffic. The latter MFL
+types of few-shot anomalies, which are more aligned with is a flexible plug-and-play module for few-shot detection
+the field of computer vision and natural language processing matching multiple NIDS baselines. We first optimize the
+[23]–[26]. Therefore, we focus on the similarity-based method multi-scale traffic representations in latent space to distinguish
+BSNet [27] and uncover why BSNet outperforms DIDS. We attack-specific information. Then we propose an elementdepict the t-SNE visualizations of their respective learned wise disentanglement term to highlight the attack-specific
+representations. As shown in Fig. 4(a) (b), we observe that information. Finally, we alternately solve them in an end-tothe representations of BSNet in different attack types are more end framework.
+separated in the latent space. It can be inferred as one of the Extensive experiments on five benchmarks show the supemain causes of higher F1 scores in BSNet. Following this riority of our DIDS-MFL. The main contributions are:
+thread, we further depict their representation correlations via
+correlation heatmaps. We have found that the representations • We propose DIDS-MFL, aiming to mitigate the entanof BSNet are more entangled than DIDS as shown in Fig. 4(c) gled distributions of flow features for NIDS in various
+(d). Aligning with the disentanglement studies in Challenge 1, practical scenarios, e.g., known, few-shot, and unknown
+we attribute the main obstacle to the performance improvement attacks 2 . To the best of our knowledge, we are the first
+of BSNet to the entangled representations. to quantitatively analyze such an interesting problem and
+ In light of the discussions, we raise two critical questions: empirically reveal the underlying cause in the intrusion
+ detection field.
+ • Q1: How can an intrusion detection model automatically
+ • As for DIDS, we present a double disentanglement
+ address the first challenges, i.e., two entangled distribuscheme for differentiating the general features of varitions, to benefit the detection of both unknown and known
+ ous attacks and highlighting the attack-specific features,
+ attacks
+ respectively. We additionally introduce a novel graph
+ • Q2: Can a few-shot intrusion detection method automatdiffusion method for dynamic feature aggregation.
+ ically learn the representations as separated in latent
+ • As for MFL, we propose a fusion-based framework
+ space, simultaneously as disentangled among represenby capturing multi-scale information and disentangling
+ tation elements?
+ representations. We alternately solve them with rigorous
+ Achieving Q1 is challenging. To mitigate the issue of the
+ derivation for few-shot intrusion detection. As a plugfirst entangled distribution, we need to differentiate tens and
+ and-play module, MFL also shows versatility in multiple
+thousands of features involved in real-time network traffic,
+ baselines and downstream tasks.
+without prior knowledge of the statistical distributions. Such a
+ • Extensive quantitative and qualitative experiments on varproblem is largely under-explored in the field of NIDS. For the
+ ious benchmarks demonstrate the effectiveness of DIDSsecond entangled distribution, there are some remotely related
+methods [28]–[30] in other fields, including computer vision 2 More details on the unknown attack detection ability are available in
+and natural language processing. However, these approaches Appendix 14.1.
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 4
+
+ MFL and provide some helpful insights for effective factor-wise message passing for better node representations.
+ NIDS in various practical scenarios. While our DIDS uses a double disentanglement method, which
+ first disentangles the statistical features via non-parametric
+ II. RELATED WORK optimization, and then learns to highlight the attack-specific
+A. Network Intrusion Detection System features with a regularization.
+ Existing NIDS can be classified into two groups, i.e.,
+signature-based ones [9]–[11] and anomaly-based ones [12]– C. Dynamic Graph Convolution Networks
+[14], [33]. Signature-based intrusion detection systems (IDS)
+ Dynamic graph convolution networks (GCNs) focus on
+rely on identifying known attack patterns or signatures. These
+ evolving graph streams. There is a line of early studies
+systems are adept at recognizing established threats, where
+ in GCNs on dynamic graphs, which incorporate temporal
+the attack signatures are predefined, employing rule sets to
+ information into graphs. These methods can be categorized
+match against network traffic for indicative malicious acinto the spatio-temporal decoupled ones [39], [53], [54] and
+tivities. However, their dependency on signature databases
+ the spatio-temporal coupled ones [40], [55]–[57]. The former
+poses a limitation, as they are typically ineffective against
+ employs two separate modules to capture temporal and spatial
+novel or zero-day attacks that do not yet have a defined
+ information, e.g., DynGCN [58] performs spatial and temporal
+signature. In contrast, the anomaly-based ones do not rely on
+ convolutions interleaved, updating model parameters to adapt
+prior knowledge of attack signatures. They leverage machine
+ to new graph snapshots, DIDA [59] Handles spatio-temporal
+learning or statistical techniques to model normal network
+ distribution shifts by discovering invariant patterns and using
+behavior and flag deviations as potential threats. Anomaly
+ intervention mechanisms to eliminate spurious impacts. The
+detection holds the advantage of identifying unknown attacks
+ latter incorporates spatial-temporal dependencies by proposing
+and adapting to new threat patterns. The anomaly-based ones
+ a synchronous modeling mechanism, e.g., AST-GCN [60]
+involve statistical methods [2], [3] and deep learning-based
+ adapts the graph structure and convolutional filters based on
+ones [15], [16]. Early deep learning studies model the traffic
+ the temporal context to capture the evolving relationships
+as independent sequences [34]–[37]. Recent popular studies
+ in dynamic graphs, TD-GCN [61] uses temporal difference
+rely on GCN to aggregate traffic information [38]–[40]. Most
+ learning to update spatial-temporal graph convolutional filters,
+related to our work is Euler [41], which builds a series of static
+ capturing the changes in graph structure and node states over
+graphs based on traffic flow and then performs information
+ time. Our DIDS is mainly inspired by the GIND [56], which
+aggregation. Our DIDS differs from the above methods in
+ adaptively aggregates information via a non-linear diffusion
+two aspects: 1) We build dynamic graphs rather than static
+ method. The key difference between our GCN approach and
+ones, and such a dynamic aggregation can capture fine-grained
+ GIND is: we introduce the non-linear graph diffusion method
+traffic features for attack detection. Furthermore, we fuse
+ into a multi-layer graph that considers the network topology
+the network layer information into our graph aggregation.
+ for dynamic intrusion detection.
+2) We introduce a double disentanglement scheme, including
+statistical disentanglement and representational one, to benefit
+the detection of both known and unknown attacks. D. Few-shot Learning
+ Few-shot learning is a machine learning paradigm designed
+B. Disentangled Representation Learning to enable a model to learn from a small number of training
+ Disentanglement aims to learn representations that separate instances and generalize effectively to unseen data. The existthe underlying explanatory factors responsible for variation in ing few-shot learning methods can be divided into two catethe data. Previous studies [42]–[45] focus on the generative gories: meta-learning-based ones [62]–[64], including metamodels by employing constraints on the loss functions, such learning-based NIDS approaches [65]–[68], and similarityas β-VAE [46] modifying the VAE framework to empha- based ones. Meta-learning-based methods focus on learning
+size the independence of latent variables. Beta-VAE achieves a model that can adapt to new tasks with limited data. These
+disentanglement by introducing a trade-off term between re- methods often involve a meta-training phase where the model
+construction and KL divergence, while FactorVAE [47] in- learns to learn from a variety of tasks, followed by a metatroduces a total correlation penalty. CausalVAE [48] takes a testing phase where the model rapidly tunes to a new task.
+significant step by integrating causal reasoning, allowing for In contrast, the similarity-based ones rely on measuring the
+interventions in the generative process. Disentangled Graph similarity or distance between the query instances and the
+Neural Networks are another active area, where methods aim support set to make predictions without necessitating vast
+to learn independent node representations decoupled from the types of few-shot samples. The similarity-based ones can also
+graph structure, e.g., GD-GAN employs a GAN framework be grouped into augmentation-based ones [69]–[73], metric
+to disentangle the latent factors of variation in graph data, learning-based ones [32], [74]–[77], and other similarity-based
+allowing for controllable generation of new graph structures few-shot learning methods [78]–[81]. Recent popular few-shot
+and node features. Some recent approaches [49]–[52] capture learning methods mainly focused on utilizing multiple learning
+the intrinsic factors in graph-structured data. Most related metrics, or prototype completion. The most related to us is
+to our work is DisenLink [52], which disentangled the BSNet [27]. Ours differs from it in two aspects: first, we
+original features into a fixed number of factors, with selective emphasize the importance of preserving multi-scale intrinsic
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 5
+
+representation information, rather than optimizing the original- C. Problem Formulation
+scale information; second, we propose a joint optimization 1) Dynamic Traffic Intrusion Detection: We first define the
+scheme to generate separated and disentangled representations devices as nodes and the communications with timestamps
+to make few-shot threats distinguishable. between any pair of devices as edges. We use T to represent
+ Finally, this work is an extension version form [20]. In [20], the maximum timestamp. An Edge sequence E is denoted by
+we address the performance inconsistency issue caused by T
+ {E t }t=1 , where each E t represents a network traffic. Also,
+entangled features on sufficient training data. More practical after each edge, there is a corresponding multi-layer graph,
+scenarios is collecting attack traffic with limited instances. It is then the corresponding multi-layer graph stream G takes the
+more challenging compared to [20] with involving double op- T
+ form of {G t }t=1 , where each G t = (V t , E t ) represents the
+timization goals. To this end, this paper proposes an alternating multi-layer graph at timestamp t. A multi-layer adjacency
+optimization framework MFL to address the entangled repre- matrix At ∈ Rm×n represents the edges in E t , where
+sentations in few-shot traffic threats with rigorous derivation. ∀(i, j, w) ∈ E t , At [i][j] = wij and wij is the weight of the
+The proposed MFL is also a plug-and-play few-shot intrusion matrix. The goal of intrusion detection is to learn to predict the
+detection module that is compatible with other NIDS methods. edge E t as a benign traffic or an attack in binary classification,
+ and a specific type under the multi-classification.
+ III. PRELIMINARIES 2) Few-shot Intrusion Detection: Given a few-shot intrusion detection task T = {Ctr , Cte }, where Ctr is a training set
+A. Multi-Layer Graphs with few-shot traffic, and Cte is a test set. Our goal is to design
+ To model the sophisticated traffic network topology, we a few-shot module to accurately classify the samples in Cte by
+formally define the multi-layer graphs. First, we consider a few-shot learning on Ctr . Ctr includes two key components,
+single-layer network modeled by a graph G = (V, E, ω), support set and query set. The former provides the few-shot
+where V is the set of nodes and E ⊂ V × V is the set of traffic information to the model, and the latter contains new
+edges. Here ω : V × V 7→ R is an edge weight function such instances for model evaluation and optimization. The query
+that each edge euv ∈ E has a weight ωuv . Then the multi-layer set can be sampled from the support set for the traffic-limited
+graph can be defined as follows: scenarios. Specifically, we conduct N -way K-shot intrusion
+ detection, N -class traffic with K samples, i.e., 5, in the support
+   set. The few-shot intrusion detection model aims to conduct
+ A(1,1) ··· A(1,k) ··· A(1,m) accurate detection in the query set, while the only available
+ .. .. .. .. ..
+ reference is the few-shot traffic in the support set.
+  
+ 
+  . . . . . 
+ 
+ A= A
+  (l,1) ··· A(k,k) ··· A(l,m) 
+ . (1)
+  .. .. .. .. ..  IV. MODEL
+  . . . . . 
+ A(m,1) ··· A(m,k) ··· A(m,m) In this section, we present the DIDS-MFL, which consists
+ of five main modules. Figure 5 shows the architecture of
+where Ai,i refers to the intra-layer adjacency matrix and
+ our proposed model. Next, we dive into the details of these
+Ai,j (i ̸= j) refers to cross-layer adjacency matrix.
+ modules.
+
+B. Edge Construction A. Statistical Disentanglement
+ We have constructed a multi-layer dynamic graph by defin- As we discussed in Section I, statistical distributions of
+ing the devices as nodes and the communications between traffic features are one of the main underlying causes of
+two devices as edges. To construct the edge relationships in performance variations. i.e., separated distributions benefit
+the multi-layer graph, we first transform the Netflow data to the unknown attack identification, while entangled ones are
+edges by the following definition: indistinguishable and thus unable to help the NIDS to make
+ accurate decisions. Therefore, our aim is there to disentangle
+ Eij (t) = (vi , li , vj , lj , t, ∆t, Fij (t)). (2)
+ the traffic features and make them distinguishable.
+First, we concatenate the source IP and source port in the To separate the features of traffic without any prior knowloriginal traffic flows as the source identity for the device i. edge, we formulate the differentiation as a constrained non-
+Similarly, we can obtain the destination identity for the device parametric optimization problem and approximate the optimal
+j. We denote vi and vj as the source and destination nodes results by solving the Satisfiability Modulo Theory (SMT)
+respectively. Secondly, li denotes the layer of device i, and [82]. We perform a min-max normalization on the edge feature
+li = 0 indicates that i is a terminal device such as a PC, a Fij (t). For convenience, we denote the normalized edge
+server, or an IoT device. Here li = 1 indicates that i is an feature as F, and Fi is the i-th normalized element.
+intermediate device such as a router in the communication We need a weight matrix w to generate the disentangled
+link. Specifically, we assign devices with the router address representation of F. Our key optimization objectives are to
+192.168.0.1 or with many stable connections in layer 1. Then minimize the mutual information between the elements of
+t refers to the timestamp of traffic and ∆t indicates the traffic traffic features and also bound the range of w when we
+duration time. Finally, Fij (t) is the traffic features. perform aggregation. We start by constraining the weight
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 6
+
+Fig. 5. Overview of the proposed DIDS-MFL, which consists of five modules. 1) Edge construction module builds edges based on traffic flow. 2) Statistical
+disentanglement module differentiates values in vectors to facilitate the identification of various attacks. 3) Representational disentanglement module learns
+to highlight attack-specific features. 4) Multi-Layer graph diffusion module fuses the network topology for better aggregation over evolving dynamic traffic.
+5) Multi-scale few-shot learning module aims to few-shot traffic threats detection. Finally, traffic classifier takes the traffic representation as an input to yield
+the detection results. DIDS takes the first four steps and flows through the yellow arrows to the classifier, while DIDS-MFL takes the five steps by flowing
+through the blue arrows to the classifier.
+
+matrix w with the range of the superposition function as subjects to:
+follows: 
+  wi ∈ [Wmin , Wmax ]
+ N  PN
+ 
+ X
+ i=1 wi ni ≤ B
+ Wmin ≤ wi ≤ Wmax (1 ≤ i ≤ N ), wi Fi ≤ B, (3) (7)
+ w F ≤ wi+1 F(i+1)
+  i i
+ 
+ i=1 
+ 2wi Fi ≤ wi−1 Fi−1 + wi+1 Fi+1 .
+where Wmin , Wmax and B are constants, N is the edge feature
+dimension. We then constrain the order-preserving properties The subjection in Eq. 7 ensures variants’ ranges and the orderof generated representations: preserving property of generated representation. It also ensures
+ symbols when removing the absolute value sign. The detailed
+ wi Fi ≤ wi+1 Fi+1 (1 ≤ i ≤ N − 1). (4) explanation of why Eq. 6 can generate the disentangled
+ representation is available in Apeendix 11.
+ Finally, we maximize the distance between components in Specifically, we employ Eq. 6 as an optimization objective,
+the vector w, consequently minimizing the mutual information i.e., loss function, and utilize Adam optimizer to solve it. Then
+between each two feature elements. In this way, we can we can generate the disentangled edge representation hi,j ,
+disentangle the distribution of element-wised features. The which can be expressed as hi,j = w ⊙ F, where the symbol
+optimization objective can be expressed as follows: ⊙ represents the Hadamard product.
+ Equipped with the above non-parametric optimization, we
+ can differentiate tens and hundreds of complex features of various attacks, mitigating the entangled distribution of statistical
+ e = arg max(wN FN − w1 F1 −
+ w
+ features. Such statistically disentangled features facilitate our
+ N −1
+ X (5) model to be more sensitive to various attacks.
+ |2wi Fi − wi+1 Fi+1 − wi−1 Fi−1 |).
+ i=2
+ B. Representational Disentanglement
+We are unable to determine the convexity of the optimization
+object due to its closed form. Therefore, we transform the So far we have constructed edges and statistically differenabove problem into an SMT problem with an optimization tiated the features of traffic flows hi,j = w ⊙ F. This module
+objective (6) and a subjection (7) to approximate the optimal generates contextualized node representations X from edge
+results. representations hi,j by using the temporal information. This
+ involves three steps:
+ 1) Generating updating messages: For an incoming traffic
+ e = arg max(wN FN − w1 F1 +
+ w flow, we will build an edge or update the corresponding
+ N −1
+ edge, which may lead to a dramatic change in the node
+ X (6) representations involved in this interaction. We can update
+ 2wi Fi − wi−1 Fi−1 − wi+1 Fi+1 ),
+ i=2
+ the node representations by utilizing this change. Therefore,
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 7
+
+we name the abrupt change an updating message and denote C. Multi-Layer Graph Diffusion
+it as c(t). Specifically, we generate c(t) by incorporating So far, we have generated the dynamic disentangled node
+historical memory and disentangled edge representation hi,j . representations with temporal information. For further fusing
+The messages of node i and j are as follows: the multi-layer topological structure information, we propose
+ ci (t) = Msg mi t− , mj t− , t, ∆t, li , lj , hi,j ,
+   
+ (8) a multi-layer graph diffusion module. Please note that we
+ −
+  −
+   still preserve the disentangled property by the following cuscj (t) = Msg mj t , mi t , t, ∆t, li , lj , hi,j , (9)
+ tomized designs.
+where hi,j is the disentangled edge representation. ∆t is the We utilize the following graph diffusion method to fuse the
+edge duration time, li , lj is the layer marks of edge, mi (t− ) topological information in evolving graph streams, which can
+is the historical memory of the two interacting nodes, where capture the fine-grained spatial-temporal coupled information.
+t− is a historical time point, compared to the existing time The previous dynamic intrusion detection methods may lose
+point t, Msg is a learnable function, and we use RNN. The this information in separated time gaps, due to the employed
+initial memory mi (0) is 0, ∀i ∈ V . Specifically, RNN aims time-window or snapshots-based methods. More discussions
+to generate the new memory message c(t) combining the on the ‘dynamic’ and superiority of the proposed graph
+historical memory m(t− ) and disentangled representation hij diffusion approach compared to the previous methods, are
+by learnable weight matrices and gating mechanism. available in Appendix 14.2.
+ 
+ 2) Updating node memory: We update the node memory ∂t X = F (X, Θ)
+ (12)
+by merging the latest message with the historical memory and X(0) = 0,
+then encode the merging information, which can be expressed
+ where F is a matrix–valued nonlinear function conditioned
+as follows:
+ on graph G, and Θ is the tensor of trainable parameters. The
+ mi (t) = Mem ci (t), mi t− ,
+ 
+ (10) above Eq. 12 establishes the foundation for spatial-temporal
+ coupled information modeling.
+where Mem is an encoder, and here we use GRU. We similarly Specifically, we aim to amplify the important dimensions
+update the memory of node j via (10). Specifically, GRU of disentangled representations and depress the influence of
+introduces Reset Gate and Update Gate to better generate trivial feature elements in the diffusion process. To formulate
+the updated node memory mi (t) by fusing historical memory this process, we consider PM (PeronaMalik) diffusion [83], a
+mi (t− ) and new memory message ci (t). GRU considers both type of nonlinear filtering. It can be expressed as:
+long-term and short-term dependencies, thus mitigating the  ∂x(u,t)
+vanishing gradient issue in temporal models. = div[g(|∇x(u, t)|)∇x(u, t)]
+ ∂t (13)
+ x(u, 0) = 0,
+ 3) Generating second disentangled node representations:
+We can generate the node representation by utilizing the where div is the divergence operator, ∇ is the gradient
+updated memory in (10), and the representation of node i operator, and g is a function inversely proportional to the
+in time t can be expressed as xi (t) = xi (t− ) + mi (t), absolute value of the gradient.
+where xi (t− ) is the historical representation of node i. In this Before formally formulating the multi-layer graph diffusion,
+way, we obtain the dynamic node representations of traffic we propose the following spatial-temporal influence coefficient
+in an evolving time flow. The representation of node j can sij ∈ S between nodes i,j in tij time. The coefficient
+also be generated in a similar way. The initial value of node matrix considers the information changes over spatial-temporal
+representations X(0) is 0. coupled traffic data. Specifically, different layers and topology
+ We aim to preserve the disentangled property in node structures over traffic networks and the traffic feature interacrepresentations. However, the update operations above may tions at different times will influence the node representations
+entangle them at the element level again. Therefore, we pro- dynamically:
+pose the second representational disentanglement, which aims
+to highlight the attack-specific features in node representations sij = f (li ||lj ||ϕ(t − tij )), (14)
+in the following end-to-end manner. It also ensures that the  
+element-wised representations are close to orthogonal. f (x) = W(2) · ReLU W(1) x , (15)
+
+ 1 2 where || is a concatenate operator, ϕ(·) is a generic time
+ ⊤
+ LDis = X(t)X(t− ) − I . (11) encoder [84] to generate temporal representations, W(1) and
+ 2 F
+ W(2) are the parameters of the first and second layer MLP.
+ The above regularization encourages the model to learn Now we formally propose the multi-layer graph diffusion
+smaller coefficients between every two elements of node rep- module. We first define a differential operator on the multiresentations. Such representations can be more differentiated. layer graph, aiming to transfer the above continuous PM
+As the module is supervised by the signal of a specific attack, diffusion in Eq. 13 to multi-layer graphs. As known from
+it can learn to highlight the attack-specific features, so as to previous literature [85], the gradient operator corresponds
+improve the detection accuracy, as discussed in Section I. By to the instance matrix M, while the divergence operator
+doing so, we are able to mitigate the entangled distribution of corresponds to the matrix M⊤ , and we can compute the matrix
+representational features as mentioned at the beginning. M by the equation MT M = D − A, where D is the diagonal
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 8
+
+matrix. Then our novel multi-layer diffusion can be expressed between each sample pair, thus benefiting the distinction of
+as: few-shot traffic threats.
+ We first focus on the original representations Z to generate
+ ∂Xt = −M⊤ σ(MXK⊤ )S MXK⊤ K,
+ 
+ (16) a coefficient matrix in the following formulation:
+where K is a transformation matrix, S is the structure-temporal min = ∥Z − ZH∥2F + λ1 ∥H∥2F , s.t.diag(H) = 0, (21)
+ H
+influence coefficients calculated in Eq. 14 and σ(·) represents
+the function exp(−| · |). The solution to equation 16 can be where | · |2F is the Frobenius matrix norm (F-norm) and
+expressed as: diag(H) denotes the diagonal entries of H. H can be directly
+ Z t+∆t derived by solving Eq. 21. Specifically, we directly employ
+ Xt+∆t = Xt + ∂t Xt dτ, (17) Eq. 21 as a loss function and utilize backpropagation and
+ t optimizer, e.g., Adam, to solve it.
+where t is the last edge occurrence time and ∆t is the edge The above self-expressive optimization only focuses on
+duration and we use the Runge-Kutta method to solve this preserving the original-scale information of Z. The multiequation. scale information of Z can also provide necessary information
+ to make few-shot traffic samples distinguishable. To this
+ end, we proposed a transform-based algorithm to generate
+D. Classifier and Loss Function
+ coefficient matrix Q by using Z’s multi-scale information.
+ For DIDS, we make the two-step predictions for intrusion This process can be considered as an ‘augmentation’ of
+detection. We utilize the first MLP to classify whether the the original representations Z in the latent space, aiming to
+traffic is benign or anomalous and utilize the second MLP to capture the invariant attack-specific features across different
+detect the specific type of attack. When an unknown attack scales. Finally, we fuse the obtained coefficient matrices H
+invades, the direct multi-classifications will be easy to fail to and Q. We refer to the above model as Multi-scale Fewassign the anomalous label thus leading to poor performance. shot learning (MFL). Equipped with the fusion of generated
+In contrast, through the first-step binary classification, DIDS matrices, MFL can effectively utilize few-shot representations
+will focus more on inconsistencies with normal behavior to across different scales, i.e., under the original and transformed
+improve the performance of detecting unknown attacks. The scale, thus benefiting the distinction of few-shot traffic threats.
+following second multi-classification will further alert the We have the following principles to achieve MFL and clarify
+administrators that what kind of attack it is more similar to the motivations behind these designs:
+so that similar mitigation measures can be taken. Specifically, • 1. MFL should encourage the representations under difthe intrusion loss can be expressed as: ferent scales to be close in latent space, thus capturing
+ the attack-specific features and benefiting the distinction
+ LInt = −
+ Pm PK of traffic samples in different types, which is motivated
+ i=1 (log(1 − pnor,i ) + log(patt,i ) + j=1 yi,k log(pi,k ))
+ (18) by the empirical studies in Fig. 4 (a)(b)
+where m is the batch size, K is the number of attack classes, • 2. MFL should ensure the disentanglement among the
+
+pnor,i is the probability of normal, patt,i is the probability elements of the learned representation, thus highlighting
+of attack. Additionally, the adjacent time intervals may cause the attack-specific information, which is motivated by the
+adjacent times embedding to be farther apart in embedded empirical studies in Fig. 4 (c)(d)
+space, due to the learning process independency. To address To achieve the above goals, we first propose a
+this problem, we constrained the variation between adjacent transformation-based learning scheme by projecting the reptimestamps embedding by minimizing the Euclidean Distance: resentations Z to a latent space, aiming to discover the
+ T
+ attack-specific invariant features across different scales. Then
+ LSmooth =
+ X
+ ∥Xt+∆t − Xt ∥2 . (19) we introduce a regularization term to disentangle the fewt=0
+ shot representations. Finally, we propose an alternating optimization algorithm to derive Q in an end-to-end way. The
+Finally, the overall loss of DIDS can be expressed as follows: implementation involves the following three steps:
+ L = LInt + δLSmooth + ζLDis , (20) 1) Generating Representation Transformation.
+ We denote Zo = Z as the original representations, and
+where δ, and ζ are trade-off parameters. Zt = G(Z) as the transformed representations, where G is
+ a transformation operator. Specifically, we introduce a scaling
+E. Multi-scale Few-shot Learning operator S as follows:
+  
+ So far we have proposed DIDS for supervised intrusion de- s1 · · · 0
+tection. Furthermore, we propose the following MFL to detect S = diag(s1 , s2 , ..., sL ) =  ... . . . ..  , (22)
+ 
+ . 
+few-shot threats accurately, e.g., 5 samples of each attack type.
+ 0 ··· sL
+We first denote the learned representations Xt+∆t in Eq. 17 as
+Z ∈ RL∗N , where L is the length of representations, and N where s1 , s2 , ..., sD is the scale factor, and different values
+is the few-shot sample number. The few-shot learner aims to determine different scalars. Then the scaling transformation
+generate a coefficient matrix S as a learned similarity matrix can be written as Zt = G(Z) = SZ. Especially, when s1 =
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 9
+
+s2 = ... = sL = γ, S is an equal-rate scaling operator with the a multi-objective optimization:
+rate of γ. Hence, the transformation can be rewritten as Zt = α 2
+G(Z) = SZ = γIZ = γZ. By the equal-rate transformation, L = ∥PZ − γPZQ∥F
+ 2X
+we generate transformed representations while preserving their α 2
+ − PZ+j − γPZ−j F + η∥Q̃∥F
+content, e.g., scaling up an image by the rate of 2, will not 2 j
+ (27)
+change the content we see.
+ + < Φ1 , PZ − γPZQ+ < Φ2 , Q − Q̃ >
+ 2) Generating Multi-scale Coefficient Matrix.
+ µ 2
+ 
+ So far, we have generated the transformations of Z. In step + ∥PZ − γPZQ∥F + ∥Q − Q̃∥2F ,
+ 2
+2, we propose a constraint term to encourage the representawhere Φ1 and Φ2 are the Lagrange multipliers and the penalty
+tion to be close between the original and transformed scale.
+ parameter µ > 0.
+Furthermore, we introduce a learnable projection operator
+P to uncover the attack-specific invariant information, thus Then, the alternating solving and updating of each variable
+benefiting the distinction of few-shot traffic threats. can be involved in the following four steps:
+ 1) Update P by fixing Q and Φ1 .
+ 2
+ f1 (P) = PT Zo − PT Zt F , (23) α αX
+ 2 2
+ P∗ = arg min ∥PZ − γPZQ∥F − PZ+j − γPZ−j F
+ The projection operator P can be considered as a metric P 2 2 j
+matrix across different-scale representation, also benefiting µ Φ1
+ 2
+
+the connectivity of same-attack traffic samples under the + PZ − γPZQ +
+ 2 µ F
+transformation. Then we formally propose an optimization (28)
+problem as follows: The closed-form solution to the problem in Eq. (27) can be
+ given as follows:
+ min f1 (P) + η∥Q∥F , X
+ (24) P∗ = −Φ1 ∆T3 (α∆1 ∆T1 − λ ∆2 ∆T2 + µ∆3 ∆T3 + I)−1 ,
+ s.t. PZ = PG(Z)Q,
+ j
+The above formulation Eq. 24 corresponds to design principle (29)
+1 and is motivated by the empirical studies in Fig. 4 (a)(b), where ∆1 = (1 − γ)Z, ∆2 = Z+j − Z−j , ∆3 = Z − γZQ,
+aiming to distinguish the attack-specific information in the and I is an identity matrix with proper size.
+latent space. 2) Update Q by fixing P, Q̃ and Φ1 , Φ2 .
+ 3) Disentangling the Learned Representations. The optimization problem is shown as:
+ Finally, we introduce a disentangle regularization term to µ Φ1
+ 2
+highlight the attack-specific information, thus mitigating the Q∗ = arg min PT Z − γPT ZQ +
+ Q 2 µ F
+representation entangled problem in few-shot traffic samples. 2
+ (30)
+ µ Φ2
+ X
+ T −j
+ 2 + Q − Q̃ + .
+ f2 (P) = − PT Z+j
+ o − P Zt , (25) 2 µ F
+ F
+ j
+ The closed-form solution to the problem above is:
+where Z+j
+ o ∈ R(L−1)×N repeats the j-th row of Zo and  −1  
+Z−j
+ t ∈ R(L−1)×N
+ denotes the transformation matrix by re- Q∗ = µγ 2 PT ZZT P + µI µγZT P∆3 + µQ̃ − Φ2 ,
+moving the j-th row. The above disentanglement regularization (31)
+term Eq. 25 corresponds to design principle 2 and is motivated where ∆3 = PT Z + Φµ1 .
+by the empirical studies in Fig. 4 (c)(d), aiming to highlight 3) Update the auxiliary variable Q̃.
+the attack-specific information. It can be solved via the singular value thresholding method,
+ Combining the above key formulations Eq. 24 and Eq. 25, 2
+ µ Φ2
+we can rewrite the optimization problem as: Q̃∗ = arg min ∥Q̃∥∗ + Q − Q̃ + , (32)
+ Q̃ 2 µ F
+ min f (P) + η∥Q̃∥F ,
+ (26) and the closed-form solution of Q̃∗ is
+ s.t. PZ = γPZQ, Q̃ = Q,
+ Q̃∗ = S1/µ (Q + Φ2 /µ)
+where f (P) = α2 (f1 (P) + f2 (P)), α and η are trade-off (33)
+hyperparameters, Q̃ is a auxiliary variable, and γ is scaling = U {sign (Σii ) max (|Σii − 1/µ| , 0)} VT ,
+rate hyperparameter. where S is the singular value thresholding operator, sign(·)
+ Since the optimization problem in Eq. 26 is not convex with is the indicator function, and Q̃ + Φ2 /µ = UΣVT is the
+the unknowns {P, Q}, we solve Q by iteratively updating singular value decomposition of Q̃ + Φ2 /µ.
+variables while fixing another. We propose the following 4) Update the multipliers Φ1 , Φ2 , µ.
+alternating solution to derive the coefficient matrix Q.
+ Φ1 = Φ1 + µ PT Z − γPT ZQ ,
+ 
+ Alternating Solution for MFL
+ We solve Eq. 26 by converting the original problem to the Φ2 = Φ2 + µ(Q − Q̃), (34)
+augmented Lagrange minimizing problem, as Eq. 26 involving µ = min (1.01µ, µmax ) .
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 10
+
+ We can obtain the coefficient matrix Q following the above (IoT). We give detailed descriptions as follows:
+updating rules. The pseudo-code of MFL is proposed in • CIC-ToN-IoT : This dataset is generated from the existing
+Algorithm 1. So far we have obtained coefficient matrices ToN-IoT dataset by a network traffic tool CICFlowMeter,
+ Algorithm 1: Alternating Algorithm for MFL where TON-IoT is a well-known database for intrusion
+ Input: Zo = Z, scaling rate γ, α and η. detection collected from Telemetry datasets of IoT ser-
+ Output: Affinity matrix S for later few-shot intrusion detection. vices. This dataset consists of 5, 351, 760 flows, with
+ 1: Initialization: Zt = γZ by γ-rate scaling transform on Zo ;
+ Q = Q̃ = 0; and Φ1 = Φ2 = 0; µ = 0.1, µmax = 107 .
+ 53.00% attack samples and 47.00% benign samples.
+ 2: while Convergence conditions are not satisfied do • CIC-BoT-IoT: It is generated from the existing BoT-
+ 3: Update: P via Eq. 29. IoT dataset by CICFlowMeter. This dataset consists of
+ 4: Update: Q via Eq. 30.
+ 5: Update: Q̃ via Eq. 33.
+ 6, 714, 300 traffic flows, with 98.82% attack samples and
+ 6: Update: Φ1 , Φ2 and µ via Eq. 34. 1.18% benign samples.
+ 7: Check the convergence conditions: • EdgeIIoT: It is collected from an IoT/IIoT system that
+
+ ∥PZ − γPZQ∥∞ < 10−6 . contains mobile devices and sensors. This dataset includes 1, 692, 555 flows, with 21.15% attack samples and
+ 8: end while
+ 9: Obtain the coefficient matrix Q 78.85% benign samples.
+ • NF-UNSW-NB15-v2: It is NetFlow-based and generated
+H and Q by parallel computing of Eq. 21 and Algorithm 1. from the UNSW-NB15 dataset, which has been expanded
+We can fuse two coefficient matrices by introducing a trade-off with additional NetFlow features and labeled with respechyperparameter ϵ: tive attack categories. This dataset includes 2, 390, 275
+ Q∗ = H + ϵ ∗ Q (35) flows, with 3.98% attack samples and 96.02% benign
+ samples.
+where Q∗ contains fine-grained multi-scale information to • NF-CSE-CIC-IDS2018-v2: It is a NetFlow-based dataset
+help few-shot traffic threats distinguishable. generated from the original pcap files of CSE-CIC-
+ Finally, we can generate  the coefficient matrix of MFL IDS2018 dataset. This dataset includes 18, 893, 708 flows,
+by S∗ = |Q∗ | + |Q∗ |T /2. Given the noise information with 11.95% attack samples and 88.05% benign samples.
+and outliers in the obtained S∗ , in practical implementations, Configurations: All experiments and timings are conducted
+we further conduct SVD decomposition of S∗ to filter noisy on a machine with Intel Xeon Gold 6330@ 2.00GHz,
+information and generate a normalized matrix S. The detailed RTX3090 GPU, and 24G memory. We use the Adam optimizer
+implementation pseudo-code of generating S is available in with a learning rate of 0.01, the learning rate scheduler
+the Appendix 15. reducing rate as 0.9, with weight decay being 1e−5 . We train
+ DIDS-MFL Loss all the models with 500 epochs.
+ The DIDS-MFL loss consists of two components, a multi- Baselines: To evaluate the performance of the proposed DIDS,
+scale few-shot learning term and a regularization term. The for- we select 10 deep learning based-models as baselines, includmer uses a cross-entropy loss, aiming to match the prediction ing 3 sequence models (i.e., MLP [86], MStream [16], LUCID
+to the query set via the generated multi-scale coefficient matrix [37]), 4 static GCN models (i.e., GAT [87] and E-GraphSAGE
+S. In the few-shot intrusion detection task, S is derived from [88], SSDCM [89], DMGI [90]), where SSDCM and DMGI
+the representations of support and query samples. The latter are designed for static multi-layer graphs, 4 dynamic GCN
+enforces the representations Z to be close to the original-scale models (i.e., TGN [91], EULER [41], AnomRank [92], Dyrepresentations in latent space. Finally, we introduce a trade- nAnom [92]). Additionally, we choose 3 rule-based baselines
+off hyperparameter β to control the regularization intensity. to compare with the proposed DIDS, (i.e., ML [93], AdaBoost
+The specific DIDS-MFL loss is as follows: [94], and Logistic Regression).
+ N X
+ X Q Metrics: We follow the previous works [95] to evaluate the
+ L= Yi,j log(Pi,j ) + β∥ZH − Z∥ (36) performances of all baselines by two commonly used metrics
+ i=1 j=1 in intrusion detection including F1-score (F1) and ROC-AUC
+where N is the category number of attacks, Q is sample score (AUC).
+number of query set in each category, Yi,j and Pi,j are ground- B. Main Results
+truth and prediction, respectively, Pij is query sample’s mean
+ 1) Comparisons of binary classification: Under this setsimilarity score derived from the coefficient matrix S, β is a
+ ting, we classify a traffic flow as an attack or a benign
+trade-off hyperparameter. In Eq. 36, the first term discovers the
+ one. We categorize the baselines into three groups, includmulti-scale information of Z, while the second term preserves
+ ing dynamic GCNs at the top of Table I, static GCNs at
+the information under the original scale via the coefficient
+ the middle of the table, and another three baselines at the
+matrix H. We can fine-tune β to control these two terms.
+ bottom. It should be noted that AnomRank and DynAnom
+ are two popular baselines for anomaly detection. We run
+ V. E XPERIMENTS
+ our experiment 5 times and report the mean and variance
+A. Experimental Settings values. The comparison results in Table I show that our
+ Datasets: We conduct experiments on five popular datasets DIDS consistently performs the best among all baselines
+that involve massive network traffic over the internet of things over the five benchmarks, which shows the superiority of
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 11
+
+ TABLE I
+ C OMPARISONS OF BINARY CLASSIFICATION ON FIVE DATASETS . T HE RESULTS WITH ‡ ARE DIRECTLY COPIED FROM [96].
+
+ CIC-TON-IoT CIC-BoT-IoT EdgeIIoT NF-UNSW-NB15-v2 NF-CSE-CIC-IDS2018-v2
+ Methods
+ F1 AUC F1 AUC F1 AUC F1 AUC F1 AUC
+ TGN [91] 89.90±1.66 82.09±1.36 96.84±0.44 94.41±0.81 94.99±0.61 89.50±2.04 93.55±0.23 88.01±1.97 95.11±0.46 91.30±0.76
+ EULER [41] 89.73±1.13 80.48±2.46 96.00±0.29 91.47±1.36 92.89±0.32 90.64±1.80 92.76±0.86 86.97±1.11 95.87±0.51 90.76±0.64
+ AnomRank [92] 76.51±0.98 77.41±1.64 84.84±0.49 82.50±0.59 78.37±0.43 81.36±0.41 90.54±2.40 79.63±0.12 90.08±0.82 83.76±0.35
+ DynAnom [97] 79.23±1.81 75.22±0.92 83.25±0.62 79.04±0.84 81.56±0.94 83.94±0.36 89.11±1.48 85.25±0.64 91.21±0.95 88.79±0.54
+ Anomal-E [96] - - - - - - 91.89‡ - 94.51‡ -
+ GAT [87] 86.30±1.16 74.66±1.37 94.56±0.75 93.09±2.83 93.30±0.14 88.30±1.56 92.20±1.60 89.91±0.62 96.08±0.24 90.56±0.34
+ E-GraphSAGE [17] 89.46±1.25 79.56±1.63 93.74±0.76 90.53±1.90 92.10±1.46 89.10±0.64 94.10±0.33 90.39±0.26 95.71±0.35 90.22±0.48
+ DMGI [90] 88.83±0.48 79.13±2.11 96.07±1.89 92.65±1.57 93.83±1.67 86.03±2.45 93.11±0.98 88.51±1.00 93.87±0.84 87.56±0.55
+ SSDCM [89] 89.23±0.87 80.84±2.32 97.11±0.63 94.82±0.96 94.72±1.59 86.69±0.76 93.30±0.25 89.22±1.94 94.96±0.52 88.61±0.38
+ MLP [86] 80.74±0.43 61.80±1.48 93.01±0.60 87.90±0.54 88.78±0.44 86.00±1.49 93.12±0.64 89.92±0.55 94.59±0.94 90.42±0.89
+ MStream [16] 73.90±1.13 70.22±1.61 78.48±0.19 74.04±1.66 82.47±1.67 77.89±0.58 89.47±1.13 84.38±1.01 88.34±0.45 83.66±1.79
+ LUCID [37] 83.62±1.69 72.31±1.14 94.36±0.41 89.46±0.72 88.94±1.73 85.23±0.94 92.77±1.39 88.32±0.91 95.84±1.46 90.75±0.79
+ Ours (DIDS) 91.57±0.40 84.06±1.01 98.24±0.32 96.32±0.25 96.83±0.36 92.34±1.10 95.45±0.67 91.55±1.03 96.34±0.21 93.23±1.50
+
+ Average Average
+ Backdoor Password
+ Ransomware Scanning
+ Fingerprint Ransomware
+ DDoS
+ XSS MITM
+ Password Backdoor
+ Scanning XSS
+ Uploading Injection
+ MITM DDoS
+ Scanner
+ Injection DoS
+ Benign Benign
+ 0 20 40 60 80 100 0 20 40 60 80 100
+ F1 Score F1 Score
+ (a) EdgeIIoT (b) CIC-ToN-IoT
+
+ Average Average Worms
+ Web Backdoor
+ Reconnaiss Reconnaiss
+ Infiltration Generic
+ Theft DDoS Exploits
+ DoS DoS DoS
+ Bot Shellcode
+ DDoS Analysis
+ BruteForce Fuzzers
+ Benign Benign Benign
+ 0 20 40 60 80 100 0 20 40 60 80 100 0 20 40 60 80 100
+ F1 Score F1 Score F1 Score
+ (c) CIC-BoT-IoT (d) NF-UNSW-NB15-v2 (e) NF-CSE-CIC-IDS2018-v2
+ TGN E-GraphSAGE ML* AdaBoost* Ours(DIDS)
+
+Fig. 6. Comparisons of multi-classification. Here † indicates that the results are directly copied from the previous works.
+
+our method for intrusion detection. Specifically, compared ours yields higher classification accuracy of up to 25 points
+to the E-GraphSAGE, the previous state-of-art GCN-based compared to the baseline TGN for detecting Injection attacks.
+approach, our method achieves a 4.80% higher F1-score over The existing graph-based methods, including E-GraphSAGE,
+the CIC-BoT-IoT dataset. Our DIDS outperforms AnomRank, ML, and AdaBoost, perform inconsistently in the identification
+the previous state-of-the-art method for anomaly detection on of complex attacks (e.g., MITM, Uploading, and XSS). We
+F1, by 15.27 points over the EdgeIIoT dataset. We attribute the also observe that some attacks that are not easily detected
+above results to the gains of our statistical disentanglement, by the baseline approaches, can be identified by the proposed
+representational disentanglement and dynamic graph diffusion DIDS with high F1 scores. For example, E-GraphSAGE only
+method. achieves 18.34% and 30.7% F1 scores on CIC-ToN-IoT for
+ 2) Comparisons of multi-classification: We compare the MITM and Backdoor attacks, respectively, while our DIDS is
+performance of our method to four baselines in declaring the able to obtain higher than 23% F1 score for each attack. These
+specific attack type. These baselines include E-GraphSAGE results further show the superiority of the proposed DIDS. We
+[17], TGN [91], ML [98], and AdaBoost [99], as they are also find that the average scores of our method on CIC-BoTrepresentative of different types of intrusion detection models loT and CIC-ToN-loT are lower than the ones on the other
+and have been widely used in previous studies. Figure 6 three datasets. The underlying reason is the unbalanced attack
+shows that the proposed DIDS consistently achieves the best distributions in the training set, where the dominant type may
+results among all others over five datasets. For example, mislead the classifications. Such a finding aligns with previous
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 12
+
+ TABLE II
+ C OMPARISONS OF FEW- SHOT LEARNING CLASSIFICATION ON FIVE DATASETS . T HE RESULTS ARE THE AVERAGE SCORES OF TEN - TIME REPETITIONS .
+
+ CIC-TON-IoT CIC-BoT-IoT EdgeIIoT NF-UNSW-NB15-v2 NF-CSE-CIC-IDS2018-v2
+ Methods
+ F1 NMI F1 NMI F1 NMI F1 NMI F1 NMI
+ MBase [22] 41.74±3.22 35.81±2.84 38.52±3.58 27.89±3.84 51.13± 2.31 55.61± 2.05 41.74±3.22 35.81±2.84 63.74±4.14 68.76±3.16
+ MTL [62] 30.79±3.13 29.81±3.58 37.80±5.66 25.10±2.69 52.64± 5.69 55.41± 4.16 44.18± 4.22 35.85± 2.79 45.38± 5.88 47.04± 4.82
+ TEG [101] 29.92± 2.17 22.64± 2.22 29.62± 3.74 25.71± 2.82 26.34± 2.45 27.58± 2.64 27.80± 2.14 21.44± 1.74 25.20± 3.17 23.48± 3.97
+ CLSA [71] 17.21± 3.63 45.01± 2.83 38.54± 3.49 51.70± 4.90 18.84± 3.10 44.25± 3.27 17.53± 1.95 45.67± 4.13 19.19± 2.90 49.76± 3.46
+ ESPT [72] 36.76± 4.37 38.51± 3.29 39.41± 5.37 34.66± 3.49 61.28± 8.34 53.77± 6.91 46.58± 5.94 49.37± 6.58 41.37± 4.98 46.52± 6.71
+ ICI [70] 55.67± 5.14 47.80± 3.77 71.32± 3.35 57.51± 4.50 49.74± 4.65 51.30± 5.27 39.17± 3.66 31.81± 2.21 76.53± 9.43 79.00± 6.20
+ KSCL [73] 36.19± 2.66 38.17± 3.90 33.50± 4.23 29.40± 4.80 34.87± 2.14 30.63± 2.56 17.03± 1.97 21.90± 1.98 25.74± 3.01 28.26± 3.15
+ BSNet [27] 58.41±2.36 57.76±2.96 42.00±5.19 31.41±4.71 43.74± 4.20 49.68± 5.09 65.73±2.65 58.96±2.08 56.39±5.75 58.56±3.76
+ CMFSL [31] 37.46±5.37 47.51±4.29 58.62± 3.58 51.47± 6.28 39.43± 3.88 43.67± 5.75 51.30± 4.29 47.62± 6.47 61.37± 4.95 58.42± 6.17
+ TAD [32] 49.80±2.13 42.23±1.35 62.75±6.40 56.53±7.70 50.82± 3.93 53.40± 3.86 58.97±3.76 58.72±2.60 54.88±3.34 52.15±1.57
+ PCWPK [102] 42.92±3.80 44.17±3.12 56.08±2.91 53.01±5.17 34.74±2.54 34.29±3.36 51.97±1.76 43.62±2.27 52.39±8.60 64.56± 5.57
+ Ours(DIDS-MFL) 97.47±1.17 94.27±2.62 96.64±1.88 91.27±3.94 92.73±2.57 88.21±3.25 97.39±1.41 94.32±2.84 93.93±3.27 90.98±3.69
+
+work in the field of computer vision [100]. Nevertheless, the cally, N is the category number of few-shot traffic, and K is
+proposed DIDS is still the best under such distributions. We the training number of each category, referred to support set.
+leave this interesting observation as our future work. In our few-shot experiments, we set K as 5. We also construct
+ 3) Comparisons of unknown attacks: To further investigate a query set for our few-shot task, with 15 sample numbers
+the performance of detecting unknown attacks, we conduct for each category. The query set can be sampled from the
+experiments on the four attack types by discarding the cor- category samples, or augmented from the support set. We split
+responding instances in the train set and detecting them in a 5-fold cross-validation set from the training set, with 20% of
+the test set. From this perspective, the unknown attacks are support and query set. Taking CIC-TON-IoT as an example,
+the new-type attacks that do not belong to the existing types we conduct a five-way-five-shot learning and five-classification
+of attacks in the training set. We run our experiments 5 test with 100 training samples. We repeat the above training,
+times and report the mean and variance values with different validate, test ten times, and report the average performance.
+random seeds. Table III reports the classification results on Each time’s training and validation samples are randomly
+the CIC-ToN-IOT dataset. It shows that the statistical rule- selected from our existing traffic data, thus simulating the fewbased method Logistic Regression can only achieve as low as shot learning setting in real-world scenarios.
+a 1.68 F1 score for DDoS attacks, this confirms our analysis at Baselines: To evaluate the performance of the proposed
+the very beginning that rule-based methods can hardly detect few-shot learner, we select 11 few-shot learning models to
+unknown attacks. The score of graph-based E-GraphSAGE is incorporate into DIDS as baselines, including 3 meta-learning
+much smaller than DIDS, e.g., 6.05% for MITM, indicating based models (i.e., MBase [22], MTL [62], TEG [101]), where
+the limitations of the static graph in detecting unknown TEG is designed for graph-structure-based few-shot learning,
+attacks. We also observe that TGN performs better than E- 4 augmentation-based models (i.e., CLSA [71], ESPT [72],
+GraphSAGE, although both of them are graph-based methods. ICI [70], KSCL [73], where CLAS and ESPT are based on
+We attribute the improvement to the dynamic module for TGN. contrastive augmentation, ICI and KSCL are based on instance
+Nevertheless, our DIDS outperforms all these methods by a augmentation), 4 metric learning-based models (i.e., BSNet
+large margin, with an average score of 33.65% on the four [27], CMFSL [31], TAD [32], PCWPK [102]).
+attacks. The results also suggest that our method is more
+ Performance metrics: We follow the previous work [103]
+consistent in detecting various unknown attacks, showing the
+ using F1 scores and NMI [104] metrics for multi-classification
+effectiveness of the two disentanglements. We further provide
+ comparison.
+empirical studies on more datasets in Appendix 16 to showcase
+the unknown detection ability of DIDS. As shown in Table II, our MFL consistently performs better
+ among 11 baselines under the five benchmarks, showing the
+ TABLE III superiority of our proposed MFL module in few-shot intru-
+ U NKNOWN CLASSIFICATION ON THE CIC-T O N-I OT DATASET WITH sion detection. Specifically, our MFL achieves reproducible
+ METRIC F1- SCORE (%)
+ average results of 95.63% and 91.81% in F1-score and NMI
+ Method Logistic Regression MSteam E-GraphSAGE TGN Ours (DIDS) value over five public datasets. The results gain 97.87% -
+ DDoS 1.68±0.67 26.73±1.21 10.20±1.46 32.84±1.03 41.78±0.26 126.99% and 73.59% - 139.53% improvements in average
+ MITM 2.17±0.84 12.82±1.90 6.05±0.35 15.32±0.54 34.91±0.91 F1-score and NMI value of 11 baselines over five public
+ Injection 0.00±0.34 15.73±1.73 12.37±0.88 22.83±0.35 25.63±0.93
+ Backdoor 3.13±1.33 20.85±0.63 9.51±0.46 23.10±1.03 32.29±0.81 datasets, respectively. We attribute the superior and impressive
+ reproducible results of MFL to our multi-scale representation
+ 4) Comparisons under few-shot settings: information using and disentanglement among few-shot traffic
+ Task Setting: We first conduct the DIDS pretraining over representations. The RQ5 and RQ6 in the discussion section
+the known benign and attack traffic. Then we conduct a N - further verified our attributions. Furthermore, we also discuss
+way-K-shot learning for the few-shot attack traffic. Specifi- the practical time cost of DIDS-MFL and the superiority of
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 13
+
+our model designs in time cost in Appendix 20. TABLE V
+ A BLATION STUDY OF MFL. F1- SCORE (%), P RECISION (%), ROC-AUC
+ (%), R ECALL (%), ALL METRICS ABOVE ARE THE AVERAGE OF TEN
+C. Ablation Study REPEATED EXPERIMENTS ON THE CIC-T O N-I OT DATASET.
+
+ 1) DIDS: In this section, we conduct an ablation study
+ Variants P R F1 NMI
+on the CIC-ToN-IoT dataset to evaluate the effectiveness of
+each component. We remove our statistical disentanglement w/o LOS 77.80±3.83 78.80±1.99 75.82±2.89 86.13±2.15
+and denote it as "w/o SD". We use "w/o RD" and "w/o w/o DR 75.51±3.01 77.30±1.77 74.90±1.66 85.56±1.64
+ SE 88.62±3.56 88.80±3.27 87.80±3.17 85.08±2.31
+MLGRAND" to refer to the model that removes represen-
+ MFL(ours) 97.68±1.09 97.50±1.18 97.47±1.17 94.27±2.62
+tational disentanglement and the multi-layer graph diffusion
+module, respectively. Table IV reports the comparison results.
+It shows that removing the multi-layer graph diffusion module
+ RQ1: How does the statistical disentanglement help the
+leads to the most significant performance degradation, e.g.,
+ detection of various attacks? To answer this question, we
+an 18.33 points decrease in AUC, indicating that it is the
+ visualize the distributions of features before and after the
+key component for the accuracy of the proposed DIDS. Our
+ statistical disentanglement. Figure 7 shows the visualizations
+second disentangled memory is also non-trivial to the overall
+ of the two distributions respectively. We can observe that
+detection accuracy, as removing this component can decrease
+ there is less overlap between distributions of features after
+the performance by 12.47 points in AUC. We observe that the
+ the disentanglement compared with the original data, which
+SD module also benefits the model performance. The above
+ demonstrates this module could decrease the mutual reference
+ablation study further confirms the effectiveness of the three
+ between features and enable them to be distinguishable. We
+key components.
+ also observe that the distributions gradually shift to the right
+ side, representing the order-preserved constraints within our
+ TABLE IV
+A BLATION STUDY OF DIDS. F1- SCORE (%), P RECISION (%), ROC-AUC disentangling method.
+ (%), R ECALL (%), ALL METRICS ABOVE ARE THE AVERAGE OF FIVE
+ REPEATED EXPERIMENTS ON THE CIC-T O N-I OT DATASET.
+ 0.5 0.5
+ totlen_fwd_pkts totlen_fwd_pkts
+ 0.4 tot_fwd_pkts tot_fwd_pkts
+ Variants P R F1 AUC tot_bwd_pkts 0.4 tot_bwd_pkts
+ fwd_pkt_len_max fwd_pkt_len_max
+ Proportion
+
+ Proportion
+ 0.3 totlen_bwd_pkts 0.3 totlen_bwd_pkts
+ w/o SD 92.70±0.46 90.71±0.89 91.69±0.33 86.87±0.54 0.2 0.2
+ w/o RD 91.06±0.57 87.32±0.67 89.15±0.42 83.57±1.33 0.1 0.1
+ w/o MLGRAND 88.76±0.54 84.43±0.26 86.54±0.71 79.32±0.30 0.0 0.0
+ 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0
+ DIDS(ours) 97.78±0.32 98.06±0.43 97.92±0.26 96.04±0.25
+ (a) Origin (b) First Distangled
+
+ 2) MFL: Furthermore, we conduct an ablation study on Fig. 7. Statistical disentanglement of traffic features.
+the CIC-TON-IOT dataset to evaluate the effectiveness of
+ RQ2: How does the representational disentanglement benour designed multi-scale few-shot learning (MFL) module.
+ efit "highlighting the attack-specific features"? To answer
+We denote our model without multi-scale latent optimization
+ this question, we track several Injection attack data in the CICspace as "w/o LOS" and "w/o DR" as our model without the
+ ToN-IoT dataset and obtain the representation of these data in
+disentanglement regularization term. For the model without
+ DIDS and E-GraphSAGE. Meanwhile, we calculate the above
+both of the above components, we denote it as "SE", which
+ two methods’ average values of embeddings for the benign
+degenerated into a naive self-expressiveness model. Table V
+ traffic. As shown in Figure 8, the representation values of
+shows that removing both LOS and DR leads to dramatic
+ E-GraphSAGE are much closer to the normal. It illustrates
+performance degradation, i.e., 9.92% and 9.75% drop in
+ that as nodes aggregate, the discrepancies in features become
+F1-score and NMI, respectively, indicating the effectiveness
+ blurred, leading to inaccurate classification. While benefiting
+of our designed MFL. Furthermore, we observed that each
+ from the representational disentanglement, each dimension of
+component of MFL, e,g. LOS or DR is necessary for perforfeatures in DIDS can effectively preserve its own properties,
+mance improvement, cause removing one of them will lead
+ deviating from the averages. Especially for the attack-specific
+to performance degradation, i.e., 22.21%-23.16% and 8.63%-
+ features Fwd Pkt Len Max and Fwd Pkt Std, etc., these attack-
+9.24% drop in F1-score and NMI, respectively. Without any
+ specific features are significantly highlighted in Fig. 1(a), thus
+one of these two components, the performance will be poorer
+ improving the accuracy of detection. The result proves the
+than the base model SE. Results showcase the complementary
+ effectiveness of the proposed DIDS in maintaining a disentanrelationships of the proposed two modules. The LOS provides
+ gled representation during the aggregation process, ensuring
+a latent optimization space across multi-scale representations,
+ the presence of discrepancies, thus highlighting the attackwhich is the foundation of the DR term. Then the DR
+ specific features and leading to more accurate classification
+term generates effective disentangled representations across
+ for attacks.
+multiple scales based on LOS.
+ RQ3: How does the multi-layer diffusion module perform
+ effectively for intrusion detection? We have illustrated the
+D. Discussion principle of multi-layer diffusion in Section IV-C. In this part,
+ DIDS: we take the MITM attack as an example to illustrate the
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 14
+
+ SW3 t2 SW3
+ SW4 SW2 t3
+ SW4
+ UE6
+ SW2
+ UE5
+ UE1
+ UE1 UE5 UE6
+ ①Detection Failed ②Detection Succeeded
+
+ Switch Phone Intrusion Device
+ (a) DIDS (b) E-GraphSAGE
+ Laptop MITM Attack Unidentified Intrusion Node
+Fig. 8. The comparison of node representation of the Injection attack after
+graph aggregation of our DIDS and E-GraphSAGE. The grey line presents Intrusion Flow
+benign data. ① Non spatial-temporal Attack Flow
+ ② Spatial-temporal Normal Flow
+
+effectiveness of spatial-temporal in intrusion detection. Fig. 9. Spatial-temporal coupling in intrusion detection.
+ Figure 9 (a) shows a deep learning-based NIDS. When a
+MITM attack occurs, it is difficult to detect the intrusion since
+the spatial and temporal information of those packets is not of password attacks and further benefits the explainability of
+considered. There are also some methods that only consider DIDS.
+a single aspect of spatial and temporal information, such as MFL:
+E-GraphSAGE and MStream. In this case, for example, E- RQ5: How does multi-scale transform-based MFL ben-
+GraphSAGE mainly focuses on the spatial relationship of efit the distinction of few-shot traffic threats? To answer
+the set nodes and extracts features from them. However, we this question, we visualize the learned representations of DIDS
+observe that different streams have their own timestamps and the few-shot learning module MFL on the CIC-TON-IoT
+from Table VI, so the lack of temporal information makes dataset via t-SNE technology. As shown in Fig. 10(a) (b), the
+it impossible to analyze the dynamic structural changes of the MFL’s representations are highly separated and distinguishedge. Similarly, taking the temporal information as the only able for different few-shot attacks, i.e., the red square box,
+effect factor will also get incomplete characteristics that do compared to the representation generated by DIDS, i.e., the
+not contain spatial information (IP address). Moreover, some red round box. It verifies the effectiveness of our proposed
+methods that take both the spatial and temporal information multi-scale few-shot learning framework, i.e., multiple coefinto account, such as Euler, take the snapshot method to ficient matrices fusion and multi-scale transformation. They
+capture the feature of the flow which does not achieve the discover the attack-specific invariant features among few-shot
+synchronous update for spatial and temporal information. As traffic in latent space, thus improving the distinction of attack
+shown in Figure 9 (b), intuitively, we can quickly detect that representations.
+UE6 is an intrusion device of layer 1 when the flow changes
+from SW 2 − SW 3 to SW 2 − U E6 and U E6 − SW 3 consid- 40
+ 10
+ering SW 2, SW 3 are layer 2 devices. Also, we have noticed
+ 20
+the changes in dynamic graph structure with a multi-Layer 5
+
+graph diffusion module to realize spatio-temporal coupling and 0 0
+
+synchronous updating. Overall, DIDS performs best among -5
+ 20
+these baselines in detecting various attacks.
+ - 10
+ 40
+ - 15
+ TABLE VI - 60 - 40 - 20 0 20 40 60 15 - 10 - 5 0 5 10 15
+ T IME S TAMP AND IP (a) The t-SNE of DIDS (b) The t-SNE of MFL
+ Time TimeStamp Src IP Dst IP Fig. 10. The t-SNE visualization of representations on the CIC-TON-IoT
+ t1 25/04/2019 05 : 18 : 37 pm 183.68.192.168 1.169.216.58 dataset generated by DIDS and MFL.
+ t2 25/04/2019 05 : 18 : 42 pm 1.169.216.58 25.162.192.168
+ t3 25/04/2019 05 : 18 : 42 pm 1.169.216.58 230.158.52.59 RQ6: Can MFL disentangle the representations of fewt4 25/04/2019 05 : 18 : 49 pm 230.158.52.59 25.162.192.168
+ t5 25/04/2019 05 : 18 : 52 pm 25.162.192.168 69.151.192.168 shot samples? To answer this question, we visualize the
+ t6 25/04/2019 05 : 19 : 00 pm 177.21.192.168 230.158.52.59 learned representations of DIDS and MFL on the CIC-TON-
+ IoT dataset via correlation heatmaps. As shown in Fig. 11(a)
+RQ4: How does the disentanglement facilitate the explain- (b), the visualization results significantly reveal that MFL can
+ability of DIDS? For this question, we rely on Figure 8 (a) as generate highly disentangled representations via our designed
+an example to recover the possible traffic features of a pass- regularization term. Specifically, MFL generates a block diagword attack. Since the original features are retained after the onal heatmap with high correlations and non-diagonal areas
+disentanglement, we can find some feature values that deviate with very low correlations. It verifies that MFL disentangles
+significantly from the normal values in the node embedding. the few-shot traffic representations and highlights the attack-
+In the password attack, we observe that the deviated features specific ones, making them more distinguishable.
+after disentanglement are "Fwd Pkt Std" and "Fwd Pkt Len RQ7: Can MFL be served for other intrusion detection
+Max". It aligns with our common sense for the main causes methods to strengthen their few-shot learning ability? To
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 15
+
+ TABLE VIII
+ 0 20 40 60 80 100120 0 20 40 60 80 100120
+ 0 1.0 0 1.00 T HE MULTI - CLASSIFICATION F1- SCORE (%) COMPARISON BETWEEN
+ DIFFERENT DATASETS ON DIDS WITH MFL MODULE .
+ 20 20 0.75
+Feature Index
+
+ 0.5
+
+ Feature Index
+ 40 40 0.50 Datasets CIC-TON-IoT CIC-BoT-Iot NF-UNSW-NB15-v2
+ 60 0.0 60 0.25
+ 80 80 DIDS 83.56±1.18 88.34±1.75 93.55±0.97
+ 0.5 0.00
+ 100 100 DIDS-MFL 96.78±1.72 91.22±3.45 95.71±5.89
+ 120 0.25
+ 120
+ (a) The correlation map of DIDS (b) The correlation map of MFL
+ efficiently. As shown in Table IX, the F1-score of the existing
+Fig. 11. The correlation map and the t-SNE visualization of representations
+generated by DIDS and DIDS-MFL with MFL. LLM is significantly lower than our SOTA method DIDS. It
+ may lie in the hallucinations [108] of existing neural languagebased LLM, which struggle to comprehend the intrinsic attack
+answer this question, we use MFL as a plug-and-play module features in traffic data. Second, the LLM necessitates more
+to incorporate into other intrusion detection methods, i.e., time to process the input traffic data and may fail as the size of
+E-GraphSAGE, EULER, and TGN. We follow our few-shot the input traffic increases. It may be attributed to the numerical
+setting to conduct experiments on these methods with and values of the traffic data involved. To sum up, the future
+without MFL. The methods with MFL significantly outperform directions to empower NIDS via LLM can be: 1. Aligning
+the ones without MFL by 17.45%-544.77%, as shown in encrypted traffic data with the input requirements of LLMs,
+Table VII. It demonstrates the effectiveness of our proposed thus speeding the intrusion detection via LLM; 2. Determining
+MFL as a plug-and-play module to strengthen the few-shot the necessary volume of traffic data and corresponding traffic
+learning ability of other NIDS. Additionally, the underlying mining technology to unlock the powerful inference capabilicause of the slight improvement of E-GraphSAGE and EULER ties of LLM.
+with MFL is interesting for future few-shot NIDS designs. The
+performance differences between E-GraphSAGE and TGN TABLE IX
+ T HE F1- SCORE (%) AND TIME COST ( S ) COMPARISONS BETWEEN THE
+lie in the generated representation qualities of respective ap- LLM AND DIDS-MFL ON 100 TRAFFIC SAMPLES FROM THE
+proaches, with more details available in Appendix 18. We also CIC-TON-I OT DATASET.
+provide the visualizations of different baselines to showcase
+the disentangle representation ability of MFL in Appendix 19. F1-Score Time Cost
+ LLM 66.67% 13.88s
+ TABLE VII
+ T HE FEW- SHOT LEARNING F1- SCORE (%) COMPARISON BETWEEN DIDS-MFL 99.52% 6.41s
+DIFFERENT METHODS WITH AND WITHOUT MFL ON THE CIC-TON-I OT
+ DATASET.
+
+ Methods E-GraphSAGE EULER TGN VI. CONCLUSION
+ This paper quantitatively studies the inconsistent perfor-
+ Original 20.14±0.15 52.38±0.29 14.25±0.33 mances of existing NIDS under various attacks and reveals
+ MFL 26.70±0.21 61.52±0.37 91.88±0.14 that the underlying cause is entangled feature distributions.
+ Furthermore, we delve into the deeper reasons for the poor
+RQ8: Can MFL improve the performance of DIDS? So few-shot intrusion detection performance of existing NIDS.
+far, we have verified the effectiveness of MFL in few-shot These interesting observations motivate us to propose DIDStraffic intrusion detection, including serving as a plug-and-play MFL. The former is a novel method that aims to benefit
+module for other methods. To further study the applicability known and unknown attacks with a double disentanglement
+of MFL in large-scale traffic, we conduct DIDS training with scheme and graph diffusion mechanism, and the latter is
+MFL and report the multi-classification results, as shown in a transform-based multi-scale few-shot learner to help few-
+Table VIII. DIDS with MFL achieves a 2.31% to 15.82% F1- shot traffic threats distinguishable. The proposed DIDS first
+score improvements among three datasets. The results reveal employs statistical disentanglement on the traffic features
+the effectiveness of MFL when serving as a multi-classification to automatically differentiate tens and hundreds of complex
+module for normal-size traffic training. Our designed multi- features and then employs representational disentanglement
+scale transform-based framework also sheds light on the future on the embeddings to highlight attack-specific features. DIDS
+intrusion detection model design. also fuses the network topology via multi-layer graph diffusion
+RQ9: Network intrusion detection and Large language methods for dynamic intrusion detection. Finally, the proposed
+model (LLM). Recently, there has been a significant surge in MFL uses an alternating optimization framework to separate
+the development and application of Large Language Models and disentangle the few-shot traffic representations. Extensive
+(LLMs) [105]cross various domains, including Natural Lan- experiments on five benchmarks show the effectiveness and the
+guage Processing (NLP) [106], Computer Vision (CV) [107], practical employment potential of our DIDS-MFL, including
+and multimodal tasks. However, the existing LLMs, e.g. GPT- binary classifications, multi-classifications, unknown attack
+3.5, GPT-4 struggle to detect traffic threats accurately and identification, and few-shot intrusion detection. Future work
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 16
+
+could focus on the deployment of DIDS-MFL on future [19] N. Moustafa, “A new distributed architecture for evaluating ai-based
+wireless networks. security systems at the edge: Network ton_iot datasets,” Sustainable
+ Cities and Society, vol. 72, p. 102994, 2021.
+ [20] C. Qiu, Y. Geng, J. Lu, K. Chen, S. Zhu, Y. Su, G. Nan, C. Zhang,
+ VII. ACKNOWLEDGEMENT J. Fu, Q. Cui et al., “3d-ids: Doubly disentangled dynamic intrusion
+ detection,” in Proceedings of the 29th ACM SIGKDD Conference on
+ This work was supported by the National Key R&D Pro- Knowledge Discovery and Data Mining, 2023, pp. 1965–1977.
+ [21] I. Cohen, Y. Huang, J. Chen, J. Benesty, J. Benesty, J. Chen, Y. Huang,
+gram of China (Grant No.2022YFB2902200). and I. Cohen, “Pearson correlation coefficient,” Noise reduction in
+ speech processing, pp. 1–4, 2009.
+ [22] Y. Chen, Z. Liu, H. Xu, T. Darrell, and X. Wang, “Meta-baseline:
+ R EFERENCES Exploring simple meta-learning for few-shot learning,” 2021.
+ [1] P. G. Kelley, S. Komanduri, M. L. Mazurek, R. Shay, T. Vidas, [23] X. Li, Z. Zhang, X. Tan, C. Chen, Y. Qu, Y. Xie, and L. Ma, “Promptad:
+ L. Bauer, N. Christin, L. F. Cranor, and J. Lopez, “Guess again Learning prompts with only normal samples for few-shot anomaly
+ (and again and again): Measuring password strength by simulating detection,” 2024.
+ password-cracking algorithms,” in 2012 IEEE symposium on security [24] N. Belton, M. T. Hagos, A. Lawlor, and K. M. Curran, “Fewsome:
+ and privacy. IEEE, 2012, pp. 523–537. One-class few shot anomaly detection with siamese networks,” in
+ [2] Z. Cekerevac, Z. Dvorak, L. Prigoda, and P. Cekerevac, “Internet of Proceedings of the IEEE/CVF Conference on Computer Vision and
+ things and the man-in-the-middle attacks–security and economic risks,” Pattern Recognition (CVPR) Workshops, June 2023, pp. 2978–2987.
+ MEST Journal, vol. 5, no. 2, pp. 15–25, 2017. [25] J. Liao, X. Xu, M. C. Nguyen, A. Goodge, and C. S. Foo, “Coft-ad:
+ [3] K. M. Prasad, “Dos and ddos attacks: defense, detection and trace- Contrastive fine-tuning for few-shot anomaly detection,” 2024.
+ back mechanisms-a survey,” Global Journal of Computer Science and [26] Y. Ma, Z. Wang, Y. Cao, and A. Sun, “Few-shot event detection: An
+ Technology, vol. 14, no. E7, pp. 15–32, 2014. empirical study and a unified view,” 2023.
+ [4] B. Bhushan and G. Sahoo, “Recent advances in attacks, technical [27] X. Li, J. Wu, Z. Sun, Z. Ma, J. Cao, and J.-H. Xue, “Bsnet:
+ challenges, vulnerabilities and their countermeasures in wireless sensor Bi-similarity network for few-shot fine-grained image classification,”
+ networks,” Wireless Personal Communications, vol. 98, pp. 2037–2077, IEEE Transactions on Image Processing, vol. 30, p. 1318–1331, 2021.
+ 2018. [Online]. Available: http://dx.doi.org/10.1109/TIP.2020.3043128
+ [5] X. Li, F. Bian, M. Crovella, C. Diot, R. Govindan, G. Iannaccone, [28] G. Liu and J. Guo, “Bidirectional lstm with attention mechanism and
+ and A. Lakhina, “Detection and identification of network anomalies convolutional layer for text classification,” Neurocomputing, vol. 337,
+ using sketch subspaces,” in Proceedings of the 6th ACM SIGCOMM pp. 325–338, 2019.
+ conference on Internet measurement, 2006, pp. 147–152. [29] C. Brodbeck and J. Z. Simon, “Continuous speech processing,” Current
+ [6] C. Wueest, “Targeted attacks against the energy sector,” Symantec Opinion in Physiology, vol. 18, pp. 25–31, 2020.
+ Security Response, Mountain View, CA, 2014. [30] V. Sharma and R. N. Mir, “A comprehensive and systematic look
+ [7] S. Kumar, A. Viinikainen, and T. Hamalainen, “Machine learning up into deep learning based object detection techniques: A review,”
+ classification model for network based intrusion detection system,” in Computer Science Review, vol. 38, p. 100301, 2020.
+ 2016 11th international conference for internet technology and secured [31] B. Xi, J. Li, Y. Li, R. Song, D. Hong, and J. Chanussot, “Fewtransactions (ICITST). IEEE, 2016, pp. 242–249. shot learning with class-covariance metric for hyperspectral image
+ [8] H. Zhao, N. Zheng, J. Li, J. Yao, and Q. Hou, “Unknown malware classification,” IEEE Transactions on Image Processing, vol. 31, pp.
+ detection based on the full virtualization and svm,” in 2009 Interna- 5079–5092, 2022. [Online]. Available: https://api.semanticscholar.org/
+ tional Conference on Management of e-Commerce and e-Government. CorpusID:251068999
+ IEEE, 2009, pp. 473–476. [32] M. Hu, H. Chang, Z. Guo, B. Ma, S. Shan, and X. CHEN,
+ [9] P. Ioulianou, V. Vasilakis, I. Moscholios, and M. Logothetis, “A “Understanding few-shot learning: Measuring task relatedness and
+ signature-based intrusion detection system for the internet of things,” adaptation difficulty via attributes,” in Thirty-seventh Conference on
+ Information and Communication Technology Form, 2018. Neural Information Processing Systems, 2023. [Online]. Available:
+[10] F. Erlacher and F. Dressler, “Fixids: A high-speed signature-based flow https://openreview.net/forum?id=Pvgxecj5aS
+ intrusion detection system,” in NOMS 2018-2018 IEEE/IFIP Network
+ [33] R. Samrin and D. Vasumathi, “Review on anomaly based network
+ Operations and Management Symposium. IEEE, 2018, pp. 1–8.
+ intrusion detection system,” in 2017 international conference on electri-
+[11] M. Masdari and H. Khezri, “A survey and taxonomy of the fuzzy
+ cal, electronics, communication, computer, and optimization techniques
+ signature-based intrusion detection systems,” Applied Soft Computing,
+ (ICEECCOT). IEEE, 2017, pp. 141–147.
+ vol. 92, p. 106301, 2020.
+ [34] L. Ma, Y. Chai, L. Cui, D. Ma, Y. Fu, and A. Xiao, “A deep
+[12] N. T. Van, T. N. Thinh et al., “An anomaly-based network intrusion
+ learning-based ddos detection framework for internet of things,” in ICC
+ detection system using deep learning,” in 2017 international conference
+ 2020-2020 IEEE International Conference on Communications (ICC).
+ on system science and engineering (ICSSE). IEEE, 2017, pp. 210–214.
+ IEEE, 2020, pp. 1–6.
+[13] S. Aljawarneh, M. Aldwairi, and M. B. Yassein, “Anomaly-based intrusion detection system through feature selection analysis and building [35] N. Hu, Z. Tian, H. Lu, X. Du, and M. Guizani, “A multiple-kernel
+ hybrid efficient model,” Journal of Computational Science, vol. 25, pp. clustering based intrusion detection scheme for 5g and iot networks,”
+ 152–160, 2018. International Journal of Machine Learning and Cybernetics, vol. 12,
+[14] M. Eskandari, Z. H. Janjua, M. Vecchio, and F. Antonelli, “Passban ids: no. 11, pp. 3129–3144, 2021.
+ An intelligent anomaly-based intrusion detection system for iot edge [36] Y. Li, R. Li, Z. Zhou, J. Guo, W. Yang, M. Du, and Q. Liu, “Graphddos:
+ devices,” IEEE Internet of Things Journal, vol. 7, no. 8, pp. 6882–6897, Effective ddos attack detection using graph neural networks,” in 2022
+ 2020. IEEE 25th International Conference on Computer Supported Cooper-
+[15] Z. Ahmad, A. Shahid Khan, C. Wai Shiang, J. Abdullah, and F. Ahmad, ative Work in Design (CSCWD). IEEE, 2022, pp. 1275–1280.
+ “Network intrusion detection system: A systematic study of machine [37] R. Doriguzzi-Corin, S. Millar, S. Scott-Hayward, J. Martinez-del Rinlearning and deep learning approaches,” Transactions on Emerging con, and D. Siracusa, “Lucid: A practical, lightweight deep learning
+ Telecommunications Technologies, vol. 32, no. 1, p. e4150, 2021. solution for ddos attack detection,” IEEE Transactions on Network and
+[16] S. Bhatia, A. Jain, P. Li, R. Kumar, and B. Hooi, “MStream: Service Management, vol. 17, no. 2, pp. 876–889, 2020.
+ Fast anomaly detection in multi-aspect streams,” in Proceedings of [38] M. Kalander, M. Zhou, C. Zhang, H. Yi, and L. Pan, “Spatiothe Web Conference 2021. ACM, apr 2021. [Online]. Available: temporal hybrid graph convolutional network for traffic forecasting in
+ https://doi.org/10.1145%2F3442381.3450023 telecommunication networks,” arXiv preprint arXiv:2009.09849, 2020.
+[17] W. W. Lo, S. Layeghy, M. Sarhan, M. Gallagher, and M. Portmann, “E- [39] W. Cong, Y. Wu, Y. Tian, M. Gu, Y. Xia, M. Mahdavi, and C.-c. J.
+ graphsage: A graph neural network based intrusion detection system Chen, “Dynamic graph representation learning via graph transformer
+ for iot,” in NOMS 2022-2022 IEEE/IFIP Network Operations and networks,” arXiv preprint arXiv:2111.10447, 2021.
+ Management Symposium. IEEE, 2022, pp. 1–9. [40] C. Song, Y. Lin, S. Guo, and H. Wan, “Spatial-temporal synchronous
+[18] C. Ioannou and V. Vassiliou, “Network attack classification in iot using graph convolutional networks: A new framework for spatial-temporal
+ support vector machines,” Journal of Sensor and Actuator Networks, network data forecasting,” in Proceedings of the AAAI Conference on
+ vol. 10, no. 3, p. 58, 2021. Artificial Intelligence, vol. 34, 2020, pp. 914–921.
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 17
+
+[41] I. J. King and H. H. Huang, “Euler: Detecting network lateral move- [64] A. Li, T. Luo, T. Xiang, W. Huang, and L. Wang, “Few-shot learning
+ ment via scalable temporal link prediction,” Network and Distributed with global class representations,” in 2019 IEEE/CVF International
+ Systems Security (NDSS) Symposium, 2022. Conference on Computer Vision (ICCV), 2019, pp. 9714–9723.
+[42] L. H. Gilpin, D. Bau, B. Z. Yuan, A. Bajwa, M. Specter, and L. Kagal, [65] C. Xu, J. Shen, and X. Du, “A method of few-shot network intrusion
+ “Explaining explanations: An approach to evaluating interpretability of detection based on meta-learning framework,” IEEE Transactions on
+ machine learning,” arXiv preprint arXiv:1806.00069, p. 118, 2018. Information Forensics and Security, vol. 15, pp. 3540–3552, 2020.
+[43] M. W. Gondal, M. Wüthrich, Ð. Miladinović, F. Locatello, M. Breidt, [66] Y. Ouyang, B. Li, Q. Kong, H. Song, and T. Li, “Fs-ids: A novel few-
+ V. Volchkov, J. Akpo, O. Bachem, B. Schölkopf, and S. Bauer, “On shot learning based intrusion detection system for scada networks,” in
+ the transfer of inductive bias from simulation to the real world: a new ICC 2021 - IEEE International Conference on Communications, 2021,
+ disentanglement dataset,” Advances in Neural Information Processing pp. 1–6.
+ Systems 32, vol. 20, pp. 15 661–15 672, 2020. [67] Z. Shi, M. Xing, J. Zhang, and B. Hao Wu, “Few-shot network intrusion
+[44] F. Locatello, B. Poole, G. Rätsch, B. Schölkopf, O. Bachem, and detection based on model-agnostic meta-learning with l2f method,”
+ M. Tschannen, “Weakly-supervised disentanglement without compro- in 2023 IEEE Wireless Communications and Networking Conference
+ mises,” in International Conference on Machine Learning. PMLR, (WCNC), 2023, pp. 1–6.
+ 2020, pp. 6348–6359. [68] Y. Yan, Y. Yang, F. Shen, M. Gao, and Y. Gu, “Meta learning-
+[45] Z. C. Lipton, “The mythos of model interpretability: In machine based few-shot intrusion detection for 5g-enabled industrial internet,”
+ learning, the concept of interpretability is both important and slippery.” Complex & Intelligent Systems, 2024. [Online]. Available: https:
+ Queue, vol. 16, no. 3, pp. 31–57, 2018. //api.semanticscholar.org/CorpusID:268699862
+[46] I. Higgins, L. Matthey, A. Pal, C. Burgess, X. Glorot, M. Botvinick,
+ [69] W. Cho and E. Kim, “Improving augmentation efficiency for few-shot
+ S. Mohamed, and A. Lerchner, “beta-vae: Learning basic visual
+ learning,” IEEE Access, vol. 10, pp. 17 697–17 706, 2022.
+ concepts with a constrained variational framework,” in International
+ conference on learning representations, 2017. [70] Y. Wang, L. Zhang, Y. Yao, and Y. Fu, “How to trust unlabeled data?
+[47] H. Kim and A. Mnih, “Disentangling by factorising,” 2019. instance credibility inference for few-shot learning,” IEEE Transactions
+[48] M. Yang, F. Liu, Z. Chen, X. Shen, J. Hao, and J. Wang, “Causalvae: on Pattern Analysis and Machine Intelligence, vol. 44, no. 10, pp.
+ Structured causal disentanglement in variational autoencoder,” 2023. 6240–6253, 2022.
+[49] R. Suter, D. Miladinovic, B. Schölkopf, and S. Bauer, “Robustly [71] X. Wang and G.-J. Qi, “Contrastive learning with stronger augmentadisentangled causal mechanisms: Validating deep representations for tions,” 2022.
+ interventional robustness,” in International Conference on Machine [72] Y. Rong, X. Lu, Z. Sun, Y. Chen, and S. Xiong, “Espt: A self-
+ Learning. PMLR, 2019, pp. 6056–6065. supervised episodic spatial pretext task for improving few-shot learn-
+[50] K. Ridgeway and M. C. Mozer, “Learning deep disentangled em- ing,” 2023.
+ beddings with the f-statistic loss,” Advances in neural information [73] H. Xu, H. Xiong, and G.-J. Qi, “K-shot contrastive learning of visual
+ processing systems, vol. 31, 2018. features with multiple instance augmentations,” 2021.
+[51] F. Träuble, E. Creager, N. Kilbertus, F. Locatello, A. Dittadi, A. Goyal, [74] M. N. Rizve, S. Khan, F. S. Khan, and M. Shah, “Exploring com-
+ B. Schölkopf, and S. Bauer, “On disentangled representations learned plementary strengths of invariant and equivariant representations for
+ from correlated data,” in International Conference on Machine Learn- few-shot learning,” in Proceedings of the IEEE/CVF Conference on
+ ing. PMLR, 2021, pp. 10 401–10 412. Computer Vision and Pattern Recognition (CVPR), June 2021, pp.
+[52] S. Zhou, Z. Guo, C. Aggarwal, X. Zhang, and S. Wang, “Link predic- 10 836–10 846.
+ tion on heterophilic graphs via disentangled representation learning,” [75] B. Xi, J. Li, Y. Li, R. Song, D. Hong, and J. Chanussot, “FewarXiv preprint arXiv:2208.01820, 2022. shot learning with class-covariance metric for hyperspectral image
+[53] A. Pareja, G. Domeniconi, J. Chen, T. Ma, T. Suzumura, H. Kanezashi, classification,” IEEE Transactions on Image Processing, vol. 31, pp.
+ T. Kaler, T. Schardl, and C. Leiserson, “Evolvegcn: Evolving graph 5079–5092, 2022.
+ convolutional networks for dynamic graphs,” in Proceedings of the [76] Y. Zhou, J. Hao, S. Huo, B. Wang, L. Ge, and S.-Y. Kung, “Automatic
+ AAAI Conference on Artificial Intelligence, vol. 34, 2020, pp. 5363– metric search for few-shot learning,” IEEE Transactions on Neural
+ 5370. Networks and Learning Systems, 2023.
+[54] M. Kalander, M. Zhou, C. Zhang, H. Yi, and L. Pan, “Spatio- [77] X. Chen, G. Zhu, and J. Wei, “Mmml: Multimanifold metric learning
+ temporal hybrid graph convolutional network for traffic forecasting in for few-shot remote-sensing image scene classification,” IEEE Transtelecommunication networks,” arXiv preprint arXiv:2009.09849, 2020. actions on Geoscience and Remote Sensing, vol. 61, pp. 1–14, 2023.
+[55] F. Gu, H. Chang, W. Zhu, S. Sojoudi, and L. El Ghaoui, “Implicit
+ [78] J. Snell, K. Swersky, and R. Zemel, “Prototypical networks for fewgraph neural networks,” Advances in Neural Information Processing
+ shot learning,” in Proceedings of the 31st International Conference on
+ Systems, vol. 33, pp. 11 984–11 995, 2020.
+ Neural Information Processing Systems, ser. NIPS’17. Red Hook, NY,
+[56] Q. Chen, Y. Wang, Y. Wang, J. Yang, and Z. Lin, “Optimization-
+ USA: Curran Associates Inc., 2017, p. 4080–4090.
+ induced graph implicit nonlinear diffusion,” in International Conference on Machine Learning. PMLR, 2022, pp. 3648–3661. [79] F. Sung, Y. Yang, L. Zhang, T. Xiang, P. H. S. Torr, and
+[57] B. Chamberlain, J. Rowbottom, M. I. Gorinova, M. Bronstein, S. Webb, T. M. Hospedales, “Learning to compare: Relation network for
+ and E. Rossi, “Grand: Graph neural diffusion,” in International Con- few-shot learning,” 2018 IEEE/CVF Conference on Computer Vision
+ ference on Machine Learning. PMLR, 2021, pp. 1407–1418. and Pattern Recognition, pp. 1199–1208, 2017. [Online]. Available:
+[58] J. Li, Y. Liu, and L. Zou, “Dyngcn: A dynamic graph convolutional https://api.semanticscholar.org/CorpusID:4412459
+ network based on spatial-temporal modeling,” in Web Information [80] O. Vinyals, C. Blundell, T. Lillicrap, K. Kavukcuoglu, and D. Wierstra,
+ Systems Engineering – WISE 2020: 21st International Conference, “Matching networks for one shot learning,” in Proceedings of the 30th
+ Amsterdam, The Netherlands, October 20–24, 2020, Proceedings, Part International Conference on Neural Information Processing Systems,
+ I. Berlin, Heidelberg: Springer-Verlag, 2020, p. 83–95. [Online]. ser. NIPS’16. Red Hook, NY, USA: Curran Associates Inc., 2016, p.
+ Available: https://doi.org/10.1007/978-3-030-62005-9_7 3637–3645.
+[59] Z. Yue, H. Zhang, Q. Sun, and X.-S. Hua, “Interventional few-shot [81] J. Oh, S. Kim, N. Ho, J.-H. Kim, H. Song, and S.-Y. Yun,
+ learning,” 2020. “Understanding cross-domain few-shot learning based on domain
+[60] D. Wang, Y. Deng, Z. Yin, H.-Y. Shum, and B. Wang, “Progressive dis- similarity and few-shot difficulty,” in Advances in Neural Information
+ entangled representation learning for fine-grained controllable talking Processing Systems, A. H. Oh, A. Agarwal, D. Belgrave, and
+ head synthesis,” 2022. K. Cho, Eds., 2022. [Online]. Available: https://openreview.net/forum?
+[61] L. Zhao, Y. Song, C. Zhang, Y. Liu, P. Wang, T. Lin, M. Deng, and id=rH-X09cB50f
+ H. Li, “T-gcn: A temporal graph convolutional network for traffic [82] L. De Moura and N. Bjørner, “Z3: An efficient smt solver,” in Tools
+ prediction,” IEEE Transactions on Intelligent Transportation Systems, and Algorithms for the Construction and Analysis of Systems: 14th
+ vol. 21, no. 9, pp. 3848–3858, 2020. International Conference, TACAS 2008, Held as Part of the Joint
+[62] Q. Sun, Y. Liu, T.-S. Chua, and B. Schiele, “Meta-transfer learning for European Conferences on Theory and Practice of Software, ETAPS
+ few-shot learning,” 2019. 2008, Budapest, Hungary, March 29-April 6, 2008. Proceedings 14.
+[63] K. Singh and D. Malhotra, “Meta-Learning based efficient framework Springer, 2008, pp. 337–340.
+ for diagnosing rare disorders: A comprehensive survey,” AIP [83] P. Perona and J. Malik, “Scale-space and edge detection using
+ Conference Proceedings, vol. 3072, no. 1, p. 040003, 03 2024. anisotropic diffusion,” IEEE Transactions on pattern analysis and
+ [Online]. Available: https://doi.org/10.1063/5.0199881 machine intelligence, vol. 12, no. 7, pp. 629–639, 1990.
+A SUBMISSION TO IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE 18
+
+ [84] D. Xu, C. Ruan, E. Korpeoglu, S. Kumar, and K. Achan, “In- [106] I. Lauriola, A. Lavelli, and F. Aiolli, “An introduction to deep learning
+ ductive representation learning on temporal graphs,” arXiv preprint in natural language processing: Models, techniques, and tools,” NeuarXiv:2002.07962, 2020. rocomputing, vol. 470, pp. 443–456, 2022.
+ [85] F. R. Chung, Spectral graph theory. American Mathematical Soc., [107] F. Liu, D. Chen, F. Wang, Z. Li, and F. Xu, “Deep learning
+ 1997, vol. 92. based single sample face recognition: a survey,” Artificial Intelligence
+ [86] M. Roopak, G. Y. Tian, and J. Chambers, “Deep learning models for Review, vol. 56, no. 3, p. 2723–2748, Aug. 2022. [Online]. Available:
+ cyber security in iot networks,” in 2019 IEEE 9th annual computing http://dx.doi.org/10.1007/s10462-022-10240-2
+ and communication workshop and conference (CCWC). IEEE, 2019, [108] L. Huang, W. Yu, W. Ma, W. Zhong, Z. Feng, H. Wang, Q. Chen,
+ pp. 0452–0457. W. Peng, X. Feng, B. Qin, and T. Liu, “A survey on hallucination
+ [87] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Lio, in large language models: Principles, taxonomy, challenges, and open
+ and Y. Bengio, “Graph attention networks,” arXiv preprint questions,” 2023.
+ arXiv:1710.10903, 2017. Chenyang Qiu received his B.Sc. degree in science from Beijing Jiaotong
+ [88] W. L. Hamilton, R. Ying, and J. Leskovec, “Representation learning on University, Beijing, China, in 2020. He is currently pursuing his Ph.D degree at
+ graphs: Methods and applications,” arXiv preprint arXiv:1709.05584, the National Engineering Research Center for Mobile Network Technologies,
+ 2017. Beijing University of Posts and Telecommunications, Beijing. His research
+ [89] A. Mitra, P. Vijayan, R. Sanasam, D. Goswami, S. Parthasarathy, and interests include Wireless Network Intrusion Detection, Semantic Communi-
+ B. Ravindran, “Semi-supervised deep learning for multiplex networks,” cation, Graph Neural Networks, and AI Robustness. He has published papers
+ in Proceedings of the 27th ACM SIGKDD Conference on Knowledge in top-tier conferences and journals including KDD, AAAI, and IEEE TCYB.
+ Discovery & Data Mining, 2021, pp. 1234–1244. Guoshun Nan (Member, IEEE) is a tenure-track professor at the National
+ [90] C. Park, D. Kim, J. Han, and H. Yu, “Unsupervised attributed multiplex Engineering Research Center for Mobile Network Technologies, Beijing
+ network embedding,” in Proceedings of the AAAI Conference on University of Posts and Telecommunications. He has broad interest in natural
+ Artificial Intelligence, vol. 34, 2020, pp. 5371–5378. language processing, computer vision, machine learning, and wireless com-
+ [91] E. Rossi, B. Chamberlain, F. Frasca, D. Eynard, F. Monti, and M. Bron- munications, such as information extraction, model robustness, multimodal
+ stein, “Temporal graph networks for deep learning on dynamic graphs,” retrieval, and next-generation wireless networks. He is a member of the
+ arXiv preprint arXiv:2006.10637, 2020. National Engineering Research Center for Mobile Network Technologies. He
+ [92] M. Yoon, B. Hooi, K. Shin, and C. Faloutsos, “Fast and accurate has published papers in top-tier conferences and journals including ACL,
+ anomaly detection in dynamic graphs with a two-pronged approach,” CVPR, EMNLP, SIGIR, IJCAI, CKIM, SIGCOMM, IEEE JSAC, IEEE
+ ACM, 2019. Communications Magazine, IEEE Network, Computer Networks. He served
+ [93] M. Sarhan, S. Layeghy, N. Moustafa, and M. Portmann, “Netflow as a Reviewer for ACL, EMNLP, AAAI, IJCAI, Neurocomputing, and IEEE
+ datasets for machine learning-based network intrusion detection sys- Transactions on Image Processing.
+ tems,” in Big Data Technologies and Applications: 10th EAI Interna- Hongrui Xia is an undergraduate student at the National Engineering Retional Conference, BDTA 2020, and 13th EAI International Conference search Center for Mobile Network Technologies, Beijing University of Posts
+ on Wireless Internet, WiCON 2020, Virtual Event, December 11, 2020, and Telecommunications. He specializes in network security and intrusion
+ Proceedings 10. Springer, 2021, pp. 117–135. detection, aiming to advance his expertise in safeguarding digital systems and
+ [94] W. Lalouani and M. Younis, “Robust distributed intrusion detection detecting cyber threats. Dedicated to contributing to the field through research
+ system for edge of things,” in 2021 IEEE Global Communications and innovation.
+ Conference (GLOBECOM). IEEE, 2021, pp. 01–06. Zheng Weng is an undergraduate student at the National Engineering Re-
+ [95] M. Sarhan, S. Layeghy, and M. Portmann, “Evaluating standard feature search Center for Mobile Network Technologies, Beijing University of Posts
+ sets towards increased generalisability and explainability of ml-based and Telecommunications. He focuses on Graph Neural Networks (GNNs) and
+ network intrusion detection,” Big Data Research, vol. 30, p. 100359, machine learning, exploring innovative methods to enhance data security and
+ 2022. network integrity through advanced computational models.
+ [96] E. Caville, W. W. Lo, S. Layeghy, and M. Portmann, “Anomal-e: Xueting Wang is an undergraduate student at the National Engineering
+ A self-supervised network intrusion detection system based on Research Center for Mobile Network Technologies, Beijing University of
+ graph neural networks,” Knowledge-Based Systems, vol. 258, p. Posts and Telecommunications. Her current research interests include artificial
+ 110030, 2022. [Online]. Available: https://www.sciencedirect.com/ intelligence security, the analysis and detection of network traffic attacks, and
+ science/article/pii/S0950705122011236 the use of AI automation to detect and analyze viruses such as Trojans.
+ [97] X. Guo, B. Zhou, and S. Skiena, “Subset node anomaly tracking
+ Meng Shen (Member, IEEE) received the B.Eng degree from Shandong
+ over large dynamic graphs,” in Proceedings of the 28th ACM SIGKDD
+ University, Jinan, China in 2009, and the Ph.D degree from Tsinghua
+ Conference on Knowledge Discovery & Data Mining, ser. KDD ’22.
+ University, Beijing, China in 2014, both in computer science. Currently he
+ Association for Computing Machinery, 2022. [Online]. Available:
+ serves in Beijing Institute of Technology, Beijing, China, as a professor. His
+ https://doi.org/10.1145/3534678.3539389
+ research interests include privacy protection for cloud and IoT, blockchain
+ [98] H. Wang, Z. Lei, X. Zhang, B. Zhou, and J. Peng, “Machine learning applications, and encrypted traffic classification. He received the Best Paper
+ basics,” Deep learning, pp. 98–164, 2016. Runner-Up Award at IEEE IPCCC 2014. He is a member of the IEEE.
+ [99] R. E. Schapire, “Explaining adaboost,” Empirical Inference: Festschrift
+ in Honor of Vladimir N. Vapnik, pp. 37–52, 2013. Xiaofeng Tao (Senior Member, IEEE) received the bachelor’s degree in
+ electrical engineering from Xi’an Jiaotong University, Xi’an, China, in 1993,
+[100] R. S. Fisher, J. H. Cross, J. A. French, N. Higurashi, E. Hirsch,
+ and the master’s and Ph.D. degrees in telecommunication engineering from the
+ F. E. Jansen, L. Lagae, S. L. Moshé, J. Peltola, E. Roulet Perez
+ Beijing University of Posts and Telecommunications (BUPT), Beijing, China,
+ et al., “Operational classification of seizure types by the international
+ in 1999 and 2002, respectively. He is currently a Professor at the National
+ league against epilepsy: Position paper of the ilae commission for
+ Engineering Research Center for Mobile Network Technologies, Beijing
+ classification and terminology,” Epilepsia, vol. 58, no. 4, pp. 522–530,
+ University of Posts and Telecommunications, a fellow of the Institution of
+ 2017.
+ Engineering and Technology, and the Chair of the IEEE ComSoc Beijing
+[101] S. Kim, J. Lee, N. Lee, W. Kim, S. Choi, and C. Park, “Task-equivariant Chapter. He has authored or coauthored over 200 articles and three books in
+ graph few-shot learning,” in Proceedings of the 29th ACM SIGKDD wireless communication areas. He focuses on B5G/6G research.
+ Conference on Knowledge Discovery and Data Mining, 2023, pp.
+ 1120–1131. Jun Liu (Member, IEEE) received the master’s degree from Fudan University
+[102] B. Zhang, X. Li, Y. Ye, and S. Feng, “Prototype completion for few- and the Ph.D. degree from the School of Electrical and Electronic Engineering,
+ shot learning,” 2021. Nanyang Technological University. He is currently an Assistant Professor with
+ the Singapore University of Technology and Design. His research interests
+[103] S. Bandyopadhyay and V. Peter, “Unsupervised constrained community
+ include computer vision, machine learning, and artificial intelligence. His
+ detection via self-expressive graph neural network,” in Uncertainty in
+ research works are published in many conferences and journals, including
+ Artificial Intelligence. PMLR, 2021, pp. 1078–1088.
+ IEEE Transactions on Pattern Analysis and Machine Intelligence, IEEE
+[104] M. Grandini, E. Bagli, and G. Visani, “Metrics for multi-class classi- Transactions on Image Processing, NeurIPS, CVPR, ICCV, and ECCV. He
+ fication: an overview,” 2020. is also an organizer of international workshops. He was the Area Chair of
+[105] A. Bahrini, M. Khamoshifar, H. Abbasimehr, R. J. Riggs, M. Esmaeili, ICML/NeurIPS (2022–2023), ICLR (2022–2024), IJCAI 2023, and CVPR
+ R. M. Majdabadkohne, and M. Pasehvar, “Chatgpt: Applications, 2024.
+ opportunities, and threats,” 2023.

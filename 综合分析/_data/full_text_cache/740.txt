@@ -1,0 +1,1013 @@
+8318 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ MFAD: A Multimodal Feature Fusion-Enhanced
+ Time Series Anomaly Detection Framework in
+ Industrial Cyber-Physical Systems
+ Silin Peng , Yu Han , Lichen Liu , Jinlong Li , Ruonan Li , Zhaoquan Gu , Jie Liu , Fellow, IEEE,
+ and Xiaowen Chu , Fellow, IEEE
+
+ Abstract—Industrial Cyber-Physical Systems (ICPS) are for real-time detection and lightweight deployment in resourceincreasingly vulnerable to sophisticated attacks and operational constrained industrial edge environments.
+disturbances that induce subtle and hard-to-detect anomalies,
+particularly in industrial edge environments. Existing anomaly
+detection methods often rely on sufficient labeled data and Note to Practitioners—This paper is motivated by the increasinvolve excessive computational overhead, hindering real-time ing need for reliable and efficient anomaly detection in
+detection and lightweight deployment. To address these chal- Industrial Cyber-Physical Systems (ICPS), particularly deployed
+lenges, we propose a Multimodal Feature fusion-enhanced time in resource-constrained industrial edge environments. Existing
+series Anomaly Detection framework (MFAD) in ICPS. MFAD approaches often treat temporal and industrial features sepaenhances the representation of subtle anomalies by jointly mod- rately, rely on sufficient labeled data, and require substantial
+eling temporal dynamics and industrial characteristics through a computational resources, which limits their applicability in realunified multimodal feature fusion mechanism. Moreover, MFAD world industrial settings. In contrast, the proposed MFAD
+adopts a three-stage detection strategy with adaptive threshold- provides a lightweight and practical solution that integrates
+ing, which further improves robustness under varying operating multimodal feature fusion with robust semi-supervised detection
+conditions, while its lightweight overall architecture supports mechanisms to effectively capture subtle anomalies in time series
+edge deployment. In addition, we provide the Industrial Gas industrial data. The framework is designed with deployment
+Cyber-Physical System (IGCPS) dataset collected from real-world feasibility that it offers strong detection accuracy, low latency,
+industrial operations. Experiments on ICPS benchmark datasets and efficient resource consumption suitable for industrial edge
+of varying scales, including IGCPS, PUMP, WADI, and SWaT, devices. The methods presented here can inform practitioners
+demonstrate that MFAD achieves an F1 score exceeding 96.7% seeking to enhance the reliability and real-time performance of
+with efficient resource utilization, validating its effectiveness ICPS anomaly detection systems. Future extensions may focus
+ on expanding MFAD for broader online industrial applications,
+ Received 23 November 2025; revised 20 February 2026; accepted 10 April integrating it with more edge platforms, and enabling large-scale
+2026. Date of publication 14 April 2026; date of current version 22 April distributed deployment.
+2026. This article was recommended for publication by Associate Editor J.
+Xiao and Editor H. Zhang upon evaluation of the reviewers’ comments. This Index Terms—Industrial cyber-physical systems, multimodal
+work was supported in part by Shenzhen Science and Technology Program feature fusion, time series anomaly detection, resourceunder Grant KJZD20240903103811016, in part by the Major Key Project constrained industrial edge environments.
+of Pengcheng Laboratory (PCL) under Grant PCL2024A05, and in part by
+the National Natural Science Foundation of China under Grant 62350710797.
+(Corresponding authors: Zhaoquan Gu; Ruonan Li.)
+ Silin Peng is with the School of Intelligent Systems Engineering,
+Sun Yat-sen University, Shenzhen 518107, China, and also with the Depart- I. I NTRODUCTION
+ment of New Networks, Peng Cheng Laboratory, Shenzhen 518108, China
+(e-mail: pengslin6@mail2.sysu.edu.cn).
+ Yu Han is with the School of Intelligent Systems Engineering, Sun Yat-sen
+University, Shenzhen 518107, China (e-mail: hanyu25@mail.sysu.edu.cn).
+ Lichen Liu and Ruonan Li are with the Department of New Networks,
+ I NDUSTRIAL Cyber–Physical Systems (ICPS) constitute
+ the operational backbone of modern industrial automation,
+ critical infrastructure, and edge intelligence systems [1]. ICPS
+Peng Cheng Laboratory, Shenzhen 518108, China (e-mail: liulch@pcl.ac.cn; tightly couple computational processes with physical dynamics
+lirn@pcl.ac.cn). through interconnected sensors, actuators, controllers, and
+ Jinlong Li is with the Cyberspace Institute of Advanced
+Technology, Guangzhou University, Guangzhou 510006, China (e-mail: communication interfaces, thereby achieving high levels of
+jinlongli@gzhu.edu.cn). automation, efficiency, and resilience [1], [2], [3], [4]. How-
+ Zhaoquan Gu is with the College of Computer Science and Technology, ever, this tight cyber–physical integration also significantly
+Harbin Institute of Technology, Shenzhen 518055, China, and also with the
+Department of New Networks, Peng Cheng Laboratory, Shenzhen 518108, enlarges the attack surface: sophisticated cyber intrusions,
+China (e-mail: guzhaoquan@hit.edu.cn). stealthy signal manipulations, and cross-layer disturbances
+ Jie Liu is with the International Research Institute for Artificial Intelli- may propagate across both cyber and physical domains, giving
+gence, Harbin Institute of Technology, Shenzhen 518055, China, and also
+with the State Key Laboratory of Smart Farm Technologies and Systems, rise to subtle yet safety-critical anomalies [5], [6], [7]. In addi-
+Harbin 150030, China (e-mail: jieliu@hit.edu.cn). tion, the migration of ICPS toward edge-assisted architectures
+ Xiaowen Chu is with the Department of Computer Science, The Hong Kong for real-time processing further exacerbates the challenge of
+University of Science and Technology (Guangzhou), Guangzhou 511458,
+China (e-mail: xwchu@ust.hk). deploying effective anomaly detection under stringent resource
+ Digital Object Identifier 10.1109/TASE.2026.3683936 constraints [8], [9], [10].
+ 1558-3783 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+PENG et al.: MULTIMODAL FEATURE FUSION-ENHANCED TIME SERIES ANOMALY DETECTION FRAMEWORK 8319
+
+ Compared with conventional Information Technology (IT) improves robustness against Gaussian noise and disanomaly detection tasks [11], [12], [13], anomaly detection tribution shifts in resource-constrained ICPS edge
+in ICPS exhibits several distinctive challenges. First, ICPS environments.
+sensor streams exhibit strong temporal dependencies and 3) We contribute the Industrial Gas Cyber-Physical System
+multimodal heterogeneity. Anomalies in such systems often (IGCPS) dataset, a real-world benchmark collected from
+manifest simultaneously across physical measurements and Shenzhen Gas Corporation operational environments,
+control logic [14]. Such multimodal properties hinder the containing both normal operations and cyber-physical
+effectiveness of detection methods using single features, while attack scenarios.
+multimodal fusion has been extensively explored in the image 4) We conduct extensive experiments on ICPS time series
+domain but remains under-investigated for time series anomaly datasets of varying scales (IGCPS, PUMP, SWaT, and
+detection [15]. Second, industrial edge devices operate under WADI), demonstrating that MFAD consistently achieves
+strict computational, memory, and latency constraints, ren- superior detection performance, with F1-scores exceeddering many deep anomaly detection frameworks impractical ing 96.7% across all benchmarks, while maintaining
+for real-world deployment [16]. Third, severe data imbalance, efficient resource utilization and real-time detection perincomplete labeling, and the presence of noise or distribution formance for industrial edge deployment.
+drift further complicate training and degrade the robustness The remainder of this paper is organized as follows.
+of fully supervised models [17], [18]. As a result, designing Section II reviews existing ICPS time series anomaly detection
+a lightweight yet robust anomaly detection framework under research. Section III describes the proposed MFAD framework
+edge constraints remains an open problem. in detail. Section IV introduces the experimental results. Sec-
+ Traditional statistical and machine learning methods [19] tion V presents robustness evaluation and analysis. Section VI
+offer interpretability and low computational cost, but their concludes the paper with future directions.
+reliance on handcrafted features and large amounts of labeled
+data limits their ability to capture complex temporal dynamics II. R ELATED W ORK
+in modern ICPS. Deep learning approaches [20], including
+ This section provides a comprehensive review of anomaly
+autoencoders, recurrent networks, and attention-based models,
+ detection research in industrial cyber–physical systems ICPS.
+have demonstrated strong capability in modeling temporal
+ Existing work can be grouped into three categories: traditional
+dependencies and nonlinear patterns. Nevertheless, most existstatistical and machine-learning methods, deep learning moding deep models focus on temporal features, underutilize
+ els, and advanced techniques.
+rich industrial feature representations, and incur computational
+overhead that exceeds the capacity of edge devices. Moreover,
+the lack of effective multimodal feature fusion and adaptive A. Traditional Methods
+thresholding mechanisms further constrains their robustness Traditional anomaly detection methods mainly consist of
+across diverse operational conditions. statistical modeling and classical machine learning tech-
+ To address these challenges, this paper proposes propose niques. Breunig et al. [21] introduced the Local Outlier
+a Multimodal Feature fusion-enhanced time series Anomaly Factor (LOF), which measures density deviation to detect
+Detection framework (MFAD) in resource-constrained ICPS local anomalies. Although LOF effectively detects contexenvironments. MFAD constructs a unified multimodal rep- tual anomalies, its sensitivity to parameter settings limresentation by jointly modeling temporal dynamics and its its stability in heterogeneous ICPS environments. To
+industrial statistical features, enabling more accurate detection model nonlinear system behaviors, Martinez-Guerra and
+of subtle cyber–physical anomalies. A lightweight architecture Mata-Machuca [22] proposed fault detection schemes based on
+and semi-supervised learning paradigm are adopted to reduce the Ensemble Kalman Filter (EnKF), which exploit recursive
+computational overhead and alleviate label scarcity. Further- Bayesian estimation to identify abnormal state deviations.
+more, MFAD incorporates a three-stage detection mechanism Although offering strong theoretical guarantees, the computawith an adaptive threshold strategy, achieving strong detec- tional burden of EnKF increases rapidly in high-dimensional
+tion performance, robustness against Gaussian noise and industrial processes.
+distribution shifts, and consistent performance across varying Furthermore, Wu et al. [23] incorporated Bayesian learning
+industrial operating conditions. and Gaussian processing into LSTM models for anomaly
+ The main contributions of this work are summarized as detection, enabling interpretable probabilistic reasoning over
+follows: multivariate temporal data. However, the introduced Bayesian
+ 1) We propose MFAD, a lightweight Multimodal Fea- components increase inference latency and restrict real-time
+ ture fusion-enhanced time series Anomaly Detection usage in edge devices. In parallel, Qin and Lou [24] employed
+ framework that jointly models temporal dependen- Isolation Forest (IF) for hydrological anomaly detection, levercies and industrial domain characteristics, enabling aging random partitioning to efficiently isolate rare events.
+ effective cross-domain anomaly representation in ICPS Nevertheless, its lack of temporal awareness limits its applicaenvironments. bility in dynamical ICPS environments. To support industrial
+ 2) We design a lightweight semi-supervised learning archi- streaming applications, Rosenberger et al. [25] extended
+ tecture incorporating a progressive three-stage detection Kernel Density Estimation (KDE) for real-time anomaly
+ mechanism with adaptive threshold calibration, which scoring. Despite its lightweight nature, KDE struggles with
+8320 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+non-stationary distributions and concept drift. Similarly, high computational overhead, limiting their feasibility for real-
+Razzak et al. [26] enhanced One-Class SVM (OCSVM) using time and resource-constrained industrial deployment.
+bounded loss functions and randomized nonlinear kernels to
+handle large-scale IoT data. While improving robustness, the C. Advanced Techniques
+kernel operations introduce scalability issues for continuous Beyond traditional and deep learning approaches,
+ICPS monitoring. researchers have introduced advanced generative and
+ Overall, traditional methods provide interpretability and graph-based models to capture spatiotemporal dependencies.
+computational efficiency. However, their limited capabil- Han and Woo [35] introduced FuSAGNet, which integrates
+ity in modeling multimodal features and complex tem- sparse autoencoders with graph structures, effectively
+poral dependencies poses challenges in modern ICPS modeling sensor dependencies. However, its static graph
+scenarios, motivating the need for data-driven sequence assumption limits adaptability to dynamically changing
+modeling. industrial relations. Similarly, Chen et al. [36] introduced
+ DVGCRN, a deep variational graph convolutional recurrent
+ network capable of learning spatial and temporal correlations
+B. Deep Learning Approaches jointly. Although effective on server and satellite data,
+ With the success of representation learning, deep its computational complexity restricts its applicability
+learning–based anomaly detectors have become mainstream. to edge devices. Building on graph relational learning,
+Park et al. [27] developed the LSTM-VAE architecture, Zhang et al. [37] designed GRELeN, integrating GNN-based
+combining recurrent networks with variational inference relational modeling with VAE structures. While maintaining
+to model nonlinear temporal dynamics. Although effective strong anomaly discrimination, its generalization to diverse
+for reconstructing multivariate sequences, this approach industrial scenarios remains limited. More recently, Dai and
+requires significant computation and memory. To further Chen [38] proposed GANF, a graph-augmented normalizing
+improve robustness, Gao et al. [28] proposed RobustTAD, flow framework that embeds causal structure learning
+integrating time–frequency decomposition with convolutional into invertible flows. This method provides interpretable
+learning. Despite improved noise resilience, the heavy dependency learning but suffers from high computational
+decomposition pipeline hinders real-time deployment. cost due to the invertibility constraints of flow-based models.
+Advancing toward attention mechanisms, Yang et al. [29] Additionally, Lin et al. [39] introduced PddBLS-AE, an
+introduced DCdetector, which applies dual-attention ensemble denoising autoencoder framework based on Broad
+contrastive learning to enhance discriminative representations. Learning System (BLS) for time series anomaly detection.
+While achieving strong performance, the dual-branch PddBLS-AE leverages the incremental learning capability of
+architecture incurs quadratic memory usage. Meanwhile, BLS combined with ensemble denoising strategies to achieve
+Su et al. [30] proposed OmniAnomaly, which incorporates strong reconstruction-based anomaly detection. However,
+planar normalizing flows into a GRU-VAE architecture to its reliance on ensemble mechanisms leads to substantial
+represent the stochastic characteristics of multivariate time floating-point operations (FLOPs) and moderate computational
+series. Despite its robustness, the model faces challenges in overhead, limiting its applicability in resource-constrained
+handling extremely high-dimensional ICPS data. industrial edge environments.
+ On the one hand, Audibert et al. [31] presented USAD, As systematically compared in Table I, traditional methods
+a lightweight adversarial autoencoder that amplifies offer valuable interpretability and computational efficiency
+reconstruction discrepancies. Though training-efficient, yet lack sophisticated multimodal fusion capabilities essen-
+USAD often becomes sensitive to unstable ICPS signals. On tial for heterogeneous ICPS data. Deep learning approaches
+the other hand, Wang et al. [32] proposed CutAddPaste, a provide superior temporal modeling and detection perfordata augmentation strategy that creates pseudo anomalies by mance but demand significant computational resources that
+injecting synthetic patterns into normal sequences. Although challenge real-time edge deployment in industrial settings.
+alleviating data scarcity, these artificial patterns cannot fully Graph-based and other emerging models capture complex
+capture the diversity of real industrial anomalies. To address relational structures and data distributions effectively but suffer
+system identification, Feng and Tian [18] developed NSIBF, from limited adaptability to dynamic conditions and substana neural system identification model equipped with Bayesian tial computational overhead. As a result, the fundamental
+filtering. Its robustness is strong, but parameter tuning is non- limitation across all methodological categories is the inabiltrivial. In addition, Kim et al. [33] proposed CTAD, which ity to simultaneously support efficient and robust anomaly
+utilizes contrastive learning with multiscale augmentations detection capabilities, lightweight computational footprint, and
+to enhance noise robustness; yet, handling cross-component real-time performance under the noisy, evolving conditions
+interactions in ICPS remains challenging. Recently, characteristic of industrial environments. These identified
+Tian et al. [34] designed SSDCL, a denoising-aware semi- research gaps directly motivate our proposed MFAD framesupervised contrastive learning framework achieving strong work, which strategically unifies industrial feature extraction,
+anomaly tolerance, but it requires delicate hyperparameter lightweight bidirectional temporal representation learning,
+balancing. adaptive semi-supervised anomaly detection with dynamic
+ In summary, deep learning methods significantly improve thresholds to comprehensively address the stringent requiredetection accuracy and feature learning, but often introduce ments of resource-constrained ICPS deployment.
+PENG et al.: MULTIMODAL FEATURE FUSION-ENHANCED TIME SERIES ANOMALY DETECTION FRAMEWORK 8321
+
+ TABLE I
+ C OMPARISON OF T IME S ERIES A NOMALY D ETECTION M ETHODS IN ICPS
+
+Fig. 1. Overall framework of MFAD for industrial anomaly detection.
+
+ III. M ETHODOLOGY Detection (TSAD) module, adaptive anomaly scoring on the
+ output of SSL module with dynamic threshold.
+ This section provides a comprehensive description of the Let the multivariate time series input be X ∈ RB×T ×F ,
+MFAD framework for anomaly detection in ICPS. where B, T , and F denote the batch size, sequence length, and
+ feature dimension respectively. The MFAD model outputs an
+ anomaly score S ∈ [0, 1] for each sample, which indicates the
+A. Overall Architecture probability that the input sequence exhibits abnormal behavior.
+ The MFAD model is specifically designed to extract The overall pipeline is formulated as:
+multimodal features from the physical layer through cap-
+  
+ S = Fdetect Ffusion Ftemp (X), Find (X) (1)
+turing industrial characteristics and temporal dependencies
+of industrial processes. It also supports semi-supervised where Find represents the industrial feature extractor,
+learning under limited labeled data. As shown in Fig. 1, Ftemp denotes the temporal feature encoder consisting of
+the architecture of MFAD consists of three primary BiGRU–Attention–TCN architecture, Ffusion refers to the
+modules: (i) Multimodal Feature Fusion (MF) module, multimodal feature fusion, and Fdetect represents the final
+including industrial feature extraction and temporal rep- time series anomaly detection after semi-supervised learning
+resentation learning through Bidirectional Gated Recur- through reconstructor and classifiers. This hierarchical design
+rent Unit–Multi-Head Self-Attention–Temporal Convolutional implements a three-stage information-refinement pipeline:
+Network (BiGRU–Attention–TCN) architecture, (ii) Semi- (i) the MF module that jointly encodes industrial domain
+Supervised Learning (SSL) module, including reconstructor characteristics and temporal dependencies into a unified latent
+and three-stage classifier, and (iii) Time Series Anomaly representation; (ii) the SSL module that performs cascaded
+8322 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+classification (the three-stage classifier) and reconstruction 2) Temporal Feature Encoder: Temporal modeling is cruregularization to learn discriminative and robust representa- cial for identifying evolving abnormal behaviors. The MFAD
+tions; and (iii) the TSAD module that integrates MC-Dropout temporal feature encoder Ftemp integrates both bidirectional
+uncertainty estimation, weighted fusion with temporal smooth- and hierarchical representations through a combination of
+ing and adaptive thresholding to produce calibrated anomaly BiGRU, Multi-Head Self-Attention, and Temporal Convoluscores. We will describe the detailed process of each module tion Network (TCN).
+in the following sections. a) BiGRU: Given the input sequence X ∈ RB×T ×F , an
+ input projection layer first maps it to Xproj ∈ RB×T ×H where
+B. MF Module H = 96 is the hidden dimension. The two-layer bidirectional
+ MF module contains industrial feature extractor and tem- GRU captures both forward and backward temporal dependenporal feature encoder, and fuses their representation as the cies:
+ −−−−→ ←−−−−
+foundation for the subsequent SSL module. ht = [GRU(x1:t ), GRU(xt:T )] ∈ RH (6)
+ 1) Industrial Feature Extractor: To capture the inherent
+ producing contextualized embeddings H ∈ RB×T ×H , where
+characteristics of industrial processes, the industrial feature
+ H is is the hidden dimension of the model (number of
+extractor Find integrates three complementary perspectives:
+ output channels for BiGRU–Attention–TCN architecture). The
+statistical features that capture distributional behaviors, fre-
+ BiGRU uses 2 layers with H/2 = 48 hidden units per direction,
+quency features that reflect spectral energy changes, and
+ and the bidirectional outputs are concatenated to maintain
+trend features that reveal variation dynamics. Specific feature
+ dimension H = 96.
+descriptions are as follows:
+ b) Multi-head self-attention: Self-attention is employed
+ a) Statistical features: Given the input sequence X ∈
+ to dynamically emphasize temporally salient events:
+RB×T ×F , where B denotes batch size, T denotes sequence
+ QK>
+  
+length, and F denotes feature dimension, for each input signal,
+ Attention(Q, K, V) = Softmax √ V (7)
+six statistics are extracted, including mean, standard deviation, dk
+minimum, maximum, median, and range: where Q, K, and V are linear projections of H, and dk
+ fstat = [µ, σ, min, max, median, range] (2) denotes the attention head dimension. This mechanism allows
+ the model to adaptively focus on timestamps that exhibit
+which describe the operational envelope and stability of each
+ higher anomaly potential. With 4 attention heads and persensor. These statistics are computed along the temporal
+ head dimension dk = H/4 = 24, the multi-head attention
+dimension, resulting in fstat ∈ RB×6F , which is then projected
+ output maintains the shape Hattn ∈ RB×T ×H through output
+to RB×96 through a linear layer with LayerNorm and GELU
+ projection, preserving the temporal resolution for subsequent
+activation.
+ TCN processing.
+ b) Frequency features: To identify periodic patterns
+ c) TCN: The Temporal Convolutional Network (TCN)
+or oscillations, a lightweight Short-Time Fourier Transform
+ module receives the attention-enhanced sequence Hattn ∈
+(STFT) with window size nfft = 8 and hop length = 4 is
+ RB×T ×H and is designed to capture short-range patterns and
+applied. The corresponding spectral power density is expressed
+ multi-scale temporal dependencies through dilated convoluas:
+ tions and residual connections. Formally, for the l-th TCN
+ ffreq = E |F{x}|2
+  
+ (3)
+ layer, the output is computed as:
+which emphasizes the dominant frequencies in the signal  
+evolution. The STFT produces nfreq = nfft /2 + 1 = 5 frequency y(l) = GELU BN Conv1D(y(l−1) ) + y(l−1) , (8)
+bins per feature, yielding ffreq ∈ RB×5F , which is projected to
+ where Conv1D(·) is a one-dimensional dilated convolution,
+RB×96 through a dedicated frequency projection layer.
+ BN(·) denotes batch normalization, and the non-linear actic) Trend features: Temporal variation is characterized by
+ vation function GELU(·) is defined as:
+first- and second-order derivatives:
+ ftrend = [∆x, ∆2 x] (4) GELU(x) = x Φ(x) (9)
+
+reflecting both the instantaneous change rate and acceleration with Φ(·) being the standard Gaussian cumulative distribution
+trend of process variables. The trend features ftrend ∈ RB×2F function (CDF). The residual connection guarantees stable
+are projected to RB×48 (half the hidden dimension) to balance gradient propagation in deep stacks of dilated convolutions.
+representation capacity. The TCN comprises 3 layers with dilation factors {1, 2, 4}
+ All three components are concatenated and form the com- and kernel size 3, maintaining the hidden dimension H =
+plete industrial feature representation: 96 throughout via channel-preserving convolutions, yielding
+  proj proj proj  HTCN ∈ RB×T ×H .
+ zind = Concat fstat , ffreq , ftrend (5) After the final layer, temporal aggregation is performed
+resulting in zind ∈ RB×240 (i.e., 96 + 96 + 48 = 240), as illus- using global average pooling:
+trated in the Feature Concat block of Fig. 1. This dimension
+ ytcn = AvgPool(y(L) ) (10)
+is designed to match the subsequent fusion layer requirements
+while preserving sufficient representational capacity for indus- where AvgPool(·) denotes average pooling along the temporal
+trial domain characteristics. dimension. This pooling operation compresses the temporal
+PENG et al.: MULTIMODAL FEATURE FUSION-ENHANCED TIME SERIES ANOMALY DETECTION FRAMEWORK 8323
+
+dimension, producing ytcn ∈ RB×H (i.e., RB×96 ), which is enables later stages to: (1) correct potential errors from earlier
+subsequently concatenated with the industrial features zind ∈ stages by observing their confidence distributions, (2) focus
+RB×240 to form the input to the fusion layer. computational capacity on samples where earlier predictions
+ 3) Multimodal Feature Fusion: To ensure proper temporal exhibit uncertainty, and (3) leverage inter-stage information
+alignment, both the industrial feature extractor and temporal flow without requiring separate feature re-extraction. The
+encoder operate on the same input window X ∈ RB×T ×F . 2-dimensional increments correspond to binary classification
+Statistical features aggregate distributional properties over the logits (normal vs. anomaly) passed between stages. Each
+complete sequence, STFT features capture frequency content stage outputs binary logits o(s) = [o(s) (s)
+ 0 , o1 ] with classification
+through overlapping windows spanning the temporal range, probabilities:
+and trend features compute derivatives across consecutive exp(o(s)
+ k )
+time steps. The temporal encoder produces sequence-level P(s)
+ k = P 1 (s)
+ , k ∈ {0, 1} (16)
+representations through average pooling after TCN process- j=0 exp(o j )
+ing. This synchronized computation ensures that both feature This cascaded architecture enables later stages to refine decimodalities represent the same temporal context before fusion. sions by leveraging predictions from earlier stages. To reduce
+As illustrated in Fig. 1, the Feature Fusion block receives computational cost, samples are routed through stages based
+the concatenated input [ytcn ; zind ] ∈ RB×336 (ytcn ∈ RB×96 and on confidence thresholds τ1 = 0.85 and τ2 = 0.90. Let
+zind ∈ RB×240 ) and projects it to the target hidden dimension c(s) = maxk P(s)
+ k denote the confidence at stage s. The routing
+H = 96 through a linear transformation: logic is:
+ 8
+ hfusion = GELU LayerNorm W[ytcn ; zind ] <i = 1 if c ≥ τ1
+  (1)
+ (11) ˆ
+where LayerNorm(·) is layer normalization, [·; ·] denotes vec- Stage(i) = i = 2 if c(1) < τ1 and c(2) ≥ τ2 (17)
+ i = 3 if c < τ1 and c < τ2
+ ˆ (1) (2)
+tor concatenation, and W ∈ R96×336 is a trainable projection
+ :
+matrix. This projection compresses the high-dimensional con- The final prediction uses the output from the deepest stage
+catenated features while preserving discriminative information reached:
+from both modalities, producing the unified latent represen- ŷ = arg max P(s final )
+ (18)
+ k
+tation hfusion ∈ RB×96 , which serves as the shared input k∈{0,1}
+
+to both the three-stage classifier and reconstruction module. where sfinal ∈ {1, 2, 3} is determined by Eq. (17). This adap-
+The dimensional reduction from 336 to 96 is intentionally tive mechanism processes approximately 70% of samples at
+designed to prevent overfitting while maintaining sufficient Stage 1, 20% at Stage 2, and 10% at Stage 3, reducing average
+representational capacity for anomaly discrimination. inference cost while maintaining detection accuracy. Stage 1
+ (Coarse) prioritizes recall, minimizing false negatives with low
+C. SSL Module dropout of 0.3, Stage 2 (Fine) balances precision and recall
+ with moderate dropout of 0.4, and Stage 3 (Expert) enhances
+ 1) Three-Stage Cascaded Detection Strategy: To achieve
+ precision for hard samples with high dropout of 0.5. The proa balance among recall, discrimination robustness, and precigressive increase in input dimensionality (H → H+2 → H+4)
+sion, the proposed framework employs a cascaded three-stage
+ and regularization strength ensures each stage specializes in
+classifier with progressive refinement and adaptive early-exit.
+ increasingly difficult discrimination tasks without deepening
+ Let hfusion ∈ RH denote the fused multimodal representation.
+ the network.
+The three-stage classifier is defined as:
+ 2) Reconstruction Regularization: The Reconstructor mod-
+ Fclf = {Fcoarse , Ffine , Fexpert } (12) ule, as shown in Fig. 1, operates on the TCN output HTCN ∈
+ RB×T ×96 and maps it back to the original feature space
+where each stage is a two-layer MLP with progressively higher
+ through a point-wise MLP: Frec : R96 → RF , producing
+regularization (Dropout: 0.3 → 0.4 → 0.5) to transition
+ the reconstructed sequence X̂ ∈ RB×T ×F . This dimensional
+from high recall to high precision. All stages are jointly
+ transformation (B, T , 96) → (B, T , F) enables point-wise
+optimized with information flowing from coarse to expert
+ reconstruction across all timestamps for accurate anomaly
+through concatenation:
+ localization. To preserve the smoothness and geometry of
+ o(1) = Fcoarse (hfusion ) ∈ R2 (13) the latent normal manifold, a reconstruction branch is jointly
+ o (2)
+ = Ffine ([hfusion ; o ]) ∈ R
+ (1) 2
+ (14) optimized with the classifier. The reconstructor estimates an
+ approximation of the original input sequence:
+ o(3) = Fexpert ([hfusion ; o(1) ; o(2) ]) ∈ R2 (15)
+ X̂ = Frec (HTCN ) (19)
+where [·; ·] denotes concatenation. As shown in Fig. 1, the
+input dimensions progress as: Coarse stage receives (B, 96) → The reconstruction error is measured using the normalized
+(B, 2), Fine stage receives (B, 98) → (B, 2), and Expert squared Frobenius norm:
+stage receives (B, 100) → (B, 2). The input dimensionality 1 2
+ Erec = X̂ − X F (20)
+progressively increases from H to H + 2 to H + 4 imple- TF
+menting a cascaded refinement mechanism. Each subsequent which serves as a self-supervised constraint encouraging norstage receives both the original fused representation and mal operational patterns to stay consistent across temporal
+the prediction logits from all preceding stages. This design evolutions.
+8324 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ 3) Joint Optimization Objective: The total loss function Label smoothing with  = 0.05 improves calibration [43]
+integrates three-stage classification, hard sample mining, label using fine-stage predictions:
+smoothing, and reconstruction regularization: (
+ X (2) 0.95 if k = y
+ 3 Lsmooth = − ỹk log pk (x), ỹk = (27)
+ X 0.05 otherwise
+ Ltotal = wi LCE
+ i + w f Lfocal + w s Lsmooth k
+ i=1
+ where k ∈ {0, 1} and p(2)k denotes fine-stage probability.
+ + wr Lrec + wa Lanom (21)
+ Two reconstruction objectives enforce normal pattern learnwhere LCE is the cross-entropy loss for stage i ∈ ing. Given TCN output HTCN ∈ RB×T ×H and reconstructor
+ i
+{1, 2, 3} (coarse/fine/expert), Lfocal is the hard example Frec : RH → RF :
+mining loss, Lsmooth is label smoothing regularization, 1 2
+Lrec is normal reconstruction loss, Lanom is anomaly Lrec = Frec (HTCN ) − X F
+ BT F
+reconstruction penalty, and (w1 , w2 , w3 , w f , w s , wr , wa ) =
+ 8
+ 1 X 2
+(0.15, 0.25, 0.25, 0.20, 0.05, 0.05, 0.05) balance the competing
+ ˆ
+ < X̂ j − X j F if N1 > 0
+ Lanom = N 1 T F (28)
+ j∈I1
+objectives. To handle class imbalance [40], we use dynamic ˆ
+ :0
+class weighting. The weighted cross-entropy loss for stage i otherwise
+is defined as: where I1 = { j : y j = 1}, T is sequence length, F is feature
+ B
+ 1X dimension, and k · kF denotes Frobenius norm.
+ i =−
+ LCE ωy j log pi (y j |x j ) (22) For unlabeled data DU = {xuj }Nj=1
+ U
+ (assumed predominantly
+ B
+ j=1 normal), we minimize reconstruction loss with weight wu =
+where B is batch size, y j ∈ {0, 1} is the ground-truth label 0.3:
+(0 = normal, 1 = anomaly), and pi (y j |x j ) is the predicted 1 X
+ NU
+ 2
+probability from stage i. The class weight ωy j is determined Lunsup = 0.3 · Frec (Hu,TCN
+ j ) − Xuj (29)
+ NU T F F
+by the sample’s label according to: j=1
+ ( Gradient clipping (k∇k2 ≤ 1.0) and NaN handling ensure
+ ω0 = 1.0 if y j = 0 (normal)
+ ωy j = (23) robust training:
+ ω1 if y j = 1 (anomaly) (
+ Ltotal if finite
+where the anomaly class weight ω1 adapts dynamically with Lfinal = (30)
+training progress: LCE
+ 2 otherwise
+
+ where LCE
+   
+ N0 e 2 is the fine-stage cross-entropy as a fallback.
+ ω1 = clip , 5.0, 20.0 · 1.5 + 0.5 · (24)
+ N1 E
+where N0 and N1 respectively denote the sample counts normal D. TSAD Module
+and anomaly, e is the current epoch, E is total epochs, To improve detection robustness under noise and drift, the
+and clip(·, a, b) constrains values to [a, b]. The base weight proposed framework employs a comprehensive TSAD module,
+N0
+N1 follows the inverse frequency weighting principle [41]. as illustrated in Fig. 1. The TSAD module receives five
+The clipping bounds [5.0, 20.0] prevent numerical instability input signals from upstream components and processes them
+  class rebalancing. The progressive
+while maintaining effective through MC Dropout uncertainty estimation, normalization,
+multiplier 1.5 + 0.5 · Ee implements a curriculum learning weighted score fusion, temporal smoothing, and adaptive
+schedule [42] that gradually increases emphasis on anomaly thresholding to produce the final anomaly detection results.
+samples from 1.5× to 2.0× throughout training, allowing the 1) Input Components: The TSAD module integrates five
+model to first establish stable representations before focusing complementary signals from the SSL module:
+on harder anomaly discrimination tasks. To emphasize hard • Classification probabilities Pcoarse , Pfine , Pexpert ∈ RB×2 :
+examples, we apply adaptive Focal Loss [41] on the expert The anomaly probabilities from the three-stage classifier,
+stage: where the second dimension represents the softmax out-
+ B
+ 1X γ(e) put for the anomaly class.
+ Lfocal = − 1 − pj log(p j + ) (25)
+ B • Reconstruction error Erec ∈ RB : Computed from the
+ j=1
+ Reconstructor as Erec = T1F kX̂ − Xk2F , measuring the deviwhere p j = pexpert (y j |x j ) is clamped to [10−7 , 1 − 10−7 ] for ation between the input sequence and its reconstruction.
+numerical stability,  = 10−8 , and γ(e) = 2.0 + e/E increases • Embedding distance Demb ∈ RB : Derived from the fused
+from 2.0 to 3.0. Class-aware aggregation prevents imbalanced representation hfusion ∈ RB×H , quantifying the deviation
+training: from the normal manifold. The embedding distance is
+ 8 computed as:
+ ˆ
+ ˆ
+ anom
+ <0.7Lfocal + 0.3Lfocal
+ normal
+ if N1 > 0 v
+ B u H 
+ Lfocal = 1 uX h j − µ j 2
+ 
+ X (26)
+ Lfocal (p j ) otherwise Demb = t (31)
+ σj + 
+ ˆ
+ :B
+ ˆ
+ j=1 j=1
+PENG et al.: MULTIMODAL FEATURE FUSION-ENHANCED TIME SERIES ANOMALY DETECTION FRAMEWORK 8325
+
+ where h j is the j-th dimension of the fused embedding 5) Temporal Smoothing: Considering that cyber-physical
+ hfusion , µ j and σ j are the mean and standard deviation attacks typically persist across multiple consecutive time steps,
+ of the j-th dimension estimated from normal training the fused scores undergo temporal smoothing with window
+ samples, and  = 10−6 ensures numerical stability. This size W:
+ bW/2c
+ standardized Euclidean distance effectively measures how 1 X
+ far each sample deviates from the learned normal mani- S̃ t = S t+k (36)
+ W
+ k=−bW/2c
+ fold in the latent space.
+ 2) MC Dropout Uncertainty Estimation: To quantify pre- The final score combines smoothed and raw components:
+diction uncertainty, the classification probabilities undergo MC S final = λS̃ + (1 − λ)S̄ (37)
+Dropout sampling during inference. Dropout layers remain
+active at test time, and M = 5 stochastic forward passes where λ ∈ (0, 1) controls the balance between temporal consisare performed. Let {S (m) }m=1
+ M
+ denote the anomaly scores from tency and instantaneous sensitivity. This formulation captures
+these passes, the ensemble score and epistemic uncertainty are sustained attack patterns while preserving responsiveness to
+computed as: sudden anomalies.
+ !1/2 6) Adaptive Dynamic Threshold: The detection threshold
+ M M
+ 1 X (m) 1 X (m) 2 is determined through a hierarchical search strategy that
+ S̄ = S , U= S −S (32) prioritizes high precision while maximizing overall detection
+ M M
+ m=1 m=1
+ performance. The optimal threshold τ∗ is obtained by solving:
+ The uncertainty U ∈ RB serves three critical purposes τ∗ = arg max F1 (τ) s.t. Precision(τ) ≥ γ (38)
+in industrial deployment: (1) identifying fuzzy samples near τ
+
+decision boundaries; (2) detecting distribution shift, where sys- where F1 (τ) is the harmonic mean of precision and recall:
+tematic uncertainty increases may indicate operational regime
+ Precision(τ) · Recall(τ)
+changes or sensor drift; and (3) supporting risk-aware decision- F1 (τ) = 2 · (39)
+making by enabling operators to adjust detection sensitivity Precision(τ) + Recall(τ)
+based on uncertainty levels. As illustrated in Fig. 1, the with:
+uncertainty is directly output alongside the anomaly score for TP TP
+downstream applications. Precision(τ) = , Recall(τ) = (40)
+ TP + FP TP + FN
+ 3) Normalization: The reconstruction error and embedding
+ Here, TP, FP, and FN denote true positives, false positives,
+distance are normalized to [0, 1] range using min-max normaland false negatives at threshold τ, respectively. The constraint
+ization for consistent fusion with probability-based scores:
+ parameter γ starts at 0.95 and relaxes to 0.90 if no feasible
+ Erec − Emin Demb − Dmin solution exists. The search range is [µ0 + 0.2(µ1 − µ0 ), µ1 ],
+ Êrec = , D̂emb = (33) where µ0 and µ1 are the mean scores of normal and anomalous
+ Emax − Emin Dmax − Dmin
+ samples. This strategy ensures Precision ≥ 95% when achievwhere the normalization bounds are estimated from the train- able, minimizing false alarms in safety-critical applications.
+ing set statistics. Unlike methods that only minimize |Precision(τ) − 0.95|, our
+ 4) Weighted Score Fusion: The score fusion adapts to the approach explicitly balances precision and recall through the
+stage reached by each sample during cascaded inference. F1 objective. This balance is essential for ICPS, where both
+Let sfinal ∈ {1, 2, 3} denote the terminal stage determined false alarms and missed detections have serious operational
+by Eq. (17). The anomaly score is computed as: consequences.
+ sfinal 7) Anomaly Detection: The TSAD module produces two
+ X
+ S = anom + α4 Ê rec + α5 D̂emb
+ αi P(i) (34) outputs with dimensions (B, ): (1) the anomaly score S final ∈
+ i=1 RB computed by comparing with threshold τ∗ , yielding a
+ binary decision per sample, and (2) the uncertainty score
+where P(i)
+ anom denotes the anomaly probability from stage i, and U ∈ RB quantifying prediction confidence for each sample, as
+the stage-adaptive weights are defined as: illustrated in Fig. 1. The final Score and Uncertainty both have
+ 8 shape (B, ), representing per-sample scalar values. High uncer-
+ <(0.85, 0, 0)
+ ˆ if sfinal = 1 tainty samples can be flagged for manual review, enhancing
+ (α1 , α2 , α3 ) = (0.30, 0.55, 0) if sfinal = 2 (35) the practical utility of MFAD in industrial operations. Algo-
+ (0.20, 0.35, 0.30) if sfinal = 3 rithm 1 summarizes the complete anomaly detection workflow.
+ ˆ
+ :
+ The procedure alternates between multimodal feature extracwith (α4 , α5 ) = (0.10, 0.05) for reconstruction and embedding tion, temporal encoding, fusion, hierarchical classification,
+components. This formulation ensures that samples exiting and reconstruction. Both labeled and unlabeled samples are
+at Stage 1 (approximately 70% of test samples) utilize incorporated through a semi-supervised optimization loop.
+only coarse-stage predictions, while harder samples benefit Algorithm 1 summarizes the MFAD for time series anomaly
+from refined multi-stage fusion. The stage-adaptive design detection procedure in ICPS. For each epoch, the model
+reduces unnecessary computation while maintaining detection processes labeled mini-batches by extracting industrial features
+accuracy. zind via Find , encoding temporal patterns HTCN via Ftemp ,
+8326 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+Algorithm 1 MFAD for Time Series Anomaly Detection in TABLE II
+ICPS H YPERPARAMETER C ONFIGURATION
+Require: Labeled dataset DL = {(Xi , yi )}i=1 NL
+ , unlabeled dataset
+ DU = {X j } j=1 , learning rate η, total epochs E, confidence
+ NU
+
+ thresholds τ1 , τ2
+Ensure: Trained model parameters θ, calibrated temperature
+ T
+ 1: for e = 1 to E do
+ 2: for each mini-batch (Xb , yb ) ∈ DL do
+ 3: zind ← Find (Xb ) {Industrial features}
+ 4: HTCN ← Ftemp (Xb ) {Temporal encoding}
+ 5: h ← Ffusion (HTCN , zind ) {Feature fusion}
+ 6: {o(s) }3s=1 ← Fclf (h) {Three-stage classification}
+ 7: X̂ ← Frec (HTCN ) {Reconstruction} IV. E XPERIMENTS
+ 8: Compute Ltotal via Eq. (21)
+ 9: θ ← θ − η∇θ Ltotal This section introduce the evaluation metrics, the Industrial
+10: end for Gas Cyber-Physical System (IGCPS) dataset and experimental
+11: for each mini-batch Xu ∈ DU do results for the ICPS datasets, respectively.
+12: Compute Lunsup and update θ
+13: end for
+14: end for A. Experimental Environments and Hyperparameter Settings
+15: Calibrate temperature T on validation set To better approximate practical industrial edge-device con-
+16: Compute adaptive threshold τ∗ via precision-constrained ditions, all experimental simulations were conducted on
+ search an NVIDIA Jetson Nano B01 platform equipped with an
+ ARMv8-based processor and 4 GB RAM. The trained MFAD
+ model was exported to ONNX format and deployed using
+and fusing both modalities through Ffusion to obtain the uni- NVIDIA TensorRT with FP16 precision optimization, enabling
+fied representation h. The three-stage classifier Fclf produces hardware-aware inference acceleration on the embedded GPU.
+hierarchical predictions, while the reconstruction module Frec This setup provides a resource-constrained yet realistic compugenerates X̂ for auxiliary supervision. The total loss Ltotal tational environment for evaluating the deployment feasibility,
+(Eq. (21)) is computed and model parameters θ are updated runtime performance, and hardware-adaptive efficiency of
+via gradient descent: edge-oriented anomaly detection models.
+ To ensure robust performance and fair comparison, all
+ θ(t+1) = θ(t) − η∇θ Ltotal (41) hyperparameters are selected via empirical validation and gridbased exploration on a held-out validation set, as summarized
+where η denotes the learning rate controlling optimization step in Table II. The hidden dimension is fixed to H = 96,
+size. For unlabeled data, the model computes unsupervised providing a favorable trade-off between representation capacity
+losses Lunsup to leverage unlabeled samples in semi-supervised and computational efficiency under edge deployment conlearning. After training, temperature calibration adjusts prob- straints, while the learning rate is set to η = 8e−4 , chosen
+abilistic confidence on a validation set, and the adaptive from {e−4 , 5e−4 , 8e−4 , e−3 } based on convergence stability and
+threshold τ∗ is determined via precision-constrained search to validation performance. To mitigate overfitting under class
+optimize anomaly detection decisions. imbalance and semi-supervised learning, a progressive dropout
+ strategy is adopted in the three-stage classifier, with dropout
+ rates of 0.3, 0.4, and 0.5 for the Coarse, Fine, and Expert
+E. Computational Complexity and Deployment Analysis stages, respectively. During inference, confidence thresholds
+ τ1 = 0.85 and τ2 = 0.90 are used to enable early-exit decisions
+ To evaluate the practicality of MFAD for real-world indus- based on prediction confidence, allowing a large proportion
+trial scenarios, we analyze both computational efficiency and of easy samples to terminate at earlier stages in practice and
+edge deployment feasibility. thus reducing average inference latency. The batch size is
+ Let T denote the sequence length, F the feature dimension, set to 64, weight decay to 5e−4 , and Monte Carlo dropout
+H the hidden dimension, and K the number of attention heads. is performed with 5 stochastic forward passes to balance
+The total computational cost of MFAD can be expressed as: uncertainty estimation quality and efficiency. For temporal
+ smoothing, the window size W = 7 is selected based on
+ OMFAD = O(T FH) + O(T H 2 ) + O(HKd) (42) two considerations: (1) odd-sized windows enable symmetric
+ centered smoothing, and (2) empirical analysis indicates that
+where the first term corresponds to the BiGRU encoder, the most ICPS attacks persist for 5-10 consecutive time steps. The
+second to the multi-head self-attention with head dimension smoothing weight λ = 0.6 is determined via grid search to
+d = H/K, and the last term to the TCN convolutional layers. balance temporal consistency with instantaneous sensitivity.
+PENG et al.: MULTIMODAL FEATURE FUSION-ENHANCED TIME SERIES ANOMALY DETECTION FRAMEWORK 8327
+
+The final configuration is selected according to the highest
+validation F1-score.
+
+B. Baselines and Evaluation Metrics
+ To provide a fair comparison, we benchmark our method
+against recent representative anomaly detection algorithms
+in ICPS, including LSTM-VAE (2018) [27], USAD (2020)
+[31], NSIBF (2021) [18], FuSAGNet (2022) [35], CTAD
+(2023) [14], DCdetector (2023) [15], and SSDCL (2025)
+[16], PddBLS-AE (2025) [39], and we reproduced their work
+based on relevant papers. The evaluation follows a standard
+binary classification protocol in which each test sample is
+assigned to one of four outcome categories: TP — the
+model correctly labels an anomalous sequence as abnormal;
+FN — an abnormal sequence is mistakenly classified as
+normal; TN — a normal sequence is correctly recognized
+as normal; FP — a normal sequence is incorrectly flagged
+as anomalous. Fig. 2. Experimental edge-computing platform: NVIDIA Jetson Nano B01
+ To quantify detection performance, we employ three widely with TensorRT-accelerated deployment.
+used metrics: Precision (Pre) (Eq.(40)), Recall (Rec) (Eq.(40)),
+and F1-Score (F1) (Eq.(39)). Precision measures how many TABLE III
+of the predicted anomalies are truly abnormal, while Recall D ESCRIPTIONS OF P HYSICAL -L AYER F EATURES IN THE IGCPS DATASET
+reflects the proportion of actual anomalies successfully
+detected. The F1-Score represents their harmonic mean, balancing both detection accuracy and coverage.
+ Beyond detection quality, we also assess the computational
+efficiency of the proposed framework using three additional
+indicators: inference latency per sample (Infer), CPU usage
+(CPU), and FLOPs, which collectively capture the suitability
+of our method for deployment in resource-constrained industrial edge environments.
+
+C. ICPS Time Series Datasets
+ To thoroughly assess the performance of the MFAD framework, we carried out an extensive experimental study on
+multiple ICPS time series datasets. The evaluation covered our
+internally collected IGCPS dataset in addition to three widely Two representative adversarial behaviors were introduced to
+used public benchmarks: PUMP, WADI, and SWaT. assess anomaly detection performance:
+ We split all datasets into a training set, a validation set,
+and a test set following a semi-supervised learning paradigm. • Shutdown-type attacks: Malicious control commands or
+The training set contains both labeled and unlabeled data: forged packets are injected to interrupt key gas supply
+5% labeled samples are used for supervised classification procedures, forcing the closure of valves or disabling
+training, while the remaining 95% unlabeled samples (assumed compressors. These actions directly compromise system
+predominantly normal operational data) are leveraged for availability and cause abrupt operational stops.
+self-supervised reconstruction learning to capture normal • Parameter manipulation attacks: Attacks of this catebehavioral patterns. The validation set is used for hyperparam- gory subtly alter regulatory parameters, such as pressure
+eter tuning, temperature calibration, and early stopping. The limits or flow rate setpoints, with the intention of mistest set is used for final model evaluation and performance leading the control logic. Unlike shutdown attacks, the
+validation. resulting anomalies evolve gradually, making them con-
+ 1) IGCPS Dataset: The IGCPS dataset was obtained from siderably more challenging to detect in real time.
+the real operational environment of Shenzhen Gas Corpo- All experiments were conducted under controlled conditions
+ration (Guangdong, China), where both cyber-layer network on April 24, 2025, between 15:17:08 and 15:31:59. During
+traffic and physical-layer process variables were continuously this time window, physical-layer signals exhibiting deviations
+recorded. The data capture includes normal operating con- in pressure, temperature, and flow rate were collected. The
+ditions as well as intentionally induced malfunction states resulting dataset contains 895 time stamped samples with
+triggered by cyber–physical attack simulations. 14 monitored sensor attributes. Fig. 3 illustrates the statistical
+8328 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+Fig. 3. Physical layer characteristics distribution and simulation scenarios in IGCPS.
+
+distribution of these physical-layer variables, and the meaning inference at 0.23 ms with minimal CPU usage of 1.32%,
+of each feature is summarized in Table III. while DCdetector incurs the highest overhead at 48.36 ms
+ In addition to the above physical indicators, the dataset inference time and 235.43 M FLOPs. MFAD maintains modalso includes controller status, controller command values, and erate resource consumption with 0.46 ms latency and 0.99 M
+overall operational state variables. The final dataset contains FLOPs.
+542 normal instances and 353 anomalous instances. On the PUMP dataset, MFAD attains 99.95% precision,
+ 2) Public Benchmarks: Our experimental evaluation 99.11% recall, and 99.93% F1-score. SSDCL follows with
+encompasses three real-world industrial Cyber-Physical Sys- 97.55% F1, while DCdetector achieves perfect 100% recall but
+tem datasets: PUMP, WADI, and SWaT, representing diverse lower precision at 91.12%, yielding 95.31% F1. USAD shows
+operational scenarios and scale characteristics. The funda- the largest precision-recall imbalance with 96.72% precision
+mental attributes and distinctive features of these benchmark but only 60.61% recall, resulting in 74.52% F1. NSIBF
+datasets are elaborated as follows: achieves the lowest FLOPs at 0.22 M but with 95.61% F1.
+ The PUMP dataset originates from a municipal water treat- MFAD requires 0.58 ms inference time and 1.19 M FLOPs,
+ment and distribution facility, where 52 sensing devices were representing 5.4 times lower computational cost than NSIBF
+installed. Data were recorded at one-minute intervals across a while achieving 4.32% higher F1-score.
+five-month period. Each instance is labeled according to the On the SWaT dataset, MFAD records 99.53% precision,
+operational condition of the pump, namely normal, recovering, 99.28% recall, and 99.40% F1-score. SSDCL ranks secor broken. ond with 93.02% F1, exhibiting 6.38% lower performance.
+ The SWaT dataset was collected from an industrial- FuSAGNet and CTAD achieve high precision of 98.01% and
+scale water purification testbed containing 25 sensors and 97.56% respectively, but their recall values of 73.70% and
+26 actuators. The full trace spans 11 days, consisting of seven 73.15% limit F1-scores to 84.11% and 83.65%. PddBLS-AE
+consecutive days of normal plant operation followed by four attains 88.72% F1 with 60.37 M FLOPs, which is 50.7 times
+days during which a variety of cyber–physical attacks were higher than MFAD. DCdetector requires 264.52 M FLOPs, the
+executed. largest among all methods, while achieving only 89.44% F1.
+ The WADI dataset extends the SWaT architecture into On the challenging WADI dataset with 5.8% anomaly ratio
+a water distribution scenario. It includes 67 sensors and and 67 sensors, performance degradation is observed across all
+26 actuators, with data gathered over 16 days in total: 14 days baselines. MFAD achieves 98.58% precision, 94.89% recall,
+reflecting nominal behavior and 2 days incorporating attack and 96.70% F1-score. PddBLS-AE follows with 87.25%
+events. F1, representing a 9.45% gap. DCdetector exhibits extreme
+ imbalance with 54.49% precision and 98.48% recall, yielding
+ 70.17% F1. SSDCL shows similar patterns with 64.02% preci-
+D. Analysis of Anomaly Detection Results sion and 88.82% recall. LSTM-VAE and USAD demonstrate
+ Table IV presents the comprehensive experimental results severe recall deficiency at 19.06% and 15.72% respectively,
+across four ICPS datasets of varying scales, comparing MFAD resulting in F1-scores below 32%. NSIBF achieves the lowest
+against eight state-of-the-art baselines. On the IGCPS dataset, FLOPs at 0.29 M but with only 33.52% F1. DCdetector
+MFAD achieves 98.98% precision, 95.10% recall, and 97.00% requires 624.22 M FLOPs, while MFAD maintains 1.64 M
+F1-score. Among baselines, PddBLS-AE attains the closest FLOPs with 26.53% higher F1-score.
+performance with 95.05% F1, followed by SSDCL at 89.64%. Fig. 4 provides a unified radar-based comparison of detec-
+NSIBF and CTAD exhibit lower F1-scores of 32.14% and tion accuracy and computational efficiency across ICPS
+66.96% respectively, primarily due to limited recall. Regard- datasets of varying scales, namely IGCPS, PUMP, SWaT,
+ing computational efficiency, USAD demonstrates the fastest and WADI. Each subfigure jointly visualizes precision, recall,
+PENG et al.: MULTIMODAL FEATURE FUSION-ENHANCED TIME SERIES ANOMALY DETECTION FRAMEWORK 8329
+
+ TABLE IV
+ E XPERIMENTAL R ESULTS OF A NOMALY D ETECTION ON D IFFERENT S CALES OF ICPS DATASETS
+
+F1-score, inference latency, CPU usage, and FLOPs, where TABLE V
+efficiency-related metrics (inference latency, CPU usage, and A BLATION S TUDY OF MFAD C OMPONENTS
+FLOPs) are reversely normalized using min–max scaling so
+that larger values indicate lower latency and reduced resource
+consumption. For the IGCPS dataset shown in Fig. 4 (a),
+MFAD exhibits the largest radar coverage, indicating the most
+balanced performance across both detection and efficiency
+dimensions, which is consistent with its superior precision,
+recall, and F1-score reported in Table Table IV. On the PUMP
+dataset in Fig. 4 (b), MFAD forms an almost regular and
+saturated radar profile, whereas methods such as DCdetector
+present distorted shapes due to imbalanced precision–recall
+behavior and high computational cost. Similar trends are
+observed on SWaT dataset in Fig. 4 (c), where MFAD is the
+only method maintaining consistently high values across all
+six dimensions. The advantage of MFAD is most pronounced
+on the WADI dataset in Fig. 4 (d), where severe class
+imbalance leads to highly skewed radar profiles for baseline
+methods, while MFAD preserves a well-proportioned shape
+ E. Ablation Study
+with strong detection accuracy and computational efficiency.
+Overall, Fig. 4 visually demonstrates that MFAD achieves the To validate the contribution of each core component, we
+most favorable trade-off between detection performance and perform ablation studies by removing a key module. As shown
+efficiency across diverse ICPS scenarios. in Table V, three primary variants are evaluated against the
+8330 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ Fig. 5. Comparison of ablation study results on the ICPS datasets.
+
+ 3) Impact of the Three-Stage Classifier: Replacing the
+ cascaded classifier with a single MLP layer in MFAD (MFAD
+Fig. 4. Comparison of detection performance of different models on the ICPS w/o Thr. in Table V) also results in performance degradation,
+datasets.
+ highlighting the value of progressive refinement. For IGCPS,
+ F1 decreases by 0.45% from 97.00% to 96.55%. On PUMP
+ dataset, F1 drops by 1.69% from 99.93% to 98.24%. The
+“Full” model (MFAD). The variant “MFAD w/o Ind.” is
+ decline is more substantial on SWaT dataset, with a 3.42%
+that MFAD removes the industrial feature extractor, relying
+ reduction in F1 from 99.40% to 95.98%. The WADI dataset
+solely on the temporal encoder. The variant “MFAD w/o
+ exhibits the largest impact, where F1 falls by 7.26% from
+Temp.” is that MFAD removes the entire BiGRU-Attention-
+ 96.70% to 89.44%. These results confirm the efficacy of the
+TCN temporal encoder, leaving only the industrial features
+ three-stage architecture, where successive stages with adaptive
+for anomaly detection. The variant “MFAD w/o Thr.” is
+ thresholds specialize in high-recall screening, balanced judgthat MFAD replaces the three-stage cascaded classifier with
+ ment, and high-precision refinement to handle diverse attack
+a single MLP layer, while keeping both feature extraction
+ complexities.
+pathways.
+ Fig. 5 illustrates the ablation study results through grouped
+ 1) Impact of the Industrial Feature Extractor: Removing
+ bar charts. Each subfigure compares the complete MFAD
+the industrial feature extractor in MFAD (MFAD w/o Ind. in
+ model (Full) with three variants, including MFAD w/o Ind.,
+Table V) leads to a consistent performance reduction across
+ MFAD w/o Temp., and MFAD w/o Thr.. On IGCPS dataset
+all datasets. On IGCPS dataset, the F1-score decreases by
+ in Fig. 5 (a), all variants maintain F1 above 93%, with
+0.48% from 97.00% to 96.52%. For PUMP, F1 drops by
+ the Full model achieving 97.00%. On PUMP dataset in
+1.30% from 99.93% to 98.63%, primarily due to a decline
+ Fig. 5 (b), the Full model reaches 99.93% F1, while removing
+in precision. The SWaT dataset shows a larger F1 reduction
+ the temporal encoder causes the largest drop to 96.41%. On
+of 3.67% from 99.40% to 95.73%. The most significant impact
+ SWaT dataset in Fig. 5 (c), the temporal encoder removal
+is observed on WADI dataset, where F1 falls by 7.14% from
+ results in the most significant degradation from 99.40% to
+96.70% to 89.56%. The pronounced degradation on WADI
+ 92.66%. On WADI dataset in Fig. 5 (d), all ablation variants
+and SWaT datasets highlights the critical role of engineered
+ show substantial performance drops, with F1 falling below
+statistical, spectral, and trend features in complex, multi-sensor
+ 92% when any component is removed. Across all datasets, the
+environments for discerning subtle operational anomalies.
+ Full model consistently achieves the highest and most balanced
+ 2) Impact of the Temporal Feature Encoder: As evaluated performance. The study establishes component importance
+in a dedicated ablation experiment (MFAD w/o Temp. in hierarchy: the temporal encoder is most critical with aver-
+Table V), removing the BiGRU-Attention-TCN encoder in age F1 reduction of 4.76% upon removal, followed by the
+MFAD causes the most severe performance drop, affirming three-stage classifier at 3.21% and industrial feature extractor
+its fundamental role. On IGCPS dataset, F1 falls by 3.74%. at 3.15%.
+The degradation is 3.52% on PUMP dataset and most acute on
+SWaT dataset at 6.74%. WADI shows a reduction of 5.03%.
+ V. ROBUSTNESS E VALUATION
+This confirms the encoder’s indispensability in capturing
+bidirectional temporal dependencies and multi-scale patterns To assess the stability of MFAD in practical ICPS
+necessary to detect evolving attacks. environments, we conduct robustness evaluation under two
+PENG et al.: MULTIMODAL FEATURE FUSION-ENHANCED TIME SERIES ANOMALY DETECTION FRAMEWORK 8331
+
+Fig. 6. Effect of Gaussian noise injection and distribution shifts on MFAD across different ICPS datasets.
+
+perturbation types: stochastic measurement corruption mod- Recall exhibits modest improvement from 94.89% to 95.83%
+eled as zero-mean Gaussian noise with standard deviations at noise 0.06 before stabilizing around 96.12% at 0.10. F1
+from 0.00 to 0.10, and deterministic distribution shifts with ranges from 96.70% at baseline to 95.86% at maximum noise,
+drift levels from 0.00 to 0.10 emulating device aging, recali- demonstrating 0.84% degradation.
+bration offsets, and slow process regime changes.
+ B. Robustness to Distribution Shifts
+A. Robustness to Gaussian Noise Fig. 6(e)-(h) present the performance under distribution
+ Fig. 6 presents the detection robustness of MFAD across shifts with drift levels from 0.00 to 0.10, simulating sendifferent ICPS datasets. Fig. 6(a)-(d) illustrate the performance sor recalibration and operational regime changes. On IGCPS
+of MFAD under Gaussian noise injection with standard devia- dataset (Fig. 6(e)), precision reaches 100.00% at shift levels
+tions ranging from 0.00 to 0.10. On IGCPS dataset (Fig. 6(a)), 0.04-0.10, while F1 ranges from 96.97% to 97.49%. At shift
+F1 ranges from 97.00% to 97.51%, with precision spanning level 0.02, the model maintains 97.00% F1 with 98.98% preci-
+98.98% to 100.00% and recall maintaining around 95.10%. sion, identical to baseline. At maximum shift 0.10, precision
+At noise level 0.04, precision reaches 100.00% while recall achieves 100.00% with 95.10% recall, yielding 97.49% F1,
+remains at 95.10%, yielding F1 of 97.49%. At maximum which is 0.52% higher than that under the initial condition.
+noise level 0.10, the model achieves 99.01% precision, 95.10% On PUMP dataset (Fig. 6(f)), exceptional stability
+recall, and 97.01% F1, demonstrating minimal degradation is observed. Precision ranges from 99.86% to 99.98%,
+from baseline. recall spans 99.91% to 100.00%, and F1 stays within
+ On PUMP dataset (Fig. 6(b)), performance remains near- 99.93%-99.94%. At shift levels 0.06-0.10, recall achieves
+perfect across all noise levels. Precision ranges from 99.86% 100.00% while precision marginally decreases from 99.95%
+to 99.98%, recall spans 99.91% to 100.00%, and F1 stays to 99.86%. At shift level 0.02, precision increases to 99.98%
+within 99.93%-99.94%. At noise level 0.06, recall achieves from baseline 99.95%, yielding the highest F1 of 99.94%.
+100.00% while precision maintains 99.89%. The highest F1 On SWaT dataset (Fig. 6(g)), precision decreases from
+of 99.94% occurs at noise level 0.02 with 99.98% precision 99.53% at baseline to 99.72% at shift 0.02, then to 99.40%,
+and 99.91% recall. 98.73%, 97.86%, and 97.64% at shift levels 0.04, 0.06, 0.08,
+ On SWaT dataset (Fig. 6(c)), controlled degradation is and 0.10 respectively. Recall shows different patterns: initially
+observed. Precision decreases from 99.53% at baseline to dropping from 99.28% to 99.05% at shift 0.02, then to 98.79%
+99.38% at noise 0.02, then to 99.12% at 0.04, 98.65% at at 0.04, before recovering to 98.83% at 0.06, surging to
+0.06, 98.21% at 0.08, and 97.89% at 0.10. Recall shows 99.40% at 0.08, and stabilizing at 99.37% at 0.10. F1 decreases
+gradual decline from 99.28% to 98.95% at noise 0.10. F1 monotonically from 99.40% to 98.49% across the shift range,
+decreases monotonically from 99.40% to 98.42% across the representing 0.91% degradation.
+noise range, representing only 0.98% degradation at maximum On WADI dataset (Fig. 6(h)), precision decreases from
+perturbation. 98.58% at baseline to 98.81% at shift 0.02, then to 97.43%
+ On WADI dataset (Fig. 6(d)), the most pronounced at 0.06, and 95.39% at 0.10. Recall exhibits inverse behavior:
+variations occur due to higher structural complexity with improving from 94.89% at baseline to 96.16% at shift 0.02,
+67 sensors. Precision decreases from 98.58% at baseline to peaking at 97.22% at shift 0.08, and stabilizing at 96.60%
+97.82% at noise 0.04, 96.45% at 0.08, and 95.62% at 0.10. at 0.10. This inverse relationship produces F1 values that
+8332 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+initially rise from 96.70% to 97.32% at low shifts, then [4] M. I. Sayyaf, P. Pascacio, N. Zhu, and V. Renaudin, “Timegradually decline to 95.99% at maximum shift. The precision- series anomaly detection for sensor data: Models, metrics, and
+ methodologies—A review,” IEEE Sensors J., vol. 25, no. 24,
+recall trade-off indicates that the three-stage classifier priori- pp. 43603–43619, Dec. 2025, doi: 10.1109/JSEN.2025.3616395.
+tizes anomaly coverage when facing drift-altered borderline [5] H. Kayan, M. Nunes, O. Rana, P. Burnap, and C. Perera, “Cybersecurity
+samples. of industrial cyber-physical systems: A review,” ACM Comput. Surveys,
+ vol. 54, no. 11s, pp. 1–35, Jan. 2022, doi: 10.1145/3510410.
+ The superior detection accuracy and robustness of MFAD [6] Z. Yu, Z. Kaplan, Q. Yan, and N. Zhang, “Security and privacy in
+stem from three complementary design choices. First, the emerging cyber-physical world: A survey,” IEEE Commun. Surveys
+multimodal feature fusion combines statistical moments, Tuts., vol. 23, no. 3, pp. 1879–1919, 3rd Quart., 2021, doi: 10.1109/
+ COMST.2021.3081450.
+STFT-based frequency features, and trend derivatives with [7] K. Zhang et al., “Self-supervised learning for time series analy-
+BiGRU–Attention–TCN temporal modeling, capturing both sis: Taxonomy, progress, and prospects,” IEEE Trans. Pattern Anal.
+industrial characteristics and temporal dependencies to form Mach. Intell., vol. 46, no. 10, pp. 6775–6794, Oct. 2024, doi: 10.1109/
+ TPAMI.2024.3387317.
+compact normal manifolds that effectively distinguish abrupt [8] L. Chen, Y. Xu, M. Li, B. Hu, H. Guo, and Z. Liu, “Privacy-preserving
+and gradual attacks under perturbations. Second, a three-stage lightweight time-series anomaly detection for resource-limited induscascaded classifier with adaptive early-exit and confidence trial IoT edge devices,” IEEE Trans. Ind. Informat., vol. 21, no. 6,
+ pp. 4435–4446, Jun. 2025, doi: 10.1109/TII.2025.3538127.
+gating directs most samples to lightweight stages, reducing [9] S. V. Haldikar, O. F. M. A. Kader, and R. K. Yekollu, “Edge computing
+computation while reserving refined analysis for ambiguous and federated learning for real-time anomaly detection in industrial
+cases, thus balancing precision and recall. Third, a semi- Internet of Things (IIoT),” in Proc. Int. Conf. Inventive Comput. Technol.
+ (ICICT), Lalitpur, Nepal, Apr. 2024, pp. 1699–1703, doi: 10.1109/
+supervised learning scheme leverages abundant unlabeled icict60155.2024.10544912.
+data via reconstruction regularization, improving robustness [10] X. Jiang, C. Lu, H. Luo, and Y. Sun, “Unsupervised distributed anomaly
+to distribution shifts. With low FLOPs under 1.64 M and detection framework for IoT in edge AI network,” IEEE Internet
+ Things J., vol. 12, no. 12, pp. 22058–22072, Jun. 2025, doi: 10.1109/
+sub-millisecond inference latency below 0.72 ms, MFAD is JIOT.2025.3549765.
+well suited for deployment in resource-constrained ICPS edge [11] S. Peng, Y. Han, R. Li, L. Liu, J. Liu, and Z. Gu, “ROSE-BOX: A
+environments. lightweight and efficient intrusion detection framework for resourceconstrained IIoT environments,” Appl. Sci., vol. 15, no. 12, p. 6448, Jun.
+ 2025, doi: 10.3390/app15126448.
+ VI. C ONCLUSION AND F UTURE W ORK [12] N. Chaabouni, M. Mosbah, A. Zemmari, C. Sauvignac, and
+ P. Faruki, “Network intrusion detection for IoT security based on
+ This paper proposes MFAD, a lightweight Multimodal learning techniques,” IEEE Commun. Surveys Tuts., vol. 21, no. 3,
+ pp. 2671–2701, 3rd Quart., 2019, doi: 10.1109/COMST.2019.2896380.
+Feature fusion-enhanced time series Anomaly Detection [13] S. Peng, Y. Han, X. Liang, C. Yang, W. Gui, and N. Zhou, “ROSE-BOX:
+framework in resource-constrained ICPS. MFAD integrates An approach for intrusion detection in industrial Internet of Things,” in
+three core components: a multimodal feature fusion module Proc. IEEE Int. Symp. Parallel Distrib. Process. Appl. (ISPA), Kaifeng,
+ China, Oct. 2024, pp. 2276–2277, doi: 10.1109/ISPA63168.2024.00325.
+that jointly captures industrial domain characteristics and [14] P. Yan et al., “A comprehensive survey of deep transfer learning for
+temporal dependencies, a semi-supervised learning architec- anomaly detection in industrial time series: Methods, applications, and
+ture that achieves high detection performance using only 5% directions,” IEEE Access, vol. 12, pp. 3768–3789, 2024, doi: 10.1109/
+ ACCESS.2023.3349132.
+labeled data, and a three-stage cascaded classifier with adap- [15] C. Ding, S. Sun, and J. Zhao, “MST-GAT: A multimodal
+tive thresholding for efficient inference. Extensive experiments spatial–temporal graph attention network for time series anomaly
+on ICPS datasets of varying scales (IGCPS, PUMP, SWaT, detection,” Inf. Fusion, vol. 89, pp. 527–536, Jan. 2023.
+ [16] H. Nizam, S. Zafar, Z. Lv, F. Wang, and X. Hu, “Real-time deep anomaly
+and WADI) demonstrate that MFAD consistently achieves detection framework for multivariate time-series data in industrial IoT,”
+F1-scores above 96.7% while maintaining low FLOPs and IEEE Sensors J., vol. 22, no. 23, pp. 22836–22849, Dec. 2022, doi:
+real-time performance suitable for edge deployment. Future 10.1109/JSEN.2022.3211874.
+ [17] E. Eldele et al., “Time-series representation learning via temporal and
+research directions include developing cross-modal atten- contextual contrasting,” in Proc. 13th Int. Joint Conf. Artif. Intell.
+tion mechanisms for bidirectional feature interaction prior to (IJCAI), 2021, pp. 2352–2359, doi: 10.24963/IJCAI.2021/324.
+fusion, incorporating physics-informed constraints to enhance [18] C. Feng and P. Tian, “Time series anomaly detection for cyber-physical
+ systems via neural system identification and Bayesian filtering,” in Proc.
+interpretability, deploying MFAD on a broader range of edge 27th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug. 2021,
+hardware platforms to validate cross-device adaptability and pp. 2858–2867, doi: 10.1145/3447548.3467137.
+deployment robustness, and extending the framework toward [19] M. Repeva and S. Polyakov, “Anomaly detection in the performance
+ of data center cooling system devices based on machine learning and
+online adaptive detection for real-time cyber-physical anomaly time series analysis,” in Proc. IEEE Ural-Siberian Conf. Biomed. Eng.,
+identification. Radioelectronics Inf. Technol. (USBEREIT), Yekaterinburg, Russia, May
+ 2025, pp. 317–320, doi: 10.1109/USBEREIT65494.2025.11054137.
+ [20] U. A. Usmani, I. Abdul Aziz, J. Jaafar, and J. Watada, “Deep
+ R EFERENCES learning for anomaly detection in time-series data: An analysis
+ of techniques, review of applications, and guidelines for future
+[1] A. Humayed, J. Lin, F. Li, and B. Luo, “Cyber-physical sys- research,” IEEE Access, vol. 12, pp. 174564–174590, 2024, doi:
+ tems security—A survey,” IEEE Internet Things J., vol. 4, no. 6, 10.1109/ACCESS.2024.3495819.
+ pp. 1802–1831, Dec. 2017, doi: 10.1109/JIOT.2017.2703172. [21] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+[2] H.-S. Wu, “A survey of research on anomaly detection for time series,” density-based local outliers,” in Proc. ACM SIGMOD Int. Conf. Manage.
+ in Proc. 13th Int. Comput. Conf. Wavelet Act. Media Technol. Inf. Data, 2000, pp. 93–104.
+ Process. (ICCWAMTIP), Chengdu, China, Dec. 2016, pp. 426–431, doi: [22] R. Martinez-Guerra and J. L. Mata-Machuca, Fault Detection and
+ 10.1109/ICCWAMTIP.2016.8079887. Diagnosis in Nonlinear Systems. Cham, Switzerland: Springer, 2016.
+[3] Y. Wang, R. Guo, and P. Min, “A survey of applications for anomaly [23] D. Wu, Z. Jiang, X. Xie, X. Wei, W. Yu, and R. Li, “LSTM learning with
+ detection in the IoT: Methods, new perspectives, and future,” in Proc. Bayesian and Gaussian processing for anomaly detection in industrial
+ IEEE Int. Conf. Syst., Man, Cybern. (SMC), Kuching, Malaysia, Oct. IoT,” IEEE Trans. Ind. Informat., vol. 16, no. 8, pp. 5244–5253, Aug.
+ 2024, pp. 2453–2460, doi: 10.1109/SMC54092.2024.10831268. 2020, doi: 10.1109/TII.2019.2952917.
+PENG et al.: MULTIMODAL FEATURE FUSION-ENHANCED TIME SERIES ANOMALY DETECTION FRAMEWORK 8333
+
+[24] Y. Qin and Y. Lou, “Hydrological time series anomaly pattern detection Silin Peng received the master’s degree in electronic
+ based on isolation forest,” in Proc. IEEE 3rd Inf. Technol., Netw., information from the Civil Aviation University of
+ Electron. Autom. Control Conf. (ITNEC), Mar. 2019, pp. 1706–1710, China. He is currently pursuing the Ph.D. degree
+ doi: 10.1109/ITNEC.2019.8729405. in information security with the School of Intelli-
+[25] J. Rosenberger, J. Müller, A. Selig, M. Bühren, and D. Schramm, gent Systems Engineering, Sun Yat-sen University,
+ “Extended kernel density estimation for anomaly detection in streaming and Peng Cheng Laboratory. His research interests
+ data,” Proc. CIRP, vol. 112, pp. 156–161, Sep. 2022. include network and information security.
+[26] I. Razzak, K. Zafar, M. Imran, and G. Xu, “Randomized nonlinear oneclass support vector machines with bounded loss function to detect of
+ outliers for large scale IoT data,” Future Gener. Comput. Syst., vol. 112,
+ pp. 715–723, Nov. 2020.
+[27] D. Park, Y. Hoshi, and C. C. Kemp, “A multimodal anomaly
+ detector for robot-assisted feeding using an LSTM-based variational
+ autoencoder,” IEEE Robot. Autom. Lett., vol. 3, no. 3, pp. 1544–1551,
+ Jul. 2018.
+[28] E. Dai and J. Chen, “Graph-augmented normalizing flows for anomaly
+ detection of multiple time series,” in Proc. Int. Conf. Learn. Represent. Yu Han received the Ph.D. degree in control theory
+ (ICLR), 2022, pp. 1–10. and control engineering from Shanghai Jiao Tong
+[29] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: University, Shanghai, China, in 2011. He is currently
+ Dual attention contrastive representation learning for time series a Full Professor with the School of Intelligent
+ anomaly detection,” in Proc. 29th ACM SIGKDD Conf. Knowl. Dis- Systems Engineering, Sun Yat-sen University,
+ covery Data Mining, Aug. 2023, pp. 3033–3045, doi: 10.1145/3580305. Shenzhen, China, and Guangdong Provincial
+ 3599295. Key Laboratory of Fire Science and Intelligent
+[30] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly Emergency Technology, Shenzhen. His research
+ detection for multivariate time series through stochastic recurrent neural interests include robot control, multiinformation
+ network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discovery Data fusion, machine vision, image processing,
+ Mining, New York, NY, USA, Jul. 2019, pp. 2828–2837, doi: 10.1145/ evolutionary computing, and intelligent fire
+ 3292500.3330672. emergency response.
+[31] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+ “USAD: Unsupervised anomaly detection on multivariate time series,”
+ in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Disc. Data Min., 2020,
+ pp. 3395–3404, doi: 10.1145/3394486.3403392.
+[32] R. Wang et al., “CutAddPaste: Time series anomaly detection by exploiting abnormal knowledge,” in Proc. 30th ACM SIGKDD Conf. Knowl.
+ Discovery Data Mining, Aug. 2024, pp. 3176–3187, doi: 10.1145/ Lichen Liu received the Ph.D. degree from the
+ 3637528.3671739. Department of Information Engineering, Chang’an
+[33] H. Kim, S. Kim, S. Min, and B. Lee, “Contrastive time-series University of Information, Xi’an, China, in 2025. He
+ anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 36, no. 10, is currently a Post-Doctoral Researcher with Peng
+ pp. 5053–5065, Nov. 2023. Cheng Laboratory. His research interests include
+[34] J. Tian, M. Li, L. Fang, and L. Chen, “SSDCL: Semi-supervised multi-modal information feature fusion anomaly
+ denoising-aware contrastive learning for time series anomaly detection detection, encrypted traffic detection, and computer
+ in cyber-physical systems,” IEEE Trans. Inf. Forensics Security, vol. 20, vision.
+ pp. 7302–7316, 2025, doi: 10.1109/TIFS.2025.3588674.
+[35] J. Tian, M. Li, L. Fang, and L. Chen, “SSDCL: Semi-supervised
+ denoising-aware contrastive learning for time series anomaly detection
+ in cyber-physical systems,” IEEE Trans. Inf. Forensics Secur., vol. 20,
+ pp. 7302–7316, Jul. 2025, doi: 10.1109/TIFS.2025.3588674.
+[36] W. Chen, L. Tian, B. Chen, L. Dai, Z. Duan, and M. Zhou, “Deep
+ variational graph convolutional recurrent network for multivariate time
+ series anomaly detection,” in Proc. Int. Conf. Mach. Learn. (ICML), Jul.
+ 2022, pp. 3621–3633. Jinlong Li received the Ph.D. degree from
+[37] W. Zhang, C. Zhang, and F. Tsung, “GRELEN: Multivariate South China University of Technology, Guangzhou,
+ time series anomaly detection from the perspective of graph rela- China, in 2024. He is currently a Lecturer with
+ tional learning,” in Proc. Int. Joint Conf. Artif. Intell., Jul. 2022, the Cyberspace Institute of Advanced Technolpp. 2390–2397. ogy, Guangzhou University, Guangzhou, China. His
+[38] E. Dai and J. Chen, “Graph-augmented normalizing flows for anomaly research interests include generative AI, data mindetection of multiple time series,” in Proc. Int. Conf. Learn. Represent. ing and security, and hybrid intelligent information
+ (ICLR), May 2022. systems modeling.
+[39] Y. Lin, Z. Yu, K. Yang, and C. L. Philip Chen, “Ensemble denoising autoencoders based on broad learning system for time-series
+ anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 36,
+ no. 8, pp. 13913–13926, Aug. 2025, doi: 10.1109/TNNLS.2025.3548
+ 941.
+[40] Y. Yao, J. Feng, and Y. Liu, “Domain knowledge-guided contrastive
+ learning framework based on complementary views for fault diagnosis
+ with limited labeled data,” IEEE Trans. Ind. Informat., vol. 20, no. 5,
+ pp. 8055–8063, May 2024. Ruonan Li received the Ph.D. degree from the
+[41] T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár, “Focal loss for Department of Computer Science and Technology,
+ dense object detection,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 42, Harbin Institute of Technology, in 2024. She is
+ no. 2, pp. 318–327, Feb. 2020, doi: 10.1109/TPAMI.2018.2858826. currently a Post-Doctoral Researcher with Peng
+[42] Y. Bengio, J. Louradour, and R. Collobert, “Curriculum Cheng Laboratory. Her research interests include
+ learning,” in Proc. Int. Conf. Mach. Learn., Aug. 2009, blockchain, federated learning, AI empowered the
+ pp. 41–48. Internet-of-Things, and deep reinforcement learning
+[43] R. Müller, S. Kornblith, and G. Hinton, “When does label smoothing for networking.
+ help,” in Proc. 33rd Int. Conf. Neural Inf. Process. Syst., Dec. 2019,
+ pp. 4694–4703.
+8334 IEEE TRANSACTIONS ON AUTOMATION SCIENCE AND ENGINEERING, VOL. 23, 2026
+
+ Zhaoquan Gu received the bachelor’s and Ph.D. Xiaowen Chu (Fellow, IEEE) received the B.E.
+ degrees in computer science from Tsinghua Univer- degree in computer science from Tsinghua University, Beijing, China, in 2011 and 2015, respectively. sity, Beijing, China, in 1999, and the Ph.D. degree in
+ He is currently a Professor with the Department of computer science from The Hong Kong University
+ Computer Science and Technology, Harbin Institute of Science and Technology, Hong Kong, in 2003. He
+ of Technology, Shenzhen, China, and a Researcher is currently a Full Professor with the Department of
+ with the Department of New Networks, Peng Cheng Computer Science, The Hong Kong University of
+ Laboratory, Shenzhen. His research interests include Science and Technology, Guangzhou.. His research
+ wireless networks, distributed computing, big data interests include distributed and parallel computing
+ analysis, and artificial intelligence security. and wireless networks. He is an Associate Editor for
+ IEEE ACCESS and IEEE Internet of Things.
+
+ Jie Liu (Fellow, IEEE) received the Ph.D. degree
+ in electrical engineering and computer science from
+ the University of California, Berkeley, Berkeley, CA,
+ USA, in 2001. He is currently a Chair Professor with
+ Harbin Institute of Technology (HIT), Shenzhen,
+ China, and the Dean of the AI Research Institute.
+ Before joining HIT, he spent 18 years with Xerox
+ PARC and Microsoft. He was a Principal Research
+ Manager with Microsoft Research, Redmond, and
+ a Partner of the Company. His research interests
+ include cyber-physical systems, AI for IoT, and
+energy efficient computing.

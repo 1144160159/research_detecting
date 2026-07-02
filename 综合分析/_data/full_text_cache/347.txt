@@ -1,0 +1,661 @@
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 12, DECEMBER 2025 23419
+
+ A Spatial Contexts-Informed Self-Supervised
+ Learning Approach for Pavement Distress
+ Segmentation
+ Ruiqi Ren , Peixin Shi , and Jinwoo Kim
+
+ Abstract—Detection and repair of pavement distress in time are is labor-intensive, time-consuming, and error-prone. Digital
+crucial to maximize functional performance and service life, while and automated distress detection technologies, such as comminimizing maintenance costs on extensive roadway networks. puter vision, thermal imaging technology and laser scanning,
+Manual distress detection is labor intensive and error prone.
+While deep learning techniques offer unparalleled capabilities for have become a promising solution [1], [2]. Among emerging
+automated and accurate pixel-level pavement distress segmen- technologies, computer vision–based methods have attracted
+tation, their reliance on extensive manual annotations remains significant attention in recent years [3], [4], as pavement disa bottleneck. To address this challenge, we propose an open- tresses are typically expressed through visual cues that signal
+ended self-supervised framework enabling flexible integration of early stages of road deterioration. Currently, vehicles mounted
+various pretext tasks for pavement distress segmentation without
+manual annotations. We introduce a spatial contexts-informed with optical cameras are widely used in practice to regularly
+pretext task that automatically generates pseudo labels by lever- inspect pavement, locate and evaluate the distresses through
+aging the highly consistent semantic information inherent across computer vision technologies, and then provide information
+continuous pavement images within localized areas. A multi- to support maintenance decisions [5], [6].
+line parallel network architecture is then employed, where each Supervised deep learning have become the core engine
+line extracts a distinct deep representation aligned with the
+pseudo-label generation process. These representations are jointly of computer vision-based pavement distress detection due to
+optimized through a shared weight update scheme augmented their high accuracy and strong generalization performance
+by momentum encoders to capture long-range dependencies. [7]. Although supervised learning shows considerable poten-
+A vision transformer processes the input images during inference, tial, its reliance on large volumes of training images and
+utilizing self-attention to highlight distressed regions based on labor-intensive annotations limits widespread use in pavement
+the learned representations for precise segmentation. Extensive
+evaluations validate the performance of our framework, outper- distress detection [8], [9], [10]. This challenge is especially
+forming state-of-the-art self-supervised methods by 0.075 mIoU pronounced in segmentation tasks, where pixel-level annotaon average, while remarkably surpassing weakly supervised tech- tions are required [11], [12]. Potential solutions to mitigate this
+niques requiring manual image-level annotations. These results challenge include data augmentation techniques [13] and transare far more promising given that our self-supervised approach fer learning [14], [15]. While these approaches have demonavoids human labeling costs, striking a trade-off between model
+effectiveness and annotation efficiency for large-scale deploy- strated enhanced performance in pavement distress detection
+ments. It helps transportation agencies to realize timely, proactive and segmentation, they cannot entirely bypass the requirement
+infrastructure maintenance through scalable, accurate distress for manual annotations, given that each roadway has unique
+monitoring over extensive road networks. surrounding environments. Therefore, exploring methods to
+ Index Terms—Pavement distress segmentation, self-supervised significantly lower or completely eliminate the requirement for
+learning, spatial contexts, multi-line parallel networks. manual annotations has become a worthwhile endeavor [16].
+ Training deep learning models without access to ground
+ I. I NTRODUCTION truth labels poses a fundamental challenge in defining effective learning objectives. Researchers have developed various
+D ETECTION and repair of pavement distress in time
+ are crucial to maximize functional performance and
+service life, while minimizing maintenance costs on extenapproaches to reduce manual annotation requirements to
+ varying degrees. Weakly supervised learning methods utilize
+sive roadway networks. Manual visual distress inspection coarse-grained labels (such as image-level annotations) to
+ guide a learning process. They often learn a distribution of
+ Received 19 November 2024; revised 10 April 2025; accepted 28 August normal data and identify anomalies as instances that exhibit
+2025. Date of publication 2 October 2025; date of current version 1 December
+2025. This work was supported by the National Natural Science Foundation
+ statistical deviations [17], [18], [19], [20], [21], [22]. These
+of China under Grant 52278405. The Associate Editor for this article was methods significantly lower the annotation burden compared
+M. Guo. (Corresponding author: Peixin Shi.) to fully supervised approaches, but still require a substantial
+ Ruiqi Ren and Peixin Shi are with the School of Rail Transporta- amount of labeled data.
+tion, Soochow University, Suzhou 215000, China (e-mail: 20204046002@
+stu.suda.edu.cn; pxshi@suda.edu.cn). Self-supervised learning eliminates the need for explicit
+ Jinwoo Kim is with the Department of Civil and Environmental Engineer- annotations by leveraging data structure to generate pseudoing, Hanyang University, Seoul 04763, South Korea (e-mail: jinwookim@
+hanyang.ac.kr).
+ labels through pretext tasks. For example, models learn feature
+ Digital Object Identifier 10.1109/TITS.2025.3612736 representations by reconstructing masked patches or aligning
+ 1558-0016 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+23420 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 12, DECEMBER 2025
+
+Fig. 1. Training schema of unsupervised siamese networks for pavement distress segmentation.
+
+augmented views [23], [24], [25], [26]. However, these meth- A. Supervised Deep Learning for Pavement Distress
+ods struggle to extract features of small pavement distress. Segmentation
+Masked patches may obscure critical details, while similar The advent of convolutional neural networks, notably Upavement backgrounds make it difficult to optimize deep Net [27] and fully convolutional networks (FCN) [28], has
+representation learning based on similarity. Self-supervised significantly influenced pavement distress detection, primarapproaches also prioritize instance-level discrimination over ily through supervised learning approaches. Crack is the
+dense predictions, limiting their effectiveness for precise local- most commonly occurred and complex distress form, and
+ization or segmentation. Designing more suitable pretext tasks has received extensive attention in academia. For instance,
+is essential for accurate pavement distress segmentation. Zhang et al. enhance the U-Net by incorporating a generative
+ To achieve pixel-level pavement distress segmentation adversarial network. This modification forces the network
+without manual annotations, we propose a spatial contexts- to segment images with fine crack details, thus improving
+informed self-supervised learning approach for pixel-level segmentation precision [13]. Wang et al. introduce a rectpavement distress segmentation, as shown in Figure 1. angular convolution pyramid and edge enhancement network
+A spatial contexts-informed pretext task leverages consistent (RENet) for precise small crack segmentation [29]. Liu et al.
+semantic information across continuous pavement images to propose CrackFormer, featuring a pyramid-shaped transformer
+automatically generate pseudo-labels. A multi-line parallel structure and customized scaling attention for sharpened crack
+network architecture is then trained on these pseudo-labeled detection [11]. To mitigate the limitation of training data
+inputs, updating parameters through shared weights and scarcity in supervised methods, Hou et al. achieve signifmomentum encoders. Finally, pavement distress segmentation icant segmentation performance improvements by utilizing
+is achieved by the self-attention mechanism of the vision Wasserstein generative adversarial network-gradient penalty
+transformer (ViT). (WGAN-GP) for image enhancement before crack segmentation [30]. Zheng et al. manage to reduce the need for labeled
+ images through active learning [15]. Despite these signifi-
+ II. R ELATED W ORK cant contributions, the persistent need for extensive manual
+ annotation remains a major obstacle, impeding the widespread
+ This section reviews relevant literature in pavement dis- adoption of computer vision technologies in pavement distress
+tress segmentation, encompassing three primary learning detection.
+paradigms, supervised deep learning techniques that leverage
+fully annotated datasets, weakly supervised learning methods
+which exploit partial annotations to reduce manual label- B. Weakly Supervised Learning to Reduce Annotation
+ing efforts, and self-supervised learning approaches that aim Dependency
+to extract meaningful representations from unlabeled data Efforts to mitigate the reliance on extensive manual annothrough carefully designed pretext tasks. tations have led to the development of weakly supervised
+REN et al.: SPATIAL CONTEXTS-INFORMED SELF-SUPERVISED LEARNING APPROACH 23421
+
+learning approaches. These methods often leverage image- mutual information between different views of the same scene
+level annotations, assuming the majority of data represents [34]. Pathak et al. train context encoders by contrasting an
+normal conditions. One approach trains encoder-decoder net- image and the same image with missing regions [35]. More
+works exclusively on normal instances, enabling accurate recently, a unified scheme that predicts different views of the
+reconstruction of normal data. When presented with abnor- same image via Siamese networks has emerged [23], [25].
+mal inputs, these networks struggle to reconstruct anomalous However, these generic pretext tasks may not be optimal for
+regions, leading to discernible deviations. By comparing “long and strip” pavement images with scattered foreground
+original and reconstructed images, anomalies can be local- objects, and mere deep representation is insufficient for pixelized without pixel-level annotations. For instance, GANomaly level segmentation. Consequently, three critical questions arise
+employs an encoder-decoder architecture with a discriminator in developing self-supervised learning for pavement distress
+for anomaly detection in luggage [17], while f-AnoGAN segmentation: (i) how to automatically generate pseudo-labels
+explores W-GAN for medical imaging [18]. Wang et al. from pavement images? (ii) how to train a deep neural network
+enhanced this structure for pavement distress detection by using these potentially noisy pseudo-labels? and (iii) how to
+incorporating modules that comprehend fundamental texture utilize the trained deep neural network for segmentation?
+information [31]. Yu et al. proposed FastFlow, utilizing 2D Addressing these challenges requires leveraging domainnormalizing flows as a probability distribution estimator [32]. specific characteristics, such as the spatial contexts between
+However, the direct application of these methods to pavement continuous pavement images. The design of task-specific predistress segmentation may be suboptimal due to the non- text tasks is crucial, as they should be customized to each
+standardized nature of field-acquired pavement images and computer vision application to exploit inherent data structures
+the prevalence of distressed sections in typical data collection effectively.
+practices.
+ Another weakly supervised learning scheme tries to estab- III. S PATIAL C ONTEXTS -I NFORMED S ELF -S UPERVISED
+lish a mapping between different image categories. This PAVEMENT D ISTRESS S EGMENTATION
+approach is to train a mapping from class A images to class
+ The proposed scheme builds upon self-supervised learning
+B based on GANs. It is often used for entertainment tasks
+ but addresses the limitations of existing approaches, including:
+such as image style transfer. For example, Zhao et al. propose
+ (i) proposing a spatial contexts-informed pretext task levera GAN-based method with adversarial consistency loss for
+ ages consistent semantics across continuous pavement images;
+selfie to anime and other similar tasks [20]. If the image is
+ (ii) introducing open-ended multi-line parallel networks to
+classified as normal or abnormal, and a mapping function from
+ exploit various noisy pseudo labels; and (iii) achieving distress
+abnormal image to normal one is trained, the abnormal region
+ segmentation in a fully unsupervised condition through the
+can be obtained by comparing the images before and after
+ incorporation of the self-attention mechanism.
+mapping, and the pixel-level segmentation can be realized.
+Siddiquee et al. devises a Fixed-Point network that utilizes
+weak label information, resulting in a more robust human A. Spatial Contexts-Informed Pretext Task
+disease detection capability than f-AnoGAN since the image is Consider the set of continuous image frames captured by
+pre-categorized as normal or abnormal [21]. Ren et al. create the pavement detection vehicle as {xt }, where xt represents the
+a PAD-Net for detecting pavement distress, which enhances image captured at time t. When the time interval between xt1
+the detection ability of fine objects and achieves pixel-level and xt2 is sufficiently small, it can be assumed that they contain
+distress segmentation [16]. similar semantic information. This characteristic can be termed
+ Despite these advancements, fully unsupervised pixel-level as spatial contexts. These similar images are then input to the
+solutions for pavement distress segmentation remain limited. network N for deep representations, which can be express as
+The discussed weakly supervised methods utilize image-level N(xt1 ) = z1 , N(xt2 ) = z2 . Valuable deep representations can be
+annotations to guide network convergence, achieving pixel- learned by optimizing the network N by minimizing loss funclevel segmentation but still requiring a degree of supervision. tion L(z1 , z2 ). Specifically, a pavement image xt obtained at any
+This limitation emphasizes the need for further research into given time can be expressed as xt = (α1 , α2 , α3 , · · · β1 , · · · ),
+unsupervised methods that can effectively address the chal- where αi represents the normal areas and βi represents the
+lenges specific to pavement distress detection. abnormal distress areas on the pavement. Given that the
+ pavement is constructed to uniform standards, the normal
+C. Self-Supervised Learning Without Manual Annotations pavement should be consistent. Therefore, the network N
+and Knowledge Gaps should focus on the abnormal areas. Highlighting the focused
+ Self-supervised learning offers an effective tool to achieve areas can help to segment the abnormal areas, which in this
+unsupervised representations by designing pretext tasks that case are pavement distress.
+generate artificial labels, enabling feature learning under Contemporary datasets of pavement images in practical
+unsupervised conditions. Wu et al. develop an instance dis- applications typically consist of entire road that have been
+crimination task, where an image and its argumentations are segmented by mileage. The dataset used in this paper comconsidered positive samples while all other images are negative prises 1,000 images sorted by mileage, each with a size of
+ones, delineating the direction for network optimization [33]. 3008 × 2048. As shown in Figure 1, a sliding window is
+Tian et al. propose a contrast learning method by maximizing designed with a size of 256 × 256 and a stride of 64 to
+23422 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 12, DECEMBER 2025
+
+ independently at the main view xt . As shown in Figure 2,
+ the latent representation obtained from the view that leaves
+ the input image unchanged after forwarding the network is
+ considered the label, while the latent representations obtained
+ from the remaining views after forwarding the network serve
+ as predictions. Subsequently, evaluating the difference between
+ the label and the prediction through cross-entropy loss is a
+ feasible solution:
+ S(z1 , z2 ) = −z2 log z1 (1)
+ Indeed, this constitutes a mutual prediction problem where
+ any view can be treated as a label. Consequently, the calculation can be expressed as follows:
+ 1 1
+ S (z1 , z2 ) + S (z2 , z1 )
+ L(z1 , z2 ) = (2)
+ 2 2
+ The final loss function is obtained by accumulating the
+Fig. 2. Training pipeline of multi-line parallel network. different views and the original input image:
+ Ltotal = L1 (v1 , v2 ) + L2 (v1 , v3 ) + · · · + Li (v1 , vi+1 ) (3)
+simulate the image frames. Specifically, it will intercept the
+image frames xt from the original dataset images Xi in turn The standard ViT [32] is chosen as the backbone network
+and name them according to the two-dimensional coordinates. f (v), with its classifier removed. All parallel networks employ
+Considering the calculation cost, a queue is employed to store an identical architecture based on the same backbone network,
+the large images Xi and Xi+1 . They are contacted into image initialized randomly. In branch 1 of the main view, parameters
+Xc during obtaining the frames. Xi exits the queue when the are not updated through backpropagation. Instead, a stop
+sliding window is completely across it, then Xi+2 joins the gradient strategy is employed, and parameters are updated
+queue, and so on. It can avoid the dismiss of information at the through a momentum encoder from other branches that utilize
+connect areas of each image. After this preprocessing, about normal backpropagation. This process is encapsulated by the
+1 300 000 image frames are obtained. Adjacent frames can be following equation:
+located according to their coordinates. For example, an image θt = αθt−1 + (1 − α)θt (4)
+xt with coordinate (m, n) has 4 adjacent images, which are
+image x(m−1,n) , x(m+1,n) , x(m,n−1) , and x(m,n+1) . Considering their where θ is the network parameter, t represents the iteration
+similar semantic information, the spatial contexts-informed step, and α is the smoothing parameter that controls the
+pretext task is proposed. The aim is to learn a mapping moving average of the momentum encoder.
+function N(xt ) = z to implement a deep representation of
+the feature space and evaluate the spatial contexts from the C. Unsupervised Segmentation via Self Attention
+parallel models as d = S (N(v1 ), N(v2 )), where S is a metric The backbone network trained by parallel networks has
+function. v1 and v2 are the different views of the input image xt . acquired the ability to represent the image frame xt and its
+Here the direction of convergence of the deep leaning model different views, which contain similar semantic information. It
+is artificially created by minimizing d = S (N(v1 ), F(v2 )), it directs attention either towards regions of normal pavement,
+enables an unsupervised training pipeline without any manual serving as the background, or towards regions of pavement
+labeling. distress, signifying the foreground. Pixel-level segmentation
+ of pavement distress can be realized by revealing areas of
+B. Multi-Line Parallel Network for Various Pretext Tasks focus or neglect by the backbone network. Following self-
+ To incorporate the proposed spatial contexts-informed pre- distillation with no labels (DINO) [36], when utilizing ViT
+text task into deep representation learning, we extend the as the backbone network, the input image is initially encoded
+Siamese Network into an open-ended multi-line parallel net- into vectors through linear projections:
+work. This architecture leverages spatial contexts-informed 2
+
+pseudo-labels while remaining flexible for integrating addi- zi = xip E, E ∈ R(P •C)×D (5)
+tional pretext tasks, as shown in Figure 2. This structure These vectors, together with position embeddings and classienables the input data to acquire deep representations within fication token, make up the input to the ViT encoder:
+the same batch and complete the evaluation after passing
+through the projection layer. Taking the case where the batch y0 = [xclass ; zi ;] + E pos , E ∈ R(N+1)×D (6)
+size is 1 as an example, the deep representation y = f (v) y0 will be normalized and put into the MSA block and MLP
+is initially obtained through the backbone network, utiliz- block:
+ing different views v. Subsequently, z = g(y) is derived
+through a multi-layer perceptron (MLP). These projection y01 = MSA (LN(y0 )) + y0 (7)
+ y1 = MLP LN(y01 ) + y01
+ 
+vectors undergo softmax processing, and the loss is calculated (8)
+REN et al.: SPATIAL CONTEXTS-INFORMED SELF-SUPERVISED LEARNING APPROACH 23423
+
+Here MSA performs the following calculations:
+ QK T
+  
+ Attention(Q, K, V) = softmax √ V (9)
+ dk
+ √
+In the above equation, softmax(QK T / dk ) denotes the attention scores. For the one-dimensional classification token, its
+attention scores indicate the importance of each patch in measuring the semantic information about the consistency of the
+input image, considering the spatial contexts-informed pretext
+task. By visualizing the attention scores, a self-attention map
+can be created. Semantic segmentation images can then be
+obtained through simple thresholding.
+
+D. Other Details
+ Following some settings from related contrastive learning
+work [37], [38], the centering is set up for each branch
+updated via backpropagation. Two A40 GPU is employed for
+the experiments, with a batch size of 64. AdamW is utilized
+as the optimizer and the learning rate is set to 0.0005. The
+momentum parameter is set to 0.996.
+
+ IV. E XPERIMENTS
+ We conducted a comprehensive series of experiments to
+evaluate the effectiveness of the proposed spatial contextinformed pretext task and the open-ended multi-line parallel
+network architecture in pavement distress segmentation. The
+proposed method requires the utilization of continuous pavement image characteristics. Although images captured under
+standard conditions are generally sequential, only a few
+available datasets meet this requirement. Consequently, our
+experiments were conducted using the previously mentioned
+continuous pavement dataset, Copave, which satisfies these
+criteria. Our experimental analysis centers on three key
+aspects: Fig. 3. Training pipeline of different approaches: (a) MAE; (b) BEIT;
+ (i) The comparative segmentation accuracy of our spatial (c) MoCo v3; and (d) Ours.
+context-informed method against other pretext tasks.
+ (ii) The potential performance gains of the proposed
+open-ended multi-line parallel network when integrated with (ii) Bidirectional encoder representation from image Transmultiple pretext tasks. formers (BEIT) [39]. As depicted in Figure 3(b), the backbone
+ (iii) The segmentation accuracy of our fully unsupervised is trained by comparing the visual token obtained from the
+methods relative to weakly supervised approaches in the masked image block through the BEIT encoder with the visual
+context of pavement distress segmentation. token obtained from the trained image tokenizer.
+ (iii) Momentum contrast for unsupervised visual representation learning version 3 (MoCo v3) [40]. As depicted in
+A. Experiment 1: Evaluating Spatial Context-Informed Figure 3(c), MoCo v3 utilizes parallel networks to train the
+Pretext Task Against Existing Methods backbone by comparing the deep representations of various
+ To quantitatively assess the segmentation accuracy of our views of the same input image in each network.
+proposed spatial context-informed pretext task in compari- 2) Experiment Settings: This experiment implements unsuson with state-of-the-art self-supervised learning methods, we pervised visual representation learning through self-supervised
+evaluate its task-specific suitability and efficacy for pavement learning. ViT-small networks serve as the backbone for all
+distress segmentation. models, and the training is conducted on the pavement image
+ 1) Baselines: Three state-of-the-art approaches are chosen dataset created in this paper, consisting of 1,300,000 image
+as baseline models, including: frames. The hyperparameter settings for the three baseline
+ (i) Masked autoencoders (MAE) [26]. As depicted in models adhere to the specifications outlined in the original
+Figure 3(a), MAE employs an masked image reconstruc- paper. The self-attention maps are obtained by visualizing the
+tion pretext task to train the backbone and obtain a deep attention scores of the classification token using the trained
+representation of the image. ViT backbone networks. The proposed method deviates from
+23424 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 12, DECEMBER 2025
+
+ improves the segmentation accuracy by an absolute value of
+ 0.048 compared to the baseline models.
+ The reasons for the poor performance of the three baseline
+ methods are different, which is highly related to their pretext
+ task. For example, the mask setting in MAE might cover the
+ pavement distress areas, particularly when the distresses are
+ fine cracks or potholes. Reconstructing the original image from
+ the remaining portion may prove challenging due to the lack of
+ meaningful information in most of the pavement background
+ pixels. The ability of MAE to reconstruct the original image
+ even with a high percentage of mask ratio (e.g., 75%) is
+ a major contribution in the original paper, and it yielded
+ surprisingly good results. However, in our task, we tested mask
+ ratios of 25%, 50%, and 75%, with the best outcomes achieved
+ at a 50% mask ratio. Therefore, the findings in Table I do not
+Fig. 4. Self-attention maps for different pretext tasks.
+ align with the initial 75% mask ratio configuration. Figure 4
+ TABLE I provides additional evidence, showcasing that MAE prioritizes
+ E VALUATION M ETRICS FOR D IFFERENT P RETEXT TASKS the background area of the image over the distress area.
+ MoCo v3 and the proposed method share similarities in
+ terms of model construction. However, the pretext task in
+ MoCo v3 involves predicting different views of the same
+ image using conventional image augmentation techniques such
+ as random cropping, flipping, and color jittering. These techniques do not fully exploit the benefits of continuous shooting
+the baseline solely in terms of pretext task training. Each of pavement images. In contrast, the proposed method can
+method undergoes training for 20 epochs. apply the MoCo v3 pretext task while also incorporating the
+ 3) Results and Analysis: Figure 4 presents the self- spatial context-informed pretext task due to their similarity in
+supervised attention maps generated by the three baseline model construction. A detailed analysis will be presented in
+models (MoCo v3, MAE, and BEIT) and the proposed method, section IV-B.
+all trained from scratch using random weight initialization. The poor performance of BEIT primarily stems from its
+For each approach, the self-attention head yielding the best unstable attention allocation. It utilizes a self-supervised trainperformance is selected for visualization. The outcomes reveal ing model similar to BERT, a natural language processing
+that all methods exhibit varying capabilities in attending to method, and introduces a pretext task called masked image
+pavement distress regions. Compared to the baseline models, modeling (MIM). The main difference between BEIT and
+the proposed method more effectively discriminates between MAE is the use of the image tokenizer, enabling training
+distressed foreground areas and the background pavement, based on comparing visual tokens. The training process for
+suggesting that the classification token employed in the pro- BEIT is more time-consuming than MAE. Since this encoder
+posed approach is more adept at identifying distress regions. incorporates out-of-domain data rather than solely relying on
+MoCo v3 primarily focuses on a few anomalous areas (yellow pavement images, the model may concentrate its attention on
+and green), which are not clearly distinguishable from the foreground regions and, in other cases, focuses on background
+background pavement. MAE tends to assign higher attention regions due to the nature of the MIM pretext task. This
+scores to background pavement regions while underempha- inconsistency is particularly evident when detecting small
+sizing obvious distress areas. BEIT exhibits an alternating cracks. Figures 4 further illustrate that while BEIT performs
+behavior, attending to distress regions in some instances (sec- relatively well on large-scale defects, its segmentation accuond row of Figure 4) and background areas in others (third racy is markedly insufficient for fine-grained defects such as
+row of Figure 4). Additionally, it demonstrates a tendency alligator cracks.
+to emphasize extensive distress patterns while potentially
+overlooking finer crack regions. B. Experiment 2: Multi-Task Integration in Open-Ended
+ After obtaining the attention scores for each image patch, Multi-Line Parallel Networks
+semantic segmentation results are derived through simple To systematically evaluate the performance of our openthresholding at a value of 0.5 across all methods. Manually ended multi-line parallel network architecture in integrating
+labeled images serve as the ground truth for evaluation. Three multiple pretext tasks, we quantify its ability to leverage
+metrics, namely mean Dice coefficient (mDice), mean Inter- diverse self-supervised signals and examines their impact on
+section over Union (mIoU), and mean Pixel Accuracy (mPA), segmentation accuracy.
+are selected to assess segmentation performance. As illustrated 1) Baselines: The proposed flexible multi-line parallel netin Table I, the results reveal that the proposed method attains work is designed to integrate multiple semantically related
+optimal performance across all evaluation indicators. Taking pretext tasks. As illustrated in Figure 5, the experiments
+the mIoU metric as an example, the proposed approach at least in this section investigate the combination of the spatial
+REN et al.: SPATIAL CONTEXTS-INFORMED SELF-SUPERVISED LEARNING APPROACH 23425
+
+Fig. 5. Training pipeline for combining different pretext tasks. Fig. 6. Self-attention maps for various pretext task combinations.
+
+ TABLE II
+ improvements of 17.0%, 10.4%, and 13.1%. When the multi-
+ E VALUATION M ETRICS FOR VARIOUS P RETEXT TASK C OMBINATIONS
+ crop strategy was introduced to the RDA method in Conditions
+ 3, it exhibits notable performance gains. However, a substantial
+ performance gap remains when the SC task was excluded. As
+ shown in Condition 4, the proposed method achieved 0.583
+ mIoU, 0.706 mDice, and 0.827 mPA, representing improvements of 19.0%, 12.2%, and 14.7%. The comparison between
+ Condition 2 and Condition 4 underscore the benefit of the
+ flexible multi-line parallel network architecture, which enables
+context-informed (SC) task with regular data augmentation the integration of the SC task with other compatible pretext
+(RDA) techniques, such as random flipping, color jitter, and tasks. As a result, the segmentation performance was further
+random grayscale [23], as well as the multi-crop strategy [24], enhanced by 0.068 mIoU, 0.071 mDice, and 0.049 mPA,
+which involves representing the entire image using smaller, representing improvements of 13.2%, 11.2%, and 6.3%. These
+localized patches. Multi-crop is commonly applied along- results highlight two key strengths of the proposed method.
+side traditional augmentation methods and has demonstrated First, the spatial context-informed task is well-suited for
+effectiveness in general visual representation learning. All pavement distress segmentation. Second, the scalable multithree tasks are suitable for self-supervised learning, as they line parallel architecture supports the seamless integration of
+preserve semantic consistency with the original input and can related self-supervised tasks, leading to consistently improved
+be compared against it during training. Following this process, segmentation performance.
+the trained network follows the testing method outlined in Figure 6 illustrates the self-attention maps for various pre-
+Section III-C to obtain unsupervised segmentation results. text task combinations. A comparison between condition 1
+ 2) Experiment Settings: This section utilizes the same and condition 2 reveals that the spatial context-informed task
+encoder (ViT small) and loss function (described in exhibits superior discrimination between foreground and back-
+Section III-B) across all methods for consistency. The same ground. This distinction is evident in the lower self-attention
+dataset containing 1.3 million images was used for train- score for the background, depicted in dark blue. Similarly,
+ing, with each method trained for 20 epochs. Pixel-level when contrasting condition 2 with condition 3, it becomes
+segmentation is performed using the approach outlined in apparent that the spatial context-informed task outperforms the
+Section III-C. The key difference lies in the self-supervised combined pretext task involving normal data augmentation and
+pretext tasks employed during training, which include four multi-crop. This is evident in the higher self-attention score
+combinations: (1) using only regular data augmentation meth- for the foreground patch, represented by a bright yellow/green
+ods; (2) using only the proposed spatial context-informed task; color. Condition 4 showcases our recommended optimal solu-
+(3) combining regular data augmentation methods with multi- tion, amalgamating normal data augmentation, multi-crop, and
+crop augmentation; and (4) using the spatial context-informed the spatial context-informed task. This solution effectively
+task along with regular data augmentation methods and multi- distinguishes between foreground and background areas with
+crop augmentation. clarity and precision.
+ 3) Results and Analysis: Table II presents the quantitative
+results under four experimental conditions. The outcomes
+from Conditions 1 and 2 illustrate the adaptability of both C. Experiment 3: Benchmarking Against Weakly Supervised
+the regular data augmentation (RDA) method and the pro- Frameworks
+posed spatial context-informed (SC) task for pavement distress To benchmark our unsupervised approach against leadsegmentation. The SC task outperformed RDA, achieving ing weakly supervised methodologies for pavement distress
+0.515 mIoU, 0.635 mDice, and 0.778 mPA, representing segmentation, we empirically evaluate the viability of our
+23426 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 12, DECEMBER 2025
+
+label-free method as a practical alternative to approaches that
+rely on image-level annotations.
+ 1) Baselines: Given the scarcity of weakly supervised or
+unsupervised methods explicitly tailored for pavement distress
+segmentation, this section conducts a comparison with stateof-the-art anomaly detection methods commonly applied in
+related domains, including human disease detection and industrial anomaly detection. These methods are categorized into
+three groups based on the training pipeline, as illustrated in
+Figure 7.
+ (i) Weakly supervised learning based on image reconstruction: The first step involves selecting normal images from
+the original pavement dataset through image-level labeling.
+Subsequently, a reconstruction network is trained with the
+assumption that even for abnormal input images, the network
+can generate a normal output. The identification of the distress
+region is based on comparing the discrepancies between the
+input and output images. Three commonly used methods
+are employed in this experiment, including GANomaly [17],
+f-Anogan [18], and FastFlow [32].
+ (ii) Weakly supervised learning based on image-to-image
+translation: Initially, the original pavement dataset is categorized into two groups, normal and abnormal, guided by
+image-level labels. Subsequently, a mapping function is trained
+to transform abnormal images into a normal state. The detection of the distress area involves comparing the differences
+observed before and after the transformation. Three commonly
+used methods are employed in this experiment, including ACl
+GAN [20], Fixed Point [21], and PAD Net [16]. Notably, PAD
+Net is specifically designed for weakly supervised pavement
+distress detection.
+ (iii) Self-supervised learning: The proposed method and
+selected baseline approaches, including MAE [26], BEIT
+[39] and MoCo v3 [40] (as mentioned in Section IV-A),
+involve identifying distress regions through the utilization of
+self-attention mechanisms. This is facilitated by formulating
+pretext tasks and executing self-supervised training procedures.
+ 2) Experiment Settings: Since this section involves completely different methods compared to the previous experiments, the recommended parameters for each weakly supervised method are followed, and training is performed until
+convergence. All methods utilize the same dataset, which is
+identical to the one used in Experiment 1 and Experiment
+2. As weakly supervised methods require image-level labels,
+400 images were manually labeled as either normal or abnormal, and a ResNet-101 classifier was trained to obtain these
+image-level labels for the dataset.
+ 3) Results and Analysis: Figure 8 illustrates the qualitative
+outcomes of the experiments. FastFlow [32], f-Anogan [18],
+and GANomaly [17] are classified as class A methods, while
+ACl GAN [20], Fixed Point [21], and PAD Net [16] are Fig. 7. Three types of training and testing for weakly supervised or
+ unsupervised pavement distress segmentation methods. (a) weakly supervised
+classified as class B methods. MAE [26], BEIT [39], MoCo learning based on image reconstruction; (b) weakly supervised learning based
+v3 [40] and the proposed approach are classified as class C on image-to-image translation; and (c) self-supervised learning.
+methods. The approaches tailored specifically for pavement
+distress segmentation, such as PADNet and the proposed This observation may stem from the low contrast of pavement
+method, demonstrated a distinct advantage by being capable of images captured in the field, as opposed to industrial or
+approximately delineating the contours of cracks and potholes. medical images that typically exhibit a more standardized
+REN et al.: SPATIAL CONTEXTS-INFORMED SELF-SUPERVISED LEARNING APPROACH 23427
+
+ TABLE III
+ E VALUATION M ETRICS FOR VARIOUS P RETEXT TASK C OMBINATIONS
+
+ The quantitative results of the experiments are presented
+ in Table III. Among the evaluated schemes, the proposed
+ method demonstrates superior performance except for PAD
+ Net in mIoU and mDice metric, but the proposed approach
+ exhibits a slight advantage in the mPA metric. Remarkably,
+ the proposed method surpasses the state-of-the-art unsupervised learning methods for general vision tasks, achieving a
+ substantial improvement of 0.143 when evaluated using the
+ mIoU index, as measured by the average accuracy across the
+ three methods. It is evident that different categories of methods
+ exhibit varying sensitivities to various evaluation metrics. The
+ direct application of weakly supervised methods, including
+ Class A and Class B, presents a trade-off: while these methods
+ are disadvantaged when prioritizing evaluation metrics such
+ as the intersection over union ratio (IoU), they exhibit an
+ advantage when favoring evaluation metrics like pixel accuracy (PA). This phenomenon can be attributed to the inherent
+ tendency of weakly supervised methods to regard objects
+ that are challenging to detect as background. Consequently,
+ pavement distresses often occupy a relatively small proportion
+ of the image, these methods can achieve high mPA scores
+ even when failing to detect all distresses. In contrast, selfsupervised methods (Class C) are predisposed to identifying
+ the foreground region, rendering them more susceptible to
+ misclassifying the background region.
+ While the performance difference between the proposed
+ method and the state-of-the-art weakly supervised schemes
+ like PAD Net is marginal, the proposed approach demonstrates
+ its own merits. Figure 9 illustrates the outcomes obtained when
+ training PAD Net and the proposed method on datasets of varying sizes. When trained on the entire dataset (100%), PAD Net
+ encountered a gradient vanishing issue, resulting in premature
+ termination. This problem can be attributed to the imbalance
+ between positive and negative samples, with 1,066,130 normal
+ images and only 259,473 abnormal images. The red square
+ points in Figure 9 represent the results obtained by training
+Fig. 8. Segmentation results on baseline and proposed methods. (a) Input on a dataset generated by cropping 1000 high-resolution
+image. (b)Manual label. (c) FastFlow. (d) GANormaly. (e) f-Anogan. (f) ACL
+GAN. (g) Fixed Point. (h) PAD Net. (i) MAE. (j) MoCo v3 (k) BEIT (l) Ours.
+ images into smaller ones, rather than using sliding windows
+ (followed as [16]). This cropping strategy offers the advantage
+ of creating a relatively balanced distribution of positive and
+and consistent shooting environment. Despite the comparison negative samples, yielding favorable outcomes. A comparative
+being against weakly supervised schemes, the results achieved analysis of these two competitive methodologies reveals the
+by the proposed method are competitive. following observations: First, the proposed method exhibits a
+23428 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 12, DECEMBER 2025
+
+ Fig. 10. Self-Attention maps for different settings.
+
+Fig. 9. Results of training PAD net and the proposed method using datasets
+of different sizes, with different metrics of (a) mIoU, (b) mPA.
+
+progressive increase in performance as the dataset size grows, Fig. 11. Comparison of loss convergence in different settings.
+ultimately achieving optimal results constrained by the dataset TABLE IV
+scale. In contrast, PAD Net exhibits an erratic convergence E VALUATION M ETRICS FOR VARIOUS P RETEXT TASK C OMBINATIONS
+behavior and consistently underperforms in terms of the mPA
+metric. Second, as the dataset size expands, fully unsupervised
+methods can operate unhindered, while weakly supervised
+methods require additional manual annotations, potentially
+leading to sample imbalances and subsequently impacting
+detection outcomes.
+
+ V. D ISCUSSION augmentation techniques that preserve complete image infor-
+ While deep representations based on self-supervised learn- mation, rather than including mask-based schemes. Moreover,
+ing have achieved remarkable success in general computer compared to weakly supervised models, the proposed unsuvision tasks, their application to pixel-level segmentation pervised approach offers key advantages beyond competitive
+remains an emerging area, especially for targets like pavement accuracy: (i) it does not require balanced label distributions,
+distress dominated by small, elongated, and irregularly shaped and its performance can continually improve with increasing
+objects such as cracks. This has necessitated the exploration data volumes; (ii) the approach is highly scalable, allowing
+of specialized methods for pretext tasks of creating pseudo the integration of diverse pretext tasks; and (iii) the underlying
+labels. The proposed spatial context-informed pretext task transformer architecture provides opportunities to enhance percan be viewed as analyzing a video sequence of continu- formance by effectively fusing multimodal information sources
+ously captured pavement images. As the frames advance, the beyond just visual data.
+human visual system can perceive a motion effect akin to However, it does not imply that self-supervised learning netmoving pavement distress, allowing contextual information to works can converge effectively without additional measures.
+be exploited. Experimental results demonstrate that the pro- To enable the network to accurately detect distress targets,
+posed scheme is better suited for pavement distress detection some necessary configurations are adopted. This paper follows
+compared to mask-based approaches like MAE and BEIT that a variety of different practices in related works, such as batch
+have achieved success in general vision tasks. Consequently, normalization (BN) and centering, that were correlated with
+the proposed multi-line parallel network incorporates data the convergence of the proposed method. Four combinations
+REN et al.: SPATIAL CONTEXTS-INFORMED SELF-SUPERVISED LEARNING APPROACH 23429
+
+ task may differ fundamentally from those acquired through
+ unsupervised learning objectives. These findings underscore
+ the necessity of a large, domain-specific dataset and a tailored training strategy to effectively address pavement distress
+ detection tasks.
+ Although the proposed method has achieved competitive
+ results on the task of unsupervised pavement distress segmentation, there are still some limitations. Due to dataset and
+ computational resource constraints, this study, as an initial
+ exploration, failed to fully capture the deepest potential of
+ the proposed method. Based on the experience with existing
+ large multimodal models, the proposed approach may achieve
+ more competitive results as data size and model capacity
+Fig. 12. Evaluation of different pretext task during trainin. increase. On the other hand, under limited equipment and data
+ scenarios, efficient, rapid, and lightweight model training is
+of these techniques are experimented, as shown in Table IV. also a problem worth exploring.
+Figure 10 displays the self-attention map, and Figure 11 VI. C ONCLUSION
+shows the corresponding convergence of the loss. The results
+ Automated and intelligent distress detection is a crucial
+in Table IV indicate only minor differences but the selfenabler for future transportation infrastructure maintenance.
+attention maps reveal significant distinctions. It is observed
+ To circumvent the time-consuming and labor-intensive manthat without centering, the self-attention layers concentrate
+ ual annotation required by deep learning-based pavement
+more on the background pavement region rather than the
+ distress segmentation methods, this paper explores a novel
+foreground distress region. Consequently, when centering is
+ self-supervised learning approach that eliminates the need
+not used, the opposite threshold setting, i.e., removing the
+ for manual labeling. The authors leverage the spatial context
+more focused regions are employed. When both BN and
+ present in continuous pavement images to create pseudocentering are used, the self-attention layer becomes more
+ labels and design an open-ended multi-line parallel network
+sensitive to changes in the pavement, shown as the distress
+ to learn deep representations using these labels, ultimately
+regions receiving higher attention scores, while some of the
+ segmenting distress regions via self-attention mechanisms.
+pavement regions are equally attended to. This makes the self-
+ Experimental results demonstrate that: (1) the proposed spatial
+attention map noisy and unsuitable for unsupervised pavement
+ context-informed pretext task achieves an average 0.075 mIoU
+distress segmentation. A more notable difference appears in the
+ higher accuracy than state-of-the-art approaches such as MAE,
+convergence of the loss in Figure 11, which fails to converge
+ BEIT, and MoCo v3 on the pavement distress segmentawell when both BN and centering are used. Considering the
+ tion task; (2) the proposed open-ended multi-line parallel
+above, only centering as the setting in this paper is employed.
+ network exhibits the potential to integrate multiple pretext
+It obtains the best mDice and mPA and exhibits a better selftasks, with the combined scheme successfully improving
+attention map and loss convergence process. Unfortunately,
+ detection accuracy by 0.068 mIoU; (3) the proposed unsuthe theoretical underpinnings for these various configurations
+ pervised method remains competitive with weakly supervised
+remain a subject of debate, their effectiveness can vary across
+ approaches requiring image-level labels, surpassing most
+different tasks.
+ weakly supervised techniques. The authors acknowledge that
+ Beyond this, a natural consideration is whether prethe performance of the proposed approach is currently contraining the model on a large common vision dataset could
+ strained by model and dataset size limitations but believe
+enhance its performance. To investigate this, the methods in
+ that these findings will contribute to the development of
+section IV-A were evaluated using weights from a ViTfully automated pavement distress detection systems, with
+small backbone network pre-trained on the ImageNet dataset
+ substantial performance enhancements achievable by scaling
+followed by fine-tuning on the pavement dataset using the
+ these factors.
+described methodologies. Figure 12 illustrates the progression
+of the mIoU evaluation metric for different methods across R EFERENCES
+training epochs. Counterintuitively, as presented in Table I, [1] H. D. Cheng and M. Miyojim, “Automatic pavement distress detection
+all four methods underperformed compared to training from system,” Inf. Sci., vol. 108, nos. 1–4, pp. 219–240, Jul. 1998.
+scratch. It was observed that the performance of these methods [2] K. C. Wang and W. Gong, “Real-time automated survey system of
+ pavement cracking in parallel environment,” J. Infrastructure Syst.,
+did not improve with continued training, suggesting that this vol. 11, no. 3, pp. 154–164, Sep. 2005.
+phenomenon is not unique to the proposed approaches but [3] L. Ying and E. Salari, “Beamlet transform-based technique for pavement
+rather inherent in self-supervised learning methods. A poten- crack detection and classification,” Comput.-Aided Civil Infrastruct.
+ Eng., vol. 25, no. 8, pp. 572–580, Nov. 2010.
+tial explanation for this outcome may lie in the substantial [4] Q. Li, Q. Zou, D. Zhang, and Q. Mao, “FoSA: F* seed-growing approach
+domain discrepancy between the ImageNet dataset, consisting for crack-line detection from pavement images,” Image Vis. Comput.,
+of natural images, and the pavement dataset, consisting of vol. 29, no. 12, pp. 861–872, Nov. 2011.
+ [5] W. Wang et al., “Pavement crack image acquisition methods and
+specialized infrastructure images. Moreover, the backbone net- crack extraction algorithms: A review,” J. Traffic Transp. Eng. (English
+work obtained through supervised training on a classification Edition), vol. 6, no. 6, pp. 535–556, Dec. 2019.
+23430 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 12, DECEMBER 2025
+
+[6] C. Xiang, V. J. L. Gan, J. Guo, and L. Deng, “Semi-supervised [28] J. Long, E. Shelhamer, and T. Darrell, “Fully convolutional networks
+ learning framework for crack segmentation based on contrastive learning for semantic segmentation,” in Proc. IEEE Conf. Comput. Vis. Pattern
+ and cross pseudo supervision,” Measurement, vol. 217, Aug. 2023, Recognit. (CVPR), Jun. 2015, pp. 3431–3440.
+ Art. no. 113091. [29] Y. Wang, K. Song, J. Liu, H. Dong, Y. Yan, and P. Jiang, “RENet:
+[7] S. Dorafshan, R. J. Thomas, and M. Maguire, “Comparison of deep Rectangular convolution pyramid and edge enhancement network for
+ convolutional neural networks and edge detectors for image-based salient object detection of pavement cracks,” Measurement, vol. 170,
+ crack detection in concrete,” Construct. Building Mater., vol. 186, Jan. 2021, Art. no. 108698.
+ pp. 1031–1045, Oct. 2018. [30] Y. Hou et al., “A deep learning method for pavement crack identification
+[8] S. Park, S. Bang, H. Kim, and H. Kim, “Patch-based crack detection based on limited field images,” IEEE Trans. Intell. Transp. Syst., vol. 23,
+ in black box images using convolutional neural networks,” J. Comput. no. 11, pp. 22156–22165, Nov. 2022.
+ Civil Eng., vol. 33, no. 3, May 2019, Art. no. 04019017. [31] W. Wang and C. Su, “Semi-supervised semantic segmentation network
+[9] Y. Cha, W. Choi, and O. Büyüköztürk, “Deep learning-based crack for surface crack detection,” Autom. Construction, vol. 128, Aug. 2021,
+ damage detection using convolutional neural networks,” Comput.-Aided Art. no. 103786.
+ Civil Infrastruct. Eng., vol. 32, no. 5, pp. 361–378, 2017. [32] J. Yu et al., “FastFlow: Unsupervised anomaly detection and localization
+[10] V. P. Tran, T. S. Tran, H. J. Lee, K. D. Kim, J. Baek, and T. T. Nguyen, via 2D normalizing flows,” 2021, arXiv:2111.07677.
+ “One stage detector (RetinaNet)-based crack detection for asphalt pave- [33] Z. Wu, Y. Xiong, S. X. Yu, and D. Lin, “Unsupervised feature learning
+ ments considering pavement distresses and surface objects,” J. Civil via non-parametric instance discrimination,” in Proc. IEEE/CVF Conf.
+ Structural Health Monitor., vol. 11, no. 1, pp. 205–222, Feb. 2021. Comput. Vis. Pattern Recognit., Jun. 2018, pp. 3733–3742.
+[11] H. Liu, X. Miao, C. Mertz, C. Xu, and H. Kong, “CrackFormer: Trans- [34] Y. Tian, D. Krishnan, and P. Isola, “Contrastive multiview coding,”
+ former network for fine-grained crack detection,” in Proc. IEEE/CVF in Proc. Eur. Conf. Comput. Vis., Glasgow, U.K.. Cham, Switzerland:
+ Int. Conf. Comput. Vis. (ICCV), Oct. 2021, pp. 3783–3792. Springer, 2020, pp. 776–794.
+[12] Z. Qu, C. Cao, L. Liu, and D.-Y. Zhou, “A deeply supervised convo- [35] D. Pathak, P. Krahenbuhl, J. Donahue, T. Darrell, and A. A. Efros,
+ lutional neural network for pavement crack detection with multiscale “Context encoders: Feature learning by inpainting,” in Proc. IEEE Conf.
+ feature fusion,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 9, Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016, pp. 2536–2544.
+ pp. 4890–4899, Sep. 2022. [36] M. Caron et al., “Emerging properties in self-supervised vision
+[13] K. Zhang, Y. Zhang, and H.-D. Cheng, “CrackGAN: Pavement crack transformers,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+ detection using partially accurate ground truths based on generative Oct. 2021, pp. 9650–9660.
+ adversarial learning,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 2, [37] M. Caron, I. Misra, J. Mairal, P. Goyal, P. Bojanowski, and A. Joulin,
+ pp. 1306–1319, Feb. 2021. “Unsupervised learning of visual features by contrasting cluster
+[14] R. Ren, F. Liu, P. Shi, H. Wang, and Y. Huang, “Preprocessing of crack assignments,” in Proc. NIPS, Dec. 2020, pp. 9912–9924.
+ recognition: Automatic crack-location method based on deep learning,” [38] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for
+ J. Mater. Civil Eng., vol. 35, no. 3, Mar. 2023, Art. no. 04022452. unsupervised visual representation learning,” in Proc. IEEE/CVF Conf.
+[15] Y. Zheng, Y. Gao, S. Lu, and K. M. Mosalam, “Multistage semisuper- Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020, pp. 9729–9738.
+ vised active learning framework for crack identification, segmentation, [39] H. Bao, L. Dong, S. Piao, and F. Wei, “BEiT: BERT pre-training of
+ and measurement of bridges,” Comput.-Aided Civil Infrastruct. Eng., image transformers,” 2021, arXiv:2106.08254.
+ vol. 37, no. 9, pp. 1089–1108, Jul. 2022. [40] X. Chen, S. Xie, and K. He, “An empirical study of training self-
+[16] R. Ren, P. Shi, P. Jia, and X. Xu, “A semi-supervised learning approach supervised vision transformers,” in Proc. IEEE/CVF Int. Conf. Comput.
+ for pixel-level pavement anomaly detection,” IEEE Trans. Intell. Transp. Vis., Oct. 2021, pp. 9640–9649.
+ Syst., vol. 24, no. 9, pp. 10099–10107, Sep. 2023.
+[17] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “GANomaly:
+ Semi-supervised anomaly detection via adversarial training,” in Proc.
+ Ruiqi Ren received the B.E. degree in civil engi-
+ 14th Asian Conf. Comput. Vis., Perth, WA, Australia. Cham, Switzerland:
+ neering from Central South University and the
+ Springer, Dec. 2019, pp. 622–637.
+ Ph.D. degree in intelligent transportation science and
+[18] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and U. Schmidttechnology from Soochow University. His research
+ Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection with
+ focuses on the application of deep learning and
+ generative adversarial networks,” Med. Image Anal., vol. 54, pp. 30–44,
+ computer vision techniques for infrastructure health
+ May 2019.
+ monitoring, with a particular interest in developing
+[19] J. Song, K. Kong, Y.-I. Park, S.-G. Kim, and S.-J. Kang, “AnoSeg:
+ efficient, automated methods for pavement distress
+ Anomaly segmentation network using self-supervised learning,” 2021,
+ diagnosis and structural health assessment.
+ arXiv:2110.03396.
+[20] Y. Zhao, R. Wu, and H. Dong, “Unpaired image-to-image translation
+ using adversarial consistency loss,” in Proc. 16th Eur. Conf. Comput.
+ Vis. (ECCV), Glasgow, U.K. Cham, Switzerland: Springer, Aug. 2020,
+ pp. 800–815.
+[21] M. M. R. Siddiquee et al., “Learning fixed points in generative adver- Peixin Shi received the Ph.D. degree in civil and
+ sarial networks: From image-to-image translation to disease detection environmental engineering from Cornell University.
+ and localization,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), He is a Full Professor with the School of Rail Trans-
+ Oct. 2019, pp. 191–200. portation, Soochow University. His research topics
+[22] X. Huang, M.-Y. Liu, S. Belongie, and J. Kautz, “Multimodal unsu- include tunneling and underground space technolpervised image-to-image translation,” in Proc. Eur. Conf. Comput. Vis., ogy, smart infrastructure systems for underground
+ 2018, pp. 172–189. environments, and lifeline earthquake engineering.
+[23] J.-B. Grill et al., “Bootstrap your own latent-a new approach to selfsupervised learning,” in Proc. 34th Int. Conf. Neural Inf. Process. Syst.,
+ 2020, pp. 21271–21284.
+[24] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+ for contrastive learning of visual representations,” in Proc. Int. Conf.
+ Mach. Learn., 2020, pp. 1597–1607. Jinwoo Kim received the Ph.D. degree in civil and
+[25] X. Chen and K. He, “Exploring simple Siamese representation learning,” environmental engineering from Seoul National Uniin Proc. IEEE Comput. Soc. Conf. Comput. Vision Pattern Recognit., versity, South Korea. His long-term goal is to realize
+ Jun. 2021, pp. 15750–15758. human-centered digitalization and robotic automa-
+[26] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked tion in the construction industry. He is currently
+ autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf. working at the Department of Civil and Environmen-
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 16000–16009. tal Engineering, Hanyang University, South Korea,
+[27] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional net- as an Assistant Professor. To this end, he researches
+ works for biomedical image segmentation,” in Proc. 18th Int. Conf. Med. how to leverage and integrate emerging artificial
+ Image Comput. Comput.-Assist. Intervent., vol. 9351. Cham, Switzer- intelligence and automation technologies with longland: Springer, 2015, pp. 234–241. established human theories and knowledge.

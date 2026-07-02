@@ -1,0 +1,679 @@
+﻿你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [851] Towards Open Set Deep Networks
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：851
+题名：Towards Open Set Deep Networks
+年份：2016
+DOI：10.1109/CVPR.2016.173
+来源：未识别
+PDF：paper/10.1109_CVPR.2016.173.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：无
+相关性：中相关，分数 8
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\851.txt
+- 原始字符数：69582
+- 本次发送字符数：69582
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+2016 IEEE Conference on Computer Vision and Pattern Recognition
+
+
+
+
+                                              Towards Open Set Deep Networks
+
+                                                  Abhijit Bendale*, Terrance E. Boult
+                                               University of Colorado at Colorado Springs
+                                                     {abendale,tboult}@vast.uccs.edu ∗
+
+
+
+                                Abstract                                          vision and learning. Recent research in deep networks has
+                                                                                  signiﬁcantly improved many aspects of visual recognition
+      Deep networks have produced signiﬁcant gains for var-                       [26, 3, 11]. Co-evolution of rich representations, scalable
+  ious visual recognition problems, leading to high impact                        classiﬁcation methods and large datasets have resulted in
+  academic and commercial applications. Recent work in                            many commercial applications [5, 28, 16, 6]. However, a
+  deep networks highlighted that it is easy to generate images                    wide range of operational challenges occur while deploying
+  that humans would never classify as a particular object                         recognition systems in the dynamic and ever-changing real
+  class, yet networks classify such images high conﬁdence                         world. A vast majority of recognition systems are designed
+  as that given class – deep network are easily fooled with                       for a static closed world, where the primary assumption is
+  images humans do not consider meaningful. The closed set                        that all categories are known a priori. Deep networks, like
+  nature of deep networks forces them to choose from one of                       many classic machine learning tools, are designed to per-
+  the known classes leading to such artifacts. Recognition in                     form closed set recognition.
+  the real world is open set, i.e. the recognition system should                      Recent work on open set recognition [20, 21] and
+  reject unknown/unseen classes at test time. We present a                        open world recognition [1], has formalized processes for
+  methodology to adapt deep networks for open set recogni-                        performing recognition in settings that require rejecting
+  tion, by introducing a new model layer, OpenMax, which                          unknown objects during testing. While one can always
+  estimates the probability of an input being from an unknown                     train with an “other” class for uninteresting classes (known
+  class. A key element of estimating the unknown probabil-                        unknowns), it is impossible to train with all possible exam-
+  ity is adapting Meta-Recognition concepts to the activation                     ples of unknown objects. Hence the need arises for design-
+  patterns in the penultimate layer of the network. Open-                         ing visual recognition tools that formally account for the
+  Max allows rejection of “fooling” and unrelated open set                        “unknown unknowns”[18]. Altough a range of algorithms
+  images presented to the system; OpenMax greatly reduces                         has been developed to address this issue [4, 20, 21, 25, 2],
+  the number of obvious errors made by a deep network. We                         performing open set recognition with deep networks has
+  prove that the OpenMax concept provides bounded open                            remained an unsolved problem.
+  space risk, thereby formally providing an open set recog-
+  nition solution. We evaluate the resulting open set deep net-                      In the majority of deep networks [11, 26, 3], the output of
+  works using pre-trained networks from the Caffe Model-zoo                       the last fully-connected layer is fed to the SoftMax function,
+  on ImageNet 2012 validation data, and thousands of fooling                      which produces a probability distribution over the N known
+  and open set images. The proposed OpenMax model signif-                         class labels. While a deep network will always have a most-
+  icantly outperforms open set recognition accuracy of basic                      likely class, one might hope that for an unknown input all
+  deep networks as well as deep networks with thresholding                        classes would have low probability and that thresholding on
+  of SoftMax probabilities.                                                       uncertainty would reject unknown classes. Recent papers
+                                                                                  have shown how to produce “fooling” [14] or “rubbish”
+                                                                                  [8] images that are visually far from the desired class but
+                                                                                  produce high-probability/conﬁdence scores. They strongly
+  1     Introduction                                                              suggests that thresholding on uncertainty is not sufﬁcient
+  Computer Vision datasets have grown from few hundred                            to determine what is unknown. In Sec. 3, we show that
+  images to millions of images and from few categories to                         extending deep networks to threshold SoftMax probabil-
+  thousands of categories, thanks to research advances in                         ity improves open set recognition somewhat, but does not
+     ∗ Research performed at Univ. of Colorado at Colorado Springs funded
+                                                                                  resolve the issue of fooling images. Nothing in the the-
+  in part by NSF IIS-1320956. Abhijit Bendale is currently with Samsung           ory/practice of deep networks, even with thresholded prob-
+  Research America, Mountain View, CA                                             abilities, satisﬁes the formal deﬁnition of open set recog-
+
+1063-6919/16 $31.00 © 2016 IEEE                                              1563
+DOI 10.1109/CVPR.2016.173
+ Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+                                                     Baseball                                                         Baseball                      Hammerhead 
+                                                                                                                                                      
+   
+     
+       
+                                             Hammerhead Shark                                                     %     (&0,    (&0,       %   (&-.$     (&-/
+          
+   
+     
+       
+                                             Great White Shark
+          
+                                                                                                      %     )&($    (&((   %    (&0/$     (&((
+     
+       
+                                                   Scuba Diver
+          
+   
+                                                                                                                  %(&)-$       %(&).     %     (&*-$     (&)(
+     
+       
+                                                                                                                         " !"
+                            Adversarial Scuba Diver (from Hammerhead)                                                         (&+* !"
+                                                                                                                                 (&,0#
+                                                                                                                                               
+                                                                                                                !  (&.0
+          Sharks                       Whales     Dogs                                   Fish Baseball
+
+Figure 1. Examples showing how an activation vector model provides sufﬁcient information for our Meta-Recognition and OpenMax
+extension of a deep network to support open-set recognition. The OpenMax algorithm measures distance between an activation vector
+(AV) for an input and the model vector for the top few classes, adjusting scores and providing an estimate of probability of being unknown.
+The left side shows activation vectors (AV) for different images, with different AVs separated by black lines. Each input image becomes
+an AV, displayed as 10x450 color pixels, with the vertical being one pixel for each of 10 deep network channel activation energy and the
+horizontal dimension showing the response for the ﬁrst 450 ImageNet classes. Ranges of various category indices (sharks, whales, dogs,
+ﬁsh, etc.) are identiﬁed on the bottom of the image. For each of four classes (baseball, hammerhead shark, great white shark and scuba
+diver), we show an AV for 4 types of images: the model, a real image, a fooling image and an open set image. The AVs show patterns of
+activation in which, for real images, related classes are often responding together, e.g., sharks share many visual features, hence correlated
+responses, with other sharks, whales, large ﬁshes, but not with dogs or with baseballs. Visual inspection of the AVs shows signiﬁcant
+difference between the response patterns for fooling and open set images compared to a real image or the model AV. For example, note
+the darker (deep blue) lines in many fooling images and different green patterns in many open set images. The bottom AV is from an
+“adversarial” image, wherein a hammerhead image was converted, by adding nearly invisible pixel changes, into something classiﬁed as
+scuba-diver. On the right are two columns showing the associated images for two of the classes. Each example shows the SoftMax (SM)
+and OpenMax (OM) scores for the real image, the fooling and open set image that produced the AV shown on the left. The red OM scores
+implies the OM algorithm classiﬁed the image as unknown, but for completeness we show the OM probability of baseball/hammerhead
+class for which there was originally confusion. The bottom right shows the adversarial image and its associated scores – despite the
+network classifying it as a scuba diver, the visual similarity to the hammerhead is clearly stronger. OpenMax rejects the adversarial image
+as an outlier from the scuba diver class. As an example of recovery from failure, we note that if the image is Gaussian blurred OpenMax
+classiﬁes it as a hammerhead shark with .79 OM probability.
+nition offered in [20]. This leads to the ﬁrst question                          information is incorporated in our OpenMax model and
+addressed in this paper, “how to adapt deep networks sup-                        used to characterize failure of recognition system. By drop-
+port to open set recognition?”                                                   ping the restriction for the probability for known classes
+                                                                                 to sum to 1, and rejecting inputs far from known inputs,
+    The SoftMax layer is a signiﬁcant component of the
+                                                                                 OpenMax can formally handle unknown/unseen classes
+problem because of its closed nature. We propose an alter-
+                                                                                 during operation. Our experiments demonstrate that the
+native, OpenMax, which extends SoftMax layer by enabling
+                                                                                 proposed combination of OpenMax and Meta-Recognition
+it to predict an unknown class. OpenMax incorporates like-
+                                                                                 ideas readily address open set recognition for deep networks
+lihood of the recognition system failure. This likelihood is
+                                                                                 and reject high conﬁdence fooling images [14].
+used to estimate the probability for a given input belong-
+ing to an unknown class. For this estimation, we adapt the                           While fooling/rubbish images are, to human observers,
+concept of Meta-Recognition[22, 32, 9] to deep networks.                         clearly not from a class of interest, adversarial images
+We use the scores from the penultimate layer of deep net-                        [8, 27] present a more difﬁcult challenge. These adversarial
+works (the fully connected layer before SoftMax, e.g., FC8)                      images are visually indistinguishable from a training sam-
+to estimate if the input is “far” from known training data.                      ple but are designed so that deep networks produce high-
+We call scores in that layer the activation vector(AV). This                     conﬁdence but incorrect answers. This is different from
+
+                                                                            1564
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+standard open space risk because adversarial images are                          layer (feature space) in which we can build a compact abat-
+“near” a training sample in input space, for any given output                    ing probability model that can be thresholded to limit open
+class.                                                                           space risk. We develop this model as a decaying probability
+    A key insight in our opening deep networks is noting                         model based on distance from a learned model. In follow-
+that “open space risk” should be measured in feature space,                      ing section, we elaborate on the space and meta-recognition
+rather than in pixel space. In prior work, open space risk                       approach for estimating distance from known training data,
+is not measured in pixel space for the majority of problems                      followed by a methodology to incorporate such distance in
+[20, 21, 1]. Thus, we ask “is there a feature space, ide-                        decision function of deep networks. We call our method-
+ally a layer in the deep network, where these adversarial                        ology OpenMax, an alternative for the SoftMax function
+images are far away from training examples, i.e., a layer                        as the ﬁnal layer of the network. Finally, we show that
+where unknown, fooling and adversarial images become                             the overall model is a compact abating probability model,
+outliers in an open set recognition problem?” In Sec. 2.1,                       hence, it satisﬁes the deﬁnition for an open set recognition.
+we investigate the choice of the feature space/layer in deep
+networks for measuring open space risk. We show that                             2.1     Multi-class Meta-Recognition
+an extreme-value meta-recognition inspired distance nor-                         Our ﬁrst step is to determine when an input is likely not
+malization process on the overall activation patterns of the                     from a known class, i.e., we want to add a meta-recognition
+penultimate network layer provides a rejection probability                       algorithm [22, 32] to analyze scores and recognize when
+for OpenMax normalization for unknown images, fooling                            deep networks are likely incorrect in their assessment. Prior
+images and even for many adversarial images. In Fig. 1, we                       work on meta-recognition used the ﬁnal system scores, ana-
+show examples of activation patterns for our model, input                        lyzed their distribution based on Extreme Value Theory
+images, fooling images, adversarial images (that the system                      (EVT) and found these distributions follow Weibull distri-
+can reject) and open set images.                                                 bution. Although one might use the per class scores inde-
+    In summary the contributions of this paper are:                              pendently and consider their distribution using EVT, that
+  1. Multi-class Meta-Recognition using Activation Vec-                          would not produce a compact abating probability because
+      tors to estimate the probability of deep network failure                   the fooling images show that the scores themselves were not
+  2. Formalization of open set deep networks using Meta-                         from a compact space close to known input training data.
+      Recognition and OpenMax, along with the proof                              Furthermore, a direct EVT ﬁtting on the set of class post
+      showing that proposed approach manages open space                          recognition scores (SoftMax layer) is not meaningful with
+      risk for deep networks                                                     deep networks, because the ﬁnal SoftMax layer is intention-
+  3. Experimental analysis of the effectiveness of open set                      ally renormalized to follow a logistic distribution. Thus, we
+      deep networks at rejecting unknown classes, fooling                        analyze the penultimate layer, which is generally viewed
+      images and obvious errors from adversarial images,                         as a per-class estimation. This per-class estimation is con-
+      while maintaining its accuracy on testing images                           verted by SoftMax function into the ﬁnal output probabili-
+                                                                                 ties.
+2      Open Set Deep Networks                                                        We take the approach that the network values from
+A natural approach for opening a deep network is to apply                        penultimate layer (hereafter the Activation Vector (AV)), are
+a threshold on the output probability. We consider this                          not an independent per-class score estimate, but rather they
+as rejecting uncertain predictions, rather than rejecting                        provide a distribution of what classes are “related.” In
+unknown classes. It is expected images from unknown                              Sec. 2.2 we discuss an illustrative example based on Fig. 1.
+classes will all have low probabilities, i.e., be very uncer-                        Our overall EVT meta-recognition algorithm is summa-
+tain. This is true only for a small fraction of unknown                          rized in Alg. 1. To recognize outliers using AVs, we adapt
+inputs. Our experiments in Sec. 3 show that thresholding                         the concepts of Nearest Class Mean [29, 12] or Nearest
+uncertain inputs helps, but is still relatively weak tool for                    Non-Outlier [1] and apply them per class within the activa-
+open set recognition. Scheirer et al. [20] deﬁned open space                     tion vector, as a ﬁrst approximation. While more complex
+risk as the risk associated with labeling data that is “far”                     models, such as nearest class multiple centroids (NCMC)
+from known training samples. That work provides only a                           [13] or NCM forests [17], could provide more accurate
+general deﬁnition and does not prescribe how to measure                          modeling, for simplicity this paper focuses on just using a
+distance, nor does it specify the space in which such dis-                       single mean. Each class is represented as a point, a mean
+tance is to be measured. In order to adapt deep networks                         activation vector (MAV) with the mean computed over only
+to handle open set recognition, we must ensure they man-                         the correctly classiﬁed training examples (line 2 of Alg. 1).
+age/minimize their open space risk and have the ability to                           Given the MAV and an input image, we measure dis-
+reject unknown inputs.                                                           tance between them. We could directly threshold distance,
+   Building on the concepts in [21, 1], we seek to choose a                      e.g., use the cross-class validation approach of [1] to deter-
+
+
+                                                                            1565
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+Algorithm 1 EVT Meta-Recognition Calibration for Open Set                           Closed Set: Presume the input is a valid input of say
+Deep Networks, with per class Weibull ﬁt to η largest distance to                a hammerhead shark, i.e., the second group of activation
+mean activation vector. Returns libMR models ρj which includes                   records from Fig. 1. The activation vector shows high
+parameters τi for shifting the data as well as the Weibull shape and             scores for the AV dimension associated with a great white
+scale parameters:κi , λi .                                                       shark. All sharks share many direct visual features and
+Require: FitHigh function from libMR                                             many contextual visual features with other sharks, whales
+Require: Activation levels in the penultimate network                            and large ﬁsh, which is why Fig. 1 shows multiple higher
+    layer v(x) = v1 (x) . . . vN (x)                                             activations (bright yellow-green) for many ImageNet cate-
+Require: For each class j let Si,j = vj (xi,j ) for each cor-                    gories in those groups. We hypothesize that for most cat-
+    rectly classiﬁed training example xi,j .                                     egories, there is a relatively consistent pattern of related
+ 1: for j = 1 . . . N do                                                         activations. The MAV captures that distribution as a sin-
+ 2:     Compute mean AV, μj = meani (Si,j )                                      gle point. The AVs present a space where we measure the
+ 3:     EVT Fit ρj = (τj , κj , λj ) = FitHigh(Ŝj −μj , η)                    distance from an input image in terms of the activation of
+ 4: end for                                                                      each class; if it is a great white shark we also expect higher
+ 5: Return means μj and libMR models ρj                                          activations from say tiger and hammerhead sharks as well as
+                                                                                 whales, but very weak or no activations from birds or base-
+mine an overall maximum distance threshold. In [1], the                          balls. Intuitively, this seems like the right space in which to
+features were subject to metric learning to normalize them,                      measure the distance during training.
+which makes a single shared threshold viable. However, the
+                                                                                     Open Set: First let us consider an open set image, i.e., a
+lack of uniformity in the AV for different classes presents
+                                                                                 real image from an unknown category. These will always be
+a greater challenge and, hence, we seek a per class meta-
+                                                                                 mapped by the deep network to the class for which SoftMax
+recognition model. In particular, on line 3 of Alg. 1 we use
+                                                                                 provides the maximum response, e.g., the images of rocks
+the libMR [22] FitHigh function to do Weibull ﬁtting on the
+                                                                                 in Fig. 1 is mapped to baseball and the ﬁsh on the right is
+largest of the distances between all correct positive training
+                                                                                 mapped to a hammerhead. Sometimes open set images will
+instances and the associated μi . This results in a parame-
+                                                                                 have lower conﬁdence, but the maximum score will yield
+ter ρi , which is used to estimate the probability of an input
+                                                                                 a corresponding class. Comparing the activation vectors of
+being an outlier with respect to class i.
+                                                                                 the input with the MAV for a class for which the input pro-
+    Given ρi , a simple rejection model would be for the
+                                                                                 duced maximum response, we observe it is often far from
+user to deﬁne a threshold that decides if an input should
+                                                                                 the mean. However, for some open set images the response
+be rejected, e.g., ensuring 90% of all training data will have
+                                                                                 provided is close to the AV but still has an overall low acti-
+probability near zero of being rejected as an outlier. While
+                                                                                 vation level. This can occur if the input is an “unknown”
+simple to implement, it is difﬁcult to calibrate an abso-
+                                                                                 class that is closely related to a known class, or if the object
+lute Meta-Recognition threshold because it depends on the
+                                                                                 is small enough that it is not well distinguished. For exam-
+unknown unknowns. Therefore, we choose to use this in the
+                                                                                 ple, if the input is from a different type of shark or large
+OpenMax algorithm described in Sec. 2 which has a contin-
+                                                                                 ﬁsh, it may provide a low activation, but the AV may not
+uous adjustment.
+                                                                                 be different enough to be rejected. For this reason, it is still
+    We note that our calibration process uses only correctly
+                                                                                 necessary for open set recognition to threshold uncertainty,
+classiﬁed data, for which class j is rank 1. At testing,
+                                                                                 in addition to directly estimating if a class is unknown.
+for input x assume class j has the largest probability, then
+ρj (x) provides the MR estimated probability that x is an                           Fooling Set: Consider a fooling input image, which
+outlier and should be rejected. We use one calibration for                       was artiﬁcially constructed to make a particular class (e.g.,
+high-ranking (e.g., top 10), but as an extension separate cal-                   baseball or hammerhead) have high activation score and,
+ibration for different ranks is possible. Note when there                        hence, to be detected with high conﬁdence. While the artiﬁ-
+are multiple channels per example we compute per channel                         cial construction increases the class of interest’s probability,
+per class mean vectors μj,c and Weibull parameters ρj,c . It                     the image generation process did not simultaneously adjust
+is worth remembering that the goal is not to determine the                       the scores of all related classes, resulting in an AV that is
+training class of the input, rather this is a meta-recognition                   “far” from the model AV. Examine the 3rd element of each
+process used to determine if the given input is from an                          class group in Fig. 1 which show activations from fooling
+unknown class and hence should be rejected.                                      images. Many fooling images are visually quite different
+                                                                                 and so are their activation vectors. The many regions of very
+2.2 Interpretation of Activation Vectors                                         low activation (dark blue/purple) are likely because one can
+In this section, we present the concept of activation vectors                    increase the output of SoftMax for a given class by reduc-
+and meta-recognition with illustrative examples based on                         ing the activation of other classes, which in turn reduces the
+Fig. 1.                                                                          denominator of the SoftMax computation.
+
+
+                                                                            1566
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+   Adversarial Set: Finally, consider an adversarial input                       Algorithm 2 OpenMax probability estimation with rejection of
+image [8, 27, 31], which is constructed to be close to one                       unknown or uncertain inputs.
+class but is mislabeled as another. An example is shown                          Require: Activation vector for v(x) = v1 (x), . . . , vN (x)
+on the bottom right of Fig. 1. If the adversarial image is                       Require: means μj and libMR models ρj = (τi , λi , κi )
+constructed to a nearby class, e.g., from hammerhead to                          Require: α, the numer of “top” classes to revise
+great white, then the approach proposed herein will fail to                       1: Let s(i) = argsort(vj (x)); Let ωj = 1
+detect it as a problem – ﬁne-grained category differences                         2: for i = 1, . . . , α do                         κs(i)
+are not captured in the MAV. However, adversarial images                                                                  x−τs(i) 
+                                                                                                                      −
+                                                                                           ωs(i) (x) = 1 − α−i
+                                                                                                                             λs(i)
+                                                                                                            α e
+can be constructed between any pair of image classes, see                           3:
+[27]. When the target class is far enough, e.g., the ham-                           4: end for
+merhead and scuba example here, or even farther such as                             5: Revise activation vector v̂(x) = v(x) ◦ ω(x)
+                                                                                                           
+hammerhead and baseball, the adversarial image will have                            6: Deﬁne v̂0 (x) =         i vi (x)(1 − ωi (x)).
+a signiﬁcant difference in activation score and hence can                           7:
+be rejected. We do not consider adversarial images in our                                                               ev̂j (x)
+                                                                                                       P̂ (y = j|x) = N                                (2)
+                                                                                                                              v̂i (x)
+                                                                                                                       i=0 e
+experiments because the outcome would be more a function
+of that adversarial images we choose to generate – and we
+                                                                                    8: Let y ∗ = argmaxj P (y = j|x)
+know of no meaningful distribution for that. If, for example,
+                                                                                    9: Reject input if y ∗ == 0 or P (y = y ∗ |x) <
+we choose random class pairs (a, b) and generated adver-
+sarial images from a to b, most of those would have large                          2.3    OpenMax
+hierarchy distance and likely be rejected. If we choose the
+                                                                                   The standard SoftMax function is a gradient-log-normalizer
+closest adversarial images, likely from nearby classes, the
+                                                                                   of the categorical probability distribution – a primary reason
+activations will be close and they will not be rejected.
+                                                                                   that it is commonly used as the last fully connected layer of
+                                                                                   a network. The traditional deﬁnition has per-node weights
+   The result of our OpenMax process is that open set                              in their computation. The scores in the penultimate network
+as well as fooling or adversarial images will generally be                         layer of Caffe-based deep networks [10], what we call the
+rejected. Building a fooling or adversarial image that is                          activation vector, has the weighting performed in the con-
+not rejected means not only getting a high score for the                           volution that produced it. Let v(x) = v1 (x), . . . , vN (x) be
+class of interest, it means maintaining the relative scores                        the activation level for each class, y = 1, . . . , N . After deep
+for the 999 other classes. At a minimum, the space of                              network training, an input image x yields activation vector
+adversarial/fooling images is signiﬁcantly reduced by these                        v(x), the SoftMax layer computes:
+constraints. Hopefully, any input that satisﬁes all the con-                                                         evj (x)
+straints is an image that also gets human support for the                                            P (y = j|x) = N                                   (1)
+                                                                                                                          vi (x)
+class label, as did some of the fooling images in Figure 3 of                                                       i=1 e
+
+[14], and as one sees in adversarial image pairs ﬁne-grain                       where the denominator sums over all classes to ensure the
+separated categories such as bull and great white sharks.                        probabilities over all classes sum to 1. However, in open
+                                                                                 set recognition there are unknown classes that will occur
+                                                                                 at test time and, hence, it is not appropriate to require the
+   One may wonder if a single MAV is sufﬁcient to repre-                         probabilities to sum to 1.
+sent complex objects with different aspects/views. While                             To adapt SoftMax for open set, let ρ be a vector of meta-
+future work should examine more complex models that                              recognition models for each class estimated by Alg. 1. In
+can capture different views/exemplars, e.g., NCMC [13]                           Alg. 2 we summarize the steps for OpenMax computation.
+or NCM forests [17]. If the deep network has actually                            For convenience we deﬁne the unknown unknown class to
+achieved the goal of view independent recognition, then the                      be at index 0. We use the Weibull CDF probability (line 3 of
+distribution of penultimate activation should be nearly view                     Alg. 2) on the distance between x and μi for the core of the
+independent. While the open-jaw and side views of a shark                        rejection estimation. The model μi is computed using the
+are visually quite different, and a multi-exemplar model                         images associated with category i, images that were clas-
+may be more effective in capturing the different features                        siﬁed correctly (top-1) during training process. We expect
+in different views, the open-jaws of different sharks are still                  the EVT function of distance to provide a meaningful prob-
+quite similar, as are their side views. Hence, each view may                     ability only for few top ranks. Thus in line 3 of Alg. 2,
+present a relatively consistent AV, allowing a single MAV                        we compute weights for the α largest activation classes and
+to capture both. Intuitively, while image features may vary                      use it to scale the Weibull CDF probability. We then com-
+greatly with view, the relative strength of “related classes”                    pute revised activation vector with the top scores changed.
+represented by the AV should be far more view independent.                       We compute a pseudo-activation for the unknown unknown
+
+                                                                            1567
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+                                                                                   class probability inherently alters all probabilities esti-
+                                                                                   mated. For a ﬁxed threshold and inputs that have even
+                                                                                   a small chance of being unknown, OpenMax will reject
+                                                                                   more inputs than SoftMax. Fig. 2 shows the OpenMax and
+                                                                                   SoftMax probabilities for 100 example images, 50 train-
+                                                                                   ing images and 50 open set images as well as for fooling
+                                                                                   images. The more off-diagonal the more OpenMax altered
+                                                                                   the probabilities. Threshold selection for uncertainty based
+                                                                                   rejection , would ﬁnd a balance between keeping the train-
+                                                                                   ing examples while rejecting open set examples. Fooling
+                                                                                   images were not used for threshold selection.
+                                                                                        While not part of our experimental evaluation, note that
+                                                                                   OpenMax also provides meaningful rank ordering via its
+                                                                                   estimated probability. Thus OpenMax directly supports a
+                                                                                   top-5 class output with rejection. It is also important to note
+Figure 2. A plot of OpenMax probabilities vs SoftMax proba-                        that because of the re-calibration of the activation scores
+bilities for the fooling (triangle), open set (square) and valida-                 v̂i (x), OpenMax often does not produce the same rank
+tion (circle) for 100 categories from ImageNet 2012. The more                      ordering of the scores.
+off-diagonal a point, the more OpenMax altered the probabili-
+ties. Below the diagonal means OpenMax estimation reduced the                      2.4    OpenMax Compact Abating Property
+inputs probability of being in the class. For some inputs Open-                    While thresholding uncertainty does provide the ability to
+Max increased the classes probability, which occurs when the lead-                 reject some inputs, it has not been shown to formally limit
+ing class is partially rejected thereby reducing its probability and               open space risk for deep networks. It should be easy to
+increasing a second or higher ranked class. Uncertainty-based                      see that in terms of the activation vector, the positively
+rejection threshold () selection can optimize F-measure between                   labeled space for SoftMax is not restricted to be near the
+correctly classifying the training examples while rejecting open
+                                                                                   training space, since any increase in the maximum class
+set examples. (Fooling images are not used for threshold selec-
+                                                                                   score increases its probability while decreasing the proba-
+tion.) The number of triangles and squares below the diagonal
+means that uncertainty thresholding on OpenMax threshold (ver-                     bility of other classes. With sufﬁcient increase in the maxi-
+tical direction), is better than thresholding on SoftMax (horizontal               mum directions, even large changes in other dimension will
+direction).                                                                        still provide large activation for the leading class. While
+                                                                                   in theory one might say the deep network activations are
+class, keeping the total activation level constant. Includ-                        bounded, the fooling images of [14], are convincing evi-
+ing the unknown unknown class, the new revised activation                          dence that SoftMax cannot manage open space risk.
+compute the OpenMax probabilities as in Eq. 2.
+   OpenMax provides probabilities that support explicit                            Theorem 1 (Open Set Deep Networks): A deep network
+rejection when the unknown unknown class (y = 0) has                               extended using Meta-Recognition on activation vectors as
+the largest probability. This Meta-Recognition approach                            in Alg. 2, with the SoftMax later adapted to OpenMax, as in
+is a ﬁrst step toward determination of unknown unknown                             Eq. 2, provides an open set recognition function.
+classes and our experiments show that a single MAV works                           Proof. The Meta-Recognition probability (CDF of a
+reasonably well at detecting fooling images, and is bet-                           Weibull) is a monotonically increasing function of μi −
+ter than just thresholding on uncertainty. However, in any                         x, and hence 1 − ωi (x) is monotonically decreasing.
+system that produces certainty estimates, thresholding on                          Thus, they form the basis for a compact abating proba-
+uncertainty is still a valid type of meta-recognition and                          bility as deﬁned in [21]. Since the OpenMax transforma-
+should not be ignored. The ﬁnal OpenMax approach thus                              tion is a weighted monotonic transformation of the Meta-
+also rejects unknown as well as uncertain inputs in line 9 of                      Recognition probability, applying Theorems 1 and 2 of
+Alg.2.                                                                             [1] yield that thresholding the OpenMax probability of the
+   To select the hyper-parameters , η, and α, we can do                            unknown manages open space risk as measured in the AV
+a grid search calibration procedure using a set of training                        feature space. Thus it is an open set recognition func-
+images plus a sampling of open set images, optimizing F-                           tion.
+measure over the set. The goal here is basic calibration
+for overall scale/sensitivity selection, not to optimize the                       3     Experimental Analysis
+threshold over the space of unknown unknowns, which can-                           Our evaluation is based on ImageNet Large Scale Visual
+not be done experimentally.                                                        Recognition Competition (ILSVRC) 2012 dataset with 1K
+   Note that the computation of the unknown unknown                                visual categories. The dataset contains around 1.3M images
+
+
+                                                                            1568
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+for training (with approximately 1K to 1.3K images per
+category), 50K images for validation and 150K images
+for testing. Since test labels for ILSVRC 2012 are not
+publicly available, like others have done we report perfor-
+mance on validation set [11, 14, 23]. We use a pre-trained
+AlexNet (BVLC AlexNet) deep neural network provided
+by the Caffe software package [10]. BVLC AlexNet is
+reported to obtain approximately 57.1% top-1 accuracy on
+ILSVRC 2012 validation set. The choice of pre-trained
+BVLC AlexNet is deliberate, since it is open source and
+one of the most widely used packages available for deep
+learning.
+    To ensure proper open set evaluation, we apply a test
+protocol similar to the ones presented in [21, 1]. During
+the testing phase, we test the system with all the 1000 cate-
+                                                                                 Figure 3. OpenMax and SoftMax-w/threshold performance shown
+gories from ILSVRC 2012 validation set, fooling categories                       as F-measure as a function of threshold on output probabilities.
+and previously unseen categories. The previously unseen                          The test uses 80,000 images, with 50,000 validation images from
+categories are selected from ILSVRC 2010. It has been                            ILSVRC 2012, 15,000 fooling images and 15,000 “unknown”
+noted by Russakovsky et al. [19] that approximately 360                          images draw from ILSVRC 2010 categories not used in 2012. The
+categories from ILSVRC 2010 were discarded and not used                          base deep network performance would be the same as threshold
+in ILSVRC 2012. Images from these 360 categories as the                          0 of SoftMax-w/threshold. OpenMax performance gain is nearly
+open set images, i.e., unseen or unknown categories.                             4.3% improvement accuracy over SoftMax with optimal threshold,
+    Fooling images are generally totally unrecognizable to                       and 12.3% over the base deep network. Putting that in context,
+                                                                                 over the test set OpenMax correctly classiﬁed 3450 more images
+humans as belonging to the given category but deep net-
+                                                                                 than SoftMax and 9847 more than the base deep network.
+works report with near certainty they are from the speciﬁed
+category. We use fooling images provided by Nguyen et                            through the OpenMax score calibration process as dis-
+al. [14] that were generated by an evolutionary algorithm or                     cussed previously in Alg. 2. The activation vectors are
+by gradient ascent in pixel space. The ﬁnal test set consists                    the values in the FC8 layer for a test image that consists
+of 50K closed set images from ILSVRC 2012, 15K open                              of 1000x10 dimensional values corresponding to each class
+set images (from the 360 distinct categories from ILSVRC                         and each channel. For each channel in each class, the input
+2010) and 15K fooling images (with 15 images each per                            is compared using a per class MAV and per class Weibull
+ILSVRC 2012 categories).                                                         parameters. During testing, distance with respect to the
+    Training Phase: As discussed previously (Alg. 1), we                         MAV is computed and revised OpenMax activations are
+consider the penultimate layer (fully connected layer 8 , i.e.,                  obtained, including the new unknown class (see lines 5&6
+FC8) for computation of mean activation vectors (MAV).                           of Alg. 2). The OpenMax probability is computed per chan-
+The MAV vector is computed for each class by consider-                           nel, using the revised activations (Eq. 2) yielding an out-
+ing the training examples that deep networks training clas-                      put of 1001x10 probabilities. For each class, the average
+siﬁed correctly for the respective class. MAV is computed                        over the 10 channel gives the overall OpenMax probability.
+for each crop/channel separately. Distance between each                          Finally, the class with the maximum over the 1001 prob-
+correctly classiﬁed training example and MAV for particu-                        abilities is the predicted class. This maximum probability
+lar class is computed to obtain class speciﬁc distance dis-                      is then subject to the uncertainty threshold (line 9). In this
+tribution. For these experiments we use a distance that is a                     work we focus on strict top-1 predictions.
+weighted combination of normalized Euclidean and cosine                              Evaluation: Multi-class classiﬁcation error for a closed
+distances. Supplemental material shows results with pure                         set system can be computed by keeping track of incorrect
+Euclidean and other measures that overall perform simi-                          classiﬁcations. For open set testing the evaluation must
+larly. Parameters of Weibull distribution are estimated on                       keep track of the errors that occur due to standard multi-
+these distances. This process is repeated for each of the                        class classiﬁcation over known categories as well as errors
+1000 classes in ILSVRC 2012. The exact length of tail size                       between known and unknown categories. As suggested
+for estimating parameters of Weibull distribution is obtained                    in [25, 20] we use F-measure to evaluate open set perfor-
+during parameter estimation phase over a small set of hold                       mance. For open set recognition testing, F-measure is bet-
+out data. This process is repeated multiple times to obtain                      ter than accuracy because it is not inﬂated by true negatives.
+an overall tail size of 20.                                                          For a given threshold on OpenMax/SoftMax probabil-
+    Testing Phase: During testing, each test image goes                          ity values, we compute true positives, false positives and
+
+
+                                                                            1569
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+                                                                                                               Original AV
+
+                                                                                                              Agama MAV
+
+                                                                                                               Jeep MAV
+
+                                                                                                               Crop 1 AV
+Figure 4. The above ﬁgure shows performance of OpenMax and                                                      Crop2 AV
+SoftMax as a detector for fooling images and for open set test
+images. F-measure is computed for varying thresholds on Open-                                                               
+Max and SoftMax probability values. The proposed approach of
+                                                                                 Figure 5. OpenMax also predict failure during training as in this
+OpenMax performs very well for rejecting fooling images during
+                                                                                 example. The ofﬁcial class is agama but the MAV for agama is
+prediction phase.
+                                                                                 rejected for this input, and the highest scoring class is jeep with
+false negatives over the entire dataset. For example, when                       probability 0.26. However, cropping out image regions can ﬁnd
+testing the system with images from validation set, fooling                      windows where the agama is well detected and another where the
+set and open set (see Fig. 3), true positives are deﬁned as                      Jeep is detected. Crop 1 is the jeep region, crop 2 is agama and the
+the correct classiﬁcations on the validation set, false posi-                    crops AV clearly match the appropriate model and are accepted
+tives are incorrect classiﬁcations on the validation set and                     with probability 0.32 and 0.21 respectively.
+false negatives are images from the fooling set and open set                     new categories. Or detection can used as a ﬂag to bring in
+categories that the system incorrectly classiﬁed as known                        other modalities [24, 7]. Further, one could apply simple
+examples. Fig. 3 shows performance of OpenMax and Soft-                          image processing methods (e.g. gaussian blur, smoothing
+Max for varying thresholds. Our experiments show that the                        etc.) for noise removal, that might have lead to misclassi-
+proposed approach of OpenMax consistently obtains higher                         ﬁcation. For e.g. in 1. OpenMax Rejects the noisy input,
+F-measure on open set testing.                                                   but with a small amount of gaussian blur, the image can be
+    Comparison with the 1-vs-set algorithm: Due to lack                          reprocessed and is accepted as a hammerhead shark by with
+of available baselines in this relatively new sub area in deep                   probability 0.79.
+learning, we consider a linear model for an open set base-
+                                                                                     We used non-test data for parameter tuning, and for
+line. We apply 1-vs-set open set algorithm[20] to the FC8
+                                                                                 brevity only showed performance variation with respect
+data. We used liblinear to train a linear SVM on the training
+                                                                                 to the uncertainty threshold shared by both SoftMax with
+samples from the 1000 classes. We also trained a 1-vs-set
+                                                                                 threshold and OpenMax. The supplemental material shows
+machine using the liblinear extension cited in [1], reﬁning it
+                                                                                 variation of a wider range of OpenMax parameters. In
+on the training data for the 1000 classes. The 1-Vs-Set algo-
+                                                                                 future work, increase in true class rejection might be mit-
+rithm achieves an overall F-measure of only .407, which is
+                                                                                 igated by increasing the expressiveness of the AV model,
+much lower than the .595 of the OpenMax approach.
+                                                                                 e.g. moving to multiple MAVs per class. This might allow
+                                                                                 it to better capture different contexts for the same object,
+4      Discussion                                                                e.g. a baseball on a desk has a different context, hence, may
+We have seen that with our OpenMax architecture, we can                          have different “related” classes in the AV than say a baseball
+automatically reject many unknown open set and fooling                           being thrown by a pitcher.
+images as well as rejecting some adversarial images, while
+                                                                                     Interestingly, we have observe that the OpenMax rejec-
+having only modest impact to the true classiﬁcation rate.
+                                                                                 tion process often identiﬁes/rejects the ImageNet images
+One of the obvious questions when using Meta-Recognition
+                                                                                 that the deep network incorrectly classiﬁed, especially
+is “what do we do with rejected inputs?” While that is best
+                                                                                 images with multiple objects. Similarly, many samples that
+left up to the operational system designer, there are multiple
+                                                                                 are far away from training data have multiple objects in the
+possibilities. OpenMax can be treated as a novelty detector
+                                                                                 scene. Thus, other uses of the OpenMax rejection can be to
+in the scenario presented open world recognition [1] after
+                                                                                 improve training process and aid in developing better local-
+that human label the data and the system incrementally learn
+                                                                                 ization techniques [30, 15]. See Fig. 5 for an example.
+
+                                                                            1570
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+References                                                                            (CVPR), 2015 IEEE Conference on. IEEE, 2015. 1, 2, 5, 6,
+                                                                                      7
+ [1] A. Bendale and T. E. Boult. Towards open world recognition.
+                                                                                 [15] M. Oquab, L. Bottou, I. Laptev, and J. Sivic. Is object local-
+     In The IEEE Conference on Computer Vision and Pattern
+                                                                                      ization for free? weakly-supervised learning with convolu-
+     Recognition (CVPR), pages 1893–1902, June 2015. 1, 3, 4,
+                                                                                      tional neural networks. In The IEEE Conference on Com-
+     6, 7, 8
+                                                                                      puter Vision and Pattern Recognition (CVPR), June 2015. 8
+ [2] P. Bodesheim, A. Freytag, E. Rodner, and J. Denzler. Local
+                                                                                 [16] V. Ordonez, V. Jagadeesh, W. Di, A. Bhardwaj, and R. Pira-
+     novelty detection in multi-class recognition problems. In
+                                                                                      muthu. Furniture-geek: Understanding ﬁne-grained furni-
+     Winter Conference on Applications of Computer Vision,
+                                                                                      ture attributes from freely associated text and tags. In Appli-
+     2015 IEEE Conference on. IEEE, 2015. 1
+                                                                                      cations of Computer Vision (WACV), 2014 IEEE Winter Con-
+ [3] K. Chatﬁeld, K. Simonyan, A. Vedaldi, and A. Zisserman.                          ference on, pages 317–324. IEEE, 2014. 1
+     Return of the devil in the details: Delving deep into convo-                [17] M. Ristin, M. Guillaumin, J. Gall, and L. VanGool. Incre-
+     lutional nets. In Proceedings of the British Machine Vision                      mental learning of ncm forests for large scale image classiﬁ-
+     Conference,(BMVC), 2014. 1                                                       cation. CVPR, 2014. 4, 5
+ [4] Q. Da, Y. Yu, and Z.-H. Zhou. Learning with augmented                       [18] D. Rumsfeld. Known and unknown: a memoir. Penguin,
+     class by exploiting unlabeled data. In AAAI Conference on                        2011. 1
+     Artiﬁcial Intelligence. AAAI, 2014. 1                                       [19] O. Russakovsky, J. Deng, H. Su, J. Krause, S. Satheesh,
+ [5] T. Dean, M. A. Ruzon, M. Segal, J. Shlens, S. Vijaya-                            S. Ma, Z. Huang, A. Karpathy, A. Khosla, M. Bernstein,
+     narasimhan, and J. Yagnik. Fast, accurate detection of                           A. C. Berg, and L. Fei-Fei. ImageNet Large Scale Visual
+     100,000 object classes on a single machine. In Computer                          Recognition Challenge. International Journal of Computer
+     Vision and Pattern Recognition (CVPR), 2013 IEEE Confer-                         Vision (IJCV), pages 1–42, April 2015. 7
+     ence on, pages 1814–1821. IEEE, 2013. 1                                     [20] W. J. Scheirer, A. de Rezende Rocha, A. Sapkota, and
+ [6] H. Fang, S. Gupta, F. Iandola, R. Srivastava, L. Deng, P. Dol-                   T. E. Boult. Toward open set recognition. IEEE TPAMI,
+     lar, J. Gao, X. He, M. Mitchell, P. John, L. Zitnick, and                        35(7):1757–1772, 2013. 1, 2, 3, 7, 8
+     G. Zweig. From captions to visual concepts and back. In The                 [21] W. J. Scheirer, L. P. Jain, and T. E. Boult. Probability models
+     IEEE Conference on Computer Vision and Pattern Recogni-                          for open set recognition. IEEE TPAMI, 36(11):2317–2324,
+     tion (CVPR). IEEE, 2015. 1                                                       2014. 1, 3, 6, 7
+ [7] A. Frome, G. S. Corrado, J. Shlens, S. Bengio, J. Dean,                     [22] W. J. Scheirer, A. Rocha, R. J. Micheals, and T. E. Boult.
+     T. Mikolov, et al. Devise: A deep visual-semantic embed-                         Meta-recognition: The theory and practice of recognition
+     ding model. In Advances in Neural Information Processing                         score analysis. Pattern Analysis and Machine Intelligence,
+     Systems, pages 2121–2129, 2013. 8                                                IEEE Transactions on, 33(8):1689–1695, 2011. libMR code
+ [8] I. Goodfellow, J. Shelns, and C. Szegedy. Explaining and                         at http://metarecognition.com. 2, 3, 4
+     harnessing adversarial examples. In International Confer-                   [23] K. Simonyan and A. Zisserman. Very deep convolutional
+     ence on Learning Representations. Computational and Bio-                         networks for large scale image recognition. In Interna-
+     logical Learning Society, 2015. 1, 2, 5                                          tional Conference on Learning Representations. Computa-
+ [9] N. Jammalamadaka, A. Zisserman, M. Eichner, V. Ferrari,                          tional and Biological Learning Society, 2015. 7
+     and C. Jawahar. Has my algorithm succeeded? an evaluator                    [24] R. Socher, M. Ganjoo, C. D. Manning, and A. Ng. Zero-shot
+     for human pose estimators. In Computer Vision–ECCV 2012.                         learning through cross-modal transfer. In Advances in neural
+     Springer, 2014. 2                                                                information processing systems, pages 935–943, 2013. 8
+[10] Y. Jia, E. Shelhamer, J. Donahue, S. Karayev, J. Long, R. Gir-              [25] R. Socher, C. D. Manning, and A. Y. Ng. Learning con-
+     shick, S. Guadarrama, and T. Darrell. Caffe: Convolu-                            tinuous phrase representations and syntactic parsing with
+     tional architecture for fast feature embedding. arXiv preprint                   recursive neural networks. In Proceedings of the NIPS-2010
+     arXiv:1408.5093, 2014. 5, 7                                                      Deep Learning and Unsupervised Feature Learning Work-
+[11] A. Krizhevsky, I. Sutskever, and G. E. Hinton. Imagenet                          shop, pages 1–9, 2010. 1, 7
+     classiﬁcation with deep convolutional neural networks. In                   [26] C. Szegedy, W. Liu, Y. Jia, P. Sermanet, S. Reed,
+     Advances in neural information processing systems (NIPS),                        D. Anguelov, D. Erhan, V. Vanhoucke, and A. Rabinovich.
+     pages 1097–1105, 2012. 1, 7                                                      Going deeper with convolutions. In Computer Vision and
+[12] T. Mensink, J. Verbeek, F. Perronnin, and G. Csurka. Metric                      Pattern Recognition (CVPR), 2015 IEEE Conference on.
+     learning for large scale image classiﬁcation: Generalizing to                    IEEE, 2015. 1
+     new classes at near-zero cost. In ECCV, 2012. 4                             [27] C. Szegedy, W. Zaremba, I. Sutskever, J. Bruna, D. Erhan,
+[13] T. Mensink, J. Verbeek, F. Perronnin, and G. Csurka.                             I. Goodfellow, and R. Fergus. Intriguing properties of neural
+     Distance-based image classiﬁcation: Generalizing to new                          networks. In International Conference on Learning Repre-
+     classes at near-zero cost. Pattern Analysis and Machine                          sentations. Computational and Biological Learning Society,
+     Intelligence, IEEE Transactions on, 35(11):2624–2637,                            2014. 2, 5
+     2013. 4, 5                                                                  [28] Y. Taigman, M. Yang, M. Ranzato, and L. Wolf. Deepface:
+[14] A. Nguyen, J. Yosinski, and J. Clune. Deep neural networks                       Closing the gap to human-level performance in face veriﬁca-
+     are easily fooled: High conﬁdence predictions for unrecog-                       tion. In Computer Vision and Pattern Recognition (CVPR),
+     nizable images. In Computer Vision and Pattern Recognition                       2014 IEEE Conference on, pages 1701–1708. IEEE, 2014. 1
+
+
+                                                                            1571
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+[29] R. Tibshirani, T. Hastie, B. Narasimhan, and G. Chu. Diag-
+     nosis of multiple cancer types by shrunken centroids of gene
+     expression. In Proceedings of the National Academy of Sci-
+     ences. NAS, 2002. 4
+[30] A. Vezhnevets and V. Ferrari. Object localization in imagenet
+     by looking out of the window. In Proceedings of the British
+     Machine Vision Conference,(BMVC), 2015. 8
+[31] J. Yosinski, J. Clune, A. Nguyen, T. Fuchs, and H. Lipson.
+     Understanding neural networks through deep visualization.
+     In International Conference on Machine Learning, Work-
+     shop on Deep Learning, 2015. 5
+[32] P. Zhang, J. Wang, A. Farhadi, M. Hebert, and D. Parikh.
+     Predicting failures of vision systems. In The IEEE Confer-
+     ence on Computer Vision and Pattern Recognition (CVPR),
+     June 2014. 2, 3
+
+
+
+
+                                                                            1572
+
+Authorized licensed use limited to: LNM Institute of Information Technology. Downloaded on July 02,2026 at 03:21:05 UTC from IEEE Xplore. Restrictions apply.
+PAPER_TEXT

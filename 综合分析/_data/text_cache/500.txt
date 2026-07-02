@@ -1,0 +1,149 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025                                                                      3500714
+
+
+
+
+ Multivariate Time Series Anomaly Detection Based
+  on Multiple Spatiotemporal Graph Convolution
+                           Shiming He , Qingqing Guo , Genxin Li , Kun Xie , Member, IEEE,
+                                    and Pradip Kumar Sharma , Senior Member, IEEE
+
+   Abstract— Multivariate time series anomaly detection                        method, MSTGAD achieves an additional 0.83% improvement
+(MTSAD) plays a crucial role in the Internet of Things (IoT),                  on average.
+identifying device malfunction or system attacks. Graph neural
+networks (GNNs) are widely applied in MTSAD to capture                            Index Terms— Anomaly detection, graph neural networks
+the spatial features among sensors. However, GNN requires                      (GNNs), graph structure learning (GSL), Internet of Things
+an explicit graph structure and cannot work when spatial                       (IoT), multivariate time series (MTS).
+relationships are lacking or sensor dependencies are unknown.
+Hence, graph structure learning (GSL) emerges as a promising                                            N OMENCLATURE
+solution, which learns graph structures with the downstream                     X                  Multivariate time series.
+tasks without requiring spatial relationships. However, a general               xi                 ith indicator values.
+cascade effect occurs in the industrial scene. Moreover, an attack              xt                 Indicator values at timestamp t.
+event changes sensor data sequentially instead of simultaneously                Xt                 Historical window of length ω at
+due to the multiple serial process that occurs (i.e., delay
+correlation). Existing GSL-based anomaly detection methods                                         timestamp t.
+fail to tackle delay correlation and focus on low prediction                    N                  Number of indicators.
+errors. However, the low prediction error distribution is always                M                  Number of timestamps.
+dispersed, making it difficult to differentiate between normal and              yt
+                                                                                b                  Label of timestamp t.
+abnormal samples based on a threshold. Therefore, we propose                    G                  Graph.
+an MTSAD based on multiple spatiotemporal graph convolution
+(MSTGAD). MSTGAD uses dynamic time warping (DTW)                                A                  Adjacency matrix.
+distance as prior knowledge instead of Euclidean, guiding graph                 DTW(x i , x j )    DTW distance between indicators i and j.
+learning to capture delay correlations effectively. MSTGAD                      ADTW               Adjacency matrix of the DTW
+designs an ensemble predictor, which uses two subpredictors                                        prior graph.
+with a shared and learnable graph to ensure high prediction                     ε                  Threshold of the DTW distance in prior
+accuracy while maintaining stable anomaly scores. Furthermore,
+we conduct extensive experiments to evaluate the MSTGAD                                            graph.
+method’s effectiveness. Our method outperforms existing                         g                  Samples from the Gumbel distribution.
+GSL-based methods in anomaly detection on four publicly                         πi                 Probabilities of ith class.
+available real-world datasets, demonstrating our proposed                       τ                  Temperature parameter.
+approach’s effectiveness. Compared with the best GSL-based                      AFPM               Adjacency matrix of the fully
+                                                                                                   parameterized graph.
+                                                                                0∗T X              Temporal convolutional network.
+  Received 30 May 2024; revised 20 August 2024; accepted 6 September
+2024. Date of publication 22 November 2024; date of current version             2∗G X              Graph convolutional network.
+26 November 2024. This work was supported in part by the National Natural       ⊙                  Hadamard product of elements.
+Science Foundation of China under Grant 62272062 and Grant 62025201; in         2l                 Spectral kernel of the GCN.
+part by the Science and Technology Innovation Program of Hunan Province
+under Grant 2023RC3139; in part by the Scientific Research Fund of Hunan        xtSTGCN
+                                                                                b                  Prediction from the STGCN subpredictor
+Provincial Transportation Department under Grant 202143; in part by the                            at timestamp t.
+Open Fund of Key Laboratory of Safety Control of Bridge Engineering,            H(t)               Hidden features at timestamp t.
+Ministry of Education, Changsha University of Science and Technology,
+under Grant 21KB07; and in part by the Open Research Fund of the Hunan          xtDCRNN
+                                                                                b                  Prediction from the DCRNN subpredictor
+Provincial Key Laboratory of Network Investigational Technology under Grant                        at timestamp t.
+2018WLZC003. The Associate Editor coordinating the review process was           xt
+                                                                                b                  Prediction from the ensemble predictor at
+Dr. Ke Feng. (Corresponding author: Kun Xie.)
+  Shiming He, Qingqing Guo, and Genxin Li are with the School of                                   timestamp t.
+Computer and Communication Engineering and the Hunan Provincial Key             λ1                 Prediction weight parameter.
+Laboratory of Intelligent Processing of Big Data on Transportation, Changsha    λ2                 Regularization amplitude parameter of
+University of Science and Technology, Changsha 410114, China (e-mail:
+smhe_cs@csust.edu.cn; guoqingqing@stu.csust.edu.cn).                                               graph learning.
+  Kun Xie is with the College of Computer Science and Electronics Engi-         Erri (t)           Prediction error at timestamp t for sensor i.
+neering and the Ministry of Education Key Laboratory of Fusion Computing        s(t)               Anomaly score at timestamp t.
+of Supercomputing and Artificial Intelligence, Hunan University, Changsha
+410082, China (e-mail: xiekun@hnu.edu.cn).
+  Pradip Kumar Sharma is with the Department of Computing Science,                                 I. I NTRODUCTION
+University of Aberdeen, AB24 3UE Aberdeen, U.K. (e-mail: Pradip.sharma@
+abdn.ac.uk).
+  Digital Object Identifier 10.1109/TIM.2024.3493890                           I    N RECENT years, more critical infrastructures have been
+                                                                                    deployed by various Internet-of-Things (IoT) sensors.
+                      1557-9662 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+3500714                                                         IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+
+
+These sensors, such as water treatment, lithium-ion batteries              Resulting in a Dispersed Distribution. This Makes Dis-
+[1], and nanogenerators [2], continue to generate substantial              tinguishing Between Normal and Abnormal Samples
+amounts of time series data that record system statuses. The               Based on a Threshold Challenging, Thereby Dimin-
+data generated by these sensors are known as multivariate time             ishing Anomaly Detection Performance: Most existing
+series (MTS) data. Developing effective anomaly detection                  GSL-based anomaly detection methods focus on the
+technologies to automate the identification of abnormal system             prediction error generated by GNNs and treat times-
+behavior and promptly trigger alerts is a necessary and urgent             tamps with a large prediction error as anomalies. They
+task. This is because abnormal MTS data changes indicate                   generally select prediction models with a low prediction
+a system attack or equipment failure. If the anomaly is not                error and high overall accuracy [19], [20]. However, the
+discovered and dealt with immediately, the whole system                    prediction and anomaly detection tasks differ. Although
+may fail, leading to economic losses [3]. Therefore, the MTS               the overall prediction accuracy is high, the anomaly
+anomaly detection (MTSAD) task plays an important role in                  detection effectiveness may not be satisfactory. In addi-
+the IoT [4].                                                               tion, models with high overall prediction accuracy
+   In the IoT, sensors interact with and depend on each other.             may exhibit inconsistent prediction errors (i.e., anomaly
+In recent years, graph neural networks (GNNs) [5] have been                scores) with large variances. This means that the pre-
+incorporated into MTSAD to capture the relationships between               diction error at certain timestamps is low, while being
+sensors. GNNs require an explicit graph structure. Therefore,              significantly high at others. Consequently, distinguishing
+the existing GNN-based anomaly detection methods use a                     between normal and abnormal samples based on the
+fixed graph structure derived from the prior domain expert                 prediction error values becomes challenging, leading to
+knowledge. However, sensor graph structures or dependency                  unsatisfactory anomaly detection performance.
+information is expensive and not easily accessible in most real-        To address the aforementioned problems, we propose
+world scenarios.                                                     MTSAD based on multiple spatiotemporal graph convolution
+   Graph structure learning (GSL) [6] is a promising solution        (MSTGAD). We leverage the dynamic time-warping (DTW)
+when expert knowledge is lacking, sensor dependencies are            distance to establish a DTW graph as prior knowledge, guiding
+unknown, and access costs are high [7]. It learns the optimal        the learning process to capture delay correlations effectively.
+graph structure of the dependencies among sensors to match           In addition, we adopt a fully parameterized approach to
+downstream anomaly detection tasks. Graph deviation network          construct the learnable graph, substantially reducing time
+(GDN) [8] first introduced GSL into anomaly detection, result-       overhead. Moreover, we combine the diffusion convolutional
+ing in two mainstream GSL methods being used in anomaly              recurrent neural network (DCRNN) and spatiotemporal graph
+detection currently: node feature-based similarity [8], [9], [10],   convolutional network (STGCN) with a shared and learnable
+[11], [12], [13], [14], [15] and fully parameterized GSL [16],       graph for ensemble prediction. This strategy ensures precise
+[17], [18], [19], [20]. The former generates a graph using           predictions and stabilizes the anomaly scores. This article’s
+the learnable node embedding similarities, while the latter          main contributions can be summarized as follows.
+regards the adjacency matrix’s elements as free and learn-
+able parameters. In addition, fully parameterized GSL offers           1) To effectively address delay correlation, we generate a
+more flexibility than the node feature-based similarity method.           prior graph from raw data using DTW distance instead
+Although GSL can learn the relationships among sensors                    of Euclidean to accurately guide GSL.
+[15], the existing GSL-based anomaly detection method still            2) To concentrate and stabilize the anomaly scores nec-
+encounters several challenges.                                            essary for anomaly detection, we integrate multiple
+   1) The Existing Prior Graph Similarity Methods Can-                    spatiotemporal predictors with a shared and learnable
+       not Tackle With the Delay Correlation Within Time                  graph instead of focusing solely on the high overall
+       Series Data: The existing GSL-based anomaly detection              prediction accuracy. This strikes a balance between
+       methods usually use prior graphs [21] to guide GSL.                prediction accuracy and anomaly score stability.
+       The prior graph in TS-GAT [11] and GSLAD [20]                   3) We conduct extensive experiments to evaluate the pro-
+       is generally generated using sensor data similarities,             posed method’s efficiency and effectiveness. On four
+       and the main similarity methods include the cosine                 real-world and publicly available datasets, our method
+       and Euclidean distance approaches, which only compare              achieves state-of-the-art anomaly detection results. Com-
+       the same timestamp values between sensors. However,                pared with the best GSL-based method, MSTGAD
+       a general cascade effect in the industrial field exists,           achieves an additional 0.83% improvement on average.
+       mainly due to the presence of certain distances in space         This article’s remaining sections are organized as follows.
+       between industrial sensors. Moreover, an attack even          Section II presents an overview of related works. Section III
+       changes sensor data sequentially instead of simulta-          provides the preliminary knowledge, problem definition, and
+       neously. The cosine or Euclidean distance approaches          research motivation. Section IV comprehensively explains
+       ignore the similarities between different timestamp val-      our approach, including a general overview and an individ-
+       ues noise into the prior graph.                               ual components discussion. In Section V, we analyze the
+   2) Existing Anomaly Detection Methods Focus on Low                model’s performance and efficiency. Finally, we conclude
+       Prediction Error. However, Models With High Predic-           by summarizing our findings and discussing future work in
+       tion Accuracy Have Large Prediction Error Variances,          Section VI.
+HE et al.: MTSAD BASED ON MULTIPLE SPATIOTEMPORAL GRAPH CONVOLUTION                                                              3500714
+
+
+
+                      II. R ELATED W ORK                                  Moreover, DVGCRN [33] captures uncertain interrela-
+   The existing works on MTSAD can be classified into three            tionships in MTS and detects anomalies based on the
+categories. The first type usually uses temporal features to           reconstruction results. GReLeN [34] uses VAE and GCN to
+detect anomalies, while the second focuses on MTS spatial              learn relationships among MTS for reconstructing graphs and
+features. The third type detects anomalies with unknown                achieve anomaly detection.
+spatial relationships.                                                    GNNs rely on known graph structures. These methods
+                                                                       assume that the relationships between indicators are known.
+A. Temporal Feature-Based Anomaly Detection                            However, the relatio

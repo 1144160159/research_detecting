@@ -1,0 +1,699 @@
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS 1
+
+ SSCTAD: Semi-Supervised Contrastive Learning
+ for Trajectory Anomaly Detection
+ Jiaqi Zhang , Zipei Fan , Xuan Song , and Ryosuke Shibasaki
+
+ Abstract—Trajectory anomaly detection is critical for transportation safety, solving traffic congestion, optimizing routes, and
+other smart city applications. Existing methods often misclassify
+reasonable but non-standard trajectories, such as route changes
+due to traffic congestion, as anomalies. Additionally, many
+methods require extensive labeled datasets for training, however,
+in real-world scenarios, trajectory anomaly labeled data are
+often scarce and costly to obtain. To address the challenges,
+we investigate a Semi-Supervised Contrastive learning approach
+for Trajectory Anomaly Detection, namely SSCTAD. Specifically,
+SSCTAD integrates a transformer based method to process
+trajectories and utilizes the in-out flow encoder to capture the
+spatial-temporal patterns from the trajectories, which can help Fig. 1. The example of normal trajectories, detour anomaly trajectories and
+the model capture the traffic conditions. Then, by leveraging unexpected detour trajectories.
+a small subset of labeled data along with extensive unlabeled
+data, SSCTAD utilizes a semi-supervised contrastive learning
+component enables the model to better distinguish normal and Transportation Systems (ITS) applications can be realized,
+anomalous trajectories by maximizing the similarity of latent such as traffic management, urban planning, public safety, and
+representation from the same class and diversifying those from understanding urban human mobility patterns [1], [2], [3], [4].
+different classes. This method improves the performance of tra- In these various ITS applications, anomaly trajectory detecjectory anomaly detection and effectively reduces the dependence
+of the model on the labeled dataset. Finally, experiments show tion has become a critical concern to be solved in many urban
+that SSCTAD outperforms the other baseline models. scenarios [5], [6], [7], [8], [9]. This is because trajectory
+ anomaly detection is valuable for Traffic Management, Urban
+ Index Terms—Trajectory anomaly detection, semi-supervised
+learning, spatio-temporal patterns, contrastive learning. Event Management, and Smart Security Center. For instance,
+ in the Smart Security Center, the monitor can check the
+ warning detour trajectory after a system alarm to determine
+ I. I NTRODUCTION whether it is necessary to take further action. Thus, the
+ anomaly detection model can be used as a frontline filter to
+W ITH the widespread adoption of GPS technology,
+ massive-scale trajectory data, i.e., vehicle trajectories,
+are being generated at an unprecedented velocity and volidentify problematic trajectory behaviors, which are further
+ processed at the Smart Safety Center.
+ume. These data contain rich behavioral signatures of human However, detecting anomaly trajectories presents significant
+mobility and traffic dynamics, through which many Intelligent challenges due to the complexity and diversity of vehicle
+ trajectories. As shown in Fig. 1, the vehicle trajectories from
+ Received 17 August 2024; revised 6 July 2025 and 7 December 2025; grid O to grid D in Shenzhen show that the vehicle trajectories
+accepted 23 March 2026. This work was supported in part by the National are different from each other, even though they have the same
+Science Foundation of China under Grant T2541001, in part by Jilin Provincial
+International Cooperation Key Laboratory for Super Smart City, and in part by starting and ending grids, which brings a significant challenge
+Jilin Provincial Key Laboratory of Intelligent Policing. The Associate Editor for trajectory anomaly detection.
+for this article was X. Ban. (Corresponding authors: Zipei Fan; Xuan Song.) Existing methodologies for trajectory anomaly detection
+ Jiaqi Zhang is with the SUSTech-UTokyo Joint Research Center for Super
+Smart Cities, Department of Computer Science and Engineering, Southern often rely on predefined thresholds and distributions to identify
+University of Science and Technology, Shenzhen, Guangdong 518055, China, anomalies [10], [11]. However, these methods struggle with
+and also with the Research Institute of Trustworthy Autonomous System, the dynamic nature of trajectories, as trajectories are influenced
+Southern University of Science and Technology, Shenzhen, Guangdong
+518055, China (e-mail: 12031097@mail.sustech.edu.cn). by numerous unpredictable factors such as traffic congestion.
+ Zipei Fan and Xuan Song are with the School of Artificial Intelli- Recent approaches have attempted to learn trajectory features
+gence, Jilin University, Changchun, Jilin 130012, China, and also with the directly from data [12], [13], [14], but they depend heavily
+Research Institute of Trustworthy Autonomous System, Southern University
+of Science and Technology, Shenzhen, Guangdong 518055, China (e-mail: on the quality of the labels of the datasets. This dependence
+fanzipei@jlu.edu.cn; songxuan@jlu.edu.cn). makes it challenging to address complex spatio-temporal cor-
+ Ryosuke Shibasaki is with LocationMind Inc., Tokyo 101-0048, Japan, and relations, leading to potential misclassification [14], [15], [16],
+also with the Japan Center for Spatial Information Science, The University of
+Tokyo, Tokyo 113-8654, Japan (e-mail: shiba@locationmind.com). [17]. For instance, as shown in 1 (b), traffic congestion has
+ Digital Object Identifier 10.1109/TITS.2026.3684057 occurred on the blue route, causing some vehicles to change
+ 1558-0016 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+2 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+to a slightly farther route to avoid the congestion, which should trajectories. Finally, in Section VI, we conclude the paper and
+be a normal rather than a detour anomaly. discuss potential directions for future work.
+ Furthermore, GPS data usually lacks labels indicating
+whether a trajectory is abnormal, necessitating manual labeling II. R ELATED W ORK
+by experts, which is both time-consuming and costly. Some
+ Trajectory anomaly detection has been developed recently,
+unsupervised methods attempt to identify anomalies but are
+ driven by advances in sensing technologies and computational
+often unreliable due to assumptions about data distribution
+ methods, which has made it a key aspect in the fields of traffic
+or density [11], [18], [19]. The scarcity of labels hinders the
+ safety, smart city, and other directions. This section reviews
+effectiveness of supervised learning approaches, which require
+ the evolution of trajectory anomaly detection methods and
+labeled data to learn distinguishing features. To address this,
+ highlights key contributions in the field.
+researchers have proposed semi-supervised learning solutions
+that utilize both a small amount of labeled data and a large
+unlabeled dataset for training in time series classification [20], A. Trajectory Anomaly Detection
+[21]. In this section, we categorize the methods for trajectory
+ In this paper, we introduce a contrastive semi-supervised anomaly detection into traditional approaches and deep learnapproach, SSCTAD, for trajectory anomaly detection. Unlike ing approaches.
+most existing approaches, SSCTAD utilizes a transformer- 1) Traditional Approach: The traditional approaches to
+based method to learn trajectory features, which allows our trajectory anomaly detection are based on statistical models,
+model to better capture the positional information of each which use distance or density metrics to produce a deviation
+trajectory point. Also, we employ an in-out flow encoder to score between normal and anomaly trajectories. For example,
+learn the traffic flow in a potential passing area, resulting in Guo et al. [10] proposed a kinematic estimation-based method
+more accurate trajectory representation and reduced misclas- to detect anomalies in vessel trajectories. Lee et al. [18]
+sification. introduced a hybrid method combining distance-based and
+ Then, to overcome the scarcity of anomaly labels, our density-based approaches to detect anomalous trajectories. As
+model employs a contrastive semi-supervised learning method anomaly trajectories are few and significantly dissimilar from
+that enhances the ability to identify anomalous trajectories normal trajectories, also with the development of machine
+in limited labeled datasets. Specifically, we use a contrastive learning, researchers are utilizing machine learning to dislearning method to establish a discriminative feature space cover anomaly trajectories. Such as Witayangkurn et al. [22]
+by maximizing the differences in the latent representations of proposed an anomaly detection method based on the Hidden
+trajectories across categories while minimizing the differences Markov Model (HMM), aiming to detect anomaly events by
+within each category. Through this process, our model effec- identifying abnormal changes in trajectory speed and direction
+tively differentiates between normal, detour, and unexpected in urban areas. Zhang et al. [23] introduced the isolation-based
+detour trajectories with limited labels. Finally, the experiments method, called iBAT, to detect anomaly trajectories. Howon Shenzhen and Chengdu datasets show that our proposed ever, these traditional methods can effectively detect simple
+SSCTAD has better accuracy in trajectory anomaly detection anomalies but cannot identify complex anomaly trajectories.
+than the baseline method. For example, the model will misclassify the unexpected detour
+ In summary, the main contributions of SSCTAD include: trajectories (driving route changes due to traffic congestion or
+ • SSCTAD utilizes a transformer based trajectory encoder road closed) as anomalies.
+ with an in-out flow encoder, significantly advancing 2) Deep Learning Approach: Deep learning methods have
+ the capture of complex spatio-temporal dependencies, become more prevalent in trajectory-based applications due to
+ thereby reducing misclassification. the fact that they can explore the rich context of the underlying
+ • SSCTAD with a contrastive semi-supervised learning trajectory with remarkable results. We will introduce these
+ approach enhancing the model’s ability to discern anoma- deep learning methods divided into supervised and unsuperlies with a limited labeled datasets. This is particularly vised learning methods.
+ effective in distinguishing trajectory behaviors, such as In supervised learning, it requires labeled data to classify
+ normal, detour, and unexpected detour trajectories. trajectories as either normal or anomalous. It can efficiently
+ • We demonstrate the efficacy of SSCTAD on Shenzhen capture complex patterns in the trajectory data. Such as Choi
+ and Chengdu trajectory datasets. The results show that et al. [17] demonstrated that CNN is highly capable of learn-
+ SSCTAD is better than the baseline model in detecting ing representations of large-scale sequences and identifying
+ anomaly trajectories. anomalies in the data. Trinh et al. [24] employed LSTM to
+ The remainder of this paper is organized as follows: process the trajectory in a sequential and recursive manner
+Section II presents a review of related work in the field of to establish the anomaly detection system. Song et al. [19]
+trajectory anomaly detection. In Section III, we introduce the utilized labeled data and constructed a supervised learning
+preliminary knowledge required to understand the proposed method based on RNN to detect anomaly trajectories. Both of
+SSCTAD framework. Section IV, we present the methodology these methods have successfully captured the complex spatioof our proposed SSCTAD framework. Section V presents an temporal dependence of vehicle trajectories. While supervised
+evaluation of SSCTAD, demonstrating its better than base- methods often achieve high accuracy, they depend heavily
+line models in detecting both known and unknown anomaly on the availability of large labeled datasets, which can be
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+ZHANG et al.: SEMI-SUPERVISED CONTRASTIVE LEARNING FOR TRAJECTORY ANOMALY DETECTION 3
+
+challenging to obtain in real-world scenarios, particularly for enhance the learning process. This is particularly relevant in
+rare or novel anomalies. anomaly detection, where the anomalies themselves are rare
+ In contrast to supervised learning, unsupervised learning and diverse, making it challenging to collect sufficient labeled
+methods do not require labeled data. These methods are examples for effective supervised learning. For example,
+particularly useful when labeled data is scarce or unavail- Zhu et al. [29] were among the early pioneers in SSL,
+able. Among them, many recent anomaly detection methods introducing a graph-based approach that propagates labels
+are built on generative inference networks, especially Varia- from a small set of labeled samples to a large set of unlabeled
+tional AutoEncoder (VAE)-based methods. The VAE consists data. This method demonstrated that by exploiting the structure
+of a generative and inference network, which enables the of the data, one could achieve substantial improvements in
+model to capture complex spatio-temporal structure and to classification accuracy, even with limited labeled data. In the
+detect anomalies by identifying deviations from the learned specific context of trajectory anomaly detection, SSL has been
+data distribution. Several recent methods employ VAE vari- employed to address the scarcity of labeled anomaly data.
+ants to achieve anomaly trajectory detection. These methods In the specific context of trajectory anomaly detection,
+encode trajectories into a low-dimensional latent space and SSL has been employed to address the scarcity of labeled
+identify anomalous behaviors by detecting trajectories that anomaly data. Sillito and Fisher [30] explored this approach by
+deviate from latent clusters. For example, Liu et al. [25] and developing a semi-supervised learning framework tailored to
+Xie et al. [26] utilized a Gaussian Mixture Variational AutoEn- the unique challenges of trajectory data in a video surveillance
+coder (GM-VSAE) based method to map each sequence into scenario. His work leverages a small set of labeled normal
+latent variables that follow a mixture of Gaussian prior, which trajectories and a large pool of unlabeled data to build a model
+allows the model to represent multiple behavioral modes and that can identify anomalies. This method effectively reduces
+detect anomalous as low-probability samples in the latent the reliance on labeled anomaly data, allowing the model to
+space. Han et al. [27] employed DeepTEA, a VAE-based generalize better to unseen anomalies.
+method, to identify the anomaly trajectories. It learn the latent In the context of trajectory anomaly detection, although
+patterns from trajectories during the travel time, and uses the SSL has emerged as a powerful tool for anomaly detection,
+learned latent patterns to detect anomalies from trajectories. particularly in addressing the challenge of limited labeled
+Additionally, Yu and Huang [28] employed a VAE-based data. However, in trajectory anomaly detection, it may often
+method, where the anomaly degree is quantified based on the fail to incorporate real-time contextual information, such as
+reconstruction probability of driving behavior feature vectors. traffic conditions, which are crucial for accurately identifying
+ Above all, trajectory anomaly detection methods have anomalies in dynamic urban environments.
+evolved from traditional methods and machine learning to So, in our work, we propose a novel deep learning framemore advanced deep learning approaches. Although each work, SSCTAD, which employs a trajectory transformer with
+method has strengths and achieves better results, there are contrastive semi-supervised learning to address these chalstill some challenges with these methods. One of the main lenges. The framework is designed to address the unique
+challenges is that they tend to misclassify unexpected detour characteristics and complexities inherent in trajectory data, and
+trajectories as anomaly trajectories. Additionally, many meth- the training process does not depend on extensive labeled data.
+ods require extensive labeled datasets to achieve high anomaly Additionally, SSCTAD integrates in-out flows with the model,
+detection accuracy, which is often scarce in real-world appli- which addresses the limitations of both traditional anomaly
+cations. In contrast, SSCTAD integrates a transformer based detection methods and existing SSL frameworks, offering a
+method to process trajectories and utilizes the in-out flow more robust solution for dynamic urban environments.
+encoder to capture the spatial-temporal patterns from the
+trajectories, which can help the model capture the traffic condi- III. P RELIMINARIES
+tions. Then, by leveraging a small subset of labeled data along
+ This section provides the preliminary knowledge required
+with extensive unlabeled data, SSCTAD utilizes a contrastive
+ to understand the proposed SSCTAD framework. First, we
+semi-supervised learning component, which enables the model
+ provide definitions related to trajectory and anomaly trajectory.
+to better distinguish normal and anomalous trajectories by
+ Then, we formally define the problem of anomaly trajectory
+maximizing the similarity of latent representation from the
+ detection in urban areas.
+same class and diversifying those from different classes.
+
+B. Semi-Supervised Learning for Anomaly Detection A. Definitions
+ The challenge of limited labeled data in anomaly detection Definition 1 (GPS Trajectory): A GPS trajectory is a
+has led to the exploration of semi-supervised learning (SSL) sequence of coordinates recorded by a GPS device during
+techniques. SSL offers a promising avenue by leveraging both a trip. Formally, a trajectory, denoted as T , is a sequence
+labeled and unlabeled data to improve model performance, of spatial-temporal points T = (p1 , p2 , . . ., pi ). Each point pi
+making it particularly well-suited for scenarios where labeled within this trajectory is represented as a tuple (lati , Loni , ti ),
+data are scarce, costly, or difficult to obtain. where Lati and Loni are the latitude and longitude coordinates,
+ The fundamental premise of semi-supervised learning is that and ti is the corresponding timestamp.
+the vast amounts of unlabeled data contain valuable infor- Definition 2 (Mapped Trajectory): In order to improve the
+mation that, when appropriately harnessed, can significantly accuracy, we use the map matching process to convert the
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+4 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+trajectory point p into grid cells r. For a raw GPS point pi , embedding network to maintain the continuity of trajectory
+the transformation can be represented by a function fmap , as points across spatial and temporal domains, as:
+shown in (1): Z k
+ ri = fmap (pi ) (1) Conv(r) = ( f ∗ R)(r) = f (y)R(ri + y)dy, (3)
+ −k
+ In our paper, the grid cell information is implicitly embedwhere R represents the input mapped trajectory points
+ded through spatial grid encoding based on the Uber H3
+ sequence, f : F → R denotes the kernel applied to the input
+system. And we utilize the H3 grid cells at resolution 9, where
+ trajectory points sequence, and F = {−k, −k + 1, · · · , k}. The
+the grid is hexagonal and has an average edge length of about
+ final output of the convolutional embedding process is a set
+200 meters.
+ of feature vectors {x1 , x2 , · · · , xn }.
+ So, an entire trajectory T = (p1 , p2 , . . ., pi ) can be trans-
+ After the convolutional embedding module, the feature
+formed into R = (r1 , r2 , . . ., ri ).
+ vectors {x1 , x2 , · · · , xn } are passed to a transformer layer,
+ Definition 3 (In-Out Flow): The inout flow of ith grid ri
+ effectively solving the irregularity and computational cost of
+is characterized by the count of vehicles entering and exiting
+ trajectory data. To ensure the Transformer layer understands
+that grid over a given time slot. Formally, at the grid ri , the
+ the order of trajectory points, the positional encoding is added
+inout flow IO(ri ) at time ti is defined by the following:
+ to the feature vectors, which injects information about the
+ IO(ri ) = (IOin (ri ) : IOout (ri )) (2) relative position of the points in the trajectory. Here, we use
+ sinusoidal functions, and the final input to the transformer
+ Here, IOin (ri ) represents the number of vehicles entering layer is the sum of the feature vector xi and its positional
+grid ri , IOout (ri ) represents the number of vehicles exiting grid embedding PEi :
+ri , and both are measured over the same time interval. x̂i = xi + PEi (4)
+ Definition 4 (Anomaly Trajectory): Given a trajectory T i ,
+which begins at region ro and ends at region rd , if the T i Following positional encoding is the Transformer encoder,
+trajectory’s actual distance and the travel time are both longer the core of our trajectory encoder, which leverages multi-head
+than the typical or expected trajectories from the ro to rd during self-attention to capture the spatial-temporal dependencies.
+the same time period, then the trajectory T i is a detour anomaly The self-attention mechanism computes attention scores based
+trajectory. on three principal components derived from the input: queries
+ (Q), keys (K), and values (V). For input vector x̂i , such three
+B. Problem Statements vectors are computed by the weight matrices Wq , Wk , Wv ,
+ respectively:
+ Let c be the trajectory category labeled random variable with
+domain c1 , c2 , c3 , where c1 denotes the normal trajectories, Q = x̂i Wq , K = x̂i Wk , V = x̂i Wv (5)
+c2 denotes the detour anomaly trajectories, c3 denotes the
+unexpected detour trajectories. Then, we perform multi-head self-attention (MSA) to cap-
+ The probability of the ith trajectory from area ro to rd ture the spatio-temporal correlations between each trajectory
+is p(T i ), and the conditional probability p(T i |c1 ) means the point. The operation is defined as:
+ QK >
+  
+probability of the trajectory T i is a normal trajectory. Higher
+p(T i |c1 ) indicates a higher probability that T i is a normal tra- St = softmax √ V (6)
+ dk
+jectory. Thus, given a set of trajectories T = (T 1 , T 2 , · · · , T n )
+from ro to rd , our objective is to identify whether these trajec- where St is the updated features, dk is the dimensionality of
+tories are normal trajectories c1 , detour anomaly trajectories the key vectors.
+c2 or unexpected detour trajectories c3 . After attention is computed, we employ layer normalization
+ and a position-wise feed-forward network for each position in
+ the sequence. Then, in order to facilitate training the trans-
+ IV. M ETHODOLOGY
+ former encoder, residual connections are employed around
+ In this section, we introduce the methodology of our pro- each of the sub-layers.
+posed SSCTAD framework, as shown in Fig. 2, which contains
+Trajectory encoder, Inout flow encoder, Trajectory generator,
+Contrastive learning, and Anomaly detector. B. In-Out Flow Encoder
+ Inspired by the study of Zhang et al. [32], [33], our in-
+A. Trajectory Encoder out flow encoder is designed to capture the dynamic flow of
+ each urban area through the trajectories. Also, it is essential to
+ The trajectory encoder transforms trajectory data into mean- understand the spatial and temporal dynamics of traffic flow.
+ingful feature representations utilizing the convolutional neural Firstly, for an hourly time interval, the in-out flow can
+networks and the transformer layers. This process involves be denoted as a matrix Xh ∈ R2×O×D , where Xh is formed
+several key steps: by inflow Ih ∈ RO×D and outflow Oh ∈ RO×D . We apply
+ Convolutional Embedding: In order to capture the corre- convolution kernels on the in-out flow matrices to integrate
+lation between the trajectory points and enable the model to the flow information and obtain their temporal embedding:
+address the irregularity of trajectory points sampling. Inspired
+by Trajformer [31], our model utilizes the convolutional Xˆh = ReLU(Wh ∗ Xh + bh ) (7)
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+ZHANG et al.: SEMI-SUPERVISED CONTRASTIVE LEARNING FOR TRAJECTORY ANOMALY DETECTION 5
+
+Fig. 2. The framewrok of SSCTAD. It consists of four main components: 1) trajectory encoder: utilize the transformer based method to process the mapped
+trajectory. 2) Inout flow encoder: We apply convolution kernel on the short-term and long-term in-out flow data to capture the traffic conditions. 3) Trajectory
+generator: based the VAE method, our method encodes each trajectory and inflow-outflow into a low-dimensional space, and enables reconstruction of the
+inputs by decoding. 4) Contrastive learning: our model attempts to train the trajectories with different modes to follow different Gaussian priors.
+
+where Wh and bh are learnable parameters, ∗ denotes the the underlying structure of the trajectory T i , and enables
+convolution operator, and we utilize the ReLU function as trajectory anomaly detection. In the context of our model, we
+an activation function. Similarly, we can obtain the daily and utilize a Gaussian distribution parameterized by a mean µi and
+weekly time interval of the in-out flow matrix Xd and Xw , a standard deviation σi , as shown in (9).
+temporal embedding Xˆd and Xˆw . Finally, we concatenate the
+ zi ∼ q(zi | Si ) = N µi , σ2i
+ 
+above temporal embedding as follows: (9)
+ where N µi , σ2i represents a Gaussian distribution with mean
+ 
+ Sio = (Xˆh ; Xˆd ; Xˆw ) · Wt (8)
+ µi and standard deviation σi . Formally, it can be calculated as
+where Wt is learnable parameters, and; is the concatenation shown below.
+operation.
+ µi = g1 (Si ) (10)
+ σi = g2 (Si ) (11)
+C. Trajectory Generator
+ The trajectory generator is responsible for producing latent where g∗ (·) is the multi-layer perceptron (MLP) function.
+variable representations from the combined feature vectors Then, we sample from this posterior distribution using the
+S obtained from the trajectory encoder St and the in-out reparameterization trick, which enables efficient gradient backflow encoder Sio . This process is crucial for capturing the propagation during training:
+underlying structure and variability in the trajectory data, zi = µi + σi ·  (12)
+which aids in anomaly detection.
+ Inference Net. The Inference Net in our Trajectory Gen- where  is a noise vector sampled from a standard normal
+erator plays a critical role in mapping the input combined distribution, formally  ∼ N (0, 1), which allows us to generate
+feature Si into a lower-dimensional latent space based on the latent variables zi from the learned distribution.
+Variational Autoencoder (VAE). This process allows us to Generative Net. Following the recent research on Variamodel the distribution of latent variables zi , which represent tional autoencoder (VAE) [34], [35], our generative net is to
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+6 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+ TABLE I utilizes the contrastive loss, which is designed to minimize
+ S TATISTICS OF THE DATASETS the distance between the latent representation of a trajectory
+ and the Gaussian distribution representing its actual category
+ while maximizing the distance with the Gaussian distributions
+ representing the other categories. It can be defined as Eq. (18)
+ i
+ X
+ cn = fI [zi ∈ cn ] · disws (zi , cn )
+ i=1
+ i
+ !
+generate the original input features through maps of the latent X
+variables z, ensuring that the latent representation captures the − log exp (−disws (zi , cn )) (18)
+ i=1
+essential information of the trajectory.
+ In this equation, fI [zi ∈ cn ] is an indicator function that
+ Ŝi = ReLU(Wg zi + bg ) (13)
+ equals 1 if the real category of the given trajectory reprewhere Wg and bg are learned weight matrices and bias vectors sentation zi is in cn , and 0 otherwise. disws (·) is a distance
+of the generative net. function, inspired by [35], we devise the distance by a
+ Reconstruction Loss: The reconstruction loss measures 2-Wasserstein distance [36], [37], which is a metric in the
+the difference between the input feature vectors S and the space of probability, to measure the distance between the latent
+reconstructed feature vectors Ŝ, which guides the learning of representation and the category distribution. It is defined as the
+the latent representations. minimum cost of transforming the shape of one probability
+ n distribution into the shape of the other distribution, where
+ 1X the cost is assumed to be the amount of distribution weight
+ Lrec = ksi − ŝi k22 (14)
+ n moved times the moving distance. The 2-Wasserstein distance
+ i=1
+ between the distribution zi and the distribution cn can be
+ Then, a regularization term based on the KL divergence is
+ calculated as Eq. (19)
+added to the loss function to ensure the latent variables follow
+ disws (zi , cn = kµzi − µcn k22 + tr(Σzi + Σcn
+ 
+a standard normal distribution. This term penalizes deviations
+from the standard normal distribution. q
+ 1 1
+ − 2 Σz2i Σcn Σz2i (19)
+ LKL = disKL qφ (zi |si )kpθ (zi )
+  
+ (15)
+ where k · k2 denotes the Euclidean distance, and tr(·) denotes
+ The total loss function of the trajectory generator combines
+ the trace of a matrix.
+the reconstruction loss and the KL divergence as follows:
+ In addition, following the existing supervised contrastive
+ Ltg = Lrec + LKL (16) learning [35], [38], our objective function also includes a
+ cross-entropy loss to further facilitate the training with some
+ The final output of the trajectory generator is the set of manually added labels (normal, detour, unexpected detour). As
+latent variables {z1 , z2 , · · · , zn }. These latent variables provide shown in Eq. (20).
+a compact and informative representation for our trajectory
+ i
+anomaly detection. X
+ Lcl = ci log(ĉi ) (20)
+ i=1
+D. Contrastive Learning where ci is the real label for the trajectories, ĉi is the predicted
+ This subsection discusses how contrastive learning enhances trajectory label by our model, and i is the total number of
+the discriminative power of trajectory anomaly detection. It is categories.
+designed to distinguish between normal, detour anomaly, and
+unexpected detour, which can effectively solve the problem of
+ E. Training and Anomaly Recognition
+the scarcity of anomaly labels in trajectories, and the trajectory
+was incorrectly identified as a detour anomaly due to traffic Training: The training process of the proposed framework
+congestion or road closure. is designed to optimize the model parameters by minimizing
+ In contrastive net, we implicitly associate each given tra- the combined loss function. Meanwhile, we also need to
+jectory latent representation zi with a pattern category cn maximize the distance between latent variables zi and other
+(e.g., Normal, Detour, or unexpected detour) and assume each categories ck,c .
+pattern category to be a Gaussian distribution, as shown in K
+ 1 X
+Eq. (17). Ldis (s, c) = [lk − dis (z s , ck )] (21)
+ cn ∼ N µi , σ2i K−1
+ 
+ (17) k,c
+
+ Here, µi and σi are the mean and covariance matrix of Here, lk is the parameter that enforces all ck,c away from cc .
+the latent representation zi of trajectories in category cn , Above all, the total loss function integrates the Ltg , Ldis , and
+respectively. Then, in order to estimate the probability of Lcl , ensuring the model learns to reconstruct the input features
+the real pattern category of a given trajectory, our model accurately while also discriminating between normal, detour
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+ZHANG et al.: SEMI-SUPERVISED CONTRASTIVE LEARNING FOR TRAJECTORY ANOMALY DETECTION 7
+
+anomaly and unexpected detour. The combined loss function
+is as follows:
+ Ltotal = λtg Ltg + λcl Lcl + λdis Ldis (22)
+where λtg , λcl , and λdis are the loss weights used to measure
+the importance of the trajectory generator, contrastive learning
+module, and the margin-based separation loss. At the same
+time, each module is crucial for the finally trajectory anomaly
+detection, we adopt the balanced configuration and set λtg =
+λcl = λdis = 1.
+ And our model implemented on Intel(R) Xeon(R) Silver
+4214R CPU @ 2.40GHz, and NVIDIA GeForce RTX 3080 Fig. 3. The travel distance distribution of shenzhen and chengdu.
+Ti (12GB) with python 3.12 and PyTorch 2.7.0. The training
+phase is performed using the Adam [39] optimizer with
+learning rate 0.001. The batch size is set to 128, and the model existing works [25], [27], we pick up about 10000 trajectories
+will trained for 500 epochs. from the dataset and manually label whether each trajectory
+ Anomaly Recognition: The anomaly recognition process is normal (c1 ), anomaly (c2 ) or unexpected detour (c3 ). The
+leverages the trained model to identify anomaly trajectories. labeling process is based on a simple consensus. An example
+To enable the SSCTAD to identify the anomaly, we devise is exhibited to show how to label a trajectory. Assuming a
+a probabilistic metric rule, inspired by [40], to discriminate trajectory T i starting at ro and ending at rd , the traveling
+anomalies. distance is d, and the traveling time is t s . First, we retrieve
+ Specifically, we compared the distance between latent rep- all the trajectories from ro to rd , then identify the trajectory
+resentation z with the trajectory categories ck = {c1 , c2 , c3 }, by judging the trajectory’s traveling distance and time. If the
+The distance metric dk can be calculated as Eq. (23) trajectory’s traveling distance and time are the median of the
+ retrieved trajectories, the trajectory is normal. If the traveling
+ dk = − log (Prec (si )) + disws (zi , ck ) (23) distance and time are significantly larger than the median of
+where, Prec (si ) is the reconstruction probability of the input the retrieved trajectories, the trajectory is detour anomaly. If
+features, disws (zi , ck ) is the Wasserstein distance between the the distance is much longer than the median, but the traveling
+latent representation zi and the trajectory categories ck . And time is closer or smaller, the trajectory is unexpected detour.
+the trajectory is assigned to the category ck with the minimum We split the data into a training set and a testing set, with
+distance, indicating the closest match among the learned 90% of the data used for training and 10% for testing. And
+categories, as shown in Eq (24). we also inject 70% manually labeled data into the training set
+ and 30% for the testing set.
+ ĉ = arg min {dk } (24)
+ k
+ B. Evaluation Metrics
+ This ensures the trajectory is classified into the most similar
+category in the latent space. To assess the performance of our model, we employed
+ commonly used metrics from existing studies [25], [27]:
+ Precision, Recall, F1-score, Accuracy, and ROCAUC.
+ V. E VALUATION
+ • Precision: It uses to measure of how many of the
+A. Datasets predicted anomaly trajectories is correct (true anomaly
+ We conducted the experiments using two datasets. As trajectories). A higher precision indicates fewer trajectoshown in TABLE I, the Shenzhen dataset was collected from ries that are falsely identified as anomalies.
+taxis between 14 October 2019 and 14 November 2019. • Recall: It uses to measure the proportion of labels cor-
+The Chengdu dataset is collected from DiDi Chuxing ride- rectly identified. A higher recall indicates fewer false
+hailing orders1 between 1 November 2016 and 30 November negatives.
+2016. And in our dataset, only standard (non-shared) trips are • F1-score: It is is the harmonic mean of precision and
+included, ride-sharing orders are not present. Therefore, all recall, providing a balance between the two.
+trajectories in our experiments correspond to single-passenger • Accuracy: It represents the ratio of correctly predicted
+trips, and our anomaly detection results do not consider the instances to the total number of instances in the dataset.
+additional detour patterns caused by shared trips. • ROCAUC The ROCAUC (Receiver Operating Character-
+ Following the previous studies [25], [41] and definition, we istic/Area Under the Curve) plot visualizes the trade-off
+first partitioned the urban area into Uber H3.2 Additionally, between classifier sensitivity and specificity.
+we analyzed each trajectory’s distance, as shown in Fig. 3.
+ Ground Truth: Since the GPS data lacks labels (normal, C. Baselines
+detour anomaly, or unexpected detour), and inspired by the
+ In order to demonstrate the effectiveness of our proposed
+ 1 https://outreach.didichuxing.com model, we compare it with several existing methods for
+ 2 https://h3geo.org/ trajectory anomaly detection.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+8 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+ TABLE II
+ P ERFORMANCE C OMPARISON ON S HENZHEN AND C HENGDU DATASET
+
+Fig. 4. The ROC curve in both shenzhen and chengdu dataset.
+
+ • TRAOD [18]: It employs a hybrid approach, combining spatial-temporal graph to handle complex spatialdistance based and density based methods, within a par- temporal dependencies and devises a spatio-temporal distition and detect framework to identify trajectory outliers criminator to determine whether a trajectory is anomaly
+ by considering both spatial and temporal properties. or not.
+ • IBOAT [13]: It is a trajectory outlier detection method
+ that utilizes an isolation based method for detection of
+ trajectory outliers in real time. D. Performance
+ • STR [12]: It is a RNN based model that leverages spatial- We evaluated the performance of our model, SSCTAD, and
+ temporal correlations for anomaly detection in trajectory compared it with several baseline models on two large-scale
+ data. real-world datasets: Shenzhen Taxi dataset and the Chengdu
+ • ATD-RNN [19]: It characterizes trajectories by learning DiDi dataset. The results are summarized in TABLE II,
+ trajectory embeddings and then employs RNN based highlight the best performance in bold and the second-best
+ model to capture temporal dependencies in trajectory data in underlined.
+ for anomaly detection. In both Shenzhen and Chengdu datasets, our proposed
+ • GM-VSAE [25]: It is a VAE based model that employs method achieves better results for detour anomaly detection.
+ a Gaussian Mixture method to capture the multimodal This reflects the model’s ability to identify route deviations
+ distribution of trajectory data for anomaly detection. caused by the driver’s behavior accurately. Compared to the
+ • DeepTEA [27]: It is a deep learning based method that other methods, our method demonstrates a clear performance
+ utilizes an attention mechanism with trajectory embed- margin.
+ ding to capture spatial-temporal features for anomaly For Unexpected Detour trajectories, SSCTAD also outperdetection, with a focus on critical trajectory points. forms baselines. This type of trajectory is more challenging to
+ • ATROM [42]: It based on spatio-temporal graph identify due to the fact that the route differs from the expected
+ convolutional adversarial network, which utilizes a route, but it has to be driven an extra distance to avoid traffic
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+ZHANG et al.: SEMI-SUPERVISED CONTRASTIVE LEARNING FOR TRAJECTORY ANOMALY DETECTION 9
+
+Fig. 5. The AUC performance of loss weights λ.
+
+ Fig. 7. The ablation study results on shenzhen and chengdu dataset.
+
+Fig. 6. Detection time cost comparison.
+
+congestion. Existing methods are struggling in this category,
+which prefer to normalize such trajectories as anomalies.
+The superiority of SSCTAD highlights the effectiveness of Fig. 8. Visualization of trajectory latent representation in shenzhen.
+integrating the in-out flow encoder into the learned latent
+space, enabling better anomaly detection results. And for
+identifying the normal trajectories, SSCTAD again delivers the Our proposed method maintains impressive efficiency, making
+best overall performance. it well-suited for online anomaly trajectory detection scenarios.
+ These performance improvements are attributed to the Ablation Study: To better understand the contribution of
+model’s combination of transformer-based trajectory encoder, various components in our model, we designed two modified
+in-out flow encoder, and the semi-supervised contrastive learn- versions: SSCTAD without the Contrastive Net (w/o CL)
+ing. And by utilizing a small number of manually labeled and SSCTAD without the in-out flow encoder (w/o IOE).
+samples, our method achieve the better trajectory anomaly As shown in Fig. 7, SSCTAD w/o IOE performs poorly
+detection results. in identifying unexpected detour trajectories, indicating that
+ To further evaluate the discriminative capability of our considering inflows and outflows in each area is crucial for
+proposed method, we plotted the ROC curve and calculated detecting such anomalies. The performance of SSCTAD w/o
+the Area Under the ROC Curve (AUC) for both the Shenzhen CL is better than SSCTAD w/o IOE, but not as good as the
+and Chengdu datasets. As shown in Fig. 4, SSCTAD achieves full SSCTAD model. Removing each component leads to a
+a higher AUC score than all baseline methods, which confirms performance degradation, suggesting that both the Contrastive
+the superior performance of SSCTAD in identifying anomaly Net and the in-out flow encoder positively impact model
+trajectories. performance.
+ Then, we also analyze the effect of loss weighting param- In the ablation study, we observed that the in-out flow
+eters during training process. As shown in Fig. 5, with the encoder is particularly critical for identifying unexpected
+weights increase, the performance improves, and the exces- detour trajectories. This is because the encoder captures the
+sively large weights lead to a decline. So, we adopt the dynamic nature of traffic flow, allowing the model to recognize
+balanced configuration and set λtg = λcl = λdis = 1. deviations from typical patterns. And the Contrastive Net sig-
+ To further evaluate the detection efficiency, we compared the nificantly enhances the model’s ability to differentiate between
+average detection time per trajectory with baseline methods. normal and anomalous trajectories by learning more distinct
+For a fair comparison, all trained models were evaluated under feature representations.
+identical conditions. The detection time cost comparison as Interpretability Analysis: To analyze whether SSCTAD
+shown in Fig. 6. Overall, the TROAD and iBOAT exhibit the can learn intuitive observations from an interpretable perlongest detection times, primarily because they extract normal spective, we visualized the distribution of the trajectory
+trajectories and compare target trajectories against these refer- latent representation using the t-SNE toolkit, comparing our
+ence routes, which results in higher computational overhead. model and ATROM in Shenzhen over one day, as shown in
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+10 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+Fig. 9. Case study of shenzhen and chengdu. The green line represent normal trajectories. The red line represent detour anomaly trajectories. The blue line
+represent unexpected detour trajectories.
+
+Fig. 8. The results provide significant evidence that our model
+effectively detects anomaly trajectories, including both detour
+anomalies and unexpected detour trajectories.
+ Case Study
+ Detection of Anomalous Trajectories: In this case study,
+we demonstrate the detection of anomalous trajectories across
+various travel distances using our model in both Shenzhen
+and Chengdu. Fig. 9 subfigures (a) to (d) depict data from a
+single day in Shenzhen, and subfigures (e) to (h) show data
+from one day in Chengdu. We detected detour trajectories Fig. 10. An case study for our model in detecting traffic congestion
+and unexpected detour trajectories without manually labeled trajectories.
+datasets using the trained model. The results are visualized
+with red representing detour anomalies, blue for traffic congestion trajectories, and green for normal trajectories.
+ Distinguishing normal and traffic congestion trajectories: As shown in Fig. 9. Traditional methods often struggle to
+discovery normal and traffic congestion trajectories. Our model
+leverages the in-out flow graph to establish the spatio-temporal
+relations between inflow and outflow across urban regions,
+enabling effective detection traffic congestion trajectories.
+ As shown in Fig. 10, subfigure (a) presents an example of
+traffic congestion trajectory detected during a morning peak
+hour. Subfigure (b) compares the inflow to a designated red
+ Fig. 11. Time distribution of normal trajectory and traffic congestion
+region against its historical average. The data suggests that the trajectories.
+morning peak hour in the red area has shifted earlier, likely
+due to traffic congestion in adjacent areas. This observation
+supports the identification of trajectories as traffic congestion trajectories identified by our model. As shown in Fig. 11, the
+trajectories. travel time distribution of these trajectories over a straight-
+ Temporal Distribution Analysis: We further investigated line distance of approximately 12 km in Shenzhen. Detection
+the temporal distribution of normal and traffic congestion becomes challenging for durations ranging from 1500 to
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+ZHANG et al.: SEMI-SUPERVISED CONTRASTIVE LEARNING FOR TRAJECTORY ANOMALY DETECTION 11
+
+2000 seconds. Our model employs a transformer-based tra- [5] X. Zhang, Y. Zheng, Z. Zhao, Y. Liu, M. Blumenstein, and J. Li, “Deep
+jectory encoder and in-out flow encoder, combined with a learning detection of anomalous patterns from bus trajectories for traffic
+ insight analysis,” Knowledge-Based Syst., vol. 217, Apr. 2021, Art. no.
+contrastive learning loss based on the Wasserstein metric, to 106833.
+enhance anomaly detection accuracy. [6] M. Zhang, T. Li, Y. Yu, Y. Li, P. Hui, and Y. Zheng, “Urban anomaly
+ In conclusion, our case study illustrates that SSCTAD analytics: Description, detection, and prediction,” IEEE Trans. Big Data,
+ vol. 8, no. 3, pp. 809–826, Jun. 2022.
+effectively identifies both normal and traffic congestion tra- [7] A. Belhadi, Y. Djenouri, J. C.-W. Lin, and A. Cano, “Trajectory outlier
+jectories. By leveraging advanced spatio-temporal modeling detection: Algorithms, taxonomies, evaluation, and open challenges,”
+and visualization techniques, our model provides a robust ACM Trans. Manage. Inf. Syst., vol. 11, no. 3, pp. 1–29, Sep. 2020.
+ [8] R. Jiang et al., “DeepUrbanEvent: A system for predicting citywide
+solution for detecting and interpreting anomalous trajectories crowd dynamics at big events,” in Proc. 25th ACM SIGKDD Int. Conf.
+in urban environments. This capability is crucial for practi- Knowl. Discovery, Data Mining, Jul. 2019, pp. 2114–2122.
+cal applications in urban traffic management, enabling more [9] Y. Zheng, “Trajectory data mining: An overview,” ACM Trans. Intell.
+ Syst. Technol., vol. 6, no. 3, pp. 1–41, 2015.
+informed decision-making and enhancing transportation safety
+ [10] S. Guo, J. Mou, L. Chen, and P. Chen, “An anomaly detection method
+and efficiency. for AIS trajectory based on kinematic interpolation,” J. Mar. Sci. Eng.,
+ vol. 9, no. 6, p. 609, Jun. 2021.
+ VI. C ONCLUSION [11] F. Ding, J. Wang, J. Ge, and W. Li, “Anomaly detection in largescale trajectories using hybrid grid-based hierarchical clustering,” Int.
+ In this study, we present SSCTAD, an effective and J. Robot. Autom., vol. 33, no. 5, pp. 1–18, 2018.
+efficient deep learning framework designed for detecting tra- [12] S. Qian et al., “Detecting taxi trajectory anomaly based on spatiotemporal relations,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 7,
+jectory anomalies in urban environments. It utilizing trajectory pp. 6883–6894, Jul. 2022.
+encoder, In-our flow encoder, trajectory generator and trained [13] C. Chen et al., “IBOAT: Isolation-based online anomalous trajectory
+with contrastive learning loss, thus excels in capturing the detection,” IEEE Trans. Intell. Transp. Syst., vol. 14, no. 2, pp. 806–818,
+inherent complexity of spatio-temporal data, while taking Jun. 2013.
+ [14] H. Zhang, Y. Luo, Q. Yu, L. Sun, X. Li, and Z. Sun, “A framework of
+into account the dynamic traffic state in urban environments. abnormal behavior detection and classification based on big trajectory
+The semi-supervised contrastive learning component further data for mobile networks,” Secur. Commun. Netw., vol. 2020, pp. 1–15,
+enhances the model’s ability to distinguish between normal Dec. 2020.
+ [15] A. Vahedian, X. Zhou, L. Tong, Y. Li, and J. Luo, “Forecasting gathering
+trajectories, detours, and unexpected detours, especially under events through continuous destination prediction on big trajectory data,”
+conditions of limited labeling data. The experimental results in Proc. 25th ACM SIGSPATIAL Int. Conf. Adv. Geographic Inf. Syst.,
+on large-scale real-world datasets from Shenzhen and Chengdu Nov. 2017, pp. 1–10.
+ [16] M.-H. Jeong, S.-B. Jeon, S. Park, and S. Kang, “Anomaly detection
+demonstrate that our proposed method, SSCTAD, consistently in taxi flow by a projection method,” Sensors Mater., vol. 31, no. 11,
+outperforms baselines model across all metrics, including pre- pp. 3827–3834, 2019.
+cision, recall, F1-score, and accuracy. The case study further [17] K. Choi, J. Yi, C. Park, and S. Yoon, “Deep learning for anomaly
+ detection in time-series data: Review, analysis, and guidelines,” IEEE
+demonstrates that our model can better detect normal, traffic Access, vol. 9, pp. 120043–120065, 2021.
+congestion, and detour anomaly trajectories. [18] J.-G. Lee, J. Han, and X. Li, “Trajectory outlier detection: A partition-
+ In the future, we aim to enhance our model’s predictive and-detect framework,” in Proc. IEEE 24th Int. Conf. Data Eng., Apr.
+ 2008, pp. 140–149.
+accuracy and perceptual capabilities by incorporating more
+ [19] L. Song, R. Wang, D. Xiao, X. Han, Y. Cai, and C. Shi, “Anomalous
+features, such as special events, so that our model can detect trajectory detection using recurrent neural network,” in Proc. Int. Conf.
+the anomaly events. We will also incorporate an online detec- Adv. Data Mining Appl. Cham, Switzerland: Springer, Nov. 2018,
+tion module, enabling our proposed method achieve higher pp. 263–277.
+ [20] H. Fan, F. Zhang, R. Wang, X. Huang, and Z. Li, “Semi-supervised
+accuracy anomaly trajectory detection in real-time. And we time series classification by temporal relation prediction,” in Proc.
+also aim to extending our framework to explicitly handle IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Jun. 2021,
+shared-trip scenarios. It will present a new challenge and pp. 3545–3549.
+ [21] C. Wei, Z. Wang, J. Yuan, C. Li, and S. Chen, “Time-frequency based
+an interesting direction for future work, as the intentional multi-task learning for semi-supervised time series classification,” Inf.
+detour and intermediate stops cause the model to incorrectly Sci., vol. 619, pp. 762–780, Jan. 2023.
+identify such trajectories as anomalies. Additionally, we plan [22] A. Witayangkurn, T. Horanont, Y. Sekimoto, and R. Shibasaki,
+ “Anomalous event detection on large-scale GPS data from mobile
+to transfer our framework to detect the anomalies behaviors in phones using hidden Markov model and cloud platform,” in Proc. ACM
+maritime, such extensions will contribute to the development Conf. Pervasive Ubiquitous Comput. Adjun. Publ., 2013, pp. 1219–1228.
+of smart ocean system construction. [23] D. Zhang, N. Li, Z.-H. Zhou, C. Chen, L. Sun, and S. Li, “IBAT:
+ Detecting anomalous taxi trajectories from GPS traces,” in Proc. 13th
+ Int. Conf. Ubiquitous Comput., Sep. 2011, pp. 99–108.
+ R EFERENCES [24] H. D. Trinh, L. Giupponi, and P. Dini, “Urban anomaly detection by
+[1] L. X. Pang, S. Chawla, W. Liu, and Y. Zheng, “On detection of emerging processing mobile traffic traces with LSTM neural networks,” in Proc.
+ anomalous traffic patterns using GPS data,” Data Knowl. Eng., vol. 87, 16th Annu. IEEE Int. Conf. Sens., Commun., Netw. (SECON), Jun. 2019,
+ pp. 357–373, Sep. 2013. pp. 1–8.
+[2] Y. Zheng, L. Capra, O. Wolfson, and H. Yang, “Urban computing: [25] Y. Liu, K. Zhao, G. Cong, and Z. Bao, “Online anomalous trajectory
+ Concepts, methodologies, and applications,” ACM Trans. Intell. Syst. detection with deep generative sequence modeling,” in Proc. IEEE 36th
+ Technol., vol. 5, no. 3, pp. 1–55, 2014. Int. Conf. Data Eng. (ICDE), Apr. 2020, pp. 949–960.
+[3] Q. Chen, X. Song, H. Yamada, and R. Shibasaki, “Learning deep [26] L. Xie et al., “A novel model for ship trajectory anomaly detection
+ representation from big and heterogeneous data for traffic accident based on Gaussian mixture variational autoencoder,” IEEE Trans. Veh.
+ inference,” in Proc. AAAI Conf. Artif. Intell., 2016, vol. 30, no. 1, Technol., vol. 72, no. 11, pp. 13826–13835, Nov. 2023.
+ pp. 1–7. [27] X. Han, R. Cheng, C. Ma, and T. Grubenmann, “DeepTEA:
+[4] R. Jiang et al., “DeepCrowd: A deep model for large-scale citywide Effective and efficient online time-dependent trajectory outlier
+ crowd density and flow prediction,” IEEE Trans. Knowl. Data Eng., detection,” Proc. VLDB Endowment, vol. 15, no. 7, pp. 1493–1505,
+ vol. 35, no. 1, pp. 276–290, Jan. 2023. Mar. 2022.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+12 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+[28] W. Yu and Q. Huang, “A deep encoder–decoder network for anomaly Zipei Fan received the B.S. degree in computer scidetection in driving trajectory behavior under spatio-temporal context,” ence from Beihang University, China, in 2012, and
+ Int. J. Appl. Earth Observ. Geoinformation, vol. 115, Dec. 2022, Art. the M.S. and Ph.D. degrees in civil engineering from
+ no. 103115. The University of Tokyo, Japan, in 2014 and 2017
+[29] X. Zhu, Z. Ghahramani, and J. D. Lafferty, “Semi-supervised learning respectively. He became a Project Researcher and a
+ using Gaussian fields and harmonic functions,” in Proc. 20th Int. Conf. Project Assistant Professor in 2017 and 2019, and
+ Mach. Learn. (ICML), 2003, pp. 912–919. he promoted to a Project Lecturer with the Center
+[30] R. R. Sillito and R. B. Fisher, “Semi-supervised learning for anoma- for Spatial Information Science, The University of
+ lous trajectory detection,” in Proc. Brit. Mach. Vis. Conf., 2008, pp. Tokyo, in 2020. He is currently a Professor with
+ 1035–1044. the School of Artificial Intelligence, Jilin University.
+[31] Y. Liang et al., “TrajFormer: Efficient trajectory classification with His research interests include ubiquitous computtransformers,” in Proc. 31st ACM Int. Conf. Inf. Knowl. Manage., Oct. ing, machine learning, spatio-temporal data mining, and heterogeneous data
+ 2022, pp. 1229–1237. fusion.
+[32] J. Zhang, Y. Zheng, and D. Qi, “Deep spatio-temporal residual networks
+ for citywide crowd flows prediction,” in Proc. AAAI Conf. Artif. Intell.,
+ Feb. 2017, vol. 31, no. 1, doi: 10.1609/aaai.v31i1.10735.
+[33] J. Zhang, Y. Zheng, J. Sun, and D. Qi, “Flow prediction in spatiotemporal networks based on multitask deep learning,” IEEE Trans.
+ Knowl. Data Eng., vol. 32, no. 3, pp. 468–478, Mar. 2020.
+[34] D. P. Kingma and M. Welling, “An introduction to variational autoencoders,” Found. Trends Mach. Learn., vol. 12, no. 4,
+ pp. 307–392, Nov. 2019.
+[35] J. Bai, S. Kong, and C. P. Gomes, “Gaussian mixture variational Xuan Song received the Ph.D. degree in signal
+ autoencoder with contrastive learning for multi-label classification,” in and information processing from Peking University,
+ Proc. Int. Conf. Mach. Learn., 2022, pp. 1383–1398. in 2010. In 2017, he was selected as an Excellent
+[36] A. Mallasto and A. Feragen, “Learning from uncertain curves: The Young Researcher of Japan MEXT. In the past ten
+ 2-Wasserstein metric for Gaussian processes,” in Proc. Adv. Neural Inf. years, he led and participated in many important
+ Process. Syst., vol. 30, J. Zhang, Y. Zheng, and D. Qi, Eds., Curran projects as a Principal investigator or primary actor
+ Associates, 2017. [Online]. Available: https://proceedings.neurips.cc/ in Japan, such as DIAS/GRENE Grant of MEXT,
+ paper files/paper/2017/file/7a006957be65e608e863301eb98e1808- Japan; Japan/U.S. Big Data and Disaster Project of
+ Paper.pdf JST, Japan; Young Scientists Grant and Scientific
+[37] V. Masarotto, V. M. Panaretos, and Y. Zemel, “Procrustes metrics on Research Grant of MEXT, Japan; Research Grant of
+ covariance operators and optimal transportation of Gaussian processes,” MLIT, Japan; CORE Project of Microsoft; Grant of
+ Sankhya A, vol. 81, no. 1, pp. 172–213, Feb. 2019. JR EAST Company; and Hitachi Company, Japan. He served as an Associate
+[38] P. Khosla et al., “Supervised contrastive learning,” in Proc. NIPS, 2020, Editor, a Guest Editor, the Area Chair, a Program Committee Member or a
+ pp. 18661–18673. reviewer for many famous journals and top-tier conferences, such as IMWUT,
+[39] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” IEEE T RANSACTIONS ON M ULTIMEDIA, WWW Journal, Big Data Journal,
+ 2014, arXiv:1412.6980. ISTC, MIPR, ACM TIST, IEEE T RANSACTIONS ON K NOWLEDGE AND
+[40] J. Lu, Y. Xu, H. Li, Z. Cheng, and Y. Niu, “PMAL: Open set recognition DATA E NGINEERING, UbiComp, ICCV, CVPR, and ICRA.
+ via robust prototype mining,” in Proc. AAAI Conf. Artif. Intell., Jun.
+ 2022, vol. 36, no. 2, pp. 1872–1880.
+[41] Y. Zheng, M. Jin, Y. Liu, L. Chi, K. T. Phan, and Y. P. Chen, “Generative
+ and contrastive self-supervised learning for graph anomaly detection,”
+ IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12220–12233, Dec.
+ 2021.
+[42] Q. Gao, X. Wang, C. Liu, G. Trajcevski, L. Huang, and F. Zhou, “Open
+ anomalous trajectory recognition via probabilistic metric learning,” in
+ Proc. 32nd Int. Joint Conf. Artif. Intell., 2023, pp. 2095–2103.
+ Ryosuke Shibasaki received the B.S., M.S., and
+ Ph.D. degrees in civil engineering from The University of Tokyo, Japan, in 1980, 1982, and 1987,
+ respectively. From 1982 to 1988, he was with the
+ Jiaqi Zhang is currently pursuing the Ph.D. degree Public Works Research Institute, Ministry of Conwith the Department of Computer Science and struction. From 1988 to 1991, he was an Associate
+ Engineering, Southern University of Science and Professor with the Civil Engineering Department,
+ Technology (SUSTech), Shenzhen, China. His cur- The University of Tokyo. In 1991, he joined the
+ rent research interests includes spatio-temporal data Institute of Industrial Science, The University of
+ mining, machine learning, and urban computing. Tokyo. In 1998, he was promoted to a Professor
+ with the Center for Spatial Information Science, The
+ University of Tokyo. His research interests include cover three-dimensional
+ data acquisition for GIS, conceptual modeling for spatial objects, and agentbased microsimulation in a GIS environment.

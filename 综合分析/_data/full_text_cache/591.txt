@@ -1,0 +1,952 @@
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026 245
+
+ A Unified Framework for Robust Encrypted
+ Malicious Traffic Detection in Adverse
+ Environments via Graph Structure Learning
+ Jianjin Zhao , Zhiwei Cui , Junsong Fu , Meng Shen , Member, IEEE, and Qi Li
+
+ Abstract—The widespread adoption of encryption protocols en- I. INTRODUCTION
+ables attackers to conceal malicious activities within encrypted
+ ITH the rapid proliferation of smart devices and internet
+traffic, rendering traditional detection methods ineffective. Graph
+Neural Networks (GNNs) have emerged as a promising solution
+by modeling network objects and their interactions within graph
+ W applications, global network traffic has experienced explosive growth. To ensure secure data transmission, encrypted
+representations to capture the collaborative behavioral patterns of traffic becomes the mainstream form of network communicacomplex threat activities. However, the well-performed premise of
+GNNs does not always hold in adverse environments, leading to
+ tions. However, the widespread deployment of encryption techunsatisfactory performance, suffering from three critical issues in- niques also expands the attack surface, as attackers increasingly
+cluding (1) incomplete information analysis, where heterogeneous conceal threat activities (e.g., malicious payload transmission,
+relations among network objects are often overlooked (2) lack of so- covert channel construction, and sensitive data theft) within
+lutions for evasion techniques, as existing methods focus on robust encrypted traffic. According to [1], between October 2023 and
+representation learning but fail to correct adversarial distortions,
+and (3) limited robustness evaluation, relying on synthetic feature September 2024, the Zscaler cloud blocked 32.1 billion attacks
+perturbations rather than raw traffic manipulations in line with embedded in SSL/TLS-encrypted traffic, accounting to 87.2%
+real-world attacks. To address these issues, we propose RETA, a of all threats.
+unified framework for robust encrypted malicious traffic detection The ubiquitous adoption of encryption protocols presents sigvia graph structure learning. First, RETA unifies heterogeneous nificant challenges to cyberspace security. Traditional detection
+subgraphs capturing semantic metapaths and homogeneous subgraphs modeling behavioral similarities among encrypted sessions methods based on deep packet inspection and signature/rule
+and takes a tailored Heterogeneous Graph Attention Network matching are gradually becoming obsolete due to their inability
+(HAN) encoder for neighborhood information aggregation. Then, to inspect encrypted payloads [2]. Consequently, research has
+it employs a unified graph structure learning framework to correct shifted toward advanced machine learning and deep learning
+noisy relations induced by evasion techniques through channel algorithms, leveraging feature engineering and representation
+attention-based aggregation and Bayesian inference-based estimation. Following an iterative manner, RETA mutually improves learning techniques to extract discriminative patterns for threat
+relation modeling and detection robustness. Finally, RETA simu- detection. Recent advancements have primarily focused on exlates various realistic adverse conditions by modifying raw traffic ploring correlation analysis to capture the collaborative behavcaptures, ensuring comprehensive robustness evaluations against ioral patterns of complex threat activities.
+network fluctuations and adversarial attacks. Extensive experi- Graph Neural Networks (GNNs) [3], [4], [5], as an emerging
+ments demonstrate the superior robustness of RETA, significantly
+improving detection performance in adverse environments. Even
+ representation learning technique, have achieved considerable
+under extreme adverse conditions (i.e., 30% packet loss rate and 5 progresses in encrypted malicious traffic detection by modeling
+perturbation edges), RETA still shows significant advantages, deliv- fine-grained network objects and integrating complicated relaering 8.94% and 4.85% accuracy improvements over the baseline tions into graph representations [6], [7]. Various graph construcmodels on average. tion paradigms at packet/session/host levels have been proposed
+ Index Terms—Encrypted traffic, malicious traffic detection, to model complex behavioral patterns for distinct tasks. Specifigraph structure learning. cally, Shen et al. [8] represent packet-level interactions between
+ Received 10 September 2024; revised 11 June 2025; accepted 18 June 2025. clients and servers as traffic interaction graphs for decentralized
+Date of publication 2 July 2025; date of current version 21 November 2025. This application identification. Zhao et al. [9] construct encrypted
+work was supported in part by the National Natural Science Foundation of China traffic graphs to model service and behavior correlations among
+under Grant 62172055, Grant 61972039, Grant 62222201, Grant U20B2045,
+and Grant U23A20304, and in part by the National Defense Basic Scientific encrypted sessions for malicious flow detection. Lo et al. [10]
+Research Program of China under Grant JCKY2021602B002. Recommended formulate endpoint communications between hosts as network
+for acceptance by G. Sun. (Corresponding author: Qi Li.) graphs for intrusion detection. Existing studies demonstrate that
+ Jianjin Zhao, Zhiwei Cui, Junsong Fu, and Qi Li are with the Beijing University of Posts and Telecommunications, Beijing 100876, China topological patterns extracted by GNNs are highly effective for
+(e-mail: jianjinzhao@bupt.edu.cn; zwcui@bupt.edu.cn; fujs@bupt.edu.cn; threat detection.
+liqi2001@bupt.edu.cn). However, prior studies [11], [12] have revealed that the strong
+ Meng Shen is with the Beijing Institute of Technology, Beijing 100081, China
+(e-mail: shenmeng@bit.edu.cn). expressive power of GNNs heavily relies on the premise that
+ Digital Object Identifier 10.1109/TNSE.2025.3582871 the observed graph topology is reliable and consistent with
+
+ 2327-4697 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+246 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+the homophily property (i.e., similar nodes tend to form con- along the HAN encoder, RETA simultaneously improves relanections). In practice, this assumption is frequently violated tion modeling and detection robustness.
+due to observational errors and adversarial distortions. Regular For comprehensive robustness evaluation, we simulate varinetwork fluctuations can lead to packet loss, retransmission, ous adverse conditions by directly modifying raw traffic capand out-of-order delivery, distorting observable features (e.g., tures, which is more inline with real attacks. Specifically, we
+packet lengths). Additionally, various evasion techniques (e.g., randomly drop packets to obfuscate session features, simulating
+adopting legitimate certificates) further obfuscate the correla- network fluctuations, and purposefully modify the data fields to
+tions between network objects, undermining the integrity of obfuscate graph topology, simulating evasion techniques. Exgraph topology. To adapt to the adversarial threat landscape, tensive experiments validates the superior robustness of RETA.
+it is imperative to exploit the full potential of GNNs on noisy The key contributions of this paper can be summarized as
+graphs for robust encrypted malicious traffic detection in adverse follows:
+environments [13], [14]. r We construct a comprehensive graph integrating hetero-
+ Several studies have explored reliable graph construction geneous (metapath-based) and homogeneous similarityfor robust traffic analysis. Pujol-Perich et al. [15] model the based) subgraphs to model the relations among encrypted
+inter-dependencies between flows traversing the network as sessions, and develop a tailored HAN to uniformly aggregraphs to capture underlying structural patterns against poten- gate neighborhood information from both subgraphs.
+tial adversarial attacks. Li et al. [7], [16] adopt graph match- r We propose a unified framework for robust encrypted
+ing and propagation for robust encrypted traffic classification malicious traffic detection. Following an iterative manner,
+among various network environments in an iterative manner. both refined subgraph structures are derived along with the
+Fu et al. [17], [18] construct a compact flow interaction graph optimized HAN encoder, enabling mutual optimizations of
+to detect abnormal interaction patterns against typical evasion relation modeling and detection robustness.
+techniques. Zhao et al. [19] construct a relational multigraph to r We design practical evasion techniques by modifying raw
+realize robust malicious flow detection via discriminative rela- traffic captures to simulate real-world attacks. Compretion incorporation and misleading relation correction. Despite hensive evaluations demonstrate the superior robustness
+their effectiveness, three critical deficiencies persist in current of RETA against network fluctuations and adversarial pergraph-based approaches when applied to adverse environments. turbations.
+ r Incomplete Information Analysis: Existing methods com- The remainder of this paper is organized as follows. We review
+ monly neglect the rich interactions among various network the related studies in Section II, and introduce some preliminarobjects (e.g., fingerprints and certificates) of encrypted ies in Section III. Section IV presents the design of RETA. In
+ sessions, which reflect the reliability of web services to Section V, the performance evaluations of RETA are provided.
+ a certain extent. In Section VI, the limitations and potential improvements of
+ r Lack of Solutions for Evasion Techniques: Evasion tech- RETA are discussed. Finally, we conclude in Section VII.
+ niques obscure both features and interactions, while existing studies focus solely on deriving robust representations
+ rather than correcting noisy relations, leading to unsatis- II. RELATED WORK
+ factory performance in adverse environments. In this section, we review and summarize the relevant studr Limited Robustness Evaluation: Few methods systemati- ies in the following three aspects: encrypted malicious traffic
+ cally simulate real-world adversarial attacks for robustness detection, graph neural network, and graph structure learning.
+ assessment. Simply modifying feature vectors rather than
+ raw traffic captures is not in line with actual attacks, limiting their practical deployment. A. Encrypted Malicious Traffic Detection
+ To address these limitations, we propose RETA, a unified The core challenges in encrypted malicious traffic detection
+graph structure learning framework for robust encrypted ma- arise from fundamental constraints in representing encrypted
+licious traffic detection in adverse environments. Specifically, traffic. The encryption of payloads obscures semantic infor-
+RETA first constructs a comprehensive graph comprising het- mation, while the sparsity of available metadata results in
+erogeneous and homogeneous subgraphs to model semantic high-dimensional feature distributions. These limitations hinder
+metapaths and behavioral similarities among encrypted sessions. traditional detection methods, which not only suffer from combi-
+Then it takes a tailored Heterogeneous Graph Attention Network natorial explosion but also struggle with capturing informative
+(HAN) encoder that to uniformly aggregate metapath-based and semantic association. Consequently, research in this area has
+similarity-based neighborhood information, obtaining contex- shifted from experience-driven Machine Learning (ML)-based
+tual session representations. To mitigate the impact of noisy methods to data-driven Deep Learning (DL)-based paradigms.
+interactions induced by evasion techniques, it retrieves session We first review ML-based and DL-based methods, followed
+embeddings from intermediate layers to generate observations as by an overview of recent GNN-based advancements leveraging
+guidance. RETA leverages channel attention-based aggregation graph modeling to capture collaborative behavioral patterns for
+and Bayesian inference-based estimation to reconcile conflicted robust detection.
+observations, deriving an optimized graph with relation correc- ML-based: Early research primarily relies on expert knowltion and completion. By iteratively refining the graph structure edge, employing manually designed feature sets combined with
+ZHAO et al.: UNIFIED FRAMEWORK FOR ROBUST ENCRYPTED MALICIOUS TRAFFIC DETECTION IN ADVERSE ENVIRONMENTS 247
+
+machine learning algorithms for detection. The technical solu- modules to enable incremental updates and support fine-grained
+tions at this stage focus on extracting network flow metadata, unknown class detection. Shen et al. [35] propose SmartDetecconstructing a basic feature space by parsing packet feature se- tor, which introduces a Semantic Attribute Matrix (SAM) reprequences (e.g., lengths, arrival times), IP/TCP header fields (e.g., sentation combined with contrastive learning and data augmenfive-tuple, TTL values), and TLS handshake information (e.g., tation, improving robustness against obfuscation and new attack
+version, cipher suites). To further enhance representation capa- variants. However, Sun et al. [36] propose AdvTG, an adversarbilities, researchers introduced analytical metrics such as mean, ial traffic generation framework that combines large language
+variance, and quantiles to generate statistical features like packet models and reinforcement learning to generate semantically
+length distribution and time interval variance, thereby achieving correct and functional adversarial traffic, effectively deceiving
+quantitative descriptions of traffic behaviors. Anderson et al. [20] various DL-based detection models. When faced with complex
+conduct pioneering work in this field, proposing a supervised challenges such as protocol version iterations and dynamic
+ML-based method that integrates TLS handshake metadata with adversarial attacks in real-world network environments, existing
+DNS and HTTP contextual information, successfully enabling methods still exhibit significant bottlenecks in representation
+efficient detection of TLS-encrypted malware traffic. Subse- robustness.
+quent works [21], [22], [23] refine flow-level feature design, GNN-based: The recent efforts in encrypted malicious traffic
+while Fu et al. [24], [25] introduce frequency-domain repre- detection primarily focus on exploring correlation analysis to
+sentations to enhance feature stability. More recent advances capture collaborative behavioral patterns to improve robustness.
+explore richer structures: Yu et al. [26] employ attributed graphs Cui et al. [37] achieve high-precision association between IPv6
+with graph kernels for robust detection under data imbalance; addresses and users using non-encrypted TLS handshake in-
+Fu et al. [27] analyze packet length semantics to detect tunneled formation based on Siamese heterogeneous graph attention netflooding attacks. Despite notable progress, ML-based methods works. Pham et al. [6] design a method based on communication
+remain highly dependent on manual feature design and show sig- graph construction and deep GNNs, addressing issues such as
+nificant performance degradation under dynamic and evolving dynamic changes in encrypted traffic and shared library internetwork environments. ference by extracting packet header information. Fu et al. [38]
+ DL-based: To mitigate manual feature reliance, DL-based introduce ST-Graph, which jointly exploits spatial, temporal,
+methods map raw traffic into images, sequences, or graphs, and graph structural features of encrypted traffic, achieving high
+enabling automated representation learning. Wang et al. [28] precision and robustness in encrypted malware traffic detection
+first apply representation learning to raw traffic data, classify- across real-world deployments. Qiu et al. [39] propose a twoing encrypted traffic by mapping it into images. In sequence step feature decoupling and dynamic graph diffusion scheme,
+modeling, recurrent neural networks (RNNs), Transformers, and effectively resolving the entanglement of traffic feature distriother sequence models are widely used to capture long-range butions in network intrusion detection. Ding et al. [40] design
+dependencies in packet feature sequences. Djaidja et al. [29] a meta-learning graph attention network-based IoT intrusion
+introduce an early intrusion detection method combining at- detection system, optimizing graph partitioning strategies in
+tention mechanisms and RNNs, achieving efficient early clas- large-scale IoT networks through offline reinforcement learning
+sification of encrypted malicious flows before session termi- algorithms to achieve efficient parallel detection performance.
+nation. In graph structure modeling, Shen et al. [8] proposed Additionally, Fu et al. [17], [18] design an encrypted malicious
+a decentralized application identification method, abstracting traffic detection system based on flow interaction graph structure
+packet length sequences into graph structures for classification, analysis, identifying unknown threats without labeled data. Mao
+further expanding the forms of encrypted traffic representation. et al. [41] propose a label-aware federated graph contrastive
+These methods effectively reduce reliance on manual feature learning framework, significantly improving network intrusion
+design and minimize information loss. Yang et al. [30] develop detection performance in few-shot scenarios by introducing
+TrafCL, a contrastive learning framework leveraging session linear graph processing for flow embeddings combined with
+augmentation and co-attention mechanisms to robustly detect in- federated learning. Wu et al. [42] propose TCG-IDS, a selfcomplete or obfuscated malicious encrypted traffic. Fu et al. [31] supervised IDS framework based on temporal contrastive graph
+design pVoxel, an unsupervised method based on point cloud learning, achieving superior performance and low false positive
+analysis that significantly reduces false positives of ML-based rates under multi-class network intrusion detection scenarios.
+detection models by capturing the topological structure of traffic Zhang et al. [43] design MH-Net, which constructs multi-view
+feature space. Zhang et al. [32] propose AOC-IDS, an online heterogeneous traffic graphs and employs contrastive learning
+adaptive IDS using autoencoders with a contrastive learning to enhance encrypted traffic classification under complex corloss and a labor-free continual adaptation framework, achieving relations across traffic bytes. Cui et al. [44] propose FG-SAT,
+strong adaptability to dynamic network environments. Alotaibi which builds flow graphs and uses GraphSAGE and GAT for
+et al. [33] propose Mateen, an adaptive ensemble learning frame- encrypted traffic classification under environment shifts, and
+work that enhances the adaptability of deep autoencoders to employs feature selection based on Jensen-Shannon divergence
+evolving benign network behaviors, achieving large gains in to improve robustness. However, it is important to emphapractical dynamic environments. Zhao et al. [34] design Trident, size that existing methods have yet to fully account for data
+a universal framework for unknown and fine-grained encrypted noise interference caused by network fluctuations and evasion
+traffic detection, using one-class learning and an ensemble of techniques.
+248 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE I GraphSAGE that generalizes GCN to inductive learning. In-
+ COMPARISON WITH ADVANCED RELATED WORK
+ stead of simple convolutions, aggregator functions are trained to
+ generate embeddings from nodes’ local neighborhoods. Graph-
+ SAGE can effectively trade off performance and runtime by
+ sampling node neighborhoods. Velickovic et al. [50] introduce
+ an attention mechanism to GNNs and proposed Graph Attention
+ Network (GAT), which can implicitly specify different weights
+ to different neighbors without knowing the graph structure. For
+ graph-level classification, Li et al. [51] incorporate hierarchical transitive alignment of nodes and transforms variable-sized
+ graphs into fixed-size aligned density matrices to encode both
+ topological structures and quantum interference patterns into
+ graph representations. Generally, most GNNs depend on the
+ homophily assumption that nodes belonging to the same class
+ are more likely to be connected. GNNs for heterophilic graphs
+ are gaining increasing research attention [52] to enhance graph
+ Unfortunately, existing GNN-based methods predominantly
+ learning with heterophily. Li et al. [53] introduce Haar-type
+rely on an ideal assumption of data integrity, failing to account
+ graph framelets with permutation equivariance, sparsity, and
+for real-world adversarial scenarios where both node features
+ efficient computation for heterophilous graphs.
+and graph structures can be compromised. In practical cy-
+ Moreover, heterogeneous graphs, also called Heterogeneous
+berspace full of uncertainties and adversarial threats, encrypted
+ Information networks (HINs) with multi-typed nodes and edges,
+sessions often exhibit incomplete feature representations and
+ contain more abundant information and are more in line with the
+spurious inter-dependencies due to intentional obfuscation techreal-world scenario. Wang et al. [54] propose Heterogeneous
+niques and protocol manipulations. Considering data quality as
+ Graph Attention Network (HAN) to perform a hierarchical
+the cornerstone of AI-driven security systems, we propose a
+ attention mechanism respectively on node level and semantic
+unified graph structure learning framework for robust encrypted
+ level to aggregate metapath-based neighbors and obtain the
+malicious traffic detection, namely RETA. It iteratively optifinal node embeddings. To consider the intermediate nodes in
+mizes both homogeneous and heterogeneous relations and the
+ metapaths, Fu et al. [55] propose Metapath Aggregated Graph
+detection model to mutually improve relation modeling and
+ Neural Network (MAGNN). It first transforms heterogeneous
+detection robustness. Additionally, we simulate various adverse
+ node embeddings into the same dimension, then applies intraconditions in line with actual attacks by directly modifying
+ metapath and inner-metapath aggregations with an attention
+raw traffic to rigorously validate RETA’s robustness. Table I
+ mechanism to learn the node embeddings.
+compares RETA with some advanced related work. Though
+ This work focuses on adapting advanced graph representation
+many state-of-the-art methods have made notable progress in
+ learning techniques to security applications rather than developcorrelation analysis (CA) and robustness evaluation (RE), they
+ ing new GNN architectures. Specifically, we propose a general
+often overlook key aspects such as noise mitigation (NM), attack
+ HGNN-powered framework for encrypted malicious traffic desimulation (AS), and unified optimization (UO). In contrast,
+ tection and take HAN as an example to present its implementa-
+RETA uniquely offers an end-to-end robust detection pipeline by
+ tion. Notably, our framework supports seamless substitution of
+jointly optimizing graph structure and detection model, achievalternative state-of-the-art HGNN models for node classification
+ing comprehensive capabilities across all evaluated dimensions.
+ tasks, preserving methodological generality while maintaining
+This highlights its superior adaptability and resilience in realdetection performance. This approach positions heterogeneous
+world adversarial and noisy network environments.
+ graph modeling as a flexible solution adaptable to evolving threat
+ detection requirements.
+B. Graph Neural Networks
+ To tackle non-Euclidean data with more expressive power,
+GNNs are proposed to learn the complex relations and the C. Graph Structure Learning
+rich inter-dependencies among entities in the graph domain. Graph Structure Learning (GSL) [56] aims to optimize the
+Due to their strong performance and interpretability, GNNs incomplete and noisy graph structures for better performance
+have recently been widely applied in various fields (e.g., so- of GNN on downstream tasks. Chen et al. [57] first propose an
+cial networks [45], recommendation systems [46] and security Iterative Deep Graph Learning (IDGL) framework to optimize
+applications [47]). Among foundational GNN architectures, graph structures. Specifically, IDGL utilizes cosine similarity as
+Graph Convolutional Network (GCN) [48] bases on first-order the edge weights and controls the sparsification of the generated
+approximations of spectral graph convolutions to aggregate graph with a preset threshold. Wang et al. [58] propose Graph
+neighborhood information and enlarge the receptive field for structure Estimation neural Network (GEN). GEN firstly hyeach node, achieving promising performance in many tasks. pothesizes that the optimal graph structure conforms to Stochas-
+However, GCN has only been applied in transductive setting tic Block Model (SBM) [59]. Then GEN generates a set of
+with fixed graphs. To fix this issue, Hamilton et al. [49] propose multi-view observations as guidance to compute the posterior
+ZHAO et al.: UNIFIED FRAMEWORK FOR ROBUST ENCRYPTED MALICIOUS TRAFFIC DETECTION IN ADVERSE ENVIRONMENTS 249
+
+probability of the optimal graph based on Bayesian inference. ServerHello message is a reply to the ClientHello message.
+Finally, GEN optimizes the parameters based on Expectation- It contains the version of SSL/TLS protocol that the server
+Maximization (EM) algorithm, achieving mutual optimizations chooses, a 32-bytes ServerHello random byte string, the lists
+of both graph structure and GNN parameters. Zhao et al. [60] of cipher suites and compression algorithms chosen from the
+extend GSL to HGNN and propose a Heterogeneous Graph list provided by the client, and the extensions in response.
+Structure Learning framework, namely HGSL. Based on IDGL, Certificate message is sent by the server following the Server-
+HGSL introduces feature propagation graphs and utilizes meta- Hello message, which contains a chain of certificates beginning
+path2vec [61] to generate semantic graphs as supplementation. with the sender’s certificate and ending with the Root certificate.
+In each heterogeneous relation, feature similarity graphs, feature Each certificate in the chain is signed by the one preceding it.
+propagation graphs, and semantic graphs are aggregated by The client verifies the server’s identity based on the certificate
+channel attention operation and fused to generate the optimal chain. It contains much valuable information like the subject,
+heterogeneous graph. Motivated by these studies, we introduce issuer information, and the validity of certificates.
+graph structure learning to mitigate the perturbations introduced Previous studies [20], [62], [63] have demonstrated that unby potential evasion techniques in adverse environments, mu- encrypted TLS handshake messages can be utilized to identify
+tually improve relation modeling and detection robustness for threats. Specifically, the distributions of cipher suites and exencrypted malicious traffic detection. tensions differ between encrypted malicious and benign traffic.
+ Certain cipher suites and extensions are considered insecure
+ III. PRELIMINARIES and rarely used by enterprises. Additionally, the status of a
+ certificate, whether self-signed or expired, reflects the reliability
+ In this section, we first define the threat model by presenting of web services. Domain names within Server Name Indicathe adversaries’ capabilities and corresponding attack scenario tion (SNI) extensions or certificates can also be extracted for
+simulations, and then introduce the background knowledge malicious domain detection. However, with the development
+about SSL/TLS handshake process related to our work. of evasion techniques, these detection approaches progressively
+ become invalidate.
+A. Threat Model
+ In this work, we consider two types of adversaries: passive IV. METHODOLOGY
+and proactive. The passive adversary prioritize disruption over A. Framework Overview
+evading detection, causing packet loss, retransmission, and outof-order delivery, like general network fluctuations. The loss In this section, we present the high-level design of RETA.
+and distortion of available information affect detection perfor- Generally, correlation analysis effectively mitigates the feature
+mance. The proactive adversary actively manipulates malicious noise introduced by network fluctuations, while various evatraffic to evade detection by exploiting vulnerabilities inherent sion techniques further obfuscate the relations among network
+in learning-based models. objects, leading to unsatisfactory detection performance. Thus,
+ To systematically evaluate the impact of these adversaries, in RETA, we construct a graph to comprehensively model the
+we consider two corresponding attack scenarios: (1) packet loss relations among encrypted sessions, and adaptively correct those
+due to network fluctuations or Denial of Services (DoS) attacks noisy ones via graph structure learning in a unified way. Foland (2) graph structure perturbations via adversarial attacks. lowing an iterative manner, it realizes mutual optimization with
+In the former scenario, we randomly drop packets at a certain noisy relation correction and detection robustness improvement.
+rate, simulating the passive adversary. As for the latter scenario, Fig. 1 shows four key components of RETA, i.e., graph conwe add perturbation relations to modify the graph structure, struction, observation generation, graph derivation, and iterative
+simulating the proactive adversary. optimization.
+ Graph Construction: RETA collects and splits raw traffic
+ captures into encrypted sessions for graph construction. Mean-
+B. TLS Handshake
+ while, it parses unencrypted TLS handshake messages and per-
+ TLS protocol is widely employed to encrypt the communi- packet features to characterize both client-side and server-side
+cations between web applications and servers. Previous studies configurations and network behaviors. In the graph, it utilizes
+primarily leverage the parameters in the unencrypted TLS hand- network objects (i.e., sessions, fingerprints and certificates) as
+shake messages negotiated for subsequent encrypted communi- nodes, and establishes connections by modeling semantic and
+cations. The details of the informative TLS handshake messages behavioral relations among sessions. The graph can be further
+are as follows: subdivided into homogeneous and heterogeneous subgraphs by
+ ClientHello message: Before the encrypted communications, relations. More details about graph construction are presented
+the client sends a ClientHello message to the server to initiate in Section IV-B.
+a TLS handshake, which contains the maximum version of Observation Generation: RETA adopts HAN to aggregate
+SSL/TLS protocol that the client supports, a 32-bytes Clien- spatial contextual information within the graph. To infer a better
+tHello random byte string, the list of cipher suites supported, graph topology with relation correction and completion, we rethe list of compression algorithms supported and some optional trieve session embeddings from intermediate layers to construct
+extension. multi-order neighborhood similarity graphs as observations.
+250 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 1. The overall framework of RETA.
+
+Following the hierarchical attention mechanism in HAN, both Encrypted Session Node S denotes an encrypted session,
+node-level and semantic-level session embeddings in different including both uplink and downlink packets that share the same
+layers are collected to generate observations and jointly guide 5-tuple (source IP, source port, destination IP, destination port,
+the optimal graph derivation. We will describe the details of the protocol). The features include the parameters negotiated during
+observation generation in HAN in Section IV-C. TLS handshake phase for subsequent encrypted communication
+ Graph Derivation: In RETA, different graph derivation strate- and the statistical data of uplink and downlink packets after the
+gies are employed based on different relations. Specifically, session is established.
+channel attention-based aggregation and Bayesian inference- Client Fingerprint Node Fc reflects the configuration of the
+based estimation are applied on heterogeneous and homoge- client application initiating TLS sessions. The features include
+neous observations respectively to derive better graph topology, supported version, accepted cipher suites, list of extensions, elreplacing the original graph for further optimization of the graph liptic curves, and elliptic curve formats in ClientHello message,
+encoder. We will provide the details of graph derivation of both with the MD5 hash value forming a 32-digit hexadecimal JA3
+heterogeneous and homogeneous observations in Section IV-D. fingerprint for correlations.
+ Iterative Optimization: With the temporary optimal graph, Server Fingerprint Node Fs reflects the security configwe can further optimize the HAN encoder, retrieve better node urations of the accessed server. The features include selected
+embeddings from hidden layers, and thus generate more accurate version, cipher suites, and extensions in ServerHello message,
+observations. Then a new iteration begins until convergence. with the MD5 hash value forming a 32-digit hexadecimal JA3s
+Following an iterative manner, RETA not only generates optimal fingerprint for correlations.
+graph topology with relation correction and completion, but also Certificate Node C denotes the certificate issued by a Certifienhance the representation ability of HAN in encrypted mali- cate Authority (CA) to verify the server’s identity. The features
+cious traffic detection with detection robustness improvement. include the issuer (i.e., non-root issuing CA), the subject (i.e.,
+We will detail how RETA iteratively optimizes the data and the entity of the certificate owner), the validity period, and the
+model in Section IV-E. number of certificates in the Certificate message.
+ 2) Relations: Generally, threat activities like Distributed
+ Denial of Service (DDoS) and botnet attacks involve multiple
+B. Graph Construction encrypted sessions collaboratively generated by a collection of
+ To model the rich relations among encrypted sessions, we con- devices. Therefore, analyzing each encrypted session in isolation
+struct a graph incorporating various network objects as nodes, for threat detection is inadequate. It is essential to consider
+and both semantic and behavioral relations as edges. the complex relations among encrypted sessions from a global
+ 1) Nodes: We extract four types of nodes to denote the perspective. The graph can be subdivided into heterogeneous
+network objects in TLS communications, including encrypted and homogeneous subgraphs by relations. Based on the TLS
+session node S, client fingerprint node Fc , server fingerprint protocol, we propose four metapath-based correlations (C1-C4)
+node Fs , certificate node C. The corresponding node features with rich semantics to construct heterogeneous subgraphs. Beare as follows: sides, we introduce DTW and Jaccard distances to measure the
+ZHAO et al.: UNIFIED FRAMEWORK FOR ROBUST ENCRYPTED MALICIOUS TRAFFIC DETECTION IN ADVERSE ENVIRONMENTS 251
+
+Fig. 2. Heterogeneous subgraph construction.
+
+Fig. 3. Homogeneous subgraph construction.
+
+similarity-based correlations (C5-C6) in network behaviors and utilize DTW and Jaccard distance metrics to quantify the beconstruct homogeneous subgraphs. havioral similarities among encrypted sessions. The behavioral
+ Specifically, during the TLS handshake process, multiple similarities within these homogeneous subgraphs are defined as
+unencrypted fields including versions, cipher suites negotiate follows:
+many unencrypted fields including version, cipher suites and
+ C5: DTW distance similarity. Dynamic Time Warping algocertificate chains, are negotiated as critical indicators of web
+ rithm quantifies the similarity between temporal sequences
+service reliability. We systematically leverage these observable
+ by aligning them non-linearly. Given the stability of downlink
+plaintext parameters to construct heterogeneous subgraphs that
+ packets and the variability of uplink packets, we construct a
+encode multi-relational behavioral patterns. Fig. 2 illustrates
+ k-NN graph of encrypted sessions based on DTW distance of
+the construction of heterogeneous subgraphs based on semantic
+ bidirectional packet length sequences.
+metapaths defined as follows:
+ C6: Jaccard distance similarity. Jaccard distance measures
+C1: SFc S metapath denotes that two encrypted sessions share the dissimilarity between sample sets by computing the ratio
+ the same JA3 fingerprint, which represents that they are initi- of the difference between their union and intersection to the
+ ated by similar client applications like web browsers, malware union size. Given the unordered nature of C&C instructions,
+ samples, or basic Software Development Kits (SDKs). we construct a k-NN graph of encrypted sessions by comput-
+C2: SFs S metapath denotes that two encrypted sessions share ing the Jaccard distance of downlink packet length sequences.
+ the same JA3s fingerprint, which represents that the server-
+ Threat activities typically adhere to fixed procedures to esside configurations are similar.
+ tablish connections, leading to relatively consistent commu-
+C3: SCS metapath denotes that two encrypted sessions share
+ nication patterns. Inspired by [65], we extend the application
+ the same certificate, which represents that the identities of the
+ scenario in user action identification to threat identification. To
+ web services accessed are the same and issued by the same
+ capture these temporal correlations, we employ DTW distance
+ non-root issuer.
+ to measure the behavioral similarity of bidirectional encrypted
+C4: SFs CFs S metapath denotes that the server fingerprints
+ communication patterns. Additionally, since C&C instructions
+ of two encrypted sessions share the same certificate, which
+ are often executed in non-strict sequence, we introduce Jaccard
+ represents that the web services sharing similar server condistance to measure the similarity of downlink packet length
+ figurations have the same certificate.
+ sequences, capturing spatial correlations between encrypted
+ In addition, bidirectional packet length sequences are widely sessions.
+applied to characterize network behaviors [8], [64]. For example, Fig. 3 illustrates the construction of homogeneous subgraphs
+bursts of uplink packets may indicate activities like google drive based on DTW and Jaccard distance metrics. Different victims
+uploads or data exfiltration, while bursts of downlink packets may respond differently to the same command due to the varimay be associated with web browsing or malware delivery. We ations in operation system versions, host configurations, and
+252 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+network conditions. For example, the ‘whoami’ command may mapping matrix and the bias vector of node vi ’s type. Then we
+return ‘alice’ on one victim and ‘bob’ on another. Notably, due apply K-head cosine similarity to generate metapath-specific
+to the constrains imposed by the Maximum Transmission Unit feature similarity graphs as follows:
+(MTU), TLS messages frequently span multiple TCP segments,
+ K
+making DTW distance particularly effective in capturing tempo- φ 1   
+ Om [i, j] = cos wk,φ  h∗i , wk,φ  h∗j , (4)
+ral dependencies. Meanwhile, the attacker can arbitrarily reorder K
+ k
+command series. Unlike sequential distance metrics, Jaccard
+distance provides a robust measure of set similarity that remains where  denotes the Hardmard product operation, wk,φ denotes
+unaffected by order, enabling effective identification of such a learnable weight matrix of metapath φ.
+manipulations. For homogeneous subgraph Gs divided by similarities, k-
+ NN graphs are generated on node-level and semantic-level node
+C. Observation Generation embeddings to jointly form homogeneous observations Os . We
+ directly take the homogeneous node embeddings to generate
+ Due to the observational errors (e.g., performance bottle- similarity-specific KNN graphs as follows:
+necks) and random errors (e.g., evasion techniques), the constructed graph is unreliable. To improve the graph structure and Oφs = {KNN(hφ ), KNN(h )}, (5)
+restore the true nature of the complex relations among network
+objects, we utilize the original graph along with multi-order where KNN(·) denotes a KNN graph generating function that
+neighborhood similarity graphs as multi-view observations of takes feature vectors as input. It is notable that layer mark (l) is
+the the optimal graph, guiding its derivation. omitted for simplicity in the above presentation.
+ RETA takes HAN as the encoder. Specifically, we input the Considering a l-layer HAN, the heterogeneous observations
+original graph G = (Gm , Gs ) into HAN, which follows a hier- Om consists |Φm | × (1 + l) heterogeneous feature similarity
+archical attention mechanism. At each layer, node-level attention graphs, where |Φm | are original graph structures and |Φm | × l
+first assigns importance scores to metapath-based neighbors, are generated on semantic-level aggregated embeddings. The
+aggregating them into semantic-specific node representations homogeneous observations Ok consists of |Φs | × (1 + l) + l
+for each metapath. Next, semantic-level attention assigns im- homogeneous feature similarity graphs, where |Φs | are original
+portance scores to each metapath, aggregating semantic-specific graph structures, |Φs | × l are generated on node-level aggrenode representations into final comprehensive representations. gated embeddings, and l are generated on semantic-level ag-
+In this context, we treat similarity-based neighbors in homo- gregated embeddings. Notably, these l homogeneous feature
+geneous graphs as metapath-based neighbors to align with the similarity graphs generated on semantic-level aggregated emaggregation mechanism in HAN. The one-layer aggregations of beddings are shared by all homogeneous relations. The above
+node i in HAN are as follows: observations serve as guidance to help correct the observed graph
+ and infer a more trustworthy graph topology.
+ hφi = NAj∈N φ (hj ), (1)
+ i
+
+ D. Graph Derivation
+ hi = SAφ∈Φ (hφi ), (2)
+ Though the multi-view observations reflect the optimal graph
+where NA and SA denote node-level and semantic-level at- from different perspectives, there may exist conflicts among obtention aggregations, Niφ denotes the collection of node i’s servations. The derivation of the optimal graph can be decoupled
+metapath φ-based neighbors, and Φ denotes the collection of into independent subproblems focused on deriving its optimal
+metapaths. During the hierarchical aggregations, the updated components.
+node representation captures both the structural information 1) Heterogeneous Subgraph Derivation: Given heterogewithin its multi-order neighbors and the semantic information neous observations Om , we aggregate them in each metapath
+of various metapaths. We retrieve the node representations from φ ∈ Φm independently to derive the estimated adjacency matriintermediate layers to construct multi-order neighborhood simi- ces Aφm of the optimal heterogeneous subgraph Gφm as follows:
+larity graphs as multi-view observations O = {Om , Os }. Both
+heterogeneous subgraph Gm and homogeneous subgraph Gs
+can be further divided by metapaths and similarities. Aφm = AGG(Oφm )
+ For heterogeneous subgraph Gm divided by metapaths, cosine similarity is used to compute the similarity graphs of = AGG(Aφm , Oφ,(1)
+ m , Oφ,(2)
+ m , . . . , Oφ,(l)
+ m ), (6)
+semantic-level features for each metapath φ ∈ Φ to form het- where AGG denotes aggregation operation that aggregates both
+erogeneous observations Om . Firstly, we design a type-specific the original observed graph and the multi-order neighborhood
+transformation to unify the heterogeneous nodes with different similarity graphs in each metapath to derive the optimal heterofeature spaces as follows: geneous subgraph.
+   2) Homogeneous Subgraph Derivation: Given homogeh∗i = σ Wt(vi ) hi + bt(vi ) , (3)
+ neous observations Os , inferring the optimal homogeneous subwhere σ(·) denotes a non-linear activation function, t(·) denotes graph Gs is challenging. However, assuming that Gs is known,
+a node type mapping function, Wt(vi ) and bt(vi ) denote the it is simpler to calculate the probabilities of mapping it to the
+ZHAO et al.: UNIFIED FRAMEWORK FOR ROBUST ENCRYPTED MALICIOUS TRAFFIC DETECTION IN ADVERSE ENVIRONMENTS 253
+
+observations. The inverse problem can be solved by Bayesian To reduce computational overhead and potential noise, we mask
+inference. (i.e., zero out) elements in the estimated adjacency matrices
+ First, we suppose that the optimal homogeneous subgraph Gs of both heterogeneous and homogeneous subgraphs that are
+satisfies the property of the Stochastic Block Model (SBM) with smaller than the given threshold  as follows:
+latent community structure to ensure homophily,. Given SBM 
+parameters Ω, known labels YL , unknown predictions Z, the A[i, j] if A[i, j] ≥ ,
+ A[i, j] = (13)
+probability distribution of the optimal homogeneous subgraph 0 otherwise.
+Gs is denoted as follows:
+  E. Iterative Optimization
+ P (Gs |Ω, YL , Z) = P (Gφs |Ω, YL , Z)
+ φ∈Φs The estimated adjacency matrices A and the graph encoder
+   φ φ parameters Θ are optimized iteratively. Along with the graph
+ = ΩGcisc[i,j]
+ j
+ (1 − Ωci cj )1−Gs [i,j] , (7) encoder optimization, the node representations from intermedi-
+ φ∈Φs i=j ate layers are increasingly informative, providing more accurate
+where observations and better estimated graphs. Conversely, the graph
+  encoder can be further optimized with the updated graph. In this
+ yi if vi ∈ VL ,
+ ci = (8) manner, RETA achieves mutual data-model optimizations, with
+ zi otherwise. noisy relation correction and detection robustness improvement.
+ 1) Update Θ: In this work, we construct a graph to model
+ Next, we introduce homogeneous observations Os as external
+ the complex relations among encrypted sessions, where a small
+knowledge to infer the optimal homogeneous subgraph Gs .
+ number of encrypted session nodes are labeled. RETA takes
+Assuming that the edges in observations follows a Bernoulli
+ HAN as the graph encoder to classify encrypted sessions into
+distribution, its parameters are conditional on the existence
+ malicious and benign. In semi-supervised node classification
+of the edges in the optimal homogeneous subgraph, where α
+ settings, the graph encoder is optimized by minimizing the cross
+denotes the true positive rate, the probability that edges in the
+ entropy loss over all labeled nodes as follows:
+observations truly appear in Gφs , and β denotes the false positive
+ 
+rate. Supposing that the edge between node i and node j is min L(A, X, YL ) = − yi ln zi , (14)
+observed Nij times out of N (i.e., |Oφs |) observations, given the Θ
+ vi ∈VL
+optimal homogeneous subgraph Gφs and the parameters α, β, the
+probability of homogeneous observations can be calculated as where yi and zi are the label and prediction of node vi . With
+follows: the guide of all labeled nodes vi ∈ VL , the graph encoder pa-
+  φ
+ rameters Θ are updated via Stochastic Gradient Descent (SGD),
+ P (Oφs |Gφs , α, β) = [αNij (1 − α)N −Nij ]Gs [i,j] allowing for learning more informative node representations.
+ i=j 2) Update A: With the graph encoder parameters Θ held
+ φ constant, we retrieve a new set of observations O as guidance to
+ × [β Nij (1 − β)N −Nij ]1−Gs [i,j] . (9)
+ optimize the graph structure, where the optimal heterogeneous
+ As such, we can utilize Bayesian inference to calculate the and homogeneous subgraphs are derived independently.
+posterior probability of the optimal homogeneous subgraph Gφs Given heterogeneous observations Om , channel attention is
+as follows: utilized to aggregate the multi-order neighborhood similarity
+ graphs in each metapath φ ∈ Φm to estimate the optimal ad-
+ P (Gφs , Ω, α, β|Oφs , YL , Z) =
+ jacency matrices Am for heterogeneous subgraph Gm , where
+ P (Oφs |Gφs , α, β)P (Gφs |Ω, YL,Z )P (Ω)P (α)P (β)
+ , (10)
+ P (Oφs , YL,Z ) Oφm = {Aφm , Oφ,(1)
+ m , Oφ,(2)
+ m , . . . , Oφ,(l)
+ m }. (15)
+where P (Ω), P (α), P (β) and P (Oφs , YL , Z) are the probabil- The importance of multi-faced observations is balanced with
+ities of parameters, observations, labels, and predictions, which channel attention to derive the optimal heterogeneous subgraph
+are assumed to be independent. To eliminate the effects of Gφs , we as follows:
+sum up all possible structures to derive the posterior probability
+of parameters Ω, α, β as follows: Aφm = CA(Aφm , Oφ,(1)
+ m , Oφ,(2)
+ m , . . . , Oφ,(l)
+ m ), (16)
+ 
+ P (Ω, α, β|Oφs , YL , Z) = P (Gφs , Ω, α, β|Oφs , YL , Z). where CA denotes channel attention operation to perform 1 × 1
+ convolution on the multi-view observations generated in differ-
+ Gφ
+ s
+ (11) ent layers.
+ By maximizing the posterior probability, we derive the prob- Given homogeneous observations Os , we apply the Expecability distribution q(Gφs ) to calculate the estimated adjacency tation Maximization (EM) algorithm to maximize the posterior
+matrices Aφs as follows: probability of the optimal homogeneous subgraphs Gφs in (10),
+  which is equivalent to maximize its logarithm form. In EM algo-
+ Aφs [i, j] = q(Gφs )Gφs [i, j] (12) rithm, E-step and M-step are repeated iteratively for Maximum
+ Gφ
+ s
+ Likelihood Estimation (MLE).
+254 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ In E-Step, we construct a lower-bound in (17). Consider the Algorithm 1: The Workflow of RETA.
+hidden variable Gφs , the distribution of which is denoted by
+ φ
+q(Gs ) ( Gφs q(Gφs ) = 1, q(Gφs ) ≥ 0). Since logarithm is strictly
+concave, we can achieve the lower-bound according to Jensen’s
+inequality as follows:
+ log P (Ω, α, β|Oφs , YL , Z)
+  P (Gφs , Ω, α, β|Oφs , YL , Z)
+ = log q(Gφs )
+ q(Gφs )
+ Gφ
+ s
+
+  P (Gφs , Ω, α, β|Oφs , YL , Z)
+ ≥ q(Gφs ) log , (17)
+ q(Gφs )
+ Gφ
+ s
+
+where the equality holds when the random variable is constant.
+By summation, we get q(Gφs ) as follows:
+ P (Gφs , Ω, α, β|Osφ , YL , Z)
+ q(Gφs ) =  . (18)
+ Gφ
+ s
+ P (Gφs , Ω, α, β|Osφ , YL , Z)
+
+With the choice of q(Gφs ), Equation (17) provides the lower
+bound of the posterior probability. Next, we update the parameters to maximize the lower bound.
+ In M-Step, we hold q(Gφs ) constant and take the derivatives
+of the right side of (17) to have Maximum-A-Posteriori (MAP)
+estimations as follows:
+    Gφ [i, j] 1 − Gφ [i, j] to estimate a better graph topology. The relation subgraphs of
+ φ s s
+ q(Gs ) − = 0, (19) heterogeneous and homogeneous graphs are estimated indepen-
+ Ω c i c j
+ 1 − Ω ci cj
+ φ
+ Gs i=j
+ dently. Following an iterative manner, RETA achieves mutual
+    optimizations of both data and model, simultaneously improve
+ Nij N − Nij
+ q(Gφs ) Gφs [i, j] − = 0, (20) relation modeling and detection robustness.
+ α 1−α
+ Gφ
+ s
+ i=j
+
+   
+  Nij N − Nij
+ q(Gφs ) 1 − Gφs [i, j] − = 0. (21) F. Complexity Analysis
+ β 1−β
+ Gφ i=j
+ s The computational complexity of RETA’s key components is
+By solving these equations, we get: analyzed as follows. We decompose the overall computational
+  φ
+ cost into three core stages: graph construction, observation geni=j Ak [i, j]Ni,j eration, and graph derivation, and provide an in-depth evaluation
+ α=  , (22)
+ N i=j Aφk [i, j] of the time complexity for each stage. This analysis helps to
+  understand the scalability and efficiency of RETA when applied
+ i=j 1 − Aφk [i, j] Nij to large-scale encrypted traffic datasets.
+ β=  , (23) 1) Graph Construction: Graph construction involves three
+ N i=j 1 − Aφk [i, j] main steps. First, flow/node features are extracted in linear time
+  with respect to the graph size, i.e., O(N ). Second, behavioral
+ Mrs
+ nr ns if r = s, similarity between nodes is computed to construct k-NN graphs,
+ Ωrs = 2Mrr (24)
+ nr (nr −1) otherwise, which requires O(kN log N ) time due to nearest neighbor
+   search with efficient approximate methods. Third, semantic
+where nr = i δci r , Mrs = i=j Aφk [i, j]δci r δcj s . Substitut- metapath are constructed with linear complexity O(N ). Overall,
+ing (7), (9), (18) into (12), we obtain the estimated adjacency the dominant term is O(kN log N ) as follows:
+matrices Aφs for homogeneous graph Gφs as follows:
+ Aφs [i, j] = Cgraph = O(N ) + O(kN log N ) + O(N )
+    
+ Nij N −Nij
+ Ωci cj α (1 − α) feature extraction behavioral similarity semantic metapath
+   .
+ N
+ Ωci cj α (1 − α)N −Nij + 1 − Ωci cj β Nij (1 − β)N −Nij
+ ij
+ = O(kN log N ), (26)
+ (25)
+ As such, RETA iteratively updates Θ to optimize the graph where N and E denote the number of nodes and edges, respecencoder, generating more accurate observations, and updates A tively.
+ZHAO et al.: UNIFIED FRAMEWORK FOR ROBUST ENCRYPTED MALICIOUS TRAFFIC DETECTION IN ADVERSE ENVIRONMENTS 255
+
+ 2) Observation Generation: For a l-layer HAN, each layer TABLE II
+ THE STATISTICAL DETAILS OF THE DATASETS
+involves both node-level aggregation and semantic-level attention across different metapaths. The node-level aggregation requires O(N d2 + Ed) per layer due to matrix multiplications and
+neighbor aggregation. Semantic-level aggregation adds another
+O(N d2 ). Additionally, during multi-view observation generation, neighbor similarity computations contribute O(kN log N ).
+However, since d is typically large compared to k log N , the
+overall complexity is dominated by O(lN d2 ) as follows:
+ ⎡ ⎤ other baseline models, we utilize PcapPlusPlus, a multiplatform
+ C++ library, to randomly drop packets to simulate network
+ ⎢ 2 2 ⎥ fluctuations, and we utilize DeepRobust, a PyTorch adversarial
+Cobs = l · ⎣O(N d + Ed) + O(N d ) + O(kN log N ) ⎦
+       library for attack and defense methods on graphs, to perform
+ node-level agg. semantic-level agg. observation generation
+ the Fast Gradient Sign Method (FGSM) attack on the graph to
+ 2
+ = O(lN d ), (27) simulate adversarial attacks.
+ Notably, For MTA and EC&C datasets, we collect encrypted
+where d denotes node feature dimension. traffic captures of various benign applications from the edge
+ 3) Graph Derivation: In the dense case, graph would require routers in Beijing University of Posts and Telecommunications
+O(N 2 ) per iteration due to pairwise relation updates. To improve campus network as negative samples.
+scalability, RETA adopts a sparse approximation strategy, where 3) Baseline Models: To validate the superior performance of
+only a limited number of significant neighbors (on average s) are RETA, we compare RETA with five baseline models as follows.
+considered per node, reducing the cost to O(sN ) per iteration. Among all baseline models, two are traditional ML-based and
+ ⎡ ⎤ DL-based methods that rely on single-session analysis. Another
+ ⎢ ⎥ two are GNN-based methods that model multi-session relations
+ Cbayes = τ · ⎣O(N 2 ) → O(sN ) ⎦ as graph structures for correlation analysis. The rest one is
+    
+ dense case sparse approx. a HGNN-based method to validate the robustness of RETA
+ against adversarial attacks on heterogeneous graph. It is notable
+ = O(τ sN ) (28)
+ that most of the selected methods are open-source and we
+where τ is the number of EM iterations, and s N is the directly utilize their publicly available implementations. For
+average number of neighbors in sparse inference. those that are not open-source, we have carefully reproduced
+ them, strictly adhering to the hyper-parameter configurations
+ V. EXPERIMENTS specified in the original papers. Additionally, all baseline models
+ are fine-tuned to achieve their optimal performance on our
+A. Dataset and Setups experimental datasets. A brief overview of the selected baselines
+ 1) Dataset: We evaluate the detection performance and ro- is provided below.
+bustness of RETA on three experimental datasets, including USTC-CNN [28] is an end-to-end encrypted traffic classifier
+two public datasets and one self-collected dataset. The detailed with 1D convolution neural network. Raw traffic captures are
+descriptions of these datasets are as follows: processed and reassembled into different sessions. The first 784
+ r DoH [66] dataset is a DNS over HTTPS (DoH) dataset bytes in each session are utilized for detection.
+ includeing benign-DoH, malicious-DoH, and non-DoH IARF [68] is an encrypted malware traffic detection method
+ traffic generated by five browsers and tools (i.e., Google via Improved Adaptive Random Forests (IARF) to adaptively
+ Chrome, Mozilla Firefox, dns2tcp, dnscat2, and iodine) update parameters when handling unseen malware traffic.
+ and four servers (i.e., AdGuard, Cloudflare, Google DNS, RSGAT [9] is an encrypted malicious traffic detection method
+ and Quad9). based on tailored graph attention networks. RSGAT models the
+ r MTA [67] dataset consists of a collection of malware traf- reliability and stationary of traffic communication patterns.
+ fic captures published in a blog (http://malware-traffic- RETRIAL [19] constructs a relational multigraph to model the
+ analysis.net) focusing on network traffic related to malware relations among encrypted flows, and utilize graph structure estiinfections. mation network for misleading relation correction and selective
+ r EC&C dataset is generated by three customized Remote relation incorporation.
+ Administrator Tools (i.e., Metasploit, Pupy, and Quasar- HAN [54] models heterogeneous relations among network
+ RAT). We randomly generate command sequences, re- objects as metapaths and takes the graph as input and follows
+ motely execute them on the compromised hosts, and record a hierarchical attention mechanism to aggregate both metapaththe interactive communications. based and similarity-based neighborhood information.
+ Table II summarizes the statistical details of the datasets.
+ 2) SETUPS: RETA is primarily implemented with PyTorch B. Performance Analysis
+and Deep Graph Library (DGL). The raw traffic captures are In this section, we begin by comparing RETA with all baseline
+preprocessed and extracted by Tshark. For fair comparisons with models in clean scenario. Then we simulate network fluctuations
+256 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ TABLE III
+ PERFORMANCE COMPARISONS OF BASELINE MODELS AND RETA IN DIFFERENT ADVERSE ENVIRONMENTS
+
+and adversarial attacks to evaluate the performance degradation DoH dataset, representing DNS-over-HTTPS traffic, proves
+of RETA and other baseline models. The overall results are particularly challenging for most models under packet loss
+summarized in Table III. The specific observations from the conditions. Here, RSGAT’s accuracy plummets to 63.90% at
+experimental results are divided into three parts as follows: p = 30%, suggesting its graph attention mechanism is highly
+ 1) Performance Comparisons in Clean Scenario: In the ab- sensitive to missing packets in encrypted DNS streams. In consence of adversarial interference, all models achieve strong trast, RETA maintains 96.95% accuracy, demonstrating excepperformance, with graph-based approaches generally outper- tional resilience that stems from two key innovations: (1) adapforming traditional methods. As exhibited in Table III, on the tive neighborhood aggregation that reconstructs missing node
+DoH dataset, RETRIAL achieves the highest accuracy (99.57%), features through relational inference, and (2) a dynamic graph
+followed closely by RETA (99.50%) and HAN (99.41%), while completion mechanism that probabilistically estimates disrupted
+USTC-CNN lags significantly (89.43%). A similar trend is connections, which proves particularly effective for DoH, where
+observed on the MTA dataset, where RSGAT performs best packet loss often breaks critical temporal dependencies in DNS
+(99.52%), with RETA (99.23%) and RETRIAL (99.35%) also query sequences.
+showing competitive results. The EC&C dataset sees RETRIAL On MTA dataset, we observe a different pattern of degradation.
+and HAN tied for the highest accuracy (99.86%), but RETA While USTC-CNN and IARF show similar vulnerability (both
+achieves the lowest false positive rate (0.09%), demonstrating <87% accuracy at p = 30%), the performance gap between
+its ability to maintain high precision while minimizing false RETA (98.88%) and other graph-based models narrows compositives. pared to DoH. This suggests that malware traffic patterns in
+ These results indicate that graph-based models, particularly MTA may contain more redundant behavioral signatures, makthose leveraging relational structures (e.g., RETRIAL, RETA, ing them inherently more tolerant to packet loss. Nevertheless,
+RSGAT), are highly effective in clean environments. Traditional RETA’s consistent advantage highlights its ability to leverage
+methods like USTC-CNN struggle due to their limited ability both structural and temporal regularities in malicious traffic
+to capture multi-session relations. RETA’s strong performance sessions.
+in this scenario validates its design, which integrates semantic EC&C dataset presents the most stable performance landmetapaths and behavioral similarities without introducing ad- scape across models, with even baseline methods maintaining
+verse effects. This lays a solid foundation for further robustness >90% accuracy at maximum packet loss. However, RETA
+evaluation in adverse environments. still achieves superior results (99.31%), likely because covert-
+ 2) Degradations Under Network Fluctuations: To evalu- channel communications exhibit more predictable periodicity
+ate the robustness against network fluctuations, we simu- in their communication patterns. The model’s channel attention
+late packet loss scenarios with varying dropout rates p ∈ mechanism appears particularly effective at reconstructing ir-
+{10%, 20%, 30%}. Table III reveals that while all models ex- regular transmission patterns when packets are dropped.
+hibit performance degradation under these conditions, the ex- Notably, the comparison with HAN reveals fundamental artent varies considerably based on both architectural design and chitectural advantages. Where HAN’s static graph construction
+dataset characteristics. fails to adapt to missing data (93.84% on EC&C at p = 30%),
+ZHAO et al.: UNIFIED FRAMEWORK FOR ROBUST ENCRYPTED MALICIOUS TRAFFIC DETECTION IN ADVERSE ENVIRONMENTS 257
+
+RETA’s probabilistic edge estimation maintains graph integrity
+through: (1) learned attention weights that redistribute importance across surviving connections, and (2) meta-path guided
+feature imputation that preserves semantic relations. This explains the <3% accuracy drop for RETA across all datasets at
+maximum packet loss, compared to 5-9% drops for other models.
+ These results collectively demonstrate that while datasetspecific traffic patterns influence absolute performance, RETA’s
+design principles provide consistent advantages across diverse
+encrypted communication scenarios. The framework’s ability Fig. 4. Visualization of attention scores.
+to dynamically reconfigure its graph representation in response
+to missing data makes it particularly valuable for real-world
+deployment, where network conditions are unpredictable and
+packet loss is inevitable. C. Interpretability Analysis
+ 3) Degradations Under Adversarial Attacks: Follow- To improve the interpretablity of RETA in encrypted maliing [12], we employ FGSM to generate adversarial perturbations cious traffic detection, we incorporate a detailed analysis of its
+with Δ ∈ {1, 3, 5} edge modifications. To ensure fair com- hierarchical attention mechanism, including both node-level and
+parison across models with different graph construction semantic-level attention. This analysis aims to visualize how
+methodologies, we focus our adversarial evaluation on RETA RETA prioritizes neighbors and relations among encrypted sesand its closest counterpart HAN. The results reveal striking sions during the detection process, and to provide insights into
+differences in adversarial robustness that vary meaningfully which factors contribute most to decision-making, improving
+across datasets. transparency and trustworthiness in its predictions.
+ On the DoH dataset, which exhibits complex query-response Node-level Attention: RETA captures discriminative local
+dependencies, RETA maintains 99.15% accuracy even at Δ = 5, structures by assigning attention to neighbors under each metapdemonstrating remarkable robustness against edge perturba- ath, encompassing both semantic paths and behavioral similarity
+tions. In contrast, HAN’s accuracy degrades to 92.30% under relations. Since each metapath induces a distinct subgraph, the
+identical conditions. This substantial 6.85% performance gap corresponding neighborhoods differ. As illustrated in Fig. 4(a),
+highlights how RETA’s graph structure optimization preserves attention scores are computed independently per metapath. Nodetection performance when adversarial edges disrupt normal tably, metapath-based neighbors exhibit varied contributions,
+DoH traffic patterns. reflecting diverse structural semantics, whereas similarity-based
+ The EC&C dataset shows a similar trend, with RETA neighbors tend to receive more uniform attention due to their less
+(99.62%) outperforming HAN (95.72%) by 3.9%. This smaller discriminative nature. The attention mechanism enables RETA
+margin suggests that covert-channel communications may be to distinguish informative neighbors from noisy ones, especially
+inherently more robust to edge perturbations, possibly due to under complex contexts.
+more standardized protocol structures. Nevertheless, RETA’s Semantic-level Attention: While node-level attention captures
+dynamic structure learning mechanism proves consistently ad- fine-grained local patterns, semantic-level attention aggregates
+vantageous, automatically identifying and downweighting sus- the meta-path-specific embeddings to learn the relative imporpicious edges through its attention-based filtering. tance of different semantic contexts.
+ Interestingly, the malware-focused MTA dataset reveals the As illustrated in Fig. 4(b), we observe that SFc S meta-path
+narrowest performance gap (98.94% vs. 95.15% at Δ = 5). receives the highest attention score among all relations, suggest-
+This relative similarity implies that malicious traffic patterns ing that client-side TLS fingerprints are the most discriminative
+in MTA may contain more distinctive behavioral signatures feature in distinguishing malware-generated traffic from benign
+that remain detectable even when edges are perturbed. How- traffic. The SFs S and SCS paths contribute moderately, indiever, RETA still maintains its advantage by combining three cating server configuration and certificate identity still provide
+key defensive mechanisms: (1) multi-view relation model- valuable but less dominant signals. In contrast, the transitive
+ing including semantic metapaths and behavioral similarities, meta-path SFs CFs S exhibits a relatively low attention score. A
+(2) mutual optimization of both graph data and detection possible reason is that the occurrence of multi-hop associations
+model. in infrequent in real-world traffic.
+ These dataset-specific variations underscore that while adver- Additionally, the behavioral similarity relation based on DTW
+sarial vulnerability depends partly on traffic features, RETA’s distance achieves a moderate attention score, implying that
+architectural innovations provide consistent protection across temporal similarity in packet length sequences captures critical
+different encrypted communication scenarios. The results par- patterns such as consistent upload/download behaviors in coorticularly emphasize how static graph approaches like HAN dinated attacks. While the relation based on Jaccard distance is
+struggle with edge perturbations, while RETA’s dynamic graph assigned a slightly lower attention score, which may be attributed
+structure learning offers crucial adaptability against evolving to its limited expressiveness in capturing nuanced variations
+evasion techniques. under adversarial conditions.
+258 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 5. Visualization of the graph structures for (a) original heterogeneous subgraph of metapath SFs S and (c) corresponding estimated graph generated by
+RETA, where red indicates the benign session, blue indicates the malicious session, beige indicates the server fingerprint. The remaining nodes and edges are faded
+to highlight the heterogeneous neighbors of selected server fingerprint node in (b) original graph and (d) estimated graph.
+
+ TABLE IV TABLE V
+ PERFORMANCE COMPARISONS OF RETA VARIANTS IN DIFFERENT ADVERSE THE OPTIMAL HYPER-PARAMETERS PER DATASET
+ ENVIRONMENTS
+
+ E. Graph Visualization
+ We take MTA dataset as an example and utilize Gephi to
+ visualize SFs S metapath-based heterogeneous subgraph and
+ DTW distance-based homogeneous subgraph to show the graph
+ structure optimizations by RETA. As shown in Fig. 5(a) and (c),
+ the original graph is chaotic, while the estimated graph is more
+ harmonious. Zooming into the neighbors of the selected server
+ fingerprint node, as shown in Fig. 5(b) and (d), the server fingerprint node connects with both benign and malicious session
+ nodes in the original graph. In contrast, the metapath-based
+ neighbors tend to have the same labels in the estimated graph.
+ Likewise, as shown in Fig. 6, with the optimization of RETA,
+ homogeneous nodes with same labels are more likely to be
+D. Ablation Study
+ connected. The estimated homogeneous graph is more in line
+ We conduct an ablation study to evaluate the contribution of with the well-performed premise of HGNNs.
+each key component in RETA. Specifically, we first compare the
+full RETA with two variants as follows:
+ r w/o M removes homogeneous optimization (i.e., Bayesian F. Hyper-Parameter Sensitivity
+ inference) on similarity-based relation subgraphs. In this subsection, we present the rigorous hyper-parameter
+ r w/o S removes heterogeneous optimization (i.e., channel tuning process in RETA using grid search with 5-fold
+ attention) on metapath-based relation subgraphs. cross-validation on each dataset’s training split. The hyper-
+ As summarized in Table IV, the full RETA model exhibits parameters include k ∈ [5, 6, . . . , 9] for k-NN graph construcminimal performance degradation under adversarial conditions. tion,  ∈ [0.6, 0.7, . . . , 0.9] for graph sparsification, and λ ∈
+With a 30% packet loss rate, its accuracy drops by only 1.14% on [10−5 , . . . , 10−1 ] for convergence control. Table V summarizes
+average across the three datasets, demonstrating strong robust- the optimal values per dataset and selection rationale.
+ness. In contrast, the variants show significantly larger declines. k: As illustrated in Fig. 7(a), generally, with the increment
+For example, on EC&C dataset, w/o M suffers a 4.92% accuracy of k value, the accuracies of RETA on three datasets show
+drop (from 99.89% to 94.97%), while w/o S degrades by 1.44% an ascending trend at the beginning, then gradually decrease.
+(from 99.96% to 98.52%). This highlights the complementary RETA achieves the best performance with k = [6, 6, 7] on DoH,
+roles of both optimizations in maintaining robustness. MTA, and EC&C datasets. We believe that the constructed
+ZHAO et al.: UNIFIED FRAMEWORK FOR ROBUST ENCRYPTED MALICIOUS TRAFFIC DETECTION IN ADVERSE ENVIRONMENTS 259
+
+Fig. 6. Visualization of the graph structures for (a) original homogeneous subgraph with DTW distance and (c) corresponding estimated graph generated by
+RETA, where red indicates benign sessions, blue indicates malicious sessions. The remaining nodes and edges are faded to highlight the homogeneous neighbors
+of selected benign session node in (b) original graph and (d) estimated graph.
+
+Fig. 7. Hyper-parameters sensitivity analysis on DoH, MTA, and EC&C datasets.
+
+k-NN graphs with larger k value incorporate more structural
+information within multi-order neighborhoods, thus achieving
+better detection performance. However, excessive correlations
+may introduce more noise and mislead the decisions of HGNN.
+ : Additionally, we can see that the sparsification threshold 
+also dramatically affects the RETA performance in Fig. 7(b).
+RETA achieves the best performance with  = [0.8, 0.7, 0.8]
+on DoH, MTA, and EC&C datasets, respectively. Similarly, the
+accuracies of RETA first increase then decrease because too
+sparse or too dense graph structure with too little or too large 
+would lead to unsatisfactory performance.
+ λ: λ controls the convergence of RETA. When the difference
+between the updated and the original parameters is less than
+λ, the optimization of RETA ends. As shown in Fig. 7(c), the
+optimal  values are [10−2 , 10−3 , 10−4 ] respectively on DoH,
+MTA and EC&C datasets.
+
+G. Embedding Visualization
+ To intuitively evaluate the effectiveness of our proposed Fig. 8. Emebedding visualization of HAN, RETAm , RETAs and RETA.
+RETA, we visualize the embeddings of encrypted sessions
+learned by RETA, RETAm , RETAs , HAN in adverse environments by t-SNE [69]. Specifically, we take MTA dataset as We can see that packet loss causes the loss of valuable inforan example to present the representations of RETA and other mation and affect the decisions of detectors to a great extent.
+baseline models in the case that the packet loss rate is 10%. As However, our proposed RETA effectively tackles this adverse
+illustrated in Fig. 8, the orange points represent the embeddings environment. The visualization of the embeddings learned by
+of encrypted benign sessions, and the green points represent the RETA has the most apparent boundaries between benign and
+embeddings of encrypted malicious sessions. malicious.
+260 IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+ VI. DISCUSSION model the rich semantic metapaths and behavioral similarities
+ among encrypted sessions. Then we utilize a tailored HAN as
+ RETA exhibits superior robustness in encrypted malicious
+traffic detection under adversarial network conditions, yet it still graph encoder and employ channel attention-based aggregation
+ and Bayesian inference-based estimation to jointly correct noisy
+exposes some potential issues to be addressed. In this section,
+ relations. Following an iterative manner, the graph data and dewe provides a critical analysis of RETA’s limitations and present
+promising directions for future research. tection model achieve mutual optimizations with noisy relation
+ correction and detection robustness improvement. In evalua-
+ 1) Graph Paradigm: RETA constructs a comprehensive graph
+ tions, we modify raw traffic captures to simulate network flucthat integrates both heterogeneous and homogeneous subgraphs
+to capture semantic metapaths and behavioral similarities among tuations and adversarial attacks. Extensive experiments demonstrate the superior robustness of RETA in adverse environments,
+encrypted sessions. The former are derived from SSL/TLS
+protocol-related fields, while the latter are measured by packet underscore the potential of RETA to advance encrypted traffic
+length sequences with various distance metrics. However, as a analysis in increasingly adversarial network landscapes. Future
+ work will explore the extension of RETA to more dynamic and
+general detection system, RETA should not be constrained to
+specific protocols or predefined relations. Future research could complex threat environments, further enhancing its efficiency,
+explore protocol-independent metapaths and additional distance adaptability, and resilience.
+metrics to model richer relations among encrypted sessions for
+subsequent analysis.
+ 2) Unified Optimization: By employing a unified graph struc- REFERENCES
+ture learning approach, RETA decomposes the optimization of [1] Zscaler, “Threatlabz 2024 encrypted attacks report,” Tech. Rep., 2024.
+the graph into independent sub-optimizations for its heteroge- [Online]. Available: https://www.zscaler.com/resources/industry-reports/
+ threatlabz-encrypted-attacks-report.pdf
+neous and homogeneous subgraphs divided by relations. Specif- [2] Z. Durumeric et al., “The security impact of HTTPS interception,” in Proc.
+ically, heterogeneous subgraphs are estimated using channel 2017 Netw. Distrib. Syst. Secur. Symp., 2017.
+attention, while homogeneous subgraphs are derived indepen- [3] J. Zhou et al., “Graph neural networks: A review of methods and applications,” AI Open, vol. 1, pp. 57–81, 2020.
+dently through Bayesian inference independently. Future work [4] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and P. S. Yu, “A comprehensive
+should focus on developing a more unified graph optimiza- survey on graph neural networks,” IEEE Trans. Neural Netw. Learn. Syst.,
+tion framework, incorporating attention-based aggregation and vol. 32, no. 1, pp. 4–24, Jan. 2021.
+ [5] S. Wu, F. Sun, W. Zhang, X. Xie, and B. Cui, “Graph neural networks
+probability-based estimation, to facilitate the joint optimization in recommender systems: A survey,” ACM Comput. Surveys, vol. 55,
+of relation subgraphs. pp. 1–37, 2020.
+ 3) Scalability Concerns: Though RETA achieves strong de- [6] T. -D. Pham, T. -L. Ho, T. Truong-Huu, T. -D. Cao, and H. -L. Truong,
+ “MAppGraph: Mobile-app classification on encrypted network traffic
+tection robustness, scalability issues persist when extending to using deep graph convolution neural networks,” in Proc. Annu. Comput.
+large graphs including the significant computational overhead Secur. Appl. Conf., 2021, pp. 1025–1038.
+associated with k-NN calculations during homogeneous sub- [7] W. Li, X. -Y. Zhang, H. Bao, H. Shi, and Q. Wang, “ProGraph: Robust
+ network traffic identification with graph propagation,” IEEE/ACM Trans.
+graph construction and observation generation, and the substan- Netw., vol. 31, no. 3, pp. 1385–1399, Jun. 2023.
+tial memory requirements imposed by GNNs. We experiment [8] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized
+with a flow aggregation technique that explicitly encodes flow application identification via encrypted traffic analysis using graph neural
+ networks,” IEEE Trans. Inf. Forensics Secur., vol. 16, pp. 2367–2380,
+count information into node embeddings, effectively reducing 2021.
+graph scale with slight performance impact. Future research [9] J. Zhao, Q. Li, S. Liu, Y. Yang, and Y. Hong, “Towards traffic supervision
+should explore alternative flow aggregation strategies and novel in 6 G: A graph neural network-based encrypted malicious traffic detection
+ method,” Scientia Sinica Informationis, vol. 52, no. 2, pp. 270–286, 2022.
+graph construction paradigms to enhance scalability without [10] W. W. Lo, S. Layeghy, M. Sarhan, M. Gallagher, and M. Portmann, “Ecompromising detection efficacy. GraphSAGE: A graph neural network based intrusion detection system for
+ 4) Attack Simulations: To evaluate RETA’s robustness, we IoT,” in Proc. NOMS 2022 IEEE/IFIP Netw. Operations Manage. Symp.,
+ 2022, pp. 1–9.
+simulate network fluctuations and adversarial attacks by drop- [11] Z. Xi, R. Pang, S. Ji, and T. Wang, “Graph backdoor,” in Proc. 30th USENIX
+ping packets and adding perturbation edges. Future work should Secur. Symp., 2021, pp. 1523–1540.
+expand these simulations to encompass more realistic attack [12] M. Zhang, X. Wang, M. Zhu, C. Shi, Z. Zhang, and J. Zhou, “Robust
+ heterogeneous graph neural networks against adversarial attacks,” in Proc.
+scenarios, such as DDoS and botnet attacks. Additionally, topo- AAAI Conf. Artif. Intell., Jun. 2022, vol. 36, pp. 4363–4370.
+logical adversarial attacks that mimic legitimate service inter- [13] D. Han et al., “DeepAID: Interpreting and improving deep learning-based
+actions require further investigation. A broader range of attack anomaly detection in security applications,” in Proc. 2021 ACM SIGSAC
+ Conf. Comput. Commun. Secur., 2021, pp. 3197–3217.
+simulations will facilitate a more comprehensive assessment of [14] D. Han et al., “Evaluating and improving adversarial robustness of machine
+RETA’s robustness and contribute to the development of a more learning-based network intrusion detectors,” IEEE J. Sel. Areas Commun.,
+practical and robust encrypted malicious traffic detection system vol. 39, no. 8, pp. 2632–2647, Aug. 2021.
+ [15] D. Pujol-Perich, J. Suárez-Varela, A. Cabellos-Aparicio, and P. Barlet-Ros,
+to tackle adversarial environments. b “Unveiling the potential of graph neural networks for robust intrusion
+ detection,” ACM SIGMETRICS Perform. Eval. Rev., vol. 49, pp. 111–117,
+ Jul. 2021.
+ VII. CONCLUSION [16] W. Li, X. -Y. Zhang, H. Bao, Q. Wang, and Z. Li, “Robust network traffic
+ identification with graph matching,” Comput. Netw., vol. 218, Dec. 2022,
+ In this paper, we propose RETA, a unified framework for Art. no. 109368.
+robust encrypted malicious traffic detection in adverse envi- [17] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted malicious traffic in
+ronments. Specifically, we construct a comprehensive graph real time via flow interaction graph analysis,” in Proc. 2023 Netw. Distrib.
+ Syst. Secur. Symp., 2023.
+integrating both heterogeneous and homogeneous subgraphs to
+ZHAO et al.: UNIFIED FRAMEWORK FOR ROBUST ENCRYPTED MALICIOUS TRAFFIC DETECTION IN ADVERSE ENVIRONMENTS 261
+
+[18] C. Fu, Q. Li, and K. Xu, “Flow interaction graph analysis: Unknown [42] C. Wu, J. Sun, J. Chen, M. Alazab, Y. Liu, and Y. Xiang, “TCG-IDS : Roencrypted malicious traffic detection,” IEEE/ACM Trans. Netw., vol. 32, bust network intrusion detection via temporal contrastive graph learning,”
+ no. 4, pp. 2972–2987, Aug. 2024. IEEE Trans. Inf. Forensics Secur., vol. 20, pp. 1475–1486, 2025.
+[19] J. Zhao et al., “ReTrial: Robust encrypted malicious traffic detection via [43] H. Zhang et al., “Revolutionizing encrypted traffic classification with MHdiscriminative relation incorporation and misleading relation correction,” Net: A multi-view heterogeneous graph model,” in Proc. AAAI Conf. Artif.
+ IEEE Trans. Inf. Forensics Secur., vol. 20, pp. 677–692, 2025. Intell., 2025, pp. 1048–1056.
+[20] B. Anderson and D. McGrew, “Identifying encrypted malware traffic with [44] S. Cui et al., “FG-SAT: Efficient flow graph for encrypted traffic classificacontextual flow data,” in Proc. 2016 ACM Workshop Artif. Intell. Secur., tion under environment shifts,” IEEE Trans. Inf. Forensics Secur., vol. 20,
+ Oct. 2016, pp. 35–46. pp. 5326–5339, 2025.
+[21] C. Novo and R. Morla, “Flow-based detection and proxy-based evasion of [45] L. Bai, Y. Jiao, L. Cui, and E. R. Hancock, “Learning aligned-spatial graph
+ encrypted malware C2 traffic,” in Proc. 13th ACM Workshop Artif. Intell. convolutional networks for graph classification,” in Proc. Mach. Learn.
+ Secur., 2020, pp. 83–91. Knowl. Discov. Databases, Eur. Conf., Würzburg, Germany, Springer,
+[22] F. Střasák, “Detection of HTTPS malware traffic,” PhD dissertation, Czech Sep. 2019, pp. 464–482.
+ Tech. Univ., Prague, Czech Republic, 2017. [46] M. Li, Z. Li, C. Huang, Y. Jiang, and X. Wu, “EduGraph: Learning path-
+[23] A. S. Shekhawat, F. Di Troia, and M. Stamp, “Feature analysis of encrypted based hypergraph neural networks for MOOC course recommendation,”
+ malicious traffic,” Expert Syst. Appl., vol. 125, pp. 130–141, 2019. IEEE Trans. Big Data, vol. 10, no. 6, pp. 706–719, Dec. 2024.
+[24] C. Fu, Q. Li, M. Shen, and K. Xu, “Realtime robust malicious traffic [47] B. Yan et al., “Graph mining for cybersecurity: A survey,” ACM Trans.
+ detection via frequency domain analysis,” in Proc. 2021 ACM SIGSAC Knowl. Discov. Data, vol. 18, no. 2, pp. 1–52, 2024.
+ Conf. Comput. Commun. Secur., Nov. 2021, pp. 3431–3446. [48] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+[25] C. Fu, Q. Li, M. Shen, and K. Xu, “Frequency domain feature based convolutional networks,” in Proc. Int. Conf. Learn. Representations, 2017.
+ robust malicious traffic detection,” IEEE/ACM Trans. Netw., vol. 31, no. 1, [49] W. Hamilton, Z. Ying, and J. Leskovec, “Inductive representation learning
+ pp. 452–467, Feb. 2023. on large graphs,” in Proc. Adv. Neural Inf. Process. Syst., 2017, vol. 30,
+[26] L. Yu, J. Tao, Y. Xu, W. Sun, and Z. Wang, “TLS fingerprint for encrypted pp. 1025–1035.
+ malicious traffic detection with attributed graph kernel,” Comput. Netw., [50] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and Y. Bengio,
+ vol. 247, 2024, Art. no. 110475. “Graph attention networks,” in Proc. Int. Conf. Learn. Representations,
+[27] C. Fu, Q. Li, M. Shen, and K. Xu, “Detecting tunneled flooding traffic 2018.
+ via deep semantic analysis of packet length patterns,” in Proc. 2024 ACM [51] L. Bai et al., “HAQJSK: Hierarchical-aligned quantum Jensen-Shannon
+ SIGSAC Conf. Comput. Commun. Secur., Salt Lake City, UT, USA, 2024, kernels for graph classification,” IEEE Trans. Knowl. Data Eng., vol. 36,
+ pp. 3659–3673. no. 11, pp. 6370–6384, Nov. 2024.
+[28] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware Traffic [52] X. Zheng et al., “Graph neural networks for graphs with heterophily: A
+ Classification Using Convolutional Neural Network for Representation survey,” 2022, arXiv:2202.07082.
+ Learning,” in Proc. Int. Conf. Inf. Netw., Jan. 2017, pp. 712–717. [53] J. Li, R. Zheng, H. Feng, M. Li, and X. Zhuang, “Permutation equivariant
+[29] T. E. T. Djaidja, B. Brik, S. M. Senouci, A. Boualouache, and Y. graph framelets for heterophilous graph learning,” IEEE Trans. Neural
+ Ghamri-Doudane, “Early network intrusion detection enabled by atten- Netw. Learn. Syst., vol. 35, no. 9, pp. 11634–11648, Sep. 2024.
+ tion mechanisms and RNNs,” IEEE Trans. Inf. Forensics Secur., vol. 19, [54] X. Wang et al., “Heterogeneous graph attention network,” in Proc. World
+ pp. 7783–7793, 2024. Wide Web Conf., Jan. 2021, pp. 2022–2032.
+[30] X. Yang, S. Ruan, J. Li, Y. Yue, and B. Sun, “TrafCL: Robust encrypted [55] X. Fu, J. Zhang, Z. Meng, and I. King, “MAGNN: Metapath aggregated
+ malicious traffic detection via contrastive learning,” in Proc. 33rd ACM graph neural network for heterogeneous graph embedding,” in Proc. Web
+ Int. Conf. Inf. Knowl. Manage., Boise, ID, USA, 2024, pp. 2910–2919. Conf., 2020, pp. 2331–2341.
+[31] C. Fu, Q. Li, K. Xu, and J. Wu, “Point cloud analysis for ML-Based [56] Y. Zhu, W. Xu, J. Zhang, Q. Liu, S. Wu, and L. Wang, “Deep graph structure
+ malicious traffic detection: Reducing majorities of false positive alarms,” learning for robust representations: A survey,” 2021, arXiv:2103.03036.
+ in Proc. 2023 ACM SIGSAC Conf. Comput. Commun. Secur., New York, [57] Y. Chen, L. Wu, and M. Zaki, “Iterative deep graph learning for graph
+ NY, USA, 2023, pp. 1005–1019. neural networks: Better and robust node embeddings,” in Proc. Adv. Neural
+[32] X. Zhang et al., “AOC-IDS: Autonomous online framework with con- Inf. Process. Syst., 2020, vol. 33, pp. 19314–19326.
+ trastive learning for intrusion detection,” in Proc. IEEE INFOCOM 2024 [58] R. Wang et al., “Graph structure estimation neural networks,” in Proc. Web
+ IEEE Conf. Comput. Commun., 2024, pp. 581–590. Conf. 2021, Ljubljana, Slovenia, Apr. 2021, pp. 342–353.
+[33] F. Alotaibi and S. Maffeis, “Mateen: Adaptive ensemble learning for [59] C. Lee and D. J. Wilkinson, “A review of stochastic block models and
+ network anomaly detection,” in Proc. 27th Int. Symp. Res. Attacks, In- extensions for graph clustering,” Appl. Netw. Sci., vol. 4, no. 1, pp. 1–50,
+ trusions Defenses, Raid ’24, Padua, Italy and New York, NY, USA, 2024, 2019.
+ pp. 215–234. [60] J. Zhao, X. Wang, C. Shi, B. Hu, G. Song, and Y. Ye, “Heterogeneous
+[34] Z. Zhao, Z. Li, Z. Song, W. Li, and F. Zhang, “Trident: A universal frame- graph structure learning for graph neural networks,” in Proc. AAAI Conf.
+ work for fine-grained and class-incremental unknown traffic detection,” in Artif. Intell., 2021, vol. 35, pp. 4697–4705.
+ Proc. ACM Web Conf. 2024, Singapore, 2024, pp. 1608–1619. [61] Y. Dong, N. V. Chawla, and A. Swami, “metapath2vec: Scalable represen-
+[35] M. Shen, J. Wu, K. Ye, K. Xu, G. Xiong, and L. Zhu, “Robust detection tation learning for heterogeneous networks,” in Proc. 23 rd ACM SIGKDD
+ of malicious encrypted traffic via contrastive learning,” IEEE Trans. Inf. Int. Conf. Knowl. Discov. Data Mining, 2017, pp. 135–144.
+ Forensics Secur., vol. 20, pp. 4228–4242, 2025. [62] B. Anderson and D. McGrew, “Machine learning for encrypted malware
+[36] P. Sun, X. Yun, S. Li, T. Yin, C. Si, and J. Xie, “AdvTG: An adversarial traffic classification: Accounting for noisy labels and non-stationarity,” in
+ traffic generation framework to deceive DL-based malicious traffic detec- Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, Halifax,
+ tion models,” in Proc. ACM Web Conf. 2025, New York, NY, USA, 2025, NS, Canada, Aug. 2017, pp. 1723–1732.
+ pp. 3147–3159. [63] B. Anderson, S. Paul, and D. McGrew, “Deciphering malware’s use of
+[37] T. Cui, G. Gou, G. Xiong, Z. Li, M. Cui, and C. Liu, “{SiamHAN}: TLS (without decryption),” J. Comput. Virol. Hacking Techn., vol. 14,
+ {IPv6} address correlation attacks on {TLS} encrypted traffic via siamese pp. 195–211, Aug. 2018.
+ heterogeneous graph attention network,” in Proc. 30th USENIX Secur. [64] S. -J. Xu, G. -G. Geng, X. -B. Jin, D. -J. Liu, and J. Weng, “Seeing traffic
+ Symp., 2021, pp. 4329–4346. paths: Encrypted traffic classification with path signature features,” IEEE
+[38] Z. Fu et al., “Encrypted malware traffic detection via graph-based network Trans. Inf. Forensics Secur., vol. 17, pp. 2166–2181, 2022.
+ analysis,” in Proc. 25th Int. Symp. Res. Attacks, Intrusions Defenses, 2022, [65] M. Conti, L. V. Mancini, R. Spolaor, and N. V. Verde, “Analyzing anpp. 495–509. droid encrypted network traffic to identify user actions,” IEEE Trans. Inf.
+[39] C. Qiu et al., “3D-IDS: Doubly disentangled dynamic intrusion detec- Forensics Secur., vol. 11, no. 1, pp. 114–125, Jan. 2016.
+ tion,” in Proc. 29th ACM SIGKDD Conf. Knowl. Discov. Data Mining, [66] “CIRA-CIC-DoHBrw-2020,” (n.d.). [Online]. Available: https://www.
+ Aug. 2023, pp. 1965–1977. malware-traffic-analysis.net/
+[40] H. Ding, L. Chen, S. Li, Y. Bai, P. Zhou, and Z. Qu, “Divide, conquer, and [67] “Malware-traffic-analysis,” (n.d.). [Online]. Available: https://www.
+ coalesce: Meta parallel graph neural network for IoT intrusion detection at malware-traffic-analysis.net/
+ scale,” in Proc. ACM Web Conf. 2024, Singapore, ACM, 2024, pp. 1656– [68] Z. Niu, J. Xue, D. Qu, Y. Wang, J. Zheng, and H. Zhu, “A novel approach
+ 1667. based on adaptive online analysis of encrypted traffic for identifying
+[41] Q. Mao et al., “FeCoGraph: Label-aware federated graph contrastive learn- malware in IIoT,” Inf. Sci., vol. 601, pp. 162–174, 2022.
+ ing for few-shot network intrusion detection,” IEEE Trans. Inf. Forensics [69] L. Van der Maaten and G. Hinton, “Visualizing data using t-SNE,” J. Mach.
+ Secur., vol. 20, pp. 2266–2280, 2025. Learn. Res., vol. 9, no. 11, pp. 2579–2605, 2008.

@@ -1,0 +1,638 @@
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025 18397
+
+ Deep Multimanifold Transformation-Based
+ Multivariate Time Series Fault Detection
+ Hong Liu , Member, IEEE, Xiuxiu Qiu , Yiming Shi, Miao Xu, Zelin Zang , Member, IEEE,
+ and Zhen Lei , Fellow, IEEE
+
+ Abstract—Unsupervised fault detection in multivariate time I. I NTRODUCTION
+series (MTS) plays a vital role in ensuring the stable operation of
+complex systems. Traditional methods often assume that normal
+data follow a single Gaussian distribution and identify anomalies
+as deviations from this distribution. However, this simplified
+assumption fails to capture the diversity and structural complex-
+ U N SUPERVISED fault detection [15], [23] in multivariate time series (MTS) has become increasingly vital
+ in both academic research and practical domains, especially
+ity of real-world time series, which can lead to misjudgments within industrial environments and the management of largeand reduced detection performance in practical applications. To scale systems [21], [29], [36]. By eliminating the need for
+address this issue, we propose a new method that combines a
+neighborhood-driven data augmentation strategy with a multi- labeled data, it enables early identification of anomalies and
+manifold representation learning framework. By incorporating incipient faults [6], [38], which is crucial for minimizing maininformation from local neighborhoods, the augmentation module tenance overhead and averting potential system failures [17].
+can simulate contextual variations of normal data, enhancing This capability makes it an indispensable tool for real-time
+the model’s adaptability to distributional changes. In addi- monitoring and predictive maintenance in scenarios where
+tion, we design a structure-aware feature learning approach
+that encourages natural clustering of similar patterns in the labeled samples are scarce or entirely unavailable [40].
+feature space while maintaining sufficient distinction between To address this challenge, a wide range of approaches
+different operational states. Extensive experiments on several have been explored, from classical statistical methods to
+public benchmark datasets demonstrate that our method achieves modern deep learning-based models [32], [37]. Despite the
+superior performance in terms of both accuracy and robust- notable progress made in recent years [20], most existing
+ness, showing strong potential for generalization and real-world
+deployment. techniques still exhibit unsatisfactory detection performance in
+ practical applications, characterized by frequent false positives
+ Index Terms—Data augmentation, fault detection, multivariate and missed anomalies (see Tables I and II). This is largely
+time series, unsupervised soft contrastive learning (CL).
+ due to the restrictive assumptions imposed during modeling,
+ often necessitated by the absence of supervision. A prevailing
+ Received 29 July 2024; revised 13 February 2025 and 4 June 2025; strategy is to model normal behavior as a Gaussian distribution
+accepted 25 June 2025. Date of publication 11 August 2025; date of current and to flag deviations as anomalies [39], as illustrated in
+version 9 October 2025. This work was supported in part by the “Pioneer” Fig. 1(a). While computationally convenient, such assumptions
+and “Leading Goose” Research and Development Program of Zhejiang under
+Grant 2024C01140, in part by the Key Research and Development Program fail to capture the intrinsic diversity and nuanced dynamics of
+of Hangzhou under Grant 2023SZD0073, in part by Beijing Natural Science real-world systems.
+Foundation under Grant L221013, and in part by the InnoHK Program. In reality, both normal and anomalous behaviors often
+(Corresponding author: Zelin Zang.)
+ Hong Liu is with the School of Information and Electrical Engineering, comprise multiple heterogeneous subpatterns, each exhibiting
+Academy of Edge Intelligence, Hangzhou City University, Hangzhou 310015, distinct temporal and structural traits [Fig. 1(b)]. Relying on
+China. a single Gaussian model obscures these internal variations,
+ Xiuxiu Qiu is with the College of Information Engineering, Zhejiang
+University of Technology, Hangzhou 310012, China. leading to suboptimal representations and a reduced capacity
+ Yiming Shi is with the Institute of Cyber-Systems and Control, Zhejiang to detect subtle deviations [23]. This oversimplification not
+University, Hangzhou 310027, China. only impairs the model’s ability to capture gradual state
+ Miao Xu is with the Centre for Artificial Intelligence and Robotics (CAIR),
+HKISI-CAS, Hong Kong, China. transitions but also undermines robustness in highly variable
+ Zelin Zang is with the School of Engineering, Westlake University, environments [10], [25]. Consequently, there is a pressing
+Hangzhou 310015, China, and also with the Centre for Artificial Intel- need to move beyond Gaussian-centric assumptions and adopt
+ligence and Robotics (CAIR), HKISI-CAS, Hong Kong, China (e-mail:
+zangzelin@westlake.edu.cn). more expressive modeling paradigms capable of characterizing
+ Zhen Lei is with the Centre for Artificial Intelligence and Robotics (CAIR), complex, multimodal system behaviors.
+HKISI-CAS, Hong Kong, China, also with the State Key Laboratory of To address the limitations caused by the oversimplified
+Multimodal Artificial Intelligence Systems (MAIS), Institute of Automation,
+Chinese Academy of Sciences (CASIA), Beijing 100190, China, and also Gaussian distribution assumption, we propose an unsupervised
+with the School of Artificial Intelligence, University of Chinese Academy of framework, termed deep multimanifold transformation for
+Sciences (UCAS), Beijing 100049, China (e-mail: zhen.lei@ia.ac.cn). fault detection (DMTFD). Unlike prior methods that char-
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TNNLS.2025.3584988, provided by the authors. acterize normal states with a single Gaussian distribution
+ Digital Object Identifier 10.1109/TNNLS.2025.3584988 [39], DMTFD adopts a multimanifold assumption, which
+ 2162-237X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+18398 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+ TABLE I
+FAULT D ETECTION P ERFORMANCE OF AUROC ON F IVE P UBLIC DATASETS . W E C OMPARE THE P ERFORMANCE OF D IFFERENT M ETHODS U SING
+ A C ONSISTENT W INDOW S IZE (DMTFD) W ITH O UR O PTIMAL R ESULTS O BTAINED T HROUGH VARYING W INDOW S IZES (DMTFD*) TO
+ S HOWCASE THE M AXIMUM P OTENTIAL . T HE B EST R ESULTS A RE G IVEN IN B OLD
+
+ TABLE II
+A NOMALY D ETECTION P ERFORMANCE OF PR ON F IVE P UBLIC DATASETS . W E C OMPARE THE P ERFORMANCE OF D IFFERENT M ETHODS U SING
+ A C ONSISTENT W INDOW S IZE (DMTFD) W ITH O UR O PTIMAL R ESULTS O BTAINED T HROUGH VARYING W INDOW S IZES (DMTFD*) TO
+ S HOWCASE THE M AXIMUM P OTENTIAL . T HE B EST R ESULTS A RE G IVEN IN B OLD
+
+ USD
+
+ ones. To construct a meaningful representation space under
+ this assumption, we introduce a neighbor-aware augmentation
+ strategy that generates context-consistent variants of each
+ sample [18] and adopt a softened similarity constraint to
+ gently pull semantically close instances. This design alleviates
+ the rigidity of binary contrastive signals and supports more
+ nuanced anomaly boundary modeling [41].
+ Comprehensive experiments show that DMTFD significantly outperforms existing methods in both AUC
+ and precision-recall (PR) metrics. On benchmark datasets,
+ DMTFD achieves consistently lower false alarm rates and
+ higher detection accuracy.
+ Furthermore, our visualization analysis supports the plau-
+Fig. 1. Motivation of DMTFD. (a) Existing methods rely on Gaussian
+assumptions and fail to capture complex latent structures with multiple
+ sibility of the multi-Gaussian assumption and illustrates how
+substates. (b) Our proposed DMTFD introduces a multimanifold assumption soft contrastive learning (CL) effectively captures underlying
+to better model state variations and improve fault detection accuracy. substate structures.
+
+acknowledges the intrinsic diversity of normal operating con- 1) Multimanifold Modeling of Operational States: We
+ditions across different system states [see Fig. 1(b)]. break away from the conventional single-Gaussian
+ Concretely, DMTFD leverages a multimanifold transfor- assumption and adopt a multimanifold view that reflects
+mation module that maps MTS into a latent space where the heterogeneity of both normal and abnormal condiheterogeneous local patterns are better disentangled and tions. This insight leads to a more faithful and flexible
+aligned. This transformation enables the model to preserve modeling of system behaviors.
+fine-grained distinctions between submanifolds of normal 2) New Framework for Unsupervised Representation:
+behaviors while amplifying their deviation from anomalous We propose a novel framework that integrates
+LIU et al.: DEEP MULTIMANIFOLD TRANSFORMATION-BASED MTS FAULT DETECTION 18399
+
+ neighbor-based data augmentation and loss function to III. P RELIMINARY
+ construct a smooth and discriminative latent space. Normalizing flow is an unsupervised density estimation
+ 3) Superior Empirical Performance Across Benchmarks: approach to map the original distribution to an arbitrary target
+ Our method achieves over 5% improvement in detection distribution by a stack of invertible affine transformations.
+ metrics compared to existing baselines, demonstrating When density estimation on original data distribution X is
+ strong robustness and generalization in real-world indus- intractable, an alternative option is to estimate z density on
+ trial scenarios. target distribution Z. Specifically, suppose a source sample
+ x ∈ RD ∼ X and a target distribution sample z ∈ RD ∼ Z.
+ Bijective invertible transformation Fθ aims to achieve one-to-
+ II. R ELATED W ORK
+ one mapping z = fθ (x) from X to Z. According to the change
+A. Time Series Anomaly Detection of variable formula, we can get
+ ∂ fθ ˇˇ
+ ˇ ˇ
+ In time series anomaly detection, one-class classifica-
+ PX (x) = PZ (z) ˇdet T ˇ .
+ ˇ
+ ˇ (1)
+tion (OCC) methods—such as USAD [4] and DAEMON ∂x
+[8]—typically assume access to purely normal data during Benefiting from the invertibility of mapping functions and
+training [5], [16]. GANF [9] employs graph neural net- tractable Jacobian determinants | det(∂ fθ /∂xT )|, the objective
+works (GNNs) for anomaly detection in MTS. MTGFlow of flow models is to achieve ẑ = z, where ẑ = fθ (x).
+[39] combines dynamic graphs with normalizing flows, while Flow models are able to achieve more superior density
+MTGFlow-cluster [40] further boosts accuracy by clustering estimation performance when additional conditions C are input
+entities. AnomalyLLM [22] leverages large language models [3]. Such a flow model is called conditional normalizing flow,
+for knowledge distillation, using prototypical signals and syn- and its corresponding mapping is derived as z = fθ (x|C).
+thetic anomalies to achieve an improvement on UCR datasets Parameters θ of fθ are updated by maximum likelihood estiacross 15 benchmarks. PeFAD [31] introduces PLM-based mation (MLE)
+parameter-efficient federated learning with anomaly masking
+ ∂ fθ ˇˇ
+  ˇ ˇ
+and synthetic distillation, improving performance by up to θ = arg max log (PZ ( fθ (x|C)) + log ˇdet T ˇ . (2)
+ ∗
+ ˇ
+ ˇ
+28.74%. Graph-MoE [15] enhances GNN-based detection via θ ∂x
+expert mixtures and memory routers, effectively utilizing hierarchical features. In addition, prior work USD [23] proposes IV. M ETHODOLOGY
+a CL framework tailored for MTS fault detection, addressing A. Notation and Problem Definition
+limitations of hard contrastive loss in the presence of view- Consider an MTS dataset X. The dataset encompassing
+level noise. Building upon this, the present work introduces K entities, each with L observations, is denoted as X =
+a multimanifold transformation strategy and a generalized (x1 , x2 , . . . , xK ), where each xk ∈ RL . Z-score normalization
+similarity modeling approach, enabling more expressive repre- is employed to standardize the time series data across difsentations and significantly improving detection performance ferent entities. A sliding window approach, with a window
+and robustness across benchmarks. size of T and a stride size of S , is utilized to sample the
+ normalized MTS, generating training samples xc , where c
+ denotes the sampling count and xc represents the segment
+B. Contrastive Learning and SoftCL
+ x[cS −T /2]:[cS +T /2] .
+ Soft CL (SoftCL) [33], [35] and deep manifold learn- The objective of unsupervised fault detection is to identify
+ing [19], [24] represent two advanced methodologies in the segments xc within X exhibiting anomalous behavior. This
+domain of machine learning, particularly in the tasks of process operates under the premise that the normal behavior of
+unsupervised learning and representation learning. These tech- X is known, and any significant deviation from this behavior
+niques aim to leverage the intrinsic structure of the data is considered abnormal. Specifically, abnormal behavior is
+to learn meaningful and discriminative features. At its core, characterized by its occurrence in low-density regions of the
+SoftCL [28], [33], [35] is an extension of the CL framework normal behavior distribution, defined by a density threshold
+[7], [13], [14], which aims to learn representations by bringing θ < ρ(normal behavior). The task of unsupervised fault detecsimilar samples closer and pushing dissimilar samples apart in tion in MTS can thus be formalized as identifying segments
+the representation space. However, SoftCL introduces a more xc where ρ(xc ) < θ.
+nuanced approach by incorporating the degrees of similarity Definition 1: (Supervised Fault Detection in MTS): Let
+between samples into the learning process, rather than treating D = {(xc , yc )}i=1 N
+ be a labeled dataset for an MTS, where each
+similarity as a binary concept. This is achieved through the c
+ segment x is annotated with a label yc ∈ {0, 1}, indicating noruse of soft labels or continuous similarity scores, allowing the mal (0) or abnormal (1) behavior. Supervised fault detection
+model to learn richer and more flexible representations. The aims to learn a function f : RL → {0, 1} that can accurately
+softness in the approach accounts for the varying degrees of classify new, unseen segments xnew as normal or abnormal
+relevance or similarity among data points, making it particu- based on learned patterns of faults.
+larly useful in tasks where the relationship between samples is Definition 2: (Unsupervised Fault Detection under Gaussian
+not strictly binary or categorical, such as in semi-supervised Assumption): In the Gaussian assumption context, unsuperlearning or in scenarios with noisy labels. vised fault detection in an MTS operates on the premise that
+18400 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+Fig. 2. Overview of the proposed DMTFD framework. (a) Temporal sequences x and x+ are processed via RNN to capture temporal dynamics, followed by
+a GNN to model interentity dependencies, yielding embeddings y. A SoftCL head maps y to transformed features c, which are then used for density modeling
+via a flow-based generative network. (b) SCL head helps cluster similar samples and separate dissimilar ones in the feature space.
+
+the distribution of normal behavior can be modeled using a 2) Manti-Manifold Transformation Head (MTH): To
+Gaussian distribution. Anomalies are identified as segments enhance the discriminative quality of the learned represenxc that fall in regions of low probability under this Gaussian tations, we introduce a multimanifold transformation head,
+model, specifically where ρ(xc ) < θ, with θ being a predefined implemented as a multilayer perceptron (MLP) H(·; ω). This
+density threshold. module receives the spatiotemporal embedding yc from the
+ Definition 3: (Unsupervised Fault Detection under Multi- GNN as input and projects it into a latent feature space
+Gaussian Assumption): Under the multi-Gaussian assumption, optimized for CL zc = H (yc ; ω), where ω denotes the learnable
+unsupervised fault detection recognizes that the distribution of parameters of the MLP and zc is the contrastive representation
+normal behavior in an MTS may encompass multiple modes, corresponding to time window c. The goal of this module is
+each fitting a Gaussian model. This assumption allows for a to enforce semantic alignment between similar instances while
+more nuanced detection of anomalies, which are segments ensuring separation among dissimilar ones. This is achieved
+xc that do not conform to any of the modeled Gaussian via a soft contrastive loss, which penalizes embeddings of
+distributions of normal behavior, detected through a composite positive pairs (semantically similar samples) that are far apart
+density threshold criterion ρ(xc ) < θ. and encourages larger distances for negative pairs (semantically dissimilar samples) that are too close. Unlike hard
+ contrastive formulations that impose strict binary similarity,
+B. Neural Network Structure of DMTFD the soft version allows for graded similarity relationships,
+ The core idea of DMTFD is to learn precise and discrimi- thereby providing a smoother optimization landscape and
+native latent representations by integrating data augmentation improving robustness to intraclass variability.
+with SoftCL. As illustrated in Fig. 2, the DMTFD framework jointly leverages a recurrent neural network (RNN)
+R(·; θ), a GNN G(·; φ), and a normalizing flow model F(·; α) C. MLE Loss and Data Augmentation
+to effectively model the temporal patterns, relational structures, and distributional properties of MTS data for fault A key objective of the DMTFD framework is to accurately
+detection. identify abnormal behaviors by modeling the underlying dis-
+ 1) RNN-GNN-Flow Architecture: To jointly capture tempo- tribution of normal operational data. To this end, we employ
+ral dynamics, interentity dependencies, and density patterns, MLE as the training criterion for the flow-based density
+we adopt an RNN-GNN-Flow architecture. Given the mul- estimation module. The core motivation behind this design is
+tivariate input at time window c, denoted as xc , we first to encourage the model to assign high likelihoods to normal
+compute the temporal encoding gc = R(xc ; θ) using an RNN patterns while assigning low likelihoods to anomalous deviaparameterized by θ; a GNN with parameters φ then produces tions, thus enabling precise and fine-grained fault detection.
+the spatiotemporal embedding yc = G(gc ; φ); and finally, a nor- Formally, given the contrastive representation zc for time
+malizing flow with parameters α estimates the log-likelihood window c, the normalizing flow transformation f (·; α) maps
+score `c = F(yc ; α), which is used to detect anomalies—where it into a latent variable ẑc = f (zc ; α) that follows a known
+low likelihood indicates high abnormality. target distribution (typically standard Gaussian with mean µ
+LIU et al.: DEEP MULTIMANIFOLD TRANSFORMATION-BASED MTS FAULT DETECTION 18401
+
+and identity covariance). The MLE loss is then defined as maximize the similarity between positive pairs and minimize
+ N 
+ it between negative pairs, utilizing the InfoNCE loss
+ ∂ fα ˇˇ
+ ˇ   ˇ
+ 1 X 1 c
+ LMLE = − kẑ − µk22 + log ˇˇdet
+ ˇ
+ N 2 ∂zc ˇ
+ (3) LCL (xc1 , xc2 , {xcn }cn=1
+ NK
+ )=
+ c=1  
+ c1 T c2
+ exp z z exp S zc1 ,zc2
+ 
+where N is the number of time windows and µ is the mean of − log P  = −log PN (6)
+ k=1 exp S z ,zcn
+  
+the target Gaussian distribution Z. The first term encourages NK c1 Tz K c1
+ k=1 exp z cn
+ẑc to match the target distribution, while the second term—i.e.,
+the log-determinant of the Jacobian—ensures that the flow where (xc1 , xc2 ) constitutes a positive pair and (xc1 , xcn ) a
+transformation remains invertible and probability-preserving. negative pair, with zc1 , zc2 , and zcn being the embeddings of
+By optimizing LMLE , the flow model learns to model the xc1 , xc2 , and zcn , respectively, and NK representing the number
+density landscape of normal patterns precisely. At inference of negative pairs. The similarity function S (zc1 , zc2 ) is typitime, data points with significantly low log likelihoods under cally defined using cosine similarity. This method effectively
+the learned distribution are flagged as anomalies, enabling enhances the model’s discriminative power by distinguishing
+accurate and interpretable fault detection across diverse tem- between closely related (positive) and less related (negative)
+poral and relational contexts. samples within the augmented data space.
+ Data augmentation is crucial for improving the model’s The conventional CL (CCL) loss is structured around a
+ability to generalize beyond the training data by artifi- single positive sample contrasted against multiple negatives.
+cially expanding the dataset’s size and diversity [34]. Our To refine this, we have restructured the CCL loss into a more
+methodology incorporates two primary strategies: neighbor- nuanced form that utilizes labels for positive and negative
+hood discovery and linear interpolation. samples, denoted by Hc1,c2 . Detailed explanations of this
+ 1) Neighborhood Discovery: This technique focuses on transformation from (6) and (7) are available in Supplementary
+leveraging the local structure of the data to generate new, Material A.
+plausible data points that conform to the existing distribution.
+ LCCL (xc1 , {xc2 }c2=1
+ NK
+ )
+For each data point xc , we define its neighborhood N(xc ) using X˚
+ =−
+ 
+a distance metric d(·, ·), such as the Euclidean distance. The Hc1,c2 log Qc1,c2 + 1 − Hc1,c2 log Q̇c1,c2 (7)
+ c
+neighborhood consists of points xnew that meet the criterion j=1
+
+ d xc , xnew
+ c
+ 
+ ≤ (4) where Hc1,c2 indicates if samples c1 and c2 have been
+ augmented from the same source. Hc1,c2 = 1 signifies a
+where  is a predetermined threshold defining the positive pair (xc1 , xc2 ), and Hc1,c2 = 0 indicates a negative
+neighborhood’s radius. This method captures the local pair. The term Qc1,c2 = exp(S (zc1 , zc2 )) represents the density
+density of the data, enabling the generation of new samples ratio, as defined and computed by the backbone network.
+within these densely populated areas and thus enhancing To enhance robustness against view-level noise introduced by
+the dataset with variations that align with the original data data augmentation, we propose the multimanifold loss (MML).
+distribution. Unlike conventional contrastive losses that treat pairwise labels
+ 2) Data Augmentation by Linear Interpolation: Data as binary constants, MML introduces soft similarity-based
+augmentation strategy augments the dataset by creating inter- weights, enabling the model to downweight uncertain or noisy
+mediate samples between existing data points. For two points samples during training.
+xc and xnew
+ c c
+ , a new sample xnew is formulated as Given an anchor sample xc1 and a set of associated samples
+ c2 NK
+ {x }c2 =1 , the MML loss is defined as
+ c
+ xnew = αxc + (1 − α) xnew
+ c
+ (5)
+ LMML (xc1 , {xc2 }) =
+where α is a random coefficient sampled from a uniform NK
+distribution, α ∼ U(0, 1). This approach facilitates a smooth
+ X   
+ − Pc1 ,c2 log Qc1 ,c2 + 1 − Pc1 ,c2 log 1 − Qc1 ,c2 (8)
+transition between data points, effectively bridging gaps in the c2 =1
+data space and introducing a continuum of sample variations.
+By interpolating between points either within the same neigh- where Pc1 ,c2 is the soft label (weight) reflecting the similarity in
+borhood or across different neighborhoods, we substantially input space and Qc1 ,c2 denotes the similarity in the contrastive
+enhance the dataset’s diversity and coverage, providing the latent space. They are defined as
+model with a more comprehensive set of examples for training. eα · κ (yc1 , yc2 ) if Hc1 ,c2 = 1
+ (
+ Pc1 ,c2 =
+ κ (yc1 , yc2 ) otherwise
+D. MML With Data Augmentation
+ Qc1 ,c2 = κ (zc1 , zc2 ) (9)
+ In data-augmentation-based CL, the task is framed as a
+binary classification problem over pairs of samples. Positive where Hc1 ,c2 ∈ {0, 1} indicates whether xc2 is a positive pair of
+pairs, drawn from the joint distribution (xc1 , xc2 ) ∼ P xc1 ,xc2 , xc1 , α ∈ [0, 1] is a confidence prior that emphasizes positive
+are labeled as Hc1,c2 = 1, whereas negative pairs, drawn from pairs, and κ(·, ·) is a similarity kernel.
+the product of marginals (xc1 , xc2 ) ∼ P xc1 P xc2 , are labeled as To improve robustness against augmentation noise and
+Hck = 0. The goal of CL is to learn representations that sample-level variability, we adopt a generalized Gaussian
+18402 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+Fig. 3. ROC and PR plots of four datasets. The ROC and PR curves of the SWaT, WADI, PSM, and MSL datasets are shown. The ROC curves illustrate
+the tradeoff between true positive rate and false positive rate, while the PR curves show the tradeoff between precision and recall. The performance of our
+method is compared against SOTA methods, demonstrating the effectiveness of our approach.
+
+kernel κβ (·, ·) as the similarity function in MML. Compared the DMTFD framework, we ensure a rigorous approach to
+to the standard Gaussian kernel, the generalized Gaussian modeling and detecting anomalies in MTS data, setting a new
+provides a tunable shape parameter that allows for heavier standard for unsupervised fault detection in complex systems.
+tails when needed, enabling the model to assign meaningful
+similarity scores even to moderately distant pairs. The kernel V. E XPERIMENTS
+ A. Dataset Information and Implementation Details
+is defined as
+  β ! Datasets Information: We evaluate DMTFD on six widely
+ β ka − bk2
+ κ (a, b) = exp − (10) used MTS fault detection datasets (Table A-1 in the Supple-
+ σ mentary Material). SWaT [11] and WADI [2] are collected
+where β > 0 controls the shape of the decay (with β = 2 from water treatment and distribution testbeds, simulating
+reducing to a Gaussian kernel and β < 2 producing heavier industrial cyberattacks with labeled anomalies. PSM [1]
+tails) and σ is a scale parameter. This formulation makes the contains server metrics from eBay, used to detect system
+loss function more tolerant to view-level noise and nonuniform performance anomalies. MSL [16] provides telemetry from
+sample structures, leading to smoother gradients and improved NASA’s Curiosity rover for space mission anomaly detection.
+generalization under multimanifold distributions. Unlike USD SMD [27] is from a large-scale server farm and captures
+[23], which relies on a fixed Gaussian assumption and sharp system behavior across multiple machines; we report average
+contrastive margins, our generalized kernel formulation offers results and ensure that test sets include anomalies via fixed
+adaptive flexibility across manifold structures and improves random seeds. SMAP is a NASA dataset [16] that contains
+tolerance to cross-view variation. Detailed comparisons and data from a satellite’s attitude control system, used for detectanalyses are provided in Supplementary Material A. ing anomalies in space missions. All datasets are standard in
+ OCC for time series anomaly detection.
+E. Optimization Objectives 1) Dataset Split and Preprocessing: In our experimental
+ The entire DMTFD framework, encompassing the RNN, setup, we adhere to the dataset configurations used in the
+GNN, and FLOW models, is optimized jointly through MLE GANF study [9]. MTGFlow [39] and MTGFlow Cluster [40].
+to ensure effective anomaly detection. The joint optimization Specifically, for the SWaT dataset, we partition the original
+process is formulated as follows: testing data into 60% for training, 20% for validation, and
+ 20% for testing. For the other datasets, the training partition
+ LDMTFD = LMLE + LMML (11)
+ comprises 60% of the data, while the test partition contains the
+where LMLE is the MLE loss and LMML is the MML loss. The remaining 40%. The training data are used to train the model,
+MLE loss is designed to maximize the likelihood of observing while the validation data are used to tune hyperparameters and
+the transformed data points ẑi under the model, while the the test data are used to evaluate the model’s performance.
+MML loss is designed to enhance the model’s sensitivity to The datasets are preprocessed to remove missing values and
+subtle differences between normal and abnormal patterns. By normalize the data to a range of [0, 1]. The data are then
+embedding these mathematical formulations into each step of divided into fixed-length sequences, with a window size of 60
+LIU et al.: DEEP MULTIMANIFOLD TRANSFORMATION-BASED MTS FAULT DETECTION 18403
+
+Fig. 4. Violin plot of AUROC scores on different training splits. The x-axis represents the training split ratio, and the y-axis represents the AUROC scores. The
+DMTFD method consistently outperforms the baseline methods (MTGFLOW) across different training splits, demonstrating its robustness and effectiveness
+in anomaly detection tasks.
+
+Fig. 5. Visualization of multisubclass data distributions. (a) t-SNE visualization of embedding of DMTFD on SWAT datasets. The color shows the different
+states of the data. Multiple clusters can be seen in the representation, which is consistent with the multiple manifold assumption of this article. The normal
+and abnormal states are not a single cluster but can be divided into separate subclusters. (b) Heatmaps of individual data point, each row in the heatmap is
+the index number of the time, and each column is the index number of the sensor. We selected four subclusters, and two samples from each cluster were
+randomly selected for presentation. The similarity of samples within subclusters and the difference of samples between subclusters are illustrated.
+
+and a stride of 10. The window size determines the number of representation collapse. DeepSAD [26] is a semi-supervised
+time steps in each sequence, while the stride determines the method that detects anomalies via entropy differences in latent
+step size between each sequence. The data are then fed into distributions. USAD [4] employs adversarially trained autoenthe model for training and evaluation. coders for unsupervised time series anomaly detection. GANF
+ 2) Implementation Details: For all datasets, we set the [9] enhances normalizing flows using Bayesian networks to
+window size to 60–80 and the stride size to 10–30. All model interseries dependencies. MTGFlow [39] and MTGFlow
+experiments were run for 400–600 epochs and executed using Cluster [40] utilize dynamic graph structure learning and
+PyTorch 2.2.1 on an NVIDIA RTX 3090 24GB GPU. Addi- entity-aware flows for fine-grained density estimation, with the
+tional specific parameters can be found in the Supplementary latter introducing clustering for improved accuracy.
+Material.
+ C. Fault Detection Performance on Five Benchmark Dataset
+B. Evaluation Metric and Baselines Methods First, we discuss the performance advantages of the
+ DMTFD method by comparing results on five common bench-
+ Following prior work, DMTFD performs window-level
+ marks. We list the results for the AUROC and AUPRC metrics
+anomaly detection, where a window is labeled anomalous if
+ in Tables I and II, where the numbers in parentheses represent
+it contains any anomalous point. We evaluate performance
+ the variance from five different seed experiments. In Tables I
+using two metrics: area under the receiver operating characterand II, the results of DROCC, DeepSAD, USAD, DAGMM,
+istic (AUROC), which measures overall discriminative ability
+ GANF, and MTGFlow are from the article [39].1 The results of
+across thresholds, and AUPRC, which is more informative
+ MTGFlow Cluster are from [40].2 We report on two variants
+under class imbalance, capturing the tradeoff between preciof DMTFD: one (DMTFD) uses the same hyperparameters
+sion and recall.
+ across all experiments and the other (DMTFD*) involves
+ 1) Baselines: We compare DMTFD with several state-ofthe-art (SOTA) anomaly detection methods. DROCC [12] is a 1 https://github.com/zqhang/MTGFLOW
+
+robust OCC method assuming locally linear manifolds to avoid 2 https://github.com/zqhang/MTGFLOW Cluster
+18404 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+ TABLE III
+ A BLATION S TUDY. AUROC C OMPARISON ON F OUR DATASETS (SWAT,
+ WADI, PSM, AND MSL). T HE B EST R ESULTS A RE G IVEN IN B OLD .
+ T HE R ESULTS A RE AVERAGED OVER F IVE RUNS , AND THE
+ S TANDARD D EVIATION I S S HOWN IN PARENTHESES
+
+Fig. 6. Point plot of the anomalies predicted outputs of MTGFLOW and
+proposed DMTFD. The x-axis represents the anomaly index, and the y-axis average result over five runs in Fig. 4. Although the anomaly
+represents the log likelihood of the anomaly. Anomalous ground truths are contamination ratio of training dataset rises, the anomaly
+marked by a red background. This indicates that DMTFD is able to detect
+anomalies more accurately and in a timely manner. detection performance of MTGFlow remains at a stable high
+ level. This indicates that the proposed DMTFD method is
+hyperparameter tuning specific to each target dataset. The robust to the anomaly contamination ratio of the training
+best results are highlighted in bold. To visualize the benefits dataset.
+of DMTFD performance, the ROC and PR curves on four
+ D. Visualization of Multisubclass Data Distributions
+datasets are shown in Fig. 3. In the ROC and PR curves,
+ To further investigate the effectiveness of the DMTFD
+the DMTFD method consistently outperforms the baseline
+ method, we visualize the multisubclass data distributions on
+methods, demonstrating its robustness and effectiveness in
+ the SWAT dataset. As shown in Fig. 5, the t-SNE visuanomaly detection tasks.
+ alization of the embedding of DMTFD on SWAT datasets
+ 1) Performance Improvement: In terms of performance
+ reveals multiple clusters, consistent with the multiple manimprovements, as shown in Tables I and II, the DMTFD
+ ifold assumption of this article. The normal and abnormal
+method shows significant enhancements compared to SOTA
+ states are not a single cluster but can be divided into sepmethods. We compare the performance of different methods
+ arate subclusters. The heatmaps of individual data points
+using a consistent window size (DMTFD) with our optimal
+ further illustrate the similarity of samples within subclusters
+results obtained through varying window sizes (DMTFD*)
+ and the differences between samples in different subclusters.
+to showcase the maximum potential. The best results are
+ This visualization demonstrates the ability of the DMTFD
+shown in bold. These improvements are evident across both
+ method to capture the diverse patterns present in both nor-
+PR and AUC curves, particularly on the SWAT dataset
+ mal and abnormal states, enhancing its anomaly detection
+with a 5.4% increase in AUROC and a 7.7% increase
+ capabilities.
+in AUPRC, and on the MSL dataset with a 6% increase
+ In addition, we present the point plot of the anomalies
+in AUROC and a 7.0% increase in AUPRC. On averpredicted outputs of MTGFLOW and the proposed DMTFD
+age, there is a 4.1% increase in AUROC performance and
+ in Fig. 6. The x-axis represents the anomaly index and the ya 7.0% increase in AUPRC performance. The consistent
+ axis represents the log likelihood of the anomaly. Anomalous
+improvements in both AUROC and AUPRC indicate that the
+ ground truths are marked by a red background. This indicates
+DMTFD method has enhanced performance across multiple
+ that DMTFD is able to detect anomalies more accurately and
+aspects.
+ in a timely manner, outperforming MTGFLOW in terms of
+ 2) Stability Improvement: As shown in Tables I and II
+ anomaly detection performance.
+and Fig. 3, the stability of the DMTFD method is also
+ Fig. 7 shows the bar plot of the frequency of normalnoteworthy, exhibiting lower variance across all test datasets
+ ized anomaly scores on baseline methods and DMTFD.
+compared to traditional methods. This indicates that the
+ The x-axis represents the anomaly scores and the y-axis
+DMTFD method is more robust and less sensitive to random
+ represents the frequency of each score. The normalized
+initialization, making it a reliable choice for anomaly detection
+ anomaly scores of DMTFD are significantly lower than those
+tasks.
+ of GANF and MTGFlow, indicating that DMTFD is more
+ 3) Performance Potential: Furthermore, by comparing the
+ effective at distinguishing between normal and abnormal
+results of DMTFD and DMTFD*, we find that conducting
+ states.
+hyperparameter searches for each dataset can significantly
+boost the model performance. This suggests that our method
+has good hyperparameter adaptability and considerable poten- E. Ablation Study: The Effect of SoftCL Loss
+tial for further performance enhancements. To assess the effectiveness of each component designed
+ 4) Additional Results on Difference Train/Validation Splits: in our model, we conducted a series of ablation exper-
+To further investigate the influence of anomaly contamination iments. The results of these experiments are presented
+rates, we vary training splits to adjust anomalous contami- in Table III.
+nation rates. For all the abovementioned datasets, the training We performed controlled experiments to verify the necessity
+split increases from 60% to 80% with 5% stride. We present an of the SoftCL Loss in the UNDA settings across all four
+LIU et al.: DEEP MULTIMANIFOLD TRANSFORMATION-BASED MTS FAULT DETECTION 18405
+
+Fig. 7. Bar plot of the frequency of normalized anomaly scores on baseline methods and DMTFD. The x-axis represents the anomaly scores and the y-axis
+represents the frequency of each score. The normalized anomaly scores of DMTFD are significantly lower than those of GANF and MTGFlow, indicating
+that DMTFD is more effective at distinguishing between normal and abnormal states.
+
+ TABLE IV
+PARAMETERS A NALYSIS : L EARNING R ATES . TABLE OF AUC S CORES (AUROC%) FOR D IFFERENT L EARNING R ATES ON THE SWAT DATASET,
+ I NDICATING DMTFD’ S S ENSITIVITY TO THE L EARNING R ATE
+
+ TABLE V
+PARAMETERS A NALYSIS : N UMBER OF E POCHS . TABLE OF AUC S CORES (AUROC%) FOR D IFFERENT E POCHS ON THE SWAT DATASET, I NDICATING
+ DMTFD’ S S ENSITIVITY TO THE N UMBER OF E POCHS
+
+ TABLE VI evaluated using DMTFD. Our method showcases promising
+PARAMETERS A NALYSIS : H YPERPARAMETER ν. TABLE OF (AUROC%) results, with consistently competitive AUROC scores across
+ S CORES (AUROC%) FOR D IFFERENT ν ON THE SWAT DATASET, I NDI - varying hyperparameter configurations. Notably, the standard
+ CATING DMTFD’ S S ENSITIVITY TO THE H YPERPARAMETER ν
+ deviations accompanying AUROC values indicate a high
+ degree of stability, underscoring the reliability of our approach.
+ Analysis of the table reveals that optimal configurations often
+ coincide with larger window sizes and moderate block numbers, suggesting a preference for capturing broader temporal
+datasets. The performance of the proposed DMTFD method contexts while maintaining computational efficiency. Additionis denoted as DMTFD in Table A-5 in the Supplementary ally, trends indicate that as the number of blocks increases,
+Material. The variant w/o. SoftCL represents the model per- there is a discernible improvement in performance, albeit
+formance with the SoftCL loss component, LMML (xti , yi t ), with diminishing returns beyond a certain threshold. This
+removed from the overall loss function of DMTFD. The observation highlights the importance of carefully balancing
+variant w. CL indicates the model performance when the model complexity with computational resources. Overall, the
+SoftCL loss is replaced by a typical contrastive loss, LCCL , DMTFD method demonstrates robustness and effectiveness in
+as defined in (6). The results clearly demonstrate that the anomaly detection tasks.
+SoftCL Loss significantly outperforms the traditional CL loss.
+We attribute the inferior performance of LCCL to its inability to adequately address the view-noise caused by domain 2) Hyperparameter Robustness: Learning Rate, ν, and
+bias. Number of Epoch: In order to further investigate the effectiveness of MTGFlow, we give a detailed analysis based on
+ the SWaT dataset. We conduct ablation studies on the learning
+F. Hyperparameter Robustness
+ rate, ν, and the number of epochs. The results are shown
+ 1) Hyperparameter Robustness: Window Size and Number in Tables IV–VII. The results show that the performance of
+of Blocks: Table A-5 in the Supplementary Material presents MTGFlow is relatively stable across different learning rates,
+an ablation study investigating the robustness of hyperparame- ν, and the number of epochs. This indicates that MTGFlow
+ters, focusing on the window size and number of blocks. Three is robust to hyperparameter changes and can achieve good
+distinct datasets, SWaT, WADI, and PSM, along with MSL, are performance with a wide range of hyperparameters.
+18406 IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 36, NO. 10, OCTOBER 2025
+
+ TABLE VII
+PARAMETERS ANALYSIS : W EIGHT OF N EGATIVE (N E ) S AMPLE AND P OSITIVE (P O ) S AMPLE . TABLE OF AUC S CORES (AUROC%) FOR D IFFERENT
+ T OPOLOGICAL L OSS R ATIOS ON THE S WAT DATASET
+
+ VI. C ONCLUSION [8] X. Chen et al., “DAEMON: Unsupervised anomaly detection and
+ interpretation for multivariate time series,” in Proc. IEEE 37th Int. Conf.
+ In this work, we propose DMTFD, an unsupervised frame- Data Eng. (ICDE), Aug. 2021, pp. 2225–2230.
+work for fault detection in multivariate time series. To [9] E. Dai and J. Chen, “Graph-augmented normalizing flows for anomaly
+ detection of multiple time series,” in Proc. Int. Conf. Learn. Represent.,
+overcome the limitations of Gaussian assumptions, DMTFD Jan. 2022, pp. 1–15.
+models data with multi-Gaussian representations. A neighbor- [10] Y. Feng et al., “Computation-efficient fault detection framework for
+based augmentation strategy is designed to generate positive partially known nonlinear distributed parameter systems,” IEEE Trans.
+ Neural Netw. Learn. Syst., vol. 35, no. 9, pp. 12604–12616, Sep. 2023.
+pairs for learning, while a representation head enables opti- [11] J. Goh, S. Adepu, K. N. Junejo, and A. Mathur, “A dataset to support
+mization based on local streamform similarities. This enhances research in the design of secure water treatment systems,” in Proc. Int.
+the separation between normal and anomalous states and Conf. Crit. Inf. Infrastruct. Secur. Cham, Switzerland: Springer, 2016,
+ pp. 88–99.
+broadens anomaly coverage. Experiments on standard bench- [12] S. Goyal, A. Raghunathan, M. Jain, H. V. Simhadri, and P. Jain,
+marks (e.g., SWaT and WADI) demonstrate that DMTFD “DROCC: Deep robust one-class classification,” in Proc. Int. Conf.
+achieves superior AUC and PR scores, with lower false alarm Mach. Learn., Jun. 2020, pp. 3711–3721.
+ [13] J.-B. Grill et al., “Bootstrap your own latent: A new approach to selfrates and improved detection accuracy. Visualizations also supervised learning,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS),
+validate the effectiveness of the multi-Gaussian modeling. vol. 33, Dec. 2020, pp. 21271–21284.
+Although our current focus is unsupervised fault detection, [14] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for
+ unsupervised visual representation learning,” in Proc. IEEE/CVF Conf.
+DMTFD can be extended to remaining useful life (RUL) Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020, pp. 9729–9738.
+prediction. Its pretrained embeddings provide strong priors for [15] X. Huang, W. Chen, B. Hu, and Z. Mao, “Graph mixture of experts
+temporal degradation modeling and, with minimal finetuning, and memory-augmented routers for multivariate time series anomaly
+ detection,” in Proc. AAAI Conf. Artif. Intell., vol. 39, Sep. 2025,
+can support few-shot RUL forecasting. We leave multitask pp. 17476–17484.
+extensions integrating fault detection and RUL estimation for [16] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and
+future work. T. Söderström, “Detecting spacecraft anomalies using LSTMs and
+ nonparametric dynamic thresholding,” in Proc. 24th ACM SIGKDD Int.
+ Conf. Knowl. Disc. Data Min., Jul. 2018, pp. 387–395.
+ [17] R. Li, W. J. C. Verhagen, and R. Curran, “A systematic methodology
+ R EFERENCES for prognostic and health management system architecture definition,”
+ Rel. Eng. Syst. Saf., vol. 193, Jan. 2020, Art. no. 106598.
+[1] A. Abdulaal, Z. Liu, and T. Lancewicki, “Practical approach to asyn- [18] S. Li, Z. Liu, Z. Zang, D. Wu, Z. Chen, and S. Z. Li, “GenURL:
+ chronous multivariate time series anomaly detection and localization,” A general framework for unsupervised representation learning,” IEEE
+ in Proc. 27th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug. Trans. Neural Netw. Learn. Syst., vol. 36, no. 1, pp. 286–298, Jan. 2025.
+ 2021, pp. 2485–2494. [19] S. Z. Li, Z. Zang, and L. Wu, “Deep manifold transformation for
+[2] C. M. Ahmed, V. R. Palleti, and A. P. Mathur, “Wadi: A water nonlinear dimensionality reduction,” 2020, arXiv:2010.14831.
+ distribution testbed for research in the design of secure cyber physical [20] S. Z. Li, Z. Zang, and L. Wu, “Markov-lipschitz deep learning,” 2020,
+ systems,” in Proc. 3rd Int. Workshop Cyber-Phys. Syst. Smart Water arXiv:2006.08256.
+ Netw., Jul. 2017, pp. 25–28. [21] A. Lin, J. Cheng, L. Rutkowski, S. Wen, M. Luo, and J. Cao,
+[3] L. Ardizzone, C. Lüth, J. Kruse, C. Rother, and U. Köthe, “Guided “Asynchronous fault detection for memristive neural networks with
+ image generation with conditional invertible neural networks,” 2019, dwell-time-based communication protocol,” IEEE Trans. Neural Netw.
+ arXiv:1907.02392. Learn. Syst., vol. 34, no. 11, pp. 9004–9015, Sep. 2022.
+[4] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga, [22] C. Liu, S. He, Q. Zhou, S. Li, and W. Meng, “Large language model
+ “USAD: Unsupervised anomaly detection on multivariate time series,” guided knowledge distillation for time series anomaly detection,” 2024,
+ in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Disc. Data Min., Jun. arXiv:2401.15123.
+ 2020, pp. 3395–3404. [23] H. Liu, X. Qiu, Y. Shi, and Z. Zang, “USD: Unsupervised soft contrastive
+[5] R. Chalapathy and S. Chawla, “Deep learning for anomaly detection: A learning for fault detection in multivariate time series,” in Proc. IEEE
+ survey,” 2019, arXiv:1901.03407. Int. Conf. Acoust., Speech Signal Process. (ICASSP), Apr. 2025, pp. 1–5.
+[6] H. Chen, Z. Chai, O. Dogru, B. Jiang, and B. Huang, “Data-driven [24] N. D. Nguyen, J. Huang, and D. Wang, “A deep manifold-regularized
+ designs of fault detection systems via neural network-aided learning,” learning model for improving phenotype prediction from multi-modal
+ IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 10, pp. 5694–5705, data,” Nature Comput. Sci., vol. 2, no. 1, pp. 38–46, 2022.
+ Oct. 2022. [25] C. Peng and M. Fanchao, “Fault detection of urban wastewater treatment
+[7] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework process based on combination of deep information and transformer
+ for contrastive learning of visual representations,” in Proc. 37th Int. network,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 6,
+ Conf. Mach. Learn., Jun. 2020, pp. 1597–1607. pp. 8124–8133, Jun. 2022.
+LIU et al.: DEEP MULTIMANIFOLD TRANSFORMATION-BASED MTS FAULT DETECTION 18407
+
+[26] L. Ruff et al., “Deep semi-supervised anomaly detection,” 2019, Xiuxiu Qiu received the master’s degree in elecarXiv:1906.02694. tronic information from Zhejiang University of
+[27] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly Technology, Hangzhou, China, in 2025.
+ detection for multivariate time series through stochastic recurrent neural Her research focuses on affective computing and
+ network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Disc. Data intelligent information processing.
+ Min., Jun. 2019, pp. 2828–2837.
+[28] J. Tang, Z. Gong, B. Tao, and Z. Yin, “Advancing generalizations of
+ multi-scale GAN via adversarial perturbation augmentations,” Knowl.-
+ Based Syst., vol. 284, Jan. 2024, Art. no. 111260.
+[29] J. Wang, S. Shao, Y. Bai, J. Deng, and Y. Lin, “Multiscale wavelet
+ graph AutoEncoder for multivariate time-series anomaly detection,”
+ IEEE Trans. Instrum. Meas., vol. 72, pp. 1–11, 2023. Yiming Shi received the master’s degree from Zhe-
+[30] H. Wu, J. Xu, J. Wang, and M. Long, “Autoformer: Decomposition jiang University, Hangzhou, China, 2006.
+ transformers with auto-correlation for long-term series forecasting,” in With long-term dedication to industrial control
+ Proc. Adv. Neural Inf. Process. Syst., Jan. 2021, pp. 1–12. systems research, he specializes in fieldbus technolo-
+[31] R. Xu, H. Miao, S. Wang, P. S. Yu, and J. Wang, “PeFAD: A parameter- gies, information security, and edge intelligence.
+ efficient federated framework for time series anomaly detection,” in
+ Proc. 30th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug.
+ 2024, pp. 3621–3632.
+[32] X. Yu, Z. Zhao, X. Zhang, X. Chen, and J. Cai, “Statistical identification
+ guided open-set domain adaptation in fault diagnosis,” Rel. Eng. Syst.
+ Saf., vol. 232, Apr. 2023, Art. no. 109047.
+[33] Z. Zang et al., “DLME: Deep local-flatness manifold embedding,” in
+ Proc. ECCV. Cham, Switzerland: Springer, Jan. 2022, pp. 576–592. Miao Xu received the M.S. degree from the Institute
+[34] Z. Zang et al., “DiffAug: Enhance unsupervised contrastivelearning with of Automation, Chinese Academy of Sciences, Beidomain-knowledge-free diffusion-based data augmentation,” in Proc. jing, China, in 2024, under the supervision of Zhen
+ Int. Conf. Mach. Learn., 2024, pp. 58174–58196. Lei.
+[35] Z. Zang et al., “Boosting novel category discovery over domains with His research interests include computer vision and
+ soft contrastive learning and all in one classifier,” in Proc. IEEE/CVF 3-D reconstruction.
+ Int. Conf. Comput. Vis. (ICCV), Oct. 2023, pp. 11824–11833.
+[36] J. Zhang, K. Zhang, Y. An, H. Luo, and S. Yin, “An integrated multitasking intelligent bearing fault diagnosis scheme based on representation
+ learning under imbalanced sample condition,” IEEE Trans. Neural Netw.
+ Learn. Syst., vol. 35, no. 5, pp. 6231–6242, May 2023.
+[37] L. Zhang, J. Lin, H. Shao, Z. Zhang, X. Yan, and J. Long, “End-to-end Zelin Zang (Member, IEEE) received the Ph.D.
+ unsupervised fault detection using a flow-based model,” Rel. Eng. Syst. degree from Zhejiang University, Hangzhou, China,
+ Saf., vol. 215, Nov. 2021, Art. no. 107805. in 2024, under the supervision of Prof. Stan Z. Li.
+[38] B. Zhao, X. Zhang, Q. Wu, Z. Yang, and Z. Zhan, “A novel unsupervised His research focuses on manifold learning, dimendirected hierarchical graph network with clustering representation for sionality reduction, and geometric deep learning,
+ intelligent fault diagnosis of machines,” Mech. Syst. Signal Process., with applications in single-cell omics, protein funcvol. 183, Jan. 2023, Art. no. 109615. tion analysis, and biomedical image understanding.
+[39] Q. Zhou, J. Chen, H. Liu, S. He, and W. Meng, “Detecting multivariate He has made notable contributions to deep manifold
+ time series anomalies with zero known label,” in Proc. AAAI Conf. Artif. transformation techniques and has proposed several
+ Intell., vol. 37, no. 4, Jun. 2023, pp. 4963–4971. high-impact models in AI for Science, including
+[40] Q. Zhou, S. He, H. Liu, J. Chen, and W. Meng, “Label-free multivariate MuST for spatial transcriptomics integration and
+ time series anomaly detection,” IEEE Trans. Knowl. Data Eng., vol. 36, DMT-HI for interpretable manifold visualization. His current research interests
+ no. 7, pp. 3166–3179, Jul. 2024. lie in developing interpretable and structure-aware representation learning
+[41] T. Zonta, C. A. da Costa, R. da Rosa Righi, M. J. de Lima, E. S. da methods for high-dimensional biological data, with an emphasis on tree-like
+ Trindade, and G. P. Li, “Predictive maintenance in the industry 4.0: A structure inference, large-scale biomedical foundation models, and multiagent
+ systematic literature review,” Comput. Ind. Eng., vol. 150, Dec. 2020, medical reasoning systems.
+ Art. no. 106889.
+
+ Zhen Lei (Fellow, IEEE) received the B.S. degree
+ in automation from the University of Science and
+ Technology of China, Hefei, China, in 2005, and
+ the Ph.D. degree from the Institute of Automation,
+ Chinese Academy of Sciences, Beijing, China, in
+ 2010.
+ He is currently a Professor with the Institute of
+ Automation, Chinese Academy of Sciences. He has
+ published over 200 articles in international journals
+ Hong Liu (Member, IEEE) received the Ph.D. and conferences with more than 30000 citations in
+ degree from Zhejiang University, Hangzhou, China, Google Scholar and an H-index of 81. His research
+ in 2014. interests include computer vision, pattern recognition, image processing, and
+ He had a post-doctoral experience in electronic face recognition in particular.
+ science major at Zhejiang University. He was a Vis- Dr. Lei is an IAPR Fellow and an AAIA Fellow. He was a winner of
+ iting Researcher with The Hong Kong University of the 2019 IAPR Young Biometrics Investigator Award. He was the Program
+ Science and Technology, Hong Kong. He is currently Co-Chair of IJCB2023, the Competition Co-Chair of IJCB2022, and the
+ an Associate Professor with the School of Infor- area chair of several conferences. He is an Associate Editor of IEEE
+ mation and Electric Engineering, Hangzhou City T RANSACTIONS ON I NFORMATION F ORENSICS AND S ECURITY, IEEE
+ University, Hangzhou. His major research interests T RANSACTIONS ON B IOMETRICS , B EHAVIOR , AND I DENTITY S CIENCE,
+ include system modeling, optimization, and control. Pattern Recognition, Neurocomputing, and IET Computer Vision.

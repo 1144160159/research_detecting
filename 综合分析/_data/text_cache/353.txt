@@ -1,0 +1,146 @@
+2602                                                               IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 18, NO. 5, SEPTEMBER/OCTOBER 2025
+
+
+
+
+               Accurate and Interpretable Log-Based Fault
+                Diagnosis Using Large Language Models
+       Yongqian Sun , Member, IEEE, Shiyu Ma, Tong Xiao, Yongxin Zhao , Xuhui Cai, Wei Dong, Yue Shen ,
+              Yao Zhao, Shenglin Zhang , Member, IEEE, Jing Han, and Dan Pei , Senior Member, IEEE
+
+
+   Abstract—Log-based fault diagnosis is essential for ensuring                                                I. INTRODUCTION
+system reliability and resilience. However, current methods only
+                                                                                       N MODERN large-scale and complex online service sys-
+provide fault diagnosis results without explanations, which un-
+dermines their credibility. Large language models (LLMs) have
+extensive pre-trained knowledge and show potential in log analysis,
+                                                                                   I   tems, faults can disrupt interdependent services, significantly
+                                                                                   degrade system performance, and impact millions of users [1].
+yet they cannot be directly applied to log-based fault diagnosis                   If these faults are not promptly mitigated, they can result in
+due to limited specialized capabilities and domain-specific insights.
+Furthermore, LLMs have limitations in context length and are
+                                                                                   severe consequences and substantial financial losses [2]. When
+too diverse to select a suitable one. To address these issues, this                a fault occurs, the system generates extensive logs containing
+paper presents LogInsight, a framework that enables accurate and                   vital information about the underlying issue [3]. Operations and
+interpretable log-based fault diagnosis using LLMs. We fine-tune a                 Maintenance (O&M) engineers analyze these logs to diagnose
+medium-sized, open-source LLM to incorporate domain expertise                      the fault, a process that involves fault triage, which is indispens-
+and leverage its interpretive capability. Additionally, we design a
+Fault-Oriented Log Summary (FOLS) module to extract essen-
+                                                                                   able for prioritizing remediation efforts and assigning the fault to
+tial information from log sequences, mitigating LLMs’ context                      the appropriate team for resolution [4]. Effective fault diagnosis
+length limitation. Extensive evaluations on two public datasets                    not only accelerates recovery times but also minimizes the risk of
+and a real-world production dataset demonstrate LogInsight’s su-                   cascading failures [5]. Consequently, log-based fault diagnosis
+periority over state-of-the-art methods in both performance and                    plays a critical role in ensuring the reliability and stability of
+interpretability.
+                                                                                   online services [6].
+   Index Terms—Log-based fault diagnosis, log analysis, large                         Manual log analysis is inherently time-consuming and labor-
+language models, interpretability.                                                 intensive, posing significant challenges for O&M engineers
+                                                                                   tasked with managing the massive and complex log data gen-
+                                                                                   erated by large-scale systems [6]. To address these challenges,
+                                                                                   automated log-based fault diagnosis leveraging machine learn-
+                                                                                   ing and deep learning algorithms has emerged as a promising
+   Received 23 January 2025; revised 28 June 2025; accepted 4 August 2025.         solution [7]. Despite significant advancements in this field [8],
+Date of publication 15 August 2025; date of current version 9 October 2025.        [9], [10], existing approaches often suffer from a critical limita-
+This work was supported in part by the National Natural Science Foundation of
+China under Grant 62272249 and Grant 62302244 and in part by the Fundamen-         tion: poor interpretability. Most approaches focus on producing
+tal Research Funds for the Central Universities under Grant XXX-63253249.          diagnostic results without providing clear explanations for these
+(Corresponding author: Shenglin Zhang.)                                            outcomes, which can hinder O&M engineers’ ability to trust and
+   Yongqian Sun is with the College of Software, Nankai University, Tianjin
+300350, China, and also with the Tianjin Key Laboratory of Software Experi-        act on the recommendations effectively [11].
+ence and Human Computer Interaction (TKL-SEHCI), Tianjin 300074, China                Interpretable fault diagnosis goes beyond merely triaging
+(e-mail: sunyongqian@nankai.edu.cn).                                               faults; it provides the rationale behind the triage results, enabling
+   Shiyu Ma and Yongxin Zhao are with the College of Software, Nankai
+University, Tianjin 300350, China (e-mail: mashiyu@mail.nankai.edu.cn;             O&M engineers to quickly and accurately assign faults to the
+zyx_nkcs@mail.nankai.edu.cn).                                                      appropriate teams while fostering a better understanding of the
+   Tong Xiao and Dan Pei are with the Department of Computer Science, Ts-          results and facilitating targeted mitigation measures. As illus-
+inghua University, Beijing 100084, China (e-mail: xiaotong@tsinghua.edu.cn;
+peidan@tsinghua.edu.cn).                                                           trated in Fig. 1, the transition from traditional fault diagnosis to
+   Xuhui Cai, Wei Dong, and Yue Shen are with China Mobile Communications          interpretable methods fosters a more transparent and informed
+Group Company Ltd., Beijing 100032, China (e-mail: caixuhui@chinamobile.           approach, bolstering confidence in decision-making and enhanc-
+com; dongweiwl@chinamobile.com; shenyue@chinamobile.com).
+   Yao Zhao is with China Mobile Communications Group Jiangsu Company              ing the overall reliability of fault management systems.
+Ltd., Jiangsu 223600, China (e-mail: zhaoyao@js.chinamobile.com).                     Recently, large language models (LLMs) have demonstrated
+   Shenglin Zhang is with the College of Software, Nankai University, Tianjin      promising capabilities across various natural language process-
+300350, China, also with the Haihe Laboratory of Information Technology
+Application Innovation (HL-IT), Tianjin 300459, China, and also with the Key       ing (NLP) tasks [12], [13]. Trained on vast datasets encompass-
+Laboratory of Data and Intelligent System Security, Ministry of Education,         ing code [14] and log data [15], LLMs have the potential to
+300350, China (e-mail: zhangsl@nankai.edu.cn).                                     provide a more comprehensive and context-aware understanding
+   Jing Han is with ZTE Corporation, Shanghai 201203, China (e-mail:
+han.jing28@zte.com.cn).                                                            of logs. Several studies have explored the application of
+   Digital Object Identifier 10.1109/TSC.2025.3599494                              LLMs in log analysis [11], [16], [17]. However, leveraging
+
+      1939-1374 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+SUN et al.: ACCURATE AND INTERPRETABLE LOG-BASED FAULT DIAGNOSIS USING LARGE LANGUAGE MODELS                                                        2603
+
+
+
+
+Fig. 1.   Comparison between traditional fault diagnosis and interpretable fault diagnosis.
+
+
+LLMs for interpretable fault diagnosis faces the following                               particularly its ability to provide interpretable results while
+challenges:                                                                              achieving superior performance compared to existing state-
+   1) LLMs’ lack of domain expertise: LLMs are not specifically                          of-the-art methods.
+       trained for fault diagnosis and often lack the domain-
+       specific skills and contextual understanding required to
+       perform fault diagnosis effectively. Consequently, directly                                         II. BACKGROUND
+       applying LLMs to log-based fault diagnosis may result in                    A. Log-Based Fault Diagnosis
+       poor performance.
+   2) LLMs’ limitations in context length: Fault diagnosis typ-                       When a fault occurs in a system, O&M engineers are re-
+       ically requires analyzing extensive logs, yet LLMs have                     sponsible for performing triage, diagnosing the root cause, and
+       limited context length, making it impractical to input all                  promptly implementing mitigation measures. Fault diagnosis,
+       logs at once. Although recent researche has focused on ex-                  which encompasses fault triage, generally involves analyzing
+       tending the context length of LLMs [18], [19], challenges                   log data generated during the fault period—referred to as fault-
+       persist due to the exponential increase in computational                    related log data—serving as the primary source of diagnostic
+       demands and accuracy degradation [20].                                      information [3]. However, the sheer volume of this data can
+   To address the above challenges, we propose LogInsight, a                       be overwhelming, making manual review both labor-intensive
+framework for accurate and interpretable log-based fault diag-                     and time-consuming and often delaying responses to critical
+nosis using LLMs. Specifically, we fine-tune a medium-sized,                       faults [6].
+open-source LLM to incorporate domain-specific knowledge                              To reduce manual workload, O&M engineers often create
+and design a Fault-Oriented Log Summary (FOLS) module to                           heuristic rules based on their experience to aid in log retrieval and
+extract critical information from each log sequence, thereby                       fault identification. While useful, these heuristics have notable
+mitigating LLMs’ inherent context-length limitations. We con-                      limitations. First, manually creating and updating rules is labor-
+duct comprehensive evaluations on two public datasets and                          intensive, especially as system requirements and configurations
+one production dataset. The results demonstrate that LogIn-                        evolve. Second, heuristic-based diagnosis is prone to errors,
+sight achieves the highest average F1 score in fault diagno-                       leading to misdiagnoses and ineffective mitigation strategies [8].
+sis, outperforming state-of-the-art baseline methods by 36.9%,                     As a result, automated log-based fault diagnosis using machine
+12.8%, and 7.3%, respectively. Additionally, LogInsight en-                        learning and deep learning techniques has gained significant
+hances interpretability by providing justifications for its diag-                  attention [3], [7], [8], [21].
+nostic outcomes, supporting more informed decision-making
+for O&M engineers. In summary, the main contributions of this
+paper are as follows:                                                              B. Large Language Models
+    r We propose a practical framework for log-based fault di-                        In recent years, large language models (LLMs) have trans-
+      agnosis using LLMs that provides explanations for fault                      formed the field of natural language processing (NLP), drawing
+      triage results.                                                              significant interest from researchers and practitioners. OpenAI’s
+    r We design a Fault-Oriented Log Summary (FOLS) module                         introduction of GPT [22] demonstrated the potential of models
+      to address LLMs’ context-length limitations, enabling the                    pre-trained on large datasets and fine-tuned for specific tasks,
+      processing of large log volumes essential for fault diagno-                  paving the way for models like BERT [23], T5 [24], and
+      sis.                                                                         GPT-3 [25]. More recently, advancements such as ChatGPT
+    r We conduct extensive evaluations on three real-world                         have broadened the application of LLMs, providing highly
+      log datasets to validate the effectiveness of LogInsight,                    conversational interfaces with remarkable dialogue capabilities.
+2604                                                    IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 18, NO. 5, SEPTEMBER/OCTOBER 2025
+
+
+
+This trend has continued with OpenAI’s GPT-4 [26], Meta AI’s                                III. RELATED WORK
+LLaMA [27], and Google’s PaLM [28].
+                                                                      A. Log-Based Fault Diagnosis
+   LLMs are predominantly built on the Transformer ar-
+chitecture [29] and are trained on extensive datasets us-                With advances in machine learning and deep learning, numer-
+ing self-supervised learning objectives. They generate text           ous approaches have been developed for automating log-based
+autoregressively—predicting one token at a time—until a               fault diagnosis. These approaches can be categorized into three
+sequence is complete [30]. At the core of the Transformer is          main types:
+the self-attention mechanism, which allows models to capture             Machine Learning-Based Methods: This type of method typ-
+dependencies across sequences; however, its computational cost        ically converts log events into vector representations for clus-
+is high, with memory and processing requirements growing              tering and classification. For example, LogCluster [7] employs
+quadratically with input length. This constraint makes handling       TF-IDF to represent log sequences as weighted vectors and
+long text inputs challenging, as information relevance can dimin-     utilizes hierarchical clustering, while Cloud19 [3] leverages
+ish over extended contexts, leading to issues such as attention       word2vec embeddings to capture semantic features and classify
+dispersion.                                                           faults. However, both approaches are challenged by the presence
+   Despite these challenges, LLMs’ extensive pre-training on          of noise and redundant log data, which can impact diagnostic
+datasets that include code and log data makes them promis-            accuracy.
+ing candidates for log-based fault diagnosis. Effectively ap-            Deep Learning-Based Methods: More recent deep learning-
+plying LLMs to these tasks has become a research priority,            based methods have enhanced fault diagnosis capabilities, par-
+with fine-tuning task-specific datasets emerging as the dominant      ticularly for complex log patte

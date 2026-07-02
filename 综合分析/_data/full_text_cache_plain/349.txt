@@ -1,0 +1,1734 @@
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+1739
+
+A Synthetic Data-Assisted Satellite Terrestrial
+Integrated Network Intrusion
+Detection Framework
+Junpeng He , Xiong Li , Senior Member, IEEE, Xiaosong Zhang , Weina Niu , Senior Member, IEEE,
+and Fagen Li , Member, IEEE
+
+Abstract—The Satellite-Terrestrial Integrated Network (STIN)
+is an emerging paradigm offering seamless network services
+across geographical boundaries, yet it faces significant security
+challenges, including limited intrusion prevention capabilities.
+Federated learning (FL) provides a viable solution by aggregating traffic data from STIN clients (e.g., ground stations and
+edge routers) to train models for network intrusion detection
+systems (NIDS). However, satellite and terrestrial domain data’s
+non-independent and identically distributed (non-IID) nature
+hinders training efficiency and performance. This paper proposes STINIDF, a novel STIN intrusion detection framework
+leveraging FL-based data augmentation. STINIDF utilizes FL
+to collaboratively train a conditional diffusion model across
+STIN nodes while preserving privacy via differential privacy
+mechanisms, generating global traffic data representative of
+the STIN distribution. Each node then integrates global and
+local traffic data to train a local model for NIDS, addressing non-IID challenges by balancing data distribution through
+data augmentation. Using a simulation environment developed
+with OMNeT++ and INET, a Satellite-Terrestrial Integrated
+(STI) traffic dataset was created, including intrusion scenarios such as signal disruption, UDP flooding, and jamming
+attacks. Experimental results indicate that STINIDF outperforms
+existing data augmentation-based approaches under non-IID conditions, achieving 96.63%(2.41% ↑) accuracy, 96.71%(3.14% ↑)
+precision, 96.54%(1.65% ↑) recall and 96.66%(2.7% ↑) F1
+score. Furthermore, when compared to methods integrating
+data augmentation with differential privacy, STINIDF demonstrates an effective balance between privacy preservation and
+intrusion detection performance, attaining an accuracy of
+96.14%(2.57% ↑) and a FID of 17.88(7.41 ↓).
+
+Index Terms—Satellite-terrestrial integrated network, intrusion detection system, diffusion model, federated learning,
+differential privacy.
+
+I. I NTRODUCTION
+
+T
+
+HE satellite-terrestrial integrated network (STIN) is
+envisioned as a cornerstone of sixth-generation (6G)
+networks, enabling heterogeneous services and global network
+access by supporting extensive traffic transmission for both
+space access and terrestrial communication [1]. However,
+expanding satellite networks and rising traffic volumes present
+critical challenges, including security vulnerabilities, cyber
+threats, and privacy breaches [2]. To address these issues,
+network intrusion detection systems (NIDS) have been proposed to monitor and detect malicious activities within satellite
+and terrestrial traffic flows [3]. To extract features from traffic
+data and adapt to dynamic environments [4], modern NIDS
+increasingly leverage artificial intelligence (AI) techniques,
+such as machine learning (ML) [5] and deep learning (DL)
+[6]. In STIN, traffic monitors collect traffic data from various
+infrastructures, such as ground stations (GSs), edge routers,
+and user terminals. However, it is impractical to train a
+centralized NIDS because aggregating locally recorded traffic
+data may leak privacy, and attackers may be able to access
+sensitive data of GSs in this process [7]. Unlike conventional
+network environments, STINs serve large-scale commercial
+and military applications. Therefore, ensuring data privacy
+is crucial, as any violations could cause significant losses to
+governments and businesses.
+In practice, traffic samples in STIN are collected by the flow
+monitor distributed across various infrastructures, including
+GSs, edge routers, and user terminals. Directly training a
+global NIDS by aggregating these traffic samples is infeasible,
+as locally recorded data inherently risks privacy breaches.
+Meanwhile, the intruders may launch adversarial attacks based
+on personal devices during traffic aggregation to sniff sensitive
+data in GSs [7]. Compared with other traffic environments
+like the Internet of Things or industrial control systems, STIN
+generally serves large-scale commercial or military usage.
+Therefore, data privacy issues in STIN deserve attention,
+and any data leakage may cause immeasurable losses to the
+government and enterprises.
+
+Received 14 June 2024; revised 27 November 2024; accepted 8 January
+2025. Date of publication 16 January 2025; date of current version 11 February
+2025. This work was supported in part by the National Science Foundation
+of China under Grant 62332018 and Grant U2336204, in part by Sichuan
+Provincial Natural Science Foundation under Grant 2025ZNSFSC0497, and
+in part by the Open Foundation of Key Laboratory of Cyberspace Security,
+Ministry of Education of China and Henan Key Laboratory of Network
+Cryptography under Grant KLCS20240303. The associate editor coordinating
+the review of this article and approving it for publication was Dr. Weizhi
+Meng. (Corresponding author: Xiong Li.)
+Junpeng He, Xiong Li, Weina Niu, and Fagen Li are with the
+School of Computer Science and Engineering, University of Electronic
+Science and Technology of China, Chengdu 611731, China (e-mail:
+junpenghe@std.uestc.edu.cn; lixiong@uestc.edu.cn; niuweina1@126.com;
+fagenli@uestc.edu.cn).
+Xiaosong Zhang is with the School of Computer Science and Engineering,
+University of Electronic Science and Technology of China, Chengdu 611731,
+China, and also with Shenzhen Institute for Advanced Study, University
+of Electronic Science and Technology of China, Shenzhen 518000, China
+(e-mail: johnsonzxs@uestc.edu.cn).
+Digital Object Identifier 10.1109/TIFS.2025.3530676
+1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+1740
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Federated learning (FL) has emerged as a privacy-aware
+paradigm, allowing the training of a global AI model across
+multiple untrusted clients using their local datasets without
+exchanging data [8]. A representative FL-based algorithm is
+Federated Averaging (FedAvg), where the parameter server
+(PS) averagely aggregates client-uploaded model weights [9].
+However, training an FL-based NIDS across STIN clients,
+such as GSs and edge routers, poses two major challenges:
+data heterogeneity and privacy concerns.
+Data heterogeneity, marked by non-independent and identically distributed (non-IID) data distributions across clients,
+results in inconsistent local models and ineffective aggregation
+[10]. In STIN, the traffic environment is divided into satellite
+and terrestrial domains. The satellite domain encompasses
+traffic exchanged between satellite constellations and GSs,
+while the terrestrial domain includes flows between GSs,
+edge routers, and user terminals. GSs record traffic from both
+domains, whereas edge routers store only terrestrial domain
+traffic. This imbalance in traffic distribution between GSs and
+edge routers hinders the effectiveness of FL-based aggregation
+across STIN clients. To mitigate this issue, data augmentation
+[11], [12] is applied to synthesize data and balance local training distributions among STIN clients. However, the existing
+literature fails to consider this approach in the context of
+STIN-based intrusion detection.
+Meanwhile, sensitive information in local traffic can be
+exposed if intruders intentionally analyze exchanged model
+parameters through data inversion [13]. To mitigate this risk,
+differential privacy (DP) [14] is employed to obscure parameters and prevent data inversion. However, few studies have
+explored the application of DP in real-world scenarios such as
+STIN.
+To tackle these challenges, we propose STINIDF, a novel
+STIN intrusion detection framework with privacy protection
+that employs a DP-based conditional diffusion model (DM)
+[15] for data augmentation. Our contributions include:
+• A novel dataset, termed Satellite-Terrestrial Integrated
+(STI), representing STIN traffic distribution, is collected
+within a designed simulation scenario using OMNET++
+[16] and INET [17].
+• A DP-based conditional diffusion model (DP-CDM)
+is proposed for traffic augmentation with functionality
+preservation, ensuring that the augmented traffic complies
+with traffic generation constraints.
+• A four-layer FL-based training algorithm, STIN-FedAvg,
+is designed to train DP-CDM within the STIN environment, incorporating overlapping downloading and
+multi-level aggregation/local-update properties. Meanwhile, DP is applied during local updates to strengthen
+privacy protection and mitigate inference attacks.
+• STINIDF employs STIN-FedAvg to aggregate DP-CDM,
+which generates traffic data representing the STIN global
+traffic distribution. Each STIN node then combines this
+data with its local data to train a detection model for
+NIDS, ensuring strong robustness and generalization even
+in a STIN non-IID scenario.
+• Extensive experiments demonstrate that STINIDF outperforms state-of-the-art methods in both traffic generation
+
+and detection. Specifically, in the generation aspect, the
+traffic generated by DP-CDM achieves 17.88 fréchet
+inception distance (FID), outperforming the second-best
+method by 7.41. In the detection aspect, NIDS achieves
+an accuracy of 96.63% in the STIN non-IID scenario,
+exceeding the second-best method by 2.41%.
+The paper is organized as follows. Section II reviews related
+works in three domains. Section III outlines background and
+the threat model. Section IV elaborates on the system design
+of STINIDF. Section VI describes the collected dataset and
+experiment setups. Section VII presents experimental results
+and discussions. Section VIII concludes this paper.
+II. R ELATED W ORKS
+This section discusses related works on STINIDF from
+multiple perspectives. Since STINIDF is designed to address
+data heterogeneity challenges, works tackling FL-based nonIID issues are introduced first. As STINIDF incorporates
+data augmentation within an FL-based system, synthetic
+data-assisted approaches for privacy preservation are subsequently reviewed. Given that STINIDF is intended for STIN
+cybersecurity, intrusion detection methods for satellite-related
+environments are further explored. Finally, a comprehensive
+comparison across six key issues highlights the distinctiveness
+of STINIDF within its domain.
+A. Non-IID Challenges in Federated Learning
+A significant challenge in FL lies in the non-IID data
+distribution, which disrupts the consistency of the aggregation
+process across local models [18]. One common approach
+addresses this by improving the aggregation process. For
+example, Wang et al. [19] proposed a normalized averaging
+algorithm to ensure objective consistency while achieving
+rapid error convergence. Another approach focuses on correcting the local training process by accounting for model
+deviations. For instance, Mu et al. [20] introduced global prototypes that guide local model training by balancing individual
+objectives with global optima.
+B. Synthetic Data-Assisted Privacy Preservation
+Data augmentation is a viable approach to mitigating nonIID challenges by balancing data distribution in FL-based
+systems [11]. This method shares the model parameters
+instead of the real data to achieve privacy preservation. For
+example, FedDPGAN [21] leverages a global generative adversarial network (GAN) [22] trained across distributed nodes
+to output synthetic data, which are subsequently used to
+enhance a detection model. However, the training process
+of GAN often involves frequent data exchanges, leading
+to significant communication costs. Li et al. [12] proposed
+a GAN-based framework to generate differentially private
+synthetic data, which are then labeled by using an iterative
+pseudo mechanism. While this framework improves consistency and aggregation in their proposed FL-based system, the
+pseudo-labeling method lacks persuasiveness as it relies on
+a predefined threshold rather than the intrinsic characteristics
+
+HE et al.: SYNTHETIC DATA-ASSISTED STI NETWORK INTRUSION DETECTION FRAMEWORK
+
+1741
+
+TABLE I
+C OMPARISON W ITH R ELATED W ORKS IN N ETWORK I NTRUSION D ETECTION
+
+of the data. Moreover, these studies predominantly address
+image classification or medical diagnosis, rather than network
+intrusion detection, particularly in STINs.
+C. Intrusion Detection for Satellite-Related Networks
+Li et al. [2] proposed a distributed NIDS on STINs,
+incorporating an FL-adapted algorithm to optimize recognition rates, packet loss rates, and CPU utilization. However,
+the non-IID nature of traffic in STINs was not considered.
+Sitouah et al. [23] explored various deep learning algorithms
+for detecting attacks in low earth orbit (LEO) satellite networks, focusing on interruption categories such as DoS/DDoS,
+jamming, and meteorological disturbances. Despite their contributions, the LEO traffic environment is indeed different
+from STINs, where the satellites are prohibitive to communicate with user terminals or edge routers without GSs.
+Additionally, DFSat [24] was proposed for intrusion detection
+on IoT-integrated distributed satellite networks, leveraging an
+FL-based deep learning framework to achieve higher performance with fewer communication rounds. Nonetheless,
+the datasets used in their experiments, ToN IoT [25] and
+UNSW-NB 15 [26], were generated from terrestrial simulated
+platforms rather than satellite-related platforms, some key features like signal-to-interference-plus-noise radio (SINR) [27]
+are not included, and the data distribution is distinct. Furthermore, Azar et al. [3] developed SAT-IDS, a hybrid intrusion
+detection system for satellite-terrestrial systems, employing
+AI-based methods with sequential forward feature selection.
+However, their system is isolated and challenging to deploy in
+realistic distributed environments like STINs.
+
+III. P RELIMINARIES
+A. Federated Learning
+It is a distributed ML-based training strategy with data
+privacy preservation. One of the most representative FLs
+is FedAvg [9], where updated local model parameters are
+averagely aggregated. Concretely, for each communication
+round t ∈ T , every client k ∈ K first updates its local model
+weights wkt by its local dataset Dk via stochastic gradient
+descent (SGD) optimizer [34]. Then, all trained local weights
+wkt+1 are transferred to PS for global weight aggregation:
+PK
+wt+1 ← k=1
+wkt+1 . wt+1 is also downloaded by each client
+for its next local training phase. Overall, FL is designed to
+solve the following risk minimization problem:
+(
+)
+K
+X
+∆ 1
+min f (w) =
+Fk (w)
+(1)
+w
+K
+k=1
+
+∆
+
+where Fk (w) = E x∼Dk [Fk (w, x)] is the loss function for local
+update. After T times, the trained global weights contain the
+knowledge from each Dk without data exchange.
+B. Differential Privacy
+Considering that the exchanged model weight can still be
+divulged by some existing analyzing tools, bringing information leakage problems, DP is designed by adding artificial
+noise to entail concealing sensitive instances within the dataset
+[13]. Given a randomized mechanism M, it satisfies (, δ)-DP
+when any possible output set Ω and any two adjacent databases
+D, D0 hold the following inequality:
+Pr(M(D) ∈ Ω) ≤ e Pr(M(D0 ) ∈ Ω) + δ
+
+D. Work Comparison
+Except for the aforementioned review, Table I provides a
+comparison with other relevant works in network intrusion
+detection, addressing various issues concerning STINs and
+related environments. Specifically, I1 represents the focus
+on STIN-specific environments; I2 indicates support for distributed deployment; I3 reflects consideration of the non-IID
+challenge; I4 pertains to the application of data augmentation; I5 highlights privacy preservation measures; I6 refers to
+manual traffic simulation and dataset collection. Our STINIDF
+aims to comprehensively cover all six issues.
+
+(2)
+
+ is the pre-defined privacy budget to balance the strength
+of DP. Smaller  means stronger privacy protection and
+worse data utility, and vice versa. δ represents the risk
+probability of condition that  can not bound D and D0 . In
+this paper, we utilize the Gaussian mechanism to guarantee
+(, δ)-DP for the traffic data, where artificial Gaussian noises
+z ∼ N (0, σ2 I) are added to the exchanged model
+weights.
+√
+The noise scale σ should satisfies σ ≥ S 2ln(1.25/δ)/
+where S is the sensitivity of the model function fw (·) given by
+S = maxD,D0 || fw (D) − fw (D0 )||. For Gaussian-based DP in DL,
+the differential private stochastic gradient descent (DP-SGD)
+
+1742
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+[35] with (, δ)-DP requires a single model update clipped to
+C (i.e., the gradient norm bound) with noise Cz addition (In
+this paper, S is equals to C for single sample update), defined
+as follow:
+!
+
+
+M
+η X dLw (xi )
+dLw (xi )
+w←w−
+min 1, C/||
+||2 + Cz
+M
+dw
+dw
+i=1
+(3)
+where η is the learning rate, M is the sample amount and Lw (·)
+is the loss function of the model.
+
+C. Diffusion Model
+DM [15] is famous for generating stable features for constructing new instances with high quality such as multi-media
+materials. Denoted as pw , DM generally includes forward and
+backward processes. The forward process gradually converts
+x0 , sampled from real data distribution q(x), into Gaussian
+noise vectors xN = N (0, I) in each step n ∈ [1, 2, . . . , N]. This
+process is also known as posterior probabilities: q(xn |xn−1 ).
+N
+Given a variance schedule {βn ∈ (0, 1)}n=0
+, it is fixed into a
+Markov chain for x0 → xN :
+p
+(4)
+q(xn |xn−1 ) = N (xn ; 1 − βn xn−1 , βn I)
+This formula can be optimized by the Gaussian noise
+reparameterization technique, where xN is directly calculated
+from x0 . As a result, Equation
+P4N is converted into Equation 5
+given αn = 1 − βn and α¯N = n=1
+αn :
+q(xN |x0 ) = N (xN ;
+
+√
+
+α¯N x0 , (1 − α¯N )I)
+
+(5)
+
+The reverse process samples xN and converts this Gaussian
+vector back to a new vector x0 with pw . This step is known
+as conditional probabilities: pw (xn−1 |xn ). It is also fixed into a
+Markov chain for xN → x0 :
+
+
+X
+pw (xn−1 |xn ) = N xn−1 ; µw (xn , n),
+(xn , n)
+(6)
+w
+
+where µw predicts the forward process posterior mean and
+P
+w (xn , n) equals βn I, which is the variance. µw can also be
+parameterized as:
+
+
+√
+βn
+µw = xn − √
+zw (xn , n) / αn
+(7)
+1 − ᾱn
+where zw is an approximator that requires gradient learning for
+approaching Gaussian vector z given xn . Finally, the reverse
+process from xn to xn−1 is specified as:
+
+
+√
+βn
+xn−1 = xn − √
+zw (xn , n) / αn + βn z
+(8)
+1 − ᾱn
+Conclusively, training a DM is to foster reverse approximator zw to predict n-step z, its empirical loss function Lw is
+defined as a denoising score that matches over multiple noise
+scales indexed by n with the expectation of x:
+p
+√
+Lw = E x,n,z ||z − zw ( α¯n x + 1 − α¯n z, n)||2
+(9)
+
+Fig. 1. Overall threat model that includes space, ground, and user segments.
+The space segment possesses satellite nodes that send messages by ISL with
+each other; the ground segment symbolizes GS nodes that are responsible for
+satellite-ground communications, each satellite covers several GSs in a fixed
+coverage, and the user segment refers to all kinds of terminals that send service
+requests to GSs. Long-distance communication between two terminals will
+bypass two GSs and several satellites. Intruders may attack satellites or GSs
+by infecting the terminals or interfering with satellite-ground communications.
+
+D. Threat Model
+The threat model outlined in Figure 1 provides a comprehensive overview of the distributed architecture inherent in
+a typical STIN, encompassing satellites, GSs, edge routers,
+and user terminals. The satellites are strategically positioned
+in intended orbits, facilitating dynamic coverage and communication with GSs, while also establishing inter-satellite
+links (ISLs) to interact with each other. When two GSs in
+different areas require a data exchange, these satellites are
+supposed to work as transponders to transfer information in
+space. The GSs play a pivotal role in traffic intersections
+and achieving telecommunication with satellites, ensuring
+seamless connectivity. They are responsible for summarizing
+incoming traffic in distinct areas from their connected edge
+routers. The edge routers in this model are responsible for
+collecting satellite-based telecommunication from the user
+terminals. The user terminals refer to various devices like
+enterprise servers, computers, and telephones. When one of
+them launches a telecommunication with a terminal in another
+area, a satellite-terrestrial integrated communication occurs.
+The communication path will traverse two edge routers, two
+GSs, and multiple satellites interconnected by ISLs.
+Assumptions underpinning the threat model include the
+prohibition of direct communication between the satellites
+and non-GS nodes, including the user terminals and the
+edge routers. This is for improving the leverage of the GSs
+and mitigating security risks associated with the satellites.
+Considering that intruders are almost unfeasible to launch an
+in-space attack that directly interferes with satellites or ISL
+links in STIN, while every GS is configured with cybersecurity
+administrators and multiple network protections, the integrity
+
+HE et al.: SYNTHETIC DATA-ASSISTED STI NETWORK INTRUSION DETECTION FRAMEWORK
+
+1743
+
+Fig. 2. The system design of STINIDF. After dataset collection and functional feature determination, the model training requires all extracted features to be
+scattered over a four-layer STIN system. This system aggregates a conditional DP-based diffusion model named DP-CDM based on FL with two properties:
+overlapping downloading and multi-level aggregation/local update. DP-CDM is supposed to generate non-functional features to form a global dataset together
+with the functional features in PS. DP is applied in its local update algorithm by gradient clipping and noise adding for higher privacy protection. The edge
+router, GS, and satellite nodes download and utilize this dataset and the local dataset to train distinctive detection models for online malicious packet detection.
+
+of the satellites, GSs, and ISL-based connections is consequently assumed. However, it is available and effortless for
+intruders to control any edge routers, user terminals, or infect
+non-ISL links, as they are trivial and with lower safeguards.
+Therefore, these nodes and links are deemed untrusted. With
+the untrusted nature of the edge routers, user terminals, and
+non-ISL links susceptible to malicious activities, intruders
+may exploit vulnerabilities and launch cyber attacks on GSs
+from terrestrial devices or target GS-satellite communications
+through nefarious means. To safeguard against these cyber
+attacks within STIN, it is necessary to develop a robust and
+distributed intrusion detection mechanism. This mechanism is
+required to achieve both satellite and terrestrial domain traffic
+detection, together with deployment in each STIN traffic pivot,
+including satellite, GS, and edge router nodes.
+IV. M ETHODOLOGY
+The system design of the proposed method is shown in
+Figure 2. It includes four steps: data collection, functional
+feature determination, model training, and online detection.
+The data collection step generates STI traffic instances with
+benign and attack labels by a simulated STIN-based platform
+with OMNET++ and INET. These labeled instances are then
+utilized for the following experimental validation.
+The functional feature determination step meets the requirement in the domain of traffic generation, it determines which
+part of the features can be transformed by the generative
+model.
+The model training step possesses a STIN-FL-based traffic
+generation part and a synthetic data-assisted detection model
+training part. These two parts are implemented under a STIN
+environment. The first part trains a DP-based conditional DM,
+named DP-CDM, based on FL across STIN clients with overlapping downloading and multi-level aggregation/local update.
+DP is applied in every local update process based on gradient
+
+TABLE II
+L IST OF M AIN S YMBOLS FOR P ROPOSED M ETHOD
+
+clipping and noise adding for higher privacy protection. After
+weight aggregation into a PS, this DM synthesizes a traffic
+dataset that reflects the global data distribution of this STIN.
+In the second part, this synthesized dataset is downloaded by
+each edge router, local GS and satellite to train its detection
+model, together with its own local recorded traffic.
+The online detection step illustrates the detection process in
+STIN, where each edge router, local GS and satellite applies
+its trained detection model as a part of NIDS to monitor the
+passed traffic with a firewall and a flow collector.
+The main symbols in this section are collected in Table II
+for quick reference.
+A. Dataset Collection
+A data collection platform is designed to generate a dataset
+that simulates STIN traffic distribution. This platform is implemented by OMNET++ [16] and INET [17]. OMNeT++ is a
+distributed network simulator, whereas INET is its inner model
+suite for simulating traffic packet configuration and delivery.
+One scenario is designed to collect benign traffic based on
+Figure 1 without intruders, whereas extra four attack scenarios
+are appended in Figure 3 to capture attack traffic.
+
+1744
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+TABLE III
+G ENERATED F EATURES IN STI T RAFFIC DATASET
+
+Fig. 3. Four attack scenarios for dataset collection. The first one is the signal
+disruptions between partial GSs and satellites due to third-party objects; the
+second one is the UDP flooding launched from terminals to paralyze satellites;
+the third one is the noise signals with the same radio frequencies sent from
+third-party objects to directly disturb the satellites; the fourth is the traditional
+terrestrial attacks based on a local area environment without using satellites.
+
+The first three scenarios focus on attacks under the satellite
+domain. Due to a higher level of security in GSs and satellites,
+most terrestrial intrusions are hard to enter and pollute traffic in
+the satellite domain [2]. However, signal disruption, jamming,
+and DoS/DDoS attacks are more changeable and flexible.
+With similar protocols utilized as STIN benign traffic, these
+attacks can still affect STIN infrastructures by improving
+communication losses, interfering with the radio signals, and
+exhausting target resources. On the other hand, intrusions like
+Bruteforce and Infiltration are not flexible to intrude on the
+satellite domain as they depend on the concrete payloads. Their
+terrestrial versions cannot be applied directly in the satellite
+domain. Concretely, attack scenario 1 concentrates on the
+malicious signals that disrupt partial GS-satellite connections.
+Such attacks are launched by third-party objects, such as
+drones. As a result, the traffic sent by impacted satellites or
+GSs possess a huge communication loss rate. Attack scenario
+2 generates DDoS attacks from several user terminals to
+first infect the GSs by sending massive, large and useless
+packets, then these infected GSs attempt to paralyze satellites
+based on UDP flooding. Attack scenario 3 contains Jamming
+attacks that directly interfere with ground-satellite transmission. These attacks are also from third-party objects, escaping
+the examination from the GSs. The last scenario concentrates
+on terrestrial intrusions based on a terrestrial environment
+within a local area. This scenario does not require satellite
+telecommunication, and is supposed to simulate ground-based
+attacks including Bruteforce, Infiltration, and DoS/DDoS to
+intrude the target GSs. Notably, the UDP flooding and terrestrial DoS/DDoS simulated in these scenarios are all based on
+the bandwidth consumption under the network layer, where the
+intruders deliberately send massive bogus messages to exhaust
+the limited bandwidth resources of target infrastructures.
+After the scenario establishment, <PcapRecorder> [36]
+module in OMNeT++ is utilized to record the past traffic in
+each communication node, whereas <tshark> [37] command
+is applied to convert <pcap> files into <csv> for training
+AI-based models. Based on the <PcapRecorder> module, a
+
+series of packet features are generated for each captured
+instance. Due to their characteristics, these features are then
+classified into six categories, which are five-tuple, intrinsic,
+content, time-based, packet, and random, respectively. The
+features and the labels form the new STI dataset, described
+in Table III.
+B. Functional Feature Determination
+The functional feature determination process ensures compliance with one constraint in the traffic generation domain:
+only non-functional features that do not violate the traffic
+functionality are allowed to be generated [38]. One generated
+instance x̄ by a generative function fw (·) is described as:
+x̄ = x f unc ⊕ fw (xnon f )
+
+(10)
+
+where x f unc is functional features, xnon f is non-functional
+features, and ⊕ is the concatenation. Applying fw (·) on x f unc is
+not allowed as the traffic functionality may change. Different
+labels may possess different functional features as different
+attack types are launched with different means and objectives.
+These means and objectives make an attack label own its distinct functionality-related features. For example, DoS/DDoS
+are generated to use multiple causal packets to paralyze
+targets whereas Infiltration concentrates on achieving concrete
+objectives with several operations. Consequently, the statistical
+features like traffic duration and packet sizes have huge values
+in DoS/DDoS whereas they are generally small in both Infiltration and benign instances. Consequently, these two features
+are functionality-related for DoS/DDoS but non-functional
+for Infiltration. Therefore, it is essential to determine the
+functional and non-functional features of each STI label to
+achieve functionality-preservation traffic generation. Following
+the feature categories in Table III, the functional features
+for different labels are decided in Table IV: five-tuple and
+intrinsic features reflect the basic traffic packet information,
+important for all traffic samples; time-based features are highly
+associated to classify long-time persistent threats like UDP
+flooding, Jamming, and DoS/DDoS; content-related features
+
+HE et al.: SYNTHETIC DATA-ASSISTED STI NETWORK INTRUSION DETECTION FRAMEWORK
+
+TABLE IV
+F UNCTIONAL F EATURE D ETERMINATION IN STI DATASET
+
+are functional for terrestrial Bruteforce and Infiltration as they
+are related to traffic payload, launched with a fixed objective
+on subsequent calls; packet-related features are related with the
+attacks caused by packet loss or massive packet utilization like
+Signal Disruption and Bruteforce; random feature, the DNS
+query ID, is non-functional due to its distinctiveness and label
+independence.
+C. Model Training
+1) STIN-FL-Based Traffic Generation: Step 3-1 in Figure 2
+includes a four-layer FL-based framework to train DP-CDM
+in a simulated STIN environment. The edge layer includes
+the edge routers that connect the user terminals. These edge
+routers act as clients to contribute their calculating power and
+local recorded traffic. The local layer contains the local GSs
+for both edge aggregation and higher-level local updates. The
+satellite layer involves the satellites that work as information
+transponders. These satellites transmit the model weights
+between the local GSs and a special GS that is responsible
+for acting as a PS in the FL-based process. This PS belongs
+to the global layer for the overall aggregation.
+In this step, a new algorithm is designed to train DP-CDM,
+named STIN-FedAvg in Algorithm 1. Let G = {1, 2, · · · , G}
+be the set of local GSs, and each GS, symbolized as g, covers
+a subset of edge routers Rg ∈ R with |Rg | = Rg . Rg can be
+called coverage g. Let Gr ⊆ G be the local GS subset that
+edge routers r can communicate with, given Gr = |Gr |. First,
+the weight w0 is initialized in each local GS. Second, for each
+communication round t, R0 edge routers download weights wt
+from their connected local GSs at line 1 ∼ 9. If one edge
+router r connects with multiple GSs, the downloaded weights
+are then averaged as:
+1 X
+wt
+(11)
+wtr =
+g∈Gr g
+Gr
+Third, the edge routers locally update the weights by their
+recorded traffic and upload them to local GSs for aggregation
+at line 10 ∼ 12. The details of the local update are illustrated
+in Algorithm 2, whereas the aggregation in local GSs is:
+ηg X
+wtg =
+wt
+(12)
+r∈Rg r
+Rg
+where ηg is the learning rate. Thus, the loss function fg (w) for
+coverage g is:
+1 X
+fg (w) =
+Fr (w)
+(13)
+r∈Rg
+Rg
+where Fr (w) is the loss function of covered edge routers.
+
+1745
+
+Algorithm 1 STIN-FedAvg Training Algorithm
+Input: Initialize weight w0 to each GS g; communication
+round T; batch epoch E/E 0 /E 00 ; GS local update interval tg ;
+overall aggregation interval tc ;
+1: for t = 1 : T do
+2:
+Random select R0 edge routers R0 from R. (R0 < R)
+3:
+for g = 1 : G do
+4:
+for r = 1 : R0 do
+5:
+if edge router r is in non-overlapping area then
+6:
+wtr = wtg // Downloading to edge routers
+7:
+else
+P
+8:
+wtr = G1r g∈Gr wtg // Downloading to edge
+routers
+9:
+end if
+10:
+wtr ← LocalU pdate(E, wtr ) // Algorithm 2 by
+edge routers
+η P
+11:
+wtg = Rgg r∈Rg wtr // Aggregation to local GSs
+12:
+end for
+13:
+if Mod(t, tg ) = 0 then
+14:
+wtg ← LocalU pdate(E 0 , wtg ) // Algorithm 2 by
+local GSs
+15:
+end if
+16:
+end for
+17:
+if Mod(t, tc )P
+= 0 then
+18:
+W t = ηGo g∈G wtg // Overall aggregation
+19:
+W t ← LocalU pdate(E 00 , W t ) // Algorithm 2 by PS
+20:
+for g = 1 : G do
+21:
+wtg = W t // Downloading to local GSs
+22:
+end for
+23:
+end if
+24:
+t =t+1
+25: end for
+
+Fourth, for each tg communication round interval, local GSs
+also apply their local traffic to train the model at line 13 ∼ 16.
+Finally, for each tc communication round interval, the weights
+are uploaded from local GSs to PS through satellites for overall
+aggregation and highest-level local update with its local traffic
+at line 17 ∼ 19. The overall aggregation in PS is described as:
+1X
+(14)
+Wt =
+wt
+g∈G g
+G
+while the overall loss function f (w) is described as:
+1X
+f (w) =
+fg (w)
+g∈G
+G
+X
+X
+1
+=
+Fr (w)
+g∈G
+r∈Rg
+GRg
+
+(15)
+(16)
+
+In addition, each local GS downloads the aggregated weight
+for the next turn at line 20 ∼ 22.
+After training DP-CDM, PS utilizes this model to synthesize
+a dataset that contains the global distribution. The details of
+DP-CDM generation are described in Algorithm 3. Notably, its
+structure is different from traditional conditional DM. Shown
+at Figure 4, it includes a functional and non-functional feature
+division part before the forward process, where this division
+is dynamic based on the given label. Consequently, for every
+
+1746
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+edge router, local GS and satellite nodes train their own D
+by both D0 and their local data D with the learning rate ηD .
+Given (x, y) ∼ D and (x0 , y0 ) ∼ D0 , the objective of D in each
+node is minimizing a cross-entropy loss LD :
+1 X
+y log D(x)
+LD = −
+MD
+MD
+X
+1
+−
+y0 log D(x0 ) + Ψ
+(17)
+MD0
+M D0
+where MD and MD0 are the sampled amount from datasets D
+and D0 , respectively. We also define Γ = MD0 /(MD + MD0 ) to
+describe the ratio of data augmentation. Γ = 0 refers that the
+training data are all from the local data, whereas Γ = 1 notifies
+that only D0 are applied. Ψ is a L p −norm regularization for
+robustness to noisy labels and overfitting alleviation [40]:
+X
+1/p
+X
+1/p
+Ψ = λ1
+|D(x)| p
++ λ2
+|D(x0 )| p
+(18)
+MD
+
+M D0
+
+where λ1 and λ2 are two predefined hyperparameters.
+D. Online Detection
+Fig. 4. The structure details of DP-CDM. For each input sample, its
+features are first divided into functional and non-functional ones. Then,
+non-functional features are fed into a U-Net-like structure including linear,
+leaky-relu, batchnorm1d layers together with the concatenation of the timestep
+positional embeddings for feature generation. Next, the generated features
+are concatenated with the divided functional features to form a sample. The
+feature division is dynamic based on the labels throughout the training and
+generation processes.
+
+input instance, its features are separated into feature categories
+listed in Table III, which are five-tuple, intrinsic, time-based
+content, packet and random. Considering that the IP and
+port features are dropped in the preprocessing step, only the
+protocol feature in the five-tuple category is retained. Then,
+these features are judged based on Table IV: the protocol
+feature and intrinsic category are treated as fully functional,
+as they are functional for all labels; the time-based, content,
+and packet categories are treated as partially functional, as the
+given labels decide whether they are functional or not; the
+random category is treated as non-functional. Next, its inner
+neural network is fed by the features judged as non-functional.
+The network structure is based on U-Net [39], where linear
+and batchnorm1d layers are applied. To achieve DM-based
+generation, this network also concatenates the input timestep
+that is positional embedded after each linear layer. Finally,
+the output features from this network are connected with
+the features judged as functional to form a newly generated
+instance.
+This part trains a new DL-based model D that is supposed to
+work as NIDS in every edge router, local GS and satellite node.
+To maximize the detection performance of D, it is trained with
+both the synthesized dataset and local recorded traffic, where
+the former represents global STIN traffic distribution while the
+latter denotes the traffic distribution of the current node. After
+downloading the synthesized dataset from PS, denoted as D0 ,
+0 Protocol*: IP and port information in the five-tuple feature category are
+dropped in the preprocessing step. Only protocol feature in five-tuple is used.
+Synthetic data-assisted detection model training.
+
+The trained D is then deployed in each edge router, GS
+and satellite to work as a part of NIDS for online detection in
+STIN. Deployment on these nodes can reflect the whole flow
+circumstance of STIN as these nodes are indeed traffic pivots
+in STIN. For each node, when traffic packets come in, they
+are first checked by a firewall filter, which can directly block
+obvious attacks with a set of defined rules. Then, the passed
+packets are detected by a NIDS module consisting of a flowbased feature collector, a preprocessing part, and D. If this
+module found an abnormal packet, it would raise an alert and
+launch follow-up analysis and mitigation modules based on
+the classified attack types. Otherwise, the packet is dropped.
+Additionally, the satellite nodes may be restricted with
+computing resources, but they just participate in training and
+prediction processes of D instead of DP-CDM, which is
+less time-consuming. Moreover, the training process of D
+is implemented only once per tc communication rounds. In
+most cases, these traffic pivots only execute intrusion detection
+tasks. Therefore, the resource consumption on these satellite
+nodes is indeed acceptable.
+V. A NALYSIS OF THE P ROPOSED F RAMEWORK
+The proposed STINIDF is analyzed in security and time
+complexity theoretically in this section.
+A. Security Analysis
+This part analyzes the potential threats that affect the STINbased training process in STINIDF and its privacy issues,
+including inference attacks, injection attacks, and data privacy.
+1) Inference Attack on Edge Router: Considering that
+GSs and satellites are configured with higher level safety
+protection, the intruders may apply an inference attack on
+any edge routers for deducing the original traffic data based
+on the weight and gradient information of DP-CDM. To
+against it, DP is utilized for local updating where Gaussian
+noise N (0, σ2C 2 I) in line 10 of Algorithm 2 is added
+
+HE et al.: SYNTHETIC DATA-ASSISTED STI NETWORK INTRUSION DETECTION FRAMEWORK
+
+to each gradient. Meanwhile, DP-CDM is only fed with
+non-functional traffic features, not highly associated with
+the functionality of raw data. The functional features do not
+participate in the federated training. Even if the intruders
+successfully deduce the obtained weight and gradient, the
+original traffic instances can not be completely reconstructed
+due to the lack of their functional elements. Thus, STINIDF
+is secure when facing inference attacks.
+2) Injection Attack for Model Corruption: The intruders
+may infect and control several edge routers to launch injection
+attacks by uploading malicious weight information. This may
+lower the performance of the global aggregated DP-CDM and
+make it unreliable. STINIDF alleviates this risk mainly based
+on multi-level aggregation/local updating, where the local GSs
+instead of PS aggregate the uploaded weights in advance. Then
+these GSs utilize their local traffic to further update the aggregated weights before uploading to PS. Moreover, the recorded
+traffic in local GSs is generally more massive and informative,
+lessening the training participation degree of the edge routers.
+Conclusively, the model corruption risk is significantly reduced
+because of the multi-level factors in STINIDF.
+3) Data Privacy for Local Raw Traffic: In the federated
+process of step 3-1, each edge router or local GS applies
+its own recorded raw traffic to train individual DP-CDM,
+which is then uploaded for weight aggregation. In the detection
+model training process of step 3-2, only the dataset generated
+by PS is downloaded by each node for training D. Overall,
+the raw traffic recorded by each node does not exchange
+during STINIDF training process. Hence, its privacy can be
+guaranteed.
+B. Time Complexity Analysis
+The computation and communication costs of STINIDF are
+given for each edge router, satellite, local GS and PS.
+1) Computation Cost: For edge routers, they include two
+parts: 1) locally updating DP-CDM in every communication
+round, the cost is O(E(B|wr |+ld p )), where clipping the sample
+gradients and adding noise into gradient in Algorithm 2 require
+O(ld p ) operations; 2) training D once per tc communication
+rounds, the cost is O(E ∗ ((MD0 + MD )|wD | + lre )), where lre
+denotes consumption of Ψ. Therefore, the total computation
+consumption for one edge router is O(T (E(B|wr | + ld p ) +
+E ∗ ((MD0 + MD )|wD | + lre ))). For each satellite node, it only
+trains D after downloading the synthetic dataset per tc communication rounds. Its cost is O(T (E ∗ ((MD0 + MD )|wD |+lre ))).
+For local GSs, they include three parts: 1) locally updating
+DP-CDM per tg communication rounds, the cost is
+O(E 0 (B|wg | + ld p )); 2) aggregating the uploaded weights
+from edge routers per tg communication rounds, the cost is
+O(R0 |wr |); 3) training D once per tc communication rounds.
+Thus, the total computation consumption for single local GS
+is O(T (E 0 (B|wg | + ld p ) + R0 |wr | + E ∗ ((MD0 + MD )|wD | + lre ))).
+For PS, it includes three parts: 1) local updating DP-CDM
+per tc communication rounds, the cost is O(E 00 (B|W| + ld p ));
+2) aggregating the uploaded weights from local GSs per tc
+communication rounds, the cost is O(G|wg |); 3) generating
+the synthetic dataset by aggregated DP-CDM, the cost is
+
+1747
+
+O(N|D0 ||W|). Hence, the total computation consumption for
+PS is O(T (E 00 (B|W| + ld p ) + G|wg | + N|D0 ||W|)).
+2) Communication Cost: For edge routers, 1) R0 of them
+upload updated DP-CDM in every communication round,
+the cost is O(|wr |); 2) they download the synthetic dataset
+after global aggregation, the cost is O(|D0 |). Therefore, the
+communication cost for one edge router is O(T (|wr | + |D0 |)).
+For each satellite, it only downloads the synthetic dataset,
+the cost is O(T |D0 |). For local GSs, 1) they receive uploaded
+DP-CDM weights from edge routers per tg communication
+rounds, the cost is O(R0 |wr |); 2) they upload updated
+DP-CDM weights to PS, the cost is O(|wg |); 3) they
+download the synthetic dataset from PS, the cost is O(|D0 |);
+4) they forward the synthetic dataset to each edge router,
+the cost is O(R0 |D0 |). Thus, the communication cost for
+local GS is O(T (R0 |wr | + |wg | + (R0 + 1)|D0 |)). For PS, 1)
+it receives DP-CDM weight from local GSs, the cost is
+O(G|wg |); 2) it sends the synthetic dataset to each local GS,
+the cost is O(G|D0 |). Hence, its total communication cost is
+O(T (G|wg | + |W| + G|D0 |)).
+Meanwhile, the complexity and scale of D are generally
+much less than DP-CDM, leading that the computational term
+E ∗ ((MD0 + MD )|wD | + lre ) in edge router and local GS nodes
+can be omitted. Also, the size of DP-CDM in different nodes
+is the same (i.e., |wr | = |wg | = |W|). Consequently, all costs
+are simplified and concluded in Table V. The costs of FedAvg
+[9] and CIDIoT [33] are recomputed for the STIN scenario
+and listed as references. Conclusively, the costs of STINIDF
+mainly depend on the size of DP-CDM (i.e., |W|) and the
+amount of the synthetic dataset (i.e., |D0 |). As for |W|, its size
+is based on the inner U-Net. Compared with the federated DM
+work for image generation [41] and federated U-Net works
+for medical segmentation [42], [43], the scalability of this
+U-Net is indeed acceptable in communication contexts as it
+generates traffic instances mainly by linear and batchnorm1d
+layers, whose parameters are much fewer than convolutional
+and batchnorm2d layers in image-related usage.
+It is worth noting that STINIDF is indeed designed for high
+intrusion detection performance in STIN instead of pursuing
+low time consumption. Based on Table V, it has paid extra
+resources on achieving multi-level aggregation/local-updating
+for smoothing the federated process and DP operations for
+weight privacy protection compared with other FLs. Nevertheless, the extra resource consumption is acceptable. Because
+the local GSs, commonly configured with sufficient computing
+resources, play the main role of multi-level aggregation/localupdating, whereas DP operations are applied only on the local
+data, whose amount is limited in single node like edge routers.
+VI. DATASET C OLLECTION AND E XPERIMENT D ESIGN
+This section describes the collected STI dataset, followed
+by the experiment setups for the proposed STINIDF.
+A. STI Dataset Formulation
+OMNeT++5.6.2 and INET 4.2.5 are utilized to achieve STI
+dataset formulation. Based on the different attack scenarios
+in Figure 3, seven attack labels under terrestrial and satellite
+domains are collected. OMNeT++ has spent 3430 seconds to
+
+1748
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+TABLE V
+C OMPUTATION AND C OMMUNICATION C OSTS OF R ELATED M ETHODS
+
+TABLE VI
+L ABEL S IMULATION T IME AND A MOUNT IN STI T RAFFIC DATASET
+
+Fig. 6. Node scenario setting for simulating FL-based training in a STIN
+environment. GS 3 is the PS that is responsible for overall aggregation for
+DP-CDM and synthesizing global dataset.
+
+Fig. 5. Low-dimensional visualization for partial STI dataset. They show that
+the label distributions in STI present clear differences in statistical level.
+
+simulate benign and malicious traffic. The information about
+this simulation process are recorded in Table VI.
+Then this dataset is pre-processed by feature selection and
+normalization. The IP and port information features are treated
+as redundant features and dropped. For features that vary
+sharply, a min-max normalization is applied to scale them
+within a range [0, 1]. Then, the normalized STI dataset with
+20 features are obtained, public at https://github.com/hjp007/
+STI.
+Moreover, this pre-processed dataset is visualized by
+2-dimensional T-SNE [45] in Figure 5(a) and 3-dimensional
+PCA [46] in Figure 5(b) with partial samples, illustrating that
+each STI malicious traffic label possesses a difference to some
+extent in statistical distribution compared with other labels.
+B. Experiment Setups
+The experiment setups include environment settings, a
+default node scenario configuration, hyper-parameter details,
+evaluation metrics, and baseline settings.
+
+1) Experimental Environment: A computer with Intel Core
+i9-10700K CPU, 32 GB DDR3, and GeForce RTX 3060Ti
+GPU is utilized. Jupyter Notebook 7.1.3 platform is applied
+to train and test the related DL-based models. These models
+are programmed by PyTorch 1.13.1 with Python 3.10.8.
+2) Default Node Scenario Configuration: To train
+DP-CDM in step 3-1 in Figure 2, a default node scenario
+is pre-defined to simulate the STIN environment, shown
+in Figure 6. It includes 6 satellite nodes, 4 GS nodes,
+7 edge routers, and 8 user terminals. GS 3 is set as PS,
+and other GS nodes are local GSs. Thus, G is 3 and R
+is 7. Considering the overlapping downloading factor, one
+edge router may connect multiple GSs (i.e., EdgeRouter 2
+and EdgeRouter 6). One edge router may also connect
+multiple users (i.e., EdgeRouter 2). Meanwhile, the data
+distribution in each node that participates in Algorithm 1
+(i.e., all edge routers and GSs) is set into two conditions,
+which are IID and non-IID scenarios. The IID scenario
+requires that the malicious traffic in the satellite domain is
+averagely distributed in GS nodes, while the terrestrial attack
+samples are equally scattered in edge routers and GSs. The
+non-IID scenario refers to the fact that the distributions in
+both domains are skewed and imbalanced. In both scenarios,
+the satellite domain traffic never exists on edge routers.
+3) Hyper-Parameter Details: The STI dataset is divided
+into a 70% training set and a 30% testing set. The training
+set is utilized to train DP-CDM where the communication
+round T is set as 30 and the batch epochs E/E 0 /E 00 are 5, 5, 5.
+Moreover, the batch size B, the partial edge router amount
+
+HE et al.: SYNTHETIC DATA-ASSISTED STI NETWORK INTRUSION DETECTION FRAMEWORK
+
+R0 , the local update interval tg , and the overall aggregation
+interval tc are set as 32, 3, 3, 5, respectively. The learning
+rates ηw , ηg , ηo are all 0.001. In the structure of DP-CDM,
+the time step N is 50 and βn changes from 0.001 to 0.02
+in these N steps. To evaluate DP effectiveness in DP-CDM,
+subsection VII-E studies the performance impact under the
+different privacy budgets , where  is set as 0.1, 1, 10, ∞,
+respectively and the risk probability δ is 0.001 ( = ∞ refers
+no DP usage).
+For each edge router, local GS, and satellite, its deployed
+detection model D is trained by the downloaded synthetic
+dataset from PS and local training dataset for every overall
+aggregation round interval tc with 20 epochs (i.e., E ∗ = 20),
+then evaluated by the local testing dataset. Learning rate
+ηD is 0.001. As for regularization terms, we chose L2 -norm
+where p = 2, the hyperparameters λ1 , λ2 are both set as 0.1.
+The data augmentation ratio Γ is set as 0.75 for the IID
+scenario and 0.25 for the non-IID scenario, as observed in
+subsection VII-C. Besides, the structure of D uses a linear
+deep neural network, including four fully-connected layers,
+three batchnorm1d layers, and one softmax output layer to
+achieve intrusion multi-classification.
+4) Evaluation Metrics: Based on true positive (TP), true
+negative (TN), false positive (FP), and false negative (FN),
+the following evaluation metrics are selected to measure the
+detection performance of trained D and other methods:
+TP + TN
+TP + TN + FN + FP
+TP
+Precision =
+TP + FP
+TP
+Recall =
+TP + FN
+Precision × Recall
+F1 = 2 ×
+Precision + Recall
+
+Accuracy =
+
+(19)
+(20)
+(21)
+(22)
+
+To evaluate the generated instances, FID [47] is adopted,
+where a smaller value implies better instance quality. FID
+utilization requires a pre-trained calculating workflow from our
+previous work [38] to adapt the domain of traffic generation.
+5) Baseline Methods: Several state-of-the-art studies based
+on FL are implemented for performance comparison. Some of
+them are not designed for the intrusion detection domain but
+are retrained over the STI dataset in our experiments.
+• FedAvg [9]: the basic FL that averages the model weights
+from the local clients to achieve global model training.
+• FedProx [48]: a FL based on FedAvg that adds a proximal
+term to mitigate the statistical data heterogeneity.
+• SDA-FL [12]: a FL with confident pseudo labeling to
+solve the non-IID challenge by sharing the synthetic data
+from GAN. DP is also utilized for privacy protection.
+• FedDPGAN [21]: a FL that privately generates diverse
+instances by GAN in local clients for diagnosing
+COVID-19. DP is also utilized for privacy protection.
+• CIDIoT [33]: a FL with a loss sensitive GAN and a robust
+aggregation process for IoT-environment-adapted intrusion detection. DP is also utilized for privacy protection.
+
+1749
+
+• STIN-NIDS [2]: a distributed FL-adapted NIDS to properly allocate resources in NIDS domain to analyze and
+block malicious traffic with complexity optimization.
+Meanwhile, random forest (RF) [49] and multi-layer perceptron (MLP) [50] are also adopted to play the role of D, trained
+with local data in each edge router, local GS, and satellite.
+VII. E XPERIMENT R ESULTS AND D ISCUSSIONS
+The evaluation results for STINIDF are categorized into
+seven key aspects. First, a direct comparison with SOTA
+methods is provided. Second, the concrete classification performance of STINIDF on each label is examined. Third, results
+under varying Γ are presented to identify the optimal data
+augmentation degree. Fourth, the evaluation for different node
+types is conducted. Fifth, the impact of varying privacy budget
+settings is examined to determine the optimal trade-off for DP
+usage. The sixth and seventh aspects encompass a scalability
+study and an ablation study. Each aspect is accompanied by a
+corresponding discussion. Finally, the limitations of STINIDF
+are critically addressed.
+A. Comparison With SOTA
+The proposed STINIDF is evaluated against the aforementioned baseline methods on detection performance in both IID
+scenario and non-IID scenario. The experiment is conducted
+five times for every method to get the average accuracy, precision, recall and F1 score, along with their standard deviations.
+The results, summarized in Table VII, clearly demonstrate that
+STINIDF gets the best performance among all methods in both
+scenarios across these four metrics. It achieves performance
+improvements compared with the second-best method, which
+are 0.2% accuracy, 0.13% precision, 0.38% recall, 0.24%
+F1 score in the IID scenario, and 2.41% accuracy, 3.14%
+precision, 1.65% recall, and 2.7% F1 in the non-IID scenario.
+Discussion: Non-FL-based methods, such as RF and MLP,
+exhibit poor performance in both scenarios. Without sharing
+the model weights that contain global traffic information, these
+models are trained solely with limited local data, resulting
+in incomplete convergence and instability. Consequently, their
+performance shows significantly higher deviations (e.g., MLP
+in the non-IID scenario even gets 24.51% deviations in precision). For FL-based methods that are not designed for solving
+the non-IID challenge, FedAvg and STIN-NIDS, they reveal
+more evident performance degradation from the IID scenario
+to the non-IID scenario than others. For instance, FedAvg
+and STIN-NIDS get 7.22%, 10.85% lower accuracy whereas
+3.04% in STINIDF. This illustrates that the strategies like data
+augmentation or adding the proximal term do improve the
+detection performance in the non-IID scenario.
+Meanwhile, STINIDF outperforms FedProx, SDA-FL, FedDPGAN and CIDIoT with 96.63% accuracy, 96.71% precision, 96.54% recall and 96.66% F1 score in the non-IID
+scenario. It shows that the data augmentation strategy utilized
+in STINIDF has balanced the distribution of the local traffic in
+each deployed node, whose D can then effectively detect its
+passed intrusions. In conclusion, STINIDF is able to model the
+traffic representations inherent in STI dataset under unbalanced
+data scenario and outperforms other SOTA methods.
+
+1750
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+TABLE VII
+OVERALL T ESTING ACCURACY, P RECISION , R ECALL AND F1 S CORE W ITH C OMPARED S TATE - OF - THE -A RT M ETHODS (%)
+
+Fig. 7. Confusion matrices of STINIDF on STI dataset in both IID and
+non-IID scenarios. S is “Signal Disruption”, U is “UDP flood”.
+
+B. Classification Performance for Intrusion Detection
+To further assess the classification performance of the proposed method, confusion matrices detailing the results on each
+label are displayed in Figure 7, with evaluations conducted
+under both IID and non-IID scenarios.
+Discussion: In the IID scenario, STINIDF achieves over
+99% accuracy on all labels. In the non-IID scenario, STINIDF
+exhibits slight performance degradation on Benign, UDP
+Flood, Jamming, and DoS traffic. The accuracy is reduced
+by approximately 3%, 7%, 6%, 2%, respectively. A plausible
+explanation for this lies in the shared functional feature
+components, time-based and packet-related features, among
+UDP Flood, Jamming, and DoS based on Table IV. These
+similarities result in closely resembling characteristics to each
+other. When the training process becomes sophisticated like
+the non-IID scenario, the classification task on them becomes
+tough in the first place, causing a declined detection result.
+Besides, the performance on benign instances is also declined
+as their distribution is more diverse in feature space, shown
+in Figure 5. This diversity causes some benign instances
+to share characteristics with certain attack instances, further
+complicating classification.
+C. Data Augmentation Degree
+For synthetic data-assisted detection model training, it is
+essential to verify the effectiveness of the data augmentation
+and figure out an appropriate degree. For STINIDF, this factor
+is highly correlated to the data augmentation ratio Γ. To find
+the best Γ, it is set into 0, 0.25, 0.5, 0.75, 1 for both IID and
+non-IID scenarios. Γ = 0 refers no data augmentation usage
+
+Fig. 8. Overall testing accuracy for STINIDF under different data augmentation ratio Γ. Γ = 0 refers no global synthetic dataset (i.e., no data augmentation
+usage) while Γ = 1 refers training without local dataset.
+
+whereas Γ = 1 implies no local data usage. Figure 8 shows
+the overall testing accuracy during each communication round
+T under these Γ. As a consequence, STINIDF gets the best
+performance when T = 30 in different Γ settings. Concretely,
+it achieves 95.43%, 98.94%, 99.32%, 99.67%, 99.58% overall
+testing accuracy in the IID scenario and 94.69%, 96.63%,
+95.21%, 93.85%, 90.1% in the non-IID scenario.
+Discussion: In Figure 8, STINIDF possesses the best performance 99.67% when Γ = 0.75 in the IID scenario and 96.63%
+when Γ = 0.25 in the non-IID scenario.
+In the IID scenario, Γ = 0 achieves 95.43% accuracy,
+significantly lower than other Γ conditions. One reason is the
+lack of training instances. Γ = 0 can only utilize local training
+data, whereas other Γ conditions can download the generated
+instances that contain the traffic information from other nodes.
+Meanwhile, Γ = 0.75 performs slightly better than Γ = 1. It
+shows that the local data is still required as it represents the
+original data distribution.
+In the non-IID scenario, Γ = 1 gets 90.1% accuracy, even
+worse than Γ = 0. One reason is that only the local training
+set, instead of the global synthetic dataset, shares the same
+data distribution as the local testing set in this scenario. Thus,
+local training data is more important than global data for D.
+On the other hand, Γ = 0.25, 0.5 still works better than Γ = 0,
+illustrating that data augmentation with an appropriate degree
+can obtain a higher accuracy than no data augmentation.
+Conclusively, STINIDF utilizes a data augmentation strategy by applying the synthetic dataset symbolizing global traffic
+distribution without dropping local data in each deployed
+node. The synthetic dataset contributes to D with stronger
+
+HE et al.: SYNTHETIC DATA-ASSISTED STI NETWORK INTRUSION DETECTION FRAMEWORK
+
+1751
+
+Fig. 9. Average testing accuracy on each type of nodes and overall condition
+for STINIDF. The performance is different because different types of nodes
+possess distinctive local datasets in different domains.
+
+robustness and generalization, whereas local data guarantees
+D to maintain prediction capability for its current node traffic
+distribution. The results have confirmed that this strategy is
+effective for D to obtain higher performance in both scenarios.
+D. Detection Performance in Each Node Types
+Three types of nodes, edge routers, local GSs and satellites,
+host D for final online detection, as illustrated in Figure 2.
+Given that D in different node types is trained with distinct
+local data distributions, an experiment is implemented to
+inspect the performance differences in these node types. The
+results, summarized in Figure 9, show that D achieves 99.27%,
+99.64%, 99.83%, 99.67% on local GSs, edge routers, satellites and overall in the IID scenario, while 95.38%, 97.39%,
+97.54%, 96.63% in the non-IID scenario.
+Discussion: In both IID and non-IID scenarios, the performance of D on local GS is slightly lower than that on the other
+two node types. This can be attributed to the complexity of the
+traffic composition. The local malicious data in the satellites
+and edge routers is from a single domain, i.e., the satellite or
+the terrestrial domain in Figure VI. Besides, the local data in
+the local GS is from both domains, as the local GS plays the
+role of the convergence center, handling all kinds of traffic in
+the STIN environment. D in the local GS is required to classify
+all the labels in both domains, which increases complexity and
+slightly reduces performance.
+Meanwhile, D in the satellite node slightly outperforms D
+in the edge router node, indicating that the traffic complexity
+in the terrestrial domain is marginally higher than the satellite
+domain. One possible interpretation, based on Table IV, is
+that the functionality of the malicious traffic in the satellite
+domain is correlated with the packet or time features, whereas
+the terrestrial intrusions also have a relationship to the contentrelated features, leading to a harder classification task for D
+to detect the terrestrial intrusions.
+E. Trade-off Between the Privacy Budgets and Performance
+To prevent privacy leakage during weight exchange in
+Algorithm 1 for DP-CDM, (, δ)-DP is utilized where privacy budget  is set into several values, including ∞, to
+determine an optimal balance for final performance.  = ∞
+refers no DP usage. The smaller  indicates stronger privacy
+protection but huger fuzziness in the exchanged weight. The
+
+Fig. 10. Overall testing accuracy and FID under different privacy budgets 
+by STINIDF and other methods in non-IID scenario.  = ∞ refers to no usage
+of differential privacy, while smaller  symbolizes stronger privacy protection.
+
+final performance is assessed based on the quality of the
+instances generated by DP-CDM and the detection capability
+of the augmented D. Besides, SDA-FL and FedDPGAN are
+chosen as references as they also apply data augmentation
+and DP. Consequently, Figure 10 presents corresponding FIDs
+and overall testing accuracy under these  in the non-IID
+scenario. Basically, for different  settings, STINIDF achieves
+the highest testing accuracy set (95.26% ∼ 96.67%) whereas it
+generates the instances with the lowest FID set (25.67 ∼ 11.54)
+compared to the other methods.
+Discussion: Compared to the absence of DP, a smaller 
+increases the noise scale σ, thereby expanding the variance
+of the added noise N (0, σ2C 2 I) to DP-CDM in line 10 of
+Algorithm 2. While this enhances privacy protection during
+weight exchange in Algorithm 1, it makes trained DP-CDM
+with slight deviation, causing the generated instances with
+lower quality by 14.13, 6.34, 2.15 higher FIDs. Naturally,
+training D with these instances decreases its performance by
+1.41%, 0.53%, 0.22% lower accuracy on original traffic data.
+Notably, this performance degradation compared with no
+DP usage is not significant when  = 1, 10 (i.e., 0.53%,
+0.22%), whereas it is more evident when  = 0.1 (i.e., 1.41%).
+Therefore,  = 1 is a suitable trade-off between privacy
+protection and model performance.
+F. Scalability Study
+To investigate the impact of varying number of local GSs
+and edge routers on STINIDF performance, additional G and
+R values are examined beyond the default node configuration
+(i.e., G = 3, R = 7). By the experiment, the final testing
+accuracy with G of 0 ∼ 4 and R of 1 ∼ 9 in the nonIID scenario is examined and recorded in Figure 11. G = 0
+symbolizes single PS usage with no local GS setting.
+Discussion: First, the model possesses significantly higher
+accuracy (i.e., 98.1 ∼ 99.71%) when G = 0 compared with
+G = 1 ∼ 4. This is because no local GS exists, which is a
+special condition. It causes the model training process in Algorithm 1 to degrade into a single-level many-to-one aggregation
+(i.e., the edge routers are directly connected to PS), lowering
+the training difficulty. Second, the accuracy drops with larger
+
+1752
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+Fig. 11. Overall testing accuracy under different numbers of local GSs (G)
+and edge routers R in the non-IID scenario. Generally, larger G and R cause
+a lower accuracy, while this trend becomes slower when G ≥ 3 and R ≥ 7.
+
+G and R, indicating that the node scenario with a larger scale
+lowers the aggregation and final performance. The reason is
+that more G and R make the local traffic instances stored in
+each STIN node become fewer under the fixed amount of STI
+dataset. Consequently, the larger scale of STIN nodes without appending total training instances inevitably impedes the
+performance of FL-based aggregation. Moreover, fewer local
+instances in each STIN node make D hard to learn the traffic
+distribution in its own node. However, in a real-world scenario,
+each STIN node is supposed to collect its passed traffic, which
+is then stored as its local data. In this case, a larger scale of
+STIN nodes, together with informative local instances may
+not lower the aggregation and final performance. Third, the
+performance decreasing degree between R = 7 and R = 9 (i.e.,
+0.45% ↓, 0.59% ↓, 0.07% ↓, 0.08% ↓, 0.05% ↓) is roughly
+smaller than the one between R = 3 and R = 5 (i.e., 0.44% ↓,
+0.28% ↓, 0.11% ↑, 0.32% ↓, 0.18% ↓). This is the same for
+G variation, where the decreasing degree between G = 3 and
+G = 4 (i.e., 0.31% ↓, 0.22% ↓, 0.08% ↓, 0.13% ↓, 0.1% ↓) is
+generally smaller than the one between G = 1 and G = 2 (i.e.,
+0.39% ↓, 1.1% ↓, 0.71% ↓, 0.71% ↓, 0.29% ↓). It illustrates
+that the impact of the node amount setting becomes weaker
+with the scale of the STIN going up. In reality, the deployed
+STIN systems are generally with thousands of edge routers
+and hundreds of GSs and satellites. Thus, the impact of small
+node variation numbers on these systems can be ignored.
+G. Ablation Study
+To access the effectiveness of the independent modules in
+STINIDF, an ablation experiment is implemented in the nonIID scenario, examining five conditions: no data augmentation
+usage (i.e., Γ = 0), no multi-level update/aggregation in
+Algorithm 1, no functional feature division in Table IV, and no
+regularization (i.e., no Ψ in Eq (17)). The accuracy, precision,
+recall and F1 score on these conditions compared to the
+original method are collected in Figure 12. Consequently, the
+proposed STINIDF outperforms all conditions and gets 1.94%,
+0.8%, 0.69%, 2.34%, 0.39% higher accuracy, respectively.
+Discussion: First, compared with no data augmentation
+usage (i.e., no DP-CDM usage), the absence of multi-
+
+Fig. 12. Overall accuracy, precision, recall and F1 score under different ablation conditions in the non-IID scenario, showing that the data augmentation,
+the multi-level update/aggregation, the functional feature division, and the
+regularization do improve the performance.
+
+level updates in DP-CDM training improves 1.14% accuracy,
+whereas the absence of multi-level aggregation improves
+1.25% accuracy. This indicates that both multi-level characteristics enhance performance, while the multi-level update
+possesses a slightly larger degree. One reason is that the multilevel update does utilize more local data (i.e., the data in
+local GSs), which is more important than the optimization of
+the aggregation process. Second, omitting functional feature
+division results in the worst performance across four metrics,
+even worse than no data augmentation. On the one hand,
+no division step before traffic generation is illegal, as the
+generated traffic may violate its functionalities due to the
+functional feature modification. On the other hand, no division
+may let DP-CDM generate instances with unseen functional
+features. Compared with the ones with unmodified functional
+features, these instances are more diverse and may be misleading for training D, as the performance of D is evaluated
+by the original test data with unmodified functional features.
+Meanwhile, the amount of features that require generation
+also improves, causing a harder DP-CDM training process.
+Third, no regularization gets 0.39% lower accuracy, indicating
+that regularization does assign D with a certain degree of
+generalization capability improvement.
+H. Limitations
+Three limitations exist in STINIDF, which are the potential
+leakage of the synthetic data, fixed positions of the satellite
+constellation, and labeled data restriction.
+First, while our proposed method avoids sharing the raw
+data, the synthetic dataset generated by DP-CDM in PS is
+inevitably transferred to the local GS, satellite and edge router
+nodes. Although this transfer does not cause data leakage
+directly, it still contains the original functional features cut
+from the local data in PS. Intruders can backtrack these data to
+reproduce the original traffic recorded by PS. To make matters
+worse, they may infer the data from other nodes based on this
+traffic by exploring the distribution relationship. Basically, the
+data in PS is inevitably unsafe due to the exposure of the
+synthetic dataset. However, the data leakage in other nodes can
+
+HE et al.: SYNTHETIC DATA-ASSISTED STI NETWORK INTRUSION DETECTION FRAMEWORK
+
+be avoided, where one available mitigating solution is selecting
+the real samples with an evidently different data distribution
+compared with the local data in PS. These samples can
+be designated as public, making it challenging for intruders
+to infer other local data based on them. By adopting this
+approach, data leakage in nodes except PS is prevented by
+tackling the non-IID challenge in STIN intrusion detection.
+Another limitation is that the dynamic topology nature of
+the STIN is not considered in STINIDF training. The satellite
+constellation in Figure 2 is indeed rotating around the earth in
+regular, each satellite is running on different designated orbits
+and possesses a dynamical connection condition with GSs.
+When the weight of DP-CDM in each local GS is uploaded
+to PS for overall aggregation through ISL-based satellites, its
+arriving order becomes extremely complicated and causes an
+asynchronous weight aggregation in PS. This asynchronous
+aggregation may make final aggregated DP-CDM unstable,
+lowering the final detection performance in the end.
+Finally, the performance of STINIDF relies heavily on STI
+dataset, a labeled dataset collected in a designated simulation
+scenario. In real-world STIN scenarios, traffic collectors generally obtain massive unlabeled instances, unable to be applied
+in NIDS training. In this case, several unsupervised strategies
+like clustering and association are recommended to analyze
+data characteristics, behavior pattern, and feature distribution.
+Based on these information, a rule-based labeling mechanism
+can be designed to label the malicious and benign ones as the
+ground truth for the following supervised strategies.
+VIII. C ONCLUSION
+In this paper, a satellite terrestrial integrated (STI) traffic
+dataset is collected to simulate the skewed data distribution
+in STIN, whereas a satellite terrestrial integrated network
+intrusion detection framework (STINIDF) is proposed to detect
+malicious traffic over this dataset. Based on federated learning
+with diffusion privacy, STINIDF first aggregates a conditional
+diffusion model that contains the global traffic information
+of STIN based on the local ground station and the edge
+router nodes. Then, it utilizes this model to aid the training process of the detection model in each node through
+data augmentation. The implemented experiments illustrate
+that STINIDF possesses 96.63% accuracy, 96.71% precision,
+96.54% recall, and 96.66% F1 score in the designed non-IID
+STIN node scenario, which outperforms other state-of-the-art
+methods. With a privacy budget that equals 1, STINIDF can
+get 96.14% accuracy and generate instances with 17.88 FID,
+which also outperforms other synthetic data-assisted methods.
+In the future, two aspects are taken into consideration. First
+is the achievement of the dynamic topology for the satellite
+constellation, mentioned in the limitation section. Second is
+to enable NIDS with the capability on detecting L7-based
+DoS/DDoS. Compared with the ones based on the network
+layer, L7-based DoS/DDoS can falsify legitimate requests
+under the protocols like HTTP and HTTPS, causing a huger
+damage on target applications and servers with a small scale.
+Designing a detection strategy to prevent them is able to
+further improve the security of STIN.
+
+1753
+
+A PPENDIX
+Algorithm 2 locally update DP-CDM in edge routers, local
+GSs, and PS with E/E 0 /E 00 batch epochs. Based on Equation (9), line 6 defines a conditional loss function L given
+label y. Line 8 clips the gradient and line 10 adds the noise
+for (, δ)-DP utilization, corresponding to Equation (3).
+Algorithm 2 DP-CDM Local Update Algorithm
+Input: Local data distribution p(x, y); DP-CDM zw ; batch size
+B; batch epoch E/E 0 /E 00 ; time step N; Clip C; DP scale σ;
+1: for e = 1 : E/E 0 /E 00 do
+B
+2:
+{x, y}b=1
+∼ p(x, y)
+f unc non f
+B
+B
+3:
+{x , x
+, y}b=1
+← {x, y}b=1
+// Functional features
+division
+4:
+for every {xnon f,(b) , y(b) } do
+5:
+n ∼ Uniform({1,
+N}), z ∼ N
+√ (0, I)
+√. . . ,non
+f,(b)
+α
+¯
+x
++
+1 − α¯n z, n, y(b) )||2
+6:
+L(b)
+=
+||z
+−
+z
+(
+w
+n
+w
+(b)
+(b)
+7:
+g = dLw /dw
+g(b) = g(b) / max(1, ||g(b) ||2 /C) // Clip gradient
+8:
+9:
+end for
+P
+10:
+e
+g = ( B g(b) + N (0, σ2C 2 I))/B // Add noise
+11:
+w = w − ηwe
+g // Model update
+12: end for
+Algorithm 3 uses DP-CDM to generates traffic based on
+local data p(x, y) in PS. In line 5 ∼ 9, it reverses Gaussian
+f
+vector xnon
+back to x0non f for non-functional feature generation
+N
+like a N-step DM-based backward process. Line 8 is based
+on Equation (8) while zw requires label y for conditional
+generation.
+Algorithm 3 DP-CDM Generation Algorithm
+Input: Local data distribution p(x, y); DP-CDM zw ; generation
+amount |D0 |; time step N;
+1: Create newList
+2: for m = 1 : |D0 | do
+3:
+{x, y} ∼ p(x, y)
+4:
+{x f unc , xnon f , y} ← {x, y} // Functional features division
+f
+5:
+xnon
+∼ N (0, I)
+N
+6:
+for n = N : 1 do
+7:
+z ∼ N (0, I) if n > 1, else z = 0
+non f
+n
+8:
+xn−1
+= √1αn (xnnon f − √1−α
+z (xnon f , n, y)) + βn z
+1−α¯n w n
+9:
+end for
+10:
+x̄ = x f unc ⊕ x0non f , ȳ = y
+11:
+newList.append( x̄, ȳ)
+12: end for
+13: Return newList
+
+R EFERENCES
+[1] X. Zhu and C. Jiang, “Integrated satellite-terrestrial networks toward
+6G: Architectures, applications, and challenges,” IEEE Internet Things
+J., vol. 9, no. 1, pp. 437–461, Jan. 2022.
+[2] K. Li, H. Zhou, Z. Tu, W. Wang, and H. Zhang, “Distributed network
+intrusion detection system in satellite-terrestrial integrated networks
+using federated learning,” IEEE Access, vol. 8, pp. 214852–214865,
+2020.
+
+1754
+
+IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+[3] A. T. Azar, E. Shehab, A. M. Mattar, I. A. Hameed, and S. A. Elsaid,
+“Deep learning based hybrid intrusion detection systems to protect
+satellite networks,” J. Netw. Syst. Manage., vol. 31, no. 4, p. 82, Oct.
+2023.
+[4] T. Sowmya and E. A. Mary Anita, “A comprehensive review of AI
+based intrusion detection system,” Meas., Sensors, vol. 28, Aug. 2023,
+Art. no. 100827.
+[5] U. S. Musa, M. Chhabra, A. Ali, and M. Kaur, “Intrusion detection
+system using machine learning techniques: A review,” in Proc. Int. Conf.
+Smart Electron. Commun. (ICOSEC), Sep. 2020, pp. 149–155.
+[6] L. Ashiku and C. Dagli, “Network intrusion detection system using deep
+learning,” Proc. Comput. Sci., vol. 185, no. 1, pp. 239–247, 2021.
+[7] H. Wang et al., “Attack of the tails: Yes, you really can backdoor
+federated learning,” in Proc. NIPS, Vancouver, BC, Canada, Dec. 2020,
+pp. 16070–16084.
+[8] C. Zhang, Y. Xie, H. Bai, B. Yu, W. Li, and Y. Gao, “A survey on
+federated learning,” Knowl.-Based Syst., vol. 216, Jan. 2021, Art. no.
+106775.
+[9] B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. A. Y. Arcas,
+“Communication-efficient learning of deep networks from decentralized
+data,” in Proc. 20th Int. Conf. Artif. Intell. Statist., vol. 54, A. Singh
+and J. Zhu. Eds., Fort Lauderdale, FL, USA, 2017, pp. 1273–1282.
+[10] H. Zhu, J. Xu, S. Liu, and Y. Jin, “Federated learning on non-IID data:
+A survey,” Neurocomputing, vol. 465, pp. 371–390, Nov. 2021.
+[11] N. Yoshida, T. Nishio, M. Morikura, K. Yamamoto, and R. Yonetani,
+“Hybrid-FL for wireless networks: Cooperative learning mechanism
+using non-IID data,” in Proc. IEEE Int. Conf. Commun. (ICC), Jun.
+2020, pp. 1–7.
+[12] Z. Li, J. Shao, Y. Mao, J. H. Wang, and J. Zhang, “Federated learning
+with GAN-based data synthesis for non-IID clients,” in Proc. Int.
+Workshop Trustworthy Federated Learn., Jan. 2022, pp. 17–32.
+[13] K. Wei et al., “Federated learning with differential privacy: Algorithms
+and performance analysis,” IEEE Trans. Inf. Forensics Security, vol. 15,
+pp. 3454–3469, 2020.
+[14] Z. Ji, Z. C. Lipton, and C. Elkan, “Differential privacy and machine
+learning: A survey and review,” 2014, arXiv:1412.7584.
+[15] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,”
+in Proc. NIPS, vol. 33. Vancouver, BC, Canada: Curran Associates,
+2020, pp. 6840–6851.
+[16] A. Varga, “OMNeT++,” in Modeling and Tools for Network Simulation.
+Cham, Switzerland: Springer, 2010, pp. 35–59.
+[17] L. Mészáros, A. Varga, and M. Kirsche, “INET framework,” in Recent
+Advances in Network Simulation. Cham, Switzerland: Springer, Jan.
+2019, pp. 55–106.
+[18] X.-C. Li and D.-C. Zhan, “FedRS: Federated learning with
+restricted softmax for label distribution non-IID data,” in Proc. 27th
+ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug. 2021,
+pp. 995–1005.
+[19] J. Wang, Q. Liu, H. Liang, G. Joshi, and V. H. Poor, “Tackling the objective inconsistency problem in heterogeneous federated optimization,” in
+Proc. NIPS, 2020, pp. 7611–7623.
+[20] X. Mu et al., “FedProc: Prototypical contrastive federated learning on
+non-IID data,” Future Gener. Comput. Syst., vol. 143, pp. 93–104, Jun.
+2023.
+[21] L. Zhang, B. Shen, A. Barnawi, S. Xi, N. Kumar, and Y. Wu,
+“FedDPGAN: Federated differentially private generative adversarial networks framework for the detection of COVID-19 pneumonia,” Inf. Syst.
+Frontiers, vol. 23, no. 6, pp. 1403–1415, Dec. 2021.
+[22] I. J. Goodfellow et al., “Generative adversarial networks,” Commun.
+ACM, vol. 63, no. 11, pp. 139–144, 2020.
+[23] N. Sitouah, F. Merazka, and A. Hedjazi, “Deep learning approach
+for interruption attacks detection in LEO satellite networks,” 2022,
+arXiv:2301.03998.
+[24] N. Moustafa et al., “DFSat: Deep federated learning for identifying cyber
+threats in IoT-based satellite networks,” IEEE Trans. Ind. Informat.,
+early access, Oct. 20, 2022, doi: 10.1109/TII.2022.3214652. [Online].
+Available: https://ieeexplore.ieee.org/document/9925589
+[25] A. Alsaedi, N. Moustafa, Z. Tari, A. Mahmood, and A. Anwar,
+“TON IoT telemetry dataset: A new generation dataset of IoT and
+IIoT for data-driven intrusion detection systems,” IEEE Access, vol. 8,
+pp. 165130–165150, 2020.
+[26] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+network intrusion detection systems (UNSW-NB15 network data set),”
+in Proc. Mil. Commun. Inf. Syst. Conf. (MilCIS), Nov. 2015, pp. 1–6.
+
+[27] D. R. Jeske and A. Sampath, “Signal-to-interference-plus-noise
+ratio estimation for wireless communication systems: Methods and
+analysis,” Nav. Res. Logistics (NRL), vol. 51, no. 5, pp. 720–740,
+Aug. 2004.
+[28] P. M. S. Sánchez et al., “Studying the robustness of anti-adversarial federated learning models detecting cyberattacks in IoT spectrum sensors,”
+IEEE Trans. Dependable Secure Comput., vol. 21, no. 2, pp. 573–584,
+2024, doi: 10.1109/TDSC.2022.3204535.
+[29] W. Huang, T. Tiropanis, and G. Konstantinidis, “Federated learningbased IoT intrusion detection on non-IID data,” in Internet
+of Things, A. González-Vidal, A. M. Abdelgawad, E. Sabir,
+S. Ziegler, and L. Ladid, Eds., Cham, Switzerland: Springer, 2022,
+pp. 326–337.
+[30] Y. Zhang and Q. Liu, “On IoT intrusion detection based
+on data augmentation for enhancing learning on unbalanced
+samples,” Future Gener. Comput. Syst., vol. 133, pp. 213–227,
+Aug. 2022.
+[31] M. Al-Hawawreh and M. S. Hossain, “Federated learning-assisted
+distributed intrusion detection using mesh satellite nets for autonomous
+vehicle protection,” IEEE Trans. Consum. Electron., vol. 70, no. 1,
+pp. 854–862, Feb. 2024.
+[32] R. Uddin and S. A. P. Kumar, “SDN-based federated learning approach
+for satellite-IoT framework to enhance data security and privacy in space
+communication,” IEEE J. Radio Freq. Identificat., vol. 7, pp. 424–440,
+2023.
+[33] W. Yao, H. Zhao, and H. Shi, “Privacy-preserving collaborative intrusion
+detection in edge of Internet of Things: A robust and efficient deep
+generative learning approach,” IEEE Internet Things J., vol. 11, no. 9,
+pp. 15704–15722, May 2024.
+[34] L. Bottou, “Large-scale machine learning with stochastic gradient
+descent,” in Proc. 19th Int. Conf. Comput. Statist., Paris, France, 2010,
+pp. 177–186.
+[35] M. Abadi et al., “Deep learning with differential privacy,” in
+Proc. ACM SIGSAC Conf. Comput. Commun. Security, 2016,
+pp. 308–318.
+[36] Pcap Recording. Accessed: Jun. 26, 2019. [Online]. Available: https://
+inet.omnetpp.org/docs/showcases/general/pcaprecording/doc/index.html
+[37] M. Tsoukalos, “Using tshark to watch and inspect network traffic,” Linux
+J., vol. 2015, no. 254, p. 1, 2015.
+[38] J. He et al., “Model-agnostic generation-enhanced technology for fewshot intrusion detection,” Appl. Intell., vol. 54, no. 4, pp. 3181–3204,
+Feb. 2024.
+[39] G. Du, X. Cao, J. Liang, X. Chen, and Y. Zhan, “Medical image
+segmentation based on U-Net: A review,” J. Imag. Sci. Technol., vol. 64,
+no. 2, Mar. 2020, Art. no. 020508.
+[40] X. Zhou, X. Liu, C. Wang, D. Zhai, J. Jiang, and X. Ji, “Learning with
+noisy labels via sparse regularization,” in Proc. IEEE/CVF Int. Conf.
+Comput. Vis. (ICCV), Oct. 2021, pp. 72–81.
+[41] M. de Goede, B. Cox, and J. Decouchant, “Training diffusion models
+with federated learning,” 2024, arXiv:2406.12575.
+[42] V. S. Parekh et al., “Cross-domain federated learning in medical
+imaging,” 2021, arXiv:2112.10001.
+[43] S. Ambesange, B. Annappa, and S. G. Koolagudi, “Simulating
+federated transfer learning for lung segmentation using modified UNet model,” Proc. Comput. Sci., vol. 218, pp. 1485–1496,
+Jan. 2023.
+[44] A. Shamir, “How to share a secret,” Commun. ACM, vol. 22, no. 11,
+pp. 612–613, Nov. 1979.
+[45] L. Van der Maaten and G. E. Hinton, “Visualizing data using
+t-SNE,” J. Mach. Learn. Res., vol. 9, no. 86, pp. 2579–2605,
+Jan. 2008.
+[46] H. Abdi and L. J. Williams, “Principal component analysis,” WIREs
+Comput. Statistic, vol. 2, no. 4, pp. 433–459, Jul./Aug. 2010.
+[47] Y. Yu, W. Zhang, and Y. Deng, “Frechet inception distance (FID)
+for evaluating GANs,” Beijing Graduate School, China Univ. Mining
+Technol., Beijing, China, 2021, vol. 3.
+[48] T. Li, A. K. Sahu, M. Zaheer, M. Sanjabi, A. Talwalkar, and V. Smith,
+“Federated optimization in heterogeneous networks,” in Proc. Mach.
+Learn. Syst., vol. 2, 2020, pp. 429–450.
+[49] L. Breiman, “Random forests,” Mach. Learn., vol. 45, pp. 5–32, Oct.
+2001.
+[50] M. Riedmiller and A. Lernen, “Multi layer perceptron,” Mach. Learn.
+Lab Special Lect., Univ. Freiburg, Freiburg im Breisgau, Germany, 2014,
+vol. 24.

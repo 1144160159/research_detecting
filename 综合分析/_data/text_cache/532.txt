@@ -1,0 +1,163 @@
+1012                                                                         IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 18, NO. 2, MARCH/APRIL 2025
+
+
+
+
+          Scalable Large Model for Unlabeled Anomaly
+          Detection With Trio-Attention U-Transformer
+          and Manifold-Learning Siamese Discriminator
+                     Muyan Yao , Member, IEEE, Dan Tao , Member, IEEE, Peng Qi , Member, IEEE,
+                                          and Ruipeng Gao , Member, IEEE
+
+
+   Abstract—To identify pattern deviations in large-scale industrial
+infrastructures, anomaly detection is crucial yet challenging. Pre-
+vious research has not adequately addressed the characteristics
+and deployment considerations in these complex scenarios. In this
+paper, we present InoU, a scalable anomaly detection framework
+to process unlabeled multivariate time-series data. We incorporate
+a VAE filter to ease impacts from noisy components in training ma-
+terials. We propose a scalable trio-attention U-Transformer to con-
+struct the typical representation of high-dimensional streams and
+produce pseudo labels that enable the later training process. The                   Fig. 1.   Challenges of deploying anomaly detection in industrial scenarios.
+ultra perception and intra-/ inter-flow attention mechanisms are
+delicately designed to aggregate information from different flows
+with variable granularities while keeping a global view of the data.
+Its nested structure helps to maintain high efficiency even when the                events in the target data, provides a new viewpoint to address
+model is scaled down. We introduce a Siamese discriminator that                     this need [6], [7], [8], thus attracting widespread attention.
+projects target data into manifolds, and collates discrepancies at the
+embedding level. This paradigm elevates detection performance
+                                                                                       Most existing solutions [9], [10], [11], [12], [13] use data
+far beyond segment-wise error comparison in prior works. We                         normalization and windowing techniques to pre-process the
+apply contrastive and adversarial learning techniques to optimize                   data, and deploy generative models to extract patterns and re-
+manifold projection and detection performance when processing                       construct the target data. The criteria for identifying anomalies
+unseen samples. Extensive experiments on five large-scale datasets                  are usually based on the segment-wise reconstruction error
+demonstrate the effectiveness of InoU with an average F1-Score
+improvement of 5.58%, significantly outperforming the state-of-
+                                                                                    of the normalized data. Seemingly promising, these solutions
+the-art.                                                                            face challenges (Fig. 1) caused by a series of factors in actual
+                                                                                    industrial deployment, including the massive volume and variety
+  Index Terms—Anomaly detection, service and system                                 of on-site data, the heterogeneity in different devices, and the
+management, self-supervised, Siamese network, Transformer,
+contrastive, manifold learning.                                                     imbalanced hardware resources in different configurations.
+                                                                                       First, the insufficient consideration of discrepancy analysis
+                                                                                    in prior works contributes to the potential neglects of anoma-
+                            I. INTRODUCTION                                         lies. Differences in high-dimensional data easily become subtle
+      HE massive deployment of sensors, actuators, and other                        after segment-wise averaging, which is a common practice of
+T     assets in industrial scenarios has formed an increasingly
+complex network architecture [1], [2], enabling a series of
+                                                                                    error calculation. Moreover, the data normalization that trans-
+                                                                                    forms data with variable ranges to a uniform scale, potentially
+automated and intelligent operations [3], [4]. The deployments,                     contributes to overlooking fluctuations in channels with more
+in turn, pose pressing urges for their maintenance [5]. Anomaly                     dynamic ranges.
+detection, which identifies unusual or unexpected patterns or                          Second, the choice of window length and the inadequate avail-
+                                                                                    ability of labeled data further cause barriers in actual industrial
+                                                                                    practice. Longer windows dilute the presence of data points that
+   Received 6 August 2023; revised 27 December 2024; accepted 18 January            deviate from the norm, while shorter windows fail to capture
+2025. Date of publication 30 January 2025; date of current version 10 April 2025.
+This work was supported in part by the Natural Science Foundation of China          sufficient contextual information over time. Moreover, the label-
+under Grant 62472023, Grant 62402027 and Grant 62072029, and in part by             ing process in industrial scenarios is costly and labor-intensive,
+the Natural Science Foundation of Beijing Municipality under Grant L221003.         while the model tuning process in a self-supervised manner has
+(Corresponding author: Dan Tao.)
+   Muyan Yao, Dan Tao, and Peng Qi are with the School of Electronic and            not yet been fully explored.
+Information Engineering, Beijing Jiaotong University, Beijing 100040, China            Lastly, the resources in industrial scenarios are usually im-
+(e-mail: muyanyao@bjtu.edu.cn; dtao@bjtu.edu.cn; pengqi1@bjtu.edu.cn).              balanced, posing challenges to the scalability of models to be
+   Ruipeng Gao is with the School of Cyberspace Science and Technology, Bei-
+jing Jiaotong University, Beijing 100040, China (e-mail: rpgao@bjtu.edu.cn).        deployed. While Multi-Access Edge Computing (MEC) of-
+   Digital Object Identifier 10.1109/TSC.2025.3536306                               fers a potential solution for near-source model inference, its
+      1939-1374 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+YAO et al.: SCALABLE LARGE MODEL FOR UNLABELED ANOMALY DETECTION                                                                                     1013
+
+
+
+computational capabilities are inherently limited. Resources on            introduce contrastive and adversarial learning to optimize
+clouds are usually more abundant, but remote deployment is                 the projection of manifold and further elevate the anomaly
+not acceptable for latency-sensitive applications. These charac-           detection performance.
+teristics of a typical industrial environment determine that the         r We evaluate InoU on five large-scale datasets from real-
+anomaly detection framework should maintain adaptability and               world industrial applications. InoU achieves an overall
+scalability.                                                               F1-Score of 0.9168, outperforming the latest state-of-
+   To address these challenges, we redesign an anomaly de-                 the-art. Extensive experiments validate its scalability and
+tection pipeline that best fits industrial needs, and propose              effectiveness.
+a scalable framework InoU that incorporates a trio-attention             The rest of this paper is organized in the following ways.
+U-Transformer and a manifold-learning Siamese discriminator           Section II introduces the underlying methodology, and we fur-
+under a unified yet flexible architecture with tunable parameters     ther present the design details of InoU in Section III. In Sec-
+ranging from approximately 100 million to 6 billion, depending        tion IV, we discuss the settings and results of the extensive
+on the specific configuration and data source. During the design      experiments. Section V briefly reviews recent research on multi-
+of its architecture, we adopt a complementary rationale, where        variate time series anomaly detection. Finally, we conclude this
+the unified structure utilizes generative models to extract typical   work in Section VI.
+patterns and reconstruct data, while leveraging discriminative
+models for manifold projection and discrepancy analysis.                                          II. METHODOLOGY
+   Adapting to the data properties under industrial setups, we
+decouple the VAE (Variational Autoencoder) model from direct             In this section, we provide the necessary information to help
+                                                                      readers comprehend the motivation and highlight the design of
+involvement in the anomaly detection task, but to filter irregu-
+larities and noise from the raw training materials. In this way,      InoU.
+we bypass the risk of the VAE model being biased or improperly           Data Pre-processing: In industrial setups, the deployed assets
+                                                                      produce multivariate time series streams as they perform des-
+trained, and offset the impacts of noise and anomalies without
+the need for human intervention.                                      ignated tasks. These multivariate data are usually sampled at a
+   To learn the embeddings of normal data while maintain-             fixed or variable frequency to record metrics in various industrial
+                                                                      processes. Due to the properties of these processes behind the
+ing a high level of scalability, we propose a trio-attention U-
+Transformer. The ultra perception and intra-/ inter-flow attention    streams, there may be significant differences in the numerical
+mechanisms within each flow assist information aggregation in         ranges of different channels.1
+                                                                         The       data          stream       is    denoted     as     x=
+variable granularities without losing a high-level perspective of
+the complex industrial data. The U-shaped nested structure also       {x(1) , x(2) , x(3) , . . . , x(N ) }, x ∈ RN ×M , where N represents
+                                                                      the total number of time steps, and M is the total number of
+helps the model maintain high efficiency even when the model
+is scaled down.                                                       features. Each one of its components x(t) (1 ≤ t ≤ N ) is a
+   Furthermore, we devise a contrastive manifold-learning             1 × M vector. A max-min scaler is then deployed to normalize
+                                                                      x, and use a sliding window with length L = 128 to segment
+Siamese discriminator to cope with the challenge of anomaly
+overlooking in conventional numerical error comparison based          the scaled time series data into slices. For example, we use
+works while processing high-dimensional industrial data. Fur-         x(t−L+1:t) ∈ RL×M to denote a recording sequence that starts
+                                                                      at time t − L + 1 and ends at time t.
+thermore, we design a contrastive manifold-learning Siamese
+discriminator to address the limitation of conventional numerical        Considering that a data segment is the minimal unit that
+error comparison methods, which often encounter the challenge         the deep learning network consumes, we use xt to represent
+                                                                      x(t−L+1:t) for a clear description in later parts of the paper. We
+of anomaly overlooking when processing high-dimensional in-
+                                                                      also use x to represent the pre-processed dataset in instances
+dustrial data. This structure projects the observed and recon-
+                                                                      where the dataset is mentioned, e.g., in the equations of the
+structed sequences into the manifold through a shared backbone,
+                                                                      model optimization, but without the need to specify a specific
+and adaptively collates their discrepancies at the embedding
+                                                                      timestep.
+level. We introduce techniques from contrastive and adversarial
+                                                                         Anomaly Detection: Most prior anomaly detection works
+learning to the duet outputs from the Siamese backbones to
+                                                                      are built based on numerical error comparison. They rely on
+optimize the manifold projection approach and achieve a more
+                                                                      generative models to reconstruct data. Then, they calculate the
+constructed latent space.
+                                                                      deviation between the observed and the reconstructed values and
+   The contributions of this work are summarized here.
+    r We present the anomaly detection framework InoU, in-            determine if the sequences are anomalous based on the numerical
+      corporating a trio-attention scalable U-Transformer recon-      segment-wise error. This criterion is based on the assumption
+                                                                      that anomalies will have a more significant reconstruction error
+      structor and a manifold-learning Siamese discriminator
+      in a unified architecture. This design inspects embedding       than normal data. However, there are a few things to note in
+      discrepancies in a fine-grained manner while maintaining        actual practice:
+      high scalability.
+    r We design a refined data processing pipeline to offset
+                                                                        1 By using the term “channel,” we refer to the univariate recordings in the multi-
+      the impacts of noise and anomalies in the raw train-            variate time series data, with the intention to emphasize their physical meanings.
+      ing materials and adapt to industrial properties. We also       This word may be used interchangeably with “feature” in the following parts.
+1014                                                              IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 18, NO. 2, MARCH/APRIL 2025
+
+
+
+
+Fig. 2. Capture of temporal dependencies in segmented data. Orange se-   Fig. 3. Fluctuations in a high dynamic channel become less salient after
+quences are anomalous.                                                   normalization, leading to potential overlooks of anomalies.
+
+
+
+   1) Segment length and limitations in dependency capture: As
+stated, the operation of reconstruction and error calculation are
+all based on the length L that segments the original data stream.
+A longer length captures more temporal information but, on the
+other hand, dilutes fluct

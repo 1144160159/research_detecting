@@ -1,0 +1,133 @@
+ETCNet: Encrypted Traffic Classification using Siamese
+ Convolutional Networks
+ Lu Xu Daihui Dou H. Jonathan Chao
+ New York University New York University New York University
+ New York, USA New York, USA New York, USA
+ lx643@nyu.edu dd2956@nyu.edu chao@nyu.edu
+
+ABSTRACT that are sensitive to delay or packet loss, achieving better network
+As more and more Internet traffic is encrypted, classifying their performance and users’ quality of experience (QoE). Moreover, trafflows for the usage in application-aware networking (AAN) and fic classification can also distinguish malware traffic from normal
+application-network integration (ANI) becomes increasingly impor- traffic [6] to enhance network security.
+tant and challenging. Traditional deep packet inspection approaches An encrypted Internet protocol, HTTP2, has been widely used
+are no longer capable of identifying the encrypted packet streams, by most top websites in the world [3]. According to [2], the usage
+and hence new traffic classification methods based on machine of HTTP2 for the websites has reached 43.6%. Just last year alone,
+learning have recently been explored by several researchers. One the adoption of HTTP2 increased by nearly 10%. The popularity
+major challenge of using machine learning to classify encrypted of HTTP2 shows the necessity of developing an effective traffic
+traffic is lacking real datasets. Collecting Internet traffic may leak classification scheme for encrypted packet streams. However, the
+users’ sensitive information, which prohibits the network commu- shift has created tremendous difficulty for traffic classification, benity from sharing the datasets they collected. In this poster, we cause the information in packet payload is no longer available for
+propose ETCNet which is a model based on Siamese convolutional inspection.
+network to solve this issue. Our evaluation for the ETCNet shows While researchers are using machine learning to perform trafthat it can achieve high accuracy by only using 40 flows of each fic classification, it has been very challenging for them to devise
+application to train it. effective algorithms due to the lack of available datasets to train
+ and evaluate their algorithms. Unlike many other machine learning
+CCS CONCEPTS problems, such as computer vision (CV) and natural language processing (NLP), network traffic contains users’ personal information,
+· Networks → Packet classification; Network monitoring; · Semaking it not always collectable. Moreover, because of the sensitivcurity and privacy → Cryptanalysis and other attacks.
+ ity of personal data, researchers in the network community have
+ the concern of sharing the real users’ data even after they manage
+KEYWORDS
+ to collect them, making it very difficult, if not impossible, for the
+encrypted traffic classification, siamese convolutional network, ma- network community to collaboratively form a large dataset. What’s
+chine learning more, the contents of Internet traffic tends to change quickly, ren-
+ACM Reference Format: dering the collected dataset obsolete quickly and requiring a new
+Lu Xu, Daihui Dou, and H. Jonathan Chao. 2020. ETCNet: Encrypted Traf- effort of collecting them again.
+fic Classification using Siamese Convolutional Networks. In Workshop on To meet the need of classifying traffic and overcoming the prob-
+Network Application Integration/CoDesign (NAI’20), August 14, 2020, Virtual lem of lacking datasets, we introduce ETCNet, a classification model
+Event, USA. ACM, New York, NY, USA, 3 pages. https://doi.org/10.1145/ based on Siamese convolutional networks (to be discussed in Sec-
+3405672.3409492
+ tion II), which only needs a small dataset to train the model while
+ achieving high classification accuracy on encrypted Internet traf-
+1 INTRODUCTION fic. Heuristically, the model converts a multi-class classification
+Internet traffic classification has become an important research problem to a binary classification problem, which reduces the probarea in recent years [5]. The ability to categorize traffic to its ap- lem difficulty and the datasets needed. The Siamese convolutional
+plication is critical for application-aware networking (AAN) and network takes a pair of traffic flows as input and produces an interapplication-network integration (ANI). By classifying each flow’s mediate feature, capturing the level of similarity of the two flows. A
+application in real-time, routers or middleboxes are able to apply classifier is then used to produce a binary label, indicating whether
+different scheduling or buffer management strategies to the flows the two flows belong to the same application. To ensure the robustness of the model, not being influenced by spoofed identification
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed or port numbers, the model only uses the encrypted payload of
+for profit or commercial advantage and that copies bear this notice and the full citation the packet stream. A detailed description of the feature selection is
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+ discussed in Section III.
+republish, to post on servers or to redistribute to lists, requires prior specific permission To evaluate the ETCNet’s prediction accuracy, we created a
+and/or a fee. Request permissions from permissions@acm.org. dataset via mocking the users’ browsing behavior. As shown in Tab.
+NAI’20, August 14, 2020, Virtual Event, USA
+© 2020 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ 1, eight of the world’s top one hundred applications [1] are chosen
+ACM ISBN 978-1-4503-8044-7/20/08. . . $15.00 and all the applications use the HTTP2 protocol. We recorded the
+https://doi.org/10.1145/3405672.3409492
+
+ 51
+NAI’20, August 14, 2020, Virtual Event, USA Xu, et al.
+
+ Table 1: The applications collected in our dataset 2.1 Siamese Neural Encoder Component
+ This component takes the feature vectors of two encrypted HTTP2
+ Reddit Twitter Spotify Facebook traffic flows as input. This encoder component contains two Siamese
+ Instagram Wikipedia Amazon Stackoverflow networks that share the same weights and biases. Each network
+ starts with a layer of 3000 neuron nodes to take the input feature vectors 𝐼 1 and 𝐼 2 . They are connected with fully connected
+packets passing through the Network Interface Card (NIC) while one-dimensional convolutional layers respectively. The first conthe mocked user is browsing those applications. We tested our volutional layer has 64 filters with a kernel size of 3. The second
+model on the dataset which achieves an accuracy of 92%. convolutional layer has 32 filters with a kernel size of 3. Both lay-
+ The main contributions of our work are summarized as follows: ers have ReLU [4] as non-linearity. A Max-Pooling layer is added
+ • Our proposed ETCNet model for encrypted traffic classifica- after convolutional layers to combine and reduce the spatial size of
+ tion is able to classify packet stream’s applications by using the low dimensional representation. The Siamese neural encoder
+ a very small training dataset (e.g., only 40 flows for each component flattens the result of the Max-Pooling layer and outputs
+ application). two vectors, 𝐹 1 and 𝐹 2 , representing a low dimensional feature of
+ • We collected our own dataset for HTTP2 flows, more than the two input flows.
+ 1500 flows for each application. We filtered raw Internet
+ traffic and stored each flow to an individual file so that the 2.2 Application Prediction Component
+ dataset can be easily used by other researchers without much
+ Vector 𝐹 1 and 𝐹 2 from the previous component are concatenated to
+ pre-processing needed. We have uploaded our dataset on
+ form a one-dimensional vector in this component. The concatenated
+ Google Drive 1 .
+ vector has a size of 200 Bytes. The two fully connected dense layers
+ are cascaded. The first layer has 100 nodes for each result vector
+ from the Siamese neural encoder component. The second layer has
+ 1 node. The first layer has ReLU as non-linearity. The second layer
+ F1 has Sigmoid as non-linearity.
+ 100
+ I1 Nodes
+ 3000B 3 EVALUATION
+ 3.1 Implementation Details
+ To evaluate the approach we proposed, we trained and test our
+ 3000 Nodes Conv. Pooling. Y(0/1) model on the dataset we collected. We only use 40 flows for each
+ application to show the effectiveness of our model even with a small
+ dataset. For each training batch, we randomly selected 200 input
+ Dense vector pairs for training. Half of the input vector pairs have their
+ I2 two traffic flows belonging to the same applications. The other 100
+ 3000B
+ F2 input vector pairs have their two traffic flows belonging to different
+ 100
+ Nodes
+ applications. We also generate 20 pairs for the test set in each
+ epoch. We run the training processing for 50 epochs. Finally, we
+ Application prediction component generate 200 pairs of flows as a validation set to evaluate the model
+ after training. The input vector is accumulated by concatenating
+ Siamese neural encoder component
+ the encrypted packet payload of a flow. If a flow does not contain
+ sufficient byte streams, we append zeros to the end of the vector.
+Figure 1: The proposed Siamese Convolutional Network We add 6 consecutive numbers of "FF" between any two payloads to
+model. The model takes two feature vectors and outputs a serve as a boundary between them. This pattern of 6 "FF" is chosen
+binary result. because it never appears in any packet payloads. With a trade-off
+ of accuracy and efficiency, an input vector size of 3000-bytes is
+ chosen.
+2 DESIGN
+Our model consists of two parts, as shown in Fig. 1, a Siamese neural 3.2 Preliminary Results
+encoder component and an Application prediction component. The We performed an experiment based on the architecture and parammodel takes two flows of encrypted HTTP2 traffic as an input and eter we discussed above. The test was run on the Intel(R) Xeon(R)
+determines whether or not they belong to the same application. CPU E5-2690 v4 @ 2.60GHz CPU, 16GB Memory ,and a GeForce
+Our objective is to use the Siamese neural encoder component to GTX 1080 Graphics Processing Unit. On the dataset we collected,
+obtain a low dimensional representation of the two input traffic our approach obtained a 92% accuracy using only 40 flows for each
+flows. Then the Application prediction component will suggest application. The time spent on testing each flow is 5ms on average.
+whether or not the two flows belong to the same application. This computation time is much smaller than the duration of a whole
+1 https://drive.google.com/open?id=1CHKcWotJg_jjE2HH6g-Z1lfr1RBBy0LO traffic flow, which is typically longer than 1s.
+
+ 52
+ETCNet: Encrypted Traffic Classification using Siamese Convolutional Networks NAI’20, August 14, 2020, Virtual Event, USA
+
+REFERENCES [4] Vinod Nair and Geoffrey E. Hinton. 2010. Rectified Linear Units Improve Restricted
+[1] Alexa 2020. Alexa - Top sites. Retrieved March 31, 2020 from https://www.alexa. Boltzmann Machines. In ICML. 807ś814. https://icml.cc/Conferences/2010/papers/
+ com/topsites 432.pdf
+[2] HTTP/2 2020. Usage statistics of HTTP/2 for websites. Retrieved April 3, 2020 from [5] S. Rezaei and X. Liu. 2019. Deep Learning for Encrypted Traffic Classification: An
+ https://w3techs.com/technologies/details/ce-http2 Overview. IEEE Communications Magazine 57, 5 (2019), 76ś81.
+[3] HTTPS 2020. HTTPS encryption on the web. Retrieved March 30, 2020 from [6] T. Shapira and Y. Shavitt. 2019. FlowPic: Encrypted Internet Traffic Classification
+ https://transparencyreport.google.com/https/overview is as Easy as Image Recognition. In IEEE INFOCOM 2019 - IEEE Conference on
+ Computer Communications Workshops (INFOCOM WKSHPS). 680ś687.
+
+ 53

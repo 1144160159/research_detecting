@@ -1,0 +1,139 @@
+5758                                                                     IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 20, 2025
+
+
+
+
+               Respond to Change With Constancy:
+           Instruction-Tuning With LLM for Non-I.I.D.
+                   Network Traffic Classification
+       Xinjie Lin , Gang Xiong, Member, IEEE, Gaopeng Gou, Wenqi Dong , Jing Yu , Zhen Li, and Wei Xia
+
+
+
+   Abstract—Encrypted traffic classification is highly challenging                                     I. I NTRODUCTION
+in network security due to the need for extracting robust
+features from content-agnostic traffic data. Existing approaches
+face critical issues: (i) Distribution drift, caused by reliance on
+the closed-world assumption, limits adaptability to real-world,
+                                                                                A      S AN essential technology for cybersecurity and network
+                                                                                       management, traffic classification aims to identify cate-
+                                                                                gories of traffic from diverse applications or network services
+shifting patterns; (ii) Dependence on labeled data restricts appli-             [1], [2], [3], [4], [5], [6], which has been widely used in
+cability where such data is scarce or unavailable. Large language               scenarios such as security attack detection and quality of
+models (LLMs) have demonstrated remarkable potential in offer-                  service assurance to help web content and service providers
+ing generalizable solutions across a wide range of tasks, achieving
+notable success in various specialized fields. However, their                   provide a more secure and high-quality web service experience
+effectiveness in traffic analysis remains constrained by challenges             for users.
+in adapting to the unique requirements of the traffic domain.                      In recent years, gradual full encryption of traffic has become
+In this paper, we introduce a novel traffic representation model                a reality, explicit fingerprinting has been gradually failing.
+named Encrypted Traffic Out-of-Distribution Instruction Tuning                  Different technical approaches have been proposed to address
+with LLM (ETooL), which integrates LLMs with knowledge of
+traffic structures through a self-supervised instruction tuning                 the needs of encrypted traffic analysis, including: (i) Statistical
+paradigm. This framework establishes connections between tex-                   feature-based approaches [15], [40] extract statistical features
+tual information and traffic interactions. ETooL demonstrates                   and combine them with classical machine learning algorithms
+more robust classification performance and superior generaliza-                 to cope with traffic without plaintext; (ii) Raw feature-based
+tion in both supervised and zero-shot traffic classification tasks.             approaches [8], [22] on the other hand selects raw traffic
+Notably, it achieves significant improvements in F1 scores: APP53
+(I.I.D.) to 93.19%(6.62%↑) and 92.11%(4.19%↑), APP53 (O.O.D.)                   features and captures complicated patterns based on deep
+to 74.88%(18.17%↑) and 72.13%(15.15%↑), and ISCX-Botnet                         learning algorithms; and (iii) Raw datagram-based approaches
+(O.O.D.) to 95.03%(9.16%↑) and 81.95%(12.08%↑). Additionally,                   [18], [19], [20] utilize deep neural networks to learn implicit
+we construct NETD, a traffic dataset designed to support dynamic                correlations between datagram bytes.
+distributional shifts, and use it to validate ETooL’s effectiveness                Regrettably, the validity of most encrypted network traffic
+under varying distributional conditions. Furthermore, we eval-
+uate the efficiency gains achieved through ETooL’s instruction                  analysis methods is based on the assumption that training
+tuning approach.                                                                and testing traffic are independent and identically distributed
+                                                                                (I.I.D.), following empirical error minimization learning from
+   Index Terms—Encrypted traffic classification, network secu-
+rity, out-of-distribution generalization, large language models.                the training distribution. In fact, this assumption is fragile and
+                                                                                unrealistic in practical scenarios in the field of cybersecurity.
+                                                                                The interaction information and patterns of web applications
+                                                                                change over time, which makes it difficult for existing meth-
+                                                                                ods to ensure good performance of the test data, the most
+   Received 22 October 2024; revised 20 May 2025; accepted 20 May 2025.         intuitive manifestations of which include version updates of
+Date of publication 29 May 2025; date of current version 12 June 2025. This     web applications, and behaviors in different temporal windows
+work was supported by the National Key Research and Development Program         [9], [10], [11]. Therefore, existing studies face the problem of
+of China under Grant 2022YFB2702404. The associate editor coordinating
+the review of this article and approving it for publication was Prof. Ghassan   probability distribution drift of traffic and category labels due
+Karame. (Corresponding author: Jing Yu.)                                        to dynamic changes in network traffic, i.e., new feature distri-
+   Xinjie Lin is with Zhongguancun Laboratory, Beijing 100094, China,           butions cannot be precisely mapped to the same labels under a
+also with the Institute of Information Engineering, Chinese Academy of
+Sciences, Beijing 100190, China, and also with the School of Cyber Security,    well-trained classification model with the old distribution [14],
+University of Chinese Academy of Sciences, Beijing 100085, China (e-mail:       [31].
+linxj@mail.zgclab.edu.cn).                                                         In response to the degraded performance of traffic classifi-
+   Gang Xiong, Gaopeng Gou, Wenqi Dong, Jing Yu, Zhen Li, and
+Wei Xia are with the Institute of Information Engineering, Chinese Academy      cation models under Out-of-Distribution (O.O.D.) conditions,
+of Sciences, Beijing 100190, China, and also with the School of Cyber           one of the most intuitive and commonly used techniques [32],
+Security, University of Chinese Academy of Sciences, Beijing 100085, China      [38], [39] is to periodically retrain the model to adapt to
+(e-mail: xionggang@iie.ac.cn; gougaopeng@iie.ac.cn; dongwenqi@iie.ac.cn;
+yujing02@iie.ac.cn; lizhen@iie.ac.cn; xiawei@iie.ac.cn).                        changes in traffic, as shown in Fig. 1(a). However, updating
+   Digital Object Identifier 10.1109/TIFS.2025.3574971                          the model involves collecting labeled samples and retraining
+             1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+LIN et al.: RESPOND TO CHANGE WITH CONSTANCY: INSTRUCTION-TUNING WITH LLM                                                                           5759
+
+
+
+                                                                                   introduce flow graph representations, converting flow inter-
+                                                                                   action properties into learnable graph structures. By using a
+                                                                                   contrastive learning approach, we align textual representations
+                                                                                   with flow graph structures, enabling the LLM to comprehend
+                                                                                   flow characteristics. During the instruction tuning phase, the
+                                                                                   model is guided through a BURST graph matching task as a
+                                                                                   self-supervised signal. This process helps the LLM understand
+                                                                                   the underlying transport structure (BURST), enhancing its
+                                                                                   ability to capture contextual associations in traffic. In the sec-
+                                                                                   ond tuning phase, we fine-tune the LLM using traffic-specific
+Fig. 1. The Schematic illustration of different O.O.D. identification solutions.   instructions, adapting it further to the traffic identification task.
+                                                                                      In summary, the main contributions of this paper are sum-
+                                                                                   marized as follows:
+the classifier, consuming a lot of time and labor. Moreover, the
+                                                                                        I We propose an instruction tuning model, called ETooL,
+frequent updating of applications and the forgetting of old dis-
+                                                                                          for out-of-distribution encrypted traffic classification.
+tributions make it difficult to balance the updating effort with
+                                                                                          The aim of this work is to align structural knowledge
+performance degradation [31], [32], [33]. Existing approaches
+                                                                                          of the traffic domain with the generalization of LLMs,
+are inappropriate in dealing with out-of-distribution traffic
+                                                                                          in order to enhance O.O.D. generalization for encrypted
+detection for two essential reasons:
+                                                                                          traffic.
+  (1) Feature Instability. Most used traffic features, single-                         II We newly propose flow-specific self-supervised instruc-
+       packet features or single-flow features inherited from                             tion tuning task, BURST Graph Matching, to improve
+       packet-level information, are weakly stable under distri-                          the LLM’s comprehension of flow interaction. Mean-
+       bution drift and lack the ability to represent traffic more                        while, we introduce task-specific instruction tun-
+       robustly.                                                                          ing to enhance the adaptability to encrypted traffic
+  (2) Insufficient Generalization. Existing research frame-                               classification.
+       works are built to fit distributions under artificial                          III We design and construct a dataset suitable for Non-I.I.D.
+       experience or large-scale labeled data, while realistic                            traffic classification, named NETD. To the best of our
+       networks, ranging from the complexity and variability                              knowledge, this is the first dynamically distributed traffic
+       of the application layer to the interactive changes of                             dataset that is dedicated to advancing data-supported
+       the transmission mechanism, launch an impact on the                                research on O.O.D. encrypted traffic.
+       existing experimental assumptions.                                            IV ETooL has great generalization ability and achieves a
+   Studies [39], [40], [41], [42] have shown that both the                                new state-of-the-art performance over 7 encrypted traffic
+temporal ordering of adjacent flows and packet-level bursts                               classification datasets across independent and identically
+contribute significantly to traffic fingerprinting. Moreover, con-                        distributed and out-of-distribution scenarios, including
+sistent traffic burst patterns within an application, even after                          Encrypted Application Classification, Malicious Service
+updates, have proven to be robust features for building stable                            Classification and Encrypted Traffic Classification with
+traffic representations. Additionally, pre-training methods are                           Distribution Flexible, and outperforms existing works
+gaining traction in traffic analysis. For instance, ET-BERT                               remarkably by 6.62%, 4.19%, 18.17%, 15.15%, 9.16%,
+[12] demonstrates strong generalization across multiple tasks,                            12.08% and 2.88%.
+offering a viable traffic representation framework, though it
+does not fully resolve the generalization challenge.                                                      II. P RELIMINARIES
+   Recently, large language modeling has been making break-
+throughs in areas such as multi-modality. Under massive                            A. Problem Statement
+knowledge and unsupervised learning tasks, LLMs are able to                           An adversary can use the encrypted traffic to perform a side-
+acquire data extrapolation and scenario transfer capabilities,                     channel attacks to identify whether a victim has accessed a
+and emerge as emergent capabilities in some tasks [21]. Such                       specific set of monitored applications. A defender, on the other
+powerful generalization ability can be easily migrated to the                      hand, performs intrusion detection analysis with encrypted
+target domain (Domain-LLM) [13], [16], [17] by fine-tuning                         traffic to identify whether an attacker uses a malicious program
+the instruction form of small-scale labeled data. Stable traffic                   to compromise a controlled network. We assume that the
+representation in conjunction with LLM motivated our idea.                         attacker or defender cannot exploit the plaintext payload of the
+   To address the aforementioned challenges, we propose a                          packets and define an encrypted network flow as a bidirectional
+novel traffic graph instruction tuning model for classifying                       sequence of packets corresponding to a unique five-tuple
+encrypted traffic in out-of-distribution (O.O.D.) scenarios,                       source IP, destination IP, source port, destination port, protocol.
+called ETooL (Encrypted Traffic Out-of-Distribution Instruc-                          The goal of out-of-distribution encrypted traffic classifi-
+tion Tuning with Large Language Model). ETooL focuses on                           cation is to utilize traffic data from known distributions to
+designing flow interaction representations that allow LLMs                         learn transferable traffic knowledge, in order to achieve that
+to learn th

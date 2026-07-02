@@ -1,0 +1,815 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025 5018713
+
+ REDAD: A Reliable Distillation for Image
+ Anomaly Detection
+ Wenrui Hu , Wei Yu , Yongqiang Tang , Yuan Xie , and Wensheng Zhang
+
+ Abstract— The vanilla knowledge distillation (KD)-based
+approach for image anomaly detection (AD) encounters three
+main challenges: data shift, normality forgetting, and anomaly
+overgeneralization. To effectively address these challenges,
+we introduce REDAD, a reliable distillation strategy for AD,
+which avoids intricate network designs. Initially, we incorporate
+an adaptive teacher model (ATM) that dynamically adjusts
+the teacher’s batch normalization (BN) statistics during the
+distillation process, aligning the teacher with the target training
+data distribution. Next, we introduce a normality remembering
+enhancement (NRE) module, designed to compel the student to
+learn the most challenging normal feature with high distillation
+loss, thereby bolstering normality retention and reducing false
+positives. Finally, we present a novel direction-guided regularization (DGR) technique to robustly enlarge the divergence
+in abnormal feature pairs, preventing the oversight of abnor- Fig. 1. Issues in KDST-based AD. (a) General KDST method framework.
+ (b) Illustration highlighting normality forgetting and overgeneralization probmal regions, or false negatives. Comprehensive experiments on lems. (c) Example of normality forgetting with a normal sample. (d) Example
+the MVTec, VisA, and MVTec3D datasets show that REDAD of anomaly overgeneralization with an abnormal sample.
+effectively resolves these three concerns, achieving superior AD
+performance compared with its baseline model (exceeding 3.5%
+(5.0%, 6.1%) in I-AUROC, 2.3% (1.6%, 1.5%) in P-AUROC,
+and 3.2% (5.4%, 3.8%) in PRO). In addition, two real-world
+industrial product inspection applications further underscore the
+ Among various UAD methods, knowledge distillation (KD)
+efficacy and utility of the proposed REDAD method. [7]-based methods establish a student–teacher (S-T) network
+ pairing to detect anomalies by pinpointing the feature-to-
+ Index Terms— Knowledge distillation (KD), self-supervised
+learning, unsupervised anomaly detection (UAD). feature discrepancies [8], as shown in Fig. 1(a). During the
+ training phase, the teacher network, pretrained on an image
+ I. I NTRODUCTION classification dataset like ImageNet, remains unchanged, while
+ the student network is trained exclusively using normal images
+T HE objective of image anomaly detection (AD) is to
+ identify images that are irregular and precisely locate the
+specific areas that deviate from normal patterns. This techfrom the AD task. In the testing phase, the student network is
+ expected to mimic the teacher in normal feature regions but
+nique for detecting anomalies is used across multiple sectors, diverge in abnormal regions, and this divergence is then used
+including industrial inspection [1], [2], medical diagnostics [3], to identify anomalies. Typically, cosine similarity is used as a
+[4], and video surveillance [5]. However, in real-world appli- metric to gauge feature discrepancies, owing to its precision
+cations, the AD tasks often encounter challenges posed by the in capturing relationships in both high- and low-dimensional
+scarcity of abnormal samples and the vast diversity of anomaly data [9]. The remarkable knowledge transfer and learning
+types. To address this issue, unsupervised AD (UAD) methods guidance offered by KDST-based methods have propelled
+have emerged as a preferred solution as they minimize the need them to the forefront of performance in the field [6]. Beyond
+for extensive annotated data [6]. the standard configuration, methods such as STPM [10] and
+ MKD [11] enhance their effectiveness by incorporating multi-
+ Received 4 November 2024; revised 29 January 2025; accepted 13 February
+2025. Date of publication 14 March 2025; date of current version 27 March scale features from various network layers into the distillation
+2025. This work was supported in part by the National Natural Science Foun- process, thereby improving overall performance.
+dation of China under Grant 62394330. The Associate Editor coordinating the Despite the promising results of KDST-based methods, they
+review process was Dr. Shiqian Chen. (Corresponding author: Wenrui Hu.)
+ Wenrui Hu and Wei Yu are with China Mobile Research encounter three main issues: data shift, normality forgetting,
+Institute, Beijing 100084, China (e-mail: huwenrui@chinamobile.com; and anomaly overgeneralization. Regarding data shift, the
+yuweiyf@chinamobile.com). distribution of images in the AD task typically differs from
+ Yongqiang Tang and Wensheng Zhang are with the Institute of Automation, Chinese Academy of Sciences, Beijing 100089, China (e-mail: that of ImageNet. As the data distribution evolves in the
+yongqiang.tang@ia.ac.cn; wensheng.zhang@ia.ac.cn). new task, the BN statistics in the student and teacher models
+ Yuan Xie is with the School of Computer Science and Technol- rapidly diverge, resulting in increased KD loss [12]. This diverogy, East China Normal University, Shanghai 200062, China (e-mail:
+yxie@cs.ecnu.edu.cn). gence hinders the alignment of features between the teacher
+ Digital Object Identifier 10.1109/TIM.2025.3551571 and student models. With respect to the issue of normality
+ 1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5018713 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+forgetting, the student model, being trained on amounts of with synthetic anomalies. Formally, let the normal feature
+anomaly-free data, becomes sensitive to the nuanced patterns vector pairs for the student and teacher be denoted as (φns ,
+in normal data due to the long-tail problem. This sensitivity φnt ), which are trained to align closely, the objective of DGR
+results in discrepancies in the normal feature representations is to augment the disparity between the perturbed abnormal
+between the teacher and student models [refer to Fig. 1(b)], feature pair (φas , φat ). The DGR mechanism achieves this by
+thereby increasing the likelihood of false positives in AD adjusting φas away from φat in a mirrored direction when the
+[refer to Fig. 1(c)]. To address this, MemKD [13] proposes a cosine angle between φat and φnt is positive, and in the opposite
+normality recall memory to reinforce the normality in student- direction when negative. We call this method as RD, as it
+generated features, ensuring detailed patterns are accurately effectively addresses the weaknesses of weak discrimination
+captured. EfficientAD [14] introduces a hard feature loss or instability found in existing methods such as DeSTSeg [20]
+that focuses backpropagation on the output elements with and CDO [15], enabling the detection of both subtle and
+the highest loss, reducing false-positive detections on normal pronounced anomalies. A more comprehensive description and
+images. analysis can be found in Section III-G. It is crucial to note that
+ Anomaly overgeneralization arises when the student model, DGR does not require additional network architectures like
+due to its strong generalization capabilities, produces abnormal those mentioned in the aforementioned methods [17], [19],
+feature distributions similar to those in the teacher’s domain [20], thus introducing no extra computational costs during
+[refer to Fig. 1(b)] [15], [16]. This overgeneralization leads to testing.
+the oversight of abnormal regions [refer to Fig. 1(d)]. To tackle The contributions of this study can be summarized as
+this problem, various strategies have been devised. Both follows.
+AST [17] and ATSN [18] use an asymmetric student–teacher 1) We identify and address three prevalent and independent
+structure to widen the gap in anomaly representations between issues within the KDST-based methods. To this end,
+teacher and student. On the other hand, reliable direction we introduce a reliable distillation approach, termed
+(RD) [19] introduces a reverse distillation approach featuring REDAD, which can simultaneously mitigate these three
+a teacher encoder and a student decoder, fostering diversity in challenges within the KDST framework. Furthermore,
+anomalous representations. A network structure similar to RD REDAD enhances the performance of the KDST-based
+is also proposed in [4]. Some other works suggest that using methods without incurring additional network complexonly normal data for training can lead to low sensitivity to ity or inference costs.
+abnormal samples. Therefore, they use self-supervised meth- 2) We design a novel DGR technique that effectively
+ods by simulating anomalies to mitigate overgeneralization. amplifies the divergence of anomaly features between
+With the help of synthetic anomalies, CDO [15] collabora- the teacher and student models using self-supervised
+tively minimizes discrepancies in normal feature distributions training with synthetic anomalies.
+and maximizes those in synthetic abnormal feature distri- 3) Extensive experiments across diverse datasets demonbutions, which achieves remarkable performance. Operations strate that REDAD outperforms the current state-ofsimilar to CDO are also proposed in Pull&Push [16]. From the-art KDST-based methods in both image-level and
+synthetically corrupted normal images, DeSTSeg [20] trains pixel-level AD tasks.
+a denoising student network to match the teacher network The remainder of this article is organized as follows.
+feature of the same images without corruption. Therefore, the Section II comprehensively reviews the related works. REDAD
+two networks are reinforced to generate distinct features from is illustrated in detail in Section III. Section IV presents
+anomalous inputs. thorough experiments, results, and analyses. Finally, Section V
+ This study proposes a reliable distillation strategy within the concludes this article and discusses future research directions.
+pyramid KDST framework to simultaneously addressing the
+three aforementioned issues. Inspired by exemplar-free class
+ II. R ELATED W ORKS
+incremental learning method [12], we introduce an adaptive
+teacher model (ATM) to tackle the data shift problem. This A. Unsupervised AD
+ATM updates the BN statistics of the teacher model while Most UAD techniques can be broadly categorized into
+keeping the rest of the model parameters fixed during the two approaches: reconstruction-based and feature-embedding
+training process, significantly minimizing KD loss. To counter methods [6]. Reconstruction methods, such as autoenthe normality forgetting problem, we propose a normality coders [22], GANs [23], and denoising diffusion [24], assume
+remembering enhancement (NRE) module, influenced by the that anomalies in data cannot be accurately reproduced by
+online hard example mining (OHEM) technique [21]. Unlike a neural network trained only on normal data. Therefore,
+MemKD [13], which uses a memory-intensive mechanism discrepancies in pixel-level reconstruction are used as indito retain normal information, NRE effectively directs the cators for detecting anomalies. Nevertheless, this assumption
+student model to concentrate on more complex normal features is not always correct. Occasionally, networks may generalize
+by identifying those with highest loss. Furthermore, unlike too much, resulting in false negatives when they mistakenly
+EfficientAD [14], which uses a static mining factor, NRE reconstruct anomalies [25].
+adopts a gradually decreasing factor to ensure training stability. Currently, feature embedding-based methods are demon-
+ To tackle the challenge of anomaly overgeneralization, strating superior performance. These approaches often leverwe devise a direction-guided regularization (DGR) technique age pretrained models to extract comprehensive feature
+HU et al.: REDAD: A RELIABLE DISTILLATION FOR IMAGE ANOMALY DETECTION 5018713
+
+representations. Subsequently, statistical algorithms such as
+multivariate Gaussian distribution [26], memory bank [27],
+and normalizing flow [28], [29] are used to embed the
+distributions of normal features. Anomalies are then identified by comparing the input features against the learned Fig. 2. Some samples of perturbed normal images.
+distribution or the stored clustering centers. Despite recent
+advances in anomaly localization, statistical algorithms often
+struggle with high computational complexity and memory teacher model modification has been explored in traditional
+consumption [25]. In addition, normalizing flows can suf- KD scenarios, our approach represents the first application
+fer from training instability, compromising the flexibility of to AD.
+density estimation [17]. Alternatively, KD-based methods [8],
+[10], [15], [17], [19] have emerged as a promising approach. III. M ETHOD
+These methods establish a teacher–student network pair and A. Problem Definition
+detect anomalies by identifying discrepancies in feature repre-
+ For any image xi ∈ R H ×W ×3 in Xtrain ∪ Xtest , where Xtrain is
+sentations between expert and apprentice domains, achieving
+ a set of anomaly-free training images and Xtest is a test query
+state-of-the-art results in AD.
+ set containing both normal and abnormal samples. The goal
+ of AD is to train a model to recognize and localize anomalies
+B. Self-Supervised Mask Training in the query set.
+ Despite the absence of genuine anomalous data for training
+within the UAD framework, it is feasible to simulate pseu- B. Formulation of General KDST-Based Methods
+doanomalous data. This simulation enables the training of an
+AD model in a self-supervised manner, thereby enabling it to We denote the pretrained teacher network as φ t and the
+explicitly grasp the potential disparities between normal and distilled student network as φ s . For an image xi , φ t and φ s
+abnormal samples. Methods such as CutPaste [30] generate extract features from different hierarchies. We define L as the
+pseudoanomalies by adding small patches to a normal image subset including the indexes of hierarchies for use. The feature
+and training a model to detect these anomalous regions. Simi- map from level l ∈ L is denoted as φ l ∼ φ l (x) ∈ R Hl ×Wl ×Cl ,
+larly, DRAEM [31] overlays additional texture images as noise where Hl , Wl , and Cl are the height, width, and channel
+onto normal images to generate abnormal regions, focusing size, respectively. For an entry φh,wl
+ ∈ R Cl at location (h, w),
+on creating textural anomalies. Building on DRAEM [31], the distance between φh,w and φh,w can be formulated as
+ t,l s,l
+
+DeSTSeg [20] trains a denoising student encoder–decoder D(φh,wt,l
+ , φh,w
+ s,l
+ ) where D(·, ·) denotes a function for feature-tousing synthetically corrupted normal images, striving to align feature discrepancy calculation. The KD process for the AD
+with the features of uncorrupted images captured by the task is to optimize D(φ t , φ s ) using the normal samples in
+teacher network. CDO [15] perturbs the input normal image Xtrain .
+with Gaussian noise and maps the perturbed image into dis- Let p ∼ (h, w), and define pn and pa as the normal feature
+tinct expert and apprentice domains using respective mapping and abnormal feature positions, respectively. The general KD
+functions. Alternatively, SimpleNet [25] generates synthetic optimization loss can be succinctly expressed as
+anomalies within the feature space, operating under the L P
+ n
+ 1 XX
+assumption that defects may not exhibit significant commonpn , φ pn .
+ 1 − cos φ t,l s,l
+ 
+ L gkd = (1)
+ality in the image space. In our system, we incorporate the N l=1 p
+ n
+principles of DRAEM [31] for anomaly simulation and detect
+ Here, the distance metric is based on cosine similarity, given
+synthetic anomalies within a KD framework.
+ by D(·, ·) := 1 − cos(·, ·). The KDST-based methods assume
+ that the discrepancies between φ tpa and φ spa would not be
+C. BN Updating in KD significantly affected and keep large during the KD process
+ BN, a widely used technique in deep learning, may which merely minimizes the discrepancies between φ tpn and
+encounter challenges in situations where the data distribu- φ spn . However, because of the overgeneralization issue, the distion undergoes changes. To facilitate domain transfer, various crepancies between φ tpa and φ spa may also decrease, resulting
+domain adaptation methods leverage normalization statistics, in high prediction uncertainty.
+as cited in [32], [33], and [34]. In the context of KD, the In KDST-based methods, convolutional neural networks
+BN statistics in both the student and teacher models can such as ResNet and its derivatives, which incorporate BN
+diverge rapidly, resulting in an elevation of KD loss, as dis- layers, are commonly used as models for both φ t and φ s .
+cussed in [12]. Recent studies have investigated the potential During the KD process, the parameters of φ t , including the
+of modifying the teacher model through meta-learning to BN statistics derived from pretrained datasets like ImageNet,
+enhance knowledge transfer within the conventional KD remain unchanged, while the parameters of φ s are subject to
+framework, as exemplified in [35]. Furthermore, research updates in the new AD task dataset. The divergence in BN
+on KD, specifically [36], suggests that updating the teacher statistics between φ t and φ s leads to an increase in KD loss,
+model’s normalization statistics with data used for student ultimately impeding the precise alignment of features between
+training can yield performance improvements. Notably, while the teacher and student models.
+5018713 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+Fig. 3. Overview of REDAD. (a) REDAD uses the general KDST framework, integrating a pretrained adaptive teacher network. During training, both
+the teacher and student networks receive normal and synthetic anomaly images as input. (b) Module for computing anomaly maps in the inference stage.
+(c) Feature flows throughout the distillation training process.
+
+C. Simulated Anomaly Generation
+ As mentioned before, the DGR uses synthetic anomalous images for self-supervised mask training. In this study,
+we adopt the same algorithm proposed in [31]. Random 2-D
+Perlin noise is generated and binarized by a preset threshold
+to obtain an anomaly mask m. An anomalous image xâ is
+produced by replacing the mask area with a linear combination
+of an anomaly-free image xn and an arbitrary image from Fig. 4. ATM modulates the teacher features by estimating normalization
+external data source z, controlled by an opacity factor γ , statistics µBN and σBN and optimizing transformation parameters γBN and
+ βBN .
+chosen at random within the interval [0.15, 1]. The process
+is mathematically represented as
+ xâ = γ (m ⊙ z) + (1 − γ )(m ⊙ xn ) + (1 − m) ⊙ xn (2) involves updating only the final linear layer [37]. We assign
+where ⊙ signifies elementwise multiplication. This anomaly the classification label for the synthetic anomaly image xâ
+generation occurs online during the training phase. Fig. 2 as 1 and that for the normal image xn as 0. Let yt (x) represent
+displays samples of perturbed normal images across various the predicted probability of the teacher model for an input
+datasets. We can see that the anomaly mask generated by image x. The cross-entropy contrast loss is then defined as
+random Perlin noise is irregular, resembling actual anomalies. 1 X
+ NBN
+ log yt xâi 1 − yt xni
+  
+ L ce = − (3)
+D. Formulation of REDAD 2NBN i=1
+ The overall architecture of REDAD is depicted in Fig. 3, where NBN is the batch size.
+using the same design as general KDST-based methods with- Subsequently, the ATM adjusts the teacher features by
+out additional structural components. Distinctions arise during estimating the normalization statistics µBN and σBN and optithe distillation optimization process, highlighted by three mizing the transformation parameters γBN and βBN , as depicted
+key aspects, which address the three separate issues. First, in Fig. 4. Specifically, normalization centers and standardizes
+we introduce an ATM which updates the BN statistics of the the input x into x̄ = (x − µBN )/σBN using its mean µBN and
+teacher model while fixed the rest model parameters during standard deviation σBN . The transformation converts x̄ into the
+the training process. ATM allows for significantly reduced output x ′ = γBN x̄ + βBN , where the affine parameters for scale
+KD loss, thereby enhancing alignment of features between γBN and shift βBN are optimized based on the loss.
+the teacher and student models. Second, we incorporate an
+NRE module, which supersedes the general feature distillation F. Normality Remembering Enhancement
+in (1) by pinpointing normal feature pairs with low cosine similarity through a dynamically decreasing mining factor. Finally, The NRE encourages the student model to focus on the
+we devise a DGR technique to reliably widen the divergence in intricate features that currently mimic the teacher the least
+the synthetic abnormal feature regions between the teacher and within normal image regions. We designate these hard features
+student, efficiently mitigating the overgeneralization problem. as pnh , and the NRE reformulates the general KD loss L gkd as
+ defined in (1), into a new expression
+E. Adaptive Teacher Model L Pn 
+ h
+ 1 XX  
+ The ATM initially converts the pretrained teacher model into L nre = 1 − cos φ t,l
+ pnh , φ s,l
+ h
+ pn
+ (4)
+a two-class classification model using linear probing, which Nh l=1 h
+ pn
+HU et al.: REDAD: A RELIABLE DISTILLATION FOR IMAGE ANOMALY DETECTION 5018713
+
+Fig. 5. Comparison with and without NRE. (a) Normal training image
+with sampling regions. (b) Decreasing curve of the mining factor h. (c) and
+(d) Anomaly score maps, respectively, without and with NRE at the tenth
+training epoch. (e) t-SNE-generated projection of feature vectors within the
+sampling regions [38].
+
+where Nh is the total number of hard features. To identify
+pnh , we calculate the h-quantile of the cosine similarity values
+ Fig. 6. Illustration of three types of DGR. (a) DD. (b) MDD. (c) RD.
+between the teacher and student features. Specifically, the (d) Qualitative comparison with an abnormal sample. The anomaly maps are
+h-quantile represents the hth smallest cosine similarity value provided. (e) t-SNE projection of feature vectors within both an abnormal
+among all the teacher–student feature pairs. This h-quantile region (⋆) and a normal region (•).
+threshold, labeled as dh , allows for the computation of the loss
+L nre as the average of all the distances D(φ tpn , φ spn ) for which
+cos(φ tpn , φ spn ) < dh . Furthermore, we introduce a progressively Recently, two principal forms of DGR are identified: denoising
+decreasing factor h ∈ [0, 1], defined as direction (DD) and maximum discrepancy direction (MDD).
+  
+ πn E
+  This study examines the inherent limitations of both DD and
+ h = 1 + (h f − 1) 1 − cos 2. (5) MDD and introduces an innovative RD approach to counteract
+ NE
+ these weaknesses.
+Here, n E indicates the current training epoch index, N E the 1) Denoising Direction: In the DD approach, the synthetic
+total number of training epochs, and h f (the final value anomaly regions are treated as noise, prompting the student
+of h) is empirically set to 0.001. The diminishing trajectory network to denoise within the feature space. While previous
+of h is depicted in Fig. 5(b). The gradual decline of h studies like DeSTSeg [20] have implemented denoising via an
+ensures a broader scope of feature distillation during the initial encoder–decoder network, we redefine DD from a regularizastages of training, which contributes to a more stable training tion perspective. Specially, both the normal image xn and its
+progression. perturbed version xâ are fed into the student network. The DD
+ Fig. 5(c) and (d) showcases a comparative analysis at the regularization loss is then computed as follows:
+tenth training epoch, contrasting the anomaly maps without
+and with the application of NRE, respectively. Notably, the
+ L Pâ 
+inclusion of NRE enables the student model to swiftly con- 1 XX  
+centrate on intricate features, including the screw thread (•), L dd = 1 − cos φ s,l
+ pâ , φ pn̂
+ s,l
+ (6)
+ Nâ l=1 p
+screw head at the tip (⋆), and tail edge (×), while effectively â
+
+suppressing the unrelated background. Then the subsequent
+training epochs necessitate further refinement for the student where pâ represents the position of the simulated abnormal
+model to harmonize challenging normal features with those features, while pn̂ corresponds to normal features, both deterof the teacher model. In addition, Fig. 5(d) depicts the mined by the synthetic anomaly mask m.
+t-SNE-based projection [38] of feature vectors after training L dd aims to align φ s,lpâ with φ pn̂ . For distinct anomalies,
+ s,l
+
+within the sampled intricate regions, where red denotes φ t,1 , φ p differs from φ p . Since φ p is optimized to mimic φ t,l
+ t,l t,l s,l
+ pn̂ ,
+ â n̂ n̂
+green represents φ s,1 enhanced by NRE, and blue corre- we expect φ p to also exhibit differences from φ p . However,
+ s,l t,l
+sponds to φ s,1 without NRE. This visualization underscores the â
+ in cases of subtle anomalies, φ t,l
+ â
+
+ pâ may resemble φ pn̂ , leading
+ t,l
+capacity of NRE to facilitate closer alignment of intricate fea- to weak discrimination due to the approximation sequence
+tures between the student and teacher models. Consequently, φ s,l
+ pâ → φ pn̂ → φ pn̂ → φ pâ . Fig. 6(a) demonstrates this issue
+ s,l t,l t,l
+we posit that hard feature distillation by NRE can enhance the of weak discrimination, and Fig. 6(d) DD presents a case of
+student model’s ability to recognize normals, thereby reducing Capsules where a subtle anomaly is not detected.
+the frequency of false-positive detections.
+ 2) Maximum Discrepancy Direction: In the MDD
+ approach, the objective is to directly optimize φ s,l pâ to attain
+G. Direction-Guided Regularization the maximum distance from φ p , echoing the strategy used
+ t,l
+ â
+ The DGR uses a feature direction regularization tech- in CDO [15] and Pull&Push [16]. Specially, xâ undergoes
+nique [39] to explicitly amplify the divergence of abnormal simultaneous processing by both the teacher and student
+feature pairs between the student and teacher models. networks, resulting in the MDD loss function defined as
+5018713 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+follows: Algorithm 1 REDAD Pseudocode, PyTorch-Like
+ L Pâ  Input: T-S Models (φ t , θ t ) and (φ s , θ s )
+ 1 XX  
+ L mdd = cos φ t,l
+ pâ , φ s,l
+ pâ . (7) Output: (φ t , θ t ), (φ s , θ s ) and Anomaly Map Sam
+ Nâ l=1 p 1 Train: Load (φ , θ ) and Initialize (θ )
+ t t s
+ â
+ 2 for x n ← dataloader (Xtrain ) do
+ Compared with DD, MDD offers superior discrimination
+ 3 xâ , m = Perlin (xn ) ⇔ (2)
+capabilities. However, in cases of subtle anomalies, MDD
+ 4 L ce = CE (yt (xâ ), yt (xn )) ⇔ (3)
+may induce significant deviations between φ s,l pâ and φ pn̂ . This,
+ s,l
+ 5 L nr e = NRE (φ tpn , φ spn ) ⇔ (4)
+in turn, may cause training instability and heighten sensitivity
+ 6 φ tp , φ sp , φ tp = m ⊙ φ t (xâ ), m ⊙ φ s (xâ ), m ⊙ φ t (xn̂ )
+to normal patterns. This instability is illustrated in Fig. 6(b), â â n̂
+
+while Fig. 6(d) MDD showcases an instance where numerous 7 etp , esp , etp = Normalize (φ tp , φ sp , φ tp )
+ â â n̂ â â n̂
+
+delicate normal structures are erroneously detected, primarily 8 L r d = DGR (etp , esp , etp ) ⇔ (8)
+ â â n̂
+due to this heightened sensitivity. 9 L r edad = L ce + αL nr e + β L r d ⇔ (9)
+ 3) Reliable Direction: To address the drawbacks of both 10 Backward (L r edad ) and Update (θ s ), ATM (θ t )
+DD and MDD, we devise the RD regularization technique, 11 end
+ 12 Test: Load (φ , θ ) and (φ , θ )
+ t t s s
+which seeks to uphold MDD’s high discriminative capability
+while incorporating a directional constraint guided by the 13 for x i ← dataloader (Xtest ) do
+similarity between φ t,l pâ and φ pn̂ . Initially, we normalize the
+ t,l 14 Sam = CalcAM (φ t (xi ), φ s (xi )) ⇔ (10)
+feature vectors of φ t,l pâ , φ pâ , and φ pn̂ to obtain e pâ , e pâ , and e pn̂ ,
+ s,l t,l t,l s,l t,l 15 end
+
+respectively. Subsequently, we calculate the projections of et,l pâ
+ t,l s,l
+and es,l t,l t,l t,l s,l t,l
+ pâ onto e pn̂ as qâ⊥n̂ = e pâ ·e pn̂ and qâ⊥n̂ = e pâ ·e pn̂ . Then,
+we determine the direction consistency between et,l pâ and e pn̂
+ t,l H. Anomaly Score Calculation
+ pâ , e pn̂ )). Finally, we formulate the RD
+ t,l In the inference stage, we feed each xi ∈ Xtest into both the
+using dâ|n̂ = sign(cos(et,l t,l
+
+loss as follows: teacher and student networks. The multihierarchical features
+ 
+ MDD
+  φ t,l and φ s,l are extracted and resized to the same spatial
+ PC
+ L
+ 1 X X
+ Pâ z  }| { z }| { resolution as the first-layer feature map (H1 , W1 ). Then the
+ cos et,l , es,l + ||q t,l − d t,l · q s,l ||2 
+ 
+ L rd = pâ pâ â⊥n̂ â|n̂ â⊥ n̂ 2 fused anomaly score can be calculated as
+ Nâ l=1 p 
+ â L
+ X
+ p , φp
+ 1 − cos φ t,l s,l
+ .
+ 
+ sp = (10)
+ (8)
+ l=1
+where PC stands for projection constraint. The mechanism of The anomaly score map {s p | p ∈ (H1 , W1 )} is interpolated
+RD is illustrated in Fig. 6(c). For subtle anomalies where to have the resolution of the input image size (H0 , W0 ) and
+ pâ and φ pn̂ align in the same direction, RD encourages
+φ t,l t,l
+ Gaussian filtered for smooth boundaries.
+divergence between es,l t,l
+ pâ and e pâ in the mirror direction, thereby For the anomaly localization task, we can obtain the
+mitigating the instability observed in MDD. Conversely, for anomaly mask with a threshold τ by
+larger anomalies where these vectors are oriented oppositely,
+RD optimizes divergence along the direction of maximum dis- SAL (xi ) := { p|s p > τ, p ∈ H0 × W0 }. (11)
+crepancy, thereby preserving MDD’s discriminative capacity. For the image-level AD task, the maximum score of the
+ Fig. 6(d) depicts the anomaly maps generated by DD, anomaly map is taken as the AD score
+MDD, and RD, respectively. Notably, RD-based regularization
+demonstrates an ability to discern subtle anomalies more effec- SAD (xi ) := max s p . (12)
+ p∈H0 ×W0
+tively than DD, while mitigating sensitivity toward delicate
+ The pseudocode for the train and test procedures of REDAD
+normal structures, when compared with MDD. In addition,
+ is shown in Algorithm 1, where θ is the model parameter.
+Fig. 6(e) provides a comparative visualization of features for
+both the abnormal and normal regions, using t-SNE [38].
+In the abnormal region, the student features for RD (⋆) and IV. E XPERIMENTS
+MDD (⋆) are more distant from the corresponding teacher A. Implementation Details
+feature (⋆) than the student feature for DD (⋆). Conversely, 1) Dataset Descriptions: The MVTec AD [1] comprises
+for the normal region, the student features for RD (•) and 15 datasets for AD, encompassing ten object classes and
+DD (•) are closer to the teacher feature (•) than the student five texture types, and serves as a widely recognized stanfeature for MDD (•). This comparative analysis underscores dard for benchmarking AD algorithms. The anomalies within
+the proficiency of RD-based DGR in addressing the inherent these datasets primarily consist of various structural changes.
+limitations of both DD and MDD. The more recent VisA dataset [40] extends this concept
+ Finally, the total loss of REDAD is then expressed as by incorporating a diverse array of objects characterized by
+ L redad = L ce + αL nre + β L rd (9) complex structures, multiple instances, and variations in scale.
+ VisA represents the largest open-source industrial AD dataset
+where α and β serve as regularizers. to date, comprising 10 821 high-resolution color images of
+HU et al.: REDAD: A RELIABLE DISTILLATION FOR IMAGE ANOMALY DETECTION 5018713
+
+ TABLE I
+ Q UANTITATIVE R ESULTS IN T ERMS OF I-AUROC, P-AUROC, AND PRO ON THE MVT EC [1] DATASETS . AVG . T., AVG . O., AND AVG . A LL
+ A RE THE AVERAGE R ESULTS OVER THE T EXTURE , O BJECTIVE , AND A LL C ATEGORIES , R ESPECTIVELY. T HE T OP P ERFORMANCE
+ I S H IGHLIGHTED IN B OLD
+
+12 different objects. The 3-D dataset MVTec3D AD [41] B. Comparisons to State-of-the-Art Methods
+creates a task to localize mainly geometric anomalies in 3-D We conducted a comparative analysis of REDAD’s perobjects. MVTec3D includes 4147 scans captured by a 3-D formance against several prominent competitors, including
+sensor from ten object categories, each providing both RGB CFlow [28], ReConPatch [27], DDAD [24], STPM [10],
+and point cloud data. When localizing geometry anomalies in MemKD [13], CDO [15], Pull&Push [16], DeSTSeg [20], and
+MVTec3D, we do not use 3-D scans, as the proposed REDAD EfficientAD [14]. Notably, CFlow exemplifies the normalizing
+only requires RGB images as inputs. flow approach, while ReConPatch and DDAD represent the
+ 2) Experimental Settings: We used the WResNet50 [42] cutting-edge memory bank-based and reconstruction-based
+as the backbone in the S-T models, aiming for a balanced methodologies, respectively. STPM serves as the benchmark
+tradeoff between effectiveness and efficiency. We configured for general KDST-based methods. CDO, Pull&Push, and
+L = 3, enabling the extraction of feature maps from the DeSTSeg are recognized as leading KDST-based approaches,
+outputs of the first three hierarchies. All the images in both relevant to our DGR method, as elaborated in Section III-G.
+the training and testing datasets were resized to 256 × 256. EfficientAD combines KDST and reconstruction methods,
+For data augmentation, we exclusively applied normalization while MemKD integrates KDST and memory bank methods,
+with the ImageNet mean and variance to the input images. both achieving state-of-the-art performance. It is worth noting
+For optimization, we used the AdamW optimizer with a that ReConPatch, MemKD, Pull&Push, and EfficientAD are
+learning rate of 0.01 and a batch size of 32. In addition, not publicly available, whereas the remaining comparison
+we adopted an exponential moving average (EMA) [43] with methods are open-sourced.
+a decay rate of 0.9 to update the student model parameters. As detailed in Tables I and II, REDAD exhibits supe-
+The training process encompassed 100 epochs. Regarding rior performance across both the MVTec and VisA datasets.
+the loss function (9), we assigned weights of 1 and 0.1 to Specifically, REDAD achieved notable improvements over the
+α and β parameters, respectively. The threshold τ in (11) baseline STPM, with a 3.5% enhancement in I-AUROC, a
+was determined as the globally optimal value based on the 2.3% increase in P-AUROC, and a 3.2% boost in PRO for the
+F1-score, facilitating the accurate segmentation of abnormal MVTec dataset, and a 5.0% gain in I-AUROC, a 1.6% rise
+regions in qualitative evaluations. Finally, we used a Gaussian in P-AUROC, and a 5.4% improvement in PRO for the VisA
+filter with a standard deviation of σ = 4 to smooth the dataset. When compared with its closest competitors, includanomaly score map, as described in Section III-H. Model ing CDO, Pull&Push, and DeSTSeg, REDAD demonstrates
+training and testing were conducted on a computer equipped superior anomaly image classification and anomaly pixel
+with an Intel1 Xeon1 CPU and an NVIDIA Tesla V100 GPU. localization capabilities. Furthermore, in comparison to state-
+ 3) Evaluation Metrics: We adopted the area under the of-the-art methods such as ReConPatch, DDAD, MemAD,
+receiver operating characteristic curve (AUROC) based on and EfficientAD, REDAD achieves comparable performance
+produced anomaly scores to calculate AD at image-level in I-AUROC and the highest scores in P-AUROC. For the
+performance (I-AUROC). Localization performance was eval- 3-D AD dataset MVTec3D, we only compared REDAD with
+uated using the AUROC at pixel level (P-AUROC) and STPM, MmeKD, and CDO, as these were the only methods
+PRO [8]. For I-AUROC, P-AUROC, and PRO, a higher value that had tested the MVTec3D dataset in their work. It can
+indicates better detection performance. be observed in Table III that REDAD outperforms STPM by
+ 6.1% in I-AUROC, 1.5% in P-AUROC, and 3.8% in PRO.
+ 1 Registered trademark. In addition, REDAD surpasses CDO in all three metrics.
+5018713 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+ TABLE II
+ Q UANTITATIVE R ESULTS IN T ERMS OF I-AUROC, P-AUROC, AND PRO ON THE V IS A [40] DATASETS . T HE T OP P ERFORMANCE I S H IGHLIGHTED
+
+ TABLE III on the basic setting in (1), we integrated each of the three
+ Q UANTITATIVE R ESULTS IN T ERMS OF I-AUROC, P-AUROC, AND modules separately, with the results depicted in Fig. 8.
+ PRO ON THE MVT EC 3D [41] DATASETS . T HE T OP
+ P ERFORMANCE I S H IGHLIGHTED
+ 1) Data Shift: As illustrated in Fig. 8(a), the implementation of ATM led to a notable reduction in KD loss. This is due
+ to the domain adaptation for the feature maps of the teacher
+ model by BN updating in ATM, and then they can be highly
+ aligned with the feature maps of the student model which
+ is learned using the MVTec datasets. The texture category,
+ specifically Grid, experienced a more significant decrease
+ compared with the object category, Bottle. This disparity is
+ attributed to texture category images being less similar to the
+ images in the pretrained ImageNet dataset than those in the
+ object category [see Fig. 7(a)].
+ 2) Normality Forgetting: To verify the effectiveness of NRE
+ in remembering the normality, we analyzed the cumulative
+ histogram distribution (CHD) of normal feature similarity
+This exceptional performance in anomaly localization can be between the teacher and student networks using the testing
+attributed to two key aspects of our proposed method. First, the datasets. Fig. 8(b) shows that the inclusion of NRE resulted
+NRE module enables the model to reinforce intricate feature in a greater proportion of high similarity feature pairs than it
+learning between the student and teacher models, thereby without NRE, indicating enhanced consistency of normality.
+reducing false alarms. Second, our DGR technique effectively 3) Overgeneralization: To verify the effectiveness of DGR
+controls the distillation of synthetic anomalies between the in overcoming anomaly overgeneralization, we analyzed the
+teacher and student models, thereby endowing the model with CHD of anomaly feature similarity between the teacher and
+high discriminative power for anomalies. In other words, when student networks using testing datasets. For the abnormal
+facing scenes with complex detailed structures and subtle regions, Fig. 8(c) clearly demonstrates that the application
+defects, REDAD often outperforms other competitors. of DGR shifted the model’s focus toward lower similarity,
+ To underscore the exceptional performance of REDAD, indicating a heightened level of discrepancy.
+Fig. 7 displays qualitative outcomes from selected samples
+across the MVTec, VisA, MVTec3D, and our curated datasets D. Ablation Studies
+of vacuum flasks and wheel hubs. These results highlight
+ We conducted ablation studies to assess the individual
+REDAD’s consistent efficacy in identifying a broad spectrum
+ contributions of REDAD’s components, and the outcomes
+of defects. This achievement is attributed to REDAD’s ability
+ using the MVTec, VisA, and MVTec3D datasets are presented
+to simultaneously address the prevalent challenges within the
+ in Table IV. By contrasting Case 1 with Cases 2, 3, and 4,
+KDST framework, including data shift, normality forgetting,
+ it becomes evident that ATM, NRE, and RD individually
+and anomaly overgeneralization, thereby ensuring its effectiveexhibit enhanced performance over the baseline KDST. This
+ness across various industrial applications.
+ observation underscores the efficacy of each component when
+ evaluated in isolation. Furthermore, in comparing Case 3 with
+ Case 4, our analysis reveals that NRE surpasses RD in image-
+C. Issues’ Mitigation
+ level performance, whereas RD excels over NRE at the pixel
+ We assessed the effectiveness of the proposed ATM, NRE, level. We hypothesize that NRE’s ability to efficiently address
+and DGR modules in addressing issues present in general the challenges associated with normalcy retention, as discussed
+KDST-based methods. The MVTec dataset is used, and the in Section III-F, significantly reduces false-positive detections,
+texture and object categories are analyzed separately. Based thereby enhancing image-level AD. Concurrently, the explicit
+HU et al.: REDAD: A RELIABLE DISTILLATION FOR IMAGE ANOMALY DETECTION 5018713
+
+Fig. 7. Qualitative results of the proposed REDAD on (a) MVTec, (b) VisA, (c) MVTec3D, and (d) collected datasets of vacuum flasks and wheel hubs.
+Original images, ground-truth masks, and anomaly maps are listed from top to bottom.
+
+ TABLE IV
+ A BLATION S TUDIES ON REDAD
+
+Fig. 8. Issues’ mitigation verified using the MVTec dataset. The categories
+of texture (top) and objects (bottom) are analyzed separately. (a) Loss plots to
+verify the influence of ATM using grid (top) and bottle (bottom) categories. our integrated REDAD approach attains superior performance,
+(b) Similarity statistics of normal regions to verify the influence of NRE. emphasizing the complementary nature and synergistic effects
+(c) Similarity statistics of abnormal regions to verify the influence of DGR.
+ of the three modules. In addition, we evaluated three types
+ of DGR methods—DD, MDD, and RD—in Cases 5, 6,
+ and 7, respectively. The outcomes affirm that the proposed
+utilization of synthetic anomalies through DGR effectively RD method outperforms others, reinforcing its reliability and
+improves anomaly pixel localization. Ultimately, in Case 7, efficacy.
+5018713 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+E. Comparison of Different Backbones and Resolutions TABLE V
+ P ERFORMANCE U NDER D IFFERENT BACKBONES AND
+ The choice of backbone architecture and image resolution R ESOLUTIONS U SING THE MVT EC DATASET
+significantly affects the performance of localization
+tasks [28]. This research evaluates various backbones,
+such as ResNet18, ResNet34, ResNet50, ResNet101, and
+WResNet50, at two resolutions, 256 × 256 and
+512 × 512, using the MVTec dataset. The results
+are shown in Table V. Our findings indicate that
+WResNet50 at 256 × 256 offers the optimal balance between
+accuracy and efficiency. Larger models with increased
+ TABLE VI
+parameters, such as ResNet101, even at 512 × 512, yield
+ C OMPLEXITY C OMPARISON IN T ERMS OF I NFERENCE S PEED (FPS)
+minimal improvements or, in some cases, show no significant AND M ODEL S IZE (MB)
+enhancement in performance. Consequently, for this study,
+we have selected WResNet50 operating at 256 × 256.
+
+F. Complexity Evaluation
+ This study assesses the computational and memory complexity of the proposed REDAD, focusing on inference speed
+and model size. STPM [10], CDO [15], Pull&Push [16],
+and REDAD share identical network architectures during
+inference; thus, their inference speeds and model sizes can
+be considered equivalent. In contrast, DeSTSeg [20] and
+MemKD [13] augment the fundamental student–teacher structure with additional components, theoretically resulting in
+slower inference times compared with methods based solely
+on the student–teacher framework. The inference speed of
+the diffusion-model-based DDAD [24] largely depends on
+the noise time step configuration, whereas ReConPatch [27],
+which uses a memory-bank approach, depends on the memorybank’s dimensions. Given these dependencies, neither DDAD
+nor ReConPatch is suitable for a fair comparative analysis. Fig. 9. Thresholds established using the globally optimal F1-score for each
+ category across the test datasets of MVTec, VisA, and MVTec3D.
+Consequently, we selected CFlow [28] and EfficientAD [14]
+as benchmarking counterparts.
+ The comparison of inference speeds and model sizes is
+ eter L, and the h-qunatile in (5). The metrics I-AUROC,
+shown in Table VI. The inference speed was measured on
+ P-AUROC, and PRO are threshold-agnostic, thereby avoiding
+a computer with an Intel Xeon CPU and an NVIDIA Tesla
+ bias in model performance evaluation. However, in practical
+V100 GPU. All the models were assigned to the GPU for
+ applications, setting a threshold is necessary to obtain final
+inference acceleration, and the data input time was factored
+ AD results. Fig. 9 illustrates the thresholds established using
+in during the evaluation of each method’s inference speed.
+ the globally optimal F1-score for each category across the
+The model size is defined as the size of all the floating point
+ MVTec, VisA, and MVTec3D test datasets. It can be observed
+parameters in the corresponding model. CFlow consists of a
+ that the optimal thresholds relative to the F1-score fall within
+feature-extraction network and a decoder. Since the decoder is
+ the interval [0.5, 0.8]. Notably, the optimal thresholds for
+typically more complex, CFlow has a larger model size and a
+ MVTec3D lie within a narrower and higher range of [0.7, 0.8],
+slower inference speed than REDAD. EfficientAD integrates a
+ compared with those of MVTec and VisA. This phenomenon
+student–teacher architecture with a denoising decoder. Genercan be attributed to the reduced background interference and
+ally, this combination would result in a slower inference speed
+ simpler targets with more pronounced defects in the MVTec3D
+and a larger model size compared with REDAD. However,
+ dataset [see Fig. 7(c)], leading to higher confidence in the
+EfficientAD trains a lightweight patch description network
+ anomaly scores produced by the model. Consequently, the
+(PDN) to boost its inference speed. As a result, EfficientAD
+ selection of threshold τ in practical applications should condemonstrates faster inference and a relatively efficient model
+ sider specific scenarios. For instance, a high threshold, such
+size. Therefore, to further enhance REDAD’s inference speed
+ as 0.6 or 0.7, can ensure high precision in settings with clean
+and reduce its memory footprint, adopting a smaller and more
+ backgrounds and clear defects. Conversely, a lower threshold,
+efficient backbone is a promising approach.
+ like 0.4 or 0.5, may be appropriate for complex backgrounds
+ or subtle defects to maintain high recall.
+G. Parameters’ Analysis The hierarch parameter L also significantly influences
+ This study analyzes three critical hyperparameters: the model performance. Lower level feature maps capture detailed
+anomaly localization threshold τ in (11), the hierarch param- information from images, while higher level feature maps
+HU et al.: REDAD: A RELIABLE DISTILLATION FOR IMAGE ANOMALY DETECTION 5018713
+
+ TABLE VII
+ P ERFORMANCE U NDER D IFFERENT H IERARCHS
+
+ TABLE VIII
+ P ERFORMANCE U NDER D IFFERENT h-Q UANTILE Fig. 10. Inspection of surface defects on vacuum flasks and car wheel hub.
+ (a) Inspection device of vacuum flasks, ① stripe light sources, ② camera,
+ ③ vacuum flask, and ④ rotating rod. (b) Inspection device of wheel hub,
+ ① robotic arm, ② camera, ③ blue planar light source and reflector, and
+ ④ wheel hub.
+
+ TABLE IX
+ DATASET D ESCRIPTION AND P ERFORMANCE ON VACUUM
+extract coarser semantic features. REDAD uses a pyramid F LASKS AND W HEEL H UBS
+structure to compare differences between teacher and student
+model feature maps at various levels for AD. Table VII
+presents the detection effectiveness under different hierarchs.
+Using only the top-level feature map (L = 1) leads to a notable
+decline in performance on the MVTec, VisA, and MVTec3D
+datasets, as many fine-grained anomalies go undetected. Con- The image solution of both the datasets is 2448 × 2048.
+versely, incorporating all the stage feature maps (L = 5) does To detect tiny defects, high-definition images were divided into
+not improve performance and even causes a slight decrease 4 × 4 patches, which were then fed into the models during
+due to increased noise from finer grained features. Therefore, both the training and testing phases. We used 6000 normal
+we selected L = 3 as the hierarch parameter to balance detail images to train the models for both the vacuum flasks and
+and semantic information effectively. wheel hubs. The rest of images were used for testing. The
+ The h-quantile of the cosine similarity values between the performance results are detailed in the rightmost column of
+teacher and student features is used to identify the hard Table IX, and the visual detection results are displayed in
+normal feature in the NRE module of the proposed REDAD. Fig. 7(c). The quantitative and qualitative evaluations demon-
+In REDAD, a gradual decline of h is implemented [see (5)]. strate that the proposed REDAD method achieved impressive
+To demonstrate the benefits of this gradual decline, we com- performance in AD.
+pared it with fixed values of h. The results are presented in In real industrial production lines, high-speed processing is
+Table VIII. Specifically, h = 1.0 indicates no hard example essential due to the fast pace. Patch preprocessing, however,
+mining, while h = 0 implies no utilization of normal features can lead to increased processing time. On the contrary, without
+for distillation. It is evident that when h = 0, the model patch preprocessing, it becomes challenging to detect minute
+performance is significantly degraded, highlighting the impor- defects. Therefore, the decision on how to patch must consider
+tance of distillation using normal features. Comparing h = factors such as production speed, defect size, and hardware
+1.0 and h = 0.1 reveals that excessive hard example mining resources. In addition, compared with the existing AD datasets,
+from the beginning of training leads to a decline in model our collected datasets exhibit significant interclass differences
+detection performance. In contrast, comparing h = 1.0 and between patches within the image dataset. Taking wheel
+h = 0.5 shows that moderate hard example mining enhances hubs as an example, different models of wheel hubs have
+performance. The gradual hard example mining approach distinct structures. As the number of product models increases,
+adopted by REDAD achieves the best performance. This is a substantial amount of normal images are required to train
+because the gradual decline of h ensures a broader scope of the model, which imposes a heavier training burden. Furtherfeature distillation during the initial stages of training, thereby more, the introduction of new wheel hub models necessitates
+contributing to a more stable training progression. retraining of the model, further complicating its deployment
+ and application.
+H. Real-World Applications V. C ONCLUSION
+ For additional validation, this study has compiled two In this article, we introduce REDAD, a reliable image
+real-world industrial inspection datasets: vacuum flasks and AD technique designed to address issues such as data shift,
+aluminum alloy car wheel hubs, both meticulously annotated normality forgetting, and anomaly overgeneralization present
+pixel-by-pixel. The used inspection equipment and exemplar in general KDST-based methods. REDAD consists of three
+images are showcased in Fig. 10. Comprehensive details components: ATM, NRE, and DGR, each targeting the respecregarding the datasets are provided in the central column of tive issues. The effectiveness of the synergistic effect of these
+Table IX. The study has amassed a collection that includes three modules has been validated through ablation experi-
+30 varieties of vacuum flasks with six types of defects ments. Our method has undergone thorough testing on three
+and 20 types of wheel hubs with nine types of defects. benchmark datasets (MVTec, VisA, and MVTec3D) for AD,
+5018713 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+with outcomes showing considerable enhancements compared [15] Y. Cao, X. Xu, Z. Liu, and W. Shen, “Collaborative discrepancy
+to other leading methods. Specifically, compared with the optimization for reliable image anomaly localization,” IEEE Trans. Ind.
+ Informat., vol. 19, no. 11, pp. 10674–10683, Nov. 2023.
+baseline model STPM [10], REDAD exceeds 3.5% (5.0%, [16] Q. Zhou, S. He, H. Liu, T. Chen, and J. Chen, “Pull & push: Leveraging
+6.1%) in I-AUROC, 2.3% (1.6%, 1.5%) in P-AUROC, and differential knowledge distillation for efficient unsupervised anomaly
+3.2% (5.4%, 3.8%) in PRO for the three datasets, respectively. detection and localization,” IEEE Trans. Circuits Syst. Video Technol.,
+ vol. 33, no. 5, pp. 2176–2189, May 2023.
+In addition, we analyze the impact of model structure, input
+ [17] M. Rudolph, T. Wehrbein, B. Rosenhahn, and B. Wandt, “Asymimage resolution, number of hierarchical feature maps, and metric student–teacher networks for industrial anomaly detection,” in
+anomaly localization threshold on model performance, as well Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2023,
+as conduct complexity evaluation, providing a more com- pp. 2591–2601.
+ [18] J. Zhu, P. Yan, J. Jiang, Y. Cui, and X. Xu, “Asymmetric teacher–student
+prehensive evaluation. Furthermore, we validate REDAD on feature pyramid matching for industrial anomaly detection,” IEEE Trans.
+two collected real-world industrial product inspection datasets, Instrum. Meas., vol. 73, pp. 1–13, 2024.
+confirming its effectiveness in practical applications. [19] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+ Looking ahead, given the prevalence of data streams with one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ Recognit. (CVPR), Jun. 2022, pp. 9727–9736.
+frequent product changes in industrial manufacturing, we plan [20] X. Zhang, S. Li, X. Li, P. Huang, J. Shan, and T. Chen, “DeSTSeg:
+to incorporate REDAD into a continuous image AD learning Segmentation guided denoising student–teacher for anomaly detection,”
+framework to accommodate such dynamic industrial environ- in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+ Jun. 2023, pp. 3914–3923.
+ments. In addition, to meet the demand for lower inference
+ [21] A. Shrivastava, A. Gupta, and R. Girshick, “Training region-based
+latency, we will further adopt a more lightweight backbone object detectors with online hard example mining,” in Proc. IEEE Conf.
+to improve inference efficiency while maintaining detection Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016, pp. 761–769.
+accuracy. [22] A. Vasilev et al., “Q-space novelty detection with variational autoencoders,” in Proc. MICCAI Int. Workshop Comput. Diffusion MRI,
+ Jan. 2020, pp. 113–124.
+ R EFERENCES [23] T. Schlegl, P. Seeböck, S. M. Waldstein, G. Langs, and
+ U. Schmidt-Erfurth, “F-AnoGAN: Fast unsupervised anomaly detection
+ [1] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec with generative adversarial networks,” Med. Image Anal., vol. 54,
+ AD—A comprehensive real-world dataset for unsupervised anomaly pp. 30–44, May 2019.
+ detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. [24] A. Mousakhan, T. Brox, and J. Tayyub, “Anomaly detection with
+ (CVPR), Jun. 2019, pp. 9584–9592. conditioned denoising diffusion models,” 2023, arXiv:2305.15956.
+ [2] K. Liu, H. Wang, H. Chen, E. Qu, Y. Tian, and H. Sun, “Steel [25] Z. Liu, Y. Zhou, Y. Xu, and Z. Wang, “SimpleNet: A simple network
+ surface defect detection using a new Haar–Weibull-variance model in for image anomaly detection and localization,” in Proc. IEEE/CVF Conf.
+ unsupervised manner,” IEEE Trans. Instrum. Meas., vol. 66, no. 10, Comput. Vis. Pattern Recognit., Jun. 2023, pp. 20402–20411.
+ pp. 2585–2596, Oct. 2017.
+ [26] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch dis-
+ [3] T. Fernando, H. Gammulle, S. Denman, S. Sridharan, and C. Fookes, tribution modeling framework for anomaly detection and localization,”
+ “Deep learning for medical anomaly detection—A survey,” ACM Com- in Proc. ICPR Int. Workshops Challenges, 2021, pp. 475–489.
+ put. Surv., vol. 54, pp. 1–37, Dec. 2020.
+ [27] J. Hyun, S. Kim, G. Jeon, S. Hwan Kim, K. Bae, and B. J. Kang,
+ [4] M. Liu, Y. Jiao, J. Lu, and H. Chen, “Anomaly detection for med-
+ “ReConPatch : Contrastive patch representation learning for industrial
+ ical images using teacher–student model with skip connections and
+ anomaly detection,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis.
+ multiscale anomaly consistency,” IEEE Trans. Instrum. Meas., vol. 73,
+ (WACV), Jan. 2024, pp. 2041–2050.
+ pp. 1–15, 2024.
+ [28] D. Gudovskiy, S. Ishizaka, and K. Kozuka, “CFLOW-AD: Real-time
+ [5] A. Vijayan, B. Meenaskshi, A. Pandey, A. Patel, and A. Jain, “Video
+ unsupervised anomaly detection with localization via conditional noranomaly detection in surveillance cameras,” in Proc. Int. Conf. Advancemalizing flows,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis.
+ ment Technol. (ICONAT), Jan. 2022, pp. 1–4.
+ (WACV), Jan. 2022, pp. 98–107.
+ [6] J. Liu et al., “Deep industrial image anomaly detection: A survey,” Mach.
+ Intell. Res., vol. 21, no. 1, pp. 104–135, Feb. 2024. [29] J. Jiang, S. Wei, X. Xu, Y. Cui, and X. Liu, “Unsupervised anomaly
+ detection and localization based on two-hierarchy normalizing flow,”
+ [7] G. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a neural
+ IEEE Trans. Instrum. Meas., vol. 73, pp. 1–11, 2024.
+ network,” 2015, arXiv:1503.02531.
+ [8] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “Uninformed [30] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Selfstudents: Student–teacher anomaly detection with discriminative latent supervised learning for anomaly detection and localization,” in Proc.
+ embeddings,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+ (CVPR), Jun. 2020, pp. 4182–4191. pp. 9659–9669.
+ [9] F. Tung and G. Mori, “Similarity-preserving knowledge distillation,” [31] V. Zavrtanik, M. Kristan, and D. Skocaj, “DRÆM—A discriminain Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019, tively trained reconstruction embedding for surface anomaly detection,”
+ pp. 1365–1374. in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021,
+[10] G. Wang, S. Han, E. Ding, and D. Huang, “Student–teacher feature pp. 8310–8319.
+ pyramid matching for anomaly detection,” in Proc. Brit. Mach. Vis. [32] D. Wang, E. Shelhamer, S. Liu, B. A. Olshausen, and T. Darrell, “Tent:
+ Conf., Jan. 2021, pp. 1–14. Fully test-time adaptation by entropy minimization,” in Proc. Int. Conf.
+[11] M. Salehi, N. Sadjadi, S. Baselizadeh, M. H. Rohban, and H. R. Rabiee, Learn. Represent. (ICLR), Jan. 2021, pp. 1–15.
+ “Multiresolution knowledge distillation for anomaly detection,” in Proc. [33] S. Schneider, E. Rusak, L. Eck, O. Bringmann, W. Brendel, and
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021, M. Bethge, “Improving robustness against common corruptions by
+ pp. 14897–14907. covariate shift adaptation,” in Proc. Adv. Neural Inf. Process. Syst.
+[12] F. Szatkowski, M. Pyla, M. Przewi˛eźlikowski, S. Cygert, B. Twardowski, (NIPS), 2020, pp. 11539–11551.
+ and T. Trzciński, “Adapt your teacher: Improving knowledge distillation [34] Y. Li, N. Wang, J. Shi, J. Liu, and X. Hou, “Revisiting batch norfor exemplar-free continual learning,” in Proc. IEEE/CVF Int. Conf. malization for practical domain adaptation,” in Proc. Int. Conf. Learn.
+ Comput. Vis. Workshops (ICCVW), Oct. 2023, pp. 3504–3509. Represent. (ICLR), Jan. 2016, pp. 1–10.
+[13] Z. Gu et al., “Remembering normality: Memory-guided knowledge [35] W. Zhou, C. Xu, and J. McAuley, “BERT learns to teach: Knowledge
+ distillation for unsupervised anomaly detection,” in Proc. IEEE/CVF distillation with meta learning,” in Proc. Annu. Meeting Assoc. Comput.
+ Int. Conf. Comput. Vis. (ICCV), Oct. 2023, pp. 16401–16409. Linguistics, 2022, pp. 7037–7049.
+[14] K. Batzner, L. Heckler, and R. König, “EfficientAD: Accurate visual [36] B. Heo, J. Kim, S. Yun, H. Park, N. Kwak, and J. Y. Choi,
+ anomaly detection at millisecond-level latencies,” in Proc. IEEE/CVF “A comprehensive overhaul of feature distillation,” in Proc. IEEE/CVF
+ Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2024, pp. 127–137. Int. Conf. Comput. Vis. (ICCV), Oct. 2019, pp. 1921–1930.
+HU et al.: REDAD: A RELIABLE DISTILLATION FOR IMAGE ANOMALY DETECTION 5018713
+
+[37] S. Kornblith, J. Shlens, and Q. V. Le, “Do better ImageNet models trans- Yongqiang Tang received the B.S. degree from
+ fer better?” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. the Department of Automation, Central South Uni-
+ (CVPR), Jun. 2019, pp. 2656–2666. versity, Changsha, Hunan, China, in 2014, and the
+[38] L. van der Maaten and G. Hinton, “Visualizing data using t-SNE,” Ph.D. degree from the Institute of Automation, Chi-
+ J. Mach. Learn. Res., vol. 9, pp. 2579–2605, Nov. 2008. nese Academy of Sciences (CAS), Beijing, China,
+[39] Y. Wang, L. Cheng, M. Duan, Y. Wang, Z. Feng, and S. Kong, in 2019.
+ “Improving knowledge distillation via regularizing feature norm and He is currently an Associate Professor with the
+ direction,” in Proc. Eur. Conf. Comput. Vis. (ECCV), Jan. 2023, State Key Laboratory of Multimodal Artificial Intelpp. 20–37. ligence Systems, Institute of Automation, CAS.
+[40] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spot- He has published more than 60 papers in major
+ the-difference self-supervised pretraining for anomaly detection and international journals and conferences including the
+ segmentation,” in Proc. Eur. Conf. Comput. Vis. (ECCV), 2022, ICML, NeurIPS, SIGKDD, IEEE T RANSACTIONS ON PATTERN A NALYSIS
+ pp. 392–408. AND M ACHINE I NTELLIGENCE (TPAMI), IEEE T RANSACTIONS ON I MAGE
+[41] P. Bergmann, X. Jin, D. Sattlegger, and C. Steger, “The MVTec 3D- P ROCESSING (TIP), IEEE T RANSACTIONS ON M ULTIMEDIA (TMM), IEEE
+ AD dataset for unsupervised 3D anomaly detection and localization,” in T RANSACTIONS ON C YBERNETICS (TCYB), IEEE T RANSACTIONS ON
+ Proc. 17th Int. Joint Conf. Comput. Vis., Imag. Comput. Graph. Theory N EURAL N ETWORKS AND L EARNING S YSTEMS (TNNLS), IEEE T RANS -
+ Appl., 2022, pp. 202–213. ACTIONS ON K NOWLEDGE AND DATA E NGINEERING (TKDE), IEEE
+[42] B. S. Zagoruyko and N. Komodakis, “Wide residual networks,” in Proc. T RANSACTIONS ON G EOSCIENCE AND R EMOTE S ENSING (TGRS), IEEE
+ Brit. Mach. Vis. Conf., 2016, pp. 87.1–87.12. T RANSACTIONS ON C IRCUITS AND S YSTEMS FOR V IDEO T ECHNOLOGY
+ (TCSVT), and IEEE J OURNAL OF B IOMEDICAL AND H EALTH I NFORMAT-
+[43] D. Brotons, T. Vogels, and H. Hendrikx, “Exponential moving average of
+ ICS (JBHI). His current research interests include machine learning, computer
+ weights in deep learning: Dynamics and benefits,” Trans. Mach. Learn.
+ vision, and data mining.
+ Res., pp. 1–27, Jan. 2024.
+
+ Yuan Xie received the Ph.D. degree from the Institute of Automation, Chinese Academy of Sciences
+ (CAS), Beijing, China, in 2013.
+ He is currently a Professor at the School of
+ Computer Science and Technology, East China Nor-
+ Wenrui Hu received the B.S. degree from the mal University, Shanghai, China. He has published
+ School of Optoelectronics, Beijing Institute of Tech- more than 100 papers in major international journology, Beijing, China, in 2010, and the Ph.D. nals and conferences including the ICML, NeurIPS,
+ degree from the Institute of Automation, Chinese CVPR, IJCAI, CIKM, ACMMM, IEEE T RANS -
+ Academy of Sciences (CAS), Beijing, in 2014. ACTIONS ON PATTERN A NALYSIS AND M ACHINE
+ He was an Associate Professor at the Precision I NTELLIGENCE (TPAMI), IEEE T RANSACTIONS
+ Perception and Control Research Center, Institute ON I MAGE P ROCESSING (TIP), IEEE T RANSACTIONS ON M ULTIMEDIA
+ of Automation, CAS. He is currently a Researcher (TMM), IEEE T RANSACTIONS ON C YBERNETICS (TCYB), IEEE T RANS -
+ at China Mobile Research Institute, Beijing. His ACTIONS ON N EURAL N ETWORKS AND L EARNING S YSTEMS (TNNLS),
+ research interests include computer vision, pattern IEEE T RANSACTIONS ON K NOWLEDGE AND DATA E NGINEERING (TKDE),
+ recognition, and artificial intelligence. IEEE T RANSACTIONS ON G EOSCIENCE AND R EMOTE S ENSING (TGRS),
+ and IEEE T RANSACTIONS ON C IRCUITS AND S YSTEMS FOR V IDEO T ECH -
+ NOLOGY (TCSVT). His current research interests include machine learning,
+ computer vision, and data mining.
+
+ Wensheng Zhang received the Ph.D. degree
+ Wei Yu received the B.S. degree from the Depart- in pattern recognition and intelligent systems
+ ment of Computer Engineering, Beijing University from the Institute of Automation, Chinese
+ of Posts and Telecommunications (BUPT), Beijing, Academy of Sciences (CAS), Beijing, China,
+ China, in 1994, and the master’s degree from the in 2000.
+ School of Computer Science and Technology, BUPT, He joined the Institute of Software, CAS, in 2001.
+ in 1997. He is a Professor of machine learning and data
+ He was an Associate Professor at the School of mining and the Director of the Research and
+ Computer Science and Technology, BUPT. He is Development Department, Institute of Automation,
+ currently the Director of the Service Technol- Chinese Academy of Sciences (CAS). He is also
+ ogy Department, China Mobile Research Institute, with Guangzhou University, Guangzhou, China.
+ Beijing. His research interests include telecommuni- His research interests include computer vision, pattern recognition, and
+cation network, Internet, big data, and artificial intelligence. artificial intelligence.

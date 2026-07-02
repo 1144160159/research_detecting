@@ -1,0 +1,856 @@
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026 3753
+
+ SAGA: Synthetic Audit Log Generation for
+ APT Campaigns
+ Yi-Ting Huang , Ying-Ren Guo , Yu-Sheng Yang, Guo-Wei Wong , Yu-Zih Jheng, Yeali S. Sun ,
+ Jessemyn Modini, Timothy Lynar , and Meng Chang Chen
+
+ Abstract—With the increasing sophistication of Advanced Per- malware analysis [1], [2], effective detection and mitigation of
+sistent Threats (APTs), the demand for effective detection and mit- APT attacks remains a critical priority. A key obstacle in APT
+igation strategies and methods has escalated. Program execution threat studies is the lack of a widely recognized benchmark
+leaves traces in the system audit log, which can be analyzed to
+detect malicious activities. However, collecting and analyzing large dataset [3], which is essential to develop AI/ML-based solutions
+volumes of audit logs over extended periods is challenging, further and objectively evaluate methods. This challenge motivates the
+compounded by insufficient labeling that hinders their usability. study of synthetic audit log generation in this work.
+Addressing these challenges, this paper introduces SAGA (Syn- System audit logs, which record traces of program execution,
+thetic Audit log Generation for APT campaigns), a novel approach play a crucial role in log analysis for threat detection. For
+for generating find-grained labeled synthetic audit logs that mimic
+real-world system logs while embedding stealthy APT attacks. example, MITRE ATT&CK Evaluations [4] provide emulation
+SAGA generates configurable audit logs for arbitrary duration, plans that allow cybersecurity providers to assess their product’s
+blending benign logs from normal operations with malicious logs ability to detect simulated cyber attacks through system logs.
+based on the definitions the MITRE ATT&CK framework. Ma- With the advancement of data-driven artificial intelligence methlicious audit logs follow an APT lifecycle, incorporating various ods, it has become increasingly effective in addressing certain
+attack techniques at each stage. These synthetic logs can serve
+as benchmark datasets for training machine learning models and cyber threats, such as attack analysis [5], [6], [7], which offer
+assessing diverse APT detection methods. To demonstrate the use- the potential for timely Technique detection. These approaches
+fulness of synthetic audit logs, we ran established baselines of typically rely on high-quality labeled audit logs for model trainevent-based technique hunting and APT campaign detection using ing. In addition, it allows for the enhancement and comparison
+various synthetic audit logs. In addition, we show that a deep of various methods.
+learning model trained on synthetic audit logs can detect previously
+unseen techniques within audit logs. However, labeling large volumes of audit logs over long
+ periods poses challenges, especially when APT attacks lack
+ Index Terms—Technique hunting, APT campaign, provenance- obvious indicators. Researchers often rely on publicly available
+based detection, synthetic audit log, deep learning.
+ datasets such as the DARPA Transparent Computing Engage-
+ I. INTRODUCTION ment [8], Operationally Transparent Cyber (OpTC) [9], and
+ LANL’s dataset [10], as well as smaller datasets that are rarely
+ HE emergence of Advanced Persistent Threats (APTs),
+T such as Fancy Bear (APT28) and Lazarus Group Elfin
+(APT33), poses significant challenges to the cybersecurity comshared due to privacy and proprietary concerns. Moreover, some
+ datasets provide fine-grained labels on malicious entities [5] or
+ processes [11], while others [8], [9] only report attack scenarios
+munity. APT campaigns, typically orchestrated by advanced
+ over time intervals, without linking them to specific system
+threat actors with economic or political motives,involve multiple
+ events. This shortage of labeled logs limits a deeper understages, including gaining initial access to a victim environment,
+ standing of attack behaviors and restricts the development of
+remaining undetected for extended periods, exfiltrating sensitive
+ AI/ML-based cybersecurity defense studies [12], [13].
+data, and compromising system integrity. Despite progress in
+ The absence of such audit logs motivates the development
+ Received 20 November 2024; revised 30 October 2025; accepted 28 Novem- of methods for generating configurable synthetic audit logs that
+ber 2025. Date of publication 5 December 2025; date of current version 12 fulfill the following key requirements.
+March 2026. This work was supported in part by CITI, Academia Sinica and in r Realism: Synthetic audit log should closely resemble the
+part by MOST under Grant NSTC 114-2221-E-011-080-MY3, Grant 114-2634-
+F-001-001-MBK, and Grant 114-2221-E-001-018. (Corresponding author: real audit logs.
+Yi-Ting Huang.) r Scenario coverage: They should represent a broad spec-
+ Yi-Ting Huang is with the National Taiwan University of Technology and
+Science, Taipei 106, Taiwan (e-mail: ythuang@mail.ntust.edu.tw). trum of APT campaigns, including recent and emerging
+ Ying-Ren Guo and Meng Chang Chen are with Academia Sinica, Taipei City threats.
+115201, Taiwan (e-mail: mcc@iis.sinica.edu.tw). r Detailed labeling: Logs should include fine-grained la-
+ Yu-Sheng Yang, Guo-Wei Wong, Yu-Zih Jheng, and Yeali S. Sun are with
+National Taiwan University, Taipei City 106319, Taiwan. bels such as specific Techniques or equivalents mapped
+ Jessemyn Modini and Timothy Lynar are with the University of New South to events in the audit log.
+Wales, Kensington 2052, Australia. r Higher-Level representation: Along with raw events, they
+ This article has supplementary downloadable material available at
+https://doi.org/10.1109/TDSC.2025.3640696, provided by the authors. should offer higher-level abstractions, facilitating easier
+ Digital Object Identifier 10.1109/TDSC.2025.3640696 understanding, examination, and communication.
+
+ 1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+3754 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ r Flexibility: The framework should be able to generate logs
+ of any duration and include any number of APT campaigns.
+ r Diversity: The framework should be able to generate previously unseen logs, which would benefit model training
+ and examination.
+ This study introduces SAGA (Synthetic Audit Log Generation for APT Campaigns), a framework for generating configurable synthetic audit logs. SAGA is aligned with the MITRE
+ATT&CK framework and terminologies, chosen for its openness, comprehensiveness, and availability. The generated synthetic audit log contains both benign and malicious (APT cam- Fig. 1. Example of audit log events captured by Procmon.
+paigns) audit logs, with benign logs representing normal system
+and user operations and malicious logs constructed from predefined Technique templates. Each APT campaign in the logs,
+ WinRAR process creates a file named IOC_09_11.rar. System
+comprising stages/tactics with corresponding techniques, which
+ events, along with their subjects and objects, include attributes
+are reflected in the audit logs.
+ such as meta-information, properties, and other details provided
+ The specific tasks of this study include:
+ r Obtaining attack scenarios: Use a red team emulator to by the system, which can further describe the event and context.
+ These details will be discussed in the subsequent section. System
+ collect and label logs with technique identifiers based on
+ audit logs can be obtained using built-in kernel event logging
+ the MITRE ATT&CK framework.
+ r Designing the SAGA framework: Develop the SAGA mechanisms such as Windows Event Tracing (ETW) and Linux
+ Audit, or through additional tools like Procmon, Sysmon, and
+ framework and workflow to address the aforementioned
+ CamFlow.
+ challenges.
+ r Synthesizing configurable audit logs: Create synthetic au- In this study, we use Procmon as the primary logging tool.
+ Procmon, short for Process Monitor is a Windows utility that
+ dit logs that combine APT attack scenarios and benign
+ monitors and records real-time system activities, including probehaviors, resembling real data logs.
+ r Verifying SAGA usefulness: Run existing systems using cess actions, file system activities, registry changes, and more.
+ Fig. 1 provides an example of the captured system events.
+ the SAGA synthetic audit log as input to demonstrate its
+ The first row records the event <firefox.exe, QueryOpen, ...
+ effectiveness. Furthermore, show that models trained on
+ \IOC_09_11.rar>, along with attributes such as timestamp, PID,
+ the synthetic audit log can successfully identify previously
+ and object value, which indicate a query for the existence of
+ unseen malicious behaviors in new datasets.
+ the RAR file. The audit log is proved useful for analyzing
+ To demonstrate the usefulness of synthetic audit logs, we
+ malicious attempts and APT attacks, offering insights into their
+tested established baselines and the existing methods across
+ characteristics.
+various applications, including APT intrusion detection, technique hunting, and APT campaign detection. The objective of
+this empirical study is to demonstrate that SAGA synthetic audit B. APT Attack Lifecycle
+logs can be used effectively and meaningfully in cybersecurity- Frameworks such as Lockheed Martin’s cyber kill chain [14],
+related audit log applications. The focus is not on comparing MITRE ATT&CK framework [15], and Mandiant adversary
+the performance or goodness of these methods, as they target lifecycle [16] define the lifecycle of cyber attacks, helping
+different objectives and operate in distinct contexts, making defenders understand the collective operations and intention of
+direct comparison uninformative. APT attacks. This study uses the Mandiant adversary lifecycle,
+ depicted in Fig. 2a , as a reference for the APT attack lifecycle,
+ II. BACKGROUND AND MOTIVATION although other frameworks can be equally applicable. Each
+ stage/tactic encompasses associated Techniques, and each Tech-
+ In this section, we introduce the audit log and its related issues
+ nique may have several implementations/abilities. In addition,
+using a running example of an APT campaign.
+ this lifecycle framework helps to generate and analyze synthetic
+ audit logs. Note that in this paper, we consider Technique and
+A. System Audit Log Sub-Technique equally and use the term Technique to represent
+ System audit logs are records of system events such as file both.
+access, process creation and termination, and network access. A typical APT attack consists of multiple stages, including
+Each system event depicts the interaction between two system initial compromise, establishing foothold, internal reconnaisentities, typically represented as <subject, operation, object>, sance, escalating privileges, moving laterally, maintaining preswhere the subject refers to a process entity or a program, and ence, and ultimately complete mission. Note that the stages of
+the object represents a system entity such as a process, file, internal reconnaissance, escalating privileges, moving laterally,
+registry, or network socket. The operation signifies the action and maintaining presence may occur multiple times, and not all
+performed by the subject on the object. For example, the event four stages are necessary in every instance. Fig. 2 a shows the
+<WinRAR.exe, CreateFile, IOC_09_11.rar> indicates that the lifecycle stages corresponding to the APT28 campaign.
+HUANG et al.: SAGA: SYNTHETIC AUDIT LOG GENERATION FOR APT CAMPAIGNS 3755
+
+Fig. 2.  a Mandiant attack lifecycle [16] of APT28.  b The APT28 attack provenance graph, derived from [17], presents five malicious events labeled with six
+techniques, which are mapped to the corresponding stages of the attack lifecycle. In each zoomed-in box, the dotted boundary color corresponds to its specific
+stage in the attack lifecycle. Rectangular nodes represent files, diamond-shaped nodes represent sockets, oval nodes denote processes, and the edges illustrate the
+causal relationships between the entities. The red arrow edges indicate the sequence of malicious events.
+
+ The attack proceeds by establishing a reverse shell between
+ the attacker and the victim, designated as T1071 Application
+ Layer Protocol of the Establish Foothold stage, marked as (3)
+ in the figure. Next, it steals information such as local state
+ files, corresponding to T1082 System Information Discovery and
+ T1005 Data from Local System, marked as (4) and (5) of the
+ Internal Reconnaissance stage. Finally, the stolen information
+ is uploaded to a web servicewebhook.site, designated as T1567
+Fig. 3. SAGA workflow.
+ Exfiltration Over Web Service of the Complete Mission stage,
+ shown as (6) in Fig. 2 b .
+
+C. Running Example III. SAGA GENERATIVE MODEL
+ We refer to APT28 threat intelligence reports [17] to construct The SAGA generative model involves collecting audit logs
+the attack scenario illustrated in Fig. 2, which serves as the run- from a red-team emulator to create a repository of attack pattern
+ning example in this work. Fig. 2 a outlines its attack lifecycle, templates with fine-grained labels. These templates are then
+while Fig. 2 b shows the corresponding APT audit log. In the used, following lifecycle selection instructions, to generate syninitial stages of the attack, phishing emails containing malicious thetic audit logs that embed APT campaigns. Fig. 3 provides an
+attachments are sent to the victim to download the attachment overview and the workflow of SAGA, which will be discussed
+IOC_09_11.rar. This activity is designated as the Technique in detail in the following subsections. To mitigate the risk of
+T1566.001 Spearphishing Attachment, as (1) in Fig. 2 b , of the detection models overfitting on artificial patterns, SAGA introattack lifecycle stage Initial Compromise. This malicious attach- duces variability in both attack implementation in Section III-A
+ment exploits a vulnerability in WinRAR versions below 6.23 (as and artifact representation in Section III-C3. In Section III-A,
+mentioned in CVE-2023-38831). When the victim clicks on the SAGA collects attack pattern from a red-team emulation plat-
+IOC_09_11.rar file, it triggers subsequent malicious activities form that supports multiple abilities per Technique, enabling the
+designated as T1204.002 User Execution: Malicious File of the generation of diverse execution paths and behavioral variants.
+attack lifecycle Establish Foothold, as (2) in Fig. 2 b . In Section III-C3, SAGA incorporates entity-level variability
+3756 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+by replacing generalized entities with hyponyms derived from
+real-world malware samples and synthetic variants. This combination of implementation diversity and entity-level variation
+helps generate a wide range of realistic log instances.
+
+A. Attack Pattern Collection and Labeling
+ The first task of SAGA is to collect labeled audit logs,
+as depicted in Fig. 3. The Red Team Platform, such as
+CALDERA [18], [19] and Atomic Red Team [20], simulates
+real-world adversaries in a controlled environment. In this study, Fig. 4. Attack pattern template model.
+we use CALDERA to emulate real-world attacks by adversaries.
+Our choice is based on its open source nature and alignment with
+the MITRE ATT&CK framework. To deploy CALDERA, we
+configure a master server and set up Remote Access Tool (RAT)
+clients on a compromised host. An ability of CALDERA refers
+to a specific implementation of an ATT&CK Technique, representing a discrete adversarial behavior. After acquiring audit
+logs from a red team emulator and process monitor, the next step
+is to extract the relevant attack patterns and assign appropriate
+Technique labels. CALDERA-generated reports provide details
+for each executed attack, including process IDs, commands used,
+and associated technique IDs. We employ a semi-automated
+labeling method to annotate audit logs based on handcrafted
+rules tailored to specific attack techniques.
+ To develop specific rules for each ability, three authors applied their expert knowledge based on the MITRE ATT&CK Fig. 5. APT28 Attack pattern template example.
+framework [15] to define rules for identifying attack-related
+events. In the case of T1566.001, the ability of T1566.001
+involves using the Invoke-WebRequest cmdlet of Powerfor the creation of new attack patterns. This approach facilitates
+Shell, which indicates network activity connecting to the
+ greater flexibility and diversity in the generation of new attack
+GitHub website. Furthermore, the flag -OutFile and parameinstances.
+ter \$env:TEMP\PhishingAttachment.xlsm suggests that a file
+ We abstract each attack pattern into an attack template, which
+named PhishingAttachment.xlsm will be created on the target
+ specifies its prerequisites, outcomes, timings, and the corresystem. To ensure accurate labeling, rules are designed and
+ sponding stage and Technique in the attack lifecycle. This metaapplied using both forward and backward tracing, since not
+ information serves as a blueprint for generating diverse attack
+all events generated during an attack should be considered
+ instances while maintaining consistency among the generated
+malicious and labeled with the Technique identifier. Some may
+ instances. Fig. 4 shows the attack template model, which is
+represent background or system activities. Only events exhibitexplained in more detail with an example in Fig. 5. Algorithm 1
+ing these specific malicious actions and artifacts are considered
+ shows the details of template generation.
+malicious for this particular ability, and custom labeling rules are
+ Attack Identification: The entity Attack Identification includes
+crafted to capture this behavior. We validated these rules using
+ the attack stage and Technique, which together define the identity
+a set of manually labeled logs and through cross-verification via
+ of the attack pattern template, as shown in Fig. 4. For example,
+code review among the three authors.
+ lines 1–3 of Fig. 5 illustrate an attack pattern template associated
+ When given a CALDERA-generated report, SAGA uses
+ with Technique T1566.001 Spearphishing Attachment and the
+the attack-related Process ID (PID) as the root to construct a
+ stage Initial Compromise in the adversary lifecycle.
+comprehensive process family tree that captures all associated
+ Attack Pattern: The entity Attack Pattern is associated with an
+processes. By mapping these process IDs to the corresponding
+ attack identity and consists of a sequence of events generated by
+audit logs and applying handcrafted rules, SAGA can accurately
+ a specific ability, categories and descriptors of artifacts presented
+assign the appropriate technique ID to the relevant log entries.
+ in the event. In this context, the category provides a broad classification, while the descriptor offers a more specific identifica-
+B. Attack Pattern Templates Abstraction tion. For example, if an event contains the artifact Firefox, it falls
+ Each attack pattern corresponds to a specific instance of a into the category process with the descriptor browser. To support
+Technique with particular parameter values. To enable the gener- the generalization of attack pattern templates, Table I outlines
+ation of a wider variety of attack patterns, it is essential to abstract a collection of categories and descriptors used in SAGA, which
+these patterns into a more abstract form. These abstractions can can be considered as forming a hypernym relationship. The
+then be instantiated with legitimate parameter values, allowing table outlines six categories, File, Network, Cmdline, Process,
+HUANG et al.: SAGA: SYNTHETIC AUDIT LOG GENERATION FOR APT CAMPAIGNS 3757
+
+ TABLE I information table records previously executed attacks and the
+ CATEGORIES AND DESCRIPTORS USED IN THIS STUDY
+ system entities utilized, as well as the system entities provided
+ by the external environment, to facilitate Prerequisite matching.
+ An attack pattern is generated only when all Prerequisite are
+ satisfied; more details are given in Section III-C2.
+ Outcome: The entity Outcome lists the artifacts produced after
+ executing this attack (line 11 of Algorithm 1) , such as a phishing
+ file (as indicated on line 17 of Fig. 5), collected sensitive information, and changes in system state. In a complete APT attack
+ chain, Outcome may serve as prerequisites for subsequent attack
+ patterns. Therefore, defining the Outcome within the template is
+ crucial, as it not only impacts the immediate effects of the attack,
+ but also has long-term implications for future attack strategies
+ and defensive measures.
+
+ C. APT Lifecycle and Technique Selection
+ SAGA supports both random and user-specified APT cam-
+ Algorithm 1: Generate Attack Pattern Template. paign generation, and in this subsection, the random APT
+ Input: Attack pattern A and events E campaign generation is introduced. The generation of an APT
+ Output: Attack pattern template P campaign is conditioned on the adversary lifecycle, involving
+ 1: Let T AB that stores known system entities and their lifecycle stage transitions, attack template selections, and attack
+ descriptors and categories, as defined in Table I. pattern instantiation. The transition process of the lifecycle stage
+ 2: Initialize P with the stage and Technique, as described determines the subsequent stage according to the current status.
+ in Subsection “Attack Identification”. An example of an adversary Mandiant lifecycle is shown in
+ 3: for each event e in E do Fig. 2 a . The attack template selection process chooses the
+ 4: for each system entity s in E do attack templates for each stage, while the artifact substitution
+ 5: if s already used then process instantiates the events for an attack pattern.
+ 6: Replace s with its descriptor d from T AB. 1) Lifecycle Stage Transitions: As described in Section II-B,
+ 7: else threat actors follow a systematic, strategic approach, executing
+ 8: Find its descriptor d and replace s. actions sequentially. An APT campaign begins with two initial
+ 9: Set the descriptor as a prerequisite. stages: initial compromise (IC) and establish foothold (EF). This
+ 10: end if is followed by an incubation period consisting of four stages:
+ 11: Set d as an outcome if it still exists. escalate privileges (EP), internal reconnaissance (IR), move
+ 12: Insert e into P . laterally (ML), and maintain presence (MP). The incubation
+ 13: end for period may occur once or multiple times, and within each
+ 14: end for incubation period, individual stages may be omitted or repeated.
+ 15: return P Finally, the last stage, complete mission (CM), is executed once
+ or not at all, marking the successful completion of the attack. The
+ Context-Free Grammar representation of a campaign generation
+Registry, and System, each subdivided into specific descriptors. is presented in Table II. The lifecycle is defined in line 6. As
+Refer to lines 3-6 of Algorithm 1. an example, in Fig. 2 b , the stages of APT28 include Initial
+ Subsequently, additional attack instances can be generated by Compromise, Establish Foothold, Internal Reconnaissance, and
+instantiating these attack pattern templates during the generation Complete Mission.
+of synthetic audit logs. Using the same running example, three 2) Attack Template Selection: For each stage of an APT camsystem entities (artifacts) are involved in phishing: Firefox ac- paign, the number of attacks can be either randomly determined
+cessing Microsoft Exchange and downloading IOC_09_11.rar or specified by the user. An attack template (TQ) may also be
+through the browser. These entities can be substituted with randomly selected based on the current stage and prerequisites,
+hypernyms (as shown in line 12 of Algorithm 1 and lines 7-10 or as specified by the user. Note that there may be benign
+of Fig. 5), such as replacing Firefox with Process.browser and events (BE) preceding the attack pattern templates (TQ) that the
+IOC_09_11.rar with File.phishing. operation is described in line 8 of Table II. In line 8, malicious
+ Prerequisite: The entity Prerequisite specifies conditions re- audit logs (MA) consist of either a sequence of benign events
+lated to the system resources required for the execution of an at- (BE), the selected attack pattern instance (In(T Q)), malicious
+tack pattern (lines 8-9 of Algorithm 1) , such as process.browser audit logs (MA), or sequences of benign events (BE) and the
+and file.phishing (as shown in lines 12-15 of Fig. 5) of the selected attack pattern instance (In(T Q)). Next, the abstracted
+attack pattern template T1566.001 of APT28. To generate a arguments of the template are replaced with artifacts to generate
+specific malicious audit log (i.e., an attack pattern), a campaign diverse audit events, as the instantiation of an attack pattern
+3758 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ TABLE II
+ CONTEXT FREE GRAMMAR FOR CAMPAIGN GENERATION
+ Algorithm 2: Synthetic Audit Log Generation.
+ Input: Lifecyle {LC}, Attack pattern instances
+ {ln(T Q)}, Benign audit log {BA}
+ Output: Synthetic audit events SA
+ 1: while while LCi in LC exists do
+ 2: for each stage in LCi do
+ 3: // Include an attack pattern instance ln(T Q) in the
+ stage. Line 8 of Table II.
+ 4: M A = BE + In(T Q) + M A | BE + In(T Q)
+ 5: where In(T Q) is an instantiated attack template,
+ as Line 10 of Table II. BE is a short list of benign
+ events.
+ 6: end for
+ 7: end while //Obtain all malicious audit logs {M A}
+ 8:
+ 9: Initialize SA with given background events.
+ 10: for each BAi in {BA} do
+ 11: // Perform Cb (SA, BAi ), as Line 1 of Table II.
+ 12: for each evt in {BAi } do
+ 13: evt.start = BAi .start + evt.relative
+described in line 10 (In(T Q)) and elaborated in Section III-C3. 14: end for // Insert event evt to synthetic audit log.
+The construction of the malicious audit log continues until all 15: SA = SA ∪ BAi
+stages have been completed. 16: end for // Insert benign audit log BEi .
+ A campaign information table, as depicted in Fig. 4, is created 17: for each M Ai in {M A} do
+to maintain information about the executed attack templates, 18: // Perform Cm (SA, M A), as Line 1 of Table II.
+including their associated lifecycle stage, as well as the system 19: for each In(T Qj ) in {M Ai } do
+entities used and their statuses. Given the current stage, the 20: for each evt in {In(T Qj )} do
+prerequisites of a template are examined against the campaign 21: evt.start = In(T Qj−1 ).end +
+information table to determine whether they are satisfied. For In(T Qj ).lapse + evt.relative
+example, if a threat actor uses a phishing email template during 22: end for // Insert event evt to synthetic audit log.
+the initial compromise stage, the campaign information table 23: SA = SA ∪ In(T Qj )
+will record the details of the phishing email template, including 24: end for // Insert technique In(T Q) to synthetic log.
+the entity File.phishing. In the second stage (EF), the templates 25: end for // Insert malicious audit log M A to synthetic
+for this stage will refer to the campaign information table to audit log.
+check whether their prerequisites are met. Only if the prerequisites are met can they be considered potential templates for this
+APT campaign.
+ can extract a file %APPDATA%\ ... \Startup\twainResolver.lnk.
+ 3) Attack Pattern Instantiation: In Section III-B, we discuss
+ The dropped file, twainResolver.lnk, is classified under the systhe creation of attack templates through the generalization of
+ tem entity type file, as indicated in the ‘file’ section of the
+system entities. While instantiating an attack pattern template,
+ VirusTotal report. It is then recognized as ‘file.short’ based on
+these generalized system entities are replaced by appropriate and
+ regular expression matching, and a shortcut file in the Winmeaningful artifacts (or a hyponym) to form a validated attack
+ dows startup folder to implement an attack behavior such as
+pattern. This approach enables the generation of a wide range
+ T1547.009 Shortcut Modification.
+of attack instances.
+ The second source of artifacts, such as usernames and process
+ There are two methods for collecting the hyponyms of gen-
+ IDs, which are indicated with ∗ Table I, is generated using the
+eralized system entities. The first method involves using arti-
+ Faker library in Python [21]. Faker efficiently generates realisticfacts collected from real-world data, such as malware names,
+ looking random data that mimics real-world information. These
+attack-related file names, and registry paths. To gather these arrandom artifacts are used to populate attack instances within
+tifacts, we leveraged VX-Underground [22] and VirusTotal [23].
+ the templates. Once attack patterns are generated for all stages
+VX-Underground provides approximately 10,000 malware hash
+ as a chronological sequence of labeled events, the prerequisites
+values associated with APT campaigns collected over the past
+ for every attack pattern must be satisfied to validate the attack
+five years. Each hash was subsequently queried on VirusTotal to
+ sequence, which is then considered an APT campaign.
+extract relevant artifacts from the behavioral analysis reports. In
+total, 157,806 artifacts were obtained and mapped to the gener-
+ D. Synthetic Audit Log Generation
+alized system entities defined in the attack templates for subsequent instantiation. For example, by querying VirusTotal using A synthetic audit log comprises several benign and APT
+a sample hash value 78a3e4702d9fc13b2ef917211cd65b44, we campaign audit logs, with their composition methods detailed in
+HUANG et al.: SAGA: SYNTHETIC AUDIT LOG GENERATION FOR APT CAMPAIGNS 3759
+
+ normal system operations, mitigating the risk of generating
+ disjointed or unrealistic event flows.
+ There are still tasks that need to be addressed, such as establishing process relationships. For example, in an audit log,
+ the ProcMon operation ProcessCreate (as shown in Fig. 1)
+ creates a new process, and their parent-child relationship must be
+Fig. 6. Composition of synthetic audit log.
+ preserved. SAGA treats artifacts with the same descriptor within
+ a single attack pattern template as belonging to the same process.
+ Otherwise, operations from different templates are considered
+Algorithm 2. A benign audit log is recorded from normal soft- independent processes.
+ware activities, such as web browsing, Windows Office usage,
+file downloads, etc., and is represented as a sequence of events, as IV. USEFULNESS STUDY OF SYNTHETIC AUDIT LOG
+defined in lines 2 and 3 of Table II. Each benign audit log includes
+ In this section, we evaluate the usefulness of synthetic audit
+a start time (BA.start) and log length (BA.length), with each
+ logs for various detection methods in different APT attack
+event having a relative time (evt.relative) to the log start time.
+ scenarios. First, we show the variety of synthetic audit logs
+The notation Cb (SA, BA) in the first line of Table II denotes
+ that SAGA can produce, from those that mimic real-world
+the composition of a benign audit log BA into a synthetic audit
+ APT attacks (denoted as the C Group) to randomly generated
+log SA. The composition involves setting the starting time of
+ logs (denoted as the G group), and finally to composite both
+the first event to the specified time of the benign audit log, and
+ groups (denoted as the M group). Next, we assess whether
+adjusting the start times of all other events by adding the log
+ state-of-the-art audit log-based and provenance-based malicious
+start time to their relative times. The procedure is described in
+ detection methods can effectively use the synthetic audit log as
+lines 9 to 14 of Algorithm 2.
+ their target datasets. In addition, we discern the performance
+ For the composition of an APT campaign audit log into a
+ and operation differences of these methods when applying their
+synthetic audit log, denoted as Cm (SA, M A) in the first line
+ original datasets versus various synthetic data logs. Note that
+of Table II, it merges each pair of benign events (BE) and
+ the objective of this study is not to identify the best-performing
+attack technique events (ln(T Q)) sequentially until all pairs
+ methods or models, as each approach has its own specific focus,
+are combined. A BE is usually a short sequence of benign
+ design considerations, and inherent limitations.
+events that occurs before the particular Technique (ln(T Q)).
+ This section begins by outlining the settings for the empirical
+The composition of BE follows the same method as that for
+ study, including the synthesized datasets, labeling, metrics, and
+BA. The composition of T Q, which refers to the audit log events
+ machine hardware and software configurations. Our analysis
+representing a particular Technique, provides flexibility in both
+ focuses on three sets of empirical studies to demonstrate the
+the start time and duration. This means that a Technique audit
+ usefulness of the synthesized attack datasets: 1) assessing the
+log can begin at any time and span any length. The start time of
+ effectiveness of APT intrusion detection by, 2) evaluating the
+a Technique audit log is set to the end time of the preceding
+ accuracy of Technique hunting, and 3) gauging the effectiveness
+Technique plus the lapse time ln(T Q).lapse, which can be
+ of campaign attribution. Finally, we will conduct a case study to
+specified by the user or determined randomly by SAGA. The
+ evaluate the effect of model training using synthetic audit logs
+procedure is described in lines 15 to 22 of Algorithm 2.
+ to test the model on an unseen dataset.
+ Fig. 6 depicts a composition of 3 benign audit logs and 4
+APT audit logs. Note that the logs may overlap and the APT
+audit logs can be extended for any duration. SAGA explicitly A. Evaluation Settings
+leverages process identifiers, parent-child process relationships, Datasets: The experiments utilize synthetic audit log datasets
+and event timestamps to preserve the underlying process struc- generated by SAGA (hereafter referred to as the SAGA dataset),
+ture, temporal ordering, and causal dependencies that are critical which is publicly available at [24]. A synthetic audit log, as
+for contextual consistency in audit logs. To avoid unrealistic described in Section III, includes both benign behaviors and macombinations of events, SAGA maintains semantic coherence licious APT attack scenarios. Similarly to previous research [5],
+at both the process and artifact levels. For example, when two [25], the benign audit logs cover a variety of everyday activities,
+events involve shared entities, such as a file, registry key, or such as watching YouTube videos, downloading and compiling
+named pipe, SAGA preserves these dependencies to ensure that source code from GitHub, writing and sending emails, running
+the resulting logs reflect plausible and continuous behavior. As Python programs, playing video games, reading news articles,
+illustrated in Section II-C, a user downloads a malicious attach- and composing Word documents. This diversity ensures that
+ment IOC_09_11.rar via a browser (T1566.001: Spearphishing the synthetic audit logs accurately reflect typical user behavior.
+Attachment), and subsequently opens it using Microsoft Word For malicious events, we prepared 169 abilities executed on the
+(T1204.002: Malicious File Execution). Although these steps MITRE CALDERA [19] red-team emulator to generate labeled
+span separate processes, their interaction through a shared ar- malicious audit events. These events were then processed into
+tifact forms a coherent and realistic attack sequence. In this attack pattern templates for further synthetic audit log generaway, SAGA ensures that injected attack behaviors are not only tion. Each of the 169 attack pattern templates was instantiated
+chronologically plausible but also contextually consistent with with artifact replacements, as described in Section III-B, to form
+3760 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+the datasets used in the empirical study. The training dataset TABLE III
+ COMPUTATION OVERHEAD OF AUDIT LOG GENERATION
+for Technique hunting consists of 16,900 attack patterns, each
+of which is an instantiation of a attack pattern template. This
+dataset is split into training, validation, and test sets in an 8:1:1
+ratio.
+ Given the limited availability of audit logs labeled with
+Techniques, we used the attack pattern templates to create
+APT campaigns. These scenarios include eight APT attack codes are publicly available and the systems can be installed and
+campaigns (“known” group) based on cyber threat intelligence executed without issues.
+reports from real-world APT campaigns, including Higaisa [26], For Technique hunting, we used the Sigma rules [35], an open
+admin338 [27], APT28 [17], FIN7 [28], CobaltGroup [29], signature-based rulebase contributed by numerous security prac-
+Gamaredon [30], Patchwork [31], and GorgonGroup [32]. More- titioners, and SFM [36], a deep learning approach that provides
+over, using SAGA random generation capability, we produced Technique hunting functionality. We selected Sigma as a base-
+20 APT campaigns (“random generated group”). From these 28 line because it is a widely adopted, community-driven detection
+APT campaigns, we randomly selected 3 to create new com- framework, actively maintained by practitioners worldwide. As
+posite scenarios involving multiple APT campaigns targeting a noted by [37], Sigma has also been shown to align closely
+single victim host, resulting in 10 composite campaigns (“com- with several commercial rulesets, making it a meaningful and
+posite” group). To demonstrate the versatility and flexibility of representative point of comparison. A major portion of these
+SAGA, each of the above APT campaigns was generated over rules align with the MITRE ATT&CK framework with 70 rules
+three different time periods: 15 minutes, 1 h, and 1 d. mapped to the Techniques identified in this study. SFM integrates
+ Labeling: For each generated APT campaign, SAGA labels three key technologies: anomaly detection to mitigate the impact
+malicious events with APT stages, Techniques, abilities, manip- of data imbalance, a multi-class classifier for Technique hunting,
+ulated system entities, and other operation-related attributes. In and subgraph matching for APT campaign attribution. SFM
+addition, it includes threat actors, when applicable. Malicious was selected because it was one of the few systems specifiaudit events are labeled using the BIO2 scheme [33] covering cally designed to address both the Technique hunting task and
+7 attack stages, 80 Techniques, and 169 abilities, as shown in APT campaign attribution, making it particularly suited for the
+Table S1 of Supplementary Material A. evaluation of complex attack scenarios. All models and methods
+ Evaluation Metrics: We adopt three evaluation metrics for were installed with configurations as close as possible to those
+different tasks: APT intrusion detection, Technique hunting, and described in their original publications. Code modifications were
+APT campaign attribution. The APT intrusion detection task only made to ensure compatibility with the structure of the
+aims to identify any APT intrusions or anomalies within the synthetic audit logs.
+dataset under examination. Technique hunting seeks to identify Computation Configurations: For empirical studies, we used
+Techniques violated based on MITRE ATT&CK definitions. a Windows 10 operating system with 8 GB of memory with an
+APT campaign attribution aims to determine the most probable Intel i9-10900F CPU as our victim system. For defender model
+APT campaign present in the dataset. To evaluate performance, development, we employed AMD EPYC 7282 16-Core Proceswe use standard classification metrics: precision (P), recall (R), sor CPU running Ubuntu 20.04 system with 1 TB of memory
+F1 score (F1), and accuracy (ACC). and two NVIDIA A100 80 GB GPUs. Neural network training
+ For APT intrusion detection, we frame it as a binary classifi- was performed using PyTorch 1.13.1 and Python 3.10. The
+cation problem, determining whether a malicious event exists computational overhead of generating malicious audit events
+in the audit log. Since different target systems or methods and audit log composition was measured and listed in Table III.
+apply their own tests to detect APT intrusion on an event, a
+graph, or a time window interval, we adapt to their respective
+evaluation designs to assess performance. Technique hunting is B. APT Dataset Generation
+treated as a multi-class classification task, where each classifier In this section, we provide a more detailed discussion on
+determines whether a specific Technique has been employed in the considerations for generating the APT dataset, focusing
+one or more events. For APT campaign attribution, we analyze primarily on generation guidance, attack scenarios, and duration.
+the Techniques identified from the Technique hunting task to Generation Guidance: SAGA offers flexibility in generating
+determine the most likely APT campaign for the audit log. We APT campaigns, based on user specifications, randomly, or
+rank the ground truth against the predictions and employ a Top-K through a combination of both. For example, SAGA generates
+measurement to evaluate the performance of the APT campaign eight known APT campaigns (denoted from C1 to C8) folattribution. lowing user specifications, with their lifecycles and Techniques
+ Established Baselines: For APT intrusion detection, we presented in Table IV. To further illustrate SAGA’s versatility,
+demonstrate the usefulness of generated attack datasets using we also used its random generation capabilities to create 20
+three types of systems: event-based (AirTag [6]), graph-based additional campaigns (denoted from G1 to G20), showcasing
+(Unicorn [34]), and time window-based (KAIROS [7]) intrusion its capacity to create varied attack scenarios. The lifecycles
+detection systems. The reasons for choosing the three systems and Techniques of these randomly generated campaigns are
+are not only that they are established baselines, but also that their presented in Table S2 of Supplementary Material A, while
+HUANG et al.: SAGA: SYNTHETIC AUDIT LOG GENERATION FOR APT CAMPAIGNS 3761
+
+ TABLE IV
+ APT ATTACK SCENARIOS BASED ON CYBER THREAT INTELLIGENCE REPORTS
+
+ TABLE V
+ STATISTICS FOR THE THREE TIME DURATIONS IN THE EIGHT APT ATTACKS
+
+the detailed statistics, including sizes, number of entities, and 14,263,393.25 for 1-day audit logs. This variability reflects the
+number of events, are provided in Table S3 also in Supple- evolving nature of APT attacks, which are not constrained by
+mentary Material A. This flexibility highlights the scalability fixed timeframes, highlighting SAGA ability to generate audit
+and adaptability of our approach in simulating a wide range of logs of various durations. It also allows for a more thorough
+cyberattack scenarios, enabling the creation of customized and examination of how different detection methods perform over
+diverse testing environments to thoroughly evaluate detection varying time intervals.
+methods.
+ Attack Scenario: We introduce two variations in attack scenarios: one involving a single campaign targeting the system and C. APT Intrusion Detection
+another featuring three simultaneous campaigns. This variation APT intrusion detection is defined as the task of identifying
+in attack composition allows for a comprehensive assessment potential APT attacks within an audit log, as established in
+of detection methods in more complex, multi-campaign situ- previous studies [6], [7], [34]. To demonstrate the usefulness
+ations. For instance, the M1 attack scenario consists of three of SAGA datasets in supporting APT intrusion detection, we
+separate attacks, Higaisa, G1, and admin338, each employing present the detection results using their own evaluation schemes
+distinct Techniques and targeting the same compromised host. of various methods and then discuss the causes of performance
+Additional details on the ten generated composite campaigns difference, considering the following factors: test granularity,
+can be found in Table S4 in Supplementary Material A, due to Technique used, attack scenario, and duration. Table VI presents
+the constraints of the manuscript space. the performance of the three intrusion detection systems, AirTag
+ Attack Duration: To account for the variability in the duration (event-based), Kairos (time window-based) and Unicorn (graphof the attack, we generated synthetic audit logs with durations based) across various SAGA datasets. More details can be found
+of 15 minutes, 1 h, and 1 d. Although SAGA can create logs in Tables S5, S6, and S7 of Supplementary Material B. Perforof any length, we limited the maximum duration to 1 d in this mance data for E3-CADETS, E3-THEIA, and E3-ClearScore
+study, considering the computational overhead of the intrusion were copied directly from their respective original papers. Unidetection systems discussed in Section IV-C Table V, Table S3 corn, which analyzes the entire provenance graph to detect
+and Table S4 in Supplementary Material A, presents statistical anomalies, generally performed well in both precision and recall.
+descriptions of logs for each duration. As shown in Table V, the AirTag, on the other hand, which identifies intrusions by analyzaverage number of events increases with log length: 910,711 ing individual events, struggled with high rates of false positives
+for 15-minute audit logs, 1,184,512.5 for 1-hour audit logs, and and false negatives. When exposed to SAGA’s broader technique
+3762 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ TABLE VI
+ AVERAGE PERFORMANCE OF THE INTRUSION DETECTION SYSTEMS
+
+coverage, multi-stage campaign structure, and temporal varia- Attack Scenario Impact: SAGA is capable of generating syntion, AirTag, a one-class SVM anomaly detection model built thetic audit logs containing multiple APT campaigns, referred to
+on a customized BERT embedding, struggles to find a stable as composite campaigns (M group), designed to reflect complex
+decision boundary across such diverse contexts. Kairos was real-world scenarios. Details of these composite campaigns,
+designed with specific assumptions about event sequence timing, labeled M1 to M10, are provided in Table S7 in the Supplemenwhich may not align with the more flexible and richly structured tary Material B. As the complexity of the M group audit logs
+scenarios generated by SAGA. By grouping events within time increases, the detection performance gradually declines (e.g.,
+windows, Kairos tended to reduce both false positives and false from C_15 min to M_15 min), as shown in Table VI.
+negatives, resulting in relatively low precision but higher recall. Duration Impact: To demonstrate its ability to generate syn-
+ Test granularity: Test granularity refers to the unit of target thetic audit logs of varying length, 15 minute and 1 h attack
+tested in a detection method. For example, the text granularity of scenarios were generated to detect APT intrusions. An APT at-
+AirTag is based on individual events. In a test using the APT28 tack typically employs a “low-and-slow” approach, maintaining
+campaign dataset (15 minutes), AirTag generated 301,069 false a prolonged presence on the target machine, which makes the
+positives and missed 14,098 malicious events out of 1,209,895 intrusion difficult to detect. As shown in Table VI, the detection
+total events. On the other hand, Kairos, which uses time window performance gradually decreases with longer durations for the
+as its test granularity, incorrectly flagged 42 benign windows same context.
+and missed just one malicious window out of 67 total windows. In summary, synthetic audit logs can be tailored in terms of
+Table VI presents the performance of the three detection sys- duration, the number and type of embedded APT campaigns,
+tems, each using its own scoring method (i.e., a formula to and the types of APT campaigns. As the complexity of these
+calculate the performance metrics). This highlights the sig- scenarios increases, the performance of detection methods tends
+nificant influence of the test granularity and scoring method to degrade.
+on the reported results, making direct comparisons between
+performance data difficult and, at times, not meaningful. Since
+SAGA provides labels for each event, its datasets are ver- D. Evaluation on Technique Hunting
+satile enough to support various test granularity and scoring To demonstrate the practical utility of fine-grained Technique
+methods. labeling, Technique hunting is the task of identifying poten-
+ Technique impact: The generated campaigns (G) feature a tial threats, specifically Techniques, as defined by the MITRE
+greater number and diversity of Techniques compared to the ATT&CK framework. SAGA follows Algorithm 2 to generate
+synthetic known campaigns (C). To assess the impact of varying attack campaigns, where each event is labeled with its correthe number and types of Techniques used in different campaigns, sponding Technique identifier. This structured synthetic audit
+we provide details of the audit logs for the known campaigns in log allows detection methods to effectively perform Technique
+Table IV, and for the generated campaigns in Table S2 of Supple- hunting. The approaches are used for Technique hunting; one is
+mentary Material A. As shown, the audit logs for the generated SFM and the other is using Sigma rules. The performance results
+campaigns contain more and a broader range of Techniques than of Technique hunting for each APT attack campaign are reported
+those in the synthetic known campaigns. Table VI presents the in Table VII that details are given in Table S9 in the Supplemenaverage performance of each detection system, showing that the tary Material C. The results indicate significant performance
+C group consistently outperforms the G group. This decline in distinctions between SFM and Sigma rules, regardless of the
+performance is directly correlated with the increasing number generation method, attack scenario, or duration. SFM is capable
+and diversity of Techniques. of recognizing attack patterns by learning from synthetic data,
+HUANG et al.: SAGA: SYNTHETIC AUDIT LOG GENERATION FOR APT CAMPAIGNS 3763
+
+ TABLE VII
+ THE PERFORMANCE OF TECHNIQUE HUNTING
+
+ Fig. 7. The top k ranking results of APT campaign detection by SFM.
+
+whereas Sigma rules are limited to detecting attack patterns that a series of coordinated attack patterns. In line with the MITRE
+match pre-defined signatures. This underscores the importance ATT&CK framework, an APT campaign can be described as a
+of the generated datasets in facilitating the advancement of sequence of Techniques. SFM leverages this structure to detect
+learning-based model methodologies. the most likely APT campaign by comparing the discovered
+ However, both methods showed significant performance fluc- Techniques (Gq ) against a pool of known APT campaigns (Gc ).
+tuations across various attack scenarios. For example, the aver- In this empirical study, Gc includes 8 known campaigns and
+age standard deviations of precision during the 15-min scenarios 30 randomly generated APT campaigns. Fig. 7 illustrates the
+were 33.92% and 32.25% for SFM and Sigma rules, respectively. ranking of each SFM-identified campaign over three different
+Several factors contributed to this variability. First, there was durations, 15 minutes, 1 h, and 1 d. SFM successfully identified
+a high incidence of false positives associated with specific most campaigns within the top 3 rankings across all three time
+attack behaviors. Second, the substantial imbalance between the durations: 74% for 15 minutes, 84% for 1 h, and 79% for
+number of malicious events and the overwhelming prevalence 1 d. Notably, 50% of the campaigns were ranked first in both
+of benign activities skewed the evaluation of attack behaviors. 1 h and 1 d scenarios. One reason for this success could be
+Lastly, benign activities and malicious events were intertwined that the temporal causal relationships is established among the
+and exhibited different patterns in various datasets, complicating Techniques discovered by SFM, which effectively distinguishes
+the recognition of attack patterns. the most probable campaign from others. Furthermore, SFM
+ For instance, recognizing T1105 Ingress Tool Transfer (ITT3) demonstrated resilience to discrepancies between the discovered
+requires identifying the following sequence of audit events ability graph Gq and the campaign Techniques Gc . However,
+within interleaved benign event sequences: <browser.exe, TCP the M group, consisting of multiple campaigns in a single
+connect, XXX.com>, <browser.exe, FileCreate, payload.exe>, scenario, posed a greater challenge compared to the groups of
+and <xxx, Process Create, payload.exe>. This sequence indi- single campaigns. In addition, the results further suggest that as
+cates that a malicious payload was downloaded from an external the duration of audit log grows, the complexity of identifying
+C2 server and executed on a compromised machine. These APT campaigns also increases. In conclusion, this evaluation
+malicious events are causally correlated and in audit log, they highlights the potential of SAGA in effectively supporting the
+were intertwined with benign and background events, making detection of APT campaigns.
+the recognition of this Technique particularly challenging.
+ On the other hand, while Sigma rules perform efficiently, they
+ F. A Case Study of Unseen APT Campaign
+are based on contributions from human experts and may not
+encompass all attack behaviors, such as T1055.002 Portable Ex- In this section, we investigate the effectiveness of SAGA synecutable Injection (PEI) and T1491 Defacement (DF2) identified thetic audit log datasets in training an APT campaign model to
+in this empirical study. As a result, certain malicious behaviors be applied to previously unseen APT campaigns, even when the
+went undetected in the APT campaigns C-6, C-8, G-11, and campaign audit logs follow a different format and organization.
+G-13. These findings address the limitations of manually crafted, Specifically, SFM was trained using SAGA datasets and tested
+signature-based detection methods and highlight the impor- on the DARPA TC E3 Fivedirection dataset to detect attack
+tance of datasets like those generated by SAGA, which provide behaviors (i.e., Techniques) within the logs.
+comprehensive logs from red-team emulation campaigns. Such The E3 Fivedirection dataset includes a complex attack scedatasets support the development and evaluation of both rule- nario (4.4 Phishing Email with Excel Macro [38]). As illusbased detection systems and learning-based models in a realistic trated in Fig. 8, the attacker used a phishing attachment to
+environment. lure the victim into downloading and executing malware that
+ triggered subsequent malicious activities, including establishing
+ a remote command shell and gathering various system informa-
+E. APT Campaign Detection Evaluation
+ tion. From the detection results, it shows that SFM was able to
+ APT campaign detection involves identifying a potential APT successfully identify part of the attack sequence. For example,
+campaign embedded in an audit log, which is characterized by during the initial compromise phase, the SFM successfully
+3764 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+Fig. 8. The DARPA TC E3 Fivedirection attack graph.
+
+flagged the system events corresponding to the victim down- dataset [10], StreamSpot [25] ADFA [40], and DARPA Transloading the phishing attachment, <thunderbird.exe, WriteFile, parent Computing (TC) [8], as well as OpTC [9]. CERT’s
+BoviaBenefitsOE.xlsm>, as T1566.001 Spearphishing Attach- dataset provides synthetic background data alongside malicious
+ment. Additionally, during the Establish Foothold phase, the operations, such as logon and email activities, carried out
+system events corresponding to the execution of the phishing by multiple threat actors across five distinct attack scenarios.
+attachment, <Excel.exe, CreateFile, BoviaBenefitsOE.xlsm>, LANL’s dataset consists of 58 consecutive days of event data
+were also correctly flagged as T1204.002 User Execution: Ma- collected from LANL’s corporate computer network, includlicious File. ing logon events, process events, DNS lookups, network flow
+ However, some attack behaviors were not correctly iden- events, and a set of well-defined red teaming events repretified by SFM. For example, during the Establish Foothold senting malicious activities. StreamSpot includes one attack
+phase, when the attacker used PowerShell to download a mali- activity—a drive-by download initiated by visiting a malicious
+cious payload (update.ps1) from a C2 server, SFM successfully URL that gains root access to the visiting host—along with
+marked the system events related to the download activity, five benign activities forming three scenarios. However, these
+<powershell.exe, CreateFile, update.ps1>, as T1105 Ingress datasets primarily focus on event action types (i.e., operations)
+Tool Transfer, but it failed to include the system events, Pow- and timestamps, lacking critical details regarding the underlying
+erShell connection to the C2 server, <powershell.exe, TCP system entities involved in the audit events. This absence limits
+connect, 208.75.117.5> in T1105. This limitation could be their ability to clearly describe the full context of each event,
+attributed to gaps in the SAGA dataset’s representation of cer- which is essential for comprehensive attack pattern analysis and
+tain attack behaviors, or SFM’s difficulty in detecting subtle detection.
+variations in event sequences. ADFA comprises three datasets: ADFA-LD (Linux), ADFA-
+ However, these results highlight the practical value of the WD (Windows), and ADFA-WD-SAA (Windows for Stealth At-
+SAGA dataset in supporting practical cybersecurity applications tacks). Among these, ADFA-WD is the most relevant to SAGA.
+and providing a solid foundation for future improvements to However, it only contains DLL traces of processes collected by
+dataset generation strategies. They also underscore the need Procmon and includes twelve zero-day attacks executed on a
+for further improvements in APT campaign detection models host.
+to enhance their capability and accuracy. DARPA’s TC program included five engagements and the
+ OpTC dataset. The E3 and E5 engagements, featuring two
+ and eight multi-stage APTs respectively, are widely used for
+ V. RELATED WORK intrusion detection, alongside benign background activity. The
+ Existing Benchmarks for Host-based Intrusion Detection: OpTC dataset, created to assess scalability, simulated a three-day
+As noted in the survey by [3], the majority of studies on APT on a 1,000-host test network during a two-week experhost-based intrusion detection have relied on self-constructed iment. However, these datasets lack thorough documentation
+attack scenarios for evaluation. Some works have utilized ex- and labels, which limits their usefulness for precisely evaluating
+isting public datasets such as CERT’s dataset [39], LANL’s attack behaviors and audit events.
+HUANG et al.: SAGA: SYNTHETIC AUDIT LOG GENERATION FOR APT CAMPAIGNS 3765
+
+ TABLE VIII representation methods used in Unicorn [34], Kairos [7], and
+ COMPARISONS WITH SYNTHETIC APT DATASET GENERATION
+ MAGIC [46]; translation-based embedding techniques in WAT-
+ SON [48] and ShadeWatcher [45]; and language models in
+ AirTag [6] and DrSec [47]. Our research demonstrates that applying event-based [6] and graph-based intrusion detection [7],
+ [34] to our synthesized campaign datasets results in effective
+ detection of intrusion events.
+ Technique Hunting: HOLMES [49] generates detection signals by matching 16 predefined attack patterns and constructing
+ a high-level scenario graph embedded with TTPs to indicate
+ APT campaign activities. RapSheet [50] creates a tactical provenance graph using 67 rules within a commercial EDR tool,
+ aligning it with MITRE ATT&CK. KRYSTAL [51] leverages
+ Sigma rules [52] to detect known attack patterns, converting
+ them into SPARQL queries for threat detection. Although these
+ rule-based approaches are effective, their manual creation and
+ upkeep are resource-intensive. Our study addresses this limita-
+ Synthetic APT Dataset Generation: While there are some tion by introducing a flexible approach to APT dataset generpublicly available attack datasets, few research focus on con- ation using a red-team emulator for audit event collection, enstructing datasets for simulating multi-stage APT attacks [41], abling a learning-based methodology. Additionally, we propose
+[42], [43], [44]. To steal organization data, DAPT2020 [41] a straightforward method (SFM) for identifying attack patterns,
+imitated the exploited web vulnerability in a production network, providing a baseline for future research.
+and Unraveled [43] created skeletons of user profiles to emulate
+user behavior based on predefined job pipelines. These datasets
+ VI. DISCUSSION AND CONCLUSION
+encompass network traffic and multi-host log information, covering limited attacks (i.e., 10 and 15) within attack stages over This study presents a generative APT campaign framework,
+a fixed collection duration (i.e., 1 week or 6 weeks), In contrast, SAGA, designed to synthesize synthetic audit logs for nearly
+our generated APT dataset includes and labels 7 attack stages, any configuration. These logs support the training of various
+80 techniques, and 169 abilities, offering configurable attack machine learning-based APT-related detection machine learning
+patterns and collection duration on single-host audit events. This models and facilitate the evaluation of various APT-related
+flexibility allows for more detailed and customizable simulation detection methods. To demonstrate the usefulness of SAGA’s
+of attack behaviors. synthetic datasets, a collection of empirical studies were con-
+ PWNJUTSU [42] and LADEMU [44] considered adver- ducted across multiple established baselines for APT intrusion
+saries’ TTPs, defining the operational semantics of Techniques detection, Technique hunting, and APT campaign detection.
+as specifications for procedures. PWNJUTSU utilized a semi- In light of the observation of artifact leakage, distributional
+automated approach where each attack step was crafted by shift, benign syntheticity, and attack covertness in the synthetic
+professional human Red Teamers, providing a highly skilled datasets [11], we emphasize that the SAGA-generated datasets
+yet partially manual campaign construction process. In contrast, are not limited to single-campaign training or evaluation. They
+LADEMU offered a proof-of-concept (PoC) implementation can be flexibly composed to include multiple campaigns, time
+using the red-team emulator Caldera and demonstrated the use spans, and benign activities, allowing researchers to design
+of a single attack scenario, APT29. Our study introduces a training and testing splits that better reflect real-world conditions
+workflow of campaign generation with event logs, enabling and capture diverse, multi-stage attack behaviors. Furthermore,
+fully automated APT simulations based on TTPs specified in SAGA enables researchers to explore distributional shifts by
+the MITRE ATT&CK framework. This approach eliminates generating stage-specific audit logs, supporting the training and
+the need for manual intervention, ensuring more consistent and evaluation of models on early-stage versus late-stage attack
+scalable attack simulations. Table VIII contrasts SAGA with behaviors.
+previous framework and highlights SAGA’s unique advantages, The authenticity of SAGA-generated logs is grounded in two
+particularly its configurability (in terms of duration, techniques, factors: the faithful implementation of attack techniques and the
+and campaign design), fine-grained labeling, and high degree of construction of realistic attack sequences. SAGA relies on a redautomation. team emulator (i.e., Caldera) to execute concrete implementa-
+ Host-based Provenance analysis: Learning-based prove- tions of ATT&CK techniques. The more faithfully the emulator
+nance analysis methods have shown notable improvements in reproduces adversary behaviors, the more realistic the resulting
+the detection of intrusions and have accelerated the investigative logs. For sequence construction, SAGA supports both expertprocess of various attacks [3], [5], [6], [7], [34], [45], [46], [47]. instructed campaigns, emulating real-world APT scenarios as
+ These learning-based models employ a range of represen- defined by domain experts (similar to manual red-teaming), and
+tation learning techniques to encode provenance graphs, en- sampled sequences, assembled from statistically plausible and
+abling effective anomaly detection. Examples include graph logically coherent technique transitions. This design enables
+3766 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+SAGA to generate scalable and scenario-driven audit logs, ad- [14] Lockheed Martin Corporation, “Gaining the advantage: Applying cyber
+dressing the broader need for labeled and scenario-driven log kill chain methodology to network defense,” 2015. [Online]. Available:
+ https://www.lockheedmartin.com/content/dam/lockheed-martin/rms/
+data for learning-based APT detection research. documents/cyber/Gaining_the_Advantage_Cyber_Kill_Chain.pdf
+ The quality of SAGA datasets depends on access to exten- [15] B. Strom, A. Applebaum, D. Miller, K. Nickels, A. Pennington, and
+sive, high-quality campaign knowledge and diverse Technique C. Thomas, “MITRE ATT&CK: Design and philosophy,” 2018. [Online]. Available: https://www.mitre.org/sites/default/files/publications/primplementations. The current implementation of SAGA uses 18-0944-11-mitre-attack-design-and-philosophy.pdf
+169 abilities and 80 Techniques, with ongoing efforts to expand [16] M. Google Cloud, “Targeted attack life cycle,” Accessed: Aug. 24, 2020.
+these numbers to enhance the usefulness of SAGA datasets and [Online]. Available: https://cloud.google.com/security/resources/
+ insights/targeted-attack-lifecycle
+cover more sophisticated APT campaigns. While the ATT&CK [17] APT28, “Cve-2023–38831 exploited by pro- Russia hacking groups
+framework is continuously evolving, SAGA is designed to be in ru-ua conflict zone for credential harvesting operations,” 2023.
+extensible. New techniques can be integrated by either updating [Online]. Available: https://blog.cluster25.duskrise.com/2023/10/12/cve-
+ 2023-38831-russian-attack
+Caldera with additional abilities as they become available, or [18] A. Applebaum, D. Miller, B. Strom, C. Korban, and R. Wolf, “Intelligent,
+manually constructing new attack templates through expert- automated red team emulation,” in Proc. 32nd Annu. Conf. Comput. Secur.
+guided red-team emulation. Furthermore, we also recognize Appl., 2016, pp. 363–373.
+ [19] “Mitre caldera,” 2023, [Online]. Available: https://github.com/mitre/
+the potential of advanced tools such as large language models caldera
+(LLMs) used in [53] to assist in the automatic attack gener- [20] “Atomic red team,” 2023. [Online]. Available: https://atomicredteam.io/
+ation – a promising direction for future research. Given the [21] R. Bordet and other contributors, “Faker: Python package that generates
+ fake data,” 2024. [Online]. Available: https://faker.readthedocs.io
+inherent differences between synthetic and real-world data, we [22] “Vx underground,” 2023. [Online]. Available: https://vx-underground.
+caution that experimental results obtained using SAGA should org/
+be interpreted carefully, as synthetic logs may not present in [23] “Virus total,” 2023. [Online]. Available: https://www.virustotal.com/gui/
+ home/upload
+real environments. As highlighted in [11], careful evaluation [24] S. Dataset, “The synthetic audit log dataset with APT campaign,” 2024.
+is necessary to avoid overestimating generalization capabilities [Online]. Available: https://saga-tw.github.io/dataset/
+due to unintended signals in synthetic datasets. In this work, the [25] E. Manzoor, S. M. Milajerdi, and L. Akoglu, “Fast memory-efficient
+ anomaly detection in streaming heterogeneous graphs,” in Proc.
+Windows operating system is used as the target environment; 22nd ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2016,
+however, the concept can be readily applied to other platforms pp. 1035–1044.
+as well. [26] Malwarebytes, “New lnk attack tied to higaisa APT discovered,” 2020.
+ [Online]. Available: https://www.malwarebytes.com/blog/news/2020/06/
+ higaisa
+ REFERENCES [27] Mandiant, “China-based cyber threat group uses dropbox for malware
+ communications and targets Hong Kong media outlets,” 2015. [Online].
+ [1] Y.-T. Huang, C. Y. Lin, Y.-R. Guo, K.-C. Lo, Y. S. Sun, and M. C. Available: https://www.mandiant.com/resources/blog/china-based-threat
+ Chen, “Open source intelligence for malicious behavior discovery and [28] Mandiant, “Fin7 evolution and the phishing lnk,” 2017. [Online]. Availinterpretation,” IEEE Trans. Dependable Secure Comput., vol. 19, no. 2, able: https://www.mandiant.com/resources/blog/fin7-phishing-lnk
+ pp. 776–789, Mar./Apr. 2022. [29] Ptsecurity, “Cobalt strikes back: An evolving multinational threat to
+ [2] G.-W. Wong, Y.-T. Huang, Y.-R. Guo, Y. Sun, and M. C. Chen, “Attention- finance,” 2017. [Online]. Available: https://www.ptsecurity.com/upload/
+ based API locating for malware techniques,” IEEE Trans. Inf. Forensics corporate/ww-en/analytics/Cobalt-2017-eng.pdf
+ Secur., vol. 19, pp. 1199–1212, 2024. [30] CERT-EE, “Gamaredon infection: From Dropper to entry,” 2021.
+ [3] M. Zipperle, F. Gottwalt, E. Chang, and T. Dillon, “Provenance-based [Online]. Available: https://www.ria.ee/sites/default/files/content-editors/
+ intrusion detection systems: A survey,” ACM Comput. Surv., vol. 55, kuberturve/tale_of_gamaredon_infection.pdf
+ pp. 1–36, 2022. [31] Cymmetria, “Unveiling patchwork-the copy-paste apt,” 2016. [Online].
+ [4] M. Engenuity, “Att&ck evaluations,” 2024. [Online]. Available: https:// Available: https://web.archive.org/web/20180825085952/https://s3-usattackevals.mitre-engenuity.org/ west-2.amazonaws.com/cymmetria-blog/public/Unveiling_Patchwork.
+ [5] A. Alsaheel et al., “{ATLAS}: A sequence-based learning approach pdf
+ for attack investigation,” in Proc. 30th USENIX Secur. Symp., 2021, [32] Unit 42, “The gorgon group: Slithering between nation state and cyberpp. 3005–3022. crime,” 2018. [Online]. Available: https://unit42.paloaltonetworks.com/
+ [6] H. Ding, J. Zhai, Y. Nan, and S. Ma, “{AIRTAG}: Towards automated unit42-gorgon-group-slithering-nation-state-cybercrime/
+ attack investigation by unsupervised learning with log texts,” in Proc. [33] E. F. T. K. Sang and F. D. Meulder, “Introduction to the conll-
+ 32nd USENIX Secur. Symp.), 2023, pp. 373–390. 2003 shared task: Language-independent named entity recognition,”
+ [7] Z. Cheng et al., “Kairos: Practical intrusion detection and investigation 2003, arXiv:1909.01315.
+ using whole-system provenance,” 2023, arXiv:2308.05034. [34] X. Han, T. Pasquier, A. Bates, J. Mickens, and M. Seltzer, “Unicorn:
+ [8] DARPA, “Transparent computing engagement,” 2021. [Online]. Avail- Runtime provenance-based detector for advanced persistent threats,” in
+ able: https://github.com/darpa-i2o/Transparent-Computing Proc. Netw. Distrib. Syst. Secur. Symp., 2020.
+ [9] DARPA, “Operationally transparent cyber (optc) data release,” 2021. [35] “Sigma rule repository,” 2024. [Online]. Available: https://github.com/
+ [Online]. Available: https://github.com/FiveDirections/OpTC-data SigmaHQ/sigma
+[10] A. D. Kent, “Comprehensive, multi-source cyber-security events data set,” [36] Y.-T. Huang, Y.-R. Guo, G.-W. Wong, and M. C. Chen, “A cascade
+ Los Alamos National Lab. (LANL), Los Alamos, NM (United States), approach for apt campaign attribution in system event logs: Technique
+ Tech. Rep. LA-UR–15-23810, 2015. hunting and subgraph matching,” 2024. [Online]. Available: https://arxiv.
+[11] J. Liu, M. A. Inam, A. Goyal, A. Riddle, K. Westfall, and A. Bates, “What org/abs/2410.22602
+ we talk about when we talk about logs: Understanding the effects of dataset [37] A. Virkud, M. A. Inam, A. Riddle, J. Liu, G. Wang, and A. Bates, “How
+ quality on endpoint threat detection research,” in Proc. 2025 IEEE Symp. does endpoint detection use the {mitre}{att&ck} framework,” in Proc.
+ Secur. Privacy, 2025, pp. 112–129. 33rd USENIX Secur. Symp., 2024, pp. 3891–3908.
+[12] D. Arp et al., “DoS and don’ts of machine learning in computer security,” [38] A. D. Keromytis, “Transparent computing engagement 3 data release,”
+ in Proc. 31st USENIX Secur. Symp., 2022, pp. 3971–3988. 2021. [Online]. Available: https://github.com/darpa-i2o/Transparent-
+[13] A. S. Jacobs, R. Beltiukov, W. Willinger, R. A. Ferreira, A. Gupta, and L. Computing/blob/master/README-E3.md
+ Z. Granville, “AI/ml for network security: The emperor has no clothes,” [39] J. Glasser and B. Lindauer, “Bridging the gap: A pragmatic approach
+ in Proc. 2022 ACM SIGSAC Conf. Comput. Commun. Secur., 2022, to generating insider threat data,” in Proc. 2013 IEEE Secur. Privacy
+ pp. 1537–1551. Workshops, 2013, pp. 98–104.
+HUANG et al.: SAGA: SYNTHETIC AUDIT LOG GENERATION FOR APT CAMPAIGNS 3767
+
+[40] G. Creech, “Developing a high-accuracy cross platform host-based in- Yu-Sheng Yang is currently working toward the mastrusion detection system capable of reliably detecting zero-day attacks,” ter’s degree in computer science with National Taiwan
+ Ph.D. dissertation, UNSW Sydney, 2014. University. His research focuses on large language
+[41] S. Myneni et al., “Dapt 2020-constructing a benchmark dataset for ad- models (LLMs) and computer vision.
+ vanced persistent threats,” in Proc. Deployable Mach. Learn. Secur. Defense: First Int. Workshop, San Diego, CA, USA, 2020, pp. 13–163.
+[42] A. Berady, M. Jaume, V. V. T. Tong, and G. Guette, “PWNJUTSU: A
+ dataset and a semantics-driven approach to retrace attack campaigns,”
+ IEEE Trans. Netw. Service Manag., vol. 19, no. 4, pp. 5252–5264,
+ Dec. 2022.
+[43] S. Myneni et al., “Unraveled—a semi-synthetic dataset for advanced
+ persistent threats,” Comput. Netw., vol. 227, 2023, Art. no. 109688.
+[44] J. Gjerstad, F. Kadiric, G. Grov, E. Kjellstadli, and M. L. Asprusten,
+ “LADEMU: A modular & continuous approach for generating labelled
+ apt datasets from emulations,” in Proc. 2022 IEEE Int. Conf. Big Data,
+ 2022, pp. 2610–2619. Guo-Wei Wong received the master’s degree in ther-
+[45] J. Zengy et al., “SHADEWATCHER: Recommendation-guided cyber mal and fluid science from the National Yunlin Unithreat analysis using system audit records,” in Proc. 2022 IEEE Symp. versity of Science and Technology, in 2017. He is
+ Secur. Privacy, 2022, pp. 489–506. currently working towards the PhD degree of CSIE
+[46] Z. Jia, Y. Xiong, Y. Nan, Y. Zhang, J. Zhao, and M. Wen, “Magic: Detecting with the National Taiwan University. His primary
+ advanced persistent threats via masked graph representation learning,” research interests include deep learning in fluid dy-
+ 2023, arXiv:2310.09831. namics and for complicated applications, including
+[47] M. Sharif et al., “DrSec: Flexible distributed representations for efficient malware analysis and PM2.5 prediction.
+ endpoint security,” in Proc. 2024 IEEE Symp. Secur. Privacy, 2024,
+ pp. 145–145.
+[48] J. Zeng, Z. L. Chua, Y. Chen, K. Ji, Z. Liang, and J. Mao, “WATSON:
+ Abstracting behaviors from audit logs via aggregation of contextual semantics,” in Proc. Netw. Distrib. Syst. Secur. Symp., 2021.
+[49] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. Venkatakrishnan, “HOLMES: Real-time APT detection through correlation of suspicious information flows,” in Proc. IEEE Symp. Secur. Privacy, 2019, Yu-Zih Jheng is currently working toward the maspp. 1137–1152. ter’s degree in Information management with Na-
+[50] W. U. Hassan, A. Bates, and D. Marino, “Tactical provenance analysis tional Taiwan University. Her research interests infor endpoint detection and response systems,” in Proc. IEEE Symp. Secur. clude static and dynamic malware analysis, red team-
+ Privacy, 2020, pp. 1172–1189. ing, and penetration testing.
+[51] K. Kurniawan, A. Ekelhart, E. Kiesling, G. Quirchmayr, and A. M. Tjoa,
+ “Krystal: Knowledge graph-based framework for tactical attack discovery
+ in audit data,” Comput. Secur., vol. 121, 2022, Art. no. 102828.
+[52] “Sigma - generic signature format for siem systems,” 2024. [Online].
+ Available: https://github.com/SigmaHQ/sigma
+[53] B. Singer, K. Lucas, L. Adiga, M. Jain, L. Bauer, and V. Sekar, “On the
+ feasibility of using LLMS to autonomously execute multi-host network
+ attacks,” 2025, arXiv:2501.16466. Yeali S. Sun received the BS degree from the Computer Science and Information Engineering department of National Taiwan University, and the MS and
+ PhD degrees in computer science from the University
+ of California, Los Angeles (UCLA). From 1988 to
+ 1993, she was with Bell Communications Research
+ Inc. In August 1993, she joined National Taiwan University and is currently a professor of the Department
+ Yi-Ting Huang received the PhD degree in informa- of Information Management. Her research interests
+ tion management from National Taiwan University, in are in the areas of Internet security and forensics,
+ 2015. She is an assistant professor with the National Quality of Service (QoS), cloud computing and ser-
+ Taiwan University of Science and Technology. She vices, and performance modeling and evaluation.
+ was a postdoctoral fellow at Academia Sinica. Her
+ primary research interests include malware analysis,
+ cyber threat intelligence analysis, deep learning, and
+ natural language processing.
+
+ Jessemyn Modini is an IT leader and cyber security
+ researcher. Jess holds 5 master’s qualifications in Cybersecurity Operations, Systems Engineering, Space
+ Operations, Project Management and International
+ Ying-Ren Guo is a research assistant in Academia Relations (Security). Jess is currently undertaking a
+ Sinica. His research interests include malware reverse doctorate in Cyber Security, focusing on applications
+ engineering and analysis, and cybersecurity. of epidemiology to cyber security (Cyber Epidemiology) for threat modelling and cyber herd immunity at scale. Jess is currently a senior Technologist
+ with Amazon Web Services where she drives global
+ technology strategy. Prior to AWS, Jess was the Australian Cyber Security Centre (ACSC) Engineering Manager. Jess is passionate
+ about security, global cyber threat intelligence sharing and multidisciplinary
+ approaches to resilience.
+3768 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ Timothy Lynar received the PhD degree from the Meng Chang Chen received the PhD degree in com-
+ University of Newcastle, Australia, in 2011. He is a puter science from the University of California, Los
+ senior lecturer with UNSW Canberra. He worked at Angeles. He was with AT&T Bell Labs and is now a
+ IBM research for 7.5 years where he was a research research fellow/professor of research center for inforstaff member and master inventor, before joining mation technology innovation, Academia Sinica, Tai-
+ UNSW, in 2019. Tim’s primary research focus is wan. His current research interests include computer
+ the application of machine learning to Cyber secu- and network security, wireless network, deep learning
+ rity. Tim has a background in simulation, modelling for complicated applications, data and knowledge
+ and distributed computing including cloud and IoT engineering.
+ systems.

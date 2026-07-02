@@ -1,0 +1,162 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026                                                                           3865
+
+
+
+
+      A Federated and Incremental Network Intrusion
+       Detection System for IoT Emerging Threats
+  Raffaele Carillo , Francesco Cerasuolo , Giampaolo Bovenzi , Domenico Ciuonzo , Senior Member, IEEE,
+                                 and Antonio Pescapé , Senior Member, IEEE
+
+
+    Abstract—Ensuring network security is increasingly challeng-                scratch, which is both storage- and computation-intensive [5].
+ing, especially in the Internet of Things (IoT) domain, where                   Moreover, while cross-network data sharing could enhance
+threats are diverse, rapidly evolving, and often device-specific.               NIDS by broadening threat coverage, it raises serious pri-
+Hence, Network Intrusion Detection Systems (NIDSs) require
+(i) being trained on network traffic gathered in different                      vacy concerns, making it impractical in most real-world
+collection points to cover the attack traffic heterogeneity,                    scenarios involving user data. Notably, recent studies have
+(ii) continuously learning emerging threats (viz., 0-day attacks),              investigated either CIL or FL for NIDS, but largely in iso-
+and (iii) be able to take attack countermeasures as soon as                     lation: CIL approaches typically assume centralized access
+possible.In this work, we aim to improve Artificial Intelligence                to all traffic data, while FL ones usually consider a fixed
+(AI)-based NIDS design & maintenance by integrating Fed-
+erated Learning (FL) and Class Incremental Learning (CIL).                      and pre-defined set of attack classes. Only a limited number
+Specifically, we devise a Federated Class Incremental Learning                  of works explore their integration, and those that do often
+(FCIL) framework–suited for early-detection settings—that sup-                  focus on simplified scenarios such as binary detection tasks,
+ports decentralized and continual model updates, investigating                  overlapping classes, or post-hoc analysis. Consequently, the
+the non-trivial intersection of FL algorithms with state-of-the-art             problem of incrementally learning new, client-specific attack
+CIL techniques to enable scalable, privacy-preserving training in
+highly non-IID environments. We evaluate FCIL on three IoT                      classes from decentralized, non-IID data in an early-detection
+datasets across different client scenarios to assess its ability to             setting remains largely unaddressed.
+learn new threats and retain prior knowledge. The experiments                      In this work, we propose a FCIL framework for NIDS
+assess potential key challenges in generalization and few-sample                that simultaneously addresses the challenges of incremen-
+training, and compare NIDS performance to monolithic and                        tal learning and decentralized training. By integrating CIL,
+centralized baselines.
+                                                                                the system can continuously incorporate new attack classes
+   Index Terms—Network intrusion detection systems, Internet                    without forgetting previously learned threats, while FL
+of Things, federated learning, class incremental learning,                      enables collaborative model training across distributed clients,
+0-day attacks.
+                                                                                ensuring scalability and preserving data privacy. This combi-
+                       I. I NTRODUCTION
+                                                                                nation allows our NIDS to adapt in real time to emerging
+
+C     YBER-ATTACKS have increased rapidly in the last few
+      years, reaching an impressive number of 600 million of
+attacks performed daily [1], highlighting the urgent need for
+                                                                                threats in heterogeneous network environments [6], [7],
+                                                                                [8].
+                                                                                   Combining FL and CIL for designing NIDS poses unique
+service providers to adopt a more proactive role in ensuring                    and still largely unaddressed challenges. First, the non-IID
+the integrity, confidentiality, and availability of data across                 nature of client data means new attack classes may emerge
+digital infrastructures. In this scenario, NIDSs are central to                 only on specific clients, leading to imbalanced updates and
+securing modern networks, shifting from static, signature-                      poor generalization. Second, catastrophic forgetting is inten-
+based methods to adaptive approaches powered by Machine                         sified, as clients may observe only new classes, causing the
+Learning (ML) and Deep Learning (DL) techniques [2]. This                       global model to overwrite knowledge of previously learned
+need is even more pronounced in the IoT domain, where                           attacks. Third, the stability–plasticity dilemma becomes even
+resource-constrained and heterogeneous devices increase the                     more pronounced, as each client must not only retain previ-
+attack surface. For instance, IoT nodes are often hijacked into                 ously learned classes while learning new (local) ones, but also
+botnets for large-scale DDoS attacks (e.g., Mirai) [3], or run                  integrate new disjoint attack classes from other clients.
+outdated firmware that enables persistent exploitation [4].                        Hence, the contributions of this work are the following:
+   However, AI-based NIDS cannot easily adapt to emerging
+                                                                                   • we formalize and study a realistic FCIL problem for
+(0-day) attacks, as updating them requires training-from-
+                                                                                      NIDS, where early detection, client-specific novel attacks,
+   Received 10 August 2025; revised 23 January 2026; accepted 13 March                and non-IID decentralized data jointly coexist, a setting
+2026. Date of publication 17 March 2026; date of current version                      that has not been systematically addressed in prior work;
+13 April 2026. The associate editor coordinating the review of this article
+and approving it for publication was N. Stakhanova. (Corresponding author:         • we provide a comprehensive analysis of how state-
+Francesco Cerasuolo.)                                                                 of-the-art (SOTA) CIL strategies behave in federated
+   The authors are with the Department of Electrical Engineering and Informa-         environments, revealing non-trivial interactions with
+tion Technologies (DIETI), University of Naples Federico II, 80138 Naples,
+Italy (e-mail: francesco.cerasuolo@unina.it).                                         different aggregation schemes (FedAvg, FedProx, and
+   Digital Object Identifier 10.1109/TNSM.2026.3675031                                FedDyn) and limitations, absent in centralized setups;
+
+              © 2026 The Authors. This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License.
+                                     For more information, see https://creativecommons.org/licenses/by-nc-nd/4.0/
+3866                                                          IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 23, 2026
+
+
+
+                                                             TABLE I
+               S TUDIES P ROPOSING CIL AND / OR FL T ECHNIQUES FOR NIDS F ROM 2022 O NWARDS IN C HRONOLOGICAL O RDER
+
+
+
+
+  • we investigate realistic federated configurations with            The rest of the paper is organized as follows. The studies
+    varying numbers of clients (i.e., 2 and 5), each intro-        dealing with CIL and FL for NIDS are reviewed in Sec. II.
+    ducing a single, disjoint novel attack, thereby explicitly     Then, Sec. III describes the FCIL procedure. The experimental
+    stressing FCIL-designed NIDS under severe class imbal-         setup and results are reported in Sec. IV and V, respectively.
+    ance and client heterogeneity;                                 Lastly, Sec. VI concludes our work, highlighting also future
+  • we evaluate FCIL-designed NIDS in real-world scenar-           directions of our research.
+    ios, assessing its ability to (i) generalize across networks
+    and (ii) learn effectively from a limited number of                                II. R ELATED W ORKS
+    samples.                                                          In this section, we review the use of CIL and FL in the
+                                                                   context of NIDS. First, we discuss approaches that apply CIL
+                                                                   to NIDS in Sec. II-A, followed by an overview of FL-based
+CARILLO et al.: FEDERATED AND INCREMENTAL NETWORK INTRUSION DETECTION SYSTEM                                                        3867
+
+
+
+methods in Sec. II-B. Then, we examine recent efforts that           clients: (i) horizontal (or homogeneous) FL, where clients
+integrate both paradigms—CIL and FL—for NIDS (Sec. II-C).            share the same feature space but each possesses a different
+Finally, Sec. II-D positions our work within this landscape.         set of data samples; and (ii) vertical (or heterogeneous) FL,
+A summary of the reviewed literature is provided in Table I.         in which clients hold different features corresponding to the
+                                                                     same sample set [32]. Additionally, FL can be classified by
+A. Incremental Learning for NIDS                                     the network dimensions into (i) cross-device and (ii) cross-
+                                                                     silo settings. The former involves many personal devices
+   In this section, we review the literature on CIL applied to
+                                                                     with unstable connections and variable data, while the latter
+NIDS, focusing on approaches that adapt existing intrusion
+                                                                     features fewer entities—e.g., organizations—with more stable,
+detectors to counter emerging attack types and anomalies.
+                                                                     high-bandwidth links and less frequent communication [33].
+In the literature, CIL approaches are divided into three main        Furthermore, client data can be characterized as either inde-
+families based on model expansions [31]: (i) ”fine-tuning,           pendently and identically distributed (IID) or non-IID. In the
+expanding the model head and updating the entire model
+                                                                     former setting, data across clients is statistically consistent and
+with the incremental training set; (ii) ”fixed-representation,
+                                                                     independent. Conversely, in the latter case, data samples are
+expanding the model head and freezing parts of the pre-trained
+                                                                     interdependent and drawn from different distributions, often
+model (viz., backbone and/or old head), definitively training        reflecting the inherent heterogeneity among clients [33].
+the non-frozen parts; (iii) ”model-growth, adding new models            Among the reviewed literature, all works deal with horizon-
+or layers to accommodate new knowledge.
+                                                                     tal FL, sharing feature space while having a disjoint sample
+   All the reviewed works are from the fine-tuning family,
+                                                                     space. Moreover, all the works implement a cross-device setup,
+except for I2 RNN [11] and SPCIL [14], which employ model-
+                                                                     with local training performed on edge devices, and deal with
+growth solutions. Notably, the fixed-representation family
+                                                                     classes and samples shared among clients, resulting in data
+remains largely unexplored for network intrusion detection           distributions that are only partially non-IID (column “DC”).
+tasks, as freezing the base model may undermine the plasticity          As for FL algorithm (column “FL approach”), the majority
+required to learn new patterns (see column “CIL Approach”
+                                                                     of works leverage FedAvg [17], [18], [19], [21], [22]. Addi-
+in Tab. I for further details).
+                                                                     tionally, other works propose minor modifications to FedAvg,
+   As for incremental episodes (column “CIL Increments”),
+                                                                     such as incorporating weighted averaging schemes and client
+most of the reviewed works adopt multi-class increments—i.e.,
+                                                                     selection based on contribution significance [20], while others
+adding more new classes per episode—while only [11], [15]            adopt more sophisticated FL algorithms, such as FedProx [21].
+explore the single-class addition scenario, which more closely       Interestingly, Rey et al. [17] investigate techniques to defend
+mirrors real-world deployment with new attacks typically
+                                                                     against adversarial clients aiming to poison the global model.
+appearing individually over time.
+                                                                        Finally, all the revised studies address the mMD task
+   Reviewed work deals with the Multi-class Misuse Detection
+                                                                     employing (supervised) DL models [18], [19], [20], [22],
+(mMD) task—i.e., distinguishing among benign and all the
+                                                                     except for [17] and [21] leveraging the (unsupervised)
+attack classes—, while Binary Misuse Detection (bMD)—i.e.,           AutoEncoders (AEs) to perform the Anomaly Detection (AD)
+differentiating benign and malicious traffic—is also considered      task—that is, training only on the benign class and recognizing
+in [16]. In addition, Cerasuolo et al. [15] decompose the intru-
+                                                                     attacks as anomalies or out-of-distribution samples.
+sion detection process into two sequential tasks: a bMD task
+and an Attack Classification (AC) task—i.e., categorization of       C. Federated Incremental Learning for NIDS
+malicious traffic into different attack types.
+   Crucially, most of these studies focus on post-mortem                In this section, we review existing work that integrates
+detection—that is, they do not perform early detection (see          incremental expansion of NIDS (i.e., CIL) with decentralized
+column “Early Detection”)—typically relying on statistics            training approaches (i.e., FL), namely, FCIL. Notably, all
+computed over the entire traffic object (see column “Input           these studies focus on a multi-class addition (column “CIL
+Data”). In contrast, a subset of wo

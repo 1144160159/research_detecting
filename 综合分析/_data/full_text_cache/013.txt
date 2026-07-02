@@ -1,0 +1,1291 @@
+56 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ A Survey of Techniques for Internet Traffic
+ Classification using Machine Learning
+ Thuy T.T. Nguyen and Grenville Armitage
+
+ Abstract—The research community has begun looking for IP whose controlling application we wish to determine. Simple
+ traffic classification techniques that do not rely on ‘well known’ classification infers the controlling application’s identity by
+ TCP or UDP port numbers, or interpreting the contents of packet assuming that most applications consistently use ‘well known’
+ payloads. New work is emerging on the use of statistical traffic
+ characteristics to assist in the identification and classification TCP or UDP port numbers (visible in the TCP or UDP headprocess. This survey paper looks at emerging research into the ers). However, many applications are increasingly using unpreapplication of Machine Learning (ML) techniques to IP traffic dictable (or at least obscure) port numbers [6]. Consequently,
+ classification - an inter-disciplinary blend of IP networking and more sophisticated classification techniques infer application
+ data mining techniques. We provide context and motivation for type by looking for application-specific data (or well-known
+ the application of ML techniques to IP traffic classification,
+ and review 18 significant works that cover the dominant period protocol behavior) within the TCP or UDP payloads [7].
+ from 2004 to early 2007. These works are categorized and Unfortunately, the effectiveness of such ‘deep packet inreviewed according to their choice of ML strategies and primary spection’ techniques is diminishing. Such packet inspection
+ contributions to the literature. We also discuss a number of key relies on two related assumptions:
+ requirements for the employment of ML-based traffic classifiers
+ in operational IP networks, and qualitatively critique the extent • Third parties unaffiliated with either source or recipient
+ to which the reviewed works meet these requirements. Open are able to inspect each IP packet’s payload (i.e. is the
+ issues and challenges in the field are also discussed. payload visible)
+ Index Terms—Traffic classification, Internet Protocol, Machine • The classifier knows the syntax of each application’s
+ Learning, Real Time, Payload inspection, Flow clustering, Sta- packet payloads (i.e. can the payload be interpreted)
+ tistical traffic properties.
+ Two emerging challenges undermine the first assumption -
+ customers may use encryption to obfuscate packet contents
+ I. I NTRODUCTION (including TCP or UDP port numbers), and governments
+ may impose privacy regulations constraining the ability of
+ R EAL-TIME traffic classification has the potential to
+ solve difficult network management problems for Internet service providers (ISPs) and their equipment vendors.
+ third parties to lawfully inspect payloads at all. The second
+ assumption imposes a heavy operational load - commercial
+ Network operators need to know what is flowing over their devices will need repeated updates to stay ahead of regular
+ networks promptly so they can react quickly in support of (or simply gratuitous) changes in every application’s packet
+ their various business goals. Traffic classification may be a payload formats.
+ core part of automated intrusion detection systems [1] [2] The research community has responded by investigating
+ [3], used to detect patterns indicative of denial of service classification schemes capable of inferring application-level
+ attacks, trigger automated re-allocation of network resources usage patterns without deep inspection of packet payloads.
+ for priority customers [4], or identify customer use of network Newer approaches classify traffic by recognising statistical
+ resources that in some way contravenes the operator’s terms patterns in externally observable attributes of the traffic (such
+ of service. More recently, governments are also clarifying as typical packet lengths and inter-packet arrival times). Their
+ ISP obligations with respect to ‘lawful interception’ (LI) of ultimate goal is either clustering IP traffic flows into groups
+ IP data traffic [5]. Just as telephone companies must support that have similar traffic patterns, or classifying one or more
+ interception of telephone usage, ISPs are increasingly subject applications of interest.
+ to government requests for information on network use by A number of researchers are looking particularly closely at
+ particular individuals at particular points in time. IP traffic the application of Machine Learning (ML) techniques (a subclassification is an integral part of ISP-based LI solutions. set of the wider Artificial Intelligence discipline) to IP traffic
+ Commonly deployed IP traffic classification techniques have classification. The application of ML techniques involves a
+ been based around direct inspection of each packet’s contents number of steps. First, features are defined by which future unat some point on the network. Successive IP packets having known IP traffic may be identified and differentiated. Features
+ the same 5-tuple of protocol type, source address:port and are attributes of flows calculated over multiple packets (such
+ destination address:port are considered to belong to a flow as maximum or minimum packet lengths in each direction,
+ flow durations or inter-packet arrival times). Then the ML
+ Manuscript received April 23, 2007; revised September 5, 2007. classifier is trained to associate sets of features with known
+ The authors are with the Centre for Advanced Internet Architec- traffic classes (creating rules), and apply the ML algorithm
+ tures, Swinburne University of Technology, Melbourne, Australia (e-mail:
+ tnguyen@swin.edu.au, garmitage@swin.edu.au). to classify unknown traffic using previously learned rules.
+ Digital Object Identifier 10.1109/SURV.2008.080406. Every ML algorithm has a different approach to sorting and
+ 1553-877X/08/$25.00 
+ c 2008 IEEE
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 57
+
+ prioritising sets of features, which leads to different dynamic
+ behaviors during training and classification. In this paper we
+ provide the rationale for IP traffic classification in IP networks,
+ review the state-of-the-art approaches to traffic classification,
+ and then review and critique emerging ML-based techniques
+ for IP traffic classification.
+ The rest of this paper is organised as follows. Section II
+ outlines the importance of IP traffic classification in opera-
+ Fig. 1. Evaluation Metrics
+ tional networks, introduces a number of metrics for assessing classification accuracy, and discusses the limitations of
+ traditional port- and payload-based classification. Section III levels of abstraction. In the telephony world a law enforcement
+ provides background information about ML and how it can be agency may nominate a ‘person of interest’ and issue a warrant
+ applied in IP traffic classification. The section also discusses a for the collection of intercept information. The intercept may
+ number of key requirements for the employment of ML-based be high-level call records (who called who and when) or
+ classifiers in operational IP networks. Section IV reviews the low-level ‘tapping’ of the audio from actual phone calls in
+ significant works in this field (predominantly from 2004 to progress. In the ISP space, traffic classification techniques
+ early 2007). The section is wrapped up with a qualitative offer the possibility of identifying traffic patterns (which
+ discussion of the extent to which the reviewed works meet endpoints are exchanging packets and when), and identifying
+ the requirements specified in section III. Section V concludes what classes of applications are being used by a ‘person
+ the paper with some final remarks and suggestions of possible of interest’ at any given point in time. Depending on the
+ future work. particular traffic classification scheme, this information may
+ potentially be obtained without violating any privacy laws
+ II. A PPLICATION C ONTEXT FOR M ACHINE L EARNING covering the TCP or UDP payloads of the ISP customer’s
+ BASED IP T RAFFIC C LASSIFICATION traffic.
+ A. The importance of IP traffic classification
+ B. Traffic classification metrics
+ The importance of IP traffic classification may be illustrated
+ by briefly reviewing to important areas - IP quality of service A key criterion on which to differentiate between classifi-
+ (QoS) schemes, and lawful interception (LI). cation techniques is predictive accuracy (i.e., how accurately
+ In responding to the network congestion problem, a com- the technique or model makes decisions when presented with
+ mon strategy for network providers is under-utilising (over- previously unseen data). A number of metrics exist with which
+ provisioning) the link capacity. However, this is not necessar- to express predictive accuracy.
+ ily an economic solution for most ISPs. On the other hand, 1) Positives, negatives, accuracy, precision and recall:
+ the development of other QoS solutions such as IntServ [8] Assume there is a traffic class X in which we are interested,
+ or DiffServ [9] has been stymied in part due to the lack mixed in with a broader set of IP traffic. A traffic classifier is
+ of QoS signaling and of an effective service pricing mech- being used to identify (classify) packets (or flows of packets)
+ anism (as suggested in [10] and [11]). Signaling allows the belonging to class X when presented with a mixture of
+ communication of specific QoS requirements between Internet previously unseen traffic. The classifier is presumed to give
+ applications and the network. A pricing mechanism is needed one of two outputs - a flow (or packet) is believed to be a
+ to differentiate customers with different needs and charge for member of class X, or it is not.
+ the QoS that they receive. It also acts as a cost recovery A common way to characterize a classifier’s accuracy is
+ mechanism and provides revenue generation for the ISPs to through metrics known as False Positives, False Negatives,
+ compensate for their efforts in providing QoS and managing True Positives and True Negatives. These metrics are defined
+ resource allocation. as follows:
+ All QoS schemes have some degree of IP traffic classifi- • False Negatives (FN): Percentage of members of class X
+ cation implicit in their design. DiffServ assumes that edge incorrectly classified as not belonging to class X.
+ routers can recognise and differentiate between aggregate • False Positives (FP): Percentage of members of other
+ classes of traffic in order to set the DiffServ code point (DSCP) classes incorrectly classified as belonging to class X.
+ on packets entering the network core. IntServ presumes that • True Positives (TP): Percentage of members of class X
+ routers along a path are able to differentiate between finely correctly classified as belonging to class X (equivalent to
+ grained traffic classes (and historically has presumed the use 100% - FN ).
+ of packet header inspection to achieve this goal). Traffic clas- • True Negatives (TN): Percentage of members of other
+ sification also has the potential to support class-based Internet classes correctly classified as not belonging to class X
+ QoS charging. Furthermore, real-time traffic classification is (equivalent to 100% - FP ).
+ the core component of emerging QoS-enabled products [12] Figure 1 illustrates the relationships between FN, FP, TP
+ and automated QoS architectures [4] [13]. and TN. A good traffic classifier aims to minimise the False
+ Traffic classification is also an important solution for the Negatives and False Positives.
+ emerging requirement that ISP networks have to provide LI Some works make use of Accuracy as an evaluation metric.
+ capabilities. Governments typically implement LI at various It is generally defined as the percentage of correctly classified
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 58 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ instances among the total number of instances. This definition sification), or the reconstruction of protocol signatures in its
+ is used throughout the paper unless otherwise stated. payload (payload based classification). Each approach suffers
+ ML literature often utilises two additional metrics known from a number of limitations.
+ as Recall and Precision. These metrics are defined as follows: 1) Port based IP traffic classification: TCP and UDP pro-
+ • Recall: Percentage of members of class X correctly vide for the multiplexing of multiple flows between common
+ classified as belonging to class X. IP endpoints through the use of port numbers. Historically
+ • Precision: Percentage of those instances that truly have many applications utilise a ‘well known’ port on their local
+ class X, among all those classified as class X. host as a rendezvous point to which other hosts may initiate
+ If all metrics are considered to range from 0 (bad) to 100% communication. A classifier sitting in the middle of a network
+ (optimal) it can be seen that Recall is equivalent to TP. need only look for TCP SYN packets (the first step in TCP’s
+ 2) Byte and Flow accuracy: When comparing literature on three-way handshake during session establishment) to know
+ different classification techniques it is also important to note the server side of a new client-server TCP connection. The
+ the unit of the author’s chosen metric. Recall, Precision, FN application is then inferred by looking up the TCP SYN
+ and FP may all be reported as percentages of bytes or flows packet’s target port number in the Internet Assigned Numbers
+ relative to the traffic being classified. An author’s choice here Authority (IANA)’s list of registered ports [17]. UDP uses
+ can significantly alter the meaning of their reported accuracy ports similarly (though without connection establishment nor
+ results. the maintenance of connection state).
+ Most recently published traffic classification studies have However, this approach has limitations. Firstly, some apfocused on flow accuracy - measuring the accuracy with which plications may not have their ports registered with IANA
+ flows are correctly classified, relative to the number of other (for example, peer to peer applications such as Napster and
+ flows in the author’s test and/or training dataset(s). However, Kazaa) [18]. An application may use ports other than its
+ some recent work has also chosen to express their accuracy well-known ports to avoid operating system access control
+ calculations in terms of byte accuracy - focusing more on how restrictions (for example, non-privileged users on unix-like
+ many bytes are carried by the packets of correctly classified systems may be forced to run HTTP servers on ports other
+ flows, relative to the total number of bytes in the author’s test than port 80.) Also, in some cases server ports are dynamically
+ and/or training dataset(s) (e.g. [14] [15]). allocated as needed. For example, the RealVideo streamer
+ Erman et al. in [16] argue that byte accuracy is crucial when allows the dynamic negotiation of the server port used for
+ evaluating the accuracy of traffic classification algorithms. the data transfer. This server port is negotiated on an initial
+ They note that the majority of flows on the Internet are small TCP connection, which is established using the well-known
+ and account for only a small portion of total bytes and packets RealVideo control port [19].
+ in the network (mice flows). On the other hand, the majority Moore and Papagiannaki [20] observed no better than 70%
+ of the traffic bytes are generated by a small number of large byte accuracy for port-based classification using the official
+ flows (elephant flows). They give an example from a 6-month IANA list. Madhukar and Williamson [21] showed that portdata trace where the top (largest) 1% of flows account for based analysis is unable to identify 30-70% of Internet traffic
+ over 73% of the traffic in terms of bytes. With a threshold flows they investigated. Sen et al. [7] reported that the default
+ to differentiate elephant and mice flows of 3.7MB, the top port accounted for only 30% of the total traffic (in bytes) for
+ 0.1% of flows would account for 46% of the traffic (in bytes). the Kazaa P2P protocol.
+ Presented with such a dataset, a classifier optimised to identify In some circumstances IP layer encryption may also obfusall but the top 0.1% of the flows could attain a 99.9% flow cate the TCP or UDP header, making it impossible to know
+ accuracy but still result in 46% of the bytes in the dataset to the actual port numbers.
+ be misclassified. 2) Payload based IP traffic classification: To avoid total
+ Whether flow accuracy or byte accuracy is more important reliance on the semantics of port numbers, many current
+ will generally depend on the classifier’s intended use. For industry products utilise stateful reconstruction of session and
+ example, when classifying traffic for IP QoS purposes it is application information from each packet’s content.
+ plausible that identifying every instance of a short lived flow Sen et al. [7] showed that payload based classification
+ needing QoS (such as a 5 minute, 32Kbit/sec phone calls) is as of P2P traffic (by examining the signatures of the traffic at
+ important as identifying long lived flows needing QoS (such the application level) could reduce false positives and false
+ as a 30 minute, 256Kbit/sec video conference) with both being negatives to 5% of total bytes for most P2P protocols studied.
+ far more important to correctly identify than the few flows that Moore and Papagiannaki [20] use a combination of port
+ represent multi-hour (and/or hundreds of megabytes) peer to and payload based techniques to identify network applications.
+ peer file sharing sessions. Conversely, an ISP doing analysis The classification procedure starts with the examination of a
+ of load patterns on their network may well be significantly flow’s port number. If no well-known port is used, the flow
+ interested in correctly classifying the applications driving the is passed through to the next stage. In the second stage, the
+ elephant flows that contribute a disproportionate number of first packet is examined to see whether it contains a known
+ packets across their network. signature. If one is not found, then the packet is examined to
+ see whether it contains a well-known protocol. If these tests
+ C. Limitations of packet inspection for traffic classification fail, the protocol signatures in the first KByte of the flow
+ Traditional IP traffic classification relies on the inspection are studied. Flows remaining unclassified after that stage will
+ of a packet’s TCP or UDP port numbers (port based clas- require inspection of the entire flow payload. Their results
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 59
+
+ show that port information by itself is capable of correctly search for and describe useful structural patterns in data.
+ classifying 69% of the total bytes. Including the information In 1992 Shi [27] noted ‘One of the defining features of
+ observed in the first KByte of each flow increases the accuracy intelligence is the ability to learn. [...]. Machine learning is
+ to almost 79%. Higher accuracy (upto nearly 100%) can only the study of making machines acquire new knowledge, new
+ be achieved by investigating the remaining unclassified flows’ skills, and reorganise existing knowledge.’ A learning machine
+ entire payload. has the ability to learn automatically from experience and
+ Although payload based inspection avoids reliance on fixed refine and improve its knowledge base. In 1983 Simon noted
+ port numbers, it imposes significant complexity and processing ‘Learning denotes changes in the system that are adaptive in
+ load on the traffic identification device. It must be kept up- the sense that they enable the system to do the same task or
+ to-date with extensive knowledge of application protocol se- tasks drawn from the same population more efficiently and
+ mantics, and must be powerful enough to perform concurrent more effectively the next time’ [28] and in 2000 Witten and
+ analysis of a potentially large number of flows. This approach Frank observed ‘Things learn when they change their behavior
+ can be difficult or impossible when dealing with proprietary in a way that makes them perform better in the future’ [29].
+ protocols or encrypted traffic. Furthermore direct analysis of ML has a wide range of applications, including search
+ session and application layer content may represent a breach of engines, medical diagnosis, text and handwriting recognition,
+ organisational privacy policies or violation of relevant privacy image screening, load forecasting, marketing and sales dilegislation. agnosis, and so on. A network traffic controller using ML
+ techniques was proposed in 1990, aiming to maximise call
+ D. Classification based on statistical traffic properties completion in a circuit-switched telecommunications network
+ [30]; this was one of the works that marked the point at
+ The preceding techniques are limited by their dependence which ML techniques expanded their application space into
+ on the inferred semantics of the information gathered through the telecommunications networking field. In 1994 ML was
+ deep inspection of packet content (payload and port numbers). first utilised for Internet flow classification in the context of
+ Newer approaches rely on traffic’s statistical characteristics intrusion detection [31]. It is the starting point for much of
+ to identify the application. An assumption underlying such the work using ML techniques in Internet traffic classification
+ methods is that traffic at the network layer has statistical that follows.
+ properties (such as the distribution of flow duration, flow idle
+ 1) Input and output of a ML process: Broadly speaking,
+ time, packet inter-arrival time and packet lengths) that are
+ ML is the process of finding and describing structural patterns
+ unique for certain classes of applications and enable different
+ in a supplied dataset.
+ source applications to be distinguished from each other.
+ ML takes input in the form of a dataset of instances (also
+ The relationship between the class of traffic and its observed
+ known as examples). An instance refers to an individual, indestatistical properties has been noted in [22] (where the authors
+ pendent example of the dataset. Each instance is characterised
+ analysed and constructed empirical models of connection
+ by the values of its features (also known as attributes or
+ characteristics - such as bytes, duration, arrival periodicity
+ discriminators) that measure different aspects of the instance.
+ - for a number of specific TCP applications), and in [23]
+ (In the networking field consecutive packets from the same
+ (where the authors analysed Internet chat systems by focusing
+ flow might form an instance, while the set of features might
+ on the characteristics of the traffic in terms of flow duration,
+ include median inter-packet arrival times or standard deviation
+ packet inter-arrival time and packet size and byte profile).
+ of packet lengths over a number of consecutive packets in
+ Later work (for example [24] [25] and [26]) also observed
+ a flow.) The dataset is ultimately presented as a matrix of
+ distinctive traffic characteristics, such as the distributions of
+ instances versus features [29].
+ packet lengths and packet inter-arrival times, for a number
+ The output is the description of the knowledge that has
+ of Internet applications. The results of these works have
+ been learnt. How the specific outcome of the learning process
+ stimulated new classification techniques based on traffic flow
+ is represented (the syntax and semantics) depends largely on
+ statistical properties. The need to deal with traffic patterns,
+ the particular ML approach being used.
+ large datasets and multi-dimensional spaces of flow and packet
+ attributes is one of the reasons for the introduction of ML 2) Different types of learning: Witten and Frank [29] define
+ techniques in this field. four basic types of learning:
+ • Classification (or supervised learning)
+ III. BACKGROUND ON M ACHINE L EARNING AND THE • Clustering (or unsupervised learning)
+ A PPLICATION OF M ACHINE L EARNING IN IP T RAFFIC • Association
+
+ C LASSIFICATION • Numeric prediction
+
+ This section summaries the basic concepts of Machine Classification learning involves a machine learning from a
+ Learning (ML) and outlines how ML can be applied to IP set of pre-classified (also called pre-labeled) examples, from
+ traffic classification. which it builds a set of classification rules (a model) to classify
+ unseen examples. Clustering is the grouping of instances that
+ have similar characteristics into clusters, without any prior
+ A. A review of classification with Machine Learning guidance. In association learning, any association between
+ ML has historically been known as a collection of powerful features is sought. In numeric prediction, the outcome to be
+ techniques for data mining and knowledge discovery, which predicted is not a discrete class but a numeric quantity.
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 60 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ Most ML techniques used for IP traffic classification focus a group with a certain probability. They may be hierarchical,
+ on the use of supervised and unsupervised learning. where there is a division of instances into groups at the top
+ 3) Supervised Learning: Supervised learning creates level, and then each of these groups is refined further - even
+ knowledge structures that support the task of classifying new down to the level of individual instances [29].
+ instances into pre-defined classes [32]. The learning machine There are three basic clustering methods: the classic kis provided with a collection of sample instances, pre-classified means algorithm, incremental clustering, and the probabilityinto classes. Output of the learning process is a classification based clustering method. The classic k-means algorithm forms
+ model that is constructed by examining and generalising from clusters in numeric domains, partitioning instances into disthe provided instances. joint clusters, while incremental clustering generates a hierar-
+ In effect, supervised learning focuses on modeling the chical grouping of instances. The probability-based methods
+ input/output relationships. Its goal is to identify a mapping assign instances to classes probabilistically, not deterministifrom input features to an output class. The knowledge learnt cally [29].
+ (e.g. commonalities among members of the same class and 5) Evaluating supervised learning algorithms: A good ML
+ differences between competing ones) can be presented as a classifier would optimise Recall and Precision. However, there
+ flowchart, a decision tree, classification rules, etc., that can be may be trade-offs between these metrics. To decide which
+ used later to classify a new unseen instance. one is more important or should be given higher priority one
+ There are two major phases (steps) in supervised learning: needs to take into account the cost of making wrong decisions
+ • Training: The learning phase that examines the provided or wrong classifications. The decision depends on a specific
+ data (called the training dataset) and constructs (builds) application context and ones commercial and/or operational
+ a classification model. priorities.
+ • Testing (also known as classifying): The model that has Various tools exist to support this trade-off process. The
+ been built in the training phase is used to classify new receiver operating characteristic (ROC) curve provides a way
+ unseen instances. to visualize the trade-offs between TP and FP by plotting
+ For example, let TS be a training dataset, that is a set of the number of TP as a function of the number of FP (both
+ input/output pairs, expressed as percentage of the total TP and FP respectively).
+ TS = {< x1 , y1 >, < x2 , y1 >, ..., < xN , yM >} It has been found useful in analysing how classifiers perform
+ where xi is the vector of values of the input features over a range of threshold settings [29]. Another is the Neymancorresponding to the ith instance, and yi is its output class Pearson criterion [34], which attempts to maximize TP given
+ value. (The name supervised learning comes from the fact a fixed threshold on FP [35].
+ that the output classes are pre-defined in the training dataset.) Most of IP classification work reviewed later in this survey
+ The goal of classification can be formulated as follows: From do not address the costs of trading between Recall and
+ a training dataset TS, find a function f(x) of the input features Precision.
+ that best predicts the outcome of the output class y for any A challenge when using supervised learning algorithms is
+ new unseen values of x. The output takes its value in a discrete that both the training and testing phases must be performed
+ set {y1 , y2 ,..., yM } that consists of all the pre-defined class using datasets that have been previously classified (labeled)
+ 1
+ values. The function f(x) is the core of the classification model. . Ideally one would have a large training set (for optimal
+ The model created during training is improved if we si- learning and creation of models) and a large, yet independent,
+ multaneously provide examples of instances that belong to testing dataset to properly assess the algorithm’s performance.
+ class(es) of interest and instances known to not be members (Testing on the training dataset is broadly misleading. Such
+ of the class(es) of interest. This will enhance the model’s later testing will usually only show that the constructed model
+ ability to identify instances belonging to class(es) of interest. is good at recognising the instances from which it was
+ There exist a number of supervised learning classification constructed.)
+ algorithms, each differing mainly in the way the classification In the real world we are often faced with a limited quantity
+ model is constructed and what optimization algorithm is used of pre-labeled datasets. A simple procedure (sometimes known
+ to search for a good model. (Examples include the supervised as holdout [29]) involves setting aside some part (e.g. two
+ Decision Tree and Naive Bayes classification algorithms [33] thirds) of the pre-labeled dataset for training and the rest (e.g.
+ [29].) one third) for testing.
+ 4) Clustering: Classification techniques use pre-defined In practice when only small or limited datasets are available
+ classes of training instances. In contrast, clustering methods a variant of holdout, called N-fold cross-validation, is most
+ are not provided with this guidance; instead, they discover nat- commonly used. The dataset is first split into N approximately
+ ural clusters (groups) in the data using internalised heuristics equal partitions (or folds). Each partition (1/N ) in turn is then
+ [33]. used for testing, while the remainder ((N − 1)/N ) are used
+ Clustering focuses on finding patterns in the input data. It for training. The procedure is repeated N times so that in the
+ clusters instances with similar properties (defined by a specific end, every instance has been used exactly once for testing. The
+ distance measuring approach, such as Euclidean space) into overall Recall and Precision are calculated from the average
+ groups. The groups that are so identified may be exclusive, so
+ 1 In this context ’labeling’ is the process of classifying the members of a
+ that any instance belongs in only one group; or they may be
+ dataset using manual (human) inspection or an irrefutable automated process.
+ overlapping, when one instance may fall into several groups; In contrast to a controlled training and testing environment, operational
+ they may also be probabilistic, that is an instance belongs to classifiers do not have access to previously labeled example flows.
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 61
+
+ of the Recalls and Precisions measured from all N tests. It has expensive, as the amount of information stored and processed
+ been claimed that N = 10 (tenfold cross-validation) provides rises with the dimensionality of a feature set used to describing
+ a good estimate of classification performance [29]. the data instances. Consequently it is desirable to select a
+ Simply partitioning the full dataset N ways does not guaran- subset of features that is small in size yet retains essential
+ tee that the same proportion is used for any given class within and useful information about the classes of interest.
+ the dataset. A further step, known as stratification, is usually Feature selection algorithms can be broadly classified into
+ applied - randomly sampling the dataset in such a way that filter method or wrapper method. Filter method algorithms
+ each class is properly represented in both training and testing make independent assessment based on general characteristics
+ datasets. When stratification is used in combination with cross- of the data. They rely on a certain metric to rate and select
+ validation, it is called stratified cross-validation. It is common the best subset before the learning commences. The results
+ to use stratified ten-fold cross-validation when only limited provided therefore should not be biased toward a particular
+ pre-labeled datasets are available. ML algorithm. Wrapper method algorithms, on the other hand,
+ 6) Evaluating unsupervised learning algorithms: While evaluate the performance of different subsets using the ML
+ Recall and Precision are common metrics to evaluate clas- algorithm that will ultimately be employed for learning. Its
+ sification algorithms, evaluating clustering algorithms is more results are therefore biased toward the ML algorithm used.
+ complicated. There are intermediate steps in evaluating the A number of subset search techniques can be used, e.g.
+ resulting clusters before labeling them or generating rules for Correlation-based Feature Selection (CFS) filter techniques
+ future classification. Given a dataset, a clustering algorithm with Greedy, Best-First or Genetic search. (Additional details
+ can always generate a division, with its own finding of can be found in [29] [40] [41] [42] [43].)
+ structure within the data. Different approaches can lead to
+ different clusters, and even for the same algorithm, different B. The application of ML in IP traffic classification
+ parameters or different order of input patterns might alter the
+ final results [36] [37]. A number of general ML concepts take a specific meaning
+ Therefore, it is important to have effective evaluation stan- when applied to IP traffic classification. For the purpose of
+ dards and criteria to provide the users with a certain level of subsequent discussion we define the following three terms
+ confidence in results generated by a particular algorithm, or relating to flows:
+ comparisons of different algorithms [38]. Criteria should help • Flow or Uni-directional flow: A series of packets sharing
+
+ to answer useful questions such as how many clusters are the same five-tuple: source and destination IP addresses,
+ hidden in the data, what are the optimal number of clusters source and destination IP ports and protocol number.
+ [37], whether the resulted clusters are meaningful or just an • Bi-directional flow: A bi-directional flow is a pair of uniartifact of the algorithms [38], how one algorithm performs directional flows going in the opposite directions between
+ compared to another: how easy they are to use, how fast it the same source and destination IP addresses and ports.
+ is to be employed [36], what is the intra-cluster quality, how • Full-flow: A bi-directional flow captured over its entire
+
+ good is inter-cluster separation, what is the cost of labeling the lifetime, from the establishment to the end of the comclusters and what are the requirements in terms of computer munication connection.
+ computation and storage. A class usually indicates IP traffic caused by (or belonging
+ Halkidi et al. [37] identify three approaches to investigate to) an application or group of applications. Instances are usucluster validity: external criteria, internal criteria and relative ally multiple packets belonging to the same flow. Features are
+ criteria. The first two approaches are based on statistical typically numerical attributes calculated over multiple packets
+ hypothesis testing. External criteria are based on some pre- belonging to individual flows. Examples include mean packet
+ specified structure, which is known as prior information on lengths, standard deviation of inter-packet arrival times, total
+ the data, and used as a standard to compare and validate flow lengths (in bytes and/or packets), Fourier transform of
+ the clustering results [38]. Internal criteria approach evaluates packet inter-arrival time, and so on. As previously noted not all
+ clustering result of an algorithm based on examining the features are equally useful, so practical ML classifiers choose
+ internal structure inherited from the dataset. Relative criteria the smallest set of features that lead to efficient differentiation
+ emphasises finding the best clustering scheme that a clustering between members of a class and other traffic outside the class.
+ algorithm can define under certain assumptions and parame- 1) Training and testing a supervised ML traffic classifier:
+ ters. The basic idea is to evaluate a clustering structure by Figures 2, 3 and 4 illustrate the steps involved in building a
+ comparing it to the ones using the same algorithm but with traffic classifier using a supervised learning (or supervised ML)
+ different parameter values [39]. (More details can be found in algorithm. In this example, the traffic classifier is intended to
+ [37] [38] [36] [29].) recognise a particular class of applications (real-time online
+ 7) Feature selection algorithms: Key to building a ML game traffic) in amongst the usual mix of traffic seen on an
+ classifier is identification of the smallest necessary set of IP network.
+ features required to achieve one’s accuracy goals - a process Figure 2 captures the overall training and testing process
+ known as feature selection. that results in a classification model. As noted earlier, the
+ The quality of the feature set is crucial to the performance optimal approach to training a supervised ML algorithm is
+ of a ML algorithm. Using irrelevant or redundant features to provide previously classified examples of two types of IP
+ often leads to negative impacts on the accuracy of most ML traffic: traffic matching the class of traffic that one wishes later
+ algorithms. It can also make the system more computationally to identify in the network (in this case online game traffic),
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 62 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ Fig. 2. Training and testing for a two-class supervised ML traffic classifier
+
+ Fig. 4. Data flow within an operational supervised ML traffic classifier
+
+ contain a mix of traffic collected at different times and
+ measurement points, or use entirely independently collected
+ training and testing datasets.)
+ Figure 4 illustrates data flow within an operational traffic
+ classifier using the model built in Figure 3. Traffic captured
+ in real-time is used to construct flow statistics from which
+ features are determined and then fed into the classification
+ model. (Here we presume that the set of features calculated
+ from captured traffic is limited to the optimal feature set
+ Fig. 3. Training the supervised ML traffic classifier
+ determined during training.) The classifier’s output indicates
+ which flows are deemed to be members of the class of
+ interest (as defined by the model). Certain implementations
+ and representative traffic of entirely different applications one may optionally allow the model to be updated in real-time
+ would expect to see in future (often referred to as interfering (performing a similar data sampling and training process to
+ traffic). that shown in Figure 3). (For controlled testing and evaluation
+ Figure 3 expands on the sequence of events involved in purposes offline traffic traces can be used instead of live traffic
+ training a supervised ML traffic classifier. First a mix of ‘traffic capture.)
+ traces’ are collected that contain both instances of the applica- 2) Supervised versus unsupervised learning: As previously
+ tion of interest (e.g. online game traffic) and instances of other noted, IP traffic classification is usually about identifying trafinterfering applications (such as HTTP, DNS, SSH and/or fic belonging to known applications (classes of interest) within
+ peer2peer file sharing). The ‘flow statistics processing’ step previously unseen streams of IP packets. The key challenge is
+ involves calculating the statistical properties of these flows to determine the relationship(s) between classes of IP traffic
+ (such as mean packet inter-arrival time, median packet length (as differentiated by ML features) and the applications causing
+ and/or flow duration) as a prelude to generating features. the IP traffic.
+ An optional next step is ‘data sampling’, designed to narrow Supervised ML schemes require a training phase to cement
+ down the search space for the ML algorithm when faced with the link between classes and applications. Training requires
+ extremely large training datasets (traffic traces). The sampling a-priori classification (or labeling) of the flows within the
+ step extracts statistics from a subset of instances of various training datasets. For this reason, supervised ML may be
+ application classes, and passes these along to the classifier to attractive for the identification of a particular (or groups of)
+ be used in the training process. application(s) of interest. However, as noted in section III-A3,
+ As noted in section III-A7, a feature filtering/selection step the supervised ML classifier works best when trained on
+ is desirable to limit the number of features actually used examples of all the classes it expects to see in practice.
+ to train the supervised ML classifier and thus create the Consequently, its performance may be degraded or skewed
+ classification model. The output of Figure 3 is a classification if not trained on a representative mix of traffic or the network
+ model. link(s) being monitored start seeing traffic of previously un-
+ Cross-validation (or stratified cross-validation) may be used known applications. (For example, Park et al. [44] showed that
+ to generate accuracy evaluation results during the training accuracy is sensitive to site-dependent training datasets, while
+ phase. However, if the source dataset consists of IP packets Erman et al. [45] showed different accuracy results between
+ collected at the same time and the same network measurement the two data traces studied for the same ML algorithms.)
+ point, the cross-validation results are likely to over-estimate When evaluating supervised ML schemes in an operational
+ the classifier’s accuracy. (Ideally the source dataset would context it is worthwhile considering how the classifier will be
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 63
+
+ supplied with adequate supervised training examples, when it form continuous classification - recomputing its classification
+ will be necessary to re-train, and how the user will detect a decision throughout the lifetime of every flow.
+ new type of applications. Timely and continuous ML classification must also address
+ It might appear that one advantage of unsupervised ML the fact that many applications change their statistical properschemes is the automatic discovery of classes through the ties over time, yet a flow should ideally be correctly classified
+ recognition of ‘natural’ patterns (clusters) in the dataset. as being the same application throughout the flow’s lifetime.
+ However, resulting clusters still need to be labeled (for ex- 2) Directional neutrality: Application flows are often asample, through direct inspection by a human expert) in order sumed to be bi-directional, and the application’s statistical
+ that new instances may be properly mapped to applications. features are calculated separately in the forward and reverse
+ (A related benefit is that traffic from previously unknown directions. Many applications (such as multiplayer online
+ applications may be detected by noting when new clusters games or streaming media) exhibit different (asymmetric)
+ emerge - sometimes the emergence of new application flows statistical properties in the client-to-server and server-to-client
+ is noteworthy even before the actual identity of the application directions. Consequently, the classifier must either ‘know’ the
+ has been determined.) direction of a previously unseen flow (for example, which
+ Another issue for unsupervised ML schemes is that clusters end is the server and which is the client) or be trained to
+ do not necessarily map 1:1 to applications. It would be ideal recognise an application of interest without relying on external
+ if the number of clusters formed is equal to the number indications of directionality.
+ of application classes to be identified, and each application Inferring the server and client ends of a flow is fraught
+ dominated one cluster group. However, in practice, the number with practical difficulties. As a real-world classifier should
+ of clusters is often greater than the number of application not presume that it has seen the first packet of every flow
+ classes [46] [47]. One application might spread over and currently being evaluated, it cannot be sure whether the first
+ dominate a number of clusters, or conversely an application packet it sees (of any new bi-directional flow of packets) is
+ might also spread over but not dominate any of the clusters. heading in the ‘forward’ or ‘reverse’ direction. Furthermore,
+ Mapping back from a cluster to a source application can the semantics of the TCP or UDP port fields should be
+ become a great challenge. considered unreliable (either due to encryption obscuring the
+ When evaluating unsupervised ML schemes in an opera- real value, or the application using unpredictable ports), so
+ tional context it is worthwhile considering how clusters will it becomes difficult to justify using ‘well known’ server-side
+ be labeled (mapped to specific applications), how labels will port numbers to infer a flow’s direction.
+ be updated as new applications are detected, and the optimal 3) Efficient use of memory and processors: Another imnumber of clusters (balancing accuracy, cost of labeling and portant criteria for operational deployment is the classification
+ label lookup, and computational complexity). system’s use of computational resources (such as CPU time
+ and memory consumption). The classifier’s efficiency impacts
+ on the financial cost to build, purchase and operate large scale
+ C. Challenges for operational deployment traffic classification systems. An inefficient classifier may be
+ Section II-A noted some important IP traffic classification inappropriate for operational use regardless of how quickly it
+ scenarios where classification must normally occur as the traf- can be trained and how accurately it identifies flows.
+ fic is flowing (or within some fairly short period of time after Minimising CPU cycles and memory consumption is advanthe traffic occurred). This creates some particular requirements tageous whether the classifier is expected to sit in the middle
+ for timely classification as traffic is in transit across a network. of an ISP network (where a small number of large, powerful
+ 1) Timely and continuous classification: A timely classifier devices may see hundreds of thousands of concurrent flows at
+ should reach its decision using as few packets as possible multi-gigabit rates) or out toward the edges (where the traffic
+ from each flow (rather than waiting until each flow completes load is substantially smaller, but the CPU power and memory
+ before reaching a decision). Reducing the number of packets resources of individual devices are also diminished).
+ required for classification also reduces the memory required to 4) Portability and Robustness: A model may be considered
+ buffer packets during feature calculations. This is an important portable if it can be used in a variety of network locations, and
+ consideration for situations where the classifier is calculating robust if it provides consistent accuracy in the face of network
+ features for (tens of) thousands of concurrent flows. Depend- layer perturbations such as packet loss, traffic shaping, packet
+ ing on the business reason for performing classification, it fragmentation, and jitter. A classifier also is robust if it can
+ may be unacceptable to sample the available flows in order efficiently identify the emergence of new traffic applications.
+ to reduce the memory consumption. Instead, one aims to use
+ less packets from each flow. IV. A R EVIEW OF M ACHINE L EARNING BASED IP
+ However, it is not sufficient to simply classify basing on T RAFFIC C LASSIFICATION T ECHNIQUES
+ the first few packets of a flow. For example, malicious attacks In this section we create four broad categories to review sigmight disguise themselves with the statistical properties of nificant works published on ML-based IP traffic classification
+ a trusted application early in their flow’s lifetime. Or the to date in:
+ classifier itself might have been started (or restarted) whilst • Clustering Approaches: Works whose main approach
+ hundreds or thousands of flows were already active through a centers around unsupervised learning techniques.
+ network monitoring point (thereby missing the starts of these • Supervised Learning Approaches: Works whose main
+ active flows). Consequently the classifier should ideally per- approach centers around supervised learning techniques.
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 64 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ Hybrid Approaches: Works whose approach combine
+ • and classification are exported for evaluation. The approach
+ supervised and unsupervised learning techniques. is evaluated based on random samples of flows obtained
+ • Comparisons and Related Work: Works that compare and from three 24-hour traffic traces (Auckland-VI, NZIX-II and
+ contrast different ML algorithms, or consider non-ML Leipzig-II traces from NLANR [52]).
+ approaches that could be considered in conjunction with Taking a further step from [48], the work proposed a method
+ ML approaches. for cluster evaluation. A metric called intra-class homogeneity,
+ The key points of each work are discussed in the following H, for assessing the quality of the resulting classes and
+ subsections and summarised in Table I, II and III. classification is introduced. H of a class is defined as the
+ largest fraction of flows on one application in the class. The
+ overall homogeneity H of a set of classes is the mean of the
+ A. Clustering Approaches class homogeneities. The goal is to maximise H to achieve a
+ 1) Flow clustering using Expectation Maximization: In good separation between different applications.
+ 2004 McGregor et al. [48] published one of the earliest The results have shown that some separation between the
+ work that applied ML in IP traffic classification using the different applications can be achieved, especially for certain
+ Expectation Maximization algorithm [49]. The approach particular applications (such as Half-Life online game traffic)
+ clusters traffic with similar observable properties into different in comparison with the others. With different sets of features
+ application types. used, the authors show that H increases with the increase in
+ The work studies HTTP, FTP, SMTP, IMAP, NTP and DNS number of features used. H reaches a maximum value of
+ traffic. Packets in a 6-hour Auckland-VI trace are divided between 85% and 89%, depending on the trace. However,
+ into bi-directional flows. Flow features (listed in Table I) are the work has not addressed the trade-offs between number
+ calculated on a full-flow basis. Flows are not timed out, except of features used and their consequences of computational
+ when they exceed the length of the traffic trace. overhead.
+ Based on these features, the EM algorithm is used to group To compute the accuracy for each application the authors
+ the traffic flows into a small number of clusters and then map each class to the application that is dominating the class
+ create classification rules from the clusters. From these rules, (by having the largest fraction of flows in that class). The
+ features that do not have a large impact on the classification are authors used accuracy (Recall) as an evaluation metric. Median
+ identified and removed from the input to the learning machine accuracy is ≥ 80% for all applications across all traces.
+ and the process is repeated. The work’s implementation of However, there are some exceptional cases, for example, for
+ EM has an option to allow the number of clusters to be found the Napster application there is one trace where it is not
+ automatically via cross-validation. The resulting estimation of dominating any of the classes (hence the accuracy is 0%).
+ performance was used to select the best competing model The results also show that FTP, Web and Telnet seem to have
+ (hence the number of clusters). the most diverse traffic characteristics and are spread across
+ The algorithm was found to separate traffic into a number of many classes.
+ classes based on traffic type (bulk transfer, small transactions, In general, although the mapping of class to application
+ multiple transactions etc.). However, current results are limited shows promising results in separating the different appliin identifying individual applications of interest. Nonetheless, cations, the number of classes resulted from the clustering
+ it may be suitable to apply this approach as the first step of algorithm is high (approximately 50 classes for 8 selected
+ classification where the traffic is completely unknown, and applications). For class and application mapping, it is a
+ possibly gives a hint on the group of applications that have challenge to identify applications that do not dominate any
+ similar traffic characteristics. of the classes.
+ 2) Automated application identification using AutoClass: 3) TCP-based application identification using Simple K-
+ The work of Zander et al. [46], proposed in 2005, uses Means: In 2006 Bernaille et al. [53] proposed a technique
+ AutoClass [50], which is an unsupervised Bayesian classifier, using an unsupervised ML (Simple K-Means) algorithm that
+ using the EM algorithm to determine the best clusters set from classified different types of TCP-based applications using the
+ the training data. EM is guaranteed to converge to a local first few packets of the traffic flow.
+ maximum. To find the global maximum, autoclass repeats EM In contrast to the previously published work, the method
+ searches starting from pseudo-random points in the parameter proposed in this paper allowed early detection of traffic flow
+ space. The model with the parameter set having the highest by looking at only the first few packets of a TCP flow.
+ probability is considered the best. The intuition behind the method is that the first few packets
+ Autoclass can be preconfigured with the number of classes capture the application’s negotiation phase, which is usually
+ (if known) or it can try to estimate the number of classes itself. a pre-defined sequence of messages and is distinct among
+ Firstly packets are classified into bi-directional flows and flow applications.
+ characteristics are computed using NetMate [51]. A number of The training phase is performed offline. The input is a onefeatures are calculated for each flow, in each direction (listed hour packet trace of TCP flows from a mix of applications.
+ in Table I). Feature values are calculated on a full-flow basis. Flows are grouped into clusters based on the values of their
+ A flow timeout of 60 seconds is used. first P packets. Flows are represented by points in a P-
+ Sampling is used to select a subset of the flow data for dimensional space, where each packet is associated with a
+ the learning process. Once the classes (clusters) have been dimension; the coordinate on dimension p is the size of packet
+ learnt, new flows are classified. The results of the learning p in the flow. Bi-directional flows are used. Packets sent by the
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 65
+
+ TCP-server are distinguished from packets sent by the TCP- and a cluster is mapped back to a traffic class that makes
+ client by having a negative coordinate. up the majority of flows in that cluster. An unseen flow will
+ Similarity between flows is measured by the Euclidean be mapped to the nearest cluster based on its distance to the
+ distance between their associated spatial representations. After clusters’ centroids.
+ natural clusters are formed, the modeling step defines a rule The approach is evaluated with flow accuracy and byte
+ to assign a new flow to a cluster. (The number of clusters accuracy as performance metrics. Three datasets are considwas chosen by trial with different number of clusters for ered: data sets containing only client-to-server packets, data
+ the K-means algorithm). The classification rule is simple: sets containing only server-to-client packet, and data sets
+ the Euclidean distance between the new flow and the centre containing a random mixture of each direction. K-Means
+ of each pre-defined cluster is computed, and the new flow algorithm requires the number of clusters as an input, it has
+ belongs to the cluster for which the distance is a minimum. been shown that both flow and byte accuracies improved as k
+ The training set also consists of payload, so that flows in increased from 25 to 400. Overall, the server-to-client data sets
+ each cluster can be labeled with its source application. The consistently give the best accuracy (95% and 79% in terms of
+ learning output consists of two sets: one with the description flows and bytes respectively). With the random data sets, the
+ of each cluster (the centre of the cluster) and the other with the average flow and byte accuracy is 91% and 67% respectively.
+ composition of its applications. Both sets are used to classify For the client-to-server data sets, 94% of the flows and 57%
+ flows online. of the bytes are correctly classified.
+ In the classification phase, packets are formed into a bi- The algorithm to estimate the missing flow statistics is based
+ directional flow. The sizes of the first P packets of the on the syntax and semantics of the TCP protocol. So it only
+ connection are captured and used to map the new flow to works with TCP, not other transport protocol traffic. The flow
+ a spatial representation. After the cluster is defined, the flow statistics are divided into three general categories: duration,
+ is associated with the application that is the most prevalent in number of bytes, and number of packets. The flow duration in
+ the cluster. the missing direction is estimated as the duration calculated
+ The results show that more than 80% of total flows are with the first and the last packet seen in the observed direccorrectly identified for a number of applications by using the tion. The number of bytes transmitted is estimated according
+ first five packets of each TCP flow. One exceptional case is to information contained in ACKs packets. The number of
+ the POP3 application. The classifier labels 86% of POP3 flows packets sent is estimated with the tracking of the last sequence
+ as NNTP and 12.6% as SMTP, because POP3 flows always number and acknowledgement number seen in the flow, with
+ belong to clusters where POP3 is not the dominant application. regards to the MSS. A number of assumptions have been
+ The results of this work are inspiring for early detection made. For example, MSS is used as a common value of
+ of the traffic flow. However, it assumes that the classifier can 1460 bytes, simple acknowledgment strategy of an ACK (40-
+ always capture the start of each flow. The effectiveness of the byte data header with no payload) for every data packet, and
+ approach when the classifier misses the first few packets of the assuming that no packet loss and retransmission occurred. An
+ traffic flow has not been discussed or addressed. Also, with the evaluation of the estimation algorithm is reported, the results
+ use of unsupervised algorithm and its classification technique, were promising for flow duration and bytes estimation, with
+ the proposal faces the challenge of classifying an application relatively larger error range for number of packets estimation.
+ when it does not dominate any of the clusters found. The work addressed an interesting issue of the possibility
+ 4) Identifying Web and P2P traffic in the network core: of using uni-directional flow statistics for traffic classification
+ The work of Erman et al. [47] in early 2007 addressed the and proposed a method to estimate the missing statistics. A
+ challenge of traffic classification at the core of the network, related issue of directionality in the use of bi-directional traffic
+ where the available information about the flows and their flows was addressed in the work of [54].
+ contributors might be limited. The work proposed to classify
+ a flow using only uni-directional flow information. While B. Supervised Learning Approaches
+ showing that for a TCP connection, server-to-client direction 1) Statistical signature-based approach using NN, LDA and
+ might provide more useful statistics and better accuracy than QDA algorithms: In 2004 Roughan et al. [18] proposed to
+ the reverse direction, it may not always be feasible to obtain use the nearest neighbours (NN), linear discriminate analysis
+ traffic in this direction. They also developed and evaluated an (LDA) and Quadratic Discriminant Analysis (QDA) ML algoalgorithm that could estimate missing statistics from a uni- rithms to map different network applications to predetermined
+ directional packet trace. QoS traffic classes.
+ The approach proposed makes use of clustering machine The authors list a number of possible features, and classify
+ learning techniques with a demonstration of using the K- them into five categories:
+ Means algorithm. Similar to other clustering approaches, Eu- • Packet Level: e.g. packet length (mean and variance, root
+ clidean distance is used to measure the similarity between two mean square)
+ flow vectors. • Flow Level: flow duration, data volume per flow, number
+ Uni-directional traffic flows are described by a full-flow of packets per flow (all with mean and variance values)
+ based features set (listed in Table II). Possible traffic classes etc. Uni-directional flow is used.
+ include Web, P2P, FTP... For the training phase, it is assumed • Connection Level: e.g. advertised TCP window sizes,
+ that labels for all training flows are available (manually throughput distribution and the symmetry of the connecclassified based on payload content and protocol signatures), tion.
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 66 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ •Intra-flow/connection features: e.g. packet inter-arrival technique. Bayesian trained neural network approach is able
+ times between packets in flows. to classify flows with up to 99% accuracy for data trained and
+ • Multi-flow: e.g. multiple concurrent connections between tested on the same day, and 95% accuracy for data trained
+ the same set of end-systems. and tested eight months apart. The paper also presents a
+ Of the features considered, the pair of most value were the list of features with their descriptions and ranking in their
+ average packet length and flow duration. These features are importance.
+ computed per full-flow, then per aggregate of flows within 24- 3) Real-time traffic classification using Multiple Sub-Flows
+ hour periods (an aggregate is a collection of statistics indexed features: As noted in section III-C timely and continuous
+ by server port and server IP address). classification is an important constraint for the practical em-
+ Three cases of classification are considered. The three-class ployment of a traffic classifier. In 2006 Nguyen and Armitage
+ classification looks at three types of application: Bulk data [56] proposed a method to address the issue by proposing
+ (FTP-data), Interactive (Telnet), and Streaming (RealMedia); classification based on only the most recent N packets of a
+ the four-class classification looks at four types of applica- flow - called a classification sliding window. The use of a small
+ tions: Interactive (Telnet), Bulk data (FTP-data), Streaming number of packets for classification ensures the timeliness
+ (RealMedia) and Transactional (DNS); and the seven-class of classification and reduces the buffer space required to
+ classification looks at seven applications: DNS, FTP-data, store packets’ information for the classification process. The
+ HTTPS, Kazaa, RealMedia, Telnet and WWW. approach does not require the classifier to capture the start of
+ The classification process is evaluated using 10-times cross each traffic flow (as required in [53] and [57]). This approach
+ validation. The classification error rates are shown to vary allows classification to be initiated at any point in time when
+ based on the number of classes it tried to identify. The three- traffic flows are already in progress. It offers a potential of
+ class classification has the lowest error rate, varying from monitoring traffic flow during its lifetime in a timely manner
+ 2.5% to 3.4% for different algorithms, while the four-class with the constraints of physical resources.
+ classification had the error rate in the range of 5.1% to 7.9%, The work proposes training ML classifiers on multiple suband the seven-class one had the highest error rate of 9.4% to flows features. First, extract two or more sub-flows (of N
+ 12.6%. packets) from every flow that represents the class of traffic one
+ 2) Classification using Bayesian analysis techniques: In wishes to identify in the future. Each sub-flow should be taken
+ 2005 Moore and Zuev [14] proposed to apply the supervised from places in the original flow having noticeably different
+ ML Naive Bayes technique to categorise Internet traffic by statistical properties (for example, the start and middle of the
+ application. Traffic flows in the dataset used are manually clas- flow). Each sub-flow would result in a set of instances with
+ sified (based upon flow content) allowing accurate evaluation. feature values derived from its N packets. Then train the ML
+ 248 full-flow based features were used to train the classifier classifier with the combination of these sub-flows rather than
+ (a summary is listed in Table I). Selected traffic for Internet the original full flows.
+ applications was grouped into different categories for clas- This optimisation is demonstrated using the Naive Bayes
+ sification, e.g. bulk data transfer, database, interactive, mail, algorithm. Bi-directional flows were used. Different training
+ services, www, p2p, attack, games and multimedia. and testing datasets were constructed from the two separate
+ To evaluate the classifier’s performance, the authors used month-long traces collected during May and September 2005
+ Accuracy and Trust (equivalent to Recall) as evaluation met- at a public online game server in Australia and two 24-hour
+ rics. The results showed that with the simple Naive Bayes periods collected by the University of Twente, Netherland
+ technique, using the whole population of flow features, ap- [58]. With the feature set used (listed in Table I), classifier
+ proximately 65% flow accuracy could be achieved in classifi- built based on full-flow features is demonstrated to perform
+ cation. Two refinements for the classifier were performed, with poorly when the classifier missed the start of a traffic flow.
+ the use of Naive Bayes Kernel Estimation (NBKE) and Fast However, with the application of the proposed method, results
+ Correlation-Based Filter (FCBF) methods 2 . These refinements show the classifier maintains more than 95% Recall and 98%
+ helped to reduce the feature space and improved the classifier Precision (flow accuracy) even when classification is initiated
+ performance to a flow accuracy better than 95% overall. With mid-way through a flow using only a total of 25 packets in
+ the best combination technique, the Trust value for individual both directions.
+ class of application ranged, for instance, from 98% for www, However, the work has only been demonstrated with an
+ to 90% for bulk data transfer, to approximately 44% for example of identifying an online game application (UDPservices traffic and 55% for P2P. based First Person Shooter game - Enemy Territory [59]).
+ The work is extended with the application of Bayesian Interference traffic included a range of other Internet applineural network approach in [55]. It has been demonstrated cations (Web, DNS, NTP, SMTP, SSH, Telnet, P2P ...). The
+ that accuracy is further improved compare to Naive Bayes authors also suggested the potential benefits of using clustering
+ algorithms in automating the sub-flows selection process.
+ 2 The NBKE method is a generalisation of Naive Bayes. It addresses the
+ 4) Real-time traffic classification using Multiple Synthetic
+ problem of approximating every feature by a normal distribution. Instead
+ of using a normal distribution with parameters estimated from the data, it Sub-Flows Pairs: As noted in section III-C directional neuuses kernel estimation methods. FCBF is a feature selection and redundancy trality an important constraint for the practical employment of
+ reduction technique. In FCBF, goodness of a feature is measured by its a traffic classifier. In 2006 Nguyen and Armitage [54] further
+ correlation with the class and other good features. That feature becomes good
+ if it is highly correlated with the class, yet is not correlated with any other extended their work in [56] to overcome this problem. The
+ good features [14] authors propose training the ML classifier using statistical
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 67
+
+ features calculated over multiple short sub-flows extracted Their results show flow accuracy of more than 91% for
+ from full-flow generated by the target application and their classifying three applications: HTTP, SMTP and POP3, using
+ mirror-imaged replicas as if the flow is in the reverse direction. the first few packets of each application’s traffic flow.
+ The optimisation is demonstrated when applied to the Naive In a similar way to the work of Bernaille et al. [53]
+ Bayes and Decision Tree algorithms with an example of iden- reviewed above, this approach demonstrates advanced results
+ tifying a UDP-based First Person Shooter game - Enemy Ter- for timeliness of the classification. However, it has the same
+ ritory [59] traffic. Using the same datasets as specified in [56] limitation in assuming that the classifier can always capture the
+ they demonstrate that both classifiers perform poorly when start of each flow, and is aware of the locations of client and
+ the classifiers are trained with bi-directional flow features that server (for constructing the PDF of client-server and servermake assumptions about the forward and backward direction. client directions). The effectiveness of the approach when
+ However, training on Synthetic Sub-Flows Pairs results in the classifier misses the first few packets of the traffic flow
+ significant improvement to classification performance (with (assumed to carry the protocol fingerprint), or suffers from
+ up to 99% Recall and 98% Precision (flow accuracy) for the packet loss and packet re-ordering has not been addressed.
+ example application) even when classification is initiated midway through a flow, without prior knowledge of the flow’s
+ C. Hybrid Approaches
+ direction and using windows as small as 25 packets long.
+ 5) GA-based classification techniques: In 2006 Park et al. Erman et al. in [62] in early 2007 proposed a semi-
+ [60] made use of feature selection technique based on Genetic supervised traffic classification approach which combines un-
+ Algorithm (GA). Using the same feature set specified in [44] supervised and supervised methods. Motivations to the pro-
+ (listed in II), three classifiers were tested and compared: the posal are due to two main reasons: Firstly labeled examples
+ Naive Bayesian classifier with Kernel Estimation (NBKE), are scarce and difficult to obtain, while supervised learning
+ Decision Tree J48 and the Reduced Error Pruning Tree methods do not generalise well when being trained with
+ (REPTree) classifier. Their results suggest two decision tree few examples in the dataset. Secondly, new applications may
+ classifiers provide more accurate classification results than the appear over time, and not all of them are known as a priori,
+ NBKE classifier. The work also suggests the impact of using traditional supervised methods map unseen flow instances into
+ training and testing data from different measurement points. one of the known classes, without the ability to detect new
+ Early flow classification is also briefly mentioned. Accuracy types of flows [62].
+ as a function of the number of packets used for classification is To overcome the challenges, the proposed classification
+ presented for J48 and REPTree classifiers. The first 10 packets method consists of two steps. First, a training dataset consistused for classification seems to provide the most accurate ing of labeled flows combined with unlabeled flows are fed
+ result. However, the accuracy result is provided as overall into a clustering algorithm. Second, the available labeled flows
+ result. It is not clear how it would be different for different are used to obtain a mapping from the clusters to the different
+ types of Internet applications. known classes. This steps allows some clusters to be remained.
+ 6) Simple statistical protocol fingerprint method: Crotti et To map a cluster with labeled flows back to an application
+ al. [61] in early 2007 proposed a flow classification mechanism type, a probabilistic assignment is used. The probability is
+ n
+ based on three properties of the captured IP packets: packet estimated by the maximum likelihood estimate, njk k
+ where
+ length, inter-arrival time and packet arrival order. They defined njk is the number of flows that were assigned to cluster k
+ a structure called protocol fingerprints which express the three with label j, and nk is the total number of labeled flows that
+ traffic properties in a compact way and used an algorithm were assigned to cluster k. Clusters without any labeled flows
+ based on normalised thresholds for flow classification. assigned to them are labeled ‘Unknown’ as application type.
+ There are two phases in the classification process: training Finally a new unseen flow will be assigned to the nearest
+ and classifying. In the training phase, pre-labeled flows from cluster with the distance metric chosen in the clustering step.
+ the application to be classified (the training dataset) are anal- This new proposed approach has promising results. Prelimysed to build the protocol fingerprints. A protocol fingerprint inary results have been shown in [62] with the employment of
+ is a PDF vector, estimated from a set of flows of the same K-Means clustering algorithm. The classifier is provided with
+ protocol from the training dataset. The PDFi is built on all the 64,000 unlabeled flows. Once the flows are clustered, a fixed
+ ith pairs of Pi (Pi = {si , Δti }) where si represents the size number of random flows in each cluster are labeled. Results
+ of packet i and Δti represents the inter-arrival time between show that with two labeled flows per cluster and K = 400,
+ packet i and packet (i-1). In order to classify an unknown the approach results in 94% flow accuracy. The increase in
+ traffic flow given a set of different PDFs, the authors check classification accuracy is marginal when five or more flows
+ whether the behaviour of the flow is statistically compatible are labeled per cluster. More details results can be found in
+ with the description given by at least one of the PDFs, and [63].
+ choose which PDF describes it better. An anomaly score As claimed by the authors [63] the proposal has advantages
+ that gives a value between 0 and 1 is used to indicate how in terms of faster training time with small number of labeled
+ ‘statistically distant’ an unknown flow is from a given protocol flows mixed with a large number of unlabeled flows, being
+ PDF. It shows the correlation between the unknown flow’s able to handle previously unseen applications and the variation
+ ith packet and the application layer protocol described by of existing application’s characteristics, and the possibility of
+ the specific PDF used; the higher the value, the higher the enhancing the classifier’s performance by adding unlabeled
+ probability that the flow was generated by that protocol. flows for iterative classifier training. However, an evaluation
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 68 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ of these advantages has not been demonstrated in the current are tied, then a label is chosen randomly amongst the tied
+ paper. category labels. A new flow is then classified with the traffic
+ class label of the cluster it is most similar to [64].
+ The evaluation was performed on two 72-hour data traces
+ D. Comparisons and Related Work provided by the University of Auckland (NLANR). A connection is defined as a bi-directional flow. The feature set is
+ 1) Comparison of different clustering algorithms: In 2006 shown in Table III.
+ Erman et al. [45] compared three unsupervised clustering algo- The paper shows that with the dataset used and nine
+ rithms: K-Means, DBSCAN and AutoClass. The comparison application classes (HTTP, SMTP, DNS, SOCKS, IRC, FTP
+ is performed on two empirical data traces: one public trace control, FTP data, POP3 and LIMEWIRE), AutoClass has an
+ from the University of Auckland and one self-collected trace average overall accuracy of 91.2% whereas the Naive Bayes
+ from the University of Calgary. classifier has an overal accuracy of 82.5%. AutoClass also
+ The effectiveness of each algorithm is evaluated using over- performs better in terms of precision and recall for individual
+ all accuracy and the number of clusters it produces. Overall traffic classes. On average, for Naive Bayes, the precision and
+ accuracy measurement determines how well the clustering recall for six out of nine classes were above 80%; whereas
+ algorithm is able to create clusters that contain only a single for AutoClass, all classes have precision and recall values
+ traffic category. A cluster is labeled by the traffic class that above 80%, six out of the nine classes have average precision
+ makes up the majority of its total connections (bi-directional values above 90%, and seven have average recall values above
+ traffic flows). Any connection that has not been assigned 90%. However, in terms of time taken to build classification
+ to a cluster is labeled as noise. Then overall accuracy is model, AutoClass takes much longer time than Naive Bayes
+ determined by the portion of the total TP for all clusters out algorithm (2070 seconds vs. 0.06 seconds for the algorithm
+ of total number of connections to be classified. Like any other implementation, data and equipment used).
+ clustering algorithms, the number of clusters produced by a The conclusion that the unsupervised AutoClass outperclustering algorithm is an important evaluation factor as it forms the supervised Naive Bayes in terms of overall accuracy
+ affects the performance of the algorithm in classification stage. might be counterintuitive to some readers on the surface.
+ Their results show that the AutoClass algorithm produces While the testing methodology of the paper is sound, the
+ the best overall accuracy. On average, AutoClass is 92.4% results might be impacted by the size of the training data
+ and 88.7% accurate in the Auckland and Calgary datasets sets (the current work uses 1000 samples per application), the
+ respectively. It produces on average of 167 clusters for the specific dataset used, how the Naive Bayes classifier is being
+ Auckland dataset (for less than 10 groups of applications) trained (single application classification at a time, or multiple
+ and 247 clusters for the Calgary dataset (for 4 groups of applications classification at a time), and the specific feature
+ applications). For K-Means, the number of clusters can be set used.
+ set, the overall accuracy steadily improves as the number of An issue of clustering approaches is the real-time classificaclusters (K) increases. When K is around 100, overall accuracy tion speed, as the number of clusters resulted from the training
+ is 79% and 84% on average for the Auckland and Calgary phase is typically larger than the number of application classes.
+ datasets respectively. Accuracy is improved only slightly with However, this has not been evaluated in the paper.
+ greater value of K. DBSCAN algorithm produces lower overall 3) Comparison of different supervised ML algorithms:
+ accuracy (upto 75.6% for the Auckland and 72% for the Williams et al. [65] provides insights into the performance
+ Calgary data sets ); however, it places the majority of the aspect of ML traffic classification. The works look at a number
+ connections in a small subset of the clusters. Looking at the of supervised ML algorithms: Naive Bayes with Discretisation
+ accuracy for particular traffic class categories, the DBSCAN (NBD), Naive Bayes with Kernel Density Estimation (NBK) ,
+ algorithm has the highest precision value for P2P, POP3 and C4.5 Decision Tree, Bayesian Network, and Naive Bayes Tree.
+ SMTP (lower than Autoclass for HTTP traffic). These algorithms’ computational performance is evaluated in
+ The work mentions briefly about the comparison of model terms of classification speed (number of classifications per secbuild time, and has not looked at other performance evaluation ond) and the time taken to build the associated classification
+ measurements, such as processing speed, CPU and memory model.
+ usage, or the timeliness of classification. Results are collected by experiments on three public
+ 2) Comparison of clustering vs. supervised techniques: NLANR traces. Features used for analysis include the full
+ Erman et al. [64] evaluate the effectiveness of supervised set of 22 features, and two best reduced feature sets selected
+ Naive Bayes and clustering AutoClass algorithm. Three ac- by correlation-based feature selection (CFS) and consistencycuracy metrics were used for evaluation: recall, precision and based feature selection (CON) algorithms. The features set is
+ overall accuracy (overall accuracy is defined the same as [45] shown in Table III.
+ reviewed in the previous sections). The results show that most algorithms achieve high flow
+ Classification method using the supervised Naive Bayes accuracy with the full set of 22 features (only NBK algorithm
+ algorithm is straight forward. For classification using Auto- achieves > 80% accuracy and the rest of the algorithms
+ Class, once AutoClass comes up with the most probable set achieve greater than 95% accuracy). With the reduced sets of
+ of clusters from the training data, the clustering is transformed 8 (CFS) and 9 (CON) features, the results achieved by crossinto a classifier. A cluster is labeled with the most common validation show only slight changes in the overall accuracy
+ traffic category of the flows in it. If two or more categories compared to the use of full feature set. The largest reduction
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 69
+
+ in accuracy were 2-2.5% for NBD and NBK with the use of was a byte sequence from the initiator to the responder and one
+ CON reduced feature set. was a byte sequence from the responder to the initiator (which
+ Despite the similarity in classification accuracy, the paper does not include packet-level information such as inter-arrival
+ shows significant differences in classification computational time, frame size or header fields).
+ performance. C4.5 algorithm was seen as the fastest algorithm Product distribution model treats each n-byte flow distriwhen using any of the feature set (with maximum of 54,700 bution as a product of n independent byte distributions. Each
+ classifications per second on a 3.4GHz Pentium 4 workstation byte offset in a flow is represented by its own byte distribution
+ running SUSE Linux 9.3 with WEKA implementation). Al- that describes the distribution of bytes at that offset in the
+ gorithms ranked in descending order in terms of classification flow. The Markov process is described as a random walk
+ speeds are: C4.5, NBD, Bayesian Network, Naive Bayes Tree, on a weighted directed graph. The nodes of the graphs are
+ NBK. labeled with unique byte values. Each edge is weighted with
+ In terms of the model build time, Naive Bayes Tree takes a transition probability such that, for any node, the sum of all
+ significant longer time than the remaining algorithms. Algo- its out-edge weights is 1. The next node is chosen according
+ rithms ranked in descending order in terms of model build to weight of the edge from the current node to its neighbors.
+ time are: Naive Bayes Tree, C4.5, Bayesian Network, NBD, And common substring graphs capture the common structural
+ NBK. information about the flows from which it is built.
+ Results of the paper also show feature reduction greatly Detailed model descriptions, how to construct each model,
+ improves performance of the algorithms in terms of model how to merge, compare and classify new instances are debuild time and classification speeds for most algorithms. scribed in [66]. Overall, the product distribution resulted in
+ 4) ACAS: Classification using machine learning techniques the lowest total misclassification error (1.68%-4.15%), while
+ on application signatures: Haffner et al. [57] in 2005 pro- Markov processes had the highest (3.33-9.97%) and CSGs in
+ posed an approach for automated construction of application the middle (2.08-6.19%).
+ signatures using machine learning techniques. Different from 6) BLINC: Multilevel traffic classification in the dark:
+ the other works, this work makes use of the first n-Bytes of Karagiannis et al. [15] developed an application classification
+ a data stream as features. Though it has the same limitation method based on the behaviours of the source host at the
+ with those works that require accessing to packet payload, transport layer, divided into three different levels. The social
+ we include it in the survey as it is also machine learning level captures and analyses the interactions of the examined
+ based, and its interesting results may be useful in a composite host with other hosts, in terms of the numbers of them it
+ machine learning based approach that combines different communicates with. The host’s popularity and that of other
+ information such as statistical characteristics, contents, and hosts in its community’s circle are considered. The role of the
+ communication patterns. host, in acting as a provider or the consumer of a service,
+ Three learning algorithms: Naive Bayes, AdaBoost and is classified at the functional level. Finally, transport layer
+ Maximum Entropy have been investigated in constructing information is used, such as the 4-tuple of the traffic (source
+ application signatures for a various range of network appli- and destination IP addresses, and source and destination ports),
+ cations: ftp control, smtp, pop3, imap, https, http and ssh. flow characteristics such as the transport protocol, and the
+ A flow instance is characterised with n-Bytes represented in average packet size.
+ binary value, and ordered by the position of the Byte in the A range of application types was studied in this work,
+ flow stream. Collection of flow instances with binary feature including web, p2p, data transfer, network management traffic,
+ is used as input by the machine learning algorithms. mail, chat, media streaming, and gaming. By analysing the
+ Using of the first 64 bytes of each TCP unidirectional social activities of the host, the authors conclude that among
+ flow the overall error rate is below 0.51% for all applications the host’s communities, neighbouring IPs may offer the same
+ considered. Adaboost and Maximum Entropy provide best service (a server farm) if they use the same service port, exact
+ results with more than 99% of all flows classified correctly. communities might indicate attacks, while partial communities
+ Precision is above 99% for all applications and Recall rate is may signify p2p or gaming applications. In addition, most
+ above 94% for all application except ssh (86.6%) (The poor IPs acting as clients have a minimum number of destination
+ performance on ssh application was suspected due to the small IPs. Thus, focusing on the identification of that small number
+ amount of sample instances in the training dataset). of servers can help client identification, leading to the clas-
+ 5) Unsupervised approach for protocol inference using flow sification of a large amount of traffic. Classification at the
+ content: Closely to Haffner et al. [57]’s work, in 2006, Ma functional level shows that a host is likely to be providing a
+ et al. [66] introduced and analysed alternative mechanisms service if during a duration of time it uses a small number of
+ for automatic identification of traffic, based solely on flow source ports, normally less than or equal to two for all of their
+ content. Unsupervised learning was applied in three different flows. Typical client behaviour is normally represented when
+ modeling techniques for capturing statistical and structural the number of source ports is equal to the number of distinct
+ aspects of messages exchanged in a protocol, namely product flows. The consistency of average packet size per flow across
+ distribution, Markov processes, and common substring graphs all flows at the application level is suggested to be a good
+ (CSG). property for identifying certain applications, such as gaming
+ Different from other work that made use of flow classi- and malware.
+ fication, the work focused on protocol inference, in which a Completeness and accuracy are the two metrics used for the
+ protocol was defined as ‘a pair of distributions on flows’ - one classification approach. Completeness is defined as the ratio
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 70 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ of the number of flows (bytes) classified by BLINC over the 2) Directional neutrality: The assumption that application
+ total number of flows (bytes), indicated by payload analysis. flows are bi-directional, and the application’s direction may
+ The results show that BLINC can classify 80% to 90% traffic be inferred prior to classification, permeates many of the
+ flows with more than 95% flow accuracy (70% to 90% for works published to date ( [14] [48] [53] [46] [68]). Most
+ byte accuracy). work has assumed that they will see the first packet of each
+ This method has to gather information from several flows bi-directional flow, that this initial packet is from a client
+ for each host before it can decide on the role of one host. Such to a server. The classification model is trained using this
+ requirements might prevent the employment of this method in assumption, and subsequent evaluations have presumed the
+ real-time operational networks. ML classifier can calculate features with the correct sense of
+ 7) Pearson’s Chi-Square test and Naive Bayes classifier: forward and reverse direction.
+ Bonfiglio et al. [67] recently proposed a framework based on As getting the direction wrong will degrade classification
+ two techniques to identify Skype traffic in realtime. The first, accuracy, [54] explores the creation of classifier models that
+ based on Pearsons Chi-Square test, detects Skypes fingerprint do not rely on external indications of directionality.
+ through analysis of the message content randomness intro- 3) Efficient use of memory and processors: There are
+ duced by the encryption process. The second, based on the definite trade-offs to be made between the classification per-
+ Naive Bayes theorem, detects Skypes traffic from message formance of a classifier and the resource consumption of the
+ size and arrival rate characteristics. actual implementation. For example, [14] and [55] reveal ex-
+ Using two specific test datasets, the authors’ compared cellent potential for classification accuracy. However, they use
+ the performance of each technique relative to classification a large number of features, many of which are computationally
+ using deep-packet inspection. They showed their Naive Bayes challenging. The overhead of computing complex features
+ technique to be effective in identifying voice traffic over IP (such as effective bandwidth based upon entropy, or Fourier
+ regardless of source application. Their Pearsons Chi-Square Transform of the packet inter-arrival time) must be considered
+ test effectively identified Skype traffic (including Skype against the potential loss of accuracy if one simply did without
+ voice/video/chat/data traffic) over UDP and all encrypted or those features.
+ compressed traffic for TCP flows. When used in combination Williams et al. [65] provide some pertinent warnings about
+ the two techniques detected Skype voice traffic (UDP flows) the trade-off between training time and classification speed.
+ with 0% false positives and 9.82% false negatives for one test (For example, among five ML algorithms studied, Naive Bayes
+ dataset, and 0.11% false positives and 2.40% false negatives with Kernel Estimation took the shortest time to build classififor the other. These false positives rates are an improvement cation models, yet performed slowest in terms of classification
+ compared to each technique being used individually. However, speed.)
+ the false negatives rates are slightly worse. Also it is important Techniques for timely and continuous classification have
+ to note the great imbalance between the amount of Skype tended to suggest a sliding window over which features are
+ traffic compared to other traffic in the test datasets. The results calculated. Increasing the length of this window ( [56] [54]
+ should also be evaluated in terms of precision and recall, to and [57]) might increase classification accuracy. However,
+ reflect the classifiers’ performance per traffic class, instead of depending on the particular implementation (opportunities for
+ only the overall false positives and false negatives. pipelining, step size with which the window slides across
+ the incoming packet streams, etc.) this may decrease the
+ Both techniques offer real-time traffic classification. The
+ timeliness with which classification decisions are made (and
+ Chi-Square technique looks at the first few bytes of the
+ increase the memory required to buffer packets during feature
+ message. The Naive Bayes technique looks at the statistical
+ calculations). Most of the reviewed work has not, to date,
+ characteristics for each window of 30 consecutive packets.
+ closely investigated this aspect.
+ 4) Portability and Robustness: None of the reviewed works
+ seriously considered or addressed the issue of classification
+ E. Challenges for operational deployment
+ model portability mentioned in section III-C.
+ We wrap up our survey with a qualitative look at the extent None of the reviewed works has addressed and evaluate
+ to which the reviewed works overlap Section III-C’s additional their model’s robustness in terms of classification performance
+ constraints and requirements for using ML techniques inside with the introduction of packet loss, packet fragmentation,
+ real-time IP traffic classifiers. delay and jitter. Unsupervised approaches have the potential
+ 1) Timely and continuous classification: Most of the re- to detect the emergence of new types of traffic. However, this
+ viewed work has evaluated the efficacy of different ML issue has not been evaluated in most of the works. It was
+ algorithms when applied to entire datasets of IP traffic, trained briefly mentioned in [62].
+ and tested over full-flows consisting of thousands of packets 5) Qualitative summary: Table IV provides a qualitative
+ (such as [14] [18] [46] [48] [64] and [65]). summary of the reviewed works against the following criteria:
+ Some ( [53] and [61]) have explored the performance of ML • Real-time Classification
+ classifiers that utilise only the first few packets of a flow, but – No: The work makes use of features that require flow
+ they cannot cope with missing the flow’s initial packets. Others completion to compute (e.g. Flow duration, total flow
+ ( [56]) have explored techniques for continuous classification bytes count)
+ of flows using a small sliding window across time, without – Yes: The work requires the capture of a small number
+ needing to see the initial packets of a flow. of packets/bytes of a flow to do classification
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 71
+
+ TABLE I
+ A S UMMARY OF R ESEARCH R EVIEWED IN S ECTION IV
+
+ Work ML Algorithms Features Data Traces Traffic Consid- Classification
+ ered Level
+ McGregor et al. [48] Expectation NLANR and A mixture of Coarse
+ Maximization • Packet length statistics (min, max, quar- Waikato trace HTTP, SMTP, grained (bulk
+ tiles, ...) FTP (control), transfer, small
+ • Inter-arrival statistics NTP, IMAP, transactions,
+ • Byte counts DNS ... multiple
+ • Connection duration transactions
+ • Number of transitions between transac- ...)
+ tion mode and bulk transfer mode
+ • Idle time
+ Calculated on full flows
+ Zander et al. [46] AutoClass Auckland-VI, Half-Life, Fine grained
+ • Packet length statistics (mean and vari- NZIX-II and Napster, AOL, (8 applications
+ ance in forward and backward directions) Leipzig-II from HTTP, DNS, studied)
+ • Inter-arrival time statistics (mean and NLANR SMTP, Telnet,
+ variance in forward and backward direc- FTP (data)
+ tions)
+ • Flow size (bytes)
+ • Flow duration
+ Calculated on full-flows
+ Roughan et al. [18] Nearest Waikato trace Telnet, FTP Fine grained
+ Neighbour, • Packet Level and section (data), Kazaa, (three, four and
+ Linear • Flow Level logs from a Real Media seven classes
+ Discriminate • Connection Level commercial Streaming, of individual
+ Analysis and • Intra-flow/Connection features streaming DNS, HTTPS applications)
+ Quadratic • Muli-flow features services
+ Discriminant Calculated on full flows
+ Analysis
+ Moore and Zuev [14] Baysian Total of 248 features, among them are Proprietary A large range Coarse grained
+ Techniques • Flow duration Hand Classified of Database,
+ (Naive Bayes • TCP port Traces P2P, Buck,
+ and Naive • Packet inter-arrival time statistics Mail, Services,
+ Bayes with • Payload size statistics ... traffic
+ Kernel • Effective bandwidth based upon entropy
+ Estimation • Fourier transform of packet inter-arrival
+ and Fast time
+ Correlation- Calculated on full flows
+ Based Filter
+ method)
+ Barnaille et al. [53] Simple K- Packet lengths of the first few packets of bi- Proprietary eDonkey, Fine grained
+ Means directional traffic flows traces FTP, HTTP, (10 applications
+ Kazaa, NTP, studied)
+ POP3, SMTP,
+ SSH, HTTPS,
+ POP3S
+ Park et al. [44] [44] Naive Bayes NLANR, WWW, N/A (compariwith Kernel • Flow duration USC/ISI, Telnet, Chat son work)
+ Estimation, • Initial Advertised Window bytes CAIDA (Messenger),
+ Decision • Number of actual data packets FTP, P2P
+ Tree J48 and • Number of packets with the option of (Kazaa,
+ Reduced Error PUSH Gnutella),
+ Prunning Tree • Packet lengths Multimedia,
+ • Advertised window bytes SMTP, POP,
+ • Packet inter-arrival time IMAP, NDS,
+ • Size of total burst packets Oracle, X11
+
+ Nguyen and Armitage Supervised Traces Online Game Application
+ [56] Naive Bayes • Packet lengths (min, max, mean, standard collected at (Enemy specific (Online
+ deviation) an online Territory) Game, UDP
+ • Inter-Packet lengths statistics (min, max, game server traffic, Others based, First
+ mean, standard deviation) in Australia (HTTP, Person Shooter,
+ • Packet Inter-arrival times statistics (min, and provided HTTPS, DNS, Enemy
+ max, mean, std dev.) by University NTP, SMTP, Territory
+ • Calculated over a small number (e.g. 25 of Twente, Telnet, SSH, traffic)
+ packets) of consecutive packets (classifi- Netherland P2P ...)
+ cation windows) taken at various points
+ of the flow lifetime - where the changes
+ in flow’s characteristics are significant
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 72 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ TABLE II
+ A S UMMARY OF R ESEARCH R EVIEWED IN S ECTION IV( CONTINUED )
+
+ Work ML Algorithms Features Data Traces Traffic Consid- Classification
+ ered Level
+ Nguyen and Armitage Naive Bayes Traces Online Game Application
+ [54] and Decision • Packet lengths statistics (min, max, mean, collected at (Enemy specific (Online
+ Tree in std dev.) an online Territory) Game, UDP
+ combination • Inter-Packet lengths statistics (min, max, game server traffic, Others based, First
+ with Clustering mean, std dev.) in Australia (HTTP, Person Shooter,
+ algorithms • Packet Inter-arrival times statistics (min, and provided HTTPS, DNS, Enemy
+ for automated max, mean, std dev.) by University NTP, SMTP, Territory
+ sub-flows • Calculated over a small number (e.g. 25 of Twente, Telnet, SSH, traffic)
+ selection packets) of consecutive packets (classifi- Netherland P2P ...)
+ cation windows) taken at various points
+ of the flow lifetime - where the changes
+ in flow’s characteristics are significant.
+ • Further extension with synthetic mirroring features.
+
+ Erman et al. [47] K-Means Self-collected 8 Web, P2P, FTP, Coarse grained
+ • Total number of packets 1-hour campus Others (29 different
+ • Mean packet length traces between protocols
+ • mean payload length excluding headers April 6-9, 2006 grouped into
+ • Number of bytes transferred a number of
+ • Flow duration application
+ • Mean inter-arrival time categories for
+ studies)
+ Crotti et al. [61] Protocol 6-month self- TCP Fine grained
+ fingerprints • Packet lengths collected traces applications (four TCP
+ (Probability • Inter-arrival time at the edge (HTTP, SMTP, protocols)
+ Density • Packet arrival order gateway of the POP3, SSH)
+ Function University of
+ vectors) and Brescia data
+ Anomaly centre network
+ score (from
+ protocol PDFs
+ to protocol
+ fingerprints)
+ Haffner et al. [57] Naive Bayes, Discrete byte encoding of the first n-bytes pay- Proprietary FTP (control), Fine grained
+ AdaBoost, load of a TCP unidirectional flow SMTP, POP3,
+ Regularized IMAP, HTTPS,
+ Maximum HTTP, SSH
+ Entropy
+ Ma et al. [66] Unsupervised Discrete byte encoding of the first n-bytes pay- Proprietary FTP (control), Fine grained
+ learning load of a TCP unidirectional flow SMTP, POP3,
+ (product IMAP, HTTPS,
+ distribution, HTTP, SSH
+ Markov
+ processes,
+ and common
+ substring
+ graphs)
+ Auld et al. [55] Bayesian Neu- 246 features in total, including: Proprietary A large range Coarse grained
+ ral Network • Flow metrics (duration, packet-count, to- hand classified of Database,
+ tal bytes) traces P2P, Buck,
+ • Packet inter-arrival time statistics Mail, Services,
+ • Size of TCP/IP control fields Multimedia,
+ • Total packets in each direction and total Web ... traffic
+ for bi-directional flow
+ • Payload size
+ • Effective bandwidth based upon entropy
+ • Top-ten Fourier transform components of
+ packet inter-arrival times for each direction
+ • Numerous TCP-specific values derived
+ from tcptrace (e.g. total payload bytes
+ transmitted, total number of PUSHED
+ packets, total number of ACK packets
+ carrying SACK information etc.)
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 73
+
+ TABLE III
+ A S UMMARY OF R ESEARCH R EVIEWED IN S ECTION IV( CONTINUED )
+
+ Work ML Algorithms Features Data Traces Traffic Consid- Classification
+ ered Level
+ Williams et al. [65] Naive NLANR FTP(data), N/A (Compari-
+ Bayes with • Protocol Telnet, SMTP, son work)
+ Discretisation, • Flow duration DNS, HTTP
+ Naive Bayes • Flow volume in bytes and packets
+ with Kernel • Packet length (minimum, mean, maxi-
+ Estimation, mum and standard deviation)
+ C4.5 Decision • Inter-arrival time between packets (mini-
+ Tree, Bayesian mum, mean, maximum and standard de-
+ Network and viation)
+ Naive Bayes
+ Tree
+ Erman et al. [45] NLANR and a HTTP, P2P, N/A (Compari-
+ K-Means, DB- • Total number of packets self-collected SMTP, IMAP, son work)
+ SCAN and Au- • Mean packet length 1-hour trace POP3, MSSQL,
+ toClass • Mean payload length excluding headers from the Other
+ • Number of bytes transfered (in each di- University of
+ rection and combined) Calgary
+ • Mean packet inter-arrival time
+
+ Erman et al. [64] Naive Bayes NLANR HTTP, SMTP, N/A (Compariand AutoClass • Total number of packets DNS, SOCKS, son work)
+ • Mean packet length (in each direction and FTP(control),
+ combined) FTP (data),
+ • Flow duration POP3,
+ • Mean data packet length Limewire
+ • Mean packet inter-arrival time
+
+ Bonfiglio et al. [67] Naive Bayes Two self col- Skype traffic Application
+ and Pearson’s • Message size (the length of the message lected datasets specific
+ Chi-Squate test encapsulated into the transport layer protocol segment)
+ • Average inter packet gap
+
+ TABLE IV
+ R EVIEWED WORK IN LIGHT OF CONSIDERATIONS FOR OPERATIONAL TRAFFIC CLASSIFICATION
+
+ Work Real-time Classification Feature Computation Classify Flows In Directional neutrality
+ Overhead Progress
+ McGregor et al. [48] No Average Not addressed No
+ Zander et al. [46] No Average Not addressed No
+ Roughan et al. [18] No Average Not addressed N/A
+ Moore and Zuev [14] No High Not addressed No
+ Barnaille et al. [53] Yes Low Not addressed No
+ Park et al. [44] No Average Not addressed Not clear
+ Nguyen and Armitage [56] Yes Average Yes Yes
+ Nguyen and Armitage [54] Yes Average Yes Yes
+ Erman et al. [47] No Average Not addressed No
+ Crotti et al. [61] Yes Average Not addressed No
+ Haffner et al. [57] Yes Average Not addressed N/A
+ Ma et al. [66] No Average Not addressed No
+ Auld et al. [55] No High Not addressed No
+ Williams et al. [65] N/A Average N/A N/A
+ Erman et al. [45] N/A Average N/A N/A
+ Erman et al. [64] N/A Average N/A N/A
+ Bonfiglio et al. [67] Yes Average Not addressed Not clear
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 74 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ • Feature Computation Overhead of concurrent flows simultaneously. And the application of
+ Low: The work makes use of a small number of ML algorithms for newer applications (such as Skype, video
+ features (e.g sizes of the first few packets, binary streaming, voice over IP and peer to peer file-sharing) is still
+ encoded of the first few bytes of a unidirectional an interesting open field.
+ flow) Nevertheless, the promising results of ML-based IP traffic
+ – Average: The work makes use of an average set of classification may open many new avenues for related research
+ features (such as packet length and inter-arrival times areas, such as the application of ML in intrusion detections,
+ statistics, flow duration, bytes count) anomaly detection in user data and control, routing traffic,
+ – High: The work makes use of a large (comparatively and building network profiles for proactive network real-time
+ with other work in the area) including computa- monitoring and management. The classification of traffic in
+ tional complex features (such as Fourier transform greynet or darknet networks is also an interesting possible
+ of packet inter-arrival time) extension of the research field.
+ • Continuous Classification
+ – Not addressed: The issue was not considered in the ACKNOWLEDGMENTS
+ work We would like to thank the anonymous reviewers for
+ – Yes: The issue was considered and solved in the work their very helpful comments and feedbacks to improve the
+ • Directional Neutrality manuscript.
+ – No: The work makes use of bi-directinal flow and
+ features calculations, but did not consider the issue R EFERENCES
+ – Yes: The work makes use of bi-directional flow [1] Snort - The de facto standard for intrusion detection/prevention,
+ and feature calculations, addressed the issues and http://www.snort.org, as of August 14, 2007.
+ [2] Bro intrusion detection system - Bro overview, http://bro-ids.org, as of
+ proposed solution August 14, 2007.
+ – N/A: The work makes use of uni-directional flow and [3] V. Paxson, “Bro: A system for detecting network intruders in real-time,”
+ the issue is not applicable Computer Networks, no. 31(23-24), pp. 2435–2463, 1999.
+ [4] L. Stewart, G. Armitage, P. Branch, and S. Zander, “An architecture for
+ – Not clear: Not clearly stated in the paper automated network control of QoS over consumer broadband links,” in
+ IEEE International Region 10 Conference (TENCON 05), Melbourne,
+ V. C ONCLUSION Australia, November 2005.
+ [5] F. Baker, B. Foster, and C. Sharp, “Cisco architecture for lawful intercept
+ This paper surveys significant works in the field of machine in IP networks,” Internet Engineering Task Force, RFC 3924, 2004.
+ learning based IP traffic classification during the peak period [6] T. Karagiannis, A. Broido, N. Brownlee, and K. Claffy, “Is P2P dying
+ or just hiding?” in Proc. 47th annual IEEE Global Telecommuniof 2004 to early 2007. Motivated by a desire to move away cations Conference (Globecom 2004), Dallas, Texas, USA, Novemfrom port-based or payload-based traffic classification, it is ber/December 2004.
+ clear that ML can be applied well in the task. The use of [7] S. Sen, O. Spatscheck, and D. Wang, “Accurate, scalable in network
+ identification of P2P traffic using application signatures,” in WWW2004,
+ a number of different ML algorithms for offline analysis, New York, NY, USA, May 2004.
+ such as AutoClass, Expectation Maximisation, Decision Tree, [8] R. Braden, D. Clark, and S. Shenker, “Integrated services in the Internet
+ NaiveBayes etc. has demonstrated high accuracy (up to 99%) architecture: an overview,” RFC 1633, IETF, 1994.
+ [9] S. Blake, D. Black, M. Carlson, E. Davies, Z. Wang, and W. Weiss, “An
+ for a various range of Internet applications traffic. Early architecture for differentiated services,” RFC 2475, IETF, 1998.
+ ML techniques relied on static, offline analysis of previously [10] G. Armitage, Quality of Service In IP Networks: Foundations for a
+ captured traffic. More recent work is beginning to address Multi-Service Internet. Macmillan Technical Publishing, April 2000.
+ [11] L. Burgstahler, K. Dolzer, C. Hauser, J. Jahnert, S. Junghans, C. Mathe requirements for practical, ML-based real-time IP traffic cian, and W. Payer, “Beyond technology: the missing pieces for QoS
+ classification in operational networks. In this survey paper, we success,” in RIPQoS ’03: Proc. ACM Special Interest Group on Data
+ have outlined a number of critical operational requirements for Communication (SIGCOMM) workshop on Revisiting IP QoS. New
+ York, NY, USA: ACM Press, August, 2003, pp. 121–130.
+ real-time classifiers and qualitatively critiqued the reviewed [12] Ubicom Inc., Solving Performance Problems with Interactive
+ works against these requirements. Applications in a Broadband Environment using StreamEngine
+ There is still a lot of room for further research in the field. Technology, http://www.ubicom.com/pdfs/whitepapers/StreamEngine-
+ WP-20041031.pdf, as of August 14, 2007.
+ While most of the approaches build their classification models [13] J. But, N. Williams, S. Zander, L. Stewart, and G. Armitage, “ANGEL -
+ based on sample data collected at certain points of the Internet, Automated Network Games Enhancement Layer,” in Proc. of 5th Annual
+ those models’ usability needs to be carefully evaluated. The Workshop on Network and Systems Support for Games (Netgames) 2006,
+ Singapore, October 2006.
+ accuracy evaluated on the test dataset collected at the same [14] A. Moore and D. Zuev, “Internet traffic classification using Bayesian
+ point of measurement might not be true when being applied in analysis techniques,” in ACM International Conference on Measuredifferent point of measurement. There are still open questions ment and Modeling of Computer Systems (SIGMETRICS) 2005, Banff,
+ Alberta, Canada, June 2005.
+ as to how well they can maintain their performance in the pres- [15] T. Karagiannis, K. Papagiannaki, and M. Faloutsos, “Blinc: Multilevel
+ ence of packet loss, latency jitter, and packet fragmentation. traffic classification in the dark,” in Proc. of the Special Interest Group
+ Each ML algorithm may perform differently toward different on Data Communication conference (SIGCOMM) 2005, Philadelphia,
+ PA, USA, August 2005.
+ Internet applications, and may require different parameter [16] J. Erman, A. Mahanti, and M. Arlitt, “Byte me: a case for byte
+ configurations. The use of a combination of classification accuracy in traffic classification,” in MineNet ’07: Proc. 3rd annual
+ models is worth investigating. Parallel processing for real- ACM workshop on Mining network data. New York, NY, USA: ACM
+ Press, June 2007, pp. 35–38.
+ time classification at traffic aggregation points in the network [17] Internet Assigned Numbers Authority (IANA),
+ may be useful when the classifiers need to cope with millions http://www.iana.org/assignments/port-numbers, as of August 14, 2007.
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ NGUYEN and ARMITAGE: A SURVEY OF TECHNIQUES FOR INTERNET TRAFFIC CLASSIFICATION USING MACHINE LEARNING 75
+
+ [18] M. Roughan, S. Sen, O. Spatscheck, and N. Duffield, “Class-of-service [45] J. Erman, M. Arlitt, and A. Mahanti, “Traffic classification using clusmapping for QoS: A statistical signature-based approach to IP traffic tering algorithms,” in MineNet ’06: Proc. 2006 SIGCOMM workshop
+ classification,” in Proc. ACM/SIGCOMM Internet Measurement Con- on Mining network data. New York, NY, USA: ACM Press, 2006, pp.
+ ference (IMC) 2004, Taormina, Sicily, Italy, October 2004. 281–286.
+ [19] H. Schulzrinne, S. Casner, R. Frederick, and V. Jacobson, “RTP: A [46] S. Zander, T. Nguyen, and G. Armitage, “Automated traffic classifi-
+ Transport Protocol for Real-Time Applications,” RFC 1889, IETF, 1996. cation and application identification using machine learning,” in IEEE
+ [20] A. Moore and K. Papagiannaki, “Toward the accurate identification 30th Conference on Local Computer Networks (LCN 2005), Sydney,
+ of network applications,” in Proc. Passive and Active Measurement Australia, November 2005.
+ Workshop (PAM2005), Boston, MA, USA, March/April 2005. [47] J. Erman, A. Mahanti, M. Arlitt, and C. Williamson, “Identifying and
+ [21] A. Madhukar and C. Williamson, “A longitudinal study of P2P traffic discriminating between web and peer-to-peer traffic in the network core,”
+ classification,” in 14th IEEE International Symposium on Modeling, in WWW ’07: Proc. 16th international conference on World Wide Web.
+ Analysis, and Simulation of Computer and Telecommunication Systems, Banff, Alberta, Canada: ACM Press, May 2007, pp. 883–892.
+ September 2006. [48] A. McGregor, M. Hall, P. Lorier, and J. Brunskill, “Flow clustering using
+ [22] V. Paxson, “Empirically derived analytic models of wide-area TCP machine learning techniques,” in Proc. Passive and Active Measurement
+ connections,” IEEE/ACM Trans. Networking, vol. 2, no. 4, pp. 316–336, Workshop (PAM2004), Antibes Juan-les-Pins, France, April 2004.
+ 1994. [49] A. Dempster, N. Laird, and D. Rubin, “Maximum likelihood from
+ [23] C. Dewes, A. Wichmann, and A. Feldmann, “An analysis of Internet incomplete data via the EM algorithm,” J. Royal Statistical Society,
+ chat systems,” in ACM/SIGCOMM Internet Measurement Conference vol. 30, no. 1, 1997.
+ 2003, Miami, Florida, USA, October 2003. [50] P. Cheeseman and J. Stutz, “Bayesian classification (AutoClass): Theory
+ [24] K. Claffy, “Internet traffic characterisation,” PhD Thesis, University of and results,” in Advances in Knowledge Discovery and Data Mining,
+ California, San Diego, 1994. 1996.
+ [25] T. Lang, G. Armitage, P. Branch, and H.-Y. Choo, “A synthetic traffic [51] NetMate, http://sourceforge.net/projects/netmate-meter/, as of August
+ model for Half-life,” in Proc. Australian Telecommunications Networks 14, 2007.
+ and Applications Conference 2003 ATNAC2003, Melbourne, Australia, [52] The National Laboratory for Applied Network Research (NLANR),
+ December 2003. Traffic Measurement Data Repository, http://pma.nlanr.net/Special/, as
+ [26] T. Lang, P. Branch, and G. Armitage, “A synthetic traffic model for of August 14, 2007.
+ Quake 3,” in Proc. ACM SIGCHI International Conference on Advances [53] L. Bernaille, R. Teixeira, I. Akodkenou, A. Soule, and K. Salamatian,
+ in computer entertainment technology (ACE2004), Singapore, June “Traffic classification on the fly,” ACM Special Interest Group on
+ 2004. Data Communication (SIGCOMM) Computer Communication Review,
+ [27] Z. Shi, Principles of Machine Learning. International Academic vol. 36, no. 2, 2006.
+ Publishers, 1992. [54] T. Nguyen and G. Armitage, “Synthetic sub-flow pairs for timely and
+ [28] H. Simon, “Why should machines learn?” in R. S. Michalski, J. G. stable IP traffic identification,” in Proc. Australian Telecommunication
+ Carbonell, and T. M. Mitchell (editors) Machine Learning: An Artificial Networks and Application Conference, Melbourne, Australia, December
+ Intelligence Approach. Morgan Kaufmann, 1983. 2006.
+ [29] I. Witten and E. Frank, Data Mining: Practical Machine Learning Tools [55] T. Auld, A. W. Moore, and S. F. Gull, “Bayesian neural networks for
+ and Techniques with Java Implementations (Second Edition). Morgan Internet traffic classification,” IEEE Trans. Neural Networks, no. 1, pp.
+ Kaufmann Publishers, 2005. 223–239, January 2007.
+ [30] B. Silver, “Netman: A learning network traffic controller,” in Proc. Third [56] T. Nguyen and G. Armitage, “Training on multiple sub-flows to optimise
+ International Conference on Industrial and Engineering Applications of the use of Machine Learning classifiers in real-world IP networks,”
+ Artificial Intelligence and Expert Systems, Association for Computing in Proc. IEEE 31st Conference on Local Computer Networks, Tampa,
+ Machinery, 1990. Florida, USA, November 2006.
+ [31] J. Frank, “Machine learning and intrusion detection: Current and future [57] P. Haffner, S. Sen, O. Spatscheck, and D. Wang, “ACAS: automated
+ directions,” in Proc. National 17th Computer Security Conference, construction of application signatures,” in MineNet ’05: Proceeding
+ Washington,D.C., October 1994. of the 2005 ACM SIGCOMM workshop on Mining network data.
+ [32] Y. Reich and J. S. Fenves, “The formation and use of abstract concepts Philadelphia, Pennsylvania, USA: ACM Press, August 2005, pp. 197–
+ in design,” in Fisher, D. H. and Pazzani, M. J. (editors), Concept Forma- 202.
+ tion: Knowledge and Experience in Unsupervised Learning. Morgan [58] The University of Twente, Traffic Measurement Data Repository,
+ Kaufmann, 1991. http://arch.cs.utwente.nl/projects/m2c/m2c-D15.pdf, as of 17th August
+ [33] H. D. Fisher, J. M. Pazzani, and P. Langley, Concept Formation: Knowl- 2007.
+ edge and Experience in Unsupervised Learning. Morgan Kaufmann, [59] Wolfenstein Enemy Territory, http://www.enemyterritory.com/, as of 17th
+ 1991. August 2007.
+ [34] R. Duda, P. Hart, and D. Stork, Pattern Classification (2nd edition). [60] J. Park, H.-R. Tyan, and K. C.-C.J., “GA-Based Internet Traffic Classi-
+ JWiley-Interscience, 2001. fication Technique for QoS Provisioning,” in Proc. 2006 International
+ [35] O. Carmichael and M. Hebert, “Shape-based recognition of wiry ob- Conference on Intelligent Information Hiding and Multimedia Signal
+ jects,” IEEE Trans. Pattern Anal. Machine Intell., vol. 26, no. 12, pp. Processing, Pasadena, California, December 2006.
+ 1537– 1552, 2004. [61] M. Crotti, M. Dusi, F. Gringoli, and L. Salgarelli, “Traffic classification
+ [36] W. Rand, “Objective criteria for the evaluation of clustering methods,” through simple statistical fingerprinting,” SIGCOMM Comput. Commun.
+ J. American Statistical Association, vol. 66, no. 336, pp. 846–850, 1971. Rev., vol. 37, no. 1, pp. 5–16, 2007.
+ [37] M. Halkidi, Y. Batistakis, and M. Vazirgiannis, “Cluster validity meth- [62] J. Erman, A. Mahanti, M. Arlitt, I. Cohen, and C. Williamson, “Semiods: part I,” SIGMOD Rec., vol. 31, no. 2, pp. 40–45, 2002. supervised network traffic classification,” ACM International Conference
+ [38] R. Xu and D. Wunsch, “Survey of clustering algorithms,” IEEE Trans. on Measurement and Modeling of Computer Systems (SIGMETRICS)
+ Neural Networks, no. Vol.16, Issue 3, pp. 645– 678, May 2005. Performance Evaluation Review, vol. 35, no. 1, pp. 369–370, 2007.
+ [39] M. Halkidi, Y. Batistakis, and M. Vazirgiannis, “Clustering validity [63] ——, “Offline/realtime network traffic classificatioin using semichecking methods: part II,” SIGMOD Rec., vol. 31, no. 3, pp. 19–27, supervised learning,” Department of Computer Science, University of
+ 2002. Calgary, Tech. Rep., February 2007.
+ [40] M. Hall and G. Holmes, “Benchmarking attribute selection techniques [64] J. Erman, A. Mahanti, and M. Arlitt, “Internet traffic identification
+ for discrete class data mining,” IEEE Trans. Knowledge Data Eng., using machine learning techniques,” in Proc. of 49th IEEE Global
+ vol. 15, no. 6, pp. 1437– 1447, 2003. Telecommunications Conference (GLOBECOM 2006), San Francisco,
+ [41] D. Goldberg, Genetic Algorithms in Search, Optimization and Machine USA, December 2006.
+ Learning. Boston, MA, USA: Addison-Wesley Longman Publishing [65] N. Williams, S. Zander, and G. Armitage, “A preliminary performance
+ Co., Inc., 1989. comparison of five machine learning algorithms for practical IP traffic
+ [42] R. Kohavi and G. H. John, “Wrappers for feature subset selection,” flow classification,” Special Interest Group on Data Communication
+ Artificial Intelligent, vol. 97, no. 1-2, pp. 273–324, 1997. (SIGCOMM) Computer Communication Review, vol. 36, no. 5, pp. 5–
+ [43] P. H. Winston, Artificial intelligence (2nd ed.). Boston, MA, USA: 16, 2006.
+ Addison-Wesley Longman Publishing Co., Inc., 1984. [66] J. Ma, K. Levchenko, C. Kreibich, S. Savage, and G. Voelker, “Un-
+ [44] J. Park, H.-R. Tyan, and K. C.-C.J., “Internet traffic classification expected means of protocol inference,” in IMC ’06: Proc. 6th ACM
+ for scalable QoS provision,” in IEEE International Conference on SIGCOMM on Internet measurement. Rio de Janeriro, Brazil: ACM
+ Multimedia and Expo, Toronto, Ontario, Canada, July 2006. Press, October 2006, pp. 313–326.
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.
+ 76 IEEE COMMUNICATIONS SURVEYS & TUTORIALS, VOL. 10, NO. 4, FOURTH QUARTER 2008
+
+ [67] D. Bonfiglio, M. Mellia, M. Meo, D. Rossi, and P. Tofanelli, “Revealing performance evaluation of broadband and wireless networks. She is a member
+ Skype traffic: when randomness plays with you,” in SIGCOMM ’07: of IEEE Communications Society.
+ Proc. 2007 conference on Applications, technologies, architectures, and
+ protocols for computer communications. New York, NY, USA: ACM,
+ August 2007, pp. 37–48.
+ [68] N. Williams, S. Zander, and G. Armitage, “Evaluating machine learning
+ methods for online game traffic identification,” Centre for Advanced In-
+ Grenville Armitage [M03] (garmitage@swin.edu.au) earned a B.Eng
+ ternet Architectures, http://caia.swin.edu.au/reports/060410C/CAIA-TR-
+ (Elec)(Hons) in 1988 and a PhD in electronic engineering in 1994, both from
+ 060410C.pdf, Tech. Rep. 060410C, as of August 14, 2007.
+ the University of Melbourne, Australia. Since 2002 he has been Associate
+ Professor of Telecommunications Engineering and Director of the Centre
+ for Advanced Internet Architectures at Swinburne University of Technology,
+ Melbourne, Australia. He authored Quality of Service In IP Networks:
+ Foundations for a Multi-Service Internet (Macmillan Technical Publishing,
+ Thuy T.T. Nguyen (tnguyen@swin.edu.au) received the B. Eng. Dip. Prac. in April 2000) and co-authored Networking and Online Games - Understanding
+ telecommunications engineering from the University of Technology, Sydney and Engineering Multiplayer Internet Games (John Wiley & Sons, UK, April
+ in 2002 with First Class Honour. She is now a PhD candidate at the Centre 2006). Associate Professor Armitage is also a member of ACM and ACM
+ for Advanced Internet Architectures, Swinburne University of Technology, SIGCOMM.
+ Melbourne, Australia. Her research interests include Internet traffic characterization and classification, Internet pricing and charging systems, QoS and
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 06:31:34 UTC from IEEE Xplore. Restrictions apply.

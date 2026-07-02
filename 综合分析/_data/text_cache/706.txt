@@ -1,0 +1,149 @@
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 64, 2026                                                                                 5507217
+
+
+
+
+               HTDC: Hyperbolic Transformer With
+              Dual-Momentum Contrastive Learning for
+                 Hyperspectral Anomaly Detection
+                          Yulei Wang , Member, IEEE, Chao Deng , Enyu Zhao , Member, IEEE,
+                                        and Chunyan Yu , Senior Member, IEEE
+
+
+
+   Abstract—Hyperspectral anomaly detection (HAD) remains a                                           I. I NTRODUCTION
+challenging task due to the complex spectral variability and
+spatial heterogeneity of real-world scenes. Reconstruction-based
+methods have been widely explored for deep learning-based HAD,
+but they rely on the assumption that background pixels can be
+                                                                               H      YPERSPECTRAL imaging (HSI) acquires detailed
+                                                                                      spectral information across tens to hundreds of contigu-
+                                                                               ous narrow bands, enabling the generation of high-dimensional
+faithfully reconstructed while anomalous pixels cannot. Although               spectral response vectors for each pixel while preserving
+intuitive, this dichotomy oversimplifies the spectral–spatial char-            spatial structures [1], [2]. Due to this unique capability, HSI
+acteristics of hyperspectral data and often fails in practice. In              has been extensively employed in a wide range of remote
+particular, when background regions exhibit strong variability
+or when anomalies share spectral similarities with their sur-                  sensing tasks, including classification [3], [4], [5], anomaly
+roundings, reconstruction-based methods tend to generate false                 detection [6], [7], [8], target detection [9], [10], [11], and
+alarms and suffer from limited robustness. To overcome these                   band selection [12], [13]. From a perspective of material
+limitations, this article moves beyond the reconstruction-based                identification, the fine spectral resolution of HSI enables pre-
+paradigm and proposes HTDC, a novel hyperbolic Transformer                     cise discrimination of subtle compositional variations, which
+with a dual-momentum contrastive learning (DMCL) frame-
+work, which shifts the focus from background reconstruction                    is particularly advantageous for detecting anomalous targets
+to discriminative representation learning at both global and                   in complex backgrounds such as camouflage detection and
+local levels. First, a custom-designed multiview data augmen-                  pollutant monitoring. In general, anomalies in HSIs exhibit
+tation module generates complementary views from different                     three characteristics: 1) low probability of occurrence; 2) small
+perspectives, enriching spectral diversity and alleviating the                 spatial extent; and 3) significant spectral differences from
+limitations of contrastive learning (CL) under homogeneous
+samples. Second, a hyperbolic Transformer encoder exploits the                 the surrounding background [14], [15]. Existing hyperspectral
+hierarchical and structured nature of hyperspectral data, where                anomaly detection (HAD) methods can be broadly classified
+hyperbolic geometry enables more effective attention aggregation               into three categories: statistical-based methods, representation-
+than Euclidean space. Subsequently, a dual-momentum mecha-                     based methods, and deep learning-based methods, each of
+nism with dual temporal queues further stabilizes global learning              which has produced representative approaches as outlined
+while dynamically adapting to local changes, thereby mitigating
+sensitivity to class imbalance and spectral drift. Finally, in the             below.
+detection stage, a sliding dual-window detection strategy with                    Statistical-based methods assume that background pixels
+exponential mapping and guided filtering is employed to suppress               follow a specific distribution, with anomalies identified as
+background interference and enhance spatial contrast. Extensive                outliers. One of the most representative approaches is the RX
+experiments on multiple real hyperspectral images acquired by                  detector [16], which models the background pixels using a
+different sensors across various scenes demonstrate that the
+proposed HTDC consistently outperforms the state-of-the-art                    multivariate Gaussian distribution and detects anomalies as
+methods in HAD tasks.                                                          pixels that exhibit significant deviations from this distribution.
+                                                                               However, in real-world scenarios, the background is often too
+  Index Terms—Contrastive learning (CL), dual-momentum,
+hyperbolic transformer, hyperspectral anomaly detection (HAD),                 complex to be accurately represented by a single multivariate
+multiview data augmentation.                                                   Gaussian model, resulting in degraded detection performance.
+                                                                               Various such as local RX (LRX) [17], weighted RX (WRX)
+   Received 23 September 2025; revised 22 January 2026; accepted               [18], kernel-based RX (KRX) [19], and recursive RX with
+23 February 2026. Date of publication 9 March 2026; date of current version    multiattribute profiles [20] attempt to improve the robustness
+13 March 2026. This work was supported in part by the National Natural
+Science Foundation of China under Grant 42271355 and Grant 62471079,           of the conventional RX detector, but all remain fundamen-
+in part by the Natural Science Foundation of Liaoning Province under Grant     tally constrained by their reliance on predefined distributional
+2022-MS-160, and in part by the Fundamental Research Funds for Central         assumptions.
+Universities under Grant 3132025251. (Corresponding authors: Enyu Zhao;
+Chao Deng.)                                                                       To avoid reliance on inaccurate distribution assumptions,
+   The authors are with the Center of Hyperspectral Imaging in Remote Sens-    representation-based methods have attracted significant atten-
+ing (CHIRS) and the Information Science and Technology College, Dalian         tion [21]. These approaches represent hyperspectral data
+Maritime University, Dalian 116026, China (e-mail: wangyulei@dlmu.edu.cn;
+dengchao@dlmu.edu.cn; zhaoenyu@dlmu.edu.cn; yucy@dlmu.edu.cn).                 as linear or nonlinear combinations of a set of bases
+   Digital Object Identifier 10.1109/TGRS.2026.3670890                         or dictionaries. Main approaches in this category include
+             1558-0644 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+5507217                                                            IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 64, 2026
+
+
+
+low-rank representation (LRR), sparse representation, collabo-      adjustment to avoid manual parameter tuning. However,
+rative representation, and tensor-based modeling. For instance,     AE-based methods may inadvertently reconstruct anomalies
+the collaborative representation-based detector (CRD) [22] is       along with the background, thereby degrading detection
+designed to exploit the sparsity and locality characteristics of    performance. GAED [37] addresses this by incorporating a
+HSI by assuming that background pixels can be linearly rep-         feedback strategy to suppress the representation of anomaly
+resented by their neighboring pixels, while anomalies cannot.       features. Similarly, to prevent anomaly leakage, a blind-spot
+However, the performance of CRD is sensitive to the selection       network [38] utilizing multiscale mask convolutions has
+of dual-window sizes across different datasets. LRR-based           been proposed, while FCAE-DCAC [39] integrates dual
+methods model hyperspectral data as a linear combination            clustering priors with latent feature adversarial consistency
+of a small number of intrinsic components, reconstruct the          to ensure prioritized background reconstruction. Other
+background, and detect anomalies as reconstruction residuals.       approaches embed physical priors, such as TAEF [40],
+While effective in capturing global structures, LRR tends to        which integrates an extended multilinear mixing model and
+ignore local structural information. To address this limitation,    employs a Transformer for improved performance. In order
+GTVLRR incorporates graph regularization and total variation        to exploit the spatial–spectral characteristics inherent in HSI,
+regularization into the LRR model [23], preserving global           S3S-LTGRMA [41] integrates spectral, spatial, and structural
+structural characteristics while simultaneously capturing local     features through superpixel segmentation and a Transformer
+geometric properties. Given the widespread nature of back-          backbone. Beyond Transformers, emerging architectures
+ground distributions in HSI and the rarity of anomalies,            have also been explored; MMR-HAD [42] leverages
+hybrid methods combining low-rank and sparse constraints            the Mamba model with random masking to inhibit anomaly
+have been explored to refine anomaly-background separation.         reconstruction, while DWSDiff [43] introduces a dual-window
+Representative methods include low-rank and sparse represen-        spectral diffusion model for precise background estimation.
+tation (LRASR) [24] and low-rank matrix decomposition using         Despite these advances, most AE-based methods remain
+Mahalanobis distance (LSMAD) [25].                                  fundamentally tied to the reconstruction assumption—that
+   In practical applications, both statistical-based and            background pixels can be accurately reconstructed while
+representation-based methods encounter significant challenges       anomalies cannot. In practice, anomalies may be partially
+when dealing with the complex and high-dimensional nature of        reconstructed with the background, causing distortion and
+hyperspectral backgrounds. To address these limitations, deep       reducing robustness. This problem is exacerbated in high-
+learning has been increasingly explored in recent years [26],       dimensional data with complex land-cover distributions,
+[27], owing to its ability to model nonlinear spectral–spatial      where the binary distinction of “background versus anomaly”
+features. Current deep learning-based HAD methods primarily         often breaks down.
+focus on three types of architectures: convolutional neural            To overcome these limitations, this article moves beyond the
+networks (CNNs), generative adversarial networks (GANs),            reconstruction paradigm and adopts contrastive learning (CL)
+and autoencoders (AEs). CNN-based methods are generally             [44], [45], [46] to develop a discriminative anomaly detection
+unsuitable for practical anomaly detection tasks due to             approach driven by intersample differences. Building upon
+their reliance on prior labeled information for supervised          this, this article proposes a hyperbolic transformer with dual-
+training [28], [29]. To overcome this, DeCNN-AD [30]                momentum contrastive learning (HTDC), a unified framework
+introduces a plug-and-play CNN denoiser to regularize               that synergistically integrates multiview data augmentation, a
+representation coefficients, enabling unsupervised learning         hyperbolic Transformer encoder, and a dual-momentum mech-
+within a traditional framework. Furthermore, to address the         anism to enable HAD through CL. In particular, a multiview
+computational burden of retraining and the constraints of           data augmentation strategy is employed to generate semanti-
+fixed input dimensions often faced by CNNs, AdaptHAD                cally consistent yet diverse views, providing the foundation
+[31] proposes an adaptive hybrid network that integrates a          for robust contrastive representation learning. A Transformer
+CNN with a Transformer to simultaneously extract local              equipped with hyperbolic attention is then constructed to
+and global features. GANs enhance the generalization ability        capture the hierarchical structural dependencies inherent in
+of neural networks through adversarial learning [32], [33].         HSI. During the CL, a dual-momentum strategy with dynamic
+Although their effectiveness in HAD has been demonstrated,          queues is introduced. The high-momentum encoder, updated
+many GAN-based variants suffer from unstable training               slowly with a large momentum coefficient, captures global
+and interference from redundant information, leading to             contextual semantics, whereas the low-momentum encoder,
+high false-alarm rates and reduced detection accuracy. To           updated more frequently with a smaller momentum, focuses
+mitigate this, CL-BioGAN [8] incorporates biologically              on local, fine-grained spectral representations. In this pro-
+inspired synaptic plasticity to actively balance memory             cess, a spectral feature encoder serves as the query branch,
+stability and learning flexibility, ensuring robust detection in    performing CL by comparing its outputs with those from
+cross-domain scenarios. In contrast, AE-based methods have          both momentum branches. Finally, in the detection stage, a
+been increasingly adopted in HAD owing to their capacity to         sliding dual-window strategy is applied, combined with a
+extract deep features with nonlinear characteristics and their      guided filter and a power function, to effectively suppress
+strong unsupervised learning capabilities [34]. For instance,       background interference and enhance spatial–spectral contrast.
+RGAE [35] integrates graph constraints and superpixel               The main contributions of this work are summarized as
+segmentation, while Auto-AD [36] employs adaptive loss              follows.
+WANG et al.: HTDC: HYPERBOLIC TRANSFORMER WITH DUAL-MOMENTUM CONTRASTIVE LEARNING FOR HAD                                    5507217
+
+
+
+
+Fig. 1. Flowchart of the proposed HTDC method.
+
+
+   1) Multiview Augmentation for CL: A strategy that generates      learning (HTDC) framework for HAD. The framework con-
+diverse perspectives by simulating data completeness, reso-         sists of five main components: a multiview data augmentation
+lution variation, and band absence. Through Gaussian noise          to enhance the quality and diversity of data samples, a spectral
+perturbation and random spectral band masking, it enriches          feature extraction network based on a hyperbolic Transformer
+spectral diversity and alleviates the limitations of CL under       to capture hierarchical spectral–spatial dependencies, a CL
+homogeneous samples.                                                mechanism with a dual-momentum strategy to improve feature
+   2) Hyperbolic Transformer Encoder: An architecture               discrimination, and a dual-window anoma

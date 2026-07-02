@@ -1,0 +1,1419 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [603] AI-on-RAN for Cyber Defense: An XAI-LLM Framework for Interpretable Anomaly Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：603
+题名：AI-on-RAN for Cyber Defense: An XAI-LLM Framework for Interpretable Anomaly Detection
+年份：2025
+DOI：10.1109/tnse.2025.3629983
+来源：IEEE Transactions on Network Science and Engineering
+PDF：paper/10.1109_TNSE.2025.3629983.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：其他AI安全与跨域异常检测
+相关性：强相关，分数 13
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\603.txt
+- 原始字符数：82831
+- 本次发送字符数：82831
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+3301
+
+AI-on-RAN for Cyber Defense: An XAI-LLM
+Framework for Interpretable Anomaly Detection
+Sotiris Chatzimiltis , Graduate Student Member, IEEE, Mohammad Shojafar , Senior Member, IEEE,
+Mahdi Boloursaz Mashhadi , Senior Member, IEEE, and Rahim Tafazolli , Fellow, IEEE
+
+Abstract—Next generation Radio Access Networks (RANs) introduce programmability, intelligence, and near real-time control
+through intelligent controllers, enabling enhanced security within
+the RAN and across broader 5G/6G infrastructures. This paper
+presents a comprehensive survey highlighting opportunities, challenges, and research gaps for Large Language Model (LLM)assisted explainable (XAI) Intrusion Detection Systems (IDS) in
+future RAN environments. Motivated by this, we propose an LLM
+interpretable anomaly detection system leveraging multivariate
+time series Key Performance Measures (KPMs), extracted from
+E2 nodes, within the Near Real-Time RAN Intelligent Controller
+(Near-RT RIC). A sequence classification model is trained to identify malicious User Equipment (UE) behavior based on these KPMs.
+To enhance transparency, we apply post-hoc local explainability
+methods such as LIME and SHAP to interpret individual predictions. Furthermore, LLMs are employed to convert technical explanations into natural-language insights accessible to non-expert
+users. Experimental results on real 5G network KPMs demonstrate
+that our framework achieves high detection accuracy (macro F1score > 0.96) while delivering actionable and interpretable outputs.
+Index Terms—XAI, LLMs, AI RAN, DDoS, near-RT-RIC,
+network security.
+
+I. INTRODUCTION
+HE Open Radio Access Network (RAN) paradigm has
+significantly reshaped the modern wireless network architecture by introducing disaggregated, interoperable, and programmable components into the RAN [1], [2]. A key enabler of
+this flexibility is the introduction of intelligent RAN controllers,
+specifically the Near-Real-Time RIC (Near-RT RIC) and the
+Non-Real-Time RIC (Non-RT RIC), which respectively support
+the deployment of custom applications known as xApps and
+rApps [3], [4]. These applications facilitate intelligent control,
+optimization, and monitoring of radio resources by leveraging
+
+T
+
+Received 17 July 2025; revised 22 October 2025; accepted 2 November 2025.
+Date of publication 6 November 2025; date of current version 11 December 2025.
+This work was supported in part by the ORAN-TWIN-X Project of CHEDDAR:
+Communications Hub for Empowering Distributed Cloud Computing Applications and Research, funded by the U.K. Engineering and Physical Sciences
+Research Council under Grant EP/Y037421/1 and Grant EP/X040518/1, in part
+by the Mobile oRAN for highly Dense Environments (5G MoDE) Project, in part
+by the TUDOR (Towards Ubiquitous 3D Open Resilient Network) Project, and
+in part by two major winners of the U.K.’s Department of Science, Innovation
+and Technology Open Networks Ecosystem Competition. Recommended for
+acceptance by Dr. Yao Sun. (Corresponding author: Mohammad Shojafar.)
+The authors are with the 5G/6GIC, Institute for Communication Systems
+(ICS), University of Surrey, GU2 7XH Guildford, U.K. (e-mail: sc02449@
+surrey.ac.uk; m.shojafar@surrey.ac.uk; m.boloursazmashhadi@surrey.ac.uk;
+r.tafazolli@surrey.ac.uk).
+Digital Object Identifier 10.1109/TNSE.2025.3629983
+
+analytics and Machine Learning (ML) across different time
+scales. This software-driven programmability enhances network
+adaptability and automation, supporting dynamic network slicing, advanced security mechanisms, resource allocation, and
+orchestration processes that flexibly adapt to diverse and evolving network demands [5], [6]. Building on these architectural
+foundations, the AI RAN paradigm has emerged as a natural
+next step, aiming to integrate AI-driven intelligence across all
+layers of the RAN. Defined by the AI-RAN Alliance, this
+paradigm outlines three key development areas: AI-for-RAN,
+AI-on-RAN, and AI-and-RAN [7], [8], each addressing a distinct aspect of AI integration in the design and operation of RAN
+systems.
+In this context, AI-RAN provides new opportunities to harness AI to improve network security. Both AI-for-RAN and
+AI-on-RAN enable the development of intelligent, adaptive
+mechanisms for detecting and mitigating anomalous behavior
+originating from User Equipment (UE) or network entities.
+Such mechanisms are increasingly critical as mobile networks
+face sophisticated and evolving security challenges, where malicious or misbehaving UEs can disrupt control and data plane
+operations, degrade quality of service, or even impact network stability [9], [10]. Traditional defense mechanisms often
+reside in the core network, limiting their responsiveness to
+edge originated anomalies. Detecting abnormal activity earlier, closer to the RAN edge, can substantially reduce reaction
+time and potential damage. Leveraging telemetry data such
+as Key Performance Measurements (KPMs) exposed via E2
+interfaces [11], [12], [13], the Near-RT RIC can host intelligent
+anomaly detection xApps that analyze UE behavior in near
+real time. As a representative example, this paper considers
+the case of a Distributed Denial-of-Service (DDoS) pattern
+to illustrate the framework’s operation, however, the proposed
+approach generalizes to other anomaly types and security-related
+deviations in RAN performance. On key contribution of this
+work lies in advancing the AI-for-RAN development area by
+proposing an ML-based framework for anomaly detection using multivariate time-series KPMs collected from UEs. A sequence modeling classifier is trained to identify abnormal or
+potentially malicious UE behavior based on these temporal
+features.
+Although detection models can achieve strong predictive performance, their decision process remains opaque, which poses
+challenges for trust, validation, and operational use in securitycritical environments [14], [15]. This is where the AI-on-RAN
+
+2327-4697 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+3302
+
+paradigm plays a key role, by enabling the deployment of auxiliary AI models, including Large Language Models (LLMs) and
+generative AI tools. Recent advancements in AI-native network
+architectures [16], [17], [18] exemplify this approach, showcasing the collaborative deployment of LLMs across cloud and
+edge environments. Such architectures facilitate real-time generative AI services and intelligent network management that can
+enhance RAN functionality, improve overall network security,
+and support operator decision-making. Recent research further
+illustrates this broader trend toward interpretable and automated
+AI-native 6G RANs, with examples addressing intelligible protocol learning for O-RAN slicing [19], explainable reasoning
+for radio resource allocation [20], and generative simulation for
+5G/6G networks [21].
+Existing works either focus solely on detection or explainability without integrating automated reasoning via LLMs, or they
+do not explicitly address the operational time constraints critical
+for deployment in Near-RT RIC environments. To address this,
+our framework first integrates Explainable AI (XAI) techniques
+to provide local explanations for individual model predictions,
+highlighting which features contributed to a specific classification. However, raw XAI output, such as feature attribution
+scores, can be complex and difficult for non-expert personnel to
+interpret quickly and act upon. To overcome this, these local
+explanations are passed through an LLM that automatically
+translates complex technical outputs into human-readable natural language insights, and it leverages its reasoning capabilities
+(if applicable) to suggest potential mitigation strategies based on
+detected anomalies. By doing so, the LLM reduces the cognitive
+burden on operators, accelerates incident response, and moves
+toward partial security workflow automation, bridging the gap
+between anomaly detection and mitigation.
+Contributions: The main contributions of this paper are summarized as follows:
+1) We provide a comprehensive survey on LLM and XAI integration for Intrusion Detection Systems (IDS) for RAN
+security in future networks. We highlight the key challenges and opportunities as well as the existing research
+gaps in this area.
+2) We propose an LLM-explainable anomaly detection
+framework leveraging a sequence modeling approach operating on UE KPM time-series data.
+3) We integrate local XAI methods (LIME and SHAP) to explain per-instance predictions and enhance interpretability.
+4) We introduce the use of LLMs to translate technical explanations into natural language, increasing human readability.
+The remainder of the paper is organized as follows.
+Section II reviews related work on intrusion detection, XAI, and
+LLM in wireless networks. Section III introduces the proposed
+framework, detailing the system architecture, the classification
+model, and the interpretability pipeline. Section IV presents the
+experimental evaluation, which assesses both detection accuracy
+and explanation quality. Finally, Section V concludes the paper
+and outlines potential future directions.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+II. RELATED WORK
+This section reviews related work on IDSs, with a focus on
+the integration of ML and Deep Learning (DL) techniques, the
+role of XAI in improving the transparency of IDS decisions, and
+the emerging use of LLMs for intrusion detection, mitigation,
+and explainability.
+A. Intrusion Detection Systems
+IDSs serve as a critical component in the defense of a multitude of networks. Examples include SDN-based IDSs, which
+leverage centralized control and network programmability for
+enhanced threat detection [22], [23], [24], IoT-oriented IDSs,
+which address the unique constraints of low-power heterogeneous devices [25], [26], [27], and IDSs designed for vehicular
+networks, which address high mobility and real-time communication requirements [28], [29], [30]. Unlike static defenses that
+rely on predefined rules or known threat signatures, IDSs are
+designed to dynamically observe network activity and identify
+potentially harmful patterns. In this subsection, we review key
+developments in classical, ML-based, and DL-based IDSs, with
+special attention to their application in mobile networks, 5G /
+B5G infrastructure, and next-generation RAN architectures.
+1) Classical, ML-Based and DL-Based IDS: The evolving
+landscape of cyber threats and the limitations of rule-based
+detection systems drove the evolution of IDSs. Early systems
+relied on signature matching to identify known attacks, but such
+approaches struggled with novel threats [31]. This limitation
+led to behavior-based and anomaly-driven methods, where deviations from learned normal patterns were flagged as potential
+intrusions. ML played a central role in enabling this shift by
+providing data-driven models to analyze complex traffic and
+user behavior [32]. Multiple surveys in the past few years
+reviewed IDS approaches, each providing a different emphasis
+on scope, methods, and challenges. Ahmad et al. [33] provided a systematic review of network IDS (NIDS) utilizing ML
+and DL approaches. They highlighted recent methodologies,
+evaluated their strengths and weaknesses, and identified key
+datasets and evaluation metrics commonly used in the literature. Similarly, Abdulganiyu et al. [34] conducted a systematic
+review of the literature for signature, anomaly, and hybrid-based
+IDSs, evaluating their performance metrics, datasets used, and
+attack detection capabilities. Xu et al. [35] focused specifically
+on the DL-based IDS lifecycle, emphasizing data collection,
+log parsing, and intrusion detection methods. They thoroughly
+examined DL methodologies such as Graph Neural Networks
+(GNNs), transformers, and recurrent models, highlighting their
+effectiveness in detecting both known and zero-day vulnerabilities. Khraisat et al. [36] presented an in-depth survey on
+the application of Federated Learning (FL) in IDS, analyzing
+architectures and aggregation strategies for privacy-preserving
+intrusion detection. The authors analyzed the strengths and limitations of FL methodologies, addressing significant issues like
+data privacy, security, and scalability in IDS. Lastly, He et al. [37]
+reviewed recent literature on adversarial ML, specifically targeting DL-based NIDS. They categorized adversarial attacks into
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+white-box and black-box methods, highlighting their specific
+applications and limitations in the network security context.
+Additionally, the authors evaluated existing defensive strategies
+against adversarial attacks, outlined significant challenges, and
+proposed future research directions to improve the robustness of
+DL-based NIDS.
+2) Temporal Modeling for IDSs: In certain intrusion detection scenarios, it is necessary to analyze sequences of temporally
+ordered data samples rather than isolated instances to accurately
+identify specific attack patterns. Many behaviors, such as DDoS
+attacks, become apparent only through temporal dependencies
+between data points. DL approaches have been shown to be
+effective in modeling such temporal dependencies for anomaly
+detection in complex network data [38]. To address this, recent
+research has incorporated temporal modeling techniques that
+enable systems to learn from the ordering and evolution of
+events. This shift has brought increased attention to sequential
+architectures such as Recurrent Neural Networks (RNNs), Long
+Short-Term Memory (LSTMs), Gated Recurrent Units (GRUs),
+and other more cost-efficient variations [39], and more recently,
+attention-based and transformer models, which offer improved
+capabilities for capturing long-range dependencies. For example, Dash et al. [40] proposed an optimized LSTM-based framework for anomaly detection, using metaheuristic hyperparameter tuning, to showcase how recurrent models improve detection
+over conventional ML-based frameworks. Building on these
+advances, recent studies have shown that integrating attention
+mechanisms with RNN, CNN, and hybrid CNN-BiLSTM architectures can further enhance temporal feature learning and
+improve intrusion detection performance [41], [42]. Temporal
+Convolutional Networks (TCNs) have also been introduced as
+an effective alternative to modeling long-range dependencies
+in sequential network traffic [43]. Lastly, transformer-based
+architectures have enabled flexible sequence modeling for network intrusion detection and have been applied to optimize the
+trade-off between detection accuracy and timely detection in
+real-time settings [44], [45].
+3) IDSs in 5G, B5G, and Next-Generation RAN: The evolution of mobile networks toward 5G, beyond 5G (B5G), and
+next-generation RANs, including paradigms such as Open RAN
+and AI-RAN, has introduced substantial new security challenges [46], [47]. Advanced infrastructures introduce new components, interfaces, and network functions that expand the attack
+surface. As a result, there is a growing emphasis on AI-driven
+and ML-based approaches to enhance anomaly detection and intrusion prevention capabilities in both the RAN and the 5G/B5G
+core [48].
+Early efforts in this domain leverage ML techniques for attack
+detection at the network edge. For example, Xavier et al. [49]
+proposed an ML-based IDS xApp that utilizes physical and
+MAC layer features to detect DoS attacks before they reach
+the core network, while Amachaghi et al. [50] developed an
+ensemble of ML classifiers for anomaly detection. Building on
+these foundations, subsequent research has explored DL to enhance detection and mitigation capabilities. Kouchaki et al. [51]
+presented a dual xApp framework in which a self-attentionenhanced RNN autoencoder is used for anomaly detection, and
+
+3303
+
+a Secure Slicing xApp orchestrates dynamic network slicing
+in response to detected threats, thereby integrating security
+and resource management to improve network resilience. Multilayer defense strategies have also gained attention. Soleymani et al. [52] proposed a framework that combines a dApp for
+rapid detection at the RAN level with xApps for in-depth analysis
+at the near-RT RIC, achieving flexible, layered protection against
+DDoS attacks. Addressing vulnerabilities specific to the O-RAN
+architecture, Hung et al. [53] proposed an anomaly detector
+targeting threats originating from the E2 interface and third-party
+xApps, employing state machine analysis and conformance
+checking to identify and mitigate unauthorized or malicious
+signaling. Finally, the distributed and disaggregated architecture
+of next-generation RANs has enabled federated learning as a
+promising approach for privacy-preserving and scalable IDS
+deployment. Attanayaka et al. [54] introduced a peer-to-peer
+federated learning framework for anomaly detection in O-RAN,
+enabling decentralized training and secure parameter aggregation. Rumesh et al. [55] further extended this concept by
+integrating hierarchical FL within a digital twin environment,
+allowing for safe and effective model training and validation
+across multiple network slices.
+A variety of ML and DL-based defense mechanisms have been
+proposed to counter DDoS attacks in 5G and B5G core networks.
+Sheikhi et al. [56] introduced an unsupervised federated learning approach utilizing autoencoders, where each 5G core node
+independently trains a local model and a central server aggregates these models to improve detection performance. Similarly,
+SENTINEL [57] presented a self-protecting control plane framework that leverages AI to identify and isolate malicious users
+responsible for launching DDoS attacks. DL techniques have
+also been explored, for example, Hussain et al. [58] developed
+a CNN-based system for detecting compromised network cells
+under attack, while the authors in [59] proposed a framework
+using LSTM networks to identify DDoS incidents in UE-related
+network traffic. Recent work has further applied sequence modeling for improved threat detection. Pell et al. [60] used LSTM
+networks to detect PFCP signaling attacks in 5G networks with
+high accuracy. Similarly, Djaidja et al. [61] proposed attentionbased RNNs for early intrusion detection by leveraging packet
+sequence data, reducing detection latency.
+B. XAI for Intrusion Detection
+Although AI-driven IDSs have demonstrated notable improvements in detection accuracy, their opaque decision-making
+processes can impede the interpretability and validation of alerts
+by security analysts, potentially reducing trust and hampering incident response times. To address these limitations, recent survey
+studies [14], [15], [62], [63] have explored the integration of XAI
+techniques with anomaly detection models in network security.
+These surveys collectively emphasize the growing interest in
+XAI approaches for enhancing interpretability, transparency,
+and decision support in AI-based IDSs.
+Several recent studies have proposed explainable AI-based
+frameworks for anomaly detection in RANs. Barnard et al. [69]
+proposed a two-stage pipeline combining XGBoost-based
+
+3304
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE I
+OVERVIEW OF SURVEY PAPERS ON IDS, XAI, AND LLM INTEGRATION
+
+supervised intrusion detection with SHAP explanations feeding a deep autoencoder for anomaly detection. Basaran and
+Dressler [70] introduced XAInomaly, a semi-supervised Deep
+Contractive Autoencoder (DeepCAE) that integrates Generative
+AI and XAI to enhance scalability and interpretability while
+reducing the computational complexity of DL models. Similarly,
+Marantis et al. [71] proposed the Explainable Anomaly Prediction (XAP) framework, which employs an LSTM EncoderDecoder combined with an Isolation Forest and utilizes SHAPbased feature attribution for interpretable detection of RAN
+anomalies. In addition, Sun et al. [72] developed SpotLight,
+a multi-stage explainable generative model aimed at detecting
+and localizing anomalies in large-scale Open RAN deployments. Additionally, Mahbooba et al. [73] explored the use
+of decision tree models to enhance trust management in IDS
+through explainability, focusing on interpretable rules extracted
+from benchmark datasets. Gaspar et al. [74] evaluated LIME
+and SHAP applicability on a multi-layer perceptron for IDS,
+demonstrating how these XAI methods improve interpretability
+and trustworthiness of black-box intrusion detection models.
+Furthermore, Wali et al. [75] proposed a reliable IDS combining
+explainable AI with random forest (RF) models to enhance
+resilience against adversarial attacks without retraining.
+C. LLM Agents for Intrusion Detection, Mitigation and
+Explainability
+Recently, the integration of LLMs and IDSs has attracted
+significant attention, with several comprehensive surveys highlighting their potential to enhance detection accuracy, scalability,
+and interpretability across a broad spectrum of cybersecurity
+applications [64], [65], [66], [67], [68], [76]. Table I provides an
+overview of recent surveys covering ML/DL-based IDSs, XAIIDS integration, and the use of LLMs for detection, mitigation
+and natural language insights. Based on this foundation, recent
+research has demonstrated the effectiveness of LLM in code vulnerability detection [77] and intrusion detection, showing that
+models such as BERT can provide good performance in terms of
+accuracy, robustness, and even privacy preservation [78], [79].
+In the context of RANs, Moore et al. [80] proposed the use of
+LLMs as detection mechanisms, illustrating their applicability
+
+in intelligent network slicing and real-time security for O-RANenabled wireless deployments.
+Beyond basic translation and summarization, recent advances
+in the reasoning capabilities of LLMs have unlocked new avenues for autonomous decision support in cybersecurity, including the automated proposal of mitigation strategies in response
+to detected threats [81]. A notable research trend is the exploration of LLMs to enhance the explainability of AI-driven
+security systems, aiming to overcome the limitations of traditional XAI techniques, which often generate complex or overly
+technical outputs that are challenging for non-expert analysts to
+interpret. Recent studies have demonstrated a range of LLMpowered frameworks designed to address this gap. For instance,
+Wen et al. [82] introduced 6G-XSec, an explainable edge security framework that integrates LLMs with DL-based anomaly
+detection, improving security telemetry in O-RAN environments. Likewise, Mavrepisa et al. [83] developed x-[plAIn], a
+GPT-based LLM that tailors XAI explanations for both technical
+users and non-experts, making model outputs clearer and more
+actionable. Similarly, Ali and Kostakos [84] proposed HuntGPT,
+a dashboard that combines ML-based anomaly detection, XAI
+techniques (SHAP, LIME), and a GPT-3.5 Turbo conversational
+agent to translate complex threat detections into human-readable
+insights, improving decision-making and trust in AI-driven
+security systems. Furthermore, Liu et al. [85] introduced an
+LLM-based framework that delivers accurate and interpretable
+anomaly detection along with comprehensive, human-readable
+explanations. Lastly, Jüttner et al. [86] presented ChatIDS,
+which leverages LLMs to translate technical IDS alerts into
+intuitive language and actionable guidance specifically for nonexpert users, thereby enhancing the accessibility and usability
+of cybersecurity analytics.
+Although prior work has explored explainable anomaly detection or the use of LLMs for generating human-readable
+insights, they typically address these components separately.
+Table II presents a comparison with recent related works. Our
+proposed approach uniquely integrates both through two dedicated applications: one for intrusion detection and another
+for post-hoc explainability and natural language interpretation.
+Although systems like HuntGPT employ a similar XAI–LLM
+pipeline, they are neither designed for nor deployable within
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+3305
+
+TABLE II
+COMPARISON OF IDS, XAI, AND LLM INTEGRATION ACROSS RELATED WORK
+
+Fig. 1. End-to-end workflow of the proposed framework within the Open RAN
+architecture.
+
+Open RAN environments. Our approach fills this gap by enabling near-real-time detection while providing interpretable,
+human-readable insights through LLMs. Unlike full LLM-based
+detection approaches that attempt to perform detection and interpretation within a single large model, our framework separates
+these functionalities into specialized modules. The decoupling
+of sequence classification and XAI–LLM improves deployment
+feasibility in latency-constrained AI-RAN environments.
+III. INTERPRETABLE ANOMALY-BASED DDOS DETECTION
+SYSTEM
+This section introduces our framework for intelligent DDoS
+detection and explainability within the Open RAN architecture.
+We integrate an LSTM-based detection model with XAI techniques and LLMs to provide interpretable insights. Section III-A
+details the architecture of the proposed framework and how it
+can be integrated into the Near-RT RIC. Section III-B focuses
+on the local explanation methods used to understand individual predictions, while Section III-C describes the LLM-based
+interpretability module.
+A. Proposed Framework
+The proposed framework is illustrated in Fig. 1. This framework integrates machine learning and explainability techniques
+within the Open RAN architecture to enable near real-time
+DDoS detection with interpretable insights. As traffic is exchanged from the UEs to the core network, the RAN components
+collect and extract KPMs for each UE. These KPMs are sent via
+
+the E2 interface (Step 1) to the Near-RT RIC, where they are
+received by the IDS xApp. The framework consists of one xApp
+and one rApp:
+r xApp: IDS, which includes a preprocessing module (Step
+2) to organize KPMs into sequential input suitable for the
+classification model. The model performs DDoS prediction
+(Step 3), and both the prediction output and the corresponding preprocessed instance are forwarded to the XAI–LLM
+rApp (via the A1 interface) for further interpretation.
+r rApp: XAI + LLM, which receives the output of the IDS
+xApp (Step 4). It first applies local explanation methods
+(SHAP and LIME) to interpret the prediction (Step 5),
+and then uses an LLM to translate these explanations
+into human-readable insights (Step 6). The decision to
+implement this functionality as an rApp is driven by both
+computational and architectural factors. Large-scale LLMs
+(e.g., GPT, DeepSeek) introduce notable inference latency,
+which can exceed the near-real-time constraints of xApps.
+rApps, being suited for non-real-time operations, are better
+aligned with the compute-intensive nature of XAI+LLM
+processing. Moreover, since this module serves an advisory
+role, providing interpretability and mitigation suggestions
+without directly interfacing with RAN components, its
+design naturally aligns with the rApp framework. Future
+extensions that automate mitigation could reconsider an
+xApp implementation.
+The final output can be saved in a database for future use.
+Additionally, the Non-RT RIC includes an offline model training
+module, which periodically updates the model weights and
+deploys them to the xApp and rApp (Step 0).
+B. XAI Methods
+XAI addresses the challenge of providing transparency in the
+decision-making process of machine learning models. These
+techniques can generally be grouped into two major categories:
+intrinsic and post-hoc methods. Intrinsic approaches involve
+the use of inherently explainable models, such as tree-based
+or linear models. However, these may struggle or be unsuitable when working with high-dimensional or time-series data.
+In contrast, post-hoc methods aim to explain already-trained
+black-box models, such as neural networks, by analyzing their
+behavior after training. Post-hoc explainability techniques can
+be further divided into model-specific and model-agnostic approaches. The former are tailored to a particular model type and
+often leverage internal structures, such as attention weights, to
+provide insights. The latter, such as SHAP (SHapley Additive exPlanations) [87] or LIME (Local Interpretable Model-Agnostic
+Explanations) [88], treat the model as a black box and generate
+explanations without relying on its internal structure, making
+
+3306
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+them applicable to a wide range of models. Finally, explanations
+can be categorized as local, which focus on individual predictions, or global, which aim to describe the overall behavior of
+the model.
+1) Local Explanations: To interpret individual predictions
+made by the LSTM model, two local explainability methods
+were examined, LIME and SHAP.
+LIME: constructs a local surrogate model around a specific
+prediction to approximate the behavior of a complex black-box
+model. The idea is to perturb the input sample multiple times and
+observe how these changes affect the model’s predictions. These
+perturbed samples are weighted by their similarity to the original
+instance, and a simple, interpretable model, typically a sparse
+linear model, is trained to mimic the local decision boundary.
+LIME formalizes this process as the following optimization
+problem
+ξ(x) = arg min L(f, g, πx ) + Ω(g),
+g∈G
+
+(1)
+
+where f is the original black-box model, g ∈ G is the family
+of interpretable models, L(f, g, πx ) measures how well g approximates f in the locality defined by πx , and Ω(g) enforces
+simplicity in g (e.g., limiting the number of features). The solution ξ(x) corresponds to the explanation for instance x. LIME is
+model-agnostic and flexible, making it useful for understanding
+individual predictions across a wide variety of models and data
+types [88].
+SHAP: values are grounded in cooperative game theory and
+aim to fairly distribute a model’s output among its input features.
+Each feature is treated as a “player” in a game, and its SHAP
+value reflects the average contribution it makes to the prediction
+across all possible feature subsets. The SHAP value for a feature
+i is defined as
+ |S|!(|F | − |S| − 1)!
+·
+φi (f, x) =
+|F |!
+S⊆F \{i}
+
+
+
+
+fS∪{i} (x) − fS (x) ,
+
+(2)
+
+where F is the full set of input features, fS (x) is the model’s
+output when only the subset S is present, and fS∪{i} (x) is the
+output when the feature i is added to the subset, representing
+the marginal contribution of feature i. SHAP values offer both
+local and global explainability and can be used with any model,
+although exact computation can be expensive for large feature
+sets. Computing exact Shapley values requires evaluating all
+2n feature subsets, which becomes unmanageable for highdimensional inputs such as time-series data. To overcome this,
+Kernel SHAP was used, an efficient, model-agnostic approximation that fits a weighted linear model on randomly sampled
+subsets while preserving the core properties of Shapley values.
+2) Global Explanations: In our paper, we used the global
+shapley values to provide a global explanation of our model.
+The global importance of a feature i can be estimated by aggregating its SHAP values across all samples in the dataset. This is
+typically done by taking the mean of the absolute SHAP values
+N
+
+1  (j)
+|φ |,
+Φi =
+N j=1 i
+
+(3)
+
+(j)
+
+where φi is the SHAP value of feature i for the j-th instance,
+and N is the total number of instances. The resulting value
+Φi reflects the average contribution (regardless of direction) of
+feature i to the model’s predictions, offering a measure of global
+importance.
+C. LLM for Human Interpretability
+Outputs from XAI methods provide detailed insights into
+model decisions at the feature level, but they are often difficult
+to interpret or act upon, particularly for non-technical users.
+To bridge this gap, we introduce an LLM-based interpretability
+module designed to translate complex explanations into clear
+insights.
+To enable consistent and context-aware interpretations, the
+input prompt provided to the LLM was carefully designed to
+encapsulate both global and instance-specific information, as
+detailed below. An example of such a prompt is shown in Fig. 2
+for reference.
+r General Feature Statistics: A table showing the mean and
+standard deviation of each feature under both normal and
+attack conditions, providing global context about the data
+distribution.
+r Model Input Sequence: A matrix representing the input
+to the model, consisting of 3 time steps and 14 features,
+highlighting the temporal behavior of the instance being
+evaluated.
+r Model Output: The binary classification result (normal or
+anomalous) produced by the classification model for the
+given input sequence.
+r Local Explanation Tables: Tabulated outputs from LIME
+and SHAP explanation methods, showing the contribution
+of individual features to the specific prediction made by
+the model.
+r Global Feature Importance Table: A table of mean absolute
+SHAP values computed across the dataset and structured
+by feature and time step, enabling the LLM to understand
+which features are generally most influential.
+r Task Instructions: A final instruction block asking the LLM
+to produce a human-readable summary of the model’s
+explanation and to suggest potential mitigation strategies.
+For LLMs that support reasoning, we explore whether
+enabling such modes improves performance on this task.
+Initially, we adopted a zero-shot prompting strategy, in which
+the LLM was presented with the structured input prompt and
+asked to generate explanations without any prior examples. This
+approach enabled rapid evaluation of interpretability without the
+need for task-specific fine-tuning.
+To further improve the quality of the generated insights,
+we applied a few-shot prompting strategy. Such strategies can
+provide the model with the necessary contextual cues through
+examples, while requiring relatively small datasets and low computational resources [89], [90]. In this approach, we appended
+the prompt with a couple example input-output pairs, each consisting of the previous prompt input followed by a high-quality,
+human-written explanation. The inclusion of these demonstrations can help the LLM better understand the structure, tone, and
+content expected in its responses. Fig. 3 provides the complete
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+Fig. 2.
+
+3307
+
+Zero-shot LLM input prompt.
+
+set of example inputs and corresponding human-written outputs
+used during the few-shot prompting process.
+D. Inference Overhead and Deployment Considerations
+While LLMs enhance interpretability by translating complex
+XAI outputs into human-readable insights, they also introduce
+
+inference/deployment costs that must be considered for practical
+adoption [91]. To avoid burdening the real-time pipeline, we
+placed the interpretability module in the non-RT RIC, where
+explanations can be generated asynchronously. Deployment can
+follow two main strategies: cloud-based APIs or self-hosted
+open-source models [92]. APIs provide straightforward access to
+advanced models but incur recurring usage fees, variable latency,
+
+3308
+
+Fig. 3.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Few-shot LLM input prompt.
+
+and potential data privacy risks. In contrast, self-hosting offers
+control, predictable performance, and reduced long-term cost at
+scale, but requires substantial upfront investment in dedicated
+hardware and energy resources. For self-hosted models, cost
+can be reduced through compression techniques such as quantization, pruning, and knowledge distillation [93], as well as by
+
+adopting lightweight fine-tuned LLMs. For API-based solutions,
+where direct model optimization is not possible, strategies such
+as prompt simplification, selective querying, and caching can
+help reduce overall cost [94]. To ground this discussion, Table III
+provides illustrative estimates of deployment costs for representative LLMs, linking parameter counts to their approximate
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+Fig. 3.
+
+3309
+
+(Continued)
+
+inference complexity (TFLOPs per token), API pricing, latency,
+and per-request costs under our zero-shot and few-shot settings.
+
+Section IV-C shows the numerical results of the classification
+model performance, XAI module explanations and finally the
+LLM interpretations.
+
+IV. FRAMEWORK ANALYSIS
+This section performs an evaluation of the proposed framework. Section IV-A describes the dataset and the pre-processing
+steps. Section IV-B details the simulation setup. Finally,
+
+A. Dataset
+The dataset used in this study comprises raw 5G radio and core
+metrics obtained from the National Centre of Scientific Research
+
+3310
+
+Fig. 3.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+(Continued)
+
+“Demokritos” [95]. This dataset was captured from a real-world
+5G testbed following 3GPP standards. It documents various
+DDoS attack scenarios initiated by malicious UEs within a 5G
+network. The testbed consists of three cells connected to a shared
+5G core, with nine UEs in total. Cells 1 and 3, along with the 5G
+core, are hosted on the Amarisoft Classic platform, while Cell 2
+utilizes the Amarisoft Callbox Mini. Up to five malicious UEs
+were chosen to launch different flooding attacks, including SYN,
+
+ICMP, UDP Fragmentation, DNS Flood, and GTP-U Flood, as
+detailed in Table IV. Attack data were recorded over four days,
+and KPMs were gathered using a data collector interfaced with
+the 5G network. For each UE, the KPMs include but not limited
+to downlink/uplink bit rates, Channel Quality Indicators (CQI),
+total transmitted bytes and transmission errors, sampled every
+five seconds. The final dataset consisted of 686,009 KPM reports, including 674,553 benign and 11,456 malicious samples,
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+3311
+
+TABLE III
+ILLUSTRATIVE INFERENCE COST ESTIMATES FOR SELECTED LLMS. FLOPS PER TOKEN ARE APPROXIMATED BY C ≈ 2N , WHERE N IS THE PARAMETER COUNT.
+VALUES ARE SHOWN IN TFLOPS PER GENERATED TOKEN, WITH INDICATIVE API PRICES, LATENCIES, AND PER-REQUEST COSTS.
+
+TABLE IV
+OVERVIEW OF DDOS ATTACK TYPES, OCCURRENCE TIMES, AND
+PARTICIPATING DEVICES
+
+Fig. 4. KDE Comparison of Downlink Bitrate under Attack and Normal
+conditions. (a) Downlink Bitrate - Normal. (b) Downlink Bitrate - Attack.
+
+TABLE V
+COMPARISON OF FEATURES BETWEEN NORMAL AND ATTACK DURATIONS,
+SORTED BY ABSOLUTE DIFFERENCE
+
+reflecting a real-world imbalance where attack events are rare
+(only 1.7% of all samples). The attack samples were distributed
+as follows: SYN flood (1,402 samples, 12. 2%), ICMP (3,756
+samples, 32. 8%), UDP fragmentation (1,402 samples, 12.2%),
+DNS flood (1,399 samples, 12. 2%) and GTP-U flood (3,497
+samples, 30. 5%).
+Exploratory Data Analysis: An Exploratory Data Analysis
+(EDA) was conducted to compare feature distributions during
+normal and attack periods. This analysis aimed to identify
+patterns, ranges, and potential indicators of malicious activity. Table V highlights the differences in mean values for key
+features, sorted by their percentage differences. For instance,
+uplink error rates (ul_err) and downlink error rates (dl_err)
+show a sharp increase during attacks, while downlink bitrates
+(dl_bitrate) drop significantly. These insights are supported
+
+by visualizations in Fig. 4, illustrating where data distributions
+become more skewed under attack conditions. Finally, Fig. 5 illustrates the temporal variation of some features across different
+attacks, comparing normal (blue) and malicious (red) UEs. The
+two rows represent different network parameters: uplink retransmissions (ul_retx), and uplink bitrate (ul_bitrate), while
+each column corresponds to a specific traffic type. The normal
+UE data were aligned with the same timestamps as the malicious
+UE to provide a direct, time-synchronized comparison. The distinct differences between normal and malicious traffic suggest
+that these patterns can help in more effective attack detection.
+The dataset was further preprocessed to ensure high-quality
+input for the LSTM model. Features containing singular values
+or irrelevant identifiers (e.g., IP addresses) were excluded, while
+records with NaN values were removed. Data from periods of
+continuous transmission were selected to accurately represent
+UE behavior under both normal and attack scenarios.
+B. Simulation Setup
+We evaluated three deep learning architectures for sequential
+network traffic analysis: LSTM, TCN, and Transformer-based
+models. Each model was fine-tuned to identify the most effective
+hyperparameters, including the window size and the ratio of
+past data used. The dataset was partitioned into training and
+test sets using an 80–20 split, with RobustScaler normalization
+applied. All models were trained using the Adam optimizer
+with binary cross-entropy loss, a batch size of 64, and early
+stopping (patience = 5). The corresponding hyperparameter
+search spaces are summarized in Table VI.
+Based on these results shown in Table VII, the LSTM achieved
+the best trade-off between accuracy, F1-scores, False Positive
+Rate (FPR), and False Negative Rate (FNR), inference time, and
+model size, therefore, it was selected as our final architecture.
+
+3312
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 5. Feature variation comparison between normal (blue line) and malicious (red line) UEs. Each column corresponds to a different network traffic type:
+Normal, SYN, ICMP, UDP, DNS, and GTPU, while each row represents a different network feature: ul_retx (row 1), and ul_bitrate (row 2). The normal
+UE data is sampled at the same timestamps as the malicious UE for a direct comparison.
+
+TABLE VI
+HYPERPARAMETER SEARCH SPACES FOR EACH MODEL
+
+We note, however, that while LSTMs were most effective in this
+setting, TCN and Transformer models may be more suitable in
+problems involving larger feature spaces or significantly longer
+temporal dependencies, where their ability to capture long-range
+patterns could provide advantages. The LSTM model architecture consists of an input layer processing sequences of shape
+(3,14), a 32-unit LSTM layer to extract temporal dependencies,
+and a dense output layer with sigmoid activation for binary
+classification.
+Furthermore, we utilized multiple LLMs to generate humanreadable summaries and mitigation strategies, selecting models
+of varying sizes to observe how output quality differs with scale.
+The models used, in descending order of approximate parameter
+count, were: GPT-4-Turbo (∼ 1.7T parameters), DeepSeekV3-R1 (∼671B), Mistral-Large-Instruct-2411 (∼123B), and
+Google’s Gemini-2.0-Flash model. All models were accessed
+programmatically through their respective APIs. When supported, reasoning modes were enabled to assess whether such
+capabilities improved the quality of the generated outputs. We
+quantitatively assessed the outputs of the LLMs using standard readability metrics to evaluate their linguistic clarity and
+accessibility. Specifically, we used the py-readabilitymetrics library to compute two representative scores: (1)
+Flesch Reading Ease, where higher scores indicate easier-toread text, and (2) Gunning Fog Index, which represents the U.S.
+school grade level needed to comprehend the text. In addition,
+we employed the BERTScore metric [96], which measures
+the semantic similarity between the LLM-generated outputs
+and human-written reference texts using contextual embeddings
+
+Fig. 6.
+
+Comparison of macro F1-score for no ratio vs. ratio.
+
+from a pretrained transformer model (RoBERTa-Large). For
+each evaluation setup, 10 zero-shot and 10 few-shot prompts
+were crafted and executed twice per model, with the resulting
+metric values averaged to obtain consistent comparisons across
+models. Together, these metrics provide a comprehensive quantitative assessment of both the linguistic readability and semantic
+fidelity of the generated content across models.
+C. Results
+The first set of experiments evaluated the performance of
+the LSTM model in attack detection. Specifically, we examined
+how different combinations of window size and past data ratio
+influenced the overall model performance while addressing the
+challenge of catastrophic forgetting, where newly introduced
+training data overwrites previously acquired knowledge in sequential learning. Fig. 6 illustrates the effect of incorporating
+different ratios of past training data. The left subplot compares a
+scenario where no ratio is applied, resulting in a macro F1-score
+peaking at almost 0.90 on average, against one where past
+knowledge is retained (ratio = 0), maintaining macro F1-scores
+consistently above 0.95. The results indicate that incorporating
+a ratio stabilizes the model, preventing sharp fluctuations in
+performance. The right subplot further examines the impact
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+3313
+
+TABLE VII
+COMPARISON OF BEST-PERFORMING CONFIGURATIONS FOR LSTM, TCN, AND TRANSFORMER MODELS
+
+TABLE IX
+MISCLASSIFICATION BREAKDOWN PER ATTACK TYPE WITH AND WITHOUT
+SMOTE+TOMEK RESAMPLING
+
+Fig. 7.
+
+Average FPR(%) (left) and FNR(%) (right).
+
+TABLE X
+PERFORMANCE COMPARISON WITH PREVIOUS WORKS USING NCSRD
+
+TABLE VIII
+AVERAGE F1-SCORE FOR PREVIOUS DAYS DATA WITH AND WITHOUT RATIO
+
+of various ratios ranging from 0.1 to 0.5, showing that while
+increasing the ratio improves performance, the gains become
+marginal beyond a certain threshold.
+Beyond the effect of ratio selection, we also analyzed the impact of window size and ratio combinations on FPR and FNR, as
+shown in Fig. 7. The heatmap visualization highlights how these
+hyperparameters influence the trade-off between false alarms
+(left subplot) and missed detections (right subplot). The results
+indicate that different window size and ratio combinations lead
+to variations in FPR and FNR, though the overall differences
+remain moderate. Based on these findings, we selected a window
+size of 3 and a ratio of 0.3 as the optimal configuration for
+subsequent experiments, as they provided strong performance
+while keeping training times within a reasonable limit.
+In addition, Table VIII presents the average macro F1-score of
+the final LSTM model for each previous day test set, comparing
+cases where no ratio (0.0) is used versus where a ratio of
+0.3 is applied. The results clearly show that incorporating a
+ratio significantly enhances F1-scores across all previous day
+evaluations. Without a ratio, the model struggles to retain past
+knowledge, particularly for Day 4, where performance drops
+drastically to 0.36. In contrast, applying a ratio of 0.3 effectively
+preserves past knowledge, leading to consistently high macro
+F1-scores, all exceeding 0.96. These findings underscore the
+importance of balancing new and past training data to maintain
+model stability and performance, mitigating the risks of catastrophic forgetting.
+Moreover, to address the class imbalance (only about 1.7%
+malicious samples), we employed a two–step resampling strategy: SMOTE [99] to oversample the minority class up to a target
+prevalence of roughly 10% (i.e., ∼1:9 pos:neg), followed by
+Tomek links [100] to remove borderline samples. This primarily
+
+reduces FNR at the expense of a higher FPR. Concretely, the
+non-resampled model achieved an overall FPR of 0.045% and
+FNR of 6.24%, whereas the resampled model achieved an FPR
+of 0.334% and an FNR of 3.01%. Table IX details FNs per
+attack family and FPs on benign traffic for both settings, showing
+that resampling markedly improves recall for the hardest class
+(GTP-U) while maintaining high precision overall.
+Recent studies have evaluated the NCSRD dataset using a range of ML and DL models for DDoS detection.
+Christopoulou et al. [97] assessed classical ML algorithms
+such as k-Nearest Neighbors (kNN) and XGBoost, while Xylouris et al. [98] explored DL models including CNNs and
+LSTMs. Table X summarizes the performance of these approaches alongside our proposed method. To ensure a consistent
+and fair comparison, we re-implemented both ML baselines
+using 10 neighbors for kNN and representative XGBoost hyperparameters (n_estimators=500, max_depth=6). In our
+evaluation, neither model outperformed the proposed LSTMbased method. It is also worth noting that an F1-score of 1.00
+corresponds to a theoretically perfect classification, implying
+zero false positives and zero false negatives—an outcome rarely
+achievable on real-world network traffic. Although the classical
+ML models achieved strong detection performance [97], their
+approach classified each instance independently, without leveraging temporal patterns across sequences, an essential factor
+for detecting evolving attack behavior. In contrast, our proposed
+DDoS detection captures temporal dependencies and achieves
+efficient inference, making it well-suited for near real-time deployment in AI-RAN environments. While Xylouris et al. [98]
+
+3314
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+Fig. 8. Local explanations for TP, TN, FP, and FN instances. The top row shows the top 10 LIME feature contributions (feature name and value shown; blue:
+Normal, orange: Attack). The bottom row shows SHAP heatmaps over three time steps (T0–T2), where red supports “Attack” and blue supports “Normal”.
+
+also employed DL architectures capable of modeling temporal information (e.g., LSTM and CNN), differences in model
+architecture and feature selection contribute to the superior performance of our system, which operates at an average inference
+time of 0.03 ms per sample (∼ 36K FLOPs) on a standard Intel
+i7-10700 CPU.
+Having established the model’s effectiveness, we now focus
+on explaining its decisions through local and global explanations, using LIME and SHAP to gain insights into individual and aggregated feature contributions. Fig. 8 presents local explanations for four representative test instances: a True
+Negative (TN), a True Positive (TP), a False Negative (FN),
+and a False Positive (FP). The top row shows the LIME-based
+explanations, highlighting the top 10 most influential features
+for each prediction. These explanations are based on a locally
+fitted linear model, which interprets each feature’s contribution
+toward the predicted class (either “Normal” or “Attack”). LIME
+provides human-readable rules, for instance, it may indicate
+that a feature’s value is greater than, less than, or falls within
+a specific range. As an example, in the second subplot of the top
+row, the feature ul_bitrate at time step T 2 contributes to an
+“Attack” prediction because its value is greater than 10.2 Mbps,
+as identified by the LIME model.
+Furthermore, the second row of Fig. 8 provides local SHAP
+explanations of the four test instances. Each heatmap shows the
+SHAP values across the three time steps (T0-T2) and the 14 input
+features. Red regions indicate feature-time contributions that
+increased the likelihood of an “Attack” prediction, while blue
+regions represent contributions toward the “Normal” class. In the
+TP and FP instances, high-intensity red regions appear for features such as ul_bitrate, ul_tx, ul_retx, dl_tx, and
+dl_bitrate, indicating the model’s strong reliance on these
+signals when predicting an attack. In the TN instance, although
+dl_bitrate shows strong attack-leaning contributions across
+timesteps, normal-leaning effects from ul_bitrate, ul_tx,
+
+Fig. 9. Global SHAP beeswarm plot showing the top 10 most influential
+features across test instances.
+
+and dl_tx counterbalance them, yielding a normal prediction.
+Finally, the FN instance exhibits a pattern similar to the TN case,
+except that other features collectively nudge the decision toward
+positive.
+Furthermore, to understand which input features the LSTM
+model relies on globally when predicting DDoS, we leveraged
+the global SHAP explanations. Fig. 9 presents a beeswarm plot
+illustrating the top 10 most influential features based on SHAP
+value magnitudes. Each dot represents a SHAP value for a
+single instance, colors indicate the actual feature value (from
+low to high), while the x-axis shows the direction and strength
+of the feature’s contribution. Features like dl_bitrate,
+ul_bitrate_T0, and ul_tx_T1 emerge as highly im- pactful. To complement this, Fig. 10 provides a heatmap of the
+mean absolute SHAP values across test instances, aggregated
+per feature and time step. This gives a temporal perspective on
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+3315
+
+Fig. 10. Heatmap of the mean absolute SHAP values, showing the overall
+importance of each feature.
+
+Fig. 12.
+
+Fig. 11. Aggregate SHAP comparison between misclassified and correctly
+classified samples.
+
+the importance of each feature. Notably, the most discriminative
+features cluster around time steps T 0 and T 1, with metrics such
+as dl_bitrate to have the greatest contribution, and other
+notable features such as ul_bitrate, dl_tx and ul_tx
+showing relevance. These global explanation tools highlight the
+temporal and structural dependencies the model captures when
+identifying anomalous traffic patterns, which can potentially
+help in the final interpretations.
+Finally, Fig. 11 contrasts the SHAP attributions of misclassified versus correctly classified samples, thereby uncovering
+
+Zero-shot LLM output.
+
+systematic patterns behind model mistakes. Subfigure (a) compares FPs against TNs, showing that benign flows misclassified
+as attacks receive disproportionately high attribution from features such as dl_bitrate, ul_retx, and ul_bitrate.
+Subfigure (b) compares FNs against TPs, where attack flows
+that are missed exhibit consistently weaker contributions from
+key indicators such as ul_retx and ul_tx.
+Having analyzed the model’s behavior through local and
+global explanations, we transitioned to the final stage of the
+proposed framework, leveraging LLMs to transform these technical explanations into human-readable insights. As detailed in
+Section III-C, we designed special prompts for each test instance
+we wanted to interpret and then employed a zero-shot prompting
+strategy to generate informative summaries. The insights generated from a TP instance using zero-shot prompting are shown
+in Fig. 12.
+The zero-shot prompting strategy used in this stage provided
+informative and context-aware insights that translated technical
+model outputs into language suitable for non-expert personnel.
+
+3316
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+TABLE XI
+READABILITY AND SEMANTIC FIDELITY OF LLM-GENERATED EXPLANATIONS UNDER ZERO-SHOT AND FEW-SHOT PROMPTING
+
+Fig. 13.
+
+Few-shot LLM output.
+
+These summaries effectively described the rationale for the
+model’s decision, highlighted key contributing characteristics.
+However, we also employed few-shot prompting to refine the
+LLM-generated outputs, enabling the insights to offer greater
+detail on the key drivers behind the model’s classification. We
+presented the LLM with one TP and on TN sample with the
+appropriate outputs and then asked for the LLM to provide the
+human-readable insights for a third TP instance as shown in
+Fig. 13.
+Lastly, we quantitatively assessed the outputs of the
+LLMs using standard readability metrics to evaluate their
+
+linguistic clarity and accessibility. Specifically, we used the
+py-readability-metrics library to compute two representative scores: (1) Flesch Reading Ease, where higher scores
+indicate easier-to-read text, and (2) Gunning Fog Index, which
+represents the U.S. school grade level needed to comprehend
+the text. In addition, we employed the BERTScore metric [96], which measures the semantic similarity between the
+LLM-generated outputs and human-written reference texts using contextual embeddings from a pretrained transformer model
+(RoBERTa-Large). For each evaluation setup, 10 zero-shot and
+10 few-shot prompts were crafted and executed twice per model,
+with the resulting metric values averaged to obtain consistent
+comparisons across models. Together, these metrics provide a
+comprehensive quantitative assessment of both the linguistic
+readability and semantic fidelity of the generated content across
+models.
+Table XI presents the readability and semantic fidelity of
+explanations produced by different LLMs under zero-shot and
+few-shot prompting. Overall, models with explicit reasoning
+capabilities, achieve slightly higher semantic fidelity scores. In
+contrast, models like Mistral and Gemma produce more readable
+outputs, with simpler language and lower reading-grade levels.
+Across most models, few-shot prompting leads to small but
+consistent improvements in both readability and fidelity, suggesting that providing a few examples helps the models generate
+clearer and more faithful explanations. These findings highlight
+a trade-off between linguistic simplicity and semantic precision
+across different LLM families.
+Finally, to evaluate the perceived usefulness of the generated
+explanations, we conducted a small-scale user study using the
+OpenAI reasoning model, which achieved the highest readability
+scores. Twelve telecommunication engineers assessed ten generated explanations (five benign and five attack) and rated each
+as clear/helpful or unclear/unhelpful. Participants rated 90%
+of benign explanations and 76.7% of anomaly explanations as
+clear and helpful, resulting in an overall positive rate of 83.3%,
+consistent with the quantitative readability and fidelity metrics
+achieved in Table XI.
+V. CONCLUSION
+This paper initially presented a survey of existing works on
+IDS, XAI, and LLM integration for RAN security, highlighting
+current research efforts and opportunities in this domain. We
+then introduced an LLM interpretable framework for detecting
+DDoS attacks in mobile networks, leveraging DL, XAI, and
+LLMs. Our results demonstrate that an LSTM-based model can
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+reliably detect anomalies in KPMs extracted from UEs with high
+accuracy. Additionally, integrating SHAP and LIME explanations with LLMs provides interpretable insights accessible to
+non-technical stakeholders. The inclusion of past data training
+ratio was also shown to be crucial in mitigating catastrophic
+forgetting, ensuring stable detection performance over time.
+Future work will explore extending our framework to detect
+more sophisticated and stealthy attacks (e.g., low-rate or slow
+DDoS), as well as deploying the proposed xApp and rApp
+within a real Open RAN emulator environment to assess their
+operational performance and real-time integration capabilities.
+We also plan to automate the mitigation pipeline by translating LLM-generated insights into actionable control policies
+executable via the RIC, enabling a closed-loop detection and
+response mechanism. Lastly, to further improve the reasoning
+capabilities of the LLM, we will investigate the use of techniques
+such as Retrieval Augmented Generation (RAG), which can help
+the model generate more informed and context-aware mitigation
+strategies based on external information sources.
+REFERENCES
+[1] “O-RAN WhitePaper—Building the next generation RAN,” Alfter, Germany: O-RAN Alliance, White Paper, Oct. 2018. [Online]. Available:
+https://www.o-ran.org/resources
+[2] M. Polese, L. Bonati, S. D’Oro, S. Basagni, and T. Melodia, “Understanding O-RAN: Architecture, interfaces, algorithms, security, and research
+challenges,” IEEE Commun. Surv. Tuts, vol. 25, no. 2, pp. 1376–1411,
+Secondquarter 2023.
+[3] B. Balasubramanian et al., “RIC: A RAN intelligent controller platform
+for AI-Enabled cellular networks,” IEEE Internet Comput., vol. 25, no. 2,
+pp. 7–17, Mar./Apr. 2021.
+[4] S. Soltani, A. Amanloo, M. Shojafar, and R. Tafazolli, “Intelligent control
+in 6G open RAN: Security risk or opportunity?,” IEEE Open J. Commun.
+Soc., vol. 6, pp. 840–880, 2025.
+[5] B. Ojaghi, F. Adelantado, A. Antonopoulos, and C. Verikoukis, “SlicedRAN: Service-aware network slicing framework for 5G radio access
+networks,” IEEE Syst. J., vol. 16, no. 2, pp. 2556–2567, Jun. 2022.
+[6] P. Alemany et al., “Defining intent-based service management automation
+for 6G multi-stakeholders scenarios,” IEEE Open J. Commun. Soc., vol. 6,
+pp. 2373–2396, 2025.
+[7] AI-RAN Alliance, “AI-RAN alliance vision and mission white paper,” AI-RAN Alliance, Technical Report (TR) 1.00, 2024. [Online]. Available: https://ai-ran.org/wpcontent/uploads/2024/12/A IRAN Alliance Whitepaper.pdf
+[8] L. Kundu, X. Lin, R. Gadiyar, J.-F. Lacasse, and S. Chowdhury, “AIRAN: Transforming RAN with AI-driven computing infrastructure,”
+2025, arXiv:2501.09007.
+[9] Q. Tang, O. Ermis, C. D. Nguyen, A. D. Oliveira, and A. Hirtzig, “A
+systematic analysis of 5G networks with a focus on 5G core security,”
+IEEE Access, vol. 10, pp. 18298–18319, 2022.
+[10] D. Je, J. Jung, and S. Choi, “Toward 6G security: Technology trends,
+threats, and solutions,” IEEE Commun. Standards Mag., vol. 5, no. 3,
+pp. 64–71, Sep. 2021.
+[11] “O-RAN WG3 E2 service model (E2SM) KPM specification,” O-RAN
+Alliance, Tech. Rep. v06.00, Feb. 2025.
+[12] “O-RAN WG3 E2 general aspects and principles (E2GAP),” O-RAN
+Alliance, Tech. Rep. v07.00, Feb. 2025.
+[13] “O-RAN WG3 E2 application protocol (E2AP),” O-RAN Alliance, Tech.
+Rep. v07.00, Feb. 2025.
+[14] S. Neupane et al., “Explainable intrusion detection systems (X-IDS): A
+survey of current methods, challenges, and opportunities,” IEEE Access,
+vol. 10, pp. 112392–112415, 2022.
+[15] A. Nascita, G. Aceto, D. Ciuonzo, A. Montieri, V. Persico, and A.
+Pescapé, “A survey on explainable artificial intelligence for internet traffic classification and prediction, and intrusion detection,” IEEE Commun.
+Surv. Tuts, vol. 27, no. 5, pp. 3165–3198, Oct. 2025.
+
+3317
+
+[16] Y. Chen et al., “NetGPT: An AI-native network architecture for provisioning beyond personalized generative services,” IEEE Netw., vol. 38,
+no. 6, pp. 404–413, Nov. 2024.
+[17] Y. Sun, L. Zhang, L. Guo, J. Li, D. Niyato, and Y. Fang, “S-RAN:
+Semantic-aware radio access networks,” IEEE Commun. Mag., vol. 63,
+no. 4, pp. 207–213, Apr. 2025.
+[18] C. Liang et al., “Generative AI-driven semantic communication networks: Architecture, technologies, and applications,” IEEE Trans. Cogn.
+Commun. Netw., vol. 11, no. 1, pp. 27–47, Feb. 2025.
+[19] F. Rezazadeh et al., “Intelligible protocol learning for resource allocation in 6G O-RAN slicing,” IEEE Wireless Commun., vol. 31, no. 5,
+pp. 192–199, Oct. 2024.
+[20] F. Rezazadeh et al., “Toward explainable reasoning in 6G: A proof of
+concept study on radio resource allocation,” IEEE Open J. Commun.
+Soc., vol. 5, pp. 6239–6260, 2024.
+[21] F. Rezazadeh, A. A. Gargari, S. Lagen, H. Song, D. Niyato, and L. Liu,
+“Toward generative 6G simulation: An experimental multi-agent LLM
+and ns-3 integration,” 2025, arXiv:2503.13402.
+[22] S. Chatzimiltis, M. Shojafar, M. B. Mashhadi, and R. Tafazolli, “A collaborative software defined network-based smart grid intrusion detection
+system,” IEEE Open J. Commun. Soc., vol. 5, pp. 700–711, 2024.
+[23] S. Chatzimiltis, S. R. Lucas, M. Shojafar, M. Boloursaz Mashhadi, and
+R. Tafazolli, “Intrusion detection in software defined networks with
+imbalanced attack classes,” ITU J. Future Evolving Technol., vol. 5, no. 4,
+pp. 422–432, 2024.
+[24] N. S. Shaji, R. Muthalagu, and P. M. Pawar, “SD-IIDS: Intelligent
+intrusion detection system for software-defined networks,” Multimedia
+Tools Appl., vol. 83, no. 4, pp. 11077–11109, 2024.
+[25] S. Hore, Q. H. Nguyen, Y. Xu, A. Shah, N. D. Bastian, and T. Le,
+“Empirical evaluation of autoencoder models for anomaly detection in
+packet-based NIDS,” in Proc. IEEE Conf. Dependable Secure Comput.,
+2023, pp. 1–8.
+[26] B. Sharma, L. Sharma, C. Lal, and S. Roy, “Anomaly based network intrusion detection for IoT attacks using deep learning technique,” Comput.
+Elect. Eng., vol. 107, 2023, Art. no. 108626.
+[27] A. Gueriani, H. Kheddar, and A. C. Mazari, “Enhancing IoT security
+with CNN and LSTM-based intrusion detection systems,” in Proc. IEEE
+6th Int. Conf. Pattern Anal. Intell. Syst., 2024, pp. 1–7.
+[28] J. Cui et al., “LH-IDS: Lightweight hybrid intrusion detection system
+based on differential privacy in VANETs,” IEEE Trans. Mobile Comput.,
+vol. 23, no. 12, pp. 12195–12210, Dec. 2024.
+[29] A. Benziker, R. Arunagiri, and G. Maheswari, “Improved IDS for vehicular ad-hoc network using deep learning approaches,” in Proc. IEEE 2nd
+Int. Conf. Automat., Comput. Renewable Syst., 2023, pp. 341–346.
+[30] C. Fan, J. Cui, H. Jin, H. Zhong, I. Bolodurina, and D. He, “Auto-updating
+intrusion detection system for vehicular network: A deep learning approach based on cloud-edge-vehicle collaboration,” IEEE Trans. Veh.
+Technol., vol. 73, no. 10, pp. 15372–15384, Oct. 2024.
+[31] K. I. Iyer, “From signatures to behavior: Evolving strategies for nextgeneration intrusion detection,” Eur. J. Adv. Eng. Technol., vol. 8, no. 6,
+pp. 165–171, 2021.
+[32] R. Sommer and V. Paxson, “Outside the closed world: On using machine
+learning for network intrusion detection,” in Proc. IEEE Symp. Secur.
+Privacy, 2010, pp. 305–316.
+[33] Z. Ahmad, A. S. Khan, C. W. Shiang, J. Abdullah, and F. Ahmad,
+“Network intrusion detection system: A systematic study of machine
+learning and deep learning approaches,” Trans. Emerg. Telecommun.
+Technol., vol. 32, no. 1, 2021, Art. no. e4150.
+[34] O. H. Abdulganiyu, T. A. Tchakoucht, and Y. K. Saheed, “A systematic
+literature review for network intrusion detection system (IDS),” Int. J.
+Inf. Secur., vol. 22, no. 5, pp. 1125–1162, 2023.
+[35] Z. Xu et al., “Deep learning-based intrusion detection systems: A survey,”
+2025, arXiv:2504.07839.
+[36] A. Khraisat, A. Alazab, S. Singh, T. Jan, and A. Jr Gomez, “Survey on
+federated learning for intrusion detection system: Concept, architectures,
+aggregation strategies, challenges, and future directions,” ACM Comput.
+Surv., vol. 57, no. 1, pp. 1–38, Oct. 2024.
+[37] K. He, D. D. Kim, and M. R. Asghar, “Adversarial machine learning for network intrusion detection systems: A comprehensive survey,”
+IEEE Commun. Surv. Tuts, vol. 25, no. 1, pp. 538–566, Firstquarter
+2023.
+[38] H. Huang, P. Wang, J. Pei, J. Wang, S. Alexanian, and D. Niyato, “Deep
+learning advancements in anomaly detection: A comprehensive survey,”
+IEEE Internet Things J., vol. 12, no. 21, pp. 44318–44342, Nov. 2025.
+
+3318
+
+[39] Y. Hua, Z. Zhao, R. Li, X. Chen, Z. Liu, and H. Zhang, “Deep learning
+with long short-term memory for time series prediction,” IEEE Commun.
+Mag., vol. 57, no. 6, pp. 114–119, Jun. 2019.
+[40] N. Dash, S. Chakravarty, A. K. Rath, N. C. Giri, K. M. AboRas, and N.
+Gowtham, “An optimized LSTM-based deep learning model for anomaly
+network intrusion detection,” Sci. Rep., vol. 15, no. 1, 2025, Art. no. 1554.
+[41] S. Bhattacharya, A. Khanna, S. Ganapaneni, and M. Najana, “Attentionbased deep learning frameworks for network intrusion detection: An
+empirical study,” Int. J. Glob. Innovations Solutions, 2024.
+[42] W. Dai, X. Li, W. Ji, and S. He, “Network intrusion detection
+method based on CNN-BiLSTM-attention model,” IEEE Access, vol. 12,
+pp. 53099–53111, 2024.
+[43] R. Nazre, R. Budke, O. Oak, S. Sawant, and A. Joshi, “A temporal
+convolutional network-based approach for network intrusion detection,”
+in Proc. IEEE Int. Conf. Integr. Intell. Commun. Syst., Nov. 2024, pp. 1–6.
+[44] L. D. Manocchio, S. Layeghy, W. W. Lo, G. K. Kulatilleke, M. Sarhan,
+and M. Portmann, “FlowTransformer: A transformer framework for flowbased network intrusion detection systems,” Expert Syst. Appl., vol. 241,
+May 2024, Art. no. 122564.
+[45] J. Chen, H. Zhou, Y. Mei, G. Adam, N. D. Bastian, and T. Lan,
+“Real-time network intrusion detection via decision transformers,”
+2023, arXiv:2312.07696.
+[46] M. Liyanage, A. Braeken, S. Shahabuddin, and P. Ranaweera, “Open
+RAN security: Challenges and opportunities,” J. Netw. Comput. Appl.,
+vol. 214, 2023, Art. no. 103621.
+[47] C. Hamroun, A. Fladenmuller, M. Pariente, and G. Pujolle, “Intrusion
+detection in 5G and Wi-Fi networks: A survey of current methods,
+challenges, and perspectives,” IEEE Access, vol. 13, pp. 40950–40976,
+2025.
+[48] E. N. Amachaghi, M. Shojafar, C. H. Foh, and K. Moessner, “A survey
+for intrusion detection systems in open RAN,” IEEE Access, vol. 12,
+pp. 88146–88173, 2024.
+[49] B. M. Xavier, M. Dzaferagic, D. Collins, G. Comarela, M. Martinello,
+and M. Ruffini, “Machine learning-based early attack detection using
+open RAN intelligent controller,” in Proc. IEEE Int. Conf. Commun.,
+2023, pp. 1856–1861.
+[50] E. Amachaghi, S. A. Age, S. Chatzimiltis, M. Shojafar, and C. H. Foh,
+“An efficient intrusion detection solution for near-real-time Open-RAN,”
+in Proc. IEEE Symp. Comput. Commun., 2024, pp. 1–7.
+[51] M. Kouchaki, J. Moore, M. Zhang, and V. Marojevic, “Advancing ORAN security: Integrated intrusion detection and secure slicing xApps,”
+in Proc. IEEE Conf. Comput. Commun. Workshops, 2024, pp. 1–2.
+[52] S. A. Soleymani, M. Eslamnejad, H. Alimohammadi, A. Akbas, C.
+H. Foh, and M. Shojafar, “DDoS detection and mitigation using
+d/xApp in O-RAN,” in Proc. IEEE Future Netw. World Forum, 2024,
+pp. 283–290.
+[53] C.-F. Hung, C.-H. Tseng, and S.-M. Cheng, “Anomaly detection for
+mitigating xApp and E2 interface threats in O-RAN Near-RT RIC,” IEEE
+Open J. Commun. Soc., vol. 6, pp. 1682–1694, 2025.
+[54] D. Attanayaka, P. Porambage, M. Liyanage, and M. Ylianttila, “Peer-topeer federated learning based anomaly detection for open radio access
+networks,” in Proc. IEEE Int. Conf. Commun., 2023, pp. 5464–5470.
+[55] Y. Rumesh, D. Attanayaka, P. Porambage, J. Pinola, J. Groen, and K.
+Chowdhury, “Federated learning for anomaly detection in open RAN:
+Security architecture within a digital twin,” in Proc. IEEE Joint Eur.
+Conf. Netw. Commun. 6G Summit, 2024, pp. 877–882.
+[56] S. Sheikhi and P. Kostakos, “DDoS attack detection using unsupervised
+federated learning for 5G networks and beyond,” in Proc. IEEE Joint Eur.
+Conf. Netw. Commun. 6G Summit, 2023, pp. 442–447.
+[57] A. Chilukuri, S. Vittal, and A. A. Franklin, “SENTINEL: Self protecting 5G core control plane from DDoS attacks for high availability
+service,” in Proc. 15th Int. Conf. COMmunication Syst. NETworkS, 2023,
+pp. 554–562.
+[58] B. Hussain, Q. Du, B. Sun, and Z. Han, “Deep learning-based
+DDoS-attack detection for cyber–physical system over 5G network,”
+IEEE Trans. Ind. Informat., vol. 17, no. 2, pp. 860–870, Feb.
+2021.
+[59] N. A. E. Kuadey, G. T. Maale, T. Kwantwi, G. Sun, and G. Liu, “DeepSecure: Detection of distributed denial of service attacks on 5G network
+slicing—Deep learning approach,” IEEE Wireless Commun. Lett., vol. 11,
+no. 3, pp. 488–492, Mar. 2022.
+[60] R. Pell, M. Shojafar, and S. Moschoyiannis, “LSTM-based anomaly
+detection of PFCP signaling attacks in 5G networks,” IEEE Consum.
+Electron. Mag., vol. 14, no. 1, pp. 56–64, Jan. 2025.
+
+IEEE TRANSACTIONS ON NETWORK SCIENCE AND ENGINEERING, VOL. 13, 2026
+
+[61] T. E. T. Djaidja, B. Brik, S. M. Senouci, A. Boualouache, and Y.
+Ghamri-Doudane, “Early network intrusion detection enabled by attention mechanisms and RNNs,” IEEE Trans. Inf. Forensics Secur., vol. 19,
+pp. 7783–7793, 2024.
+[62] N. Moustafa, N. Koroniotis, M. Keshk, A. Y. Zomaya, and Z. Tari,
+“Explainable intrusion detection for cyber defences in the Internet of
+Things: Opportunities and solutions,” IEEE Commun. Surv. Tuts, vol. 25,
+no. 3, pp. 1775–1807, Thirdquarter 2023.
+[63] T. Senevirathna, V. La, S. Marchal, B. Siniarski, M. Liyanage, and S.
+Wang, “A survey on XAI for 5G and beyond security: Technical aspects,
+challenges and research directions,” IEEE Commun. Surv. Tuts, vol. 27,
+no. 2, pp. 941–973, Apr. 2025.
+[64] H. Zhou et al., “Large language model (LLM) for telecommunications: A
+comprehensive survey on principles, key techniques, and opportunities,”
+IEEE Commun. Surv. Tuts, vol. 27, no. 3, pp. 1955–2005, Jun. 2025.
+[65] H. Kheddar, “Transformers and large language models for efficient intrusion detection systems: A comprehensive survey,” Inf. Fusion, vol. 124,
+2025, Art. no. 103347.
+[66] M. A. Ferrag, F. Alwahedi, A. Battah, B. Cherif, A. Mechri, and N.
+Tihanyi, “Generative AI and large language models for cyber security:
+All insights you need,” 2024, arXiv:2405.12750.
+[67] H. Xu et al., “Large language models for cyber security: A systematic literature review,” ACM Trans. Softw. Eng. Methodol., Sep. 2025. [Online].
+Available: https://doi.org/10.1145/3769676
+[68] M. A Ferrag, N. Tihanyi, and M. Debbah, “Reasoning beyond limits: Advances and open problems for LLMs,” ICT Express, 2025.
+[Online]. Available: https://www.sciencedirect.com/science/article/pii/
+S240595952500133X
+[69] P. Barnard, N. Marchetti, and L. A. DaSilva, “Robust network intrusion
+detection through explainable artificial intelligence (XAI),” IEEE Netw.
+Lett., vol. 4, no. 3, pp. 167–171, Sep. 2022.
+[70] O. T. Basaran and F. Dressler, “XAInomaly: Explainable and interpretable deep contractive autoencoder for O-RAN traffic anomaly detection,” Comput. Netw., vol. 261, 2025, Art. no. 111145.
+[71] P. Marantis, K. Ramantas, and C. Verikoukis, “RAN explainable anomaly
+prediction for 6G networks,” in Proc. IEEE 29th Int. Workshop Comput.
+Aided Model. Des. Commun. Links Netw., 2024, pp. 1–6.
+[72] C. Sun, U. Pawar, M. Khoja, X. Foukas, M. K. Marina, and B. Radunovic,
+“SpotLight: Accurate, explainable and efficient anomaly detection for
+open RAN,” in Proc. ACM Annu. Int. Conf. Mobile Comput. Netw., 2024,
+pp. 923–937.
+[73] B. Mahbooba, M. Timilsina, R. Sahal, and M. Serrano, “Explainable
+artificial intelligence (XAI) to enhance trust management in intrusion
+detection systems using decision tree model,” Complexity, vol. 2021,
+no. 1, 2021, Art. no. 6634811.
+[74] D. Gaspar, P. Silva, and C. Silva, “Explainable AI for intrusion detection
+systems: LIME and SHAP applicability on multi-layer perceptron,” IEEE
+Access, vol. 12, pp. 30164–30175, 2024.
+[75] S. Wali, Y. A. Farrukh, and I. Khan, “Explainable AI and random forest
+based reliable intrusion detection system,” Comput. Secur., vol. 157,
+2025, Art. no. 104542.
+[76] O. G. Lira, A. Marroquin, and M. A. To, “Harnessing the advanced
+capabilities of LLM for adaptive intrusion detection systems,” in Proc.
+Adv. Inf. Netw. Appl., 2024, pp. 453–464.
+[77] A. Shestov, R. Levichev, R. Mussabayev, E. Maslov, A. Cheshkov,
+and P. Zadorozhny, “Finetuning large language models for vulnerability
+detection,” IEEE Access, vol. 13, pp. 38889–38900, 2024.
+[78] H. Lai, “Intrusion detection technology based on large language models,”
+in Proc. IEEE Int. Conf. Evol. Algorithms Soft Comput. Techn., 2023,
+pp. 1–5.
+[79] M. A. Ferrag et al., “Revolutionizing cyber threat detection with
+large language models: A privacy-preserving BERT-based lightweight
+model for IoT/IIoT devices,” IEEE Access, vol. 12, pp. 23733–23750,
+2024.
+[80] J. Moore, A. S. Abdalla, P. Khanal, and V. Marojevic, “Integrated LLMbased intrusion detection with secure slicing Xapp for securing O-RANenabled wireless network deployments,” 2025, arXiv:2504.00341.
+[81] M. A. Ferrag, N. Tihanyi, and M. Debbah, “Reasoning beyond limits: Advances and open problems for LLMs,” ICT Express, 2025.
+[Online]. Available: https://www.sciencedirect.com/science/article/pii/
+S240595952500133X
+[82] H. Wen, P. Sharma, V. Yegneswaran, P. Porras, A. Gehani, and Z. Lin,
+“6G-XSec: Explainable edge security for emerging OpenRAN architectures,” in Proc. ACM Workshop Hot Topics Netw., 2024, pp. 77–85.
+
+CHATZIMILTIS et al.: AI-ON-RAN FOR CYBER DEFENSE: AN XAI-LLM FRAMEWORK FOR INTERPRETABLE ANOMALY DETECTION
+
+[83] P. Mavrepis, G. Makridis, G. Fatouros, V. Koukos, M. M. Separdani,
+and D. Kyriazis, “XAI for All: Can large language models simplify
+explainable AI?,” 2024, arXiv:2401.13110.
+[84] T. Ali and P. Kostakos, “HuntGPT: Integrating machine learning-based
+anomaly detection and explainable AI with large language models
+(LLMs),” 2023, arXiv:2309.16021.
+[85] J. Liu et al., “Large language models can deliver accurate and interpretable time series anomaly detection,” in Proc. 31nd ACM SIGKDD
+Int. Conf. Knowl. Discov. Data Mining, 2025, pp. 4623–4634.
+[86] V. Jüttner, M. Grimmer, and E. Buchmann, “ChatIDS: Explainable cybersecurity using generative AI,” 2023, arXiv:2306.14504.
+[87] S. M. Lundberg and S. I. Lee, “A unified approach to interpreting model
+predictions,” in Proc. Adv. Neural Inf. Process. Syst., 2017, vol. 30,
+pp. 4768–4777.
+[88] M. T. Ribeiro, S. Singh, and C. Guestrin, ““Why should i trust you?”
+Explaining the predictions of any classifier,” in Proc. 22nd ACM SIGKDD
+Int. Conf. Knowl. Discov. Data Mining, 2016, pp. 1135–1144.
+[89] H. Zhou et al., “Large language models for wireless networks: An
+overview from the prompt engineering perspective,” IEEE Wireless Commun., vol. 32, no. 4, pp. 98–106, Aug. 2025.
+[90] Y. Wang et al., “Large model based agents: State-of-the-art, cooperation
+paradigms, security and privacy, and future trends,” IEEE Commun. Surv.
+Tuts, early access, Jun. 3, 2025, doi: 10.1109/COMST.2025.3576176.
+[91] R. Li, D. Fu, C. Shi, Z. Huang, and G. Lu, “Efficient LLMs training and
+inference: An introduction,” IEEE Access, vol. 13, pp. 32944–32970,
+2025.
+[92] V. Liagkou, E. Filiopoulou, G. Fragiadakis, M. Nikolaidou, and C. Michalakelis, “The cost perspective of adopting large language model-as-aservice,” in Proc. IEEE Int. Conf. Joint Cloud Comput., 2024, pp. 80–83.
+[93] X. Zhu, J. Li, Y. Liu, C. Ma, and W. Wang, “A survey on model compression for large language models,” Trans. Assoc. Comput. Linguistics,
+vol. 12, pp. 1556–1577, 2024, doi: 10.1162/tacl_a_00704.
+[94] L. Chen, M. Zaharia, and J. Zou, “FrugalGPT: How to use large language
+models while reducing cost and improving performance,” Trans. Mach.
+Learn. Res., 2024. [Online]. Available: https://openreview.net/forum?id=
+cSimKw5p6R
+[95] National Centre of Scientific Research “Demokritos” and Space Hellas (Greece), “NCSRD-DS-5GDDoS: 5G radio and core metrics containing sporadic DDoS attacks,” zenodo, Feb. 2024, doi: 10.5281/zenodo.10671494.
+[96] T. Zhang, V. Kishore, F. Wu, K. Q. Weinberger, and Y. Artzi,
+“BERTScore: Evaluating text generation with BERT,” in Int. Conf.
+Learn. Representations, 2020. [Online]. Available: https://openreview.
+net/forum?id=SkeHuCVFDr
+[97] M. Christopoulou et al., “User terminals as attackers: An open dataset
+analysis of DDoS attacks in 5G networks,” in Proc. IEEE Conf. Standards
+Commun. Netw., 2024, pp. 301–307.
+[98] G. Xylouris, A. Vekraki, M. Christopoulou, M. A. Kourtis, E. K.
+Markakis, and P. Trakadas, “Advancing predictive security for consumer
+applications in beyond 5G/6G networks with annotated datasets,” IEEE
+Trans. Consum. Electron., vol. 71, no. 2, pp. 5108–5118, May 2025.
+[99] N. V. Chawla, K. W. Bowyer, L. O. Hall, and W. P. Kegelmeyer, “SMOTE:
+Synthetic minority over-sampling technique,” J. Artif. Intell. Res., vol. 16,
+pp. 321–357, 2002.
+[100] I. Tomek, “Two modifications of CNN,” IEEE Trans. Syst., Man, Cybern.,
+vol. SMC-6, no. 11, pp. 769–772, Nov. 1976.
+
+Sotiris Chatzimiltis (Graduate Student Member,
+IEEE) received the B.Sc. degree in computer science
+from the University of Cyprus, Cyprus, in 2021,
+and the M.Sc. degree in computer vision, machine
+learning and robotics from the University of Surrey,
+Guildford, U.K., in 2022. He is currently working
+toward the Ph.D. degree with the Institute for Communication Systems, the University of Surrey. His
+current research interests include machine learning,
+intrusion detection systems, distributed AI and Open
+RAN security.
+
+3319
+
+Mohammad Shojafar (Senior Member, IEEE) is
+currently an Associate Professor in network security
+and an Intel Innovator, professional ACM member
+and ACM distinguished speaker, a Fellow of the
+Higher Education Academy, and a Marie Curie alumnus, working with the 5G & 6G Innovation Centre (5G/6GIC), Institute for Communication Systems
+(ICS), the University of Surrey, Guildford, U.K. Before joining 5G/6GIC, he was a Senior Researcher
+and a Marie Curie fellow with the SPRITZ Security
+and Privacy Research group, the University of Padua,
+Padua, Italy. He secured around £2 M as PI in various EU/U.K. projects. He is
+also an Associate Editor in IEEE TRANSACTIONS ON NETWORK AND SERVICE
+MANAGEMENT, IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, IEEE TRANSACTIONS ON GREEN COMMUNICATIONS AND NETWORKING,
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, and Computer Networks.
+
+Mahdi Boloursaz Mashhadi (Senior Member,
+IEEE) received the B.S., M.S., and Ph.D. degrees in
+mobile telecommunications from the Sharif University of Technology (SUT), Tehran, Iran. He is currently a Lecturer with the 5G/6G Innovation Centre
+(5G/6GIC) with the Institute for Communication Systems (ICS), University of Surrey (UoS), Guildford,
+U.K. and a Surrey AI Fellow. His research is focused
+with the intersection of AI/ML with wireless communication, learning and communication co-design,
+generative AI for telecommunications, and collaborative machine learning. He was a PI/Co-PI for various government and industry
+funded projects including the UKTIN/DSIT 12 M£national project TUDOR. He
+is also an Editor for the Springer Nature Wireless Personal Communications
+Journal.
+
+Rahim Tafazolli (Fellow, IEEE) is currently a Professor in mobile and personal communications, the
+Director of the Institute of Communication Systems
+(ICS) and the 5G and 6G Innovation Centre, University of Surrey, Guildford, U.K. He has been active in
+research for more than 30 years and published more
+than 1200 research papers. He has been a technical
+advisor to many mobile companies, and has lectured,
+chaired, and been invited as keynote speaker to a
+number of IEE and IEEE workshops and conferences.
+He was the Chairperson for the EU Expert Group on
+Mobile Platform (e-mobility SRA), the Chairperson for the Post-IP working
+Group in e-mobility, and the past Chairperson of WG3 of WWRF. He is nationally and internationally known in the field of mobile communications. In 2018,
+he was appointed as a Regius Professor in electronic engineering for recognition
+of his exceptional contributions to digital communications technologies more
+than the past 30 years. He was elected as a Fellow of the U.K. Royal Academy
+of Engineering, in 2020. He is a Fellow of IET and the Wireless World Research
+Forum (WWRF).
+PAPER_TEXT

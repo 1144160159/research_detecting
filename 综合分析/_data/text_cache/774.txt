@@ -1,0 +1,147 @@
+           IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026                                                              1461
+
+
+
+
+              PowerDiffuser: Collaborative
+       Contrastive-Reconstruction Self-Supervised
+            Learning for Robust Power Load
+                  Signal Representation
+                 Honggang Yang , Student Member, IEEE, Cheng Lian , Senior Member, IEEE,
+                 Bingrong Xu , Member, IEEE, Ruijin Ding , and Zhigang Zeng , Fellow, IEEE
+
+
+   Abstract—The widespread deployment of smart meters                        of transforming 1-D load signals into 2-D periodicity-based
+has created significant opportunities for applying artificial                representations as a preprocessing step.
+intelligence technologies to power system tasks. However,
+the high cost of data annotation limits the effectiveness of                   Index Terms —Involution, power signal, self-supervised
+traditional supervised learning in this domain, making self-                 learning, spatiotemporal feature extractors.
+supervised learning an attractive alternative. In this article,
+we propose PowerDiffuser, a novel self-supervised learning
+strategy tailored for power load signals. By leveraging a
+                                                                                                        I. INTRODUCTION
+diffusion model framework, PowerDiffuser integrates two                            HE advent of artificial intelligence (AI) technologies has
+mainstream self-supervised paradigms, namely contrastive
+learning and reconstruction-based learning, which enables
+the model to effectively capture both periodic patterns and
+                                                                             T     provided novel approaches for power companies to address
+                                                                             operational challenges, with extensive research conducted on
+                                                                             applications including power load forecasting [1], [2], power
+local features. To address the overfitting issues commonly
+observed in generic time-series feature extractors when
+                                                                             generation forecasting [3], subscriber portrait [4], and electricity
+applied to power load tasks, we design two modular spa-                      theft detection [5]. The proliferation of smart meters, intelligent
+tiotemporal feature extractors specifically engineered to                    distribution networks, and cloud platforms has enabled power
+handle samples with varying complexity levels. In addition,                  companies to accumulate vast amounts of data, creating favor-
+we adapt the involution operator to better align with the                    able conditions for developing effective AI-based power models.
+unique characteristics of power load signals. Extensive ex-                     Nevertheless, manual annotation remains indispensable for
+periments on the ISMCBT, ETTh and REDD datasets demon-                       specific downstream tasks to facilitate supervised learning pro-
+strate that PowerDiffuser consistently outperforms both                      cesses. As demonstrated in [6], electricity theft detection based
+time-series general models and existing self-supervised                      on power and gas load analysis requires technical experts to
+learning strategies across diverse downstream power load                     explicitly label fraudulent cases. In a similar vein, the study
+tasks. Ablation studies further validate the contributions
+of the proposed modules and highlight the effectiveness
+                                                                             in [4] on household attribute inference from smart meter signals
+                                                                             necessitates extensive surveys to obtain accurate labels. These
+                                                                             annotation processes often incur substantial costs and face chal-
+   Received 25 February 2025; revised 15 July 2025 and 25 August             lenges due to privacy concerns and other practical constraints.
+2025; accepted 21 October 2025. Date of publication 24 November                 Power load signals inherently manifest as sequential data
+2025; date of current version 5 February 2026. This work was sup-            streams characterized by temporal dependencies and dynamic
+ported in part by the Natural Science Foundation of China under
+Grant 62176193 and Grant 62206204, and in part by the Fundamen-              fluctuation patterns. This time-series nature makes them partic-
+tal Research Funds for the Central Universities, China, under Grant          ularly amenable to self-supervised learning (SSL). In the field of
+104972025YJS0118. Paper no. TII-25-1156. (Corresponding author:              AI, SSL significantly reduces the dependency on manually an-
+Cheng Lian.)                                                                 notated data by exploiting the intrinsic structure and information
+   Honggang Yang, Cheng Lian, and Bingrong Xu are with the School            within the data itself to generate supervisory signals. The two
+of Automation, Wuhan University of Technology, Wuhan 430074,
+China (e-mail: hgyang@whut.edu.cn; chenglian@whut.edu.cn; bin-               predominant SSL paradigms can be categorized into contrastive
+grongxu@whut.edu.cn).                                                        learning and reconstruction-based methods. As schematically
+   Ruijin Ding is with the State Key Laboratory of Breeding Biotech-         depicted in Fig. 1, contrastive learning establishes positive and
+nology and Sustainable Aquaculture, Institute of Hydrobiology, Chi-          negative sample pairs through carefully designed strategies and
+nese Academy of Sciences, Wuhan 430072, China (e-mail: din-
+grj@ihb.ac.cn).                                                              learns discriminative feature representations by minimizing the
+   Zhigang Zeng is with the School of Artificial Intelligence and Automa-    feature space distance between positive sample pairs while
+tion, Huazhong University of Science and Technology, Wuhan 430074,           maximizing the separation of negative pairs. Fig. 2 illustrates
+China, and also with the Key Laboratory of Image Processing and              the fundamental framework of reconstruction-based methods,
+Intelligent Control of Education Ministry of China, Wuhan 430074, China      where model is trained to reconstruct complete data from partial
+(e-mail: zgzeng@hust.edu.cn).
+   The code is publicly available at https://github.com/HGYang97/            or perturbed inputs, thereby capturing the intrinsic structure
+PowerDiffuser.                                                               and essential features of the data. Through optimization of the
+   Digital Object Identifier 10.1109/TII.2025.3627498                        reconstruction error, the model extracts semantically meaningful
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+   Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+                                                                 for more information.
+1462                                                               IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+
+
+                                                                             trained in this manner can combine the advantages of both
+                                                                             paradigms.
+                                                                                In addition, we develop a specialized deep learning archi-
+                                                                             tecture tailored to the unique characteristics of power load
+                                                                             signals, incorporating two key optimizations. First, building
+                                                                             upon previous studies [3], [7] that demonstrate the superior
+                                                                             contextual information provided by 2-D representations during
+                                                                             reconstruction, and considering recent studies [8], [9] in power
+                                                                             applications that show performance improvements through 1-D
+                                                                             to 2-D signal transformations, we reformulate the data into a 2-D
+                                                                             format, defining it as a multichannel time-series self-supervised
+                                                                             task. Second, addressing the overfitting issues observed in
+                                                                             general-purpose temporal models [10], [11], [12] when applied
+Fig. 1. Generic framework of contrastive learning, where positive and        to low-complexity power tasks or datasets with limited sampling
+negative sample pairs are defined through augmentation strategies to         density, we design two deep learning models based on consistent
+learn discriminative feature representations by optimizing similarity met-   spatio-temporal interaction principles to accommodate diverse
+rics.                                                                        downstream tasks.
+                                                                                Our experimental results demonstrate that the proposed
+                                                                             methodology achieves significant performance improvements
+                                                                             across various power-related downstream tasks. The specific
+                                                                             contributions are as follows.
+                                                                                 1) We redefine the representation learning process for power
+                                                                                    load signals as a multichannel time-series self-supervised
+                                                                                    task and propose an innovative self-supervised learn-
+                                                                                    ing framework that effectively integrates contrastive
+                                                                                    learning and reconstruction within the diffusion model
+Fig. 2. General paradigm of perturbation-based reconstruction, which
+                                                                                    paradigm.
+trains models to recover clean data from partially masked or noise-              2) To mitigate overfitting risks, we develop two deep learn-
+corrupted inputs, thereby learning robust feature representations via               ing architectures based on spatio-temporal interaction
+joint optimization of reconstruction and denoising objectives.
+                                                                                    principles, specifically designed to handle multiscale task
+                                                                                    complexity levels and recordings with different but fixed
+feature representations. Despite these advancements, several                        sampling rates, while maintaining compatibility with
+critical challenges persist as follows.                                             both self-supervised learning and downstream task fine-
+    1) While contrastive learning primarily emphasizes global                       tuning.
+       feature distributions, reconstruction-based methods                       3) Comprehensive experimental evaluations demonstrate
+       demonstrate superior capability in extracting local                          that our proposed methodology achieves state-of-the-art
+       sample characteristics. This inherent limitation poses                       performance across evaluation metrics in diverse power-
+       significant challenges for any single SSL methodology to                     related downstream tasks.
+       holistically capture essential data features across diverse
+       downstream tasks in the power domain.
+    2) The effectiveness of both contrastive learning and                                          II. RELATED WORK
+       reconstruction-based approaches exhibits substantial de-                Power load signals represent a canonical form of time-series
+       pendence on task formulation. Excessively complex tasks               data where self-supervised learning effectively enhances repre-
+       may impede model convergence, whereas overly simplis-                 sentation capability. This paradigm provides an efficient frame-
+       tic formulations often yield inadequate self-supervisory              work for extracting meaningful temporal patterns while reduc-
+       signals.                                                              ing label dependency, primarily through two approaches: 1)
+   Due to the significant structural differences between these               contrastive learning-based methods leveraging discrimination
+two methods, few researchers have explored combining them.                   between positive/negative sample pairs; and 2) reconstruction-
+The emergence of diffusion models has inspired us to design                  based methods targeting future state reconstruction or missing
+a novel SSL strategy that requires the model to simultane-                   segment imputation. While both demonstrate proven efficacy in
+ously perform two tasks: Distinguishing positive and negative                temporal representation learning, they differ fundamentally in
+sample pairs and interactively generating reconstructions. We                implementation architectures.
+believe this design can enhance the model’s representational
+capacity and improve its training robustness. Specifically, when
+                                                                             A. Time Series Self-Supervised Methods Based on
+a batch of samples is fed into the model, they undergo two
+                                                                             Contrastive Learning
+different data augmentation functions, generating two distinct
+signals. These signals serve as mutual conditions during the                    In the contrastive learning paradigm, CPC [13] constructed
+diffusion process, cross-reconstructing the augmented repre-                 positive and negative sample pairs by predicting future time
+sentations of each other. After the diffusion process, we also               steps, leading to significant advancements in speech classifi-
+require the classifier to distinguish between positive and neg-              cation tasks. InfoTS [14] addressed the challenge of selecting
+ative sample pairs within the batch. We argue that models                    meaningful augmentations for time-series data by leveraging
+YANG et al.: POWERDIFFUSER: COLLABORATIVE CONTRASTIVE-RECONSTRUCTION SELF-SUPERVISED LEARNING                                             1463
+
+
+
+information theory to adaptively choose optimal au

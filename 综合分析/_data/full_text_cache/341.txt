@@ -1,0 +1,1017 @@
+4362 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+ A Moving Target DDoS Defense Approach in
+ Consortium Blockchain
+ Keke Gai , Guolei Zhang, Peng Jiang, Member, IEEE, Liehuang Zhu , Senior Member, IEEE,
+ and Kim-Kwang Raymond Choo , Senior Member, IEEE
+
+ Abstract—Although consortium blockchain has an identification threatening the security of blockchain [4], [5], [6], [7]. Existing
+mechanism, the captured internal clients are potentially threat- Internet DDoS defense methods focus on defending large-scale
+ening internal blockchain nodes. Internal Distributed Denial-of- malicious traffic requests on the Internet. However, due to the
+Service (DDoS) attacks threaten the specific nodes in consortium
+blockchain, e.g., the executor, consensus, and committer nodes. limited number of participating nodes, the nodes inside each
+Typical attack methods may include SYN Flooding and ACK organization are public for internal clients to call functions, but
+Flooding and deny normal transaction service by sending many internal clients are probably compromised by attackers, which
+invalid transactions and blocks. In this work, we have proposed cannot be defended by existing Internet DDoS defense methods.
+an organization collaboration-based DDoS defense approach and In the typical consortium blockchain, the authorized internal
+a Deep Q-learning (DQN)-based Moving Target Defense (MTD)
+for changing attack surface of victims in consortium blockchain. clients have permission to obtain the node’s information and
+On one hand, contracts are used to synchronize attack information smart contracts. Most consortium blockchains (e.g., Hyperobtained from organizations, e.g., bots’ IP addresses and public ledger Fabric [8]) implement built-in rate restrictions mainly tarkeys. On the other hand, we have developed a DQN-based MTD gets transaction processing speed or block generation frequency
+defense mechanism for organizations to change the attack surface to mitigate DDoS attacks, encompassing limits on a variety
+of victims in order to mitigate the malicious traffic, in the case
+of missing detections of bots. Our approach applies a multi-stage of aspects, such as the number of peers and orderors, overall
+game to reflect interactions between attackers and defenders. The query capacity, concurrency thresholds, and batch timeouts.
+evaluation results have demonstrated that our approach could However, the traditional setting encounters a failure in defending
+effectively mitigate DDoS attacks in consortium blockchain. internal DDoS attacks, since an internal DDoS attacker is able
+ Index Terms—Consortium blockchain, DDoS, moving target to not only launch typical DDoS attacks (e.g., SYN Flood or
+defense, deep Q-network. ACK Flood) but also compromise internal clients to implement
+ different internal attacks at the application layer, threatening the
+ I. INTRODUCTION execution, consensus, and block committing of transactions [9].
+ Therefore, these built-in rate limitations cannot mitigate the
+ EMPORARILY, Distributed-Denial-of-Service (DDoS)
+T attacks are common threats to majority of applications
+running on the Internet. A variety of new DDoS attacks have
+ target DDoS attacks considered in this work. The challenge
+ issue is that the internal attacks make various types of nodes
+ ignore current identity authentication rather than evading Interbrought new challenges to existing DDoS defense technologies, net DDoS defense [10]. A typical internal DDoS attack scenario,
+including consortium blockchain [1], [2], [3]. Even though for example, is that DDoS attackers may create a large number
+blockchain presents services in a decentralized manner, which of invalid transactions (e.g., incorrect signatures) to block the
+implies a higher-level defense capability, the DDoS attack still is execution of normal transactions for targeting executor nodes,
+ as the blockchain network allows anyone to freely send trans-
+ Received 17 May 2023; revised 16 February 2025; accepted 23 February actions [11]. In addition, when attacking consensus nodes, the
+2025. Date of publication 28 February 2025; date of current version 11 July
+2025. This work was supported in part by the National Key Research and attacker can send a large number of endorsed transactions until
+Development Program of China under Grant 2021YFB2701300, in part by the node’s transaction pool is filled with malicious transactions.
+National Natural Science Foundation of China under Grant 62232002, Grant Attackers can also attack committer nodes by initiating a large
+U24B20146, and Grant 62372044, and in part by Beijing Municipal Science and
+Technology Commission Project under Grant Z241100009124008. The work of number of empty blocks, unsigned blocks, or blocks containing
+Kim-Kwang Raymond Choo was supported by the Cloud Technology Endowed conflict transactions to block the storage of normal blocks. The
+Professorship. (Corresponding author: Keke Gai.) bots controlled by the attacker can rationally arrange attack
+ Keke Gai, Peng Jiang, and Liehuang Zhu are with the School of Cyberspace
+Science and Technology, Beijing Institute of Technology, Beijing 100081, China resources in different organizations.
+(e-mail: gaikeke@bit.edu.cn; pengjiang@bit.edu.cn; liehuangz@bit.edu.cn). However, there are rare works focusing on the DDoS defense
+ Guolei Zhang is with the School of Computer Science and Tech- inside the consortium blockchain. We have investigated the typnology, Beijing Institute of Technology, Beijing 100081, China (e-mail:
+3220201004@bit.edu.cn). ical DDoS defense approaches and analyzed the defense effect
+ Kim-Kwang Raymond Choo is with the Department of Information Systems on consortium blockchain, including traffic filtering, Softwareand Cyber Security and Department of Electrical and Computer Engineering, defined Networking (SDN) [12], Network Function Virtualiza-
+University of Texas at San Antonio, San Antonio, TX 78249 USA (e-mail:
+raymond.choo@fulbrightmail.org). tion (NFV) [13], Moving Target Defense (MTD) [14], [15], [16]
+ Digital Object Identifier 10.1109/TDSC.2025.3546625 and collaborative defense approach [17], [18], [19], [20]. The
+
+ 1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN 4363
+
+ that the independent organizations have a broader scope of
+ knowledge about attacks compared to a centralized-based
+ defense setting.
+ 3) This work utilizes blockchain smart contracts to collect
+ and record the attack feature data in order to provide
+ sufficient and qualified training data for DQN. Due to
+ the collaborative defense setting, combining with smart
+ contracts can facilitate a higher-level efficiency when adversaries appear a dynamic attacking manner.
+ The advantages of our proposed approach in this paper, compared to other methods, are: (i) Focus on Consortium Blockchain
+Fig. 1. The architecture of proposed DDoS defense approach. Security: Most existing work focuses on public blockchain,
+ despite DDoS attacks posing a greater threat to consortium
+filtering method generally performs well in most situations, but blockchain systems. Consortium blockchains have fewer nodes
+the method can hardly handle the moving attackers due to its centralized within specific organizations, making them easier
+inflexibility limitations [21]. SDN-based and NFV-based meth- targets for attackers. In contrast, public blockchains have a
+ods present higher-level flexibility but generally cause a longer vast, globally distributed network, requiring more resources to
+latency [22]. The MTD is one of the important active defense disrupt [24], [25]. Additionally, consortium blockchains rely on
+approaches, but resource consumption and uncertainty lead to cryptographic-based consensus (e.g., PBFT or RAFT), which
+the MTD strategy not being applied in consortium blockchain can be severely impacted by attacking a few key nodes. Public
+directly. The collaborative defense is a suitable approach for blockchains use more robust mechanisms (e.g., PoW or PoS)
+defending against DDoS attacks inside consortium blockchain, that are more resistant to such attacks. Furthermore, consorwhich can not only fit the architecture of consortium blockchain tium blockchain nodes are easier to identify and target due to
+but also enhance DDoS defense of single organizations. their limited anonymity, whereas public blockchain nodes are
+ Combining Contract-based Collaborative Defense with MTD anonymous. Node management rules in consortium blockchains
+is a better way to mitigate DDoS attacks in consortium mitigate malicious attacks using Sybil accounts and other stealth
+blockchain. MTD avoids being attacked by malicious traffic strategies, serving as prerequisites for moving target defense.
+while ensuring normal blockchain service and changes the At- (ii) Attack Data Sharing: Existing defense methods do not
+tack Surface (AS) for preventing persistent attacks. Besides, effectively leverage blockchain’s data sharing capabilities. Our
+reinforcement learning [23] provides MTD strategy generation approach combines the distributed ledger characteristics of
+with continuous solutions that fully utilize smart contracts to blockchain with deep reinforcement learning to create defensive
+collect DDoS attack information concerning attack features for methods. The consortium blockchain provides the necessary
+every node. conditions for implementing our approach and the infrastructure
+ In this work, we have proposed a two-stage DDoS defense for data sharing, enabling each node to store a complete dataset
+approach for consortium blockchains. The architecture of pro- and generate effective defense solutions using synchronized
+posed defense approach consists of four parts as shown in Fig. 1, attack data.
+including malicious traffic detection and filtering, attacks data The rest of this paper is organized by the followings. Section II
+synchronization contract, DQN-based MTD action generation, presents the threat model and defines the proposed problem. Secand MTD execution module. The traffic detection and filtering tions III and IV explain smart contract-based collaborative demodule filters malicious traffics by using the attack data stored fense mechanism and DQN-based model, respectively. The evalin the distributed ledger through the contract. When the attacker uation and main findings are given in Section V. Finally, we reis recorded in the ledger, the traffic is directly filtered by the fil- view related work and draw conclusions in Sections VI and VII.
+tering module. There are some persistent malicious traffics, and
+each node in the organization uses MTD module to change its II. CENCEPTS AND THE DEFINITIONS
+own environment for mitigating the attacks. The MTD method in
+each node comes from the DQN. Attack data required by DQN A. Threat Model
+model derives from the data stored in the distributed ledger. Our attack vector assumes that rational attackers can compro-
+ The main contributions of this paper are as follows: mise internal nodes in the consortium blockchain with public
+ 1) We have explored using an MTD-based mechanism to information to achieve maximum profit. The goal of internal
+ defend DDoS attacks in the consortium blockchain. In attackers launching DDoS attacks is to make the consortium
+ order to construct an adoptable solution, we have at- blockchain unable to provide normal services, without gentempted to apply a DQN to generate MTD strategies in erating direct benefits, but will appear indirectly in the form
+ each organization. of external benefits, such as disrupting or extorting competing
+ 2) We have developed a smart contract-based collaborative organizations within the consortium blockchain, or driven by
+ defense method in consortium blockchain. The proposed economic interests. Rational attackers will terminate their atmethod allows the organizations in consortium blockchain tacks when the cost and benefits of launching attacks are unequal
+ to share information on collected malicious traffics, so or even less. In contrast, compromised bots are authenticated to
+4364 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+access internal information of consortium blockchain, e.g., types attacks by sending invalid transactions at a small cost. These
+of nodes, deployed contracts of different nodes, and addresses invalid transactions may have meaningful purposes, such as
+of internal nodes. simulating sending transactions to their own accounts when
+ DDoS attackers can make the optimal attack strategy deriving developing and testing blockchain applications to verify the
+from the information asymmetry by collecting the defender’s format and logic of transactions, and sending transactions with
+information in advance. In an ideal case, the attacker concen- zero transaction amounts may help ensure that accounts are not
+trates on attacking those nodes with a higher benefit, e.g., the considered inactive or cleared. In addition, attack targets will be
+Leader node in the consensus mechanism, the Endorser, and continuously changed after each round of MTD moves. Defend-
+Executor node with essential contracts and Anchor nodes in ers learn MTD moves from DQN-based model and change states
+organizations. Multiple attack strategies are generally available of nodes in each organization. Logically, the effect of MTD will
+for attackers to deal with different types of nodes at application be enhanced along with the increment of attack rounds. Our work
+layer. We formulate threats targeting at different types of nodes has proved that there exists a Nash equilibrium for the situation
+in consortium blockchain. above.
+ Threats to Executor Nodes: Assume that attackers can launch A necessary condition of terminating DDoS to an organization
+legitimate attacks by sending a large volume of invalid trans- is all nodes in organization are survived from the attack. We
+actions at a small cost to block the node’s transaction pool and define the problem as when the Nash equilibrium is reached,
+deny the normal service of transaction execution. Attack benefit attacker’s profit is as small as possible under the condition when
+generally positively correlates with the number of contracts and all nodes in organization are not attacked.
+logical nodes employed at the target node. Nodes will consider We present the problem formally in Definition II.1.
+invalid transactions as such and exclude them from blocks, yet Definition II.1: Minimizing Attack Profit Under Node-Saving
+each node will still verify the validity of all received transactions. Condition Problem (MAPOC): Inputs: include a set of attack
+Empty blocks, adhering to the basic blockchain protocol rules, profits for a node {abe ij }, a set of attack costs node {aij },
+ cost
+
+can be successfully added to the chain. Both invalid transactions a set contains the number of container deployed in each node
+ cont
+and empty blocks are special transactions initiated by attackers {Nij }, the number of logical nodes deployed in each server
+ lon
+within the consortium blockchain and cannot be restricted by {Nij }, a set contains the number of IP moving time for each
+built-in rate limits. IP
+ node {Mij }, a set contains the number of port moving time in
+ Threats to Endorser Nodes: the Timeout-manipulation at- each node {Mij P ort
+ } and a set contains initial malicious traffics
+tack [10], [26] mainly targets the Leader node and a specific interception rates of each node {αij } in each organization.
+number of Follower nodes. Attacking Leader node delays pro- Outputs: include a set contains node attack profits {apro ij } and
+cessing transaction messages sent by normal clients. Attacking a set contains malicious traffics interception rates {αij 
+ } when
+a specific number of Follower nodes (at least F+1 nodes need to the Nash equilibrium is reached.
+be attacked in the Practical Byzantine Fault Tolerance (PBFT) The proposed MAPOC problem is to find out optimal MTD
+consensus) destroy the Leader replacement of the consensus sys- actions to minimize the total attack profit (Ptotal ) under the contem. There are not enough Follower nodes to vote for replacing dition when none node in organization is attacked (αij 
+ > αij ).
+the current Leader node. Mathematical expression of MAPOC is given by (1).
+ ⎡ ⎤
+ m  n
+B. Problem Definition Ptotal = MIN ⎣ apro
+ ij
+ ⎦ and αij ≥ αij 
+ (1)
+ Consortium blockchain is only open to authorized organiza- i=1 j=1
+tions or institutions, and the joining and exiting of nodes usually
+require specific conditions defined by the governance rules, so The subscript ranges in (1) are i ∈ [1, m] and j ∈ [1, n].
+that the total size of nodes in the consortium blockchain is MIN[·] is the function that obtains the minimum attack profit
+smaller than that of the public blockchain. And the internal iden- value in (1). Regarding notations in an organization, we take the
+tity in the consortium blockchain is unforgeable, which creates organization O1 as an example. The attack profit,  benefit, and
+ cost of the organization O1 are denoted by P1 = nj=1 apro 1j , j ∈
+a barrier for becoming an attacker. For example, Hyperledger  n
+Fabric has implemented a series of built-in rate restrictions to [1, n], B1 = nj=1 abe 1j , j ∈ [1, n], and C 1 = cost
+ j=1 1j , j ∈
+ a
+mitigate DDoS attacks. However, when attackers within the [1, n]. Oi = {O1 , O2 , . . ., Om } denotes the set of organizations.
+consortium blockchain control clients to initiate a large number The number of nodes in each organization is denoted by n. Value
+of invalid transactions, such as empty blocks, normal generation of profit apro be cost
+ ij is obtained from aij − aij . The profit of each
+of empty blocks is not hindered by built-in rate limitations. organization is denoted in (2). When profit is less than 0, the
+ The primary issue of this work is to prevent each node in DDoS attack will be ended for that organization.
+organizations from attacks and lead to the minimum attack Pi = Bi − Ci , ∀i ∈ [1, m] (2)
+return, while reaching a Nash equilibrium between the attacker
+and organization. Rational attackers adopt an optimal DDoS For the benefit and cost of attacking nodes in MAPOC, we
+attack strategy at each organization by selecting nodes to gain the define the node attack benefit as a sum of the number of
+maximum return at the instant state. Rational attackers can also deployed containers (denoted as N cont ) and the number of
+take advantage of the feature of blockchain networks that allow running logical nodes (denoted as N lon ). Therefore, there is
+anyone to freely send transactions and can launch legitimate a abe cont
+ ij = Nij
+ lon
+ + Nij . MTD action changes victims’ attack
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN 4365
+
+surface, which increases attack cost. We define the node attack attacker. Suppose there exists a time spot t∗ that arrives the
+cost as a sum of the times of IP MTD action (denoted as M IP ) Nash equilibrium, state of defender Ok is s∗k , which is the states
+and Port MTD action (denoted as M P ort ). Thus, there is a collection of all internal nodes. Equation (8) shows the occasion
+acost
+ ij = Mij IP P ort
+ + Mij . (t∗ ) when the Nash equilibrium is reached. Nash equilibrium
+ Our model defines a malicious traffic interception rate α point can be expressed by ({s∗1 , s∗2 , s∗3 . . .s∗m }, s∗a ).
+for traffic detection and filtering. The effective attack’s cost is 
+ V (s∗k ) ≥ V (sk ) T he def ender Ok
+denoted by acost
+ ij (1 − αij ). The DDoS attacker needs to cost ad- (8)
+ V (s∗a ) ≥ V (sa ) T he DDoS attacker
+ditional resources when malicious traffics are filtered. Assuming
+that k rounds of attacks are filtered, there exists a cost of attack Next, we prove the existence of Nash equilibrium for the
+to node pij is acost
+ ij (1 + kαij ). DDoS cost in pij needs to satisfy proposed model by proving presence of potential game [28].
+  The key is to prove the existence of function called φ(a), which
+requirement of (3). Equation (4) defines αij .
+ satisfies (9).
+ acost be
+ ij (1 + kαij ) < aij 1 ≤ i ≤ m, 1 ≤ j ≤ n (3)
+ Va−i (ai ) − Va−i (ai ) < 0 ⇒ φa−i (ai ) − φa−i (ai ) < 0 (9)
+ 
+ abe cost
+ ij − aij
+ αij = cost 1 ≤ i ≤ m, 1 ≤ j ≤ n. (4) In (9), Va−i (ai ) denotes the sum of accumulated benefit except
+ kaij
+ the i-th player (when i-th player with an action ai ). The i ∈ [i, k]
+ The proposed multistage game between DDoS attackers and denotes the defenders; otherwise, the player is the attacker. The
+defenders is explained in the followings. ai is another action, which satisfy (11).
+ Multistage Game Model between DDoS Attacker & Multiple
+ ra−i (s, ai ) < ra−i (s, ai ) (10)
+Defenders. In our game model, players involve both organizations and attackers. The action space of each organization We further define the potential function of the proposed game
+is the collection of MTD actions at each node from relevant in (11).
+organizations (refer to Section IV). m
+ 
+ We use malicious traffics to measure the efficiency of DDoS φa−i (ai ) = [r(s, ai ) + γV (s , πk )] Ii∈[1,k]
+defense, by taking a single organization Ok as an analysis object. k=1,k=i
+ Considering the discount factor γ (γ ∈ (0, 1)), the accumulated reward of Ok is denoted by Vk (s). Vk (s) is essentially an + [r(sa , ai ) + γV (sa , πa )] Ii/∈[1,k] . (11)
+expected reward function on player states, which is a function An I is the indicator function that is valued 1 when the condition
+of state s. Vk (s) is expressed in (5). is satisfied and is valued 0 if not. We formulate the assumption
+ Vk (s) = Eπ [Pks |st = s] (5) by Theorem II.1.
+ Theorem II.1: The proposed multistage game between mulst is the state of Pk in MTD round t. The π denotes our tiple defenders and the DDoS attacker is a potential game with
+DQN-based MTD strategy and the Pks is the reward of Ok in the potential function of (11).
+state s. Another representation of (5) is expressed by Bellman Proof: We prove this theorem on both defenders and attack-
+Equation in (6) (i.e., in a recursion format), in which the sk is the ers, including i ∈ [1, k] (defenders) and i ∈ / [1, k] (attacker).
+next state after the current action. The rk,t is the action reward First, for the DDoS defenders (i ∈ [1, k]), the potential function
+of Ok in MTD round t and the s is the next state of Ok . is shown in (12).
+ Vk (s) = rk,t + γVk (s ) (6) m
+ 
+ φa−i (ai ) = [r(s, ai ) + γV (s , πk )] (12)
+ Similar to defenders, the reward of DDoS attackers is defined k=1,k=i
+by (7), where ra,t and Va (s ) denote bots’ reward after MTD
+round t and accumulated reward in next state, respectively. The operation φa−i (ai ) − φa−i (ai ) is expressed by (13).
+
+ Va (s) = ra,t + γVa (s ). (7) φa−i (ai ) − φa−i (ai )
+ m
+ The operating principle of our gaming model is formulating = [r(s, ai ) + γV (s , πk )]
+ k=1,k=i
+multi-phase interactions between attackers and organization de- m
+fenders in a consortium blockchain. Organizations in the same − [r(s, ai ) + γV (s , πk )]
+ k=1,k=i
+channel play as defenders, each of which adopts a specific MTD
+ m
+ 
+action (obtained from Reinforce learning) based on the attacker’s
+strategy. The DDoS attacker changes DDoS targets according to = [r(s, ai )−r(s, ai )] = ra−i (s, ai )−ra−i (s, ai ) < 0
+ k=1,k=i
+defenders’ states. We assume the attacker takes an optimal attack
+strategy at every step to maximize the attack benefit. (13)
+ The proposed game model is essentially a limited Non- Therefore, Theorem II.1 is proved in the condition of i ∈ [1, k].
+cooperative mixed strategy game. According to Nash Equi- For the DDoS attacker (i = [1, k]), the potential function is
+librium [27], the proposed game model has at least one Nash depicted in (14).
+equilibrium point. Specifically, the Nash equilibrium point can
+be expressed as the states of every defender and the DDoS φa−i (ai ) = [r(sa , ai ) + γV (sa , πa )] Ii/∈[1,k] (14)
+4366 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+For different actions of DDoS attackers, the states of defenders III. CONTRACT-BASED COLLABORATIVE DEFENSE
+are constant in the assumption. The consequence of the compu-
+ We define a special smart contract that can only be called
+tation φa−i (ai ) − φa−i (ai ) is shown in (15). by internal nodes in organizations. Transactions with attacker
+ φa−i (ai ) − φa−i (ai ) = r(sa , ai ) − r(sa , ai ) information or attack data are generated by smart contract. The
+ DDoS attack information will be recorded by each organization
+ = ra−i (sa , ai ) − ra−i (sa , ai ) < 0. (15) when the consensus and verification are made.
+ / [1, k].
+Therefore, Theorem II.1 is proved when i ∈ 
+ A. Architecture
+C. Overview
+ In a consortium blockchain, only necessary business informa-
+ In our approach, when an organization detects a DDoS at- tion can be synchronized between organizations due to the autontack, victims will initiate transactions to synchronize attack omy and independence of each organization. Therefore, infordata between organizations via smart contracts. To prevent mation on bots and malicious traffics cannot be directly synced
+malicious internal clients from uploading error information to across organizations, which makes the information asymmetry
+disrupt the defense, we set up a special proxy node in each between internal DDoS bots and victimized nodes in consortium
+organization to synchronize DDoS data, which is only called blockchain.
+by authenticated participant organizations and cannot be dis- Malicious traffics from internal bots are essentially as the
+covered by other internal clients. When an organization detects same as normal traffic. The typical SDN-based programmable
+DDoS attacks, the proxy node in the victim organization will switch defenses and firewalls cannot completely filter malicious
+synchronize the obtained attacks information/data with other traffics. Typical Internet DDoS defenses cannot defend DDoS atorganizations by initiating transactions, such as bots IPs, attack tacks launched by nodes inside different organizations bypassing
+types, attack intensity, and attack duration. The traffics sent the identity authentication of the consortium blockchain. When
+from bots can be successfully filtered once other organizations the scale and intensity of attacks launched by internal attackers
+update the strategy. Moreover, the persistent malicious traffic have not yet reached the Internet DDoS defense standards,
+generally cannot be directly detected or filtered, as the attacker insider attackers can successfully slow down the transaction
+continuously adjust the attack resource following the constantly processing and block generation services of the consortium
+changing environment of the defender in order to obtain better blockchain. Attackers do not need to launch a full DDoS attack
+returns. In order to address this type of attack, we utilize the at a single node, which is much easier than an Internet DDoS
+Deep Q-network (DQN) to generate an MTD strategy in each attack. The incremental amount of the attacked nodes will further
+organization. We represent the DDoS malicious traffics by attack negatively influence the whole efficiency of the blockchain systype, attack intensity, and attack duration. A variety of MTD tem due to a slower speed of block generations caused by DDoS
+hopping methods are covered in our approach, such as hopping, attacks. Thus, traditional Internet DDoS defense is inapplicable
+port hopping, container hopping, and logic node hopping. With for the proposed attack scenario.
+the increment of happenings of malicious traffics, our approach We proposed a smart contract-based DDoS attack data sharing
+will continuously update its filter strategy to improve the defense and collaborative defense method, the first defense method in the
+accuracy. Finally, we adopt a multi-round optimized MTD strat- proposed defense approach. Internal DDoS attackers not only
+egy to defend persistent malicious traffics. launch typical DDoS attacks, but also control internal clients
+ A fundamental philosophy of our approach is to formulate the to collect information from defenders in advance to formulate
+attack-defense interactions between the attacker and defender. the best attack strategy, making malicious traffic ignore current
+We describe the interaction via formulating a multistage game identity verification, threaten transaction execution, consensus,
+model [29]. Once a DDoS attack occurs, the nodes of defenders and prevent submissions, thereby achieving maximum attack
+first filter out detected malicious traffics, retrieving the knowl- benefits. We have defined a special smart contract to synchroedge from the ledger. When persistent malicious traffics attack nize DDoS attack information that is only called by internal
+occurs, the MTD method that follows the local DQN training blockchain nodes. The proposed contract generates the transresult can be adopted to mitigate the threats. The DQN is trained actions with attackers or malicious traffic information. Each
+by malicious traffics collected by all organizations. In this case organization saves DDoS attack information after the consensus
+(after MTD actions), attackers discover the new environment of and verification, which is as same as normal transactions.
+each node in consortium blockchain, so that the attack strategy The contract-based collaborative method between organizaat each node will be adjusted for achieving an optimal attack tions takes advantage of quickly committing blocks by smart
+return. In the meantime, defenders’ nodes synchronize the new contract in consortium blockchain. However, the problem of
+updated attack data to the ledger via implementing a smart the denial of service for synchronizing attack data should be
+contract. The interactions above are repeated to increase the solved. In response to the threat of compromised malicious
+defense performance. Therefore, the interaction between DDoS internal nodes uploading wrong bot information to disrupt the
+attackers and defenders are formulated into a multistage game, defense, we set a special proxy node in each organization for
+such that a Nash equilibrium eventually can be reached. After synchronizing DDoS data, including the transactions executing,
+the repeated executions of MTD, the rational attacker’s cost will consensus, and committing blocks, which can be only called
+increase. Logically, when the attacker’s gain from the defender’s between organizations and cannot be found by internal clients.
+node becomes negative, the attack will be terminated. The proxy node also broadcasts the blocks with DDoS data to
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN 4367
+
+Fig. 2. Architecture of contract-based collaborative defense method.
+
+other nodes in the same organization. The proxy node ensures
+there is at least one ledger that keeps complete attack data in each
+organization, which ensures the integrity of attack data [30], [31]
+in the whole consortium blockchain. The collaborative defense
+method is shown in Fig. 2.
+ Specifically, each organization’s traffic detection and filter
+module calls the function of UPLOAD_ATTACK in contract of
+DDoS recording, which uploads the DDoS attack data by transactions. The proxy node broadcasts the launched transactions to
+other proxy nodes in organizations. These transactions will be
+blocked and broadcast to other organizations for synchronizing
+the attack data and information of attackers.
+B. Functionality
+ The smart contract for DDoS attacks records the malicious
+traffic information. The bots have specific node names (N b )
+and public keys (Pkb ) since the bots are authenticated clients.
+In addition, the attacker’s address (Ab ) and state (malicious or
+normal, denoted by Stab ) are also recorded in the distributed The following is a detailed presentation of contract execution
+ledger. The bot can be represented by bot = N b , Ab , Pkb , Stab . and code snippets.
+A tuple with five parameters are used to record the DDoS attacks UPLOAD_ATTACK: First, the traffic detection and filterdata, which is shown as Ab , T a , I a , pij . In the attacks data ing module sends transactions with detected malicious traffic
+tuple, the parameters represent the address of the bot, the DDoS and malicious attacker to proxy node. Attacker information is
+attack method, the attack intensity and the victim’s ID. presented as N b , Ab , Pkb , Stab and the DDoS attack data is
+ The operation of the proposed smart contract includes up- presented as Ab , T a , I a , pij . Second, the proxy node executes
+loading attack data, obtaining node information and changing the transactions and generates the blocks. The transactions and
+the state of internal clients, all of them are invoked by the traffic corresponding results will be sent to proxy nodes in other ordetection and filtering module. Three operations are described ganizations. The proxy node packages the received transactions
+as follows. into blocks and broadcasts them to other proxy nodes. In the
+ r UPLOAD_ATTACK: Uploading the detected attack data last, proxy nodes verify the received blocks and decide whether
+ to the ledger and synchronizing the data to other orga- to save the block or not. The core logic of UPLOAD_ATTACK
+ nizations. The form of attack data is a tuple with five is shown in code M AIN _U P LOAD_AT T ACK.
+ parameters. In the code above, the function of DetectionAndCollect is
+ r GET_CLI_INFO: Defenders obtain the client’s state from used to detect and collect malicious traffics, which is not esthe contract when detecting the traffic. The traffic from sential in this paper. The function of UploadDDoSInfo calls
+ malicious clients will be filtered directly. the function UPLOAD_ATTACK in the contract, which comr CHANGE_NODE_STATE: This function sets the node’s mits the transactions to proxy for the next processing. The
+ state to malicious if the node is detected as malicious UploadDDoSInfo returns true if the transaction is successfully
+ (sending malicious traffic). In addition, this function also saved by blockchain.
+ sets the node’s state to normal if the node’s traffic return to GET_CLI_INFO: This function is called before traffic detectnormal. ing and filtering. The traffic detection and filter module obtains
+4368 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+the DDoS data from contract first and checks whether there are the function ChangeCliState to launch the transaction.
+bots in current traffic. The current malicious traffics from the ChangeCliState returns a T rue when the transaction is sucbots will be filtered directly. The core logic of GET_CLI_INFO cessfully executed.
+is shown in code M AIN _GET _CLI_IN F O.
+
+ IV. DQN-BASED MTD STRATEGY GENERATION
+ A. Method
+ Smart contracts collect and store malicious traffic data within
+ each organization. The effectiveness and accuracy of this approach will increase as more malicious traffic is identified. Once
+ an internal attacker gains access, it may use external botnets
+ to control nodes and launch DDoS attacks. Attack patterns are
+ varied in type, intensity, or duration, depending on the node
+ type. Since attacker identities within the consortium blockchain
+ cannot be forged, we must discretize the state space to prevent
+ morphing through stealth strategies, e.g., using different Sybil
+ accounts and IPs. Each organization uses a training model that
+ incorporates malicious traffic detected by others, but direct
+ malicious traffic carries greater weight. Our primary concern
+ is internal nodes within the consortium blockchain, as they can
+ control internal clients to gather information from defenders,
+ formulate optimal attack strategies, and bypass identity verification. This threatens transaction execution, consensus, and
+ prevents submissions, maximizing attack benefits. Thus, attacks
+ must evade both traditional DDoS defenses and our dynamic
+ defense strategies to succeed. Rational attackers will cease their
+ The traffic detection and filtering module call function of attacks when the costs outweigh the benefits.
+GetBotsInfo to obtain the saved bots and calls function of 1) State Space: We focus on the blockchain node pij in
+CheckIsBots to check whether there are bots in the current client organization Orgi , the DDoS attacker pays attention to the types,
+node. the attacking cost and profit in time slot t, which can be expressed
+ CHANGE_NODE_STATE: The traffic detection and filtering as ptij = pT ype , {bot}cost , apro tij . The pT ype is a set of types
+module dynamically changes the state (normal or malicious) of because one node may display multiple roles of consortium
+internal clients according to whether current traffic is malicious. blockchain; for example, pTijype = Endorser, Committer
+The core logic of CHANGE_NODE_STATE is shown in code means the pij provides the transaction execution service and
+M AIN _CHAN GE_N ODE_ST AT E. blocks storage service. The malicious traffics in time t in pij
+ t t
+ called rij can be denoted by rij = { Ab , T a , I a , Da }tij , which
+ is the collection of all malicious traffics to the pij . The state of
+ t
+ pij in time t denoted by the Sij t
+ = ptij , rij , which is the node
+ state in the analysis of DQN learning.
+ 2) Action Space: According to the MTD theory and the features of consortium blockchain, the attack surface of blockchain
+ node can be expressed as two parts, including the service addresses and the logic nodes deployed in the physical node.
+ The service addresses of node pij in time t are denoted by
+ t
+ Mij = M IP , M P ort , M Cont tij . M IP denotes the exposed IP
+ address for providing blockchain service. M P ort is the set of
+ ports for multiple types of blockchain service, and the M Cont
+ is the set of containers for running multiple smart contracts.
+ The multiple logic nodes can be deployed in one physical node,
+ denoted by Ltij . We use ASij t
+ to denote the attack surface of pij
+ t t
+ in time t, where the ASij = Mij , Ltij .
+ The action in proposed DQN-based MTD is the change of
+ t t
+ ASij as the time sequentially, including the change of Mij , Ltij
+ or both of them. The state is changed by defense strategy as time
+ The contract caller generates a transaction based on the grows according to DQN results, the state change from t to Δt
+ t+Δt
+client’s state (by function DetectStateChange) and calls can be denoted as Mij t
+ , Ltij ⇒ Mij , Lt+Δt
+ ij . The specific
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN 4369
+
+ comes from the current environment evolving with persistent
+ malicious traffic.
+ The agent does not have action experience in the first epoch,
+ but the malicious traffics are distributed to attack different nodes.
+ One physical consortium blockchain node may play multiple
+ roles at the beginning of DDoS attack, the MTD action could be
+ selected randomly because there is no experience with malicious
+ traffics. After the first action is taken, the environment can obtain
+ t+1
+ the action reward. Finally, the reward and the new state Sij are
+ sent simultaneously to Main Q-network and the Replay memory
+Fig. 3. DNN workflow for training.
+ D. With the continuous changes in the defense environment, the
+ persistent malicious attacks aimed at maximizing profits are also
+ constantly adjusting their attack strategies, achieving a Nash
+transition process is shown in (16). equilibrium between defense and attack strategies. When the
+⎧ t t+Δt t t+Δt
+⎨Mij = Mij , Lij = Lij Mij moved, Lij unchanged attack cost exceeds the attack benefit, the multi-round optimized
+ t+Δt
+ Mij = Mij , Lij = Lt+Δt
+ t t
+ ij Mij unchanged, Lij moved MTD strategy can successfully counter persistent malicious
+⎩ t t+Δt t t+Δt traffic.
+ Mij = Mij , Lij = Lij Mij moved, Lij moved
+ The DNN architecture is used to train the state information
+ (16)
+ and generate the value of every output action in epoch t. The
+ 3) Reward Function: We evaluate the DDoS effect in node actor-network needs to take the exploration for obtaining the
+pij by Maximum Likelihood Estimation (MLE), the rate arriving next state by the probability p = . The experience replay
+obeys the Poisson distribution, and the queue model is denoted and target network are also applied to make learning process
+as M/M/1. The probability density function of the Poisson more stable. The experience replay is called D for storing the
+distribution is defined as (17). history state transition, which will be extracted as a minibatch
+ λk −λ to train our MTD DNN. Each transition can be expressed by
+ P (X = k) = e ,k ∈ N (17) At , Rt , S t , S t+1 in transition set. The correlation between the
+ k!
+ continuous malicious attack samples is reduced, alleviating the
+The λ denotes the number of malicious packets arriving in the influence of continuous DDoS attack. The target network is
+unit time. The expectation of Poisson distribution is λ, which copied by main Q-network each C steps, which reduces the
+can be used as the evaluation of DDoS effect in each node. The loss value and approaches the optimal solution.
+λij denotes the DDoS attack strength to pij . Fig. 3 shows the DNN workflow for training. The state param-
+ According to MLE, the sample of the last β time units about eters need to be extracted as the DNN input. The parameters of
+malicious traffics are denoted by {X1 , X2 . . .Xβ }, the likelihood t
+ ptij and rij are concatenated as the format for DNN processing.
+function is shown in (18). We used the ReLU as the activation function for building the
+ L(λ|X1 , X2 . . .Xβ ) = fλ (X1 , X2 . . .Xβ ) (18) hidden layers. The outputs of DNN are the Q value of each
+ state-changing action, which is also the probability of subse-
+The value of λ that makes the maximum fλ is the target value quent action. In addition, the following action with the most
+for estimating the traffic in node pij . The fλ is also denoted in Q value will be selected and taken in the related blockchain
+probability format, which is shown in (18). node, like changing the endorsement port of peer node pij . The
+ fλ (X1 , X2 . . .Xβ ) = P (X1 , X2 . . .Xβ |λ) (19) change of pij attack surface influences the node state, the cost
+ of attacking to the pij endorsement service is increased and
+ Defense reward of defender Ok is the expected value of all the DDoS attack type is changed due to the port changing.
+nodes in Ok , which is shown in (20). In the case where internal DDoS attackers disrupt the norn
+ 1 1 mal operation of the consortium blockchain driven by external
+ Rk = . (20) interests, the attack will terminate when the cost of launchn j=1 λkj
+ ing the attack and the benefits obtained are unequal or even
+ less.
+B. Workflow of Deep-Q-Network Learning
+ Detailed training workflow is shown in Algorithm 1, which
+ The DNN is used for performing the Deep-Q-Network is the process of one learning episode. There are a number of
+Learning process, which generates the MTD method for the MAX_STEPS in each episode and the episode ends if IsEnd
+specified blockchain node in organization. The interaction be- is True. The loss function is shown in (21).
+tween the DQN agent and environment is shown in Fig. 4.
+DQN agent includes Target Q-network and Main Q-network,
+ m
+the Loss Function is used for approaching the optimal action. 1 
+The environment includes malicious traffics monitoring and the L(ω) = (yk − Q∗ (φ(Sk ), Ak , ω))2 (21)
+ t+1 m
+current logic nodes of ptij . The reward of changing state to Sij k=1
+4370 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+Fig. 4. The DQN workflow with the blockchain node states.
+
+ TABLE I TABLE II
+ DDOS ATTACK PARAMETERS EXPERIMENT SETTINGS (INS: INITIAL NODE STATES; SO: SINGLE
+ ORGANIZATION; MO: MULTIPLE ORGANIZATIONS; NN: THE NUMNER OF
+ NODES)
+
+There are m number of samples randomly selected from Replay
+memory D. The yk is denoted in (22).
+ 
+ Rk If terminates in next step
+ yk = (22)
+ Rk + γ maxA Q∗ (φ(Sk ), Ak , ω ∗ )Otherwise.
+
+The ω and ω ∗ denote the parameters in DNN network. Specifically, the ω ∗ denotes the target network parameter, which will
+be updated to decrease the loss function value.
+
+ V. EVALUATION AND THE RESULTS
+ Each attacker will choose one of the payload types and meth-
+A. Experiment Configuration
+ ods in attack round, and the attack intensity will be limited in
+ Evaluations were carried out under Python 3.10.4 version and corresponding range. We set the attack duration to 60 seconds.
+PyTorch 1.10.2 version. Simulation environment included an 1) Internet DDoS Defense: To evaluate whether the Internet
+Intel Core i5-7200 U CPU, a Windows 11 operation system DDoS defense can successfully intercept malicious traffic, we
+with an 8.0 GB main memory. We compared our approach monitored the device status of the target node under attack and
+with Bayesian Q-Learning Game Approach [32], MOTAG [33], set the average CPU utilization, network bandwidth, maximum
+DSEOM mechanism [15], and the theoretically optimal results TCP connections and attack time as parameters. We launched
+(Up Bound). Our experiment used 100 nodes, distributed in DDoS attacks from the beginning and initiated normal block
+10 different organizations, to communicate over the Internet to transactions after the 14th second.
+simulate the actual situation of cross-regional operations. Each As shown in Fig. 5, the performance of the target device
+node is equipped with a 4-core CPU, 4 GB of memory, and has not changed specifically before the normal transaction
+100 GB of SSD storage. Experiment settings were summarized is launched, which indicates that the DDoS malicious traffic
+in Table II. Evaluations of single organization and multiple or- launched by the attacker will be intercepted by the Internet DDoS
+ganizations were separately processed. All of these evaluations defense.
+are conducted on the Hyperledger Fabric v2.4.0 platform. Meanwhile, in order to prove the practicability of DDoS at-
+ In addition, we used BoNeSi to generate flood attacks (in- tacks on blockchain nodes after DDoS protection on the Internet,
+cluding ICMP, UDP and TCP), the parameters such as attack we mainly evaluated two different DDoS attacks launched by
+intensity, bots scale, target address and attack duration can be attackers inside and outside the consortium blockchain. We set
+configured through options. The the parameters of the DDoS the transaction number and block time as parameters. In the two
+attacks are shown in Table I. We also adopted the HULK [34] scenarios of internal and external DDoS attacks, the normal node
+attack as one of the DDoS attack methods, randomly generating initiates block transactions according to the transaction number,
+forged parameter names and values. and the corresponding time of the block reflects the service
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN 4371
+
+Fig. 5. Performance of the attacked target device.
+
+ Fig. 7. The impact of different types of DDoS attacks on the rewards of Single
+ Organization (SO) and Multiple organizations (MO) defenders.
+
+ nodes are limited, and the throughput is low. Continuously
+Fig. 6. Effects of different attack modes under Internet DDoS defense. processing block transactions in a short period of time can cause
+ consensus pressure, resulting in increased block generation time
+ and decreased service quality. The experimental results show
+quality of the consortium blockchain, indirectly reflecting the that Internet DDoS defense can properly deal with external
+defense effect of the DDoS protection method on the Internet attackers, but it is powerless to deal with DDoS attacks launched
+against internal and external DDoS attacks. by internal attackers.
+ After 100 transactions, the average block generation time As shown in Fig. 7, regardless of whether in single organizafor the three attack scenarios is 0.18 s, 0.21 s, and 0.24 s. tion or multiple organizations, the rewards of defender increased
+The results of the Fig. 6 showed that DDoS attacks initiated as episodes progress. It indicated that defenders are capable of
+by internal attackers have a greater negative impact on consor- effectively countering DDoS attacks of varying types, methods,
+tium blockchain than external attacks. DDoS attacks launched and intensities launched by attackers.
+by external attackers have a weak impact on the consortium 2) Single Organization: In a single organization, we mainly
+blockchain, and external malicious traffic will be identified evaluated the relationship between the attacker’s and defender’s
+and discarded by the Internet DDoS defense. However, DDoS benefits with DQN learning episode. We set the number of
+attacks initiated by internal attackers can have a negative impact nodes and the number of bots as parameters. Rational DDoS
+on consortium blockchain services. The main reason is that attackers terminate attacks as long as reaching the requirement
+although the frequency of invalid transaction DDoS generated of (2). Equation (2) is an episode-stopping signal, which means
+by internal attackers is lower than that of external attackers, an episode of DQN would stop only when reaching a DDoS
+the computing power resources of the consortium blockchain termination condition.
+4372 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+ Algorithm 1: The MTD Action Selection Method.
+ Require: The initialized replay memory D, the initialized
+ main Q network and target Q network with ω and ω ∗ , the
+ existing unhealthy states caused by DDoS.
+ Ensure: {S  , ω ∗ , ω}
+ 1: procedure Deep Q-learning EpisodeD, ω, ω ∗ , S
+ 2: for step = 1 → M AX_ST EP S do
+ 3: Initializing the first state S = p0 , r0 as φ(S).
+ 4: IsEnd ← F alse
+ 5: Input the φ(S) to main Q-network and obtain the
+ output actions, selecting the action A according to
+ -greedy method.
+ 6: Execute action A (defined in Section IV-A3), the
+ new state S  , φ(S  ) and reward R are obtained.
+Fig. 8. Defender’s rewards and attacker’s profits inside one organization by 7: if R ≤ 0 then
+each episode.
+ 8: IsEnd ← T rue.
+ 9: end if
+ 10: Put the tuple φ(S), A, R, φ(S  ), IsEnd into
+ replay memory D.
+ 11: Renew the current state for the node, S ← S  .
+ 12: The number of m samples are selected randomly
+ from D φ(Sk ), Ak , Rk , φ(Sk ), IsEnd k ,
+ computing the target Q value of yk according to
+ (22).
+ 13: Computing and minimizing the loss function (21)
+ and updating ω in each step.
+ 14: Update the ω ∗ by ω ← ω ∗ in each C steps.
+ 15: if step mod C == 0 then
+ 16: ω ← ω∗
+ 17: end if
+ 18: if IsEnd == T rue then
+Fig. 9. Learning steps in each episode with the different number of bots (100, 19: return
+500 and 1000). 20: end if
+ 21: end for
+ 22: end procedure
+ There are four MTD attributes of blockchain node state,
+including IP moving times (MjIP , maximum value is 100), port
+moving times (MjP ort , maximum value is 100), the number
+of developed containers (Njcont , minimum value is 1), and the Next, we evaluate the effect of sharing frequency of attack
+number of logic nodes (Njlon , minimum value is 1). The initial information is shared on defense reward. This experiment was
+state of nodes is shown in Setting #1.1. The profit of DDoS carried out in a single organization. We set the sharing interattacker is the difference between the benefit and attacking cost vals are 100 ms, 500 ms, 1000 ms, 5000 ms, and 10000 ms
+of the blockchain node; the benefit of attacked organization is respectively. The Settings#1.2 contains other parameters. The
+the sum of benefits of attacked nodes. expectation of this evaluation is defender’s reward will increase
+ The attacker adopted the optimal DDoS attack method, which with the increment of sharing frequency of malicious traffics, but
+selected nodes with the most benefit as targets in sequence (See the defense reward will decrease after reaching a certain value.
+Setting #1.1). Memory pool size was 200 and minibatch size The specific results are shown in Fig. 15.
+was 16 (refer to Fig. 8). Finally, we conducted defense performance under different
+ We also evaluated the relationship between the number of bots attack intensities. We used simulated malicious clients to generand the DQN efficiency. Our evaluation reflected the defense ate malicious traffics with different attack intensity and recorded
+efficiency in different scales of botnet; practicability of the the number of saved nodes in each round. We conducted four
+proposed DQN-based defense could be reflected. We set the experiments with different attack traffic rates, the traffic rates
+number of bots as a variable of the experiment; the experiment of each malicious client were 2000 pps, 3000 pps, 4000 pps
+data was the same as the last experiment. The number of steps and 5000 pps. Other configuration parameters are #1.4 in the
+in each episode was evaluation metric in this evaluation. We Table II. The experimental results are shown in Fig. 14.
+carried out three times of experiments with different numbers of 3) Multiple Organizations: DDoS defense efficiency in difbots. The settings are given in Settings #1.2-#1.4, refer to Fig. 9. ferent numbers of organizations (m) was also researched. Based
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN 4373
+
+ Fig. 11. Reward of defender with the different number of nodes.
+
+ considered the impact of increasing both the number of organizations and the number of nodes within the organization on defense
+ effectiveness. The evaluation results are shown in Fig. 11.
+ Average value of interception rate for each node is denoted
+ by α , which is shown in (23).
+ m m
+ 1  
+ α = α 1 ≤ i ≤ m, 1 ≤ j ≤ n (23)
+ n ∗ m i=1 j=1 ij
+
+ Next, we evaluated changes of the expected value of αij
+ (defined as α) and α in blockchain node (in Section II-B). The
+ relationship between α and α reflected DDoS duration time to
+ victims in organization. According to Section II-B, the sooner α
+ was greater than α (α ≥ α ), the better of DDoS defense effect.
+ See Settings #2.1, #2.3, and #2.5.
+ Finally, evaluations also considered the case of multiple organizations. We set MTD action of defenders as a defense round,
+ the number of total saved nodes was the evaluation measurement.
+ The evaluations set three groups for different ms (Settings #2.1,
+Fig. 10. Rewards of defender in episode with the different number of
+organization. #2.3, and #2.5), see Fig. 12.
+
+on the proposed theory, the defense mechanism in this paper B. Experiment Results
+can achieve better defense effects in the case of multiple or- Fig. 8 depicted that the increment of episodes had a negaganizations, because each defender can obtain more malicious tive relationship with learning steps, which implied that it was
+traffics information. Therefore, defenders can directly filter out quicker for the defender to terminat DDoS attack at the end
+more malicious traffics and train a more accurate deep reinforce- of DQN learning than at the beginning of DQN learning. The
+ment learning model based on these traffic data. In addition, defenders could prevent DDoS attacks within 200 steps when an
+the defender can obtain various types of attack information, episode at 200. Efficiency was 96.22% higher than the situation
+which can improve the elasticity and scalability of the defense when episode = 1. In addition, the number of steps and the
+model. The difference between the collaborative situation and attacker’s profit were converged to 198 and -5 at 70 episodes,
+the single organization situation was the scale of training data. respectively.
+The collaborative situation obtained more malicious traffics than In Fig. 9, the statistical data were the average value of the
+a single situation, which made the MTD defense results of each number of steps in the period of episodes. For example, the value
+organization converge to the stable value quickly. Similarly, we in episode = 400 was the average number of steps from episode
+judged the defense effect of an organization by the number of 200 to episode 400. Learning duration of bots=100 was less than
+steps in each episode and the defender’s benefits. We set up 500 and 1000 number of bots when the episode was below 200.
+five situations to study the number of steps in each episode and Except for the above situation, the learning duration was almost
+the defender’s benefits, settings are given in Settings #2.1-#2.5. close in different scales of bots. In addition, the learning steps
+The evaluation results are shown in Fig. 10. In addition, we were stable at around 180 after 1000 episodes, which meant the
+set up eight situations to analyze the correlation between node defense model could converge to a high-efficiency state quickly.
+quantity and defender benefits, settings are given in Settings Fig. 10 depicted that defenders received more rewards with
+#3.1-#3.8. The first four situations explored the impact of in- increased collaboration among organizations. We evaluated the
+creasing node diversity within organizations while maintaining defense mechanism by setting all blockchain nodes under attack,
+a constant number of organizations. The remaining situations using the number of execution rounds as the primary metric.
+4374 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+Fig. 12. The number of attacked nodes decreased as the number of defense MTD rounds increased. The total number of nodes was 20 in (a), 60 in
+(b), and 100 in (c).
+
+Fig. 13. Value of α and α changed with episodes.
+
+The results indicate that collaboration between multiple organizations improved defense efficiency. The defense effectiveness
+increased with the number of episodes. In addition, Fig. 11
+depicted the defenders received more rewards with more nodes.
+We found that it was difficult to fully leverage the advantages of
+collaborative defense when the number of collaborative nodes
+in two groups was at a lower-level. However, as the number of
+nodes increased, there arose a problem of diminishing returns
+in benefits. Compared to the previous stage, the growth rate of
+benefits decreased from 240% to 40% and from 140% to 30%.
+Only an appropriate number of nodes could effectively exploit
+the defensive advantage. The evaluation results depicted that the
+increase in the number of nodes enhanced the defense reward;
+the defense effect also increased with increase of the number of
+organizations.
+ We extracted the accumulated data by ten rounds of defense Fig. 14. The number of saved nodes in episode 1000.
+MTD in Fig. 12. The data of Up Bound was the theoretical
+optimal approach for comparing other approaches. The results can help victims terminate DDoS attacks in less duration time.
+in Fig. 12 showed the proposed DQN-based could successfully Episodes in Fig. 13(c) was 66.67% fewer than that of Fig. 13(a).
+filter all malicious traffics and the efficiency could be upon Fig. 14 depicted that the number of safe blockchain nodes
+94.95% of the up bound. In addition, considering the efficiency, gradually increased with more defense rounds. In each round,
+the proposed approach saved all blockchain nodes faster than defenders could quickly save all nodes at low attack intensities,
+other approaches and the efficiency of the proposed approach but as intensity increased, mitigation speed slowed, though most
+performed well when a large scale of defenders were employed. nodes were saved within 50 rounds. Overall, under an attack
+The results demonstrated that the proposed approach could intensity of 2000 pps, the mitigation efficiency was 42.9%, 50%,
+efficiently defend DDoS attacks in consortium blockchain. In the and 150% higher than under intensities of 3000 pps, 4000 pps,
+evaluation of α and α , condition of α equal to α was arrived and 5000 pps, respectively. Fig. 15 demonstrated that attackers
+about episode = 900, episode = 400 and episode = 300 in failed to obtain maximum benefits when the frequency of sharing
+Fig. 13(a), (b), and (c) respectively. The three evaluation results malicious traffic was high, such as once every 500 ms, as this
+intuitively reflected the increase of the number of organizations concurrently lowered training efficiency. The attack return also
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN 4375
+
+ Theorem V.1, we have demonstrated the effectiveness of our
+ method to the threat.
+ Theorem V.1: Let the filtering capabilities of those nodes
+ 
+ without deploying our defense method be αij and those nodes
+ 0
+ 
+ using our defense method as αij . There exist that the total
+ 1
+ filtering capability with adopting our defense method is greater
+ than those of without adopting our defense method. The mathematical expression is given in (25).
+ m 
+  n m 
+  n
+  
+ αij > αij 1 ≤ i ≤ m, 1 ≤ j ≤ n (24)
+Fig. 15. Defender’s reward in each episode with the different frequency of i=1 j=1 1 i=1 j=1 0
+sharing DDoS messages (200 ms, 500 ms, 1000 ms, 5000 ms and 10000 ms).
+ Proof: Equation (25) is obtained from (4) showing the computation of the total filtering capability.
+decreased with sustained high sharing frequencies. Our experiments found that defenders achieved a maximum benefit when
+ m 
+  n
+ 
+ m 
+  n
+ apro
+ ij
+ αij = (25)
+the malicious information-sharing frequency was approximately i=1 j=1 1 i=1 j=1
+ kacost
+ ij
+1000 ms.
+ The results showed two advantages of our approach. One For an acost cost
+ ij , there is a value aic , c ∈ [1, n] making (26)
+merit is that the efficiency of our DQN-based approach could be existed.
+ m n m n pro
+enhanced when the volume of the malicious traffics was stored. 1  pro   aij
+The other merit is that our approach could successfully filter the a ij = (26)
+ i=1
+ kacost
+ ic j=1 i=1 j=1
+ kacost
+ ij
+persistent malicious traffics by adopting our MTD method.
+ To measure the maximum rate at which consortium Deriving from (6), we can have following computation, shown
+blockchain nodes process invalid transactions or empty blocks, in (27).
+we submited a series of invalid transactions and generated empty ⎡ ⎤
+ m m n
+blocks to the system, while monitoring and recording the speed 1 1 ⎣ 
+ cost Vi (s) = cost αij + γVi (s )⎦
+at which each node processes these blocks. The experimental ka ic ka ic
+ i=1 i=1 j=1 0
+results showed that during our testing process, an average of
+ m
+  n m
+990 invalid transactions were intercepted per second, and the 1    1 
+processing speed for empty block transactions was 17394 TPS. = cost α ij + cost γVi (s )
+ i=1
+ ka ic j=1 0 i=1
+ ka ic
+ In summary, in this work we assumed that rational attackers would adjust the optimal DDoS attack strategy to select (27)
+suitable nodes and obtain the maximum profits in real-time m 1
+ Since i=1 kacost γVi (s ) > 0, we can have a conclusion
+when updating MTD strategies. A multi-stage game was for- ic
+ shown in (28) such that the Theorem V.1 has been proved.
+mulated to abstract the attack-defend interactions, such that a
+ n
+ m 
+  n
+ m 
+ 
+Nash equilibrium would be reached. The experiment results had  
+demonstrated that rational attackers would eventually terminate αij > αij 1 ≤ i ≤ m, 1 ≤ j ≤ n (28)
+ i=1 j=1 1 i=1 j=1 0
+attacks when the attack profit became negative. The limitation
+of our method was that the accuracy of DDoS attack predictions 
+still needed an improvement, which would be explored in our On the other hand, our scheme moves logic nodes to reduce
+future work. those threats to consensus nodes. Fig. 12 have depicted that our
+ method could successfully decrease the number of the attacked
+C. Security Analysis nodes in a gradual manner. Our method allowed the consensus
+ to remain functional even with a few malfunction nodes in the
+ In line with the threat model defined in Section II-A, we
+ system. Fig. 12 exhibited that our method could guarantee a
+provided a brief security analysis in this section. The analysis
+ maximum amount of recovered nodes at each round of MTD
+would be given from the perspective of MTD that defended the
+ moves; thus, consensus was primarily recovered. Theorem V.2
+proposed threats. There were four key MTD parameters involved
+ described the effectiveness of the defense method to the consenin our experiment evaluations, which played vital roles in the
+ sus threat.
+defense.
+ Theorem V.2: Assume that the maximum amount of the mal-
+ On one hand, considering threats to executor nodes, we
+ function nodes in a consensus is m . The number of consensus
+have proposed an MTD method supporting the moves of smart
+ nodes being attacked is v  . A certain a time spot is denoted by
+contract containers. The increment of the MTD rounds will
+ t . Thus, there exist a v  < m when t > t .
+decrease the total attack profit Ptotal . Results shown in Fig. 8
+ Proof: Deriving from demonstrations in Section II-B, we can
+have depicted that the attack profit will be converged to a stable
+ obtain (29).
+minimum value along with the growth of the training times,
+when the attack cost will be at a maximum point. In the following apro be cost
+ ij = aij − aij
+4376 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+ cont lon IP P ort
+ = (Nij + Nij ) − (Mij + Mij ) CoFence performed better in flexibility and hardware resource
+ saving than [41] but brought an extra exchanging overhead. In
+ where, 1 ≤ i ≤ m, 1 ≤ j ≤ n (29) our approach, the organizations were enabled to share malicious
+ traffics with one another via implementing smart contracts in
+ According to demonstrations in Section IV, there exists a
+ consortium blockchain, which meant that the historical attack
+set (Nijcont lon
+ , Nij IP
+ , Mij P ort
+ , Mij ), which makes apro
+ ij < 0, such
+ records were stored in the distributed ledger, such that reliability
+   
+that v ← (v − 1). Thus, ∃t there exists v  < m when t > t .
+ could be ensured [17], [20], [41].
+Theorem V.2 has been proved. 
+ Reinforcement Learning (RL) was another option for facilitating DDoS attacks mitigation. Li et al. [42] proposed an
+ VI. RELATED WORK RL-based DDoS mitigation in Internet of Vehicles (IoV), named
+ As a new research direction, defense of DDoS attack in FAST, that applied the Kalman filter and historical data analytic;
+blockchain has been explored in recent years. Perez et al. [35] however, this method was passive in analyzing and responding to
+leveraged Ethereum’s metering mechanism and developed a the bots’ actions. [43] has introduced RL-based MTD to proacgenetic algorithm to generate low-throughput contracts that tively change IoV configuration for mitigating DDoS. Compared
+could gradually exhaust nodes’ resources. Li et al. [36] proposed with [42], the dynamic defense environment proposed in [43]
+a DDoS method to Ethereum, called DETER, which used a improved the DDoS defense efficiency. Rather than addressing
+low-cost DDoS rate to attack the txpool in Ethereum node and efficiency, Zhou et al. [44], [45] proposed a shuffling method
+disrupted the normal processing of transactions. Compared that used a multi-objective Markov decision process to model
+with [36], the DETER attack mainly targeted the txpool of behaviors of attackers/defenders and balance resource costs and
+Ethereum node and also utilized the metering mechanism defense effects. Differing from prior work, our approach further
+of Ethereum. On the basis of the huge cost of mining-based synchronized the malicious traffics among multiple defenders
+DDoS attacks [37], [38], [39], Mirkin et al. [40] proposed a to make RL implementations more efficient.
+scheme called BDoS, in which attackers are driven by external Furthermore, MTD is an alternative for mitigating DDoS
+incentives to prevent the normal operation of the blockchain. attacks in consortium blockchain, due to its proactive defense
+With only small resources invested, BDoS can motivate other mechanism and dynamic attacking strategy [44], [46]. In most
+miners to stop mining. cases, MTD relied on itself rather than using third-party tools.
+ As a severe threat using bots to send malicious traffics for For instance, combining MTD with greedy shuffle algorithms
+blocking services or essential links, the internal clients were had been examined in DDoS defense [33], [47], [48]. The
+used for launching DDoS attacks and the identity authentication mechanism implemented a greedy client-server nodes shuffle
+was bypassed in the consortium blockchain [10]. A group of to continuously adjust connections of client-server nodes and
+DDoS defense methods has been explored by prior studies, distinguish malicious clients. Such a greedy-based shuffle alsuch as MTD-based defense, filtering, SDN-based defense, gorithm had two drawbacks. On one hand, efficiency would be
+collaboration-based methods, and reinforcement learning-based dramatically lowered down when a large number of nodes were
+defense methods. involved, as operations were sequentially executed. On the other
+ Even though DDoS threats to consortium blockchains are hand, this sort of methods had a lower performance in predictions
+observable, constructing effective defense methods was still due to lack of historical network states data.
+encountering challenges [26]. One of challenges was that nodes SDN-based method also was explored for defending DDoS
+in consortium blockchain were internally public so that this attacks, because of its flexibility and efficiency [22], [49]. One
+setting provided attackers with attack chances by attacking at of features of SDN was decoupling network’s data plane and
+public nodes’ addresses. In general, attack features are hardly to control plane [50]. The work [22] designed a SDN-based defense
+be detected when they derive from internal nodes [33]. method, called Bohatei, which combined SDN with NFV to
+ The collaborative DDoS defense assembled resources from lower down the defender’s costs. Administrators could flexibly
+multiple defenders to detect/defend against DDoS attacks, in deploy a variety of different software on common servers, while
+order to guarantee the system security in a large scale. Sivara- NFV improved defenders’ flexibility. Yang et al. [51] proposed
+makrishnan et al. [20] proposed a method, called SENSS, to a machine learning-based SDN solution to mitigating DDoS
+assist victims to request DDoS defense resources from ISPs. attacks. The method used Support Vector Machine (SVM) to
+In another exploration, Daniel et al. [41] developed a dis- detect malicious traffics, which represented a better robust than
+tributed attack mitigation platform for mitigating amplification other DDoS detection methods, e.g., [22]. Unlike [51], Xu et
+attacks and dropping additional malicious traffics. Similarly, a al. [49] utilized the traffic monitoring function of SDN to detect
+DDoS mitigation platform was proposed in [41] that exchanged DDoS attacks, which accurately found potential attackers as
+DDoS rate information within internal nodes. The collaboration well as occupied servers. Another work [52] tried adopting a
+in [41] was designed among multiple defenders (e.g., Internet Markov Decision Process (MDP) in SDN-based solutions, by
+Exchange Points, IXP) rather than providing defense power for which the optimal traffic process strategies could be generated
+victims [20], which appeared a higher-level adaptability in mul- for preventing DDoS attacks.
+tiple application scenarios in a large scale of the system. Rashidi In our approach, we assumed the attacker controls sufficient
+et al. [17] proposed a NFV-based domain network, called internal nodes to launch DDoS attacks, posing hazards equiva-
+CoFence, to construct a collaboration network for mitigating lent to insider threats. Dissimilar to SDN-based DDoS defense
+the large volume of DDoS attacks through resource sharing. methods, our approach lacks a centralized controller, instead
+GAI et al.: MOVING TARGET DDOS DEFENSE APPROACH IN CONSORTIUM BLOCKCHAIN 4377
+
+relying on adaptable defense actions at each organization. Our [8] Hyperledger, “Performance considerations: Hyperledger fabric docs main
+work explores a different dimension from others by emphasizing documentation,” (n.d.), 2020. Accessed: Mar. 27, 2024. [Online]. Available: https://hyperledger-fabric.readthedocs.io
+two key aspects. First, our approach enhances malicious traffic [9] R. Kumar, P. Kumar, R. Tripathi, G. Gupta, S. Garg, and M. Hassan,
+filtering efficiency through collaboration between defenders. “A distributed intrusion detection system to detect DDoS attacks in
+This collaboration also improves the refinement performance blockchain-enabled IoT network,” J. Parallel Distrib. Comput., vol. 164,
+ pp. 55–68, 2022.
+of RL in detecting malicious traffic rates. Second, we introduce [10] E. Androulaki et al., “Hyperledger fabric: A distributed operating sysa moving defense strategy to adapt to diverse DDoS attacks tem for permissioned blockchains,” in Proc. 13th EuroSys Conf., 2018,
+from both external and internal bots, highlighting our approach’s pp. 30:1–30:15.
+ [11] M. Saad et al., “Exploring the attack surface of blockchain: A comprehencapability to defend against internal threats. Additionally, our sive survey,” IEEE Commun. Surveys Tuts., vol. 22, no. 3, pp. 1977–2008,
+approach leverages historical data by utilizing a DQN-based Third Quarter, 2020.
+MTD method, which fully exploits records of prior DDoS at- [12] Z. Lv and W. Xiu, “Interaction of edge-cloud computing based on SDN
+ and NFV for next generation IoT,” IEEE Internet Things J., vol. 7, no. 7,
+tacks to enhance MTD performance. pp. 5706–5712, Jul. 2020.
+ [13] J. Pei, P. Hong, M. Pan, J. Liu, and J. Zhou, “Optimal VNF placement
+ via deep reinforcement learning in SDN/NFV-Enabled networks,” IEEE
+ VII. CONCLUSION J. Sel. Areas Commun., vol. 38, no. 2, pp. 263–278, Feb. 2020.
+ [14] C. Lei et al., “Incomplete information Markov game theoretic approach
+ In this work, we had proposed a collaborative approach for to strategy generation for moving target defense,” Comput. Commun.,
+mitigating DDoS attacks while emphasizing internal threats vol. 116, pp. 184–199, 2018.
+ [15] H. Jin, Z. Li, D. Zou, and B. Yuan, “DSEOM: A framework for dynamic
+of consortium blockchain systems, through combining MTD security evaluation and optimization of MTD in container-based cloud,”
+with DQN. First of all, the collaborative working mode enabled IEEE Trans. Dependable Secure Comput., vol. 18, no. 3, pp. 1125–1136,
+multiple organizations to share data of malicious records within May/Jun. 2021.
+ [16] J. Tan, C. Lei, H. Zhang, and Y. Cheng, “Optimal strategy selection apa trustworthy environment, thanks to the distributed ledger. proach to moving target defense based on Markov robust game,” Comput.
+The mode contributed to both training and efficiency of traffic Secur., vol. 85, pp. 63–76, 2019.
+filtering. Moreover, our approach improved the effectiveness [17] B. Rashidi, C. Fung, and E. Bertino, “A collaborative DDoS defence framework using network function virtualization,” IEEE Trans. Inf. Forensics
+of the MTD decision making due to the implementation of Secur., vol. 12, no. 10, pp. 2483–2497, Oct. 2017.
+DQN. The decision was updated along with the state update [18] K. Xu, Y. Zheng, S. Yao, B. Wu, and X. Xu, “NetSpirit: A smart collaboraof bots-defenders of each round. With the increasing records of tive learning framework for DDoS attack detection,” IEEE Netw., vol. 35,
+ no. 6, pp. 140–147, Nov./Dec. 2021.
+the malicious traffics, we found that the efficiency of decision [19] X. Chen, L. Xiao, W. Feng, N. Ge, and X. Wang, “DDoS defense for IoT: A
+making could be enhanced. Our experiment evaluations had Stackelberg game model enabled collaborative framework,” IEEE Internet
+demonstrated that the proposed approach could successfully Things J., vol. 9, no. 12, pp. 9659–9674, Jun. 2022.
+ [20] S. Ramanathan, J. Mirkovic, M. Yu, and Y. Zhang, “SENSS against
+defend DDoS attacks by organizing multiple organizations in volumetric DDoS attacks,” in Proc. 34th Annu. Comput. Secur. Appl. Conf.,
+blockchain. The main finding was that the amount of participant 2018, pp. 266–277.
+organizations or episodes had a positive relationship with the [21] A. Shaghaghi, M. A. Kaafar, and S. Jha, “WedgeTail: An intrusion prevention system for the data plane of software defined networks,” in Proc.
+defending performance. ACM Asia Conf. Comput. Commun. Secur., 2017, pp. 849–861.
+ In our future work, we will fully consider the impact of MTD’s [22] S. K. Fayaz, Y. Tobioka, V. Sekar, and M. Bailey, “Bohatei: Flexible and
+latency on DDoS defense and improve the performance of our elastic DDoS defense,” in Proc. 24th USENIX Secur. Symp., 2015, pp. 817–
+ 832.
+defense approach while considering various constraints, such as [23] J. Yun, Y. Goh, and J.-M. Chung, “DQN-based optimization framework
+timing limit. A scalable size of participant organizations will for secure sharded Blockchain systems,” IEEE Internet Things J., vol. 8,
+be explored in order to demonstrate the impact of a dynamic no. 2, pp. 708–722, Jan. 2021.
+ [24] C. Badertscher, Y. Lu, and V. Zikas, “A rational protocol treatment of 51%
+organization setting on defending varied types of DDoS attacks. attacks,” in Proc. 41st Annu. Int. Cryptol. Conf., Springer, 2021, pp. 3–32.
+ [25] R. Feichtinger, R. Fritsch, L. Heimbach, Y. Vonlanthen, and R. Wattenhofer, “SoK: Attacks on DAOs,” in Proc. 6th Conf. Adv. Financial Technol.,
+ REFERENCES 2024, pp. 28:1–28:27.
+ [26] Y. Amir, B. Coan, J. Kirsch, and J. Lane, “Prime: Byzantine replication
+ [1] Y. Mirsky and M. Guri, “DDoS attacks on 9–1-1 emergency services,” under attack,” IEEE Trans. Dependable Secure Comput., vol. 8, no. 4,
+ IEEE Trans. Dependable Secure Comput., vol. 18, no. 6, pp. 2767–2786, pp. 564–577, Jul./Aug. 2011.
+ Nov./Dec. 2021. [27] J. F. Nash, “Equilibrium points in N-person games,” in Proc. Nat. Acad.
+ [2] B. Rodrigues and B. Stiller, “Cooperative signaling of DDoS attacks in Sci. USA, vol. 36, no. 1, pp. 48–49, 1950.
+ a blockchain-based network,” in Proc. ACM SIGCOMM Conf. Posters [28] D. Monderer and L. Shapley, “Potential games,” Games Econ. Behav.,
+ Demos, 2019, pp. 39–41. vol. 14, no. 1, pp. 124–143, 1996.
+ [3] A. Bremler-Barr, E. Brosh, and M. Sides, “DDoS attack on cloud auto- [29] C.-T. Huang, M. N. Sakib, C. A. Kamhoua, K. A. Kwiat, and L. Njilla, “A
+ scaling mechanisms,” in Proc. IEEE Int. Conf. Comput. Commun., 2017, Bayesian game theoretic approach for inspecting web-based malvertising,”
+ pp. 1–9. IEEE Trans. Dependable Secure Comput., vol. 17, no. 6, pp. 1257–1268,
+ [4] P. Thakkar, S. Nathan, and B. Viswanathan, “Performance benchmarking Nov./Dec. 2020.
+ and optimizing hyperledger fabric blockchain platform,” in Proc. IEEE Int. [30] Y. Miao, K. Gai, L. Zhu, K. R. Choo, and J. Vaidya, “Blockchain-based
+ Symp. Model. Anal. Simul. Comput. Telecommun. Syst., 2018, pp. 264–276. shared data integrity auditing and deduplication,” IEEE Trans. Dependable
+ [5] K. Li, J. Chen, X. Liu, Y. R. Tang, X. Wang, and X. Luo, “As strong as its Secure Comput., vol. 21, no. 4, pp. 3688–3703, Jul./Aug. 2024.
+ weakest link: How to break blockchain DApps at RPC service,” in Proc. [31] Y. Miao, K. Gai, J. Yu, Y. Tan, L. Zhu, and W. Meng, “Blockchain-
+ 28th Annu. Netw. Distrib. Syst. Secur. Symp., 2021, pp. 1–18. empowered keyword searchable provable data possession for large sim-
+ [6] M. Mirkin et al., “BDoS: Blockchain denial-of-service,” in Proc. ACM ilar data,” IEEE Trans. Inf. Forensics Secur., vol. 20, pp. 1374–1389,
+ SIGSAC Conf. Comput. Commun. Secur., 2020, pp. 601–619. 2025.
+ [7] K. Baqer, D. Y. Huang, D. McCoy, and N. Weaver, “Stressing out: Bitcoin [32] J. Liu, X. Wang, S. Shen, G. Yue, S. Yu, and M. Li, “A Bayesian Q-learning
+ “stress testing””,” in Proc. Int. Conf. Financial Cryptogr. Data Secur., game for dependable task offloading against DDoS attacks in sensor edge
+ Springer, 2016, pp. 3–18. cloud,” IEEE Internet Things J., vol. 8, no. 9, pp. 7546–7561, May 2021.
+4378 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 22, NO. 4, JULY/AUGUST 2025
+
+[33] Q. Jia, K. Sun, and A. Stavrou, “MOTAG: Moving target defense against Guolei Zhang received the master’s degree in cominternet denial of service attacks,” in Proc. 22nd Int. Conf. Comput. puter science from the School of Computer Science
+ Commun. Netw., 2013, pp. 1–9. and Technology, Beijing Institute of Technology, Bei-
+[34] W. Alcorn, “HULK (HTTP Unbearable Load King),” 2012. Accessed: Feb. jing, China. His research interests include blockchain,
+ 13, 2025. [Online]. Available: https://github.com/R3DHULK/HULK cybersecurity, and cloud computing.
+[35] D. Perez and B. Livshits, “Broken metre: Attacking resource metering in
+ EVM,” 2019, arXiv: 1909.07220.
+[36] K. Li, Y. Wang, and Y. Tang, “DETER: Denial of Ethereum Txpool
+ services,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2021,
+ pp. 1645–1667.
+[37] J. Bonneau, “Why buy when you can rent? - Bribery attacks on Bitcoinstyle consensus,” in Proc. Int. Workshops Financial Cryptogr. Data Secur.,
+ Springer, 2016, pp. 19–26.
+[38] J. Bonneau, “Hostile blockchain takeovers (short paper),” in Proc. Int. Peng Jiang (Member, IEEE) received the PhD degree
+ Conf. Financial Cryptogr. Data Secur., Springer, 2019, pp. 92–100. from the Beijing University of Posts and Telecom-
+[39] J. A. Kroll, I. C. Davey, and E. W. Felten, “The economics of Bitcoin munications, in 2017. She is an associate professor
+ mining, or Bitcoin in the presence of adversaries,” in Proc. Workshop with the School of Cyberspace Science and Tech-
+ Econ. Inf. Secur., 2013, pp. 1–21. nology, Beijing Institute of Technology, Beijing. She
+[40] M. Mirkin, Y. Ji, J. Pang, A. Klages-Mundt, I. Eyal, and A. Juels, “BDOS: has edited three book/book chapters and published
+ Blockchain denial-of-service,” in Proc. ACM SIGSAC Conf. Comput. more than 40 refereed papers in international jour-
+ Commun. Secur., 2020, pp. 601–619. nals and conferences. Her research interests include
+[41] D. Wagner et al., “United we stand: Collaborative detection and mitigation cryptography, information security, and blockchain
+ of amplification DDoS attacks at scale,” in Proc. ACM SIGSAC Conf. technology. She has served as an associated editor of
+ Comput. Commun. Secur., 2021, pp. 970–987. the Computer Standards & Interfaces, a guest editor
+[42] Z. Li, Y. Kong, C. Wang, and C. Jiang, “DDoS mitigation based on space- for many journals, and a program committee member of many conferences.
+ time flow regularities in IoV: A feature adaption reinforcement learning
+ approach,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 3, pp. 2262–2278,
+ Mar. 2022.
+[43] T. Zhang et al., “How to mitigate DDoS intelligently in SD-IoV: A
+ moving target defense approach,” IEEE Trans. Ind. Inform., vol. 19, no. 1,
+ pp. 1097–1106, Jan. 2023.
+[44] Y. Zhou et al., “A cost-effective shuffling method against DDoS attacks
+ using moving target defense,” in Proc. 6th ACM Workshop Moving Target Liehuang Zhu (Senior Member, IEEE) is currently a
+ Defense, 2019, pp. 57–66. full professor with the School of Cyberspace Science
+[45] Y. Zhou et al., “Cost-effective moving target defense against DDoS attacks and Technology, Beijing Institute of Technology. He
+ using trilateral game and multi-objective Markov decision processes,” is selected into the Program for New Century Excel-
+ Comput. Secur., vol. 97, 2020, Art. no. 101976. lent Talents in University from Ministry of Education,
+[46] S. Debroy et al., “Frequency-minimal utility-maximal moving target de- China. He has published more than 260 SCI-indexed
+ fense against DDoS in SDN-based systems,” IEEE Trans. Netw. Service research articles in these areas, and a book published
+ Manag., vol. 17, no. 2, pp. 890–903, Jun. 2020. by Springer. He serves on the editorial boards of three
+[47] H. Wang et al., “A moving target DDoS defense mechanism,” Comput. international journals, including the IEEE Internet
+ Commun., vol. 46, pp. 10–21, 2014. of Things Journal, IEEE Transactions on Vehicular
+[48] Q. Jia et al., “Catch me if you can: A cloud-enabled DDoS defense,” in Technology, and IEEE Network Magazine. He won
+ Proc. 44th Annu. IEEE/IFIP Int. Conf. Dependable Syst. Netw., 2014, the Best Paper Award at IEEE/ACM IWQoS 2017 and IEEE TrustCom 2018.
+ pp. 264–275. His research interests include the Internet of Things, cloud computing security,
+[49] Y. Xu and Y. Liu, “DDoS attack detection under SDN context,” in Proc. internet, and mobile security.
+ IEEE Int. Conf. Comput. Commun., 2016, pp. 1–9.
+[50] J. Hu, M. Reed, N. Thomos, M. F. AI-Naday, and K. Yang, “Securing
+ SDN-controlled IoT networks through edge blockchain,” IEEE Internet
+ Things J., vol. 8, no. 4, pp. 2102–2115, Feb. 2021.
+[51] L. Yang and H. Zhao, “DDoS attack identification and defense using SDN
+ based on machine learning method,” in Proc. 15th Int. Symp. Pervasive
+ Syst. Algorithms Netw., 2018, pp. 174–178.
+[52] J. Zheng and A. S. Namin, “Defending SDN-based IoT networks against Kim-Kwang Raymond Choo (Senior Member,
+ DDoS attacks using Markov decision process,” in Proc. IEEE Int. Conf. IEEE) received the PhD degree in information secu-
+ Big Data, 2018, pp. 4589–4592. rity from the Queensland University of Technology,
+ Australia, in 2006. He currently holds the Cloud Tech-
+ Keke Gai received the PhD degree in computer sci- nology Endowed professorship with the University of
+ ence from Pace University, New York, NY, USA. Texas at San Antonio. He is the founding co-editor-
+ He is currently a professor with the School of Cy- in-chief of the ACM Distributed Ledger Technoloberspace Science and Technology, Beijing Institute gies: Research & Practice, and the founding chair of
+ of Technology, Beijing, China. He has published five the IEEE Technology and Engineering Management
+ books, more than 200 peer-reviewed papers, & 10+ Society Technical Committee (TC) on Blockchain
+ best paper awards. He serves as an editor-in-chief of and Distributed Ledger Technologies. He is also the
+ the journal Blockchains and associate editors for a recipient of the 2022 IEEE Hyper-Intelligence TC Award for Excellence in
+ few journals, including IEEE Transactions on De- Hyper-Intelligence Systems (Technical Achievement award), the 2022 IEEE
+ pendable and Secure Computing, Journal of Parallel TC on Homeland Security Research and Innovation Award, the 2022 IEEE
+ and Distributed Computing, etc. He also serves as a TC on Secure and Dependable Measurement Mid-Career Award, and the 2019
+co-chair of IEEE Technology and Engineering Management Society’s Technical IEEE TC on Scalable Computing Award for Excellence in Scalable Computing
+Committee on Blockchain and Distributed Ledger Technologies, a standing (Middle Career Researcher).
+committee member at China Computer Federation-Blockchain Committee. His
+research interests include cybersecurity, blockchain, privacy-preserving computation, and decentralized identity.

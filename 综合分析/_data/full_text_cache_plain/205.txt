@@ -1,0 +1,1060 @@
+IEEE TRANSACTIONS ON EMERGING TOPICS IN COMPUTATIONAL INTELLIGENCE, VOL. 8, NO. 1, FEBRUARY 2024
+
+3
+
+Deep Contrastive Representation Learning
+With Self-Distillation
+Zhiwen Xiao , Member, IEEE, Huanlai Xing , Member, IEEE, Bowen Zhao , Rong Qu , Senior Member, IEEE,
+Shouxi Luo , Member, IEEE, Penglin Dai , Member, IEEE, Ke Li , and Zonghai Zhu
+
+Abstract—Recently, contrastive learning (CL) is a promising way
+of learning discriminative representations from time series data.
+In the representation hierarchy, semantic information extracted
+from lower levels is the basis of that captured from higher levels.
+Low-level semantic information is essential and should be considered in the CL process. However, the existing CL algorithms
+mainly focus on the similarity of high-level semantic information.
+Considering the similarity of low-level semantic information may
+improve the performance of CL. To this end, we present a deep
+contrastive representation learning with self-distillation (DCRLS)
+for the time series domain. DCRLS gracefully combine data augmentation, deep contrastive learning, and self distillation. Our data
+augmentation provides different views from the same sample as the
+input of DCRLS. Unlike most CL algorithms that concentrate on
+high-level semantic information only, our deep contrastive learning
+also considers the contrast similarity of low-level semantic information between peer residual blocks. Our self distillation promotes
+knowledge flow from high-level to low-level blocks to help regularize DCRLS in the knowledge transfer process. The experimental
+results demonstrate that the DCRLS-based structures achieve excellent performance on classification and clustering on 36 UCR2018
+datasets.
+Index Terms—Contrastive learning, knowledge distillation,
+representation learning, time series classification, time series
+clustering.
+
+I. INTRODUCTION
+IME series data is of significant importance to various
+areas in the real world, such as electroencephalogram
+(EEG) analysis [1], cardiotocography (CTG) interpretation [2],
+symbolic sequence classification [3], automated damage detection [4], anomaly detection [5], regime change detection [6],
+
+T
+
+Manuscript received 31 March 2023; revised 2 July 2023; accepted 4 August
+2023. Date of publication 29 August 2023; date of current version 23 January 2024. This work was supported in part by the National Natural Science
+Foundation of China under Grants 62172342 and 62202392, in part by the
+Natural Science Foundation of Hebei Province under Grant F2022105027,
+in part by the Natural Science Foundation of Sichuan Province under Grants
+2022NSFSC0568, 2022NSFSC0944, and 2023NSFSC0459, and in part by the
+Fundamental Research Funds for the Central Universities, China. (Corresponding author: Huanlai Xing.)
+Zhiwen Xiao, Huanlai Xing, Bowen Zhao, Shouxi Luo, Penglin Dai, Ke Li,
+and Zonghai Zhu are with the School of Computing and Artificial Intelligence,
+Southwest Jiaotong University, Chengdu 610031, China, also with the Tangshan
+Institute of Southwest Jiaotong University, Tangshan 063000, China, and also
+with the Engineering Research Center of Sustainable Urban Intelligent Transportation, Ministry of Education, China (e-mail: xiao1994zw@163.com; hxx
+@home.swjtu.edu.cn; cn16bz@icloud.com; sxluo@swjtu.edu.cn; penglindai
+@swjtu.edu.cn; keli@swjtu.edu.cn; zzhu@swjtu.edu.cn).
+Rong Qu is with the School of Computer Science, University of Nottingham,
+NG7 2RD 455356 Nottingham, U.K. (e-mail: rong.qu@nottingham.ac.uk).
+Digital Object Identifier 10.1109/TETCI.2023.3304948
+
+valvular heart diseases detection [7], colorectal polyp diagnosis [8] and motion detection [9]. To achieve accurate time
+series classification, it is essential for an algorithm to effectively capture both local and global patterns of the input time
+series [10].
+Deep learning algorithms on time series classification have
+achieved promising performance because they can discover the
+intrinsic connections among representations by unfolding the
+internal representation hierarchy of data. For instance, Wang
+et al. [11] tested three deep learning architectures, including
+fully convolutional network (FCN), residual network (ResNet),
+and multilayer perceptron (MLP) for time series classification.
+Fawaz et al. [12] proposed a multi-head neural network, called
+InceptionTime, to extract multi-scaled features from the input.
+Xiao et al. [13] presented a robust temporal feature network
+integrating an LSTM-based attention network and a temporal
+feature network for supervised classification and unsupervised
+clustering. The algorithms above heavily rely on a massive
+amount of labeled data, making it challenging to adapt them
+to scenarios with limited labeled data.
+Recently, there has been a surge of interest in self-supervised
+learning as a means of generating effective representations from
+unlabelled data for use in downstream tasks. Among the most
+popular trends in this area are algorithms that incorporate contrastive learning (CL) [14], [15], [16]. CL is a discriminative
+approach to similar group samples closer. For instance, He
+et al. [17] proposed MoCo using a momentum encoder to learn
+representations of the negative pairs obtained from a memory
+bank. Chen et al. [18] devised SimCLR to replace the momentum
+encoder with a large batch of antagonistic pairs. Chen et al. [19]
+developed SimSiam ignoring the negative samples for feature
+extraction. Jin et al. [20] designed a multi-scale contrastive
+approach with self-distillation that achieved decent performance
+on a number of benchmark datasets. A self-supervised learning paradigm that utilizes single-stage online knowledge distillation to enhance the quality of model representations was
+proposed [21]. Hu et al. [22] designed an unsupervised crossmodal hashing method to achieve decent retrieval performance.
+Li et al. [23] put forward an online clustering approach for
+instance- and cluster-level CL. Shu et al. [24] introduced an
+anchor-contrastive representation learning approach for semisupervised skeleton-based action recognition. Xu et al. [25]
+devised an X-invariant contrastive augmentation and representation learning method for skeleton-based action recognition.
+Lin et al. [26] presented a contrastive matching method with
+
+2471-285X © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+4
+
+IEEE TRANSACTIONS ON EMERGING TOPICS IN COMPUTATIONAL INTELLIGENCE, VOL. 8, NO. 1, FEBRUARY 2024
+
+momentum distillation to address the bi-level noisy correspondence problem in graph matching. Yu et al. [27] designed a
+contrastive instance learning method with self-distillation for
+audio-visual violence detection. Wang et al. [28] introduced
+a CL-based transformer model with label-free distillation for
+feature extraction in remote sensing.
+CL has been applied to the time series field. For example,
+Mohsenvand et al. [29] extended the SimCLR model [18] to capture representations from EEG data. Eldele et al. [30] introduced
+an unsupervised time series representation learning framework
+via temporal and contextual contrasting to learn representations from unlabeled data. Yue et al. [31] designed a universal
+framework for understanding time series representations at an
+arbitrary semantic level. Different from computer vision (CV),
+CL in the time series domain develops slowly. The following
+lists some notable limitations in this domain.
+First, the time series domain lacks large-scale datasets, e.g.,
+unlike ImageNet in CV, to provide models with rich semantic
+features in the data [30], [31]. As a result, time series models
+usually have little prior knowledge to help handle real-world
+tasks, such as anomaly detection.
+Second, data augmentation is crucial for CL to understand
+the similarity of different views from the same sample and the
+similarity with the views from different samples [14]. Unlike
+image data, time series data is a series of time-ordered data points
+associated with single or multiple time-dependent variables [13].
+Typical augmentation methods for image data, such as crop,
+are not directly applicable to time series domain. Meanwhile,
+time series data augmentation has not received enough research
+attention [29], [30], [31].
+Third, a deep neural network aims at learning multiple levels
+of feature representations with increasing abstraction. Its performance is dependent on high- and low-level semantic information
+obtained from the data [32]. As known, the quality of the
+obtained high-level semantic information is based on that of the
+low-level semantic information already extracted. On the other
+hand, most learning models update their parameters using the
+backpropagation (BP) [33] method. High-level semantic information influences low-level semantic information to a certain
+extent according to BP. Hence, low-level semantic information
+is also important and should be considered in the CL process.
+To the best of our knowledge, most of the existing CL-based
+algorithms in the time series field, such as SimCLR on EEG [29]
+and temporal and contextual contrasting [30], mainly focus
+on the similarity of high-level semantic information. Ignoring
+the similarity of low-level semantic information may lead to a
+deteriorated CL performance. Unfortunately, this issue has not
+been well studied in the literature.
+To tackle the problems above, we propose a deep contrastive
+representation learning with self-distillation (DCRLS). To
+be specific, DCRLS gracefully integrates data augmentation,
+deep contrastive learning, and self distillation to explore the
+representations hidden in time series data. Data augmentation
+provides different views from the same sample as the input of
+DCRLS. The feature extractor for DCRLS is a residual network
+(ResNet) containing three residual blocks. Deep contrastive
+learning provides the contrast similarity of high-level semantic
+
+information and that of low-level semantic information
+between peer residual blocks to mine instance-level features
+between different perspectives from the same sample. Inspired
+by BYOT [34], self distillation transfers knowledge from
+high-level to low-level blocks for self regularization purpose.
+Unlike BYOT’s KL divergence-based knowledge distillation
+(KD) loss function, DCRLS uses the L2 function to measure
+the difference between high-level and low-level feature vectors.
+Fig. 1 illustrates the overview of DCRLS.
+Our major contributions are summarized as follows:
+r We present DCRLS that ensembles data augmentation,
+deep contrastive learning, and self distillation techniques,
+to mine the intrinsic connections between the internal
+representational hierarchy of data for downstream tasks.
+r Unlike other CL-based algorithms, DCRLS considers the
+contrast similarity of high-level semantic information and
+that of low-level semantic information between peer residual blocks via deep contrastive learning.
+r DCRLS is applied to time series classification and clustering with 36 UCR2018 datasets considered. On classification, DCRLS outperforms six existing classification
+algorithms on 28 datasets in terms of mean accuracy,
+‘win’/‘tie’/‘lose’ measure, and AVG_rank; on clustering,
+DCRLS wins on 8 out of 36 datasets when compared with
+13 clustering algorithms with respect to average rand index,
+‘win’/‘tie’/‘lose’ measure, and AVG_rank.
+The remainder of this article is structured as follows. In
+Section II, we review related work on time series classification
+and clustering. In Section III, we provide a detailed description
+of the problem formulation and our proposed approach, DCRLS.
+Section IV presents an analysis of our experimental results, and
+finally, we draw our conclusion in Section V.
+II. RELATED WORK
+This section reviews time series classification and clustering
+algorithms.
+A. Time Series Classification
+Time series classification algorithms can be roughly classified
+into two categories: traditional and deep-learning algorithms.
+1) Traditional Algorithms: Distance- and feature-based algorithms are two main streams for time series classification.
+Combining the nearest neighbor (NN) and dynamic time warping (DTW) is a commonly used as distance-based method.
+This method focuses on calculating the similarities between
+spatial features of data, e.g., DT WI , DT WA , DT WC and
+DT WD [10]. Besides, researchers have devoted their effects
+on ensemble approaches for time series classification. Lines
+and Bagnall [35] introduced an elastic ensemble (EE) algorithm
+hybridizing 11 1-NN-based elastic distances for various time
+series classification tasks. Lines et al. [36] proposed a collective
+of transformation-based ensemble (COTE) algorithm that used
+multiple standard classifiers to achieve decent performance. The
+hierarchical vote collective of transformation-based ensembles
+(HIVE-COTE) [37], HIVE-COTE 2.0 [38], and local cascade
+ensemble (LCE) [39] are also ensemble-based.
+
+XIAO et al.: DEEP CONTRASTIVE REPRESENTATION LEARNING WITH SELF-DISTILLATION
+
+5
+
+Fig. 1. Overview of DCRLS. The feature extractor is a residual network (ResNet) including three residual blocks, an average pooling layer, and two dense (i.e.,
+fully-connected) layers. Each residual block consists of a 1-dimensional convolutional neural network (Conv), a batch normalization (BatchNorm) module, and a
+rectified linear unit (ReLU) function, where “Conv 8x128” stands for a 1-dimensional Conv with a kernel size of 8 and a channel number of 128.
+
+Feature-based algorithms aims at capturing representative
+features from time series data. For example, Karlsson et al. [40]
+designed a generalized random shapelet forest algorithm with
+shapelets and bag-of-words methods used for feature extraction.
+The learned pattern similarity [41], hidden state conditional
+random field [42] and interpretable representation learning [43]
+are feature-based as well.
+2) Deep Learning Algorithms: Deep learning algorithms
+learn the underlying relationships among data representations
+by constructing an internal hierarchy of data representation.
+Currently, there are two branches of work in the community: single-network-based and dual-network-based models.
+A single-network-based model is based on one (usually hybridized) network that concentrates on the significant connections within the hierarchy. For example, Xiao et al. [44]
+introduced a multi-process collaborative architecture using a
+multi-head capsule network to extract multi-scale features from
+the input. Other examples of single-network-based models include MLP, ResNet, FCN [11], InceptionTime [12], ResNet with
+random vector functional link [45], residual channel attention
+network [46], CNN-based federated distillation learning [47],
+deep echo state network [48], ROCKET [49], MiniRocket [50],
+and ConvTimeNet [51]. In contrast, dual-network-based models
+typically consist of two parallel networks: one for local-feature
+extraction and one for global-relation extraction. The former
+typically uses CNNs to extract local features, while the latter focuses on capturing the connections among the extracted features.
+Examples of dual-network-based models include RTFN [13],
+robust neural temporal search [52], FCN-LSTM [53], ResNetTransformer [54], SelfMatch [55] and attentional prototype
+network [56].
+B. Time Series Clustering
+Time series clustering algorithms are used to group similar
+data together for better analysis of its structure [57]. Two main
+
+streams in the time series clustering community are traditional
+and deep learning algorithms. Traditional clustering algorithms
+use dissimilarity measure or time series representation methods
+to distinguish the differences in data structures. For example,
+Yang et al. [58] introduced a combination of discriminative
+analysis and l2,1 -norm minimization for unsupervised feature
+selection. Li et al. [59] proposed an unsupervised feature selection algorithm for non-negative spectral analysis. The robust unsupervised feature selection [60], robust local learning
+method [61], K-spectral centroid clustering [62], DTW-based
+barycenter averaging method [63], K-shape [64], U-shape [64]
+and fuzzy-based clustering [65] all belong to traditional clustering methods. On the contrary, deep learning clustering ones
+provide rich representations for standard clustering, e.g., the
+deep temporal clustering [66], unsupervised deep embedding
+algorithm [67], improved deep embedding algorithm [67], deep
+temporal clustering representation algorithm [68], and ClusterGAN [69].
+III. THE PROPOSED DCRLS
+First of all, the problem formulation is introduced. Then, the
+three key components of DCRLS, namely data augmentation,
+deep contrastive learning, and self distillation, are described. Finally, the DCRLS-based classification and clustering structures
+are given.
+A. Problem Formulation
+Let an arbitrary time equidistant time series sequence denoted
+(i)
+(i)
+(i)
+(i)
+by xi = {{x1,1 , . . ., x1,d }, . . ., {{xl,1 , . . ., xl,d }} ∈ X , where
+X ⊆ Rl×d is the input space, and l and d are the length and
+number of covariates of xi , respectively. xi is univariate if d
+= 1, and xi is multivariate, otherwise. The goal is to learn a
+nonlinear embedding function fθ , which maps xi ∈ X to its
+representation ri that interprets itself for downstream tasks, e.g.,
+time series classification.
+
+6
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON EMERGING TOPICS IN COMPUTATIONAL INTELLIGENCE, VOL. 8, NO. 1, FEBRUARY 2024
+
+Example raw data and its jitter-and-scale and Cutout-modified data on the Wafer dataset.
+
+B. Data Augmentation
+Data augmentation is a widely-used regularization method in
+deep learning that can significantly improve a model’s robustness. DCRLS leverages two augmentation methods to produce
+different views from the same sample as the input. To be specific,
+the first method is based on a jitter-and-scale strategy through
+adding the Gaussian function to the raw data. The second method
+is a variant of Cutout [70], where a small piece of the raw
+data is randomly replaced without changing its overall trend.
+Fig. 2 illustrates examples of the raw data and the resulting
+jitter-and-scale and Cutout-modified data generated from the
+Wafer dataset.
+C. Deep Contrastive Learning (DeepCL)
+DeepCL aims at understanding the contrast similarity of
+high-level semantic information and that of low-level semantic
+information between peer residual blocks to capture the discriminative representations from unlabeled data. As illustrated
+in Fig. 1, there are four parts involving CL, including Residual
+Block 1, Residual Block 2, Residual Block 3, and the output of
+ResNet (i.e. the whole model).
+CL understands the similarity of different views from the
+same sample via a contrasting loss function [18]. To be specific,
+it obtains two feature vectors for every sample from the two
+
+augmented views above. Assume there are N input samples.
+The DeepCL method thus obtains 2N feature vectors. Let zti be
++
+the i-th feature vector, i ∈ {1, 2, . . ., 2N }. Let zti denote the
+i
+positive sample of zt that comes from the other augmented view
++
+of the same input. (zti , zti ) is a positive pair. In the meanwhile,
+we consider (2N − 2) feature vectors from other inputs within
+the same batch as the negative samples of zti . In other words, zti
+has (2N − 2) negative pairs with its negative samples. We use
+the contrasting loss function in [18], [29], LCL , to maximize the
+similarity between the positive pair and minimize that between
+negative pairs, as defined in (1).
+
+
+
+
++
+exp sim zti , zti /τCL
+log 2 N
+LCL = −
+
+
+ i m
+/τCL
+m=1 1[m=i] exp sim zt , zt
+i=1
+(1)
+uT v
+represents the dot product between
+where, sim(u, v) = ||u||||v||
+l2 normalized u and v (i.e., cosine smilarity). 1[m=i] ∈ {0, 1}
+is an indicator function, equal to 1 iff [m = i] and τCL is a
+temperature parameter of LCL . In this article, we set τCL = 1.0
+(more details are found in Section IV-C).
+The loss function of DeepCL, LDCL , is defined in (2):
+2N
+
+
+LDCL = LResblk1
++ LResblk2
++ LResblk3
++ Loutput
+CL
+CL
+CL
+CL
+
+(2)
+
+XIAO et al.: DEEP CONTRASTIVE REPRESENTATION LEARNING WITH SELF-DISTILLATION
+
+where, LResblk1
+, LResblk2
+, LResblk3
+and Loutput
+are the conCL
+CL
+CL
+CL
+trasting loss functions of Residual Block 1, Residual Block 2,
+Residual Block 3, and the output of ResNet, respectively.
+
+7
+
+the k-means loss in the overall loss function [66], [68], [73],
+the DCRLS-based clustering method solely relies on the loss
+function of DCRLS for parameter updating.
+IV. EXPERIMENTS AND ANALYSIS
+
+D. Self Distillation
+Self-distillation, a special teacher-student model, transfers its
+knowledge from high-level to low-level blocks [34]. Let V1 , V2 ,
+V3 represent the output feature vectors of the first, second and
+third residual block, respectively. To match each vector with
+ResNet’s soft label (i.e., output feature vector), q, a temporal
+classifier, ψ, is employed. This classifier comprises an average
+pooling layer and a dense (i.e., fully-connected) layer. After
+passing through the classifier, Vi ’s output is represented as qi ,
+which is defined in (3).
+qi = fsoftmax (ψ(Vi )/τSD )
+
+i ∈ {1, 2, 3}
+
+(3)
+
+where, the activation function fsoftmax is used to compute the
+probability distribution of a given matrix, and the temperature
+parameter τSD is used for self-distillation. As the previous work
+suggested [34], [71], we set τSD = 1.0.
+The L2 loss function is utilized to quantify the disparity
+between qi and q and is expressed as follows:
+LiKD = ||qi − q||2
+
+i ∈ {1, 2, 3}
+
+(4)
+
+The self-distillation loss for DCRLS, LKD , is the summation
+of LiKD , shown in (5)
+LKD =
+
+3
+
+
+LiKD
+
+(5)
+
+i=1
+
+Based on LKD and LDCL , the loss function of DCRLS, L,
+is written in (6).
+L = LKD + LDCL + ||θ||2
+
+(6)
+
+where, θ stands for the parameters of DCRLS, and  the coefficient of ||θ||2 (i.e., L2 regularization). Following [12], [13], we
+set  = 0.0005.
+E. DCRLS-Based Classification
+To reflect the effectiveness of the instance-level features
+extracted by DCRLS for classification tasks, this article adds
+a classifier behind the first dense (i.e., fully-connected) layer
+in ResNet. Like most existing time series classification algorithms [29], [30], [31], [72], DCRLS-based classification uses
+a two-step method. Firstly, unsupervised learning is applied to
+extract informative features from the data. Subsequently, these
+features are supplied to the classifier for classification. Following
+the previous work in [72], we embed a one-nearest-neighbor (1NN) classifier into the DCRLS-based classification framework.
+F. DCRLS-Based Clustering
+To handle clustering tasks, this article adds a k-means algorithm behind the first dense layer in ResNet. The DCRLS-based
+clustering extracts rich representations from data through unsupervised learning and then sends them to the k-means algorithm
+for clustering. Unlike some previous approaches that include
+
+This section first introduces the experimental setup and performance metrics. Then, it focuses on the hyper-parameter sensitivity and ablation study. Finally, the performance of DCRLS-based
+classification and clustering is evaluated.
+A. Experimental Setup
+1) Data Description: In accordance with [66], [68], we evaluate the efficacy of DCRLS-based classification and clustering
+on 36 commonly used datasets from the UCR2018 archive [74].
+The number of categories varies from 2 to 25, and the length
+of the time series varies from 65 to 637, encompassing various
+domains such as ECG and motion. For additional information,
+please refer to Table I.
+2) Implementation Details: To prevent overfitting during
+training, we apply L2 regularization and dropout techniques.
+Additionally, we set the decay value of batch normalization to
+0.9 to ensure the stability of the training process, following
+the approach in [11], [13]. Meanwhile, we adopt the Adam
+optimizer, where the momentum term is fixed to 0.9 and the
+learning rate is initialized with 0.001 and tuned with a decay
+value of 0.9. All experiments are run on a computer with Ubuntu
+18.04 OS, an Nvidia GTX 1070Ti GPU with 8 GB, an Nvidia
+GTX 1080Ti GPU with 11 GB, and an AMD R5 1400 CPU with
+16 G RAM.
+B. Performance Metrics
+To compare the performance of various algorithms for time
+series classification and clustering, we adopt a number of wellknown performance metrics.
+1) Metrics for Classification: Based on the top-1 accuracy, three metrics, namely, ‘win’/‘tie’/‘lose’, mean accuracy
+(MeanACC), and AVG_rank, are used to rank different supervised algorithms. To be specific, for an arbitrary algorithm, it
+is associated with ‘win’, ‘tie’, and ‘lose’ values, revealing on
+how many datasets it is better than, equivalent to, and worse
+than the other algorithms, respectively. Its ‘best’ value is the
+summation of the corresponding ‘win’ and ‘tie’ values. As
+the previous work [11], [12], [13], [44], [52], [53], [56], we
+use the AVG_rank score based on the Wilcoxon signed-rank
+test with Holm’s alpha (5%) correction to ranking various classification algorithms.
+2) Metrics for Clustering: We use a commonly adopted performance indicator, rand index (RI) [66], [68], as defined in (7).
+RI =
+
+PTP + NTP
+S(S − 1)/2
+
+(7)
+
+where, P T P and N T P represent the numbers of positive and
+negative time series pairs in the clustering, respectively, and S
+is the dataset size. Note that AVG_RI is the average RI value of
+a certain algorithm.
+
+8
+
+IEEE TRANSACTIONS ON EMERGING TOPICS IN COMPUTATIONAL INTELLIGENCE, VOL. 8, NO. 1, FEBRUARY 2024
+
+TABLE I
+DETAILS OF THE 36 UCR2018 DATASETS SELECTED
+
+TABLE II
+MEANACC RESULTS WITH DIFFERENT PARAMETER SETTINGS
+ON 36 DATASETS
+
+C. Hyper-Parameter Sensitivity
+We use the 36 UCR2018 datasets above to study the impact
+of hyper-parameter settings on DCRLS.
+1) Effectiveness of τCL : τCL is a threshold value for DCRLS
+to distinguish the similarity of different views from the same
+sample. Tables II and III show the MeanACC results obtained
+by DCRLS-based classification and AVG_RI results obtained
+by DCRLS-based clustering with different τCL values, respectively. When τCL = 1, the DCRLS-based classification and
+
+TABLE III
+AVG_RI RESULTS WITH DIFFERENT PARAMETER SETTINGS ON 36 DATASETS
+
+clustering result in 0.7565 and 0.6947, the highest MeanACC
+score and highest AVG_RI value, respectively. It means τCL = 1
+is suitable for DCRLS to capture representations from the input.
+2) Effectiveness of KD Loss: A teacher-student model needs
+to choose an appropriate KD loss to measure the difference
+between high- and low-level features. Tables II and III also
+show the impact of KD loss on DCRLS. One can observe that
+self distillation improves the performance of DCRLS mainly
+because supervising low-level semantics with high-level ones
+helps regularize the model itself. Besides, L2 outperforms the
+other losses in both classification and clustering. Therefore, we
+choose L2 to promote the knowledge flow within the model.
+
+XIAO et al.: DEEP CONTRASTIVE REPRESENTATION LEARNING WITH SELF-DISTILLATION
+
+9
+
+TABLE IV
+MEANACC AND AVG_RI RESULTS OBTAINED BY VARIOUS DEEPCL-BASED VARIANTS FOR CLASSIFICATION AND CLUSTERING VARIANTS ON 36 DATASETS
+
+D. Ablation Study
+We investigate the effectiveness of two important components
+of DCRLS on 36 datasets.
+1) Effectiveness of Deep Contrastive Learning (DeepCL):
+As aforementioned, our DeepCL has four parts involving CL,
+i.e. Residual Blocks 1, 2, and 3, and the output of ResNet,
+i.e., the whole model, as shown in Fig. 1. Let ContrBlock1,
+ContrBlock2, ContrBlock3, and ContrOutput denote the contrastive learning at the outputs of Residual Blocks 1, 2, 3, and
+ResNet, respectively.
+To evaluate the impact of low-level semantic information on
+extraction of high-level semantic information, we compare a
+number of DeepCL-based variants for classification and clustering variants on 36 datasets.
+r Baseline: It uses the proposed ResNet structure (i.e. the
+whole model) for feature extraction and enables CL at the
+outputs of ResNet.
+r Baseline-ContrBlock1: Baseline with extra CL enabled at
+the outputs of Residual Block 1.
+r Baseline-ContrBlock2: Baseline with extra CL enabled at
+the outputs of Residual Block 2.
+r Baseline-ContrBlock3: Baseline with extra CL enabled at
+the outputs of Residual Block 3.
+r Baseline-ContrBlock1-ContrBlock2: Baseline with extra
+CL enabled at the outputs of Residual Blocks 1 and 2.
+r Baseline-ContrBlock1-ContrBlock3: Baseline with extra
+CL enabled at the outputs of Residual Blocks 1 and 3.
+r Baseline-ContrBlock2-ContrBlock3: Baseline with extra
+CL enabled at the outputs of Residual Blocks 2 and 3.
+r DeepCL: Baseline with extra CL enabled at the outputs of
+Residual Blocks 1, 2 and 3.
+As shown in Table IV, with continuous addition of CL on
+low-level outputs, the accuracy values of classification and clustering are both increasing. For example, the MeanACC value
+of Baseline is 0.6674 while that of the Baseline-ContrBolck2 is
+0.6882. This, to a certain extend, reflects the importance of low
+level semantic information to representation learning. DeepCL
+understands the contrast similarity of high-level semantic information and that of low-level semantic information between peer
+Residual Blocks, enhancing the ability of representation learning
+on DCRLS. This is why DeepCL achieves the best performance
+among all compared variants.
+2) Effectiveness of Self Distillation: To evaluate the proposed
+self distillation method, we select four advanced self-distillation
+methods for performance comparison, including BYOT, SAD,
+
+TSD with KL, and TSD with L2 . These self distillation methods
+are listed below.
+r BYOT: the best your own teacher method with the Kullback Leibler (KL) function used to measure the difference
+between high- and low-level feature vectors [34].
+r SAD: the layer-wise attention self-distillation method
+transferring knowledge from high levels to low levels [75].
+r TSD with KL: the transitive self-distillation method with
+the Kullback Leibler (KL) function as its loss function [76].
+r TSD with L2 : the transitive self-distillation method with
+the L2 function as its loss function [76].
+r Self Distillation (Ours): using the L2 function to measure
+the difference between high- and low-level feature vectors.
+As shown in Fig. 1, DCRLS consists of DeepCL and the proposed self distillation. To validate the impact of self distillation
+on DCRLS, we compare it with a number of DeepCL variants
+listed below.
+r DeepCL-BYOL: DeepCL with the best your own teacher
+method.
+r DeepCL-SAD: DeepCL with the layer-wise attention selfdistillation method.
+r DeepCL-TSD with KL: DeepCL with the transitive selfdistillation method, where the KL function is adopted.
+r DeepCL-TSD with L2 : DeepCL with the transitive selfdistillation method, where the L2 function is used.
+r DCRLS: DeepCL with the proposed self distillation
+method.
+The MeanACC and AVG_RI results obtained by DeepCL
+with various self distillation techniques for classification and
+clustering on 36 datasets are shown in Table V. Clearly, DeepCL
+results in the worst performance on both classification and clustering. This is because self distillation can effectively promotes
+knowledge flow within the model, enhancing its robustness. In
+addition, DCRLS outperforms DeepCL-BYOT, DeepCL-SAD,
+DeepCL-TSD with KL, and DeepCL-TSD with L2 with respect to MeanACC and AVG_RI, which means the proposed
+self distillation achieves better performance than a number of
+well-known methods when working with DeepCL on time series
+classification and clustering tasks.
+E. Evaluation of DCRLS-Based Classification
+To evaluate the performance of DCRLS-based classification,
+we compare it with a number of existing CL-based classification algorithms against ‘win’/‘lose’/‘tie’, MeanACC, and
+AVG_rank, as listed below.
+
+10
+
+IEEE TRANSACTIONS ON EMERGING TOPICS IN COMPUTATIONAL INTELLIGENCE, VOL. 8, NO. 1, FEBRUARY 2024
+
+TABLE V
+MEANACC AND AVG_RI RESULTS OBTAINED BY DEEPCL WITH VARIOUS SELF DISTILLATION TECHNIQUES FOR CLASSIFICATION AND CLUSTERING ON 36
+DATASETS
+
+r T-Loss: a method based on random sub-series technique
+ResNet as its feature extractor [72].
+
+r SimCLR: a modified version of SimCLR adapted to time
+series classification with ResNet as its feature extractor [18].
+r CRL with KL: a contrastive representation leaning method
+with the Kullback Leibler (KL) function as its selfdistillation loss function and ResNet as its feature extractor [20].
+r CRL with L2 : a contrastive representation leaning method
+with the L2 function as its self-distillation loss function
+and ResNet as its feature extractor [20].
+r KNCRL with KL: a KD-based contrastive leaning method
+with the KL function as its KD loss function and ResNet
+as its feature extractor [21].
+r KNCRL with L2 : a KD-based contrastive representation
+leaning method with the L2 function as its KD loss function
+and ResNet as its feature extractor [21].
+Note that the algorithms above all take 1-NN as their classifier
+for classification. The top-1 accuracy results obtained with different algorithms on 36 selected UCR2018 datasets are shown
+in Table VI . The DCRLS-based classification is the best among
+all algorithms as it obtains the highest MeanACC and ‘best’
+values, 28 and 0.7565, and the smallest AVG_rank score, 1.7639.
+Rather than focusing on the contrastive similarity of high-level
+semantic information only, DCRLS-based classification considers the contrast similarity of multi-level semantic information,
+especially that of low-level semantic information between peer
+Residual Blocks, which is beneficial for mining instance-level
+features between different perspectives from the same sample.
+KNCRL with L2 takes advantage of CL and KD to distinguish
+the similarity of different views from the same sample and the
+similarity with the views from different samples. That brings it
+second in terms of MeanACC and AVG_rank, namely 0.7009
+and 3.7361. On the contrary, it is difficult for T-Loss to generate
+proper random sub-series as positive samples when mining
+discriminate shapelets from the input, resulting in its performing
+the worst among all the algorithms.
+To further study the performance of DCRLS on classification,
+we compare it with a separate 1-NN algorithm on 36 datasets.
+Fig. 3 depicts the accuracy plot of DCRLS-based classification against 1-NN for each dataset. The results indicate that
+DCRLS-based classification outperforms 1-NN in 30 cases, ties
+in one case, and underperforms in five cases, with a p-value
+less than 0.5 (about 0.0034). The performance of DCRLS-based
+classification outstrips significantly that of 1-NN. That is because the instance-level features extracted by DCRLS are more
+
+Fig. 3. Accuracy plot showing the performance difference between DCRLSbased classification and 1-NN.
+
+conducive for the 1-NN classifier to distinguish the similarity
+between different samples.
+F. Evaluation of DCRLS-Based Clustering
+To evaluate the performance of DCRLS-based clustering,
+we compare it with a number of existing clustering algorithms
+against three performance metrics: ‘win’/‘tie’/‘lose’, AVG_RI,
+and AVG_rank. These algorithms are listed blow:
+r K-means: a simple yet elegant approach that partitions a
+dataset into K distinct, non-overlapping clusters [68].
+r UDFS: a combination of discriminative analysis and l2,1 norm minimization for unsupervised feature selection [58].
+r NDFS: an unsupervised feature selection algorithm using
+non-negative spectral analysis [59].
+r RUFS: a robust unsupervised feature selection algorithm
+using local learning regularized robust nonnegative matrix
+factorization [60].
+r RSFS: a robust local learning method for graph Laplacian
+and spectral regression construction [61].
+r KSC: a K-spectral centroid clustering algorithm to mine
+patterns of temporal variation [62].
+r KBDB: a dynamic time warping-based barycenter averaging method [63].
+r K-shape: a domain-independent, highly accurate, and efficient clustering approach for partitional, hierarchical, and
+spectral clustering [64].
+r U-shapelet: a shapelet method for time series clustering [64].
+r DTC: a deep temporal clustering algorithm that integrates
+dimensionality reduction and temporal clustering into endto-end learning [66].
+
+XIAO et al.: DEEP CONTRASTIVE REPRESENTATION LEARNING WITH SELF-DISTILLATION
+
+11
+
+TABLE VI
+THE TOP-1 ACCURACY RESULTS OF DIFFERENT CLASSIFICATION ALGORITHMS ON 36 DATASETS WHEN USING 1-NN
+
+r DEC: an unsupervised deep embedding algorithm for clustering analysis that learns feature representations and clustering assignments using deep neural network [67].
+r IDEC: an improved version of DEC [67].
+r DTCR: a deep temporal clustering representation algorithm integrating the temporal reconstruction and K-means
+objective into the seq2seq model [68].
+Table VII shows the RI results of different clustering algorithms on 36 datasets. DTCR and DCRLS-based clustering
+are the best and second-best among all compared algorithms.
+DTCR integrates the temporal reconstruction and K-means into
+the seq2seq model, jointly optimizing its parameters for cluster structure improvement and temporal representation mining.
+However, DTCR is mainly used for addressing cluster-specific
+problems and it has complicated model structure. On the other
+hand, DCRLS-based clustering updates the model’s parameters
+via self-supervised learning and it adopts a K-means algorithm
+for feature classification. Despite its simple structure, DCRLSbased clustering achieves decent performance on the 36 datasets,
+thanks to the DCRLS’s strong ability for feature extraction.
+
+Fig. 4. RI plot showing the performance difference between DCRLS-based
+clustering and K-means.
+
+To further study the effectiveness of DCRLS in time series
+clustering, we compare DCRLS-based clustering with a separate
+K-means algorithm on 36 datasets. Fig. 4 depicts the RI plot of
+
+12
+
+IEEE TRANSACTIONS ON EMERGING TOPICS IN COMPUTATIONAL INTELLIGENCE, VOL. 8, NO. 1, FEBRUARY 2024
+
+TABLE VII
+THE RI RESULTS OF DIFFERENT CLUSTERING ALGORITHMS ON 36 DATASETS
+
+DCRLS-based clustering against K-means for each dataset. The
+results show that DCRLS-based clustering achieves ‘win’/‘tie’/
+‘loss’ in 30/1/5 cases, respectively, with a p-value less than 0.5
+(about 0.0048). The performance of DCRLS-based clustering is
+significantly better than that of K-means. That is because the
+DCRLS-based clustering is provided with sufficient features
+captured by DCRLS, especially those hiding deeply in the
+input data.
+
+DCRLS-based classification and clustering result in significant
+performance improvement when compared with separate 1-NN
+and K-mean algorithms, respectively. Meanwhile, DCRLS is
+generic and has potential to be applied to other domains.
+Due to the limited GPU resources for training, this work
+considered 36 out of 128 UCR2018 datasets for model evaluation and comparison. In the future, we will validate DCRLS
+on all UCR2018 datasets in the time series domain and on larger
+datasets in other domains, such as ImageNet.
+
+V. CONCLUSION
+In the proposed DCRLS, deep contrastive learning pays
+attention to the contrast similarity of multi-level semantic
+information to mine instance-level features between different
+perspectives from the same sample, while self distillation
+transfers knowledge from high-level to low-level blocks to
+regularize DCRLS during knowledge transfer. Experimental results demonstrate that DCRLS obtains promising results in both
+classification and clustering tasks. Specifically, DCRLS-based
+classification wins on 28 datasets in terms of mean accuracy,
+‘win’/‘tie’/‘lose’ measure, and AVG_rank, compared with six
+classification algorithms. DCRLS-based clustering wins on 8
+datasets and takes the second best position among 14 clustering
+algorithms regarding AVG_RI, ‘win’/‘tie’/‘lose’ measure,
+and AVG_rank. on With 36 UCR2018 datasets considered,
+
+ACKNOWLEDGMENT
+The authors thank the editors and reviewers for their valuable
+suggestions to improve the quality of this work.
+REFERENCES
+[1] S. Supriya, S. Siuly, H. Wang, and Y. Zhang, “Eeg sleep stages analysis and
+classification based on weighed complex network features,” IEEE Trans.
+Emerg. Topics Comput. Intell., vol. 5, no. 2, pp. 236–246, Apr. 2021.
+[2] P. Fergus, C. Chalmers, C. C. Montanez, D. Reilly, P. Lisboa, and B.
+Pineles, “Modelling segmented cardiotocography time-series signals using
+one-dimensional convolutional neural networks for the early detection of
+abnormal birth outcomes,” IEEE Trans. Emerg. Topics Comput. Intell.,
+vol. 5, no. 6, pp. 882–892, Dec. 2021.
+[3] Y. Yao, H. Chen, and X. Yao, “Discriminative learning in the model space
+for symbolic sequence classification,” IEEE Trans. Emerg. Topics Comput.
+Intell., vol. 5, no. 2, pp. 154–167, Apr. 2021.
+
+XIAO et al.: DEEP CONTRASTIVE REPRESENTATION LEARNING WITH SELF-DISTILLATION
+
+[4] A. M. Roy and J. Bhaduri, “Densesph-yolov5: An automated damage
+detection model based on densenet and swin-transformer prediction headenabled yolov5 with attention mechanism,” Adv. Eng. Inform., vol. 56,
+pp. 1–16, 2023.
+[5] P. Jain, S. Jain, O. R. Zaïane, and A. Srivastava, “Anomaly detection
+in resource constrained environments with streaming data,” IEEE Trans.
+Emerg. Topics Comput. Intell., vol. 6, no. 3, pp. 649–659, Jun. 2022.
+[6] E. Tsang and J. Chen, “Regime change detection using directional change
+indicators in the foreign exchange market to chart Brexit,” IEEE Trans.
+Emerg. Topics Comput. Intell., vol. 2, no. 3, pp. 185–193, Jun. 2018.
+[7] S. Jamil and A. M. Roy, “An efficient and robust phonocardiography
+(PCG)-based valvular heart diseases (VHD) detection framework using
+vision transformer (VIT),” Comput. Bio. Med., vol. 158, pp. 1–15, 2023.
+[8] S. Wang, Y. Yin, D. Wang, Z. Lv, Y. Wang, and Y. Jin, “An interpretable
+deep neural network for colorectal polyp diagnosis under colonoscopy,”
+Knowl. Based Syst., vol. 234, pp. 1–14, 2022.
+[9] A. R. Shirazi and Y. Jin, “A strategy for self-organized coordinated motion
+of a swarm of minimalist robots,” IEEE Trans. Emerg. Topics Comput.
+Intell., vol. 1, no. 5, pp. 326–338, Oct. 2017.
+[10] H. Fawaz, G. Forestier, J. Weber, L. Idoumghar, and P.-A. Muller, “Deep
+learning for time series classification: A review,” Data Mining Knowl.
+Discov., vol. 33, pp. 917–963, 2019.
+[11] Z. Wang, W. Yan, and T. Oates, “Time series classification from scratch
+with deep neural networks: A strong baseline,” in Proc. IEEE Int. Joint
+Conf. Neural Netw., 2017, pp. 1578–1585.
+[12] H. Fawaz et al., “Inceptiontime: Finding alexnet for time series classification,” Data Mining Knowl. Discov., vol. 34, pp. 1936–1962, 2020.
+[13] Z. Xiao, X. Xu, H. Xing, S. Luo, P. Dai, and D. Zhan, “Rtfn: A robust
+temporal feature network for time series classification,” Inform. Sci.,
+vol. 571, pp. 65–86, 2021.
+[14] A. Jaiswal, A. R. Babu, M. Zadeh, D. Banerjee, and F. Makedon, “A
+survey on contrastive self-supervised learning,” Technologies, vol. 9, no. 1,
+pp. 1–22, 2021.
+[15] Y. Lin, Y. Gou, X. Liu, J. Bai, J. Lv, and X. Peng, “Dual contrastive prediction for incomplete multi-view representation learning,” IEEE Trans.
+Pattern Anal. Mach. Intell., vol. 45, no. 4, pp. 4447–4461, Apr. 2023.
+[16] Y. Li, M. Yang, D. Peng, T. Li, J. Huang, and X. Peng, “Twin contrastive
+learning for online clustering,” Int. J. Comput. Vis., vol. 130, no. 9,
+pp. 2205–2221, Sep. 2022.
+[17] K. He, H. Fan, Y. Wu, S. Xie, and R. Girshick, “Momentum contrast for
+unsupervised visual representation learning,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit., 2020, pp. 9726–9735.
+[18] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc. Int. Conf. Mach.
+Learn., 2020, pp. 1597–1607.
+[19] X. Chen and K. He, “Exploring simple siamese representation learning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2021,
+pp. 15745–15753.
+[20] M. Jin, Y. Zheng, Y. Li, C. Gong, C. Zhou, and S. Pan, “Multi-scale
+contrastive siamese networks for self-supervised graph representation
+learning,” in Proc. Int. Joint Conf. Artif. Intell., 2021, pp. 1477–1483.
+[21] P. Bhat, E. Arani, and B. Zonooz, “Distill on the go: Online knowledge
+distillation in self-supervised learning,” in Proc. IEEE Conf. Comput. Vis.
+Pattern Recognit. Workshops, 2021, pp. 2672–2681.
+[22] P. Hu, H. Zhu, J. Lin, D. Peng, Y.-P. Zhao, and X. Peng, “Unsupervised
+contrastive cross-modal hashing,” IEEE Trans. Pattern Anal. Mach. Intell.,
+vol. 45, no. 3, pp. 3877–3889, Mar. 2023.
+[23] Y. Li, P. Hu, Z. Liu, D. Peng, J. Zhou, and X. Peng, “Contrastive clustering,”
+in Proc. AAAI Conf. Artif. Intell., 2021, pp. 8547–8555.
+[24] X. Shu, B. Xu, L. Zhang, and J. Tang, “Multi-granularity anchorcontrastive representation learning for semi-supervised skeleton-based action recognition,” IEEE Trans. Pattern Anal., vol. 45, no. 6, pp. 7559–7576,
+Jun. 2023.
+[25] B. Xu, X. Shu, and Y. Song, “X-invariant contrastive augmentation and
+representation learning for semi-supervised skeleton-based action recognition,” IEEE Trans. Image Process., vol. 31, pp. 3852–3867, 2022.
+[26] Y. Lin, M. Yang, J. Yu, P. Hu, C. Zhang, and X. Peng, “Graph matching
+with bi-level noisy correspondence,” 2022, arXiv: 2212.04085.
+[27] J. Yu, J. Liu, Y. Cheng, R. Feng, and Y. Zhang, “Modality-aware contrastive
+instance learning with self-distillation for weakly-supervised audio-visual
+violence detection,” in Proc. 30th ACM Int. Conf. Multimedia, 2022,
+pp. 6278–6287.
+[28] X. Wang et al., “LaST: Label-free self-distillation contrastive learning with
+transformer architecture for remote sensing image scene classification,”
+IEEE Geosci. Remote Sens. Lett., vol. 19, 2022, Art. no. 6512205.
+
+13
+
+[29] M. Mohsenvand, M. R. Izadi, and P. Maes, “Contrastive representation
+learning for electroencephalogram classification,” in Proc. Mach. Learn.
+Health NeurIPS Workshop, 2020, pp. 238–253.
+[30] E. Eldele et al., “Time-series representation learning via temporal and
+contextual contrasting,” in Proc. Int. Joint Conf. Artif. Intell., 2021,
+pp. 2352–2359.
+[31] Z. Yue et al., “TS2VEC: Towards universal representation of time series,”
+in Proc. AAAI Conf. Artif. Intell., 2022, vol. 36, pp. 8980–8987.
+[32] Y. Bengio, A. Courville, and P. Vincent, “Representation learning: A
+review and new perspectives,” IEEE Trans. Pattern Anal. Mach. Intell.,
+vol. 35, no. 8, pp. 1798–1828, Aug. 2013.
+[33] P. Munro, “Backpropagation,” in Encyclopedia of Machine Learning, C.
+Sammut and G. I. Webb Eds., 2011, p. 73.
+[34] L. Zhang, J. Song, A. Gao, J. Chen, C. Bao, and K. Ma, “Be your own
+teacher: Improve the performance of convolutional neural networks via self
+distillation,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., pp. 3712–3721,
+2019.
+[35] J. Lines and A. Bagnall, “Time series classification with ensembles of elastic distance measures,” Data Mining Knowl. Discov., vol. 29, pp. 565–592,
+2015.
+[36] J. Lines, S. Taylor, and A. Bagnall, “Time-series classification with COTE:
+The collective of transformation-based ensembles,” IEEE Trans. Knowl.
+Data Eng., vol. 27, no. 9, pp. 2522–2535, Sep. 2015.
+[37] J. Lines et al., “Time series classification with HIVE-COTE: The hierarchical vote collective of transformation-based ensembles,” ACM Trans.
+Knowl. Discov. Data, vol. 21, no. 52, pp. 1–35, 2018.
+[38] M. Middlehurst, J. Large, M. Flynn, J. Lines, A. Bostrom, and A. Bagnall,
+“Hive cote 2.0: A new meta ensemble for time series classification,” Mach.
+Learn., vol. 110, pp. 3211–3243, 2021.
+[39] K. Fauvel, É. Fromont, V. Masson, P. Faverdin, and A. Termier,
+“Local cascade ensemble for multivariate data classification,” 2020,
+arXiv:2005.03645.
+[40] I. Karlsson, P. Papapetrou, and H. Bostrôm, “Generalized random shapelet
+forests,” Data Mining Knowl. Discov., vol. 30, no. 5, pp. 1053–1083, 2016.
+[41] M. G. Baydogan and G. Runger, “Time series representation and similarity
+based on local autopatterns,” Data Mining Knowl. Discov., vol. 30, no. 2,
+pp. 476–509, 2016.
+[42] A. Quattoni, S. Wang, L. Morency, M. Collins, and T. Darrell, “Hidden
+conditional random fields,” IEEE Trans. Pattern Anal., vol. 29, no. 10,
+pp. 1848–1852, Oct. 2007.
+[43] F. Baldán and J. Benítez, “Multivariate times series classification through
+an interpretable representation,” Inform. Sci., vol. 569, pp. 596–614, 2021.
+[44] Z. Xiao, X. Xu, H. Zhang, and E. Szczerbicki, “A new multi-process
+collaborative architecture for time series classification,” Knowl. Based
+Syst., vol. 220, pp. 1–11, 2021.
+[45] W. Cheng, P. Sunganthan, and R. Katuwal, “Time series classification
+using diversified ensemble deep random vector functional link and resnet
+features,” Appl. Soft Comput., vol. 112, pp. 1–12, 2021.
+[46] H. Zhu, J. Zhang, H. Cui, K. Wang, and Q. Tang, “TCRAN: Multivariate
+time series classification using residual channel attention networks with
+time correction,” Appl. Soft Comput., vol. 114, pp. 1–10, 2022.
+[47] H. Xing, Z. X. R. Qu, Z. Zhu, and B. Zhao, “An efficient federated
+distillation learning system for multi-task time series classification,” IEEE
+Trans. Instrum. Meas., vol. 71, 2022, Art. no. 2517012.
+[48] Z. Huang et al., “Functional deep echo state network improved by a bi-level
+optimization approach for multivariate time series classification,” Appl.
+Soft Comput., vol. 106, pp. 1–12, 2021.
+[49] A. Dempster, D. Petitjean, and G. Webb, “Rocket: Exceptionally fast and
+accurate time series classification using random convolutional kernels,”
+Data Mining Knowl. Discov., vol. 34, pp. 1454–1495, 2020.
+[50] A. Dempster et al., “Minirocket: A very fast (almost) deterministic transform for time series classification,” in Proc. 27th ACM SIGKDD Conf.
+Knowl. Discov. Data Mining, 2021, pp. 248–257.
+[51] K. Kashiparekh, J. Narwariya, P. Malhotra, L. Vig, and G. Shroff, “Convtimenet: A pre-trained deep convolutional neural network for time series
+classification,” in Proc. IEEE Int. Joint Conf. Neural Netw., 2019, pp. 1–8.
+[52] Z. Xiao, X. Xu, H. Xing, R. Qu, F. Song, and B. Zhao, “RNTS: Robust
+neural temporal search for time series classification,” in Proc. IEEE Int.
+Joint Conf. Neural Netw., 2021, pp. 1–8.
+[53] F. Karim, S. Majumdar, H. Darabi, and S. Harford, “Multivariate LSTMFCNS for time series classification,” Neural Netw., vol. 116, pp. 237–245,
+2019.
+[54] S. H. Huang, L. Xu, and C. Jiang, “Residual attention net for superior crossdomain time sequence modeling,” in Fintech With Artificial Intelligence,
+Big Data, and Blockchain.Berlin, Germany: Springer, 2021.
+
+14
+
+IEEE TRANSACTIONS ON EMERGING TOPICS IN COMPUTATIONAL INTELLIGENCE, VOL. 8, NO. 1, FEBRUARY 2024
+
+[55] H. Xing, Z. Xiao, D. Zhan, S. Luo, P. Dai, and K. Li, “Selfmatch: Robust
+semisupervised time-series classification with self-distillation,” Int. J.
+Intell. Syst., vol. 37, pp. 8583–8610, 2022.
+[56] X. Zhang, Y. Gao, J. Lin, and C.-T. Lu, “Tapnet: Multivariate time series
+classification with attentional prototypical network,” in Proc. AAAI Conf.
+Artif. Intell., 2020, pp. 1–8.
+[57] B. Lafabregue, J. Weber, P. Gançarski, and G. Forestier, “End-to-end deep
+representation learning for time series clustering: A comparative study,”
+Data Mining Knowl. Discov., vol. 36, pp. 29–81, 2022.
+[58] Y. Yang, H. Shen, Z. Ma, Z. Huang, and X. Zhou, “L2, 1-norm regularized
+discriminative feature selection for unsupervised,” in Proc. Int. Joint Conf.
+Artif. Intell., 2011, pp. 1589–1594.
+[59] Z. Li, Y. Yang, J. Liu, X. Zhou, and H. Lu, “Unsupervised feature selection
+using nonnegative spectral analysis,” in Proc. AAAI Conf. Artif. Intell.,
+2012, vol. 26, pp. 1026–1032.
+[60] M. Qian and C. Zhai, “Robust unsupervised feature selection,” in Proc.
+Int. Joint Conf. Artif. Intell., 2013, pp. 1621–1627.
+[61] L. Shi, L. Du, and Y. Shen, “Robust spectral learning for unsupervised feature selection,” in Proc. IEEE Int. Conf. Data Mining, 2014,
+pp. 977–982.
+[62] J. Yang and J. Leskovec, “Patterns of temporal variation in online media,”
+in Proc. 4th ACM Int. Conf. Web Search Data Mining, 2011, pp. 177–186.
+[63] F. Petitjean, A. Ketterlin, and P. Gancarski, “A global averaging method for dynamic time warping, with the applications
+to clustering,” Pattern Recognit., vol. 44, no. 3, pp. 678–693,
+2011.
+[64] J. Paparrizos and L. Gravano, “K-shape: Efficient and accurate clustering
+of time series,” in Proc. ACM SIGMOD Int. Conf. Manage. Data, 2015,
+pp. 1855–1870.
+[65] H. Kamalzadeh, A. Ahmadi, and S. Mansour, “Clustering time-series
+by a novel slope-based similarity measure considering particle swarm
+optimization,” Appl. Soft Comput., vol. 96, pp. 1–16, 2020.
+[66] N. Madiraju, S. Sadat, D. Fisher, and H. Karimabadi, “Deep temporal
+clustering: Fully unsupervised learning of time-domain features,” 2018,
+arXiv:1802.01059.
+[67] X. Guo, L. Gao, X. Liu, and J. Yin, “Improved deep embedded clustering
+with local structure preservation,” in Proc. Int. Joint Conf. Artif. Intell.,
+2017, pp. 1753–1759.
+[68] Q. Ma, J. Zheng, S. Li, and G. Cottrell, “Learning representations for
+time series clustering,” in Proc. Adv. Neural Inf. Process. Syst., 2019,
+pp. 3781–3791.
+[69] K. Ghasedi, X. Wang, C. Deng, and H. Huang, “Balanced selfpaced learning for generative adversarial clustering network,” in
+Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2019,
+pp. 4391–4400.
+[70] T. DeVries and G. W. Taylor, “Improved regularization of convolutional
+neural networks with cutout,” 2017, arXiv:1708.04552.
+[71] G. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a neural
+network,” 2015, arXiv:1503.02531.
+[72] J.-Y. Franceschi, A. Dieuleveut, and M. Jaggi, “Unsupervised scalable
+representation learning for multivariate time series,” in Proc. Adv. Neural
+Inf. Process. Syst., 2019, pp. 4650–4661.
+[73] X. Guo, L. Gao, X. Liu, and J. Yin, “Improved deep embedded clustering
+with local structure preservation,” in Proc. Int. Joint Conf. Artif. Intell.,
+pp. 1753–1759, 2017.
+[74] H. A. Dau et al., “The UCR time series archive,” IEEE/CAA J. Automatica
+Sinica, vol. 6, no. 6, pp. 1293–1305, Nov. 2019.
+[75] Y. Hou, Z. Ma, C. Liu, and C. C. Loy, “Learning lightweight lane detection
+CNNs by self attention distillation,” in Proc. IEEE Int. Conf. Comput. Vis.,
+2019, pp. 1013–1021.
+[76] L. Zhang, C. Bao, and K. Ma, “Self-distillation: Towards efficient and
+compact neural networks,” IEEE Trans. Pattern Anal., vol. 44, no. 8,
+pp. 4388–4403, Aug. 2022.
+
+Zhiwen Xiao (Member, IEEE) received the B.Eng.
+degree in network engineering from the Chengdu
+University of Information Technology, Chengdu,
+China, and the M.Eng. degree in computer science
+from the Northwest AF University, Yangling, China.
+He is currently working toward the Ph.D. degree in
+computer science with Southwest Jiaotong University, Chengdu. His research interests include semantic
+communication, federated learning (FL), representation learning, data mining, and computer vision.
+
+Huanlai Xing (Member, IEEE) received the Ph.D.
+degree in computer science from the University of
+Nottingham (Supervisor: Dr Rong Qu), Nottingham,
+U.K., in 2013. During 2020–2021, he was a Visiting Scholar of computer science, The University of
+Rhode Island (Supervisor: Dr. Haibo He), Kingston,
+RI, USA. He is currently with the School of Computing and Artificial Intelligence, Southwest Jiaotong
+University (SWJTU), Chengdu, China, and Tangshan
+Institute, SWJTU. He was on Editorial Board of Science China Information Sciences. He was a Member
+of several international conference program and senior program committees,
+such as ECML-PKDD, MobiMedia, ISCIT, ICCC, TrustCom, IJCNN, and
+ICSINC. His research interests include semantic communication, representation learning, data mining, reinforcement learning, machine learning, network
+function virtualization, and software defined networking.
+
+Bowen Zhao received the B.Eng. degree in computer science and technology in 2020 from Southwest
+Jiaotong University, Chengdu, China, where he is
+currently working toward the master’s degree with the
+School of Information Science and Technology. His
+research interests include deep reinforcement learning, cloud computing, and deep learning.
+
+Rong Qu (Senior Member, IEEE) received the B.Sc.
+degree in computer science and its applications from
+Xidian University, Xi’an, China, in 1996 and the
+Ph.D. degree in computer Science from The University of Nottingham, Nottingham, U.K., in 2003. She
+is currently an Associate Professor with the School
+of Computer Science, University of Nottingham. Her
+research interests include the modelling and optimisation for logistics transport scheduling, personnel
+scheduling, network routing, portfolio optimization
+and timetabling problems by using evolutionary algorithms, mathematical programming, constraint programming in operational
+research and artificial intelligence. These computational techniques are integrated with knowledge discovery, machine learning and data mining to provide
+intelligent decision support on logistic fleet operations at SMEs, workforce
+scheduling at hospitals, policy making in education, and cyber security for connected and autonomous vehicles. Dr. Qu is an Associated Editor for Engineering
+Applications of Artificial Intelligence, IEEE COMPUTATIONAL INTELLIGENCE
+MAGAZINE, IEEE TRANSACTIONS ON EVOLUTIONARY COMPUTATION, Journal
+of Operational Research Society, and PeerJ Computer Science. She has been
+a Senior IEEE Member since 2012 and the Vice-Chair of Evolutionary Computation Task Committee since 2019 and Technical Committee on Intelligent
+Systems Applications during 2015–2018 at IEEE Computational Intelligence
+Society. She has guest edited special issues on the automated design of search
+algorithms and machine learning at the IEEE TRANSACTIONS ON PATTERN
+ANALYSIS AND MACHINE INTELLIGENCE and IEEE Computational Intelligence
+Magazine.
+
+XIAO et al.: DEEP CONTRASTIVE REPRESENTATION LEARNING WITH SELF-DISTILLATION
+
+Shouxi Luo (Member, IEEE) received the bachelor’s
+degree in communication engineering and the Ph.D.
+degree in communication and information systems
+from the University of Electronic Science and Technology of China, Chengdu, China, in 2011 and 2016,
+respectively. He is currently an Associate Professor
+with the School of Computing and Artificial Intelligence, Southwest Jiaotong University, Chengdu.
+His research interests include data center networks,
+software-defined networking, and networked systems.
+
+Penglin Dai (Member, IEEE) received the B.S. degree in mathematics and applied mathematics and the
+Ph.D. degree in computer science from Chongqing
+University, Chongqing, China, in 2012 and 2017, respectively. He is currently an Assistant Professor with
+the School of Information Science and Technology,
+Southwest Jiaotong University, Chengdu, China. His
+research interests include intelligent transportation
+systems and vehicular cyber–physical systems.
+
+15
+
+Ke Li received the master’s degree from Sichuan
+University, Chengdu, China, in 2008, and the Ph.D.
+degree in communication and information systems
+from the University of Electronic Science and Technology of China, Chengdu, in 2012. She is currently a Lecturer with the School of Information
+Science and Technology, Southwest Jiaotong University, Chengdu. Her research interests include network
+optimization, network design, and future Internet.
+
+Zonghai Zhu received the B.Sc. degree from the
+Department of Information, Mechanical and Electrical Engineer, Shanghai Normal University, Shanghai, China, in 2010, and the Ph.D. degree from
+the Department of Computer Science and Engineering, East China University of Science and Technology, Shanghai, in 2021. He is currently an Assistant Professor with the School of Computing and
+Artificial Intelligence, Southwest Jiaotong University, Chengdu, China. His research interests include
+imbalanced problems, kernel-based methods, and
+graph-structured data.

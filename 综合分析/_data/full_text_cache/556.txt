@@ -1,0 +1,867 @@
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS 1
+
+ Temporal-Spatial Decoupled Self-Supervised
+ Multi-Task Learning for Video Anomaly Detection
+ and Localization in Intelligent Transportation
+ Surveillance Systems
+ Dicong Wang , Graduate Student Member, IEEE, Qilong Wang , Member, IEEE,
+ Qinghua Hu , Senior Member, IEEE, and Kaijun Wu , Member, IEEE
+
+ Abstract— Video anomaly detection (VAD) has become a criti- Index Terms— Video anomaly detection, multi-task learning,
+cal research focus in the realms of computer vision and intelligent decoupling, generative AI, self-supervised Learning.
+transportation systems, particularly with the rise of generative
+AI and advancements in self-supervised learning. These develop- I. I NTRODUCTION
+ments open up new frontiers in understanding complex scenarios
+within intelligent transportation systems. Since previous methods,
+confined to a single paradigm, inadequately captured intricate
+feature information, which led to a bottleneck that constrained
+ W ITH the rapid development of intelligent transportation
+ systems, video surveillance, as a critical component of
+ traffic management, serving as one of the core technologies for
+the performance; individuals form unbiased and logical evaluations of matters through an in-depth review of a multitude
+ real-time traffic monitoring and anomaly behavior detection.
+of factors and rationalizations. Decoupled multi-task learning In particular, pedestrian anomaly behavior detection in road
+not only overcomes the limitations of single-task paradigms scenarios is not only vital for traffic safety but also a key task
+but also meets the requirements for comprehensiveness and in enhancing the intelligence level of intelligent transportation
+objectivity in distinguishing things. Therefore, we propose a systems [1], [2]. In recent years, driven by an exponential
+self-supervised multi-task learning network with object-level
+spatiotemporal decoupling in this paper. We decouple the video
+ surge in surveillance video, video anomaly detection continues
+anomaly detection task in both spatial and temporal dimensions to maintain its indispensability within the fields of computer
+to construct multiple proxy tasks, optimizing overall performance vision and pattern recognition. Video anomaly detection, as a
+through joint learning. Specifically, we first utilize a pre-trained crucial component of intelligent video analysis, is widely
+object detector to construct spatiotemporal context cubes. Then, applied in various urban management sectors, including intelon the decoupled dimensions, we design several related proxy
+tasks, adjusting the context cube structure to accommodate
+ ligent transport system, autonomous driving, and infrastructure
+each proxy task, and providing reliable information for anomaly maintenance, within the construction of smart cities [3]. Addidetection through joint training. In the end, our method achieved tionally, in intelligent transportation systems [4], real-time
+performance that surpasses existing methods on three traffic road identification and processing of abnormal events in traffic flow
+datasets, namely UCSD Ped2, Avenue, and ShanghaiTech, with (such as traffic accidents, violations, emergencies, etc.) can
+AUCs of 99.6%, 95.6%, and 87.7%, respectively. It demonstrates
+the potential of generative AI-powered anomaly detection systems significantly improve traffic safety and management efficiency,
+in advancing intelligent transportation applications. promote the intelligent and digital transformation of urban
+ traffic management, and optimize traffic flow and resource
+ allocation. Hence, augmenting the performance and efficiency
+ Received 4 January 2025; revised 15 March 2025; accepted 2 April 2025. of video anomaly detection holds paramount significance
+This work was supported in part by the National Natural Science Foundation and value in realizing intelligent applications and propelling
+of China under Grant 62276186; in part by the Natural Science Foundation
+Key Project of Gansu Province under Grant 23JRRA860; in part by Inner relevant research endeavors forward.
+Mongolia Key Research and Development and Achievement Transformation Up to the present, various anomaly detection methods have
+Project under Grant 2023YFDZ0043, Grant 2023YFDZ0054, and Grant emerged under different supervisory settings, encompassing
+2023YFSH0043; in part by the Key Research and Development Project of
+Lanzhou Jiaotong University under Grant ZDYF2304; and in part by the Key remarkable techniques in unsupervised [5], [6], [7], [8], [9],
+Talent Project of Gansu Province. The Associate Editor for this article was [10], [11], [12], weakly supervised [13], [14], and semi-
+T. R. Gadekallu. (Corresponding authors: Qilong Wang; Kaijun Wu.) supervised paradigms [15], [16]. In these regimes, early
+ Dicong Wang is with the College of Intelligence and Computing, Tianjin
+University, Tianjin 300350, China, and also with the School of Electronics reconstruction or prediction methods simply utilized either
+and Information Engineering, Lanzhou Jiaotong University, Lanzhou 730070, motion or appearance information of objects for anomaly
+China (e-mail: wangdc_2021@tju.edu.cn). detection. However, Cai et al. [6] combined both to capture
+ Qilong Wang and Qinghua Hu are with the College of Intelligence and Computing, Tianjin University, Tianjin 300350, China (e-mail: qlwang@tju.edu.cn; the consistency between motion and appearance. Although
+huqinghua@tju.edu.cn). this combination has somewhat advanced the progress in
+ Kaijun Wu is with the School of Electronics and Information Engi- addressing the consistency issue, the vanilla fusion of motion
+neering, Lanzhou Jiaotong University, Lanzhou 730070, China (e-mail:
+wkj@mail.lzjtu.cn). appearances may overlook the fact that the same type of
+ Digital Object Identifier 10.1109/TITS.2025.3559166 abnormality could exhibit different patterns. In order to
+ 1558-0016 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+2 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+further explore higher-level visual features and investigate the
+complex relationship between object motion and appearance.
+Yang et al. [11] proposed a new paradigm for video anomaly
+detection based on keyframe reconstruction, grounded in video
+encoding theory. Although this method excels in maintaining
+video continuity and consistency, its effectiveness heavily
+depends on the representativeness of the selected keyframes.
+In the real world, abnormal events are relatively rare, with Fig. 1. Illustration of difference in various task paradigms for video anomaly
+normal data typically dominating the dataset, leading to a detection. (a) single-task paradigms lack subtle anomaly feature capture,
+ (b) temporal-spatial separation misses feature interactions, and (c) Ours is
+prevalent imbalance in favor of negative samples. Among the a decoupled self-supervised multi-task learning approach.
+existing unsupervised methods in use, particularly in detecting
+rare anomalies, are significantly influenced by the abundance
+of dominant negative samples. While the above-mentioned we designed a more challenging proxy task by spatialendeavors have been continuously exploring and striving temporal decoupling, where we designed multiple proxy
+within the domain of VAD, the detection of anomalies in sub-tasks along the time and space dimensions to process
+VAD still presents challenges with regard to two distinct time and spatial information at a finer granularity. First,
+variables [2]: (1) Rarity or scarcity. Anomalies are rare, to extract key information from the video, we employed
+making it challenging to acquire enough authentic examples an off-the-shelf object detector to detect each object in the
+for training. (2) Ambiguity or vagueness. Anomalies lack fixed video and extract the corresponding feature information.
+semantics, as they encompass diverse events across varying Next, for each detected object, we performed a series of
+subjects and scenarios. Whether an event is normal or anoma- operations, including cropping along the object’s bounding
+lous depends on the task’s context or overall scenario, thus box to construct a spatiotemporal context cube centered
+introducing variability and uncertainty. More recently, self- around the object, adapting the cube structure based on
+supervised multi-task learning has emerged as another avenue the task requirements. In the spatial dimension. ① We
+for VAD, yielding significantly improved results [17], [18], applied a mask operation to the segmented patches and
+[19], [20], [22], [23], [24]. Self-supervised learning methods used them as input to train the model by reconstructing
+aim to explore supervisory signals by learning representations the masked parts of the information. ② For each frame in
+from unlabeled data. It involves designing auxiliary tasks the spatiotemporal context cube, we decomposed it into
+(proxy tasks) to leverage unlabeled data for self-supervised several equal-sized patches, scrambled the original positions
+learning. These auxiliary tasks encompass various strategies, of these patches, and then trained the model to predict their
+including data augmentation by manipulating parameters of correct positions. These tasks help the model gain a deeper
+existing data to transform it into new and unique samples; understanding of the structural aspects of spatial information
+employing temporally aware contrastive learning to address and its relationship to the overall content of the video. In the
+performance issues arising from inconsistencies between indi- temporal dimension. ③ For all frames in the spatiotemporal
+vidual auxiliary tasks and anomaly detection tasks [25]; context cube, we shuffled their temporal order and then
+combining different forms of predictive tasks or implementing trained the model to predict the correct position of these
+various variants of a single predictive task [10], [11]; and frames in the original sequence. ④ We removed a specific
+utilizing different methods in one or more reconstruction tasks frame from each spatiotemporal context cube and used the
+to alleviate the “identity mapping” problem in reconstruction, information from the preceding and succeeding frames to
+thereby better distinguishing anomalies [12]. The ultimate goal predict the removed frame. Through these operations, the
+is to empower models to discern valuable features within model is able to capture anomalous patterns in time and
+the data and progressively assimilate an understanding of the further enhance its ability to understand temporal information.
+inherent structure and semantic information through the exe- We believe that anomaly detection involves not only motion
+cution of these tasks, leading to enhanced overall performance. anomalies but also appearance anomalies. Therefore, through
+ Based on the preceding discussion, Individual spatial-temporal decoupling, we perform multitask processing
+reconstruction- or prediction-based methods (Fig. 1(a)) along the time and space dimensions to more effectively
+struggle to capture comprehensive object representations, identify different types of anomalies. We highlight the main
+especially for subtle anomalies, leading to suboptimal contributions as follows:
+performance. Dual-branch structures (Fig. 1(b)), which – We have decoupled the video anomaly detection task into
+separately learn spatial and temporal features, may suffer both temporal and spatial dimensions, designing it as a
+from information loss when handling these dimensions multi-task learning paradigm for anomaly detection.
+independently. Jointly training multiple correlated tasks – We approach video anomaly detection as a multi-task
+often outperforms single-task approaches, extracting more learning challenge, wherein we consolidate diverse
+comprehensive features. As shown in Fig. 1(c), multiple self-supervised proxy tasks from various dimensions
+proxy tasks can guide the model toward richer feature within a unified model for joint learning.
+representations, enhancing anomaly detection performance. – We were among the early adopters of decoupled self-
+This synergistic approach improves the model’s consistency supervised multi-task learning in the domain of video
+and effectiveness in detecting subtle anomalies. In this work, anomaly detection.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+WANG et al.: TEMPORAL-SPATIAL DECOUPLED SELF-SUPERVISED MULTI-TASK LEARNING FOR VAD AND LOCALIZATION 3
+
+ – We have conducted experiments that illustrate the superi- and self-supervised learning. By using dictionary learning to
+ ority of our approach over state-of-the-art methods across generate segment-level features and leveraging self-supervised
+ three different traffic road scenario benchmarks. learning to generate pseudo-normal/abnormal samples, the
+ The subsequent parts of this paper are organized in the framework trains an anomaly detector. Although it effectively
+following manner: Section II delves into the related work on distinguishes normal and abnormal events in most cases, it still
+self-supervised multi-task learning in video anomaly detection. encounters false negatives when dealing with certain complex
+Section III offers a comprehensive description of the proposed anomalies, such as low-frequency anomalies. Zanella et al.
+self-supervised multi-task learning method with temporal- [28] leveraged existing vision-language models to generate
+spatial decoupling. Section IV presents a series of experiments textual descriptions for each test frame, along with a specific
+conducted to evaluate the proposed method, along with a dis- prompting mechanism to unlock the language model’s capacussion of some of future directions and practical implications. bilities in temporal aggregation and anomaly score estimation,
+In the end, Section V provides a summary of the methodology making it an effective video anomaly detector.
+adopted for this paper.
+ B. Multi-Task Learning on VAD
+ II. R ELATED W ORK As described by Zhang and Yang [29], we initially provide
+ the definition of multi-task learning:
+A. Video Anomaly Detection Definition 1 (Multi-task learning): Given m learning tasks
+ m
+ {Ti }i=1
+ The advancement of deep neural networks has signifi- where all the tasks or a subset of them are related
+cantly enhanced anomaly detection by incorporating various but not identical, multi-task learning aims to help improve the
+research paradigms, including knowledge distillation [20], learning of a model for Ti by using the knowledge contained
+[21], self-supervised learning [22], [23], [24], [25], and meta- in the m tasks.
+learning [26]. These approaches collectively contribute to Multi-task models have the capacity to learn both the
+the improved efficiency and accuracy of capturing anoma- commonalities and differences among various tasks, resulting
+lous behaviors within complex scenes. Georgescu et al. [19] in improved efficiency and model quality for each individual
+proposed an object-level approach that treats anomaly detec- task [30], [31]. Consequently, compared to single-task models,
+tion as a binary classification task. To overcome the issue the risk of over fitting diminishes, while the generalizaof lacking anomaly samples and to improve performance, tion capability strengthens. Georgescu et al. [20] pioneered
+they created scene-independent pseudo-anomaly samples for the treatment of video anomaly detection as a multi-task
+adversarial training and binary classifier training. However, the learning endeavor. By combining knowledge distillation and
+introduction of optical flow significantly reduced the model’s several self-supervised proxy tasks into a unified architecture,
+computational efficiency, potentially making it unsuitable for they effectively tackled the complex challenge of anomaly
+real-time processing of high frame-rate or high-resolution detection. Baradaran and Bergevin [30] incorporated three
+videos. Zhou et al. [27] proposed an appearance-motion complementary proxy tasks, establishing two branches for
+network to improve the accuracy of video-based accident future semantic segmentation and optical flow magnitude
+detection in congested traffic. Features are extracted through estimation to achieve anomaly detection. Additionally, they
+parallel appearance and motion convolutional networks, and innovatively integrated factors such as the direction of object
+auxiliary networks, optical flow learners, and temporal atten- motion and distance from the camera into the scope of
+tion modules are introduced to enhance the model’s ability to anomaly detection. Barbalau et al. [23] revisited the selfrecognize complex traffic scenes. Additionally, a new traffic supervised multi-task learning framework originally proposed
+anomaly dataset is constructed and effectively validated. How- in [20]. Building upon this foundation, they explored alterever, the model occasionally misidentifies non-collision events, native proxy tasks and adopted the convolutional vision
+such as vehicle malfunctions, as collisions due to the similarity Transformer (CvT) [31] as the backbone, resulting in further
+in motion features. Qing et al. [24] proposed a self-supervised enhanced performance of the model. Therefore, leveraglearning approach called hierarchical consistency (HiCo) ing the characteristics and advantages of multitask learning,
+specifically designed for untrimmed videos that contain abun- we designed several targeted proxy tasks and trained them
+dant visual and semantic information. This method tailors jointly. The model can fully explore the intrinsic correlations
+the learning process to capture various levels of visual and and complementarities between the tasks, significantly enhancsemantic consistency, adapting them based on the relevance ing its ability to understand and represent the data. Multitask
+between visual and semantic components. Utilizing recon- learning enables knowledge sharing across different tasks,
+struction or prediction has emerged as a prevalent approach allowing the model to simultaneously learn and extract inforwithin the realm of video anomaly detection. These methods mation from multiple perspectives. This not only enhances the
+are trained solely on data representing normal patterns, never- model’s generalization performance in complex scenarios but
+theless, deep neural networks exhibit an impressive capacity also facilitates knowledge transfer and sharing between tasks.
+for generalization, enabling the model to adeptly reconstruct
+(or predict) demanding anomaly samples as well, it introduces C. Self-Supervised Learning on VAD
+the challenge of over-generalization. Wu et al. [17] devised Self-supervised learning (SSL) is a general learning
+the self-supervised sparse representation (S3R) framework, paradigm with the aim of automatically constructing superviexploring the synergistic effect between dictionary learning sion signals from raw data, without external labels or manual
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+4 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+annotations. Its core principle is to leverage the inherent struc- our approach are as follows: generating spatiotemporal context
+ture and information within the data for the learning process. cubes, developing spatiotemporal decoupled proxy tasks, and
+SSL can be divided into two main methods: constructing joint training. To begin, we utilize an off-the-shelf object
+proxy tasks and conducting contrastive learning. In proxy tasks detector such as YOLOv3 or YOLOv5 to obtain a series of
+for images, researchers design a series of tasks such as data bounding boxes related to the object in the adjacent frames
+rotation [32], jigsaw puzzles [33], prediction, or reconstruc- of the video I = {Ii−l , · · · , Ii−1 , Ii , Ii+1 , · · · , Ii+l }, We then
+tion [34], [35] to enable the model to learn visual features perform cropping and resizing operations along these boundfrom the data. Unlike image proxy tasks, video proxy tasks ing boxes for the same object to generate the spatiotemporal
+have their unique attributes—temporal information. In video context cube. After that, in order to adequately take into
+proxy tasks, the focus is often on temporal information, such as account the attributes of the spatial and temporal dimensions,
+frame sequence ordering [22], frame playback speed [36], and we apply an array of explores to develop adaptable proxy
+the arrow of time [20], [37], among others. Wang et al. [22] tasks. Within the spatial dimension, two proxy subtasks are
+introduced a novel proxy task for predictive sequence model- introduced: “the spatial patches masking” and “predicting the
+ing that disentangles spatiotemporal components by shuffling positions of the spatial patches”. The model learns information
+spatial and temporal cubes, simplifying the self-supervised of different spatial visual features through such tasks, thereby
+learning framework and achieves remarkable performance improving its ability to pick up spatial structures and patterns
+improvements, although it requires substantial computational in videos. Within the temporal dimension, two proxy subresources due to the extensive use of permutation-based data. tasks are established: “predict missing boxes” and “predict
+Shi et al. [38] proposed a progressive learning strategy based temporal position”. These tasks contribute to the model’s
+on the difficulty of proxy tasks, gradually introducing mul- learning of the temporal evolution and changes that occur
+tiple proxy tasks in ascending order of task difficulty to during abnormalities. In the end, we train the aforementioned
+improve performance. If a proxy task is more challenging, proxy subtasks jointly by a shared backbone. Diverse proxy
+they typically encourage the model to learn more complex subtasks are able to interact and connect by a shared visual
+features; the performance might be better, which is exactly representation of features. By acquiring more extensive and
+what our method achieves. In contrastive learning, models detailed feature information from various proxy subtasks, the
+are tasked with extracting features from the same sample model enhances its performance. Furthermore, by sharing the
+or distinct samples and learning by comparing the similarity backbone, conflicts and competition among distinct proxy
+of these extracted features [16]. Liu et al. [26] proposed tasks are minimized, which ended in a more stable and efficient
+a meta-learning method based on ensemble uncertainty for learning procedure for the model. The symbols and their
+anomaly detection in road scenes, particularly suitable for corresponding descriptions are presented in Table I of this
+autonomous driving. This method implicitly quantifies uncer- paper.
+tainty by measuring the differences between different models, 1) Backbone Architecture: Drawing on prior works [20],
+detecting out-of-distribution (OoD) samples that deviate sig- [22], [40], we employ 3D convolutional neural network (3D
+nificantly from the training data distribution. However, due to CNN) and Transformer blocks to construct the backbone
+its reliance on the outputs of multiple semantic segmentation network, with each proxy subtask having its corresponding
+models, inference requires running multiple models, which prediction head. Initially, we model the spatiotemporal repremay lead to longer inference times, posing certain limitations, sentation of the input using a 3D CNN block. Each 3D block
+especially in real-time road monitoring systems. Wang et al. consists of two 3 × 3 × 3 3D convolutional layers and a
+[39] used an autocorrelation mechanism to map video features 3D max-pooling layer, with each convolutional layer followed
+into sub-feature spaces, supervised by contrastive loss to detect by a batch normalization (BN) layer and a ReLU activation
+anomalous videos. Still, it demands a substantial amount of function. Following that, we provide Transformer blocks that
+training data and task-specific data augmentation strategies. are capable of effectively processing video sequences, the
+Inspired by the significant success of self-supervised learning output produced by the Transformer blocks is subsequently
+in the field of image representation learning, we attempt to subjected to global pooling in order to generate the final result.
+extend this paradigm to the domain of anomaly detection,
+exploring its potential in video analysis. By applying selfsupervised multi-task learning to video, we can fully exploit B. Temporal-Spatial Decoupled Self-Supervised Multi-Task
+the latent information within the video, thereby better learning Learning
+video representations and features. It will bring new perspec- Spatial dimension—Proxy subtask I. Spatial patches masktives and challenges to research and applications in the field ing. Within the field of self-supervised learning, He et al.
+of video anomaly detection. [41] devised a straightforward yet exceptionally efficient
+ method: they reconstruct the missing pixels of the input image
+ III. M ETHODOLOGY after randomly masking a portion (or patch) of it. A significantly enhanced performance has been achieved through
+A. Overview the implementation of this approach. Encouraged by this,
+ Overview. An overview of the spatiotemporal decoupled we implemented the mask reconstruction task in the frames
+self-supervised multi-task learning network that we propose at the object level and optimized the network utilizing the
+at the object level is depicted in Fig. 2. The basic parts of L2 loss. In the testing phase, a random subset of the patches
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+WANG et al.: TEMPORAL-SPATIAL DECOUPLED SELF-SUPERVISED MULTI-TASK LEARNING FOR VAD AND LOCALIZATION 5
+
+Fig. 2. Method overview. We propose an object-centric spatiotemporal decoupled self-supervised multi-task learning network, which consists of three main
+components: the construction of spatiotemporal context cubes; employing diverse strategies to generate flexible proxy tasks in both temporal and spatial
+dimensions; and joint training using a shared backbone. We can simultaneously learn temporal and spatial features within a unified framework, thus better
+capturing anomalies in videos.
+
+ TABLE I whether the current frame is anomalous by calculating the
+ N OTATIONS AND T HEIR D ESCRIPTIONS I NVOLVED difference between the original image and the completed
+ IN THE P ROPOSED M ETHOD
+ reconstruction.
+
+ Iˆ I = f T (I ; θ I ) ; θ f
+ 
+ (1)
+ 2
+ Lsub1 = I − Iˆ I (2)
+ 2
+ 1 Xm
+ Scor est1 = Ii − IˆiI (3)
+ m i=1
+
+ where, the ground truth of the i-th object-level frame is
+ denoted as Ii , Iˆ I represents the output obtained from the proxy
+ subtask I, T (∗; θ I ) represents the spatiotemporal context cube
+ with masked patches, f ∗; θ f represents the backbone of our
+ model, the 3D encoder, and the number of frames in the cube
+ is denoted by m.
+ Proxy subtask II—Predict the positions of the spatial
+ patches. First, each frame within the spatiotemporal context
+ cube is split into n × n the same patches, which are subsequently shuffled. To ensure that the content and relative
+ position of each patch within the context cube are correct,
+ we set the absolute positions of the patches to be arranged
+ sequentially from left to right and from top to bottom.
+ Concurrently, so as to preserve the natural temporal order,
+ the relative positions of each frame along the temporal axis
+ of the spatiotemporal context cube remain constant. After
+ inputting it into the backbone for training, use the spatial
+ patches position classifier to predict the absolute position of
+ each patch in every frame, and optimize the network using
+ cross-entropy loss, as shown in equation (5). During the
+ testing phase, we use context cubes containing the correct
+ patch position sequences. The model predicts the position of
+in the input (64 × 64 in our settings) is masked for recon- patches in each frame and generates a position matrix. In the
+struction. Finally, the anomaly score, which is calculated using position matrix, the diagonal values should be the largest
+mean absolute difference (MAD), is utilized for determining in their respective columns, indicating the probability that
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+6 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+the corresponding patch is in the correct position. Since the Proxy subtask IV. Predict the missing box. Discarding (or
+model is trained only with normal data, when encountering removing) a frame from the spatiotemporal context cubes and
+anomalous events during testing, the model often produces predicting the frame using its contextual information. This
+large prediction errors at the correct anomalous locations, includes predicting not only the next frame based on the
+resulting in significantly lower confidence in the predicted preceding video sequence but also an intermediate frame using
+outcome at these locations, which leads to the detection of the frames before and after it, and predicting the content of
+anomalies at those positions. Therefore, for anomaly scores, a prior video frame using subsequent frames. This design
+the predicted probabilities along the diagonal of the matrix guarantees a comprehensive prediction process by including
+are used as the anomaly scores for these patches. The matrix various perspectives to capture the features of the object frame.
+predicted by the spatial patches classifier is denoted as Zs . As a result of object-level frame prediction, the prediction
+The diagonal of the matrix is extracted using diag(·), and the process is less susceptible to background interference, which
+minimum value is used to obtain Scorest2 . This value denotes improves the accuracy of the missing frame prediction. During
+the object-level anomaly score. In a nutshell, the object-level training, we optimize the network using the L2 loss function,
+anomaly score is determined by selecting the minimum score and we utilize mean squared error (MSE) as the anomaly score
+along the diagonal of the matrix. This is due to the fact that (Scorest4 ) to determine anomalies, as shown below:
+a sample may be considered abnormal if a frame or patch is Iˆ I V = f T (I ; θ I V ) ; θ f
+ 
+ (10)
+incorrectly predicted.
+ Lsub4 = I − Iˆ I V (11)
+ Iˆ I I = f T (I ; θ I I ) ; θ f
+  2
+ (4)
+ 1 Xn 2 where, Iˆ I V represents the output obtained from the proxy
+ Lsub2 = 2 C E(Is , IˆsI I ) (5) subtask IV, T (∗; θ I V ) represents the spatiotemporal context
+ n s=1
+ Scor est2 = min (diag (Z s )) (6) cube with missing frames.
+
+where, Iˆ I I represents the output obtained from the proxy C. Joint Loss Function
+subtask II, T (∗; θ I I ) represents the spatiotemporal context
+cube with spatially shuffled patches. To align with the overall To train the network, we utilize a 3D backbone with Transtrend of anomaly scores for the entire task, we invert the former for joint optimization on all four of the aforementioned
+frame-level anomaly scores. It implies that when the overall proxy subtasks. The loss function therefore associated with
+anomaly score takes on higher values, it can be considered as joint training is as follows:
+an anomaly, and vice versa. Ltotal = 1 Lsub1 + 2 Lsub2 + 3 Lsub3 + 4 Lsub4 (12)
+ Temporal dimension—Proxy subtask III. Predict temporal
+ where, 1,...,4 represents the weights during joint training,
+position. Stephen Hawking [42], in his seminal work “A Brief
+ determining the trade-off among the four proxy tasks. The
+History of Time” introduced the concept of the “arrow of
+ training pseudo code for the method we employ is provided
+time,” which suggests the reality of a distinct trajectory for
+ by Algorithm 1.
+time and provides substantiation for the inexorable progression of forward-moving time that is unreversible. Influenced
+ D. VAD Inference
+by it, we adopted a strategy to address the spatiotemporal
+context. To be more precise, we shuffle and reorder the frames When testing, we utilize an object detector to perform
+within the spatiotemporal context cube along the timeline and object detection on each frame. For each object, a series of
+then input them into the model for training. By predicting operations, including cropping, are conducted to generate the
+the correct position of each frame, the model is guided corresponding object-level spatiotemporal context cube. The
+to more comprehensively capture the temporal relationships model is trained using each spatiotemporal cube as input,
+between frames. During testing, we input context cubes with and its outputs correspond to the following subtasks: Scorest1 ,
+the correct temporal order to generate the temporal position Scorest2 , Scorest3 , and Scorest4 . In the spatial dimension,
+prediction matrix Zt . Each element in the matrix represents for the spatial patch masking subtask, we use MAD as the
+the predicted position of the corresponding frame on the time anomaly score. In the predict positions of the spatial patches
+axis. Afterward, we use the diagonal prediction probability subtask, we choose the probabilities along the diagonal of
+of the prediction matrix as the anomaly score. In terms of the spatial prediction matrix as the anomaly score. In the
+network optimization, we utilize a cross-entropy loss function temporal dimension, for the predict temporal position subtask,
+as follows: we choose the probabilities along the diagonal of the temporal
+ prediction matrix as the anomaly score. In the missing frame
+ Iˆ I I I = f T (I ; θ I I I ) ; θ f
+ 
+ (7) prediction subtask, we still use MSE as the anomaly score to
+ 1 Xm determine anomalies. The final anomaly score of an object is
+ Lsub3 = C E(Ii , IˆiI I I ) (8)
+ m i=1 calculated by averaging the anomaly scores supplied by each
+ Scor est3 = min (diag (Z t )) (9) prediction head:
+ Scor e(I ) = 14 Scor est1 + Scor est2 + Scor est3 + Scor est4 (13)
+ 
+where, Iˆ I I I represents the output obtained from the proxy
+subtask III, T (∗; θ I I I ) represents the spatiotemporal context where, Scor est2 and Scor est3 represent negation, and higher
+cube with shuffled frames. values indicate anomalies. Because the initial detection is
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+ WANG et al.: TEMPORAL-SPATIAL DECOUPLED SELF-SUPERVISED MULTI-TASK LEARNING FOR VAD AND LOCALIZATION 7
+
+ Algorithm 1 Training pseudo code of temporal-spatial TABLE II
+ decoupled self-supervised multi-task learning C OMPARISON A NOMALY D ETECTION DATASETS .
+ (#F RAMES\V IDEOS )
+ 1: Input: D the training dataset with only normal frames;
+ object-centric spatiotemporal context cubes; Cube size; the
+ learning rate; 3D Encoder.
+ 2: Output: optimally trained model.
+ 3: Initialize all parameters.
+ 4: for the number of training epochs do
+ 5: Sample object-centric spatiotemporal context cubes from D.
+ 6: Function multi − task(·):
+ 7: # Proxy subtask I of spatial patches masking.
+ 2
+ 8: Lsub1 ← I− IˆI
+ 2
+ 9: # Proxy subtask II of predicts the positions of the
+ spatial patches.
+10: Lsub2 ← CE(Is , IˆsII )
+11: # Proxy subtask III of predicts temporal position.
+12: Lsub3 ← CE(Ii , IˆiIII )
+13: # Proxy subtask IV of Predict the missing box.
+14: Lsub4 ← I− IˆIV
+ 2
+15:
+ return 1 Lsub1 + 2 Lsub2 + 3 Lsub3 + 4 Lsub4
+16: Ltotal ← multi-task(·)
+17: # parameter optimization
+18:
+ Update network parameters using the optimizer Adam.
+ Fig. 3. Examples of both anomalous and normal events in each dataset.
+19: end for
+
+ • CUHK Avenue [43] is released by the Chinese University
+ at the object level, it’s easy to locate the anomaly region. of Hong Kong (CUHK) in 2013. It consists of 16 training
+ As there are multiple objects in the video frame, each with its videos and 21 testing videos, with a resolution of 640 ×
+ own anomaly score, the overall anomaly score for the entire 360 pixels. The video clips cover various indoor and outvideo frame is determined by the maximum score among the door scenes and contain 47 different types of anomalies,
+ corresponding anomaly maps. including running, crowding, loitering, and more.
+ Let the frame-level anomaly score be Scorefra . For each • The ShanghaiTech Campus dataset [45] provides a variety
+ video frame where j objects are detected, the overall anomaly of scenarios and anomalous behaviors. It contains video
+ score is as follows: clips of both normal and abnormal behaviors, which
+  includes traffic accidents, sudden occurrences, assem-
+  max Scor e(I )1 , Scor e(I )2 , . . ., Scor e(I ) j ,
+ 
+ 
+ blies, and more. The dataset consists of 330 training
+ Scor e f ra = j >0 (14)
+  videos and 107 testing videos, with 13 diverse scenes
+ 0, j =0
+ 
+ and a wide range of abnormal categories. The resolution
+ If there are no objects detected in a frame, the anomaly score of the videos is 856 × 480 pixels. The dataset contains
+ is assigned to 0. video clips with various lengths, perspectives, conditions
+ of lighting, and other details, making them more repre-
+ IV. E XPERIMENTS sentative of the complexity of the actual world.
+ A. Datasets Fig. 3 depicts normal and anomalous samples from the
+ aforementioned datasets. The illustrations that were in the
+ In this section, we evaluate our proposed method on three
+ figure depict video snippets of various scenarios, including
+ publicly available datasets: the CUHK Avenue dataset [43], the
+ normal and abnormal actions such as walking, congestion,
+ UCSD Pedestrian dataset [44], and the ShanghaiTech Campus battling, and traffic accidents, etc. Table II displays some
+ dataset [45]. We conduct both qualitative and quantitative statistics regarding the various datasets, including the number
+ analyses of the experimental results to demonstrate the effec- of video segments, the number of frames, and the kinds of
+ tiveness of our proposed approach. abnormal behaviors present in each dataset. This information
+ • The UCSD Pedestrian dataset [44] consists of two sub- provides an overview of the characteristics and range of the
+ sets: UCSD Ped1 and UCSD Ped2, each corresponding datasets utilized in the evaluation.
+ to a specific scenario. UCSD Ped1 includes 34 training clips and 36 testing clips, while UCSD Ped2 has
+ 16 training clips and 12 testing clips. Both subsets pro- B. Evaluation Metrics and Implementation Details
+ vide frame-level and pixel-level ground truth annotations. As per the evaluation metric that is commonly accepted
+ In this dataset, any non-pedestrian objects or abnormal and used within the VAD community [20], [34], In video
+ movements of pedestrians are considered anomalies. anomaly detection, area under the curve (AUC) is a widely
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+8 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+employed evaluation metric. It assesses a model’s ability to TABLE III
+distinguish between positive and negative samples by measur- C OMPARISON W ITH S TATE - OF - THE -A RT M ETHODS . T HE P ERFORMANCES
+ OF THE C OMPARED M ETHODS A RE S OURCED F ROM T HEIR
+ing the area under the receiver operating characteristic (ROC) O RIGINAL PAPERS
+curve, depicted from the starting point (0,0) to the endpoint
+(1,1). By employing AUC, subjective assumptions can be
+circumvented during the threshold selection process. AUC
+comprehensively considers all possible thresholds, providing
+a more holistic evaluation of model performance compared
+to other methods using fixed thresholds (e.g., accuracy and
+recall), especially when dealing with imbalanced datasets.
+Therefore, we employ AUC to evaluate our proposed method.
+ 1) Implementation Details: In order to guarantee fairness
+and generality in comparison, we followed the setup of previous outstanding works [22], [23], [46] and used YOLOv3 as
+the object of interest extractor. For different datasets, we set
+different confidence thresholds according to their characteristics to filter out low-confidence objects. Specifically, for
+the medium-sized dataset Avenue and the large-scale dataset
+ShanghaiTech, we set the confidence threshold at 0.8 to maintain high accuracy. For the smaller and earlier-released dataset,
+UCSD Ped2, due to its lower pixel resolution and relatively
+smaller data volume, we set the confidence threshold at 0.5.
+We resized the input data to 64 × 64 and set the batch size to
+128. The Adam optimizer is employed with a learning rate of
+2e-4. The hyperparameters β1 = 0.9 and β2 = 0.999 are set up
+for the Adam optimizer, with all other parameters remaining
+at their default settings. To ensure that each task contributes
+sufficiently during the multi-task learning process, we assign
+equal weights to the hyperparameters 1,...,4 in Equation (12).
+The entire network training and testing are conducted end-toend on an NVIDIA GeForce RTX 3090 GPU.
+
+C. Comparative Evaluation With State-of-the-Art (SOTA)
+Methods
+ The comparison between our proposed method and the
+existing state-of-the-art methods on three benchmark datasets This, in turn, illustrates the effectiveness and superiority of our
+(Avenue, ShanghaiTech, and UCSD Ped2) is represented in method. Results on Avenue: consistent advancements in VAD
+Table III. These methods are categorized into single-proxy and the ensuing competition among different approaches have
+tasks (based on reconstruction/prediction), hybrid-proxy tasks, undeniably resulted in substantial performance enhancements,
+and multi-proxy tasks according to different paradigms. enabling methods to rival one another and go close to or
+We found that whether it is a single proxy task based on even surpass the 90% threshold [9], [11], [20], [46], [57],
+reconstruction or prediction, or a hybrid proxy task com- [59]. Nevertheless, in comparison to these approaches, our
+bining the both, the performance generally lags behind that method’s performance still reaches the current optimal level,
+of self-supervised multi-proxy tasks, and this gap becomes specifically 95.9%, compared to the previous state-of-the-art
+increasingly pronounced as the scenes become more complex. self-supervised method [61], our performance surpasses it by
+In the self-supervised multi-task paradigm, the aggregation of around 2%. This indicates the benefits and potential shown
+multiple complex task features enables the method to fully by the synergy between multiple tasks and the logical combiexploit the data itself as supervisory information, thereby nation of proxy tasks in the self-supervised learning setting.
+demonstrating superior performance on larger-scale and more Results on ShanghaiTech: In terms of scene complexity and
+complex datasets. Results on Ped2: the performance of various data scale, the ShanghaiTech dataset is more intricate and
+proxy task methods is consistently above 90%. Compared to expansive in comparison to the ped2 and Avenue. However,
+the previous state-of-the-art method [57], our method offers we unveiled the most optimal result at 87.7%, which is an
+highly competitive performance, with a mere 0.1% disparity. almost 2% improvement over the previous state-of-the-art
+Due to the relatively old release date of the Ped2 dataset and approach [59]. This also demonstrates the superiority of
+its lower pixel resolution, the images are not particularly clear. self-supervised learning, which decouples the spatiotemporal
+Therefore, when performance approaches a bottleneck, the per- dimensions of VAD and integrates expression features from
+formance differences between methods are not so pronounced. multiple perspectives to optimize the model’s performance.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+WANG et al.: TEMPORAL-SPATIAL DECOUPLED SELF-SUPERVISED MULTI-TASK LEARNING FOR VAD AND LOCALIZATION 9
+
+ TABLE IV TABLE V
+C OMPARISON W ITH THE O PTIMAL M ETHODS U SING D IFFERENT P ERFORMANCE ON AVENUE AND P ED 2 W HILE VARYING
+ M ODALITIES AS I NPUTS . W HERE , “ ” D ENOTES I NPUT AS RGB THE P ROXY S UBTASKS
+ I MAGE , “ ” R EPRESENTS I NPUT AS O PTICAL F LOW, “ ” S IGNIFIES
+ I NPUT AS S EMANTIC M AP, AND “ ” D ENOTES I NPUT AS
+ G RADIENT M AP. “ ” R EPRESENTS D EPTH M AP
+
+ TABLE VI
+ P ERFORMANCE ON AVENUE W HILE C HANGING
+ THE P ROXY S UBTASKS
+
+ TABLE VII
+ C OMPARISON OF E XECUTION E FFICIENCY W ITH
+ OTHER SOTA M ETHODS
+
+ In Table IV, we compared our method with state-of-the-art
+approaches that use different modalities as inputs. From the
+table, we can observe that despite prior methods using a single
+modality (such as optical flow/RGB image) or combinations
+of different modalities (such as RGB image + optical flow
+/semantic segmentation map, etc.) as inputs, our method
+remains competitive. Although the work [64] employed the
+combination of optical flow and semantic segmentation maps
+to reduce background interference in input data, making the
+model more focused on dynamically changing foreground
+objects, our approach continues to demonstrate superior performance. While the performance of [30] surpasses ours on
+ShanghaiTech, it’s essential to note that they employed three TABLE VIII
+different modalities (RGB image + optical flow + depth A NALYSIS OF THE I MPACT OF H YPERPARAMETER
+ C ONFIGURATIONS
+map), combining them, whereas our method solely utilizes
+RGB image. The utilization of multiple modalities not only
+enhances the capture of object appearance and motion but also
+improves the performance of the model to a significant extent.
+Inputs from modalities other than images reduce background
+interference, benefiting the performance improvement of the
+model, this contributes valuable insights to our future work.
+The aforementioned analysis suggests that multi-task learning
+can indeed acquire richer feature representations than a single
+task, and even outperforms features learned when different
+ various scenarios. The performance of the same task varies
+modalities with less noise are fused as inputs.
+ across different scenarios as well. However, these proxy tasks
+ effectively compensate for potential limitations of the overall
+D. Ablation Study model under a single task by enriching feature information
+ In Table V, we provide a detailed presentation of the density from their respective perspectives. This indicates that
+individual performance of each proxy subtask on the Avenue introducing diverse proxy tasks to enrich feature information
+and Ped2 datasets. Encouragingly, each task exhibits unique can provide more comprehensive support for VAD, ultimately
+advantages and achieves satisfactory results within its respec- leading to a significant improvement in the overall model
+tive domain. This indicates that each proxy subtask in our performance.
+multi-task approach contributes valuable information and fea- 1) Relevance Between Proxy Subtasks: Caruana [68] once
+tures to the model training, thereby aiding in the overall made such a definition: If task A as auxiliary task can improve
+enhancement of model performance. After a more detailed the performance of the model in task B, then the task A and
+analysis of the data in the table, we can observe that different task B are associated, that is, “related”. The performance variproxy tasks exhibit unique performance characteristics in ations resulting from various subtask combinations on Avenue
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+10 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+ from different paradigms, as displayed in Table VII. The
+ results show that some methods trade higher performance
+ for lower efficiency, primarily constrained by complex operations such as optical flow calculations, as in the SSMTL++
+ [23] and object-centric [18] methods. In contrast, in selfsupervised multi-task methods, the simplified design of proxy
+ tasks significantly improves runtime efficiency while maintaining relatively high performance, as demonstrated by the
+ SLMPT [38]. Our method, within the self-supervised multitask framework, is able to maintain competitive efficiency
+Fig. 4. Performance corresponding to different cube sizes. while ensuring high performance. The focus of our research
+ is primarily on improving performance, and with further
+ optimization of execution time in future work, its efficiency is
+are displayed in Table VI. We conducted a series of exper- expected to improve further.
+iments initially, combining spatial dimension subtasks 1 and 4) Analysis of Hyperparameter Effects on the Model: We
+2. The results indicate a significant performance improvement tuned and selected different hyperparameter configurations on
+compared to their respective individual subtasks. Subsequently, the Ped2 dataset to determine the optimal model settings,
+a substantial enhancement in performance was also observed as shown in Table VIII. Experimental results indicate that
+in the combined experiment that includes subtasks 2 and with a fixed learning rate, model performance fluctuates with
+3. Further, we conducted experiments involving three tasks changes in batch size. Similarly, when the batch size is held
+and the combination of all tasks, the results demonstrated a constant, adjustments to the learning rate have varying impacts
+gradual improvement in performance. This also indicates that on model performance, with smaller learning rates outperformthe performance of anomaly detection can be substantially ing larger ones. This may be because larger learning rates tend
+improved through the synergy and combination of tasks. This to cause overly large updates to the model parameters, thereby
+progressive performance improvement strongly supports the affecting convergence stability. Overall, both the learning
+effectiveness of our approach and highlights the advantages of rate and batch size influence model performance to different
+multi-task learning, as they can capture the complementarity extents, and appropriate parameter configurations can lead to
+and correlation between different tasks. improved performance.
+ 2) Generating Object-Centric Spatiotemporal Context
+Cubes: We use the bounding box of object o in the i-th E. Visualization and Analysis
+frame as the center and apply the same bounding box before Figs. 5, 6, and 7 give qualitative illustrations of our
+and after, forming a spatiotemporal context cube centered approach, encompassing anomaly score curves and exemplar
+around the object. Fig. 4 presents an analysis of the impact frames depicting both normal and abnormal events. Note that
+of the quantity of frames included within the cube on the we recognize and categorize normal and anomalous events in
+performance of the model. The frame number was configured each traffic road scene, with a focus on highlighting abnormal
+within the range of 3 to 13, and its performance variability ones. In general, when anomalous events take place, there
+was showcased using the Ped2 and Avenue datasets. It can is a noticeable rise in the curve representing the anomaly
+be observed that there is a beneficial correlation between score, which then maintains a heightened level throughout the
+the number of frames within a specific range and the duration of the abnormality. Once the event or behavior that
+performance of the model. Yet, when the quantity of frames gives rise to the anomaly ceases, the curve rapidly descends
+within the cube continually increases, the performance suffers to a decreased level and maintains a relatively stable trend.
+a decrease. It can be conjectured that if a context cube According to them, the method we have used has great
+contains too few frames, the same object may appear in sensitivity to anomalies and can efficiently detect anomalous
+multiple cubes. This redundancy in object representation can events.
+lead to duplicate feature information, which may overwhelm Fig. 5 illustrates how anomaly scores change during normal
+the model with extraneous data during training and ultimately and abnormal events in the UCSD Ped2 dataset. When the
+reduce detection accuracy. On the other hand, if the number video exclusively records pedestrians, the anomaly score curve
+of frames is too many, the context cube may contain multiple continually holds a lower level, however, it is seen that the
+objects. Given the potential for complex spatiotemporal anomaly score experiences a significant spike as soon as a
+interactions between these objects, the model may encounter rider enters the frame, and this heightened level is sustained
+greater uncertainty when distinguishing between abnormal until the rider exits the frame. Fig. 6 illustrates how anomaly
+and normal behaviors, which could negatively affect the final scores change during normal and abnormal events in the
+detection. Therefore, setting a reasonable number of frames CUHK Avenue dataset. In Fig. 6, normal frames depict regular
+within the context cube is crucial to ensuring that the model pedestrian activities. When sudden abnormal behaviors occur
+captures sufficient object features while avoiding excessive (e.g., a child running back and forth or a person pushing a
+complexity and redundant information. bicycle), the anomaly score curve sharply rises, whereas when
+ 3) Execution Efficiency Comparison: We compared the the subject of the abnormal behavior exits the frame (the child
+efficiency of our method with state-of-the-art (SOTA) methods runs out of it), the curve rapidly drops. In a similar vein,
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+WANG et al.: TEMPORAL-SPATIAL DECOUPLED SELF-SUPERVISED MULTI-TASK LEARNING FOR VAD AND LOCALIZATION 11
+
+ rise. After the entire anomalous event is over, the curve
+ promptly reverts back to a lower and stable state.
+
+ F. Discussion
+ In this section, we will delve into the significant advantages
+ brought by our proposed method, analyze its feasibility in
+ practical applications, while also briefly introducing other possible methods in the field of video anomaly detection. Through
+ comparative analysis, we aim to comprehensively evaluate the
+ effectiveness of existing methods, while identifying potential
+ areas for improvement and research gaps.
+ We perform spatial-temporal decoupling of the video
+Fig. 5. Anomaly score curves and anomaly localization examples by our anomaly detection task to separately capture temporal and
+method on UCSD Ped2. The light red-shaded region and the white area
+correspondingly represent the ground truth of anomalies and normal events.
+ spatial information in the time and space dimensions. In the
+ temporal dimension, the focus is on the temporal sequence
+ patterns of events, identifying dynamic changes in abnormal
+ behaviors. In the spatial dimension, attention is given to the
+ spatial features and positional changes of objects, revealing spatial differences in abnormal events. By constructing
+ multiple proxy tasks related to each dimension, the model
+ can learn and process features at different levels, enhancing
+ its ability to tackle complex anomaly detection tasks. This
+ approach strengthens spatial-temporal feature understanding
+ through joint learning, improving robustness, generalization,
+ and efficiency. In practical applications, the spatial-temporal
+ decoupling method is highly feasible. By decoupling the
+ time and space dimensions, it effectively captures the
+ spatial-temporal information in videos, improving the model’s
+ ability to perform fine-grained detection of complex abnormal
+ behaviors. This method is particularly suitable for video data
+Fig. 6. Anomaly score curves and anomaly localization examples by our
+method on CUHK Avenue. The light red-shaded region and the white area such as surveillance footage and event logs, which exhibit
+correspondingly represent the ground truth of anomalies and normal events. significant temporal and spatial feature differences. Additionally, constructing multiple self-supervised proxy tasks related
+ to time and space can promote knowledge sharing between
+ tasks, enhance learning efficiency and generalization ability,
+ reduce dependence on labeled data, and improve the model’s
+ adaptability in fields such as security surveillance, intelligent
+ transportation system, and traffic anomaly early warning.
+ It is often said that, “stones from other hills may serve to
+ polish jade.” the same holds true for the field of VAD. With the
+ development of technologies such as domain adaptation [69],
+ transfer learning [70], and federated learning [71], new solutions have been proposed for multiple bottleneck problems in
+ video anomaly detection, especially in the face of challenges
+ like scene variations and data distribution discrepancies. These
+ approaches provide new ideas and insights. The research on
+ domain adaptation technology in video anomaly detection
+Fig. 7. Anomaly score curves and anomaly localization examples by our primarily focuses on enhancing the model’s generalization
+method on ShanghaiTech. The light red-shaded region and the white area
+correspondingly represent the ground truth of anomalies and normal events.
+ ability to new environments and reducing the distribution
+ gap between the source and target domains. This is particularly important when annotated data in the target domain
+Fig. 7 illustrates the variation of anomaly scores for normal is scarce, as it provides effective strategies for transfer and
+and abnormal events on the ShanghaiTech dataset. In normal adaptation. Meta-learning methods, applied in domain adaptaframes, pedestrians walk normally at the intersection without tion and multi-task learning, have significantly improved the
+any abnormal behavior, and the anomaly score curve keeps at a model’s ability to quickly adapt to new tasks and domains.
+low level. However, in the case of a sudden abnormality, such Transfer learning, by leveraging knowledge from one task,
+as a pedestrian’s bag being snatched or a physical altercation at enhances the model’s generalization capability in other tasks.
+an intersection, the score curve suffers a rapid and significant This is especially useful in scenarios with limited labeled
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+12 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+data, effectively addressing the data scarcity issue. Moreover, [5] D. Gong et al., “Memorizing normality to detect anomaly: Memoryby using methods such as similarity analysis to assess the augmented deep autoencoder for unsupervised anomaly detection,”
+ in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019,
+relationships between tasks, we can optimize model selection pp. 1705–1714.
+in transfer learning, thereby improving detection performance. [6] R. Cai, H. Zhang, W. Liu, S. Gao, and Z. Hao, “Appearance-motion
+This is particularly evident in anomaly detection tasks, where memory consistency network for video anomaly detection,” in Proc.
+ AAAI Conf. Artif. Intell., 2021, pp. 938–946.
+leveraging knowledge from traffic surveillance scenarios can
+ [7] L. Wang, J. Tian, S. Zhou, H. Shi, and G. Hua, “Memory-augmented
+significantly enhance model performance. appearance-motion network for video anomaly detection,” Pattern
+ From the brief discussion above, it is evident that there are Recognit., vol. 138, Jun. 2023, Art. no. 109335.
+still many directions in the field of video anomaly detection [8] D. Wang, Q. Hu, and K. Wu, “Dual-branch network with memory for
+ video anomaly detection,” Multimedia Syst., vol. 29, no. 1, pp. 247–259,
+that are worth exploring and researching in depth. These Feb. 2023.
+methods not only provide valuable insights for addressing [9] Y. Wang, C. Qin, Y. Bai, Y. Xu, X. Ma, and Y. Fu, “Making
+the unique challenges in video anomaly detection but also reconstruction-based method great again for video anomaly deteceffectively enhance the performance of the model in several tion,” in Proc. IEEE Int. Conf. Data Mining (ICDM), Nov. 2022,
+ pp. 1215–1220.
+aspects. [10] X. Wen et al., “Video anomaly detection based on cross-frame prediction
+ mechanism and spatio-temporal memory-enhanced pseudo-3D encoder,”
+ Eng. Appl. Artif. Intell., vol. 126, Nov. 2023, Art. no. 107057.
+ V. C ONCLUSION [11] Z. Yang, J. Liu, Z. Wu, P. Wu, and X. Liu, “Video event restoration based
+ In the field of intelligent transportation, traffic anomaly on keyframes for video anomaly detection,” in Proc. IEEE/CVF Conf.
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2023, pp. 14592–14601.
+detection plays a critical role in enhancing road safety [12] X. Wang et al., “Robust unsupervised video anomaly detection by
+and optimizing traffic management efficiency. In this paper, multipath frame prediction,” IEEE Trans. Neural Netw. Learn. Syst.,
+we propose an object-level spatiotemporal decoupled self- vol. 33, no. 6, pp. 2301–2312, Jun. 2022.
+supervised multi-task learning network for video anomaly [13] H. Lv, C. Zhou, Z. Cui, C. Xu, Y. Li, and J. Yang, “Localizing anomalies
+ from weakly-labeled videos,” IEEE Trans. Image Process., vol. 30,
+detection. Specifically, we decouple the task into spatiotem- pp. 4505–4515, 2021.
+poral multi-task learning by constructing different forms of [14] C. Zhang, G. Li, Q. Xu, X. Zhang, L. Su, and Q. Huang, “Weakly superspatiotemporal context cubes in both temporal and spatial vised anomaly detection in videos considering the openness of events,”
+ IEEE Trans. Intell. Transp. Syst., vol. 23, no. 11, pp. 21687–21699,
+dimensions for joint learning of multiple tasks. Through Nov. 2022.
+experimental validation and ablation analysis, we compre- [15] S. Han, H. Song, S. Lee, S. Park, and M. Cha, “Elsa: Energy-based learnhensively evaluate the effectiveness of the proposed method. ing for semi-supervised anomaly detection,” 2021, arXiv:2103.15296.
+The experimental results indicate that our approach attains [16] G. Wang, Y. Zhan, X. Wang, M. Song, and K. Nahrstedt, “Hierarchical semi-supervised contrastive learning for contamination-resistant
+optimal performance on widely utilized benchmark datasets, anomaly detection,” in Proc. Eur. Conf. Comput. Vis., 2022,
+regardless of whether it involves reconstruction, prediction, pp. 110–128.
+or other hybrid methods. Our methodology maintains a high [17] J. C. Wu, H. Y. Hsieh, D. J. Chen, C. S. Fuh, and T. L. Liu, “Selflevel of competitiveness, even when compared to multimodal supervised sparse representation for video anomaly detection,” in Proc.
+ Eur. Conf. Comput. Vis., 2022, pp. 729–745.
+input approaches. Furthermore, a succession of targeted abla- [18] R. T. Ionescu, F. S. Khan, M.-I. Georgescu, and L. Shao, “Object-centric
+tion experiments confirmed the relevance and efficacy of the auto-encoders and dummy anomalies for abnormal event detection
+different components of our method. Although our method in video,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+ (CVPR), Jun. 2019, pp. 7842–7851.
+demonstrates outstanding capabilities, it is not devoid of
+ [19] M. I. Georgescu, R. Ionescu, F. S. Khan, M. Popescu, and M. Shah,
+boundaries. When dealing with subtle or more covert anoma- “A background-agnostic framework with adversarial training for abnorlies, relying on object detectors may have certain limitations. mal event detection in video,” IEEE Trans. Pattern Anal. Mach. Intell.,
+Therefore, future research should focus on improving the vol. 44, no. 9, pp. 4505–4523, Apr. 2021.
+ [20] M.-I. Georgescu, A. Barbalau, R. T. Ionescu, F. Shahbaz Khan,
+model’s ability to detect these subtle anomalies while also M. Popescu, and M. Shah, “Anomaly detection in video via
+optimizing the relevance of task agents and the interaction self-supervised and multi-task learning,” in Proc. IEEE/CVF
+representations between tasks to further enhance the potential Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+ pp. 12742–12752.
+application of video anomaly detection in intelligent trans-
+ [21] J. Yu, J. Liu, Y. Cheng, R. Feng, and Y. Zhang, “Modality-aware
+portation surveillance systems, ultimately, providing a more contrastive instance learning with self-distillation for weakly-supervised
+robust technical foundation for intelligent traffic monitoring audio-visual violence detection,” in Proc. 30th ACM Int. Conf. Multiand safety management. media, 2022, pp. 6278–6287.
+ [22] G. Wang, Y. Wang, J. Qin, D. Zhang, X. Bao, and D. Huang,
+ “Video anomaly detection by solving decoupled spatio-temporal
+ R EFERENCES jigsaw puzzles,” in Proc. Eur. Conf. Comput. Vis., 2022,
+ pp. 494–511.
+ [1] W. Zhou et al., “Vision technologies with applications in traffic surveil- [23] A. Barbalau et al., “SSMTL++: Revisiting self-supervised multi-task
+ lance systems: A holistic survey,” 2024, arXiv:2412.00348. learning for video anomaly detection,” Comput. Vis. Image Understand.,
+ [2] B. Ramachandra, M. J. Jones, and R. R. Vatsavai, “A survey of vol. 229, Mar. 2023, Art. no. 103656.
+ single-scene video anomaly detection,” IEEE Trans. Pattern Anal. [24] Z. Qing et al., “Learning from untrimmed videos: Self-supervised
+ Mach. Intell., vol. 44, no. 5, pp. 2293–2312, May 2022. video representation learning with hierarchical consistency,” in Proc.
+ [3] Y. Fang et al., “Anomaly diagnosis of connected autonomous vehicles: IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,
+ A survey,” Inf. Fusion, vol. 105, May 2024, Art. no. 102223. pp. 13821–13831.
+ [4] K. K. Santhosh, D. P. Dogra, P. P. Roy, and A. Mitra, “Vehicular [25] C. Huang, Z. Wu, J. Wen, Y. Xu, Q. Jiang, and Y. Wang, “Abnormal
+ trajectory classification and traffic anomaly detection in videos using event detection using deep contrastive learning for intelligent video
+ a hybrid CNN-VAE architecture,” IEEE Trans. Intell. Transp. Syst., surveillance system,” IEEE Trans. Ind. Informat., vol. 18, no. 8,
+ vol. 23, no. 8, pp. 11891–11902, Aug. 2022. pp. 5171–5179, Aug. 2022.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+WANG et al.: TEMPORAL-SPATIAL DECOUPLED SELF-SUPERVISED MULTI-TASK LEARNING FOR VAD AND LOCALIZATION 13
+
+[26] Y. Liu, X. Wei, P. Lasang, S. Pranata, K. Subramanian, and H. Seow, [50] X. Feng, D. Song, Y. Chen, and Y. Wang, “Convolutional transformer
+ “Ensemble uncertainty guided road scene anomaly detection: A simple based dual discriminator generative adversarial networks for video
+ meta-learning approach,” IEEE Trans. Intell. Transp. Syst., vol. 25, no. 9, anomaly detection,” in Proc. 29th ACM Int. Conf. Multimedia, 2021,
+ pp. 10754–10765, Sep. 2024. pp. 5546–5554.
+[27] W. Zhou, L. Wen, Y. Zhan, and C. Wang, “An appearance-motion [51] Z. Yang, P. Wu, J. Liu, and X. Liu, “Dynamic local aggregation network
+ network for vision-based crash detection: Improving the accuracy in with adaptive clusterer for anomaly detection,” in Proc. Eur. Conf.
+ congested traffic,” IEEE Trans. Intell. Transp. Syst., vol. 24, no. 12, Comput. Vis., 2022, pp. 404–421.
+ pp. 13742–13755, Dec. 2023. [52] Y. Hao, J. Li, N. Wang, X. Wang, and X. Gao, “Spatiotemporal
+[28] L. Zanella, W. Menapace, M. Mancini, Y. Wang, and E. Ricci, “Harness- consistency-enhanced network for video anomaly detection,” Pattern
+ ing large language models for training-free video anomaly detection,” Recognit., vol. 121, Jan. 2022, Art. no. 108232.
+ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)., [53] R. Morais, V. Le, T. Tran, B. Saha, M. Mansour, and S. Venkatesh,
+ Jun. 2024, pp. 18527–18536. “Learning regularity in skeleton trajectories for anomaly detection in
+[29] Y. Zhang and Q. Yang, “An overview of multi-task learning,” Nat. Sci. videos,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+ Rev., vol. 5, no. 1, pp. 30–43, Jan. 2018. (CVPR), Jun. 2019, pp. 11996–12004.
+[30] M. Baradaran and R. Bergevin, “Multi-task learning based video [54] W. Luo et al., “Video anomaly detection with sparse coding inspired
+ anomaly detection with attention,” in Proc. IEEE/CVF Conf. Comput. deep neural networks,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 43,
+ Vis. Pattern Recognit., Jun. 2023, pp. 2885–2895. no. 3, pp. 1070–1084, Mar. 2021.
+[31] H. Wu et al., “CvT: Introducing convolutions to vision transformers,” in [55] Z. Liu, Y. Nie, C. Long, Q. Zhang, and G. Li, “A hybrid video anomaly
+ Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021, pp. 22–31. detection framework via memory-augmented flow reconstruction and
+[32] S. Gidaris, P. Singh, and N. Komodakis, “Unsupervised representation flow-guided frame prediction,” in Proc. IEEE/CVF Int. Conf. Comput.
+ learning by predicting image rotations,” in Proc. Int. Conf. Learn. Vis. (ICCV), Oct. 2021, pp. 13588–13597.
+ Represent. (ICLR), 2018, pp. 1–16. [56] Y. Zhong, X. Chen, Y. Hu, P. Tang, and F. Ren, “Bidirectional spatio-
+[33] Y. Chen, X. Shen, Y. Liu, Q. Tao, and J. A. K. Suykens, “Jigsaw-ViT: temporal feature learning with multiscale evaluation for video anomaly
+ Learning jigsaw puzzles in vision transformer,” Pattern Recognit. Lett., detection,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 12,
+ vol. 166, pp. 53–60, Feb. 2023. pp. 8285–8296, Dec. 2022.
+[34] W. Liu, W. Luo, D. Lian, and S. Gao, “Future frame prediction for [57] W. Liu, H. Chang, B. Ma, S. Shan, and X. Chen, “Diversity-measurable
+ anomaly detection—A new baseline,” in Proc. IEEE/CVF Conf. Comput. anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ Vis. Pattern Recognit., Jun. 2018, pp. 6536–6545. Recognit. (CVPR), Jun. 2023, pp. 12147–12156.
+ [58] X. Huang, C. Zhao, and Z. Wu, “A video anomaly detection frame-
+[35] H. Park, J. Noh, and B. Ham, “Learning memory-guided normality
+ work based on appearance-motion semantics representation consistency,”
+ for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ in Proc. ICASSP - IEEE Int. Conf. Acoust., Speech Signal Process.
+ Recognit. (CVPR), Jun. 2020, pp. 14372–14381.
+ (ICASSP), Jun. 2023, pp. 1–5.
+[36] P. Chen et al., “RSPNet: Relative speed perception for unsupervised
+ [59] T. Reiss and Y. Hoshen, “An attribute-based method for video anomaly
+ video representation learning,” in Proc. AAAI Conf. Artif. Intell., 2021,
+ detection,” 2022, arXiv:2212.00789.
+ vol. 35, no. 2, pp. 1045–1053.
+ [60] S. Yu et al., “Regularity learning via explicit distribution
+[37] D. Wei, J. Lim, A. Zisserman, and W. T. Freeman, “Learning and using modeling for skeletal video anomaly detection,” IEEE Trans.
+ the arrow of time,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Circuits Syst. Video Technol., vol. 34, no. 8, pp. 6661–6673,
+ Recognit., Jun. 2018, pp. 8052–8060. Aug. 2024.
+[38] C. Shi, C. Sun, Y. Wu, and Y. Jia, “Video anomaly detection via [61] S. Sun and X. Gong, “Hierarchical semantic contrast for scene-aware
+ sequentially learning multiple pretext tasks,” in Proc. IEEE/CVF Int. video anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ Conf. Comput. Vis., Oct. 2023, pp. 10330–10340. Pattern Recognit. (CVPR), Jun. 2023, pp. 22846–22856.
+[39] Z. Wang, Y. Zou, and Z. Zhang, “Cluster attention contrast for video [62] T. N. Nguyen and J. Meunier, “Anomaly detection in video sequence
+ anomaly detection,” in Proc. 28th ACM Int. Conf. Multimedia, Oct. 2020, with appearance-motion correspondence,” in Proc. IEEE/CVF Int. Conf.
+ pp. 2463–2471. Comput. Vis. (ICCV), Oct. 2019, pp. 1273–1283.
+[40] Z. Tong, Y. Song, J. Wang, and L. Wang, “VideoMAE: Masked autoen- [63] C. Chen et al., “Comprehensive regularization in a bi-directional prediccoders are data-efficient learners for self-supervised video pre-training,” tive network for video anomaly detection,” in Proc. AAAI Conf. Artif.
+ in Proc. Adv. Neural Inf. Process. Syst., vol. 35, 2022, pp. 10078–10093. Intell., 2022, vol. 36, no. 1, pp. 230–238.
+[41] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked [64] M. Baradaran and R. Bergevin, “Future video prediction from a single
+ autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf. frame for video anomaly detection,” in Proc. Int. Symp. Vis. Comput.,
+ Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 16000–16009. 2023, pp. 472–486.
+[42] S. W. Hawking, A Brief History of Time. New York City, NY, USA: [65] Y. Naji, A. Setkov, A. Loesch, M. Gouiffès, and R. Audigier, “Spatio-
+ Bantam Books, 1998. temporal predictive tasks for abnormal event detection in videos,” in
+[43] C. Lu, J. Shi, and J. Jia, “Abnormal event detection at 150 FPS Proc. 18th IEEE Int. Conf. Adv. Video Signal Based Surveill. (AVSS),
+ in MATLAB,” in Proc. IEEE Int. Conf. Comput. Vis., Dec. 2013, Nov. 2022, pp. 1–8.
+ pp. 2720–2727. [66] G. Yu, S. Wang, Z. Cai, X. Liu, E. Zhu, and J. Yin, “Video anomaly
+[44] V. Mahadevan, W. X. Li, V. Bhalodia, and D. M. M. M. Sigal, “Anomaly detection via visual cloze tests,” IEEE Trans. Inf. Forensics Security,
+ detection in crowded scenes,” in Proc. IEEE Comput. Soc. Conf. Comput. vol. 18, pp. 4955–4969, 2023.
+ Vis. Pattern Recognit., Jun. 2010, pp. 1975–1981. [67] M. Zhang et al., “Multi-scale video anomaly detection by
+[45] W. Luo, W. Liu, and S. Gao, “A revisit of sparse coding based anomaly multi-grained spatio-temporal representation learning,” in Proc.
+ detection in stacked RNN framework,” in Proc. IEEE Int. Conf. Comput. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2024,
+ Vis. (ICCV), Oct. 2017, pp. 341–349. pp. 17385–17394.
+[46] G. Yu, S. Wang, Z. Cai, and Y. Wang, “Cloze test helps: Effective video [68] R. Caruana, “Multitask learning,” Mach. Learn., vol. 28, no. 1,
+ anomaly detection via learning to complete video events,” in Proc. 28th pp. 41–75, 1997.
+ ACM Int. Conf. Multimedia, 2020, pp. 583–591. [69] Y. Wu, M. Hong, A. Li, S. Huang, H. Liu, and Y. Ge, “Self-supervised
+[47] M. Hasan, J. Choi, J. Neumann, A. K. Roy-Chowdhury, and L. S. adversarial learning for domain adaptation of pavement distress classifi-
+ Davis, “Learning temporal regularity in video sequences,” in Proc. cation,” IEEE Trans. Intell. Transp. Syst., vol. 25, no. 2, pp. 1966–1977,
+ IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016, Feb. 2024.
+ pp. 733–742. [70] S. Zhao, W. Yi, J. Shi, Z. Jiang, and X. Lu, “An innovative crack
+[48] S. Saypadith and T. Onoye, “Video anomaly detection based on deep detection algorithm based on efficient feature fusion and progressive
+ generative network,” in Proc. IEEE Int. Symp. Circuits Syst. (ISCAS), transfer learning,” IEEE Trans. Intell. Transp. Syst., vol. 25, no. 12,
+ May 2021, pp. 1–5. pp. 21469–21483, Dec. 2024.
+[49] Y. Zhong, X. Chen, J. Jiang, and F. Ren, “A cascade recon- [71] X. Wang, W. Liu, H. Lin, J. Hu, K. Kaur, and M. S. Hossain,
+ struction model with generalization ability evaluation for anomaly “AI-empowered trajectory anomaly detection for intelligent transportadetection in videos,” Pattern Recognit., vol. 122, Feb. 2022, tion systems: A hierarchical federated learning approach,” IEEE Trans.
+ Art. no. 108336. Intell. Transp. Syst., vol. 24, no. 4, pp. 4631–4640, Apr. 2023.
+ This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+14 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+ Dicong Wang (Graduate Student Member, IEEE) is Qinghua Hu (Senior Member, IEEE) received the
+ currently pursuing the Ph.D. degree with the College B.S., M.S., and Ph.D. degrees from Harbin Institute
+ of Intelligence and Computing, Tianjin University, of Technology, Harbin, China, in 1999, 2002, and
+ and the School of Electronic Information Engi- 2008, respectively. He was a Post-Doctoral Fellow
+ neering, Lanzhou Jiaotong University. His research with the Department of Computing, The Hong Kong
+ interests include computer vision and video anomaly Polytechnic University, from 2009 to 2011. He is
+ detection. currently the Chair Professor of the College of
+ Intelligence and Computing, Tianjin University, and
+ the Director of the SIG Granular Computing and
+ Knowledge Discovery and Chinese Association of
+ Artificial Intelligence. He was supported by the Key
+ Program, National Natural Science Foundation of China. He has published
+ over 300 peer-reviewed articles. His current research interests include uncertainty modeling in big data, machine learning with multi-modality data,
+ and intelligent unmanned systems. He is an Associate Editor of IEEE
+ T RANSACTIONS ON F UZZY S YSTEMS, Acta Automatica Sinica, and Acta
+ Electronica Sinica.
+ Qilong Wang (Member, IEEE) received the Ph.D.
+ degree from the School of Information and Communication Engineering, Dalian University of Technology, China, in 2018. He is currently a Professor
+ Kaijun Wu (Member, IEEE) received the Ph.D.
+ with Tianjin University. He has published more than
+ degree from Lanzhou Jiaotong University, China,
+ 40 academic papers in top conferences and refereed
+ in 2017. He is currently a Professor with the
+ journals, including ICCV/CVPR/NeurIPS/ECCV,
+ School of Electronics and Information Engineering,
+ and IEEE T RANSACTIONS ON PATTERN A NALYSIS
+ Lanzhou Jiaotong University. His research interests
+ AND M ACHINE I NTELLIGENCE /IEEE T RANSAC -
+ include intelligent algorithm optimization and image
+ TIONS ON I MAGE P ROCESSING /IEEE T RANSAC -
+ processing.
+ TIONS ON C IRCUITS AND S YSTEMS FOR V IDEO
+T ECHNOLOGY. His research interests include visual understanding and deep
+learning, particularly deep models with high-order statistical modeling and
+self-attention mechanism. He served as the Area Chair for CVPR 2024.

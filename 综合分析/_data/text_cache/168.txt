@@ -1,0 +1,148 @@
+           IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 10, OCTOBER 2024                                                   12103
+
+
+
+
+    Adaptive Working Condition Recognition With
+     Clustering-Based Contrastive Learning for
+         Unsupervised Anomaly Detection
+              Qifa Xu , Tianming Xie , Cuixia Jiang , Qiliang Cheng , and Xiangxiang Wang
+
+
+   Abstract—In real industrial processes, machines usu-                     of promptly capturing abnormal behaviors during machine op-
+ally run under variable working conditions, which impose                    erations. This lays a crucial foundation for subsequent machine
+challenges for anomaly detection. To complete anomaly                       fault diagnosis and repair processes. To date, there have been
+detection for machines under variable working conditions,
+we develop a reconstruction-based autoencoder called                        numerous studies on anomaly detection using various types of
+clustering-based contrastive learning autoencoder (CBCL-                    data, including images [3], videos [4], multivariate time series
+AE). It integrates clustering-based contrastive learning                    (MTS) [5], and so on. In general, MTS can retain more informa-
+(CBCL) to perform clustering in the feature space and en-                   tion in the temporal dimension than in images and videos with
+hance the differentiation of features from different working
+                                                                            the same storage capacity. As a result, MTS anomaly detection
+conditions, thereby achieving adaptive working condition
+recognition. Considering the crucial role of the cluster-                   has been increasingly applied in various industrial production
+ing of CBCL, we theoretically and experimentally demon-                     environments as a cost-effective solution to reduce storage costs.
+strate its convergence property during the training process,                   In real industrial processes, the existing anomaly detection
+which directly determines the effectiveness of CBCL-AE.                     methods can be primarily grouped into three types: model-based,
+CBCL-AE’s superiority has been validated on three public
+                                                                            signal-based, and knowledge-based methods. First, model-based
+datasets and two private datasets collected from an ac-
+tual industrial process. These validations highlight its su-                methods [6], [7], [8] leverage prior information from indus-
+periority over five state-of-the-art models in unsupervised                 trial processes or practical system models, enabling accurate
+anomaly detection.                                                          anomaly detection even with limited data. However, it is diffi-
+  Index Terms—Adaptive working condition recognition,                       cult to acquire accurate, comprehensive, and reliable models in
+anomaly detection, clustering-based contrastive learning                    complicated industrial production environments. Moreover, the
+(CBCL), multivariate time series (MTS), reconstruction-                     system’s outputs are instability and may be influenced by vari-
+based autoencoder, variable working conditions.                             ous factors, such as environmental noise, machine lubrication,
+                                                                            and temperature, which reduce the efficiency of model-based
+                                                                            methods. Second, signal-based methods [9] extract features
+                         I. INTRODUCTION
+                                                                            from measured signals, then analyze symptoms and make di-
+    N THE era of Industry 4.0, the significance of anomaly
+I   detection is growing exponentially across various indus-
+tries, encompassing wind power, transportation, oil, natural
+                                                                            agnostic decisions based on prior knowledge of the system.
+                                                                            Owing to the rich information contained in time-domain and
+                                                                            frequency-domain signals, the performance of fault diagnosis
+gas, aerospace, vehicles, etc. [1], [2]. As the earliest stage of           in motors [10] and rotary machines [11] can be improved.
+Prognostics Health Management, anomaly detection is capable                 For this reason, signal-based anomaly detection requires high
+                                                                            storage capacity to preserve more detailed information. Third,
+   Manuscript received 4 November 2023; revised 14 April 2024 and 19
+                                                                            the characteristic of knowledge-based methods is to extract
+May 2024; accepted 2 June 2024. Date of publication 24 June 2024;           underlying knowledge from a large volume of historical data
+date of current version 7 October 2024. This work was supported by          using artificial intelligence techniques. The knowledge-based
+the National Natural Science Foundation of PR China under Grant
+72171070. Paper no. TII-23-4355. (Corresponding author: Tianming
+                                                                            method [12], [13], [14] is also referred to as a data-driven
+Xie.)                                                                       method for its reliance on historical data for decision-making.
+   Qifa Xu and Cuixia Jiang are with the School of Manage-                  With the rapid progress in big data and computing capability,
+ment, Hefei University of Technology, Hefei 230009, China (e-mail:
+xuqifa@hfut.edu.cn; jiangcuixia@hfut.edu.cn).
+                                                                            knowledge-based methods that rely on artificial intelligence
+   Tianming Xie is with the School of Management, Hefei University of       models have gained significant attention as a popular research
+Technology, Hefei 230009, China, and also with the Faculty of Engineer-     area in recent years.
+ing and Environment, Northumbria University, NE1 8ST Newcastle upon
+Tyne, U.K. (e-mail: xietianming@mail.hfut.edu.cn).
+                                                                               In industrial production environments, a machine anomaly is
+   Qiliang Cheng and Xiangxiang Wang are with RONDS Science and             a typical low-probability event and presents some characteris-
+Technology Incorporated Company, Hefei 230000, China (e-mail: qil-          tics, such as unpredictability, unknown patterns, and diversity.
+iang.cheng@ronds.com.cn; xiangxiang.wang@ronds.com.cn).
+   Color versions of one or more figures in this article are available at
+                                                                            Therefore, unsupervised data-driven methods are more suitable
+https://doi.org/10.1109/TII.2024.3413952.                                   for anomaly detection. In these methods, autoencoders [15]
+   Digital Object Identifier 10.1109/TII.2024.3413952                       are usually employed to construct reconstruction-based models,
+                  1551-3203 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                See https://www.ieee.org/publications/rights/index.html for more information.
+12104                                                        IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 10, OCTOBER 2024
+
+
+
+which aim at differentiating between abnormal and normal               the differentiation of features from different working conditions,
+behaviors by learning patterns or features from normal behav-          thereby achieving adaptive working condition recognition. The
+iors. Wulsin et al. [16] applied deep belief networks to construct     contributions of this study can be summarized as follows.
+an encoding–decoding model, which utilizes reconstruction er-              1) We integrate CBCL into a specific autoencoder built with
+ror to detect anomalies in clinical electroencephalography data.              GRU and realize end-to-end training. It can adaptively
+However, without considering temporal dependencies, such                      group similar working condition data into the same cat-
+encoding–decoding models [17] and [18] are limited signifi-                   egory with the clustering method. By leveraging con-
+cantly in terms of accuracy in unsupervised anomaly detection.                trastive learning, the CBCL-AE model can effectively
+To take temporal dependencies into account, many studies use                  improve the proximity of features from identical work-
+recurrent neural networks (RNNs) [5], [19], [20], including                   ing conditions. It can also enhance the differentiation of
+traditional RNNs, long short-term memory (LSTM), and gate                     features from different working conditions by designing
+recurrent unit (GRU), to construct autoencoder. These studies                 a specific constraint to ensure a sufficient distance among
+have demonstrated that such models excel in reconstructing                    these features.
+MTS data. Indeed, in real-world data, it is common to encounter            2) We conclude that the clustering process in the feature
+various noises that can potentially decrease the robustness of                space can converge by theoretically proving the model’s
+the model during the training process, even in normal data. To                convergence during the training process, as the clustering
+address this issue, the authors in [5], [20], and [21] incorporated           process relies on model optimization. The proof of con-
+variational inference [22] into the autoencoder. By introducing               vergence of this clustering process provides theoretical
+variational inference, the autoencoder can represent features                 support for the effectiveness of the integrated CBCL mod-
+in the form of distributions, reducing the impact of noises                   ule in CBCL-AE. By experimentally visualizing the trace
+at the tails of the distribution on the model significantly. In               of cluster center iteration during the training process, we
+recent years, the transformer has also been gradually introduced              further confirm the convergence of the clustering process.
+into MTS anomaly detection since its powerful text processing              3) We conduct experiments on three public datasets and two
+capability. Based on the characteristics of the transformer, Xu               private datasets. The comparison results on three public
+et al. [23] constructed two types of associations: the association            datasets demonstrate that the CBCL-AE model achieves
+between the current point and local context, as well as the                   acceptable results in general MTS anomaly when com-
+association between the current point and the global sequence.                pared to five state-of-the-art models (SOTAs). The main
+As a result, the distinguishability between normal data and                   results on our private datasets show that our model is
+anomalies has been successfully increased. The self-attention                 superior to the five SOTAs in monitoring machines under
+mechanism in the transformer calculates temporal dependencies                 variable working conditions. In addition, the ablation
+with parallel matrix multiplication operations, which enables                 study proves the efficacy of integrating CBCL into our
+the transformer to run much faster than RNNs with the same                    model.
+number of parameters. However, this computational advantage               The rest of this article is organized as follows. Section II
+in terms of time is accompanied by an increased storage burden.        introduces relevant theories and definitions. Section III details
+In addition to the methods mentioned previously, there are             the proposed CBCL-AE model. Section IV considers real-world
+also autoencoders built by integrating generative adversarial          applications on three public datasets and two private datasets.
+networks [24] or combined with graph neural networks [25],             Finally, Section V concludes this article.
+[26]. The former aims at enhancing the model’s generation or
+data reconstruction capabilities, while the latter focuses on estab-                            II. PRELIMINARIES
+lishing better correlations among variables in high-dimensional
+data. Current research on anomaly detection is primarily focused       A. Reconstruction-Based Anomaly Detection
+on steady-state or single-machine scenarios. However, due to              Due to the unpredictability, unknown patterns, and diversity
+the complex industrial processes, some machines often work             of anomalies in MTS, supervised methods are in general not
+under variable conditions. In fact, for machines under variable        suitable for MTS anomaly detection. To this end, we develop
+working conditions, having a large amount of data with such            a reconstruction-based model using an autoencoder to real-
+different working conditions in the training set might enhance         ize unsupervised anomaly detection. Let us consider an MTS
+the model’s ability to reconstruct genuine anomalies. Variable         X = [x1 , x2 , . . . , xt , . . . , xT ] with a length of T , where each
+working conditions lead to the characteristic of concept drift         element xt ∈ Rm is an m-dimensional vector. Our goal is to
+in multisensor time series data, where the distribution, such as       build a reconstruction-based model, denoted as f (.), which takes
+mean and/or variance, of the MTS changes abruptly over time.           X as inputs and produces X̂ as outputs. The model aims to
+This makes it more difficult to identify true anomalies. Research      maximize the similarity between X and X̂. Consequently, the
+on anomaly detection specifically for machines under variable          residuals e = X − X̂ can be used to identify anomalies.
+working conditions is scarce, which remains a significant chal-
+lenge within the industrial sector.
+   To this end, we develop a reconstruction-based autoen-              B. Contrastive Learning
+coder called clustering-based contrastive learning autoencoder            The core idea of contrastive learning is to bring observations
+(CBCL-AE). It integrates clustering-based contrastive learning         from the same category closer together in the feature space, while
+(CBCL) to perform clustering in the feature space and enhance          simultaneously increasing the separation between observations
+XU et al.: ADAPTIVE WORKING CONDITION RECOGNITION WITH CBCL FOR UNSUPERVISED ANOMALY DETECTION                                          12105
+
+
+
+                                                                       to LSTM, GRU is capable of alleviating the issue of gradient
+                                                                       vanishing and has a simpler architecture. Therefore, we employ
+                                                                       GRU to construct the autoencoder. In Fig. 2, EU and DU denote
+                                                                       the encoder unit and the decoder unit that consist of GRU, which
+                                                                       are defined as
+
+                                                                                      r t = σ(W rx xt + W rh ht−1 + br

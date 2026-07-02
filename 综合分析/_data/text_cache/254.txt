@@ -1,0 +1,169 @@
+                                                                  Computer Networks 250 (2024) 110576
+
+
+                                                                Contents lists available at ScienceDirect
+
+
+                                                                   Computer Networks
+                                                      journal homepage: www.elsevier.com/locate/comnet
+
+
+
+
+Machine learning-enabled hybrid intrusion detection system with host data
+transformation and an advanced two-stage classifier
+Zhiyan Chen a , Murat Simsek a , Burak Kantarci a ,∗, Mehran Bagheri b , Petar Djukic c
+a
+    University of Ottawa, 800 King Edward Avenue, Ottawa, ON, Canada, K1N 6N5
+b
+    Ciena, 5050 Innovation Drive Ottawa, ON, K2K 0J2, Canada
+c
+    Nokia Bell Labs, 600 March Rd, Kanata, ON, Canada K2K 2T6
+
+
+
+ARTICLE                INFO                             ABSTRACT
+
+Keywords:                                               Network Intrusion Detection Systems (NIDS) have been extensively investigated by monitoring real network
+Machine learning                                        traffic and analyzing suspicious activities. However, there are limitations in detecting specific types of attacks
+Network security                                        with NIDS, such as Advanced Persistent Threats (APT). Additionally, NIDS is restricted in observing complete
+Network intrusion detection
+                                                        traffic information due to encrypted traffic or a lack of authority. To address these limitations, a Host-based
+Hybrid intrusion detection
+                                                        Intrusion Detection system (HIDS) evaluates resources in the host, including logs, files, and folders, to identify
+Feature flattening
+Collaborative classifier
+                                                        APT attacks that routinely inject malicious files into victimized nodes. In this study, a hybrid network intrusion
+                                                        detection system that combines NIDS and HIDS is proposed to improve intrusion detection performance.
+                                                        The host data undergoes a Language Processing (NLP)-based Bidirectional Encoder Representations from
+                                                        Transformers (BERT) model from textual representation to a numerical one in order to process host data in
+                                                        a similar way to the network flow data through machine learning models. The feature flattening technique is
+                                                        applied to flatten two-dimensional host-based features that is provided by BERT into one-dimensional vectors
+                                                        so that host-based and network flow-based features can be processed by advanced Machine Learning (ML)
+                                                        models. In order to enhance HIDS effectiveness, a two-stage collaborative classifier is utilized, which applies
+                                                        two tiers of machine learning algorithms, binary and multi-class classifiers, to detect network intrusions.
+                                                        Once a binary classifier is used to detect benign samples to reduce the complexity of the original problem,
+                                                        the attack data are classified by a multi-class supervised learner to identify attack types. Hence, the overall
+                                                        performance of the two-stage collaborative model outperforms the baseline classifier, XGBoost. The proposed
+                                                        method is shown to generalize across two well-known datasets, CICIDS 2018 and NDSec-1. The performance
+                                                        of XGBoost, which represents conventional ML, is evaluated. Combining host and network features enhances
+                                                        attack detection performance (macro average F1 score) by 8.1% under the CICIDS 2018 dataset and 3.7%
+                                                        under the NDSec-1 dataset. Meanwhile, the two-stage collaborative classifier improves detection performance
+                                                        for most single classes, especially for DoS-LOIC-UDP and DoS-SlowHTTPTest, with improvements of 30.7%
+                                                        and 84.3%, respectively, when compared with the traditional ML models.
+
+
+
+1. Introduction                                                                          entire network traffic can be challenging in scenarios such as encrypted
+                                                                                         traffic or without authentication monitoring. NIDS cannot inspect en-
+    The importance of security solutions for networked systems has                       crypted network traffic, limiting its ability to detect only external
+increased with the advances in information and communication tech-                       attacks [8]. Moreover, NIDS requires improved solutions to identify
+nologies [1,2]. In the area of safeguarding network systems, consid-                     specific malicious activities, particularly APT, which often utilize ma-
+erable research and implementation efforts have been dedicated to                        licious files attached to various applications [9]. Host-based intrusion
+the exploration of Network Intrusion Detection Systems (NIDSs [3–5].
+                                                                                         detection evaluates resources in a host, including logs, files, and folders,
+ML-based NIDSs have been proven to detect prevalent and zero-day
+                                                                                         to detect attacks on hosts such as servers. HIDS provides a fine-grained
+attacks, which have also been studied in the context of defensive and
+                                                                                         solution to detect anomalous patterns internally, making it a valuable
+proactive/adversarial ML [6].
+                                                                                         tool in detecting APT [10]. HIDS also has the advantage of detecting
+    NIDS identifies suspicious activities by analyzing data from a single
+packet in captured global network traffic [7]. However, monitoring                       anomalies without analyzing or monitoring network traffic. As an
+
+
+
+     ∗ Corresponding author.
+       E-mail address: burak.kantarci@uottawa.ca (B. Kantarci).
+
+https://doi.org/10.1016/j.comnet.2024.110576
+Received 14 November 2023; Received in revised form 7 April 2024; Accepted 5 June 2024
+Available online 7 June 2024
+1389-1286/© 2024 The Author(s). Published by Elsevier B.V. This is an open access article under the CC BY-NC-ND license (http://creativecommons.org/licenses/by-
+nc-nd/4.0/).
+Z. Chen et al.                                                                                                              Computer Networks 250 (2024) 110576
+
+
+example, [11] presents a HIDS use case for securing Android mobile
+equipment. HIDSs are software components installed on observed sys-
+tems, and they scan the entire system to prevent intrusions. HIDSs
+offer rich context, enabling excellent knowledge for data processing
+and analysis [12]. Although HIDSs increase costs due to their con-
+nectivity to the server, setup of distributed clients, and collection and
+management of massive and sensitive data from host devices, they
+have recently gained attention from researchers. Industrial companies
+often implement both NIDS and HIDS to achieve promising detection
+performance and secure their systems [13].
+    In this work, we investigate intrusion detection system combin-
+ing NIDS and HIDS via utilizing network and host features together.
+Various public datasets, such as NSL KDD, KDD 99, Bot-IoT, and
+MQTTTest, are utilized in network intrusion detection research [1].
+However, there are only a limited number of public datasets that
+include host information. The CICIDS 2018 dataset [14,15] and NDSec-
+1 dataset [16], which incorporate host-based information, including
+logs detailing events and messages, have been employed in various
+intrusion detection schemes. Therefore, we selected the two datasets
+to demonstrate the method integrating network and host features and
+evaluate the proposed method. Despite the potential benefits of host-
+based information in intrusion detection, very few studies have applied
+hybrid host features and flow features together for intrusion detection
+via machine learning or deep learning models. The authors in [17]
+introduce a deep learning model named CIDS-Net to detect intrusions                           Fig. 1. An example of hybrid HIDS and NIDS system.
+using hybrid host and flow features. In this work, we propose machine
+learning-enabled intrusion detection system and an advanced two-stage
+classifier for network intrusion detection with hybrid host and flow
+                                                                                    • The process involves converting host data from textual to a nu-
+data. Furthermore, the literature demonstrates dataset pre-processing
+                                                                                      merical structure, wherein host-based features are further cate-
+in details for hybrid features, including host feature selection and host
+                                                                                      gorized into event features and message features. The efficacy
+feature flattening. Host-based content is stored as a string and trans-
+                                                                                      of the proposed hybrid intrusion detection system has been val-
+formed into a numeric array by BERT [18,19]. Event data and message
+data stored in the host are transformed separately to obtain host-based               idated through comparative analysis against state-of-the-art ma-
+features. Moreover, the transformed host features are applied data pre-               chine learning-based detection methods.
+processing techniques to reduce the size of host features and finally are           • Data flattening is a technique employed to convert multidimen-
+flattened from two-dimensional into a vector. The following step is to                sional features into a vector, facilitating their seamless integration
+combine network/flow features1 and host features and send to detec-                   into machine learning or deep learning networks for both training
+tion model, including traditional ML and the two-stage collaborative                  and testing purposes. This straightforward method simplifies the
+classifier.                                                                           transformation of host features into a vector, making them readily
+    One of the motivations behind this work is the large number of                    applicable in machine learning models.
+samples in intrusion datasets. For example, the CICIDS 2018 dataset                 • The design entails a two-stage collaborative classifier. The pro-
+contains approximately 1 million samples. Typically, the majority of                  posed novel classifier not only reduces computational complexity
+the dataset consists of benign traffic, and attack samples are a minority             but also improves the detection performance when compared to
+since only a limited number of attack points can be appropriately hid-                the baseline machine learning-based detection model.
+den (except for denial-of-service related attacks). As a result, the large
+number of benign samples increases the complexity of the intrusion                   The remainder of the article is structured as follows. Section 2
+detection system due to the increased training overhead of the ML                presents the state-of-the-art in network security, emphasizing NIDS
+models. To address this, this work leverages both network-based and              and HIDS. Section 3 introduces two public datasets, CICIDS 2018 and
+host-based intrusion detection frameworks simultaneously to take ad-             NDSec-1, and provides a sample distribution for each. In Section 4,
+vantage of both systems. A two-stage collaborative classifier is proposed        a machine learning-based approach using hybrid and network-based
+to improve intrusion detection accuracy and minimize false alarm                 features is presented for detecting network intrusions, demonstrating
+probability. Fig. 1 illustrates the proposed intrusion detection system,         the benefits of using host features alongside flow features. Section 5
+which bridges HIDS and NIDS to consider both real network traffic and            introduces a two-stage machine learning framework, which filters out
+records saved in host devices. To reduce detection system complexity             benign samples before characterizing the attack instances. Finally, the
+while maintaining detection performance, this article introduces a two-          article concludes in Section 6 by discussing future directions.
+stage collaborative classifier that comprises a binary classifier and a
+multi-classifier. The binary classifier discriminates between benign and         2. Related work
+attack instances, with all attacks sharing the same label. The multi-class
+classifier characterizes the attack instances after the binary classifier            Network security encompasses more than just communication net-
+has filtered out the benign instances. The proposed framework initially          works; it also encompasses the security of the entire cyberspace envi-
+eliminates benign traffic and then focuses on recognizing individual
+                                                                                 ronment, including the information infrastructure, application systems,
+attack categories.
+                                                                                 and data resources [20]. To achieve comprehensive network system se-
+    The main contributions of this work can be listed as below:
+                                                                                 curity, several approaches can be employed, such as firewalls, antivirus
+                                                                                 software, access control, and anti-malware [1,21–24]. For instance, the
+  1
+     We use network and flow feature to represent the same feature in this       study in [25] introduces a hardware/software-based firewall that plays
+work that are extracted from network traffic data and different with host        the role of monitoring and filtering traffic packets seeking to enter or
+features.                                                                        exit a safeguarded private network. The authors in [26] present novel
+
+                                                                             2
+Z. Chen et al.                                                                                                            Computer Networks 250 (2024) 110576
+
+
+methodologies, including emulation techniques and heuristic scanning             and analyzing containerized environments (e.g., system calls), that is
+to detect viruses. Current antivirus software products are designed with         helpful to make accurate prediction for attacks. In [45], the authors
+including but not limited to static and dynamic heuristics, machine              investigate observing information from system logs, whic

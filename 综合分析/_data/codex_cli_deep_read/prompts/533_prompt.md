@@ -1,0 +1,1202 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [533] Secure and Trustworthy Data Management Mechanism for Dance-Consumer Electronics in AIoT
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：533
+题名：Secure and Trustworthy Data Management Mechanism for Dance-Consumer Electronics in AIoT
+年份：2024
+DOI：10.1109/tce.2024.3471573
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2024.3471573.pdf
+已有粗分类：IoT、车联网、工业互联网与边缘安全
+二级关联：无
+相关性：中相关，分数 9
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\533.txt
+- 原始字符数：60134
+- 本次发送字符数：60134
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+1970
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 1, FEBRUARY 2025
+
+Secure and Trustworthy Data Management
+Mechanism for Dance-Consumer
+Electronics in AIoT
+Hua Wei, Junfeng Miao , Jianhui Lv , Chien-Ming Chen , Senior Member, IEEE,
+Saru Kumari , Senior Member, IEEE, and Mohammed Amoon
+
+Abstract—The integration of Artificial Intelligence (AI) with
+the Internet of Things (IoT) marks a considerable advancement
+in data collection and utilization across various sectors. In the
+realm of complex scenarios, dance-consumer electronics (DCE)
+employ this technology to provide detailed and trustworthy
+documentation and three-dimensional digital capture of dancers’
+movements. However, the handling of sensitive physiological
+data poses significant security and trustworthiness risks in such
+consumer electronics, including potential breaches that could
+be exploited for location tracking and behavior prediction.
+To address the challenges of encrypted traffic detection and
+the need for trustworthiness in IoT, this paper introduces the
+AI-Enhanced Anonymous Traffic Filtering Framework, which
+features terminal anonymization. This framework employs the
+Inception-SelfAttBiGRU model to filter malicious traffic and
+includes a credibility-based filtering mechanism prior to this
+module to reduce network load and enhance system efficiency
+for those consumer electronics. The evaluation concentrated on
+two main areas: assessing the access credibility-based filtering mechanism’s ability to identify and block malicious DCE
+endpoints and evaluating the effectiveness of the encrypted
+traffic classification technique. Using simulated environments
+and public datasets, this comprehensive assessment demonstrated
+that the dual-layer protection mechanism effectively detects and
+blocks malicious traffic, thereby enhancing system security and
+maintaining network integrity.
+Index Terms—AIoT, consumer electronics, security and trustworthiness, encrypted traffic filtering.
+
+Received 29 April 2024; revised 21 July 2024; accepted 25 September
+2024. Date of publication 1 October 2024; date of current version
+12 June 2025. This work was supported by the Researchers Supporting Project
+number (RSPD2024R968), King Saud University Riyadh, Saudi Arabia.
+(Corresponding authors: Hua Wei; Jianhui Lv.)
+Hua Wei is with Department of Music, Xinxiang University, Xinxiang
+453003, China (e-mail: weihua36@xxu.edu.cn).
+Junfeng Miao is with the College of Computer and Information
+Engineering, Henan Normal University, Xinxiang 453007, China (e-mail:
+miaojunfengwu@gmail.com).
+Jianhui Lv is with the Department of Network, Peng Cheng Laboratory,
+Shenzhen 518057, China (e-mail: lvjh@pcl.ac.cn).
+Chien-Ming Chen is with the School of Artificial Intelligence, Nanjing
+University of Information Science and Technology, Nanjing 210044, China
+(e-mail: chienmingchen@ieee.org).
+Saru Kumari is with the Department of Mathematics, Chaudhary Charan
+Singh University, Meerut 250004, India (e-mail: saryusiirohi@gmail.com).
+Mohammed Amoon is with the Department of Computer Science,
+Community College, King Saud University, Riyadh 11437, Saudi Arabia
+(e-mail: mamoon@ksu.edu.sa).
+Digital Object Identifier 10.1109/TCE.2024.3471573
+
+I. I NTRODUCTION
+HE INTEGRATION of Artificial Intelligence (AI) with
+the Internet of Things (IoT), commonly referred to
+as AIoT, represents a significant advancement in how data
+is collected and utilized across various sectors [1]. AIoT
+systems harness a wide array of sensors to collect realtime data–including environmental, operational, business, and
+monitoring data–which is then intelligently processed and
+analyzed at the device, edge, or cloud levels using data
+mining and machine learning techniques [2]. This technology has increasingly permeated national infrastructure and
+public services, impacting fields ranging from science to
+the humanities, including the performing arts such as dance.
+In dance, AIoT technologies facilitate comprehensive and
+precise documentation and three-dimensional digital capture
+of dancers’ movements, enabling detailed analysis of their
+techniques and experiences to derive patterns and insights [3].
+The convergence of AIoT with dance not only enhances the
+way performances are executed and experienced but also opens
+new avenues for exploring interactive narrative structures in
+digital dance arts [4]. This paper defines such applications
+within typical dance scenarios as dance-consumer electronics (DCE), which include devices like smart dance shoes,
+motion monitoring wristbands, fitness trackers, motion capture
+systems, and interactive dance technology systems.
+The DCE system utilizes IoT sensing devices to collect
+user data, and uploads it to local or cloud servers for analysis and processing [5]. However, the collection of sensitive
+physiological data such as heart rate, movement speed, and
+body temperature presents significant security and trustworthy
+challenges [6]. These data are intimately tied to an individual’s
+health and personal details, making unauthorized access a
+serious threat that could lead to trustworthiness breaches and
+potential misuse for purposes such as location tracking and
+behavior prediction. To mitigate these risks, encryption of data
+traffic has become a common practice, ensuring that even
+if attackers intercept the data, they cannot read or analyze
+the sensitive information. This not only shields the data from
+prying eyes but also significantly reduces the potential for data
+misuse. Moreover, many of these devices lack robust security
+measures. Outdated software can exacerbate security flaws,
+leaving systems susceptible to exploitation [7]. The consequences of such vulnerabilities can be severe; compromised
+
+T
+
+c 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+1558-4127 
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+WEI et al.: SECURE AND TRUSTWORTHY DATA MANAGEMENT MECHANISM FOR DCE IN AIoT
+
+devices might be hijacked to dispatch malicious traffic, leading
+to Distributed Denial of Service (DDoS) attacks that disrupt
+network communication and system operations [8]. This could
+severely impact the performance monitoring systems crucial
+in dance environments.
+Classifying and detecting malicious encrypted traffic
+effectively mitigates security challenges in Dance-consumer
+electronics [9]. There are two main technological approaches
+for detecting encrypted traffic: cryptographic-based malicious
+traffic identification and artificial intelligence (AI)-based malicious traffic identification [10]. Cryptographic identification
+utilizes the distinct statistical features manifested by ciphertexts produced under different encryption schemes to detect
+malicious traffic. This method is particularly effective for traffic with known encryption characteristics but less so for traffic
+with unknown features. On the other hand, AI-based identification involves extracting features from target encrypted
+traffic, using these features to train classification models, and
+optimizing the models to achieve high detection accuracy. This
+approach can effectively detect malicious traffic regardless of
+the encryption algorithm used, providing a robust solution to
+the problem of unknown encrypted traffic.
+This paper introduces an AI-enhanced anonymous traffic filtering framework tailored to address the challenges
+of detecting encrypted malicious traffic and preserving the
+trustworthiness of traffic characteristics. At the core of this
+framework is the Inception-SelfAttBiGRU model, which is
+specifically chosen for its robust ability to handle the complexities of encrypted traffic. This model transforms raw traffic
+data into traffic images, effectively utilizing both spatial and
+temporal feature extraction techniques. The Inception module
+within this model is particularly well-suited for processing
+traffic images at varying scales, allowing for the extraction
+of intricate patterns with minimal computational overhead.
+This capability is crucial for real-time processing in environments where security is a priority. Complementing this,
+the Self-Attentive BiGRU component is adept at capturing
+temporal dependencies and nuances in traffic flow. Together,
+these components process the traffic images to extract deep
+learning features, resulting in protocol-independent feature
+vectors that are critical for detailed encrypted traffic analysis.
+To enhance security and operational efficiency, the framework also integrates access anonymization management and
+a credibility filtering mechanism. These components work
+by anonymizing endpoint identities and rigorously evaluating the credibility of each endpoint. Traffic from sources
+deemed untrustworthy is effectively blocked, thereby reducing
+the network load and increasing the overall effectiveness
+of the system. This strategic blocking of traffic not only
+fortifies the security of the network but also ensures that
+only credible, verified traffic is processed, aligning with the
+framework’s goal to maintain the integrity and trustworthiness
+of network data. The primary contributions of this paper are
+threefold:
+1) Introduction of the AI-Enhanced Anonymous Traffic
+Filtering Framework: This framework leverages the
+Inception-SelfAttBiGRU model to transform raw traffic
+into traffic images for encrypted traffic analysis. It
+
+1971
+
+provides a novel approach to detect encrypted malicious
+traffic using deep learning techniques.
+2) Integration of Access Anonymization and Credibility
+Filtering: The framework integrates access anonymization management and a filtering mechanism based on
+access credibility, which obscures endpoint identities
+and evaluates the consistency of identity verification
+and behavior with the access context. This dual-layer
+protection mechanism enhances the system’s security
+and efficiency.
+3) Comprehensive Evaluation and Validation: The effectiveness of the proposed framework is evaluated using
+both simulated environments and publicly available
+datasets. The experimental results demonstrate that the
+dual-layer protection mechanism can effectively detect
+and block malicious traffic, thus improving system
+security and ensuring the integrity of the network.
+This paper is structured as follows: Section II reviews
+related work. Section III outlines our AI-enhanced anonymous
+traffic filtering framework, including its three main modules:
+access anonymization, credibility filtering, and cryptographic
+traffic filtering. Section IV assesses the framework’s effectiveness using simulations and public datasets. Section V
+concludes our paper.
+II. R ELATED W ORK
+A. Access Control for IoT Devices
+Access control for IoT devices is increasingly crucial
+as the Internet of Things expands and smart device usage
+proliferates, accentuating the need for robust trustworthiness protection. Access control mechanisms safeguard against
+unauthorized access and operations by delineating permissions
+across varying user levels, thus securing sensitive data effectively. Reference [11] highlights a smart contract-based role
+access control model that supports autonomous, decentralized
+application functioning and responsive resource management,
+enhancing access control flexibility and security. However,
+improvements in the granularity and dynamism of access
+permissions are suggested. Ateniese et al. [12] developed a
+secure distributed storage solution using Proxy Re-Encryption
+(PRE), allowing only data owners with a master private
+key to access encrypted files. This mechanism’s ability to
+transform ciphertext into forms readable by designated users
+has led to its application across various contexts, as noted in
+studies [13], [14], [15]. Further security enhancements have
+been realized, with Libert and Vergnaud [16] developing a
+scheme resistant to Replayable Chosen Ciphertext Attacks
+(RCCA). In the context of IoT, Hong and Sun [17] devised an
+attribute-based PRE scheme that incorporates a key isolation
+mechanism, ensuring the forward security of user private keys
+and re-encryption keys, which facilitates secure and finely
+granulated data sharing. In another significant contribution,
+Kim and Lee [18] proposed a method for efficiently managing
+and sharing data on lightweight devices using proxy reencryption, effectively reducing the computational load and
+enhancing the functional capabilities of networks with limited
+resources.
+
+1972
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 1, FEBRUARY 2025
+
+B. Encrypted Traffic Detection and Classification
+Encryption, a technology that enhances the data’s
+information content while reducing predictability, affects the
+statistical characteristics of the data without altering its length,
+thereby increasing its randomness [19]. Academically, this
+increase in randomness is exploited to distinguish between
+encrypted and non-encrypted traffic effectively. Niu et al. [20]
+proposed the Heuristic Statistical Testing (HST) method, utilizing various randomness tests to measure traffic randomness,
+with the C4.5 decision tree classifier for detecting encrypted
+traffic.
+In parallel, machine learning and deep learning have revolutionized fields such as computer vision and natural language
+processing and have shown substantial benefits in encrypted
+traffic classification. Wang et al. [21] leveraged deep learning’s end-to-end learning capabilities for automated feature
+selection using a 1D-CNN. Song et al. [22] innovated further
+by integrating Text-CNN for classification, addressing the
+hierarchical nature of encrypted traffic and introducing a novel
+loss function and category weight distribution to smooth the
+classification process. Additionally, the ICLSTM model by
+Lu et al. [23], which merges Inception CNN with LSTM,
+exemplify advanced integrations for enhanced performance.
+Xie et al. [24] incorporated the Self-attention mechanism with
+CNN to refine feature selection, demonstrating superior efficacy compared to conventional models. Lotfollahi et al. [25]
+and Izadi et al. [26] respectively utilized stacked autoencoders
+and convolutional neural networks to achieve high recall
+rates in network traffic classification tasks, highlighting the
+effectiveness of deep learning structures in handling complex
+classification scenarios.
+Furthermore, encrypted malicious traffic detection has also
+progressed with methods like those by Yu et al. [27] using
+Multi AutoEncoders for feature extraction and detection. De
+Lucia and Cotton [28] and Yang et al. [29] also contributed
+significantly, using SVM, CNN, and Bayesian neural networks
+to handle the nuanced challenges of encrypted malicious traffic
+detection, thereby advancing the field towards more reliable
+and effective solutions. Zeng et al. [30] employs a hybrid
+deep learning model combining LSTM and CNN for enhanced
+detection capabilities.
+Our framework integrates deep learning and access control to address encrypted traffic detection and secure
+access management. Unlike previous works, our AI-enhanced
+anonymous traffic filtering framework incorporates the
+Inception-SelfAttBiGRU model to transform raw traffic into
+traffic images for encrypted traffic analysis, combined with
+terminal anonymization and access credibility filtering to
+enhance security and efficiency. This approach leverages deep
+learning strengths and robust access control for IoT environments.
+III. AI-E NHANCED A NONYMOUS T RAFFIC
+F ILTERING F RAMEWORK
+A. Overview of Our Method
+To tackle the identified security and trustworthiness issues,
+this study introduces an AI-enhanced anonymous traffic
+
+filtering framework, aimed at strengthening the trustworthiness
+of data in Dance-Consumer Electronics in AIoT environments. This method involves anonymizing endpoint identities
+to obscure traffic characteristics from the detection systems,
+crucial for identifying malicious activities within encrypted
+communications. The framework employs a dual-layered strategy that integrates access anonymization, evaluation of device
+credibility, and advanced deep-learning techniques to filter
+cryptographic traffic effectively.
+The proposed framework includes three modules in total,
+namely the access anonymization module, credibility filtering module, and cryptographic traffic filtering module.
+The first module, access anonymization, assigns anonymized
+identities to each DCE endpoint, creating a secure and
+trustworthy environment for traffic detection. This approach
+prevents adversaries from inferring the identities of DCE
+endpoints based on their traffic patterns, thereby safeguarding
+traffic trustworthiness. The second module, credibility filtering, involves assessing the credibility of source endpoints.
+This process blocks traffic from sources deemed untrustworthy, effectively filtering out malicious traffic at its origin.
+Credibility is evaluated based on how well the endpoint’s
+identity verification and its behavior conform to the access
+context. For traffic stemming from endpoints of moderate
+credibility, challenging to assess, redirection to the third
+module for filtering the uncertain traffic. The third module
+utilizes the Inception-SelfAttBiGRU model. It transforms raw
+traffic into images, extracts spatial and temporal features using
+Inception modules and BiGRU with Self-attention, respectively, and classifies these into protocol-independent vectors
+via a softmax classifier for detecting encrypted malicious
+traffic efficiently. The Inception module is ideal for this task
+due to its ability to process images at varying scales and extract
+intricate patterns without extensive computational costs, which
+is critical for real-time processing in security-sensitive environments. Meanwhile, the Self-Attentive BiGRU component
+enhances the model by providing the capability to capture
+temporal dependencies and nuances in traffic flow, which are
+often missed by conventional convolutional networks. The
+encrypted traffic detection service can be performed by one or
+more servers within the scenario that possess strong computing
+capabilities, thereby alleviating the computational burden on
+the DCE devices.
+B. Filtering Mechanism Based on Terminal Access
+Credibility
+1) Concealed Access for Terminals: Concealed access for
+DCE endpoints facilitates the protection against malicious
+inference of their identities based on traffic characteristics,
+while preserving the integrity of these characteristics. The
+process of anonymizing endpoint access is bifurcated into two
+distinct phases: the generation of anonymous identities and
+their subsequent verification. This section details the creation
+of these concealed identities and their authentication process
+to ensure secure and anonymous access.
+Creation of Concealed Terminal Identities. Given
+that servers often display semi-trustworthy and inquisitive
+
+WEI et al.: SECURE AND TRUSTWORTHY DATA MANAGEMENT MECHANISM FOR DCE IN AIoT
+
+behaviors, demonstrating interest in decrypting and examining
+traffic flows and possibly circumventing certain safeguards
+to gain direct access to unprocessed data. Thus, to maintain
+a securely and trustworthily anonymous setting, the servers,
+within the identity creation and confirmation cycle, should
+be restricted to serving merely as conduits for message
+relay. Anonymous identity creation using proxy re-encryption
+consists of the following five steps.
+Step 1: Each participant begins by generating a unique
+random number n, which serves as a temporary anonymous
+parameter. The participant then constructs an anonymity
+request in the form
+R(TID ) = ETp (nTID STs (n)tR )rT−A ,
+where Tp denotes the participant’s public key, TID the true
+identity, STs (n) the signature over n, and rT−A the reencryption key derived from the participant’s private key Ts
+and the server’s public key Ap , tR is the timestamp indicating
+when the request is made.
+Step 2: Upon receiving the request, the server uses rT−A to
+re-encrypt the data, obtaining R(TID )r , and forwards this to the
+anonymity server. The anonymity server decrypts the payload
+with its private key As and verifies whether n is listed in its
+database of anonymous parameters.
+Step 3: If n is not listed, the anonymity server creates a new
+anonymous identity
+PID = h(TID n),
+and logs this identity alongside the real identity in a private
+blockchain accessible solely to the anonymity server. If n is
+found in the database, indicating a repeat, the anonymity server
+issues a reset command to the participant to select a different
+n, ensuring the uniqueness of each anonymous identity.
+Step 4: Next, the anonymity server packages the anonymous identity PID along with its digital signature SAs (PID )
+and a timestamp ts into a response, encrypts it using its
+public key Ap , and attaches the re-encryption key rA−T ,
+which is generated using the server’s private key Ds and the
+anonymity server’s public key Ap , before sending it back to
+the server. This package confirms the identity is generated by
+the anonymity server. The encrypted response is structured as
+follows:
+S(PID ) ≡ EAp (PID SAs (PID )ts )rA−T
+Step 5: The server then broadcasts the encrypted response
+S(PID )r , which has been re-encrypted using rA−T . Each participant uses their private key Ts to decrypt the response and
+retrieve their unique anonymous identity PID .
+The creation phase ensures that each terminal is assigned a
+unique anonymous identity, preventing unauthorized tracking
+or inference of terminal behavior. Once identities are created, the next critical step is to authenticate these identities
+to confirm their legitimacy and grant access to network
+resources.
+Authentication of Concealed Terminal Identities. The
+process for authenticating the anonymous terminal is shown
+as follows.
+
+1973
+
+Step 1: The access terminal initiates the process by sending
+a anonymous identity verification request
+
+
+RV (PID ) = PID STs (PID )tRv rT−A
+to the server. Here, PID represents the terminal’s anonymous
+identity, STs (PID ) is the signature over PID by the terminal,
+rT−A is a re-encryption key generated using the terminal’s
+private key Ts and the identity of the target server, and tRv is
+the timestamp for the authentication request.
+Step 2: The server uses the re-encryption key rT−A to
+calculate the re-encrypted ciphertext RV (PID )r and forwards
+it to the anonymous server. The anonymous server decrypts
+RV (PID )r using its private key As and searches for PID in the
+anonymous identity mapping table.
+Step 3: If PID is found in the table, the verification result
+is set as VPID = 1. The anonymous server then responds with
+
+
+SV (VPID ) ≡ EDp VPID SAs (VPID )tSV
+where Dp is the public key of the server, SAs (VPID ) is the
+signature on the verification result, and tSV is the response
+time. If PID is not found, VPID = 0, and the anonymous server
+sends a rejection response to the terminal.
+Step 4: The server decrypts SV (VPID ) using its private key
+Ds to obtain the verification result VPID . If VPID = 1, the
+server issues an access token to the terminal, enabling it to
+join the current network with this token.
+2) Assessment of Trust for Terminal Access: The evaluation
+of a terminal’s access reliability involves an analysis of its
+access context and prior activities, along with how well the
+terminal’s anonymous verification and environmental interactions are understood. This process aims to preclude malicious
+traffic from the outset. Terminals deemed highly reliable are
+considered to transmit credible traffic, which is allowed to
+pass. In contrast, terminals with low reliability are presumed to
+be sources of malicious traffic and are consequently blocked.
+Quantification of Access Trust. To streamline the assessment of access trust, the terminal’s trust score is normalized to
+the [0, 1] interval. The Beta probability density function stands
+out for its computational ease, adaptability, and efficiency,
+making it an apt model for trust calculation, represented as
+follows:
+(α + β) α−1
+θ
+(1)
+Beta(α, β) =
+(1 − θ )β−1
+(α)(β)
+The parameter θ quantifies the action probability, which is
+the likelihood of a device engaging in a specific behavior. It
+lies within the open interval (0,1). The parameters α and β are
+critical to shaping this probability distribution. They represent
+the number of successful and unsuccessful anonymous identity
+verifications, respectively. Both parameters must be positive.
+Terminals are subjected to anonymous identity verification,
+which forms the basis for evaluating their initial credibility. If
+the anonymous identity validation succeeds for the ith terminal
+ , and not for V  , then the foundational trust level
+user Vi1
+i2
+of IoT terminals is derived from a cumulative statistic of
+anonymous validations, expressed as:
+TBASEi =
+
+Vi1 + 1
+Vi1 + Vi2 + 2
+
+(2)
+
+1974
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 1, FEBRUARY 2025
+
+Anonymous identity verification serves as a fundamental
+factor in assessing the reliability of IoT terminal access. For
+the i-th terminal, let Vi1 and Vi2 represent the counts of
+successful and failed anonymous verifications, respectively.
+This formula adjusts for extreme values by incorporating
+a pseudocount, enhancing stability in reliability assessments.
+However, this base reliability metric may exhibit delays in
+detecting compromised terminals, as it does not adapt quickly
+to sudden changes in device behavior, potentially keeping the
+trust index within a narrow fluctuation range for extended
+periods. In dynamic environments, such as those involving
+dance-consumer electronics (DCE) terminals, trust should
+evolve with user interactions and environmental changes, not
+remain static.
+To accommodate the dynamic nature of IoT environments,
+we refine the evaluation method by introducing an access
+statistical count c(k), which accumulates with each device
+interaction, reflecting the device’s growing familiarity with its
+environment:
+c(k) = c(k − 1) +
+
+1
+τ
+
+(3)
+
+where τ represents the access threshold, and k is the number of
+access attempts. This count is reset to zero once the threshold
+τ is reached, ensuring responsiveness to recent access patterns.
+Additionally, we define trust (fp ) and suspicion (fd )
+coefficients to capture the nuances of terminal interactions over
+time. These coefficients are computed as follows:
+fp =
+fd =
+
+n−1
+
+k=1
+n−1
+
+
+(e(k) · c(k))
+
+(4)
+
+(d(k) · c(k))
+
+(5)
+
+k=1
+
+where e(k) measures the similarity between the current and
+historical access environments, and d(k) measures their differences. These metrics are adjusted based on the degree of
+overlap with historical data, where m is the count of similar
+past accesses.
+The comprehensive access credibility TCOMPi of the
+terminal is then adjusted by the threat attenuation factor ti ,
+calculated as:
+
+
+ n 2
+1
+
+ti =
+fpj + fdj2
+(6)
+mean(Fi )
+j=1
+
+where Fi represents the historical set of trust and suspicion
+coefficients for the i-th terminal. This factor sensitively adjusts
+the base trust index based on the variance in access conditions,
+as reflected in the coefficients.
+The final credibility index is expressed conditionally,
+accounting for the attenuation:
+
+Vi1
+· e−ti , if TBASEi > ti
+(7)
+TCOMPi = Vi1 +Vi2 +2
+0,
+otherwise
+This approach allows for a more dynamic adjustment of
+trust based on real-time data, making it more suitable for
+
+Fig. 1.
+
+System Architecture of Inception-SelfAttBiGRU Model.
+
+environments where DCE devices interact frequently and
+under varying conditions.
+Thus, the traffic filtering mechanism based on terminal
+access credibility can be summarized in three main steps:
+Step 1: Initiate by verifying the terminal’s anonymous identity. Extract the signature STs (PID ) from encrypted traffic and
+authenticate it through an anonymous server. If authentication
+fails, block the terminal’s traffic and increment the failure
+count: Vi2 = Vi2 + 1. If successful, increment the success
+count: Vi1 = Vi1 + 1.
+Step 2: Determine the terminal’s comprehensive credibility
+TCOMPi . Start by computing the base credibility TBASEi using
+the outcome of the identity verification. Then, pull historical
+access data from the record table Yc , and evaluate how
+the current access context compares to past data. Calculate
+the trust coefficient fp and suspicion coefficient fd based on
+whether the current environment is new, the same, or partially
+overlapping with historical ones, assigning e(k) and d(k)
+accordingly. Calculate the threat attenuation factor ti based on
+these coefficients to finalize TCOMPi .
+Step 3: Assess whether to allow the traffic through or
+forward it to the next filtering layer. If TCOMPi falls below a set
+threshold δ, the traffic is deemed trustworthy and is permitted
+to proceed. Otherwise, it is escalated for further scrutiny.
+C. Encrypted Traffic Filtering Mechanism Based on Deep
+Learning
+Following the terminal access credibility assessment, which
+blocks potentially malicious terminals, this section introduces
+a complementary approach focusing on raw network traffic.
+The deep learning-based encrypted traffic filtering mechanism
+leverages advanced neural architectures to enhance security
+against both identity-based and content-based threats. This
+paper introduces the Inception-SelfAttBiGRU model, which
+transforms raw network traffic into traffic images using packet
+arrival time and packet size as axes. These images are then
+processed through a deep learning model for feature extraction.
+Spatial features are captured using Inception modules, while
+temporal features are extracted with BiGRU and Self-attention
+mechanisms. The resulting protocol-independent feature vectors are classified using a fully connected layer and a softmax
+classifier.
+
+WEI et al.: SECURE AND TRUSTWORTHY DATA MANAGEMENT MECHANISM FOR DCE IN AIoT
+
+1) Data Processing: The process of the data processing employed converts traffic data into two-dimensional
+histograms, providing a visual representation of the data
+distribution and a more intuitive understanding of its characteristics. This paper positions time on the horizontal axis
+and frame size of traffic data on the vertical axis, with
+frame direction indicated by varying shades, which helps
+in observing traffic distribution over different time periods,
+differences in upstream and downstream frame distribution,
+and the relationship between traffic volume and time. This
+method is superior to single-dimensional traffic sequence
+analysis as it captures the density and directional differences in
+frame sizes, revealing the multidimensional complexity of the
+data. The two-dimensional histogram offers a comprehensive
+description of data distribution, detailing range, concentration,
+and density patterns, which enhances feature representation
+capability. This approach effectively captures the distribution
+characteristics and trends of frame sizes in link-layer encrypted
+traffic, laying a robust foundation for further identification and
+classification. The specific steps in the processing workflow
+are as follows:
+Data Cleaning. The data cleaning step is critical for ensuring the accuracy and reliability of the subsequent analysis.
+Initially, this process involves removing corrupted or incomplete data frames from the dataset. Any frames that do not
+conform to expected traffic protocols or that exhibit anomalies
+in their metadata, such as timestamps or source/destination
+addresses, are discarded. This step also includes the normalization of frame sizes and timestamps to ensure uniformity across
+the dataset. Furthermore, outliers that significantly deviate
+from typical data patterns are identified and evaluated to
+determine whether they represent genuine traffic phenomena
+or data collection errors.
+Traffic Segmentation. Data frames collected with the
+same source and destination addresses are grouped into
+the same data stream. An “observation window” is used
+to represent a segment of the stream for statistical analysis, extracting features from each window separately.
+The observation window, defined as π , maps the traffic
+time series as T1 , T2 , . . . , Tπ , Tπ +1 , . . . , TN . Without sliding windows, traffic data are divided into segments such
+as {T1 , T2 , . . . , Tπ }, {Tπ +1 , Tπ +2 , . . . , T2π } and so forth. The
+use of sliding window techniques, where segments such as
+{T1 , T2 , . . . , Tπ }, {T2 , T3 , . . . , Tπ +1 } are analyzed, allows for
+a richer sampling of features while ensuring variability among
+samples. The chosen time window is 30 seconds, with a sliding
+step of 3 seconds.
+Histogram Generation. Each time window is used to
+extract data frame sizes and their arrival times relative to the
+first frame, serving as the horizontal and vertical coordinates,
+respectively. Traffic originating from mobile devices to routers
+is defined as upstream and represented by positive values,
+while downstream traffic to mobile devices is represented
+by negative values. Normalization is applied to map frame
+sizes between −50 and +50, and time windows between 0
+and 100, resulting in a 100x100 two-dimensional histogram.
+Each cell represents the count of frames with a specific size
+during the corresponding time interval, with the sum of all
+
+1975
+
+cells representing the total number of frames captured in that
+30-second sample.
+2) Spatial Feature Extraction Using the Inception Module:
+Convolutional Neural Networks (CNNs) are deep neural
+network models designed to process data with a grid-like
+topology. Traditional CNNs often increase network depth to
+extract complex features, which requires extensive parameters
+and computational resources. This approach leads to bulky
+models that are inefficient in practical applications. Moreover,
+they may fail to capture multi-level features within the input
+data, limiting model performance. The Inception module
+addresses these limitations by using convolutions at various
+scales to achieve nuanced feature extraction across different
+levels of abstraction.
+In addition to the multi-scale convolutional architecture, this paper enhances the Inception module with Batch
+Normalization (BN), aimed at mitigating issues like vanishing gradients, exploding gradients, and speeding up network
+convergence. BN normalizes the input layers by adjusting the
+input distributions to a standard form, maintaining a stable
+distribution across the neural network’s layers which improves
+both the training efficiency and generalization of the model.
+Given a batch of input data x1 , x2 , . . . , xm where m denotes
+the batch size, the normalization process involves calculating
+the mean μ and variance σ 2 for the inputs to a layer,
+normalizing these inputs, and then applying a scale and shift
+transformation. This transformation uses trainable parameters
+γ and β to adjust the data, as outlined in Equations (8)-(11),
+where is a constant.
+m
+1
+xi
+(8)
+μ=
+m
+i=1
+
+m
+1
+2
+σ =
+(xi − μ)2
+m
+
+(9)
+
+i=1
+
+xi − μ
+x̂i = √
+σ2 +
+yi = γ xi + β
+
+(10)
+(11)
+
+Following normalization, data is processed through the
+ReLU activation function, defined in Equation (12). This
+function applies a simple threshold to the input, enhancing
+computational speed in practical applications, especially for
+large-scale deep neural networks.
+
+0, if x ≤ 0
+f (x) =
+(12)
+x, if x > 0
+3) Temporal Feature Extraction Using the SelfAttBiGRU:
+While the Inception network adeptly learns distributed feature
+representations across different scales in parallel, it does not
+adaptively adjust inter-channel weights and often suffers from
+significant discrepancies in the relevance of the feature maps
+generated by each branch. This can lead to improper feature
+selection.
+To leverage both the temporal and spatial features of traffic
+images, Recurrent Neural Networks (RNNs) are employed
+for temporal feature extraction. However, traditional RNNs
+struggle with vanishing gradients and cannot retain long-term
+information effectively. The Gated Recurrent Unit (GRU), an
+
+1976
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 1, FEBRUARY 2025
+
+advanced version of the RNN, introduces gate mechanisms
+that control information flow between hidden states, thus
+alleviating the issues of gradient explosion and vanishing in
+RNNs. To fully harness temporal features from both preceding
+and succeeding contexts, Bidirectional Gated Recurrent Units
+(BiGRU) are utilized.
+Furthermore, considering the varying importance of each
+packet in session traffic, a Self-attention mechanism is integrated on top of the BiGRU model to calculate weights for the
+outputs of the last hidden layer through weighted summation.
+This enhances the accuracy and efficiency of the model. The
+structure of the BiGRUSelf-attention model comprises four
+main layers, which are input layer, BiGRU layer, hidden layer
+and self-attention layer. Initially, features extracted by the
+Inception module are input as en . These features are fed into
+both forward and backward GRU cells of the BiGRU layer to
+extract temporal features. Each input thus generates a forward
+←
+−
+−
+→
+hidden output h n and a backward hidden output h n . For
+self-attention layer, the forward and backward hidden output
+are added firstly.
+−
+→
+←
+−
+(13)
+hn = h n ⊕ h n
+This output forms the input vector H = [h1 , h2 , h3 , . . . , hn ]
+for the Self-attention layer, where Q, V, and K values are
+computed:
+Q = H × WQ
+V = H × WV
+
+(14)
+(15)
+
+K = H × WK
+
+(16)
+
+Attention weights are then calculated using the following
+equation:
+a = softmax
+
+Q · KT
+√
+Dk
+
+(17)
+
+Here, Dk represents the dimension of either the query vector
+Q or the key vector K. The final output is obtained as follows:
+hn =
+
+N
+
+
+vj · aj
+
+(18)
+
+j=1
+
+The combination of BiGRU and Self-attention mechanisms
+successfully extracts temporal features from the traffic images.
+4) Encrypted Traffic Classification: This paper proposes an
+encrypted traffic classification model that integrates Inception
+networks with BiGRU Self-attention mechanisms. The model
+begins with preprocessing two-dimensional histogram matrices
+of the traffic data which are then inputted into the model for
+training. Initially, two sets of convolution and pooling layers
+extract primary features from the input images, distributing
+global information across multiple local feature matrices. This
+setup enables the extraction of learned image features directly
+from input images. Subsequent layers consist of several
+Inception modules that process these feature maps. Differentsized convolutional kernels operate in parallel within these
+modules to capture both detailed and global information from
+the two-dimensional histograms, enhancing the perception of
+spatial features related to data frame size, direction, and
+
+arrival time. Additionally, SelfAttBiGRU module can aid in
+the accurate recognition and selection of key attributes. An
+adaptive average pooling operation then reduces the spatial
+dimensions of the feature maps to 1x1, creating a global
+feature representation. Finally, the Flatten layer transforms
+the multi-dimensional feature tensor into a one-dimensional
+vector. This vector feeds into a fully connected neural network
+that classifies the encrypted traffic. To enhance the model’s
+generalization ability and robustness, a dropout layer is
+incorporated, which randomly deactivates some neurons to
+reduce the model’s dependency on specific neurons, effectively
+preventing overfitting. Together, these components form a deep
+learning network model capable of effectively distinguishing
+between malicious and benign traffic samples. For encrypted
+traffic that is challenging to classify based on access credibility
+assessments alone, this model can classify encrypted traffic
+by combining the Inception module and the SelfAttBiGRU
+module, enabling effective security and trustworthy for DCE
+terminals.
+IV. E XPERIMENTAL E VALUATIONS
+A. Experimental Settings
+To evaluate the effectiveness of the methodologies described
+herein, experimental analyses are conducted on a trustworthy
+traffic filtering framework to assess its capability in detecting
+malicious encrypted traffic. The evaluation comprised two
+primary components: initially, the access credibility of DCE
+endpoints is examined to ascertain the efficacy of the proposed
+method in identifying malicious DCE endpoints. Subsequently,
+the performance of the encrypted traffic classification method
+is appraised. The experiments utilized a hardware setup featuring an Intel Core i7-10700 processor, 16 GB of RAM, and
+the Windows 10 operating system. The deep learning model
+employed is based on Pytorch 1.7.0 and accelerated using an
+NVIDIA RTX3090 GPU.
+A simulated environment involving a multi-person dance
+scenario, such as a dance troupe, is used to evaluate the
+terminal detection scheme based on credibility. The scenario
+involved 400 DCE terminals, aimed at thoroughly documenting and accurately capturing the dancers’ movements
+and physiological states. To assess system resilience against
+malicious attacks, 35% of the DCE devices are configured
+as dishonest terminals, simulating control by attackers. It is
+hypothesized that these devices would engage in malicious
+traffic from the 40th of 120 communication rounds. A credibility threshold of δ=0.4 is established.
+For the performance evaluation of the deep learningbased encrypted traffic classification method, we conducted
+experiments using the ISCX-VPN-nonVPN dataset from the
+Canadian Institute for Cybersecurity. This dataset includes
+seven types of session traffic and their encrypted counterparts using protocol encapsulation. The sessions encompass
+a diverse range of applications: Email-VPN (emails sent
+via SMTP and received through POP3 or IMAP), ChatVPN (various instant messaging apps), Streaming-VPN
+(streaming media services), File Transfer-VPN (file sharing
+under multiple protocols), VOIP-VPN (Voice Over IP calls),
+
+WEI et al.: SECURE AND TRUSTWORTHY DATA MANAGEMENT MECHANISM FOR DCE IN AIoT
+
+1977
+
+Fig. 3. Experimental Results of Our Method under Different Window Sizes.
+Fig. 2. Suppression of Malicious Traffic Using Different Access Credibility
+based-Filtering Mechanisms.
+
+and P2P-VPN (peer-to-peer file sharing via protocols like
+Bittorrent). The initial category of Browsing-VPN, characterized by traffic generated through Web browsing, is excluded
+from the evaluations due to the high variability and nondistinctive patterns of browsing behavior, which often overlap
+with other categories, leading to unclear classification boundaries compared to other categories. The study is hence limited
+to the six remaining types of encrypted session traffic. For the
+experimental validation, 30% of the data is randomly selected
+as the test set, with the remaining used for training.
+B. Evaluations on Filtering Mechanism Based on Terminal
+Access Credibility
+To observe the impact of employing different access
+credibility-based filtering mechanisms on suppressing malicious traffic from compromised terminals, we measured the
+variation of the proportion of malicious encrypted traffic across
+iterations, as depicted in Figure 2. The use of basic access
+credibility led to some degree of suppression but is accompanied by considerable fluctuations and an upward trend,
+indicating a modest effect. In contrast, comprehensive access
+credibility consistently and significantly reduced the proportion of malicious traffic, maintaining a low level throughout the
+experiment. Without the implementation of any access credibility, the proportion of malicious traffic incrementally rose.
+With the number of iterations, this proportion exceeded 80%
+and continued to rise gradually, highlighting the destructive
+impact of compromised devices on the network. In summary,
+by integrating the attenuation factor ti into the basic access
+credibility, comprehensive credibility promptly responds to the
+compromised behavior of IoT terminals, thereby effectively
+curbing the surge in malicious traffic.
+C. Evaluations on Encrypted Traffic Filtering Mechanism
+Based on Deep Learning
+In the evaluation of binary classification models, four
+principal metrics are utilized: Accuracy, Precision, Recall, and
+F1 Score. The definitions are as follows:
+TP + TN
+(19)
+Accuracy =
+TP + FP + TN + FN
+TP
+Precision =
+(20)
+TP + FP
+
+TP
+(21)
+TP + FN
+2 × Precision × Recall
+(22)
+F1score =
+Precision + Recall
+These metrics are computed using the quantities of true
+positives (TP), false positives (FP), true negatives (TN), and
+false negatives (FN). For multi-class classification, the direct
+application of Precision, Recall, and the F1 Score is not
+straightforward, as they are inherently designed for binary
+scenarios. Hence, we adopt their macro-averaged counterparts:
+macro-Precision, macro-Recall, and macro-F1 Score. Each of
+these is the arithmetic mean of the respective metric calculated
+for each class independently.
+In this study, we employed a sliding window method to
+segment the original traffic dataset. To explore the impact of
+varying window sizes on model performance, we set window
+size π to different values. The experimental results are shown
+in Figure 3. The results indicate that as the window size
+increases, there are significant improvements in model accuracy, precision, recall, and F1-score. Notably, the performance
+enhancements are particularly marked when the window size
+is increased from 10 to 150. For larger window sizes, all
+metrics reach or exceed 99%, demonstrating that the model
+can process and predict data with extremely high precision
+under these settings. Ultimately, this study selected a window
+size of 150. This choice is based on experimental data, as
+this window size maintains high levels of accuracy and other
+metrics while avoiding the additional computational overhead
+that larger windows might entail.
+To evaluate the performance enhancement effects of different improvement modules within the model proposed
+in this paper, we designed the following variant models. Except for the specified modifications, all other
+parameters in these models are kept consistent. The
+comparative analysis involved four distinct network architectures: Standalone CNN, CNN+SelfAttBiGRU, Standalone
+Inception, and Inception+GRU. In the Standalone CNN
+model, the architecture employs only conventional convolutional layers without the advanced feature extraction
+capabilities of the Inception module or the dynamic temporal
+processing of the SelfAttBiGRU mechanism. This model
+serves as a baseline to evaluate the effectiveness of adding
+more complex structures. The CNN+SelfAttBiGRU architecture enhances the basic CNN model by integrating a
+Self-Attention mechanism with a Bidirectional GRU. This
+Recall =
+
+1978
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 71, NO. 1, FEBRUARY 2025
+
+TABLE I
+C OMPARATIVE P ERFORMANCE A NALYSIS OF D IFFERENT
+N ETWORK A RCHITECTURES
+
+addition aims to improve the model’s ability to capture
+temporal relationships and dependencies in the data, expected
+to enhance performance in scenarios where sequence and
+timing are crucial. Standalone Inception employs the Inception
+module alone, leveraging its ability to perform multi-level
+feature extraction through parallel convolutional operations.
+This model tests the hypothesis that spatial feature diversity
+within the traffic images can significantly improve classification accuracy. Finally, the Inception+GRU model combines
+the Inception module with a unidirectional GRU. This configuration is designed to benefit from the Inception module’s
+detailed feature extraction capabilities while also utilizing
+GRU to capture temporal features, aiming for a balanced
+approach to handling both spatial and temporal aspects of the
+traffic data. This structured approach ensures that each model
+variant focuses on testing the impact of specific components,
+thereby isolating the effects of each module on the overall
+performance of the network. Comparative experimental results
+are presented in Table I.
+The experimental results indicate clear differences in
+performance across the various network models tested. The
+Standalone CNN, serving as a baseline, achieved scores with
+an accuracy and F1-score just under 90%. Introduction of the
+SelfAttBiGRU mechanism in the CNN+SelfAttBiGRU model
+markedly improved all metrics, indicating the efficacy of combining convolutional neural networks with bidirectional GRU
+and self-attention mechanisms for this application. Further
+enhancements are observed with the Standalone Inception
+model, which outperformed the Standalone CNN, underscoring the advantages of the Inception architecture in handling
+more complex features independently. The Inception+GRU
+model integrated these features with unidirectional GRU to
+further boost performance, achieving nearly 98.5% in both
+accuracy and F1-score, demonstrating significant gains particularly in precision. The most pronounced improvements
+are seen in the proposed Inception+SelfAttBiGRU model,
+which combined the strengths of Inception modules, bidirectional GRU, and self-attention. This configuration not only
+achieved the highest scores across all metrics–close to or
+exceeding 99%. But it also confirmed that the synergistic integration of these modules can substantially improve
+performance in complex model architectures. This model’s
+superior precision and F1-score, in particular, highlight its
+robustness in both identifying relevant features and accurately
+classifying data points. These findings suggest that the addition
+of advanced architectural elements like the Inception module
+and SelfAttBiGRU significantly enhances the model’s ability
+
+Fig. 4.
+
+Compared Experimental Results with Different Methods.
+
+to process and interpret complex datasets more effectively than
+simpler CNN structures.
+In a comparative analysis against established methods, our
+approach, which employs the Inception+SelfAttBiGRU architecture, demonstrated robust performance across all evaluated
+metrics. Support Vector Machines (SVM) are supervised learning models with associated learning algorithms that analyze
+data for classification and regression analysis. They are widely
+used due to their effectiveness in high-dimensional spaces and
+their versatility in modeling diverse sources of data. K-means
+clustering, a method of vector quantization, originally from
+signal processing, that is popular for cluster analysis in data
+mining. K-means clustering partitions n observations into k
+clusters in which each observation belongs to the cluster
+with the nearest mean, serving as a prototype of the cluster.
+Traditional methods such as Support Vector Machines (SVM)
+and K-means clustering yielded lower results, with SVM
+achieving an accuracy and F1-score of approximately 86%,
+and K-means slightly lower at around 83% for both metrics.
+ResNet18, a variant of the ResNet architecture that uses 18
+layers, is known for its ability to enable training of deeper
+networks by utilizing skip connections or shortcuts to jump
+over some layers. Typical applications include image recognition tasks. The ResNet18 also underperformed relative to our
+method, achieving an accuracy close to 96% and a precision of
+approximately 95%. While ResNet18 represents a significant
+advancement over simpler architectures, it still did not match
+the more advanced systems in this evaluation. Flowpic is a
+method that visualizes network flow data as images, enabling
+the use of image processing techniques for network traffic
+analysis. It transforms flow data into a grid-like structure
+where different traffic characteristics are represented in various
+dimensions of the grid. More contemporary architectures like
+Flowpic and MobileNet showed closer performance to our
+method. Flowpic achieved commendable results, especially in
+precision at nearly 98.6%, but with a slightly lower recall
+which impacted its overall F1-score. MobileNet is a class
+of efficient models for mobile and edge devices. It is based
+on a streamlined architecture that uses depth-wise separable convolutions to build lightweight deep neural networks.
+MobileNet slightly outperformed our method in accuracy
+and precision but had a lower recall and corresponding F1score. Our method, employing the Inception+SelfAttBiGRU
+
+WEI et al.: SECURE AND TRUSTWORTHY DATA MANAGEMENT MECHANISM FOR DCE IN AIoT
+
+architecture, excelled in this evaluation, achieving an accuracy
+close to 99.4%, with high scores in precision and F1-score as
+well. This indicates a well-balanced capability in accurately
+identifying and classifying features within encrypted traffic.
+The integration of Inception modules with Self-Attention and
+BiGRU mechanisms proved particularly effective, providing
+the high precision and balanced recall necessary for the
+complex task of encrypted traffic classification.
+V. C ONCLUSION
+To address the security and trustworthiness challenges
+faced by Consumer Electronics (DCE), this paper presents
+an AI-enhanced anonymous traffic filtering framework that
+anonymizes DCE endpoints and employs encrypted traffic
+communication to prevent malicious entities from inferring
+terminal identities based on traffic characteristics. The framework integrates a credibility-based filtering mechanism and the
+Inception-SelfAttBiGRU model. To assess the effectiveness of
+the proposed secure and trustworthy framework in detecting
+malicious encrypted traffic, a comprehensive evaluation is
+conducted using both simulated environments and the publicly available ISCX-VPN-nonVPN dataset. The evaluation
+focused on two primary aspects: the performance of the
+access credibility-based filtering mechanism at identifying
+and blocking malicious DCE endpoints, and the efficacy of
+the encrypted traffic classification technique. Compared to
+basic access credibility and scenarios without any access control implementation, this comprehensive credibility approach
+rapidly addresses compromised IoT terminal behavior, effectively reducing the surge in malicious traffic. Besides, results
+on ISCX-VPN-nonVPN datasets show that the integration
+of Inception modules with Self-Attention and BiGRU mechanisms proved particularly effective, providing the high
+precision and balanced recall required for the complex task of
+encrypted traffic classification.
+R EFERENCES
+[1] S. Hadzovic, S. Mrdovic, and M. Radonjic, “A path towards an
+Internet of Things and artificial intelligence regulatory framework,”
+IEEE Commun. Mag., vol. 61, no. 7, pp. 90–96, Jul. 2023.
+[2] W.-J. Chang, L.-B. Chen, I.-C. Lin, and Y.-K. Ou, “iBuffet: An AIoTbased intelligent calorie management system for eating buffet meals with
+calorie intake control,” IEEE Trans. Consum. Electron., vol. 67, no. 4,
+pp. 226–234, Nov. 2021.
+[3] S. Wang and S. Tong, “Analysis of high-level dance movements under
+deep learning and Internet of Things,” J. Supercomput., vol. 78, no. 12,
+pp. 14294–14316, 2022.
+[4] Z. Ji and Y. Tian, “IoT based dance movement recognition model based
+on deep learning framework,” Scalable Comput. Pract. Exp., vol. 25,
+no. 2, pp. 1091–1106, 2024.
+[5] C. K. Wu, C.-T. Cheng, Y. Uwate, G. Chen, S. Mumtaz, and K. F. Tsang,
+“State-of-the-art and research opportunities for next-generation consumer electronics,” IEEE Trans. Consum. Electron., vol. 69, no. 4,
+pp. 937–948, Nov. 2023.
+[6] W. Z. Khan, M. Y. Aalsalem, and M. K. Khan, “Communal acts of
+IoT consumers: A potential threat to security and privacy,” IEEE Trans.
+Consum. Electron., vol. 65, no. 1, pp. 64–72, Feb. 2019.
+[7] D. A. Hahn, A. Munir, and S. P. Mohanty, “Security and privacy issues
+in contemporary consumer electronics [energy and security],” IEEE
+Consum. Electron. Mag., vol. 8, no. 1, pp. 95–99, Jan. 2019.
+
+1979
+
+[8] L. F. Eliyan and R. Di Pietro, “DoS and DDoS attacks in software
+defined networks: A survey of existing solutions and research challenges,” Future Gener. Comput. Syst., vol. 122, pp. 149–171, Sep. 2021.
+[9] D. Javeed, M. S. Saeed, I. Ahmad, P. Kumar, A. Jolfaei, and M. Tahir,
+“An intelligent intrusion detection system for smart consumer electronics
+network,” IEEE Trans. Consum. Electron., vol. 69, no. 4, pp. 906–913,
+Nov. 2023.
+[10] E. Papadogiannaki and S. Ioannidis, “A survey on encrypted network
+traffic analysis applications, techniques, and countermeasures,” ACM
+Comput. Surveys, vol. 54, no. 6, pp. 1–35, 2021.
+[11] J. P. Cruz, Y. Kaji, and N. Yanai, “RBAC-SC: Role-based access control
+using smart contract,” IEEE Access, vol. 6, pp. 12240–12251, 2018.
+[12] G. Ateniese, K. Fu, M. Green, and S. Hohenberger, “Improved proxy
+re-encryption schemes with applications to secure distributed storage,”
+ACM Trans. Inf. Syst. Security, vol. 9, no. 1, pp. 1–30, 2006.
+[13] C. Ge, J. Xia, A. Wu, H. Li, and Y. Wang, “A source hiding identitybased proxy reencryption scheme for wireless sensor network,” Security
+Commun. Netw., vol. 2018, pp. 1–8, Oct. 2018.
+[14] X. A. Wang, X. Yang, C. Li, Y. Liu, and Y. Ding, “Improved functional
+proxy re-encryption schemes for secure cloud data sharing,” Comput.
+Sci. Inf. Syst., vol. 15, no. 3, pp. 585–614, 2018.
+[15] C. Sur, C. D. Jung, Y. Park, and K. H. Rhee, “Chosen-ciphertext secure
+certificateless proxy re-encryption,” in Proc. 11th IFIP TC 6/TC 11 Int.
+Conf. Commun. Multimedia Security, 2010, pp. 214–232.
+[16] B. Libert and D. Vergnaud, “Unidirectional chosen-ciphertext secure
+proxy re-encryption,” IEEE Trans. Inf. Theory, vol. 57, no. 3,
+pp. 1786–1802, Mar. 2011.
+[17] H. Hong and Z. Sun, “Sharing your privileges securely: A key-insulated
+attribute based proxy re-encryption scheme for IoT,” World Wide Web,
+vol. 21, pp. 595–607, May 2018.
+[18] S. Kim and I. Lee, “IoT device security based on proxy re-encryption,” J.
+Ambient Intell. Humanized Comput., vol. 9, pp. 1267–1273, Aug. 2018.
+[19] K. N. Singh, N. Baranwal, O. P. Singh, and A. K. Singh, “SIELNet: 3-D
+chaotic-map-based secure image encryption using Customized residual
+dense spatial network,” IEEE Trans. Consum. Electron., vol. 69, no. 4,
+pp. 862–868, Nov. 2023.
+[20] W. Niu, Z. Zhuo, X. Zhang, X. Du, G. Yang, and M. Guizani, “A
+heuristic statistical testing based approach for encrypted network traffic
+identification,” IEEE Trans. Veh. Technol., vol. 68, no. 4, pp. 3843–3853,
+Apr. 2019.
+[21] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+encrypted traffic classification with one-dimensional convolution neural
+networks,” in Proc. IEEE Int. Conf. Intell. Security Inform. (ISI), Beijing,
+China, Jul. 2017, pp. 43–48.
+[22] M. Song, J. Ran, and S. Li, “Encrypted traffic classification based on
+text convolution neural networks,” in Proc. IEEE 7th Int. Conf. Comput.
+Sci. Netw. Technol. (ICCSNT), Dalian, China, Oct. 2019, pp. 432–436.
+[23] B. Lu, N. Luktarhan, C. Ding, and W. Zhang, “ICLSTM: Encrypted
+traffic service identification based on inception-LSTM neural network,”
+Symmetry, vol. 13, no. 6, p. 1080, 2021.
+[24] G. Xie, Q. Li, and Y. Jiang, “Self-attentive deep learning method
+for online traffic classification and its interpretability,” Comput. Netw.,
+vol. 196, Sep. 2021, Art. no. 108267.
+[25] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian, “Deep
+packet: A novel approach for encrypted traffic classification using deep
+learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, Feb. 2020.
+[26] S. Izadi, M. Ahmadi, and R. Nikbazm, “Network traffic classification
+using convolutional neural network and ant-lion optimization,” Comput.
+Electr. Eng., vol. 101, Jul. 2022, Art. no. 108024.
+[27] T. Yu, F. Zou, L. Li, and P. Yi, “An encrypted malicious traffic detection
+system based on neural network,” in Proc. Int. Conf. Cyber-Enabled
+Distrib. Comput. Knowl. Disc. (CyberC), Xi’an, China, Oct. 2019,
+pp. 62–70.
+[28] M. J. De Lucia and C. Cotton, “Detection of encrypted malicious
+network traffic using machine learning,” in Proc. IEEE Mil. Commun.
+Conf. (MILCOM), Norfolk, VA, USA, Nov. 2019, pp. 1–6.
+[29] J. Yang, J. Narantuya, and H. Lim, “Bayesian neural network based
+encrypted traffic classification using initial handshake packets,” in Proc.
+49th Annu. IEEE/IFIP Int. Conf. Dependable Syst. Netw.–Supplemental
+Volume (DSN-S), Portland, OR, USA, Jun. 2019, pp. 19–20.
+[30] Y. Zeng, Z. Qi, W. Chen, and Y. Huang, “Test: An end-to-end network
+traffic classification system with spatio-temporal features extraction,”
+in Proc. IEEE Int. Conf. Smart Cloud (SmartCloud), Washington, DC,
+USA, Dec. 2019, pp. 131–136.
+PAPER_TEXT

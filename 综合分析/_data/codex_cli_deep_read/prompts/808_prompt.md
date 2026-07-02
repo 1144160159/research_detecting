@@ -1,0 +1,1347 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [808] SParse: Semantic Tracking and Path Analysis for Attack Investigation in Real-Time
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：808
+题名：SParse: Semantic Tracking and Path Analysis for Attack Investigation in Real-Time
+年份：2025
+DOI：10.1109/tdsc.2025.3621434
+来源：IEEE Transactions on Dependable and Secure Computing
+PDF：paper/10.1109_TDSC.2025.3621434.pdf
+已有粗分类：恶意流量、暗网与攻击检测
+二级关联：无
+相关性：中相关，分数 9
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\808.txt
+- 原始字符数：72319
+- 本次发送字符数：72319
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+1865
+
+SPARSE: Semantic Tracking and Path Analysis for
+Attack Investigation in Real-Time
+Jie Ying , Tiantian Zhu , Member, IEEE, Wenrui Cheng , Qixuan Yuan , Mingjun Ma, Chunlin Xiong ,
+Tieming Chen , Mingqi Lv , and Yan Chen , Fellow, IEEE
+
+Abstract—As Advanced Persistent Threats (APTs) become more
+complex and destructive, attack investigation has gained importance. Analysts use provenance graphs for causality analysis on
+Point-Of-Interest (POI) events to capture critical events. However,
+existing methods suffer from problems of high false positives, high
+overhead, and high latency due to the vast size of the provenance
+graph and the rarity of critical events. We propose SPARSE for
+constructing critical component graphs (i.e., consisting of critical
+events) from streaming logs in real time. Our approach is based on
+two key observations: 1) Critical events exist in suspicious semantic
+graphs (SSGs) composed of interaction flows between suspicious
+entities, and 2) Information flows accomplishing the attacker’s
+goal exist as paths. SPARSE uses a two-stage framework that first
+constructs the SSG using a state-based mode with semantic transfer
+rules and storage strategies. Then, it identifies suspicious flow
+paths (SFPs) related to the POI event and quantifies each path’s
+influence to filter irrelevant events. Evaluation on a large-scale
+attack dataset shows our system generates a critical component
+graph (∼113 edges) in 1.6 seconds, which is 2014 × smaller than the
+backtracking graph (∼227,589 edges). It is also 25 × more effective
+in filtering irrelevant edges compared to other state-of-the-art
+techniques.
+Index Terms—Advanced persistent threat, intrusion/anomaly
+detection and investigation, data provenance.
+
+Received 9 September 2024; revised 8 August 2025; accepted 11 October
+2025. Date of publication 14 October 2025; date of current version 12 March
+2026. This work was supported in part by the National Natural Science Foundation of China under Grant U22B2028, Grant 62372410, and Grant 62002324,
+in part by Zhejiang Provincial Natural Science Foundation of China under
+Grant LQ21F020016 and Grant LZ23F020011, and in part by The Fundamental
+Research Funds for the Provincial Universities of Zhejiang under Grant RFA2023009. (Corresponding author: Tiantian Zhu.)
+Jie Ying, Tiantian Zhu, Wenrui Cheng, Qixuan Yuan, Mingjun Ma, and
+Mingqi Lv are with the College of Computer Science and Technology, Zhejiang University of Technology, Hangzhou 310023, China (e-mail: jieying@
+zjut.edu.cn; ttzhu@zjut.edu.cn; zjutcwr@zjut.edu.cn; zjutyqx@zjut.edu.cn;
+zjutmmj@zjut.edu.cn; mingqilv@zjut.edu.cn).
+Chunlin Xiong is with China Unicom (Guangdong) Industrial Internet Company, Ltd., Guangzhou 510555, China (e-mail: chunlinxiong@gmail.com).
+Tieming Chen is with the College of Computer Science and Technology,
+Zhejiang University of Technology, Hangzhou 310023, China, and also with
+the Zhejiang Key Laboratory of Visual Information Intelligent Processing,
+Zhejiang University of Technology, Hangzhou 310023, China (e-mail: tmchen@
+zjut.edu.cn).
+Yan Chen is with the Department of Electrical Engineering and Computer
+Science, Northwestern University, Evanston, IL 60208 USA (e-mail: ychen
+@northwestern.edu).
+This article has supplementary downloadable material available at
+https://doi.org/10.1109/TDSC.2025.3621434, provided by the authors.
+Digital Object Identifier 10.1109/TDSC.2025.3621434
+
+I. INTRODUCTION
+S THE Internet has developed over time, APT attacks have
+grown more sophisticated and destructive. APT attacks
+target mainly large corporations such as Twitter [1], resulting in
+significant financial losses and reputational damage. In addition,
+APT attacks are executed in multiple stages, which include
+initial access, persistence, lateral movement, collection, and
+exfiltration [2].
+While an intrusion may be noticed at any stage, detection
+only uncovers isolated traces of the attack. As a result, analysts
+must undertake causality analysis to capture the bigger picture
+and obtain a sound understanding of the detected attack point.
+Achieving a secure system recovery after a cyber attack requires
+certain key steps. First, analysts must determine how the adversary infiltrated the system. Once the point of entry is identified,
+then analysts need to assess the obvious and hidden damage
+done to the system, such as installed payload, modified files,
+and exfiltrated information. In short, analysts need to identify
+the sequence of critical events leading up to the POI event
+and reconstruct the critical component (subgraph consisting of
+critical events), which is also called attack investigation.
+With the improvement of kernel-level monitoring frameworks [3], [4], [5], more and more causality analysis systems
+depend on a provenance graph consisting of entities (e.g., files,
+processes, and sockets) and inter-entity interactions (e.g., processes reading and writing files). However, a provenance graph is
+a gigantic [6], [7] and coarse-grained data format that cannot directly determine the specific dependencies between all relevant
+events of an entity (e.g., a process has multiple read-in events
+and write-out events) [8], which leads to a dependency explosion
+problem and the poor performance of existing causality analysis
+systems [9], [10], [11].
+Previous Attack Investigation Techniques and Limitations:
+Methodologically, causality analysis can be classified into three
+categories: label propagation-based, anomaly score-based, and
+machine learning-based. Specifically, the label propagationbased approach [12], [13], [14], [15], [16] sets entity labels
+and transformation rules through heuristic rules but suffers
+from a reliance on heavy manual effort and the incapacity to
+address zero-day vulnerabilities. The anomaly score-based approach [17], [18], [19], [20] quantifies the suspiciousness of dependency between entities, but faces challenges such as relying
+on historical statistics and the inability to adapt to complex enterprise production environments. Earlier machine learning-based
+
+A
+
+1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+1866
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+approaches [21], [22], [23], [24] attempted to learn directly
+from attack samples using neural networks, but were limited
+by insufficient sample size, poor generalization capability, and
+high computational overhead. Recent studies [16], [25], [26],
+[27], [28], [29] have employed self-supervised learning to model
+normal system behavior and trigger alerts through anomaly
+detection. However, in the field of attack investigation, these
+approaches can only perform basic alert correlation, such as constructing reachable paths between alerts, yet fail to reconstruct
+comprehensive attack scenarios. These issues make it difficult
+for analysts to carry out comprehensive attack investigations in
+the optimal time (10 minutes) [30]. In summary, a general, efficient, and cost-effective causality analysis system needs to meet
+the following three requirements: 1) Reduced False Positives
+to address dependency explosion, 2) Affordable Overhead to
+reduce the cost of attack investigation, and 3) Minimal Latency
+to prevent further losses caused by subsequent attacks.
+To meet the above requirements, after researching hundreds
+of APT attack descriptions [31] and analyzing numerous related
+dependency graphs [17], [19], [21], [32], [33], [34], we have the
+following two key observations. Firstly, suspicious semantics
+are introduced externally and transferred to non-suspicious
+entities via interaction. Based on this, we propose a set of
+predefined semantic transfer rules to process streaming logs to
+construct the suspicious semantic graph (SSG). The SSG consists of suspicious entities (e.g., a process visiting an unknown
+website) and suspicious events (data and control flows initiated
+by the suspicious entities) via utilizing transfer rules. We believe
+that the SSG contains all critical events (i.e., critical events are
+a subset of suspicious events) and is much smaller than the
+subgraph obtained by backtracking [35] from the POI event.
+As shown in Section V, the SSG (∼417 edges) is 545 × smaller
+than the backtracking graph (∼227,589 edges).
+Secondly, information flows that accomplish goals exist in
+the form of paths. There are still many false positives in the
+suspicious semantics graph. As shown in Section V, the SSG
+(∼417 edges) is 3.7 times larger than the critical component
+graph (∼113 edges). Therefore, we aim to filter out the events
+that are contextually irrelevant to the POI event in the suspicious
+semantics graph by performing path-level contextual analysis.
+Based on this observation, we opine that evaluating whether to
+filter an event cannot be done in isolation, but rather calls for a
+comprehensive assessment of flow paths consisting of multiple
+events. Consequently, we construct all suspicious flow paths
+(SFPs) related to the POI event from SSG and quantify the degree
+of influence based on the properties (i.e., data flow amount and
+timestamp) of the POI event and path structural characteristics
+to weed out irrelevant events. In summary, we achieve the attack
+investigation through a two-stage step (i.e., SSG construction
+and path-level contextual analysis).
+This paper proposes SPARSE1 and makes the following
+contributions:
+r We propose a state-based framework that contains suspicious semantic transfer rule and suspicious event storage
+1 SPARSE short for Semantic tracking and Path Analysis foR attack
+inveStigation in real-timE
+
+TABLE I
+ATTRIBUTES OF SYSTEM EVENTS
+
+strategy. The framework consumes events as streams in low
+overhead without recording historical data. In addition, the
+framework can output suspicious semantic graph related
+to the POI event in real time. The graph consists of all
+suspicious data flows and control flows that lead to the POI
+event, and thus contains all attack-related critical events. It
+is phase I of SPARSE for filtering semantic-irrelevant events.
+r We propose a path-level contextual analysis mechanism
+that incorporates suspicious flow path extraction and scoring. It utilizes an optimized BFS algorithm to extract all
+suspicious flow paths (SFPs) from the SSG. Then the
+mechanism combines the properties of the POI event and
+characteristics of the path structure to quantify the impact
+of each SFP on the POI event. Finally, it filters all events
+that only exist in SFPs with low scores. It is phase II of
+SPARSE for filtering impact-irrelevant events.
+r We implemented SPARSE and evaluated all its components
+in detail on a large-scale dataset with more than 150 million logs. Specifically, the dataset contains 10 simulated
+attacks [17] (∼ 100 million logs) and 5 attacks from the
+DARPA TC program [36], [37] (∼ 50 million logs). Experimental results show that SPARSE can generate the critical
+component graph (∼113 edges) in 1.6s, which is 2014 ×
+smaller than the dependency graph (∼227,589 edges). The
+critical component graph (FP = 99) generated by SPARSE
+is 25 × more effective than other state-of-the-art causality
+analysis techniques (FP = 2,473) in filtering irrelevant
+edges while preserving the attack sequences. In addition,
+SPARSE can run for a long time while processing streaming
+logs with a low memory overhead (30 MB).
+II. BACKGROUND AND MOTIVATION
+A. Dependency Graph
+Recent literature has leveraged the concept of data provenance, i.e., instead of manually piecing together individual evidence from raw logs, provenance-based systems can construct
+dependency graphs that explain the relationships between each
+event, simplifying the attack investigation. Specifically, a dependency graph G(E, V ) is a heterogeneous graph consisting of
+nodes V representing system entities and edges E representing
+inter-entity events. The attributes of entities and events are carefully selected from raw audit logs, which are lean and critical. For
+entities, we choose processes (P rocessN ame, P rocessID),
+files (F ileN ame), and sockets (IP : P ort). For events,
+we made selections as shown in Table I. For any edge e ∈ E,
+there is e = (u, v, t), where u represents the subject, v represents
+the object, and t represents the timestamp of the event. For
+
+YING et al.: SPARSE: SEMANTIC TRACKING AND PATH ANALYSIS FOR ATTACK INVESTIGATION IN REAL-TIME
+
+1867
+
+Fig. 1. Partial dependency graph of one attack case Dataleak. The black dashed box indicates the backtracking graph (∼200,000 edges) constructed from the
+POI event via backward propagation. The blue dashed box indicates the suspicious semantic graph (∼27 edges) constructed by SPARSE. The red dashed line box
+indicates the critical component graph (∼22 edges) exported by SPARSE.
+
+the two edges in the dependency graph, e1 = (u1 , v1 , t1 ), e2 =
+(u2 , v2 , t2 ), we consider that there is a dependence (causality)
+between e1 and e2 if v1 = u2 and t1 < t2 .
+B. Attack Investigation
+The goal of attack investigation using dependency
+graphs [12], [13], [14], [15], [17], [18], [20], [22], [38] is to
+identify all critical events and critical components related to the
+POI event. A critical component is a subgraph of the dependency
+graph that retains internal information critical to the attack
+investigation and eliminates irrelevant system activity. Typically
+this analysis includes tracing the flow of data through the graph to
+identify potentially relevant events, and examining the properties
+of nodes and edges to identify signs of compromise. The goal of
+an attack investigation is to determine both the source and scope
+of the attack, ascertain the extent of damage or disruption, and
+develop remediation and prevention strategies.
+
+suspicious semantic-related to the alert. The red dashed box
+denotes the critical component graph obtained by analyzing
+the path-level contextual semantics, which includes all events
+attack-related to the alert.
+Obviously, the number of attack-related critical events (∼22)
+is a drop in the ocean compared to the number of causalrelated non-critical events (∼ 200,000). This turns the attack
+investigation into a needle-in-a-haystack process, making it
+challenging for analysts to complete the investigation in the
+optimal time (600 s) [30]. However, existing techniques such
+as DEPIMPACT [17], as shown in Section V, have exhibited
+poor performance. It requires 6,464 s (600 s) to generate
+dependency graphs with 2,473 false positives on average. In
+addition, it needs to load raw audit logs, resulting in an endless memory overhead. Therefore, we need an attack investigation system with low false positives, low latency and low
+overhead.
+III. OVERVIEW
+
+C. Motivating Example
+As shown in Fig. 1, this is a typical data leakage attack.
+The attacker exploited a vulnerability in apache2 and downloaded the malicious artifact gather.sh. After executing the
+malware, the attacker collected sensitive data from the target host and saved it in the form of the file leaked.vm2.
+After using gpg to compress leaked.vm2 into the file
+leaked, the attacker transferred leaked to the C2 server
+192.168.2.3:xx via process ssh.
+In Fig. 1, the black dashed box denotes the backtracking
+graph obtained by performing backward causality analysis [35],
+which includes all events causal-related to the alert. The blue
+dashed box denotes the suspicious semantic graph obtained by
+using suspicious semantic transfer, which includes all events
+
+A. Threat Model
+First, we assume that the event logs and digital signatures are
+credible, similar to previous work [13], [17], [18], [19], [33],
+[35], [39], [40]. In addition, events related to the attack did not
+occur before the logs were processed.
+Second, we assume that the attacker is external to the system and carries out their attack remotely. This may involve
+exploiting vulnerabilities within the system or employing social
+engineering tactics to convince a user to download and run a
+file containing malicious code. Therefore, we do not support
+side-channel attacks and insider attacks where the attacker has
+a legitimate way to access the machine without going through
+them.
+
+1868
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+Architecture of SPARSE.
+
+Third, we exclude mimicry attacks [41] from consideration in
+our threat model. These attacks are designed to evade intrusion
+detection systems by creating a seemingly benign chain of events
+within an enterprise environment. Existing intrusion detection
+systems [42], [43], [44] often rely on heuristics or analysis
+of individual events, making them vulnerable to such attacks.
+While detecting mimicry attacks is a limitation of current detection systems, it falls outside the scope of our work. Our
+focus is on identifying relevant events of alert generated by the
+detection system as contextual information to investigate the
+attack.
+B. Our Approach
+In this section, we describe the architecture of SPARSE shown
+in Fig. 2. Given a POI event, SPARSE can automatically identify
+the critical component of the dependency graph. SPARSE consists of two phases: (I) suspicious semantic graph construction
+(SSGC) and (II) path-level contextual analysis (PCA).
+In Phase I, SPARSE makes use of mature auditing systems [4], [45], [46], [47], [48] to access kernel-level streaming logs and process them into specific data structures. Then
+SPARSE proposes a suspicious semantic transfer rule and storage strategy to maintain the suspicious entity list and related
+event table with low memory overhead. Given a POI event,
+SPARSE can construct the suspicious semantic graph (SSG) in
+real-time.
+In Phase II, SPARSE first performs edge compaction on the
+suspicious semantic graph. Then SPARSE proposes a suspicious
+flow path extraction algorithm to identify possible propagation
+paths of the data/control flow in the suspicious semantic graph
+(i.e., suspicious flow paths). Next, SPARSE performs path-level
+contextual analysis, scores each suspicious flow path, and determines how relevant the path is to the POI event. Finally, SPARSE
+filters out all events that only exist in irrelevant paths from
+suspicious semantic graph to generate the critical component
+graph (CCG) as the output.
+IV. SYSTEM DESIGN
+In this section, we describe the design details of each phase of
+SPARSE. As shown in Fig. 2, SPARSE is a two-phase framework
+(i.e., constructing suspicious semantic graph and performing
+path-level contextual analysis) for mitigating the dependency
+explosion problem.
+
+A. Streaming Log Monitoring
+SPARSE makes use of mature auditing systems [4], [45], [46],
+[47], [48] to access kernel-level logs and obtain the required data.
+At the entity level, SPARSE focuses on three entity types: file,
+process, and socket. To differentiate, SPARSE needs to construct
+unique identifiers for all entities. For the file, SPARSE records the
+absolute path as the unique identifier. For the process, SPARSE
+concatenates the PID and name as the unique identifier. For the
+socket, SPARSE constructs the 4-tuple (<srcip, srcport, dstip,
+dstport>) as the unique identifier. At the event level, SPARSE
+focuses on three event types: process interactions, file IO events,
+and network IO events. To the best of our knowledge, existing
+auditing systems are rich in semantics and meet the data requirements of SPARSE.
+B. Suspicious Semantic Transfer
+The letter P in APT stands for persistence, which means that
+an attacker can lurk for a long time until achieves the goal.
+To support real-time investigation and long-term monitoring,
+SPARSE utilizes a state-based structure and suspicious semantic
+transfer rule to record state changes and associated events for
+each entity. Next, we describe the specific data structure and
+transfer rule in turn.
+1) Data Structure: For any entity v ∈ V , SPARSE represents
+it as a triple < U, Ty , S >. U is the unique identifier of the
+entity, the construction of U is described in Section IV-A. Ty
+denotes the type of the entity and S denotes the state of the
+entity. When S is 0 it means that the entity is not suspicious, and
+S is 1 it means that the entity is suspicious. Note that the file
+and process have their S initialized to 0 when they are created,
+and the socket has their S initialized to 1 when it is created,
+i.e., we default to all sockets that are not in the whitelist being
+suspicious.
+For any event e ∈ E, SPARSE represents it as a quintuple
+< Us , Uo , O, Ti , D >. Us and Uo are unique identifiers for the
+subject and object of e, respectively. O denotes the type of e,
+Ti denotes the time when e occurred, and D denotes the data
+flow amount of e. Note that SPARSE is based on the direction of
+the data flow and control flow to determine the location of the
+subject and object. For example, when O = Read, the data flow
+is from the file to the process, so the file is the subject and the
+process is the object. When O = W rite, the data flow is from
+the process to the file, so the process is the subject and the file
+is the object.
+
+YING et al.: SPARSE: SEMANTIC TRACKING AND PATH ANALYSIS FOR ATTACK INVESTIGATION IN REAL-TIME
+
+1869
+
+TABLE II
+SUSPICIOUS SEMANTIC TRANSFER RULE
+
+Fig. 3. An Example of Suspicious Semantic Transfer. The red solid line indicates that the entity carries suspicious semantic. SEL is short for Suspicious Entity
+List and RET is short for Relevant Event Table.
+
+2) Transfer Rule: Based on the idea of semantic transfer,
+SPARSE constructs a set of predefined rules to process streaming
+logs and identify entity states in real-time. As shown in Table II,
+each rule is a quadruple: < O, Ts , To , D >. O is the type of
+event, Ts and To are the entity types of the subject and object
+respectively, and D is a description of the rule. From Table II we
+can see that the subject can transfer suspicious semantics to the
+object via a specific event, which is referred to as the ”suspicious
+semantics transfer rule”. As shown in Fig. 3, T denotes the
+moment, red entities denote suspicious entities, and red straight
+arrows denote suspicious semantic transfer. When T = 3, a
+suspicious process (process A) writes data to a file (f ile C),
+which in turn carries the suspicious semantic. When T = 4, the
+suspicious file is read by another process (process D), which
+then carries the suspicious semantic. Conversely, if an entity
+has no suspicious semantic, any event involving this entity as
+a subject will not propagate suspicious semantic. For example,
+when T = 2, a file (f ile B) is read by the suspicious entity
+(process A), but there is no propagation of the suspicious
+semantic.
+As shown in lines 5 to 11 in Algorithm 1, SPARSE processes the
+streaming logs, analyses data flows, and determines whether the
+entity state transitions. First, SPARSE accesses the event e =<
+Us , Uo , O, Ti , D > and constructs the subject and object u, v
+corresponding to that event. Then, SPARSE determines whether
+the subject u is a socket or exists in suspicious entity list (SEL,
+see Section IV-B3 for detailed definition). Finally, as soon as
+one of these two conditions is met, SPARSE will mark the object
+v as suspicious and add it to SEL.
+3) STORAGE STRATEGY: SPARSE designs two data structures
+to enable efficient storage of relevant data and real-time
+
+Algorithm 1: Suspicious Semantic Graph Construction.
+Input:
+1:
+Streaming logs in chronological order;
+2:
+Suspicious Entity List (SEL);
+3:
+Related Event Table (RET);
+4:
+POI event p;
+Output: Suspicious Semantic Graph (SSG) for POI event
+p;
+5:
+for e ∈ Streaming logs do
+6:
+Construct u, v from e where uU = eUs , vU = eUo
+7:
+if uS == 0 and  uU ∈ SEL then
+8:
+continue;
+9:
+else
+10:
+vS = 1;
+11:
+if  vU ∈ SEL then
+12:
+SEL.append(vU );
+13:
+end if
+14:
+Add {vU : RET[uU ] + e} to RET;
+15:
+end if
+16:
+if ∃ pUo ∈ SEL then
+17:
+return graphConstruct(RET[pUo ])
+18:
+end if
+19:
+end for
+
+construction of the suspicious semantic graph. Specifically,
+SPARSE designs a Suspicious Entity List (SEL) and a Related
+Event Table (RET), as defined below.
+Suspicious Entity List: A list that maintains all entities with
+suspicious semantics (possibly related to attacks). As shown in
+
+1870
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+Algorithm 2: Suspicious Flow Path Extraction.
+Input:
+1:
+(1) Suspicious Semantic Graph G;
+2:
+(2) POI Event p;
+3:
+(3) Q and V for the queue structure, T for the tree
+structure;
+Output: Suspicious flow paths;
+4:
+Q.add(p)
+5:
+T.creatN ode(p)
+6:
+while Q.num = 0 do
+7:
+e = Q.pop()
+8:
+V.add(e)
+9:
+for ie ∈ G.inEdges(eUs ) do
+/ Q and ie ∈
+/ V then
+10:
+if ieTi < eTi and ie ∈
+11:
+Q.add(ie)
+12:
+T.creatN ode(ie)
+13:
+T.creatEdge(e, ie)
+14:
+end if
+15:
+end for
+16:
+end while
+17:
+return T.allP aths()
+
+Fig. 3, when T = 1, the data flow passes from the suspicious
+socket to process A (suspicious semantic transfer), so SPARSE
+adds entity A to SEL. When T = 2, there is no suspicious
+semantic transfer, so SEL is not changed. When T = 5, the data
+flow passes from suspicious file C to process A, but entity A is
+already in SEL, so SEL is not changed.
+Related Event Table: A table that holds all the related events
+corresponding to all suspicious entities. The related events of
+a suspicious entity refer to the set of all data flows and control flows that lead to this entity’s semantic change. Specifically, SPARSE will maintain a separate set of related events
+in RET for all suspicious entities. Whenever an event e =<
+Us , Uo , O, Ti , D > that satisfies the suspicious semantic
+transfer rule occurs, SPARSE will stitch the related events of Us
+with event e and use it as the related events of Uo to update RET.
+As shown in Section V-C, the size of the RET is much smaller
+than the raw audit logs and the time of read in is negligible.
+SPARSE can construct a suspicious semantic graph related to the
+POI event in real-time.
+As shown in Fig. 3, when T = 1, SPARSE adds to RET with
+A : {1}, indicating that the related event of the suspicious entity
+A is {1}. When T = 4, SPARSE adds to RET with D : {1, 3, 4},
+stitched from the related events {1, 3} of subject C and the
+current event {4}. When T = 5, SPARSE updates RET with
+A : {1, 3, 5}, stitched from the related events {1, 3} of subject
+C and the current event {5}.
+In order to speed up the consumption of log streams, SPARSE
+keeps the whole SEL in memory to determine the entity states
+and save suspicious entities in real-time. In contrast, inspired
+by the CPU architecture, SPARSE keeps only some of the
+high-modification (frequent growth in a short period) RETs in
+memory and stores other low-modification RETs in the hard
+disk. According to our experimental results (see Section V-C for
+
+detail), the memory overhead of SPARSE is 30 MB on average,
+and there is no problem with high memory overhead. Note that
+we default sockets to suspicious entities, so only entities of file
+type and process type are saved in SEL.
+In summary, SPARSE will use these two data structures to
+enable efficient storage of the necessary data and real-time
+construction of the suspicious semantic graph. As shown in lines
+11 to 17 of Algorithm 1, SPARSE will add the object vU to the
+SEL for any event e =< Us , Uo , O, Ti , D > that satisfies the
+semantic transfer rule. In addition, SPARSE stitches the related
+events of Us with event e and uses it as the related events of
+Uo to update RET. Finally, for any given POI event, SPARSE is
+able to extract all relevant events for the object of that POI event
+from the RET in real-time. SPARSE then uses a simple graph
+construction algorithm, which extracts entities from entities as
+nodes and events as edges, to construct a suspicious semantic
+graph associated with the POI event.
+C. Edge Compaction
+A suspicious semantic graph often contains multiple parallel
+edges between two nodes. This is because operating systems
+typically complete read/write tasks (e.g., file read/write) by
+proportionally allocating data to multiple system calls. Inspired
+by recent work for graph reduction [11], SPARSE merges the
+edges between two nodes if the time difference between them
+is less than a given threshold. We ultimately chose 10 seconds
+as it demonstrates reasonable results in terms of various system
+calls, such as file transfers and network connections.
+D. Suspicious Flow Path Extraction
+In order to perform path-level contextual analysis, it is
+first necessary to identify possible propagation paths of the
+data/control flow in the suspicious semantic graph (i.e., suspicious flow paths). SPARSE proposes a suspicious flow path
+extraction algorithm that can efficiently handle complex graph
+structures. In brief, as shown in Fig. 4, SPARSE transforms
+the suspicious semantic graph into a multiway tree and then
+traverses it to obtain all suspicious flow paths.
+Specifically, as shown in lines 1 to 5 of Algorithm 2, Q and V
+are the queue structures, where Q holds the events to be traversed
+and V holds the events that have been traversed. T is the multiway tree structure, which holds the topological information. As
+shown in lines 6 to 9 of Algorithm 2, SPARSE traverses event
+e, identifying all incoming edge ies (ies = G.inEdges(eUs )).
+As shown in lines 10-13 of Algorithm 2, SPARSE determines
+that the incoming edge ie (ie ∈ ies) occurred earlier than event
+e and has not been traversed (ie ∈
+/ V ), then creates node ie in
+the multiway tree T and the parent of that node is e. Finally,
+SPARSE traverses the multiway tree T to obtain all paths from
+the root node to the leaf nodes, which are output as suspicious
+flow paths.
+The suspicious flow path extraction algorithm takes into account the timeliness and directionality of the data/control flow
+and is able to handle the complex graph structure efficiently, as
+demonstrated in Section V-C, where SPARSE extracts over 140
+suspicious flow paths in one second on average. Finally, it is
+
+YING et al.: SPARSE: SEMANTIC TRACKING AND PATH ANALYSIS FOR ATTACK INVESTIGATION IN REAL-TIME
+
+Fig. 4.
+
+1871
+
+Suspicious flow path extraction and path-level contextual scoring.
+
+important to note that events exist as nodes in the multiway tree
+and suspicious flow paths, as shown in Fig. 4.
+E. Path-Level Contextual Scoring
+To avoid confusion, it is important to clarify that events in the
+suspicious semantic graph (Fig. 4(a) are represented as nodes
+within both the multiway tree (Fig. 4(b) and the suspicious flow
+paths (Fig. 4(c). SPARSE quantifies the degree of influence that
+a suspicious flow path exerts on the POI event (i.e., Event 10 in
+Fig. 4), which corresponds to the final node in the path.
+Provenance graphs are coarse-grained by nature, making it
+difficult to directly infer causal relationships between a process
+node’s incoming and outgoing edges. Therefore, SPARSE adopts
+the following intuitive assumptions: First, if the data volumes
+of an incoming and outgoing edge are similar, it is more likely
+that a causal relationship exists between them (e.g., a process
+reads 526 bytes from the network and immediately writes 526
+bytes to a file, suggesting the same content is being transferred).
+Similarly, if the timestamps are similar, then there is a causal
+relation between the events since we think that the exploitation is
+automated and its steps quickly follow each other. Furthermore,
+considering the neighborhood structure in the suspicious semantic graph, if a node has only one incoming edge and one outgoing
+edge, we assume the incoming edge has a 100% influence on the
+outgoing edge. When a node has multiple incoming edges and a
+single outgoing edge, SPARSE applies a weighted calculation to
+assess the contribution of each incoming edge to the outgoing
+edge.
+In summary, SPARSE estimates the degree of impact between
+events is determined by the event attributes (i.e., data flow
+amount and timestamp) and the neighboring relationships between events (i.e., multiple incoming and outgoing edges).
+For each suspicious flow path p, SPARSE calculates the
+P athScore using the following equation:
+P athScore =
+
+e
+
+
+EventScore(e) / Len(p)
+
+(1)
+
+E
+
+where e denotes an event and E denotes the set of all events
+contained in the path (e ∈ E). EventScore denotes the degree
+of impact of event e on the parent node, as defined later. Len(p)
+
+denotes the number of events in the path and is used to normalize
+the P athScore.
+SPARSE calculates the EventScore using the following
+equation:
+Impact(e, f )
+f = parent(e)
+child(f ) Impact(s, f )
+(2)
+
+EventScore = α s
+
+α=1+
+
+len(child(f ) − 1)
+C
+
+(3)
+
+where parent(e) denotes the parent node of event e, and
+child(f ) denotes all the children of node f in the multiway tree.
+Impact(e, f ) denotes the degree of impact that event e exerts on
+event f , as defined later. α is an inflation factor designed to mitigate the issue of relative impact attenuation caused by fan-out,
+where a parent node has multiple child nodes. The multiway tree
+constructed from the suspicious semantic graph often contains
+nodes with multiple outgoing edges. Without introducing this
+inflation factor, the final PathScore would disproportionately
+rely on the EventScore of nodes near the root (e.g., node 10
+in Fig. 4(b), potentially leading to false negatives. As shown in
+Equation (3), α is controlled by the super parameter C and the
+number of child nodes. It is negatively correlated with C and
+positively correlated with the number of child nodes.
+SPARSE picks two features (i.e., data flow amount and time),
+to calculate the Impact using the following equation:
+Impact(e1, e2) = CS(N or(e1D , e1Ti ), N or(e2D , e2Ti ))
+(4)
+where e1 and e2 are two connected events(i.e., the object node
+of e2 is the subject node of e1). eD and eT denote the data flow
+and occurrence time of event e, respectively. N or(·) denotes
+normalization, which removes differences in eD and eT on the
+scale. CS(·) denotes the computation of cosine similarity.
+SPARSE will iteratively calculate the scores of all suspicious
+flow paths and consider the path whose score is below a threshold
+T as an irrelevant path. Then, SPARSE filters out events that
+only exist in the irrelevant path and outputs the retained
+part as a critical component graph to help analysts in attack
+investigation.
+
+1872
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+TABLE III
+THE STATISTICS OF DEPENDENCY GRAPHS GENERATED FOR ALL THE 15
+ATTACKS
+
+V. EVALUATION
+In this section, we first present the evaluation preparation, including the characteristics of the dataset, the obtaining of ground
+truth, and the setting of evaluation metrics. We then evaluate the
+effectiveness and efficiency of each component separately. In
+summary, we aim to answer the following questions:
+r RQ1: How effective is SPARSE in attack investigation?
+r RQ2: How efficient is SPARSE in attack investigation?
+r RQ3: How sensitive is SPARSE in parameter selection?
+A. Evaluation Preparation
+We deploy our implementation of SPARSE on a computer with
+Intel (R) Core (TM) i9-10900 K CPU @ 3.70 GHz and 64 GB
+memory. SPARSE processes streaming logs from the auditing
+systems Sysdig [47] and SPADE [5], extracts information in the
+format as described in Section II-A, and runs continuously in a
+low-overhead state.
+1) Attack Dataset: We evaluate the effectiveness of SPARSE
+in revealing attack sequences on a dataset with over 150 million system audit logs. As shown in Table III, this dataset
+contains 15 attack cases (10 simulated attacks and 5 DARPA
+attacks), and is provided by DEPIMPACT [17]. The simulated
+attacks consist of 7 (rows 2 to 8) single-host attacks based on
+common exploits [11], [32], [34], [49] and 3 (rows 9 to 11)
+multi-host attacks based on Cyber Kill Chain [50] and CVE
+reports [49]. The simulated attacks utilized deployed hosts with
+12 active users and hundreds of processes, daily tasks such as
+file manipulation, text editing, and software development were
+carried out to simulate real-world usage. We detail these 10
+simulated attacks in Appendix A1 and A2. The DARPA dataset
+contains 5 host attacks (rows 12 to 16), which was done by
+two teams (FiveDirections and Theia), and differed in terms
+of target systems (Windows, Linux) and vulnerability exploits
+(pine backdoor, firefox backdoor, and browser extension).
+Table III shows the statistics of the generated dependency
+graphs for all attacks. Column “Attack” indicates the name of
+
+the attack case. Columns “# V” and “# E” indicate the number
+of nodes and edges of the backtracking graphs after performing
+causality analysis [35] from POI events. Column “# CE” shows
+the number of critical events (related to the attack), which we
+explain in detail below.
+2) Obtaining Ground Truth: In order to evaluate the performance of SPARSE, we need to specify the ground truth for all
+attack cases (i.e., identify all critical events). Specifically, we
+analyzed the targets of each attack case and determined the
+corresponding POI events from massive logs. We then conducted
+back-propagation [35] from POI events to obtain backtracking
+graphs and searched for critical events within them. Finally, we
+manually ascertained the critical events based on Indicators of
+Compromise (e.g., file names and malware names) and attack
+steps (e.g., download then execution), as shown in Appendix A.
+Evaluation Metrics: First, we measure false positives (FP)
+and false negatives (FN). False positives refer to those edges that
+SPARSE identifies as critical but are not, while false negatives
+refer to those edges that SPARSE identifies as irrelevant but
+are critical. Then we compute the false positive rate F P R =
+F P/Etotal and false negative rate F N R = F N/Ec , where
+Etotal represents the number of edges and Ec represents the
+number of critical edges, respectively. Finally, we also computed
+the precision, recall, and F-score as comprehensive evaluation
+metrics.
+B. RQ1 : How Effective is SPARSE in Attack Investigation ?
+There has been a lot of graph-based related work about attack
+investigation [12], [13], [16], [17], [18], [23], [25], [26], [27],
+[29], [51], [52]. However, HOLMES [12] and RapSheet [13]
+rely solely on defined TTP-like (Tactics, Techniques, and Procedures) rules for detection and investigation. Such approaches
+suffer from heavy reliance on manual efforts and cannot effectively address zero-day vulnerabilities. HERCULE [51] and
+WATSON [23] address attack investigation problems by discovering communities (i.e., behavioral abstractions) on the provenance graph. Their purpose is to assist analysts in identifying
+attack stages from a community perspective, enabling a quick
+understanding of the purpose of a subgraph in the provenance
+graph (e.g., file compilation and uploading). HERCULE and
+WATSON (subgraph-level) differ in granularity from SPARSE
+(event-level). KAIROS [26], FLASH [25], R-CAID [29], and
+PROVG-SEARCHER [16] are intrusion detection systems that
+leverage self-supervised learning to identify anomalous behaviors and incorporate attack investigation as a subcomponent.
+However, these frameworks are highly integrated, with their
+investigation modules tightly dependent on the outputs of the
+detection components, making direct reuse challenging. Hence,
+we do not compare our work with theirs.
+Here, we compare the performance of SPARSE with 4 stateof-the-art approaches: SLEUTH [52], NODOZE [18], DISTDET [27], and DEPIMPACT [17], which are more relevant in
+terms of methodology (anomaly-score based) and granularity
+(event-level) for our evaluation. SLEUTH defines TTP-like rules
+with the added constraint that these rules only fire when certain
+confidentiality or integrity conditions are satisfied according to
+
+YING et al.: SPARSE: SEMANTIC TRACKING AND PATH ANALYSIS FOR ATTACK INVESTIGATION IN REAL-TIME
+
+1873
+
+TABLE IV
+PERFORMANCE OF DEPENDENCY GRAPHS GENERATED BY DIFFERENT TECHNIQUES. PREC.: PRECISION; REC.: RECALL
+
+a tag-based information flow propagation. NODOZE measures
+the rarity of different events in the environment and, based on
+this, assigns anomaly scores to each event in the dependency
+graph. We use logs that only contain normal behavior (captured
+outside of attack periods) as execution profiles (i.e., statistics of
+events) to satisfy NODOZE. DISTDET is a distributed detection
+system that detects anomalous events by training a hierarchical
+system event tree (HST) model and generates alert summary
+graphs (ASGs) as outputs for attack investigation. Specifically,
+DISTDET first identifies the X-generation ancestors and Ygeneration descendants of the subject process. It then incorporates the top N outgoing edges of each type (process, file,
+and network) from these identified nodes (i.e., the events they
+initiated) to form the ASG. Accordingly, we produce ASGs
+based on this heuristic rule and optimized hyperparameters
+(X=12, Y=2, N=15). DEPIMPACT assigns anomaly scores
+to edges based on several characteristics (including time, data
+flow amount, and node access), and then aggregates the scores
+to determine the entry points through a propagation algorithm.
+DEPIMPACT then takes as output the overlap events of the
+forward graph of the entry point and the backward graph of
+the alert point.
+Table IV shows the performance of attack investigation for
+different techniques in all cases. Lower FP/FPR indicates a better
+ability to filter irrelevant edges and lower FN/FNR indicate
+a better ability to retain critical edges. The results show that
+SPARSE performs the best. On average, the critical component
+graph generated by SPARSE (∼113 edges) is 8849 × smaller than
+the original dependency graph (∼1,000,000 edges), 22 × smaller
+than the second-best result (i.e., DEPIMAPCT with ∼2,487
+edges). SPARSE demonstrates the best capability in filtering
+irrelevant edges while preserving the attack sequences (FP =
+99, FPR = 0.043*10−2 ), 25 × more effective than DEPIMPACT
+(FP = 2,473, FPR = 1.087*10−2 ). Moreover, SPARSE does not
+miss any critical edges (i.e., FN = 0, FNR = 0).
+SLEUTH investigates attack scenarios by defining confidentiality and integrity labels for label propagation. However, SLEUTH cannot ensure to cover all the attack-related
+edges and therefore performed the worst in FNR (FN = 5.73,
+
+FPR = 42.54*10−2 ), resulting in ineffective support for attack
+investigation. NODOZE performed better than SLEUTH in
+including critical edges but worse in FPR (FP = 16,682, FPR
+= 7.329*10−2 ; FN = 2, FNR = 14.85*10−2 ), resulting in
+the ineffective reduction of investigation cost for analysts. The
+reason is that the performance of NODOZE relies on whether the
+execution profile comprehensively covers all benign behaviors
+but ignores information in the form of streams. DISTDET considers the ancestor process nodes up to X preceding generations
+(X = 12), the descendant process nodes up to Y subsequent generations (Y = 2), and the top N (N = 15) outgoing nodes as part
+of the ASG. This comprehensive inclusion enables DISTDET to
+achieve optimal performance in terms of false negatives (FN =
+0). However, due to the lack of further filtering mechanisms to
+eliminate irrelevant events, DISTDET performs poorly in false
+positive reduction (FP = 4052, FPR = 1.72*10−2 ). DEPIMPACT heuristically selects 3 entry points (one each for files,
+processes, and sockets), which amplifies the attack surface.
+DEPIMPACT directly takes the intersection between the forward graph of the entry points and the backward graph of the
+alert point as output, which introduces massive attack-irrelevant
+events (FP = 2,473, FPR = 1.087*10−2 ). Regarding the reduction results, SPARSE exhibits the best performance (FP = 99, FPR
+= 0.043*10−2 ), we attribute the good performance of our system
+to (1) SPARSE employs semantic transfer to construct a suspicious semantic graph related to the POI event that inherently
+filters out a significant number of irrelevant events (FP = 403,
+FPR = 0.177*10−2 ), and (2) SPARSE evaluates the relevance of
+context to POI events at the path-level rather than in isolation.
+Finally, SPARSE outperforms all comparative methods across
+all comprehensive evaluation metrics (i.e., precision, recall,
+and F-score), indicating that it effectively meets the practical
+requirement for low false positives.
+C. RQ2 : How Efficient is SPARSE in Attack Investigation ?
+In this section, we evaluate the efficiency of SPARSE when
+deployed in a real scenario. First, we evaluate SPARSE on the
+real-time performance by comparing data generation rate and
+
+1874
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+TABLE V
+COMPARISON OF DATA CONSUMPTION RATE AND DATA GENERATION RATE
+
+increases overhead on the disk. In addition, the CPU overhead
+of SPARSE is 4.5%, due to the simple yet intuitive and effective
+algorithm.
+In summary, we believe that SPARSE outperforms the latest
+work DEPIMPACT in all aspects of overhead and can satisfy
+the requirements of low overhead and latency in application
+scenarios.
+D. RQ3: How Sensitive is SPARSE in Parameter Selection?
+
+data consumption rate. Table V shows that SPARSE can consume
+events 15 × faster than the events generation rate of the host on
+average, which shows the real-time of SPARSE is feasible. Then
+we evaluate the overheads of each component of SPARSE on
+time, memory, CPU, and disk, as shown in Table VI. In addition,
+we conduct comparative experiments with the baseline method
+DEPIMPACT.
+Time and Memory: SPARSE can perform path-level contextual
+analysis of the suspicious semantic graph and construct the
+critical component graph in 2 s on average, which is 4091
+× faster than DEPIMPACT (∼6,464s). DEPIMPACT uses an
+impact propagation algorithm to identify entry points. However,
+when the number of edges in the backtracking graph is high
+(e.g., case “Hide File”), it takes an extremely long time to reach
+global convergence (19,814s). In terms of memory overhead,
+three causes are making SPARSE smaller than DEPIMAPCT: (1)
+SPARSE only stores suspicious nodes in memory when processing streaming logs, so the memory overhead grows extremely
+slowly and can be seen as constant in scale (i.e., 30 MB). (2) The
+suspicious semantic graphs (∼403 edges) read in by SPARSE are
+much smaller than the dependency graphs (∼one million edges)
+read in by DEPIMPACT. (3) The suspicious flow path extraction
+algorithm applied in PCA only traverses the graph structure once
+(a complexity of O(E) ) and generates a smaller number of SFPs
+(230 on average). For these reasons, the memory overhead of
+PCA (132.82 MB) is 2.4 × smaller than that of DEPIMAPCT
+(320.81 MB). Finally, it is important to emphasize that SPARSE
+is real-time for suspicious semantic graph construction (SSGC),
+so we do not perform a time overhead evaluation for this
+component.
+CPU and Disk: SPARSE stores the relevant event table (RET)
+in the database when processing streaming logs. To evaluate the
+overhead of SPARSE on the hard disk, we also perform the relevant experiments. As shown in Table VI, SPARSE requires only
+21.03 MB of disk space, which is 9 × smaller than the original
+logs (204.87 MB). This is because SPARSE only retains events of
+suspicious semantic relevance, whereas other techniques [10],
+[17], [18], [19], [34] require the whole logs, which significantly
+
+As shown in Section IV-E, there are two super parameters in
+SPARSE that need to be set: (1) the C affects the expansion factor,
+(2) the T filters the paths. As shown in Equation (3), the larger C,
+the smaller the expansion factor α, the lower the path score, and
+the fewer events will be retained by SPARSE. Parameter T , on the
+other hand, indicates the severity of SPARSE for path selection;
+the larger T is, the fewer events will be retained by SPARSE.
+We demonstrate the sensitivity of SPARSE in parameter selection by testing all combinations of the hyper-parameters C
+and T through grid search methodology. Specifically, we set the
+minimum value of C to be 1, the maximum value to be 9, and
+the step size to be 1; set the minimum value of T to be 0.1, the
+maximum value to be 0.9, and the step size to be 0.1; and test the
+performance of SPARSE on the metrics FP/FN as shown in Fig. 5.
+As parameter C increases, SPARSE reduces the path score and
+retains fewer events, hence the FP decreases. At the same time,
+SPARSE misses some critical events, causing FN to rise. As the
+threshold T increases, SPARSE blocks more paths and preserves
+fewer events, so FP falls while FN rises. As shown in Fig. 5(a),
+FP decreases gradually from the upper left to the lower right; as
+shown in Fig. 5(b), FN increases gradually from the upper left
+to the lower right. The effects of these parameter changes on the
+SPARSE are in line with our predictions.
+Obviously, FP and FN are two evaluation metrics that we both
+want to be as low as possible, but there is a trade-off between
+their performance for a system (i.e., a rise in one leads to a fall in
+the other). Finally, we choose C = 5 and T = 0.5 as the default
+parameters for SPARSE. Of course, the manufacturer can adapt
+these parameters to the specific scenario.
+VI. DISCUSSION
+Cooperation with existing techniques: There is a requirement
+for defenders to be able to detect and handle real-world attacks
+in real time. As an attack investigation system, SPARSE can be
+combined with a variety of existing techniques to meet this
+goal. By working with intrusion detection systems [12], [14],
+[15], [53] that can provide real-time alerts and defenses, SPARSE
+is able to investigate alerts for relevant events and provide a
+brief critical component graph to analysts. By working with
+compression systems [10], [11], [38], [54], [55] that can reduce
+redundant information, SPARSE is able to reduce memory and
+disk overheads, enabling years of relevant data storage. By
+working with analysis systems [13], [18], [56] that automatically
+determine the authenticity of alarms, SPARSE is able to provide
+streamlined but sufficient relevant events to support the triage of
+alarms.
+
+YING et al.: SPARSE: SEMANTIC TRACKING AND PATH ANALYSIS FOR ATTACK INVESTIGATION IN REAL-TIME
+
+1875
+
+TABLE VI
+OVERHEAD PERFORMANCE OF EACH COMPONENT OF SPARSE AND BASELINE APPROACH
+
+Fig. 5.
+
+Hyperparameter Matrices for System Performance with Different Parameters.
+
+Evasion Attacks: Existing investigation techniques, such
+as DEPIMAPCT, utilize weight computation and scorepropagation techniques to identify attack entry points. However,
+this insight of independently calculating the weights of events
+does not fit the situation where information flows between entities. As a result, an attacker can inject a payload by writing
+multiple times and thus evade tracking. In contrast, SPARSE
+mitigates the impact of this by performing contextual analysis
+in path-level to synthesize the relevance between a path and an
+alert. An attacker may evade investigation by going the long way
+around (i.e., repeating nonsensical behavior) as in the attack case
+“Hide File” where the attacker changes the file name multiple
+times. As shown in Section IV-E, SPARSE is able to mitigate
+this problem by performing relative score calculation and event
+score inflation mechanisms.
+Limitation: To implement attack investigation, SPARSE relies
+on alerts initiated by Endpoint Detection and Response (EDR)
+placed on the host. SPARSE cannot perform attack investigation
+if the detection system fails to launch alerts (identify suspicious
+behavior). Recent approaches [57], [58] propose solutions to
+
+improve the detection of anomalous system activity, and SPARSE
+can work with these approaches to provide better defenses. If
+the detection system initiates false positives frequently, SPARSE
+can only identify relevant events but cannot filter these false
+alerts. But SPARSE can work with alarm triage techniques [13],
+[18], [54] to help them filter false alarms by providing a
+streamlined critical component graph. In addition, as shown in
+Section IV-B3, SPARSE needs to maintain a suspicious entity
+list in memory and a related event table on disk. As the runtime
+grows, there is redundant information in the related event table,
+such as Event 10 being stored four times in Fig. 3. By working
+with existing compression systems [10], [11], [38], [54], [55],
+SPARSE can effectively mitigate this situation and enable long
+deployment runs.
+VII. RELATED WORK
+The analysts need to perform threat alert validation and postmortem analysis of incidents. Currently, while auditing is by
+no means the only form of forensic investigation, it is telling
+
+1876
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+that 75% of incident response specialists consider logs to be the
+most valuable form of investigation artifact [59]. And in terms
+of methodologies for attack investigation using logs, they can
+be categorized into three categories: label propagation-based,
+anomaly score-based, and machine learning-based.
+Label Propagation-based: Labels are given to nodes and are
+propagated to other nodes by system calls. When an alert arises,
+the analyst can easily retrace the events associated with the
+alert based on the label. Milajerdi et al. propose HOLMES [12],
+which mitigates the dependency explosion problem by requiring
+the aggregation of more labels to raise the detection threshold.
+RapSheet [13] makes use of the tactical provenance graph
+(TPG), which instead of encoding low-level system event dependencies, reasons about the causal relationships between threat
+alerts. RapSheet proposes a threat scoring scheme that evaluates
+the severity of each alert based on TPGs to enable effective
+investigation of alerts. CONAN [14] iteratively performs malicious behavior determination with label passing and aggregation
+through data provided by ETW, enabling real-time detection
+and investigation. ProvG-Searcher [16] employs graph reduction
+techniques to address the semantic gap between the query graph
+and the provenance graph and simplify subgraph matching to
+straightforward comparisons between a query and precomputed
+subgraph representations by using order embeddings. These
+label-based approaches rely on heuristic rules that cannot handle
+all types of attacks and have a high level of false negatives in
+attack investigation.
+Anomaly Score-based: The essential view of these methods is
+to quantify the suspiciousness of edges between pairs of nodes.
+Pei et al. ’s HERCULE [51] system correlates multi-source
+heterogeneous logs to construct a multi-dimensional weighted
+graph and uses the unsupervised community detection algorithm Louvain [60] to discover attack-related paths from it.
+NODOZE [18] and PRIOTRACKER [19], on the other hand,
+perform statistics on historical data and assign anomaly scores
+to events in the dependency graph. The score propagation algorithm is then used to find suspicious events. Both of these
+methods rely on statistics of historical data and cannot be applied in complex and variable generative environments. DEPIMPACT [17] calculates dependency weights globally based on
+multiple features (including time, data traffic amount, and node
+access) and then aggregates the weights to nodes to determine
+suspicious points of intrusion. The overlapping parts between
+the forward graph of the entry point and the backward graph of
+the alarm point are then considered attack-related events. These
+score-based methods can cover all critical events. However,
+there is no restriction on the variation of scores to solve the
+dependency explosion problem, thus leading to higher false
+positives. In addition, these methods require reading in all the
+logs to build the dependency graph, which is very expensive in
+terms of hard disk and memory.
+Machine Learning-based: Some techniques use machine
+learning methods to learn contextual and structural information from dependency graphs to identify the most relevant
+abnormal events to alert. ATLAS [21] uses a novel combination of causal analysis, natural language processing, and machine learning to construct sequence-based models as a way to
+
+establish critical patterns of attack and non-attack behavior in
+the dependency graph. On the other hand, DEPCOMM [22]
+proposes a novel graph summarization method by dividing the
+large graph into process-centric subgraphs. DEPCOMM then extracts summaries from each subgraph, enabling the generation of
+summary graphs from dependency graphs, thereby reducing the
+difficulty of investigation for analysts. ConGraph [24] integrates
+provenance graphs with multi-process contextual information
+and employs a CNN-BiLSTM model to detect anomalous nodes.
+These supervised learning-based approaches suffer from inadequate training samples, poor generalization capabilities, and
+high computational costs. Therefore, some studies leverage selfsupervised learning to model normal system behavior, enabling
+the generation of alerts upon detecting anomalies. These alerts
+are subsequently correlated to produce the final output for attack
+investigation. DISTDET [27] is a distributed detection system
+that detects anomalous events by training a hierarchical system event tree (HST) model. Then, DISTDET marks detected
+anomalous events as alerts and generates alarm summary graphs
+(ASGs). KAIROS [26] trains an anomaly detection model with
+an encoder and decoder architecture and reconstructs the attack
+through community discovery algorithms [60] to help security
+analysts quickly understand the full attack scene. FLASH [25]
+incorporates a novel adaptation of a GNN-based contextual encoder to efficiently encode both local and global graph structures
+into expressive node embeddings. Similarly, Flash implements
+attack investigation at the end through the construction of an
+attack evolution graph. MAGIC [28] uses masked graph representation learning to model benign system entities and behaviors, but without an explicit attack investigation component.
+R-CAID [29] precomputes the root cause of each node during the
+graph construction phase and directly links each node to its root
+during the embedding process, thereby preventing adversaries
+from masquerading as legitimate processes. Finally, R-CAID
+includes all root cause nodes of the anomalous nodes as part
+of the attack investigation output. However, the investigation
+components in the aforementioned works typically rely on simple correlation of multiple alerts and exhibit a high degree of
+integration, making them heavily dependent on the outputs of
+preceding detection components.
+In contrast to previous work, SPARSE employs a hybrid
+method in the specific domain of causality tracking. SPARSE
+first uses suspicious semantic delivery rule to construct suspicious semantic graph. Then SPARSE uses path-level contextual
+analysis to extract a streamlined critical component graph.
+VIII. CONCLUSION
+We propose SPARSE, a system that processes streaming logs
+and outputs critical events (attack-related events) according to
+alert in real-time. Specifically, SPARSE constructs a suspicious
+semantic graph related to the POI event by suspicious semantic
+transfer rule and storage strategy. Then SPARSE uses a suspicious flow path extraction algorithm to extract all reachable
+flow paths from the suspicious semantic graph. Finally, SPARSE
+uses path-level contextual analysis to score all paths and filters
+irrelevant events to obtain the final critical component graph.
+
+YING et al.: SPARSE: SEMANTIC TRACKING AND PATH ANALYSIS FOR ATTACK INVESTIGATION IN REAL-TIME
+
+Our evaluation of real attacks demonstrates that SPARSE achieves
+low false positives (FP = 99), low overhead (30 MB for memory
+and 21.03 MB for hard disk), and low latency (1.58 s for attack
+investigation).
+REFERENCES
+[1] “What Twitter’s 200 million-user email leak actually means,” 2024. [Online]. Available: https://www.wired.com/story/twitter-leak-200-millionuser-email-addresses/
+[2] “Mitre att&ck,” 2024. [Online]. Available: https://attack.mitre.org/
+[3] “System administration utilities,” 2024. [Online]. Available: https:
+//access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/
+html/security_guide/chap-system_auditing
+[4] “About event tracing,” 2024. [Online]. Available: https://docs.microsoft.
+com/en-us/windows/win32/etw/about-event-tracing
+[5] A. Gehani and D. Tariq, “Spade: Support for Provenance Auditing in
+Distributed Environments,” in Proc. ACM/IFIP/USENIX Int. Middleware
+Conf., 2012, pp. 101–120.
+[6] S. Ma et al., “Kernel-supported cost-effective audit logging for causality tracking,” in Proc. USENIX Conf. Usenix Annu. Tech. Conf., 2018,
+pp. 241–254.
+[7] A. Bates et al., “Trustworthy whole-system provenance for the Linux
+kernel,” in Proc. 24th USENIX Conf. Secur. Symp., 2015, pp. 319–334.
+[8] M. A. Inam et al., “SoK: History is a vast early warning system: Auditing
+the provenance of system intrusions,” in Proc. IEEE Symp. Secur. Privacy,
+2022, pp. 307–325.
+[9] K. H. Lee et al., “High accuracy attack provenance via binary-based
+execution partition,” in Proc. Netw. Distrib. Syst. Secur., 2013, vol. 16,
+pp. 1–16.
+[10] Y. Tang et al., “NodeMerge: Template based efficient data reduction
+for big-data causality analysis,” in Proc. ACM SIGSAC Conf. Comput.
+Commun Secur., 2018, pp. 1324–1337.
+[11] Z. Xu et al., “High fidelity data reduction for Big Data security dependency
+analyses,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2016,
+pp. 504–516.
+[12] S. M. Milajerdi, R. Gjomemo, B. Eshete, R. Sekar, and V. N. Venkatakrishnan, “HOLMES: Real-time APT detection through correlation of suspicious information flows,” in Proc. IEEE Symp. Secur. Privacy, 2019,
+pp. 1137–1152.
+[13] W. U. Hassan, A. Bates, and D. Marino, “Tactical provenance analysis
+for endpoint detection and response systems,” in Proc. IEEE Symp. Secur.
+Privacy, 2020, pp. 1172–1189.
+[14] C. Xiong et al., “Conan: A practical real-time APT detection system with
+high accuracy and efficiency,” IEEE Trans. Dependable Secure Comput.,
+vol. 19, no. 1, pp. 551–565, Jan./Feb. 2020.
+[15] T. Zhu et al., “APTSHIELD: A stable, efficient and real-time APT detection
+system for linux hosts,” IEEE Trans. Dependable Secure Comput., vol. 20,
+no. 6, pp. 5247–5264, Nov/-Dec. 2023.
+[16] E. Altinisik, F. Deniz, and H. T. Sencar, “ProvG-searcher: A graph representation learning approach for efficient provenance graph search,” in Proc.
+ACM SIGSAC Conf. Comput. Commun. Secur., 2023, pp. 2247–2261.
+[17] P. Fang et al., “Back-propagating system dependency impact for attack
+investigation,” in Proc. 31th USENIX Secur. Symp., 2022, pp. 2461–2478.
+[18] W. U. Hassan et al., “Nodoze: Combatting threat alert fatigue with
+automated provenance triage,” in Proc. Netw. Distrib. Syst. Secur.,
+2019, pp. 1–15.
+[19] Y. Liu et al., “Towards a timely causality analysis for enterprise security,”
+in Proc. Netw. Distrib. Syst. Secur., 2018, pp. 1–15.
+[20] Hassan et al., “This is why we can’t cache nice things: Lightning-fast
+threat hunting using suspicion-based hierarchical storage,” in Proc. 36th
+Annu. Comput. Secur. Appl. Conf., 2020, pp. 165–178.
+[21] A. Alsaheel et al., “ATLAS: A sequence-based learning approach for attack
+investigation,” in Proc. 30th USENIX Secur. Symp., 2021, pp. 3005–3022.
+[22] Z. Xu, P. Fang, C. Liu, X. Xiao, Y. Wen, and D. Meng, “DEPCOMM:
+Graph summarization on system audit logs for attack investigation,” in
+Proc. IEEE Symp. Secur. Privacy, 2022, pp. 540–557.
+[23] J. Zeng et al., “WATSON: Abstracting behaviors from audit logs via
+aggregation of contextual semantics,” in Proc. Netw. Distrib. Syst. Secur.,
+2021, pp. 1–18.
+[24] L. Li and W. Chen, “Congraph: Advanced persistent threat detection
+method based on provenance graph combined with process context in
+
+1877
+
+cyber-physical system environment,” Electronics, vol. 13, no. 5, 2024,
+Art. no. 945.
+[25] M. U. Rehman, H. Ahmadi, and W. U. Hassan, “Flash: A comprehensive approach to intrusion detection via provenance graph representation
+learning,” in Proc. IEEE Symp. Secur. Privacy, 2024, pp. 3552–3570.
+[26] Z. Cheng et al., “KAIROS: Practical intrusion detection and investigation
+using whole-system provenance,” in Proc. IEEE Symp. Secur. Privacy,
+2024, pp. 3533–3551.
+[27] F. Dong et al., “{DISTDET }: A { Cost-Effective} distributed cyber
+threat detection system,” in Proc. 32nd USENIX Secur. Symp., 2023,
+vol. 23,pp. 6575–6592.
+[28] Z. Jia, Y. Xiong, Y. Nan, Y. Zhang, J. Zhao, and M. Wen, “{MAGIC}: Detecting advanced persistent threats via masked graph representation learning,” in Proc. 33rd USENIX Secur. Symp., 2024, vol. 24, pp. 5197–5214.
+[29] A. Goyal, G. Wang, and A. Bates, “R-CAID: Embedding root cause
+analysis within provenance-based intrusion detection,” in Proc. IEEE
+Symp. Secur. Privacy, 2024, pp. 3515–3532.
+[30] “Lateral movement,” 2024. [Online]. Available: https://www.crowdstrike.
+com/cybersecurity-101/lateral-movement/
+[31] “Apt notes,” 2024. [Online]. Available: https://github.com/aptnotes/data/
+[32] Y. Kwon et al., “MCI: Modeling-based causality inference in audit logging
+for attack investigation,” in Proc. Netw. Distrib. Syst. Secur., 2018, vol. 2,
+pp. 1–14.
+[33] P. Gao et al., “{AIQL}: Enabling efficient attack investigation from system
+monitoring data,” in Proc. USENIX Conf. Usenix Annu. Tech. Conf., 2018,
+pp. 113–126.
+[34] S. Ma et al., “ProTracer: Towards practical provenance tracing by alternating between logging and tainting,” in Proc. Netw. Distrib. Syst. Secur.,
+2016, vol. 2, pp. 1–15.
+[35] S. T. King and P. M. Chen, “Backtracking intrusions,” ACM SIGOPS
+Operating Syst. Rev., vol. 37, no. 5, pp. 223–236, 2003.
+[36] “Darpa,” 2024. [Online]. Available: https://www.darpa.mil/program/
+transparent-computing
+[37] “Darap3 transparent engagement 3,” 2023. [Online]. Available: https://
+drive.google.com/drive/folders/1QlbUFWAGq3Hpl8wVdzOdIoZLFxkII
+4EK
+[38] T. Zhu et al., “General, efficient, and real-time data compaction strategy
+for APT forensic analysis,” IEEE Trans. Inf. Forensics Secur., vol. 16,
+pp. 3312–3325, 2021.
+[39] P. Gao et al., “Enabling efficient cyber threat hunting with cyber threat
+intelligence,” in Proc. IEEE 37th Int. Conf. Data Eng., 2021, pp. 193–204.
+[40] Gao et al., “{SAQL}: A stream-based query system for real-time abnormal
+system behavior detection,” in Proc. 27th USENIX Conf. Secur. Symp.,
+2018, pp. 639–656.
+[41] D. Wagner and P. Soto, “Mimicry attacks on host-based intrusion detection systems,” in Proc. 9th ACM Conf. Comput. Commun. Secur., 2002,
+pp. 255–264.
+[42] M. Bishop et al., Introduction to Computer Security, vol. 50. Reading,
+MA, USA: Addison-Wesley, 2005.
+[43] C. Kruegel et al., Intrusion Detection and Correlation: Challenges and
+Solutions, vol. 14. Berlin, Germany: Springer, 2004.
+[44] “Insider threat monitoring software,” 2023. [Online]. Available: https://
+www.netwrix.com/insider_threat_detection.html
+[45] “Auditd,” 2023. [Online]. Available: https://linux.die.net/man/8/auditd
+[46] “Lttng,” 2023. [Online]. Available: https://lttng.org
+[47] “Sysdig,” 2023. [Online]. Available: https://github.com/draios/sysdig
+[48] “Redhat,” 2023. [Online]. Available: https://github.com/linux-audit/
+[49] “Exploit database,” 2024. [Online]. Available: https://www.exploit-db.
+com/
+[50] “Cyber kill chain,” 2023. [Online]. Available: https://www.
+lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html
+[51] K. Pei et al., “HERCULE: Attack story reconstruction via community
+discovery on correlated log graph,” in Proc. 32nd Annu. Conf. Comput.
+Secur. Appl., 2016, pp. 583–595.
+[52] M. N. Hossain et al., “SLEUTH: Real-time attack scenario reconstruction
+from cots audit data,” in Proc. 26th USENIX Conf. Secur. Symp., 2017,
+pp. 487–504.
+[53] T. Kim et al., “Intrusion recovery using selective re-execution,” in Proc. 9th
+USENIX Conf. Operating Syst. Des. Implementation, 2010, pp. 89–104.
+[54] M. N. Hossain et al., “Dependence-preserving data compaction for scalable forensic analysis,” in Proc. 27th USENIX Conf. Secur. Symp., 2018,
+pp. 1723–1740.
+[55] N. Michael et al., “On the forensic validity of approximated audit logs,”
+in Proc. 36th Annu. Comput. Secur. Appl. Conf., 2020, pp. 189–202.
+
+1878
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+[56] W. U. Hassan et al., “This is why we can’t cache nice things: Lightning-fast
+threat hunting using suspicion-based hierarchical storage,” in Proc. 36th
+Annu. Comput. Secur. Appl. Conf., 2020, pp. 165–178.
+[57] S. Wang et al., “Heterogeneous graph matching networks for unknown
+malware detection,” in Proc. 28th Int. Joint Conf. Artif. Intell., 2019,
+pp. 3762–3770.
+[58] X. Han et al., “Unicorn: Runtime provenance-based detector for advanced
+persistent threats,” Netw. Distrib. Syst. Secur. Symp., pp. 1–18, 2020.
+[59] “Carbon black,” 2018. [Online]. Available: https://www.carbonblack.com/
+global-incident-response-threatreport/november-2018/
+[60] V. D. Blondel et al., “Fast unfolding of communities in large networks,” J.
+Stat. Mech.: Theory Experiment, vol. 2008, no. 10, 2008, Art. no. P10008.
+[61] Vpnfilter, New router malware with destructive capabilities,” 2018. [Online]. Available: https://symc.ly/2IPGGVE
+[62] Ebay, “Ebay Inc. to ask Ebay users to change pass-words” 2014. [Online]. Available: http://blog.ebay.com/ebay-inc-ask-ebay-users-changepasswords/
+[63] “Schneier security: Router vulnerability the vpnfilter botnet,” 2018.
+[Online]. Available: https://www.schneier.com/blog/archives/2018/06/
+router_vulnerab.html
+
+Jie Ying received the BE degree in digital media from
+the Zhejiang University of Technology, Hangzhou,
+China, in 2020. He is currently working toward the
+PhD degree in computer science the Zhejiang University of Technology. His research interests include
+APT and cyber threat Intelligence.
+
+Tiantian Zhu (Member, IEEE) received the PhD
+degree in computer science from Zhejiang University,
+Hangzhou, China, in 2019. He is currently an associate professor with the College of Computer Science
+and Technology, Zhejiang University of Technology,
+China. His research interests include system security
+and artificial intelligence.
+
+Mingjun Ma received the BE degree in computer science from Zhejiang ShuRen University, HangZhou,
+China, in 2023. He is currently working toward
+the MD degree in computer science with the Zhejiang University of Technology. His research interests include APT and cyber intelligence and mobile
+authentication.
+
+Chunlin Xiong received the PhD degree on cybersecurity from Zhejiang University, Hangzhou, China,
+in 2021. He is currently the chief security expert
+of China Unicom (Guangdong) Industrial Internet
+Company, Ltd., responsible for the construction of
+SOC and large models in the security field.
+
+Tieming Chen received the PhD degree in computer software and theory from BeiHang University,
+Beijing, China, in 2011. He is currently a professor
+with the College of Computer Science and Technology, Zhejiang University of Technology, Hangzhou,
+China. His research interests include cyberspace security and intelligence security. He is also a member
+of ACM.
+
+Mingqi Lv received the PhD degree in computer
+science from Zhejiang University, Hangzhou, China,
+in 2012. His research interests include spatiotemporal
+data mining and ubiquitous computing.
+Wenrui Cheng received the BE degree in computer
+science and technology from Huzhou University,
+Huzhou, China, in 2022. She is currently working
+toward the PhD degree in computer science with
+Zhejiang University of Technology. Her current research interests include knowledge driven APT attack
+sample generation and detection.
+
+Qixuan Yuan received the BE degree in computer
+science and technology from ShanDong Normal University, Jinan, China, in 2022. She is currently working toward the PhD degree in computer science with
+Zhejiang University of Technology. Her research interests include APT detection and cyber threat intelligence analysis.
+
+Yan Chen (Fellow, IEEE) received the PhD degree
+in computer science from the University of California, Berkeley, CA, USA, in 2003. He is currently a
+professor with the Department of Electrical Engineering and Computer Science, Northwestern University,
+Evanston, IL, USA. His research interests include
+network security, measurement, and diagnosis for
+large-scale networks and distributed systems.
+PAPER_TEXT

@@ -1,0 +1,1032 @@
+3600 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+ 5G Mobile Networked Clusters Anomaly Detection
+ Under Distribution Shifts: A Causal Perspective
+ Xuyuan Liu, Chao Luo , Member, IEEE, and Rui Shao
+
+ Abstract— Along with the application of the C-band of the healthcare systems, vehicle-to-everything communications,
+high-frequency spectrum, the number of 5G wireless base stations drone communication systems, and the industrial Internet of
+has increased significantly compared with 3G/4G networks. Things (IoT) [1], [2], [3], [4].
+Therefore, how to intelligently detect anomalies in base stations is
+crucial for the daily operation and maintenance of 5G networks. Although 5G’s millimeter wave spectrum enables increased
+Nowadays, 5G Mobile Network Clusters (5G-MNCs) are gradu- bandwidth, it also requires a significant increase in base
+ally replacing individual base stations for maintenance as a group station density. This presents deployment challenges for wireof regional base stations with high internal correlation. However, less base stations—essential components of communication
+anomaly detection in 5G-MNC remains challenging due to the infrastructure. A vital operational priority is anomaly detection
+complex spatio-temporal measurement data, and additionally, the
+distributional variations of such data’s time series can also have in base station clusters, which is highlighted by this rapid
+a large impact on anomaly detection. In this work, we propose a infrastructure growth.
+novel architecture that integrates causal intervention with doubly Traditional approaches for mobile network anomaly detecresidual spatio-temporal graph convolution (Causal-DRSTGC). tion mostly use manually set fixed criteria to track Key
+First, a causal intervention module is introduced to eliminate Performance Indicators (KPIs) at specific base stations [5],
+the effect of confounders due to distribution shifts. Second,
+a doubly residual structure is adopted to output reconstruction [6], [7]. Despite the interpretability benefits of these expert
+and hidden representations respectively, which is more conducive knowledge-based approaches, they have three key drawto promoting the representation capability of 5G-MNC data. backs. First, for modern networks—comprising hundreds of
+Third, after stacking multiple DRSTGC blocks, a reconstruction thousands of base station nodes—creating separate threshmodule and a discrimination module are designed to process old models for each base station requires substantial expert
+data reconstruction representation and hidden representations
+for joint optimization. Finally, a flexible score is designed to input and ongoing maintenance as network topologies change.
+balance the contributions of each component to improve the This drives operating costs to unaffordable levels. Second,
+overall performance of anomaly detection. Extensive experiments current methods usually use monitoring systems with just
+conducted on China Mobile’s real-world dataset demonstrate that one variable, analyzing each base station’s KPIs separately.
+the proposed model achieves remarkable performance. For Clus- This design is still vulnerable to false alarms brought on by
+ter1, the F1-scores for shielding and decommissioning anomalies
+reach 89.29% and 90.53%, respectively. Additional validation single-node data changes and exhibits significant sensitivity to
+on public industrial datasets demonstrates its generalization local noise. Third, the spatial correlation features inherent in
+capability, achieving an F1-score of 83.43% on PSM, confirming base station clusters are not sufficiently captured by existing
+its effectiveness in various application scenarios. solutions. Notably, in cellular network designs, neighboring
+ Index Terms— Anomaly detection, causal interventions, spatio- base stations achieve spatial coordination through techniques
+temporal modeling, graph convolution network, 5G mobile like load balancing and handover optimization. However, the
+network. intrinsic spatio-temporal coupling properties of KPI data are
+ I. I NTRODUCTION not captured by conventional threshold-based methods, leading
+ to systematic discrepancies in the assessment of the overall
+W ITH its high bandwidth, ultra-low latency, and extensive connection, the 5G mobile network offers vital
+technical support for vertical sector applications such as smart
+ normal condition of the network [8].
+ In practical operational scenarios, compared to the discrete
+ deployment architectures of 3G/4G networks, 5G systems
+ Received 3 June 2025; revised 5 September 2025 and 17 October 2025; exhibit a denser network topology. This denser topology
+accepted 10 November 2025. Date of publication 13 November 2025; date of
+current version 31 December 2025. This research is supported by the National facilitates resource sharing and dynamic scheduling through
+Natural Science Foundation of China (Nos: 62172264). The associate editor clustered configurations rather than relying on individual or
+coordinating the review of this article and approving it for publication was loosely coordinated base stations [9]. A 5G-MNC can be
+R. Malekian. (Corresponding author: Chao Luo.)
+ Xuyuan Liu is with the School of Information Science and Engineering, defined as a closely coordinated cluster of base stations within
+Shandong Normal University, Jinan 250014, China. specific coverage areas, as illustrated in Fig.1. To ensure
+ Chao Luo is with the School of Information Science and Engineering, continuous coverage and effective load distribution across 5G
+Shandong Normal University, Jinan 250014, China, and also with Shandong
+Provincial Key Laboratory for Novel Distributed Computer Software Tech- base stations, strong interconnections between wireless nodes
+nology, Jinan 250014, China (e-mail: luochao@sdnu.edu.cn). must be maintained across the service area. This architecture
+ Rui Shao is with the Center of Network Optimization, China Mobile enables seamless handover between multiple base stations
+Shandong Company Ltd., Jinan 250014, China.
+ This article has supplementary downloadable material available at during user mobility, ensures load balancing, and leverages
+https://doi.org/10.1109/TCCN.2025.3632390, provided by the authors. collaborative virtualization technologies to achieve resource
+ Digital Object Identifier 10.1109/TCCN.2025.3632390 sharing and dynamic scheduling. This focus on real-time
+ 2332-7731 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3601
+
+ defined topological characteristics while elucidating intrinsic
+ synchronization dependencies between base stations. Furthermore, the DRSTGC module incorporates a doubly residual
+ architecture that simultaneously outputs reconstruction and
+ hidden representations to enhance the representational capacity of 5G-MNC data. Following two stacked DRSTGC
+ modules, we implement causal intervention mechanisms to
+ mitigate distribution shift effects. Finally, we develop a
+ dual-component architecture comprising discrimination and
+ reconstruction modules for collaborative anomaly detection,
+ effectively integrating information from both original data
+ domains and latent spatial representations. The synergistic
+Fig. 1. Example of 5G-MNCs, and each node represents a base station. integration of these modules with an adaptive anomaly scoring mechanism enables complementary inference capabilities,
+performance aligns with advancements in related wireless thereby achieving enhanced detection robustness. The main
+communications technologies [10]. contributions of this work are summarized as follows:
+ Therefore, in this study, we conduct anomaly detection in 1) A novel anomaly detection model (Causal-DRSTGC) is
+5G mobile networks through the lens of 5G-MNC architecture. proposed, by combining causal learning with graph learning
+The methodological strengths are multifold: By establishing mechanisms, which can effectively eliminate environmenthe entire 5G mobile network as a unified monitoring and tal confounding factors and address anomaly detection of
+modeling architecture, our approach captures spatio-temporal spatio-temporal data in distribution shifts.
+correlations among network nodes, consequently enhanc- 2) The introduction of a joint optimization mechanism
+ing anomaly detection performance. System-wide anomaly enables the synergistic integration of discrimination-based and
+detection across the 5G-MNC substantially mitigates the reconstruction-based modules, which are implemented in the
+effects of noise and fluctuations originating from individual latent and original data domains, respectively. This integration
+nodes on collective detection performance. The proposed is designed to achieve superior model performance.
+technique effectively suppresses false positives induced by 3) Extensive experiments on real-world 5G-MNC datasets
+unaccounted node interactions, thereby strengthening both and public industrial datasets validate the superiority of the
+robustness and stability in detection processes. Moreover, proposed method in various application scenarios.
+this paradigm promotes data-driven learning mechanisms that
+remove dependency on expert-configured thresholds, achieving II. R ELATED W ORK
+dual improvements in the reduction of maintenance costs and A. Mobile Network Anomaly Detection
+the enhancement of detection efficiency.
+ The domain of mobile network anomaly detection has
+ From another perspective, distribution shift problems
+ seen extensive methodological development, with various
+with 5G-MNC data may compromise the accuracy of
+ approaches investigating distinct strategies and frameworks
+anomaly detection systems. Variations in the environment
+ for identifying network irregularities. Dridi et al. [13] develare the main cause of these shifts in distribution. Buildoped an automated framework that employs machine learning
+ing environment-invariant representations of data is crucial
+ techniques, including One-Class Support Vector Machines,
+to reducing the effects of distribution shifts. To learn
+ Support Vector Regression, and Long Short-Term Memory
+invariant representations in this situation, we include a Par-
+ (LSTM), to detect network anomalies in cellular traffic in real
+tial Conditional Invariance Regularization (PCIR) term in
+ time. Sangaiah et al. [14] devised an automated procedure that
+this architecture [11]. By lowering the Maximum Mean
+ integrates unsupervised learning with classification algorithms
+Discrepancy (MMD), we decrease the disparity between repto detect and diagnose active failures in mobile networks by
+resentations from various environments. Therefore, due to the
+ combining network-collected data with manual drive testing.
+influence of communication environment, distribution shift
+ The data generated by 5G-MNCs exhibit inherent nonproblems are commonly present in intelligent wireless comlocalized spatio-temporal dependencies and temporal state
+munication systems [12]. This research effectively eliminates
+ relationships between current and historical data matrices [15].
+the impact of distribution shifts brought on by environmental
+ The inherent complexity of these spatio-temporal characterchanges using causal intervention approaches.
+ istics substantially increases anomaly detection difficulty for
+ For analyzing complex spatio-temporal interdependencies
+ 5G-MNC data streams. Consequently, conventional statistical
+within 5G-MNC data, we develop a Doubly Residual
+ approaches and machine learning methods may be inadequate,
+Spatio-Temporal Graph Convolution (DRSTGC) block incorrequiring specialized computational architectures for 5G-MNC
+porating two graph convolution components with residual
+ anomaly detection.
+connections. The primary component systematically incorporates predefined domain knowledge, while the auxiliary
+component employs data-driven methodology to address resid- B. Deep Learning Approaches for Anomaly Detection
+ual patterns unresolved by the preceding module. This The effectiveness of deep learning-based methods in
+innovative architecture effectively leverages 5G-MNC’s pre- anomaly detection has been empirically validated across
+3602 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+multiple domains, establishing a robust theoretical foundation potentially enabling even anomalous data to achieve satfor further exploration and practical implementation [16], isfactory reconstruction fidelity [33]. Furthermore, 5G net-
+[17], [18], [19]. Particularly notable contributions include work measurement data inherently has complex dynamic
+Thill et al. [20], who developed a temporal convolutional spatio-temporal characteristics and is susceptible to disautoencoder (AE) for ECG signal anomaly detection. Li et al. tribution shifts—making it imperative to develop novel
+[21] proposed a stacked variational autoencoder (VAE) inte- methodologies tailored for 5G-MNC data.
+grated with GNNs to address time series anomaly detection
+challenges. Lunardi et al. [22] introduced an unsupervised C. Out-of-Distribution (OOD) Challenges With Temporal
+deep anomaly detection system that employs convolutional Shift
+autoencoding for network traffic profiling from initial packet
+ Inspired by OOD graph learning advancements, researchers
+sequences, incorporating adversarial training strategies to
+ have recently focused on temporal shift-induced OOD probenhance detection robustness. Deng and Hooi [23] established
+ lems. For instance, CauSTG [34] introduces a causal framea GNN-based predictive paradigm that identifies anomalies
+ work that transfers both local and global spatio-temporal
+through systematic deviations between predicted and observed
+ invariant relationships to OOD scenarios. CaST [35] employs a
+values. Liu et al. [24] employed a Temporal Convolutional
+ structural causal model (SCM) to interpret the data generation
+Network (TCN)-based deep learning approach for channel
+ process in spatio-temporal graphs, and uses backdoor adjustprediction, with its computationally intensive tasks handled
+ ment to decouple invariant features from temporal environby Mobile Edge Computing (MEC) to reduce the response
+ ments. STVE [36] encodes traffic data into two disentangled
+time. Huang et al. [25] devised HitAnomaly, a hierarchirepresentations and incorporates contextual information from
+cal Transformer-based model for log anomaly detection that
+ spatio-temporal environments—using them as self-supervised
+effectively processes unseen log templates and anomalous
+ signals to enhance the generalizability of context-oriented
+parameter values.
+ representations and improve OOD performance.
+ Nam et al. [26] proposed the Dual-Time-Frequency
+ However, current research mostly focuses on predicting
+(DualTF) model, which employs a nested sliding window
+ temporal drift but has limited exploration of time series
+mechanism: the outer and inner windows process temporal
+ anomaly detection. Existing detection methodologies mainly
+and frequency domain features, respectively; this synchronizes
+ address anomalies under identical training-testing distribution
+anomaly scoring across domains to resolve time-frequency
+ assumptions. However, experiments show significant perforgranularity discrepancies. Lee et al. [27] introduced an
+ mance degradation when facing data with diverse distribution
+Uncertainty-aware Dynamic Thresholding (UDT) method
+ shifts in real applications.
+that dynamically adjusts detection thresholds by quantifying epistemic and aleatoric uncertainties in temporal data
+for time-series anomaly detection. Liu et al. [28] devel- III. P ROBLEM S TATEMENT
+oped TopoGDN for fine-grained modeling of temporal and This study formulates the anomaly detection problem
+feature dimensions. The model utilizes multi-scale temporal in 5G Mobile Network Configuration (5G-MNC) as a
+convolution modules for feature extraction and incorporates spatio-temporal anomaly detection task. As illustrated in Fig.2,
+graph structure learning with topological attention mech- the 5G-MNC system is formally represented as a weighted
+anisms. This combined approach effectively captures both graph G = (V, E, A), where the node set V comprises N base
+inter-feature dependencies and high-order topological patterns. stations (N = |V |); the edge set E captures inter-base sta-
+Dai and Chen [29] presented a Graph-Augmented Normalizing tion connectivity relationships; the weighted adjacency matrix
+Flow (GANF) model that establishes causal dependencies A ∈ RN ×N is constructed through geographical distance
+among multivariate time series through Bayesian networks metrics, with each matrix element Ai,j corresponding to the
+while employing normalizing flows for density estimation geographical distance between nodes vi and vj .
+in anomaly detection. Wang et al. [30] devised COCA, The 5G-MNC state at each timestep t is mathematically
+a deep contrastive one-class framework combining contrastive represented as a graph signal matrix Xt ∈ RN ×C , where
+learning with normality assumptions for time-series anomaly C denotes the feature dimensionality. To effectively capdetection. Yang et al. [31] proposed DCdetector, featuring a ture temporal dependencies, we employ a sliding window of
+dual-attention contrastive architecture with multi-scale patch length T to construct spatio-temporal feature sequences Xt =
+design that generates multi-view temporal representations and (Xt−T +1 , Xt−T +2 , . . . , Xt ), as model inputs. The anomaly
+enhances discriminative power through contrastive loss opti- detection objective involves generating binary classification
+mization. Meli [32] proposed a novel OUAD, using causal labels y ∈ {0, 1} for given samples (the numbers 0 and
+discovery to learn a normal causal graph of the system, and 1 represent normal and anomalous, respectively).
+it evaluated the persistency of causal links during real-time Notably, this study adopts a semi-supervised learning
+acquisition of sensor data to promptly detect anomalies. paradigm: the training set X contains exclusively normal
+ The above methods typically operate under the funda- samples, while the testing set X ′ incorporates both normal and
+mental assumption that models cannot accurately reconstruct anomalous instances for model validation. This configuration
+or predict unseen anomalous samples, thereby differentiating effectively simulates practical engineering requirements in
+between normal and anomalous instances. However, their application scenarios where anomaly samples are scarce but
+modeling approaches may inadvertently induce overfitting, require precise identification.
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3603
+
+ B. Doubly Residual Stacking Architecture
+ Inspired by the doubly residual architecture of N-
+ BEATS [37], this study proposes a novel Doubly Residual
+ Spatio-temporal Graph Convolution (DRSTGC) block to
+ model implicit synchronous dependencies among base stations
+ in 5G Mobile Network Clusters (5G-MNC). Our approach
+ demonstrates significant architectural and functional innovations compared to N-BEATS:
+ Multidimensional Expansion: While N-BEATS addresses
+ temporal dependencies in general time series through predictive sequence modeling, DRSTGC employs spatio-temporal
+ graph convolutions to capture complex spatio-temporal corre-
+Fig. 2. Graph structure of 5G-MNC. lations in input sequences. This extension enables effective
+ modeling of both spatial topological relationships between
+ base stations and temporal dynamics of signal propagation.
+ IV. P ROPOSED A PPROACH Functional Innovation: Diverging from N-BEATS’s doubly
+ residual architecture for time-series forecasting, our struc-
+ This study introduces a deep spatio-temporal graph con- ture enhances representational capacity for anomaly detection
+volutional anomaly detection architecture, with its core (l)
+ tasks. As illustrated in Fig.4, the input Xt to the l-th block
+architecture depicted in Fig.3. The methodology employs (l)
+ generates two outputs: Reconstruction Output X̂t : Partial
+stacked Doubly Residual Spatio-temporal Graph Convolution reconstruction results removing resolved explicit features.
+(DRSTGC) blocks design. Each DRSTGC block contains (l)
+ Hidden Representation Ot : Residual-connected features captwo complementary graph convolutional modules: spatioturing unresolved latent patterns.
+temporal graph convolution module (STGCM) synchronously
+ Progressive Feature Decoupling: The cascaded residual
+extracts spatio-temporal correlations based on existing graph
+ architecture enables hierarchical feature extraction. In the
+structures, and auxiliary spatio-temporal graph convolution
+ reconstruction path, previous modules progressively strip
+module (ASTGCM) learns hidden spatio-temporal dependen- (l−1)
+ resolved explicit features X̂t , forcing subsequent modules
+cies. To address distribution shifts in practical scenarios,
+ to focus on unresolved information. The collective output of
+a novel intervention module is integrated to mitigate confoundall blocks is formulated as
+ing factor interference. The architecture ultimately performs X (l)
+anomaly detection through synergistic integration of discrimi- X̂t = X̂t (1)
+nation and reconstruction modules. They effectively integrate l
+information from both the original data domain and latent (l)
+ X
+ Ot = Ot (2)
+spatial representations. By integrating these modules with an l
+adaptive scoring mechanism, the proposed model leverages
+their complementary strengths to achieve more robust anomaly The final reconstruction X̂t constitutes the aggregated sumdetection. Subsequent subsections offer detailed descriptions mation of partial reconstructions from all blocks, achieving
+of each individual component. hierarchical decomposition while enabling interpretable output
+ generation. Moreover, the reconstruction representation can
+ uniquely identify this segment of temporal data as label
+A. Temporal Embedding information within the causal intervention module. Analogously, the ultimate hidden representation Ot , emerges as the
+ The KPI metrics generated by 5G-MNC systems are sigcumulative integration of latent partial representations. Hidden
+nificantly influenced by user behaviors and temporal patterns,
+ representations can serve as core temporal information for
+consequently exhibiting seasonal variations that recur at pericausal intervention within the causal intervention module. This
+odic intervals (e.g., daily and weekly cycles).
+ multi-scale aggregation mechanism facilitates multi-view rep-
+ To comprehensively model periodic dependencies in 5Gresentation aggregation and enables multi-scale latent pattern
+MNC base stations, we employ temporal embedding to encode
+ extraction, thereby enhancing anomaly detection sensitivity.
+each timestep into vector representations. For a given timestep,
+two one-hot encoded vectors are generated based on its
+hour-of-day and day-of-week attributes. These vectors are C. Doubly Residual Spatio-Temporal Graph Convolution
+subsequently concatenated and projected through a fully con- Block
+nected layer to obtain temporal embeddings mt ∈ Rm . For We propose the Doubly Residual Spatio-temporal Graph
+the t-th temporal segment containing historical timesteps, the Convolution (DRSTGC) block to simultaneously capture
+corresponding temporal embedding matrix is formulated as temporal and spatial dependencies in 5G-MNC data.
+Mt = [mt−T +1 , mt−T +2 , . . . mt ]T ∈ RT ×D . The resultant As depicted in Fig.5, the proposed architecture comprises
+temporal embeddings encapsulate critical timing information two spatio-temporal graph convolution modules with douthat is subsequently integrated into DRSTGC blocks for bly residual connections. The primary module systematically
+spatio-temporal modeling. incorporates domain-specific prior knowledge, while the
+3604 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+auxiliary module subsequently processes residual information function is applied to eliminate weak connections, followed
+unresolved by its predecessor. by a softmax operation to normalize the learned auxiliary
+ 1) Spatio-temporal Graph Convolution Module (STGCM): adjacency matrix.
+The STGCM is designed to synchronously extract Subsequently, the self-learned auxiliary graph G =
+spatio-temporal correlations through integrated Graph (V, E, Aaux ) undergoes the same Graph Convolutional Gated
+Convolutional Gated Recurrent Units (GCGRUs) [38] and Recurrent Unit (GCGRU) operations as the STGCM. The
+fully connected layers. Given a graph G = (V, E, A), the output of the GCGRU is then fed into two fully connected
+spectral graph convolution operation ∗ g on input signal X layers with ReLU activation functions to generate partial
+can be formally defined as: reconstructions and hidden representation outputs. The operations are formally defined as follows:
+ Wg ∗G X = σ (LXWg + bg ) (3)  
+ (l,2)
+ Ot = σ U1l,2 Htl,2 + bl,2
+ 1 (11)
+where L = I − D−( 2 ) AD−( 2 ) denotes the Laplacian matrix,
+ 1 1
+
+ (l,2)
+I is the identity matrix, and D is the degree matrix. Wg and bg X̂t = σ(U2l,2 Htl,2 + bl,2
+ 2 ) (12)
+are the learnable parameters. σ is the ReLU activation func- (l,2) (l,2)
+tion. In the construction of GCGRU, the matrix multiplication where Ot and X̂t are the partial hidden representation
+in GRU is replaced with graph convolution operation. For and the partial reconstruction of ASTGCM.
+convenience of presentation, omitting the superscript and the 3) Block Output: The outputs of the doubly residual
+operation of GCGRU can be defined as spatio-temporal graph convolution block consist of two parts,
+ one is the fusion of the partial hidden representations of
+ zt = σ (Wz ∗G [It ; Ht−1 ] + bz ) (4) (l,1) (l,2)
+ Ot and Ot , and the other is the summation of the
+ (l,1) (l,2)
+ rt = σ (Wr ∗G [It ; Ht−1 ] + br ) (5) partial reconstruction representations of X̂t and X̂t . The
+ ct = tanh (Wc ∗G [It ; rt ⊙ Ht−1 ] + bc ) (6) outputs are defined as
+ Ht = zt ⊙ Ht−1 + (1 − zt ) ⊙ ct (7) (l) (l,1) (l,2)
+ Ot = σ(W l [Ot ; Ot ] + bl ) (13)
+ (l) (l,1) (l,2)
+where It = Xt∗ + mt denotes the summation of input and X̂t = X̂t + X̂t (14)
+temporal embedding, and Xt∗ ∈RD represents the result of a (l) (l)
+fully connected transformation of Xt , aiming to have the same where Ot and X̂t are the hidden representation and recondimension as mt . Ht denotes the output of GCGRU at time t. struction outputs of the l-th block, respectively.
+WZ , Wr , Wc , bz , br and bc are learnable parameters. To address the interference of confounding factors in time
+ Then, two branches consisting of two fully connected layers series data under distribution shifts, this study proposes a
+are used to output partial reconstruction and partial hidden causal intervention module. It mitigates the impact of distrirepresentation. For the STGCM in the l-th block, the outputs butional variations by introducing a PCIR regularization term.
+ (l) (l)
+are defined as Therefore, Ot and X̂t are fed into the intervention module
+ (l,1)
+   to compute the causal loss. Finally, the respective partial
+ Ot = σ U1l,1 Htl,1 + bl,1
+ 1 (8) (l)
+ reconstructions X̂t of each DRSTGC block are summed and
+ fed into the reconstruction module to compute reconstruction
+  
+ (l,1)
+ X̂t = σ U2l,1 Htl,1 + bl,1
+ 2 (9) (l)
+ scores. The partial hidden representations Ot are aggre-
+ (l,1) (l,1) gated and delivered to the discrimination module to calculate
+where Ot and X̂t are the partial hidden representation
+ anomaly probabilities.
+and the partial reconstruction of STGCM, and U1l,1 , U1l,1 , bl,1
+ 1
+and bl,1
+ 2 are learnable parameters.
+ 2) Auxiliary Spatio-temporal Graph Convolution Mod- D. Intervention Module
+ule (ASTGCM): The ASTGCM serves as a complement to 1) Invariant Representation Context Under Distribution
+the STGCM, addressing information flows that cannot be Shifts: Our formulation operates under the assumptions of an
+resolved through prior knowledge derived from available graph environmental set (denoted as E) and a sample space (denoted
+structures. While the ASTGCM shares the same fundamen- as X) of time series data. We consider a sliding time window
+tal architecture as the STGCM, it distinguishes itself by sample Xt drawn from an unknown distribution pn , which is
+employing an auxiliary adjacency matrix to autonomously primarily concentrated on a subset N ⊆ X defining the normal
+learn unresolved hidden spatial dependencies. This auxiliary class. Given Xt ∼ pn , we decompose Xt into a pair of random
+adjacency matrix is designed to complement the prior graph. variables Xa and Xe such that X = (Xa , Xe ). Here, the
+Specifically, two randomly initialized node embeddings with environment E exclusively influences Xe . Conceptually, Xa
+learnable parameters are defined, and the auxiliary adjacency represents the relevant features of time series X that determine
+matrix is formulated as: its anomaly status, while Xe represents style features of time
+ Aaux = sofmax σ E1 ET
+ 
+ (10) series X that determine its environmental status. While these
+ 2
+ style features remain unaffected by the anomaly status of the
+ Here, E1 and E2 represent the source and target node time series, they are influenced by environmental conditions.
+embeddings, respectively, where their multiplicative product Building on causal inference theory [11], we consider the
+defines the spatial dependency weights. The ReLU activation process from Xt to Ot in Fig.4 as the encoder f : X → O that
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3605
+
+Fig. 3. Overall architecture of the model.
+
+ Causal-DRSTGC model to obtain an invariant representation
+ O of the original sample X. This enables more effective
+ processing in the subsequent module for calculating more
+ accurate anomaly scores. Below, we elaborate on the main
+ workflow of the causal intervention module.
+Fig. 4. Construct of doubly residual stacking architecture. Firstly, we introduce a causal graph for anomaly detection
+ based on a structural causal model (SCM), as illustrated in
+ Fig.6. We treat X̂ as the environment E described above.
+ As discussed in Section IV-B, X̂ serves as the reconstruction
+ representation of X, functioning to distinguish samples X
+ and assign them to their corresponding environmental labels.
+ Therefore, we further obtain:
+ We say O is an invariant representation of X under domain
+ shift if
+ ′
+ pdo(X̂=e) (O = ·) = pdo(X̂=e ) (O = ·) , f oranye, e′ ∈ X̂.
+ (16)
+ Xa and Xe denote relevant features and the style features,
+ respectively. The hidden representation O represents the final
+ representation of time series X. We introduce new random
+Fig. 5. Construct of Doubly Residual Spatio-temporal Graph Convolution variable W that is a binary variable indicating whether a
+block(DRSTGC block).
+ sample is normal (W = 0) or anomalous (W = 1).
+ It establishes causal relationships among five variables,
+maps raw observations to a representation space O.Here, O = where links from one variable to another indicate causation:
+f (X) constitutes the final representation. Domain invariance cause → effect. We present the following interpretation of
+is formalized as follows: SCM:
+ Definition. We say O is an invariant representation of X Xa → O: Since Xa is the primary feature and f is the
+under domain shift if mapping from X to O, any probability associated with X can
+ ′ be replaced by O. O also serves as the final output of the
+ pdo(E=e) (O = ·) = pdo(E=e ) (O = ·) , f oranye, e′ ∈ E.
+ model, used to determine whether a sample is anomalous.
+ (15)
+ Xa ← W → Xe : W fundamentally determines the
+ The symbol do denotes an intervention operation. That sample attribute X, thus constituting a causal relationship, and
+is, the intervention E = e is represented as do (E = e), consequently influences both Xa and Xe .
+which differs from observing E = e through existing data. p X̂ → Xe → O: The reconstruction representation X̂ is
+denotes probability. Invariant representations prevent anomaly treated as an environmental label at the causal level, uniquely
+detectors from misclassifying phenomena induced by domain determining the style features Xe within the sample. Subseshift. By definition, these representations O exhibit resistance quently, these style features exert a certain influence on O.
+to variations in E. Theorem 1: Suppose that f learns an invariant representa-
+ Therefore, this module aims to derive a causal loss function tion, O⊥X̂.
+as a partial conditional invariance regularization (PCIR) term Proof. Since f learns an invariant representation and is
+through causal intervention theory. This function trains the measurable, O becomes Xa measurable. This implies that any
+3606 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+ representation Ot . This enhances the generalization capability
+ of Causal-DRSTGC under distribution shifts. Moreover, the
+ proposed model automatically generates environment labels
+ through the reconstruction patterns decomposed by DRSTGC,
+ eliminating the need for manual annotation and better suiting
+ real-world application scenarios.
+
+ E. Discrimination Module
+ Within the discrimination module, the learned hidden representations are employed to distinguish anomalous data in
+ the latent space. However, during 5G network operation
+Fig. 6. Causal graph for anomaly detection.
+ and maintenance, generating sufficient anomalous samples
+ for supervised training is usually infeasible—anomalies occur
+ infrequently. To address this limitation, we implement a comprobability involving events of O can be expressed in terms putationally efficient negative sampling strategy to generate
+of probabilities involving Xa . It thus suffices to demonstrate pseudo-anomalous samples. Given a temporal segment Xt ,
+Xa ⊥X̂. We prove this via d-separation. Note that there are we apply a permutation perturbation strategy to produce
+two paths from Xa to X̂. One via W and the other via O. negative samples Xt′ . Specifically, the permutation operation
+The path via W is blocked because Xe is a collision, and divides the signal into randomly sized subsequences and
+neither Xe nor its descendant O are observed. The path via O shuffles them, with each base station sequence undergoing
+is blocked because O is a collision with no descendants and independent permutation to deliberately disrupt inter-sequence
+is not observed. Hence, Xa ⊥X̂. correlations. Subsequently, random temporal jittering is intro-
+ The fundamental challenge lies in ensuring duced to the permuted segments.
+statistical independence between O and X̂.If this The discrimination module processes hidden representations
+ from either original inputs or negative-sampled data through a
+independence holds, we find that pdo(X̂=e) (O = ·) =
+ ′ gated recurrent unit (GRU) layer, which sequentially computes
+pdo(X̂=e ) (O = ·) , f oranye, e′ ∈ X̂. By definition, O is an
+ hidden states across temporal intervals. The final hidden
+invariant representation of time series X.
+ state is then passed to a fully connected layer with sigmoid
+ Secondly, while counterfactual examples are generally
+ activation to derive anomaly scores within [0,1] for each input
+inaccessible, enforcing appropriate conditional independence
+ segment, and to calculate the discrimination loss. The module
+constraints can still induce counterfactual invariance. In pracis ultimately trained in an end-to-end manner using pseudo
+tice, this condition may be formulated as M M D(p(O =
+ labels.
+·|X̂ = e), p(O = ·|X̂ = e′ )) = 0, where M M D denotes
+the Maximum Mean Discrepancy. To capture complex highdimensional differences, we utilize a cosine kernel, which F. Model Training
+is particularly effective in comparing the angular similarity
+ Building upon the preceding analysis, we propose the utibetween feature vectors.
+ X lization of MMD between two distributions as the driving
+ Lmmd = MMD mechanism for invariance induction. Additionally, we introduce Eq.(17) as a PCIR term specifically applied to anomaly
+ e, e′ ∈ X̂ ,e̸=e′ detection in time series under distribution shifts.
+  
+ p(Ot = · | W = ·, X̂t = e), p(Ot = · | W = ·, X̂t = e′ ) The discrimination and reconstruction modules exhibit distinct yet complementary strengths, forming mutually reinforc-
+ (17)
+ ing components. Specifically, the reconstruction module learns
+ The causality loss function, as shown in Eq.(17), can serve latent representations by reconstructing original observations,
+as a PCIR term. Specifically, due to the temporal continuity, with anomaly detection achieved through reconstruction errors
+we randomly set the window value to 10. Additionally, there is since unseen anomalies tend to induce substantial deviaa one-to-one correspondence between every element of X̂t and tions. Nevertheless, the reconstruction-based module primarily
+Ot . For each value of X̂t and Ot , we obtain the correspond- focuses on sample reconstruction fidelity while ensuring
+ing environmental label ei , i ∈ [1, 10], from reconstruction distinctiveness between normal and anomalous sample reprerepresentation X̂t .And we obtain the corresponding hidden sentations. Consequently, this approach may enable accurate
+representation oi , i ∈ [1, 10], from hidden representation Ot . reconstruction of anomalous data.
+We then apply M M D (oi , oj ) = 0, f oranyei ̸= ej , thereby The discrimination module is trained to identify anomaly in
+obtaining the corresponding causal loss. temporal evolution patterns, guaranteeing discriminative sepa-
+ Furthermore, we compute the causal loss separately for rability in the latent space. This effectively compensates for the
+normal samples (W=0) and anomalous samples (W=1), limitations inherent in reconstruction-based methodologies.
+ultimately achieving a stronger decoupling between Accordingly, the composite loss function is formulated as
+the reconstructed representation X̂t and the hidden the weighted summation of three optimization objectives,
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3607
+
+Algorithm 1 Training procedure of Causal-DRSTGC In this architecture, D denotes the discriminator, where
+Input: Training data set X = {X1 , X2 ,. . . , Xt }, Epoch E. Ot represents the hidden representation of the input sample,
+Output: The learned model parameters Θ. and Ot′ corresponds to the hidden representation generated
+1: Initialize all parameters; by the negative sampling strategy. The training procedure for
+2: for e = 1, 2,. . . . . . , E do Causal-DRSTGC is outlined in Algorithm 1.
+3: for t = 1, 2, . . . . . . , T do
+ (1) (1)
+4: Ot , X̂t ← Block 1 (Xt , Mt , E1 , E2 )
+ (2) (2) (1) G. Model Inference
+5: Ot , X̂t ← Block 2 (Xt − X̂t , Mt , E1 , E2 )
+ (1)
+6: Ot = Ot + Ot
+ (2) As mentioned in previous sections, the reconstruction and
+ (1)
+7: X̂t = X̂t + X̂t
+ (2) discrimination modules are jointly trained to optimize targets.
+8: Generate negative sample Xt′ and perform forward As a result, both modules are encouraged to contribute to
+ propagation to obtain the negative representation Ot′ and anomaly detection cooperatively. In order to do this, we create
+ the negative reconstruction representation X̂t′ . a scoring system based on reconstruction and discrimination
+9: // Calculate the total loss using that balances each of their contributions, increasing anomaly
+  Eq. (20) detection’s overall efficacy. In particular, given an observation
+10: L = Lrec Xt , X̂t + Ldis (Ot , Ot′ ) +
+ segment (Xt−T +1 , Xt−T +2 , . . . , X t ), the reconstruction score
+Lmmd ((X̂t , X̂t′ ), (Ot , Ot′ )) is calculated from the deviation between the reconstructed val-
+11: Update model parameters using L; ues and the original observations, whereas the discrimination
+12: end for score, pt is derived from the discriminator’s output probability.
+13: end for The definition of the inference score st is
+14: return The learned parameters. T
+ ∥ Xt−T +i − X̂t−T +i ∥22 +α × (1 − pt )
+ P
+ i=1
+ st = (21)
+Algorithm 2 Inference procedure of Causal-DRSTGC 1+α
+Input: Testing data set X = {X1 ,X2 ,. . . ,XT }, model param- The hyperparameter α, which balances the contributions
+eter Θ, threshold τ . of the two components, will be thoroughly investigated in
+Output:The label yt of Xt . the subsequent sensitivity analysis section. An anomaly is
+1: Load the trained model parameters Θ; identified when the inference score exceeds a threshold [39],
+2: for t = 1, 2, . . . T, do where this threshold is determined through grid search on the
+ (1) (1)
+3: Ot , X̂t ← Block 1 (Xt , Mt , E1 , E2 ) validation set. The detailed inference procedure is presented
+ (2) (2) (1) in Algorithm 2.
+4: Ot , X̂t ← Block 2 (Xt − X̂t , Mt , E1 , E2 )
+ (1) (2)
+5: Ot = Ot + Ot
+ (1) (2)
+6: X̂t = X̂t + X̂t V. E XPERIMENT
+7: Calculate the inference score st using Eq. (21); This section begins with an introduction to the dataset
+8: if st >τ then and experimental setup. Subsequently, the performance of
+9: yt =“Anomalous” Causal-DRSTGC is validated using real-world operational data
+10: else from 5G-MNC systems. A case study is then conducted to ana-
+11: yt =“Normal” lyze experimental outcomes, accompanied by ablation studies
+12: end if and sensitivity analysis. Finally, the model’s performance is
+13: end for further validated on industrial datasets, and a complexity
+ analysis is conducted.
+
+denoted as Eq.(20). Here, Lrec represents the reconstruction- A. Dataset Description
+based loss, defined as the mean squared error (MSE) between To evaluate the proposed method’s effectiveness, we use
+targets and reconstructed values. Ldis corresponds to the a real-world 5G-MNC dataset. Collected by China Mobile
+discrimination loss employing binary cross-entropy. Lmmd Communications in Jinan, Shandong Province, it contains Key
+serves as the loss function for the intervention module, which Performance Indicator (KPI) records from two 5G-MNCs.
+incorporates the aforementioned regularization strategy. The Cluster1 comprises 5 base stations, while Cluster2 consists
+hyperparameter α and λ balance the loss contributions of the of 14 base stations. The selected KPI for anomaly detection
+three modules. is the average number of Radio Resource Control (RRC)
+ X connections, with data aggregated at 15-minute intervals. The
+ Ldis = − log(1 − D(Ot )) + log(D(Ot′ )) (18) dataset spans from September 3, 2021, to January 3, 2022.
+ t Table I presents the partition lengths of the training and testing
+ T
+ 1 X sets.
+ Lrec = ∥ Xt+i − X̂t+i ∥22 (19) In practical applications, decommissioning and shielding
+ T i=1
+ represent two categories of anomalies in the operational main-
+ L = (1 − α)Lrec + αLdis + λLmmd (20) tenance of 5G networks, described as follows:
+3608 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+ Decommissioning. Base station decommissioning refers to
+the phenomenon where base stations unexpectedly go offline
+during operation. It is caused by factors like severe weather
+and transmission failures, resulting in communication service
+interruption.
+ Shielding. As critical components of mobile communication
+systems, base stations play a pivotal role in maintaining
+communication quality. However, physical obstructions caused
+by billboards and outdoor buildings can degrade signal transmission. Therefore, base station shielding as an anomaly can
+affect the daily operation of 5G-MNC.
+ Fig.7 illustrates two real-world anomaly scenarios involving
+14 base stations in a 5G-MNC system, with each subplot
+depicting the average number of RRC connections. Fig.7(a)
+demonstrates the decommissioning anomaly case, showing
+a simultaneous sharp decline in RRC connections across a
+group of base stations. As shown in Fig.7(b) for the shielding
+anomaly case, a decrease in RRC connections at base stations
+B1, B3, B4, and B6 results in a corresponding surge at the
+neighboring base stations B2 and B5.
+ In 5G-MNC systems, anomalies are highly uncommon
+in practical scenarios, and existing anomaly datasets remain
+insufficient to validate the comparative performance of detection models. To address this, we implemented anomaly
+data imputation using the following methodology. Specifically, to simulate base station decommissioning anomalies,
+we stochastically reduced the number of users establishing
+connections with neighboring base stations at a specified rate
+of 0.6 over a given time interval. For base station shielding
+anomalies, we proportionally reduced the number of connected
+users at a target base station by a defined ratio of 0.6, then
+redistributed the reduced connections to its geographically
+adjacent base stations based on spatial proximity. Statistical
+metrics for both anomaly clusters are provided in Table I.
+ Fig. 7. Two real anomalies in the 5G-MNC data. (a) Decommissioning
+ To more effectively simulate scenarios involving distribu- anomaly. (b) Shielding anomaly.
+tion shifts and render the distribution shifts in the testing
+sets more pronounced, while simultaneously enabling com-
+ TABLE I
+prehensive demonstration of our proposed model’s superior
+ C LUSTER 1 AND C LUSTER 2 DATA STATISTICS
+capabilities, we adopted a specific approach. Accordingly,
+we manually introduced distribution shifts into the testing sets
+of the aforementioned datasets by adjusting the magnitude of
+fluctuations to 0.5. Within the middle 70% of the temporal
+range, two continuous intervals were selected for each of the
+five feature columns, and variance manipulation was applied
+to approximately 10% of the data. This process retained the
+mean of the selected data segments while randomly altering
+the variance of individual data points.
+ Taking the testing set of Cluster1 as an example (total
+sample size: 3,542), two consecutive intervals were chosen
+for each of the five feature columns within the middle 70% B. Experimental Setup
+of the time series. A total of 342 samples (approximately Evaluation Metrics. To measure and evaluate method per-
+9.66%) underwent variance perturbation. Features 1–4 each formance, four standard metrics were employed: precision (P),
+had 70 data points modified (1.98% per feature), while Feature recall (R), F1-score (F1), and ROC-AUC (AUC) [40], [41].
+5 contained 62 modified points (1.75%). As exemplified in In practical applications, anomalies typically manifest as con-
+Fig.8, the blue curve represents the original time series, and tinuous segments; thus, point-wise metrics are not prioritized.
+the orange curve illustrates the modified data distribution. Following the evaluation strategy of [42], if any anomalous
+This experimental design effectively validates the model’s observation exists within a segment, the entire segment is
+robustness under variance shifts conditions. labeled as the positive class.
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3609
+
+ modules facilitate collaborative anomaly detection in both
+ original data space and latent feature domains. Furthermore,
+ the integration of causal graphs with intervention mechanisms
+ effectively mitigates confounding effects under distribution
+ shifts, significantly enhancing model robustness. Experimental
+ results demonstrate that Causal-DRSTGC achieves state-ofthe-art performance compared to existing methods.
+ Shielding anomalies differ fundamentally from decommissioning scenarios in 5G-MNC operations. While decommissioning involves simultaneous failures across multiple base
+ stations within a region, shielding anomalies typically occur
+ within individual base stations, where adjacent nodes com-
+Fig. 8. Samples distribution shift for manual processing. The blue curve pensate through dynamic traffic redistribution. This distinction
+represents the original time series, and the orange curve illustrates the modified results in stronger spatial dependencies during shielding events
+data distribution. compared to decommissioning scenarios. Causal-DRSTGC
+ effectively models evolutionary relationships between base
+ stations and their neighbors through spatio-temporal cor-
+ Baselines. The proposed method was compared against
+ relation mining, with particular sensitivity to dependency
+seven baselines: DCdetector (2023), GANF (2022), COCA
+ alterations caused by shielding anomalies. This capability
+(2023), UDT (2025), DUALTF (2024), TopoGDN (2024), and
+ positions Causal-DRSTGC as a promising solution for 5G-
+OUAD (2024). All comparisons adhered to the architectures
+ MNC anomaly detection challenges.
+recommended in their original publications. Since not all
+ To comprehensively evaluate the scalability and robustness
+anomaly detection methods were designed for 5G-MNC sceof Causal-DRSTGC on large datasets with varying topologies,
+narios, each model was evaluated across all feasible thresholds,
+ we expanded our data scope to clusters of different scales: 2,
+and experimental results were reported based on the highest
+ 4, 6, 8, 10, 12, 14, 16, and 19 nodes. Results demonstrate that
+F1-score.
+ Causal-DRSTGC maintains stably high performance across
+ Data Preprocessing. Consistent with [43], Z-score normalclusters of all scales, enabling reliable scaling to larger datasets
+ization was first applied to the training and testing sets to
+ and adaptation to diverse topologies. Experimental results are
+enhance the robustness of the proposed method. Additionally,
+ shown in Fig.9.
+aligning with [44], the adjacency matrix for 5G-MNC was
+ To rigorously test the model’s adaptability to real-time
+computed based on the geographical distances between base
+ environmental changes and dynamic topology shifts, we ranstations within the mobile network cluster. The weighted
+ domly altered the adjacency relationships among nodes four
+adjacency matrix A can be formulated as:
+ times within a 16-node cluster, simulating continuous network
+ topology evolution. Experimental results demonstrate that our
+ 2 2
+ 
+ ηij ηij model continues to exhibit robust performance, effectively
+ exp(− ), i ̸
+ = jandexp(− )≥ϵ
+ 
+ Aij = δ2 δ2 (22) proving its stability and adaptability to dynamic 5G network
+ 0, otherwise
+ 
+ environments. Experimental results are shown in Fig.10.
+ To validate the impact of long-range temporal and spatial
+where Aij is the weight of the edge, and it is determined by
+ dependencies across multiple nodes on anomaly detection,
+ηij , which is the geographical distance between base stations
+ we further conducted the following experiments. Specifically,
+i and j. δ 2 and ϵ are the thresholds to control the distribution
+ we set the time window size to 100 sample points. On the
+and sparsity of adjacency matrix A, and they are set to 1e-5
+ Cluster1 dataset, we removed one time window, three consecand 0.3 in this work, respectively.
+ utive time windows, and three non-consecutive time windows
+ respectively, and performed anomaly detection. The detection
+C. Experimental Results results are shown in Table IV, with the maximum values of
+ In this subsection, we conducted experiments on the real- the core metrics F1-score and AUC highlighted in bold. The
+world 5G-MNC dataset to evaluate the effectiveness of results show that even a small amount of missing historical
+Causal-DRSTGC against seven baseline methods. Table II data has an impact on anomaly detection results, which proves
+presents the shielding anomaly detection performance com- that the model can extract effectively long-range dependencies
+parison between Cluster1 and Cluster2, while Table III from historical time-series data.
+summarizes the decommissioning anomaly detection results. Subsequently, from a spatial perspective, on the Cluster1
+The best score achieved is highlighted in bold. dataset, we removed the adjacency edges of node 5, the
+ The proposed Causal-DRSTGC architecture comprehen- adjacency edges between nodes 4 and 5, and the adjacency
+sively explores spatio-temporal patterns in original 5G-MNC edges between nodes 3, 4, and 5, respectively, as illustrated
+data through specifically designed components. The STGCM in Fig.11. The detection results are shown in Table V, with
+and ASTGCM modules effectively leverage domain-specific the maximum values of the core metrics F1-score and AUC
+knowledge to capture inherent synchronous dependencies highlighted in bold. The findings indicate that the absence
+within 5G-MNC systems. Discrimination and reconstruction of link relationships from the original cluster reduces the
+3610 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+ Fig. 11. Node relationship diagram after removing adjacent edges of specific
+ nodes.
+
+ Cluster2 dataset for ablation studies in this section. Specifi-
+Fig. 9. Performance of clusters with different numbers of nodes. The
+blue curve represents shielding anomalies, and the orange curve represents cally, we disabled individual modules within Causal-DRSTGC
+decommissioning anomalies. for systematic evaluation. w/o STGCM and w/o ASTGCM
+ denote the variants where the spatio-temporal graph convolution module (STGCM) and auxiliary spatio-temporal
+ graph convolution module (ASTGCM) are deactivated in each
+ block, respectively. The w/o Reconstruction variant performs
+ anomaly detection exclusively through the discrimination
+ mode, while the w/o Discrimination variant relies solely on the
+ reconstruction mode. The w/o Intervention variant eliminates
+ the causal intervention mechanism. As shown in Table VI,
+ experimental results confirm the indispensability of all aforementioned modules in Causal-DRSTGC.
+ In the w/o ASTGCM configuration, only predefined
+ topological information from 5G-MNC is utilized for representation learning, which restricts comprehensive exploration
+ of 5G-MNC data characteristics. Similarly, disabling STGCM
+ prevents full exploitation of prior knowledge, emphasizing the
+ complementary roles of both modules. The absence of the
+ reconstruction module confines anomaly detection to latent
+ space analysis, neglecting informational cues from original data. Conversely, removal of the discrimination module
+Fig. 10. Performance of different adjacency relationships in a cluster
+with 16 nodes, where the first row shows topological structures of different prioritizes reconstruction fidelity while disregarding critical
+adjacency relationships among 16 nodes, the second row shows performance discriminative features that separate normal and anomalous
+metrics for shielding anomalies and the third row shows performance metrics samples. Eliminating the intervention module impairs the
+for decommissioning anomalies.
+ model’s capacity to address distribution shifts, ultimately
+ degrading detection performance.
+performance of anomaly detection to varying degrees, which To intuitively validate the effect of causal intervention
+demonstrates that the proposed model can capture spatial module and the discrimination module, we provide a comrelationships between non-directly adjacent nodes for carrying parative visualization of the model’s latent representations in
+out anomaly detection. Fig. 12. Specifically, we selected a continuous sequence with
+ To comprehensively evaluate our model’s adaptability anomalies and visualized the model’s output representations.
+beyond a single KPI, we conducted additional experiments We first reduced the dimensions to 2D space via UMAP, then
+using the signal strength (RSRP) metric on the original Clus- generated scatterplots for visualization.
+ter1 and Cluster2 datasets. As shown in Table II and Table III, Fig.12(a) illustrates the mapping of the proposed model,
+the model still achieves competitive F1-scores and AUC values while Fig.12(b) depicts the visualization without the interfor both shielding and decommissioning anomalies. vention module. A stark contrast can be observed: the
+ representations in Fig.12(a) exhibit tighter, more structured
+ clusters corresponding to normal and anomalous states. This
+D. Ablation Study suggests that the intervention module effectively disentangles
+ To investigate the effectiveness of distinct components in the confounders, allowing the model to learn more invariant
+Causal-DRSTGC for anomaly detection, we employed the and robust representations that are irrelevant to distribution
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3611
+
+shifts. In contrast, the features in Fig. 12(b) are more dispersed and overlapping. This dispersion indicates that the
+ablated model is susceptible to spurious correlations introduced by shifting data distributions. This visual evidence
+directly supports our quantitative results in Table II and
+Table III, explaining why the intervention module contributes
+to a significant accuracy improvement. That is, it guides the
+model to base its decisions on relevant features rather than on
+confounding factors.
+ Fig.12(c) presents the visualization without the discrimination module. It further elucidates that integrating the
+discrimination module into the hidden representation imposes
+direct constraints on the distribution of normal and anomalous samples in the latent space, thereby enhancing model
+performance.
+ Collectively, architectural ablation of any module degrades
+detection efficacy.
+
+E. Case Study
+ To visually demonstrate the anomaly detection performance of Causal-DRSTGC on 5G-MNC data, Fig.13 and
+Fig.14 presented two distinct visualization results. Specifically,
+we selected two anomalous 5G-MNC data segments from
+Cluster1 and Cluster2 datasets, respectively, then computed
+and displayed their anomaly scores. Fig.13 illustrates a shielding anomaly detection result on Cluster1, where node B3
+exhibits a significant performance decline in the anomalous
+region, simultaneously inducing concurrent load increases in
+its associated nodes B1, B4, and B5. Fig.14 demonstrates a
+decommissioning anomaly detection result on Cluster2, where
+a group of neighboring base stations (B3, B8, B11, B12,
+and B13) show synchronized reductions in RCC connections
+within the anomalous region. Notably, in both cases, Causal-
+DRSTGC promptly generates conspicuous spike alerts.
+ Furthermore, in the architectural design of Causal-
+DRSTGC, the ASTGCM module employs an auxiliary
+self-learned adjacency matrix to capture unresolved hidden
+spatial dependencies, serving as complementary information
+to the predefined graph structure. To validate this mechanism, we conducted a case study visualizing the self-learned
+adjacency matrix. Specifically, we presented the geographical
+layout of base station B7 and its neighbors, along with the
+corresponding rows from both the predefined adjacency matrix
+and the self-learned matrix in Fig.15. Blue markers denote Fig. 12. Mapping of different variants of the model in two dimensions (red
+ dots are anomalous samples, blue dots are normal samples).
+the top three neighbors specified in the predefined adjacency
+matrix for node B7, while brown markers indicate the top three
+neighbors identified in the self-learned matrix. The visualization reveals three additional base stations in the self-learned specific details, please refer to the Appendix A (Supplementary
+matrix that, despite lacking direct adjacency in the predefined Material).
+structure, maintain relatively close geographical proximity It is common for base stations to experience fault recovery
+and demonstrate measurable influence on B7’s actual oper- scenarios in real applications. To validate the model’s adaptational status. This evidence confirms that the self-learned ability in such cases, we manually added more pronounced
+matrix effectively supplements the predefined graph structure, fault data to simulate the kind of transition processes and test
+enabling ASTGCM to uncover latent spatial relationships. the proposed model. For specific details, please refer to the
+ Given the multi-stage architecture with stacked DRSTGC Appendix E (Supplementary Material).
+blocks, there is a possibility of error propagation through the In addition, the impact of extreme weather is also a factor
+layers. We conducted a controlled experiment in which artifi- that base stations need to consider in practical scenarios.
+cial errors were introduced after the first DRSTGC block. For Hence, we simulated the data fluctuations and distribution
+3612 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+ TABLE II
+ P ERFORMANCE COMPARISON OF SHIELDING ANOMALY DETECTION FOR C LUSTER 1 AND C LUSTER 2
+
+ TABLE III
+ P ERFORMANCE COMPARISON OF DECOMMISSIONING ANOMALY DETECTION FOR C LUSTER 1 AND C LUSTER 2
+
+changes caused by extreme weather conditions (such as heavy conducted using the Cluster1 and Cluster2 datasets. Specifirain and blizzards) and further validate the performance of cally, we evaluated the recall, precision, F1-score, and AUC
+model. For specific details of experiments, please refer to the for decommissioning anomalies and shielding anomalies under
+Appendix F (Supplementary Material). varying α values, with results visualized in Fig.16 and Fig.17.
+ For Cluster2, experimental results demonstrate that the
+ model achieves optimal overall performance for shielding
+F. Sensitivity Analysis anomalies at α = 0.1 and λ = 0.1, while the optimal
+ During model training, the hyperparameters α and λ balance configuration for decommissioning anomalies occurs at α =
+the loss contributions of the reconstruction, discrimination, 0.3 with λ = 0.1. The reconstruction module learns data
+and intervention modules, which critically influence anomaly distributions by minimizing the mean squared error between
+detection performance in 5G-MNC systems. To analyze the inputs and outputs. However, the scarcity of anomalous samsensitivity of Causal-DRSTGC, extensive experiments were ples in detection tasks may render this module sensitive to
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3613
+
+ TABLE IV TABLE VI
+P ERFORMANCE COMPARISON OF TEMPORAL RELATIONSHIPS AFFECTED C OMPARISON OF DIFFERENT VARIANTS
+ BY HISTORICAL TIME - SERIES . D0 INDICATES ORIGINAL DATA . D1
+ INDICATES DATA AFTER REMOVING ONE TIME WINDOW. D2 INDI -
+ CATES DATA AFTER REMOVING THREE CONSECUTIVE TIME
+ WINDOWS . D3 INDICATES DATA AFTER REMOVING THREE
+ NON - CONSECUTIVE TIME WINDOWS
+
+ TABLE V
+P ERFORMANCE COMPARISON OF SPATIAL RELATIONSHIPS AFFECTED BY
+ NON - ADJACENT NODES . D0 INDICATES ORIGINAL DATA . T1 INDICATES
+ THE DATA AFTER REMOVING THE ADJACENT EDGES OF NODE 5.
+ T2 INDICATES THE DATA AFTER REMOVING THE ADJACENT
+ EDGES OF NODES 4 AND 5. T3 INDICATES THE DATA AFTER
+ REMOVING THE ADJACENT EDGES OF NODES 3, 4, AND 5
+
+ Fig. 13. Case of shielding anomaly detection result on Cluster1.
+
+noise. Concurrently, maintaining partial reconstruction constraints helps capture spatio-temporal dependencies among
+base stations, providing auxiliary information for the discrimination module. The discrimination module employs binary
+cross-entropy loss to distinguish normal samples from pseudoanomalies. Higher weights prioritize discrimination capability
+enhancement, amplifying representational divergence between
+normal and anomalous samples to improve detection sensitiv- Fig. 14. Case of decommissioning anomaly detection result on Cluster2.
+ity for rare anomalies. The configuration λ = 0.1 balances
+robustness and flexibility, suppressing distribution shifts from
+environmental factors while preserving critical spatio-temporal α = 0.1 and λ = 0.1 for shielding anomalies and α = 0.3 with
+patterns related to anomalies. Thus, for Cluster2, we select λ = 0.1 for decommissioning anomalies.
+3614 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+Fig. 15. Locations of base station B7 and its neighbors (each marker denotes
+a base station). The row of B7 in the adjacency matrix (blue) and the row of
+B7 in the learned matrix (brown).
+
+ For Cluster1, experimental results reveal that α = 0.5 and
+λ = 0.1 yield optimal performance for both anomaly types.
+Compared with Cluster2, Cluster1 contains fewer base stations with lower feature dimensionality, exhibiting simpler
+spatio-temporal dependencies but more pronounced localized
+distribution disturbances. The higher α value (0.5) imposes Fig. 16. Comparison of the performance of different parameters in Cluster2.
+stronger reconstruction constraints, effectively suppressing (a) Shielding anomaly detection. (b) Decommissioning anomaly detection.
+noise interference in low-dimensional feature space through
+enhanced input-output alignment while preserving essential
+spatio-temporal correlations. Furthermore, λ = 0.1 minimizes
+representation discrepancies across environments, mitigating
+amplified distribution shifts in low-dimensional features to
+ensure robustness under complex conditions. These experiments confirm that parameter selection must consider data
+characteristics: for 5G-MNC scenarios with smaller scale and
+lower feature dimensionality, we recommend α = 0.5 and
+λ = 0.1.
+ We further conducted parameter sensitivity analysis with
+2-node and 10-node clusters to investigate the adaptability
+of hyperparameters across different network scales. For specific details, please refer to the Appendix B (Supplementary
+Material).
+ Besides, in order to conduct a more comprehensive analysis of the model, we have further implemented sensitivity
+analysis from multiple perspectives including the influence
+of batch size on training efficiency and performance, the
+optimal stacking block number for DRSTGC, and the chosen
+of the negative sampling strategy. Due to space limitations,
+for specific details, please refer to Appendix C, D, and G
+(Supplementary Material).
+
+G. Industrial Data Applications
+ 1) Datasets: To further validate the generalizability of Fig. 17. Comparison of the performance of different parameters in Cluster1.
+our proposed method, we conducted experiments using the (a) Shielding anomaly detection. (b) Decommissioning anomaly detection.
+following datasets. The PSM dataset [45], a public dataset
+obtained from eBay server machines, contains 25-dimensional
+metrics. The MSL dataset [46], collected by NASA, records SMAP dataset [46], also collected by NASA, provides soil
+sensor and actuator status data from the Mars rover. The sample measurements and telemetry information from the
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3615
+
+ TABLE VII
+ P ERFORMANCE COMPARISON OF PSM, MSL, AND SMAP DATASETS ON DIFFERENT BASELINES
+
+ TABLE VIII
+ P ERFORMANCE COMPARISON OF THE P EPPER DATASET ON DIFFERENT BASELINES
+
+Mars rover. Compared with MSL, SMAP exhibits a higher capability to distinguish between normal and anomalous samincidence of point anomalies. Pepper is a humanoid robot ples. Although GANF exhibits a marginally higher AUC
+developed by SoftBank Robotics for use in human–robot than Causal-DRSTGC on the SMAP dataset, Causal-DRSTGC
+interaction and social assistance [47]. The dataset comprises maintains significantly superior F1-score performance, sug-
+256 sensor readings. It records data for three distinct types gesting a better balance between precision and recall.
+of cyber-physical attacks: “JointsControl”, “LedsControl” and We conducted experiments under three types of attacks
+“WheelsControl”. The Pepper dataset is a well-known bench- on the Pepper dataset, with results shown in Table VIII.
+mark for anomaly detection in robotics, and is considered The findings indicate that our model also achieved the best
+particularly challenging due to the high dimensionality of the performance. These experimental outcomes validate Causaldata. DRSTGC’s generalizability and effectiveness, particularly its
+ Similar to the 5G-MNC dataset, the testing sets were modi- significant advantages over existing baselines in balancing
+fied by introducing artificial distribution shifts through manual precision-recall tradeoffs, handling distribution shifts, and
+processing. Given the substantial data volume, our adjustment modeling complex spatio-temporal dependencies.
+involved setting the fluctuation amplitude to 0.5 and applying This demonstrates that the proposed model not only applies
+variance perturbation to 30% of the data in the central 70% to 5G-MNC scenarios but also generalizes effectively to
+region. diverse time-series anomaly detection tasks, including server
+ 2) Baselines: We selected the following advanced anomaly monitoring, aerospace sensor, and robot data, highlighting its
+detection methods for comparison: TopoGDN(2024) [28], practical utility.
+GANF(2022) [29], COCA(2023) [30], DUALTF(2024) [26],
+OUAD(2024) [32]. Our evaluation metrics included precision H. Complexity Analysis
+(P), recall (R), F1-score (F1), and ROC-AUC (AUC). The time complexity of the DRSTGC block stacking archi-
+ 3) Performance Evaluation: We conducted comparative tecture is O(BT (N 2 D + N D2 )). The time complexity of
+analyses of Causal-DRSTGC against baseline methods with the causal intervention module is O(BT 2 N D). Here, B
+results presented in Table VII. The experimental results represents the batch size, T represents the size of the time
+demonstrate that Causal-DRSTGC achieves superior F1-scores window, N represents the number of feature nodes, and D
+across all three public datasets. Except for the SMAP represents the feature dimension after data processing.
+dataset, Causal-DRSTGC achieves the highest AUC values Besides, we calculated the actual running time and memory
+on both PSM and MSL datasets, indicating its enhanced consumption of the proposed model on both Cluster1 and
+3616 IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+ TABLE IX solutions to trace back to the fundamental causes, which
+ RUNNING TIME AND MEMORY CONSUMPTION OF hinders further improvements in overall operational efficiency.
+ C LUSTER 1 AND C LUSTER 2
+ Hence, in future work, how to autonomously identify the
+ emergence of new anomalies and locate the root causes of
+ anomalies in 5G-MNCs are valuable research directions.
+
+ R EFERENCES
+ [1] J. Contreras-Castillo, J. Guerrero-Ibañez, S. Zeadally, and E.-K. Hong,
+ “Generative AI for Internet of Vehicles (IoV): Potential and challenges,”
+ IEEE Commun. Standards Mag., vol. 9, no. 2, pp. 106–116, Jun. 2025.
+ [2] S. A. A. Hakeem and H. Kim, “Advancing intrusion detection in
+ V2X networks: A comprehensive survey on machine learning, federated
+ learning, and edge AI for V2X security,” IEEE Trans. Intell. Transp.
+Cluster2 listed in Table IX. The running time listed is the Syst., vol. 26, no. 8, pp. 1–69, Aug. 2025.
+cumulative time for training dataset. We performed inference [3] Q. Zheng et al., “MobileRaT: A lightweight radio transformer method
+on the test dataset item by item to simulate real-world stream- for automatic modulation classification in drone communication systems,” Drones, vol. 7, no. 10, p. 596, Sep. 2023.
+ing scenarios, avoiding the use of any vectorization methods.
+ [4] Y. Tan, J. Liu, Y. Li, and J. Wang, “Deep learning based proactive
+One can observe that each item of data for inference requires anomaly detection for 5G core control plane network function interacapproximately 0.07 seconds. Considering that the minimum tions,” IEEE Trans. Cognit. Commun. Netw., early access, Feb. 7, 2025,
+time interval for mobile operators to collect each item of doi: 10.1109/TCCN.2025.3539660.
+ [5] S. F. Ahmed et al., “Toward a secure 5G-enabled Internet of Things: A
+data is 15 minutes, the responsiveness of the model can meet survey on requirements, privacy, security, challenges, and opportunities,”
+the requirements of real-time applications. The experimental IEEE Access, vol. 12, pp. 13125–13145, 2024.
+environment utilized an NVIDIA GeForce RTX 3090 GPU @ [6] X. Chen, Q. Qiu, C. Li, and K. Xie, “GraphAD: A graph neural network
+ for entity-wise multivariate time-series anomaly detection,” in Proc. 45th
+128GB RAM configuration computer. These results demon- Int. ACM SIGIR Conf. Res. Develop. Inf. Retr., Jul. 2022, pp. 2297–2302.
+strate the capability of the proposed model for deployment in [7] N. Zhao, B. Han, R. Li, J. Su, and C. Zhou, “A multivariate KPIs
+real-world industrial scenarios. anomaly detection framework with dynamic balancing loss training,”
+ IEEE Trans. Netw. Service Manage., vol. 20, no. 2, pp. 1418–1429,
+ Jun. 2023.
+ VI. C ONCLUSION [8] X. Wang et al., “Adaptive multi-receptive field spatial–temporal graph
+ convolutional network for traffic forecasting,” in Proc. IEEE Global
+ In 5G Mobile Network Clusters (5G-MNCs), the proposed Commun. Conf. (GLOBECOM), Dec. 2021, pp. 1–7.
+model effectively resolves complex spatio-temporal pattern [9] S. Piltyay, A. Bulashenko, and I. Demchenko, “Wireless sensor network
+recognition and distribution shifts robustness issues. The connectivity in heterogeneous 5G mobile systems,” in Proc. IEEE Int.
+designed DRSTGC block achieves deep modeling of inter-base Conf. Problems Infocommunications Sci. Technol. (PIC ST), Oct. 2020,
+ pp. 625–630.
+station synchronization dependencies through integration of [10] Q. Zheng, S. Saponara, X. Tian, Z. Yu, A. Elhanashi, and R. Yu, “A
+predefined topological information with data-driven hidden real-time constellation image classification method of wireless commudependency mining. By incorporating causal intervention nication signals based on the lightweight network MobileViT,” Cognit.
+ Neurodynamics, vol. 18, no. 2, pp. 659–671, Apr. 2024.
+mechanisms and partial conditional invariance regulariza- [11] J. B. S. Carvalho, M. Zhang, R. Geyer, C. Cotrini, and J. M. Buhmann,
+tion (PCIR), the architecture eliminates confounding effects “Invariant anomaly detection under distribution shifts: A causal perspecinduced by distribution shifts, significantly enhancing detec- tive,” in Proc. Adv. Neural Inf. Process. Syst., 2023, pp. 310–337.
+ [12] Q. Zheng, X. Tian, L. Yu, A. Elhanashi, and S. Saponara, “Recent
+tion robustness in non-stationary environments. A joint opti- advances in automatic modulation classification technology: Methods,
+mization strategy combining discrimination and reconstruction results, and prospects,” Int. J. Intell. Syst., vol. 2025, no. 1, Jan. 2025,
+modules leverages complementary information between origi- Art. no. 4067323.
+ [13] A. Dridi, C. Boucetta, S. E. Hammami, H. Afifi, and H. Moungla,
+nal data and latent feature spaces, establishing a more reliable “STAD: Spatio-temporal anomaly detection mechanism for mobile netanomaly scoring mechanism. work management,” IEEE Trans. Netw. Service Manage., vol. 18, no. 1,
+ Experimental results demonstrate that Causal-DRSTGC out- pp. 894–906, Mar. 2021.
+performs state-of-the-art methods on real-world China Mobile [14] A. K. Sangaiah, S. Rezaei, A. Javadpour, F. Miri, W. Zhang, and
+ D. Wang, “Automatic fault detection and diagnosis in cellular networks
+5G-MNC datasets, particularly excelling in shielding and and beyond 5G: Intelligent network management,” Algorithms, vol. 15,
+decommissioning anomaly scenarios with superior F1-score no. 11, p. 432, Nov. 2022.
+and AUC metrics. Ablation studies confirm the necessity of [15] F. Wen and H. Wymeersch, “5G synchronization, positioning, and
+ mapping from diffuse multipath,” IEEE Wireless Commun. Lett., vol. 10,
+core components. Generalization experiments further reveal no. 1, pp. 43–47, Jan. 2021.
+outstanding cross-domain performance on widely-used indus- [16] L. Chao, L. Yinghua, D. Fengqian, and S. Rui, “Spatio-temporal
+trial benchmark datasets, highlighting strong universality and anomaly detection for 5G-clusters: A multi-scale fuzzy contrastive
+ learning approach,” IEEE Trans. Netw., vol. 33, no. 4, pp. 1588–1602,
+practical value. Aug. 2025.
+ Although this study demonstrated effectiveness, real-world [17] P. K. Deka, Y. Verma, A. B. Bhutto, E. Elmroth, and M. Bhuyan, “Semi-
+5G-MNC deployments still face challenges. First, the identifi- supervised range-based anomaly detection for cloud systems,” IEEE
+ Trans. Netw. Service Manage., vol. 20, no. 2, pp. 1290–1304, Jun. 2023.
+cation of anomaly types still relies on prior expert knowledge,
+ [18] Y. Wang, J. Zhang, S. Guo, H. Yin, C. Li, and H. Chen, “Decoupling
+particularly in dynamic and complex network environments, representation learning and classification for GNN-based anomaly detecwhere autonomous anomaly categorization remains challenge. tion,” in Proc. 44th ACM SIGIR Conf. Res. Dev. Inf. Retr., Jul. 2021,
+Second, the application background of mobile network clusters pp. 1239–1248.
+ [19] Y. Liu et al., “Anomaly detection in dynamic graphs via transformer,”
+leads to the difficulty of root cause localization in real scenar- IEEE Trans. Knowl. Data Eng., vol. 35, no. 12, pp. 12081–12094,
+ios. Currently, there is a lack of systematic and automated Dec. 2023.
+LIU et al.:5G MOBILE NETWORKED CLUSTERS ANOMALY DETECTION UNDER DISTRIBUTION SHIFTS 3617
+
+[20] M. Thill, W. Konen, H. Wang, and T. Bäck, “Temporal convolutional [42] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+ autoencoder for unsupervised anomaly detection in time series,” Appl. detection for multivariate time series through stochastic recurrent neural
+ Soft Comput., vol. 112, Nov. 2021, Art. no. 107751. network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discovery Data
+[21] W. Li, W. Hu, T. Chen, N. Chen, and C. Feng, “StackVAE-G: An Mining, Jul. 2019, pp. 2828–2837.
+ efficient and interpretable model for time series anomaly detection,” AI [43] J. Li, H. Izakian, W. Pedrycz, and I. Jamal, “Clustering-based anomaly
+ Open, vol. 3, pp. 101–110, Jun. 2022. detection in multivariate time series data,” Appl. Soft Comput., vol. 100,
+[22] W. T. Lunardi, M. A. Lopez, and J.-P. Giacalone, “ARCADE: Adver- Mar. 2021, Art. no. 106919.
+ sarially regularized convolutional autoencoder for network anomaly [44] X. Zhang, Z. Tian, Y. Shi, Q. Guan, Y. Lu, and Y. Pan, “STFGCN:
+ detection,” IEEE Trans. Netw. Service Manage., vol. 20, no. 2, Spatio-temporal fusion graph convolutional networks for subway traffic
+ pp. 1305–1318, Jun. 2023. prediction,” IEEE Access, vol. 12, pp. 194449–194461, 2024.
+[23] A. Deng and B. Hooi, “Graph neural network-based anomaly detection [45] A. Abdulaal, Z. Liu, and T. Lancewicki, “Practical approach to asynin multivariate time series,” in Proc. AAAI Conf. Artif. Intell., May 2021, chronous multivariate time series anomaly detection and localization,”
+ vol. 35, no. 5, pp. 4027–4035. in Proc. 27th ACM SIGKDD Conf. Knowl. Discovery Data Mining,
+[24] K. Liu et al., “DeepBAN: A temporal convolution-based communication Aug. 2021, pp. 2485–2494.
+ framework for dynamic WBANs,” IEEE Trans. Commun., vol. 69, [46] K. Hundman, V. Constantinou, C. Laporte, I. Colwell, and
+ no. 10, pp. 6675–6690, Oct. 2021. T. Soderstrom, “Detecting spacecraft anomalies using LSTMs and non-
+[25] S. Huang et al., “HitAnomaly: Hierarchical transformers for anomaly parametric dynamic thresholding,” in Proc. 24th ACM SIGKDD Int.
+ detection in system log,” IEEE Trans. Netw. Service Manage., vol. 17, Conf. Knowl. Discovery Data Mining, Jul. 2018, pp. 387–395.
+ no. 4, pp. 2064–2076, Dec. 2020. [47] A. K. Pandey, R. Gelin, and A. Robot, “Pepper: The first machine of its
+[26] Y. Nam et al., “Breaking the time-frequency granularity discrepancy in kind,” IEEE Robot Autom. Mag., vol. 25, no. 3, pp. 40–48, Mar. 2018.
+ time-series anomaly detection,” in Proc. ACM Web Conf., May 2024,
+ pp. 4204–4215.
+[27] J. Lee, J. Lee, and S. B. Kim, “Uncertainty-informed dynamic threshold for time series anomaly detection,” Expert Syst. Appl., vol. 278,
+ Jun. 2025, Art. no. 127379.
+[28] Z. Liu, X. Huang, J. Zhang, Z. Hao, L. Sun, and H. Peng, “Multivariate time-series anomaly detection based on enhancing graph attention Xuyuan Liu received the B.E. degree from Qingdao
+ networks with topological analysis,” in Proc. 33rd ACM Int. Conf. Inf. University of Technology, China, in 2024. He is
+ Knowl. Manag., Jul. 2024, pp. 1555–1564. currently pursuing the M.E. degree with the School
+[29] E. Dai and J. Chen, “Graph-augmented normalizing flows for anomaly of Information Science and Engineering, Shandong
+ detection of multiple time series,” 2022, arXiv:2202.07857. Normal University. His research interests include
+[30] R. Wang et al., “Deep contrastive one-class time series anomaly detec- anomaly detection and multivariate time series
+ tion,” in Proc. SDM, Jun. 2023, pp. 694–702. analysis.
+[31] Y. Yang, C. Zhang, T. Zhou, Q. Wen, and L. Sun, “DCdetector: Dual
+ attention contrastive representation learning for time series anomaly
+ detection,” in Proc. 29th ACM SIGKDD Conf. Knowl. Discovery Data
+ Mining, Aug. 2023, pp. 3033–3045.
+[32] D. Meli, “Explainable online unsupervised anomaly detection for
+ cyber-physical systems via causal discovery from time series,” in
+ Proc. IEEE 20th Int. Conf. Autom. Sci. Eng. (CASE), Aug. 2024,
+ pp. 4120–4125.
+[33] N. Huyan, D. Quan, X. Zhang, X. Liang, J. Chanussot, and L. Jiao,
+ “Unsupervised outlier detection using memory and contrastive learning,” Chao Luo (Member, IEEE) received the Ph.D.
+ IEEE Trans. Image Process., vol. 31, pp. 6440–6454, 2022. degree in computer science from Dalian University
+[34] Z. Zhou et al., “Maintaining the status quo: Capturing invariant relations of Technology, China, in 2013. He is currently a Profor OOD spatiotemporal learning,” in Proc. 29th ACM SIGKDD Conf. fessor with the School of Information Science and
+ Knowl. Discovery Data Mining, Aug. 2023, pp. 3603–3614. Engineering, Shandong Normal University, China.
+[35] Y. Xia et al., “Deciphering spatio-temporal graph forecasting: A causal He has published more than 60 refereed articles. His
+ lens and treatment,” in Proc. NeurIPS, vol. 36, 2023, pp. 37068–37088. research interests include machine learning, complex
+[36] J. Hu, Y. Liang, Z. Fan, H. Chen, Y. Zheng, and R. Zimmermann, systems, and time series analysis.
+ “Graph neural processes for spatio-temporal extrapolation,” in Proc. 29th
+ ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, Sep. 2023,
+ pp. 752–763.
+[37] B. N. Oreshkin, D. Carpov, N. Chapados, and Y. Bengio, “N-BEATS:
+ Neural basis expansion analysis for interpretable time series forecasting,”
+ 2019, arXiv:1905.10437.
+[38] S. Rahmani, A. Baghbani, N. Bouguila, and Z. Patterson, “Graph neural
+ networks for intelligent transportation systems: A survey,” IEEE Trans.
+ Intell. Transp. Syst., vol. 24, no. 8, pp. 8846–8885, Aug. 2023. Rui Shao received the master’s degree in com-
+[39] H. Zhang et al., “Spatio-temporal weighted graph reason learning for puter software and theory from Shandong University.
+ multivariate time-series anomaly detection,” IEEE Internet Things J., He is currently with China Mobile Communications
+ vol. 12, no. 15, pp. 29373–29383, Aug. 2025. Group Shandong Company Ltd., mainly engaged in
+[40] S. He, Q. Guo, G. Li, K. Xie, and P. K. Sharma, “Multivariate time series wireless network optimization and planning work
+ anomaly detection based on multiple spatiotemporal graph convolution,” for 5G/4G networks. His research interests include
+ IEEE Trans. Instrum. Meas., vol. 74, pp. 1–14, 2025. 5G communication network planning, strategy opti-
+[41] X. Zhang et al., “Rethinking robust multivariate time series anomaly mization, SON, anomaly recognition, and network
+ detection: A hierarchical spatio-temporal variational perspective,” IEEE structure optimization.
+ Trans. Knowl. Data Eng., vol. 36, no. 12, pp. 9136–9149, Dec. 2024.

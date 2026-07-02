@@ -1,0 +1,698 @@
+IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025 5534014
+
+ MiKA-HAD: Minority-Augmented KAN-Based
+ Hybrid Self-Supervised Framework for
+ Hyperspectral Anomaly Detection
+ Dandan Ma , Zhuozhao Liu, Zhiyu Jiang , Yi Zheng , and Qi Wang
+
+ Abstract—In recent years, autoencoder (AE)-based models Index Terms—Anomaly detection, autoencoder (AE), hyperhave demonstrated significant potential in hyperspectral anomaly spectral image, Kolmogorov–Arnold network (KAN), selfdetection (HAD). However, the inherent class imbalance between supervised.
+anomaly and background samples, coupled with substantial
+intraclass heterogeneity within background components, often
+leads traditional models to excessively capture majority-class
+background features, thereby weakening their discriminative
+ I. I NTRODUCTION
+capabilities for minority-class backgrounds and anomaly targets.
+Concurrently, conventional methods fail to sufficiently model
+nonlinear features and adapt to complex environments, undermining their detection performance and robustness in intricate
+ H YPERSPECTRAL anomaly detection (HAD) enables
+ the precise identification of targets by comparing pixels with distinct spatial and spectral characteristics to their
+environmental interference. To address these challenges, we adjacent background, even when prior data is unavailable
+propose MiKA-HAD, a minority-augmented Kolmogorov–Arnold [1]. This technology overcomes the reliance on target prior
+network (KAN)-based hybrid self-supervised framework for knowledge, demonstrating unique adaptability in unknown and
+HAD. It incorporates a density-based clustering-guided sample balancing strategy that dynamically synthesizes minority complex scenarios. With the development of remote sensing
+background samples with spectral–spatial diversity through platforms [2], [3], HAD has emerged as a frontier research
+self-supervised learning. This approach achieves feature space direction in the field of multidimensional information sensing,
+rebalancing while effectively suppressing noise interference on deeply integrated into significant engineering practices such
+anomaly boundaries. To overcome high-dimensional data com- as crop stress monitoring in precision agriculture [4], [5],
+plexity and nonlinear feature extraction challenges, we construct
+a hybrid self-supervised network with a KAN-based multipath disaster life detection in emergency management [6], and
+collaborative module that orchestrates synergy between local concealed target localization in national defense security
+sensitivity preservation, nonlinear feature modeling, and global [7].
+consistency maintenance. This tripartite architecture establishes Statistically based HAD methods operate under probaa dynamic equilibrium that enhances representation capability bilistic assumptions, where background pixels conform to
+and environmental robustness. Extensive experiments show that
+MiKA-HAD achieves superior detection accuracy and stabil- predefined statistical distributions while anomalies manifest
+ity compared to existing approaches, particularly in complex as significant deviations. The Reed–Xiaoli (RX) detector [8]
+environments with varying noise conditions. The framework identifies anomalous regions through Mahalanobis distance
+establishes a new paradigm for robust HAD by addressing both calculation between target pixels and background distribuclass imbalance bias and nonlinear feature modeling limitations. tions under Gaussian distribution assumptions. Kwon and
+ Nasrabadi [9] pioneered the integration of reproducing ker-
+ Received 11 August 2025; revised 25 September 2025; accepted 14 November 2025. Date of publication 20 November 2025; date of current version nel Hilbert space theory to characterize high-order spectral
+4 December 2025. This work was supported in part by the Young Scientists relationships in nonlinearly separable scenarios. Zhao et
+Fund of the National Natural Science Foundation of China under Grant al. [10] enhanced robustness through a hybrid framework
+62301444, in part by Guangdong Basic and Applied Basic Research Foundation under Grant 2025A1515011365, in part by the Natural Science Basic combining kernelization with robust iterative estimation. Li
+Research Program of Shaanxi under Grant 2024JC-YBMS-479, and in part by et al. [11] extended the isolation forest to kernel space,
+the Key Research and Development Projects of Shaanxi Province under Grant leveraging both global statistics and local spatial–contextual
+2024GX-YBXM-077. (Dandan Ma and Zhuozhao Liu contributed equally to
+this work.) (Corresponding author: Zhiyu Jiang.) information. Despite their computational efficiency, statisti-
+ Dandan Ma is with the School of Artificial Intelligence, Optics and cal methods remain constrained by simplified distribution
+Electronics (iOPEN), Northwestern Polytechnical University, Xi’an 710072, assumptions and often fail in scenarios with complex
+China, and also with Shenzhen Research Institute, Northwestern Polytechnical
+University, Shenzhen 518057, China. backgrounds.
+ Zhuozhao Liu is with the School of Artificial Intelligence, Optics and Data representation-based methods identify anomalies by
+Electronics (iOPEN) and the School of Computer Science, Northwestern computing reconstruction errors from background dictionar-
+Polytechnical University, Xi’an 710072, China.
+ Zhiyu Jiang and Qi Wang are with the School of Artificial Intelligence, ies, where normal pixels exhibit lower residuals compared
+Optics and Electronics (iOPEN), Northwestern Polytechnical University, Xi’an to anomalies. Li et al. [12] introduced a joint sparse
+710072, China (e-mail: jiangzhiyu@nwpu.edu.cn). representation-based detector incorporating atomic decompo-
+ Yi Zheng is with the School of Computer Science, Northwestern Polytechnical University, Xi’an 710072, China. sition from over-complete dictionaries. Zhao et al. [13] devised
+ Digital Object Identifier 10.1109/TGRS.2025.3635167 a quantitative sparsity assessment methodology improving dis-
+ 1558-0644 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+5534014 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+criminative capability between the background and anomaly. background samples, referred to as majority-class background
+Li and Du [14] introduced collaborative representation detec- samples, while uncommon backgrounds such as shadows and
+tion, further optimized using spatial contextual information fog account for less than 10% of the samples, referred to
+and saliency analysis [15]. The low-rank decomposition as minority-class background samples. Conventional models
+extracts principal data features, while the sparse decomposition tend to prioritize learning features from the majority-class
+isolates deviations from normal patterns. Yang et al. [16] background samples during training, resulting in inadequate
+employed the low-rank background property to decompose characterization of minority-class backgrounds. This limitation
+HSI data into background and anomaly components. Ma et al. consequently hampers the model’s ability to discern subtle
+[17] formulated the background component as a low-rank ten- distinctions between minority-class backgrounds and anomasor, achieving effective background-residual separation. This lous targets, degrading detection performance. Moreover,
+framework circumvents Gaussian assumptions in traditional traditional approaches demonstrate insufficient robustness in
+models to some extent but faces challenges in handling complex scenarios due to their limited capacity for nonlinear
+noise-corrupted dictionaries and computational complexity for feature modeling and adaptability to intricate environmental
+large-scale HSIs. interference [33]. To address these issues, we propose MiKA-
+ Deep learning-based methods have been established as HAD, a minority-augmented Kolmogorov–Arnold network
+the predominant approach for anomaly detection, primarily (KAN)-based hybrid self-supervised framework for robust
+employing autoencoder (AE) architectures to model back- HAD. First, a density-based clustering-guided strategy sepaground distributions through reconstruction error analysis [18]. rates minority-class background samples and isolated anomaly
+Wang et al. [19] combined fully convolutional AEs with noise samples. These isolated samples are considered potential
+adaptive weighted loss functions to suppress anomalous recon- anomalies. Our hybrid self-supervised framework integrates
+struction errors. Aghili et al. [20] developed dual-domain AEs, AEs and generative adversarial networks (GANs) to impleseparating anomalies from background components through ment dynamic minority-class sample augmentation, explicitly
+nonnegative matrix factorization. Various sampling optimiza- guiding the feature learning process toward these underreption strategies have been explored, including diagonal sub- resented categories. This strategy effectively enhances the
+sampling for reconstruction consistency [21], random masking network’s discriminative capability in distinguishing between
+[22], and multiscale masking [23] for enhanced background anomalous samples and minority-class background counfeature learning. For multimodal feature fusion, researchers terparts. Furthermore, a KAN-based multipath collaborative
+have introduced dual-window masking [24], feature aggre- module achieves synergistic complementation of local sensitivgation mechanisms [25], and spatial–spectral cross-guided ity, nonlinear feature modeling, and global consistency, which
+frameworks [26]. In adversarial learning paradigms, Li et al. enhances the nonlinear modeling capability and robustness in
+[27] proposed an unsupervised transfer detection model with complex environments. The contributions of this research are
+global–local self-attention modules, while Wang et al. [28] outlined as follows.
+developed a capsule differential adversarial reconstruction
+network. Chen et al. [29] proposed a double-window iter- 1) A density-based cluster-guided sample balancing stratative spectral diffusion and inverse reconstruction method, egy is developed, where a generator network dynamwhich achieved accurate background estimation. He et al. [30] ically synthesizes minority background samples with
+improved the Transformer network to capture deep reconstruc- spectral–spatial diversity, effectively mitigating feation features from global to local views in the spatial-spectral ture learning bias induced by class imbalance. This
+domain. Fu et al. [31] proposed a multiscale Mamba network strategy improves the detection performance through
+to enhance the representation of the background and suppress feature space rebalancing, while greatly suppressing
+the reconstruction of anomalies. Liu et al. [32] proposed the interference of background noise on the anomaly
+adaptive dual-domain learning based on the spatial spectrum to boundaries.
+extract high-frequency abnormal signals in images. Although 2) A KAN-based multipath collaborative module is prothese methods have significantly improved detection perfor- posed that integrates three complementary mechanisms:
+mance, their reconstruction processes remain susceptible to spline interpolation for localized feature precision, radial
+interference from low signal-to-noise ratio data, resulting in basis function (RBF) mapping for nonlinear represenlower detection accuracy. tation, and linear transformations for global structural
+ In hyperspectral imagery, background samples typically coherence. This novel joint modeling strategy effectively
+dominate in quantity over anomalies while exhibiting sig- addresses the limitations of conventional approaches
+nificant intraclass heterogeneity. In hyperspectral images, in characterizing high-dimensional nonlinear features
+background samples typically dominate in terms of quantity across complex terrain regions.
+while exhibiting significant intraclass heterogeneity. Specif- 3) Our MiKA-HAD framework has been validated through
+ically, background samples often account for over 95% of extensive experiments on six public datasets comprising
+the total sample count, and within these background sam- ten real-world scenes with an overall performance gain
+ples, there are multiple distinct background types, such as of 2.16%, demonstrating superior detection accuracy
+trees, rivers, and shadows. The proportions of these different and stability, particularly in complex environments with
+background samples vary greatly. Common backgrounds such varying noise conditions. The experimental results conas trees and rivers typically account for over 90% of the firm the effectiveness of our approach in addressing both
+MA et al.: MINORITY-AUGMENTED KAN-BASED HYBRID SELF-SUPERVISED FRAMEWORK FOR HAD 5534014
+
+ class imbalance bias and nonlinear feature modeling divergence for distribution alignment, yet practical improvelimitations. ments like Wasserstein distance and spectral normalization are
+ The rest of this article is arranged as follows. The related often adopted to mitigate gradient vanishing or mode collapse.
+works are briefly reviewed in Section II. Section III describes Unlike conventional linear approaches, GANs establish a
+the details of the proposed method. In Section IV, the experi- nonlinear characterization of HSI backgrounds through their
+mental results on real hyperspectral datasets are reported and inherent architecture, which enables robust adaptation to teranalyzed. Finally, the conclusions are drawn in Section V. rain heterogeneity and illumination fluctuations [36]. The
+ discriminative component progressively refines its capability to
+ identify nuanced spectral divergences between intricate back-
+ II. R ELATED W ORKS
+ grounds and anomalous targets through iterative adversarial
+A. Autoencoder optimization. Concurrently, the generative module produces
+ AE, as an unsupervised deep neural network architec- diverse normal spectral samples that comprehensively repture, has gained prominence in HAD due to its distinctive resent typical surface characteristics, thereby improving the
+feature extraction capability and noise robustness. The fun- generalization capacity of detection frameworks through datadamental structure comprises symmetrical encoder–decoder driven learning. This adversarial framework fundamentally
+components that collaboratively learn low-dimensional repre- learns background distributions directly from unlabeled hypersentations through data reconstruction [18]. spectral data while maintaining environmental fidelity.
+ In HAD applications, AE’s effectiveness stems from
+hyperspectral imagery’s inherent statistics: background pixels C. KAN
+dominate while anomalies are extremely sparse [34]. During The Kolmogorov–Arnold representation theorem establishes
+training, gradient descent prioritizes learning spectral mixing that every multivariate continuous function can be expressed
+patterns of background regions, whereas the modeling capac- as a finite superposition of two-parameter univariate funcity for rare anomalies remains underdeveloped. This feature tions. This principle implies that complex high-dimensional
+learning bias creates a natural detection mechanism where relationships can be represented through simpler 1-D transforanomalous pixels generate prominent reconstruction residuals mations, reducing computational complexity while preserving
+compared to background components. functional expressiveness. In particular, for any continuous
+ For a given hyperspectral pixel x, the encoder uses a function f : [0, 1]d → R, there exist univariate continuous
+trainable weight matrix W and a bias vector b to map the functions Φq and φq,p such that
+input sample to potential features z 0 1
+ 2d+1 d
+ z = f (W x + b)
+ X X
+ f (x1 , x2 , . . . , xd ) = Φq @ φq,p x p A
+ 
+ (1) (4)
+ q=1 p=1
+where f (·) is usually an element-by-element activation function such as ReLU and its variants for deeper architectures, or where Φq : R → R and φq,p : [0, 1] → R, x p is the input
+sigmoid for bounded outputs. The decoder then reconstructs features, and d is the dimension of the input.
+the input data from the latent representation z using a separate Based on this insight, learning a high-dimensional function
+weight matrix W 0 and bias b0 , followed by the same or different essentially reduces to learning a polynomial number of 1-D
+activation function functions. However, in practical scenarios, these 1-D functions may exhibit nonsmooth or even fractal characteristics,
+ x̂ = f W 0 z + b0 .
+ 
+ (2) rendering them fundamentally unlearnable [37]. This critical
+By minimizing the reconstruction error, the network forces the limitation has historically hindered the application of the
+latent code z to encapsulate dominant data features. Kolmogorov–Arnold theorem in machine learning domains.
+ To address this challenge, Liu et al. [38] postulated that most
+ functions encountered in scientific and daily contexts typically
+B. Generative Adversarial Network demonstrate smoothness and sparse compositional structures,
+ GANs model data distributions through adversarial interplay suggesting that network learning failures rarely occur under
+between two modules [35]. The generator G maps latent practical conditions. By extending neural networks to arbitrary
+variables z to synthetic samples G(z), aiming to approximate widths and depths, they proposed the KANs
+the real data distribution, while the discriminator D evaluates KAN (x) = (ΦL−1 ◦ ΦL−2 ◦ · · · ◦ Φ1 ◦ Φ0 ) x (5)
+sample authenticity via binary cross-entropy loss
+ where l is the number of stacked layers and x is the input
+ min max L(G,D) = min max E x∼preal (x) log D (x)
+  
+ G D G D
+ features.
+ 
+ + Ez∼pz(z) log (1 − D (G (z)))
+ 
+ (3) The KAN demonstrates exceptional performance in processing high-dimensional spectral–spatial data. Leveraging their
+where L(G,D) is usually a binary cross-entropy loss function, x superior function approximation capabilities, the KAN can
+is real data, and z is a latent variable. At the Nash equilibrium, effectively extract discriminative features from hundreds of
+D fails to distinguish real and generated samples, indicating spectral bands. This property is particularly advantageous
+that G has successfully captured the essential data char- for hyperspectral data, where nonlinear spectral interdepenacteristics. Theoretically, GANs minimize Jensen–Shannon dencies align naturally with KAN’s decomposition approach.
+5534014 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+Fig. 1. Overall framework of our proposed MiKA-HAD.
+
+Compared with a multilayer perceptron, the KAN achieves
+comparable or superior accuracy with fewer parameters,
+thereby mitigating overfitting risks under limited annotated
+samples. Its hierarchical decomposition aligns with the intrinsic low-dimensional structure of hyperspectral data, enabling
+interpretable feature learning.
+
+ III. P ROPOSED M ETHOD
+ The overall framework of our proposed MiKA-HAD
+(minority-augmented KAN-based hybrid self-supervised
+framework for HAD) is illustrated in Fig. 1. First, a
+background sample selection and amplification strategy is
+developed to dynamically identify and augment minority-class Fig. 2. (a) Clustering results on the Los Angeles-II dataset. The majority-class
+background samples, effectively rebalancing the feature space. background samples account for more than 93% of the total. (b) Minority-
+Second, a hybrid self-supervised network is constructed to class background may be similar in appearance to anomalies, where green and
+ blue pixels represent the majority-class background, yellow pixels represent
+enhance the network’s ability to discriminate minority class the minority-class background, and orange pixels represent anomalies.
+samples and anomalous targets by dynamically generating
+diverse minority-class background samples. Within this
+hybrid network, we further design a KAN-based multipath genuine anomalies, which affects the detection efficiency in
+collaborative module that orchestrates synergy among local complex scenarios.
+sensitivity preservation, nonlinear feature modeling, and This imbalance fundamentally alters model optimization
+global consistency maintenance for augmenting the model’s trajectories during training. Specifically, during stochastic graadaptability and flexibility to complex hyperspectral scenes. dient descent, parameter updates are governed by
+ 1 X ∂L (x; θ)
+A. Background Sample Selection and Amplification ∇θ L (θ) =
+ N ∂θ
+ x∈N
+ In HAD, background pixels typically constitute 95%–99.9%
+ Nmaj Nmin Na
+of the total imagery, while anomalous targets exist in sparse = · ∇Lmaj + · ∇Lmin + · ∇La (6)
+distributions [39]. Meanwhile, the background regions them- N N N
+selves exhibit significant heterogeneity. As illustrated in where N denotes the total number of samples processed.
+Fig. 2 using the Los Angeles-II dataset, while background Nmaj , Nmin , and Na represent the number of majority-class
+pixels account for 99.13% of the total, they exhibit a pro- background samples, minority-class background samples, and
+nounced internal imbalance: 93.65% represent majority-class anomalous samples, respectively. (∂L(x; θ))/(∂θ) represents
+backgrounds (vegetation and soil), while only 5.48% con- the gradient contribution of a single input sample x with
+stitute minority-class backgrounds (shadows and moisture respect to parameters θ. ∇Lmaj , ∇Lmin , and ∇La denote
+changes)—a proportion barely exceeding that of anomalous the average loss gradients computed over these three catsamples (0.87%). This imbalance creates a critical detection egories, respectively. The terms (Nmaj )/N , (Nmin )/N , and
+bottleneck, as models struggle to distinguish subtle spectral (Na )/N represent their proportional weights within the
+differences between minority-class background samples and dataset, satisfying Nmaj + Nmin + Na = N . Given that
+MA et al.: MINORITY-AUGMENTED KAN-BASED HYBRID SELF-SUPERVISED FRAMEWORK FOR HAD 5534014
+
+ After identification, we amplify minority-class samples
+ through a controlled augmentation strategy. The sparse cluster
+ samples are expanded m-fold, where m is a hyperparameter
+ controlling the augmentation multiple. To enhance feature
+ space diversity while preserving spectral characteristics, we
+ introduce Gaussian noise following N (0, 1 × 10−7 ) to each
+ augmented sample. This choice leverages the natural property of Gaussian noise to approximate multiple independent
+ perturbation sources without directional bias [41], effectively
+Fig. 3. (a) Pseudo-color image of the Los Angeles-II dataset. (b) Ground-truth expanding the feature space representation of minority-class
+annotation of the Los Angeles-II dataset, where white pixels denote anomalous samples while maintaining their intrinsic spectral signatures.
+regions. (c) Distribution of isolated pixels identified by HDBSCAN clustering:
+the red pixels represent these isolated pixels, which constitute merely 3.10% This balanced augmentation approach enables the model to
+of the total pixels yet cover 60.92% of the actual anomalous areas. develop more discriminative representations for both majority
+ and minority background classes, significantly enhancing its
+Nmaj  Nmin ≈ Na , the resultant gradient predominantly opti- ability to distinguish between anomalies and complex backmizes for the majority-class background. This progressively ground variations.
+shifts the decision boundaries toward the feature spaces of the
+majority class, degrading the model’s capacity to distinguish B. Hybrid Self-Supervised Network
+minority backgrounds from anomalies. We propose a hybrid self-supervised network combining
+ To address this challenge, MiKA-HAD incorporates a AEs and GANs to enhance the ability of HAD networks to
+density-based clustering-guided background sample selection characterize minority background samples through a multiand amplification strategy. After PCA-based dimensionality stage feature optimization mechanism. The network employs
+reduction and normalization, we leverage the hierarchical a cascaded structure with two AEs and a GAN. After initial
+density-based spatial clustering of applications with noise feature compression and reconstruction by the first-stage AE,
+(HDBSCAN) method [40] to identify and separate minority- the network performs adversarial optimization via the GAN,
+class background samples from majority classes and potential followed by final reconstruction through the second-stage AE,
+anomalies. HDBSCAN combines the ideas of density clus- forming a self-supervised closed loop. This hybrid architectering and hierarchical clustering, using a density hierarchy ture offers dual advantages: it prevents pattern collapse in
+tree to represent the clustering structure of the data. This GAN training through the cascaded reconstruction constraints
+approach exploits the inherent spectral–spatial distribution of the AEs, while leveraging the adversarial mechanism to
+patterns in hyperspectral data: majority backgrounds typically focus model learning on subtle spectral differences between
+form dense, continuous clusters with strong spatial corre- minority-class backgrounds and anomalies, addressing a key
+lation, while minority backgrounds and anomalies manifest limitation of pure AE approaches in sparse sample learnas sparse, isolated structures due to their spectral deviation ing. Additionally, we introduce a joint dictionary structure
+from dominant patterns. With hyperparameters min-cluster that ensures semantic consistency during feature refinement
+size mc and min-samples ms, the HDBSCAN algorithm can through self-consistent constraints. The network comprises
+generate multiple sample clusters and isolated noise points. three complementary components: a feature encoding module,
+We designate clusters with fewer than k elements as sparse an adversarial generation module, and a feature refinement
+clusters (minority-class backgrounds), where the threshold k module.
+is determined dynamically to ensure sparse clusters constitute In the encoding phase, the first-stage autoencoder Ae, conr% of the total clustered pixels. This adaptive thresholding sisting of an encoder En and a decoder De, compresses and
+approach ensures consistent minority sample identification reconstructs the input pixel x to generate the potential feature
+across varied datasets. Importantly, we exclude isolated noise z and the reconstructed sample x0 . In the generation phase, the
+points (potential anomalies) to prevent anomaly contami- generator Ge, which has the same structure as the En, extracts
+nation during background modeling. Fig. 3 illustrates the the refinement feature z0 from x0 . Meanwhile, the discriminator
+HDBSCAN clustering results on the Los Angeles-II dataset. Di distinguishes between the original feature z and the refined
+In Fig. 3(b) and (c), black pixels represent background feature z0 through adversarial training. During the refinement
+regions, white pixels denote true anomaly areas, and red stage, the second-stage autoencoder Ae0 , consisting of a generpixels mark isolated pixels identified by HDBSCAN. These ator Ge and a decoder De0 , reconstructs z0 into x00 , establishing
+isolated pixels account for only 3.10% of the total pixels but a cascading optimization path with the first-stage AE. To
+cover 60.92% of the anomaly regions. To improve anomaly enhance the network’s capacity for modeling complex highsuppression, we exclude the isolated pixels from network dimensional data and extracting nonlinear features, we replace
+training. Notably, erroneously excluded background regions traditional linear layers in the AEs with our KAN-based
+can be compensated through data augmentation from neigh- multipath collaborative module, detailed in Section III-C.
+boring pixels, whereas true anomalies are difficult to recover Notably, a joint dictionary structure is introduced to map
+due to spectral differences. This further widens the propor- potential spatial features, ensuring L2 distance minimization gap between minority-class backgrounds and anomaly tion between dictionary-reconstructed features zre and z0 .
+samples. This approach maintains distributional consistency between
+5534014 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+the original z and refined z0 while preserving background consistency throughout the feature refinement process via
+purity through sparse dictionary constraints. The joint dic- closed-loop optimization.
+tionary learning framework captures multiview background
+representations using two co-trained dictionaries. The input
+features z and z0 undergo normalization before initialization C. KAN-Based Multipath Collaborative Module
+of orthogonal random dictionary matrices D1 and D2 and the Within the hybrid self-supervised network, we design a
+corresponding sparse coefficient matrices X1 and X2 . During KAN-based multipath collaborative module to address the
+the iterative optimization phase, we alternately perform three inherent complexity of hyperspectral data characterized by
+core steps: sparse coding, dictionary updating, and cross- high dimensionality and nonlinear spectral–spatial correladictionary regularization. Sparse coding is achieved by solving tions. This module replaces conventional linear layers in
+for the coefficient matrices using least-squares with ReLU- the AEs, substantially enhancing network flexibility and
+enforced nonnegativity. Dictionary updating employs an atom adaptability. Our design integrates three complementary mechstrategy to compute residuals and optimize the atom vectors. anisms: spline interpolation for localized feature precision,
+Cross-dictionary regularization enhances information sharing RBF mapping for nonlinear feature completion [42], and linear
+between the two dictionaries. The structure’s objective func- transformations for global structural coherence. This multipath
+tion is as follows: architecture establishes dynamic collaboration among specialized pathways, enabling joint optimization of local sensitivity
+ D1 = (1 − λ) D1 + λD2 and global consistency.
+ D2 = (1 − λ) D2 + λD1 The module simultaneously activates three independent
+ 2 computational paths to process input data after initialization.
+ 1
+ Lossz = z0 − (D1 X1 + D2 X2 ) (7) The basic linear transformation path constructs global feature
+ 2 F
+ baselines through parameterized weight matrices and SiLU
+where k · k2F represents feature reconstruction error and λ nonlinear activation. The B-spline basis function path performs
+controls feature sharing strength between dictionaries. local adaptive partitioning of input space using differen-
+ The principal AE Ae loss incorporates the pixel-level tiable spline interpolation. By imposing continuity constraints
+reconstruction error, feature alignment error, and adversarial on piecewise polynomial functions at preset grid nodes, it
+discrimination loss constructs a flexible feature mapping for locally complex high-
+ N
+ X 2 dimensional data
+ LossAe = xi − x0 i + Lossz x − gi
+ i=1
+ Bi,k (x) = Bi,k−1 (x)
+ gi+k − gi
+ − Ez∼preal(z) [D (z)] (8) gi+k+1 − x
+ + Bi+1,k−1 (x) (11)
+where xi is the input sample, x0 i denotes the first-stage gi+k+1 − gi+1
+reconstructed sample, and Ez∼preal(z) [D(z)] corresponds to the where Bi,k (x) is the ith basis function of order k, gi , gi+k ,
+loss where the discriminator Di classifies the real sample z as and gi+k+1 denote grid nodes, and Bi,k−1 (x) is the basis
+real. Similarly, AE Ae0 loss is function of order k − 1. Throughout training, the architecture
+ N adaptively optimizes the learnable weights governing dynamic
+ X 2
+ LossAe0 = x0 i − x00 i + Lossz and uniform grids to enhance adaptability across diverse input
+ i=1 samples.
+ − Ez0 ∼pfake(z0 ) D z0
+  
+ (9) The RBF path uses kernel function mapping to project input
+ features into implicit high-dimensional spaces. In contrast to
+where x00 i is the second-stage reconstructed sample and conventional SiLU, RBF leverages explicit spatial distance
+Ez0 ∼pfake(z0 ) [D(z0 )] corresponds to the loss where the discrimina- measurements between data points and predefined reference
+tor Di classifies the fake sample z0 as fake. The discriminator points to establish a localized response mechanism. This archi-
+Di loss is tecture provides innate sensitivity to local spectral anomalies
+ while offering physically interpretable feature representations
+ LossDi = −Ez∼preal(z) [D (z)]
+ d
+ + Ez0 ∼pfake(z0 ) D z0 + η · GP
+   
+ (10) kx−gk
+ RBF (x) = 1 + (12)
+ σ2
+where η · GP represents the gradient penalty term, with η
+controlling penalty strength. where x represents the input feature, g is the grid nodes, σ is
+ This architecture achieves progressive feature purification the scaling factor that governs the width of the RBF, and d
+through cascaded dual AEs, gradually eliminating noise inter- is the exponent that determines the RBF shape. The output
+ference through staged reconstruction. The adversarial training tensors from the three paths undergo scale normalization
+mechanism encourages generator Ge to learn more discrimina- and are then summed with weighted coefficients to form the
+tive feature distributions while dynamically adjusting feature final feature representation. These weights are dynamically
+space separability through discriminator Di feedback. More- optimized through learnable parameters.
+over, the joint dictionary structure establishes self-consistent This multipath collaborative module offers significant comconstraints between potential features, ensuring semantic plementary advantages. The spline path achieves accurate local
+MA et al.: MINORITY-AUGMENTED KAN-BASED HYBRID SELF-SUPERVISED FRAMEWORK FOR HAD 5534014
+
+feature capture through linear combinations of piecewise poly- U-HAD. All experiments were conducted with ten repeated
+nomial basis functions, with error limits controlled by mesh trials to ensure reliability, with reported results representing
+density and spline order, providing flexibility and adaptability average outcomes. The experimental analysis incorporated
+to locally complex features. The radial basis path relies on four principal indicators for evaluating anomaly detection
+kernel method theory, ensuring feature space completeness performance: receiver operating characteristic (ROC) curves,
+through Mercer’s theorem [43] while excelling at capturing their corresponding area under the curve (AUC) values, and
+nonlinear feature associations. The basic linear term main- the signal-to-noise probability ratio (SNPR). ROC provides
+tains the basic global feature construction. This collaborative a threshold-independent performance analysis by plotting the
+structure achieves dynamic equilibrium between local feature relationship between the probability of detection (PD) and the
+sensitivity and global structural coherence, enabling robust false alarm rate (FAR). Higher PD with a lower FAR indicates
+adaptation to complex scenes while preserving topological superior performance. AUC quantifies the ROC’s overall disconsistency across varying spatial scales. criminative power. Larger AUC values signify better detection
+ capability, particularly useful when ROC curves intersect. The
+D. Anomaly Detection SNPR measures detector confidence in identifying genuine
+ targets amidst interference by comparing the probability of
+ The residual image xres is generated through pixel-level
+ correct detection to the probability of false alarms. A higher
+discrepancy computation between the original HSI and its
+ SNPR indicates superior separation between signal and noise
+reconstruction. An initial anomaly score map is then produced
+ distributions, implying greater reliability in discerning targets
+by computing the Mahalanobis distance for each residual pixel.
+ from clutter. This metric emphasizes inherent probabilistic
+To enhance detection sensitivity, the anomaly scores of previseparability over absolute energy thresholds, complementing
+ously excluded isolated noise pixels are strategically amplified
+ tools like ROC analysis, which rely on threshold-dependent
+by a factor of two. This targeted score adjustment effectively
+ outcomes. Furthermore, to assess computational efficiency, the
+distinguishes genuine anomalies from background interference
+ running times of all methods were recorded across all datasets,
+while maintaining computational efficiency, yielding a refined
+ with centisecond precision.
+anomaly distribution map that optimizes the balance between
+detection accuracy and false alarm suppression. The anomaly
+ A. Datasets Descriptions
+score is as follows:
+ ( > In our comparative experiments, we utilized six publicly
+ (i)
+ − µ Σ−1 xres
+ (i)
+ −µ , i∈Ω
+ 
+ 2 · xres available hyperspectral datasets comprising ten real-world
+ Si = > (13)
+ (i)
+ − µ Σ−1 xres
+ (i)
+ −µ ,
+ 
+ xres other scenes. These datasets exhibit anomalies that vary in both
+ (i) type and size, with diverse background compositions and
+where xres are residual image pixels, Σ−1 is the inverse covari- complex minority-class distributions, providing a comprehenance matrix, µ is the mean vector, and Ω is the sequence of sive evaluation platform for assessing the anomaly detection
+previously excluded isolated noise pixels. performance.
+ 1) Cat Island: This real dataset was collected in Cat
+ IV. E XPERIMENTAL R ESULTS AND A NALYSIS Island by the Airborne Visible/Infrared Imaging Spectrometer
+ This section presents a comprehensive evaluation of our (AVIRIS) sensor. The dataset contains 150 × 150 pixels with
+proposed MiKA-HAD framework through four systematic 188 bands, and its spatial resolution is 17.2 m. The rocks are
+investigations. All experimental data are from our own considered as anomalies, with 19 anomalous pixels accounting
+experiments. First, comparative experiments are conducted for 0.08% of the total.
+across several publicly available datasets with diverse back- 2) Los Angeles: This real dataset was collected in Los
+grounds and anomaly characteristics. Subsequently, parametric Angeles by AVIRIS sensors. The dataset contains the Log
+sensitivity analysis examines the robustness of key hyperpa- Angeles-I–IV subsets with 100 × 100 pixels, 205 bands, and a
+rameters. Then, rigorous ablation studies are implemented. spatial resolution of 7.1 m. Aircraft and industrial facilities
+Finally, anti-interference experiments verify the framework’s are considered as anomalies, with 144, 87, 170, and 232
+robustness against varying noise levels. The experiment is anomalous pixels, or 1.44%, 0.87%, 1.7%, and 2.32% of the
+implemented using Python 3.9 and MATLAB R2018b on total number of anomalies, respectively.
+an NVIDIA GeForce RTX 4090 GPU. The experiment used 3) Gulfport: This real dataset was collected in Gulfport by
+the Adam optimizer with 20 epochs, the AE learning rates the AVIRIS sensor. The dataset contains 100×100 pixels with
+of 0.001, the GAN learning rate of 0.0001, the dictionary 191 bands, and its spatial resolution is 3.4 m. The aircraft are
+collaboration degree of 0.5, and noise added to the augmented considered as anomalies, with 60 anomalous pixels accounting
+pixels as random values obeying N(0, 1e − 7). The dimension for 0.6% of the total.
+settings for each layer of the GAN and the two AE groups were 4) Gainesville: This real dataset was collected in
+the same, namely 40 and 80. The number of grid divisions Gainesville by the AVIRIS sensor. The dataset contains 100 ×
+for the B-spline is 5, and the degree of the spline is 3. 100 pixels with 191 bands, and its spatial resolution is 3.5 m.
+The number of grid divisions for the RBF is 5, the degree The ships and facilities are considered as anomalies, with 52
+is 2, and the scaling factor is 2. The PCA dimension was anomalous pixels accounting for 0.52% of the total.
+preset to 120, but due to the insufficient number of bands in 5) Bay Champagne: This real dataset was collected in Bay
+the U-HAD dataset, the PCA dimension was set to 50 for Champagne by the AVIRIS sensor. The dataset contains 100×
+5534014 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+ TABLE I
+ AUC S CORES AND E XECUTION T IMES FOR D IFFERENT M ETHODS ON A LL DATASETS . T HE B EST P ERFORMERS PER ROW
+ A RE B OLDED ; S ECOND -B EST P ERFORMERS A RE U NDERLINED
+
+Fig. 4. ROC curves for different methods on all datasets. (a) Cat Island. (b) Los Angeles-I. (c) Los Angeles-II. (d) Los Angeles-III. (e) Los Angeles-IV.
+(f) Gulfport. (g) Gainesville. (h) Bay Champagne. (i) UHAD-U-I. (j) UHAD-U-II.
+
+100 pixels with 188 bands, and its spatial resolution is 4.4 m. categories to establish a comprehensive performance compari-
+The rocks are considered as anomalies, with 11 anomalous son. As for statistical-based methods, RX [8] detects anomalies
+pixels accounting for 0.11% of the total. using the Gaussian distribution and covariance matrices. LRX
+ 6) UHAD-U: This real dataset was collected in Guangzhou [45] improves RX by focusing on local regions for smallby the HyperspecI sensor. The dataset contains UHAD-U-I–II scale anomalies. CTAD [46] employs a checkerboard topology
+subsets, 250×250 pixels, 61 bands, and a spatial resolution of framework for direct high-dimensional feature mining. KIFD
+0.053 m. Vehicles and pedestrians are considered as anomalies, [11] maps hyperspectral data to kernel space for iterative
+with 302 anomalous pixels representing 0.48% of the total refinement of anomaly maps. As for representation-based
+and 34 anomalous pixels representing 0.056% of the total, methods, WSCF [44] enhances anomaly detection through a
+respectively. sparse coding framework for pixel combination. CRD [14]
+ uses collaborative representation with spatial neighborhood
+B. Comparison With Other Competitors data for anomaly detection. As for deep learning-based meth-
+ Our MiKA-HAD framework was benchmarked against ods, DFAN [25] integrates spectral attention and background
+nine representative methods spanning three methodological statistics for effective anomaly capture. BockNet [47] is a
+MA et al.: MINORITY-AUGMENTED KAN-BASED HYBRID SELF-SUPERVISED FRAMEWORK FOR HAD 5534014
+
+Fig. 5. Anomaly detection results of different methods on all datasets.
+
+self-supervised network with blind spots for protected window collaborative methods, CRD exhibit limited discrimination
+reconstruction. GT-HAD [48] utilizes a gated Transformer capability, manifesting as background interference, incomplete
+network to model background and anomaly features based on target detection, or blurred anomaly boundaries. Kernel-based
+content similarity. approaches, KIFD, suffer from excessive false alarms due
+ Table I provides quantitative AUC scores and execution to inadequate high-dimensional space modeling, while deep
+times metrics with the best values in bold, and Fig. 4 compares learning methods, DFAN, BlockNet, and GT-HAD, show
+the ROC curves. The experimental results demonstrate that constrained scene adaptability, leading to residual background
+MiKA-HAD demonstrates exceptional detection performance artifacts or partial target omissions. In contrast, our method
+across nine of the ten test scenes, with an average AUC achieves comprehensive anomaly localization while maintainimprovement of 2.16% over the second-best method. This ing background purity. On UHAD-U-I datasets characterized
+consistent performance advantage is particularly noteworthy by nonlinear mixing and low target–background contrast,
+in complex scenes where minority background classes are whereas conventional approaches struggle to reconcile backpresent. Furthermore, our method maintains low FARs across ground suppression with anomaly fidelity, our method strikes
+all datasets, achieving an optimal balance between detection an optimal balance between background suppression and
+sensitivity and false alarm suppression—a critical requirement accurate anomaly identification in such challenging scenarios,
+for practical applications. Present investigations center on owing to the synergistic effect of minority sample augmentaalgorithmic efficacy, while forthcoming research will empha- tion and KAN-based feature learning.
+size enhancing computational efficiency. Table II presents the SNPR scores across all datasets. The
+ Fig. 5 presents the anomaly detection visualization results results indicate that MiKA-HAD achieves the highest SNPR
+across all datasets. For complex scenes like the Gainesville values on the Bay Champagne, Gainesville, Los Angelesdataset with spectral variations and low target–background III–IV, and UHAD-U-I–II datasets, ranks second on the
+contrast, traditional statistical methods, RX, LRX, and remaining datasets, and attains the highest average SNPR
+5534014 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+ TABLE II
+SNPR FOR D IFFERENT M ETHODS ON A LL DATASETS . T HE B EST P ERFORMERS PER ROW A RE B OLDED ; S ECOND -B EST P ERFORMERS A RE U NDERLINED
+
+Fig. 6. Box plots of different methods on all datasets. (a) Cat Island. (b) Los Angeles-I. (c) Los Angeles-II. (d) Los Angeles-III. (e) Los Angeles-IV.
+(f) Gulfport. (g) Gainesville. (h) Bay Champagne. (i) UHAD-U-I. (j) UHAD-U-II.
+
+value. This demonstrates that our method effectively detects Furthermore, our method demonstrates superior background
+anomalies while suppressing background noise. In contrast, suppression capabilities, evidenced by the compact distribution
+methods such as KIFD and DFAN, which previously excelled of green boxes that indicates precise, consistent background
+in AUC experiments, did not maintain their advantage in the modeling. In contrast, comparative methods exhibit varying
+SNPR evaluation, showing a significant decline in ranking. degrees of distribution overlap between anomaly and back-
+This highlights the challenge they face in balancing detec- ground classes, alongside significantly wider background score
+tion probability and FAR. These results validate that our distributions, indicating their susceptibility to minority-class
+designed background sample selection and amplification mod- misclassifications. This quantitative analysis confirms that our
+ule effectively differentiates anomaly samples from minority approach effectively addresses both feature learning bias from
+background samples, while the multipath collaborative module class imbalance and nonlinear modeling limitations in complex
+enhances the network’s local sensitivity and nonlinear feature environments.
+extraction capabilities, enabling the model to adapt to diverse
+complex scenarios and ultimately achieve a favorable balance C. Ablation Experiment
+between detection performance and background suppression. This section evaluates three core components through abla-
+ Fig. 6 presents the box plot comparison of anomaly tion studies: background sample selection and amplification,
+detection performance across datasets using different meth- a hybrid self-supervised network, and a multipath collaboraods. The red boxes indicate anomaly score distributions, tive module. The ablation study consists of five progressive
+while the green boxes represent background scores. The configurations: C1 uses only the AE, C2 adds background
+spacing between boxes reflects anomaly–background sepa- sample selection and amplification to C1, C3 integrates the
+rability, and the spread of green boxes directly visualizes hybrid self-supervised network into C2, C4 builds upon C3
+background suppression effectiveness. Experimental results by incorporating the KAN module, and C5 incorporates the
+reveal that MiKA-HAD consistently achieves the optimal KAN-based multipath collaborative module based on C3. As
+anomaly–background separation across most datasets, indi- shown in Table III and Fig. 7, the comparison between C2
+cated by the maximal distance between red and green boxes. and C1 demonstrates that traditional models based on AE and
+MA et al.: MINORITY-AUGMENTED KAN-BASED HYBRID SELF-SUPERVISED FRAMEWORK FOR HAD 5534014
+
+ TABLE III
+ AUC OF D IFFERENT C OMPONENTS ON R EPRESENTATIVE DATASETS
+
+ Fig. 8. AUC for different parameters on all datasets.
+
+Fig. 7. Ablation visualization results on representative datasets.
+
+ all datasets. First, we investigated the impact of the min sample
+similar architectures indeed tend to prioritize learning features
+ and min cluster size parameters in the HDBSCAN density
+of majority-class background samples, resulting in insufficient
+ clustering algorithm on network performance. As shown in
+representation of minority-class backgrounds. The sample bal-
+ Fig. 8, when the min sample and min cluster size are set
+ancing strategy in C2 substantially reduces false detections
+ to 2 and 5, respectively, the clustering algorithm optimally
+by suppressing background noise and enhancing minorityseparates the majority and minority background samples, thus
+class representation. The evidence is particularly compelling
+ providing a clear distinction boundary for subsequent anomaly
+on the Gulfport dataset, where AUC improves from 0.9869
+ detection. This parameter combination effectively balances
+to 0.9931, confirming our method’s efficacy in addressing
+ the heterogeneous distribution characteristics of background
+the class imbalance challenge. The hybrid self-supervised
+ samples: the smaller minimum cluster size preserves more
+network in C3 further refines anomaly boundary definition
+ spectrally discrete minority background samples, while the
+and enhances detection uniformity through adversarial feature
+ moderate minimum cluster size prevents over-segmentation
+fusion, with AUC reaching 0.9941 on Gulfport and 0.9612 on
+ caused by excessively low-density thresholds. Furthermore, we
+Los Angeles-II. Meanwhile, background sample selection and
+ analyzed the critical parameters in the process of minority
+amplification introduced in C2 effectively address the issue of
+ sample augmentation—augmentation multiple and augmensample space imbalance that traditional GANs often encounter
+ tation ratio. As depicted in Fig. 8, the network’s detection
+when generating samples. Furthermore, the KAN module was
+ performance is optimal when the augmentation multiple is
+introduced based on C3. Although false alarms still exist
+ 8 and the augmentation ratio is 10%. This finding reveals
+in the background, the KAN module enhances the local
+ a critical insight: increasing the absolute number of minorsensitivity of the model while maintaining global constraints,
+ ity samples to a specific threshold creates sufficient feature
+making the contours of abnormal targets clearer. Finally, by
+ space density to influence model training, effectively shifting
+integrating the KAN-based multipath collaborative module
+ decision boundaries to better differentiate between minority
+into C5, our MiKA-HAD framework is refined. By introducing
+ backgrounds and anomalies. However, excessive augmentation
+RBF to enhance the model’s nonlinear modeling capabilities,
+ beyond this optimal point provides diminishing returns and
+the model produces a cleaner background while retaining
+ may introduce noise that degrades performance.
+anomaly information, achieving optimal performance. Most
+ In addition, changes in the augmentation multiple have a
+notably, these results reveal synergistic interactions between
+ more significant impact on the results than the other three
+our innovations rather than merely additive effects. The
+ hyperparameters, which is consistent with our expectations:
+progressive performance gains demonstrate that our sample
+ changes in the other three hyperparameters lead to insufficient
+balancing strategy creates optimized conditions for the hybrid
+ feature learning for certain samples, such as those not correctly
+network to learn discriminative features, while the KANclustered by HDBSCAN or not augmented by the sample
+based module effectively exploits this enriched feature space
+ augmentation method, while changes in the augmentation
+through complementary modeling pathways. This confirms
+ multiple directly affect the proportion of different types of
+our architectural design philosophy of addressing both data
+ background samples. This impact no longer pertains to only
+distribution challenges and feature extraction limitations in a
+ certain categories of background samples but affects all backunified framework.
+ ground samples. Therefore, maintaining a balanced quantity
+ of different types of background samples is more important.
+D. Parameter Analysis This conclusion further validates our initial hypothesis that
+ In this study, we conducted a detailed sensitivity analysis on rebalancing the model’s feature space can effectively improve
+the key hyperparameters involved in our MiKA-HAD across detection performance.
+5534014 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+Fig. 9. Anomaly detection results of different methods on all datasets of N(0, Mean × 0.1) noise level.
+
+E. Robustness to Noise increasing interference confirms our method’s relative advan-
+ To validate MiKA-HAD’s practical utility under real-world tage in noisy environments.
+conditions, we conducted comprehensive anti-interference Fig. 9 visualizes detection results under N(0, Mean × 0.1)
+experiments by introducing controlled noise perturbations noise. Taking the Gulfport dataset as an example, traditional
+across all test datasets. Considering the diverse scene char- statistical or collaborative methods fail to effectively identify
+acteristics across different datasets, we design two levels anomalies, with only CTAD demonstrating partial noise supof adaptive noise: Gaussian distributions N(0, Mean × 0.01) pression. Kernel-based KIFD exhibits excessive false alarms,
+at approximately 60 dB and N(0, Mean × 0.1) at approxi- limiting practical utility. Deep learning approaches DFAN
+mately 40 dB, where Mean represents the average pixel value suffer severe performance degradation under noise, while
+of each dataset. Compared to fixed-decibel noise, Gaussian BlockNet and GT-HAD show incomplete anomaly annotanoise following preset distributions better emulates real sen- tions or localized false markings. In contrast, our method
+sor noise characteristics, providing more realistic robustness achieves effective noise suppression while maintaining comvalidation. plete anomaly annotation capability as a direct benefit of our
+ Table IV summarizes the AUC comparisons under two noise minority-augmented sample strategy, preventing noise-induced
+levels. Experimental results demonstrate that our method’s false alarms and the KAN-based multipath architecture
+exceptional robustness maintains superior performance across preserves discriminative feature extraction under noise perturmost test scenarios, even under severe noise conditions. bation. Specifically, the minority-augmented sampling strategy
+Most notably, as noise intensity escalates from moderate enhances discrimination between minority-class and anoma-
+N(0, Mean×0.01) to severe N(0, Mean×0.1), the performance lous samples. Within the KAN-based multipath architecture,
+gap between MiKA-HAD and competing methods widens sig- B-splines ensure local feature precision while RBFs enable
+nificantly from an average AUC advantage of 0.0261–0.0293. comprehensive extraction of high-dimensional nonlinear fea-
+This progressive enhancement of relative performance under tures, complemented by linear transformations that enforce
+MA et al.: MINORITY-AUGMENTED KAN-BASED HYBRID SELF-SUPERVISED FRAMEWORK FOR HAD 5534014
+
+ TABLE IV
+ AUC FOR D IFFERENT M ETHODS ON A LL DATASETS OF D IFFERENT N OISE L EVELS . T HE B EST P ERFORMERS PER ROW
+ A RE B OLDED ; S ECOND -B EST P ERFORMERS A RE U NDERLINED
+
+fundamental global constraints—collectively ensuring robust- [2] D. Ma, S. Xu, Z. Jiang, and Y. Yuan, “Central pixel-based dual-branch
+ness under complex noise interference. network for hyperspectral image classification,” Remote Sens., vol. 17,
+ no. 7, p. 1255, Apr. 2025.
+ [3] Y. Yuan, C. Wang, and Z. Jiang, “Proxy-based deep learning framework
+ V. C ONCLUSION for spectral–spatial hyperspectral image classification: Efficient and
+ robust,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no.
+ This article proposes MiKA-HAD, a minority-augmented 5501115.
+ [4] C. McCann, K. S. Repasky, R. Lawrence, and S. Powell, “Multi-temporal
+hybrid self-supervised framework based on KAN for HAD. mesoscale hyperspectral data of mixed agricultural and grassland regions
+By identifying minority-class background samples through for anomaly detection,” ISPRS J. Photogramm. Remote Sens., vol. 131,
+density-based clustering and implementing augmentation pp. 121–133, Sep. 2017.
+ [5] D. Ma, Z. Liu, and Z. Jiang, “Variation autoencoder of spatial–spectral
+strategies, our method explicitly guides feature learning to joint mask for hyperspectral anomaly detection,” IEEE Signal Process.
+address the challenge of distinguishing minority-class back- Lett., vol. 32, pp. 1535–1539, 2025.
+grounds from anomalous targets in heterogeneous scenes. [6] M. T. Eismann, A. D. Stocker, and N. M. Nasrabadi, “Automated
+ hyperspectral cueing for civilian search and rescue,” Proc. IEEE, vol. 97,
+To tackle the challenges posed by high-dimensional data no. 6, pp. 1031–1055, Jun. 2009.
+complexity and nonlinear feature extraction difficulties, we [7] X. Briottet et al., “Military applications of hyperspectral imagery,” Proc.
+integrate AE, GAN, and a KAN-based multipath collaborative SPIE, vol. 6239, pp. 82–89, May 2006.
+ [8] I. S. Reed and X. Yu, “Adaptive multiple-band CFAR detection of an
+module to establish a self-supervised model, thereby enhanc- optical pattern with unknown spectral distribution,” IEEE Trans. Acoust.,
+ing the network’s adaptability and robustness when processing Speech, Signal Process., vol. 38, no. 10, pp. 1760–1770, Oct. 1990.
+complex high-dimensional data. Experimental results demon- [9] H. Kwon and N. M. Nasrabadi, “Kernel RX-algorithm: A nonlinear
+ anomaly detector for hyperspectral imagery,” IEEE Trans. Geosci.
+strate that despite limitations in computational efficiency and Remote Sens., vol. 43, no. 2, pp. 388–397, Feb. 2005.
+scalability, our method achieves marked effectiveness across [10] R. Zhao, B. Du, and L. Zhang, “A robust nonlinear hyperspectral
+multiple datasets, demonstrating enhanced performance and anomaly detection approach,” IEEE J. Sel. Topics Appl. Earth Observ.
+ Remote Sens., vol. 7, no. 4, pp. 1227–1234, Apr. 2014.
+robustness under various noise conditions. In future work, we [11] S. Li, K. Zhang, P. Duan, and X. Kang, “Hyperspectral anomaly
+will focus on optimizing resource consumption and enhanc- detection with kernel isolation forest,” IEEE Trans. Geosci. Remote
+ing scalability. We anticipate that this research will provide Sens., vol. 58, no. 1, pp. 319–329, Jan. 2020.
+ [12] J. Li, H. Zhang, L. Zhang, and L. Ma, “Hyperspectral anomaly detection
+valuable insights for future explorations in HAD and related by the use of background joint sparse representation,” IEEE J. Sel.
+fields. Topics Appl. Earth Observ. Remote Sens., vol. 8, no. 6, pp. 2523–2533,
+ Jun. 2015.
+ [13] R. Zhao, B. Du, and L. Zhang, “Hyperspectral anomaly detection via
+ R EFERENCES a sparsity score estimation framework,” IEEE Trans. Geosci. Remote
+ Sens., vol. 55, no. 6, pp. 3208–3222, Jun. 2017.
+[1] Y. Xu, L. Zhang, B. Du, and L. Zhang, “Hyperspectral anomaly detection [14] W. Li and Q. Du, “Collaborative representation for hyperspectral
+ based on machine learning: An overview,” IEEE J. Sel. Topics Appl. anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 53, no. 3,
+ Earth Observ. Remote Sens., vol. 15, pp. 3351–3364, 2022. pp. 1463–1474, Mar. 2015.
+5534014 IEEE TRANSACTIONS ON GEOSCIENCE AND REMOTE SENSING, VOL. 63, 2025
+
+[15] W. Sun, C. Liu, J. Li, Y. M. Lai, and W. Li, “Low-rank and sparse matrix [32] S. Liu, L. Peng, X. Chang, Z. Wang, G. Wen, and C. Zhu,
+ decomposition-based anomaly detection for hyperspectral imagery,” “Adaptive dual-domain learning for hyperspectral anomaly detection
+ J. Appl. Remote Sens., vol. 8, no. 1, May 2014, Art. no. 083641. with state-space models,” IEEE Trans. Geosci. Remote Sens., vol. 63,
+[16] Y. Yang, S. Song, D. Liu, J. C.-W. Chan, J. Li, and J. Zhang, 2025, Art. no. 5503719.
+ “Hyperspectral anomaly detection through sparse representation with [33] K. Jiang, W. Xie, Y. Li, J. Lei, G. He, and Q. Du, “Semisupervised
+ tensor decomposition-based dictionary construction and adaptive spectral learning with generative adversarial network for hyperspectral
+ weighting,” IEEE Access, vol. 8, pp. 72121–72137, 2020. anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 58, no. 7,
+[17] X. Ma, X. Zhang, N. Huyan, X. Tang, B. Hou, and L. Jiao, “Hyper- pp. 5224–5236, Jul. 2020.
+ Laplacian regularized low-rank tensor decomposition for hyperspectral [34] Z. Wu et al., “Background-guided deformable convolutional autoencoder
+ anomaly detection,” in Proc. IGARSS-IEEE Int. Geosci. Remote Sens. for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote
+ Symp., Jul. 2018, pp. 6380–6383. Sens., vol. 61, 2023, Art. no. 5531816.
+[18] X. Hu et al., “Hyperspectral anomaly detection using deep learning: A [35] S. Arisoy, N. M. Nasrabadi, and K. Kayabol, “Unsupervised pixelreview,” Remote Sens., vol. 14, no. 9, p. 1973, Apr. 2022. wise hyperspectral anomaly detection via autoencoding adversar-
+[19] S. Wang, X. Wang, L. Zhang, and Y. Zhong, “Auto-AD: Autonomous ial networks,” IEEE Geosci. Remote Sens. Lett., vol. 19, pp. 1–5,
+ hyperspectral anomaly detection network based on fully convolutional 2022.
+ autoencoder,” IEEE Trans. Geosci. Remote Sens., vol. 60, 2022, Art. no. [36] T. Jiang, Y. Li, W. Xie, and Q. Du, “Discriminative reconstruc-
+ 5503314. tion constrained generative adversarial network for hyperspectral
+[20] M. E. Aghili, H. Ghassemian, and M. I. Arani, “Spectral–spatial anomaly anomaly detection,” IEEE Trans. Geosci. Remote Sens., vol. 58, no. 7,
+ detection in hyperspectral imagery based on dual-domain autoencoders,” pp. 4666–4679, Jul. 2020.
+ in Proc. 13th Iranian/3rd Int. Mach. Vis. Image Process. Conf. (MVIP), [37] F. Girosi and T. Poggio, “Representation properties of networks:
+ Mar. 2024, pp. 1–5. Kolmogorov’s theorem is irrelevant,” Neural Comput., vol. 1, no. 4,
+[21] H. Wen, X. Hu, and P. Zhong, “DSRNet: Diagonal subsampling recon- pp. 465–469, Dec. 1989.
+ struction network for hyperspectral anomaly detection,” IEEE Trans. [38] Z. Liu et al., “KAN: Kolmogorov–Arnold networks,” 2024,
+ Geosci. Remote Sens., vol. 62, 2024, Art. no. 5628916. arXiv:2404.19756.
+[22] Z. Li, Y. Wang, C. Xiao, Q. Ling, Z. Lin, and W. An, “You only [39] N. Raza Shah et al., “Hyperspectral anomaly detection: A performance
+ train once: Learning a general anomaly enhancement network with ran- comparison of existing techniques,” Int. J. Digit. Earth, vol. 15, no. 1,
+ dom masks for hyperspectral anomaly detection,” IEEE Trans. Geosci. pp. 2078–2125, Dec. 2022.
+ Remote Sens., vol. 61, 2023, Art. no. 5506718. [40] L. McInnes, J. Healy, and S. Astels, “Hdbscan: Hierarchical density
+[23] J. Zhong, W. Xie, Y. Li, J. Lei, and Q. Du, “Characterization of based clustering,” J. Open Source Softw., vol. 2, no. 11, p. 205, Mar.
+ background-anomaly separability with generative adversarial network 2017.
+ for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote [41] Y. Yuan, Y. Zhao, and D. Ma, “NACAD: A noise-adaptive context-aware
+ Sens., vol. 59, no. 7, pp. 6017–6028, Jul. 2021. detector for remote sensing small objects,” IEEE Trans. Geosci. Remote
+[24] S. Xiao, T. Zhang, Z. Xu, J. Qu, S. Hou, and W. Dong, “Anomaly detec- Sens., vol. 61, 2023, Art. no. 1001413.
+ tion of hyperspectral images based on transformer with spatial–spectral [42] Y. Altmann, N. Dobigeon, J-Y. Tourneret, and S. McLaughlin,
+ dual-window mask,” IEEE J. Sel. Topics Appl. Earth Observ. Remote “Nonlinear unmixing of hyperspectral images using radial basis func-
+ Sens., vol. 16, pp. 1414–1426, 2023. tions and orthogonal least squares,” in Proc. IEEE Int. Geosci. Remote
+[25] X. Cheng et al., “Deep feature aggregation network for hyperspectral Sens. Symp., Jul. 2011, pp. 1151–1154.
+ anomaly detection,” IEEE Trans. Instrum. Meas., vol. 73, pp. 1–16, [43] H. Goldberg, H. Kwon, and N. M. Nasrabadi, “Kernel eigenspace
+ 2024. separation transform for subspace anomaly detection in hyperspectral
+[26] Q. Guo, Y. Cen, L. Zhang, Y. Zhang, and Y. Huang, “Hyperspectral imagery,” IEEE Geosci. Remote Sens. Lett., vol. 4, no. 4, pp. 581–585,
+ anomaly detection based on spatial–spectral cross-guided mask Oct. 2007.
+ autoencoder,” IEEE J. Sel. Topics Appl. Earth Observ. Remote Sens., [44] F. Verdoja and M. Grangetto, “Graph Laplacian for image
+ vol. 17, pp. 9876–9889, 2024. anomaly detection,” Mach. Vis. Appl., vol. 31, nos. 1–2, p. 11,
+[27] J. Li, X. Wang, S. Wang, H. Zhao, and Y. Zhong, “One-step detection Feb. 2020.
+ paradigm for hyperspectral anomaly detection via spectral deviation [45] J. M. Molero, E. M. Garzon, I. Garcia, and A. Plaza, “Analysis
+ relationship learning,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024, and optimizations of global and local versions of the RX algo-
+ Art. no. 5517515. rithm for anomaly detection in hyperspectral data,” IEEE J. Sel.
+[28] J. Wang, S. Guo, Z. Hua, R. Huang, J. Hu, and M. Gong, “CL-CaGAN: Topics Appl. Earth Observ. Remote Sens., vol. 6, no. 2, pp. 801–814,
+ Capsule differential adversarial continual learning for cross-domain Apr. 2013.
+ hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens., [46] L. Gao, X. Sun, X. Sun, L. Zhuang, Q. Du, and B. Zhang, “Hyperspectral
+ vol. 62, 2024, Art. no. 5517315. anomaly detection based on chessboard topology,” IEEE Trans. Geosci.
+[29] W. Chen, X. Zhi, S. Jiang, Y. Huang, Q. Han, and W. Zhang, “DWSDiff: Remote Sens., vol. 61, 2023, Art. no. 5505016.
+ Dual-window spectral diffusion for hyperspectral anomaly detection,” [47] D. Wang, L. Zhuang, L. Gao, X. Sun, M. Huang, and A. Plaza,
+ IEEE Trans. Geosci. Remote Sens., vol. 63, 2025, Art. no. 5504617. “BockNet: Blind-block reconstruction network with a guard window for
+[30] X. He et al., “Global-to-local spatial–spectral awareness transformer hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+ network for hyperspectral anomaly detection,” IEEE Trans. Geosci. vol. 61, 2023, Art. no. 5531916.
+ Remote Sens., vol. 62, 2024, Art. no. 5530422. [48] J. Lian, L. Wang, H. Sun, and H. Huang, “GT-HAD: Gated
+[31] X. Fu, T. Zhang, J. Cheng, and S. Jia, “MMR-HAD: Multiscale mamba transformer for hyperspectral anomaly detection,” IEEE Trans.
+ reconstruction network for hyperspectral anomaly detection,” IEEE Neural Netw. Learn. Syst., vol. 36, no. 2, pp. 3631–3645,
+ Trans. Geosci. Remote Sens., vol. 63, 2025, Art. no. 5516914. Feb. 2025.

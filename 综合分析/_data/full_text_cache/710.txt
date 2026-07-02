@@ -1,0 +1,630 @@
+Received 31 July 2025; revised 18 February 2026; accepted 14 April 2026. Date of publication 20 April 2026; date of current version 24 April 2026.
+ The associate editor coordinating the review of this article and approving it for publication was M. Jaber.
+ Digital Object Identifier 10.1109/TMLCN.2026.3685578
+
+ ICT-META: In-Context Aware Few-Shot Learner
+ for Encrypted Traffic Classification
+ CHENGXIANG CHANG 1,2 , YING LI 1,2
+ , SURANGA SENEVIRATNE 3
+ , AND
+ 1,2
+ XINGQUAN CAI (Member, IEEE)
+ 1
+ School of Artificial Intelligence and Computer Science, North China University of Technology, Beijing 100144, China
+ 2
+ Beijing Key Laboratory of Key Technologies for AI+ Domain Applications, Beijing 100144, China
+ 3
+ School of Computer Science, The University of Sydney, Sydney NSW 2006, Australia
+ CORRESPONDING AUTHOR: Y. LI (ying.li@ncut.edu.cn)
+ This work was supported in part by the Beijing Municipal Education Commission under Grant 10051360024XN151-41 and in part by the Beijing
+ Natural Science Foundation under Grant L253018.
+
+ ABSTRACT Encrypted traffic classification is a fundamental task in cybersecurity and network traffic
+ management. With the popularity of deep learning, many studies have used it to achieve high accuracy in
+ this field. However, these models rely on large amounts of labeled data and require retraining or fine-tuning
+ when faced with new tasks, which is time-consuming and resource-intensive. Due to this limitation, fewshot traffic classification methods have emerged to reduce dependence on large labeled datasets by using
+ only a few samples. However, these models often still require pre-training and fine-tuning to perform well.
+ Meanwhile, Large Language Models (LLMs), such as ChatGPT, have attracted attention for their capacity to
+ learn new concepts during inference without fine-tuning. Inspired by this, we propose In-Context Encrypted
+ Traffic, a novel few-shot network traffic classification method allowing for few-shot classification without
+ the need for fine-tuning. We use two existing encrypted traffic datasets to demonstrate the effectiveness of
+ our method when facing new samples. We evaluate our method on a realistic 5-way few-shot classification
+ task over encrypted traffic, and it achieves up to 5.7% higher accuracy than representative meta-learning
+ baselines, without requiring fine-tuning.
+ INDEX TERMS Network security, encrypted network traffic, meta-learning, few-shot learning, in-context
+ aware learning.
+
+I. INTRODUCTION well-suited for this type of encrypted traffic classification
+
+E NCRYPTED network traffic flow classification is an
+ important task in the field of cybersecurity, primarily
+focused on classifying encrypted network data for differtask compared to traditional machine learning models.
+ However, deep learning-based traffic classification methods heavily rely on large amounts of labeled data, which is
+ent types of network activities and applications. With the fundamentally at odds with the inherent difficulty of obtainincreasing variety of network services and the growing ing labeled data for encrypted traffic. In many real-world
+complexity of user behaviors, encrypted network data clas- scenarios, the widespread adoption of privacy protection
+sification has become increasingly valuable and significant measures and encryption technologies has made labeling
+in society. It holds important applications in areas such as traffic samples both challenging and costly, exacerbating
+anomaly detection and intrusion detection [1], [2], illegal the issue of limited training data. Consequently, achieving
+content monitoring [3], [4]user behavior analysis [5], [6] and efficient and accurate classification under the constraints of
+traffic management and optimization [7], [8]. In many cases, small-sample data has emerged as a core challenge in the
+traffic analysis attacks can be formulated as a classification field of encrypted network traffic classification. To address
+problem, where the input to the classification model is a time this issue, Few-Shot Learning demonstrates its unique
+series representing the statistical properties of traffic flows, advantages by efficiently modeling inter-class differences,
+such as packet size and direction. Previous research [9], [10], allowing for rapid adaptation to new tasks. Remarkably,
+[11] has observed that deep learning models are particularly it can deliver strong performance even with limited data,
+
+ © 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+ For more information, see https://creativecommons.org/licenses/by/4.0/
+VOLUME 4, 2026 733
+making it a natural choice for tackling the small-sample allowing the model to learn new encrypted traffic features
+problem in encrypted traffic classification. directly from the context during the inference stage, thus
+ The challenge of learning from very few training sam- achieving the ability to classify new type of traffic without
+ples [12], [13] has led to the emergence of two main fine-tuning. Notably, in our experiments, the model was
+types of few-shot classification methods: 1) in-domain, and trained primarily on video and audio streaming traffic. To
+2) cross-domain. In the in-domain setting, methods evaluate assess its cross-domain generalization ability, we conducted
+a meta-learner’s ability to quickly adapt to new tasks after evaluations on a different type of traffic—encrypted web
+training on similar tasks. Models designed for this setting traffic—that was not seen during training. This approach
+are typically fast but exhibit poor generalization to tasks leverages in-context learning to propose a new metaoutside the target domain [14]. Meanwhile, the cross-domain learning approach, providing a new pathway for rapid and
+setting evaluates a meta-learner’s ability to adapt to tasks generalizable adaptation in the classification of encrypted
+in previously unseen domains. In this case, the model network traffic. Accordingly, this work makes the following
+is trained on data from one category of network traffic, contributions:
+such as video or audio streams, and then evaluated on a • We propose the ICT-META model, a meta-learning
+different category of data, such as web traffic. Methods approach with contextual awareness, to solve the probdesigned for this setting are highly adaptable but slower lem of encrypted traffic classification in few-shot and
+during inference as they require fine-tuning on the support cross-domain scenarios. Our model not only achieves
+set [15], [16]. Crucially, the meta-learners in both settings strong performance on known tasks but also adapts
+differ from humans in their ability to quickly generalize to effectively to new tasks without fine-tuning. To the
+new tasks. Similar to challenges in computer vision, within- best of our knowledge, this is the first approach that
+domain meta-learning models perform well in encrypted can perform cross-task encrypted traffic classification
+network traffic classification in terms of adaptability, but without requiring fine-tuning.
+cross-domain generalization still remains limited [14], [15], • We evaluate the effectiveness of our approach by
+[17]. Additionally, existing few-shot learning methods for conducting extensive experiments on a different type
+encrypted traffic classification also exhibit several critical of traffic data than the data used during training.
+limitations. First, most approaches rely on task-specific fine- The results demonstrate that ICT-META outperforms
+tuning on the support set, which is impractical in real-world existing methods, highlighting its potential for practical
+encrypted traffic scenarios where new applications and pro- applications in encrypted network traffic classification.
+tocols emerge frequently [18], [19]. Second, prior few-shot The structure of the remaining chapters is as follows. In
+ETC studies predominantly focus on in-domain evalua- Section II, we introduce related works. Section III explains
+tion, assuming similar traffic distributions between training the structure of ICT-META in detail. Section IV describes
+and testing tasks, while cross-domain traffic classification the experimental setup. Section V presents the results of
+involves substantial domain shifts that significantly degrade model evaluation and analysis. Finally, we conclude this
+model performance [20], [21]. Third, existing methods adapt paper in Section VI.
+to new tasks primarily at the parameter level, rather than
+explicitly reasoning over the relationships between sup- II. RELATED WORK
+port examples and query traffic, limiting their ability to In this section, we review existing methods for the classiinfer novel traffic patterns from limited context. In-context fication of encrypted network traffic and the application of
+learning (ICL), initially popularized in natural language pro- meta-learning in this field, respectively.
+cessing, enables models to perform few-shot classification
+by conditioning on a small set of labeled examples without A. ENCRYPTED TRAFFIC CLASSIFICATION
+parameter updates. Inspired by this, we propose to apply Encrypted traffic classification refers to the process of iden-
+ICL to encrypted traffic classification, particularly focusing tifying and categorizing different types of network traffic
+on cross-domain scenarios where the target traffic types were without decrypting the data content, by analyzing statistical
+never seen during training. characteristics and temporal patterns of the traffic, so as to
+ In this paper, we address the challenges of few-shot and understand communication behaviors and support effective
+cross-domain classification in encrypted network traffic by network resource management. Early studies mainly relied
+proposing an In-Context Traffic Meta-learner (ICT-META). on shallow statistical features such as packet size and inter-
+Our approach reformulates the n-way-k-shot few-shot traffic arrival time for traffic classification [22], [23]. With the
+classification task as a non-causal sequence modeling prob- development of machine learning techniques, researchers
+lem over the support set and an unknown query data stream. have further incorporated traffic time-series features and pro-
+Specifically, for an n-way classification task with k samples tocol behavior characteristics to build classification models
+per class, we train a non-causal model on the support set [17], [24], [25], thereby improving the recognition capability
+consisting of traffic-label pairs, along with an unlabeled and classification accuracy for encrypted network traffic.
+query traffic, to predict the label of the query traffic, The existing classification methods can be broadly divided
+
+734 VOLUME 4, 2026
+Chang et al.: ICT-META: In-Context Aware Few-Shot Learner
+
+into the following three categories based on their underlying pre-trained models, but they are resource-intensive and timemodeling paradigms. consuming, limiting their use in real-time systems. Recent
+ meta-learning advances aim to improve task adaptation:
+1) STATISTIC-BASED METHODS
+Statistical-based methods employ predefined rules or prob- 1) METRIC-BASED META-LEARNING
+abilistic models to classify traffic based on feature Methods like Prototypical Networks [36] compare new tasks
+distributions. Although early work on encrypted traffic fin- with previously learned ones by optimizing the feature
+gerprinting demonstrates that such approaches can achieve space for better generalization. However, they struggle with
+good performance, they struggle with the complexity and heterogeneous environments, such as encrypted network
+variability of modern encrypted traffic [22], [23]. traffic, where data varies significantly.
+
+2) MACHINE LEARNING-BASED METHODS 2) OPTIMIZATION-BASED META-LEARNING
+Traditional machine learning-based methods, including Methods like MAML [37] train models to adapt with
+Support Vector Machines and Random Forests, improve minimal gradient updates. However, their reliance on fineclassification performance by learning non-linear decision tuning makes them impractical for large-scale applications.
+boundaries from handcrafted features [24], [25]. Although
+these methods outperform purely statistical approaches, they 3) UNIVERSAL META-LEARNING FRAMEWORKS
+remain highly dependent on feature engineering and typi- Frameworks [14] eliminate fine-tuning, enabling models
+cally require retraining to adapt to new applications or traffic to classify new tasks without task-specific training, alignpatterns. ing with context-aware meta-learning for encrypted traffic
+ classification.
+3) DEEP LEARNING-BASED METHODS Despite their potential, existing methods for encrypted
+Deep learning-based approaches enable encrypted traffic traffic classification face key limitations. Most rely on
+classification by automatically learning hierarchical repre- computationally intensive fine-tuning and large labeled
+sentations from raw or minimally processed traffic data. datasets, hindering real-time application. They also lack
+Early studies primarily adopted convolutional and recurrent cross-domain generalization and require retraining for even
+neural networks to model packet-level and temporal patterns, minor task changes. Thus, a fine-tuning-free method with
+as exemplified by DF [26], FS-Net [27], Deep Packet [28], strong cross-domain adaptability is urgently needed for
+TSCRNN [29], achieving improved accuracy over traditional dynamic, label-scarce environments.
+machine learning methods but requiring large amounts of
+labeled data and task-specific retraining. With the introduc- C. IN-CONTEXT LEARNING
+tion of transformer-based models, ET-BERT [17] applies In-Context Learning (ICL) has recently emerged as a powself-supervised pre-training to learn contextualized traffic erful paradigm that enables models to perform new tasks by
+representations, significantly enhancing feature generaliza- conditioning on a small set of labeled examples provided at
+tion and performance in low-label settings. More recent inference time, without updating model parameters. Initially
+works further explore scalability and adaptability, such as popularized in NLP by large language models such as GPT-3
+MERLOT [30], which incorporates distilled large language [38], ICL demonstrates that task adaptation can be achieved
+models and mixture-of-experts for large-scale classification, through contextual reasoning rather than explicit fine-tuning
+and M3S-UPD [31], which leverages multi-stage self- or retraining. However, the effectiveness of ICL depends on
+supervised learning to support fine-grained classification and the model’s prior knowledge, usually acquired from largeunknown pattern discovery. These models are particularly scale pre-training on diverse datasets, and on the size of
+effective in scenarios with large-scale, well-labeled datasets. the context window, which determines how many labeled
+Yet, they face challenges due to their dependency on labeled examples can be considered simultaneously. Insufficient predata and limited adaptability to unseen traffic without costly training or an improperly sized context window may limit
+retraining. the model’s ability to generalize to new tasks purely from
+ in-context examples.
+B. META-LEARNING To improve few-shot generalization, MetaICL [39] meta-
+Meta-learning, or “learning to learn,” aims to optimize trains language models over diverse tasks to enable more
+models for rapid adaptation to new tasks with minimal data. effective in-context adaptation, while In-Context Tuning
+Early frameworks, such as Neural Turing Machines [32] [40] frames task adaptation as a sequence modeling over
+and self-attention mechanisms [33], laid the groundwork for input-label pairs. Theoretical analyses further show that
+sequence modeling and feature extraction. However, causal transformer-based ICL implicitly implements task-specific
+sequence modeling complicates feature optimization due to learning algorithms, explaining its strong few-shot perissues like permutation invariance [13]. formance [41], and recent work explores unsupervised
+ Recent methods, such as model fine-tuning [34], [35], meta-learning via ICL, allowing models to acquire contextalleviate the scarcity of labeled data by leveraging dependent representations from unlabeled data [42]. These
+VOLUME 4, 2026 735
+ FIGURE 1. ICT-META. ICT-META consists of three components: Encrypted traffic data encoder, Label
+ encoder, and In-context encoder. The Encrypted traffic data encoder is used to extract feature
+ representations of the support set and query set in encrypted network traffic data. The Label Encoder is
+ responsible for encoding the labels of both the support set and query set. The extracted features and
+ label embeddings are then concatenated and passed into the In-Context Encoder for processing. After
+ going through multiple layers of self-attention and feature fusion in the Non-causal sequence model, the
+ final output is fed into a shallow MLP for classification.
+
+advances highlight the ability of transformers to generalize III. METHODOLOGY
+to new tasks purely through contextual reasoning, without Terminology: In the context of few-shot learning, the supparameter updates [43]. port set refers to a small number of labeled samples used to
+ Inspired by these developments in NLP, recent works in help the model perform classification, while the query set
+encrypted traffic classification have explored context-aware contains the unlabeled samples to be predicted. A frozen
+and Transformer-based models to improve representation encoder is a feature extractor whose parameters remain fixed
+learning. For example, CoTNeT introduces a contextual during training of the meta-learner and are not updated
+Transformer network to capture inter-packet dependencies during task adaptation.
+[44], while MIETT adopts a multi-instance Transformer This section introduces our approach and outlines the key
+architecture to aggregate packet-level representations [45]. concepts of the proposed ICT-META method for encrypted
+Similarly, Language of Network models encrypted traffic traffic data classification. The main framework of ICTas a structured “network language” and employs generative META is shown in Fig 1, which consists of three primary
+pre-training [46], whereas M3S-UPD leverages multi-stage components: the Encrypted Traffic Data Encoder, the Label
+self-supervised learning to efficiently capture fine-grained Encoder, and the In-Context Encoder(i.e., a non-causal
+traffic patterns [31]. Although these approaches improve model, where we use a Transformer encoder).
+classification accuracy and reduce reliance on labeled data,
+they still require task-specific training or fine-tuning when A. PROBLEM FORMULATION
+applied to new traffic categories or domains. In few-shot encrypted traffic classification, we define each
+ Despite their empirical effectiveness, the aforementioned task T as an n-way k-shot classification problem, consisting
+methods differ fundamentally from true in-context learning. of two subsets:
+They primarily enhance feature representations through con-
+ • A support set S = {(xi , yi )}n·k
+ i=1 , where xi ∈ X is a traffic
+textual modeling, pre-training, or self-supervised learning,
+ sample and yi ∈ Y = {1, 2, . . . , n} is its label;
+rather than enabling task adaptation purely at inference time.
+ • A query sample xq ∈ X , whose label yq ∈ Y is
+In contrast, ICL allows models to infer new classification
+ unknown.
+rules from a small support set without any parameter
+updates, making it particularly suitable for few-shot and The goal is to predict yq given S ∪ {xq }, under the
+cross-domain scenarios. In encrypted traffic classification, constraint that each class in Y has only k labeled samples
+where new applications and encryption protocols emerge in S.
+frequently, large-scale data collection and labeling for every Formally, the classification function is defined as:
+scenario is costly and impractical. By leveraging a small
+support set at inference time, ICL provides a more feasible f (xq ; S) = arg max P(y | xq , S)
+solution for rapid adaptation to new traffic categories. y∈Y
+
+736 VOLUME 4, 2026
+Chang et al.: ICT-META: In-Context Aware Few-Shot Learner
+
+ We reformulate this few-shot task as a non-causal
+sequence modeling problem, where the model receives a
+concatenated sequence of support instances and a query
+instance:
+ X seq = [(x1 , y1 ), . . . , (xnk , ynk ), (xq , yunk )]
+where yunk is a learned “unknown” token.
+ The model is trained to predict the correct label for xq
+by leveraging the contextual relationships between the query
+and the support examples.
+
+B. IN-CONTEXT TRAFFIC META-LEARNER(ICT-META)
+We propose ICT-META as a meta-learning framework
+designed to perform few-shot encrypted traffic classification FIGURE 2. Encrypted traffic data encoder. The Encrypted traffic
+without requiring fine-tuning. The core idea is to reformulate data encoder is used to extract features from encrypted
+the typical n-way k-shot classification task as a non-causal network traffic data.
+sequence modeling problem that jointly considers both the
+support set and the query instance in a unified context.
+ It is worth noting that each traffic sample xi is rep- non-causal Transformer encoder. Unlike causal models that
+resented by a one-dimensional sequence of packet sizes enforce strict input order, the non-causal design allows
+as the feature representation. To standardize input length, ICT-META to process support and query samples symsequences are zero-padded or truncated to 500 bytes. This metrically and holistically. This is particularly suitable for
+choice is motivated by several factors. First, packet size falls encrypted traffic classification, where packet-level sequences
+into the category of metadata, which can still be obtained can vary due to retransmissions, multiplexing, or clienteasily after encryption, making it one of the few directly side processing delays, making temporal order brittle and
+observable key pieces of information. Moreover, compared potentially misleading. By treating the support-query pair
+with other statistical features such as byte size, packet as an unordered set of embeddings, the model focuses
+size as a sequence feature achieves better classification on discriminative feature relationships rather than fragile
+results. Second, different types of encrypted traffic, including sequence dependencies.
+video, audio, and web pages, exhibit unique distribution Finally, the output of the In-Context Encoder is passed
+patterns of packet sizes. For example, video streams generate through a lightweight MLP classification head, which prepacket sequences with “periodic size fluctuations” due to dicts the class label of the query sample. Importantly, only
+dynamic bitrate adjustment, audio streams may present a the In-Context Encoder and MLP are trained; both the traffic
+size pattern of “an initial large peak followed by stability” encoder and label encoder remain frozen, allowing ICTand web browsing features more random intervals and peaks META to generalize across tasks without any parameter
+in packet size sequences due to user interactions such updates during inference.
+as clicking and loading. These patterns can be directly
+characterized by one-dimensional packet size sequences, C. ENCRYPTED TRAFFIC DATA ENCODER
+which serve as the core basis for distinguishing traffic types The Encrypted Traffic Data Encoder is built on a resid-
+[4]. Finally, a one-dimensional packet size sequence can be ual network (ResNet) architecture to tackle challenges in
+naturally mapped to the temporal/vector input of the model, training deep neural networks. By introducing shortcut coneliminating the need for complex high-dimensional feature nections, ResNet mitigates vanishing gradients, enhances
+transformation while balancing classification performance gradient flow, and improves training efficiency and model
+with computational cost. performance [47], as shown in Fig. 2. Its core component is
+ For each task, ICT-META takes as input a support set the residual block, comprising two convolutional layers with
+of n×k encrypted traffic samples with their corresponding batch normalization and ReLU activations. The shortcut
+labels, and a query sample whose label is to be pre- connection directly adds input to the output, preserving
+dicted. Each traffic sample is first passed through a frozen information and enabling deeper feature learning.
+Encrypted Traffic Data Encoder (based on a residual net- The encoder begins with a convolutional layer for initial
+work), which extracts fixed-dimensional feature vectors. In feature extraction, followed by multiple residual blocks
+parallel, the corresponding class labels in the support set are that capture increasingly abstract features and long-range
+embedded using a Label Encoder, while the query label is dependencies critical for understanding encrypted traffic
+represented using a learnable “unknown” token. behavior. Shortcut connections help retain vital information
+ The support features, label embeddings, and the query during deep training [48]. Finally, fully connected layers
+feature are then concatenated into a unified sequence and map the extracted features to output classes, supporting
+passed into the In-Context Encoder, implemented as a accurate classification.
+VOLUME 4, 2026 737
+ In essence, this encoder leverages ResNet’s strengths— The resulting embedding matrix remains fixed during trainshortcut connections and deep feature learning—to achieve ing, ensuring equal length and maximal equiangularity
+robust performance in encrypted traffic classification. among class vectors.
+
+D. LABEL ENCODER b) RANDOMLY INITIALIZED EMBEDDINGS
+1) LABEL ENCODER DESIGN AND EMBEDDING For comparison, we also employ a randomly initialized
+CONSTRUCTION embedding matrix. This matrix is initialized using the He
+In few-shot encrypted traffic classification, each task con- initialization scheme [50], which is defined as:
+tains only a limited number of labeled support samples, r r !
+and encrypted traffic features often exhibit high intra-class 6 6
+ Ei j ∼ U − , , (3)
+variability and inter-class similarity. Under such conditions, fan in fan in
+relying solely on traffic features makes it difficult for the
+model to learn stable decision boundaries. Therefore, we where fan in represents the number of input units in the
+introduce a Label Encoder to transform discrete class labels embedding layer. In this case, fan in = C+p, where C is the
+into continuous embeddings, providing an explicit geometric number of classes and p is the embedding dimension. This
+prior that guides the model’s discriminative reasoning. initialization ensures that signals propagate stably through
+ Label embeddings enable the In-Context Encoder to the network during training. Unlike ELMES, the embedding
+jointly model both traffic features and label information matrix initialized in this manner is learnable and updated
+through self-attention. This allows the query sample to be dynamically during the training process.
+aligned not only with support features but also with the
+ 2) LABEL ENCODING PROCESS
+corresponding class representations, enhancing classification
+robustness under data scarcity. Formally, the embedding Once the embedding matrix E is constructed, the label
+matrix is denoted as E ∈ RC×p , where C is the number encoding process involves two steps:
+of classes and p is the embedding dimension. Accordingly,
+ a) ONE-HOT ENCODING
+we organize the Label Encoder as a unified module and
+investigate two representative label embedding construction Discrete labels y ∈ RB are transformed into one-hot encoded
+strategies, which are described as follows. representations:
+ Y = OneHot(y) ∈ RB×C , (4)
+a) ELMES ENCODING
+The ELMES embedding matrix is precomputed using the where B is the batch size.
+Equal Length Maximum Equiangular Set (ELMES) encoding mechanism [49], which aims to enforce equal vector b) EMBEDDING TRANSFORMATION
+lengths and maximize equiangular separation among class The one-hot matrix Y is projected into the embedding space:
+embeddings. This design is motivated by the need to
+address the fuzzy class boundaries and feature overlap in Z = Y · (α · E), (5)
+encrypted network traffic classification. MeanWhile, equal where α is a learnable scaling factor initialized to 1, and
+vector lengths eliminate norm disparity interference, ensur- Z ∈ RB×p is the resulting label embedding matrix.
+ing the model’s similarity judgment reflects true class
+differences rather than arbitrary scale variations. Maximal 3) COMPARISON OF ENCODING METHODS
+equiangularity minimizes embedding distribution overlap, We conducted comparative experiments to evaluate the perreducing the model’s uncertainty in class detection and formance of ELMES encoding and the randomly initialized
+enhancing discriminative power—critical for scenarios with embedding matrix. The detailed experimental setup and
+limited labeled traffic data. Additionally, ELMES maintains results are presented in the experimental design section of
+permutation invariance of the input sequence, ensuring sta- Section V.
+ble predictions regardless of the order of traffic samples in
+the input. E. IN-CONTEXT ENCODER
+ Specifically, a random orthogonal matrix U ∈ R p×C is first In-context learning leverages the relationships between a
+generated via QR decomposition. An adjustment matrix M ∗ small support set and a query set to perform accurate
+is then constructed as inference without task-specific fine-tuning. To effectively
+ r   implement this approach in encrypted network traffic clas-
+ C 1
+ M =∗
+ · IC − 11> , (1) sification, the In-Context Encoder is designed to fully
+ C−1 C
+ utilize the global contextual information within the support
+where IC denotes the identity matrix and 1 ∈ RC is an all- and query sets. By simultaneously processing both sets,
+ones vector. The embedding matrix is finally computed as the encoder ensures that the model dynamically adapts
+ its predictions based on contextual cues provided by the
+ E = (U · M ∗ )> . (2) support set. This design enhances the model’s robustness
+738 VOLUME 4, 2026
+Chang et al.: ICT-META: In-Context Aware Few-Shot Learner
+
+and generalization capabilities, which are crucial under fewshot conditions.
+ The In-Context Encoder is built upon the Transformer
+architecture and employs multi-head self-attention to capture dependencies across both support and query samples.
+Specifically, the encoder adopts a non-causal formulation
+at the task inference level, where autoregressive constraints
+are removed to allow bidirectional attention over the entire
+support–query context. This design enables the model to
+infer task-specific decision rules by jointly reasoning over
+labeled support samples and unlabeled queries. To respect
+the set-based nature of few-shot learning, the support set
+is treated as an unordered collection of examples. Accordingly, positional encodings are excluded for support samples,
+ensuring that model predictions are invariant to permutations
+of the support set. Importantly, this design does not discard
+structural information within individual traffic samples, as
+the temporal or feature order inside each encrypted traffic
+sequence is preserved and encoded by the backbone feature
+ FIGURE 3. In-context encoder architecture.
+extractor. By disentangling task-level contextual reasoning
+from sample-level structural encoding, the proposed encoder
+flexibly models support–query relationships without introducing ordering bias. 2) GOOGLE HOME DATASET
+ In the specific implementation, the In-Context Encoder The Google Home dataset [51] includes 100 voice comis composed of multiple layers of Transformer encoders. mand samples, aiding ICT-META training. Its rich contexts
+The concatenated feature sequence is fed into the In-Context enhance the model’s ability to generalize and respond
+Encoder for processing. Each encoder layer consists of two to voice-based encrypted traffic in dynamic, real-world
+main components: Self-Attention and a Feedforward Neural scenarios.
+Network, which is implemented as a Multi-Layer Perceptron
+ B. FEATURE ENGINEERING
+(MLP). In each layer, the input is first normalized using
+LayerNorm, followed by Self-Attention computation via the For both datasets, we adopt the packet size as the only
+MultiheadAttention layer to capture dependencies between feature, following the approach introduced by Li et al.
+different positions in the input sequence. The output of the [4], who demonstrated that packet sizes can reveal classself-attention mechanism is then added to the input through a specific patterns even in fully encrypted traffic. Each traffic
+residual connection. Next, the input is processed by another sample is treated as a one-dimensional sequence of packet
+LayerNorm and MLP layer to further enhance its feature sizes (in bytes). This design choice avoids reliance on
+representation capacity. The output of each layer is again timing, direction, or protocol-level metadata, and ensures
+added to the input through another residual connection, applicability under strict encryption scenarios.
+which helps mitigate the vanishing gradient problem during To ensure consistent input across samples, all sequences
+training. Finally, the output sequence from the Transformer are either zero-padded or truncated to a fixed length of
+encoders is standardized through the final LayerNorm, yield- 500 before being passed into the model. No additional
+ing the final encoded representation. The specific module features such as inter-arrival time, directionality, or signal
+architecture is shown in Fig. 3. strength are used. This unified feature representation allows
+ us to directly compare model performance across multiple
+IV. EXPERIMENTS domains and datasets.
+A. DATASETS
+1) DC DATASET C. EXPERIMENTAL DESIGN
+The DC dataset [4] comprises two parts (9000 and 15000 1) ENCRYPTED TRAFFIC DATA ENCODER
+samples), collected over WPA2-encrypted 2.4 GHz WiFi Our encrypted traffic data encoder uses a well-trained residfrom video (Netflix, Stan, YouTube), audio (YouTube Music, ual network. The training dataset includes multimedia data
+Spotify, Xiami), and web (Wikipedia, ABC News, SMH) from the DC Dataset, with 30 video content items from
+platforms. MAC-layer features such as frame size, type, and YouTube Video and 10 audio content items from YouTube
+signal strength are used for analysis. Its diversity makes it Music. This diverse dataset provides ample training samples,
+suitable for evaluating cross-domain generalization across enabling the network to efficiently extract features from
+various encrypted traffic types. encrypted network traffic.
+
+VOLUME 4, 2026 739
+TABLE 1. Experimental settings for ICT-META. Ubuntu 22.04 as the operating system, and an NVIDIA
+ GA104GL [RTX A4000] GPU. The implementation of ICT-
+ META is based on Python 3.7 and the PyTorch 1.13.1 deep
+ learning framework.
+
+ E. COMPARED METHODS
+ Among the compared baseline methods, several were originally proposed in the computer vision domain, such
+ as MetaNIW. However, these methods are not inherently image-specific; instead, they operate on generic
+ feature embeddings and perform task-level inference over
+2) LABEL ENCODER support–query sets. To adapt them to encrypted traffic
+We compared the performance of ELMES encoding and a classification in a fair and consistent manner, we remove
+randomly initialized embedding matrix. Experimental results their original image encoders and replace them with the
+(Table 2, 1CT-META*) show that both methods perform same encrypted traffic feature encoder used in our ICTsimilarly in some cases, but ELMES encoding demonstrates META framework. As a result, all methods receive identical
+superior class separation due to its geometric properties, fixed-dimensional traffic representations as input, and
+making it more effective for tasks requiring robust class the observed performance differences mainly reflect their
+discrimination. task adaptation mechanisms rather than feature extraction
+ advantages.
+3) ICT-META
+To evaluate the cross-task adaptability of ICT-META, we
+ 1) METANIW
+deliberately constructed the dataset to ensure that the train-
+ MetaNIW (Meta Neural Information Worker) [52] is a metaing and testing sets belong to different service categories
+ learning method for few-shot tasks that models task-level
+(e.g., training on video/audio and testing on web traffic). To
+ features to support rapid adaptation. It performs well in lowtrain the ICT-META model, we used two diverse datasets:
+ resource scenarios by generalizing effectively from limited
+DC Dataset and the Google Home Dataset. The DC Dataset
+ samples.
+includes video, audio, and web stream data, with video
+stream data sourced from Netflix and Stan, and audio stream
+data from Spotify and Xiami. The Google Home Dataset 2) SNAIL
+consists of 100 speech command samples. We used the video SNAIL (Simple Neural Attentive Meta-Learner) [53] comand audio stream data from DC Dataset, combined with bines temporal convolutions and attention mechanisms for
+the Google Home Dataset, for model training. Additionally, efficient few-shot learning. Temporal convolutions capture
+we leveraged DC Dataset’s web stream data (from sources context, while attention highlights key features, enabling fast
+such as ABC, SMH, Wikipedia, and Web—where ABC, and effective adaptation.
+SMH, and Wikipedia were combined into a single dataset)
+to assess the model’s ability to generalize classification tasks
+for unseen domain data without requiring fine-tuning. In 3) GPICL
+summary, the ICT-META training dataset not only enriched GPICL (Gaussian Process Incremental Contrastive Learnthe model’s training data but also strengthened its ability to ing) [43] merges Gaussian processes with contrastive
+handle cross-domain classification tasks, enabling effective learning to handle incremental learning. It models uncergeneralization without requiring fine-tuning. tainty and learns robust feature representations, maintaining
+ stable performance amid changing data distributions.
+4) ABLATION STUDY
+To investigate the contribution of the Google Home Dataset
+in training, we also conduct an ablation experiment where 4) METAMRE
+ICT-META is trained only on the DC Dataset (video, audio MetaMRE [19] is a few-shot cross-domain encrypted traffic
+stream data) without the Google Home Dataset. The model classification framework based on multi-task representais then evaluated on web stream data to assess cross-domain tion learning. It enhances feature discriminability through
+performance. supervised and auxiliary tasks and adopts a gradient-based
+ meta-learning strategy for rapid adaptation to new traffic
+D. EXPERIMENTAL ENVIRONMENT categories. During meta-testing, task-specific fine-tuning is
+The model training for this work was conducted on a local performed on the support set. For fair comparison, we
+server with the following configuration: a 12th Gen IntelO
+ R implement MetaMRE under the same 5-way K-shot cross-
+CoreTM i7-12700F processor (2.10GHz), 32GB RAM, domain setting.
+740 VOLUME 4, 2026
+Chang et al.: ICT-META: In-Context Aware Few-Shot Learner
+
+TABLE 2. Performance comparison of methods on 5-way K -shot datasets (Accuracy %).
+
+V. RESULTS using ICT-META and ICT-META* trained only on the
+A. EVALUATION AND ANALYSIS OF ENCRYPTED DC Dataset (video, audio stream data) without the Google
+TRAFFIC DATA ENCODER Home Dataset. As shown in Table II, removing the Google
+1) SETTINGS
+ Home Dataset slightly decreases the model’s performance
+The YouTube dataset contains 30 video categories, and the on the web stream data across both 5-way 5-shot and 1-shot
+YouTube Music dataset includes 10 audio categories from settings. This result indicates that incorporating additional
+the DC Dataset. The model was trained for 30 epochs data sources in the training phase contributes to better
+with a learning rate of 0.0001 and the Adam optimizer. cross-domain generalization. Specifically, ICT-META w/o
+The ReduceLROnPlateau scheduler dynamically adjusted achieves 82.05% on web 5-shot, compared to 85.67% when
+the learning rate based on validation performance. trained with both DC and Google Home datasets.
+ Key Findings:
+2) EVALUATION AND ANALYSIS
+ 1) Superior Performance of ICT-META: The ICT-
+After 30 epochs, the model achieved a 75.50% testing
+ META model consistently outperforms the baseline
+accuracy, demonstrating its ability to extract critical features
+ models across all datasets and settings. In the 5-way
+from encrypted network streams. This highlights the effec-
+ 5-shot configuration, ICT-META achieves the highest
+tiveness of the Encrypted Traffic Data Encoder in encrypted
+ accuracy of 73.91% on the “abc” dataset, compared to
+traffic classification.
+ MetaNIW’s 72.22%, and far surpasses SNAIL, which
+B. EVALUATION AND ANALYSIS OF ICT-META achieves only 20.24%. Additionally, on the “web”
+1) SETTINGS dataset, ICT-META achieves 85.67% and 75.90% in
+ICT-META was optimized using Adam with an initial learn- the 5-way 5-shot and 5-way 1-shot configurations,
+ing rate of 0.0001, adjusted by a Custom Cosine scheduler respectively, making it the best-performing model
+over 40 epochs. The batch size was set to 75 for balanced across all settings.
+efficiency. Key parameters are summarized in Table 1. 2) Impact of ELMES Encoding: When comparing ICT-
+ In the meta-testing phase, the model underwent 4,000 META and ICT-META* (the version using randomly
+trials with 5-way classification, using either 1-shot or 5-shot initialized embeddings), we observe that the use of the
+support samples and 16 query samples per class. This setup ELMES encoding mechanism significantly improves
+tested the model’s generalization ability. the performance. For example, on the “wiki” dataset
+ in the 5-way 1-shot setting, ICT-META achieves
+2) EVALUATION AND ANALYSIS 71.32%, while ICT-META* only achieves 74.45%.
+The ICT-META model was evaluated on unseen web traffic This confirms that ELMES encoding enhances the
+data and compared against baseline models: MetaNIW, model’s ability to extract meaningful features from
+SNAIL, and GPICL. Results, presented in Table 2, show encrypted traffic, contributing to better generalization
+classification accuracy under 5-way 5-shot and 5-way 1-shot across diverse datasets.
+configurations. 3) Cross-Domain Adaptability: One of the key
+ strengths of ICT-META is its ability to perform well
+3) ABLATION STUDY ON TRAINING DATASETS in cross-domain learning scenarios. On the com-
+To further investigate the effect of including multiple bined “web” dataset, which includes categories from
+datasets during training, we conduct an ablation study all three source datasets, ICT-META achieves an
+
+VOLUME 4, 2026 741
+ accuracy of 85.67% in the 5-way 5-shot configura- or incremental inference strategies, constitutes an important
+ tion. This demonstrates that ICT-META is capable of direction for future work.
+ adapting to new, unseen traffic data and effectively
+ generalizing across domains without the need for REFERENCES
+ retraining or fine-tuning. In future work, we plan to [1] E. Papadogiannaki, G. Tsirantonakis, and S. Ioannidis, “Network intrusion
+ detection in encrypted traffic,” in Proc. IEEE Conf. Dependable Secure
+ further validate the robustness of ICT-META by eval- Comput. (DSC), Jun. 2022, pp. 1–8.
+ uating multiple random partitions and training/testing [2] Z. Wang and V. L. L. Thing, “Feature mining for encrypted malicious trafsplits across different service categories. fic detection with deep learning and other machine learning algorithms,”
+ Comput. Secur., vol. 128, May 2023, Art. no. 103143.
+ [3] Y. Li et al., “Deep content: Unveiling video streaming content from
+VI. CONCLUSION encrypted WiFi traffic,” in Proc. IEEE 17th Int. Symp. Netw. Comput. Appl.
+This section summarizes the proposed In-Context Traffic (NCA), Nov. 2018, pp. 1–8.
+Meta-learner(ICT-META) method for encrypted traffic clas- [4] Y. Li et al., “From traffic classes to content: A hierarchical approach for
+ encrypted traffic classification,” Comput. Netw., vol. 212, May 2022, Art.
+sification. Traditional deep learning models rely heavily on no. 109017.
+large labeled datasets and require retraining or fine-tuning [5] C. Hou, J. Shi, C. Kang, Z. Cao, and G. Xiong, “Classifying user activities
+for new tasks, which can be time-consuming and resource- in the encrypted WeChat traffic,” in Proc. IEEE 37th Int. Perform. Comput.
+ Commun. Conf. (IPCCC), Nov. 2018, pp. 1–8.
+intensive. To address these issues, the ICT-META method
+ [6] H. Wu, Q. Wu, G. Cheng, and S. Guo, “Instagram user behavior identificombines few-shot learning with universal meta-learning, cation based on multidimensional features,” in Proc. IEEE Conf. Comput.
+enabling the model to learn new traffic features directly from Commun. Workshops (INFOCOM WKSHPS), Toronto, ON, Canada, Jul.
+the context during inference without the need for fine-tuning, 2020, pp. 1111–1116.
+ [7] S. Troia, R. Alvizu, Y. Zhou, G. Maier, and A. Pattavina, “Deep learningallowing it to quickly adapt to new types of encrypted traffic. based traffic prediction for network optimization,” in Proc. 20th Int. Conf.
+ ICT-META uses non-causal sequence modeling, which Transparent Opt. Netw. (ICTON), Jul. 2018, pp. 1–4.
+helps the model adapt to new encrypted traffic types without [8] K. Meduri, G. S. Nadella, H. Gonaygunta, and S. S. Meduri, “Developing
+ a fog computing-based AI framework for real-time traffic management
+retraining. Additionally, ICT-META utilizes a pre-trained and optimization,” Int. J. Sustain. Develop. Comput. Sci., vol. 5, no. 4,
+residual network as a feature extractor and incorporates pp. 1–24, 2023.
+the ICT-META encoding mechanism, which enhances the [9] M. Andronie, G. Lzroiu, M. Iatagan, C. Uţ, R. Ştefanescu, and
+ M. Cocoşatu, “Artificial intelligence-based decision-making algorithms,
+model’s feature extraction capabilities for encrypted traffic Internet of Things sensing networks, and deep learning-assisted smart
+classification. Experimental results demonstrate that ICT- process management in cyber-physical production systems,” Electron.,
+META outperforms traditional models, providing a faster vol. 10, no. 20, p. 2497, 2021.
+ [10] A. Q. Jiang et al., “Mistral 7B,” 2023, arXiv:2310.06825.
+and more general solution for encrypted traffic classification, [11] S. Sen, O. Spatscheck, and D. Wang, “Accurate, scalable in-network
+capable of quickly learning new features and accurately identification of p2p traffic using application signatures,” in Proc. 13th
+classifying encrypted traffic of various types. Furthermore, Int. Conf. World Wide Web, May 2004, pp. 512–521.
+ [12] B. M. Lake, T. D. Ullman, J. B. Tenenbaum, and S. J. Gershman, “Building
+our ablation study further demonstrates the importance of machines that learn and think like people,” Behav. Brain Sci., vol. 40,
+leveraging multiple datasets during training. Models trained p. 253, Nov. 2017.
+only on the DC Dataset (video, audio stream data) exhibit [13] M. Garnelo et al., “Conditional neural processes,” in Proc. Int. Conf. Mach.
+ Learn., 2018, pp. 1704–1713.
+slightly lower cross-domain performance, confirming that [14] W.-Y. Chen, Y.-C. Liu, Z. Kira, Y.-C. Frank Wang, and J.-B. Huang, “A
+including diverse data sources improves the model’s gener- closer look at few-shot classification,” 2019, arXiv:1904.04232.
+alization capability. [15] Y. Guo et al., “A broader study of cross-domain few-shot learning,” in
+ Proc. 16th Eur. Conf. Comput. Vis. (ECCV), Aug. 2020, pp. 124–141.
+ Although ICT-META shows promising performance,
+ [16] J. Oh, S. Kim, N. Ho, J.-H. Kim, H. Song, and S.-Y. Yun, “Understanding
+especially in cross-domain encrypted traffic classification cross-domain few-shot learning based on domain similarity and few-shot
+scenarios, several limitations should be acknowledged. First, difficulty,” in Proc. Adv. Neural Inf. Process. Syst., 2022, pp. 2622–2636.
+ICT-META operates on fixed-length traffic feature rep- [17] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+ contextualized datagram representation with pre-training transformers
+resentations, and its robustness under higher-dimensional for encrypted traffic classification,” in Proc. ACM Web Conf., 2022,
+traffic features has not yet been fully evaluated. Second, pp. 633–642.
+the Transformer-based in-context modeling introduces addi- [18] Z. Li, J. Wang, Y. Song, and S. Yue, “Unlocking few-shot encrypted traffic
+ classification: A contrastive-driven meta-learning approach,” Electronics,
+tional computational overhead, which may pose challenges vol. 14, no. 21, p. 4245, 2025.
+in resource-constrained or large-scale deployment environ- [19] C. Yang et al., “Few-shot encrypted traffic classification via multi-task
+ments. Third, while ICT-META adapts well to new traffic representation enhanced meta-learning,” Comput. Netw., vol. 228, Jun.
+ 2023, Art. no. 109731.
+types, its current accuracy on certain categories such as [20] H. Wang and Z.-H. Deng, “Cross-domain few-shot classification via
+SMH may not meet the latency and reliability requirements adversarial task augmentation,” 2021, arXiv:2104.14385.
+of real-time security systems. Finally, in some datasets with [21] F. Zhou, P. Wang, L. Zhang, W. Wei, and Y. Zhang, “Meta-collaborative
+ comparison for effective cross-domain few-shot learning,” Pattern Recogrelatively structured traffic patterns like the Wiki dataset, nit., vol. 156, Dec. 2024, Art. no. 110790.
+simpler embedding strategies may perform competitively [22] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smartphone
+in low-shot scenarios, highlighting potential limitations of app identification via encrypted network traffic analysis,” IEEE Trans. Inf.
+ Forensics Security, vol. 13, no. 1, pp. 63–78, Jan. 2018.
+the ELMES encoding in specific contexts. Addressing these [23] K. Al-Naami et al., “Adaptive encrypted traffic fingerprinting with bilimitations, such as enhancing class-wise consistency, sup- directional dependence,” in Proc. 32nd Annu. Conf. Comput. Secur. Appl.,
+porting high-dimensional traffic, and developing lightweight Dec. 2016, pp. 177–188.
+
+742 VOLUME 4, 2026
+Chang et al.: ICT-META: In-Context Aware Few-Shot Learner
+
+[24] R. T. El-Maghraby, N. M. A. Aziem, M. Sobh, and A. M. Bahaa-Eldin, [50] K. He, X. Zhang, S. Ren, and J. Sun, “Delving deep into rectifiers:
+ “Encrypted network traffic classification based on machine learning,” Ain Surpassing human-level performance on ImageNet classification,” in Proc.
+ Shams Eng. J., vol. 15, no. 2, 2023, Art. no. 102361. IEEE Int. Conf. Comput. Vis., Dec. 2015, pp. 1026–1034.
+[25] I. A. Najm et al., “Enhanced network traffic classification with machine [51] C. Wang et al., “Fingerprinting encrypted voice traffic on smart speakers
+ learning algorithms,” in Proc. Cognit. Models Artif. Intell. Conf., May with deep learning,” in Proc. 13th ACM Conf. Secur. Privacy Wireless
+ 2024, pp. 322–327. Mobile Netw., Jul. 2020, pp. 254–265.
+[26] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fingerprinting: [52] M. Kim and T. Hospedales, “A hierarchical Bayesian model for deep few-
+ Undermining website fingerprinting defenses with deep learning,” in Proc. shot meta learning,” 2023, arXiv:2306.09702.
+ ACM SIGSAC Conf. Comput. Commun. Secur., Oct. 2018, pp. 1928–1943. [53] N. Mishra, M. Rohaninejad, X. Chen, and P. Abbeel, “A simple neural
+[27] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-net: A flow sequence attentive meta-learner,” 2017, arXiv:1707.03141.
+ network for encrypted traffic classification,” in Proc. IEEE INFOCOM
+ Conf. Comput. Commun., Apr. 2019, pp. 1171–1179.
+[28] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian, “Deep
+ packet: A novel approach for encrypted traffic classification using deep
+ learning,” Soft Comput., vol. 24, no. 3, pp. 1999–2012, 2019.
+ CHENGXIANG CHANG is currently pursuing
+[29] K. Lin, X. Xu, and H. Gao, “TSCRNN: A novel classification scheme of the Graduate degree with the School of Artificial
+ encrypted traffic based on flow spatiotemporal features for efficient man- Intelligence and Computer Science, North China
+ agement of IIoT,” Comput. Netw., vol. 190, May 2021, Art. no. 107974. University of Technology, Beijing. His research
+[30] Y. Chen, R. Li, Z. Zhao, and H. Zhang, “MERLOT: A distilled LLM-based interests include few-shot learning in encrypted
+ mixture-of-experts framework for scalable encrypted traffic classification,” traffic classification.
+ 2024, arXiv:2411.13004.
+[31] Y. Yuan, Y. Huang, X. Zeng, H. Mei, and G. Cheng, “M3S-UPD: Efficient
+ multi-stage self-supervised learning for fine-grained encrypted traffic classification with unknown pattern discovery,” 2025, arXiv:2505.21462.
+[32] A. Graves, G. Wayne, and I. Danihelka, “Neural Turing machines,” 2014,
+ arXiv:1410.5401.
+[33] A. Vaswani et al., “Attention is all you need. advances in neural information processing systems,” in Proc. Adv. neural Inf. Process. Syst., Dec.
+ 2017, pp. 5998–6008.
+[34] P. Sirinam, N. Mathews, M. S. Rahman, and M. Wright, “Triplet finger- YING LI received the B.E. and M.S. degrees in
+ printing: More practical and portable website fingerprinting with n-shot software engineering from Taiyuan University
+ learning,” in Proc. ACM SIGSAC Conf. Comput. Commun. Secur., 2019, of Technology in 2014 and 2017, respectively,
+ pp. 1131–1148. and the Ph.D. degree from the Computer Science School, University of Technology Sydney, in
+[35] C. Xu, J. Shen, and X. Du, “A method of few-shot network intrusion
+ 2023. She is currently a Lecturer with the School
+ detection based on meta-learning framework,” IEEE Trans. Inf. Forensics
+ of Artificial Intelligence and Computer Science,
+ Security, vol. 15, pp. 3540–3552, 2020.
+ North China University of Technology, Beijing.
+[36] R. Hou, H. Chang, B. Ma, S. Shan, and X. Chen, “Cross attention
+ Her research interests include time-aware deep
+ network for few-shot classification,” in Proc. Adv. Neural Inf. Process.
+ learning and Bayesian nonparametrics.
+ Syst., vol. 32, 2019, pp. 4003–4014.
+[37] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for fast
+ adaptation of deep networks,” in Proc. Int. Conf. Mach. Learn., 2017,
+ pp. 1126–1135.
+[38] T. Brown et al., “Language models are few-shot learners,” in Proc. Adv.
+ Neural Inf. Process. Syst. (NeurIPS), vol. 33, 2020, pp. 1877–1901.
+[39] S. Min, M. Lewis, L. Zettlemoyer, and H. Hajishirzi, “MetaICL: Learning SURANGA SENEVIRATNE received the B.S.
+ to learn in context,” in Proc. Conf. North Amer. Chapter Assoc. Comput. degree from the University of Moratuwa, Sri-
+ Linguistics, Human Lang. Technol., 2022, pp. 2791–2809. lanka, in 2005, and the Ph.D. degree from the
+[40] Y. Chen, R. Zhong, S. Zha, G. Karypis, and H. He, “Meta-learning via University of New South Wales, Australia, in
+ language model in-context tuning,” in Proc. 60th Annu. Meeting Assoc. 2015. He is currently an Associate Professor of
+ Comput. Linguistics (Long Papers), 2022, pp. 719–730. security with the School of Computer Science,
+[41] S. Wu, Y. Wang, and Q. Yao, “Why in-context learning models are good The University of Sydney. His current research
+ few-shot learners?,” in Proc. 13th Int. Conf. Learn. Represent., May 2025. interests include privacy and security in mobile
+[42] A. Vettoruzzo, L. Braccaioli, J. Vanschoren, and M. Nowaczyk, systems, AI applications in security, and behav-
+ “Unsupervised meta-learning via in-context learning,” 2024, ioral biometrics. Before moving into research, he
+ arXiv:2405.16124. worked nearly six years in the telecommunica-
+[43] L. Kirsch, J. Harrison, J. Sohl-Dickstein, and L. Metz, “General- tions industry in core network planning and operations.
+ purpose in-context learning by meta-learning transformers,” 2022,
+ arXiv:2212.04458.
+[44] H. Huang, Y. Lu, S. Zhou, X. Zhang, and Z. Li, “CoTNeT: Contextual
+ transformer network for encrypted traffic classification,” Egyptian Informat. J., vol. 26, Jun. 2024, Art. no. 100475.
+[45] X.-Y. Chen, L. Han, D.-C. Zhan, and H.-J. Ye, “MIETT: Multi-instance XINGQUAN CAI (Member, IEEE) received the
+ encrypted traffic transformer for encrypted traffic classification,” in Proc. B.S. and Ph.D. degrees in computer science from
+ AAAI Conf. Artif. Intell., Apr. 2025, vol. 39, no. 15, pp. 15922–15929. Beijing Institute of Technology, Beijing, China,
+[46] D. Zhao et al., “Language of network: A generative pre-trained model for in 2001 and 2007, respectively. He is currently
+ encrypted traffic comprehension,” 2025, arXiv:2505.19482. a Professor and the Dean of the Digital Media
+[47] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image Department, North China University of Technolrecognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., Jun. ogy, Beijing. He is also a Professor with the
+ 2016, pp. 770–778. School of Artificial Intelligence and Computer
+[48] X. Zhang, J. Zhao, and Y. LeCun, “Character-level convolutional networks Science, North China University of Technology.
+ for text classification,” in Proc. Adv. Neural Inf. Process. Syst., Dec. 2015, His research interests include interactive media,
+ pp. 649–657. image processing, pattern recognition, and virtual
+[49] C. Fifty et al., “Context-aware meta-learning,” 2023, arXiv:2310.10971. reality.
+
+VOLUME 4, 2026 743

@@ -1,0 +1,167 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025                                                                             2520516
+
+
+
+
+     Frequency-Domain Spectrum Discrepancy-Based
+         Fast Anomaly Detection for IIoT Sensor
+                  Time-Series Signals
+                              Lei Chen , Member, IEEE, Xuxin Liu , Ying Zou , Jiajun Tang ,
+                                      Canwei Liu , Bowen Hu , and Mingyang Lv
+
+   Abstract— Driven by Industry 4.0, anomaly detection for the                 Things (IIoT) [1]. Based on the granularity of anomaly detec-
+Industrial Internet of Things (IIoT) has new demands: high                     tion, existing methods can be primarily categorized into three
+accuracy, high speed, and low resource consumption. However,                   types, collective-level, subsequence-level, and timestamp-
+most existing models prioritize accuracy by constructing deep
+structures with huge parameters, often neglecting timeliness                   level detection [2], [3]. Collective-level detection determines
+and resource efficiency in resource-limited IIoT environments.                 whether an entire time series is abnormal. Subsequence-level
+To solve these limitations, a nonneural-network-based sensor sig-              detection determines whether a time interval consisting of
+nal fast anomaly detection model, named FADSD, is proposed for                 multiple consecutive timestamps is abnormal. Timestamp-level
+resource-limited IIoT scenarios. Unlike traditional bulky neural-              detection, in contrast, assesses whether an individual times-
+network solutions, FADSD only uses spectrum discrepancy in the
+frequency domain, a nonneural-network approach, to meet these                  tamp is abnormal. With the growing demand for fine-grained
+three demands. First, the spectrum discrepancy is introduced to                intelligent control, timestamp-level anomaly detection has
+break the dilemma of not being able to perform timestamp-level                 become a hot topic in the research area and also the focus
+feature extraction and anomaly detection in the frequency                      of this article [4].
+domain. Second, both point-level and sequence-level compu-
+tation components are developed as complementary branches
+to generate the spectrum discrepancies for each timestamp.                     A. Challenge
+Finally, a novel anomaly scoring strategy combines point-level
+and sequence-level spectrum discrepancies for more accurate                       Existing timestamp-level IIoT anomaly detection methods
+anomaly detection. To the best of authors’ knowledge, this is                  mainly focus on developing high-accuracy neural-network
+the first work to deploy anomaly detection exclusively in the                  models without the aid of supervised labels [2]. To achieve
+frequency domain. Extensive experiments on eight IIoT sensor                   high accuracy, these models make an effort to build bulky
+signal datasets demonstrate that FADSD outperforms multiple
+                                                                               neural networks with numerous parameters and deep struc-
+state-of-the-art (SOTA) deep models and can be easily deployed in
+resource-limited IIoT environments. The source code of FADSD                   tures. Inevitably, these models require long training/testing
+is available at https://github.com/infogroup502/FADSD.                         times and consume many resources. When these models are
+   Index Terms— Anomaly detection, fast anomaly detection,
+                                                                               deployed on a cloud with powerful resources, their detection
+frequency domain, Industrial Internet of Things (IIoT), sensor                 time and resource consumption will not be a concern. Coming
+signal, spectrum discrepancy.                                                  to Industry 4.0, large-volume sensor signals, intensive resource
+                                                                               scheduling, and frequent computing tasks bring high latency
+                     I. I NTRODUCTION                                          issues for anomaly detection in the cloud. Consequently,
+                                                                               anomaly detection models are increasingly being deployed on
+A     NOMALY detection plays a crucial role in ensuring
+      the security and stability of the Industrial Internet of                 edge devices with limited computational resources, a paradigm
+                                                                               known as edge computing. In this case, it introduces two key
+   Received 15 September 2024; revised 17 January 2025; accepted 5 February    challenges for timestamp-level anomaly detection [5].
+2025. Date of publication 24 March 2025; date of current version 3 April
+2025. This work was supported in part by the National Natural Science             1) Neural Network-Based Models May Not Be Deploy-
+Foundation of China under Grant 62103143 and Grant 62203164, in part                 able and Run Stably: Unlike servers or clouds, IIoT
+by Hunan Provincial Natural Science Foundation of China under Grant                  edge devices have very limited resources. For exam-
+2024JJ5162, in part by the Young Backbone Teacher of Hunan Province
+under Grant 2022101, and in part by the Scientific Research Fund of Hunan            ple, an MCU-based STM32 microcontroller only has
+Provincial Education Department under Grant 22B0471. The Associate Editor            <1-MB SRAM and <168-MHz clock speed. Even the
+coordinating the review process was Dr. Dong Wang. (Corresponding author:            high-performance Raspberry Pi 4b has only 2-GB RAM
+Lei Chen.)
+   Lei Chen, Xuxin Liu, Ying Zou, Jiajun Tang, Bowen Hu, and Mingyang                and 1.5-GHz clock speed. These limited resources ren-
+Lv are with the School of Information and Electrical Engineering, Hunan              der neural-network-based models inoperable or unable
+University of Science and Technology, Xiangtan 411201, China (e-mail:                to run stably on such devices.
+chenlei@hnust.edu.cn; xuxinliu@mail.hnust.edu.cn; 1040134@hnust.edu.cn;
+jiajuntang@mail.hnust.edu.cn; hubowen@mail.hnust.edu.cn; lvapple@hnust.           2) Tradeoff Between High Accuracy and High Speed: Even
+edu.cn).                                                                             if the resources of an edge device are sufficient to sup-
+   Canwei Liu is with the School of Computer Science and Engi-                       port deep neural-network-based models, these models
+neering, Central South University, Changsha 410083, China (e-mail:
+canweiliu@csu.edu.cn).                                                               face the tradeoff between high speed and high accu-
+   Digital Object Identifier 10.1109/TIM.2025.3554286                                racy. Specifically, bulky neural-network models with
+               1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+2520516                                                                IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+
+
+
+Fig. 1. Spectrum discrepancy in the frequency domain. (a) Illustration of amplitude discrepancy in the frequency domain for a timestamp. (b) Comparison
+of the amplitude and phase discrepancies between a normal (943 timestamps) and an outlier (937 timestamps) of the Yahoo dataset. (c) Comparison of the
+amplitude and phase discrepancies between a normal (14 795 timestamps) and an outlier (14 789 timestamps) of the second variable in the SMTP dataset.
+
+
+
+       deep structures and extensive parameters achieve high                 or DWT cannot directly perform timestamp-level anomaly
+       accuracy. However, it requires substantial computation                detection. It is because FFT or DWT can only work when
+       time, particularly on resource-constrained edge devices.              the input is an entire time series or a subsequence, whereas
+       Conversely, lightweight models with shallow architec-                 they cannot work when the input is a timestamp. It means
+       tures and fewer parameters offer faster detection speeds              that a timestamp in the time domain cannot be directly
+       with a reduction of reduced accuracy.                                 mapped to the frequency domain to get its frequency-domain
+                                                                             features. To take advantage of the frequency domain, existing
+B. Existing Solution                                                         timestamp-level anomaly detection models [11], [14] incor-
+                                                                             porate the frequency-domain features of a time series or its
+   To address the abovementioned challenges, some stud-
+                                                                             subsequences as auxiliary information alongside time-domain
+ies [6], [7] propose some lightweight neural networks that
+                                                                             data. Neural networks are then employed to extract the features
+adapt to limited resources while maintaining accuracy. How-
+                                                                             of each timestamp from this combined time–frequency-domain
+ever, these models require frequent updates and redeployment
+                                                                             information and determine whether a timestamp is abnormal.
+in the cloud to sustain their accuracy. Other research [8], [9]
+                                                                             Such models are, namely, time–frequency anomaly detection
+constructs high-accuracy anomaly detection models by inte-
+                                                                             models.
+grating multiple nonneural-network techniques. These models
+                                                                                To the best of authors’ knowledge, there is no
+offer advantages such as online updates or operations without
+                                                                             nonneural-network approach that has been developed to per-
+updates. Nevertheless, they often exhibit unstable detection
+                                                                             form timestamp-level anomaly detection solely within the
+accuracy due to limited representation capabilities. In sum-
+                                                                             frequency domain.
+mary, while nonneural-network solutions are more suitable for
+real-world industrial edge devices with constrained resources,
+further optimization is necessary to enhance their representa-               C. New Insight
+tion capabilities and detection stability.                                      To fill such a gap, this article aims to design a purely
+   Recent studies [10], [11] reveal that the complex feature                 frequency-domain-based and nonneural-network timestamp-
+patterns of sensor signals in the time domain can always be                  level anomaly detection model for resource-limited IIoT
+simplified and effectively identified in the frequency domain.               environments.
+Consequently, frequency-domain analysis, such as fast Fourier                   To achieve this objective, two critical tasks should be
+transform (FFT) and discrete wavelet transform (DWT),                        taken into consideration. First, the feature of a timestamp
+emerges as a promising nonneural-network technology for                      in the frequency domain must be measured. In this article,
+timestamp-level anomaly detection, which provides both                       the frequency-spectrum (amplitude or phase) discrepancy with
+strong representation ability and fast processing speed. How-                and without a timestamp is considered as the feature of this
+ever, existing frequency-domain analysis-based nonneural-                    timestamp in the frequency domain, as shown in Fig. 1(a).
+network models mainly focus on collective-level [12] or                      It can be seen that the two sequences, with and without the
+subsequence-level anomaly detection [13]. Technically, they                  red-marked timestamp, form two comparison branches in the
+use FFT or DWT to transform an entire time series or a subse-                figure. The spectrum discrepancy between the two sequences is
+quence into the frequency domain to extract spectral features.               regarded as the feature of the red-marked timestamp. Second,
+These spectral features are then used to determine whether                   it is crucial to verify whether this measurement method can
+the time series or subsequence is abnormal. However, FFT                     effectively distinguish outliers from normal points. To verify
+CHEN et al.: FREQUENCY-DOMAIN SPECTRUM DISCREPANCY-BASED FAST ANOMALY DETECTION                                                 2520516
+
+
+
+the effectiveness, a sequence of length 20 containing at least                                     TABLE I
+one outlier is selected from two real-world datasets, Yahoo                                    R ELATED W ORK
+and SMTP. Next, the amplitude and phase discrepancies of a
+normal point and an outlier from two datasets are plotted in
+Fig. 1(b) and (c), respectively. By observation, it is not difficult
+to find that the spectrum discrepancy can distinguish outliers
+from normal points.
+
+D. Contribution
+   Based on the above discussions, a fast and nonneural-
+network timestamp-level anomaly detection model is proposed
+for IIoT sensor signals via spectrum discrepancy in the fre-
+quency domain. The main contributions of this work are
+summarized as follows.
+   1) Spectrum discrepancy is introduced to measure
+      timestamp-level features in the frequency domain,
+      which overcomes the difficulty of timestamp-level
+      feature extraction and anomaly detection only in the
+      frequency domain.
+   2) A nonneural-network fast anomaly detection model,
+      namely, FADSD, is proposed for IIoT sensor signals.
+      Technically, FADSD designs customized point-level and
+      sequence-level learning components, and a spectrum
+      discrepancy-based scoring strategy. They work together
+      to achieve anomaly detection with high speed, high
+      accuracy, and low resource consumption. To the best
+      of authors’ knowledge, this is the first work to deploy          bulky models often require a lot of GPU/CPU and storage
+      timestamp-level anomaly detection exclusively in the             resources, and they require long training time and testing time.
+      frequency domain.                                                Therefore, their timeliness is compromised, with processing
+   3) Extensive experiments on eight real-world IIoT datasets          times potentially extending to several hours or even days for
+      demonstrate that FADSD outperforms several state-of-             large-volume sensor signals.
+      the-art (SOTA) deep models. Moreover, experiments on                To enhance timeliness, acceleration techniques such as
+      STM32 and Raspberry Pi 4b verify that FADSD has high             parallelization, federated learning, and model compressi

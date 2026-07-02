@@ -1,0 +1,1038 @@
+5328 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ A Unified Framework for Hybrid Network
+ Intrusion Detection
+ Yan Wang , Sheng Cao , Member, IEEE, Jingwei Li , Member, IEEE,
+ and Xiaosong Zhang , Senior Member, IEEE
+
+ Abstract—Lately, hybrid network intrusion detection systems aims to detect and respond to malicious behavior or secu-
+(HNIDSs) have progressed significantly. Through the cascade rity incidents promptly. Its primary function is to detect
+or ensemble of multiple machine learning models, HNIDS malicious network traffic and provide relevant information
+benefits from each model and achieves better performance.
+A widely adopted framework for designing HNIDS consists for network administrators to take defensive or responsive
+of two models: a misuse detector and an anomaly detector. measures. Most NIDS construct intrusion detection models
+However, (1) benign traffic must be analyzed by both models, through machine learning or deep learning, converting network
+reducing inference speed; (2) the misuse detector performs dual intrusion detection into anomaly detection or multi-class clasfunctionalities, leading to suboptimal accuracy; (3) deploying sification tasks [3], [4], [5].
+the misuse and anomaly detectors on two devices introduces
+substantial latency and restricts distributed deployment. In this Due to the increasing types of malicious traffic, relying on
+article, we propose a unified framework called AUF. To solve a single machine learning model to accurately detect mali-
+(1), we deploy the anomaly detector in the first stage rather cious traffic is difficult [6], [7], [8]. Therefore, some studies
+than the second, which improves inference speed. To solve (2), attempted to integrate multiple machine-learning models to
+we employ two independent models to implement the misuse enhance the performance of intrusion detection, referred to
+detector’s functionality, enhancing overall accuracy. To solve
+(3), we ensure that the different models operate independently, as the HNIDS [9], [10], [11]. The core idea of HNIDS is
+supporting distributed deployment. To demonstrate the effec- to cascade multiple models and fully exploit their advantiveness of the AUF framework, we implement XGBoost for tages. However, due to the guidance of the framework, i.e.,
+detection and classification and propose an adaptive k-nearest specifying the functionalities required for each model and
+neighborhood-based approach to achieve accurate discrimina- their correlations, many HNIDSs simply cascade multiple
+tion. We also introduce zero-shot learning to showcase the
+framework’s customized model. Extensive experiments validate models together, as shown in Figure 1(a). This Non-framework
+the effectiveness of the AUF framework and methods. Our cascading tends to focus on improving the accuracy of
+code is available at https://github.com/wangyann2000/A-Unified- the hybrid model. However, they ignore some of the other
+Framework-for-Hybrid-Network-Intrusion-Detection. important performance metrics, including detection accu-
+ Index Terms—Intrusion detection, anomaly detection, out- racy, functionality completeness (e.g., detecting malicious
+of-distribution detection, multi-class classification, zero-shot traffic and identifying malicious traffic classes), inference
+learning, network security. speed, and distributed deployment capability. For convenience, we name such an issue the “loss-gain imbalance”
+ I. I NTRODUCTION in HNIDS.
+ Proposing the framework for guiding the design of HNIDS
+ HE NETWORK intrusion detection system (NIDS) is
+T a security tool that monitors the network [1], [2]. It
+ is the key to alleviating the “loss-gain imbalance,” where
+ Kim et al. [12] construct the framework that combines a
+ Received 29 September 2024; revised 5 March 2025 and 13 July 2025; misuse and an anomaly detector (MADF), as shown in
+accepted 11 September 2025. Date of publication 16 September 2025; date of Figure 1(b). All traffic is first analyzed by the misuse detector,
+current version 5 December 2025. This work is supported by Key Research followed by the anomaly detector for the MADF framework.
+and Development Program of Sichuan Province (2023ZHJY0006), Sichuan
+Province Science and Technology Support Program (2024NSFSC0004), and The misuse detector identifies seen malicious traffic, i.e.,
+National Natural Science Foundation of China (U2336204). The associate types/classes of malicious traffic available during training
+editor coordinating the review of this article and approving it for publication based on comparing features stored in the database, while
+was R. Doriguzzi-Corin. (Corresponding author: Sheng Cao.)
+ Yan Wang and Jingwei Li are with the School of Computer Science and the anomaly detector identifies unseen malicious traffic, i.e.,
+Engineering (School of Cyber Security), University of Electronic Science and new types/classes of malicious traffic unseen during training
+Technology of China, Chengdu 610054, Sichuan, China. by detecting features that deviate from benign traffic. Traffic
+ Sheng Cao is with the School of Computer Science and Engineering (School
+of Cyber Security), the Yibin Park, the Sichuan–Chongqing Co-construction that successfully passes the detection of both models will
+Key Laboratory of Digital Economy Intelligence and Security, and the be considered benign traffic. Despite the MADF framework’s
+Blockchain Storage and Trade Engineering Center of Sichuan province, attempt, it still suffers from the “loss-gain imbalance” issue:
+University of Electronic Science and Technology of China, Chengdu 610054,
+Sichuan, China (e-mail: caosheng@uestc.edu.cn). (1) benign traffic that constitutes most of the network traffic
+ Xiaosong Zhang is with the School of Computer Science and Engineering needs to pass through both models, resulting in low inference
+(School of Cyber Security) and the Shenzhen Institute for Advanced Study, speed; (2) the misuse detector both differentiates between
+University of Electronic Science and Technology of China, Chengdu 610054,
+Sichuan, China. seen and unseen malicious traffic and classifies seen malicious
+ Digital Object Identifier 10.1109/TNSM.2025.3609854 traffic, leading to suboptimal accuracy; (3) the misuse and
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5329
+
+ identify the categories of unseen samples with the help of
+ auxiliary information. With the assistance of the classifier
+ trained based on ZSL, administrators only need to provide
+ auxiliary information and validate the classification results,
+ thereby reducing labeling costs. The proposed semanticguided zero-shot learning approach (SG-ZSL) enhances the
+ correlation between auxiliary information and features by
+ maximizing mutual information, thus extracting more discriminative features for unseen malicious traffic. We summarize
+Fig. 1. (a) Visualization of the “Non-framework cascading”: Different
+methods introduce models with different functionalities, and the relationships our contributions as follows:
+between models vary. All network traffic typically needs to pass through all • Problem and Framework. We address the limitamodels for analysis. (b) Visualization of the MADF framework: Two models tions of “Non-framework cascading” and the MADF
+are responsible for separately detecting seen and unseen malicious traffic,
+requiring all traffic to be analyzed by both models. (c) Visualization of the framework—the “loss-gain imbalance” issue in HNIDS—
+AUF framework: Most network traffic only needs to be analyzed by a single by proposing a unified framework AUF. The AUF
+detector. The models are independent in functionality and support distributed framework cascades four unified models: a detector,
+deployment.
+ a discriminator, a classifier, and a customized model.
+ HNIDS built upon the AUF will benefit from the
+anomaly detectors deployed across different devices lead unified framework’s advantage, with faster inference
+to high traffic transmission costs and introduce substantial speed, better overall accuracy, and distributed deployment
+latency, making distributed deployment difficult. capabilities.
+ To tackle the “loss-gain imbalance,” we propose a unified • Discriminator. The adaptive KNN-based approach
+framework for HNIDS called AUF. As shown in Figure 1(c), exploits the distribution differences between seen
+the AUF framework consists of four unified, decoupled, and unseen malicious traffic in nearest neighbors.
+cascaded models: a detector, a discriminator, a classifier, and a The adaptive k estimated based on local density
+customized model. The detector distinguishes between benign benefits minority classes, thereby achieving accurate
+and malicious traffic, including seen and unseen malicious traf- discrimination.
+fic. The discriminator differentiates between seen and unseen • Customized Model. We introduce ZSL to train a classifier
+detected malicious traffic and forwards seen malicious traffic as the customized model within the AUF framework to
+to the classifier. The classifier categorizes detected seen mali- reduce the labeling cost for unseen malicious traffic. The
+cious traffic into its corresponding classes. The customized semantic-guided and contrastive learning loss preserves
+model can be integrated in a cascaded manner to analyze semantic consistency and enhances the discriminability
+malicious traffic based on the requirements. Compared to the of malicious traffic features.
+MADF framework, the advantages of the AUF framework • Sufficient Experiment Support. Our experimental results
+are threefold. Firstly, benign traffic accounts for most of the on the CIC-IDS2017 and the BoT-IoT datasets demonnetwork traffic and is analyzed only by the detector, thereby strate that the AUF framework (i) achieves satisfying
+improving inference speed. Furthermore, each model focuses performance both in individual models and in the cason implementing a single functionality, leading to better caded hybrid model, (ii) highlights the importance of
+performance than models handling multiple functionalities. handling class imbalance and generalization to unseen
+Finally, the decoupled models support distributed deployment, classes, and (iii) provides new baselines and insights for
+such as cloud-edge collaborative deployment. The detector can future research.
+be deployed on edge since malicious traffic detection requires
+high real-time performance. In contrast, the discriminator,
+ II. R ELATED W ORK
+classifier, and customized models can be deployed in the cloud
+to reduce the computational burden on edge devices. A. HNIDS Built Upon “Non-Framework Cascading”
+ We further introduce different methods to showcase Table I illustrates the differences in functionalities, inferthe design of HNIDS based on the AUF framework. ence speed, and distributed deployment support between SOTA
+(1) Detector and Classifier: We adopt tree-based models HNIDS, where N, M, and U denote HNIDS built upon the
+adaptable in multiple scenarios as the detector and the clas- “Non-framework cascading,” the MADF framework and the
+sifier. (2) Discriminator: We propose an adaptive k-nearest proposed unified framework, respectively. Based on model
+neighborhood-based (KNN) approach for better discrimina- functionality, we categorize the models in HNIDS into detector
+tion. The key of the adaptive KNN-based approach is to (anomaly detector), discriminator, classifier (misuse detector),
+determine whether malicious traffic belongs to the seen or and the customized model. Detector refers to models built on
+unseen based on the number of neighbors from the seen anomaly detection techniques, characterized by their ability
+categories in k-nearest neighbors. The value of k for each to distinguish between benign and malicious traffic, regardsample is adaptively determined according to its local density, less of whether the malicious traffic categories were seen
+mitigating the impact of class imbalance. (3) Customized or unseen during training. Discriminator refers to models
+model: We introduce zero-shot learning (ZSL) to assist admin- constructed based on out-of-distribution detection techniques,
+istrators in labeling unseen malicious traffic. ZSL aims to capable of differentiating between seen and unseen malicious
+5330 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ TABLE I
+ F RAMEWORK C OMPARISON
+
+traffic. Classifier refers to binary or multi-class models. Binary additional multi-class classifier to enhance accuracy. However,
+classifiers can distinguish between benign and seen malicious neither of these approaches can detect unseen categories of
+traffic, while multi-class classifiers can identify categories of malicious traffic. An et al. (TCCN 2022) [18] introduced the
+seen malicious traffic. The customized model have no fixed Birch clustering algorithm and an autoencoder to detect malifunctionality. cious traffic. Bovenzi et al. [19] design the Multi-Modal Deep
+ ElSayed et al. (JNCA 2021) [13], Mushtaq et al. (Appl. Auto-Encoder (M2-DAE) to detect both seen and unseen mali-
+Soft Comput. 2022) [14], Lan et al. (Appl. Intell. 2023) [15], cious traffic and employ the classifier’s output to determine
+emphasize the importance of discriminative feature extraction the category of malicious traffic. Verkerken et al. [20] extend
+in enhancing accuracy, designing HNIDSs that include both Bovenzi’s hybrid system by introducing an extension stage for
+feature extractors and classifiers. These three approaches recalling wrongly detected benign traffic. However, these three
+employed convolutional neural networks, autoencoders, and methods rely on unsupervised learning for detection, making
+triplet networks as feature extractors to capture discriminative it difficult to maintain low false negative and false positive
+features. ElSayed’s approach, which uses a single machine rates.
+learning-based classifier, can only perform binary or multi- Kye et al. (SPL 2022) [21] and Alzaqebah et al. (COSE
+class classification separately without the ability to detect 2023) [22] apply multiple models directly to malicious traffic
+seen malicious traffic types and unseen malicious traffic detection. Kye et al. develop a HNIDS composed of an encoder
+simultaneously. Mushtaq’s method leverages long short-term and a decoder. The encoder first calculates the Mahalanobis
+memory (LSTM) networks for classification, which can only distance as an anomaly score to assess the deviation of the
+detect seen malicious traffic. Lan’s approach, based on one- input traffic from benign traffic, setting a low threshold to
+class support vector machines, can detect both seen and unseen detect traffic with high anomaly scores. Traffic that passes
+malicious traffic but cannot identify specific categories of seen through the encoder is forwarded into the decoder for secmalicious traffic. ondary detection, and traffic with high reconstruction loss
+ Some studies aim to develop HNIDS with more complete is flagged as malicious. Alzaqebah et al. decompose the
+functionalities by cascading multiple models, enabling both multi-class classification task into several binary classification
+the detection of unseen malicious traffic and the classification tasks. Each base classifier focuses on distinguishing between
+of seen malicious traffic. For instance, de Souza et al. (CN benign traffic and a specific type of malicious traffic, and
+2020) [16] cascade a binary classifier with a multi-class clas- final predictions are jointly made based on each classifier’s
+sifier, where the binary classifier distinguishes between benign prediction. These methods cannot detect unseen malicious
+and malicious traffic, and the multi-class classifier identifies traffic, and the coupled design restricts the distributed
+the specific category of malicious traffic. Similar to Cristiano deployment of machine-learning models across different
+Antonio et al., Chen et al. (CN 2024) [17] further integrate an devices.
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5331
+
+B. HNIDS Built Upon the “MADF” Framework Each module within AUF (detector, discriminator, classifier, or
+ HNIDS built upon the MADF framework typically includes customized model) can be implemented using unsupervised,
+a misuse and an anomaly detector, enabling the detection semi-supervised, or supervised learning methods, and can
+of seen and unseen malicious traffic and the recognition of accept either raw traffic or preprocessed features as input.
+malicious traffic categories. For instance, Yang et al. (TIFS This flexibility not only ensures compatibility with a wide
+2021) [24] leveraged the conditional VAE as the misuse range of existing NIDS methods but also provides a scalable
+detection phase to determine whether the input traffic belongs and extensible foundation for future developments in intrusion
+to benign or specific seen malicious classes and utilized detection research. (3) Unification of open-source code. Due
+the generative-based anomaly detector to identify unseen to the lack of publicly available source code in most existing
+malicious traffic. Yang et al. (ESWA 2024) [26] proposed hybrid NIDS implementations, reproducing prior work is often
+an architecture that employed a stacking-based classifier as difficult and unreliable. As shown in Table I, we publicly
+the misuse detector and utilized the generative-based anomaly release the source code of AUF, enabling future work to build
+detector for detecting unseen malicious traffic. Li et al. (IOT upon the proposed AUF framework.
+2022) [25] followed the same misuse detector but differed in
+that the anomaly detector employed the clustering labeling C. Contrastive Embedding-Based Zero-Shot Learning
+k-means (CL k-means) for unseen malicious traffic detection. Classifying unseen malicious traffic is challenging due to
+Some studies route all traffic through the anomaly detector the lack of labeled samples for training. ZSL is a machine
+to address the issue where some unseen malicious traffic is learning method that enables models to infer when facing
+misidentified as seen malicious traffic by the misuse detec- unseen classes or samples by leveraging auxiliary semantic
+tor. Chen et al. [27] (CN 2024) develop a semi-supervised information and class relationships. The key of ZSL lies
+learning-based approach, constructing a multi-class classifier in constructing a “bridge” between features and seman-
+(identifying K seen malicious traffic classes) and K binary tic information. Many methods have introduced contrastive
+classifiers (each corresponding to a seen class, distinguishing embeddings into ZSL in recent years and achieved promising
+it from unseen traffic). Each binary classifier focuses on deter- results. Han et al. [30] first introduced contrastive embedmining whether samples predicted as belonging to a specific dings into ZSL. The model learns contrastive embeddings at
+class are unseen malicious traffic. During prediction, traffic both class and instance levels, assisting generative models in
+is first analyzed and classified into a specific category by the generating more discriminative features for unseen classes.
+multi-class classifier and then forwarded to the corresponding Building upon [30], Fan et al. [32] further decomposed embedbinary classifier to determine if it is unseen malicious traffic. dings into semantically related and semantically unrelated
+Zhong et al. [28] (TIFS 2024) build the misuse detector embeddings. Li et al. [31] introduced feature contrastive
+based on deep neural networks and contrastive learning, optimization module (FCOM) and cycle reconstruction loss
+employing a deep k-nearest neighbors algorithm to determine in the proposed method, encouraging the model to generate
+whether traffic belongs to unseen malicious categories. The visually consistent and discriminative features with semantic
+deep k-nearest neighbors algorithm takes hidden layer features coherence. Wang et al. [33] utilized generated samples to
+from both the deep neural network and the adversarial neural train the contrastive embedding model for more generalnetwork as input to more accurately identify unseen malicious ized embedding. Kong et al. [34] proposed an Intra-Class
+traffic. Although the MADF framework integrates function- Compactness Enhancement method (ICCE) to enhance intraalities including detection, discrimination, and classification, class compactness, jointly promoting intra-class compactness
+it still encounters the “loss-gain imbalance” issue. In contrast, and inter-class separability in embedding and visual feature
+the proposed AUF framework achieves “unification” across space.
+three key dimensions and effectively addresses the lossgain imbalance problem that previous approaches struggle
+ III. M ETHODOLOGY
+to overcome: (1) Unification of models and corresponding
+functionalities. As mentioned above, in MADF-based and A. Overall Architecture
+certain cascaded HNIDS architectures, individual models are As illustrated in Figure 2, the AUF framework conresponsible for multiple tasks simultaneously. For instance, sists of four cascaded stages. Given a feature set X =
+classifiers in [19] and [20] are required to both distinguish a , . . . , xa
+ {x1b , . . . , xnb , xn+1 n+m } composed of n benign trafbetween seen and unseen malicious traffic and identify the fic samples and m malicious traffic samples as input, the
+categories of seen malicious traffic. In contrast, AUF adopts a detector at stage 1 outputs anomaly scores for each sample.
+functionally decoupled design where each model is dedicated If the anomaly score exceeds τ1 , the sample is recognized
+to a single task. This design enables more comprehensive as malicious traffic and forwarded to the discriminator at
+functionalities, faster inference speed for benign traffic, and stage 2. Given the detector has detected d seen malicious
+improved accuracy. (2) Unification of modeling and traffic traffic samples and m − d unseen malicious samples formprocessing. Some existing HNIDSs restrict the way of con- ing a feature set Xa = {x1s , . . . , xds , xd+1 u , . . . , x u }, the
+ m
+structing models. For example, [19] and [20] specify in their discriminator at stage 2 outputs out-of-distribution (OOD)
+architectures that anomaly detectors be trained using only scores for each detected malicious traffic sample. If the OOD
+benign traffic. In contrast, AUF imposes no such restrictions. score exceeds τ2 , the sample is considered unseen malicious
+5332 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 2. Proposed AUF Framework. Blue, orange, green, and purple colors indicate the corresponding stages of the detector, discriminator, and classifier
+with the customized model. It integrates a detector, discriminator, classifier, and customized model in a cascaded manner, with each model only focusing on
+realizing a single functionality.
+
+ TABLE II
+traffic and forwarded to the unseen classifier (customized ACRONYMS S UMMARY
+model) at stage 4; otherwise, the sample is considered seen
+malicious traffic and forwarded to the seen classifier at stage
+3. Given the discriminator has detected d seen malicious
+traffic samples Xs = {x1s , . . . , xds } and m − d unseen
+malicious traffic samples Xu = {x1u , . . . , xm−d u }, the seen
+classifier fseen : Xs → Ys at stage 3 and unseen classifier funseen : Xu → Yu at stage 4 output probability
+distribution and make predictions for each detected malicious
+traffic samples, where Ys = {y1 , y2 , . . . , yS } and Yu =
+{y1 , y2 , . . . , yU } denote the label space of seen and unseen
+classes. The unseen classifier is trained on the training set containing seen malicious traffic samples Xt = {x1s , . . . , xts } and
+auxiliary semantic information corresponding to the categories
+A = {a1s , . . . , aes , a1u , . . . , afu } due to the lack of labeled
+training samples of unseen classes. The critical acronyms are
+summarized in Table II.
+
+B. Discrimination malicious traffic. Given the malicious traffic samples detected
+ An interesting phenomenon we observe is that malicious in the first stage Xa = {x1s , . . . , xds , xd+1 u , . . . , x u }, and
+ m
+traffic of the same category exhibit similar features, with their the training set containing seen malicious traffic samples
+distribution in feature space being more concentrated, forming Xt = {x1s , . . . , xts }, the union of these two sets is Xall =
+one or more continuous clusters. In contrast, malicious traffic
+ u , . . . , x u , x s , . . . , x s }. For seen malicious
+ {x1s , . . . , xds , xd+1 m 1 t
+of different categories tends to occupy distinct regions in the traffic Xs = {x1d , . . . , xds }, their nearest neighbors in Xall
+feature space. The nearest neighborhoods of seen malicious are more likely to belong to the training set Xt . Conversely,
+traffic samples typically contain more seen malicious traffic, for unseen malicious traffic Xu = {x1u , . . . , xm−d u }, their
+which provides insights for discriminating seen from unseen nearest neighbors in Xall mainly belong to the test set Xa .
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5333
+
+ As mentioned above, samples from majority classes tend
+ to have higher local density and require a higher k value.
+ In contrast, samples from minority classes are prone to have
+ lower local density and require a smaller k value. Thus, we
+ normalize and invert the distance as follows:
+ d̄ (xi ) − dmin
+ d̃ (xi ) = 1 − , (4)
+ dmax − dmin
+
+Fig. 3. Proposed adaptive KNN-based approach for discrimination. Based
+ where dmin and dmax denote the minimum and maximum
+on the local density of each sample, we first compute the adaptive k value for mean distances across all samples from test set Xa , respeceach sample and determine whether it belongs to seen or unseen malicious tively. Finally, the adaptive k value for each sample is
+traffic, depending on the number of samples belonging to the training set in
+the k-nearest neighbors.
+ determined as:
+ ki = kmin + d̃ (xi ) × (kmax − kmin ), (5)
+Inspired by [29], we can discriminate between seen and where kmin and kmax denote the minimum and maximum
+unseen malicious traffic by calculating the nearest neighbors values of k as specified in hyperparameters. Given the set of
+to the training set Xt . As a result, for each sample xi from adaptive k-nearest neighbors NNki (xi ) = {xi1 , xi2 , . . . , xik }
+ i
+ u , . . . , x u }, the first step is to calculate
+Xa = {x1s , . . . , xds , xd+1 m for sample xi , the OOD score is calculated as follows:
+the Euclidean distance d (xi , xj ) between xi and Xall =
+ ki
+{x1s , . . . , xds , xd+1
+ u , . . . , x u , x s , . . . , x s }:
+ m 1 t score(xi ) = k   , (6)
+    
+ i
+ xij ∈NNki (xi )
+ I xij ∈ Xt + 1
+ d x i , x j = x i − x j 2 , (1) j =1
+
+ Then, we sort the distances d (xi , xj ) in ascending where I(xij ∈ Xt ) denotes the indicator function that returns
+order and select the top k nearest neighbors NNk (xi ) = 1 if the neighbor xij is from the training set (i.e., xij ∈ Xt ),
+{xi1 , xi2 , . . . , xik }. The OOD score for each sample score(xi ) and 0 otherwise. Since unseen malicious traffic tends to have
+depends on the number of neighbors from seen categories higher OOD scores, we can discriminate unseen malicious trafwithin the fixed k nearest neighbors, which is calculated as fic by setting a threshold τ , where malicious traffic exceeding
+follows: this threshold is recognized as unseen malicious traffic.
+ I
+   
+ score(xi ) = / Xt
+ xij ∈ (2) C. Unseen Malicious Traffic Classification
+ xij ∈NNk (xi ) 1) Semantic Information Extraction: As mentioned above,
+ j =1 classifying unseen malicious traffic without labeled samwhere I(xij ∈ / Xt ) denotes the indicator function that returns ples requires incorporating auxiliary semantic information for
+0 if the neighbor xij is from the training set (i.e., xij ∈ Xt ), unseen classes. Therefore, extracting task-relevant and highand 1 otherwise. quality semantic information is the first crucial step. There
+ An inevitable issue is that the fixed k value does not fit are many ways to obtain auxiliary semantic information,
+samples from all classes. For example, in the CIC-IDS2017 such as expert knowledge and network information. We
+dataset, the Heartbleed category contains only nine sam- achieve this goal through SecureBERT [35], a domain-specific
+ples, while the PortScan category contains 100,000 samples. language model for cybersecurity. Specifically, we design
+Suppose k is fixed at a value larger than nine. In that case, prompts corresponding to categories, such as “A malicious
+the k-nearest neighbors for samples in the Heartbleed category traffic of PortScan.” and forward them into the SecureBERT.
+will include many samples from other categories, which would SecureBERT then produces a 768-dimensional word embedinterfere with the discrimination. Therefore, it is necessary to ding representing the semantic information of the category.
+calculate an adaptive k value for each sample. As illustrated These embeddings serve as the auxiliary information for zeroin Figure 3, given that samples from the majority classes shot classification.
+tend to be higher in local density than samples from the 2) Feature Generation: After obtaining auxiliary semantic
+minority classes, we calculate mean distances and determine information, the next step is to build a “bridge” between it
+the k value for each sample. Based on the distance calculated and the features.As shown in Figure 4, we deploy Wasserstein
+as Equation (1), we sort the distances d (xi , xj ) in ascending GAN as the backbone architecture of the model. Specifically,
+order and select the top k̂ nearest neighbors NNk̂ (xi ) = Wasserstein GAN comprises a generator G and a discriminator
+ D. The generator G takes Gaussian noise ε ∼ Ṅ (0, 1) and
+{xi1 , xi2 , . . . , xik̂ }. k̂ is a number larger than k for acquiring
+ semantic information a as input and generates fake features
+more accurate local density. Then we calculate mean distance
+ x . Real feature x and fake feature x are concatenated with
+d̄ (xi ) of k̂ nearest neighbors as follows:
+ semantic information a and then fed into the discriminator
+ 1  
+ k̂ D for adversarial training. Given semantic information a for
+ d̄ (xi ) = d x i , x ij (3) unseen classes and noise z, we can generate features correk̂ j =1 sponding to the categories of malicious traffic with the trained
+5334 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 4. Proposed SG-ZSL approach. The generator generates features that match the given semantic information; the semantic guidance module extracts
+embeddings with semantic information; the contrastive embedding module is responsible for enhancing the discriminative of embeddings.
+
+generator. The generator and discriminator are optimized by On the other hand, we train a mutual information estimator
+the following objective: F(z, a) to guide the encoder E to learn embeddings related
+ to semantic information. Compared to directly aligning the
+ LWGAN = E[D(x , a)] − E[D(x̃ , a)] −
+ distributions of features and semantic information, maximizing
+ λE (∇x̂ D(x̂ , a)2 − 1)2 , (7) mutual information helps preserve the features’ diversity. We
+ follow the approach proposed in [36] to estimate the mutual
+where x = G(ε, a) denotes the synthesized fake features, information between semantic information and features:
+and the last term denotes the gradient penalty, where λ is the
+ 1 
+ N
+penalty coefficient. exp(F (zi , ai ))
+ I (zi , ai ) = E log 1 N . (9)
+ j =1 exp(F (zi , ai ))
+ 3) Semantic-Guided Module: To further establish the cor- N
+ i=1 N
+relation between feature and semantic information, we train the Finally, we define the loss function of the semantic-guided
+encoder E with the semantic-guided module, ensuring that the module as follows:
+embedding z = E(x) of the feature x contains as much semantic
+information as possible. On the one hand, we encourage the Lsg = Lmat − β I (zi , ai ), (10)
+encoder E to generate embeddings matching the corresponding where β denotes the weight for maximizing mutual
+class semantics by training a matching network M(z, a). The information.
+matching network accepts one positive pair of embedding and 4) Contrastive Embedding Module: Learning discriminasemantic information and K − 1 negative pairs and measures tive features is also crucial since the ultimate goal is to train a
+their correlation. If they belong to the same class, they are classifier. We achieve this goal through the contrastive embedconsidered a match; otherwise, they are not. Concretely, we ding module, which enhances intra-class compactness and
+optimize the encoder E and the matching network M with the inter-class separability in the embedding space. Specifically,
+following constraint: for the original features x, we randomly sample a positive
+     sample x + from the training batch and K negative samples
+ exp M zi , a + /τs
+ Lmat = Ezi ,a + −log K , (8)
+ −
+ {x1− , . . . , xK }. Through the encoder E and non-linear pro-
+ K =1 exp(F (zi , aK )/τS ) jection head H, we aim to minimize the distance between
+where a + denotes the semantic information corresponding to hi = H (E (x )) and hi+ = H (E (x + )), while maximizing
+the same class as zi , K denotes the number of seen malicious the distance between hi and {h1− , . . . , hK−
+ }. Specifically, we
+traffic categories, aK denotes the semantic information dif- optimize the following supervised contrastive learning loss:
+    
+ferent from the class of zi , and τS denotes the temperature exp hi h + /τe
+ Lce = Ezi ,a + −log   K   −  , (11)
+parameter. exp hi h + /τe + k =1 exp hi hb /τe
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5335
+
+ TABLE III
+where K denotes the number of negative samples, and τe D ETAILS OF CIC-IDS2017 AND B OT-I OT DATASET
+denotes the temperature parameter.
+ 5) Overall Objective: Combining the above objective functions, we formulate the total objective function of our hybrid
+framework as follows:
+Ltotal = LWGAN (G, D) + Lsg (E , M , F ) + γLce (E , H ),
+ (12)
+where LWGAN (G, D) denotes the optimization of parameters
+for generator G and discriminator D, Lsg (E , M , F ) denotes
+the optimization of parameters for encoder E, matching
+network M, and mutual information estimator F, γ denotes the
+weight of contrastive embedding loss, and Lce (E , H ) denotes
+the optimization of parameters for encoder E and non-linear
+projection head H.
+ 6) Classification: We first need to collect auxiliary semantic information of unseen malicious traffic to classify unseen
+malicious traffic. As mentioned above, we feed the prompt
+containing the unseen class category into SecureBert and
+obtain the corresponding embedding as auxiliary semantic
+information. Next, we utilize the semantic information of
+unseen classes a1 , . . . , aU and the generator G to synthesize
+a set of features for each unseen classes x1u , . . . , xm
+ u , where 477 normal traffic samples, accounting for a mere 0.013% of
+xi = G(ε, au ). The embeddings z1 , . . . , zm can be obtained
+ u u u the total dataset. We utilize all available samples for dataset
+through the encoder E, where ziu = E (xiu ). We can train a splits without excluding any instances to maintain the classclassifier for unseen malicious traffic classification based on imbalanced characteristics. We use the labeled CSV feature
+these discriminative embeddings containing sufficient semantic files provided by the CIC-IDS2017 and BoT-IoT datasets for
+information and corresponding labels. The performance of the dataset split. For the CIC-IDS2017 dataset, we adopt the
+classifier is evaluated based on the prediction accuracy. same preprocessing strategy as [39] and retain 70-dimensional
+ features. For the BoT-IoT dataset, we utilize the selected
+ 10-dimensional features provided by the dataset. It is worth
+ IV. E XPERIMENTAL S ETUP
+ noting that the proposed AUF framework does not restrict the
+A. Dataset form of features processed by different models. Models based
+ We employ the BoT-IoT dataset [37] adopted by on flow-based statistics or pre-processed features as input are
+Bovenzi et al. [19] (abbreviated as HIoT) and the CIC- compatible with the AUF framework.
+IDS2017 dataset [38] adopted by Verkerken et al. [20] to Figure 5 illustrates the dataset split on the CIC-IDS2017
+evaluate the effectiveness of the proposed AUF framework. dataset for evaluating different models. For evaluating the
+The CIC-IDS2017 dataset includes raw PCAP traffic files and detector, we randomly designate eleven classes as seen mali-
+78-dimensional feature files extracted using CICFlowMeter. cious classes, while the remaining three serve as unseen
+As shown in Table III, the CIC-IDS2017 dataset encom- malicious classes. The training set consists of samples from
+passes 14 types of malicious traffic, including DoS, Portscan, eight seen malicious classes and the benign class, whereas the
+Infiltration, and Bot attacks. The number of samples in validation set includes samples from all eleven seen malicious
+different categories varies greatly. For example, the majority classes and the benign class. The test set used for detection
+classes, such as Benign and DoS Hulk, contain 2,095,057 and contains samples from all fourteen malicious classes and the
+172,846 samples, respectively. In contrast, minority classes benign class. The dataset split follows a similar approach
+like Infiltration and Heartbleed have only 36 and 11 samples, for evaluating the discriminator and the customized unseen
+respectively, highlighting that the network traffic is highly malicious traffic classifier, with the only difference being the
+class-imbalanced. exclusion of the benign class. The training, validation, and test
+ The BoT-IoT dataset consists of raw PCAP traffic files and sets consist solely of samples from the eleven seen malicious
+feature files containing the 10 selected features. As shown classes for evaluating seen malicious traffic classifiers. The
+in Table III, the BoT-IoT dataset includes four categories of partitioning of seen and unseen classes results in 364 possible
+malicious traffic: DDoS, DoS, Reconnaissance, and Theft. permutations, from which we randomly select 98 as the final
+Similar to CIC-IDS2017, the network traffic exhibits an imbal- dataset splits. The BoT-IoT dataset split utilizes the same
+anced class distribution. The DDoS category, with the highest strategy as the CIC-IDS2017 dataset, with the only difference
+number of samples, comprises 1,926,624 instances, whereas being the number of classes in the training, validation, and test
+the Theft category, with the fewest samples, includes only sets. Specifically, we randomly select two as seen malicious
+79 instances. Notably, unlike CIC-IDS2017, the proportion of classes and the remaining two as unseen ones. Since this
+malicious traffic in BoT-IoT is significantly higher, with only division results in six possible permutations, we retain all
+5336 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 5. Proposed dataset splits on CIC-IDS2017 dataset. Blue, yellow, and green colors indicate the training set, validation set, and test set samples,
+respectively.
+
+of them as the final dataset splits. This partitioning strategy C. Evaluation Metrics
+accounts for the presence of seen and unseen malicious We evaluate the performance of different models using
+traffic in real-world network environments and the chal- different metrics. Specifically, we utilize Area Under the
+lenges posed by class-imbalanced malicious traffic, ensuring Receiver Operating Characteristic Curve (AUC-ROC), Area
+a robust testbed for evaluating the proposed methods and Under the Precision-Recall Curve (AUC-PR), Micro Recall,
+framework. and Macro Recall to measure the performance of the detector
+ and the discriminator, and the Micro Recall and Macro Recall
+B. Implement Details to evaluate the performance of both seen and unseen clas-
+ We employ XGBoost from [40] using the default parameters sifiers. All methods adopt a consistent thresholding strategy
+for the detector, as XGBoost has been proven to perform to determine binary decisions based on detection scores.
+well in anomaly detection and intrusion detection tasks [40], Specifically, we define a fixed True Positive Rate (TPR) as
+[41], [42], [43], [44], [45], [46]. We set the values of k in the thresholding criterion: TPR = 0.99 for two datasets.
+equation (2), k̂ in equation (3), kmax , and kmin in equation (5) These thresholds are applied uniformly to the output scores
+to 20, 200, 20, and 3, respectively, for the discrimination from the detector, discrimination stage, and extension stage of
+of the CIC-IDS2017 dataset split. Given that the BoT-IoT Verkerken et al. [20] to ensure fair comparison. In addition
+dataset split contains a larger sample size, we increase kmax in to assessing the performance of each model individually, we
+equation (5) to 40. We utilize the widely used XGBoost with cascade the detector, discriminator, classifier, and customized
+its default parameters for the seen classifier. We implement the model to evaluate the overall classification performance. We
+feature extractor using a multilayer perceptron with Rectified treat wrongly detected benign traffic as malicious traffic and
+Linear Unit (ReLU) activation and 128 hidden units for the assign malicious labels to the wrongly detected benign traffic
+SG-ZSL approach. The overall objective function is optimized with the discriminator and classifier. At the same time, we
+using the Adam solver with a batch size of 2048 and a learning assign wrongly detected malicious traffic benign labels. For
+rate of 1e −4 . The size of the hidden units for the generator wrongly discriminated malicious traffic, we assign labels
+G, discriminator D, and comparator network F are fixed at from unseen malicious classes to wrongly discriminated seen
+128, 128, and 70, respectively. The weights of the contrastive malicious traffic and labels from seen malicious classes to
+embedding loss γ in equation (12) and the mutual information wrongly discriminated unseen malicious traffic.
+maximization β in equation (10) are set to 0.01. After the To demonstrate the superiority of our proposed adaptive
+generator G and feature extractor E converge, we generate KNN-based approach, we introduce HIoT [19] and DNN
+10,000 samples for each class and train an XGBoost classifier (ICML 2022) [29] for comparison. HIoT identifies traffic as
+as the unseen classifier. Since the BoT-IoT dataset contains unseen malicious traffic if the maximum value of the predicted
+only four malicious traffic categories, we only compare dif- probability is less than the threshold. DNN calculates the
+ferent unseen classifiers on the CIC-IDS2017 dataset. All data k-nearest neighbors for each test sample and considers the
+splits utilize the same hyperparameter settings. The reported distance to the k-th nearest neighbor as the anomaly score.
+data are average results across all dataset splits. The figures We select HIoT and DNN as representative baselines based
+without specified dataset split adopt the same dataset split: for on two criteria. On the one hand, HIoT shares structural
+the CIC-IDS2017 dataset, we adopt the split with the BoT, similarities with the proposed AUF framework for hybrid
+DDoS, and Slowloris classes specified as the unseen malicious network intrusion detection. On the other hand, our proposed
+traffic classes. For the BoT-IoT dataset, we adopt the split with adaptive KNN-based method is directly inspired by the outthe DDoS and Scan classes specified as the unseen malicious of-distribution detection approach in DNN. We do not include
+traffic classes. Verkerken et al.’s method in the comparison because it takes
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5337
+
+the same method for recognizing unseen malicious traffic as
+HIoT. For fair comparison with the DNN method, we calculate
+the K nearest neighbors of each test set sample in the training
+set and select the distance between the sample and the Kth
+nearest neighbor as the OOD score. The value of parameter K
+is the same as kmax in equation (5): 20 for the CIC-IDS2017
+dataset and 40 for the BoT-IoT dataset. We directly use the
+raw features rather than training additional feature extractors.
+ Regarding unseen classification, we compare the proposed
+SG-ZSL with three SOTA contrastive embedding-based ZSL Fig. 6. Class-wise recall of three dataset splits for detection.
+methods: CE-GZSL [30], CO-GZSL [31], and CD-GZSL [32].
+Since these approaches share the same backbone and training when Infiltration, Bruteforce, and SQL Injection are unseen
+strategy proposed by CE-GZSL, we implement all methods classes, the recall for categories such as Bot, Infiltration,
+using the official codes, ensuring that all hyperparameters and SQL Injection is unsatisfying. The decline in minority
+except for method-specific are the same for fair comparison. classes suggests that the detector’s performance depends on the
+ We also compare the hybrid performance of the AUF number of available training samples and classes. In addition
+framework, HIoT, and Verkerken et al.’s method. For fair to the class imbalance problem, the setting of thresholds also
+comparison, these three methods employ XGBoost as the affects Micro Recall and Macro Recall. For the CIC-IDS2017
+detector and classifier.We select XGBoost since it yields better dataset, while 99% of malicious traffic is detected, a large
+performance than unsupervised models and is commonly used amount of benign traffic is also misdetected as malicious
+in intrusion detection studies. traffic. The recall of benign traffic is 0.8163, which is lower
+ than the recall of most malicious traffic categories. Since
+ benign traffic accounts for the majority of traffic, Micro Recall
+ V. E VALUATION
+ is lower than Macro Recall.
+A. Detection Results Table IV also presents the speed differences between the
+ 1) Performance: Table IV shows the performance of AUF and MADF in distinguishing benign and malicious
+XGBoost model as the detector and the seen classifier. As traffic. Both frameworks employ XGBoost as the detector
+one of the best anomaly detectors, XGBoost achieves high and classifier for fair comparison. On the CIC-IDS2017
+performance across all evaluation metrics. For the CIC- and BoT-IoT datasets, the AUF completes malicious traffic
+IDS2017 dataset, XGBoost achieves an AUC-ROC of 0.9714 detection in 0.1522s and 0.0957s, respectively. In contrast, on
+and an AUC-PR of 0.9525. While on the BoT-IoT dataset, the CIC-IDS2017 dataset, MADF takes 0.5267s to complete
+XGBoost performs better with an AUC-ROC of 0.9988 and malicious traffic detection, consuming more than three times
+an AUC-PR of 1.0, indicating its ability to differentiate the inference time of the AUF. On the BoT-IoT dataset, MADF
+between benign and malicious samples. A notable observation requires 0.1809s, which is still nearly twice the time required
+is the gap between Macro Recall and Micro Recall in the by the AUF. The primary reason for this discrepancy is that the
+two datasets. XGBoost achieves Micro Recall of 0.8671 and classifier significantly increases the overall inference time. The
+0.9999 on CIC-IDS2017 and BoT-IoT datasets, respectively. detector is deployed in the first stage for the AUF, allowing
+However, the Macro Recall of 0.9455 and 0.9162 suggest a it to differentiate between benign and malicious traffic solely
+disparity in detection performance across different categories. through the detector. The MADF requires the majority of
+This discrepancy mainly results from class imbalance, where benign traffic to be processed by both the misuse detector (i.e.,
+certain classes of malicious traffic have fewer samples in classifier) and the anomaly detector (i.e., detector). Although
+the dataset, leading to suboptimal Macro Recall for minority the classifier detects some malicious traffic in the first stage,
+classes. This discrepancy also highlights a common challenge thereby reducing the detector’s inference time, the time cost
+in anomaly detection: ensuring that models generalize well to remains high. The design of the AUF framework enhances
+all classes, especially to minority classes. malicious traffic detection speed. It is expected to achieve
+ To further investigate the decline in Macro Recall, we higher accuracy and faster inference when incorporating more
+calculate the class-wise recall of XGBoost algorithm across advanced detectors, such as [47], [48].
+98 dataset splits in Table VI. The class imbalance problem 2) Impact on Unseen Malicious Traffic: Class-imbalanced
+is obviously one of the important reasons for the difference traffic and unseen malicious traffic are challenges faced by all
+between Macro Recall and Micro Recall. Classes such as HNIDSs. Class-imbalanced traffic affects the recall of minority
+DDoS, DoS Hulk, and DoS GoldenEye achieve an average classes, while unseen malicious traffic impacts the detection
+recall of 0.99, demonstrating that the detector can accurately performance of both the majority class and the minority class.
+identify most malicious traffic. However, the recall for some Taking the CIC-IDS2017 dataset as an example, the Bot class
+minority classes is relatively low, especially when these classes achieves an average recall of only 0.8848 with 1948 samples,
+are unseen during training. Figure 6 illustrates the class-wise lower than the Brute Force (0.9954) and XSS (0.9947) classes
+recall of three dataset splits on the CIC-IDS2017 dataset. For with only 1470 and 652 samples, respectively. To further
+instance, when Heartbleed, SSH, and XSS are unseen classes, investigate the impact of unseen malicious traffic, we set two
+the recall for SSH and Heartbleed drops to zero. Similarly, experimental scenarios: (1) all malicious traffic classes are
+5338 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ TABLE IV
+ P ERFORMANCE OF THE D ETECTOR AND S EEN C LASSIFIER
+
+ Fig. 8. Feature importance score of the detector on two datasets. (a) Feature
+ importance score on the CIC-IDS2017 dataset with the test set includes
+ both seen and unseen malicious traffic. (b) Feature importance score on the
+ CIC-IDS2017 dataset with the test set contains only seen malicious traffic.
+Fig. 7. Density histogram of the detector on two datasets. (a) Density (c) Feature importance score on the BoT-IoT dataset with the test set includes
+histogram on the CIC-IDS2017 dataset with the test set includes both seen and both seen and unseen malicious traffic. (d) Feature importance score on the
+unseen malicious traffic. (b) Density histogram on the CIC-IDS2017 dataset BoT-IoT dataset with the test set contains only seen malicious traffic.
+with the test set contains only seen malicious traffic. (c) Density histogram on
+the BoT-IoT dataset with the test set includes both seen and unseen malicious
+traffic. (d) Density histogram on the BoT-IoT dataset with the test set contains
+only seen malicious traffic. missed detection of unseen malicious traffic, highlighting the
+ necessity of designing the detector with generalization for
+ unseen malicious traffic.
+available during the training phase, and the test set contains Leveraging XGBoost’s interpretability, we analyze feature
+only seen malicious traffic, and (2) some classes of malicious importance variations to understand XGBoost’s performance
+traffic are unavailable during the training phase, the test set under different scenarios. Figure 8 shows the feature imporincludes both seen and unseen malicious traffic, consistent tance scores of XGBoost in both experimental settings.
+with our proposed dataset split. For the CIC-IDS2017 dataset, the eight most impor-
+ Figure 7 illustrates XGBoost’s performance under two sce- tant features remain unchanged across scenarios. Notably,
+narios. For the CIC-IDS2017 dataset, seen malicious traffic five features—Destination Port, Init_Win_bytes_forward,
+generally exhibits high anomaly scores, while benign traffic Init_Win_bytes_backward, Flow IAT Min, and Fwd IAT
+maintains low anomaly scores. This difference explains why Min—consistently exhibit importance scores above 100, indi-
+XGBoost performs well in anomaly detection - choosing a cating their crucial role in malicious traffic detection.
+threshold between 0.1 and 0.9 enables accurate detection. However, the rankings and scores of individual features
+However, the anomaly scores of unseen malicious traffic differ undergo noticeable shifts. Flow IAT Mean and Total Fwd
+from those of seen classes, with only approximately 60% of Packets emerge as the ninth and tenth most important features,
+unseen malicious traffic having high anomaly scores. Nearly each with an importance score of 65 when the test set
+40% of the unseen malicious traffic is low in anomaly score, includes both seen and unseen malicious traffic. Conversely,
+leading to confusion between benign and malicious traffic. in the scenario where only seen malicious traffic exists, Bwd
+For the BoT-IoT dataset, both seen and unseen malicious Packets/s and Bwd Packet Length Std take the ninth and tenth
+traffic exhibit high anomaly scores. Nevertheless, around 1% positions with scores of 75 and 67, respectively. Additionally,
+of unseen malicious traffic has anomaly scores similar to Init_Win_bytes_forward increases in importance from 279 to
+benign traffic. This discrepancy increases the likelihood of 380, surpassing Destination Port as the most critical feature.
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5339
+
+ TABLE V
+ P ERFORMANCE C OMPARISON B ETWEEN D IFFERENT D ISCRIMINATORS HIoT only considers the output of the classifier. Two primary
+ factors allow the adaptive KNN-based method to capture the
+ class distribution disparities between seen and unseen classes,
+ leading to more accurate discrimination.
+ Introducing the adaptive k strategy in the adaptive KNNbased discriminator improves the Macro Recall. However, it
+ still lags behind Micro Recall by 0.0512 on the CIC-IDS2017
+ dataset and 0.0257 on the BoT-IoT dataset, respectively.
+ This discrepancy indicates that the recall for certain minority
+ classes is lower than for others. The class-wise recall in
+ Table VI provides further insight into this issue. For the
+ majority classes, such as Dos, DoS Hulk, DDoS, and PortScan,
+ the recall is all above 0.96. For the minority classes, such as
+ Scan, SSH-Patator and Bot, recall exceeds 0.96. The results
+ explain why the adaptive KNN-based method performs well
+ The overall ranking significantly changes for the BoT- regarding AUC-ROC, AUC-PR, and Micro Recall. However,
+IoT dataset, which consists of only ten features. In the the recall drops for classes with fewer than 1500 samples.
+test set comprising solely seen malicious traffic, the feature The average recall for Theft, Brute Force, XSS, Infiltration,
+N_IN_Conn_P_DstIP surpasses N_IN_Conn_P_SrciP and seq Sql Injection, and Heartbleed are 0.8869, 0.8497, 0.7918,
+with an importance score of 210, emerging as the most 0.8473, 0.7221, and 0.8692, respectively. The lack of sufficient
+significant feature. Meanwhile, the importance score of the samples significantly contributes to the decline in recall. The
+feature srate drops from 111 to 80, shifting from the fourth insufficient number of samples leads to a situation where
+most important feature to the sixth. These variations in feature the nearest neighbors of these classes’ samples may include
+importance explain XGBoost’s suboptimal performance in samples from other classes, thereby interfering with the disdetecting unseen malicious traffic. Since unseen malicious crimination. Even though the adaptive k strategy helps to some
+traffic is absent during training, XGBoost fails to emphasize extent, it can only partially mitigate the impact of insufficient
+features crucial for distinguishing unseen malicious traffic, samples.
+such as Init_Win_bytes_forward and N_IN_Conn_P_SrciP. Further analysis reveals that the reasons for the decline
+ in recall vary among different minority classes. A closer
+ examination of different data splits and class-wise recall
+B. Discrimination Results shows that if XSS and Brute Force are both split as seen
+ 1) Performance: Table V compares four discriminators’ malicious classes, their recall is nearly 1. However, the recall
+performance on the CIC-IDS2017 and the BoT-IoT dataset. drops significantly if either XSS or Brute Force is split as
+We observe that the adaptive KNN-based method achieves an unseen malicious class. Since both classes belong to the
+exceptional performance, with average AUC-ROC and AUC- Web Attack and share similar features, the discrimination
+PR exceeding 0.99, indicating that the adaptive KNN-based becomes challenging when these two classes are split into
+method effectively distinguishes most malicious traffic. different categories, indicating that the adaptive KNN-based
+Moreover, introducing the adaptive k strategy boosts the method still has room for improvement in discriminating
+method’s performance in Macro Recall, which improves the between classes with similar features. For classes of Theft, Sql
+average Macro Recall by 0.004. The adaptive k strategy allows Injection, Heartbleed, and Infiltration, their recall is closely
+the method to dynamically adjust each sample’s k value based related to their distribution in the feature space. The last row
+on the local density, leading to a more balanced recall across of Table VI shows the average distance between each class’s
+all classes. samples and their adaptive k-nearest neighbors. Heartbleed and
+ The proposed adaptive KNN-based method also signifi- Infiltration have higher average distances than other classes,
+cantly outperforms the other approaches in all metrics. On the with values of 2.4790 and 1.4458, respectively. As shown
+CIC-IDS2017 dataset, the proposed method outperforms the in Equation (5), since the adaptive k value increases linearly
+baseline by at least 0.0783 in AUC-ROC, 0.1752 in AUC- as the average distance decreases, the adaptive k value for
+PR, and 0.1413 in Micro Recall. On the BoT-IoT dataset, Infiltration samples will be significantly higher than that for
+the proposed method achieves a minimum improvement of Heartbleed. However, with only 36 samples, the higher k value
+0.1409 in AUC-ROC, 0.2141 in AUC-PR, and 0.236 in for Infiltration results in nearest neighbors that include samples
+Micro Recall. Two primary factors contribute to the significant from other classes, affecting the final discriminating. On the
+improvements. On the one hand, the adaptive KNN-based other hand, the average distance for the Sql Injection class
+method leverages the class distribution in the training and is only 0.0742. Its relatively high k value and the sparse
+test sets rather than relying solely on the training set for 21 samples result in the recall that ranks lowest among the
+predictions. On the other hand, by utilizing the k-nearest neigh- fourteen classes. Similar to the Sql Injection class, the number
+bors’ distances and class distribution, the adaptive KNN-based of samples in the Theft class is much smaller than that of
+method makes more informed decisions than DNN, where other classes. Even if a lower adaptive k value is set, avoiding
+the DNN only considers the k-nearest neighbors’ distance and interference from samples of other classes is difficult.
+5340 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ TABLE VI
+ AVERAGE C LASS -W ISE R ECALL AND AVERAGE D ISTANCE ON THE CIC-IDS2017 AND THE B OT-I OT DATASET
+
+ 2) Parameter Sensitivity: Given that our method is based
+on the KNN algorithm, different values of k will affect the
+discrimination results. Therefore, we set various hyperparameters and investigate their impact on the adaptive KNN-based
+discriminator. As shown in Figure 9 (a) and Figure 10 (a), we
+first explore the changes in different metrics without applying
+the adaptive k strategy and set k to various values. The AUC-
+PR, AUC-ROC, and Micro Recall consistently remain close
+to 1, indicating that the model correctly discriminates most
+malicious traffic across different k values. Micro Recall shows
+a slight increase as k increases, though this increase is not
+significant enough to be visible in the graph. For the majority
+classes, such as Dos, DoS Hulk, DDoS, and PortScan, which
+constitute the majority of malicious traffic, setting a higher k
+value helps accurately discriminate samples of these classes
+and results in higher Micro Recall.
+ Unfortunately, as k increases, Macro Recall gradually
+decreases. When k is set to 20, 30, 40, and 50, Macro
+Recall decreases progressively from 0.9228 to 0.909, 0.902,
+and 0.899 on the CIC-IDS2017 dataset. On the BoT-IoT
+dataset, the macro recall increases by 0.001 when k is set Fig. 9. Parameter sensitivity of the proposed adaptive KNN-based method on
+to 30. However, as k rises, the macro recall still declines the CIC-IDS2017 dataset. (a) Model performance with different k. (b) Model
+from 0.966 to 0.934. For some minority classes, such as performance with different k̂ . (c) Model performance with different kmin .
+ (d) Model performance with different kmax .
+Infiltration, SQL Injection, and Heartbleed, which have fewer
+than 50 samples each, setting a smaller k value is more
+conducive to accurately discriminating malicious traffic in
+these classes, thereby achieving higher Macro Recall. Our Estimating local density is crucial to assign reasonable
+proposed adaptive KNN-based approach is actually based k values to different samples. We estimate density using
+on this concept, assigning smaller k values to minority the average distance of different samples to their nearest
+classes and larger k values to the majority classes, thereby neighbors, with k̂ being the key hyperparameter. As illustrated
+achieving balanced and superior performance across all in Figure 9 (b) and Figure 10 (b), we fix the other hyperpaclasses. rameters and set k̂ to 100, 200, 500, and 1000 to observe its
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5341
+
+ Fig. 11. The UMAP visualization of the malicious traffic features and the
+ OOD scores (a) Malicious traffic features. (b) OOD scores of the proposed
+ adaptive KNN-based method. (c) OOD scores of the KNN. (d) OOD scores
+ of the HIoT.
+
+Fig. 10. Parameter sensitivity of the proposed adaptive KNN-based method
+on the BoT-IoT dataset. (a) Model performance with different k. (b) Model
+ 3) Visualization: To intuitively demonstrate the superiority
+performance with different k̂ . (c) Model performance with different kmin . of the proposed method, we utilize UMAP for dimensionality
+(d) Model performance with different kmax . reduction to visualize feature distributions and the OOD scores
+ assigned by different discriminators. Figure 11 illustrates the
+ performance of three discriminators on a specific split of the
+ CIC-IDS2017 dataset. In Figure 11 (a), blue samples represent
+effect on the discrimination results. The results indicate that seen malicious traffic, while orange samples denote unseen
+different values of k̂ have little impact on the final results, malicious traffic. The feature space exhibits a structured distriwhich consistently remain around 0.934 and 0.966 on the bution, where seen and unseen malicious traffic form distinct
+CIC-IDS2017 and BoT-IoT dataset, respectively, suggesting clusters. In the meantime, clusters of seen malicious traffic
+that the adaptive KNN-based method is not sensitive to k̂ . maintain a certain degree of separation between clusters of
+Taking the CIC-IDS2017 dataset as an example, due to the unseen malicious traffic. The distribution disparity enables our
+lower local density of the Heartbleed and Infiltration classes, proposed adaptive KNN-based method to differentiate between
+different k̂ values enable smaller k values for samples of seen and unseen malicious samples effectively. Figure 11
+these classes. On the other hand, the SQL Injection class, due (b) shows that the OOD scores of seen and unseen malicious
+to its proximity to Brute Force and XSS samples, exhibits traffic differ significantly. Almost all seen malicious traffic
+significantly higher local density compared to Heartbleed and receives low OOD scores, whereas unseen malicious traffic
+Infiltration. Therefore, different k̂ values fail to assign smaller is assigned substantially higher scores. Even in the lowerk values to it, making the adaptive KNN-based model not right region where seen and unseen malicious traffic partially
+sensitive to k̂ . overlap, most samples retain OOD scores that align with
+ As shown in Figure 9 (c)(d) and Figure 10 (c)(d), the effect ground truth.
+of setting different kmax and kmin values on the model is In contrast, both the DNN method and the HIoT exhibit
+similar to that of setting different k values. When kmin is deviations between predicted OOD scores and the ground
+set to 3, the model performs best in Macro Recall, indicating truth. Figure 11 (c) shows that the DNN method performs
+that a smaller kmin helps the model assign smaller k values well in detecting the dispersed unseen malicious traffic in
+to minority classes, thereby improving performance on Macro the upper-left region. However, the unseen malicious traffic is
+Recall. When kmax is set to 20 on the CIC-IDS2017 dataset incorrectly assigned low OOD scores in the overlapping lowerand 40 on the BoT-IoT dataset, the model achieves the right region. Since DNN determines OOD scores solely based
+best performance in terms of Macro Recall, mirroring the on training set features, unseen malicious traffic in overlapping
+effect of increasing k value on the model’s performance. regions is influenced by malicious traffic of the training set,
+As kmax increases, the model becomes more accurate in leading to incorrect OOD scores. The proposed adaptive KNNdiscriminating majority classes, but this simultaneously affects based method overcomes this limitation- as many test samples
+the discrimination of minority classes. Therefore, setting kmax also exist in overlapping regions, K-nearest neighbors of the
+to 20 on the CIC-IDS2017 dataset and 40 on the BoT-IoT unseen malicious traffic contain fewer samples from the traindataset strikes a balance between Macro Recall and Micro ing set, yielding more accurate OOD scores. HIoT predicts
+Recall, achieving high recall for both majority and minority OOD scores based on classifier probability distributions, and
+classes. it is difficult to explain the reason for decision-making based
+5342 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ Fig. 13. Micro Recall and Macro Recall of four unseen classifiers.
+
+Fig. 12. Density histogram of the two discriminators on two datasets.
+(a) Density histogram of the proposed adaptive KNN-based method on the 0.9999 on the CIC-IDS2017 dataset and BoT-IoT dataset,
+CIC-IDS2017 dataset. (b) Density histogram of the HIoT on the CIC-IDS2017 respectively, reflecting XGBoost’s ability to accurately clasdataset. (c) Density histogram of the proposed adaptive KNN-based method
+on the BoT-IoT dataset. (d) Density histogram of the HIoT on the BoT-IoT
+ sify the vast majority of traffic into the correct categories.
+dataset. Classifiers for classifying unseen malicious traffic also achieve
+ satisfying recall despite lacking training samples, as illustrated in Figure 13. The four unseen classifiers obtain an
+on feature distribution. As depicted in Figure 11 (d), only average Micro Recall and Macro Recall exceeding 0.65 on
+the upper-left region’s unseen malicious traffic is assigned the CIC-IDS2017 dataset, indicating the feasibility of applying
+relatively high OOD scores. In contrast, most unseen malicious zero-shot learning in the customized model. The classifiers
+traffic receives scores similar to those of seen malicious traffic. trained with zero-shot learning require only auxiliary seman-
+ While UMAP visualization explains the effectiveness of the tic information from administrators to classify most unseen
+proposed method, it does not provide insights into selecting malicious traffic correctly. Furthermore, the proposed SG-ZSL
+an optimal threshold. To address this, we visualize the density demonstrates superior performance compared to other SOTA
+histograms of OOD scores to compare the differences between methods. Specifically, SG-ZSL leads in both average Macro
+the adaptive KNN-based approach and HIoT. As shown in Recall and Micro Recall, with a 0.0297, 0.0397, and 0.0433
+Figure 12 (a) and Figure12(c), the proposed adaptive KNN- advantage in average Macro Recall and 0.0306, 0.0183, and
+based method exhibits a clear decision boundary. Nearly all 0.0208 in average Micro Recall over CE-GZSL, CO-GZSL,
+seen malicious traffic receives an OOD score close to 1, and CD-GZSL, respectively. The superiority highlights the
+while most unseen malicious traffic is assigned significantly effectiveness of the semantic-guided module in enhancing the
+higher scores, around 20 for the CIC-IDS2017 dataset and relationship between traffic features and auxiliary semantic
+40 for the BoT-IoT dataset. Taking the CIC-IDS2017 dataset information. The module facilitates better alignment between
+as an example, any threshold within the range of 1–20 can the semantic and feature spaces, allowing the classifier to
+effectively separate seen from unseen malicious traffic. generalize more effectively to unseen classes.
+ In contrast, the performance of HIoT is suboptimal. As However, class-imbalanced malicious traffic brings chaldepicted in Figure 12 (b), approximately 60% of unseen lenge to both seen and unseen classifiers. Despite the strong
+malicious traffic in the CIC-IDS2017 dataset have OOD scores performance in Micro Recall, XGBoost’s average Macro
+similar to seen malicious traffic, resulting in an indistinct Recall of 0.9188 and 0.9843 is lower than Micro Recall.
+separation. The performance further deteriorates on BoT-IoT, This discrepancy indicates that while XGBoost is effective
+where, as shown in Figure 12 (d), OOD scores for both seen at classifying the majority classes, it struggles with minority
+and unseen malicious traffic overlap in the narrow range of classes, contributing to the lower Macro Recall. Interestingly,
+0–0.08. The overlap leads to two issues: (1) selecting an the unseen classifiers exhibit a different trend, with average
+appropriate threshold becomes challenging, and (2) even with Macro Recall being higher than average Micro Recall. The
+an optimal threshold, distinguishing between seen and unseen four models achieve average Macro Recall values of 0.7228,
+malicious traffic remains difficult. The density histograms 0.7181, 0.6765, and 0.7525, while their corresponding Micro
+explain why HIoT achieves only 0.5926 AUC-ROC on the Recall values are 0.6786, 0.6909, 0.6884, and 0.7092, sug-
+BoT-IoT dataset. gesting that unseen classifiers are more effective at recalling
+ minority classes. This phenomenon can be attributed to the
+ training strategy of the proposed SG-ZSL approach, where the
+C. Classification generator synthesizes an equal number of samples for each
+ Regarding the classification of seen malicious traffic, class, and the unseen classifier is trained with a balanced
+XGBoost achieves an average Micro Recall of 0.9984 and synthesized dataset afterward.
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5343
+
+ of 0.7878 on the CIC-IDS2017 dataset. Considering that the
+ detector and classifiers are raw XGBoost without the aid of
+ any tricks, we are convinced that employing more powerful
+ detectors and classifiers could significantly enhance overall
+ performance.
+ In contrast, the cascaded model of HIoT and
+ Verkerken et al.’s method exhibit suboptimal performance. On
+ the CIC-IDS2017 dataset, HIoT achieves a micro recall of
+ 0.9070 and a macro recall of 0.6259, while Verkerken et al.’s
+Fig. 14. Recall of four malicious traffic classes on different dataset splits. method is 0.8272 and 0.4700. Both methods are lower than the
+(a) Recall of Brute Force and XSS on six dataset splits. (b) Recall of Sql AUF framework. On the BoT-IoT dataset with fewer classes,
+Injection and Infiltration on six dataset splits. the two methods perform even worse, attaining a micro recall
+ of 0.7376, 0.7319 and a macro recall of 0.5409, 0.5149,
+ respectively. Given that the AUF framework and the two
+ To investigate the impact of class imbalance on classifiers
+ comparison methods utilize identical detectors and classifiers,
+further, we utilize XGBoost as the seen classifier and the
+ the lower recall can be attributed to a performance bottleneck
+proposed SG-ZSL as the unseen classifier. As shown in
+ caused by the suboptimal discriminator. As mentioned
+Table VI, the results indicate that the unseen classifier is
+ before, the two comparison methods wrongly discriminate
+more adaptive to the class-imbalanced dataset. For instance,
+ a significant amount of seen malicious traffic as unseen
+when Sql Injection, Infiltration, and PortScan are split as
+ malicious traffic while also misjudging a large portion of
+unseen malicious classes, their recall is 0.8918, 0.7778, and
+ unseen malicious traffic as seen malicious traffic. The final
+0.4545, respectively. Despite Sql Injection and Infiltration only
+ classification results remain incorrect even if the classifier
+containing 21 and 36 samples, their recall is higher than
+ performs well. Verkerken et al.’s method improves HIoT by
+other majority classes, suggesting that the unseen classifier
+ introducing an additional threshold selection stage aimed at
+trained with zero-shot learning is more conducive to achieving
+ recovering benign traffic that had been mistakenly identified as
+balanced classification results.
+ previously unseen malicious traffic. However, the added stage
+ In contrast, XGBoost’s Macro Recall is lower than Micro
+ brings a negative effect on overall performance, rendering the
+Recall, which is attributed to the influence of minority classes,
+ improved approach less effective than the original HIoT. The
+similar to the discriminator. As illustrated in Figure 14(a),
+ primary reason lies in the relatively low detection accuracy
+when Brute Force and XSS are split as seen classes, like
+ of the autoencoder employed by Verkerken et al. Due to
+dataset split ID 1, 2, 3, 5, both exhibit a decline in recall,
+ the autoencoder’s limited performance, a significant portion
+with XSS showing a more significant drop. The decline
+ of benign traffic is misclassified as unseen malicious traffic.
+indicates that these two classes share similar, indiscriminative
+ Under such circumstances, the additional threshold selection
+features, leading to confusion of the classifier between these
+ stage can improve the recall of benign traffic. In contrast,
+two classes. Moreover, due to XSS’s smaller sample size than
+ XGBoost, which is trained in a supervised manner, can more
+Brute Force, the model is more prone to misclassifying XSS
+ accurately differentiate between benign and malicious traffic
+samples as Brute Force. Similarly, Figure 14(b) shows that the
+ than the autoencoder. As a result, when using XGBoost,
+recall for Infiltration and SQL Injection are suboptimal. The
+ the proportion of benign traffic within the detected unseen
+limited sample size of these classes leads classifiers to give
+ malicious traffic is lower. Consequently, introducing an
+biased predictions toward majority classes, resulting in recall
+ additional thresholding stage in this context has a negative
+below the average for these categories.
+ effect. Given this, we only report the performance of HIoT in
+ the subsequent confusion matrices.
+D. Hybrid Performance The confusion matrices in Figure 15 further illustrate the
+ To validate the feasibility and superiority of the AUF frame- differences between the AUF framework and HIoT, where the
+work, we cascade the detector, discriminator, seen classifier, red labeling classes represent unseen classes and the black
+and unseen classifier and calculate the class-wise recall of labeling classes represent seen classes. As shown in Figure 15
+the hybrid model. As shown in Table VI, despite facing the (a) and (c), owing to the excellent performance of the detector,
+dual challenges of class imbalance and invisible malicious discriminator, and classifiers, the AUF framework exhibits a
+traffic, the hybrid model achieves a micro recall of 0.8601 and clear diagonal pattern in both confusion matrices. For the
+a macro recall of 0.8225 on the CIC-IDS2017 dataset. The CIC-IDS2017 dataset, the AUF framework achieves a recall
+hybrid model performs better on the BoT-IoT dataset, attaining rate above 0.85 across 13 classes. Only two classes exhibit
+a micro recall of 0.9828 and a macro recall of 0.9008. The lower recall: the BoT class and the XSS class. Due to the
+superior results achieved by the hybrid model demonstrate that limited sample size of the BoT class, some samples are
+the proposed unified framework can accurately detect, discrim- identified as benign traffic by the detector. Meanwhile, due to
+inate, and classify malicious traffic while providing accurate its feature similarity with the Brute Force class, some samples
+prediction. When cascading the customized model designed to from the XSS class are misclassified as Brute Force by the
+assist in labeling unseen malicious traffic, the hybrid model classifier. The AUF framework performs better on the BoTstill achieves a micro recall of 0.8242 and a macro recall IoT dataset. Except for a small portion of samples from the
+5344 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+Fig. 15. The confusion matrix of the proposed AUF framework and HIoT.
+(a) The confusion matrix of the proposed AUF on the BoT-IoT dataset. (b) The
+confusion matrix of the HIoT on the BoT-IoT dataset. (c) The confusion Fig. 16. The confusion matrix on evaluating different models in a cascaded
+matrix of the proposed AUF on the CIC-IDS2017 dataset. (d) The confusion manner, where red labeling represents the unseen malicious classes. (a) The
+matrix of the HIoT on the CIC-IDS2017 dataset. confusion matrix of the detector. (b) The confusion matrix of cascaded detector
+ and discriminator. (c) The confusion matrix of the cascaded detector, discriminator, and seen classifier. (d) The confusion matrix of the cascaded detector,
+ discriminator, seen classifier, and customized model (unseen classifier).
+
+Scan and Theft classes, which are recognized as the Normal classifier, the hybrid model cannot address unseen malicious
+class, most samples are correctly classified into their respective traffic effectively.
+categories. On the other hand, even if unseen malicious traffic is iden-
+ As depicted in Figure 15 (b) and (d), the performance dis- tified based on the output of the detector or classifier, accurate
+parity between HIoT and the AUF framework is pronounced. prediction remains challenging. The detector and classifier
+On the CIC-IDS2017 dataset, seven classes achieve a recall are primarily designed to differentiate between benign and
+rate of 0. Only five classes—Benign, DDoS, PortScan, Hulk, malicious traffic and to classify seen malicious traffic, rather
+and Slowloris—attain recall rates above 0.8. The confusion than to identify unseen malicious traffic. Consequently, their
+matrix reveals that the discriminator misjudges most seen outputs contain limited information for differentiating seen
+malicious traffic as unseen malicious traffic, resulting in poor from unseen malicious traffic, leading to poor discrimination
+overall recall performance. This issue is even more evident performance (e.g., Macro Recall of only 0.4994 on the
+in the BoT-IoT dataset, where nearly all visible malicious BoT-IoT dataset, Table V). Inaccurate discrimination negatraffic categories are recognized as unseen malicious traffic. tively impacts the overall prediction accuracy of the hybrid
+These results collectively indicate that HIoT performs poorly model (e.g., Macro Recall of 0.5409 on the BoT-IoT dataset,
+in distinguishing between seen and unseen malicious traffic, Table VI), ultimately rendering the hybrid model impractical.
+leading to significant deviations between the final classification As mentioned in Section II, the AUF framework achieves
+results and the ground truth. “unification” in three key aspects, especially in decoupling the
+ Based on above analysis, we further discuss the difference discriminator as an independent component. The discriminator
+between AUF framework and HIoT [19]. Bovenzi et al.’s is essential for addressing the “loss-gain imbalance” problem,
+(GLOBECOM 2020) approach [19] achieves characteristics as it enables the hybrid model to perform discrimination and
+similar to AUF framework. Specifically, Bovenzi et al. deploy enhances overall prediction accuracy. On the one hand, the
+the anomaly detector before the classifier, enabling fast infer- discriminator naturally bridges the detector and the classifier.
+ence speed and distributed deployment. At the same time, It distinguishes seen and unseen malicious traffic from the
+Bovenzi et al. utilize the output of the classifier to discrim- detector’s output, forwarding only seen malicious traffic to
+inate between seen and unseen malicious traffic, enabling the classifier for further classification. On the other hand, the
+functionality completeness. However, we still categorize it as discriminator is specifically designed to differentiate between
+“non-framework cascading”, as simply deploying the anomaly seen and unseen malicious traffic. It accurately identifies
+detector prior to the misuse detector can hardly solve the “loss- unseen malicious traffic by thoroughly analyzing the differgain imbalance” due to two key issues. On the one hand, the ences in feature distributions and other characteristics (e.g.,
+malicious traffic detected by the detector includes both seen Micro Recall of 0.9926 and Macro Recall of 0.9345 on
+and unseen categories, whereas the classifier can only classify the BoT-IoT dataset, Table V). Additionally, the decoupling
+seen malicious traffic. Without a mechanism to distinguish design enables more advanced discrimination methods and
+unseen malicious traffic based on the outputs of the detector or models to be integrated into the AUF framework and further
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5345
+
+improve prediction accuracy without affecting the detector or model. For example, the average recall of the XSS drops
+classifier. sharply from 0.9942 at the detection stage to 0.3976 after
+ Most methods ignore some other performance metrics to cascading. Therefore, designing training strategies for classimprove prediction accuracy. The reason is that the core imbalanced datasets to enable the model to provide unbiased
+task of an HNIDS is to detect malicious traffic and identify predictions is critical.
+its category accurately. Therefore, prediction accuracy is the
+most critical performance metric for ensuring the system’s VI. C ONCLUSION
+usability. We thoroughly compare the AUF framework with This article explores the limitations of the “Non-framework
+Bovenzi et al.’s approach and Verkerken et al.’s approach under cascading” and the “MADF” framework, thereby introducing
+identical experimental setups. The results indicate that AUF a unified framework AUF to address these issues. The key
+achieves higher prediction accuracy on both datasets (e.g., difference between the AUF framework and other HNIDSs
+Macro Recall of 0.8225 versus 0.4717 in the CIC-IDS2017 is that it consists of four cascaded and decoupled models,
+dataset and Micro Recall of 0.9008 versus 0.5409 in the each performing a corresponding functionality: distinguishing
+BoT-IoT dataset, Table VI), demonstrating its superiority and between benign and malicious traffic, differentiating between
+usability. seen and unseen malicious traffic, identifying the category of
+ In summary, the AUF is innovative in its design and seen malicious traffic, and implementing customized functionresolution of the “loss-gain imbalance,” setting it apart from alities. This design overcomes the “loss-gain imbalance” issue,
+prior works. The AUF framework not only overcomes the lim- thereby providing more comprehensive functionalities, faster
+itations of the “Non-framework cascading” but also provides inference speed, and higher accuracy. In addition, the unified
+new insights for future HNIDS development. framework achieves the unification of three aspects, offering
+ As mentioned before, the performance of downstream mod- a new perspective for the design of future HNIDS.
+els is closely related to the effectiveness of upstream models With the AUF framework, we validate the performance
+for cascaded models. For example, the average recall rate of individual and cascaded models across the CIC-IDS2017
+of the Heartbleed is 0.8033, 0.8692, 0.9156, and 0.9437 at and the BoT-IoT datasets, including the adaptive KNN-based
+the detection, discrimination, classification, and customized discriminator and the customized model SG-ZSL proposed in
+stages, respectively. The hybrid recall for the Heartbleed this article. Extensive experiments demonstrate the feasibility
+class is only 0.7041, indicating that the detector’s suboptimal and superiority of the AUF framework. Our findings also
+performance on Heartbleed hinders the overall performance of suggest that: (1) The dataset split proposed in this article
+the hybrid model. To illustrate this phenomenon more clearly, includes seen and unseen malicious traffic together, which prowe plot the confusion matrices of the cascaded model at vides new evaluation criteria and baselines for future HNIDSs.
+different stages on the CIC-IDS2017 dataset. Figure 16 shows (2) Designing detectors that can accurately discover unseen
+the confusion matrices on evaluating different models in a malicious traffic is critical for improving HNIDS performance.
+cascaded manner. We observe that most malicious traffic is (3) Introducing detectors, discriminators, and classifiers with
+detected during the detection stage, with only a few malicious more robust generalization to minority classes in future work
+samples from the Bot being wrongly recognized as benign traf- will further enhance the overall performance of the HNIDS.
+fic. The discriminator correctly identifies most of the detected (4) Integrating flow-based network intrusion detection methods
+malicious traffic afterward, with only a few malicious traffic into the AUF framework will explore the potential in online
+from Infiltration being wrongly discriminated. The classifier malicious traffic detection.
+correctly classifies most of the samples identified as seen
+malicious classes, except those belonging to the BruteForce R EFERENCES
+and XSS classes. As previously analyzed, the BruteForce
+ [1] D. Chou and M. Jiang, “A survey on data-driven network intrusion
+and XSS samples tend to be confused by the classifier due detection,” ACM Comput. Surv., vol. 54, no. 9, p. 182, Oct. 2021.
+to their similar features. After introducing the customized [2] K. He, D. D. Kim, and M. R. Asghar, “Adversarial machine learning for
+unseen class classifier, most samples from unseen malicious network intrusion detection systems: A comprehensive survey,” IEEE
+ IEEE Commun. Surveys Tuts., vol. 25, no. 1, pp. 538–566, 1st Quart.,
+classes are correctly labeled. Despite the strong performance 2023.
+of all four models, there are still discrepancies between the [3] G. Pang, C. Shen, L. Cao, and A. V. D. Hengel, “Deep learning for
+final confusion matrix and the one from the detection stage. anomaly detection: A review,” ACM Comput. Surveys, vol. 54, no. 2,
+ pp. 1–38, 2021.
+Therefore, improving the performance of any of the detector, [4] A. Thakkar and R. Lohiya, “A survey on intrusion detection system:
+discriminator, classifier, or customized models would enhance Feature selection, model, performance measures, application perspective,
+the final performance of the hybrid model. challenges, and future research directions,” Artif. Intell. Rev., vol. 55,
+ no. 1, pp. 453–563, Jan. 2022.
+ We also notice that the model’s generalization to the [5] Y. Wang et al., “Adversarial attacks and defenses in machine
+minority classes is crucial. Apart from the discriminator, learning-empowered communication systems and networks: A contemwe do not adopt other strategies to mitigate the effects of porary survey,” IEEE IEEE Commun. Surveys Tuts., vol. 25, no. 4,
+ pp. 2245–2298, 4th Quart., 2023.
+class imbalance to reveal its impact on the model. The [6] Y. Guo, “A review of machine learning-based zero-day attack detecresults indicate whether the detector, discriminator, or classifier tion: Challenges and future directions,” Comput. Commun., vol. 198,
+tends to give predictions biased towards the majority classes, pp. 175–185, Jan. 2023.
+ [7] M. Ozkan-Okay, R. Samet, Ö. Aslan, and D. Gupta, “A comprehensive
+resulting in recall for the minority classes being below average. systematic literature review on intrusion detection systems,” IEEE
+This phenomenon is exponentially amplified in the cascaded Access, vol. 9, pp. 157727–157760, 2021.
+5346 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 6, DECEMBER 2025
+
+ [8] U. Sabeel, S. S. Heydari, K. El-Khatib, and K. Elgazzar, “Unknown, [30] Z. Han, Z. Fu, S. Chen, and J. Yang, “Contrastive embedding for
+ atypical and polymorphic network intrusion detection: A systematic sur- generalized zero-shot learning,” in Proc. IEEE/CVF Conf. Comput. Vis.
+ vey,” IEEE Trans. Netw. Service Manag., vol. 21, no. 1, pp. 1190–1212, Pattern Recognit. (CVPR), 2021, pp. 2371–2381.
+ Feb. 2024. [31] Q. Li, Z. Zhan, Y. Shen, and B. Bhanu, “Co-GZSL: Feature contrastive
+ [9] E. M. Maseno, Z. Wang, H. Xing, and L. Maglaras, “A systematic review optimization for generalized zero-shot learning,” Neural Process. Lett.,
+ on hybrid intrusion detection system,” Sec. Commun. Netw., vol. 2022, vol. 56, no. 2, pp. 1–16, 2024.
+ pp. 1–23, Jan. 2022. [32] W. Fan, C. Liang, and T. Wang, “Contrastive semantic disentanglement
+[10] R. Ahmad, I. Alsmadi, W. Alhamdani, and L. Tawalbeh, “Zero-day in latent space for generalized zero-shot learning,” Knowl.-Based Syst.,
+ attack detection: A systematic literature review,” Artif. Intell. Rev., vol. 257, Dec. 2022, Art. no. 109949.
+ vol. 56, no. 10, pp. 10733–10811, Feb. 2023. [33] H. Wang, T. Zhang, and X. Zhang, “Contrastive embedding-based
+[11] K. N. Rao, K. V. Rao, and P. V. G. D. Prasad Reddy, “A hybrid intrusion feature generation for generalized zero-shot learning,” Int. J. Mach.
+ detection system based on sparse autoencoder and deep neural network,” Learn. Cybern., vol. 14, no. 5, pp. 1669–1681, 2023.
+ Comput. Commun., vol. 180, pp. 77–88, Dec. 2021. [34] X. Kong et al., “En-compactness: Self-distillation embedding &
+[12] G. Kim, S. Lee, and S. Kim, “A novel hybrid intrusion detection method contrastive generation for generalized zero-shot learning,” in Proc.
+ integrating anomaly detection with misuse detection,” Expert Syst. Appl., IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), 2022,
+ vol. 41, no. 4, pp. 1690–1700, 2014. pp. 9296–9305.
+[13] M. S. ElSayed, N.-A. Le-Khac, M. A. Albahar, and A. Jurcut, “A novel [35] E. Aghaei, X. Niu, W. Shadid, and E. Al-Shaer, “SecureBERT: A
+ hybrid model for intrusion detection systems in SDNs based on CNN domain-specific language model for cybersecurity,” in Security and
+ and a new regularization technique,” J. Netw. Comput. Appl., vol. 191, Privacy in Communication Networks, F. Li, K. Liang, Z. Lin, and
+ Oct. 2021, Art. no. 103160. S. K. Katsikas, Eds., Cham, Switzerland: Springer., 2023, pp. 39–56.
+[14] E. Mushtaq, A. Zameer, M. Umer, and A. A. Abbasi, “A two-stage [36] A. v. d. Oord, Y. Li, and O. Vinyals, “Representation learning with
+ intrusion detection system with auto-encoder and LSTMs,” Appl. Soft contrastive predictive coding,” 2018, arXiv:1807.03748.
+ Comput., vol. 121, May 2022, Art. no. 108768. [37] N. Koroniotis, N. Moustafa, E. Sitnikova, and B. Turnbull, “Towards
+[15] J. Lan, X. Liu, B. Li, and J. Zhao, “A novel hierarchical attention- the development of realistic botnet dataset in the Internet of Things
+ based triplet network with unsupervised domain adaptation for network for network forensic analytics: Bot-IoT dataset,” Future Gener. Comput.
+ intrusion detection,” Appl. Intell., vol. 53, no. 10, pp. 11705–11726, Sep. Syst., vol. 100, pp. 779–796, Nov. 2019.
+ 2022. [38] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+[16] C. A. de Souza, C. B. Westphall, R. B. Machado, J. B. M. Sobral, a new intrusion detection dataset and intrusion traffic characterization,”
+ and G. dos Santos Vieira, “Hybrid approach to intrusion detection in Proc. 4th Int. Conf. Inf. Syst. Security Privacy, 2018, pp. 108–116.
+ in fog-based IoT environments,” Comput. Netw., vol. 180, Oct. 2020, [39] V. Bulavas, V. Marcinkevičius, and J. Rumiński, “Study of multi-class
+ Art. no. 107417. classification algorithms’ performance on highly imbalanced network
+[17] Z. Chen, M. Simsek, B. Kantarci, M. Bagheri, and P. Djukic, “Machine intrusion datasets,” Informatica, vol. 32, no. 3, pp. 441–475, 2021.
+ learning-enabled hybrid intrusion detection system with host data [40] S. Han, X. Hu, H. Huang, M. Jiang, and Y. Zhao, “AdBench: Anomaly
+ transformation and an advanced two-stage classifier,” Comput. Netw., detection benchmark,” in Advances in Neural Information Processing
+ vol. 250, Aug. 2024, Art. no. 110576. Systems, S. Koyejo et al., Eds., vol. 35, Cambridge, MA, USA: MIT
+ Press, 2022, pp. 32142–32159.
+[18] Y. An, Y. He, F. R. Yu, J. Li, J. Chen, and V. C. M. Leung, “An HTTP
+ [41] Z. Li, Y. Zhu, and M. Van Leeuwen, “A survey on explainable anomaly
+ anomaly detection architecture based on the Internet of intelligence,”
+ detection,” ACM Trans. Knowl. Disc. Data, vol. 18, no. 1, pp. 1–54,
+ IEEE Trans. Cogn. Commun. Netw., vol. 8, no. 3, pp. 1552–1565,
+ 2023.
+ Sep. 2022.
+ [42] T. Zebin, S. Rezvy, and Y. Luo, “An explainable AI-based intrusion
+[19] G. Bovenzi, G. Aceto, D. Ciuonzo, V. Persico, and A. Pescapé, “A
+ detection system for DNS over HTTPS (DoH) attacks,” IEEE Trans. Inf.
+ hierarchical hybrid intrusion detection approach in IoT scenarios,” in
+ Forensics Security, vol. 17, pp. 2339–2349, 2022.
+ Proc. IEEE Global Commun. Conf., Dec 2020, pp. 1–7.
+ [43] L. Yang, S. Fu, Y. Wang, L. Liu, and Y. Luo, “The analysis of encrypted
+[20] M. Verkerken et al., “A novel multi-stage approach for hierarchical video stream based on low-dimensional embedding method,” IEEE
+ intrusion detection,” IEEE Trans. Netw. Service Manag., vol. 20, no. 3, Trans. Inf. Forensics Security, vol. 20, pp. 8280–8295, 2025.
+ pp. 3915–3929, Sep. 2023. [44] S. Cai, H. Tang, J. Chen, T. Lv, W. Zhao, and C. Huang, “GSA-DT: A
+[21] H. Kye, M. Kim, and M. Kwon, “Hierarchical detection of network malicious traffic detection model based on graph self-attention network
+ anomalies: A self-supervised learning approach,” IEEE Signal Process. and decision tree,” IEEE Trans. Netw. Service Manag., vol. 22, no. 2,
+ Lett., vol. 29, pp. 1908–1912, 2022. pp. 2059–2073, Apr. 2025.
+[22] A. Alzaqebah, I. Aljarah, and O. Al-Kadi, “A hierarchical intrusion [45] O. Aouedi, K. Piamrat, and B. Parrein, “Ensemble-based deep learning
+ detection system based on extreme learning machine and nature-inspired model for network traffic classification,” IEEE Trans. Netw. Service
+ optimization,” Comput. Security, vol. 124, Jan. 2023, Art. no. 102957. Manag., vol. 19, no. 4, pp. 4124–4135, Dec. 2022.
+[23] N. Wei et al., “An autoencoder-based hybrid detection model for [46] D. Upadhyay, J. Manero, M. Zaman, and S. Sampalli, “Intrusion
+ intrusion detection with small-sample problem,” IEEE Trans. Netw. detection in SCADA based power grids: Recursive feature elimination
+ Service Manag., vol. 21, no. 2, pp. 2402–2412, Apr. 2024. model with majority vote ensemble algorithm,” IEEE Trans. Netw. Sci.
+[24] J. Yang, X. Chen, S. Chen, X. Jiang, and X. Tan, “Conditional Eng., vol. 8, no. 3, pp. 2559–2574, Jul.–Sep. 2021.
+ variational auto-encoder and extreme value theory aided two-stage [47] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An
+ learning approach for intelligent fine-grained known/unknown intrusion ensemble of autoencoders for online network intrusion detection,” in
+ detection,” IEEE Trans. Inf. Forensics Security, vol. 16, pp. 3538–3553, Proc. 25th Annu. Netw. Distrib. Syst. Security Symp., San Diego, CA,
+ 2021. USA, 2018, pp. 1–15.
+[25] S. Li, Y. Cao, S. Liu, Y. Lai, Y. Zhu, and N. Ahmad, “HDA-IDS: [48] G. Bovenzi, G. Aceto, D. Ciuonzo, A. Montieri, V. Persico, and
+ A hybrid dos attacks intrusion detection system for IoT by using A. Pescapé, “Network anomaly detection methods in IoT environments
+ semi-supervised CL-GAN,” Expert Syst. Appl., vol. 238, Mar. 2024, via deep learning: A fair comparison of performance and robustness,”
+ Art. no. 122198. Comput. Security, vol. 128, May 2023, Art. no. 103167.
+[26] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered
+ hybrid intrusion detection system for Internet of Vehicles,” IEEE Internet
+ Things J., vol. 9, no. 1, pp. 616–632, Jan. 2022.
+[27] R. Chen, L. Luo, X. Wang, B. Ren, D. Guo, and S. Zhu, “Knowing Yan Wang received the B.S. degree from Yunnan
+ the unknowns: Network traffic detection with open-set semi-supervised University, Kunming, China. He is currently pursulearning,” Comput. Netw., vol. 251, Sep. 2024, Art. no. 110630. ing the M.S. degree with the School of Computer
+[28] Y. Zhong, Z. Wang, X. Shi, J. Yang, and K. Li, “RFG-HELAD: A Science and Engineering, University of Electronic
+ robust fine-grained network traffic anomaly detection model based on Science and Technology of China, Chengdu, China.
+ heterogeneous ensemble learning,” IEEE Trans. Inf. Forensics Security, His current research interests include deep learning
+ vol. 19, pp. 5895–5910, 2024. and intrusion detection.
+[29] Y. Sun, Y. Ming, X. Zhu, and Y. Li, “Out-of-distribution detection with
+ deep nearest neighbors,” in Proc. 39th Int. Conf. Mach. Learn., vol. 162,
+ Jul. 2022, pp. 20827–20840.
+WANG et al.: UNIFIED FRAMEWORK FOR HYBRID NETWORK INTRUSION DETECTION 5347
+
+ Sheng Cao (Member, IEEE) received the Ph.D. Xiaosong Zhang (Senior Member, IEEE) received
+ degree from the University of Chinese Academy the M.S. and Ph.D. degrees from the University
+ Sciences, Beijing, in 2008. He is currently a of Electronic Science and Technology of China
+ Professor with the University of Electronic Science (UESTC), Chengdu, China, in 1999 and 2011,
+ and Technology of China, Chengdu. His research respectively. He is currently a Professor with the
+ interests include network security, blockchain, School of Computer Science and Engineering,
+ service computing, and intelligent education. UESTC. He is the Cheung Kong Scholar
+ Distinguished Professor. He is also the Head of
+ College for Cyber Security, UESTC. His research
+ interests are blockchain and AI security.
+
+ Jingwei Li (Member, IEEE) received the B.S.
+ degree in information and computing science from
+ the Hebei University of Technology, Tianjin, China,
+ in 2009, and the Ph.D. degree in computer application technology from Nankai University, Tianjin,
+ in 2014. Since 2016, he has been an Associate
+ Professor with the University of Electronic Science
+ and Technology of China, Chengdu, China. His current research interests include applied cryptography,
+ and cloud security and secure deduplication.

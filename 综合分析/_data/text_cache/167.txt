@@ -1,0 +1,150 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024                                                                     5004515
+
+
+
+
+                  Adaptive Context-Aware Distillation for
+                   Industrial Image Anomaly Detection
+                        Yuan He , Hua Yang , Member, IEEE, and Zhouping Yin , Member, IEEE
+
+
+
+   Abstract— Image anomaly detection is extremely challenging                tremendous and unforeseeable variations of surface anomalies,
+in industrial manufacturing processes due to unforeseen and                  accurate anomaly detection is still a challenging but integral
+diversified anomalies. Recently, unsupervised anomaly detection              part of real-world industrial applications.
+methods based on knowledge distillation have been developed
+and have shown remarkable potential. While most existing                        In the past decade, the rapid development of deep neural
+methods are devoted to knowledge generalization, they are inad-              networks has significantly advanced the anomaly detection
+equate for the fine-grained detection task. To address this issue,           task with powerful representation capabilities [2]. Particularly,
+we propose a novel adaptive context-aware distillation (ACAD)                unsupervised methods can be applied to cases where it is
+paradigm that gives due consideration to distillation component              difficult to collect sufficient abnormal samples. Most early
+dependencies and knowledge transfer optimization. Technically,
+a novel adaptive distillation module (ADM) is proposed for                   methods used reconstruction-based architectures [3], [4], [5],
+optimal context-aware knowledge transfer, which consists of                  [6], [7], [8], [9], [10] that detect outliers under the assumption
+contrastive decoupling distillation (CDD) and masked perceiving              that inliers are significantly more frequent and share a common
+distillation (MPD). The proposed CDD helps to constrain the                  concept of normalcy [11]. These methods can produce images
+distribution of different semantic patterns and strengthen the               with per-pixel generation, such as typical autoencoders (AEs)
+discriminative capability. Vanilla methods treat every pixel as
+an equal contribution and fail to focus on critical information.             and generative adversarial networks (GANs). The reconstruc-
+To this end, the MPD is proposed to weigh different contextual               tion residuals, derived from the disparity between an original
+knowledge adaptively. Extensive experiments with mainstream                  image and its reconstructed counterpart, are used to distinguish
+anomaly detection datasets show that ACAD outperforms the                    anomalies. However, these methods are prone to bias toward
+state-of-the-art competitors in accuracy and efficiency. In addi-            reconstructing abnormal regions well and obtaining incorrect
+tion, the experimental results with a real-world inkjet printing
+organic electroluminescence display (OLED) panel dataset fur-                per-pixel estimation.
+ther demonstrate the effectiveness of our method.                               Recently, increasing studies based on embedding similarity
+                                                                             have been devoted to anomaly detection by exploring the
+  Index Terms— Anomaly detection, context-aware optimization,
+contrastive learning, knowledge distillation.                                potential of rich feature manifolds [12], [13], [14], [15],
+                                                                             [16], [17]. These methods perform well in extracting mean-
+                         I. I NTRODUCTION                                    ingful embedding features and project raw images into a
+                                                                             high-dimensional feature space, where anomalies are much
+
+A     NOMALY detection is vital to guarantee product qual-
+      ity in complex industrial manufacturing processes. The
+primary goal of anomaly detection is to detect outliers and
+                                                                             more distinguishable. Typically, [14] and [15] use the Gaussian
+                                                                             distribution to construct a correlation model of normal train-
+                                                                             ing samples. Roth et al. [17] adopted an extensive memory
+locate anomalies that deviate from normal instances. These                   bank to store and leverage available normal patch features
+anomalies generally manifest as local structure damages such                 optimally. Since the normal distribution in the feature space
+as scratches, dents, contaminations, or logical violations such              is constrained in fixed regions, the features distributed in the
+as permissible objects occurring in invalid locations [1]. Cur-              remaining regions are identified as anomalies. Thus, anomaly
+rently, efficient and reliable visual inspection technology has              scores can be derived by calculating the distances between
+been widely applied to product quality control instead of tradi-             embedding vectors of test and train samples. However, these
+tional manual inspection approaches. However, considering the                methods cannot meet the real-time requirement in practical
+  Manuscript received 20 July 2023; revised 8 November 2023; accepted        applications due to the massive computations of vector-level
+9 November 2023. Date of publication 28 November 2023; date of current       similarity distances and considerable memory consumption for
+version 3 January 2024. This work was supported in part by the Joint Funds   storing patch embeddings.
+of National Natural Science Foundation of China under Grant U22A20208,
+in part by the Key Research and Development Program of Guangdong                In addition to the methods mentioned above, unsupervised
+Province under Grant 2022B0202010001-2, and in part by the Project of        methods based on knowledge distillation [18], [19], [20], [21],
+Foshan Science and Technology Bureau under Grant 2020001006509. The          [22], [23], [24], [25], [26] have recently been developed. These
+Associate Editor coordinating the review process was Dr. Shovan Barma.
+(Corresponding author: Hua Yang.)                                            methods attempt to transfer meaningful knowledge from other
+  The authors are with the State Key Laboratory of Digital Manufacturing     well-studied computer vision tasks pretrained with natural
+Equipment and Technology, School of Mechanical Science and Engineering,      datasets. Generally, these methods train a student network that
+Huazhong University of Science and Technology, Wuhan 430074, China
+(e-mail: huayang@hust.edu.cn).                                               learns to mimic the output of a pretrained teacher network
+  Digital Object Identifier 10.1109/TIM.2023.3336758                         and detect anomalies through their output disparities. Inchoate
+                      1557-9662 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+5004515                                                        IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+
+
+methods tended to adopt identical or similar architectures for             weighted masks, which help to focus on critical infor-
+both student and teacher networks to improve the efficiency                mation and refine the perception capacity.
+of knowledge transfer. Then, the student attempts to learn             The remainder of this article is organized as follows:
+the normal pattern distribution during training and tries to        In Section II, previous works related to our method are
+generalize on previously unseen data [27]. Therefore, dur-          briefly reviewed. In Section III, the proposed ACAD is illus-
+ing testing, the student’s output for the learned distribution      trated in detail. In Section IV, the extensive experiments and
+closely resembles that of the teacher. For test data outside the    analyses conducted to evaluate our method are presented.
+normal distribution, the output from the student significantly      Finally, we conclude this article and discuss future studies
+differs from that of the teacher, resulting in different anomaly    in Section V.
+scores. The pixel with a more significant anomaly score
+indicates a higher likelihood of being abnormal. However,                                 II. R ELATED W ORKS
+existing methods utilize a homogeneous distillation paradigm,          In this section, for a more intuitive comparison, we summa-
+which cannot fully exploit the context-aware information,           rize previous representative works along with their advantages
+leading to weak discriminative capabilities in the inference        and limitations in a tabular format according to categories,
+process.                                                            as shown in Table I. In addition to the reconstruction-based
+   To address the abovementioned issues, we propose a novel         methods and embedding similarity-based methods introduced
+adaptive context-aware distillation (ACAD) paradigm in this         in Section I, we briefly review previous research contributions
+study. Compared to previous work, ACAD transfers opti-              related to our work in Sections II-A–II-C.
+mal knowledge with distinct architectures and data flows to
+enhance the diversity of pattern representations. It is diffi-      A. Anomaly Simulation-Based Methods
+cult for convolutional neural networks (CNNs) to learn a               Since it is impracticable to collect and annotate sufficient
+precise decision boundary from only normal samples. Gen-            abnormal samples, it is expected that models can generalize
+erally, CNNs tend to overgeneralize on normal samples and           to deal with unforeseen and diversified types of anomalies
+perform anomaly localization poorly. Thus, we introduce arti-       while only having access to normal samples during training.
+ficial anomalies to mitigate the offset inconsistency between       Anomaly simulation-based methods attempt to generate abun-
+the training and testing data distributions. Based on the           dant pseudo-abnormal samples with pixel-level annotations to
+assumption that normal and abnormal patterns can be decou-          alleviate the sample imbalance problem. Schlüter et al. [37]
+pled from abnormal samples, ACAD leverages the semantic             proposed an intuitive self-supervision method named natural
+class-separability for normality reconversion and anomaly seg-      synthetic anomalies (NSAs). NSA integrates Poisson image
+mentation. To achieve superior performance, a novel adaptive        editing to blend scaled patches of various sizes from separate
+distillation module (ADM) is proposed for knowledge transfer        images seamlessly and creates abundant synthetic anomalies
+optimization. This module encourages the network to focus           that are more similar to natural irregularities. Li et al. [38]
+more on valuable knowledge while considering contextual             proposed a simple data augmentation strategy named CutPaste
+information dependencies. At the inference stage, our method        that cuts a rectangular region of a certain image and pastes
+has the potential to detect and localize various anomalies          it at a random location in another image. CutPaste per-
+precisely through the joint detection of the teacher and student    forms well in image-level anomaly detection, but its anomaly
+networks. Extensive experiments and analyses conducted with         localization precision is limited. For increased diversity,
+the mainstream anomaly detection dataset MVTec AD [28]              Zavrtanik et al. [29] proposed a discriminatively trained
+and a real-world inkjet printing OLED panel dataset demon-          reconstruction anomaly embedding model (DRAEM) to gen-
+strate that ACAD achieves the state-of-the-art performance          erate anomalies based on Perlin noise and auxiliary datasets.
+without using real-world abnormal samples. The main con-            In addition, a pair of reconstructive and discriminative subnet-
+tributions of this study are summarized as follows.                 works was utilized to produce high-fidelity per-pixel anomaly
+   1) A novel ACAD paradigm is proposed for anomaly detec-          detection maps. Liu et al. [32] proposed a simple and
+       tion and achieves the new state-of-the-art performance.      application-friendly network called SimpleNet that generates
+       ACAD adopts heterogeneous distillation architectures         anomaly features by adding Gaussian noise to the adapted
+       and considers dependencies of different distillation com-    normal features. Then, a simple discriminator consisting of a
+       ponents with vital context-aware optimization.               few multi-layer perceptron (MLP) layers was trained on these
+   2) A novel contrastive decoupling distillation (CDD) loss is     features to discriminate anomalies. Yang et al. [31] proposed
+       proposed to facilitate the network to learn discriminative   a multicategory decomposition editing network (MCDEN)
+       representations of different semantic patterns. CDD uti-     that adopts a simulative defect generation strategy similar
+       lizes the embeddings projected into the latent space by      to CutMix to make the model more sensitive to matching
+       the teacher network as prior knowledge to explicitly pull    normal and abnormal areas. MCDEN uses a defect library
+       normal features closer together while pushing outliers       with abnormal data to recognize and decompose defect regions
+       further apart to boost superior performance.                 into assumed fundamental conversions. Similarly, Song et al.
+   3) A novel masked perceiving distillation (MPD) approach         [30] proposed an anomaly composition and decomposition
+       is proposed to weigh different contextual knowledge          network (ACDN). ACDN introduces a Gaussian-sampling-
+       for normal pattern reconversion adaptively. This inno-       based anomaly composition (GSAC) method to composite
+       vation introduces a set of trainable tokens to customize     a large number of images that are similar to real defective
+HE et al.: ACAD FOR INDUSTRIAL IMAGE ANOMALY DETECTION                                                                      5004515
+
+
+
+                                                             TABLE I
+              S UMMARY OF THE A DVANTAGES AND L IMITATIONS OF P REVIOUS R EPRESENTATIVE A NOMALY D ETECTION M ETHODS
+
+
+
+
+images for training. Due to the adoption of the GAN structure,    to a smaller and faster student. It is widely acknowledged
+GSAC is prone to mode collapse during training.                   that the teacher model’s dark knowledge provides privileged
+                                                                  information on the similarity of class categories to enhance
+B. Semantic Segmentation-Based Methods                            student learning [42]. Recently, some methods based on
+   The semantic segmentation task is an important processing      knowledge distilled from pretrained networks have become
+step for scene understanding or better explaining the global      potential solutions to anomaly detection. Bergmann et al. [18]
+context of an image [39]. Previously, U-Net [40], a typ-          proposed 

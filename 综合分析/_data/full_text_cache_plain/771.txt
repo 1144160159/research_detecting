@@ -1,0 +1,1336 @@
+2760
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+One2: An Intrusion Detection System for Both
+Internal and External Vehicular Network
+From Weak Labeled Data
+He Lu , Yilong Ren , Yue Liu, Yanan Zhao , Kaiwen Guo , Yang Yang, and Haohua Du
+
+Abstract—Network attacks on the Internet of Vehicles (IoV)
+can lead to catastrophic consequences such as traffic congestion,
+incorrect routing, and even accidents. Existing rule-based countermeasures are effective only in specific scenarios, while machine
+learning-based methods suffer from suboptimal performance due
+to data quality issues. Furthermore, the isolation between in-vehicle
+networks (IVN) and external vehicle networks (EVN) prevents
+independent intrusion detection systems (IDS) from detecting continuous attack behaviors. To address these issues, we propose a
+mechanism that characterizes attack behaviors solely based on
+network connection information. This mechanism downplays the
+specifics of the traffic itself, allowing for the integration of IVN
+and EVN through structure, thus breaking the internal-external
+boundary and providing relatively stable logical structure information. This approach also offers opportunities to address the
+scarcity of labeled data. Based on this characterization mechanism, we develop an intrusion detection system – One2 , utilizing
+a multi-attribute heterogeneous graph transformer to achieve accurate multi-classification of various types of attacks. To assess the
+compatibility of the proposed IDS for IVN and EVN, extensive
+experiments were conducted using six real-world datasets that accurately depict IVN and EVN. The results show that One2 improves
+average accuracy by 7.14% and F1 score by 6.97% compared to
+state-of-the-art methods.
+Index Terms—Internet of Vehicles (IoV), intrusion detection
+system (IDS), weak label.
+Received 9 April 2025; revised 22 September 2025; accepted 3 November
+2025. Date of publication 6 November 2025; date of current version 12 March
+2026. This work was supported in part by the National Key R&D Program of
+China under Grant 2022YFB3104403 and in part by Shandong Provincial Natural Science Foundation under Grant ZR2025QB43 and Grant ZR2025QC1536.
+(Corresponding author: Haohua Du.)
+He Lu is with the School of Civil and Environmental Engineering, Nanyang
+Technological University, Singapore 639798, and also with the School of Transportation Science and Engineering, Beihang University, Beijing 100191, China
+(e-mail: herlu@buaa.edu.cn).
+Yilong Ren is with the School of Transportation Science and Engineering,
+Beihang University, Beijing 100191, China, also with the Beihang Hangzhou
+Innovation Institute, Hangzhou 310023, China, also with Zhongguancun Laboratory, Beijing 100083, China, and also with the State Key Lab of Intelligent Transportation System, Beijing 100191, China (e-mail: yilongren@buaa.edu.cn).
+Yue Liu is with the School of Urban Construction, Beijing University of
+Technology, Beijing 100124, China (e-mail: yueliu@emails.bjut.edu.cn).
+Yanan Zhao and Yang Yang are with the School of Transportation Science
+and Engineering, Beihang University, Beijing 100191, China (e-mail: zynbyxz@gmail.com; yang_yang@buaa.edu.cn).
+Kaiwen Guo is with the Ocean University of China, Qingdao 266100, China
+(e-mail: kevinguo@ouc.edu.cn).
+Haohua Du is with the School of Cyber Science and Technology, Beihang
+University, Beijing 100191, China (e-mail: duhaohua@buaa.edu.cn).
+The source code of this work is available at: https://github.com/
+LouHerGetUp/One2
+Digital Object Identifier 10.1109/TDSC.2025.3629862
+
+I. INTRODUCTION
+HE rapid development of the Internet of Vehicles (IoV)
+enables vehicles to communicate with various entities,
+including network infrastructure and pedestrians [1]. While this
+connectivity brings convenience, it also introduces significant
+security risks [2]. For example, renowned white hat hackers
+Valasek and Miller exploited a vulnerability in the in-vehicle
+infotainment (IVI) system to gain remote control of a Jeep
+Cherokee [3]. Similarly, Keen Security Lab of Tencent demonstrated a comprehensive attack chain that successfully infiltrated the in-vehicle network (IVN) system through the wireless
+communication module of the external vehicle network (EVN),
+enabling remote control attacks on both Tesla Model series and
+BMW vehicles [4], [5]. If such incidents were to occur in a real
+traffic environment, they would significantly compromise the
+vehicle’s communication safety and functional integrity, even
+leading to traffic accidents and casualties. Therefore, Intrusion
+Detection Systems (IDS) for IoV have become a critical research
+issue recently [6].
+Currently, intrusion detection systems (IDS) for the Internet
+of Vehicles (IoV) can be categorized into two main types:
+rule-based and machine learning-based. Rule-based IDS can
+only describe known and formalizable attack behaviors, making
+them effective only in specific scenarios [7], [8], [9]. In contrast, machine learning-based IDS automatically derive “rules”
+from data, allowing them to be applicable in more diverse
+scenarios [10], [11], [12]. However, the performance of machine
+learning algorithms is highly dependent on data quality, which
+limits the effectiveness of these systems [13], [14]. Recent
+efforts have utilized self-supervised learning to address the
+issue of scarce labeled data in IoV scenarios [15]. However,
+these efforts typically focus only on either the IVN or the
+EVN. Given that attack chains typically progress from EVN
+to IVN, detecting intrusions at each network layer separately
+is crucial. Early detection of attacks at the EVN level enables
+preemptive warnings and protective measures, thereby preventing attackers from progressing to the IVN and gaining control
+of the vehicle. Therefore, it is evident that an IDS system for
+IoV needs to have three key capabilities: recognizing attack
+types, being compatible with both IVN and EVN, and performing well with limited labeled data. However, achieving
+these capabilities is highly challenging due to the following
+reasons:
+
+T
+
+1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+LU et al.: ONE2 : AN INTRUSION DETECTION SYSTEM FOR BOTH INTERNAL AND EXTERNAL VEHICULAR NETWORK
+
+1) Attack behaviors are often multilayered and hidden within
+normal behaviors, leading to similar features among different attack types and diverse features within the same attack type. This makes feature-based recognition extremely
+difficult.
+2) IVN and EVN use different network protocols, resulting in
+distinct network data structures, complicating the design
+of an intrusion detection algorithm that works for both.
+3) Machine learning-based methods heavily rely on data
+quality for performance. IoV data is difficult to obtain due
+to its sensitive nature, and the few available datasets often
+lack high-quality type annotations.
+To address the aforementioned challenges, we propose a
+behavior representation mechanism based on network structure,
+modeling network data as a multi-attribute heterogeneous graph.
+In this graph, data flows, IP addresses, and ports are treated
+as nodes, and nodes belonging to the same traffic flow form a
+fully connected subgraph. This approach weakens the specific
+characteristics of the traffic data, allowing the logical integration
+of IVN and EVN by breaking the boundaries between them.
+Additionally, the stability of the structure serves as implicit information, enabling the clustering of behavior data with similar
+structures for self-supervised learning with weak labels [16].
+Furthermore, to effectively learn the information from this multiattribute heterogeneous graph, we introduce a corresponding
+Multi-attribute Heterogeneous Graph Transformer (MA-HGT).
+This model employs multiple attention heads to learn different
+attention weight distributions within the graph and capture correlations at various positions [17], thereby enhancing the model’s
+representational capability.
+In summary, the major contributions of this work are as
+follows:
+r We designed and implemented an IDS called One2 that is
+compatible with both IVN and EVN using limited weakly
+labeled data. It can accurately identify attacks, including
+cross-network continuous attacks.
+r We proposed a network structure-based representation
+mechanism, modeling network data as a multi-attribute
+heterogeneous graph to extract deep implicit information.
+Additionally, we designed a novel deep learning model
+structure, MA-HGT, to efficiently learn the information
+within this multi-attribute heterogeneous graph.
+r To validate the performance of One2 , we conducted experiments on multiple real-world datasets. The results show
+that One2 improves average accuracy by 7.14% and F1Score by 6.97% compared to state-of-the-art methods.
+II. RELATED WORKS
+A. Machine Learning-Based IDS
+Machine learning [18] algorithms have been widely used in
+IDS. Alshammari et al. [19] developed an IDS for IVN using the
+two algorithms. Derhab et al. [20] proposed a Histogram-based
+Intrusion Detection. However, these IDS exhibit high False
+Alarm Rates (FAR) and are exclusively suitable for IVN. To
+safeguard IVN and EVN and reduce the FAR, Yang et al. [14]
+integrated four distinct ML methods to develop a novel IDS.
+
+2761
+
+In [21], the authors also designed an IDS incorporating three
+algorithms. Nevertheless, both IDS heavily rely on feature engineering. Additionally, they require extensive training using a
+substantial volume of labeled data.
+B. Deep Learning-Based IDS
+To avoid the dependence on feature engineering, researchers
+employ Deep Learning [22] to build IDS. Seo et al. [23] proposed
+a Generative Adversarial Network-based IDS for IVN. Nguyen
+et al. [24] proposed a novel approach for developing an IDS
+specifically designed for CAN buses. However, these IDS fail
+to consider the intricate attributes of the external network. As
+a result, their effectiveness is limited to IVN with relatively
+simple data structures. For EVN, Han et al. [25] introduced
+the Spatial and Time-aware Intrusion Detection Model. Deng
+et al. [15] proposed an IDS based on Graph Convolutional
+Network with stream topology. To achieve Bot detection in
+external networks, Zhao et al. [26] transformed the bot detection
+problem into a classification task on a semi-supervised graph.
+To detect Distributed Denial of Service (DDoS) attacks, Cao
+et al. [27] designed an IDS based on a spatio-temporal graph
+convolutional network. However, these IDS only apply to EVN
+and mostly focus on the binary classification problem of network
+traffic. To design IDS that can be used in IVN and EVN, Yang and
+Shami [28] proposed an IDS system based on transfer learning
+and ensemble learning. However, it is important to note that
+transforming network data into images for training requires
+substantial data. Ashraf et al. [13] developed an IDS utilizing the
+LSTM autoencoder architecture. Nevertheless, these two IDS
+only address the binary classification problem of IoV traffic data.
+III. IOV AND THEIR VULNERABILITIES
+A. Preliminary
+The IoV enables wireless communication between vehicles
+and network infrastructure setups, making it a critical foundation for intelligent transportation systems. According to the
+communication range, the IoV can be categorized into IVN and
+EVN [29]. The IVN consists of numerous Electronic Control
+Unit (ECU) interconnected via controller area network (CAN)
+bus [30]. This facilitates the integration of various features in
+Connected Vehicles (CV) and Autonomous Vehicles (AV) [31].
+The EVN establishes a connection between CV, AV and external
+devices via Vehicle-to-Everything (V2X) technology, including Vehicle-to-Vehicle (V2V), Vehicle-to-Infrastructure (V2I),
+Vehicle-to-Pedestrian (V2P) and Vehicle-to-Sensors (V2S) [2].
+B. Vulnerabilities of IVN
+In IVN, ECU play a crucial role in facilitating the execution
+of diverse functionalities by CV and AV. Consequently, an
+increasing number of ECU are being integrated into contemporary vehicles, with many luxury vehicles boasting an excess
+of 100 ECU [30]. Typically, These ECU establish communication through the CAN bus. Fig. 1 illustrates the structure
+of a CAN packet, which consists of seven distinct fields [32].
+Among these fields, the data field holds the information that
+
+2762
+
+Fig. 1.
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+CAN packet structure [13].
+
+governs the functioning of the node, making it the most crucial
+and susceptible component [14]. Message injection attack is a
+prominent form of attack in IVN, which is realized by an attacker
+intentionally inserting malicious messages into the data field of
+CAN packets. This manipulation is aimed at gaining control over
+the vehicle. Message injection attacks can be classified into three
+main categories: Denial of Service (DoS), fuzzy, and spoofing
+attacks [33]. DoS attacks flood the CAN with a substantial
+volume of messages, leading to the delay or unavailability of
+valid messages. In a similar vein, fuzzy attacks induce the
+vehicle to have malfunctions or display unanticipated behavior
+by the injection of random packets. Spoofing attacks involve the
+deliberate injection of targeted packets with the aim of disguising
+them as legitimate signals, hence enabling unauthorized control
+over the vehicle.
+C. Vulnerabilities of EVN
+With the increasing number of entities accessing IoV, EVN are
+becoming enormous networks containing diverse networks and
+devices [34]. Due to the lack of encryption and authentication
+mechanisms, EVN are vulnerable to a variety of traditional cyber
+threats, wherein every entity within the network possesses the
+potential to be targeted as an attack node. The major types of
+attacks in EVN are DoS, infiltration, sniffing, brute force, Web
+attacks, and botnet attacks [14], [35]. Among these, DoS attacks
+overwhelm the vehicle with a large number of messages, resulting in the vehicle’s inability to handle legitimate requests. Infiltration attacks [35] refer to aiding other assaults by traversing a
+compromised protective system. Sniffing attacks collect sensitive information by capturing packets in the EVN. Brute force
+attacks are used to obtain malicious vehicle control by breaking
+passwords. Web attacks [35] are employed with the intention
+of executing detrimental actions by targeting the web interfaces
+of entities within the EVN. Botnets infect many vehicles and
+equipment with Bot viruses to facilitate assaults such as DoS.
+D. Security Model of IVN and EVN
+Fig. 2 illustrates the general attack scenarios against the CV or
+AV, encompassing both physical and remote attacks. A physical
+attack pertains to the act of an assailant utilizing computing
+equipment, such as a laptop, to get unauthorized access to the
+CAN bus by establishing a connection with the OBD-II port in
+IVN. This unauthorized access enables direct control over critical vehicle functions, including steering, braking, and acceleration systems. Remote attacks involve the exploitation of wireless
+interfaces in the EVN—such as WiFi, cellular networks, and
+
+Fig. 2.
+
+Attack scenarios and proposed IDS – One2 deployment.
+
+Bluetooth—which attackers leverage to subsequently compromise IVN systems, creating cross-network attacks as discussed
+in Section III-C. The objective of these attacks is to compromise
+the telematics equipment and CAN bus of the vehicle [14].
+Execution scenarios for this type of attack include V2V attacks
+and V2I vulnerabilities. (1) V2V attacks: Malicious vehicles
+can broadcast falsified safety messages (e.g., fake emergency
+braking warnings) or spoofed position information, messages,
+potentially causing traffic disruption or collisions. (2) V2I vulnerability: Attackers can compromise existing roadside devices
+or deploy malware on them. Through these compromised or
+spoofed infrastructure devices, an attacker can launch an attack
+directly at passing vehicles. This interconnected threat landscape
+demonstrates why unified security approaches spanning both
+IVN and EVN domains are essential for comprehensive vehicle
+protection. Attackers can exploit the boundaries between these
+networks, using compromised telematics equipment as a bridge
+to access critical CAN bus functions, or leveraging captured
+CAN data to orchestrate more sophisticated external attacks.
+Additionally, The declining costs of memory and computing
+devices have recently facilitated the widespread adoption of
+deep-learning-based IDS in CV and AV [13].
+The proposed IDS deployment is shown in Fig. 2 To ensure
+the security of the IVN, the proposed IDS will be implemented
+directly on the CAN bus. The network sniffer intercepts and
+scrutinizes all flow data transmitted on the CAN bus to monitor
+and identify suspicious network activities. This capability is
+crucial for defending against physical access attacks [13], [36].
+The proposed IDS will also be deployed within the gateway to
+safeguard the vehicle against remote attacks initiated from the
+EVN. The IDS at the gateway will detect all flow data transmitted
+to and from the CAN bus originating from the EVN, thereby
+establishing a defense against remote access attacks [14]. In
+the event that an attacker sending malicious traffic to the car is
+detected, the proposed IDS will promptly raise the alarm and
+prevent the attacker from gaining access, thereby protecting the
+vehicle from potential damage caused by cyber-attacks.
+IV. THE IDS: ONE2
+A. System Architecture
+The One2 framework has three steps, as shown in Fig. 3. First,
+network flow data is constructed into the graph construction.
+Subsequently, the graph construction is employed as the input
+
+LU et al.: ONE2 : AN INTRUSION DETECTION SYSTEM FOR BOTH INTERNAL AND EXTERNAL VEHICULAR NETWORK
+
+2763
+
+TABLE II
+SOME ESSENTIAL ATTRIBUTES OF EVN FLOW DATA
+
+Fig. 3.
+
+Framework of the proposed IDS.
+
+TABLE I
+SOME ESSENTIAL ATTRIBUTES OF IVN FLOW DATA
+
+for MA-HGT to perform graph embedding. Ultimately, the
+flow nodes are classified based on the graph embedding.
+Additionally, to enhance training efficiency when processing
+large-scale intrusion detection data, an effective heterogeneous
+graph sampling algorithm is employed to sample the graph
+structure during training.
+B. Graph Construction
+Definition 1. Heterogeneous Graph: A heterogeneous
+graph is defined as a graph with multiple types of nodes and/or
+edges. We denote a heterogeneous graph as G = (V, E, A, R),
+where v ∈ V denotes nodes, e ∈ E denotes edges, A denotes the
+union of node type, and R denotes the union of edge type.
+Definition 2. Mapping function: The mapping function of
+node type and edge type is τ (v) : V → A and φ(e) : E → R,
+respectively.
+In real life, network flow data contain many attributes that may
+indicate potentially malicious activity. Hence, these attributes
+can be used to differentiate malicious attacks from benign
+behaviors. Tables I and II provide some essential attributes of
+IVN and EVN flow data, respectively. Instead of traditional IDS
+that directly input attributes into the model, the proposed IDS
+adopts a novel approach by constructing a graph representation
+of network data before the model learning process. In detail, we
+build the One2 of network flow data for the first time. This graph
+enables us to describe the network flow more fine-grained and
+capture implicit topological features of flow which facilitates
+accurate identification of malicious behavior in the network.
+The reasons for using graph structures to build an IDS for IoV
+are as follows: (1) Unified representation of heterogeneous data:
+By modeling network data as a multi-attribute heterogeneous
+graph, data streams, IP addresses, and ports are uniformly represented as nodes. This allows IVN and EVN to be logically unified
+and processed together, breaking down the boundaries between
+
+them. (2) Adaptability to weakly labeled data: The inherent stability of graph structures provides implicit information, enabling
+the clustering of behavioral data exhibiting similar structural
+patterns, as shown in the left half of Fig. 4. This supports
+self-supervised learning approaches with weakly labeled data,
+thereby reducing dependence on extensive labeled datasets. (3)
+Effective capture of complex relationships and positional information: Nodes within the same traffic flow form fully connected
+subgraphs, enabling comprehensive modeling of inter-node relationships. Through the multi-attention head mechanism of
+the MA-HGT model, it learns positional associations within
+the graph structure. This enhances the model’s representational
+capabilities, enabling it to capture complex patterns that traditional methods struggle to identify. (4) Preservation of structural
+features: In contrast to flattening or serialization approaches, the
+graph structure preserves the natural topological features of IoV
+network traffic. This structured representation maintains greater
+fidelity to the inherent characteristics of network data.
+Given a IVN flow data I, we construct a multi-network attributes heterogeneous graph GI with two types of nodes (F low
+and ID) and one type of edges (F low − ID edge). The identifier
+of IVN flow data is represented as a ID node, and the rest of the
+attributes of flow are represented as a F low node. Moreover, we
+build an undirected edge which is from the F low to the ID.
+Given a EVN flow data E, we construct a multi-network
+attributes heterogeneous graph GE with five types of nodes
+(F low, Srcip, Dstip, Sport and Dport) and four types
+of edges (F low − Srcip edge, F low − Dstip edge, F low −
+Sport edge, F low − Dport edge). As illustrated in Fig. 3, the
+source IP address, destination IP address, source port number
+and destination port number of EVN flow data are denoted
+as a Srcip node, Dstip node, Srcport node, Dstport node,
+respectively. Besides, the rest of the attributes of flow are denoted
+as a F low node. After that, we build four undirected edges which
+are from the F low to the Srcip, from the F low to the Dstip,
+from the F low to the Srcport, from the F low to the Dstport.
+For the aforementioned graph construction methods, every
+F low node in the graph represents a single piece of network
+
+2764
+
+Fig. 4.
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+Framework of MA-HGT.
+
+flow data and encompasses all its statistical features. Thus,
+to acquire the network topological features of each flow data
+while preserving its statistical features, we can employ message
+passing and aggregation among F low nodes to obtain the graph
+embedding for each F low node. Lastly, by classifying all F low
+nodes, we can determine the category of each corresponding
+network flow data.
+C. Heterogeneous Graph Embedding
+To mine implicit meta relationships between flows and their
+attributes in the graph construction, we use HGT [17] to get
+graph embeddings for all nodes, as shown in Fig. 4. The input
+for HGT is the heterogeneous graph GI or GE . For the sake
+of simplicity in mathematical notation, we will use the symbol
+X0 to represent either of these graphs. Moreover, the outputs
+of HGT are the graph embeddings representing flows and their
+attributes, indicated as H.
+Definition 3. Meta relation: We define τ (s), φ(e), τ (t) as
+the meta relation for an edge e = (s, t) linked from source node
+s to target node t.
+There exists a one-to-one link between the F Low node in
+the constructed graph structure and the network flow statistics.
+Consequently, one can regard the graph embedding of the F low
+node as the graph embedding of the network flow data. As a
+result, the F Low node is chosen as the target node, denoted as
+f , to reduce the computational complexity.
+1) Heterogeneous mutual attention: Initially, we use three
+linear projection functions to transform node embeddings into
+the ith vector. In detail, the function QLineariτ (f ) is used to map
+the F low node f into the ith query vector Qi (f ), which has
+d
+a dimension of Rd → R h . Here, d represents the dimension of
+d
+X0 [f ], while h denotes the vector dimension per head. Similarly,
+the functions KLineariτ (s) and VLineariτ (s) are also used to map
+the source node s to the ith key vector Ki (s) and the ith value
+vector Vi (s). It is important to highlight that these functions are
+indexed based on the node’s type [37]. This implies that each
+kind of node has a distinct linear projection that aims to capture
+
+the distribution disparities effectively.
+Qi (f ) = QLineariτ (f ) (X0 [f ])
+
+(1)
+
+Ki (s) = KLineariτ (s) (X0 [s])
+
+(2)
+
+Vi (s) = VLineariτ (s) (X0 [s])
+
+(3)
+
+Subsequently, it is necessary to compute the attention heads
+for a pair of nodes. In the process of computing the similarity
+between the Query vector Qi (f ) and Key vector Ki (s), a unique
+d
+d
+ATT
+matrix Wφ(e)
+∈ R h × h is utilized for each specific edge type
+φ(e). By doing so, the model has the ability to capture various
+semantic relations, even when considering node-type pairs that
+are identical. Additionally, it is important to note that not all
+relationships have an equal impact on the target nodes. To
+account for this, we introduce a prior tensor μ ∈ R|A|×|R|×|A|
+which represents the overall significance of each meta relation
+triplet. This tensor serves as an adaptive scaling factor for the
+attention mechanism. Hence, the calculation of headiatt (s, e, f )
+for edge e = (s, f ) is performed as follows:
+ μ
+
+τ (s),φ(e),τ (f )
+att
+√
+Qi (f )T ·
+headiatt (s, e, f ) = Ki (s)Wφ(e)
+d
+(4)
+Ultimately, the attention heads are concatenated, resulting in
+the generation of an attention vector for each pair of nodes. Next,
+we proceed to collect attention vectors from the neighboring
+nodes N (f ) for each target node f and apply the softmax
+function. Thus, the computation of the h-head attention for edge
+e = (s, f ) is performed as follows:
+
+
+Attention(s, e, f ) = Softmax i∈[1,h] headiatt (s, e, f )
+∀s∈N (f )
+
+(5)
+2) Heterogeneous message passing: First, the meassge head
+headimsg (s, e, f ) for edge e = (s, f ) is calculated by:
+msg
+headimsg (s, e, f ) = Vi (s)Wφ(e)
+
+(6)
+
+LU et al.: ONE2 : AN INTRUSION DETECTION SYSTEM FOR BOTH INTERNAL AND EXTERNAL VEHICULAR NETWORK
+
+msg
+where Wφ(e)
+∈ R h × h is utilized to incorporate the edge deATT
+. Then, we
+pendence, analogous to the utilization of Wφ(e)
+concatenate all the message heads to get the Message(s, e, f )
+for edge e = (s, f ):
+d
+
+d
+
+Message(s, e, f ) = i∈[1,h] headimsg (s, e, f )
+
+⊕
+
+∀s∈N (f )
+
+(Attention(s, e, f ) · Message(s, e, f ))
+
+(8)
+Then, the ReLU activation function and linear projection
+ ], and this is followed by a
+ALinear are applied to the H[f
+residual connection as:
+
+
+
+ ] + X0 [f ]
+(9)
+H[f ] = ALinearτ (f ) ReLU H[f
+Employing this approach, we obtain the output of a highly
+contextualized representation for the F low node f . Subsequently, this representation is utilized as input for a single-layer
+fully connected network to perform flow node classification.
+D. Attack Classification
+In this step, the MA-HGT feeds the graph embedding of
+flow nodes H[f ] into a single-layer fully connected network
+to generate the system’s output. Specifically, the quantity of
+neurons within the fully connected network is contingent upon
+the number of classification categories. We use the softmax
+activation function, calculated as follows:
+Yf = Softmax(W ∗ H[f ] + b)
+
+TABLE III
+CLASS LABEL, AND SIZE OF THE CAR-HACKING DATASET
+
+(7)
+
+3) Flow node aggregation: The Attention(s, e, f ) is
+regarded as the weight to average the corresponding
+Message(s, e, f ). The aforementioned action aggregates information from various source nodes and transfers it to the
+ ]
+destination node f . As a result of this process, the vector H[f
+is updated as:
+ ]=
+H[f
+
+2765
+
+(10)
+
+where Yf is the predicted label of network flow data, i.e.,
+the result of the MA-HGT, W is a weighted matrix and b is
+bias vector. We chose a single-layer fully connected network
+because it primarily serves as a dimensional transformation
+component in our framework, converting high-dimensional feature representations from the HGT into a format suitable for
+final classification tasks (binary or multi-class). The proposed
+MA-HGT’s representational power allows this simple structure to effectively map graph features to classification space
+while minimizing overfitting risk from excessive parameters.
+For the output layer, we adopted the standard softmax activation
+function as it provides sufficient probabilistic differentiation to
+distinguish between benign traffic and various attack types.
+E. Training on Subgraphs
+To facilitate the training on giant heterogeneous graphs composed of network flows with hundreds of thousands of nodes
+and edges, we employ a method called MA-HGSampling. This
+method allows for the generation of subgraphs from the original gigantic graph. To begin, we include all direct neighbors
+s ∈ N (f ) of the F low nodes in the budget B[f ], resulting in
+
+B[f ][s]. Subsequently, we calculate the sampling probabilities
+for these nodes:
+P [f ][s] =
+
+B[f ][s]2
+,
+B[f ]22
+
+(11)
+
+where B[τ ][s] is updated by the normalization degree of the
+candidate node concerning the F low node:
+B[f ][s] = B[f ][s] +
+
+1
+,
+len(Adj[f ])
+
+(12)
+
+where len(Adj[f ]) is the length of adjacency matrix for each
+τ (s), φ(e), τ (f ) meta relation.
+Subsequently, a specific number of nodes were sampled based
+on the probability P among all F low nodes and the budget was
+allocated for each category of node. This iterative procedure is
+executed four times to generate a graph sample with a depth of
+four. Finally, the adjacency matrix between the sampled nodes
+is reconstructed. The MA-HGSampling technique ensures that
+the subgraph generated has a comparable number of nodes for
+each type as the original graph. Additionally, the subgraph is
+sufficiently dense to facilitate MA-HGT training on large-scale
+heterogeneous networks representing network traffic.
+V. PERFORMANCE EVALUATION
+A. Experimental Setup
+The experiments utilize the PyTorch 2.0 library [38] and the
+PyTorch Geometric library [39] for model development. Furthermore, the trials were conducted on a workstation equipped
+with Ubuntu 18.04, an Intel Xeon Gold 6230R CPU, and an
+NVIDIA GeForce RTX 3090 GPU.
+B. Data Description
+This paper utilizes the following three IVN datasets to evaluate the proposed IDS:
+r CAR-HACKING: The dataset was generated by capturing
+CAN traffic through the OBD-II port of an actual car during
+the execution of CAN attacks [33], [40]. The various attack
+types present in the CAR-HACKING dataset are displayed
+in Table III. The CAR-HACKING dataset encompasses
+several key attributes, namely the timestamp, CAN ID, data
+length code (DLC), and the DATA[0]-[7]. These attributes
+are derived from the arbitration field, control field, and
+data field of the CAN packets which are illustrates in
+Fig. 1 and Table I. Additionally, Table III displays the label
+
+2766
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+distributions of the original dataset, the training dataset, and
+the validation dataset.
+r CAN-INTRUSION: This dataset mainly consists of impersonation attacks and injection attacks against the CAN
+bus [41]. In particular, impersonation attacks assume that
+the attacker is able to make physical modifications and can
+control the target node, stop the message transmission, and
+have the containing node send a message to replace the
+terminating node. On the other hand, there are two main
+different types of injection attacks in datasets: DOS and
+fuzzing attacks.
+r CICIoV2024: This dataset was used by researchers to
+conduct five attacks on the complete interior of a 2019
+Ford vehicle, including all ECU, over the CAN bus [42].
+This dataset focuses on two types of threats against the
+CAN bus: DOS attacks and spoofing attacks. For DOS
+attacks, a malicious CAN user can change the arbitration
+value to initiate an attack. On the other hand, spoofing
+attacks include steering wheel spoofing, RPM spoofing,
+speed spoofing, and gas control spoofing.
+In the process of developing the IDS for the IVN, we have
+chosen to incorporate all of the aforementioned properties as
+input features for the model. In order to address the memory
+constraints of the computer utilized in the experiments and to
+assess the efficacy of the model under label-constrained circumstances, we employed random down-sampling techniques
+to preprocess the data. This enabled the successful implementation of the proposed model for both training and testing
+purposes.
+The scarcity of publicly available EVN benchmark datasets
+can be attributed to concerns about privacy and commercialisation [14], [43]. In contrast, Wireless Local Area Networks
+(WLANs) and cellular networks are frequently employed communication methods for IoV communication. Consequently, the
+attack on the conventional computer network can be regarded
+as analogous to the intrusion on the EVN [13], [28], [44].
+Consequently, numerous research endeavors [13], [45], [46],
+[47], [48], [49], [50] have been undertaken to construct external
+IDS for vehicle networks. These projects utilize established
+intrusion detection datasets, such as ISCXID2012 [51] and
+UNSW-NB15 [52], to facilitate their development. Therefore,
+this paper utilizes the following three similar datasets to evaluate
+the proposed IDS for the performance on the EVN:
+r CIC-IDS2017: This dataset is considered to be highly
+advanced due to its comprehensive range of features and
+inclusion of the up-to-date sorts of attacks [44], [53]. The
+datasets have a strong resemblance to authentic real-world
+data. The complete set of network traffic analysis results
+from the dataset was utilised by our IDS, encompassing
+over 80 network traffic attributes such as source and destination IPs, source and destination ports, and protocols.
+Table II presents several significant attributes of the dataset.
+Furthermore, this study establishes a correlation between
+each attack included in the CIC-IDS2017 dataset and the
+potential attacks discussed in Section III. The details pertaining to the CIC-IDS2017 dataset and the results of the
+correlation analysis are presented in Table IV.
+
+TABLE IV
+CLASS LABEL, AND SIZE OF THE CIC-IDS2017 DATASET
+
+r TON-IoT: The TON-IoT dataset consists of the original dataset, the processed dataset, and the training test
+dataset [54]. In this paper, we select the training test dataset
+from the TON-IoT dataset. This dataset contains a total of
+nine attacks, namely Backdoor Attack, DoS Attack, DDoS
+Attack, Injection Attack, Password Attack, Ransomware,
+Scanning, xss Attack and Man-in-the-Middle Attack. The
+training test dataset contains 42 network traffic attributes
+such as source and destination IPs, source and destination
+ports, and protocols.
+r CIC-UNSW-NB15: The CIC-UNSW-NB15 dataset uses
+the CICFlowMeter network traffic analysis tool to extract
+a new set of features from the captured network traffic data
+provided by UNSW-NB15, including a total of 83 features
+such as source and destination IPs, source and destination
+ports, and protocols [55]. This dataset contains a total of
+nine types of attacks, Fuzzer, Analytics, Backdoor, DoS,
+Vulnerability, Generic, Reconnaissance, Shellcode, and
+Worms.
+The aforementioned attributes are utilised as input features
+in the proposed model, allowing it to optimise the learning of
+characteristics that enhance the performance of the proposed
+IDS. Furthermore, the analysis in Tables III and IV demonstrates
+that the CAR-HACKING and CIC-IDS2017 datasets comprehensively encompass the primary threat categories encountered
+in IoV environments. These datasets are widely adopted within
+the field of connected vehicle security research and possess
+high representativeness [13], [14], [28], [35], [45]. Therefore,
+a two-tiered experimental approach was adopted: (1) Comprehensive evaluation employs all six datasets for foundational
+experiments to demonstrate the proposed model’s generalization capability across diverse network environments and attack
+scenarios. (2) Representative evaluation uses CAR-HACKING
+and CIC-IDS2017 as representative IVN and EVN datasets for
+specialized analyses of specific scenarios or dimensions.
+
+LU et al.: ONE2 : AN INTRUSION DETECTION SYSTEM FOR BOTH INTERNAL AND EXTERNAL VEHICULAR NETWORK
+
+2767
+
+C. Comparative Methods
+
+D. Validation Metrics
+
+In this study, we conducted a comparative analysis of the
+proposed IDS against eight approaches. The selection of machine learning or deep learning-based IDS baselines follows the
+following criteria: (1) Methods employing classical machine
+learning or deep learning algorithms that are widely cited in
+academia or serve as comparative benchmarks. (2) Whether
+the method accounts for the characteristics of IVN or EVN,
+or is specifically designed for these environments. (3) Whether
+the ACC and FAR meet the fundamental requirements for IoV
+security applications.
+r Rule-based IDS: This rule-based IDS integrates multiple rule types, including statistical threshold rules [56],
+attack pattern rules [57], domain expert rules [32] and
+state-related rules [58]. We integrated multiple rules to
+balance method generality with detection capability. This
+design enables the IDS to adapt to diverse environments
+such as IVN and EVN, while delivering robust detection
+performance without requiring machine learning models.
+r AdaBoost-based IDS [59]: AdaBoost is an iterative ensemble learning technique that constructs a robust classifier
+by aggregating multiple weak classifiers to enhance the
+accuracy of network traffic classification.
+r Gradient Boosting Decision Trees (GBDT)-based IDS
+[60]: GBDT involves each iteration’s iterative training of
+decision trees to rectify the faults made in the preceding
+iteration to classify network traffic effectively.
+r Random Forest(RF)-based IDS [35]: RF enhances the performance and stability of intrusion detection models by aggregating the predicted results through voting or averaging.
+r Deep Neural Networks(DNN)-based IDS [44]: DNN is a
+common variant of feed-forward neural networks with six
+hidden layers.
+r 1D Convolutional Neural Network(1DCNN)-based
+IDS [61]. The 1DCNN extracts network traffic features
+through four 1D convolutional layers and 1D max pooling
+and classifies them through a single-layer neural network.
+r Long Short-Term Memory(LSTM)-based IDS [62]. LSTM
+can efficiently capture long-term relationships in network
+stream data, making it well-suited for intrusion detection
+tasks. LSTM contains two LSTM layers, one 1D adaptive
+average pooling layer, one dropout layer and two singlelayer neural networks.
+r Gated Recurrent Unit(GRU)-based IDS [63]. GRU incorporates a gating mechanism that allows the GRU to
+efficiently capture long-term dependencies in streaming
+data and mitigate the issue of gradient vanishing. The architecture comprises two GRU layers followed by a simple
+one-layer neural network.
+For all of the comparison methods used in the experiments, we
+referenced the parameter settings recommended in the original
+literature where these methods were proposed and optimally
+tuned these parameters to the characteristics of the datasets we
+used. Specifically, we tuned the grid search parameters for each
+algorithm to ensure that they would perform optimally on the
+datasets.
+
+To assess the effectiveness of the proposed model, we employ
+several assessment measures to gauge its classification performance. These metrics include Accuracy (ACC), DR, FAR, and
+F1-Score. The ACC metric is used to evaluate the overall performance of the proposed model. The DR measures the ability
+of the given model to correctly identify instances belonging to
+a specific category. The F1-Score is a metric that combines the
+precision rate and recall rate into a single value using the harmonic mean. The metrics are defined in the following manner:
+TP + TN
+TP + TN + FP + FN
+TP
+DR =
+TP + FN
+FP
+FAR =
+TN + FP
+2 × TP
+F1 − Score =
+2 × TP + FP + FN
+ACC =
+
+where the variables TP, TN, FP, and FN represent the quantities
+of true positive, true negative, false positive, and false negative,
+respectively.
+E. Performance Results
+1) Performance of binary classification: To assess the effectiveness of the proposed IDS for intrusion detection, the MAHGT algorithm and eight state-of-the-art baseline approaches
+are developed. These methods are trained and tested on three
+IVN and EVN distinct data sets, which accurately represent
+internal and external vehicle network traffic data, respectively.
+All comparative approaches have demonstrated favourable performance for intrusion detection in IVN or EVN. The results
+of the experiment for all methods are shown in Fig. 5. For
+accuracy metric, MA-HGT achieves 99.99% , 99.95% and
+99.97% on the CAR-HACKING, CAN-INTRUSION and CICIoV2024, respectively. The accuracy of MA-HGT on the IVN
+datasets is at least 3.73% , 15.55% , 3.45% higher than the
+other eight methods. On the other hand, MA-HGT achieves
+99.98% , 99.95% and 99.99% accuracy on the CIC-IDS2017,
+TON-IoT and CIC-UNSW-NB15, respectively. The accuracy
+of MA-HGT on the EVN datasets is at least 3.51% , 13.96%
+, 2.67% higher than the other eight methods. Meanwhile, as
+depicted in Fig. 5, the result demonstrates that MA-HGT attains F1-Scores of 99.99% , 99.97% and 99.70% on the CARHACKING, CAN-INTRUSION and CICIoV2024, respectively.
+The F1-Score of MA-HGT on the IVN datasets is at least
+13.29% , 9.02% , 2.42% higher than those achieved by the other
+eight methods. Additionally, MA-HGT achieves F1-Scores of
+99.88% , 99.97% and 99.99% F1-Score on the CIC-IDS2017,
+TON-IoT and CIC-UNSW-NB15, respectively. The MA-HGT
+approach demonstrates a minimum increase in F1-Score of
+9.00% , 3.71% and 4.40% compared to the other eight methods,
+as observed in the EVN datasets. Besides, upon observing the
+additional two indices shown in Tables V and VI, it becomes
+
+2768
+
+Fig. 5.
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+Binary classification performance of all methods on IVN and EVN datasets.
+
+TABLE V
+DETECTION RATE AND FALSE ALARM RATE OF ALL METHODS ON THREE IVN
+DATASETS
+
+Fig. 6.
+
+ROC curves of all methods on two dataset.
+
+Fig. 7.
+
+PR curves of all methods on two dataset.
+
+TABLE VI
+DETECTION RATE AND FALSE ALARM RATE OF ALL METHODS ON THREE EVN
+DATASETS
+
+evident that MA-HGT exhibits a noticeable enhancement in
+detection performance compared to the baseline technique. This
+demonstrates that the proposed IDS effectively acquires a unified
+representation encompassing topological and statistical characteristics of network flow data. Furthermore, the MA-HGT
+model performs better than deep learning techniques such as
+1DCNN and LSTM across all evaluation criteria, particularly
+when evaluated on the EVN datasets. One possible explanation
+for this phenomenon is the high feature dimensionality of the
+EVN datasets; for example, the CIC-IDS2017 dataset contains
+more than 80 feature dimensions. Meanwhile, the absence of
+a multi-attention mechanism in these approaches hinders their
+ability to effectively concentrate on important features, leading
+to suboptimal detection results.
+Additionally, the Receiver Operating Characteristic (ROC)
+and Area Under the Curve (AUC) findings for all approaches
+on CAR-HACKING and CIC-IDS2017 datasets are presented
+in Fig. 6. It is evident that the AUC scores obtained by the
+MA-HGT approach surpass those of the other methods, exceeding 0.9999 on both datasets. Furthermore, Fig. 7 presents the
+Precision-Recall (PR) curves and Average Precision (AP) scores
+
+for all methods across the CAR-HACKING and CIC-IDS2017
+datasets. The MA-HGT method achieved superior AP scores
+compared to all baseline approaches, exceeding 0.9999 on both
+datasets. The findings of these experiments suggest that the
+proposed MA-HGT has superior classification performance for
+IVN and EVN flow data compared to alternative approaches.
+The MA-HGT framework can transform traffic flows into a
+topological structure of heterogeneous graph data, which can
+then be effectively utilised for intrusion detection through graph
+embedding technology.
+2) Performance of multi-classification: To evaluate the multiclassification performance of MA-HGT, we generated confusion
+matrices for the test sets of the IVN and EVN datasets, as
+depicted in Fig. 8, respectively.
+For the CAN-HACKING dataset, MA-HGT can accurately
+detect three types of attacks: DoS, RPM spoofing and gear
+spoofing. The accuracy rate of MA-HGT was found to be
+exceptionally high, reaching 99.98% . This high accuracy can
+be attributed to the algorithm’s ability to effectively identify and
+classify instances of DoS, RPM spoofing, and gear spoofing
+attacks. Moreover, in the case of Fuzzy attacks, which exhibit
+attack patterns that closely resemble those of other attacks, MAHGT demonstrated minimal misclassifications. Furthermore,
+MA-HGT achieved high accuracy rates of 98.45% and 99.99%
+on the CAN-intrusion and CICIoV2024 datasets, respectively.
+
+LU et al.: ONE2 : AN INTRUSION DETECTION SYSTEM FOR BOTH INTERNAL AND EXTERNAL VEHICULAR NETWORK
+
+Fig. 8.
+
+2769
+
+Confusion matrix of proposed methods for the test set on IVN and EVN datasets.
+
+Despite the presence of different attack types and complicated
+assault patterns within the CIC-IDS2017 dataset, the MA-HGT
+model demonstrates a remarkable accuracy rate of 98.38% .
+The MA-HGT model achieves an accuracy of 1 in identifying
+and classifying four common attack patterns: Bot, Heartbleed,
+FTP-Patator, and SSH-Patator attacks. However, the accuracy
+for various DoS attacks is slightly lower. This might be attributed
+to DoS attack patterns exhibiting a high degree of similarity.
+Moreover, the performance of MA-HGT in the context of Infiltration and XSS attacks is suboptimal. One potential explanation
+for this outcome is the limited number of samples available for
+the two attacks, impeding correct attack identification. Additionally, MA-HGT achieved high accuracy rates of 96.62% on the
+TON-IoT dataset and 93.92% on the CIC-UNSW-NB15 dataset.
+The relatively lower accuracy on the CIC-UNSW-NB15 dataset
+is attributed to the severe class imbalance in the data.
+The factor contributing to the high-performance multiclassification of MA-HGT is the ability of each head within
+the HGT to acquire distinct representations concurrently. This
+enables the model to selectively attend to various locations or
+features concurrently, thereby enhancing the model’s classification performance on intricate data.
+3) Ablation study: To comprehensively evaluate the role of
+each MA-HGT module in intrusion detection, we conducted
+ablation experiments on the proposed system using both IVN and
+EVN datasets, with results presented in Fig. 9. The ablation study
+focuses on three key modules: the MA-HG construction method,
+the HGT module, and the MA-HGSampling method. We
+designed the following ablation experiments to systematically
+evaluate each module’s contribution: (1) w/o HL: excludes
+
+Fig. 9.
+
+Ablation study of the proposed IDS on IVN and EVN datasets.
+
+the MA-HG Sampling method, utilizing only the ordinary
+Dataloader; (2) HAN+HL: replaces the HGT module with
+the Heterogeneous Graph Attention Network (HAN) [64]; (3)
+HGN+HL: substitutes the HGT module with a Heterogeneous
+Graph Convolutional Network (HGCN) [39]; (4) HAN+DL:
+combines the HAN with the ordinary Dataloader, omitting
+the multi-attribute heterogeneous graph sampling method; (5)
+HGN+DL: employs the HGCN with the ordinary Dataloader,
+excluding the MA-HG Sampling method; (6) GAT: utilizes
+homographys instead of heterogeneous graphs, implementing
+the Graph Attention Network (GAT) [65]; (7) GCN: employs
+homographys rather than heterogeneous graphs, applying the
+Graph Convolutional Network (GCN) [66].
+The results of the ablation experiments revealed performance
+variations across different datasets. Overall, MA-HGT achieved
+the highest accuracy on each dataset compared to all ablation
+methods. These results demonstrate that MA-HGT provides efficient detection Performance, confirming the rational design of
+MA-HGT and the indispensable and significant contribution of
+
+2770
+
+Fig. 10.
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+Loss and accuracy of five methods on two datasets during training.
+
+each module to its detection capability. Furthermore, the relative
+importance of each module varies across different datasets. For
+example, the MA-HGSampling method plays a more crucial
+role on CAR-HACKING, CICIoV2024, and TON-IoT datasets,
+whereas the HGT module contributes more significantly to
+performance on CIC-IDS2017 and CIC-UNSW-NB15. On the
+CAR-INTRUSION dataset, the ablation results indicate that
+each module contributes equally to the overall performance.
+Notably, the model’s accuracy decreases significantly when the
+common homography construction method is used instead of
+our proposed heterogeneous graph construction approach.
+4) Training efficiency of MA-HGT: In this experiment, we will
+validate the training efficiency of MA-HGT at a limited labeling
+rate. We conducted training on MA-HGT and four different
+deep-learning methods for a total of 20 epochs. The training data
+utilised had a labelling rate of 80% . Based on the information
+shown in Fig. 10, it is evident that the loss and accuracy of
+MA-HGT exhibit stabilisation after a single epoch across both
+datasets. This suggests that MA-HGT achieves convergence and
+optimal performance after a single training epoch. Furthermore,
+the stability of loss and accuracy from epochs 2-20 further
+support this conclusion. Regarding the remaining four deep
+learning methods, it can be observed that even after 20 epochs
+of training, the loss and accuracy exhibit a fluctuating pattern,
+indicating a lack of convergence. This observation suggests
+that the training efficiency of the proposed MA-HGT model
+surpasses that of several existing deep learning methods. One
+potential rationale is that the heterogeneous graph representation in MA-HGT enables the effective depiction of both the
+topological relationships and statistical characteristics within the
+network flow data. Simultaneously, incorporating a multi-head
+attention mechanism facilitates the rapid identification of crucial
+features pertaining to normal and abnormal network activities
+within the heterogeneous graph constructed through this representation. Consequently, MA-HGT exhibits swift convergence
+and efficient detection capabilities, requiring only a minimal
+number of epochs.
+In order to provide additional evidence of the training efficacy
+of MA-HGT, the alterations in detection rate and F1 score
+over the course of 20 training epochs for both MA-HGT and
+the four deep learning techniques on the CAR-HACKING and
+CIC-IDS2017 datasets are depicted in Figs. 11 and 12. These
+figures illustrate the changes in detection rate, false alarm rate,
+and F1-Score throughout the training process of the two datasets.
+
+During the training process using the aforementioned datasets,
+it was observed that the curves representing the three metrics
+of MA-HGT reached their highest values at the completion of
+one epoch. In contrast, compared to MA-HGT, the convergence
+speeds of the three metric curves in the remaining four deep
+learning methods are comparatively slower, and their convergence effects are less pronounced. It is worth mentioning that
+the three metric curves associated with the 1DCNN approach
+exhibit persistent oscillations in the 20 epochs. The observed
+phenomenon can be attributed to the high sensitivity of 1DCNN
+to unbalanced network data, which makes it unable to solve the
+classification problem with unbalanced sample categories effectively. Furthermore, experimental results show that MA-HGT
+has high performance in classification on both IVN and EVN
+flow data. The MA-HGT converges quickly and can effectively
+handle datasets with label-limited datasets.
+5) Effect of labeling rate: To assess the performance of
+MA-HGT under varying labelling rates of the dataset, the accuracy of MA-HGT and seven learning-based methods was
+assessed at various labelling rates spanning from 1% to 100% on
+the CAR-HACKING and CIC-IDS2017 datasets. Based on the
+analysis of Fig. 13, it is evident that most approaches exhibit a
+declining pattern in accuracy as the labelling rate declines. This
+observation suggests that the proportion of labelled data in the
+training set plays a significant role in influencing the accuracy of
+IDS. As depicted in Fig. 13, it is evident that the accuracy rate
+of MA-HGT consistently surpasses that of the other baseline
+methods. Furthermore, there is minimal variation in the accuracy
+rate of MA-HGT as the labelling rate declines from 100% to
+1% . The heterogeneous graph construction method’s efficacy
+and multi-head attention mechanisms in MA-HGT have been
+demonstrated to enhance the model’s ability to concentrate
+on critical features, resulting in improved classification performance. Furthermore, the experimental findings also demonstrate
+that integrating topological and statistical traffic flow characteristics in MA-HGT enhances its ability to capture the underlying
+representations of network traffic flow relationships. As a result, it achieves outstanding classification performance across
+various label rates. In addition, the commendable performance
+exhibited by MA-HGT serves as evidence that the issue of inadequate learnable information inside the model may be effectively
+addressed through the construction of a heterogeneous graph
+topology for network flow data, coupled with the utilisation of
+HGT for graph embedding, even when faced with limitations in
+labelling rate.
+6) Real-time performance, model complexity, and computational efficiency: To assess the feasibility of deploying the
+proposed IDS in real-world vehicular environments, we conducted five independent experiments to evaluate different aspects of real-time performance, model complexity, and computational efficiency. Each experiment was designed to measure
+a specific performance metric: (1) average test time, (2) model
+size, (3) total number of parameters, (4) Floating Point Operations Per Second (FLOPs) and (5) average power consumption.
+All experiments were conducted using the hardware environment described in Section V-A and the results are presented
+in Fig. 14(a). The experimental results demonstrate that the
+
+LU et al.: ONE2 : AN INTRUSION DETECTION SYSTEM FOR BOTH INTERNAL AND EXTERNAL VEHICULAR NETWORK
+
+Fig. 11.
+
+Detection rate, false alarm rate, F1-Score of five methods on CAR-HACKING dataset during training.
+
+Fig. 12.
+
+Detection rate, false alarm rate, F1-Score of five methods on CIC-IDS2017 dataset during training.
+
+Fig. 13.
+
+Accuracy of five methods on two datasets with different labeling rates.
+
+Fig. 14. (a) Comparison of real-time performance, model complexity, and
+computational efficiency and (b) Cross-dataset intrusion detection experiment
+results.
+
+proposed method achieves the shortest average test time, with
+its inference speed outperforming all baseline methods across
+all six datasets. Additionally, the model size, total number of
+parameters, FLOPs and average power consumption of the proposed IDS remain at relatively low to moderate levels compared
+
+2771
+
+to the baseline methods. To further demonstrate the feasibility
+of deploying One2 in automotive applications, we conducted
+an analysis mapping experimental results from workstation
+to real-vehicle environments. According to [67], the latency
+for safety services in vehicular environments should be below
+100ms. Concurrently, detection latency should be minimized to
+prevent interference with normal vehicle operation [68]. The
+proposed model achieved a GPU test time of 5.13ms. However,
+CPU inference times in practical tests were approximately 2.5x
+to 14.9x times longer than GPU times [69]. We employed a
+conservative 45x for estimation. Furthermore, the introduction
+of INT8 quantization [70] and model pruning techniques [71]
+can respectively enhance inference speed by 3.8x to 4.7x and
+6.67x (with only a 1% impact on model accuracy). Using a
+conservative estimate of 9.11ms for CPU inference time, this
+falls below the latency requirement for vehicular network safety
+services. Furthermore, our model remains sufficiently compact
+at 0.65MB, which is considerably less than the memory capacity
+of automotive computing systems, which typically possess over
+1GB of RAM [14]. Therefore, experimental results demonstrate
+that the proposed method exhibits superior feasibility for deployment in real vehicular systems.
+7) Cross-domain detection: To demonstrate the robustness
+of the proposed method against unseen attack scenarios, we
+conducted cross-dataset intrusion detection experiments. We
+performed two sets of cross-dataset experiments: training on
+CAR-HACKING and testing on CAN-intrusion datasets, and
+training on CIC-IDS2017 and testing on CIC-UNSW-NB15
+datasets. These dataset pairs were selected because they share
+similar network traffic characteristics, making them appropriate
+for cross-dataset validation. Fig. 14(b) demonstrates that the
+
+2772
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+REFERENCES
+
+Fig. 15. Zero-day attack detection test results of proposed methods on two
+datasets.
+
+proposed method achieved consistently high performance across
+all four evaluation metrics in both cross-dataset experiments.
+These results confirm that the proposed method demonstrates
+strong adaptability to unseen scenarios.
+8) Zero-day attack detection: To investigate the detection
+performance of the proposed IDS against zero-day attacks,
+we conducted zero-day attack evaluation experiments using
+the CAR-HACKING and CIC-IDS2017 datasets [53]. In each
+experiment, we designated one attack type from the dataset
+as the zero-day attack, extracted all corresponding attack instances, and combined them with a proportionate amount of
+randomly sampled benign data to form the test set. The training
+set consisted of all remaining data from the original dataset.
+This approach ensured the complete absence of zero-day attack
+patterns in the training data. We conducted these experiments
+for each attack type present in both the CAR-HACKING and
+CIC-IDS2017 datasets. The results are presented in Fig. 15. The
+experimental results indicate that the proposed IDS achieves
+accuracy exceeding 90% for most zero-day attack types across
+both datasets, confirming its effectiveness in detecting zero-day
+attack patterns.
+VI. CONCLUSION
+In this paper, we propose One2 IDS for label-limited IoV.
+Initially, a graph construction is developed to represent the topology of network traffic. Subsequently, the MA-HGT is employed
+to obtain graph embeddings. Finally, the node classification is
+performed on the graph for intrusion detection. The performance
+of the MA-HGT is evaluated using three IVN and EVN datasets,
+respectively. The experimental results demonstrate that MAHGT exhibits superior classification performance in binary and
+multi-class classification. Moreover, MA-HGT demonstrates
+notable convergence speed. Furthermore, despite a limited labeling rate, the MA-HGT model achieves exceptional detection accuracy, surpassing other state-of-the-art methodologies.
+A critical direction for future work involves conducting comprehensive on-target evaluations on representative automotive
+hardware platforms (such as NVIDIA DRIVE, NXP S32) to
+validate real-time performance under authentic IVN and EVN
+loads. We will thoroughly analyze the complete pipeline timing,
+worst-case execution time bounds, batching/windowing effects
+on detection latency, and system coexistence with other safetycritical tasks following ASIL considerations—essential factors
+for successful integration into production vehicle environments.
+
+[1] L. Yang, A. Moubayed, I. Hamieh, and A. Shami, “Tree-based intelligent
+intrusion detection system in Internet of Vehicles,” in Proc. 2019 IEEE
+Glob. Commun. Conf., 2019, pp. 1–6.
+[2] B. Ji et al., “Survey on the Internet of Vehicles: Network architectures and
+applications,” IEEE Commun. Standards Mag., vol. 4, no. 1, pp. 34–41,
+Mar. 2020.
+[3] C. Miller and C. Valasek, “Remote exploitation of an unaltered passenger
+vehicle,” Black Hat USA, vol. 2015, no. S91, pp. 1–91, 2015.
+[4] S. Nie, L. Liu, Y. Du, and W. Zhang, “Over-the-air: How we remotely
+compromised the gateway, BCM, and autopilot ECUs of tesla cars,”
+Briefing, Black Hat USA, vol. 91, pp. 1–19, 2018.
+[5] K. Kim, J. S. Kim, S. Jeong, J.-H. Park, and H. K. Kim, “Cybersecurity
+for autonomous vehicles: Review of attacks and defense,” Comput. Secur.,
+vol. 103, 2021, Art. no. 102150.
+[6] B. Lampe and W. Meng, “A survey of deep learning-based intrusion
+detection in automotive applications,” Expert Syst. Appl., vol. 221, 2023,
+Art. no. 119771.
+[7] K. Ilgun, R. A. Kemmerer, and P. A. Porras, “State transition analysis: A
+rule-based intrusion detection approach,” IEEE Trans. Softw. Eng., vol. 21,
+no. 3, pp. 181–199, Mar. 1995.
+[8] V. Kumar, D. Sinha, A. K. Das, S. C. Pandey, and R. T. Goswami, “An
+integrated rule based intrusion detection system: Analysis on UNSWNB15 data set and the real time online dataset,” Cluster Comput., vol. 23,
+pp. 1397–1418, 2020.
+[9] S. Al-Sarawi, M. Anbar, B. A. Alabsi, M. A. Aladaileh, and S. D. A.
+Rihan, “Passive rule-based approach to detect sinkhole attack in RPLbased Internet of Things networks,” IEEE Access, vol. 11, pp. 94081–
+94093, 2023.
+[10] P. Mishra, V. Varadharajan, U. Tupakula, and E. S. Pilli, “A detailed investigation and analysis of using machine learning techniques for intrusion
+detection,” IEEE Commun. Surveys Tut., vol. 21, no. 1, pp. 686–728, First
+Quarter 2019.
+[11] S. Sharma and A. Kaul, “A survey on intrusion detection systems and
+honeypot based proactive security mechanisms in VANETs and VANET
+cloud,” Veh. Commun., vol. 12, pp. 138–164, 2018.
+[12] R. Bitton and A. Shabtai, “A machine learning-based intrusion detection
+system for securing remote desktop connections to electronic flight bag
+servers,” IEEE Trans. Dependable Secur. Comput., vol. 18, no. 3, pp. 1164–
+1181, May/Jun. 2021.
+[13] J. Ashraf, A. D. Bakhshi, N. Moustafa, H. Khurshid, A. Javed, and A.
+Beheshti, “Novel deep learning-enabled LSTM autoencoder architecture
+for discovering anomalous events from intelligent transportation systems,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 7, pp. 4507–4518,
+Jul. 2021.
+[14] L. Yang, A. Moubayed, and A. Shami, “MTH-IDS: A multitiered hybrid
+intrusion detection system for Internet of Vehicles,” IEEE Internet Things
+J., vol. 9, no. 1, pp. 616–632, Jan. 2022.
+[15] X. Deng, J. Zhu, X. Pei, L. Zhang, Z. Ling, and K. Xue, “Flow topologybased graph convolutional network for intrusion detection in labellimited IoT networks,” IEEE Trans. Netw. Serv. Manag., vol. 20, no. 1,
+pp. 684–696, Mar. 2023.
+[16] N. Chaabouni, M. Mosbah, A. Zemmari, C. Sauvignac, and P. Faruki, “Network intrusion detection for IoT security based on learning techniques,”
+IEEE Commun. Surveys Tut., vol. 21, no. 3, pp. 2671–2701, Third Quarter
+2019.
+[17] Z. Hu, Y. Dong, K. Wang, and Y. Sun, “Heterogeneous graph transformer,”
+in Proc. Web Conf., 2020, pp. 2704–2710.
+[18] H. Yu, H. Zhang, Z. Zhang, and S. Yang, “State estimation of lithium-ion
+batteries via physics-machine learning combined methods: A methodological review and future perspectives,” eTransportation, vol. 24, 2025,
+Art. no. 100420.
+[19] A. Alshammari, M. A. Zohdy, D. Debnath, and G. Corser, “Classification approach for intrusion detection in vehicle systems,” Wireless Eng.
+Technol., vol. 9, no. 4, pp. 79–94, 2018.
+[20] A. Derhab, M. Belaoued, I. Mohiuddin, F. Kurniawan, and M. K. Khan,
+“Histogram-based intrusion detection and filtering framework for secure
+and safe in-vehicle networks,” IEEE Trans. Intell. Transp. Syst., vol. 23,
+no. 3, pp. 2366–2379, Mar. 2022.
+[21] L. Yang, A. Shami, G. Stevens, and S. De Rusett, “LCCDE: A
+decision-based ensemble framework for intrusion detection in the Internet of Vehicles,” in Proc. IEEE Glob. Commun. Conf., 2022,
+pp. 3545–3550.
+[22] H. Yu et al., “State of charge estimation method by using a simplified electrochemical model in deep learning framework for lithium-ion batteries,”
+Energy, vol. 278, 2023, Art. no. 127846.
+
+LU et al.: ONE2 : AN INTRUSION DETECTION SYSTEM FOR BOTH INTERNAL AND EXTERNAL VEHICULAR NETWORK
+
+[23] E. Seo, H. M. Song, and H. K. Kim, “GIDS: GAN based intrusion detection
+system for in-vehicle network,” in Proc. 16th Annu. Conf. Privacy Secur.
+Trust, 2018, pp. 1–6.
+[24] T. P. Nguyen, H. Nam, and D. Kim, “Transformer-based attention network
+for in-vehicle intrusion detection,” IEEE Access, vol. 11, pp. 55389–55403,
+2023.
+[25] X. Han et al., “STIDM: A spatial and temporal aware intrusion detection
+model,” in Proc. IEEE Int. Conf. Trust Secur. Privacy Comput. Commun.,
+2020, pp. 370–377.
+[26] J. Zhao, X. Liu, Q. Yan, B. Li, M. Shao, and H. Peng, “Multi-attributed
+heterogeneous graph convolutional network for bot detection,” Inf. Sci.,
+vol. 537, pp. 380–393, 2020.
+[27] Y. Cao, H. Jiang, Y. Deng, J. Wu, P. Zhou, and W. Luo, “Detecting and
+mitigating DDoS attacks in SDN using spatial-temporal graph convolutional network,” IEEE Trans. Dependable Secure Comput., vol. 19, no. 6,
+pp. 3855–3872, Nov./Dec. 2022.
+[28] L. Yang and A. Shami, “A transfer learning and optimized CNN based
+intrusion detection system for Internet of Vehicles,” in Proc. IEEE Int.
+Conf. Commun., 2022, pp. 2774–2779.
+[29] H. Liang et al., “Network and system level security in connected vehicle
+applications,” in Proc. IEEE/ACM Int. Conf. Comput.-Aided Des., 2018,
+pp. 1–7.
+[30] W. Wu et al., “A survey of intrusion detection for in-vehicle networks,”
+IEEE Trans. Intell. Transp. Syst., vol. 21, no. 3, pp. 919–933, Mar. 2020.
+[31] J. Liu, S. Zhang, W. Sun, and Y. Shi, “In-vehicle network attacks and
+countermeasures: Challenges and future directions,” IEEE Netw., vol. 31,
+no. 5, pp. 50–58, 2017.
+[32] S.-F. Lokman, A. T. Othman, and M.-H. Abu-Bakar, “Intrusion detection
+system for automotive controller area network (CAN) bus system: A
+review,” EURASIP J. Wireless Commun. Netw., vol. 2019, pp. 1–17, 2019.
+[33] E. Seo, H. M. Song, and H. K. Kim, “GIDS: GAN based intrusion detection
+system for in-vehicle network,” in Proc. 16th Annu. Conf. Privacy Secur.
+Trust, 2018, pp. 1–6.
+[34] H. Jiang, Y. Ren, Y. Zhao, Z. Cui, and H. Yu, “Toward city-scale vehicular
+crowd sensing: A decentralized framework for online participant recruitment,” IEEE Trans. Intell. Transp. Syst., vol. 26, no. 10, pp. 17800–17813,
+Oct. 2025.
+[35] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating a
+new intrusion detection dataset and intrusion traffic characterization.,” in
+Proc. Int. Conf. Inf. Syst. Secur. Privacy, 2018, pp. 108–116.
+[36] B. Groza and P.-S. Murvay, “Efficient intrusion detection with bloom
+filtering in controller area networks,” IEEE Trans. Inf. Forensics Security,
+vol. 14, no. 4, pp. 1037–1051, Apr. 2019.
+[37] A. Ma et al., “Single-cell biological network inference using a heterogeneous graph transformer,” Nat. Commun., vol. 14, no. 1, 2023, Art. no. 964.
+[38] A. Paszke et al., “PyTorch: An imperative style, high-performance deep
+learning library,” in Proc. Adv. Neural Inf. Process. Syst., 2019, pp. 8026–
+8037.
+[39] M. Fey and J. E. Lenssen, “Fast graph representation learning with PyTorch geometric,” in Proc. ICLR Workshop Representation Learn. Graphs
+Manifolds, 2019, pp. 1–9.
+[40] H. M. Song, J. Woo, and H. K. Kim, “In-vehicle network intrusion detection using deep convolutional neural network,” Veh. Commun., vol. 21,
+2020, Art. no. 100198.
+[41] H. Lee, S. H. Jeong, and H. K. Kim, “OTIDS: A novel intrusion detection
+system for in-vehicle network by using remote frame,” in Proc. 15th Annu.
+Conf. Privacy Secur. Trust, 2017, pp. 57–5709.
+[42] E. C. P. Neto et al., “CICIoV2024: Advancing realistic IDS approaches
+against dos and spoofing attack in IoV CAN bus,” Internet Things, vol. 26,
+2024, Art. no. 101209.
+[43] O. Y. Al-Jarrah, C. Maple, M. Dianati, D. Oxtoby, and A. Mouzakitis,
+“Intrusion detection systems for intra-vehicle networks: A review,” IEEE
+Access, vol. 7, pp. 21266–21289, 2019.
+[44] A. Rosay, F. Carlier, and P. Leroux, “Feed-forward neural network for
+network intrusion detection,” in Proc. IEEE 91st Veh. Technol. Conf., 2020,
+pp. 1–6.
+[45] S. Almutlaq, A. Derhab, M. M. Hassan, and K. Kaur, “Two-stage intrusion
+detection system in intelligent transportation systems using rule extraction
+methods from deep neural networks,” IEEE Trans. Intell. Transp. Syst.,
+vol. 24, no. 12, pp. 15687–15701, Dec. 2023.
+[46] F. Jin, M. Chen, W. Zhang, Y. Yuan, and S. Wang, “Intrusion detection
+on Internet of Vehicles via combining log-ratio oversampling, outlier
+detection and metric learning,” Inf. Sci., vol. 579, pp. 814–831, 2021.
+[47] X. Li et al., “Sustainable ensemble learning driving intrusion detection
+model,” IEEE Trans. Dependable Secure Comput., vol. 18, no. 4, pp. 1591–
+1604, Jul./Aug. 2021.
+
+2773
+
+[48] Y. Javed, M. A. Khayat, A. A. Elghariani, and A. Ghafoor, “PRISM: A hierarchical intrusion detection architecture for large-scale cyber networks,”
+IEEE Trans. Dependable Secure Comput., vol. 20, no. 6, pp. 5070–5086,
+Nov./Dec. 2023.
+[49] M. Abdel-Basset, N. Moustafa, H. Hawash, I. Razzak, K. M. Sallam, and
+O. M. Elkomy, “Federated intrusion detection in blockchain-based smart
+transportation systems,” IEEE Trans. Intell. Transp. Syst., vol. 23, no. 3,
+pp. 2523–2537, Mar. 2022.
+[50] A. Oseni et al., “An explainable deep learning framework for resilient intrusion detection in IoT-enabled transportation networks,”
+IEEE Trans. Intell. Transp. Syst., vol. 24, no. 1, pp. 1000–1014,
+Jan. 2023.
+[51] A. Shiravi, H. Shiravi, M. Tavallaee, and A. A. Ghorbani, “Toward developing a systematic approach to generate benchmark datasets for intrusion
+detection,” Comput. Secur., vol. 31, no. 3, pp. 357–374, 2012.
+[52] N. Moustafa and J. Slay, “UNSW-NB15: A comprehensive data set for
+network intrusion detection systems (UNSW-NB15 network data set),” in
+Proc. 2015 Mil. Commun. Inf. Syst. Conf., 2015, pp. 1–6.
+[53] H. Lu et al., “A transfer learning-based intrusion detection system for
+zero-day attack in communication-based train control system,” Cluster
+Comput., vol. 27, no. 6, pp. 8477–8492, 2024.
+[54] N. Moustafa, “A new distributed architecture for evaluating AI-based
+security systems at the edge: Network ton_IoT datasets,” Sustain. Cities
+Soc., vol. 72, 2021, Art. no. 102994.
+[55] H. Mohammadian, A. H. Lashkari, and A. A. Ghorbani, “Poisoning and
+evasion: Deep learning-based NIDS under adversarial attacks,” in Proc.
+21st Annu. Int. Conf. Privacy Secur. Trust, 2024, pp. 1–9.
+[56] M. L. Han, B. I. Kwak, and H. K. Kim, “Anomaly intrusion detection
+method for vehicular networks based on survival analysis,” Veh. Commun.,
+vol. 14, pp. 52–63, 2018.
+[57] S. Tariq, S. Lee, H. K. Kim, and S. S. Woo, “CAN-ADF: The controller
+area network attack detection framework,” Comput. Secur., vol. 94, 2020,
+Art. no. 101857.
+[58] Y. Chae, N. Katenka, and L. DiPippo, “An adaptive threshold method for
+anomaly-based intrusion detection systems,” in Proc. IEEE 18th Int. Symp.
+Netw. Comput. Appl., 2019, pp. 1–4.
+[59] A. Yulianto, P. Sukarno, and N. A. Suwastika, “Improving AdaBoost-based
+intrusion detection system (IDS) performance on CIC IDS 2017 dataset,”
+J. Physics: Conf. Ser., vol. 1192, 2019, Art. no. 012018.
+[60] M. H. L. Louk and B. A. Tama, “Dual-IDS: A bagging-based gradient
+boosting decision tree model for network anomaly intrusion detection
+system,” Expert Syst. Appl., vol. 213, 2023, Art. no. 119030.
+[61] M. D. Hossain, H. Inoue, H. Ochiai, D. Fall, and Y. Kadobayashi, “An
+effective in-vehicle CAN bus intrusion detection system using CNN deep
+learning approach,” in Proc. IEEE Glob. Commun. Conf., 2020, pp. 1–6.
+[62] F. Laghrissi, S. Douzi, K. Douzi, and B. Hssina, “Intrusion detection
+systems using long short-term memory (LSTM),” J. Big Data, vol. 8,
+no. 1, 2021, Art. no. 65.
+[63] M. K. Putchala, “Deep learning approach for intrusion detection system
+(IDS) in the Internet of Things (IoT) network using gated recurrent neural
+networks (GRU),” Master’s thesis, Dept. Comput. Sci. Eng., Wright State
+Univ., Dayton, Ohio, 2017.
+[64] X. Wang et al., “Heterogeneous graph attention network,” in Proc. World
+Wide Web Conf., 2019, pp. 2022–2032.
+[65] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Liò, and Y. Bengio,
+“Graph attention networks,” in Proc. Int. Conf. Learn. Representations,
+2018, pp. 1–12.
+[66] T. N. Kipf and M. Welling, “Semi-supervised classification with graph
+convolutional networks,” in Proc. Int. Conf. Learn. Representations,
+2017, pp. 1–14.
+[67] K. Zheng, Q. Zheng, P. Chatzimisios, W. Xiang, and Y. Zhou, “Heterogeneous vehicular networking: A survey on architecture, challenges, and
+solutions,” IEEE Commun. Surveys Tut., vol. 17, no. 4, pp. 2377–2396,
+Fourth Quarter 2015.
+[68] H. Taslimasa, S. Dadkhah, E. C. P. Neto, P. Xiong, S. Ray, and A. A.
+Ghorbani, “Security issues in Internet of Vehicles (IoV): A comprehensive
+survey,” Internet Things, vol. 22, 2023, Art. no. 100809.
+[69] V. W. Lee et al., “Debunking the 100x GPU vs. CPU myth: An evaluation
+of throughput computing on CPU and GPU,” in Proc. 37th Annu. Int.
+Symp. Comput. Archit., 2010, pp. 451–460.
+[70] S. A. Tailor, J. Fernandez-Marques, and N. D. Lane, “Degree-quant:
+Quantization-aware training for graph neural networks,” in Proc. Int. Conf.
+Learn. Representations, 2021, pp. 1–22.
+[71] H. Zhou, A. Srivastava, H. Zeng, R. Kannan, and V. Prasanna, “Accelerating large scale real-time GNN inference using channel pruning,” Proc.
+VLDB Endowment, vol. 14, no. 9, pp. 1597–1605, May 2021.

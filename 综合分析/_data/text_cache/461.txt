@@ -1,0 +1,126 @@
+  Hawkeye: Diagnosing RDMA Network Performance Anomalies
+                    with PFC Provenance
+          Shicheng Wang1 , Menghao Zhang2 , Xiao Li3 , Qiyang Peng2 , Haoyuan Yu3 , Zhiliang Wang1 ,
+                           Mingwei Xu1 , Xiaohe Hu4 , Jiahai Yang1,5 , Xingang Shi1
+                                 1 Institute for Network Sciences and Cyberspace, BNRist, Tsinghua University
+                                                            2 School of Software, Beihang University
+                                     3 Department of Computer Science and Technology, Tsinghua University
+                                                            4 Infrawaves         5 Quan Cheng Laboratory
+
+
+Abstract                                                                                      1   Introduction
+RDMA is becoming increasingly prevalent from private data centers                             Remote Direct Memory Access (RDMA) has become a pivotal tech-
+to public multi-tenant clouds, due to its remarkable performance im-                          nology for network applications to achieve ultra-low latency and
+provement. However, its lossless traffic control, i.e., PFC, introduces                       ultra-high throughput. With the advent of RoCEv2 (RDMA over
+new complexities in network performance anomalies (NPAs) due to                               Converged Ethernet version 2) [29], RDMA has been increasingly
+its cascading congestion spreading property, which usually incurs                             used for many distributed applications in industrial large-scale
+complaints from customers/applications about certain flows’ per-                              data centers [6, 17, 20, 56, 80], especially in areas like distributed
+formance degradation. Existing studies fall short in fine-grained vis-                        deep learning training [9, 16, 30, 31, 51, 65, 69] and cloud stor-
+ibility of PFC impact and traceability of PFC causality, and are thus                         age [6, 11, 12, 15, 17, 32, 44, 70]. And currently it is becoming a
+ineffective in diagnosing the root causes for RDMA NPAs. In this                              trend to expand RDMA from private data centers to public multi-
+paper, we propose Hawkeye, an accurate and efficient RDMA NPA                                 tenant clouds [1, 5, 6, 56].
+diagnosis system based on PFC provenance. Hawkeye comprises                                      However, RDMA also introduces new complexity for network
+1) a fine-grained PFC-aware telemetry mechanism to record the                                 performance anomalies (NPAs), especially under the trend of de-
+PFC impact on flows; 2) an in-network PFC causality analysis and                              ployment in multi-tenant public clouds. In RDMA networks, Prior-
+tracing mechanism to quickly and efficiently collect causal teleme-                           ity Flow Control (PFC) [28] is deployed to enable a loss-free network
+try for diagnosis; and 3) a provenance-based diagnosis algorithm to                           and guarantee high performance. Nevertheless, PFC introduces sev-
+comprehensively present the anomaly breakdown, identifying the                                eral performance issues. Once one port becomes congested, PFC
+anomaly type and root causes accurately. Through extensive evalu-                             spreads the congestion across multiple hops and imposes perfor-
+ations on both NS-3 simulations and a Tofino testbed, Hawkeye                                 mance degradation on other flows that may even not traverse the
+can quickly and accurately diagnose multiple RDMA NPAs with                                   initial congested point. Therefore, various performance anomalies
+over 90% precision and 1-4 orders of magnitude lower overhead                                 can be raised, such as head-of-line blocking, unfairness, PFC storm
+than baselines.                                                                               and even PFC deadlock [20, 26]. Even with fine-grained conges-
+                                                                                              tion control [36, 45, 80] and advanced load balance [52, 59], PFC
+CCS Concepts                                                                                  cannot be fully eliminated and still occurs frequently. Worse yet,
+                                                                                              these mechanisms can in turn be misled by PFC to make wrong
+• Networks → Programmable networks; Network monitoring;
+                                                                                              decisions [25, 63]. As a result, when customers/applications com-
+Data center networks; Network performance analysis.
+                                                                                              plain about certain flows’ performance degradation, it is difficult
+                                                                                              to diagnose the root causes for the RDMA NPAs, especially under
+Keywords                                                                                      increasingly complex traffic in multi-tenant public clouds.
+RDMA Networks, Performance diagnosis, Programmable Networks,                                     Current network performance anomaly diagnosis mechanisms
+Network Provenance                                                                            cannot diagnose RDMA NPAs and the root causes effectively and
+                                                                                              efficiently. First, fine-grained PFC visibility is lacking in current
+ACM Reference Format:
+                                                                                              monitoring and diagnosis systems, making inaccurate congestion
+Shicheng Wang, Menghao Zhang, Xiao Li, Qiyang Peng, Haoyuan Yu,
+Zhiliang Wang, Mingwei Xu, Xiaohe Hu, Jiahai Yang, Xingang Shi. 2025.
+                                                                                              identification. Existing NPA diagnosis studies, either on the host
+Hawkeye: Diagnosing RDMA Network Performance Anomalies with PFC                               side [19, 21, 41, 46] or the switch side [6, 17, 22, 24, 39, 47, 58, 66,
+Provenance. In ACM SIGCOMM 2025 Conference (SIGCOMM ’25), Septem-                             79], lack the monitoring capability for flow-level PFC impact, and
+ber 8–11, 2025, Coimbra, Portugal. ACM, New York, NY, USA, 15 pages.                          thus cannot distinguish PFC-related anomalies from direct flow
+https://doi.org/10.1145/3718958.3750490                                                       contention. Second, current monitoring and diagnosis systems fall
+                                                                                              short in quickly and efficiently tracing PFC causality. Due to the
+                                                                                              cascading property of PFC, the congestion may not occur within a
+                                                                                              single queue independently. Therefore, tracing the PFC causality
+This work is licensed under a Creative Commons Attribution 4.0 International License.         requires collecting the related telemetry on the PFC spreading path
+SIGCOMM ’25, Coimbra, Portugal                                                                efficiently. However, existing approaches either fail to capture the
+© 2025 Copyright held by the owner/author(s).                                                 complete set of causal switches [22, 37, 47, 58, 66, 79] or suffer from
+ACM ISBN 979-8-4007-1524-2/25/09
+https://doi.org/10.1145/3718958.3750490
+                                                                                              high overhead [24, 55]. Third, current diagnosis algorithms, which
+
+
+
+
+                                                                                        481
+SIGCOMM ’25, September 8–11, 2025, Coimbra, Portugal                                                                                                                Shicheng Wang et al.
+
+
+are mainly based on the flow-interaction paradigm [10, 37, 46, 66],                                          Polling
+                                                                                                             Packet                         P2                     P1
+cannot support accurate root cause analysis on PFC anomalies.                                           S1                                                                     R1
+They attribute the root cause to the flows contending with the                                                  F1                                       SW3
+                                                                                                                                      P3          P1
+victim flow in the shared queue, instead of flows or hosts causing                                      S2                                                                     R2
+                                                                                                                          P1 PAUSE P1
+PFC originally. Therefore, both why (the root cause flows or hosts                                              F2      SW1         SW2 PAUSE SW4
+                                                                                                                                                                   congested
+beyond the victim path) and how (the PFC spreading path) about
+                                                                                                                                             F3-F6 A1 …… A4
+the anomaly are largely ignored by current diagnosis paradigms.
+   In this paper, we present Hawkeye, an accurate and efficient                                        (a) PFC backpressure by flow contention (e.g., incast micro-bursts).
+RDMA NPA diagnosis system with PFC provenance. Hawkeye
+                                                                                                                                                                   F1
+detects the victim flow encountering performance anomalies, con-                                                                             P1
+                                                                                                                                                                               H2
+structs the complete anomaly provenance and locate the root causes:                                                                      PAUSE      SW2       PAUSE
+                                                                                                           H1                 P1                                   F2
+flows (e.g., problematic bursts) or hosts (e.g., host-side PFC injec-                                           PAUSE                        P1                                H3
+tion), hence providing network operators with comprehensive un-                                                               SW1        PAUSE      SW3           PAUSE
+derstanding of the anomalies. The accuracy and efficiency of Hawk-                                                        (b) PFC storm by host injection.
+eye are derived from the following three key techniques. First,
+Hawkeye augments telemetry systems by incorporating flow-level                                F1                              P1 F2
+                                                                                                                           SW2
+                                                                                                                                             F1                               P1 F2
+PFC impact, delivers fine-grained PFC visibility and enables analysis                                SW1
+                                                                                                                PAUSE
+                                                                                                                                                   SW1                     SW2
+                                                                                                                             P2 Flow
+of PFC-induced effects beyond conventional intra-queue flow inter-                                                             Contention                   PAUSE            P2 PFC
+action. Second, Hawkeye supports accurate and efficient telemetry                                                                F5-F8                                         Injection
+information collection across the network. By line-rate analyzing
+the victim flow path and the port-level PFC causality in the data
+plane, Hawkeye quickly identifies the switches causally relevant                                     SW4                   SW3                     SW4                     SW3
+to the anomaly, and efficiently collects the telemetry data through
+                                                                                                        F4               F3                            F4                 F3
+the switch CPU asynchronously. Third, Hawkeye constructs a
+heterogeneous provenance graph describing causality relationship                                   (c) Deadlock by flow contention.
+                                                                                                                                                             23
+                                                                                                                                                  (d) Deadlock by PFC injection.
+between flows and ports. Hawkeye also proposes a signature-based
+                                                                                                    Figure 1: PFC introduces complexity in congestion.
+anomaly diagnosis algorithm to match the behaviors and locate the
+root cause. We implement a prototype of Hawkeye at both Intel
+Tofino hardware and NS-3, and make the code publicly available                               spread congestion in a cascading manner, causing issues like head-
+at Github [62]. Extensive evaluations on simulations and testbed                             of-line blocking, unfairness, PFC storms, and even deadlock [20, 26].
+demonstrate that Hawkeye is able to accurately and robustly di-                              To alleviate the side effect of PFC, conventional wisdom introduces
+agnose multiple representative NPAs in RDMA networks, with >                                 the end-to-end congestion control [36, 40, 45, 80] to mitigate the
+90% average precision and ∼100% recall. Hawkeye also presents                                congestion. However, PFC cannot be fully eliminated and still oc-
+high efficiency in telemetry collection and diagnosis, whose band-                           curs frequently.
+width and processing overhead are orders of magnitude lower than
+baselines. Hawkeye also fits well in current switch hardware with                            2.1       RDMA NPAs
+efficient resource usage.                                                                    Hawkeye focuses on the performance anomalies caused by switch
+Contributions. We analyze the complexity of diagnosing RDMA                                  queue congestion in networks. However, these problem are chal-
+NPAs (§2) and propose Hawkeye, an accurate and efficient RDMA                                lenging to diagnose in the context of RDMA. 

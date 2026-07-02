@@ -1,0 +1,1191 @@
+This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 1
+
+ ReFLIP-VAD: Towards Weakly Supervised Video
+ Anomaly Detection via Vision-Language Model
+Prabhu Prasad Dev, Graduate Student Member, IEEE, Raju Hazari, Member, IEEE, Pranesh Das, Member, IEEE
+
+ Abstract—The vision-language model has recently achieved contrast to both FSVAD and USVAD, our primary focus is on
+notable success in image-related tasks, showcasing its ability to the practical paradigm of WSVAD, which utilizes only videolearn deep and meaningful visual representations. Applying this level annotations. This paradigm results in reduced costs for
+robust model to video analysis for detecting anomalies poses a significant challenge. This paper introduces Reparameterized Fine- manual and detailed annotations.
+grained Language Image Pretraining-Video Anomaly Detection Current research in the VAD domain typically follows a sys-
+(ReFLIP-VAD), a novel approach designed to leverage vision- tematic approach. It starts with extracting only visual features
+language capabilities for video anomaly detection. ReFLIP-VAD using visual backbone models, e.g., C3D [4], [5], I3D [6], [7],
+employs a prompt encoder to generate reparameterized learnable ViT [8], which are pre-trained on activity recognition tasks.
+prompt templates, enhancing interpretability and understanding
+of anomaly-specific semantics. The framework adopts a dual- These extracted features are then fed into binary classifiers
+block architecture: a classification block that uses visual features based on multiple instance learning (MIL) framework [9].
+for binary classification and a video-text alignment block that The last step involves detecting abnormal events using the
+integrates textual and visual features for precise language-vision predicted anomaly confidence. Although these straightforward
+alignment. This proposed approach is further strengthened by approaches have shown potential results, they do not fully
+the Glimpse-Emphasize network that effectively captures both
+global and local temporal dependencies across time and the harness cross-modal connections between vision and language.
+MIL-Align mechanism that selects the most representative video In recent years, significant advancements have been obframes for each label, representing the entire video. ReFLIP- served in the advancement of vision-language models such
+VAD has demonstrated superior performance on two large- as Contrastive Language-Image Pre-training (CLIP) [10],
+scale benchmark datasets achieving an Average Precision (AP) A Large-scale ImaGe and Noisy-text embedding (ALIGN)
+of 86.29% on XD-Violence and an Area Under the Curve
+(AUC) of 89.14% on UCF-Crime, significantly surpassing ex- [11], Context Optimization (CoOp) [12] and Fine-grained
+isting state-of-the-art methods. Our source code is available at Language-Image Pre-training (FLIP) [13]. These models aim
+https://github.com/prasaddev97/ReFLIP-VAD. to acquire generalized visual representations enriched with
+ Index Terms—Video anomaly detection, Weakly supervised, semantic concepts. The key idea behind CLIP is to align
+Vision-language pre-training, Prompt template images and text in a shared embedding space using contrastive
+ learning, allowing it to associate images with their textual
+ descriptions and perform various tasks involving vision and
+ I. I NTRODUCTION language. Given the remarkable success of VLMs in recent
+ times, there is a growing interest in exploring the development
+V IDEO anomaly detection(VAD) task has recently gained
+ significant attention in real-world scenarios, including
+but not limited to public surveillance, transportation manageof task-specific models built upon CLIP.
+ Despite the evident potential of VLMs in diverse visual
+ment, traffic monitoring, and military settings. This task is tasks, their primary emphasis lies within the realm of static
+approached through three primary paradigms, namely, Fully- images. Hence, it is imperative to thoroughly investigate
+Supervised VAD (FSVAD) [1], Unsupervised VAD (USVAD) how to effectively transform a model trained on image-text
+[2], and Weakly-Supervised VAD (WSVAD) [3]. Traditional pairs into a tool capable of addressing the more intricate
+FSVAD is deemed impractical due to the scattered and diverse challenge of video anomaly detection with limited supervision.
+anomalies that require extensive manual frame-level annota- To harness generalized knowledge effectively and enable FLIP
+tions. Conversely, unsupervised VAD, which relies solely on to realize its full potential in the WSVAD task, it is crucial
+learning from normal videos to identify open-set anomalies, to address specific challenges aligned with the characteristics
+often generates false alarms. However, it is inherently chal- of WSVAD. Firstly, exploring methods to capture contextual
+lenging to determine what is normal and abnormal without dependencies across time is vital. Secondly, determining how
+prior knowledge when provided only with normal videos. In to utilize acquired knowledge and enhance visual-language
+ connections is essential. Thirdly, maintaining vision-language
+Corresponding author: Prabhu Prasad Dev model performance in video anomaly detection scenarios is of
+ critical importance.
+ Prabhu Prasad Dev is with the Department of Computer Science and
+Engineering, National Institute of Technology, Calicut, Kerala, India and To effectively address the above-mentioned issues, a novel
+the School of Computer Engineering, KIIT Deemed to be University, framework ReFLIP-VAD is developed:Reparameterized Fine-
+Bhubaneswar, Odisha, India (e-mail: prasaddev97@gmail.com). grained Language Image Pre-training for Video Anomaly
+ Raju Hazari and Pranesh Das are with Department of Computer Science and
+Engineering, National Institute of Technology, Calicut, Kerala, India (e-mail: Detection. A Glimpse-Emphasize network is introduced to
+rajuhazari@nitc.ac.in, praneshdas@nitc.ac.in) address the first challenge based on a global-to-local strat-
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 2
+
+egy. It comprises two key components: the Glimpse module presents the experimental results and discussion on the UCF
+and the Emphasize module. The Glimpse module primarily Crime and XD-Violence dataset. Section V concludes with a
+captures the global context information and the Emphasize discussion of future research directions.
+module extracts the local features. Addressing the second
+challenge divergently from existing approaches that only rely II. R ELATED W ORK
+on visual features, ReFLIP-VAD incorporates textual features
+with visual features. This multi-modality strategy aims to A. Video Anomaly Detection
+maximize the preservation of learned knowledge. ReFLIP- 1) Unsupervised VAD (USVAD): Video anomaly detection
+VAD involves a classification block and a video-text align- has undergone a revolutionary transformation with the advent
+ment block. The former leverages visual features for binary of deep learning techniques. Methods utilizing convolutional
+classification while the latter leverages both textual and visual neural networks [18]–[20], recurrent neural networks [21],
+features for language-vision alignment. Furthermore, these [22], and transformers [23], [24] have progressively emerged
+blocks effortlessly accomplish both coarse-grained and fine- as the primary focus of research in this area. Peng et al.
+grained weakly supervised video anomaly detection [14]. In [18] proposed a deep one-stage neural network by employaddition to these blocks, two prompt mechanisms namely the ing a stacked convolutional encoder to generate their lowmulti-modal prompts and reparameterized learnable prompts dimensional high-level representations aiming for maximal
+are introduced to enhance text label representations. Contrary compactness. Furthermore, they incorporated a decoder to
+to existing methods [10], [12], [15], [16], which depend reconstruct raw samples from these low-dimensional repreon either hand-crafted or learnable prompts, the proposed sentations. By employing proxy task learning, Liu et al.
+approach utilizes a prompt encoder, specifically DistilBERT [19] introduced a spatial-temporal memory-augmented auto-
+[17], to generate reparameterized learnable prompt template. encoder. Following this structure, researchers [25], [26], [27]
+These templates are contextually rich and provide a level of developed the video prediction network that separately learns
+interpretability, facilitating a more detailed understanding of appearance and motion normality to predict the anomalies.
+the specific semantics associated with anomalies. To address Zhong et al. [28] utilized a cascade structure combining pixel
+the third challenge, a multiple instance learning (MIL)-align reconstruction and optical flow prediction to enhance anomaly
+mechanism is utilized for the visual and language alignment detection. Zeng et al. [29] used Graph Convolutional Neural
+block. Network to detect human-related anomalies. Jin et al. [23]
+ The main contributions of this paper are outlined as follows: utilized transformers that learn the discriminative temporal
+ features among all video frames. Zhong et al. [30] developed
+ 1) A novel framework i.e. ReFLIP-VAD is developed that an attention-based feature fusion module to integrate forward
+ employs a prompt encoder to generate reparameterized and backward spatio-temporal features, and utilizes an error
+ learnable prompt templates instead of hand-crafted tem- pyramid and mean pooling for anomaly evaluation, effectively
+ plates. These templates are contextually rich, enhancing detecting objects of varying sizes in complex scenes. Li et al.
+ interpretability and providing a deeper understanding of [31] leveraged multi-branch generative adversarial network to
+ the specific semantics associated with anomalies. detect abnormal events.
+ 2) The proposed approach comprises a classification block
+ 2) Weakly Supervised VAD (WSVAD): Weakly supervised
+ and a video-text alignment block. The former leverages
+ video anomaly detection methods have garnered increased
+ visual features for binary classification while the latter
+ attention, particularly following the introduction of the weakly
+ leverages both textual and visual features for languagesupervised Multiple Instance Learning(MIL) framework by
+ vision alignment. Consequently, this dual block based
+ Sultani et al. [9]. They conceptualized each video as a bag,
+ proposed approach is able to detect video anomalies at
+ with its segments representing instances within the bag. The
+ both coarse and fine-grained levels.
+ framework generates results based on the premise that the
+ 3) A Glimpse-Emphasize network is developed that efanomaly score for instances within the positive bag (anomafectively captures both the global and local temporal
+ lous videos) should surpass that of the negative bag (normal
+ dependencies across time. The MIL-Align mechanism
+ videos), utilizing ranking loss functions with video-level annois also developed to optimize visual-language alignment
+ tations. Therefore, several research works follow this direction
+ under weak supervision.
+ which has attracted the attention of the research community.
+ 4) The effectiveness of ReFLIP-VAD is demonstrated
+ Zhong et al. [32] utilized a Graph Convolutional Neural
+ on two large-scale benchmarks. ReFLIP-VAD achieves
+ Network to correct label noise in the area of video anomaly
+ state-of-the-art performance, including 86.29% AP on
+ detection. Lv et al. [33] presented a localization framework
+ XD-Violence and 89.14% AUC on UCF-Crime, surpassby employing a high-level context information module for
+ ing existing state-of-the-art methods by a large margin.
+ anomaly localization. Tian et al. [34] developed a robust
+The rest of the paper is structured as follows: Section II temporal feature magnitude learning framework by leveraging
+discusses the state-of-the-art approaches for the detection a self-attention network and dilated convolutions to capture
+of anomalies in videos and how to adapt vision-language short and long-range temporal dependencies. Huang et al. [35]
+models in video anomaly detection. Section III describes the proposed a temporal feature aggregator for modeling the temproposed methodology that achieves both coarse-grained and poral relationships between segments of video. Moreover, they
+fine-grained video anomaly detection effectively. Section IV also incorporated a discriminative feature encoder for feature
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 3
+
+discrimination. Liu et al. [36] obtained deep discriminative Section II-B. Section III-A defines the problem formulation
+features by introducing a collaborative learning module. Chen of weakly supervised anomaly detection in videos. Section
+et al. [37] applied a magnitude contrastive loss to capture III-B outlines the process for extracting both visual and textual
+feature separability between normal and abnormal videos features. Section III-C presents the glimpse and emphasize neteffectively. Fan et al. [38] proposed a snippet-level attention work of how global and local context information is captured
+mechanism to effectively localize the anomalous events in effectively. Section III-D and III-E describe the classification
+survelliance videos. and video-text alignment block respectively. Section III-F
+ introduces the novel reparameterized learnable prompt using
+B. Vision-Language Model (VLM) the DistilBERT encoder. Section III-G outlines how visual and
+ text embeddings are combined. Finally, the coarse-grained and
+ Vision-language models have garnered significant attention
+ fine-grained alignment along with a novel feature magnitude
+from the computer vision community due to their ability to
+ separability loss functions are described. The overall framebridge the gap between visual data and natural language.
+ work of the proposed method illustrated in Figure 1.
+Earlier VLMs focused on image applications such as image classification [12], scene text detection [39], and image
+captioning [40]. Recently, Xu et al. [41] extended the VLM A. Problem Definition
+from image to video domains that aligns video and text by Consider a training set of untrimmed videos U = {uk }N uv
+ k=1 ,
+contrasting temporally related video-text pairs showing robust where Nuv denotes the total number of untrimmed videos.
+zero-shot capabilities in video tasks. Ju et al. [15] developed Each video uk is associated with a binary label lk ∈ {0, 1}
+a simple baseline for efficient action recognition task by from the set L = {lk }N k=1 , where lk = 1 indicates that if
+ uv
+
+learning the task-specific prompt templates. Zanella et al. at least one frame of the video contains abnormal events and
+[42] leveraged the latent CLIP feature space to identify the lk = 0 otherwise. The WSVAD model aims to predict an
+normal events and establish text-driven vectors for detecting anomaly score vector svk ∈ RSk for each video, where Sk is
+abnormalities. Wu et al. [16] adapted the frozen CLIP model the number of segments in the k -th video, and each element of
+to effectively transfer pre-trained language-visual knowledge svk represents a normalized anomaly score for each segment
+to WS-VAD. Yang et al. [43] proposed a novel framework by in the range from 0 to 1.
+utilizing the CLIP model to align video event description texts
+with corresponding video frames, improving pseudo-label gen- B. Feature Extraction
+eration and self-training through fine-tuning, learnable text
+ Previous research studies typically employ pre-trained 3D
+prompts, and normality guidance. Wu et al. [44] introduced
+ convolutional models like C3D and I3D to extract features
+a new paradigm for open-vocabulary video anomaly detection
+ from videos. These features are then input into MIL-based
+using the CLIP model to improve detection and categorization
+ binary classifiers. Recently, FLIP [13] a large-scale languageof seen and unseen anomalies.
+ vision pre-trained model, has significantly impacted various
+ The following shortcomings of video anomaly detection
+ computer vision fields, showcasing strong generalization camethods based on the vision-language model are identified
+ pabilities across diverse tasks. Drawing inspiration from FLIP,
+from the related works:
+ the proposed work not only utilizes the image encoder of FLIP
+ • Despite the effectiveness of existing approaches, they do
+ to extract video features but also explores leveraging text of
+ not effectively capture the dynamic and temporal depen- encoder of FLIP to fully utilize the rich associations between
+ dencies in videos. To address this challenge, we have visual content and textual concepts.
+ introduced a Glimpse and Emphasize Network (detailed For the visual features, the image encoder is a Vision
+ in Section III-C). Transformer that concatenates an additional [CLASS] token
+ • Current state-of-the-art methods fail to fully exploit the
+ embedding and projects image patches linearly as input [45].
+ connection between visual and language features, result- For the textual features, following [10], a Byte-Pair Encoding
+ ing in suboptimal performance. This limitation is ad- (BPE) [46] with a vocabulary size of 49,408 is used to tokenize
+ dressed through a dual-block structure, where one branch the text. Each text sequence starts with a Beginning of Senfocuses on visual features for coarse-grained binary clas- tence [BOS] token and ends with an End of Sentence [EOS]
+ sification, and the other integrates both visual and textual token. The token embeddings are then fed into a modified
+ features for fine-grained anomaly detection (discussed in decoder-only Transformer model [47]. Textual tokens and
+ Section III-D and III-E). visual tokens are then projected into a multi-modal common
+ • Existing methods rely on hand-crafted or learnable
+ space and separately L2-normalized. This approach differs
+ prompts, which are inadequate for capturing the subtle from existing dual-stream models, which only model crossanomalies. To overcome this issue, we have incorporated modal interaction via global features. FLIP introduces a finea reparameterized learnable prompt (explained in Section grained contrastive learning objective that accounts for the
+ III-F). interaction between image patches and textual tokens.
+ Initially, the FLIP image feature extractor processes a set
+ III. M ETHODOLOGY of Nuv raw untrimmed videos U. For each video uk ∈
+ This section provides a detailed description of the proposed RNf ×X ×Y×3 , the parameters Nf , X , and Y denote the number
+ReFLIP-VAD, which addresses the shortcomings discussed in of frames, height, and width of uk , respectively. Following
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 4
+
+ Input Video
+
+ CLS-Block
+ Coarse-grained
+ anomaly score
+ 1
+ Visual Video-level binary
+ features ground truth
+ FLIP Glimpse &
+ Emphasize Binary K
+ Image
+ Encoder Network Classifier
+ 2
+
+ A
+
+ Reparamterized
+ Learnable Prompt
+ FLIP Multimodal
+ [CLASS]
+ Text Prompt D M
+ Encoder
+ [riot][arrest] [arson] Visual-text
+ features
+ Fine-grained Video-level category
+ Prompt
+ DistilBERT alignment map ground truth
+ Encoder
+
+ VTA-Block
+
+ Learnable Prompt ADD Trainable Frozen A Aggregation M MIL-Align D Product K Top-K
+
+Fig. 1. Proposed Framework
+
+this, each video sequence is partitioned into S segments and Here, α signifies a hyperparameter governing the influence of
+the resulting feature maps produced by the feature extractor the norm term, and Conv1D is a 1-dimensional convolutional
+are denoted by G = {g k,j }, where k varies from 1 to Nuv , layer that modulates the feature norm for every dimension.
+and j varies from 1 to S. These feature maps are quantified
+as G ∈ RNuv ×S×C×D , with C indicating the number of crops C. Glimpse and Emphasize Network
+in each video segment and D representing the dimensionality 1) Glimpse Module: The glimpse module comprises three
+of features. Each g k,j ∈ RC×D corresponds to the feature set key components: channel squeezer (CS), segment level transof the j-th segment in the k-th video. former (SLT), and feed-forward network (FFN). To streamline
+ Furthermore, the Feature Intensify Module (FIM) module computation, the channel squeezer reduces the dimensionality
+initially processes a feature map G to compute a feature norm of the feature map from D in the Feature Intensify Mod-
+F as will be discussed later. Subsequently, the Glimpse and ule (FIM) to D/32 that generates an output feature map
+Emphasize module leverages this enhanced feature map to Gcs global ∈ RU ×C×S×D/32 . Furthermore, a video segment level
+extract global and local representation through a segment- transformer (SLT) is implemented to learn the global feature
+level transformer (SLT) and self-attention mechanism (SAM), relationships across video segments. This is achieved by
+respectively. Initially, FIM computes the feature norm F k,j of formulating an attention map M ∈ R1×S×S×C that distinctly
+g k,j as per Eq. (1): associates the various temporal segments.
+ ! 21 D
+ D X    
+ k,j1 ,j2 k,j1 ,d k,j2 ,d
+ k,j
+ X
+ k,j,d 2 1×1×C×1 M = Q Gcs global K Gcs global (3)
+ F = g ∈R (1)
+ d=1
+ d=1
+ where, j1 , j2 ∈ [1, S], Q, K represent 1D “query” and “key”
+where d is the index of the feature dimension. convolutions of the transformer. Then, softmax normalization
+ Subsequently, FIM enhances the features {g k,j }Frozen
+ F IM by is appliedMtoMIL-Align R1×S×S×D
+ obtain mD∈ Product , where mk,j1 ,: indicates
+ Residual Connection Trainable k,j A Aggregation K Top-K
+integrating the modulated feature norm, Conv1D(F ), with the association of other segments with the clip j1 .
+g k,j acting as a residual component as illustrated in Eq. (2): k,j1 ,j2
+ k,j1 ,j2 eM
+ m = (4)
+ gFk,jIM = g k,j + αConv1D(F k,j ) ∈ R1×1×C×D
+ PS Mk,j1 ,j2
+ (2) j2 =1 e
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 5
+
+ The feature map Gsam local is computed by the self-attentional
+ FFN
+ FFN
+
+ SLT
+ SAM
+
+ Conv 1d
+
+ Conv 1d
+
+ CS Batch Normalization 1d
+
+Fig. 2. Glimpse Module introduced in III-C to capture the global features. CS
+
+ D Fig. 3. Emphasize module introduced in III-C to capture the local features.
+The output Gslt global of SLT is in R1×S×C× 32 , reflecting the
+weighted average of all segment features in the long video. convolution on Gca local which is represented in Eq. (5) . The
+ S
+ X   operation is represented by a Hadamard product (denoted by
+ k,j1 ,d k,j2 ,d
+ Gslt global = mk,j1 ,j2 V Gcs global (5) ⊗) of Gca local with itself, resulting in a tensor of dimensions
+ D
+ j2 =1 U × S × C × 16 . The individual elements of Gsam local are
+ D
+ computed by summing over the 16 channels of the Hadamard
+Here, the Glimpse module within the network structure as
+ product of the corresponding elements of Gca local represented
+shown in Figure 2 uses a 1D “value” convolution represented
+ in Eq. (6), without the use of learnable weights. This process
+by V from the transformer architecture. This module equips
+ facilitates each channel in accessing adjacent channels to learn
+the network with an understanding of typical, expected scenarchannel-wise correlations. Following this operation, a twoios, which enhances its ability to pinpoint anomalies. Morelayered feedforward network (FFN) processes the output to
+over, it leverages this insight to make better use of extensive
+ produce the final feature map as shown in Figure 3.
+temporal contexts within the data. The Glimpse module also
+incorporates a Feed-Forward Network (FFN), consisting of
+ D
+a pair of fully connected layers alongside a Gaussian Error Gsam local = Gca local ⊗ Gca local ∈ RU ×S×C× 16 (6)
+Linear Unit (GeLU) non-linear function. This setup is designed
+to enhance the ability of the model to represent and process where for each element of Gsam local , we have:
+complex features. The resulting feature map from the Glimpse
+module is then directed into the subsequent Emphasize module 16
+ D
+
+for further analysis. k,j,l1
+ Gsam
+ X k,j,l1
+ Gca k,j,l2 1×1×C×1
+ local = local · Gca local ∈ R (7)
+ 2) Emphasize Module: The emphasize module comprises l1 ,l2 =0
+three key components: channel squeezer (CS), self-attention
+mechanism (SAM), and the feed-forward network (FFN).
+The channel squeezer effectively reduces the feature map D. Classification Block (CLS Block)
+from its original channel dimension D to D/16. The self- Unlike previous WSVAD approaches, ReFLIP-VAD incorattention mechanism (SAM) enhances the local features in porates a two-pronged block architecture. Following tempoeach video segment by learning channel-wise correlations. ral modeling, the local video features Gsam local are passed
+It allows the model to focus on relevant information and through a fully connected (FC) layer to produce the final visual
+capture context. The feed-forward network contributes to the features as Gvisual . Typically, in the CLS block, Gvisual is
+generation of a refined feature map. This refined map serves fed into a binary classifier. This classifier includes a feedas an indicator of anomalies present in the video segments. forward network layer (FFN), a fully connected layer (FN),
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 6
+
+and a Sigmoid activation(σ) to calculate the coarse-grained Output Prompt Embeddings
+anomaly confidence score A, given in Eq. (8):
+ A = σ(FC(FFN(Gvisual ) + Gvisual )) (8)
+
+E. Video-Text Alignment Block (VTA-Block)
+ In addition to the conventional binary classification block, a
+novel video-text alignment block is introduced. In this block, Layer Normalization
+textual labels such as ‘explosion’, ‘road accident’, ‘arson’,
+‘abuse’ etc., are not encoded as one-hot vectors; rather, they + Transformer Layer 6
+
+are converted into class embeddings using the text encoder
+ Feed Forward
+of FLIP. By leveraging the static pre-trained text encoder
+of FLIP, we harness its linguistic knowledge for enhancing Layer Normalization
+ Transformer Layer 2
+video anomaly detection. Subsequently, the similarities between class embeddings and frame-level visual features are
+ +
+ Transformer Layer 1
+assessed to generate the alignment map AM ∈ Rn×ℓ , where Multi-Head
+ Attention
+ℓ is the number of textual labels. This arrangement mirrors DistilBERT
+ key value query
+the setup in CLIP, where each input text label corresponds
+to a distinct class of abnormal events, facilitating fine-grained
+WS-VAD.
+
+F. Reparameterized Learnable Prompt
+ Input Prompt Embeddings
+ The proposed method is built upon the CLIP [10], a visuallanguage model consisting of the visual encoder and text Fig. 4. Reparameterized Learnable Prompt using DistilBERT Architecture
+encoder that transforms images and text into visual and textual
+embeddings. CLIP generates the textual label embeddings
+by leveraging manual prompts. However, such handcrafted G. Multimodal Prompt
+prompts pose a significant challenge because it is highly To enhance text label representations for abnormal events,
+time-consuming. To address this issue, a novel approach is we introduce a method utilizing visual contexts to refine
+introduced: Reparameterized Fine-grained Language-Image class embeddings. This involves an anomaly-centric visual
+Pre-training (ReFLIP). Instead of directly optimizing prompts, prompt leveraging the visual embeddings from abnormal video
+ReFLIP employs a reparameterized prompt encoder (Distil- segments to improve text label accuracy. The anomaly confi-
+BERT) as depicted in Figure 4 to re-parameterize input prompt dence vector from the Classification block serves as anomaly
+embeddings. This reparameterization enhances the exploration attention. The video-level prompt is calculated by the dot(.)
+of task-specific knowledge from few-shot samples. product of this anomaly attention with the video feature vector,
+ Given a set of original prompt embeddings P E consisting followed by normalization. The visual prompt is then inteof N prompt tokens P E = {pe1 , pe2 , ..., peN }, the prompt grated with the class embedding, and the final segment-specific
+encoder is applied to obtain a reparameterized sequence P g E class embedding is generated using a Feedforward Neural
+as follows: Network with an addition operation and a skip connection.
+
+ P
+ g E = {pe
+ e 1 , pe e N } = {ϕ(pe1 ), ϕ(pe2 ), ..., ϕ(peN )}
+ e 2 , ..., pe V = Norm(AT · Gvisual ) (9)
+ where ϕ(·) denotes the reparameterization function of the where V ∈ Rd is the anomaly-centric visual prompt. We
+prompt encoder, which includes a network θ(·) with a residual then add V to the class embedding T and obtain the final
+connection. The function ϕ is defined for each prompt token instance-specific class embedding CE by a simple FFN layer
+pei as: and a skip connection.
+ ϕ(pei ) = θ(pei ) + pei , i ∈ {1...N }
+The network θ(·) is an adaptable approach that forms con- CE = FFN(ADD(V, T )) + T (10)
+nections between the prompt embeddings. This facilitates the where ADD denotes element-wise addition. The finecreation of task-specific reparameterization within the prompt grained alignment map AM is then generated by calculating
+embeddings. After applying reparameterization, the class token the similarity scores across all instance-specific class embedembedding ci for the i-th class is integrated into the center dings and frame-level visual features.
+of the reparameterized learnable prompts ϕ(pei ) forming the
+sequence as pi = {ϕ(pe1 ), ϕ(pe2 ), .ci .., ϕ(peN ), }. Following
+their integration with positional embeddings to incorporate H. Loss function
+positional information, these prompts are fed into the FLIP For the CLS block, the WSVAD task handles known anomatextual encoder etext (·). This process generates the textual class lies using either MIL or Top- K due to the lack of precise
+embeddings, represented as Ti = etext (pi ). frame-level annotations. It utilizes the Top-K mechanism to
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 7
+
+identify K highest anomaly confidences. It calculates the classification loss using binary cross entropy between the video- U /2
+level predictions and the actual ground truth. In contrast, the Lf ms =
+ X p
+ (1 − I)(δ(Wnormal q
+ , Wnormal )
+Video-Text Alignment-block (VTA-block) addresses scenarios p,q=0
+where there are no anomaly confidences and the challenge of U
+dealing with multiple classes instead of binary classes. Taking
+ X
+ r s
+ + (1 − I)δ(Wabnormal , Wabnormal ) (14)
+inspiration from Wu et al. [16], the MIL-Align mechanism r,s=U /2
+is utilized to address the above challenge. The MIL-Align U /2 U
+mechanism focuses on the alignment map AM, which cap- X X p r
+ + I (M argin − δ(Wnormal , Wabnormal ))
+tures the similarity between frame-level video features and
+ p=0 r=U /2
+all class embeddings. By selecting the top K similarities and
+averaging them, the degree of fine-grained alignment for a Here, U/2 normal videos and U/2 abnormal videos are
+given video with the current class is assessed such that it sampled in each training batch U. p, q represent the normal
+exhibits the highest similarity score among all options. The segments index, and r, s denote the abnormal segments index.
+probability for multi-class classification is computed as the Wnormal and Wabnormal are the top-K feature magnitudes
+softmax normalized similarity between visual embeddings V for normal and abnormal segments respectively. δ(·, ·) is a
+and all text embeddings T for each category. distance metric used to increase the feature magnitude distance
+ between the segments.
+ exp (sim(V, Ti )/τ ) Here, I = 1 indicates that the two sampled video segments
+ pvt
+ i = PK+1 (11) (one normal and one abnormal) are of different categories.
+ j=1 exp (sim(V, Tj )/τ ) The loss function is to increase the distance between the
+ feature magnitudes of these segments. The goal is to enhance
+ where pvt
+ i denotes the predicted probability corresponding the model’s ability to distinguish clearly between normal and
+to the i-th category, sim(.,.) is the cosine similarity and abnormal segments, which aids in better anomaly detection.
+K + 1 is the K number of anomaly categories and 1 normal I = 0 indicates that the paired segments sampled are both
+category. τ represents the temperature scaling parameter that from the same category, either both normal or both abnormal.
+adjusts the softmax distribution. The fine-grained alignment In this scenario, the Lf ms loss function aims to minimize
+loss Lf ga is calculated using the Kullback-Leibler divergence. the distance between the feature magnitudes of the segments,
+This approach compels the network to discern between the effectively grouping similar types of segments closer together
+visual content of the video that depicts abnormal behavior in the feature space. This reinforces the model’s capability to
+(foreground) and the content irrelevant to the abnormal be- recognize and maintain consistency within the same categories
+havior (background). of segments, thereby improving the overall model performance
+ in distinguishing between normal and abnormal segments.
+ p q
+ Lf ga = Ep∼p(v) [log pvt (v) − log q vt (v)] (12) The distance functions δ(Wnormal , Wnormal ) and
+ p q
+ δ(Wabnormal , Wabnormal ) are defined in Eq. (15) and
+ Eq. (16) respectively.
+where pvt (v) and q vt (v) denote the similarity score and
+semantic consistency label of the visual-prompt pair, respec- p q
+ δ(Wnormal , Wnormal )= min
+tively. If it is a positive pair, q = 1; otherwise, q = 0. u,v∈{0,...,S}
+ (15)
+The coarse-grained alignment loss is binary cross entropy loss p,u q,v
+ (O(∥fEM ∥2 ) − O(∥fEM ∥2 ))
+Lcga between pi and lk as given in Eq. (13).
+ r s
+ δ(Wabnormal , Wabnormal )= min
+ u,v∈{0,...,S}
+ 1
+ N (16)
+ X r,u s,v
+ Lcga = − [lk log(pi ) + (1 − lk ) log(1 − pi )] (13) (O(∥fEM ∥2 ) − O(∥fEM ∥2 ))
+ N i=1
+ where
+ where, N is the number of video segments, lk is the ground- r,u
+ O(∥fEM ∥2 ) is one of the top-K feature magnitudes among
+truth label for the i-th video segment, where lk = 1 if the
+ r,{1,...,S}
+segment is anomalous and lk = 0 if it is normal. pi is the fEM .
+ p r
+predicted probability that the i-th video segment is anomalous. Similarly, the distance δ(Wnormal , Wabnormal ) for normal
+ This model incorporates a feature magnitude separability feature p and abnormal features r is presented in Eq. (17) as:
+loss Lf ms given in Eq. (14) in addition to the coarse-grained p r
+ δ(Wnormal , Wabnormal )= max
+alignment loss Lcga and fine-grained alignment loss Lf ga . u,v∈{0,...,S}
+ (17)
+This separability loss serves to incrementally separate the p,u
+ (O(∥fEM r,v
+ ∥2 ) − O(∥fEM ∥2 ))
+normal class embeddings from the abnormal ones. The process
+begins by computing the cosine similarity between the normal Here, the max operation is taken over all temporal segments
+and abnormal class embeddings. Subsequently, the contrastive u and v indicate the largest difference in feature magnitudes
+loss Lf ms is calculated as follows: between the normal and abnormal features.
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 8
+
+ To sum up, the overall loss for ReFLIP-VAD is expressed K as 1 for negative bags, where S denotes the length of input
+in Eq. (18) as: feature. To make a fair comparison, the visual sample rate is
+ set to be 24 fps for UCF-Crime and 30 fps for XD-violence
+ L = Lcga + λ1 Lf ga + λ2 Lf ms (18)
+ as prior methods [14] and a sliding window with a size of 16
+ where λ1 ,λ2 is the weighting factor that adjusts the influ- frames for visual feature extraction.
+ence of loss terms.
+ C. Comparison with State-of-the-art Methods
+ IV. E XPERIMENTS 1) Coarse-grained WSVAD Results: The proposed method
+A. Datasets and Evaluation Metrics is designed to handle both coarse-grained and fine-grained
+ 1) Datasets: Extensive experiments have been conducted WSVAD tasks effectively. To demonstrate its performance,
+on two standard benchmark datasets, namely UCF-Crime [9] the method is compared with other state-of-the-art methods
+and XD-Violence [48]. in Tables I and II. This approach ensures that the comparisons
+ UCF-Crime is a large-scale weakly supervised video are equitable and highlights the capabilities of the proposed
+anomaly detection dataset released in 2018. It comprises 1900 method in anomaly detection.
+untrimmed real-world videos with a total duration of 128
+hours. It includes 13 different classes of anomalous events. TABLE I
+ P ERFORMANCE C OMPARISON (C OARSE - GRAINED ) ON UCF-C RIME
+It is split into a training set of 1610 videos and a testing set
+of 290 videos. Supervision Method Features AUC(%) Ano-AUC(%)
+ XD-violence is a multi-modal large-scale diverse dataset
+ SVM baseline - 50.10 50.00
+released in 2020. It is collected from movies, surveillance Un OCSVM [49] - 63.20 51.06
+cameras, and in-the-wild scenes for 217 hours. It includes Hasan et al. [50] - 51.20 39.43
+6 different classes of physically violent events. It comprises Deep-MIL [9] C3D 75.42 54.25
+4754 videos, with 2,349 categorized as normal and 2,405 as IBL [51] C3D 78.66 -
+abnormal. The training set comprises 3,954 videos, while the Motion-Aware [52] PWC Flow 79.01 62.18
+ GCN [32] TSN 82.12 59.03
+test set contains 800 videos. HL-Net [14] I3D 82.45 60.27
+ 2) Evaluation Metrics: For evaluating coarse-grained MS-BSAD [53] I3D 83.54 -
+Weakly Supervised Video Anomaly Detection (WSVAD), this Ju et al. [15] CLIP 84.72 62.60
+ Weak CRFD [54] I3D 84.89 -
+study adopts the frame-level Average Precision (AP) metric, LA-Net [55] I3D 85.12 -
+which calculates the area under the precision-recall curve for NG-MIL [56] I3D 85.63 -
+the XD-Violence dataset, and the frame-level Area Under the RTFM [34] I3D 85.66 63.86
+ AnomalyCLIP [42] ViT-B/16 86.36 -
+Curve (AUC) for the UCF-Crime dataset. Additionally, the DMU [57] I3D 86.75 66.8
+AUC for only the anomalous videos (referred to as AnoAUC is UB-MIL [58] X-CLIP 86.97 68.94
+utilized to highlight the detection accuracy within anomalous CLIP-TSA [59] CLIP 87.58 69.31
+ Vad-CLIP [16] CLIP 88.02 70.23
+content, addressing the issue where high performance on
+normal videos might obscure lower detection accuracy within Weak ReFLIP-VAD (Ours) CLIP 88.57 72.35
+ ReFLIP-VAD (Ours) FLIP 89.14 74.72
+abnormal videos. For fine-grained WSVAD, the study follows
+the established protocol in video action detection, employing
+ Table I presents a performance comparison of existing
+the mean Average Precision (mAP) across varying Intersection
+ methods on the UCF-Crime dataset, emphasizing both coarseover Union (IoU) thresholds. Specifically, IoU thresholds from
+ grained AUC and anomaly-specific detection capabilities
+0.1 to 0.5, in increments of 0.1, are used to calculate mAP
+ (Ano-AUC). The proposed method achieves an impressive
+values. The average of these mAP values (AVG) is also
+ AUC of 89.14% and an Ano-AUC of 74.72%, showing
+reported. It is important to note that mAP calculations are
+ substantial improvements over existing methods. Specifically,
+performed solely on the anomalous videos within the test set.
+ when compared to the highest scores from previous methods,
+ VadCLIP [16] which scored 88.02% in AUC and 70.23% in
+B. Implementation Details Ano-AUC, the proposed method demonstrates an improvement
+ The model is trained on NVIDIA RTX 4070 GPU using of +1.12% in AUC and +4.49% in Ano-AUC. Additionally,
+the PyTorch framework. For the optimization of the network, compared to the second highest-performing method, CLIP-
+Adam is leveraged as the optimizer with a batch size of 128. TSA [59], which scored an AUC of 87.58% and an Ano-
+On the XD-Violence dataset, the learning rate and total epoch AUC of 69.31%, the proposed method exhibits improvements
+are set as 5 × 10−4 and 50, respectively, and on the UCF- of +1.56% in AUC and +5.41% in Ano-AUC. These en-
+Crime dataset, the learning rate and total epoch are set as hancements significantly underscore the efficacy of the pro-
+3 × 10−4 and 50, respectively. For hyper-parameters, τ in Eq. posed method in distinguishing between normal and abnormal
+(11) is set as 0.07. For the loss weight adjustment factor in events, setting a new benchmark for anomaly detection in the
+Eq. (18), the values of λ1 and λ2 are configured as 0.01 and UCF-Crime dataset.
+0.001 on the UCF-Crime dataset, respectively. On the XD- Table II showcases a performance comparison of existing
+Violence dataset, both λ1 and λ2 are set
+  as 0.0001. For the anomaly detection methods on the XD-Violence dataset, cate-
+ S
+MIL-ranking, the value of K as 16 + 1 for positive bags and gorized under unsupervised and weakly supervised techniques.
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 9
+
+ TABLE II re-implemented using visual features from CLIP, followed by
+ P ERFORMANCE C OMPARISON (C OARSE - GRAINED ) ON XD-V IOLENCE the setup in HL-Net to fine-tune Deep-MIL [9] for adapting to
+ fine-grained WSVAD. Fine-grained WSVAD presents a more
+ Supervision Method Features AP(%)
+ challenging task relative to coarse-fined WSVAD as it requires
+ Baseline - 50.80 attention to both multi-category classification accuracy and
+ Un OCSVM [49] - 28.63
+ Hasan et al. [50] - 31.25 detection segment continuity. In this task, the proposed method
+ is also clearly superior to these excellent comparison methods
+ Deep-MIL [9] C3D 75.18
+ CRFD [54] I3D 75.90 on both XD-Violence and UCF-Crime datasets. For example,
+ Ju et al. [15] I3D 76.57 on XD-Violence, the ReFLIP-VAD achieves performance im-
+ RTFM [34] I3D 78.27 provements of 15.71% , 7.15% and 2.66% in terms of AVG
+ HL-Net [14] I3D 78.10
+ Weak NG-MIL [56] I3D 78.51 compared to Deep-MIL [9], HL-Net [14] and VadCLIP [16],
+ AnomalyCLIP [42] ViT-B/16 78.55 respectively.
+ MS-BSAD [53] I3D 78.92
+ LA-Net [55] I3D 80.72
+ CMRL [60] I3D 81.30
+ DMU [57] I3D 82.41
+ D. Qualitative Analysis
+ CLIP-TSA [59] CLIP 82.17 Figures 5 and 6 illustrate the qualitative visualization results
+ Vad-CLIP [16] CLIP 84.51
+ for the UCF Crime and XD Violence datasets, respectively.
+ Weak ReFLIP-VAD (Ours) CLIP 85.81
+ ReFLIP-VAD (Ours) FLIP 86.29
+ The frame-wise anomaly detection scores are depicted by
+ the blue solid line, and the ground-truth abnormal temporal
+ locations are depicted by the light orange shaded regions.
+ TABLE III The proposed method has demonstrated effectiveness across
+ P ERFORMANCE C OMPARISONS (F INE - GRAINED ) ON UCF-C RIME
+ various categories within both the UCF-Crime and XD-
+ Method mAP@IoU(%) Violence datasets, effectively identifying anomalies within the
+ 0.1 0.2 0.3 0.4 0.5 AVG designated ground truth regions. This confirms the model’s
+ Baseline 0.21 0.14 0.04 0.02 0.01 0.08 precision in temporal and situational anomaly detection.
+ Deep-MIL [9] 5.73 4.41 2.69 1.93 1.44 3.24
+ HL-Net [14] 10.27 7.01 6.25 3.42 3.29 6.05 Figure 7 presents t-SNE visualizations of feature distribu-
+ Vad-CLIP [16] 11.72 7.83 6.40 4.53 2.93 6.68 tions on these datasets, both with and without the proposed
+ ReFLIP-VAD (Ours) 14.23 10.34 9.32 7.54 6.81 9.62 loss function L . The visualizations highlight that incorporating L significantly enhances the separation between normal
+ TABLE IV (green dots) and abnormal (magenta dots) features, thereby
+ P ERFORMANCE C OMPARISONS (F INE - GRAINED ) ON XD-V IOLENCE improving the proposed model’s discriminative capability. This
+ improved distinction is crucial for effective anomaly detection,
+ Method mAP@IOU(%)
+ 0.1 0.2 0.3 0.4 0.5 AVG demonstrating the model’s vital role in enhancing surveillance
+ Baseline 1.82 0.92 0.48 0.23 0.09 0.71 and safety systems by efficiently distinguishing between nor-
+ Deep-MIL [9] 22.72 15.57 9.98 6.20 3.78 11.65 mal and anomalous activities.
+ HL-Net [14] 30.51 25.75 20.18 14.83 9.79 20.21
+ Vad-CLIP [16] 37.03 30.84 23.38 17.90 14.31 24.70
+ ReFLIP-VAD (Ours) 39.24 33.45 27.71 20.86 17.22 27.36
+ E. Ablation Studies
+ Comprehensive ablation studies have been conducted to
+The Proposed Method achieves a notable Average Precision verify the effectiveness of the proposed model. For these
+(AP) of 86.29%, which is substantially higher compared to studies, the similarity map is utilized to calculate the frameboth categories of existing methods. Among unsupervised level anomaly degree for coarse-grained WSVAD.
+methods, the Baseline method scores 50.80%, OCSVM [49] 1) Effectiveness of Temporal Modeling module: To evaluate
+achieves 28.63%, and Hasan et al. [50] achieve 31.25%. the efficacy of the temporal modeling module in the pro-
+Compared to these, the proposed method shows improvements posed framework, experiments are conducted on XD-Violence
+of 35.49%, 57.66%, and 54.04% respectively. In the realm dataset in various settings.
+of weakly supervised methods, the highest previous AP was
+achieved by VadCLIP [16] at 84.51% and the lowest by Deep- TABLE V
+MIL [9] at 75.18%. The proposed method surpasses UB- E FFECTIVENESS OF T EMPORAL M ODELING MODULE IN P ROPOSED
+MIL [58] the second best-performing existing method in this F RAMEWORK
+category, by 4.12%. This significant outperformance of the Configuration Method AP(%) AVG(%)
+proposed method over both unsupervised and weakly super- I Baseline (w/o temporal modeling) 73.31 16.27
+ II Global TF-Encoder 82.69 16.98
+vised methods underscores its superior efficacy in accurately III Emphasize-Glimpse (EG) 82.89 17.43
+ IV Local TF-Encoder 81.34 18.67
+identifying anomalies in the XD-Violence dataset. V Emphasize-Emphasize (EE) 81.59 19.27
+ VI Graph Convolutional Network (GCN) 82.65 24.19
+ 2) Fine-grained WSVAD Results: For the fine-grained per- VII Local TF-Encoder + Global TF-Encoder 80.12 20.93
+formance on two benchmark dataset, ReFLIP-VAD is com- VIII Global TF-Encoder + GCN 85.15 21.76
+ IX Local TF-Encoder + GCN 85.57 25.42
+pared with previous works [9], [14], [16] in Tables III and IV. X Glimpse-Emphasize-Fusion (GE-Fusion) 85.89 26.58
+HL-Net [14], the first work to propose fine-grained WSVAD, is XI Glimpse-Emphasize (GE) (Proposed Method) 86.29 27.36
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 10
+
+ (a) Arrest (b) Vandalism (a) Explosion (b) Riot
+
+ (c) Explosion (d) Assault (c) Car Accident (d) Abuse
+
+ (e) Shooting (f) Normal Video
+ (e) Road Accident (f) Normal Video
+
+Fig. 5. Visualization Results of ground-truth and anomaly detection score Fig. 6. Visualization Results of ground-truth and anomaly detection score
+of the proposed method on UCF-Crime dataset. The blue solid line depicts of the proposed method on XD-Violence dataset. The blue solid line depicts
+the frame-wise anomaly detection score and the light orange shaded regions the frame-wise anomaly detection score and the light orange shaded regions
+indicate the ground-truth abnormal temporal locations. Green arrow represents indicate the ground-truth abnormal temporal locations. Green arrow represents
+the location of normal frame and red arrow represents the location of abnormal the location of normal frame and red arrow represents the location of abnormal
+frame. frame.
+
+ Table V illustrates the effectiveness of the Temporal Mod- 1.35% in AP and -2.15% in AVG compared to Setting III.
+eling module in the proposed framework across various con- The integration of Graph Convolutional Network (GCN) in
+figurations. Configuration I serves as the baseline without Configuration VI leads to an improvement, reaching 82.65%
+the temporal modeling capabilities of the proposed method, AP and 24.19% AVG. Configuration X shows an increase of
+achieving an AP of 73.31% and an AVG of 16.27%. In Con- +5.77% in AP and +5.65% in AVG compared to Configuration
+figuration II, the inclusion of the Global TF-Encoder enhances VII, an increase of +0.74% in AP and +4.82% in AVG
+the AP and AVG scores to 82.69% and 16.98%, respectively. compared to Configuration VIII, and an increase of +0.32%
+The Emphasize-Glimpse (EG) sequence in Configuration III in AP and +1.16% in AVG compared to Configuration IX.
+further improves the scores slightly to 82.89% for AP and However, it shows a notable decrease of -0.40% in AP and
+17.43% for AVG. Compared to the baseline (Setting I), this -0.78% in AVG compared to the proposed method in Setting
+configuration improves AP by +9.58% and AVG by +1.16%. XI. Configuration XI, representing the Glimpse-Emphasize
+ In Configurations IV and V, the Local TF-Encoder and (GE) method proposed in this paper, outperforms all other
+the Emphasize-Emphasize (EE) arrangements show further configurations, achieving the highest AP of 86.29% and an
+improvements, with Configuration V (EE) achieving 81.59% AVG of 27.36%. This emphasizes the efficacy of the GE
+AP and 19.27% AVG. This setting shows a decrease of - approach, which leverages a sequential arrangement of the
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 11
+
+ w/o w/ w/o w/
+
+ (a) UCF-Crime (b) XD-Violence
+Fig. 7. Visualizations of the distributions of the normal and abnormal embeddings learned without and with the proposed loss (L ) using t-Distributed
+Stochastic Neighbor Embedding (t-SNE) [61], on (a) UCF-Crime dataset. and (b) XD-Violence dataset.
+
+Glimpse and Emphasize modules, highlighting its advantage representing a substantial improvement of approximately 5%
+in handling temporal dependencies in video anomaly detection in AP and 4.62% in AVG compared to a context length of
+tasks. 8. However, further increasing the context length to 32 leads
+ 2) Effectiveness of dual block: ReFLIP-VAD can simulta- to a slight decrease in performance, with AP(%) dropping
+neously realize coarse-grained and fine-grained WSVAD tasks by 2.16% and AVG(%) by 4.47%, indicating that while a
+through a dual-block approach. To evaluate the effectiveness of larger context length generally enhances the model’s ability
+each block and the prompt mechanisms in the video-text align- to capture relevant features, there is a threshold beyond which
+ment (VTA-Block), extensive experiments were conducted, the benefits diminish.
+with detailed results presented in Table VI. The method The performance of the model is then analyzed by varying
+utilizing only the Classification block (CLS-Block) falls under the window length of the Glimpse and Emphasize network.
+the classification-based paradigm and competes with current The optimal window length is identified between 32 and 64,
+state-of-the-art methods on XD-Violence. However, using only where the AP(%) and AVG(%) reach their maximum values
+the VTA block results in unsatisfactory performance in terms of 86.29% and 27.36%, respectively, showing an improvement
+of AP, as it primarily focuses on fine-grained WSVAD. With of 2.11% in AP and 2.19% in AVG over the shortest window
+the integration of coarse-grained classification for feature length of 16. However, extending the window length to 256
+optimization in the CLS block, the VTA block experiences results in a notable decline in performance, with AP(%)
+a significant improvement, approximately a 12% increase in decreasing by 2.75% and AVG(%) by 3.82%, indicating that
+AP. Furthermore, the dual block that integrates the Repa- excessively long window lengths might introduce unnecessary
+rameterized Learnable Prompt (RL-prompt) and the Visual noise or irrelevant information, thereby affecting the model’s
+Prompt (V-prompt) to form a multimodal prompt achieves robustness.
+substantial improvements of +2.42% and +6.23%, respec- The input length directly influences the amount of video
+tively. Additionally, the incorporation of learnable prompts data processed by the model. As input length increases from
+and visual prompts, which are specific designs in the VTA 64 to 512, both AP(%) and AVG(%) improve, peaking at an
+block, consistently enhances performance, establishing a new input length of 512 with a substantial improvement of 4.69% in
+state-of-the-art. These results demonstrate that the dual-block AP and 4.49% in AVG compared to the shortest input length.
+configuration, which combines a coarse-grained classification This demonstrates that the method is capable of effectively
+paradigm with a fine-grained alignment paradigm, effectively handling larger input sizes, leading to enhanced performance.
+increases the performance.
+ 4) Scale of Vision-Language Models (VL-Models) and Their
+ TABLE VI
+ Impact on Fine-Grained WSVAD: Table VIII illustrates the
+ E FFECTIVENESS OF D UAL B LOCK ON XD-V IOLENCE DATASET performance impact of different Vision-Language Model (VL-
+ Model) variants on fine-grained WSVAD task. The DistilBERT
+ CLS-Block VTA-Block RL-Prompt V-Prompt AP(%)
+ ✓ ✗ ✗ ✗ 81.28
+ + FLIP model achieves the highest mAP@IoU=0.3 of 27.71%
+ ✗ ✓ ✗ ✗ 69.24 and an AUC of 86.29%, representing a significant improve-
+ ✓ ✓ ✗ ✗ 77.33 ment over the base CLIP model, which records an mAP of
+ ✓ ✓ ✓ ✗ 79.75
+ ✓ ✓ ✗ ✓ 83.56
+ 22.38% and an AUC of 81.19%. Specifically, the DistilBERT
+ ✓ ✓ ✓ ✓ 86.29 + FLIP variant outperforms the CLIP model by 23.82% in
+ mAP and 6.27% in AUC. Compared to ALIGN, which has
+ 3) Effectiveness of Context Length, Window Length, and the largest model size at 307M parameters, DistilBERT + FLIP
+Video Input Length: As shown in Table VII, the perfor- still shows a 9.37% increase in mAP and a 1.77% improvement
+mance metrics, AP(%) and AVG(%), tend to improve as the in AUC, despite having a considerably smaller model size of
+context length in the learnable prompt increases from 8 to 165M parameters. This highlights the effectiveness and effi-
+24. Specifically, the AP(%) reaches its peak at a context ciency of integrating DistilBERT with FLIP for fine-grained
+length of 24, yielding 86.29%, and an AVG(%) of 27.36%, WSVAD tasks, offering a better trade-off between model size
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 12
+
+ TABLE VII
+ I MPACT OF C ONTEXT L ENGTH , W INDOW L ENGTH , AND V IDEO I NPUT L ENGTH
+
+ Context Length AP(%) AVG(%) Window Length AP(%) AVG(%) Input Length AP(%) AVG(%)
+ 8 81.26 22.74 16 84.19 27.26 64 82.54 26.87
+ 16 82.78 23.34 32 84.68 25.17 128 82.19 26.38
+ 20 84.91 25.61 64 86.29 27.36 256 85.41 25.08
+ 24 86.29 27.36 128 84.87 23.26 512 86.29 27.36
+ 32 84.13 22.89 256 83.54 26.54 1024 84.54 24.45
+
+ TABLE VIII TABLE X
+ S CALE OF V ISION -L ANGUAGE M ODELS (VL-M ODELS ) AND T HEIR P ERFORMANCE C OMPARISON OF D IFFERENT P ROMPT T EMPLATE
+ I MPACT ON F INE -G RAINED WSVAD
+ Prompt Template UCF-Crime XD-Violence
+ VL-Model Variant Model Size (Parameters) mAP@IoU=0.3(%) AP(%)
+ AUC(%) AP(%)
+ CLIP [10] 144M 22.38 81.19
+ DistilBERT + CLIP 126M 24.54 83.76 [CLASS] 83.95 80.69
+ ALIGN [11] 307M 25.42 84.52
+ FLIP [13] 238M 25.89 84.95
+ ‘a video of’ + [CLASS] 85.55 81.06
+ DistilBERT + FLIP 165M 27.71 86.29 ‘a long video of’ + [CLASS] 85.63 82.59
+ L-Prompt + [CLASS] 86.48 84.48
+ RL- Prompt + [CLASS] 89.14 86.29
+and performance.
+ 5) Analysis of Computational Complexity and Model Size:
+ the highest performance metrics. This template significantly
+The comparison of model size and computational complexity
+ outperforms other methods in the UCF-Crime dataset with an
+between the Glimpse-Emphasize Network and other methods
+ AUC of 89.14% and in the XD-Violence dataset with an AP
+[53], [34], [55] and [14] is presented in Table IX. The results
+ of 86.29%. Compared to the next best performing template,
+for all methods were obtained by executing their official codes
+ the ‘Learnable Prompt (L-Prompt) + [CLASS],’ the proposed
+on NVIDIA RTX 4070 GPU. For an equitable comparison,
+ prompt template shows a substantial improvement of approxiopen-source codes were utilized to replicate existing modules,
+ mately 4.66% in AUC for UCF-Crime and a remarkable 1.81%
+which were then integrated into the baseline. The Glimpseincrease in AP for XD-Violence. This marked enhancement
+Emphasize Network demonstrates a significant reduction in
+ underscores the method’s ability to fine-tune and optimize the
+model size, with only 1.14 million parameters compared to the
+ feature extraction process, leading to more accurate and robust
+13.27 million of MS-BSAD [53] and 24.7 million of RTFM
+ anomaly detection across varying video contexts.
+[34], the highest among the compared methods. Additionally,
+ 7) Effectiveness of different hyper-parameter settings: The
+the computational complexity, measured in FLOPs, for the
+ impact of varying temperature coefficients (τ ) is presented in
+Glimpse-Emphasize Network stands at only 0.36 GigaFLOPs.
+ Table XI.
+This is much lower than the 2.63 GigaFLOPs of MS-BSAD
+[53] and only slightly higher than the 0.29 GigaFLOPs from TABLE XI
+HL-Net [14], indicating a balance between efficiency and P ERFORMANCE C OMPARISON OF D IFFERENT T EMPERATURE
+complexity. Despite its smaller size and lower computational C OEFFICIENTS τ
+cost, the Glimpse-Emphasize Network outperforms all others τ 0.01 0.03 0.05 0.07 0.09 0.1
+in terms of effectiveness on challenging benchmarks. The
+ UCF@AUC (%) 87.34 88.78 88.56 89.14 88.12 87.64
+findings in Table IX confirm that the Glimpse-Emphasize XD@AP (%) 85.33 84.45 85.13 86.29 85.20 85.36
+Network is both lightweight and efficient.
+ The optimal performance is achieved with (τ ) of 0.07,
+ TABLE IX
+ C OMPARISON OF M ODEL S IZE (M) AND C OMPUTATIONAL
+ yielding an AUC of 89.14% on UCF-Crime and AP of 86.29%
+ COMPLEXITY (G) OF DIFFERENT METHODS on XD-Violence. This configuration notably outperforms other
+ tested settings, showing a remarkable increase in model effi-
+ Method Parameters FLOPs UCF-Crime XD-Violence cacy. Specifically, the (τ ) value of 0.07 shows an increase of up
+ (M) (G) AUC(%) AP(%)
+ MS-BSAD [53] 13.27 2.63 83.15 78.92
+ to 2.06% in AUC and 2.18% in AP over the lowest-performing
+ RTFM [34] 24.7 0.79 84.30 77.81 configurations.
+ LA-Net [55] 2.69 0.53 83.67 79.18
+ HL-Net [14] 5.66 0.29 83.12 79.58 Figures 8 and 9 demonstrate the impact of the loss weight
+ Glimpse-Emphasize Network 1.14 0.36 85.76 82.44 adjustment factors, λ1 and λ2 , by 1×e−x , on the performance
+ of the proposed method across the UCF-Crime and XD-
+ 6) Performance comparison on different prompt templates: Violence datasets. The evaluation reveals that the optimal
+The performance comparison across different prompt tem- performance for λ1 on the UCF-Crime dataset is achieved
+plates as shown in Table X highlights the effectiveness of the at x = 2, where the AUC reaches approximately 88%, and
+proposed method, particularly the ‘Reparameterized Learnable on the XD-Violence dataset at x = 4, achieving an AP of
+Prompt (RL-Prompt) + [CLASS]’ template, which achieves about 86%. Similarly, λ2 exhibits peak performance on the
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 13
+
+ 90 87 90
+ AUC(%) on UCF-Crime AP(%) on XD-Violence DMU [52] UB-MIL [57] ReFLIP-VAD
+ 89 80
+ 86
+ 70
+ 88
+ 85 60
+
+ Ano-AUC (%)
+ 87 50
+ 84
+AUC (%)
+
+ AP (%)
+ 86 40
+ 83 30
+ 85
+ 82 20
+ 84
+ 10
+ 83 81
+ 0
+
+ Sh ery
+ ad ing
+
+ ge
+ e
+
+ Ro nt
+ As n
+
+ Av ng
+ est
+
+ Bu lt
+
+ n
+
+ Va ting
+ Ex lary
+
+ Sh alism
+
+ Ste ng
+ us
+
+ o
+
+ sio
+ sau
+
+ e
+ 82 80
+
+ Ars
+
+ era
+ ali
+ i
+ Arr
+
+ Ro Fight
+
+ lift
+ bb
+ cid
+ Ab
+
+ rg
+
+ oo
+ plo
+ 1 2 3 4 5
+
+ nd
+ op
+ Ac
+ x
+Fig. 8. Model performance under different loss weight adjustment factor λ1 . Fig. 10. Class-wise Ano-AUC results of top three methods on UCF-Crime
+It shows the AUC results on UCF-Crime and AP results on XD-Violence of dataset
+the proposed method for different values of λ1 (1 × e−x ) where, different
+values of x are represented as x-axis.
+ 90
+ DMU [52] CLIP-TSA [53] ReFLIP-VAD
+ 80
+ 90 87
+ AUC(%) on UCF-Crime AP(%) on XD-Violence 70
+ 89
+ 60
+ 86
+ 88 50
+ AP (%)
+
+ 87 40
+ 85
+AUC (%)
+
+ 30
+ AP (%)
+
+ 86
+ 20
+ 85 84
+ 10
+ 84 0
+ 83
+ g
+
+ e
+ e
+
+ n
+
+ t
+
+ g
+ nt
+
+ Rio
+
+ rag
+ us
+
+ tin
+ sio
+
+ tin
+ 83
+ de
+ Ab
+
+ h
+
+ oo
+ plo
+
+ e
+ cci
+
+ Fig
+
+ Av
+ Sh
+ Ex
+ rA
+ Ca
+
+ 82 82 Fig. 11. Class-wise AP results of top three methods on XD-Violence dataset
+ 1 2 3 4 5
+ x
+Fig. 9. Model performance under different loss weight adjustment factor λ2 . duced. These shortcomings are evident in categories where the
+It shows the AUC results on UCF-Crime and AP results on XD-Violence of
+the proposed method for different values of λ2 (1 × e−x ) where, different anomalies are more subtle or difficult to describe with simple
+values of x are represented as x-axis. textual prompts. For example, in the ‘Shoplifting’ category,
+ ReFLIP-VAD achieves an Ano-AUC of 62.2%, which is comparable to the performance of UB-MIL at 62.3% and slightly
+UCF-Crime dataset at x = 3 with an AUC of 89%, and higher than the performance of DMU at 62.2%. Similarly, in
+the AP peaks at x = 4 for the XD-Violence dataset. Both the ‘Fighting’ category, ReFLIP-VAD scores 73.5%, which,
+figures indicate a subsequent decline in model performance as although higher than the performance of UB-MIL at 65.9%
+x exceeds these optimal values. This behavior highlights the and DMU at 65.4%, is not as significantly superior as in other
+sensitivity of the model to the tuning of λ values, emphasizing categories. These cases highlight the challenges ReFLIP-VAD
+the necessity of precise modulation of these parameters to faces in scenarios where the anomalous actions are subtle,
+enhance the overall effectiveness of the anomaly detection less visually distinctive, or not easily captured by the prompt
+capabilities across varied scenarios. dictionary used to describe anomalies.
+ 8) Effectiveness of class-wise AUC and AP results : To The class-wise Average Precision (AP) results on the XDshowcase the detailed performance on specific anomalous Violence dataset for top three performing methods: DMU,
+events, the class-wise Anomaly-Area Under Curve (Ano-AUC) CLIP-TSA, and ReFLIP-VAD is presented in Figure 11.
+results on the UCF-Crime dataset for top three performing ReFLIP-VAD consistently demonstrates superior performance
+methods: DMU, UB-MIL, and ReFLIP-VAD is illustrated in across various violence categories. For instance, in the ‘Abuse
+Figure 10. While ReFLIP-VAD demonstrates superior per- category, ReFLIP-VAD achieves an AP of 70.9%, outperformformance across most categories in the UCF-Crime dataset, ing CLIP-TSA and DMU, which attain 65.9% and 57.8%, rethere are certain failure cases where its effectiveness is re- spectively. Similarly, in the ‘Car Accident’ category, ReFLIP-
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 14
+
+VAD leads with an AP of 77.1%, followed by CLIP-TSA [11] C. Jia, Y. Yang, Y. Xia, Y.-T. Chen, Z. Parekh, H. Pham, Q. Le, Y.-H.
+at 75.2% and DMU at 73.4%. These results highlight the Sung, Z. Li, and T. Duerig, “Scaling up visual and vision-language
+ representation learning with noisy text supervision,” in International
+effectiveness of ReFLIP-VAD in accurately identifying and conference on machine learning. PMLR, 2021, pp. 4904–4916.
+classifying different types of violent events, which is crucial [12] K. Zhou, J. Yang, C. C. Loy, and Z. Liu, “Learning to prompt for visionfor applications in surveillance and security. language models,” International Journal of Computer Vision, vol. 130,
+ no. 9, pp. 2337–2348, 2022.
+ [13] L. Yao, R. Huang, L. Hou, G. Lu, M. Niu, H. Xu, X. Liang, Z. Li,
+ V. C ONCLUSION X. Jiang, and C. Xu, “Filip: Fine-grained interactive language-image
+ pre-training,” arXiv preprint arXiv:2111.07783, 2021.
+ This paper introduces ReFLIP-VAD, an innovative frame- [14] P. Wu, X. Liu, and J. Liu, “Weakly supervised audio-visual violence
+work for video anomaly detection that leverages the strengths detection,” IEEE Transactions on Multimedia, 2022.
+of vision-language models. By employing a reparameterized [15] C. Ju, T. Han, K. Zheng, Y. Zhang, and W. Xie, “Prompting visuallanguage models for efficient video understanding,” in European Conprompt encoder, ReFLIP-VAD generates contextually rich and ference on Computer Vision. Springer, 2022, pp. 105–124.
+interpretable prompt templates, enhancing the detection of [16] P. Wu, X. Zhou, G. Pang, L. Zhou, Q. Yan, P. Wang, and Y. Zhang,
+specific semantics associated with anomalies. The proposed “Vadclip: Adapting vision-language models for weakly supervised video
+ anomaly detection,” in Proceedings of the AAAI Conference on Artificial
+approach incorporates a dual-block architecture, consisting Intelligence, vol. 38, no. 6, 2024, pp. 6074–6082.
+of a classification block and a video-text alignment block, [17] V. Sanh, L. Debut, J. Chaumond, and T. Wolf, “Distilbert, a distilled
+enabling effective anomaly detection at both coarse and fine- version of bert: smaller, faster, cheaper and lighter,” arXiv preprint
+grained levels. This approach is further strengthened by the arXiv:1910.01108, 2019.
+ [18] P. Wu, J. Liu, and F. Shen, “A deep one-class neural network for
+Glimpse-Emphasize network, which captures both global and anomalous event detection in complex scenes,” IEEE transactions on
+local temporal dependencies, and the MIL-Align mechanism, neural networks and learning systems, vol. 31, no. 7, pp. 2609–2622,
+optimizing visual-language alignment under weak supervision. 2019.
+ [19] Y. Liu, J. Liu, J. Lin, M. Zhao, and L. Song, “Appearance-motion
+Extensive evaluations on benchmark datasets demonstrate that united auto-encoder framework for video anomaly detection,” IEEE
+ReFLIP-VAD outperforms existing methods, achieving state- Transactions on Circuits and Systems II: Express Briefs, vol. 69, no. 5,
+of-the-art performance. As a future research direction, the pp. 2498–2502, 2022.
+ [20] Y. Liu, Z. Xia, M. Zhao, D. Wei, Y. Wang, S. Liu, B. Ju, G. Fang, J. Liu,
+proposed approach can be adapted to handle situations where and L. Song, “Learning causality-inspired representation consistency for
+anomalies are not predefined, improving its effectiveness in video anomaly detection,” in Proceedings of the 31st ACM International
+real-world settings where unexpected events frequently occur. Conference on Multimedia, 2023, pp. 203–212.
+ [21] H. Song, C. Sun, X. Wu, M. Chen, and Y. Jia, “Learning normal patterns
+This will enable the model to identify and categorize new via adversarial attention-based autoencoder for abnormal event detection
+unseen types of anomalies that were not part of its initial in videos,” IEEE Transactions on Multimedia, vol. 22, no. 8, pp. 2138–
+training. 2148, 2019.
+ [22] X. Wang, Z. Che, B. Jiang, N. Xiao, K. Yang, J. Tang, J. Ye, J. Wang,
+ and Q. Qi, “Robust unsupervised video anomaly detection by multipath
+ R EFERENCES frame prediction,” IEEE transactions on neural networks and learning
+ systems, vol. 33, no. 6, pp. 2301–2312, 2021.
+ [1] A. Acsintoae, A. Florescu, M.-I. Georgescu, T. Mare, P. Sumedrea, R. T.
+ Ionescu, F. S. Khan, and M. Shah, “Ubnormal: New benchmark for [23] P. Jin, L. Mou, G.-S. Xia, and X. X. Zhu, “Anomaly detection in
+ supervised open-set video anomaly detection,” in Proceedings of the aerial videos with transformers,” IEEE Transactions on Geoscience and
+ IEEE/CVF Conference on Computer Vision and Pattern Recognition, Remote Sensing, vol. 60, pp. 1–13, 2022.
+ 2022, pp. 20 143–20 153. [24] Z. Yang, J. Liu, Z. Wu, P. Wu, and X. Liu, “Video event restoration
+ [2] Y. Liang, J. Zhang, S. Zhao, R. Wu, Y. Liu, and S. Pan, “Omni-frequency based on keyframes for video anomaly detection,” in Proceedings of the
+ channel-selection representations for unsupervised anomaly detection,” IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+ IEEE Transactions on Image Processing, 2023. 2023, pp. 14 592–14 601.
+ [3] Z. Yang, Y. Guo, J. Wang, D. Huang, X. Bao, and Y. Wang, “Towards [25] Y. Chang, Z. Tu, W. Xie, B. Luo, S. Zhang, H. Sui, and J. Yuan,
+ video anomaly detection in the real world: A binarization embedded “Video anomaly detection with spatio-temporal dissociation,” Pattern
+ weakly-supervised network,” IEEE Transactions on Circuits and Systems Recognition, vol. 122, p. 108213, 2022.
+ for Video Technology, 2023. [26] C. Guo, H. Wang, Y. Xia, and G. Feng, “Learning appearance-motion
+ [4] D. Tran, L. Bourdev, R. Fergus, L. Torresani, and M. Paluri, “Learning synergy via memory-guided event prediction for video anomaly detecspatiotemporal features with 3d convolutional networks,” in Proceedings tion,” IEEE Transactions on Circuits and Systems for Video Technology,
+ of the IEEE international conference on computer vision, 2015, pp. 2023.
+ 4489–4497. [27] G. Wang, Y. Wang, J. Qin, D. Zhang, X. Bao, and D. Huang, “Video
+ [5] B. Zhang and J. Xue, “Weakly-supervised anomaly detection with a anomaly detection by solving decoupled spatio-temporal jigsaw puzsub-max strategy,” Neurocomputing, p. 126770, 2023. zles,” in European Conference on Computer Vision. Springer, 2022,
+ [6] J. Carreira and A. Zisserman, “Quo vadis, action recognition? a new pp. 494–511.
+ model and the kinetics dataset,” in 2017 IEEE Conference on Computer [28] Y. Zhong, X. Chen, J. Jiang, and F. Ren, “A cascade reconstruction
+ Vision and Pattern Recognition (CVPR), 2017, pp. 4724–4733. model with generalization ability evaluation for anomaly detection in
+ [7] P. P. Dev, P. Das, and R. Hazari, “Msdeepnet: A novel multi-stream deep videos,” Pattern Recognition, vol. 122, p. 108336, 2022.
+ neural network for real-world anomaly detection in surveillance videos,” [29] X. Zeng, Y. Jiang, W. Ding, H. Li, Y. Hao, and Z. Qiu, “A hierarchical
+ in International Conference on Deep Learning Theory and Applications. spatio-temporal graph convolutional neural network for anomaly detec-
+ Springer, 2023, pp. 157–172. tion in videos,” IEEE Transactions on Circuits and Systems for Video
+ [8] H. Yuan, Z. Cai, H. Zhou, Y. Wang, and X. Chen, “Transanomaly: Video Technology, vol. 33, no. 1, pp. 200–212, 2021.
+ anomaly detection using video vision transformer,” IEEE Access, vol. 9, [30] Y. Zhong, X. Chen, Y. Hu, P. Tang, and F. Ren, “Bidirectional spatiopp. 123 977–123 986, 2021. temporal feature learning with multiscale evaluation for video anomaly
+ [9] W. Sultani, C. Chen, and M. Shah, “Real-world anomaly detection in detection,” IEEE Transactions on Circuits and Systems for Video Techsurveillance videos,” in Proceedings of the IEEE conference on computer nology, vol. 32, no. 12, pp. 8285–8296, 2022.
+ vision and pattern recognition, 2018, pp. 6479–6488. [31] D. Li, X. Nie, R. Gong, X. Lin, and H. Yu, “Multi-branch gan-based
+[10] A. Radford, J. W. Kim, C. Hallacy, A. Ramesh, G. Goh, S. Agarwal, abnormal events detection via context learning in surveillance videos,”
+ G. Sastry, A. Askell, P. Mishkin, J. Clark et al., “Learning transferable IEEE Transactions on Circuits and Systems for Video Technology, 2023.
+ visual models from natural language supervision,” in International [32] J.-X. Zhong, N. Li, W. Kong, S. Liu, T. H. Li, and G. Li, “Graph
+ conference on machine learning. PMLR, 2021, pp. 8748–8763. convolutional label noise cleaner: Train a plug-and-play action classifier
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Circuits and Systems for Video Technology. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TCSVT.2024.3482007
+
+ 15
+
+ for anomaly detection,” in Proceedings of the IEEE/CVF conference on International Conference on Image Processing (ICIP). IEEE, 2021,
+ computer vision and pattern recognition, 2019, pp. 1237–1246. pp. 1114–1118.
+[33] H. Lv, C. Zhou, Z. Cui, C. Xu, Y. Li, and J. Yang, “Localizing anomalies [54] P. Wu and J. Liu, “Learning causal temporal relation and feature
+ from weakly-labeled videos,” IEEE transactions on image processing, discrimination for anomaly detection,” IEEE Transactions on Image
+ vol. 30, pp. 4505–4515, 2021. Processing, vol. 30, pp. 3513–3527, 2021.
+[34] Y. Tian, G. Pang, Y. Chen, R. Singh, J. W. Verjans, and G. Carneiro, [55] Y. Pu and X. Wu, “Locality-aware attention network with discriminative
+ “Weakly-supervised video anomaly detection with robust temporal fea- dynamics learning for weakly supervised anomaly detection,” in 2022
+ ture magnitude learning,” in Proceedings of the IEEE/CVF international IEEE International Conference on Multimedia and Expo (ICME). IEEE,
+ conference on computer vision, 2021, pp. 4975–4986. 2022, pp. 1–6.
+[35] C. Huang, C. Liu, J. Wen, L. Wu, Y. Xu, Q. Jiang, and Y. Wang, [56] S. Park, H. Kim, M. Kim, D. Kim, and K. Sohn, “Normality guided mul-
+ “Weakly supervised video anomaly detection via self-guided temporal tiple instance learning for weakly supervised video anomaly detection,”
+ discriminative transformer,” IEEE Transactions on Cybernetics, 2022. in Proceedings of the IEEE/CVF Winter Conference on Applications of
+[36] Y. Liu, J. Liu, M. Zhao, S. Li, and L. Song, “Collaborative normality Computer Vision, 2023, pp. 2665–2674.
+ learning framework for weakly supervised video anomaly detection,” [57] H. Zhou, J. Yu, and W. Yang, “Dual memory units with uncertainty reg-
+ IEEE Transactions on Circuits and Systems II: Express Briefs, vol. 69, ulation for weakly supervised video anomaly detection,” in Proceedings
+ no. 5, pp. 2508–2512, 2022. of the AAAI Conference on Artificial Intelligence, vol. 37, no. 3, 2023,
+[37] Y. Chen, Z. Liu, B. Zhang, W. Fok, X. Qi, and Y.-C. Wu, “Mgfn: pp. 3769–3777.
+ Magnitude-contrastive glance-and-focus network for weakly-supervised [58] H. Lv, Z. Yue, Q. Sun, B. Luo, Z. Cui, and H. Zhang, “Unbiased multiple
+ video anomaly detection,” in Proceedings of the AAAI Conference on instance learning for weakly supervised video anomaly detection,” in
+ Artificial Intelligence, vol. 37, no. 1, 2023, pp. 387–395. Proceedings of the IEEE/CVF conference on computer vision and
+[38] Y. Fan, Y. Yu, W. Lu, and Y. Han, “Weakly-supervised video anomaly pattern recognition, 2023, pp. 8022–8031.
+ detection with snippet anomalous attention,” IEEE Transactions on [59] H. K. Joo, K. Vo, K. Yamazaki, and N. Le, “Clip-tsa: Clip-assisted
+ Circuits and Systems for Video Technology, 2024. temporal self-attention for weakly-supervised video anomaly detection,”
+[39] W. Yu, Y. Liu, W. Hua, D. Jiang, B. Ren, and X. Bai, “Turning a clip in 2023 IEEE International Conference on Image Processing (ICIP).
+ model into a scene text detector,” in Proceedings of the IEEE/CVF IEEE, 2023, pp. 3230–3234.
+ Conference on Computer Vision and Pattern Recognition, 2023, pp. [60] M. Cho, M. Kim, S. Hwang, C. Park, K. Lee, and S. Lee, “Look around
+ 6978–6988. for anomalies: weakly-supervised anomaly detection via context-motion
+[40] J. Lee, J. Kim, H. Shon, B. Kim, S. H. Kim, H. Lee, and J. Kim, “Uni- relational learning,” in Proceedings of the IEEE/CVF conference on
+ clip: Unified framework for contrastive language-image pre-training,” computer vision and pattern recognition, 2023, pp. 12 137–12 146.
+ Advances in Neural Information Processing Systems, vol. 35, pp. 1008– [61] L. Van der Maaten and G. Hinton, “Visualizing data using t-sne.” Journal
+ 1019, 2022. of machine learning research, vol. 9, no. 11, 2008.
+[41] H. Xu, G. Ghosh, P.-Y. Huang, D. Okhonko, A. Aghajanyan,
+ F. Metze, L. Zettlemoyer, and C. Feichtenhofer, “Videoclip: Contrastive Prabhu Prasad Dev (Graduate Student Member,
+ pre-training for zero-shot video-text understanding,” arXiv preprint IEEE) received his B.Tech and M.Tech degree
+ arXiv:2109.14084, 2021. from KIIT Deemed to be University, Bhubaneswar,
+[42] L. Zanella, B. Liberatori, W. Menapace, F. Poiesi, Y. Wang, and E. Ricci, Odisha, India in 2019 and 2021 respectively. He is
+ “Delving into clip latent space for video anomaly recognition,” arXiv currently pursuing the PhD degree in the Departpreprint arXiv:2310.02835, 2023. ment of Computer Science and Engineering, Na-
+[43] Z. Yang, J. Liu, and P. Wu, “Text prompt with normality guidance tional Institute of Technology, Calicut, Kerala, India.
+ for weakly supervised video anomaly detection,” in Proceedings of the Also, he is currently working as Assistant Professor
+ IEEE/CVF Conference on Computer Vision and Pattern Recognition, at KIIT Deemed to be University, Bhubaneswar,
+ 2024, pp. 18 899–18 908. Odisha, India. He has more than 5 years of teaching
+[44] P. Wu, X. Zhou, G. Pang, Y. Sun, J. Liu, P. Wang, and Y. Zhang, “Open- experience. His research interests include computer
+ vocabulary video anomaly detection,” in Proceedings of the IEEE/CVF vision, anomaly detection, video analysis, and deep learning.
+ Conference on Computer Vision and Pattern Recognition, 2024, pp.
+ 18 297–18 307. Raju Hazari (Member, IEEE) received his B.E and
+[45] A. Dosovitskiy, L. Beyer, A. Kolesnikov, D. Weissenborn, X. Zhai, M.E degree in Information Technology from Indian
+ T. Unterthiner, M. Dehghani, M. Minderer, G. Heigold, S. Gelly et al., Institute of Engineering Science and Technology,
+ “An image is worth 16x16 words: Transformers for image recognition Shibpur, West Bengal, India, in 2009 and 2013 reat scale,” arXiv preprint arXiv:2010.11929, 2020. spectively. He received a PhD degree in Engineering
+[46] R. Sennrich, B. Haddow, and A. Birch, “Neural machine translation of from the Department of Information Technology in
+ rare words with subword units,” arXiv preprint arXiv:1508.07909, 2015. Indian Institute of Engineering Science and Tech-
+[47] A. Radford, J. Wu, R. Child, D. Luan, D. Amodei, I. Sutskever et al., nology, Shibpur, West Bengal, India, in 2019. He
+ “Language models are unsupervised multitask learners,” OpenAI blog, has more than 4 years of teaching experience. He
+ vol. 1, no. 8, p. 9, 2019. has authored and co-authored over 15 journals and
+[48] P. Wu, J. Liu, Y. Shi, Y. Sun, F. Shao, Z. Wu, and Z. Yang, “Not conference papers. Currently, he is working as an
+ only look, but also listen: Learning multimodal violence detection under assistant professor in the Department of Computer Science and Engineering at
+ weak supervision,” in Computer Vision–ECCV 2020: 16th European National Institute of Technology Calicut, Kerala, India. His research interests
+ Conference, Glasgow, UK, August 23–28, 2020, Proceedings, Part XXX include Machine learning, Cellular automata, and Computational Biology.
+ 16. Springer, 2020, pp. 322–339.
+[49] K.-L. Li, H.-K. Huang, S.-F. Tian, and W. Xu, “Improving one-class svm Pranesh Das (Member, IEEE) received his B.Tech
+ for anomaly detection,” in Proceedings of the 2003 international con- degree in information technology from Maulana
+ ference on machine learning and cybernetics (IEEE Cat. No. 03EX693), Abul Kalam Azad University of Technology, West
+ vol. 5. IEEE, 2003, pp. 3077–3081. Bengal, India, in 2007, M.Tech degree in computer
+[50] M. Hasan, J. Choi, J. Neumann, A. K. Roy-Chowdhury, and L. S. Davis, science and engineering from the National Insti-
+ “Learning temporal regularity in video sequences,” in Proceedings of the tute of Technology Rourkela, India, in 2013 and
+ IEEE conference on computer vision and pattern recognition, 2016, pp. Ph.D from the Department of Computer Science
+ 733–742. and Engineering in National Institute of Technology
+[51] J. Zhang, L. Qing, and J. Miao, “Temporal convolutional network with Nagaland, India in 2019.
+ complementary inner bag loss for weakly supervised anomaly detection,” He has more than 10 years of teaching experiin 2019 IEEE International Conference on Image Processing (ICIP). ence. He has publications in reputed journals and
+ IEEE, 2019, pp. 4030–4034. conferences including IEEE Transactions on Emerging Topics in Computing,
+[52] Y. Zhu and S. Newsam, “Motion-aware feature for improved video IEEE Sensors journal and Applied soft computing, Elsevier. Currently, he
+ anomaly detection,” arXiv preprint arXiv:1907.10211, 2019. is working as an assistant professor at the National Institute of Technology
+[53] Y. Zhen, Y. Guo, J. Wei, X. Bao, and D. Huang, “Multi-scale background Calicut, Kerala, India. His research interests include computer vision, machine
+ suppression anomaly detection in surveillance videos,” in 2021 IEEE learning, data mining, soft computing, and optimization algorithms.
+
+ © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.See https://www.ieee.org/publications/rights/index.html for more information.

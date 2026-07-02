@@ -1,0 +1,870 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [777] Proactive Zero-Trust Intrusion Detection for Consumer IoT Applications Using Lightweight Ensemble Learning With Anomaly Analysis
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：777
+题名：Proactive Zero-Trust Intrusion Detection for Consumer IoT Applications Using Lightweight Ensemble Learning With Anomaly Analysis
+年份：2025
+DOI：10.1109/tce.2025.3635619
+来源：IEEE Transactions on Consumer Electronics
+PDF：paper/10.1109_TCE.2025.3635619.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：IoT、车联网、工业互联网与边缘安全、其他AI安全与跨域异常检测
+相关性：中相关，分数 9
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\777.txt
+- 原始字符数：41464
+- 本次发送字符数：41464
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+2007
+
+Proactive Zero-Trust Intrusion Detection for
+Consumer IoT Applications Using Lightweight
+Ensemble Learning With Anomaly Analysis
+Bipasha Guha Roy, Deepsubhra Guha Roy , Piyali Datta , Surbhi Bhatia Khan , Senior Member, IEEE,
+Asma Alshuhail, and Oumaima Saidani
+
+Abstract— The rapid proliferation of consumer IoT devices
+from smart home hubs to wearables has expanded the attack
+surface, introducing new security and privacy challenges. Traditional Intrusion Detection Systems (IDS) often rely on implicit
+trust and heavyweight computation, making them unsuitable for
+resource-constrained consumer electronics. This paper presents
+a proactive, lightweight zero-trust IDS tailored for consumer
+applications. Our two-layer architecture integrates a supervised
+stacked ensemble classifier (Random Forest, XGBoost, LightGBM) to detect known threats and an unsupervised DBSCAN
+(Density-Based Spatial Clustering of Applications with Noise)
+-based anomaly detector to identify zero-day attacks. We introduce a feature reduction pipeline driven by correlation and
+variance analysis, reducing the feature set by over 50% to fit
+edge hardware constraints. Evaluated on the CICIDS collection
+dataset (over 9 million flows), the framework achieves 98.48%
+accuracy while maintaining real-time processing capability on
+Raspberry Pi-class hardware. By continuously scrutinizing both
+malicious and benign traffic, our system delivers proactive, trustenhancing defense critical to modern consumer IoT applications.
+
+Received 13 August 2025; revised 17 September 2025 and 21 October
+2025; accepted 9 November 2025. Date of publication 21 November 2025;
+date of current version 25 March 2026. This work was supported in part by
+Princess Nourah bint Abdulrahman University, Riyadh, Saudi Arabia, through
+the Princess Nourah bint Abdulrahman University Researchers Supporting
+Project, under Grant PNURSP2026R760; in part by the Deanship of Scientific
+Research, Vice Presidency for Graduate Studies and Scientific Research, King
+Faisal University, Saudi Arabia, under Grant KFU254151. (Corresponding
+authors: Deepsubhra Guha Roy; Asma Alshuhail.)
+Bipasha Guha Roy and Deepsubhra Guha Roy are with the IEM Centre
+of Excellence for Cloud Computing and IoT, Department of CSE (AIML),
+Institute of Engineering and Management, University of Engineering and
+Management, Kolkata 700091, India (e-mail: mahatobipasha.91@gmail.com;
+roysubhraguha@gmail.com).
+Piyali Datta is with the IEM-IIT Mandi Centre for Joint Research on
+Human Computer Interaction, Department of CSE (AIML), Institute of
+Engineering and Management, University of Engineering and Management,
+Kolkata 700091, India (e-mail: piyali.datta@iem.edu.in).
+Surbhi Bhatia Khan is with the School of Science, Engineering and
+Environment, University of Salford, M5 4WT Manchester, U.K., also
+with the Centre for Research Impact and Outcome, Chitkara University,
+Rajpura, Punjab 140401, India, and also with the Division of Research
+and Development, Lovely Professional University, Phagwara 144411, India
+(e-mail: s.khan138@ieee.org).
+Asma Alshuhail is with the Department of Information Systems, College
+of Computer Science and Information Technology, King Faisal University,
+Al-Ahsa 31982, Saudi Arabia (e-mail: alshuhail@kfu.edu.sa).
+Oumaima Saidani is with the Department of Information Systems, College
+of Computer and Information Sciences, Princess Nourah bint Abdulrahman University, P.O. Box 84428, Riyadh 11671, Saudi Arabia (e-mail:
+oscaidani@pnu.edu.sa).
+Digital Object Identifier 10.1109/TCE.2025.3635619
+
+Index Terms— Zero-trust, intrusion detection, consumer IoT
+security, ensemble learning, anomaly detection, edge computing,
+adaptable defense.
+
+I. I NTRODUCTION
+
+C
+
+ONSUMER applications such as smart home hubs,
+wearable health trackers, and connected appliances have
+become deeply integrated into daily life. However, this
+hyper-connectivity also exposes consumer devices to sophisticated cyber threats. Traditional IDS solutions, typically
+designed for centralized infrastructures, often assume implicit
+trust among components and demand computational resources
+unsuitable for resource-constrained consumer devices [1].
+In response, zero-trust security frameworks are gaining traction, treating all entities as untrusted by default and requiring
+continuous verification. Yet, proactively detecting known and
+unknown threats under stringent hardware and latency constraints remains challenging. This work presents a lightweight,
+two-layer zero-trust IDS designed specifically for consumer
+IoT applications. The system combines supervised ensemble
+learning for high-accuracy detection of known threats with
+unsupervised anomaly detection to proactively uncover zeroday attacks.
+Designing effective intrusion detection for consumer IoT
+environments requires lightweight deployment, detection of
+unknown threats, and trust enforcement. The literature addressing the following domains is discussed here.
+A. Zero-Trust Security in IoT
+Zero-Trust Architecture (ZTA) assumes no implicit trust
+across devices or networks and enforces continuous verification [2], [3]. While ZTA has gained traction in enterprise
+contexts, its extension to consumer IoT is still emerging [4].
+Alalmaie [5] implemented a Zero-Trust edge IDS, integrating
+access control and anomaly detection for smart city IoT, but
+their deep learning approach introduces latency and energy
+challenges.
+B. Lightweight IDS for Consumer IoT
+IoT-focused IDSs often prioritize low computational cost.
+Roy [6] proposed an IDS combining Principal Component
+Analysis (PCA) and Support Vector Machine (SVM) for
+smart homes, achieving moderate accuracy with minimal
+resource demands. Bafghi [7] introduced LightGBM-based
+
+1558-4127 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+2008
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+TABLE I
+C OMPARISON OF E XISTING IDS A PPROACHES FOR I OT S ECURITY
+
+lightweight IDS with efficient training but limited generalization to unknown [8]. These solutions either lack anomaly
+detection or do not integrate proactive ZT policies [9].
+
+TABLE II
+S YMBOL TABLE : N OTATION AND D ESCRIPTION
+
+C. Ensemble and Hybrid Learning Approaches
+Nassreddine [10] evaluated ensemble classifiers for network
+attacks, showing robustness but requiring powerful nodes.
+Chen [11] adopted a hybrid deep RL and autoencoder model
+to capture temporal dependencies, but their design suits cloud
+settings, not edge devices.
+D. Unsupervised Anomaly Detection in IoT
+Unsupervised models like DBSCAN are valuable for zeroday detection. Alsmadi and Xu [12] demonstrated DBSCAN’s
+utility for IoT botnet detection. However, unsupervised models
+alone often misclassify benign outliers as [4], [13]. Our
+work combines the strengths of supervised ensemble learning
+and unsupervised DBSCAN in a two-layer ZT framework
+optimized for consumer devices.
+Table I compares selected works across key dimensions.
+As seen, few systems simultaneously enforce zero-trust, support lightweight edge deployment, and detect novel threats.
+Our approach addresses this triad by integrating supervised
+ensemble classifiers with unsupervised clustering in a layered
+zero-trust design suitable for consumer applications.
+II. P ROBLEM S TATEMENT AND M OTIVATION
+The proliferation of consumer edge- IoT devices has
+reshaped the digital landscape, embedding computation into
+daily-use electronics such as smart thermostats, security cameras, wearable devices, and home automation systems using
+IoT applications and protocols [16], [17]. Despite their growing ubiquity, these devices often remain highly vulnerable
+to cyberattacks due to their inherent design constraints and
+lack of robust, integrated security frameworks. Consumer IoT
+environments pose distinct challenges:
+• Resource Constraints: Most devices operate on
+low-power processors with limited RAM and storage, severely restricting the use of conventional or
+compute-intensive security solutions [18].
+• Heterogeneity and Dynamism: IoT networks are
+dynamic, composed of a wide variety of protocols, device
+types, and transient connectivity states-complicating the
+design of generalized intrusion detection [19], [20].
+• High Privacy Sensitivity: Consumer data, including
+voice, video, health, and location information, necessitates privacy-preserving models with minimal data
+leakage and low tolerance for false outcome [21], [22].
+
+Conventional IDS frameworks either rely heavily on centralization or operate under static trust assumptions, rendering
+them inadequate for zero-day resilience and continuous
+verification in evolving consumer IoT topologies. Additionally, models optimized for enterprise-scale networks are
+computationally impractical for constrained platforms Raspberry Pi, and can be implemented using ESP32, or similar
+microcontroller-based systems. To address these gaps, our
+motivation stems from the following core objectives:
+• Proactive Zero-Trust Enforcement: Design an intrusion
+detection framework grounded in zero-trust architecture
+principles, where no entity (internal or external) is trusted
+by default (all communication is continuously verified).
+• Dual-Mode Detection Capability: Integrate both supervised and unsupervised techniques to detect known
+(signature-based) and zero-day (anomaly-based) attacks
+using a layered ensemble structure.
+• Edge-Compatible Efficiency: Ensure the proposed
+model maintains a lightweight computational footprint,
+enabling real-time inference and low power consumption
+on consumer-grade embedded platforms.
+This research is driven by the growing need to operationalize zero-trust principles in the context of consumer IoT, where
+attack surfaces are wide, defense capabilities are fragmented,
+and user tolerance for false alerts is minimal. The goal is to
+build a trustworthy, scalable, and proactive defense mechanism
+tailored to the realities of consumer device security.
+III. P ROPOSED F RAMEWORK
+A. Proposed Architecture: Layered Design
+To satisfy the stringent security, efficiency, and scalability
+demands of consumer IoT applications, we propose a layered
+
+ROY et al.: PROACTIVE ZERO-TRUST INTRUSION DETECTION FOR CONSUMER IoT APPLICATIONS
+
+2009
+
+achieving both horizontal and vertical trust enforcement.
+By avoiding centralized inference or deep learning models, the
+architecture is both edge-compliant and latency-aware. Feature reduction was carried out using correlation filtering and
+variance thresholding, while DBSCAN parameters (ε, minPts)
+were empirically tuned via grid search to balance anomaly
+precision and false positive rate.
+
+Fig. 1. Layered architecture of the proposed proactive zero-trust IDS for
+consumer IoT applications.
+
+Zero-Trust Intrusion Detection System (ZT-IDS) designed
+for proactive threat mitigation. The architecture, illustrated
+in Fig. 1, follows the foundational zero-trust paradigm of
+continuous verification and operates in two tightly coupled
+analytical layers. This modular design is optimized to execute
+on resource-constrained edge devices such as Raspberry Pi,
+smart home hubs, or IoT gateways, where memory and processing power are at a premium.
+1) Feature Reduction Module: Incoming traffic flows are
+first preprocessed and passed through a lightweight feature
+engineering unit that employs correlation-based filtering and
+variance thresholding. Redundant or low-informative features
+are discarded, reducing dimensionality while preserving discriminatory power. This module ensures the downstream
+classifiers receive a compact representation x ′ ∈ Rk , where
+k ≪ d, the original feature space dimension.
+2) Layer 1 – Ensemble-Based Classifier: The first detection
+layer is a supervised ensemble meta-classifier that identifies known attack patterns employing a stacked ensemble of
+three heterogeneous learners: Random Forest (RF), XGBoost
+(XGB), and LightGBM (LGB). Each base model produces
+a probabilistic prediction, which is aggregated using a soft
+voting mechanism or a learned meta-layer:
+
+1
+f RF (x ′ ) + f XGB (x ′ ) + f LGB (x ′ )
+3
+If the ensemble confidence exceeds a classification threshold θ, the flow is labeled as malicious and appropriate alerts
+are generated. Otherwise, it is forwarded to the anomaly
+detection layer for deeper scrutiny.
+3) Layer 2 – DBSCAN-based Anomaly Detector: Traffic
+instances deemed benign by Layer 1 are subjected to unsupervised clustering using DBSCAN. This layer targets the
+detection of zero-day or previously unseen attacks by isolating
+outliers in high-dimensional space. Formally, for each point x ′ :
+Pens (x ′ ) =
+
+Nε (x ′ ) = {x j ∈ Rk : ∥x ′ − x j ∥ ≤ ε}
+If |Nε (x ′ )| < minPts, the sample is treated as an anomaly and
+flagged as a potential zero-day threat. Otherwise, it is logged
+as legitimate traffic.
+This dual-layer structure enforces a proactive defense
+cycle: Layer 1 detects known threats with high precision,
+while Layer 2 continuously monitors for emergent anomalies
+
+B. Research Problem Formulation and Hypotheses
+This work is guided by two core research questions, each
+linked to a hypothesis that is evaluated through the proposed
+layered intrusion detection framework.
+RQ1: Can a lightweight ensemble model accurately classify
+known attacks in consumer IoT traffic while maintaining edge
+deployability?
+1) Hypothesis H1 : A compact ensemble classifier E =
+{ f RF , f XGB , f LGB } with dimensionality-reduced input x ′ ∈ Rk
+can achieve classification accuracy A ≥ τ1 (e.g., 95%) on
+known attack instances with total inference time TE < δ ms
+on edge hardware. Formally,
+
+
+Ex∼Dknown ⊮ arg max E(x ′ ) = y ≥ τ1 , TE < δ
+(1)
+where Dknown is the known-attack traffic distribution, and
+⊮(·) is the indicator function.
+RQ2: Can DBSCAN identify previously unseen (zero-day)
+attacks with minimal false positives when applied only to
+Layer-1-benign flows?
+2) Hypothesis H2 : Applying DBSCAN on a filtered set of
+benign-labeled samples X benign can detect novel attacks with
+anomaly precision P ≥ τ2 (e.g., 90%) and false-positive rate
+F P R < γ . Let:
+DBSCANε (X benign ) = C1 , . . . , Cn , O
+
+(2)
+
+where O represents outlier points, then:
+|O ∩ Dzero-day |
+≥ τ2 ,
+|O|
+
+FPR =
+
+|O ∩ Dbenign |
+<γ
+|Dbenign |
+
+(3)
+
+where Dzero-day and Dbenign denote zero-day and truly benign
+instances, respectively.
+C. Methodology: Mathematical Formulation and Sequence
+Let x ∈ Rd be an input feature vector after reduction.
+1) Layer 1: Stacked Ensemble: Each base classifier h m (x)
+maps x to a probability of being malicious: pm =
+h m (x), m ∈ {1, . . . , M}. The ensemble combines these
+using a meta-classifier g (logistic regression): pens (x) =
+g h 1 (x), h 2 (x), . . . , h M (x) . Traffic is flagged malicious if
+pens (x) ≥ θens . While the computational complexity of
+Random Forest is O(n log n) per tree, XGBoost / LightGBM
+needs O(K d log n), with K boosting iterations.
+2) Layer 2: DBSCAN-Based Anomaly Detector: Remaining
+benign traffic passes to DBSCAN. For sample pairs (xi , x j ),
+d(xi , x j ) ≤ ε. Samples with fewer than minPts neighbors
+become outliers and are reclassified as malicious. The complexity is O(n 2 ) (optimized to O(n log n) with indexing).
+3) Knowledge Base and Continuous Verification: The IDS
+continuously updates the statistical knowledge base, i.e., mean
+and variance of benign flow as well as the cluster structure
+from DBSCAN, enabling adaptive detection over time.
+
+2010
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+D. Dbscan Clustering
+Let X = {x1 , x2 , . . . , xn } ⊂ Rd be the set of benign-labeled
+vectors. For each point xi , define:
+
+TABLE III
+E VALUATION OF L AYER -1 AND L AYER -2 FOR D IFFERENT I OT S CENARIOS
+
+Nε (xi ) = {x j ∈ X : ∥xi − x j ∥ ≤ ε}
+Points with |Nε (xi )| < minPts are labeled outliers. The hyperparameter (ϵ and minPts) tuning is performed by assessing the
+quality of the cluster using the Silhouette Score.
+E. Evaluation Metric Formulation
+To comprehensively assess the performance of the proposed
+Zero-Trust Intrusion Detection System (ZT-IDS), we formulate
+a multi-perspective evaluation model composed of classification accuracy, anomaly precision, false positive rate, and
+resource efficiency.
+Layer 1: Ensemble Classifier Metrics are considered to be
+the Accuracy, Precision, Recall, F1-score, and Area Under the
+Receiver Operating Characteristic Curve (AUC-ROC) [23].
+N with true labels
+Let the set of test samples be X = {xi}i=1
+N
+N
+Y = {yi}i=1 and predicted labels Ŷ = { ŷi}i=1
+from the
+ensemble classifier E. Then, we define:
+TP +TN
+(4)
+Accuracy =
+T P + T N + FP + FN
+TP
+Precision =
+(5)
+T P + FP
+TP
+Recall (TPR) =
+(6)
+T P + FN
+Precision · Recall
+(7)
+F1-score = 2 ·
+Precision + Recall
+Z 1
+AUC-ROC =
+T P R(F P R −1 (x)) d x
+(8)
+0
+
+where T P, T N , F P, and F N represent true positives,
+true negatives, false positives, and false negatives, respectively [23].
+Layer 2: Anomaly Detection Metrics (DBSCAN) Let
+X benign ⊂ X be the samples labeled as benign by Layer 1.
+DBSCAN partitions these into K clusters and a set of
+outliers O:
+DBSCANε (X benign ) ⇒ {C1 , . . . , C K },
+
+O = Noise
+
+(9)
+
+OTP : true zero-day anomalies correctly marked as outliers
+and OFP : benign points wrongly marked as outliers.
+|OTP |
+Anomaly Precision =
+(10)
+|OTP | + |OFP |
+|OFP |
+False Positive RateLayer 2 =
+(11)
+|Xbenign |
+Additionally, we define the Noise Ratio as:
+ρ=
+
+|O|
+|Xbenign |
+
+(12)
+
+F. Algorithm: Two-Layered Proactive Zero-Trust IDS
+Algorithm 1 summarizes the layered intrusion detection
+pipeline integrating both known and zero-day attack detection. Formally, Layer-1 ensemble classification is defined as
+pens (x) = 13 ( f R F (x) + f X G B (x) + f LG B (x)), and Layer-2
+
+anomaly detection via DBSCAN as Nε (x) = {x j : ∥x − x j ∥ ≤
+ε}, |Nε (x)| < minPts ⇒ x ∈ O.
+DBSCAN was selected over alternatives such as Isolation
+Forest and k-means because it does not assume linear separability or fixed cluster counts, making it more suitable for
+sparse IoT traffic where attack flows appear as density outliers.
+As shown in Table III, our ensemble consistently outperforms
+lightweight baselines such as Decision Tree and SVM across
+all scenarios, justifying its selection for Layer-1.
+Algorithm 1 Two-Layered Proactive Zero-Trust IDS
+Require: Input network flow x , lightweight ensemble classifier g , anomaly detector A
+(e.g., DBSCAN), thresholds θens , θan
+1: x ′ ← FEATUREREDUCTION(x)
+{Preprocessing and normalization}
+2: Layer-1: pens ← g(h 1 (x ′ ), h 2 (x ′ ), h 3 (x ′ ))
+{Ensemble of base learners}
+3: if pens ≥ θens then
+4:
+return Alert: Known Attack (L1)
+5: else
+6:
+Layer-2: label ← A. pr edict (x ′ )
+{Anomaly-based zero-day detection}
+7:
+if label == outlier then
+8:
+return Alert: Zero-Day Detected (L2)
+9:
+else
+10:
+L OG F LOW(x’, pens )
+{Benign flow; update edge knowledge base}
+11:
+end if
+12: end if
+
+1) System-Level Metrics: To ensure feasibility on consumer
+devices, we evaluate:
+Inference Latency T
+N
+
+=
+
+1 X
+ti
+N
+
+(per flow)
+
+(13)
+
+i=1
+
+Memory Footprint M
+= Peak RAM usage during inference
+(14)
+ModelSize S = Disk space-trained model components (15)
+An efficient edge-compatible model must satisfy T < δt ,
+M < δm , S < δs , where δt , δm , and δs are device-specific
+operational thresholds (e.g., δt < 50ms, δm < 100MB, etc.).
+IV. I MPLEMENTATION AND E VALUATION
+A. Real-Time Evaluation Scenarios
+To validate the ZT-IDS framework across diverse consumer
+IoT environments, five representative real-time scenarios were
+emulated on Raspberry Pi hardware, each increasing in traffic
+complexity and threat intensity (see Table III). The evaluation considers inference latency (T ), memory footprint
+(S), accuracy, and anomaly precision, following the metric
+formulations described in Section V. In the Smart Light
+Bulb case (Scenario 1), the IDS analyzed deterministic Wi-Fi
+traffic under minimal noise. Results show 98.1% accuracy,
+latency T = 8.7ms, and near-zero outlier ratio (ρ ≈
+0), confirming suitability for low-risk static IoT devices.
+
+ROY et al.: PROACTIVE ZERO-TRUST INTRUSION DETECTION FOR CONSUMER IoT APPLICATIONS
+
+2011
+
+TABLE IV
+S CENARIO -W ISE S HAPLEY A DDITIVE E X P LANATIONS (SHAP) I NTERPRETATION AND ATTACK S IMULATION S TRATEGY
+
+Fig. 2. SHAP feature importance (Top 10 Features) across five IoT attack scenarios. Each bar chart highlights dominant features contributing to model
+decision per scenario.
+
+Fig. 3. ZT-IDS framework across multiple dimensions: (a) Layer-1 classification and Layer-2 anomaly detection, (b) Feature separability in attack flows,
+(c) Outlier isolation of zero-day anomalies, (d) Temporal deviations under attack, (e) Classification precision across known threats, and (f) Feature-wise
+behavior divergence between benign and malicious flows.
+
+The Smart Door Lock (Scenario 2) introduced a spoofed
+access attempt over Zigbee; while the ensemble layer misclassified one flow, Layer-2 (DBSCAN) successfully isolated the
+spoof as an outlier, achieving over 80% anomaly precision.
+The Smart Camera with DNS Tunneling (Scenario 3)
+tested encrypted flow handling, where Layer-1 maintained
+
+0.86 recall despite variability in payloads, while Layer-2 distinctly clustered DNS-tunneled packets (F P R < 10%). In the
+Multi-IoT Home with Botnet Infection (Scenario 4), five
+heterogeneous devices generated concurrent flows, validating
+scalability. The ensemble maintained F1 ≥ 0.92 with latency
+T < 40ms and memory M < 70MB, successfully isolating
+
+2012
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+TABLE V
+
+TABLE VI
+
+E XPERIMENTAL S ETUP FOR ZT-IDS I MPLEMENTATION
+
+E VALUATION M ETRICS FOR E DGE V S C LOUD O FFLOADING
+
+B. Experimental Setup
+
+C. Visualization Framework and Interpretability Analysis
+To enhance interpretability and scenario-specific insight,
+a visualization suite (Figure 3) was developed for the proposed
+ZT-IDS. The radar chart (a) contrasts Layer-1 (ensemble
+classifier) and Layer-2 (DBSCAN anomaly detector) using
+accuracy, precision, recall, and F1-score-highlighting that
+while Layer-1 detects known attacks efficiently, Layer-2
+strengthens defense against unseen anomalies, validating the
+hybrid architecture. The 3D PCA projection (b) reveals the
+separability and overlap of benign and malicious flows in latent
+space, supporting risk estimation. The DBSCAN cluster map
+(c) visualizes how outliers are isolated from dense benign
+regions, confirming Layer-2’s unsupervised capability. The
+time-series view (d) captures flow-duration deviations linked
+to attack events, indicating temporal sensitivity. The confusion
+matrix (e) summarizes Layer-1 results, showing strong true
+positive and negative rates with minimal misclassifications.
+Finally, the parallel coordinates plot (f) visualizes variations
+across SHAP-ranked features (e.g., port, protocol, and timing
+flags), enabling multi-dimensional interpretation of benign vs.
+attack traffic. Together, these visual analyses provide both
+quantitative validation and intuitive interpretability of ZT-IDS
+decisions across diverse IoT scenarios.
+
+Experiments were performed on a Raspberry Pi 4
+(4 GB RAM), validating the ZT-IDS on the CICIDS dataset
+containing over 9 million network flows of benign and attack
+traffic. Table V summarizes hardware, frameworks, and evaluation metrics. The Pi consumed 3.5–4.2 W during active
+detection, confirming its suitability for low-power IoT deployment. The “Botnet” scenario emulates volumetric DDoS and
+PortScan misuse, while the “Zero-Day” case injects synthetic
+jitter into benign flows to represent unseen temporal anomalies. Botnet traffic exhibits high ACK rates and bursty packets,
+whereas Zero-Day attacks show timing irregularities in Flow
+Duration and Inter-Arrival Time (IAT) Std. Figure 2 shows
+SHAP interaction values for the most influential features—
+Destination Port and Flow Duration. Each point represents a
+test flow, where horizontal spread denotes interaction strength.
+The nearly symmetric clustering of Destination Port around
+zero indicates context-dependent influence, while Flow Duration interacts subtly with it to separate benign and attack
+flows. The tight spread near zero suggests limited higher-order
+effects, validating the lightweight model’s interpretability. The
+latency-jitter plots are grouped under performance metrics,
+and memory–bandwidth under resource metrics (Figs. 4-5),
+supporting efficient IoT-level visualization and interpretive
+validation.
+
+D. Comparative Discussion
+The visualization suite links numeric results to semantic
+insights, showing each ZT-IDS component’s role in decisionmaking. It enables real-time detection interpretation, model
+refinement, and forensic analysis. The combined use of classification and anomaly detection is validated through their
+complementary performance in visualizations. ZT-IDS delivers
+strong results-98.48% accuracy, sub-1GB memory use, and
+ultra-low latency-making it suitable for real-time edge deployment. Table VI highlights ZT-IDS performance across five
+consumer IoT scenarios under edge, hybrid, and cloud-assisted
+modes. Key metrics include inference time, power use, latency,
+and offloading bandwidth. In lightweight cases (e.g., Smart
+Bulb, Botnet), edge-only execution yields low latency (6-15
+ms) and power (3.5-4.1 W). For complex threats like DNS
+tunneling or zero-day attacks, offloading reduces inference
+time (e.g., 3.1 ms on TPU) but adds network latency. Cloud
+GPU use also improves detection precision in high-threat cases
+at modest bandwidth cost (1.2-1.5 MB/s). These results support adaptive deployment: using the cloud for complex threats
+while maintaining edge autonomy for routine tasks, core to the
+zero-trust model of continuous verification. Beyond classification accuracy, we also report anomaly precision (92.4%) and
+
+compromised nodes without affecting benign ones. Finally,
+the Wearable Health Monitor under Zero-Day Attack (Scenario 5) simulated jitter-based stealth injections in BLE traffic.
+As expected, Layer-1 exhibited moderate AUC-ROC (< 0.85)
+due to unseen timing variations, while Layer-2 achieved 94%
+anomaly precision with ρ ≈ 0.12, demonstrating resilience to
+novel threats.
+Overall, these five scenarios illustrate the adaptability of
+ZT-IDS to both known and unknown attacks in constrained IoT
+environments. The hybrid ensemble–DBSCAN architecture
+maintains low latency and energy footprint while effectively
+scaling across traffic diversity and device types.
+
+ROY et al.: PROACTIVE ZERO-TRUST INTRUSION DETECTION FOR CONSUMER IoT APPLICATIONS
+
+2013
+
+Fig. 4. System performance metrics across Zero-Trust IDS scenarios: (a) latency profiling, (b) edge resource utilization, (c) jitter variability, (d) delay
+time-series, (e) flow volume distribution.
+
+false-positive rate (< 3%) for the DBSCAN layer, together
+with latency measurements confirming sub-15ms inference at
+the edge. These complementary results further validate the
+robustness of the proposed IDS across both supervised and
+unsupervised detection modes.
+E. System Performance Visualization
+To assess the real-time viability and responsiveness, we conducted multi-metric profiling for each emulated scenario.
+Figure 4 presents latency, resource usage, timing variability,
+and traffic behavior across the five IoT threat scenarios. The
+average inference latency is lowest in edge-only scenarios,
+such as Smart Bulb (Figure 4(a)), validating the feasibility of local processing. However, latency increases notably
+in cloud-assisted scenarios due to transmission and queuing overhead. Figure 4(b) reflects the CPU and memory
+utilization trends. Scenario 4 (Botnet) shows higher memory requirements due to the volume of anomalous flows
+and ensemble activity. In Figure 4(c), jitter variability is
+pronounced in Scenario 5 (Zero-Day), simulating stealthy
+timing-based anomalies. Stable timing behavior is evident in
+Scenarios 1 through 3. Figure 4(d) illustrates packet delay
+signals, with offloaded scenarios showing greater fluctuation, indicating queue and network variability effects. Lastly,
+Figure 4(e) visualizes packet flow volume over time. Scenario 4 (Botnet) and Scenario 5 (Zero-Day) exhibit bursty
+traffic due to attack behavior and noise injection, while Scenario 1 demonstrates periodic, stable flow characteristics.
+F. Edge Vs. Cloud Deployment Trade-Offs
+We present a compact comparison of three critical metrics in Figure 5, where Figure 5(a) reveals that end-to-end
+inference latency remains lowest for edge-only deployments,
+such as the Smart Bulb and Botnet scenarios, where local
+processing avoids external round-trip delays. In contrast,
+cloud-reliant setups-especially the DNS Tunnel and Zero-Day
+cases-suffer increased latency due to transmission and queueing delays. The hybrid GPU mode (e.g., Door Lock) offers a
+latency-power middle ground. Figure 5(b) shows power usage
+increases significantly when GPU/TPU inference is triggered,
+reflecting the cost of cloud burst compute and data uplink.
+Edge-native scenarios remain energy-efficient under 4.5W,
+suitable for lightweight devices like Raspberry Pi 4 or Jetson
+Nano. Figure 5(c) demonstrates that offloading introduces
+notable bandwidth overhead (up to 1.8 MB/s in the DNS
+tunneling case), which may strain consumer-grade uplinks and
+introduce potential bottlenecks. Together, these results support
+
+the architecture’s flexibility: low-power edge inference for
+known benign or high-frequency traffic, with cloud-enhanced
+detection for stealthy, encrypted, or zero-day threats.
+G. Resource Utilization Metrics Across IoT Security
+Scenarios at the Edge
+To evaluate the operational viability of the proposed
+ZT-IDS in varied consumer IoT environments, we measured
+inference latency, jitter variability, memory usage, and bandwidth overhead (Figure 6). Inference latency (Figure 6a)
+remains under 15 ms in most edge-only setups, such as Smart
+Bulb and Door Lock, while attack-intensive scenarios like
+DNS Tunnel and Zero-Day show slightly longer delays due
+to encrypted or obfuscated flows. Memory usage (Figure 6b)
+reaches around 70 MB for complex traffic such as Botnet and
+Zero-Day, but the ensemble-based architecture keeps overall
+demands moderate. Bandwidth overhead (Figure 6c) peaks at
+about 1.8 MB/s for cloud-reliant scenarios, whereas edge-only
+modes incur no offloading, making the approach well-suited to
+bandwidth-limited environments. Jitter variability (Figure 6d)
+is minimal for benign traffic but shows wider distributions
+in Zero-Day and DNS Tunnel, supporting temporal anomaly
+detection in the Layer-2 engine. These observations confirm
+that ZT-IDS preserves computational feasibility at the edge
+while ensuring robust detection.
+H. System Impact Analysis With and Without ZT-IDS
+To assess the runtime efficiency we analyzed system
+resource usage across Before Attack (normal operation), During Attack without IDS (unmitigated compromise), and During
+Attack with ZT-IDS (active defense). (i) Before attack, the
+baseline performance is under expected load, (ii) during attack
+(no IDS), sharp spikes arise in memory, disk I/O, network,
+and power due to malicious activity, and (iii) with ZT-IDS,
+same threat scenario occurs, but with active anomaly detection
+and mitigation reducing system strain. Lightweight baselines
+such as decision-tree and SVM-based IDS have been reported
+in prior IoT studies, but our two-layer hybrid demonstrates
+superior adaptability by combining supervised ensemble detection with unsupervised anomaly discovery, enabling improved
+handling of zero-day threats while sustaining low edge latency.
+1) Comparative Discussion: The attacks increase activity
+across cores, suggesting multi-threaded payloads (Fig. 7a).
+ZT-IDS significantly curbs surges in memory, power, network, and I/O (Fig. 7b), and ZT-IDS cuts memory use
+by 28%, disk I/O by 17%, and network load significantly,
+
+2014
+
+IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 1, FEBRUARY 2026
+
+Fig. 5. End-to-end inference latency across edge and cloud modes for each scenario. Edge-only scenarios achieve the lowest latency, while cloud-offloaded
+cases introduce network-induced delays, highlighting the trade-off between accuracy and responsiveness.
+
+Fig. 6. Resource utilization metrics across IoT security scenarios: distribution of latency, jitter, memory, and offloading bandwidth under Zero-Trust analysis.
+
+Fig. 7. System resource utilization: live CPU load distribution, memory/network/disk/power profile over time, and summarized resource cost with and without
+ZT-IDS.
+
+with slight power efficiency gains (Fig. 7c). These results
+confirm ZT-IDS’s ability to reduce the impact of attacks
+with minimal overhead, supporting it for resource-constrained
+consumer IoT.
+For completeness, we briefly contrast our approach with
+simpler lightweight baselines such as Decision Tree (DT) and
+SVM, which are commonly applied in IoT IDS literature.
+While DT and SVM achieve reasonable accuracy on known
+attack classes, prior studies and our preliminary trials showed
+limited robustness against zero-day anomalies and higher
+false positive rates. In comparison, our ensemble-DBSCAN
+pipeline sustains stronger accuracy with lightweight efficiency,
+demonstrating a better balance between detection reliability
+and edge deployability.
+
+V. C ONCLUSION AND F UTURE W ORK
+This study introduces proactive ZT-IDS, a lightweight
+two-layer intrusion detection framework for consumer IoT
+with 98.48% accuracy and <15 ms latency, demonstrating feasibility for IoT deployments. Unlike prior IoT IDS
+studies that depend on deep models or single-mode detectors, the proposed model uniquely combines a lightweight
+ensemble (RF + XGBoost + LightGBM) for known attacks
+with a DBSCAN anomaly layer for zero-day detection.
+Unlike existing approaches tested only in high-resource settings, this framework demonstrates scalable, interpretable,
+and edge-deployable intrusion detection, enhanced with
+SHAP-based explainability and robust performance against
+timing-based (jitter) evasion attacks. The proposed ZT-IDS
+
+ROY et al.: PROACTIVE ZERO-TRUST INTRUSION DETECTION FOR CONSUMER IoT APPLICATIONS
+
+scales efficiently under thousands of concurrent flows, sustaining sub-45 ms per-flow latency and under 90 MB memory even
+during high-volume simulations on Raspberry Pi-class hardware. The ensemble–DBSCAN pipeline maintains throughput
+without observable degradation in classification accuracy or
+anomaly precision, primarily due to the reduced feature
+space and asynchronous flow batching at the preprocessing
+layer. This confirms its feasibility for real-world consumer
+IoT deployments involving dense, bursty traffic. A supervised ensemble classifier with an unsupervised DBSCAN
+anomaly detector balances accuracy with edge deployability.
+The ensemble achieved 97. 4% precision and 96. 9% F1
+score for known attacks, while the anomaly layer attained
+91.2% precision on zero-day threats with less than 4. 7%
+false positives. ZT-IDS also reduced memory usage, disk I/O,
+and network overhead by 28%, 17%, and 57% during attacks,
+showing its effectiveness and system stability under threat.
+Future work will explore the following:
+Adaptive Thresholding:
+Dynamically adjust ensemble and anomaly detection thresholds based on behavioral baselines to improve robustness in
+evolving traffic conditions.
+Federated Deployment:
+We will extend this lightweight Z-T IDS through federated or distributed detection frameworks, allowing opt-in
+collaborative learning across heterogeneous IoT devices while
+preserving privacy [24].
+Explainable AI Integration:
+Incorporate explainability tools such as SHAP or Local
+Interpretable Model-agnostic Explanations (LIME) to enhance
+trust and interpretability of model decisions for security analysts and users.
+Adversarial Robustness Testing:
+Evaluate resilience against evasion, poisoning, and adversarial attacks to ensure model integrity in adversarial
+environments.
+Autonomous Knowledge Base Update:
+Automate online learning by enabling continuous updates to
+the statistical and clustering components of the IDS without
+manual intervention.
+ACKNOWLEDGMENT
+This work was supported in part by Princess Nourah bint
+Abdulrahman University, Riyadh, Saudi Arabia, through the
+Princess Nourah bint Abdulrahman University Researchers
+Supporting Project, under Grant PNURSP2026R760; in part
+by the Deanship of Scientific Research, Vice Presidency for
+Graduate Studies and Scientific Research, King Faisal University, Saudi Arabia, under Grant KFU254151; and in part by the
+Institute of Engineering and Management (IEM) Trust under
+Grant IEMT(S)/2024/02-G19 and Grant IEMT(S)/2023/02G05.
+R EFERENCES
+[1] D. Guha Roy, B. Mahato, D. De, and S. N. Srirama, “Quality of
+experience aware recommendation system with IoT data filtration for
+handshaking among users using MQTT-SN protocol,” J. Ambient Intell.
+Humanized Comput., vol. 14, no. 7, pp. 8811–8826, Jul. 2023.
+
+2015
+
+[2] A. Rehman et al., “Immersive embedded consumer model leveraging
+AI with zero-trust architecture for cyber-physical system,” IEEE Trans.
+Consum. Electron., p. 1, Mar. 2025.
+[3] A. Hussain et al., “Ensuring zero trust IoT data privacy: Differential
+privacy in blockchain using federated learning,” IEEE Trans. Consum.
+Electron., vol. 71, no. 1, pp. 1167–1179, Feb. 2025.
+[4] S. M. Nagarajan, G. G. Devarajan, M. S. Thangakrishnan, T. V. Ramana,
+A. K. Bashir, and A. A. AlZubi, “Artificial intelligence-based zero
+trust security approach for consumer industry,” IEEE Trans. Consum.
+Electron., vol. 70, no. 3, pp. 5411–5418, Aug. 2024.
+[5] K. N. Q. M. S. A. Iftikhar, F. B. Hussain and M. Sookhak, “Securing
+edge based smart city networks with software defined networking
+and zero trust architecture,” J. Netw. Comput. Appl., vol. 244, 2025,
+Art. no. 104341.
+[6] A. Roy, “Lightweight intrusion detection for IoT using SVM and PCA,”
+Int. J. Netw. Secur., 2022.
+[7] R. Bafghi, “A lightweight ensemble learning framework for IoT intrusion
+detection,” Comput. Secur., 2021.
+[8] S. U. Jan, S. Ahmed, V. Shakhov, and I. Koo, “Toward a lightweight
+intrusion detection system for the Internet of Things,” IEEE Access,
+vol. 7, pp. 42450–42471, 2019.
+[9] N. Musa Shanono, Z. Muslim, N. Azman Abu, S. Rahayu Selamat, and
+H. Nahar, “Intrusion detection system in lightweight devices: Issues and
+challenges,” Bull. Electr. Eng. Informat., vol. 14, no. 1, pp. 800–812,
+Feb. 2025.
+[10] G. Nasserddine, M. Nassereddine, and O. Al-Khatib, “Ensemble learning
+for network intrusion detection based on correlation and embedded
+feature selection techniques,” Computers, vol. 14, Oct. 2025.
+[11] M. Emeç and M. Ozcanhan, “A hybrid deep learning approach for
+intrusion detection in IOT networks,” Adv. Elect. Comput. Eng., vol. 22,
+pp. 3–12, 2022.
+[12] I. Alsmadi and D. Xu, “Unsupervised anomaly detection in IoT using
+DBSCAN,” Comput. Commun., 2020.
+[13] K. Zhang, J. Sun, Q. Feng, X. Huang, C. Jiang, and M. S. Hossain, “Joint
+optimization of fairness and energy efficiency in zero-trust federated
+learning for consumer Internet of Things: A lossy communication perspective,” IEEE Trans. Consum. Electron., vol. 71, no. 1, pp. 1156–1166,
+Feb. 2025.
+[14] D. Javeed, M. Saeed, M. Adil, P. Kumar, and A. Jolfaei, “A federated
+learning-based zero trust intrusion detection system for Internet of
+Things,” Ad Hoc Netw., vol. 162, 2024, Art. no. 103540.
+[15] M. Ester, H. Kriegel, J. Sander, and X. Xu, “A density-based algorithm
+for discovering clusters in large spatial databases with noise,” in Proc.
+KDD, 1996, pp. 226–231.
+[16] D. Guha Roy, B. Mahato, D. De, and R. Buyya, “Application-aware
+end-to-end delay and message loss estimation in Internet of Things
+(IoT)—MQTT-SN protocols,” Future Gener. Comput. Syst., vol. 89,
+pp. 300–316, Dec. 2018.
+[17] B. Guha Roy, D. Guha Roy, P. Datta, S. B. Khan, A. Albuali, and
+A. Almusharraf, “Quality of experience aware service selection model to
+empower edge computing in IoT,” Int. J. Distrib. Sensor Netw., vol. 2025,
+no. 1, Jan. 2025, Art. no. 5573818.
+[18] F. Pereira, R. Correia, P. Pinho, S. I. Lopes, and N. B. Carvalho, “Challenges in resource-constrained IoT devices: Energy and communication
+as critical success factors for future IoT deployment,” Sensors, vol. 20,
+no. 22, p. 6420, Nov. 2020.
+[19] W. J. Ladeira et al., “Consumer adoption of Internet of Things,”
+J. Consum. Behav., vol. 24, no. 2, pp. 673–693, Mar. 2025.
+[20] J. Z. Zhang and C.-W. Chang, “Consumer dynamics: Theories, methods,
+and emerging directions,” J. Acad. Marketing Sci., vol. 49, no. 1,
+pp. 166–196, Jan. 2021.
+[21] A. A. Tudoran, “Rethinking privacy in the Internet of Things: A
+comprehensive review of consumer studies and theories,” Internet Res.,
+vol. 35, no. 2, pp. 514–545, Mar. 2025.
+[22] W. Kim, Y. Park, J. Shin, and M. Jo, “Consumer preference structure
+of online privacy concerns in an IoT environment,” Int. J. Market Res.,
+vol. 64, no. 5, pp. 630–651, Sep. 2022.
+[23] S. Zhang, M. Li, and J. Li, “WaveConv-sLSTM-KET: A novel framework for the multi-task analysis of oil spill fluorescence spectra,” Appl.
+Sci., vol. 15, no. 6, p. 3177, Mar. 2025.
+[24] P. Das, M. Singh, and D. G. Roy, “Framework using federated deep
+learning,” in Proc. Int. Conf. Netw. Secur. Blockchain Technol. (ICNSBT),
+vol. 481. Cham, Switzerland: Springer, 2022, p. 369.
+PAPER_TEXT

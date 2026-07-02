@@ -1,0 +1,1068 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [774] PowerDiffuser: Collaborative Contrastive-Reconstruction Self-Supervised Learning for Robust Power Load Signal Representation
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：774
+题名：PowerDiffuser: Collaborative Contrastive-Reconstruction Self-Supervised Learning for Robust Power Load Signal Representation
+年份：2025
+DOI：10.1109/tii.2025.3627498
+来源：IEEE Transactions on Industrial Informatics
+PDF：paper/10.1109_TII.2025.3627498.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：联邦学习、隐私保护与分布式协同
+相关性：弱相关，分数 
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\774.txt
+- 原始字符数：55575
+- 本次发送字符数：55575
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+1461
+
+PowerDiffuser: Collaborative
+Contrastive-Reconstruction Self-Supervised
+Learning for Robust Power Load
+Signal Representation
+Honggang Yang , Student Member, IEEE, Cheng Lian , Senior Member, IEEE,
+Bingrong Xu , Member, IEEE, Ruijin Ding , and Zhigang Zeng , Fellow, IEEE
+
+Abstract—The widespread deployment of smart meters
+has created significant opportunities for applying artificial
+intelligence technologies to power system tasks. However,
+the high cost of data annotation limits the effectiveness of
+traditional supervised learning in this domain, making selfsupervised learning an attractive alternative. In this article,
+we propose PowerDiffuser, a novel self-supervised learning
+strategy tailored for power load signals. By leveraging a
+diffusion model framework, PowerDiffuser integrates two
+mainstream self-supervised paradigms, namely contrastive
+learning and reconstruction-based learning, which enables
+the model to effectively capture both periodic patterns and
+local features. To address the overfitting issues commonly
+observed in generic time-series feature extractors when
+applied to power load tasks, we design two modular spatiotemporal feature extractors specifically engineered to
+handle samples with varying complexity levels. In addition,
+we adapt the involution operator to better align with the
+unique characteristics of power load signals. Extensive experiments on the ISMCBT, ETTh and REDD datasets demonstrate that PowerDiffuser consistently outperforms both
+time-series general models and existing self-supervised
+learning strategies across diverse downstream power load
+tasks. Ablation studies further validate the contributions
+of the proposed modules and highlight the effectiveness
+Received 25 February 2025; revised 15 July 2025 and 25 August
+2025; accepted 21 October 2025. Date of publication 24 November
+2025; date of current version 5 February 2026. This work was supported in part by the Natural Science Foundation of China under
+Grant 62176193 and Grant 62206204, and in part by the Fundamental Research Funds for the Central Universities, China, under Grant
+104972025YJS0118. Paper no. TII-25-1156. (Corresponding author:
+Cheng Lian.)
+Honggang Yang, Cheng Lian, and Bingrong Xu are with the School
+of Automation, Wuhan University of Technology, Wuhan 430074,
+China (e-mail: hgyang@whut.edu.cn; chenglian@whut.edu.cn; bingrongxu@whut.edu.cn).
+Ruijin Ding is with the State Key Laboratory of Breeding Biotechnology and Sustainable Aquaculture, Institute of Hydrobiology, Chinese Academy of Sciences, Wuhan 430072, China (e-mail: dingrj@ihb.ac.cn).
+Zhigang Zeng is with the School of Artificial Intelligence and Automation, Huazhong University of Science and Technology, Wuhan 430074,
+China, and also with the Key Laboratory of Image Processing and
+Intelligent Control of Education Ministry of China, Wuhan 430074, China
+(e-mail: zgzeng@hust.edu.cn).
+The code is publicly available at https://github.com/HGYang97/
+PowerDiffuser.
+Digital Object Identifier 10.1109/TII.2025.3627498
+
+of transforming 1-D load signals into 2-D periodicity-based
+representations as a preprocessing step.
+Index Terms —Involution, power signal, self-supervised
+learning, spatiotemporal feature extractors.
+
+I. INTRODUCTION
+HE advent of artificial intelligence (AI) technologies has
+provided novel approaches for power companies to address
+operational challenges, with extensive research conducted on
+applications including power load forecasting [1], [2], power
+generation forecasting [3], subscriber portrait [4], and electricity
+theft detection [5]. The proliferation of smart meters, intelligent
+distribution networks, and cloud platforms has enabled power
+companies to accumulate vast amounts of data, creating favorable conditions for developing effective AI-based power models.
+Nevertheless, manual annotation remains indispensable for
+specific downstream tasks to facilitate supervised learning processes. As demonstrated in [6], electricity theft detection based
+on power and gas load analysis requires technical experts to
+explicitly label fraudulent cases. In a similar vein, the study
+in [4] on household attribute inference from smart meter signals
+necessitates extensive surveys to obtain accurate labels. These
+annotation processes often incur substantial costs and face challenges due to privacy concerns and other practical constraints.
+Power load signals inherently manifest as sequential data
+streams characterized by temporal dependencies and dynamic
+fluctuation patterns. This time-series nature makes them particularly amenable to self-supervised learning (SSL). In the field of
+AI, SSL significantly reduces the dependency on manually annotated data by exploiting the intrinsic structure and information
+within the data itself to generate supervisory signals. The two
+predominant SSL paradigms can be categorized into contrastive
+learning and reconstruction-based methods. As schematically
+depicted in Fig. 1, contrastive learning establishes positive and
+negative sample pairs through carefully designed strategies and
+learns discriminative feature representations by minimizing the
+feature space distance between positive sample pairs while
+maximizing the separation of negative pairs. Fig. 2 illustrates
+the fundamental framework of reconstruction-based methods,
+where model is trained to reconstruct complete data from partial
+or perturbed inputs, thereby capturing the intrinsic structure
+and essential features of the data. Through optimization of the
+reconstruction error, the model extracts semantically meaningful
+
+T
+
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+for more information.
+
+1462
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+Fig. 1. Generic framework of contrastive learning, where positive and
+negative sample pairs are defined through augmentation strategies to
+learn discriminative feature representations by optimizing similarity metrics.
+
+Fig. 2. General paradigm of perturbation-based reconstruction, which
+trains models to recover clean data from partially masked or noisecorrupted inputs, thereby learning robust feature representations via
+joint optimization of reconstruction and denoising objectives.
+
+feature representations. Despite these advancements, several
+critical challenges persist as follows.
+1) While contrastive learning primarily emphasizes global
+feature distributions, reconstruction-based methods
+demonstrate superior capability in extracting local
+sample characteristics. This inherent limitation poses
+significant challenges for any single SSL methodology to
+holistically capture essential data features across diverse
+downstream tasks in the power domain.
+2) The effectiveness of both contrastive learning and
+reconstruction-based approaches exhibits substantial dependence on task formulation. Excessively complex tasks
+may impede model convergence, whereas overly simplistic formulations often yield inadequate self-supervisory
+signals.
+Due to the significant structural differences between these
+two methods, few researchers have explored combining them.
+The emergence of diffusion models has inspired us to design
+a novel SSL strategy that requires the model to simultaneously perform two tasks: Distinguishing positive and negative
+sample pairs and interactively generating reconstructions. We
+believe this design can enhance the model’s representational
+capacity and improve its training robustness. Specifically, when
+a batch of samples is fed into the model, they undergo two
+different data augmentation functions, generating two distinct
+signals. These signals serve as mutual conditions during the
+diffusion process, cross-reconstructing the augmented representations of each other. After the diffusion process, we also
+require the classifier to distinguish between positive and negative sample pairs within the batch. We argue that models
+
+trained in this manner can combine the advantages of both
+paradigms.
+In addition, we develop a specialized deep learning architecture tailored to the unique characteristics of power load
+signals, incorporating two key optimizations. First, building
+upon previous studies [3], [7] that demonstrate the superior
+contextual information provided by 2-D representations during
+reconstruction, and considering recent studies [8], [9] in power
+applications that show performance improvements through 1-D
+to 2-D signal transformations, we reformulate the data into a 2-D
+format, defining it as a multichannel time-series self-supervised
+task. Second, addressing the overfitting issues observed in
+general-purpose temporal models [10], [11], [12] when applied
+to low-complexity power tasks or datasets with limited sampling
+density, we design two deep learning models based on consistent
+spatio-temporal interaction principles to accommodate diverse
+downstream tasks.
+Our experimental results demonstrate that the proposed
+methodology achieves significant performance improvements
+across various power-related downstream tasks. The specific
+contributions are as follows.
+1) We redefine the representation learning process for power
+load signals as a multichannel time-series self-supervised
+task and propose an innovative self-supervised learning framework that effectively integrates contrastive
+learning and reconstruction within the diffusion model
+paradigm.
+2) To mitigate overfitting risks, we develop two deep learning architectures based on spatio-temporal interaction
+principles, specifically designed to handle multiscale task
+complexity levels and recordings with different but fixed
+sampling rates, while maintaining compatibility with
+both self-supervised learning and downstream task finetuning.
+3) Comprehensive experimental evaluations demonstrate
+that our proposed methodology achieves state-of-the-art
+performance across evaluation metrics in diverse powerrelated downstream tasks.
+II. RELATED WORK
+Power load signals represent a canonical form of time-series
+data where self-supervised learning effectively enhances representation capability. This paradigm provides an efficient framework for extracting meaningful temporal patterns while reducing label dependency, primarily through two approaches: 1)
+contrastive learning-based methods leveraging discrimination
+between positive/negative sample pairs; and 2) reconstructionbased methods targeting future state reconstruction or missing
+segment imputation. While both demonstrate proven efficacy in
+temporal representation learning, they differ fundamentally in
+implementation architectures.
+A. Time Series Self-Supervised Methods Based on
+Contrastive Learning
+In the contrastive learning paradigm, CPC [13] constructed
+positive and negative sample pairs by predicting future time
+steps, leading to significant advancements in speech classification tasks. InfoTS [14] addressed the challenge of selecting
+meaningful augmentations for time-series data by leveraging
+
+YANG et al.: POWERDIFFUSER: COLLABORATIVE CONTRASTIVE-RECONSTRUCTION SELF-SUPERVISED LEARNING
+
+information theory to adaptively choose optimal augmentations. TCN [15] improved upon this approach by employing
+a Gaussian distribution-based strategy to constrain the sampling
+range for context-positive samples. TNC [16] proposed a selfsupervised framework for learning generalizable representations
+of nonstationary time series by leveraging the local smoothness
+of signals. Using a debiased contrastive objective, TNC ensured
+that neighboring signals were distinguishable from nonneighboring ones in the encoding space. TS2Vec [17] introduced
+feature augmentation techniques within hierarchical sample
+pairs to achieve multigranularity self-supervised representation
+learning. TS-TCC [18] examined the effects of various feature
+augmentation methods on contrastive learning performance for
+time-series signals and proposed a spatiotemporal interaction
+prediction approach to further enhance model generalization.
+Although contrastive learning provided effective guidance for
+model training, performance improvements relied heavily on
+carefully designed positive and negative sample pairs as well as
+large batch sizes. This inevitably imposed higher demands on
+hardware, particularly GPU memory. To address this challenge,
+we proposed a self-supervised strategy that combined reconstruction methods.
+B. Time Series Self-Supervised Methods Based on
+Reconstruction
+The conceptual foundation of reconstruction-based methods
+originates from Masked Autoencoders (MAE) [19] in computer
+vision. This approach employs an asymmetric encoder-decoder
+architecture, where the model’s capability to accurately reconstruct randomly masked images serves as an indicator of the
+encoder’s ability to extract deep semantic features. Building
+upon this foundation, Tarnet [20] introduced a task-guided masking strategy that leverages attention mechanisms to identify and
+reconstruct critical timestamps, thereby enhancing the perceptual relevance of the reconstruction task. Ti-MAE [21] advanced
+this paradigm by implementing random masking on embedded
+time-series data and training an autoencoder for point-level
+reconstruction, effectively bridging the gap between representation learning and reconstruction methodologies, particularly in
+forecasting applications. Further innovations were introduced by
+TimeMAE [22], which shifted the reconstruction target from raw
+point-level data to latent features while concurrently performing
+regression tasks. CRT [23] expanded the reconstruction scope
+by incorporating frequency-domain analysis through fast fourier
+transform, enabling cross-domain masking and reconstruction
+of both temporal and spectral signals.
+Despite these methodological advancements, reconstructionbased self-supervised strategies inherently present greater
+challenges compared to contrastive learning approaches. This is
+particularly evident in time-series analysis, where models struggle to implicitly learn masked region features from 1-D contextual information, as reflected in their reconstruction loss metrics.
+To address these limitations, we propose a novel approach that
+directly learns the underlying distribution of time series through
+a diffusion process, complemented by contrastive interaction
+constraints, yielding substantial performance improvements.
+III. FRAMEWORK
+To formally describe the task pipeline, we make the following
+definitions. Given a dataset D = {X1 , X2 , . . . , XM }, where
+
+1463
+
+Fig. 3. In diffusion models, the forward process adds noise to timeseries data, while the reverse process trains a neural network to remove
+the noise and recover the original data. During denoising, the model
+gradually refines the data, using learned knowledge to match real-world
+patterns.
+
+X ∈ RL represents a power load signal of length L and M
+denotes the number of samples in the dataset. We reshape the 1-D
+load signals into 2-D representations during preprocessing. This
+transformation ensures each channel strictly preserves temporal
+periodicity, specifically by ensuring that each channel corresponds to weekly or monthly sampling points, thereby maintaining physical meaning and temporal structure consistency.
+The input data format for our model can thus be expressed as
+L
+X̂ ∈ RC× C , where C denotes channels.
+Our objective is to train model F using a self-supervised
+learning strategy to obtain feature representations F = F(X̂) of
+power load signals. This representation enables effective transfer
+learning through fine-tuning on downstream tasks, enhancing
+both generalization capability and robustness.
+A. Diffusion Model
+As illustrated in Fig. 3, the diffusion model functions through
+two key processes: a forward noise-adding process and a conditional reverse denoising process. The forward process systematically transforms a clean input x0 ∼ q(x0 ) into Gaussian noise
+xT ∼ N (0, I) by employing a Markov chain transition. This
+transition is defined as follows:
+ 
+
+q(xt |xt−1 ) = N xt ; 1 − βt xt−1 , βt I
+(1)
+where βt ∈ (0, 1) controls the noise schedule at step t. For the
+reverse process, we extend the standard diffusion to a conditional
+formulation, where the denoising network predicts the noise
+component φ (xt , c, t), conditioned on task-specific information c
+
+
+βt
+xt − √1−α
+φ (xt , c, t)
+t
+pθ (xt−1 |xt , c) = N xt−1 ;
+, βt I
+√
+αt
+(2)
+
+where αt = ts=1 (1 − βs ). Following DDPM [24], the loss
+function optimizes a reweighted objective
+L(x0 , c) =
+
+T
+
+
+E∼N (0,I)  − θ (xt , t, c)2
+
+(3)
+
+t=1
+
+where T is temporal steps. This conditional mechanism enables
+targeted refinement of noisy samples toward task-specific distributions.
+B. PowerDiffuser
+The diffusion model inherently serves as a flexible framework capable of performing reconstruction tasks. By integrating contrastive learning principles, we design a crossreconstruction process to regularize power signal feature
+extraction. As illustrated in Fig. 4, PowerDiffuser comprises
+two branches: the Weak-to-Strong (W2S) and Strong-to-Weak
+
+1464
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+Fig. 4. Framework of the proposed PowerDiffuser, where signals with strong and weak augmentations are cross-reconstructed from each other
+through the reverse process.
+
+(S2W) augmentation-reconstruction branches. Both W2S and
+S2W are implemented through conditional DDPMs, where two
+augmented tensors derived from the original input signal act as
+mutual conditions for cross-reconstruction. Below, we elaborate on PowerDiffuser from both forward and reverse process
+perspectives.
+Data Augmentation: Contrastive learning, a dominant
+paradigm in SSL, aligns representations of similar samples
+(positive pairs) while pushing apart dissimilar ones (negative
+pairs). In smart meter data analysis, this facilitates distinguishing
+distinct consumption patterns (e.g., residential vs. industrial)
+and enhances robustness to noise and temporal shifts. Data
+augmentation is crucial in constructing meaningful positive and
+negative pairs: it generates diverse yet semantically consistent
+variants from the same time-series instance, forming positive
+pairs, while using sequences from different instances as negatives. Meanwhile, the noise introduced by data augmentation encourages the model to learn invariant representations, enhancing
+its resilience to perturbations and reducing overfitting, thereby
+improving reliability in real-world applications.
+Forward Diffusion Process: In both branches, the forward diffusion processes operate independently, each resembling standard DDPM. Starting from two augmented tensors X̂ W and X̂ S ,
+Gaussian noise is progressively added to generate a sequence of
+2-D matrices. Following the findings in [24], [25], we set the
+diffusion steps T to 1000. This sufficiently large T ensures that
+both branches converge to identical noise distributions after corruption, a critical prerequisite for initiating cross-reconstruction.
+Cross-reconstruct Reverse Process: The reverse process performs a cross-reconstruction task, where both branches start
+from Gaussian noise and iteratively refine the signals via a
+shared-parameter neural network for noise prediction and reconstruction. Taking W2S as an example, analogous to conditional
+DDPM, the neural network incorporates the weakly augmented
+original signal by concatenating it with the input from the
+previous diffusion step along the channel dimension. At the
+tth diffusion step, the noise predictor φ (·) in the W2S branch
+S(t)
+takes the reconstructed signal X̂t
+from the previous step,
+the timestep embedding t, and the condition X̂ W as inputs to
+estimate the noise component
+
+ 2
+S(t)
+.
+(4)
+min  − φ X̂t , c = X̂ W , t,
+2
+
+Fig. 5. Detailed computation process of ST-Large. Temporal and spatial network are implemented as one-layer Transformer.
+
+Similarly, the noise predictor in the S2W branch estimates the
+noise component as
+
+ 2
+W (t)
+min  − φ X̂t
+, c = X̂ S , t,
+.
+(5)
+2
+
+C. Spatiotemporal Neural Network
+The purpose of self-supervised training is to obtain a powerful
+feature extractor that transforms raw power load signals into
+high-quality representations. During the diffusion process, the
+denoising network naturally extracts data representations by
+learning the recovery process at different noise levels. Inspired
+by previous works [26], we demonstrate that designing feature
+extractors for two-dimensional power load signals from both
+spatial and temporal perspectives is crucial. To address the
+overfitting issue in complex networks, we design two different
+feature extractors, named ST-Tiny and ST-Large.
+ST-Large: As shown in Fig. 5, ST-Large involves two feature
+extraction processes. Taking W2S as an example, in the encoder
+L
+part, the temporal network separates input ∈ RC× C into a tensor
+of RC×1×K for extracting intraperiod features. Meanwhile, the
+L
+spatial network separates it into R1×K× C to extract inter-period
+features at the same timestamp. In the fusion module, we use
+a basic concat operation to combine the spatial and temporal
+features and further integrate condition information. During the
+time embedding process, we adopt the same encoding rules as
+described in [26]. In the decoder part, we use a Transformer layer
+to decode the features and generate inputs for the next stage. It
+is worth noting that in this structure, the number of encoder and
+
+YANG et al.: POWERDIFFUSER: COLLABORATIVE CONTRASTIVE-RECONSTRUCTION SELF-SUPERVISED LEARNING
+
+1465
+
+Reconstruction: We use the MSE loss to compare the reconstructed outputs with their corresponding augmented tarS(r)
+denotes the final denoised output in
+gets. Specifically, X̂T
+the W2S branch, which is reconstructed from Gaussian noise
+conditioned on the weakly augmented signal X̂ W . Similarly,
+W (r)
+X̂T
+is reconstructed in the S2W branch conditioned on X̂ S .
+The reconstruction loss is defined as
+2
+2
+1   S(r)
+1   W (r)
+X̂T,u − X̂uS +
+X̂T,u − X̂uW
+|Ω|
+|Ω|
+u∈Ω
+u∈Ω
+(6)
+where Ω denotes the set of element indices of the signal tensors.
+The reconstruction loss constrains the model to retain sufficient
+information to faithfully reconstruct the input, preventing purely
+discriminative training from discarding excessive information.
+Contrastive Learning: Given a batch of H input samples, we
+apply strong and weak augmentations and perform denoising at
+T /2 and T steps, resulting in a total of 6H potential samples.
+Among them, the 6 samples derived from the same original
+sample are considered positive pairs, while samples from different original inputs are treated as negative pairs. We employ
+the Normalized Temperature-scaled Cross-Entropy Loss to optimize the model, ensuring that the representations of the same
+sample variations are closer while keeping them distinct from
+other samples. This design extends the loss formulation and the
+construction of positive and negative sample pairs as proposed in
+TS-TCC [18] (https://github.com/emadeldeen24/TS-TCC). The
+loss function is formulated as
+LR =
+
+Fig. 6. Detailed computational flow diagram of the 1-D involution operator in ST-Tiny.
+
+Algorithm 1: Feature Transformation.
+Require: Input: x̂iq ∈ R1×C
+Ensure: Output: x̂i+1
+∈ R1×C
+q
+1: procedure FEATURETRANSFORMATION (x̂it )
+2:
+Initialize learnable convolution kernel θ ∈ RK×C
+3:
+Given window size K, compute windowed features:
+4:
+x̂iq:K ∈ RK×C
+5:
+Extract intermediate feature vector:
+6:
+Giq ∈ R1×C
+7:
+Project Git via fully-connected layer W ∈ RC×K :
+8:
+Ĝiq = (Giq W ) ∈ RK×1
+9:
+Perform broadcasted multiplication and reduction:
+10:
+x̂i+1
+= (Ĝiq  x̂iq:K )
+Element-wise
+q
+multiplication followed by summation
+11: end procedure
+
+decoder layers can be flexibly stacked to meet the requirements
+of extracting power load signals of varying complexity.
+ST-Tiny: The involution operator [27] is a computation process in the computer vision domain that can replace convolution, commonly considered to have spatial specific and channel
+agnostic. We modified its computation process to generalize it
+to temporal data and believe that it can simultaneously handle
+spatiotemporal features in temporal data, as shown in Fig. 6.
+Similar to ResNet-1D [28], the computation traverses multichannel temporal signals along the time dimension. Taking W2S
+as an example, the original input to the computation at the ith
+involution layer for timestamp q is represented by x̂qi ∈ R1×C .
+The specific forward computation is shown in Algorithm 1.
+
+LC = −
+
+H 
+6
+6
+
+
+i=1 a=1 b=1,b=a
+
+log H
+
+exp(sim(hi,a , hi,b )/τ )
+6
+
+j=1 k=1
+
+exp(sim(hi,a , hj,k )/τ )
+
+(7)
+where
+1) hi,a and hi,b are feature representations obtained from a
+neural network encoder and are 2 -normalized.
+2) sim(hi,a , hi,b ) = h
+i,a hi,b represents the cosine similarity.
+3) τ is a temperature hyperparameter that controls the scale
+of contrastive loss, and it is typically set to 0.1 in our
+experiments.
+The contrastive loss provides a mutual-information lowerbound objective, encouraging embeddings of positive signals
+to align while pushing apart negative signals.
+Overall, within the diffusion-model framework, the three
+loss terms cooperate to form a complementary objective that
+enhances discriminability, preserves fidelity, and captures the
+data manifold.
+
+D. Loss Functions
+The loss construction in the pre-training process is divided
+into three components: diffusion process, reconstruction, and
+contrastive learning. The final loss function is the sum of these
+three parts.
+Diffusion Process: We train the feature extractors of the W2S
+and S2W branches using the noise prediction loss defined in
+(4) and (5). The diffusion objective is equivalent to denoising
+score matching; it shapes representations under multilevel noise,
+captures the local geometry of the data manifold, and improves
+robustness.
+
+E. Theoretical Principles
+We discussed the advantages of the PowerDiffuser framework
+from the perspectives of mutual information maximization and
+information bottleneck theory, and explained why the combination of reconstruction and contrastive learning is effective.
+1) Mutual Information Maximization: The essence of selfsupervised learning is to maximize the mutual information between the input X and its latent representation Z, i.e., I(X; Z),
+so that Z contains sufficient information to reconstruct X or
+predict its attributes.
+
+1466
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+a) Reconstruction Learning directly optimizes I(X; Z) by
+minimizing the reconstruction loss LR , which enhances
+the encoding ability of Z with respect to X.
+b) Contrastive Learning implicitly improves I(Z; Y ) by
+encouraging the alignment of positive sample pairs,
+where Y denotes the target variable of the downstream
+task. Specifically:
+i) The contrastive objective enforces the similarity between the clean and augmented views (e.g., different
+noisy versions) of the same input, Zclean and Zaug ,
+which approximates the maximization of the mutual
+information I(Zclean ; Zaug ).
+ii) Based on the information inequality I(Z; Y ) ≥
+I(Zclean ; Zaug ), contrastive loss can be seen as a lower
+bound of task-relevant mutual information.
+From an information-theoretic perspective, the total loss of
+PowerDiffuser can be approximated as
+Ltotal ≈ −I(X; Z) − λ · I(Zclean ; Zaug ).
+
+TABLE I
+ISMCBT DATASET PARTITIONING AND BRIEF INTRODUCTION
+
+reconstruction learning ensures that the underlying periodic
+trends are maintained.
+
+(8)
+
+By jointly optimizing these two objectives, PowerDiffuser
+effectively balances signal reconstruction and representation
+invariance, leading to improved generalization in downstream
+tasks. The combination of both terms provides a decoupled yet
+complementary view of the information flow: reconstruction
+promotes informativeness, while contrastive learning enhances
+consistency under local perturbations or noise.
+Due to the long-term dependencies in power load signals,
+representations are required to capture cross-temporal dependencies. Contrastive learning achieves this by enforcing temporal invariance constraints, while reconstruction ensures the
+temporal continuity of the time series.
+2) Information Bottleneck Theory: The information bottleneck theory aims to learn a compact representation Z from
+the input X, such that the retained information is maximally
+relevant to the target task Y , while minimizing the irrelevant
+or nuisance information. This leads to an optimization tradeoff
+between I(Z; Y ) and I(Z; X).
+a) LR enforces the preservation of complete information
+about X in Z (high I(X; Z)), but it may include a large
+amount of task-irrelevant noise or redundant features
+(e.g., background, disturbances).
+b) LC enhances task-relevant features by encouraging invariance under augmentation (e.g., noise injection, temporal
+cropping), thus increasing I(Z; Y ) and filtering out nuisance variables unrelated to the downstream task.
+Joint optimization of reconstruction loss LR and contrastive
+loss LC aligns with the IB principle
+min [I(Z; X) − βI(Z; Y )]
+Z
+
+where LR constrains the lower bound of I(Z; X) to avoid information loss of critical features; LC increases I(Z; Y ) to enhance
+discriminability; β balances the trade-off and can be interpreted
+as a compression coefficient larger β, stronger compression.
+The nonstationarity of power load signals, such as periodic
+fluctuations and sudden noise, requires that the learned representations preserve both global pattern completeness (ensured
+by reconstruction-based objectives) and local perturbation invariance (guaranteed by contrastive objectives). For instance,
+augmentation strategies in contrastive learning simulate transient disturbances that occur in real-world power grids, while
+
+IV. EXPERIMENTAL SETUP
+A. Datasets
+The Irish Smart Meter Customer Behavior Trial (ISMCBT)
+dataset, curated by Ireland’s energy regulatory authority, comprises smart meter recordings from 4,232 residential households
+over 536 days at 30-min resolution, alongside responses to over
+200 survey questions per subscriber. We select classification
+tasks numbered 300, 310, 450, and 4704 as detailed in Table I.
+The ETTh dataset contains hourly-sampled power load
+records from Chinese substations, serving as an established
+benchmark for multivariate time-series forecasting. We extend
+its application to evaluate imputation and short-term forecasting
+task performance in this study.
+The REDD dataset comprises electricity consumption records
+from six U.S. households, capturing both whole-home and
+appliance-level power usage across over ten types of devices.
+Initially designed for energy disaggregation research, it is repurposed in this study to evaluate anomaly detection performance
+under realistic residential load conditions.
+B. Data Processing
+We conducted temporal segmentation on all datasets to simulate power load signals with varying observation durations.
+For the ISMCBT dataset, we established two temporal scales:
+weekly segmentation (ISMCBT-Tiny, 336 sampling points restructured into 7 × 48 matrices) and monthly segmentation
+(ISMCBT-Large, 1440 points structured as 30 × 48 matrices), where the monthly partitioning adopted 30-day cycles
+for standardization. The ETTS dataset underwent dedicated
+preprocessing for imputation and short-term time-series forecasting task training, implementing two granularities: ETThTiny with 7 × 24 configuration (168 points) and ETTh-Large
+with 30 × 24 structure (720 points). All datasets were normalized and sample interpolation was used to account for
+sparse missing values. The matrix transformation explicitly
+preserves temporal topology, where row dimensions represent
+consecutive days and column dimensions correspond to fixed
+measurement intervals (48 daily readings for ISMCBT, 24 for
+ETTh), maintaining the intrinsic cyclicity of power consumption
+patterns.
+
+YANG et al.: POWERDIFFUSER: COLLABORATIVE CONTRASTIVE-RECONSTRUCTION SELF-SUPERVISED LEARNING
+
+1467
+
+TABLE II
+COMPARISON OF CLASSIFICATION TASKS ON THE ISMCBT-TINY DATASET
+
+Since the REDD dataset lacks ground-truth anomaly labels,
+we follow common practice by injecting synthetic anomalies
+to facilitate the evaluation of unsupervised anomaly detection
+methods. Specifically, we introduce four types of anomalies into
+the aggregated power consumption data: 1) spike anomalies,
+where sudden surges are simulated by amplifying values by
+a factor of 2.5–4.0; 2) dropout anomalies, created by scaling
+values down to 1% –10% of their original magnitude; 3) noise
+bursts, in which localized Gaussian noise is added over short
+windows; 4) flat segments, where values are held constant to
+mimic sensor faults or frozen readings. The above noise injection
+method adopts equal-weight random sampling. Anomalies are
+randomly injected into 5% and 10% of the total time steps to
+ensure sparsity and realism.
+C. Implementation Details
+In the experiments, pretraining was conducted for 120 epochs,
+and downstream tasks were trained for 80 epochs. A batch
+size of 64 was used. The weights of all learnable parameters
+in the models were initialized using Kaiming initialization and
+optimized with the Adam optimizer. The initial learning rate
+was set to 3 × 10−4 , with a weight decay of 1 × 10−5 . All
+experiments were implemented using PyTorch and trained on
+an NVIDIA GeForce RTX 4090 Ti GPU.
+In terms of model implementation, considering the time cost,
+ST-Large adopts a structure with one encoder layer and one
+decoder layer. ST-Tiny utilizes four involution blocks with
+K = 3 as the feature extraction units. For downstream tasks, we
+selected the model at diffusion step T = 5 for both linear probing
+and fine-tuning, and demonstrated its superiority in ablation
+experiments. In the contrastive learning loss, we designed a
+
+two-layer MLP to extract feature representations for hi,a and
+hi,b .
+V. EXPERIMENT RESULTS
+A. Downstream Task Experiments
+1) Classification Task: Table II and Table III present the performance of PowerDiffuser on classification tasks, comparing it
+with both time-series general models and self-supervised strategies under linear probing and fine-tuning settings. PowerDiffuser demonstrates superior classification performance across
+most tasks, owing to its integration of contrastive learning and
+reconstruction, which effectively captures intricate local signal
+patterns and periodic distributions, necessitating robust feature
+extraction capabilities.
+Under fine-tuning, the Tiny version remains competitive
+across all tasks on the ISMCBT-Tiny dataset, outperforming the
+second-best model by an average AUC margin of 0.016 across
+task300, task310, and task4704. The Large version dominates
+ISMCBT-Large, surpassing the second-best model by an average
+AUC margin of 0.004 across task300, task450, and task4704.
+Under linear probing, the Tiny version also performs competitively on ISMCBT-Tiny, achieving leading or comparable results
+in most tasks, with particularly strong performance on task4704.
+On ISMCBT-Large, the Large version consistently ranks first
+or second across all four tasks. These results demonstrate the
+model’s strong transferability and representational capacity,
+even under limited supervision.
+In addition, two key observations emerge: 1) the experiment
+highlights the universality of overfitting in the representation
+learning process of power load signals. For instance, general
+time-series models and ST-Large models, which have larger
+
+1468
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+TABLE III
+COMPARISON OF CLASSIFICATION TASKS ON THE ISMCBT-LARGE DATASET
+
+TABLE IV
+COMPARISON OF IMPUTATION TASKS ON THE ISMCBT AND ETTH DATASET
+
+YANG et al.: POWERDIFFUSER: COLLABORATIVE CONTRASTIVE-RECONSTRUCTION SELF-SUPERVISED LEARNING
+
+1469
+
+TABLE V
+COMPARISON OF SHORT-TERM TIME-SERIES FORECASTING TASK ON THE
+ETTH DATASET
+
+Fig. 7. Impact of modifying or removing certain settings on the performance of the PowerDiffuser model. The numbers in the figure represent
+the accuracy of the classification task.
+
+TABLE VI
+COMPARISON OF ANOMALY DETECTION TASK ON THE REDD DATASET
+
+parameter sizes, exhibit notable overfitting on the ISMCBT-Tiny
+dataset but perform better on ISMCBT-Large. This pattern is
+similarly observed in time-series self-supervised models. Since
+these models typically employ simpler and modular architectures, their performance shows smaller variations between tiny
+and large datasets, underscoring the necessity of designing
+power load models tailored to the specific characteristics of the
+sampled data; 2) we observed that in self-supervised strategies
+based on power load signals, reconstruction-based approaches
+generally outperform those based on contrastive learning. This
+suggests that power load signals prioritize extracting information from the same time step across local or different cycles,
+particularly in scenarios with missing data or disturbances.
+2) Imputation Task: Table IV presents the results of the imputation task. To demonstrate the generalization capability of
+
+the method, we conducted experiments on both the ISMCBT
+and ETTh datasets. The overall findings align with those of the
+classification task. Models with large parameters still exhibit
+overfitting on the tiny dataset but perform well on the large
+dataset. Our proposed model consistently achieves optimal or
+suboptimal results across all settings, with PowerDiffuser-Large
+achieving the lowest MSE on ISMCBT-Large and ETTh-Large,
+while PowerDiffuser-Tiny performs best on ISMCBT-Tiny. Although performance on ETTh-Tiny is competitive, TimeMAE
+achieves the best overall result in this setting.
+3) Short-Term Time Series Forecasting Task: Table V compares the forecasting performance of all models on the ETThTiny dataset under two short-term horizons (48 and 96). The
+results demonstrate that PowerDiffuser-Tiny exhibits superior
+performance in this task. Compared with other self-supervised
+baselines, TS-TCC and TimeMAE also perform well, especially
+in the fine-tuning setting. Overall, short-term forecasting is a
+relatively simple downstream task, and as model size increases,
+current methods tend to achieve comparable performance.
+4) Anomaly Detection Task: We evaluated the performance
+of various models under different anomaly injection rates. As
+shown in Table VI, PowerDiffuser demonstrates significant advantages in the anomaly detection task. Notably, under a low
+injection rate of 5%, the PowerDiffuser-Tiny model achieves
+the best performance with an accuracy of 0.971 and an F1 score
+of 0.881. When the anomaly injection rate increases to 10%, the
+ModernTCN model excels, reaching an accuracy of 0.969 and
+an F1 score of 0.896. This suggests that its short-range feature
+extraction structure is particularly effective for capturing highfrequency anomalies. The results also indicate that although traditional time-series models yield relatively high accuracy, their
+F1 scores are comparatively lower, reflecting limited capability
+in detecting minority-class samples. Since anomaly detection is
+an unsupervised process, its performance heavily relies on the
+modeling capacity of the feature extractor. Therefore, we argue
+that ST is more suitable for capturing patterns in power load
+signals.
+B. Ablation Experiments
+1) Deconstructing PowerDiffuser: To demonstrate the contribution of different components in PowerDiffuser to accuracy
+improvement, we systematically deconstructed its design and
+evaluated it on two classification tasks, as shown in Fig. 7. To
+better highlight the capabilities of the self-supervised process,
+we adopted the linear probing approach for downstream tasks.
+
+1470
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+Fig. 8. Impact of models pretrained with different diffusion steps on downstream task performance. (a) Classification task. (b) Imputation task. (c)
+Short-term time-series forecasting task. (d) Anomaly detection task.
+TABLE VII
+PERFORMANCE COMPARISON BETWEEN POWERDIFFUSER AND
+NONDIFFUSION HYBRID MODEL
+
+a) Contrastive Learning Loss Removal: Removing the contrastive learning loss and relying solely on reconstruction
+demonstrated the importance of contrastive constraints.
+b) Prediction Target Modification: Changing the diffusion
+process target from predicting noise to predicting the original signal surprisingly resulted in worse performance,
+aligning with findings in [25].
+c) 2-D Signal Conversion: Converting power load signals
+into 2-D representations proved crucial, as it provided
+both spatial and temporal features, enabling the model to
+better capture underlying sample information.
+d) Normalization Removal: Eliminating normalization significantly degraded performance, confirming its necessity
+as a preprocessing step for power load signals.
+2) Ablation on Pretrained Models With Different Diffusion
+Steps T: We evaluate the impact of pretraining with different
+
+diffusion steps on downstream performance across four tasks,
+using PowerDiffuser-Tiny in all experiments. As shown in Fig. 8,
+the model achieves the best performance on most tasks when
+the diffusion step is set to T = 5. We believe that allowing a
+moderate level of noise during pretraining enables more flexible
+fine-tuning in downstream tasks, which is consistent with the
+findings in [25].
+3) Ablation on Different Feature Augmentation Combinations: Designing data augmentation methods tailored to specific
+
+data characteristics is a critical factor in the success of contrastive
+learning. We systematically explored various feature augmentation combinations to identify the optimal strategy for power
+load signals, with the results illustrated in Fig. 9. Under the linear
+probing setting, we observed that overly aggressive augmentations, such as random noise, rendered the reconstruction process
+excessively challenging, as demonstrated in Fig. 9(a).
+From a loss perspective, combinations incorporating random
+mask methods achieved the lowest loss values. From a downstream task performance perspective (ISMCBT-Tiny, Task310),
+the combination of permutation and random mask emerged as
+the most effective. Consequently, we adopted this combination
+as the default feature augmentation strategy for PowerDiffuser.
+This exploration underscores the importance of aligning the
+difficulty of self-supervised strategy design with both model
+size and sample complexity.
+4) Effect of Diffusion Framework: To isolate the contribution
+of the diffusion mechanism in our contrastive-reconstruction fusion framework, we construct an alternative hybrid baseline that
+does not rely on a diffusion model. Specifically, we implement
+a dual-branch encoder structure inspired by MAE [19] and SimCLR [30], where one branch performs masked autoencoding for
+reconstruction, and the other branch applies contrastive learning
+with augmentations. Both branches share the same backbone
+(ST-Tiny) but are trained jointly without any denoising diffusion
+process.
+Table VII reports the performance comparison between PowerDiffuser and this nondiffusion hybrid baseline in ISMCBTTiny (Task310). PowerDiffuser consistently outperforms it
+across all evaluation metrics. This confirms that the integration
+of contrastive and reconstruction learning within the diffusion
+framework provides synergistic benefits beyond simply combining the two objectives.
+In PowerDiffuser, the contrastive loss and reconstruction
+loss share a common diffusion-based representation pathway,
+whereas in the dual-branch MAE + SimCLR baseline, the two
+
+YANG et al.: POWERDIFFUSER: COLLABORATIVE CONTRASTIVE-RECONSTRUCTION SELF-SUPERVISED LEARNING
+
+1471
+
+TABLE VIII
+COMPARISON OF COMPUTATIONAL EFFICIENCY BETWEEN POWERDIFFUSER AND BASELINES IN ETTH
+
+5) Computational Efficiency Analysis: We quantify the computational cost of PowerDiffuser and other self-supervised algorithms in Table VIII. Specifically, we perform pretraining on
+the ETTh dataset with a batch size of 64.
+PowerDiffuser exhibits a relatively large training time, which
+is primarily attributed to the iterative nature of the diffusion process and the integration of both contrastive and reconstruction
+objectives at each step. In addition, our current implementation
+prioritizes modularity and clarity, which results in less runtime
+optimization compared to some mature baseline frameworks.
+Despite the high training cost, the inference time of PowerDiffuser is 29.7 milliseconds per batch and the peak GPU memory
+usage is 4.6 GB. These values remain moderate and are even
+lower than those of single-objective self-supervised strategies.
+This efficiency is mainly due to the lightweight design of the
+ST feature extractor based on involution operations. Therefore,
+we consider the offline training time to be acceptable, and
+the inference efficiency indicates that PowerDiffuser has the
+potential for practical deployment.
+
+VI. CONCLUSION
+
+Fig. 9. Visualization of the impact of different feature enhancement
+combinations on performance. Combinations within the same method
+use different random seeds. It is worth noting that in both plots, lighter
+colors indicate better performance. (a) Comparison of pretraining loss
+values for different feature augmentation combinations on the ISMCBT
+dataset. (b) Comparison of different feature augmentation combinations
+on the downstream ISMCBT-tiny classification task (Task300).
+
+objectives are executed in parallel and optimized independently.
+This may lead to conflicts in the representation space or mutual
+interference between objectives, making joint convergence more
+difficult. In contrast, the diffusion framework naturally provides
+a progressive learning mechanism, which we believe contributes
+to more stable and generalizable representation learning. Overall, we argue that PowerDiffuser’s joint objective design exhibits
+coupled consistency, rather than a structurally fragmented combination.
+
+This article introduces PowerDiffuser, a self-supervised strategy specifically designed for power load signals. Built on the
+diffusion model framework, PowerDiffuser combines two mainstream self-supervised strategies, namely contrastive learning
+and reconstruction, effectively balancing global distribution and
+local information. We show that general time-series models
+often overfit in power load signal tasks and address this by
+developing two adaptable feature extractors, ST-Large and STTiny, designed to process raw data of varying complexities.
+Furthermore, we offer insights into the generalization of the
+involution operator for 1-D data and the preprocessing of power
+load signals. Experimental results on real-world datasets confirm the effectiveness of our approach, while ablation studies
+emphasize the influence of different design choices on the overall architecture’s performance. We argue that a well-designed
+self-supervised strategy is essential for applying artificial intelligence technologies in the power load domain. Future work will
+focus on exploring more lightweight self-supervised strategies
+to mitigate the substantial computational costs associated with
+the diffusion process.
+REFERENCES
+[1] B. Jiang et al., “Dynamic temporal dependency model for multiple steps
+ahead short-term load forecasting of power system,” IEEE Trans. Ind.
+Appl., vol. 60, no. 4, pp. 5244–5254, Jul./Aug. 2024.
+[2] P. Zhao et al., “Probabilistic multienergy load forecasting based on hybrid
+attention-enabled transformer network and gaussian process-aided residual learning,” IEEE Trans. Ind. Informat., vol. 20, no. 6, pp. 8379–8393,
+Jun. 2024.
+[3] W. Liao et al., “Can we trust explainable artificial intelligence in wind
+power forecasting?,” Appl. Energy, vol. 376, Dec. 2024, Art. no. 124273.
+
+1472
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+[4] Y. Wang, Q. Chen, D. Gan, J. Yang, D. S. Kirschen, and C. Kang, “Deep
+learning-based socio-demographic information identification from smart
+meter data,” IEEE Trans. Smart Grid, vol. 10, no. 3, pp. 2593–2602,
+May 2018.
+[5] Y. Zhu et al., “Hybrid-order representation learning for electricity theft
+detection,” IEEE Trans. Ind. Informat., vol. 19, no. 2, pp. 1248–1259,
+Feb. 2022.
+[6] W. Liao, R. Zhu, T. Ishizaki, Y. Li, Y. Jia, and Z. Yang, “Can gas
+consumption data improve the performance of electricity theft detection?,”
+IEEE Trans. Ind. Informat., vol. 20, no. 6, pp. 8453–8465, Jun. 2024.
+[7] M. Noroozi et al., “Unsupervised learning of visual representations by
+solving jigsaw puzzles,” in Proc. Eur. Conf. Comput. Vis., 2016, pp. 69–84.
+[8] A. Gao, F. Mei, J. Zheng, H. Sha, M. Guo, and Y. Xie, “Electricity
+theft detection based on contrastive learning and non-intrusive load monitoring,” IEEE Trans. Smart Grid, vol. 14, no. 6, pp. 4565–4580, Nov.
+2023.
+[9] X. Xia et al., “ETD-ConvLSTM: A deep learning approach for electricity
+theft detection in smart grids,” IEEE Trans. Inf. Forensics Secur., vol. 18,
+pp. 2553–2568, 2023.
+[10] H. Ye et al., “ATFNet: Adaptive time-frequency ensembled network for
+long-term time series forecasting,” 2024, ariXv:2404.05192.
+[11] H. Zhou et al., “Informer: Beyond efficient transformer for long sequence
+time-series forecasting,” in Proc. AAAI Conf. Artif. Intell., 2021, vol. 35,
+no. 12, pp. 11106–11115.
+[12] H. Wu et al., “AutoFormer: Decomposition transformers with autocorrelation for long-term series forecasting,” in Proc. Adv. Neural Inf.
+Process. Syst., 2021, vol. 34, pp. 22419–22430.
+[13] A. Oord et al., “Representation learning with contrastive predictive coding,” 2018, arXiv:1807.03748.
+[14] D. Luo et al., “Time series contrastive learning with information-aware
+augmentations,” in Proc. AAAI Conf. Artif. Intell., 2023, vol. 37, no. 4,
+pp. 4534–4542.
+[15] S. Tonekaboni et al., “Unsupervised representation learning for time
+series with temporal neighborhood coding,” in Proc. Int. Conf. Learn.
+Representation, 2020.
+[16] S. Tonekaboni et al., “Unsupervised representation learning for time
+series with temporal neighborhood coding,” in Proc. Int. Conf. Learn.
+Representation, 2021, pp. 1–17.
+[17] Z. Yue et al., “TS2Vec: Towards universal representation of time
+series,” in Proc. AAAI Conf. Artif. Intell., 2022, vol. 36, no. 8,
+pp. 8980–8987.
+[18] E. Eldele et al., “Time-series representation learning via temporal and
+contextual contrasting,” in Proc. Int. Joint Conf. Artif. Intell., 2021,
+pp. 2352–2359.
+[19] K. He et al., “Masked autoencoders are scalable vision learners,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2022, pp. 16000–16009.
+[20] R. R. Chowdhury et al., “TARNet: Task-aware reconstruction for timeseries transformer,” in Proc. ACM SIGKDD Conf. Knowl. Discov. Data
+Min, 2022, pp. 212–220.
+[21] Z. Li et al., “Ti-MAE: Self-supervised masked time series autoencoders,”
+in Proc. Int. Conf. Learn. Representation, 2023, pp. 1–20.
+[22] M. Cheng et al., “TimeMAE: Self-supervised representations of time series
+with decoupled masked autoencoders,” 2023, arXiv:2303.00320.
+[23] W. Zhang, L. Yang, S. Geng, and S. Hong, “Self-supervised time series representation learning via cross reconstruction transformer,” IEEE
+Trans. Neural Netw. Learn. Syst., vol. 35, no. 11, pp. 16129–16138,
+Nov. 2024.
+[24] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic
+models,” in Proc. Adv. Neural Inf. Process. Syst., 2020, vol. 33,
+pp. 6840–6851.
+[25] Y. Xing, L. Qu, S. Zhang, K. Zhang, Y. Zhang, and L. Bruzzone,
+“CrossDiff: Exploring self-supervised representation of pansharpening via
+cross-predictive diffusion model,” IEEE Trans. Image Process., vol. 33,
+pp. 5496–5509, 2024.
+[26] Z. Senane et al., “Self-supervised learning of time series representation via diffusion process and imputation-interpolation-forecasting
+mask,” in Proc. ACM SIGKDD Conf. Knowl. Discov. Data Min. 2024,
+pp. 2560–2571.
+[27] D. Li et al., “Involution: Inverting the inherence of convolution for visual
+recognition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+2021, pp. 12321–12330.
+[28] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2016,
+pp. 770–778.
+[29] D. Luo et al., “ModernTCN: A modern pure convolution structure for
+general time series analysis,” in Proc. Int. Conf. Learn. Representation,
+2024, pp. 1–43.
+
+[30] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc. Int. Conf. Mach.
+Learn. 2020, pp. 1597–1607.
+Honggang Yang (Student Member, IEEE) received the M.S. Eng. degree from Hubei Nomal
+University, Huangshi, China, in 2023.
+He is currently working toward the Ph.D degree in traffic information engineering and control with the School of Automation, Wuhan University of Technology, Wuhan, China. His current research interests include deeping learning
+and optimization algorithm.
+
+Cheng Lian (Senior Member, IEEE) received
+the B.S. degree in electrical engineering and automation and the M.S. degree in control science
+and engineering from the School of Automation,
+Wuhan University of Technology, Wuhan, China,
+in 2008 and 2011, respectively, and the Ph.D.
+degree in control science and engineering from
+the School of Automation, Huazhong University
+of Science and Technology, Wuhan, in 2014.
+He is currently a Professor with the School
+of Automation, Wuhan University of Technology.
+His research interests include machine learning, data mining, and pattern recognition.
+Bingrong Xu (Member, IEEE) received the B.S.
+degree in control science and engineering from
+the School of Automation, Wuhan University of
+Technology, Wuhan, China, in 2015, and the
+Ph.D. degree in control science and engineering
+from the School of Artificial Intelligence and Automation, Huazhong University of Science and
+Technology, Wuhan, in 2021.
+She is currently an Associate Professor with
+the School of Automation, Wuhan University of
+Technology, Wuhan. Her research interests include zero-shot learning, transfer learning, sparse representation, and
+low-rank representation.
+Ruijin Ding received the Ph.D. degree in hydrobiology from the University of Chinese Academy
+of Sciences, Beijing, China, in 2025.
+She has authored several papers in international and national journals at the intersection
+of artificial intelligence and biotechnology. Her
+research interests include bioelectrical signal
+analysis and gene prediction.
+
+Zhigang Zeng (Fellow, IEEE) received the
+Ph.D. degree in systems analysis and integration from the Huazhong University of Science
+and Technology, Wuhan, China, in 2003.
+He is currently a Professor with the School of
+Artificial Intelligence and Automation, Huazhong
+University of Science and Technology, Wuhan,
+and also with the Key Laboratory of Image Processing and Intelligent Control of the Education
+Ministry of China, Wuhan. He has authored or
+coauthored more than 200 international journal
+papers. His research interests include theory of functional differential
+equations and differential equations with discontinuous right-hand sides,
+and their applications to dynamics of neural networks, memristive systems, and control systems.
+Dr. Zeng has been an Associate Editor for IEEE TRANSACTIONS ON
+NEURAL NETWORKS (2010–2011), IEEE TRANSACTIONS ON CYBERNETICS
+(since 2014), IEEE TRANSACTIONS ON FUZZY SYSTEMS (since 2016),
+and a Member of the Editorial Board of Neural Networks (since 2012),
+Cognitive Computation (since 2010), and Applied Soft Computing (since
+2013).
+PAPER_TEXT

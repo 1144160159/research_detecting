@@ -1,0 +1,151 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026                                                                             1647
+
+
+
+
+           Universal Embedding Function for Traffic
+          Classification via QUIC Domain Recognition
+            Pretraining: A Transfer Learning Success
+                             Jan Luxemburk , Karel Hynek , Richard Plný , and Tomáš Čejka
+
+
+
+   Abstract—Encrypted traffic classification (TC) methods must                  better suited to protocol dissectors and pattern-matching.
+adapt to new protocols and extensions as well as to advancements                Additionally, in deployment scenarios where inference is not
+in other machine learning fields. In this paper, we adopt a                     performed directly on monitoring probes, transmitting payload
+transfer learning setup best known from computer vision. We
+first pretrain an embedding model on a complex task with a large                data introduces both privacy and performance issues.
+number of classes and then transfer it to seven established TC                     Building on our previous research in fine-grained traffic
+datasets. The pretraining task is recognition of SNI domains in                 classification (TC) for TLS [1] and QUIC [2], we design and
+encrypted QUIC traffic, which in itself is a challenge for network              train the embedding function using the CESNET-QUIC22 [3]
+monitoring due to the growing adoption of TLS Encrypted Client                  dataset. This dataset includes Server Name Indication (SNI)
+Hello. Our training pipeline—featuring a disjoint class setup,
+ArcFace loss function, and a modern deep learning architecture—                 domains as labels, enabling a classification task focused on
+aims to produce universal embeddings applicable across tasks.                   inferring exact domain names from packet sequences. This
+A transfer method based on model fine-tuning surpassed SOTA                     domain recognition task serves two important roles in this
+performance on nine of ten downstream TC tasks, with an                         paper. First, the growing adoption of the Encrypted Client
+average improvement of 6.4%. Furthermore, a comparison with a                   Hello (ECH) extension has made domain recognition increas-
+baseline method using raw packet sequences revealed unexpected
+findings with potential implications for the broader TC field. We               ingly important. In combination with TLS 1.3, ECH removes
+released the model architecture, trained weights, and codebase                  all plaintext handshake fields that have traditionally enabled
+for transfer learning experiments.                                              visibility into encrypted traffic. Our solution, which relies
+   Index Terms—Traffic classification, transfer learning, deep                  solely on packet sequences and is unaffected by ECH, is able
+learning, encrypted traffic, QUIC.                                              to infer the correct domain name in 94.83% of cases, even
+                                                                                when evaluated on test domains entirely disjoint from the
+                          I. I NTRODUCTION                                      embedding function’s training set. Second, domain recognition
+    N THIS paper, we propose a universal embedding (map-                        is well suited as a pretraining task due to its complexity,
+I   ping) function that transforms packet sequences into an
+embedding vector space. The core idea is to map similar packet
+                                                                                large number of classes, and straightforward labeling process.
+                                                                                Transfer learning leverages models trained on one task to adapt
+sequences close to each other in the embedding space while                      them for a different but related task, under the assumption
+keeping dissimilar ones far apart. The embedding function                       that certain knowledge (i.e., extracted features, learned traffic
+serves as a feature extractor, enabling a nearest neighbors                     patterns and characteristics) is shared and transferable. This
+(k-NN) classifier to make predictions. As our focus is on
+                                                                                approach is widely used in computer vision and natural
+encrypted traffic, we utilize the standard input representation
+                                                                                language processing, where the typical experimental pipeline
+unaffected by encryption: packet size, direction, and inter-
+                                                                                involves fine-tuning large models pretrained on public datasets.
+packet time of the first N packets. We deliberately avoid using
+                                                                                   To evaluate the transfer learning approach, we tested
+payload as a model input due to its limited value in analyzing
+initial handshakes of encrypted protocols, a task we consider                   our pretrained embedding function on seven datasets:
+                                                                                ISCXVPN2016 [4], MIRAGE19 [5], MIRAGE22 [6],
+   Received 18 February 2025; revised 14 August 2025 and 6 November             UTMOBILENET21 [7], UCDAVIS19 [8], CESNET-TLS22 [1],
+2025; accepted 6 December 2025. Date of publication 11 December 2025;
+date of current version 13 January 2026. This research was funded by the
+                                                                                and AppClassNet [9], presenting ten downstream TC tasks in
+Ministry of Interior of the Czech Republic, grant No. VJ02010024: “Flow-        total. We evaluated three transfer techniques: (a) using fixed
+Based Encrypted Traffic Analysis” and also supported by the Grant Agency        pretrained embeddings with a k-NN classifier, (b) using fixed
+of the CTU in Prague, grant No. SGS23/207/OHK3/3T/18. Computational
+resources were provided by the e-INFRA CZ project (ID:90254), supported         pretrained embeddings with a linear classifier (also known as
+by the Ministry of Education, Youth and Sports of the Czech Republic. The       linear probing), and (c) fine-tuning the embedding function on
+associate editor coordinating the review of this article and approving it for   each downstream task. To isolate the contribution of the transfer
+publication was T. Inoue. (Corresponding author: Jan Luxemburk.)
+   Jan Luxemburk, Karel Hynek, and Richard Plný are with the Faculty of         learning, we also compared against training the same model
+Information Technology, Czech Technical University in Prague, Prague 160        from scratch on the downstream tasks.
+00, Czech Republic, and also with the CESNET Association, Prague 160 00,           The results are promising: the fine-tuning approach proved
+Czech Republic (e-mail: luxemburk@cesnet.cz).
+   Tomáš Čejka is with CESNET Association, Prague 160 00, Czech Republic.
+                                                                                to be the best, surpassing state-of-the-art (SOTA) performance
+   Digital Object Identifier 10.1109/TNSM.2025.3642984                          on nine downstream tasks and outperforming training from
+                1932-4537 
+                          c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                       and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+1648                                                       IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+
+
+scratch on eight. A k-NN classifier in the learned embedding       A. Transfer Learning in Traffic Classification
+space also exceeded SOTA performance, although the gains              The objective of transfer learning is to capitalize on the
+were more modest compared to fine-tuning. This offers a            knowledge encoded in a model M0 , learned while solving a
+viable alternative when fine-tuning or training from scratch       task T0 , and adapt it to a different target task Ttarget . The
+is not feasible, for example due to insufficient labeled data      key intuition is that the closer the relationship between T0
+for the downstream task. Finally, our experiments revealed         and Ttarget , the more effectively the learned representations
+an intriguing finding: a k-NN classifier using L1 distance on      (i.e., features) can be reused and transferred. Depending on the
+the first 10 packet features—referred to as the input-space        application, the label spaces of T0 and Ttarget may be disjoint
+baseline—also performed quite well across all datasets.            (e.g., when pretraining on a pretext task), partially overlapping
+   Main contributions                                              (e.g., when adapting to new classes), or identical (e.g., when
+   (i) We designed and developed an embedding function for         adapting to a new operational environment). Transfer learning
+packet sequences to serve as a foundation for classifiers of       has gained significant traction in network classification and is
+encrypted network traffic. It is based on a neural network         applied in various scenarios discussed below.
+architecture 30pktTCNET_256 that combines existing, well-
+                                                                      1) Cross-Dataset: Pretraining on pretext tasks before
+proven techniques, such as ResNet-like convolutional blocks,
+                                                                   fine-tuning for downstream objectives. ET-BERT [12] and
+packet feature embeddings, and Generalized Mean Pooling
+                                                                   YaTC [13] exemplify this strategy, leveraging large unlabeled
+(GeM) [10]. For initializing packet feature embeddings, we
+                                                                   datasets to pretrain transformer models in an NLP-like fashion
+adopted Piecewise Linear Encoding (PLE) [11], a method that
+                                                                   using tokenization and masking. However, both operate on
+outperforms random initialization and has not previously been
+                                                                   packet payloads and are thus outside the scope of detailed
+used in the TC domain. Although the architecture is largely
+                                                                   comparison in this work. Rezaei et al. [14] pretrained a
+based on established techniques—with the exception of PLE—
+                                                                   1D-CNN on QUIC packet sequences via a pretext task
+we rigorously tuned all its components to uncover the true
+                                                                   targeting flow bandwidth and duration prediction, and sub-
+limits of CNN-based processing of packet sequences.
+                                                                   sequently transferred it to Web service classification. This
+   (ii) We present a domain recognition solution that enables
+                                                                   pretraining improved performance relative to direct training on
+domain-level visibility into encrypted traffic, even in the
+                                                                   Web services; nevertheless, jointly training all three tasks—
+presence of TLS 1.3 and ECH. Using a k-NN classifier in
+                                                                   bandwidth, duration, and Web service—yielded the strongest
+the embedding space, our method achieves 94.83% accuracy
+                                                                   performance.
+and 79.35% recall under a class-disjoint evaluation setup. We
+further show that domain recognition serves as an effective           2) New-Class Adaptation: Transferring knowledge from
+pretraining task, as the learned embeddings generalize across      frequent to rare classes in incremental learning and few-shot
+ten downstream TC tasks.                                           learning (FSL). When the main constraint is a limited number
+   (iii) With the fine-tuning transfer method, we surpass          of samples, transfer learning can serve as an alternative to, or a
+the SOTA performance on nine of the ten downstream                 component within, various FSL approaches. Bovenzi et al. [15]
+TC tasks, achieving a remarkable average improvement               studied IoT attack detection across four datasets and found
+of 6.4%. Compared to training from scratch, fine-tuning            that FSL methods outperform transfer learning. However, sub-
+pretrained weights provides a 2.1% average gain, empirically       sequent works by Di Monda et al. [16] and Monda et al. [17],
+confirming the benefits of transfer learning.                      focusing on intrusion detection and fast adaptation to new
+   The paper is organized as follows: Section II provides a        attacks, reported the opposite result: transfer learning methods
+review of related research. Section III describes the experi-      were superior. In particular, the Rethinking Few-Shot method
+mental setup used to develop the embedding function, covering      of Tian et al. [18] achieved excellent performance using a base
+the dataset, data preparation, training loop, loss function,       model trained in a standard supervised fashion, with additional
+and deep learning (DL) architecture. Section IV presents the       self-distillation to enhance the learned representations. The
+results of the domain recognition task, along with ablation        Rethinking Few-Shot method highlights that a strong base
+studies examining parts of the solution. Section V describes the   model can offer performance comparable to, or better than,
+transfer of the trained embedding function to seven additional     standard FSL meta-learning approaches while enabling a
+TC datasets and discusses the achieved results. Section VI         simpler and arguably more straightforward adaptation to new
+addresses limitations, and Section VII concludes the paper by      classes. Tong et al. [19] proposed a feature-alignment approach
+summarizing key contributions and outlining future directions.     for encrypted traffic classification. In their problem setup,
+                                                                   the source domain provides abundant labeled data, whereas
+                                                                   the target domain has many samples but few or no labels
+                     II. R ELATED W ORK                            and includes additional classes. Their method introduces an
+   We begin by outlining how transfer learning has been            auxiliary optimization objective, termed the smooth charac-
+applied within the TC domain. Next, we review influential          teristic function, which encourages the feature distributions
+papers on representation learning for TC, highlighting method-     of the two domains to align during training. This alignment
+ological similarities to our approach and key differences.         facilitates classification of previously unseen classes in the
+We deliberately omit detailed discussion of studies that rely      target domain, although the approach requires target-domain
+heavily on payload data, focusing instead on methods that   

@@ -1,0 +1,1905 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [210] DualAttlog: Context aware dual attention networks for log-based anomaly detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：210
+题名：DualAttlog: Context aware dual attention networks for log-based anomaly detection
+年份：2024
+DOI：10.1016/j.neunet.2024.106680
+来源：Neural Networks
+PDF：paper/10.1016_j.neunet.2024.106680.pdf
+已有粗分类：时序、日志、KPI 与云原生异常检测
+二级关联：入侵检测与网络异常检测、其他AI安全与跨域异常检测
+相关性：中相关，分数 7
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\210.txt
+- 原始字符数：84166
+- 本次发送字符数：84166
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+Neural Networks 180 (2024) 106680
+
+Contents lists available at ScienceDirect
+
+Neural Networks
+journal homepage: www.elsevier.com/locate/neunet
+
+Full Length Article
+
+DualAttlog: Context aware dual attention networks for log-based anomaly
+detection
+Haitian Yang a,b ,∗, Degang Sun b , Weiqing Huang a,b
+a Institute of Information Engineering, Chinese Academy of Sciences, Beijing, 100080, China
+b
+
+School of Cyber Security, University of Chinese Academy of Sciences, Beijing, 100080, China
+
+ARTICLE
+
+INFO
+
+Keywords:
+Log analysis
+Anomaly detection
+Word level semantic
+Sequence level semantic
+Self-matching attention
+Context aware dual attention
+
+ABSTRACT
+Most existing log-driven anomaly detection methods assume that logs are static and unchanged, which is often
+impractical. To address this, we propose a log anomaly detection model called DualAttlog. This model includes
+word-level and sequence-level semantic encoding modules, as well as a context-aware dual attention module.
+Specifically, The word-level semantic encoding module utilizes a self-matching attention mechanism to explore
+the interactive properties between words in log sequences. By performing word embedding and semantic
+encoding, it captures the associations and evolution processes between words, extracting local-level semantic
+information. while The sequence-level semantic encoding module encoding the entire log sequence using a pretrained model. This extracts global semantic information, capturing overall patterns and trends in the logs. The
+context-aware dual attention module integrates these two levels of encoding, utilizing contextual information
+to reduce redundancy and enhance detection accuracy. Experimental results show that the DualAttlog model
+achieves an F1-Score of over 95% on 7 public datasets. Impressively, it achieves an F1-Score of 82.35% on
+the Real-Industrial W dataset and 83.54% on the Real-Industrial Q dataset. It outperforms existing baseline
+techniques on 9 datasets, demonstrating its significant advantages.
+
+1. Introduction
+During the past decade, the uninterrupted enlargement of software
+systems has led to a sharp escalation in complexity, resulting in notable
+impediments to system maintenance efforts. As widely recognized by
+both academia and industry, as software scales up and its structure
+becomes more complex, manually managing and maintaining these
+systems becomes increasingly difficult (Chen et al., 2019; Chen, Yang,
+et al., 2020; Chen, Zhang, He, et al., 2020; Jiang et al., 2020; Zhao
+et al., 2020). Against this backdrop, logs, as automatically generated
+data sources recording system events and operational status, have
+become increasingly important.
+For large-scale and complex software systems
+(Decker, Leite, Giommi, & Bonacorsi, 2020; He, Zhu, He, & Lyu, 2016;
+Yang, Chen, et al., 2021; Zhang et al., 2019), such as widely used online
+service systems and big data systems that process massive amounts
+of data, logs have become an indispensable source of information for
+maintenance personnel. These logs typically exist in the form of semistructured text, containing rich system status information that is easily
+parsed by both humans and machines. Through careful analysis of these
+logs, maintenance personnel can promptly detect abnormal behaviors
+in the system, thereby rapidly locating and resolving issues (Chu et al.,
+
+2021; Li, Chen, Jing, He, & Yu, 2022; Wang et al., 2020; Yan et al.,
+2021; Zhi et al., 2019).
+Nevertheless, as the system’s scale and complexity continue to grow,
+relying solely on manual inspection of logs to detect abnormalities
+has become impractical (Chen, Zhang, Li, et al., 2020; He, Zhu, He,
+Li, & Lyu, 2017; Huang et al., 2020; Vervaet, 2021; Xu, Huang, Fox,
+Patterson, & Jordan, 2009). Consequently, in recent times, automated
+anomaly detection techniques based on logs have garnered significant
+attention. These methods utilize data mining and machine learning
+techniques to extract useful information from massive log data and
+construct models to automatically detect abnormal behaviors in the
+system.
+For instance, Xu et al. introduced an unsupervised learning technique, utilizing Principal Component Analysis (PCA), for detecting
+anomalies. They first converted log data into numerical vectors, then
+used PCA to reduce the dimensionality of these vectors, and ultimately,
+the existence of anomalies was ascertained by measuring the distance
+between the diminished data points and the distribution of typical state
+data. This method effectively extracts key information from complex
+log data and accurately detects abnormal behaviors in the system.
+
+∗ Corresponding author at: Institute of Information Engineering, Chinese Academy of Sciences, Beijing, 100080, China.
+
+E-mail address: yanghaitian@iie.ac.cn (H. Yang).
+https://doi.org/10.1016/j.neunet.2024.106680
+Received 5 April 2024; Received in revised form 25 May 2024; Accepted 29 August 2024
+Available online 31 August 2024
+0893-6080/© 2024 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+This semantic encoding approach, combining both micro and macro
+dimensions, enables DualAttlog to better understand and represent log
+data, providing a solid foundation for subsequent anomaly detection.
+(2) Investigating the dual attention mechanism across different
+RoBERTa layers: To fully utilize the powerful capabilities of the
+RoBERTa model, we further explore the impact of applying the dual
+attention mechanism across different RoBERTa Transformer layers. By
+comparing different settings of applying dual attention at a single layer,
+multiple layers, and all layers, we gain a deep understanding of the
+practical effectiveness of the dual attention mechanism in anomaly
+detection tasks. This research not only provides an important basis
+for the design of the DualAttlog model but also offers new ideas for
+subsequent studies.
+(3) Comprehensive evaluation and benchmark testing: With
+the aim of comprehensively gauging the performance of DualAttlog,
+we conducted a series of rigorous experiments encompassing seven
+public datasets along with two industrial datasets from actual deployment scenarios. The results of our experiments underscore the
+superior performance of DualAttlog over other baseline models across
+these datasets, while also demonstrating its strong robustness. Even
+when faced with constantly changing and noisy log data, DualAttlog
+maintains stable anomaly detection performance. This accomplishment
+unequivocally showcases the efficacy and dependability of DualAttlog
+in real-world scenarios.
+The subsequent parts of this paper are structured in the following
+way: Section 2 gives an overview of the techniques that are connected
+to our work; Section 3 presents a comprehensive account of our proposed log-based anomaly detection model, DualAttlog, highlighting its
+structure, operating principles, and defining characteristics; Section 4
+describes the specific implementation process of DualAttlog, including
+data preprocessing, model training, and optimization; Section 5 experimentally validates the performance of DualAttlog on various datasets
+and conducts detailed analysis and discussion of the results; Section 6
+offers a comprehensive overview of the paper’s key research contents
+and accomplishments, coupled with suggestions for future research
+trajectories and their anticipated outcomes.
+
+Moreover, Lou, Fu, Yang, Xu, and Li (2010) extracted invariance
+from console logs for anomaly detection. By observing the log output
+during normal system operation, they extracted a series of invariance
+rules, like the regular appearance of particular events in a prescribed
+sequence or the sustenance of a constant rate for designated events.
+When violations of these invariance rules occur during system execution, it can be considered that the system has undergone an anomaly.
+This method, based on a deep understanding of system behavior, can
+precisely detect anomalies that may lead to system failure.
+Despite their effectiveness in various cases, existing log-based
+anomaly detection methods commonly lack the required robustness for
+practical use. This is because these methods typically rely on known
+log events and sequences extracted from training data to construct
+detection models. However, In the event of encountering previously unobserved log events and sequences, the functionality of these methods is
+often seriously impacted. In real-world production environments, most
+software systems adopt agile development models, there are frequent
+software updates, leading to subsequent alterations in log data, which
+include the appearance of novel log events and sequences. This further
+increases the challenges faced by existing methods.
+To tackle this obstacle, this paper introduces a unique log-based
+anomaly detection approach named DualAttlog. The essence of this
+method’s advantage is its ability to accomplish accurate and robust
+anomaly detection within dynamically shifting and noisy log data.
+Specifically, DualAttlog designs an innovative self-matching network
+that can deeply explore the interactive features between words in
+log messages, Consequently, it effectively captures the log word-level
+semantic details within the evolving log messages. Within DualAttlog,
+we initially compute the interactional details between each word pair
+within the input log sequence, subsequently formulating self-matching
+attention vectors utilizing this information. These vectors not only
+effectively represent the input log sequence but also allow us to perform
+word-by-word matching within the log sequence, thereby better adapting to the evolution of log messages. This design enables DualAttlog to
+more accurately identify abnormal logs that deviate from normal patterns. Additionally, to further enhance the performance of DualAttlog,
+we successfully integrate pre-trained models into the network design.
+These pre-trained models, having undergone extensive training on vast
+text data, are capable of extracting profound semantic information. By
+combining these models with our self-matching network, DualAttlog
+can capture sequence-level semantic information at the log sequence
+level, further improving the accuracy of its anomaly detection. Most importantly, DualAttlog successfully connects local semantic information
+with global semantic information through an innovative context-aware
+dual attention network design. This design not only maintains excellent
+discriminative ability but also effectively controls potential information redundancy, enabling DualAttlog to achieve high accuracy while
+maintaining robustness.
+Briefly put, DualAttlog introduces a groundbreaking and efficient
+method for identifying anomalies in log data. By deeply exploring the
+dual advantages of word-level semantic information and sequence-level
+semantic information in log data, DualAttlog achieves accurate and
+robust anomaly detection in constantly changing and noisy log data,
+providing strong support for software system maintenance efforts.
+The significant contributions of this paper are outlined as follows:
+(1) Undertaking the exploration of a novel semantic encoding
+technique for log sequences: In the semantic encoding, of log sequence, we propose an innovative semantic encoding scheme, which
+includes two modules: log word-level semantic encoding, and log
+sequence-level semantic encoding. In the log word-level semantic encoding module, we unveil a self-matching attention mechanism designed to accurately distill the word-level semantic essence of log
+messages, focusing on the intricate word interactions that occur during
+their progression. In the log sequence-level semantic encoding module, we utilize a pre-trained model to globally encode the entire log
+sequence, capturing the overall semantic structure of the log sequence.
+
+2. Related work
+2.1. Rule-driven methods
+The utilization of deep learning techniques has introduced novel
+and unprecedented opportunities in the field of detecting anomalies
+based on logs. Prior to the widespread adoption of deep learning,
+Traditional techniques in log-based anomaly detection primarily depended upon rule-guided and association-oriented methods (Jafarian,
+Masdari, Ghaffari, & Majidzadeh, 2021). While these methods can be
+effective in specific scenarios, they have significant limitations. Rulebased methods often depend on predefined rules constructed from
+expert knowledge (Hela, Amel, & Badran, 2018), which requires a
+significant amount of time and manpower, and they struggle to adapt
+to the complexity and dynamic changes of log data. Association-based
+methods, on the other hand, mine association rules from accumulated
+log data to detect anomalies (Lim, Singh, & Yajnik, 2008), However,
+they are often inefficient in dealing with voluminous log data and can
+be easily influenced by noise.
+Traditional log parsing methods, such as using regular expressions
+for system fault diagnosis (Vaarandi, Blumbergs, & Kont, 2018; Zhang,
+Fan, & Guo, 2018), also face challenges. These methods require manual
+customization of regular expressions to extract specific log events,
+which is not only time-consuming but also labor-intensive. Moreover,
+as software systems evolve and log formats diversify, manually crafted
+regular expressions often fail to adapt to new changes. When faced
+with complex software systems, these methods often cannot capture
+comprehensive patterns to guide anomaly detection. Therefore, to meet
+practical needs, it is necessary to explore techniques that transcend
+rules and patterns.
+2
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+learning abilities of the Siamese network, it overcomes the limitations
+of existing methods.
+However, these methods still have certain limitations when dealing
+with varying log data. Most of them adopt one-hot encoding vectors
+to process log events, which often performs poorly when handling
+newly emerging log events. Additionally, most of these methods rely
+on supervised learning, and the acquisition of labeled data in reallife scenarios often requires significant resources and domain-specific
+knowledge and experience, limiting their application scope to some
+extent.
+To overcome these limitations, some researchers have begun to
+borrow natural language processing (NLP) techniques to analyze log
+data. As a type of natural language sequence, log data possesses rich
+contextual and semantic information, providing new insights for NLPbased anomaly detection models. By merging LSTM models with TF-IDF
+weights, Zhang et al. (2016) accomplished specific results in the prediction of abnormal log messages. By leveraging WordVec and traditional
+classifiers like SVM and random forests, Bertero, Roy, Sauvanaud, and
+Trédan (2017) detected anomalies in log events, further confirming the
+efficacy of NLP techniques in anomaly detection within logs.
+Regardless of the progress achieved in utilizing NLP tools for the
+purpose of processing log data, these methods still have some shortcomings. Firstly, most of these models focus solely on the granularity
+of individual log events, ignoring the overall nature of log sequences.
+In practical applications, log events are often not isolated but interconnected and form sequences. Therefore, focusing solely on individual log
+events may not fully capture the contextual information of anomalous
+behaviors.
+Secondly, unlike traditional NLP models that emphasize contextual
+and semantic information, these anomaly detection models typically
+overlook semantic information when processing log data. Although log
+data differs from natural language text, they contain rich semantic information crucial for accurately identifying anomalous behaviors. Consequently, the crucial aspect of enhancing the performance of log-based
+anomaly detection lies in effectively integrating semantic information
+into the model.
+To cope with the issues stated above, we propose a model named
+DualAttlog for log anomaly detection, which leverages deep learning and NLP techniques. This model not only considers word-level
+semantic information within log sequences but also takes into account sequence-level semantic information. Additionally, it leverages
+a context-aware dual attention network to seamlessly combine wordlevel semantic information and sequence-level semantic information
+in log data. By doing so, DualAttlog can more accurately identify
+anomalous behaviors, strengthening the precision and robustness of
+anomaly detection.
+
+2.2. Machine learning-based methods
+Numerous researchers have devoted themselves to employing machine learning techniques in log-based fault detection, with the objective of boosting the accuracy and speed of anomaly detection. For
+instance, using a Support Vector Machine classifier, Liang, Zhang,
+Xiong, and Sahoo (2007) were able to successfully harness the powerful
+classification capabilities of machine learning in their analysis of log
+data, successfully detecting faults from event logs. Chen, Zheng, Lloyd,
+Jordan, and Brewer (2004) trained a decision tree model to detect
+anomalies in application operations, effectively capturing the associative relationships between log events through the hierarchical structure
+of the decision tree. Farshchi, Schneider, Weber, and Grundy (2015)
+suggested a regression model aimed at detecting anomalies in cloud
+systems by analyzing log data, thus extending the reach of machine
+learning in the field of log anomaly detection.
+Moreover, Breier and Branišová (2015) conducted a thorough investigation of various classical supervised classification models applied
+to log-based anomaly detection, providing valuable references and
+insights for subsequent researchers. These research attempts not only
+reveal the vast capabilities of machine learning in identifying log
+anomalies but also pave a solid path for future research endeavors.
+However, traditional machine learning methods, despite their accomplishments in detecting anomalies from logs, still possess notable
+constraints. Similar to rule-based and correlation-based methods, traditional machine learning methods have certain advantages in real-world
+scenarios but often lack robustness in handling unstable log data. As a
+result of the ever-changing and diverse nature of log data. traditional
+machine learning methods struggle to capture all possible anomaly
+patterns, resulting in limited performance in practical applications.
+Therefore, we must strive to further improve the precision and
+reliability of anomaly detection utilizing log data, it is necessary to
+explore more advanced and effective techniques. As a branch of machine learning, deep learning possesses powerful feature extraction
+and pattern recognition capabilities, introducing fresh possibilities for
+detecting anomalous behaviors from logs. Leveraging the power of deep
+learning, we are capable of processing and analyzing complex log data
+with greater efficiency, automatically learning and extracting meaningful features, ultimately enabling the accurate detection of anomalous
+behaviors.
+2.3. Deep learning-based methods
+In the last few years, the swift growth of deep learning has given
+new momentum to the realm of anomaly detection using logs. Zhang
+et al. (2016) initiated the application of LSTM models to model log
+keys, enabling the prediction of anomalous behaviors in log sequences.
+Du, Li, Zheng, and Srikumar (2017) broadened the application of
+LSTM models by predicting the next occurrence in the log sequence
+and comparing it to actual data for anomaly detection. Through the
+training of stacked LSTM models to simulate both regular and irregular operational log samples related to events, Vinayakumar, Soman,
+and Poornachandran (2017) successfully improved the accuracy of
+anomaly detection. Wang, Zhang, Wang and Cao (2021) proposed
+a logging sequence anomaly detection method based on contrastive
+adversarial training and dual feature extraction. This method employs
+BERT and VAE to extract semantic features and statistical features
+of logging sequences respectively, and combines these two types of
+features for anomaly detection of logging sequences. At the same time,
+a novel contrastive adversarial training method is adopted to train
+the model. Adeba, Kim, and Kwak (2024) presented a log anomaly
+detection method called SaRLog, which aims to address the challenges
+of balancing model complexity and generating semantically meaningful
+representations for downstream detection models. By leveraging the
+contextual semantic information extraction capabilities of Bidirectional
+Encoder Representations from Transformers (BERT) and the few-shot
+
+3. Our proposed approach
+3.1. Overview of the proposed model
+We will explore the nuances of our model in this segment, and Fig. 1
+outlines its structural design.
+Initially, the raw logs are processed through two branches. The
+initial semi-structured log data is transformed into structured log events
+by the first branch, utilizing log parsing techniques. Following that,
+every word within each log event is converted into a corresponding
+word vector. These word vectors are subsequently processed by a selfmatching attention network, which identifies and extracts semantic
+information specific to each word within the log sequence. This enables
+the model to focus on important information fragments within the log
+sequence while ignoring irrelevant information, resulting in a more
+accurate and robust semantic representation vector at the word level.
+Skipping the log parsing step, the second branch proceeds to input
+the raw logs directly into the RoBERTa (Liu et al., 2019) model. This
+3
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+Fig. 1. Model overall architecture.
+
+model then transforms the entire log sequence into a semantic vector
+with a fixed dimension, focusing on the log sequence level.
+Finally, to further integrate these vectorized log sequences, we utilize a context-aware dual attention network to combine the information
+from both branches. This allows us to better fuse the log information,
+as a result, the performance of the anomaly detection task based on
+logs is greatly enhanced.
+
+interaction features from the logs that have been parsed. Then, we
+fuse the word-specific details with the word-level semantic encoding
+of the log sequence, facilitated by the self-matching network (Yang,
+Zhao, et al., 2021). Once the preceding steps are completed, we determine a constant number of vectors representing word-word interactions
+throughout the entire log sequence.
+For the log sequence (𝑆 = [𝑠1 , 𝑠2 , … , 𝑠𝑔 ]), the self-matching attention
+network creates a self-attention-based feature vector: (𝑓𝑎 = 𝑆 ⋅𝑎), where
+(𝑎 ∈ 𝑅𝑛 ). According to the study in Yang, Zhao, et al. (2021), semantic
+inconsistency can be employed as a predictive factor for anomaly
+detection utilizing log data. Consequently, the self-attention vector (a)
+serves to detect inconsistencies that arise during the evolution of the
+log sequence.
+Xiong, Zhang, Zhu, and Yang (2019) pointed out that incoherence
+in sentences is mainly caused by conflicts between words, and they
+delved deeper into the interactions occurring between each word-word
+pairing. Drawing upon this, they proposed an ’intra-attention’ network,
+which computes the inner product of each word pair to represent their
+interaction information. Taking cue from the previous idea, we adapt
+this concept to log sequences and articulate the interaction information
+(𝑤(𝑖,𝑗) ) among words (𝑖) and (𝑗) in a given log sequence as detailed here:
+
+3.2. Word-level semantic module
+In this section, we elaborate on the word-level semantic encoding
+of log sequences. In the detection of log anomalies, encoding the semantic information at the word level within log sequences is of utmost
+importance. Word-level semantic information pertains to the manner
+in which words within log messages interact and the significance they
+carry within a given context. A self-matching attention network is
+leveraged to acquire the semantic information at the word level within
+log sequences. The self-matching attention network is an attention
+mechanism that can automatically learn and highlight important parts
+of the log sequence while ignoring irrelevant noise information (Yang,
+Zhao, et al., 2021). Specifically, To begin with, we extract inter-word
+4
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+3.3. Sequence-level semantic module
+𝑤𝑖,𝑗 = 𝐞𝑖 ⋅ 𝐞T𝑗
+
+(1)
+
+In this section, we will detail how to use a RoBERTa (Liu et al.,
+2019) model to encode the overall semantics of log sequences in order
+to capture sequence-level semantic features within them. RoBERTa (Liu
+et al., 2019) is an improved version based on BERT
+(Kenton & Toutanova, 2019), which achieves a profound understanding of textual context information through pre-training on large-scale
+corpuses.
+Firstly, we represent a log event sequence of length g as 𝑆 =
+[𝑠1 , 𝑠2 , … , 𝑆 𝑔 ]. Each log event 𝑠𝑖 contains a series of words or tokens
+that constitute the specific content of the event.
+To input the log event sequence into the BERT model, we need
+to perform a series of embedding operations. These include token
+embedding, segment embedding, and position embedding. To introduce
+the log event sequence into the RoBERTa (Liu et al., 2019) model, we
+must undertake a set of embedding steps. Specifically, token embedding
+maps each word or token to a fixed-dimensional vector space; segment
+embedding distinguishes different log events or sentences; and position
+embedding provides information about the position of words within the
+sequence. These embedding operations collectively constitute the input
+to the RoBERTa (Liu et al., 2019) model.
+Following the insertion of the embedded log event sequence into the
+RoBERTa (Liu et al., 2019) model, we leverage its powerful capabilities
+to process and analyze log data. The RoBERTa (Liu et al., 2019) model,
+a deep learning model rooted in Transformers technology, is comprised
+of several stacked encoder layers, each layer utilizing self-attention
+mechanisms and feed-forward neural networks.
+Firstly, The RoBERTa (Liu et al., 2019) model relies heavily on the
+self-attention mechanism as one of its fundamental components., allowing it to consider all other words in the sequence when processing each
+word. This mechanism enables RoBERTa (Liu et al., 2019) to capture
+global contextual information within log event sequences, namely the
+complex relationships between each word and other words. For log
+analysis, this global contextual information is particularly crucial as it
+helps us understand the contextual environment of log events, thereby
+enabling more accurate identification of anomalies or patterns.
+Secondly, the feed-forward neural network in the RoBERTa (Liu
+et al., 2019) model further processes the features output by the selfattention mechanism. Through the feed-forward neural network, the
+model performs nonlinear transformations on the captured global contextual information, extracting higher-level feature representations.
+These feature representations play a pivotal role in the subsequent tasks
+of detecting log anomalies.
+The entire log event sequence’s semantic representation is denoted
+by the special token [cls] present in the RoBERTa (Liu et al., 2019)
+model’s output. The vector output corresponding to the [cls] token is
+utilized as the holistic contextual representation for the complete log
+event sequence, denoted as 𝑓𝑙 , as detailed in the following equation:
+
+In this context, (𝑒𝑖 ) and (𝑒𝑗 ) denote the embedding vectors of words
+occupying the (𝑖)th and (𝑗)th positions in the log sequence.
+In our research, we employ the aforementioned technique in a comparable fashion to explore potential deep semantic data by contrasting
+information among words. However, we have noticed that the use of
+the inner product operation to calculate joint information tends to significantly dilute the informational distinctiveness between individual
+words. This may be because the inner product mainly focuses on capturing the similarity between two feature vectors and contributes little to
+processing log sequence information. Furthermore, word embeddings
+are designed to capture word occurrence patterns, but they may not
+necessarily be beneficial for our study of log sequences. Consequently,
+the inner product operation may not fully capture all the conflicts
+within log sequences, posing a significant challenge for our analysis.
+To mitigate this restriction, we propose a parameter matrix that
+builds on the principles of the c̈o-attentionm̈ethod. The c̈o-attention
+n̈etwork proposed by Lu, Yang, Batra, and Parikh (2016) has provided
+us with valuable insights, especially in addressing visual question answering tasks (Lu et al., 2016). They incorporate a correlation matrix to
+integrate the feature map 𝐺 of the input image and the representation 𝑇
+of the textual question, thereby constructing a more comprehensive and
+insightful interaction model. The formula for calculating the correlation
+matrix 𝑀 is as follows:
+(
+)
+𝑀 = tanh 𝑇 ⋅ 𝑊𝑎 ⋅ 𝐺
+(2)
+Here, 𝑊𝑎 represents the attention weight matrix, which plays a
+crucial role in the model and helps us better capture the relationships
+between different input elements.
+We employ joint activation methods, including row-wise and column-wise maximization, to simultaneously regulate the attention weights
+associated with (G) and (T). In order to strengthen the joint information
+capture between words, we enhance this approach by inserting a weight
+matrix connecting word pairs. For the specific word pair (𝑒𝑖 , 𝑒𝑗 ), the
+joint feature vector (𝑤𝑖,𝑗 ) is determined in the following manner:
+𝑤𝑖,𝑗 = tanh(𝐞𝑖 ⋅ 𝐌𝑖,𝑗 ⋅ 𝐞T𝑗 )
+
+(3)
+
+In this context, (𝑤𝑖,𝑗 ∈ 𝑅) encodes the joint data between 𝑤𝑜𝑟𝑑(𝑖) and
+𝑤𝑜𝑟𝑑(𝑗), whereas (𝑀𝑖,𝑗 ∈ 𝑅𝑘×𝑘 ) functions as a parametric matrix.
+Incorporating all joint information (𝑤𝑖,𝑗 ) for (𝑖, 𝑗 varying from 1
+to 𝑛), the computation of the self-matching information matrix (W)
+proceeds as described:
+⎛ 𝑤1,1
+⎜
+𝑤
+𝐖 = ⎜ 2,1
+⎜ ⋮
+⎜ 𝑤
+⎝ 𝑛,1
+
+𝑤1,2
+𝑤2,2
+⋮
+𝑤2,2
+
+…
+…
+⋱
+…
+
+𝑤1,𝑛 ⎞
+⎟
+𝑤2,𝑛 ⎟
+⋮ ⎟
+𝑤𝑛,𝑛 ⎟⎠
+
+(4)
+
+𝑓𝑙 = 𝑅𝑜𝐵𝐸𝑅𝑇 𝑎𝑐𝑙𝑠 (𝑆)
+
+Employing the maximization activation approach, we determine the
+self-matching attention vector 𝑎 by computing the intermediate vector
+𝑚 ∈ 𝑅𝑛 through maximizing the elements of 𝑊 on a row-by-row basis,
+as detailed below.
+(
+)
+𝑚𝑖 = max 𝑤𝑖,1 , 𝑤𝑖,2 , … , 𝑤𝑖,𝑛 , ∀𝑖 ∈ (1, 2, … , 𝑛)
+(5)
+
+(6)
+
+It is worth noting that this vector incorporates all semantic details
+from the log event sequence, making it suitable for use in subsequent
+anomaly detection tasks. Additionally, The RoBERTa (Liu et al., 2019)
+model’s output dimension is standardized, preserving the consistency of
+the output vector’s dimension across different lengths of input log event
+sequences. This provides a convenient way to handle variable-length
+log data.
+In summary, by utilizing a RoBERTa (Liu et al., 2019) model as an
+encoder layer, we can effectively capture global semantic features from
+log data and represent them as fixed-dimension vectors. These vectors
+have the potential to act as input features for future anomaly detection
+models, thereby potentially enhancing the accuracy and efficiency with
+which anomalies are detected.
+
+In conclusion, we generate a semantic information representation
+at the word level for log messages by constructing interactive features
+among words, fusing self-matching attention networks, and portraying
+them as vectors with a fixed number of dimensions. This representation
+method can effectively capture key information and local semantic
+relationships in log messages, providing strong support for subsequent
+anomaly detection tasks.
+5
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+input sequence {𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙𝑖 }𝑇𝑖=1 . The weights are calculated based on
+the memory vector 𝑚(𝑘−1)
+from the previous step, which encodes
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙
+the accumulated information from previous steps of the model. This
+is represented as:
+
+3.4. Log context aware dual attention module
+Log context aware dual attention module are a crucial component
+of the model proposed in this paper, particularly when dealing with
+sequential data. By enabling the model to concentrate on the most
+significant sections of the input data, they effectively bolster its ability
+to express and learn. The attention mechanism is particularly important
+when processing complex temporal features and long sequences, such
+as log sequences.
+In our model, we introduce two types of attention mechanisms:
+local semantic attention(word-level semantic information) and global
+semantic attention(sequence-level semantic information). These mechanisms operate independently, enhancing the model’s ability to capture
+different features.
+Local Semantic Attention Mechanism: This mechanism primarily
+focuses on local, short-term dependencies. When processing log sequences, it helps the model capture frequent short-term patterns, such
+Word-level semantic information in system states. By assigning greater
+weights to these short-term patterns, the model can better understand
+and predict future events.
+Global Semantic Attention Mechanism: Unlike the local semantic
+attention mechanism, the global semantic attention mechanism focuses
+more on global, long-term information. When dealing with long sequence data, this mechanism aids the model in capturing long-term
+trends and patterns. For instance, when analyzing system logs, global
+semantic attention can help the model understand the overall system
+state and behavior patterns across different time points.
+These two attention mechanisms operate independently, capturing different features and patterns. However, by complementing each
+other, they jointly improve the model’s ability to comprehend and
+forecast complex log sequences. In the following sections, we will
+elaborate on how these two attention mechanisms function within our
+model.
+
+(𝑘−1)
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙(𝑘) = 𝐺𝑙𝑜𝑏𝑎𝑙_𝐴𝑡𝑡𝑒𝑛({𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙𝑖 }𝑇𝑖=1 , 𝑚𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙
+)
+
+where 𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙(𝑘) is the context vector and 𝑚(𝑘−1)
+is the memory
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙
+vector.
+Specifically, for each sentence 𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙𝑖 in the input sequence, the
+model first computes a hidden state ℎ(𝑘)
+through a nonlinear
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙,𝑖
+transformation (such as the tanh function). This hidden state is a
+function of the log sequence itself and the memory vector, combining
+them through element-wise multiplication.
+This process can be expressed by the following equations:
+(𝑘)
+ℎ(𝑘)
+= tanh(𝑊𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙𝑖 )⊙
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙,𝑖
+(𝑘)
+tanh(𝑊𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙,𝑚
+𝑚(𝑘−1)
+)
+𝑢
+(𝑘)
+(𝑘)
+𝛼𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙,𝑖
+= sof tmax(𝑊𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙,ℎ
+ℎ(𝑘)
+)
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙,𝑖
+∑ (𝑘)
+(𝑘)
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙 =
+𝛼𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙,𝑖 𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙𝑖
+
+(7)
+
+(𝑘)
+(𝑘)
+𝛼𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,𝑗
+= sof tmax(𝑊𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,ℎ
+⋅ ℎ(𝑘)
+)
+𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,𝑗
+∑ (𝑘)
+(𝑘)
+𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙 =
+𝛼𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,𝑗 ⋅ 𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙𝑗
+
+(14)
+
+3.5. Model fusion mechanism
+
+tion taken into account until the 𝑘 − 1th step.
+Using a two-layer feed-forward neural network (FNN), the attention
+(𝑘)
+weights {𝛼𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,𝑛
+}𝑁
+are computed, and then a softmax function is
+𝑗=1
+applied to them. This entire process is outlined in the following manner:
+
+(𝑘)
+tanh(𝑊𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,𝑚
+⋅ 𝑚(𝑘−1)
+)
+𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙
+
+(13)
+
+Next, the model uses another network layer to compute the at(𝑘)
+tention weights 𝛼𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙,𝑖
+. Typically, this procedure encompasses subjecting the hidden states to a linear transformation and subsequently
+normalizing them using the softmax function, guaranteeing that the
+collective sum of all weights equals unity. These weights reflect the
+model’s focus on each log sequence in the input sequence at the current
+step 𝑘.
+Finally, utilizing the attention weights computed, the model performs a weighted aggregation of the input sequence, thereby obtaining
+the global semantic context vector 𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙(𝑘) . This vector integrates
+information from different log sequences in the input sequence and
+emphasizes those most relevant to the current task. This context vector
+will be used as input for subsequent steps, guiding the model for further
+processing and prediction.
+Unlike focusing solely on local information, the global semantic
+attention mechanism boasts the advantage of encompassing global
+information within the input sequence. By doing so, the model gains
+a deeper and more holistic comprehension of the overall structure and
+content within the log sequences, thereby more accurately identifying
+key sentences and features relevant to the current task. This is especially important for processing long sequence data since long sequences
+often contain rich global information and long-term dependencies.
+
+(𝑘−1)
+serves as a memory vector, encoding all the informaHere, 𝑚𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙
+
+(𝑘)
+ℎ(𝑘)
+= tanh(𝑊𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙
+⋅ 𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙𝑗 )⊙
+𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,𝑗
+
+(12)
+
+𝑖
+
+3.4.1. Local semantic attention of log sequence
+The main objective of local semantic attention is to produce a
+context vector by giving preferential attention to certain sections of
+the word-level semantic encoding input from the log sequence. In other
+words, local semantic attention zeroes in on crucial words within each
+input sequence, enabling the derivation of a context vector. For step
+𝑘, the context vector 𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙(𝑘) for the local semantic log sequence is
+obtained by the following formula:
+)
+𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙(𝑘) = 𝐿𝑜𝑐𝑎𝑙_𝐴𝑡𝑡𝑒𝑛({𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙𝑗 }𝑁
+, 𝑚(𝑘−1)
+𝑗=1
+𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙
+
+(11)
+
+The schematic representation of our dual attention network is presented in Fig. 1. At the heart of our network lies the fusion memory
+connection vector, which is introduced in this section. Alternatively
+stated, DualAttlog functions through the transmission of memory connection vectors, functioning as a conduit that combines local semantic
+details with global semantic insights extracted from log sequences. It
+also plays a role in gradually transmitting information. According to the
+following equations, 𝑚(𝑘) serves as a fusion memory vector, responsible
+for storing the accumulated local and global semantic details obtained
+from earlier steps 𝑘:
+
+(8)
+
+(9)
+(10)
+
+𝑚(𝑘) = 𝑚(𝑘−1) + 𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙(𝑘) ⊙ 𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙(𝑘)
+
+𝑗
+(𝑘)
+(𝑘)
+(𝑘)
+where 𝑊𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙
+, 𝑊𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,𝑚
+, and 𝑊𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,ℎ
+are network parameters,
+(𝑘)
+ℎ𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙,𝑗 is the hidden state, and ⊙ denotes element-wise multiplica-
+
+(𝑘)
+
+(15)
+
+Here, 𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙
+represents the local semantic vector, while
+𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙(𝑘) signifies the global semantic vector, both derived from the
+preceding section.
+By means of this fusion technique, both local and global attention
+𝑘
+𝑘
+are simultaneously steered, i.e., 𝑚(𝑘) = 𝑚(𝑙𝑜𝑔_𝑙𝑜𝑐𝑎𝑙 ) = 𝑚(𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙 ) .
+Consequently, the two attention mechanisms can function in close
+cooperation.
+
+tion.
+3.4.2. Global semantic attention of log sequence
+The global semantic attention mechanism first computes a context
+vector 𝑙𝑜𝑔_𝑔𝑙𝑜𝑏𝑎𝑙(𝑘) by weighted summing each log sequence in the
+6
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+Table 1
+Detailed statistics of public datasets.
+
+Table 2
+Detailed statistics of production environment datasets.
+
+Dataset name
+
+Dataset size
+
+Number of
+log messages
+
+Number of
+abnormal logs
+
+Dataset name
+
+Dataset size
+
+Number of
+log messages
+
+Number of
+abnormal logs
+
+HDFS (Zhu et al., 2019)
+BGL (Zhu et al., 2019)
+BGP (Zhu et al., 2019)
+Thunderbird (Zhu et al., 2019)
+Spirit (Oliner & Stearley, 2007)
+Liberty (Oliner & Stearley, 2007)
+Zookeeper (Zhu et al., 2019)
+
+1.58GB
+1.207GB
+1.04GB
+27.367GB
+30.289GB
+29.5GB
+10.4M
+
+11,175,629
+4,747,963
+11,428,282
+211,212,192
+272,298,969
+266,991,013
+74,380
+
+362,793
+949,024
+1,276,742
+43,087,287
+78,360,273
+191,839,098
+49,124
+
+Real-Industrial W
+Real-Industrial Q
+
+1.36 GB
+1.15 GB
+
+3,275,859
+2,973,597
+
+214,780
+185,620
+
+The introduction of new log events during system updates poses significant challenges for anomaly detection based on log data mining,
+making them highly suitable for validating our approach. We have
+collected log data from dates before and after system updates, ensuring
+that the new log events in these two datasets were introduced by the
+deployed updates.
+
+The global context vectors, 𝑡(0) and 𝑢(0) , form the basis for the initial
+memory vector, 𝑚(0) :
+𝑚(0) = log _𝑙𝑜𝑐𝑎𝑙(0) ⊙ log _𝑔𝑙𝑜𝑏𝑎𝑙(0)
+(
+)
+∑
+(0)
+(0) 1
+log _𝑙𝑜𝑐𝑎𝑙 = tanh 𝑃
+𝑡
+𝑁 𝑗 𝑗
+1 ∑
+log _𝑔𝑙𝑜𝑏𝑎𝑙(0) =
+𝑢
+𝑇 𝑖 𝑖
+
+(16)
+
+4.2. Training and hyper-parameters
+
+(17)
+
+This section focuses on explaining the process of determining fixed
+hyperparameters for our model. During the pre-training phase, we employed a basic version of RoBERTa to generate pre-trained embeddings.
+Empirical evidence indicates that a dual attention step count (denoted
+as K) of 2 yields optimal performance. For optimization, we decided
+to utilize the Adam Optimizer algorithm, specifying a value of 0.9 for
+the first momentum coefficient 𝛽1 and 0.999 for the second momentum
+coefficient 𝛽2 .
+Furthermore, We have taken great care in setting the initial learning
+rate and the L2 regularization parameter. The initial learning rate was
+[
+]
+chosen from the range of 1 × 10−9 , 4 × 10−5 , 1 × 10−7 , while the L2 reg[
+ularization parameters were set within the range of 1 × 10−6 , 4 × 10−7 ,
+]
+1 × 10−7 . Additionally, we experimented with batch sizes of [64, 128,
+256]. These hyperparameters were fine-tuned using development sets
+and subsequently validated on test sets. We performed our experiments on NVIDIA TESLA V100 GPU hardware, leveraging the PyTorch
+framework.
+
+(18)
+
+During this process, dual attention and memory are updated 𝑘 times.
+Finally, We predict the detection results by means of a single-layer
+softmax classifier, which incorporates cross-entropy loss, and the input
+for this classifier is the memory unit 𝑚(𝐾) :
+𝑝𝑖 = 𝑠𝑜𝑓 𝑡𝑚𝑎𝑥(𝑊𝑓 ⋅ 𝑚(𝐾) + 𝑏)
+
+(19)
+
+∈ 𝑅2 indicates whether the input log sequence is regular
+
+Here, 𝑝𝑖
+or irregular, and 𝑊𝑓 ∈ 𝑅2×𝑐 along with 𝑏 ∈ 𝑅2 are the adjustable
+parameters.
+3.6. Training objective
+For the task of log-based anomaly detection, the loss function
+adopted corresponds to the conventional cross-entropy formulation. Its
+mathematical expression is given below.
+𝐽 (𝜃) = −
+
+𝑁
+∑
+[
+
+]
+𝑦𝑖 ⋅ log(𝑝𝑖 ) + (1 − 𝑦𝑖 ) ⋅ log(1 − 𝑝𝑖 ) + 𝜆 ⋅ 𝑅
+
+5. Experimental results
+For a more comprehensive evaluation of the performance of our proposed mode, we have formulated four research inquiries and performed
+corresponding experiments in order to assess the effectiveness of the
+model introduced in this research.
+
+(20)
+
+𝑖=1
+
+Here, 𝑁 stands for the total number of instances in the training dataset, and 𝑦𝑖 indicates the true label assigned to the 𝑖th log
+sequence. The set of model parameters is encompassed by 𝜃, including {𝑀𝑖,𝑗 , 𝑈 , 𝑉 , 𝑔, 𝑊𝑓 , 𝑏}. The regularization term, expressed as 𝑅 =
+‖𝜃‖𝐿2 , measures the magnitude of the model parameters, and 𝜆 is a
+hyperparameter that controls the impact of the regularization term.
+
+RQ1: Does the model outlined in this paper have the potential to
+achieve a higher level of performance in log anomaly detection
+compared to the most advanced methods?
+For the purpose of evaluating the log anomaly detection capabilities
+of our model, we plan to benchmark it against seven established models
+across seven publicly available datasets. By adopting this comparison
+method, we can conduct a thorough evaluation of the proposed model’s
+performance and gain insights into its performance variations across
+various datasets.
+
+4. Experimental setup
+4.1. Dataset
+The public datasets used in this article include seven types, specifically: HDFS dataset (Zhu et al., 2019), BGL dataset (Zhu et al., 2019),
+BGP dataset (Zhu et al., 2019), Thunderbird dataset (Zhu et al., 2019),
+Spirit dataset (Oliner & Stearley, 2007), Liberty dataset (Oliner &
+Stearley, 2007), and ZooKeeper dataset (Zhu et al., 2019). Detailed
+information is provided in Table 1.
+In addition to the public datasets, we have also collected two
+authentic industrial log datasets from large enterprises, namely RealIndustrial W dataset and Real-Industrial Q dataset. The detailed information is presented in Table 2. Specifically, Real-Industrial W is
+a financial transaction service based on a microservices architecture,
+serving millions of users. Real-Industrial Q is a WEB-based distributed
+online commodity trading service, also serving millions of users. These
+two services generate millions of log sequences daily. Both are composed of multiple components and are deployed with weekly updates.
+
+RQ2: What is the contribution of the key model components in the
+model proposed in this paper to the overall performance?
+To answer the above question, we divide the proposed model into
+three key components (using only local semantic representation, using
+only global semantic representation, and removing the dual attention
+network). We conducted experiments on multiple datasets for each of
+these key components to evaluate their individual contributions to the
+overall model.
+RQ3: How does the size of parameters, particularly the hidden
+state dimension of the dual attention network and the number
+of dual attention network steps K, influence the overall model’s
+performance in this paper?
+There are many key parameters in the model proposed in this
+chapter. We selected the iteration steps K of the dual attention network
+7
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+Table 3
+Detailed experimental results on seven public datasets.
+Datasets
+
+Metric
+
+DeepLog⋆
+
+LogAnomaly⋆
+
+PLELog⋆⋆
+
+OC4Seq
+
+LogRobust
+
+NeuralLog
+
+CAT
+
+DualAttlog
+
+HDFS
+
+Precision
+Recall
+F1-score
+
+88.39%
+83.32%
+85.78%
+
+79.43%
+98.15%
+87.80%
+
+87.85%
+89.52%
+88.68%
+
+89.38%
+89.74%
+89.56%
+
+94.37%
+96.82%
+95.58%
+
+93.65%
+91.47%
+92.55%
+
+94.53%
+97.75%
+96.11%
+
+96.58%
+98.78%
+97.67%
+
+BGL
+
+Precision
+Recall
+F1-score
+
+87.26%
+86.34%
+86.80%
+
+81.39%
+98.59%
+89.17%
+
+88.21%
+91.67%
+89.91%
+
+90.53%
+90.21%
+90.37%
+
+95.52%
+97.38%
+96.44%
+
+94.39%
+92.45%
+93.41%
+
+95.68%
+98.84%
+97.23%
+
+97.25%
+98.89%
+98.06%
+
+BGP
+
+Precision
+Recall
+F1-score
+
+78.65%
+87.69%
+82.92%
+
+79.82%
+88.91%
+84.12%
+
+83.28%
+89.76%
+86.40%
+
+86.59%
+90.83%
+88.66%
+
+93.62%
+95.57%
+94.58%
+
+91.52%
+92.62%
+92.07%
+
+95.32%
+91.38%
+93.31%
+
+96.45%
+95.65%
+96.05%
+
+Thunderbird
+
+Precision
+Recall
+F1-score
+
+86.43%
+85.95%
+86.19%
+
+83.84%
+86.83%
+85.31%
+
+85.37%
+87.29%
+86.32%
+
+86.29%
+88.63%
+87.44%
+
+93.85%
+93.59%
+93.72%
+
+91.58%
+92.38%
+91.98%
+
+93.87%
+90.28%
+92.04%
+
+95.48%
+96.92%
+96.19%
+
+Spirit
+
+Precision
+Recall
+F1-score
+
+74.65%
+82.17%
+78.23%
+
+75.86%
+83.62%
+79.55%
+
+76.92%
+84.71%
+80.63%
+
+78.93%
+86.65%
+82.61%
+
+91.85%
+93.24%
+92.54%
+
+89.29%
+93.53%
+91.36%
+
+92.37%
+94.53%
+93.44%
+
+93.52%
+96.56%
+95.02%
+
+Liberty
+
+Precision
+Recall
+F1-score
+
+72.13%
+81.57%
+76.56%
+
+73.86%
+87.19%
+79.97%
+
+78.62%
+88.67%
+83.34%
+
+81.53%
+90.12%
+85.61%
+
+92.25%
+94.72%
+93.47%
+
+91.45%
+91.59%
+91.52%
+
+93.32%
+93.84%
+93.58%
+
+94.86%
+95.69%
+95.27%
+
+ZooKeeper
+
+Precision
+Recall
+F1-score
+
+75.34%
+82.56%
+78.78%
+
+77.68%
+85.29%
+81.31%
+
+81.25%
+87.62%
+84.31%
+
+82.53%
+90.12%
+86.16%
+
+93.52%
+92.82%
+93.17%
+
+92.95%
+91.59%
+92.26%
+
+95.32%
+96.45%
+95.88%
+
+96.29%
+97.64%
+96.96%
+
+and the hidden state dimension. We performed experiments utilizing
+various datasets in order to assess the effect of these key parameters
+on the overall model’s functionality.
+
+semi-supervised models (such as PLELog (Yang, Chen, et al., 2021)),
+we also adhered to the original paper’s dataset splitting, evaluation
+methods, and training parameter settings. This approach aims to ensure
+the objectivity and fairness of the experimental results, enabling a more
+accurate assessment of the performance of different methods in the field
+of log analysis.
+The evaluation results in Table 3 (where ⋆ represents unsupervised
+methods, ⋆⋆ represents semi-supervised methods, and the others are
+supervised methods) show the highest F1 scores highlighted in bold:
+(1) Compared to supervised learning methods, unsupervised learning methods (DeepLog (Du et al., 2017) and LogAnomaly (Meng et al.,
+2019)) exhibited significantly lower effectiveness in aspect of F1 scores.
+This is because they were originally designed to treat all training
+samples as normal. As a result, when making inferences, they are
+inclined to categorize any sample without recognizable log templates
+as abnormal, leading to a situation where recall is high but precision is
+low, ultimately causing reduced F1 scores.
+(2) Semi-supervised learning methods (PLELog (Yang, Chen, et al.,
+2021)) outperformed unsupervised learning methods (DeepLog (Du
+et al., 2017) and LogAnomaly (Meng et al., 2019)) in terms of F1
+scores. This is primarily due to their ability to leverage partially labeled
+data. These labeled data provide some guidance to the model, enabling
+it to more accurately distinguish between normal and abnormal patterns, thereby improving precision. In contrast, unsupervised learning
+methods lack explicit label guidance, making it difficult to accurately
+identify abnormal patterns during training, resulting in lower precision.
+However, the F1 scores of semi-supervised learning methods are still
+lower than those of supervised learning methods because they can
+only utilize partially labeled data. This means that compared to fully
+supervised methods with abundant labeled data for precise model
+training, their guidance between normal and abnormal instances is
+relatively limited.
+(3) In the task of log anomaly detection, when it comes to performance, supervised learning methods can be more effective than both
+unsupervised and semi-supervised learning methods. This is primarily
+attributed to the requirement of labeled datasets in supervised learning,
+which provide known input–output correspondences. This correspondence enables the model to directly learn the clear boundaries between
+abnormal and normal patterns during training. Therefore, when faced
+with new log data, supervised learning models can more accurately
+identify anomalies. Consequently, most supervised learning methods
+(OC4Seq (Wang, Chen, et al., 2021),LogRobust (Zhang et al., 2019),
+
+RQ4: How do the various layers of RoBERTa, which are utilized
+in the model introduced in this paper, contribute to its overall
+performance?
+The model introduced in this paper employs the base version of
+RoBERTa, consisting of a total of 12 layers. We question whether the
+semantic information extracted from all 12 layers has an identical influence on the proposed model’s functionality. To answer this question,
+We undertook a series of experiments to validate the contribution of
+diverse layers to the model proposed in this chapter.
+5.1. Model comparisons
+In addressing research question (RQ1), we conducted a comprehensive evaluation of the performance of DualAttlog in the task of log
+anomaly detection. To ensure the broad applicability and reliability
+of our experimental results, we carefully selected 7 publicly available
+datasets and further introduced 2 datasets from real-world production
+environments for model training and testing. In the following, we will
+elaborate on the specific application of these datasets in the evaluation
+process.
+5.1.1. Experiments on public datasets
+To ensure the fairness and accuracy of the comparative experiments,
+this paper carefully selected seven baseline methods and conducted detailed experiments on seven publicly available and unified datasets. For
+supervised learning methods, including OC4Seq (Wang, Chen, et al.,
+2021), LogRobust (Zhang et al., 2019), NeuralLog (Le & Zhang, 2021),
+CAT (Zhang et al., 2022), and DualAttlog, we adhered to strict principles for dataset splitting. Specifically, we divided the datasets into
+training and testing sets in chronological order, with 80% of the data
+used for model training and the remaining 20% reserved for evaluating model performance. During the training process, we fully utilized
+labels as feedback to guide the optimization of the models. However,
+during the testing phase, we followed the conventional approach of
+supervised learning models and did not use any form of feedback.
+Furthermore, to ensure reproducibility and consistency of the experiments, we maintained the same parameter settings as in the original
+papers during the training process. For unsupervised models (such as
+DeepLog (Du et al., 2017) and LogAnomaly (Meng et al., 2019)) and
+8
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+Fig. 2. Detailed results on two production environment datasets.
+
+to ensure the fairness and accuracy of the comparative experiments,
+allowing our proposed method to be compared with these baseline
+methods under identical conditions. Fig. 2 depicts the results:
+The information in Fig. 2 reveals that, LogRobust (Zhang et al.,
+2019) and CAT (Zhang et al., 2022) are the most powerful baseline
+models for log-based anomaly detection tasks. Our DualAttlog model
+exhibited superior performance on both datasets, as evident from the
+experimental results. Specifically:
+(1) Our model surpassed the benchmark model CAT (Zhang et al.,
+2022) by 2.97% in F1-Score on the Real-Industrial W dataset, achieving
+significance at 𝑝 < 0.05 on the student t-test. Similarly, it exceeded
+LogRobust (Zhang et al., 2019) by 2.62% with the same level of
+significance.
+(2) Our model surpassed the benchmark model CAT (Zhang et al.,
+2022) by 4.10% in F1-Score on the Real-Industrial Q dataset, achieving
+significance at 𝑝 < 0.05 on the student t-test. Similarly, it exceeded
+LogRobust (Zhang et al., 2019) by 4.22% with the same level of
+significance.
+The reason for our model’s superior performance on the two realworld production environment datasets lies in its ability to explore
+the interactive features between words and capture the semantic relationships among them during the process of log message evolution.
+Additionally, We calculate the interactive information existing between
+every individual word and every pair of words within the given log
+sequence, and utilize a self-matching attention network to handle the
+log sequence and generate word-level semantic vectors.
+Moreover, we utilize the RoBERTa model to encode the entire
+log sequence and generate a sequence-level semantic vector. Finally,
+we leverage an innovative context aware dual-attention network for
+logs to fuse word-level and sequence-level information while reducing the impact of noise on model performance. Consequently, Our
+final experimental results confirm that our technique attains significant
+performance when dealing with log-based anomaly detection tasks.
+
+NeuralLog (Le & Zhang, 2021), and CAT (Zhang et al., 2022)) exhibit
+good performance.
+(4) The method proposed in this paper demonstrates the best performance across all datasets. This is mainly because it takes a holistic
+view, encompassing both situations where a log parser is required and
+where it is not. In the case of no log parser being utilized, the method
+directly utilizes a pre-trained model for global semantic extraction from
+log sequences (similar to NeuralLog (Le & Zhang, 2021), effectively
+addressing log noise issues). When a log parser is required, it utilizes
+a self-matching attention network to extract word-level semantics from
+logs (similar to LogRobust (Zhang et al., 2019), better handling log evolution issues). Subsequently, by adopting our proposed context aware
+dual-attention network, it attains the highest level of performance by
+integrating these two kinds of information.
+5.1.2. Experiments on two real-world production datasets
+In order to more effectively assess the performance of the proposed model in actual production settings, we collected two datasets
+from real-world operational systems and divided them in chronological
+order. Among these, 80% of the data was used as the training set,
+while the remaining 20% was reserved for testing. During the training
+process, for all four models (LogRobust (Zhang et al., 2019), NeuralLog (Le & Zhang, 2021), CAT (Zhang et al., 2022), and DualAttlog),
+we integrated labels as feedback to ensure that the models could learn
+accurate data patterns.
+However, during the testing phase, we strictly adhered to the standard methodology of supervised learning models, refraining from using
+any form of feedback. This approach aimed to guarantee the objectivity
+and fairness of the testing results, reflecting the models’ performance
+on unseen data accurately.
+For the three selected baseline methods (LogRobust (Zhang et al.,
+2019), NeuralLog (Le & Zhang, 2021), and CAT (Zhang et al., 2022)),
+we paid particular attention to maintaining their training parameters
+consistent with the settings in the original papers. This was done
+9
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+Fig. 3. Ablation study.
+
+reason is that the log context aware dual attention module excels at
+capturing the semantic relationship between word-level and sequencelevel meanings in log messages. Therefore, removing this component
+can degrade the overall model performance.
+In summary, our proposed model utilizes self-matching attention
+to capture word-level semantic information and RoBERTa to capture sequence-level semantic information. By adopting the log context
+aware dual attention module, it fully captures interactive features in the
+sequence at both the word-level and global sequence-level, maximizing
+log-based anomaly detection performance.
+
+5.2. Ablation study
+To gain a comprehensive understanding of how each essential part
+of our model contributes to its overall performance (RQ2), we conducted a set of ablation experiments, decomposing the entire model
+into three derivative models. To enhance the validation process of our
+model, we conducted a series of ablation studies across three datasets.
+The findings of the experiment are depicted in Fig. 3.
+The three derivative models are as follows: Model (1): Only use
+word-level semantic module; Model (2): Only use sequence-level semantic module; Model (3): Without log context aware dual attention
+module.
+From the ablation experiment results shown in Fig. 3, several observations can be made. Firstly, comparing Model (1) and Model (2),
+Model (2) exhibits a performance decrease of 3.89%, 1.85%, and 4.85%
+in F1-score on the HDFS, Real Industrial W, and BGL datasets, respectively. This indicates that only use sequence-level semantic module
+slightly degrades the model’s performance compared to only use wordlevel semantic module. This suggests that, while both are important for
+our method, the Only use word-level semantic module may be more
+crucial. This is primarily because the Only use word-level semantic
+module, by exploring word-word interaction features, captures deep
+semantic information from the evolution of log messages. Therefore,
+obtaining rich semantic representations is a valuable solution.
+Secondly, comparing Model (3) with both Model (2) and Model
+(1), the results show that Model (3) outperforms both on the HDFS,
+BGL, and Real Industrial W datasets. These results indicate that even
+when the log context aware dual attention module is removed, its
+performance is still better than using either representation alone. The
+combined use of both types of information better addresses log-based
+anomaly detection tasks.
+Lastly, we compared Model (3) with our proposed model, DualAttlog. On the HDFS, Real Industrial W, and BGL datasets, Model (3)
+exhibited accuracy reductions of 8.47%, 5.98%, and 8.37%, respectively. The findings confirm that the log context aware dual attention
+module plays a crucial role in our proposed method. This primary
+
+5.3. Sensitivity analysis of parameters
+In this part, we assess the effect of several key parameters on the
+proposed model (RQ3). For instance, the influence of the hidden layer’s
+dimensionality and the number of iterations 𝐾 within the context aware
+dual attention network on three datasets (HDFS dataset, BGL, and Real
+Industrial W).
+Initially, we aim to investigate the impact of the hidden layer
+dimension within the context-aware dual attention network model on
+its overall performance, we conducted a series of experiments and conducted a detailed analysis of the results. Fig. 4 exhibits the experimental
+results, revealing several crucial trends.
+(1) On three different datasets, the F1 score of the model demonstrates a clear upward trend when the hidden layer dimension falls
+below 300. This suggests that, within a certain range, increasing the
+hidden layer dimension can indeed enhance the effectiveness of the
+model. This stems from the fact that an increased dimension enables
+the model to gather a richer set of feature information, thereby better
+understanding the intrinsic structure of the data.
+(2) Notably, when the hidden layer dimension is exactly 300, the F1
+score of the model reaches its peak. This finding indicates that at this
+specific dimension, the model can most effectively utilize additional
+log data feature information to achieve optimal performance. This may
+be due to the fact that a 300-dimensional hidden layer can provide
+a feature representation space that is neither too complex nor too
+10
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+Fig. 4. Hidden layer parameter analysis of context aware dual attention.
+
+simple, enabling the model to fully learn the details of the data while
+maintaining generalization ability.
+(3) When the hidden layer dimension exceeds 300, we observe a
+decline in the model’s accuracy on the validation and test sets. This
+could be due to the emergence of overfitting. When the model’s complexity is too high, it may pay too much attention to noise and details
+in the training data, ignoring the overall structure of the data. This
+results in poor performance on unseen data, indicating a decrease in
+generalization ability. Additionally, insufficient training data may also
+contribute to the decline in performance. With limited training data, an
+overly complex model may have difficulty fully learning the inherent
+patterns of the data, affecting its performance on the validation and test
+sets.
+Overall, our experimental findings reveal that the dimension of the
+hidden layer exerts a notable influence on the effectiveness of the
+context-aware dual attention network model. Increasing the dimension
+within a certain range can improve model performance, but an excessively large dimension may lead to overfitting and a decrease in
+performance. Therefore, in practical applications, we need to select an
+appropriate hidden layer dimension derived from the characteristics of
+the specific task and dataset to gain optimal model performance.
+Next, we delve deeper into the impact the steps 𝐾 in the context
+aware dual attention network on model performance and conduct
+a comparative analysis across three different datasets. As shown in
+Fig. 5, when the steps 𝐾 in the dual attention network is set to 2, our
+model reaches the utmost accuracy on all three datasets. This discovery
+provides important clues for understanding the working mechanism of
+the model and optimizing its performance.
+(1) When steps 𝐾 is small, the model may face the problem of
+insufficient fitting. This is because a smaller number of steps means that
+the model may not fully capture the dependencies between log events,
+unable to fully extract and utilize useful information from the data.
+This constraint diminishes the model’s comprehension of the inherent
+structure and patterns in the log data, thereby affecting its accuracy in
+making predictions and classifications.
+(2) When steps 𝐾 is large, the model may experience overfitting.
+A longer number of steps makes the model overly focus on the details
+and noise in the data during training, ignoring the overall structure and
+
+generalization ability. This results in poor performance on unseen data,
+indicating a decrease in generalization ability. Additionally, A greater
+number of steps can also result in an increase in the computational
+demands and training duration required by the model, reducing its
+efficiency.
+(3) Notably, selecting the appropriate steps 𝐾 is crucial for the
+performance of the dual attention network. In this experiment, we
+found that the model performs best when 𝐾 is set to 2. This may be
+because, under this setting, the model can fully capture the dependencies between log events while avoiding overfitting and increasing
+computational complexity. This result provides a useful reference for
+adjusting model parameters in practical applications.
+In summary, through a comparative analysis of steps 𝐾 in the
+context aware dual attention network, We realized that steps play
+a crucial role in determining the model’s performance. Selecting the
+appropriate steps can ensure that the model fully learns from the data
+while avoiding overfitting and increasing computational complexity,
+thereby achieving optimal model performance.
+5.4. Exploration of distinct RoBERTa layers
+To explore the impact that different layers of RoBERTa have on the
+overall functionality of the model(RQ4), in this paper, we performed a
+sequence of experimental tests by applying the dual-attention network
+component on top of different layers of RoBERTa. By comparing the
+performance of single-layer, multi-layer, and full-layer Transformers,
+we aimed to reveal the differences in feature extraction and semantic
+understanding capabilities across various layers of RoBERTa.
+In terms of experimental design, We designated the 𝑘th layer (where
+k is 1, 3, 6, 9, or 12) of RoBERTa as the exclusive layer for our experimental analysis. For the configuration of multi-layer Transformers, We
+step by step enhanced the number of layers and tested combinations
+such as 1,3, 1,3,6, and 1,3,6,9. Finally, we also evaluated the full-layer
+Transformer, which involved applying the dual-attention network after
+each layer of RoBERTa for analysis. All experiments were conducted on
+the Real-Industrial W dataset to ensure consistency and comparability
+of the results. The outcomes of the experiments are showcased in
+Table 4.
+11
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+Fig. 5. Steps K analysis of context aware dual attention.
+Table 4
+Analysis of RoBERTa’s layer performance variations.
+single
+
+Layer
+F1
+
+1
+0.7325
+
+3
+0.7569
+
+1,3
+
+1,3,6
+
+6
+0.7197
+
+1,3,6,9
+
+full
+
+0.7413
+
+0.7385
+
+0.7294
+
+0.6473
+
+multi
+
+Layer
+F1
+
+real-world software systems. Despite their extensive log counts, the
+nine datasets have a restricted scope in the quantity of topic systems
+they cover. They do not cover all domains comprehensively. Moving
+forward, we aim to expand our dataset repertoire by incorporating
+more datasets sourced from software systems across diverse domains.
+This extension in dataset variety will facilitate a more comprehensive
+evaluation of the efficacy and robustness of the methods proposed in
+this paper across a broader spectrum of domains.
+(2) Drastic changes: It is true that our proposed method caters
+well to typical software maintenance scenarios, such as those in continuous delivery and deployment contexts. However, challenges arise
+when significant changes occur in the online system’s codebase or
+logging mechanism. For instance, if the original system is replaced,
+or the new system—while serving similar functions—is developed by
+a different team and employs a drastically altered logging mechanism,
+DualAttlog may encounter performance issues if it is not incrementally
+updated to adapt to these changes.his kind of situation, where there
+are major alterations in the system architecture or logging protocols
+without corresponding updates to DualAttlog, could result in a considerable drop in its performance. Maintaining alignment between the
+system’s evolution and the adaptability of DualAttlog becomes crucial
+to sustain its effectiveness in anomaly detection under evolving system
+configurations.
+(3) Noises in labeling: The meticulous labeling process carried out
+by engineers for all four datasets in this paper indeed suggests a high
+degree of accuracy in the dataset annotations. However, it is important
+to acknowledge the potential introduction of data noise, such as false
+positives or false negatives, during the phase of manual tagging. Despite
+the presumption that the noise is minimal in its magnitude, if present
+at all, it remains a possibility that warrants further investigation. In
+our future work, we intend to delve deeper into exploring data quality
+concerns. This investigation will aim to address and understand any
+potential issues related to data noise, ensuring a more comprehensive
+evaluation of the datasets used in our methodology. This effort will
+enhance the reliability and robustness of our approach by minimizing
+the impact of any inaccuracies brought in during the phase of manual
+tagging phase.
+
+9
+0.6879
+
+12
+0.6682
+full
+
+The findings displayed in Table 4 suggest that shallow layers of
+RoBERTa tend to yield better performance in the task of log anomaly
+detection. This observation results from the shallow layers’ ability to
+foster a layered interplay between log features and RoBERTa, enabling
+the model to more effectively capture key information within log
+sequences. Furthermore, we also noticed a trend of decreasing performance when applying the context aware dual attention component to
+various layers of RoBERTa. This phenomenon may be attributed to the
+overfitting issues arising from multi-layer integration, where the model
+becomes overly focused on noise and fine details in the training data,
+thereby reducing its generalization ability on test data.
+Based on these findings, we can further optimize the model. For
+instance, we can experiment with adjusting the weights of different
+RoBERTa layers or introducing regularization techniques to mitigate
+overfitting issues. Additionally, investigating the utilization of various
+pre-trained models or fine-tuning techniques could potentially enhance
+the model’s performance even further.
+5.5. Threats to validity
+Here are the key threats that have the potential to undermine our
+effectiveness:
+(1) Subjects: In this paper, we employed nine distinct datasets:
+HDFS, BGL, BGP, Thunderbird,Spirit,LibertyZooKeeper, Real-Industrial
+W, and Real-Industrial Q datasets. HDFS, BGL, BGP, Thunderbird, Spirit
+and LibertyZooKeeper are open-source datasets, have served as prevalent benchmarks in log-based anomaly detection tasks. Conversely,
+Real-Industrial W and Real-Industrial Q datasets stem from expansive
+12
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+6. Conclusion
+
+Chen, Y., Yang, X., Dong, H., He, X., Zhang, H., Lin, Q., et al. (2020). Identifying linked
+incidents in large-scale online service systems. In Proceedings of the 28th ACM joint
+meeting on European software engineering conference and symposium on the foundations
+of software engineering (pp. 304–314).
+Chen, J., Zhang, S., He, X., Lin, Q., Zhang, H., Hao, D., et al. (2020). How incidental
+are the incidents? characterizing and prioritizing incidents for large-scale online
+service systems. In Proceedings of the 35th IEEE/ACM international conference on
+automated software engineering (pp. 373–384).
+Chen, R., Zhang, S., Li, D., Zhang, Y., Guo, F., Meng, W., et al. (2020). Logtransfer:
+Cross-system log anomaly detection for software systems with transfer learning. In
+2020 IEEE 31st international symposium on software reliability engineering (pp. 37–47).
+IEEE.
+Chen, M., Zheng, A. X., Lloyd, J., Jordan, M. I., & Brewer, E. (2004). Failure diagnosis
+using decision trees. In International conference on autonomic computing, 2004.
+Proceedings (pp. 36–43). IEEE.
+Chu, G., Wang, J., Qi, Q., Sun, H., Tao, S., & Liao, J. (2021). Prefix-Graph: A versatile
+log parsing approach merging prefix tree with probabilistic graph. In 2021 IEEE
+37th international conference on data engineering (pp. 2411–2422). IEEE.
+Decker, L., Leite, D., Giommi, L., & Bonacorsi, D. (2020). Real-time anomaly detection
+in data centers for log-based predictive maintenance using an evolving fuzzy-rulebased approach. In 2020 IEEE international conference on fuzzy systems (pp. 1–8).
+IEEE.
+Du, M., Li, F., Zheng, G., & Srikumar, V. (2017). Deeplog: Anomaly detection and
+diagnosis from system logs through deep learning. In Proceedings of the 2017 ACM
+SIGSAC conference on computer and communications security (pp. 1285–1298).
+Farshchi, M., Schneider, J.-G., Weber, I., & Grundy, J. (2015). Experience report:
+Anomaly detection of cloud application operations using log and cloud metric
+correlation analysis. In 2015 IEEE 26th international symposium on software reliability
+engineering (pp. 24–34). IEEE.
+He, P., Zhu, J., He, S., Li, J., & Lyu, M. R. (2017). Towards automated log parsing for
+large-scale log data analysis. IEEE Transactions on Dependable and Secure Computing,
+15(6), 931–944.
+He, S., Zhu, J., He, P., & Lyu, M. R. (2016). Experience report: System log analysis for
+anomaly detection. In 2016 IEEE 27th international symposium on software reliability
+engineering (pp. 207–218). IEEE.
+Hela, S., Amel, B., & Badran, R. (2018). Early anomaly detection in smart home: A
+causal association rule-based approach. Artificial Intelligence in Medicine, 91, 57–71.
+Huang, S., Liu, Y., Fung, C., He, R., Zhao, Y., Yang, H., et al. (2020). Hitanomaly:
+Hierarchical transformers for anomaly detection in system log. IEEE Transactions
+on Network and Service Management, 17(4), 2064–2076.
+Jafarian, T., Masdari, M., Ghaffari, A., & Majidzadeh, K. (2021). A survey and
+classification of the security anomaly detection mechanisms in software defined
+networks. Cluster Computing, 24(2), 1235–1253.
+Jiang, J., Lu, W., Chen, J., Lin, Q., Zhao, P., Kang, Y., et al. (2020). How to mitigate the
+incident? an effective troubleshooting guide recommendation technique for online
+service systems. In Proceedings of the 28th ACM joint meeting on European software
+engineering conference and symposium on the foundations of software engineering (pp.
+1410–1420).
+Kenton, J. D. M.-W. C., & Toutanova, L. K. (2019). BERT: Pre-training of deep
+bidirectional transformers for language understanding. In Proceedings of NAACL-HLT
+(pp. 4171–4186).
+Le, V.-H., & Zhang, H. (2021). Log-based anomaly detection without log parsing. In
+2021 36th IEEE/ACM international conference on automated software engineering (pp.
+492–504). IEEE.
+Li, X., Chen, P., Jing, L., He, Z., & Yu, G. (2022). SwissLog: Robust anomaly detection
+and localization for interleaved unstructured logs. IEEE Transactions on Dependable
+and Secure Computing.
+Liang, Y., Zhang, Y., Xiong, H., & Sahoo, R. (2007). Failure prediction in IBM
+BlueGene/L event logs. In Seventh IEEE international conference on data mining (pp.
+583–588). IEEE.
+Lim, C., Singh, N., & Yajnik, S. (2008). A log mining approach to failure analysis of
+enterprise telephony systems. In 2008 IEEE international conference on dependable
+systems and networks with FTCS and DCC (pp. 398–403). IEEE.
+Liu, Y., Ott, M., Goyal, N., Du, J., Joshi, M., Chen, D., et al. (2019). Roberta: A robustly
+optimized bert pretraining approach. arXiv preprint arXiv:1907.11692.
+Lou, J.-G., Fu, Q., Yang, S., Xu, Y., & Li, J. (2010). Mining invariants from console
+logs for system problem detection. In 2010 USeNIX annual technical conference (pp.
+1–14).
+Lu, J., Yang, J., Batra, D., & Parikh, D. (2016). Hierarchical question-image co-attention
+for visual question answering. In Proceedings of the 30th international conference on
+neural information processing systems: Vol. 29, (pp. 289–297).
+Meng, W., Liu, Y., Zhu, Y., Zhang, S., Pei, D., Liu, Y., et al. (2019). Loganomaly:
+unsupervised detection of sequential and quantitative anomalies in unstructured
+logs. In Proceedings of the 28th international joint conference on artificial intelligence:
+Vol. 19, (7), (pp. 4739–4745).
+Oliner, A., & Stearley, J. (2007). What supercomputers say: A study of five system logs.
+In 37th annual IEEE/iFIP international conference on dependable systems and networks
+(pp. 575–584). IEEE.
+Vaarandi, R., Blumbergs, B., & Kont, M. (2018). An unsupervised framework for
+detecting anomalous messages from syslog log files. In NOMS 2018-2018 IEEE/iFIP
+network operations and management symposium (pp. 1–6). IEEE.
+
+With the rapid development of information technology, log data
+has become a crucial basis for monitoring and diagnosing system
+behavior. This paper proposes a novel anomaly detection method based
+on log data analysis called DualAttlog. This method integrates selfmatching networks, pre-trained models (such as RoBERTa), and dual attention networks to capture deep semantic information in log sequences
+and effectively identify anomalies. The self-matching network explores
+interactions between words in logs, the pre-trained model provides
+higher-level semantic information, and the dual attention network
+integrates inconsistent and synthetic information. DualAttlog performs
+well on multiple benchmark datasets, outperforming other advanced
+models and demonstrating robustness to real-world data. This method
+has extensive potential and applicability in practical applications.
+Although our research has made certain progress, there are inevitably limitations and shortcomings. Firstly, the current model primarily focuses on offline log analysis and has not been verified in
+actual online systems, which limits the evaluation and improvement
+of the model’s effectiveness in practical applications. Secondly, the
+model’s training and inference speed still need to be improved to meet
+the high-efficiency requirements of real-time log processing. These
+two points provide clear directions and optimization opportunities for
+future research.
+Additionally, with the rapid development of large language model
+technology, how to efficiently apply this advanced technology to the
+field of log anomaly detection has become the focus of our next
+research. We expect that through in-depth research and exploration,
+we can integrate the powerful capabilities of large language models
+into log analysis, further enhancing the accuracy and efficiency of log
+anomaly detection, and providing more solid guarantees for system
+stability and security.
+CRediT authorship contribution statement
+Haitian Yang: Writing – review & editing, Writing – original draft,
+Methodology. Degang Sun: Visualization, Validation, Formal analysis.
+Weiqing Huang: Methodology, Funding acquisition.
+Declaration of competing interest
+The authors declare that they have no financial and personal relationships with other people or organizations that can inappropriately
+influence their work, there is no professional or other personal interest
+of any nature or kind in any product, service and/or company that
+could be construed as influencing the position presented in, or the
+review of, the manuscript entitled.
+Data availability
+Data will be made available on request.
+References
+Adeba, J. L., Kim, D.-H., & Kwak, J. (2024). SaRLog: Semantic-aware robust log
+anomaly detection via BERT-augmented contrastive learning. IEEE Internet of Things
+Journal.
+Bertero, C., Roy, M., Sauvanaud, C., & Trédan, G. (2017). Experience report: Log mining
+using natural language processing and application to anomaly detection. In 2017
+IEEE 28th international symposium on software reliability engineering (pp. 351–360).
+IEEE.
+Breier, J., & Branišová, J. (2015). Anomaly detection from log files using data mining
+techniques. In Information science and applications (pp. 449–457). Springer.
+Chen, J., He, X., Lin, Q., Xu, Y., Zhang, H., Hao, D., et al. (2019). An empirical
+investigation of incident triage for online service systems. In 2019 IEEE/ACM 41st
+international conference on software engineering: software engineering in practice (pp.
+111–120). IEEE.
+13
+
+Neural Networks 180 (2024) 106680
+
+H. Yang et al.
+
+Zhang, X., Xu, Y., Lin, Q., Qiao, B., Zhang, H., Dang, Y., et al. (2019). Robust log-based
+anomaly detection on unstable log data. In Proceedings of the 2019 27th ACM joint
+meeting on European software engineering conference and symposium on the foundations
+of software engineering (pp. 807–817).
+Zhang, K., Xu, J., Min, M. R., Jiang, G., Pelechrinis, K., & Zhang, H. (2016). Automated
+IT system failure prediction: A deep learning approach. In 2016 IEEE international
+conference on big data (pp. 1291–1300). IEEE.
+Zhao, N., Chen, J., Peng, X., Wang, H., Wu, X., Zhang, Y., et al. (2020). Understanding
+and handling alert storm for online service systems. In 2020 IEEE/ACM 42nd
+international conference on software engineering: software engineering in practice (pp.
+162–171). IEEE.
+Zhi, C., Yin, J., Deng, S., Ye, M., Fu, M., & Xie, T. (2019). An exploratory study of
+logging configuration practice in Java. In 2019 IEEE international conference on
+software maintenance and evolution (pp. 459–469). IEEE.
+Zhu, J., He, S., Liu, J., He, P., Xie, Q., Zheng, Z., et al. (2019). Tools and benchmarks for
+automated log parsing. In 2019 IEEE/ACM 41st international conference on software
+engineering: software engineering in practice (pp. 121–130). IEEE.
+
+Vervaet, A. (2021). MoniLog: An automated log-based anomaly detection system for
+cloud computing infrastructures. In 2021 IEEE 37th international conference on data
+engineering (pp. 2739–2743). IEEE.
+Vinayakumar, R., Soman, K., & Poornachandran, P. (2017). Long short-term memory
+based operation log anomaly detection. In 2017 international conference on advances
+in computing, communications and informatics (pp. 236–242). IEEE.
+Wang, Z., Chen, Z., Ni, J., Liu, H., Chen, H., & Tang, J. (2021). Multi-scale oneclass recurrent neural networks for discrete event sequence anomaly detection. In
+Proceedings of the 27th ACM SIGKDD conference on knowledge discovery & data mining
+(pp. 3726–3734).
+Wang, Q., Zhang, X., Wang, X., & Cao, Z. (2021). Log sequence anomaly detection
+method based on contrastive adversarial training and dual feature extraction.
+Entropy, 24(1), 69.
+Wang, L., Zhao, N., Chen, J., Li, P., Zhang, W., & Sui, K. (2020). Root-cause
+metric location for microservice systems via log anomaly detection. In 2020 IEEE
+international conference on web services (pp. 142–150). IEEE.
+Xiong, T., Zhang, P., Zhu, H., & Yang, Y. (2019). Sarcasm detection with self-matching
+networks and low-rank bilinear pooling. In The world wide web conference (pp.
+2115–2124).
+Xu, W., Huang, L., Fox, A., Patterson, D., & Jordan, M. I. (2009). Detecting large-scale
+system problems by mining console logs. In Proceedings of the ACM SIGOPS 22nd
+symposium on operating systems principles (pp. 117–132).
+Yan, M., Chen, J., Zhang, X., Tan, L., Wang, G., & Wang, Z. (2021). Exposing numerical
+bugs in deep learning via gradient back-propagation. In Proceedings of the 29th
+ACM joint meeting on European software engineering conference and symposium on the
+foundations of software engineering (pp. 627–638).
+Yang, L., Chen, J., Wang, Z., Wang, W., Jiang, J., Dong, X., et al. (2021). PLELog:
+semi-supervised log-based anomaly detection via probabilistic label estimation. In
+2021 IEEE/ACM 43rd international conference on software engineering: companion
+proceedings (pp. 230–231). IEEE.
+Yang, H., Zhao, X., Sun, D., Wang, Y., & Huang, W. (2021). Sprelog: Log-based anomaly
+detection with self-matching networks and pre-trained models. In Service-oriented
+computing: 19th international conference, ICSOC 2021, virtual event, November 22–25,
+2021, Proceedings 19 (pp. 736–743). Springer.
+Zhang, L., Fan, L., & Guo, N. (2018). Log-based openstack fault diagnosis by machine
+learning. Journal of Physics: Conference Series, 1069(1), Article 012111.
+Zhang, S., Liu, Y., Zhang, X., Cheng, W., Chen, H., & Xiong, H. (2022). CAT: Beyond
+efficient transformer for content-aware anomaly detection in event sequences. In
+Proceedings of the 28th ACM SIGKDD conference on knowledge discovery and data
+mining (pp. 4541–4550).
+
+Haitian Yang is now working in the institute of information engineering, Chinese
+Academy of Sciences. His research interests include deep learning, natural language
+processing, information retrieval, anomaly detection and user behavior analysis.
+
+Degang Sun is a research professor, Ph.D. supervisor of Institute of Information
+Engineering, Chinese Academy of Sciences. He is also a professor in the School of
+Cyber Security, University of Chinese Academy of Sciences. His research interests
+include electromagnetic leakage protection, wireless communication technology and
+high security level information system protection technology.
+
+Weiqing Huang is currently a doctoral supervisor in the Department of No. 4
+Laboratory, Institute of Information Engineering, Chinese Academy of Sciences. His
+current research interests include IoT security and application, information security
+technology.
+
+14
+PAPER_TEXT

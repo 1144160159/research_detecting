@@ -1,0 +1,135 @@
+IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 4, APRIL 2024                                                                1667
+
+
+
+
+            Integrating Entity Attributes for Error-Aware
+                   Knowledge Graph Embedding
+                              Qinggang Zhang , Junnan Dong , Qiaoyu Tan , and Xiao Huang
+
+
+   Abstract—Knowledge graphs (KGs) can structurally organize                       While many KG embedding algorithms have been ex-
+large-scale information in the form of triples and significantly               plored [8], [9], [10], the impact of erroneous triples has often
+support many real-world applications. While most KG embedding                  been ignored. Manual construction is impractical due to the mas-
+algorithms hold the assumption that all triples are correct, consid-
+erable errors were inevitably injected during the construction pro-            sive scale of KGs. Most real-world KGs are extracted from web
+cess. It is urgent to develop effective error-aware KG embedding,              corpora using heuristic algorithms [3], [11], [12]. A considerable
+since errors in KGs would lead to significant performance degra-               number of noisy triples were inevitably introduced into KGs due
+dation in downstream applications. To this end, we propose a novel             to the noises in the original sources and the imperfect extraction
+framework named Attributed Error-aware Knowledge Embedding                     algorithms [13]. For example, NELL [14] is a frequently used
+(AEKE). It leverages the semantics contained in entity attributes
+to guide the KG embedding model learning against the impact of                 KG with 2.4 million triples, with an accuracy of 74%, corre-
+erroneous triples. We design two triple-level hypergraphs to model             sponding to roughly 0.6 million erroneous triples [15]. Errors
+the topological structures of the KG and its attributes, respectively.         in KGs would lead to significant performance degradation in
+The confidence score of each triple is jointly calculated based                downstream applications. Thus, it is urgent to develop effective
+on self-contradictory within the triple, consistency between local             error-aware KG embedding.
+and global structures, and homogeneity between structures and
+attributes. We leverage confidence scores to adaptively update the                 It is nontrivial to enable error-aware learning in KGs, given
+weighted aggregation in the multi-view graph learning framework                that the patterns of KG errors are unknown and diverse [16], [17],
+and margin loss in KG embedding, such that potential errors will               [18]. Recently, a few studies explore guiding the KG embedding
+contribute little to KG learning. Experiments on three real-world              model learning against the impact of erroneous triples [19], [20],
+KGs demonstrate that AEKE outperforms state-of-the-art KG                      [21]. Particularly, Vault [22] is the first work that performs graph
+embedding and error detection algorithms.
+                                                                               representation learning while considering erroneous triples dur-
+  Index Terms—Knowledge graph, graph neural network,                           ing the learning phase. It estimates a probability score of relia-
+anomaly detection, node representation learning.                               bility to determine the quality of a triple via several prior models
+                                                                               fitted with existing KGs. The similar concept of judgments for
+                           I. INTRODUCTION                                     each triple is also applied in CKRL [23] and NoiGAN [24]. The
+                                                                               former model generates confidence scores for triples via internal
+       NOWLEDGE graphs (KGs) can aggregate millions of
+K      relational facts in the form of triples [1], i.e, (head entity,
+relation, tail entity). Examples include general-purpose KGs,
+                                                                               structure information and utilizes them in representation learn-
+                                                                               ing to produce robust representations, while the latter improves it
+                                                                               in the aspect of sample selection. The key idea of these methods
+e.g., YAGO [2] and DBpedia [3], and domain-specific KGs,
+                                                                               is to guide the embedding model to focus on more convincing
+e.g., biomedical KGs [4] and agricultural KGs [5]. KGs are
+                                                                               triples by exploiting the internal graph structures. However,
+essential supporters for many knowledge-driven artificial intel-
+                                                                               merely KG topological structures are often not effective to
+ligent systems, such as KG-enhanced recommender systems [6]
+                                                                               support the detection of nontrivial errors [25]. For instance,
+and KG-based conversational agents [7]. Meanwhile, KG em-
+                                                                               given a triple {London, is_larger_than, W ashington} with
+bedding has been intensively studied, which can improve the
+                                                                               sparse graph structure, it is hard to know which London it refers
+generalization and adaptability of KGs in downstream tasks. By
+                                                                               to, since there are many cities called London. Thus, efforts
+representing entities as continuous vectors and each relationship
+                                                                               have been devoted to employing extra information sources,
+as an operation in the same space, such as translation and
+                                                                               such as related webpages [26], external knowledge bases [25]
+projection, we can perform KG inference in continuous spaces
+                                                                               and annotation information from crowdsourcing websites [27].
+with simple numerical computations.
+                                                                               But these supplemental sources are often prohibitive to acquire
+                                                                               which impedes its success in practice.
+   Manuscript received 6 June 2022; revised 31 July 2023; accepted 26 August
+2023. Date of publication 5 September 2023; date of current version 8 March        KGs are often associated with fertile and valuable attribute
+2024. This work was supported by the Research Grants Council of the Hong       data, describing the property of entities. Fig. 1 illustrates a
+Kong Special Administrative Region, China under Grant PolyU 25208322. Rec-     toy KG with six entities. Each entity contains a set of at-
+ommended for acceptance by X. Chen. (Corresponding author: Xiao Huang.)
+   The authors are with the Department of Computing, Hong Kong Poly-           tributes, e.g., the entity M adameCurie has an attribute list
+technic University, Hong Kong (e-mail: qinggangg.zhang@connect.polyu.hk;       of {birth_date, gender, nationality, language} which indi-
+hanson.dong@connect.polyu.hk; qiaoytan@polyu.edu.hk; xiaohuang@comp.           cates its role as a human being, while {latitude, longitude,
+polyu.edu.hk).
+   Digital Object Identifier 10.1109/TKDE.2023.3310149                         population, area} shows M ariaSalomea’s role as a location.
+
+                        1041-4347 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+1668                                                                      IEEE TRANSACTIONS ON KNOWLEDGE AND DATA ENGINEERING, VOL. 36, NO. 4, APRIL 2024
+
+
+
+                                                                                           information to depict the various levels of semantics for entities.
+                                                                                           (ii) It is hard to leverage the semantics learned from attributes to
+                                                                                           help the KG embedding model learn error-aware embeddings.
+                                                                                           Entity attributes can be used to implicitly portray the semantics
+                                                                                           of entities, but it is hard to integrate different KG components,
+                                                                                           i.e., entities, relations and attributes into a suitable vector space
+                                                                                           since they always exhibit rather distinct characteristics. Some
+                                                                                           existing KG embedding models attempt to integrate attributes
+                                                                                           into the learning framework by directly fusing the learned at-
+Fig. 1. Running examples of complex errors in real-world KGs. (a) Presents                 tribute semantics into the entity embedding [28], [29], [30],
+a KG error with mismatched head/tail entities and relations. This error can be
+detected by reasoning over neighboring triples. But, real-world KGs are often              [31]. However, in this fusing way, it is hard to measure the
+incomplete and noisy. (b) Demonstrates a further difficult case with some key              complex correlation and dependency between entity attributes
+links missing. In this case, the rich semantics in entity attribute types can facilitate   and knowledge graph structure, which is crucial to guide the
+the detection of errors.
+                                                                                           embedding model to filter out noisy information from hidden
+                                                                                           erroneous triples.
+                                                                                              Through this article, we aim to answer the following research
+Considering that most entities in KGs are not typed or are very                            questions. ❶ How to jointly embed different kinds of KG compo-
+loosely typed, being able to learn about the semantic portrait of                          nents, i.e, entities, relations and attributes, into suitable vector
+the entity from the attribute set is valuable.                                             spaces? ❷ How to construct an effective detector that calcu-
+   Modeling and measuring the correlation between entity at-                               lates the confidence score for each triple based on the learned
+tributes and KG structure can guide the KG embedding model                                 features? ❸ How to make the best of confidence information
+learning against the impact of erroneous triples. In real-world                            learned from the detection module to get the error-aware KG
+KGs, entity attributes often show high dependency with the                                 embeddings? To solve these problems, in this article, we propose
+graph structure, i.e., entities with relevant semantic meanings                            a novel framework named Attributed Error-aware Knowledge
+are usually linked by specific relations. For example, enti-                               Embedding, i.e, AEKE, that leverages the semantics contained
+ties with attribute set {latitude, longitude, population, area}                            in entity attributes to guide the KG embedding model learning
+are generally connected to live_in or born_in while enti-                                  against the impact of erroneous triples. The key idea is to guide
+ties with {pen_name, writing_style} are more likely con-                                   the embedding model to focus on more convincing triples by
+nected to author_of . It means that triples whose entities                                 exploiting the correlation between knowledge graph structures
+have inconsistent attributes with its neighboring relations                                and entity attributes. Concretely, we designed two triple-level
+are more likely to contain noisy facts. Taking the triple                                  hypergraphs, i.e, relational hypergraph, and attribute hyper-
+{M adameCurie, spouse_of, M ariaSalomea} in Fig. 1(b)                                      graph, to model the topological structure of the original KG
+as example, analyzing the attribute list of M adameCurie and                               and its attributes, respectively. A contrastive learning framework
+M ariaSalomea and comparing the learned semantics with the                                 is then used to learn the representation of each instance from
+corresponding relation, it can be easily deduced that this triple is                       these two different views. Analyzing and mining the unique
+erroneous since it is impossible to has the relation of spouse_of                          structure of KGs and the correlation between graph structure and
+between a person and a location. Hence, we propose to enrich the                           attributes, the confidence score of each triple can be calculated
+entity semantics with its attribute list, and measure the degree of                        by considering three anomaly signals, i.e., self-contradictory
+consistency between attributes and graph structure as anomaly                              within the triple, global acknowledgment across triples, and
+signal to guide the learning process of KGs to enable effective                            conformity between attribute and graph structure. We leverage
+error-aware KG embeddings.                                                                 confidence scores to adaptively update the weighted aggregation
+   However, it is still a challenging task to integrate en-                                in contrastive learning and margin loss in KG embedding, such
+tity attributes into error-aware KG embedding, with two ma-                                that potential errors would contribute little to KG learning. The
+jor key challenges. (i) The heterogeneity of entity attribute                              main contributions of this work are concluded as follows:
+makes it hard to utilize. In general, attributes are not uni-                                  r In this research, we propose a novel knowledge graph
+formly distributed over all entities. As shown in Fig. 1(b),                                      embedding framework, i.e., AEKE, which leverages the
+different entities usually have distinct types or numbers of                                      semantics contained in entity attributes to guide the KG
+attributes. Furthermore, the same entity can represent differ-                                    embedding model learning against the impact of erroneous
+ent roles in different triples. When an entity describes its dif-                       

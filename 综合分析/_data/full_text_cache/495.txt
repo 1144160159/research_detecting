@@ -1,0 +1,582 @@
+3132 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 27, 2025
+
+ Multimodal Evidential Learning for Open-World
+ Weakly-Supervised Video Anomaly Detection
+ Chao Huang , Member, IEEE, Weiliang Huang, Qiuping Jiang , Senior Member, IEEE, Wei Wang ,
+ Jie Wen , Senior Member, IEEE, and Bob Zhang , Senior Member, IEEE
+
+ Abstract—Efforts in weakly-supervised video anomaly detection
+center on detecting abnormal events within videos by coarsegrained labels, which has been successfully applied to many
+real-world applications. However, a significant limitation of most
+existing methods is that they are only effective for specific objects
+in specific scenarios, which makes them prone to misclassification
+or omission when confronted with previously unseen anomalies.
+Relative to conventional anomaly detection tasks, Open-world
+Weakly-supervised Video Anomaly Detection (OWVAD) poses
+greater challenges due to the absence of labels and fine-grained
+annotations for unknown anomalies. To address the above problem,
+we propose a multi-scale evidential vision-language model to
+achieve open-world video anomaly detection. Specifically, we
+leverage generalized visual-language associations derived from
+CLIP to harness the full potential of large pre-trained models
+in addressing the OWVAD task. Subsequently, we integrate a
+multi-scale temporal modeling module with a multimodal evidence
+collector to achieve precise frame-level detection of both seen and
+unseen anomalies. Extensive experiments on two widely-utilized
+benchmarks have conclusively validated the effectiveness of our
+method. The code will be made publicly available.
+ Index Terms—Video anomaly detection, vision-language model,
+evidential learning.
+
+ I. INTRODUCTION
+ IDEO anomaly detection (VAD), which aims to identify
+V the anomaly events that diverge from normal ones, has
+become an increasingly critical field because of its promising Fig. 1. Illustration of the train and test phases of (a) Unsupervised, (b) Weaklysupervised and (c) Open-world Weakly-supervised VAD task.
+ Received 24 August 2024; revised 16 December 2024 and 23 January 2025;
+accepted 5 February 2025. Date of publication 3 April 2025; date of current
+version 28 May 2025. This work was supported in part by the National Natural Science Foundation of China under Grant 62301621, in part by Shenzhen application prospects. Due to the unavailability of substantial
+Science and Technology Program under Grant 20231121172359002, in part by
+Shenzhen General Research Project under Grant JCYJ20241202125904007, in fine-grained anomaly annotation, most existing VAD methods
+part by Guangdong Basic and Applied Basic Research Foundation under Grant focus on unsupervised learning and weakly-supervised learning
+2025A1515011398, and in part by the Science and Technology Development to detect those deviated samples as anomalies. The main differ-
+Fund of Macao S.A.R (FDCT) under Grant 0028/2023/RIA1. The guest editor
+coordinating the review of this article and approving it for publication was Prof. ence between them is inherent in the availability of annotated
+Xiankai Lu. (Corresponding author: Qiuping Jiang.) training samples. As shown in Fig. 1(a) and (b), unsupervised
+ Chao Huang and Wei Wang are with the School of Cyber Science and Tech- VAD methods [1], [2], [3], [4] focus on how to detect unseen
+nology, Shenzhen Campus of Sun Yat-sen University, Shenzhen 518000, China
+(e-mail: huangch253@mail.sysu.edu.cn; wangwei29@mail.sysu.edu.cn). anomaly events by mining the intrinsic structural information
+ Weiliang Huang and Bob Zhang are with the PAMI Research Group, De- and correlation of data, while Weakly-supervised VAD (WVAD)
+partment of Computer and Information Science, University of Macau, Macau methods [5], [6], [7], [8], [9], [10] focus on how to detect seen
+999078, China (e-mail: yc47492@um.edu.mo; bobzhang@um.edu.mo).
+ Qiuping Jiang is with the Faculty of Information Science and Engineering, anomaly events by limited annotated training samples. From the
+Ningbo University, Ningbo 315211, China (e-mail: jiangqiuping@nbu.edu.cn). perspective of supervised mode and model performance, neither
+ Jie Wen is with the Shenzhen Key Laboratory of Visual Object Detection and method is entirely satisfactory for real-world VAD. On the one
+Recognition, Harbin Institute of Technology, Shenzhen 518055, China (e-mail:
+jiewen_pr@126.com). hand, though unsupervised methods are convenient for detect-
+ Digital Object Identifier 10.1109/TMM.2025.3557682 ing a wide variety of unseen anomaly events in the real world,
+
+ 1520-9210 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+HUANG et al.: MULTIMODAL EVIDENTIAL LEARNING FOR OPEN-WORLD WEAKLY-SUPERVISED VIDEO ANOMALY DETECTION 3133
+
+the performance is often unsatisfactory. On the other hand, while transfer learning capabilities. Some recent VLP-based WVAD
+WVAD methods exhibit superior performance in closed-set sce- methods [17], [18] have demonstrated the feasibility and sunarios, they manifest a susceptibility to misclassification or over- periority of VLP(e.g. Contrastive Language-Image Pre-training
+sight when confronted with unanticipated anomaly events. Some (CLIP [19])) in VAD task.
+recent works [11], [12], [13], [14], [15], [16] have attempted to Second, to address the problem of ambiguity of training samsolve this problem by means of image enhancement, which im- ple annotations, we design a multimodal evidence collector,
+proves its performance in the real world to some extent, but still under Subjective Logic Theory (SLT [20]), to better distindoes not completely solve this problem. guish between background and anomalies by jointly leverag-
+ The essential reason for this situation is that, as the dynami- ing single-modal and multimodal features. We argue that, for
+cally changing real world continues to evolve, never-before-seen abnormal events in a scenario, visual features should provide
+anomalies consistently emerge. Therefore, to meet the require- sufficient evidence of the seen anomalies, while textual features
+ments of VAD tasks in the real world, it is necessary to explore can provide not only supplementary evidence information for
+the Open-world WVAD (OWVAD) methods, which can achieve seen anomalies but also correlation evidence for unseen anomacontent performance in detecting anomaly events from videos lies, thereby enhancing the model’s ability to detect various
+with assorted seen and unseen anomaly. anomalies in the real world. To combine multimodal evidence to
+ Divergent from the traditional VAD methods, as shown in dynamically calibrate the temporal boundaries of anomaly, we
+Fig. 1(c), OWVAD methods can detect temporal boundaries ac- propose a multimodal evidential collaborative learning method
+curately of the anomaly events in the testing phase, which have that allows single and joint modal evidence information to be
+never occurred in the training phase. There is no doubt that OW- calibrated against each other according to their respective con-
+VAD tasks are more complicated than WVAD tasks based on fidence and uncertainty.
+closed sets. We argue that the following two aspects are key Finally, for the unpredictability and variability of anomaly dulimiting factors for OWVAD performance: ration, a Multi-scale Temporal Visual Modeling (MTVM) modr Complexity of scenarios and diversity of anomaly cate- ule is designed to empower single snippet features with the cagories in the real world: Unlike the closed-set WVAD task, pacity to perceive multi-scale contextual video segments. By
+ the OWVAD task is expected to detect anomaly events from capturing and aggregating local and global visual information
+ a variety of real-world scenarios. However, the limited sce- across video segments that traverse distinct temporal scales, our
+ nario information in the training set makes it difficult for the MTVM facilitates the acquisition of features at both fine-grained
+ model to have a generic visual representation. Moreover, and coarse-grained levels, thereby augmenting the capability to
+ a single scenario usually contains a series of associated characterize anomalies with varied durations.
+ anomaly events, which is difficult to detect accurately in Therefore, our potential contributions can be summarized as
+ the absence of information about the internal correlation follows.
+ of these associated events. r We propose a novel multi-scale evidential learning framer Ambiguity of training sample annotations: Under the con- work for open-world weakly-supervised video anomaly
+ ditions of OWVAD, not only are annotations unavailable detection, which is driven by vision-language pre-trained
+ for the unseen anomaly, but also the temporal boundaries model and under the guidance of subjective logic theory.
+ for both seen and unseen anomaly can only be ambigu- r We jointly leverage the multi-scale temporal visual modously inferred from the video and its coarse-grained an- eling (MTVM) module and multimodal evidential collabnotation. This ambiguity brings confusion between seen orative learning (MECL) module to address the limitation
+ anomaly, unseen anomaly, and background. Furthermore, of ambiguity of training sample annotations.
+ the duration of anomalous events is often unpredictable and r We conduct extensive experiments on two popular benchexhibits considerable variability in the real world, which marks, XD-Violence and UCF-Crime. And the experimenincreases the difficulty of accurately identifying their tem- tal results demonstrate significant superiority to several
+ poral boundaries. state-of-the-art weakly supervised approaches.
+ To alleviate the above limitations of OWVAD, we propose a Multi-scale Evidential Learning method based on the II. RELATIVE WORK
+Vision-Language Pre-trained model (MEL-VLP) for OWVAD.
+Guided by the introduced visual-textual associated knowledge, A. Weakly Supervised Video Anomaly Detection
+MEL-VLP detects both seen and unseen anomalies by col- Recent weakly supervised anomaly detection methods are
+lecting multi-scale temporal contexts, text-associated informa- mainly based on the multi-instance learning (MIL) frametion, and joint-modal features as evidence. To be specific, we work [21], which regards the anomaly and normal segments as
+first extract visual features and textual features from the en- positive and negative samples respectively. Among them, most
+coders of vision-language pre-trained model and constructed of the methods can be classified into three categories, namely,
+a joint discriminative framework to detect anomalies by both erasing-based methods [22], [23], [24], [25], attention-based
+visual-textual features and their associated relationship. Re- methods [17], [26], [27], [28], [29] and uncertainty-based methcently, large vision-language pre-trained model has exhibited re- ods [30], [31], [32]. Erasure-based methods mainly erase outmarkable success across a diverse array of downstream tasks, at- standing areas by setting a threshold and then mining less obvitributed to its acquired cross-modal prior knowledge and robust ous areas. For example, DE-Net [22] devises a dynamic erasing
+3134 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 27, 2025
+
+strategy that dynamically evaluates the completeness of the de- C. Evidential Deep Learning
+tected anomalies and erases the prominent anomaly segments in
+ Grounded in subjective logic theory [20], evidence-based
+order to motivate the model to discover milder anomaly segdeep learning involves the collection of scalar evidence for each
+ments in the video. Attention-based methods suppress backcategory and models the probability distribution of the collected
+ground components by assessing foreground attention scores
+ evidence, enabling uncertainty estimation in a single forward
+mainly through the attention mechanism. RTFM [33] employs
+ pass. Specifically, subjective logic is a logical framework for
+self-attention mechanisms and dilation convolutions to capture
+ dealing with and reasoning about uncertainty and trust, which is
+both long-range and short-range temporal dependencies for betparticularly well suited for modeling and analyzing subjective
+ter feature learning.
+ opinions or beliefs. It combines ideas from probabilistic and
+ As an emerging sort of approach, uncertainty-based methmulti-valued logic to be able to deal with the complexity of unods primarily decompose model classification probabilities into
+ certainty, incomplete information, and inter-subjective trust. In
+confidence and uncertainty through uncertainty estimation, and
+ contrast to traditional probabilistic logic, subjective logic theoptimization is conducted based on this uncertainty. Although
+ ory formalizes the cognitive uncertainty of a model in the face
+this paradigm has been successful in many fields [34], [35], it
+ of incomplete information by assigning belief measures to pohas only been little studied in the field of anomaly detection.
+ tential categories to characterize assertions of truthfulness and
+For example, CELL [36] proposes a Cascade Evidential Learnexplicitly incorporating uncertainty measures. As an emerging
+ing framework at an evidence level, which jointly leverages
+ method for uncertainty assessment, it holds a significant posimulti-scale temporal contexts and knowledge-guided prototype
+ tion across numerous applications. For video anomaly detection,
+information to achieve temporal action localization. For video
+ Zhu et al. [30] use evidential deep learning to instantiate MIL
+anomaly detection, Zhu et al. [30] use evidential deep learning
+ and use the predicted evidence to help select anomaly instances
+to instantiate MIL and use the predicted evidence to help select
+ with high cleanness for robust MIL training. Huang et al. [45]
+anomaly instances with high cleanness for robust MIL training.
+ propose a model called Uncertainty-Aware Prototypical Trans-
+In this paper, by collecting multimodal anomaly evidence, we
+ former (UPformer), which is specialized for visual anomaly depropose a novel multimodal evidence collaboration framework
+ tection at the pixel level. In this work, the authors specifically
+driven by vision-language pre-trained model to effectively mitemphasize two challenges in the anomaly detection task: the diigate the background ambiguity problem in WVAD.
+ versity of anomalies and the blurred boundaries between them
+ and normal regions. To address these challenges, the authors
+B. Vision-Language Pre-Training Model design a novel approach that takes into account not only the
+ diversity of anomalies but also the uncertainty in the anomaly
+ Over the past few years, vision-language pre-trained mod- detection process.
+els [37], [38], [39], [40] have achieved substantial success, at- However, evidence collected under single-modality contributed to their pre-training on large-scale visual-textual pairs. ditions is limited by the constraints of modality-specific
+Pre-training based on large amounts of data allows the model to information. Current methods used for VAD tasks overlook the
+learn more general and efficient visual and textual feature repre- correlation and collaboration of evidence in a multi-modal consentations. Of greater significance is the assistance rendered by text. Therefore, we propose a multi-modal evidence collaborathe inherent associative information between visual and textual tion method aimed at endowing the model with the capability to
+modalities learned during the pre-training process, facilitating dynamically calibrate anomaly temporal boundaries.
+application to diverse multi-modal downstream tasks [41], [42],
+[43]. Llama [44] extends the scope of modeling in multimodal
+domains such as image and video by integrating visual inputs III. METHOD
+with the capabilities of LLMs. DoraemonGPT [38] achieves bet-
+ A. Overall Architecture
+ter processing of video tasks by combining LLM with dynamic
+scene understanding to reason and predict objects and scenes in Problem Definition: OWVAD aims to detect seen and unvideos. seen abnormal instances in videos. Given a set of weakly-
+ |V |
+ For the VAD task, some recent works achieved significant per- labeled training videos V = {X (k) , y (k) }k=1 , where X (k) ∈
+ Nk ×H×W
+formance gains by introducing the encoders of vision-language R represents a video with Nk frames with H × W pixpre-trained models. For instance, CLIP-TSA [17] acquires more els, and y (k) ∈ RC is its multi-hot label indicating the anomaly
+discriminative visual features using visual coders from CLIP categories that the abnormal instances in this video belong to,
+and models temporal dependence using a self-attention mecha- where C is the number of seen anomaly categories. During the
+nism. Nevertheless, existing works have not delved deeply into testing phase, the model is used to predict frame-level anomaly
+the exploration of associative information from vision-language scores for the test video. It is worth noting that in the OWVAD
+pre-training model for the OWVAD task. In this paper, we intro- task, the training data contains several unknown anomaly cateduce visual encoders and textual encoders from vision-language gories, which are labeled as unknown categories.
+pre-train model to learn more generalized feature representa- Overview: We firstly leverage the most popular visualtions. At the same time, we enhance the performance of the language pre-trained models, such as CLIP, utilizing their visual
+model in the open world by learning the intrinsic correlation encoders and text encoders to extract visual and textual features,
+information between visual and textual modalities. which possess greater generality and discriminability. As shown
+HUANG et al.: MULTIMODAL EVIDENTIAL LEARNING FOR OPEN-WORLD WEAKLY-SUPERVISED VIDEO ANOMALY DETECTION 3135
+
+Fig. 2. The whole framework of our proposed method, in which the solid line box is divided into the main novel part of this paper. First, we perform feature
+extraction on the video and labeled text with CLIP’s image encoders and text encoders to learn the more general and discriminative features. We then propose the
+(a) Multi-scale Temporal Visual Modeling (MTVM) module for sensing different ranges of temporal contexts and capturing useful information. Finally, we design
+the (b) Multimodal Evidence Collaborative Learning (MECL) module to dynamically calibrate the temporal boundaries of anomaly events.
+
+in Fig. 2, for a given training video V , we input it into the visual discrimination (JMD) strategy. Specifically, the training process
+encoders of CLIP to obtain visual features X V ∈ RN ×D , where and inference process are shown in Algorithms 1 and 2.
+N is the number of video frames, D is the dimension of visual feature. Similarly, we input category labels into the text encoders to B. Multi-Scale Temporal Visual Modeling
+obtain textual features X T ∈ R(C+2)×D , where C is the number
+ Despite the potent feature representation capabilities of CLIP,
+of anomaly classes. Specifically, we code ‘normal’ and anomaly
+ it is trained on a large-scale dataset of image-text pairs, which
+categorries as text here. On the one hand, visual features X V emimplies that it faces challenges in extracting temporal depenploy the multi-scale temporal visual modeling (MTVM) moddencies within video data. Nevertheless, temporal dependencies
+ule to perceive temporal context and derive anomaly probabilplay a crucial role in video anomaly detection. Therefore, inity XN V
+ ∈ R1×N through the classifier. Subsequently, we can
+ spired by [46], [47], [48], we employ a Local and Global Temget frame-level anomaly scores through the Tok-k algorithm.
+ poral (LGT) adapter to model the long and short-term temporal
+On the other hand, visual attention XN V− attn
+ ∈ R1×D (the pro-
+ V dependencies in videos. Then we design a multi-scale tempoduction between visual features X and anomaly probabil-
+ V ral visual modeling (MTVM) module to empower single snipity XN ) and textual features are aggregated together through
+ pet features with the capacity to perceive multi-scale contextual
+the Visual Language Aggregation (VLA) module to get aggrevideo segments.
+gated featuresXna ∈ RN ×D , and then a fine-grained aggregation
+ Local and Global Temporal Adapter: To capture the local temmappingXnA ∈ RN ×(C+2) is obtained through the product with
+ poral dependencies, we first compute the internal self-attention
+the visual features.
+ of each video segment by Transformer. Then to capture the
+ Besides, we use the multimodal evidential collaborative learnglobal temporal dependency, we model the global temporal deing (MECL) module to dynamically calibrate the temporal
+ pendency in terms of feature similarity and relative distance
+boundaries of anomaly. Specifically, we collect evidence from
+ V using GCN. These two processes can be expressed by the folanomaly probability XN , textual features X T and aggrega-
+ A lowing formulas:
+tion mapping XN , respectively. The corresponding Dirichlet
+distributions are obtained from the collected evidence and the Xl = [T ransf ormer (xsegi ) , . . ., T ransf ormer (xsegj )] ,
+learned evidence is dynamically corrected by a joint-modal (1)
+3136 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 27, 2025
+
+ Xg = gelu ([Softmax (Hsim ) ; Softmax (Hdis )] Xl W ) , (2) Algorithm 1: Training Process of Our Method.
+where segi and segj denote the serial numbers of different video
+segments respectively. Xl is the frame-level video feature extracted from the local module. Hsim is the adjacency matrix
+computed by cosine similarity of each frame. Hdis is the adjacency matrix computed by the relative positions between each
+two frames.
+ Multi-scale Temporal Visual Modeling: In MTVM, each
+frame is assigned a series of multiscale video segments centered around it, and the contextual awareness properties of these
+video segments contribute to the expansion of perceptual scope.
+When a series of video segments centered around t are given,
+our process of averaging this series of multiscale video frames
+can be expressed as follows:
+ 1 
+ fmn = m xi , (3)
+ en − s mn + 1 sm ≤i≤em
+ n n
+
+where m is the length of the predetermined temporal range,
+and (smn , en ) indicate the start time and end time of the video
+ m
+
+segment.
+ To enhance the perceptual capabilities of frame n regarding
+abnormal events within the temporal context, feature enhancement is conducted through the fusion of xn and fnm . We argue that frame-level visual features can assimilate informative
+contextual details from extended video segments highly correlated with them. Therefore, the fusion of xn and fnm to obtain Algorithm 2: Inference Process of Our Method.
+frame-level features with context awareness can be expressed as:
+ 
+ x̃n = (1 − β) xn + β ωnm f m
+ n, (4)
+ m∈M
+
+where M is the total number of fused fragments, β is a hyperparameter for fusion weight of the cosine similarities ωnm
+between xn and f m m
+ n . And ωn can be calculated by:
+
+ xn f m
+ ωnm = n
+ . (5)
+ n 2
+ xn 2 · f m
+
+C. Multimodal Evidential Collaborative Learning
+ We design a novel multimodal evidential collaboration learning approach for open-world WVAD task using the Evidential
+Deep Learning (EDL) mechanism based on subjective logic
+theory. In contrast to conventional classifiers that lack awareness of confidence in their predictions, EDL collects evidence
+through uncertainty perception. It treats the classification output as a point estimate of the classification distribution, placing
+priors on the distribution across all possible classification outputs. For the OWVAD task, the assessment of confidence and optimize prediction results based on the confidence and unceruncertainty regarding unknown anomalies is significantly more tainty associated with different modalities. For the features of
+ T
+effective through evidence collection and the construction of an modality m ∈ (vsion, language, aggregated), (xm n )n=1 , the
+uncertainty perception framework. Optimization of prediction evidence of the c-th anomaly category is a scalar and can be
+results based on this approach proves to be more efficient in many calculated by:
+fields compared to traditional classifier learning methods. Theren,c = g (fc (xn ; θ)) ,
+ em m
+ (6)
+fore, we devise a Multimodal Evidential Collaborative Learning
+(MECL) module for the OWVAD task. By collecting evidence where fc (·) is the DNN evidential collector parameterized by
+from visual modality, textual modality, and joint modality, we θ for c-th category. In order to keep the collected evidence
+HUANG et al.: MULTIMODAL EVIDENTIAL LEARNING FOR OPEN-WORLD WEAKLY-SUPERVISED VIDEO ANOMALY DETECTION 3137
+
+non-negative, the evidence function g(·) usually consists of anomaly types from the XD-Violence and UCF-Crime training
+RELU, SoftPus or Exp function. For simplicity, we simplify datasets to simulate the real world with different proportions of
+the process of constructing the distribution of evidence for each unseen anomalies. On this basis, we follow previous works and
+modality as follow: use frame-level Average Precision (AP) and frame-level Area
+ under the operating Characteristic curve (AUC) as the metrics for
+ 1 C
+ XD-Violence and UCF-Crime, respectively, on coarse-grained
+ Distribution (xc ; αc ) = xαc −1 , (7)
+ B (αc ) c=1 c predictions. For fine-grained predictions, we use the mean Average Precision (mAP) under different intersection over union
+ 1 
+ C
+ (IoU) thresholds as the evaluation metric.
+ B (αc ) =   Γ(αc ), (8)
+ C Implementation Details: For the setting of unseen anomalies
+ Γ c=1 αc c=1
+ in the training set, we train the model with 1, 2, 3, and 4 catewhere xc the predicted results of model, αc = em gories of seen anomaly videos together with normal videos in the
+ n,c + 1, and Γ is
+the Gama function. Based on this we can obtain the confidence XD-Violence dataset, which has a total of 6 anomaly categories
+and uncertainty as follow: in this dataset. Similarly, we train the model with 1, 3, 6, and 9
+ categories of seen anomaly videos together with normal videos
+ αc c
+ pc = C , u c = C . (9) in the UCF-Crime dataset, which has a total of 13 anomaly catec=1 αc c=1 αc gories in this dataset. Specifically, we randomly remove a certain
+ To make the evidence for different modalities effective for number of training anomaly classes each time and repeat them
+joint learning, we jointly optimize using the prediction uncer- three times to reduce the evaluation bias of the seen anomaly.
+tainty of the different modalities as a correction factor. At first, For the setting of vision-language pre-trained model, we use
+to prioritise the model to focus on the more reliable modality, the Contrastive Language-Image Pre-training (CLIP) to extract
+ c , pc } as follow, which represents the conwe calculate {uuni uni both visual and textual features by their corresponding frozen
+fidence of category c in the most representative modality: encoders. For the setting of hyperparameters, we set the fusion
+  uni uni    weight β as 0.2, the weight of Ljmd as 1 × 10−2 , and the temu c , pc = δ(c) {uvc , pvc } + (1 − δ(c)) utc , ptc , (10) poral context-aware range m as 3. Our model is implemented
+where δ(c) = 1 if pvc > ptc , otherwise the reverse is true. with Python 3.8 and Pytorch 1.12, and we employ AdamW [53]
+ Then, our multimodal collaborative learning strategy can be optimizer with a learning rate of 1 × 10−5 for optimization. All
+expressed as: experiments are conducted on a single RTX 3090 GPU.
+ 
+ Ljmd = (1 − mean(uagg c )) 1 − uc
+ uni
+
+ c
+ B. Comparison With State-of-The-Arts
+ c ) , pc
+ ∗l s (pagg uni
+ , (11)
+ Comparison on XD-Violence: As shown in Table I, our prowhere l(·) is a distrance metrics function, e.g. L2-norm, and s(·) posed method outperforms previous weakly supervised meththe gradient truncation operation on the input. ods in terms of AP metrics under different conditions of seen
+ anomaly categories. Specifically, compared to the SOTA method
+ IV. EXPERIMENTS VadCLIP [46], our method achieves superior performance under
+ different seen anomaly category conditions, achieving perfor-
+A. Experimental Settings.
+ mance gains of 0.35%, 1.39%, 2.03%, and 1.86%, respectively.
+ Datasets:We perform experiments on the two most popular Compared to other methods, our method also achieves varying
+anomaly detection datasets: (1) XD-Violence. The XD-Violence degrees of performance gain under different open set conditions.
+dataset comprises 3954 training videos annotated at the video This reflects the superiority of our approach in the open world.
+level and 800 testing videos annotated at the frame level, en- As shown in Table III, compared to the performance of other
+compassing 6 categories of violent anomalies. Additionally, it methods under closed-set conditions, our method achieves comstands out as one of the most challenging datasets due to the parable performance even in the absence of partial seen anomaly
+frequent occurrence of camera movement and scene transitions data, which reflects its robustness in the face of real-world comwithin the videos. (2) UCF-Crime. The UCF-Crime dataset is a plexity.
+large-scale collection of real-world videos captured by surveil- Comparison on UCF-Crime: As shown in Table II, our prolance cameras. Comprising 1,610 training videos annotated posed method outperforms previous weakly supervised methwith video-level labels and 290 testing videos annotated with ods in terms of AUC metrics under different conditions of seen
+frame-level labels for performance evaluation. These surveil- anomaly categories. Specifically, compared to the SOTA method
+lance videos are derived from a variety of complex real-world VadCLIP [46], our method achieves superior performance under
+scenarios, covering 13 classes of abnormal events. different seen anomaly category conditions, achieving perfor-
+ Evaluation Metrics: Following the prior work [30], in order mance gains of 0.95%, 0.1%, 0.48%, and 0.34%, respectively.
+to make the testing set contain previously unseen anomalies, As shown in Table III, we also achieved comparable performance
+we train the model by altering the distribution of labels in the with VadCLIP under closed-set conditions. Similarly, compared
+training set. Specifically, we removed different proportions of to other methods, our method also achieves varying degrees of
+3138 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 27, 2025
+
+ TABLE I
+ COMPARISONS UNDER DIFFERENT SEEN ANOMALY IN XD-VIOLENCE
+
+ TABLE II
+ COMPARISONS UNDER DIFFERENT SEEN ANOMALY IN UCF-CRIME
+
+ TABLE III the number of unseen anomalies is 1. We believe that this is
+ COMPARISONS UNDER CLOSE-SET SETTING ON XD-VIOLENCE AND
+ UCF-CRIME DATASETS
+ mainly due to differences in the video sources of the dataset.
+ The videos in XD-Violence are mainly derived from movies and
+ web videos, which often contain numerous scene changes and
+ complex action behaviors. In contrast, UCF-Crime’s videos are
+ mainly derived from surveillance cameras, which have relatively
+ homogeneous scenes and shooting angles.
+ Performance in Seen and Unseen Categories: In addition, in
+ order to prove that the proposed method has stronger detection
+ ability for the unseen category, we conduct experiments on the
+ seen and unseen categories separately. Specifically, we set Seen
+ Category Set to {Fighting, Shooting, Riot, Abuse} and Unseen
+ Category Set to {Car Accident, Explosion} on XD Violance
+ dataset, while we set Seen Category Set to {Abuse, Arrest, Arson, Assault, Burglary, Explosion, Fighting, Road Accidents,
+ Robbery} and Unseen Category Set to {Shooting, Shoplifting, Stealing, Vandalism} on UCF-Crime dataset. As shown in
+ Tables IV and V, our proposed method achieves better performance than other SOTA methods in both seen and unseen categories. More importantly, the performance improvement of our
+performance gain under different open set conditions. This re- method on the unseen categories is significantly greater than
+flects the superiority of our approach in the open world. that on the seen categories, which proves the effectiveness of
+ In addition, We find that the standard deviation in XD- our method on the unseen category.
+Violence is much larger than that in UCF-Crime, implying that Comparison of different methods on each category: In order
+the selection of different unseen anomalies in XD-Violence has to explore in more detail the performance of different methods
+a greater impact on the model. This is particularly severe when for specific categories in open scenarios, we further conducted
+HUANG et al.: MULTIMODAL EVIDENTIAL LEARNING FOR OPEN-WORLD WEAKLY-SUPERVISED VIDEO ANOMALY DETECTION 3139
+
+ TABLE IV TABLE VI
+ COMPARISONS BETWEEN SEEN AND UNSEEN CATEGORY IN XD-VIOLENCE ABLATION STUDY OF MODULES
+
+ TABLE V
+ COMPARISONS BETWEEN SEEN AND UNSEEN CATEGORY IN UCF-CRIME. contribute to the performance gain. Moreover, the final result
+ of the ablation study demonstrates that the joint application of
+ proposed modules can further bring a great performance improvement, which proves the effectiveness and rationality of our
+ modules.
+ It is noteworthy that the proposed MTVM module needs to
+ compute the contextual details of each frame, which imposes a
+ certain computational burden. Specifically, the resulting complexity is mainly related to the video length and feature dimension. Assuming the length of the video is lv , the feature dimension is dv , and the number of fused segments is M. Then the
+ computational complexity is lv ∗ M ∗ d2v . Thus, the computational complexity is directly proportional to the length of the
+ video, the longer the video, the more computation is required.
+ It is also proportional to the square of the feature dimension,
+ which means that an increase in the feature dimension leads to a
+ significant increase in the computation. In addition, the number
+ of fused segments M also affects the computational complexity,
+ with more fused segments implying a more complex computational process. In practical applications, a combination of these
+ factors may need to be considered to balance computational ef-
+ Fig. 3. Comparison of different methods on seen and unseen categories. ficiency and model performance. This can ensure that the model
+ can efficiently sense contextual information without putting too
+experiments for each Base category and Novel category. Specifi- much pressure on the computational resources.
+cally, we set Seen Category Set to {Fighting, Shooting} and Un- Furthermore, the overall performance on close-set is better
+seen Category Set to {Riot, Abuse, Car Accident, Explosion} on when the MECL module is used individually. This is due to the
+XD Violance dataset. As shown in Fig. 3, our method achieves fact that the model under the closed-set condition is able to learn
+the best performance under open-set conditions in almost all wealthier features and patterns from seen anomalous events, thus
+Base and Novel categories, which reflects the effectiveness and providing more accurate predictions in most cases. However,
+superiority of our proposed method. Meanwhile, for the Novel the open-set condition brings larger performance gains than the
+category, the performance under the open-set condition is still closed-set condition. This indicates that the MECL module is
+quite different from that under the closed-set condition, which more effective in identifying and distinguishing between normeans that there is still a lot of scope for improvement in the mal and unseen abnormal events. This may be associated with
+current open-world video anomaly detection methods. the MECL module’s ability to better capture the distributional
+ characteristics of the data under open-set conditions, as well as
+ to more accurately evaluate uncertainty.
+C. Ablation Study
+ In this section, ablation experiments are performed under the
+condition of 4 seen anomaly categories and closed-set to verify D. Qualitative Results
+the effectiveness of the different modules. Specifically, we inves- In Fig. 4, we show the qualitative results of our proposed
+tigate the model performance gain of the proposed MTVM and method and the baseline (without MTVM and MECL) on unseen
+MECL by adding different module combinations in the network. and seen anomalies for the XD-Violence dataset. For continuous
+The results of the ablation study are illustrated in Table VI. The unseen anomalous events, like riot and shooting, our method
+MTVM and MECL are independent of each other, and each can produces high confidence in the anomalous region with precise
+achieve better results compared to the baseline. Among them, time boundaries, which reflects good detection performance for
+two modules have achieved performance gains of 0.41% and unseen continuous anomaly. However, the anomalous events are
+1.7% in the 4 seen anomaly category condition, while they have often complex and discontinuous in the real world. As shown in
+achieved performance gains of 0.43% and 1.67% in the closed set fighting and car accident, it is easy to see that our model still has
+condition. Therefore, we can conclude both MTVM and MECL difficulty in predicting time boundaries of unseen discontinuity
+3140 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 27, 2025
+
+Fig. 4. The qualitative results of our proposed method and the baseline without (MTVM and MECL) on unseen and seen anomalies for the XD-Violence dataset.
+The light blue range represents abnormal ground truth.
+
+events accurately. And it’s worth paying attention to the fact needed for the training process and the learnable parameters
+that, for continuous seen anomalous events (like explosion and in the network, the fusion weight of β plays a significant role
+abuse), our method produces high confidence in the anomalous in controlling the fusion quality of multi-scale temporal visual
+region with precise time boundaries. These results reflect its modeling features. Therefore, it is essential to explore the
+similarly positive effect on the categories of seen anomaly. appropriate range of β.
+ In conclusion, our method achieves the detection of unseen As shown in Fig. 5, we investigate the parameter sensitivanomalies under open-world conditions to a certain extent. ity regarding the percentage of β for the XD-Violence dataset
+However, there are still significant challenges in the complex and UCF-Crime dataset. Specifically, as the weight parameter
+real-world because of the discontinuity and unpredictability of β increases, the evaluation metrics generally exhibit an initial
+unseen anomalies. increase, followed by an decrease, and then another increase.
+ Regarding the performance in XD-Violence, the optimal
+ model performance is typically achieved when β is approxi-
+E. Sensitivity Analysis of Parameters mately 0.1. Regarding the performance in UCF-Crime, the op-
+ In this section, we discuss the parameters that are critical timal model performance is typically achieved when β is apto model performance. In addition to the hyperparameters proximately 0.2. Ideally, useful information within the range of
+HUANG et al.: MULTIMODAL EVIDENTIAL LEARNING FOR OPEN-WORLD WEAKLY-SUPERVISED VIDEO ANOMALY DETECTION 3141
+
+ [8] S. Sun et al., “TDSD: Text-driven scene-decoupled weakly supervised
+ video anomaly detection,” in Proc. ACM Int. Conf. Multimedia, 2024,
+ pp. 5055–5064.
+ [9] J. Chen, L. Li, L. Su, Z.-j. Zha, and Q. Huang, “Prompt-enhanced
+ multiple instance learning for weakly supervised video anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2024,
+ pp. 18319–18329.
+ [10] Y. Fan, Y. Yu, W. Lu, and Y. Han, “Weakly-supervised video anomaly
+ detection with snippet anomalous attention,” IEEE Trans. Circuits Syst.
+ Video Technol., vol. 34, no. 7, pp. 5480–5492, Jul. 2024.
+ [11] Q. Jiang et al., “Unsupervised decomposition and correction network for
+ low-light image enhancement,” IEEE Trans. Intell. Transp. Syst., vol. 23,
+ no. 10, pp. 19440–19455, Oct. 2022.
+ [12] J. Hu, Q. Jiang, R. Cong, W. Gao, and F. Shao, “Two-branch deep neural
+ network for underwater image enhancement in HSV color space,” IEEE
+ Signal Process. Lett., vol. 28, pp. 2152–2156, 2021.
+ [13] Q. Jiang, Y. Kang, Z. Wang, W. Ren, and C. Li, “Perception-driven deep
+ underwater image enhancement without paired supervision,” IEEE Trans.
+ Multimedia, vol. 26, pp. 4884–4897, 2024.
+ Fig. 5. The changing trend of fusion weight β. [14] Y. Kang et al., “A perception-aware decomposition and fusion framework
+ for underwater image enhancement,” IEEE Trans. Circuits Syst. Video
+ Technol., vol. 33, no. 3, pp. 988–1002, Mar. 2023.
+temporal context perception is transferred to the current frame [15] Q. Jiang, Y. Gu, C. Li, R. Cong, and F. Shao, “Underwater image enhancement quality evaluation: Benchmark dataset and objective metric,”
+so that it can capture a certain range of temporal context infor- IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 9, pp. 5959–5974,
+mation without affecting the representation of the current frame. Sep. 2022.
+ [16] Q. Jiang et al., “Single image super-resolution quality assessment: A realworld dataset, subjective studies, and an objective metric,” IEEE Trans.
+ V. CONCLUSION Image Process., vol. 31, pp. 2279–2294, 2022.
+ [17] H. K. Joo, K. Vo, K. Yamazaki, and N. Le, “CLIP-TSA: Clip-assisted
+ In this paper, we propose a multi-scale evidential learning temporal self-attention for weakly-supervised video anomaly detection,”
+method for open-world weakly supervised anomaly detection, in Proc. 2023 IEEE Int. Conf. Image Process., 2023, pp. 3230–3234.
+which is driven by vision-language pre-trained model. Specifi- [18] P. Wu et al., “Open-vocabulary video anomaly detection,” in Proc.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2024, pp. 18297–18307.
+cally, we commence by extracting features from both the video [19] A. Radford et al., “Learning transferable visual models from natural lanand label text using the encoders of the pre-trained model. guage supervision,” in Proc. Int. Conf. Mach. Learn., 2021, pp. 8748–8763.
+Specifically, we learn generalized visual and textual feature rep- [20] A. Jsang, Subjective Logic: A Formalism for Reasoning Under Uncertainty. Cham, Switzerland: Springer, 2018.
+resentation from vision-language pre-trained model and capture [21] W. Sultani, C. Chen, and M. Shah, “Real-world anomaly detection in
+useful information in temporal context through multi-scale tem- surveillance videos,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.,
+poral visual modeling module. We then collect and jointly lever- 2018, pp. 6479–6488.
+ [22] C. Zhang et al., “Dynamic erasing network based on multi-scale temage multimodal evidence to achieve weakly-supervised video poral features for weakly supervised video anomaly detection,” 2023,
+anomaly detection in the open world. Extensive experimental arXiv:2312.01764.
+results demonstrate the effectiveness of components in our pro- [23] Y. Dang et al., “Discriminative action snippet propagation network for
+ weakly supervised temporal action localization,” ACM Trans. Multimedia
+posed framework, which also show that our method outperforms Comput., Commun. Appl., vol. 20, no. 6, pp. 1–21, 2024.
+those existing methods on XD-Violence and UCF-Crime for [24] X. Xie et al., “Attention erasing and instance sampling for weakly superopen-world weakly-supervised video anomaly detection. vised object detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024,
+ Art. no. 5600910.
+ [25] F. Ye et al., “Attribute restoration framework for anomaly detection,” IEEE
+ REFERENCES Trans. Multimedia, vol. 24, pp. 116–127, 2020.
+ [26] F.-T. Hong, J.-C. Feng, D. Xu, Y. Shan, and W.-S. Zheng, “Cross-modal
+ [1] A. O. Tur, N. Dall’Asen, C. Beyan, and E. Ricci, “Exploring diffusion consensus network for weakly supervised temporal action localization,”
+ models for unsupervised video anomaly detection,” in Proc. 2023 IEEE in Proc. 29th ACM Int. Conf. Multimedia, 2021, pp. 1591–1599.
+ Int. Conf. Image Process., 2023, pp. 2540–2544. [27] M. Baradaran and R. Bergevin, “Multi-task learning based video anomaly
+ [2] Y. Liu, Z. Guo, J. Liu, C. Li, and L. Song, “OSIN: Object-centric scene in- detection with attention,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ ference network for unsupervised video anomaly detection,” IEEE Signal Recognit., 2023, pp. 2886–2896.
+ Process. Lett., vol. 30, pp. 359–363, 2023. [28] Z. Yang, J. Liu, Z. Wu, P. Wu, and X. Liu, “Video event restoration based
+ [3] C. Tao et al., “Feature reconstruction with disruption for unsuper- on keyframes for video anomaly detection,” in Proc. IEEE/CVF Conf.
+ vised video anomaly detection,” IEEE Trans. Multimedia, vol. 26, Comput. Vis. Pattern Recognit., 2023, pp. 14592–14601.
+ pp. 10160–10173, 2024. [29] Z. Ye et al., “Unsupervised video anomaly detection with self-attention
+ [4] T. M. Tran, D. C. Bui, T. V. Nguyen, and K. Nguyen, “Transformer-based based feature aggregating,” in Proc. 2023 IEEE 26th Int. Conf. Intell.
+ spatio-temporal unsupervised traffic anomaly detection in aerial videos,” Transp. Syst., 2023, pp. 3551–3556.
+ IEEE Trans. Circuits Syst. Video Technol., vol. 34, no. 9, pp. 8292–8309, [30] Y. Zhu, W. Bao, and Q. Yu, “Towards open set video anomaly detection,”
+ Sep. 2024. in Proc. Eur. Conf. Comput. Vis., 2022, pp. 395–412.
+ [5] C. Zhang et al., “Exploiting completeness and uncertainty of pseudo labels [31] H. Zhou, J. Yu, and W. Yang, “Dual memory units with uncertainty regfor weakly supervised video anomaly detection,” in Proc. IEEE/CVF Conf. ulation for weakly supervised video anomaly detection,” in Proc. AAAI
+ Comput. Vis. Pattern Recognit., 2023, pp. 16271–16280. Conf. Artif. Intell., 2023, pp. 3769–3777.
+ [6] M. Cho et al., “Look around for anomalies: Weakly-supervised anomaly [32] M. Siemon, T. B. Moeslund, B. Norton, and K. Nasrollahi, “Bounding
+ detection via context-motion relational learning,” in Proc. IEEE/CVF boxes and probabilistic graphical models: Video anomaly detection sim-
+ Conf. Comput. Vis. pattern Recognit., 2023, pp. 12137–12146. plified,” 2024, arXiv:2407.06000.
+ [7] Z. Yang, J. Liu, and P. Wu, “Text prompt with normality guidance for [33] Y. Tian et al., “Weakly-supervised video anomaly detection with robust
+ weakly supervised video anomaly detection,” in Proc. IEEE/CVF Conf. temporal feature magnitude learning,” in Proc. IEEE/CVF Int. Conf. Com-
+ Comput. Vis. Pattern Recognit., 2024, pp. 18899–18908. put. Vis., 2021, pp. 4975–4986.
+3142 IEEE TRANSACTIONS ON MULTIMEDIA, VOL. 27, 2025
+
+[34] M. Chen, J. Gao, and C. Xu, “Uncertainty-aware dual-evidential learning Chao Huang (Member, IEEE) received the Ph.D. defor weakly-supervised temporal action localization,” IEEE Trans. Pattern gree in computer science and technology from the
+ Anal. Mach. Intell., vol. 45, no. 12, pp. 15896–15911, Dec. 2023. Harbin Institute of Technology, Shenzhen, China, in
+[35] J. Gao, M. Chen, and C. Xu, “Collecting cross-modal presence-absence 2022. From 2019 to 2022, he was a Visiting Scholar
+ evidence for weakly-supervised audio-visual event perception,” in Proc. with Peng Cheng Laboratory, Shenzhen. He is cur-
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2023, pp. 18827–18836. rently an Assistant Professor with the School of Cy-
+[36] M. Chen, J. Gao, and C. Xu, “Cascade evidential learning for open-world ber Science and Technology, Sun Yat-sen University,
+ weakly-supervised temporal action localization,” in Proc. IEEE/CVF Conf. Shenzhen. He has authored or coauthored more than
+ Comput. Vis. Pattern Recognit., 2023, pp. 14741–14750. 40 technical papers in prestigious international jour-
+[37] W. Wang, Y. Yang, and Y. Pan, “Visual knowledge in the big model era: nals and conferences. His research interests include
+ Retrospect and prospect,” Frontiers Inf. Technol. Electron. Eng., vol. 26, anomaly detection, multimedia analysis, object deno. 1, pp. 1–19, 2025. tection, image/video compression, and deep learning. Dr. Huang was the re-
+[38] Z. Yang, G. Chen, X. Li, W. Wang, and Y. Yang, “DoraemonGPT: Toward cipient of the Distinguished Paper Award of AAAI 2023, and his dissertation
+ understanding dynamic scenes with large language models,” in Proc. 41st was nominated for the Harbin Institute of Technology’s Outstanding Disserta-
+ Int. Conf. Mach. Learn., 2024, pp. 55976–55997. tion Award. He is also an Associate Editor for Pattern Recognition and is/was
+[39] H. Fang, P. Wu, Y. Li, X. Zhang, and X. Lu, “Unified embedding alignment the Reviewer/PC Member for several top-tier journals and conferences, includfor open-vocabulary video instance segmentation,” in Proc. Eur. Conf. ing IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE,
+ Comput. Vis., 2024, pp. 225–241. IEEE TRANSACTIONS ON IMAGE PROCESSING, IEEE TRANSACTIONS ON INFOR-
+[40] X. Zhang, P. Zhao, J. Ji, X. Lu, and Y. Yin, “Video corpus moment retrieval MATION FORENSICS AND SECURITY, IEEE TRANSACTIONS ON NEURAL NETvia deformable multigranularity feature fusion and adversarial training,” WORKS AND LEARNING SYSTEMS, ACM CSUR, CVPR, ICCV, ECCV, ICML,
+ IEEE Trans. Circuits Syst. Video Technol., vol. 34, no. 8, pp. 6686–6698, NeurIPS, ICLR, AAAI, IJCAI, and ACM Multimedia.
+ Aug. 2024.
+[41] R. Mokady, A. Hertz, and A. H. Bermano, “ClipCap: Clip prefix for image
+ captioning,” 2021, arXiv:2111.09734.
+[42] W. Yu et al., “Turning a clip model into a scene text detector,” in Proc.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2023, pp. 6978–6988.
+[43] H. Luo et al., “CLIP4Clip: An empirical study of CLIP for end to end video
+ clip retrieval and captioning,” Neurocomputing, vol. 508, pp. 293–304,
+ 2022.
+[44] A. Dubey et al., “The Llama 3 herd of models,” 2024, arXiv:2407.21783. Weiliang Huang received the B.E. and M.E. degree
+[45] C. Huang et al., “Pixel-level anomaly detection via uncertainty-aware pro- in electronic information engineering from the School
+ totypical transformer,” in Proc. 30th ACM Int. Conf. Multimedia, 2022, of Shantou University, Shantou, China, in 2020 and
+ pp. 521–530. 2024, respectively. He is currently working toward
+[46] P. Wu et al., “VadCLIP: Adapting vision-language models for weakly the Ph.D. degree in computer and information scisupervised video anomaly detection,” in Proc. AAAI Conf. Artif. Intell., ence with the University of Macau, Taipa, Macau. His
+ 2024, vol. 38, no. 6, pp. 6074–6082. research interests include anomaly detection, image
+[47] C. Huang et al., “Weakly supervised video anomaly detection via segmentation, vision-language model, and prompt
+ self-guided temporal discriminative transformer,” IEEE Trans. Cybern., learning.
+ vol. 54, no. 5, pp. 3197–3210, May 2024.
+[48] C. Huang et al., “Hierarchical graph embedded pose regularity learning
+ via spatio-temporal transformer for abnormal behavior detection,” in Proc.
+ 30th ACM Int. Conf. Multimedia, 2022, pp. 307–315.
+[49] P. Wu et al., “Not only look, but also listen: Learning multimodal violence
+ detection under weak supervision,” in Proc. 16th Eur. Conf. Comput. Vis.,
+ 2020, pp. 322–339.
+[50] J.-C. Wu, H.-Y. Hsieh, D.-J. Chen, C.-S. Fuh, and T.-L. Liu, “Self- Qiuping Jiang (Senior Member, IEEE) is currently a
+ supervised sparse representation for video anomaly detection,” in Proc. Full Professor with the School of Information Science
+ Eur. Conf. Comput. Vis., 2022, pp. 729–745. and Engineering, Ningbo University, Ningbo, China.
+[51] X. Zhou et al., “Learning weakly supervised audio-visual violence His research interests include image quality assessdetection in hyperbolic space,” Image Vis. Comput., vol. 151, 2024, ment, visual perception modeling, and underwater vi-
+ Art. no. 105286. sual information processing. He is also an Associate
+[52] Y. Pu, X. Wu, L. Yang, and S. Wang, “Learning prompt-enhanced context Editor for several SCI-indexed journals such as Disfeatures for weakly-supervised video anomaly detection,” IEEE Trans. plays, Journal of Visual Communication and Image
+ Image Process., vol. 33, pp. 4923–4936, 2024. Representation, IET Image Processing, and Journal
+[53] I. Loshchilov and F. Hutter, “Decoupled weight decay regularization,” of Electronic Imaging.
+ 2017, arXiv:1711.05101.
+[54] J.-C. Feng, F.-T. Hong, and W.-S. Zheng, “MIST: Multiple instance
+ self-training framework for video anomaly detection,” in Proc. IEEE/CVF
+ Conf. Comput. Vis. pattern Recognit., 2021, pp. 14009–14018.
+[55] S. Li, F. Liu, and L. Jiao, “Self-training multi-sequence learning with transformer for weakly supervised video anomaly detection,” in Proc. AAAI
+ Conf. Artif. Intell., 2022, vol. 36, no. 2, pp. 1395–1403.
+[56] Y. Chen et al., “MGFN: Magnitude-contrastive glance-and-focus network
+ for weakly-supervised video anomaly detection,” in Proc. AAAI Conf. Ar- Wei Wang received the B.S. degree from the School
+ tif. Intell., 2023, vol. 37, no. 1, pp. 387–395. of Science, Anhui Agricultural University, Hefei,
+[57] R. Girdhar et al., “Imagebind: One embedding space to bind them China, in 2015, the M.S. degree from the School
+ all,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2023, of Computer Science and Technology, Anhui Unipp. 15180–15190. versity, Hefei, China, in 2018, and the Ph.D. degree
+[58] H. Liu, C. Li, Y. Li, and Y. J. Lee, “Improved baselines with visual instruc- from the School of Software Technology, Dalian Unition tuning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., versity of Technology, Dalian, China, in 2022. He is
+ 2024, pp. 26296–26306. currently a Postdoctoral researcher with the School
+[59] L. Zanella, W. Menapace, M. Mancini, Y. Wang, and E. Ricci, “Harnessing of Cyber Science and Technology, Shenzhen Camlarge language models for training-free video anomaly detection,” in Proc. pus, Sun Yat-Sen University, Shenzhen, China. His
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2024, pp. 18527–18536. research interests include transfer learning, zero-shot
+[60] P. Wu et al., “Open-vocabulary video anomaly detection,” in Proc. learning, and deep learning.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2024, pp. 18297–18307.
+HUANG et al.: MULTIMODAL EVIDENTIAL LEARNING FOR OPEN-WORLD WEAKLY-SUPERVISED VIDEO ANOMALY DETECTION 3143
+
+ Jie Wen (Senior Member, IEEE) received the Ph.D. Bob Zhang (Senior Member, IEEE) received the
+ degree in computer science and technology from the Ph.D. degree in electrical and computer engineer-
+ Harbin Institute of Technology, Shenzhen, China, in ing from the University of Waterloo, Waterloo, ON,
+ 2019. He is currently an Associate Professor with Canada, in 2011. He was a Postdoctoral Researcher
+ the School of Computer Science and Technology, with the Department of Electrical and Computer En-
+ Harbin Institute of Technology, Shenzhen. His re- gineering, Carnegie Mellon University, Pittsburgh,
+ search interests include image and video enhance- PA, USA. He is currently an Associate Professor with
+ ment, pattern recognition, and machine learning. He the Department of Computer and Information Scihas authored or coauthored more than 100 technical ence, University of Macau, Taipa, Macau. His repapers at prestigious international journals and con- search interests include biometrics, pattern recogferences, including IEEE TRANSACTIONS ON NEU- nition, and image processing. He is also a Techni-
+RAL NETWORKS AND LEARNING SYSTEMS, IEEE TRANSACTIONS ON IMAGE cal Committee Member of the IEEE Systems, Man, and Cybernetics Society
+PROCESSING, IEEE TRANSACTIONS ON CYBERNETICS, NeurIPS, ICML, CVPR, and an Associate Editors for IEEE TRANSACTIONS ON IMAGE PROCESSING,
+AAAI, IJCAI, and ACM MM. He is also an Associate Editor for IEEE TRANSAC- IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, IEEE
+TIONS ON IMAGE PROCESSING, IEEE TRANSACTIONS ON INFORMATION FOREN- TRANSACTIONS ON SYSTEMS, MAN, AND CYBERNETICS, and Artificial Intelli-
+SICS AND SECURITY, Pattern Recognition, and International Journal of Image gence Review.
+and Graphics, the Area Editor of Information Fusion. He was the Area Chair of
+ACM MM and ICML. He was also selected for the ‘World’s Top 2% Scientists
+List’ in 2021-2024. His one paper was the recipient of the Distinguished Paper
+Award from AAAI’23. For more information, please refer to the homepage:
+https://sites.google.com/view/jerry-wen-hit/home.

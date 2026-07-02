@@ -1,0 +1,1326 @@
+18172
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+ARISE: Graph Anomaly Detection on Attributed
+Networks via Substructure Awareness
+Jingcan Duan , Bin Xiao , Siwei Wang , Haifang Zhou, and Xinwang Liu , Senior Member, IEEE
+
+Abstract— Recently, graph anomaly detection on attributed
+networks has attracted growing attention in data mining
+and machine learning communities. Apart from attribute
+anomalies, graph anomaly detection also aims at suspicious
+topological-abnormal nodes that exhibit collective anomalous
+behavior. Closely connected uncorrelated node groups form
+uncommonly dense substructures in the network. However,
+existing methods overlook that the topology anomaly detection
+performance can be improved by recognizing such a collective pattern. To this end, we propose a new graph anomaly
+detection framework on attributed networks via substructure
+awareness (ARISE). Unlike previous algorithms, we focus on the
+substructures in the graph to discern abnormalities. Specifically,
+we establish a region proposal module to discover high-density
+substructures in the network as suspicious regions. The average
+node-pair similarity can be regarded as the topology anomaly
+degree of nodes within substructures. Generally, the lower the
+similarity, the higher the probability that internal nodes are topology anomalies. To distill better embeddings of node attributes,
+we further introduce a graph contrastive learning scheme, which
+observes attribute anomalies in the meantime. In this way, ARISE
+can detect both topology and attribute anomalies. Ultimately,
+extensive experiments on benchmark datasets show that ARISE
+greatly improves detection performance (up to 7.30% AUC and
+17.46% AUPRC gains) compared to state-of-the-art attributed
+networks anomaly detection (ANAD) algorithms.
+Index Terms— Attributed networks, graph anomaly detection,
+graph neural networks (GNNs), network substructure.
+
+Notations
+G
+Cj
+vi
+A ∈ Rn×n
+D ∈ Rn×n
+
+N OMENCLATURE
+Definitions
+Attributed network.
+Substructure in the network.
+ith node of G.
+Adjacency matrix of G.
+Degree matrix of A.
+
+Manuscript received 23 September 2022; revised 28 March 2023 and 14 July
+2023; accepted 31 August 2023. Date of publication 22 September 2023; date
+of current version 3 December 2024. This work was supported in part by the
+National Key Research and Development Program of China under Project
+2020AAA0107100 and in part by the National Natural Science Foundation
+of China under Project 62325604 and Project 62276271. (Corresponding
+authors: Bin Xiao; Xinwang Liu.)
+Jingcan Duan, Haifang Zhou, and Xinwang Liu are with the College
+of Computer Science and Technology, National University of Defense
+Technology, Changsha 410073, China (e-mail: jingcan_duan@163.com;
+haifang_zhou@nudt.edu.cn; xinwangliu@nudt.edu.cn).
+Bin Xiao is with the Department of Computer Science and Technology,
+Chongqing University of Posts and Telecommunications, Chongqing 400065,
+China (e-mail: xiaobin@cqupt.edu.cn).
+Siwei Wang is with the Intelligent Game and Decision Laboratory, Beijing
+100071, China (e-mail: wangsiwei13@nudt.edu.cn).
+Digital Object Identifier 10.1109/TNNLS.2023.3312655
+
+X ∈ Rn×d
+xi ∈ R1×d
+′
+H(ℓ) ∈ Rn×d
+h(ℓ) ∈ R1×d
+′
+′
+W(ℓ) ∈ Rd ×d
+t
+R
+′
+
+Ra
+yi ∈ {0, 1}
+score(vi )
+
+Attribute matrix of G.
+Attribute vector of vi .
+Hidden subgraph representation of the ℓth
+layer.
+Node hidden representation of the ℓth layer.
+Network parameters of the ℓth layer.
+Number of topology anomaly detection
+round.
+Number of attribute anomaly detection
+round.
+Ground-truth label of a instance pair.
+Final anomaly score of vi .
+I. I NTRODUCTION
+
+A
+
+TTRIBUTED networks have the powerful capability of
+modeling and analyzing numerous complex scenarios in
+the real world. In recent years, researches [1] on attributed networks tasks are becoming an increasingly appealing direction
+for academia and industry. In particular, anomaly detection
+has been a vital topic in attributed networks [2], which has
+ubiquitous applications in many fields, such as financial fraud
+detection [3], social spam detection [4], network intrusion
+detection [5], and information system error detection [6].
+Attributed networks anomaly detection (ANAD) intends
+to discern anomalous nodes that diverge from frequent patterns [2]. Unlike the raw data widely applied in other
+fields [7], [8], [9], attributed networks include both network
+topology and node attribute information. According to the
+previous literature [10], [11], [12], [13], the mismatch between
+the above two types of information will cause two typical
+kinds of anomalies in attributed networks, i.e., the topology
+anomalies and attribute anomalies. As illustrated in Fig. 1,
+the topology anomaly has normal attribute values at a glance,
+while it densely links to the uncorrelated nodes [14]; on the
+contrary, the attribute counterpart has a normal neighborhood
+connectivity relationship, while its attribute values may be contaminated by noise and are not similar to the neighborhoods.
+Further analysis demonstrates that the pattern of topology
+anomalies is the collective behavior of a group of anomalous
+nodes, which form uncommonly dense substructures in the
+networks.
+Early shallow methods [15], [16], [17], [18], [19] primarily
+focus on feature engineering or pattern recognition methods
+to detect the anomalous behaviors of nodes. Such models
+rely on specific domain knowledge of researchers to improve
+detection performance. Besides, they cannot effectively dig
+
+2162-237X © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+DUAN et al.: ARISE
+
+Fig. 1. Toy example contains two typical anomalous nodes in attributed
+networks: 1) Topology anomaly: uncorrelated nodes with dense links in the
+red circle. 2) Attribute anomaly: nodes with dissimilar attribute values from
+neighborhoods.
+
+deep nonlinear information from the topology structure and
+the node attributes. The above reasons hinder them from
+discriminating abnormal nodes effectively.
+Recently, the graph neural network (GNN) has made
+remarkable advances in many fields, e.g., natural language processing [20], traffic systems [21], recommender systems [22],
+and chemistry [23]. Therefore, GNN has become a natural
+choice for the ANAD task and can solve the problems faced by
+traditional methods better. DOMINANT [24] designs a graph
+convolution network (GCN)-based autoencoder, which regards
+the reconstruction errors of structure and attribute matrices as
+the anomalous degrees. AnomalyDAE [25] replaces GCN with
+graph attention network (GAT). ResGCN [26] improves GAT
+by adding residual information. Differently, [27] combines
+multiple graph filters and solves the anomalous information
+smoothing of nodes caused by GCN’s low-pass filter. To avoid
+the labor-intensive and time-consuming cost of collecting node
+labels, CoLA first introduces the graph contrastive learning
+paradigm into ANAD. [28], [29], [30] boost the detection performance with the addition of node-level contrastive network,
+generative loss, and graph multiview contrastive paradigm.
+Although existing works have achieved impressive results
+in the detection performance, there is still a relative lack
+of research on effectively detecting topology anomalies.
+The common practice of most contrastive-based previous
+approaches is the comparison of attributes between the target
+node and its neighbors. Besides, reconstruction-based methods
+compare the original attribute and topology information of the
+target node with the one reconstructed from its neighbors.
+It is obvious that such a strategy is effective in detecting
+the anomalous behaviors of attribute anomalies. An attribute
+anomalous node can be easily captured if it is dissimilar from
+its neighbors. However, the topology anomaly has normal
+attribute values but more complex connectivity relationships
+with other topology anomalies. It is difficult to discern them
+
+18173
+
+under such a strategy. Therefore, a new algorithm that can
+effectively detect topology anomalies and cooperate well with
+attribute anomaly detection needs to be explored.
+In this article, we make a new attempt to remedy the
+mentioned defects in ANAD. To this end, we propose a novel
+graph Anomaly detection framework on attRIbuted networks
+via Substructure awarEness (ARISE), which both detects
+the topology and attribute anomalies concurrently. Topology
+anomalies are groups of uncorrelated nodes with dense links
+between them. Such a group of anomalous nodes viewed as
+a whole will form an uncommonly dense substructure in the
+networks. It is the anomalous behavior manifested by nodes
+combined together. However, existing works are unaware that
+the key to topology anomaly detection is discerning such a
+collective pattern from the network topology. To overcome this
+challenge, we elaborate a new topology detection scheme from
+a substructure-based perspective, which can detect their collective anomalous behaviors. To be specific, we first leverage a
+density-based algorithm in the region proposal module to discover high-density substructures as suspicious regions. Then,
+the anomalous degrees of the internal nodes are measured
+by their attribute similarities. On the other hand, we adopt
+a graph contrastive network for attribute anomaly detection.
+It can distill better node embeddings for similarity measures in topology anomaly detection simultaneously. Finally,
+a well-designed aggregator is utilized to fuse the topology
+and attribute anomalous information. Extensive evaluations
+and comprehensive metrics on benchmarks show ARISE’s
+astonishing effectiveness compared to strong competitors.
+In general, the main contributions of this work are summarized below.
+1) We redesign a new principle to detect the topology
+anomalies. Specifically, it perceives their collective
+anomalous behaviors from the perspective of network
+substructures.
+2) We propose a new integrated anomaly detection framework (ARISE) in attributed networks, which experts in
+detecting topology anomalies and attribute anomalies
+simultaneously.
+3) Experiments demonstrate the remarkable advantage of
+ARISE against current ANAD methods.
+II. R ELATED W ORK
+In this section, we will review the related work in terms of
+1) ANAD and 2) graph contrastive learning.
+A. Attributed Networks Anomaly Detection
+An attributed network is a structured network with multidimensional attribute information. Many traditional algorithms
+have been proposed in ANAD. They are based on the nondeep
+anomaly detection way, which captures anomalous patterns
+from either topology or node attributes of the network.
+LOF [15] and Radar [18] find the differences in attributes
+between the target node and the context or most of the
+nodes. Among the methods based on topology information,
+SCAN [16] is one of the most well-known works. AMEN [17]
+
+18174
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+and ANOMALOUS [19] both use node attribute information and network topology information to achieve powerful
+results. However, the traditional methods cannot excavate
+deep information, making it difficult to improve performance
+continuously.
+The emergence of GNN has dramatically improved the
+ability of the algorithms to extract the deep information of
+the attributed networks. They have been widely used in many
+fields [31], [32], [33], [34], [35]. It is natural to introduce GNN
+to graph anomaly detection. AAGNN [36], which is improved
+from the traditional anomaly detection algorithm, incorporates
+the one-class support vector machine (SVM) algorithm into
+attributed networks to identify anomalous samples. Algorithms
+based on the self-supervised learning paradigm have also
+achieved great success. The generative self-supervised learning method DOMINANT [24] performs anomaly detection
+by calculating the differences between the attribute matrix,
+the adjacency matrix, and the original matrices after GCN
+reconstruction. COMMANDER [37] pays attention to solving
+the cross-domain problem in ANAD. Auxiliary attributebased HCM [38] adopts a node-to-hop count pretext task
+that takes the predicted values of hop counts of nodes and
+first-order neighbors as node anomaly scores. CoLA [14]
+introduces the contrastive learning paradigm to ANAD for the
+first time, constructing node- and subgraph-level comparisons
+to identify anomalies by the differences between the node
+and contrastive subgraph attributes in positive and negative
+pairs. ANEMONE [28], SL-GAD [29], and Sub-CR [30]
+do further research based on CoLA. Multiscale strategies [39]
+have been proven effective in other domains. ANEMONE
+forms multiscale contrastive with new node-level comparison
+and captures more anomalous information. SL-GAD adopts
+both contrastive learning and reconstruction patterns. Sub-CR
+works in a multiview way with a global graph view generated
+by the diffusion model. Differently, PAMFUL [40] captures
+global information by a synergistic approach. However, most
+of these methods focus on digging the information of node
+attributes and pay less attention to the topological information.
+III. G RAPH C ONTRASTIVE L EARNING
+The primary purpose of GNN algorithms is to transform
+the attributes of nodes into low dimensions according to the
+needs of specific tasks. The expensive label collection progress
+limits the supervised and semi-supervised learning algorithms.
+As an essential branch of the graph self-supervised paradigm,
+graph contrastive learning can compensate for the above
+problem to a certain extent by obtaining enough supervision
+information from ingeniously designed pretext tasks. Based
+on the contrastive scale [41], most graph contrastive learning
+methods can be divided into two leading mainstream. One
+is same-scale contrastive learning. GRACE [42] generates
+two comparison views by graph augmentation methods that
+bring the positive pair nodes in the view closer and push
+the negative pair nodes farther. After two graph views are
+generated, HeCO [43] is trained on the heterogeneous graph
+with encoders maximizing the mutual information of the same
+nodes in the views. To alleviate the burden of constructing
+negative pairs, BGRL [44] uses the Siamese network approach
+
+for model training. The other one is cross-scale contrastive
+learning. The pioneering work DGI [45] proposes to maximize
+the mutual information of node representation and graph-level
+representation to obtain global information. After generating
+two views through data augmentation, MVGRL [46] maximizes the node representation in one view and the graph-level
+representation in the other view. Therefore, we focus on
+using cross-scale contrastive learning, which provides a better
+solution to distill the representation of node attributes for
+ANAD tasks.
+IV. P ROPOSED M ETHOD
+In this section, we will first define the main problem of
+ANAD formally. The primary notations used throughout this
+article are summarized in Nomenclature. Then, we introduce
+the proposed framework, ARISE. Finally, we conduct complexity analysis of the model.
+A. Attributed Networks Anomaly Detection
+An attributed network G = (V, E, X) consists of: 1) the
+set of nodes V, where |V| = n; 2) the set of edges E, where
+|E| = m; and 3) the node attributes matrix X ∈ Rn×d , indicates
+the attribute values of nodes. In addition, the adjacency matrix
+A ∈ Rn×n contains the topology information of the network,
+and Ai j = 1 represents there is an edge between node vi
+and v j , otherwise, Ai j = 0. In ANAD, the model is trained to
+learn a function score(vi ) that calculates the anomaly score for
+node vi in G. The larger the anomaly score, the more likely
+the node is anomalous. It is worth noting that we conduct the
+ANAD task strictly unsupervised in this article.
+B. Proposed Method
+In this subsection, we will introduce our method ARISE.
+As shown in Fig. 2, it consists of three main components.
+The first part is the topology anomaly detection module,
+which uses a density-based algorithm to perceive high-density
+substructures as suspicious regions. The anomaly degrees of
+internal nodes are evaluated by the average node-pair similarity
+in the substructure. The second part is the attribute anomaly
+detection module, which forms a contrast of node-subgraph
+level to obtain node attribute anomaly degree. It should be
+pointed out that these two modules leverage both node attribute
+information and network topology information. The last one
+is the anomaly score calculation, which aggregates the anomalous information from the first two modules to obtain the final
+anomaly score for each node. Such two types of anomaly score
+calculations are performed under multiround detection. In each
+detection, the former employs a multisize substructure scoring
+strategy, which takes into account the size of the substructure.
+The latter combines the effects of both positive and negative
+pairs.
+1) Topology Anomaly Detection: Previous methods [14],
+[28], [29] constitute node-subgraph pairs in the contrastive
+network by random walk [47], [48], [49], [50], [51]. Nevertheless, the uncertainty caused by random walk does not always
+contribute to learning the node-local topology information
+
+DUAN et al.: ARISE
+
+18175
+
+Fig. 2. Overview of the ARISE model. It consists of three modules. 1) Topology anomaly detection: we design a region proposal module to perceive
+high-density substructures as suspicious regions. The average node-pair similarity indicates the anomaly degrees of nodes within the substructure. 2) Attribute
+anomaly detection: the target node forms a positive pair with its located subgraph and forms a negative pair with the irrelevant subgraph. After the contrastive
+learning network, the node embeddings are also used in topology anomaly detection. 3) Anomaly score calculation: we treat the reciprocal of average node-pair
+similarity as the topology anomaly estimates of its inner nodes and adopt a multiscale substructure scoring strategy. The node attribute anomaly score is
+calculated by measuring the relationship between it and its contrastive subgraphs. Finally, the aggregator calculates the final anomaly score by fusing the
+attribute and topology anomaly scores of each node.
+
+that is beneficial for the task. In extreme cases, the sampled subgraph around an anomalous node may contain a
+few similar nodes in its neighborhoods, which will harm
+detecting it. On the other hand, this node-subgraph contrastive
+mode ignores the collective abnormal behavior of topology
+anomalies on the network topology. Therefore, we make a
+new attempt to leverage local topology information from the
+perspective of substructures in the networks. We design a
+region proposal module to extract suspicious substructures and
+overcome the above deficiency. Afterward, we discriminate
+the anomalous nodes in the substructure based on the average
+node-pair similarity.
+a) Region proposal module: A group of topology anomalies will form an uncommonly dense substructure in the
+networks. To this end, we employ a density-based algorithm
+to discover the high-density substructures that may contain
+topology anomalies. In practice, we first utilize a k-core
+method [52] to find the k-core graphs. Then, they will be
+partitioned into substructures based on the node connectivity.
+In addition to this straightforward density-based algorithm,
+other more sophisticated algorithm strategies are also applicable under our substructure-aware framework as one of the
+potential directions in the future. Ultimately, these substructures {C0 , . . . , Cb } with possible anomalous nodes can be
+regarded as suspicious regions.
+b) Topology anomaly degree estimate: In reality, there
+are some scenarios where normal samples possess close
+connections between them, e.g., there are frequent email
+correspondences between managers and their secretaries. Conversely, the intensive email exchanges between assembly line
+
+workers and secretaries could be regarded as abnormality [53].
+Therefore, some suspicious regions have only normal nodes,
+while others contain normal nodes and topology anomalies.
+In light of this, we measure the anomaly degree of internal
+nodes by average node-pair similarity in the substructure.
+It should be pointed out that the nodes with more significant
+differences in attributes have a higher anomalous possibility.
+To obtain more accurate similarity, we utilize the embeddings
+of node attributes instead of the original attribute values.
+Specifically, we choose cosine distance as the node-pair similarity measurement
+
+
+dk,q = Similarity z k , z q = cos z k , z q
+(1)
+where z k and z q represents the embedding of node vk and vq .
+After that, we utilize an average function to compute the
+average node-pair similarity for each substructure
+n̂ j
+
+1 X (l)
+d
+dj =
+n̂ j l=1 k,q
+
+(2)
+
+where n̂ j is the number of the node pairs in the substructure C j .
+And node vk and vq belong to C j .
+So far, it has not been solved how to obtain more qualified
+node embeddings for the similarity metric in (1). In addition,
+it is essential to detect attribute anomalies in ANAD. Hence,
+we introduce the graph contrastive learning scheme in attribute
+anomaly detection, which can acquire better node representations in the meantime.
+2) Attribute Anomaly Detection: The recent success of
+graph contrastive learning introduced in Section III has shown
+
+18176
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+great potential to discern attribute anomalies. Inspired by this,
+we define contrastive instance pairs following [14]. Afterward,
+the node attribute anomaly degree is calculated by measuring
+the similarity between the embeddings of instance pairs. More
+importantly, ARISE can learn better node representations
+served in the topology anomaly detection module.
+a) Subgraph sampling: The construction of positive and
+negative pairs is vital for contrastive learning. While there are
+multiple-scale contrasts, one of the most potent comparisons is
+the contrast of node and subgraph for ANAD. The supervision
+information from the subgraph includes both neighborhood
+attributes and topology. For the target node vi , it forms a
+positive pair with the subgraph where it is located and forms
+a negative pair with the subgraph where another random
+node is located. To avoid the interaction between the node
+and subgraphs, the attribute values of the node are masked,
+i.e., all attribute values are set to 0.
+There are many subgraph sampling methods, but we use
+a random walk-based algorithm in this article. Because it
+is practical and straightforward to implement. A generated
+subgraph is composed of a node and its neighborhoods.
+b) Contrastive learning network: The contrastive learning network pulls the positive pairs and pushes the negative
+pairs into the latent space. In this process, the node representations are optimized. First, we learn the representation of the
+subgraph corresponding to the target node vi through a GCN
+layer. The hidden layer representation of the subgraph in the
+positive pair can be defined as
+
+ −1
+−1
+Ai e
+(3)
+Di 2 Hi(ℓ) W(ℓ)
+Hi(ℓ+1) = σ e
+Di 2 e
+where Hi(ℓ+1) and Hi(ℓ) denote the hidden representation of the
+−(1/2) e e−(1/2)
+(ℓ + 1)th and ℓth layer, e
+Di
+Ai Di
+is the normalization
+of the adjacency matrix, W(ℓ) denotes the network parameters,
+and σ (·) is activation function ReLU here.
+After GCN, we manage to define a Readout function, which
+converts the embedding of the subgraph Ei to the same shape
+as vi . In practice, we choose average to achieve Readout
+ñ
+
+ei = Readout(Ei ) =
+
+i
+1 X
+(Ei )l
+ñ i l=1
+
+(4)
+
+where ñ i denotes the number of nodes within the subgraph,
+(Ei )l denotes the ℓth row of Ei , and ei is the final representation of the subgraph.
+Then, we need to encode the attribute of the target node into
+the same embedding space as subgraphs. The embedding of
+the target node can be acquired by using the model parameters
+of GCN
+
+
+hi(ℓ+1) = σ hi(ℓ) W(ℓ)
+(5)
+
+i.e., the similarity
+e i⊤
+si = Bilinear(z i , ei ) = sigmoid z i We
+
+
+
+(6)
+
+e denotes the parameter matrix and sigmoid(·) is the
+where W
+logistic sigmoid function.
+According to the characteristics of the ANAD task,
+we decide to apply the binary cross-entropy loss [45] as
+the objective function of the module. It can be expressed as
+follows:
+n
+X
+L=−
+(7)
+(yi log (si ) + (1 − yi ) log (1 − si ))
+i=1
+
+where yi is equal to 1 in positive pairs, while is equal to 0 in
+negative pairs.
+3) Anomaly Score Calculation:
+a) Topology anomaly score: Since the average node-pair
+similarity is negatively correlated with the anomaly degree
+of nodes in the substructure, the reciprocal of the average node-pair similarity is naturally used to represent their
+anomaly degrees. Then, we treat the reciprocal value as the
+topology anomaly estimate of each internal node within the
+substructure. We calculate the topology anomaly estimate for
+each node in the substructure
+1
+(8)
+ti =
+dj
+where d j is the inner-node similarity of substructure C j . And
+ti represents the topology anomaly score of the target node vi
+that belongs to C j .
+It is unknown which substructure the topology anomalies
+belong to. We perform multiround detections with a gradually
+increasing k. To avoid unnecessary calculations, we start the
+detections with a specific k equal to the average node degree δ.
+The substructure discovery algorithm will be stopped when
+returning NULL. In each detection, we compute the topology
+anomaly estimates for the nodes detected in any substructure
+via (1), (2), and (8). The other nodes that have not been
+detected in any substructure will be assigned with a topology
+anomaly score of 0. Noble and Cook [54] and He et al. [55]
+indicate that smaller substructures appear frequently in the network while larger substructures appear infrequently. According
+to the characteristics of ANAD, we design the topology
+anomaly scoring method by combining the average node-pair
+similarity and the substructure size. In general, we adopt a new
+multisize substructure scoring strategy for topology anomaly
+detection. In practice, we adopt the number of nodes in the
+substructure to measure this impact. Therefore, we finally
+average the anomaly scores from multiround detection to
+determine the topology anomaly score for each node. So, the
+final topology anomaly score of the target node can be defined
+as follows:
+Rt
+
+where hi(ℓ+1) and hi(ℓ) denote the hidden representation of the
+(ℓ)
+
+(ℓ + 1)th and ℓth layer, W denotes the network parameters,
+and σ (·) is ReLU here. The last two are both shared with
+GCN. z i is the final representation of the target node.
+We utilize a bilinear model to tease out the relationship
+between the target node vi and its counterpart subgraph,
+
+score_t(vi ) =
+
+1 X
+C j ti(r )
+R t r =1
+
+(9)
+
+where |C j | indicates the number of the node in the substructure
+C j that vi belongs to. And R t is the number of topology
+anomaly detection rounds. score_t (vi ) denotes the final topology anomaly score of the target node vi .
+
+DUAN et al.: ARISE
+
+18177
+
+b) Attribute anomaly score: The attribute anomaly detection module obtains the similarities between the embeddings
+of each target node and contrastive subgraphs. We calculate
+the node attribute anomaly score according to the similarities
+information. For a normal node, its embedding should be
+similar to the subgraph in the positive pair, i.e., si, p is
+close to 1. On the contrary, it is dissimilar to the subgraph
+in the negative pair, i.e., si,n is close to 0. For an anomalous
+node, its embedding should be dissimilar to the subgraphs in
+both positive and negative pairs, i.e., si, p and si,n are both close
+to 0. Therefore, we define the attribute anomaly estimate of
+the target node as follows:
+ai = si,n − si, p
+
+(10)
+
+where si,n is the similar degree of vi and its corresponding
+subgraph in a negative pair, and si, p is the similar degree of vi
+and its corresponding subgraph in a positive pair.
+Due to the randomness of the subgraph sampling method,
+it cannot reflect all the attribute information of the node
+neighborhoods in one sampling. Thus, we perform multiround
+detection and construct multiple groups of positive and negative pairs. Then, the final attribute anomaly score of the target
+node is expressed as follows:
+Ra
+
+1 X (r )
+a
+score_a(vi ) = a
+R r =1 i
+
+(11)
+
+where score_a(vi ) denotes the final attribute anomaly score of
+the target node vi and R a is the number of attribute anomaly
+detection round.
+c) Final anomaly score: After the topology and attribute
+anomaly scores for each node are determined, we employ an
+aggregator to fuse them. First, each kind of score is normalized
+to unify its magnitudes. Then, the aggregator sums the two
+scores according to weight and obtains the final anomaly score
+score(vi ) for each node
+score(vi ) = (1 − α) · score_t(vi ) + α · score_a(vi ) (12)
+where α ∈ [0, 1] is a trade-off parameter to balance the importance between two scores.
+In general, the overall procedures of ARISE are shown
+in Algorithm 1.
+
+Algorithm 1 Proposed ARISE
+Input: An attributed network G = (V, E, X); Number of
+training epochs E; Batch size B.
+Output: Anomaly score function scor e(·).
+1: // Topology anomaly detection
+2: Calculate the average degree δ of nodes in graph.
+3: for k = δ to kmax do
+4:
+Detect high-density substructures {C0 , . . . , Cb }.
+5:
+for C j do
+6:
+Measure the inner-node embedding similarities of
+
+C j via Eq.(1).
+Calculate the average node-pair similarity of C j via
+Eq.(2).
+8:
+end for
+9: end for
+10: // Attribute anomaly detection
+11: for e = 1 to E do
+12:
+V is divided into batches with size B by random.
+13:
+for vi ∈ B do
+14:
+Form the positive and negative pairs by random
+walk sampling.
+15:
+Estimate the similarity scores for the embeddings of
+the target node and two subgraphs in the positive
+and negative pair via Eq.(6).
+16:
+Calculate the loss L via Eq.(7).
+17:
+Back propagation and update trainable parameters.
+18:
+end for
+19: end for
+20: // Anomaly score calculation
+21: By multiple round detection, calculate the final anomaly
+score for each node via Eq.(8), (9), (10), (11), and (12).
+7:
+
+TABLE I
+C OMPARISON OF T IME C OMPLEXITY FOR D IFFERENT A NOMALY
+D ETECTION M ETHODS IN ATTRIBUTED N ETWORKS . R I S THE
+N UMBER OF ROUNDS IN I NFERENCE FOR THE C OMPARED
+M ETHODS . A ND THE OTHER N OTATIONS A RE THE
+S AME AS S ECTION IV-C
+
+C. Complexity Analysis
+We analyze the time complexity of each component in
+ARISE. In the topology anomaly detection module, the time
+complexity of k-core method is O(max(n, m)) (n is the
+number of nodes in the graph and m represents the number of
+edges in the network). Therefore, R t rounds of detection need
+O(max(n, m)R t ). For the attribute anomaly detection module,
+each RWR subgraph sampling for all nodes is O(cδn) (c is
+the number of nodes within the subgraphs and δ is the mean
+degree of the network). The time complexity of GCN for all
+nodes is O((K qd + K cd 2 )n) (K is the number of layers, d is
+the dimension of node attributes in hidden space, and q is
+the number of edges in subgraphs). Hence, this module needs
+O(n(cδ+K qd+K cd 2 )(T +R a )) (T is the number of epochs in
+training and R a is the round of attribute detection). The overall
+
+time complexity of the proposed model is O(max(n, m)R t +
+n(cδ + K qd + K cd 2 )(T + R a )).
+In the meantime, we conduct time complexity analysis of
+recent important ANAD methods. Table I shows that since the
+augmented view is generated by graph diffusion, Sub-CR [30]
+has the largest time complexity of all the methods. In summary, our method improves performance without significantly
+increasing complexity.
+
+18178
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+TABLE II
+S TATISTICS OF DATASETS
+
+V. E XPERIMENT
+To verify the effectiveness of ARISE, in this section,
+we conduct experiments on six benchmark datasets and evaluate the model through three metrics.
+A. Experimental Settings
+1) Datasets: We perform experiments on six datasets commonly used in ANAD. The details of each dataset are
+presented in Table II. They are Cora [56], CiteSeer [56],
+DBLP [57], Citation [57], ACM [57], and PubMed [56].
+DBLP is an author network. There is an edge between two
+authors if they have a coauthor relationship. The others are
+publication network datasets, which are composed of scientific
+publications. Each paper is regarded as a node. The citation
+relations form the edges of the network.
+2) Anomaly Injection: Since the above six datasets are commonly attributed network datasets, they are usually considered
+to have no anomalies. Therefore, we need to inject anomalous nodes into these datasets for the experiment to work
+successfully. Following the previous literature [10], [11], [12],
+we inject both topology and attribute anomalies into the
+datasets. Considering the balance, such two types of anomalies
+have the same number in each dataset.
+a) Topology anomaly injection: Topology anomalies are
+mainly generated by perturbing the topology of the attributed
+networks. If many nodes in the dataset with dissimilar
+attributes are much more closely connected than the average,
+this can be considered a typical anomalous situation [10], [12].
+Specifically, we randomly select m̂ nodes that make them
+fully connected and repeat this operation p times. The number
+m̂ is set to 15 in practice. The number p is 5, 5, 10,
+15, 15, and 20 on Cora, CiteSeer, DBLP, Citation ACM,
+and PubMed.
+b) Attribute anomaly injection: Attribute anomalies are
+mainly generated by perturbing the attribute values of nodes.
+Using the method proposed in the literature [11], attribute
+anomalies are generated by modifying node attribute values.
+First, we randomly select a node vi and another n̂ nodes. The
+number n̂ is usually 50. Then, we calculate the Euclidean
+distance between vi and each of the n̂ nodes. Finally, the
+attribute values of vi are changed to be the same as that of
+node v j , which has the largest Euclidean distance. The number
+of attribute anomalies is 75, 75, 150, 225, 225, and 300 on
+each dataset, respectively.
+
+3) Baselines: We select eight well-known ANAD algorithms to compare with our proposed framework, ARISE. They
+are LOF1 [15], ANOMALOUS2 [19], DOMINANT3 [24],
+CoLA4 [14], ANEMONE5 [28], SL-GAD6 [29], HCM7 [38],
+and Sub-CR8 [30]. The first two are nondeep methods, and
+the last six are deep methods. Following the operation of
+CoLA, the datasets are first preprocessed before running
+ANOMALOUS. Specifically, the attributes dimension of nodes
+is reduced to 30 by PCA.
+4) Evaluation Metric: Our experiments employ three common metrics to evaluate the model comprehensively.
+a) AUC: The ROC curve is a plot of the true-positive
+rate against the false-positive rate according to the ground
+truth and the anomaly scores of the nodes. AUC value is
+the area under the ROC curve. A higher value means the
+score function assigns a higher score to the randomly chosen
+anomalous sample than a normal sample.
+b) AUPRC: The PR curve is a plot of precision against
+recall according to the ground truth and the anomaly scores
+of the nodes. AUPRC value is the area under the PR curve,
+reflecting the performance of the positive samples. In practice,
+we use the method of calculating the average precision to
+obtain AUPRC value [58].
+c) Precision@K: It indicates the proportion of truepositive samples among the top k samples with the largest
+anomaly scores. The value of Precision@K ranges from 0 to 1,
+and close to 1 means the model performs better.
+5) Parameter Settings: In the attribute anomaly detection
+module, we set the size of subgraphs in positive pairs and
+negative pairs to be 4. In the meantime, the basic network
+model (GCN) is one layer, and the latent embedding dimension is 64 on all datasets. The learning rate of the model
+for Cora, CiteSeer, DBLP, Citation, ACM, and PubMed is
+0.003, 0.003, 0.0005, 0.001, 0.0005, and 0.001. To get better
+performance, the number of training epochs on Cora, CiteSeer,
+and PubMed is 100. It is set to 400 on DBLP, Citation,
+and ACM.
+6) Computing Infrastructures: Except for ANOMALOUS,
+the experiments of other models run on the PyTorch
+1.10.2 platform using an Intel9 Core10 i9-10850K CPU
+(3.60 GHz), 64 GB RAM, and an NVIDIA GeForce RTX
+3070 8 GB GPU. The experiments of ANOMALOUS run on
+MATLAB R2020b platform using the same machine.
+B. Experimental Results
+1) Analysis of Performance Comparison: The ROC curves
+of these nine models on these six datasets are shown in Fig. 3.
+The specific AUC values and AUPRC values are shown
+1 https://github.com/damjankuznar/pylof
+2 https://github.com/zpeng27/ANOMALOUS
+3 https://github.com/kaize0409/GCN_AnomalyDetection_pytorch
+4 https://github.com/GRAND-Lab/CoLA
+5 https://github.com/GRAND-Lab/ANEMONE
+6 https://github.com/KimMeen/SL-GAD
+7 https://github.com/Juintin/GraphAnomalyDetection
+8 https://github.com/Zjer12/Sub
+9 Registered trademark.
+10 Trademarked.
+
+DUAN et al.: ARISE
+
+18179
+
+Fig. 3. ROC curves comparison on six benchmark datasets. The area under the curve is larger, the anomaly detection performance is better. The black dotted
+lines are the “random line,” indicating the performance under random guessing. (a) ROC curve of Cora. (b) ROC curve of CiteSeer. (c) ROC curve of DBLP.
+(d) ROC curve of Citation. (e) ROC curve of ACM. (f) ROC curve of PubMed.
+TABLE III
+P ERFORMANCE C OMPARISON FOR AUC AND AUPRC. OOM I NDICATES THE I SSUE OF O UT- OF -M EMORY H APPENS D URING T RAINING . T HE B OLD AND
+U NDERLINED VALUES I NDICATE THE B EST AND RUNNER -U P R ESULTS , R ESPECTIVELY
+
+in Table III. Meanwhile, the Precision@K of total anomaly and
+topology anomaly line diagrams are shown in Fig. 4. Through
+comparison, we can conclude as follows:
+a) AUC and AUPRC results: As shown in Table III,
+we observe that ARISE has a stronger ability to distinguish
+anomalous nodes from normal nodes than other models.
+In particular, ARISE attains a remarkable AUC gain of
+2.46%, 0.62%, 1.85%, 7.30%, 2.92%, and 0.52% on Cora,
+CiteSeer, DBLP, Citation, ACM, and PubMed, respectively.
+At the same time, the AUPRC results reflect that ARISE
+makes a remarkable improvement in the positive sample detection compared with its competitors on most datasets, and it
+obtains about 17.46% AUPRC increment on the ACM dataset.
+
+These indicate that ARISE has a more comprehensive performance and can adapt to the different needs of various
+scenarios. It is worth noting that the well-design topology
+anomaly detection module brings about 2.19%–15.29% AUC
+and 11.97%–34.32% AUPRC gains when compared with the
+pioneering baseline CoLA.
+Fig. 3 offers an intuitive illustration that the under-curve
+areas of the deep methods are significantly larger than most
+nondeep methods, and the contrastive learning-based methods
+work best among the deep methods. This indicates that deep
+methods, especially contrastive learning-based methods, can
+learn more effective embeddings of node attributes than nondeep methods for the ANAD task.
+
+18180
+
+Fig. 4.
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+Performance comparison results with respect to Precision@K of total anomaly and topology anomaly on six benchmark datasets.
+
+b) Precision@K results: For a more comprehensive
+evaluation, we also report Precision@K on the six datasets
+in Fig. 4. For each dataset, the odd columns are Precision@K
+results reflecting the proportion of true total anomalies, which
+contains both attribute and topology anomalies, in its top k
+ranked nodes. The even columns are Precision@K measuring
+the proportion of veritable topology anomalies in its top k
+anomaly scores. As suggested by results in Fig. 4, ARISE
+achieves best or comparable results in odd column subfigures.
+It is noticeable that ARISE brings tangible Precision@K
+improvement to the competitors except on Citation in even
+column subfigures. These phenomena verify the effectiveness of our novel substructure-based paradigm on topology
+anomaly detection. According to the odd column subfigures,
+the proposed framework has stronger comprehensive detection
+performance than competitors.
+2) Study on Topology Anomaly Injection: Currently, there
+are two major topology anomaly injection methods. The first
+one is making randomly selected nodes fully connected [12].
+The other is to randomly dropout partial links between
+the selected nodes after the operation of the first injection
+
+method [13]. Our article adopts the first method in the experiments, which has been widely used in [14], [24], [28], [29],
+and [30].
+We perform comparative experiments to further investigate
+the generalization ability of our model on topology anomaly
+detection. To be specific, we follow the second injection
+method of topology anomalies, which drops out 10% edges
+between the randomly selected nodes (the injection of attribute
+anomalies remains unchanged). As shown in Table IV, our
+model still outperforms the competitors on all experimental
+datasets. Besides, we observe that most methods suffer from
+performance degradation under the new injection condition.
+This means such an injection method would make it more
+difficult to discern topology anomalies from normal nodes.
+This will be one of the challenges for future work.
+3) Analysis of Time Efficiency: We further concretely
+investigate the time efficiencies of all methods. In practice, we compute the average running time (second) for
+each epoch out of 100 epochs. Fig. 5 shows the relationships between performance and running time (second) for
+all methods on Citation. Most methods spend near time,
+
+DUAN et al.: ARISE
+
+18181
+
+TABLE IV
+P ERFORMANCE C OMPARISON FOR AUC U NDER D IFFERENT T OPOLOGY
+I NJECTION S ETTINGS (D ROPOUT 10% E DGES B ETWEEN S ELECTED
+N ODES ). OOM I NDICATES THE I SSUE OF O UT- OF -M EMORY
+H APPENS D URING T RAINING . T HE B OLD AND
+U NDERLINED VALUES I NDICATE THE B EST
+AND RUNNER -U P R ESULTS , R ESPECTIVELY
+
+TABLE VI
+A BLATION A NALYSIS FOR THE S UBSTRUCTURE D ETECTION M ETHOD IN
+THE T OPOLOGY A NOMALY D ETECTION M ODULE W ITH R ESPECT TO
+AUC VALUES . T HE B OLD VALUES I NDICATE THE B EST R ESULTS
+
+TABLE VII
+A BLATION A NALYSIS FOR THE C OMPONENTS OF (2) AND (9) W ITH
+R ESPECT TO AUC VALUES . “W/O AVERAGING ” M EANS D ELETING
+THE AVERAGING T ERM IN (2). A ND “N ODE PAIR ” I NDICATES
+R EPLACING THE N UMBER OF N ODES IN THE S UBSTRUCTURE
+W ITH THE N UMBER OF N ODE PAIRS . T HE B OLD AND
+U NDERLINED VALUES I NDICATE THE B EST AND
+RUNNER -U P R ESULTS , R ESPECTIVELY
+
+Fig. 5. Relationships between AUC result and running time for all models
+on Citation. The running time results (second) are calculated by averaging the
+running time for each epoch out of 100 epochs.
+TABLE V
+A BLATION A NALYSIS FOR THE M ETHOD OF O BTAINING N ODE
+R EPRESENTATIONS W ITH R ESPECT TO AUC VALUES .
+T HE B OLD VALUES I NDICATE THE B EST R ESULTS
+
+while ANOMALOUS runs significantly longer. And our model
+takes comparable time and achieves the best performance.
+C. Ablation Study
+In this section, we investigate the effects of the node
+representation acquisition strategies, the substructure detection method in the topology anomaly module, the topology
+anomaly score calculation strategy, and the score-fusion strategy on the model performance.
+1) Analysis of Node Representations Acquisition: In the
+topology anomaly module, the inner-node embedding similarities are highly correlated with the anomalous degree of the
+substructure. Hence, how to enjoy better node representations
+becomes a vital problem. We compare the performance of
+using raw node attributes with node embeddings from the
+contrastive network. Table V shows that the contrastive network learns more effective node representations for topology
+anomaly detection, further enhancing the ANAD performance.
+2) Analysis of Substructure Detection Method: In the meantime, we perform ablation study on the substructure detection
+method in the topology anomaly module with other seven
+
+classical community search algorithms. EHPPG [59] divides
+the graph into communities by iteratively swapping node pairs
+to reduce the edge cut between them. Greedy Modularity [60]
+modifies the community partition of nodes by a greedy pattern
+until it reaches the max modularity of the graph. Label Propagation [61] is a semisynchronous label propagation method.
+DANMF [62] detects communities in the graph by combining
+nonnegative matrix factorization and deep autoencoder. PercoMCV [63] first performs the clique percolation algorithm,
+then computes eigenvector centrality. EdMot [64] designs
+an edge enhancement approach for motif-aware community
+detection. DNTM [65] works based on a distributed neighborhood threshold method. As shown in Table VI, the adopted
+k-core [52] based method outperforms the other community
+search methods, which means it can more effectively capture
+suspicious substructures and work better with the framework.
+3) Analysis of Topology Anomaly Score Calculation:
+As for topology anomaly score calculation, the number of node
+pairs can also be used to measure the size of substructures
+in (9). To study the effectiveness of the averaging component
+in (2), we conduct additional experiments on all datasets.
+The comparison between the first and last row in Table VII
+indicates that the number of nodes works better in our
+scheme. In the meantime, compared with “W/O Averaging,”
+our scheme achieves the best or comparable performance. The
+experiment results verify the effectiveness of our topology
+anomaly score calculation strategy.
+4) Analysis of Fusion Strategy for Topology and Attribute
+Anomaly Scores: After gathering important topology and
+attribute anomaly scores, we analyze the fusion strategies to
+get final anomaly scores. To boost the performance, we explore
+three different combination strategies: 1) Max: we choose the
+largest value to represent the node anomaly degree; 2) sum:
+we sum the two scores directly; and 3) weight: the scores are
+
+18182
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+TABLE VIII
+A BLATION A NALYSIS FOR THE F USION M ETHOD OF T OPOLOGY AND
+ATTRIBUTE A NOMALY S CORES W ITH R ESPECT TO AUC VALUES .
+T HE B OLD VALUES I NDICATE THE B EST R ESULTS
+
+Fig. 6.
+
+Trade-off parameter α with respect to AUC values.
+
+summed by weight. As shown in Table VIII, ARISE adopts
+the weight fusion strategy, which is not always the best but
+the most comprehensive and effective choice.
+D. Parameter Analysis
+In the following subsection, we analyze the influence
+of coefficient α and its related settings on the detection
+performance.
+1) Score-Fusion Strategy: We first study the direct effect of
+α on the score-fusion strategy. As shown in Fig. 6, we vary the
+coefficient α from 0 to 1.0 and obtain its effect on the AUC
+value. Finally, we adopt α equal to 0.8 on all datasets. We note
+that the lines show an upward trend followed by a downward
+trend. The performance on α = 0 or α = 1 is significantly
+lower when α is between 0 and 1. This reflects that using the
+topology and attribute anomaly module concurrently greatly
+improves the detection ability of the model compared with
+only one.
+To further explore this phenomenon, we report the Precision@K results of topology anomaly and attribute anomaly
+when α = 0.2 and α = 0.8 on Citation and PubMed
+in Fig. 7. Table IX shows the AUC comparison of our model
+on different datasets. When α = 0.2, ARISE relies more
+on topology anomaly scores than attribute ones. In this case,
+Fig. 7 indicates that the performance of detecting topology
+anomalies is much better than detecting attribute anomalies on
+all datasets. The model has a weak ability to detect attribute
+anomalies.
+However, we aim to effectively detect such two types
+of anomalies simultaneously. Apparently, the model cannot
+achieve the goal when α = 0.2. The comparison of AUC
+results in Table IX also validates it. On the contrary, α =
+0.8 can balance the effects of two types of anomaly scores
+and enhance the detection performance of attribute anomalies.
+
+Fig. 7. Impact of trade-off parameter α with respect to Precision@K of total
+anomaly, topology anomaly, and attribute anomaly on Citation and PubMed.
+(a) Citation (α = 0.2). (b) Citation (α = 0.8). (c) PubMed (α = 0.2).
+(d) PubMed (α = 0.8).
+
+TABLE IX
+I MPACT OF T RADE -O FF PARAMETER α W ITH R ESPECT TO AUC R ESULTS
+
+Under these circumstances, our model would have a more
+comprehensive detection performance. Therefore, we employ
+such a value strategy for α.
+2) Imbalanced Anomaly Injection: As mentioned in
+Section V-A2, we inject two types of anomalous nodes
+with the same number into the original graph. However,
+an imbalanced injection method might affect the selection of
+the trade-off parameter α. We perform further experiments
+to study the relationship between the ratio of two types of
+nodes and α. In practice, we design five different injection
+ratios of the topology anomalies and the attribute anomalies
+as shown in Table X. The total number of anomalies remains
+unchanged in all datasets and we change the ratio according
+
+DUAN et al.: ARISE
+
+18183
+
+TABLE X
+N UMBER OF E ACH T YPE OF A NOMALIES I NJECTED I NTO E ACH DATASET. “TA” R EPRESENTS THE T OPOLOGY A NOMALIES , “AA”
+I NDICATES THE ATTRIBUTE A NOMALIES . “R ATIO ” I S THE R ATIO OF T OPOLOGY A NOMALIES AND ATTRIBUTE A NOMALIES
+
+Fig. 8. Impact of trade-off parameter α with respect to AUC values under different ratios of topology and attribute anomalies. (a) Ratio = 9:1. (b) Ratio =
+7:3. (c) Ratio = 1:1. (d) Ratio = 3:7. (e) Ratio = 1:9.
+
+to the injection method in Section V-A2. Fig. 8 indicates the
+effect of the trade-off parameter α under different anomaly
+ratios on detection performance.
+We can intuitively observe that the model achieves the best
+performance on most datasets when α = 0.8 in Fig. 8(a)–(d).
+And all of the detection performances reach the peak when
+α = 1.0 in Fig. 8(e). As mentioned in Section V-D1,
+α = 0.8 can provide a more comprehensive detection performance for such two types of anomalies in most cases.
+However, the number of attribute anomalies is nine times
+more than the number of topology ones under the last
+anomaly injection ratio. The model needs a stronger attribute
+anomaly detection performance under such an imbalanced
+injection. Hence, when α = 1.0, the model achieves the best
+performance.
+VI. C ONCLUSION
+In this article, we propose a novel graph anomaly detection
+framework on attributed networks via substructure awareness
+termed ARISE. Different from existing works, we design a
+
+new topology anomaly detection principle from the perspective
+of network substructure. Specifically, we use a density-based
+algorithm to detect high-density substructures as the region
+proposed. Then, the average node-pair similarity of nodes is
+measured to discern topology anomalies. For this purpose,
+we introduce a graph contrastive learning method to obtain
+better embeddings of node attributes and to detect attribute
+anomalies. The experiments demonstrate that ARISE makes
+a great improvement on ANAD. In future work, we continue
+to explore how to better aggregate the attribute and topology
+anomaly scores of nodes to avoid information loss.
+R EFERENCES
+[1] Z. Wu, S. Pan, F. Chen, G. Long, C. Zhang, and P. S. Yu, “A comprehensive survey on graph neural networks,” IEEE Trans. Neural Netw.
+Learn. Syst., vol. 32, no. 1, pp. 4–24, Jan. 2021.
+[2] X. Ma et al., “A comprehensive survey on graph anomaly detection
+with deep learning,” IEEE Trans. Knowl. Data Eng., early access,
+Oct. 8, 2021, doi: 10.1109/TKDE.2021.3118815.
+[3] G. Zhang et al., “eFraudCom: An e-commerce fraud detection system
+via competitive graph neural networks,” ACM Trans. Inf. Syst., vol. 40,
+no. 3, pp. 1–29, Jul. 2022.
+
+18184
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 35, NO. 12, DECEMBER 2024
+
+[4] S. Rao, A. K. Verma, and T. Bhatia, “A review on social spam detection:
+Challenges, open issues, and future directions,” Expert Syst. Appl.,
+vol. 186, Dec. 2021, Art. no. 115742.
+[5] M. Mongiovì, P. Bogdanov, R. Ranca, E. E. Papalexakis, C. Faloutsos,
+and A. K. Singh, “NetSpot: Spotting significant anomalous regions on
+dynamic networks,” in Proc. SIAM Int. Conf. Data Mining, May 2013,
+pp. 28–36.
+[6] Y. Boshmaf, K. Beznosov, and M. Ripeanu, “Graph-based Sybil Detection in social and information systems,” in Proc. IEEE/ACM Int. Conf.
+Adv. Social Netw. Anal. Mining (ASONAM), Aug. 2013, pp. 466–473.
+[7] Z. Cheng, S. Wang, P. Zhang, S. Wang, X. Liu, and E. Zhu, “Improved
+autoencoder for unsupervised anomaly detection,” Int. J. Intell. Syst.,
+vol. 36, no. 12, pp. 7103–7125, Dec. 2021.
+[8] Z. Cheng, E. Zhu, S. Wang, P. Zhang, and W. Li, “Unsupervised outlier
+detection via transformation invariant autoencoder,” IEEE Access, vol. 9,
+pp. 43991–44002, 2021.
+[9] J. Hu, G. Yu, S. Wang, E. Zhu, Z. Cai, and X. Zhu, “Detecting anomalous
+events from unlabeled videos via temporal masked auto-encoding,” in
+Proc. IEEE Int. Conf. Multimedia Expo (ICME), Jul. 2022, pp. 1–6.
+[10] D. B. Skillicorn, “Detecting anomalies in graphs,” in Proc. IEEE Intell.
+Secur. Inform., May 2007, pp. 209–216.
+[11] X. Song, M. Wu, C. Jermaine, and S. Ranka, “Conditional anomaly
+detection,” IEEE Trans. Knowl. Data Eng., vol. 19, no. 5, pp. 631–645,
+May 2007.
+[12] K. Ding, J. Li, and H. Liu, “Interactive anomaly detection on attributed
+networks,” in Proc. 12th ACM Int. Conf. Web Search Data Mining,
+Jan. 2019, pp. 357–365.
+[13] K. Liu et al., “BOND: Benchmarking unsupervised outlier node detection on static attributed graphs,” in Proc. 26th Conf. Neural Inf. Process.
+Syst. Datasets Benchmarks Track, 2022, pp. 1–15.
+[14] Y. Liu, Z. Li, S. Pan, C. Gong, C. Zhou, and G. Karypis, “Anomaly
+detection on attributed networks via contrastive self-supervised learning,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6,
+pp. 2378–2392, Jun. 2022.
+[15] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+density-based local outliers,” ACM SIGMOD Rec., vol. 29, no. 2,
+pp. 93–104, Jun. 2000.
+[16] X. Xu, N. Yuruk, Z. Feng, and T. A. J. Schweiger, “SCAN: A structural
+clustering algorithm for networks,” in Proc. 13th ACM SIGKDD Int.
+Conf. Knowl. Discovery Data Mining, Aug. 2007, pp. 824–833.
+[17] B. Perozzi and L. Akoglu, “Scalable anomaly ranking of attributed
+neighborhoods,” in Proc. SIAM Int. Conf. Data Mining, Jun. 2016,
+pp. 207–215.
+[18] J. Li, H. Dani, X. Hu, and H. Liu, “Radar: Residual analysis for anomaly
+detection in attributed networks,” in Proc. IJCAI, 2017, pp. 2152–2158.
+[19] Z. Peng, M. Luo, J. Li, H. Liu, and Q. Zheng, “Anomalous: A joint
+modeling approach for anomaly detection on attributed networks,” in
+Proc. IJCAI, 2018, pp. 3513–3519.
+[20] D. Marcheggiani and I. Titov, “Encoding sentences with graph convolutional networks for semantic role labeling,” in Proc. Conf. Empirical
+Methods Natural Lang. Process., 2017, pp. 1506–1515.
+[21] J. Zhang, X. Shi, J. Xie, H. Ma, I. King, and D. Y. Yeung, “GaAN: Gated
+attention networks for learning on large and spatiotemporal graphs,” in
+Proc. 34th Conf. Uncertainty Artif. Intell. (UAI) 2018, pp. 1–10.
+[22] R. Ying, R. He, K. Chen, P. Eksombatchai, W. L. Hamilton, and
+J. Leskovec, “Graph convolutional neural networks for web-scale recommender systems,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl.
+Discovery Data Mining, Jul. 2018, pp. 974–983.
+[23] J. Gilmer, S. S. Schoenholz, P. F. Riley, O. Vinyals, and G. E. Dahl,
+“Neural message passing for quantum chemistry,” in Proc. Int. Conf.
+Mach. Learn., 2017, pp. 1263–1272.
+[24] K. Ding, J. Li, R. Bhanushali, and H. Liu, “Deep anomaly detection on attributed networks,” in Proc. SIAM Int. Conf. Data Mining.
+Philadelphia, PA, USA: SIAM, 2019, pp. 594–602.
+[25] H. Fan, F. Zhang, and Z. Li, “Anomalydae: Dual autoencoder for
+anomaly detection on attributed networks,” in Proc. IEEE Int. Conf.
+Acoust., Speech Signal Process. (ICASSP), May 2020, pp. 5685–5689.
+[26] Y. Pei, T. Huang, W. van Ipenburg, and M. Pechenizkiy, “ResGCN:
+Attention-based deep residual modeling for anomaly detection on
+attributed networks,” in Proc. IEEE 8th Int. Conf. Data Sci. Adv. Anal.
+(DSAA), Oct. 2021, pp. 1–2.
+[27] J. Tang, J. Li, Z. Gao, and J. Li, “Rethinking graph neural networks for
+anomaly detection,” 2022, arXiv:2205.15508.
+
+[28] M. Jin, Y. Liu, Y. Zheng, L. Chi, Y.-F. Li, and S. Pan, “ANEMONE:
+Graph anomaly detection with multi-scale contrastive learning,” in Proc.
+30th ACM Int. Conf. Inf. Knowl. Manage., Oct. 2021, pp. 3122–3126.
+[29] Y. Zheng, M. Jin, Y. Liu, L. Chi, K. T. Phan, and Y. P. Chen, “Generative
+and contrastive self-supervised learning for graph anomaly detection,”
+IEEE Trans. Knowl. Data Eng., early access, Oct. 12, 2021, doi:
+10.1109/TKDE.2021.3119326.
+[30] J. Zhang, S. Wang, and S. Chen, “Reconstruction enhanced multi-view
+contrastive learning for anomaly detection on attributed networks,” 2022,
+arXiv:2205.04816.
+[31] X. He, K. Deng, X. Wang, Y. Li, Y. Zhang, and M. Wang, “LightGCN:
+Simplifying and powering graph convolution network for recommendation,” in Proc. 43rd Int. ACM SIGIR Conf. Res. Develop. Inf. Retr.,
+Jul. 2020, pp. 639–648.
+[32] L. Chen, L. Wu, R. Hong, K. Zhang, and M. Wang, “Revisiting
+graph based collaborative filtering: A linear residual graph convolutional
+network approach,” in Proc. AAAI Conf. Artif. Intell., 2020, vol. 34,
+no. 1, pp. 27–34.
+[33] L. Wu, P. Sun, R. Hong, Y. Fu, X. Wang, and M. Wang, “SocialGCN:
+An efficient graph convolutional network based model for social recommendation,” 2018, arXiv:1811.02815.
+[34] J. Liu, Z.-J. Zha, R. Hong, M. Wang, and Y. Zhang, “Deep adversarial
+graph attention convolution network for text-based person search,” in
+Proc. 27th ACM Int. Conf. Multimedia, Oct. 2019, pp. 665–673.
+[35] J. Shuai et al., “A review-aware graph contrastive learning framework
+for recommendation,” 2022, arXiv:2204.12063.
+[36] S. Zhou, Q. Tan, Z. Xu, X. Huang, and F.-L. Chung, “Subtractive
+aggregation for attributed network anomaly detection,” in Proc. 30th
+ACM Int. Conf. Inf. Knowl. Manage., Oct. 2021, pp. 3672–3676.
+[37] K. Ding, K. Shu, X. Shan, J. Li, and H. Liu, “Cross-domain graph
+anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst., vol. 33,
+no. 6, pp. 2406–2415, Jun. 2022.
+[38] T. Huang, Y. Pei, V. Menkovski, and M. Pechenizkiy, “Hop-count
+based self-supervised anomaly detection on attributed networks,” 2021,
+arXiv:2104.07917.
+[39] Y. Wang, J. Peng, H. Wang, and M. Wang, “Progressive learning with
+multi-scale attention network for cross-domain vehicle re-identification,”
+Sci. China Inf. Sci., vol. 65, no. 6, pp. 1–15, Jun. 2022.
+[40] T. Zhao, T. Jiang, N. Shah, and M. Jiang, “A synergistic approach
+for graph anomaly detection with pattern mining and feature learning,”
+IEEE Trans. Neural Netw. Learn. Syst., vol. 33, no. 6, pp. 2393–2405,
+Jun. 2022.
+[41] Y. Liu et al., “Graph self-supervised learning: A survey,” IEEE Trans.
+Knowl. Data Eng., vol. 35, no. 6, pp. 5879–5900, Jun. 2023.
+[42] Y. Zhu, Y. Xu, F. Yu, Q. Liu, S. Wu, and L. Wang, “Deep graph
+contrastive representation learning,” 2020, arXiv:2006.04131.
+[43] X. Wang, N. Liu, H. Han, and C. Shi, “Self-supervised heterogeneous graph neural network with co-contrastive learning,” in Proc.
+27th ACM SIGKDD Conf. Knowl. Discovery Data Mining, Aug. 2021,
+pp. 1726–1736.
+[44] S. Thakoor, C. Tallec, M. G. Azar, R. Munos, P. Veličković, and
+M. Valko, “Bootstrapped representation learning on graphs,” in Proc.
+Workshop Geometrical Topological Represent. Learn. (ICLR), 2021,
+pp. 1–14.
+[45] P. Velickovic, W. Fedus, W. L. Hamilton, P. Liò, Y. Bengio, and
+R. D. Hjelm, “Deep graph infomax,” in Proc. ICLR, vol. 2, no. 3, 2019,
+pp. 1–17.
+[46] K. Hassani and A. H. Khasahmadi, “Contrastive multi-view representation learning on graphs,” in Proc. Int. Conf. Mach. Learn., 2020,
+pp. 4116–4126.
+[47] H. Tong, C. Faloutsos, and J.-Y. Pan, “Fast random walk with restart
+and its applications,” in Proc. 6th Int. Conf. Data Mining (ICDM), 2006,
+pp. 613–622.
+[48] B. Perozzi, R. Al-Rfou, and S. Skiena, “DeepWalk: Online learning of
+social representations,” in Proc. 20th ACM SIGKDD Int. Conf. Knowl.
+Discovery Data Mining, Aug. 2014, pp. 701–710.
+[49] J. Qiu et al., “GCC: Graph contrastive coding for graph neural network
+pre-training,” in Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining, Aug. 2020, pp. 1150–1160.
+[50] Y. Wang, W. Zhang, L. Wu, X. Lin, and X. Zhao, “Unsupervised
+metric fusion over multiview data by graph random walk-based crossview diffusion,” IEEE Trans. Neural Netw. Learn. Syst., vol. 28, no. 1,
+pp. 57–70, Jan. 2017.
+
+DUAN et al.: ARISE
+
+18185
+
+[51] Y. Wang, X. Lin, and Q. Zhang, “Towards metric fusion on multi-view
+data: A cross-view based graph random walk approach,” in Proc. 22nd
+ACM Int. Conf. Conf. Inf. Knowl. Manage. (CIKM), 2013, pp. 805–810.
+[52] V. Batagelj and M. Zaversnik, “An O(m) algorithm for cores decomposition of networks,” 2003, arXiv:cs/0310049.
+[53] R. Yu, H. Qiu, Z. Wen, C. Lin, and Y. Liu, “A survey on social media
+anomaly detection,” ACM SIGKDD Explor. Newslett., vol. 18, no. 1,
+pp. 1–14, Aug. 2016.
+[54] C. C. Noble and D. J. Cook, “Graph-based anomaly detection,” in Proc.
+9th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, 2003,
+pp. 631–636.
+[55] W. He, G. Hu, and Y. Zhou, “Large-scale IP network behavior anomaly
+detection and identification using substructure-based approach and multivariate time series mining,” Telecommun. Syst., vol. 50, no. 1, pp. 1–13,
+Apr. 2012.
+[56] P. Sen, G. Namata, M. Bilgic, L. Getoor, B. Gallagher, and
+T. Eliassi-Rad, “Collective classification in network data,” AI Mag.,
+vol. 29, no. 3, pp. 93–106, Sep. 2008.
+[57] X. Yuan, N. Zhou, S. Yu, H. Huang, Z. Chen, and F. Xia, “Higher-order
+structure based anomaly detection on attributed networks,” in Proc. IEEE
+Int. Conf. Big Data (Big Data), Dec. 2021, pp. 2691–2700.
+[58] H. Schütze, C. D. Manning, and P. Raghavan, Introduction to Information Retrieval, vol. 39. Cambridge, U.K.: Cambridge Univ. Press, 2008.
+[59] B. W. Kernighan and S. Lin, “An efficient heuristic procedure for
+partitioning graphs,” Bell Syst. Tech. J., vol. 49, no. 2, pp. 291–307,
+Feb. 1970.
+[60] A. Clauset, M. E. J. Newman, and C. Moore, “Finding community structure in very large networks,” Phys. Rev. E, Stat. Phys. Plasmas Fluids
+Relat. Interdiscip. Top., vol. 70, no. 6, Dec. 2004, Art. no. 066111.
+[61] G. Cordasco and L. Gargano, “Community detection via semisynchronous label propagation algorithms,” in Proc. IEEE Int. Workshop,
+Bus. Appl. Social Netw. Anal. (BASNA), Dec. 2010, pp. 1–8.
+[62] F. Ye, C. Chen, and Z. Zheng, “Deep autoencoder-like nonnegative
+matrix factorization for community detection,” in Proc. 27th ACM Int.
+Conf. Inf. Knowl. Manage., Oct. 2018, pp. 1393–1402.
+[63] N. Kasoro, S. Kasereka, E. Mayogha, H. T. Vinh, and J. Kinganga,
+“PercoMCV: A hybrid approach of community detection in social
+networks,” Proc. Comput. Sci., vol. 151, pp. 45–52, Jan. 2019.
+[64] P.-Z. Li, L. Huang, C.-D. Wang, and J.-H. Lai, “EdMot: An edge
+enhancement approach for motif-aware community detection,” in Proc.
+25th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, Jul. 2019,
+pp. 479–487.
+[65] R. Jaiswal and S. Ramanna, “Detecting overlapping communities using
+ensemble-based distributed neighbourhood threshold method in social
+networks,” Intell. Decis. Technol., vol. 15, no. 2, pp. 251–267, Jun. 2021.
+
+Jingcan Duan is currently pursuing the master’s
+degree with the College of Computer Science and
+Technology, National University of Defense Technology (NUDT), Changsha, China.
+His current research interests include graph representation learning, graph anomaly detection, and
+artificial intelligence (AI) for science.
+
+Bin Xiao received the B.S. and M.S. degrees
+in electrical engineering from Shanxi Normal
+University, Xi’an, China, in 2004 and 2007, respectively, and the Ph.D. degree in computer science
+from Xidian University, Xi’an, in 2012.
+He is currently a Professor with the Chongqing
+University of Posts and Telecommunications,
+Chongqing, China. His research interests include
+image processing and pattern recognition.
+
+Siwei Wang received the Ph.D degree from
+the National University of Defense Technology
+(NUDT), Changsha, China, in 2023.
+He is currently an Assistant Research Professor
+with the Intelligent Game and Decision Laboratory,
+China. He has published several articles. His current
+research interests include kernel learning, unsupervised multiple-view learning, scalable clustering,
+and deep unsupervised learning.
+Mr. Wang served as a PC Member/reviewer
+in top journals and conferences, such as IEEE
+T RANSACTIONS ON K NOWLEDGE AND DATA E NGINEERING (TKDE),
+IEEE T RANSACTIONS ON N EURAL N ETWORKS AND L EARNING S YS TEMS (TNNLS), IEEE T RANSACTIONS ON I MAGE P ROCESSING (TIP),
+IEEE T RANSACTIONS ON C YBERNETICS (TCYB), IEEE T RANSACTIONS
+ON M ULTIMEDIA (TMM), International Conference on Machine Learning
+(ICML), IEEE/CVF Computer Vision and Pattern Recognition Conference
+(CVPR), European Conference on Computer Vision (ECCV), International
+Conference on Computer Vision (ICCV), AAAI Conference on Artificial Intelligence (AAAI), and International Joint Conference on Artificial Intelligence
+(IJCAI).
+
+Haifang Zhou received the Ph.D. degree from
+the National University of Defense Technology
+(NUDT), Changsha, China, in 2003.
+She is now a Professor at the College of Computer
+Science and Technology, NUDT. She has published more than 60 peer-reviewed papers, including
+those in highly regarded journals and conferences
+such as Concurrency and Computation Practice and
+Experience (CCPE), Journal of Software, Parallel Computing, International Conference on Parallel
+Processing (ICPP), etc. Her current research interests
+include bigdata processing and intelligent parallel computing.
+
+Xinwang Liu (Senior Member, IEEE) received
+the Ph.D. degree from the National University of
+Defense Technology (NUDT), Changsha, China, in
+2013.
+He is now a Professor at the College of Computer
+Science and Technology, NUDT. He has published
+more than 100 peer-reviewed papers, including
+those in highly regarded journals and conferences
+such as IEEE T RANSACTIONS ON PATTERN A NAL YSIS AND M ACHINE I NTELLIGENCE (T-PAMI),
+IEEE T RANSACTIONS ON K NOWLEDGE AND DATA
+E NGINEERING (T-KDE), IEEE T RANSACTIONS ON I MAGE P ROCESSING
+(T-IP), IEEE T RANSACTIONS ON N EURAL N ETWORKS AND L EARNING
+S YSTEMS (T-NNLS), IEEE T RANSACTIONS ON M ULTIMEDIA (T-MM),
+IEEE T RANSACTIONS ON I NFORMATION F ORENSICS AND S ECURITY (TIFS), International Conference on Machine Learning (ICML), Conference
+on Neural Information Processing Systems (NeurIPS), International Conference on Computer Vision (ICCV), IEEE/CVF Computer Vision and Pattern
+Recognition Conference (CVPR), AAAI Conference on Artificial Intelligence
+(AAAI), International Joint Conference on Artificial Intelligence (IJCAI), etc.
+His current research interests include kernel learning and unsupervised feature
+learning.
+Dr. Liu serves as the Associate Editor of Information Fusion Journal. More
+information can be found at https://xinwangliu.github.io/.

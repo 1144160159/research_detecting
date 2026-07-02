@@ -1,0 +1,1789 @@
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+1
+
+Anomaly Subgraph Detection on Multiple
+Associated Attributed Networks
+Nannan Wu , Ying Sun , Yazheng Zhao , Wenjun Wang , Xueli Liu, and Jianxin Li
+
+Abstract—With the rapid development of artificial intelligence
+(AI) technology and large-scale dataset applications, anomaly
+subgraph detection is becoming an essential and widespread
+application. Most existing methods detect anomaly subgraphs
+depending on the observable anomalous attributes in target
+data. However, they may face challenges when the target data
+lacks such anomalous attributes. E.g., identifying suspicious
+gangs in the target transportation graph solely based on road
+traffic information, or detecting burst events in nonpublic data
+without explicit anomalous attributes. To address the detection
+of implicit anomaly subgraphs (IASs) in such target graphs,
+this article proposes a novel approach IAS detection (IASD)
+with multidimensional feature transfer. First, our approach is
+built upon transfer learning techniques and involves fusing
+features from multiple graphs. Second, we explore a feature
+extraction procedure based on a graph attention (GAT) network
+model to generate representations of anomaly features for large
+multidimensional attribute graphs. Third, we construct a twolayer graph by introducing an attributed graph referred to as
+a “source graph,” where anomalies can be easily detected, and
+nodes of the source graph are partially aligned with the target
+graph. We validate the effectiveness and robustness of IASD
+through experiments on five real-world datasets, and implement
+four anomaly subgraph detection tasks in practical applications.
+Index Terms—Anomaly alignment, anomaly subgraph detection, complex network, feature transfer learning.
+
+N = (G1 , G2 , M)
+G1 = (V1 , E1 , XG1 )
+G2 = (V2 , E2 , XG2 )
+M ⊆ V1 × V2
+V1 , V2 and E1 , E2
+
+N OMENCLATURE
+Two-layer graph.
+Source graph layer.
+Target graph layer.
+Alignment edge sets.
+Node sets and edge sets.
+
+Received 20 May 2024; revised 9 October 2024, 1 May 2025,
+and 24 September 2025; accepted 15 December 2025. This work was
+supported in part by the Natural Science Foundation of Tianjin under Grant
+25JCZDJC01300, in part by the National Natural Science Foundation of China
+under Grant U2468204, and in part by the Innovative Research Group Project
+of the National Natural Science Foundation of China under Grant 62272311.
+(Corresponding author: Ying Sun.)
+Nannan Wu is with the School of Cybersecurity, Tianjin University, Tianjin
+300350, China (e-mail: nannan.wu@tju.edu.cn).
+Ying Sun is with the School of International Business, Zhejiang Yuexiu
+University, Shaoxing 312000, China (e-mail: yingsun@tju.edu.cn).
+Yazheng Zhao and Xueli Liu are with the School of Computer Science and Technology, Tianjin University, Tianjin 300350, China (e-mail:
+yazhengzhao@tju.edu.cn; xueli@tju.edu.cn).
+Wenjun Wang is with the College of Intelligence and Computing, Tianjin
+University, Tianjin 300350, China (e-mail: wjwang@tju.edu.cn).
+Jianxin Li is with the State Key Laboratory of Software Development Environment and Beijing Advanced Innovation Center for Big Data
+and Brain Computing, Beihang University, Beijing 100191, China (e-mail:
+lijx@act.buaa.edu.cn).
+Digital Object Identifier 10.1109/TNNLS.2025.3647831
+
+XG1 ∈ Rn×d1
+XG2 ∈ Rm×d2
+n = |V1 |, m = |V2 |
+d1 ∈ N, d2 ∈ N
+S 1 = (VS 1 , ES 1 , XS 1 )
+S 2 = (VS 2 , ES 2 , XS 2 )
+H ⊆ V1 × V2
+xG1 (v) ∈ Rd1 , v ∈ V1
+xG2 (v) ∈ Rd2 , v ∈ V2
+x1 ∈ Rn , x2 ∈ Rm
+
+Anomaly attribute matrix of G1 .
+Nonanomaly attribute matrix of G2 .
+Number of nodes of G1 and G2 .
+Dimensionality of node attributes.
+Anomaly subgraph of G1 .
+Anomaly subgraph of G2 .
+Prior alignment edge sets.
+Anomaly attribute of G1 nodes.
+Non-anomaly attribute of G2 nodes.
+Feature vectors of G1 , G2 .
+
+I. I NTRODUCTION
+
+A
+
+NOMALY detection refers to the discovery of entities, events, and observations that deviate from the
+majority, while anomaly subgraph detection identifies unusual
+or anomaly subgraphs within a larger graph or network.1
+Anomaly subgraph detection is a vital task in various public
+safety applications, such as hot spot detection, fraud detection,
+and intrusion detection.
+In general, anomaly subgraph detection specifically focuses
+on revealing anomalous patterns and facilitating informed
+decision-making. Most existing approaches achieve this by
+directly extracting anomaly-related features based on observable anomalous attributes within the target dataset [1], [2].
+Nonetheless, they face significant challenges when such
+anomalous attributes are absent. In practical applications,
+detecting urban crime hotspots remains a crucial anomaly
+subgraph detection task for ensuring urban security. Typically,
+identifying criminal activity in urban street networks (USNs)
+or urban transport networks (UTNs) is often impossible or
+limited by insufficient road surveillance, e.g., in a city’s
+commercial district, traffic monitoring may report normal flow
+while social media simultaneously reveals abnormal events
+such as robberies or sudden crowd gatherings. As shown in
+Fig. 1, emotional words (e.g., nasty, hate, and complaint) frequently appear in social networks (SNs), and this particularly
+anomalous attribute is difficult to observe in USN. Similar situations also arise in public SNs and private forums. The private
+nature of some SNs conceals certain information, making it
+challenging to directly capture the anomalous attributes. In
+addition to the absence of anomalous attributes in the dataset,
+the lack of anomaly features may also result from anomalous
+attributes being obscured within the vast volume of big data
+and its high-dimensional nature. How can we achieve effective
+detection performance when anomaly features are lacking due
+to the absence of observable anomalous attributes?
+1 In this article, we use the terms “network” and “graph” interchangeably
+for the structure denoted as G = (V, E), where V and E denote the node and
+the edge sets, respectively.
+
+2162-237X © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+2
+
+Fig. 1. Illustration of crime hotspot detection using the IASD framework.
+Crime hotspots in the urban street graph are identified by leveraging a
+social graph enriched with negative emotional attributes. The proposed IASD
+approach integrates anomaly subgraph detection with network alignment.
+
+Fig. 2. Illustration of anomaly alignment: red circles vi and v j denote anomaly
+nodes, orange circles v0i and v0j denote implicit anomaly nodes, solid lines
+(vi , v j ) and (v0i , v0j ) are edges in graphs, and dash lines (vi , v0i ) and (v j , v0j ) are
+the alignment edges between two graphs.
+
+In this article, we refer to the anomaly subgraph hidden
+within the target data that lacks anomaly features as the
+implicit anomaly subgraph (IAS). Hence, detecting anomaly
+subgraphs will face challenges due to the lack of anomaly features within the target datasets. Another challenge encountered
+by many existing anomaly subgraph detection algorithms is the
+lack of interpretability. Especially, single-attribute networks
+hinder anomaly cause identification without sufficient features,
+as seen in UTN data where sparse accident metadata impedes
+accurate congestion analysis. Such discrepancies motivate
+the development of anomaly feature transfer learning algorithms that leverage social signals to complement traffic/street
+monitoring data and enable early detection of potential
+risks.
+To address the two aforementioned challenges, our approach
+incorporates associated auxiliary data to enable the identification of IASs and underlying anomaly causal chains
+within the target data. An anomalous event often exhibits
+correlations across multiple domain-specific datasets. This
+correlation is termed as “Anomaly Alignment” in this article.
+Another instance is that unusual opinions about traffic congestion reported on SNs and congestion patterns recorded by
+UTNs often coincide at specific street locations or geographic
+coordinates, as illustrated in Fig. 2. Consequently, we construct
+the causal chain underlying a traffic congestion event by
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+analyzing both opinion diffusion subgraphs and congested
+subgraphs. Inspired by transfer learning to address the challenge of data sparsity and sample limitations across domains
+and tasks, this article proposes an innovative anomaly feature
+transfer learning approach for detecting IAS through Anomaly
+Alignment across multidimensional attributed networks.
+Our approach works on a multilayer graph structure N =
+(G1 , G2 , M) to tackle the aforementioned challenges. G1 is the
+source graph associated with the target graph G2 . G1 contains
+certain observable anomalous attributes, which make it easier
+to capture anomaly features and detect the anomaly subgraph
+S 1 within it. In contrast, the target graph G2 lacks explicit
+anomalous attributes and includes the IAS, referred to as S 2 .
+Let M denote the association relationships between G1 and G2 .
+These association relationships are modeled within a two-layer
+graph N, subject to specific alignment constraints. Although
+this article focuses on two-layer graphs, the proposed method
+can be extended to multilayer graphs. A multilayer graph
+is an effective model for representing multiple interrelated
+source graphs originating from diverse domains. Each layer
+represents a unique type of interaction between nodes, and
+different layers consist of distinct sets of nodes and types of
+links. Additionally, alignment links exist between layers to
+represent the association relationships across different graphs
+[3]. Our approach postulates that the anomaly features present
+in the source graph G1 affect the target graph G2 through
+alignment links M between G1 and G2 . Hence, the IAS S 2 in
+G2 is possibly detected by correlating this affection from G1 .
+Fig. 1 demonstrates our approach for detecting urban crime
+hotspots in social and USNs. Our main contributions can be
+summarized as follows.
+1) This article proposes a pioneering approach (IASD),
+designed for the specific challenge of detecting IASs S 2
+under “Anomaly Alignment” within multidimensional
+attribute networks.
+2) IASD novelty interprets the anomaly subgraph S 2 by
+fusing aligned attributes from the explicit anomaly subgraph S 1 in G1 , facilitating the detection of causal chains
+within anomalies.
+3) Extensive experiments are conducted on five real-world
+datasets, showcasing IASD’s significant performance
+and robustness. Additionally, IASD is applied to address
+four practical application tasks.
+The remainder of this article is structured as follows.
+Section II provides an overview of relevant existing methods,
+while Sections III–IV define the “anomaly alignment” problem
+and introduce IASD in detail. Sections V-A–V encompass five
+real datasets and offer a comprehensive evaluation of IASD.
+Four case studies are presented in Section V-E, and finally,
+Section VI summarizes the primary findings of this research.
+
+II. R ELATED W ORKS
+Table I summarizes representative graph anomaly detection
+(GAD) methods from recent years and compares them with
+our approach across six aspects. These methods were comprehensively compared in terms of anomaly types, consideration
+of structural anomalies, capability to handle few-attribute
+anomalies, suitability for multiple graphs, interpretability, and
+reliance on graph neural networks (GNNs).
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+WU et al.: ANOMALY SUBGRAPH DETECTION ON MULTIPLE ASSOCIATED ATTRIBUTED NETWORKS
+
+3
+
+TABLE I
+C OMPARISON B ETWEEN O UR M ETHOD AND S OME E XISTING R EPRESENTATIVE GAD M ODELS
+
+A. Anomaly Subgraph Detection
+Traditional anomaly subgraph detection methods typically extract features from graph-structured data and identify
+anomalies via statistical and graph search techniques [1], [15].
+These nondeep learning approaches handle static and dynamic
+graphs, including single, multiple, and multilayered graphs [7],
+[8], [9], [16], [17], but face challenges with large-scale graphs
+and high-dimensional node or edge attributes.
+To address these challenges, recent approaches leverage
+deep learning [2], [18], [19]. However, due to inefficient
+subgraph representation learning, most focus on detecting
+anomalous nodes rather than subgraphs [4], [5], [20], [21],
+[22], [23]. For instance, Hu et al. [4] propose subgraph-aligned
+contrastive learning using multiview augmented subgraphs to
+detect anomalous nodes. Liu et al. [23] detect anomalies by
+evaluating data similarity through representative neighbors.
+Zhou et al. [5] propose a lightweight IoT anomaly detection model combining GNN and knowledge distillation with
+global-local feature learning for secure, efficient, and lowoverhead communication.
+Some deep learning methods target anomaly subgraphs by
+learning distinctive features. Huang et al. [6] propose a hybridorder graph attention (GAT) network to detect abnormal nodes
+and motif instances. Zhang and Zhao [11] evaluate subgraph
+anomaly scores in a residual graph built from reconstructed
+and original graphs using a location-aware graph autoencoder. Sun et al. [10] introduce ASD-HC, which combines
+GCN-based contrastive learning with Nonparametric Graph
+Scan statistics to assess anomalous subgraphs.
+In summary, while these methods learn anomaly features
+from data, most do not target IASs.
+B. Anomaly Detection on Multiple Networks
+Recently, some works study anomaly detection across multiple networks. Bindu et al. [9] detect anomalous users by
+comparing topological similarities across layers. Sun et al. [14]
+propose AAAN, using ADMM to find maximum connected
+anomaly subgraphs across networks. Wu et al. [12] apply deep
+learning and network alignment to detect shared anomalies
+in traffic networks. However, there are also works that can
+be easily confused with anomaly subgraph detection research,
+such as anomaly or object detection across multiple views [24]
+and domains [25]. These approaches do not take into account
+the network structure of the data.
+Other GNN-based GAD methods, like SAMCL [4], focus
+on rich anomaly features and complex topologies, while
+multilayer methods such as A3MAN [12] emphasize interpretability. Our approach is more general, detecting IASs
+in two-layer, multidimensional networks, handling missing
+
+features, leveraging GNNs for topological anomalies, enabling
+anomaly feature transfer across domains like pandemic and
+traffic networks, and providing good interpretability.
+C. Transfer Learning
+Existing transfer learning methods address challenges such
+as data scarcity, domain shift, task differences, computational
+constraints, negative transfer, and heterogeneous transfer. By
+leveraging knowledge from a source domain—e.g., model
+parameters or feature representations—they mitigate limited
+labeled data, distribution discrepancies, and task mismatches in
+the target domain, improving performance and generalization
+[26], [27], [28], [29], [30], [31], [32], [33], [34].
+Transfer learning can be categorized into four subsettings:
+Instance-transfer, Feature-representation-transfer, Parametertransfer, and Relational-knowledge-transfer [35]. In instancetransfer, Askarizadeh et al. [26] propose an optimization
+framework to improve learning under resource constraints
+while reducing negative transfer, and Liang et al. [36] extend
+instance-transfer to large-scale SNs. In feature-representation
+transfer, Li et al. [27] introduce a cross-channel specificmutual feature transfer network for EEG decoding, Gao et al.
+[29] propose a multitask model to extract shared features
+across tasks, Lu et al. [30] tackle cross-modality person reidentification by learning both common and modality-specific
+features, and Liang et al. [36] proposed an instance-transfer
+method for large-scale SNs.
+In relational-knowledge transfer, Tang et al. [28] leverage
+social theories for transfer across heterogeneous networks,
+while Bi et al. [32] develop Bridged-GNN, enhancing transfer
+via a Bridged-Graph structure. Cui et al. [31] apply knowledge
+transfer in human–machine dialog systems to improve generalization. Beyond traditional transfer learning, Li et al. [33], [34]
+explore domain adaptation for robust object detection across
+domains and unseen categories.
+In summary, these studies highlight the diverse methods and
+applications of transfer learning, providing a foundation for
+further research in anomaly detection and knowledge transfer
+in complex structured domains.
+III. P ROBLEM F ORMULATION
+Consider a two-layer graph N = (G1 , G2 , M), where G1 =
+(V1 , E1 , XG1 ) is the source graph (layer), G2 = (V2 , E2 , XG2 )
+is the target graph (layer), and M ⊆ V1 × V2 represents the
+set of association relationships (i.e., alignment edges) between
+nodes in G1 and G2 . Specifically, V1 = {v11 , v12 , . . . , v1n } and
+V2 = {v21 , v22 , . . . , v2m } are the node sets, with E1 ⊆ V1 ×V1 and
+E2 ⊆ V2 × V2 as their corresponding edge sets. The attribute
+matrices are given by XG1 = {xG1 (vi )|vi ∈ V1 } ∈ Rn×d1 and
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+4
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+XG2 = {xG2 (v j )|v j ∈ V2 } ∈ Rm×d2 , where xG1 (vi ) ∈ Rd1 and
+xG2 (v j ) ∈ Rd2 denote the multidimensional attribute vectors
+of nodes in G1 and G2 , respectively. The alignment edges in
+M model cross-layer associations, enabling anomaly feature
+transfer from G1 to G2 . Accordingly, we formalize the following foundational definitions.
+Definition 1 (Anomalous Node): Given a graph G =
+(V, E, X), let p(X) denote the probability distribution of the
+node features in G. For a node v ∈ V, if the probability of
+its feature vector satisfies p(xG (v)) ≤ α, where α ∈ R ≥ 0
+is a predefined significant anomaly threshold, then node v is
+considered an anomalous node of G.
+Definition 2 (Anomaly Subgraph): Given a subgraph
+S = (VS , ES , XS ), if an anomalous node v ∈ V exists or
+XS comprises the anomaly features, then the subgraph S is
+considered an anomaly subgraph.
+We denote S 1 = (VS 1 , ES 1 , XS 1 ) and S 2 = (VS 2 , ES 2 , XS 2 ) as
+the anomaly subgraphs of G1 and G2 , respectively. When XG1
+contains anomaly attributes while XG2 lacks such attributes,
+S 1 can be readily detected from the source graph G1 through
+the anomaly attributes in XG1 . However, detecting S 2 directly
+from graph G2 proves challenging. If G1 aligns with G2
+under certain association relationship constraints, then the
+node anomaly attributes of G1 can be projected onto the
+corresponding aligned nodes in G2 . This naturally raises a
+critical question: Can the IAS S 2 be effectively detected from
+G2 through the joint utilization of attributes XG1 and XG2 ?
+Definition 3 (Feature Transfer Learning): Given G1 =
+(V1 , E1 , XG1 ) is the source graph and G2 = (V2 , E2 , XG2 ) is the
+target graph, with alignment edges M ⊆ V1 × V2 . the general
+feature transfer learning model ftran : XG1 → XG2 is given as
+follows:
+
+
+XG2 ← XG2 + ftran XG1 , M = XG2 + Φ MXG1
+(1)
+where Mm×n is the matrix form of the alignment edge set M,
+Φ is a feature projection function.
+Proposition 1 (Anomaly Alignment): Given a two-layer
+graph N = (G1 , G2 , M). where G1 = (V1 , E1 , XG1 ) is the
+source graph and G2 = (V2 , E2 , XG2 ) is the target graph, with
+alignment edges M ⊆ V1 ×V2 . A connected anomaly subgraph
+S 1 (VS 1 , ES 1 , XS 1 ) in G1 contains an anomalous node vi . If
+(vi , v j ) ∈ ES 1 and (v0i , v0j ) ∈ E2 exist with (vi , v0i ) ∈ M and
+(v j , v0j ) ∈ M, then according to our feature transfer learning
+model ftran : XS 1 → XS 2 , a nonempty aligned anomaly
+subgraph S 2 exists in G2 .
+Proof: The detailed proof is provided in the appendix.
+
+
+
+Definition 4 (IASD): IAS detection (IASD) refers to detecting the maximum anomaly subgraph within the target network,
+which is devoid of anomalous attributes.
+Under the constraint of the Anomaly Alignment, the objective function of IASD is defined as the following constrained
+optimization problem:
+
+Sˆ1 , Sˆ2 , M̂
+= arg max Fα (S 1 ) + Q (S 1 , S 2 , M)
+S 1 ⊆G1 ,S 2 ⊆G2 ,M
+ˇ ˇ
+s.t. S 1 is connected, M ∈ {0, 1}m×n , ˇVS 2 ˇ ≤ c, α ∈ P (2)
+where α is a hyperparameter which represents the anomalous
+significant level, the set P = {p(xG1 (vi )) | p(xG1 (vi )) ≤
+αmax , vi ∈ V1 } ∪ {αmax } comprises the probabilities of the
+significant anomalies of G1 , with αmax = 0.15 in this article.
+
+Here, c ≤ m is a constant representing the maximum number of
+nodes in S 2 . The function Fα (S 1 ) evaluates the anomaly score
+for the subgraph S 1 . Let Q(S 1 , S 2 , M) be the feature transfer
+learning model based on network alignment principles [37],
+which scales the anomalous significance of S 1 transferred to
+S 2 . In our article, the similarity of S 1 and S 2 is represented
+by the alignment matrix M ∈ Rm×n . Let M( j, i) = 1 if node
+vi ∈ VS 1 aligns with the node v j ∈ VS 2 , otherwise M( j, i) = 0.
+Intuitively, IASD problem (2) has the following three
+properties.
+1) P1: Function Fα (S 1 ) increases monotonically with
+Nα (S 1 ), i.e., the number of anomaly nodes of S 1 .
+2) P2: Function Fα (S 1 ) decreases monotonically with
+N α (S 1 ), i.e., the number of normal nodes in S 1 .
+3) P3: Function Q(S 1 , S 2 , M) increases monotonically with
+the number of alignment edges between S 1 and S 2 .
+P1 and P2 guarantee that the optimal anomaly subgraph Sˆ1
+detected by maximizing the value of function Fα (S 1 ) [7], and
+P3 guarantees that the optimal anomaly subgraph Sˆ1 contains
+more nodes of Sˆ2 that are aligned with the anomaly nodes of
+Sˆ1 . These three properties guarantee that the induced anomaly
+subgraph Sˆ2 is the optimal result. The corresponding formal
+proof is provided in Section IV, and additional detailed proofs
+are included in Appendix. Note that in this article, we do not
+impose any connectivity constraints on S 2 .
+IV. M ETHODOLOGY
+A. Feature Extraction Preprocessing
+With the widespread utilization of large-scale data, highdimensional attributes are widely adopted to characterize
+nodes and edges in large-scale graphs. Consequently, anomaly
+subgraph detection algorithms will face the challenge of the
+curse of dimensionality in high-dimension datasets, making
+it difficult to observe anomalous attributes. In the process
+of extracting anomalous features for each node in graphs,
+our approach incorporates the GNN model (e.g., GCN, GAT,
+etc.) to convert nodes’ high-dimensional attributes into a
+low-dimensional representation of anomalous features. In this
+article, we investigate the GAT network model to extract node
+features for both the source graph G1 and the target graph
+G2 . Now, let us delve into the detailed procedure using G1
+as an example. First, the initial nodes’ attributes of G1 are
+represented as XG1 = {xG1 (vi )|vi ∈ V1 }, where xG1 (vi ) ∈ R1×d1 .
+The normalized attention coefficient from node v j to node vi
+is calculated by the following equation:
+
+
+exp LeakyReLU aT W xG1 (vi ) k W xG1 v j
+
+
+ai j = P
+T W x (v ) k W x (v )
+G1 i
+G1 k
+k∈Ni exp LeakyReLU a
+(3)
+where Ni0 denotes the neighbor set of node vi in graph G1 ,
+W ∈ Rd1 ×d1 represents the weight matrix used for linear
+transformation applied to each node, d10 is the dimension of
+0
+the output feature for each node. a ∈ R2d1 is the weight
+vector, aT denotes the transposition of vector a. k denotes the
+concatenation operation. LeakyReLU is a nonlinear activation
+function characterized by a negative input slope of 0.2. Then,
+the final output feature of node vi is computed through a linear
+combination of the features as follows:
+0
+1
+X
+
+h1 (vi ) = σ @
+ai j W xG1 v j A .
+(4)
+v j ∈Ni
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+WU et al.: ANOMALY SUBGRAPH DETECTION ON MULTIPLE ASSOCIATED ATTRIBUTED NETWORKS
+
+To obtain stable learning features, we employ the aggregation of a multihead GAT mechanism, which utilizes
+K-independent attention mechanisms and applies averaging
+computation to the final output features of each node, as shown
+in the following equation:
+0
+1
+K X
+X
+
+1
+h1 (vi ) = σ @
+akij W k xG1 v j A
+(5)
+K
+v ∈N
+k=1
+
+j
+
+x1 (i) = kh1 (vi )k2 ,
+x2 (i) = kh2 (vi )k2 ,
+
+s.t. vi ∈ G1
+s.t. vi ∈ G2 .
+
+(6)
+
+B. Anomaly Alignment Model
+Fig. 2 depicts the Anomaly Alignment proposition. Now, let
+us elaborate on our proposed approach. Anomaly alignment
+comprises two main stages.
+1) Detecting Anomaly Subgraph S 1 in G1 : In this stage, we
+introduce a NPGS-based method (TSPSP [7]) to detect the
+optimal anomaly subgraph. Specifically, NPGS-based methods calculate the anomaly score function Fα (S 1 ) for each
+subgraph S 1 in G1 through NPGS statistics to detect the
+optimal anomaly subgraph S 1 of G1 . Therefore, the general
+formulation of the anomaly score function Fα (S 1 ) in our
+problem (2) is defined as follows:
+Fα (S 1 ) = ϕ (α, Nα (S 1 ) , N (S 1 ))
+
+(7)
+
+where α is the anomalous significant level, Nα (S 1 ) is the
+number of anomaly nodes in S 1 , and N(S 1 ) is the total number
+of nodes in S 1 . The function ϕ : VS 1 → R is the NPGS
+function used to evaluate the anomalous extent for subgraph
+S 1 . In this article, We explore two NPGS statistics within
+TSPSD: Berk-Jones (BJs) [38], as defined in (8), and higher
+criticism (HC) [39]
+
+
+Nα (S )
+,α
+ϕBJ (α, Nα (S ) , N (S )) = N (S ) × KL
+(8)
+N (S )
+where KL is Kullback–Liebler divergence between the
+observed and expected proportions, with values less than α
+
+
+8
+ 
+<a log a + (1 − a) log 1 − a , if a ≥ b
+KL (a, b) =
+b
+1−b
+:
+0,
+if a < b
+(9)
+where a, b > 0.
+Lemma 1 [7]: Given N α (S 1 ) = N(S 1 )− Nα (S 1 ), the optimal
+subgraph of NPGS problem with the K-budget node-weighted
+prize-collection Steiner tree is defined as
+S 1α,K
+
+=
+
+arg max
+
+S 1 ⊆G1 ,S 1 is connected
+
+Lemma 2 [7]: Given S 1α,K , (K = 0, . . . , n) is the optimal solution of the K-budget node-weighted prize-collection
+Steiner Tree from (10), the NPGS problem
+Sˆ1
+
+Nα (S 1 ),
+
+s.t. N α (S 1 ) ≤ K
+
+(10)
+
+where α is the anomaly significance level, typically set as
+α ≤ 0.15 in this article. K ≤ n is the number of normal nodes
+in S 1 .
+
+=
+
+arg max
+
+S 1 ⊆G1 ,S 1 is connected
+
+Fα (S 1 )
+
+is equivalent to the following optimal problem:
+Sˆ1
+
+i
+
+where K is the number of independent attention mechanisms,
+and σ represents the nonlinear activation function.
+Similarly, the feature XG2 in G2 can also be generated
+following the aforementioned process. Thus, x1 ∈ Rn×1 and
+x2 ∈ Rm×1 are feature vectors of G1 and G2 , calculated as
+shown in the following equation:
+
+5
+
+=
+
+argn max oFα (S 1 ).
+α∈P,S 1 ∈ S 1α,0 ,...,S 1α,n
+
+(11)
+
+In summary, TSPSD decomposes the NPGS-based anomaly
+subgraph detection problem into a series of K-budget subgraph
+detection subproblems. With the constraints of lemma 5 and 6,
+we guarantee that the optimal solution Sˆ1 in (11) is the optimal
+anomaly subgraph detected from G1 .
+2) Anomaly Transferring From G1 to G2 : Inspired by
+transfer learning the biological knowledge among protein
+interaction networks based on the network alignment [40],
+[41], [42], our algorithm calculates the S 2 ’s anomaly features
+by transferring the S 1 ’s anomaly features through the network
+alignment. Our algorithm transfers the anomaly features of
+S 1 to infer the anomaly features of S 2 , while simultaneously
+ensuring optimal structural alignment between the associated
+graphs G1 and G2 . Our anomaly transferring model is formalized as the following convex combination form:
+Q (S 1 , S 2 , M) = ICS (S 1 , S 2 , M) + FT (S 1 , S 2 , M) .
+
+(12)
+
+Here, ICS(S 1 , S 2 , M) denotes the topological similarity
+function based on the conserved aligned edges [37], [43]
+ICS (S 1 , S 2 , M)
+
+
+ 
+ 
+P
+M v0i , vi M v0j , v j A1 vi , v j A2 v0i , v0j
+
+
+=
+P
+0 0
+A
+v
+,
+v
+0
+0
+2
+vi ,v j
+i
+j
+
+(13)
+
+where A1 and A2 are the adjacency matrices of G1 and G2 ,
+vi , v j ∈ VS 1 , v0i , v0j ∈ VS 2 . I(·) is the indicator function.
+FT (S 1 , S 2 , M) represents the induced subgraph features that
+combine the inherent features of S 2 and the multidimensional
+features transferred from S 1 . To enhance significant anomaly
+features, we modify our feature transfer learning model (1)
+into the following general function:
+
+FT (S 1 , S 2 , M) = XS 2 + Φ M 1 − XS 1 .
+(14)
+Therefore, the objective function of our anomaly transfer
+model is defined below
+arg max Q (S 1 , S 2 , M),
+
+α∈P,S 1 ,S 2 ,M
+
+s.t. N α (S 1 ) ≤ K, |S 2 | ≤ c
+
+(15)
+
+where K ≤ n and c ≤ m are both hyperparameters.
+Given the constraint of hyperparameters, achieving the optimal value of Q(S 1 , S 2 , M) requires simultaneously maximizing
+both the ICS and FT functions, as shown in (12). Function
+Q(S 1 , S 2 , M) maximizes the alignment quality between S 1
+and S 2 , while highlighting the significant induced anomaly
+features. Furthermore, Fα (S 1 ) in (7) increases monotonically
+with the number of anomaly nodes Nα (S 1 ) and decreases with
+the number of normal nodes N α (S 1 ). Based on Lemma 6, the
+optimal anomaly subgraph S 1 exists in the limited graph G1 .
+Hence, the significant anomaly subgraph Sˆ1 can be directly
+identified from G1 using the method in [7]. Subsequently, ICS
+function facilitates the identification of the most structurally
+similar subgraph alignment pairs, while FT function ensures
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+6
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+Algorithm 1 IASD With Multidimensional Feature Transfer
+Input: N = (G1 , G2 , H), G1 = (V1 , E1 , XG1 ), G2 =
+(V2 , E2 , XG2 ), Number of S 2 ’ nodes c, αmax
+Output: The optimal implicit anomaly subgraph Sˆ2
+1 Initialization: M 0 ← H, S 10 ← φ, S 20 ← φ;
+2 Extracting anomaly feature vectors in graph G 1 via GAT:
+x1 ← G 1 ;
+3 Extracting normal feature vectors in graph G 2 via GAT:
+x2 ← G 2 ;
+4 Calculating the probability of features for nodes in G 1 :
+{p(vi )} ← x1
+5 for α ∈ P = {p(vi )|p(vi ) ≤ αmax } ∪ {αmax } do
+6 for K ≤ n do
+7
+S 1K ← maxS 1 Nα (S 1 ), s.t. N α (S 1 ) ≤ K, S 1 is connected;
+8
+S 2K ← maxS 2 Q(S 1K , S 2 , M K−1 ), s.t. |VS 2 | ≤ c;
+9
+M K ← arg max Q(S 1K , S 2K , M K−1 );
+10 end for
+11 (S 1α , S 2α , M α ) ← maxK (F α (S 1K ) + Q(S 1K , S 2K , M K ));
+12 end for
+13 (Sˆ1 , Sˆ2 , M̂) ← maxα (F α (S 1α ) + Q(S 1α , S 2α , M α ));
+14 return Sˆ2 ;
+the effective transfer of significant anomaly features from the
+source graph to the target graph, resulting in strongly induced
+anomaly patterns. Therefore, Q(S 1 , S 2 , M) is monotonically
+increasing with the number of alignment edges (|M|) and
+the number of anomaly nodes in S 1 , i.e., Nα (S 1 ). Our algorithm IASD satisfies properties P1, P2, and P3 described in
+Section III. The validity of these conclusions is confirmed
+by parameter-sensitivity experiments, the details of which are
+provided in the appendix.
+C. IASD With Multidimensional Feature Transfer Algorithm
+IASD is summarized below, as shown in Algorithm 1.
+1) Fusing the multidimensional attributes into the feature
+vector x1 .
+2) Optimizing the IASD problem (2) via dynamic programming procedure, and deriving the optimal anomaly
+subgraph Sˆ2 .
+a) Detecting the maximum anomaly subgraph S 1 by
+calculating Function Fα (S 1 ), based on the anomaly
+feature x1 .
+b) Calculating the optimal subgraph S 2 by maximizing Function Q.
+c) Updating the alignment matrix Mm×n based on the
+new S 1 and S 2 .
+Lemma 3: Optimal anomaly S 2 with S 1 and M fixed. Under
+the condition that the anomaly subgraph S 1 and the alignment
+matrix M are fixed, if S 1 and S 2 satisfy Anomaly Alignment
+(Proposition 1), then the maximum solution Sˆ2 of Function Q
+is defined as follows:
+
+sˆ2 = λM [s1 (1 − x1 )] + λx2 T + 1 Ms1
+(16)
+where λ is a regularization parameter.
+Proof: The detailed proof is provided in the appendix. 
+Lemma 4: Optimal alignment matrix M with S 1 and S 2
+fixed. Given two input subgraphs S 1 and S 2 , then Function Q
+in (15) w.r.t. M is equivalent to the optimal problem
+M̂ = arg max η [Q (M)] − (1 − η) kM − Hk2F
+M∈[0,1]m×n
+
+(17)
+
+where η is a regularization parameter, H is the prior alignment
+matrix, and k · kF denotes the Frobenius norm.
+Proof: The detailed proof is provided in the appendix. 
+Theorem 1: Optimal anomaly subgraphs S 1 , S 2 in Graphs
+G1 , G2 . If subgraphs S 1 and S 2 satisfy the anomaly alignment
+condition, then in the IASD problem [(2)], an optimal solution
+exists and is defined as follows:
+
+Sˆ1 , Sˆ2 = arg max Fα (S 1 ) + Q (S 1 , S 2 , M).
+(18)
+α∈P
+
+Proof: The detailed proof is provided in the appendix. 
+a) Complexity analysis: The time complexity of IASD
+primarily relies on the iterations involving S 1K , S 2K , and M K .
+Detecting the anomaly subgraph S 1K involves solving a 0-1
+multiple-choice knapsack (MCK) Problem, which can be
+addressed using dynamic programming. Its worst case time
+complexity is O(|P| · n3 ) for a graph with n nodes [7]. To
+optimize M efficiently, we exploit the Kronecker product
+property, yielding a time complexity of O(|P| · mn2 ) for
+this step. Additionally, the time complexity of S 2K is also
+O(|P| · mn2 ). Hence, the time complexity of our algorithm is
+O(|P| · (n3 + mn2 )). When m = O(n), this reduces to O(|P| · n3 ),
+which is consistent with our empirical observation that the
+running time is dominated by the n3 term. The evaluation
+results are presented in the appendix.
+V. E XPERIMENTS
+A. Dataset Description
+Fig. 3 shows four multilayer graphs from five real datasets
+(details in the appendix).
+1) Weibo Dataset contains 17.26 million geo-tagged Weibo
+users from Tianjin (December 1, 2011–December 31,
+2012), collected from www.weibo.com. Applying SentiCircle [44], 99 872 negative tweets are filtered to build
+the source graph G1 (Negative Friendship Graph) with
+11 225 users and 13 405 links. The target graph G2
+(Neighborhood Graph) has 137 919 nodes and 6 396 462
+edges, where nodes are neighborhoods (areas with a
+diameter of 300 m) and edges indicate a user tweeting
+across them.
+2) TYC Dataset comprises 1.67 million corporations,
+1.0 million investors, and 2.66 million investment
+relationships from www.tianyancha.com (January 1,
+2000–December 31, 2018). The source graph G1
+contains 864 microcredit loan companies and 1814
+relationships, while the target graph G2 has 4785 shareholders and 35 892 co-investment links. Companies
+labeled as risky on the website were collected as ground
+truth.
+3) B&C Datasets: B dataset comprises 4.8 million population movement records among 441 Chinese cities from
+www.Baidu.com (January 1–February 29, 2020), where
+edges represent the top 100 movements between cities,
+forming G1 of B&C. C dataset includes 24 787 daily
+confirmed COVID-19 cases and 7686 patient trajectories
+(December 1, 2019–March 10, 2020) across 313 Chinese
+cities. G2 of B&C is constructed as a plain graph with
+313 nodes and 7686 edges, using only the topology and
+treating COVID-19 data as ground truth.
+4) Water Pollution (WP) Dataset was collected from a real
+Water Sensor Network across six time slices, comprising
+12 527 sensors (nodes) and 14 831 edges monitoring
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+WU et al.: ANOMALY SUBGRAPH DETECTION ON MULTIPLE ASSOCIATED ATTRIBUTED NETWORKS
+
+7
+
+Fig. 3. Description of multilayer graphs in our case study experiments. In each subillustration, the source graph G1 exhibits intrinsic anomalous characteristics,
+where explicitly annotated observable anomalies are encoded in red, while anomaly alignment between G1 and target graph G2 are delineated through gray
+directional arrows symbolizing cross-domain alignment mechanisms. G2 obtain induced anomalous features from G1 through transfer learning, enabling G2
+to detect the IAS (depicted in blue in the subillustration). (a) Urban and rural area crime hotspots detection. (b) Anomaly event detection: epidemic breakout.
+(c) Risky investors detection. (d) Water Pollution Prediction.
+
+Fig. 4. ROC curves for evaluations of the IASD on the Weibo and TYC
+datasets.
+
+chemical pollutants in rivers. Sensors output 1’ when
+contamination is detected, otherwise 0’. The source
+graph G1 is built from the structure and attributes at
+time t, and the target graph G2 from the structure at
+time t + 1.
+B. Experiment Setup
+All performance evaluations explore the BJ and HC statistics on four multilayer graphs, labeling algorithms with
+suffixes “(BJ)” or “(HC)”, e.g., IASD(BJ) and IASD(HC). As
+IASD(HC) results closely match IASD(BJ), they are provided
+in the appendix for brevity. For GAT layers, 2 heads are
+used for WP and 4 heads for TYC and Weibo, with attention
+weights initialized uniformly.
+1) Baselines: We adopt five algorithms as our baselines.
+1) TF is our designed baseline, which directly integrates the
+network alignment algorithm FINAL [40] with TSPSD
+and serves to detect an IAS.
+2) A3MAN is a deep learning-based anomaly detection
+approach across multiple graphs [12].
+3) ASDHC [10] employs GNNs and contrastive learning to
+detect anomaly subgraphs in an attributed network.
+4) BG-ASDHC is our constructed baseline for detecting IASs, which consists of a GNN-based knowledge
+transfer learning algorithm Bridged-GNN [32] and
+a GNN-based anomaly subgraph detection algorithm
+ASDHC.
+5) BG-ASGAE is our constructed baseline for detecting
+IASs, which integrates the Bridged-GNN [32] algorithm
+with a GNN-based anomaly subgraph detection algorithm AS-GAE [11].
+2) Evaluation Metrics: Performance is evaluated by precision, recall, accuracy, false positive rate (FPR), and F1,
+
+Fig. 5. Precision-Recall Curves for evaluations of the IASD on the Weibo
+and TYC datasets.
+
+corresponding to true positives among detected positives,
+true detected positives among actual positives, correct detections overall, false detections, and combined precision-recall,
+respectively.
+C. Experimental Result Analysis
+1) Performance Measures Analysis: As shown in Table II,
+IASD achieves the highest scores across all metrics on the
+Weibo dataset, with improvements of 9% ∼ 29% over competitive baselines. On the WP dataset, it outperforms four
+baselines in most metrics, except Recall, where it is 6% lower
+than TF(BJ). In the TYC dataset, IASD leads in Accuracy,
+Recall, and F1, while TSPSD(BJ) is 3% better in Precision
+and 8% lower in FPRs (including FPR, FPR-P and FPR-D).
+However, TSPSD(BJ) shows a 33% ∼ 47% decrease in other
+metrics compared to IASD. Moreover, we demonstrate its
+superior performance by analyzing the correlation between
+TPR and FPR, as well as the correlation between precision and
+recall, as shown in Figs. 4 and 5. In summary, our approach
+outperforms nearly all the baseline methods.
+2) Robustness Evaluation: To evaluate the robustness of
+our algorithm, we randomly selected a percentage of vertices
+and flipped their binary feature values. In addition, we make
+the noise ratio take values in the range [0%, 30%]. Compared to the baselines, IASD(BJ) has stable performance and
+achieves the best Precision and FPR under different noise
+rates, as shown in Fig. 6. It is worth noting that when
+the noise ratio is greater than 15, the precision shows an
+upward trend. Our analysis suggests this is because multiple
+abnormal subgraphs are adjacent to each other and are detected
+as one optimal abnormal subgraph. When the noise ratio
+exceeds a certain level, multiple original abnormal subgraphs
+connect with several “false anomaly nodes.” These false nodes
+are distributed in the adjacent areas of the smaller original
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+8
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+Fig. 6. Robustness evaluation on the TYC dataset under different noise ratios. (a) Precision. (b) Recall. (c) False positive rate.
+TABLE II
+C OMPARISON B ETWEEN IASD AND OTHER M ETHODS ON WP, W EIBO , AND TYC DATASET
+
+abnormal subgraphs. This results in the detection of more “true
+anomaly nodes.” Fig. 6 shows the experimental results with
+the BJ statistic on the TYC dataset and similar results are
+derived with the HC statistic.
+
+D. Ablation Study
+1) GAT Module Analysis: In our approach, the GAT module embeds node attributes by sampling neighbor features.
+To assess its impact, we compare IASD with IASD-GAT
+(without GAT) using ROC (Fig. 4) and Precision-Recall curves
+(Fig. 5), where IASD achieves the highest AUC and the best
+Precision–Recall value. An additional ablation study (Fig. 6)
+evaluates robustness under varying noise levels: IASD attains
+higher Precision and lower FPR than IASD-GAT across noise
+settings, with better Recall when noise is below 10. However,
+as noise increases, GAT aggregation reduces Recall by making
+anomalous nodes harder to distinguish.
+2) Transferability Analysis: The transferability of IASD
+depends primarily on the functions Q(S 1 , S 2 , M) and
+FT (S 1 , S 2 , M). To validate this, we compare IASD with
+ASDHC (Table II), which detects anomaly subgraphs directly
+on the feature-deficient G2 . The poor performance of the
+ASDHC method proves the transferability of our method.
+We also applied TSPSD directly to G2 , but it did not detect
+anomaly subgraphs, further demonstrating the effectiveness of
+our framework.
+
+TABLE III
+A BLATION S TUDY ON TYC
+
+In summary, as shown in Table III, removing the GAT or
+Transferability components leads to suboptimal performance,
+demonstrating the importance of each component.
+E. Case Study
+1) Urban Crime Hotspot Detection: We hypothesize
+that the aggregation of negative emotions among residents
+increases the likelihood of abnormal events in their neighborhoods. To test this, we detected urban crime hotspots
+by aligning the “Negative Friend Graph” G1 with the
+“Neighborhood Graph” G2 and transferring auxiliary anomaly
+features. Daily empirical p-values for user attributes (December 1, 2011–December 1, 2012) yielded 397 anomaly
+subgraphs corresponding to neighborhoods. These hotspots
+were evaluated against the Urban Area Security Incident
+Report issued by a third-party authority. Fig. 7 showed the
+optimal subgraph S 2 on August 25, 2012, which contained
+eight crime hotspots, all confirmed by ground truth.
+2) Risky Investors Detection: This case is to identify
+potentially risky investors by observing unusual behaviors of
+specific companies. G1 with 864 microcredit loan companies
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+WU et al.: ANOMALY SUBGRAPH DETECTION ON MULTIPLE ASSOCIATED ATTRIBUTED NETWORKS
+
+Fig. 7. Illustration of urban crime hotspot detection, G1 consists of negative
+friends, G2 represents the neighborhood graph. On August 25, 2012, IASD
+identified the optimal anomaly subgraph in G1 with 21 anomaly users (dark
+blue circles) and detected 8 crime hotspots in G2 (red areas). The pink solid
+lines denote prior preference links, while the dashed lines indicate alignment
+links. All hotspots are confirmed by the urban area security incident report
+from a third-party authority.
+
+9
+
+Fig. 9. Intuitive interpretation of the cause of the anomaly event: epidemic
+breakout. (a) Cities with significant population movements on January 13,
+2020. (b) Anomalous COVID-19 outbreak cities detected by IASD from
+January 19, 2020 to February 20, 2020.
+
+Fig. 10. Water pollution prediction Case Study. Blue circles indicate sensors
+that will issue water pollution warnings in the upcoming time slice, and red
+circles show the current warning sensors detected at the 3th time slice.
+
+Fig. 8. Risky investor detection in Nov 2017. (a) Connected anomalous
+company subgraph S 1 includes 3 anomalous microcredit loan companies with
+observed anomalous business activities (red dots) and 1 normal company
+(a blue dot). (b) Disconnected alignment anomaly subgraph S 2 consists of
+44 detected risky investors (violet dots). (c) 11 companies with unobserved
+abnormal business behaviors (green dots) related to risky investors, discovered
+from the ground truth.
+
+and 1814 relationships, and G2 with 4785 shareholders and
+35 892 coinvestment links. Twenty four months of business
+data (January 2017–December 2018) are used to compute
+anomaly features for each company. In November 2017, four
+interconnected companies (three anomalous, one normal) are
+detected [Fig. 8(a)], and 44 risky investors are identified [Fig.
+8(b)]. To validate our approach’s accuracy, we identified 11
+additional companies where 43 of these investors had made
+investments, as shown in Fig. 8(c). This proves that these
+investors have a certain degree of business risk.
+3) Anomaly Event Detection-Epidemic Breakout: In this
+scenario, our objective is to illustrate the strong association
+between migration patterns and the COVID-19 outbreak. To
+comprehend the causal chain behind the COVID-19 epidemic
+breakout, we analyze several Chinese cities characterized
+by significant population movements and a high number of
+COVID-19 cases. We utilize the Baidu migration graph as our
+source graph G1 , and consider COVID-19 as the target graph
+G2 . This setup is designed to simulate the inherently unpredictable nature of COVID-19 transmission. During the initial
+23 days of January 2020, we identified significant anomalous
+migration subgraphs over a span of 14 days. These subgraphs
+revealed a similar regional distribution pattern among the cities
+involved, as illustrated in Fig. 9(a). For instance, when Wuhan
+initially reported confirmed COVID-19 cases on January 13,
+2020, a substantial increase in population movements occurred
+between 367 cities in Mainland China. After 6 days, our
+
+approach identifies the first anomaly subgraph S 2 within
+the epidemic graph G2 , leveraging the transferred migration
+attributes. This discovery underscores our approach’s capability in epidemic detection. Subsequently, IASD proceeds to
+detect an additional 32 anomaly subgraphs over the following
+33 days, covering a total of 157 cities that were officially
+confirmed to have experienced new case outbreaks according
+to Chinese government news websites. These cities are marked
+on the map according to their geographic coordinates, as
+shown in Fig. 9(b). This experiment offers persuasive evidence
+of a congruent distribution between migration patterns and the
+COVID-19 outbreak. It offers an intuitive explanation for the
+rapid spread of the COVID-19 epidemic, largely attributed to
+population migration.
+4) WP Prediction: IASD can be applied to a set of graphs
+with time series, e.g., WSN across different time slices. We
+use two time-slice graphs G(t) with historical sensors’ data
+and G(t+1) without any sensors’ warning data, to construct
+the IASD’s two-layer graph. i.e., G(t) is G1 , and G(t+1) is
+G2 . In Fig. 10, IASD identified 76 sensors emitting warning
+signals during the third time slot and determined that 29
+sensors would predict warnings of chemical contaminants in
+the fourth time slot. These 29 sensors had not previously
+emitted a warning signal; however, 27 of them generated
+actual warnings in the fourth time slice, and in the fifth time
+slice, two additional sensors also issued warning signals. This
+experiment demonstrates that IASD is capable of effectively
+addressing the practical task of predicting WP.
+VI. C ONCLUSION
+In this article, we propose the anomaly alignment problem and a novel anomaly detection algorithm IASD for the
+multilayer multidimensional attributed graph. IASD employs
+network alignment and a multilayer graph model to integrate a
+feature-rich source graph with the target graph, facilitating the
+detection of IASs. Various evaluation across five real datasets
+demonstrates IASD’s effective performance and robustness.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+10
+
+In future work, under the Anomaly Alignment framework,
+we aim to extend IASD to more complex multilayer graphs
+by aligning multiple source graphs and transferring features
+across layers, using iterative or joint alignment strategies, and
+validating the method on diverse multilayer datasets, such as
+SNs and multiomics networks.
+A PPENDIX A
+DATASETS
+We provide detailed information about the six real datasets
+used in our experiments. The raw data used to construct our
+multilayer graphs are processed in the following steps.
+A. Weibo Dataset
+The Weibo dataset includes 5.76 million tweets and 1.81
+billion retweets collected from the Weibo Website from
+December 1, 2011 to December 31, 2012. All these tweets are
+assigned a geo-tag attribute which is a longitude and latitude
+within the urban area of Tianjin (The latitudes are in the
+range of 37◦ 89700 to 40◦ 77200 , and the longitudes are in the
+range of 114◦ 13100 to 120◦ 64100 ). We extracted 17.26 million
+users and their relationships from these tweets, analyzed the
+semantics of these tweets based on the SentiCircle algorithm
+[44], and classified the tweets into three categories: negative,
+positive, and neutral sentiment tweets. 99, 872 negative sentiment tweets containing negative emotional words (e.g., “hate,”
+“complain,” etc.) are filtered to construct the source graph G1
+(Negative Friendship Graph). G1 includes 11 225 Weibo users
+and 13 405 friend (or follower) relationships.
+The target graph G2 is the Neighborhood Graph which
+includes 462 591 geo-coordinates extracted from the tweets.
+These geo-coordinates are clustered into 137 919 vertices.
+Each vertex represents a neighborhood (a circular area with
+a diameter of 300 m), and the 6 396 462 edges are extracted
+from all those negative tweets. Each edge represents that there
+exists a user who posted tweets with the geo-coordinates of
+two neighborhoods.
+Ground Truth Data: The authority department’s urban security database provides 3.21 million security records of urban
+and rural areas, which constitute the ground truth for Urban
+Crime Hotspot Detection. All security alarm events occurring
+within the same time and region as the Weibo data are
+extracted. The data items include the time, location, and alarm
+information. Its location is labeled by longitude and latitude
+coordinates. Thus, our detection result is deemed correct if
+there is an alarm record within the hotspot area (i.e., a node
+of S 2 ) identified by the algorithm; otherwise, it is deemed
+incorrect.
+B. TYC Dataset
+This
+dataset
+is
+extracted
+from
+the
+website
+www.tianyancha.com. It includes 1 668 797 corporations,
+1 000 938 investors, and 2 657 470 of their investmentrelationships during the period from January 1, 2000 to
+December 31, 2018. We collect 332 009 corporations and
+their obvious abnormal commercial-related behaviors. For
+example, their assets are auctioned off by the court, or they
+announce being unable to repay their bank loans, or they
+(or their legal persons) are accused, and so on. In this case
+study, we focus on 3005 microcredit loan companies and
+8146 related shareholders (including persons and companies)
+from January 1, 2017 to December 31, 2018.
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+Therefore, G1 has 864 microcredit loan companies as
+vertices and 1814 associated relationships between these companies as edges. G2 has 4785 related shareholders as vertices
+and 35 892 co-investment relationships between these shareholders as edges.
+Ground Truth Data: As the website designates companies
+as high-risk by compiling records of warnings, penalties, and
+actions issued by courts or regulatory authorities throughout
+their operations, we employed this labeled information as the
+ground truth, which encompasses both the identified companies and their corresponding shareholders.
+C. Baidu Migration (B) Dataset Versus Covid-19 Pandemic
+(C) Dataset
+The Baidu migration dataset includes 4.8 million population
+movement records among 441 Chinese cities collected from
+the Baidu.com website during the period from January 1, 2020
+to February 29, 2020. The population movement records are
+the immigration and emigration rates of each city. Therefore,
+G1 is constructed with 441 cities and the edges which represent
+the top 100 population movement relationships between a city
+and its neighboring cities.
+The COVID-19 pandemic dataset is collected from GitHub
+(December 1, 2019–January 27, 2020) and the Chinese News
+Websites (January 27, 2020–March 10, 2020). It includes
+24, 787 confirmed cases of COVID-19 reported daily and
+7, 686 known patient trajectories announced as of March 10,
+2020. Those cases were distributed in 313 cities in Mainland
+China. We construct G2 as a plain graph2 . G2 consists of 313
+cities as vertices and 7686 known patient trajectories as edges.
+Here, our approach only adopts the topology of G2 without
+using any Covid-19 outbreak information as the attributes.
+Ground Truth Data: All COVID-19 confirmed case data
+collected from the Chinese News Websites are merely used as
+ground truth to evaluate our algorithm.
+D. WP Dataset
+This WP warning data was collected from a real water
+sensor network3 across six time slices. The dataset comprises
+12 527 sensors (nodes) and 14 831 edges. These sensors are
+responsible for monitoring chemical pollutants distributed in
+river areas. A sensor produces the signal ‘1’ when there is the
+presence of water contamination; otherwise, it reports ‘0’. In
+our experiment, the graphs G1 and G2 are the largest connected
+subgraphs within this dataset. The source graph G1 is built
+based on the structure and attributes of the network at the t
+time slice, while the target graph G2 is constructed from the
+structure of the network at the t + 1 time slice.
+Ground Truth Data: In our article, the sensor alarm signals
+from the corresponding time slices in the WP dataset are used
+as the ground truth for our detection time slices.
+E. Synthetic Dataset
+Synthetic dataset is constructed with reference to the basic
+characteristics of the Weibo dataset, such as the proportion
+of nodes and the proportion of aligned edges, as detailed
+in Table V. For constructing individual graphs, we adopted
+the Barabasi-Albert model [45], and the feature data were
+simulated based on the basic information from the Weibo
+dataset.
+2 The plain graph refers to the graph without any attribute feature.
+3 “The Battle of the Water Sensor Networks (BWSN)”.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+WU et al.: ANOMALY SUBGRAPH DETECTION ON MULTIPLE ASSOCIATED ATTRIBUTED NETWORKS
+
+11
+
+TABLE IV
+S TATISTICS OF OUR M ULTILAYER G RAPHS
+
+A PPENDIX B
+T HEORY
+A. Proposition
+Proposition 2 (Anomaly Alignment): Given a two-layer
+graph N = (G1 , G2 , M). where G1 = (V1 , E1 , XG1 ) is the
+source graph and G2 = (V2 , E2 , XG2 ) is the target graph, with
+alignment edges M ⊆ V1 ×V2 . A connected anomaly subgraph
+S 1 (VS 1 , ES 1 , XS 1 ) in G1 contains an anomalous node vi . If
+(vi , v j ) ∈ ES 1 and (v0i , v0j ) ∈ E2 exist with (vi , v0i ) ∈ M and
+(v j , v0j ) ∈ M, then according to our feature transfer learning
+model ftran : XS 1 → XS 2 , a nonempty aligned anomaly
+subgraph S 2 exists in G2 .
+Proof: Let s1 n×1 be the indicator vector of subgraph S 1 ,
+s2
+the indicator vector of S 2 , and Mm×n the alignment
+matrix. The attribute matrices of subgraph S 1 and S 2 are
+defined as
+m×1
+
+XS 1 = diag (s1 ) XG1 ,
+
+XS 2 = diag (s2 ) XG2
+
+(19)
+
+where diag(s1 ) ∈ Rn×n denotes the diagonal matrix with the
+diagonal entries from s1 . Similarly, diag(s2 ) ∈ Rm×m is the
+diagonal matrix with the diagonal entries from s2 .
+If (vi , v j ) ∈ ES 1 , the attribute matrices of subgraphs S 1 and
+S 2 are
+#
+"
+
+
+xS 2 v0i 
+xS 1 (vi )
+XS 1 =
+, XS 2 =
+(20)
+xS 1 v j
+xS 2 v0j
+where XS 1 includes the anomalous attribute xS 1 (vi ), while XS 2
+contains only normal attributes.
+Since vi aligns with v0i and v j aligns with v0j , we have
+M(i0 , i) = 1 and M( j0 , j) = 1. Based on the definition of
+our feature transfer learning model: ftran : XS 1 → XS 2 , the
+projection of the transferred features onto XS 2 are represented
+using the following equation:
+
+#
+"
+xS 2 v0i + Φ xS 1 (vi )
+ .
+XS 2 =
+(21)
+xS 2 v0j + Φ xS 1 v j
+Thus, XS 2 includes the transferred anomaly features, and the
+aligned subgraph S 2 = {v0i , v0j } is an anomaly subgraph. The
+proposition is thereby proven.
+
+B. Lemma
+Lemma 5 [7]: Given N α (S 1 ) = N(S 1 ) − Nα (S 1 ), the optimal
+subgraph of NPGS problem with the K-budget node-weighted
+prize-collection Steiner Tree is defined as
+S 1α,K
+
+=
+
+arg max
+
+S 1 ⊆G1 ,S 1 is connected
+
+Nα (S 1 ),
+
+s.t. N α (S 1 ) ≤ K
+
+(22)
+
+where α is the anomaly significance level, typically set as
+α ≤ 0.15 in this article. K ≤ n is the number of normal nodes
+in S 1 .
+Lemma 6 [7]: Given S 1α,K , (K = 0, . . . , n) is the optimal solution of the K-budget node-weighted prize-collection
+Steiner Tree from (22), the NPGS problem
+Sˆ1
+
+=
+
+arg max
+
+S 1 ⊆G1 ,S 1 is connected
+
+Fα (S 1 )
+
+is equivalent to the following optimal problem:
+Sˆ1
+
+=
+
+argn max oFα (S 1 ).
+α∈P,S 1 ∈ S 1α,0 ,...,S 1α,n
+
+(23)
+
+Lemma 7: Optimal anomaly S 2 with S 1 and M fixed. Under
+the condition that the anomaly subgraph S 1 and the alignment
+matrix M are fixed, if S 1 and S 2 satisfy anomaly alignment
+(Proposition 2), then the maximum solution Sˆ2 of function Q
+is defined as follows:
+
+sˆ2 = λM [s1 (1 − x1 )] + λx2 T + 1 Ms1
+(24)
+where λ is a regularization parameter.
+Proof: Because the anomaly alignment property holds, s1 ,
+0 and M , 0. If s1 and M are fixed, then our feature transfer
+learning function is defined as follows:
+
+s2 T M [s1 (1 − x1 )] + s2 T x2 T Ms1
+FT (S 1 , S 2 , M) =
+.
+k1 − x1 k1 · kx2 k1
+(25)
+To enhance the stability of the model and improve its generalization ability, (26) reformulates the above equation by
+introducing an additional regularization term
+
+s2 T M [s1 (1 − x1 )] + s2 T x2 T Ms1
+FT (s2 ) =
+k(1 − x1 )k1 · kx2 k1
+− ρ ks2 − Ms1 k2F
+(26)
+where ρ is a regularization parameter. Let the derivative be
+equal to zero. Since the denominator of (26) is a constant
+value, then
+∂FT (s2 )
+∂
+=
+s2 T M [s1 (1 − x1 )]
+∂s2
+∂s2
+
+
++ s2 T x2 T Ms1 − ρks2 − Ms1 k2F = 0.
+
+(27)
+
+The maximum solution of the induced subgraph feature scoring function is obtained as follows:
+sˆ2 =
+
+1 ˚
+M [s1
+2ρ
+
+(1 − x1 )] + x2 T Ms1 + Ms1 .
+
+(28)
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+12
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+Let λ = 1/2ρ, then
+sˆ2 = λM [s1
+
+TABLE V
+
+
+(1 − x1 )] + λx2 T + 1 Ms1 .
+
+RUNNING T IME A NALYSIS ON S YNTHETIC DATASET
+
+(29)
+
+Therefore, the lemma is proved.
+
+Lemma 8: Optimal alignment matrix M with S 1 and S 2
+fixed. Given two input subgraphs S 1 and S 2 , then Function Q
+in (16) w.r.t. M is equivalent to the optimal problem.
+M̂ = arg max η [Q (M)] − (1 − η) kM − Hk2F
+
+(30)
+
+M∈[0,1]m×n
+
+where η is a regularization parameter, H is the prior alignment
+matrix, and k · kF denotes the Frobenius norm.
+Proof: Given the input graphs S 1 and S 2 , function
+Q(S 1 , S 2 , M) is equivalent to the function w.r.t. M in (31). To
+simplify the derivation of formulas, we introduce the vector
+m = vec(M) ∈ Rmn×1 , where vec(·) denotes the vectorization
+operator that stacks the columns of a matrix sequentially
+Q (M) = η [ICS (M) + FT (M)] + (1 − η) kM − Hk2F . (31)
+The maximum solution of it is deduced by setting its
+derivative to be zero
+∂Q (m)
+∂mh
+T i
+= η AS 1 ⊗ AS 2 + AS 1 ⊗ AS 2
+m − 2 (1 − η) m
+
+
+
+T
+T
+(1 − x1 ) + x2 s1 T − 2 (1 − η) h = 0
++ η s2 s1
+then the alignment matrix M is calculated as follows:
+h
+T i
+m̂ = η AS 1 ⊗ AS 2 + AS 1 ⊗ AS 2
+m
+
+
+
+T
+T
+(1 − x1 ) + x2 s1 T − h
++ η s2 s1
+
+
+
+= η AS 1 ⊗ AS 2 m + ATS 1 ⊗ ATS 2 m
+
+
+
++ η s2 s1 T (1 − x1 )T + x2 s1 T − h.
+Then, we apply the nature of the Kronecker product: (BT ⊗
+A)vec(X) = vec(AXB) [46] to make our algorithm more
+efficient
+
+
+
+m̂ = η vec AS 2 MATS 1 + vec ATS 2 MAS 1
+
+
+
++ η s2 s1 T (1 − x1 )T + x2 s1 T − h.
+(32)
+Consequently, the maximum solution of the function Q(M)
+exists, and m̂ in (32) is the fixed-point iterative method. The
+lemma is proved.
+
+In a given real-world scenario, G1 and G2 represent a pair of
+associated graphs. If an associated link (vi , v j ) exists between
+G1 and G2 , where vi ∈ V1 and v j ∈ V2 , then H(i, j) = 1;
+otherwise, H(i, j) = 0. In the iterative optimal procedure, when
+S 1 and S 2 are provided, Q(·) is solely dependent on M. The
+regularization term kM − Hk2F in (30) would help prevent a
+trivial solution of (30), while M is equal to the zero matrix.
+Additionally, the time and space complexities of computing the Kronecker products AS 1 ⊗ AS 2 and ATS 1 ⊗ ATS 2 are
+both O(n2 m2 ), whereas the vectorized forms vec(AS 2 MATS 1 )
+and vec(ATS 2 MAS 1 ) only required O(mn2 ). By exploiting this
+property of the Kronecker product, we optimize this Iterative
+process and reduce its overall complexity to O(mn2 ).
+
+C. Theorem
+Theorem 2: Optimal anomaly subgraphs S 1 , S 2 in Graphs
+G1 , G2 . If subgraphs S 1 and S 2 satisfy the anomaly alignment
+condition, then in the IASD problem [(5)], an optimal solution
+exists and is defined as follows:
+
+Sˆ1 , Sˆ2 = arg max Fα (S 1 ) + Q (S 1 , S 2 , M).
+(33)
+α∈P
+
+Proof: Based on the definition of our IASD problem and
+Lemma 5, S 1 contains at most K normal nodes, while S 2
+consists of at most c nodes. Both S 1 and S 2 are therefore
+restricted subgraphs. If α is assigned a specific value, then
+the functions Fα (S 1 ) and Q(S 1 , S 2 , M) are guaranteed to be
+monotonically increasing, as ensured by properties P1, P2, and
+P3. Consequently, if S 1 and S 2 satisfy the Anomaly alignment
+condition, then the optimal solution to the IASD problem, (2),
+exists.
+The uniqueness of Theorem 1 is proved by means of contradiction. Suppose (Sˆ1 , Sˆ2 ) is not the unique optimal solution
+of problem [(2)]. We assume that there exists at least one pair
+of nodes (vt , v0t ) aligned, where vt < Sˆ1 but is connected to
+Sˆ1 , v0t < Sˆ2 , the P-value of the node vt ’s feature is less than a
+significant level p(x1 (t)) ≤ α, and the edge (v0t , vt ) exists, i.e.,
+M(t0 , t) > 0. Let S 1 0 = Sˆ1 ∪{vt } and S 2 0 = Sˆ2 ∪{v0t }. Since Nα (·)
+denotes the number of anomaly nodes, then Nα (S 10 ) > Nα (Sˆ1 )
+holds. By properties (P1), (P2), it follows that F(S 10 ) ≥ F(Sˆ1 ).
+0
+0
+Moreover, by properties P
+(P1),
+P (P3), Q(S 1 , S0 2 , M) increases
+0
+monotonically with both
+vi ∈VS0 ,v0i ∈VS0 M(i , i) and Nα (S 1 ).
+1
+2
+Let Q0 = Q(S 10 , S 20 , M) and Q̂ = Q(Sˆ1 , Sˆ2 , M). Then Q0 > Q̂,
+which implies Fα (S 10 ) + Q0 > Fα (Sˆ1 ) + Q̂.
+This assumption contradicts that Fα (Sˆ1 )+ Q̂ is the maximum
+value of the IASD problem [(2)]. Therefore, the pair of
+nodes (vt , v0t ) cannot exist, and it follows that (Sˆ1 , Sˆ2 ) is the
+optimal solution to the IASD problem. Hence, the theorem is
+proven.
+
+A PPENDIX C
+E XPERIMENTAL R ESULTS
+A. Evaluation on the HC Statistic
+As shown in Table VI, the results of IASD(HC) and
+IASD(BJ) are highly similar. In conjunction with the comparison against TF(HC) and A3MAN(HC), these findings further
+substantiate the effectiveness of the proposed IASD approach.
+B. Parameter Sensitivity Study
+1) Influence of the Anomaly Ratio of G1 : The anomaly
+ratio refers to the proportion of anomalous vertices in
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+WU et al.: ANOMALY SUBGRAPH DETECTION ON MULTIPLE ASSOCIATED ATTRIBUTED NETWORKS
+
+Fig. 11. Influence of the anomalous ratio of G1 . When the ratio of anomalous
+nodes in source graph G1 increases from 0.5% ∼ 7%. (a) Anomalous scores
+of S 2 (i.e., the induced anomaly features) increase with the growing anomaly
+ratio in S 1 . (b) Number of alignment links between S 1 and S 2 follows a
+rising trend, reaching a peak before declining.
+
+G1 . We evaluate the influence of the anomaly ratio
+by detecting the anomaly features of every vertex in
+G1 . As the anomaly ratio increases from 0.5% to 5%,
+the anomaly feature score of S 2 , induced by transfer learning, increases from 0 to 15. Additionally, the
+number of alignment links calculated by our approach
+increases monotonically with the anomaly ratio in G1 ,
+as shown in Fig. 11. However, when the anomaly
+ratio of G1 exceeds 5%, the anomalous scores of S 2
+remain stable, while the number of alignment links
+begins to decrease. Hence, this experiment demonstrates that, within an anomaly alignment structure, the
+anomaly features of the source graph can effectively
+amplify those in the target graph, thereby facilitating
+the detection of implicit anomalous subgraphs. Furthermore, this experiment validates the reasonableness of
+the properties (P1, P2, and P3) proposed in our problem
+definition and demonstrates the effectiveness of our
+approach.
+2) Influence of the Parameter c: As defined in (2), |VS 2 | ≤ c,
+the number of S 2 ’s nodes is constrained by a constant c,
+where c ≤ |V2 |. For ease of visualization, we represent
+the parameter c as |VS 2 |/|V2 |, that is the ratio of the
+number of nodes in S 2 to the total number of nodes
+in G2 . In Fig. 12, we investigate c within the range of
+(0, 11.2%] in the WP dataset to assess our algorithm’s
+performance. For c ≤ 3.2%, Precision, Recall, F1,
+Accuracy, TPR-P, and TPR-D are all equal to 1, and
+FPR, FPR-P, and FPR-D are all 0. As c falls within
+[3.2%, 11.2%], Precision remains 1, and FPR, FPR-P,
+and FPR-D are 0; however, Recall, F1, Accuracy, and
+TPR-P (similar to TPR-D) exhibit a declining trend, as
+illustrated in Fig. 12.
+3) Influence of the Parameter K: According to [7] and
+[8], function Fα (S 1 ) increases with the number of
+anomaly nodes of S 1 , and tends to stabilize once the
+number of normal nodes K in S 1 exceeds 20. That
+is, Fα (S 1 ) achieves the highest statistic score when
+K ≥ 20. Since our algorithm employs TSPSD [7] to
+detect anomaly subgraph S 1 , the parameter K in TSPSD
+similarly affects the detection performance of our IASD.
+As shown in Fig. 13, IASD generally exhibits superior
+detection performance when K = 20 in our experiments.
+Therefore, we typically tune the parameter K to be
+equal 20.
+4) Influence of the Parameter αmax : In the method proposed
+in this article, the setting of the parameter αmax is
+of critical importance to the model’s performance. As
+depicted in Fig. 14, we conducted a systematic analysis
+of the model’s performance on the TYC dataset with
+
+13
+
+Fig. 12. Influence of the parameter c: (Ratio of the number of nodes in S 2
+to the total nodes in WP Graph G2 ).
+
+Fig. 13. Effect of parameter K on the detection performance of IASD.
+(a) F1 Score. (b) Accuracy. (c) FPR.
+
+Fig. 14. Influence of the parameter αmax on the TYC dataset.
+
+respect to four key metrics: Recall, F1-score, Accuracy,
+and Precision, across various values of αmax . The experimental results indicate that optimal model performance
+is achieved when the value of αmax falls within a
+specific range. Specifically, when αmax is within the
+range [0.10, 0.35], the model’s Recall, Accuracy, and
+Precision metrics are maintained at a high level. Notably,
+both Accuracy and Precision metrics peak around αmax =
+0.25. This suggests that within this parameter interval,
+the model can effectively balance the comprehensiveness
+and accuracy of its identification. However, when the
+value of αmax exceeds 0.35, the model’s performance
+metrics begin to decline sharply. Particularly for αmax ≥
+0.45, both Recall and the F1-score decrease significantly, indicating that an excessively large αmax value
+substantially weakens the model’s ability to identify positive samples, thereby severely compromising its overall
+performance.
+5) Influence of the GAT Head h: As depicted in Fig. 15,
+the number of GAT heads h significantly influences
+performance. We investigate the impact of the number
+of attention heads on the performance of a Transformerbased model. Our analysis reveals a nonmonotonic
+relationship between the number of heads (h) and
+model performance. Specifically, a single attention
+head (h = 1) yields suboptimal performance, sug-
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+14
+
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS
+
+TABLE VI
+IASD (HC),TF (HC), AND A3MAN (HC) ON WP, W EIBO , AND TYC DATASET
+
+[4]
+
+Fig. 15. Influence of GAT Head h on the WP dataset.
+
+gesting limitations in capturing the diverse feature
+representations necessary for robust modeling. Increasing the number of heads to h = 2 results in a
+substantial performance improvement, which validates
+the efficacy of the multihead attention mechanism in
+learning distinct, complementary representations. However, a critical observation is the sharp performance
+degradation when the number of heads becomes excessively large. Our findings underscore the importance
+of judiciously selecting the number of attention heads
+to balance representational power with the risk of
+overfitting.
+C. Running Time Analysis
+To evaluate the time complexity, a synthetic dataset was
+constructed with reference to the basic characteristics of the
+Weibo dataset, including the proportion of nodes and aligned
+edges, as summarized in Table V. For the generation of
+individual graphs, we employed the Barabási–Albert model
+[45], while the feature data were simulated using the basic
+information from the Weibo dataset. Ten sets of simulation
+graphs were generated for empirical evaluation, as reported in
+Table V, which demonstrate that the algorithm’s running time
+grows proportionally with the cube of the number of graph
+nodes, i.e., O(n3 ).
+[1]
+[2]
+[3]
+
+R EFERENCES
+L. Akoglu, H. Tong, and D. Koutra, “Graph based anomaly detection and
+description: A survey,” Data Mining Knowl. Discovery, vol. 29, no. 3,
+pp. 626–688, May 2015.
+G. Pang, C. Shen, L. Cao, and A. van den Hengel, “Deep learning for
+anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2, pp.
+38:1–38:38, 2021.
+R. Kanawati, “Multiplex network mining: A brief survey,” IEEE Intell.
+Informat. Bull., vol. 16, pp. 24–27, 2015.
+
+J. Hu et al., “SAMCL: Subgraph-aligned multiview contrastive learning
+for graph anomaly detection,” IEEE Trans. Neural Netw. Learn. Syst.,
+vol. 36, no. 1, pp. 1664–1676, Jan. 2025.
+[5] X. Zhou et al., “Reconstructed graph neural network with knowledge
+distillation for lightweight anomaly detection,” IEEE Trans. Neural
+Netw. Learn. Syst., vol. 35, no. 9, pp. 11817–11828, Sep. 2024.
+[6] L. Huang et al., “Hybrid-order anomaly detection on attributed
+networks,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+pp. 12249–12263, Dec. 2023.
+[7] N. Wu et al., “A nonparametric approach to uncovering connected
+anomalies by tree shaped priors,” IEEE Trans. Knowl. Data Eng.,
+vol. 31, no. 10, pp. 1849–1862, Oct. 2019.
+[8] F. Chen and D. B. Neill, “Non-parametric scan statistics for event
+detection and forecasting in heterogeneous social media graphs,” in
+Proc. 20th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+Aug. 2014, pp. 1166–1175.
+[9] P. V. Bindu, P. S. Thilagam, and D. Ahuja, “Discovering suspicious
+behavior in multilayer social networks,” Comput. Hum. Behav., vol. 73,
+pp. 568–582, Aug. 2017.
+[10] Y. Sun, W. Wang, N. Wu, and C. Bao, “Anomaly subgraph detection
+through high-order sampling contrastive learning,” in Proc. 23rd Int.
+Joint Conf. Artif. Intell., 2024, pp. 2362–2369.
+[11] Z. Zhang and L. Zhao, “Unsupervised deep subgraph anomaly
+detection,” in Proc. IEEE Int. Conf. Data Mining (ICDM), Nov. 2022,
+pp. 753–762.
+[12] N. Wu et al., “Multiple anomaly alignments on network traffics,”
+in Proc. IEEE Int. Conf. Knowl. Graph (ICKG), Nov. 2022,
+pp. 313–320.
+[13] Y. Sun, W. Wang, N. Wu, W. Yu, and X. Chen, “Anomaly subgraph
+detection with feature transfer,” in Proc. 29th ACM Int. Conf. Inf. Knowl.
+Manage., Oct. 2020, pp. 1415–1424.
+[14] Y. Sun et al., “AAAN: Anomaly alignment in attributed networks,”
+Knowl.-Based Syst., vol. 249, Aug. 2022, Art. no. 108944.
+[15] H. Xu et al., “AFSC: Adaptive Fourier space compression for
+anomaly detection,” IEEE Trans. Ind. Informat., vol. 20, no. 11,
+pp. 12586–12596, Nov. 2024.
+[16] J. Sharpnack, A. Krishnamurthy, and A. Singh, “Near-optimal anomaly
+detection in graphs using Lovasz extended scan statistic,” in Proc. Adv.
+Neural Inf. Process. Syst., vol. 26, 2013, pp. 1959–1967.
+[17] M. Salehi and L. Rashidi, “A survey on anomaly detection in evolving
+data: [With application to forest fire risk prediction],” ACM SIGKDD
+Explor. Newslett., vol. 20, no. 1, pp. 13–23, May 2018.
+[18] Z. Ding, Q. Dong, H. Xu, C. Li, X. Ding, and Y. Huang, “Unsupervised
+anomaly segmentation for brain lesions using dual semantic-manifold
+reconstruction,” in Proc. ICONIP, vol. 13625. Cham, Switzerland:
+Springer, 2022, pp. 133–144.
+[19] C. Li, Y. Zhang, J. Li, Y. Huang, and X. Ding, “Unsupervised
+anomaly segmentation using image-semantic cycle translation,” 2021,
+arXiv:2103.09094.
+[20] K. Xiao, J. Cao, Z. Zeng, and W.-K. Ling, “Graph-based
+active learning with uncertainty and representativeness for industrial
+anomaly detection,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–14,
+2023.
+[21] H. Zenati, C.-S. Foo, B. Lecouat, G. Manek, and V. Chandrasekhar,
+“Efficient GAN-based anomaly detection,” 2018, arXiv:1802.06222.
+[22] L. Qi, Y. Yang, X. Zhou, W. Rafique, and J. Ma, “Fast anomaly
+identification based on multiaspect data streams for intelligent intrusion
+detection toward secure Industry 4.0,” IEEE Trans. Ind. Informat.,
+vol. 18, no. 9, pp. 6503–6511, Sep. 2022.
+
+This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+WU et al.: ANOMALY SUBGRAPH DETECTION ON MULTIPLE ASSOCIATED ATTRIBUTED NETWORKS
+
+[23] H. Liu, X. Xu, E. Li, S. Zhang, and X. Li, “Anomaly detection
+with representative neighbors,” IEEE Trans. Neural Netw. Learn. Syst.,
+vol. 34, no. 6, pp. 2831–2841, Jun. 2023.
+[24] S. Wang et al., “Multiview deep anomaly detection: A systematic
+exploration,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 2,
+pp. 1651–1665, Feb. 2024.
+[25] C. Li et al., “Domain generalization on medical imaging classification
+using episodic training with task augmentation,” Comput. Biol. Med.,
+vol. 141, Feb. 2022, Art. no. 105144.
+[26] M. Askarizadeh, A. Morsali, and K. K. Nguyen, “Resource-constrained
+multisource instance-based transfer learning,” IEEE Trans. Neural Netw.
+Learn. Syst., vol. 36, no. 1, pp. 1029–1043, Jan. 2025.
+[27] D. Li, J. Wang, J. Xu, X. Fang, and Y. Ji, “Cross-channel specificmutual feature transfer learning for motor imagery EEG signals
+decoding,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35, no. 10,
+pp. 13472–13482, Oct. 2024.
+[28] J. Tang, T. Lou, J. Kleinberg, and S. Wu, “Transfer learning to infer
+social ties across heterogeneous networks,” ACM Trans. Inf. Syst.,
+vol. 34, no. 2, pp. 1–43, Apr. 2016.
+[29] F. Gao, H. Yoon, T. Wu, and X. Chu, “A feature transfer enabled
+multi-task deep learning model on medical imaging,” Expert Syst. Appl.,
+vol. 143, Apr. 2020, Art. no. 112957.
+[30] Y. Lu et al., “Cross-modality person re-identification with sharedspecific feature transfer,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2020, pp. 13376–13386.
+[31] F. Cui, Q. Cui, and Y. Song, “A survey on learning-based approaches for
+modeling and classification of human–machine dialog systems,” IEEE
+Trans. Neural Netw. Learn. Syst., vol. 32, no. 4, pp. 1418–1432, Apr.
+2021.
+[32] W. Bi, X. Cheng, B. Xu, X. Sun, L. Xu, and H. Shen, “Bridged-GNN:
+Knowledge bridge learning for effective knowledge transfer,” in Proc.
+32nd ACM Int. Conf. Inf. Knowl. Manage., Oct. 2023, pp. 99–109.
+
+15
+
+Nannan Wu received the B.S. degree from
+Zhengzhou University, Zhengzhou, China, in 2009,
+the M.S. degree from Chongqing University,
+Chongqing, China, in 2012, and the Ph.D. degree
+in computer software and theory from Beihang University, Beijing, China, in 2018.
+He is a Professor with Tianjin University, Tianjin,
+China. His current research interests include artificial
+intelligence and graph anomaly detection in largescale graphs.
+
+Ying Sun received the B.S. degree in computer
+science and engineering from Tianjin University,
+Tianjin, China, in 1990, the M.S. degree in control
+science and engineering from Xi’an Jiaotong University, Xi’an, China, in 1998, and the Ph.D. degree
+from Tianjin University in 2025.
+She is currently a Professor with the School
+of International Business, Zhejiang Yuexiu University, Shaoxing, China. Her research interests include
+anomaly detection, human behavior dynamics analysis by complex networks, and large-scale data
+mining.
+
+Yazheng Zhao received the B.S. degree from
+Shanghai University of Finance and Economics,
+Shanghai, China, in 2024. He is currently pursuing the M.S. degree with the School of Computer
+Science and Technology, Tianjin University, Tianjin,
+China.
+His current research interests include graph mining and graph anomaly detection.
+
+[33] W. Li, X. Guo, and Y. Yuan, “Novel scenes & classes: Towards adaptive
+open-set object detection,” in Proc. IEEE/CVF Int. Conf. Comput. Vis.
+(ICCV), Oct. 2023, pp. 15734–15744.
+[34] W. Li, X. Liu, and Y. Yuan, “SIGMA++: Improved semantic-complete
+graph matching for domain adaptive object detection,” IEEE Trans.
+Pattern Anal. Mach. Intell., vol. 45, no. 7, pp. 9022–9040, Jan. 2023.
+[35] S. J. Pan and Q. Yang, “A survey on transfer learning,” IEEE Trans.
+Knowl. Data Eng., vol. 22, no. 10, pp. 1345–1359, Oct. 2009.
+[36] Z. Liang et al., “Unsupervised large-scale social network alignment via
+cross network embedding,” in Proc. 30th ACM Int. Conf. Inf. Knowl.
+Manage., Oct. 2021, pp. 1008–1017.
+[37] C. Döpmann, “Survey on the graph alignment problem and a benchmark
+of suitable algorithms,” Institut für Informatik, 2013.
+[38] R. H. Berk and D. H. Jones, “Goodness-of-fit test statistics that dominate
+the Kolmogorov statistics,” Zeitschrift für Wahrscheinlichkeitstheorie
+und Verwandte Gebiete, vol. 47, no. 1, pp. 47–59, 1979.
+[39] D. Donoho and J. Jin, “Higher criticism for detecting sparse heterogeneous mixtures,” Ann. Statist., vol. 32, no. 3, pp. 962–994, Jun. 2004.
+[40] S. Zhang and H. Tong, “FINAL: Fast attributed network alignment,” in
+Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+San Francisco, CA, USA, Aug. 2016, pp. 1345–1354.
+[41] B. Du and H. Tong, “FASTEN: Fast Sylvester equation solver for graph
+mining,” in Proc. 24th ACM SIGKDD Int. Conf. Knowl. Discovery Data
+Mining, Jul. 2018, pp. 1339–1347.
+[42] S. Zhang et al., “HiDDen: Hierarchical dense subgraph detection with
+application to financial fraud detection,” in Proc. SIAM Int. Conf. Data
+Mining, 2017, pp. 570–578.
+[43] R. Patro and C. Kingsford, “Global network alignment using multiscale
+spectral signatures,” Bioinformatics, vol. 28, no. 23, pp. 3105–3114,
+Dec. 2012.
+[44] H. Saif, M. Fernández, Y. He, and H. Alani, “SentiCircles for contextual
+and conceptual semantic sentiment analysis of Twitter,” in Proc. ESWC.
+Cham, Switzerland: Springer, 2014, pp. 83–98.
+[45] A.-L. Barabási and R. Albert, “Emergence of scaling in random
+networks,” Science, vol. 286, no. 5439, pp. 509–512, 1999.
+[46] R. A. Horn and C. R. Johnson, Topics in Matrix Analysis. Cambridge
+Univ. Press, Jun. 1994.
+
+Wenjun Wang received the Ph.D. degree from
+Peking University, Beijing, China, in 2006.
+He is currently a Professor with the College
+of Intelligence and Computing, Tianjin University,
+Tianjin, China, the Chief Expert of major projects
+of the National Social Science Foundation, Beijing,
+the Big Data Specially Invited Expert with Tianjin
+Public Security Bureau, Tianjin, and the Director of
+Tianjin Engineering Research Center of Big Data
+on Public Security, Tianjin. His research interests
+include computational social science, large-scale
+data mining, intelligence analysis, and multilayer complex network modeling.
+
+Xueli Liu received the Ph.D. degree from Harbin
+Institute of Technology, Harbin, China, in 2018.
+She is an Associate Professor with the School of
+Computer Science and Technology, Tianjin University, Tianjin, China. Her research interests include
+big data computing, graph association analysis, and
+deep learning interpretation.
+
+Jianxin Li is currently a Professor with the State
+Key Laboratory of Software Development Environment and Beijing Advanced Innovation Center for
+Big Data and Brain Computing, Beihang University, Beijing, China. He has published 30 refereed
+articles in major data mining venues, including IEEE T RANSACTIONS ON K NOWLEDGE AND
+DATA E NGINEERING, ACM-KDD, ACM-WWW,
+AAAI and IJCAI. His current research interests
+include machine learning, distributed system, trust
+management and network security.
+Mr. Li won the best paper award at AAAI2021.

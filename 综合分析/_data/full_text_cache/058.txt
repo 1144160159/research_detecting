@@ -1,0 +1,1279 @@
+F LOW P RINT: Semi-Supervised Mobile-App
+ Fingerprinting on Encrypted Network Traffic
+Thijs van Ede1 , Riccardo Bortolameotti2 , Andrea Continella3 , Jingjing Ren4 , Daniel J. Dubois4 , Martina Lindorfer5 ,
+ David Choffnes4 , Maarten van Steen1 , and Andreas Peter1
+ 1 University of Twente, 2 Bitdefender, 3 UC Santa Barbara, 4 Northeastern University, 5 TU Wien
+
+ {t.s.vanede, m.r.vansteen, a.peter}@utwente.nl, rbortolameotti@bitdefender.com,
+ {acontinella, mlindorfer}@iseclab.org, {renjj, d.dubois, choffnes}@ccs.neu.edu
+
+ Abstract—Mobile-application fingerprinting of network traffic However, recognizing mobile apps can be a double-edged
+is valuable for many security solutions as it provides insights into sword: On the one hand, network flow analysis provides a nonthe apps active on a network. Unfortunately, existing techniques intrusive central view of apps on the network without requiring
+require prior knowledge of apps to be able to recognize them. host access. On the other hand, app detection can be used for
+However, mobile environments are constantly evolving, i.e., apps censoring and invades users’ privacy. As we show in this work,
+are regularly installed, updated, and uninstalled. Therefore, it is
+ active apps on a network can not only be reliably fingerprinted
+infeasible for existing fingerprinting approaches to cover all apps
+that may appear on a network. Moreover, most mobile traffic is for security purposes, but also in an adversarial setting, despite
+encrypted, shows similarities with other apps, e.g., due to common traffic encryption. Thus, privacy-conscious users need to be
+libraries or the use of content delivery networks, and depends on aware of the amount of information that encrypted traffic is still
+user input, further complicating the fingerprinting process. revealing about their app usage, and should consider additional
+ safeguards, such as VPNs, in certain settings.
+ As a solution, we propose F LOW P RINT, a semi-supervised
+approach for fingerprinting mobile apps from (encrypted) network traffic. We automatically find temporal correlations among
+ The idea of network-based app detection has already been
+destination-related features of network traffic and use these extensively explored in both industry and academia [2, 4, 5,
+correlations to generate app fingerprints. Our approach is able 17, 25]. Snort for example offers AppID [21], a system for
+to fingerprint previously unseen apps, something that existing creating network intrusion detection rules for specified apps,
+techniques fail to achieve. We evaluate our approach for both while Andromaly [57] attempts to detect unknown software
+Android and iOS in the setting of app recognition, where we through anomaly detection by comparing its network behavior
+achieve an accuracy of 89.2%, significantly outperforming state- to that of known apps. Other approaches specifically focus
+of-the-art solutions. In addition, we show that our approach can on detecting apps containing known vulnerabilities [62], and
+detect previously unseen apps with a precision of 93.5%, detecting others identify devices across networks based on the list of
+72.3% of apps within the first five minutes of communication. apps installed on a device [61]. All these approaches have
+ in common that they require prior knowledge of apps before
+ I. I NTRODUCTION being able to distinguish them. However, new apps are easily
+ Security solutions aim at preventing potentially harmful or installed, updated and uninstalled, with almost 2.5 million
+vulnerable applications from damaging the IT infrastructure or apps to choose from in the Google Play Store alone [60],
+leaking confidential information. In large enterprise networks, not to mention a number of alternative markets. Furthermore,
+this is traditionally achieved by installing monitoring agents recent work has shown that even the set of pre-installed apps
+that protect each individual device [67]. However, for mobile on Android varies greatly per device [30]. Thus, especially
+devices security operators do not have direct control over the when companies adopt BYOD policies, it is infeasible to know
+apps installed on each device in their infrastructure, especially in advance which apps will appear on the network. As a
+when new devices enter networks under bring-your-own-device consequence, unknown apps are either misclassified or bundled
+(BYOD) policies on a regular basis and with the ease by into a big class of unknown apps. In a real-world setting, a
+which apps are installed, updated, and uninstalled. In order security operator would need to inspect the unknown traffic
+to still retain detection capabilities for apps that are active in and decide which app it belongs to, limiting the applicability
+the network, operators rely on observing the network traffic of existing approaches in practice.
+of mobile devices. This naturally introduces the challenge of
+detecting apps in encrypted network traffic, which represents Unlike existing solutions, we assume no prior knowledge
+the majority of mobile traffic—80% of all Android apps, and about the apps running in the network. We aim at generating
+90% of apps targeting Android 9 or higher, adopt Transport fingerprints that act as markers, and that can be used to both
+Layer Security (TLS) [31]. recognize known apps and automatically detect and isolate
+ previously unseen apps. From this, a security operator can
+ update whitelists, blacklists or conduct targeted investigations
+ on per-app groupings of network traffic.
+Network and Distributed Systems Security (NDSS) Symposium 2020
+23-26 February 2020, San Diego, CA, USA
+ISBN 1-891562-61-4 There are several challenges that make such fingerprinting
+https://dx.doi.org/10.14722/ndss.2020.24412 non-trivial. This is because mobile network traffic is particuwww.ndss-symposium.org larly homogeneous, highly dynamic, and constantly evolving:
+Homogeneous. Mobile network traffic is homogeneous be- example, having knowledge about the Google Maps app,
+cause many apps share common libraries for authentication, allows us to rename unknown_app_X to google_maps.
+advertisements or analytics [11]. In addition, the vast majority Similarly, unseen app detection requires a training phase on a
+of traffic uses the same application-level protocol HTTP in set of known apps to identify unknown ones.
+various forms (HTTP(S)/QUIC) [50]. Furthermore, part of
+the content is often served through content delivery networks In summary, we make the following contributions:
+(CDNs) or hosted by cloud providers. Consequently, different • We introduce an approach for semi-supervised finapps share many network traffic characteristics. Our work gerprinting by combining destination-based clustering,
+tackles homogeneous traffic by leveraging the difference in browser isolation and pattern recognition.
+network destinations that apps communicate with. We show
+that despite the large overlap in destinations, our approach is • We implement this approach in our prototype F LOWstill able to extract unique patterns in the network traffic. P RINT, the first real-time system for constructing
+ mobile app fingerprints capable of dealing with unseen
+Dynamic. Mobile network traffic is often dynamic as data that apps, without requiring prior knowledge.
+apps generate may depend on the behavior of the users, e.g., • We show that, for both Android and iOS apps, our
+their navigation through an app. Such dynamism may already approach detects known apps with an accuracy of
+be observed in synthetic datasets that randomly browse through 89.2%, significantly outperforming the state-of-the-art
+an app’s functionality. Various fingerprinting approaches rely supervised app recognition system AppScanner [62].
+on repetitive behavior in network traffic [1, 28]. Despite good Moreover, our approach is able to deal with app
+results of these methods in smart-home environments and updates and is capable of detecting previously unseen
+industrial control systems, dynamic traffic could complicate apps with a precision of 93.5%.
+fingerprinting of mobile apps. Hence, our work aims to create
+fingerprints that are robust against user interactions by leverag- In the spirit of open science, we make both our prototype and
+ing information about network destinations on which the user datasets available at https://github.com/Thijsvanede/FlowPrint.
+has limited influence. We show that our approach achieves
+similar results on both automated and user-generated datasets.
+ II. P RELIMINARY A NALYSIS
+Evolving. Mobile network traffic is constantly evolving as app
+ To study mobile network traffic and identify strong indicamarkets offer effortless installation, update, and uninstallation
+ tors that can be used to recognize mobile apps, we performed
+of a vast array of apps. Studies have shown that apps are
+ a preliminary analysis on a small dataset. As indicated in
+regularly updated with new versions, as frequently as once a
+ the introduction, our fingerprinting method should be able to
+month on average [11, 22]. This is a challenge for existing findistinguish mobile apps despite their homogeneous, dynamic
+gerprinting mechanisms that require prior knowledge of an app
+ and evolving behavior. Hence, in our preliminary analysis we
+in order to generate fingerprints. When new or updated apps
+ explored features that may be used to fingerprint apps.
+are introduced into the network, these fingerprinting systems
+become less accurate, similarly to what Vastel et al. observed in
+the setting of browser fingerprinting [65]. Moreover, the frac- A. Dataset
+tion of apps covered by these systems dramatically decreases In order to perform our analyses, we use datasets of
+over time if fingerprints are not regularly updated. Our solution encrypted network traffic labeled per app (see Table I). These
+counters this by basing its fingerprints on pattern discovery in datasets allow us to evaluate our method in various conditions
+network traffic instead of training on labeled data. Doing so, as they contain a mix of both synthetic and user-generated data;
+our approach produces fingerprints that automatically evolve Android and iOS apps; benign and potentially harmful apps;
+together with the changing network traffic. We show that our different app stores; and different versions of the same app. We
+approach is able to correctly recognize updated apps and can collected three of the datasets as part of our prior work [40, 51,
+even detect and fingerprint previously unseen apps. 52, 53]. We collected the last set specifically for this work with
+ To address these challenges, we introduce a semi- the purpose of representing browser traffic, which is lacking in
+supervised approach to generate fingerprints for mobile apps. most available datasets. For this preliminary analysis, we only
+Our key observation is that mobile apps are composed of used a small fraction of the available data in order to prevent
+different modules that often communicate with a static set of bias in the final evaluation.
+destinations. We leverage this property to discover patterns in
+ ReCon. The ReCon AppVersions dataset [52, 53] consists
+the network traffic corresponding to these different modules.
+ of labeled network traces of 512 Android apps from the
+On a high level, we group together (encrypted) TCP/UDP
+ Google Play Store, including multiple version releases over
+flows based on their destination and find correlations in desa period of eight years. The traces were generated through
+tinations frequently accessed together. We then combine these
+ a combination of automated and scripted interactions on five
+patterns into fingerprints, which may, among other use cases,
+ different Android devices. The apps were chosen among the
+be used for app recognition and unseen app detection.
+ 600 most popular free apps on the Google Play Store ranking
+ While our approach does not require prior knowledge to within the top 50 in each category. In addition, this dataset
+generate fingerprints, and could, thus, be considered unsuper- contains extended traces of five apps, including multiple vervised, the applications of our approach are semi-supervised. In sion releases. The network traffic of each of these five apps
+fact, our approach creates “anonymous” labels that uniquely was captured daily over a two-week period. In this work, we
+identify mobile apps. However, app recognition uses known refer the AppVersions dataset as ReCon and to the extended
+labels to assign app names to the matched fingerprints. For dataset as ReCon extended.
+
+ 2
+ TABLE I. DATASET OVERVIEW. 3 INDICATES A DATASET CONTAINS
+ H OMOGENEOUS (H), DYNAMIC (D), OR E VOLVING (E) TRAFFIC . traffic limits the available features to temporal and size-based
+ features, as well as the header values of unencrypted layers
+ Dataset
+ No.
+ Apps
+ No.
+ Flows
+ % TLS
+ Flows
+ Start Date End Date
+ Avg.
+ Duration
+ H D E and the handshake performed to establish a TLS connection.
+ ReCon [52, 53] 512 28.7K 65.9% 2017-01-24 2017-05-06 189.2s 3 3
+ The data-link layer header provides only information about
+ ReCon extended [52, 53] 5 141.2K 54.0% 2017-04-21 2017-05-06 4h 16m 3 3 the linked devices, not about the app itself and is therefore
+ Cross Platform (Android) [51]
+ Cross Platform (iOS) [51]
+ 215
+ 196
+ 67.4K
+ 34.8K
+ 35.6%
+ 74.2%
+ 2017-09-11
+ 2017-08-28
+ 2017-11-20
+ 2017-11-13
+ 333.0s
+ 339.4s
+ 3 3
+ 3 3
+ not useful for our purposes. We further analyze the layers
+ Cross Platform (All) [51] 411 102.2K 49.6% 2017-08-28 2017-11-20 336.0s 3 3 between the data-link and application layer, as we expect the
+ Andrubis [40] 1.03M 41.3M 24.7% 2012-06-13 2016-03-25 210.7s 3 latter to be encrypted. From these layers, we extract all header
+ Browser 4 204.5K 90.5% 2018-12-17 2019-03-01 3h 34m 3 values controlled by the communicating app as well as the
+ sizes and inter-arrival times of packets. In addition, for the size
+Cross Platform. The Cross Platform dataset [51] consists of and time related features we compute the statistical properties:
+user-generated data for 215 Android and 196 iOS apps. The minimum, maximum, mean, standard deviation, mean absolute
+iOS apps were gathered from the top 100 apps in the App deviation, and 10-th through 90-th percentile values.
+Store in the US, China and India. The Android apps originate
+from the top 100 apps in Google Play Store in the US and C. Feature Ranking
+India, plus from the top 100 apps of the Tencent MyApps and
+360 Mobile Assistant stores, as Google Play is not available in We score all features according to the Adjusted Mutual
+China. Each app was executed between three and ten minutes Information (AMI) [66], a metric for scoring features in unsuwhile receiving real user inputs. Procedures to install, interact, pervised learning. We favor the AMI over other methods, such
+and uninstall the apps were given to student researchers who as information gain, as the latter is biased towards features that
+followed them to complete the experiments while collecting can take on random values. Such randomness is undesirable
+data. We use this dataset to evaluate both the performance in an unsupervised or semi-supervised setting, as we do not
+of our method with user-generated data and the performance have any prior expectation of feature values. The AMI defines
+between different operating systems. the relative amount of entropy gained by knowing a feature
+ with respect to the class, in our case the app. To this end, we
+Andrubis. The Andrubis dataset [40] contains labeled data of first compute the mutual information between a feature and its
+1.03 million Android apps from the Google Play Store and 15 app as described in Equation 1. Here Y is the list of classes
+alternative market places. This dataset contains both benign of each sample and X is the list of features corresponding to
+and potentially harmful apps, as classified by VirusTotal. Each the samples. Function p(x, y) defines the joint probability of
+trace in this dataset was generated by running the app for value x and label y, whereas p(x) and p(y) are the individual
+four minutes in a sandbox environment emulating an Android probabilities of features x and y occurring respectively.
+device. The app was exercised by automatically invoking app  p(x, y) 
+activities and registered broadcast receivers, and simulating
+ XX
+ M I(X, Y ) = p(x, y) log (1)
+user interactions through the Android Application Exerciser p(x)p(y)
+ y∈Y x∈X
+Monkey. We use the Andrubis dataset for experiments requiring large traffic volume and to assess the performance of our To counter that the mutual information is biased toward
+method on both benign and potentially harmful apps. features that have many different values, the AMI removes
+ any bias by normalizing for the expected gain in entropy. As a
+Browser. We created the Browser dataset because the existing result, the AMI score ranges from 0 (completely uncorrelated)
+datasets contain a limited amount of browser traffic, which may to 1 (observing feature X fully maps to knowing app label Y).
+produce a significant portion of traffic in mobile environments. Equation 2 shows the definition of the AMI, where E[X] is
+Even though a browser is not a dedicated app, but rather a the expected value of X and H(X) is the entropy of X. We
+platform on which various web content is rendered, executed use the AMI to rank features based on how much information
+and displayed, a fingerprinting method with the purpose of they contain about an app, and thereby get an indication of
+detecting apps should also be able to detect the browser as their usefulness in a fingerprint.
+a single app. To this end, we collect an additional dataset
+of browser traffic by scraping the top 1,000 Alexa websites M I(X, Y ) − E[M I(X, Y )]
+ AM I(X, Y ) = (2)
+on a Samsung Galaxy Note 4 running Android 6.0.1 with max(H(X), H(Y )) − E[M I(X, Y )]
+Chrome, Firefox, Samsung Internet and UC Browser, which
+cover 90.9% of browser traffic [59], if we exclude Safari, D. Feature Evaluation
+which is not available for Android. Each website visit lasts for
+15 seconds, while the Application Exerciser Monkey simulates Using the AMI, we analyze and rank the features available
+a series of random movements and touches. in TLS-encrypted traffic of the ReCon dataset. The evaluation
+ of our fingerprinting approach in Section V demonstrates that
+B. Feature Exploration these features also generalize to other datasets. After extracting
+ all features, we divide them into categorical and continuous
+ Previous work on app fingerprinting usually tackles the values. As the AMI can be compared only for categorical
+problem in a supervised setting. In this work however, we values, we divided each continuous value into 20 equally
+propose an approach with the aim of automatically detect- sized bins spanning the full range of each feature. Then,
+ing unknown apps, without requiring prior knowledge. This we computed the AMI of each feature with respect to the
+requires a re-evaluation of the network features commonly app label. Table II shows the ten highest ranked features,
+used in app fingerprinting. Therefore, we first identify pos- we provide all the analyzed features together with their AMI
+sible features from the network traffic. The TLS-encrypted scores at https://github.com/Thijsvanede/FlowPrint.
+
+ 3
+ TABLE II. AMI OF TEN HIGHEST SCORING FEATURES .
+ Size features. Both incoming and outgoing Packet size features
+ Feature Category AMI show a high AMI. This implies that the amount of data being
+ Inter-flow timing Temporal 0.493 sent and received per flow is a good indicator of which app is
+ IP address - source Device 0.434 active. However, all other packet size features yielded an AMI
+ TLS certificate - validity after Destination 0.369 score of 0.07 or lower, i.e., making up two thirds of the bottom
+ TLS certificate - validity before Destination 0.356
+ TLS certificate - serial number Destination 0.342 50% of ranked features. Therefore, we do not incorporate
+ IP address - destination Destination 0.246 packet sizes in our approach. This does not mean size features
+ TLS certificate - extension set Destination 0.235
+ Packet size (incoming) - std Size 0.235
+ are unsuited for fingerprinting per se, as can be observed
+ Packet size (outgoing) - std Size 0.232 from supervised approaches using size-based features [2, 5,
+ Packet inter-arrival time (incoming) - std Temporal 0.218 62]. However, the size features yield little information for
+ fingerprinting in a semi-supervised setting.
+ From Table II we first observe that there are no features
+with an AMI close to 1. Hence, a fingerprint should combine III. T HREAT M ODEL
+multiple features in order to create a reliable app marker.
+ Our work focuses on creating fingerprints for mobile apps
+In addition, we deduce four important categories that can
+ and we assume the perspective of a security monitor who can
+be leveraged when creating app fingerprints. We note that
+ (1) trace back flows to the device despite NAT or changing IP
+these categories are not new to app fingerprinting, but give
+ addresses, (2) distinguish mobile from non-mobile devices, and
+insights into how an approach may benefit from leveraging
+ (3) only monitor its own network (e.g., the WiFi network of an
+these features. While only using a small part of the dataset for
+ enterprise)—traffic sent over other networks cannot be used to
+our preliminary feature evaluation, our results in Section V
+ generate fingerprints. Our assumptions match the scenario of
+show that the features are generic and also perform well on
+ enterprise networks, where security operators have full network
+larger datasets.
+ visibility and access to the DHCP server.
+Temporal features. The Inter-flow timing and Packet inter- Even without a priori knowledge about device types, searrival time (incoming) stress the importance of timing in curity operators could still isolate network traffic from mobile
+network traffic. Most apps primarily communicate when active, devices based on MAC addresses and orthogonal OS fingerand early studies suggested a limited number of apps are active printing approaches: for example, related work has shown that
+simultaneously [14, 26]. As temporal features may be affected DHCP messages [46], TCP/IP headers [18], and OS-specific
+by latency and network congestion on a small-time scale, our destinations [36] (e.g., update servers and mobile app markets),
+work uses time on a more course-grained level. We leverage can be used to identify mobile devices, and even tethering.
+the time between flows to correlate traffic occurring at the
+same time interval. In addition to our semi-supervised setting, Finally, we focus on single app fingerprints, i.e., we assume
+supervised fingerprinting methods such as BIND [4] also use that mobile apps are executed one at the time. In practice, there
+temporal features. is often a separation between the execution of multiple apps,
+ with the exception of background services, which, however,
+Device features. The IP address - source feature is the IP produce fewer and more recognizable traffic patterns. Nonetheaddress of the monitored device. This feature demonstrates less, we acknowledge the possibility that multiple apps are
+that the device producing network traffic reveals information executed simultaneously on a single device causing composite
+about the app. Intuitively, different devices may run different fingerprints. We believe our approach is an excellent start
+app suites. Our work does not use the IP source address to investigate the creation and behavior of such composite
+as a feature, but instead create app fingerprints separately fingerprints. However, as we will discuss in Section VI, we
+per device. We reason that identifying apps on a per-device consider this out of scope for the current work as existing
+basis assists in limiting the amount of dynamic behavior. solutions already suffer from limitations such as identifying
+Furthermore, a related study [5] observed that different devices previously unseen apps.
+in terms of vendor and/or OS version may exhibit significant
+variations in traffic features. Therefore, our approach handles
+ IV. A PPROACH
+traffic on a per-device basis and constructs separate fingerprints
+for each device. We aim to fingerprint mobile apps in a semi-supervised and
+ real-time fashion on the base of their (encrypted) network traf-
+Destination features. The high AMI of the IP address - destific. We build our approach on the observation that mobile apps
+nation, i.e., the IP address of the server, and various TLS cerare composed of different modules that each communicate with
+tificate features indicate that apps may be discriminated based
+ a relatively invariable set of network destinations. Our focus
+on the destinations with which they communicate. Intuitively,
+ lies on discovering these distinctive communication patterns
+each app is composed of a unique set of different modules
+ without requiring any knowledge of the specific active apps. To
+that all provide parts of the app’s functionality. Each module
+ this end, we create fingerprints based on temporal correlations
+communicates with a set of servers resulting in a unique set
+ among network flows between monitored devices and the
+of network destinations that differentiate apps. Destination
+ destinations they interact with. As a result, our fingerprints are
+features may even be enriched by domains extracted from DNS
+ capable of dealing with evolving app suites, and are agnostic
+traffic. However, this data is not always available due to DNS
+ to the homogeneous and dynamic nature of mobile traffic.
+caches. Hence, to work in a more general setting our approach
+does not use the domain as a feature. Even though network Figure 1 shows an overview of our approach: We peridestinations may change over time, we show in Section V that odically take network traffic of mobile devices as input and
+our approach is able to deal with these changes. generate fingerprints that map to apps. To do so, we isolate
+
+ 4
+ all, web services may use multiple IP addresses for a single destination for load balancing and reducing the server
+ response time, or even change their IP address completely.
+ Our approach tackles this problem by clustering destinations
+ based on similarity of either the (IP, port)-tuple or the TLS
+ certificate. As discussed previously, one may even enrich the
+ clustering features by including DNS traffic of flows as well
+ if this information is available. Our evaluation in Section V
+ shows that this method is robust against inconsistencies in
+ network destinations.
+Fig. 1. Overview of the creation and matching of app fingerprints. (A) We Figure 2 shows an example of the resulting clusters, in
+extract features from the network traces. (B) We cluster the flows from each which the destination clusters are scattered randomly. The
+device per network destination. (C) We detect and isolate browsers. (D) We
+discover correlations between network destinations. (E) We create fingerprints
+ size of each cluster is proportionate to the amount of flows
+based on strong correlations. (F) We match newly found fingerprints against assigned to it. Note that some of the clusters are generated by
+previously generated fingerprints and update them accordingly. multiple apps, which we refer to as shared clusters. Further
+ inspection reveals that these shared clusters correspond
+TCP/UDP flows from the network traces for each device, and to third-party services such as crash analytics, mobile
+extract the required features. Subsequently, for each individual advertisement (ad) networks, social networks, and CDNs.
+device we cluster all flows according to their destination. These services are often embedded through libraries that are
+This clustering allows the discovery of common communi- used by many apps: e.g., googleads.g.doubleclick.net,
+cation patterns later on. Before generating app fingerprints, lh4.googleusercontent.com and android.clients.-
+our approach first pays special attention to browsers as they google.com are shared clusters that provide these services.
+behave like a platform accessing web content rather than We discuss the extent to which shared clusters influence
+a dedicated app. Thereafter, we correlate remaining clusters fingerprinting in our analysis on homogeneity in Section V-E.
+based on temporally close network activity to generate app In addition to shared clusters, apps frequently produce
+fingerprints. When clusters show a strong correlation, we group clusters unique to that specific app, e.g., the s.yimg.com and
+their flows together in a fingerprint. Finally, we match the gen- infoc2.duba.net clusters only occur in the traffic of the
+erated fingerprints against a database of known fingerprints to com.rhmsoft.fm app. These app-specific clusters often point
+recognize apps or detect previously unseen apps. By combining to destinations of the app developer, i.e., the first party, or
+correlation and clustering techniques, our approach discovers smaller providers of the aforementioned cross-app services.
+temporal access patterns between network destinations without Finally, note that the obtained clusters consist of flows
+requiring any prior knowledge. from the entire input batch. However, the monitored device
+ will only sporadically communicate with each destination.
+ Therefore, we refer to clusters as active when a message is
+A. Feature Extraction sent to or received from the destination represented by the
+ The first step for generating fingerprints extracts features cluster, and inactive otherwise.
+from the network traffic, where we separately look at the TCP
+and UDP flows of each mobile device. Per device, we extract C. Browser Isolation
+the destination IP and port number, timestamp (used to compute the timing between flows), size and direction of all packets As previously discussed, browsers are different from other
+in the flow and, if applicable, the TLS certificate for that flow. apps in that they are not dedicated apps. This means that
+From these features, we use the destination IP and port number behavioral patterns in browsers are more difficult to detect as
+as well as the TLS certificate in the clustering phase. Browser the user may navigate to any website at will. To account for
+isolation additionally requires information about the amount of this, we introduce a separate technique to detect and isolate
+data that is sent over the network. Finally, the correlation step browser traffic into a single app.
+uses the timestamps of packets to determine to what extent Features. From the perspective of destination clustering, we
+different flows are temporally correlated. expect browsers to show many new clusters. After all, modern
+ websites distribute their content along CDNs, display adver-
+B. Clustering tisement, and load auxiliary scripts and images. These are
+ Since our approach runs periodically over input data of stored at various destinations and therefore show up as new
+each device, we first split the input data is into batches of clusters. In addition, content downloaded to be displayed in
+a given timing interval τbatch . After extracting the features browsers often contains much more data than is uploaded
+for each batch, we cluster together TCP/UDP flows based in browser requests. We expect that for other mobile apps,
+on their network destination. We consider flows to go to the this communication is much more balanced and the number
+same network destination if they satisfy any of the following of clusters active simultaneously is smaller. To account for
+criteria: (1) The flows contain the same (destination IP address, the fact that multiple apps may be active and thereby show
+destination port)-tuple. (2) The flows contain the same TLS browser-like behavior, we focus only on the relative changes.
+certificate. Therefore, our browser detector uses the following features:
+ (1) Relative change in active clusters; (2) Relative change in
+ The clustering approach for app fingerprinting raises some bytes uploaded; (3) Relative change in bytes downloaded; (4)
+concerns about the consistency of destination clusters. After Relative change in upload/download ratio.
+
+ 5
+Browser detector. To detect browsers, we train a Random
+Forest Classifier [34] with labeled browser and non-browser
+data.1 When the classifier detects a TCP/UDP stream originating from a browser at time t, we isolate all connections
+active within an empirically set timeframe of [t − 10, t + 10]
+seconds. This means that we label the connections as browser
+and do not consider them for further analysis. Therefore, after
+detection, these streams are removed from the destination
+clusters. Our rationale for removing all connections within
+a specific timeframe is that, when a browser is detected, it
+probably caused more network activity around that time. While
+this approach might be considered aggressive in detecting Fig. 2. Example of destination clusters for three apps: com.rhmsoft.fm,
+browsers, we argue that other apps should show persistent com.steam.photoeditor, and au.com.penguinapps.android.babyfeeding.client.-
+ android. The size of each cluster is proportionate to the amount of flows
+behavior. As a result, clusters that have been removed because assigned to it. We labeled first- and third-party destinations based on the
+all their connections were incorrectly isolated are still expected methodology of Ren et al. [52], and distinguished for the latter between CDNs,
+to resurface when the app is active without an interfering advertisement networks (ads), and social networks (social).
+browser. We evaluate the performance of the browser isolation
+component in Section V-D.
+
+D. Cluster Correlation
+ Now that browsers are isolated, we leverage the remaining
+clusters for app fingerprinting. However, using only destination
+clusters is insufficient for fingerprinting apps as network destinations are shared among apps and may change between different executions of an app [62, 63]. A small-scale experiment on
+our datasets shows that an increasing number of apps leads to a
+rapid decline in app-specific clusters. When randomly selecting
+100 apps from all our dataset over ten Monte Carlo cross
+ Fig. 3. Example correlation graph for three apps as generated
+validations, only 58% of apps show at least one app-specific by our approach (left) and when labeled per app (right). The
+destination cluster. In the same experiment, when selecting apps include com.rhmsoft.fm (blue), com.steam.photoeditor (green) and
+1,000 apps, this number drops to 38%. Therefore, to fingerprint au.com.penguinapps.android.babyfeeding.client.android (red) or shared destiapps we also leverage the temporal correlations between active nation clusters (black). Larger nodes indicate the more flows to that destination
+ cluster. The thickness of each edge depends on the cross correlation.
+destination clusters. Our rationale here is that apps persistently
+communicate with the same network destinations. We hypothesize that the combination of active destination clusters at each for the total amount of activity in both clusters as specified in
+point in time is unique and relatively stable for each app. This Equation 4.
+means that over time one should be able to observe stronger
+ PT
+correlations for destinations that belong to the same app. Our ci [t] · cj [t]
+experiments in Section V demonstrate that this method of (ci ? cj )norm = PT t=0 (4)
+fingerprint generation can be used for both app recognition t=0 max(ci [t], cj [t])
+and detection of previously unseen apps. Using the cross-correlation metric between each cluster, we
+Correlation graph. To measure the temporal correlation be- construct a correlation graph with each node in this graph
+tween clusters, we compute the cross-correlation [49] between representing a cluster. Clusters are connected through weighted
+the activity of all cluster pairs as defined in Equation 3. Even edges where the weight of each edge defines the crossthough this has a theoretical time complexity of O(n2 ), we correlation between two clusters. Figure 3 shows the correshow in Section V-G that in practice it is still easily scalable. lation graph of three selected apps as an example. We see that
+We compute this cross-correlation by splitting the input batch clusters belonging to the same app demonstrate a strong crossinto slices of τwindow seconds (see Section V-A). We consider correlation. In addition, shared clusters show weak correlation
+a cluster ci active at time slice t if it sends or receives at between all apps and most of the unique clusters are not
+least one message to or from the destination cluster during correlated at all.
+that window. Its activity is modeled as ci [t] = 1 if it is active
+or ci [t] = 0 if it is inactive. E. App Fingerprints
+ T
+ X To construct app fingerprints we identify maximal cliques,
+ (ci ? cj ) = ci [t] · cj [t] (3) i.e., complete subgraphs, of strongly correlated clusters in the
+ t=0 correlation graph. To discover such cliques, we first remove all
+The cross-correlation is naturally higher for clusters with a lot edges with a weak cross-correlation. A cross-correlation is conof activity. To counter this, we normalize the cross-correlation sidered weak if it is lower than a threshold τcorrelation , which in
+ our approach is empirically set to 0.1 (see Section V-A). This
+ 1 While this is a form of supervised detection, we still consider our approach leaves us with a correlation graph containing only the strongly
+semi-supervised as we do not require prior knowledge for other types of apps. correlated clusters. We then extract all maximal cliques from
+
+ 6
+this graph and transform each clique into a fingerprint. As V. E VALUATION
+all maximal cliques are complete subgraphs, the edges in the
+clique do not add any additional information. This means We implemented a prototype of our approach, called
+we can transform cliques into sets of network destinations F LOW P RINT, in Python using the Scikit-learn [47] and Netby extracting all (destination IP, destination port)-tuples and workX [33] libraries for machine learning and graph compu-
+TLS-certificates from every node in a clique and combine tation. The first experiment in our evaluation determines the
+them into a set. By performing this transformation for each optimal parameters for our approach. Then, we analyze to
+clique, we obtain all of our fingerprints. In short, we define an what extent the fingerprints generated by our approach can
+app fingerprint as the set of network destinations that form a be used to precisely identify apps. Here, we compare our
+maximal clique in the correlation graph. approach against AppScanner [62], a supervised state-of-theart technique to recognize apps in network traffic. Thereafter,
+ As graph edges in the correlation graph depend on the we evaluate how well our approach deals with previously
+activity of a destination with other clusters, some of the nodes unseen apps, either through updates or newly installed apps.
+are completely disconnected from the rest of the graph. This We then detail specific aspects of our approach such as the
+is often the case for destinations that are shared among many performance of the browser detector, the confidence level
+apps. Figure 3 shows an example where the shared (black) of our fingerprints, and the number of fingerprints produced
+nodes only have low cross correlations that fall under the per app. We further investigate how well our approach can
+threshold. As these 1-cliques often correspond to multiple deal with the homogeneous, dynamic, and evolving nature
+apps, treating them as fingerprints yields little added value. of mobile network traffic. Finally, we discuss the impact of
+However, they will most likely originate from the same app the number of apps installed on the device and demonstrate
+for which we are able to produce fingerprints during the batch that our method is able to run in real-time by assessing the
+processing. Therefore, we assign flows from 1-cliques to the execution time of F LOW P RINT.
+fingerprint that is closest in time, or, if two fingerprints are Experimental setup. Our evaluation requires ground truth
+equally close, to the fingerprint containing the most flows. labels, which for mobile apps can be acquired by installing
+ an intrusive monitoring agent on a real device, or by running
+ controlled experiments. Due to privacy concerns and to ensure
+F. Fingerprint Comparison repeatability of our experiments, we evaluate F LOW P RINT
+ on the datasets described in Section II-A, which closely
+ The benefit of using a fingerprint to represent traffic from approach an open world setting, containing encrypted data,
+an app is that it can be computed from the features of the user-generated data, both Android and iOS apps, and different
+network traffic itself without any prior knowledge. Moreover, app versions. As explained in Section IV, our approach does
+we want to compare fingerprints with each other to track not require any prior knowledge to generate fingerprints, and
+app activity over time. Unfortunately, apps communicate with we leverage ground truth labels only to evaluate our prototype
+various sets of destinations at different times, either because (i.e., to assign app names to matched fingerprints).
+traffic is based on user interaction, which is dynamic, or because apps produce distinct traffic for different functionalities. We split the traffic of each app in our datasets 50:50
+Consequently, fingerprints of the same app can diverge to into training and testing sets, without any overlap. For each
+various degrees. To account for this fact, we do not compare experiment, we build our database from the training data of
+fingerprints as an exact match, but instead base their compar- 100 randomly chosen apps for each dataset. This leads to an
+ison on the Jaccard similarity [35]. Since our fingerprints are average of 2.0 fingerprints per app for ReCon and Andrubis,
+sets, the Jaccard similarity is a natural metric to use. To test and 6.2 for the Cross Platform dataset. For the unseen app
+whether two fingerprints are similar, we compute the Jaccard detection, we additionally introduce traffic from 20 randomly
+similarity between two fingerprints Fa and Fb (displayed in chosen apps that are not present in the training set.
+Equation 5) and check whether it is larger then a threshold
+τsimilarity . If this is the case, we consider the two fingerprints A. Parameter Selection
+to be the same.
+ As detailed in the previous section, our approach requires
+ |Fa ∩ Fb | four configurable parameters to create fingerprints:
+ J(Fa , Fb ) = (5)
+ |Fa ∪ Fb | • τbatch sets the amount of time of each batch in a network capture to process in each run of our approach.
+By comparing fingerprints in this way, we are able to track the
+activity of apps between different input batches and executions • τwindow specifies the time window for destination clusof the our approach. In addition, it automatically solves the ters to be considered active simultaneously.
+problem when we observe a fingerprint where one edge of the • τcorrelation describes the minimum amount of correlation
+clique is missing because it did not make the threshold cutoff. (ci ? cj )norm between two destination clusters to have
+Especially when cliques become larger, the possibility of a an edge in the correlation graph.
+clique missing an edge increases. In such cases, our approach • τsimilarity indicates the minimum required Jaccard simiwould output multiple fingerprints for the same app. If these larity between fingerprints to be treated as equivalent.
+fingerprints are similar, they can even be merged by taking
+the union of fingerprints. In addition, this comparison based Optimization metric. We optimize each parameter with reon the Jaccard similarity allows our approach to treat similar spect to the F1-score that our approach achieves when recfingerprints as equivalent. ognizing apps. This metric computes the harmonic mean
+
+ 7
+ TABLE III. S UMMARY OF TESTED PARAMETER OPTIMIZATION
+VALUES . T HE FIRST ROW SHOWS THE DEFAULT PARAMETERS AND EACH
+ As shown in Table III, we find optimal values for τbatch =
+SUBSEQUENT ROW HIGHLIGHTS THE OPTIMAL VALUES FOUND FOR EACH 300 seconds, τwindow = 30 seconds, τcorrelation = 0.1 and
+ INDIVIDUAL PARAMETER . τsimilarity = 0.9 from this analysis.2 One interesting observation
+ is that the optimal value for τbatch is found at 300 seconds.
+ τbatch τwindow τcorrelation τsimilarity F1-score
+ This means that it may take up to five minutes before a
+ 3600 5 0.3 0.5 0.8164 flow is assigned to a fingerprint. In settings that require faster
+ 300 5 0.3 0.5 0.8294 fingerprint generation, operators can of course set a lower τbatch
+ 300 30 0.3 0.5 0.8367 value, however at the cost of a lower performance.
+ 300 30 0.1 0.5 0.8543
+ 300 30 0.1 0.9 0.9190
+ B. App Recognition
+ Many security solutions use a fingerprinting method for
+between precision and recall and is often used to evaluate the purpose of app recognition [15, 57, 62]. To evaluate the
+security solutions. As we output fingerprints, we need to map extent to which our approach recognizes apps within network
+them to app labels in order to evaluate our approach. Each traffic, we create fingerprints of labeled training data. Then,
+fingerprint consists of flows which, in our dataset, are labeled. we label each fingerprint with the app label most commonly
+Hence, we label each fingerprint with the flow label that is assigned to flows within the fingerprint, i.e., we perform a
+most commonly assigned to that fingerprint. To illustrate this, majority vote. After obtaining the labeled fingerprints we run
+suppose fingerprint F contains 10 flows of app A and 2 flows our approach with the test data. We then compare the resulting
+of app B, all 12 flows of that fingerprint will be assigned the test fingerprints with the labeled training fingerprints using the
+label A. While this approach can generate multiple fingerprints Jaccard similarity, as detailed in Section IV-F. Subsequently,
+per app (see Section V-D), many security applications (e.g., each test fingerprint, and by inference each flow belonging to
+firewalls) use a mapping on top of fingerprinting and allow that test fingerprint, receives the same label as the training
+multiple fingerprints for the same app. fingerprint that is most similar to it.
+Parameter selection. To optimize our parameters, we refine We compare our approach with the state-of-the-art tool
+them individually to reach an optimal F1-score. We choose our AppScanner [62, 63]. However, the authors of AppScanner
+parameters from the following set of possible values: only released precomputed length statistics about the flows in
+ their dataset and the code for running the classification phase
+ • τbatch : 1m, 5m, 10m, 30m, 1h, 3h, 6h, and 12h. on such preprocessed statistics. Therefore, to be able compare
+ • τwindow : 1s, 5s, 10s, 30s, 1m, 5m, 10m, and 30m. both approaches on the same datasets, we faithfully reim-
+ • τcorrelation : 0.1 to 1.0 in steps of 0.1. plemented the AppScanner feature extraction strategy, which
+ • τsimilarity : 0.1 to 1.0 in steps of 0.1. reads PCAP files and feeds the feature values to the classifier.3
+ To do so, we followed the description in the AppScanner paper
+ The batch size thresholds vary between 1 minute, a scenario for computing feature statistics, using the standard NumPy [45]
+where apps can be detected while they are still running, and and Pandas [43] libraries. AppScanner has different settings, it
+12 hours, representing a post-incident analysis. The window can either work with a Support Vector Classifier or a Random
+thresholds vary between 1 second and 30 minutes, where Forest Classifier. We evaluate AppScanner with a single large
+smaller values may miss flow correlations and larger values Random Forest Classifier, which achieved the highest performay correlate flows that were accidentally active around the mance in AppScanner’s evaluation. In addition, AppScanner
+same time period. Both correlation and similarity thresholds requires a parameter that sets the minimum confidence level
+are evenly spread out between 0.1 and 1.0, the first and max for recognition. The optimal confidence level according to
+values that trigger the corresponding fingerprint mechanism. the original paper is 0.7, hence this is what we used in our
+ evaluation. Lowering this threshold increases the recall and
+ For each parameter we vary the value by iterating over the decreases the precision of AppScanner.
+test set of possible values while keeping the other parameters
+as their default value. Once we find an optimal value for a Comparison with AppScanner. We evaluate F LOW P RINT
+parameter, it is set as the new default for optimizing the other against AppScanner by running a 10-fold cross validation on
+parameters. This way of iterating through the values allows the same datasets discussed in Section II-A. Additionally, we
+us to capture dependencies between the parameters. To get an measure to what extent the performance of our approach is
+average result, we perform a 10-fold cross validation analysis affected by the number of flows produced per app. As apps
+for each setting on held-out validation data from the Andrubis in the Andrubis dataset produce a varying amount of data,
+dataset. This held-out data is not used in the remainder of the we evaluated the performance considering only apps having
+evaluation to remove bias from this optimization step. We opt a minimum of x flows. This resulted in five evaluations for
+to optimize the parameters using only the Andrubis dataset x = 1, i.e., all apps, x = 10, x = 100, x = 500, and
+to ensure all datasets contain enough testing data to evaluate x = 1000. We refer to these evaluations as Andrubis ≥ x
+our approach. While this may bias the optimal parameters to flow(s) for each respective value of x. All experiments assumed
+a specific dataset, our results in the remainder of this section a maximum of 100 active apps per device in accordance with
+show that the parameters also generalize well to other datasets. recent statistics [10].
+During the experiment, we assume that each device has 100 2 Due to space limitations we provide additional results about the parameter
+apps installed, which resembles a realistic setting [10]. We selection at https://github.com/Thijsvanede/FlowPrint.
+also performed the same evaluation with 200 apps per device, 3 We release our implementation of AppScanner at https://github.com/
+which resulted in the same optimal parameters. Thijsvanede/AppScanner.
+
+ 8
+TABLE IV. P ERFORMANCE OF OUR APPROACH COMPARED TO A PP S CANNER IN THE APP RECOGNITION EXPERIMENT. T HE NUMBER OF FLOWS SHOWN
+ FOR THE A NDRUBIS DATASET INDICATE THE MINIMUM NUMBER OF REQUIRED FLOWS AN APP HAD TO PRODUCE TO BE INCLUDED IN THE EXPERIMENT.
+
+ F LOW P RINT AppScanner (Single Large Random Forest)
+ Dataset Precision Recall F1-score Accuracy Precision Recall F1-score Accuracy
+ ReCon 0.9470 0.9447 0.9458 0.9447 0.8960 0.4284 0.5797 0.4284
+ ReCon extended 0.8984 0.8922 0.8953 0.8922 0.9365 0.2534 0.3989 0.2534
+ Cross Platform (Android) 0.9007 0.8698 0.8702 0.8698 0.9108 0.8867 0.8693 0.8867
+ Cross Platform (iOS) 0.9438 0.9254 0.9260 0.9254 0.8538 0.1484 0.2430 0.1484
+ Cross Platform (Average) 0.9191 0.8923 0.8917 0.8923 0.8791 0.5028 0.5757 0.5028
+ Andrubis (≥ 1 flow) 0.5842 0.5871 0.5856 0.5871 0.6270 0.1956 0.2982 0.1956
+ Andrubis (≥ 10 flows) 0.5439 0.5031 0.5227 0.5031 0.6069 0.1501 0.2407 0.1501
+ Andrubis (≥ 100 flows) 0.7617 0.6852 0.7214 0.6852 0.8520 0.5048 0.6340 0.5048
+ Andrubis (≥ 500 flows) 0.7389 0.7413 0.7401 0.7413 0.8663 0.5386 0.6642 0.5386
+ Andrubis (≥ 1000 flows) 0.8021 0.8111 0.8066 0.8111 0.9141 0.6005 0.7248 0.6005
+
+ Table IV shows the performance of both F LOW P RINT and existing one. This isolation allows also us to distinguish be-
+AppScanner. We note that the accuracy and recall levels are the tween different unseen apps. Subsequently, when F LOW P RINT
+same, which is due to computing the micro-average metrics for detects a previously unseen app, the security operator can
+the individual apps. This is often regarded as a more precise choose to include the new fingerprints in the database. From
+metric for computing the precision, recall and F1-score and has that point forward, the new app will be classified as known
+the side effect that the accuracy equals the recall [32]. Despite and can be recognized as in Section V-B. For this setting,
+competing with a supervised learning method, we see that both we create fingerprints for the apps that are present on the
+AppScanner and our approach have similar levels of precision, device. Subsequently, we add previously unseen apps to the
+meaning they are able to correctly classify network flows to evaluation and generate fingerprints for all the apps present
+their corresponding app. However, we outperform AppScanner during this testing phase. Our work uses the same parameters
+greatly on the recall, meaning that our approach is much better from Section V-A for detecting unseen apps. However, in
+at classifying all types of traffic, whereas AppScanner provides order to decide whether a fingerprint originates from a new
+a sufficient certainty level for only a small fraction of apps. or existing app, we introduce a different threshold τnew . This
+We note that in our experiments, AppScanner has a lower threshold indicates the maximum Jaccard similarity between a
+performance than reported in the original paper, especially tested fingerprint and all training fingerprints to be considered
+for the recall. The cause is twofold: First, most apps in our a new app. Note that the lower this threshold, the more
+datasets are captured over shorter periods of time, making conservative we are in flagging fingerprints as originating
+it more difficult to recognize apps. Second, the AppScanner from new apps. The rationale for introducing this additional
+paper reported only on flows for which they have a confidence threshold is that fingerprints remain the same for the entire
+level ≥ 0.7, which in their dataset was 79.4% of flows. approach, but are interpreted differently depending on the use
+This means that unclassified flows are not taken into account. case. When detecting unseen apps, we suggest the use of
+As unrecognized flows reveal much about the recognition a threshold of 0.1, meaning that only fingerprints that have
+approach, our work reports the performance over all flows, an overlap of less than 0.1 with all existing fingerprints are
+where unrecognized flows cause lower recall rates. considered new apps. Comparing fingerprinting approaches for
+ detecting unseen apps is difficult because, as far as we are
+Dataset independence. Our evaluation shows that F LOW- aware, the only network-based approaches for detecting unseen
+P RINT performs well on both synthetic (ReCon and Andrubis) apps are DECANTeR [15] and HeadPrint [16]. Unfortunately,
+and human-generated (Cross Platform) traffic. Furthermore, both detectors only handle unencrypted data, thus they cannot
+the results from the Cross Platform dataset show that our be applied on encrypted data like ours. Hence, we are unable
+approach can be used to generate fingerprints for both iOS to compare our approach with related work in this setting.
+and Android apps. However, this does not necessarily mean
+that a fingerprint generated for an iOS app can be used to As in previous experiments, we assume each device has
+detect the corresponding Android version or vice versa. In 100 apps installed, and introduce 20 new apps. We evaluate our
+the Andrubis dataset, we observed no significant difference detector by running a 10-fold cross validation using τnew = 0.1.
+between recognizing benign and potentially harmful apps. A low τnew threshold ensures that known apps are not detected
+Moreover, the flow experiment (see Table IV) shows that apps as new despite the dynamic nature of apps. As a trade-off,
+generating a small amount of flows are more difficult to detect. the detector does not correctly classify all flows of previously
+As a result, our approach has to find correlations between unseen apps. However, we argue that correctly classifying all
+traffic in a limited timeframe resulting in a lower precision. flows of unseen apps is infeasible as large parts of many apps
+This is a known limitation of network-based approaches and are shared in the form of common libraries. This means that
+also affects related tools such as AppScanner. it is preferable to aim for a high precision in flows flagged
+ as new apps rather than a high recall as long as previously
+C. Detection of Previously Unseen Apps unseen apps can be detected at some point.
+ In addition to app recognition, we evaluate the capabilities Table V shows the results of our experiment. We see
+of our fingerprinting approach to detect previously unseen that the precision is reasonably high and 97.8% of flows
+apps. Here, we want F LOW P RINT to be able to correctly isolate are correctly flagged as unseen for ReCon and 99.5% for
+an unseen app as a new app, instead of classifying it as an ReCon extended. This also means that existing apps are rarely
+
+ 9
+ TABLE V. P ERFORMANCE OF OUR APPROACH WHEN DETECTING TABLE VI. P ERFORMANCE OF THE B ROWSER D ETECTOR BASED ON
+ UNSEEN APPS . T RUE POSITIVES = CORRECTLY IDENTIFIED NEW APPS ; THE NUMBER OF DETECTED TCP/UDP STREAMS .
+ TRUE NEGATIVES = CORRECTLY IDENTIFIED KNOWN APPS ; FALSE
+POSITIVES = KNOWN APPS CLASSIFIED AS NEW; FALSE NEGATIVES = NEW Actual Browser Actual non-Browser
+ APPS CLASSIFIED AS KNOWN .
+ Predicted Browser 21,987 (TP) 5,574 (FP)
+ Predicted non-Browser 363 (FN) 28,4125 (TN)
+ Dataset Precision Recall F1-score Accuracy
+ ReCon 0.9777 0.7098 0.8225 0.8550
+ ReCon extended 0.9948 0.2032 0.3375 0.5494
+ we detect a browser, all flows within a surrounding 20 second
+ Cross Platform (Android) 0.9106 0.4318 0.5858 0.6634
+ Cross Platform (iOS) 0.9637 0.7744 0.8588 0.8527 window are marked as browser traffic. This window was
+ Cross Platform (Average) 0.9352 0.5449 0.6886 0.7253 empirically optimized to achieve high recall rates. To ensure
+ Andrubis (≥ 1 flow) 0.4757 0.2090 0.2904 0.5100 that wrong detections are properly penalized in our experiment,
+ Andrubis (≥ 10 flows) 0.5703 0.2552 0.3526 0.4965 we interleave the browser and non-browser traffic by shifting
+ Andrubis (≥ 100 flows) 0.8405 0.4760 0.6078 0.6386
+ Andrubis (≥ 500 flows) 0.7722 0.3121 0.4446 0.5915
+ all timestamps such that each trace starts at the same time.
+ Andrubis (≥ 1000 flows) 0.7939 0.3444 0.4804 0.6177
+ Note that, while there exist apps that embed a “browser
+ window” (e.g., Android WebView), we do not consider these
+ apps as browsers because of their confined access to a limited
+marked as unseen, reducing the load on any manual checking set of network destinations. In contrast, real browsers navigate
+of alert messages. On the Cross Platform dataset, we achieve to many different websites, producing a bigger relative change
+93.5% precision on average indicating that, while slightly more of active clusters—one of the features of our browser isolation.
+difficult, our approach is still capable of detecting new apps In fact, our datasets contain several HTML5 apps, which we
+without raising too many false alerts. For Andrubis, the rate correctly detected as regular apps.
+of false positives is higher with 14.8% for apps producing at
+least 100 flows. This is due to the relatively short time span in Table VI shows the average performance of the browser
+which traffic of this dataset was produced, i.e., 240 seconds. detector using ten Monte Carlo cross validations. Our detector achieves, on average, an accuracy of 98.1% and detects
+Recall. We see that the recall is significantly lower than browser flows with a recall of 98.3%. Unfortunately, with a
+the precision, only reaching 20.3% for the ReCon extended precision of 79.8% the number of wrongly isolated streams is
+dataset. This is caused by homogeneous behavior of mobile rather high due to the aggressive detection. This in turn leads to
+apps, i.e., the network traffic of these apps overlaps due to 1.8K of 25.8K non-browser clusters being incorrectly removed
+the use of common libraries and services. In the experiments at some point. Fortunately, 75.7% of these clusters resurfaced
+of Table V we found that unknown apps showed similar after the initial removal without being mistakenly detected as
+advertisement traffic to known apps. When the similarity ot a browser. This means they are still used for fingerprinting
+the unknown app results in a higher matching score than τnew , their corresponding non-browser apps. In total only 1.7% of
+it will be misclassified as known. This is less of a problem in non-browser clusters were permanently removed.
+the app recognition scenario where F LOW P RINT searches for a
+best match. Multiple training fingerprints can have a similarity Confidence. F LOW P RINT assigns unlabeled fingerprints to
+score > τnew , but the actual app likely produces the highest each flow passing through. To gain more insights into how
+score due to most overlapping destinations, leading to a correct these fingerprints are represented we assign a confidence level
+match. We elaborate on the effects of homogeneous traffic in to each fingerprint that measures how certain we are that each
+Section V-E. As stated before, low recall is not necessarily flow within a fingerprint belongs to the same app. In order
+problematic as long as the unseen app is detected at some to measure confidence, we look at the amount of information
+point. In our experiment, we already detect 72.3% of apps in gained by knowing to which fingerprint a flow belongs to with
+the first batch (five minutes) in which they appear. We discuss respect to the app label of that flow. That is, we measure by
+further limitations of app fingerprinting in Section VI. what fraction the entropy of app labels is reduced if we know
+ the fingerprint of each flow. Equation 6 shows the formula for
+D. Fingerprinting Insights computing the confidence of our fingerprints. Here, H(A|F )
+ is the entropy of app labels for each flow, given that we
+ In the previous experiments we demonstrated that our know its fingerprint. H(A) is the entropy of the labels without
+approach works for both recognizing already seen apps, as knowing the fingerprints. When all fingerprints only consist of
+well as detecting unseen apps. In this section, we evaluate flows of a single app knowing that fingerprint automatically
+specific parts of our fingerprinting approach to give insights leads to knowing the label. Therefore, H(A|F ) = 0 gives a
+into possible other use cases. confidence level of 1. In case knowing the fingerprint does
+Browser isolation. We first highlight the performance of not provide additional information regarding the app label of
+the browser detector component within our approach. In this a flow H(A|F ) = H(A) and therefore, the confidence level
+experiment we use both the browser dataset and the Andrubis is 0. In clustering, this is referred to as homogeneity [54].
+dataset as discussed in Section II-A. As the browser detector H(A|F )
+is supervised, it performs better when trained with a large Confidence = 1 − (6)
+ H(A)
+set of applications, hence the Andrubis dataset is a natural
+choice for this evaluation. To this end, we randomly selected Table VII shows the confidence level of fingerprints produced
+5,000 non-browser apps from the Andrubis dataset to represent by our approach for each dataset. We see that for each dataset
+non-browser data. Of these apps, we used an 80:20 split for we achieve confidence levels close to 1 meaning that the
+training and testing our detector respectively. Recall that when majority of our fingerprints contain only flows of a single app.
+
+ 10
+TABLE VII. C ONFIDENCE LEVELS OF OUR FINGERPRINTS . A SCORE
+OF 1 INDICATES FINGERPRINTS ONLY CONTAIN FLOWS OF A SINGLE APP. ReCon
+ 0.5
+ Dataset Confidence
+ Andrubis
+
+ Fraction of apps in dataset
+ Cross Platform
+ ReCon 0.9857
+ ReCon extended 0.9670 0.4
+ Cross Platform (Android) 0.9740
+ Cross Platform (iOS) 0.9887
+ Cross Platform (Total) 0.9864 0.3
+ Andrubis 0.9939
+
+ 0.2
+
+Cardinality. Each app is ideally represented by a single fingerprint. This would make it possible to automatically separate 0.1
+the network traffic into bins of different apps. However, this
+might be infeasible as mobile apps offer different function-
+ 0
+alities which may result in multiple fingerprints. Therefore,
+
+ 1
+
+ 2
+
+ 3
+
+ 4
+
+ 5
+
+ 6–10
+
+ 11–15
+
+ 16–20
+
+ 20+
+we also investigate the number of fingerprints our approach
+generates for each app. We recall that an app can be viewed
+as a combination of individual modules, including third-party Number of fingerprints
+libraries, that each account for part of the app’s functionality.
+This naturally leads to apps presenting multiple fingerprints. Fig. 4. Number of fingerprints (cardinality) generated per app.
+We refer to the number of fingerprints generated per app as
+the cardinality of each app. the cause of homogeneity. In detail, this classification maps
+ Figure 4 displays the cardinality of apps in our datasets domains, and by extension flows, to one of the following
+and shows that the majority of apps in all datasets have categories based on properties of the app’s description in the
+multiple fingerprints. Our previous evaluations have shown Google Play Store and WHOIS information [52]: (1) firstthat this is not a problem for the app recognition and unseen party, i.e., app-specific traffic, and third-party traffic. For the
+app detection settings. However, the cardinality of apps in latter we further distinguish between (2) CDN traffic, (3)
+our work should be taken into account in case a new app advertisement traffic, and (4) social network traffic, based on
+is detected. Here, security operators should be aware that publicly available adblocker lists, extended by manual labeling.
+there will likely emerge multiple fingerprints for that new app. In turn, we classify each cluster according to a majority vote
+We note that the ReCon extended dataset is not shown in of the flows within that cluster.
+this graph since all apps in that dataset had more than 20 Our experiment found a total of 2,028 distinct clusters, of
+fingerprints. This is in large part due to the fact that apps which 281 clusters are shared between more than one app.
+in the ReCon extended dataset contain more versions, which At first sight, the homogeneity of traffic seems quite low with
+introduce additional fingerprints (also see Section V-E). On only 13.9% of all clusters being shared. However, these shared
+average, each version in the ReCon extended dataset contained clusters account for 56.9% of all flows in the dataset. By
+18 fingerprints. This number of fingerprints per version is still looking at the categories, we find that advertisement networks
+higher than the other datasets because each app was exercised account for 60.6% of traffic spread over 184 different shared
+longer, leading to more app functionality being tested, which in destination clusters. As apps often use standard libraries for
+turn led to more fingerprints. Finally, Figure 4 shows that apps displaying advertisement it is unsurprising that many flows
+in the Cross Platform dataset have a higher average cardinality are homogeneous with respect to their network destination.
+than the other datasets. This suggests that user interaction leads Social networks account for 30.4% of traffic to shared clusters.
+to more fingerprints describing individual app functionalities Similar to advertisements, the support for social services
+rather than the entire app itself. is often provided by commonly used libraries such as the
+ Facebook SDK4 or Firebase SDK5 . Finally, we find that 6.0%
+E. Mobile Network Traffic Challenges and 2.9% of shared cluster traffic originates from app-specific
+ network destinations and CDNs respectively.
+ We evaluate the effect of the three properties (Section I)
+of the mobile network traffic that pose challenges for our Then, we evaluate how our approach reacts under higher
+approach: its homogeneous, dynamic and evolving nature. levels of homogeneity. To this end, we removed all flows
+ that are not shared between apps from the ReCon dataset,
+(1) Homogeneous traffic. The first challenge is that mobile leaving only shared clusters. When running our approach for
+traffic is homogeneous because traffic is encrypted and many recognizing apps, the F1-score drops from 94.6% to 93.0% and
+apps share the same network destinations, for example due to accuracy drops from 94.5% to 93.3%. Despite the small drop
+shared third-party libraries, or the use of CDNs and common in performance, we are still able to accurately distinguish apps
+cloud providers. In this experiment, we analyze to what extent because the different correlation patterns of these shared clusthe homogeneity caused by shared network destinations affects ters can still be uniquely identified. Therefore, our approach
+the performance of our approach. We analyzed the ReCon shows robustness against homogeneous network traffic.
+dataset, which includes DNS information for each flow, as
+well as a classification of each DNS address as a first-party or 4 https://developers.facebook.com/docs/android/
+
+third-party destination for each app, allowing us to investigate 5 https://firebase.google.com/docs/auth/android/start
+
+ 11
+(2) Dynamic traffic. The second challenge is the dynamic 1
+nature of the traffic generated by users as they interact with
+
+ Fraction of matching fingerprints
+apps by using different functionalities at different times. In
+contrast, automatically generated datasets often aim to cover as 0.8
+much functionality as possible in a short amount of time. This
+difference between datasets may lead to a different quality of
+the fingerprints. To evaluate whether our approach is influenced 0.6
+by dynamic traffic, we look at the performance difference
+of our approach between the user-generated Cross Platform
+dataset and the other datasets. Although these datasets are not 0.4 3 months 1 year 2 years
+
+directly comparable due to the different apps they contain, we 6 months
+do not find a significant difference in the detection capabilities
+of our approach (see Tables IV and V). We attribute this in 0.2 ReCon
+part to the amount of network traffic produced by apps without ReCon Extended
+requiring any user interaction. These include connections to, Average
+ 0
+for example, advertisement and social networks, as well as 0 4 8 12 16 20
+loading content when launching an app. The high performance
+ Version difference between training and testing
+for both recognizing apps and detecting unseen apps from usergenerated traffic suggests that dynamic traffic does not impose
+ Fig. 5. Recognition performance of F LOW P RINT between versions. The
+any restrictions on our approach. x-axis shows the number of different versions, including the average time
+ apps take to receive so many version updates. The y-axis shows the fraction
+(3) Evolving traffic. The final challenge concerns the evolving of matching fingerprints between training and testing data.
+nature of apps. Besides detecting previously unseen apps
+(Section V-C), we evaluate our approach when dealing with
+new versions of an existing app, and we perform a longitudinal ReCon dataset. The difference between the two datasets is due
+analysis to assess how F LOW P RINT performs when the values to (1) more traffic per app in the ReCon Extended dataset,
+of our features change over time. which makes fingerprinting more accurate, and (2) a larger
+ set of apps in the ReCon dataset, which makes recognition
+(3a) App updates. We use the ReCon and ReCon extended more difficult. The average result shows the analysis for the
+datasets as they contain apps of different versions released combined datasets and gives the most realistic performance,
+over 8 years. On average, the datasets contain 18 different which shows that F LOW P RINT can recognize 90.2% of the
+versions per app, where new versions were released once new fingerprints even when operators do not update the models
+every 47.8 days on average. As the traffic of these different for one year. Interestingly, 45.5% of the apps in our datasets
+versions was captured over a period of two and a half months, released multiple new versions on the same day. However,
+changes in IP addresses and certificates might cause a slight F LOW P RINT showed nearly identical performance for these
+bias in the dataset. In the next subsection, we describe the same-day updates, leading us to believe that quick version
+results of our longitudinal analysis, which provides a more releases do not introduce major app fingerprint changes.
+in depth analysis regarding this influence. Nevertheless, we
+demonstrate that new app functionality introduced by updates (3b) Longitudinal analysis. Over time, the destination feadoes not necessarily cause an issue with our fingerprints if tures (IP address, port) and the TLS certificate may change
+caught early. For this experiment, we train the unseen app because of server replication/migration or certificate renewals.
+detector with a specific version of the app as described in To measure how F LOW P RINT’s performance changes over
+Section V-C. In turn, for each newer version of the app, we extended periods of time, we evaluate how feature changes
+run the unseen app detector to predict whether the fingerprints affect our approach. To do this, we train F LOW P RINT using
+of this new version match the training version. We perform the original training data and consistently change a percentage
+this experiment by increasing the amount of versions between of random IP addresses and TLS certificates in the testing
+the training data and the version to predict. This simulates a data. As TLS certificates are domain-based and not IP-based,
+security operator lagging behind in updating the models and random selection gives a good approximation of F LOW P RINT’s
+thus missing intermediate versions. performance. We performed a 10-fold cross validation changing 0 to 100% of such features in steps of 10% points.
+ Figure 5 shows the results of this experiment. Here, the
+x-axis shows the amount of versions between the training app Figures 6 and 7 show the performance of F LOW P RINT, in
+and predicted app. The y-axis shows the relative number of the case of app recognition and unseen app detection respecfingerprints from the newer app versions that F LOW P RINT tively, for an increasing amount of changes in our features.
+correctly recognizes. As we know the average amount of As with the app updates, we indicate the expected amount of
+time it takes for an app to be updated (47.8 days), we show changed features after given periods of time by the vertical
+the decline in performance not only in terms of versions, dashed lines. These expected changes are computed from the
+but also over time, by the vertical dashed lines in the plot. average lifetime of certificates in our dataset and DNS-name-
+We found that on average F LOW P RINT recognizes 95.6% to-IP changes according to the Farsight DNSDB database [56].
+of the fingerprints if F LOW P RINT is updated immediately For the case of app recognition, the number of changed feawhen a subsequent version is released. When we do not tures initially has limited effect because changing only one of
+update immediately, but wait a certain amount of time, the the two destination features still allows our clustering approach
+detection rate slowly drops, which is more evident in the to detect the same network destination. Once we change
+
+ 12
+approximately 80% of the features, the decline becomes a 1 Cross Platform
+lot steeper because at this point both features are changed
+simultaneously. When changing 100% of IP addresses and
+certificates we are unable to detect anything. Interestingly, the 0.8 ReCon
+Andrubis performance of the dataset declines almost linearly.
+That is because only 24.7% of Andrubis flows contain a TLS
+
+ Performance
+certificate. Hence, the certificate cannot counteract changes 0.6
+in the IP address, leading to a steeper decline. This also
+underlines the importance of using both the IP and TLS Andrubis
+certificate as destination features. We recall from Section IV-B 0.4 1 month
+that destination features may be enriched by domains from 3 months
+DNS traffic. As domains are generally more stable than IP F1-score 6 months
+addresses, they will have a positive effect on the performance 0.2
+ Precision 1 year
+over time. For the case of unseen app detection, an increase Recall
+in changed features leads to an increase in the recall. After
+ 0
+all, if traffic of a previously unseen app differs more from the 0 0.2 0.4 0.6 0.8 1
+training data, the app will be flagged as previously unseen. Fraction of changed features
+For the same reason, the detection precision declines as known
+apps increasingly differ from their training dataset. Fig. 6. App recognition performance vs changes in both IP and certificate
+ features. The x-axis denotes the % of changed features. Where the expected
+ Subsequently, we performed a real-world experiment by amount of change over time is denoted by the dashed vertical lines.
+collecting and analyzing data from the current versions of
+31 apps in the Cross Platform dataset more than 2 years (26 1 ReCon
+months) after the original capture. When F LOW P RINT trains on
+the original dataset and performs recognition on the recollected
+flows it achieved a precision of 36.7%, recall of 33.6% and 0.8
+F1-score of 35.1%. This translated to being able to recognize Cross Platform
+12 out of 31 apps. Interestingly, if we only look at the apps
+ Performance
+
+that we were able to recognize, F LOW P RINT performs with 0.6
+a precision of 76.1%, a recall of 62.2% and an F1-score of
+68.4%. The expected decline in performance after 2+ years Andrubis
+that we found in our two previous analyses is in line with the 0.4
+ 1 year
+results from this real-world experiment.
+ 6 months
+ In conclusion, while, as expected, F LOW P RINT’s perfor- 0.2 F1-score
+ 3 months
+mance degrades when a large amount of destination-based fea- Precision
+ 1 month
+tures change (i.e., after one year), our approach can cope with Recall
+a significant amount of variations without drastic performance 0
+degradations. We believe this gives operators enough time to 0 0.2 0.4 0.6 0.8 1
+update F LOW P RINT’s models to maintain high performance, Fraction of changed features
+making our approach practical. Fig. 7. Unseen app detection performance vs changes in both features.
+ The x-axis denotes the % of changed features. Where the expected amount of
+ change over time is denoted by the dashed vertical lines.
+F. Training Size
+ So far we assumed each device in the network to have 100 Figure 8 shows the performance of the different datasets
+apps installed, however F LOW P RINT may perform better or in app recognition. Here we see that for all datasets, the
+worse in case this number differs. To evaluate the effect of the performance of all metrics initially decreases, but stabilizes
+number of installed apps, we train F LOW P RINT by varying after a certain point (note that the y-axis starts from 0.85).
+the number of apps N in the training data. Recall that our Even up to the tested scenario of 1,000 apps, for the Andrubis
+approach builds its model on a per-device basis. Hence, while dataset, the F-1 score remains constant at 0.9. This indicates
+our database may contain millions of fingerprints, F LOW P RINT that F LOW P RINT easily discerns between relatively few apps,
+only matches fingerprints against apps installed on the moni- because it can still rely on network destinations to differentiate
+tored device. We train F LOW P RINT with N apps, ranging from between apps. However, once apps start to share network desti-
+1 to 200 for the ReCon and Cross Platform datasets, which nations, the performance drops slightly and quickly stabilizes.
+is already much higher than the average number of installed Once stabilized, F LOW P RINT leverages temporal correlations
+apps on a device [10]. For the Andrubis dataset, we range in network destinations found by our correlation-graph, which
+N from 1 to 1,000 to evaluate the extreme scenario. We first provide a much more robust way of recognizing apps. We
+analyze the performance of our approach in app recognition see the same mechanism, although to a lesser degree, for
+on the testing data of the same apps. In the second experiment, the unseen app detection scenario in Figure 9. Here the
+for each N we introduce 20% previously unseen apps, which recall is initially affected because F LOW P RINT only detects
+F LOW P RINT has to correctly detect. All experiments use 10- an app as previously unseen if its fingerprint differs enough
+fold cross validation. from the existing ones. When the training data includes more
+
+ 13
+ 1 F1-score
+ Time (seconds)
+ Precision 103
+ Cross Platform Recall
+ 102
+ 0.95
+ Performance
+
+ 101
+ ReCon
+ 100 Flows
+ 0.9 10 100 1k 10k 100k 1m
+ 10−1
+ Andrubis
+ 10−2
+ 0.85
+ Fingerprinting
+ 10−3 Clustering
+ Batch time
+ 0 40 80 120 160 200 10−4
+ Number of training apps
+ Fig. 10. Average execution time of F LOW P RINT when fingerprinting n
+Fig. 8. App recognition performance vs training size. flows in a single batch. The fingerprint generation time includes clustering.
+
+ 1
+ execution time of F LOW P RINT by running it on a single core
+ Cross Platform
+ of an HP Elitebook laptop containing an Intel Core i5-5200U
+ 0.8 CPU 2.20GHz processor.
+ Figure 10 shows the average performance over 10 runs
+ Performance
+
+ 0.6 ReCon of F LOW P RINT when generating fingerprints. Here we find
+ that our prototype is able to process roughly 400k flows
+ within the time window of five minutes. To put this number
+ 0.4 into perspective, the ReCon and Andrubis datasets contain an
+ average of 117 and 22 flows and a maximum of 845 and 1,810
+ 0.2 Andrubis F1-score flows per five-minute interval respectively. This means that at
+ Precision peak communication activity F LOW P RINT is able to handle
+ Recall 221 devices simultaneously on a mid-range laptop, making our
+ 0 approach feasible to run in practice. Both the clustering and
+ 40 80 120 160 200 cross-correlation have a theoretical time complexity of O(n2 ),
+ Number of training apps however, from Figure 10 we see that in our approach these
+ components act almost linearly. For the clustering, each flow
+Fig. 9. Unseen app detection performance vs training size.
+ is clustered together with flows containing the same destination
+ (IP, port)-tuple or the same TLS certificate. Our prototype
+shared destinations, the probability that a new app overlaps implements these checks using a hashmap giving the clustering
+with the original dataset becomes larger, and therefore the a linear time complexity. For the cross-correlation we note
+detection rate, initially, slightly decreases. Once the training that flows that have the same activity pattern c[0]...c[T ] have
+data contains a sufficient amount of shared destinations the per- a mutual cross-correlation of 1 and the same correlation with
+formance becomes more consistent. The fluctuations are due respect to other flows. Hence, they only need to be computed
+to apps producing traffic to shared clusters, which occasionally once, reducing the time complexity.
+produce incorrect matches with known apps. Finally, we note
+that the Andrubis dataset performs notably worse than the other Generated fingerprints need to be matched against a
+datasets because it contains apps that produce relatively few database of known fingerprints. We consider two scenarios: (1)
+flows. This is in accordance with the results found in Table V. finding the closest matching fingerprint (for app recognition),
+ and (2) checking for any match (in case of unseen app detec-
+G. Assessment of Execution Time tion). Figure 11 shows the average performance over 10 runs
+ for matching 1,000 generated fingerprints against a database
+ In addition to the aforementioned metrics, the effectiveness of size n. The complexity of matching fingerprints grows both
+of our approach in a real environment also depends on its with the database size and the amount of fingerprints matched
+execution time. As we employ some seemingly high-cost op- against this database. Figure 11 shows that even for databases
+erations, such as clustering and clique discovery, we also assess containing one million fingerprints, the required time to match
+the individual components of our approach to better understand is 73 seconds, which is well beneath the five-minute mark
+the actual time complexity involved. We note that, due to the of τbatch . Assuming an average of 100 apps per device and a
+setup of our approach, its complexity depends on the number high cardinality of 20 fingerprints per app (see Section V-D), a
+of network flows rather than the amount of communicated database containing one million fingerprints would be able to
+bytes. In order for our approach to run smoothly, it should be deal with 500 devices simultaneously on a mid-range laptop.
+able to process all received flows within each batch time τbatch , These results suggest the feasibility of our approach in highwhich in our prototype is set to five minutes. We assessed the volume traffic scenarios as well.
+
+ 14
+ Time (seconds) proaches to suffer from the same limitation due to the generic
+ 102 nature of advertisement and analytics communication.
+ Simultaneously active apps. A limitation of a semi-supervised
+ approach is that it has difficulty distinguishing multiple apps
+ 101 that are running at the same time. Android allows apps to
+ exchange network traffic in the background, although this behavior is typically found only in a limited set of apps (i.e., mu-
+ 100 Size DB sic streaming apps, and apps to make phone calls). In addition,
+ 10 100 1k 10k 100k 1m since Android 7, two apps can be in the foreground at the time
+ by splitting the screen of the device. Furthermore, Android
+ 10−1 10 allows those apps also to be active simultaneously [58].
+ We expect this heavy multi-app scenario to create challenges
+ Find closest fingerprint for our fingerprinting approach, and therefore, future work
+ Check for unseen apps needs to investigate the fingerprint generation for multiple
+ 10−2 simultaneously active apps.
+Fig. 11. Average execution time of F LOW P RINT when matching 1,000 Repackaged apps. While one of our datasets, the Andrubis
+fingerprints against a database containing n fingerprints. dataset, also contains flows from potentially harmful and
+ malicious apps, we did not specifically investigate the effect
+ of repackaged apps on our fingerprinting. As malware authors
+ VI. D ISCUSSION frequently repackage benign apps with their malicious pay-
+ We have shown that our approach succeeds in creating load [38], it would be interesting for future work to investigate
+semi-supervised fingerprints for mobile apps, and that such whether the additional fingerprints introduced by this payload
+fingerprints can be used for both app recognition and detecting could be used to detect this type of malware.
+previously unseen apps. Nevertheless, there are some aspects Fingerprint coverage. Our evaluation has shown an app
+of our approach that should be addressed in future work. may have multiple fingerprints. When detecting new apps,
+ it takes some time for our approach to converge to a state
+Potential for evasion. We construct our fingerprints based
+ where a sufficient number of fingerprints has been created to
+on the set of network destinations, and the timing of comaccurately characterize the network traffic of an app. Continella
+munication with such destinations. In order for authors of an
+ et al. [24] already observed this as a limitation when dealing
+adversarial app to evade detection by our approach, they have
+ with unknown traffic. Future work could explore approaches
+two options. First, they may redirect all traffic of their app
+ similar to theirs to automatically decide when enough network
+using a VPN or proxy. When doing this only for their app
+ traffic has been fingerprinted to sufficiently cover the network
+and not system-wide, its single destination would still show
+ behavior of an app. Furthermore, while the fingerprints of
+up as a fingerprint, thus that specific app can still be detected.
+ previously unseen apps can be immediately used to recognize
+Setting a system-wide proxy or VPN connection for all apps
+ the same apps later on, if an unseen app produces multion the device (1) requires manual confirmation by the user;
+ ple fingerprints, F LOW P RINT recognizes each fingerprint as
+and (2) would be recognizable as unusual device behavior as
+ a separate app. Future work could explore approaches to
+our approach would detect all device traffic as originating from
+ automatically determine whether a burst of new fingerprints
+a single app. Hence, with this evasion technique our approach
+ belong to the same previously unseen app.
+would still be able to detect the presence of an unknown app
+but it will have trouble identifying the specific app. The second AppScanner reimplementation. While we faithfully reimoption is to either avoid producing network traffic (limiting plemented AppScanner following the approach described in
+the damage of potentially harmful apps), or to try to simulate the original paper, our implementation might still slightly
+the traffic patterns of a genuine app. We expect that being differ from the original tool. Therefore, it is possible that
+restricted to use the same set of destinations and timing of the two implementations have slightly different performances.
+an existing genuine app severely limits the potential for an However, we expect this difference to be minimal, if present.
+attack, especially if the attacker does not have control over
+such destinations. Privacy implications. One of the advantages of our work
+ is that it works on encrypted traffic. One can argue that in
+Low-traffic apps. During our evaluation, we observed cases of enterprise networks, TLS can be decrypted by deploying manapps that cannot be reliably fingerprinted using our approach. in-the-middle TLS proxies and therefore other approaches are
+This includes, in particular, apps that only communicate with still applicable. However, traffic decryption weakens the overwidely used services, e.g. advertisement networks and CDNs, all security [27] and violates users’ privacy, thus we believe it
+which may be difficult to fingerprint. After all, our fingerprints should be avoided. At the same time, our approach shows the
+rely on patterns shown in network destinations. If the pattern high precision with which apps can be identified despite traffic
+generated by an app is common to many other apps, we cannot encryption. From a privacy perspective, the use of certain
+discern said specific app. We mainly observed this behavior in apps can reveal information about medical conditions, religion,
+apps that do not require any form of server for their main sexual orientation, or attitude towards the government of users.
+functionality, but that still communicate with advertisement Identifying individual apps from the network traffic alone also
+and analytics services, probably as a way for monetization. opens the door for censorship and traffic differentiation [37].
+Unfortunately, we expect most network-based monitoring ap- Furthermore, individuals may be identified and tracked to
+
+ 15
+a certain degree based on the unique set of apps they are Finally, several techniques attempt to identify not the apps
+using [3]. Since devices from different vendors and carriers themselves, but rather user activity within apps [23, 55].
+often introduce a unique set of pre-installed apps [30], it should These methods are able to detect even more subtle differences
+at least be feasible to identify a specific device manufacturer within app usage which can subsequently be linked to the
+or type, which we leave for future work. original app. Unfortunately, none of these approaches address
+ the inherent flaw of app recognition, namely the inability to
+ VII. R ELATED W ORK recognize previously unseen apps.
+ Related work already explored the use of network finger- Real-time fingerprint generation. Related approaches on
+prints for both mobile and desktop devices. However, related real-time fingerprint generation for the detection of apps either
+approaches are either supervised, i.e., require prior training on require decrypted network traffic, or focus on detecting the
+labeled apps, or only work on unencrypted network traffic. application-layer instead of the mobile app itself. Bernaille et
+ al. [13] stressed the importance of fast recognition of apps
+App recognition. App recognition, also referred to as traffic in network traffic and suggested the clustering of TCP flows
+classification, is closely related to app fingerprinting as both based on their first five messages. Their approach recognizes
+approaches attempt to map traffic to the app that produced the application-layer protocol, which might be sufficient for
+it. Related work suggested the use of deep packet inspection detecting desktop apps. In contrast, since mobile apps mostly
+(DPI) for this purpose. Some approaches attempt to automat- communicate over either HTTPS or QUIC, this method is
+ically identify clear-text snippets in network traffic that are insufficient in our setting. DECANTeR [15] builds desktop
+unique to an app [64, 68]. Other classifiers focus specifically app fingerprints from the headers of HTTP messages without
+on HTTP headers in combination with traditional machine requiring prior knowledge of apps. However, this approach also
+learning [44] or deep learning approaches [19]. Choi et al. [20] relies on decrypted traffic for fingerprint generation.
+even suggested automatically learning the optimal classifier for
+each app. As app recognition can only be used for apps for TLS fingerprinting. In addition to app fingerprinting, TLS finwhich a fingerprint exists, several approaches extended HTTP- gerprinting techniques are often used to track communicating
+based fingerprints by automating the process of fingerprint processes [6, 8, 41, 42]. These techniques leverage the diversity
+creation [17, 25]. However, all these approaches rely on DPI, of fields in ClientHello messages generated by different
+meaning that they cannot be used on encrypted traffic. Given TLS implementations to create fingerprints. However, they
+that 80%–90% of Android apps nowadays communicate over do not work well in the homogeneous mobile setting where
+HTTPS, i.e., use TLS [31, 50], any fingerprinting solution many apps use the same SSL/TLS implementation provided
+should be able to deal with TLS-encrypted traffic. by the underlying OS. Consequently, different apps produce
+ the same TLS fingerprints making impractical to recognize
+ AppScanner [62] uses statistical features of packet sizes apps or discover previously unseen apps. This property is
+in TCP streams to train Support Vector and Random Forest even exploited by tools [29] to bypass censorship systems.
+Classifiers for recognizing known apps. This system is able to TLS fingerprinting may also be applied on the ServerHello
+re-identify the top 110 most popular apps in the Google Play message as done by JA3S [6]. In this setting, it is not the app
+Store apps 99% accuracy. However, to achieve these results, that is fingerprinted but rather the destination communicating
+AppScanner only makes a prediction on traffic for which its with the app. This technique can potentially be used to improve
+confidence is high enough. This results in the system only our destination clustering step, but is not directly applicable to
+being able to classify 72% of all TCP streams. BIND [4], fingerprinting mobile apps. In general, destination-based TLS
+like AppScanner, creates supervised app fingerprints based on fingerprinting techniques that focus on desktop applications do
+statistical features of TCP streams. BIND also uses temporal not work well when directly applied to mobile apps because,
+features to better capture app behavior and reaches an average as shown in Section V-E, mobile apps often share destinationaccuracy of 92.6%. However, the authors observed a decay based clusters (e.g., advertisement networks).
+in performance over time, and suggest to retrain the system
+periodically if lower performance is observed. Malware detection. We showed the value of our approach
+ Concurrent to our work, Petagna et al. [48] demonstrated in the setting of unseen app detection, where we treat new
+that individual apps can also be recognized in traffic that apps as potentially malicious. This decision can be made by
+is anonymized through Tor. Their supervised approach uses complementing techniques that focus specifically on classifytiming, size, packet direction and burst features of TCP flows. ing malicious traffic [7, 9]. These approaches are not capable
+Similar to our work, the authors observed web browsers of discriminating between individual apps, but rather make a
+posing a particular challenge, since each visited website might decision on whether traffic contains malicious patterns. Hence,
+produce different patterns. our approach complements these techniques by providing more
+ insights into the individual apps active on the network.
+ Other approaches include the use of Naı̈ve Bayes classifiers
+in combination with incoming and outgoing byte distribu- VIII. C ONCLUSION
+tions [39], the use of statistical flow features in combination
+with decision trees [12] and the possibility of combining In this work we proposed F LOW P RINT, a novel approach
+existing classifiers [2]. Alan et al. [5] train a classifier on the for creating real-time app fingerprints from the encrypted
+packet sizes of the launch-time traffic of apps. However, as network traffic of mobile devices. Unlike existing approaches,
+the authors acknowledge, detecting the launch of an app in our approach does not rely on any prior knowledge about apps
+real-world traffic is challenging, and and app might already be that are active in a certain network. Therefore, the strength
+launched when a phone enters a network. of F LOW P RINT lies in its ability to detect previously unseen
+
+ 16
+apps in encrypted network traffic. This allows us to deal with [10] AppAnnie. The State of Mobile in 2019. https://www.appannie.com/
+evolving sets of apps, opening many security applications for de/insights/market-data/the-state-of-mobile-2019/, January 2019.
+which fingerprinting was previously unsuitable. [11] Michael Backes, Sven Bugiel, and Erik Derr. Reliable Third-Party
+ Library Detection in Android and its Security Applications. In Proc.
+ In our evaluation, F LOW P RINT achieved an accuracy of of the ACM Conference on Computer and Communications Security
+89.2% for recognizing apps, outperforming the supervised (CCS), 2016.
+state-of-the-art approach. Furthermore, we showed that our [12] Taimur Bakhshi and Bogdan Ghita. On Internet Traffic Classification:
+approach is able to detect previously unseen apps with a A Two-Phased Machine Learning Approach. Journal of Computer
+ Networks and Communications, 2016.
+precision of 93.5%. These results demonstrate the capabilities
+ [13] Laurent Bernaille, Renata Teixeira, Ismael Akodkenou, Augustin Soule,
+of semi-supervised approaches when dealing with evolving and Kave Salamatian. Traffic Classification On The Fly. ACM
+systems, such as mobile apps, even in the presence of largely SIGCOMM Computer Communication Review, 2006.
+homogeneous traffic due to third-party libraries and services. [14] Matthias Böhmer, Brent Hecht, Johannes Schöning, Antonio Krüger,
+ and Gernot Bauer. Falling Asleep with Angry Birds, Facebook and
+ ACKNOWLEDGEMENTS Kindle – A Large Scale Study on Mobile Application Usage. In Proc.
+ of the International Conference on Human-Computer Interaction with
+ We would like to thank our reviewers for their valuable Mobile Devices and Services (MobileHCI), 2011.
+comments, which significantly improved our paper. This work [15] Riccardo Bortolameotti, Thijs van Ede, Marco Caselli, Maarten H
+was partially supported by the Netherlands Organisation for Everts, Pieter Hartel, Rick Hofstede, Willem Jonker, and Andreas Peter.
+ DECANTeR: DEteCtion of Anomalous outbouNd HTTP TRaffic by
+Scientific Research (NWO) in the context of the SeReNity Passive Application Fingerprinting. In Proc. of the Annual Computer
+project and grants from DHS S&T (contract FA8750-17-2- Security Applications Conference (ACSAC), 2017.
+0145), NSF award CNS-1909020, the Data Transparency Lab, [16] Riccardo Bortolameotti, Thijs van Ede, Andrea Continella, Thomas
+and Comcast Innovation Fund. Some of the analysis in the Hupperich, Maarten Everts, Reza Rafati, Willem Jonker, Pieter Hartel,
+work was also supported by a Farsight Research Grant. The and Andreas Peter. HeadPrint: Detecting Anomalous Communications
+research leading to these results has further received funding through Header-based Application Fingerprinting. In Proc. of the ACM
+ Symposium on Applied Computing (SAC), 2020.
+from SBA Research (SBA-K1), which is funded within the
+ [17] Yi Chen, Wei You, Yeonjoon Lee, Kai Chen, XiaoFeng Wang, and Wei
+framework of COMET Competence Centers for Excellent Zou. Mass Discovery of Android Traffic Imprints through Instantiated
+Technologies by BMVIT, BMDW, and the federal state of Partial Execution. In Proc. of the ACM Conference on Computer and
+Vienna, managed by the FFG. The financial support by the Communications Security (CCS), 2017.
+Christian Doppler Research Association, the Austrian Federal [18] Yi-Chao Chen, Yong Liao, Mario Baldi, Sung-Ju Lee, and Lili Qiu. OS
+Ministry for Digital and Economic Affairs and the National Fingerprinting and Tethering Detection in Mobile Networks. In Proc.
+Foundation for Research, Technology and Development is also of the ACM Internet Measurement Conference (IMC), 2014.
+gratefully acknowledged. [19] Zhengyang Chen, Bowen Yu, Yu Zhang, Jianzhong Zhang, and
+ Jingdong Xu. Automatic Mobile Application Traffic Identification by Convolutional Neural Networks. In Proc. of IEEE Trust-
+ R EFERENCES com/BigDataSE/ISPA, 2016.
+[1] Abbas Acar, Hossein Fereidooni, Tigist Abera, Amit Kumar Sikder, [20] Yeongrak Choi, Jae Yoon Chung, Byungchul Park, and James Won-Ki
+ Markus Miettinen, Hidayet Aksu, Mauro Conti, Ahmad-Reza Sadeghi, Hong. Automated classifier generation for application- level mobile
+ and A. Selcuk Uluagac. Peek-a-Boo: I see your smart home activities, traffic identification. In Proc. of the IEEE/IFIP Network Operations
+ even encrypted! arXiv preprint arXiv:1808.02741, 2018. and Management Symposium (NOMS), 2012.
+[2] Giuseppe Aceto, Domenico Ciuonzo, Antonio Montieri, and Antonio [21] Cisco. SNORT Users Manual. https://www.snort.org/documents/snort-
+ Pescapé. Multi-Classification Approaches for Classifying Mobile App users-manual, 2018.
+ Traffic. Journal of Network and Computer Applications, 2018. [22] Stefano Comino, Fabio M. Manenti, and Franco Mariuzzo. Updates
+[3] Jagdish Prasad Achara, Gergely Acs, and Claude Castelluccia. On the Management in Mobile Applications. iTunes vs Google Play. Journal
+ Unicity of Smartphone Applications. In Proc. of the ACM Workshop of Economics & Management Strategy, 2018.
+ on Privacy in the Electronic Society (WPES), 2015. [23] Mauro Conti, Luigi V. Mancini, Riccardo Spolaor, and Nino Vincenzo
+[4] Khaled Al-Naami, Swarup Chandra, Ahmad Mustafa, Latifur Khan, Verde. Can’t You Hear Me Knocking: Identification of User Actions
+ Zhiqiang Lin, Kevin Hamlen, and Bhavani Thuraisingham. Adaptive on Android Apps via Traffic Analysis. In Proc. of the ACM Conference
+ Encrypted Traffic Fingerprinting With Bi-Directional Dependence. In on Data and Application Security and Privacy (CODASPY), 2015.
+ Proc. of the Annual Computer Security Applications Conference (AC- [24] Andrea Continella, Yanick Fratantonio, Martina Lindorfer, Alessan-
+ SAC), 2016. dro Puccetti, Ali Zand, Christopher Kruegel, and Giovanni Vigna.
+[5] Hasan Faik Alan and Jasleen Kaur. Can Android Applications Be Obfuscation-Resilient Privacy Leak Detection for Mobile Apps Through
+ Identified Using Only TCP/IP Headers of Their Launch Time Traffic? Differential Analysis. In Proc. of the ISOC Network and Distributed
+ In Proc. of the ACM Conference on Security & Privacy in Wireless and System Security Symposium (NDSS), 2017.
+ Mobile Networks (WiSec), 2016. [25] Shuaifu Dai, Alok Tongaonkar, Xiaoyin Wang, Antonio Nucci, and
+[6] John B. Althouse, Jeff Atkinson, and Josh Atkins. JA3 - A method Dawn Song. NetworkProfiler: Towards Automatic Fingerprinting of
+ for profiling SSL/TLS Clients. https://github.com/salesforce/ja3, June Android Apps. In Proc. of the IEEE International Conference on
+ 2017. Computer Communications (INFOCOM), 2013.
+[7] Blake Anderson and David McGrew. Identifying Encrypted Malware [26] Trinh Minh Tri Do and Daniel Gatica-Perez. Where and What: Using
+ Traffic with Contextual Flow Data. In Proc. of the ACM Workshop on Smartphones to Predict Next Locations and Applications in Daily Life.
+ Artificial Intelligence and Security (AISec), 2016. Pervasive and Mobile Computing, 2014.
+[8] Blake Anderson and David McGrew. TLS Beyond the Browser: [27] Zakir Durumeric, Zane Ma, Drew Springall, Richard Barnes, Nick
+ Combining End Host and Network Data to Understand Application Sullivan, Elie Bursztein, Michael Bailey, J Alex Halderman, and Vern
+ Behavior. In Proc. of the ACM Internet Measurement Conference (IMC), Paxson. The Security Impact of HTTPS Interception. In Proc. of the
+ 2019. ISOC Network and Distributed System Security Symposium (NDSS),
+[9] Blake Anderson, Subharthi Paul, and David McGrew. Deciphering 2017.
+ Malware’s use of TLS (without Decryption). Journal of Computer [28] David Formby, Preethi Srinivasan, Andrew Leonard, Jonathan Rogers,
+ Virology and Hacking Techniques, 2018. and Raheem Beyah. Who’s in Control of Your Control System? Device
+
+ 17
+ Fingerprinting for Cyber-Physical Systems. In Proc. of the ISOC on emerging Networking EXperiments and Technologies (CoNEXT),
+ Network and Distributed System Security Symposium (NDSS), 2016. 2017.
+[29] Frolov, Sergey and Wustrow, Eric. The use of TLS in Censorship [51] Jingjing Ren, Daniel J. Dubois, and David Choffnes. An International
+ Circumvention. In Proc. of the ISOC Network and Distributed System View of Privacy Risks for Mobile Apps, 2019.
+ Security Symposium (NDSS), 2019. [52] Jingjing Ren, Martina Lindorfer, Daniel Dubois, Ashwin Rao, David
+[30] Julien Gamba, Mohammed Rashed, Abbas Razaghpanah, Juan Tapiador, Choffnes, and Narseo Vallina-Rodriguez. Bug Fixes, Improvements, ...
+ and Narseo Vallina-Rodriguez. An Analysis of Pre-installed Android and Privacy Leaks – A Longitudinal Study of PII Leaks Across Android
+ Software. In Proc. of the IEEE Symposium on Security and Privacy App Versions. In Proc. of the ISOC Network and Distributed System
+ (S&P), 2020. Security Symposium (NDSS), 2018.
+[31] Google. An Update on Android TLS Adoption. [53] Jingjing Ren, Ashwin Rao, Martina Lindorfer, Arnaud Legout, and
+ https://security.googleblog.com/2019/12/an-update-on-android-tls- David Choffnes. ReCon: Revealing and Controlling PII Leaks in Mobile
+ adoption.html, December 2019. Network Traffic. In Proc. of the International Conference on Mobile
+[32] Cyril Goutte and Eric Gaussier. A Probabilistic Interpretation of Systems, Applications and Services (MobiSys), 2016.
+ Precision, Recall and F-Score, with Implication for Evaluation. In Proc. [54] Andrew Rosenberg and Julia Hirschberg. V-Measure: A Conditional
+ of the European Conference on Information Retrieval (ECIR), 2005. Entropy-Based External Cluster Evaluation Measure. In Proc. of the
+[33] Aric Hagberg, Daniel Schult, and Pieter Swart. Exploring Network Joint Conference on Empirical Methods in Natural Language Process-
+ Structure, Dynamics, and Function using NetworkX. In Proc. of the ing and Computational Natural Language Learning (EMNLP-CoNLL),
+ Python in Science Conference (SciPy), 2008. 2007.
+[34] Tin Kam Ho. Random Decision Forests. In Proc. of IEEE International [55] Brendan Saltaformaggio, Hongjun Choi, Kristen Johnson, Yonghwi
+ Conference on Document Analysis and Recognition (ICDAR), 1995. Kwon, Qi Zhang, Xiangyu Zhang, Dongyan Xu, and John Qian.
+ Eavesdropping on Fine-Grained User Activities Within Smartphone
+[35] Paul Jaccard. The Distribution of the Flora of the Alpine Zone. New Apps Over Encrypted Network Traffic. In Proc. of the USENIX
+ Phytologist, 1912. Workshop on Offensive Technologies (WOOT), 2016.
+[36] Martin Lastovicka, Tomas Jirsik, Pavel Celeda, Stanislav Spacek, and [56] Farsight Security. Newly Observed Domains. https://www.
+ Daniel Filakovsky. Passive OS Fingerprinting Methods in the Jungle farsightsecurity.com, January 2020.
+ of Wireless Networks. In Proc. of the IEEE/IFIP Network Operations
+ and Management Symposium (NOMS), 2018. [57] Asaf Shabtai, Uri Kanonov, Yuval Elovici, Chanan Glezer, and Yael
+ Weiss. “Andromaly”: a behavioral malware detection framework for
+[37] Fangfan Li, Arian Akhavan Niaki, David Choffnes, Phillipa Gill, and Android devices. Journal of Intelligent Information Systems, 2012.
+ Alan Mislove. A Large-Scale Analysis of Deployed Traffic Differenti-
+ [58] Ravi Sharma. Android Q will let you run multiple apps simultaneously
+ ation Practices. In Proc. of the ACM Special Interest Group on Data
+ with Multi Resume feature. https://www.91mobiles.com/hub/android-
+ Communication (SIGCOMM), 2019.
+ q-multi-resume-feature-how-to-use-2-android-apps-at-same-time,
+[38] Li Li, Daoyuan Li, Tegawendé F. Bissyandé, Jacques Klein, Yves Le November 2018.
+ Traon, David Lo, and Lorenzo Cavallaro. Understanding Android App
+ [59] Statcounter. Mobile Browser Market Share Worldwide. https://
+ Piggybacking: A Systematic Study of Malicious Code Grafting. IEEE
+ gs.statcounter.com/browser-market-share/mobile/worldwide. Accessed:
+ Transactions on Information Forensics and Security, 2017.
+ February 2019.
+[39] Marc Liberatore and Brian Neil Levine. Inferring the Source of
+ [60] Statista. Number of Apps Available in Leading App Stores as of
+ Encrypted HTTP Connections. In Proc. of the ACM Conference on
+ 2nd Quarter 2019. https://www.statista.com/statistics/276623/number-
+ Computer and Communications Security (CCS), 2006.
+ of-apps-available-in-leading-app-stores/, August 2019.
+[40] Martina Lindorfer, Matthias Neugschwandtner, Lukas Weichselbaum,
+ [61] Tim Stöber, Mario Frank, Jens Schmitt, and Ivan Martinovic. Who
+ Yanick Fratantonio, Victor Van Der Veen, and Christian Platzer. Ando you sync you are? Smartphone Fingerprinting via Application
+ drubis - 1,000,000 Apps Later: A View on Current Android Malware
+ Behaviour. In Proc. of the ACM Conference on Security and Privacy
+ Behaviors. In Proc. of the IEEE International Workshop on Building
+ in Wireless and Mobile Networks (WiSec), 2013.
+ Analysis Datasets and Gathering Experience Returns for Security
+ (BADGERS), 2014. [62] Vincent F. Taylor, Riccardo Spolaor, Mauro Conti, and Ivan Martinovic.
+ AppScanner: Automatic Fingerprinting of Smartphone Apps from En-
+[41] David McGrew, Blake Anderson, Philip Perricone, and Bill Hudson.
+ crypted Network Traffic. In Proc. of the IEEE European Symposium
+ JOY. https://github.com/cisco/joy/, February 2017.
+ on Security and Privacy (EuroS&P), 2016.
+[42] David McGrew, Brandon Enright, Blake Anderson, Shekhar Acharya, [63] Vincent F Taylor, Riccardo Spolaor, Mauro Conti, and Ivan Martinovic.
+ and Adam Weller. Mercury. https://github.com/cisco/mercury, August Robust Smartphone App Identification via Encrypted Network Traffic
+ 2019. Analysis. IEEE Transactions on Information Forensics and Security,
+[43] Wes McKinney et al. Data Structures for Statistical Computing in 2018.
+ Python. In Proc. of the Python in Science Conference (SciPy), 2010. [64] Eline Vanrykel, Gunes Acar, Michael Herrmann, and Claudia Diaz.
+[44] Stanislav Miskovic, Gene Moo Lee, Yong Liao, and Mario Baldi. Leaky Birds: Exploiting Mobile Application Traffic for Surveillance.
+ AppPrint: Automatic Fingerprinting of Mobile Applications in Network In Proc. of the International Conference on Financial Cryptography
+ Traffic. In Proc. of the International Conference on Passive and Active and Data Security (FC), 2016.
+ Network Measurement (PAM), 2015. [65] Antoine Vastel, Pierre Laperdrix, Walter Rudametkin, and Romain
+[45] Travis E. Oliphant. A Guide to NumPy. Trelgol Publishing, 2006. Rouvoy. FP-STALKER: Tracking Browser Fingerprint Evolutions. In
+[46] Ioannis Papapanagiotou, Erich M Nahum, and Vasileios Pappas. Con- Proc. of the IEEE Symposium on Security and Privacy (S&P), 2018.
+ figuring DHCP Leases in the Smartphone Era. In Proc. of the ACM [66] Nguyen Xuan Vinh, Julien Epps, and James Bailey. Information
+ Internet Measurement Conference (IMC), 2012. Theoretic Measures for Clusterings Comparison: Variants, Properties,
+[47] Fabian Pedregosa et al. Scikit-learn: Machine Learning in Python. Normalization and Correction for Chance. Journal of Machine Learning
+ Journal of Machine Learning Research, 2011. Research, 2010.
+[48] Emanuele Petagna, Giuseppe Laurenza, Claudio Ciccotelli, and [67] Yong Wang, Jinpeng Wei, and Karthik Vangury. Bring Your Own
+ Leonardo Querzoni. Peel the Onion: Recognition of Android Apps Device Security Issues and Challenges. In Proc. of the IEEE Consumer
+ Behind the Tor Network. In Proc. of the International Conference on Communications and Networking Conference (CCNC), 2014.
+ Information Security Practice and Experience (ISPEC), 2019. [68] Hongyi Yao, Gyan Ranjan, Alok Tongaonkar, Yong Liao, and Zhuo-
+[49] Lawrence R. Rabiner and Bernard Gold. Theory and Application of qing Morley Mao. SAMPLES: Self Adaptive Mining of Persistent
+ Digital Signal Processing. Prentice Hall, 1975. LExical Snippets for Classifying Mobile Application Traffic. In Proc.
+ of the ACM Annual International Conference on Mobile Computing and
+[50] Abbas Razaghpanah, Arian Akhavan Niaki, Narseo Vallina-Rodriguez, Networking (MobiCom), 2015.
+ Srikanth Sundaresan, Johanna Amann, and Phillipa Gill. Studying TLS
+ Usage in Android Apps. In Proc. of the ACM International Conference
+
+ 18

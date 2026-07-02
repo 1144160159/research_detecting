@@ -1,0 +1,819 @@
+288 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ Learning Subgraph-Based Normality for
+ Interpretable Graph-Level Anomaly Detection
+ Ge Zhang , Zhenyu Yang , Jia Wu , Senior Member, IEEE, Pengfei Jiao , Member, IEEE,
+ Jian Yang , Member, IEEE, Hao Peng , Senior Member, IEEE, and Xixun Lin
+
+ Abstract—Graph-level anomaly detection (GLAD) aims to I. I NTRODUCTION
+identify graphs that significantly deviate from others in a graph RAPHS are commonly used to model relational data
+dataset. Existing methods predominantly rely on standard Graph
+Neural Networks (GNNs) to learn graph representations, but
+they often overlook subgraph-level information, which provides
+ G in various fields, including chemistry, finance, social
+ networks, and cybersecurity [1], [2]. The task of detecting
+essential structural and semantic cues for distinguishing normal anomalies within graphs has garnered significant interest from
+and anomalous graphs. This limitation not only compromises both academia and industry. Although anomalies are often
+the detection performance but also hinders the interpretability associated with individual nodes, they can also manifest as
+of GLAD predictions. To address these challenges, we propose
+NGLAD, a novel framework that introduces the concept of atypical graphs within a collection or database of graphs [3],
+normality-relevant subgraphs that capture shared patterns across [4]. Graph-level anomaly detection (GLAD) refers to the chalnormal graphs. These subgraphs serve as key indicators to lenge of identifying graphs that differ significantly from the
+distinguish normal graphs from anomalies that that often lack or majority in a given dataset. Identifying these anomalous graphs
+deviate from such patterns. During model training, by explicitly is crucial for maintaining societal stability and safeguarding
+modeling the shared subgraph patterns inherent in normal
+graphs through a Subgraph Extractor and a Normality Learner, business interests, such as uncovering fraud syndicates [5].
+NGLAD identifies the subgraphs most relevant to normality. Recent advances in GLAD [6], [7], [8] typically assume
+Leveraging the One-class Information Bottleneck principle, these that the graph representations produced by Graph Neural
+modules ensure that the extracted subgraphs retain only the most Networks (GNNs) are adequate to differentiate anomalous
+informative features of normality while filtering out irrelevant graphs from normal ones. These approaches often integrate
+nodes and edges. During inference, NGLAD detects anomalies
+by evaluating inconsistencies in representations between the traditional anomaly detection techniques, such as one-class
+input graph and its extracted subgraph. Extensive evaluations classification [9] and knowledge distillation [10], with standard
+on synthetic and real-world datasets demonstrate that NGLAD message-passing GNNs. However, these methods lack the
+significantly outperforms state-of-the-art methods in detection ability to explain the reasoning behind their predictions, i.e.,
+performance while offering interpretable explanations. they do not clarify why a particular graph is considered
+ Index Terms—Graph-level anomaly detection, graph neural normal or anomalous. In practical settings, providing clear
+networks, explanation. explanations for anomaly detection is crucial. Explanatory
+ models in GLAD increase trustworthiness and ensure that the
+ models meet safety and security standards [11], [12], [13],
+ [14], [15]. For instance, an explainable intrusion detection
+ Received 31 January 2025; revised 31 October 2025; accepted 16 December system can not only detect intrusions but also identify spe-
+2025. Date of publication 26 December 2025; date of current version
+29 December 2025. This work was supported in part by Shanghai Pujiang cific intrusion patterns, making the model’s predictions more
+Program under Grant 24PJA004; in part by the Fundamental Research Funds reliable.
+for the Central Universities under Grant 2232025D-33; in part by the National We propose that the key to interpreting GLAD’s predictions
+Natural Science Foundation of China under Grant 62402491, Grant 62372146,
+Grant 62322202, and Grant U25B2029; in part by China Postdoctoral Science lies in learning the shared subgraph patterns inherent in normal
+Foundation under Grant 2025M771524; and in part by the Key Technology graphs, which are typically missing or disrupted in anoma-
+Research and Development Program of the Zhejiang Province under Grant lous ones. These patterns, referred to as normality-relevant
+2025C01023. The associate editor coordinating the review of this article
+and approving it for publication was Dr. Angelo Spognardi. (Corresponding subgraphs, serve as primary indicators of normality by encapauthors: Pengfei Jiao; Xixun Lin.) sulating the shared structural and semantic information within
+ Ge Zhang is with the School of Information and Intelligent Science, normal graphs. As shown in Fig. 1, the “house”-like sub-
+Donghua University, Shanghai 201620, China (e-mail: gezhang@dhu.edu.cn).
+ Zhenyu Yang, Jia Wu, and Jian Yang are with the School of Com- graph functions as a normality-relevant subgraph in the graph
+puting, Macquarie University, Sydney, NSW 2109, Australia (e-mail: dataset. Specifically, graphs Ga and Gc are identified as normal
+zhenyu.yang@mq.edu.au; jia.wu@mq.edu.au; jian.yang@mq.edu.au). due to the presence of this “house”-like subgraph, while graphs
+ Pengfei Jiao is with the School of Cyberspace, Hangzhou Dianzi University,
+Hangzhou 310018, China (e-mail: pjiao@hdu.edu.cn). Gb and Gd are detected as anomalous, as the subgraph-level
+ Hao Peng is with the School of Cyber Science and Technology, Beihang patterns in these two graphs diverge from the normal pattern.
+University, Beijing 100191, China (e-mail: penghao@buaa.edu.cn). This illustrative example reflects a general phenomenon that
+ Xixun Lin is with the Institute of Information Engineering, Chinese
+Academy of Sciences, Beijing 100085, China (e-mail: linxixun@iie.ac.cn). can also be observed in real-world domains. For instance,
+ Digital Object Identifier 10.1109/TIFS.2025.3647221 in molecular screening, biologically active compounds often
+ 1556-6021 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+ZHANG et al.: LEARNING SUBGRAPH-BASED NORMALITY FOR INTERPRETABLE GLAD 289
+
+ evaluates discrepancies between the extracted subgraphs and
+ the normality of normal graphs, while the mutual information
+ term ensures that only the most informative subgraphs are
+ retained, filtering out irrelevant nodes and edges. Through
+ this probabilistic optimization, NGLAD effectively isolates
+ normality-relevant subgraphs and encodes them for graphlevel representations. During inference, NGLAD evaluates
+ the inconsistency between the representations of an input
+ graph and its extracted subgraph to determine abnormality.
+ Normal graphs yield lower anomaly scores, as the model has
+ been trained to extract subgraphs that capture the intrinsic
+ normality of normal graphs. We summarize contributions as
+Fig. 1. A toy example about the differences between normal and anomalous follows:
+graphs. Graphs Ga and Gc are identified as normal with low anomaly scores • Meaningful insight. We introduce the insight that
+because they both contain the “house”-like subgraph, which is learned as a
+normality-relevant subgraphs. In contrast, graphs Gb and Gd are flagged as normality-relevant subgraphs, which capture the most
+anomalous with higher anomaly scores, because that it have different local indicative and shared patterns within normal graphs,
+patterns with the normal graphs. are essential for improving detection performance and
+ enabling self-interpretability in GLAD.
+ • Novel algorithm. We propose NGLAD, a novel algocontain functional groups such as carboxyl or hydroxyl groups, rithm for detecting graph anomalies through subgraphwhich often participate in key interactions contributing to based normality learning. By integrating the Subgraph
+biological activity. In contrast, inactive compounds may lack Extractor and Normality Learner modules into the OIB
+such groups or possess modifications that disrupt these inter- framework, NGLAD captures the normality across graphs
+action patterns. In particular, incorporating normality-relevant and uses these features to distinguish anomalous from
+subgraphs in GLAD not only enhances anomaly detection, but normal graphs.
+also provides interpretability, enabling the model to explain • Extensive Evaluation. Extensive experiments on synwhy specific graphs are identified as normal or anomalous. thetic and real-world graph dataset demonstrate that
+ Despite its promise, effectively leveraging subgraph-based NGLAD outperforms existing methods in both prediction
+normality learning for GLAD remains challenging: How can and interpretation. Visualization experiments highlight the
+we identify subgraphs that capture the most representative subgraphs identified by NGLAD, effectively explaining
+normality across the graph dataset? Several recent works have the normal or anomalous characteristics of graphs. We
+attempted to address this challenge. SIGNET [16] improves also conducted time efficiency experiments to demonthe explainability of GLAD by extracting subgraphs through strate that NGLAD is computationally efficient.
+minimizing the multi-view mutual information between the
+original graph view and its hypergraph view. However, it II. R ELATED W ORKS
+only considers intra-graph consistency and ignores structural
+regularities shared across normal graphs. Consequently, the A. Graph Neural Networks
+extracted subgraphs may be coherent within individual graphs Graph Neural Networks (GNNs) have shown substantial
+but fail to represent patterns typical of the entire normal graph success in various prediction tasks on graph-structured data,
+population. GLADPro [17] interprets GLAD through learnable including node and graph classification [19], [20], [21], [22].
+prototype representations. Yet, obtaining representative sub- 1) Message-Passing Neural Networks: GNNs that incorgraphs that embody the normality of normal graphs is still porate spatial graph convolution [23], [24], [25] are often
+challenging, as converting prototypes into actual subgraphs discussed within the context of message-passing neural netrequires heuristic procedures. works (MPNNs) [21], [26], [27], [28]. These MPNNs typically
+ To address the aforementioned challenges, we propose a update each node’s representation by iteratively aggregating
+novel GLAD method called Self-interpretable Graph-level information from neighboring nodes. To construct a graph-
+Anomaly Detection via Subgraph-based Normality Learn- level representation, MPNNs employ a readout function or
+ing (NGLAD for abbreviation). NGLAD explicitly learns pooling operation on the node embeddings after the message
+normality-relevant subgraphs through the combination of two passing process. The readout function can be as simple as
+innovative modules: firstly, a Subgraph Extractor, proposed to taking the sum, average, or max of all node embeddings in the
+identify potential subgraphs from each input graph; Secondly, graph. Alternatively, more sophisticated pooling techniques,
+a Normality Learner enables the model to extract subgraphs such as hierarchical pooling [29], can be used to selectively
+that capture patterns shared across normal graphs while faith- aggregate node information, potentially giving more weight to
+fully representing their original graphs. We optimize NGLAD certain nodes or regions of the graph. The ability of GNNs to
+using the One-class Information Bottleneck (OIB) principle distinguish various graph structures is essential, as it directly
+[18], which combines the Subgraph Extractor and the Nor- impacts their effectiveness in capturing relational patterns and
+mality Learner via a probabilistic framework with a distortion encoding structural information critical to downstream tasks
+term and a mutual information term. The distortion term [14], [30], [31], [32]. The Graph Isomorphism Network (GIN)
+290 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+[26], for example, achieves equivalence to the 1-Weisfeiler- in the dataset [39], [40]. Various graph anomaly detection
+Lehman (1-WL) test [33] by incorporating a multi-layer algorithms have been developed, often leveraging metrics
+perceptron (MLP) into its aggregation function. Further, some like distance-based [41], [42], [43] and density-based [44]
+GNNs leverage subgraphs to capture localized structural pat- measures to quantify deviations among samples. In particuterns, allowing for more expressive graph representations. lar, methods such as one-class classification [9], [45] have
+For example, Zhang and Li [14] proposed to improve upon emerged as prominent approaches. These methods focus on
+traditional GNNs by using rooted subgraphs. Specifically, distinguishing normal samples from potential anomalies by
+it applies a base GNN to learn node representations based learning a decision boundary that encompasses the majority
+a subgraph around it, and pools them to form a whole- class, effectively identifying outliers that fall outside this
+graph representation, offering superior power compared to the boundary.
+1-WL algorithm, especially in distinguishing r-regular graphs. 1) Graph-Level Anomaly Detection: Graph anomaly detec-
+In addition, Zhao et al. [15] proposed a framework that tion has gained significant traction, particularly with GNNenhances the expressiveness of MPNNs by extending local based methods, shifting from a primary focus on detecting
+aggregation from star-shaped patterns to general subgraph anomalous nodes [46], [47], [48], [49] to addressing anomapatterns (e.g., k-ego nets). The framework uses a GNN-based lous graphs, which are crucial for applications like anomalous
+subgraph encoder, offering a more powerful representation functional molecule recognition [4] and brain network analysis
+than 1-WL and 2-WL, with minimal scalability overhead and [50]. For example, Zhao and Akoglu [7] introduced the first
+improved performance on graph machine learning tasks. GLAD method called OCGIN, which integrates one-class clas-
+ 2) Interpretable Graph Neural Networks: Since GNNs sification with GNNs to identify anomalous graphs. However,
+leverage both node attributes and structural information, their they discovered that this type of method often experiences
+interpretability often centers around identifying influential “performance flip”, where the model performs worse than
+subgraphs or feature sets that play a crucial role in the random on at least one experimental variant. To address this
+model’s decision-making process. A wide array of post-hoc issue, Qiu et al. [6] developed a new self-supervised GLAD
+explanation methods has been proposed to analyze pre-trained model named OCGTL, consisting of multiple jointly trained
+GNNs. These techniques typically work by post-processing GNNs. Another self-supervised approach, GOOD-D [51], utia trained GNN and focusing on identifying the parts of lizes contrastive learning to capture latent patterns shared
+the graph that contribute most to the final output. They by normal graphs. Additionally, the knowledge distillationgenerally employ combinatorial search techniques to isolate based method GLocalKD [8] employs a different mechanism
+critical substructures within the input graphs, such as attention to identify the major patterns in normal graphs. It trains a
+mechanisms, gradient-based attribution, and subgraph selec- predictor GNN to represent normal graphs, aligning its outputs
+tion methods [34], [35], [36], [37]. In contrast, some studies with those of another GNN that has randomly initialized and
+have proposed inherently interpretable GNN models, where fixed weights.
+the interpretability is integrated into the model architecture 2) Interpretable Graph-Level Anomaly Detection: Few
+itself rather than relying on post-hoc analysis [13], [38]. GLAD methods have recognized the significance of subgraphs
+For example, GSAT [11] introduces a stochastic attention for the GLAD task; however, they do not specify which types
+mechanism that directs the model’s focus toward task-relevant of subgraphs are effective for differentiating between normal
+subgraphs, thus enhancing the interpretability of the decision and anomalous graphs. For example, iGAD [4] integrates the
+process. These inherently interpretable models aim to improve random walk with GNN to explore anomalous substructures.
+the transparency of the GNN by design, enabling clearer However, regarding the GLAD problem as the binary graph
+insights into how decisions are made without the need for classification task make the approach less adaptable to the
+additional explanation methods. variations found in anomalous graphs. Another approach,
+ However, most of the existing research on GNN explainers SIGNET [16] introduces the hypergraph as a supplemental
+has focused on supervised learning settings, particularly node view of the original graph and maximize the mutual inforor graph classification tasks, which often assume labeled mation between subgraphs extracted from the supplemental
+data for training. This presents a significant challenge when and original views. However, its limitation lies in primarily
+attempting to apply these methods to GLAD problems [16], focusing on each single graph, without effectively capturing
+where anomalies need to be identified without explicit labels the characteristics shared by the entire group of normal graphs.
+for abnormal or normal instances. In GLAD, the focus is GLADPro [17] proposes to provide global explanations for
+often on detecting structural deviations or outliers in an GLAD by learning several prototype representations that
+unsupervised manner, making it more difficult to interpret the characterize the normal graph population. However, these
+learned representations. Thus, there is a need for explanation prototypes exist only as embedding vectors, and mapping
+techniques tailored to GLAD that can uncover the reasons them to actual subgraphs relies on heuristic strategies. In
+behind anomaly detection decisions. addition, determining the appropriate number of prototypes
+ remains a challenging problem. This paper enhances GLAD
+B. Graph Anomaly Detection through subgraph-based normality learning, aiming to cap-
+ Graph Anomaly detection focuses on identifying samples ture the most informative local features of each normal
+(i.e., nodes, edges, subgraphs, and graphs) that signifi- graph that contribute to the overall normality of the graph
+cantly deviate from the majority, flagging potential outliers dataset.
+ZHANG et al.: LEARNING SUBGRAPH-BASED NORMALITY FOR INTERPRETABLE GLAD 291
+
+ III. P RELIMINARIES the subgraph G(S ) provide insights into the reasoning behind
+A. Graph the identification of the input test graph as either normal or
+ anomalous.
+ A graph can be denoted as G = (VG , EG ), where VG is the
+set of n nodes, EG is the set of m edges. The topology of G
+can be modeled as an adjacency matrix AG ∈ {0, 1}n×n , where E. One-Class Information Bottleneck (OIB)
+AG (ui , u j ) = 1 if there is an edge between nodes ui and u j , The OIB [18] aims to identify a coherently structured subset
+i.e., (ui , u j ) ∈ EG , otherwise AG (ui , u j ) = 0. XG ∈ Rn×d is the of samples from a dataset X = {x1 , . . ., xn } and project this
+attribute matrix of Gi , each row vector xu ∈ Rd is associate subset into a compact yet informative representation space C.
+with the attribute vector of node ui ∈ VG . In the context of the one-class problem, this objective is formulated as minimizing a tradeoff between two complementary
+B. Normality-Relevant Subgraph terms:
+ min [D(C, w; X) + I(C; X)] . (2)
+ A normality-relevant subgraph, denoted as G(S ) , refers to w
+a specific part of a normal graph G that mostly indicates its The first term, D(C, w; X), is the distortion term, which
+normal characteristics. In general, such subgraphs are present measures the closeness between the representation space C and
+in normal graphs but absent in anomalous ones. For example, the original data X. Specifically, for a sample xi assigned to a
+in identifying mutagenic molecules, functional groups like coherently structured region, a penalty is imposed according
+NH2 and NO2 serve as normality-relevant subgraphs, as their to its distance from the region center w in C. Minimizing
+presence typically indicates mutagenicity. In contrast, anoma- this term encourages samples within the same coherent region
+lous, non-mutagenic molecules lack these functional groups. to cluster together, yielding a compact and consistent representation. The second term, I(C; X), quantifies the mutual
+C. Graph Neural Networks (GNNs) information between C and X, ensuring that the representation
+ GNN are deep learning models proposed to process graph- retains only samples relevant to the coherent structure while
+structured data by leveraging the relationships between nodes excluding those that cannot form tight connections. By jointly
+and their neighbors to learn representations at node-level minimizing these two terms, the model learns a representation
+or graph-level. Node feature representations are initialized space composed of a subset of samples from X that is both
+according to their corresponding attributes, i.e, h(0) compact and informative, effectively capturing the coherently
+ ui = xui ,
+GNNs updates the node representation by iteratively aggregat- structured regions while excluding samples that do not belong
+ing the representations coming from its one-hop neighborhood. to these regions.
+The formulation is: The OIB principle inspires us to design a mechanism for
+ identifying normality-relevant subgraphs from normal graphs.
+ h(l) (ui ) = fCombine (h(l−1) (ui ), The rationale is based on the observation that normalityfAggregate ({h(l−1) (u j ), u j ∈ N (ui )}) (1) relevant subgraphs form coherent regions, consistent with
+ OIB’s objective of identifying coherent subsets from data
+where l ∈ {1, . . . , L}, h(l) (ui ) ∈ Rq denotes the immediate samples and representing them concisely and informatively.
+representation of node ui at the l-th graph convolution. N (ui ) By treating subgraphs within normal graphs as elements of
+denotes the 1-hop neighborhood of node ui . fAggregate denotes the graph dataset, OIB has the potential to guide the model to
+how to aggregate neighbors of node ui , and fCombine defines focus on subgraphs that capture common structural patterns
+how to combine the immediate representations of node ui shared across normal graphs, while filtering out irrelevant
+and its neighborhood. h(ui ) = h(L) (ui ) is the final node rep- information. As a result, the OIB framework provides a
+resentation of ui , where h(ui ) ∈ R p . The graph representation principled criterion for selecting subgraphs that effectively
+h(G) ∈ R p is generally obtained via the graph pooling methods capture the inherent normality of the graph collection. Howapplying on {h(ui ), ui ∈ VG }, e.g., sum-based or average-based ever, adapting OIB for interpretable GLAD is a nontrivial
+node representation aggregation. endeavor, involving the design of a subgraph extraction mechanism and the requirement that selected subgraphs remain
+D. Graph-Level Anomaly Detection (GLAD) both informative and interpretable, which further demands
+ careful reformulation of the distortion and mutual information
+ The traditional GLAD framework, represented as
+ terms.
+score(G) = f (G), involves identifying anomalous graphs from
+the graph dataset by learning the anomaly score score(G)
+for each input graph G. This score serves as an indicator of IV. M ETHODOLOGY
+the degree of abnormality. In this paper, given the training This section provides a detailed overview of the proposed
+graph set G consists of N normal graphs, we aim to train NGLAD model, with its pipeline illustrated in Fig. 2. The
+a self-interpretable GLAD model (G(S ) , score(G)) = f (G), methodology begins with the NGLAD framework overview
+where G(S ) is the key subgraph extracted from the graph (Sec. IV-A), where we focus on the optimization objective
+G. If a test graph G having the higher anomaly score, it grounded in the OIB principle. Next, we discuss the Subindicates that G deviates from the normality in the graph graph Extractor module (Sec. IV-B), detailing the methodology
+dataset, thus being detected as a anomalous graph. Moreover, for extracting subgraphs from input graphs. The Normality
+292 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 2. The overall pipeline of the proposed NGLAD model consists of two key modules: the Subgraph Extractor and the Normality Learner. The Normality
+Learner includes a Shared GNN Encoder, a Gaussian Encoder, and a Fixed Random MLP. As illustrated in the figure, NGLAD learns normal graph samples
+by extracting subgraphs relevant to normality. The subgraph within the red dashed circle highlights those that are normality-relevant.
+
+Learner module consisting of a Shared GNN Encoder, a Learner Φ, which evaluates how well the extracted subgraphs
+Gaussian Encoder and a Random Fixed MLP (Sec. IV-C) preserve the inherent normality patterns in the normal graph
+is then described, which learns the alignment between those collection. This formulation generalizes the notion of coherextracted subgraphs and the normality present in normal ence in OIB from generic data subsets to graph-structured data.
+graphs. Afterwards, we describe the training process of (3) Graph-specific mutual information measurement:
+NGLAD (Sec. IV-D) and explain how NGLAD detects anoma- The mutual information term I(Ψ(G; Θ); G) quantifies the
+lous graphs and interprets GLAD (Sec. IV-E). Finally, we retained information between the extracted subgraphs G(S ) and
+analyze its model complexity (Sec. IV-F). the original graph G. The computation of mutual information
+ in graph structures presents a significant challenge because of
+A. Framework Overview of NGLAD the intricate dependencies among nodes and edges.
+ By jointly minimizing the newly proposed distortion term
+ NGLAD is a novel framework for self-interpretable GLAD
+ and mutual information term, NGLAD identifies normalityvia subgraph-based normality learning. It extends OIB from
+ relevant subgraphs that ensure informativeness and compact-
+Euclidean space to graph-structured data. To this end,
+ ness while excluding redundant nodes and edges that do not
+NGLAD introduces the Subgraph Extractor and Normality
+ contribute to normality.
+Learner, which allow the model to identify normality-relevant
+subgraphs from normal graph data and interpret GLAD predictions. Formally, the optimization objective of NGLAD is B. NGLAD: The Subgraph Extractor
+defined as:
+ For an input graph G, the Subgraph Extractor Ψ(G; Θ) firstly
+ min D(Ψ(G; Θ), Φ; G) + I(Ψ(G; Θ); G), (3) learns the node representations {h(ui ) ∈ Rq |ui ∈ VG } through
+ Ψ,Φ
+ a GNN backbone. A multi-layer perceptron (MLP) with a
+where Ψ and Φ denote the Subgraph Extractor and the sigmoid activation is then applied to these node representations
+Normality Learner, respectively. These two modules are to compute the probability vector p ∈ Rn , where each entry
+jointly designed to identify normality-relevant subgraphs from p(ui ) denotes the probability of sampling node ui to form the
+normal graphs. While Eq. (3) is inherited from the OIB subgraph G(S ) , as shown below:
+principle, its adaptation in NGLAD necessitates new module designs, including subgraph extraction strategies, graph p(ui ) = σ (MLP(h(ui ))) . (4)
+normality learning, and graph-specific information measures,
+all of which are specifically tailored for interpretable GLAD. Nodes are then sampled according to these probabilities, i.e.,
+Specifically, NGLAD introduces the following key innovations aui ∼ Bernoulli(p(ui )). If aui = 1, node ui is selected for the
+upon OIB: subgraph G(S ) ; otherwise, it is excluded.
+ (1) Subgraph extraction for normality modeling: Unlike However, since the sampling operation makes the gradient
+OIB, which operates on Euclidean data, NGLAD incorporates with respect to p(ui ) non-computable, it prevents backpropa Subgraph Extractor Ψ(G; Θ) to identify candidate subgraphs agation and end-to-end training. To overcome this, we use
+G(S ) that capture structural patterns shared across normal the Gumbel-Softmax reparameterization trick [52]. Instead of
+graphs. This extractor explicitly models complex dependencies directly sampling binary values, a continuous approximation
+between nodes and edges, a challenge that the original OIB is introduced, where each node in G is assigned a soft weight
+framework does not consider. âui ∈ (0, 1), calculated as:
+ (2) Normality-driven distortion evaluation: The distortion log() − log(1 − ) + p(ui )
+  
+term D(Ψ(G; Θ), Φ; G) is defined with respect to a Normality âui = σ , (5)
+ τ
+ZHANG et al.: LEARNING SUBGRAPH-BASED NORMALITY FOR INTERPRETABLE GLAD 293
+
+where  ∼ Uniform(0, 1) and τ is the temperature parameter. we employ the reparameterization trick [53] for gradient
+When τ → 0, âui approaches a binary value, effectively estimation, expressed as follows:
+approximating the sampling process.
+ Once the soft node selections are determined, the edge ĥ(G(S ) ) = u(G(S ) ) + σ(G(S ) )I , (12)
+weights for the subgraph G(S ) are computed based on these where  ∈ N (0, I) is the independent Gaussian noise and
+node weights. Specifically, if an edge ei j exists between nodes denotes the element-wise product.
+ui and u j in G, the corresponding edge in G(S ) is assigned a Further, the similarity of subgraphs G(S ) extracted from
+weight as follows: different input graphs G will be accomplished by miniêi j = âui · âu j . (6) mizing the Kullback leibler (KL) divergence [54] between
+ N u(G(S ) ), σ(G(S ) )I and Pnormal . The KL divergence can be
+This approach allows the construction of the subgraph G(S )
+ calculated as follows:
+while ensuring differentiability throughout the entire process.
+ 1 X
+ L1 = min KL[N u(G(S ) ), σ(G(S ) )I ||N (r, σ2 I)]
+ 
+ Θ,Φ N
+ G (S )
+C. NGLAD: The Normality Learner p
+ 1 XX σ
+ To guide the Subgraph Extractor to extract the potential = min log
+normality-relevant subgraphs, the Normality Learner mod- Θ,Φ N p
+ (S )
+ σ(G (S ) )
+ t
+ G t=1
+ule has two primary functions: (1) assessing the similarity 2
+ σ(G(S ) )t + (µ(G(S ) )t − rt )2 1
+of subgraphs extracted from different training graphs, as + − , (13)
+ 2σ2 2
+normality-relevant subgraphs are expected to capture the
+shared structural patterns inherent in normal graphs, and (2) For Pnormal = N (r, Σ), we derive r by averaging all subgraph
+ensuring that the representation of G(S ) is closely aligned with representations ĥ(G(S ) ) and we set Σ = σ2 I, where σ is a
+that of G, as G(S ) should effectively capture the most salient hyperparameter. During training, the mean vector r of Pnormal
+features of G, particularly those indicative of its normality. will be updated every m epochs through:
+After extracting the subgraph G(S ) through the Subgraph 1 X
+Extractor, we employ the Shared GNN Encoder fGNN to r← ĥ(G(S ) ). (14)
+ N
+represent G(S ) and G as h(G(S ) ) ∈ R p and h(G) ∈ R p , G∈G
+
+respectively. The formulations are shown as below: 2) Measuring Representation Alignment: In the normality
+ learner, following the Shared GNN Encoder, apart from the
+ h(G(S ) ) = fGNN (G(S ) ), (7) Gaussian Encoder, we also have a Fixed Random MLP fMLP
+and with its parameters fixed to the random initialization. This path
+ is specialized in representing graph G, with the representation
+ h(G) = fGNN (G). (8)
+ defined as:
+Next, we will detail how the Normality Learner evaluates sub- ĥ(G) = fMLP (h(G)). (15)
+graph similarity and measures the alignment in representations.
+ To make the representation of G(S ) is closely aligned with that
+ 1) Establishing Subgraph Similarity: We assume that the
+ of G, we minimize the difference between ĥ(G(S ) ) and ĥ(G):
+representation process accomplished by the Shared GNN
+Encoder incurs no information loss, thereby allowing us to 1 X
+ L2 = min kĥ(G) − ĥ(G(S ) )k2 . (16)
+establish subgraph similarity within the graph representa- Θ,Φ N
+ G∈G
+tion space. To prompt the similarity among subgraphs G(S )
+extracted from various input graphs, we aim to make the the By randomly initializing the parameters of fMLP and keeping
+representations of subgraph extracting from different inputs them fixed during training, it effectively acts as a fixed random
+conform to the Gaussian distribution Pnormal = N (r, Σ), where projection that can only output stable features from the input
+r ∈ R p is the mean vector, Σ ∈ R p×p is the covariance matrix. graph G. This design requires the subgraph extractor to select
+ We firstly utilize a Gaussian Encoder fGau to standardize all subgraphs G(S ) that can capture these stable normality features
+subgraph representations h(G(S ) ) output by the Shared GNN from G. Moreover, gradient backpropagation from fMLP to the
+encoder, shown as below: shared GNN encoder is blocked, preventing interference with
+ the learning of graph representations. As a result, the Sub-
+ P(ĥ(G(S ) )|h(G(S ) ) = N u(G(S ) ), σ(G(S ) )I ,
+ 
+ (9) graph Extractor bears the primary responsibility for capturing
+ essential information, rather than allowing the Shared GNN
+where Encoder to compensate for suboptimal subgraph selection.
+ µ
+ u(G(S ) ) = fGau (h(G(S ) )) (10)
+
+and D. Model Training
+ σ
+ σ(G (S )
+ ) = fGau (h(G(S ) )), (11) The distortion term that evaluates the discrepancies between
+ the extracted subgraphs and the inherent normality can be
+where u(G(S ) ) ∈ R p represents the mean vector, σ(G(S ) )I formulated as:
+represents the covariance matrix, σ(G(S ) ) ∈ R p and I ∈ R p×p
+is an identity matrix. To obtain ĥ(G(S ) ) ∼ N (u(G(S ) ), σ(G(S ) )), D (Ψ(G; Θ), Φ; G) = L1 + L2 . (17)
+294 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Minimizing this term encourages the Subgraph Extractor 1) Identify Anomalous Graphs: For a test graph G, its
+Ψ(G; Θ) to identify normality-relevant subgraphs from each anomaly score is defined by the prediction error between the
+input graph G. However, optimizing this term alone cannot graph and its extracted subgraph representations:
+guarantee that G(S ) excludes nodes and edges unrelated to the
+normality. To address this, we also minimize the mutual infor- score(G) = kĥ(G) − ĥ(G(S ) )k2 . (21)
+mation term I(Ψ(G; Θ); G), i.e., I(G; G(S ) ), while quantifies the During training, NGLAD learns to extract subgraphs G(S ) that
+information retained G(S ) about G. Since directly minimizing represent the intrinsic normality of normal graphs. Therefore,
+I(G; G(S ) ) is intractable, we instead focus on finding its upper during inference, a normal graph G will yield a lower anomaly
+bound, with the derivation process below: score. In contrast, NGLAD has not been trained to extract
+ I(G(S ) ; G) representative subgraph G(S ) for anomalous graphs, which
+ results in higher anomaly scores for these instances. This
+ X P(G(S ) | G)
+ = P(G(S ) | G)P(G) log distinction in anomaly scores between normal and anomalous
+ P(G(S ) ) graphs allows NGLAD to effectively identify anomalies.
+ (S )
+ G ,G
+ X P(G(S ) | G) Q(G(S ) ) 2) Explanation: NGLAD provides explanations by iden-
+ = P(G(S ) | G)P(G) log · tifying “normality-relevant” subgraphs, which are shared
+ P(G(S ) ) Q(G(S ) )
+ G(S ) ,G substructures commonly found in normal graphs. For normal
+ X P(G(S ) | G) · Q(G(S ) ) graphs, these subgraphs serve as their most discriminative
+ = P(G(S ) | G)P(G) log
+ Q(G(S ) ) · P(G(S ) ) components, explaining why a graph is identified as normal.
+ G(S ) ,G
+ In practice, altered in normality-relevant subgraphs often sig-
+ X P(G(S ) | G) nal the presence of anomalies. Specifically, the presence of
+ = P(G(S ) | G)P(G) log
+ Q(G(S ) ) subgraphs that resemble normal patterns but exhibit critical
+ G(S ) ,G
+ deviations within a graph indicates a departure from normality,
+ X P(G(S )
+ − P(G(S ) ) log contributing to the anomaly. NGLAD’s ability to identify
+ Q(G(S ) ) subgraphs relevant to normality enables it to detect changes in
+ G(S )
+ these subgraphs. Thus, NGLAD not only identifies anomalies
+ X
+ = P(G)KL[P(G(S ) | G)||Q(G(S ) )]
+ G
+ but also explains the source of abnormality, enhancing the
+ − KL[P(G(S ) )||Q(G(S ) ] interpretability of its predictions. As aforementioned, âui and
+ X êi j represent the soft weights of node ui and edge ei j in G,
+ ≤ P(G)KL[P(G(S ) | G)||Q(G(S ) )], (18) respectively. A threshold-based or top-k selection strategy can
+ G be applied to obtain the explanation subgraph Ĝ(S ) .
+where Q(G(S ) ) is the variational approximation of P(G(S ) ).
+ (S )
+ P minimizing I(G ; G) can )be transferred to min-
+Therefore, F. Model Complexity Analysis
+imize G P(G)KL[P(G(S ) | G)||Q(G(SQ )]. As aforementioned
+ n Within this subsection, we denote the number of graphs
+in the Sec. IV-B, P(G(S ) | G) = Qni )), aui ∼
+ i=1 p(aui |p(u
+ as N, and the average numbers of nodes and edges as n
+Bernoulli(p(ui )). Similarity, Q(G(S ) | G) = i=1 p(bui |r),
+ and m, respectively. At each training epoch, the Subgraph
+bui ∼ Bernoulli(r), r ∈ (0, 1) is a prior parameter. Finally,
+ Extractor requires O(N(m + n)) complexity. The GNN conwe can obtain:
+ sumes O(N(Lmd + nd)), where L denotes the number of
+ 1 X graph convolution layers and d represents the latent dimen-
+ L3 = min I(G(S ) ; G)
+ Θ N sion of graph representations. The distortion terms L1 + L2
+ G
+ 1 X require O(Nd), while the mutual information term L3 incurs a
+ = min KL[P(G(S ) | G)||Q(G(S ) ) complexity of O(Nn). Therefore, the overall time complexity
+ Θ N
+ G
+ of NGLAD is O(N(Lmd + nd + m + n)). During inference,
+ 1 XX p(ui )
+ = min p(ui ) log NGLAD only performs the forward pass through the Subgraph
+ Θ Nn r
+ G ui ∈VG Extractor and GNN module, resulting in a complexity of
+ 1 − p(ui ) O(N(Lmd + nd + m + n)) of N graphs. This is the same as
+ + (1 − p(ui )) log . (19) the forward computation in training, without the additional
+ 1−r
+ overhead of backpropagation and parameter updates. The
+Thus, during model training, the final optimization objective
+ pseudo code is illustrated in Algorithm 1.
+L is the summation of L1 , L2 , and L3 :
+ Among recent methods specifically designed for inter-
+ L = L1 + L2 + L3 . (20) pretable GLAD, SIGNET [16] has a theoretical time complexity of O(N(Lmd+nd+m+n)), which can be comparable to that
+ of NGLAD. However, this equivalence holds only under strict
+E. Model Inference assumptions: the GNN encoder for the original graph and the
+ In this part, we will detail how our proposed GLAD HGNN encoder for the hypergraph view must be executed in
+model, NGLAD, identifies anomalous graphs and provides parallel, and the additional cost of constructing the hypergraph
+explanations for its predictions during the model inference is not considered. In practice, these conditions may not always
+phase. be achievable, making SIGNET potentially less efficient than
+ZHANG et al.: LEARNING SUBGRAPH-BASED NORMALITY FOR INTERPRETABLE GLAD 295
+
+Algorithm 1 Forward Propagation of NGLAD TABLE I
+ S TATISTICAL I NFORMATION OF R EAL -W ORLD AND S YNTHETIC G RAPH
+ DATASETS . T HE L AST C OLUMN I NDICATES W HETHER E ACH DATASET
+ P ROVIDES G ROUND -T RUTH E XPLANATIONS FOR
+ Q UANTITATIVE E VALUATION
+
+ • Mutagen is a dataset aimed at predicting molecular properties and includes both mutagenic and non-mutagenic
+ compounds [55]. The presence of functional groups
+ such as -NO2 and -NH2 typically indicates mutagenicity. In this context, we regard mutagenic molecules as
+ the normal class and consider non-mutagenic molecules
+ as anomalies. The -NO2 and -NH2 groups in the
+ mutagenic compounds serve as the normality-relevant
+ subgraphs.
+ • MNIST is derived from the MNIST-75sp superpixel
+ dataset [56] and has been converted into graph-structured
+ data. We randomly select three out of the ten classes,
+ corresponding to the digits 0 to 9, to represent the normal,
+ while the remaining classes are identified as anomalies. In
+ the normal graphs, the segments most closely associated
+ with the represented digit are identified as normalityrelevant subgraphs.
+NGLAD. GLADPro [17] requires O(N(Lmd+nd+m+n+N)),
+ • BA-TYPE, BA-COUNT, and BA-SIZE are synthetic
+where the extra O(N 2 ) complexity is incurred due to the
+ datasets created using widely synthetic benchmarks [13],
+prototype-learning procedure.
+ utilizing Barabási-Albert (BA) graphs that incorporate
+ various motifs. In the BA-TYPE dataset, each normal
+ V. E XPERIMENTS graph contains one of the following normality-relevant
+ In this section, we conduct extensive experiments to answer subgraphs: “house”, “wheel”, or “lattice”, while anomathe following research questions. lies are characterized by either a “diamond” or a
+ • Q1 Can NGLAD achieve superior performance in quan- “5-cycle”. For the BA-COUNT dataset, normal graphs
+ titative evaluations of explanation performance? include 1 or 2 “house” as normality-relevant subgraphs,
+ • Q2 How do the explanations learned by NGLAD perform whereas anomalies contain 3 or 4 “house”. In the
+ in qualitative visual evaluations? BA-SIZE dataset, normal graphs feature “cycle” with 3 to
+ • Q3 Is NGLAD effective in accurately identifying anoma- 5 nodes as normality-relevant subgraphs, while anomalies
+ lous graphs? consist of “cycle” with 6 to 8 nodes.
+ • Q4 How does each core component of NGLAD contribute Additionally, to assess the model performance in detectto its overall performance? ing anomalous graphs, we utilize six supplementary datasets
+ • Q5 How does the parameter analysis reveal the impact of from the TU collection [57]. Comprehensive statistical details
+ various configurations on NGLAD’s performance? regarding these datasets can be found in Table I.
+ • Q6 How does the running efficiency of NGLAD compare 2) Comparison Methods: For evaluating our proposed
+ to other state-of-the-art methods? method in identifying anomalous graphs, we employ six deep
+ GLAD algorithms for comparison:
+A. Experimental Setup • OCGIN [7] combines one-class classification with GNNs
+ 1) Datasets: We employ five graph datasets for inter- to detect anomalous graphs. This method aims to map
+pretable GLAD tasks, including two real-world datasets normal graphs onto a hypersphere and detect anomalies
+(Mutagen and MNIST) and three synthetic datasets (BA- by measuring their deviation from it.
+TYPE, BA-COUNT, and BA-SIZE). All these datasets provide • OCGTL [6] integrates deep one-class classification with
+ground-truth explanatory subgraphs, which enable quantitative self-supervision. The approach involves k + 1 GNNs
+evaluation of the interpretability of GLAD models. trained on two complementary losses.
+296 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ • GLocalKD [8] trains a predictor GNN to replicate random We conduct each experiment five times with different ran-
+ GNN representations, forcing it to learn major informa- dom seeds and report the mean and standard deviation of the
+ tion in the normal graphs. evaluation metrics.
+ • GOOD-D [51] employs hierarchical contrastive learning 4) Implementation: For NGLAD, we employ GIN [26] as
+ to distinguish normal graphs at the node, graph, and the GNN backbone to derive node and graph representations.
+ group levels. Then, it identifies anomalies by measuring We conduct a grid search to identify the key hyperparameters
+ the disagreement between different graph views and their for both NGLAD and the baseline methods. All experiments
+ alignment with normal graphs. are implemented on Python 3.9.0, CUDA 11.6.1, a Rocky
+ • SIGNET [16] evaluates graph abnormality by learning the Linux 8.6 (Green Obsidian) server with a 12-core CPU, 1
+ cross-view mutual information between the original graph NVIDIA V100 GPU, PyTorch 1.10.0, and 300GB RAM.
+ and its hypergraph representation.
+ • GLADPro [17] is an interpretable GLAD framework B. Quantitative Evaluation of Explainability (Q1)
+ based on prototype learning. It models the distribution As shown in Table II, We evaluate model performance using
+ of normal graphs using a set of vectorized prototypes. N-AUC and E-AUC on five graph datasets with ground-truth
+ Two variants are proposed: GLADPro-Instance, which explanations. These metrics quantitatively assess explainability
+ generates explanations independently for each graph, and by measuring the model’s ability to correctly identify nodes
+ GLADPro-Global, which learns prototype representations (N-AUC) and edges (E-AUC) within the ground-truth explanato interpret GLAD and heuristically maps them to con- tory subgraphs. Among the post-hoc explainers, PGEx+
+ crete subgraphs. provides only edge-level explanations, whereas MaskEx+
+ Among the methods introduced above, only SIGNET and and GNNEx+ can generate both node- and edge-level
+GLADPro are capable of addressing the interpret GLAD explanations.
+problem. To obtain GLAD explanations for the remaining four According to the reported model performance, we observe
+methods, we incorporate three post-hoc GNN explainers: the following key findings: (1) NGLAD demonstrates superior
+ • GNNExplainer [58] (short for GNNEx) identifies com- performance in interpreting GLAD predictions. On datasets
+ pact subgraphs and key node features that are most including MNIST, BA-TYPE, BA-COUNT, and BA-SIZE,
+ influential for a GNN’s prediction. It can handle both NGLAD consistently outperforms comparison methods in
+ single- and multi-instance explanations, offering inter- both node-level and edge-level explanations, demonstrating
+ pretable insights into the model’s decisions. its overall superiority. Specifically, it achieves an average
+ • PGExplainer [34] (short for PGEx) provides global and improvement of 2.34 % in N-AUC and 1.72% in E-AUC over
+ inductive explanations for GNNs by learning generative the best-performing baseline GLADPro-Global. On the Mutamodels of underlying graph structures. Shared neural net- gen dataset, NGLAD attains 99.42% and 99.65% regarding
+ work parameters allow it to collectively explain multiple N-AUC and E-AUC, respectively. Although GLADPro-Global
+ instances and generalize to unseen nodes efficiently. can reach 100% in N-AUC, it requires predefining the number
+ • GraphMaskExplainer [59] (short for MaskEx) inter- of prototypes as two, since the normal class in Mutagen
+ prets GNNs via a differentiable erasure function that contains two normality-relevant subgraphs, i.e., NH2 and NO2 .
+ decides which edges to retain or discard for faithful When the number of normality-relevant subgraphs is unknown,
+ explanations. By amortizing learning over the dataset, GLADPro-Instance experiences a drop in N-AUC from 100%
+ it avoids hindsight bias while remaining scalable and to 95.83%; (2) Built-in interpretability delivers more effective
+ model-agnostic. explanations than post-hoc approaches. Models with builtin interpreters, such as SIGNET, GLADPro and NGLAD,
+ The GLAD baseline models, including OCGIN, OCGTL, are more effective at capturing key distinguishing features
+GLocalKD, and GOOD-D, follow a “detector + explainer” between normal and anomalous graphs on real-world datasets.
+framework and are trained solely on normal graphs. In this In contrast, post-hoc approaches show substantial performance
+framework, the detector assigns an anomaly score to each fluctuations across these datasets, highlighting their limitations
+graph, while the explainer highlights subgraphs that are most in adapting to varying data conditions. On synthetic datasets,
+responsible for lowering the anomaly score. however, SIGNET demonstrates suboptimal performance. This
+ 3) Metrics: To evaluate GLAD performance, we calculate instability may stem from the lack of labels providing reliable
+the ROC-AUC based on anomaly scores and their correspond- supervision for explanations.
+ing normal/anomalous labels, which we refer to as AD-AUC.
+For the interpretation assessment, we provide explanation C. Qualitative Evaluation of Explainability (Q2)
+ROC-AUCs at both the node level (N-AUC) and the edge level To further demonstrate NGLAD’s explanatory power, we
+(E-AUC). Specifically, nodes and edges within the ground- show the subgraphs extracted by interpretable GLAD models
+truth explanation subgraph are labeled as 1, while all others on the Mutagen (Fig. 3), BA-TYPE (Fig. 4), and IMDBare assigned a label of 0. In NGLAD, the soft weights BINARY (Fig. 5) datasets.
+âui and êi j generated by the Subgraph Extractor serve as As shown in Fig. 3, we present the explanation results
+prediction logits. This allows us to compute AUCs between for five randomly sampled mutagenic molecules. Our prothese prediction logits and the ground-truth as performance posed method, NGLAD, effectively explains these mutagenic
+metrics. molecules without including any irrelevant nodes or edges. In
+ZHANG et al.: LEARNING SUBGRAPH-BASED NORMALITY FOR INTERPRETABLE GLAD 297
+
+ TABLE II
+E XPLAINABILITY P ERFORMANCE R EGARDING N-AUC AND E-AUC ( IN P ERCENT, M EAN ± STD ). “PGE X +”, “M ASK E X +”, AND “GNNE X +” M EANS
+ ATTACHING P OST-H OC E XPLAINER TO GLAD M ODELS B ELOW. T HE B OLD F ONT H IGHLIGHTS THE B EST P ERFORMANCE
+
+Fig. 3. The visualizations illustrate the explainable results for normal graphs from the real-world dataset Mutagen. Notably, functional groups such as NH2
+and NO2 are emphasized as normality-relevant subgraphs, as their presence typically indicates mutagenicity. In contrast, anomalous, non-mutagenic molecules
+lack these functional groups. (a) focuses on the normality-relevant subgraphs NH2 and NO2 . (b) presents the results from the state-of-the-art method, SIGNET.
+(c) shows the results from the state-of-the-art method GLADPro. (d) displays the explainable results obtained using our proposed method, NGLAD. Bold
+black edges and nodes represent the top-k ranked elements based on their soft weights, with k maintained at the same value for differnt methods.
+
+other words, NGLAD classifies these molecules as normal by include the crucial nitrogen (N) atom in these randomly samidentifying the normality-relevant subgraphs NO2 and NH2 . pled graphs. Additionally, it includes some redundant nodes
+In contrast, the comparison method SIGNET fails to provide and edges in its explanations, suggesting that SIGNET may
+complete explanations for these normal graphs, as it does not generate inaccurate explanation results. In addition, although
+298 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+Fig. 4. The visualizations illustrate the explainable results for both normal and anomalous graphs from the synthetic dataset BA-TYPE. In (a), three normalityrelevant subgraphs, i.e., “house”, “wheel”, and “lattice” are highlighted to explain normal graphs. (b) focuses on two explanation subgraphs associated with
+anomalous graphs, i.e., “diamond” and “5-cycle”. (c) presents the results from the state-of-the-art method, SIGNET. (d) shows the results from the state-ofthe-art method GLADPro. (e) displays the explainable results obtained using our proposed method, NGLAD. Bold black edges and nodes represent the top-k
+ranked elements based on their soft weights, with k consistently set for different methods.
+
+GLADPro generally provides more accurate explanations, in multi-group networks (i.e., social networks composed of
+the most complex graph where the ground-truth explanation two or more groups), it identifies connections between
+includes four NH2 subgraphs, the presence of an irrelevant central nodes and nodes in the largest group as normalityedge indicates that the prototype may overgeneralize and relevant, consistent with the observation that central nodes
+reveals its limitations in capturing intricate local structures. and dominant groups typically govern social networks. In
+ As shown in Fig. 4, compared to SIGNET and GLADPro, contrast, for ring-shaped networks without central nodes,
+NGLAD delivers more accurate explanations for normal and NGLAD considers all nodes and edges as normality-relevant,
+anomalous graphs from BA-TYPE. The subgraph explanations reflecting that each node contributes equally to maintaining
+for normal graphs produced by SIGNET and GLADPro often connectivity.
+include more nodes and edges that are not relevant to the
+graphs’ normal properties. This tendency makes the explanation results difficult to interpret. In contrast, the explanations D. Graph-Level Anomaly Detection Results (Q3)
+produced by NGLAD are more informative and compact. To evaluate NGLAD’s performance in detecting anomalous
+Notably, NGLAD effectively identifies the explanation sub- graphs, we conducted experiments on eleven graph datasets,
+graphs for anomalous graphs. When the explanatory subgraphs including both real-world and synthetic datasets. The results
+of anomalous graphs closely resemble the subgraphs relevant are presented in Table III.
+to normality, such as the anomalous explanatory subgraphs On real world dataset, our observations are as follows:
+“diamond” and “5-cycle”, which are components of the (1) NGLAD ranks as the leading method. It achieves
+normality-relevant subgraphs “wheel” and “house”, respec- the highest AD-AUC scores across all real-world datasets,
+tively. The experimental results support our opinion that including Mutagen (94.35% ± 1.23%), MNIST (66.10%
+NGLAD’s ability to identify normality-relevant subgraphs ±0.91%), MUTAG (93.08% ± 0.11%), PROTEIN (79.87%
+enables it to detect disruptions in these subgraphs. ± 1.43%), DD(81.29% ± 1.37%), IMDB-BINARY (69.89%
+ As shown in Fig. 5, NGLAD effectively extracts normality- ± 1.99%), REDDIT-BINARY (89.01% ± 0.48%), and COLrelevant subgraphs from the IMDB-BINARY dataset. In LAB (74.77% ± 1.30%). With an average ranking of 1.4,
+ZHANG et al.: LEARNING SUBGRAPH-BASED NORMALITY FOR INTERPRETABLE GLAD 299
+
+ Fig. 5. The visualizations show normality-relevant subgraphs extracted by our proposed method NGLAD from the IMDB-BINARY dataset.
+
+ TABLE III
+ GLAD P ERFORMANCE R EGARDING AD-AUC ( IN P ERCENT, M EAN ± STD ). T HE B OLD F ONT H IGHLIGHTS THE B EST R ESULT
+
+NGLAD demonstrates consistent and robust anomaly detection insights into the mechanisms underlying normal and abnormal
+performance across diverse graph structures; (2) NGLAD graph properties. On BA-SIZE, GLADPro slightly outperbalances anomaly detection and explanation. It surpasses forms our method in AD-AUC (97.51% vs. 96.89%), likely
+SIGNET in both anomaly detection and explanation perfor- because the anomalies in this dataset are primarily reflected
+mance, providing more reliable and interpretable results for the in subgraph size, which GLADPro captures more directly.
+GLAD task. While GLADPro shows competitive explanation NGLAD, in contrast, focuses on extracting interpretable
+performance on Mutagen, its overall detection ability on real- normality-relevant subgraphs, highlighting local structural patworld datasets is weaker than NGLAD, likely because its terns rather than size differences.
+reliance on the prototype learning limits flexibility in capturing the diverse and complex structures of real anomalous
+graphs. E. Ablation Study (Q4)
+ On synthetic datasets such as BA-TYPE and BA-COUNT, We conduct ablation studies from three perspectives:
+OCGTL performs well because its one-class classification (1) NGLAD w/o MI term. We evaluate the importance of the
+combined with self-supervised graph transformations effec- mutual information term by replacing the Bernoulli sampling
+tively captures the dominant, uniform structural patterns of procedure with the setting âui = p(ui ) and removing the
+normal graphs with small size. However, OCGTL’s perfor- mutual information term (i.e., L2 from the final loss function
+mance declines on complex real-world datasets, where normal in Eq (14)). (2) NGLAD w/o Gaussian Encoder. We assess the
+graphs exhibit complex distributions. In contrast, NGLAD role of the Gaussian Encoder by substituting it with a MLP
+maintains competitive detection performance across both syn- and omitting the L1 term from the final loss function Eq (14).
+thetic and real-world datasets, while providing interpretable (3) NGLAD w/o Fixed Random MLP. We examine the
+300 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+ TABLE IV
+ A BLATION S TUDY R ESULTS H IGHLIGHTING THE K EY C OMPONENTS OF NGLAD: T HE M UTUAL
+ I NFORMATION (MI) T ERM , G AUSSIAN E NCODER , AND F IXED R ANDOM MLP
+
+Fig. 6. Parameter analysis of NGLAD with respect to four key hyperparameters: m (update interval for the mean vector of Pnormal ), σ (predefined variance
+of Pnormal ), r (prior Bernoulli distribution parameter), and τ (Gumbel–Softmax temperature) on the real-world dataset Mutagen and the synthetic dataset
+BA-TYPE.
+
+significance of the Fixed Random MLP by removing it from optimal result at m = 20. When m is too small (e.g., 1 or 5),
+the NGLAD framework. The experimental results are pre- frequent updates cause Pnormal to fluctuate, while overly large
+sented in Table IV, which indicate that NGLAD consistently m values make updates too sparse to capture distributional
+achieves the highest AUC scores (AD-AUC, N-AUC, and E- shifts, both leading to performance degradation. (2) σ —
+AUC) across multiple datasets, including Mutagen, MNIST, predefined variance of Pnormal . We observe that σ = 0.1 yields
+and BA-TYPE. In contrast, obvious performance drop on the best performance on both datasets. This indicates that nordatasets Mutagen and BA-TYPE can be observed when remov- mal graphs are relatively concentrated due to the presence of
+ing components from NGLAD. This indicates that after losing normality-relevant subgraphs, and a smaller σ allows NGLAD
+certain important components, NGLAD becomes more sensi- to better fit the underlying data distribution. (3) r — prior
+tive to variations in the data. Overall, the mutual information Bernoulli distribution parameter. We define bui ∼ Bernoulli(r)
+term, Gaussian Encoder, and Fixed Random MLP, therefore, with r ∈ (0, 1). In our experiments, r is initialized to 0.9 and
+contribute positively to NGLAD’s leading performance. decays by 0.1 every 10 epochs until reaching a predefined
+ minimum value. By varying this minimum from 0.8 to 0.1, we
+F. Parameter Analysis (Q5) find that NGLAD achieves optimal performance at r = 0.5,
+ As illustrated in Fig. 6, we conduct a comprehensive where the variational distribution Q assigns each node an
+parameter analysis on the real-world dataset Mutagen and the equal prior probability of being sampled. This encourages the
+synthetic dataset BA-TYPE, focusing on four key hyperpa- model to learn from a diverse set of subgraph instances. (4)
+rameters: (1) m — update interval for the mean vector r of τ — Gumbel–Softmax temperature parameter. The temper-
+Pnormal . Our proposed method NGLAD consistently achieves ature τ in the Gumbel–Softmax reparameterization controls
+strong performance when m is set to 10, 15, or 20, with the how closely the soft weight âui approximate binary values.
+ZHANG et al.: LEARNING SUBGRAPH-BASED NORMALITY FOR INTERPRETABLE GLAD 301
+
+ learning approach to identify anomalous graphs and explain
+ their identification based on the subgraphs they contain. To
+ address the challenge of extracting key subgraphs that capture
+ shared patterns in normal graphs, we present NGLAD. This
+ method integrates a Subgraph Extractor and a Normality
+ Learner within a one-class Information Bottleneck framework.
+ Extensive evaluations on synthetic and real-world datasets
+ demonstrate NGLAD’s superior performance in both anomaly
+ detection and explanation.
+
+ R EFERENCES
+ [1] C. C. Aggarwal and H. Wang, “Graph data management and mining:
+Fig. 7. Comparison of average training time per epoch (in seconds) on four A survey of algorithms and applications,” Manag. Mining Graph Data,
+real-world datasets: Mutagen, MNIST, REDDIT-BINARY, and COLLAB. vol. 40, pp. 13–68, 2010.
+ [2] K. Z. Khanam, G. Srivastava, and V. Mago, “The homophily principle
+ in social network analysis: A survey,” Multimedia Tools Appl., vol. 82,
+ no. 6, pp. 8811–8854, Mar.2023.
+We find that τ = 0.1 yields the best performance, while larger [3] T. Lanciano, F. Bonchi, and A. Gionis, “Explainable classification of
+values gradually degrade it. This aligns with the nature of the brain networks via contrast subgraphs,” in Proc. 26th ACM SIGKDD
+ Int. Conf. Knowl. Discovery Data Mining, Aug. 2020, pp. 3308–3318.
+Gumbel–Softmax distribution: smaller temperatures τ produce [4] G. Zhang et al., “Dual-discriminative graph neural network for
+sharper, near-binary samples—one value dominates while oth- imbalanced graph-level anomaly detection,” in Proc. NeurIPS, 2022,
+ers are near zero—enabling the model to effectively identify pp. 24144–24157.
+normality-relevant subgraphs, whereas a larger τ pushes the [5] X. Ma et al., “A comprehensive survey on graph anomaly detection
+ with deep learning,” IEEE Trans. Knowl. Data Eng., vol. 35, no. 12,
+node soft weights toward 0.5, which reduces the discriminative pp. 12012–12038, Dec.2023.
+ability of extracted subgraphs. [6] C. Qiu, M. Kloft, S. Mandt, and M. Rudolph, “Raising the bar in graphlevel anomaly detection,” in Proc. Int. Joint Conf. Artif. Intell., Jul. 2022,
+ pp. 2196–2203.
+G. Time Efficiency (Q6) [7] L. Zhao and L. Akoglu, “On using classification datasets to evaluate
+ graph outlier detection: Peculiar observations and new insights,” Big
+ As shown in Fig. 7, we compare the average training Data, vol. 11, no. 3, pp. 151–180, Jun.2023.
+time per epoch (in seconds) of our proposed NGLAD with [8] R. Ma, G. Pang, L. Chen, and A. V. D. Hengel, “Deep graph-level
+ anomaly detection by glocal knowledge distillation,” in Proc. WSDM,
+other GLAD variants across four real-world datasets. Among 2022, pp. 704–714.
+the methods, OCGIN, OCGTL, GLocalKD, and GOOD-D [9] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf. Mach.
+focus solely on anomaly detection without providing explana- Learn., 2018, pp. 4393–4402.
+ [10] Y. Burda, H. Edwards, A. Storkey, and O. Klimov, “Exploration by
+tions, whereas SIGNET, GLADPro, and NGLAD can perform random network distillation,” in Proc. ICLR, 2018.
+both detection and explanation. Methods that focus solely [11] S. Miao, M. Liu, and P. Li, “Interpretable and generalizable graph
+on distinguishing anomalous graphs from normal ones with- learning via stochastic attention mechanism,” in Proc. ICML, 2022,
+ pp. 15524–15543.
+out providing explanations, such as OCGIN and GLocalKD, [12] Q. Sun et al., “Graph structure learning with variational information
+exhibit relatively faster training compared to SIGNET, GLAD- bottleneck,” in Proc. AAAI Conf. Artif. Intell., Jun. 2022, vol. 36, no. 4,
+Pro, and NGLAD, as expected. However, OCGTL, is the pp. 4165–4174.
+ [13] Y. Wu, X. Wang, A. Zhang, X. He, and T. Chua, “Discovering invariant
+slowest on Mutagen, MNIST, and REDDIT-BINARY, despite rationales for graph neural networks,” in Proc. ICLR, 2022.
+not producing explanations, due to its requirement to train mul- [14] M. Zhang and P. Li, “Nested graph neural networks,” in Proc. NeurIPS,
+tiple GNNs and perform transformation learning among them. 2021, pp. 15734–15747.
+GOOD-D also does not demonstrate a runtime advantage, [15] L. Zhao, W. Jin, L. Akoglu, and N. Shah, “From stars to subgraphs:
+ Uplifting any GNN with local structure awareness,” in Proc. ICLR, 2021.
+since it performs hierarchical contrastive learning at the node, [16] Y. Liu, K. Ding, Q. Lu, F. Li, L. Y. Zhang, and S. Pan, “Towards selfgraph, and group levels for identifying anomalous graphs. interpretable graph-level anomaly detection,” in Proc. NeurIPS, 2023,
+Among the explanation-capable GLAD algorithms, includ- pp. 8975–8987.
+ [17] Z. Yang et al., “Global interpretable graph-level anomaly detection via
+ing SIGNET and GLADPro, our proposed method NGLAD prototype,” in Proc. KDD, 2025, pp. 3586–3597.
+achieves superior efficiency on datasets Mutagen, REDDIT- [18] K. Crammer and G. Chechik, “A needle in a haystack: Local one-class
+BINARY, and COLLAB. Notably, REDDIT-BINARY and optimization,” in Proc. Int. Conf. Mach. Learn., 2004, p. 26.
+ [19] J. Bruna, W. Zaremba, A. Szlam, and Y. LeCun, “Spectral networks and
+COLLAB are relatively larger social network datasets, locally connected networks on graphs,” in Proc. ICLR, 2013.
+where our method’s efficiency advantage is particularly [20] M. Defferrard, X. Bresson, and P. Vandergheynst, “Convolutional neural
+pronounced. networks on graphs with fast localized spectral filtering,” in Proc. NIPS,
+ vol. 29, 2016, pp. 3837–3845.
+ [21] M. Balcilar, G. Renton, P. Héroux, B. Gaüzère, S. Adam, and P. Honeiné,
+ VI. C ONCLUSION “Analyzing the expressive power of graph neural networks in a spectral
+ perspective,” in Proc. ICLR, 2021.
+ In this paper, we introduce the insight that normal graphs [22] S. Sawlani, L. Zhao, and L. Akoglu, “Fast attributed graph embedding
+shared features, which manifest in key subgraphs referred via density of states,” in Proc. ICDM, 2021, pp. 559–568.
+ [23] T. Kipf and M. Welling, “Semi-supervised classification with graph
+to as normality-relevant subgraphs. These subgraphs are convolutional networks,” in Proc. ICLR, 2016.
+often absent or altered in anomalous graphs. Building on [24] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Lió, and
+this observation, we propose a subgraph-based normality Y. Bengio, “Graph attention networks,” in Proc. ICLR, 2018.
+302 IEEE TRANSACTIONS ON INFORMATION FORENSICS AND SECURITY, VOL. 21, 2026
+
+[25] W. L. Hamilton, R. Ying, and J. Leskovec, “Inductive representa- [53] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in
+ tion learning on large graphs,” in Proc. NeurIPS, vol. 30, 2017, Proc. ICLR, 2013.
+ pp. 1024–1034. [54] T. Van Erven and P. Harremos, “Rényi divergence and Kullback–Leibler
+[26] K. Xu, W. Hu, J. Leskovec, and S. Jegelka, “How powerful are graph divergence,” IEEE Trans. Inf. Theory, vol. 60, no. 7, pp. 3797–3820,
+ neural networks?,” in Proc. ICLR, 2018. Jul.2014.
+[27] M. Zhang, Z. Cui, M. Neumann, and Y. Chen, “An end-to-end deep [55] A. K. Debnath, R. L. Lopez de Compadre, G. Debnath, A. J. Shusterman,
+ learning architecture for graph classification,” in Proc. 32nd AAAI Conf. and C. Hansch, “Structure-activity relationship of mutagenic aromatic
+ Artif. Intell., 2018, pp. 4438–4445. and heteroaromatic nitro compounds. Correlation with molecular orbital
+[28] Z. Wang and S. Ji, “Second-order pooling for graph neural networks,” energies and hydrophobicity,” J. Medicinal Chem., vol. 34, no. 2,
+ IEEE Trans. Pattern Anal. Mach. Intell., vol. 45, no. 6, pp. 6870–6880, pp. 786–797, Feb.1991.
+ Jun.2023. [56] B. Knyazev, G. W. Taylor, and M. R. Amer, “Understanding attention
+[29] Z. Ying, J. You, C. Morris, X. Ren, W. Hamilton, and J. Leskovec, and generalization in graph neural networks,” in Proc. NIPS, 2019,
+ “Hierarchical graph representation learning with differentiable pooling,” pp. 4204–4214.
+ in Proc. Adv. Neural Inf. Process. Syst., 2018, pp. 4805–4815. [57] C. Morris, N. M. Kriege, F. Bause, K. Kersting, P. Mutzel, and M. Neu-
+[30] C. Morris et al., “Weisfeiler and Leman go neural: Higher-order graph mann, “TUDataset: A collection of benchmark datasets for learning with
+ neural networks,” in Proc. AAAI Conf. Artif. Intell., vol. 33, Jul. 2019, graphs,” 2020, arXiv:2007.08663.
+ pp. 4602–4609. [58] R. Ying, D. Bourgeois, J. You, M. Žitnik, and J. Leskovec,
+[31] H. Maron, H. Ben-Hamu, H. Serviansky, and Y. Lipman, “Provably pow- “GNNExplainer: Generating explanations for graph neural networks,”
+ erful graph networks,” in Proc. NeurIPS, vol. 32, 2019, pp. 2153–2164. in Proc. NeurIPS, 2019, pp. 9240–9251.
+[32] M. Balcilar, P. Héroux, B. Gauzere, P. Vasseur, S. Adam, and P. Honeine, [59] M. Schlichtkrull, N. D. Cao, and I. Titov, “Interpreting graph neural
+ “Breaking the limits of message passing graph neural networks,” in Proc. networks for NLP with differentiable edge masking,” in Proc. ICLR,
+ 38th Int. Conf. Mach. Learn., 2021, pp. 599–608. 2020.
+[33] N. Shervashidze, P. Schweitzer, E. J. Van Leeuwen, K. Mehlhorn, and
+ K. M. Borgwardt, “Weisfeiler-lehman graph kernels,” J. Mach. Learn.
+ Res., vol. 12, no. 77, pp. 2539–2561, 2011.
+[34] D. Luo et al., “Parameterized explainer for graph neural network,” in
+ Proc. NIPS, vol. 33, 2020, pp. 19620–19631.
+[35] H. Yuan, J. Tang, X. Hu, and S. Ji, “XGNN: Towards model-level explanations of graph neural networks,” in Proc. KDD, 2020, pp. 430–438.
+[36] R. Henderson, D. Clevert, and F. Montanari, “Improving molecular
+ graph neural network explainability with orthonormalization and induced Ge Zhang received the Ph.D. degree from the
+ sparsity,” in Proc. Int. Conf. Mach. Learn., 2021, pp. 4203–4213. School of Computing, Macquarie University, Aus-
+[37] M. N. Vu and M. T. Thai, “PGM-explainer: Probabilistic graphical tralia, in 2024. She is currently a Lecturer with
+ model explanations for graph neural networks,” in Proc. NeurIPS, the School of Information and Intelligent Scivol. 33, 2020, pp. 12225–12235. ence, Donghua University, China. She has published
+[38] J. Fang et al., “Evaluating post-hoc explanations for graph neu- papers in prestigious journals and conferences,
+ ral networks via robustness analysis,” in Proc. NeurIPS, 2024, including IEEE TRANSACTIONS ON KNOWLEDGE
+ AND D ATA E NGINEERING , NeurIPS, WWW, IJCAI,
+ pp. 72446–72463.
+[39] T. H. A. Musa and A. Bouras, “Anomaly detection: A survey,” ACM ICDM, and WSDM. Her research focuses on graph
+ Comput. Surv., vol. 41, no. 3, pp. 391–401, 2021. anomaly detection.
+[40] G. Pang, C. Shen, L. Cao, and A. V. D. Hengel, “Deep learning for
+ anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2,
+ pp. 1–38, 2021.
+[41] Y. Sun, Y. Ming, X. Zhu, and Y. Li, “Out-of-distribution detection
+ with deep nearest neighbors,” in Proc. Int. Conf. Mach. Learn., 2022,
+ pp. 20827–20840.
+[42] X. Lin et al., “Conformal graph-level out-of-distribution detection with
+ adaptive data augmentation,” in Proc. WWW, 2025, pp. 4755–4765.
+[43] G. Zhang, Z. Yang, J. Wu, P. Jiao, and J. Yang, “Enhancing graph neural Zhenyu Yang is currently pursuing the Ph.D. degree
+ networks for out-of-distribution graph detection,” IEEE Trans. Neural with the School of Computing, Macquarie Univer-
+ Netw. Learn. Syst., vol. 36, no. 10, pp. 19255–19269, Oct.2025. sity, Australia. His current research interests include
+[44] B. Zong et al., “Deep autoencoding Gaussian mixture model for unsu- deep learning and graph learning.
+ pervised anomaly detection,” in Proc. ICLR, 2018.
+[45] N. Belton, M. T. Hagos, A. Lawlor, and K. M. Curran, “FewSOME:
+ One-class few shot anomaly detection with Siamese networks,” in Proc.
+ IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops (CVPRW),
+ Jun. 2023, pp. 2978–2987.
+[46] G. Zhang et al., “FRAUDRE: Fraud detection dual-resistant to graph
+ inconsistency and imbalance,” in Proc. ICDM, 2021, pp. 867–876.
+[47] Q. Chen, S. Li, Y. Liu, S. Pan, C. Zhang, and Y. Zheng, “ARC: A
+ generalist graph anomaly detector with in-context learning,” in Proc.
+ Adv. Neural Inf. Process. Syst., 2024, pp. 50772–50804.
+[48] Z. Yuan, M. Shao, and Q. Yan, “Motif-level anomaly detection
+ in dynamic graphs,” IEEE Trans. Inf. Forensics Security, vol. 18,
+ pp. 2870–2882, 2023.
+[49] L. Xi, R. Li, M. Li, D. Miao, R. Wang, and Z. J. Haas, “NMFAD:
+ Neighbor-aware mask-filling attributed network anomaly detection,” Jia Wu (Senior Member, IEEE) received the Ph.D.
+ IEEE Trans. Inf. Forensics Security, vol. 20, pp. 364–374, 2025. degree from the University of Technology Sydney,
+[50] X. Zhao et al., “Deep reinforcement learning guided graph neural Australia. He is currently an ARC DECRA Fellow
+ networks for brain network analysis,” Neural Netw., vol. 154, pp. 56–67, and a Senior Lecturer (Associate Professor in North
+ Oct.2022. America) with the School of Computing, Macquarie
+[51] Y. Liu, K. Ding, H. Liu, and S. Pan, “GOOD-D: On unsupervised graph University, Australia. His current research interests
+ out-of-distribution detection,” in Proc. 16th ACM Int. Conf. Web Search include data mining and machine learning. He is
+ Data Mining, Feb. 2023, pp. 339–347. an Associate Editor of IEEE TRANSACTIONS ON
+[52] E. Jang, S. Gu, and B. Poole, “Categorical reparameterization with NEURAL NETWORKS AND LEARNING SYSTEMS
+ gumbel-softmax,” in Proc. ICLR, 2016. (TNNLS).
+ZHANG et al.: LEARNING SUBGRAPH-BASED NORMALITY FOR INTERPRETABLE GLAD 303
+
+ Pengfei Jiao (Member, IEEE) received the Ph.D. Hao Peng (Senior Member, IEEE) is currently
+ degree in computer science from Tianjin University, a Professor with the School of Cyber Science
+ Tianjin, China, in 2018. From 2018 to 2021, he was and Technology, Beihang University. His current
+ a Lecturer with the Center of Biosafety Research research interests include machine learning, deep
+ and Strategy, Tianjin University. He is currently a learning, and reinforcement learning. He is an Asso-
+ Professor with the School of Cyberspace, Hangzhou ciate Editor of International Journal of Machine
+ Dianzi University, Hangzhou, China. His current Learning and Cybernetics(IJMLC) and Neural Netresearch interests include complex network analysis works.
+ and its applications.
+
+ Xixun Lin received the M.S. degree from the Col-
+ Jian Yang (Member, IEEE) received the Ph.D. lege of Computer Sciences and Technology, Jilin
+ degree in data integration from The Australian University, in 2018. He is currently pursuing the
+ National University, Canberra, ACT, Australia, in Ph.D. degree in computer science with the Institute
+ 1995. She is currently a Full Professor with the of Information Engineering, Chinese Academy of
+ School of Computing, Macquarie University, Syd- Sciences. His research interests include information
+ ney, NSW, Australia. Her research interests include retrieval, recommender system, and graph represenbusiness process management, data science, and tation learning. He has published several articles
+ social networks. She is currently serving as an in IEEE TRANSACTIONS ON PATTERN ANALYSIS
+ Executive Committee for the Computing Research AND M ACHINE I NTELLIGENCE , ICML, WWW,
+ and Education Association of Australasia. ICDM, WSDM and SIGIR.

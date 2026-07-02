@@ -1,0 +1,151 @@
+                                                                         Computer Networks 245 (2024) 110372
+
+
+                                                                       Contents lists available at ScienceDirect
+
+
+                                                                          Computer Networks
+                                                            journal homepage: www.elsevier.com/locate/comnet
+
+
+
+
+DE-GNN: Dual embedding with graph neural network for fine-grained
+encrypted traffic classification
+Xinbo Han a,b , Guizhong Xu c , Meng Zhang a,b , Zheng Yang a,b , Ziyang Yu a,b , Weiqing Huang a,b ,
+Chen Meng a ,∗
+a
+    Institute of Information Engineering, Chinese Academy of Sciences, Beijing, China
+b School of Cyber Security, University of Chinese Academy of Sciences, Beijing, China
+c Information Science Academy of China Electronics Technology Group Corporation, Beijing, China
+
+
+
+
+ARTICLE                  INFO                                 ABSTRACT
+
+Keywords:                                                     Nowadays, most network traffic is encrypted, which protects user privacy but complicates the task of analyzing
+Encrypted traffic classification                              and classifying encrypted traffic. Identifying the specific categories of encrypted traffic, such as application
+Deep learning                                                 type or even the specific application, is of great significance for advanced network services and network
+Graph neural networks
+                                                              security management. Many existing methods for encrypted traffic classification rely on machine learning
+Dual-embedding
+                                                              and deep learning techniques, but they exhibit certain shortcomings. A considerable number of these methods
+Traffic interaction graph
+                                                              rely on statistical features, which may lose their relevance as networks evolve and lead to the loss of important
+                                                              information. Additionally, Convolutional Neural Networks (CNNs) and Recurrent Neural Networks (RNNs) face
+                                                              limitations in extracting features from encrypted traffic, specifically, their inability to learn traffic interaction
+                                                              information within a network flow.
+                                                                  To address these challenges, we propose a model called Dual Embedding with Graph Neural Networks
+                                                              (DE-GNN) for fine-grained encrypted traffic classification. Based on the byte-packet-flow structure of network
+                                                              traffic, we present a dual embedding layer that encodes the packet header and payload separately using raw
+                                                              bytes, which allows subsequent processes to run separately and in parallel. Then, we develop the PacketCNN
+                                                              to extract packet-level features from both the header and payload. Afterwards, we construct a network
+                                                              flow as a Traffic Interaction Graphs (TIG) and utilize Graph Neural Networks (GNNs) to extract flow-level
+                                                              features. Finally, an adaptive deep feature fusion process is applied to combine flow-level features from the
+                                                              header and payload, creating a robust representation for classification. Extensive experiments are conducted
+                                                              on two well-known datasets, ISCX-VPN2016 and ISCX-Tor2016, to verify our approach. The experimental
+                                                              results demonstrate that DE-GNN effectively identifies the type of encrypted traffic, outperforming baselines
+                                                              significantly.
+
+
+
+1. Introduction                                                                                 classifying encrypted traffic. Consequently, the task of extracting valu-
+                                                                                                able information from encrypted traffic presents a formidable challenge
+    Identifying traffic types is a fundamental and critical ability for                         in the pursuit of accurate classification.
+network research. Traffic classification, the categorization of network                             Early traffic classification methods included port-based techniques
+traffic into appropriate classes, is important to many applications, such
+                                                                                                and Deep Packet Inspection (DPI) [4–6]. However, with the prolifer-
+as quality of service (QoS) control, pricing, resource usage planning,
+malware detection, and intrusion detection [1]. In recent times, to                             ation of applications utilizing non-standard interfaces or dynamically
+protect user privacy and anonymity, various encryption techniques                               assigned ports, the effectiveness of port-based methods has significantly
+are used to encrypt the transmission of network traffic [2]. While                              waned. The Deep Packet Inspection (DPI) method involves a thorough
+this ensures the privacy and anonymity for users, it complicates the                            examination and analysis of network packets to detect and identify spe-
+task of analyzing and classifying network traffic. Furthermore, privacy-                        cific protocols, applications, content, or behaviors within network traf-
+enhanced tools, such as VPN and Tor [3], are employed to circumvent                             fic. While DPI has outperformed port-based detection methods, it does
+Internet censorship measures, which further increase the difficulty of
+
+
+     ∗ Corresponding author.
+    E-mail addresses: hanxinbo@iie.ac.cn (X. Han), xuguizhong@cetc.com.cn (G. Xu), zhangmeng@iie.ac.cn (M. Zhang), yangzheng@iie.ac.cn (Z. Yang),
+yuziyang@iie.ac.cn (Z. Yu), huangweiqing@iie.ac.cn (W. Huang), mengchen@iie.ac.cn (C. Meng).
+
+https://doi.org/10.1016/j.comnet.2024.110372
+Received 21 November 2023; Received in revised form 26 February 2024; Accepted 25 March 2024
+Available online 27 March 2024
+1389-1286/© 2024 Elsevier B.V. All rights reserved.
+X. Han et al.                                                                                                                  Computer Networks 245 (2024) 110372
+
+
+incur substantial computational overhead and faces certain limitations                 • We utilize a CNN structure to learn packet-level representations
+when dealing with encrypted traffic [7]. To address these challenges,                    from raw bytes, reducing the impact of noise and redundant data
+some have proposed a two-step approach, combining traffic decryption                     compared to using the original byte vectors directly.
+with DPI [8–11]. Nevertheless, this approach undeniably amplifies the                  • We construct network flows in the form of a Traffic Interac-
+computational load and raises concerns about privacy implications,                       tion Graph, incorporating information on behavioral patterns and
+which contradicts the original purpose of traffic encryption.                            packet-level features, and leverage Graph Neural Networks to
+    The advancement of artificial intelligence technology has ushered                    acquire flow-level features.
+in a new era of traffic classification methods, primarily centered on the              • To assess the effectiveness of our model, we perform a series of
+utilization of machine learning and deep learning algorithms. Machine                    experiments. The experimental results affirm the efficacy of our
+learning approaches employing statistical features have shown promis-                    approach.
+ing outcomes for both encrypted and non-encrypted traffic [12–14].
+However, these algorithms heavily rely on manually crafted features by                 The rest of the paper is organized as follows: Section 2 presents
+                                                                                   the task description and the related works on encrypted traffic clas-
+domain experts. As network dynamics evolve, previously designed fea-
+                                                                                   sification; Section 3 describes our model in detail; Section 4 introduces
+tures may lose their effectiveness, thus imposing significant constraints
+                                                                                   relevant experiments and analyzes the results; We discuss limitations
+on machine learning-based traffic classification methods. Additionally,
+                                                                                   and future works in Section 5 and conclude the paper in Section 6.
+statistical features often necessitate observing the entire network flow,
+making them incapable of classifying traffic during the initial stages
+                                                                                   2. Task description and related works
+of network traffic generation [1]. As a branch of machine learning,
+deep learning has demonstrated substantial potential in the realm of
+                                                                                       At present, a significant volume of research in the field of encrypted
+encrypted traffic classification [15–17]. Deep learning techniques no
+                                                                                   traffic classification centers on the utilization of machine learning
+longer depend on manual feature engineering, as they can automati-
+                                                                                   and deep learning models. In the subsequent section, we describe the
+cally extract relevant features from raw data. Embracing an end-to-end
+                                                                                   encrypted traffic classification task and briefly review existing studies.
+learning paradigm, deep learning directly learns from the original input
+data to produce the desired output, bypassing traditional practices of
+                                                                                   2.1. Task description
+decomposing the problem into smaller subproblems such as feature
+selection and classification. This characteristic empowers deep learning
+                                                                                       The encrypted traffic classification task aims to differentiate the
+algorithms to comprehensively tackle the complexities associated with
+                                                                                   traffic generated from various sources (e.g., applications, web pages,
+traffic classification tasks [1]. In light of the instability of statistical
+                                                                                   or services) by using the information of traffic packets captured by
+features, we use raw bytes as the input of the model in this paper.
+                                                                                   professional software or programs. In this paper, our focus is on clas-
+    The current encrypted traffic classification methods based on deep             sifying in-app traffic behavior, distinguishing fine-grained encrypted
+learning have demonstrated remarkable capabilities. Many of these                  traffic actions such as video, chat, and file transfer.
+methods harness the power of Convolutional Neural Networks (CNN)                       We define a flow as an sample, a common practice in many traffic
+and Recurrent Neural Networks (RNN) to capture spatial and temporal                classification studies [18–21]. A flow comprises request and response
+features within traffic data. Nevertheless, two primary flaws persist              packets exchanged between two communicating entities in a network,
+in current deep learning-based approaches: (1) Limited information                 sharing the same quintuple (src_ip, src_port, dst_ip, dst_port, protocol)
+capture. Due to the encryption of information, CNN and RNN ex-                     over a specific period. Assume that there are 𝑀 training samples and
+hibit constraints in effectively extracting data from encrypted traffic.           𝑁 categories in total, let a flow sample be a sequence 𝑙 = [𝑝1 , 𝑝2 , … , 𝑝𝑛 ],
+Additionally, CNN and RNN focus on temporal and spatial character-                 where n is the packet sequence length and 𝑝𝑖 is the 𝑖th packet of the
+istics, often overlooking traffic interaction mode. (2) Mix usage of               flow. The 𝑖th packet is represented as 𝑝𝑖 = [𝑏1 , 𝑏2 , … , 𝑏𝑚 ], where m is the
+the header and payload. Approaches employing packet bytes con-                     byte sequence length and 𝑏𝑗 is the 𝑗th byte value of 𝑖th packet. In other
+sider the header and payload as a unified entity for learning, without             words, network traffic exhibits a hierarchical structure: byte-packet-
+differentiating their distinct representations and functions.                      flow. According to the definition above, the encrypted classification
+    In this paper, we propose a model called Dual Embedding with                   task can be described formally as predicting the category 𝐶𝑠 of an
+Graph Neural Network (DE-GNN) for encrypted traffic classification.                unseen test sample 𝑓𝑠 with a designed and well-trained end-to-end
+DE-GNN primarily comprises four main components, as illustrated                    model 𝐹 (𝑓𝑠 ) on M training samples, where 𝐶𝑠 = 0, 1, … , 𝑁 − 1.
+in Fig. 1: Dual Embedding, Packet-level Traffic Learning, Flow-level
+Graph Construction and Learning, and Adaptive Deep Feature Fusion.                 2.2. Related works
+Based on the byte-packet-flow structure of network traffic, the dual
+embedding treats the header and payload bytes of a packet separately               Machine learning based encrypted traffic classification. Numerous
+and encodes them using one-hot encoding. Subsequently, two separate                methods within the realm of encrypted traffic classification leverage
+PacketCNNs are employed to extract packet-level features for both the              statistical features to characterize packet or flow properties, employing
+header and payload. Following this, flow-level features are obtained               classical machine learning models for the task of traffic classification.
+through the construction of the Traffic Interaction Graph (TIG) and                Taylor et al. [22] introduced AppScanner, a classification model that
+learning from GNN. The flow-level features of the header and payload               utilizes the random forest algorithm to distinguish mobile apps based
+are then integrated into a comprehensive vector for the entire flow us-            on statistical features extracted from flow data. Liu et al. [23] proposed
+ing adaptive deep feature fusion, which is used for traffic classification.        a multi-attribute Markov probability model, which integrates message
+In the experimental section, we employ two publicly available datasets,            type sequence and packet length, to classify traffic applications. Ede
+namely, ISCX-VPN and

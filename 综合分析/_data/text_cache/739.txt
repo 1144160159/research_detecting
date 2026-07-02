@@ -1,0 +1,161 @@
+3764                                                                          IEEE TRANSACTIONS ON CONSUMER ELECTRONICS, VOL. 72, NO. 2, MAY 2026
+
+
+
+
+                        Memory Augment Is All You Need
+                             for Image Restoration
+                  Xiaofeng Zhang , Xuhang Chen , Chaochen Gu, Shanying Zhu, Kim-Fung Tsang ,
+                                        and Xinping Guan , Fellow, IEEE
+
+
+
+   Abstract—The quality of images captured by consumer elec-                    of degradation challenges in consumer imaging applications,
+tronic devices, such as smartphones and digital cameras, is often               such as super-resolution for mobile photography, defogging
+compromised by adverse environmental conditions, leading to                     for automotive cameras, de-shadowing for outdoor surveil-
+degradations like rain, shadows, blur, and low light. These issues
+significantly impact the user experience. This paper introduces                 lance, removal of rain artifacts from dashcam footage, and
+MemoryNet, a novel image restoration framework designed                         enhancement of low-light images captured by smartphone.
+to enhance the quality of images captured with consumer                         Image restoration is a fundamental yet inherently ill-posed
+devices. We also propose Degradation-Aware CLIP (DA-CLIP)                       inverse problem: a single degraded image can correspond
+for the perceptual classification of degraded images, a common                  to infinitely many plausible high-quality reconstructions, as
+challenge in consumer photography. MemoryNet utilizes a three-
+granularity memory layer and contrastive learning to effectively                real-world degradation processes—such as motion blur, rain
+restore images. The memory layer retains deep image features,                   streaks, shadows, or low-light noise—irreversibly discard
+while contrastive learning ensures the alignment of learned                     visual information. In consumer electronics (e.g., smartphones,
+features for a balanced restoration. We have tested our model on                dashcams, surveillance cameras), this ambiguity is further
+several challenging tasks, including de-raining, de-shadowing, de-              amplified by the highly diverse and uncontrolled imaging
+blurring, and low-light enhancement. The results show significant
+improvements in PSNR and SSIM in four datasets, demonstrating                   conditions under which images are captured. Unlike controlled
+that MemoryNet can produce restored images with high percep-                    laboratory settings, consumer devices must handle arbitrary
+tual authenticity, making it a promising solution to improve the                combinations of degradations without access to ground-truth
+imaging capabilities of consumer electronics. The code can be                   degradation models or auxiliary inputs (e.g., shadow masks),
+accessed in https://github.com/zhangbaijin/MemoryNet                            making restoration both technically challenging and practically
+  Index Terms—Image restoration, memory augmentation,                           critical for user experience.
+degradation-aware CLIP.                                                            To regularize this ill-posed problem, image priors are
+                                                                                essential to guide the solution toward perceptually plausible
+                         I. I NTRODUCTION                                       and structurally coherent results. Classical priors—such as
+                                                                                sparsity or total variation—often fail to generalize across
+I   MAGE restoration pertains to a fundamental vision task
+    focused on enhancing degraded images captured by con-
+sumer electronic devices. In the era of ubiquitous consumer
+                                                                                real-world scenes and device-specific artifacts. While modern
+                                                                                deep learning approaches have made significant progress by
+electronics, smartphones, digital cameras, dashcams, and                        learning implicit priors from large-scale data, most existing
+surveillance systems have become integral to daily life. How-                   methods focus narrowly on architectural innovation (e.g.,
+ever, images captured by these devices often suffer from                        attention mechanisms, transformers, or Generative Adversarial
+various degradations, including noise, blur, low light condi-                   Networks (GANs) [1], [2]. Crucially, they overlook a key
+tions, and weather-related artifacts, significantly affecting the               insight from human vision: the ability to restore corrupted
+user experience and device functionality. The rapid progress                    perception often relies on memory of typical structures and
+in computer vision has enabled addressing an expanding array                    patterns—such as the expected shape of a car, the texture
+                                                                                of pavement, or the lighting consistency of a scene. This
+   Received 10 December 2025; accepted 15 January 2026. Date of publication     structural memory enables robust inference even under severe
+19 January 2026; date of current version 2 June 2026. This work was
+supported in part by the National Natural Science Foundation under Grant
+                                                                                degradation, yet it remains underexplored in current consumer-
+62273235; in part by the National Major Scientific Research Instrument          oriented restoration frameworks.
+Development Project under Grant 62227811; in part by the Joint Fund of the         Moreover, practical deployment in consumer electronics
+Ministry of Education under Grant 8091B022101; and in part by the Deep
+Blue Program Fund Project, Second Institute of Oceanography, Ministry of
+                                                                                imposes stringent constraints: algorithms must be lightweight,
+Natural Resources. (Corresponding author: Chaochen Gu.)                         fast, and mask-free, while still delivering high perceptual
+   Xiaofeng Zhang, Chaochen Gu, Shanying Zhu, and Xinping Guan are              quality. Unfortunately, many state-of-the-art methods either
+with the Center for Intelligent Wireless Network and Collaborative Con-
+trol, Shanghai Jiao Tong University, Shanghai 200240, China (e-mail:
+                                                                                require auxiliary inputs (e.g., shadow masks [1], [3]), rely on
+framebreak@sjtu.edu.cn; jacygu@sjtu.com; shyzhu@sjtu.com).                      heavy generative models unsuitable for on-device inference,
+   Xuhang Chen and Kim-Fung Tsang are with Shenzhen Institutes of               or fail to leverage semantic guidance in a degradation-aware
+Advanced Technology, Chinese Academy of Sciences, Shenzhen 518055,
+China (e-mail: xx.chen2@siat.ac.cn; kftsang@ieee.org).
+                                                                                manner. Meanwhile, recent advances in vision-language mod-
+   Digital Object Identifier 10.1109/TCE.2026.3655769                           els (e.g., Contrastive Language-Image Pre-training (CLIP))
+             1558-4127 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+ZHANG et al.: MEMORY AUGMENT IS ALL YOU NEED FOR IMAGE RESTORATION                                                                3765
+
+
+
+offer powerful semantic priors but are ill-suited for low-           accentuating normal frames while magnifying reconstruction
+level restoration tasks due to their insensitivity to fine-grained   errors in anomalous frames. Park et al. [5] advances the Auto
+structural details and their assumption of clean inputs.             Encoder with information on normal frames to enhance the
+   To address these gaps, we propose MemoryNet, a novel              distinction between normal and abnormal frames in video
+image restoration framework that explicitly integrates hier-         anomaly detection. For de-raining tasks, MMOS [6] integrates
+archical structural memory with degradation-aware semantic           an intermediate Memory module to model and store diverse
+guidance—tailored for real-world consumer electronics. Our           rain patterns, assisting in the rain removal process.
+approach is motivated by two key observations: (1) Memory-
+augmented representation enables the model to recall and             B. Vision-Language Models
+reconstruct prototypical patterns at multiple granularities (part,
+                                                                        Recent research underscores the promising potential of
+instance, and semantic levels), thereby constraining the solu-
+                                                                     using pre-trained Vision-Language Models (VLMs) to improve
+tion space toward structurally consistent outputs without
+                                                                     subsequent tasks by leveraging universal visual and text rep-
+requiring masks or paired degradation labels; (2) Pre-trained
+                                                                     resentations [7], [8], [9]. Typically, a VLM consists of a text
+vision-language models can be adapted for low-level tasks if
+                                                                     encoder and an image encoder, which work to obtain aligned
+made aware of input degradation, allowing them to provide
+                                                                     multimodal features from noisy image-text pairs through con-
+meaningful perceptual supervision even when the input is
+                                                                     trastive learning. The BLIP approach refines this by filtering
+severely corrupted.
+                                                                     out noisy data from the web using generated captions. While
+   Accordingly, we introduce two core components: (i) a
+                                                                     VLMs excel in zero-shot and label-free classification for
+three-granularity memory augmentation module that encodes
+                                                                     downstream tasks, their success in image restoration has been
+learnable structural prototypes to enhance restoration fidelity
+                                                                     limited due to the necessity for precise, specialized vocabulary.
+and generalization; and (ii) a Degradation-Aware CLIP
+                                                                     A novel technique for refining vision-language models is
+(DA-CLIP) that repurposes CLIP’s semantic knowledge for
+                                                                     known as prompt learning [10], where words within the
+perceptual classification and guidance under degradation.
+                                                                     prompt context are represented by learnable vectors which are
+   MemoryNet is designed to be lightweight, mask-free,
+                                                                     then optimized for the specific task. The degradation-aware
+and end-to-end trainable, making it suitable for real-
+                                                                     visual language model DA-CLIP [11] incorporates an Image
+time deployment on consumer devices. It achieves strong
+                                                                     Controller to predict degradation types and uses a CLIP Image
+performance across four representative tasks—shadow
+                                                                     Encoder module to extract high-quality content embeddings,
+removal, raindrop cleaning, motion deblurring, and low-light
+                                                                     integrating DA-CLIP with a reconstruction network. For the
+enhancement—demonstrating that memory is indeed “all you
+                                                                     training of DA-CLIP, a hybrid dataset featuring 10 types of
+need” to bridge the gap between real-world degradation and
+                                                                     degradation is constructed.
+perceptually authentic restoration.
+   The key contributions of this paper are as follows:
+                                                                                      III. N ETWORK S TRUCTURE
+   1) We developed an innovative memory augmentation mod-
+                                                                        The MemoryNet architecture is depicted in Fig. 1. This
+       ule that models a learnable latent property variable
+                                                                     paper presents the Degradation-aware CLIP (DA-CLIP) [11],
+       to capture globally representative structural prototype
+                                                                     designed for low-level visual applications, offering a uniform
+       patterns, optimized for efficient execution on consumer
+                                                                     approach to image restoration. DA-CLIP creatively incorpo-
+       device processors.
+                                                                     rates an extra controller to alter the standard CLIP image
+   2) We proposed a degradation-aware visual language model
+                                                                     encoder, which aids in forecasting enhanced feature embed-
+       (DA-CLIP) to effectively adapt the pre-trained visual
+                                                                     dings. This process allows for the development of adaptive
+       language model for low-level visual tasks in consumer
+                                                                     classifiers tailored to diverse degradation scenarios such as
+       electronics, serving as a comprehensive framework for
+                                                                     blur, dim lighting, shadows, and rain.
+       image restoration in smartphones, cameras, and other
+       consumer imaging devices.
+   3) We conducted extensive experiments across four com-            A. Memory Augmentation
+       mon image restoration tasks relevant to consumer                 1) How to Detect Abnormal Area?: Blur is categorized as
+       electronics: synthetic image de-shadowing for outdoor         a type of irregular pattern. To distinguish and convert it into
+       photography, real image deraining for dashcam appli-          a normal pattern, we employ a mixture of abnormal detec-
+       cations, image deblurring for handheld camera shake           tion and a completion proxy. This method aligns well with
+       correction, and image low-light enhancement for smart-        the transformer framework. Within this framework, shadow
+       phone night photography.                                      images are treated as abnormal, whereas clean images are
+                                                                     deemed normal.
+                     II. R ELATED W ORK                                 Our anomaly dete

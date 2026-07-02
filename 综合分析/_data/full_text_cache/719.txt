@@ -1,0 +1,1137 @@
+This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 1
+
+ Learning Flow Semantics for Encrypted Traffic
+ Analysis: A Contrastive Pre-training Approach
+ Ruijie Zhao, Mingwei Zhan, Qi Li, Senior Member, IEEE, Zhuotao Liu, Xianwen Deng, Yanhao Wang,
+ Guang Cheng, Zhi Xue, Ke Xu, Fellow, IEEE
+
+ Abstract—Encrypted traffic analysis is crucial for cyberspace security. Self-supervised learning shows great promise to enhance traffic
+ analysis with the pre-trained traffic encoder, which is constructed using large-scale, readily available unlabeled traffic data. However,
+ existing approaches struggle to handle the increasingly prevalent encrypted traffic, as their generative reconstruction tasks cannot
+ process encrypted content. To this end, we propose TAC O, a robust and flexible encrypted traffic analysis system based on flow
+ semantics learning. Specifically, we first design several feasible traffic data augmentation strategies to prepare flow semantics
+ knowledge from the unlabeled traffic. Then, our traffic encoder with a traffic partition module learns the semantics knowledge based on
+ the contrastive pre-training paradigm. It serves as a traffic foundation encoder that can comprehend flow semantics and extract
+ effective semantic representations. Finally, we fine-tune the traffic encoder to leverage flow semantics for various downstream
+ encrypted traffic analysis tasks. The experimental results illustrate that TAC O outperforms the optimal baseline by 7.5% in average F1
+ score on four traffic classification datasets and achieves an improvement of at least 11.62% in average F1 score on the three transfer
+ tasks, while indicating superior efficiency. We will release the source code as well as the experiment data upon publication to foster
+ future research.
+
+ Index Terms—Traffic analysis, contrastive pre-training, traffic data augmentation, flow semantics learning.
+
+ ✦
+
+1 I NTRODUCTION approaches use traditional supervised training paradigms,
+ which heavily rely on a large amount of labeled traffic data.
+Network traffic serves as one of the most critical data However, traffic data labeling imposes significant overhead
+sources for analyzing network activities and detecting cy- and cost [15]. Furthermore, it is difficult for classifiers
+berspace attacks. Numerous security tasks are based on trained on a certain dataset to adapt to the constantly evolvtraffic analysis, such as application identification [1], [2], [3], ing traffic protocols and applications. Recent arts [16], [17],
+malware detection [4], [5], [6], and attack detection [7], [8], [18], [19], [20] leverage self-supervised learning to construct
+[9]. With the development of the Internet and increasing pre-trained traffic encoders, alleviating the aforementioned
+focus on user privacy, Internet traffic is rapidly evolving issues. Specifically, they first learn knowledge from largeand predominantly encrypted, posing significant challenges scale unlabeled traffic data through pre-training to construct
+for traffic analysis [10], [11], [12], [13]. a generic traffic foundation encoder that extracts latent rep-
+ In recent years, deep learning (DL)-based traffic analysis resentations. Subsequently, this pre-trained encoder is finemethods have surpassed traditional rule-based methods, tuned with limited labeled traffic data to perform various
+leveraging their powerful learning capabilities to automati- traffic analysis tasks. It is noteworthy that their pre-training
+cally extract traffic features for effective analysis [14]. These directly borrows the generative tasks from the fields of natural language processing (NLP) and computer vision (CV),
+• This work was supported in part by China National Funds for by reconstructing masked bytes to match the raw bytes in
+ Distinguished Young Scientists under Grant 62425201; in part by the the traffic data. However, adopting such tasks encounters
+ National Natural Science Foundation of China under Grant 62502089,
+ Grant 62132011, and Grant 61932016; in part by Basic Research Program
+ significant challenges when applied to process encrypted
+ of Jiangsu under Grant BK20251353; and in part by SJTU-QI’ANXIN traffic data. Given that encryption obfuscates the network
+ Joint Lab of Information System Security. (Corresponding authors: Ke Xu payload into random bytes, reconstructing raw bytes from
+ and Zhi Xue.) these parts is infeasible for pre-training encoders. Conse-
+• Ruijie Zhao and Guang Cheng are with the School of Cyber Science quently, these traffic foundation encoders, based on the
+ and Engineering, Southeast University, Nanjing, Jiangsu, China (e-mails: generative pre-training paradigm, struggle to learn effective
+ {ruijiezhao, chengguang}@seu.edu.cn) traffic representations for encrypted traffic data, severely
+• Mingwei Zhan, Xianwen Deng, and Zhi Xue are with the School of
+ Computer Science, Shanghai Jiao Tong University, Shanghai, China (elimiting their efficacy.
+ mails: {mw.zhan, 2594306528, zxue}@sjtu.edu.cn). In this paper, we propose to leverage the holistic infor-
+• Qi Li and Zhuotao Liu are with the Institute for Network Sciences and mation of flow in encrypted traffic (defined as the flow se-
+ Cyberspace, Tsinghua University, Beijing 100084, China (e-mails: {qli01, mantics) rather than the fine-grained information obfuscated
+ zhuotaoliu}@tsinghua.edu.cn).
+• Yanhao Wang is an Independent Researcher (e-mail: wangyan- by encryption, to construct an effective traffic foundation enhao136@gmail.com). coder. Contrastive learning, another form of self-supervised
+• Ke Xu is with the Department of Computer Science and Technology, Ts- learning, could serve this purpose by comparing the seinghua University, Beijing 100190, China, and also with the Zhongguancun Laboratory, Beijing 100086, China (e-mail: xuke@tsinghua.edu.cn).
+ mantic similarities and differences between flows, enabling
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 2
+
+the encoder to comprehend flow semantics. Yet, empirical knowledge by contrastive learning. The pre-trained enstudies show that semantic knowledge preparation with coder is able to effectively extract semantic representadata augmentation is critical to contrastive learning [21], tions of various flows.
+[22], [23]. Unlike pixels and words, the meaning of traffic • We switch the pre-trained traffic encoder to packetbytes is position-dependent. Traditional data augmentation window and flow-window modes to conduct more efstrategies used in the NLP and CV fields, such as rota- ficient fine-tuning with limited labeled traffic data for
+tion and cropping, can disrupt this positional information various encrypted traffic analysis tasks.
+and seriously damage the flow semantics (detailed in Ap- • We comprehensively evaluate TA C O ’s classification perpendix A). So far, existing literature lacks well-designed formance, transfer performance, and efficiency on various
+data augmentation strategies for traffic bytes, further hin- real-world encrypted traffic datasets. Results demonstrate
+dering the development of encrypted traffic analysis sys- that TA C O outperforms the state-of-the-art methods by a
+tems based on contrastive learning. large margin.
+ To this end, we propose TA C O, a robust and flexible
+encrypted traffic analysis system based on based on contrastive pre-training. The deployment of TA C O includes 2 R ELATED W ORK
+three core stages: flow semantic knowledge preparation,
+flow semantics-aware encoder pre-training, and traffic clas- Traditional Traffic Analysis Systems. The traditional methsifier fine-tuning. First, we design several feasible traffic ods mainly include rule-based methods and ML-based
+data augmentation strategies to prepare flow semantics methods. The early studies of traffic analysis rely on rules
+knowledge from the unlabeled traffic data. Our key insight designed by experts in network security. However, with the
+is to define semantic similarities at different levels of en- development of network environments, these methods are
+crypted traffic data (i.e., byte-level, packet-level, and flow- no longer sufficient to analyze more complex traffic [10],
+level) in a way that preserves the structural integrity and [12]. To solve this problem, ML-based methods [5], [24],
+positional information, thus generating high-quality posi- [25], [26] apply machine learning algorithms to analyze
+tive samples as flow semantics knowledge. Then, we design selected statistical features of traffic. However, the humana novel flow semantics-aware traffic encoder with byte- designed features are limited to specific scenarios and lack
+window partition mode to learn and utilize the prepared generalizability. In recent years, DL-based methods using
+knowledge via the contrastive pre-training paradigm. The raw traffic as input are emerging, which exploit advanced
+obtained pre-trained encoder can be regarded as a foun- DL algorithms (e.g., CNN) for feature extraction without
+dation encoder, capable of comprehending flow semantics. manually designed features [3], [6], [27], [28], [29]. However,
+Finally, we switch the pre-trained traffic encoder to packet- CNN-based models exhibit inductive bias towards local
+window and flow-window modes to make it easier for fine- feature extraction, which is more suitable for images rather
+tuning with limited labeled traffic data. than highly structured traffic data. More seriously, most of
+ We evaluate the performance of TA C O on four real- the previous DL-based works utilize the supervised training
+world traffic datasets collected from 2016 to 2024 across paradigms, requiring large amounts of labeled data to convarious traffic classification tasks, including service type struct traffic classifiers. They not only highly rely on traffic
+identification, application fingerprinting, malicious traffic labeling, which is overhead and expensive, but also have
+detection, etc. Results show that TA C O achieves 86.61% to difficulty adapting to different traffic analysis scenarios.
+96.46% classification accuracies on these classification tasks Self-Supervised Traffic Analysis Systems. Recently, selfand surpasses the optimal baseline by by 7.43% in aver- supervised learning methods [30], [31], [32] have revoluage accuracy and 7.49% in average F1 score. Notably, our tionized the fields of computer vision and natural language
+flow semantics learning in the pre-training stage effectively processing, which utilize the unlabeled data to build a
+contributes to an average performance gain of 23.1% in F1 foundation encoder, thereby reducing the dependence on
+score. Besides, we introduce three transfer tasks that are labeled data and benefiting various downstream tasks. In
+distinct from traditional traffic classification tasks: flow con- the field of traffic analysis, recent works Rosetta [33] and
+sistency judgment, unseen protocol adaptation, and open- NetCLR [34] leverage self-supervised learning methods to
+world evaluation. Our method achieves an improvement of learn variants of packet sequences rather than raw bytes
+at least 11.62% in average F1 score on these transfer tasks. in different network environments (e.g., high throughput
+Additionally, benefiting from our efficient traffic partition and low throughput), reducing the impact of network enmodule, TA C O demonstrates superior efficiency compared vironments on traffic analysis performance. However, these
+to the Transformer-based baselines. methods focus on their defined specific scenario and fail
+ In summary, our contributions are as follows: to serve as traffic foundation encoders to enhance various
+• We propose TA C O , a flow semantics-aware traffic analy- analysis tasks. For instance, Rosetta designs several data
+ sis system based on contrastive pre-training, to perform augmentations for the traffic sequence, e.g., subsequence
+ robust and flexible encrypted traffic analysis. shift and size variation, to simulate the variants when the
+• We perform effective traffic data augmentation with three network environment changes. However, these sequencewell-designed augmentation strategies. It can prepare rea- based augmentations cannot be applied in raw traffic bytes
+ sonable and pattern-rich flow semantic knowledge from to generate meaningful positive flow samples as required
+ the unlabeled traffic data. by the general traffic analysis. To this end, several works
+• We design a flow semantics-aware traffic encoder with the have widely applied raw bytes to pre-train a general enbyte-window partition mode to learn the flow semantic coder. SAE [35] uses the stacked autoencoder paradigm
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 3
+
+for unlabeled feature extraction on raw bytes, and CL- for natural language processing. Unlike the pathway of fine-
+ETC [36] randomly sets 14 consecutive bytes of the 784 tuning publicly available large foundation models (e.g., GPT
+raw bytes to generate augmented samples and perform [40] and Llama [41]) or following the generative training
+contrastive learning with CNN. Both of them have limited paradigm, both of which cannot directly interpret encrypted
+performance due to their simple backbones and pre-train traffic, we build the contrastive-based traffic foundation
+task designs. Several recent studies employ Transformer encoder using flow semantic knowledge in the pre-training
+[37], a powerful backbone suitable for traffic bytes, and stage. The model input is the raw bytes in the flow, regarded
+introduce generative tasks for self-supervised pre-training. as a promising data source for encrypted traffic analysis, and
+For instance, PERT [16] migrates ALBERT [38] on bi-gramed has been widely applied in several works [6], [16], [17], [18],
+sentence-like traffic bytes for mask modeling; ET-BERT [17] [19], [20], [27], [35].
+utilizes BERT and the bi-gram tokenizer on the designed The developed system should be able to classify specific
+BURST [39] for better traffic classification performance; categories of traffic (i.e., multi-classification). We emphasize
+PEAN [18] also adopts BERT to pre-train the packet encoder that traffic classification is fully different from anomaly
+and combines transformer and long short-term memory detection [7], [11], [42], which aims to detect traffic that
+networks for traffic analysis; YaTC [19] treats traffic data deviates from the threshold. It is also worth noting that this
+as images instead of sentences, and applies the masked work is different from the supervised learning-based methautoencoder (MAE) paradigm to reconstruct the input traffic ods. We implement the pipeline of the proposed method
+data for more efficient pre-training. However, they learn through three stages: (1) flow semantic knowledge prepalatent representations by reconstructing masked raw bytes ration based on large-scale unlabeled traffic data via traffic
+of traffic, which is difficult to achieve with the prevalence of data augmentation; (2) flow semantics learning, where
+encryption. the encoder learns to comprehend flow semantics and ex-
+ To solve the above problems, we first prepare flow tract effective semantic representations by pre-training; and
+semantic knowledge of encrypted traffic data by augmen- (3) classifier fine-tuning (i.e., leveraging flow semantics),
+tation. Then we apply contrastive learning that can focus which utilizes the learned representations to drive the clasmore on overall semantic information rather than detailed sifier with limited labeled data. Furthermore, to rigorously
+information for pre-training. Finally, the pre-trained encoder evaluate the effectiveness and generalizability of flow seis fine-tuned on various downstream traffic classification mantics learning, we construct a diverse evaluation benchtasks for high-performance analysis. mark. Specifically, we utilize two fine-tuning datasets [2],
+ [43] that are included in the pre-training data to verify
+ the encoder’s ability to capture effective flow semantics
+3 P ROBLEM S TATEMENT from seen distributions. Meanwhile, two newer transfer
+3.1 Flow Semantics datasets [44], [45], which are strictly excluded from the pre-
+Flow semantics is defined as the intrinsic intent and be- training data, are employed to assess the method’s flexibility
+havioral patterns of network flows (cohesive sequences in handling unseen protocols and applications. Crucially, for
+of packets) designed to perform specific functions, which all datasets, the test samples are rigorously isolated from
+remain invariant across network condition changes (e.g., the pre-training data to prevent any potential information
+packet loss, retransmission) and observation windows. They leakage.
+encompass two primary elements: content and structure.
+ 3.3 Design Goals
+Content comprises the header and payload data within
+the packet sequence, capturing attributes such as packet TA C O is designed to prepare, learn, and leverage the flow
+length, protocol, and transmission details. Structure refers semantics, thus developing a robust and flexible encrypted
+to specific data blocks located at different positions, which traffic analysis system for various downstream security
+are defined by protocols to fulfill particular functions. More- tasks, such as application identification, malware detection,
+over, flow semantics provide extensive contextual infor- attack detection, etc. In particular, the system should achieve
+mation about sessions, protocols, applications, and events, the following two goals, which have not been addressed
+delivering a holistic view of network behavior. We prepare well in existing studies.
+flow semantics knowledge through traffic data augmenta- Robust. The system should be able to accurately classify
+tion tailored to the content and structural characteristics. specific traffic categories, especially in encrypted networks.
+Building on this foundation, flow semantics learning can Notably, we do not advocate relying on a massive amount
+be effectively implemented using a contrastive pre-training of labeled traffic data for training to enhance robustness.
+paradigm, enabling robust analysis and deeper insights into Flexible. Equally important, the system is designed for
+network behavior. agile deployment across new traffic analysis task scenarios,
+ demonstrating a strong transfer capability. It is capable of
+ adapting to the ever-changing landscape of task require-
+3.2 Threat Model ments, traffic protocols, and applications.
+We aim to develop a robust and flexible traffic system We deploy our pipeline around flow semantics learning
+that can analyze complex traffic behaviors under the en- to achieve the aforementioned goals. First, we address the
+crypted network through flow semantics learning. It is challenge of traffic data augmentation for high-quality flow
+noteworthy that flow semantics learning can utilize large- semantics knowledge preparation. Subsequently, through
+scale unlabeled traffic data to construct a foundation model our flow semantics-oriented training paradigm and encoder
+for encrypted traffic analysis, analogous to ChatGPT [32] structure, TA C O learns and leverages flow semantics to
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 4
+
+ Unlabeled Traffic Traffic Encoder
+ Large-Scale Original Sample X4
+ 𝑥 Embedding TPM Self-attention 𝑞
+ Module (Byte-window) Module
+ Traffic Data Contrastive
+ Momentum Update
+ Augmentation Loss
+ Momentum Encoder X4
+
+ Traffic Parser Feature 𝑥+ Embedding TPM Self-attention 𝑘
+ Augmented Sample Module (Byte-window) Module
+ Matrices
+ Stage 1: Flow Semantic Knowledge Preparation Stage 2: Contrastive Pre-training based on Flow Semantics
+ Pre-trained Encoder Note: Switch TPM to Packet-window and Flow-window Mode
+ Labeled Traffic Limited X2
+ Output
+
+ (Packet-window)
+
+ (Flow-window)
+ Self-attention
+
+ Self-attention
+
+ Classification
+ Embedding
+
+ Module
+
+ Module
+ Module
+ Cross Entropy
+
+ Layer
+ TPM
+ TPM
+ Loss
+
+ Traffic Parser Feature Label
+ Matrices
+ Stage 3: Classifier Fine-Tuning using Limited Labeled Data
+
+Fig. 1. The overview of TAC O.
+
+construct a robust and flexible encrypted traffic analysis embedding space by discriminating the semantic relationsystem. ship of the above three types of flows, i.e., the augmented
+ flows are close to the anchor, while the other flows are far
+ away from the anchor. In addition, we apply byte-window
+4 OVERVIEW OF TAC O mode for the traffic encoder to obtain cross-level sensing
+ fields within traffic data, so that the encoder can take into
+TA C O is a systematic approach centered around flow se- account global dependencies for feature extraction. Notably,
+mantics learning, aimed at developing a robust and flexible our pre-trained encoder, serving as a traffic foundation
+encrypted traffic analysis system. Our insight is to leverage encoder, can effectively extract semantic representations of
+a flow semantics-aware traffic foundation encoder to extract various flows. We will detail the flow semantics learning in
+effective flow semantic representations, thereby enhancing §5.2.
+the performance in various encrypted traffic analysis tasks. Traffic Classifier Fine-Tuning. In this stage, we aim to fine-
+Specifically, the traffic is preprocessed into the feature matrix tune the classifier with limited labeled data. Although the
+that generates a 2D matrix with stacked packet matrixes pre-trained encoder can extract the semantic representation
+for a flow. Next, we adopt the Transformer-based backbone of the flow, it cannot classify the specific class of each flow.
+network for feature extraction and design three partition Thus, we load our pre-trained encoder and add a linear
+modes to promote the performance of pre-training and fine- classification layer to it for fine-tuning training. Besides,
+tuning. Then, we construct TA C O through three key stages: we switch the partition module of the traffic encoder to
+flow semantic knowledge preparation, flow semantics learn- packet-window mode and flow-window mode. It enables
+ing, and traffic classifier fine-tuning. Figure 1 shows the the encoder to perform feature extraction within the packetoverview of TA C O. level partition and flow-level partition separately. Hence,
+Flow Semantic Knowledge Preparation. In this stage, we we can well drive our classifier with limited labeled traffic
+aim to prepare flow semantic knowledge from unlabeled data for various downstream traffic analysis tasks. We will
+traffic data. Our traffic data augmentation, implemented at describe the details of the fine-tuning in §5.3.
+the flow-level, packet-level, and byte-level, generates the
+augmented flow with the similar semantics as the original
+flow. These augmentation strategies are designed based on
+ 5 D ESIGN D ETAILS OF TAC O
+traffic data characteristics and provide high-quality data In this section, we first perform traffic data augmentation,
+preparation for flow semantics learning. We will detail our which is designed to prepare flow semantic knowledge from
+traffic data augmentation in §5.1. unlabeled traffic data. Then, we detail the pre-training stage
+Contrastive Pre-training. In this stage, the flow semantics- where our traffic encoder learns flow semantic. Finally, we
+aware traffic encoder learns flow semantics based on con- fine-tune the pre-trained encoder for various downstream
+trastive pre-training, which can prompt the traffic encoder traffic classification tasks.
+with an embedding space where embeddings of similar
+flow semantics are closer than embeddings of different flow 5.1 Flow Semantic Knowledge Preparation
+semantics. Specifically, there are three types of flow involved As previously mentioned, contrastive training is highly
+in training: (1) the original flow (i.e., as an anchor), (2) applicable for constructing our traffic encoder with flow
+various augmented flows with consistent semantics of the semantics learning. In the contrastive learning paradigm,
+original flow, and (3) other flows with different semantics data augmentation is crucial as it determines the quality of
+from the original flow. The traffic encoder trains an effective positive samples.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 5
+
+ Flow Header Payload Dropout
+ Feature
+ Packet 1 Original
+
+ Original Packets
+ Matrix
+ Packet 2 Sample
+ Packet 3
+ Packet 4 Packet
+
+ Byte Dropout
+ Packet Loss
+ Retransmission
+
+ Operation
+ Sliding Packet 5
+ Window Packet 6 Packet 6 Packet 6
+
+ Adjacent Packets
+ Packet 7 Packet 7
+ Packet 7
+ Packet 7 Packet 8 Remove
+ Packet 8 Packet 8 Packet 9 Packet 10
+ Packet 9 Packet 9 0 Padding Augmented
+ Session Flows Packet 10 Packet 10 Out of Window Sample
+
+ Flow-Level Augmentation Packet-Level Augmentation Byte-Level Augmentation
+
+Fig. 2. The schematic illustration of traffic data augmentation.
+
+ To this end, we implement traffic data augmenta- knowledge with a large amount of redundancy information
+tion with three well-designed augmentation strategies. As (especially encrypted payloads). Thus, we apply the byte
+shown in Figure 2, the augmentation is performed at the dropout operation to randomly drop a certain percentage
+byte-level, packet-level, and flow-level to preserve struc- of byte patches of both original and augmented samples
+tural integrity and positional information of the traffic data. during training. This augmentation brings different variants
+Moreover, the combination of intuitive and rational aug- to input flow in each epoch, thereby enhancing the diversity
+mentation strategies enriches the pattern of augmented sam- of input information as well as forcing the encoder to focus
+ples. Our traffic data augmentation strategies are specified on the robust flow semantic among encrypted bytes.
+as follows: Our traffic data augmentation combines the above three
+Flow-Level Augmentation. The flow-level augmentation is strategies to generate high-quality and diverse augmented
+implemented via a sliding window. From the perspective of samples for effective self-supervised learning during preapplication-layer protocol state machines, a network session training. Flow-level augmentation samples different wintypically consists of a continuous sequence of interactions dows, packet-level augmentation introduces dynamics of
+serving a unified purpose (e.g., a file download or video loss and retransmission, and byte-level augmentation enstream). Since the application state (e.g., ’transferring data’) sures fine-grained diversity by randomly masking payload
+remains consistent within a localized timeframe, adjacent bytes, guaranteeing distinct input variations for contrastive
+windows sample sub-sequences of this continuous interac- learning.
+tion and thus share the same flow semantics. In practice,
+the input size of the DL encoder is finite and fixed, meaning it can only process a limited segment of a flow at a 5.2 Contrastive Pre-training Based on Flow Semantics
+time. Therefore, following the idea of sliding windows in
+ In this stage (i.e., pre-training), we leverage the prepared
+network transmission control, we continue to slide the fixed
+ flow semantic knowledge to construct our flow semanticswindow along the timestamp to sample subsequent parts.
+ aware traffic encoder, which serves as a traffic foundation
+The augmented and original samples, adjacent within the
+ encoder that can comprehend flow semantics and extract
+same flow, exhibit similar functionality and semantics but
+ effective semantic representations.
+differ in content.
+Packet-Level Augmentation. The packet-level augmentation, which encompasses packet retransmission and loss op- 5.2.1 Encoder Structure
+erations, addresses the common variations prevalent in real- To extract features from structured traffic data more effecworld network traffic. From the perspective of transport- tively, we adopt Transformer with positional embedding
+layer reliability, mechanisms like TCP retransmission are and multi-head attention mechanism as the backbone of
+designed to handle network instability without altering the the model. The following are the details of the three core
+application-layer function. Therefore, artificially simulating modules of the traffic encoder, i.e., the embedding module,
+packet loss or duplication mimics network jitter, while the the traffic partition module, and the self-attention module.
+underlying semantics of the flow remain unchanged. To Embedding Module. The embedding module, the iniensure robustness in learned flow semantics, it is essential tial component of the encoder, is responsible for splitting
+that the model can adapt to such variability. To this end, the formatted input feature matrix into a series of nonwe implement packet retransmission and loss on the aug- overlapping byte patches. Each byte patch consists of bytes
+mented flow as positive samples. Specifically, the retrans- of size 2 ∗ 2 in the matrix, which is mapped to a 192-
+mission operation involves randomly selecting a packet and dimensional feature space. The positional embedding is
+duplicating its content. Conversely, the packet loss opera- added to mark their positional information in the traffic,
+tion removes a packet, subsequently padding the end of the then we have the initial features of all patches, denoted as
+feature matrix with zero bytes. the set P = {x1p ; x2p ; ...; xN
+ p }.
+ Byte-Level Augmentation. The byte-level augmentation Traffic Partition Module. We develop a traffic partition
+is achieved by byte dropout operation. The raw bytes module to better perform flow semantic learning in the preof traffic contain highly position-dependent flow semantic training stage and traffic classification in the subsequent
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 6
+
+ • Packet-window contains all patches of a packet in the fea-
+ Packet 1
+ ture matrix. In the packet-window mode, patches within
+ A Packet Packet 2 the same packet are partitioned into the same subset.
+ Window Unit
+ A Byte Window Unit Packet 3 • Flow-window is defined as the patches at the same position of different packets in the feature matrix. The flow-
+ Packet 4
+ window mode ensures that patches within the same flow
+ Packet 5 window will not be partitioned into different subsets.
+ (a) Byte-Window Mode (b) Packet-Window Mode
+ (Pre-training Stage) (Fine-tuning Stage) Because these modes with different levels of information
+ granularity define the scope of feature extraction, the en-
+ A Flow Window Unit
+ coder has the ability to more effectively learn and utilize
+ the flow semantics. Additionally, each scope contains only
+ one subset with N/C patches after partition. Thus, the
+ O(N 2 ) complexity of the self-attention module is significantly reduced to O(N 2 /C 2 ). In the deployment, we stack
+ multiple traffic partition modules for feature extraction.
+ (c) Flow-Window Mode (Fine-tuning Stage)
+ Consequently, information from different scopes can inter-
+ Step 1: Select A Window Mode
+ act with each other through the redistribution of subsets in
+ Generate Subset Based on Selected Window Mode the subsequent traffic partition module, gaining complete
+ … … …… … dependency extraction.
+ Subset 1 Subset 2 Subset C In this stage, we adopt the byte-window mode and set C
+ Step 2: Generate Subsets for Feature Extraction to 2 to form a subset of bytes at different global positions for
+ feature extraction. It can discover clues in global information
+Fig. 3. The schematic illustration of the traffic partition module. We first to promote information interaction between related content.
+select a unique window mode as the smallest unit of partition. Then, we In the subsequent fine-tuning stage (§5.3), we will switch the
+generate each subset based on the selected mode. The blue patches
+indicate how a subset is partitioned under each mode. pre-trained encoder to packet-window and flow-window
+ modes for feature extraction, where the information interacfine-tuning stage. We detail its design motivation in Ap- tion is limited to the bytes at the packet-level and the flowpendix E. The function of the traffic partition module is to level respectively. It can facilitate the pre-trained encoder to
+generate a partition in terms of a specific window for P : more efficiently leverage related content in packet-level and
+ C
+ [ flow-level for classification.
+ T P M (P ) = {P1 ; P2 ; ...; PC }, P = Pi , (1) Self-Attention Module. Through the traffic partition modi=1 ule, traffic patches are divided into C subsets based on
+ specific windows. To focus on more important features in
+ Pi = {W1 ∪ W2 ∪ ...} = {xi1 i2 i3
+ p ; xp ; xp ; ...}, (2)
+ the patches and capture long-distance dependencies, we
+ ∀i, j, i ̸= j ⇒ Pi ∩ Pj = ∅. (3) introduce the self-attention module with the multi-head selfattention mechanism [37]. The output of the self-attention
+In the sets theory of mathematics, a partition of the set module is patch features containing dependencies within
+P refers to dividing its elements into non-empty subsets their subset. As detailed in Figure 1, our encoder includes
+Pi (i = 1, 2, . . . , C) by our defined window units W1,2... , 4 stacked traffic partition modules and self-attention modin a manner such that each element xn p (n = 1, 2, . . . , N ) is ules in both pre-training and fine-tuning. After the final
+precisely included in one and only one subset. Each subset self-attention module, we form the union set of all patch
+has the same number of elements (also known as cardinality features, and apply mean-pooling to them to obtain a 192-
+in the set theory). Therefore, we can easily parallelize the dimensional flow feature vector.
+input of these subsets into the self-attention module.
+ The design of the traffic partition module is explicitly 5.2.2 Flow Semantics-Oriented Training
+motivated by the hierarchical structural characteristics of Inspired by MoCo v3 [22], we abstract contrastive learning
+network traffic: the byte is the basis content of a packet, and on flows as a dictionary query problem. Considering an
+sequences of packets form a flow and reflect semantics. As encoded flow q as a query and a set of encoded flows
+the smallest unit of partition, the delineation of the window {k0 , k1 , k2 , . . .} as keys of a dictionary, which contains a
+can be combined with the existing hierarchical information single key k as the encoded positive sample of the query
+inside traffic data. By designing three window modes, i.e., flow. We aim to discriminate the k from {k0 , k1 , k2 , . . .} in
+byte-window, packet-window, and flow-window, the fea- the feature space for each q . To obtain the encoded queries
+ture extraction of each layer could be focused on one specific and keys, our model contains a query encoder fquery for
+granularity of the traffic hierarchical structure, enhancing queries and a momentum encoder fkey for keys. Both of
+the effectiveness and efficiency of flow semantics learning them take our flow semantics-aware traffic encoder for
+and leveraging. As shown in Figure 3, the three window feature extraction, and contain alternately stacked 4 traffic
+modes are defined as follows: partition modules and 4 self-attention modules.
+• Byte-window consists of byte patches in the feature matix. First, the original traffic sample x is fed to our traffic data
+ The byte-window mode uses it as the basic unit of parti- augmentation to obtain the corresponding augmented postion without limitation of high-level structure, i.e. packet itive sample x+ . Then, we input x and x+ into the encoder
+ and flow. and momentum encoder respectively to obtain their feature
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 7
+
+representations q = fquery (x) and k = fkey (x+ ). Next, we TABLE 1
+get the encoded flow sample q as a query and the whole Summary of Datasets and Baselines. (Cls: class count, Gen:
+ generative pre-training, Con: contrastive pre-training).
+batch of encoded augmented samples {k0 , k1 , k2 , . . . kB } as
+keys of the dictionary. Note that only one key matches q
+ Datasets Baselines
+in these keys. The remaining keys and other flows’ positive Name Size Cls. Method Backbone Type
+samples within this batch are considered negative samples ISCXVPN2016 [43] 1.7k 7 SAE [35] AE Gen.
+of q . The model realizes the dictionary query by calculating CrossPlat2020 [2] 1.9k 30 CL-ETC [36] CNN Con.
+the InfoNCE Loss [46] for each query: CrossNet2022 [44] 1.6k 20 PEAN [18] BERT+LSTM Gen.
+ CICEVSE2024 [45] 10.2k 51 PERT [16] ALBERT Gen.
+ VPN2023 [47] 7.5k 150 ET-BERT [17] BERT Gen.
+ exp(sim(q, k)/t) QUIC2022 2.2k 8 YaTC [20] MAE Gen.
+ Loss = − log PB , (4)
+ i=1 exp(sim(q, ki )/t)
+ inter-flow information interaction. As shown in Figure 3, the
+where the t is a temperature hyper-parameter that controls packet-window mode divides patches into subsets accordthe sharpness of the probability distribution, regulating ing to the packet they belong to, which means the number
+the penalty strength for negative samples in contrastive of subsets C is the packet count of the flow feature matrix,
+pre-training, the k is the only key that q matches, and i.e. 5 in our implementation. In flow-window mode, each
+ki (i = 1, 2, . . . , B) are the whole batch encoded augmented window unit contains patches of the same position from
+samples. The function sim means the similarity, which we different packets in the flow since they usually indicate the
+measure by the dot product. same function and reflect the fine-grained flow dynamics.
+ While the query encoder fquery updated its parameters These flow window units are partitioned into C = 4 subby back-propagation, the key encoder fkey performs mo- sets, where a higher partition count C will result in more
+mentum updates by introducing a momentum coefficient information loss of each subset and a lower C will introduce
+m instead of simply copying the parameters of fquery : more flow-independent patches within a single subset. The
+ new old
+θkey = m · θkey + (1 − m) · θquery , where m ∈ [0, 1), the packet window mode and flow window mode respectively
+parameters of fkey denoted as θkey , and those of fquery impose attention on the traffic of a specific granularity to
+as θquery . Momentum updating is vital for traffic data, avoid irrelevant fine-grained dependencies, thereby achievwhich carries distinct functional behaviors across different ing effective utilization of the pre-trained encoder. Besides,
+applications. It maintains the consistency of the key encoder, our encoder has learned knowledge from all information
+preventing drastic parameter fluctuations driven by func- granularity (i.e., byte-level, packet-level, and flow-level) in
+tional discrepancies between batches. By smoothing updates the previous pre-training stage with byte-window mode,
+with a coefficient m, it ensures the negative sample queue enabling efficient information interaction within the flow
+remains a stable reference, allowing the model to capture window and packet window. Finally, a linear classification
+robust flow semantics rather than fitting specific batch noise. layer is added after the encoder to classify the traffic type.
+ In addition, the byte dropout strategy used in the pretraining stage not only involves byte-level data augmen- 5.3.2 Classifier Training
+tation but also significantly reduces the number of input We use the pre-trained query encoder that updates the
+patches, achieving a significant reduction in memory usage parameters normally, and load it to the flow semanticsand computation. Furthermore, our insight into pre-training aware traffic encoder. Then, the partition mode of the traffic
+is that the more difficult training task can push our encoder partition module is switched as mentioned above. Next, a
+to learn more effective representations. Thus, the traffic linear layer is added behind the encoder for classification.
+partition module in the flow semantics-aware traffic encoder It receives the output features from the encoder to make
+is set as byte window mode in this stage. It excludes addi- predictions of the labels and use the cross entropy as a
+tional structural knowledge in the pre-training encoder and loss function: Loss = − i=1
+ PNl
+ yi log(pi ), where the yi is
+prevents the encoder from taking shortcuts during learning. the one-hot encoding of the true label, pi means the output
+ prediction of the model, and Nl is the number of labels.
+5.3 Traffic Classifier Fine-tuning Moreover, during the fine-tuning stage, the flow-
+In the fine-tuning stage, we leverage supervised learning window partition is a randomized partition with the flowto fine-tune our encoder for diverse downstream traffic window as the smallest unit. The randomness is intended
+analysis tasks. to enrich the pattern of features seen by the self-attention
+ module, bringing a kind of hidden data augmentation in the
+5.3.1 Classifier Structure training phase that can improve the generalization ability of
+ the model. In the test stage, to obtain fixed inputs of test
+To perform classifier fine-tuning more efficiently, we consamples, we apply a certain strategy similar to the shuffle
+sider providing facilitation to the classifier for achieving
+ Transformer to partition the subsets, so as to obtain stable
+better classification performance. Thus, we load the preinference results. Specifically, flow windows are rotated into
+trained encoder and switch the traffic partition module.
+ C subsets by their sequential order, which could easily be
+ Specifically, we load the parameters of the pre-trained
+ realized by matrix transposition.
+flow semantics-aware traffic encoder including 4 selfattention modules with the ability to extract generic representations of traffic data. Then, the traffic partition module 6 E XPERIMENTAL R ESULTS
+is switched to packet-window and flow-window partition In this section, we evaluate the performance of TA C O. In
+alternately, which can cyclically realize intra-packet and particular, we answer the following four research questions:
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 8
+
+ TABLE 2
+ The Performance of TAC O and Baselines on Four Real-World Traffic Datasets.
+
+ ISCXVPN2016 CrossPlat2020 CrossNet2022 CICEVSE2024
+ Methods
+ Acc. (%) F1 (%) Acc. (%) F1 (%) Acc. (%) F1 (%) Acc. (%) F1 (%)
+ SAE 57.91 ± 0.46 55.60 ± 0.26 36.67 ± 1.87 33.97 ± 1.95 30.94 ± 0.67 29.01 ± 0.68 35.48 ± 0.17 30.25 ± 0.91
+ CL-ETC 82.99 ± 0.70 83.34 ± 0.73 40.45 ± 1.59 41.69 ± 1.35 55.72 ± 1.52 55.12 ± 1.53 52.17 ± 2.00 49.44 ± 2.22
+ PERT 86.89 ± 1.53 86.75 ± 1.50 94.03 ± 2.75 93.68 ± 3.04 74.31 ± 2.07 73.77 ± 2.19 72.33 ± 0.71 71.93 ± 0.74
+ ET-BERT 86.19 ± 0.94 86.84 ± 0.73 91.66 ± 3.98 90.94 ± 4.47 65.08 ± 3.29 64.63 ± 3.20 72.19 ± 0.24 72.06 ± 0.24
+ PEAN 83.22 ± 1.70 83.03 ± 1.92 40.62 ± 1.83 36.11 ± 2.69 49.11 ± 4.40 46.26 ± 6.28 5.08 ± 0.53 0.94 ± 0.50
+ YaTC 90.83 ± 0.34 90.65 ± 0.37 88.97 ± 1.15 88.47 ± 1.18 80.49 ± 1.17 80.34 ± 1.31 76.03 ± 1.76 75.82 ± 1.71
+ TA C O 94.52 ± 0.69 94.46 ± 0.70 96.46 ± 0.43 96.24 ± 0.43 86.61 ± 1.68 86.41 ± 1.71 88.45 ± 0.37 88.13 ± 0.40
+
+1) How well does TA C O perform compared to the state-of- potential to handle the position-dependent bytes of enthe-art methods? (§6.2) crypted traffic with self-attention mechanism and position
+2) How effective is the flow semantics learning in the pre- embedding, as the backbone to conduct self-supervised
+ training stage? (§6.3) traffic analysis. Except for PEAN, which does not show
+3) If TA C O has transfer capability for rapid application in a significant gap due to its heavy reliance on LSTM, the
+ new downstream traffic tasks? (§6.4) generative Transformer approaches (i.e., PERT, ET-BERT,
+4) How efficient is TA C O in training and analysis? (§6.5) YaTC) demonstrate a performance advantage. However,
+5) How does each component of TA C O contribute? (§6.6) their representations learned by the reconstruction task are
+ harmed by the encrypted part of traffic. Thus, none of them
+ achieve consistently high performance and stability on all
+6.1 Experiment Settings
+ four datasets. Differently, TA C O learns the flow semantics
+We design several experiments to evaluate the efficacy by the relationships between flows instead of the internal
+and efficiency of TA C O and advanced baselines on various information with encryption and significantly outperforms
+datasets. We repeated the experiments with different ran- them in performance, stability, and universality. In addition,
+dom seeds and reported them as the mean and standard Appendix F shows that our method can still achieve signifdeviation. The details of implementation and model archi- icant advantages over the baselines in few-shot learning.
+tecture are presented in Appendix B and C. Note that, TA C O is also significantly ahead in terms of
+Datasets. In pre-training, we aggregate 1,074,861 unlabeled transfer capability (Sec. 6.4) and efficiency (Sec. 6.5), both
+traffic flows from public datasets [2], [6], [43], [48] for TA C O of which are critical to the availability of traffic classifiers.
+and the fair replication of all methods. As summarized in the We specifically analyze the performance of our method and
+left part of Table 1, four datasets [2], [43], [44], [45] collected baselines on various traffic datasets as follows.
+from different years with various traffic analysis tasks are
+ The results of different methods on the ISCXVPN2016
+used for fine-tuning evaluation. The VPN2023 [47] dataset
+ dataset are shown in the leftmost section of Table 2. This
+with the new protocol is introduced for unseen protocol
+ service type identification task includes 7 different service
+adaptation and open-world evaluation. Furthermore, we
+ types over VPN. Among the baselines, SAE exhibits the
+collect a QUIC traffic dataset for unseen protocol adaptation.
+ poorest performance, primarily because its backbone, com-
+In the implementation, we strictly removed the IP, port, and
+ posed of linear layers, struggles to extract features from
+timestamp of all traffic to avoid potential bias. We describe
+ complex VPN traffic effectively. TA C O achieves improvethe details of the datasets in Appendix D.
+ ments of 3.7% in accuracy and 3.8% in F1 score com-
+Baselines. As shown in the right part of of Table 1, we use
+ pared to the suboptimal baseline, YaTC. In addition, Table
+six advanced self-supervised traffic analysis methods [16],
+ VII presents the performance of supervised learning-based
+[17], [18], [20], [35], [36] that have the ability to leverage
+ baselines. FS-Net, designed for encrypted traffic analysis,
+unlabeled traffic data as baselines with their optimal setis the best among them, achieving an accuracy of 87.56%
+tings, which are detailed in Appendix E. Additionally, we
+ and an F1 score of 87.50%, respectively. However, since FSalso compare with the other six supervised learning-based
+ Net cannot leverage unlabeled data to extract effective latent
+baselines in Appendix F.
+ representations, its performance remains significantly lower
+ than ours. Thus, TA C O achieves significant improvements
+6.2 Classification Performance (RQ1) over all baselines, demonstrating its effectiveness in the
+Table 2 shows the results of the classification performance of service type identification task.
+TA C O and baselines on the four real-world traffic datasets. The second section of Table 2 illustrates the performance
+We can observe that TA C O achieves superior classification of various methods for application fingerprinting on the
+performance on all metrics. Both SAE and CL-ETC are CrossPlat2020 dataset. It can be observed that many baseunable to perform ideal classification performance with the lines present a significant performance drop, including the
+backbones of linear layer networks and CNN, which are supervised baselines in Appendix F. This is because this
+not suitable to serve as robust traffic encoders. TA C O and task includes a large number of application categories in
+other baseline methods adopt Transformer, which shows the relatively closed IOS system, resulting in more complex
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 9
+
+ 100
+ ISCXVPN2016 100
+ CrossPlat2020 100
+ CrossNet2022 100
+ CICEVSE2024
+
+ 85 75 75 75
+ F1 Score (%)
+
+ F1 Score (%)
+
+ F1 Score (%)
+
+ F1 Score (%)
+ 70 50 50 50
+
+ 55 25 25 25
+ w/o Pre-training w/o Pre-training w/o Pre-training w/o Pre-training
+ w/ Pre-training w/ Pre-training w/ Pre-training w/ Pre-training
+ 40 0 0 0
+ C
+
+ C
+
+ C
+
+ C
+ ET T
+ PE T
+ AN
+ C
+
+ RT
+
+ PE T
+
+ C
+
+ ET T
+ PE T
+
+ C
+ CO
+
+ ET T
+ RT
+
+ C
+ E
+
+ E
+
+ AN
+
+ CO
+
+ E
+
+ AN
+
+ CO
+
+ E
+
+ AN
+
+ CO
+ R
+ R
+
+ R
+
+ R
+ R
+
+ R
+ -ET
+
+ -ET
+
+ -ET
+
+ -ET
+ SA
+
+ YaT
+
+ SA
+
+ YaT
+
+ SA
+
+ YaT
+
+ SA
+
+ YaT
+ PE
+ -BE
+
+ PE
+ -BE
+
+ PE
+ -BE
+
+ PE
+ -BE
+ PE
+ TA
+
+ TA
+
+ TA
+
+ TA
+ CL
+
+ CL
+
+ CL
+
+ CL
+ ET
+Fig. 4. Comparison of pre-training effects on the four traffic datasets.
+
+and unified traffic patterns. Pre-training methods generally TABLE 3
+achieve superior performance as they effectively learn to F1 Performance (%) of Using Traditional Augmentation for Pre-training.
+extract features of these patterns from unlabeled data. PERT,
+with a larger number of parameters, achieves sub-optimal Methods ISCXVPN2016 CrossPlat2020 CrossNet2022 CICEVSE2024
+
+performance. However, its performance exhibits noticeable w/o PT 81.5 70.8 52.2 68.4
+ w/ Trad. Aug. 81.4 ↓0.1 57.1 ↓13.7 54.2 ↑2.0 58.7 ↓9.7
+fluctuations (around 3%) and remains lower than that of w/ Our Aug. 94.5 ↑13.0 96.2 ↑25.4 86.4 ↑34.2 88.1 ↑19.7
+TA C O by 2.4% and 2.6% in accuracy and F1 score, respectively. These results highlight that our flow semantics
+ achieves stable and significant improvements across varilearning serves as a more effective pre-training strategy,
+ ous traffic classification tasks. However, the performance
+enabling TA C O with fewer parameters to achieve superior
+ improvements of SAE, CL-ETC, and PEAN are minimal and
+performance in application fingerprinting.
+ sometimes even negative. This is because SAE and CL-ETC
+ The third section of Table 2 presents the results of
+ apply the unsuitable backbone and overly simplistic selfdifferent methods on the CrossNet2022 dataset. This task
+ supervised tasks, where SAE conducts data compression
+evaluates the performance of traffic classifiers under abnorand CL-ETC replaces the consecutive bytes with 0 as augmal network conditions, where the bandwidth is limited
+ mentation for contrast, resulting in their failed pre-training.
+to 10 Mbps, the packet loss rate ranges from 2.5% to 5%,
+ In addition, PEAN only pre-trains the packet encoder to
+and the latency is 200 ms. Due to the challenging network
+ learn the packet representation, while the other components
+conditions, none of the methods achieved classification per-
+ (flow encoder and LSTM) are absent from pre-training. As
+formance above 90%, with PERT and ET-BERT even falling
+ a result, it fails to benefit from unlabeled traffic data. The
+below 75%. TA C O achieves the best performance in this task,
+ other three baselines employ generative pre-training, which,
+with improvements of 6.1% in accuracy and 6.0% in F1 score
+ though not feasible for encrypted content, can learn from
+compared to YaTC.
+ partially unencrypted flows and unencrypted segments of
+ The results of different methods on the CICEVSE2024
+ the flow (e.g., header content), achieving some pre-training
+dataset are presented in the rightmost section of Table 2.
+ improvements. Notably, since limited labeled data cannot
+This task includes 51 traffic categories with various madrive PERT and ET-BERT with large parameter amounts
+licious traffic (e.g., cryptojacking, backdoor, and denial of
+ (see §6.6), they can’t work well without pre-training on the
+service attacks) collected in electric vehicle charging sta-
+ Cross-Platform dataset. Benefiting from the well-designed
+tions. The large number of similar attacks (e.g., up to 5
+ traffic data augmentation that can prepare rich flow semantypes of scan attacks and 6 types of flood attacks) on
+ tic knowledge for pre-training, the pre-training improvecharging stations makes the traffic difficult to distinguish,
+ ments of TA C O are very significant and stable on the four
+significantly affecting the classification performance of the
+ datasets.
+baselines. In this malicious traffic classification task, TA C O
+ Comparison with Traditional Augmentation. It is noteworachieves an accuracy of 88.45% and an F1 score of 88.13%,
+ thy that traditional data augmentation strategies, such as
+outperforming the optimal baseline by 12.4% and 12.3%,
+ rotation, cropping, and zooming, can seriously damage the
+respectively.
+ content of traffic data. The results of pre-training the traffic
+ classifier using traditional augmentation are presented in
+6.3 Effect of Flow Semantics Learning (RQ2) Table 3. It can be observed that traditional augmentation
+In this section, we present the effect of our flow semantics strategies yield almost no improvement in classifier perlearning implemented in the pre-training stage. To com- formance on the four traffic datasets, with only a slight
+prehensively evaluate the effectiveness of flow semantics increase of 2.8% in accuracy and 2% in F1 score on the Crosslearning as a novel pre-training strategy for traffic analysis Net2022 dataset. On the CrossPlat2020 and CICEVSE2024
+tasks, we conduct experiments focusing on the following datasets, which represent challenging tasks with a larger
+two aspects: (1) the performance improvements in traffic number of traffic categories, the F1 scores from pre-training
+analysis contributed by pre-training and (2) the results using with traditional data augmentation even decrease by 9.7%
+traditional augmentation on traffic data. and 13.7%, respectively. In contrast, pre-training with our
+Improvement of Pre-training. Figure 4 illustrates the results flow semantics-based data augmentation achieves consisof pre-training improvements across different methods. It is tent and significant improvements, with an average increase
+evident that TA C O’s flow semantics learning consistently of 22.1% in accuracy and 23.1% in F1 score. In summary,
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 10
+
+ TABLE 4
+
+ GPU Memory Usage (MB)
+ Performance of TAC O and Baselines on Flow Consistency Judgment 80000 PERT
+ ET-BERT
+ and Unseen Protocol Adaptation (WireGuard and QUIC). PEAN
+ 60000 YaTC
+ Flow Consistency Judgment WireGuard QUIC
+ TACO
+ Methods
+ Acc. (%) F1 (%) Acc. (%) F1 (%) Acc. (%) F1 (%) 40000
+ PERT 50.37 ± 0.27 46.97 ± 2.53 73.27 ± 4.18 73.23 ± 4.14 54.67 ± 2.84 51.86 ± 2.79
+ ET-BERT 50.33 ± 0.10
+ YaTC 87.77 ± 2.46
+ 41.13 ± 3.14
+ 87.36 ± 2.63
+ 72.24 ± 3.14 71.79 ± 3.21 44.27 ± 0.80 44.25 ± 0.60
+ 81.33 ± 2.37 81.18 ± 2.42 87.98 ± 0.43 87.97 ± 0.44
+ 20000
+ TA C O 93.15 ± 1.40 93.05 ± 1.44 92.21 ± 0.37 92.12 ± 0.38 91.51 ± 0.39 91.53 ± 0.41
+ 25 26 27 28 29 210 211 212 213 214
+ Batch Size (2x)
+ TABLE 5
+ Performance of TAC O and Baselines on Open-World Evaluation.
+ Fig. 5. The GPU memory usage of Transformer-based methods.
+
+ Methods
+ Open-World Evaluation can more effectively judge flow consistency. TA C O achieves
+ Acc. (%) F1 (%) MTA (%) UTA (%) an accuracy of 93.15% and an F1 score of 93.05%, surpassing
+ PERT 87.84 ± 3.50 87.46 ± 2.32 64.22 ± 5.55 96.80 ± 4.75
+ the optimal baseline by 5.38% and 5.69%, respectively.
+ ET-BERT 78.09 ± 10.33 79.19 ± 7.62 50.72 ± 8.53 88.47 ± 14.77 Unseen Protocol Adaptation. During the pre-training stage,
+ YaTC 72.27 ± 11.61 76.17 ± 9.56 90.07 ± 0.96 65.51 ± 15.85 all methods are only exposed to VPN traffic using the
+ TA C O 93.84 ± 2.06 94.40 ± 1.53 91.32 ± 1.57 94.80 ± 2.43 TLS 1.2 protocol. The unseen protocol adaptation task aims
+ to assess whether the learned representations extracted by
+ the pre-trained traffic encoder can adapt to previously untraditional data augmentation strategies are unsuitable for seen protocols. To this end, we introduce the WireGuard
+traffic data, whereas TA C O with three well-designed aug- dataset [47] and the widely deployed QUIC protocol for
+mentation strategies effectively addresses this challenge and evaluation.
+achieves robust performance. As shown in the right part of Table 4, generative baselines (PERT, ET-BERT) suffer a catastrophic performance
+6.4 Transfer Capability of TAC O (RQ3) drop on QUIC. These baselines adopt the generative pre-
+In this section, we implement three new traffic tasks, dis- training paradigm, which overly focuses on detailed infortinct from the classification tasks in the original dataset, mation (e.g., protocol-specific byte patterns), making them
+that require a more fundamental understanding of traffic less flexible in adapting to fundamental protocol changes.
+semantics by the pre-trained encoder. The flexible transfer In contrast, TA C O implements traffic augmentation to precapability on new traffic analysis tasks is critical to a foun- pare rich flow semantic knowledge, enabling the learning
+dation traffic encoder. The three new transfer tasks are (1) of holistic flow semantics that reflect network behavior in
+flow consistency judgment, (2) unseen protocol adaptation, the pre-training stage. Consequently, our method achieves
+and (3) open-world evaluation. robust F1 scores of 92.12% on WireGuard and 91.53% on
+Flow Consistency Judgment. We construct a binary classifi- QUIC, significantly outperforming the optimal baseline by
+cation task to determine whether the input flow samples 10.94% and 3.56%, respectively.
+exhibit consistent flow semantics. Specifically, each flow Open-World Evaluation. In the open-world scenario, traffic
+sample consists of five packets, which either originate from analysis methods not only need to classify the monitored
+the same flow (classified as class 0) or from different flows traffic categories, but also face the open-world unmonitored
+(classified as class 1). Since all packets are stripped of IP traffic. We model the open-world evaluation as a multiaddresses, port numbers, and timestamps, the model must classification task with the original monitored categories
+rely solely on the remaining bytes to determine whether the and an additional unmonitored open-set category. In depackets in the input flow sample belong to the same flow. tail, we introduce original 7 classes and traffic from the
+We use the four traffic datasets in Sec. 6.2 to conduct this ISCXVPN2016 dataset as the monitored categories, while
+assessment. the ISCX-NonVPN dataset serves as another category to
+ The left part of Table 4 presents the results of the flow represent unmonitored traffic in the train set. In contrast,
+consistency judgment task. It can be seen that PERT and the unmonitored category in the test set consists of all test
+ET-BERT achieved F1 scores of 46.97% and 41.13%, respec- traffic samples with 150 new classes from the VPN2023
+tively, indicating that they are unable to correctly judge dataset [47], which is not included in the training data for
+the consistency of the flow. Moreover, this task involves the open-world setting. We define two metrics in this evalutraffic data from four different traffic datasets, which re- ation: monitored traffic accuracy (MTA) and unmonitored
+quires the pre-trained encoder to handle traffic with di- traffic accuracy (UTA). MTA measures the proportion of
+verse protocols for feature extraction, thereby increasing the correctly classified monitored traffic, while UTA measures
+task’s difficulty. PERT and ET-BERT use bi-gram strings the proportion of open-world
+ P traffic correctly classified as
+ k∈M TPk
+to represent traffic bytes, making them excessively focus unmonitored : MTA = P , UTA = TP Nu , where M is
+ u
+ k∈M Nk
+on the detailed patterns rather than the semantics of the the set of monitored categories, TPk and Nk are the correctly
+entire flow, resulting in their poor performances in this task. classified and total samples in category k , respectively, and
+Thanks to TA C O’s pre-training paradigm, which is designed TPu and Nu are the correctly classified and total unmonito comprehend the holistic semantics of flows and learn the tored samples.
+semantic differences between different flows, our method Table 5 shows the results of the open-world evaluation.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 11
+
+ TABLE 6
+ Ablation Study on Key Modules and Traffic Data Augmentation. The abbreviations are explained as follows: TPM: traffic partition module, PE:
+ pre-trained encoder; FLA: flow-level augmentation, PLA: packet-level augmentation, BLA: byte-level augmentation, All: all augmentation.
+
+ ISCXVPN2016 CrossPlat2020 CrossNet2022 CICEVSE2024
+ Methods
+ Acc. (%) F1 (%) Acc. (%) F1 (%) Acc. (%) F1 (%) Acc. (%) F1 (%)
+ TA C O 94.52 ± 0.69 94.46 ± 0.70 96.46 ± 0.43 96.24 ± 0.43 86.61 ± 1.68 86.41 ± 1.71 88.45 ± 0.37 88.13 ± 0.40
+ w/o TPM 90.47 ± 0.95 90.30 ± 0.98 88.13 ± 0.69 87.19 ± 0.81 74.50 ± 1.23 74.17 ± 1.30 72.97 ± 0.43 72.76 ± 0.48
+ w/o PE 82.36 ± 3.72 81.52 ± 3.87 72.00 ± 1.20 70.75 ± 1.34 53.58 ± 4.96 52.21 ± 4.90 69.67 ± 6.28 68.37 ± 6.66
+ w/o FLA 92.65 ± 0.52 92.50 ± 0.54 93.99 ± 0.44 93.48 ± 0.56 78.17 ± 2.31 77.92 ± 2.50 86.50 ± 3.40 86.30 ± 3.39
+ w/o PLA 93.43 ± 1.00 93.30 ± 1.06 94.78 ± 0.75 94.51 ± 0.75 83.24 ± 2.44 83.02 ± 2.50 84.66 ± 5.89 84.41 ± 5.89
+ w/o BLA 82.78 ± 2.15 82.03 ± 2.31 71.40 ± 2.16 62.96 ± 3.19 60.49 ± 6.33 58.44 ± 7.66 78.72 ± 5.19 78.24 ± 5.09
+ w/o All 79.09 ± 2.32 78.32 ± 2.45 30.03 ± 2.05 17.07 ± 2.25 63.12 ± 0.60 62.76 ± 0.67 71.19 ± 2.46 69.97 ± 2.43
+
+ 4000 14000
+ Throughput (sample/s)
+
+ 3500 12250 more data under the same memory constraints compared
+ Parameters (104)
+
+ 3000 10500 to other methods. In contrast, both ET-BERT and PERT have
+ 2500 8750 extremely high memory usage due to the use of the BERT-
+ 2000 7000 style setup designed for NLP tasks with extremely high
+ 1500 5250 parameter counts. YaTC and PEAN with specific settings
+ 1000 3500
+ for traffic analysis tasks have lower memory usage, but the
+ 500 1750
+ 0 0 lack of optimized encoder design in the pre-training stage
+ results in significantly higher memory consumption than
+ O
+
+ O
+ N
+ C
+
+ N
+ C
+ ET-B T
+ PEA T
+
+ ET-B T
+ PEA T
+ PER
+ ER
+
+ PER
+ ER
+ YaT
+
+ YaT
+ TAC
+
+ TAC
+
+ our method.
+ Throughput and Parameters. Throughput and parameter
+Fig. 6. The throughput and parameters of Transformer-based methods. count are vital in traffic analysis systems, as throughput de-
+Except for TA C O, all baselines show wider fluctuations in termines processing speed while parameter count impacts
+performance with different random seeds in the open-world model complexity and resource demands. Figure 6 shows
+setting. In terms of accuracy and F1 score, each method that the processing and deployment efficiency of PERT and
+achieves performance higher than 70%. However, MTA and ET-BERT is significantly lower than others. Because they
+UTA reveal their inherent issues. Although ET-BERT and direct reuse of the large models and parameter settings
+PERT demonstrate superior performance in unmonitored in the NLP field, and neither of them has taken measures
+open-world traffic detection, they perform poorly on the to optimize the highly complex global self-attention in the
+classification task for monitored traffic categories, with MTA Transformer model structure for traffic analysis. In contrast,
+scores of only 50.72% and 64.22%, respectively. On the other PEAN, YaTC, and TA C O conduct special model design achand, YaTC achieves a high MTA of 90.07%, but its UTA cording to flow structure thus decomposing the complexity
+of 65.51% indicates a lack of ability to distinguish moni- of self-attention, resulting in their lightweight parameters.
+tored and unmonitored traffic, resulting in over one-third However, the irrational input settings and staged twoof unmonitored traffic being misclassified into monitored encoder design of PEAN result in the lowest throughput.
+categories. Thanks to our pre-trained traffic encoder that YaTC utilizes parameter sharing to mitigate this problem,
+captures the distinct semantics of each flow, TA C O achieves but still with inefficient staged model design. Thanks to the
+performance exceeding 90% across all metrics, demonstrat- well-designed traffic partition module, TA C O achieves an
+ing its superiority in the open-world evaluation. integrated single encoder without staged modeling, while
+ generating subsets to reduce global complexity in selfattention calculations. Thus, TA C O achieves the highest
+6.5 Efficiency of TAC O (to RQ4) throughput of 3824.95 samples/s among all methods with
+To evaluate the efficiency of our method, we compare lightweight parameters of 1.86 × 106 .
+the memory usage, throughput, and parameters with four
+transformer-based methods in this section.
+GPU Memory Usage. GPU memory usage is crucial for 6.6 Ablation Study (RQ5)
+training, especially for the pre-training stage, because it To examine the contribution of each component in TA C O,
+determines the size of unlabeled data that can be pro- we conduct a series of ablation studies. Table 6 illustrates
+cessed under the same GPU resources. Figure 5 illustrates the results.
+the GPU memory consumption of the Transformer-based Ablation on Key Modules. It can be observed that the
+methods under different batch sizes. It is evident that, due traffic partition module (TPM) can contribute to learning
+to the O(N 2 ) space complexity inherent to the Transformer flow semantic knowledge in the pre-training stage and boost
+architecture, the memory usage of each method escalates the classification performance. It is worth noting that the
+rapidly with the exponential increase of batch size. TA C O performance drop is most significant when we ablate the
+benefits from the byte dropout strategy and traffic parti- pre-trained encoder (PE). The significant performance gains
+tion module, which substantially mitigate space complexity. demonstrates that our flow semantics-based traffic encoder
+Consequently, our method can handle at least 16 times successfully leverages unlabeled traffic data to reduce the
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 12
+
+ 100 100 increases up to 8,192. Regarding potential false negatives
+F1 Score (%) where flows from the same application appear in the batch,
+
+ F1 Score (%)
+ 90 90 we argue that treating them as negatives is theoretically
+ justified by the original flow discrimination objective. Even
+ 80 80
+ ISCX. CrosN. ISCX. CrosN. if two flows belong to the same application, they repre-
+ CrosP. CIC. CrosP. CIC. sent distinct network sessions with unique flow seman-
+ 70 25 50 75 9095 70 210 211 212 213 214
+ Byte Dropout Ratio (%) Batch Size tics. Contrasting these same-application but distinct-flow
+ (a) (b) samples encourages the encoder to capture fine-grained
+ intra-class variations rather than collapsing into coarse class
+Fig. 7. The impact of (a) byte dropout ratio and (b) batch size.
+ labels, which is also unavailable in pre-training. This strictly
+dependence on labeled data and improve the performance flow-level separation prevents feature collapse and learns
+for various traffic analysis tasks. robust representations that generalize better during fine-
+Ablation on Augmentation Strategies. We evaluate our tuning. However, when the batch size reaches 16,384, the
+augmentation strategies, which are fundamental for defin- performance degrades because the huge number of negative
+ing semantic similarities in contrastive learning. The flow- samples creates a difficult surrogate task that exceeds the
+level augmentation (FLA) effectively captures temporal model’s capabilities. Thus, we set the batch size to 8,192.
+consistency via sliding windows, validating that adjacent More experimental results and analysis are detailed in Apconsecutive packets within the same flow share consistent pendix F.
+semantics. The packet-level augmentation (PLA) enhances Deployment Feasibility. TA C O supports both real-time
+generalization by applying packet retransmission and loss online traffic analysis (via time window) and large-scale
+operations, which emulates traffic variations encountered in offline traffic analysis. To evaluate practical applicability,
+real-world network environments. Most critically, remov- we analyze deployment across diverse scenarios. Benefiting
+ing byte-level augmentation (BLA) causes a performance from the traffic partition module that reduces complexity,
+drop of over 9% across all datasets. Randomly masking TA C O achieves 3,824.95 samples/s on an RTX 3090. On an
+a significant ratio of bytes not only diminishes redundant Intel Xeon Platinum 8373C CPU, the throughput remains
+information, compelling the model to focus on intrinsic flow robust at 182.05 samples/s. Even in a simulated resourcepatterns, but also generates diverse views from unlabeled constrained edge environment (single-core CPU with 50%
+traffic. Furthermore, it significantly reduces the computa- quota, 1GB memory, AVX2 instruction set), TA C O remains
+tional complexity of self-attention, allowing TA C O to utilize functional at 7.04 samples/s. These results confirm TA C O
+a larger batch size with richer negative samples. Finally, we is adaptable from cloud clusters to low-power edge endremove all augmentation strategies (w/o All). Unlike the points.
+ablation of the pre-trained encoder (w/o PE), ’w/o All’ still
+performs pre-training but utilizes the original flow as the
+positive sample. The resulting failure of contrastive learning
+proves that our augmentation is essential for preventing 8 C ONCLUSION
+model collapse. Note that our traffic data augmentation is
+also effective in semi-supervised learning, which is detailed
+in Appendix F. In this paper, we propose TA C O, a robust and flexible
+ encrypted traffic analysis system based on contrastive pretraining. We first prepare rich flow semantic knowledge
+7 D ISCUSSIONS through traffic data augmentation from a large amount
+Parameters Analysis. Byte dropout allows the encoder to of unlabeled traffic data. Then, we apply the contrastive
+learn key semantics of remaining bytes. The higher byte learning paradigm to obtain a well-trained flow semanticsdropout ratio enhances the difficulty of this task, requiring aware traffic encoder with the flow semantic knowledge. In
+deeper semantic extraction. Figure 7 (a) shows that the clas- the pre-training stage, we deploy the byte-window mode to
+sification performance improves as the byte dropout ratio enhance the interaction of global information, which signifiincreases. However, when the byte dropout ratio reaches cantly improves the encoder’s ability to learn flow semantics
+95%, the F1 score decreases due to extreme information loss. for semantic representation extraction. It should be noted
+The optimal byte dropout ratio is 75% on the CrossNet2022 that our pre-trained encoder, capable of comprehending
+dataset and 90% on the other three datasets. Our method flow semantics, can serve as a traffic foundation encoder.
+with byte dropout strategy can benefit more from large-scale Finally, in order to more efficiently drive our classifier with
+unlabeled traffic data than generative methods that focus on limited labeled traffic data, the pre-trained traffic encoder
+patterns within individual traffic samples. is switched to packet-window and flow-window modes for
+ In contrastive pre-training, each sample treats other sam- fine-tuning. The experimental results illustrate that TA C O
+ples within the same batch as negative samples, making the outperforms the state-of-the-art methods by a large margin
+batch size a critical factor. As shown in Figure 7 (b), we on four fine-tuning traffic datasets. Besides, our method
+compare the classification performance under different pre- shows excellent transfer performance (flexibility) on three
+training batch size settings. Thanks to the high dropout ratio new traffic analysis tasks. We believe that the future trend
+and traffic partition module, TA C O has extremely low space in encrypted traffic analysis will involve leveraging unlacomplexity and supports training with large batch sizes. It beled traffic data to learn flow semantics, thereby boosting
+can be seen that performance improves as the batch size analysis performance.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 13
+
+R EFERENCES [22] X. Chen, S. Xie, and K. He, “An empirical study of training selfsupervised vision transformers,” in 2021 IEEE/CVF International
+[1] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smart- Conference on Computer Vision (ICCV), 2021, pp. 9620–9629.
+ phone app identification via encrypted network traffic analysis,” [23] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple
+ IEEE Trans. Inf. Forensics Secur., vol. 13, no. 1, pp. 63–78, 2018. framework for contrastive learning of visual representations,” in
+[2] V. Ede et al., “Flowprint: Semi-supervised mobile-app fingerprint- International conference on machine learning, 2020, pp. 1597–1607.
+ ing on encrypted network traffic,” in Network and Distributed
+ [24] F. Li, R. Zhao, S. Wang, L. Chen, A. W.-C. Liew, and W. Ding,
+ System Security Symposium (NDSS), vol. 27, 2020.
+ “Online intrusion detection for internet of things systems with full
+[3] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “Fs-net: A flow sequence
+ bayesian possibilistic clustering and ensembled fuzzy classifiers,”
+ network for encrypted traffic classification,” in IEEE Conference on
+ IEEE Transactions on Fuzzy Systems, vol. 30, no. 11, pp. 4605–4617,
+ Computer Communications (INFOCOM), 2019, pp. 1171–1179.
+ 2022.
+[4] X. Zhang, Q. Wang, M. Qin, Y. Wang, T. Ohtsuki, B. Adebisi,
+ [25] N. Jing et al., “An efficient svm-based method for multi-class net-
+ H. Sari, and G. Gui, “Enhanced few-shot malware traffic classifiwork traffic classification,” in 30th IEEE International Performance
+ cation via integrating knowledge transfer with neural architecture
+ Computing and Communications Conference, 2011, pp. 1–8.
+ search,” IEEE Trans. Inf. Forensics Secur., vol. 19, pp. 5245–5256,
+ 2024. [26] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Appscanner:
+[5] B. Anderson and D. McGrew, “Machine learning for encrypted Automatic fingerprinting of smartphone apps from encrypted netmalware traffic classification: accounting for noisy labels and non- work traffic,” in IEEE European Symposium on Security and Privacy
+ stationarity,” in ACM SIGKDD International Conference on knowledge (EuroS&P), 2016, pp. 439–454.
+ discovery and data mining (KDD), 2017, pp. 1723–1732. [27] Y. Zeng, H. Gu, W. Wei, and Y. Guo, “Deep-full-range: a deep
+[6] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware learning based network encrypted traffic classification and intrutraffic classification using convolutional neural network for rep- sion detection framework,” IEEE Access, vol. 7, pp. 45 182–45 190,
+ resentation learning,” in 2017 International conference on information 2019.
+ networking (ICOIN), 2017, pp. 712–717. [28] J. Zhang et al., “Autonomous unknown-application filtering and
+[7] Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An labeling for dl-based traffic classifier update,” in IEEE Conference
+ ensemble of autoencoders for online network intrusion detection,” on Computer Communications (INFOCOM), 2020, pp. 397–405.
+ in Network and Distributed System Security Symposium (NDSS), 2018. [29] K. Lin, X. Xu, and H. Gao, “Tscrnn: A novel classification scheme
+[8] C. Fu, Q. Li, M. Shen, and K. Xu, “Frequency domain feature of encrypted traffic based on flow spatiotemporal features for
+ based robust malicious traffic detection,” IEEE/ACM Transactions efficient management of iiot,” Computer Networks, vol. 190, p.
+ on Networking, vol. 31, no. 1, pp. 452–467, 2023. 107974, 2021.
+[9] K. Sood, M. R. Nosouhi, D. D. N. Nguyen, F. Jiang, M. Chowdhury, [30] J. Devlin, M. Chang, K. Lee, and K. Toutanova, “Bert: Pre-training
+ and R. Doss, “Intrusion detection scheme with dimensionality of deep bidirectional transformers for language understanding,”
+ reduction in next generation networks,” IEEE Trans. Inf. Forensics in North American Chapter of the Association for Computational
+ Secur., vol. 18, pp. 965–979, 2023. Linguistics: Human Language Technologies (NAACL-HLT), 2019, pp.
+[10] P. Velan, M. Čermák, P. Čeleda, and M. Drašar, “A survey of meth- 4171–4186.
+ ods for encrypted traffic classification and analysis,” International [31] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked
+ Journal of Network Management, vol. 25, no. 5, pp. 355–374, 2015. autoencoders are scalable vision learners,” in IEEE/CVF conference
+[11] C. Fu, Q. Li, and K. Xu, “Detecting unknown encrypted malicious on computer vision and pattern recognition, 2022, pp. 16 000–16 009.
+ traffic in real time via flow interaction graph analysis,” in Network [32] OpenAI, “Chatgpt,” https://openai.com/chatgpt/, accessed 2022.
+ and Distributed System Security Symposium (NDSS), 2023. [33] R. Xie, J. Cao, E. Dong, M. Xu, K. Sun, Q. Li, L. Shen, and
+[12] M. Shen, K. Ye, X. Liu, L. Zhu, J. Kang, S. Yu, Q. Li, and K. Xu, M. Zhang, “Rosetta: Enabling robust TLS encrypted traffic clas-
+ “Machine learning-powered encrypted network traffic analysis: sification in diverse network environments with tcp-aware traffic
+ A comprehensive survey,” IEEE Commun. Surv. Tutorials, vol. 25, augmentation,” in 32nd USENIX Security Symposium (USENIX
+ no. 1, pp. 791–824, 2023. Security), 2023, pp. 625–642.
+[13] M. Shen, Y. Liu, L. Zhu, K. Xu, X. Du, and N. Guizani, “Optimizing [34] A. Bahramali, A. Bozorgi, and A. Houmansadr, “Realistic webfeature selection for efficient encrypted traffic classification: A site fingerprinting by augmenting network traces,” in 2023 ACM
+ systematic approach,” IEEE Network, vol. 34, no. 4, pp. 20–27, 2020. SIGSAC Conference on Computer and Communications Security (CCS),
+[14] E. Papadogiannaki and S. Ioannidis, “A survey on encrypted 2023, pp. 1035–1049.
+ network traffic analysis applications, techniques, and countermea- [35] M. Lotfollahi, M. Jafari Siavoshani, R. Shirali Hossein Zade, and
+ sures,” ACM Computing Surveys, vol. 54, no. 6, 2021. M. Saberian, “Deep packet: A novel approach for encrypted traffic
+[15] Y. Qing, Q. Yin, X. Deng, Y. Chen, Z. Liu, K. Sun, K. Xu, J. Zhang, classification using deep learning,” Soft Computing, vol. 24, no. 3,
+ and Q. Li, “Low-quality training data only? A robust framework pp. 1999–2012, 2020.
+ for detecting encrypted malicious network traffic,” in Network and [36] Z. Zhao, Y. Guo, J. H. Wang, H. Wang, C. Zhang, and C. An, “Cl-
+ Distributed System Security Symposium (NDSS), 2024. etc: A contrastive learning method for encrypted traffic classifica-
+[16] H. He, Z. Yang, and X. Chen, “Pert: Payload encoding representa- tion,” in 2022 IFIP Networking Conference (IFIP Networking), 2022,
+ tion from transformer for encrypted traffic classification,” in 2020 pp. 1–9.
+ ITU Kaleidoscope: Industry-Driven Digital Transformation, 2020, pp.
+ [37] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N.
+ 1–8.
+ Gomez, Ł. Kaiser, and I. Polosukhin, “Attention is all you need,”
+[17] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “Et-bert: A con-
+ Advances in neural information processing systems, vol. 30, 2017.
+ textualized datagram representation with pre-training transformers for encrypted traffic classification,” in ACM Web Conference [38] Z. Lan, M. Chen, S. Goodman, K. Gimpel, P. Sharma, and R. Sori-
+ (WWW), 2022, pp. 633–642. cut, “Albert: A lite bert for self-supervised learning of language
+[18] P. Lin, K. Ye, Y. Hu, Y. Lin, and C.-Z. Xu, “A novel multimodal representations,” in International Conference on Learning Representadeep learning framework for encrypted traffic classification,” tions (ICLR), 2020.
+ IEEE/ACM Transactions on Networking, 2022. [39] A. Panchenko, L. Niessen, A. Zinnen, and T. Engel, “Website
+[19] R. Zhao, M. Zhan, X. Deng, Y. Wang, Y. Wang, G. Gui, and fingerprinting in onion routing based anonymization networks,”
+ Z. Xue, “Yet another traffic classifier: A masked autoencoder based in 10th annual ACM Workshop on Privacy in the Electronic Society,
+ traffic transformer with multi-level flow representation,” in Thirty- 2011, pp. 103–114.
+ Seventh AAAI Conference on Artificial Intelligence (AAAI), 2023, pp. [40] T. B. Brown, “Language models are few-shot learners,” arXiv
+ 5420–5427. preprint arXiv:2005.14165, 2020.
+[20] R. Zhao, M. Zhan, X. Deng, F. Li, Y. Wang, Y. Wang, G. Gui, and [41] Meta, “Llama2,” https://llama.meta.com/llama2/, accessed 2023.
+ Z. Xue, “A novel self-supervised framework based on masked [42] Z. Liu, H. Namkung, G. Nikolaidis, J. Lee, C. Kim, X. Jin, V. Braverautoencoder for traffic classification,” IEEE/ACM Transactions on man, M. Yu, and V. Sekar, “Jaqen: A high-performance switch-
+ Networking, vol. 32, no. 3, pp. 2012–2025, 2024. native approach for detecting and mitigating volumetric ddos
+[21] K. He, H. Fan, Y. Wu, S. Xie, and R. B. Girshick, “Momen- attacks with programmable switches,” in 30th USENIX Security
+ tum contrast for unsupervised visual representation learning,” in Symposium (USENIX Security), 2021, pp. 3829–3846.
+ IEEE/CVF Conference on Computer Vision and Pattern Recognition [43] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A.
+ (CVPR), 2020, pp. 9726–9735. Ghorbani, “Characterization of encrypted and vpn traffic using
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+ This article has been accepted for publication in IEEE Transactions on Dependable and Secure Computing. This is the author's version which has not been fully edited and
+ content may change prior to final publication. Citation information: DOI 10.1109/TDSC.2026.3677663
+
+IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 14, NO. 8, AUGUST 2022 14
+
+ time-related,” in Proceedings of the 2nd international conference on
+ information systems security and privacy (ICISSP), 2016, pp. 407–414.
+[44] W. Li, X.-Y. Zhang, H. Bao, H. Shi, and Q. Wang, “Prograph:
+ Robust network traffic identification with graph propagation,”
+ IEEE/ACM Transactions on Networking, 2022.
+[45] CICEVSE2024 Dataset, “Multi-dimensional dataset
+ for electric vehicle charging station security,”
+ https://www.unb.ca/cic/datasets/evse-dataset-2024.html,
+ accessed 2024.
+[46] A. v. d. Oord, Y. Li, and O. Vinyals, “Representation learning with
+ contrastive predictive coding,” arXiv preprint arXiv:1807.03748,
+ 2018.
+[47] S. Oh, M. Lee, H. Lee, E. Bertino, and H. Kim, “Appsniffer:
+ Towards robust mobile app fingerprinting against vpn,” in ACM
+ Web Conference (WWW), 2023, pp. 2318–2328.
+[48] S. Dadkhah, H. Mahdikhani, P. K. Danso, A. Zohourian, K. A.
+ Truong, and A. A. Ghorbani, “Towards the development of a
+ realistic multidimensional iot profiling dataset,” in 19th Annual
+ International Conference on Privacy, Security & Trust, 2022, pp. 1–11.
+
+ © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+ but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.

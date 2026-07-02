@@ -1,0 +1,1108 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [048] An Encrypted Traffic Classification Framework Based on Convolutional Neural Networks and Stacked Autoencoders
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：048
+题名：An Encrypted Traffic Classification Framework Based on Convolutional Neural Networks and Stacked Autoencoders
+年份：2020
+DOI：10.1109/iccc51575.2020.9344978
+来源：2020 IEEE 6th International Conference on Computer and Communications (ICCC)
+PDF：paper/10.1109_iccc51575.2020.9344978.pdf
+已有粗分类：加密流量分类与应用识别
+二级关联：其他AI安全与跨域异常检测
+相关性：强相关，分数 12
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\048.txt
+- 原始字符数：35161
+- 本次发送字符数：35161
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+2020 IEEE 6th International Conference on Computer and Communications
+
+An Encrypted Traffic Classification Framework Based on Convolutional Neural
+Networks and Stacked Autoencoders
+Maonan Wang1,2, Kangfeng Zheng1,*, Dan Luo1, Yanqing Yang1,3, Xiujuan Wang4
+
+2020 IEEE 6th International Conference on Computer and Communications (ICCC) | 978-1-7281-8635-1/20/$31.00 ©2020 IEEE | DOI: 10.1109/ICCC51575.2020.9344978
+
+1
+
+School of Cyberspace Security, Beijing University of Posts and Telecommunications, Beijing, China
+2
+Faculty of Humanities and Education, University of Agder, Norway
+3
+College of Information Science and Engineering, Xinjiang University, Urumqi, China
+4
+Faculty of Information Technology, Beijing University of Technology, Beijing, China
+e-mail: wangmaonan@bupt.edu.cn, zkf_bupt@163.com, luodan@bupt.edu.cn,
+qing0991@163.com, xjwang@bjut.edu.cn
+brings significant challenges to traditional traffic
+classification. Therefore, some technologies about encrypted
+traffic classification based on machine learning or deep
+learning have been proposed [2].
+Some approaches for encrypted traffic classification are
+statistical-based methods. These methods have an
+assumption that the statistical features of different types of
+traffic are unique. Draper-Gil et al. used time-related features
+like the duration of the flow, the time between two packets
+sent forward direction, and the time between two packets
+sent in either direction, etc. to classify the encrypted traffic.
+They achieve 90% accuracy in classifying 12 classes of
+traffic when using the C4.5 decision tree algorithms [3]. The
+main drawback of these methods is that the features need to
+be extracted by experts; it is time-consuming and expensive.
+The deep neural network can automatically extract features
+from hierarchical data, and the network traffic flow is
+hierarchical. Therefore, some approaches based on the deep
+neural network are proposed. Wang et al. proposed an
+end-to-end method of encrypted traffic classification [4].
+They use a one-dimensional convolutional neural network
+that automatically extracts features from raw traffic and has
+an excellent performance on classification.
+However, there are still some problems when using deep
+neural networks to classify encrypted network traffic. Most
+of the neural networks, like convolutional neural networks,
+need a fixed-sized input; therefore, the raw network traffic
+needs to be trimmed first. For example, if the traffic file’s
+size is larger than N bytes, then we trim the file to N bytes.
+This will cause information loss after N bytes. More
+importantly, some information about the overall structure of
+traffic is lost. For example, we will not know the length of
+the entire traffic and the number of packets in a session,
+which will affect the classification accuracy.
+For the sake of solving these disadvantages, an encrypted
+traffic classification framework based on convolutional
+neural networks (CNN) and stacked autoencoders (SAE) is
+proposed. We use convolutional neural networks to extract
+features directly from raw encrypted traffic. At the same time,
+we extract statistical features from raw traffic and use
+stacked autoencoders to encode these features to high-level
+features. The statistical features are used to compensate for
+the information loss caused by traffic trimming. The
+high-level features extracted from the convolutional neural
+
+Abstract—In recent years, deep learning-based encrypted
+traffic classification has proven to be effective; especially, using
+neural networks to extract features from raw traffic to classify
+encrypted traffic. However, most of the neural networks need a
+fixed-sized input, so that the raw traffic need to be trimmed.
+This will cause the loss of some information; for example, we
+do not know the number of packets in a session. To solve these
+problems, a framework, which implements both a
+convolutional neural network (CNN) and a stacked
+autoencoder (SAE), is proposed in this paper. This framework
+uses a CNN to extract high-level features from raw network
+traffic and uses an SAE to encode the 26 statistical features
+calculated by raw traffic directly. The statistical features can
+be used to supplement the information loss due to trimming.
+After that, the outputs from the CNN and the encoder in SAE
+are combined into new high-level features; these new features
+include the information from the trimmed raw traffic and
+statistical features. Finally, these new high-level features are
+used to classify encrypted traffic. “ISCX VPNnonVPN” traffic
+dataset is used to demonstrate the feasibility of this framework.
+The framework proposed in this paper can improve the
+performance of encrypted traffic classification; it achieves an
+f1-score of 0.98. Furthermore, new high-level features, which
+generated by combining the features extracted from a
+convolutional neural network and a stacked autoencoder, can
+represent different classes of traffic well. More importantly,
+this work is unique in the encrypted traffic classification field,
+for it is the first time to use both raw traffic and statistical
+features as the input of the model.
+Keywords-encrypted traffic classification; stacked autoencoder; convolutional neural network;
+
+I.
+
+INTRODUCTION
+
+The recent development of the Internet has made various
+applications appear, and the amount of traffic generated by
+these applications is increasing rapidly. A large amount of
+traffic will make it difficult for the networking industry to
+ensure the network quality of service (QoS). To cope with
+the significant traffic increases, traffic classification
+technologies have been receiving increased attention in
+recent years. More and more research organizations are
+making efforts to research on traffic classification and
+develop new classification technologies [1]. However, as
+people realize the importance of privacy, encrypted traffic is
+becoming more and more common in network traffic, which
+
+978-1-7281-8635-1/20/$31.00 ©2020 IEEE
+
+634
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 19,2025 at 01:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+network and encoded by the encoder in stacked autoencoder
+are combined to form new high-level features. The newly
+generated features can contain information from both
+trimmed raw traffic and statistical features. Finally, these
+new high-level features are used for encrypted traffic
+classification. “ISCX VPN-nonVPN” traffic dataset [3] is
+used to demonstrate the feasibility of this framework. The
+results show that this framework has a good performance on
+classification; it achieves an f1-score of 0.98 in traffic
+classification. Furthermore, the new high-level features
+generated by this framework can represent different kinds of
+network traffic well.
+The major contributions of this paper are as follows:
+x
+We propose a framework that employs a
+convolutional neural network and a stacked
+autoencoder at the same time. The convolutional
+neural network is used to extract high-level features
+from raw traffic, and the stacked autoencoder is
+used to encode the statistical features.
+x
+The raw traffic needs to be trimmed before it can be
+input to the convolutional neural network, which
+will cause information loss, such as how many
+packets are in a session. In this framework,
+statistical features are used to supplement some
+information of the raw traffic.
+x
+This framework can generate new high-level
+features by combining the features extracted from
+the convolutional neural network and the stacked
+autoencoder. We use the new high-level features to
+classify encrypted traffic and achieve an excellent
+performance.
+x
+The new high-level features can also represent
+different classes of network traffic well.
+x
+This work is unique in the encrypted traffic
+classification field, for it is the first time to use both
+raw traffic and statistical features as the input of the
+model at the same time.
+The rest of the paper is organized as follows. Related
+works are discussed in section II. The background in this
+work is introduced in section III, including the stacked
+autoencoder and convolutional neural network. Section IV
+proposes the framework in this paper, including two parts,
+data preprocess and model’s architecture. Section V presents
+the experiments carried out using the “ISCX VPN-nonVPN”
+traffic dataset and shows detailed results. Experiment setup
+and evaluation metrics are also introduced in this section.
+Finally, section VI concludes the paper and discusses the
+future direction.
+
+method, also known as deep packet inspection (DPI), uses
+the pre-defined patterns to inspect the payload in the
+application layer of packets [6]. However, due to the
+emergence of encrypted network traffic, the payload-based
+method’s accuracy also declines. As a result, a new method
+that is based on statistical features has gradually appeared.
+This method can handle both encrypted and unencrypted
+traffic. Draper-Gil et al. used this method to achieve superior
+performance in encrypted traffic classification [3].
+Nevertheless, this method’s main problem is that all the
+statistical features need to be extracted by experts.
+In recent years, deep learning methods have shown
+state-of-the-art performances in encrypted traffic
+classification. One of its main advantages is that it can
+automatically extract features from the raw network traffic.
+Wang et al. proposed a new system that integrates feature
+extraction, feature selection, and classifier into an end-to-end
+framework based on the convolution neural network [4].
+Song et al. used a text convolutional neural network to
+extract critical features for traffic classification [7]. Shapira
+et al. transformed the basic flow data into a picture and then
+used image classification deep learning techniques to classify
+encrypted traffic [8]. Guo et al. utilized the convolutional
+autoencoder and the convolutional neural network to identify
+real-time VPN traffic [9]. Lotfollahi et al. proposed a “Deep
+Packet” scheme, which integrates both feature extraction and
+classification phases in one system. Moreover, “Deep Packet”
+can handle both traffic classification and application
+identification [10].
+III.
+
+BACKGROUND
+
+A. Stacked Autoencoder
+An autoencoder (AE) is an unsupervised neural network
+that learns to minimize the difference between input data and
+output data. There are two parts of an AE, an encoder and a
+decoder. The encoder maps the original data to the code
+(usually, the dimension of the code is less than the original
+data). The decoder tries to map the code to the original input.
+One of the applications of AE is dimensionality reduction
+[11]. Consider an input ∈ ; the objective of the AE is
+defined to be = . The AE tries to learn an objective
+is the weights of the
+function
+, ( ) ≈ y, where the
+whole neural network, and the
+is the network’s biases.
+The general loss function of AE is shown in (1). The
+distance. Then
+reconstruction loss in (1) is defined as the
+gradient descent can be used for fine-tuning the weights and
+biases in AE.
+
+II. RELATED WORK
+Traffic classification technology has developed
+significantly for many years. The initial traffic classification
+is based on the port number; this method is considered the
+easiest and fastest [5]. However, when more and more new
+applications appear, and some of them use standard
+registered port numbers to disguise their traffic, the accuracy
+of classification based on ports gradually decreases.
+Therefore, a new technology based on payload appears. This
+
+( , )=
+
+−
+
+, (
+
+)
+
+(1)
+
+In practice, in order to obtain better results, stacked
+autoencoder (SAE) is proposed [12]. An SAE consists of
+several autoencoders where the output of each one is
+connected to the input of the successive one. The training
+steps of SAE mainly include the following two steps:
+x
+The parameters of other layers are fixed when
+training one layer. The output from the previous
+
+635
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 19,2025 at 01:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+layer is used as an input for the next layer, and this
+will continue until the training is completed.
+x
+After training all the layers, the backpropagation
+algorithm is used to minimize the reconstruction
+error. The weights in all the layers will be adjusted.
+In this work, SAE is used to deal with the statistical
+features from the network traffic. We will use SAE to encode
+statistical features and get high-level features.
+
+parts in this framework, data preprocessing and encrypted
+traffic classification. During the data preprocessing phase,
+we not only extract statistical features but also generate
+images from the trimmed raw traffic. The statistical features
+are used to compensate for information loss caused by
+trimming. During the classification phase, CNN and SAE are
+used at the same time. To be specific, the CNN is used to
+extract high-level features from the trimmed raw traffic, and
+the SAE is used to extracted features from statistical features.
+Then we combine these two features into new high-level
+features and use these to classify encrypted traffic. The
+dataset, details of preprocessing, and the architecture of
+classification model are explained in the following.
+
+B. Convolutional Neural Network
+The convolutional neural network (CNN) is another deep
+neural network, most commonly implemented to analyze
+images. The architecture of CNN is inspired by the visual
+cortex in the brain. Individual neurons respond to stimuli
+only in restricted areas of the visual field, and all these
+neurons can cover the entire visible area [13], [14]. The
+convolutional layer is the most fundamental component of
+CNN. Now consider the input of a convolutional layer is a
+matrix X × and the convolution kernel is
+× . The
+stride is 1, and the padding is 0. The output of this layer is
+of size ( − + 1) × ( − + 1), and (2) is the way to
+compute .
+=
+
+(
+
+)(
+
+)
+
+,
+
+TABLE I.
+
+Non-VPN/CPN
+
+Traffic Type
+Email
+Chat
+
+non-VPN
+
+(2)
+
+Streaming
+File Transfer
+P2P
+VoIP
+
+where
+is non-linear activations such as Sigmoid, rectified
+linear activation unit (ReLU), or Leaky ReLU [15]. There is
+another basic block in CNN, which is the pooling layer,
+typically max pooling or average pooling. The pooling layer
+can reduce the size of the output, thereby further reduce the
+computational complexity.
+An interesting application of CNN is extracting features,
+such as feature extraction from tumor images [16] or
+hyperspectral images [17]. It is observed that some simple
+shapes (e.g., edges and curves) can be extracted in shallow
+layers, and some semantic features can be extracted in a
+deeper layer [18]. In this paper, CNN is used to deal with the
+images generated by trimmed raw traffic and extract features
+from these images. The generation of images is discussed in
+section IV-B. In particular, 1D-CNN will be used; the
+specific reason will be mentioned in section IV-C.
+IV.
+
+12 CLASSES IN “ISCX VPN-NON VPN” DATASET
+
+VPN-Email
+VPN-Chat
+VPN
+
+VPN-Streaming
+VPN-File Transfer
+VPN-P2P
+VPN-VoIP
+
+A. Dataset
+The experiments in this paper are carried out by using the
+“ISCX VPN-nonVPN” traffic dataset. This dataset was
+proposed by Draper-Gil et al. in 2016 [3]. Both regular
+(non-VPN) traffic and VPN traffic, captured from different
+applications (i.e., Skype, Gmail), are included in this dataset.
+There are two types of data formats in this dataset,
+statistical features, and raw traffic. Because the
+correspondence between the statistical features and the raw
+traffic is not given in the dataset, we only use the raw traffic
+in this work. We extract statistical features from the raw
+traffic by ourselves. This will be introduced in section IV-B.
+There are 12 classes in “ISCX VPN-non VPN”, including
+6 classes of non-VPN traffic and 6 classes of VPN traffic. A
+detailed introduction of these 12 classes can be found in
+“Table I”.
+
+METHODOLOGY
+
+B. Preprocess
+During the phase of preprocessing, we convert the raw
+traffic to the expected format required by encrypted traffic
+classifier. There are three data preprocessing steps: traffic
+split, traffic clean, image, and statistical features generation.
+“Figure 2” shows the whole process of data preprocesses.
+
+Figure 1. Overview of the structure of the proposed framework.
+
+In this work, a new framework is proposed to classify
+encrypted traffic. As shown in “Figure. 1”, there are two
+
+636
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 19,2025 at 01:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+Figure 2. The process of data preprocess
+TABLE II.
+No.
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+
+LIST OF 26 STATISTICAL FEATURES
+
+Feature
+
+Description
+
+Num pkts
+Avg syn flag
+Avg urg flag
+Avg fin flag
+Avg ack flag
+Avg psh flag
+Avg rst flag
+Avg DNS pkt
+Avg TCP pkt
+Avg UDP pkt
+Avg ICMP pkt
+Duration window flow
+Avg delta time
+Min delta time
+Max delta time
+StDev delta time
+Avg pkts lenght
+Min pkts lenght
+Max pkts lenght
+StDev pkts lenght
+Avg small payload pkt
+Avg payload
+Min payload
+Max payload
+StDev payload
+Avg DNS over TCP
+
+The number of packets in a session.
+The average of packets with syn flag active in a session.
+The average of packets with urg flag active in a session.
+The average of packets with fin flag active in a session.
+The average of packets with ack flag active in a session.
+The average of packets with psh flag active in a session.
+The average of packets with rst flag active in a session.
+The average number of DNS packets in a session.
+The average number of TCP packets in a session.
+The average number of UDP packets in a session.
+The average number of ICMP packets in a session.
+The time from the first packet to last packet in a session.
+The average of delta times in a session. Delta time is the time from a packet to the next packet.
+The minimum delta time in a session.
+The maximum delta time in a session.
+The standard deviation of delta time in a session.
+The average of packet lenghts in a session.
+The minimum of packet lenghts in a session.
+The maximum of packet lenghts in a session.
+The standard deviation of packet lenghts in a session.
+The average of packet with a small payload. A payload is considered small if his size is lower than 32 Byte.
+The average of payload size in a session.
+The minimum of payload size in a session.
+The maximum of payload size in a session.
+The standard deviation of payload size in a session.
+The average of ration DNS/TCP in a session.
+
+Step 1 (Traffic Split). In this step, the continuous raw
+traffic is split into multiply discrete traffic units. There are
+two common ways to split the traffic, which are session and
+flow. A flow is a traffic unit having the same source IP,
+source port, destination IP, destination port, and
+transport-level protocol. Flow is one direction. The session is
+very similar to flow, but it includes both directions of flow
+[19]. Wang et al. tested these two ways in [4] and found that
+session is better than flow when used to classify encrypted
+traffic. Therefore, we choose to use the session in this work.
+Step 2 (Traffic Clear). During the second step, we first
+anonymize the traffic by masking the MAC address and IP
+address, respectively. In the “ISCX VPN-nonVPN” dataset,
+each type of traffic has a unique IP address; therefore, the
+model may only use these features to classify the traffic.
+
+Then we remove empty files, which do not have data in the
+application layer. The duplicated files are also removed in
+this step.
+Step 3 (Image and Statistical Features Generation).
+Two actions are performed in this step, respectively. The
+first action is the generation of images. Because CNN needs
+a fixed-sized input, we trim all files to the same length (784
+bytes in this paper). If the size of the file is larger than 784
+bytes, then we trim it to 784 bytes. If the size of the file is
+shorter than 784 bytes, then we add 0x00 at the end of the
+file. The second action is to extract statistical features from
+the raw. Network traffic. These statistical features are used to
+supplement the session's structure information, such as the
+duration from the first packet to the last packet in a session.
+
+637
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 19,2025 at 01:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+26 statistical features are extracted in this paper. These
+features can be found in “Table II”.
+After the above three steps, we obtained the images and
+statistical features corresponding to each session. These two
+
+Figure 3.
+
+types of data are used in the following experiments, the
+images are the input of CNN, and the 26 statistical features
+are the input of SAE.
+
+The architecture of the encrypted traffic classification model
+
+C. Architecture
+There are two types of neural networks in our proposed
+framework, namely SAE and CNN. “Figure. 3” shows
+detailed structure about the second part of the framework,
+which is an encrypted traffic classifier. This part includes
+two classes of input. First, the statistical features are used as
+the SAE’s input, and “high-level feature A” can be gotten
+through an encoder. Second, the images are used as the input
+of CNN. We use CNN to extract “high-level feature B”.
+After that, “high-level feature A” and “high-level feature B”
+are spliced as the “new high-level feature”. These new
+features include information both from statistical features
+and the trimmed raw traffic. We use the “new high-level
+feature” to classify encrypted network traffic.
+The main parameters of the models in the second part of
+our framework are described in “Table III”. We use 1D-CNN
+in our model because network traffic is sequential data.
+Additionally, Wang et al. [4] has used an experiment to
+prove that when using the raw traffic for classification,
+1D-CNN is better than 2D-CNN. 1D-CNN’s parameters in
+our work refer to Wang’s [4]. The input of CNN is 784 bytes,
+the input of SAE is 26 bytes, and the ratio of these two inputs
+is 30:1. Therefore, we keep this ratio in the “new high-level
+feature” when we combine the output from two deep
+learning models. Specifically, the output of CNN is a 300
+bytes vector, and the output of the encoder is a 10 bytes
+vector. Finally, the new vector is a 310 bytes vector.
+
+638
+
+TABLE III.
+
+MAIN PARAMETERS OF THE MODEL
+
+Layer
+
+Operation
+
+Input
+
+Filter
+
+Output
+
+CNN-1
+CNN-2
+CNN-3
+CNN-4
+CNN-5
+CNN-6
+CNN-7
+
+conv+ReLU
+1d max pool
+conv+ReLU
+1d max pool
+flatten
+fully-connected
+fully-connected
+
+1*784
+32*784
+32*262
+64*262
+64*88
+5632
+1024
+
+1*25
+1*3
+1*25
+1*3
+-
+
+32*784
+32*262
+64*262
+64*88
+5632
+1024
+300
+
+SAE-Encode-1
+SAE-Encode-2
+SAE-Decode-3
+SAE-Decode-4
+
+fully-connected
+fully-connected
+fully-connected
+fully-connected
+
+26
+18
+10
+18
+
+-
+
+18
+10
+18
+26
+
+Fully-connected-1
+Fully-connected-2
+Fully-connected-3
+
+fully-connected
+fully-connected
+softmax
+
+300+10
+100
+30
+
+-
+
+100
+30
+12
+
+V.
+
+EXPERIMENTS AND RESULTS
+
+A. Experiment Setup
+All the experiments are conducted on Google Colab.
+Pytorch [20] is used to build the proposed neural networks.
+We randomly take 10% of the data as the test data, and the
+rest is the training data. The batch size is 200. The CNN and
+SAE are trained by Adam optimizer [21]. The initial learning
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 19,2025 at 01:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+rate is 0.001 and decay of 0.9 per 20 epochs. The total
+training time is 100 epochs. Before training the whole model,
+we first pre-train the SAE to find good initial weights.
+
+traffic dataset between our proposed framework and others.
+It can be seen from “Table V”, compared with the other four
+models, our model achieves the highest overall precision,
+recall, F1-score, and accuracy.
+Finally, we explore the property of these new features,
+whether they can represent different types of traffic. In order
+to demonstrate the “new high-level feature” that can
+represent different classes of traffic, t-SNE [22] is used for
+dimension reduction and visualization. The t-SNE is suitable
+for mapping high-dimensional data to a low-dimensional
+space for visualization. As shown in “Figure. 4”, the “new
+high-level feature” are projected into 2D space. Different
+types of traffic are represented by different colors and
+different shapes in “Figure. 4”. It can be seen that the same
+types of traffic cluster in similar positions, while the distance
+between different types of traffic is large. This shows that the
+“new high-level feature” in our framework can represent the
+characteristics of different types of traffic well.
+
+B. Evaluation Metrics
+Four evaluation metrics are used to evaluate the
+performance of the classifier: accuracy, precision, recall, and
+F1-score. These evaluation metrics can be calculated in the
+following ways.
+1) Accuracy: The ratio of correctly recognized traffic to
+the entire test dataset (Accuracy ∈ [0,1]).
+=
+
++
++
+
++
+
+(3)
++
+
+2) Precision: The ratio of the number correctly
+classified as specific type traffic to the number of all
+samples classified as this type (Precision ∈ [0,1]).
+
+TABLE IV.
+
+(4)
+
+=
+
++
+
+Traffic Class
+
+3) Recall: The ratio of the number correctly classified as
+a specific type of traffic to all this type of traffic (Recall
+∈ [0,1]).
+=
+
+Chat
+Email
+File Transfer
+P2P
+Streaming
+VoIP
+VPN-Chat
+VPN-Email
+VPN-File Transfer
+VPN-P2P
+VPN-Streaming
+VPN-VoIP
+Weighted avg
+
+(5)
++
+
+4) F1-score: F1-score is used to measure precision and
+recall at the same time. It uses the harmonic mean in place
+of the arithmetic mean (F1-socre ∈ [0,1]).
+∗
+(6)
++
+where TP, TN, FP, FN stand for true positive, true negative,
+false positive, and false negative, respectively.
+1−
+
+=
+
+PERFORMANCE FOR EACH TYPE OF ENCRYPTED TRAFFIC
+CALSSIFICATION
+
+2∗
+
+TABLE V.
+
+C. Experiment Results and Analysis
+“Table IV” shows the experiment results of each type of
+encrypted traffic. We compare the precision, recall, and
+f1-score obtained by our framework with these metrics from
+[10]. It can be seen that except for the classification
+performance on File Transfer, our proposed framework’s
+performances on other types of traffic are much better. The
+weighted average F1-score achieved by our framework is
+0.98, 0.05 larger than that in [10]. This is because our
+framework uses both raw traffic and statistical features.
+Specifically, we use the CNN to extract features from the
+trimmed raw traffic and use the encoder in SAE to compress
+the statistical features. Then we combine the outputs from
+the above two models into new high-level features. These
+new features, which include information both from trimmed
+raw traffic and statistical features, are used to classify
+encrypted traffic.
+To further evaluate the performance of the proposed
+framework, the results of our framework are compared with
+other state-of-the-art models. “Table V” shows the
+performance comparison on the “ISCX VPN-non VPN”
+
+The Proposed
+Framework
+Pr
+Re
+F1
+0.99
+1.00
+1.00
+1.00
+1.00
+1.00
+0.91
+0.91
+0.91
+0.99
+1.00
+1.00
+0.96
+0.99
+0.98
+0.98
+0.97
+0.97
+1.00
+0.99
+0.99
+0.97
+1.00
+0.98
+0.99
+0.98
+0.98
+0.96
+0.98
+0.97
+1.00
+1.00
+1.00
+1.00
+1.00
+1.00
+0.98
+0.98
+0.98
+
+CNN[8]
+Pr
+0.71
+0.87
+1.00
+1.00
+0.87
+0.88
+0.98
+0.98
+0.99
+1.00
+1.00
+1.00
+0.94
+
+Re
+0.84
+0.96
+0.98
+1.00
+0.92
+0.63
+0.98
+0.99
+0.99
+1.00
+1.00
+0.99
+0.93
+
+A COMPRASION BETWEEN DIFFERENT MODELS
+
+Classifier
+
+Precision
+
+Recall
+
+F1-score
+
+Accuracy
+
+Deep packet-CNN [8]
+Deep packet-SAE [8]
+C4.5 [3]
+FlowPic [20]
+The proposed framework
+
+0.94
+0.92
+0.98
+
+0.93
+0.92
+0.98
+
+0.93
+0.92
+0.98
+
+0.90
+0.88
+0.98
+
+Figure 4. Visualizations of 12 types of encrypted traffic
+
+639
+
+F1
+0.77
+0.91
+0.99
+1.00
+0.90
+0.74
+0.98
+0.99
+0.99
+1.00
+1.00
+1.00
+0.93
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 19,2025 at 01:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+VI.
+
+[2]
+
+S. Rezaei and X. Liu, “Deep learning for encrypted traffic
+classification: An overview,” IEEE communications magazine, vol.
+57, no. 5, pp. 76– 81, 2019.
+[3] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani,
+“Characterization of encrypted and vpn traffic using time-related,” in
+Proceedings of the 2nd international conference on information
+systems security and privacy (ICISSP), 2016, pp. 407–414.
+[4] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang, “End-to-end
+encrypted traffic classification with one-dimensional convolution
+neural networks,” in 2017 IEEE International Conference on
+Intelligence and Security Informatics (ISI). IEEE, 2017, pp. 43–48.
+[5] A. Dainotti, A. Pescape, and K. C. Claffy, “Issues and future
+directions in traffic classification,” IEEE network, vol. 26, no. 1, pp.
+35–40, 2012.
+[6] T. AbuHmed, A. Mohaisen, and D. Nyang, “A survey on deep packet
+inspection for intrusion detection systems,” arXiv preprint
+arXiv:0803.0037, 2008.
+[7]
+M. Song, J. Ran, and S. Li, “Encrypted traffic classification based on
+text convolution neural networks,” in 2019 IEEE 7th International
+Conference on Computer Science and Network Technology
+(ICCSNT). IEEE, 2019, pp. 432–436.
+[8] T. Shapira and Y. Shavitt, “Flowpic: Encrypted internet traffic classification is as easy as image recognition,” in IEEE INFOCOM 2019IEEE Conference on Computer Communications Workshops
+(INFOCOM WKSHPS). IEEE, 2019, pp. 680–687.
+[9] L. Guo, Q. Wu, S. Liu, M. Duan, H. Li, and J. Sun, “Deep
+learning-based real-time vpn encrypted traffic identification methods,”
+Journal of Real-Time Image Processing, vol. 17, no. 1, pp. 103–114,
+2020.
+[10] M. Lotfollahi, M. J. Siavoshani, R. S. H. Zade, and M. Saberian,
+“Deep packet: A novel approach for encrypted traffic classification
+using deep learning,” Soft Computing, vol. 24, no. 3, pp. 1999–2012,
+2020.
+[11] G. E. Hinton and R. R. Salakhutdinov, “Reducing the dimensionality
+of data with neural networks,” science, vol. 313, no. 5786, pp. 504–
+507, 2006.
+[12] P. Vincent, H. Larochelle, Y. Bengio, and P.-A. Manzagol,
+“Extracting and composing robust features with denoising
+autoencoders,” in Proceedings of the 25th international conference on
+Machine learning, 2008, pp. 1096–1103.
+[13] D. H. Hubel and T. N. Wiesel, “Receptive fields and functional
+architecture of monkey striate cortex,” The Journal of physiology, vol.
+195, no. 1, pp. 215–243, 1968.
+[14] M. Eickenberg, A. Gramfort, G. Varoquaux, and B. Thirion, “Seeing
+it all: Convolutional network layers map the function of the human
+visual system,” NeuroImage, vol. 152, pp. 184–194, 2017.
+[15] A. L. Maas, A. Y. Hannun, and A. Y. Ng, “Rectifier nonlinearities
+improve neural network acoustic models,” in Proc. icml, vol. 30, no. 1,
+2013, p. 3.
+[16] A. Yang, X. Yang, W. Wu, H. Liu, and Y. Zhuansun, “Research on
+feature extraction of tumor image based on convolutional neural
+network,” IEEE Access, vol. 7, pp. 24 204–24 213, 2019.
+[17] Y.Chen,H.Jiang,C.Li,X.Jia,andP.Ghamisi,“Deepfeatureextraction and
+classification of hyperspectral images based on convolutional neural
+networks,” IEEE Transactions on Geoscience and Remote Sensing,
+vol. 54, no. 10, pp. 6232–6251, 2016.
+[18] H. Lee, R. Grosse, R. Ranganath, and A. Y. Ng, “Convolutional deep
+belief networks for scalable unsupervised learning of hierarchical
+repre- sentations,” in Proceedings of the 26th annual international
+conference on machine learning, 2009, pp. 609–616.
+[19] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+classification using convolutional neural network for representation
+learning,” in 2017 International Conference on Information
+Networking (ICOIN). IEEE, 2017, pp. 712–717.
+[20] A.Paszke,S.Gross,S.Chintala,G.Chanan,E.Yang,Z.DeVito,Z.Lin, A.
+Desmaison, L. Antiga, and A. Lerer, “Automatic differentiation in
+pytorch,” 2017.
+
+CONCLUSION AND FUTURE WORK
+
+Nowadays, deep learning-based encrypted traffic
+classification is becoming more and more popular. However,
+the input of the neural networks needs fixed-sized data, so
+that the raw traffic needs to be trimmed first before
+classification, which will cause information loss. Therefore,
+a new framework is proposed in this paper, which utilizes
+both the raw traffic and the statistical features of traffic.
+There are two parts of this framework, data preprocessing
+and encrypted traffic classification. During the phase of data
+preprocessing, we extract the statistical features from the raw
+traffic and then trim the raw network traffic to make it
+suitable for CNN’s input. During the phase of classification,
+we use a CNN to extract high-level features from raw
+network traffic and use an SAE to encode the statistical
+features. Then we combine these two kinds of features to a
+new high-level feature, which includes the information both
+from the trimmed raw traffic and statistical features. Finally,
+this new high-level feature is used to classify encrypted
+traffic. The result shows that our framework gets a higher
+f1-score on encrypted traffic classification; the f1-score is
+0.98. In addition, we visualize the new high-level features
+and find that these features can represent different classes of
+traffic well.
+The present work still has room for improvement. Firstly,
+we only use one dataset, “ISCX VPN-nonVPN”, to verify
+our proposed framework in this work. More datasets should
+be used to check the performance of our framework and
+whether the new high-level features are representative.
+Secondly, statistical features need to be extracted in our
+proposed framework; it will be more time-consuming than
+only using deep neural networks to extract features from
+network traffic.
+Notwithstanding these limitations, this study offers
+valuable insight into using convolutional neural networks
+and stacked autoencoders at the same time to classify the
+encrypted traffic. Additionally, we generate new high-level
+features that contain both information from trimmed raw
+traffic and statistical features, representing different classes
+of traffic well. In the future, more experiments can focus on
+experimenting on more datasets, making the framework
+work in real-time, and makes this framework more robust.
+ACKNOWLEDGMENT
+This work is supported by the National Key R&D
+Program of China under Grant no.2017YFB0802703 and the
+National Natural Science Foundation of China under Grant
+no.61602052.
+The authors would like to appreciate Yuting Zhou,
+Jiaying Liao, Jimmy Chan, for their insightful comments and
+helpful suggestions.
+Maonan Wang would also like to thank his parents, Ling
+Wang, and Jianfang Jiang, for their support and love.
+REFERENCES
+[1]
+
+F. Pacheco, E. Exposito, M. Gineste, C. Baudoin, and J. Aguilar,
+“Towards the deployment of machine learning solutions in network
+traffic classification: A systematic survey,” IEEE Communications
+Surveys & Tutorials, vol. 21, no. 2, pp. 1988–2014, 2018.
+
+640
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 19,2025 at 01:17:39 UTC from IEEE Xplore. Restrictions apply.
+
+[21] D. P. Kingma and J. Ba, “Adam: A method for stochastic
+optimization,” arXiv preprint arXiv:1412.6980, 2014.
+[22] L. v. d. Maaten and G. Hinton, “Visualizing data using t-sne,” Journal
+of machine learning research, vol. 9, no. Nov, pp. 2579–2605, 2008
+
+.
+
+641
+
+Authorized licensed use limited to: Tsinghua University. Downloaded on August 19,2025 at 01:17:39 UTC from IEEE Xplore. Restrictions apply.
+PAPER_TEXT

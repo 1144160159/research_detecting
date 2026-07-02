@@ -1,0 +1,384 @@
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 1
+
+ Drift-oriented Self-evolving Encrypted Traffic
+ Application Classification for Actual Network
+ Environment
+ Zihan Chen, Member, IEEE, Guang Cheng, Member, IEEE, Jinhui Li, Tian Qin, Yuyang Zhou, Member, IEEE,
+ Xing Luan
+
+ Abstract—Encrypted traffic classification technology is a cru- to use the remaining information disclosure not covered by
+ cial decision-making information source for network manage- encryption network protocols to classify or identify descriptive
+arXiv:2501.04246v1 [cs.NI] 8 Jan 2025
+
+ ment and security protection. It has the advantages of excellent labels such as services, applications, and behaviors underneath
+ response timeliness, large-scale data bearing, and cross-timeand-space analysis. The existing research on encrypted traffic encrypted traffic from a macro perspective without deciphering
+ classification has gradually transitioned from the closed world [4].
+ to the open world, and many classifier optimization and feature The existing research on encrypted traffic classification
+ engineering schemes have been proposed. However, encrypted mainly focuses on deep learning frameworks and open-world
+ traffic classification has yet to be effectively applied to the actual environments, including classifier optimization and encrypted
+ network environment. The main reason is that applications on the
+ Internet are constantly updated, including function adjustment traffic feature engineering. Classifier optimization mainly foand version change, which brings severe feature concept drift, cuses on deep learning model fusion, graph neural networks
+ resulting in rapid failure of the classifier. Hence, the entire model that are more suitable for expressing the interactive features of
+ must be retrained only past very fast time, with unacceptable traffic, and the introduction of the latest large language models.
+ labeled sample constructing and model training cost. To solve These studies can better mine the distinguishing information
+ this problem, we deeply study the characteristics of Internet
+ application updates, associate them with feature concept drift, in the features to better approximate the upper limit of
+ and then propose self-evolving encrypted traffic classification. the classification effect. Unlikely, the feature engineering of
+ We propose a feature concept drift determination method and a encrypted traffic enhances the initial adaptability of features
+ drift-oriented self-evolving fine-tuning method based on the Laida from the perspective of increasing the upper limit of theoretical
+ criterion to adapt to all applications that are likely to be updated. information gain in feature space to increase the classification
+ In the case of no exact label samples, the classifier evolves through
+ fully fine-tuning continuously, and the time interval between performance.
+ two necessary retraining is greatly extended to be applied to However, compared with the closed-world environment,
+ the actual network environment. Experiments show that our although unknown applications and incomplete sample covapproach significantly improves the classification performance erage are considered in the open-world environment, the
+ of the original classifier on the following stage dataset of the application update in the actual network environment should
+ following months (9% improvement on F1-score) without any
+ hard-to-acquire labeled sample. Under the current experimental be considered. By studying the encrypted traffic at the border
+ environment, the life of the classifier is extended to more than of the provincial backbone network, we find that the network
+ eight months. application is constantly updated. In addition, the network
+ Index Terms—Encrypted traffic classification, Concept drift, environment is constantly changing, resulting in the new
+ Self-evolving fine-tuning architecture, Windowed multi-threshold encrypted traffic sample features being inconsistent with those
+ accumulation measurement of the original samples in the same category. The changes are
+ time-persistent, continuously decreasing the trained model’s
+ classification effect. This phenomenon is called the concept
+ I. I NTRODUCTION
+ drift of encrypted traffic [5]. Although encrypted traffic feature
+
+ W ITH the rise of network security and privacy protection awareness, the encryption of network traffic
+ has become an inevitable trend [1]. In the backbone network
+ engineering can improve the initial tolerance of the method
+ to concept drift, the concept drift is spawned very fast [6],
+ resulting in the rapid failure of the classifier. The cost of
+ environment with Tbps bandwidth, more than 95% of traffic retraining a new encrypted traffic classifier is really high
+ is encrypted, and some Internet services have reached almost due to the massive calculation and elusive labeled sample
+ 100% encrypted [2]. To solve the problem of encrypted traffic acquirement [7]. Repeated retraining in a short period is
+ not being matched in plaintext to support network management unacceptable in terms of computing power cost, and there is
+ and security [3], relevant research on encrypted traffic classifi- not enough time to collect enough samples. As a result, the
+ cation has been produced. Encrypted traffic classification aims encrypted traffic classification method has been challenging to
+ apply in the actual network environment.
+ The authors are with the School of Cyber Science and Engineering, To solve the above problems, we propose the self-evolving
+ Southeast University, Nanjing 210096, China; Purple Mountain Laboratories,
+ Nanjing 211111, China; Jiangsu Province Engineering Research Center of encrypted traffic classification, which aims to resist the con-
+ Security for Ubiquitous Network, Nanjing 211189, China. tinuous failure of the model caused by the irresistible feature
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 2
+
+concept drift through the model’s catch-up self-evolving. First, of Large Language Models (LLM), with a small volume, it
+we study the factors that cause feature concept drift in an can play the advantages of different model architectures to
+actual network environment, and from its universality, we construct a model with better capability, which is an essential
+propose a drift-oriented self-evolving architecture. We pro- basis for the encrypted traffic classification. To some extent,
+pose a windowed multi-threshold accumulation measurement the graph neural network uses packet interactivity in the
+method to solve the problem of concept drift determination process of encrypted traffic transmission. It is superior to the
+in this architecture. For the self-evolving of the classifier, we tensor neural network in terms of accuracy at the cost of more
+introduce the Laida criterion to retrieve and label samples with calculations. However, in approaching the theoretical optimal
+high enough Softmax confidence in the label-free prediction effect, both of them also pay a considerable performance cost.
+process, and rely on such samples (named silver samples) Although some studies began to explore the explainability
+to conduct Fully Fine-Tuning (FFT), and finally significantly [10], there is still a problem of unexplainable features [11] and
+extend the time interval between two necessary retraining, to the results of automatic feature selection are only sometimes
+achieve the self-evolving encrypted traffic classification. preferred, mainly due to the non-high-dimensional optimiza-
+ The main contributions of this paper are as follows: tion of features and the neglect of structural features.
+ • For the first time, we pay direct attention to concept drift On the other hand, some studies focused on anti-concept
+ in encrypted traffic classification in a actual network en- drift feature engineering to improve the upper limit of the
+ vironment, investigate its causes, and propose windowed model’s initial classification accuracy. At present, the most
+ multi-threshold accumulation measurement method to representative studies focus on length sequence features, such
+ determine whether concept drift occurs in the current as packet length sequence features [12], multi-flow length
+ classifier. sequence features [7], and packet length path signature features
+ • We propose the self-evolving encrypted traffic classifica- [3].
+ tion for the first time. Aiming at the different degrees of In summary, with the support of feature engineering, the enfeature concept drift that may exist in all applications, hanced length sequence features can resist concept drift better
+ we introduce the Laida criterion and propose a drift- than other features. However, these features are still static, and
+ oriented self-evolving fine-tuning method based on the no matter how good the feature is, it will gradually become
+ high-confidence silver samples continuously recovered in invalid with the continuous update of massive applications.
+ the classification process, which significantly extends the Static classifiers cannot keep up with the feature concept drift
+ effective life cycle of the model (The current dataset can caused by application updates and cannot be used in an actual
+ prove to extend to 8 months, which may be longer.), network environment.
+ diluting the long-term deployment costs of encrypted
+ traffic classifications. III. C ONTINUOUS S AMPLE ACQUISITION UNDER
+ The structure of this paper is as follows. Section II in- C ONCEPT D RIFT
+troduces the latest research in encrypted traffic classification. A. The Negative Impact of Actual Network Environment on
+In Section III, we analyze the source of concept drift in a Existing Encrypted Traffic Classification Methods
+actual network environment and introduce the Laida criterion
+ The concept drift of encrypted traffic features refers to the
+to gather silver samples. Section IV focuses on two key links in
+ phenomenon where the representation of a feature changes
+the drift-oriented self-evolving fine-tuning of encrypted traffic.
+ arbitrarily without any change in the input (still belonging
+In Section V, experiments on self-evolving classification are
+ to the same feature category). It is due to the self-change
+carried out. Finally, the paper is summarized in Section VI.
+ or external influence on the target being classified over time.
+ Therefore, the sources of the concept drift in encrypted traffic
+ II. R ELATED W ORK features are various variable factors in the actual network
+ Current research in encrypted traffic classification can be environment. From the perspective of encrypted traffic, it can
+divided into two parts: deep learning classifier optimization be broadly categorized into feature concept drift caused by
+and anti-concept drift feature engineering. changes in protocol headers and protocol bodies.
+ With the development of neural networks and deep learn- Changes in protocol headers are mainly shown in encryption
+ing technology, some researchers began using deep learning transport protocols and application layer protocols, which are
+methods to classify encrypted traffic. The most significant covered/encrypted. On the Internet, the most typical example
+advantages of deep learning are that it does not need to rely on of the former is the TLS-1.3 protocol, while the latter is the
+prior expert knowledge of feature engineering, its end-to-end HTTP-2.0 protocol. QUIC, as a transport layer protocol with
+learning features can directly feed raw encrypted traffic into built-in encryption capabilities, combines the two types of
+the neural network for training and classification, and neural changes. The core impact comes from the network protocol
+networks have better generalization ability than traditional itself.
+machine learning methods. Changes in protocol bodies are more diverse, including
+ The latest research on deep learning classifier optimization changes in the transmitted data and network environment.
+focuses on the fusion of tensor-based models (I2 RNN [8]) For example, changes in the transmitted data come directly
+and the introduction of graph neural network models [9]. The from application updates, including data-side and functionaladvantage of tensor-based model fusion is that in the case side updates. Differently, changes in the network environment
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 3
+
+ TABLE I
+ T HE NEGATIVE IMPACTS OF PROTOCOLS AND THE ENVIRONMENT ON THE CLASSIFICATION OF ENCRYPTED TRAFFIC APPLICATIONS
+
+ Influencing Factors Factor Name Specific Negative Impacts
+ Undetermined start of flow for an application behavior
+ TLS-1.3
+ Concept drift to TLS-1.2 statistical features
+ Flow-level feature confusion due to multiplexing
+ HTTP-2.0
+ Hidden application layer header length shorten continuously with access
+ Protocol
+ The classifier for HTTPS traffic becomes invalid directly
+ QUIC QUIC is constantly updated rapidly, so the features are constantly disturbed
+ More complex multiplexing, interactivity features interference
+ Multi-protocol Application The highly-precised single protocol classifier fails
+ Rapid Updates of Applications Features are constantly changes, new functions, new features
+ Application Homogenization Competition Overlapping functions of applications, increasing feature confusion
+ Environment
+ User Habit Difference Spatially inconsistent traffic features of the same application
+ Computational Ocean and LLM Dramatically increasing the speed of function update and new application generate
+
+are more extensive, including changes in hardware models, conform to the normal distribution, depending on the nature of
+network configurations, spatial locations, and other human- the classifier, especially in the case of multi-classification. The
+selected changes, as well as changes caused by technological gradient saddle point on the side of the category in question
+updates and iterations in related fields. We have summarized may not be symmetrical.
+these two types of changes in Table I below. Nicely, due to the arbitrary direction of concept drift, we
+ In summary, if we want to implement self-evolving en- can assume that the scope of concept drift at the next time
+crypted traffic application classification, we need to consider point conforms to the normal distribution. Therefore, we
+all of the above. However, since feature concept drift is can extend the assumption that the change in the Softmax
+uncontrollable and difficult to predict (especially in the case function’s confidence in a certain category is consistent with
+of a large number of categories), the concept drift happening the normal distribution, so we can use the Laida criterion as the
+must be determined. verification standard. Samples with positive offset that exceed
+ this range will be regarded as effective fine-tuning samples,
+ which are named silver samples in this paper (as opposed
+B. Laida Criterion and Silver Samples
+ to deterministic labeled samples in the normal construction of
+ When the drift representation accumulates to a certain label datasets, which are called gold samples). Therefore, the
+extent, we will consider that the model is no longer effective confidence standard of the silver sample was selected as 0.997
+in the current network environment and urgently needs fine- (3 σ); that is, if the maximum value of Softmax confidence of
+tuning (even if some categories still have acceptable classifica- the current sample classification result is higher than 0.997,
+tion effects). The prerequisite for fine-tuning is that there are it is regarded as a silver sample, which will be used for the
+some new labeled samples, but the cost of collecting labeled subsequent round of fine-tuning.
+samples through controllable end devices is very high and
+cannot guarantee the coverage of after-concept-drift samples.
+ IV. D RIFT- ORIENTED E NCRYPTED T RAFFIC
+On the other hand, the traffic throughput of the analysis point
+ S ELF - EVOLVING F INE - TUNING
+is much higher than that of an end device. The single-slot edge
+network traffic processing device at the edge of the backbone With the development of time, the features reflected by all
+network has a peak of about 400 Gbps throughput, and the application samples may change compared with the original
+entire device can reach up to 25.6 Tbps. On the contrary, the sample features of this category, resulting in the inevitability of
+peak throughput of a controllable end device is only about concept drift. However, simultaneously, the degree and cycle
+100 Mbps, and the average labeled sample traffic collection of different application updates or version iterations are not
+throughput is less than 10 Mbps. Hence, we must obtain new aligned, which leads to uncontrollable concept drift. Therefore,
+labeled samples directly at the analysis point. drift-oriented self-evolving is proposed in this paper, which
+ However, the analysis point cannot obtain samples with aims to continuously fine-tune the model according to the
+completely real labels; that is, the result obtained by the concept drift of a particular category without considering the
+classification method may not be 100% correct due to the specific classification target.
+nature of deep learning.
+ In mathematical statistics, the Laida criterion refers to the
+interval calculation based on the standard deviation probability A. Concept Drift Determination based on Windowed Multiwhen it is assumed that a dataset is approximately normally threshold Accumulation Measurement
+distributed and only has random errors. For encrypted traffic At a macro level, the self-evolving encrypted traffic appliclassification, the Softmax function can convert the parameter cation classification plays a crucial role in maintaining the
+value of the neural network’s penultimate layer into the confi- overall accuracy. This process is reflected in the fact that
+dence distribution of the category. Although the classification the accuracy of each category needs to be improved, and the
+of a certain application can meet the sufficient measurement more the category with concept drift, the more it needs to be
+condition, the confidence distribution of the category may not improved.
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 4
+
+ Due to the arbitrariness of concept drift in all directions and fine-tuning process of the model. However, the target dataset
+the continuity of application updates, the classifier intuitively is derived from the silver samples continuously obtained in the
+feels that the current sample features are ”similar enough but classification process, and fine-tuning is constantly occurring.
+not very similar” to the features during training, which is Therefore, in view of this paper’s self-evolving scenario,
+reflected in the decline of classification confidence. It is worth we propose drift-oriented self-evolving fine-tuning. It is worth
+noting that for classifiers, a decline in classification confidence noting that ”drift-oriented” means that we will not specifically
+is a necessary condition for concept drift to have an impact. study the feature changes of a certain category during the
+Therefore, judging concept drift only by the appearance of whole lifecycle of the model but let the classifier directly be
+classification confidence decline is wrong. fine-tuned when there is a concept drift. This adaptability to
+ In order to make better use of classification confidence concept drift is also the meaning of ’self’ in self-evolving, and
+decline to judge concept drift, we propose a concept drift it ensures the model’s accuracy over time.
+determination method based on windowed multi-threshold It’s crucial to understand that, in the context of enaccumulation measurement to determine whether a specific crypted traffic classification, self-evolving is inherently modelcategory or the whole classifier have concept drift (whether it independent. This means that any deep learning model capable
+needs to be fine-tuned). of fine-tuning can be seamlessly integrated into the self-
+ The purpose of determining whether concept drift occurs in evolving fine-tuning architecture, providing a high level of
+a certain category is that the update cycle of some applications flexibility and adaptability. Unlike sequence classification in
+is concise, and the degree of concept drift per unit time is NLP, where Transformer are typically used, encrypted traffic
+much higher than that of other categories. Although it has little classification requires models that can maintain high throughimpact on the model’s overall accuracy, it is invalid for this put network requirements. Therefore, for the classification
+category. Hence, the overall classifier’s determination is that model to be fine-tuned, we have chosen LS-LSTM [7] from
+most categories are invalid to a certain extent, so the results previous research to demonstrate the enhancement potential of
+obtained by the model do not have a good reference value. our proposed method.
+ Therefore, according to the theory in Section III, we set Since the target model does not necessarily have the ability
+multiple thresholds for each category and the overall model, to adapt to prefixes, we chose FFT over other methods.
+respectively, and there are different scores for reaching different thresholds. By calculating the accumulative score of the V. E XPERIMENT E VALUATION
+new classified sample in the current time window, we can A. Dataset and Experimental Environment
+determine whether the category or the whole model needs to Since the current public dataset cannot effectively support
+be fine-tuned, as shown in Figure 1. the research of self-evolving encrypted traffic classification,
+ In particular, since the concept drift determination should we conducted traffic sample collection in the actual network
+not affect the standard classification of encrypted traffic, it environment of Jiangsu Province (in order to ensure privacy,
+is impossible to constantly slide to calculate whether con- the specific information about traffic collection personnel, decept drift occurs in a specific time slice (otherwise, it will vice model, and account is not disclosed) from September 27,
+bring huge polling performance overhead). Since the overall 2023, to July 16, 2024. It includes the traffic of various Internet
+accuracy decline of the model comes from the accumulation applications and web pages, mainly multimedia-related traffic,
+of class accuracy decline, we will carry out the number of a total of 372 GB (the content are relatively stable and can
+accumulative times when the confidence is too low for the better reflect the concept drift of traffic features). The silver
+samples of a certain class (assumed as class A) for the first sample dataset still uses 80% of the samples as training and
+time, and the lower the threshold, the more times will be 20% as test samples as primitive datasets.
+accumulated. If the accumulative number of measurements It is worth noting that to reflect the changes in application
+in the current time window reaches the judgment threshold, characteristics, we deliberately selected six applications with
+it is regarded as the happening of concept drift. A more large user and traffic volumes. As shown in Table II, silver
+severe concept drift is considered to have occurred if a lower samples were calculated only for the first and second finedecision threshold is reached. Subsequent fine-tuning can be tuning stages (the number is determined by the actual experdone depending on the degree of conceptual drift in the current imental results). In contrast, the long-span third classification
+category. stage’s samples had a more extended period than the previous
+ Suppose the single class of the current model has only slight two. In order to reflect the continuity of the traffic label
+concept drift at worst. Still, many classes already have concept sample, we did not divide the data strictly according to
+drift (usually in the model after long-term use, which is also the date. However, we carried out proportional segmentation
+determined by accumulation measurement). In that case, the according to the continuity of the time axis according to the
+entire model must be fine-tuned to adapt to the current feature sample size. At the same time, we directly used datasets with
+representation distribution. a highly uneven number distribution to reflect the differences
+ in the sample size distribution of different applications in
+B. Drift-oriented Self-evolving Fine-tuning actual network environments. Datasets will be published at
+ Compared with the task specialization of an LLM, the initial https://data.iptas.edu.cn/web/tbps after a strict privacy audit.
+model in the self-evolving lifecycle can be regarded as a pre- Since the determination of concept drift is a simple statistraining process and the subsequent evolution process as a tical process of sample classification confidence results, the
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 5
+
+Fig. 1. Conceptual drift determination process diagram based on windowed multi-threshold accumulation measurement
+
+ TABLE II
+ S TATISTICS OF THE DATASETS ( PRESENT BY FLOW COUNT )
+
+ Initial training 1st stage 1st fine-tune * 2nd stage 2nd fine-tune * Final stage
+ Application
+ samples total samples silver samples total samples silver samples long-span samples
+ Bilibili 4585 4587 1407 4587 2340 1529
+ Douyin 125 123 21 123 34 41
+ MGTV 1965 1963 159 1963 371 656
+ Youku 4425 4427 825 4427 1096 1477
+ QQ Music 47828 47830 39099 47830 40542 15944
+ IQiYi 2925 2923 1809 2923 2304 977
+ Total 61853 61853 43320 61853 46687 20624
+ * The silver samples are gathered by the previous one version classifier, which is model-dataset specific.
+
+preliminary experiment found that the threshold is related stage dataset (Level-1 fine-tuned), and the fine-tuned model
+to the throughput of current network traffic (that is, to the from Level-1 fine-tuned model using the silver samples from
+total number of samples to be classified). Therefore, we the second stage dataset (Level-2 fine-tuned) on the data subset
+directly assume that each stage triggers the determination of in the next stage, respectively. Then we fine-tuned the model
+concept drift in the following experiments. Therefore, each in the current stage and tested the results after fine-tuning.
+classification stage must be self-evolving as it transitions to The epoch of initial training or fine-tuning was 50 rounds, the
+the next stage. batch-size was 500, and the learning-rate was fixed at 0.0025.
+ We conducted ten rounds of experiments, and each round of
+B. Encrypted Traffic Classification Effect Diminishing and the training set and test set was randomly divided in equal
+Self-evolving Classification Experiment proportion (80% and 20%). The average results are shown in
+ At the same time, we conducted a diminishing experiment Table III.
+and a self-evolving experiment on the classification effect of The following conclusions can be drawn from the experiencrypted traffic. In this experiment, we first compared the mental results:
+effects of the initial trained model, the fine-tuned model from 1) By comparing the classification performance of each
+initial trained model using the silver samples from the first round of initial training or fine-tuned model in the cur-
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 6
+
+ TABLE III
+ T HE PERFORMANCE OF THE THREE DIFFERENT STAGE MODELS UNDER THEIR OWN STAGE DATASETS , NEXT- STAGE DATASETS , AND FINAL - STAGE
+ DATASETS
+
+ Initial trained LS-LSTM Level-1 fine-tuned LS-LSTM Level-2 fine-tuned LS-LSTM
+ Training F1-score 0.9321 0.9902 0.9960
+ Testing F1-score 0.9189 0.9619 0.9822
+ F1-score of Next-stage Samples 0.8960 0.8956 N/A
+ F1-score of Final Samples 0.5950 0.5842 0.5898
+ Silver Sample Percentage in Final Samples 41.66% 56.74% 68.20%
+
+ rent data subset and the following data subset, concept still far away), and the features are slightly more similar,
+ drift exists, which is not only reflected in the decline proving the continuity of application updates.
+ of the classification confidence of some samples on the
+ micro level but also in the decline of the F1-score of VI. C ONCLUSION
+ the overall dataset on the macro level. Therefore, the
+ diminishing of the encrypted traffic classification effect This paper proposes a self-evolving encrypted traffic appliover time is natural. cation classification method for the actual large-scale Internet
+ 2) Compared with the initial training model and the two environment, which does not need to consider the specific
+ fine-tuned models, the catastrophic forgetting that often changes of the actual classification objectives, nor does it need
+ occurs in the field of NLP does not appear. However, to restrict the role of the model. It directly relies on the silver
+ it can be seen that the training F1-score is constantly samples accumulated in the prediction process, based on the
+ improving, while the classification F1-score of the next concept drift determination through windowed multi-threshold
+ round of data is constantly decreasing. At the same time, accumulation measurement, and constantly fine-tuning the
+ although the silver sample rate of the final test dataset model. Thus, the life cycle of the classification model can
+ is increasing (that is, the accuracy of the classification be extended greatly without any real labeled samples and
+ of the sample is high confidence or the classification of retraining.
+ the sample is firmly wrong), the F1-score even shows a In the subsequent research, the relationship between concept
+ decline in general. This indicates some overfitting, which drift determination and sample size (network traffic throughis expected because self-evolving fine-tuning cannot give put) will be further refined first, and the relationship between
+ the model an infinite lifetime. It can only extend the the Softmax threshold value of silver sample determination
+ lifetime of the model. With second stage experimental (currently 0.997 directly) and model/sample needs to be further
+ data as a calculation, the life cycle is extended to 8 studied. In addition, the dataset will be extended to quantify
+ months (compared to a first-order model with a span of the extension of the lifecycle and the cost that can be really
+ only 2 months). reduced.
+ 3) Comparing the F1-score of the next round of data
+ classification before fine-tuning with the test F1-score ACKNOWLEDGMENTS
+ of the model after fine-tuning, it can be found that selfevolving fine-tuning is effective and can significantly This paper is supported by the Youth Fund of the National
+ improve the model’s ability to adapt to new data. It is Natural Science Foundation of China under Grant Number
+ worth noting that because the samples of each stage have 62402101, the Joint Funds of the National Natural Science
+ a specific span, the fine-tuning sample set actually covers Foundation of China under Grant Number U22B2025, the
+ the data of the current time node (that is, the update Jiangsu Funding Program for Excellent Postdoctoral Talent
+ of the application are continuous). Therefore, using the under Grant Number 2024ZB494. This paper is part on the
+ silver sample as the fine-tuning dataset for self-evolving topic of the encrypted traffic classification. Guang Cheng is
+ is feasible and reasonable. the corresponding author.
+ 4) For the long-span third classification samples tested in
+ the final test, the initial and fine-tuned models performed R EFERENCES
+ poorly and showed a downward trend on the whole.
+ [1] Y. Zeng, Z. Wu, L. Dong, Z. Liu, J. Ma, and Z. Li, “Research
+ The main reason is that the feature concept drift of on malicious traffic identification technology in encrypted traffic,”
+ the long period (up to 3 months with the second stage Xi’an Dianzi Keji Daxue Xuebao/Journal of Xidian University,
+ dataset) could not be expressed by the current fine- vol. 48, no. 3, pp. 170 – 187, 2021. [Online]. Available:
+ http://dx.doi.org/10.19665/j.issn1001-2400.2021.03.022
+ tuning, especially for some categories with few samples. [2] Z.-H. Chen, G. Cheng, Z.-H. Xu, K.-Y. Xu, X. Qiu, and D.-D.
+ The weakness of feature expression activation makes it Niu, “A survey on internet encrypted traffic detection, classification
+ more challenging to adapt to changes, so self-evolving and identification,” Jisuanji Xuebao/Chinese Journal of Computers,
+ vol. 46, no. 5, pp. 1060 – 1085, 2023. [Online]. Available:
+ needs to be constantly deployed. On the other hand, http://dx.doi.org/10.11897/SP.J.1016.2023.01060
+ the average F1-score of the Level-2 fine-tuned model [3] S. Xu, G. Geng, X. Jin, D. Liu, and J. Weng, “Seeing traffic paths:
+ is slightly increased. This may be because the second Encrypted traffic classification with path signature features,” IEEE
+ Transactions on Information Forensics and Security, vol. 17, pp. 2166–
+ stage data is closer to the final data in time (although 2181, 2022.
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 7
+
+ [4] M. Shen, K. Ye, X. Liu, L. Zhu, J. Kang, S. Yu, Q. Li, and K. Xu, works as a reviewer for multiple Journals such as IEEE IoTJ and the duty
+ “Machine learning-powered encrypted network traffic analysis: A com- editor of the Journal of Cyberspace.
+ prehensive survey,” IEEE Communications Surveys & Tutorials, vol. 25,
+ no. 1, pp. 791–824, 2023.
+ [5] Z. Chen, G. Cheng, Z. Wei, D. Niu, and N. fu, “Classify traffic rather Guang Cheng received his B.S. degree in Traffic Engineering from Southeast
+ than flow: Versatile multi-flow encrypted traffic classification with flow University in 1994, his M.S. degree in Computer Application from Hefei
+ clustering,” IEEE Transactions on Network and Service Management, University of Technology in 2000, and his Ph.D. degree in Computer Network
+ pp. 1–1, 2023. from Southeast University in 2003. He is a Full Professor in the School of
+ [6] J. Lu, A. Liu, F. Dong, F. Gu, J. Gama, and G. Zhang, “Learning under Cyber Science and Engineering, Southeast University, Nanjing, China. He has
+ concept drift: A review,” IEEE Transactions on Knowledge and Data authored or coauthored seven monographs and more than 100 technical papers,
+ Engineering, vol. 31, no. 12, pp. 2346–2363, 2019. including top journals and top conferences. His research interests include
+ [7] Z. Chen, G. Cheng, Z. Xu, S. Guo, Y. Zhou, and Y. Zhao, network security, network measurement, and traffic behavior analysis. He is
+ “Length matters: Scalable fast encrypted internet traffic service a Member of IEEE and a Senior Member of CCF.
+ classification based on multiple protocol data unit length sequence
+ with composite deep learning,” Digital Communications and Networks,
+ vol. 8, no. 3, pp. 289–302, 2022. [Online]. Available: https:
+ //www.sciencedirect.com/science/article/pii/S2352864821000699 Jinhui Li received his B.S. degree in Cyber Security from Southeast Uni-
+ [8] Z. Song, Z. Zhao, F. Zhang, G. Xiong, G. Cheng, X. Zhao, S. Guo, versity in 2021. He is currently a Master’s student at the School of Cyber
+ and B. Chen, “I 2 rnn: An incremental and interpretable recurrent Science and Engineering, Southeast University. His major research interests
+ neural network for encrypted traffic classification,” IEEE Transactions include feature engineering and classification of multimedia traffic, as well as
+ on Dependable and Secure Computing, pp. 1–14, 2023. encrypted traffic classification.
+ [9] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized
+ application identification via encrypted traffic analysis using graph
+ neural networks,” IEEE Transactions on Information Forensics and Tian Qin received the B.S. degree in information and computing sciences
+ Security, vol. 16, pp. 2367–2380, 2021. from HoHai University (HHU) in 2020. He is currently a Doctor candidate at
+[10] A. Nascita, A. Montieri, G. Aceto, D. Ciuonzo, V. Persico, and the School of cyber science and engineering, Southeast University, Nanjing,
+ A. Pescapé, “Improving performance, reliability, and feasibility in mul- China. His current research interests include network traffic detection and
+ timodal multitask traffic classification with xai,” IEEE Transactions on federated learning.
+ Network and Service Management, vol. 20, no. 2, pp. 1267–1289, 2023.
+[11] M. Shen, Y. Liu, L. Zhu, X. Du, and J. Hu, “Fine-grained webpage
+ fingerprinting using only packet length information of encrypted traffic,”
+ IEEE Transactions on Information Forensics and Security, vol. 16, pp. Yuyang Zhou is currently working as a postdoc with the School of Cyber
+ 2046–2059, 2021. Science and Engineering, Southeast University. His major research interests
+[12] X. Yun, Y. Wang, Y. Zhang, C. Zhao, and Z. Zhao, “Encrypted tls include moving target defense, Android malware detection, and security
+ traffic classification on cloud platforms,” IEEE/ACM Transactions on modeling.
+ Networking, vol. 31, no. 1, pp. 164–177, 2023.
+
+Zihan Chen obtained his Ph.D. degree in Cyber Security from Southeast Xing Luan received the B.S. degree in computer science and technology
+University in 2023 and B.S. degree in Software Engineering from Central from HoHai University (HHU) in 2023. He is currently a Doctor candidate at
+South University in 2017. He is currently working as a postdoc with the School the School of cyber science and engineering, Southeast University, Nanjing,
+of Cyber Science and Engineering at Southeast University. His major research China. His current research interests include network traffic detection and
+interests include cyber security, encrypted traffic classification, encrypted VPN traffic.
+traffic feature engineering, and deep learning. He is a Member of IEEE and

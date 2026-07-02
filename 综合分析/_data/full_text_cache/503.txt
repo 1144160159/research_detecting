@@ -1,0 +1,1409 @@
+Computers & Security 148 (2025) 104160
+
+ Contents lists available at ScienceDirect
+
+ Computers & Security
+ journal homepage: www.elsevier.com/locate/cose
+
+NTLFlowLyzer: Towards generating an intrusion detection dataset and
+intruders behavior profiling through network and transport layers traffic
+analysis and pattern extraction
+MohammadMoein Shafi a ,∗, Arash Habibi Lashkari a,b , Arousha Haghighian Roudsari c
+a
+ Department of Electrical Engineering and Computer Science, York University, Toronto, Ontario, Canada
+b Behaviour-Centric Cybersecurity Center (BCCC), School of Information Technology, York University, Toronto, Ontario, Canada
+c School of Computing, Gachon University, Songnam, South Korea
+
+ARTICLE INFO ABSTRACT
+
+Keywords: Network security remains a critical concern in modern computing systems due to the constant emergence
+Network security of threats and attacks. This paper introduces a comprehensive behavioral profiling solution to address
+Behavioral profiling the limitations of current intrusion detection methods in identifying zero-day attacks and novel malicious
+Zero-day attacks
+ behaviors. Beginning with raw network data, the proposed framework progresses through multiple stages,
+Anomaly detection
+ ultimately culminating in the creation of activity-specific profiles. Central to this approach is NTLFlowLyzer, a
+Feature selection
+Behavior similarity
+ novel network traffic analyzer, which generates an updated dataset, BCCC-CIC-IDS2017, for enhanced profile
+Pattern extraction generation. The core of the profiling system leverages the distinct behaviors exhibited by individual features
+NTLFlowLyzer and the diverse correlations observed across various activities. The profiling procedure attains accuracy and
+BCCC-CIC-IDS2017 robustness by integrating a novel feature selection algorithm and a pattern extraction process. Furthermore,
+Taxonomy of profiling behavior similarity is introduced to quantify the resemblance between activities based on their features and
+ behaviors. We rigorously evaluate the effectiveness of our model by subjecting it to comprehensive testing,
+ followed by meticulous comparison with previous works. Our proposed framework proficiently characterizes
+ eight malicious activities with an accuracy rate surpassing 99.8%, while displaying promising performance
+ in profiling various other activities. These findings, derived from our comprehensive experiments, provide
+ valuable guidance for accurately implementing behavioral profiling.
+
+1. Introduction This paper introduces a holistic solution with raw network data and
+ culminates activity-specific profiles. We select the CIC-IDS2017 dataset,
+ Modern computing systems face constant exposure to diverse threats but due to limitations, we propose NTLFlowLyzer, a novel network
+and attacks, underscoring the significance of network security. Monitor- traffic analyzer, to generate an updated dataset, BCCC-CIC-IDS2017
+ing and analyzing network activities to detect anomalous or malicious (BCCC-Dataset, 2024), for profile creation.
+behaviors are pivotal for safeguarding networks and their assets. How- The profiling core is founded on two principles: (1) each feature
+ever, prevailing intrusion detection systems struggle to identify zero- exhibits distinctive behavior in activities, and (2) features display diday attacks and malicious activities. Behavioral profiling, which entails verse correlations across activities. By amalgamating these concepts, we
+modeling normal behavior for each network entity (users, devices, devise profiles capturing activity essence. Our novel feature selection
+etc.) and detecting deviations or anomalies, emerges as a technique to algorithm and pattern extraction integrate these principles. We also
+address this challenge (Shafi et al., 2024a). introduce behavior similarity, quantifying activity resemblance based
+ Nonetheless, crafting accurate and resilient behavioral profiles on features and behaviors.
+presents considerable challenges. Unique activities may necessitate This paper presents groundbreaking contributions to network bedistinct profiling approaches due to their diverse behaviors. This ne- havior profiling:
+cessitates a flexible and comprehensive framework to create behavioral profiles for varied network activities systematically (Shafi et al., • A novel feature selection algorithm.
+2024b). • A behavior similarity calculation algorithm.
+
+ ∗ Corresponding author.
+ E-mail address: moeinsh@yorku.ca (M. Shafi).
+
+https://doi.org/10.1016/j.cose.2024.104160
+Received 11 August 2023; Received in revised form 15 November 2023; Accepted 10 October 2024
+Available online 19 October 2024
+0167-4048/© 2024 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 1. Taxonomy of IDS detection methods.
+
+ 2.1.1. Signature-based IDS
+ • A new network traffic analyzer, NTLFlowLyzer. Signature-based detection relies on existing attack signatures. It
+ • A benchmark dataset, BCCC-CIC-IDS2017 (BCCC-Dataset, 2024). matches network traffic to known patterns, flagging matches as in-
+ • A novel profiling system. trusions. Regular updates to the dataset are essential for detecting
+ • A taxonomy of profiling techniques. new attacks, often done manually or via dedicated websites. (AlYousef
+ and Abdelmajeed, 2019) proposed auto-updating signatures; (Li et al.,
+ The rest of the paper is organized: Section 2 provides related
+ 2019) introduced a blockchain IDS with incremental signature updates.
+work context. Section 3 details our profiling model, including feature
+ Escalating network traffic challenges traditional IDS hardware,
+selection, behavior similarity calculation, and profile definition. Secprompting cloud-based solutions. Cloud usage raises privacy concerns.
+tion 4 presents NTLFlowLyzer and its comparison with CICFlowMeter.
+ (Wang et al., 2018) suggested a privacy-preserving IDS based on fog
+Section 5 outlines the CIC dataset and its relevance. Section 6 describes
+ devices. Rapid attack evolution weakens signature-based methods’ efthe experimental setup and results using our model. Section 7 analyzes
+ fectiveness. While efficient for known attacks, signature-based methods
+the findings, and Section 8 concludes the paper and outlines future
+ falter against new, unrecorded patterns (Kocher and Kumar, 2021; Dina
+directions.
+ and Manivannan, 2021). Detecting new attacks is pivotal, given the
+2. Literature review upsurge in novel attack types and malware variants.
+
+ This section comprehensively reviews Intrusion Detection Systems 2.1.2. Rule-based IDS
+(IDS) techniques. Fig. 1 illustrates an organized taxonomy of IDS meth- Rule-based detection employs If-Then and If-Else-Then rules to spot
+ods. Moreover, recent influential studies are categorized by methodol- targeted attacks, relying on prior attack knowledge. (Monzer et al.,
+ogy. 2022) proposed a complex cyber–physical system IDS using a physical
+ Limitations of previous research are delineated, highlighting areas model yet overlooked model uncertainties. (Sonchack et al., 2015) emfor our contributions. Our paper addresses these gaps, proposing profil- phasized robust rule sets, suggesting adaptation for local network trafing as the optimal solution, substantiated by the profiling techniques’ fic optimization. Manual collaboration expense is a concern. (Sagala,
+background (Fig. 2). Recent distinguished works utilizing profiling 2015) employed a honeypot-based IDS, transferring data to activate
+are methodically categorized, enabling precise comparison. Identified snort rules.
+shortcomings in these studies drive our enhancements. (Tomandl et al., 2014) developed VANET IDS for fake message
+ detection through neighboring vehicle data. (Afzal and Lindskog, 2016)
+2.1. Intrusion detection systems advocated rule-based ICS IDS, focusing on an optimized ruleset for
+ evolving attacks. These models automate rule generation for specific
+ This section reviews prior work on intrusion detection methods. limited scenarios yet fail against zero-day or unknown attacks. As at-
+Firstly, an IDS taxonomy and key concepts are discussed. The synthesis tacks increase, intricate rules strain software and hardware processing.
+then highlights existing literature limitations and indicates areas our
+proposed model addresses. 2.1.3. Anomaly-based IDS
+ IDS are categorized by architecture, response, and detection meth- Anomaly-based detection models normal network behavior. User
+ods (Fig. 1). Architecturally, IDS can be host-based, utilizing host or system patterns from past network use serve as the baseline. Deaudit data like system calls, or network-based, working with network viations from this norm flag anomalies as potential attacks (Kocher
+traffic data (Li et al., 2019). Host-based offers deep insights but can and Kumar, 2021; Liao et al., 2013). Vital for detecting unknown
+strain resources; network-based is easier to deploy but struggles with attacks, these models produce higher false positives than signatureencrypted traffic (Ayyagari et al., 2021). based methods (Mushtaq et al., 2022; Dina and Manivannan, 2021).
+ In terms of response, IDS is passive or active. Passive monitors, Anomaly-based IDS comprises knowledge-based, statistical-based, and
+while active, intervenes upon detection (Kocher and Kumar, 2021). De- machine-learning-based approaches.
+tection methods span signature-based (misuse), rule-based, and Statistics-based methods analyze data records, forming a statistianomaly-based (behavior) IDS. cal model of typical behavior. Metrics like standard deviation, mean,
+
+ 2
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 2. Profiling techniques taxonomy.
+
+and mode informs this model. Univariate monitors individual metrics; detection. Five primary categories compose behavioral profiling techmultivariate assesses relationships among variables. Multivariate high- niques: Learning Methods, Soft Computing Methods, Statistical Methdimensional data distribution estimation is a challenge. Knowledge- ods, Rule-based Methods, and Graph-based Methods. Fig. 2 illustrates
+based utilizes expert systems akin to rule-based models, recognizing ac- the taxonomy, following detail each category and its families.
+tions and network traffic using existing system data. Machine learning Learning Methods predict behavior using past data, comprising
+methods enhance pattern-matching via adaptable, robust training data Machine Learning and Deep Learning. Machine Learning learns patterns
+use, rendering them popular choices for anomaly-based IDS (Khraisat and predicts using algorithms (Janiesch et al., 2021). Deep Learning
+ employs deep neural networks for complex pattern extraction (Sarker,
+et al., 2019).
+ 2021).
+ Machine learning-based IDSs encompass session-based, packet-
+ Soft Computing Methods use fuzzy logic, neural networks, and
+based, or flow-based features. Yet, real-time intrusion detection poses
+ genetic algorithms for uncertain data handling (Cui et al., 2019).
+challenges. (Kim and Pak, 2022) propose deferred decision-making Fuzzy Logic captures uncertainty with truth degrees, while Genetic
+with a hybrid classifier, optimizing detection speed and accuracy. Algorithms optimize solutions (Ibrahim, 2016), (Meng and Saddeh,
+Complexity is a concern. (Qiu et al., 2022) integrate Dempster–Shafer 2020).
+theory for flow and packet-based early attack detection. Statistical Methods analyze behavior patterns with Regression,
+ Data volume hinders intrusion detection efficiency. Probabilistic, and Distribution Checking Methods. Regression models
+(Herrera-Semenets et al., 2022) reduce data through label generation, variables’ relationships (Kolascyk, 2013). Probabilistic applies ranrelabeling, and duplicate removal. (Baldini and Amerini, 2022) apply domness for solutions. Distribution Checking examines data distribu-
+Morphological Fractal Dimension in a sliding window for anomaly tion (Silva et al., 2022).
+detection. (Asif et al., 2021) use MapReduce for big dataset process- Rule-Based Methods use predefined rules for classification. Rule
+ing. Deep Learning excels in intrusion detection. (Imran et al., 2022) Induction Algorithms learn from data; Expert Systems rely on human
+propose a Deep Learning-based IDS achieving 99.65% accuracy. (Liu knowledge (Abdulganiyu et al., 2023), (Fürnkranz, 2013).
+et al., 2022) utilize auto-encoder, MLP, and clustering for attack detec- Graph-based Methods model data as a graph, analyzing relationtion. (Mushtaq et al., 2022) use auto-encoders and LSTM. (Ravi et al., ships. Valuable for complex data and anomaly identification
+ (Pourhabibi et al., 2020), (Khoshraftar and An, 2022).
+2022) employ recurrent models for 99% accuracy. (Li et al., 2022) use
+ Subsequent subsections explore prior work, technique analysis, and
+clustering to label attacks.
+ strengths/weaknesses.
+ Anomaly-based detection, like other methods, has merits and limitations. Ongoing research strives for better accuracy and reduced false 2.2.1. Previous IDS behavioral profiling research
+positives and negatives. This section offers an encompassing overview of recent behavioral profiling research in network security, classified by employed
+2.1.4. Synthesis approaches as outlined earlier. Proposed models, experiments, and
+ Previous method limitations include: analyses within each category are demonstrated. Limitations of prior
+ works are summarized, emphasizing coverage by our proposed model.
+ 1. Signature-based IDS excel with known attacks but struggle
+ against unknown or zero-day attacks. • Rule-based Works
+ (Kapetanakis et al., 2014) adopt a case-based reasoning ap-
+ 2. Rule-based IDS are intricate, effective for known attacks, but
+ proach, profiling attackers’ characteristics during an attack to
+ incapable of detecting unknown ones.
+ differentiate known profiles from a pool of attack data and human
+ 3. Anomaly-based IDS have lower accuracy and higher false posiinfiltration behaviors.
+ tives than signature-based IDS, but detect unknown attacks. • Learning-based Works
+ 4. Profiling for reduced false positives in anomaly-based IDS is (Hou et al., 2022) present a hierarchical attention networkcomplex. based flow-vector generation approach for identifying malicious
+ 5. Network-based IDS grapple with vast data handling. traffic, utilizing network profiling and machine learning. (Singh
+ 6. Real-time detection is crucial for a reliable IDS. et al., 2015) propose an intrusion detection method using On-
+ This paper adopts a profiling model to address issues 1, 2, 5, and 6. line Sequential Extreme Learning Machine, incorporating feature
+ selection strategies and profile reduction for scalability.
+ • Statistical-based Works
+2.2. Behavioral profiling (Muraleedharan et al., 2010) utilize IP flow characteristics and
+ chi-square detection to propose a flow-based system for anomaly
+ Behavioral profiling is crucial in network security, identifying in- detection, establishing normal behavior models and detecting
+dividual or group behavior patterns for normal or anomalous activity threats by analyzing network traffic behavior.
+
+ 3
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ • Mixed Works are constantly evolving and becoming more sophisticated. Static
+ or rigid profiling systems are unable to keep up with this pace
+ – Learning and Soft Computing Methods
+ of change and quickly become obsolete, leaving organizations
+ (Rabbani et al., 2020) enhance cloud service provider
+ vulnerable to emerging threats. (He et al., 2015; Liang et al.,
+ behavior modeling through combined learning and self-
+ 2019; Lin et al., 2019).
+ optimized machine learning using a Probabilistic Neural
+ 13. Not suitable for encrypted traffic detection: The increasing
+ Network. Particle Swarm Optimization boosts system perprevalence of encryption in modern network communication
+ formance, enabling user behavior categorization and attack
+ and the security monitoring challenges it presents necessitate a
+ recognition.
+ profiling system suitable for encrypted traffic detection (Wang
+ – Learning and Statistical Methods
+ et al., 2022; Garcia et al., 2021).
+ (Herrmann et al., 2013) utilize DNS resolver data for tracking algorithms. Behavioral traits inform profiles, pattern In this study, we have effectively addressed and resolved the first
+ extraction, and session matching. Test instance classification nine above-mentioned issues.
+ employs the closest comparable training case and Euclidean
+ distance. 3. Proposed model
+
+2.2.2. Synthesis This section introduces our innovative model for profiling network
+ There are several shortcomings identified with the existing methods, traffic to derive distinct behavior-based profiles for each activity. Adincluding: dressing previous limitations, our approach offers a novel perspective
+ on network traffic analysis. The overarching architecture of our solu-
+ 1. Working only on specific types of malicious behavior: Almost all tion is visualized in Fig. 3, providing an initial glimpse into our novel
+ of the previous profiling works focus on specific known signa- framework. Subsequent subsections will delve into specific facets of our
+ tures or patterns, limiting their ability to detect novel threats. model, discussing model input and feature extraction, feature selection,
+ 2. Lack of comprehensive feature set: Previous research indicates behavior similarity metrics, the profiling core, and profile-assigning.
+ that comprehensive feature sets are crucial for accurate behav- Additionally, the components of the proposed model are delineated in
+ ioral profiling (von Ziegler et al., 2021). However, almost all of detail through the presentation of Algorithms 1, 2, and 3, offering a
+ the previous works worked with a dataset containing less than
+ comprehensive understanding of our innovative approach to network
+ 50 features.
+ traffic analysis and behavior profiling.
+ 3. Low accuracy: Several studies have pointed out the accuracy limitations in conventional intrusion detection systems (Hou et al.,
+ 3.1. Feature extraction
+ 2022; Singh et al., 2015; Rabbani et al., 2020; Muraleedharan
+ et al., 2010).
+ Our solution begins by extracting crucial insights from raw network
+ 4. Easy to circumvent in case of knowing the IDS: Existing systems
+ traffic data using our specialized analyzer. These extracted features
+ can be vulnerable to evasion techniques (Herrmann et al., 2013;
+ form the foundation of our subsequent analyses and profiling. In the
+ Muraleedharan et al., 2010; Hou et al., 2022).
+ upcoming subsections, we explore how this analyzed data and these
+ 5. Lack of good data and model (profile) visualization: The importance of data and model visualization has been emphasized features are harnessed to extract the patterns and further create proin (Vellido, 2020; Unwin, 2020; Midway, 2020). files. In Section 4 we elaborate on our analyzer and the extracted
+ features in detail, while in Section 5 we delve into the details of the
+ 6. Lack of a defined profile per attack or malware: Almost all of the
+ previous profiling works lack a defined clear profile per benign selected raw network data and further the prepared analyzed data.
+ and malicious activity.
+ 7. Not suitable for online detection: Online detection challenges 3.2. Feature selection
+ are discussed in (Alrawashdeh and Purdy, 2016; Aljanabi et al.,
+ 2021; Hsu et al., 2019), however, almost all of the previous This section introduces a novel approach for activity-specific feature
+ profiling works suffer from this shortcoming. selection. This approach operates on datasets comprising 𝑛 instances
+ 8. Not applicable on profiling the zero-day attacks and vulnera- and 𝑚 features, ultimately providing the most suitable feature set for
+ bilities: In response to the ever-evolving threat landscape, the each label. The methodology leverages a correlation graph, mapping
+ demand for a profiling system equipped to effectively profile features to nodes and quantifying their relationships. Our process inzero-day attacks becomes imperative (Ahmad et al., 2023; Guo, volves creating a fully connected graph, initializing with zero edge
+ 2022; Barros et al., 2022). weights, and updating these weights based on feature correlations. This
+ 9. Lack of Scalability with the new applications, protocols, and results in a weighted graph 𝐺 = (𝑉 , 𝐸) with nodes (𝑉 ) and weighted
+ features: To address the challenges stemming from the intro- edges (𝐸) reflecting correlations.
+ duction of new applications, protocols, and features, scalability For each activity label 𝑎 ∈ 𝐴, the algorithm systematically calculates
+ becomes a critical necessity (Shaikh et al., 2009; Khan et al., correlations between feature pairs within instances labeled as 𝑎 and
+ 2019; Mighan and Kahani, 2021). updates edge weights in graph 𝐺 accordingly. Subsequently, edges with
+ 10. Lack of a comprehensive dataset: To meet the requirements weights below a predefined threshold are eliminated. The algorithm
+ for effective training and analysis, a comprehensive dataset is then identifies the strongest path within graph 𝐺, ensuring a node is
+ vital, ensuring the reliability and thoroughness of the process (). visited just once throughout this process. The nodes, representing fea-
+ Nonetheless, as detailed in Section 7.7.1, datasets used in prior tures, within this strongest path are ultimately utilized as the optimal
+ research exhibit numerous issues. feature set for the given activity 𝑎.
+ 11. High Complexity in terms of time, preparation, real-time de- Unique representations emerge for each activity as we repeat the
+ tection, and performance: Most prior research overlooked the process for each label in the dataset. Fig. 6 demonstrates distinct
+ complexity challenge in their model designs. correlation graphs for various activities, highlighting the need to tailor
+ 12. Lack of adaptable variance per profile (dynamic threshold): features to specific profiles. This contrasts with conventional uniform
+ Dynamic profiling systems are essential for adapting to and effec- feature sets for all activities. Optimal feature sets are identified by
+ tively responding to the evolving threat landscape. In the ever- finding the strongest path of a specified length within the correlation
+ changing world of cybersecurity, threats and attack techniques graph. Algorithm 1 outlines this procedure.
+
+ 4
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 3. General solution.
+
+ Common correlation algorithms like Pearson’s, Kendall’s, and Spear- Algorithm 1 Feature Selection Algorithm
+man’s were tested for network security context (Cohen et al., 2009;
+ 1: Input: Dataset with 𝑛 instances and 𝑚 features
+Abdi, 2007; Myers and Sirois, 2004). Selection depends on variable re-
+ 2: Output: Best feature set for each activity label
+lationships and research questions (Chok, 2010; Bolboaca and Jäntschi,
+ 3: Initialize a fully connected graph 𝐺 = (𝑉 , 𝐸) with 𝑉 = 𝑓1 , 𝑓2 , … , 𝑓𝑚
+2006). Experiments compared these algorithms (Section 6, Fig. 7).
+ and 𝐸 = (𝑓𝑖 , 𝑓𝑗 )|1 ≤ 𝑖, 𝑗 ≤ 𝑚 with initial edge weights of zero
+ The introduction of this new feature selection methodology is driven
+ 4: for each activity 𝑎 ∈ 𝐴 do
+by the imperative need for feature selection algorithms to align seam-
+ 5: Calculate the correlation between each pair of features for
+lessly with our profiling algorithm. Given that our profiling definition
+ instances with label 𝑎
+inherently encompasses the possibilities and correlations among feature
+ 6: Update the edge weights in graph 𝐺 based on the calculated
+values, we recognized the necessity to devise an approach that can
+ correlations
+effectively address this unique challenge within the profiling frame-
+ 7: Remove all edges with weights below a defined threshold
+work. In essence, the concept of this feature selection algorithm evolved
+ 8: Find the strongest path with a defined length in the graph 𝐺
+organically during the design and implementation of the profiling
+ without visiting any node twice
+algorithm.
+ 9: The nodes (features) in the strongest path are used as the best
+ It is noteworthy that the existing literature encompasses feature sefeature set for activity 𝑎
+lection algorithms that consider feature correlations. In their respective
+ 10: end for
+studies, (Zhou et al., 2022; Wang et al., 2020; Akhiat et al., 2021;
+ 11: Return Best feature set for each activity
+Potharaju and Sreedevi, 2018; Zhang and Hancock, 2011) present
+feature selection methods that prioritize the identification of features highly correlated with the target variable, while minimizing
+inter-feature correlations. (Zhou et al., 2022) leverage mutual in- Leveraging the constructed feature selection graphs for all activities,
+formation, (Wang et al., 2020) utilize a graph-based Laplacian ma- our approach yields a robust formula, Eq. (1), to assess the similarity
+trix, (Akhiat et al., 2021) employ a correlation-based filtering ap- between activities 𝐴1 and 𝐴2 denoted as S(𝐴1 , 𝐴2 ). The formula updates
+proach, (Potharaju and Sreedevi, 2018) opt for a low-dimensional similarity values by analyzing edges 𝐸1 and 𝐸2 connecting features 𝑓𝑖
+embedding approach, and (Zhang and Hancock, 2011) apply a graph- and 𝑓𝑗 in both graphs.
+based regularization approach. However, none of these methods ex- The procedure initiates with a similarity value of zero for activities
+plicitly address the intricate ‘‘chain of correlations’’ among features. 𝐴1 and 𝐴2 . The similarity measure is systematically adjusted by exam-
+Our innovative approach, utilizing a graph-based framework, unlocks ining each pair of features and corresponding edges and utilizing an
+the potential to assist the profiling algorithm in extracting patterns intricate calculation mechanism. The process considers the presence,
+associated with the complex possibilities of feature values. direction, and magnitude of edges. Normalizing the outcome by the
+ The Pattern Extraction subsection (Section 3.4.2) underscores the number of correlations results in a floating-point value between (−1, 1).
+algorithm’s integration into our profiling system and pattern extrac- Higher values signify greater similarity between behavioral patterns,
+tion module. We discuss its pivotal role, deviating from conventional aiding assessments of activity likeness and potential risks.
+methods, and enhancing our comprehensive profiling methodology’s This algorithm yields pivotal benefits across multiple domains. It
+effectiveness and robustness. offers precise similarity quantification, enhancing network anomaly
+ detection, intrusion identification, and risk assessment. High similarity
+3.3. Behavior similarity indicates related activities, enabling proactive risk mitigation. Comparing activities against benign and malicious behaviors strengthens pro-
+ We introduce the novel concept of behavior similarity, a metric filing and categorization. The behavior similarity algorithm augments
+designed to quantify the likeness between different network activities. network analysis, providing organizations with enhanced comprehen-
+This metric draws from the earlier-discussed feature selection graph sion and strategic decision-making capabilities for intricate network
+concept. activities.
+
+ 5
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ ⎧ The Gaussian kernel function is widely adopted for Kernel Density
+ ⎪1 if 𝐸1 > 0 and 𝐸2 > 0
+ Estimation due to its symmetric and smooth properties, facilitating
+ ⎪1 if 𝐸1 < 0 and 𝐸2 < 0
+ ⎪ accurate density estimation (Węglarczyk, 2018).
+ ⎪−1 if 𝐸1 > 0 and 𝐸2 < 0 To determine the optimal bandwidth (ℎ) for our KDE estimation,
+ ∑ ⎪
+ 𝐹 𝑒𝑎𝑡𝑢𝑟𝑒𝑠
+S(𝐴1 , 𝐴2 ) = ⎨−1 if 𝐸1 < 0 and 𝐸2 > 0 (1) we employed k-fold cross-validation (Rodriguez et al., 2009). For each
+ 𝑓𝑖 ,𝑓𝑗 ⎪ fold, we calculated the mean integrated squared error (MISE) (Marron
+ ⎪1 if ¬𝐸1 and ¬𝐸2
+ and Wand, 1992) by evaluating the discrepancy between the estimated
+ ⎪−1 if ¬𝐸1 and 𝐸2
+ ⎪ density function (𝑓̂−𝑖 (𝑥)) with the 𝑖-th observation omitted and the true
+ ⎪−1 if 𝐸1 and ¬𝐸2 underlying probability density function (𝑓 (𝑥)) of the data. The MISE for
+ ⎩
+ the 𝑖-th fold is expressed as:
+3.4. Profiling core 𝑀 𝐼 𝑆 𝐸𝑖 (ℎ) = [𝑓̂−𝑖 (𝑥) − 𝑓 (𝑥)]2 𝑑 𝑥 (5)
+ ∫
+ Several critical steps are employed to achieve the utmost precision
+and efficiency in a profile definition, as outlined in Algorithm 2. Our Subsequently, the cross-validation score (𝐶 𝑉 (ℎ)), representing the
+proposed profiling model is founded on two fundamental concepts. The average MISE over all 𝑛 data points, was computed as follows:
+ 1∑
+ 𝑛
+first revolves around the unique behavioral characteristics exhibited by
+ 𝐶 𝑉 (ℎ) = 𝑀 𝐼 𝑆 𝐸𝑖 (ℎ) (6)
+each feature across different activities. The second concept pertains to 𝑛 𝑖=1
+the diverse correlations observed among various features across distinct
+activities. Building upon the best features identified in the preceding The bandwidth ℎopt that minimized the cross-validation score was
+subsections, the subsequent sections provide a detailed elucidation then selected as the optimal bandwidth for our KDE estimation. This
+of our profile creation algorithm centered around these two primary critical selection ensures an optimal trade-off between capturing fine
+principles. data details and generating a smooth and accurate density estimate.
+ In the Range Calculation subsection, we address each selected fea- After determining the bandwidth, we assigned a range to each local
+ture within each activity, effectively transforming the infinite float maximum, considering the local maximum point as the center of the
+value space into finite categories. The ensuing Profiling Core subsection corresponding range. We identified all the ranges for each feature in
+delves into a comprehensive exploration of the possibilities encompass- a specific activity by following this approach. We effectively reduced
+ing all these ranges and features within each activity. Finally, in the dependence on the dataset by mapping each record to its nearest center
+last subsection, we demonstrate the process of assigning profiles to range within each activity and its corresponding features. This method
+new inputs based on the patterns extracted earlier. This pivotal step allows us to identify the primary regions of the data, thereby mitigating
+completes the profiling process, facilitating identifying and recognition the impact of duplicate, unbalanced, or noisy data as we focus on the
+of novel activities based on their similarities to existing profiles. local maxima.
+ Importantly, it is imperative to clarify that ‘‘range_1’’ for ‘‘feature_1’’
+3.4.1. Range calculation in ‘‘activity_1’’ may differ from ‘‘range_1’’ for ‘‘feature_1’’ in ‘‘activity_2’’.
+ Following the selection of features for each activity, the subsequent For instance, let us consider the feature named ‘‘pkts_count’’, which can
+step involves constructing the profile of each activity based on the two exhibit three ranges in benign activity but four in DDoS activity. This
+fundamental concepts as mentioned earlier. This subsection focuses on distinction arises from the divergent nature of these activities, warthe first concept, which posits that each feature exhibits distinctive ranting separate consideration. Consequently, the values for ‘‘range_1’’
+behavior across various activities. For example, as illustrated in Fig. 8, concerning the ‘‘pkts_count’’ feature in the benign activity would differ
+the average duration value varies significantly between benign and from those in the DDoS activity. The general procedure for identifying
+DDoS activities. As substantiated in Section 6, we firmly believe that data ranges is illustrated in the following algorithm:
+each feature value within each activity conforms to certain characteristic ranges. To identify these ranges, we employ the Kernel Density 3.4.2. Behavior profiling by pattern extraction
+Estimation (KDE) (Chen, 2017) function, defined as: In this subsection, we culminate our behavior profile creation by
+ (𝑥 − 𝑥 ) incorporating the second concept elucidated earlier. The second idea
+ 1∑
+ 𝑛
+ 𝑖
+𝑓̂ℎ (𝑥) = 𝐾 (2) pertains to the diverse correlations observed among different features
+ 𝑛 𝑖=1 ℎ
+ across various activities. As an illustrative example, let us consider
+ the features ‘‘duration’’ and ‘‘packet count’’. In benign activities, these
+ Here, 𝑓̂ℎ (𝑥) represents the kernel density estimate of the probability
+ two features exhibit no meaningful correlation. In contrast, in an SSH
+density function at the point 𝑥, utilizing the chosen kernel function
+ Patator activity, the ‘‘packet count’’ demonstrates a high positive corwith bandwidth ℎ. 𝑛 denotes the total number of data points in the
+ relation with ‘‘duration’’, as visually depicted in Fig. 6. This subsection
+dataset under consideration, 𝑥𝑖 represents the 𝑖th data point, and
+ delves into the intricacies of applying these feature correlations to
+𝐾 function refers to the kernel function, defining the shape of the
+ the previously explained ranges. In essence, we seek to determine the
+kernel. The bandwidth ℎ, also known as the smoothing parameter,
+ associations between different ranges within one feature and within anis responsible for controlling the width of the kernel, significantly
+ other. To elaborate, when the value of ‘‘duration’’ falls within ‘‘range1’’,
+influencing the smoothness of the resultant density estimation (Raykar
+ what are the plausible values for ‘‘packet count’’? Notably, these new
+and Duraiswami, 2006).
+ correlations, or rather, possibilities, may differ for each activity com-
+ In this study, we utilize the Gaussian function (Keerthi and Lin,
+ pared to another. The pattern extraction process herein unveils these
+2003) as our kernel:
+ ( 2) latent behavioral nuances unique to each activity.
+ 1 𝑥 A crucial consideration is that our novel feature selection algorithm
+ 𝐾(𝑥) = √ exp − (3)
+ 2𝜋 2 thoughtfully identifies the most correlated features. Consequently, this
+ stage of profile creation invariably yields meaningful and rational pat-
+ Consequently, the KDE function with Gaussian as the kernel is terns. This underscores the criticality of our feature selection algorithm,
+expressed as: for it ensures that the pattern extraction process is anchored in the
+ ( )
+ 1 ∑ 1
+ 𝑛
+ (𝑥 − 𝑥𝑖 )2 underlying correlations between the features’ values. Indeed, the suc-
+ 𝑓̂ℎ (𝑥) = √ exp − (4)
+ 𝑛ℎ 𝑖=1 2𝜋 2ℎ 2 cessful identification of patterns hinges on the existence of substantial
+ correlations between the features. As such, if the selected features lack
+
+ 6
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+meaningful correlations due to common algorithms like information particle’s previous velocity, its individual experience, and the collective
+gain, the ensuing pattern extraction process likely yields no meaningful knowledge of the swarm, respectively. The random coefficients 𝑟1 and
+patterns based on the features’ value variations. 𝑟2 introduce stochasticity to the particle’s movement. Through iterative
+ We employ Association Rule Mining algorithms to extract the di- refinement, PSO effectively guides the swarm towards the optimal
+verse possibilities between different feature values within an activity; parameter values, leading to enhanced performance in our parameter
+we employ Association Rule Mining algorithms (Kotsiantis and Kanel- tuning process (Poli et al., 2007).
+lopoulos, 2006). This family of algorithms aligns seamlessly with our The performance metric utilized to optimize the particles is based
+second concept, as previously discussed. After a meticulous evaluation on maximizing accuracy while minimizing false positive rates. Thus, in
+of various algorithms within this family (Luna et al., 2019), we have each iteration of the algorithm, we calculate the value of the equation
+chosen to utilize the FP-Growth algorithm (Shawkat et al., 2022) due to 𝐴𝑐 𝑐 𝑢𝑟𝑎𝑐 𝑦 − 𝐹 𝑎𝑙𝑠𝑒_𝑃 𝑜𝑠𝑖𝑡𝑖𝑣𝑒. The higher the value of this equation, the
+its superior performance compared to other alternatives (Singh et al., better the result. Consequently, the particles move in a manner that
+2014). However, this algorithm requires the selection of two crucial optimizes this equation, thereby improving both precision and recall.
+parameters, namely minimum support and confidence ratios. Once the parameter tuning for a specific activity is completed, we
+ The minimum support ratio represents the minimum proportion run the algorithm one final time with the best parameters to extract
+of transactions required for a pattern to be considered. In contrast, the patterns of that activity. These extracted patterns form the core
+the minimum confidence ratio denotes the minimum proportion of of the profile for each activity. Algorithm 2 outlines the different
+transactions that must satisfy the pattern to be deemed valid (Shawkat steps involved in profile creation. The patterns extracted during this
+et al., 2022). In our pursuit of identifying the optimal values for these stage play a pivotal role in the decision-making process during the
+parameters, we adopted a rigorous approach involving the utilization of profile-assigning stage.
+optimization algorithms. After thoughtful consideration, we determined Algorithm 2 Pattern Extraction Algorithm
+that the Particle Swarm Optimization (PSO) algorithm (Kennedy and
+ Require: A dataset 𝐷 with 𝑛 activities, each represented by 𝑚
+Eberhart, 1995) is best suited for this purpose.
+ categorical selected features.
+ The choice of PSO over other optimization techniques was based
+ Ensure: A set of activity-specific patterns for each activity.
+on several factors. Firstly, PSO’s ability to effectively navigate complex
+ 1: Parameters: Initial confidence value 𝐶, Initial support value 𝑆 𝑈 ,
+search spaces aligns well with the challenges posed by the parameter
+ Particle Swarm Optimization steps 𝑠
+optimization task (Zhang et al., 2015). Secondly, PSO is known for
+ 2: for each activity 𝑎 in dataset 𝐷 do
+its inherent parallelism, which allows for efficient computation and
+ 3: Run Association Rule Mining Algorithm (FP-Growth) with initial
+reduced processing time (Zeng et al., 2020). Finally, PSO’s adaptive
+ 𝐶 and 𝑆 𝑈
+nature enables it to dynamically adjust its search strategy based on
+ 4: Employ Particle Swarm Optimization (PSO) to fine-tune the
+the evolving fitness landscape, ensuring convergence towards optimal
+ values of 𝐶 and 𝑆 𝑈
+solutions (Jensi and Jiji, 2016; Wang and Song, 2019).
+ 5: for each step 𝑠 in Particle Swarm Optimization do
+ Several comparative studies have demonstrated the superior perfor-
+ 6: for each particle 𝑝 in particles do
+mance of PSO over other metaheuristic algorithms in various optimization tasks. (Tharwat and Schenck, 2021) evaluated PSO against Genetic 7: Update 𝐶 and 𝑆 𝑈 based on step size 𝑠
+Algorithm (GA), Differential Evolution (DE), and Artificial Bee Colony 8: Calculate Accuracy and False Positive rates
+(ABC) algorithms and found that PSO outperformed the others in terms 9: Update particle positions according to the value of <
+of solution quality and convergence speed for problems with complex 𝐴𝑐 𝑐 𝑢𝑟𝑎𝑐 𝑦 − 𝐹 𝑃 >
+search spaces. (Pratama and Suyanto, 2020) compared PSO, GA, and 10: Save the best 𝐶 and 𝑆 𝑈 for each particle 𝑃𝑖 based on the
+DE for feature selection in classification tasks and found that PSO highest < 𝐴𝑐 𝑐 𝑢𝑟𝑎𝑐 𝑦 − 𝐹 𝑃 > value
+achieved superior classification accuracy. (Kachitvichyanukul, 2012) 11: end for
+investigated the performance of PSO, GA, and DE in optimizing Support 12: end for
+Vector Machine (SVM) parameters and found that PSO consistently 13: Run the FP-Growth with the Best 𝐶 and 𝑆 𝑈
+outperformed the others in terms of classification accuracy and model 14: end for
+complexity. (Khan and Sahai, 2012) compared PSO, GA, and DE for 15: Termination:
+neural network training and found that PSO achieved faster conver- 16: return Activity-specific patterns for each activity
+gence and superior generalization performance. These studies highlight
+PSO’s effectiveness in handling multidimensional, non-linear optimiza- 3.5. Profile-assigning
+tion problems, its inherent parallelism and adaptive nature, and its
+superior performance compared to other metaheuristic algorithms. Having obtained the patterns for each activity, the next step in-
+ This nature-inspired algorithm maintains a swarm of particles, with volves profiling new activities using these sets of patterns. To achieve
+each particle representing a potential solution. The PSO algorithm this, we analyze the ranges associated with the corresponding features
+guides these particles towards the most promising regions of the search of each activity and create a pattern for the test input with each activity.
+space. The particle’s movement is influenced by its current position, its Consequently, we obtain one pattern for each activity. Subsequently,
+best previously attained position, and the overall best position discov- we compare the test input pattern with the previously created patterns
+ered by the swarm (Kennedy and Eberhart, 1995). Mathematically, the for each activity. The profile-assigning procedure for the test input is
+position update for each particle 𝑖 at iteration 𝑡 + 1 can be expressed as as follows: If only one activity’s pattern is matched, the new input is
+follows: labeled with the corresponding activity’s label. If more than one pattern
+𝐯(𝑡+1) = 𝑤 ⋅ 𝐯(𝑡) (𝑡) (𝑡) (𝑡)
+ (7) is matched, and one of them corresponds to the benign activity, the
+ 𝑖 𝑖 + 𝑐1 ⋅ 𝑟1 ⋅ (𝐩𝑖 − 𝐱𝑖 ) + 𝑐2 ⋅ 𝑟2 ⋅ (𝐠 − 𝐱𝑖 )
+ new input is labeled as ‘‘Suspicious’’. Otherwise, it is classified as an
+ ‘‘Attack’’. Lastly, if no pattern is found in any activities, the new input
+𝐱𝑖(𝑡+1) = 𝐱𝑖(𝑡) + 𝐯(𝑡+1)
+ 𝑖 (8)
+ is labeled as ‘‘Unknown’’. The overarching procedure for assigning the
+ correct profile to new inputs is depicted in Algorithm 3.
+ where 𝐱𝑖(𝑡) represents the position of particle 𝑖 at iteration 𝑡, 𝐯𝑖(𝑡) Our novel approach to profiling network activity combines a novel
+denotes its velocity, 𝐩𝑖 is the best position found by particle 𝑖 so far, graph-based feature selection technique with a novel pattern extraction
+and 𝐠(𝑡) signifies the best position obtained by the entire swarm at module to deliver efficient results. The feature selection stage extracts
+iteration 𝑡. The parameters 𝑤, 𝑐1 , and 𝑐2 regulate the impact of the the best feature set for each activity by finding the strongest paths in
+
+ 7
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+Algorithm 3 Profile Assigning Algorithm addressing issues identified in its implementation and theoretical underpinnings, such as incomplete features’ formulas, unfinished flow
+Require: 𝑛 Activities with corresponding Patterns 𝑃 , Each with 𝑚
+ creation, etc. Furthermore, NTLFlowLyzer enhances and expands upon
+ selected features, and the Test input data
+ CICFlowMeter by integrating a range of new features, as presented in
+Ensure: Profile of the test input
+ 1: Range Calculation:
+ Table 1. This integration provides an enriched capability for analyzing
+ 2: for each activity 𝑎 in dataset 𝐷 do
+ network flows and extracting valuable insights. The primary motivation
+ 3: for each 𝑓𝑖,𝑗 where 0 ≤ 𝑖 < 𝑛 and 0 ≤ 𝑗 < 𝑚 do for the development of NTLFlowLyzer was to overcome the limitations
+ 4: Calculate the range 𝑟 associated with 𝑓𝑖,𝑗 of CICFlowMeter and provide a more efficient and accurate tool for
+ 5: Replace 𝑟 as the value of 𝑓𝑖,𝑗 for 𝑎 extracting valuable features from network traffic. In the following
+ 6: end for subsections, we will discuss the shortcomings of CICFlowMeter and
+ 7: Save the test pattern 𝑇 𝑃𝑎 the improvements implemented in NTLFlowLyzer, as well as provide
+ 8: end for a detailed overview of the tool’s features and functionality.
+ 9: Match Patterns:
+10: for each pattern 𝑝𝑎 in 𝑃 and each 𝑡𝑝𝑎 in 𝑇 𝑃 do 4.1.1. CICFlowMeter covered shortcomings and issues
+11: if 𝑝𝑎 == 𝑡𝑝𝑎 then CICFlowMeter is a previous tool that was developed in 2017 using
+12: Add activity 𝑎 to possible profiles list 𝑃 𝑃 𝐿 the Java programming language. While the tool effectively extracted
+13: end if features from network traffic, our work seeks to improve upon it
+14: end for by addressing issues identified in its implementation and theoretical
+15: Profile Assignment: foundations. The primary motivation for developing our tool, NTLFlow-
+16: if 𝑃 𝑃 𝐿 size == 1 then Lyzer, is to provide a more efficient and accurate means of extracting
+17: Assign the corresponding profile valuable features from network traffic, overcoming the limitations of
+18: else CICFlowMeter.
+19: if 𝑃 𝑃 𝐿 size == 0 then In this section, we will discuss the issues with CICFlowMeter in
+20: Assign ‘‘Unknown" detail, and describe the improvements we made in our implementation.
+21: else if ‘‘Benign" in 𝑃 𝑃 𝐿 then The following is a list of issues we identified with CICFlowMeter. For
+22: Assign ‘‘Suspicious" more information on how we addressed these issues please refer to the
+23: else GitHub page of NTLFlowLyzer (BCCC-NTLFlowLyzer, 2024):
+24: Assign ‘‘Attack"
+25: end if 1. Incorrect flow creation
+26: end if 2. CICFlowMeter’s low performance
+27: return Profile of the test input 3. Creating empty CSV files for certain pcap files
+ 4. Empty flow list creation for attack pcap files
+ 5. Time-consuming features for specific pcap files
+ 6. Installation on Windows and Linux
+the feature’s correlation graph. The range calculation module mines the
+ 7. Payload bytes of the first packet issue
+underlying data behavior and the pattern extraction module generates
+ 8. Loading network interfaces issues on Debian 10
+the patterns by considering the correlations between previously defined
+ 9. PSH flag features issue
+ranges in different features. Finally, in the profiling-assigning stage,
+ 10. Down/Up ratio feature issue
+the corresponding profile for each new test input is calculated. In the
+ 11. ICMP protocol issue
+experiment Section 6, we have implemented the profiling model and
+ 12. Negative values in IAT statistics issue
+designed a test scenario, and in the analysis and discussion Section 7,
+ 13. Handling large files issues
+we have analyzed our proposed model from different perspectives and
+ 14. Manual labeling shortcoming
+discussed the possible future avenues.
+ 15. Pcapng extension shortcoming
+ This innovative and practical solution establishes a new standard
+ 16. ARP flows issue
+for accurately profiling network behavior. Its applicability empowers
+organizations, including firewalls, IDS/IPS, Security Information and In addressing these issues, we added new features to NTLFlowLyzer
+Event Management (SIEM), and Unified Threat Management (UTM) and corrected the calculation of some of the previous features. A
+systems, to strengthen their network security and threat detection comparison of these features is presented in Table 1.
+mechanisms, particularly in the context of detecting zero-day and NTLFlowLyzer leverages the Python programming language instead
+previously unknown malicious activities. of Java, providing several advantages in this domain. Python’s simpler
+ and more concise syntax facilitates both writing and reading code,
+4. Implementation while its rich set of libraries and frameworks allows for the implementation of advanced features with ease. Moreover, Python is easier to
+ This section introduces NTLFlowLyzer (BCCC-NTLFlowLyzer, 2024), use and learn than Java, which increases accessibility for researchers
+comparing it with one of the most popular existing tools, CICFlowMe- and practitioners in the field. Python’s ease of use and readability
+ter (Lashkari et al., 2017). The architecture, flow creation process, also enable smoother development processes and easier maintenance
+behavior selection, and feature extraction are discussed. and modification of code over time. These advantages make Python
+ a popular choice for such applications, and NTLFlowLyzer benefits
+4.1. NlFlowLyzer: Network layer traffic feature extractor significantly from its flexibility and versatility.
+
+ In this work, we present the development of a new open-source 4.1.2. Architecture
+tool for extracting network traffic flow features from pcap files named NTLFlowLyzer is designed with a flexible architecture that allows
+NTLFlowLyzer. The tool is in Python and primarily uses the DPKT for effective extraction of network flows, improved speed through
+library to read the pcap file. Our tool builds upon the previously multi-thread functionality, and ease of development and modification.
+developed CICFlowMeter tool in Java by (Lashkari et al., 2017), The architecture is based on the latest software development principles
+
+ 8
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 4. Flow creation.
+
+and design patterns, making it easy for other researchers to use and 4.1.4. Behavior selection and feature extraction
+extend the tool for future work. Prudent selection and extracting pertinent features are pivotal in
+ The tool architecture and details of each component are available on crafting an efficacious network behavior analysis model. This section
+the GitHub page of the project (BCCC-NTLFlowLyzer, 2024). The user delineates our approach to behavior selection and feature extraction.
+ Fig. 5 elucidates our classification of six primary network bemust provide the input network traffic pcap file and specify the desired
+ havior categories: Time-based, Flag-based, Rate-based, Header-based,
+output format. The tool then utilizes three main modules: FlowCap-
+ Payload-based, and Side-based. Notably, behaviors not fitting the first
+turer, FeatureExtractor, and Writer. The NetFlowCapturer module reads
+ five categories find inclusion in the final category, Side-behavior. This
+packets from the input file using the DPKT library and creates network taxonomy emerges from a thorough literature review and empirical
+flows. The FeatureExtractor module extracts relevant features from the network traffic observations.
+output of the previous module. Finally, the Writer module prepares the It is noteworthy that network behavior categorization can diverge
+output file containing the flows and their extracted features. based on the approach. Nonetheless, our core model remains constant,
+ irrespective of categorization. For ease of comprehension, we offer a
+ feature list in Table 1, contrasting NTLFlowLyzer and CICFlowMeter
+4.1.3. Flow creation features.
+ Our approach exhibits notable differences from previous works, For in-depth feature insight and precise definitions, the NTLFlowparticularly regarding flow definition and termination criteria. A net- Lyzer project’s GitHub repository serves as a comprehensive resource.
+work traffic flow is a sequence of packets with the same six attributes:
+source IP, source port, destination IP, destination port, protocol, and 5. Updated intrusion detection dataset (BCCC-CIC-IDS2017)
+timestamp. Unlike other works, our approach considers bidirectional
+ Effective evaluation of our proposed profiling model hinges on decommunication between a source and destination as a single flow.
+ pendable datasets. This section scrutinizes prevalent public IDS
+Additionally, we consider the timestamp of the packets, as it allows
+ datasets, identifying limitations. Our chosen dataset, CIC-IDS2017, ofus to differentiate between communication (flows) that occurred at fers an improved, realistic, and current portrayal of real-world network
+different times and potentially exhibited other behavior. For our dis- traffic, ideally suited for assessing our profiling model. Notably, we
+charges, we use the start time of the flow, which is determined by highlight disparities between our generated CSV file and the dataset’s
+the timestamp of the first packet in the flow. Including a timestamp CICFlowMeter CSV file.
+in the flow, the definition provides a more accurate representation of
+the communication taking place. It is worth noting that the general 5.1. Available IDS traffic comparison
+procedure of flow creation is visualized in Fig. 4, which highlights the
+steps involved in our method. In this subsection, we undertake a comprehensive comparison of the
+ most reputable IDS datasets to evaluate their suitability for our research
+ We also differ from previous works in terms of terminating a flow.
+ objectives.
+To close a flow, our approach utilizes four distinct criteria, and the DARPA (Lincoln Laboratory 1998–99): This dataset includes dioccurrence of any one of these criteria is sufficient for flow closure. verse activities like FTP, email, browsing, and SNMP, along with arti-
+These criteria include: ficially injected attacks such as buffer overflow and DoS. However, it
+ lacks real-world traffic representation, newer attack types, and actual
+ • Receipt of two FIN flags from sender and receiver; attack samples due to its age (McHugh, 2000; Brown et al., 2009)
+ • Presence of an RST flag; KDD’99 (University of California, Irvine 1998–99): Derived from
+ • Flow duration exceeding the maximum threshold time; DARPA, KDD’99 integrates attacks like Smurf-Dos, but exhibits im-
+ • Flow idle time, defined as the time between packets being added balanced attack class distribution and redundancy with its predecesto the flow, exceeding the maximum flow idle time. sor (Al Jallad et al., 2020; Tavallaee et al., 2009). NSL-KDD was
+ constructed utilizing KDD (Tavallaee et al., 2009) to address some of
+ These criteria have been carefully selected to ensure our flows the KDD’s weaknesses (McHugh, 2000).
+accurately reflect the underlying network traffic. To the best of our DEFCON (The Shmoo Group,2000–2002): DEFCON offers versions
+knowledge, our approach represents a unique and novel approach to with intrusive activities like buffer overflows and port scanning. Howflow termination, as prior works have yet to consider all of these ever, it lacks normal background traffic, reducing its applicability to
+criteria. real-world scenarios (Nehinbe, 2009).
+
+ 9
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 5. Network behavior.
+
+ CAIDA (Center of Applied Internet Data Analysis 2002–2016): Twente (University of Twente 2009): Twente’s dataset is collected
+CAIDA presents datasets focused on specific attacks or events, poten- from honeypot network traffic, providing labeled data. However, its
+tially limiting their representativeness. Their anonymization approach attack type variety and data volume might not fully reflect real-world
+masks protocol information and payload, impacting utility (Shiravi scenarios (Sperotto et al., 2009).
+et al., 2012). UMASS (University of Massachusetts 2011): UMASS dataset of-
+ LBNL (Lawrence Berkeley National Laboratory and ICSI 2004– fers trace files of wireless applications and network packets. Its limi-
+2005): LBNL offers full header traffic data from a medium-sized net- tations include a lack of attack diversity and traffic volume for robust
+work, although privacy concerns led to payload exclusion. Despite evaluation (Prusty et al., 2011).
+its realism, it may lack the comprehensive attack diversity desired
+ ISCX2012 (University of New Brunswick 2012): The ISCX2012
+(Nechaev et al., 2004).
+ comprises diverse protocols, but the distribution of simulated attacks
+ CDX (United States Military Academy 2009): CDX provides netmay not align with real-world statistics. Additionally, its absence of
+work traffic of essential services like Web and DNS, useful for testing
+ HTTPS traffic reduces its current relevance (Shiravi et al., 2012).
+alert rules. Nonetheless, its diversity and data volume are limited,
+potentially constraining its practicality (Sangster et al., 2009). ADFA (University of New south wales 2013): ADFA includes raw
+ Kyoto (Kyoto University 2009): This dataset, generated using call traces during regular host operations and attacks, yet it may suffer
+honeypots, features attacks against them. While offering useful features from homogeneity and lack of distinction between attack and normal
+for IDS analysis, it may lack false positives, crucial for real-world alert behaviors (Xie and Hu, 2013; Xie et al., 2014).
+minimization (Song et al., 2011; Sato et al., 2012; Chitrakar and Huang, CIC-IDS2017 (Canadian Institute for Cybersecurity (CIC), Uni-
+2012). versity of New Brunswick 2017): Offering abstract behaviors of
+
+ 10
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Table 1
+ NTLFlowLyzer features.
+ Behavior Num. Feature name Is new Num. Feature name Is new
+ F1 Duration F13 Packets IAT Min
+ F2 Active Max F14 Packets IAT Sum
+ F3 Active Mean F15 Fwd Packets IAT Max
+ F4 Active STD F16 Fwd Packets IAT Mean
+ F5 Active Min F17 Fwd Packets IAT STD
+ F6 Idle Max F18 Fwd Packets IAT Min
+ Time-based
+ F7 Idle Mean F19 Fwd Packets IAT Sum
+ F8 Idle STD F20 Bwd Packets IAT Max
+ F9 Idle Min F21 Bwd Packets IAT Mean
+ F10 Packets IAT Max F22 Bwd Packets IAT STD
+ F11 Packets IAT Mean F23 Bwd Packets IAT Min
+ F12 Packets IAT STD F24 Bwd Packets IAT Sum
+ F25 Down Up Rate F30 Fwd Bytes Rate ✓
+ F26 Packets Rate F31 Bwd Bytes Rate ✓
+ Rate-based F27 Fwd Packets Rate F32 Packets Count ✓
+ F28 Bwd Packets Rate F33 Fwd Packets Count
+ F29 Bytes Rate F34 Bwd Packets Count
+ F35 Header Bytes Max ✓ F44 Fwd Header Bytes Total
+ F36 Header Bytes Mean ✓ F45 Bwd Header Bytes Max ✓
+ F37 Header Bytes STD ✓ F46 Bwd Header Bytes Mean ✓
+ F38 Header Bytes Min ✓ F47 Bwd Header Bytes STD ✓
+ Header-based F39 Header Bytes Total ✓ F48 Bwd Header Bytes Min ✓
+ F40 Fwd Header Bytes Max ✓ F49 Bwd Header Bytes Total ✓
+ F41 Fwd Header Bytes Mean ✓ F50 Avg Segment Size ✓
+ F42 Fwd Header Bytes STD ✓ F51 Fwd Avg Segment Size
+ F43 Fwd Header BytesMin ✓ F52 Bwd Avg Segment Size
+ F53 Payload Bytes Max F62 Fwd Payload Bytes Min
+ F54 Payload Bytes Mean F63 Fwd Payload Bytes Total
+ F55 Payload Bytes STD F64 Fwd Payload Bytes Variance ✓
+ F56 Payload Bytes Min F65 Bwd Payload Bytes Max
+ Payload-based F57 Payload Bytes Total ✓ F66 Bwd Payload Bytes Mean
+ F58 Payload Bytes Variance F67 Bwd Payload Bytes STD
+ F59 Fwd Payload Bytes Max F68 Bwd Payload Bytes Min
+ F60 Fwd Payload Bytes Mean F69 Bwd Payload Bytes Total
+ F61 Fwd Payload Bytes STD F70 Bwd Payload Bytes Variance ✓
+ F71 FIN Flag Counts F83 Fwd ACK Flag Counts ✓
+ F72 SYN Flag Counts F84 Fwd URG Flag Counts ✓
+ F73 RST Flag Counts F85 Fwd ECE Flag Counts ✓
+ F74 PSH Flag Counts F86 Fwd CWR Flag Counts ✓
+ F75 ACK Flag Counts F87 Bwd FIN Flag Counts ✓
+ F76 URG Flag Counts F88 Bwd SYN Flag Counts ✓
+ Flag-based
+ F77 ECE Flag Counts F89 Bwd RST Flag Counts ✓
+ F78 CWR Flag Counts F90 Bwd PSH Flag Counts ✓
+ F79 Fwd FIN Flag Counts ✓ F91 Bwd ACK Flag Counts ✓
+ F80 Fwd SYN Flag Counts ✓ F92 Bwd URG Flag Counts ✓
+ F81 Fwd RST Flag Counts ✓ F93 Bwd ECE Flag Counts ✓
+ F82 Fwd PSH Flag Counts ✓ F94 Bwd CWR Flag Counts ✓
+ F95 Avg Fwd Bytes Per Bulk F105 Bwd Bulk State Count ✓
+ F96 Avg Fwd Packets Per Bulk F106 Bwd Bulk Size Total ✓
+ F97 Avg Fwd Bulk Rate F107 Bwd Bulk Packet Count ✓
+ F98 Avg Bwd Bytes Per Bulk F108 Bwd Bulk Duration ✓
+ F99 Avg Bwd Packets Per Bulk F109 Subflow Fwd Packets
+ Side-based
+ F100 Avg Bwd Bulk Rate F110 Subflow Bwd Packets
+ F101 Fwd Bulk State Count ✓ F111 Subflow Fwd Bytes
+ F102 Fwd Bulk Size Total ✓ F112 Subflow Bwd Bytes
+ F103 Fwd Bulk Packet Count ✓ F113 Fwd Init Win Bytes
+ F104 Fwd Bulk Duration ✓ F114 Bwd Init Win Bytes
+
+users based on various protocols, CIC-IDS2017 includes a compre- 5.2. Flow extraction and CSV generation using NTLFlowLyzer
+hensive range of attacks, features, and criteria for reliable evaluation (Sharafaldin et al., 2018, 2019; Kaur et al., 2020). In this section, we delve into the intricacies of flow extraction and
+ After analyzing the datasets, we found that the CIC-IDS2017 dataset the generation of CSV files employing NTLFlowLyzer. Our analysis
+is particularly suitable for evaluating our proposed profiling model due uncovered significant disparities between the NTLFlowLyzer-generated
+to its comprehensive and up-to-date representation of real-world net- CSV file and the CICFlowMeter CSV file provided as part of the dataset.
+work traffic. The dataset includes diverse background network traffic These disparities are of utmost importance as they impact the accuracy
+data and updated attacks. Furthermore, it provides raw data in the and reliability of the data used in our research.
+form of PCAP files. To extract flows and features from the raw data, One notable disparity revolves around the flow counts associated
+we utilized our analyzer, NTLFlowLyzer. Using our tool to generate with different labels in both CSV files, as meticulously documented
+our own analyzed data in CSV format, we addressed the issues and in Table 2. These discrepancies in flow counts are indicative of funshortcomings of the CICFlowMeter CSV file provided with the dataset. damental differences in how these flows are captured and recorded.
+ It is crucial to highlight that these discrepancies are not mere data
+
+ 11
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+Table 2 6.2. Profiling scenarios
+Number of flows per activity comparison between CSV files generated by CICFlowMeter
+and NTLFlowLyzer.
+ Category Activity CICFlow. NLFlow. To comprehensively assess profile effectiveness and achieve de-
+ Monday_Benign 529,918 495,338 fined goals (correctness, comprehensiveness, and definitiveness), we
+ Tuesday_Benign 432,074 395,976 employed two profiling scenarios.
+ Benign Wednesday_Benign 440,031 397,053
+ Thursday_Benign 168,186 133,770 The first scenario adopted a multi-layer approach, creating two
+ Friday_Benign 414,322 364,102 profiles per activity. These profiles’ results were combined for the final
+ DoS_GoldenEye 10,293 8364 outcome. Conversely, the second scenario followed a single-profile-
+ DoS_Hulk 231,073 349,240 per-activity approach. However, the second scenario’s profile features
+ DoS DoS_Slowhttp 5499 6860
+ equaled the sum of the first scenario’s. For instance, the first scenario
+ DoS_Slowloris 5796 5177
+ DDoS_LOIT 128,027 95,733 entailed dual profiles, each with four features per activity. In contrast,
+ FTP_Patator 7938 9531 the second scenario comprised a single profile containing eight features
+ Brute Force SSH_Patator 5897 5949 per activity.
+ Web_Brute_Force 1507 2734
+ Notably, the nature of the feature selection algorithm introduces a
+ Botnet Botnet_ARES 1966 5508 crucial consideration with increased feature count. Features optimal
+ Port Scanning Portscan 158,930 161,323 for a four-feature profile might not be suitable for an eight-feature
+ Vulnerability
+ SQL_Injection 21 24 profile. In the next subsection, we delve deeper into feature selection
+ Web_XSS 652 1358
+ Exploitation results, providing insights into the implications of our chosen profiling
+ Heartbleed 11 12
+ scenarios.
+
+anomalies but rather stem from variations in flow creation and ter- 6.3. Feature selection
+mination processes, coupled with certain implementation and labeling
+inconsistencies within the CIC-IDS2017 dataset itself.
+ For pertinent network activity features, our algorithm ran separately
+ Furthermore, we observed discrepancies in feature extraction befor each activity. Table 3 outlines chosen features for each activity and
+tween the NTLFlowLyzer-generated CSV file and the CICFlowMeter CSV
+file, as depicted in Table 1. These disparities underscore the importance profiling scenario. To ascertain optimal feature selection and behavior
+of a robust and consistent approach to feature extraction, a critical similarity, three correlation algorithms (one linear, two non-linear)
+aspect of our research. were employed. Behavior similarity results are detailed in the next
+ In summary, the utilization of NTLFlowLyzer has provided us with subsection.
+a more dependable and comprehensive dataset for our research en- Our feature selection algorithm might yield multiple feature sets per
+deavors. The ensuing section is dedicated to leveraging the BCCC-CIC- activity. To enhance profile distinctiveness and definitiveness, we opted
+IDS2017 dataset (BCCC-Dataset, 2024), generated through NTLFlow- for the least common set among activities. This ensures unique features
+Lyzer, to conduct a rigorous evaluation of our proposed profiling per profile, elevating definitiveness.
+model. The insights and findings from this evaluation are poised to con-
+ Fig. 6 visually shows feature correlation across activities. Node
+tribute significantly to the advancement of intrusion detection methodologies and network security research as a whole. connections reflect correlation magnitude. No connection suggests a
+ correlation below the 0.1 thresholds.
+6. Experiment results To enhance profile distinctiveness, we addressed correlations in
+ over 30% activities. This bolsters uniqueness and definitiveness. Edges
+ This section presents experimental results from our model for pro- with absolute weight under 0.3 were excluded, retaining key features.
+filing diverse network activities. We offer insights into experiment This streamlines representative feature sets, boosting analysis efficiency
+metrics, profiling scenarios, feature selection, behavior similarity, and
+ and accuracy.
+pattern extraction. These findings showcase raw experiment outputs.
+In the following section, we will analyze and interpret these results
+comprehensively. 6.4. Behavior similarity
+
+6.1. Experiment metrics
+ To gauge network activity similarity, we employed our behavior
+ Our focus is on developing a profiling system, not a detection similarity algorithm. We executed this algorithm using three corresystem. Our experiment procedure centers on ‘‘profiling evaluation’’, lation techniques: Pearson, Spearman, and KendallTau. Notably, this
+assessing the successful creation of behavioral profiles for each activity. study emphasizes similarity to exemplar activities (Benign and DDoS_
+The experiment criteria include: Slowloris) due to space limitations. Fig. 7 illustrates these specific
+ comparisons, aiding in recognizing activity similarity and associated
+ • Correctness: The initial step, accurately profiling all activity
+ records, lays the foundation for subsequent enhancements. risks.
+ • Comprehensiveness: Ability to accurately capture the behavior of
+ unseen records, assessed using data not utilized during profile
+ 6.5. Profile creation: Pattern extraction
+ creation.
+ • Definitiveness: Ensuring specificity, avoiding assignment to
+ records from other activities. A definitive profile captures only This section outlines steps for profile creation via pattern extraction
+ unique behaviors. from our model. To ensure balanced training and profile data, we
+ Evaluating profiles based on these criteria gauges the effectiveness randomly selected 70% of activity data. Subsequent subsections detail
+of our proposed system. Refining profiles for high correctness, compre- pivotal training steps: range calculation, parameter tuning, and pattern
+hensiveness, and definitiveness follows, leading to robust profiling. extraction.
+
+ 12
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 6. Features correlations in different activities.
+
+ Table 3
+ Selected feature for each activity in each profile.
+ Activity 1st Profile 2nd Profile 3rd Profile
+ Benign {F13, F25, F42, F41} {F50, F52, F53, F88} {F13, F25, F41, F42, F43, F53, F88, F114}
+ DDoS LOIT {F44, F49, F52, F87} {F32, F34, F75, F91} {F32, F33, F42, F44, F49, F52, F69, F87}
+ DoS GoldenEye {F7, F54, F71, F88} {F14, F23, F24, F54} {F7, F21, F41, F52, F54, F71, F88, F114}
+ DoS Hulk {F11, F80, F90, F91} {F14, F15, F19, F33} {F11, F43, F45, F53, F80, F87, F90, F91}
+ DoS Slowhttp {F13, F25, F46, F88} {F33, F50, F66, F82} {F13, F14, F25, F35, F41, F46, F65, F88}
+ DoS Slowloris {F40, F88, F89, F97} {F32, F110, F111, F112} {F22, F32, F40, F81, F83, F88, F89, F97}
+ Botnet ARES {F21, F31, F71, F88} {F16, F18, F19, F33} {F21, F25, F31, F33, F36, F71, F73, F88}
+ FTP Patator {F90, F91, F111, F114} {F32, F110, F111, F112} {F47, F64, F80, F90, F91, F110, F111, F114}
+ SSH Patator {F80, F82, F111, F112} {F32, F110, F111, F112} {F21, F32, F52, F80, F82, F110, F111, F112}
+ Port Scan {F47, F64, F80, F110} {F22, F32, F109, F110} {F39, F44, F47, F64, F75, F79, F80, F110}
+ Web Brute Force {F25, F32, F39, F57} {F15, F18, F19, F35} {F1, F19, F25, F32, F39, F57, F79, F80}
+ Web XSS {F17, F30, F109, F114} {F18, F19, F109, F110} {F1, F17, F30, F40, F54, F109, F111, F114}
+
+6.5.1. Range calculation Fig. 9 showcases created profiles for some of the activities with
+ Range calculation computed Kernel Density Estimation (KDE) for four features. Nodes correspond to feature ranges, and edges connect
+each feature in each activity. The Gaussian kernel was used, reveal- based on patterns. This visualizes correlations and value possibilities,
+ing varied feature ranges across activities (Fig. 8). Different features uncovering activity behavior. Though space confines us, our experdemonstrate distinct behaviors in diverse activities, underlining feature iments covered all features, yielding comprehensive profiles. These
+selection importance. Space limits allow one feature example, but a profiles form the basis of our model, enabling accurate and efficient
+similar analysis is applied to others. network activity profiling. It is important to highlight that due to space
+ Range calculation transforms continuous data into density represen- constraints, we have included select examples of created profiles rather
+tations, enhancing data distribution understanding. Identifying ranges than presenting all the profiles in each scenario.
+crucially aids subsequent pattern extraction, establishing correlations
+among feature values per activity. 6.5.3. Profile-assigning
+ This subsection evaluates profile correctness and comprehensive-
+6.5.2. Pattern extraction ness in both profiling scenarios, aligning with earlier discussed stan-
+ In the final step, profiles were constructed for each label using dards. We emphasized correctness and comprehensiveness, with definifeatures and range from previous steps. Pattern extraction employed tiveness assessment reserved for future work.
+FP-Growth for association rule mining and Particle Swarm Optimiza- Within the multi-layer approach, we explored profile output comtion for parameter tuning (minimum support and confidence ratios). binations via intersection and union. Results for correctness and com-
+After thorough experimentation, 0.1 and 0.4 were chosen as mini- prehensiveness can be found in Tables 4 and 5. Diverse profiles in this
+mum support and confidence ratios, respectively. These values ensured multi-layer setup address complexity as features increase, necessitating
+relevant and accurate patterns for activities. intricate analysis. As shown in Tables 4 and 5, multi-profile adoption
+ To enhance readability, we graphically connected nodes to rep- enhances system accuracy and profile comprehensiveness.
+resent extracted patterns for each activity. Profiles are shaped by To conclude, our model exhibits promise in network activity profeatures’ varying ranges and unique correlations. This visual approach filing. Profile correctness and comprehensiveness are crucial. The next
+illustrates permissible feature ranges and correlations, demonstrating section deeply analyzes experimental outcomes, accounting for influeach activity’s behavior. encing factors. Conclusions drawn, strengths and limitations assessed,
+
+ 13
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 7. Behavior similarity between different activities using different correlation calculation algorithms.
+
+ Table 4
+ Correctness for each activity in each profile.
+ Activity 1st Profile 2nd Profile 1st Profile ∩ 2nd Profile 1st Profile ∪ 2nd Profile 3rd Profile
+ Benign 57.8 73.8 57.8 73.8 53.6
+ DDoS LOIT 47.1 79.0 47.1 79.0 28.6
+ DoS GoldenEye 88.4 90.0 88.4 90.0 72.9
+ DoS Hulk 86.2 92.7 79.0 99.9 79.0
+ DoS Slowhttp 81.2 84.2 75.2 90.1 75.5
+ DoS Slowloris 93.3 99.4 92.7 100 92.7
+ Botnet ARES 98.3 99.3 92.7 100 92.7
+ FTP Patator 99.8 99.8 99.7 100 99.7
+ SSH Patator 99.2 99.8 99.2 99.8 98.5
+ Port Scan 99.5 99.9 98.7 99.8 98.6
+ Web Brute Force 97.3 95.8 93.1 100 93.2
+ Web XSS 99.0 97.8 97.0 99.8 96.6
+
+ Table 5
+ Comprehensiveness for each activity in each profile.
+ Activity 1st Profile 2nd Profile 1st Profile ∩ 2nd Profile 1st Profile ∪ 2nd Profile 3rd Profile
+ Benign 57.8 73.8 57.8 73.9 53.5
+ DDoS LOIT 47.1 78.8 47.1 79.0 78.8
+ DoS GoldenEye 89.6 90.1 88.3 90.1 74.0
+ DoS Hulk 86.3 92.9 79.0 99.9 79.1
+ DoS Slowhttp 81.5 83.8 75.2 90.2 76.2
+ DoS Slowloris 92.3 99.3 92.7 100 91.6
+ Botnet ARES 98.4 99.2 97.6 100 95.0
+ FTP Patator 99.8 99.9 99.6 100 99.7
+ SSH Patator 99.5 99.8 99.3 99.9 99.9
+ Port Scan 99.6 99.9 98.6 99.9 99.6
+ Web Brute Force 97.4 94.2 93.2 100 91.7
+ Web XSS 97.8 98.3 97.1 99.8 96.0
+
+ 14
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 8. Violin plot of duration values in different activities.
+
+and future directions explored. This inclusive approach aims to offer a synergize, yielding comprehensive, reasonable profiles validated by
+robust network activity profiling system. experiments.
+ Effective profiling mandates careful feature selection. Features’
+7. Analysis, evaluation and discussion ranges and correlations inform this selection. Feature range drives
+ rule extraction; correlations guide rule extraction and feature selec-
+ This section conducts an in-depth analysis and discussion of our tion. Feature choice’s importance during rule extraction is evident:
+proposed behavior profiling model’s foundational concepts. We ex- unrelated features hinder rule identification. Absent correlations yield
+plore distinct feature behavior across activities and varying feature meaningless rules and inaccurate profiles. Relevant, correlated features
+correlations. Empirical evidence in Figs. 6 and 8 supports these ideas, are pivotal for successful rule extraction and accurate profiling. In
+affirming robust profile creation. the ensuing subsection, we elaborate on our crucial feature selection
+ algorithm.
+7.1. Idea analysis Our experiments substantiate our ideas and model efficacy. Merging
+ distinct feature behaviors and correlations yields robust, comprehen-
+ Experimental outcomes (Fig. 8) strongly affirm distinct feature be- sive activity profiles. This distinguishes activities and furnishes network
+haviors in activities, aligning with our initial hypothesis. Fig. 6 re- security insights, aiding anomaly detection. Model success establishes
+inforces varied feature correlations across activities. These concepts potential real-world network applications.
+
+ 15
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Fig. 9. Examples of created profiles for some of the activities.
+
+7.2. Feature selection analysis (a) Calculating Correlations: The correlation calculation between each pair of features has a time complexity of
+ Selecting relevant features stands as a pivotal stride in robust profile 𝑂(𝑚(𝑚 − 1)∕2). With parallel computing, this complexity
+creation. Our novel approach prioritizes highly correlated features, can be reduced, potentially to 𝑂(𝑚(𝑚 − 1)∕(2𝑝)), where 𝑝
+vital for uncovering inter-feature relationships within each activity. represents the degree of parallelism achieved.
+Non-correlated features yield trivial rules, spotlighting our effective (b) Finding Strongest Path: The process of finding the
+selection algorithm’s value. Our approach surpasses common meth- strongest path of a specified length 𝐿 in a graph is
+ods like information gain. It ensures that selected features align with computationally expensive. The time complexity for this
+our profiling definition, resulting in meaningful profiles and precise operation is influenced by the graph’s structure after edge
+behavior depiction. removal. However, the integration of parallelism as an
+ Our feature selection algorithm’s nature implies varying feature sets optimization strategy can significantly improve perforwith increased feature count. For instance, profiles with four versus mance. By leveraging multiple processors or threads for
+eight features may vary (Table 3). To address this, two scenarios were concurrent path exploration, the time complexity can
+crafted. In the second, the feature count equals the first scenario’s sum. be reduced to approximately 𝑂(𝑚𝐿 ∕𝑝) in the worst case
+Performance analysis in Section 7.6 provides an assessment of both (when it is a complete graph), where 𝑝 represents the
+scenarios, gauging their effectiveness and relative performance. number of processors or threads utilized.
+
+ The overall time complexity of the optimized algorithm with paral-
+7.2.1. Correlation threshold analysis
+ lelization can be summarized as:
+ Feature selection involves a defined correlation threshold to remove ( )
+ 𝑘𝑚(𝑚 − 1) + 2𝑚𝐿
+correlations common in over 30% of activities. A lower threshold un- 𝑂 𝑚+ (9)
+ 2𝑝
+veils unique correlations, enhancing features and outcomes, especially
+for suspicious output reduction. Yet, very low thresholds might not where 𝑚 represents the number of features, 𝑘 denotes the number of
+fit limited features or extensive activities. They remove many edges, distinct activity labels, 𝐿 is the path length, and 𝑝 represents the degree
+impeding robust path discovery. Higher thresholds may select common of parallelism.
+features, yielding multiple or suspicious outputs. Appropriate threshold
+setting is pivotal for effective feature selection. 7.3. Behavior similarity analysis
+
+7.2.2. Time complexity Fig. 7 reveals DoS Slowhttp as most similar to DoS Slowloris. This
+ In this section, we provide an analysis of the time complexity of our discovery underscores our profiling technique’s reliability and effecfeature selection algorithm, taking into account potential optimizations tiveness. The significant similarity between these activities attests to
+through parallel computing. The optimized time complexity breakdown our ability to identify and quantify behavior patterns across activities,
+with parallel optimization is as follows: affirming our approach’s robustness and accuracy in assessing activity
+ similarity.
+ 1. Initialization: The initialization phase involves creating a empty These findings hold vital implications for future behavior analysis
+ graph with 𝑚 nodes, resulting in a time complexity of 𝑂(𝑚). and profiling. Recognizing behavior similarities among attack types
+ 2. Loop Over Activities: The main computational load occurs enhances detection algorithm efficiency and effectiveness. Leveraging
+ during the loop over distinct activity labels. Within this loop, these similarities improves attack identification, leading to prompt,
+ we consider the following major operations: precise responses.
+
+ 16
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ Remarkable consistency in most similar activity for DoS_Slowloris zero-day attack detection stands as a critical line of defense against
+among three algorithms is notable. Minor similarity variations for other threats that exploit vulnerabilities unknown to the broader security
+activities indicate the algorithm choice’s secondary impact. Non-linear community (Ahmad et al., 2023; Hiremagalore, 2015).
+algorithms yielding almost identical similarity values suggest non- In our specific approach, we have structured our system to confront
+linearity as a general phenomenon, not critical for algorithm selection. the challenges posed by zero-day attacks. To achieve this, we first
+ Finding unique correlations in DoS_Slowloris, absent in DoS_ establish a baseline of normal behavior by meticulously analyzing the
+Slowhttp, is challenging. Profiles for similar activities like DoS_ network’s usual traffic patterns. This baseline acts as a reference point
+Slowloris and DoS_Slowhttp tend to contain more suspicious outputs. for what is considered typical (i.e., normal behavior) in the network
+More similarity equates to a higher likelihood of detecting suspicious environment which can be used for the abnormal activity profiling.
+behavior. Further research may enhance final results for closely related Building on this, we create profiles for known malicious behaviors
+activities. Overall, findings showcase behavior analysis and profiling’s based on various attack scenarios present in our comprehensive dataset.
+potency in detecting and responding to attacks. These profiles serve as reference points for identifying attacks that
+ In conclusion, our experiments underscore our profiling system’s have already been encountered and categorized. However, what sets
+effectiveness in measuring activity similarity. A robust method for de- our approach apart is the provision for recognizing previously unseen
+tecting and analyzing malicious activities emerges, bolstering network attacks or attack variants.
+security and safeguarding against potential cyber threats. In situations where incoming network activity does not align with
+ any of the established profiles, we provisionally label it as a ‘‘Zero-Day
+7.4. Created profile analysis Attack’’. This classification acknowledges the unknown or novel nature
+ of the behavior. The system can then accumulate data over time, and
+ Successful behavior profiling of each attack showcases our system’s as it becomes more familiar with the characteristics of this unknown
+adeptness in characterizing attack types through extracted patterns. Let behavior, it can create a dedicated profile. This proactive approach
+us delve into the DoS Slowloris profile (Fig. 9). This profile unveils ensures that emerging threats are promptly detected and addressed.
+an attacker strategy: establishing connections to a target server and The ability to identify and respond to such novel threats is what
+sustaining them, taxing system resources. defines our method as a zero-day attack profiling system. While we also
+ Remarkably, our profiling system detects this by scrutinizing piv- engage in the essential practice of abnormal activity profiling to mainotal features like the bwd_syn_flag_counts and the bwd_rst_flag_counts. tain network integrity, our emphasis on rapidly classifying and mitigat-
+Elevated bwd_syn_flag_counts implies high bwd_rst_flag_counts (here, ing activities that exploit vulnerabilities unknown to the broader secuequal to one), signaling attacker connection initiation. Consequently, rity community sets our approach apart, ultimately fortifying network
+the victim responds with an ‘‘rst’’ packet to free occupied resources, ini- security against emerging threats.
+tiating a cycle where the attacker triggers new connections, prompting
+ 7.6. Performance analysis
+victim closure, rendering resources and ports unavailable to legitimate
+users.
+ Evaluating our profiling system’s outcomes is crucial after establish-
+ Once connected, the attacker prolongs the connection. Our system
+ ing diverse profiles. Results from correctness and comprehensiveness
+flags this behavior, too. Fig. 9 illustrates regular syn packets (estabtables (Tables 4 and 5) reveal that the combined 1st and 2nd profiles
+lished connection) alongside low ‘‘rst’’ flags (zero here), indicating a
+ demonstrate superior overall performance across activities. This is due
+sustained connection to drain victim resources.
+ to these profiles analyzing behaviors from distinct perspectives, result-
+ We applied analogous analysis to other profiles, affirming our sysing in complementary coverage and improved outcomes. Moreover,
+tem’s aptitude for identifying unique attack patterns. Despite space conboth profiles proficiently detect common behaviors, evident from high
+straints, we have consistently found our profiling system distinguishing
+ correctness and comprehensiveness scores for most activities.
+attack patterns.
+ These findings advocate for a multi-layer profiling structure, allow-
+ Our analysis affirms pattern identification for all profiles unique to
+ ing for the amalgamation of perspectives to enhance activity behaveach attack type. Profiles aptly capture corresponding activity behavior;
+ ior understanding. Employing the intersection of profiles might lead
+association rule mining extracts insightful feature value relationships.
+ to inferior results due to the diversity in perspectives and featured
+Our profiling proves robust, differentiating diverse network activielements.
+ties. Though space limits individual profile discussion here, we have
+ Considering the merging of the two profiles into one comprehensive
+conducted similar analyses for all, yielding consistent results.
+ profile presents intriguing possibilities, explored in our second scenario.
+ Potential outcomes include the new profile mirroring the features of
+7.5. Zero-day attack profiling the first two profiles or incorporating previously absent traits. Which
+ case emerges depends on the feature selection algorithm, without a
+ Our pioneering profiling system effectively characterizes zero-day predetermined outcome. In our experiments, the latter scenario tranattacks through network traffic analysis. Upon encountering a new spired, further discussed in Table 3. Building on these cases, we conduct
+attack, the following scenarios emerge: further analysis in the next subsection.
+ • Distinct Behavior: When no existing profiles align with the
+ 7.6.1. Analysis of feature count per profile
+ new activity, we provisionally label it ‘‘Unknown’’ or ‘‘Zero-day
+ The optimal number of features necessary to profile specific be-
+ Attack’’ until sufficient data permits a dedicated profile creation.
+ haviors has been debated. Our research challenges the efficacy of
+ • Profile Overlap: If the new activity shares elements with multiple
+ using identical feature sets across activities. Notably, distinct activiprofiles, refining detection involves eliminating shared patterns.
+ ties exhibit diverse feature relationships, as depicted in Fig. 6. This
+ Continued alignment implies malicious intent, warranting the
+ underscores the significance of per-profile feature selection and the
+ ‘‘Unknown’’ or ‘‘Zero-day Attack’’ label until a specific profile is individual profiling of each activity.
+ established. Exploring the ideal number of features per profile reveals insightful
+ In the realm of network security, two crucial approaches emerge, conclusions from our two profiling scenarios. Remarkably, utilizing
+anomalous activity detection and zero-day attack detection (AlEroud four features surpasses the effectiveness of eight features across most
+and Karabatis, 2012). Abnormal activity detection is centered around activities. It is essential to note that increased feature usage escaspotting deviations from established network norms, essential for main- lates time and space demands, spanning range calculations to pattern
+taining network integrity (Chandola et al., 2009). On the other hand, extraction.
+
+ 17
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ A notable trend is that fewer features foster stronger connections in 7.7. Evaluation: Comparison with previous works
+the feature selection graph. This results in multiple feature sets of fixed
+lengths (e.g., four), with the best one chosen. Conversely, higher feature To gauge the innovation and efficacy of our proposed model, we
+counts might hinder the graph’s identification of connected feature conduct a comparative assessment with two prominent recent studsets. This suggests that sub-behaviors within activities might lack direct ies (Rabbani et al., 2020) and (Hou et al., 2022). This evaluation
+connections. For instance, in the Benign activity (Fig. 6), the packet illuminates the strides and contributions of our approach, spanning
+ dataset utilization, evaluation metrics, and profiling strategies. It is
+count feature exhibits minimal correlation with the other three. Subnoteworthy that direct result comparisons with previous ‘profiling’
+behaviors within activities might necessitate distinct profiling, leading
+ works are constrained by the utilization of different datasets in their
+to potential research on sub-profiles encompassing these sub-behaviors
+ respective studies. Consequently, our focus in this work centers on
+to form a comprehensive activity profile. a comprehensive comparison of the fundamental aspects, theoretical
+ Furthermore, our study reveals varying feature counts per profile foundations, and underlying philosophies of prior research endeavors,
+for each activity. Correctness results in Table 4 highlight that Benign as elaborated in the Literature Review Synthesis (Section 2.2.2).
+to DoS Slowhttp activities excel with four features, while other activities benefit from eight. This reinforces the notion of tailoring feature 7.7.1. Data
+selection to the unique nature of each activity’s behavior. Our comparison begins with an evaluation of data. (Rabbani et al.,
+ Space constraints limit our presentation to two profiling scenarios. 2020) employed the UNSW-NB15 dataset (Moustafa and Slay, 2015),
+However, future work should delve deeper into more comprehen- and (Hou et al., 2022) combined the CTU-13 (Garcia et al., 2014) and
+sive experiments and analysis for optimal feature counts and selec- ISCX2012 (Shiravi et al., 2012) datasets. In contrast, we harnessed raw
+ traffic data from CIC-IDS2017 (Lashkari et al., 2017), employing an
+tion strategies. Investigating sub-behaviors and their distinct feature
+ analyzer (BCCC-NTLFlowLyzer, 2024) to generate essential CSV files.
+selection could also offer valuable research avenues.
+ Let us examine these datasets through distinct lenses:
+ Notably, low correctness and comprehensiveness values for specific
+profiles within some activities stem from limited feature availability in • Up-to-date Relevance: The data currency is pivotal in intrusion
+the evaluation, particularly for Benign. Deleting specific correlations detection, given the continuous evolution of malicious actividuring feature selection reduces profile effectiveness. While definitive- ties. Timely training data is essential to detect novel malicious
+ness was not the primary focus, it remains essential for our study. behaviors effectively. Our chosen dataset, BCCC-CIC-IDS2017
+Future endeavors can explore definitiveness more exhaustively. (BCCC-Dataset, 2024), boasts superior up-to-date relevance compared to other datasets. While ISCX2012 hails from 2012, CTU-13
+ from 2013, and UNSW-NB15 from 2015, the CIC-IDS2017 dataset
+7.6.2. Missed attacks impact stems from 2017.
+ In assessing the performance of our security system, it is crucial to • Dataset Magnitude: Dataset size profoundly impacts profile comdelve into the impact of missed attacks, specifically focusing on the prehensiveness and model assessment. ISCX2012 contains
+most prevalent one as indicated by the data in Tables 4 and 5. A closer 133,450, CTU-13 comprises 180,896, and UNSW-NB15 comprises
+examination of our results unveils an intriguing trend. Notably, attacks 1,964,509 flows. In contrast, our BCCC-CIC-IDS2017 dataset (BCCCexhibiting a higher similarity to benign network traffic, such as DDoS Dataset, 2024) incorporates 2,438,052 flows (as detailed in Table 2).
+LOIT, DoS HULK, DoS Slowhttp, and DoS GoldenEye, often experience This dataset’s larger scale furnishes richer analytical opportunities
+ and robust profiling.
+a higher incidence of being missed by our system. This pattern under-
+ • Activity Diversity: The number of activities (labels) bears sigscores the effectiveness of the similarity calculation approach and the
+ nificance on several fronts. It underscores profile precision, comsystem’s sensitivity to the subtleties in network traffic behaviors, where
+ plexity of testing, and resemblance to real-world scenarios where
+the proximity of an attack’s behavior to that of benign activity can lead
+ diverse attacks target systems. ISCX2012 encompasses 6 activto overlooked threats. ities, CTU-13 has 14, UNSW-NB15 includes 10, whereas our
+ Among these closely related attacks, DDoS LOIT stands out as the dataset comprises 14 distinct activities. Our dataset captures dimost frequently missed, warranting special attention in our analysis. verse activities, reflecting real-world complexity.
+The inherent challenge in detecting DDoS LOIT attacks arises from their
+ In summation, our profiling approach excels in dataset aspects,
+resemblance to benign network traffic. These attacks employ tactics
+ leveraging an up-to-date, larger, and more comprehensive dataset feathat closely mimic legitimate user interactions, making them intricate
+ turing diverse activities. These attributes substantiate the potency and
+to differentiate from typical activity. The nuances of DDoS LOIT lie relevance of our proposed model.
+in their utilization of low-level traffic volume and a distributed sourcing approach, characteristics that superficially mirror commonplace 7.7.2. Experiment metrics
+network behaviors. A notable distinction between our proposed model and prior studies
+ The overlooked DDoS LOIT attacks, while notable, underscore a lies in the evaluation metrics employed. Preceding works primarily
+distinctive aspect of these attacks: they tend to consume network concentrated on detection, striving to attain optimal detection rates
+resources without necessarily causing system downtime. The attacks for recognized activities. In contrast, our central focus rested on promay pose a resource utilization challenge, imposing an increased load filing, aiming to formulate comprehensive behavioral profiles for each
+on network resources and potentially leading to slower response times. activity. This pivotal differentiation engenders fundamental disparities
+However, they typically do not result in a complete system shutdown in approach and objectives between these two model categories.
+ Within a detection-centric framework, the core objective involves
+or the kind of severe service disruption associated with other types of
+ discerning if a given activity corresponds to established activities or
+attacks.
+ signifies a potential new attack (zero-day attack). This approach hinges
+ Moving forward, we are committed to refining our profiling system heavily on the specific training dataset, rendering detection outcomes
+to address this specific challenge, ensuring comprehensive protection susceptible to shifts in data distribution or emergent attack types. Conagainst DDoS LOIT attacks and other sophisticated threats. This it- sequently, detection models might not exhibit robust generalizability
+erative process will involve the incorporation of additional anomaly to novel or unexplored data.
+detection techniques, improved traffic analysis, and the development of Conversely, our profiling-centric approach strives to create inclusive
+specific profiles to detect and mitigate these types of attacks effectively. behavior profiles for each activity. These profiles encapsulate distinct
+
+ 18
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+activity patterns and attributes, impervious to the particular profiling 8. Conclusion and future prospects
+dataset. Thus, the profiling model attains greater resilience, applicable
+across diverse datasets and scenarios, so long as activity behavior This paper introduces a sophisticated and adaptable solution for
+remains consistent.
+ creating precise behavioral profiles tailored to diverse network activ-
+ Prioritizing profiling over detection distinguishes our model as a
+ ities. Our approach tackles profile creation challenges across the entire
+pioneering advancement in network security. We establish a systemprocess, from raw data handling to the NTLFlowLyzer analyzer, feature
+atic and comprehensive framework for behavior profiling, offering
+ extraction, implementation, dataset preparation (BCCC-CIC-IDS2017
+insightful comprehension of individual activity behavior. This enriched
+perception of activity patterns markedly enhances overall network (BCCC-Dataset, 2024)), feature selection, behavior similarity assesssecurity system efficacy, facilitating heightened threat identification, ment, range calculation, pattern extraction, and profile generation. Our
+response, and adaptation to novel attack typologies. profiling solution applicability empowers organizations, including fire-
+ To summarize, our model’s divergence in evaluation metrics and walls, IDS/IPS, Security Information and Event Management (SIEM),
+the primacy of profiling heralds a substantive evolution from earlier Unified Threat Management (UTM) systems, and others, to strengthen
+endeavors, constituting a notable stride in behavior-centric network their network security and threat detection mechanisms, particularly
+security. in the context of detecting zero-day and previously unknown malicious
+ activities.
+7.7.3. Profiling solution A robust profiling system hinges on high-quality data. Extensive
+ An integral facet of our comparative analysis involves the com- dataset analysis revealed raw and analyzed data limitations. While
+prehensive nature of our proposed profiling solution. Diverging from addressing raw data issues requires new data generation, this goes
+prior approaches fixated on the profiling model per se, we formulated
+ beyond this study’s scope. Therefore, we utilized the most reliable
+an end-to-end solution for behavior profiling. This holistic solution
+ dataset’s raw data. Additionally, we designed and implemented the
+enacts crucial steps, commencing with raw network traffic data and
+ NTLFlowLyzer analyzer to enhance the analyzed data generation (CSV
+culminating in the generation of individual behavioral profiles. The
+pivotal constituents of our profiling solution encompass: files), validated against CICFlowMeter.
+ This study presents a comprehensive and all-encompassing profil- Our framework centers on two key principles: feature behavior
+ing solution, encompassing vital components that span raw network distinctiveness and varying feature correlations across activities. Extentraffic data to individual activity behavioral profile construction. Our sive experimentation validates these principles. Our novel graph-based
+approach encompasses a series of pivotal stages: network analysis, feature selection algorithm guarantees relevant feature selection, as
+flow and feature extraction, feature selection, pattern extraction, and demonstrated in experiments and analysis. Furthermore, based on the
+culminating in behavioral profile formulation. Distinguished from prior feature selection graph, we introduce Behavior Similarity, quantifyworks centered solely on the profiling model, we acknowledge the ing activity similarity, which is valuable for identifying critical and
+equal significance of each constituent within the overarching profiling complex attacks, regardless of conditions. Our pattern extraction phase
+system. captures behavior intricacies, making our profiling core adept at repre-
+ The crafting of a robust profiling system mandates meticulous atten- senting network behavior nuances. Our solution’s advancements hold
+tion to each phase. Every element assumes a cardinal role in influencing profound implications for behavior analysis and profiling research,
+the caliber and precision of the final profiles. For example, data quality
+ particularly in swiftly identifying malicious activities. We underscore
+directly reverberates onto profiling outcomes; compromised data can
+ non-linearity’s significance in behavior patterns, offering the potential
+skew profiles and engender unreliable findings. Additionally, precise
+ to refine profiling algorithms and address zero-day threats.
+flow delineation and accurate labeling are indispensable for capturing
+genuine activity behavior. Our evaluation framework surpasses conventional correctness and
+ Furthermore, the quantity and caliber of selected features are comprehensiveness, highlighting our system’s feature quantity and
+paramount for yielding precise and informative profiles. Insufficient quality advantage. This approach prompts deeper consideration of evalfeatures might inadequately represent multifaceted behaviors across uation metrics’ interplay, zero-day profiling, and selected feature set
+activities, leading to incomplete or erroneous profiles. Correspondingly, robustness. Our proposed framework effectively profiles eight malicious
+inaccuracies in feature implementation or flawed code can propagate activities with over 99.8% correctness and comprehensiveness. It also
+errors throughout the profiling process. successfully profiles other activities promisingly. These outcomes and
+ Our solution accentuates the critical significance of feature se- insights from our experiments offer valuable guidance for accurate
+lection and pattern extraction, determinants that profoundly impact behavioral profiling.
+the profiling system’s efficacy. Via a novel feature selection algo- Our solution can significantly enhance network security and threat
+rithm and harnessing FP-Growth and PSO for pattern extraction, we detection systems, including detecting complex zero-day attacks. Comachieve more exact and distinctive activity profiles. These profiles
+ parative analysis with previous works demonstrates our framework’s
+encapsulate idiosyncratic behavior, fortifying our solution’s resilience
+ exceptional performance, reinforcing its uniqueness and practicality.
+and adaptability across diverse datasets and scenarios.
+ Our insights into selected feature quantity and quality strengthen our
+ However, a limitation of our study pertains to the reduced emphasis on profile definitiveness. The dataset’s plethora of labels yielded dedication to refining field approaches and cultivating resilient behavfewer unique feature correlations within the feature selection algo- ior analysis systems.
+rithm. Consequently, fewer features were available for profile creation, In the future, research avenues beckon. We prioritize the third metdiminishing profile definitiveness. Mitigating this challenge and aug- ric – definitiveness- – in refining our system. Ensembles hold the potenmenting the definitiveness metric represent fertile areas for future tial to bolster robustness and precision. Exploring diverse, larger-scale
+enhancement and inquiry. datasets promises a comprehensive view of our system’s performance.
+ In summation, our comparative analysis underscores the strides
+and enhancements inherent in our comprehensive profiling solution,
+ Declaration of competing interest
+juxtaposed with earlier approaches. Distinguished by multifaceted evaluation metrics, our approach deviates from earlier models that exclusively fixated on the profiling model. This comparative analysis The authors declare the following financial interests/personal relafurnishes empirical substantiation, validating the efficacy and ascen- tionships which may be considered as potential competing interests:
+dancy of our proposed solution, and highlighting its distinctiveness and MohammadMoein Shaf reports financial support was provided by York
+contributions within the realm of behavioral profiling. University.
+
+ 19
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+Acknowledgments Cohen, I., Huang, Y., Chen, J., Benesty, J., Benesty, J., Chen, J., Huang, Y., Cohen, I.,
+ 2009. Pearson correlation coefficient. Noise Reduct. Speech Process. 1–4.
+ Cui, Z., Gao, X.-Z., Deb, S., 2019. Theory and applications of soft computing methods.
+ The authors acknowledge the grant from Canada Research Chair -
+ Neural Comput. Appl. 31, 1983–1985.
+Tier II (#CRC-2021-00340), and the Natural Sciences and Engineering Dina, A.S., Manivannan, D., 2021. Intrusion detection based on machine learning
+Research Council of Canada — NSERC (#RGPIN-2020-04701) — to techniques in computer networks. Internet Things 16, 100462.
+Arash Habibi Lashkari. Fürnkranz, J., 2013. Rule-based methods. In: Dubitzky, W., Wolkenhauer, O., Cho, K.-
+ H., Yokota, H. (Eds.), Encyclopedia of Systems Biology. Springer New York, New
+ York, NY, pp. 1883–1888. http://dx.doi.org/10.1007/978-1-4419-9863-7_610.
+Data availability
+ Garcia, N., Alcaniz, T., González-Vidal, A., Bernabe, J.B., Rivera, D., Skarmeta, A.,
+ 2021. Distributed real-time SlowDoS attacks detection over encrypted traffic using
+ The source code for NTLFlowLyzer is publicly available on GitHub Artificial Intelligence. J. Netw. Comput. Appl. 173, 102871.
+(BCCC-NTLFlowLyzer, 2024) and the data for BCCC-CIC-IDS2017 Dataset Garcia, S., Grill, M., Stiborek, J., Zunino, A., 2014. An empirical comparison of botnet
+is publicly available on the BCCC website (BCCC-Dataset, 2024). detection methods. Comput. Secur. 45, 100–123.
+ Guo, Y., 2022. A review of Machine Learning-based zero-day attack detection:
+ Challenges and future directions. Comput. Commun.
+ He, X., Dai, H., Ning, P., Dutta, R., 2015. Dynamic IDS configuration in the presence
+References
+ of intruder type uncertainty. In: 2015 IEEE Global Communications Conference.
+ GLOBECOM, IEEE, pp. 1–6.
+Abdi, H., 2007. The Kendall rank correlation coefficient. In: Encyclopedia of Herrera-Semenets, V., Hernández-León, R., van den Berg, J., 2022. A fast instance
+ Measurement and Statistics. Sage, Thousand Oaks, CA, pp. 508–510. reduction algorithm for intrusion detection scenarios. Comput. Electr. Eng. 101,
+Abdulganiyu, O.H., Ait Tchakoucht, T., Saheed, Y.K., 2023. A systematic literature 107963.
+ review for network intrusion detection system (ids). International journal of Herrmann, D., Banse, C., Federrath, H., 2013. Behavior-based tracking: Exploiting
+ information security 22 (5), 1125–1162. characteristic patterns in DNS traffic. Comput. Secur. 39, 17–33.
+Afzal, Z., Lindskog, S., 2016. Ids rule management made easy. In: 2016 8th International Hiremagalore, S., 2015. Zero-Day Attack Detection Using Collaborative and
+ Conference on Electronics, Computers and Artificial Intelligence. ECAI, IEEE, pp. Transduction-Based Anomaly Detectors (Ph.D. thesis). George Mason University.
+ 1–8.
+ Hou, J., Liu, F., Lu, H., Tan, Z., Zhuang, X., Tian, Z., 2022. A novel flow-vector
+Ahmad, R., Alsmadi, I., Alhamdani, W., Tawalbeh, L., 2023. Zero-day attack detection:
+ generation approach for malicious traffic detection. J. Parallel Distrib. Comput.
+ a systematic literature review. Artif. Intell. Rev. 1–79.
+ 169, 72–86.
+Akhiat, Y., Asnaoui, Y., Chahhou, M., Zinedine, A., 2021. A new graph feature selection
+ Hsu, Y.F., He, Z., Tarutani, Y., Matsuoka, M., 2019. Toward an online network intrusion
+ approach. In: 2020 6th IEEE Congress on Information Science and Technology. CiSt,
+ detection system based on ensemble learning. In: 2019 IEEE 12th International
+ IEEE, pp. 156–161.
+ Conference on Cloud Computing. CLOUD, IEEE, pp. 174–178.
+Al Jallad, K., Aljnidi, M., Desouki, M.S., 2020. Anomaly detection optimization using
+ Ibrahim, D., 2016. An overview of soft computing. Procedia Comput. Sci. 102, 34–38.
+ big data and deep learning to reduce false-positive. J. Big Data 7 (1), 1–12.
+ Imran, M., Haider, N., Shoaib, M., Razzak, I., et al., 2022. An intelligent and efficient
+AlEroud, A., Karabatis, G., 2012. A contextual anomaly detection approach to discover
+ network intrusion detection system using deep learning. Comput. Electr. Eng. 99,
+ zero-day attacks. In: 2012 International Conference on Cyber Security. IEEE, pp.
+ 107764.
+ 40–45.
+ Janiesch, C., Zschech, P., Heinrich, K., 2021. Machine learning and deep learning.
+Aljanabi, M., Ismail, M.A., Ali, A.H., 2021. Intrusion detection systems, issues,
+ Electr. Mark. 31 (3), 685–695.
+ challenges, and needs. Int. J. Comput. Intell. Syst. 14 (1), 560–571.
+ Jensi, R., Jiji, G.W., 2016. An enhanced particle swarm optimization with levy flight
+Alrawashdeh, K., Purdy, C., 2016. Toward an online anomaly intrusion detection system
+ for global optimization. Appl. Soft Comput. 43, 248–261.
+ based on deep learning. In: 2016 15th IEEE International Conference on Machine
+ Kachitvichyanukul, V., 2012. Comparison of three evolutionary algorithms: GA, PSO,
+ Learning and Applications. ICMLA, IEEE, pp. 195–200.
+ and DE. Ind. Eng. Manag. Syst. 11 (3), 215–223.
+AlYousef, M.Y., Abdelmajeed, N.T., 2019. Dynamically detecting security threats and
+ Kapetanakis, S., Filippoupolitis, A., Loukas, G., Al Murayziq, T.S., 2014. Profiling Cyber
+ updating a signature-based intrusion detection system’s database. Procedia Comput.
+ Attackers Using Case-Based Reasoning. CEUR.
+ Sci. 159, 1507–1516.
+Asif, M., Abbas, S., Khan, M., Fatima, A., Khan, M.A., Lee, S.-W., 2021. MapReduce Kaur, G., Habibi Lashkari, A., Rahali, A., 2020. Intrusion traffic detection and charbased intelligent model for intrusion detection using machine learning technique. acterization using deep image learning. In: IEEE Intl Conf on Cyber Science and
+ J. King Saud Univ. Comput. Inf. Sci. Technology Congress. CyberSciTech, pp. 55–62. http://dx.doi.org/10.1109/DASC-
+ PICom-CBDCom-CyberSciTech49142.2020.00025.
+Ayyagari, M.R., Kesswani, N., Kumar, M., Kumar, K., 2021. Intrusion detection
+ techniques in network environment: a systematic review. Wirel. Netw. 27 (2), Keerthi, S.S., Lin, C.J., 2003. Asymptotic behaviors of support vector machines with
+ 1269–1285. Gaussian kernel. Neural Comput. 15 (7), 1667–1689.
+Baldini, G., Amerini, I., 2022. Online Distributed Denial of Service (DDoS) intrusion Kennedy, J., Eberhart, R., 1995. Particle swarm optimization. In: Proceedings
+ detection based on adaptive sliding window and morphological fractal dimension. of ICNN’95-International Conference on Neural Networks, Vol. 4. IEEE, pp.
+ Comput. Netw. 210, 108923. 1942–1948.
+Barros, P.H., Chagas, E.T., Oliveira, L.B., Queiroz, F., Ramos, H.S., 2022. Malware- Khan, M.A., Karim, M.R., Kim, Y., 2019. A scalable and hybrid intrusion detection
+ SMELL: A zero-shot learning strategy for detecting zero-day vulnerabilities. Comput. system based on the convolutional-LSTM network. Symmetry 11 (4), 583.
+ Secur. 120, 102785. Khan, K., Sahai, A., 2012. A comparison of BA, GA, PSO, BP and LM for training feed
+BCCC-Dataset, 2024. BCCC updated intrusion detection dataset 2017 (BCCC-CIC- forward neural networks in e-learning context. Int. J. Intell. Syst. Appl. 4 (7), 23.
+ ids2017). Behaviour-Centric Cybersecurity Center (BCCC) URL https://www.yorku. Khoshraftar, S., An, A., 2022. A survey on graph representation learning methods. arXiv
+ ca/research/bccc/ucs-technical/cybersecurity-datasets-cds/. preprint arXiv:2204.01855.
+BCCC-NTLFlowLyzer, 2024. Network and transport layers flow analyzer (ntlFlowLyzer), Khraisat, A., Gondal, I., Vamplew, P., Kamruzzaman, J., 2019. Survey of intrusion
+ Retrieved 10 April 2023. Behaviour-Centric Cybersecurity Center (BCCC) URL detection systems: techniques, datasets and challenges. Cybersecurity 2 (1), 1–22.
+ https://github.com/ahlashkari/NTLFlowLyzer. Kim, T., Pak, W., 2022. Real-time network intrusion detection using deferred decision
+Bolboaca, S.D., Jäntschi, L., 2006. Pearson versus Spearman, Kendall’s tau correlation and hybrid classifier. Future Gener. Comput. Syst. 132, 51–66.
+ analysis on structure-activity relationships of biologic active compounds. Leonardo Kocher, G., Kumar, G., 2021. Machine learning and deep learning methods for intrusion
+ J. Sci. 5 (9), 179–200. detection systems: recent developments and challenges. Soft Comput. 25 (15),
+Brown, C., Cowperthwaite, A., Hijazi, A., Somayaji, A., 2009. Analysis of the 1999 9731–9763.
+ darpa/lincoln laboratory ids evaluation data with netadhict. In: 2009 IEEE Sym- Kolascyk, E., 2013. Statistical analysis of network data. In: SAMSI Program on Complex
+ posium on Computational Intelligence for Security and Defense Applications. IEEE, Networks. Boston university.
+ pp. 1–7. Kotsiantis, S., Kanellopoulos, D., 2006. Association rules mining: A recent overview.
+Chandola, V., Banerjee, A., Kumar, V., 2009. Anomaly detection: A survey. ACM GESTS Int. Trans. Comput. Sci. Eng. 32 (1), 71–82.
+ Comput. Surv. (CSUR) 41 (3), 1–58. Lashkari, A.H., Gil, G.D., Mamun, M.S.I., Ghorbani, A.A., 2017. Characterization of
+Chen, Y.C., 2017. A tutorial on kernel density estimation and recent advances. tor traffic using time based features. In: International Conference on Information
+ Biostatist. Epidemiol. 1 (1), 161–187. Systems Security and Privacy. 2, SciTePress, pp. 253–262.
+Chitrakar, R., Huang, C., 2012. Anomaly based intrusion detection using hybrid learning Li, W., Tug, S., Meng, W., Wang, Y., 2019. Designing collaborative blockchained
+ approach of combining k-medoids clustering and naive bayes classification. In: 2012 signature-based intrusion detection in IoT environments. Future Gener. Comput.
+ 8th International Conference on Wireless Communications, Networking and Mobile Syst. 96, 481–489.
+ Computing. IEEE, pp. 1–5. Li, B., Wang, Y., Xu, K., Cheng, L., Qin, Z., 2022. DFAID: Density-aware and feature-
+Chok, N.S., 2010. Pearson’s Versus Spearman’s and Kendall’s Correlation Coefficients deviated active intrusion detection over network traffic streams. Comput. Secur.
+ for Continuous Data (Ph.D. thesis). University of Pittsburgh. 118, 102719.
+
+ 20
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+Liang, H., Wu, J., Mumtaz, S., Li, J., Lin, X., Wen, M., 2019. MBID: Micro-blockchain- Shafi, M., Lashkari, A.H., Rodriguez, V., Nevo, R., 2024a. Toward generating a new
+ based geographical dynamic intrusion detection for V2X. IEEE Commun. Mag. 57 cloud-based distributed denial of service (ddos) dataset and cloud intrusion traffic
+ (10), 77–83. characterization. Information 15 (4), 195.
+Liao, H.J., Lin, C.H.R., Lin, Y.C., Tung, K.Y., 2013. Intrusion detection system: A Shaikh, S.A., Chivers, H., Nobles, P., Clark, J.A., Chen, H., 2009. Towards scalable
+ comprehensive review. J. Netw. Comput. Appl. 36 (1), 16–24. intrusion detection. Netw. Secur. 2009 (6), 12–16.
+Lin, P., Ye, K., Xu, C.Z., 2019. Dynamic network anomaly detection system by using Sharafaldin, I., Lashkari, A.H., Ghorbani, A.A., 2018. Toward generating a new intrusion
+ deep learning techniques. In: Cloud Computing–CLOUD 2019: 12th International detection dataset and intrusion traffic characterization. ICISSp 1, 108–116.
+ Conference, Held As Part of the Services Conference Federation, SCF 2019, San Sharafaldin, I., Lashkari, A.H., Ghorbani, A.A., 2019. An evaluation framework for
+ Diego, CA, USA, June 25–30, 2019, Proceedings 12. Springer, pp. 161–176. network security visualizations. Comput. Secur. 84, 70–92. http://dx.doi.org/10.
+Liu, Q., Wang, D., Jia, Y., Luo, S., Wang, C., 2022. A multi-task based deep learning 1016/j.cose.2019.03.005, URL https://www.sciencedirect.com/science/article/pii/
+ approach for intrusion detection. Knowl.-Based Syst. 238, 107852. S0167404818308952.
+Luna, J.M., Fournier-Viger, P., Ventura, S., 2019. Frequent itemset mining: A 25 years Shawkat, M., Badawi, M., El-ghamrawy, S., Arnous, R., El-desoky, A., 2022. An
+ review. Wiley Interdiscip. Rev. Data Min. Knowl. Discov. 9 (6), e1329. optimized FP-growth algorithm for discovery of association rules. J. Supercomput.
+Marron, J.S., Wand, M.P., 1992. Exact mean integrated squared error. Ann. Statist. 20 1–28.
+ (2), 712–736. Shiravi, A., Shiravi, H., Tavallaee, M., Ghorbani, A.A., 2012. Toward developing
+McHugh, J., 2000. Testing intrusion detection systems: a critique of the 1998 and 1999 a systematic approach to generate benchmark datasets for intrusion detection.
+ darpa intrusion detection system evaluations as performed by lincoln laboratory. Comput. Secur. 31 (3), 357–374.
+ ACM Trans. Inf. Syst. Secur. 3 (4), 262–294. Silva, J.V.V., de Oliveira, N.R., Medeiros, D.S., Lopez, M.A., Mattos, D.M., 2022. A
+Meng, G., Saddeh, H., 2020. Applications of machine learning and soft computing statistical analysis of intrinsic bias of network security datasets for training machine
+ techniques in real world. Int. J. Comput. Appl. Inf. Technol. 12 (1), 298–302. learning mechanisms. Ann. Telecommun. 77 (7–8), 555–571.
+Midway, S.R., 2020. Principles of effective data visualization. Patterns 1 (9). Singh, A.K., Kumar, A., Maurya, A.K., 2014. An empirical analysis and comparison
+Mighan, S.N., Kahani, M., 2021. A novel scalable intrusion detection system based on of apriori and FP-growth algorithm for frequent pattern mining. In: 2014 IEEE
+ deep learning. Int. J. Inf. Secur. 20, 387–403. International Conference on Advanced Communications, Control and Computing
+Monzer, M.-H., Beydoun, K., Ghaith, A., Flaus, J.M., 2022. Model-based IDS design for Technologies. IEEE, pp. 1599–1602.
+ ICSs. Reliab. Eng. Syst. Saf. 108571. Singh, R., Kumar, H., Singla, R., 2015. An intrusion detection system using network
+Moustafa, N., Slay, J., 2015. UNSW-NB15: a comprehensive data set for network traffic profiling and online sequential extreme learning machine. Expert Syst. Appl.
+ intrusion detection systems (UNSW-NB15 network data set). In: 2015 Military 42 (22), 8609–8624.
+ Communications and Information Systems Conference. MilCIS, IEEE, pp. 1–6. Sonchack, J., Aviv, A.J., Smith, J.M., 2015. Cross-domain collaboration for improved
+Muraleedharan, N., Parmar, A., Kumar, M., 2010. A flow based anomaly detection IDS rule set selection. J. Inf. Secur. Appl. 24, 25–40.
+ system using chi-square technique. In: 2010 IEEE 2nd International Advance Song, J., Takakura, H., Okabe, Y., Eto, M., Inoue, D., Nakao, K., 2011. Statistical
+ Computing Conference. IACC, IEEE, pp. 285–289. analysis of honeypot data and building of Kyoto 2006+ dataset for NIDS evaluation.
+Mushtaq, E., Zameer, A., Umer, M., Abbasi, A.A., 2022. A two-stage intrusion detection In: Proceedings of the First Workshop on Building Analysis Datasets and Gathering
+ system with auto-encoder and LSTMs. Appl. Soft Comput. 121, 108768. Experience Returns for Security. pp. 29–36.
+Myers, L., Sirois, M.J., 2004. Spearman correlation coefficients, differences between. Sperotto, A., Sadre, R., Vliet, F.v., Pras, A., 2009. A labeled data set for flow-based
+ In: Encyclopedia of Statistical Sciences, vol. 12, Wiley Online Library. intrusion detection. In: International Workshop on IP Operations and Management.
+Nechaev, B., Allman, M., Paxson, V., Gurtov, A., 2004. Lawrence Berkeley National Springer, pp. 39–50.
+ Laboratory (lbnl)/icsi Enterprise Tracing Project. LBNL/ICSI, Berkeley, CA. Tavallaee, M., Bagheri, E., Lu, W., Ghorbani, A.A., 2009. A detailed analysis of the
+Nehinbe, J.O., 2009. A simple method for improving intrusion detections in corpo- KDD cup 99 data set. In: 2009 IEEE Symposium on Computational Intelligence for
+ rate networks. In: International Conference on Information Security and Digital Security and Defense Applications. Ieee, pp. 1–6.
+ Forensics. Springer, pp. 111–122. Tharwat, A., Schenck, W., 2021. A conceptual and practical comparison of PSO-style
+Poli, R., Kennedy, J., Blackwell, T., 2007. Particle swarm optimization: An overview. optimization algorithms. Expert Syst. Appl. 167, 114430.
+ Swarm Intell. 1, 33–57. Tomandl, A., Fuchs, K.P., Federrath, H., 2014. REST-net: A dynamic rule-based IDS for
+Potharaju, S.P., Sreedevi, M., 2018. Correlation coefficient based candidate feature VANETs. In: 2014 7th IFIP Wireless and Mobile Networking Conference. WMNC,
+ selection framework using graph construction. Gazi Univ. J. Sci. 31 (3), 775–787. IEEE, pp. 1–8.
+Pourhabibi, T., Ong, K.L., Kam, B.H., Boo, Y.L., 2020. Fraud detection: A systematic Unwin, A., 2020. Why is data visualization important? what is important in data
+ literature review of graph-based anomaly detection approaches. Decis. Support Syst. visualization? Harvard Data Sci. Rev. 2 (1), 1.
+ 133, 113303. Vellido, A., 2020. The importance of interpretability and visualization in machine
+Pratama, D.H., Suyanto, S., 2020. Comparison of PSO, FA, and BA for discrete opti- learning for applications in medicine and health care. Neural Comput. Appl. 32
+ mization problems. In: 2020 3rd International Seminar on Research of Information (24), 18069–18083.
+ Technology and Intelligent Systems. ISRITI, IEEE, pp. 17–20. von Ziegler, L., Sturman, O., Bohacek, J., 2021. Big behavior: challenges and opportu-
+Prusty, S., Levine, B.N., Liberatore, M., 2011. Forensic investigation of the OneSwarm nities in a new era of deep behavior profiling. Neuropsychopharmacology 46 (1),
+ anonymous filesharing system. In: Proceedings of the 18th ACM Conference on 33–44.
+ Computer and Communications Security. pp. 201–214. Wang, Z., Fok, K.W., Thing, V.L., 2022. Machine learning for encrypted malicious
+Qiu, W., Ma, Y., Chen, X., Yu, H., Chen, L., 2022. Hybrid intrusion detection system traffic detection: Approaches, datasets and comparative study. Comput. Secur. 113,
+ based on Dempster-Shafer evidence theory. Comput. Secur. 117, 102709. 102542.
+Rabbani, M., Wang, Y.L., Khoshkangini, R., Jelodar, H., Zhao, R., Hu, P., 2020. A hybrid Wang, Y., Meng, W., Li, W., Li, J., Liu, W.X., Xiang, Y., 2018. A fog-based privacymachine learning approach for malicious behaviour detection and recognition in preserving approach for distributed signature-based intrusion detection. J. Parallel
+ cloud computing. J. Netw. Comput. Appl. 151, 102507. Distrib. Comput. 122, 26–35.
+Ravi, V., Chaganti, R., Alazab, M., 2022. Recurrent deep learning-based feature Wang, C., Song, W., 2019. A modified particle swarm optimization algorithm based on
+ fusion ensemble meta-classifier approach for intelligent network intrusion detection velocity updating mechanism. Ain Shams Eng. J. 10 (4), 847–866.
+ system. Comput. Electr. Eng. 102, 108156. Wang, X., Yan, Y., Ma, X., 2020. Feature selection method based on differential
+Raykar, V.C., Duraiswami, R., 2006. Fast optimal bandwidth selection for kernel density correlation information entropy. Neural Process. Lett. 52, 1339–1358.
+ estimation. In: Proceedings of the 2006 SIAM International Conference on Data Węglarczyk, S., 2018. Kernel density estimation and its application. In: ITM Web of
+ Mining. SIAM, pp. 524–528. Conferences, Vol. 23. EDP Sciences, p. 00037.
+ Xie, M., Hu, J., 2013. Evaluating host-based anomaly detection systems: A preliminary
+Rodriguez, J.D., Perez, A., Lozano, J.A., 2009. Sensitivity analysis of k-fold cross
+ analysis of adfa-ld. In: 2013 6th International Congress on Image and Signal
+ validation in prediction error estimation. :IEEE Trans. Pattern Anal. Mach. Intell.
+ Processing, Vol. 3. CISP, IEEE, pp. 1711–1716.
+ 32 (3), 569–575.
+ Xie, M., Hu, J., Slay, J., 2014. Evaluating host-based anomaly detection systems: Ap-
+Sagala, A., 2015. Automatic SNORT IDS rule generation based on honeypot log.
+ plication of the one-class SVM algorithm to ADFA-LD. In: 2014 11th International
+ In: 2015 7th International Conference on Information Technology and Electrical
+ Conference on Fuzzy Systems and Knowledge Discovery. FSKD, IEEE, pp. 978–982.
+ Engineering. ICITEE, IEEE, pp. 576–580.
+ Zeng, N., Wang, Z., Liu, W., Zhang, H., Hone, K., Liu, X., 2020. A dynamic
+Sangster, B., O’Connor, T., Cook, T., Fanelli, R., Dean, E., Morrell, C., Conti, G.J., 2009.
+ neighborhood-based switching particle swarm optimization algorithm. IEEE Trans.
+ Toward instrumenting network warfare competitions to generate labeled datasets.
+ Cybern. 52 (9), 9290–9301.
+ In: CSET.
+ Zhang, Z., Hancock, E.R., 2011. A graph-based approach to feature selection. In:
+Sarker, I.H., 2021. Deep learning: a comprehensive overview on techniques, taxonomy,
+ International Workshop on Graph-Based Representations in Pattern Recognition.
+ applications and research directions. SN Comput. Sci. 2 (6), 420.
+ Springer, pp. 205–214.
+Sato, M., Yamaki, H., Takakura, H., 2012. Unknown attacks detection using feature
+ Zhang, Y., Wang, S., Ji, G., et al., 2015. A comprehensive survey on particle swarm
+ extraction from anomaly-based ids alerts. In: 2012 IEEE/IPSJ 12th International
+ optimization algorithm and its applications. Math. Prob. Eng. 2015.
+ Symposium on Applications and the Internet. IEEE, pp. 273–277.
+ Zhou, H., Wang, X., Zhu, R., 2022. Feature selection based on mutual information with
+Shafi, M., Lashkari, A.H., Mohanty, H., 2024b. Unveiling malicious dns behavior procorrelation coefficient. Appl. Intell. 1–18.
+ filing and generating benchmark dataset through application layer traffic analysis.
+ Computers and Electrical Engineering 118, 109436.
+
+ 21
+M. Shafi et al. Computers & Security 148 (2025) 104160
+
+ MohammadMoein Shafi is a graduate student pursuing a at international computer security competitions – including
+ Master’s degree in Computer Science at York University. three gold awards – and was recognized as one of Canada’s
+ Holding a bachelor’s degree in Computer Engineering from Top 150 Researchers for 2017. Building on over two decades
+ the University of Tehran, MohammadMoein has a keen of concurrent industrial and development experience in
+ interest in Cybersecurity, Computer Networks, Internet of network, software, and computer security, Dr. Lashkari’s
+ Things (IoT), Artificial Intelligence, and Network Analysis. current work involves the development of vulnerability
+ As a Research Assistant at the esteemed Behavior-Centric detection technology to protect network systems against cy-
+ Cybersecurity Center (BCCC), he actively contributes to berattacks. He simultaneously supervises multiple research
+ advancements in digital security and technology innovation. and development teams working on several projects related
+ to network traffic analysis, malware analysis, Honeynet, and
+ threat hunting.
+
+ Dr. Arash Habibi Lashkari is a Canada Research Chair Arousha Haghighian Roudsari is currently working as a
+ (CRC) in Cybersecurity. He is a Senior member of IEEE and Research Professor at the School of Computing (Departan Associate Professor at York University. He is the author ment of AI Software), Gachon University, South Korea. She
+ of ten published books and more than 110 academic articles obtained her Ph.D. in Industrial Engineering from Inha Union various cybersecurity-related topics. He co-authors the versity in 2022. She received an M.Sc. degree in Industrial
+ national award-winning article series ‘‘Understanding Cana- Engineering from Universiti Teknologi Malaysia in 2013 and
+ dian Cybersecurity Laws’’, recently recognized with a Gold a B.Sc. degree in Industrial Engineering from Islamic Azad
+ Medal at the 2020 Canadian Online Publishing Awards. Dr. University, Tehran North Branch, Iran, in 2009. Her current
+ Lashkari has over 25 years of teaching experience spanning research interests include data mining, natural language
+ several international universities, has received 15 awards processing, deep learning, big data, information retrieval,
+ patent analysis, and cybersecurity.
+
+ 22

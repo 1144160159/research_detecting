@@ -1,0 +1,788 @@
+6714 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ Self-Supervised Masked Graph Autoencoder for
+ Hyperspectral Anomaly Detection
+ Bing Tu , Senior Member, IEEE, Baoliang He, Student Member, IEEE, Yan He, Member, IEEE,
+ Tao Zhou , Student Member, IEEE, Bo Liu , Member, IEEE, Jun Li , Fellow, IEEE,
+ and Antonio Plaza , Fellow, IEEE
+
+ Abstract—Hyperspectral image anomaly detection faces the I. I NTRODUCTION
+challenge of difficulty in annotating anomalous targets.
+Autoencoder(AE)-based methods are widely used due to their
+excellent image reconstruction capability. However, traditional
+grid-based image representation methods struggle to capture
+ H YPERSPECTRAL imaging differs from traditional
+ remote sensing technologies by providing simultaneous
+ information on the radiance, geometry, and spectrum of ground
+long-range dependencies and model non-Euclidean structures. objects [1], [2]. The nearly continuous spectral information
+To address these issues, this paper proposes a self-supervised provided by Hyperspectral Images (HSI) conveys a powerful
+Masked Graph AutoEncoder (MGAE) for hyperspectral anomaly
+detection. MGAE utilizes a Graph Attention Network (GAT) ability to distinguish the subtle spectral differences between
+autoencoder to reconstruct the background of hyperspectral ground objects, leading to the widespread application of hyperimages and identifies anomalies by comparing the reconstructed spectral technology in various fields [3], [4]. Target detection,
+features with the original features. Specifically, we constructs a a key research area in HSI, can be categorized into spectral
+topological graph structure of the hyperspectral image, which matching detection and anomaly detection based on the need
+is then input into the GAT autoencoder for reconstruction,
+leveraging the multi-head attention mechanism to learn spatial for prior information. The former employs prior information
+and spectral features. To prevent the decoder from learning of the target spectral signal for spectral matching, while the
+trivial solutions, we introduce a re-masking strategy that ran- latter does not require any prior information about the targets
+domly masks both the input features and hidden representations and identifies anomalous targets based on spectral differences.
+during training, forcing the model to learn and reconstruct In practical applications, acquiring prior spectral information
+features under limited information, thereby improving detection
+performance. Additionally, the proposed loss function with graph of targets is often challenging [5], [6], [7]. Consequently,
+Laplacian regularization (Twice Loss) minimizes variations in anomaly detection is highly practical and fundamental in HSI
+feature representations, leading to more consistent background processing.
+reconstruction. Experimental results on several real-world hyper- In recent years, numerous algorithms for hyperspectral
+spectral datasets demonstrate that MGAE outperforms existing anomaly detection (HAD) have been developed and can be
+methods.
+ typically divided into two categories:
+ Index Terms—Anomaly detection, autoencoder, graph attention network, re-masking strategy, twice loss.
+ 1) Statistics-Based:
+ Received 24 January 2025; revised 5 August 2025 and 14 September 2025; Such methods operate under the core premise that the
+accepted 30 September 2025. Date of publication 16 October 2025; date of background adheres to a specific statistical distribution, while
+current version 24 October 2025. This work was supported in part by the anomalous targets deviate significantly from these statistical
+National Natural Science Foundation of China under Grant 62535010, Grant
+62271200, and Grant 62375083; and in part by the Start-Up Foundation characteristics. The Reed-Xiaoli (RX) [8] detector is a reprefor Introducing Talent of Nanjing University of Information Science and sentative statistically-based method. It quantifies the anomaly
+Technology (NUIST) under Grant 2023r091. The associate editor coordinating degree of a test pixel by computing the Mahalanobis distance
+the review of this article and approving it for publication was Prof. Zhiyuan
+Zha. (Corresponding author: Bing Tu.) using the global mean and covariance matrix, under the
+ Bing Tu, Baoliang He, Yan He, and Bo Liu are with the Institute of Optics assumption that the background follows a multivariate Gausand Electronics, the State Key Laboratory Cultivation Base of Atmospheric sian distribution. However, backgrounds are often complex and
+Optoelectronic Detection and Information Fusion, Jiangsu International
+Joint Laboratory on Meteorological Photonics and Optoelectronic Detec- heterogeneous in real-world scenarios, rendering the Gaustion, and Jiangsu Engineering Research Center for Intelligent Optoelectronic sian distribution assumption unreliable and constraining its
+Sensing Technology of Atmosphere, Nanjing University of Information Sci- background suppression capability. To address this limitation,
+ence and Technology, Nanjing 210044, China (e-mail: tubing@nuist.edu.cn;
+baoliang he@163.com; 975861884@qq.com; bo@nuist.edu.cn). the Local RX (LRX) [9] estimates local statistics within a
+ Tao Zhou is with the School of Electronic Information and Electri- sliding window; the Segmented RX (SRX) [10] partitions the
+cal Engineering, Anhui Jianzhu University, Hefei 230601, China (e-mail: background into homogeneous categories via clustering; and
+zhoutao@stu.ahjzu.edu.cn).
+ Jun Li is with the Faculty of Computer Science, China University of the Kernel RX (K-RX) [11] enhances separability between
+Geosciences, Wuhan 430074, China (e-mail: lijuncug@cug.edu.cn). background and anomalies by mapping the original data into a
+ Antonio Plaza is with the Hyperspectral Computing Laboratory, Department high-dimensional feature space via kernel functions. Additionof Technology of Computers and Communications, Escuela Politécnica,
+University of Extremadura, 10003 Cáceres, Spain (e-mail: aplaza@unex.es). ally, other statistically-based methods have been developed.
+ Digital Object Identifier 10.1109/TIP.2025.3620091 For instance, Lin et al. [12] proposed a dual-dictionary
+ 1941-0042 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+ similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+TU et al.: SELF-SUPERVISED MASKED GRAPH AUTOENCODER FOR HYPERSPECTRAL ANOMALY DETECTION 6715
+
+construction method via two-stage complementary decisions which imposes elevated reconstruction errors on anomalous
+(DDC-TSCD). Schweizer and Moura [13] introduced an pixels to enable detection.
+anomaly detector based on Gaussian-Markov random fields In this article, we implement HAD through a self-supervised
+(MRF). Diverging from these approaches, recent research masked graph autoencoder. Our approach falls within the
+addressing background suppression has primarily focused on non-statistical methodology category. Although grounded in
+low-rank and sparse matrix decomposition frameworks [14], graph theory, it should not be characterized solely as distance-
+[15]. Ren et al. [16] proposed a non-local and deep prior- based since its core mechanism relies on autoencoder (AE)
+based anomaly detection method (NLDPAD). Wang et al. [17] architecture. Initially proposed by Baldi in 2006 [25], AE
+proposed an anomaly detection framework based on Tensor constitutes a powerful unsupervised learning model capable
+Low-Rank and Sparse Representation (TLRSP). of autonomously learning intrinsic data structures and patterns
+ without manual feature engineering. Subsequent variants –
+ including deep autoencoders and convolutional autoencoders –
+2) Non-Statistics-Based: have significantly enhanced representation capacity through
+ Unlike statistically-based approaches, non-statistical meth- multi-layered neural frameworks. These advancements have
+ods abandon assumptions about background distributions established AE’s efficacy in image processing, data comand instead develop alternative frameworks encompassing pression, and feature learning tasks, demonstrating unique
+machine learning-based, representation learning-based, and advantages for HAD applications in complex scenarios. Emoto
+deep learning-based techniques. Within machine learning- and Matsuoka [26] integrated tensor robust principal compobased approaches, these can be categorized into distance-based nent analysis (TRPCA) with autoencoder adversarial networks
+methods, isolation-based models and clustering-based detec- to learn nonlinear low-dimensional representations of spectral
+tors. A representative distance-based approach is the Support features in background regions. Wang et al. [27]proposed a
+Vector Data Description (SVDD) anomaly detection method frequency-to-spectral mapping generative adversarial network
+[18], which defines a novel detection statistic using a decision (GAN) for HAD. This network maps raw spectra to the
+rule derived from the computation of a minimal enclos- fractional Fourier domain, transforms the anomaly identificaing hypersphere to discriminate anomalies. Graph-theoretic tion task into a mapping task, and leverages reconstruction
+methods also fall within the distance-based category, lever- errors to distinguish between backgrounds and anomalies.
+aging topological relationships between pixels for anomaly Wu et al. [28] proposed a lightweight unsupervised crossidentification. The Topological Anomaly Detection (TAD) image HAD method (VJDNet), which utilizes variational
+algorithm stands as the first graph-based method for HAD, autoencoders (VAE) to learn global and local discriminanotably pioneering the application of graph structures in tive features of anomalies. Zhao et al. [29] proposed two
+this field [19]. In TAD, the topological connection den- cascaded autoencoders with adaptive pixel-level attention
+sity between a test pixel and background components on modules (CAPNet) for HAD. Through cascaded autoencoders,
+the graph determines its anomaly status. Xu et al. [20] discriminative high-level semantic features can be effectively
+presented a systematic review of machine learning-driven extracted, enhancing the difference between anomalies and the
+HAD methods, and underscored the insight that while graph- background. The core advantage of AE lies in its precise
+structured models are capable of capturing spatial-spectral reconstruction capability for normal data. For data points
+correlations within hyperspectral data, traditional graph-based deviating from a normal distribution, AE often fails to achieve
+approaches face challenges in dynamically differentiating the effective reconstruction, thereby producing significant reconrelative importance of neighboring nodes. Li et al. [21] struction errors.
+developed a kernelized Isolation Forest (iForest) detector that In this article, we employ a re-masking strategy to preprojects the original data into a kernel space, where anomalies vent the decoder from learning trivial mapping relationships.
+exhibit higher separability from the background. Recently, As a fundamental technique in computer science, maskrepresentation learning-based approaches have gained signif- ing selectively processes data through binary patterns –
+icant traction in HAD. Jiao et al. [22] presented a method enabling suppression of irrelevant information and enhanceintegrating intrinsic image decomposition with background ment of salient features. Background suppression was prisubtraction. This technique fuses a reflectance-weighted map marily achieved indirectly through statistical methods prior to
+derived from intrinsic decomposition with an anomaly prob- 2010. For instance, the Reed-Xiaoli (RX) algorithm implicitly
+ability map generated through background subtraction to masks distribution-conforming pixels by assuming Gaussian
+produce the final detection result. Deep learning techniques background distributions and leveraging covariance matrihave demonstrated significant impact across diverse domains, ces, yet remains constrained by rigid statistical assumptions
+with their rapid advancement offering novel paradigms for and linear modeling capabilities. With the rise of deep
+HAD. Wang et al. [23] proposed a sliding dual-window- learning, masking strategies have gained increased attenheuristic reconstruction network (DirectNet) for HAD, which tion. Sun et al. [30] proposed Contrastive Self-Supervised
+suppresses anomalous interference during the reconstruction Background Reconstruction (CSSBR) for HAD, which conprocess through a sliding dual-window mechanism, thereby structs a self-supervised pretraining model through pixel and
+amplifying the reconstruction errors of anomalous targets. In patch-level masking combined with dual-attention networks.
+subsequent work, Wang et al. [24] developed a pixel-shuffled This framework learns generalized background representaundersampling blind-spot reconstruction network (PDBSNet), tions without requiring annotated samples. Wang et al. [31]
+6716 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+introduced a fourier conditional masking with Mixed Attention (FCMMA) method, where conditional masks (CMASK)
+suppress high-frequency anomaly components while preserving low-frequency background information in the frequency
+domain, thereby optimizing detection performance. In their
+subsequent research, Wang et al. [32]further proposed a
+non-local and local feature-coupled self-supervised network
+(NL2Net) for HAD. This network incorporates masked convolution to strengthen the focus on background features, thereby
+effectively addressing the non-local self-similarity issue in
+HSI. Su et al. [33] utilized latent binary masks to separate anomalies from backgrounds, reconstructing backgrounds Fig. 1. Comparison between original input and masked input. The original
+while suppressing anomalies via separation loss functions. input may lead to simple identity mapping, causing the model to ignore
+ anomalies due to uniformly low reconstruction error. Masking forces the
+The recently proposed hyperspectral foundation model Hyper- model to reconstruct the masked areas based on unmasked nodes, focusing
+SIGMA [34] pinpoints the core bottleneck of traditional more on learning background features.
+models to be their inadequate general feature representation
+capability, most methods are limited to specific scenarios
+ local consistency and global information preservation. The
+(e.g., single homogeneous backgrounds) and exhibit significant
+ main contributions of our work can be summarized as follows:
+performance degradation in complex heterogeneous scenes,
+primarily due to insufficient modeling of feature correlations. • By integrating GAT into the anomaly detection task, its
+While HyperSIGMA enables robust feature extraction in com- multi-head attention mechanism can dynamically assign
+plex scenes via multimodal fusion and self-supervised masked weights to neighborhood nodes, flexibly modeling comlearning, its design as a general foundation model means plex relationships between pixels, enhancing sensitivity
+it lacks optimization for the balance between background to key areas and suppressing noise interference. This
+reconstruction and anomaly discrimination. Notably, this latter effectively captures the spatial-spectral dependency of
+shortcoming is critical to background consistency modeling in hyperspectral data, and improves the detection capability
+HAD. Therefore, within an unsupervised framework, devel- of anomalies of different scales and shapes.
+oping an approach to integrate graph structures with masked • By performing double random masking on the input
+learning for accurate background reconstruction and efficient features and hidden representations, the model is forced to
+anomaly discrimination in complex scenes remains a pressing learn and reconstruct features under limited information,
+open challenge in the field. avoiding the problem of reconstruction error averag-
+ To address these issues, this study proposes a self- ing caused by the decoder learning a simple mapping
+supervised masked graph autoencoder (MGAE) for HAD. This relationship. This significantly improves the model’s genmethod utilizes a graph attention network (GAT) to construct eralization ability and adaptability to data incompleteness,
+an autoencoder. By reconstructing the hyperspectral image and demonstrates more stable detection performance on
+background and comparing the reconstructed features with the real datasets.
+original features to identify anomalies, it effectively captures • A Twice Loss is proposed that combines reconstruction
+the spatial-spectral dependencies and non-Euclidean structure loss and graph Laplacian smoothing loss. It achieves
+of the hyperspectral data. Specifically, the MGAE first con- local consistency of background reconstruction and global
+structs the topological graph structure of the hyperspectral information preservation by minimizing feature represenimage and feeds it into the GAT autoencoder for reconstruc- tation changes, while imposing minimum constraints on
+tion. Leveraging a multi-head attention mechanism [35], [36], abnormal areas to prevent them from being reconstructed,
+[37], the MGAE learns both spatial and spectral features, thus balancing background modeling accuracy and abnorovercoming the limitations of traditional grid representations, mality recognition sensitivity.
+which struggle to model long-range dependencies. Secondly, a The paper is organized as follows: Section II introduces
+re-masking strategy is introduced, as shown in Fig. 1. During the KNN algorithm for graph construction, the GAT model
+training, the input features and hidden representations are and masking strategy. Section III details the proposed method,
+randomly masked, forcing the model to learn and reconstruct including the GAT-based autoencoder, the re-masking stratfeatures with limited information [38], [39], avoiding the issue egy, and the Twice Loss function. Section IV demonstrates
+noted in [20] that the decoder of self-supervised autoencoders the method’s effectiveness through experiments on real HSI.
+is prone to trivial solutions and suffers from reconstruction Finally, Section V summarizes the work and discusses future
+error averaging. Furthermore, a loss function (Twice Loss) research directions.
+with graph Laplacian regularization is designed to achieve
+more consistent background reconstruction by minimizing II. R ELATED W ORK
+changes in feature representations. At the same time, it Graph structures are a powerful form of data representation
+imposes minimal constraints on anomalous regions to prevent capable of flexibly depicting irregular and non-Euclidean spathem from being reconstructed, achieving a balance between tial relationships. However, due to the variable node degrees
+TU et al.: SELF-SUPERVISED MASKED GRAPH AUTOENCODER FOR HYPERSPECTRAL ANOMALY DETECTION 6717
+
+ into a graph structure, the edge set E is constructed via
+ the K-nearest neighbor algorithm. The K-Nearest Neighbors
+ (KNN) algorithm is a method used to construct edges based on
+ spectral characteristic similarity, it utilizes a defined distance
+ metric (typically Euclidean distance) to find the k-nearest
+Fig. 2. Graph construction from image, with different node and edge types neighbors for each data point, i.e., each pixel in the image. In
+and related information. hyperspectral images, each pixel contains spectral data from
+ multiple bands, forming a high-dimensional feature space.
+ KNN evaluates and identifies the most similar neighbors in this
+ feature space. By using each pixel’s spectral data as a feature
+ vector and calculating the Euclidean distances between every
+ pair of pixels, the k closest neighbors are identified. Edges
+ are then constructed in the graph based on the connections
+ between each pixel and its k-nearest neighbors, thus indicating
+ spectral similarity. The formula can be expressed as:
+ r
+ Xb=1
+ dspec (pi , p j ) = (xib − x jb )2 (1)
+ b
+
+ B. Graph Attention Networks
+ The rise of graph neural networks (GNN) has provided a
+ new paradigm for modeling the structure of hyperspectral data.
+Fig. 3. Graph constructed with various K values for the central pixel in
+Airport-I image. Graph Attention Networks (GAT), in particular, overcome the
+ limitations of traditional graph convolutional networks (GCN)
+ by introducing an attention mechanism, becoming a valuable
+and the unordered nature of neighboring nodes in graphs, tool for processing non-Euclidean data. Early graph-based
+traditional deep learning techniques are not directly applicable HAD methods attempted to capture inter-pixel relationships,
+to graph data. Before the advent of GCN, feature extraction but suffered from significant limitations. The emergence of
+in graphs primarily relied on manually designed features GCN has promoted the integration of graph structures with
+or rule-based methods. The emergence of GCN ingeniously deep learning. GCN aggregates information through weighted
+combined graph theory with Convolutional Neural Network averaging of neighborhood features, has shown potential in
+(CNN), utilizing spectral and spatial convolution techniques modeling hyperspectral spatial-spectral relationships. Howto efficiently model graph data. The spectral convolution ever, it relies on the homogeneous graph assumption, assuming
+approach is based on the graph Fourier transform, which that all nodes and edges are of the same type, making it
+processes graph signals by converting them to the frequency difficult to handle the heterogeneous structure prevalent in
+domain. In contrast, spatial convolution updates node informa- hyperspectral data. Feature aggregation relies on predefined
+tion through the aggregation of neighborhood information and fixed weights, failing to dynamically capture complex interfeature transformation. In this paper, we construct the graph node relationships and making them susceptible to noise.
+structure using the K-Nearest Neighbors (KNN) algorithm Simple weighted averaging operations struggle to distinguish
+[40], [41], [42] and employ the GAT for learning node features. the importance of neighboring nodes, diluting key features
+In this section, we will introduce the foundational knowledge sensitive to anomalies. Subsequent improvements, such as
+used in this paper. dynamic graph models and multi-scale feature extraction, have
+ alleviated these issues to some extent, but remain limited in
+ their ability to model node relationships, and their performance
+A. Preliminaries on sparse or heterogeneous graphs remains suboptimal.
+ The graph structure is composed of a finite and non-empty In contrast, GAT dynamically assigns node weights through
+set of vertices and a set of edges between vertices, typically an attention mechanism, providing a more flexible solution
+represented as G = (V, E). Here, G denotes a graph, V is for HAD.It eliminates the need to rely on graph homogeneity
+the set of vertices of graph G, and E is the set of edges of assumptions and automatically distinguishes the importance
+graph G. Unlike image data that relies on a fixed grid structure, of neighboring nodes by learning attention coefficients, effecgraph data can more flexibly represent the complex spatial and tively handling heterogeneous scenes with mixed feature
+spectral relationships in hyperspectral data. By establishing types in hyperspectral data. The multi-head attention mechadjacency relationships, the graph structure effectively cap- anism extracts node features from multiple perspectives,
+tures both local and global similarities between pixels, making enhancing the ability to capture anomalies of varying scales
+it particularly suitable for dealing with sparse features and non- and spectral characteristics. Dynamic adjustment of attention
+uniform distributions in hyperspectral data. Therefore, in this weights enables the model to adaptively suppress interference
+paper, we choose to construct graph data to perform anomaly from noisy nodes, improving sensitivity to subtle anomalies
+detection tasks for HSI.To convert hyperspectral image data [43], [44], [45].
+6718 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+Fig. 4. The proposed MGAE-based HAD flow chart. First, the input hyperspectral image is constructed as a spatial topological graph using the KNN algorithm.
+Subsequently, a preliminary masking operation is performed on the node features, and the masked graph data is input into the GAT encoder. At the encoder
+output layer, a re-masking strategy is used to mask the hidden layer representations twice. The processed features are then passed through the GAT decoder to
+reconstruct the original spectral features. Finally, a dual loss function is used to jointly optimize the reconstruction error and the graph structure smoothness
+constraint to output the anomaly detection result graph.
+
+ The MGAE proposed in this study further expands the appli- correlation patterns, enabling effective discrimination between
+cation of GAT in HAD. Unlike methods that rely solely on anomalies and background. This design not only ensures
+GAT for feature aggregation, MGAE combines GAT with an the core capability of the mask operation to “selectively
+autoencoder architecture to reconstruct background through an retain key information” but also breaks through the traditional
+“encode-decode” process. A re-masking strategy is introduced mask’s dependence on linear relationships and static scenes
+to force the model to learn more robust feature representa- through graph structure guidance, and significantly improves
+tions, avoiding the “trivial mapping” problem that traditional the robustness of HAD.
+GAT often falls prey to. Furthermore, by constraining feature
+smoothness through a graph Laplacian regularization loss, the
+topological relationships captured by GAT are more consis- III. P ROPOSED M ETHODOLOGY
+tent with the spatial continuity of hyperspectral data, further In this section, we initially outline our approach. Subseimproving the separability of background and anomalies. This quently, we elaborate on the implementation specifics of each
+design not only retains GAT’s ability to model complex element of our method.
+relationships but also enhances the stability and accuracy of
+detection through self-supervised learning and regularization
+mechanisms. A. GAT-Based Autoencoder
+ Our proposed anomaly detection method consists of three
+C. Masking Strategy main steps: topology graph generation, re-masking operation,
+ Masking is a technique that precisely controls specific bits and graph autoencoder reconstruction based on GAT. The
+of target data through binary bitwise operations. Its core overall architecture of MGAE is shown in Fig. 4.
+approach involves extracting, modifying, filtering, or flipping First, we load the three-dimensional HSI as a node feature
+specific bits in the target data using a binary sequence of the matrix x, where each pixel in the image is treated as a node.
+same length as the target data through bitwise operations such To capture the spatial relationships between pixels, adjacency
+as AND, OR, and XOR. It is widely used in tasks such as information is constructed using the KNN algorithm. This step
+classification, anomaly detection, and background suppression creates a topology graph, which represents the connectivity
+to achieve refined control over binary data. between neighboring pixels based on their feature similarities.
+ This study introduces a re-masking strategy that applies The adjacency matrix reflects the inherent spatial and spectral
+double AND operations to deeply couple the masking process dependencies in hyperspectral data, which is crucial for capwith graph topology. This shifts the model’s background turing the correlations between different spectral bands and
+learning from “individual pixel features” to “neighborhood pixels in the image. It can be expressed with the following
+correlation patterns”. Ultimately, anomalous nodes exhibit formula:
+elevated reconstruction errors due to violations of background E = KNN(x, x, k) (2)
+TU et al.: SELF-SUPERVISED MASKED GRAPH AUTOENCODER FOR HYPERSPECTRAL ANOMALY DETECTION 6719
+
+ 1) Masked Feature Reconstruction: When the mask dimension exceeds the input dimension, ordinary autoencoders
+ tend to learn meaningless “identity functions”, making the
+ encoded representation useless. This problem is particularly
+ prominent in graph data with small node feature dimensions, and existing graph autoencoders often ignore this
+ problem. Inspired by denoising autoencoders which avoid
+ trivial solutions by deliberately corrupting the input, we use
+ masked autoencoders as the basic framework of MGAE. In
+ Fig. 5. Random masking operation in the re-masking process. our method, a portion of nodes is randomly selected and
+ their features are replaced with zero. The resulting masked
+ feature matrix defines the characteristics of each node as
+where E is the set of edges and k is the parameter in the KNN follows:
+algorithm that specifies the number of nearest neighbor nodes (
+each node should connect to. 0, vi ∈ e
+ V
+ x̃i = (7)
+ Subsequently, an initial masking operation is applied to the xi , V
+ vi < e
+node feature matrix x, where a random subset of features is set
+ The goal of MGAE is to reconstruct masked node features
+to zero. The masked feature matrix, along with the adjacency
+ using partially observed node signals and an input adjacency
+matrix, is then fed into a GAT-based encoder consisting of
+ matrix. By randomly selecting a subset of nodes, setting their
+multiple GATConv layers. The encoder learns to capture spafeatures to zero, and performing uniform random sampling
+tial and spectral dependencies through a multi-head attention
+ without replacement, the mask distribution is balanced (premechanism. Each attention head independently computes the
+ venting all nodes’ neighbors from being completely masked or
+attention coefficients ai j , representing the relationship strength
+ visible). Finally, the masked node features are reconstructed
+between node i and node j. The encoder aggregates the node
+ using the partially observed node signals and the input adjafeatures based on these attention coefficients, producing a new
+ cency matrix. In graph autoencoders, nodes rely on neighbor
+node feature representation. This process retains inter-node
+ information to optimize their features, and this sampling
+relationships while combining spatial and spectral information.
+ strategy effectively maintains this balance.
+The encoder outputs the latent representation rep, with dimen-
+ 2) GAE Decoder With Re-Mask Decoding: The decoder
+sions nhead × dhidden , where nhead is the number of attention
+ needs to map the latent code back to the input features, and its
+heads and dhidden is the hidden feature dimension. This latent
+ design is related to the semantic complexity of the input. For
+representation captures node relationships and feature inforgraph data, traditional graph autoencoders often use non-neural
+mation, serving as the basis for the subsequent reconstruction
+ network decoders or basic multi-layer perceptrons, which has
+process. A second masking operation is applied to the encoder
+ limited expressive power. This results in the latent code being
+output as part of our proposed re-masking strategy, which
+ highly similar to the input features, making it difficult to
+helps the model learn more robust feature representations by
+ form a compressed and information-rich representation. To
+reconstructing the missing parts of the data.
+ address this, MGAE uses a more expressive single-layer graph
+ xmasked = x M1 (3) attention network as the decoder. This reconstructs features
+ rep = Encoder(xmasked , E) (4) based on node neighborhood information rather than relying
+ solely on the nodes themselves, enabling the encoder to learn
+ repremasked = rep M2 (5)
+ more abstract latent representations.
+where the symbol denotes element-wise multiplication, and To further advance compressed representation learning, we
+M1 and M2 are the initial mask matrix and the re-mask matrix, introduce a re-masking technique: the masked node indices
+respectively. The masked positions are set to 0, while all other are reset to zero again at the latent code level to simulate
+positions are set to 1. additional noise. This forces the masked nodes to reconstruct
+ The re-masked rep is then passed to the GAT-based decoder, their input features using the latent representations of their
+which reconstructs the node feature matrix x̂. The decoder unmasked neighbors. The re-masked latent code is defined as:
+attempts to recover the original features of the nodes based (
+on the encoded and re-masked representation. The output of 0, hi ∈ e
+ V
+ h̃i = (8)
+this stage is an approximation of the original hyperspectral hi , V
+ hi < e
+data, which is compared to the actual data during training to
+compute the reconstruction loss.
+ C. Twice Loss
+ x̂ = Decoder(repremasked , E) (6) Our framework employs a dual loss function named Twice
+ Loss, as illustrated in the Fig. 6. Subsequently, we will
+B. Re-Masking Strategy elaborate on the conceptual design of the loss function.
+ The proposed re-masking strategy is applied at the data 1) Reconstruction Loss: We use the squared L2 norm to
+input stage and the encoder output stage. The masking method calculate the loss, which imposes a greater penalty on larger
+is shown in the Fig.5. Its design principle is as follows: errors. This means that if some pixels have larger differences,
+6720 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ smoother reconstruction effect, while the anomalous areas,
+ due to weaker connectivity in the graph structure, are less
+ constrained by the model in their reconstruction, which helps
+ enhance the identification and detection of anomalous areas.
+ The smoothness loss not only improves the accuracy of background reconstruction but also enhances anomaly detection
+ sensitivity by reducing over-reconstruction in anomalous areas.
+ 3) Twice Loss: In summary, we define the loss function L
+ for MGAE as follows:
+ L = α · Lrec + (1 − α) · Lsmooth
+ = α · ||X 0 − X||22 + (1 − α) · abs Tr(Z T LZ) · 0.00001 (11)
+  
+
+ Fig. 6. The implementation of the proposed twice loss.
+ where Lrec is the reconstruction loss, L smooth is the smoothness
+ loss, and α is a hyperparameter. α controls the strength of
+their contribution to the loss will also be greater, and the the graph Laplacian smoothness loss. By adjusting α, we can
+model will work harder to reduce these differences. This flexibly balance the trade-off between smoothness in backcharacteristic makes the squared L2 norm suitable for image ground reconstruction and sensitivity in anomaly detection.
+reconstruction tasks that are sensitive to global errors. When α is large, the model emphasizes local smoothness more
+ Lrec = kX 0 − Xk22 (9) in the reconstruction process, which is suitable for optimizing
+ background areas; when α is small, the model handles feature
+where Lrec is the reconstruction loss, which measures the changes in anomalous areas more flexibly, avoiding excessive
+difference between the input X and the reconstructed output X 0 . smoothing of anomalous areas.
+The goal is to minimize this loss, making the reconstructed X 0
+as close as possible to the input. X 0 denotes the reconstructed
+ D. Anomaly Scores
+output, i.e., the result obtained after the reconstruction network
+model processes the input, representing the hyperspectral Anomalies are measured by the difference (diff ) between the
+image data that the model tries to restore; X represents the reconstructed and original node feature matrices. The L2 norm
+input data, i.e., the original image data, which serves as the and Mahalanobis distance are computed from this difference
+“ground truth” for the model during reconstruction. We hope and combined with weights to produce a comprehensive
+that X 0 can be as close as possible to X. anomaly score, which serves as the final detection result. Their
+ 2) Smooth Loss: Although the traditional reconstruction definitions are as follows:
+loss effectively measures the difference between the input 1) L2 Norm: Measures the Euclidean distance between
+and output images, it treats all pixels ‘equally’ without the original data and the reconstructed data. The calculation
+considering the local structural relationships between pixels formula for scores l2 is shown as follows:
+(features). This approach may lead the model to reconstruct diff = x − x̂ (12)
+all areas (including anomalous regions) to the same extent d
+in HAD, thereby affecting the detection performance. To scores l2 =
+ X
+ (diffi j )2 (13)
+further enhance the network’s effectiveness in reconstructing j=1
+the background of hyperspectral images and to utilize the local
+structural information in the data, we introduce a quadratic loss where diff represents the difference between the original
+based on graph Laplacian regularization. feature matrix x and the reconstructed feature matrix x̂. x is the
+ original feature matrix, x̂ is the reconstructed feature matrix,
+ L smooth = abs Tr(Z T LZ) · 0.00001
+  
+ (10) i is the node index, j is the feature dimension, and d is the
+where Z represents the feature representation output by the total number of features.
+model, L is the graph Laplacian matrix, and L smooth is the 2) Mahalanobis Distance: Incorporating the covariance
+smoothness loss, also referred to as the second loss. The graph matrix, it measures the deviation of node features from the
+Laplacian matrix L, defined through the graph’s adjacency global distribution. The calculation formula for scores ma is
+matrix and degree matrix, captures the local relationships shown as follows:
+between pixels or features in the data. The primary purpose of Σ = Cov(diff) (14)
+regularization is to guide the model to maintain consistency
+ Σ −1
+ = (Cov(diff)) −1
+ (15)
+in features during the training process, especially in the n
+background areas, ensuring that the reconstruction between 1X
+ µ= diffi (16)
+adjacent pixels remains smooth and consistent. The factor of n
+ i=1
+0.00001 is multiplied to balance the magnitudes of the two
+ scores ma = diag (diff − µ) · Σ−1 · (diff − µ)>
+ 
+ (17)
+terms, ensuring the effectiveness of the loss function.
+ By minimizing the smoothness loss, the model reduces the where Σ represents the covariance matrix of the differences
+differences among adjacent feature points in high-dimensional diff, and Σ−1 is its inverse, normalizing distances by accounting
+space. This means that the background areas will exhibit a for feature correlations. µ is the mean vector of diff, and n
+TU et al.: SELF-SUPERVISED MASKED GRAPH AUTOENCODER FOR HYPERSPECTRAL ANOMALY DETECTION 6721
+
+Algorithm 1 Proposed MGAE for Hyperspectral Anomaly the water-absorption bands. The spatial resolution is
+Detection approximately 1.3m.
+ 2) BEACH-II: The second hyperspectral data set was
+ acquired by the AVIRIS sensor covering the Bay
+ Chamoagne. This scene covers area of 100×100 pixels
+ with 188 spectral channels in wavelengths ranging from
+ 370 to 2510 nm. The spatial resolution is approximately
+ 4.4m.
+ 3) HYDICE: The third hyperspectral dataset, acquired by
+ the AVIRIS sensor, covers an urban area in California.
+ The scene has a pixel size of 100 × 100 pixels, an
+ unknown wavelength range, 205 spectral channels, and
+ an anomaly ratio of 0.91%. The spatial resolution is
+ 1 meter.
+ 4) Gainesville: The fourth hyperspectral dataset, acquired
+ by the AVIRIS sensor, covers the Gainesville area. This
+ scene has a pixel size of 100 × 100 pixels, an unknown
+ wavelength range, 191 spectral channels, and 0.52%
+ anomaly ratio. The spatial resolution is 3.5 meters.
+ 5) Gulfport: The fifth hyperspectral dataset, acquired by the
+ AVIRIS sensor, covers the Gulfport area. This scene has
+ a pixel size of 100 × 100 pixels, an unknown wavelength
+ range, 191 spectral channels, and an anomaly ratio of
+ 0.60%. The spatial resolution is 3.4 meters.
+ 6) Los Angeles: The sixth hyperspectral dataset, acquired
+ by the AVIRIS sensor, covers the Los Angeles area.
+ This scene has a pixel size of 100 × 100 pixels, an
+ unknown wavelength range, 205 spectral channels, and
+is the number of nodes. Finally, diag(·) extracts the diagonal an anomaly ratio of 0.87%. The spatial resolution is 7.1
+elements, yielding the Mahalanobis distance scores for each meters. The image and ground truth of this dataset are
+node. shown respectively in Fig. 7 (a) and (b).
+ We use λ to combine scores l2 and scores ma with
+weighting, resulting in a method for calculating anomaly B. Comparison Algorithms and Evaluation Criteria
+scores. The formula is as follows: 1) Comparison Method: This paper compares the proposed
+ Anomaly Scores = λ · scores l2 + (1 − λ) · scores ma. (18) MGAE algorithm with six existing HAD algorithms, including
+ RX [8], LRX [9], LSMAD [46], FrFE [47], BockNet [48],
+ During training, λ is set to 0.85 to focus on the model’s PUNNet [49] and PDBSNet [24]. The RX algorithm is a
+reconstruction error. During testing, λ is set to 0.5, equally classic method based on statistical modeling, while LRX
+weighting the L2 norm and Mahalanobis distance. The L2 norm is a localized version of the RX algorithm. LSMAD is a
+captures pointwise feature deviations, while the Mahalanobis representative method based on low-rank and sparse matrix
+distance detects global distribution anomalies, resulting in a decomposition. The experimental parameter initial rank l0 is
+more comprehensive anomaly score for detection. set to a value matching 0.6 times the number of bands in the
+ HSI, and the initial number of mixed Gaussian noise K is
+ IV. E XPERIMENTS set to 4. FrFE is a complex method based on the fractional
+ In order to verify the detection performance of our proposed Fourier transform and entropy principles that enhances HAD
+method, a series of contrast tests are set up in this section. by optimizing signal enhancement and noise suppression.
+ BockNet is a self-supervised blind-block reconstruction network with a guard window. It uses the blind-block (inner
+A. Experimental Datasets
+ window) to protect central pixels and only leverages outer
+ In this article, the proposed method is evaluated on six real window information to predict central pixels, thus increasing
+hyperspectral data sets captured at different scenes, which are the reconstruction error of anomalous pixels. PUNNet is an
+listed as follows. anomaly detection method using a global feature injection
+ 1) BEACH-I: The first hyperspectral data set was acquired blind-spot network. PDBSNet employs a pixel-reorganized
+ by the Raster Object-oriented Sensor Image System downsampling blind-spot reconstruction mechanism, where
+ (ROSIS-03) sensor covering the Pavia. This scene covers the center pixel is masked as the blind spot and its spectral
+ area of 100×100 pixels with 224 spectral channels in information is reconstructed from the surrounding neighborwavelengths ranging from 370 to 2510 nm. In the exper- hood. RX, LRX, and FrFE are non-parametric techniques. For
+ iments, a total of 102 bands are used after removing BockNet, we employ the parameters reported in its original
+6722 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ Fig. 7. Pseudo-color images and ground-truth maps of the six selected datasets. (a) Pseudo-color images. (b) Ground-truth maps.
+
+ TABLE I
+ AUC VALUES OF THE C OMPARISON A LGORITHMS AND O UR P ROPOSED A LGORITHM ON THE S IX S ELECTED DATASETS
+
+paper. PUNNet utilizes kernel sizes of (1, 4, 5, 5, 5, 4). algorithms across six hyperspectral datasets versus the deci-
+PDBSNet is configured with kernel sizes ((4, 4), (5, 5), (5, sion threshold τ. The vertical axis quantifies the algorithms’
+5), (5, 5), (4, 4), (5, 5)). Our algorithm has two parameters, k anomaly detection capability (TPR), while the horizontal axis
+and α. In the comparative experiments, we used the optimal determines the anomaly/background classification boundary.
+parameters selected through experimentation. The specific The curves exhibit a general trend of increasing TPR with
+parameter analysis will be discussed in detail in the later decreasing threshold, but reveal distinct performance characsection on parameter analysis. teristics across algorithms and datasets.The MGAE algorithm
+ 2) Evaluation Criteria: Based on the real data provided consistently exhibits steeper performance curves across all
+in Fig. 7, we can deeply evaluate the performance of each datasets, rapidly approaching a TPR of 1 at low thresholds
+detector with the help of 3D ROC curves and 2 ROC curves. (τ < 0.2) – for instance, achieving TPR > 0.95 on the BEACH-
+By analyzing the three corresponding 2D ROC curves – the 1 dataset. This behavior indicates exceptional sensitivity to
+relationship between detection rate Pd and false alarm rate subtle anomalies and significant robustness to threshold selec-
+P f , detection rate Pd and threshold τ, and false alarm rate P f tion. In contrast, traditional algorithms (e.g., RX, LRX) display
+and threshold τ – we can clearly understand the performance flatter, lower curves, requiring substantially higher threshdifferences of different anomaly detectors in the relationship olds (τ > 0.4) to approach MGAE’s TPR performance,
+among Pd , P f , and threshold τ. demonstrating pronounced parameter dependence.MGAE’s
+ performance advantage is most distinct in homogeneous scenes
+C. Comparison Experiments and Detection Performance like BEACH. Under the complex background of HYDIC,
+ We conducted comparison experiments of our algorithm MGAE maintains a clear lead over methods such as BockNet
+with others on six datasets, and the detection results are shown and PUNNet. On the Gainesville and Gulfport datasets, while
+in Fig. 8. The AUC values of each algorithm are listed in PUNNet approaches MGAE’s performance within mid-range
+Table I. We will analyze the strengths and weaknesses of each thresholds (0.2 ∼ 0.5), it fails to match MGAE’s effectiveness
+algorithm and their detection performance. at low thresholds (τ < 0.2). For the spectrally confounded
+ 1) 2D ROC: The Fig. 9 illustrates the True Positive Rate Los Angeles scene, all algorithms exhibit marginally reduced
+(TPR) performance curves of multiple anomaly detection peak TPR. However, MGAE sustains its superior performance,
+TU et al.: SELF-SUPERVISED MASKED GRAPH AUTOENCODER FOR HYPERSPECTRAL ANOMALY DETECTION 6723
+
+Fig. 8. Label maps of the selected datasets and anomaly maps of all methods. (a) BEACH-I. (b) BEACH-II. (c) HYDICE. (d) Gainesville. (e) Gulfport.
+(f) Los Angeles.
+
+confirming robustness in challenging environments. Collec- PUNNet, prone to local overfitting) exhibit flatter curves
+tively, these curves demonstrate MGAE’s high detection requiring strict thresholds (τ < 0.2) or high FPR tolerance
+accuracy and scene adaptability across an extended threshold (> 0.4) to approach MGAE’s performance, validating its
+range, significantly outperforming other algorithms. robustness in complex hyperspectral scenarios.
+ 2) 3D ROC: The Fig. 10 presents the 3D ROC per- 3) Box Plot: The Fig. 11 displays boxplots comparing
+formance of eight anomaly detection algorithms across six anomaly detection scores (green) and background scores
+hyperspectral datasets, jointly evaluating false positive rate (red) across methods, revealing MGAE’s consistent superior-
+(FPR), decision threshold (τ), and true positive rate (TPR) ity. In BEACH-I, it achieves near-maximal anomaly scores
+to characterize detection trade-offs. MGAE demonstrates sig- with minimal background interference, effectively handling
+nificant advantages across all scenarios: on homogeneous spectral variability. While experiencing a slight decline in
+backgrounds (e.g., BEACH-I) with FPR < 0.3 and τ ∈ BEACH-II, it maintains competitive robustness across beach
+[0.2, 0.6], it sustains TPR > 0.9, surpassing RX (TPR < 0.7) environments. MGAE dominates in HYDICE (complex urban
+and LRX (TPR < 0.6) by 30 − 50 percentage points. Under areas) and Gainesville, demonstrating cross-dataset stability,
+complex environments like HYDICE (urban heterogeneity) and excels in Gulfport’s airport scene with optimal anomalyand Los Angeles (spectral confusion), MGAE achieves higher background separation. For the spectrally confounded Los
+TPR at equivalent FPR through relaxed thresholds (τ reduced Angeles dataset, MGAE sustains exceptional anomaly detecby 0.1−0.2), significantly outperforming deep learning coun- tion with suppressed background. Crucially, MGAE markedly
+terparts (BockNet, PDBSNet). This superiority stems from outperforms traditional methods (RX/LRX/LSMAD) in chal-
+MGAE’s graph-structural hyperspectral modeling: graph atten- lenging environments featuring diverse anomalies, while its
+tion mechanisms capture spectral-spatial correlations while sustained low background scores confirm precise spectral
+dual-mask loss suppresses background interference, main- discrimination—addressing hyperspectral imaging’s fundataining dynamic high-detection/low-FPR balance across wide mental challenge of anomaly-background separation.
+threshold ranges. In contrast, traditional methods (e.g., RX, 4) Summary: As evidenced by Fig. 8 and Table I, MGAE
+limited by Gaussian assumptions) and deep approaches (e.g., achieves superior AUC values across all datasets, consistently
+6724 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ Fig. 9. 2D ROC curves of all methods for the six datasets.
+
+ Fig. 10. 3D ROC curves of all methods for the six datasets.
+
+outperforming comparative methods. Corroborated by ROC lower false positive rates than traditional approaches (e.g., RX,
+characteristics, MGAE maintains higher true positive rates and LSMAD) in every operational environment. This demonstrates
+TU et al.: SELF-SUPERVISED MASKED GRAPH AUTOENCODER FOR HYPERSPECTRAL ANOMALY DETECTION 6725
+
+ Fig. 11. Box plots of all methods for the six datasets.
+
+ TABLE II
+ AUC VALUES OF A BLATION E XPERIMENTS ON S IX DATASETS
+
+precise anomaly discrimination with minimal false alarms —
+a critical advantage for real-world deployment. The 3D performance evolution further confirms MGAE’s stability and
+adaptability across threshold configurations. Collectively, these
+cross-dataset analyses validate MGAE’s robust efficacy for
+HAD.
+
+D. Ablation Study
+ This section analyzes the effectiveness of the proposed
+re-masking strategy and twice loss strategy. Using a traditional Graph Attention Network (GAT) as the baseline
+framework, the proposed MGAE incorporates an innovative Fig. 12. The impact of parameter k selection on the AUC values changes in
+ the results of the experimental dataset.
+re-masking strategy that mitigates decoder-induced reconstruction error averaging by preventing simplistic mapping
+relationships. Concurrently, a twice loss strategy is introduced to balance background modeling accuracy and anomaly can introduce false anomalies, while random masking uncerdetection sensitivity. Table II compares the AUC performance tainty may reconstruct anomalies—increasing false positive
+of the three models across six datasets. The re-masking rates. The twice loss strategy addresses these limitations
+strategy alone provides modest improvements over the base- by preserving global background context while minimizing
+line GAT, as background information loss during re-masking constraints on anomalies to suppress their reconstruction.
+6726 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+ Fig. 13. The variation curve of AUC values in the experimental dataset results caused by different parameters α.
+
+Consequently, MGAE integrating both strategies achieves sig- scenes (Gulfport) achieve peak discrimination at moderate
+nificant enhancement in HAD capability. k-values (51-71, AUC 0.97) through balanced spatial-spectral
+ modeling. This demonstrates that optimal k is intrinsically
+ linked to scene heterogeneity.
+E. Parameter Analysis 2) Parameter α: The parameter α controls the proportion of
+ In this section, we analyze the influence of the parameters reconstruction loss and smoothness loss in our proposed Twice
+k and α on the detection performance of the proposed MGAE Loss. In order to make the effect of parameter A more intuitive,
+method. we set the value of k in the parameter experiment. Fig. 13
+ 1) Parameter k: The parameter k is critical in the MGAE illustrates the impact of parameter α on the Area Under the
+method as it defines the number of nearest neighbors consid- Receiver Operating Characteristic (ROC) curve (AUC) values
+ered during the anomaly detection process. This parameter’s across different datasets.
+influence on the detection performance is profound, as it The Fig. 13 and Table III demonstrate the critical infludirectly affects both the sensitivity and specificity of the ence of the loss-balancing parameter α on MGAE’s AUC
+method. As shown in Fig. 12, our analysis of six datasets with performance across hyperspectral datasets. For beach envivarying k-values from 11 to 101 has demonstrated the critical ronments, BEACH-I exhibits monotonic AUC improvement
+role of k in the performance of the MGAE method. The sen- with increasing α, stabilizing near α = 0.3 and peaking
+sitivity and specificity of anomaly detection are significantly at 0.9987 (α = 0.8); BEACH-II maintains stable perforinfluenced by the choice of k, affecting the overall accuracy mance despite minor fluctuations at α = 0.2, achieving
+and reliability of the method.To determine the optimal k value, dual maxima of 0.9946 at α = 0.6 and 0.9. Urban and
+we analyze the AUC values for different k-values on each mixed scenes show distinct patterns: Gainesville displays
+dataset. The data revealed that datasets such as BEACH-I rapid AUC escalation beyond α = 0.3, stabilizing at its
+consistently performed well across a broad range of k-values peak 0.9748 (α = 0.5), while Los Angeles manifests grad-
+(maintaining AUC between 0.99 and 0.98), indicating robust- ual improvement culminating at maximum AUC (α = 0.9).
+ness to the choice of k. In contrast, datasets like Gainesville Crucially, when α = 1 (pure reconstruction loss without
+exhibited substantial fluctuations in performance (AUC rising smoothness regularization), HYDICE and Gulfport attain their
+from 0.96 to 0.98), highlighting a sensitivity to k-value selec- highest AUC values - indicating smoothness loss provides
+tion. For instance, the Gainesville dataset showed improved negligible benefit for these specific environments. These findperformance as k increased from 11 to 101, peaking at k = 101 ings establish α’s dual role in HAD: 1) Optimizing the
+with the highest AUC value of 0.98. This suggests that a higher reconstruction-smoothness tradeoff enhances model efficiency,
+k-value may be necessary to capture the broader context within and 2) Enabling scene-specific performance customization
+this particular dataset, reducing noise and minimizing false through spectral-characteristic-adaptive loss balancing. This
+positives. Complex urban environments (HYDICE, Los Ange- tradeoff underscores α’s critical function in tailoring detection
+les) require k ≥ 71 to stabilize performance (> 0.97 AUC) by precision to diverse operational scenarios while maintaining
+suppressing outlier-induced false positives, whereas structured computational effectiveness.
+TU et al.: SELF-SUPERVISED MASKED GRAPH AUTOENCODER FOR HYPERSPECTRAL ANOMALY DETECTION 6727
+
+ TABLE III
+ T HE S ELECTION OF PARAMETER α AND THE I MPACT OF D IFFERENT α VALUES ON THE AUC OF E XPERIMENTAL R ESULTS ACROSS S IX DATASETS
+
+ TABLE IV
+ I NFERENCE T IME OF D IFFERENT D ETECTION M ETHOD S ON S IX DATASETS
+
+F. Comparison of Inference Times conventional Graph Autoencoders (GAE) that utilize mul-
+ The Table IV reports the inference times of various com- tilayer perceptrons (MLP) for decoding, we implement a
+parison methods across six datasets. Except for BockNet, re-mask decoding strategy using GNN to enhance the capabil-
+PUNNet, PDBSNet, and our MGAE (implemented using the ity of MGAE. Additionally, within the GNN framework, we
+PyTorch framework), all other methods were coded in MAT- integrate the Laplacian matrix with the reconstructed feature
+LAB 2021b. The five traditional physics-driven methods (RX, matrix. This integration is crucial as it significantly boosts the
+LRX, LAMAD, FrFE) exhibit significantly longer inference model’s sensitivity to topological variations and irregularities
+times across most datasets compared to their deep learning- within the data structure. Such an approach allows for the
+based counterparts. Although MGAE involves graph structure effective capture of nuanced anomaly patterns by leveraging
+construction and graph attention-based feature aggregation — the inherent graph structure encoded by the Laplacian matrix,
+introducing marginal computational overhead — it consis- thereby augmenting the detection capabilities of our model.
+tently achieves the shortest inference time across all datasets, By incorporating these advanced graph-based insights, MGAE
+notably outperforming BockNet and PDBSNet by an order demonstrates an ability to outperform conventional methods,
+of magnitude in efficiency. This result underscores MGAE’s particularly in detecting subtle and complex anomalies in
+superior balance between model complexity and computational hyperspectral images. This advancement establishes MGAE
+efficiency. as a potent tool in the hyperspectral imaging field, providing
+ enhanced accuracy and reliability in anomaly detection.
+ The experimental results on six real HSIs demonstrate that
+ V. C ONCLUSION our approach outperforms other state-of-the-art HAD methods.
+ In this article, we introduce Masked Graph Autoencoder Future work will focus on integrating spatial information into
+(MGAE), a pioneering approach designed for HAD. This inno- the MGAE framework to enhance anomaly detection by levervative method leverages graph neural networks (GNN) to learn aging both spectral and spatial features. Additionally, optimizgraph representations unsupervised. At the core of MGAE’s ing model parameters adaptively and exploring more refined
+strategy is the reconstruction of masked node features, which weight definitions between graph nodes will be pursued to
+is a significant departure from traditional approaches. Unlike improve sensitivity to subtle anomalies. Finally, incorporating
+6728 IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 34, 2025
+
+advanced learning techniques like self-supervised learning [22] J. Jiao, L. Xiao, and C. Wang, “Hyperspectral anomaly detection based
+could further boost generalization across diverse hyperspectral on intrinsic image decomposition and background subtraction,” IEEE
+ Access, vol. 13, pp. 15723–15738, 2025.
+datasets, pushing the boundaries of detection accuracy. [23] D. Wang, L. Zhuang, L. Gao, X. Sun, X. Zhao, and A. Plaza, “Sliding
+ dual-window-inspired reconstruction network for hyperspectral anomaly
+ detection,” IEEE Trans. Geosci. Remote Sens., vol. 62, 2024, Art. no.
+ R EFERENCES 5504115.
+ [24] D. Wang, L. Zhuang, L. Gao, X. Sun, M. Huang, and A. J. Plaza,
+[1] Y. Liu, “Development of hyperspectral imaging remote sensing
+ “PDBSNet: Pixel-shuffle downsampling blind-spot reconstruction nettechnology,” Nat. Remote Sens. Bull., vol. 25, no. 1, pp. 439–459, 2021.
+ work for hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote
+[2] R. J. Chu, N. Richard, H. Chatoux, C. Fernandez-Maloigne, and
+ Sens., vol. 61, May 2023, Art. no. 5511914.
+ J. Y. Hardeberg, “Hyperspectral texture metrology based on joint proba-
+ [25] P. Baldi, “Autoencoders, unsupervised learning and deep architectures,”
+ bility of spectral and spatial distribution,” IEEE Trans. Image Process.,
+ in Proc. Int. Conf. Unsupervised Transf. Learn. Workshop, 2011,
+ vol. 30, pp. 4341–4356, 2021.
+ pp. 37–50.
+[3] B. Yang, Z. Wang, X. Liu, L. Fang, and L. Liu, “Reciprocal
+ [26] A. Emoto and R. Matsuoka, “Unsupervised anomaly detection in
+ transformation-based joint deep and broad learning for change detection
+ hyperspectral imaging: Integrating tensor robust principal component
+ with heterogeneous images,” IEEE Trans. Geosci. Remote Sens., vol. 62,
+ analysis with autoencoding adversarial networks,” IEEE Access, vol. 13,
+ 2024, Art. no. 4413414.
+ pp. 21422–21433, 2025.
+[4] B. Yang, Y. Mao, L. Liu, X. Liu, Y. Ma, and J. Li, “From trained
+ [27] D. Wang, L. Gao, Y. Qu, X. Sun, and W. Liao, “Frequency-to-spectrum
+ to untrained: A novel change detection framework using randomly
+ mapping GAN for semisupervised hyperspectral anomaly detection,”
+ initialized models with spatial–channel augmentation for hyperspectral
+ CAAI Trans. Intell. Technol., vol. 8, no. 4, pp. 1258–1273, Dec. 2023,
+ images,” IEEE Trans. Geosci. Remote Sens., vol. 61, 2023, Art. no.
+ doi: 10.1049/cit2.12154.
+ 4402214.
+[5] C.-I. Chang, “Hyperspectral target detection: Hypothesis testing, signal- [28] S. Wu et al., “VJDNet: A simple variational joint discrimination netto-noise ratio, and spectral angle theories,” IEEE Trans. Geosci. Remote work for cross-image hyperspectral anomaly detection,” Remote Sens.,
+ Sens., vol. 60, 2022, Art. no. 5505223. vol. 17, no. 14, p. 2438, Jul. 2025.
+[6] N. M. Nasrabadi, “Hyperspectral target detection: An overview of [29] Z. Zhao et al., “Hyperspectral anomaly detection via cascaded convocurrent and future challenges,” IEEE Signal Process. Mag., vol. 31, lutional autoencoders with adaptive pixel-level attention,” Expert Syst.
+ no. 1, pp. 34–44, Jan. 2014. Appl., vol. 279, Jun. 2025, Art. no. 127366.
+[7] J. Dai, C. Deng, W. Wang, and X. Liu, “Low-rank and sparse tensor [30] X. Sun, Y. Zhang, Y. Dong, and B. Du, “Contrastive self-supervised
+ recovery for hyperspectral anomaly detection,” in Proc. IEEE Int. learning-based background reconstruction for hyperspectral anomaly
+ Geosci. Remote Sens. Symp. (IGARSS), Jul. 2017, pp. 1141–1144. detection,” IEEE Trans. Geosci. Remote Sens., vol. 63, 2025, Art. no.
+[8] I. S. Reed and X. Yu, “Adaptive multiple-band CFAR detection of an 5504312.
+ optical pattern with unknown spectral distribution,” IEEE Trans. Acoust., [31] X. Wang et al., “FCMMA: Fourier conditional mask-based mixed
+ Speech, Signal Process., vol. 38, no. 10, pp. 1760–1770, Oct. 1990. attention method for hyperspectral anomaly detection,” IEEE Trans.
+[9] J. M. Molero, E. M. Garzon, I. Garcia, and A. Plaza, “Analysis and Geosci. Remote Sens., vol. 63, 2025, Art. no. 5507012.
+ optimizations of global and local versions of the RX algorithm for [32] D. Wang, L. Ren, X. Sun, L. Gao, and J. Chanussot, “Nonlocal and
+ anomaly detection in hyperspectral data,” IEEE J. Sel. Topics Appl. local feature-coupled self-supervised network for hyperspectral anomaly
+ Earth Observ. Remote Sens., vol. 6, no. 2, pp. 801–814, Apr. 2013. detection,” IEEE J. Sel. Topics Appl. Earth Observ. Remote Sens.,
+[10] A. V. Kanaev and J. Murray-Krezan, “Segmentation adaptive RX: An vol. 18, pp. 6981–6993, 2025.
+ algorithm for spectral anomaly detection in a variety of measured- [33] X. Su, X. Shen, H. Liu, L. Chen, G. Vivone, and X. Zhou, “Toward
+ radiance conditions,” Proc. SPIE, vol. 7695, Mar. 2010, Art. no. 769505. model-independent separative training for deep hyperspectral anomaly
+[11] H. Kwon and N. M. Nasrabadi, “Kernel RX-algorithm: A nonlinear detection with mask guidance,” IEEE J. Sel. Topics Appl. Earth Observ.
+ anomaly detector for hyperspectral imagery,” IEEE Trans. Geosci. Remote Sens., vol. 18, pp. 15412–15426, 2025.
+ Remote Sens., vol. 43, no. 2, pp. 388–397, Feb. 2005. [34] D. Wang et al., “HyperSIGMA: Hyperspectral intelligence compre-
+[12] S. Lin, M. Zhang, X. Cheng, L. Wang, M. Xu, and H. Wang, hension foundation model,” IEEE Trans. Pattern Anal. Mach. Intell.,
+ “Hyperspectral anomaly detection via dual dictionaries construction vol. 47, no. 8, pp. 6427–6444, Aug. 2025.
+ guided by two-stage complementary decision,” Remote Sens., vol. 14, [35] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Lió, and
+ no. 8, p. 1784, Apr. 2022. Y. Bengio, “Graph attention networks,” 2017, arXiv:1710.10903.
+[13] S. M. Schweizer and J. M. F. Moura, “Hyperspectral imagery: Clutter [36] S. Brody, U. Alon, and E. Yahav, “How attentive are graph attention
+ adaptation in anomaly detection,” IEEE Trans. Inf. Theory, vol. 46, networks?,” 2021, arXiv:2105.14491.
+ no. 5, pp. 1855–1871, May 2000. [37] Y. Dong, Q. Liu, B. Du, and L. Zhang, “Weighted feature fusion of
+[14] Z. Zha, B. Wen, X. Yuan, S. Ravishankar, J. Zhou, and C. Zhu, “Learning convolutional neural network and graph attention network for hypernonlocal sparse and low-rank models for image compressive sensing: spectral image classification,” IEEE Trans. Image Process., vol. 31,
+ Nonlocal sparse and low-rank modeling,” IEEE Signal Process. Mag., pp. 1559–1572, 2022.
+ vol. 40, no. 1, pp. 32–44, Jan. 2023. [38] R. Walsh, I. Osman, and M. S. Shehata, “Masked embedding modeling
+[15] Z. Zha, B. Wen, X. Yuan, J. Zhou, and C. Zhu, “Image restoration with rapid domain adjustment for few-shot image classification,” IEEE
+ via reconciliation of group sparsity and low-rank models,” IEEE Trans. Trans. Image Process., vol. 32, pp. 4907–4920, 2023.
+ Image Process., vol. 30, pp. 5223–5238, 2021. [39] J. Zhu, H. Ma, J. Chen, and J. Yuan, “High-quality and diverse few-
+[16] L. Ren, D. Wang, L. Gao, M. Wang, and M. Huang, “Nonlocal and shot image generation via masked discrimination,” IEEE Trans. Image
+ deep priors for hyperspectral anomaly detection,” IEEE Trans. Geosci. Process., vol. 33, pp. 2950–2965, 2024.
+ Remote Sens., vol. 63, 2025, Art. no. 5520415. [40] E. Fix and J. L. Hodges, “Discriminatory analysis—Nonparametric
+[17] M. Wang, Q. Wang, D. Hong, S. K. Roy, and J. Chanussot, “Learning discrimination: Consistency properties,” Int. Stat. Rev., vol. 57,
+ tensor low-rank representation for hyperspectral anomaly detection,” p. 238, Jan. 1989. [Online]. Available: https://api.semanticscholar.org/
+ IEEE Trans. Cybern., vol. 53, no. 1, pp. 679–691, Jan. 2023. CorpusID:120323383
+[18] A. Banerjee, P. Burlina, and C. Diehl, “A support vector method [41] T. M. Cover and P. E. Hart, “Nearest neighbor pattern classification,”
+ for anomaly detection in hyperspectral imagery,” IEEE Trans. Geosci. IEEE Trans. Inf. Theory, vol. IT-13, no. 1, pp. 21–27, Jan. 1967.
+ Remote Sens., vol. 44, no. 8, pp. 2282–2291, Aug. 2006. [42] S. T. Roweis and L. K. Saul, “Nonlinear dimensionality reduction by
+[19] W. Basener, E. J. Ientilucci, and D. W. Messinger, “Anomaly detection locally linear embedding,” Science, vol. 290, no. 5500, pp. 2323–2326,
+ using topology,” Proc. SPIE, vol. 6565, Feb. 2007, Art. no. 65650J, doi: Dec. 2000. [Online]. Available: https://api.semanticscholar.org/
+ 10.1117/12.745429. CorpusID:5987139
+[20] Y. Xu, L. Zhang, B. Du, and L. Zhang, “Hyperspectral anomaly detection [43] T. Takikawa, D. Acuna, V. Jampani, and S. Fidler, “Gated-SCNN: Gated
+ based on machine learning: An overview,” IEEE J. Sel. Topics Appl. shape CNNs for semantic segmentation,” 2019, arXiv:1907.05740.
+ Earth Observ. Remote Sens., vol. 15, pp. 3351–3364, 2022. [44] C. Ding, S. Sun, and J. Zhao, “MST-GAT: A multimodal
+[21] S. Li, K. Zhang, P. Duan, and X. Kang, “Hyperspectral anomaly spatial–temporal graph attention network for time series anomaly
+ detection with kernel isolation forest,” IEEE Trans. Geosci. Remote detection,” Inf. Fusion, vol. 89, pp. 527–536, Jan. 2023, doi: 10.1016/
+ Sens., vol. 58, no. 1, pp. 319–329, Jan. 2020. j.inffus.2022.08.011.
+TU et al.: SELF-SUPERVISED MASKED GRAPH AUTOENCODER FOR HYPERSPECTRAL ANOMALY DETECTION 6729
+
+[45] Y. Dongsheng, K. Ping, and X. Gu, “3D reconstruction based on GAT Bo Liu (Member, IEEE) received the B.S. and
+ from a single image,” in Proc. 17th Int. Comput. Conf. Wavelet Act. Ph.D. degrees in optical engineering from Beijing
+ Media Technol. Inf. Process. (ICCWAMTIP), Dec. 2020, pp. 122–125. University of Posts and Telecommunications, Bei-
+[46] L. Li, W. Li, Q. Du, and R. Tao, “Low-rank and sparse decomposition jing, China, in 2008 and 2013, respectively. He is
+ with mixture of Gaussian for hyperspectral anomaly detection,” IEEE currently a Professor with the School of Physics
+ Trans. Cybern., vol. 51, no. 9, pp. 4363–4372, Sep. 2021. and Optoelectronics, NUIST, China. His research
+[47] R. Tao, X. Zhao, W. Li, H.-C. Li, and Q. Du, “Hyperspectral anomaly interests include all-optical signal processing, radio
+ detection by fractional Fourier entropy,” IEEE J. Sel. Topics Appl. Earth over fiber, and broadband optical communication.
+ Observ. Remote Sens., vol. 12, no. 12, pp. 4920–4929, Dec. 2019.
+[48] D. Wang, L. Zhuang, L. Gao, X. Sun, M. Huang, and A. Plaza,
+ “BockNet: Blind-block reconstruction network with a guard window for
+ hyperspectral anomaly detection,” IEEE Trans. Geosci. Remote Sens.,
+ vol. 61, 2023, Art. no. 5531916.
+[49] D. Wang, L. Zhuang, L. Gao, X. Sun, and X. Zhao, “Global feature- Jun Li (Fellow, IEEE) received the B.S. degree in
+ injected blind-dpot network for hyperspectral anomaly detection,” IEEE geographic information systems from Hunan Normal
+ Geosci. Remote Sens. Lett., vol. 21, pp. 1–5, 2024. University, Changsha, China, in 2004, the M.E.
+ degree in remote sensing from Peking University,
+ Beijing, China, in 2007, and the Ph.D. degree in
+ electrical engineering from the Instituto de Tele-
+ Bing Tu (Senior Member, IEEE) received the M.S. comunica ções, Instituto Superior Técnico (IST),
+ degree in control science and engineering from Universidade Técnica de Lisboa, Lisbon, Portugal,
+ Guilin University of Technology, Guilin, China, in in 2011.
+ 2009, and the Ph.D. degree in mechatronic engineer- From 2013 to 2021, she was a Full Professor with
+ ing from Beijing University of Technology, Beijing, Sun Yat-sen University. Since 2022, she has been
+ China, in 2013. with China University of Geosciences as a Full Professor. She has received
+ From 2015 to 2016, he was a Visiting Researcher several prestigious funding grants at the national and international levels.
+ with the Department of Computer Science and Engi- She has authored more than 160 Journal Citation Report (JCR) articles, 60
+ neering, University of Nevada, Reno, NV, USA, international conference papers, and a book chapter.
+ which was supported by China Scholarship Council. Dr. Li has been serving as the Editor-in-Chief for IEEE J OURNAL
+ He is currently a Full Professor with Nanjing Uni- OF S ELECTED T OPICS IN A PPLIED E ARTH O BSERVATIONS AND R EMOTE
+versity of Information Science and Technology, Nanjing, China. His research S ENSING since 2021.
+interests include sparse representation, pattern recognition, and analysis in
+remote sensing. He is an Associate Editor of IEEE J OURNAL OF S ELECTED
+T OPICS IN A PPLIED E ARTH O BSERVATIONS AND R EMOTE S ENSING.
+
+ Antonio Plaza (Fellow, IEEE) received the M.Sc.
+ and Ph.D. degrees in computer engineering from the
+ Hyperspectral Computing Laboratory, Department
+ of Technology of Computers and Communications,
+ Baoliang He (Student Member, IEEE) received the University of Extremadura, Cáceres, Spain, in 1999
+ B.S. degree in electrical engineering and automa- and 2002, respectively.
+ tion from Henan Polytechnic University, Jiaozuo, He is currently the Head of the Hyperspectral
+ Henan, China, in 2025. He is currently pursuing Computing Laboratory, Department of Technology
+ the M.S. degree in optical engineering with Nanjing of Computers and Communications, University of
+ University of Information Science and Technol- Extremadura. He has authored more than 600 pubogy, Nanjing, Jiangsu, China. His research interests lications, including over 200 JCR journal articles
+ include hyperspectral anomaly detection. (over 160 in IEEE journals), 23 book chapters, and around 300 peer-reviewed
+ conference proceeding papers. His research interests include hyperspectral
+ data processing and parallel computing of remote sensing data.
+ Dr. Plaza was an Editorial Board Member of the IEEE Geoscience and
+ Remote Sensing Newsletter from 2011 to 2012 and IEEE Geoscience and
+ Remote Sensing Magazine in 2013. He was also a member of the Steering
+ Yan He (Member, IEEE) received the Ph.D. degree Committee of IEEE J OURNAL OF S ELECTED T OPICS IN A PPLIED E ARTH
+ in computer science from Hunan University, Chang- O BSERVATIONS AND R EMOTE S ENSING. He is a fellow of IEEE for consha, Hunan, China, in 2025. She is currently a tributions to hyperspectral data processing and parallel computing of Earth
+ Lecturer with Nanjing University of Information Sci- observation data. He was a recipient of the recognition of Best Reviewers
+ ence and Technology, Nanjing, China. Her research of IEEE G EOSCIENCE AND R EMOTE S ENSING L ETTERS in 2009 and the
+ interests include hyperspectral image processing and Best Reviewer of IEEE T RANSACTIONS ON G EOSCIENCE AND R EMOTE
+ remote sensing image registration. S ENSING in 2010, for which he has served as an Associate Editor from
+ 2007 to 2012. He was also a recipient of the Best Column Award of
+ IEEE Signal Processing Magazine in 2015, the 2013 Best Paper Award of
+ IEEE J OURNAL OF S ELECTED T OPICS IN A PPLIED E ARTH O BSERVATIONS
+ AND R EMOTE S ENSING , and the Most Highly Cited Paper (2005–2010) in
+ Journal of Parallel and Distributed Computing. He received best paper awards
+ at the IEEE International Conference on Space Technology and the IEEE
+ Symposium on Signal Processing and Information Technology. He has served
+ Tao Zhou (Student Member, IEEE) is currently as the Director of Education Activities for the IEEE Geoscience and Remote
+ pursuing the master’s degree in electronic science Sensing Society (GRSS) from 2011 to 2012 and the President of Spanish
+ and technology with the School of Electronic and Chapter of IEEE GRSS from 2012 to 2016. He has reviewed more than 500
+ Information Engineering, Anhui Jianzhu University, manuscripts for over 50 different journals. He has served as the Editor-in-
+ Hefei, Anhui, China. Chief for IEEE T RANSACTIONS ON G EOSCIENCE AND R EMOTE S ENSING
+ from 2013 to 2017. He has guest-edited ten special issues on hyperspectral
+ remote sensing for different journals. He is an Associate Editor of the IEEE
+ ACCESS (receiving the recognition as an Outstanding Associate Editor of the
+ journal in 2017). Additional information is available at http://www.umbc.edu/
+ rssipl/people/aplaza

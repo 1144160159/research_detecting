@@ -1,0 +1,548 @@
+AppClassNet: A commercial-grade dataset
+ for application identification research
+ Chao Wang Alessandro Finamore Lixuan Yang
+ Huawei Technologies France SASU Huawei Technologies France SASU Huawei Technologies France SASU
+ chao.wang@huawei.com alessandro.finamore@huawei.com lixuan.yang@huawei.com
+
+ Kevin Fauvel Dario Rossi
+ Huawei Technologies France SASU Huawei Technologies France SASU
+ kevin.fauvel@huawei.com dario.rossi@huawei.com
+
+ This article is an editorial note submitted to CCR. It has NOT been peer reviewed.
+ The authors take full responsibility for this article’s technical content. Comments can be posted through CCR Online.
+
+ABSTRACT advances have equally benefited from (𝑖) the ground-breaking the-
+The recent success of Artificial Intelligence (AI) is rooted into sev- oretical research, (𝑖𝑖) the availability of open-source software plateral concomitant factors, namely theoretical progress coupled with forms, (𝑖𝑖𝑖) the creation of efficient hardware accelerators and, last
+abundance of data and computing power. Large companies can take but not least, (𝑖𝑣) the availability of large corpora training sets. For
+advantage of a deluge of data, typically withhold from the research instance, crowdsourcing efforts in the CVPR field led to the wellcommunity due to privacy or business sensitivity concerns, and known ImageNet [1] which comprises tens of millions of image
+this is particularly true for networking data. Therefore, the lack samples, each annotated with one among tens of thousands of class
+of high quality data is often recognized as one of the main factors labels. Similarly, in the NLP field the Common Crawl [2] project
+currently limiting networking research from fully leveraging AI gathered several hundreds of billions of text tokens.
+methodologies potential. This is in stark contrast with the networking field where a com-
+ Following numerous requests we received from the scientific monly identified limit to AI deployment is the lack of publicly
+community, we release AppClassNet, a commercial-grade dataset available large scale datasets. We point out that, over the years,
+for benchmarking traffic classification and management methodolo- several research groups have indeed made commendable effort to
+gies. AppClassNet is significantly larger than the datasets generally release datasets for networking research. In the context of network
+available to the academic community in terms of both the number operation and management (O&M) a quite fundamental building
+of samples and classes, and reaches scales similar to the popular block is constituted by the ability to recognize the type of traffic, or
+ImageNet dataset commonly used in computer vision literature. To specific application, that generated a particular stream of packets.
+avoid leaking user- and business-sensitive information, we oppor- Different waves of research, in the early 2000s and late 2010s, have
+tunely anonymized the dataset, while empirically showing that it tackled this use-case with Machine Learning (ML) and Deep Learnstill represents a relevant benchmark for algorithmic research. In ing (DL) approaches respectively. As a side effect of the scientific
+this paper, we describe the public dataset and our anonymization research, a number of datasets have been released (Sec.2). At the
+process. We hope that AppClassNet can be instrumental for other same time, while these datasets are valuable to foster repeatability
+researchers to address more complex commercial-grade problems and cross-comparison, academic groups generally lack (𝑖) access
+in the broad field of traffic classification and management. to real operational networks environment, (𝑖𝑖) diverse operational
+ environment (e.g., residential access vs enterprise campuses) and
+ (𝑖𝑖𝑖) commercial-grade labeling tools.
+CCS CONCEPTS To help tackling these limitations, we contribute to the research
+• Networks → Network measurement; • Computing method- community AppClassNet, a commercial-grade dataset for the purologies → Machine learning. pose of application identification. We used the private version of
+ such dataset in our previous work on federated training [69], zero-
+KEYWORDS day application detection [70] and inference acceleration at line rate
+ based on either hardware accelerators to speedup computation [32]
+Open Dataset, Application Identification, Traffic Classification, Ma- or approximated-key caching to save computation altogether [31].
+chine Learning, Supervised learning, Neural networks AppClassNet is obtained from 10 TB worth of real traffic and comprises over 10 M flows each of which is annotated by a commercial
+ and proprietary DPI system supporting thousands of labels. The
+1 INTRODUCTION public version that we release and describe in this document retains
+ most of the richness of the original dataset (99% of the flows and
+In recent times, Deep Learning (DL) techniques have attained sig- bytes) of the most popular applications, corresponding to 500 finenificant advances in the fields of Computer Vision and Pattern grained application labels. Roughly, AppClassNet is the networking
+Recognition (CVPR) and Natural Language Processing (NLP). Such
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 19
+ Corrected Version of Record. V.1.1. Published September 22, 2022.
+equivalent of the popular ImageNet Large Scale Visual Recogni- adoption of simple, yet effective, Time Series (TS) features based
+tion Challenge (ILSVRC) [1], an ImageNet subset comprising 1,000 on properties of the first packets of a flow such as packet size
+classes and nearly 1.5M images. As this sheer size is significantly and direction [17] (and seldom interarrival time [17, 28]). These
+larger than what it is currently available to the academic commu- lightweight TS approaches are particularly appealing since they
+nity, we hope that AppClassNet can be an instrumental benchmark (𝑖) operate “early” at the beginning of a flow, as opposite to “post
+for the community and foster research exploration towards more mortem” techniques which compute FF after a flow ends, and as
+realistic and ambitious challenges. such are suitable for traffic management and (𝑖𝑖) sustain line rate
+ We point out that making publicly available (a subset of) any operation with limited computational costs [29].
+private dataset is a delicate process, as opportune anonymization The second wave of traffic classification [48, 20] employs DL
+is paramount to ensure that the data released is deprived of both techniques and essentially re-considers all inputs features previprivacy- and business-sensitive information. Likewise, we also need ously introduced — from PP [65, 63, 62, 42], to FF [57, 27, 61], to
+to make sure that the public version of the dataset obtained through TS [41, 54], and hybrid FF+TS [27]. An independent comparison
+such anonymization still fits the original purpose – ML/DL models of some of these recent works [57, 63, 62, 41] is carried out in [14],
+created with the public and private version of the dataset offer by mean of a single dataset [13] that differs from the ones used
+comparable performance. We point out that the goal of this paper by original authors, and the analysis reveals a different scenario
+is not to propose a new technique for opportune anonymization. from the one pictured by the original publications: (𝑖) TS features
+Rather, we discuss the pre-processing steps taken to deprive the confirm their interest, but the expected performance drops sigdataset from sensitive information as (𝑖) to avoid a flawed “security nificantly below <90% for any architecture; (𝑖𝑖) there is no clear
+by obscurity” approach and (𝑖𝑖) to highlight the limitations of the winner, although 1d-CNN models have consistently better results
+public datasets with respect to the original private one. We believe among the candidate approaches; (𝑖𝑖𝑖) 1d-CNN has a limited gain
+that AppClassNet is a good enough compromise, as it allows re- against shallow Multi Layer Perceptron (MLP) over the same input
+searchers to focus on algorithms design in a challenging network (+6%) or against Random Forest (RF) over FF input (+3%). Under this
+use-case, despite the anonymization deprives most of the common viewpoint, we argue that application identification is still quite an
+networking domain knowledge from the dataset. active research area. As we shall see later, AppClassNet constitutes
+ In the following, we first review the literature on datasets and an even more challenging benchmark with respect to the dataset
+collection methodologies (Sec. 2). Then, we introduce AppClassNet, used in [14] or MIRAGE19 [13], and should empower researchers
+covering both the anonymization methodology as well as contrast- to spend more time on algorithmic aspects rather than investing
+ing the characteristic of the private and public version of the dataset effort in scattered data collection.
+(Sec. 3). We next verify that the performance of state of the art ML
+and DL techniques remains consistent between the private and public version of the dataset (Sec. 4). Finally, we discuss AppClassNet 2.2 Datasets viewpoint
+limitations and term of use (Sec. 5) and conclude the paper (Sec. 6). Over the years, several datasets have been open-sourced for benchmarking of traffic classification algorithms, summarized in Table 1.
+2 BACKGROUND We point out that other datasets have been released (see [13] for a
+ comparison). Yet, many of those are collected in the context of In-
+The early 2000’s witnessed a first wave of traffic classification
+ trusion detection systems (IDS) (as surveyed in [52]). As such, they
+with Machine Learning (ML) methodologies aiming to identify
+ have a different purpose (distinguishing malicious from benign traffine-grained applications labels (e.g., YouTube, Skype, PokemonGo)
+ fic) and a much less fine-grained labeling (few attack types). Some
+or coarse-grained services (e.g., video streaming, video call, gamof these datasets became popular within the traffic classification
+ing). Then, the late 2010 have seen an explosion of interest toward
+ community, yet one can question their representativeness for traffic
+Deep Learning (DL) methodologies, essentially solving the same
+ classification commercial deployments. Conversely, AppClassNet
+problem but with a different set of techniques (see Sec.2.1)
+ explicitly aims to offer the larger and more diversified set of traffic
+ The need for common benchmarks has pushed researchers totypical of commercial settings.
+wards adoption of open-source datasets created to either address a
+ Generally speaking, two methodologies for datasets collection
+specific goal or as a side product of their research. In this section, we
+ can be employed: (𝑖) Active collections gather traffic from a spereview the relevant datasets and methods for traffic classification
+ cific set of applications, whereas (𝑖𝑖) Passive collections gather real
+and management focusing more on the adopted input rather than
+ environment traffic without a specific set of applications defined.
+the ML/DL tested on such data.
+ While both methods require instrumentation effort, active collections setup are typically more involved. For instance, they typically
+2.1 Use-case viewpoint employ kernel-level modification [35] to annotate executable names
+The goal of this paper is not to present a full background on the polled from kernel information along with packet traces or strace
+application identification literature, but rather to discuss which kernel logs[13], which allow for more fine-grained ground truth
+type of work could benefit from AppClassNet. The first wave of labels. This instrumentation effort coupled with the adoption of real
+traffic classification, well surveyed in [47], employed “classic” ML users manually-driven procedures [13, 35, 3] limits the collections
+techniques. As we overviewed in [70], such techniques adopted to relatively small scale experiments. Only rare exceptions reach
+an input based on either engineered Flow Features (FF) [45] or large scale but rely on automated but synthetic collections rather
+Packet Payload features (PP) [44, 18], and culminated with the than real users [39]. Conversely, passive collections benefit of large
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 20
+ Table 1: Subset of publicly available datasets for traffic classification
+
+ Dataset Year Classes Flows Flows/class Comment
+ UniBS [35] 2009 7 78.9k 11.3k Pcap; Ground truth devised with kernel-level modification
+ Bujlow et al.[24] 2015 25 559k 22k Cross-comparison of 4 open-source and 2 commercial DPI tools
+ Mirage[13] 2019 40 100k 2.5k Active pcap traffic collection for 40 mobile apps from 380 participants
+ Cross platform[3] 2012 411 102k 248 Active pcap collection of 411 apps from several students participants
+ ReCon[51] 2015 512 (+5) 29k (+141 k) 56 (+28k) Automated collection for top-apps (+multiple versions for 5 apps)
+ Andrubis[39] 2014 1 M 41M 41 Automated collection of startup traffic for apps from 15 market places
+ AppClassNet 2022 200+300 9.7M+0.3M 48.3k+1.1k 200 popular + 300 unpopular applications, covering ≃99% of traffic volume
+
+volumes of traffic and cover more diversified users behavior and timing (e.g., the time elapsed between two packets, the RTT). The
+set of applications, but incur in an extra effort to get ground truth TS-related input features (e.g., raw packet size) previously described
+label, e.g., labels can come from open-source [4, 5, 6] or commer- fall into this class of non-private information. We understand that
+cial [7, 8, 9] DPI tools, as compared in [24]. AppClassNet falls in the from a network-expert viewpoint it would be desirable to employ
+latter category and is obtained from a passive collections of 10 TB prefix-preserving IP anonymization techniques as well as to retain
+worth of traffic labeled via a commercial DPI tool (see Sec. 3.4). exact timing information across flows [59], as they could assist the
+ Complementary to [14] (that compares several DL architectures classification of multiple flows of the same endpoint, or multiple IP
+on a single dataset), [59] offers a longitudinal analysis of feature addresses in the same range. However, IP addresses are considered
+importance across datasets (including some of the ones reported in as private information according to both the European GDPR [10]
+Table 1). The study confirms that (aside TLS-related and inter-flow and the Chinese PIPL [11] regulations. Hence, to minimize risks of
+timing information), the packet size, direction and inter-arrival privacy leaks, IP addresses and absolute timing information are not
+within a single flow are the features with the highest discriminative even available in our private version of the dataset.
+power. Thus, both [14] and [59] confirm TS as relevant across
+DL architectures and datasets, making it the “canonical” input for 3.1.2 Business-sensitive information. Business-sensitive data are
+application identification tasks. As such, AppClassNet limits the orthogonal to users privacy but equally important. In fact, despite
+available input to the TS data. In releasing AppClassNet, we point not being privacy-sensitive, early described TS-related input feaout that we do not believe it should be the one and only benchmark tures (e.g., raw packet size and direction) have business-sensitive
+for traffic classification. Rather, we hope that it can become one of value. Indeed, if exact application signatures and application labels
+the several benchmarks (e.g., those in Table.1 and beyond) that are were to be released, then a third-party could train (and sell) an
+normally used in ablation studies, as commonly done in computer operationally useful model. This is of course delicate from a busivision research. ness viewpoint, for which it would be desirable that models created
+ on public dataset have no operational/commercial (which is the
+3 DATASET goal of this section). At the same time, to retain interest for the
+ academic community, the public dataset should have comparable
+As early outlined, the private dataset we used in [69, 70, 32, 31]
+ performance with respect to models obtained using the private
+needs to be deprived of business-sensitive information prior to
+ dataset, i.e., working on the public dataset should provide a task of
+public release. In this section we start discussing the goals for the
+ roughly equal hardness as the one of the private dataset (Sec.4).
+transformation process (Sec.3.1), next we outline the available and
+selected anonymization method (Sec.3.2 and Sec.3.3) and finally
+we contrast the characteristics of the original private against the 3.2 Anonymization background
+publicly released dataset (Sec.3.4). As previously introduced our private dataset does not contain sensitive user-related information. While IP addresses anonymization
+3.1 Private and business-sensitive information is a topic that has attracted historical [66] and recent interest [43]
+We refer to anonymization as a transformation process that alters in reason of GDPR regulation, those techniques do not fit our needs.
+a dataset for depriving it of both (i) private information as well as Similarly, as our input consists of TS data, at first sight work on
+(ii) business-sensitive information time-series anonymization could appear more appropriate (e.g.,
+ see [56] and references therein). However, those methods gener-
+3.1.1 Private information. Privacy-sensitive information is data ally aim to protect user privacy (e.g., the input are GPS trace logs),
+that can be traced back to a specific user and his/her behavior which is generally relevant, but orthogonal to our need.
+and location. This includes information about exact timing, IP ad- Luckily, with the growing need to share data and code for redresses, protocol headers field values (e.g., HTTP URLs and header producibility in ML/DL, a series of work [40, 37, 67, 68] started to
+options such as User-Agent) and packet-payload (e.g., the body of tackle general mechanisms for altering the data with the goal of
+HTTP GET and POST messages). Non-private information instead privacy protection and resilience to de-identification, i.e. preventcomprises other data such as protocol headers field values (TCP ing an attacker from identifying matching pairs between raw and
+flags and options, IP message size, IP header length) and relative encoded samples. These work have generally been applied on image
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 21
+datasets aiming to limit the distortion of the shared dataset [40], very popular patterns. Thus, an attacker can easily guess the salt
+possibly hiding private data using noise from very large available 𝑠 by brute force, by considering only the most common packet
+image datasets [37] or through learned transformation [67, 68]. sizes. This would not be possible in case packet sizes were equally
+Yet among the above works, only [68] attempts at estimating the distributed, but such condition is unrealistic from data collected
+amount of guesswork that an attacker should spend to succeed a from real networks. For the same reason, it is unclear if this skew
+re-identification attack — in our case, a successful re-identification can negatively impact the security of Syfer [68], which assumes
+attack allows to uncover the true application labels of the dataset, balanced input distribution. Clearly, the adoption of multiple salts
+hence breaking business privacy. More worrisome, [68] also shows (e.g., per application, or per position in the time-series) can increase
+previous work to be [40, 37] easily breakable. security, with the downside of more severe modification to the
+ Moreover, we observe that these techniques are very recent and, original data patterns and distribution.
+in some cases, not even peer-reviewed yet: thus, the downside of
+ 3.3.2 Sequence-level techniques. Consider now a bijective permuusing any of these methods is that security flaws may just not have
+ tation of the original time series 𝑥 as:
+been uncovered yet. To make a couple of examples, data smashing
+layers of Split Learning [60] (proposed in 2018, not peer-reviewed 𝑦 = 𝑝𝑒𝑟𝑚(𝑥) (2)
+but quite popular) were demonstrated to not be secure [49] (in 2021,
+ which alters time series elements order. Moreover, we define such
+published at ACM CCS but not yet popular at all). Similarly, Neutransformation to be “static”, i.e., the same reordering is applied
+raCrypt [67] claims to be secure (in 2021, not yet peer reviewed),
+ to all time series in the dataset. Whereas at first sight, selecting
+while other research claims the opposite [25] (in 2021, not yet peer
+ one out of the 𝑛! permutation of a 𝑛-component long sequence
+reviewed). Finally, even the most promising method (Syfer [68]
+ would protect the business sensitive data, the expected skew in the
+that attempts at directly estimating the level of security) are based
+ application popularity will again defeat the security of the approach.
+on extremely simplifying assumptions (e.g., uniform data distribu-
+ Indeed, permutation of the sequence does not alter the sequence
+tion [68], while our dataset exhibit significant skew) – the actual
+ unicity, so that the most frequent sequence is still easily identifiable.
+level of privacy protection of these general mechanisms remains
+ In this case, with a relatively low cost, an attacker could gather
+unclear at this stage.
+ by his/her own means (e.g., with active experiments) new sample
+3.3 Methodology time series 𝑥 of the most popular applications (according to Cisco
+ VNI, Sandvine, etc.) and next attempt at reverse engineering the
+As per the above discussion, it appears that general and provably permutation.1 As in the previous case, this can be countered, e.g.,
+secure methodologies are unfortunately not readily available. As by using several permutations (e.g., per group of applications, or
+security is essentially a risk-vs-cost tradeoff, we ultimately settle on per individual application, etc.), which would further break the
+a practical approach where we estimate the cost to reverse engineer temporal correlation in the sequence, and reduce the usefulness of
+the released dataset exceeds the cost of performing a data collection the dataset for research purposes. As in the previous case, the impact
+ex novo. In fact, if the data collection cost (i.e., engineering testbeds of the imbalance in the application-popularity might negatively
+such as those listed in Table 1 as the community has done in the affect the strength of security provided by approaches such as [68].
+last decades) is smaller than the cost of reverse engineering, then
+there would be no business incentive in the latter. Reverse engi- 3.3.3 Combined Component and Sequence level. Clearly, combinneering would still remain an intellectual exercise but we forbid it ing permutation and hashing makes reverse engineering harder
+in AppClassNet terms of use (Sec.5). to the point where it is may no longer be cost-effective (as the
+ We argue that a good compromise is the joint use of (𝑖) tech- reverse engineering cost grows above the data collection cost), thus
+niques that alter the amplitude of individual time series elements, rendering it a mere exercise intellectual exercise (that we prohibit
+i.e., the size 𝑥𝑖 of the 𝑖-th packet as in 𝑦 = ℎ𝑎𝑠ℎ(𝑥𝑖 ) combined in the terms of use described in Sec.5).
+with (𝑖𝑖) techniques that shuffle the whole sequence, e.g., by swap- Trading off between scrambling the data to the point of being
+ping 𝑖-th and 𝑗-th elements. We empirically show that neither of useless and the risk of sensitive information leak, we settle to:
+the two techniques is sufficiently strong to avoid leakage of sensi- ℎ𝑎𝑠ℎ 64 (𝑥 𝑗 + 𝑠𝑖 ) − 263
+tive information if used in isolation, while the combination of the 𝑦𝑖 = (3)
+two achieves the desired effect without completely destroying the 264
+dataset usability. where the (𝑖, 𝑗) pair represents a generic pair of columns which
+ are swapped once for the whole dataset (e.g., so that the first three
+3.3.1 Component-level techniques. Consider the homomorphic en- 0-payload packets of a TCP application are not expected to be SYN,
+cryption function: SYN-ACK, ACK). Additionally, a set of arbitrary parameters 𝑠𝑖 is
+ 𝑦 = ℎ𝑎𝑠ℎ(𝑥 + 𝑠) (1) used to salt the 64-bit wide hash function ℎ𝑎𝑠ℎ 64 (·) for hashing
+where ℎ𝑎𝑠ℎ(·) is a cryptographic hash function, 𝑥 is a time series the 𝑖-th samples. Thus packets with the same sizes are hashed
+element and and 𝑠 an arbitrary salt. Although the cryptographic to different values depending on their permuted positions in the
+function cannot be inverted (unless it is compromised) it is not sequence. Finally, the output is normalized in [-1,1] for convenience.
+stronger than a mono-alphabetic substitution cipher. Indeed, our
+ 1 Assuming that the packet size sequence is exactly the same, i.e., packet sizes do not
+input time series are unbalanced due to an expected skew in the
+ differ even a single byte, which is unlikely (but not impossible) for some time series:
+packet size distribution – by leaving TCP ACK packets in the time in case attackers do not get the exact same sequence of packet sizes, a 1-bit input
+series or simply checking full-payload packets one can identify difference flips on average 1/2 of the output bits due to hashing.
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 22
+ Table 2: Commercial-grade dataset description Private Public
+ 1500 0.50
+ 1000
+ Property Popular Unpopular Public Private 0.25
+ Slice
+
+ Nickname top-200 next-300 pub-500 all-3k 500
+ Public release ✓ ✓ ✓ ✗ 0 0.00
+ App (#) 200 300 500 3,073 500
+ App (%) 6.5% 9.8% 16.3% 100.0% 0.25
+ Labels
+
+ Flow/app (max) 1,000,864 3,050 1,000,864 1,000,864 1000
+ Flow/app (avg) 48,299 1,071 19,963 3,272
+ 1500 0.50
+ Flow/app (min) 3,080 382 382 1
+ Flows (#) 9.7 M 0.3 M 10.0 M 10.1 M
+ Volume
+
+ Flows (%) 95.7% 3.2% 98.9% 100.0%
+ Bytes (#) 10.0 TB 0.3 TB 10.4 TB 10.4 TB Figure 1: Violin plot of the first signature component in the
+ Bytes (%) 96.4% 2.8% 99.2% 100.0%
+ Private (left: packet size) vs Public datasets (right: permuted,
+ salted and hashed value).
+ The use of multiple salts makes reverse engineering cost higher.
+Indeed, while in principle for SYN and SYN-ACK packets it still
+possible to rely on the popularity skew to guess their likely positions
+in the permuted sequence, and next brute-force the corresponding packets of a flow are commonly dominated by small packet sizes.
+salt 𝑠𝑖 , however guessing a single 𝑠𝑖 is not informative to learn 𝑠 𝑗 for For instance, in TCP traffic, those are 0-payload SYN packets due
+the other sequence positions. As such, even finding the top-most to TCP three-way handshakes, where variability is also due to the
+popular sequence is more complex, which we estimate to be good presence/absence of IP and TCP options, as well as the presence of
+enough from our practical purpose. UDP traffic in the traffic mixture. In the public dataset (Fig. 1 right
+ chart), the first component has been chosen by permutation (so that
+3.4 Private vs Public dataset characteristics it can be any of the 20 elements of the time series) and additionally has been transformed via homomorphic encryption: while the
+3.4.1 At a glance. As mentioned before, the original dataset corre- normalized packet size distribution still exhibits clear modes, any
+sponds to about 10 TB of per-flow logs enriched with labels obtained domain expertise in this case is meaningless — there is no way to
+from a commercial and private DPI tool. Such data comprises both tell whether the modes tie to full-payload segments, 0-payload ac-
+TCP and UDP traffic, and for each flow a time series is collected knowledgements, or other dynamics. Otherwise stated, networking
+with first 20 packets size and direction (for TCP, ACK packets are domain knowledge is no longer relevant for AppClassNet.
+preserved). In other words, the dataset has a 20 (features) + 1 (label) Additionally, permutations may affect other typical ablation
+tabular schema (i.e., direction is encoded as sign for packet sizes). studies, such as the sensitivity of classification performance to
+ Table 2 breakdowns the public-vs-private datasets composition. time series length as investigated by many works in the literature.
+While the private dataset comprises 3,073 applications, the public However, due to the permutation, the first 𝑘 components of the
+AppClassNet includes only the top-500 (16.3% of all labels) which time series no longer correspond to the first 𝑘 packets of a flow, so
+account for 98.9% of flows and 99.2% of bytes. Out of the public extrapolate networking-domain conclusions should be avoided (e.g.,
+dataset, we further identify two subsets: the top-200 most popu- “fewer packets suffice for successful classification”). For instance,
+lar applications correspond to 95.7% (96.4%) of flows (bytes) with mutual information between the first component and the class label
+48,299 samples/app on average (well suited for classic supervised is higher in the public dataset, since the first element of the time
+training), complemented by the set of next-300 (and thus less) pop- series is not (confidently) a TCP SYN anymore.
+ular application, with 1,071 samples/app on average (well fit for
+zero-day traffic classification, or few shot learning).
+ Notice the high class imbalance in both top-200 and next-300 4 BASELINE
+dataset slices: the top-1 application comprises over 1 M samples, In this section we verify that, despite AppClassNet no longer has
+the 200-th most popular application only comprises 3,080 samples business-relevance (as it is not a real dataset due to the transforma-
+(about 325× time less) and the 500-th only 382 (the least numerous tion), it is still meaningful from an academic research viewpoint (as
+class in AppClassNet). This skew is rather typical in network traffic a relevant dataset of benchmarking).
+but is significantly higher than in image datasets. For instance, the We do so by studying the performance (Sec. 4.2) across different
+nearly 1.5M images in ImageNet [53] are divided into 1,000 classes, state of the art ML/DL models (Sec. 4.1). However, the goal of this
+each having between 668–3,047 training samples, i.e., a modest 4.5× editorial note is not to perform a fully fledged study (e.g., as in [14]),
+difference between the most and least popular classes. but rather to contrast the baseline performance obtained from both
+ public and private version of the dataset.
+3.4.2 Impact of transformation. The described transformation alters some of the properties of the dataset which we briefly illustrate
+here and that we discuss more broadly in Sec. 5. 4.1 Baseline models
+ Fig. 1 illustrates the effect of hashing considering the first el- We adopt both traditional ML and DL state of the art methods as
+ement of the time series (the effect is qualitatively the same on baselines. First, we decided to evaluate the prediction performance
+other time series elements). Domain knowledge states that the first of two traditional tree-based models with different complexities: a
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 23
+ Table 3: Performance of several ML/DL baselines on the top-200 slice of the public AppClassNet vs private datasets
+
+ Decision Tree† Random Forest† 1d-CNN‡ ResNet‡
+ Dataset Rank Acc Depth Rank Acc. Depth Rank Acc. Params Rank Acc. Params
+ Private 2 93.5% 71 1 94.7% 65 4 84.7% 275k 3 90.8% 318k
+ Permuted 2 93.5% 71 1 94.7% 65 4 81.9% 275k 3 88.8% 318k
+ Public (AppClassNet) 2 86.9% 78 1 88.3% 88 4 72.1% 275k 3 80.3% 318k
+ † ML: default scikit-learn configuration, random_state=0
+ ‡ DL: epochs=1000, batch_size=1024, learning_rate=0.01
+
+single CART [23] decision tree and an ensemble of trees via a Ran- models. Clearly, one can adjust both architecture parametrizations
+dom Forest [22]. Then, we integrate in our benchmark some com- and obtain different results, as we show in [70].
+monly adopted state of the art DL methods: a classic 1d-CNN [33]
+ Rank consistency. From a higher viewpoint, the rank of the conand ResNet [36].
+ sidered models is consistent across the three dataset variations.
+ Specifically, we used Scikit-Learn [50] for traditional ML base-
+ Albeit the quantitative results provide a conservative estimate of
+lines (DecisionTreeClassifier, RandomForestClassifier) with their
+ performance in real settings (by about 6-10%), the qualitative comdefault parameters and the random state set to 0. For DL baselines,
+ parison retains full informative value — in our option, this strongly
+we implemented the 1-d CNN (3 convolutional ReLU layers) and
+ indicates that AppClassNet is suitable for research purposes.
+ResNet (2 residual blocks) in PyTorch and trained models for 1,000
+epochs, with batch size of 1,024 and a 0.01 learning rate. To ease Challenging dataset. Finally, the dataset is interesting as it repthe bootstrapping cost of using AppClassNet, we also provide the resents an instance where classic tree-based ensembles perform
+code for both to import the data and to replicate results [12]. better than DL on tabular data [55]. Clearly, the Table 3 has been
+ obtained for specific architectures and hyper-parametrizations, and
+4.2 Baseline performance results are meant as a qualitative reference baseline in spirit with
+We contrast baselines performance of ML and DL models in Table 3. the Ockham razor principle. Thus, we do not rule out DL approaches
+For each model we report the raw classification accuracy for top- completely, e.g., as DL gradient backpropagation has a significant
+200 and the model accuracy rank (the lower, the better) on the test competitive advantage for zero-day application detection[70]. Moreset. Without loss of generality, we release AppClassNet structured over, Random Forest models contain 30M leaves with a slim imwith separate train/validation/test splits to simplify reproducibility provement (<1%) compared to a simpler decision tree (286k–552k
+(although the use of alternative splits for 𝑘-fold cross-validation is leaves). Hence, one cannot conclude that Random Forest models
+authorized and rather recommended). The dataset has been normal- obtained with default parameters are a suitable solution to the
+ized as a preprocessing step using Scikit-Learn [50] (MinMaxScaler). problem (as it is, quite frankly, an overkill). Rather, the academic
+Additionally, the depth (average depth) of the decision tree (ran- community should be aware that the quest for 1% accuracy imdom forest) and the total number of trainable parameters for DL provement comes with a model complexity cost, which should not
+approaches are reported as proxy of models complexity. be neglected.
+ The effect of permutations. We compare the performance across Summary. The anonymization applied to our private dataset repthree variations: the private dataset, an intermediate step where resents a good compromise as ML/DL models suffer only a modest
+only permutation is applied, and the public AppClassNet where accuracy loss with respect to the private dataset and qualitative
+both permutation and component hashing are applied. The inter- results show consistent ranking across models – compared to commediate step is added as a litmus test — we expect permutations monly adopted datasets in literature, AppClassNet is a “realistic”
+to have little impact on tree-based ML, where the order of the fea- and conservative benchmark aiming to empower researchers to
+tures is not important; we conversely expect permutation to have address challenging and larger scale product-level problems [70].
+a larger impact on the DL models as they break the correlation in
+the sequences, hence making it harder for convolutional filters to 5 DISCUSSION
+extract relevant patterns. This is indeed what can be observed in While we hope that AppClassNet becomes one of the standard
+Table 3: performance of tree-based approaches remain identical benchmarks for traffic classification problems, we need to clarify
+between private and permuted, whereas DL models loose about its allowed and prohibited usages (Sec.5.1), as well as its limitations
+2-3% accuracy. as result of the performed anonymization (Sec.5.2).
+ The effect of hashing. Intuitively, hash functions spread component far apart (1/2 of bits change in the output for 1-bit change in 5.1 Allowed and prohibited usage
+the input) resulting in additional branching in trees that inflates Openly sharing dataset has associated cost (e.g., the anonymization
+their depth by 1.09× (average random forest depth by 1.35×) and re- process). Additionally, it exposes the data provider to additional
+duces accuracy by 6-7%. DL-models size is instead fixed and results risks (e.g., reverse engineering) and consequent potential harm (e.g.,
+into a slightly higher accuracy loss of 9% compared to tree-based leak of business sensitive information) [16]. As such, we clearly state
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 24
+the allowed and prohibited usages of AppClassNet. We understand 5.2 Limits and alternatives
+that, while doing so, we are not fully sheltered from malicious third As earlier introduced, AppClassNet does not aim to be the one and
+parties abuse. At the same time, we appeal researchers seeking to only traffic classification benchmark. As such we list its limits and
+use AppClassNet to follow ACM Code of Ethics and Professional alternatives for the interested readers.
+Conduct [34], which clearly puts avoid harm among its first and
+foremost articles (Art 1.2), and to adhere to the following guidelines. 5.2.1 Limits. The limited amount of information in AppClassNet
+ constrains the possible classification operations. For instance, owing
+ to the lack of flow-level identifiers, it is not possible to perform ag-
+5.1.1 Allowed usage. Explicitly allowed usage of the open-source
+ gregated endpoint classification, or correlate multiple classifications
+dataset is limited to Academic usage, and in particular limited to
+ across multiple flows of the same endpoint [59]. Since the dataset
+algorithms for inference and training related to the use case of
+ considers only the first 20 packet sizes and directions for a flow,
+traffic classification, as described in this paper. While it is out of
+ it is unsuitable for multi-modal classification [15] or continuous
+the scope of this section to provide a fully exhaustive list of legally
+ classification across multiple windows of the same (sub)flow [46].
+binding allowed usages, we make concrete examples for the sake
+ Moreover, several studies have analyzed the classification perof clarity. Allowed usage for inference-related ML/DL problems
+ formance as a function of the sequence length, which is altered
+include for instance: application identification (supervised classifiby permutation in AppClassNet, making such analysis worthless.
+cation on fine-grained labels[70]), zero-day application detection
+ Similarly, while approximate-key caching [31] would work given
+(e.g., open set recognition[70]), inference speedup (by hardware
+ that the natural skew of the traffic is preserved, approximation
+acceleration[32], approximate caching[31], quantization). Allowed
+ functions such as prefix(·) that work best on the private dataset
+usage for training-related ML/DL algorithms include for instance:
+ would not be suitable on the public dataset due to permutation.
+distributed training by sharing models instead of data (federated
+ The dataset does not contain flow arrival rate so it cannot be
+learning[38, 69]), training from few samples (few-shot learning[64]),
+ used as a realistic workload for traffic classification engines. Howpre-processing techniques to simplify training (transfer or selfever, it can still be used as a controlled workload [32] for stress
+supervised learning[26, 58]), techniques to add/remove classes
+ testing the target classification system. As such, AppClassNet is
+to/from existing models (incremental/decremental learning[21, 19]),
+ more geared for contribution on ML/DL techniques (e.g., comparing
+techniques to automatically design new classification engines (neudifferent training algorithms), than for novel system-level aspects
+ral architecture search[30]). While it is outside of the scope of this
+ (e.g., feature engineering).
+paper to also provide a research agenda for open problems related
+to traffic classification, we note that combinations of above research 5.2.2 Alternatives. We observe that while collecting large volumes
+tasks is also possible and novel. AppClassNet is a good playground of real labeled network data is a daunting effort for a single academic
+for the design, e.g., via autoML, of accurate models that are also com- partner, a coordinated pooling effort across multiple research groups
+putationally simple from an inference perspective, which has only can be an effective strategy to achieve this goal – the list of datasets
+seldomly been taken into account. We finally suggest to researchers reported in Table 1 and the additional datasets reviewed in [59, 13]
+working on unrelated traffic classification use cases early listed, or indeed constitutes a good example and starting point.
+whenever in doubt about the legitimacy of using AppClassNet in Clearly, due to the anonymization process, the current dataset
+their work, to contact us [34]. cannot be directly merged with other datasets (as learning on this
+ dataset is non directly informative for other real applications). At
+5.1.2 Prohibited usage. We explicitly prohibit usages of the dataset the same time, used alongside alternatives such as those expressed
+for commercial use. We additionally prohibit any reverse engineer- above, AppClassNet can hopefully help the scientific community to
+ing attempts, in line with deontological considerations concerning focus and reinforce the soundness of scientific results. We believe
+network measurements [16]. In reason of the anonymization tech- that, given its characteristics (i.e., scale of samples and classes,
+niques employed, the current dataset has direct little commercial conservative performance), AppClassNet provides a challenging
+value. As such, we mostly discuss reverse engineering practices. In- and instrumental research playground as it helps ensuring that
+deed, while academic work performing reverse engineering would results are not biased by small datasets — this avoids excessively
+not constitute a violation of commercial usage per se, it could sig- focusing on “easy problems” where many solutions can achieve the
+nificantly lower the barrier for third parties to use the reverse 90% accuracy “holy grail”.
+engineered dataset for commercial use. As such, de-anonymization
+techniques that would try to expose users, classes, or application 6 CONCLUSION
+labels, signatures and any other non directly available information This paper describes AppClassNet, a dataset obtained from a priof the private dataset, from any technique applied on data avail- vate commercial-grade dataset comprising thousands of application
+able in the public dataset, are explicitly prohibited. We understand labels. AppClassNet represents a substantial portion of the original
+that, once data is available publicly, this risk exists. However, we private dataset, opportunely altered to deprive it of user-private
+hope to make it clear that, shall AppClassNet be victim of a re- and business-sensitive information.
+verse engineering attempt (fruitful or not), this would significantly We openly release the dataset at [12], along with code for baseline
+threaten the ability for industrial players to release datasets such as techniques, and we hope that it can become instrumental for the
+AppClassNet in the future. We thus appeal once more to [34] and benchmarking of data-driven algorithms applied to networkingwe suggest to contact us for a usage that is not explicitly authorized. related classification problems.
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 25
+REFERENCES [34] DW Gotterbarn, Bo Brinkman, Catherine Flick, Michael S Kirkpatrick, Keith
+ [1] https://www.image-net.org/download.php. Miller, Kate Vazansky, and Marty J Wolf. Acm code of ethics and professional
+ [2] https://commoncrawl.org/. conduct. 2018.
+ [3] https://recon.meddle.mobi/cross-market.html. [35] Francesco Gringoli, Luca Salgarelli, Maurizio Dusi, Niccolo Cascarano, Fulvio
+ [4] https://wand.net.nz/projects/details/libprotoident. Risso, and KC Claffy. GT: picking up the truth from the ground for internet traffic.
+ [5] https://sourceforge.net/projects/l7-filter/. ACM SIGCOMM Computer Communication Review, 39(5):12–18, 2009.
+ [6] https://github.com/ntop/nDPI. [36] K. He, X. Zhang, S. Ren, and J. Sun. Deep residual learning for image recognition.
+ [7] https://www.cisco.com/c/en/us/products/ios-nx-os-software/network-based- In IEEE Conference on Computer Vision and Pattern Recognition, 2016.
+ application-recognition-nbar/index.html. [37] Yangsibo Huang, Zhao Song, Kai Li, and Sanjeev Arora. InstaHide: Instance-hiding
+ [8] https://www.ipoque.com/products/dpi-engine-rs-pace-2-for-application- schemes for private distributed learning. In Proceedings of the 37th International
+ awareness. Conference on Machine Learning, volume 119, pages 4507–4518, Jul 2020.
+ [9] https://support.huawei.com/enterprise/de/doc/EDOC1000012889?section=j00c. [38] Jakub Konečnỳ, H Brendan McMahan, Felix X Yu, Peter Richtárik,
+[10] https://en.wikipedia.org/wiki/General_Data_Protection_Regulation. Ananda Theertha Suresh, and Dave Bacon. Federated learning: Strate-
+[11] https://en.wikipedia.org/wiki/Personal_Information_Protection_Law_of_the_ gies for improving communication efficiency. In NeurIPS Workshop on Private
+ People’s_Republic_of_China. Multi-Party Machine Learning, 2016.
+[12] https://figshare.com/articles/dataset/AppClassNet_-_A_commercial-grade_ [39] Martina Lindorfer, Matthias Neugschwandtner, Lukas Weichselbaum, Yanick
+ dataset_for_application_identification_research/20375580. Fratantonio, Victor Van Der Veen, and Christian Platzer. Andrubis–1,000,000
+[13] Giuseppe Aceto, Domenico Ciuonzo, Antonio Montieri, Valerio Persico, and apps later: A view on current android malware behaviors. In IEEE International
+ Antonio Pescapé. Mirage: Mobile-app traffic capture and ground-truth creation. Workshop on Building Analysis Datasets and Gathering Experience Returns for
+ In International Conference on Computing, Communications and Security (ICCCS). Security (BADGERS), pages 3–17, 2014.
+ IEEE, 2019. [40] Bo Liu, Ming Ding, Hanyu Xue, Tianqing Zhu, Dayong Ye, Li Song, and Wanlei
+[14] Giuseppe Aceto, Domenico Ciuonzo, Antonio Montieri, and Antonio Pescapé. Zhou. Dp-image: Differential privacy for image data in feature space, 2021.
+ Mobile encrypted traffic classification using deep learning. In Proc. IEEE TMA, [41] Manuel Lopez-Martin, Belen Carro, Antonio Sanchez-Esguevillas, and Jaime
+ 2018. Lloret. Network traffic classifier with convolutional and recurrent neural net-
+[15] Giuseppe Aceto, Domenico Ciuonzo, Antonio Montieri, and Antonio Pescapè. works for internet of things. IEEE Access, 5:18042–18050, 2017.
+ Mimetic: Mobile encrypted traffic classification using multimodal deep learning. [42] Mohammad Lotfollahi, Mahdi Jafari Siavoshani, Ramin Shirali Hossein Zade, and
+ Computer networks, 165:106944, 2019. Mohammdsadegh Saberian. Deep packet: A novel approach for encrypted traffic
+[16] Mark Allman and Vern Paxson. Issues and etiquette concerning use of shared classification using deep learning. Soft Computing, 24(3), 2020.
+ measurement data. In ACM SIGCOMM Internet Measurement Conference (IMC), [43] Meisam Mohammady, Lingyu Wang, Yuan Hong, Habib Louafi, Makan Pourzandi,
+ pages 135–140, 2007. and Mourad Debbabi. Preserving both privacy and utility in network trace
+[17] Laurent Bernaille, Renata Teixeira, Ismael Akodkenou, Augustin Soule, and Kave anonymization. In ACM Conference on Computer and Communications Security
+ Salamatian. Traffic classification on the fly. ACM SIGCOMM Computer Communi- (CCS), page 459–474, 2018.
+ cation Review, 36(2):23–26, 2006. [44] Andrew W Moore and Konstantina Papagiannaki. Toward the accurate identifi-
+[18] Dario Bonfiglio, Marco Mellia, Michela Meo, Dario Rossi, and Paolo Tofanelli. Re- cation of network applications. In Proc. PAM, 2005.
+ vealing skype traffic: when randomness plays with you. In Proc. ACM SIGCOMM, [45] Andrew W Moore and Denis Zuev. Internet traffic classification using bayesian
+ 2007. analysis techniques. In Proc. ACM SIGMETRICS, 2005.
+[19] Lucas Bourtoule, Varun Chandrasekaran, Christopher A Choquette-Choo, Hen- [46] Thuy TT Nguyen and Grenville Armitage. Training on multiple sub-flows to
+ grui Jia, Adelin Travers, Baiwu Zhang, David Lie, and Nicolas Papernot. Machine optimise the use of machine learning classifiers in real-world ip networks. In
+ unlearning. arXiv preprint arXiv:1912.03817, 2019. IEEE LCN, pages 369–376, 2006.
+[20] Raouf Boutaba, Mohammad A Salahuddin, Noura Limam, Sara Ayoubi, Nashid [47] Thuy TT Nguyen and Grenville J Armitage. A survey of techniques for internet
+ Shahriar, Felipe Estrada-Solano, and Oscar M Caicedo. A comprehensive sur- traffic classification using machine learning. IEEE Communications Surveys and
+ vey on machine learning for networking: evolution, applications and research Tutorials, 10(1-4):56–76, 2008.
+ opportunities. Journal of Internet Services and Applications, 9(1):16, 2018. [48] F. Pacheco, E. Exposito, M. Gineste, C. Baudoin, and J. Aguilar. Towards the
+[21] Giampaolo Bovenzi, Lixuan Yang, Alessandro Finamore, Giuseppe Aceto, deployment of machine learning solutions in network traffic classification: A
+ Domenico Ciuonzo, Antonio Pescape, and Dario Rossi. A first look at class systematic survey. IEEE Communications Surveys and Tutorials, pages 1–1, 2018.
+ incremental learning in deep learning mobile traffic. In IFIP Traffic Monitoring [49] Dario Pasquini, Giuseppe Ateniese, and Massimo Bernaschi. Unleashing the
+ and Analysis (TMA), 2021. tiger: Inference attacks on split learning. In ACM Computer and Communications
+[22] L. Breiman. Random forests. Machine Learning, 45, 2001. Security (CCS), 2021.
+[23] L. Breiman, J. Friedman, C.J. Stone, and R.A. Olshen. Classification and Regression [50] F. Pedregosa, G. Varoquaux, A. Gramfort, V. Michel, B. Thirion, O. Grisel, M. Blon-
+ Trees. Taylor & Francis, 1984. del, P. Prettenhofer, R. Weiss, V. Dubourg, J. Vanderplas, A. Passos, D. Cournapeau,
+[24] Tomasz Bujlow, Valentin Carela-Espanol, and Pere Barlet-Ros. Independent com- M. Brucher, M. Perrot, and E. Duchesnay. Scikit-learn: Machine learning in Python.
+ parison of popular dpi tools for traffic classification. Computer Networks, 76:75–89, Journal of Machine Learning Research, 12:2825–2830, 2011.
+ 2015. [51] Jingjing Ren, Martina Lindorfer, Daniel J Dubois, Ashwin Rao, David Choffnes,
+[25] Nicholas Carlini, Sanjam Garg, Somesh Jha, Saeed Mahloujifar, Mohammad and Narseo Vallina-Rodriguez. A longitudinal study of PII leaks across android
+ Mahmoody, and Florian Tramèr. Neuracrypt is not private. CoRR, abs/2108.07256, app versions. In Network and Distributed System Security Symposium (NDSS),
+ 2021. volume 10, 2018.
+[26] Ting Chen, Simon Kornblith, Mohammad Norouzi, and Geoffrey Hinton. A simple [52] Markus Ring, Sarah Wunderlich, Deniz Scheuring, Dieter Landes, and Andreas
+ framework for contrastive learning of visual representations. In International Hotho. A survey of network-based intrusion detection data sets. Springer Comconference on machine learning, pages 1597–1607. PMLR, 2020. puters and Security, 86:147–167, 2019.
+[27] Zhitang Chen, Ke He, Jian Li, and Yanhui Geng. Seq2img: A sequence-to-image [53] Olga Russakovsky, Jia Deng, Hao Su, Jonathan Krause, Sanjeev Satheesh, Sean
+ based approach towards ip traffic classification using convolutional neural net- Ma, Zhiheng Huang, Andrej Karpathy, Aditya Khosla, Michael Bernstein, Alexanworks. In Proc. IEEE BigData, pages 1271–1276, 2017. der C. Berg, and Li Fei-Fei. ImageNet Large Scale Visual Recognition Challenge.
+[28] Manuel Crotti, Maurizio Dusi, Francesco Gringoli, and Luca Salgarelli. Traffic International Journal of Computer Vision (IJCV), 115(3):211–252, 2015.
+ classification through simple statistical fingerprinting. ACM SIGCOMM Computer [54] Tal Shapira and Yuval Shavitt. Flowpic: Encrypted internet traffic classification is
+ Communication Review, 37(1):5–16, 2007. as easy as image recognition. In IEEE INFOCOM Workshops, 2019.
+[29] P.M. Santiago del Rio, D. Rossi, F. Gringoli, L. Nava, L. Salgarelli, and J. Aracil. [55] Ravid Shwartz-Ziv and Amitai Armon. Tabular data: Deep learning is not all you
+ Wire-speed statistical classification of network traffic on commodity hardware. need. CoRR, abs/2106.03253, 2021.
+ In Proc. ACM IMC, 2012. [56] Nazanin Takbiri, Amir Houmansadr, Dennis L Goeckel, and Hossein Pishro-
+[30] Thomas Elsken, Jan Hendrik Metzen, and Frank Hutter. Neural architecture Nik. Matching anonymized and obfuscated time series to users’ profiles. IEEE
+ search: A survey. The Journal of Machine Learning Research, 20(1):1997–2017, Transactions on Information Theory, 65(2):724–741, 2018.
+ 2019. [57] Vincent F Taylor, Riccardo Spolaor, Mauro Conti, and Ivan Martinovic. App-
+[31] Alessandro Finamore, James Roberts, Massimo Gallo, and Dario Rossi. Accelerat- scanner: Automatic fingerprinting of smartphone apps from encrypted network
+ ing deep learning classification with error-controlled approximate-key caching. traffic. In Proc. IEEE EuroS&P, 2016.
+ IEEE INFOCOM, 2022. [58] Md Shamim Towhid and Nashid Shahriar. Encrypted network traffic classification
+[32] Massimo Gallo, Alessandro Finamore, Gwendal Simon, and Dario Rossi. Fenxi: using self-supervised learning. In IEEE NetSoft, 2022.
+ Deep-learning traffic analytics at the edge. ACM/IEEE Symposium on Edge Com- [59] Thijs van Ede, Riccardo Bortolameotti, Andrea Continella, Jingjing Ren, Daniel J
+ puting (SEC), 2021. Dubois, Martina Lindorfer, David Choffnes, Maarten van Steen, and Andreas Peter.
+[33] I. Goodfellow, Y. Bengio, and A. Courville. Deep Learning. MIT Press, 2016. Flowprint: Semi-supervised mobile-app fingerprinting on encrypted network
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 26
+ traffic. In Network and Distributed System Security Symposium (NDSS), volume 27, [65] Zhanyi Wang. The applications of deep learning on traffic identification. BlackHat
+ 2020. USA, 2015.
+[60] Praneeth Vepakomma, Otkrist Gupta, Tristan Swedish, and Ramesh Raskar. Split [66] Jun Xu, Jinliang Fan, Mostafa H Ammar, and Sue B Moon. Prefix-preserving
+ learning for health: Distributed deep learning without sharing raw patient data. IP address anonymization: Measurement-based security evaluation and a new
+ CoRR, abs/1812.00564, 2018. cryptography-based scheme. In IEEE International Conference on Network Protocols
+[61] Ly Vu, Cong Thanh Bui, and Quang Uy Nguyen. A deep learning based method (ICNP), pages 280–289. IEEE, 2002.
+ for handling imbalanced problem in network traffic classification. In ACM Inter- [67] Adam Yala, Homa Esfahanizadeh, Rafael G. L. D’ Oliveira, Ken R. Duffy, Manya
+ national Symposium on Information and Communication Technology, 2017. Ghobadi, Tommi S. Jaakkola, Vinod Vaikuntanathan, Regina Barzilay, and Muriel
+[62] W. Wang, M. Zhu, J. Wang, X. Zeng, and Z. Yang. End-to-end encrypted traffic Medard. Neuracrypt: Hiding private health data via random neural networks for
+ classification with one-dimensional convolution neural networks. In Proc. IEEE public training, 2021.
+ ISI, 2017. [68] Adam Yala, Victor Quach, Homa Esfahanizadeh, Rafael G. L. D’Oliveira, Ken R.
+[63] Wei Wang, Ming Zhu, Xuewen Zeng, Xiaozhou Ye, and Yiqiang Sheng. Mal- Duffy, Muriel Médard, Tommi S. Jaakkola, and Regina Barzilay. Syfer: Neural
+ ware traffic classification using convolutional neural network for representation obfuscation for private data release, 2022.
+ learning. In Proc. IEEE ICOIN, 2017. [69] Lixuan Yang, Cedric Beliard, and Dario Rossi. Heterogeneous data-aware feder-
+[64] Yaqing Wang, Quanming Yao, James T Kwok, and Lionel M Ni. Generalizing ated learning. In IJCAI Workshop on Federated Learning, 2020.
+ from a few examples: A survey on few-shot learning. ACM Computing Surveys, [70] Lixuan Yang, Alessandro Finamore, Jun Feng, and Dario Rossi. Deep learning and
+ 53(3):1–34, 2020. zero-day traffic classification: Lessons learned from a commercial-grade dataset.
+ IEEE Transactions on Network and Service Management, 18, 2021.
+
+ACM SIGCOMM Computer Communication Review Volume 52 Issue 2, July 2022
+
+ 27

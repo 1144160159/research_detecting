@@ -1,0 +1,927 @@
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025 2059
+
+ GSA-DT: A Malicious Traffic Detection Model
+ Based on Graph Self-Attention Network
+ and Decision Tree
+ Saihua Cai , Member, IEEE, Han Tang, Jinfu Chen , Member, IEEE, Tianxiang Lv,
+ Wenjun Zhao, and Chunlei Huang
+
+ Abstract—Malicious attack has shown a rapid growth in recent risks, it is crucial to promptly detect the malicious attacks.
+years, it is very important to accurately detect malicious traffic to Malicious attacks will generate malicious traffic, therefore,
+defend against malicious attacks. Compared with machine learn- accurately detecting malicious traffic can find hidden attack
+ing and deep learning technologies, graph convolutional neural
+network (GCN) achieves better detection results of malicious behaviors, which can defend against network intrusion [1].
+traffic due to additional consideration of the correlation between Previously, researchers mainly used statistics-based [2],
+network traffic features. However, existing GCN-based detection port-based [3], signature-based [4] and other methods to
+models suffer from fixed weight assignment, only focusing on detect malicious traffic. However, these methods show great
+local features, lack the ability to model graph structure and limitations in face of unknown types of malicious traffic.
+relationships as well as having gradient disappearance. To solve
+these problems, this paper proposes the GSA-DT model based Among them, statistics-based approaches have difficulty to
+on graph self-attention network and decision tree. GSA-DT first identify malicious traffic that does not fit a known model or
+preprocesses the original network traffic to obtain better traffic preset thresholds; Port-based approaches become ineffective
+features and labels, and then uses GCN to extract the topological due to the absence of fixed port numbers; Signature-based
+structure of network traffic as well as capture the correlation methods achieve low detection accuracy and robustness due
+relationships among traffic features, where the ReLU activation
+function is replaced by LeakyReLU to overcome the problems of to the use of techniques such as mutation, encryption and
+neuron “death” and gradient disappearance during the training obfuscation in malicious attacks.
+process; It also introduces the self-attention mechanism into In recent years, machine learning (e.g., support vector
+GCN to assign larger weights to the key features to reduce the machine [5], KNN [6], etc.) methods have been widely used
+interference of redundant features. Finally, GSA-DT uses decision in the field of malicious traffic detection, but the use of
+tree to perform the detection of malicious traffic. Experimental
+results on four network traffic datasets show that GSA-DT model machine learning models has the following limitations: (1)
+improves the detection accuracy over 1% on average than seven It is very difficult in effectively identifying the complex
+advanced malicious traffic detection models, and it also performs patterns and nonlinear relationships in network traffic [7];
+better in F1-measure, TPR, FPR as well as stability. (2) It relies on additional preprocessing to deal with the
+ Index Terms—Malicious traffic detection, graph self-attention problems included in complex network such as packet loss,
+network, decision tree, LeakyReLU, deep learning. retransmission and reordering [8]; (3) It has weak ability to
+ recognize unknown attack types in complex tasks, has poor
+ generalization ability and weak feature expression ability [9].
+ Compared with traditional machine learning methods, deep
+ I. I NTRODUCTION
+ learning has stronger ability to handle the complex network
+ N RECENT years, malicious attacks show a rapid growth
+I trend, leading to severe service disruptions, thereby impacting the daily life of people. To mitigate the escalating security
+ traffic, stronger end-to-end learning ability, stronger ability
+ to capture nonlinear relationships and can provide more
+ robust and reliable detection results, therefore, deep learning
+ Received 26 April 2024; revised 4 October 2024 and 16 December 2024; techniques have gained widespread attention in recent years.
+accepted 16 January 2025. Date of publication 12 February 2025; date However, traditional deep learning models (e.g., TCN, LSTM,
+of current version 22 April 2025. This work was partly supported by the
+National Natural Science Foundation of China (NSFC) (Grant nos. 62202206,
+ RNN, etc.) do not consider the correlation between the features
+U1836116, 62172194), the China Postdoctoral Science Foundation (Grant of network traffic in the model training process. In the network
+no. 2023T160275), the Natural Science Foundation of Jiangsu Province (Grant activities, the source IP and destination IP addresses as well
+no. BK20220515), and the Qinglan Project of Jiangsu Province. The associate
+editor coordinating the review of this article and approving it for publication
+ as the source port and destination port have tight correlations,
+was M. Sayıt. (Corresponding author: Jinfu Chen.) therefore, analyzing and modeling the correlation can improve
+ The authors are with the School of Computer Science the detection ability.
+and Communication Engineering, and the Jiangsu Provincial
+Key Laboratory of Industrial Cyberspace Security Technology, As a powerful deep representation learning method, GCN
+Jiangsu University, Zhenjiang 212013, China (e-mail: caisaih@ can learn node representation vectors that contain the
+ujs.edu.cn; 2222208016@stmail.ujs.edu.cn; jinfuchen@ujs.edu.cn; information about nodes’ own features and associations with
+2222008039@stmail.ujs.edu.cn; 2222208077@stmail.ujs.edu.cn;
+2232208014@stmail.ujs.edu.cn). other nodes [10]. GCN shows remarkable performance in
+ Digital Object Identifier 10.1109/TNSM.2025.3531885 network analysis through constructing network traffic topology
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+2060 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+graphs as well as performing message passing and node II. R ELATED W ORKS
+updating on the graphs to capture the complex correlations Malicious traffic detection is a technique to effectively
+among network traffic. For this reason, GCN models have distinguish the malicious traffic from normal traffic, thereby
+been introduced in recent years for malicious traffic detection. maintaining the security of cyberspace. Initially, scholars used
+However, existing GCN model [11] still has some shortcom- statistical-based [2], port-based [3], and signature-based [4]
+ings: (1) Assigning same weight to all features of network techniques to detect malicious traffic, but these traditional
+traffic, resulting in unable distinguish feature importance; detection methods are difficult to effectively deal with increas-
+(2) Only focusing on local features while ignoring global ingly sophisticated and stealthy network attacks, as well as
+contextual information, resulting in cannot adequately capture difficult to adapt to new and unknown malicious attacks. With
+the global dependencies of network traffic; (3) Lacking the the rapid development of artificial intelligence, machine learnability to model graph structure and relationships, resulting ing and deep learning techniques are widely used to effectively
+in cannot well capture the dynamic nature in graph structure detect malicious attacks (including denial-of-service (DoS)
+and complex relationships; (4) Having the problem of gradient attacks, malware infections, unauthorized access attempts, etc.)
+disappearance due to using ReLU activation function, resulting through learning their features.
+in have limitation in nonlinear representation capability as
+well as capture the complex graph structure. These limitations Machine learning-based methods construct the machine
+affect the detection accuracy of GCN model. learning models via learning the features of normal traffic and
+ In this paper, we propose a malicious traffic detection model malicious traffic. Subsequently, the trained machine learning
+called GSA-DT based on graph self-attention network and models are used to classify the collected network traffic,
+decision tree to solve these problems. The main contributions thereby effectively detecting malicious traffic and discovering
+can be summarized as follows: malicious attacks. Wang et al. [5] proposed a cloud-based
+ • We combine the GCN model with self-attention mechintrusion detection system called SCAEPSVM-IDS, but this
+ anism to achieve accurate detection of malicious traffic, algorithm lacks a detailed parameter optimization strategy.
+ this combination not only helps the detection model Machine learning-based methods usually require manually
+ better learn the relationship between the features through extracting the effective features from complex and variable
+ GCN, but also helps extract the important features network traffic; In addition, they cannot effectively extract the
+ through self-attention mechanism and assign larger relevant features, resulting in a serious impact on the detection
+ weights to them. In addition, we replace the ReLU accuracy.
+ activation function in the GCN model with nonlinear Unlike machine learning-based methods that require manactivation function LeakyReLU, which solves the gra- ual extracting the features, deep learning-based models have
+ dient disappearance and neuron “death” problems of been widely studied in recent years due to their ability to
+ ReLU through its non-zero slope, thereby improving automatically learn the features of network traffic and capture
+ the detection performance. the complex patterns and rules associated with malicious
+ • We leverage the interpretability of decision tree to behavior. For example, Haghnegahdar and Wang [12] proposed
+ improve the transparency of the model’s predictive rea- a model called WOA-ANN that uses artificial neural network
+ soning; In addition, we utilize the strong generalization to determine the optimal weights, it overcomes the drawcapability of decision tree to effectively handle the backs of tendency to fall into local minimal value, but this
+ nonlinear relationships among network traffic features, method suffers from high time complexity. Kan et al. [13]
+ thereby achieving the superior detection performance in proposed an adaptive particle swarm optimized convolutional
+ complex network traffic environment. neural network (APSO-CNN) for IoT intrusion detection,
+ • We introduce the Gini coefficient as a replacement for it used particle swarm algorithm to optimize the structural
+ entropy in the decision tree and use it as the feature parameters of a 1-D CNN by adaptive inertia weights, but
+ selection metric to measure the importance of features, its heuristic optimization algorithm had a long search time
+ thereby selecting the features much faster and further for offline models and redundant instances. Chiba et al. [14]
+ reducing the computation time; In addition, we also introduced a backpropagation neural network (BPNN)-based
+ replace the Focal loss function in the decision tree optimization method and constructed an effective network
+ with Cross-Entropy loss function to automatically pay intrusion detection system to effectively improve the detection
+ more attention on a small number of hard-to-distinguish accuracy, but these two methods can not effectively handle the
+ malicious traffic samples, thereby improving the detection temporal and sequential information. Chang and Branco [15]
+ performance. proposed two new graph neural network models called E-
+ The rest of this paper is organized as follows. Section II ResSAGE and E-ResGAT, which can significantly improve
+provides an overview of related works. Section III detailed the detection accuracy on minority classes of data samples
+describes the malicious traffic detection model called GSA- when dealing with class imbalance problem; However, these
+DT based on GCN and decision tree. Section IV gives two models require higher computational complexity and
+and analyzes the experimental results. Section V discusses training time. Huda et al. [16] introduced a fuzzy aggregation
+the potential threats that may affect the detection results. method using a modified density peak clustering algorithm
+Finally, the whole paper is summarized and the future research (MDPCA) and deep belief network (DBN), it could adapt
+directions are discussed in Section VI. to dynamic changes of new malware,but it had a large time
+CAI et al.: GSA-DT: A MALICIOUS TRAFFIC DETECTION MODEL 2061
+
+ TABLE I
+complexity. Chen et al. [17] proposed a bi-directional temporal C OMPARISON OF M ALICIOUS T RAFFIC D ETECTION M ETHODS
+convolutional network-based malicious traffic detection model
+called BiTCN, it addressed the limitations of existing models
+and obtained high detection accuracy and better stability,
+but the bidirectional operation increases the training time
+of the model, especially on large-scale datasets. Venturi et
+al. [18] proposed a network intrusion detection system called
+ARGANIDS based on adversarial regularized graph selfencoder, it uses a GNN to capture the topology and traffic
+features, and adopts the adversarial training to make the model
+more robust to noisy and sparse data, thereby further improving the detection efficiency on complex network attacks;
+However, ARGANIDS relies on constructing detailed graph
+structures of network topologies, which may not be suitable for
+network environments with fast changing dynamics and large
+traffic sizes. Lin et al. [19] proposed a new multi-modal deep
+learning framework, it used raw byte and length sequences
+as the inputs and used a self-attention mechanism to learn
+the deep relationships between network packets in a stream.
+However, traditional deep learning models do not consider the
+correlations between the features of network traffic as well as
+ignore the topological information and contextual relationships
+of network traffic, as well as cannot fully consider the temporal
+and dynamically changing characteristics of data, resulting in
+a limited ability to process sequential data.
+ To solve the problems of traditional deep learning-based Fig. 1. The framework of GSA-DT model.
+methods, scholars tried to introduce GCN models for malicious
+traffic detection. For example, Lan et al. [20] proposed a
+GraphSAGE-based model called E-minBatch GraphSAGE, it and decision tree from six aspects, including the general
+took the source ports of application layer and source IP introduction of GSA-DT model, the traffic preprocessing, the
+addresses as source nodes, as well as the target ports of construction of traffic topology relationships, the use of GCN
+application layer and target IP addresses as target nodes, model, the feature selection based on self-attention mechanism
+and the remaining traffic information as edge information to and the detection of malicious traffic based on decision tree.
+complete the construction of graph structure, but this model is
+limited in detecting industrial Internet traffic. Jiang et al. [21]
+designed a new trust assessment framework called GATrust A. General Introduction of GSA-DT Model
+based on the graph attention network, it assigned different The GSA-DT first combines the GCN and self-attention
+attention coefficients to multifaceted attributes in the online mechanism to learn the complex relationship and feature repsocial networks, thereby improving the prediction accuracy of resentation of network traffic, and then combines the decision
+social trust assessment, but its generality on graph structure tree for malicious traffic detection. As shown in Fig. 1, the
+data has not been tested. Zheng et al. [22] proposed an GSA-DT includes pre-processing phase, traffic topology relaencrypted malicious traffic detection method called GCN-ETA tionship construction phase, GCN model construction phase,
+based on graph convolutional neural network, it integrated self-attention mechanism-based feature selection phase and
+a new traffic representation and an association construction decision tree-based detection phase.
+scheme of network traffic; However, the flow direction of (1) In the pre-processing phase, the process of traffic
+network traffic and the weights of different association types analysis, traffic cleaning, information extraction and traffic
+were not considered; In addition, this model also did not labeling provide accurate training samples and labels for
+address the feature redundancy problem. malicious network traffic detection and analysis.
+ To solve these problems in existing GCN-based methods, (2) In the traffic topology relationship construction phase,
+this paper proposes the GSA-DT method based on graph self- the address information is used to construct the relationship
+attention network and decision tree to accurately detect malicious between traffic nodes and transform them into traffic adjacency
+traffic. A comparison of the proposed GSA-DT and some matrix and traffic diagonal matrix.
+reviewed malicious traffic detection methods is shown in Table I. (3) In the GCN construction phase, the topological structure
+ information of network traffic graph is extracted to capture the
+ feature relationships between network traffic; In addition, the
+ III. GSA-DT M ODEL LeakyReLU activation function is used to solve the gradient
+ In this section, we describe the malicious traffic detection disappearance problem and neuron “death” problem of ReLU
+model called GSA-DT based on graph self-attention network activation function.
+2062 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+ TABLE II
+ (4) In the self-attention mechanism-based feature selection A N E XAMPLE OF N ETWORK T RAFFIC
+phase, we assign different weights to the features with correlations, this process ignores the features that contribute less to
+the correlation information of nodes and gives large weight to
+the features with stronger importance.
+ (5) In the decision tree-based detection phase, the filtered
+correlation features are classified to quickly and accurately
+detect malicious traffic.
+
+B. Data Pre-Processing
+ The original network traffic is mostly in PCAP type,
+therefore, the original network traffic needs to be processed to
+make it suitable for GSA-DT model. In this paper, we process
+the original traffic through traffic analysis, traffic cleaning,
+information extraction and traffic labeling.
+ Fig. 2. The traffic topology relationships diagram.
+ (1) The traffic analysis phase calls the Wireshark tool to
+analyze the original network traffic, thereby obtaining the
+statistical information of network traffic, such as the number
+ network and extract relevant features to describe the properties
+of packets, source IP and destination IP statistics, protocol
+ and behaviors of the nodes and edges, but these methods lack
+distribution, etc.
+ classification by nodes, and thus cannot capture the differences
+ (2) The traffic cleaning phase calls the statistical information
+ and correlations between the network traffic generated by difas well as removes the empty and duplicate information, thus
+ ferent nodes. For this reason, we improve it through classifying
+improving the generalization ability of the model.
+ network traffic in the graph by node and treating the network
+ (3) The information extraction phase mainly extracts the
+ traffic generated by same node as the same traffic type, thus
+feature information in network traffic, including: source IP
+ transforming the problem of malicious traffic detection into
+address, destination IP address, incoming and outgoing traffic
+ malicious node detection. Specifically, when constructing a
+packet size, incoming and outgoing traffic packet number,
+ network traffic graph, each node represents a network entity,
+traffic packet number, port number and other information. We
+ such as an IP address or a device. In order to better detect
+select these features because empirical analysis shows that
+ malicious traffic, we add labels representing the traffic type
+in malicious behavior detection, the abnormal IP addresses,
+ of each node. By adding labels to the nodes, the model can
+unconventional port usage, and a large number of small traffic
+ easily distinguish traffic and identify different types of attacks.
+packets may indicate the malicious activities. And then, the
+ Among them, the traffic label of each node can be set based
+string information is segmented using Pandas library and
+ on its communication behavior and specific features, and the
+written the traffic information in the form of Dataframe.
+ label can cover different types of malicious traffic, thus, the
+ (4) The traffic labeling phase aims to label the traffic
+ traffic type is identified by adding an attribute to each node.
+detection information (including: normal traffic, malicious
+ Taking the network traffic shown in Table II as an examtraffic, and malicious traffic categories) according to the traffic
+ ple. Assuming that source IP 10.0.2.15 is node 1 (as
+type, thereby providing accurate training samples and labels
+ marked in the parentheses), and its destination IPs are
+for malicious traffic detection and analysis. In addition, the
+ 173.194.10.145 (noted as node 2) and 216.58.211.3
+obtained traffic information is stored in the form of tables to
+ (noted as node 3), there is an association between node 1 and
+obtain the suitable form for detection model.
+ nodes 2 and 3 in the topology, as illustrated by the traffic
+ topology in Fig. 2. In this network traffic graph, each node
+C. Constructing Traffic Topology Relationships (such as nodes 1, 2 and 3) represents a network entity.
+ In the phase of constructing traffic topology relations, it To improve the detection accuracy of malicious traffic, we
+is necessary to construct traffic tables that have undergone assign specific traffic type labels rather than general “malipreprocessing operations to obtain traffic topology maps, cious” or “benign” label to each node to represent different
+thereby facilitating the detection of malicious traffic. After types of traffic. For example, if node 1’s behavior resembles
+obtaining the traffic information, different nodes are connected normal communication patterns, it can be labeled as “benign
+with the source IP address as starting point and the destination traffic”; However, if node 2 shows the characteristics of a
+IP address as ending point. At the same time, each different DDoS attack, it would be labeled as “DDoS”, and if node 3’s
+IP node is numbered to form the network topology. The traffic matches the patterns of malware distribution, it would
+information carried by connected edges on the graph is the be labeled as “malware”. These specific labels not only help
+characteristic information, including: source IP address, des- the model distinguish between benign traffic and malicious
+tination IP address, traffic packet size, traffic packet number, traffic, but also identify the exact type of malicious behavior,
+port number, etc. such as DDoS, phishing, malware, etc.
+ The traditional methods mainly construct graph structures After constructing the traffic topology, the adjacency matrix
+based on the relationship between nodes and edges in the B and diagonal matrix D are obtained according to the
+CAI et al.: GSA-DT: A MALICIOUS TRAFFIC DETECTION MODEL 2063
+
+ Equation (2), where σ denotes the activation function and θ1
+ is the initial weight matrix.
+ H1 = σ(S θ1 ). (2)
+ The features of network traffic often show the complex
+ nonlinear patterns, retaining the nonlinear mapping capabilities
+ can help to better capture these complex nonlinear patterns,
+Fig. 3. The adjacency matrix and diagonal matrix of network traffic. thereby improving the detection accuracy. Therefore, it is
+ required to use activation function with stronger nonlinear
+ expressivity to better fit such nonlinear features. GCN usually
+constructed diagram of traffic topology relationships. The uses ReLU activation function, but use of ReLU has the
+value of Bi,j in B is 0 or 1, where 0 means there is no following problems: (1) The output is zero when the input is
+connection between two nodes and 1 means two nodes have negative (that is, appearing neuron “death” problem), resulting
+network communication. Take node 1 as an example, it has in some neurons being unable to update the corresponding
+network communication with node 2 and node 3, then B1,2 , weights during the training process due to the cessation of
+B2,1 , B1,3 and B3,1 are recorded as 1. Because there is no learning; (2) Leads to the problem of gradient disappearconnection between node 1 and node 4, B1,4 and B4,1 are ance, especially the gradient may become very small in the
+recorded as 0. Matrix D is used to represent the number of backpropagation process. To solve these problems, scholars
+neighboring nodes connected with each node, and the number replaced it with Sigmoid [25], ELU [17] and Tanh [26] in
+of neighboring nodes is added 1 when there is a network recent years. In contrast, the LeakyReLU activation function
+communication between node, where Di,i denotes the number retains the linear properties of ReLU at positive inputs, which
+of neighboring nodes connected to node i. Since node 1 is effectively avoids the problem of gradient vanishing; It is also
+adjacent to node 2 and node 3, D1,1 is recorded as 2. The final able to maintain a more stable gradient update rate, avoiding
+adjacency matrix B and diagonal matrix D obtained from the almost no effective gradient update in the first few layers like
+network traffic listed in Table II are shown in Fig. 3. Tanh. These advantages of LeakyReLU motivate us to use it
+ instead of ReLU to achieve better detection result.
+ After acquiring the features, the deep features are obtained
+D. Graph Convolutional Neural Network by stacking multiple convolutional networks to get a larger
+ After obtaining the adjacency matrix and diagonal matrix, it perceptual field. For the k th convolutional layer, its features
+is necessary to construct a structure to process them. Currently, Hk are nonlinearized from the features obtained from previous
+the GIN [23], GraphSAGE [20] and GCN [24] are often used (k − 1) layer using LeakyReLU. The details are shown in
+as the backbone of the model. Among them, a key property of Equation (3).
+GIN model is that the aggregation of node features is invariant, Hk = σ(SHk −1 θk ). (3)
+but network traffic is the packets transmitted from one place
+to another over a period of time, this process is dynamic, thus, During the training process of GCN model, the graph
+GIN model is not applicable to our scenario; GraphSAGE association relationship representation is achieved by learning
+only considers the aggregation between nodes and neighboring its association relationship to obtain the feature information
+nodes but ignores the internal correlation between the features, of different nodes with their neighbor nodes and edge
+resulting in not being able to capture the global topology information. At the same time, with the help of sharing same
+information well. Compared with these two models, GCN can network node structure information, the features of each node
+better learn the information of neighboring nodes around each for each global inter-neighbor node are obtained under the
+node, can learn the parameters for different node locations in a action of multi-layer convolution, thereby obtaining the spatial
+single training through parameter sharing, as well as can better structure characteristics of network traffic.
+balance the computational complexity and expressive power
+by means of feature propagation and convolutional operations. E. Self-Attention Mechanism
+Therefore, we choose GCN as the backbone of the model. Although GCN has strong ability in feature learning of
+ GCN is a multi-layer convolutional neural network, it learns network traffic, but it does not give more attention to the
+from the attributes between the nodes in the established features that reflects malicious traffic, which leads to unstable
+graph and the neighboring nodes to obtain a new feature detection result, it is necessary to assign different weights
+representation for each node. To improve the computational to the features according to their importance in the feature
+efficiency, matrixs B and D need to be normalized using screening process. The self-attention mechanism reduces the
+Equation (1) to obtain the normalization matrix S. impact of unimportant and redundant features [27], [28], [29]
+ on malicious traffic detection by assigning larger weights to
+ S = D −1/2 BD −1/2 . (1) the features that have a greater impact on malicious traffic
+ detection and smaller weights to these unimportant features.
+ After sending S as input to 1-D convolutional network, Based on the advantage of self-attention mechanism, this
+the first-order neighbor association feature H1 is learned by paper improves the GCN model via adding the self-attention
+2064 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+mechanism layer, thereby further improving the detection interpretability of the predictive reasoning process. Compared
+ability of GCN model. with other machine learning models, decision tree has the
+ The self-attention mechanism obtains the relevance of advantages of small computational effort, easy transformation
+different traffic inputs through computing the attention of classification rules, high accuracy and strong generalizacoefficients on different relevant inputs, and then assigns the tion [30], where the internal nodes represent the characteristic
+low weights to the irrelevant features to retain important vector features of network traffic and the leaf nodes represent its
+features. The overall structure of self-attention mechanism traffic classification labels.
+is shown in the upper right corner of Fig. 1, it is mainly In the detection phase, the obtained associated traffic feacomposed of Query, Key and Value. Firstly, it inputs the n tures are input and the loss value is calculated via loss
+feature vectors h obtained by GCN into self-attention model, function, thereby obtaining the parameters according to this
+and then obtains the traffic feature matrix L through stitching value. Currently, the commonly used loss functions include:
+the features via the input layer. The specific process is shown mean square error (MSE), mean absolute error (MAE), focal
+in Equation (4). loss and cross-entropy loss. The malicious traffic detection
+ belongs to multi-classification research, it requires GSA-DT
+ L = [h1 , h2 , . . . , hn ]. (4)
+ model to be able to automatically detect malicious traffic by
+ Meanwhile, L is input into the embedding layer to map it learning the features of network traffic, therefore, focal loss is
+to three different spaces to obtain Q, K and V matrices. This not suitable due to the need of manually adjusting the weight
+process is shown in Equation (5), where WQ , WK and WV parameters and the lack of automation capability. In addition,
+represent the randomly obtained space matrices, respectively. the scale of malicious traffic generated by malicious attacks is
+ much smaller compared to that of normal traffic generated by
+ Q = WQ ∗ L, K = WK ∗ L, V = WV ∗ L. (5) normal accesses, i.e., there is a data imbalance in the network
+ After obtaining three different spatial matrices, the similar- traffic, which leads to the fact that both MSE and MAE are
+ity between each query vector qi and each different traffic not suitable for our research scenario due to their excessive
+vector is calculated to obtain the linkage score (recorded as focus on the main category (normal traffic). Compared with
+Score). The used similarity measure is shown in Equation (6), these commonly used loss functions, the cross-entropy loss
+where the Score is obtained by calculating the product of each can automatically focus the attention on a small number of
+vector’s own q and k and then summing them. Finally, the hard-to-distinguish malicious traffic samples, which improves
+weight relationship matrix A of L is obtained by stitching the the detection ability of the model. For this reason, it is chosen
+Score, which is shown in Equation (7). as the loss function in the decision tree model. The loss
+ function of cross-entropy is shown in Equation (10), where
+ n
+  pi represents the probability vector of predicted classification
+ Scorei = qi ∗ ki . (6)
+ results, yi represents the label category of actual samples.
+ i=1
+ Finally, the corresponding parameters are updated through
+ A = [Score1 , Score2 , . . . , Scoren ]. (7)
+ backward derivation.
+ And then, the Softmax function is used to normalize A to K
+obtain similarity matrix A , thus reducing the computational 
+ Loss = − yi log(pi ). (10)
+difficulty, which is shown in Equation (8).
+ i=1
+ e si
+ A = Softmax(A) = n sj . (8) Both Gini coefficient and entropy are commonly used
+ j =1 e feature selection metrics to measure the importance of features
+ Finally, the attention output matrix O is calculated by and they have different properties in decision trees. The
+weighting and summing the key value matrix V based on A , Gini coefficient is a measure of impurity that measures the
+which is shown in Equation (9). probability that two samples are randomly selected from a
+ dataset and their category labels do not match. The smaller
+ O = V ∗ A . (9) Gini coefficient indicates the lower impurity of the dataset
+ and the higher importance of the feature. The process of Gini
+F. Decision Tree coefficient calculation does not involve logarithmic operations,
+ After getting the feature vector O, it is required to use thus, the computation is more efficient. Entropy is another
+feature vector to determine whether the network traffic is commonly used feature selection metric, which measures the
+malicious traffic. For the detection of malicious traffic, the degree of information clutter in a dataset. The calculation
+interpretability is very important, but it is a common problem of entropy requires logarithmic operations, which requires
+encountered by deep learning models. The introduction of more computational time compared to the Gini coefficient. In
+GCN allows the model to learn more informative and dis- the case of large-scale datasets and complex feature spaces,
+criminative features that can be used to improve the detection the Gini coefficient can perform feature selection faster and
+accuracy. To enhance the interpretability of detection models, reduce the computation time. Therefore, we use the Gini
+it is better to integrate a machine learning model to provide coefficient (shown in Equation (11)) as a feature selection
+a transparent and interpretable framework for distinguishing function, where k represents the number of traffic categories
+malicious traffic from normal traffic, thereby facilitating the and pi represents the probability that the traffic belongs to i th
+CAI et al.: GSA-DT: A MALICIOUS TRAFFIC DETECTION MODEL 2065
+
+category. The classification result is measured by the value
+of Gini coefficient, and the classification of network traffic is
+performed based on the rank of calculated Gini coefficients.
+ k
+  k
+ 
+ Gini(D) = pi (1 − pi ) = 1 − pi 2 . (11)
+ i=1 i=1
+ In general, the proposed GSA-DT model uses GCN network
+as the main body to fully consider the correlation features of
+ Fig. 4. The flowchart of GSA-DT model.
+network traffic as well as adopts the LeakyReLU activation
+function to solve the neuron “death” problem of ReLU and Algorithm 1 GSA-DT
+thus improving the expressiveness of GCN model. And then, Input:
+it uses a self-attention mechanism to provide larger weight Network traffic NT, learning rate, hidden, epoch, dropout
+for important features as well as reduce the influence of Output:
+redundant features; In addition, it uses decision tree to classify Detection result R
+the network traffic, thus improving the detection accuracy of 1: preprocess NT to obtain features X
+ 2: Initialize parameters (learning rate, hidden, epoach, dropout)
+malicious traffic while providing the model a stronger gen- 3: construct traffic topology relationships G
+eralization capability. With these improvements, the proposed 4: G→ GCN model
+GSA-DT model can effectively capture the features of global 5: for each epoch in R do
+network traffic by learning the differences and correlations 6: for each hidden in R dataset do
+between different types of network traffic, thereby accurately 7: extract traffic features according to learning rate and
+ dropout
+detecting malicious traffic. 8: classification result←label
+ In summary, our model utilizes the GCN and self-attention 9: calculate loss function
+mechanism to effectively enhance the feature representation, 10: renew weight W
+which in turn achieves interpretability through decision tree. 11: obtain traffic correlation feature H
+Such integration aims to ensure effective detection of mali- 12: end for
+ 13: assign features’ weight W  using self-attention mechanism
+cious traffic while balancing performance and interpretability. 14: end for
+ 15: R = DT (H , W  )
+G. The Workflow of GSA-DT Model 16: return R
+
+ The flowchart of GSA-DT is shown in Fig. 4, it is composed
+feature pre-processing phase, feature extraction phase and
+malicious traffic detection phase. traffic is preprocessed and the relationship between network
+ (1) In the feature pre-processing phase, network traffic traffic node is constructed using the address information of
+will undergo a series of operations including traffic analysis, traffic to get the key information and feature annotations
+cleaning and labeling to ensure that it can be used in the of network traffic. Based on the obtained network traffic
+correct format and structure for subsequent analysis; One of information, the contained address information is extracted and
+the key tasks in this phase is to construct the topology of the traffic topology relationship graph is constructed based
+network traffic using the source and destination IP addresses, on the source IP address and destination IP address and
+and then generate the adjacency and diagonal matrices to better other information, thereby obtaining the adjacency matrix and
+represent the relationships between traffic nodes. diagonal matrix of network traffic. And then, the features
+ (2) In the feature extraction phase, GCN is used to extract are extracted using GCN for the constructed network traffic
+the topological structure of network traffic, allowing the model graph structure, and the features with stronger correlation are
+to capture the intrinsic correlations between the features; And obtained by giving large weight to the important traffic features
+then, the LeakyReLU is adopted to replace the traditional and ignoring the features that contribute less to the node
+ReLU to solve the gradient vanishing and “neuron death” correlation information through self-attention mechanism. In
+problems. In addition, the model also introduces a self- addition, the ReLU activation function in the GCN model is
+attention mechanism to focus on the key features and assign replaced by the LeakyReLU, thus improving the expressivelarge weights to important features, thereby reducing the ness of the model as well as making the model to have better
+impact of redundant features. These improvements improve the properties when handling negative anomalies and preserving
+model’s ability to distinguish between normal and malicious negative gradients. Next, the filtered correlated features are
+traffic. classified in combination with the decision tree, thus detecting
+ (3) In the malicious traffic detection phase, the decision tree malicious traffic more accurately. Finally, the test set is input
+with Gini coefficient as feature evaluation index is used to to the GSA-DT model to verify its detection effect.
+classify the extracted features, thereby efficiently and accurately detecting malicious traffic while reducing false positive IV. E XPERIMENT R ESULTS AND A NALYSIS
+and false negative rates, and providing good interpretability. We compare GSA-DT model with seven malicious traffic
+ The detailed process of malicious traffic detection using detection models on four network traffic datasets to test its
+GSA-DT model is shown in Algorithm 1. Firstly, the network efficiency. Experiments are conducted on a Linux 64-bit OS
+2066 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+with Intel Xeon Gold 5218R CPU and NVIDIA GeForce RTX (2) FPR (False Positive Rate): It indicates the number of
+3090 GPU, using Python (Python version 3.8) as the AI library. mis-detected malicious network traffic to the total number
+ of normal network traffic samples, which is calculated by
+ Equation (13).
+A. Description of Network Traffic Datasets
+ FP
+ To verify the detection efficiency of GSA-DT model, we FPR = (13)
+use four network traffic datasets (USTC-TC2016, Stratosphere, (TN + FP )
+CTU and UJS-IDS2024) in the experiments, the distribution (3) F1_measure: It is the harmonic mean of precision and
+of these network traffic datasets is shown in Table III, where recall with a maximum of 1 and a minimum of 0, which is
+all normal network traffic are classified into “Normal”. calculated by Equation (14).
+ (1) USTC-TFC2016 [31] contains ten types of malicious TP TP
+traffic and one normal traffic (composed of ten categories of 2 × TP+FP × (TP+TN)
+ F 1_measure = TP TP
+ (14)
+ TP+FP + (TP+TN)
+normal traffic) collected by the simulated devices from 2011
+to 2015, the format is pcap file and the labels of traffic types
+are provided. (4) Accuracy: It indicates the ratio of the number of accu-
+ (2) Stratosphere [32] is a network traffic dataset with a rately detected network traffic samples to the total number of
+mixture of encrypted and non-encrypted traffic, it includes a network traffic samples, which is calculated by Equation (15).
+series of network IPS/IDS traffic, such as Zeus and botnets. TP + TN
+Because the scale of malicious traffic is large than normal Accuracy = (15)
+ TP + FP + TN + FN
+traffic in this dataset, we integrated some normal traffic in
+CTU-13 dataset into this dataset to balance the scale of C. Baselines
+network traffic. To evaluate the efficiency of GSA-DT model, seven base-
+ (3) CTU [33] is a network traffic dataset collected by the lines are used in the experiments.
+devices from 2016 to 2019, it contains ten types of malicious (1) E-minBatch GraphSAG [20]: It is a graph neural
+network traffic and one type of normal network traffic. network for malicious traffic detection, it represents the asso-
+ (4) UJS-IDS2024 is a network traffic dataset collected by ciation relationships between the features of network traffic by
+multiple normal software and malware in the real environment constructing a graph structure and performs malicious traffic
+by the Key Laboratory of Industrial Cyberspace Security detection by aggregating the information of neighboring nodes.
+Technology of Jiangsu University from March 5, 2024 to April (2) GATrust [21]: It is a graph neural network model based
+18, 2024. on graph attention mechanism, it integrates multiple attributes
+ In the experiments, we follow the 90%/10% ratio to divide (including user context-specific information, network topology
+each network traffic dataset into a training set and a testing information and locally generated social trust relationships)
+set, where 90% of the data is used to train the model and of users, and assigns different attention coefficients to the
+the remaining 10% is used to evaluate the performance of attributes of users in online social networks, thereby improving
+the model. This segmentation method ensures that the model the prediction accuracy.
+can be trained on sufficient data, while also evaluates its (3) GCN-ETA [22]: It is an encrypted malicious traffic
+generalization ability through unseen data. detection model based on GCN, it improves the traditional
+ GCN by considering the statistical features of network flows
+B. Evaluation Metrics (internal information) and the structural information between
+ In order to evaluate the efficiency of GSA-DT model, we network flows (external connections), thereby effectively
+use four widely used evaluation metrics including TPR, FPR, improving the detection efficiency.
+F1_measure and Accuracy in the experiments [17], [19], [34], (4) TCN [36]: It is a malicious traffic detection model based
+[35], they are calculated as shown in Equations 12 to 15. These on temporal convolutional network, it extracts the key features
+four metrics can well evaluate GSA-DT model from different using the features of byte sequences in network traffic packets
+perspectives. Among these equations, TP (True Positive) is the as well as avoids neurons “death” by changing the ReLU to
+number of malicious traffic correctly identified by GSA-DT, ELU, thereby obtaining high detection performance.
+FP (False Positive) is the number of normal traffic incorrectly (5) XGBoost [37]: It is an ensemble malicious traffic
+identified as malicious by GSA-DT, FN (False Negative) is detection model based on gradient boosting decision tree, it
+the number of malicious traffic not correctly identified by also uses WOA (Whale Optimization Algorithm) to seek for
+GSA-DT, TN (True Negative) is the number of normal traffic the best parameters.
+correctly identified by GSA-DT. (6) BiTCN [17]: It is a malicious traffic detection model
+ (1) TPR (Ture Positive Rate): It indicates the number of based on bidirectional temporal convolution network (BiTCN),
+correctly-detected malicious network traffic to the total number it uses TCN model to better grasp the sequence characteristics
+of malicious network traffic samples, which is calculated by of network traffic as well as improves the original one-way
+Equation (12). model to a two-way model to capture more characteristics of
+ network traffic.
+ TP (7) PENA [19]: It is a packet-level end-to-end attentive
+ TPR = (12)
+ (TP + FN ) network, it treats original byte and length sequences as inputs
+CAI et al.: GSA-DT: A MALICIOUS TRAFFIC DETECTION MODEL 2067
+
+ TABLE III
+ T HE I NTRODUCTION OF O RIGINAL N ETWORK T RAFFIC
+
+and uses the self-attention mechanism to learn the deep datasets and compared the results with seven state-of-the-art
+relationships between network packets. models. The average experimental result is shown in Table IV.
+ The experimental results in Table IV show that on the
+D. The Selection of Parameters USTC-TFC2016 dataset, GSA-DT has better performance than
+ seven compared models, and its average detection accuracy
+ For the proposed GSA-DT model, the parameters including
+ can reach to 99.96%, while the GCN-ETA model has the worst
+the number of hidden units, dropout and epoch number will
+ performance of 97.50%. In contrast, the TCN and XGBoost
+affect its detection efficiency. To obtain better detection accuonly consider the attribute statistical features of network traffic
+racy, we test the efficiency of GSA-DT under these parameters
+ without considering the relationship between network traffic,
+on three widely used public network traffic datasets, where the
+ thus, their detection accuracy is slightly lower than that of
+used loss function is LeakyReLU. The experimental results
+ GSA-DT model. Compared with GATrust, a graph-based maliare shown in Fig. 5-Fig. 7.
+ cious traffic detection model with better detection results, the
+ As can be seen from Fig. 5 that GSA-DT has best
+ GSA-DT model has improved the detection accuracy by about
+performance and smoother fluctuations when the number is
+ 1.54%, TPR by about 1.89%, and F1-measure by about 1.92%,
+selected as 16 on three datasets. When the number is select
+ and decreased the FPR by about 0.36%. In addition, the GSAless than 16, the performance is worse; With the increase
+ DT model has the least fluctuation in detection efficiency.
+number of hidden units, the performance of GSA-DT shows
+ For the Stratosphere dataset that contains encrypted network
+a decrease trend, which is caused by the overfitting. After
+ traffic, the detection effectiveness of all eight models shows
+a comprehensive comparison, the number of hidden units is
+ a decrease trend, but GSA-DT still performs best among all
+chosen to be 16. As is shown in Fig. 6 that on USTC-TC2016
+ models, which can reach to about 98.49%, while the accuracy
+and Stratosphere datasets, the performance of GSA-DT is
+ of other detection models is 96.5% on average. Because
+low when the dropout is chosen as less than 0.05, it is
+ the encrypted traffic hides the attack information through
+owing to that the lower dropout causes the model to be
+ encryption protocols, it is difficult to extract the statistical
+overly dependent on specific neurons, making the network
+ features of network traffic, which leads to the poor detection
+less expressive and prone to overfitting. In contrast, when the
+ performance of TCN and XGBoost models because they do
+dropout is chosen as 0.06 and 0.07, the performance is lower
+ not use relevant features. Compared with them, three graphthan that when it is chosen as 0.05, the reason is that large
+ based detection models (including GCN-ETA, E-minBatch
+dropout causes many neurons to be randomly discarded, thus
+ GraphSAGE and GATrust) improve the detection efficiency
+losing a large amount of information. On the CTU dataset, the
+ in some metrics, but they have lower TPR due to the fact
+performance of GSA-DT model is higher when the dropout
+ that not use a self-attention mechanism to assign larger weight
+is chosen as 0.05. After a comprehensive comparison, the
+ to important features. Compared with GCN-ETA, E-minBatch
+dropout is chosen as 0.05. As is shown in Fig. 7 that compared
+ GraphSAGE and GATrust, GSA-DT has improved accuracy by
+with seven detection models, GSA-DT has the best detection
+ about 0.98%, 2.18% and 2.15%, TPR by about 2.67%, 1.41%
+accuracy at different epochs, this is because it considers the
+ and 0.96%, F1-measure by about 1.35%, 1.58% and 1.38%.
+correlation between traffic features and combines self-attention
+ The experimental results show that GSA-DT performs well
+mechanism to better capture the features. It can be seen from
+ on the encrypted network traffic via learning the correlation
+Fig. 7(a) and Fig. 7(b) that when the epoch number is less than
+ relationships and assigning differential weights to features.
+5, GSA-DT shows a growth trend as epoch number increases,
+ The experimental results on CTU dataset show that GSAbut there is a significant decline with the further increase of
+ DT has better performance than the compared models. In the
+epoch number. When the epoch number is larger than 8, GSAmetrics of accuracy, TPR and F1-measure, GSA-DT improves
+DT has stable trend, and it has better performance when the
+ about 3.03%, 3.92% and 3.4% over E-minBatch GraphSAGE
+epoch number is set to 10. Therefore, the epoch number is
+ model, about 1.69%, 2% and 2.02% over GATrust model,
+chosen as 10.
+ about 3.84%, 2.92% and 2.46% over GCN-ETA model, about
+ 0.92%, 1.29% and 1.09% over TCN model, about 1.5%, 2.83%
+E. Detection Results of GSA-DT Model and 2.41% over XGBoost model. Compared with BiTCN and
+ To validate the performance of GSA-DT model, we con- PENA, GSA-DT has improved accuracy by about 0.76% and
+ducted a large number of experiments on four network traffic 0.35%, TPR by about 0.73% and 0.51%, F1-measure by about
+2068 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+Fig. 5. The detection accuracy of GSA-DT under different number of hidden units.
+
+Fig. 6. The detection accuracy of GSA-DT under different dropout.
+
+Fig. 7. The detection accuracy of GSA-DT under different epoch number.
+
+ TABLE IV
+ AVERAGE D ETECTION E FFICIENCY OF E IGHT M ALICIOUS T RAFFIC D ETECTION M ODELS (%)
+
+0.84% and 0.52% respectively, and decreased the FPR by the correlation between features, and the traditional graphabout 0.74% and 0.2%. On the UJS-IDS2024 dataset, the based detection models improve the detection accuracy due to
+GSA-DT model improved about 5.04%, 4.07% and 4.66% they learn more features through the additional consideration
+over EminBatch GraphSAGE, about 0.4%, 0.32% and 0.22% of correlation between traffic features. However, graph-based
+over GATrust in terms of accuracy, TPR and F1-measure. models do not perform well in detecting small classes of
+In summary, the traditional deep learning-based detection malicious traffic. Compared with seven baselines, the proposed
+models have relative low performance for not considering GSA-DT model exhibits excellent performance and achieves
+CAI et al.: GSA-DT: A MALICIOUS TRAFFIC DETECTION MODEL 2069
+
+ TABLE V
+ T IME C OST OF GSA-DT M ODEL U NDER D IFFERENT S IZES OF sizes of network traffic are selected in the experi-
+ UJS-IDS2024 DATASET ( SEC .) ments. Each experiment is conducted for 30 times, and
+ the average time cost is calculated and shown in
+ Table V.
+ It can be seen from Table V that the time cost of our
+ proposed GSA-DT model is slightly longer than that of the
+ TCN, XGBoost and BiTCN models when processing different
+ sizes of network traffic, which is less than three graph-based
+significant improvements in all evaluation metrics, which can detection models of E-minBtach GraphSAGE, GATrust and
+be attributed to the following factors: (1) The introduction of GCN-ETA. For the proposed GSA-DT model, its time cost
+self-attention mechanism makes it assigning large weights to is mainly concentrated in the model training phase, which
+the important features, which leads it to reduce the impact is mainly due to the fact that the training process of the
+of redundant features on malicious traffic detection; (2) The model needs to transform the original network traffic into
+use of decision tree makes GSA-DT having the advantages a suitable traffic topology graph to capture more correlation
+of good multi-classification capability, robustness to missing information, and this complex process will consume more
+data and outliers, and efficient feature selection and training; time than traditional deep learning models (e.g., TCN). Once
+(3) The use of LeakyReLU solves the neuron “death” problem the GSA-DT model is trained, utilizing it to detect malicious
+and gradient disappearance problem of ReLU. traffic will consume much less time. Therefore, the proposed
+ GSA-DT model has the strong scalability than other graph-
+F. Stability Analysis of GSA-DT Model based malicious traffic detection models.
+ In addition to the detection efficiency, the stability of
+detection model is another important index. In this subsection, H. Ablation Experiments
+we compare the stability of GSA-DT with seven detection
+ To verify the role of each module in the GSA-DT model,
+models on four network traffic datasets, and the experimental
+ we conducted a series of ablation experiments and the experresult is shown in Fig. 8.
+ imental results are shown in Table VI. GCN indicates the
+ As is shown in Fig. 8 that on these datasets, GSA-DT model
+ original GCN model; GCN-SA indicates that self-attention
+has highest detection accuracy, TPR and F1-measure as well as
+ mechanism is added to the original GCN model; GCN-SAlowest FPR compared with seven detection models, and it also
+ LR indicates that LeakyReLU is used in the GCN-SA model;
+has no outlier in detection results as well as has minimal gap
+ GCN-DT indicates that decision tree is used in the GCN
+between the upper and lower quartiles. In contrast, the machine
+ model; GCN-DT-LR indicates that LeakyReLU is used in
+learning-based XGBoost model has many outliers due to it
+ the GCN-DT model; GCN-SA-DT indicates that self-attention
+tends to overfit the real data as well as ignores the correlation
+ mechanism and decision tree are added to the original GCN
+between the contexts of network traffic. Because TCN model
+ model.
+considers the temporal characteristics of network traffic during
+ It can be seen from the results that removing or replacing any
+the training process, it shows higher performance in terms
+ module including LeakyReLU, decision Tree or self-attention
+of accuracy, but it ignores the correlation between features
+ mechanism will lead to a decrease performance. Among these
+during the training process, resulting in a large gap between
+ modules, self-attention mechanism plays the most critical
+the upper and lower quartiles. Compared with XGBoost and
+ role. As can be seen from Table VI that the introduction of
+TCN models, the graph-based detection models GCN-ETA, Eself-attention mechanism significantly improves the detection
+minBatch GraphSAGE, and GATrust have larger differences
+ accuracy, which is due to that it has the ability to adaptively learn
+between the upper and lower quartiles but with few outliers,
+ the correlation and importance between network traffic features,
+which is largely due to the fact that these graph-based models
+ as well as enable the model to flexibly select features by learning
+consider the correlation of features. However, compared with
+ the weights between different features, thereby providing the
+GSA-DT model, these three graph-based detection models do
+ model a good generalization ability and reducing the redundancy
+not assign different weights to the features, which leads them
+ of features. In addition, the change of activation function from
+facing feature redundancy problem and thus having relatively
+ the original ReLU to LeakyReLU can solve the neuron “death”
+low detection efficiency. For the PEAN method, it has the
+ problem as well as reduce the risk of gradient disappearance.
+higher accuracy, TPR and F1-measure than other six methods
+ Especially on the USTC-TFC2016 dataset that contains many
+except for GSA-DT method.
+ attack types with detailed attack labels, the optimization of
+ Overall, the proposed GSA-DT model has the highest detecactivation function can achieve good result. Moreover, the use
+tion performance, and its detection results are concentrated in
+ of decision tree makes GSA-DT having the advantages of easy
+smaller boxes as well as has no outlier, which indicates that
+ interpretation, good multi-classification capability, robustness
+GSA-DT model has good detection stability.
+ to missing data and outliers, and efficient feature selection and
+ training, which can improve the detection performance of GSA-
+G. Scalability of GSA-DT Model DT model. The experimental results in Table VI show that the
+ To test the scalability of GSA-DT model, we use the proposed GSA-DT model achieves the best detection results
+UJS-IDS2024 dataset in the experiments, where different with better generalization ability on all four network traffic
+2070 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+Fig. 8. The stability of eight malicious detection models.
+
+ TABLE VI
+ AVERAGE D ETECTION ACCURACY OF D IFFERENT M ODULES ON GSA-DT method show improvements in terms of accuracy,
+ M ALICIOUS D ETECTION M ODELS (%) F1-measure, FPR, TPR and stability.
+ For the proposed GSA-DT method, it can achieve better
+ detection accuracy due to it constructs a graph representation
+ to capture richer interdependencies among the features of
+ network traffic, but this process consumes much time. That
+ is, GSA-DT method improves the detection accuracy by consuming more time, which is similar with deep learning-based
+ TABLE VII malicious traffic detection methods. We can improve the time
+T IME C OST OF GSA-DT W ITH G INI C OEFFICIENT AND E NTROPY ( SEC .)
+ efficiency of GSA-DT using the following potential strategies:
+ (1) Optimize the GCN using pruning and quantization techniques to remove the neurons and connections that contribute
+ less to the detection results, thus reducing the computational
+datasets, which indicates that these improvements in GSA- cost. (2) Incorporate the operation of sparsifying the adjacency
+DT are very effective in improving the detection of malicious matrix before using normalization method, thus effectively
+traffic. reducing the memory usage and computational complexity.
+ In addition, we also add the experiments to verify that the (3) Use the parallel computing and distributed processing to
+use of Gini coefficient consumes less time than entropy, and accelerate the model’s inference speed, thereby achieving the
+the experimental results are show in Table VII. GSA-DT-Gini real-time processing.
+means the GSA-DT model with Gini coefficient and GSA-DT- There are several practical considerations that need to
+entropy means the GSA-DT model with entropy. be considered when deploying GSA-DT model in real-
+ It can be seen from Table VII that the time cost of GSA- world network environments: (1) Integration with existing
+DT model with the use of Gini coefficient is shorter than that network infrastructure: GSA-DT model utilizes GCN and
+with the use of entropy, which is due to the fact that the self-attention mechanism to improve the detection accuracy,
+computing of Gini coefficient only involves the Gini impurity it has a relatively high demand on computational resources,
+of each feature, whereas the computing of entropy needs to thus, it is necessary to evaluate the availability of sufficient
+consider the information of each feature. Experimental results computational power in the existing network infrastructure
+demonstrate the use of Gini coefficient reducing the time cost to support real-time operation. (2) Handling live traffic:
+in large-scale and complex network traffic. GSA-DT model performs malicious traffic detection through
+ graph structure construction and feature extraction, which may
+ lead to processing delays, therefore, the inference speed of
+I. Discussion the model needs to be optimized when deploying GSA-DT
+ model in high-traffic environments, e.g., reducing the depth of
+ Extensive experimental results show that the proposed GSA- network layers or parallelizing the processing to reduce the
+DT model can effectively solve the problems of existing computational latency. (3) Maintaining system performance
+malicious traffic models. For the GSA-DT model, it first under varying conditions: The performance of GSA-DT
+performs pre-processing operations on original network traffic model may vary under different network conditions, especially
+to obtain better network traffic and their labels, and then uses encountering novel cyber-attack patterns, thus, it is necessary
+GCN to extract the topological structure of network traffic to retrain and update periodically to make it adapt to new
+as well as capture the correlation relationships among traffic network environment.
+features. In the GSA-DT model, the commonly used ReLU
+activation function is replaced with LeakyReLU to overcome
+the problems of neuron “death” and gradient disappearance. V. T HREATS TO VALIDITY
+In addition, GSA-DT model also introduces the self-attention In Section VI, extensive experimental results demonstrate
+mechanism in the GCN model to assign larger weights to the the effectiveness of GSA-DT model. However, our findings
+key features, thereby reducing the interference of redundant still present two major threats in the following areas.
+features. Finally, GSA-DT uses decision tree to perform Internal validity: We consider many parameters (including
+the detection of malicious traffic. These improvements make epoch number, dropout, number of hidden units, etc.) under
+CAI et al.: GSA-DT: A MALICIOUS TRAFFIC DETECTION MODEL 2071
+
+different situations, but not consider the parameters such great risks to individuals, organizations and society. Therefore,
+as the number of network layers and filter settings, the it is very crucial to accurately detect malicious traffic generated
+changes of these different parameter combinations leave many by network attacks to maintain network security. To achieve
+possibilities. In this paper, we verify the effectiveness of better detection performance, this paper proposes a malicious
+GSA-DT by changing several parameters and finally select traffic detection model called GSA-DT. It first analyzes the
+the parameter with better experimental results as the final IP information between different network nodes such as user
+parameter, although this manner leads to better experimental communication and transaction. And then, it uses GCN to
+results, but it does not guarantee that the selected parameters capture the topology in the network traffic from the associated
+are optimal. In addition, the used preprocessing methods features in network traffic; It also uses self-attention mechainclude traffic analysis, traffic cleaning, information extraction nism to assign larger weights to the key features. Finally, it
+and traffic labeling, but different preprocessing can lead to uses a decision tree to detect malicious traffic. In addition, the
+differences and eventually lead to changes in the experimental ReLU is replaced by LeakyReLU to overcome neuron “death”
+results, therefore, whether there is a better preprocessing problem and gradient disappearance, thereby improving the
+method remains to be investigated. Moreover, we compare detection performance. Extensive experimental results on four
+the models of GATrust [21], GCN-ETA [22], E-minBatch network traffic datasets show that GSA-DT has better TPR,
+GraphSAG [20], TCN [36], XGBoost [37], BiTCN [17] and FPR, F1-measure and accuracy on most types of malicious
+PEAN [19] in this paper, but we do not get the full details of traffic compared with seven state-of-the-arts, and it also has
+the model, therefore, the experimental results may have errors. better stability.
+ External validity: External validity threats are mainly The proposed GSA-DT model has the following drawbacks:
+caused by the used network traffic datasets, where experiments (1) Its time cost in the training phase is still relatively long,
+are conducted using four datasets that contains various mali- which is mainly due to that long time need to be spent in
+cious traffic to validate the detection efficiency of GSA-DT, processing the features of network traffic. (2) The use of
+but there are more categories of malicious traffic in real life, self-attention mechanism may focuses excessively on specific
+and the used datasets are only a small fraction of the categories features while neglecting others, leading to biased detection
+of intrusion traffic in real cyberspace, therefore, there is no results. (3) It is unable to handle the data imbalance problem
+guarantee that GSA-DT model can maintain a high detection and this problem is indeed a highly publicized and important
+accuracy for all malicious traffic in practical applications. In challenge in malicious traffic detection.
+the future, we need to conduct experiments on more datasets to In the future, we would like to do the following researches
+further validate the efficiency of GSA-DT model. In addition, to improve the detection of malicious traffic: (1) The specific
+the current study targets unencrypted or mixed (containing research directions: (I) Further optimize the efficiency of
+both encrypted and unencrypted traffic) malicious traffic, while GSA-DT model in handling real-time network traffic, espethe performance of GSA-DT model on encrypted network cially in large-scale network environments; (II) Explore the
+traffic is not yet known. model compression techniques, feature selection optimization
+ The attacker may attack model by analyzing the model’s and more efficient GCN models to improve the real-time detecclassification logic and generating traffic specifically designed tion performance; (III) Explore the cross-domain applications
+using adversarial sample generation, which may cause the of GSA-DT model in different network environments and
+model to misreport normal traffic as malicious or misreport different types of malicious traffic detection, and study how
+some malicious traffic. Therefore, the robustness of model to maintain efficient and accurate performance in IoT device
+can be improved against such adversarial attacks from the networks, enterprise intranets and public cloud environments.
+following perspectives: (1) Enhance the model by adversarial (2) The potential improvements in model architecture:
+training and use adversarial generation network to construct (I) Introduce a more complex attention mechanism such as
+simulated adversarial traffic as well as integrate them into adaptive attention models to capture more complex feature
+training process, thereby improving the model’s capability of relationships; (II) Combine the GSA-DT with other detection
+detecting unknown adversarial traffic; (2) Use the idea of models (e.g., deep learning models or rule-based models) to
+model stacking to integrate multiple models, so that even one form a hybrid detection system; (III) Study how to efficiently
+model is successfully breached other models can still function, deploy the GSA-DT models on distributed network environthus improving robustness of the model; (3) Take necessary ments or edge devices. All these improvements lead GSA-DT
+measures (e.g., encryption, code obfuscation, etc.) from the model achieve high detection accuracy, low-latency and highsystem level to prevent the model from being easily accessed, throughput of malicious traffic detection.
+thus making it more difficult for attackers to reverse the model;
+(4) Use the online learning approach to optimize and update
+the model instead of using a fixed offline training model, thus R EFERENCES
+improving the model’s adaptability to emerging attacks.
+ [1] Z. Wang, K. W. Fok, and V. L. L. Thing, “Machine learning for
+ encrypted malicious traffic detection: Approaches, datasets and comparative study,” Comput. Secur., vol. 113, Feb. 2022, Art. no. 102542.
+ VI. C ONCLUSION AND F UTURE W ORK [2] V. C. Cunha, A. Z. Zavala, D. Magoni, P. R. M. Inácio, and M. M. Freire,
+ “A complete review on the application of statistical methods for evalu-
+ With the popularity of Internet and the advent of digital age, ating internet traffic usage,” IEEE Access, vol. 10, pp. 128433–128455,
+the number of network attacks are increasing, which brings 2022.
+2072 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+
+ [3] A. Blaise, M. Bouet, V. Conan, and S. Secci, “Detection of zero-day [27] Y. Qu, R. K. Baghbaderani, H. Qi, and C. Kwan, “Unsupervised
+ attacks: An unsupervised port-based approach,” Comput. Netw., vol. 180, pansharpening based on self-attention mechanism,” IEEE Trans. Geosci.
+ Oct. 2020, Art. no. 107391. Remote Sens., vol. 59, no. 4, pp. 3192–3208, Apr. 2021.
+ [4] H.-Y. Kwon, T. Kim, and M.-K. Lee, “Advanced intrusion [28] Y. Ding, M. Jia, Q. Miao, and Y. Cao, “A novel time–frequency
+ detection combining signature-based and behavior-based detection meth- transformer based on self–attention mechanism and its application in
+ ods,” Electronics, vol. 11, no. 6, p. 867, 2022. fault diagnosis of rolling bearings,” Mech. Syst. Signal Process., vol. 168,
+ [5] W. Wang, X. Du, D. Shan, R. Qin, and N. Wang, “Cloud intrusion Apr. 2022, Art. no. 108616.
+ detection method based on stacked contractive auto-encoder and sup- [29] M.-H. Guo, Z.-N. Liu, T.-J. Mu, and S.-M. Hu, “Beyond self-attention:
+ port vector machine,” IEEE Trans. Cloud Comput., vol. 10, no. 3, External attention using two linear layers for visual tasks,” 2021,
+ pp. 1634–1646, Jul.–Sep. 2022. arXiv:2105.02358.
+ [6] A. I. Saleh, F. M. Talaat, and L. M. Labib, “A hybrid intrusion detection [30] V. G. Costa and C. E. Pedreira, “Recent advances in decision trees: An
+ system (HIDS) based on prioritized k-nearest neighbors and optimized updated survey,” Artif. Intell. Rev., vol. 56, no. 5, pp. 4765–4800, 2023.
+ SVM classifiers,” Artif. Intell. Rev., vol. 51, pp. 403–443, Mar. 2019. [31] W. Wang, M. Zhu, X. Zeng, X. Ye, and Y. Sheng, “Malware traffic
+ [7] Y. Zhong, Z. Wang, X. Shi, J. Yang, and K. Li, “RFG-HELAD: A classification using convolutional neural network for representation
+ robust fine-grained network traffic anomaly detection model based on learning,” in Proc. Int. Conf. Inf. Netw. (ICOIN), 2017, pp. 712–717.
+ heterogeneous ensemble learning,” IEEE Trans. Inf. Forensics Security, [32] 2015, “Stratosphere laboratory Datasets,” Dataset, Stratosphere, Mar. 13,
+ vol. 19, pp. 5895–5910, 2024. 2020. [Online]. Available: https://www.stratosphereips.org/datasets-
+ [8] Z. Zhao et al., “ERNN: Error-resilient RNN for encrypted overview
+ traffic detection towards network-induced phenomena,” IEEE [33] O. Roques, S. Maffeis, and M. Cova, “Detecting malware in TLS
+ Trans. Dependable Secure Comput., early access, Feb. 3, 2023, traffic,” in Proc. IEEE Conf. Local Comput. Netw. 30th Anniv. (LCN),
+ doi: 10.1109/TDSC.2023.3242134. 2019, pp. 1–77.
+ [9] X. Han, S. Liu, J. Liu, B. Jiang, Z. Lu, and B. Liu, “ECNet: [34] K. Sood, M. R. Nosouhi, D. D. N. Nguyen, F. Jiang, M. Chowdhury, and
+ Robust malicious network traffic detection with multi-view feature and R. Doss, “Intrusion detection scheme with dimensionality reduction in
+ confidence mechanism,” IEEE Trans. Inf. Forensics Security, vol. 19, next generation networks,” IEEE Trans. Inf. Forensics Security, vol. 18,
+ pp. 6871–6885, 2024. pp. 965–979, 2023.
+[10] M. Chen, Z. Wei, Z. Huang, B. Ding, and Y. Li, “Simple and deep graph [35] H. Xu, S. Han, X. Li, and Z. Han, “Anomaly traffic detection based
+ convolutional networks,” in Proc. 37th Int. Conf. Mach. Learn., 2020, on communication-efficient federated learning in space-air-ground intepp. 1725–1735. gration network,” IEEE Trans. Wireless Commun., vol. 22, no. 12,
+[11] J. Zhou, Z. Xu, A. M. Rush, and M. Yu, “Automating botnet detection pp. 9346–9360, Dec. 2023.
+ with graph neural networks,” 2020, arXiv:2003.06344. [36] J. Chen, S. Yin, S. Cai, C. Zhang, Y. Yin, and L. Zhou, “An efficient
+[12] L. Haghnegahdar and Y. Wang, “A whale optimization algorithm-trained network intrusion detection model based on temporal convolutional
+ artificial neural network for smart grid cyber intrusion detection,” Neural networks,” in Proc. IEEE 21st Int. Conf. Softw. Qual., Rel. Security
+ Comput. Appl., vol. 32, pp. 9427–9441, Jul. 2020. (QRS), 2021, pp. 768–775.
+[13] X. Kan et al., “A novel IoT network intrusion detection approach [37] Y. Song, H. Li, P. Xu, and D. Liu, “A method of intrusion detection
+ based on adaptive particle swarm optimization convolutional neural based on WOA-XGBoost algorithm,” Discr. Dyn. Nat. Soc., vol. 2022,
+ network,” Inf. Sci., vol. 568, pp. 147–162, Aug. 2021. no. 1, 2022, Art. no. 5245622.
+[14] Z. Chiba, N. Abghour, K. Moussaid, A. El Omri, and M. Rida,
+ “A novel architecture combined with optimal parameters for back
+ propagation neural networks applied to anomaly network intrusion
+ detection,” Comput. Secur., vol. 75, pp. 36–58, Jun. 2018.
+[15] L. Chang and P. Branco, “Embedding residuals in graph-based solutions:
+ The E-ResSAGE and E-ResGAT algorithms. A case study in intrusion
+ detection,” Appl. Intell., vol. 54, pp. 6025–6040, May 2024.
+[16] S. Huda, S. Miah, J. Yearwood, S. Alyahya, H. Al-Dossari, and R. Doss,
+ “A malicious threat detection model for cloud assisted Internet of Things
+ Saihua Cai (Member, IEEE) received the
+ (CoT) based industrial control system (ICS) networks using deep belief
+ Ph.D. degree from the College of Information
+ network,” J. Parallel Distrib. Comput., vol. 120, pp. 23–31, Oct. 2018.
+ and Electrical Engineering, China Agricultural
+[17] J. Chen, T. Lv, S. Cai, L. Song, and S. Yin, “A novel detection model for
+ University, Beijing, China, in 2020. He is currently
+ abnormal network traffic based on bidirectional temporal convolutional
+ an Associate Professor with the School of Computer
+ network,” Inf. Softw. Technol., vol. 157, May 2023, Art. no. 107166.
+ Science and Communication Engineering, Jiangsu
+[18] A. Venturi, M. Ferrari, M. Marchetti, and M. Colajanni, “ARGANIDS:
+ University, Zhenjiang, China. He has published
+ A novel network intrusion detection system based on adversarially
+ more than 90 papers in some famous journals
+ regularized graph autoencoder,” in Proc. 38th ACM/SIGAPP Symp. Appl.
+ or conferences, including ACM Transactions on
+ Comput., 2023, pp. 1540–1548.
+ Privacy and Security, the IEEE T RANSACTIONS
+[19] P. Lin, K. Ye, Y. Hu, Y. Lin, and C.-Z. Xu, “A novel multimodal
+ ON R ELIABILITY , ASE, and ISSRE. His major
+ deep learning framework for encrypted traffic classification,” IEEE/ACM
+ research interests include malicious traffic detection, outlier detection, and
+ Trans. Netw., vol. 31, no. 3, pp. 1369–1384, Jun. 2023.
+ software testing. He is a member of ACM, and a Senior Member of the
+[20] J. Lan et al., “E-minBatch GraphSAGE: An industrial internet attack
+ China Computer Federation.
+ detection model,” Secur. Commun. Netw., vol. 2022, Jul. 2022,
+ Art. no. 5363764.
+[21] N. Jiang, J. Wen, J. Li, X. Liu, and D. Jin, “GATrust: A multi-aspect
+ graph attention network model for trust assessment in OSNs,” IEEE
+ Trans. Knowl. Data Eng., vol. 35, no. 6, pp. 5865–5878, Jun. 2023.
+[22] J. Zheng, Z. Zeng, and T. Feng, “GCN-ETA: High-efficiency encrypted
+ malicious traffic detection,” Secur. Commun. Netw., vol. 2022, Jan. 2022,
+ Art. no. 4274139.
+[23] J. Xiao, L. Yang, and S. Wang, “Graph isomorphism network for materials property prediction along with explainability analysis,” Comput. Han Tang received the B.E. degree in software engi-
+ Mater. Sci., vol. 233, Jan. 2024, Art. no. 112619. neering from Pujiang College, Nanjing, China, in
+[24] L. Zhao et al., “T-GCN: A temporal graph convolutional network for 2022. She is currently pursuing the master’s degree
+ traffic prediction,” IEEE Trans. Intell. Transp. Syst., vol. 21, no. 9, in computer technology with Jiangsu University,
+ pp. 3848–3858, Sep. 2020. Zhenjiang, China. Her research interest includes
+[25] C. Fu, Q. Li, M. Shen, and K. Xu, “Frequency domain feature based malicious traffic detection.
+ robust malicious traffic detection,” IEEE/ACM Trans. Netw., vol. 31,
+ no. 1, pp. 452–467, Feb. 2023.
+[26] T.-Y. Kim and S.-B. Cho, “Web traffic anomaly detection using C-LSTM
+ neural networks,” Expert Syst. Appl., vol. 106, pp. 66–76, Sep. 2018.
+CAI et al.: GSA-DT: A MALICIOUS TRAFFIC DETECTION MODEL 2073
+
+ Jinfu Chen (Member, IEEE) received the Ph.D. Wenjun Zhao received the B.E. degree in software
+ degree in computer science and technology from the engineering from Yancheng Teachers College in
+ Huazhong University of Science and Technology, 2022. He is currently pursuing the master’s degree
+ Wuhan, China, in 2009. He is currently a Full in computer technology with Jiangsu University,
+ Professor with the School of Computer Science and Zhenjiang, China. His research interests include
+ Communication Engineering, Jiangsu University, malicious traffic detection and data augmentation.
+ Zhenjiang, China. He has published more than
+ 100 papers in some famous journals or conferences, including the IEEE T RANSACTIONS ON
+ R ELIABILITY, Information Sciences, Information
+ and Software Technology, and Software: Practice
+and Experience. His major research interests include software testing, software
+security, and trusted software. He is a member of ACM, and the China
+Computer Federation.
+
+ Tianxiang Lv received the M.D. degree in computer Chunlei Huang received the B.E. degree in automascience and technology from Jiangsu University, tion from the Nanjing Institute of Technology,
+ Zhenjiang, China, in 2023. He has published two Nanjing, China, in 2012. He is currently pursuing
+ papers in Information and Software Technology and the master’s degree in software engineering with
+ QRS. His major research interest includes malicious Jiangsu University, Zhenjiang, China. He is currently
+ traffic detection. working with Zhenjiang Maternal and Child Health
+ Hospital, Zhenjiang. His research interests include
+ malicious traffic detection and healthcare insurance
+ fraud detection.

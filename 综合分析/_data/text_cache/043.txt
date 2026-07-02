@@ -1,0 +1,146 @@
+  FS-Net: A Flow Sequence Network For Encrypted
+               Trafﬁc Classiﬁcation
+                      Chang Liu1,2 , Longtao He3 , Gang Xiong1,2 , Zigang Cao1,2 , Zhen Li1,2
+                       1.Institute of Information Engineering, Chinese Academy of Sciences
+                     2.School of Cyber Security, University of Chinese Academy of Sciences
+         3.National Computer Network Emergency Response Technical Team/Coordination Center of China
+
+   Abstract—With more attention paid to user privacy and                       such as maximum packet length, average packet length and
+communication security, the volume of encrypted trafﬁc rises                   byte distribution. This procedure depends on professional ex-
+sharply, which brings a huge challenge to traditional rule-                    perience heavily, and the effectiveness of manually designed
+based trafﬁc classiﬁcation methods. Combining machine learn-
+ing algorithms and manual-design features has become the                       features needs to be further veriﬁed. The model training is
+mainstream methods to solve this problem. However, these                       to feed the selected features into a speciﬁc classiﬁcation
+features depend on professional experience heavily, which needs                model, e.g. the logistic regression classiﬁer. However, the
+lots of human effort. And these methods divide the encrypted                   classiﬁcation models are also needed to be carefully selected
+trafﬁc classiﬁcation problem into piece-wise sub-problems, which               to generate convincing results. Obviously, this kind method
+could not guarantee the optimal solution. In this paper, we
+apply the recurrent neural network to the encrypted trafﬁc                     decomposes the encrypted trafﬁc classiﬁcation problem into
+classiﬁcation problem and propose the Flow Sequence Network                    two sub-problems, and the result of each sub-problem will
+(FS-Net). The FS-Net is an end-to-end classiﬁcation model                      directly affect the ﬁnal classiﬁcation performance. An alterna-
+that learns representative features from the raw ﬂows, and                     tive idea is to design an end-to-end model, i.e., combining the
+then classiﬁes them in a uniﬁed framework. Moreover, we                        feature engineering and model training into a uniﬁed model.
+adopt a multi-layer encoder-decoder structure which can mine
+the potential sequential characteristics of ﬂows deeply, and                   This end-to-end model can learn features from the raw input
+import the reconstruction mechanism which can enhance the                      directly, and the learned features are guided by the real labels
+effectiveness of features. Our comprehensive experiments on the                to boost performance. Therefore, it can save human effort for
+real-world dataset covering 18 applications indicate that FS-Net               designing and verifying features.
+achieves an excellent performance (99.14% TPR, 0.05% FPR                          In this paper, we purpose an end-to-end model named Flow
+and 0.9906 FTF) and outperforms the state-of-the-art methods.
+   Index Terms—Encrypted Trafﬁc Classiﬁcation, Recurrent
+                                                                               Sequence Network (FS-Net) for encrypted trafﬁc classiﬁca-
+Neural Network, Reconstruction Mechanism                                       tion. The FS-Net learns representative features from the raw
+                                                                               ﬂow sequences rather than manually designed features. The
+                                                                               major structure of the FS-Net model includes an encoder to
+                         I. I NTRODUCTION
+                                                                               generate the features, a decoder with reconstruction layer
+   Network trafﬁc classiﬁcation is a vital task in the network                 to restore the input sequences and a softmax classiﬁer to
+management and cyberspace security [1], [2]. In the network                    recognize applications. Both the encoder and decoder are the
+management, the trafﬁc needs to be classiﬁed based on                          multi-layer bi-directional recurrent neural networks to handle
+different priority strategies to guarantee the quality of service              the input sequences with different ﬂow lengths. The features
+(QoS) of networks. In cyberspace security, the malware trafﬁc                  for classiﬁcation are learned automatically from the raw ﬂow
+needs to be identiﬁed from benign trafﬁc for the network                       sequences by the encoder and are boosted by the decoder and
+anomaly detection. Nowadays, as the extensive use of encryp-                   reconstruction mechanism. Moreover, the decoder also learns
+tion techniques for protecting user privacy, encrypted trafﬁc                  features to enhance the discrimination of ﬂows. The encoder,
+rises sharply and takes a large share of network trafﬁc [3].                   decoder and classiﬁer are jointly trained with the raw ﬂow
+However, encrypted trafﬁc classiﬁcation is a huge challenge                    sequences and application labels. The ﬂexible architecture
+to traditional rule-based methods, due to the fact that all the                increases the generalization of the FS-Net.
+communication contents are randomized after encryption [4].                       Our contributions can be brieﬂy summarized as follows:
+Therefore, encrypted trafﬁc classiﬁcation becomes a focus                         • We purpose an end-to-end FS-Net model for the en-
+issue and attracts the widespread attention of industries and                        crypted trafﬁc classiﬁcation. The FS-Net jointly learns
+academia [5]–[12].                                                                   features from the raw ﬂow sequences and makes classi-
+   Combining machine learning algorithms and statistical                             ﬁcation to identify ﬂows, and consists of an encoder, a
+characteristics extracted artiﬁcially from raw trafﬁc ﬂows                           decoder, a classiﬁer and a reconstruction layer.
+becomes the mainstream method for encrypted trafﬁc classi-                        • The reconstruction mechanism is used to boost the fea-
+ﬁcation. The general procedures include feature engineering                          ture learning. By keeping reconstructed sequences and
+and model training [5]–[8], [13]. The feature engineering is to                      raw ﬂow sequences as similar as possible, the generated
+select effective features for the encrypted trafﬁc classiﬁcation,                    features can contain more discriminative information,
+
+
+
+
+                                                                         1171
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:29:34 UTC from IEEE Xplore. Restrictions apply.
+     which improves the classiﬁcation performance.                             classiﬁcation [1]. However, these methods are mainly based
+  •  Our FS-Net achieves excellent results on the real-world                   on the rich experiences, professional knowledge and lots of
+     network trafﬁc data for the encrypted trafﬁc classiﬁca-                   human effort. An alternative way is to learn representative
+     tion, and outperforms several state-of-the-art methods.                   features from the raw ﬂow data directly.
+   The rest of the paper is organized as follows. Section II                      2) Sequential Features: Sequential features are learned
+summarizes the related work. The preliminaries are described                   from the raw ﬂow sequences. The mainstream methods learn
+in Section III, and the detailed system architecture is proposed               the generation probabilities of ﬂows which are determined by
+in Section IV. Section V presents the comparison experi-                       each packet of ﬂows. Korczyński et al. (2014) ﬁrst proposed to
+ments. Finally, we conclude this paper in Section VI.                          represent the trafﬁc ﬂow sequence by Markov transformation
+                                                                               matrix [22]. They used message type sequences of encrypted
+                        II. R ELATED W ORK                                     trafﬁc to build ﬁrst-order Markov model with the maximum
+   Researches on trafﬁc classiﬁcation emerge in an endless                     generation probability to classify encrypted trafﬁc. Based on
+stream, and in this section, we introduce conventional trafﬁc                  this method, Shen et al. clustered the certiﬁcate length and the
+classiﬁcation, encrypted trafﬁc classiﬁcation and deep learn-                  ﬁrst packet length to improve the classiﬁcation performances
+ing models in this ﬁeld.                                                       under second-order Markov model [6], [23]. Chang et al.
+                                                                               (2017) integrated both message type sequences and length
+A. Conventional Trafﬁc Classiﬁcation                                           block sequences to build Markov models, and all the gener-
+   Port-based method [14] is used to identify the applica-                     ation probabilities are fed into classiﬁers to make decisions
+tion type with a given port list provided by the Internet                      [11]. Moreover, Fu et al. (2016) segmented encrypted trafﬁc
+Assigned Numbers Authority (IANA). However, this method                        ﬂows into sessions in a hierarchical way and extracted packet
+is failed in the situations with port dynamic allocation [15]                  length and time delay sequences to build hidden Markov
+and common communication protocol port [16]. Payload-                          models (HMM) [9], which can identify service usages and
+based method [17] uses the speciﬁc signature strings in the                    the end-user in-app behaviors. In addition, work [24] con-
+payload for matching. Keralapura et al. (2009) provided a                      sidered the sub-ﬂows during the HTTPS handshake process
+self-learning trafﬁc classiﬁer to identify the P2P trafﬁc in                   and the following data transmission period, and combined
+high-speed networks with application payload signatures [18],                  Markov and HMM models with optimal emission probability
+while Roughan et al. (2004) used statistical signatures to                     to classify encrypted trafﬁc. However, these methods cannot
+classify P2P application trafﬁc [19]. However, both port-based                 handle the long-term relationship due to the small order (e.g.,
+and payload-based methods lose their efﬁciency in encrypted                    1 or 2) of Markov model. These methods also split the feature
+trafﬁc classiﬁcation, because it is impossible to get signatures               learning and classiﬁcation procedures, i.e., the application
+from payloads after encryption.                                                labels cannot guide the feature representation.
+B. Encrypted Trafﬁc Classiﬁcation                                              C. Deep Learning Based Methods
+   With the appearance of machine learning techniques, re-
+                                                                                  Deep learning (DL) has been well applied to the image
+searchers mainly work on the feature engineering, i.e., con-
+                                                                               processing and natural language processing, but it is still a
+sider how to construct enough effective features rather than
+                                                                               new research idea for encrypted trafﬁc classiﬁcation. There
+extract the signatures from payload contents. There are two
+                                                                               are several attempts to apply DL to it. Lotfollahi et al.
+kinds of features commonly used in the encrypted trafﬁc
+                                                                               (2017) adopted the stacked autoencoder and one-dimensional
+classiﬁcation: statistical features and sequential features.
+                                                                               convolution neural network to extract features from encrypted
+   1) Statistical Features: Statistical features are proposed
+                                                                               trafﬁc payloads automatically [25]. Rui et al. (2018) provided
+to solve encrypted trafﬁc classiﬁcation problem combined
+                                                                               a byte segment neural network for trafﬁc classiﬁcation where
+with various traditional machine learning algorithms, e.g.
+                                                                               the segments of payloads are put into the attention encoder
+logistic regression, random forest and support vector machine.
+                                                                               to get the features, and then the softmax classiﬁer is used for
+Liu et al. (2012) designed packet-level statistical features
+                                                                               classiﬁcation [26]. However, they only use the encrypted pay-
+which include maximum, minimum and mean of sent and
+                                                                               loads of ﬂows to classify behaviors and do not consider other
+received bytes, and proposed a composite feature-based semi-
+                                                                               ﬂow information, which can fail in some encrypted trafﬁc
+supervised method for encrypted trafﬁc classiﬁcation [20].
+                                                                               classiﬁcation problems, like application-level classiﬁcation. In
+Anderson et al. (2016) preferred to ﬂow-level features and
+                                                                               this paper, we attempt to design a new DL network structure
+took ﬂow metadata, packet length distributions, time distribu-
+                                                                               which is ﬁt for ﬂow sequence characteristic, and adopt the
+tions, byte distributions and unencrypted TLS header informa-
+                                                                               reconstruction mechanism to enhance the performances of
+tion as joint features to identify malware encrypted trafﬁc with
+                                                                               both the feature representation and classiﬁcation.
+the logistic regression algorithm [21]. A robust application
+identiﬁcation method with the concept of the burst and ﬂow
+                                                                                                        III. P RELIMINARIES
+statistical features was proposed by work [5]. And Shi et al.
+(2018) built a deep learning framework to select and combine                     In this section, we ﬁrst give the deﬁnition of the encrypt-
+the statistical features to enhance the performances of trafﬁc                 ed trafﬁc classiﬁcation problem. Then, the recurrent neural
+
+
+
+
+                                                                         1172
+
+Authorized licensed use limited to: Montana State University Library. Downloaded on November 20,2024 at 08:29:34 UTC from IEEE Xplore. Restrictions apply.
+network, gated recurrent unit and autoencoder framework are                                        

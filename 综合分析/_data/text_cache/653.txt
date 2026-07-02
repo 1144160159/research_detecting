@@ -1,0 +1,150 @@
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026                                                                                                    4361
+
+
+
+
+                   Early Attack Identification in the Wild
+      Minji Kim, Dongeun Lee , Kookjin Lee, Doowon Kim, Member, IEEE, Jinpyo Kim , Sangman Lee ,
+                                  and Jinoh Kim , Senior Member, IEEE
+
+
+   Abstract—While characterizing network connections in their                  (the gap between the time to compromise and the time to
+early stage is vital for providing timely responses against network            defend) [2]. That is, the network should be able to pre-
+threats, existing methods become less attractive due to the                    pare and enforce relevant countermeasures against individual
+requirement of complete connection information (thus unable to
+make timely identification) or packet payload inspection (there-               attack activities before they are successfully executed. To
+fore limited to unencrypted packets under no privacy regulation).              this end, there would be at least two prerequisites: First, the
+To this end, this paper takes an approach of packet stream                     class of attacks should be identified in the detection time to
+analysis referencing statistical information of packet sequences,              prepare relevant countermeasures (e.g., based on predefined
+requiring neither packet inspection nor complete connection                    security policies). Second, the detection process should be
+information. To enable practical packet stream analysis, there
+exist several challenges, such as out-of-order packet sequences                done as early as possible while the attack is active and in
+introduced by network dynamics and class imbalance with a tiny                 progress.
+fraction of attack connections. To overcome these challenges, we                  Recently a body of studies has employed machine learning
+design two deep sequence models: 1) a bidirectional recurrent                  (ML) techniques for detecting network attacks [3], [4]. Despite
+structure designed for greater resilience to out-of-order packet               their promising detection performance reported, most (if not
+streams; and 2) a pre-training-enabled sequence-to-sequence
+structure designed for creating consistent representations from                all) of previous studies assume the availability of complete
+unbalanced class distributions using self-supervised learning. We              connection records that are only available at the connection
+evaluate the presented deep sequence models using real and                     termination time. For instance, common public datasets (e.g.,
+synthetic network data collections for extensive experimentation.              KDDCup 1999/NSL-KDD [5], UNSW-NB15 [6], and CIC-
+The experimental results support the feasibility of the proposed               IDS2017 [7]) provide the complete connection information
+models outperforming baseline deep learning models, yielding up
+to 94.8% (F1 score) only with the first five packets (k=5) from                such as duration, aggregated bytes, and number of packets,
+the Internet traffic collection containing a substantial fraction of           through CSV-formatted files. Such reliance confines the capa-
+network flows experiencing out-of-order delivery.                              bility of attack detection to postmortem analysis rather than
+  Index Terms—Packet stream, early characterization, out-of-                   live online detection for timely actions. Moreover, a large body
+order packets, class imbalance, deep sequence, neural networks.                of ML-based detection studies targeted anomaly detection (i.e.,
+                                                                               binary decision whether it is likely an attack or not); attack
+                     I. I NTRODUCTION                                          detection is a more complicated problem and requires the abil-
+
+N     ETWORK-BASED attacks happen increasingly with
+      growing volume and impacts. This becomes more critical
+with ever-growing connectivity with less secure Internet of
+                                                                               ity to identify the type of attacks (e.g., Web, DoS, and scanning
+                                                                               attacks). Deep packet inspection is an effective method for
+                                                                               identifying attack classes at the early stage of connections
+Things (IoT) devices through wireless mobile communica-                        by applying pattern matching with predefined byte sequences
+tions. One of the essential functions to protect computing                     (“signatures”) [8]. However, any payload inspection approach
+resources in the networking environment is the effective                       is extremely expensive for analyzing packet payloads. It is
+detection of network attacks. The approach to network attack                   also limited to unencrypted packets only. Moreover, there
+detection can be either host-based or connection-based (i.e.,                  is a trend of banning payload scanning with an increasing
+host-independent), and the latter would be an attractive option                demand on privacy, which renders it unlawful to read even
+with relatively low deployment and operation costs [1]. In                     cleartext packets. In this study, we take an approach of
+addition to detection, the capability of timely responses is                   packet stream analysis referencing statistical information of
+another vital requirement, so as to minimize detection deficit                 packet sequences, thus requiring neither packet inspection nor
+   Received 21 May 2023; revised 10 November 2024, 3 May 2025,
+                                                                               complete connection information.
+and 29 August 2025; accepted 10 March 2026; approved by IEEE T RANSAC -           For practical packet stream analysis, there exist several
+TIONS ON N ETWORKING Editor D. Pei. Date of publication 24 March 2026;         intricate challenges. First, the communication network is wild
+date of current version 27 March 2026. (Corresponding author: Jinoh Kim.)
+   Minji Kim, Dongeun Lee, Jinpyo Kim, and Jinoh Kim are with the
+                                                                               and network dynamics (e.g., routing oscillation) may lead
+Computer Science Department, East Texas A&M University, Commerce,              to out-of-order packet sequences in collection. For example,
+TX 75428 USA (e-mail: jinoh.kim@etamu.edu).                                    packet loss rates are non-negligible in reality, ranging from
+   Kookjin Lee is with the School of Computing and Augmented Intelligence,     0.01% to 20%, even in wired networking settings [9]. Packet
+Arizona State University, Tempe, AZ 85281 USA.
+   Doowon Kim is with the Department of Electrical Engineering and Com-        reordering refers to the reception of packets in a different
+puter Science, University of Tennessee, Knoxville, TN 37996 USA.               order than what were originally sent, and it is inevitable to see
+   Sangman Lee is with the Department of AI Cyber Security, Korea Univer-
+sity, Sejong-si 30019, South Korea.
+                                                                               packet reordering in packet-switched networks due to several
+   Digital Object Identifier 10.1109/TON.2026.3677135                          reasons, such as multi-path forwarding routes, parallelism, and
+             2998-4157 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+4362                                                                                     IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+
+
+                                                                  TABLE I
+                                                P RIOR R ESEARCH ON PACKET S TREAM A NALYSIS
+
+
+
+
+                               TABLE II                                network. Such dynamics is generally more critical in wireless
+       ATTACK C LASS I NFORMATION D EFINED IN THE I NTRUSION L OG      mobile communications with greater loss and retransmission
+                                                                       rates. Second, the measured data collection shows a high
+                                                                       degree of class imbalance with only a small fraction of attack
+                                                                       connections. We can also find significant variations even from
+                                                                       the distribution of attack types (also observed from our dataset
+                                                                       in Table III). Another challenge would be a trade-off between
+                                                                       the number of packet stream variables to be managed and
+                                                                       analyzed vs. the corresponding time/space complexity: for
+                                                                       example, a greater set of variables in analysis may yield better
+                                                                       performance, while imposing greater overheads and expenses.
+                                                                          This paper sheds light on the design of deep learning
+                                                                       models for effective packet stream analysis in the wild, which
+                                                                       enables us to make timely responses against network attacks
+                                                                       by identifying in their early stages. The key contributions of
+                                                                       this study can be summarized, as follows:
+                              TABLE III
+          C ONSTRUCTED DATA W ITH C LASS L ABELS F ROM WIDE
+                                                                         • We formulate the problem of packet stream analysis with
+                   T RACE (09/01/2020-09/30/2020)                            the notion of time series classification, which optimizes
+                                                                             identification performance while minimizing the number
+                                                                             of packets on a flow referenced in the analysis process.
+                                                                         • We present two deep sequence models designed to over-
+                                                                             come the challenges of incomplete packet sequences and
+                                                                             class imbalance: (i) a bidirectional recurrent structure
+                                                                             designed for greater resilience to missing/out-of-order
+                                                                             packet streams, and (ii) a pre-training-enabled sequence-
+                                                                             to-sequence structure designed for creating consistent
+                                                                             representations from unbalanced class distributions using
+packet loss and retransmission [10]. Possibly, recovering from               self-supervised learning.
+packet reordering by referring to the sequence number field              • We share evaluation details with our observations and
+is an option, but it is a highly expensive operation with extra              analysis. We conduct extensive evaluations using three
+space and time requirements in an intermediate point in the                  different data collections, one from the Internet backbone
+KIM et al.: EARLY ATTACK IDENTIFICATION IN THE WILD                                                                                                      4363
+
+
+
+
+Fig. 1. Early attack identification: Each flow is represented with the size and time information, and the framework performs the identification of attack
+classes based on the flow representation. Note that ψ(·) is the flow representation function and φ(·) is the flow identification function that takes the input
+flow represented by ψ(·) to determine its class.
+
+
+
+      links and the others collected from simulated networking                  packet time recorded for each packet within the flow, which
+      environments. The experimental results show that our                      has often been considered as time series analysis for traffic
+      deep sequence models consistently outperform baseline                     classification [11]. For flow f , let bj (f ) be the number of
+      deep learning models across diverse experimental set-                     bytes of the j-th packet and tj (f ) be the inter-packet time
+      tings, yielding up to 94.8% (F1 score) with the first                     between the (j-1)-th and j-th packets (t1 (f ) = 0). Let ψ be
+      five packets (k = 5) from the Internet traffic collection                 the function that transforms a flow into this representation:
+      containing a substantial fraction of network flows expe-                  ψ(f ) = h(b1 (f ), . . . , bn (f )), (t1 (f ), . . . , tn (f ))i, for flow f
+      riencing out-of-order delivery.                                           consisting of n packets. Note that ψk (f ) takes the first k
+   The organization of this paper is as follows. We begin                       packets in the observation (for the purpose of early decision).
+with providing the description of the problem and a summary                     Figure 1 depicts the data transformation from a series of
+of closely related studies in Section II. We next introduce                     packets captured on a communication link.
+the dataset constructed from the Internet backbone and syn-                        For attack types, suppose m attack classes under consid-
+thetic traffic traces with the associated ground-truth logs in                  eration. A flow may either be a part of an attack connection
+Section III. Section IV presents our deep sequence models                       or have nothing to do with any of attack classes (referred
+developed to analyze the potentially imperfect and unbalanced                   to as “background”). Let U be a set of different classes,
+packet stream data, with a schematic overview of the the                        U = {Ai |0 ≤ i ≤ m, i ∈ Z}, where A0 is a class for
+framework model implementing the deep sequence models                           background traffic while Aj (j > 0) is an attack class. In
+to tackle the problem of early identification. We share the                     other words, a flow belongs to Ai (0 ≤ i ≤ m) depending
+experimental setting and results with our observations and                      on its class. The identification function φ(·) takes the input
+implications in Section V, conducted with three data collec-                    representation of a flow ψ(f ) and determines its class, i.e.,
+tions. We finally

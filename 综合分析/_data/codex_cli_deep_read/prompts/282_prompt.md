@@ -1,0 +1,1533 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [282] Produce Once, Utilize Twice for Anomaly Detection
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：282
+题名：Produce Once, Utilize Twice for Anomaly Detection
+年份：2024
+DOI：10.1109/tcsvt.2024.3420775
+来源：IEEE Transactions on Circuits and Systems for Video Technology
+PDF：paper/10.1109_TCSVT.2024.3420775.pdf
+已有粗分类：入侵检测与网络异常检测
+二级关联：其他AI安全与跨域异常检测、多媒体、医学、遥感与视频异常检测
+相关性：强相关，分数 10
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\282.txt
+- 原始字符数：80215
+- 本次发送字符数：80215
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+11751
+
+Produce Once, Utilize Twice for Anomaly Detection
+Shuyuan Wang , Qi Li , Member, IEEE, Huiyuan Luo, Chengkan Lv , Member, IEEE,
+and Zhengtao Zhang , Member, IEEE
+
+Abstract— Visual anomaly detection aims at classifying and
+locating the regions that deviate from the normal appearance.
+Embedding-based methods and reconstruction-based methods
+are two main approaches for this task. The embedding-based
+methods typically predict the anomaly by measuring the distances
+between the deep representations of the test samples and a
+limited number of nominal samples, which enables these methods
+to be efficient but struggle in providing a fine-grained pixellevel anomaly location. The reconstruction-based methods rely
+on the pixel-level reconstruction errors to locate the anomaly,
+thereby the anomaly predictions are fine-grained. However, there
+are repetitive feature extractions and usually extra modules to
+guarantee the quality of the reconstructed images, resulting
+in unsatisfactory detection efficiency. In a nutshell, the prior
+methods are either not efficient or not precise enough for
+the industrial detection. To deal with this problem, we derive
+POUTA (Produce Once Utilize Twice for Anomaly detection),
+which improves both the accuracy and efficiency by reusing the
+discriminant information potential in the reconstructive network.
+We observe that the encoder and decoder representations of
+the reconstructive network are able to stand for the features
+of the original and reconstructed image respectively. And the
+discrepancies between the symmetric reconstructive representations provides roughly accurate anomaly information. To refine
+this information, a coarse-to-fine process is proposed in POUTA,
+which calibrates the semantics of each discriminative layer by
+the high-level representations and supervision loss. Equipped
+with the above modules, POUTA is endowed with the ability
+to provide a more precise anomaly location than the prior arts.
+Besides, the representation reusage also enables to exclude the
+feature extraction process in the discriminative network, which
+reduces the parameters and improves the efficiency. Extensive
+experiments show that, POUTA is superior or comparable to the
+prior methods with even less cost. Furthermore, POUTA also
+achieves better performance than the state-of-the-art few-shot
+anomaly detection methods without any special design, showing
+that POUTA has strong ability to learn representations inherent
+in the training data.
+Index Terms— Anomaly detection, detection efficiency, representations reusing.
+
+Manuscript received 21 December 2023; revised 29 April 2024;
+accepted 20 June 2024. Date of publication 28 June 2024; date of current version 27 November 2024. This work was supported in part by the
+National Natural Science Foundation of China under Grant U21A20482, Grant
+62303458, Grant 62303461, and Grant 62076240; in part by Beijing Municipal
+Natural Science Foundation under Grant 4222054; and in part by the Youth
+Innovation Promotion Association of the Chinese Academy of Sciences under
+Grant Y2023143. This article was recommended by Associate Editor Z. Tao.
+(Corresponding author: Zhengtao Zhang.)
+The authors are with the Institute of Automation, Chinese Academy of
+Sciences, Beijing 100190, China (e-mail: wangshuyuan2020@ia.ac.cn; qli@
+nlpr.ia.ac.cn; huiyuan.luo@ia.ac.cn; chengkan.lv@ia.ac.cn; zhengtao.zhang@
+ia.ac.cn).
+Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TCSVT.2024.3420775.
+Digital Object Identifier 10.1109/TCSVT.2024.3420775
+
+I. I NTRODUCTION
+NSUPERVISED anomaly detection has drawn much
+attention in recent years [26], [32], [54], since it requires
+no defect samples for training [25], [29], [31], which benefits the scenario where the collection of defect samples
+is costly, e.g. industrial detection [28], [30]. There are two
+main approaches for anomaly detection, reconstruction-based
+methods and embedding-based methods. The reconstructionbased methods train a reconstructive network to build a normal
+version of the input [27], as shown in Figure 1. Generally,
+the deviation lies solely in the abnormal regions before and
+after reconstruction. By analyzing the reconstruction errors,
+the anomaly can be located [2], [49], [54]. As illustrated
+in Figure 2, due to the analysis on pixel-level reconstruction errors, the reconstruction-based methods are endowed
+with the capability to locate the anomaly at the fine-grained
+pixel-level. However, there are strict requirements for the
+reconstructive network. Specifically, abnormal regions should
+be repaired to normal, while the normal regions are supposed
+to remain unchanged. Otherwise, the reconstruction errors will
+not conform to the anomaly, resulting in failure in detection,
+as shown in the carpet of Figure 2. Prior studies [6], [33]
+always design extra modules for the reconstructive network to
+meet the aforementioned requirements. Due to the intricate
+structure, the reconstruction-based methods fall flat when
+comparing the inference time with the embedding-based methods. The embedding-based methods typically exploit the deep
+representations to do a feature matching between the test
+sample and the nominal samples, as indicated in Figure 1.
+Since the nominal samples for feature matching are usually
+limited in number [16], the embedding-based methods achieve
+tremendous progress on the detection efficiency. However,
+the deep representations are typically of lower resolution
+than the input, which makes the embedding-based methods
+to struggle in providing a fine-grained pixel-level anomaly
+location, as shown in Figure 2. In a nutshell, both of the above
+methods have some deficiencies, and it is an ambitious goal
+for the prior arts to provide a fine-grained pixel-level anomaly
+location efficiently.
+There are two approaches to overcome the aforementioned
+deficiencies. For the embedding-based methods, to obtain the
+fine-grained location, it is necessary to analyze the shallow
+representations to add details about the anomaly. RD [18]
+follows this way, which utilizes a distillation mechanism
+and introduces a student network to upsample the features
+from the teacher network to measure the shallow representations, as depicted in Figure 1. Specifically, RD believes the
+teacher network which is pre-trained on other dataset (such as
+
+U
+
+1051-8215 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+11752
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+Fig. 1.
+The network architectures of the reconstruction-based method
+(DRÆM [5]), embedding-based method (PatchCore [16]), the improved
+embedding-based method (RD [18]) and the proposed POUTA which is
+improved based on the vanilla reconstruction-based method [5].
+
+Fig. 2.
+The qualitative examples of the embedding-based method
+(PatchCore [16]), the improved embedding-based method (RD [18]), reconstruction-based method (DRÆM [5]), and the proposed POUTA.
+
+ImageNet) has the ability to demonstrate the anomaly well,
+while the student network trained only on the current dataset
+does not have this ability. Therefore, the cosine distance
+between the features of the teacher network and student
+network reveals the anomaly location. However, modeling or
+feature matching the shallow representations is sophisticated.
+As shown in Figure 2, the predicted location of RD is finer
+than the embedding-based method, but as it identifies anomaly
+in the feature layer whose resolution is close to that of the
+input, the predicted anomaly location is not as fine-grained
+as that of the reconstruction-based methods. It is because that
+the shallow representations are not as homogeneous as the
+deep ones, it requires to record the shallow representations
+elaborately to obtain an accurate anomaly location, which is
+costly and may deprive the efficiency. Therefore, we turn to
+another solution, improving the accuracy and efficiency of the
+reconstruction-based methods.
+Recent reconstruction-based methods follow a paradigm,
+which involves a reconstructive network and a discriminative
+network [5], [35], [48], as demonstrated in Figure 1. The
+discriminative network is employed to locate the anomaly
+by analyzing the discrepancies between the original and
+reconstructed images, demonstrating significantly better performance than simply measuring the absolute distance between
+these two images. Despite the impressive efforts, two critical
+issues still exist. Firstly, this paradigm yet relies on the
+reconstruction errors to identify anomaly. The requirements for
+the reconstructive network are strict as usual. While the quality
+of the reconstructed image is sometimes not so ideal, resulting
+in the unsatisfactory prediction, as shown in the carpet and
+
+Fig. 3. In POUTA, the representation distributions of the last reconstructive
+encoder layer and the first reconstructive decoder layer are visualized by
+t-SNE [42]. The red points correspond to the representations of the abnormal
+regions, and the green ones refer to the normal representations. Each column
+on the right represents the input, the anomaly predicted only by the differences
+in representation of the aforementioned two layers, and the ground truth,
+respectively.
+
+capsule of Figure 2. Even if the reconstructed image is of high
+quality, it is still a challenging problem to indicate anomaly
+completely when the color of abnormal region is close to
+the normal one. The second lies in the excessive computing
+consumption caused by the repetitive feature extraction in
+the reconstructive and discriminative network. Both of them
+extracts the features of the input in their encoders. It seems
+impossible to solve both of the above problems simultaneously within the conventional reconstruction-based paradigm,
+as achieving better performance necessitates enhancing the
+quality of reconstruction, which inevitably leads to increased
+computing consumption. This enlightens us to propose a new
+reconstruction-based paradigm.
+We argue that, in the reconstructive network, the encoder
+and decoder representations are able to stand for the hierarchical representations of the input and reconstructed images.
+It is more suitable for the discriminative network to locate
+the anomaly by analyzing the discrepancies between the
+symmetric representations in the encoder and decoder directly.
+To verify our assumption, the encoder and decoder representations are visualized in Figure 3. Figure 3 indicates that, in the
+encoder, most of the abnormal representations are apart from
+the normal ones. While in the decoder, since the abnormal
+regions are repaired to normal, their representations are shifted
+to the distribution of the normal data. The above phenomena are consistent with our assumption. Since the normal
+regions and the abnormal regions in the input have different
+appearances, they naturally belong to different distributions.
+While the abnormal regions are repaired to normal in the
+reconstructed image, their representations will shift to the
+normal distribution in the decoder. Therefore, it is feasible
+to identify the anomaly by the representation discrepancies
+between encoder and decoder. As shown in Figure 3, by analyzing the disparities between the last reconstructive encoder
+layer and the first reconstructive decoder layer, the anomaly
+can be located roughly accurately.
+Based on the above conclusion, we derive a neat and
+effective approach, POUTA (Produce Once Utilize Twice
+for Anomaly detection), as an effective remedy for the
+reconstruction-based methods on both accuracy and efficiency,
+fully reusing the discriminant information potential in the
+reconstructive network. POUTA is established with a view
+
+WANG et al.: PRODUCE ONCE, UTILIZE TWICE FOR ANOMALY DETECTION
+
+Fig. 4.
+
+11753
+
+The qualitative examples and visualizations (provided by Grad-CAM [4]) of the vanilla reconstruction-based (DRÆM [5]-like) and POUTA.
+
+to the availability of the multi-scale reconstructive representations, aggregating hierarchical symmetric representations to
+identify anomaly through a lightweight coarse-to-fine discriminative network, as shown in Figure 1. Specifically, in the
+discriminative network, firstly, there is a MSS (Multi-scale
+Semantic Supervision) module to ensure clear differentiation for the abnormal regions between encoder and decoder
+representations. Secondly, a differential module named FCM
+(Feature Contrast Module) is designed to analyze the distribution shift of the same representation between the encoder
+and decoder in the feature space. The representations of the
+normal regions remain in the same distribution, while those
+of the abnormal ones shift, which can serve as a signal for
+detection. In addition, HSG (High-level Semantic Guidance)
+module calibrates the hierarchical representations output by
+FCM progressively, resulting in rich and precise spatial details.
+It can be observed that our method compares the shallow
+representations in the encoder with their symmetric decoder
+representations. While the anomaly information drawn from
+the discrepancies between these representations is calibrated
+by the deep semantics through the HSG module and also the
+MSS module, which enables the prediction to be more accurate
+and fine-grained simultaneously.
+Due to reusing the reconstructive representations, POUTA
+suffices to identify anomaly more precisely than the vanilla
+reconstruction-based method with even lower cost. We take
+Grad-CAM [4] to visualize the semantic differences captured
+by the vanilla method and POUTA in Figure 4. There is no
+significant discrepancy between the reconstructed images from
+both methods, while POUTA obtains more complete semantics
+of anomaly regions through the representations and therefore
+the predictions of POUTA are more precise. This indicates that
+the reconstructive representations are more informative than
+reconstruction errors. It is reasonable since the information
+loss occurs when reconstructing an image from its representations. As a result of this loss, the pixel-level reconstruction
+errors might be incomplete, or even inaccurate, potentially
+leading to detection failures in certain cases, especially those
+of fine-grained anomalies. As shown in Figure 4, the colors
+of the abnormal regions in wood and pill are close to the
+
+normal ones, the vanilla method fails to locate anomalies
+without surprise, but POUTA still identifies anomaly precisely.
+Besides, the discriminative network in POUTA directly reuses
+the reconstructive representations, which distinctively allows
+for the exclusion of feature extraction in the discriminative
+network, thereby improving efficiency. In summary, by directly
+reusing informative representations, POUTA relaxes the strict
+requirement for reconstructive network, and this new paradigm
+is able to achieve higher accuracy at lower cost.
+Our main contributions can be listed as follows:
+• Different from previous reconstruction-based methods,
+the discriminative network in POUTA directly reuses the
+representations in the reconstructive network, which filled
+the gap that the previous arts are typically inefficient.
+• POUTA utilizes the discrepancies between the reconstructive representations to locate the anomaly, which provides
+more accurate and complete anomaly information than
+the previously used reconstruction error, endowing the
+capability to identify the anomaly more precisely.
+• Experimental results show the superiority of the proposed unsupervised method POUTA. It outperforms
+the state-of-the-art methods on MVTec AD and VisA
+dataset and achieves a comparable performance with the
+best-performing supervised method on DAGM dataset.
+• POUTA also achieves superior performance on few-shot
+anomaly detection without any special design, which
+indicates that POUTA has strong ability to learn representations inherent in the nominal data.
+II. R ELATED W ORK
+Anomaly detection is an unsupervised detection task, where
+only the normal data is involved amid training [58]. The
+anomaly detection model is required to distinguish between
+samples being drawn from the training data distribution and
+those outside its support [16], [61]. Given respective nominal samples and test samples, anomaly detection can be
+converted to calculating distances between the nominal deep
+representations and the test ones, or analyzing the differences
+before and after reconstruction, which corresponds to the
+embedding-based methods and reconstruction-based methods.
+
+11754
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+A. Embedding-Based Methods
+The embedding-based methods typically extract the deep
+representations and then calculate the distance to k nearest nominal neighbors or the probability in the distribution.
+DeepSVDD [39] and MLBFD [59] propose to find the data
+centers and set corresponding radii. Data where the distance
+from its corresponding center exceeds the radius is considered
+as an anomaly. This approach is effective in fault diagnosis
+task. While DeepSVDD extracts the deep representations
+describing the entire image, which limits the model to obtaining only the existence of the anomaly but not to locating
+it. To mitigate this problem, PatchSVDD [3] extracts the
+deep representations for the image patch, which provides
+the rough anomaly location. Similarly, PaDim [40] generates
+patch embeddings from the pretrained network to estimate
+the Gaussian distribution moments (mean and covariance) for
+patch-level Mahalanobis distance. GLCF [28] points out that
+the performance of prior arts are limited since only the local
+knowledge is relied to identify anomaly. Therefore, GLCF
+proposes a two-branch approach to extract the local and global
+features, respectively. Despite improving the performance, the
+efficiency degrades. Other distribution learning methods can
+also be utilized, such as the normalizing flow (NF) [41]. DifferNet [36] takes the NF to measure the anomaly. To obtain the
+more informative representations, CSflow [37] builds a crossscale NF, which enables the model to predict the anomaly more
+precisely while increase the model scale at the same time.
+Some works turn the anomaly detection task into a matter of
+distances to k nearest neighbors. SPADE records the nominal
+representations extracted from a pretrained network in a memory bank, and then calculates the average distances between
+the test data and k nearest nonimal neighbors [15]. To notably
+reduce the inference cost, PatchCore [16] subsamples the
+memory bank. Moreover, Patchcore extracts locally aware
+patch features to achieve high performance. The traditional
+embedding-based methods suffer from the coarse anomaly
+prediction. RD [18] proposes to utilize a distillation mechanism into the embedding-based method. A student network
+is employed to upsample the representations of the teacher
+network, allowing to modelling the shallow representations
+whose resolution is close to the input. This approach slightly
+alleviates the difficulty of modelling the shallow representations, but also results in a predicted anomaly map that is not
+as fine-grained as that of the reconstruction-based methods.
+Unlike RD, we choose a different solution to consider both the
+efficiency and accuracy, improving the reconstruction-based
+methods by reusing the reconstructive representations. In this
+paper, our POUTA is compared with PatchCore and RD,
+known for their efficiency and finer location, respectively,
+among the above methods. The embedding-based methods
+generally enjoys higher efficiency than the reconstructionbased methods, but the anomaly locations are generally not
+as fine-grained as the reconstruction-based methods.
+B. Reconstruction-Based Methods
+The reconstruction-based anomaly methods reconstruct
+a normal version of the input, typically through the
+
+autoencoder [10]. Since the anomaly is located by analyzing
+the pixel-level differences between the images before and after
+reconstruction, the anomaly prediction is always fine-grained.
+The early arts predicts the anomaly by the reconstruction error,
+typically in L1 distance [26], [27]. EaLDL [60] employs the
+L2 distance to calculate the reconstruction error. A threshold
+is set to distinguish normal and abnormal regions. Including
+the reconstruction error, SSR-AE [62] also calculate the L2
+distance between the applied and predicted transformation on
+the original image, in order to enlarge the gap of anomaly
+scores between normal and abnormal images. SSAGAN [63]
+applies Peak Signal-to-Noise Ratio (PSNR) to calculate the
+prediction error between the actual pixels and the predicted
+ones provided by a self-attentive predictor. Besides, a selfsupervised rotation angle prediction task is proposed to enlarge
+detection errors for abnormal pixels. TAC-Net [64] transforms
+the instances and incorparates contrastive learning during the
+training stage. The anomaly score is also measured by PSNR.
+These methods are effective in certain practical applications,
+such as process monitoring and video anomaly detection.
+Recently, to meet the requirements of more complex and
+changing industrial scenarios, there is a paradigm shift towards
+analyzing the reconstruction errors using a discriminative
+network [5], [21], [35], [48], [51]. Namely, the vanilla framework comprises a reconstructive network and a discriminative
+network in series. The input of the discriminative network
+contains only the input image and the reconstructed image.
+However, the procedure that compresses the representations to
+build a reconstructed image inevitably results in information
+loss, which may ultimately lead to inconsistencies between
+the reconstruction errors and the anomalies. Lots of effort has
+been invested in enhancing the quality of the reconstructed
+image to ensure that the reconstruction errors provide more
+precise anomaly information. And most turns to incorporate
+an additional module into the reconstructive network, such as a
+memory bank [6], [10], [24], [27], codebook [21], or attention
+mechanism [26], [33]. Turning the reconstruction sub-task
+to the image inpainting task, where the input is gridded
+and then reconstructed in patch [11], [22], [23], [46], also
+facilitates the construction of a high-quality reconstructed
+image. It also proposes to utilize the mathematical expectation
+map of the training dataset as the supplement of normal
+appearance [33], aiming to assist the reconstructive network
+to build a high-quality normal image. Based on the paradigm
+composed of a reconstructive network and a separate discriminative network, NIGSF [25] provides an insight into the
+normal appearance through another normal image, which is
+beneficial for identifying semantic anomaly. But the unavoidable inconsistencies between the input and the introduced
+one in details might lead to misjudgment. Despite being a
+smaller model, the performance drops on certain metrics.
+The above methods aim to build a high-quality reconstructed
+image, which follows the vanilla idea to locate the anomaly
+by analyzing the pixel-level reconstruction errors. It is costly
+but still can not deal with certain anomaly, such as the colorclose-to-normal one. Aiming at improving both the accuracy
+and efficiency, it is necessary to propose a new paradigm.
+Our method opts to reuse the reconstructive representations,
+
+WANG et al.: PRODUCE ONCE, UTILIZE TWICE FOR ANOMALY DETECTION
+
+which provides more precise anomaly information, endowing
+our method to achieve better performance with less costs than
+the vanilla method.
+C. Few-Shot Anomaly Detection
+Few-shot anomaly detection aims to indicate the anomaly
+with only a few nominal samples as the training support [20].
+TDG [9] incorporates a hierarchical generative module to
+model the distribution of multi-scale patches. To enhance
+the representations, TDG uses image transformations and
+optimizes discriminators to distinguish between real and fake
+patches, as well as between different transformations applied
+to the patches. The anomaly predictions are obtained by aggregating the patch-based votes of the correct transformations.
+Similarly, RegAD [20] applies the transformations as well,
+but on the features, learning the category-agnostic feature
+registration flexibly. Therefore, RegAD can detect anomaly
+in new categories with just a few normal images, without
+requiring fine-tuning [20]. MSMC [43] proposes to employs a
+global memory bank and an individual memory bank to record
+the features of the entire image and a single object respectively.
+The prior few-shot anomaly detection methods implement
+focused design for the few-shot context, whereas our method
+POUTA is initially designed for the typical anomaly detection.
+Despite this, POUTA still exhibits considerable performance
+on the few-shot anomaly detection, indicating strong learning
+ability towards the representations inherent in the training data.
+III. M ETHOD
+As depicted in Figure 5, instead of analyzing the pixel-level
+reconstruction errors in the vanilla method, POUTA predicts
+the anomaly by analyzing the discrepancies in the symmetric
+reconstructive representations. POUTA is a neat and effective framework which comprises two networks that we will
+describe in sequence: self-supervised learning with reconstructive network (III-A) and coarse-to-fine discriminative
+network (III-B).
+A. Self-Supervised Learning With Reconstructive Network
+Different from conventional methods, the reconstructed
+image does not need to repair the anomaly flawlessly, and it is
+sufficient to offer a tendency towards repairing it in POUTA.
+Therefore, no additional elements are added to produce a
+flawless reconstructed image, and the reconstructive network
+is requested to rectify the synthetic anomaly using contextual
+information, which has been proven to be an effective strategy
+to enhance the representational learning ability [12], [17], [53].
+The synthetic abnormal image Iin is generated by seamlessly blending an augmented image Iaug within a predetermined region M of an image Iori from the training dataset.
+Iin = Iori ⊙ (1 − M) + Iaug ⊙ M
+Iaug = β × g(Iori ) + (1 − β) × Iun
+
+(1)
+(2)
+
+where Iaug is formed by merging a transformed version g(·) of
+the original image Iori (e.g. translation, rotation or identity)
+with an image Iun obtained from an unrelated dataset [13].
+
+11755
+
+Perlin generator [44] is used to determine the abnormal region.
+M is a binary map, which indicates the regions on a random
+Perlin noise map that is greater than a random threshold
+between 0 and 1. M is a zero matrix when the input is
+a normal image, all the numbers in the Perlin noise map
+are smaller than the threshold at this time. This situation
+rarely happens, in general, the inputs are mainly images with
+synthetic anomalies. β is a random number between 0 and 0.8.
+The input in Figure 5 exemplifies the synthetic image.
+There are three parts in reconstructive network: the encoder,
+the mapping layer, and the decoder. Given the input image, the
+encoder outputs hierarchy representations FEi (i = 1, 2, 3, 4).
+Then, the mapping layer maps the representation FE4 to the
+normal latent space, and outputs as FM . Subsequently, the
+decoder samples up FM and obtains the multi-scale normal
+representations FDi (i = 4, 3, 2, 1). Finally, an image with
+normal appearance Ir is reconstructed. Ir is supposed to be the
+same with the original one Iori . Therefore, the reconstructive
+loss L r ec is calculated between Ir and Iori by the mean
+square error (MSE) and structure similarity index measure [34]
+(SSIM). As mentioned in [5], MSE is a regular reconstruction
+loss but assumes the independence between neighboring pixels. Following recommendations in [5], we add SSIM loss into
+the reconstruction loss.
+L r ec = L M S E (Ir , Iori ) + L SS I M (Ir , Iori )
+
+(3)
+
+B. The Coarse-to-Fine Discriminative Network
+The discrepancies between the symmetric reconstructive
+representations can accurately indicate the anomaly positions
+in some cases, as shown in Figure 2. While we find that
+the anomaly information contained in the reconstructive representations is coarse, which makes the indicated anomaly
+positions in other cases unclear or incomplete (we will present
+these cases in ablation study). Previous methods follow the
+vanilla paradigm to compress the representations into images.
+Nevertheless, the compression inevitably results in the loss
+of information, which leads to the pixel-level reconstruction
+errors not align with the anomalies. To address this, the
+previous methods focus on enhancing the quality of the
+reconstructed image by using sophisticated skills [6], [33],
+which typically requires extra space or computing resources.
+Instead, the reconstructive representations are directly
+employed as discriminative representations in this paper. This
+approach eliminates the information loss associated with the
+compression from representations to images. To obtain a more
+precise result, we propose a coarse-to-fine strategy to analyze the discrepancies between the symmetric reconstructive
+representations. Three well-designed modules are proposed
+to detect and refine the anomaly location. Specifically, the
+Feature Contrast Module (FCM) initially acquires the coarse
+anomaly information within the reconstructive representations,
+which is the coarse stage. And then the High-level Semantic
+Guidance (HSG) and Multi-scale Semantic Supervision (MSS)
+refine the anomaly information, and identify the anomalies
+precisely.
+1) FCM: FCM treats the encoder representations FEi
+(i = 1, 2, 3, 4) and the decoder representations FDi
+
+11756
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+Fig. 5. The vanilla method and the proposed POUTA. Vanilla method is composed of an autoencoder-like reconstructive network and a U-Net [45]-like
+discriminative network, where the discriminative network obtains only the concatenation of the input and reconstructed image. While in POUTA, the
+discriminative network obtains the representations of the symmetric layers in the reconstructive network. The reconstructive representations contains more
+precise information about anomaly than the pixel-level reconstruction errors, which enables POUTA to identify anomaly more precisely. Each layer (except
+the first one) in the discriminative network involves a coarse(FCM module)-to-fine(HSG and MSS module) process.
+
+(i = 1, 2, 3, 4) as the features of the input and reconstructed
+image respectively. By analyzing the discrepancies between
+them, the preliminary anomaly information exists in the
+contrastive feature maps FCi (i = 1, 2, 3, 4). Specifically,
+as demonstrated in Figure 5, FEi and FCi (i = 1, 2, 3, 4)
+go through their respective 1 × 1 convolutional layers. Next, a
+1 × 1 convolutional layer is used to capture the discrepancies
+(distribution shift) between them by their channel-wise concatenation, and its output is denoted as FCi . FCi contains the
+roughly precise information about the anomaly location.
+2) HSG: HSG aims to refine the anomaly information
+′ (i =
+in FCi . And the refined version is denoted as FCi
+1, 2, 3). Generally speaking, the shallow representations (highresolution) contain the information about anomaly details, but
+they are also susceptible to interference from noise. And
+modelling the shallow representations is too sophisticated
+to be absolutely accurate, due to the various details in the
+shallow representations. Although the deep representations
+(low-resolution) generally cannot provide detailed anomaly
+information, they reveal accurate anomaly semantics and are
+less affected by noise. To refine the anomaly information
+
+contained in FCi (i = 1, 2, 3), a natural idea is to filter the
+shallow FCi with the deep one FC(i+1) .
+As illustrated in Figure 5, the last refined representation
+′
+FC(i+1)
+i = 2, 3 or FC4 are used to filter the current representation FCi (i = 1, 2, 3). Specifically, the deep representation
+′
+FC(i+1)
+i = 2, 3 (or FC4 ) is firstly upsampled to the current
+resolution, and then passes through a 3 × 3 convolution. Next,
+it generates weight maps at spatial dimension Wsp(i) and
+channel dimension Wcn(i) as filters. To generate the spatial
+weight map Wsp(i) , a 1 × 1 convolution is added to adjust
+the channel number to 1. As for the channel-wise weight
+map Wcn(i) , a global average pooling is used to adjust the
+spatial size to 1 × 1, and then Wcn(i) is generated by a
+1 × 1 convolution. By multiplying Wsp(i) and Wcn(i) to FC(i) ,
+′
+a refined contrastive feature map FC(i)
+is obtained:
+(
+Wsp(i) =
+(
+Wcn(i) =
+
+′
+f sp(i) (FC(i+1)
+), i = 1, 2
+f sp(i) (FC4 ),
+i =3
+
+(4)
+
+′
+f cn(i) (FC(i+1)
+), i = 1, 2
+f cn(i) (FC4 ),
+i =3
+
+(5)
+
+WANG et al.: PRODUCE ONCE, UTILIZE TWICE FOR ANOMALY DETECTION
+
+′
+= Wsp(i) ⊙ FCi ⊙ Wcn(i) ,
+FCi
+
+i = 1, 2, 3
+
+(6)
+
+where the f sp(i) represents the operations of upsample and
+convolution, and f cn(i) represents the operations of upsample,
+′ is involved to
+convolution and global average pooling. FCi
+refine the next contrastive feature map FC(i−1) (i = 2, 3).
+3) MSS: POUTA establishes on the observation that the
+representations of the encoder and decoder in the reconstructive network refer to the features of the input and reconstructed
+image respectively. Under this observation, we further propose
+a multi-scale semantic supervision (MSS) module to refine the
+anomaly information by ensuring a clear discrepancy between
+the symmetric reconstructive representations. MSS requires
+′ (i = 1, 2, 3) and F
+FCi
+C4 to be able to predict the abnormal
+regions M p(i) through their corresponding predictive head.
+As shown in Figure 5, the predictive head consists of an
+upsample layer, a 1 × 1 convolution for dimensional reduction
+and a softmax layer. Note that MSS module is only used during
+training. To supervise the anomaly prediction of each layer,
+we add semantic supervision loss L SS(i) to each predictive
+head, which is represented as:
+L SS(i) = L f ocal (M p(i) , M)+ L 1 (M p(i) , M),
+
+i = 1, 2, 3, 4
+(7)
+
+where L 1 (·) denotes the ℓ1 -norm-based loss function,
+L f ocal (·) is the focal loss [7], M is a binary map for ground
+truth, which indicates the abnormal regions. It can be noticed
+that we use the L1-norm in Eq. 7 because it has been verified
+to be beneficial in segmentation more accurately, and retains
+less edge information than the L2-norm [52]. MSS forces the
+intermediate representations to pay more attention to anomaly
+information. The total loss of MSS L M SS is the weighted sum
+of L SS(i) on each scale:
+L M SS =
+
+4
+X
+
+λi L SS(i)
+
+(8)
+
+i=1
+′ , F ′ , F ′ and
+Finally, the channel-wise aggregation of FC1
+C2
+C3
+FC4 is required to predict a pixel-level anomaly heatmap M p .
+Inspired by the vanilla method [5], the image-level anomaly
+score S is the maximum of the 21 × 21 average pooling result
+of M p . The loss of the predicted heatmap L pr e is measured
+by focal loss and L1 loss. L pr e presses the predicted anomaly
+map M p to be as close to M as possible.
+
+L pr e = L f ocal (M p , M) + L 1 (M p , M)
+
+(9)
+
+The total loss of POUTA L total are represented as follows:
+L total = α1 L r ec + α2 L pr e + α3 L M SS
+
+(10)
+
+L total forces the reconstructed image Ir and predicted
+anomaly map M p to be as close to Iori and M as possible,
+respectively.
+IV. E XPERIMENT
+A. Experimental Setup
+1) Dataset: POUTA is evaluated on MVTec AD [14],
+VisA [19], MPDD [68] and DAGM [47] dataset. MVTec
+
+11757
+
+AD is a benchmark dataset for visual anomaly detection,
+which contains 5,354 images in 15 image categories. VisA
+contains 10,821 images with 9,621 normal and 1,200 abnormal
+samples. As for MPDD, it incorporates 1,346 samples in
+6 classes. Since abnormal images only exist in the testing
+set for MVTec AD, MPDD and VisA, they are mainly used
+to train unsupervised anomaly detection methods. Different
+with the above datasets, DAGM has defect images in training
+set and is mainly used to train supervised anomaly detection
+methods. It contains 16100 images in 10 categories. Note that
+POUTA doesn’t use any real defect images to train the model
+on all of the datasets, and it is only trained on the normal
+images in training data with the synthetic anomalies.
+2) Metric: In order to have a fair comparison with
+other methods, both the image-level classification performance (CLS) and pixel-level location performance (LOC)
+are exploited in this paper. The metric to measure CLS and
+LOC is the area under the receiver operating characteristic
+curve (AUROC). We notice that many methods report high
+performance on MVTec AD, even close to 1, on AUROC
+metric. Therefore, we add another metric, average precision
+(AP) to measure LOC. On MVTec AD dataset, both CLS
+and LOC are evaluated. Since the annotations of DAGM is
+coarse, only the CLS is tested. Similar with other state-of-theart methods, CLS is measured on VisA and MPDD.
+3) Implementation Details: λ1 , λ2 , λ3 and λ4 in Eq. 8 are
+empirically set to 0.4, 0.3, 0.2 and 0.1 respectively. To confirm
+the reweight parameters α1 , α2 , and α3 in Eq. 10, we conduct
+25 groups of experiments as shown in Figure 6. We first adopt
+AP metric to evaluate the performance, due to AP is more
+sensitive to performance changes than AUROC. Since the
+performances of the current methods vary acutely on carpet,
+cable, pill, toothbrush, and transistor classes, as demonstrated
+on Table II, we thereby test the performance of the reweighted
+POUTA on these five objects. The distribution of the average
+performance on them is close to a normal distribution, the
+mean locates around α1 = 1.0, α2 = 1.0, α3 = 1.0, which is
+finally adopted in POUTA. POUTA is trained for 600 epochs
+with a batch size of 8. The learning rate of the Adam optimizer
+is set to 0.0002 and multiplied by 0.2 at epoch 480 and epoch
+540. Images are resized to 224 × 224.
+4) Training Algorithm: Every experiment is trained from
+scratch, and initialized randomly, including the few-shot experiment. All the networks in POUTA is trained simultaneously
+as shown in Algorithm 1. L total will force the reconstructive network to keep the features of the input in encoder,
+repair the features of the abnormal regions in mapping layer,
+and upsample the normal features in decoder. Regarding the
+discriminative network, L total endows it with the ability to
+identify the discrepancies between the symmetric reconstructive representations. Figure 7 exhibits an example of L total loss
+curve, which demonstrates that despite slight fluctuations, the
+overall tendency is a gradual decline that ultimately converges.
+B. Anomaly Detection
+The proposed POUTA is compared with previous methods
+on MVTec AD, VisA and DAGM. The comparison results are
+shown in Table I, II, III and V.
+
+11758
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+Fig. 6.
+The average performance of carpet, cable, pill, toothbrush, and
+transistor on AP metric. It can be seen that the best performance achieves
+when α1 = 1.0, α2 = 1.0, α3 = 1.0.
+
+Algorithm 1 Training Algorithm
+Data: original training image Iori
+Result: reconstructed image Ir , anomaly prediction in MSS
+M p(i) , i = 1, 2, 3, 4, final predicted anomaly map M p
+random initialization
+for epoch ← 1 to 600 do
+Synthesize abnormal image Iin from Iori as in Equ. 1;
+Reconstructive network:
+compute reconstructed image Ir ;
+Calculate reconstruction loss L r ec as in Equ. 3;
+Discriminative network:
+Each FCM: compute FCi , i = 1, 2, 3, 4;
+′ , i = 1, 2, 3;
+Each HSG: compute FCi
+MSS: compute M p(i) , i = 1, 2, 3, 4;
+Calculate MSS loss L M SS as in Equ. 8;
+Compute the final anomaly prediction map M p
+Calculate prediction loss L pr e as in Equ. 9;
+Calculate total loss L total as in Equ. 10;
+Back propagate L total to optimize POUTA.
+end
+
+Fig. 7.
+
+The loss curve of L total during training POUTA on connector.
+
+1) MVTec AD: We report the quantitative classification
+(CLS) and location (LOC) results of the prior methods and
+POUTA on MVTec AD dataset in Table I and II, respectively.
+PatchCore in this section is conducted using its official code
+with 1% training data as coreset remaining. As depicted by
+Table I, POUTA shows highest classification performance on
+most cases, and outperforms the improved embedding-based
+method RD [18] in all classes except for metal nut. Especially
+on capsule, POUTA outperforms the runner-up by 1.4%.
+We also notice that the difference between POUTA and the
+best result is 2% on cable, which may due to changes in cable’s
+
+orientation, as well as the background. They prevent POUTA
+from modeling the normal appearance of cable, causing to
+judge these changes as anomalies. For the average performance
+of CLS, POUTA attains a comparable performance with SOTA
+results.
+And for the LOC results in Table II, POUTA also demonstrates satisfactory performance in the majority cases, with
+little performance difference in the remaining cases. In addition, POUTA shows better average performance than the
+improved embedding-based method RD [18]. For the AUROC
+metric, POUTA surpasses the SOTA by 2.6% on transistor,
+which is because of the more complete anomaly location
+predicted by POUTA, especially when the anomaly is large.
+The performance improvement is more clear on AP metric.
+On wood, cable, and transistor, POUTA outperforms the SOTA
+by 6.9%, 9.1%, and 7.0%. On the average LOC results,
+POUTA is 0.3% and 2.9% higher than SOTA measured by
+pixel-level AUROC and AP metric respectively.
+A qualitative comparison with the vanilla method
+(DRAEM [5]) and embedding-based method (PatchCore [16])
+is presented in Figure 8, indicating that POUTA is able to
+precisely predict the anomaly with more details. The improved
+embedding-based method, RD [18] provides finer anomaly
+location than the embedding-based method PatchCore [16],
+while it is still cruder than the one of POUTA. It is worth
+mentioning that, Figure 8 shows POUTA is able to identify
+the minor anomalies, since the information about the minor
+anomalies can be delivered to POUTA by the discrepancies
+between the low-level reconstructive representations.
+2) VisA: As shown in Table III, POUTA outperforms the
+prior methods on most cases. Especially on capsules and
+macaroni2, POUTA shows 21.0% and 17.1% improvement
+on the image-level AUROC metric. Both of these are the
+categories where the position of the object changes drastically
+per image. This indicates that POUTA is more flexible than
+others to adapt to these position changes. And as for the
+average classification performance, POUTA is 0.4% higher
+than the SOTA. Sample segmentations in Figure 9 offer a
+qualitative anomaly localization of POUTA, showing that
+POUTA can locate the anomaly accurately.
+3) MPDD: Table IV depicts the quantitative results on
+MPDD. POUTA also outperforms others, including the
+improved embedding method RD [18], on most classes and
+average performance. This is particularly evident in the bracket
+brown and bracket white, where the color of the anomaly is
+often close to that of the normal one. While POUTA learns
+the anomalies semantically by the discrepancies between the
+reconstructive representations, which enables it to identify the
+color-close-to-normal anomalies. The only area for improvement lies in bracket black for 1.6% less than the SOTA
+on AUROC metric, as POUTA considers some changes in
+detail, such as the lighting changes as anomalies, as shown
+in column 2 of Figure 10. Other qualitative results of POUTA
+in Figure 10 indicates that POUTA can identify most of the
+anomalies accurately. The predicted maps in columns 4, 6,
+7, 8, and 9 in Figure 10 are almost identical to the ground
+truth. In certain instances, such as columns 3 and 5, the
+ground truth labels are crude. While as a reconstruction-based
+
+WANG et al.: PRODUCE ONCE, UTILIZE TWICE FOR ANOMALY DETECTION
+
+11759
+
+TABLE I
+I MAGE -L EVEL C LASSIFICATION (CLS) ( IN %) OF THE VANILLA M ETHOD DRÆM, S EVERAL S TATE - OF - THE -A RT R ECONSTRUCTION -BASED
+M ETHODS , E MBEDDING -BASED M ETHOD AND O UR M ETHOD POUTA ON MVT EC AD DATASET.
+T HE B EST R ESULT FOR E ACH C LASS I S H IGHLIGHTED IN B OLD
+
+TABLE II
+P IXEL -L EVEL L OCATION (LOC) ( IN %) OF THE VANILLA M ETHOD DRÆM, S EVERAL S TATE - OF - THE -A RT R ECONSTRUCTION -BASED
+M ETHODS , E MBEDDING -BASED M ETHOD AND O UR M ETHOD POUTA ON MVT EC AD DATASET. T HE B EST
+R ESULT FOR E ACH C LASS I S H IGHLIGHTED IN B OLD
+
+TABLE III
+I MAGE -L EVEL C LASSIFICATION (CLS) ( IN %) OF S EVERAL S TATE - OF - THE -A RT R ECONSTRUCTION -BASED M ETHODS , E MBEDDING -BASED M ETHODS ,
+AND O UR POUTA ON V IS A DATASET (AUROC). T HE B EST R ESULT I S H IGHLIGHTED IN B OLD
+
+TABLE IV
+I MAGE -L EVEL C LASSIFICATION (CLS) ( IN %) OF S EVERAL S TATE - OF - THE -A RT M ETHODS AND O UR POUTA ON MPDD
+DATASET (AUROC). T HE B EST R ESULT I S H IGHLIGHTED IN B OLD
+
+method, POUTA provides a more fine-grained location in
+columns 3 and 5. Due to the varying shooting angles of the
+training images and the limited number of training images,
+
+it is challenging to model the normal appearance in POUTA,
+leading to some misjudgments in the anomaly predictions for
+columns 3 and 5.
+
+11760
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+Fig. 8.
+
+The qualitative results of PatchCore [16], RD [18], DRAEM [5], and POUTA on MVTec AD [14].
+
+Fig. 9.
+
+The qualitative results of POUTA on VisA dataset [19].
+
+Fig. 10.
+
+The qualitative results of POUTA on MPDD dataset [68].
+
+4) DAGM: In addition, the quantitative evaluations on
+DAGM dataset are presented in Table V. POUTA outperforms all the unsupervised methods, including the improved
+
+embedding-based method, RD [18] on all the categories except
+for Class4. It is worth mentioning that on Class8, POUTA
+is 38.6% higher than PatchCore, which measures anomaly
+
+WANG et al.: PRODUCE ONCE, UTILIZE TWICE FOR ANOMALY DETECTION
+
+11761
+
+TABLE V
+I MAGE -L EVEL C LASSIFICATION (CLS) ( IN %) OF S EVERAL U NSUPERVISED M ETHODS , S UPERVISED M ETHODS , AND O UR POUTA
+ON DAGM DATASET (AUROC). T HE B EST R ESULT I S H IGHLIGHTED IN B OLD
+
+TABLE VI
+I MAGE -L EVEL F EW-S HOT C LASSIFICATION (CLS) (AUROC IN %) OF
+THE P RIOR F EW-S HOT A NOMALY D ETECTION M ETHODS (I NCLUDING
+TDG [9], D IFFER N ET [36], R EG AD [20], AND POUTA ON MVT EC
+AD DATASET. T HE B EST R ESULT I S H IGHLIGHTED IN B OLD
+
+by calculating the distances between the test sample and the
+coreset’s training samples. However, the texture of Class8
+varies, which makes it to be impossible to include all possible
+textures in the training data, resulting in a non-ideal detection
+performance. While POUTA learns the distribution of the
+texture in the reconstructive network, which results in minimal
+texture changes before and after reconstruction, leading to
+more accurate detection results. The average performance is
+also higher than the prior unsupervised methods. Besides,
+POUTA achieves a comparable performance with the best
+supervised methods. While POUTA requires no real anomaly
+for training, which enables POUTA to be more flexible to the
+situation where the real anomaly is hard to collect.
+C. Few-Shot Anomaly Detection
+POUTA represents satisfactory performance on MVTec AD
+with the entire training data. To assess the performance with
+a limited number of training images, we conduct a few-shot
+experiment. Few-shot anomaly detection becomes a hot topic
+recently since it is suitable for practical applications where the
+normal samples are hard to collect as well. Experiments are
+also done to analyze the effectiveness of POUTA on this task.
+We train POUTA only with the support set (k training
+images, k = 2, 4, 8) for each category. All the settings keep
+the same with the ones in regular anomaly detection, we just
+reduce the number of the training images. Table VI demonstrates the quantitative results of TDG [9], DifferNet [36],
+RegAD [20] and POUTA on MVTec AD. TDG and TegAD
+are designed for the few-shot anomaly detection methods, and
+DifferNet is an embedding-based anomaly detection methods
+with the normalizing flow. Moreover, the qualitative results are
+represented in Figure 11.
+Table VI indicates that POUTA achieves better performance
+than the prior few-shot anomaly detection methods. In 2-shot,
+4-shot, and 8-shot, POUTA surpasses the run-up by 4.5%,
+3.7%, and 4.8%, respectively. Whereas there is no special
+
+design for the few-shot detection in POUTA. This is a surprising result, showing that POUTA has a strong ability to
+learn representations inherent in the training data.
+Figure 11 demonstrates the qualitative results of POUTA for
+both the few-shot and regular anomaly detection. As shown in
+Figure 11, the obvious anomaly can be identified by POUTA
+even in the 2-shot setting. When rising the k to 8, the
+prediction for the obvious anomaly can rival the one provided
+by the model trained on the entire data, indicating that POUTA
+is able to learn a near accurate distribution of the normal data.
+As for the subtle anomaly, it is challenging for the few-shot
+model to precisely locate the anomaly. The location accuracy
+increases with the number of training images rising. The subtle
+anomaly can be partially predicted in some cases with the
+8-shot setting, but it is still not as comprehensive as the predicted anomaly map output by the model trained on the entire
+dataset. In that the subtle anomaly tends to be close to the
+edge of the normal data distribution, definitely requiring more
+training data to construct an accurate distribution. In terms
+of the changable object, the prediction accuracy is obviously
+related to the number of the training images k. The qualitative
+result under k = 8 is close to the one under entire data training,
+and much more accurate than the one under k = 2 and k = 4.
+This is due to the fact that the more training images there
+are, the more the model acquires information about the object
+in various rotations, leading to a better understanding of its
+normal appearance.
+The performance of POUTA under a few-shot setting can
+be summarized as follows: The performance is determined by
+whether the k training images can represent comprehensive
+information about the normal appearance to enable the model
+to clearly define the boundary between normal and abnormal.
+As for the obvious anomaly, it significantly differs from the
+normal appearance, making it easy to identify. Regarding the
+subtle anomaly, it is always on the edge of the normal data
+distribution and thereby close to the decision boundary. When
+k is small, it is challenging to fit the learned decision boundary
+closely to the real one, making it possible to take certain
+subtle anomaly as normal. When it comes to the changeable
+object, a few training images may not be sufficient to help
+the model fully understand the normal appearance. Hence, the
+anomaly prediction is not satisfactory when k is small, but
+the results markedly improve even with a few training images
+added (from k = 2 to k = 8).
+The reconstructive representation distributions of POUTA
+in few-shot and regular anomaly detection are visualized in
+Figure 12. It can be seen that, similar with the distributions in
+
+11762
+
+Fig. 11.
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+The qualitative few-shot and regular anomaly detection results of POUTA on MVTec AD [14].
+TABLE VII
+A BLATION S TUDY OF POUTA ON MVTec AD. T HE B EST
+R ESULT I S H IGHLIGHTED IN B OLD
+
+Fig. 12. The visualization of the encoder and decoder representations of
+POUTA through t-SNE [42]. The red points correspond to the representations
+of the abnormal regions, and the green ones refer to the normal representations.
+
+regular anomaly detection, the distributions in the few-shot
+setting also follow the rule: In the encoder, the normal
+and abnormal representations are separated from each other
+(though not obvious), while in the decoder, they are distributed
+together as the abnormal representations have been repaired
+to normal. Besides, the visualization shows that with a few
+more training images (from 2-shot to 8-shot), the distribution
+established by POUTA is greatly improved, approaching to
+the distribution of the entire data training. For example, the
+normal and abnormal representations are separated more and
+more clearly from each other in the encoder. This confirms
+the strong ability to learn the inherent distribution of normal
+data.
+D. Ablation Study
+To investigate the effect of each component in POUTA, five
+groups of ablation experiments are conducted on MVTec AD.
+All the experiments share the same implementation details.
+
+1) Quantitative Results: The quantitative results are shown
+in Table VII. Vanilla refers to the vanilla method as shown in
+Figure 5 (a), which utilizes only the pixel-level reconstruction
+errors to analyze the anomaly. POUTA-base is POUTA without
+HSG and MSS modules, that is, there is no refined step in
+the discriminative network and the coarse information from
+reconstructive network is directly used to locate the anomaly.
+POUTA-basezHSG and POUTA-base+MSS add only HSG or
+MSS module to POUTA-base respectively. And POUTA adds
+both HSG and MSS modules to POUTA-base.
+1) Reconstruction errors vs representation reusing:
+Experiments Vanilla and POUTA-base in Table VII are
+conducted to verify the effectiveness of the representation reusing. The results shows that by reusing the
+reconstructive representations instead of the pixel-level
+reconstruction errors, the performance improves. This
+demonstrates that reusing representations from the
+reconstructive network provides more accurate anomaly
+information than the conventional reconstruction errors.
+2) HSG module: To investigate the effectiveness of HSG,
+experiments POUTA-base and POUTA-base+HSG are
+
+WANG et al.: PRODUCE ONCE, UTILIZE TWICE FOR ANOMALY DETECTION
+
+conducted. POUTA-base+HSG adds only HSG module
+to POUTA-base, and the results show improvement in
+terms of the detection performance in Table VII. This
+shows that HSG module can be used to refine anomaly
+information. However, we also find that adding HSG
+only has marginal performance improvement. Due to
+the lack of MSS, the representations of the encoder
+and the decoder cannot represent the features of the
+original and reconstructed image fully. The semantic
+differences between the last few encoder representations
+and the first few decoder representations might not be
+obvious enough, resulting in unclear information about
+the abnormal regions at the high-level semantics, which
+affects the ability to guide the low-level representations.
+3) MSS module: POUTA-base+MSS adds MSS module
+to POUTA-base. As shown in Table VII, the detection
+performance increases by adding MSS module. MSS
+requires each layer of discriminative network to predict
+the anomaly precisely, which enhances the ability to
+distinguish the normal and abnormal regions. While
+without HSG, each layer predicts the anomaly based
+on the representations of the current scale, which might
+be not robust and accurate enough since it has not
+been calibrated by the high-level semantic information.
+Therefore, adding only MSS module provides limited
+improvement.
+4) The coarse-to-fine process: POUTA adds both HSG and
+MSS modules to POUTA-base. There is a significant
+performance increase as shown in Table VII. POUTA
+also shows a noticeable improvement when compared
+with POUTA-base+HSG and POUTA-base+MSS. The
+above results demonstrate that the collaboration between
+HSG and MSS plays an important role in refining
+the semantic information about the anomaly, allowing
+a better performance than adding only one or neither
+module.
+5) Parameters, computation and inference time. We
+calculate the average inference time (including the
+time for deep network, and time for feature matching if it is an embedding-based method) per image
+on the embedding-based method PatchCore [16],
+the improved embedding-based method RD [18], the
+reconstruction-based method Vanilla, and the proposed
+method POUTA. Also, the computational cost (FLOPs
+and parameters of each model) are calculated. Calculation and parameters are metrics for network, while half
+of the procedure in PatchCore [16] is not completed
+by network, thereby only the inference time of [16]
+are measured and compared. The results are shown in
+Table VIII. The parameters of POUTA are obviously less
+than those of Vanilla, while the computation is slightly
+less than that of Vanilla. This is because POUTA utilizes
+the existing information more extensively and refines it.
+It can be seen from the inference time that POUTA is
+significantly more efficient than Vanilla, and marginally
+more efficient than PatchCore. Despite the floating
+point operations (FLOPs) of POUTA are slightly higher
+than those of the improved embedding-based method
+
+11763
+
+TABLE VIII
+T HE C ALCULATION C OST (FLOP S ), PARAMETERS AND AVERAGE
+I NFERENCE T IME P ER I MAGE OF VANILLA R ECONSTRUCTION -BASED
+M ETHOD (S AME A RCHITECTURE W ITH DRÆM [5]),
+E MBEDDING - BASED (PATCH C ORE [16]), I MPROVED
+E MBEDDING -BASED M ETHOD (RD [18]), AND POUTA.
+T HE B EST R ESULT I S H IGHLIGHTED IN B OLD
+
+RD [18], there is no discernible difference in inference
+times between POUTA and RD, and the parameters of
+POUTA are considerably less than those of RD. Besides,
+POUTA demonstrates superior performance in terms of
+accuracy, as shown in Table I and II.
+2) Qualitative Results: The qualitative results are exhibited
+in Figure 13. Also, we take Grad-CAM [4] to visualize the
+semantic differences captured by the five groups of models in
+Figure 13.
+1) Reconstruction errors vs representation reusing:
+Figure 13 demonstrates that the reconstructive representations enable the model to capture more accurate
+anomaly semantics, resulting in POUTA-base to locate
+the anomaly more completely and precisely than Vanilla.
+2) HSG module: As shown in Figure 13, the visualization
+of Grad-CAM shows that the addition of HSG enables
+the model to capture more accurate semantic differences,
+leading to predicting anomalies more precisely. This
+indicates that by introducing the high-level semantic
+information to the low-level feature through HSG module, it does benefit to calibrate the semantics. But the
+gains are limited, since without MSS, the high-level
+semantic difference is not clear enough to describe the
+anomaly, which weakens the ability to guide the lowlevel representations.
+3) MSS module: As exemplified in Figure 13, itPOUTAbase+MSS alleviates the misjudgment problem in
+POUTA-base through MSS module. We take t-SNE [42]
+to visualize the representation distribution before and
+after mapping layer (the last encoder representations and
+the first decoder representations) in the reconstructive
+network with or without the MSS module, as shown
+in Figure 14. It can be seen that, the main differences
+exist in the distributions of the encoder, where the
+encoder representations are significantly more separable
+with MSS, leading to a more obvious distribution shift
+between the encoder and decoder. The above phenomena verifies that MSS effectively improves the ability
+to distinguish the normal and abnormal information.
+However without HSG, the anomaly predictions of
+POUTA-base+MSS are still not ideal enough in some
+cases as shown in Figure 13, indicating that even if
+MSS module is added, HSG module is still necessary
+to calibrate the semantics.
+4) The coarse-to-fine process: As presented in Figure 13,
+the anomaly predictions are significantly more precisely
+after adding HSG and MSS modules simultaneously.
+
+11764
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+Fig. 13. The qualitative examples and visualizations (proivded by Grad-CAM [4]) of vanilla method, POUTA-base and POUTA. POUTA obtains a more
+comprehensive set of anomaly information to locate the anomaly more precisely.
+
+the anomaly, allowing a significantly better performance
+than adding only one or neither module.
+V. L IMITATION AND F UTURE P OTENTIALS
+
+Fig. 14. We take t-SNE [42] to visualize the representation distribution before
+and after mapping layer (the last encoder representations and the first decoder
+representations) in reconstructive network under with or without MSS module.
+The red points correspond to the representations of the abnormal regions, and
+the green ones refer to the normal representations.
+
+With HSG, the semantic information of each layer in
+the discriminative network is more accurate, since it
+has been calibrated by the high-level features, further
+enabling MSS to achieve better supervision effect. And
+MSS enables the distribution discrepancies between
+encoder and decoder to be more obvious and makes
+the high-level semantic anomaly information to be more
+clear by the supervision loss. The collaboration between
+HSG and MSS refines the semantic information about
+
+As depicted in Figure 15, POUTA fails in some cases. The
+two cables placed on the bottom are the blue one on the left
+and the gray one on the right in the training data, but this input
+reverses their positions. POUTA points out the reversion and
+marks it on the predicted anomaly map. While the ground truth
+does not consider this to be an anomaly. POUTA shows the
+capability to identify numerous subtle anomalies, as indicated
+in Figure 8. While it is possible for POUTA to provide
+incomplete predictions when the anomaly is very insignificant,
+as presented in the second and third columns in Figure 15.
+It is possible to happen, since the minor anomalies always
+locate closely to the decision boundary, and the inconsistency
+between the fitted decision boundary and the real decision
+boundary is almost unavoidable. In the toothbrush shown in
+Figure 15, including the abnormal regions identified by the
+ground truth, POUTA also highlights additional regions where
+the bristles appear disorganized. But ground truth considers
+them as normal. And it is the same with the chewing gum in
+Figure 15, POUTA also highlights the bumpy regions, which
+are not considered as anomalies by the ground truth.
+We propose POUTA as a lightweight and efficient model
+for the regular anomaly detection. POUTA demonstrates a
+strong capability to learn the inherent distribution of normal
+data, even in the few-shot setting. On the other hand, we find
+that POUTA is not suitable for the general anomaly detection
+(GAD). General anomaly detection aims to train a single
+
+WANG et al.: PRODUCE ONCE, UTILIZE TWICE FOR ANOMALY DETECTION
+
+Fig. 15.
+
+Examples of failure cases.
+
+anomaly detection model that can generalize to identifying
+anomaly in various datasets [65], [66], [67]. In general, there
+are a large number of parameters in the GAD model, which are
+much larger than those in POUTA. As a lightweight model,
+it is challenging for POUTA to accurately build the normal
+appearances of numerous datasets in a single model.
+The anomaly detection towards the object in 3-dimension
+(3D) recently draws much attention. By replacing the reconstructive network with a 3D-aware network, it is possible to
+achieve 3D anomaly detection through POUTA.
+VI. C ONCLUSION
+In this paper, we verifies that reusing the reconstructive
+representations is more reliable than the pixel-level reconstruction errors for reconstruction-based anomaly detection.
+Then a new approach named POUTA is proposed locating
+the anomaly by analyzing the distribution shift between the
+reconstructive encoder and decoder, which enables to predict
+the anomaly more precisely with lower cost than the vanilla
+method. Moreover, POUTA further refines the anomaly information by HSG and MSS modules in each discriminative layer,
+which also enhances the separability between the symmetric
+reconstructive representations. Finally, POUTA outperforms
+the prior methods on MVTec AD, VisA and DAGM dataset,
+and achieves a comparable results with the best-performing
+supervised methods on DAGM dataset. Surprisingly, POUTA
+also achieves better performance than the state-of-the-art fewshot anomaly detection methods without any special design,
+showing that POUTA has strong ability to learn representations
+inherent in the training data.
+R EFERENCES
+[1] X. Yan, H. Zhang, X. Xu, X. Hu, and P.-A. Heng, “Learning semantic
+context from normal samples for unsupervised anomaly detection,” in
+Proc. AAAI Conf. Artif. Intell., vol. 35, May 2021, pp. 3110–3118.
+[2] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “GANomaly:
+Semi-supervised anomaly detection via adversarial training,” in Proc.
+14th Asian Conf. Comput. Vis., Dec. 2019, pp. 622–637.
+[3] J. Yi and S. Yoon, “Patch SVDD: Patch-level SVDD for anomaly
+detection and segmentation,” in Proc. Asian Conf. Comput. Vis. (ACCV),
+Nov. 2020, pp. 375–390.
+[4] R. R. Selvaraju, M. Cogswell, A. Das, R. Vedantam, D. Parikh, and
+D. Batra, “Grad-CAM: Visual explanations from deep networks via
+gradient-based localization,” in Proc. IEEE Int. Conf. Comput. Vis.
+(ICCV), Oct. 2017, pp. 618–626.
+
+11765
+
+[5] V. Zavrtanik, M. Kristan, and D. Skocaj, “DRAEM—A discriminatively
+trained reconstruction embedding for surface anomaly detection,” in
+Proc. IEEE/CVF Int. Conf. Comput. Vis., Oct. 2021, pp. 8330–8339.
+[6] D. Gong et al., “Memorizing normality to detect anomaly: Memoryaugmented deep autoencoder for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2019,
+pp. 1705–1714.
+[7] T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár, “Focal loss for
+dense object detection,” in Proc. IEEE Int. Conf. Comput. Vis. (ICCV),
+Oct. 2017, pp. 2980–2988.
+[8] J. Wang and A. Cherian, “GODS: Generalized one-class discriminative
+subspaces for anomaly detection,” in Proc. IEEE/CVF Int. Conf. Comput.
+Vis. (ICCV), Oct. 2019, pp. 8200–8210.
+[9] S. Sheynin, S. Benaim, and L. Wolf, “A hierarchical transformationdiscriminating generative model for few shot anomaly detection,”
+in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV), Oct. 2021,
+pp. 8495–8504.
+[10] H. Park, J. Noh, and B. Ham, “Learning memory-guided normality
+for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2020, pp. 14372–14381.
+[11] N.-C. Ristea et al., “Self-supervised predictive convolutional attentive
+block for anomaly detection,” in Proc. IEEE/CVF Conf. Comput. Vis.
+Pattern Recognit. (CVPR), Jun. 2022, pp. 13576–13586.
+[12] M. Z. Zaheer, J. Lee, M. Astrid, and S.-I. Lee, “Old is gold: Redefining
+the adversarially learned one-class classifier training paradigm,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2020,
+pp. 14183–14193.
+[13] M. Cimpoi, S. Maji, I. Kokkinos, S. Mohamed, and A. Vedaldi,
+“Describing textures in the wild,” in Proc. IEEE Conf. Comput. Vis.
+Pattern Recognit., Jun. 2014, pp. 3606–3613.
+[14] P. Bergmann, M. Fauser, D. Sattlegger, and C. Steger, “MVTec AD—A
+comprehensive real-world dataset for unsupervised anomaly detection,”
+in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2019, pp. 9584–9592.
+[15] N. Cohen and Y. Hoshen, “Sub-image anomaly detection with deep
+pyramid correspondences,” 2020, arXiv:2005.02357.
+[16] K. Roth, L. Pemula, J. Zepeda, B. Schölkopf, T. Brox, and P. Gehler,
+“Towards total recall in industrial anomaly detection,” in Proc.
+IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+Jun. 2022, pp. 14318–14328.
+[17] C.-L. Li, K. Sohn, J. Yoon, and T. Pfister, “CutPaste: Selfsupervised learning for anomaly detection and localization,” in Proc.
+IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+pp. 9659–9669.
+[18] H. Deng and X. Li, “Anomaly detection via reverse distillation from
+one-class embedding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), Jun. 2022, pp. 9737–9746.
+[19] Y. Zou, J. Jeong, L. Pemula, D. Zhang, and O. Dabeer, “Spotthe-difference self-supervised pre-training for anomaly detection and
+segmentation,” in Proc. Eur. Conf. Comput. Vis., 2022, pp. 392–408.
+[20] C. Huang, H. Guan, A. Jiang, Y. Zhang, M. Spratling, and Y. F. Wang,
+“Registration based few-shot anomaly detection,” in Proc. Eur. Conf.
+Comput. Vis., 2022, pp. 303–319.
+[21] V. Zavrtanik, M. Kristan, and D. Skocaj, “DSR a dual subspace reprojection network for surface anomaly detection,” in Proc. Eur. Conf.
+Comput. Vis., 2022, pp. 539–554.
+[22] V. Zavrtanik, M. Kristan, and D. Skocaj, “Reconstruction by inpainting
+for visual anomaly detection,” Pattern Recognit., vol. 112, Apr. 2021,
+Art. no. 107706.
+[23] N. Madan et al., “Self-supervised masked convolutional transformer
+block for anomaly detection,” IEEE Trans. Pattern Anal. Mach. Intell.,
+vol. 46, no. 1, pp. 525–542, Jan. 2024.
+[24] P. Xing and Z. Li, “Visual anomaly detection via partition memory bank
+module and error estimation,” IEEE Trans. Circuits Syst. Video Technol.,
+vol. 33, no. 8, pp. 3596–3607, Aug. 2023.
+[25] P. Xing, Y. Sun, D. Zeng, and Z. Li, “Normal image guided segmentation
+framework for unsupervised anomaly detection,” IEEE Trans. Circuits
+Syst. Video Technol., vol. 34, no. 6, pp. 4639–4652, Jun. 2024.
+[26] X. Zhang, J. Fang, B. Yang, S. Chen, and B. Li, “Hybrid attention
+and motion constraint for anomaly detection in crowded scenes,” IEEE
+Trans. Circuits Syst. Video Technol., vol. 33, no. 5, pp. 2259–2274,
+May 2023.
+[27] K. Wu, L. Zhu, W. Shi, W. Wang, and J. Wu, “Self-attention memoryaugmented wavelet-CNN for anomaly detection,” IEEE Trans. Circuits
+Syst. Video Technol., vol. 33, no. 3, pp. 1374–1385, Mar. 2023.
+
+11766
+
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS FOR VIDEO TECHNOLOGY, VOL. 34, NO. 11, NOVEMBER 2024
+
+[28] H. Yao, W. Yu, W. Luo, Z. Qiang, D. Luo, and X. Zhang, “Learning global-local correspondence with semantic bottleneck for logical
+anomaly detection,” IEEE Trans. Circuits Syst. Video Technol., vol. 34,
+no. 5, pp. 3589–3605, May 2024.
+[29] Y. Zhong, X. Chen, Y. Hu, P. Tang, and F. Ren, “Bidirectional spatiotemporal feature learning with multiscale evaluation for video anomaly
+detection,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 12,
+pp. 8285–8296, Dec. 2022.
+[30] Q. Zhou, S. He, H. Liu, T. Chen, and J. Chen, “Pull & push: Leveraging
+differential knowledge distillation for efficient unsupervised anomaly
+detection and localization,” IEEE Trans. Circuits Syst. Video Technol.,
+vol. 33, no. 5, pp. 2176–2189, May 2023.
+[31] C. Guo, H. Wang, Y. Xia, and G. Feng, “Learning appearancemotion synergy via memory-guided event prediction for video anomaly
+detection,” IEEE Trans. Circuits Syst. Video Technol., vol. 34, no. 3,
+pp. 1519–1531, Mar. 2024.
+[32] Y. Zhang, X. Nie, R. He, M. Chen, and Y. Yin, “Normality learning
+in multispace for video anomaly detection,” IEEE Trans. Circuits Syst.
+Video Technol., vol. 31, no. 9, pp. 3694–3706, Sep. 2021.
+[33] S. Wang, C. Lv, Z. Zhang, and X. Wei, “Dual-branch learning with
+prior information for surface anomaly detection,” IEEE Trans. Instrum.
+Meas., vol. 72, pp. 1–11, 2023.
+[34] W. Zhou, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, “Image
+quality assessment: From error visibility to structural similarity,” IEEE
+Trans. Image Process., vol. 13, no. 4, pp. 600–612, Apr. 2004.
+[35] C. Lv, F. Shen, Z. Zhang, D. Xu, and Y. He, “A novel pixel-wise defect
+inspection method based on stable background reconstruction,” IEEE
+Trans. Instrum. Meas., vol. 70, pp. 1–13, 2021.
+[36] M. Rudolph, B. Wandt, and B. Rosenhahn, “Same same but DifferNet:
+Semi-supervised defect detection with normalizing flows,” in Proc. IEEE
+Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2021, pp. 1907–1916.
+[37] M. Rudolph, T. Wehrbein, B. Rosenhahn, and B. Wandt, “Fully
+convolutional cross-scale-flows for image-based defect detection,” in
+Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV), Jan. 2022,
+pp. 1088–1097.
+[38] D. Racki, D. Tomazevic, and D. Skocaj, “A compact convolutional neural
+network for textured surface anomaly detection,” in Proc. IEEE Winter
+Conf. Appl. Comput. Vis., Oct. 2018, pp. 1331–1339.
+[39] L. Ruff et al., “Deep one-class classification,” in Proc. Int. Conf.
+Mach. Learn., 2018, pp. 4393–4402.
+[40] T. Defard, A. Setkov, A. Loesch, and R. Audigier, “PaDiM: A patch distribution modeling framework for anomaly detection and localization,”
+in Proc. Int. Conf. Pattern Recognit., Jan. 2021, pp. 475–489.
+[41] D. P. Kingma and P. Dhariwal, “Glow: Generative flow with invertible
+1×1 convolutions,” in Proc. Adv. Neural Inf. Process. Syst., vol. 31,
+2018, pp. 1–10.
+[42] L. van der Maaten and G. Hinton, “Visualizing data using t-SNE,”
+J. Mach. Learn. Res., vol. 9, pp. 2579–2605, Nov. 2008.
+[43] C. Huang, A. Jiang, Y. Zhang, and Y. Wang, “Multi-scale memory comparison for zero-/few-shot anomaly detection,” 2023, arXiv:2308.04789.
+[44] K. Perlin, “An image synthesizer,” ACM SIGGRAPH Comput. Graph.,
+vol. 19, no. 3, pp. 287–296, Jul. 1985.
+[45] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional networks for biomedical image segmentation,” in Proc. 18th Int. Conf.
+Med. Image Comput. Comput.-Assist. Intervent., vol. 9351, 2015,
+pp. 234–241.
+[46] J. Pirnay and K. Chai, “Inpainting transformer for anomaly detection,”
+in Proc. Int. Conf. Image Anal. Process. Italy: Springer, May 2022,
+pp. 394–406.
+[47] M. Wieler and T. Hahn. (2007). Weakly Supervised Learning
+for
+Industrial
+Optical
+Inspection.
+[Online].
+Available:
+https://hci.iwr.uni-heidelberg.de/content/weakly-supervised-learningindustrial-optical-inspection
+[48] S. Yamada, S. Kamiya, and K. Hotta, “Reconstructed student-teacher
+and discriminative networks for anomaly detection,” in Proc. IEEE/RSJ
+Int. Conf. Intell. Robots Syst. (IROS), Oct. 2022, pp. 2725–2732.
+[49] S. Akcay, A. Atapour-Abarghouei, and T. P. Breckon, “Skip-GANomaly:
+Skip connected and adversarially trained encoder–decoder anomaly
+detection,” in Proc. Int. Joint Conf. Neural Netw., 2019, pp. 1–8.
+[50] D. Dehaene, O. Frigo, S. Combrexelle, and P. Eline, “Iterative energybased projection on a normal data manifold for anomaly localization,”
+2020, arXiv:2002.03734.
+[51] X. Zhang, S. Li, X. Li, P. Huang, J. Shan, and T. Chen, “DeSTSeg:
+Segmentation guided denoising student-teacher for anomaly detection,”
+2022, arXiv:2211.11317.
+
+[52] M. Yang, P. Wu, and H. Feng, “MemSeg: A semi-supervised method
+for image surface defect detection using differences and commonalities,”
+Eng. Appl. Artif. Intell., vol. 119, Mar. 2023, Art. no. 105835.
+[53] P. Liznerski et al., “Explainable deep one-class classification,” in Proc.
+Int. Conf. Learn. Represent., 2021, pp. 1–25.
+[54] J. Yang, K. Zhou, Y. Li, and Z. Liu, “Generalized out-of-distribution
+detection: A survey,” 2021, arXiv:2110.11334.
+[55] J. Guo, S. Lu, L. Jia, W. Zhang, and H. Li, “ReContrast: Domainspecific anomaly detection via contrastive reconstruction,” 2023,
+arXiv:2306.02602.
+[56] T. Liu, B. Li, Z. Zhao, X. Du, B. Jiang, and L. Geng, “Reconstruction
+from edge image combined with color and gradient difference for
+industrial surface anomaly detection,” 2022, arXiv:2210.14485.
+[57] J. Bozic, D. Tabernik, and D. Skocaj, “Mixed supervision for surfacedefect detection: From weakly to fully supervised learning,” Comput.
+Ind., vol. 129, Aug. 2021, Art. no. 103459.
+[58] J. Liu et al., “Deep industrial image anomaly detection: A survey,” Mach.
+Intell. Res., vol. 21, no. 1, pp. 104–135, Feb. 2024.
+[59] K. Huang, S. Wu, B. Sun, C. Yang, and W. Gui, “Metric learningbased fault diagnosis and anomaly detection for industrial data with
+intraclass variance,” IEEE Trans. Neural Netw. Learn. Syst., vol. 35,
+no. 1, pp. 547–558, Jan. 2024.
+[60] K. Huang, H. Zhu, D. Wu, C. Yang, and W. Gui, “EaLDL: Elementaware lifelong dictionary learning for multimode process monitoring,”
+IEEE Trans. Neural Netw. Learn. Syst., early access, Dec. 25, 2023, doi:
+10.1109/TNNLS.2023.3343937.
+[61] P. Yan et al., “A comprehensive survey of deep transfer learning for
+anomaly detection in industrial time series: Methods, applications, and
+directions,” IEEE Access, vol. 12, pp. 3768–3789, 2024.
+[62] C. Huang et al., “Self-supervision-augmented deep autoencoder for
+unsupervised visual anomaly detection,” IEEE Trans. Cybern., vol. 52,
+no. 12, pp. 13834–13847, Dec. 2022.
+[63] C. Huang et al., “Self-supervised attentive generative adversarial networks for video anomaly detection,” IEEE Trans. Neural Netw. Learn.
+Syst., vol. 34, no. 11, pp. 9389–9403, Nov. 2023.
+[64] C. Huang, Z. Wu, J. Wen, Y. Xu, Q. Jiang, and Y. Wang, “Abnormal
+event detection using deep contrastive learning for intelligent video
+surveillance system,” IEEE Trans. Ind. Informat., vol. 18, no. 8,
+pp. 5171–5179, Aug. 2022.
+[65] Z. You et al., “A unified model for multi-class anomaly detection,” in
+Proc. Adv. Neural Inf. Process. Syst., vol. 35, 2022, pp. 4571–4584.
+[66] J. Zhu and G. Pang, “Toward generalist anomaly detection via in-context
+residual learning with few-shot sample prompts,” in Proc. IEEE/CVF
+Conf. Comput. Vis. Pattern Recognit., Jun. 2024, pp. 17826–17836.
+[67] Y. Cao, X. Xu, C. Sun, X. Huang, and W. Shen, “Towards generic
+anomaly detection and understanding: Large-scale visual-linguistic
+model (GPT-4V) takes the lead,” 2023, arXiv:2311.02782.
+[68] S. Jezek, M. Jonak, R. Burget, P. Dvorak, and M. Skotak, “Deep
+learning-based defect detection of metal parts: Evaluating current methods in complex conditions,” in Proc. 13th Int. Congr. Ultra Modern
+Telecommun. Control Syst. Workshops (ICUMT), 2021, pp. 66–71.
+[69] D. Gudovskiy, S. Ishizaka, and K. Kozuka, “CFLOW-AD: Real-time
+unsupervised anomaly detection with localization via conditional normalizing flows,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis.
+(WACV), Jan. 2022, pp. 98–107.
+[70] X. Zhang, M. Xu, and X. Zhou, “RealNet: A feature selection network with realistic synthetic anomaly for anomaly detection,” 2024,
+arXiv:2403.05897.
+[71] J. Tebbe and J. Tayyub, “Dynamic addition of noise in a diffusion model
+for anomaly detection,” 2024, arXiv:2401.04463.
+
+Shuyuan Wang received the M.Sc. degree from
+the Institute of Automation, Chinese Academy of
+Sciences (CASIA), Beijing, China, in 2023. Her
+research interests include 3D vision (especially 3D
+editing) and anomaly detection.
+
+WANG et al.: PRODUCE ONCE, UTILIZE TWICE FOR ANOMALY DETECTION
+
+11767
+
+Qi Li (Member, IEEE) received the B.E. degree
+from China University of Petroleum in 2011 and
+the Ph.D. degree from the Institute of Automation,
+Chinese Academy of Sciences (CASIA), Beijing,
+China, in 2016. He is currently an Associate Professor with the New Laboratory of Pattern Recognition
+(NLPR), State Key Laboratory of Multimodal Artificial Intelligence Systems, Chinese Academy of
+Sciences, and also with the School of Artificial
+Intelligence, University of Chinese Academy of Sciences, Beijing. His research interests include face
+recognition, computer vision, and machine learning.
+
+Chengkan Lv (Member, IEEE) received the B.Sc.
+degree from Shandong University, Jinan, China,
+in 2017, and the Ph.D. degree from the Institute of Automation, Chinese Academy of Sciences
+(CASIA), Beijing, China, in 2022. He is currently
+an Assistant Researcher with CASIA. His research
+interests include neural networks, computer vision,
+and anomaly detection.
+
+Huiyuan Luo received the B.S. degree from
+Harbin Institute of Technology, Weihai, China,
+in 2016, and the Ph.D. degree from Changchun
+Institute of Optics, Fine Mechanics and Physics,
+Chinese Academy of Science, Changchun, China,
+in 2021. Since 2022, he has been a Post-Doctoral
+Researcher and an Assistant Researcher with the
+Institute of Automation, Chinese Academy of Sciences (CASIA), Beijing, China. He has been
+engaged in saliency detection, industrial anomaly
+detection, unsupervised learning, and intelligent
+manufacturing.
+
+Zhengtao Zhang (Member, IEEE) received the
+B.Sc. degree from China University of Petroleum,
+Dongying, China, in 2004, the M.Sc. degree from
+Beijing Institute of Technology, Beijing, China,
+in 2007, and the Ph.D. degree in control science
+and engineering from the Institute of Automation,
+Chinese Academy of Sciences (CASIA), Beijing,
+in 2010. He is currently a Professor with Chinese
+Academy of Sciences (CAS) Engineering Laboratory for Intelligent Industrial Vision, Beijing.
+His research interests include visual measurement,
+micro-assembly, and automation.
+PAPER_TEXT

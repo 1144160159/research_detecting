@@ -1,0 +1,1391 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [418] Enhancing Multivariate Time Series Anomaly Detection With an Inference Stacked Recurrent-Autoencoder in Strong Mechanistic Contexts
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：418
+题名：Enhancing Multivariate Time Series Anomaly Detection With an Inference Stacked Recurrent-Autoencoder in Strong Mechanistic Contexts
+年份：2024
+DOI：10.1109/tii.2024.3485808
+来源：IEEE Transactions on Industrial Informatics
+PDF：paper/10.1109_TII.2024.3485808.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：时序、日志、KPI 与云原生异常检测、入侵检测与网络异常检测
+相关性：弱相关，分数 2
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\418.txt
+- 原始字符数：43338
+- 本次发送字符数：43338
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+1724
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 2, FEBRUARY 2025
+
+Enhancing Multivariate Time Series Anomaly
+Detection With an Inference Stacked
+Recurrent-Autoencoder in Strong
+Mechanistic Contexts
+Tianming Xie, Zhiwei Gao , Fellow, IEEE, Qifa Xu , Cuixia Jiang , and Aihua Zhang
+
+Abstract—Existing self-supervised multivariate time series anomaly detection methods struggle with interference
+among variables during reconstruction. They also tend to
+miss capturing critical anomaly information, resulting in
+unsatisfactory performance, especially in scenarios with
+strong mechanistic contexts. To this end, we propose a targeted anomaly detection algorithm called inference stacked
+recurrent autoencoder (ISRAE). Its key contribution lies
+in the design of a specific inference kernel, derived from
+specialist knowledge, which captures the strong mechanistic relationships among variables. This kernel is then
+fused with the multidimensional anomalies predicted by
+the SRAE, which mitigates interference among variables
+through the stacking technique. Furthermore, a novel differential constraint is introduced into the loss function,
+which not only highlights anomaly reconstruction errors,
+but also smooths the reconstructions, enhancing overall
+detection performance. Comprehensive comparison experiments and ablation studies show that ISRAE achieves superior anomaly detection performance under strong mechanistic contexts and highlight the importance of each key
+module in ISRAE.
+Index Terms—Anomaly detection, inference kernel, inference stacked recurrent-autoencoder (ISRAE), multivariate
+time series, self-supervised method, strong mechanistic
+context.
+
+Received 11 June 2024; revised 26 July 2024 and 26 September
+2024; accepted 15 October 2024. Date of publication 13 November
+2024; date of current version 5 February 2025. This work was supported
+in part by the National Natural Science Foundation of China under
+Grant 61673074, Grant 62473095, and Grant 72171070, in part by
+China Scholarship Council, in part by the research group fund at the
+University of Northumbria, and in part by Anhui RONDS Science &
+Technology Incorporated Company Hefei, CN. Paper no. TII-24-2911.
+(Corresponding author: Zhiwei Gao.)
+Tianming Xie and Zhiwei Gao are with the Faculty of Engineering and Environment, Northumbria University, NE1 8ST Newcastle
+upon Tyne, U.K. (e-mail: tianming.xie@northumbria.ac.uk; zhiwei.gao@
+northumbria.ac.uk).
+Qifa Xu and Cuixia Jiang are with the School of Management, Hefei University of Technology, Hefei 230009, China (e-mail:
+xuqifa@hfut.edu.cn; jiangcuixia@hfut.edu.cn).
+Aihua Zhang is with the College of Physical Science and Technology, Bohai University, Jinzhou 121000, China (e-mail: zhangaihua@
+qymail.bhu.edu.cn).
+Digital Object Identifier 10.1109/TII.2024.3485808
+
+I. INTRODUCTION
+HE rapid development of artificial intelligence (AI) creates
+opportunities to integrate AI technologies into the prognostics and health management (PHM) of industrial equipment.
+Anomaly detection, the initial phase of PHM, is a crucial foundation for subsequent stages. A key area within anomaly detection
+is multivariate time series (MTS) anomaly detection, which is
+becoming increasingly vital across diverse industries, including
+wind power, natural gas, and aerospace [1], [2]. Consequently,
+methods for detecting anomalies in MTS have been extensively
+explored to identify and locate anomalies more accurately.
+According to [1] and [2], existing anomaly detection methods
+can be categorized into model-based [3], signal-based [4], [5],
+and knowledge-based methods [6], [7], [8]. Given the extreme
+imbalance between anomalies and normal data in real-world
+scenarios, along with the uncertainty of undiscovered anomalies
+that may deviate from known anomaly patterns, unsupervised
+anomaly detection methods–often referred to as self-supervised
+methods–are likely the most suitable choice. These methods
+have become the primary focus of current research and fall under
+the knowledge-based methods mentioned above.
+The self-supervised methods primarily focus on learning
+typical patterns using only normal data during training. This
+approach ensures that the trained model accurately represents
+normal data while poorly representing anomalies. Consequently,
+anomalies can be identified through differences in representation. The more pronounced these differences are, the more
+accurate the anomaly detection results will be.
+Among these self-supervised methods, autoencoders have
+become mainstream since they were first introduced by [9].
+Variants of autoencoders [10], [11] detect anomalies in images
+or 2-D data through reconstruction. However, due to the lack of
+consideration for temporal dependencies, autoencoders based on
+fully connected or convolutional architectures perform poorly
+in MTS anomaly detection. The performance of models like the
+deep autoencoding Gaussian mixture model (DAGMM) [12]
+on MTS is consistently inferior to self-supervised models that
+consider temporal dependencies [13], [14], [15]. To address temporal dependencies, recurrent neural networks like long shortterm memory (LSTM) [16] and gate recurrent unit (GRU) [17]
+have been integrated into autoencoders. For example, [18] first
+integrate LSTM into an autoencoder, achieving good reconstruction performance. Variants such as LSTM-based variational
+
+T
+
+1941-0050 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+XIE et al.: ENHANCING MULTIVARIATE TIME SERIES ANOMALY DETECTION WITH AN ISRAE IN STRONG MECHANISTIC CONTEXTS
+
+autoencoders [19], [20] and GRU-based models [13], which
+employ planar normalizing flow to handle temporal dependencies of latent variables, fit temporal trends better and result
+in more robust models. In addition to temporal dependencies,
+the correlation between variables has also gained attention. The
+authors in [14] used specific correlation matrices to describe and
+interpret detected anomalies, while [15] and [21] represented
+variable correlations through graph construction. However, excessive focus on variable correlations can increase interference
+and weaken the reconstruction capability of self-supervised
+models. This is particularly evident in existing models that consider the entire multivariate input collectively and share weights,
+especially when variables are relatively independent and exhibit
+significantly different trends. In many cases, variables of MTS
+do not exhibit strong correlations and are mostly independent.
+The causal or logical relationships between these variables only
+become apparent during anomalies. Consequently, the model
+cannot effectively learn these relationships from the limited
+anomaly data. To enhance reconstruction capability, [22] and
+[23] incorporated adversarial strategies from generative adversarial networks into autoencoders. Yet, these models show
+weaker generalization when the normal training data does not
+cover the entire distribution, performing well only within the
+training set distribution. Given transformers’ powerful sequence
+processing capabilities, techniques related to transformers have
+been applied to MTS anomaly detection [24], [25], [26]. However, their successful application relies on massive data and a
+unified data representation. These requirements are challenging
+for MTS, especially in industrial settings with multisensor data.
+Multisensor data is often sensitive and proprietary, and data
+from different devices exhibits distributional differences. In addition, unlike transformer-based methods, there is no standardized method for normalizing such multisensor data uniformly
+currently.
+In addition to the limitations regarding correlation and transformers, there are still gaps in current research on self-supervised
+MTS anomaly detection. Existing research often treats all variables in MTS equally, aggregating reconstruction errors into
+total errors for anomaly detection. Methods of this research
+can only detect obvious anomalies or those synchronized across
+variables. However, it may not perform well under strong
+mechanistic contexts, where variables in MTS often have different importances or strong logical relationships. Existing
+self-supervised methods trained solely on normal data cannot
+learn these relationships; they must be inferred from fault cases
+combined with mechanical principles. Therefore, incorporating
+mechanism-based inference is necessary to enhance anomaly
+detection performance in such contexts. Furthermore, [27] critically discussed the evaluation methods used for anomaly results
+in popular studies, including [13] and [14].
+To this end, we propose a targeted anomaly detection algorithm called inference stacked recurrent autoencoder (ISRAE).
+The contributions of this study are summarized as follows.
+1) We propose the ISRAE anomaly detection algorithm for
+identifying anomalies within strong mechanistic contexts.
+This algorithm incorporates a specialized inference kernel
+that detects anomalies by considering causal or logical
+relationships among variables.
+2) ISRAE integrates various recurrent neural networks
+(RNNs), including LSTM and GRU, and achieves
+
+Fig. 1.
+
+1725
+
+Process of anomaly detection based on ISRAE.
+
+enhanced data representation through a stacking technique that effectively mitigates interference among variables.
+3) We introduce a new differential constraint in the loss function, which helps the model better approximate normal
+data and enhance the distinction between normal data and
+anomalies in reconstruction errors.
+II. THEORIES OF ISRAE
+A. Self-Supervised Based Anomaly Detection
+A self-supervised method can be simply defined as x̂ = f (x),
+where the objective is to define a model that can reconstruct an
+output as similar to the input as possible. This indicates that if
+we want to use f (.) for anomaly detection, the input x should
+be normal data so that the model can learn the normal behavior
+patterns of x. After model f (.) is trained, the reconstruction
+errors e = x − x̂ are finally used to detect anomalies.
+B. Overall Architecture
+1) Scheme: Fig. 1 illustrates the complete process of
+anomaly detection based on ISRAE from data collection to
+final detection. Initially, the vibration data is obtained from
+the wireless sensor and then sent to the diagnostic center for
+data storage. Historical data is then retrieved from the database
+for offline training of stacked recurrent autoencoder (SRAE).
+Subsequently, an inference kernel is designed based on specialist
+knowledge and integrated with the trained SRAE to create
+ISRAE. The anomaly detection threshold is determined by using
+test data through a traversal method. Once the threshold is
+set, real-time anomaly detection is conducted with the trained
+ISRAE model, the selected threshold, and the inference kernel.
+Finally, detection results are evaluated and sent back to the
+diagnostic center to generate the machines’ health status, which
+is then communicated to clients. As the historical data accumulates, the model requires periodic retraining, and the thresholds
+need regular updates.
+
+C. The Architecture of SRAE
+SRAE must be constructed before ISRAE is created. Fig. 2
+shows the architecture of SRAE. We first standardize the original
+data, X. Then, we segment the data using a sliding window W
+(with a window length of 10), separating the MTS into three sets
+of single time series based on their dimensions.
+As mentioned in Section I, a weight-sharing autoencoder may
+encounter interference among variables when reconstructing
+MTS. To mitigate this issue, we construct a recurrent autoencoder (RAE) for each set of single time series. Thus, we build
+
+1726
+
+Fig. 2.
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 2, FEBRUARY 2025
+
+where α is a tunable parameter that balances the tradeoff between the two terms; N denotes the batch size.
+N  K
+(k)
+The first term (1−α)
+n=1
+k=1 Lmse (θ) is the average of
+NK
+theMSEloss across K RAE models. The second term
+(k)
+N
+K
+α
+n=1
+k=1 LC (θ) is a constraint we propose to minimize
+N
+the influence of unlabeled anomalies or individual noise in the
+training set. We do not average the second term because averaging may cause interference between variables during reconstruction, making the constraint effective only within individual
+variables. Instead, we sum up all three constraints. This constraint aims to smooth the reconstruction results by minimizing
+the differences between consecutive points. It helps the model
+better capture the patterns of normal data and reconstruct data
+that closely resembles normal instances even when anomalies
+are present. As a result, the final reconstruction errors can more
+effectively differentiate between normal data and real anomalies.
+(k)
+The constraint LC (θ) in (5) can be written as
+
+Architecture of SRAE.
+
+three RAEs and stack them together for joint training and optimization, yielding the stacked model as SRAE. The kth encoder
+of an RAE can be presented as follows:
+
+
+⎧
+⎨Ek,l xk,t , h(l)
+k,t−1 , l ⩽ 1
+
+
+(1)
+hk,t =
+⎩Ek,l h(l−1) , h(l)
+k,t
+k,t−1 , l > 1
+where hk,t is the output of the k-th encoder; Ek,l (.) denotes the
+lth layer of the kth encoder;t represents the time step in time
+(l)
+series xk ; xk,t is the kth dimension input of X; hk,t refers to the
+hidden state of the lth (l = 1, 2, . . . , 4) layer. After constructing
+the encoder, the subsequent decoder can be similarly written as
+
+
+⎧
+(l )
+
+⎨
+
+D
+BN
+(h
+),
+h
+k,l
+k,t
+k,t−1 , l ⩽ 1
+(l )
+
+
+(2)
+hk,t =
+⎩Dk,l h(l−1) , h(l )
+l > 1
+k,t
+k,t−1 ,
+where BN (.) is the batch normalization operation to stabilize
+(l )
+and accelerate training; hk,t refers to the hidden state of l th
+(l = 1, 2, . . . , 4) layer of the decoder. After the hidden state
+(l )
+output hk,t from the last layer of the decoder are obtained, the
+final output x̂t can be expressed as
+  
+  
+
+  
+(l )
+(l )
+(l )
+(3)
+x̂t = concat BN h1,t , BN h2,t , BN h3,t
+where concat(.) is the concatenation operation. Equation (3)
+represents the output of our model obtained by stacking outputs
+of multiple RAEs, which is the output of SRAE. Taking (1)–
+(3) together, let’s denote the kth RAE as fk (xk,t ) and SRAE
+as f (xt ). In this study, we let k = 1, 2, . . . , K and K = 3.
+Ultimately, SRAE can be briefly expressed as
+f(xt ) = concat(f1 (x1,t ), f2 (x2,t ), . . . , fk (xk,t ), . . . , fK (xK,t )).
+(4)
+D. Loss Function
+The loss function of the SRAE model is defined as
+L(θ) =
+
+N K
+N K
+(1 − α)   (k)
+α   (k)
+Lmse (θ) +
+LC (θ) (5)
+N K n=1
+N n=1
+k=1
+
+k=1
+
+1
+(xk,t+1 − xk,t )2 .
+T t=1
+T
+
+(k)
+
+LC (θ) =
+
+(6)
+
+E. Convergence of SRAE’s Training
+SRAE’s ability to capture the normal behavior patterns of
+MTS data is critical to the anomaly detection performance of the
+final ISRAE model, with its convergence during training crucial
+(k)
+for learning these patterns effectively. In (5), both Lmse (θ)
+(k)
+and LC (θ) take similar forms of squared difference, which
+is easier to satisfy the requirement of convexity compared to
+the entire loss function L(θ). This convexity is crucial for the
+(k)
+subsequent proof. If we can prove the convergence of Lmse (θ)
+(k)
+during training, the convergence of LC (θ) can similarly be
+established due to their identical form. Ultimately, based on the
+addition rule of inequalities, we can infer that L(θ) converges.
+Before the theoretical proof, two assumptions are needed. For
+the SRAE model, consider any two parameters, θ k,1 and θ k,2 ,
+obtained from different iterations during training. Here, k ∈ K
+represents the kth dimension of the model’s parameters. According to [28], these two parameters should meet the following
+conditions:
+θk,1 − θk,2 2 ⩽ dk
+
+A1 :
+
+(7)
+
+where d represents the distance boundary. Since θk,1 and θk,2
+are obtained through the Adam optimization algorithm, A1
+holds for any differentiable function. Another assumption is the
+boundedness of gradients for any iteration, ∀i, during the training
+process. For the ith iteration, the gradient gk,i satisfies
+gk,i 2 ⩽ dk .
+
+A2 :
+
+(8)
+
+We use learning rate decay during model training to satisfy the
+first assumption as much as possible. In addition, to meet the
+second assumption, we use gradient clipping, Xavier initialization, and batch normalization. We measure the convergence by
+introducing the regret conception from [29], with the form
+
+1    (k)
+Li (θi ) − L(k) (θ∗ )
+K
+i=1
+K
+
+C(N ) =
+
+k=1
+
+N
+
+(9)
+
+XIE et al.: ENHANCING MULTIVARIATE TIME SERIES ANOMALY DETECTION WITH AN ISRAE IN STRONG MECHANISTIC CONTEXTS
+
+1727
+
+where θ i denotes the parameter set of SRAE from the ith iteration during training, and θ ∗ represents the parameter set that optimizes the loss function L(.). When N → ∞, if C(N )/N → 0,
+it implies that Li (θ i ) is approaching Li (θ ∗ ), indicating that
+the loss function L(.) converges during training. Therefore,
+)
+= 0 serves as the criterion for determining the conlim C(N
+N
+
+expressed as
+
+(17)
+
+vergence of the loss function L(.).
+We train the model using the Adam optimizer [28] and have
+
+Let λi = ηi 1−i1 β , then (17) can be written as
+
+β1,i mi−1 + (1 − β1,i )gk,i
+·
+v̂k,i
+
+1
+
+θk,i+1 = θk,i − ηi
+
+i
+
+1−
+
+β1,j
+j=1
+
+N →∞
+
+mi = β1 mi−1 + (1 − β1 ) g i
+
+η
+
+v̂ i + ε
+
+m̂i .
+
+mi = (1 − β1 )
+
+θk,i+1 = θk,i − λi
+(10)
+
+β1i−j g j .
+
+β1,i mk,i−1 + (1 − β1,i )gk,i
+·
+v̂k,i
+
+(11)
+
+j=1
+
+β1,i mk,i−1 + (1 − β1,i )gk,i
+v̂k,i
+
+m2k,i
+mk,i
+(θk,i −θk∗ ) = (θk,i −θk∗ )2−(θk,i+1−θk∗ )2+λ2i
+·
+v̂k.i
+v̂k,i
+(19)
+
+⇒ 2λi
+
+By introducing gk,i on both sides of (19), we can extract
+v̂k,i (θk,i − θk∗ )2 − (θk,i+1 − θk∗ )2
+
+gk,i (θk,i − θk∗ ) =
+
+2λi (1 − β1,i )
+
+
+Similarly, by expanding v i = β2 v i−1 + (1 − β2 )g 2i , we have
+v i = (1 − β2 )
+
+i
+
+
+β2i−j g 2j .
+
+−
+
+(12)
+
+m2k,i
+β1,i
+λi
+mk,i−1 (θk,i − θk∗ ) +
+·
+1 − β1,i
+2(1 − β1,i ) v̂k,i
+
+
+
+
+(2)
+
+For the ith iteration in the local optimum region that ensures
+convexity, there exists
+∗
+
+Li (θ i ) − Li (θ ) ⩽ g i , θ i − θ .
+
+According to (9) and (13), we derive the following inequality:
+
+N
+
+i=1
+
+C(N ) ⩽
+
+N
+
+
+gi , θi − θ∗
+
+(14)
+
+i=1
+
+where g i , θ i − θ ∗ can also be represented as g i , θ i − θ ∗ =
+K
+∗
+k=1 gk,i (θk,i − θk ). Therefore, (14) can be ultimately expressed as
+C(N ) ⩽
+
+N 
+K
+
+
+gk,i (θk,i − θk∗ ).
+
+(15)
+
+i=1 k=1
+
+1 β1 mk,i−1 + (1 − β1 ) gk,i
+1 − β1i
+v̂k,i
+
+K
+
+∗
+k=1 gk,i (θk,i − θk ) can be expressed as
+
+gk,i (θk,i − θk∗ )
+⎛
+
+N ⎜
+
+⎜
+=
+⎜
+⎝
+i=1
+
+
+
+v̂k,i (θk,i − θk∗ )2 − (θk,i+1 − θk∗ )2
+2λi (1 − β1,i )
+
+
+(1)
+
+⎞
+
+⎟
+m2k,i ⎟
+β1,i
+λi
+∗
+⎟·
+−
+mk,i−1 (θk,i − θk ) +
+1 − β1,i
+2(1 − β1,i ) v̂k,i ⎟
+⎠
+
+
+
+
+(2)
+
+Therefore, our objective shifts to proving the boundedness of
+K
+∗
+k=1 gk,i (θk,i − θk ). According to (10)–(12), for θk,i , which
+represents the kth dimension of the parameters θ after the ith
+training iteration, we have
+θk,i+1 = θk,i − ηi
+
+(3)
+
+(20)
+According to (20),
+
+(13)
+
+(16)
+
+As β1 denotes the decay rate, let us assume it is monotonically
+nondecreasing. As the iteration increases, (16) can be further
+
+
+
+(1)
+
+j=1
+
+∗
+
+(18)
+
+Since we try to extract gk,i (θk,i − θk∗ ), (18) can be transformed
+as
+
+To establish the direct relationship between mi and g i , we
+expand the recursive expression mi = β1 mi−1 + (1 − β1 )g i in
+(10) as
+i
+
+
+1,j
+
+θk,i+1 = θk,i − λi
+
+v i = β2 v i−1 + (1 − β2 ) g 2i
+mi
+m̂i =
+1 − β1i
+vi
+v̂ i =
+1 − β2i
+θ i+1 = θ i − √
+
+j=1
+
+(3)
+
+(21)
+Let us scale terms (1), (2), and (3) in (21). In term (1), let us expand√
+λi . Furthermore, based
+we can infer
+√ on the first assumption,
+√
+v̂k,i (θk,i −θ ∗ )2
+
+v̂k,i d2
+
+v̂k,i (θk,i −θ ∗ )2
+
+that 2ηi (1−β1,1 )k ⩽ 2ηi (1−β1,1k ) , where − 2ηi (1−β1,1 )k
+With all these considerations, we can derive
+N
+
+
+v̂k,i (θk,i − θk∗ )2 − (θk,i+1 − θk∗ )2
+
+i=1
+
+2λi (1 − β1,i )
+
+⩽ 0.
+
+1728
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 2, FEBRUARY 2025
+
+v̂k,1 (θk,1 − θk∗ )2
+v̂k,N (θk,N +1 − θk∗ )2
+−
+2η1 (1 − β1,1 )
+2ηN (1 − β1,1 )
+
+
+N
+
+v̂k,i
+v̂k,i−1
+∗ 2
+−
++
+(θk,i − θk )
+2ηi (1 − β1,1 ) 2ηi−1 (1 − β1,1 )
+i=2
+⩽
+
+⩽
+
+(22)
+
+vk,i
+Given the conditions v̂k,i = 1−β
+, vk,i =(1−β2 )
+2,i
+assumption A2, we can derive the following:
+
+i
+
+i−j 2
+gk,j
+j=1 β2
+
+, and
+
+
+2
+(1 − β2 ) ij=1 β2i−j gk,j
+vk,i
+2
+=
+⩽ (dk ) .
+v̂k,i =
+1 − β2i
+1 − β2i
+
+(23)
+
+v̂k,i (θk,i − θk∗ )2 − (θk,i+1 − θk∗ )2
+
+⩽
+
+2λi (1 − β1,i )
+
+d2k dk
+·
+2ηN (1 − β1,1 )
+(24)
+
+β1,i
+β1,i
+mk,i−1 (θk,i − θk∗ ) ⩽
+mk,i−1 dk .
+1 − β1,i
+1 − β1,i
+
+(25)
+
+As β1 is monotonically nondecreasing, further expanding and
+(i)
+merging mk based on (11) yields
+⎞
+⎛
+i
+i
+
+
+mk,i =
+(1 − β1,j ) ⎝
+β1,l ⎠ gk,j .
+(26)
+j=1
+
+l=j+1
+
+Based on the second assumption, (26) can be further scaled to
+⎞
+⎛
+
+
+i
+i
+i
+
+
+
+
+(1−β1,j )⎝
+β1,l ⎠gk,j ⩽ dk 1 −
+β1,l ⩽ dk .
+l=j+1
+
+l=1
+
+(27)
+Combining (25)–(27), term (2) can be ultimately scaled to
+β1,i
+β1,i
+mk,i−1 (θk,i − θk∗ ) ⩽ dk dk
+·
+1 − β1,i
+1 − β1,i
+
+(28)
+
+m2
+
+For term (3), we mainly focus on √ k,i . According to
+v̂k,i
+
+v
+
+k,i
+v̂k,i = 1−β
+i , we have
+2
+
+(
+
+=
+
+m2k,i
+m2k,i
+1 − β2,i √
+⩽√
+·
+vk,i
+vk,i
+
+transform m2k,i based
+l=j+1 β1,l )gk,j . Then, we obtain
+
+Let
+
+i
+
+on
+
+us
+
+
+m2k,i =
+
+i
+
+j=1
+
+i
+
+(1−β1,j )2
+
+β1,l
+l=j+1
+
+(1−β2 )β2i−j
+
+·dk .
+
+(1 − β1,j )
+
+2
+
+mk,i =
+
+Taking (15), (21), (24), (28), and (31) together, we can ultimately
+derive
+N 
+K 
+
+d2k dk
+β1,i
+C(N ) ⩽
++ dk dk
+2η
+(1
+−
+β
+)
+1
+−
+β1,i
+N
+1,1
+i=1 k=1
+⎞
+
+2
+λi
++
+2(1 − β1,i ) j=1
+
+For term (2), based on the first assumption, we have
+
+v̂k,i
+
+λi
+⩽
+v̂k,i 2(1−β1.i ) j=1
+
+i
+
+
+According to (22) and (23), term (1) can be scaled to
+
+m2k,i
+
+λi
+2(1−β1.i )
+
+i
+
+
+m2k,i
+
+(31)
+
+d2k v̂k,N
+2ηN (1 − β1,1 )
+
+j=1
+
+According to (23) and (30), term (3) can be scaled to
+
+2
+
+(29)
+i
+
+j=1 (1−β1,j )
+
+(1 − β1,j )2
+
+i
+
+β1,l
+l=j+1
+
+⎟
+⎟
+
+⎟
+· dk ⎟
+⎟
+⎠
+
+(1 − β2 )β2i−j
+
+(32)
+Since all the values on the right side of the inequality in (32)
+)
+stay constant, we infer that as N → ∞, lim C(N
+= 0. Thus,
+N
+
+N →∞
+(m)
+we can prove that Lmse (θ) converges during training. Similarly,
+(m)
+convergence of LC (θ) can also be proved. Finally, following
+
+the rule of inequalities, we conclude that the loss function
+L(θ), represented by (5), can converge during the model’s
+training.
+Since the convergence of ISRAE during the training process
+has been proved we train the model using the Adam algorithm
+to optimize
+
+
+N K
+N K
+α   (k)
+(1−α)   (k)
+∗
+Lmse (θ)+
+LC (θ) .
+θ = arg min
+N M n=1
+N n=1
+θ
+k=1
+
+k=1
+
+(33)
+F. Anomaly Detection Algorithm Based on ISRAE
+After training the SRAE, we propose an inference kernel
+based on specialist knowledge for the anomaly detection phase.
+This kernel helps focus on detecting anomalies related to the
+machine’s rotational frequency, such as unbalanced bearings
+and misalignments. These anomalies often show significant increases in energy at one-time or two-time rotational frequencies
+and in the RMS. Therefore, we define the inference kernel as
+ϕ(p1 , p2 , p3 ) = p1 ∧ (p2 ∨ p3 )
+
+(34)
+
+where p1 , p2 , p3 are the predictions of three dimensions. By integrating the inference kernel with SRAE, the
+final ISRAE anomaly detection algorithm is detailed in
+Algorithm 1.
+III. EXPERIMENTAL DESIGN AND RESULTS
+A. Experimental Design
+
+2
+
+i
+
+β1,l
+l=j+1
+
+(1 − β2 )β2i−j
+
+· vk,i
+
+(30)
+
+1) Comparative Models: We compare ISRAE with nine
+state-of-the-art (SOTA) models and two baselines using a private
+dataset, the MSPD to demonstrate the superiority of our model.
+The detailed descriptions of these SOTAs and baselines are
+presented in Table I.
+
+XIE et al.: ENHANCING MULTIVARIATE TIME SERIES ANOMALY DETECTION WITH AN ISRAE IN STRONG MECHANISTIC CONTEXTS
+
+1729
+
+Algorithm 1: ISRAE Anomaly Detection Algorithm.
+
+Fig. 3. Installation of sensors on a pump. (a) Overview of machine.
+(b) Overview of sensor installation. (c) Sensor on motor drive end. (d)
+Sensor on pump drive end.
+TABLE II
+DETAILED INFORMATION ON THE MSPD
+
+TABLE I
+DESCRIPTIONS OF SOTAS AND BASELINES
+
+where Si denotes the ith segment of anomaly. To comprehensively evaluate the anomaly detection results, we further utilize
+a new PA adjustment method of [27] as follows:
+
+ 
+∗
+1, if et ⩾ ν ∗ or t ∈ Si and |{t |t ∈S|Si ,ei |t ⩾ν }| ⩾ τ
+
+(36)
+yt =
+0, otherwise.
+Equation (36) indicates that an anomaly segment can only be
+correctly predicted if more than τ × |Si | anomalies within that
+segment are accurately identified.
+4) Experiment Setting: The proposed ISRAE are implemented in a PyTorch 1.8.1 environment and run on an 11th Gen
+Intel(R) (6-Core 2.50 GHz) processor with 64GB RAM and an
+NVIDIA GeForce RTX 3080.
+B. Experimental Results
+
+2) Threshold Selection: A uniform selection strategy for the
+predicted threshold is utilized for each model to ensure fair
+comparison. We generate numerous thresholds covering the
+range of reconstruction errors and choose the one that best
+detects anomalies in the test set. The details of the threshold
+selection are outlined in steps (4)–(12) of Algorithm 1.
+3) Evaluation Metrics: Existing studies usually perform
+point adjustments (PA) on the predictions results. According
+to [27], their PA can be written as follows:
+
+1, if et ⩾ ν ∗ or t ∈ Si and ∃ et ⩾ ν ∗
+
+t ∈Si
+(35)
+yt =
+0, otherwise
+
+1) Data: The existing MTS public datasets do not contain
+the specialist knowledge mentioned in this study. Moreover,
+extracting such knowledge directly from public datasets is challenging without sufficient domain expertise. Therefore, we use
+a private dataset, the MSPD, to comprehensively demonstrate
+the superiority of ISRAE.
+The MSPD is a 3-D MTS obtained from multiple sensors
+installed on a pump. The sensor installation is illustrated in
+Fig. 3, and detailed information on the MSPD is presented
+in Table II. The time interval between two consecutive data
+points is two hours in both the training and test sets. Fig. 4
+shows the data collected from four specific pumps. Metrics 1–3
+correspond to the RMS of velocity, the energy at the one-time
+rotational frequency, and the energy at the two-time rotational
+frequency, respectively. In this context, the one-time rotational
+frequency indicates the rotational frequency. Data visualization
+indicates a genuine anomaly when metric 1 significantly rises
+and either metric 2 or metric 3 also shows a substantial increase.
+In other cases, even if metrics 2 and 3 simultaneously rise
+significantly, it does not necessarily indicate genuine anomalies.
+These characteristics are supported by robust mechanical theories or specialist knowledge, constituting the strong mechanistic
+contexts mentioned before.
+
+1730
+
+Fig. 4.
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 2, FEBRUARY 2025
+
+MSPD visualization. (a) Pump 1. (b) Pump 2. (c) Pump 3. (d) Pump 4.
+
+TABLE III
+COMPARISON RESULTS ON THE MSPD
+
+2) Comparison Results: To demonstrate the effectiveness
+of ISRAE in detecting anomalies in the MSPD, we compare
+ISRAE with nine other SOTAs. To further validate the ISRAE’s
+universality and robustness, we add noise to the MSPD at a
+signal-to-noise ratio (SNR) of 10 dB. Since LSTM and GRU
+are the two most well-established types of RNNs, we also
+create ISLSTMAE and ISGRUAE as two representatives of
+ISRAE. The comparison results reported in Table III include
+the average value and standard deviation across twenty repeated
+experiments. The F1-score, the harmonic mean of precision and
+recall used for threshold selection, is the primary focus during
+model analysis and comparison.
+Table III shows that both ISLSTMAE and ISGRUAE achieve
+the best (F1-score = 0.8937) and second-best (F1-score =
+
+0.8870) performance on the MSPD, respectively. We can
+observe that these two models achieve the best and second-best
+precision scores, respectively, while also maintaining relatively
+high recall levels. This indicates that the proposed inference
+kernel in ISRAE significantly reduces false alarm rates while
+effectively capturing most of the anomalies. USAD has the
+worst performance with an F1-score of only 0.2781. Its low
+precision of 0.2044 highlights the issue of incorrectly identifying
+many normal data points as anomalies. This issue may stem
+from overfitting in the generative adversarial learning process
+of USAD fusion. As a result, the model can learn the training
+set data perfectly but struggles to perform well on the test set.
+Compared to GDN and MTAD-GAT, MSCRED performs poorly
+because it doesn’t use attention mechanisms to learn important
+correlations and fails to consider sufficiently long temporal
+dependencies like other models that integrate RNNs. This results in MSCRED having the second-worst performance on
+the MSPD. OmniAnomaly’s F1-score is only 0.8059, significantly lower than the baseline DAE, and its recall of 0.7309
+indicates that the model misses many anomalies. This suggests
+that OmniAnomaly does not effectively learn the patterns of
+normal data. Furthermore, Table III also shows that models
+like DAGMM, GDN, MTAD-GAT, and TranAD, while performing relatively well, cannot adequately consider the temporal dependencies of MTS due to their structural characteristics. As a result, their F1-scores are quite similar, achieving only around 0.82–0.83. For EncDec-AD and LSTM-VAE,
+which consider temporal dependencies, both models achieve an
+F1-score of 0.87, with recall and precision at relatively good
+levels.
+In the results for the MSPD (SNR = 10 dB), ISRAE still
+achieves almost the best performance. ISLSTMAE and ISGRUAE have the best and third-best F1-scores, respectively.
+Even as the third-best, ISGRUAE’s F1-score of 0.8579 is nearly
+identical to the second-best score of 0.8586. ISRAE’s excellent performance on the noise-added MSPD dataset is due to
+its strong reconstruction and smoothing capabilities from the
+stacking method and differential constraint, and the inference
+
+XIE et al.: ENHANCING MULTIVARIATE TIME SERIES ANOMALY DETECTION WITH AN ISRAE IN STRONG MECHANISTIC CONTEXTS
+
+1731
+
+Fig. 5. Visualizations of model reconstruction and predicted anomalies. (a) DAGMM. (b) USAD. (c) EncDec-AD. (d) LSTM-VAE. (e) OmniAnomaly.
+(f) GDN. (g) MTAD-GAT. (h) TranAD. (i) ISRAE.
+
+kernel high precision. After introducing noise into the MSPD,
+the performance of all models generally declines. Notably, the
+performance of GDN and MTAD-GAT, which use graph-based
+data correlations, drops significantly due to the noise’s impact on graph construction. Models incorporating variational
+inference, such as LSTM-VAE and OmniAnomaly, show less
+performance degradation, as variational inference enhances robustness against noise. In contrast, the F1-score of EncDecAE, which lacks variational inference, dropped by nearly 10%.
+Despite some improvement, USAD and MSCRED remain the
+worst-performing models, likely due to the difficulty of training
+them on this dataset.
+In addition, to compare and analyze their ability to capture
+normal behavior patterns, we present the reconstructions of a
+pump generated by these models. The reconstruction errors and
+predicted anomalies are also shown to demonstrate the effectiveness of ISRAE compared to other SOTAs. These visualizations
+are illustrated in Fig. 5, where the red regions represent labeled
+anomalies. It is clear that LSTM-VAE and ISRAE have the
+best reconstruction abilities. Both models significantly underestimate anomalies, enhancing the effectiveness of reconstruction
+errors in differentiating between normal data and anomalies.
+OmniAnomaly performs the worst in reconstruction, confirming
+it has barely learned the normal behavior patterns of MTS.
+In addition, we observe false alarms by other models, while
+ISRAE does not, highlighting the advantage of ISRAE’s inference kernel that fully considers the strong causal or logical relationships among the variables. Moreover, it is evident
+that the model effectively captures normal data trends while
+significantly underestimating anomalies. This occurs because
+stable trends in normal data incur smaller penalties from the
+differential constraint, whereas anomalies, due to their instability, incur larger penalties. These results demonstrate that the
+differential constraint enhances the model’s anomaly detection
+capabilities.
+
+We further consider different τ values of PA based on (36)
+to evaluate model performance comprehensively. Fig. 6 shows
+that our proposed ISLSTMAE and ISGRUAE do not exhibit a
+rapid decrease in performance across three metrics (precision,
+recall, F1-score) as τ increases, while other SOTAs deteriorate
+faster in at least two metrics. This indicates that our ISRAE
+anomaly detection algorithm has low sensitivity to PA, further
+demonstrating that the model can more accurately predict
+anomalies while the inference kernel can consistently reduce
+false alarms.
+C. Model Discussion
+1) Sensitivity Analysis of Hyperparameters: We discuss the
+model performance on the MSPD dataset by conducting sensitivity analysis. Based on (5), a hyperparameter α balances the
+tradeoff between the two terms in the loss function. Therefore,
+we analyze this hyperparameter to see how it affects ISRAE’s
+performance. The results are illustrated in Fig. 7. Since the F1score is the harmonic mean of precision and recall, we primarily
+focus on changes in the F1-score. It is evident that the F1-score
+of ISRAE shows a notable increase from α = 0 to α = 0.01,
+staying at a remarkably high level until α = 0.4, where it starts to
+decrease. Given this consistently strong performance, we choose
+α = 0.11 that maximizes the F1-score.
+2) Ablation Study: We conduct an ablation study to demonstrate module’s effectiveness in ISRAE. In addition to the two
+baselines (i.e., NAE and DAE), we also introduce a new baseline
+here that initializes the model without training. Comparing these
+baselines helps us understand whether our proposed model
+and its modules have positive effectiveness for anomaly detection. The results are presented in Table IV. The ISRAE model
+achieves optimal performance only when all three modules are
+applied simultaneously, with F1-scores of 0.8937 and 0.8870,
+respectively.
+
+1732
+
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 2, FEBRUARY 2025
+
+Fig. 6.
+
+Comparison results on the MSPD with different PA%τ .
+
+Fig. 7.
+
+Sensitivity analysis of α.
+
+Table IV indicates that the effects of the different modules are
+interconnected rather than independent. The stacking module
+alone does not perform well but shows notable improvement
+when paired with either of the other two modules. This is
+because the stacking module can eliminate interference between
+variables during reconstruction, leading to better performance.
+However, without the other two modules, the model might
+achieve excessively high reconstruction performance, which
+could hinder effective anomaly identification. When only the
+differential constraint is introduced, without the other two modules, the F1-scores of the two models reach 0.8564 and 0.8301,
+respectively, which is very close to the baseline DAE. The differential constraint smooths the reconstruction results, increasing
+the difference between the reconstruction and the original data
+in unstable regions, thus enhancing performance. Similarly,
+introducing only the inference kernel results in an F1-score close
+to that of the baseline DAE, with good recall. The inference
+kernel can reduce false alarms for fake anomalies present in the
+private dataset. However, without the other two modules, the
+model’s reconstruction capability remains significantly limited.
+Combining any two of the three modules above results in an
+F1-score of 0.85–0.87, significantly improving over the individual modules. This improvement is due to the complementary
+advantages of each module enhancing anomaly detection performance. For example, combining the inference kernel with
+either of the other two modules generally improves precision, as
+the inference kernel can better identify fake anomalies when reconstruction capabilities are enhanced. When all three modules
+are integrated, the performance of the ISRAE model reaches its
+optimum level.
+
+Fig. 8.
+
+Feature distribution of ISRAE. (a) ISLSTMAE. (b) ISGRUAE.
+
+3) Distribution of ISRAE’s Feature: Based on the main idea
+of ISRAE anomaly detection, we understand that when the
+reconstruction of anomalies is similar to that of normal data,
+greater reconstruction residuals make anomalies easier to detect.
+By visualizing the feature distribution of ISRAE in Fig. 8, we
+find that the features of anomalies and normal data are distributed
+similarly. This indicates that our proposed ISRAE effectively
+captures normal behavior patterns.
+
+IV. CONCLUSION
+In this article, we proposed the ISRAE model for anomaly
+detection in MTS under strong mechanistic contexts. ISRAE
+effectively mitigated interference among variables by using a
+stacking approach. The inference kernel, derived from specialist
+
+XIE et al.: ENHANCING MULTIVARIATE TIME SERIES ANOMALY DETECTION WITH AN ISRAE IN STRONG MECHANISTIC CONTEXTS
+
+TABLE IV
+ABLATION STUDY RESULTS
+
+knowledge, enhanced anomaly detection accuracy and reduced
+false alarms. In addition, a new differential constraint in the loss
+function emphasized anomaly reconstruction errors by smoothing the reconstructions. Comparison results demonstrated that
+ISRAE achieved superior anomaly detection performance in
+MTS with strong mechanistic contexts. Reconstruction comparisons highlighted the model’s ability to capture normal behavior
+patterns effectively. Following [27], we presented the PA results for all models at different τ values and introducee three
+baselines, confirming the superiority of our model. The ablation
+study confirmed the role of each module and revealed potential
+interaction effects among the key modules. In summary, ISRAE
+exceled at detecting anomalies in strong mechanistic contexts.
+REFERENCES
+[1] X. Dai and Z. Gao, “From model, signal to knowledge: A data-driven
+perspective of fault detection and diagnosis,” IEEE Trans. Ind. Inform.,
+vol. 9, no. 4, pp. 2226–2238, Nov. 2013.
+[2] Z. Gao, C. Cecati, and S. X. Ding, “A survey of fault diagnosis and
+fault-tolerant techniques–Part II: Fault diagnosis with knowledge-based
+and hybrid/active approaches,” IEEE Trans. Ind. Electron., vol. 62, no. 6,
+pp. 3768–3774, Jun. 2015.
+[3] Z. Gao, X. Dai, T. Breikin, and H. Wang, “Novel parameter identification
+by using a high-gain observer with application to a gas turbine engine,”
+IEEE Trans. Ind. Inform., vol. 4, no. 4, pp. 271–279, Nov. 2008.
+[4] I. Bandyopadhyay, P. Purkait, and C. Koley, “Performance of a classifier
+based on time-domain features for incipient fault detection in inverter
+drives,” IEEE Trans. Ind. Inform., vol. 15, no. 1, pp. 3–14, Jan. 2019.
+[5] W. Li, Z. Chen, and G. He, “A novel weighted adversarial transfer network
+for partial domain fault diagnosis of machinery,” IEEE Trans. Ind. Inform.,
+vol. 17, no. 3, pp. 1753–1762, Mar. 2021.
+[6] I. Morgan and H. Liu, “Computational analysis of sparse datasets for
+fault diagnosis in large tribological mechanisms,” IEEE Trans. Syst. Man
+Cybern. Part C-Appl. Rev., vol. 41, no. 5, pp. 617–629, Sep. 2011.
+
+1733
+
+[7] T. Xie, Q. Xu, C. Jiang, S. Lu, and X. Wang, “The fault frequency
+priors fusion deep learning framework with application to fault diagnosis of offshore wind turbines,” Renew. Energy, vol. 202, pp. 143–153,
+2023.
+[8] S. Lu, Z. Gao, Q. Xu, C. Jiang, A. Zhang, and X. Wang, “Class-imbalance
+privacy-preserving federated learning for decentralized fault diagnosis
+with biometric authentication,” IEEE Trans. Ind. Inform., vol. 18, no. 12,
+pp. 9101–9111, Dec. 2022.
+[9] G. E. Hinton and R. R. Salakhutdinov, “Reducing the dimensionality
+of data with neural networks,” Sci., vol. 313, no. 5786, pp. 504–507,
+2006.
+[10] C. Huang et al., “Self-supervision-augmented deep autoencoder for unsupervised visual anomaly detection,” IEEE Trans. Cybern., vol. 52, no. 12,
+pp. 13834–13847, Dec. 2022.
+[11] H. Ren et al., “Time-series anomaly detection service at microsoft,” in
+Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2019,
+pp. 3009–3017.
+[12] B. Zong et al., “Deep autoencoding gaussian mixture model for unsupervised anomaly detection,” in Proc. Int. Conf. Learn. Represent.,
+2018.
+[13] Y. Su, Y. Zhao, C. Niu, R. Liu, W. Sun, and D. Pei, “Robust anomaly
+detection for multivariate time series through stochastic recurrent neural
+network,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl. Discov. Data
+Mining, 2019, pp. 2828–2837.
+[14] C. Zhang et al., “A deep neural network for unsupervised anomaly detection and diagnosis in multivariate time series data,” in Proc. AAAI Conf.
+Artif. Intell., vol. 33, 2019, pp. 1409–1416.
+[15] H. Zhao et al., “Multivariate time-series anomaly detection via graph attention network,” in Proc. IEEE Int. Conf. Data Mining, 2020, pp. 841–850.
+[16] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural
+Comput., vol. 9, no. 8, pp. 1735–1780, 1997.
+[17] J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, “Empirical evaluation of
+gated recurrent neural networks on sequence modeling,” in Proc. IEEE
+Int. Conf. Acoust., 2017.
+[18] P. Malhotra, A. Ramakrishnan, G. Anand, L. Vig, P. Agarwal, and G.
+Shroff, “LSTM-based encoder-decoder for multi-sensor anomaly detection,” in Proc. Int. Conf. Mach. Learn., 2016.
+[19] D. Park, Y. Hoshi, and C. C. Kemp, “A multimodal anomaly detector
+for robot-assisted feeding using an LSTM-based variational autoencoder,”
+IEEE Robot. Autom. Lett., vol. 3, no. 3, pp. 1544–1551, Jul. 2018.
+[20] X. Zhou, Y. Hu, W. Liang, J. Ma, and Q. Jin, “Variational LSTM enhanced
+anomaly detection for industrial Big Data,” IEEE Trans. Ind. Inform.,
+vol. 17, no. 5, pp. 3469–3477, May 2021.
+[21] Z. Chen, D. Chen, X. Zhang, Z. Yuan, and X. Cheng, “Learning graph
+structures with transformer for multivariate time-series anomaly detection in IoT,” IEEE Internet Things J., vol. 9, no. 12, pp. 9179–9189,
+Jun. 2022.
+[22] J. Audibert, P. Michiardi, F. Guyard, S. Marti, and M. A. Zuluaga,
+“USAD: Unsupervised anomaly detection on multivariate time series,” in
+Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2020,
+pp. 3395–3404.
+[23] B. Du, X. Sun, J. Ye, K. Cheng, J. Wang, and L. Sun, “Gan-based anomaly
+detection for multivariate time series using polluted training set,” IEEE
+Trans. Knowl. Data. Eng., vol. 35, no. 12, pp. 12208–12219, Dec. 2023.
+[24] S. Tuli, G. Casale, and N. R. Jennings, “Tranad: Deep transformer networks
+for anomaly detection in multivariate time series data,” in Proc. Int. Conf.
+Very Large Data Bases, 2022.
+[25] G. Zerveas, S. Jayaraman, D. Patel, A. Bhamidipaty, and C. Eickhoff, “A
+transformer-based framework for multivariate time series representation
+learning,” in Proc. 27th ACM SIGKDD Int. Conf. Knowl. Discov. Data
+Mining, 2021, pp. 2114–2124.
+[26] T. Xie, Q. Xu, C. Jiang, Z. Gao, and X. Wang, “A robust anomaly
+detection model for pumps based on the spectral residual with selfattention variational autoencoder,” IEEE Trans. Ind. Inform., vol. 20, no. 6,
+pp. 9059–9069, Jun. 2024.
+[27] S. Kim, K. Choi, H. Choi, B. Lee, and S. Yoon, “Towards a rigorous
+evaluation of time-series anomaly detection,” in Proc. AAAI Conf. Artif.
+Intell., 2022, vol. 36, pp. 7194–7201.
+[28] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+in Proc. Int. Conf. Learn. Represent., 2015.
+[29] M. Zinkevich, “Online convex programming and generalized infinitesimal
+gradient ascent,” in Proc. Int. Conf. Mach. Learn., 2003, pp. 928–936.
+[30] A. Deng and B. Hooi, “Graph neural network-based anomaly detection in
+multivariate time series,” in Proc. AAAI Conf. Artif. Intell., 2021, vol. 35,
+pp. 4027–4035.
+PAPER_TEXT

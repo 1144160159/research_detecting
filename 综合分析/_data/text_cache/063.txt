@@ -1,0 +1,135 @@
+              PacketCGAN: Exploratory Study of Class
+            Imbalance for Encrypted Trafﬁc Classiﬁcation
+                           Using CGAN
+                              Pan Wang∗ , Shuhang Li∗ , Feng Ye† , Zixuan Wang∗ and Moxuan Zhang‡
+                      ∗ School of Modern Posts, Nanjing University of Posts & Telecommunications, Nanjing, China
+                      † Department of Electrical & Computer Engineering, University of Dayton, Dayton, OH, USA
+                            ‡ Schools of International Education, Jinling Institute of Technology, Nanjing, China
+                                                            Email: ∗ wangpan@njupt.edu.cn
+
+
+
+       Abstract—With the popularity of Deep Learning (DL), re-                  a huge challenge for QoS, network management and security
+    searchers have begun to apply DL to tackle with encrypted trafﬁc            monitoring. Therefore, studies on encrypted trafﬁc classiﬁca-
+    classiﬁcation problems. Although these methods can automati-                tion not only help to improve the ﬁne-grained network resource
+    cally extract trafﬁc features to improve the ability of feature
+    engineering of traditional methods like DPI, a large amount                 allocation based on application, but also enhance security level
+    of data is still needed to learn the characteristics of various             of network and applications.
+    types of trafﬁc. Therefore, the performance of classiﬁcation                   Traditionally, the evolution of encrypted trafﬁc classiﬁcation
+    model always signiﬁcantly depends on the quality of datasets.               technology has gone through three stages: port matching,
+    Nonetheless, the building of datasets is a time-consuming and               payload matching and ﬂow statistical characteristics based
+    costly task, especially encrypted trafﬁc. Apparently, it is often
+    more difﬁcult to collect a large amount of trafﬁc samples of those          classiﬁcation methods. Port matching based method infers
+    unpopular applications than well-known ones, which often leads              applications’ types by assuming that most applications consis-
+    to the problem of class imbalance between major and minor                   tently use ’well known’ TCP or UDP port numbers, however,
+    encrypted applications in datasets. In this paper, we proposed              the emergence of port camouﬂage, dynamic port, proprietary
+    a novel trafﬁc data augmenting method called PacketCGAN                     protocols with user-deﬁned ports and tunneling technology
+    using Conditional GAN, which can control the modes of data
+    to be generated. PacketCGAN exploit the beneﬁt of CGAN to                   makes these methods lose efﬁcacy quickly. Payload match-
+    generate speciﬁed samples with the input of applications’ types             ing based methods, namely, DPI (Deep Packet Inspection)
+    as conditional and thereby achieve data balancing . As a proof of           technology cannot deal with encrypted trafﬁc because of
+    concept, three classical DL models including CNN were adopted               invisible packet content of encrypted trafﬁc, in addition, it
+    to classify four types of encrypted trafﬁc datasets augmented               incurs high computational overhead and requires manual sig-
+    by Random Over Sampling (ROS), SMOTE(Synthetic Minority
+    Over-sampling Techinique) , vanilla GAN and PacketCGAN                      natures maintenance [1, 2]. As a result, in order to attempt to
+    respectively using public datasets. The experimental evaluation             solve the aboved problems of encrypted trafﬁc identiﬁcation
+    results demonstrate that DL based encrypted trafﬁc classiﬁer                , ﬂow-based methods emerged, which usually combine sta-
+    over our new dataset augmented by PacketCGAN can achieve                    tistical or time series trafﬁc features with Machine Learning
+    better performance than the other three in terms of encrypted               (ML) algorithms, such as naive bayes(NB), support vector
+    trafﬁc classiﬁcation.
+       Index Terms—encrypted trafﬁc classiﬁcation, data augmenta-               machine(SVM), decision tree, Random Forest(RF), k-nearest
+    tion, Conditional Generative Adversarial Network, trafﬁc iden-              neighbor(KNN) [3]. Although classical machine learning
+    tiﬁcation, class imbalance                                                  approaches can solve many issues that port and payload based
+                                                                                methods cannot solve, it still has some limitations, such as
+                             I. I NTRODUCTION                                   handcrafted trafﬁc features driven by domain-expert, time-
+       With the rapid development of network technology, the                    consuming, lack of ability of automation, rapidly outdated
+    types and quantity of trafﬁc data in cyberspace are increasing.             when compared to the evolution. Unlike most traditional
+    Network trafﬁc identiﬁcation and classiﬁcation is a crucial re-             ML algorithms, DL performs automatic feature extraction
+    search task in the area of network management and security. It              without human intervention, which undoubtedly makes it a
+    is the footstone of dynamic access control, network resources               highly desirable approach for trafﬁc classiﬁcation, especially
+    scheduling, content based billing, intrusion and malware de-                encrypted trafﬁc. Recent research work has demonstrated the
+    tection etc. High efﬁcient and accurate trafﬁc classiﬁcation                superiority of DL methods in trafﬁc classiﬁcation [4], such as
+    is of great practical signiﬁcance to provide service quality                MLP [5], CNN [6], SAE [7], LSTM [8].
+    assurance, dynamic access control and abnormal network be-                     However, due to the different popularity of various applica-
+    haviors detection. With the widespread adoption of encryption               tions, the class imbalance problem of trafﬁc samples often
+    techniques for internet, especially 5G and IoT applications, the            occurs when building trafﬁc datasets. That is, the number
+    growth of portion of encrypted trafﬁc has dramatically posed                of popular applications samples is much larger than others,
+
+
+
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 01:55:35 UTC from IEEE Xplore. Restrictions apply.
+                                                            978-1-7281-5089-5/20/$31.00 ©2020 IEEE
+    which always leads to the misclassifying problems of minor                  B. Traditional methods for handling imbalanced data
+    applications and thereby incurs deterioration of classiﬁer per-                In general, there are three methods for dealing with class
+    formance. Imbalanced class distribution of a dataset has posed              imbalance problem: Modifying the objective cost function,
+    a serious challenge to most ML based classiﬁers which assume                Sampling and Generating artiﬁcial data [11]. The approach
+    a relatively balanced distribution. Network trafﬁc classiﬁcation            of modifying objective cost function alleviates the problem
+    is no exception due to the imbalanced property of network                   by means of weighting differently the data samples in minor
+    trafﬁc data [9], especially encrypted trafﬁc. Therefore, it is              and major classes, which gives higher score on the minor
+    very crucial to address such challenges of imbalanced class                 samples to penalize more intensely on miss-classiﬁying of
+    distribution of trafﬁc datasets for network trafﬁc classiﬁcation.           the sample in the minor class. Sampling methods include two
+    However, there are very few studies focusing on trafﬁc data                 different ways of under-sampling and over-sampling, which
+    augmentation for trafﬁc classiﬁcation to overcome the limita-               is to reduce the size of major class by removing some major
+    tion of class imbalance.                                                    data samples and raise the ones in the minor class, respectively.
+       In this paper, we proposed trafﬁc data augmentation method               Random under sampling (RUS) and Random over sampling
+    called PacketCGAN using Conditional GAN, one of a genre                     (ROS) are two main methods of under-sampling and over-
+    of GAN, which can control the modes of the data to be                       sampling [12]. RUS randomly removes some instances in ma-
+    generated. As a generative model, PacketCGAN exploits the                   jor class, accordingly, ROS generates some copies of samples
+    beneﬁt of CGAN to generate synthesized trafﬁc samples by                    of the minor class. However, overﬁtting problem is always the
+    learning the characteristics of the original trafﬁc data. The               main drawback of ROS due to generating same copies from the
+    synthesized data is then combined with the original (viz. real)             minor class. A classical method for generating artiﬁcial data
+    data to build the new trafﬁc dataset and thereby keep balance               is Synthetic Minority Over-sampling Techinique (SMOTE) in
+    between major and minor classes of the dataset. As a proof                  which minority samples are generated by synthetic samples
+    of concept, three classical DL models like CNN were adopted                 rather than copies [13].
+    and designed to classify four types of encrypted trafﬁc datasets
+    augmented by ROS, SMOTE, vanilla GAN and PacketCGAN                         C. The application of GAN and other DL techniques in
+    respectively using public datasets. The experimental evaluation             generating trafﬁc data samples
+    results demonstrate that DL based encrypted trafﬁc classiﬁer                   Due to the great success of GAN applying in images,
+    over our new dataset augmented by PacketCGAN can achieve                    computer vision and NLP etc., this innovative technique has
+    better performance than the other three in terms of encrypted               been already applied to network security recently. As for
+    trafﬁc classiﬁcation.                                                       trafﬁc classiﬁcation, some researchers have introduced some
+       The rest of this paper is organized as follows. Section II               approaches based on GAN to generate the trafﬁc samples to
+    introduces related works of trafﬁc classiﬁcation and some cur-              overcome the imbalaced limitation of network data. In [14],
+    rent methods for tackling with the problem of imbalanced class              the authors proposed a novel method called auxiliary classiﬁer
+    data. Section III describes the principles of GAN and CGAN.                 GAN (AC-GAN) to generate synthesized trafﬁc samples for
+    Section IV illustrates the methodology of PacketCGAN. The                   balancing between the minor and major classes over a well-
+    experimental results are provided and discussed in Section                  known trafﬁc dataset NIMS. The AC-GAN took both a random
+    V. Section VI concludes our work and presents some future                   noise and a class label as input in order to generate the
+    works.                                                                      samples of the input class label accordingly. The experimental
+                                                                                results has shown that their proposed method achieved better
+                                                                                performance compared to other methods like SMOTE. How-
+                           II. R ELATED WORKS                                   ever, the NIMS dataset was only composed of SSH and non-
+                                                                                SSH two classes. In [15], the authors proposed a novel data
+    A. DL based approach of Trafﬁc Classiﬁcation                                augmentation approach based on the use of Long Short Term
+                                                                                Memory (LSTM) network to learn the trafﬁc ﬂow patterns
+       Unlike most traditional ML algorithms, Deep Learning                     and Kernel Density Estimation (KDE) for replicating the
+    performs automatic feature extraction without human interven-               sequence of packets in a ﬂow for classes with less population.
+    tion, which undoubtedly makes it a highly desirable approach                The results have shown that this method can improve the
+    for trafﬁc classiﬁcation, especially encrypted trafﬁc. Recent               performance of DL algorithms over augmented datasets.
+    research work has demonstrated the superiority of DL methods
+    in trafﬁc classiﬁcation [4–6, 8, 10]. The workﬂow of DL based                      III. C ONDITIONAL G ENERATIVE A DVERSARIAL
+    classﬁcation usually consists of three steps. First, model inputs                                  N ETWORKS
+    are deﬁned and designed according to some principles, such                     In GAN, there is no control over modes of the data to
+    as raw packets, PCAP ﬁles or ﬂow statistics features. Second,               be generated. The conditional GAN changes that by adding
+    models and algorithms are elaborately chosen according to                   the constraint condition y as an additional parameter to the
+    models’ characteristics and aim of the classiﬁer. Finally, the              generator G and hopes that the corresponding images are
+    DL classiﬁer is trained to automatically extract the features of            generated. For example, in MNIST, the digit generated by
+    trafﬁc.                                                                     GAN may be either any digit from 0-9 instead of speciﬁed
+
+
+
+
+Authorized licensed use limited to: INDIAN INSTITUTE OF TECHNOLOGY MADRAS. Downloaded on August 19,2025 at 01:55:35 UTC from IEEE Xplore. Restrictions apply.
+    one or always output the same digit. Fig. 1 shows the network                        3XEOLF'DWDVHW
+                                                                                                                7KH:RUNIORZRI3DFNHW&*$1EDVHG(QFU\SWHG7UDIILF&ODVVLILFDWLRQ
+
+                                                                                                                                                    ,QSXW3DFNHW'DWD3UHSURFHVVLQJ
+    structure of CGAN.                                                                    Unbalanced)
+
+                                                                                          ,6&;                         )LOH+HDGHU
+                                                                                                                                                                  7UXQFDWLRQ=HUR
+                                                                                                                            5HPRYDO                                                            1RUPDOL]DWLRQ
+                                                                                                                                                                     3DGGLQJ
+                                                                                                                          3DFNHW)LOWHULQJ                                                          (D)
+                                                                                        867&7)&           

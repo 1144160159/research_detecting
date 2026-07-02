@@ -1,0 +1,1265 @@
+6488 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+ Representation Learning for Tabular Data: A
+ Comprehensive Survey
+ Jun-Peng Jiang , Si-Yang Liu, Hao-Run Cai, Qi-Le Zhou , and Han-Jia Ye
+
+ (Survey Paper)
+
+ Abstract—Tabular data, structured as rows and columns, is
+among the most prevalent data types in machine learning classification and regression applications. Models for learning from
+tabular data have continuously evolved, with Deep Neural Networks (DNNs) recently demonstrating promising results through
+their capability of representation learning. In this survey, we systematically introduce the field of tabular representation learning,
+covering the background, challenges, and benchmarks, along with
+the pros and cons of using DNNs. We organize existing methods into
+three main categories according to their generalization capabilities:
+specialized, transferable, and general models. Specialized models
+focus on tasks where training and evaluation occur within the same
+data distribution. We introduce a hierarchical taxonomy for specialized models based on the key aspects of tabular data—features, Fig. 1. A brief introduction to tabular data and associated learning tasks. Each
+samples, and objectives—and delve into detailed strategies for row represents an instance and each column corresponds to an attribute or feature,
+obtaining high-quality feature- and sample-level representations. which can be numerical or categorical. The most common tabular tasks are
+Transferable models are pre-trained on one or more datasets and classification and regression as shown in the right side of the figure.
+subsequently fine-tuned on downstream tasks, leveraging knowledge acquired from homogeneous or heterogeneous sources, or even such as finance [1], healthcare [2], education [3], recommencross-modalities such as vision and language. General models, also
+known as tabular foundation models, extend this concept further, dation systems [4], and scientific research. In particular, AI
+allowing direct application to downstream tasks without additional for scientific research (AI4science) has increasingly relied on
+fine-tuning. We group these general models based on the strate- tabular data, as numerous prominent datasets—such as those
+gies used to adapt across heterogeneous datasets. Additionally, from genomics [5], chemistry [6], and climate science [7],
+we explore ensemble methods, which integrate the strengths of [8]—naturally adopt tabular forms.
+multiple tabular models. Finally, we discuss representative extensions of tabular learning, including open-environment tabular ma- Tabular data inherently organizes information in a structured,
+chine learning, multimodal learning with tabular data, and tabular table-like format. In this survey, we focus primarily on superunderstanding tasks. vised tabular machine learning tasks, specifically classification
+ Index Terms—Tabular data, representation learning, deep
+ and regression.
+tabular learning, tabular foundation model. Beyond their structured organization, tabular datasets frequently include heterogeneous attributes [9], encompassing nu-
+ I. INTRODUCTION merical, categorical, or mixed data types that may be dense or
+ sparse. Additionally, many tabular datasets present quality chal-
+ ABULAR data, characterized by structured rows and
+T columns, is one of the most prevalent data formats in realworld machine learning applications, spanning diverse domains
+ lenges, such as noisy measurements, missing values, outliers,
+ inaccuracies [10], and privacy constraints [11], all of which
+ complicate the modeling process. The most common supervised
+ tabular tasks are classification and regression, where the goal is
+ Received 3 June 2025; revised 6 December 2025; accepted 15 January 2026.
+Date of publication 30 January 2026; date of current version 7 May 2026. to learn mappings from training data to discrete or continuous
+This work was supported in part by the Natural Science Foundation of Jiangsu targets, respectively. As illustrated in Fig. 1, each row represents
+Province of China under Grant BK20250062, in part by the NSFC under Grant an instance (with its corresponding label), while each column
+62376118 and Grant 62522605, and in part by the Collaborative Innovation
+Center of Novel Software Technology and Industrialization. Recommended for corresponds to a specific attribute or feature [12]. Ideally, learned
+acceptance by K.I. Kim. (Corresponding author: Han-Jia Ye.) mappings should generalize effectively, accurately predicting
+ The authors are with the School of Artificial Intelligence, Nanjing Uni- outcomes for new instances drawn from the same underlying
+versity, and National Key Laboratory for Novel Software Technology, Nanjing University, Nanjing 210023, China (e-mail: jiangjp@lamda.nju.edu.cn; distribution.
+liusy@lamda.nju.edu.cn; caihr@lamda.nju.edu.cn; zhouql@lamda.nju.edu.cn; Machine learning methods for tabular data have evolved
+yehj@lamda.nju.edu.cn). significantly over the years [13], [14], [15]. Recently, the rise
+ More information can be found in the following repository: https://github.
+com/LAMDA-Tabular/Tabular-Survey. of deep learning has profoundly impacted domains like com-
+ Digital Object Identifier 10.1109/TPAMI.2026.3657217 puter vision [16] and natural language processing [17], where
+ 0162-8828 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6489
+
+Fig. 2. We organize existing tabular classification/regression methods into three categories according to their generalization capabilities: specialized (left),
+transferable (middle), and general (right) models. Specialized models focus on tasks where training and evaluation occur within the same data distribution.
+Transferable models are pre-trained on one or more datasets and subsequently fine-tuned on downstream tasks. General models, also known as tabular foundation
+models, extend this concept further, allowing direct application to downstream tasks without additional fine-tuning. General models and transferable methods are
+synergistic: transferable techniques facilitate the training of general models, which in turn serve as powerful pre-trained models for downstream fine-tuning.
+
+Deep Neural Networks (DNNs) extract semantic representa- methods align closely with classical supervised models, typitions directly from raw inputs [18], [19], [20]. These learned cally trained and evaluated on data drawn from the same distrirepresentations have not only improved generalization but have bution. In contrast, transferable methods leverage knowledge
+also facilitated knowledge transfer across related tasks [21]. from models pre-trained on one or multiple source datasets,
+The flexibility of DNNs in modeling feature interactions and subsequently fine-tuning these models on target datasets; the
+learning hierarchical structures has inspired interest in adapting primary challenge here lies in addressing the heterogeneity
+deep learning techniques to tabular data. between pre-trained sources and target tasks. The recently pro-
+ Indeed, DNNs were applied to tabular data decades ago, posed general tabular methods—motivated by the remarkable
+initially targeting dimensionality reduction and visualization “zero-shot” generalization abilities demonstrated by large lantasks [22], [23], [24], yet they typically struggled to match guage models (LLMs)—exhibit exceptional versatility. These
+tree-based methods on standard classification and regression general models can directly apply to downstream tabular datasets
+problems. Later advances in DNNs have led to significant without additional fine-tuning, achieving robust generalization
+improvements across various tabular-related applications, such due to advanced pre-training strategies.
+as click-through rate prediction [25], anomaly detection [26], Crucially, rather than viewing these categories as a strict
+recommendation systems [27], and time series forecasting [28]. hierarchy, we emphasize the synergistic relationship between
+Modern deep learning approaches, benefiting from better- transferable and general methods. On one hand, techniques
+designed architectures, optimized training strategies, high- foundational to transferable models, such as self-supervised
+quality representations, have revitalized DNN performance on learning and heterogeneous feature alignment, serve as essential
+tabular data, often rivaling or surpassing traditional tree-based building blocks for constructing robust general models. On the
+models [29], [30], [31]. Given the wide variety of approaches other hand, general models often function as powerful starting
+emerging in deep tabular modeling, a systematic overview that points for transfer learning; fine-tuning a general model (e.g.,
+revisits critical factors and current methodologies in representa- TabPFN variants [39], [40], [41]) on downstream tasks typition learning for tabular data becomes necessary. cally yields superior performance compared to zero-shot infer-
+ This survey begins by introducing the background of tabular ence, effectively blurring the line between general and transferdata learning, highlighting the challenges involved and critically able approaches. Together with specialized methods, which reexamining the advantages and limitations of utilizing DNNs main dominant on large-scale, distribution-specific tasks, these
+compared to classical—particularly tree-based—methods [32], paradigms form a complementary ecosystem, providing diverse
+[33], [34], [35]. Given the observed instability of method perfor- tools tailored to different data scales and computational conmance across different tabular datasets, we also discuss compre- straints.
+hensive strategies for dataset collection, evaluation, and analysis, For specialized methods, numerous designs have been proaiming to establish robust criteria for aggregating performance posed from diverse perspectives, and previous papers have often
+metrics across multiple datasets [36], [37], [38]. categorized these methods based primarily on their architectural
+ We broadly categorize deep tabular methods into three types: characteristics or behaviors. Existing taxonomies [42], for exspecialized methods, transferable methods, and general meth- ample, group specialized methods into feature-preprocessingods, distinguished by the scope of datasets on which they are based [29], [43], data-augmentation-based [44], [45], [46],
+trained and deployed, as well as their corresponding general- [47], MLP variants [30], [48], specialized DNN architecization capabilities (illustrated in Fig. 2). Specialized tabular tures [49], [50], [51], [52], [53], [54], [55], [56], tree-mimic
+6490 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+approaches [57], [58], [59], token-based techniques [29], [60], tasks within a common representation framework [78], [88],
+[61], [62], [63], regularization-driven methods [64], [65], and [89].
+neighborhood-based strategies [31], [66], [67]. However, such Additionally, ensemble methods [39], [87], [90] are introcategorizations can appear scattered, making it difficult to con- duced, which improve the generalization ability based on the
+nect the core ideas between methods in distinct groups. In con- strengths of multiple tabular models. By summarizing the state
+trast, this survey introduces a hierarchical taxonomy based on the of the field and discussing extensions, we aim to guide future
+key aspects of tabular data—features, samples, and objectives— research and applications in tabular representation learning.
+providing a cohesive organizational framework. Our approach
+emphasizes detailed strategies for obtaining high-quality rep- II. BACKGROUND
+resentations at both feature- and sample-levels. This unified
+ This section presents the (supervised) tabular machine learnperspective helps bridge core ideas across methods, facilitating task, including the notation of tabular data learning, the
+ing clearer comparative discussions and potentially guiding the
+ history of tabular data, the challenges of learning from tabular
+design of more advanced tabular models.
+ data, evaluation metrics, and tabular benchmarks.
+ Instead of training a model from scratch on a single tabular dataset, transferable models leverage knowledge encoded
+ A. Learning With Tabular Data
+in a pre-trained model from another dataset, which can significantly enhance the training process, especially when data A supervised tabular dataset is formatted as N examples and d
+or computational resources for the target task are limited. A features/attributes corresponding to N rows and d columns in the
+major challenge in transferring knowledge across tabular tasks table. An instance xi ∈ Rd is depicted by its d feature values.
+lies in the inherent heterogeneity between the source and tar- Assume xi,j as the j-th feature of instance xi , it could be a
+get datasets, particularly differences in their feature and la- numerical (continuous) one xnum i,j ∈ R, like the temperature of
+bel spaces. In this survey, we adopt a broad perspective on a region or the density of the object. xi can also be a categorical
+transferable tabular models, categorizing methods based on the (discrete) value xcat
+ i,j , like one of multiple colors, the location of
+sources of their pre-trained knowledge. Specifically, we discuss a person, or even some textual descriptions of the instance. Each
+models pre-trained on homogeneous tabular domains, such as instance is associated with a label yi , where yi ∈ {1, −1} in a biself-supervised methods with additional pre-training steps on nary classification task, yi ∈ [C] = {1, . . . , C} in a multi-class
+the target dataset itself [68], [69]; models pre-trained across classification task, and yi ∈ R in a regression task. This survey
+heterogeneous tabular domains [62], [70], [71]; and methods primarily focuses on standard classification and regression tasks
+transferring knowledge from other modalities, such as vision- and does not specifically discuss ordinal regression [91].
+based pre-trained models [72], [73]. Additionally, since incor- Given a tabular dataset D = {(xi , yi )}N i=1 , we aim to learn
+porating attribute semantics (when available) is a common strat- a mapping f on D that maps xi to its label yi . In other words,
+egy for bridging heterogeneous attribute spaces across tabular the model predicts xi with ŷi = f (xi ). The general objective
+datasets [74], [75], [76], we also explore approaches leveraging learning f follows the structural risk minimization:
+language models in the final category. In particular, we further 
+ min (y, ŷi = f (xi )) + Ω(f ) . (1)
+organize these language model-based strategies according to the f
+ (xi ,yi )∈D
+methods to extract knowledge and the types of language models
+involved—ranging from small-scale language models to Large (·, ·) measures the discrepancy between the predicted label ŷi
+Language Models (LLMs) [77], [78], [79]. and the true label yi , e.g., cross-entropy in classification and
+ Inspired by recent advancements in foundation models from mean square error in regression. Ω(·) is the regularization on
+vision and language domains [80], [81], general models— the model, which restricts the complexity of f . We expect the
+also known as tabular foundation models—expand the con- learned f is able to extend its ability to unseen instances sampled
+cept of transferable tabular models by enabling direct ap- from the same distribution as D.
+plication to downstream tasks without additional fine-tuning. Tabular methods differ in their strategies to implement f .
+This capability, commonly referred to as the model’s “zero- The “dummy” approach makes predictions based on training
+shot” ability, significantly enhances the model’s usability across labels {yi }N i=1 directly, which outputs the major class in the
+diverse tabular datasets. In contrast to transferable models, training set for classification and the average of all labels for
+which primarily focus on bridging knowledge gaps between regression, respectively. In a C-class classification task, classource and target datasets, general models aim to construct sical parametric methods implement f with a linear mapping,
+highly adaptive architectures capable of handling a wide ar- i.e., f (xi ) = W  xi + b, where the classifier W ∈ Rd×C and
+ray of heterogeneous datasets simultaneously. We categorize b ∈ RC is the bias. With different loss functions, we can
+these general models based on the strategies used to achieve implement Logistic Regression, SVM, or even AdaBoost. In
+adaptiveness across diverse tabular tasks, specifically exam- contrast, non-parametric methods implement the prediction via
+ining adaptations from both data-centric [82] and model- f (xi ) = f (xi , D), depending on the whole training set. For
+centric perspectives [83], [84]. Furthermore, we discuss critical example, KNN searches neighbors in the training set D with
+branches of general tabular models in detail: the TabPFN vari- the K smallest distance w.r.t. xi . Deep tabular methods impleants leveraging in-context learning [85], [86], [87], and meth- ment f with a deep neural network. Most deep models could
+ods utilizing attributes and semantics to unify heterogeneous be decomposed into two parts, i.e., f (xi ) = W  φ(xi ) + b.
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6491
+
+Similar to the linear model, W and b are the components of the generalization challenges [100]. As dimensionality increases,
+ 
+classifier, with W ∈ Rd ×C . φ maps the input vector xi into the the risk of overfitting also increases. Thus, efficient training and
+d dimension space, which extracts semantic embeddings for the adequate resources are essential. Scaling tabular models while
+given input. φ could be implemented with an MLP or a residual preserving generalization remains a critical challenge [101].
+network. Model Selection and Hyperparameter Tuning: Tabular models are highly sensitive to hyperparameters [102], [103]. Choosing suitable architectures and tuning parameters like learning
+B. Challenges of Learning From Tabular Data rate or tree count is often costly and time-consuming. Although
+ Different from other types of data sources, e.g., images and AutoML techniques [104], [105] offer automation, identifying
+texts, there exist several challenges dealing with tabular datasets optimal settings for deep tabular models under constraints redue to their characteristics. mains difficult yet vital.
+ Heterogeneity of Features: Unlike continuous image data or Domain-Specific Constraints: Applications in domains like
+token-based text, tabular data often contains both numerical and healthcare or finance impose regulatory and ethical concategorical attributes, each requiring different handling [9], [92]. straints [106]. Healthcare models must comply with privacy laws
+Numerical features vary in range and distribution, requiring nor- like HIPAA [107] and be interpretable to clinicians. Financial
+malization or scaling. Categorical features differ in cardinality systems face fairness and compliance requirements. Such conand semantics, needing encoding methods like one-hot vectors straints affect algorithm choices and demand interpretability and
+or embeddings. Models must handle these mixed types carefully validation [108].
+to retain feature utility.
+ Lack of Spatial Relationships: Tabular data lacks the spatial
+or sequential structure present in other modalities [48], [72].
+ C. Evaluation of a Tabular Method
+Column order has no semantic meaning, making it permutationinvariant. Rows are typically assumed to be independently and We present the evaluation of tabular methods, ranging from
+identically distributed (i.i.d.), eliminating temporal or sequential traditional to modern, to provide a comprehensive evaluation
+correlations. This lack of structure limits the applicability of across different aspects. For a given model on a dataset D, we
+deep architectures designed to exploit such dependencies. employ standard metrics that quantify the discrepancy between
+ Sensitivity to Perturbations: Unlike images, text, or time the predicted label ŷi and the true label yi .
+series data, tabular data often exhibits sharp decision boundaries Evaluation on A Single Task: For classification tasks, Accuwhere small variations in critical features can lead to significant racy (or Error Rate) is commonly employed as the primary metshifts in the target label [32], [33]. Furthermore, when predicting ric. AUC and F1 scores are further used to address imbalanced lawith LLMs, they often struggle with precise numerical reasoning bel distributions, while Expected Calibration Error (ECE) [109]
+and are insensitive to small numerical changes, leading to subop- calculates the weighted average error of the estimated probabiltimal performance on tasks requiring high-precision arithmetic ities. All criteria are the higher, the better, except the error rate
+or regression [93]. and ECE. For regression tasks, common metrics include Mean
+ Low-quality and Missing Data: Unlike image or text data, Squared Error (MSE), Mean Absolute Error (MAE), and Root
+where contextual redundancy helps mitigate missing values, Mean Squared Error (RMSE), with MAE and RMSE sharing
+tabular data is more sensitive to incomplete or noisy entries [94], the scale of the original labels. Lower values denote superior
+[95]. Missing values can introduce bias and degrade perfor- performance. Additionally, the coefficient of determination (R2 )
+mance, while noisy data reduces reliability. Thus, preprocessing is employed, with higher values indicating a better fit.
+steps like cleaning and imputation are essential. Evaluation on A Set of Tasks: The diversity of tabular datasets
+ Importance of Feature Engineering: Tabular models heavily makes it hard for one model to perform best universally, so evalrely on input feature quality [43], [96]. Unlike in vision or NLP, uation should consider both per-dataset results and aggregated
+where DNNs learn from raw data, tabular tasks often require metrics for overall effectiveness. Early research predominantly
+domain knowledge and manual feature engineering. Modeling relied on Average Rank (Friedman Rank) [12], [35] and Critfeature interactions usually demands expert-driven transforma- ical Difference Comparisons to evaluate model performance
+tions, which significantly affect performance [97]. across datasets. Models are ranked per dataset using metrics like
+ Class Imbalance: Tabular classification tasks often face label accuracy or RMSE. Statistical tests such as Wilcoxon-Holm,
+imbalance, where some classes are underrepresented [98]. This Friedman, and Nemenyi [110] assess the significance of rank
+leads to biased predictions and poor performance on minority differences. To mitigate the influence of outliers, PAMA [12]
+classes. Solutions include oversampling, undersampling, and measures the fraction of datasets where a model achieves the
+loss reweighting. Metrics like AUC and F1-score help evaluate best accuracy, while P95 quantifies the likelihood that at least
+models under imbalance. Recent studies show deep and classical 95% of the maximum.
+models handle imbalance differently, warranting careful method As research progressed, more diverse evaluation metrics were
+selection [37], [99]. introduced, e.g., Arithmetic Mean, normalized Accuracy, nor-
+ Scalability to Large Datasets: Tabular datasets can be malized RMSE [30], [32], Mean Normalized Error, Shifted Gelarge-scale and high-dimensional, posing computational and ometric Mean (SGM) error [30]. Beyond absolute performance,
+6492 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+relative comparisons such as Relative Improvement [111], ELO- 2) Evaluation Protocols: Given the strong sensitivity of tabbased evaluation [41] are also important. ular methods to data and the additional randomness in deep
+ methods, robust evaluation is essential. Furthermore, due to the
+ high computational cost of some methods, it is equally important
+D. Tabular Benchmarks and Datasets to ensure evaluation efficiency.
+ This section introduces existing benchmarks and datasets, Model Selection: Model selection on the validation set inalong with associated considerations for constructing the bench- volves hyperparameter tuning and early stopping to ensure
+marks and evaluation protocols. reliable evaluation. Given the high dimensionality of hyperpa-
+ 1) Popular Tabular Benchmarks and Datasets: We begin by rameters in deep models, automated tools like Optuna [121]
+introducing several benchmarks constructed from raw tabular are widely used for efficient search [29], [67]. Models are
+features across various dimensions, followed by datasets en- typically trained with multiple random seeds for stability, and
+riched with semantic annotations. early stopping [122] is applied in each trial to avoid overfitting,
+ Standard Benchmarks: Tabular learning methods often ex- selecting the best epoch based on validation performance.
+hibit dataset-specific performance, and evaluations based on Performance Evaluation: To assess generalization and
+a small number of datasets may be biased by randomness or prevent overfitting, models are typically evaluated using
+dataset idiosyncrasies. Therefore, constructing comprehensive train/val/test splits. However, fixed splits may lead to inconbenchmarks is critical for robust and generalizable evaluation. sistent results. With the rise of deep learning, more robust
+ An effective benchmark should cover a wide range of datasets evaluation protocols have been proposed [123], including (1)
+to evaluate generalization across different tasks and feature char- fixing the split and running multiple trials with different random
+acteristics. This includes binary classification, multi-class clas- seeds [29], [52], [56], [57], [67], [69], [124]; and (2) crosssification, and regression tasks. For example, [12] benchmarked validation, where new splits are generated per fold [30], [61],
+179 classifiers across 121 datasets and found that Random Forest [85], [125]. Hybrid approaches combining both have also been
+variants consistently outperformed others. [48] evaluated MLPs explored [126].
+augmented with ensembling and data augmentation across 40 Recent work has highlighted that holdout-based hyperpaclassification datasets. [29] further demonstrated the competi- rameter tuning can be unstable and prone to overfitting [112],
+tiveness of MLPs, ResNets, and Transformer-based models on [127]. [112] found it ineffective on TabZilla [35] datasets,
+11 datasets. [32] conducted a broad comparison on 45 datasets, advocating for 5-fold cross-validation, which altered prior
+analyzing the performance gap between tree-based and deep meta-feature conclusions. [42] further refined these insights by
+learning methods. identifying more predictive meta-features. For small datasets,
+ Benchmarks should include datasets of varying sizes to alternative evaluation strategies have been proposed [128]. [129]
+evaluate scalability and efficiency. [35] uses 176 classification showed that simple data reshuffling can improve generalizadatasets with different sizes to compare across methods. How- tion, making holdout selection competitive with cross-validation
+ever, limited tuning and strict time constraints may have led to while being more efficient.
+suboptimal evaluations for some deep methods [112].
+ To ensure generalization, datasets should come from mul-
+ III. FROM CLASSICAL TO DEEP METHOD
+tiple domains, e.g., healthcare, biology, and finance. [113]
+evaluates attention and contrastive learning methods on 28 We present possible advantages of deep learning for tabular
+datasets. [42] uses over 300 datasets covering diverse tasks, data, as well as the potential challenges of deep learning when
+sizes, and domains to assess the generalization of DNN- compared with tree-based methods.
+based models. TabArena [114] constructs a continuously maintained living benchmarking system for standardized and reliable
+ A. Advantages of Deep Representation Learning
+evaluation.
+ Semantic-Enriched Datasets: Recent work has focused on Deep tabular models offer several advantages beyond perfortabular datasets with rich semantics, such as task-related meta- mance when compared with classical methods.
+information and attribute names. UniTabE [115] introduces a Ability to Model Complex Feature Interactions: DNNs effec-
+7 TB dataset with 13 billion examples for pre-training. CM2 [76] tively capture high-order, non-linear feature interactions, which
+proposes OpenTabs for cross-table pre-training, including 46 M are difficult for traditional models like linear regression or
+tables with column name semantics. TP-BERTa [75] filters decision trees [49], [52]. Through hierarchical representations,
+OpenTabs to 101 binary and 101 regression datasets with at low-level interactions are learned in early layers, while deeper
+least 10,000 samples and no more than 32 features, totaling layers capture complex dependencies, making DNNs suited for
+10 million samples. GTL [78], TabLib [116], and T4 [88] also modeling intricate tabular relationships.
+extract large-scale data from real-world sources such as Kaggle End-to-End Learning: Unlike traditional methods that sepaand GitHub. These semantic-rich datasets are primarily used rate feature engineering, preprocessing, and tuning, DNNs can
+for pre-training LLMs on tabular data, while others serve for learn directly from raw features without manual transformations.
+evaluating standard methods. Several toolboxes support both This end-to-end training reduces human bias and streamlines
+classical and deep methods [117], [118], [119], [120]. Build- workflows [29], [130]. DNNs also support multi-task learning,
+ing a comprehensive benchmark requires considering both the enabling shared representations that improve both performance
+diversity and quality of the dataset. and efficiency [47], [68], [131].
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6493
+
+ Integration with Other Modalities: Deep tabular models excel accommodate missing values through optimal splitting and tolin multi-modal pipelines, combining tabular data with images, erate inconsistent data [32]. In contrast, DNNs are more sensitive
+audio, or text. In AI4science, for example, tabular data may and require preprocessing (e.g., imputation, noise filtering) to
+be fused with images [132] (e.g., medical imaging) or time maintain performance [63], [85].
+series [133], [134] (e.g., forecasting). DNNs naturally model Interpretability and Transparency: Tree-based models are
+such heterogeneous interactions, enabling more accurate, com- highly interpretable [58], [59], [141]. Their decision paths can be
+prehensive predictions. visualized, and feature importance is directly accessible [142],
+ Flexibility with Dynamic Environments: DNNs benefit from [143], [144], making them well-suited for domains like finance
+gradient-based optimization, enabling efficient, iterative training and healthcare. Although interpretability tools like LIME [145]
+and adaptability to changing objectives [9]. Unlike tree-based and SHAP [146] exist for DNNs, tree-based models remain more
+models, which often require task-specific adjustments, DNNs intuitive. Recent work [57], [125] has aimed to improve neural
+handle dynamic environments such as real-time prediction, fi- network interpretability by mimicking tree-based behavior.
+nancial analysis, and decision systems where feature relation- Handling Outliers and Skewed Data: Tree-based methods
+ships may shift. Their adaptability supports online or incre- are more robust to outliers and skewed distributions. Decision
+mental learning, integrating new data without retraining from trees split based on feature ranges, naturally isolating extreme
+scratch [135], [136]. values. In contrast, DNNs often require additional techniques
+ Long-Term Knowledge Transfer and Learning: DNNs can (e.g., outlier removal) to manage such data [147], [148].
+retain and transfer knowledge across tasks [137], reducing the In conclusion, despite the rapid progress of deep learning,
+need for retraining when applied to related domains [138]. This tree-based models such as XGBoost [142], LightGBM [144],
+is especially valuable in AI4science, where models trained on and CatBoost [143] remain the dominant solution for many
+one data type can be adapted to others, saving time and resources. tabular tasks. They offer superior training efficiency and robust-
+Such transferability enables more efficient and sustained use of ness to unscaled features. Furthermore, classical probabilistic
+data and model capabilities. methods continue to serve as strong baselines for tasks requiring uncertainty estimation [149], [150]. Consequently, rigorous
+ benchmarking against these established non-DNN approaches
+ remains a critical standard for evaluating the effectiveness of
+B. Debates Between Tree-Based Methods and DNNs deep tabular representation learning.
+ While deep tabular methods show promise in learning representations and nonlinear predictors, they often struggle to
+ IV. TAXONOMY OF SPECIALIZED METHODS
+outperform classical models like Gradient Boosted Decision
+Trees (GBDT). Many studies still consider GBDT strong base- Similar to the evolution of deep learning, which progresses
+lines [32], [35], and their relative advantages may diminish from specialized learning to transfer learning and ultimately to
+across diverse evaluation datasets. foundation models [195], we categorize deep tabular methods
+ Several reasons contribute to why tree-based methods retain into three groups, as shown in Table I and Fig. 2: specialized
+their advantages over DNNs in many tabular tasks: methods, transferable methods, and general methods. This clas-
+ Better Handling of High-Frequency Data: Tree-based meth- sification reflects both the evolutionary development of deep
+ods, especially GBDT, efficiently handle high-frequency or learning techniques and the increasing generalization capabilidense data with small variations [34]. By recursively splitting ties.
+on informative features, they capture local and global patterns Beyond such taxonomy, it is also insightful to view the field
+effectively. In contrast, DNNs may struggle with fine-grained through the lens of input modalities. Similar to benchmarks
+patterns without extensive regularization [139]. To address (in Section II-D), recent deep tabular methods can also be
+this, [43] showed that periodic activations enhance learning of divided into standard methods and semantic-enriched methhigh-frequency functions. ods. Standard methods focus on extracting patterns purely
+ Natural Handling of Mixed Data Types: Tree-based mod- from raw numerical and categorical values, modeling the strucels naturally support mixed data types and handle categorical tural relationships between rows, columns, and targets. In
+features without one-hot encoding [9], [42], streamlining pre- contrast, semantics-enriched methods integrate auxiliary texprocessing, whereas DNNs rely on encoding methods, adding tual information with LLMs, such as attribute names and
+complexity and potentially harming performance [61]. meta descriptions. While our survey is organized primar-
+ Lower Computational Requirements for Training and In- ily by generalization capability, this modality-based distincference: Tree-based models are often more computationally tion permeates all three categories, with semantic enrichefficient than DNNs [29], especially for smaller datasets or ment becoming increasingly central in transferable and general
+rapid deployment [35]. GBDTs train quickly and require fewer models.
+resources, while DNNs typically demand more computation Specialized methods, being the earliest developed and most
+(e.g., GPUs, time) to match performance [84], [140], making widely used category, will be our starting point for discussion.
+them less suitable in resource-limited settings. Tabular data consists of features (columns), samples (rows), and
+ Robustness to Noisy and Missing Data: Tree-based models objectives (labels), which together define the structure and the
+handle noisy and missing data more effectively. Decision trees task objectives. We emphasize detailed strategies for obtaining
+6494 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+ TABLE I
+ THE TAXONOMY OF REPRESENTATION LEARNING FOR TABULAR DATA
+
+high-quality representations at both feature- and sample-level integrate strategies from multiple aspects to tackle the complex
+for the target task. Specifically, given the input data, according challenges of tabular learning effectively.
+to the general learning objective in (1), we consider how to In specialized methods, we focus solely on learning from
+transform the tabular input xi (feature aspect), how to construct pure data, excluding feature semantics considered in transferable
+relationships between samples (sample aspect), how to design methods (in Section VI). Since specialized methods cover lots
+the objective (·) and regularize Ω(·) (objective aspect). In of approaches—with feature-aspect methods being the largest
+particular, subset—we first introduce sample-aspect and objective-aspect
+ r Feature Aspect: We focus on how to transform the raw methods, then Feature-aspect methods in Section V.
+ tabular input into intermediate representations. We consider two types of features: numerical and categorical. A. Sample-Aspect Specialized Methods
+ By explicitly modeling the relationships between the two
+ Sample interaction methods take a retrieval-based approach,
+ features (e.g., feature importance and interactions), we are
+ focusing on relationships between individual samples rather
+ able to enhance the model’s understanding of the input
+ than features. In a tabular dataset, each sample xi represents
+ space.
+ r Sample Aspect: In addition to features, we explore how a row with d features, and the goal is to leverage relationships
+ between a target sample and its “extracted neighbors” to improve
+ to retrieve and utilize neighboring samples to capture
+ predictions. The general form for the sample interaction methods
+ inter-sample dependencies, thereby improving predictions.
+ can be expressed as:
+ In order to improve the model’s prediction ability, we
+ explore the relationships between a target sample and its ŷi = f (R(xi , D; Φ)) , (2)
+ “neighbors.”
+ r Objective Aspect: We examine how to modify the loss where D is the set of all samples (training data) available for
+ retrieval or learning. R(·) is the sample interaction module,
+ function and objective to introduce inductive biases. By
+ which retrieves or aggregates information from relevant samples
+ directly guiding the learning process with the target variin S for the target sample xi . Φ represents the learnable paramables, we incorporate prior knowledge or task-specific
+ eters of R. f (·) is the prediction head that maps the aggregated
+ preferences into the model, improving its generalizability
+ information to the final output ŷi .
+ and interpretability.
+ Sample aspect approaches can be broadly categorized into
+ It is worth noting that these three aspects are not mutually
+ two main strategies. The first approach introduces the modelexclusive but rather complementary. Feature-aspect methods
+ ing of sample relationships R during representation training,
+primarily address the heterogeneity of tabular attributes, transallowing the model to learn better representations by capturing
+forming diverse data types into a unified representation space
+ inter-sample dependencies. The second approach is retrievalcapable of capturing high-order interactions. Sample-aspect
+ based models, which directly predict outcomes by retrieving
+methods compensate for the lack of explicit spatial or sequential
+ and utilizing neighbors’ relationships R when testing.
+structure by leveraging relationships between instances (e.g.,
+ Sample Interaction: These methods assist in representation
+retrieval or attention), thereby enriching the representation with
+ learning by allowing the model to capture relationships between
+global context. Finally, Objective-aspect methods inject necessamples, which in turn helps generate a more robust represensary inductive biases (such as sparsity or regularization) directly
+ tation during training. During testing, the model becomes more
+into the optimization process to guide generalization. Deep
+ sensitive to each sample without interaction.
+tabular models (e.g., FT-Transformer [29], SAINT [68]) can
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6495
+
+ SAINT [68] introduces inter-sample attention beyond interattribute attention, which improves row classification by relating each row to others in the table. NPT [154] extends this
+via non-parametric Transformers, whereas Hopular [155] employs Hopfield networks, sharing conceptual alignment with
+SAINT [68]. Unlike nearest-neighbor classification, the distance
+metric is learned end-to-end. Trompt [124] posits that the feature
+importance in tabular data is sample-dependent. During feature
+extraction, it treats the information between samples as prompts.
+PTaRL [65] identifies two issues in the representation of tabular
+data samples: entanglement and localization. It addresses these
+by modeling global sample relationships through prototype generation and representation projection, helping the model produce
+ Fig. 3. Illustration of feature-aspect methods, including feature encoding,
+clear and consistent decisions. feature selection, feature projection and feature interaction.
+ Neighbor Retrieval: These methods construct high-quality
+contexts to aid prediction by retrieving valuable neighbors and
+designing efficient ways to utilize them based on the relationof hyperparameters during training by introducing an efficient
+ships between samples. The training data is used to assist during
+ tuning scheme, which minimizes a new “Counterfactual Loss.”
+testing.
+ In RLNs, the regularization coefficients are optimized together
+ DNNR [66] argues that a key advantage of neighbor-based
+ with learning the network weight parameters. [48] introduces
+methods is the model’s transparency, meaning that the model’s
+ “cocktails,” dataset-specific combinations of 13 regularization
+decisions can be explained by inspecting its components.
+ techniques, showing that even simple neural networks can
+TabR [67] proposes that, compared to purely parametric (e.g.,
+ outperform tree-based architectures when optimized with these
+retrieval-free) models, retrieval-based models can achieve supemethods. TANGOS [64] introduces a regularization-based
+rior performance while also exhibiting several practically imporimprovement. It regularizes neuron attributions to encourage
+tant properties, such as the ability for incremental learning and
+ neurons to specialize and become orthogonal to one another.
+enhanced robustness. ModernNCA [31] revitalizes the classic
+tabular prediction method, Neighbourhood Component Analysis (NCA) [196], by designing and incorporating deep learning V. FEATURE-ASPECT SPECIALIZED METHODS
+architectures and strategies. The resulting method efficiently Tabular data consists of various features, including categorleverages neighboring samples for prediction. ical and numerical variables. Its complexity stems from varied
+ feature types, interrelationships, and often high dimensionality.
+B. Objective-Aspect Specialized Methods Traditional methods rely on manual feature engineering—such
+ as encoding categorical variables and feature selection—to im-
+ The general objective learning f follows the structural risk prove performance and reduce overfitting. As deep learning
+minimization as in (1), where  is the loss function to set the evolved, these techniques have been integrated and extended.
+training objective between the prediction and the ground truth Deep tabular models can automatically learn feature representalabel. Ω(·) is the regularization on the model, which directs the tions, reducing the need for manual engineering. Feature-aspect
+objective or restricts the complexity of f . methods, like encoding, selection, projection, and interaction,
+ Objective-aspect methods in deep learning are an extension transform raw inputs into informative forms, helping capture
+of these traditional regularization techniques, where inductive intricate relationships and improve generalization, as shown in
+bias is introduced by adjusting the loss function  or adding Fig. 3. Feature encoding and interaction methods are specifically
+regularizers Ω. In the training progress, the goal is to leverage designed to address the heterogeneity of features, transforming
+regularization on the model to improve predictions. diverse data types into a unified latent space. Meanwhile, feature
+ Objective-aspect approaches can be broadly categorized into projection techniques help mitigate the high dimensionality
+two main strategies. The first approach involves training objec- often resulting from one-hot encoding.
+tives, which enhance the model with a specialized ability. The
+second approach introduces a regularizer, allowing the model to
+learn strong generalized representations. A. Feature Encoding
+ Training Objective: For training objectives, PTaRL [65] con- Various encoding strategies have been explored for both catestructs prototype-based projection space and learns the disen- gorical and numerical features in tabular data. Additionally, with
+tangled representation around global prototypes. PTaRL uses the advancement of the attention mechanism, feature tokenizaa diversification constraint for representation calibration and tion, similar to word embeddings in natural language processing,
+introduces a matrix orthogonalization constraint to ensure the transforms all features into embeddings.
+independence of global prototypes. Categorical Encoding: Categorical variables represent data
+ Training Regularization: For training regularization, types divided into groups, such as race, sex, age group, and
+RLNs [157] overcome the challenge of an intractable number educational level [197]. These features are usually converted
+6496 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+into integers. Two common techniques are Ordinal Encoding dimension of the input features and meanwhile allows differand One-Hot Encoding. ent types of features to interact with each other. TabTrans-
+ Ordinal Encoding assigns each category a distinct integer, use- former [61] embed each categorical feature into a parametful when categories have an inherent order like “low,” “medium,” ric embedding of dimension t using Column embedding. An
+and “high.” Its main advantage is simplicity and efficiency, embedding vector is assigned to each feature, and a set of
+transforming the variable into a single numeric column. How- embeddings is constructed for all categorical features. Unlike
+ever, it assumes an ordinal relationship that may not exist—for TabTransformer, SAINT [68] proposes projecting numerical
+example, “red,” “blue,” and “green,” with Ordinal Encoding features into a t-dimensional space before passing their emwould introduce an artificial order that does not reflect any bedding through the transformer encoder. FT-Transformer [29]
+meaningful ranking. adapts the Transformer architecture for tabular data, where all
+ On the other hand, One-Hot Encoding creates a binary column features are transformed to embeddings and applies a stack of
+for each unique category. For example, the variable “color” Transformer layers to the embeddings. Specifically, the numeriwith categories red, blue, and green would generate three cal tokenizer is implemented as the element-wise multiplication
+columns: “is_red,” “is_blue,” and “is_green,” encoding red as T num
+ i = bnum
+ i + xnum
+ i · W num
+ i , and the categorical tokenizer is
+(1,0,0), blue as (0,1,0), and green as (0,0,1). This method suits implemented as the lookup table T cat
+ i = bcat
+ i + eTi W cat
+ i , where
+nominal categorical variables without inherent order. While it ei is a one-hot vector for the corresponding categorical feature.
+ T
+
+avoids ordinal assumptions, One-Hot Encoding can produce a Other transformer-based methods, like [63], [70], [168], use the
+high-dimensional feature space when many unique values exist, same feature tokenizer as FT-Transformer.
+increasing computational costs and risking overfitting.
+ In some cases, more advanced encodings address these lim- B. Feature Selection
+itations. For example, Target Encoding assigns each category
+ High dimensionality in tabular data often leads to overfitting,
+the mean target value, useful when categorical features strongly
+ where models focus on irrelevant features. Feature selection
+relate to the target. In Leave-one-out embedding, every category
+ addresses this by retaining only the most informative features,
+is replaced with the mean of the target variable of that category,
+ improving generalization and reducing computational cost. Trawhich excludes the current row to avoid overfitting.
+ ditional tree-based models perform feature selection inherently
+ Numerical Encoding: For encoding, MLP-PLR [43] introby evaluating feature impact during construction. Decision trees
+duces two numerical encoding methods: Piecewise Linear Enutilize metrics such as information gain or the Gini index for
+coding (PLE) and Periodic Activation Functions. These encodfeature selection, while ensemble methods like random forests
+ing methods can be integrated with other differentiable layers
+ determine feature importance by assessing each feature’s contri-
+(e.g., Linear, ReLU) to enhance performance. PLE produces
+ bution [198], [199]. Recently, modern deep learning methods for
+alternative initial representations for the original scalar values
+ tabular data often mimic trees’ structures for feature selection.
+and is based on feature binning. Periodic Activation Functions
+ GrowNet [57] and NODE [58] mimic ensemble methods,
+take into account the fact the embedding framework where
+ with GrowNet stacking weak DNN learners inspired by GBDT,
+all features are computed independently of each other forbids
+ and NODE using differentiable oblivious trees with Bagging
+mixing features during the embedding process and train the
+ and Stacking. NODE-GAM [59] adapts NODE into a scalpre-activation coefficients instead of keeping them fixed. [34]
+ able GAM [200] for learning non-linear patterns. TabNet [141]
+utilizes tools from spectral analysis, showing that functions
+ combines DNN representation learning with tree-like interdescribed by tabular datasets often have high irregularity, and
+ pretability and sparse feature selection, while GRANDE [125]
+can be smoothed by transformations such as scaling and ranking
+ leverages tree-style hard splits via gradient-based learning to
+to improve performance. They propose “frequency reduction”
+ bridge the gap with deep models. Recursive Feature Machines
+as an inductive bias during training.
+ (RFM) [151] enables kernel machines to learn features by recur-
+ Feature Tokenization: Feature tokenizer performs a similar
+ sively reweighting features via a gradient-inspired mechanism
+role to the feature extractor in traditional models. It transforms
+ without backpropagation. xRFM [152] extends feature learning
+the input features to embeddings [29], [60]. Since the feature repkernel machines with a tree structure to both adapt to the local
+resentations of features are very sparse and high-dimensional, a
+ structure of the data and scale to unlimited amounts of training
+common way is to represent them into low-dimensional spaces
+ data.
+(e.g., word embeddings). The general form for feature tokeniza-
+ In parallel, instead of mimicking tree structures, another line
+tion can be expressed as:
+ of work integrates differentiable feature selection into neural
+ T i,j = bj + T (xi,j ; Ψ) ∈ Rt , (3) networks. STG [201] enhances LASSO by modeling nonlinear
+ feature interactions and using smooth Bernoulli-based gates for
+where T (·) is the feature tokenizer module, which transforms the
+ regularization, while LSPIN [202] learns instance-wise gating
+input feature vector xi ∈ Rd to a token embedding T i,j ∈ Rt . t
+ probabilities to select the most informative features per sample.
+is the dimension of token embedding. bj is the j-th feature bias.
+T can be implemented with different forms. Ψ represents the
+ C. Feature Projection
+learnable parameters of T .
+ In AutoInt [60], both the categorical and numerical features Feature projection methods aim to project the raw data into
+are embedded into low-dimensional spaces, which reduces the a middle form, enhancing the representation ability for later
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6497
+
+architectures. Feature projection methods can be broadly cat- DCNv2 [52] improves the learning of the model’s feature
+egorized into two main approaches: MLP variants and special interaction by improving the “Cross Network” structure. Audesigned architectures. These approaches aim to enhance the toInt [60] maps the original sparse high-dimensional feature
+model’s ability to represent complex features for underlying vectors into a low-dimensional space and models high-order feafeature structures. ture interactions by stacking interaction layers with a multi-head
+ MLP Variants: For model architecture, RTDL [29] investi- attention mechanism. Unlike AutoInt, the TabTransformer [61]
+gates both ResNet-like and Transformer-based architectures tai- only maps categorical features into contextual embeddings and
+lored for tabular data, proposing simple yet effective adaptations feeds them into a Transformer model, while numerical conof these widely-used deep models. Another contemporaneous tinuous features are directly concatenated with the interacted
+work [48] enhances the MLP architecture by equipping it with contextual embeddings. When tabular data contains only numera comprehensive suite of modern regularization techniques. In- ical features, TabTransformer behaves in an MLP-like manner.
+stead of introducing architectural innovations, this study focuses Conversely, when the data contains only categorical features,
+on systematically exploring different regularization methods to TabTransformer operates similarly to AutoInt.
+identify an effective “regularization cocktail” for plain MLPs. Implicit Feature Relationships: Methods in this category typ-
+For a more comprehensive strategy, RealMLP [30] explores ically assume that features in tabular data can be abstracted into
+multiple aspects including preprocessing, hyperparameters, ar- implicit types and that it is necessary to design a suitable feature
+chitecture, regularization, and initialization. learning process to adapt to the characteristics of different types
+ Special Designed Architectures: For units, motivated by the of features.
+observation that normalization techniques are prone to distur- DANets [53] propose the existence of underlying feature
+bances during training, SNN [50] proposes the Scaled Expo- groups in tabular data, where features within each group are
+nential Linear Unit (SELU) to improve deep models for tabular correlated. They learn to group input features and perform
+data. NAMs [203] uses exp-centered (ExU) hidden units to further feature abstraction. SwitchTab [47] introduces the idea
+improve the learnability for fitting jumpy functions. BiSHop [56] of extracting sample-specific “Salient Features” and sampleuses a dual-component approach, sequentially processing data shared “Mutual Information” in tabular features. It leverages
+both column-wise and row-wise through two interconnected self-supervised learning to assist in learning feature representadirectional learning modules. They use layers of generalized tions. ExcelFormer [63] argues that while DNN assigns weights
+sparse modern Hopfield layers, a sparse extension of the modern to each feature, it does not actively exclude irrelevant features. To
+Hopfield model with learnable sparsity. address this, it introduces Semi-Permeable Attention for feature
+ interaction, which allows features with lower information content to access information from more informative features while
+D. Feature Interaction preventing highly informative features from being influenced
+ Feature interaction methods aim to model relationships by less relevant ones. AMFormer [153] proposes the hypothesis
+among features to enhance the representation power of deep that arithmetic feature interactions are crucial for deep tabular
+learning models on tabular data. In tabular datasets, each sample models. Based on the Transformer architecture, it introduces
+xi ∈ Rd is described by d features. The general form for feature components designed to extract both additive and multiplicative
+interaction methods can be expressed as: interaction information.
+
+ ŷi = f (H(xi ; Θ)) , (4) VI. FROM SPECIALIZED TO TRANSFERABLE MODEL
+ Instead of training a tabular model from scratch, learning
+where xi ∈ Rd is the input feature vector for a single instance, based on a Pre-Trained Model (PTM) may increase the learning
+H(·) is the feature interaction module, which transforms the efficacy and reduce the resource and data requirement. For
+input x by capturing feature dependencies or generating higher- example, in a house prices prediction task, training a regressor
+order feature interactions. Θ represents the learnable parameters in a certain area may benefit from a well-trained predictor from
+of H. f (·) is the prediction head that maps the transformed its neighborhood. These methods primarily tackle the challenge
+representation to the final output ŷ. of low-quality and missing data (specifically, label scarcity) by
+ Feature interaction methods can be broadly categorized into transferring knowledge from data-rich source domains.
+two main approaches: the design of automatic feature interaction Learning by reusing the PTM usually contains two stages.
+modules and the mining of implicit feature relationships. These The first is the pre-training of a tabular model, from one or
+approaches aim to enhance the model’s ability to learn complex more upstream tasks. Given the PTM and a downstream task, an
+feature interactions and underlying feature structures within adaptation strategy is needed to transform the PTM to the target
+tabular data. task or facilitate the learning of the target model. Formally, a
+ Automatic Feature Interaction Modules: These methods do well-trained model gΘ is often available and can be leveraged
+not assume specific feature types within the tabular dataset. to facilitate the training of fθ over D. Here, gΘ is pre-trained
+ 
+ d
+Instead, they focus on improving the feature interaction pro- on a dataset D = {(xj , yj )}N 
+ j=1 with instances xj ∈ R and
+  
+cess, enabling the model to learn complex, high-order feature labels yj ∈ [C ]. To reuse expert knowledge in gΘ , an adaptation
+relationships autonomously. strategy is applied: fθ = Adapt(fθ0 | D, gΘ ), where θ 0 is the
+6498 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+ categories: the masked language model, contrastive pre-training,
+ and hybrid methods.
+ Masked Language Model (MLM): MLM is an unsupervised
+ pre-training objective where a random subset of features is
+ masked and predicted in a multi-target classification manner [61]. VIME [46] estimates mask vectors from corrupted
+ data and reconstructs features, generating multiple augmented
+ samples via different masks and imputations. SubTab [44] reconstructs data from a subset of features instead of corrupted
+Fig. 4. Illustration of homogeneous transferable tabular methods. The pre- inputs to better capture latent representations. SEFS [159] retrained model could be constructed from supervised or self-supervised learning, constructs the input using a randomly selected feature subset and
+including masked language model, contrastive pre-training, and hybrid methods.
+ estimates a gate vector to indicate feature selection. MET [161]
+ concatenates feature representations and adds an adversarial
+ reconstruction loss to the standard objective.
+initialization of the model. The notation could also be extended Contrastive Pre-training: Contrastive pre-training uses data
+to cases with more than one PTM. The main challenge to reuse augmentations to generate positive pairs or two different augone or more PTMs is to bridge the gap between the PTM and mented views of a given example, and the loss function encourthe target tabular model [204]. We categorize PTMs into three ages a feature extractor to map positive pairs to similar features.
+kinds based on the source of PTM gΘ . The key factor in contrastive learning is to generate positive and
+ Homogeneous Transferable Tabular Model: First, the PTM negative versions of a given instance xi . SAINT [68] utilizes
+may come from the same form of task (with d = d and C  = cutMix in the input space and mixup in the embedding space to
+C, but with different distributions Pr(D ) = Pr(D) or model obtain positive pairs, where other instances xj=i are treated as
+families g = f ). For example, those pre-trained from other negative ones. SCARF [45] generates a view for a given input
+domains [69], or those unlabeled instances [46], [68]. by selecting a random subset of its features and replacing them
+ Heterogeneous Transferable Tabular Model: In addition, we with random draws from their respective empirical marginal
+consider a PTM pre-trained from a slightly different task with distributions. STab [162] minimizes the distance between the
+D. In addition to the previous difference, the PTM gΘ may representations of the same instance processed by these two
+differ from fθ in feature dimension (d = d) or target class set weight-sharing neural networks, with the stop-gradient opera-
+(C  = C), so the adaptation method Adapt(·) must handle such tion applied to the target network, ensuring to model invariance
+heterogeneity [62], [168]. with respect to more complicated regularizations [45], [205].
+ Cross-Modal Transferable Tabular Model: Moreover, the pre- DoRA [164] incorporates domain knowledge, training by intratrained model could also be constructed from another modality, sample pretext task and inter-sample contrastive learning to
+such as vision and language domains. The cross-modality PTM learn contextualized representations. DACL+ [158] uses Mixup
+is hard to be applied to the tabular prediction task in most noise to create similar and dissimilar examples by mixing data
+cases, so auxiliary information from the tabular task like the differently to overcome the reliance on a particular domain.
+semantic meaning of attributes (i.e., the attribute names) are Hybrid Methods:[160] explores supervised and unsupervised
+usually assumed to be available in this case, where PTM like pre-training strategies, using MLM and multi-label classificalarge language models may provide the latent semantic meanings tion, and finds that supervised pre-training yields more transas external knowledge [71], [74]. ferable features. LFR [165] pre-trains models by reconstructing multiple randomly generated projections, demonstrating
+ applicability across tabular, vision, and language data. ReCon-
+A. Homogeneous Transferable Tabular Model Tab [163] combines self- and semi-supervised learning, using
+ Benefiting from the strong capacity of deep neural networks, feature selection and contrastive learning to distill task-relevant
+some recent studies focus on pre-training a tabular model from information. [69] investigates whether supervised pre-training
+unsupervised instances, and then adapting the model via fine- helps with fully labeled tabular data and shows that target-aware
+tuning the PTM on the target (even few-shot) labeled examples, pre-training benefits downstream performance. [204] provides
+as shown in Fig. 4. This strategy could be applied in standard a systematic review and summarizes the recent progress and
+supervised learning or semi-supervised learning. challenges of self-supervised learning for non-sequential tabular
+ Supervised Pre-training Objectives: A straightforward way data.
+to incorporate the target variable in pre-training is to treat
+input corruption as augmentation for supervised objectives. [69]
+identifies pre-training practices for tabular deep models across B. Heterogeneous Transferable Tabular Model
+datasets and architectures. They demonstrate that incorporating The main intuition lies in the mapping f and g work in a simtarget labels in pre-training improves downstream performance ilar fashion, i.e., predicting the labels with similar mechanisms.
+and propose several target-aware objectives. Therefore, the main idea to transfer knowledge is to match the
+ Self-Supervised Pre-training Objectives: The self-supervised target model with the well-trained one, over the weight space or
+pre-training objectives can be mainly categorized into three the prediction space, as in Fig. 5.
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6499
+
+Fig. 5. Illustration of heterogeneous transferable tabular methods. During pre- Fig. 6. Illustration of transferable tabular methods with a language model. The
+training on one or multiple datasets, most of the parameters in the PTM are language model can be applied at various stages, including feature tokenization,
+trained. For downstream tasks, only a small subset of parameters is fine-tuned. feature engineering, and textual serialization.
+
+ encoder, allowing high-level semantic extraction without paired
+ Early methods focus on feature-level heterogeneity between f multimodal training data [207].
+and g, assuming a shared feature set between the pre-trained task
+D and the target task D, allowing weight transfer for shared fea- C. Reusing a Pre-Trained Language Model
+tures [206]. Neural models are advantageous due to their ability In some cases, the semantic meaning of features is available,
+to learn reusable features and adapt to new domains. Deep PTMs making it natural to leverage pre-trained language models for
+can extract generalizable features, enabling knowledge transfer tabular data, as in Fig. 6. Typically, two types of semantic
+from vision and language strategies. For example, most PTM information can be derived from a tabular dataset D. First,
+parameters are frozen, and only a small subset is fine-tuned using attribute names for each of the d features, A = A1 , . . . , Ad ,
+techniques like linear probing or parameter-efficient tuning. provide useful context. Additionally, meta-information such as
+ Reuse PTM Pre-trained from One Dataset: These methods a textual description, denoted as meta_descript, can further
+primarily focus on the difference between the pre-trained and enhance understanding. The learning process is then formulated
+down-streaming datasets. TabRet [70] utilizes masked autoen- as:
+coding to make the transformer work in downstream tasks.
+ ŷi = f (xi , A | D, meta_descript) (5)
+To transfer pre-trained large language models to tabular tasks,
+ORCA [71] trains an embedder to align the source and target where the semantic information bridges the gap between feature
+distributions. TabToken [62] focuses on improving the quality spaces and facilitates knowledge transfer from pre-trained tasks
+of the feature tokens, which are an important component in to downstream applications.
+tabular deep models. TabToken leverages a conditional con- Language Models for Feature Tokenization: When the feature
+trastive loss to improve the quality of learned embeddings and space changes, language-based methods assume that semantic
+demonstrates enhanced transferability of deep learning models relationships exist between feature descriptions and rely on
+for tabular data. Pseudo-Feature [160] trains separate models per large-scale language models to capture these connections. For
+new feature. It pre-trains on upstream data without the feature, example, the feature “occupation” in one task may share semanfine-tunes on downstream data to predict it, then uses the model tic similarity with the feature “organization” in another, allowing
+to assign pseudo-values in the upstream data. The enriched data feature-label relationships to be reused across different datasets.
+is used for another pre-training round before transfer. However, By extracting feature embeddings (tokens), tables of varying
+this method is computationally costly for broad feature space sizes can be transformed into a standardized set of tokens in a
+adaptation. shared space. A pre-trained transformer then encodes transfer-
+ Reusing PTMs Pre-trained on Multiple Datasets: XTab [168] able knowledge, aiding the fine-tuning process for downstream
+improves transformer transferability by using independent fea- tasks.
+tures and federated learning to handle varying column types and TransTab [74] trains a tokenizer on column descriptions and
+quantities across tables. Other methods learn shared, attribute- cell values, using them as input to a gated Transformer. It is
+agnostic components across datasets to provide strong ini- pre-trained via self-supervised or contrastive loss and evaluated
+tialization for downstream tasks. [166] addresses the chal- on transfer and feature-incremental tasks. PTab [170] follows
+lenge of differing attribute spaces by treating the problem as a similar approach, learning contextual representations from
+a meta-learning task. It utilizes a few labeled instances to tokenized tabular datasets before fine-tuning. UniTabE [115]
+infer latent embeddings, then applies them to unlabeled test encodes column names, data types, and cell values into tokens,
+instances for predictions, allowing the model to adapt to new using an encoder-decoder architecture with Transformer and
+tables with varying dimensions. DEN [167] adopts a three-block LSTM. It applies Multi-Cell-Masking and contrastive learning,
+architecture—covariate transformation, distribution embedding, treating sub-vectors as positives and other subsets as negatives.
+and classification—and shows that the latter two blocks can CM2 [76] proposes a cross-table pre-training framework
+be fixed after pre-training. Meta-Transformer [169] maps raw combining attribute names and feature values. It uses transinputs from various modalities into a shared space using a frozen formers to process feature tokens and applies a prompt-based
+6500 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+Masked Table Modeling (pMTM) objective, where column
+names prompt masked feature prediction. TP-BERTa [75] adopts
+a similar approach with numerical discretization and magnitude
+tokenization, fine-tuning smaller PLMs like RoBERTa [208].
+CARTE [171] models tabular data as a graph, embedding
+textual column names and entries. CARTE is pre-trained on
+YAGO3 [209] with contrastive loss on graphlets, where original
+and truncated variants as positives, others as negatives. Then
+pre-trained CARTE model is fine-tuned for downstream tasks. Fig. 7. Illustration of general methods. These methods handle inherent heterogeneity by improving the model’s adaptability or homogenizing the diverse
+ Language Models for Feature Engineering: Discriminative tabular formats. Once pre-trained, they can be directly applied to downstream
+features enhance the effectiveness of subsequent tabular learning tasks without fine-tuning.
+models. Binder [172] uses LLMs to generate auxiliary features
+for knowledge grounding by identifying task inputs not directly
+ Various transformation strategies have been proposed to enanswerable by the model. Since discriminative features are often
+ able such reuse. One line of work uses dimensionality reduction
+manually designed, CAAFE [173] employs LLMs to generate
+ techniques such as t-SNE [177] or Bayesian Metric Multidiauxiliary features from task and feature semantics, evaluating
+ mensional Scaling [178] to project high-dimensional tabular
+their quality with TabPFN [85]. FeatLLM [79] uses examplefeatures into 2D spaces, generating image-like representations.
+based prompting for LLMs to create new features from textual
+ Another direction restructures tabular data into grid-like formats
+descriptions. TaPTaP [174], through large-scale pre-training on
+ to introduce spatial relationships, as in TAC [179], IGTD [72],
+real-world tabular data, aims to capture generic tabular distri-
+ TablEye [73], and LM-IGTD [180]. Other approaches encode
+butions and generate high-quality synthetic tables for various
+ feature values as visual markers, such as fixed-position text [181]
+applications.
+ or colored bars [182], allowing CNNs to interpret tabular in-
+ Language Models for Textual Serialization: A direct way
+ stances as images.
+to use pre-trained language models is converting tabular data
+ By transforming tabular data into images, these methods
+into text, letting LLMs infer feature-label relationships from
+ enable the application of powerful pre-trained vision models for
+embedded expert knowledge, as shown in semantic parsing
+ tabular prediction tasks, leveraging established deep learning
+tasks [210]. LIFT [175] and TabLLM [77] serialize tables by
+ techniques to enhance tabular model performance.
+combining feature names and task descriptions, treating prediction as text generation. LIFT fine-tunes on the full training
+ VII. FROM TRANSFERABLE TO GENERAL MODEL
+set, while TabLLM uses few-shot learning. UniPredict [176]
+builds prompts from metadata, sample serialization, and task The general model (also referred to as the tabular foundation
+instructions, fine-tuning with confidence-weighted labels from model) represents an advancement over the transferable model,
+an external model, validated on multiple datasets. CoT2 [211] as in Fig. 7. It extends the generalization capabilities of a PTM to
+uses nearest neighbors and external models to guide LLMs in a variety of heterogeneous downstream tabular tasks, regardless
+multi-step reasoning, advancing toward expert-level prediction. of their diverse feature and class spaces, without requiring
+ Despite their advantages, textual serialization methods strug- additional fine-tuning. In other words, given a pre-trained model
+gle as feature numbers grow, since prompts can exceed the gΘ , it can be directly applied to a downstream tabular task D to
+model’s context window. LLM effectiveness on tabular tasks is predict the label of a test instance x∗ as follows:
+limited by available semantic information and external tabular
+ ŷ ∗ = gΘ (x∗ | D) . (6)
+model capabilities. Further discussion of LLM-based methods
+appears in the general tabular models in Section VII. Thus, the general model shares similarities with the transferable
+ tabular model, but with a greater emphasis on the “zero-shot”
+ ability, aims to construct highly adaptive architectures capable
+D. Reusing a Pre-Trained Vision Model
+ of handling a wide array of heterogeneous datasets simulta-
+ Given the success of deep neural networks (DNNs) in visual neously. Importantly, it does not require an Adapt function,
+tasks, it is natural to leverage pre-trained vision models for which further reduces the computational cost. General models
+tabular data. Data augmentation techniques from image pro- aim to overcome the lack of spatial relationships, sensitivity to
+cessing can also be applied after converting tabular data into perturbations, and model selection constraints by enforcing a
+visual formats. Similar ideas have been explored in time series standardized input format or adapting architectures to handle
+forecasting [212] and irregular time series classification [213]. arbitrary tabular structures.
+The main challenge is representing tabular instances as images. Pre-training has transformed fields like vision and lan-
+Unlike natural images, where neighboring pixels share semantic guage [80], but its use in tabular data remains limited due to the
+relationships, tabular features are permutation-invariant and lack inherent heterogeneity of tabular datasets. The tabular data vary
+spatial structure. Various methods have been proposed to trans- greatly in the dimensionality and semantic meaning of each feaform tabular data into images, enabling the use of pre-trained ture, even within the same domain. There are two main strategies
+vision models fine-tuned for tabular tasks. This subsection re- to address the inherent heterogeneity in tabular datasets: improvviews these transformation strategies. ing the model’s adaptability or homogenizing the diverse tabular
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6501
+
+formats. We categorize general tabular models into three parts also been explored, including tabular data generation [219],
+based on their strategies for generalizability. The first focuses on anomaly detection [220], data augmentation [221], and time
+raw-feature-based approaches, among which TabPFN variants series forecasting [222].
+represent a rapidly evolving branch and are thus discussed sepa- The improvements of TabPFN stem from several aspects.1
+rately. The third category encompasses semantic-based methods Pre-training Improvements: TabForestPFN [188] extends
+that leverage attribute and task semantics to unify heterogeneous TabPFN by pre-training ICL-transformers on synthetic fortasks. est datasets with complex decision boundaries. TabDPT [41]
+ leverages real-world datasets and self-supervised objectives
+A. Raw-Feature-Based General Models for pre-training, supporting both classification and regression.
+ APT [223] enhances generalization by using adversarial syn-
+ To adapt general tabular models to heterogeneous datasets,
+ thetic data generated through adaptive agents that modify the
+two main strategies are adopted: data-centric and model-centric.
+ data distribution. TabICL [40] incorporates tree-based SCMs
+From the data-centric perspective, models standardize tabular
+ via XGBoost and adopts curriculum learning with progresdatasets into a homogeneous format. For example, TabPTM [82]
+ sively larger synthetic datasets. Building upon masked jointuses meta-representations to transform all datasets into a unidistribution modeling with an episodic, context-conditional
+form format, enabling pre-training. The resulting model can be
+ objective, LimiX [93] introduces two scalable instantiations
+directly applied or fine-tuned on downstream tasks without extra
+ (LimiX-16 M and LimiX-2 M) of large structured-data models
+parameters. From the model-centric perspective, models are
+ (LDMs) that complement language and physical world foundatailored to specific tasks for better adaptability. HyperFast [83]
+ tion models toward achieving general intelligence.
+employs a Hyper Network [214] in meta-learning [215], learning
+ Scalable Improvements: The efficiency of TabPFN is highly
+a mapping from datasets to classifier weights. To handle varying
+ sensitive to context size, prompting strategies to enhance scalainput dimensions, it uses random projections. MotherNet [84]
+ bility and performance [35]. These include compressing training
+accelerates weight generation by enhancing HyperFast’s ardata into a compact learned representation using sketching [187]
+chitecture with Transformer-like modules. iLTM [183] further
+ or prompt tuning techniques [186], [224], employing adaptive
+unifies tree-derived embeddings, dimensionality-agnostic repdata selection methods to identify the most pertinent training
+resentations, a metatrained hypernetwork, MLPs, and retrieval
+ examples for each test instance [41], [86], [225], [226], and
+within a single architecture.
+ replacing traditional quadratic attention with computationally
+ efficient linear attention mechanisms [227] and state-space mod-
+B. TabPFN Variants els (SSMs) [228].
+ The TabPFN family of models [85], [87], [184] leverages Adaptation Improvements: Some approaches improve
+the in-context learning capabilities of transformers, directly TabPFN’s performance on downstream tasks by adapting the
+predicting labels by adapting test instances according to the context [86] or fine-tuning specific parts of the model [39], [186],
+context of training examples. In the first version of TabPFN, [188], [225]. TabICL [40] employs a column-then-row attention
+an instance xi is padded to a fixed dimension (e.g., 100), and mechanism to construct fixed-dimensional embeddings of rows,
+the features are projected to a higher dimension (e.g., d ) for which are subsequently processed by a transformer like TabPFN
+further processing. The label yi is processed similarly and added v1 to facilitate efficient in-context learning. EquiTabPFN [190]
+to the instance embeddings. These embeddings are processed introduces self-attention across target components, ensuring that
+through several layers of a Transformer, and the output token the arbitrary ordering of target dimensions does not influence
+corresponding to the test instance is further predicted using model predictions, enhancing the performance of TabPFN v1
+a 10-way classifier. TabPFN is pre-trained over synthetically to some extent. [189] adapts TabPFN v2 to multi-class, highgenerated datasets with structured causal models (SCM) [216] dimensional, and large-scale data scenarios via post-processing
+and Bayesian Neural Networks (BNNs) [217]. Due to the high techniques. [191] investigates various fine-tuning strategies for
+complexity of transformers, TabPFN is limited to small-scale TabPFN and concludes that full-model fine-tuning yields the
+tasks, with N < 1000, d < 100, and C < 10. optimal performance.
+ TabPFN v2 introduces a specialized feature tokenizer to better handle heterogeneity. Specifically, each cell in the table is C. Semantics-Based General Models
+projected to a k-dimensional vector using a shared mapping, By leveraging the semantic structure of tabular data, such
+and random position encoding vectors are added to differentiate as column names, heterogeneous tasks can be projected into a
+features [189]. A two-way attention mechanism is used, with shared language space. This allows a single language model,
+each feature attending to the other features in its row and pre-trained on diverse tabular datasets, to handle unseen tasks
+then attending to the same feature across its column [218]. in a unified manner. TabuLa-8B [88] fine-tunes a Llama 3-
+Several improvements have been made in TabPFN v2, includ- 8B LLM for tabular data prediction (classification and binned
+ing increased context size (N < 10000, d < 500), automatic regression) using a novel packing and attention scheme for
+feature engineering, and post-hoc ensemble methods. TabPFN
+v2.5 [184] further extends with up to 50000 data points and 2000 1 Some variants of TabPFN are not considered general tabular models, espefeatures, and introduces a new distillation engine that converts cially the latter parts, as they require additional fine-tuning steps. We place them
+into a compact MLP or tree ensemble. Various applications have in this subsection due to their strong relationship with TabPFN.
+6502 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+tabular prediction. GTL [78] transforms tabular datasets into compression, outlier removal, and Yeo–Johnson power transan instruction-oriented language format, facilitating the contin- forms [87], enabling effective ensemble learning without extra
+ued pre-training of LLMs on instruction-oriented tabular data, training. Other methods adapt ensemble ideas to TabPFN v1 for
+which demonstrates strong performance in few-shot scenarios. scalability: TabPFN-Bagging splits large datasets into context
+GTL-S [229] unlocks the potential of GTL from a scaling groups and averages predictions [39], [232], while BoostPFN
+perspective, revealing that scaling datasets and prediction tasks treats TabPFN v1 as weak learners trained on data subsets,
+enhance generalization. [89] extends GTL by incorporating outperforming standard PFNs on large-scale data [232].
+retrieval-augmented LLMs for tabular data, combined with
+retrieval-guided instruction-tuning for LLMs. MediTab [192]
+uses a data engine that leverages LLMs to consolidate tabular IX. EXTENSIONS
+samples to overcome the barrier across tables with distinct In this section, we briefly introduce some extensions on deep
+schema. MediTab aligns out-domain data with the target task tabular methods across different complex tasks.
+using a “learn, annotate, and refinement” pipeline for arbitrary Anomaly Detection: Anomaly detection in tabular data identabular input in the domain without fine-tuning. tifies irregularities such as fraud or failures. Classical methods include Isolation Forest [233] and Local Outlier Factor [234]. Recent methods capture contextual relationships in
+ high-dimensional data [235], [236]. For example, [237] maxi-
+ VIII. TABULAR ENSEMBLE METHODS
+ mizes mutual information between samples and masked parts.
+ Ensemble learning enhances generalization by combining ADBench [238] benchmarks 30 algorithms on 57 datasets.
+diverse base learners. Classical methods like Random Forest and LLMs have also been applied [239].
+AdaBoost use bagging and boosting to ensemble decision trees. Tabular Generation: Synthetic tabular data generation ad-
+In deep tabular learning, ensembles are either joint-training en- dresses privacy and data scarcity. Traditional methods like
+sembles that aggregate sub-networks during training or post-hoc Bayesian networks and GANs capture marginal distributions;
+ensembles that combine predictions from multiple pre-trained newer approaches preserve complex feature dependencies. Difmodels. A major challenge is the high computational cost of fusion models [240] refine synthetic data iteratively. [241] intraining multiple models or submodels. corporates structural causal priors and benchmarks synthesis
+ Joint-Training Ensembles: Joint-training ensembles integrate models. To balance realism and privacy, neuro-symbolic models
+diverse model architectures within a single training process to improve trustworthy data generation [242].
+improve performance and efficiency. These often combine dif- Interpretability: Traditional GBDTs offer interpretability via
+ferent models, such as linear and non-linear [230] or tree-based feature importance and decision path visualization [142], [144].
+and deep neural networks [61], and tree-mimic methods mix The additive nature of GBDTs enables partial dependence
+predictions from multiple tree nodes [57], [125]. plots [243] to visualize feature effects. NeC4.5 [199] integrates
+ To balance efficiency and predictive power, parameter- decision tree interpretability with neural network ensembles to
+efficient ensembles have been proposed. For example, improve performance while maintaining clarity. Recent deep
+TabM [111] uses MLPs with batchEnsemble to generate diverse tabular models also focus on interpretability. NAMs [203] combase learners without greatly increasing parameters. Similarly, bine DNN expressivity with additive model intelligibility by
+BETA applies additional tuning on pre-trained TabPFN by learning feature-specific networks. TabNet [141] employs selearning multiple feature projections and aggregating results quential attention with feature masks for global interpretabilwith BatchEnsemble to reduce parameter overhead [39]. Hy- ity. Variants like TabTransformer [61] visualize cross-feature
+brid methods like LLM-Boost and PFN-Boost integrate large attention. NODE [58], NODE-GAM [59], and DOFEN [244]
+language models and TabPFN with gradient-boosted decision generalize ensembles of oblivious trees with gradient-based
+trees [231], where LLMs and PFN serve as initial learners and optimization and hierarchical representations.
+additional base learners are trained via boosting, combining Open-Environment Tabular Machine Learning: Real-world
+priors with scalability. deployments often face distribution shifts where test data differs
+ Post-Hoc Ensembles: Post-hoc ensemble (PHE) methods from training distributions. Research typically categorizes these
+combine multiple trained models to enhance robustness and into domain-to-domain shifts [245], handling scenarios with or
+accuracy. Bagging ensembles aggregate models trained with without accessible target data via transfer learning [246] or dodifferent random seeds [29], [67], improving robustness at the main generalization techniques [247]. A more challenging setcost of increased computation. Recent studies show LLM-based ting is temporal shift, common in financial or climate data, where
+methods produce predictions complementary to deep tabular patterns evolve over time. Benchmarks like TableShift [245]
+models without attribute names [89], making them promising and TabReD [148] highlight that most standard models deensemble candidates. Perturbation-based ensembles generate grade significantly in these settings. Recent solutions focus on
+diversity from a single pre-trained model without retraining. temporal-aware evaluation protocols [248], drift-resilient archi-
+For example, TabPFN exploits feature permutation sensitivity tectures [109], and robust ensemble strategies [90] to maintain
+by randomly shuffling feature order [85]. TabPFN v2 further performance in the context of data streams.
+increases diversity via random transformations such as var- From Tabular Data to Structured Data: Tabular data often
+ied feature encoding, quantization, categorical shuffling, SVD serves as the underlying format for more complex structured
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6503
+
+domains. Time Series can be modeled as tabular data with [6] O. Ivanciuc et al., “Applications of support vector machines in chemistry,”
+temporal indices, where recent studies apply tabular methods Rev. Comput. Chem., vol. 23, 2007, Art. no. 291.
+ [7] N. K. Ahmed, A. F. Atiya, N. E. Gayar, and H. El-Shishiny, “An empirical
+using sliding windows or time-aware embeddings for forecast- comparison of machine learning models for time series forecasting,”
+ing [148], [249]. Similarly, Relational and Graph Data are Econometric Rev., vol. 29, no. 5-6, pp. 594–621, 2010.
+naturally stored as linked tables. Approaches like CARTE [171] [8] M. R. Allen and D. A. Stainforth, “Towards objective probabalistic
+ climate forecasting,” Nature, vol. 419, no. 6903, pp. 228–228, 2002.
+bridge this gap by modeling tables as graphs to capture en- [9] V. Borisov, T. Leemann, K. Seßler, J. Haug, M. Pawelczyk, and G.
+tity relationships, while Graph Neural Networks (GNNs) are Kasneci, “Deep neural networks and tabular data: A survey,” IEEE Trans.
+increasingly adapted to model interactions between rows and Neural Netw. Learn. Syst., vol. 35, no. 6, pp. 7499–7519, Jun. 2024.
+ [10] C. C. Aggarwal, Data Mining - the Textbook. Berlin, Germany: Springer,
+columns in standard tabular tasks [250]. 2015.
+ Multi-modal Learning with Tabular Data: Text, such as fea- [11] Z. Ji, Z. C. Lipton, and C. Elkan, “Differential privacy and machine
+ture names, enhances tabular learning (see Section VI). We learning: A survey and review,” 2014, arXiv:1412.7584.
+ [12] M. F. Delgado, E. Cernadas, S. Barro, and D. G. Amorim, “Do we need
+focus here on tabular–image interactions, e.g., in healthcare hundreds of classifiers to solve real world classification problems?,” J.
+where medical images require expert knowledge often encoded Mach. Learn. Res., vol. 15, no. 1, pp. 3133–3181, 2014.
+as tabular data [251]. MMCL [132] and CHARMS [130] im- [13] C. Bishop, Pattern Recognition and Machine Learning. Berlin, Germany:
+ Springer, 2006.
+proving predictions without tables during inference, reducing [14] T. Hastie, R. Tibshirani, and J. H. Friedman, The Elements of Statistiannotation needs while TIP [252] proposes a self-supervised cal Learning: Data Mining, Inference, and Prediction, 2nd Ed. Berlin,
+tabular encoder for multimodal joint representation learning. Germany: Springer, 2009.
+ [15] M. Mohri, A. Rostamizadeh, and A. Talwalkar, Foundations of Machine
+ Tabular Understanding: Tabular understanding includes tasks Learning. Cambridge, MA, USA: MIT Press, 2012.
+such as Table Detection (TD) [253], [254], which locates tables [16] A. Voulodimos et al., “Deep learning for computer vision: A brief review,”
+in images, and Table Structure Recognition (TSR) [255], [256], Comput. Intell. Neurosci., vol. 2018, 2018, Art. no. 7068349.
+ [17] D. W. Otter, J. R. Medina, and J. K. Kalita, “A survey of the usages
+which extracts cell coordinates and spanning info. Table Ques- of deep learning for natural language processing,” IEEE Trans. Neural
+tion Answering (TQA) [257], [258], [259] answers user queries Netw. Learn. Syst., vol. 32, no. 2, pp. 604–624, Feb. 2021.
+from tables. Traditional OCR-based [260] and OCR-free [261] [18] Y. Bengio, A. Courville, and P. Vincent, “Representation learning: A
+ review and new perspectives,” IEEE Trans. Pattern Anal. Mach. Intell.,
+methods have advanced TD and TSR, which are simpler tasks. vol. 35, no. 8, pp. 1798–1828, Aug. 2013.
+More complex TQA tasks have also progressed with the help of [19] Y. LeCun, Y. Bengio, and G. Hinton, “Deep learning,” Nature, vol. 521,
+LLMs [262]. Please refer to [257], [263] for more details. no. 7553, pp. 436–444, 2015.
+ [20] I. Goodfellow, Y. Bengio, and A. Courville, Deep Learning. Cambridge,
+ MA, USA: MIT Press, 2016.
+ X. CONCLUSION [21] J. Donahue et al., “DeCAF: A deep convolutional activation feature for
+ generic visual recognition,” in Proc. Int. Conf. Mach. Learn., 2014, pp.
+ Tabular data remains a cornerstone of real-world machine 647–655.
+learning applications, and the advancement of deep learning has [22] G. E. Hinton and R. R. Salakhutdinov, “Reducing the dimensionality of
+ data with neural networks,” Science, vol. 313, no. 5786, pp. 504–507,
+opened new possibilities for effective representation learning 2006.
+in this domain. In this survey, we present a comprehensive [23] L. Van Der Maaten, “Learning a parametric embedding by preserving looverview of deep tabular representation learning, covering its cal structure,” in Proc. Int. Conf. Artif. Intell. Statist., 2009, pp. 384–391.
+ [24] M. R. Min, L. Maaten, Z. Yuan, A. J. Bonner, and Z. Zhang, “Deep
+background, challenges, evaluation benchmarks, and the discus- supervised t-distributed embedding,” in Proc. Int. Conf. Mach. Learn.,
+sion between tree-based models and DNNs. We systematically 2010, pp. 791–798.
+categorize existing methods into three categories—specialized, [25] W. Zhang, T. Du, and J. Wang, “Deep learning over multi-field categorical
+ data—A case study on user response prediction,” in Proc. Eur. Conf. Inf.
+transferable, and general models—based on their generaliza- Retrieval, 2016, pp. 45–57.
+tion capabilities. In addition, we discuss ensemble techniques, [26] K. G. Mehrotra, C. K. Mohan, H. Huang, K. G. Mehrotra, C. K. Mohan,
+extensions, and some promising future directions, such as open- and H. Huang, Anomaly Detection. Berlin, Germany: Springer, 2017.
+ [27] F. O. Isinkaye, Y. O. Folajimi, and B. A. Ojokoh, “Recommendation
+environment and multimodal tabular learning. We hope this systems: Principles, methods and evaluation,” Egyptian Inform. J., vol.
+survey serves as a valuable reference for understanding the 16, no. 3, pp. 261–273, 2015.
+current state of the field and inspires further progress for more [28] B. Lim and S. Zohren, “Time-series forecasting with deep learning: A
+ survey,” Philos. Trans. Roy. Soc. A, vol. 379, no. 2194, 2021, Art. no.
+robust and generalizable tabular learning methods. 20200209.
+ [29] Y. Gorishniy, I. Rubachev, V. Khrulkov, and A. Babenko, “Revisiting
+ deep learning models for tabular data,” in Proc. Int. Conf. Neural Inf.
+ REFERENCES Process. Syst., 2021, pp. 18932–18943.
+ [1] B. Kovalerchuk and E. Vityaev, Data Mining in Finance: Advances in [30] D. Holzmüller, L. Grinsztajn, and I. Steinwart, “Better by default: Strong
+ Relational and Hybrid Methods. Berlin, Germany: Springer, 2005. pre-tuned MLPs and boosted trees on tabular data,” in Proc. Int. Conf.
+ [2] S. L. Hyland et al., “Early prediction of circulatory failure in the intensive Neural Inf. Process. Syst., 2024, pp. 26577–26658.
+ care unit using machine learning,” Nature Med., vol. 26, no. 3, pp. [31] H.-J. Ye, H.-H. Yin, D.-C. Zhan, and W.-L. Chao, “Revisiting nearest
+ 364–373, 2020. neighbor for tabular data: A deep tabular baseline two decades later,” in
+ [3] C. Romero and S. Ventura, “Educational data mining: A review of the Proc. Int. Conf. Learn. Representations, 2025.
+ state of the art,” IEEE Trans. Systems, Man, Cybern., vol. 40, no. 6, pp. [32] L. Grinsztajn, E. Oyallon, and G. Varoquaux, “Why do tree-based models
+ 601–618, Nov. 2010. still outperform deep learning on typical tabular data?,” in Proc. Int. Conf.
+ [4] X. Amatriain, A. Jaimes, N. Oliver, and J. M. Pujol, “Data mining meth- Neural Inf. Process. Syst., 2022, pp. 507–520.
+ ods for recommender systems,” in Recommender Systems Handbook. [33] R. Shwartz-Ziv and A. Armon, “Tabular data: Deep learning is not all
+ Berlin, Germany: Springer, 2010, pp. 39–71. you need,” Inf. Fusion, vol. 81, pp. 84–90, 2022.
+ [5] R. Tibshirani, T. Hastie, B. Narasimhan, and G. Chu, “Diagnosis of [34] E. Beyazit, J. Kozaczuk, B. Li, V. Wallace, and B. Fadlallah, “An inductive
+ multiple cancer types by shrunken centroids of gene expression,” Proc. bias for tabular deep learning,” in Proc. Int. Conf. Neural Inf. Process.
+ Nat. Acad. Sci. USA, vol. 99, no. 10, pp. 6567–6572, 2002. Syst., 2023, pp. 43108–43135.
+6504 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+ [35] D. C. McElfresh et al., “When do neural nets outperform boosted trees [61] X. Huang, A. Khetan, M. Cvitkovic, and Z. S. Karnin, “TabTranson tabular data?,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2023, pp. former: Tabular data modeling using contextual embeddings,” 2020,
+ 76336–76369. arXiv:2012.06678.
+ [36] H.-J. Ye, D.-C. Zhan, N. Li, and Y. Jiang, “Learning multiple local [62] Q.-L. Zhou, H.-J. Ye, L. Wang, and D.-C. Zhan, “Unlocking the
+ metrics: Global consideration helps,” IEEE Trans. Pattern Anal. Mach. transferability of tokens in deep models for tabular data,” 2023,
+ Intell., vol. 42, no. 7, pp. 1698–1712, Jul. 2020. arXiv:2310.15149.
+ [37] S. M. Jesus et al., “Turning the tables: Biased, imbalanced, dynamic [63] J. Chen, J. Yan, Q. Chen, D. Z. Chen, J. Wu, and J. Sun, “Can a deep
+ tabular datasets for ML evaluation,” in Proc. Int. Conf. Neural Inf. learning model be a sure bet for tabular prediction?,” in Proc. ACM
+ Process. Syst., 2022, pp. 33563–33575. SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2024, pp. 288–296.
+ [38] R. Kohli, M. Feurer, K. Eggensperger, B. Bischl, and F. Hutter, “Towards [64] A. Jeffares, T. Liu, J. Crabbé, F. Imrie, and M. van der Schaar, “Tangos:
+ quantifying the effect of datasets for benchmarking: A look at tabular Regularizing tabular neural networks through gradient orthogonalization
+ machine learning,” in Proc. Int. Conf. Learn. Representations Workshop, and specialization,” in Proc. Int. Conf. Learn. Representations, 2023.
+ 2024. [65] H. Ye et al., “Ptarl: Prototype-based tabular representation learning via
+ [39] S.-Y. Liu and H.-J. Ye, “TabPFN unleashed: A scalable and effective space calibration,” in Proc. Int. Conf. Learn. Representations, 2024.
+ solution to tabular classification problems,” in Proc. Int. Conf. Mach. [66] Y. Nader, L. Sixt, and T. Landgraf, “DNNR: Differential nearest
+ Learn., 2025, pp. 40043–40068. neighbors regression,” in Proc. Int. Conf. Mach. Learn., 2022, pp.
+ [40] J. Qu, D. Holzmüller, G. Varoquaux, and M. L. Morvan, “TabICL: A 16296–16317.
+ tabular foundation model for in-context learning on large data,” in Proc. [67] Y. Gorishniy, I. Rubachev, N. Kartashev, D. Shlenskii, A. Kotelnikov,
+ Int. Conf. Mach. Learn., 2025, pp. 50817–50847. and A. Babenko, “TabR: Tabular deep learning meets nearest neighbors
+ [41] J. Ma et al., “TabDPT: Scaling tabular foundation models on real data,” in 2023,” in Proc. Int. Conf. Learn. Representations, 2024.
+ in Proc. Int. Conf. Neural Inf. Process. Syst., 2025. [68] G. Somepalli, A. Schwarzschild, M. Goldblum, C. B. Bruss, and T.
+ [42] H.-J. Ye, S.-Y. Liu, H.-R. Cai, Q.-L. Zhou, and D.-C. Zhan, “A closer Goldstein, “SAINT: Improved neural networks for tabular data via row
+ look at deep learning on tabular data,” 2024, arXiv:2407.00956. attention and contrastive pre-training,” in Proc. Int. Conf. Neural Inf.
+ [43] Y. Gorishniy, I. Rubachev, and A. Babenko, “On embeddings for nu- Process. Syst. Workshop, 2022.
+ merical features in tabular deep learning,” in Proc. Int. Conf. Neural Inf. [69] I. Rubachev, A. Alekberov, Y. Gorishniy, and A. Babenko, “Re-
+ Process. Syst., 2022, pp. 24991–25004. visiting pretraining objectives for tabular deep learning,” 2022,
+ [44] T. Ucar, E. Hajiramezanali, and L. Edwards, “Subtab: Subsetting features arXiv:2207.03208.
+ of tabular data for self-supervised representation learning,” in Proc. Int. [70] S. Onishi, K. Oono, and K. Hayashi, “TabRet: Pre-training transformer-
+ Conf. Neural Inf. Process. Syst., 2021, pp. 18853–18865. based tabular models for unseen columns,” 2023, arXiv:2303.15747.
+ [45] D. Bahri, H. Jiang, Y. Tay, and D. Metzler, “SCARF: Self-supervised [71] J. Shen et al., “Cross-modal fine-tuning: Align then refine,” in Proc. Int.
+ contrastive learning using random feature corruption,” in Proc. Int. Conf. Conf. Mach. Learn., 2023, pp. 31030–31056.
+ Learn. Representations, 2022. [72] Y. Zhu et al., “Converting tabular data into images for deep learning with
+ [46] J. Yoon, Y. Zhang, J. Jordon, and M. van der Schaar, “VIME: Ex- convolutional neural networks,” Sci. Rep., vol. 11, no. 11325, 2021.
+ tending the success of self- and semi-supervised learning to tabu- [73] S. Lee and S.-C. Lee, “TablEye: Seeing small tables through the lens of
+ lar domain,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2020, images,” 2023, arXiv:2307.02491.
+ pp. 11033–11043. [74] Z. Wang and J. Sun, “TransTab: Learning transferable tabular transform-
+ [47] J. Wu et al., “Switchtab: Switched autoencoders are effective tabular ers across tables,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2022, pp.
+ learners,” in Proc. AAAI Conf. Artif. Intell., 2024, pp. 15924–15933. 2902–2915.
+ [48] A. Kadra, M. Lindauer, F. Hutter, and J. Grabocka, “Well-tuned simple [75] J. Yan et al., “Making pre-trained language models great on tabular
+ nets excel on tabular datasets,” in Proc. Int. Conf. Neural Inf. Process. prediction,” in Proc. Int. Conf. Learn. Representations, 2024.
+ Syst., 2021, pp. 23928–23941. [76] C. Ye et al., “Towards cross-table masked pretraining for web data
+ [49] R. Wang, B. Fu, G. Fu, and M. Wang, “Deep & cross network for ad click mining,” in Proc. World Wide Web Conf., 2024, pp. 4449–4459.
+ predictions,” in Proc. ADKDD, 2017, pp. 1–7. [77] S. Hegselmann, A. Buendia, H. Lang, M. Agrawal, X. Jiang, and D.
+ [50] G. Klambauer, T. Unterthiner, A. Mayr, and S. Hochreiter, “Self- Sontag, “TabLLM: Few-shot classification of tabular data with large
+ normalizing neural networks,” in Proc. Int. Conf. Neural Inf. Process. language models,” in Proc. Int. Conf. Artif. Intell. Statist., 2023, pp.
+ Syst., 2017, pp. 971–980. 5549–5581.
+ [51] G. Ke, J. Zhang, Z. Xu, J. Bian, and T.-Y. Liu, “TabNN: A universal [78] X. Wen, H. Zhang, S. Zheng, W. Xu, and J. Bian, “From supervised
+ neural network solution for tabular data,” 2018. to generative: A novel paradigm for tabular deep learning with large
+ [52] R. Wang et al., “DCN V2: Improved deep & cross network and practical language models,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov.
+ lessons for web-scale learning to rank systems,” in Proc. World Wide Web Data Mining, 2024, pp. 3323–3333.
+ Conf., 2021, pp. 1785–1797. [79] S. Han, J. Yoon, S. Ö. Arik, and T. Pfister, “Large language models can
+ [53] J. Chen, K. Liao, Y. Wan, D. Z. Chen, and J. Wu, “Danets: Deep abstract automatically engineer features for few-shot tabular learning,” in Proc.
+ networks for tabular data classification and regression,” in Proc. AAAI Int. Conf. Mach. Learn., 2024, pp. 17454–17479.
+ Conf. Artif. Intell., 2022, pp. 3930–3938. [80] C. Zhou et al., “A comprehensive survey on pretrained foundation mod-
+ [54] J. Chen, K. Liao, Y. Fang, D. Chen, and J. Wu, “TabCaps: A capsule els: A history from BERT to chatGPT,” Int. J. Mach. Learn. Cybern.,
+ neural network for tabular data classification with bow routing,” in Proc. 2024, pp. 1–65.
+ Int. Conf. Learn. Representations, 2023. [81] Y. Liang et al., “Foundation models for time series analysis: A tutorial and
+ [55] J. Yan, J. Chen, Q. Wang, D. Z. Chen, and J. Wu, “Team up gbdts and dnns: survey,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining,
+ Advancing efficient and effective tabular prediction with tree-hybrid 2024, pp. 6555–6565.
+ mlps,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, [82] H.-J. Ye, Q.-L. Zhou, H.-H. Yin, D.-C. Zhan, and W.-L. Chao, “Rethink-
+ 2024, pp. 3679–3689. ing pre-training in tabular data: A neighborhood embedding perspective,”
+ [56] C. Xu et al., “Bishop: Bi-directional cellular learning for tabular data with 2025, arXiv:2311.00055.
+ generalized sparse modern hopfield model,” in Proc. Int. Conf. Mach. [83] D. Bonet, D. M. Montserrat, X. G. i Nieto, and A. G. Ioannidis, “Hy-
+ Learn., 2024, pp. 55048–55075. perfast: Instant classification for tabular data,” in Proc. AAAI Conf. Artif.
+ [57] S. Badirli, X. Liu, Z. Xing, A. Bhowmik, and S. S. Keerthi, “Gradient Intell., 2024, pp. 11114–11123.
+ boosting neural networks: Grownet,” 2020, arXiv:2002.07971. [84] A. Müller, C. Curino, and R. Ramakrishnan, “Mothernet: Fast training
+ [58] S. Popov, S. Morozov, and A. Babenko, “Neural oblivious decision and inference via hyper-network transformers,” in Proc. Int. Conf. Learn.
+ ensembles for deep learning on tabular data,” in Proc. Int. Conf. Learn. Representations, 2025.
+ Representations, 2020. [85] N. Hollmann, S. Müller, K. Eggensperger, and F. Hutter, “TabPFN: A
+ [59] C.-H. Chang, R. Caruana, and A. Goldenberg, “NODE-GAM: Neural transformer that solves small tabular classification problems in a second,”
+ generalized additive model for interpretable deep learning,” in Proc. Int. in Proc. Int. Conf. Learn. Representations, 2023.
+ Conf. Learn. Representations, 2022. [86] V. Thomas et al., “Retrieval & fine-tuning for in-context tabular models,”
+ [60] W. Song et al., “Autoint: Automatic feature interaction learning via self- in Proc. Int. Conf. Neural Inf. Process. Syst., 2024, pp. 108439–108467.
+ attentive neural networks,” in Proc. Conf. Inf. Knowl. Manage., 2019, pp. [87] N. Hollmann et al., “Accurate predictions on small data with a tabular
+ 1161–1170. foundation model,” Nature, vol. 637, no. 8045, pp. 319–326, 2025.
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6505
+
+ [88] J. Gardner, J. C. Perdomo, and L. Schmidt, “Large scale transfer learning [114] N. Erickson et al., “TabArena: A living benchmark for machine learning
+ for tabular data via language modeling,” in Proc. Int. Conf. Neural Inf. on tabular data,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2025.
+ Process. Syst., 2024, pp. 45155–45205. [115] Y. Yang, Y. Wang, G. Liu, L. Wu, and Q. Liu, “Unitabe: A universal
+ [89] X. Wen, S. Zheng, Z. Xu, Y. Sun, and J. Bian, “Scalable in-context pretraining protocol for tabular foundation model in data science,” in
+ learning on tabular data via retrieval-augmented large language models,” Proc. Int. Conf. Learn. Representations, 2024.
+ 2025, arXiv:2502.03147. [116] G. Eggert, K. Huo, M. Biven, and J. Waugh, “Tablib: A dataset of 627M
+ [90] Y. Gorishniy, A. Kotelnikov, and A. Babenko, “TabM: Advancing tables with context,” 2023, arXiv:2310.07875.
+ tabular deep learning with parameter-efficient ensembling,” 2024, [117] H. W. J. Yang and X. Li, “DeepTables: A deep learning python packarXiv:2410.24210. age for tabular data,” 2022. [Online]. Available: https://github.com/
+ [91] P. A. Gutiérrez, M. Pérez-Ortiz, J. Sánchez-Monedero, F. Fernández- DataCanvasIO/DeepTables
+ Navarro, and C. Hervás-Martıńez, “Ordinal regression methods: Survey [118] N. Erickson et al., “Autogluon-tabular: Robust and accurate autoML for
+ and experimental study,” IEEE Trans. Knowl. Data Eng., vol. 28, no. 1, structured data,” 2020, arXiv:2003.06505.
+ pp. 127–146, Jan. 2016. [119] J. R. Zaurin and P. Mulinka, “pytorch-widedeep: A flexible package
+ [92] D. Lane, D. Scott, M. Hebl, R. Guerra, D. Osherson, and H. Zimmer, for multimodal deep learning,” J. Open Source Softw., vol. 8, no. 86,
+ Introduction to Statistics. Princeton, NJ, USA: Citeseer, 2003. Jun. 2023, Art. no. 5027.
+ [93] X. Zhang et al., “Limix: Unleashing structured-data modeling capability [120] S.-Y. Liu et al., “TALENT: A tabular analytics and learning toolbox,” J.
+ for generalist intelligence,” 2025, arXiv:2509.03505. Mach. Learn. Res., vol. 26, pp. 226:1–226:16, 2025.
+ [94] A. F. Karr, A. P. Sanil, and D. L. Banks, “Data quality: A sta- [121] T. Akiba, S. Sano, T. Yanase, T. Ohta, and M. Koyama, “Optistical perspective,” Statist. Methodol., vol. 3, no. 2, pp. 137–173, tuna: A next-generation hyperparameter optimization framework,” in
+ 2006. Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2019,
+ [95] A. Sánchez-Morales, J.-L. Sancho-Gómez, J.-A. Martıńez-Garcıá, and A. pp. 2623–2631.
+ R. Figueiras-Vidal, “Improving deep learning performance with missing [122] N. Morgan and H. Bourlard, “Generalization and parameter estimation
+ values via deletion and compensation,” Neural Comput. Appl., vol. 32, in feedforward nets: Some experiments,” in Proc. Int. Conf. Neural Inf.
+ pp. 13233–13244, 2020. Process. Syst., 1989, pp. 630–637.
+ [96] D. Chicco, L. Oneto, and E. Tavazzi, “Eleven quick tips for data cleaning [123] S. Arlot and A. Celisse, “A survey of cross-validation procedures for
+ and feature engineering,” PLoS Comput. Biol., vol. 18, no. 12, 2022, Art. model selection,” 2009, arXiv:0907.4728.
+ no. e1010718. [124] K.-Y. Chen, P.-H. Chiang, H.-R. Chou, T.-W. Chen, and T.-H. Chang,
+ [97] Y. Luo et al., “Autocross: Automatic feature crossing for tabular data “Trompt: Towards a better deep neural network for tabular data,” in Proc.
+ in real-world applications,” in Proc. ACM SIGKDD Int. Conf. Knowl. Int. Conf. Mach. Learn., 2023, pp. 4392–4434.
+ Discov. Data Mining, 2019, pp. 1936–1945. [125] S. Marton, S. Lüdtke, C. Bartelt, and H. Stuckenschmidt, “GRANDE:
+ [98] H. He and Y. Ma, Imbalanced Learning: Foundations, Algorithms, and Gradient-based decision tree ensembles for tabular data,” in Proc. Int.
+ Applications. Hoboken, NJ, USA: Wiley, 2013. Conf. Learn. Representations, 2024.
+ [99] J. M. Johnson and T. M. Khoshgoftaar, “Survey on deep learning with [126] X. Jiang, A. Margeloiu, N. Simidjievski, and M. Jamnik, “Protogate:
+ class imbalance,” J. Big Data, vol. 6, no. 1, pp. 1–54, 2019. Prototype-based neural networks with global-to-local feature selection
+[100] Y. Xie et al., “Fives: Feature interaction via edge search for large-scale for tabular biomedical data,” in Proc. Int. Conf. Mach. Learn., 2024, pp.
+ tabular data,” in Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data 21844–21878.
+ Mining, 2021, pp. 3795–3805. [127] G. C. Cawley and N. L. C. Talbot, “On over-fitting in model selection and
+[101] Y. Hu, I. Fountalis, J. Tian, and N. Vasiloglou, “Annotatedtables: subsequent selection bias in performance evaluation,” J. Mach. Learn.
+ A large tabular dataset with language model annotations,” 2024, Res., vol. 11, pp. 2079–2107, 2010.
+ arXiv:2406.16349. [128] H. Schulz-Kümpel, S. Fischer, T. Nagler, A. Boulesteix, B. Bischl, and
+[102] A. Klein and F. Hutter, “Tabular benchmarks for joint architecture and R. Hornung, “Constructing confidence intervals for ’the’ generalization
+ hyperparameter optimization,” 2019, arXiv:1905.04970. error–A comprehensive benchmark study,” 2024, arXiv:2409.18836.
+[103] P. Pokhrel, “A comparison of automl hyperparameter optimization [129] T. Nagler, L. Schneider, B. Bischl, and M. Feurer, “Reshuffling resamtools for tabular data,” Ph.D. dissertation, Youngstown State Univ., pling splits can improve generalization of hyperparameter optimization,”
+ Youngstown, OH, USA, 2023. in Proc. Int. Conf. Neural Inf. Process. Syst., 2024.
+[104] X. He, K. Zhao, and X. Chu, “Automl: A survey of the state-of-the-art,” [130] J.-P. Jiang, H.-J. Ye, L. Wang, Y. Yang, Y. Jiang, and D.-C. Zhan, “Tabular
+ Knowl. Based Syst., vol. 212, 2021, Art. no. 106622. insights, visual impacts: Transferring expertise from tables to images,”
+[105] M. Feurer, K. Eggensperger, S. Falkner, M. Lindauer, and F. Hut- in Proc. Int. Conf. Mach. Learn., 2024, pp. 21988–22009.
+ ter, “Auto-sklearn 2.0: Hands-free automl via meta-learning,” J. Mach. [131] J. Feng, Y. Yu, and Z. Zhou, “Multi-layered gradient boosting decision
+ Learn. Res., vol. 23, no. 261, pp. 1–61, 2022. trees,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2018, pp. 3555–
+[106] C. Mennella, U. Maniscalco, G. De Pietro, and M. Esposito, “Ethical 3565.
+ and regulatory challenges of AI technologies in healthcare: A narrative [132] P. Hager, M. J. Menten, and D. Rueckert, “Best of both worlds: Mulreview,” Heliyon, vol. 10, no. 4, 2024, Art. no. e26297. timodal contrastive learning with tabular and imaging data,” in CVPR,
+[107] W. Moore and S. Frye, “Review of HIPAA, part 1: History, protected 2023, pp. 23924–23935.
+ health information, and privacy and security rules,” J. Nucl. Med. Tech- [133] I. Padhi et al., “Tabular transformers for modeling multivariate time
+ nol., vol. 47, no. 4, pp. 269–272, 2019. series,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process., 2021,
+[108] B. S. Caffo, F. A. D’Asaro, A. Garcez, and E. Raffinetti, “Explainable pp. 3565–3569.
+ artificial intelligence models and methods in finance and healthcare,” [134] F. D. Martino and F. Delmastro, “Explainable AI for clinical and remote
+ Front Artif. Intell., vol. 5, 2022, Art no. 970246. health applications: A survey on tabular and time series data,” Artif. Intell.
+[109] K. Helli, D. Schnurr, N. Hollmann, S. Müller, and F. Hutter, “Drift- Rev., vol. 56, no. 6, pp. 5261–5315, 2023.
+ resilient tabPFN: In-context learning temporal distribution shifts on [135] G. M. Van de Ven, T. Tuytelaars, and A. S. Tolias, “Three types of
+ tabular data,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2024, pp. incremental learning,” Nature Mach. Intell., vol. 4, no. 12, pp. 1185–1197,
+ 98742–98781. 2022.
+[110] J. Demsar, “Statistical comparisons of classifiers over multiple data sets,” [136] D.-W. Zhou, Q.-W. Wang, Z.-H. Qi, H.-J. Ye, D.-C. Zhan, and Z. Liu,
+ J. Mach. Learn. Res., vol. 7, pp. 1–30, 2006. “Class-incremental learning: A survey,” IEEE Trans. pattern Anal. Mach.
+[111] Y. Gorishniy, A. Kotelnikov, and A. Babenko, “Tabm: Advancing tabular Intell., vol. 46, no. 12, pp. 9851–9873, 2024.
+ deep learning with parameter-efficient ensembling,” in Proc. Int. Conf. [137] J. Yosinski, J. Clune, Y. Bengio, and H. Lipson, “How transferable are
+ Learn. Representations, 2025. features in deep neural networks?,” in Proc. Int. Conf. Neural Inf. Process.
+[112] A. Tschalzev, L. Purucker, S. Lüdtke, F. Hutter, C. Bartelt, and H. Stuck- Syst., 2014.
+ enschmidt, “Unreflected use of tabular data repositories can undermine [138] S. U. H. Dar, M. Özbey, A. B. Çatlı, and T. Çukur, “A transfer-learning
+ research quality,” in Proc. Int. Conf. Learn. Representations Workshop, approach for accelerated MRI using deep neural networks,” Magn. Reson.
+ 2025. Med., vol. 84, no. 2, pp. 663–685, 2020.
+[113] S. B. Rabbani, I. V. Medri, and M. D. Samad, “Attention versus con- [139] R. Basri, M. Galun, A. Geifman, D. Jacobs, Y. Kasten, and S. Kritchman,
+ trastive learning of tabular data–A data-centric benchmarking,” 2024, “Frequency bias in neural networks for input of non-uniform density,” in
+ arXiv:2401.04266. Proc. Int. Conf. Mach. Learn., 2020, pp. 685–694.
+6506 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+[140] M. Pang, K. M. Ting, P. Zhao, and Z. Zhou, “Improving deep forest by [167] L. Liu, M. M. Fard, and S. Zhao, “Distribution embedding networks for
+ screening,” IEEE Trans. Knowl. Data Eng., vol. 34, no. 9, pp. 4298–4312, generalization from a diverse set of classification tasks,” Trans. Mach.
+ Sep. 2022. Learn. Res., 2022, arXiv:2202.01940.
+[141] S. Ö. Arik and T. Pfister, “TabNet: Attentive interpretable tabular learn- [168] B. Zhu, X. Shi, N. Erickson, M. Li, G. Karypis, and M. Shoaran, “Xtab:
+ ing,” in Proc. AAAI Conf. Artif. Intell., 2021, pp. 6679–6687. Cross-table pretraining for tabular transformers,” in Proc. Int. Conf.
+[142] T. Chen and C. Guestrin, “XGBoost: A scalable tree boosting system,” in Mach. Learn., 2023, pp. 43181–43204.
+ Proc. ACM SIGKDD Int. Conf. Knowl. Discov. Data Mining, 2016, pp. [169] Y. Zhang et al., “Meta-transformer: A unified framework for multimodal
+ 785–794. learning,” 2023, arXiv:2307.10802.
+[143] L. O. Prokhorenkova, G. Gusev, A. Vorobev, A. V. Dorogush, and A. [170] G. Liu, J. Yang, and L. Wu, “PTab: Using the pre-trained language model
+ Gulin, “CatBoost: Unbiased boosting with categorical features,” in Proc. for modeling tabular data,” 2022, arXiv:2209.08060.
+ Int. Conf. Neural Inf. Process. Syst., 2018, pp. 6639–6649. [171] M. J. Kim, L. Grinsztajn, and G. Varoquaux, “CARTE: Pretraining and
+[144] G. Ke et al., “LightGBM: A highly efficient gradient boosting decision transfer for tabular learning,” in Proc. Int. Conf. Mach. Learn., 2024, pp.
+ tree,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2017, pp. 3146–3154. 23843–23866.
+[145] M. T. Ribeiro, S. Singh, and C. Guestrin, ““why should I trust you?”: [172] Z. Cheng et al., “Binding language models in symbolic languages,” in
+ Explaining the predictions of any classifier,” in Proc. ACM SIGKDD Int. Proc. Int. Conf. Learn. Representations, 2023.
+ Conf. Knowl. Discov. Data Mining, 2016, pp. 1135–1144. [173] N. Hollmann, S. Müller, and F. Hutter, “Large language models for au-
+[146] S. M. Lundberg and S. Lee, “A unified approach to interpreting model tomated data science: Introducing CAAFE for context-aware automated
+ predictions,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2017, pp. feature engineering,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2023,
+ 4765–4774. pp. 44753–44775.
+[147] A. Tschalzev, S. Marton, S. Lüdtke, C. Bartelt, and H. Stuckenschmidt, [174] T. Zhang, S. Wang, S. Yan, L. Jian, and Q. Liu, “Generative table
+ “A data-centric perspective on evaluating machine learning models for pre-training empowers models for tabular prediction,” in Proc. Conf.
+ tabular data,” in Proc. Int. Conf. Neural Inf. Process. Syst. Datasets Empirical Methods Natural Lang. Process., 2023.
+ Benchmarks Track, 2024. [175] T. Dinh et al., “LIFT: Language-interfaced fine-tuning for non-language
+[148] I. Rubachev, N. Kartashev, Y. Gorishniy, and A. Babenko, “TabReD: machine learning tasks,” in Proc. Int. Conf. Neural Inf. Process. Syst.,
+ A benchmark of tabular machine learning in-the-wild,” 2024, 2022, pp. 11763–11784.
+ arXiv:2406.19380. [176] R. Wang, Z. Wang, and J. Sun, “UniPredict: Large language models are
+[149] H. A. Chipman, E. I. George, and R. E. McCulloch, “BART: Bayesian universal tabular predictors,” 2023, arXiv:2310.03266.
+ additive regression trees,” Ann. Appl. Statist., vol. 1, pp. 266–298, 2010, [177] A. Sharma, E. Vans, D. Shigemizu, K. A. Boroevich, and T. Tsunoda,
+ doi: 10.1214/09-AOAS285. “Deepinsight: A methodology to transform a non-image data to an image
+[150] T. Duan et al., “NGBoost: Natural gradient boosting for probabilistic for convolution neural network architecture,” Sci. Rep., vol. 9, no. 1, 2019,
+ prediction,” in Proc. Int. Conf. Mach. Learn., 2020, pp. 2690–2700. Art. no. 11399.
+[151] A. Radhakrishnan, D. Beaglehole, P. Pandit, and M. Belkin, “Mechanism [178] O. Bazgir, R. Zhang, S. R. Dhruba, R. Rahman, S. Ghosh, and R. Pal,
+ of feature learning in deep fully connected networks and kernel machines “Representation of features as images with neighborhood dependencies
+ that recursively learn features,” Science, vol. 383, pp. 1461–1467, 2024. for compatibility with convolutional neural networks,” Nature Commun.,
+[152] D. Beaglehole, D. Holzmüller, A. Radhakrishnan, and M. Belkin, vol. 11, no. 1, 2020, Art. no. 4391.
+ “xRFM: Accurate, scalable, and interpretable feature learning models [179] L. Buturović and D. Miljković, “A novel method for classification
+ for tabular data,” 2025, arXiv:2508.10053. of tabular data using convolutional neural networks,” BioRxiv, 2020,
+[153] Y. Cheng, R. Hu, H. Ying, X. Shi, J. Wu, and W. Lin, “Arithmetic feature doi: 10.1101/2020.05.02.074203.
+ interaction is necessary for deep tabular learning,” in Proc. AAAI Conf. [180] V. Gómez-Martıńez, F. J. Lara-Abelenda, P. Peiro-Corbacho, D.
+ Artif. Intell., 2024, pp. 11516–11524. Chushig-Muzo, C. Granja, and C. Soguero-Ruıź, “LM-IGTD: A 2D
+[154] J. Kossen, N. Band, C. Lyle, A. N. Gomez, T. Rainforth, and Y. Gal, “Self- image generator for low-dimensional and mixed-type tabular data
+ attention between datapoints: Going beyond individual input-output pairs to leverage the potential of convolutional neural networks,” 2024,
+ in deep learning,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2021, pp. arXiv:2406.14566.
+ 28742–28756. [181] B. Sun et al., “SuperTML: Two-dimensional word embedding for the
+[155] B. Schäfl, L. Gruber, A. Bitto-Nemling, and S. Hochreiter, “Hopular: precognition on structured tabular data,” in Proc. IEEE Conf. Comput.
+ Modern hopfield networks for tabular data,” 2022, arXiv:2206.00664. Vis. Pattern Recognit. Workshops, 2019.
+[156] H. Kim et al., “Attentive neural processes,” in Proc. Int. Conf. Learn. [182] A. Mamdouh, M. El-Melegy, S. Ali, and R. Kikinis, “Tab2Visual: Over-
+ Representations, 2019. coming limited data in tabular data classification using deep learning with
+[157] I. Shavitt and E. Segal, “Regularization learning networks: Deep learning visual representations,” 2025, arXiv:2502.07181.
+ for tabular datasets,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2018, [183] D. Bonet, M. C. Cara, A. Calafell, D. M. Montserrat, and A. G. Ioannidis,
+ pp. 1386–1396. “iLTM: Integrated large tabular model,” 2025, arXiv:2511.15941.
+[158] V. Verma, T. Luong, K. Kawaguchi, H. Pham, and Q. V. Le, “Towards [184] L. Grinsztajn et al., “TabPFN-2.5: Advancing the state of the art in tabular
+ domain-agnostic contrastive learning,” in Proc. Int. Conf. Mach. Learn., foundation models,” 2025, arXiv:2511.08667.
+ 2021, pp. 10530–10541. [185] X. Zhang et al., “Mitra: Mixed synthetic priors for enhancing tabu-
+[159] C. Lee, F. Imrie, and M. van der Schaar, “Self-supervision enhanced lar foundation models,” in Proc. Int. Conf. Neural Inf. Process. Syst.,
+ feature selection with correlated gates,” in Proc. Int. Conf. Learn. Rep- 2025.
+ resentations, 2022. [186] B. Feuer et al., “Tunetables: Context optimization for scalable prior-data
+[160] R. Levin et al., “Transfer learning with deep tabular models,” in Proc. fitted networks,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2024, pp.
+ Int. Conf. Learn. Representations, 2023. 83430–83464.
+[161] K. Majmundar, S. Goyal, P. Netrapalli, and P. Jain, “MET: Masked [187] B. Feuer, C. Hegde, and N. Cohen, “Scaling tabPFN: Sketching
+ encoding for tabular data,” 2022, arXiv:2206.08564. and feature selection for tabular prior-data fitted networks,” 2023,
+[162] E. Hajiramezanali, N. L. Diamant, G. Scalia, and M. W. Shen, “STab: arXiv:2311.10609.
+ Self-supervised learning for tabular data,” in Proc. Int. Conf. Neural Inf. [188] F. den Breejen, S. Bae, S. Cha, and S.-Y. Yun, “Fine-tuned in-context
+ Process. Syst. Workshop, 2022. learning transformers are excellent tabular data classifiers,” 2025,
+[163] S. Chen, J. Wu, N. Hovakimyan, and H. Yao, “ReConTab: Reg- arXiv:2405.13396.
+ ularized contrastive representation learning for tabular data,” 2023, [189] H.-J. Ye, S.-Y. Liu, and W.-L. Chao, “A closer look at tabPFN V2:
+ arXiv:2310.18541. Strength, limitation, and extension,” 2025, arXiv:2502.17361.
+[164] W.-W. Du, W.-Y. Wang, and W.-C. Peng, “DoRA: Domain-based self- [190] M. Arbel, D. Salinas, and F. Hutter, “EquitabPFN: A target-permutation
+ supervised learning framework for low-resource real estate appraisal,” in equivariant prior fitted network,” in Proc. Int. Conf. Neural Inf. Process.
+ Proc. Conf. Inf. Knowl. Manage., 2023, pp. 4552–4558. Syst., 2025.
+[165] Y. Sui et al., “Self-supervised representation learning from random data [191] I. Rubachev, A. Kotelnikov, N. Kartashev, and A. Babenko, “On finetunprojectors,” in Proc. Int. Conf. Learn. Representations, 2024. ing tabular foundation models,” 2024, arXiv:2506.08982.
+[166] T. Iwata and A. Kumagai, “Meta-learning from tasks with heterogeneous [192] Z. Wang, C. Gao, C. Xiao, and J. Sun, “Meditab: Scaling medical tabular
+ attribute spaces,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2020, pp. data predictors via data consolidation, enrichment, and refinement,” in
+ 6053–6063. Proc. Int. Joint Conf. Artif. Intell., 2024, pp. 6062–6070.
+JIANG et al.: REPRESENTATION LEARNING FOR TABULAR DATA: A COMPREHENSIVE SURVEY 6507
+
+[193] A. Arazi, E. Shapira, and R. Reichart, “TabSTAR: A foundation tabular [221] A. Margeloiu, A. Bazaga, N. Simidjievski, P. Liò, and M. Jamnik,
+ model with semantically target-aware representations,” in Proc. Int. Conf. “TabMDA: Tabular manifold data augmentation for any classifier using
+ Neural Inf. Process. Syst., 2025. transformers with in-context subsetting,” 2024, arXiv:2406.01805.
+[194] M. Spinaci, M. Polewczyk, M. Schambach, and S. Thelin, “Contexttab: [222] S. B. Hoo, S. Müller, D. Salinas, and F. Hutter, “The tabular foundation
+ A semantics-aware tabular in-context learner,” in Proc. Int. Conf. Neural model tabPFN outperforms specialized time series forecasting models
+ Inf. Process. Syst., 2025. based on simple features,” 2025, arXiv:2501.02945.
+[195] R. Bommasani et al., “On the opportunities and risks of foundation [223] Y. Wu and D. L. Bergman, “Zero-shot meta-learning for tabular prediction
+ models,” 2021, arXiv:2108.07258. tasks with adversarially pre-trained transformer,” in Proc. Int. Conf.
+[196] J. Goldberger, G. E. Hinton, S. Roweis, and R. R. Salakhutdinov, “Neigh- Mach. Learn., 2025.
+ bourhood components analysis,” in Proc. Int. Conf. Neural Inf. Process. [224] J. Ma, V. Thomas, G. Yu, and A. L. Caterini, “In-context data distillation
+ Syst., 2004. with tabPFN,” 2024, arXiv:2402.06971.
+[197] J. T. Hancock and T. M. Khoshgoftaar, “Survey on categorical data for [225] D. Xu, O. Cirit, R. Asadi, Y. Sun, and W. Wang, “Mixture of in-context
+ neural networks,” J. Big Data, vol. 7, no. 1, 2020, Art. no. 28. prompters for tabular PFNs,” 2024, arXiv:2405.16156.
+[198] L. Breiman, “Random forests,” Mach. Learn., vol. 45, pp. 5–32, 2001. [226] M. Koshil, T. Nagler, M. Feurer, and K. Eggensperger, “Towards local-
+[199] Z.-H. Zhou and Y. Jiang, “NeC4. 5: Neural ensemble based C4. ization via data embedding for tabPFN,” in Proc. Int. Conf. Neural Inf.
+ 5,” IEEE Trans. Knowl. data Eng., vol. 16, no. 6, pp. 770–773, Process. Syst. Workshop, 2024.
+ Jun. 2004. [227] Y. Zeng, W. Kang, and A. C. Mueller, “Tabflex: Scaling tabular learning
+[200] T. Hastie and R. Tibshirani, “Generalized additive models,” Statist. Sci., to millions with linear attention,” in Proc. Int. Conf. Neural Inf. Process.
+ vol. 1, no. 3, pp. 297–310, 1986. Syst. Workshop, 2024.
+[201] Y. Yamada, O. Lindenbaum, S. Negahban, and Y. Kluger, “Feature [228] S. K. Baur and S. Kim, “Exploration of autoregressive models for inselection using stochastic gates,” in Proc. Int. Conf. Mach. Learn., 2020, context learning on tabular data,” in Proc. Int. Conf. Neural Inf. Process.
+ pp. 10648–10659. Syst. Workshop, 2024.
+[202] J. Yang, O. Lindenbaum, and Y. Kluger, “Locally sparse neural networks [229] Y. Sun, X. Wen, S. Zheng, X. Jia, and J. Bian, “Scaling generative
+ for tabular biomedical data,” in Proc. Int. Conf. Mach. Learn., 2022, pp. tabular learning for large language models,” in Proc. Int. Conf. Neural
+ 25123–25153. Inf. Process. Syst. Workshop, 2024.
+[203] R. Agarwal et al., “Neural additive models: Interpretable machine learn- [230] H.-T. Cheng et al., “Wide & deep learning for recommender sysing with neural nets,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2021, tems,” in Proc. 1st Workshop Deep Learn. Recommender Syst., 2016,
+ pp. 4699–4711. pp. 7–10.
+[204] W.-Y. Wang, W.-W. Du, D. Xu, W. Wang, and W.-C. Peng, “A survey on [231] M. Jayawardhana et al., “Transformers boost the performance of decision
+ self-supervised learning for non-sequential tabular data,” Mach. Learn., trees on tabular data across sample sizes,” 2025, arXiv:2502.02672.
+ vol. 114, no. 1, 2025, Art. no. 16. [232] Y. Wang et al., “Prior-fitted networks scale to larger datasets when treated
+[205] Y. Gal and Z. Ghahramani, “Dropout as a Bayesian approximation: as weak learners,” 2025, arXiv:2503.01256.
+ Representing model uncertainty in deep learning,” in Proc. Int. Conf. [233] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. Int.
+ Mach. Learn., 2016, pp. 1050–1059. Conf. Des. Mater., 2008, pp. 413–422.
+[206] H.-J. Ye, D.-C. Zhan, Y. Jiang, and Z.-H. Zhou, “Rectify heterogeneous [234] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: Identifying
+ models with semantic mapping,” in Proc. Int. Conf. Mach. Learn., 2018, density-based local outliers,” in Proc. 26th ACM SIGKDD Int. Conf.
+ pp. 5630–5639. Knowl. Discov. Data Mining, 2000, pp. 93–104.
+[207] H.-J. Ye, L. Han, and D.-C. Zhan, “Revisiting unsupervised meta-learning [235] O. Lindenbaum, Y. Aizenbud, and Y. Kluger, “Transductive and inductive
+ via the characteristics of few-shot tasks,” IEEE Trans. Pattern Anal. outlier detection with robust autoencoders,” in Proc. Conf. Uncertainty
+ Mach. Intell., vol. 45, no. 3, pp. 3721–3737, Mar. 2023. Artif. Intell., 2024, pp. 2271–2293.
+[208] Y. Liu et al., “RoBERTa: A robustly optimized BERT pretraining ap- [236] A. Rozner, B. Battash, H. Li, L. Wolf, and O. Lindenbaum, “Anomaly
+ proach,” 2019, arXiv:1907.11692. detection with variance stabilized density estimation,” in UAI, 2024, pp.
+[209] F. Mahdisoltani, J. Biega, and F. M. Suchanek, “YAGO3: A knowledge 3121–3137.
+ base from multilingual Wikipedias,” in Proc. Conf. Innov. Data Syst. Res., [237] T. Shenkar and L. Wolf, “Anomaly detection for tabular data with internal
+ 2015, pp. 177–185. contrastive learning,” in Proc. Int. Conf. Learn. Representations, 2022.
+[210] P. Yin, G. Neubig, W. tau Yih, and S. Riedel, “Tabert: Pretraining for [238] S. Han, X. Hu, H. Huang, M. Jiang, and Y. Zhao, “Adbench: Anomaly
+ joint understanding of textual and tabular data,” in Proc. Annu. Meeting detection benchmark,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2022,
+ Assoc. Comput. Linguistics, 2020, pp. 8413–8426. pp. 32142–32159.
+[211] S.-Y. Liu, Q. Zhou, and H.-J. Ye, “Make still further progress: Chain of [239] A. Li et al., “Anomaly detection of tabular data using LLMs,” 2024,
+ thoughts for tabular data leaderboard,” 2025, arXiv:2505.13421. arXiv:2406.16308.
+[212] M. Chen, L. Shen, Z. Li, X. J. Wang, J. Sun, and C. Liu, “Visionts: Visual [240] C. Lee, J. Kim, and N. Park, “CoDi: Co-evolving contrastive diffusion
+ masked autoencoders are free-lunch zero-shot time series forecasters,” models for mixed-type tabular synthesis,” in Proc. Int. Conf. Mach.
+ 2024, arXiv:2408.17253. Learn., 2023, pp. 18940–18956.
+[213] Z. Li, S. Li, and X. Yan, “Time series as images: Vision transformer for [241] R. Tu, Z. Senane, L. Cao, C. Zhang, H. Kjellström, and G. E. Henter,
+ irregularly sampled time series,” in Proc. Int. Conf. Neural Inf. Process. “Causality for tabular data synthesis: A high-order structure causal
+ Syst., 2023, pp. 49187–49204. benchmark framework,” CoRR, vol. 2024, arXiv:2406.08311.
+[214] D. Ha, A. M. Dai, and Q. V. Le, “Hypernetworks,” in Proc. Int. Conf. [242] R. Feinman and B. M. Lake, “Generating new concepts with hybrid
+ Learn. Representations, 2017. neuro-symbolic models,” 2020, arXiv:2003.08978.
+[215] W.-L. Chao, H.-J. Ye, D.-C. Zhan, M. E. Campbell, and K. Q. [243] B. M. Greenwell et al., “pdp: An R package for constructing partial
+ Weinberger, “Revisiting meta-learning as supervised learning,” 2020, dependence plots,” R J., vol. 9, no. 1, 2017, Art. no. 421.
+ arXiv:2002.00573. [244] K.-Y. Chen, P.-H. Chiang, H.-R. Chou, C.-S. Chen, and D. H. Chang,
+[216] J. Peters, D. Janzing, and B. Schölkopf, Elements of Causal Inference: “DOFEN: Deep oblivious forest ensemble,” in Proc. Int. Conf. Neural
+ Foundations and Learning Algorithms. Cambridge, MA, USA: MIT Inf. Process. Syst., 2024, pp. 44624–44677.
+ Press, 2017. [245] J. Gardner, Z. Popovic, and L. Schmidt, “Benchmarking distribution shift
+[217] R. Neal, Bayesian Learning for Neural Networks. Berlin, Germany: in tabular data with tableshift,” in Proc. Int. Conf. Neural Inf. Process.
+ Springer, 1996. Syst., 2024, pp. 53385–53432.
+[218] T. Iwata and A. Kumagai, “Meta-learning of semi-supervised [246] C. Kim, T. Kim, S. Woo, J. Y. Yang, and E. Yang, “Adaptable: Test-time
+ learning from tasks with heterogeneous attribute spaces,” 2023, adaptation for tabular data via shift-aware uncertainty calibrator and label
+ arXiv:2311.05088. distribution handler,” 2024, arXiv:2407.10784.
+[219] J. Ma, A. Dankar, G. Stein, G. Yu, and A. L. Caterini, “TabPFGen - [247] S. Sagawa, P. W. Koh, T. B. Hashimoto, and P. Liang, “Distributionally
+ tabular data generation with tabPFN,” 2024, arXiv:2406.05216. robust neural networks,” in Proc. Int. Conf. Learn. Representations,
+[220] S. Ruiz-Villafranca, J. R. Gómez, J. M. C. Gómez, J. C. Mondéjar, 2020.
+ and J. L. Martıńez, “A tabPFN-based intrusion detection system for the [248] H.-R. Cai and H.-J. Ye, “Understanding the limits of deep tabular
+ industrial Internet of Things,” J. Supercomputing, vol. 80, no. 14, pp. methods with temporal shift,” in Proc. Int. Conf. Mach. Learn., 2025,
+ 20080–20117, 2024. pp. 6366–6386.
+6508 IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 6, JUNE 2026
+
+[249] H.-R. Cai and H.-J. Ye, “Feature-aware modulation for learning from Jun-Peng Jiang is currently working toward the PhD degree with the National
+ temporal tabular data,” in Proc. Int. Conf. Neural Inf. Process. Syst., Key Lab for Novel Software Technology, School of Artificial Intelligence,
+ 2025. Nanjing University, China. His research interests include primarily in tabular
+[250] X. Guo, Y. Quan, H. Zhao, Q. Yao, Y. Li, and W. Tu, “TabGNN: data learning, multimodal learning, and multimodal large language models.
+ Multiplex graph neural network for tabular data prediction,” 2021,
+ arXiv:2108.09127.
+[251] W. Huang, “Multimodal contrastive learning and tabular attention for
+ automated Alzheimer’s disease prediction,” in Proc. IEEE Int. Conf.
+ Comput. Vis. Workshops, 2023, pp. 2465–2474.
+[252] S. Du, S. Zheng, Y. Wang, W. Bai, D. P. O’Regan, and C. Qin, “Tip: Si-Yang Liu is currently working toward the MSc degree with the National Key
+ Lab for Novel Software Technology, School of Artificial Intelligence, Nanjing
+ Tabular-image pre-training for multimodal classification with incomplete
+ University, China.
+ data,” in Proc. Eur. Conf. Comput. Vis., 2024, pp. 478–496.
+[253] A. Gilani, S. R. Qasim, I. Malik, and F. Shafait, “Table detection using
+ deep learning,” in Proc. 14th IAPR Int. Conf. Document Anal. Recognit.,
+ 2017, pp. 771–776.
+[254] M. Li, L. Cui, S. Huang, F. Wei, M. Zhou, and Z. Li, “Tablebank: Table
+ benchmark for image-based table detection and recognition,” in Proc.
+ Lang. Resour. Eval. Conf., 2020, pp. 1918–1925. Hao-Run Cai is currently working toward the PhD degree with the National Key
+[255] S. Schreiber, S. Agne, I. Wolf, A. Dengel, and S. Ahmed, “Deepdesrt: Lab for Novel Software Technology, School of Artificial Intelligence, Nanjing
+ Deep learning for detection and structure recognition of tables in docu- University, China.
+ ment images,” in Proc. IAPR Int. Conf. Document Anal. Recognit., 2017,
+ pp. 1162–1167.
+[256] M. s. Kasem et al., “Deep learning for table detection and structure
+ recognition: A survey,” ACM Comput. Surv., vol. 56, no. 12, pp. 1–41,
+ 2024.
+[257] N. Jin, J. Siebert, D. Li, and Q. Chen, “A survey on table question answering: Recent advances,” in Proc. China Conf. Knowl. Graph Semantic Qi-Le Zhou received the MSc degree from the National Key Lab for Novel
+ Comput., 2022, pp. 174–186. Software Technology, School of Artificial Intelligence, Nanjing University,
+[258] J.-P. Jiang, T. Zhou, D.-C. Zhan, and H.-J. Ye, “Compositional condition China.
+ question answering in tabular understanding,” in Proc. Int. Conf. Mach.
+ Learn., 2025, pp. 27831–27850.
+[259] J.-P. Jiang et al., “Multimodal tabular reasoning with privileged structured
+ information,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2025.
+[260] S. Appalaraju, B. Jasani, B. U. Kota, Y. Xie, and R. Manmatha, “Doc- Han-Jia Ye received the PhD degree in computer science from Nanjing Uniformer: End-to-end transformer for document understanding,” in Proc.
+ versity, China, in 2019. He joined the School of Artificial Intelligence, Nanjing
+ IEEE Int. Conf. Comput. Vis., 2021, pp. 993–1003.
+ University as a faculty member in the same year and currently holds the position
+[261] J. Wan et al., “Omniparser: A unified framework for text spotting key inof associate professor. His research focuses primarily on machine learning, with
+ formation extraction and table recognition,” in Proc. IEEE Conf. Comput.
+ interests in representation learning, model reuse, and meta-learning. He has
+ Vis. Pattern Recognit., 2024, pp. 15641–15653.
+ served as the Tutorial Co-Chair for SDM 2023. Additionally, he participates as
+[262] N. Deng et al., “Tables as images? Exploring the strengths and limiarea chairs in conferences, such as ICML, NeurIPS, and CVPR, and others.
+ tations of LLMs on multimodal representations of tabular data,” 2024,
+ arXiv:2402.12424v3.
+[263] X. Fang et al., “Large language models (LLMs) on tabular data: Prediction, generation, and understanding–A survey,” 2024, arXiv:2402.17944.

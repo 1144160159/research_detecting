@@ -1,0 +1,1865 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [375] Bipartite Graph Anomaly Detection With Contrastive Learning
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：375
+题名：Bipartite Graph Anomaly Detection With Contrastive Learning
+年份：2025
+DOI：10.1109/tcss.2025.3572961
+来源：IEEE Transactions on Computational Social Systems
+PDF：paper/10.1109_TCSS.2025.3572961.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：图学习、知识图谱与威胁情报、入侵检测与网络异常检测
+相关性：中相关，分数 5
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\375.txt
+- 原始字符数：77368
+- 本次发送字符数：77368
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+5362
+
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 6, DECEMBER 2025
+
+Bipartite Graph Anomaly Detection With
+Contrastive Learning
+Pinlyu Zhou , Jiayang Wu , and Wensheng Gan , Member, IEEE
+
+Abstract—Bipartite graphs are widely used to model social
+fintech interactions, particularly user-transaction and investorproject relationships. The rapid shift toward digital financial
+ecosystems has heightened the need for secure and reliable
+artificial intelligence (AI) models to detect anomalies. Existing
+graph neural network (GNN) models for anomaly detection
+often concentrate on homogeneous graphs and address node
+or edge anomalies, limiting their ability to capture the full
+complexity of bipartite interactions. These limitations reduce
+their effectiveness in protecting data and trust within social
+fintech applications. To overcome these challenges, we propose
+the bipartite graph anomaly detection with contrastive learning
+(CL-BGAD), an innovative framework designed to enhance AI
+model security by comprehensively capturing intricate interactions in bipartite graphs. The encoder features a node attention
+mechanism that prioritizes critical interactions among nodes,
+while the structure decoder leverages contrastive learning to
+discern between normal and anomalous connections. This dual
+strategy ensures robust anomaly detection at both the node
+and edge levels, contributing to greater adaptability in social
+fintech applications. Experimental results validate that CLBGAD consistently outperforms state-of-the-art baselines across
+diverse real-world datasets, reinforcing the model’s capability to
+maintain secure and responsible AI-driven systems. The source
+code and datasets are publicly available at https://github.com/
+DSI-Lab1/CL-BGAD.
+Index Terms—Anomaly detection, bipartite graphs, contrastive
+learning, graph neural networks (GNNs).
+
+I. INTRODUCTION
+
+T
+
+HE rapid advancement of financial technology (fintech)
+has transformed financial services, changing interactions
+from physical to digital, with a strong emphasis on convenience and accessibility [1]. Social fintech, a subset of fintech
+focused on fostering trust, social responsibility, and sustainable
+development, has emerged as a key area of innovation. Platforms in this domain facilitate activities, such as peer-to-peer
+lending, crowdfunding, social impact investing, and financial
+education, promoting inclusivity and social equity. However,
+
+Received 1 December 2024; revised 25 February 2025 and 8 May 2025;
+accepted 14 May 2025. Date of publication 17 June 2025; date of current
+version 3 December 2025. This work was supported in part by the National
+Natural Science Foundation of China under Grant 62272196, and in part by
+the Guangzhou Basic and Applied Basic Research Foundation under Grant
+2024A04J9971. (Corresponding author: Wensheng Gan.)
+The authors are with the College of Cyber Security, Jinan University, Guangzhou 510632, China (e-mail: pinlvzhou@gmail.com; csjywu1@
+gmail.com; wsgan001@gmail.com).
+Digital Object Identifier 10.1109/TCSS.2025.3572961
+
+Fig. 1. Example of a real-world interaction network and its bipartite graph
+representation. Left: real-world network with users and products. Right:
+bipartite graph where circles represent users (red for abnormal, orange for
+normal) and squares represent products, with red and black edges indicating
+abnormal and normal interactions.
+
+these advancements bring the challenge of ensuring artificial
+intelligence (AI) model security, addressing fraud, safeguarding
+data privacy, and maintaining public trust [2]. This transition
+toward digitally responsible financial ecosystems requires adaptive AI solutions for anomaly detection to secure these complex
+networks. In social fintech, interactions are often represented
+as bipartite graphs to capture relationships between distinct
+entities, such as users and transactions, or investors and financial products [3], [4]. For example, peer-to-peer lending platforms can model user-borrower interactions in bipartite graphs,
+where anomalies might signify fraud or misuse. As shown in
+Fig. 1, real-world interactions can be abstracted into a bipartite
+graph, with anomalies (red edges) indicating behaviors that
+deviate from normal patterns (black edges), thereby supporting
+AI model security, social responsibility, and sustainable fintech
+development.
+Despite the promise of graph-based anomaly detection, existing methods often struggle to address the unique structural
+complexities of bipartite graphs [5], [6]. Traditional GNNs,
+optimized for homogeneous or heterogeneous graphs, tend to
+focus on either node or edge anomalies, potentially missing
+crucial interdependencies necessary for detecting fraud in social
+fintech [7]. To enhance AI model security and promote sustainable practices, methods must capture irregularities at both node
+and edge levels within bipartite structures.
+Attention mechanisms have emerged as essential tools in
+graph-based anomaly detection for social fintech [2], enabling
+the model to assign different levels of importance to various interactions. This capability is particularly valuable in
+high-stakes applications, such as financial fraud detection. In
+
+2329-924X © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+
+ZHOU et al.: BIPARTITE GRAPH ANOMALY DETECTION WITH CONTRASTIVE LEARNING
+
+these cases, certain transactions, such as large transfers or
+unusual trading patterns, require special attention. Traditional
+GNNs typically assume all interactions are of equal importance, which can lead to the model overlooking critical signals.
+Self-attention mechanisms address this limitation by dynamically weighting interactions based on their contextual relevance,
+thereby enhancing the model’s ability to focus on key aspects
+for identifying anomalies in socially responsible fintech applications [8]. This is crucial for maintaining AI model security
+within social fintech, where accurate anomaly detection is foundational for trust, transparency, and sustainability.
+Contrastive learning enhances the robustness of anomaly detection models by distinguishing between normal and anomalous patterns through relational comparisons in the embedding space [9]. Unlike traditional methods that focus solely
+on feature values, contrastive learning emphasizes the relative
+differences between samples, making it particularly effective in
+detecting subtle fraud signals in bipartite graphs where anomalies may not be obvious as outliers. In applications such as
+social fintech, fraudulent behavior often appears to be slightly
+different from typical transaction patterns. Contrastive learning
+helps the model identify these deviations more precisely, leading to improved AI model security [10]. Recent studies also
+show that contrastive learning improves the uniformity of node
+embeddings by establishing a contrastive space between positive and negative samples. This approach helps the model better
+distinguish meaningful patterns from frequent, less informative
+interactions, which is a common challenge in large-scale financial networks [11]. While traditional contrastive learning often
+uses data augmentation to create different views of the same
+data, these transformations can disrupt the inherent structure
+of bipartite graphs and introduce noise, which is problematic
+for anomaly detection tasks. In contrast, our approach uses
+random sampling to generate contrastive pairs, which maintains
+the original graph structure and provides meaningful learning
+signals. This strategy helps preserve the key relationships between nodes, which is essential for accurately detecting subtle
+anomalies in financial transactions [12].
+In this article, we introduce CL-BGAD, a novel framework
+for bipartite graph anomaly detection that combines node attention mechanisms with contrastive learning. The framework
+consists of three key components: an encoder with node attention, a feature decoder for reconstructing node and edge
+features, and a structure decoder with a contrastive learning
+module. The encoder uses node attention to aggregate information from neighboring nodes based on their contextual importance, enabling effective capture of suspicious interaction
+patterns. The feature decoder aims to accurately reconstruct
+the original node and edge features from their latent representations, where reconstruction errors can serve as indicators of
+potential anomalies. In the structure decoder, random sampling
+strategically selects positive pairs from existing edges and negative pairs from unconnected nodes, enabling the model to learn
+the intrinsic patterns that differentiate normal from anomalous
+interactions. This sampling-based contrastive learning serves
+two key purposes: 1) it helps the model distinguish genuine
+transaction patterns from fraudulent ones by comparing their
+
+5363
+
+structural and feature-level differences; and 2) it ensures the
+learned embeddings capture the natural distribution of financial interactions without artificial perturbations [13]. The structure decoder utilizes random sampling for contrastive learning
+to preserve the graph’s inherent structure, avoiding potential
+distortions from data augmentation. This design enhances the
+model’s ability to distinguish between normal and anomalous
+node pairs while maintaining uniformly distributed embeddings
+through InfoNCE loss optimization [14]. The integration of
+attention mechanisms, feature reconstruction, and contrastive
+learning enables CL-BGAD to effectively capture both local interaction patterns and global structural information. This comprehensive approach provides reliable anomaly detection for
+social fintech applications where security and trust are essential.
+The primary contributions of this article are as follows.
+1) We propose CL-BGAD, an unsupervised anomaly detection model tailored for bipartite graphs, addressing both
+node and edge anomalies to enhance AI model security
+in social fintech.
+2) We introduce a node attention mechanism that improves
+the encoder’s ability to capture significant interactions,
+facilitating more reliable and transparent detection in social fintech networks.
+3) We incorporate contrastive learning in the decoder to
+improve model generalization, particularly in adapting
+to evolving fraud patterns, thus supporting sustainable
+development goals.
+4) Our model is validated on real-world datasets, demonstrating its superior performance over state-of-the-art
+methods and its effectiveness.
+The remainder of this article is organized as follows.
+Section II reviews the literature related to anomaly detection
+in bipartite graphs. Section III introduces preliminary concepts
+and definitions essential for understanding our framework.
+Section IV details the proposed method, including the encoder–
+decoder architecture and contrastive learning approach.
+Section V presents the experimental settings and analyzes the
+results. Finally, Section VI concludes the article and suggests
+directions for future research.
+II. RELATED WORK
+A. Anomaly Detection in Graphs for Social Fintech
+Anomaly detection is critical in enhancing the security and
+reliability of social fintech applications, contributing to sustainable development by building trust in digital financial ecosystems [15]. The unique requirements of social fintech emphasize
+transparency, accountability, and social responsibility. These
+requirements demand robust mechanisms to detect fraudulent
+activities that compromise both financial integrity and user
+trust. Traditional approaches to anomaly detection in graphs,
+including statistical, supervised, and unsupervised methods,
+have been widely applied in sectors like finance and healthcare [16]. Statistical models, such as Gaussian mixture models
+(GMMs) [17], often assume a fixed data distribution, which
+can limit their applicability in dynamic financial systems where
+relationships continuously evolve. Supervised approaches, such
+
+5364
+
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 6, DECEMBER 2025
+
+as support vector machines (SVMs) [18] and decision trees,
+require labeled data, posing a challenge in anomaly detection
+contexts where fraudulent events are rare and costly to label
+[6]. These methods often lack the adaptability needed in social
+fintech, where fraud tactics and user behaviors evolve rapidly,
+underscoring the need for flexible, scalable solutions.
+Unsupervised approaches, particularly clustering algorithms
+and autoencoders, offer greater flexibility by identifying anomalies based on inherent data distributions without labeled samples. However, these methods often struggle with complex,
+high-dimensional graphs commonly found in social fintech,
+where intricate user-transaction relationships must be preserved
+to ensure accurate anomaly detection. Graph-based models,
+such as graph convolutional networks (GCNs) [19] and graph
+attention networks (GATs) [20], leverage neighborhood information to capture deviations in node behavior, providing a
+foundation for detecting anomalies in homogeneous graphs
+[21]. However, GCNs and GATs generally assume uniform
+properties across nodes and edges, limiting their effectiveness
+in the bipartite graphs characteristic of social fintech applications, where nodes represent distinct entities such as users and
+transactions [22]. Accurate fraud detection is crucial for social
+fintech platforms to maintain both security and user trust while
+fulfilling their social responsibilities.
+Incorporating attention mechanisms has proven to be an
+effective enhancement for anomaly detection in complex
+graph structures [2]. By dynamically assigning weights to
+interactions, attention mechanisms help models prioritize highimportance transactions, such as large-scale and irregular financial activities, over routine exchanges. This approach aligns
+with the ethical and social priorities of social fintech. In highdimensional graph structures, attention mechanisms allow for
+adaptive aggregation from neighboring nodes, enhancing the
+detection of subtle irregularities that might indicate fraud. This
+capacity for selective focus aligns with social fintech’s demand
+for AI-driven technologies that can adapt to changing fraud
+patterns while fostering a sustainable and responsible financial
+ecosystem [23].
+B. Anomaly Detection in Bipartite Graphs for Sustainable
+Social Fintech
+Bipartite graphs model interactions between two distinct
+sets of nodes, such as users and products. In social fintech applications, these graphs are essential for representing
+user-transaction and investor-project relationships, enabling effective detection of fraudulent behaviors at both node and
+edge levels [24]. Traditional embedding techniques, such as
+DeepWalk [25] and Node2vec [26], as well as heterogeneous
+graph models like Metapath2vec [27], have limitations in fully
+capturing the unique structural constraints of bipartite graphs,
+particularly in applications where maintaining data integrity is
+critical for trust-building [28]. This limitation has led to the
+development of specialized methods tailored to bipartite graph
+structures, especially in financial applications such as fraud
+detection and credit scoring, which are essential for sustaining
+reliable financial systems.
+
+Contrastive learning has recently gained prominence as an
+effective approach for enhancing anomaly detection in bipartite
+graphs, especially within the context of social fintech [29]. By
+learning from positive and negative sample pairs, contrastive
+learning enables models to capture relative patterns that distinguish between normal and anomalous behaviors [30]. Notable bipartite graph models, including BiGI [31] and general
+contrastive frameworks like SimGCL [12] and COIN [32],
+leverage InfoNCE loss [33] to improve representation learning.
+While BiGI [31] focuses on mutual information maximization
+between node representations, it lacks attention mechanisms
+for capturing interaction importance. SimGCL [12] employs
+simple graph augmentation strategies but does not specifically
+address bipartite structures. CONAD [34] effectively utilizes
+contrastive learning for anomaly detection and shows strong
+performance on certain datasets. However, it was originally
+designed for homogeneous graphs rather than addressing the
+inherent heterogeneity in bipartite structures where different
+node types represent distinct entities. While it performs well on
+some bipartite datasets, particularly Wikipedia, our experiments
+suggest that a specialized approach can further enhance detection capabilities for bipartite graph anomalies across diverse
+scenarios, especially in capturing the unique interaction patterns
+between different entity types, such as users and transactions
+in financial fraud detection contexts. COIN [32] proposes cocluster infomax but does not consider the joint optimization
+of node and edge anomalies. In contrast, CL-BGAD integrates
+node attention with contrastive learning specifically designed
+for bipartite graphs, enabling more effective anomaly detection
+at both node and edge levels. A key theoretical advantage of
+our approach lies in the strategic use of random sampling for
+contrastive pairs rather than relying on synthetic graph augmentations. While augmentation techniques often modify the original graph structure by adding, removing, or perturbing edges
+and features, our random sampling method preserves the authentic bipartite structure—a critical requirement for financial
+transaction networks where structural integrity directly impacts
+anomaly detection accuracy. This preservation ensures that the
+learned representations capture real transaction patterns without
+introducing artificial distortions that could mask subtle fraudulent behaviors. In particular, random sampling of contrastive
+pairs, as implemented in various models, preserves the intrinsic
+structure of bipartite graphs, which is crucial for accurately
+detecting anomalies in social fintech applications where even
+minor structural distortions can impact model performance and
+erode user trust [35]. Unlike traditional graph augmentation
+methods, which may introduce noise or inaccuracies, random
+sampling in contrastive learning maintains the authentic structure of relationships, making it particularly suitable for highstakes applications such as fraud detection and risk assessment. Ensuring unbiased and fair representations is crucial in
+social fintech to prevent the exacerbation of existing social
+inequalities. Contrastive learning contributes to this goal by
+creating a balanced embedding space that minimizes popularity
+bias [36]. Node attention mechanisms have also emerged as
+indispensable tools for anomaly detection in graph structures. They dynamically prioritize significant activities, such as
+
+ZHOU et al.: BIPARTITE GRAPH ANOMALY DETECTION WITH CONTRASTIVE LEARNING
+
+unusually large or high-frequency transactions, ensuring that
+critical interactions receive higher weights in the embedding
+process. In social fintech contexts, attention mechanisms enhance the model’s sensitivity to emergent fraud patterns and
+changing user behaviors, which is essential for fostering a
+safe and accountable environment [23]. Furthermore, recent advancements have demonstrated that attention-based models improve detection accuracy in high-dimensional, heterogeneous
+graph data by allowing adaptive aggregation from neighboring
+nodes. This approach supports the nuanced understanding of
+complex interactions, thereby facilitating more precise anomaly
+detection [8]. While existing attention-based approaches mainly
+focus on homogeneous graphs, CL-BGAD extends attention
+mechanisms to bipartite structures by considering the distinct
+roles of different node types and their interactions. Recent
+research on contrastive learning and attention mechanisms reflects a trend toward increasingly sophisticated, context-aware
+approaches to anomaly detection in bipartite graphs. By preserving the graph’s natural structure and focusing on significant
+interactions, these methodologies directly contribute to the objectives of AI-driven social responsibility and ethical financial
+practices. Addressing the unique challenges posed by social
+fintech, these advanced methods support the sustainable development of secure, trustworthy digital financial ecosystems.
+
+5365
+
+Definition 1 (Bipartite Graph Structure [31]): A bipartite
+graph structure consists of two disjoint sets of nodes, U and
+V , representing different entities. The edge set E represents the
+connections between these nodes. Formally, the bipartite graph
+is defined as G = (U, V, E), where E ⊆ U × V represents the
+edge set, with adjacency matrix element Aij = 1 indicating an
+edge exists between nodes ui ∈ U and vj ∈ V , and Aij = 0
+otherwise.
+Definition 2 [Graph Convolution Network (GCN)] [37]: A
+GCN aggregates features from neighboring nodes and edges in
+a bipartite graph through multiple layers. For the kth layer, the
+feature matrices are defined as
+QU ∈ R|U |×d ,
+
+QV ∈ R|V |×d ,
+
+The graph convolution operation updates the node and edge
+representations as follows:
+⎛ ⎛
+
+
+U
+Zi = σ ⎝BN ⎝
+Aij QVj Wuv +
+QEi,j We
+j∈N (i)
+
+⎞⎞
+
+ei,j ∈M(i)
+
+⎠⎠
++ QU
+i Wu
+⎛
+
+⎛
+
+ZjV = σ ⎝BN ⎝
+
+
+
+Aji QU
+i Wvu +
+
+(1)
+
+
+QEi,j We
+
+ei,j ∈M(j)
+
+i∈N (j)
+
+⎞⎞
+
+III. PRELIMINARIES AND DEFINITIONS
+The primary objective of this article is to enhance AI model
+security in social fintech by detecting anomalous patterns within
+bipartite graphs, focusing on both node and edge anomalies.
+In social fintech contexts, including e-commerce, peer-to-peer
+lending, and crowdfunding platforms, these anomalies may indicate fraudulent activities, irregular transactions, or abnormal
+user behaviors that could compromise the integrity and trustworthiness of the platform. Detecting these anomalies is crucial
+for ensuring the security of AI-driven systems in Fintech, as
+well as for promoting responsible, transparent, and sustainable
+financial practices. For instance, in peer-to-peer lending platforms, node anomalies typically appear as users with suspicious
+borrowing or lending behaviors. Edge anomalies, on the other
+hand, represent unusual transaction patterns that deviate from
+normal platform activities. Early detection of these anomalies
+helps maintain platform security and user trust, and it is crucial
+for sustainable social fintech development.
+Problem statement. Given a bipartite graph G = (U, V, E),
+where U and V represent two distinct types of entities (e.g.,
+users and transactions, or investors and projects), the task is to
+assign anomaly scores to both nodes and edges. For u ∈ U and
+v ∈ V , node anomalies are detected, such as potentially fraudulent users or high-risk projects. For e ∈ E, edge anomalies, such
+as suspicious transactions and irregular interactions, are identified. This scoring process differentiates abnormal patterns from
+regular interactions, providing a robust mechanism for fraud
+detection and safeguarding the AI model’s security within social
+fintech applications. Through the detection of these anomalies,
+our model enhances the resilience and reliability of social fintech platforms, contributing to secure and socially responsible
+AI-driven systems that support sustainable financial practices.
+
+QE ∈ R|E|×d .
+
++ QVj Wv ⎠⎠ .
+
+(2)
+
+For edge feature updates, we first concatenate the features of
+connected nodes and the edge itself, and then apply a transformation
+
+
+
+E
+V
+E
+Zi,j
+.
+(3)
+= σ BN We · [QU
+i ||Qj ||Qi,j ] + be
+Here, Aij represents the adjacency matrix element between
+nodes ui ∈ U and vj ∈ V . N (i) and N (j) denote neighboring
+node sets, while M(i) and M(j) denote connected edge sets.
+Wuv , Wvu , We , Wu , and Wv are learnable weight matrices
+shared across all nodes in the same set within each layer,
+σ(·) is a ReLU activation function, and BN denotes batch
+normalization. The symbol || represents the feature concatenation operation. The resulting representations Z U ∈ R|U |×d ,
+Z V ∈ R|V |×d , and Z E ∈ R|E|×d are the updated embeddings,
+where d is the embedding dimension.
+Definition 3 (Attention Mechanism in the Encoder [38]):
+The attention mechanism in the encoder dynamically assigns
+weights to neighboring nodes based on their relevance. The
+attention coefficient αij between node ui and its neighbor vj is
+computed as
+αij =
+
+exp(LeakyReLU(a [W hi W hj ]))
+
+k∈N (ui ) exp(LeakyReLU(a [W hi W hk ]))
+
+(4)
+
+where W is the learnable weight matrix, hi and hj are the
+feature representations of nodes ui and vj , and a is the attention
+vector. The updated node representation hi is as follows:
+⎞
+⎛
+
+(5)
+hi = σ ⎝
+αij W hj ⎠ .
+j∈N (ui )
+
+5366
+
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 6, DECEMBER 2025
+
+The attention mechanism is used exclusively in the encoder, not
+in the decoders.
+Definition 4 (Feature Reconstruction [39]): The feature
+decoder in CL-BGAD reconstructs the original feature vectors
+QU , QV , and QE from their latent representations Z U , Z V , and
+Z E . The reconstruction is achieved as follows:
+X U = g(Z U ),
+
+X V = g(Z V ),
+
+X E = g(Z E )
+
+(6)
+
+where g(·) is a series of transformations (e.g., graph convolutions and fully connected layers) that map the latent representations back to the original feature space.
+Definition 5 (Contrastive Learning [33]): Contrastive learning distinguishes between positive pairs (i.e., existing edges
+/ E)
+(ui , vj ) ∈ E) and negative pairs (i.e., absent edges (ui , vk ) ∈
+to learn effective representations for anomaly detection. The
+InfoNCE loss is given by
+Lcont = − log
+
+exp (simpos /τ )
+exp (simpos /τ ) + exp (simneg /τ )
+
+(7)
+
+where simpos and simneg are the cosine similarities for positive
+and negative pairs, respectively, and τ is a temperature parameter controlling the concentration level of the distribution.
+
+3) maintaining temporal consistency in sequential interactions.
+The final sample sizes are determined to balance computational
+feasibility with statistical significance. The initialization of features in our model is crucial for both the encoder and decoder
+stages, especially when handling graph-structured data. The
+input bipartite graph G = (U, V, E) consists of two disjoint node
+sets U (users) and V (products), where edges E ⊆ U × V represent their interactions. Initial features for each node set (QU for
+users and QV for products) are derived from pretrained textual
+embeddings, such as those generated by a Sentence Transformer model [40]. Specifically, user nodes receive embeddings based on interaction texts (e.g., reviews and comments),
+while product nodes use embeddings reflecting descriptions or
+metadata. To ensure feature consistency and improve model
+convergence, all node and edge features are standardized. Using
+a StandardScaler [41], each feature is normalized by removing
+its mean and scaling to unit variance. This standardization step
+is essential for effective contrastive learning and improves the
+stability of graph convolution operations. Edge features, which
+encode interaction attributes, are similarly standardized to enhance structural learning within the decoder.
+B. Encoder With Node Attention
+
+IV. PROPOSED METHOD
+We propose CL-BGAD, a contrastive learning framework
+designed for anomaly detection in bipartite graphs that incorporates both structural information and attribute features. This
+framework is developed to detect anomalies that could compromise platform trust and security, such as suspicious user
+behaviors, fraudulent transactions, and irregular project interactions. CL-BGAD’s robust detection capabilities support socially
+responsible financial operations by identifying potential threats
+in user-transaction and user-investor relationships, which are
+central to social fintech applications. As illustrated in Fig. 2,
+the CL-BGAD framework includes three key components: an
+encoder with a node attention mechanism, a feature decoder,
+and a structure decoder with a contrastive learning module.
+A. Feature Transformation
+Our experimental data are collected from four widely used
+public datasets: Wikipedia’s edit history data from the Stanford
+Network Analysis Project (SNAP),1 Reddit’s user-subreddit interaction data, and Amazon’s product review datasets (Finefoods and Movies). For Wikipedia and Reddit, we collect user
+behavior data, including editing patterns and community interactions, with timestamps and detailed action features. The
+Amazon datasets contain user-product interactions through reviews, including review texts, ratings, and timestamps. These
+datasets are chosen for their diverse characteristics in terms of
+interaction patterns and feature distributions. The data collection process ensures data quality through several measures: 1)
+filtering out users and items with too few interactions to ensure
+sufficient behavioral patterns; 2) removing duplicate interactions and spam entries identified by platform-specific rules; and
+1 http://snap.stanford.edu/jodie/#datasets
+
+The encoder in CL-BGAD plays a pivotal role in transforming the input bipartite graph’s node and edge features into expressive latent representations. By employing a graph attention
+mechanism, the encoder dynamically assigns importance to
+neighboring nodes, effectively capturing the intricate relationships essential for anomaly detection. The input to the encoder
+includes node features from the sets QU and QV , edge features
+QE , and the structural information represented by the adjacency
+matrix A. The encoder begins by calculating attention scores
+to evaluate the relevance of neighboring nodes. For each node
+ui ∈ U , the attention score αij between ui and its neighboring
+node vj ∈ V is computed as follows:
+
+
+
+(8)
+αij = softmax LeakyReLU aT [ui W  vj W]
+where ui and vj are the feature vectors of nodes ui and vj ,
+respectively, W is a learnable weight matrix, a is a learnable
+attention vector, and  denotes concatenation. This score reflects the influence of node vj on the representation of node
+ui , ensuring that more relevant neighbors are assigned greater
+weight.
+The attention scores are normalized using a softmax function
+to ensure that attention weights across all neighbors of the node
+ui sum to 1. Specifically, the normalized attention weight αij
+is computed as
+
+
+
+exp LeakyReLU aT [ui W  vj W]
+αij =
+T
+k∈N (ui ) exp (LeakyReLU (a [ui W  vk W]))
+(9)
+where N (ui ) represents the set of neighboring nodes of ui .
+This normalization step allows the encoder to prioritize the most
+influential neighbors, focusing on the key interactions within
+the graph.
+After computing the attention weights, the encoder aggregates information from neighboring nodes. For each node ui ∈
+
+ZHOU et al.: BIPARTITE GRAPH ANOMALY DETECTION WITH CONTRASTIVE LEARNING
+
+5367
+
+Fig. 2. CL-BGAD framework consists of three main components: The encoder, the feature decoder, and the structure decoder. The encoder processes input
+bipartite graph data, including node features Qu , Qv , and edge features Qe , through graph attention mechanisms to produce latent representations Zu , Zv ,
+and Ze . The feature decoder reconstructs the node and edge features, generating output features Xu , Xv , and Xe , while the structure decoder predicts edge
+connections by combining latent representations and contrastive learning, producing the adjacency matrix A. The entire process is optimized through a unified
+loss function to capture both node and edge anomalies.
+
+U , the aggregated message is computed as a weighted sum of
+the feature vectors from its neighboring nodes vj ∈ V
+
+αij vj .
+(10)
+hui =
+
+edge representation is generated using a convolution operation,
+followed by batch normalization and a ReLU activation
+Z E = ReLU(BN(Conv(QE , A))).
+
+(14)
+
+j∈N (ui )
+
+In this aggregation process, the feature vectors of neighboring nodes are multiplied by their corresponding attention
+weights, ensuring that more important neighbors contribute
+more significantly to the final representation of node ui . This
+step enables the encoder to embed the structural dependencies
+of the bipartite graph into the latent representation of each node.
+Similarly, for nodes vj ∈ V , the encoder aggregates information
+from neighboring nodes ui ∈ U . The aggregated representation
+for node vj is calculated as
+
+αji ui .
+(11)
+h vj =
+i∈N (vj )
+
+This bidirectional message passing ensures that both node sets
+U and V contribute to each other’s representations. By propagating information in both directions, the encoder effectively
+models the interactions between the two sets of nodes in the
+bipartite graph.
+After completing the attention-based message aggregation,
+the encoder outputs the final latent representations for the nodes
+in both sets. The latent representation matrices for nodes in U
+and V are denoted as Z U and Z V , respectively,
+Z U = {hu1 , hu2 , . . . , hu|U | }
+
+(12)
+
+Z V = {hv1 , hv2 , . . . , hv|V | }.
+
+(13)
+
+These latent representations encode both the feature and
+structural information of the nodes, as determined by the attention mechanism. Additionally, the encoder computes latent
+representations for the edges in the graph, denoted as Z E ,
+which capture the relationships between connected nodes. This
+
+Conv represents a convolution operation that aggregates information from neighboring nodes and edges to capture local
+structural patterns. BN represents batch normalization, which
+standardizes the features by adjusting their distribution to promote faster convergence and better training stability. The ReLU
+activation function, defined as ReLU(x) = max(0, x), introduces nonlinearity to the model for capturing complex patterns.
+This transformation function projects the edge features into the
+latent space, enhancing the model’s ability to detect anomalies,
+particularly in scenarios where irregularities in node-to-node
+relationships indicate anomalous behavior.
+By leveraging this attention-based encoding process, CLBGAD can effectively capture both structural dependencies and
+subtle interactions within the bipartite graph. The encoder’s
+dynamic focus on relevant neighbors and bidirectional message
+passing enables the generation of rich node and edge representations, establishing a robust foundation for anomaly detection
+in subsequent model stages.
+C. Feature Decoder
+The feature decoder in CL-BGAD is responsible for reconstructing the original node and edge features QU , QV , and QE
+from their corresponding latent representations Z U , Z V , and
+Z E , which are generated by the encoder. Reconstruction errors
+between original features and their reconstructed counterparts
+serve as anomaly indicators, where larger deviations typically
+suggest that the corresponding nodes or edges exhibit patterns
+significantly different from the majority of the data. The input
+to the feature decoder consists of latent representations Z U ∈
+
+5368
+
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 6, DECEMBER 2025
+
+R|U |×d , Z V ∈ R|U |×d , and Z E ∈ R|e|×d , produced by the encoder. These latent representations encapsulate the structural
+and feature information of the nodes and edges in the bipartite
+graph.
+To reconstruct the features, the feature decoder applies a
+series of transformation functions fdec to the latent representations. Specifically, the decoder performs the following operations, mathematically described as:
+
+
+
+U
+Znew
+= σ BN Wu · Z U · A
+(15)
+
+
+
+V
+V
+Znew = σ BN Wv · Z · A
+(16)
+
+
+
+E
+E
+(17)
+Znew = σ BN We · Z
+
+decoder operates on the latent representations Z U and Z V produced by the encoder. These representations encapsulate both
+the feature and structural information of nodes in U and V , but
+to make accurate predictions about the edges between them,
+further refinement is necessary.
+To refine the representations, the decoder applies a series of
+multilayer perceptrons (MLPs) [42], which adjust and transform the initial latent vectors into more informative representations. Each MLP consists of multiple fully connected layers
+with ReLU activation and batch normalization. Specifically, for
+a given MLP with L layers
+
+where Wu , Wv , and We are learnable weight matrices applied
+to the node and edge representations, BN(·) denote batch normalization, which stabilizes training and ensures consistency
+across layers, σ(·) is the ReLU activation function, introducing
+nonlinearity into the transformation, fdec combines these operations sequentially: graph convolution with weight matrices,
+followed by batch normalization and ReLU activation, to refine
+the latent representations.
+Once the transformations are applied, the decoder reconstructs the original feature vectors QU , QV , and QE from
+their respective latent representations. The final reconstructed
+features X U , X V , and X E are given by
+
+
+U
+X U = σ Wrec,u · Znew
+(18)
+
+
+V
+V
+X = σ Wrec,v · Znew
+(19)
+
+
+E
+E
+X = σ Wrec,e · Znew
+(20)
+
+where each layer fi is defined as
+
+where Wrec,u , Wrec,v , and Wrec,e are learnable matrices used
+to map the transformed latent representations back to the feature
+space. σ(·) is the ReLU activation function applied to introduce
+nonlinearity in the reconstruction process. The reconstruction
+loss, which serves as an indicator of anomalies, is formulated
+as
+Lrec = QU − X U 22 + QV − X V 22 + QE − X E 22 (21)
+where  · 22 denotes the squared L2 norm of the difference
+between original and reconstructed features. This objective
+function ensures that the learned latent representations retain
+as much information from the original features as possible
+while preserving the structural properties of the graph. High
+reconstruction errors signal potential anomalies, highlighting
+nodes or edges that deviate from expected patterns.
+In summary, the feature decoder in CL-BGAD effectively reconstructs both node and edge features, preserving the structural
+context of the graph and providing a basis for detecting node
+and edge anomalies in bipartite graphs.
+D. Structure Decoder With Graph Reconstruction
+The structure decoder in CL-BGAD is responsible for modeling the structural relationships between nodes in the bipartite
+graph G = (U, V, E). This decoder plays a key role in identifying irregularities in node-to-node interactions by reconstructing
+the connections between the two disjoint sets U and V , detecting any anomalies in the structural patterns. The structure
+
+MLP(x) = fL ◦ fL−1 ◦ · · · ◦ f1 (x)
+
+fi (x) = σ(BN(Wi x + bi ))
+
+(22)
+
+(23)
+
+with Wi and bi being the learnable weight matrix and bias
+vector of the ith layer, BN denoting batch normalization, and
+σ representing the ReLU activation function.
+U
+is
+For each node ui ∈ U , the refined representation Znew
+computed as
+U
+= MLPU (Z U ).
+Znew
+
+(24)
+
+Similarly, for each node vj ∈ V , the updated representation
+V
+is obtained through another MLP transformation
+Znew
+V
+= MLPV (Z V ).
+Znew
+
+(25)
+
+These transformations allow the model to extract more abstract and meaningful patterns from the nodes, effectively
+preparing them for the task of edge prediction. With the refined
+node representations, the next step is to estimate the probability
+P (Aij ) of an edge existing between a node ui ∈ U and a node
+vj ∈ V . This edge probability is crucial in identifying whether
+an interaction between two entities is anomalous. The structure
+decoder calculates this probability by computing the dot product of the updated latent representations of nodes ui and vj ,
+followed by a sigmoid activation to map the result into a valid
+probability range
+
+ U
+V
+(26)
+· (Znew,j
+)
+Aij = P (Aij ) = σ Znew,i
+where σ represents the sigmoid function. The predicted probability P (Aij ) serves as an indication of how likely an edge
+exists between ui and vj , allowing the model to distinguish
+between expected and anomalous interactions.
+E. Structure Decoder With Contrastive Learning
+A key innovation in the structure decoder is the integration
+of contrastive learning, which enhances the model’s ability
+to differentiate between normal and abnormal edges. In this
+context, contrastive learning serves to maximize the similarity
+between positive pairs (i.e., nodes that are connected by edges)
+and minimize the similarity between negative pairs (i.e., nodes
+that are not connected by edges).
+Positive and Negative Pair Generation: The structure decoder adopts positive and negative node pairs for contrastive
+learning to distinguish between normal and anomalous patterns.
+
+ZHOU et al.: BIPARTITE GRAPH ANOMALY DETECTION WITH CONTRASTIVE LEARNING
+
+Positive pairs are defined by existing edges in the bipartite
+graph. For each user ui ∈ U , a product vj ∈ V that shares an
+edge with ui in the edge set E ⊆ U × V is selected as the
+positive pair (ui , vj ). This sampling process traverses each
+user node in U and randomly selects one connected product
+node from V to ensure balanced and representative positive
+samples across the graph. This process allows the model to learn
+meaningful relationships between connected nodes, capturing
+typical interaction patterns in the bipartite structure.
+Negative pairs are unconnected node pairs in the bipartite
+graph, representing interactions that are less likely or anomalous. For each user ui ∈ U , three product nodes from V that are
+not connected to ui are randomly selected to form the negative
+pairs. This 3:1 ratio of negative to positive pairs is chosen to
+balance the contrastive learning process, where each user node
+has one associated positive pair and three associated negative
+pairs. By focusing on disconnected nodes for negative samples
+(while ensuring they are associated with the same user for
+contextual relevance), the model learns to discern typical connections from anomalous ones. This ratio also aligns with the
+architectural design of our structure decoder. Since our model
+employs both feature reconstruction and contrastive learning,
+an excessive number of negative samples could overwhelm the
+feature reconstruction signals in the joint optimization process.
+The 3:1 ratio maintains an effective balance between these two
+learning objectives. Besides, as observed in financial transaction networks [6], this ratio naturally corresponds to the sparsity
+patterns where legitimate users typically interact with only a
+small subset of all possible products or services.
+Incorporating contrastive learning in this way, as shown in the
+structure decoder in Fig. 2, allows the model to refine its understanding of both normal and abnormal interactions in the bipartite graph. By maximizing similarity within positive pairs and
+minimizing similarity within negative pairs, the model enhances
+its ability to detect irregular patterns, contributing to more accurate anomaly detection. The model applies the InfoNCE [33]
+loss function to enforce this distinction between positive and
+negative pairs. The loss function is designed to push positive
+pairs closer together in the latent space while pushing negative
+pairs further apart. Through the combination of edge probability
+prediction and contrastive learning, the structure decoder provides a powerful mechanism for identifying deviations from
+typical interaction patterns in bipartite graphs. This approach
+ensures that even subtle anomalies, which may not be evident
+in traditional edge prediction models, are effectively detected.
+
+5369
+
+where λstruct and λcont are hyperparameters controlling the impact of structure and contrastive losses, respectively. This balanced objective ensures the model effectively learns meaningful representations while discriminating between normal and
+anomalous interactions.
+Feature reconstruction loss minimizes the discrepancy between the input feature vectors QU , QV , QE and their reconstructed counterparts X U , X V , X E produced by the decoder.
+This loss guides the model to capture the essential nodes and
+edges, defined as
+Lfeat = RMSE(QU , X U ) + RMSE(QV , X V )
++ λE · RMSE(QE , X E )
+
+(28)
+
+where λE is a weighting factor that controls the influence
+of edge feature reconstruction, and RMSE denotes the mean
+squared error between the original and reconstructed features.
+Contrastive loss is designed to maximize the similarity of
+positive pairs (existing edges) while minimizing the similarity
+of negative pairs (absent edges) in the latent space
+exp (simpos /τ )
+Lcont = − log
+(29)
+exp (simpos /τ ) + exp (simneg /τ )
+where simpos and simneg are the cosine similarities between the
+refined latent embeddings (ZiU , ZjV ) for positive and negative
+pairs, respectively. The parameter τ ∈ (0, 1] controls the sharpness of the distribution: a smaller value (e.g., τ = 0.1) leads
+to a more concentrated distribution and emphasizes the differences between similar and dissimilar pairs, while a larger value
+produces a smoother distribution. This formulation enables the
+model to effectively distinguish between normal and anomalous
+relationships in the latent space.
+G. Anomaly Scoring
+In the CL-BGAD framework, anomaly scores are generated
+for both nodes and edges to quantify the likelihood of each
+being anomalous. These scores are derived from reconstruction
+errors in features and structure prediction results, computed
+using the root mean square error (RMSE) [43] and binary crossentropy loss (BCE) [43]. For nodes ui ∈ U and vj ∈ V , the
+anomaly score is computed based on the RMSE between the
+original feature vectors QU , QV and the reconstructed features
+X U , X V from the decoder. The anomaly scores for each node
+type are defined as follows:
+AnomalyScoreui = 
+
+1 U
+U )2
+(Qi,k − Xi,k
+d
+
+(30)
+
+1 V
+V )2
+(Qj,k − Xj,k
+d
+
+(31)
+
+d
+
+k=1
+
+F. Objective and Optimization
+The primary objective of CL-BGAD is to detect anomalous
+patterns within bipartite graphs by jointly leveraging node and
+edge features. The model optimizes a composite loss function,
+integrating feature reconstruction loss Lfeat , structure prediction
+Lstruct , and contrastive learning Lcont , each contributing to a
+robust anomaly detection process. The total loss function is
+defined as follows:
+Ltotal = Lfeat + λstruct · Lstruct + λcont · Lcont
+
+(27)
+
+AnomalyScorevj = 
+
+d
+
+k=1
+
+where d represent the number of features for nodes in U and
+V . For edges eij ∈ E, the anomaly score is similarly computed
+using the RMSE between the original edge features QE and the
+reconstructed edge features X E
+AnomalyScoreeij = 
+
+1 E
+E )2
+(Qij,k − Xij,k
+d
+d
+
+k=1
+
+(32)
+
+5370
+
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 6, DECEMBER 2025
+
+where d represents the number of features associated with each
+edge in E. This edge-level anomaly score provides an additional
+measure to identify irregularities in connections between nodes.
+H. Computational Analysis
+The computational complexity of CL-BGAD mainly
+comes from three components: the node attention mechanism
+O(|E|d), feature reconstruction O((|U | + |V |)d), and
+contrastive learning with negative sampling O(|E|d). |E| is
+the number of edges, |U | and |V | are the numbers of nodes
+in the two node sets, and d is the feature dimension. While
+the attention mechanism introduces additional computational
+overhead compared to simple aggregation, its complexity
+remains linear with respect to the number of edges, making
+it scalable to large graphs. The feature reconstruction process
+is also efficiently designed to maintain linear complexity
+in terms of node count. For various applications on larger
+scale datasets, the model’s efficiency can be further improved
+through mini-batch training and sparse matrix operations.
+
+3) Finefoods: This dataset contains Amazon reviews on
+food products, with nodes representing users and products and
+edges capturing reviews. Node attributes and edge features from
+review content provide a basis for detecting anomalies, aiding
+transparency in online user-product interactions.
+4) Movies: Similar to Finefoods, this dataset includes Amazon movie reviews, where nodes represent users and movies.
+Node attributes capture review statistics, while edge features
+use review embeddings, which help in identifying potential
+biases in social recommendation systems.
+Due to the large size of the Finefoods and Movies datasets,
+we randomly sampled subgraphs with approximately 10 000
+nodes to ensure computational feasibility. Each dataset was
+structured as a bipartite graph, with nodes representing users
+and items or transactions, and edges denoting interactions. To
+capture behaviors relevant to social fintech, node features (e.g.,
+user profiles and product descriptions) and edge features (e.g.,
+timestamps and review embeddings) were included to identify
+potential anomalies.
+B. Experimental Settings
+
+V. EXPERIMENTS
+In this section, we evaluate CL-BGAD on multiple public
+datasets, emphasizing its applicability in social fintech for secure and responsible anomaly detection. We compare the results against seven state-of-the-art baselines to demonstrate the
+effectiveness of the proposed model. All experiments were implemented in Python, and the source code is available at https://
+github.com/DSI-Lab1/CL-BGAD. Each experiment was repeated five times to ensure the reliability of results, with the average performance reported. The experiments were performed
+on a server with an RTX 3090, 24 GB vCPU AMD EPYC 7642
+48-Core Processor, 80 GB RAM, and a 30 GB system disk.
+A. Experimental Datasets
+To evaluate the performance of CL-BGAD, we conducted
+experiments on four publicly available datasets,2 each capturing
+different aspects of user behavior and interaction patterns relevant to social fintech and AI model security. These datasets
+provide diverse scenarios for studying anomaly detection in
+bipartite graph structures, which are essential for addressing
+social responsibility and trust concerns in social fintech applications.
+1) Wikipedia: This dataset captures the editing activities of
+Wikipedia contributors, where edges represent user-edit interactions. Node attributes summarize editing patterns, and edge
+features include temporal data, providing insights into abnormal
+user behaviors that could impact content credibility.
+2) Reddit: This dataset tracks user engagement across Reddit subforums, with edges indicating user participation. Node
+attributes summarize user activity, while edge features reflect
+temporal patterns. Detecting anomalies in such data can help
+identify irregular or coordinated behaviors relevant to community trust.
+2 http://snap.stanford.edu/jodie/#datasets
+
+In our experiments, CL-BGAD utilized a four-layer architecture. The encoder consists of two graph convolutional layers
+that capture local structural and feature information by aggregating information from neighboring nodes, allowing the model
+to learn robust embeddings for each node type. The feature decoder mirrors this structure with two GNN layers to reconstruct
+the input features from the latent embeddings, ensuring the
+learned representations retain relevant information. The structure decoder employs a two-layer MLP operating on concatenated node embeddings, with each dense layer transforming the
+input into a 32-dimensional space, enabling effective learning
+of complex node relationships and structural patterns while
+maintaining computational efficiency. The loss function was a
+combination of reconstruction, structure, and contrastive losses,
+with weights set to Lstruct = 0.2 and Lcont = 0.2, respectively, to
+balance feature and structural learning. This four-layer structure was mirrored in the GNN-based baselines (GraphBEAN,
+DOMINANT, AnomalyDAE, CONAD, and ADONE) for consistency. For optimization, CL-BGAD and the baselines used
+Adam with a learning rate of 0.01, determined to perform best
+after testing a range (0.0001, 0.001, 0.003, 0.01, and 0.03).
+To stabilize training, we applied learning rate decay at epochs
+20 and 35 with a factor of 0.2. For contrastive learning, the
+structure decoder sampled negative node pairs at a 3:1 ratio to
+positive pairs, with each node sampling up to ten neighbors. The
+random seed was set to 0 across all models. Isolation Forest
+used Scikit-Learn’s default configurations for estimators and
+samples, ensuring consistent parameterization in all models.
+To evaluate the robustness of CL-BGAD, we injected synthetic anomalies into these datasets following the strategy outlined in GraphBEAN [39]. Anomalies were introduced at both
+node and edge levels, simulating real-world irregularities such
+as fraudulent transactions or abnormal user behavior. The injection process involved three types of anomalies: block anomalies, feature anomalies, and node-edge feature anomalies. Block
+anomalies created dense interaction patterns within specific
+
+ZHOU et al.: BIPARTITE GRAPH ANOMALY DETECTION WITH CONTRASTIVE LEARNING
+
+5371
+
+TABLE I
+OVERVIEW OF THE USED DATASETS, INCLUDING THE NUMBER OF NODES FOR SETS U AND V ,
+THE NUMBER OF EDGES E, AND THE NUMBER OF ANOMALIES IN NODES U , V , AND EDGES E
+
+Dataset
+Wikipedia
+Reddit
+Finefoods
+Movies
+
+#U
+8,227
+10,000
+9,705
+9,622
+
+#V
+1,000
+984
+4,879
+6,366
+
+#E
+18,257
+78,516
+18,523
+28,147
+
+subgroups, feature anomalies altered node or edge features
+beyond standard distributions, and node-edge feature anomalies targeted either node-only, edge-only, or combined features.
+Each type of anomaly was selected based on predefined probabilities to ensure diverse and realistic challenges for the model.
+The size of anomaly blocks and their degree of connectivity
+were controlled by random sampling to reflect varying severity
+levels. Parameters such as standard deviation cutoffs and scaling
+factors were applied for feature anomalies to ensure realistic
+injection. For example, Gaussian noise was added to node features, and partial dense blocks of edges were created between
+selected node groups to reflect potential fraud or abnormal
+activity patterns [44], [45].
+Baselines: We compared the performance of CL-BGAD with
+seven baseline models.
+1) GraphBEAN [39]: Focuses on the dual reconstruction
+of both graph structure and node attributes in bipartite
+graphs. While it shares our goal of simultaneous node and
+edge anomaly detection, it lacks attention mechanisms
+for capturing interaction importance and does not employ
+contrastive learning for pattern discrimination.
+2) FRAUDAR [44]: Focuses on detecting fraudulent patterns in bipartite graphs, with applications in anti-fraud
+tasks. Unlike our approach, which considers both structural and feature information, FRAUDAR relies solely on
+structural patterns, limiting its ability to capture complex
+anomalies.
+3) CONAD [34]: A contrastive learning-based model designed for anomaly detection but focuses on homogeneous graphs. Our approach extends this idea to bipartite
+structures while incorporating node attention and feature
+reconstruction.
+4) DOMINANT [45]: It utilizes an autoencoder framework
+to reconstruct graph structure and features for anomaly
+detection. However, they lack specific mechanisms for
+handling the distinct characteristics of bipartite graphs
+and do not utilize contrastive learning for enhancing pattern discrimination.
+5) ADONE [46]: It handles both node and edge irregularities
+but does not specifically address the unique challenges of
+bipartite structures. Our framework explicitly models the
+heterogeneous nature of user–item interactions.
+6) AnomalyDAE [47]: It uses dual autoencoders to manage graph structure and independence. Unlike our unified framework, this separation may miss important
+correlations between structural and feature anomalies in
+bipartite settings.
+
+#anomalyu
+189
+380
+126
+125
+
+#anomalyv
+71
+100
+127
+121
+
+#anomalye
+456
+942
+685
+563
+
+7) Isolation Forest [48]: A classical machine learning approach for anomaly detection through data isolation.
+The selection of these baselines allows us to evaluate several
+key aspects of CL-BGAD.
+1) Effectiveness of Bipartite-Specific Design: Comparison
+with GraphBEAN [39] and FRAUDAR [44] demonstrates the advantages of our attention-based feature
+learning in bipartite settings.
+2) Impact of Contrastive Learning: Results against CONAD
+[34] highlight the benefits of our adapted contrastive
+learning strategy for bipartite structures.
+3) Advantage of Joint Optimization: Comparison with
+autoencoder-based methods (DOMINANT [45] and
+AnomalyDAE [47]) shows the benefit of combining
+attention mechanisms with contrastive learning.
+4) General Anomaly Detection Capability: Results against
+traditional methods like Isolation Forest [48] validate our
+graph-based approach.
+Note that AUC-ROC [49] measures the model’s ability to
+distinguish between anomalous and normal samples. It plots the
+true positive rate against the false positive rate across different
+thresholds. A score closer to 1 indicates better classification
+performance. AUC-PR [49] is particularly effective for imbalanced datasets where anomalies are rare. It plots precision (ratio
+of correct positive predictions) against recall (ratio of detected
+actual positives). A higher score indicates better performance
+in handling class imbalance, making it suitable for anomaly
+detection tasks.
+C. Overall Evaluation
+In order to comprehensively evaluate the anomaly detection
+performance of CL-BGAD, we focused on two primary metrics: AUC-ROC and AUC-PR. These metrics provide critical
+insights into the model’s ability to distinguish between normal
+and anomalous instances, especially in imbalanced datasets
+where the number of anomalies is relatively small compared
+to normal data. As shown in Table II, which presents the
+performance comparison between CL-BGAD and the baseline
+models, we report precision-recall (PR) scores for nodes of
+U , V , and edges E across the four datasets. CL-BGAD consistently outperformed the baseline models, demonstrating its
+robust anomaly detection capabilities.
+As shown in Table II, CL-BGAD achieved superior AUC-PR
+scores across all datasets, outperforming all baseline models.
+On the Finefoods dataset, CL-BGAD achieved an AUC-PR of
+0.961 for U nodes, 0.898 for V nodes, and 0.984 for edges,
+
+5372
+
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 6, DECEMBER 2025
+
+TABLE II
+PERFORMANCE COMPARISON OF CL-BGAD AND BASELINE MODELS ACROSS FOUR DATASETS
+Model
+GraphBEAN
+
+Finefoods
+
+Movies
+
+Reddit
+
+Wikipedia
+
+P RU
+
+P RV
+
+P RE
+
+P RU
+
+P RV
+
+P RE
+
+P RU
+
+P RV
+
+P RE
+
+P RU
+
+P RV
+
+P RE
+
+0.786
+
+0.767
+
+0.789
+
+0.569
+
+0.573
+
+0.596
+
+0.332
+
+0.351
+
+0.349
+
+0.297
+
+0.258
+
+0.265
+
+FRAUDAR
+
+0.262
+
+0.389
+
+0.279
+
+0.228
+
+0.178
+
+0.033
+
+0.059
+
+0.105
+
+0.018
+
+0.101
+
+0.086
+
+0.042
+
+CONAD
+
+0.740
+
+0.721
+
+0.691
+
+0.684
+
+0.695
+
+0.564
+
+0.115
+
+0.180
+
+0.016
+
+0.740
+
+0.721
+
+0.692
+
+DOMINANT
+
+0.735
+
+0.721
+
+0.686
+
+0.631
+
+0.710
+
+0.388
+
+0.121
+
+0.186
+
+0.016
+
+0.164
+
+0.179
+
+0.049
+
+ADONE
+
+0.239
+
+0.162
+
+0.048
+
+0.164
+
+0.129
+
+0.021
+
+0.138
+
+0.133
+
+0.007
+
+0.201
+
+0.128
+
+0.025
+
+AnomalyDAE
+
+0.771
+
+0.774
+
+0.671
+
+0.679
+
+0.753
+
+0.556
+
+0.128
+
+0.194
+
+0.016
+
+0.174
+
+0.193
+
+0.052
+
+Isolation Forest
+
+0.091
+
+0.167
+
+0.796
+
+0.127
+
+0.181
+
+0.827
+
+0.361
+
+0.608
+
+0.172
+
+0.228
+
+0.497
+
+0.279
+
+CL-BGAD (ours)
+
+0.961
+
+0.898
+
+0.984
+
+0.741
+
+0.772
+
+0.717
+
+0.513
+
+0.520
+
+0.513
+
+0.304
+
+0.273
+
+0.254
+
+Note: The Table Reports Precision-Recall (PR) Scores for Nodes U , V , and Edge E. CL-BGAD Consistently Outperforms the
+Baselines, Demonstrating its Robust Anomaly Detection Capabilities. The bold values indicate the best performance for each metric.
+
+significantly outperforming GraphBEAN, which scored 0.786,
+0.767, and 0.789, respectively. Similarly, on the Movies dataset,
+CL-BGAD maintained its superior performance with AUC-PR
+values of 0.741, 0.772, and 0.717 across the same three anomaly
+types. The baseline models, such as FRAUDAR and Isolation
+Forest, demonstrated much lower performance, particularly on
+the Reddit and Wikipedia datasets, where CL-BGAD’s AUCPR values surpassed all other models, confirming its robustness in handling diverse datasets with imbalanced anomaly
+distributions.
+Fig. 3 presents the AUC-ROC curves of CL-BGAD and other
+baseline models across the four datasets. CL-BGAD consistently outperformed all baselines, with its AUC-ROC scores
+ranging from 0.91 to 0.96. The steep ascent of CL-BGAD’s
+ROC curves, particularly on the Finefoods and Wikipedia
+datasets, illustrates its superior ability to detect anomalies with
+few false positives. For example, CL-BGAD’s AUC-ROC values on the Movies and Reddit datasets also clearly show its
+capacity to distinguish between anomalous and normal instances, significantly outperforming models like ADONE and
+AnomalyDAE, which struggled to achieve the same level of
+separation. In contrast, the baseline models, such as ADONE
+and FRAUDAR, showed much lower AUC-ROC values across
+datasets, with ADONE performing particularly poorly on the
+Wikipedia dataset, where it failed to effectively distinguish between normal and anomalous samples. Similarly, FRAUDAR’s
+AUC-ROC performance on the Reddit dataset was markedly
+lower, emphasizing the limitations of these baseline models in
+handling the complexities of edge anomalies.
+Through experimental analysis, we can observe that CLBGAD achieves varying performance across different datasets.
+The model performs best on the Finefoods dataset (PRU :
+0.961, PRV : 0.898, PRE : 0.984) and Movies dataset (PRU :
+0.741, PRV : 0.772, PRE : 0.717), where user–item interactions
+are well structured with moderate average node degrees (3.8
+and 5.2, respectively) and clear normal-anomalous patterns.
+However, performance decreases on the Reddit dataset (PRU :
+0.513, PRV : 0.520, PRE : 0.513) with its higher average node
+degree (15.7) and complex user participation patterns. The
+model shows limited effectiveness on the Wikipedia dataset
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+Fig. 3. Comparison of ROC curves for the proposed model and baseline
+models. (a) Finefoods. (b) Movies. (c) Reddit. (d) Wikipedia.
+
+(PRU : 0.304, PRV : 0.273, PRE : 0.254), which exhibits highly
+skewed degree distributions and significant feature heterogeneity between editors and articles. These performance variations
+can be attributed to a key aspect of our model design. The node
+attention mechanism in our encoder works most effectively
+when node degrees are relatively balanced, as it can better
+capture the relative importance of different interactions.
+Overall, the combination of high AUC-ROC and AUC-PR
+values demonstrates CL-BGAD’s robustness and reliability
+across diverse and challenging datasets. The model excels in
+capturing both node and edge anomalies, even in scenarios
+with imbalanced data distributions, making it an effective and
+practical tool for real-world anomaly detection applications.
+D. Ablation Study
+The ablation study results indicate the critical impact of each
+component of the CL-BGAD model on its overall anomaly
+detection performance. As shown in Table III, the full CLBGAD model demonstrates the highest performance across all
+
+ZHOU et al.: BIPARTITE GRAPH ANOMALY DETECTION WITH CONTRASTIVE LEARNING
+
+5373
+
+TABLE III
+ABLATION STUDY RESULTS FOR CL-BGAD MODEL ON FOUR DATASETS
+Finefoods
+
+Model
+
+Movies
+
+Reddit
+
+Wikipedia
+
+P RU
+
+P RV
+
+P RE
+
+P RU
+
+P RV
+
+P RE
+
+P RU
+
+P RV
+
+P RE
+
+P RU
+
+P RV
+
+P RE
+
+full CL-BGAD
+
+0.961
+
+0.898
+
+0.984
+
+0.741
+
+0.772
+
+0.717
+
+0.513
+
+0.520
+
+0.513
+
+0.304
+
+0.273
+
+0.254
+
+w/o contrastive learning
+
+0.854
+
+0.838
+
+0.884
+
+0.696
+
+0.687
+
+0.676
+
+0.491
+
+0.489
+
+0.478
+
+0.296
+
+0.271
+
+0.261
+
+w/o node attention
+
+0.829
+
+0.817
+
+0.839
+
+0.637
+
+0.621
+
+0.613
+
+0.465
+
+0.437
+
+0.441
+
+0.201
+
+0.265
+
+0.259
+
+w/o attention and contrastive
+
+0.786
+
+0.767
+
+0.789
+
+0.569
+
+0.573
+
+0.596
+
+0.332
+
+0.351
+
+0.349
+
+0.297
+
+0.258
+
+0.265
+
+Note: The bold values indicate the best performance for each metric.
+
+datasets, with PRU , PRV , and PRE scores consistently higher
+than the ablated variants. On the Finefoods dataset, the full
+model achieves PRU of 0.961, PRV of 0.898, and PRE of
+0.984, reflecting the effectiveness of the node attention mechanism and contrastive learning module in capturing both node
+and edge anomalies. When the contrastive learning module in
+the structure decoder is removed, performance declines, with
+precision dropping across all anomaly types and datasets. On
+the Movies dataset, PRE decreases from 0.717 in the full model
+to 0.676, and similar trends are observed in the other datasets.
+This emphasizes the role of contrastive learning in distinguishing between positive and negative samples, especially for edge
+anomaly detection.
+Similarly, the removal of the node attention mechanism from
+the encoder results in a significant drop in performance, particularly for node anomalies. For example, on the Reddit dataset,
+PRU drops from 0.513 in the full model to 0.465 without node
+attention. This highlights the importance of attention in effectively capturing dependencies between nodes, which is crucial
+for detecting node anomalies. The baseline model, which excludes both the node attention mechanism and contrastive learning, performs the worst. Across all datasets, this variant records
+the lowest precision scores. On the Wikipedia dataset, PRU
+drops to 0.297, compared to 0.304 for the full model. These
+findings underscore the synergy between the node attention and
+contrastive learning modules in boosting the model’s ability to
+detect anomalies.
+The ablation study results conclusively show that both the
+node attention mechanism and the contrastive learning module are essential components of the CL-BGAD framework,
+enabling the model to achieve robust and accurate anomaly
+detection across various datasets and anomaly types.
+VI. CONCLUSION
+Anomaly detection in bipartite graphs is crucial for enhancing the security and reliability of AI-driven applications, particularly within social fintech, where early detection of fraudulent
+activities is essential for maintaining trust and social responsibility. This study introduced a specialized anomaly detection
+framework for bipartite graphs called CL-BGAD, which addresses the unique challenges in financial and social network
+domains. The framework includes a powerful encoder with
+node attention mechanisms to capture detailed interactions, a
+feature decoder to reconstruct node and edge features, and
+a structure decoder with contrastive learning to differentiate
+
+normal from anomalous patterns. This combination enables
+precise anomaly detection at both node and edge levels, which is
+essential for identifying subtle high-impact anomalies in secure
+social fintech applications. While showing promise for realtime fraud detection in social fintech platforms, CL-BGAD
+faces challenges in handling rapidly evolving fraud patterns and
+computational scalability. Experiments on several real-world
+datasets, spanning e-commerce and financial networks, validate
+CL-BGAD’s effectiveness in detecting complex anomalies, outperforming current methods. Future work will focus on extending CL-BGAD to handle more complex k-partite graphs and
+different domain applications. This extension will broaden its
+applicability to multientity financial systems and recommendation platforms where anomaly detection is crucial.
+REFERENCES
+[1] L. Cao, Q. Yang, and P. S. Yu, “Data science and AI in FinTech: An
+overview,” Int. J. Data Sci. Analytics, vol. 12, no. 2, pp. 81–99, 2021.
+[2] Y. Song, H. Ye, M. Li, and F. Cao, “Deep multi-graph neural networks
+with attention fusion for recommendation,” Expert Syst. Appl., vol. 191,
+2022, Art. no. 116240.
+[3] Y. Zhang, Y. Xiong, X. Kong, and Y. Zhu, “Learning node embeddings
+in interaction graphs,” in Proc. ACM Conf. Inf. Knowl. Manage., 2017,
+pp. 397–406.
+[4] X. Zhang, H. Wang, J. Yu, C. Chen, X. Wang, and W. Zhang, “Bipartite
+graph capsule network,” World Wide Web, vol. 26, no. 1, pp. 421–440,
+2023.
+[5] J. Ren, F. Xia, I. Lee, A. Noori Hoshyar, and C. Aggarwal, “Graph learning for anomaly analytics: Algorithms, applications, and challenges,”
+ACM Trans. Intell. Syst. Technol., vol. 14, no. 2, pp. 1–29, 2023.
+[6] T. Pourhabibi, K.-L. Ong, B. H. Kam, and Y. L. Boo, “Fraud detection: A systematic literature review of graph-based anomaly detection
+approaches,” Decis. Support Syst., vol. 133, 2020, Art. no. 113303.
+[7] A. Mutemi and F. Bacao, “E-commerce fraud detection based on
+machine learning techniques: Systematic literature review,” Big Data
+Mining Anal., vol. 7, no. 2, pp. 419–444, 2024.
+[8] A. Deng and B. Hooi, “Graph neural network-based anomaly detection
+in multivariate time series,” Proc. AAAI Conf. Artif. Intell., vol. 35, no.
+5, pp. 4027–4035, 2021.
+[9] Y. Tian, C. Sun, B. Poole, D. Krishnan, C. Schmid, and P. Isola, “What
+makes for good views for contrastive learning?” in Proc. Adv. Neural
+Inf. Process. Syst., vol. 33, 2020, pp. 6827–6839.
+[10] C.-Y. Zhang, W.-P. Fang, H.-C. Cai, C. P. Chen, and Y.-N. Lin, “Sparse
+graph transformer with contrastive learning,” IEEE Trans. Computat.
+Social Syst., vol. 11, no. 1, pp. 892–904, Feb. 2022.
+[11] Y. Zhao et al., “Can one embedding fit all? A multi-interest learning
+paradigm towards improving user interest diversity fairness,” in Proc.
+ACM Web Conf., 2024, pp. 1237–1248.
+[12] J. Yu, H. Yin, X. Xia, T. Chen, L. Cui, and Q. V. H. Nguyen, “Are
+graph augmentations necessary? Simple graph contrastive learning for
+recommendation,” in Proc. Int. ACM SIGIR Conf. Res. Develop. Inf.
+Retrieval, 2022, pp. 1294–1303.
+[13] J. Robinson, C.-Y. Chuang, S. Sra, and S. Jegelka, “Contrastive learning
+with hard negative samples,” in Proc. Int. Conf. Learn. Represent., 2021,
+pp. 1–29.
+
+5374
+
+IEEE TRANSACTIONS ON COMPUTATIONAL SOCIAL SYSTEMS, VOL. 12, NO. 6, DECEMBER 2025
+
+[14] A. Nesvijevskaia, S. Ouillade, P. Guilmin, and J.-D. Zucker, “The
+accuracy versus interpretability trade-off in fraud detection model,” Data
+Policy, vol. 3, p. e12, 2021.
+[15] G. Pang, C. Shen, L. Cao, and A. V. D. Hengel, “Deep learning for
+anomaly detection: A review,” ACM Comput. Surv., vol. 54, no. 2, pp.
+1–38, 2021.
+[16] S. Thudumu, P. Branch, J. Jin, and J. Singh, “A comprehensive survey
+of anomaly detection techniques for high dimensional big data,” J. Big
+Data, vol. 7, pp. 1–30, 2020.
+[17] D. A. Reynolds et al., “Gaussian mixture models,” in Encyclopedia of
+Biometrics, vol. 741. Boston, MA, USA: Springer, 2009, pp. 659–663.
+[18] D. A. Pisner and D. M. Schnyer, “Support vector machine,” in Machine
+Learning. Amsterdam, Netherlands: Elsevier, 2020, pp. 101–121.
+[19] F. Wu, A. Souza, T. Zhang, C. Fifty, T. Yu, and K. Weinberger,
+“Simplifying graph convolutional networks,” in Proc. Int. Conf. Mach.
+Learn., PMLR, 2019, pp. 6861–6871.
+[20] P. Velickovic et al., “Graph attention networks,” Stat, vol. 1050, no. 20,
+pp. 10–48, 2017.
+[21] C. Sun et al., “Attention-based graph neural networks: A survey,” Artif.
+Intell. Rev., vol. 56, no. Suppl 2, pp. 2263–2310, 2023.
+[22] I. Chami, S. Abu-El-Haija, B. Perozzi, C. Ré, and K. Murphy, “Machine
+learning on graphs: A model and comprehensive taxonomy,” J. Mach.
+Learn. Res., vol. 23, no. 89, pp. 1–64, 2022.
+[23] A. Li, B. Yang, H. Huo, F. K. Hussain, and G. Xu, “Structure-and logicaware heterogeneous graph learning for recommendation,” in Proc. IEEE
+Int. Conf. Data Eng., Piscataway, NJ, USA: IEEE, 2024, pp. 544–556.
+[24] S. Khodabandehlou and A. H. Golpayegani, “FiFrauD: Unsupervised
+financial fraud detection in dynamic graph streams,” ACM Trans. Knowl.
+Discovery Data, vol. 18, no. 5, pp. 1–29, 2024.
+[25] B. Perozzi, R. Al-Rfou, and S. Skiena, “DeepWalk: Online learning
+of social representations,” in Proc. ACM SIGKDD Int. Conf. Knowl.
+Discovery Data Mining, 2014, pp. 701–710.
+[26] A. Grover and J. Leskovec, “node2vec: Scalable feature learning for
+networks,” in Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discovery
+Data Mining, 2016, pp. 855–864.
+[27] Y. Dong, N. V. Chawla, and A. Swami, “metapath2vec: Scalable representation learning for heterogeneous networks,” in Proc. ACM SIGKDD
+Int. Conf. Knowl. Discovery Data Mining, 2017, pp. 135–144.
+[28] Y. Fang et al., “Metagraph-based learning on heterogeneous graphs,”
+IEEE Trans. Knowl. Data Eng., vol. 33, no. 1, pp. 154–168, Jan. 2021.
+[29] L. Akoglu, H. Tong, and D. Koutra, “Graph based anomaly detection
+and description: A survey,” Data Mining Knowl. Discovery, vol. 29, pp.
+626–688, 2015.
+[30] Z. Z. Darban, G. I. Webb, S. Pan, C. C. Aggarwal, and M. Salehi,
+“CARLA: Self-supervised contrastive representation learning for time
+series anomaly detection,” Pattern Recognit., vol. 157, 2025, Art. no.
+110874.
+[31] J. Cao, X. Lin, S. Guo, L. Liu, T. Liu, and B. Wang, “Bipartite graph
+embedding via mutual information maximization,” in Proc. ACM Int.
+Conf. Web Search Data Mining, 2021, pp. 635–643.
+[32] B. Jing, Y. Yan, Y. Zhu, and H. Tong, “COIN: Co-cluster infomax for
+bipartite graphs,” in Proc. NeurIPS Workshop New Front. Graph Learn.,
+2022, pp. 1–15.
+[33] A. Parulekar, L. Collins, K. Shanmugam, A. Mokhtari, and S. Shakkottai, “InfoNCE loss provably learns cluster-preserving representations,”
+in Proc. Annu. Conf. Learn. Theory, PMLR, 2023, pp. 1914–1961.
+[34] Z. Xu, X. Huang, Y. Zhao, Y. Dong, and J. Li, “Contrastive attributed
+network anomaly detection with data augmentation,” in Proc. PacificAsia Conf. Knowledge Discovery Data Mining, Cham, Switzerland:
+Springer, 2022, pp. 444–457.
+[35] Y. Jiang, C. Huang, and L. Huang, “Adaptive graph contrastive learning
+for recommendation,” in Proc. SIGKDD Conf. Knowl. Discovery Data
+Mining, 2023, pp. 4252–4261.
+[36] N. Saunshi et al., “Understanding contrastive learning requires incorporating inductive biases,” in Proc. Int. Conf. Mach. Learn., PMLR, 2022,
+pp. 19250–19286.
+[37] M. Chen, Z. Wei, Z. Huang, B. Ding, and Y. Li, “Simple and deep graph
+convolutional networks,” in Proc. Int. Conf. Mach. Learn., PMLR, 2020,
+pp. 1725–1735.
+[38] Z. Niu, G. Zhong, and H. Yu, “A review on the attention mechanism of
+deep learning,” Neurocomputing, vol. 452, pp. 48–62, 2021.
+[39] R. Fathony, J. Ng, and J. Chen, “Interaction-focused anomaly detection on bipartite node-and-edge-attributed graphs,” in Proc. Int.
+Joint Conf. Neural Netw., Piscataway, NJ, USA: IEEE, 2023,
+pp. 1–10.
+
+[40] N. Reimers and I. Gurevych, “Sentence-BERT: Sentence embeddings
+using siamese BERT-networks,” in Proc. Conf. Empirical Methods
+Natural Lang. Process.; 9th Int. Joint Conf. Natural Lang. Process.,
+2019, pp. 3980–3990.
+[41] V. G. Raju, K. P. Lakshmi, V. M. Jain, A. Kalidindi, and V. Padma,
+“Study the influence of normalization/transformation process on the
+accuracy of supervised classification,” in Proc. Int. Conf. Smart Syst.
+Inventive Technol., Piscataway, NJ, USA: IEEE, 2020, pp. 729–735.
+[42] R. Kruse, S. Mostaghim, C. Borgelt, C. Braune, and M. Steinbrecher,
+“Multi-layer perceptrons,” in Computational Intelligence: A Methodological Introduction. Cham, Switzerland: Springer, 2022, pp. 53–124.
+[43] N. Khare, P. S. Thakur, P. Khanna, and A. Ojha, “Analysis of loss
+functions for image reconstruction using convolutional autoencoder,”
+in Proc. Int. Conf. Comput. Vis. Image Process., Cham, Switzerland:
+Springer, 2021, pp. 338–349.
+[44] B. Hooi, H. A. Song, A. Beutel, N. Shah, K. Shin, and C. Faloutsos,
+“FRAUDAR: Bounding graph fraud in the face of camouflage,” in Proc.
+ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining, 2016, pp.
+895–904.
+[45] K. Ding, J. Li, R. Bhanushali, and H. Liu, “Deep anomaly detection on
+attributed networks,” in Proc. SIAM Int. Conf. Data Mining, Philadelphia, PA, USA: SIAM, 2019, pp. 594–602.
+[46] S. Bandyopadhyay, L. N. S. V. Vivek, and M. N. Murty, “Outlier resistant
+unsupervised deep architectures for attributed network embedding,” in
+Proc. Int. Conf. Web Search Data Mining, 2020, pp. 25–33.
+[47] H. Fan, F. Zhang, and Z. Li, “AnomalyDAE: Dual autoencoder for
+anomaly detection on attributed networks,” in Proc. IEEE Int. Conf.
+Acoust., Speech Signal Process., Piscataway, NJ, USA: IEEE, 2020, pp.
+5685–5689.
+[48] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. Int.
+Conf. Data Mining, Piscataway, NJ, USA: IEEE, 2008, pp. 413–422.
+[49] A. R. Rachakonda and A. Bhatnagar, “Aratio: Extending area under the
+roc curve for probabilistic labels,” Pattern Recognit. Lett., vol. 150, pp.
+265–271, 2021.
+
+Pinlyu Zhou received the B.S. degree in computer
+science from Shandong University of Finance and
+Economics, Jinan, China, in 2023. She is currently
+working toward the master’s degree in cyberspace
+security with the College of Cyber Security, Jinan
+University, Guangzhou, China.
+Her research interests include data mining and
+artificial intelligence.
+
+Jiayang Wu received the B.S. degree in electronic information engineering from Guangdong
+Ocean University, Zhanjiang, China, in 2023. He
+is currently working toward the master’s degree
+in cyberspace security with the College of Cyber
+Security, Jinan University, Guangzhou, China.
+He has published several research papers in peerreviewed journals and conferences. His research
+interests include artificial intelligence and data
+mining.
+
+Wensheng Gan (Member, IEEE) received the B.S.
+degree in computer science from the South China
+Normal University, Guangzhou, China, in 2013,
+and the Ph.D. degree in computer science and
+technology from Harbin Institute of Technology
+(Shenzhen), Shenzhen, China, in 2019.
+Currently, he is an Associate Professor with
+the College of Cyber Security, Jinan University,
+Guangzhou. He has published more than 200 research papers in peer-reviewed journals and international conferences. His research interests include
+data mining, artificial intelligence, and cybersecurity.
+PAPER_TEXT

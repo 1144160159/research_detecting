@@ -1,0 +1,157 @@
+          IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 1, JANUARY 2025                                                     781
+
+
+
+
+       Enhancing Anti-Interference of Magnetic
+    Tracking: A MagRobustNet-Based Framework
+    With Self-Supervised Anomaly Detection and
+              Measurements Recovery
+           Shijian Su , Hai Lan, Huxin Gao , Member, IEEE, Houde Dai , Senior Member, IEEE,
+                                and Hongliang Ren , Senior Member, IEEE
+
+
+   Abstract—Magnetic tracking technology shows great                       Index Terms—Anomaly detection, anti-interference, mag-
+promise for applications in medicine and industry. How-                  netic sensing, measurement recovery, robust tracking.
+ever, it often suffers from diverse and unpredictable inter-
+ferences in practical applications, such as hard-/soft-iron
+interferences and sensor saturation, leading to reduced
+localization accuracy or even tracking failure. Thus, we                                        I. INTRODUCTION
+propose a two-step framework to mitigate the impact of
+                                                                                  AGNETIC tracking is a low-cost, occlusion-free, and
+interferences based on MagRobustNet, a UNet-like autoen-
+coder network. In the first step, disjoint mask sets are
+used in conjunction with MagRobustNet to detect anoma-
+                                                                         M        high-precise technique with great potential for numer-
+                                                                         ous applications, including wireless capsule endoscopy (WCE)
+lous measurements subject to disturbances. In the second                 localization [1], flexible robot shape sensing [2], automated
+step, the interfered regions are masked, and MagRobustNet                guided vehicle (AGV) navigation [3], and body motion cap-
+is applied again to recover their expected measurements                  ture [4]. However, magnetic tracking systems (MTSs) are sen-
+from neighboring normal data. Experimental results from                  sitive to ferromagnetic materials, which will result in degraded
+testing in four interference scenarios showed that the pro-              localization accuracy or even tracking failure. Thus, it is cru-
+posed method improved the average position accuracy by
+76.2%, enhancing the tracking system’s anti-interference
+                                                                         cial to enhance the tracking system’s anti-interference ability
+capability. In addition, the proposed method can indicate                and robustness to avoid medical malpractices and financial
+the interfered regions, thereby prompting the adjustment of              losses.
+the magnetometer array to an interference-free location and                 The factors affecting tracking robustness can be classified as
+offering a new potential diagnostic method for localizing                related to the tracking algorithm or environmental interferences.
+ingested foreign bodies in clinical practice.                            Traditional MTSs are mainly based on the Levenber–Marquardt
+                                                                         (LM) optimization algorithm [5], [6], [7], and therefore are
+                                                                         sensitive to initial guesses. To address this issue, some re-
+   Received 7 August 2024; accepted 10 September 2024. Date of           searchers attempted to provide initial guesses for the LM algo-
+publication 17 October 2024; date of current version 7 January 2025.
+This work was supported in part by the Hong Kong Research Grants
+                                                                         rithm using various initial estimation methods, such as particle
+Council through the Collaborative Research Fund under Grant CRF          swarm optimization (PSO) [8], whale optimization algorithm
+C4063-18G, in part by the General Research Fund under Grant GRF          (WOA) [9], artificial neural networks (ANN) [10], while others
+14216022, in part by the NSFC/RGC Joint Research Scheme 2022/23          used end-to-end neural networks to directly regress the magnet
+N_CUHK420/22, in part by the National Academy of Medicine, Healthy       pose [11], [12]. Among these methods, AMagPoseNet [12]
+Longevity Catalyst Awards (Hong Kong), in part by the Chinese Uni-
+versity of Hong Kong Mainland Postdoctoral Sponsorship Program, and      demonstrated superior localization accuracy and computation
+in part by the Shenzhen-Hong Kong-Macau Technology Research Pro-         latency compared to traditional methods and is also independent
+gram (Type C) under Grant 202108233000303. Paper no. TII-24-4005.        of initial guesses.
+(Corresponding author: Hongliang Ren.)                                      Environment interferences in MTSs arise primarily from hard
+   This work involved human subjects or animals in its research. Ap-
+proval of all ethical and experimental procedures and protocols was
+                                                                         and soft iron effects [13]. The hard iron effects are caused by
+granted by the Animal Ethics Committee of Qilu Hospital of Shangdong     objects that can generate magnetic fields, such as permanent
+University under Application No. Dwll-2021-021, and performed in line    magnets and electrified wires. The soft iron effect results from
+with the Guiding Principles in the Care and Use of Animals.              materials that distort the magnet’s magnetic field, such as ferro-
+   Shijian Su, Huxin Gao, and Hongliang Ren are with the Depart-         magnetic surgical instruments or iron plates. Fig. 1(a) shows
+ment of Electronic Engineering, Chinese University of Hong Kong,
+Hong Kong (e-mail: shijiansu@foxmail.com; huxingao@cuhk.edu.hk;          the potential interference sources presented in the operating
+hlren@ee.cuhk.edu.hk).                                                   room. In addition, previous research has identified a reduction in
+   Hai Lan and Houde Dai are with the Quanzhou Institute of Equipment    localization accuracy at lower heights due to sensor saturation,
+Manufacturing, Haixi Institutes, Chinese Academy of Sciences, Jinjiang   as depicted in Fig. 1(b).
+362216, China (e-mail: Lanhai09@fjirsm.ac.cn; dhd@fjirsm.ac.cn).
+   This article has supplementary downloadable material available at
+                                                                            Sensor-level anti-interference: To address the impact of soft-
+https://doi.org/10.1109/TII.2024.3461774, provided by the authors.       /hard-iron interferences caused by currents and ferromagnetic
+   Digital Object Identifier 10.1109/TII.2024.3461774                    materials in the environment, Wu et al. [13] employed the
+
+     © 2024 The Authors. This work is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 License. For more
+                                      information, see https://creativecommons.org/licenses/by-nc-nd/4.0/
+782                                                               IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 21, NO. 1, JANUARY 2025
+
+
+
+
+Fig. 1. Factors impacting the robustness of MTS. (a) Potential inter-
+ference sources presented in the operating room (surgical instruments,
+robotic arm, iron plate, et al.). (b) Reduction in localization accuracy   Fig. 2. Modeling an annular magnet based on the equivalent magne-
+at low heights due to sensor saturation, reported from [12], where the     tizing current, the Biot–Savart law, and the superposition principle.
+magnetometer range was set to ±1200 uT.
+                                                                           unpredictable interference fields. This study is the first to in-
+optimal maximum likelihood method to estimate the parameters               troduce autoencoder networks to tackle this issue. Specifically,
+of an error model, while Christensen et al. [14] utilized a neural         we propose a two-step framework with anomaly detection and
+network to learn a magnetic field distortion model. However,               measurement recovery. The contributions of our framework are
+existing techniques primarily focus on magnetic compass appli-             summarized as follows.
+cations and rely on precollected calibration data in specific usage            1) Designed a UNet-like autoencoder network, MagRobust-
+environments, rendering them unsuitable for handling diverse                      Net, with partial convolution to accommodate ultralow
+and unpredictable disturbances. As for the saturation induced                     resolution (5 × 5) measurements of MTSs.
+by strong magnetic fields, Fu et al. [15] applied an external                  2) Integrated anomaly detection and measurement recovery
+electromagnetic coil for interference compensation. Currently,                    into our framework using only MagRobustNet. This not
+no available research can address the saturation issue solely by                  only indicates anomalous regions subject to disturbances
+post-processing without external hardware.                                        but also improves the average position accuracy of MTS
+   System-level anti-interference: To enhance the resistance of
+                                                                                  in four interference scenarios by 76.2%.
+MTSs to environmental interferences, Su [16] et al. utilized
+the Huber loss function to mitigate the impact of hard iron                    3) Presented a model-to-real domain adaptation approach to
+interference on localization. Still, this method is limited to                    ensure that our framework can be used for both learning-
+traditional optimization-based approaches and cannot identify                     based and optimization-based tracking methods.
+which magnetometers are affected. Son [6] and Shi [17] et al.
+introduced an actuator’s magnetic field to manipulate WCE with                                II. MAGNETIC FIELD MODEL
+an embedded magnet. They accurately calculated the actuator’s
+magnetic field based on magnetic models and subtracted it from             A. Prior Mathematical Model of Annular Magnets
+the raw measurements. However, they cannot address unknown                    As illustrated in Fig. 2(a), a sensor array composed of N
+stochastic interferences caused by soft-/hard-iron effects and             tri-axes magnetometers is adopted to perceive the magnetic
+sensor saturation. Song [18] and Shao [19] et al. optimized the            induction intensity generated by an annular magnet in space. The
+sensor layout using the grid method and SNR evaluation, which              ith magnetometer’s position in the magnet coordinate frame {m}
+                                                                                           m m m T
+                                                                                i = [pxi , pyi , pzi ] . Based on the equivalent magnetizing
+improved the system’s localization accuracy to some extent.                is pm
+Nevertheless, they were also unable to cope with these random              current model and the Biot–Savart law, the magnetic induction
+and diverse interferences.                                                 intensity dBl generated by a surface current element located at
+   System-level anomaly detection: Diverse and unpredictable               (x0 , y0 , z0 ) on the ith magnetometer can be expressed as
+interferences can cause measured data to deviate from the normal
+distribution [20]. Anomaly detection is recognized as a means                                     μ0 μr Idl × P0     dv × P0
+                                                                                        dBl =                     =K                            (1)
+to enhance the robustness of sensing systems by detecting and                                      4π     |P0 | 3     |P0 |3
+indicating the presence of interferences. Various anomaly de-
+tection techniques are available in sensing systems, including             where μ0 and μr denote the magnetic permeability of vacuum
+traditional methods, such as clustering [21] and support vector            and the relative magnetic permeability of the medium, respec-
+machine [22], deep learning-based approaches, such as autoen-              tively, and P0 is the vector from the point (x0 , y0 , z0 ) to point pm
+                                                                                                                                                 i .
+coders [23] and generative adversarial networks (GANs) [24],               The surface current I = Idl = Js dv, where I and dl represent
+and hybrid methods combining traditional and deep learning,                the current magnitude and direction, and Js is the current density
+such as deep one-class classification [25]. However, detecting             (A/m). Let K = Js μ4π0 μr , which is a constant determined by
+interferences is often insufficient for MTSs, as our goal is to            magnet material.
+recover their expected measurements and obtain more reliable                  Assuming that the radius of a cylinder magnet is r1 . The
+localization results.                                                      magnetic induction intensity at pm   i can be estimated by
+   Current research on anti-interference in MTSs is limited                                                        r1
+because it is challenging to separate the magnetic field gen-                                   Bci (pi , r1 ) =
+                                                                                                  m    m
+                                                                                                                       dBz                       (2)
+erated by the tracking target (permanent magnet) from diverse                                                       −r1
+SU et al.: ENHANCING ANTI-INTERFERENCE OF MAGNETIC TRACKING                                                                           783
+
+
+                                               
+where dBz = ab dBl + bc dBl + cd dBl + da dBl is the                     Similarly, we define the objective function associated with the
+magnetic induction intensity generated by the surface current            magnetometer position and orientation as
+Iabcda at the point pm
+                     i .
+                                                                                              L 
+                                                                                                                   2
+   Applying the superposition principle of magnetic fields, the                                  s                 
+difference between the magnetic induction intensity produced by                       Epi =     B̃ai (j) − Bsai (j)
+                                                                                                                      2
+two cylindrical magnets with different radii yields an equivalent                             j=1
+annular magnet with the same magnetic moment direction and                                                                            (7)
+                                                                                            L 
+                                                                                                                      2
+length. Then, the magnetic induction intensity at the point pm                                 s                      
+                                                               i                      Eoi =   B̃ai (j) − Oi · Bsai (j)
+due to the annular magnet is given by                                                         j=1
+ 

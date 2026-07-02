@@ -1,0 +1,1065 @@
+1994 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ Hierarchical GNN Message Passing for Node-Level
+ Anomaly Detection in Industrial Control Systems
+ Shuaiyi Lyu , Kai Wang , Member, IEEE, Yang Liu, and Bailing Wang
+
+ Abstract—Advances in Graph Neural Networks (GNNs) have I. INTRODUCTION
+prompted remarkable progress in anomaly detection for securing
+ HE Industrial Control Systems (ICSs) are complex systems
+the Industrial Control Systems (ICSs). As the core functioning
+block of a GNN network, message passing in most of the current frameworks is conducted via local aggregation, in which a
+ T of heterogeneous devices dedicated for industrial process
+ monitoring and control. They have been frequently targeted and
+node’s vector representation is updated with messages from its attacked in recent years due to their increasing connectivity to
+directly connected neighbours. However, despite its efficiency over
+numerous application scenarios, such neighbouring aggregation
+ public networks. In order to inflict massive physical damage or
+mechanism tends to be highly biased towards a node’s locality, cause considerable economic loss, the majority of recent attacks
+and hence may not accurately profile the hierarchical semantics in aim at directly sabotaging the industrial processes supervised
+layered ICS architectures, such as the supervisory relations among by the ICSs. As the operational status of industrial processes
+controllers and field devices. The resulting node embeddings, in this can be reflected in the numeric data streams of measurement
+case, may not be knowledgeable enough to instruct downstream
+tasks such as fine-grained device-wise ICS anomaly detection. To
+ values or operational states (See Fig. 1) with respect to each
+address this issue, we introduce the Hierarchical Message Analyzer process-related ICS device (sensors, actuators, controllers, etc.),
+(the HMA), a new message passing scheme that explores a net- it is imminent to derive reliable schemes to detect anomalies in
+work’s supervisory structural features and regulates a message’s these streams in order to secure the industrial processes and
+transmission paths to create balanced embeddings for node-level avoid any potential hazards.
+ICS anomaly detection. This model comprises in its architecture
+a Preprocessor that condenses the original data flow into initial
+ To discover malicious patterns in these streams, early methods
+node vectors, an Adjacency Parser that regulates how messages such as the Deterministic Finite Automata [1], [2] series and the
+are transmitted in the aggregation process, an Encoder performing Statechart-based Detectors [3], [4] are proposed to intuitively
+message passing in compliance with the adjacency info obtained detect anomalous snippets that deviate from the periodic characfrom the Adjacency Parser, and a Decoder for label inference. We teristics of industrial processes. Lightweight and simple as they
+assess the HMA’s performance over multiple evaluation metrics
+and compare it against various state-of-the-art baselines. Results
+ are, these methods usually suffer from an undesirably high false
+on multiple datasets certify the HMA’s validity and superiority in positive detection rate, in that the patterns extracted are usually
+device-wise ICS anomaly detection. simple and superficial while an actual measurement value tends
+ to fluctuate frequently even in normal operating scenarios. This
+ Index Terms—Hierarchical message passing, meta-graph data
+collection, graph neural networks, anomaly detection, industrial makes state machine generation difficult and therefore greatly
+control systems. weakens the methods’ applicability to anomaly detection in
+ dynamic ICS streams. In addition, lack of consideration of associativity among numeric streams with respect to different ICS
+ devices further undermines the methods’ detection accuracy.
+ Received 27 November 2023; revised 12 October 2025; accepted 15 October To better exploit the complex variational semantics together
+2025. Date of publication 20 October 2025; date of current version 12 March with the correlational features of devices’ numeric streams,
+2026. This work was supported in part by the Taishan Scholar Project of
+Shandong Province, China under Grant tsqn202408112, in part by the National neural network (NN) based solutions are introduced in numerous
+Natural Science Foundation of China (NSFC) under Grant 62272129, and in part literature (e.g., [5] [6] [7]). By introducing layers of parameters,
+by the Key Laboratory of Cognitive Intelligence and Content Security, Ministry these methods conduct in-depth semantic learning over the
+of Education, China under Grant RZZN202414. (Corresponding authors: Kai
+Wang; Bailing Wang.) input streams, produce in-depth features for anomaly detection
+ Shuaiyi Lyu is with the Faculty of Computing, Harbin Institute of Technology, and have, therefore, made decent improvements in detection
+Harbin 264209, China (e-mail: lvshuaiyi2568068@163.com). accuracy. However, most of these methods perform graph-level
+ Kai Wang is with the School of Computer Science and Technology, Harbin
+Institute of Technology, Weihai 264209, China, and also with the Shandong state inference rather than conducting fine-grained device-wise
+Key Laboratory of Industrial Network Security, Weihai 264209, China (e-mail: adversary detection. This tremendously undermines the models’
+dr.wangkai@hit.edu.cn). ability in finding which devices in the system an anomaly occurs
+ Yang Liu is with the School of Computer Science and Technology, Harbin Institute of Technology, Weihai 264209, China (e-mail: liuyang322@hit.edu.cn). in and severely impairs their practicality in ICS protection, as
+ Bailing Wang is with the Harbin Institute of Technology (Weihai) Qingdao promptly locating and responding to anomalies is critical in
+Research Institute, Qingdao 266109, China, and also with the Shandong Key securing the running industrial processes and preventing catas-
+Laboratory of Industrial Network Security, Weihai 264209, China (e-mail:
+wbl@hit.edu.cn). trophic outcomes such as physical damage and casualty [8], [9].
+ Digital Object Identifier 10.1109/TDSC.2025.3623299 Furthermore, one cannot shut down the entire system as it may
+
+ 1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 1995
+
+ representations featuring compressed temporal flow properties.
+ These vectors are fed into the model as the initial feature vectors
+ for the encoding process. (b) An Adjacency Parser that constructs the hierarchical architecture from the ICSs of interest and
+ stipulates how messages flow during the aggregation process.
+ (c) An Encoder that performs message passing based upon the
+ new adjacency info produced by the Adjacency Parser and (d) A
+ Decoder that maps the Encoder’s output to the respective labels,
+ which represent states of ICS devices for any applicable moment.
+ Our key contributions are summarized as follows:
+Fig. 1. Numeric data streams reflecting the operational status of industrial 1) Differentiated from the majority of current literature that
+processes (Red-dashed blocks: Anomalous; Green-dashed blocks: Benign).
+Each stream corresponds to a measurement or operation index for a particular
+ conducts coarse-grained system-wise anomaly detection,
+ICS device in a specified process (e.g. a sensor’s measurement of liquid level we present a fine-grained anomaly detection framework
+inside some tank in a water treatment process, the operational mode of a pump producing device-wise labels that help locate the specific
+(on/off) on a pipe, etc.).
+ devices or components with which detected anomalies are
+ associated with. As a result, our proposed framework is
+cause considerable economic loss [10]. It will be very useful if much more practical than current graph-level detection
+operators can take actions over only the most relevant devices solutions in terms of anomaly retracing.
+when an anomaly appears. 2) In order to accurately profile the core hierarchical se-
+ To timely discover the specific devices an anomaly impacts, mantics in typical layered ICS architectures that current
+Graph Neural Network (GNN) based approaches have been neighbouring passing schemes fail to effectively capture,
+investigated. The GNNs are a powerful architecture for profiling we develop the HMA, a hierarchical aggregation model
+graphs of arbitrary structures [11] and dealing with tasks on regulating the message passing directions during the emboth coarse-grained graph level and fine-grained device level. bedding generation process, to obtain a more precise
+The fundamental principle is to produce high-quality node perception of how specific nodes exist in the hierarchical
+embeddings via message aggregation for subsequent feature context of an ICS architecture, than existing neighbouring
+differentiation. However, how to design the message aggregation aggregation paradigms in which embedding learning is
+scheme so that the quality of information within the embeddings biased towards a node’s local surroundings. The resulting
+is good enough for device-wise ICS anomaly detection is a perception serves as a more balanced and reliable basis
+challenging technical issue that requires in-depth exploration. for fine-grained (node-level) state inference.
+Much of the current literature is based on direct neighbour- 3) We implement the HMA over multiple datasets and evalhood aggregation, in which a node obtains information from uate its performance against numerous state-of-the-art
+its immediate neighbours, causing embedding learning to bias baselines. Its effectiveness in ICS anomaly detection is
+towards a node’s local surroundings. Simple as they are, when demonstrated with various popular metrics.
+it comes to application in layered ICS architectures built upon The rest of the paper is structured as follows. Section II
+heterogeneous devices, nevertheless, such aggregation schemes provides an overview of related work on ICS anomaly detection
+do not explicitly consider the supervisory relations among the and basic GNN techniques. Section III defines the problem and
+devices. As a consequence, the embeddings produced by these illustrates the general principles of the proposed framework.
+methods are not an accurate or comprehensive reflection of Section IV provides a detailed description of the model architechow a node belongs to a hierarchical ICS topology. Therefore, ture. Section V summarizes the experiment procedures, results
+these embeddings may not be knowledgeable enough to instruct and analysis and Section VI concludes the paper.
+downstream device-wise ICS anomaly detection tasks.
+ To address the aforementioned issue, we introduce the Hierarchical Message Analyzer (HMA). Distinguished from previous II. RELATED WORK
+coarse-grained anomaly detection approaches producing graph- In this section, we summarize the literature in ICS anomaly
+level results, our proposed HMA yields fine-grained labels on the detection and the Graph Neural Networks.
+node level that can be immediately utilized in tracking down the 1) Anomaly Detection: As security issues in the ICSs have
+specific devices with which detected anomalies are associated. drawn substantial attention over the past decade, there has been
+In addition, the HMA is a new message passing scheme that numerous reviews discussing typical structures of ICS netaccurately profiles the hierarchical semantics in layered ICS works [12], as well as the security challenges they are confronted
+structures via transmission path regulation. It generates balanced with [13], [14]. In light of the commonality of these reviews
+embeddings that reflect more precisely how specific nodes exist that there exists prominent consistency and periodic features in
+in the hierarchical context of an ICS architecture and, as a result, ICSs’ communication patterns and process-oriented semantics,
+boosts the model’s anomaly detection performance. The frame- early traditional methods [15], [16], [17] are introduced to
+work sequentially amalgamates the following components: detect anomalies via periodicity mining, using methods ranging
+(a) A Preprocessor that condenses the original numeric data from classic statistical analytics [17] to state automata generastreams captured from the ICS devices into downsized vector tion [1], [2]. Such solutions are favourable in situations where the
+1996 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+inspected communication is relatively simple so that the quantity In terms of message passing or aggregation, available soluof states remains manageable. Nevertheless, they suffer from a tions in the current literature mostly fall in the neighbouring
+rather large false detection rate when handling flows exhibiting aggregation paradigm, in which a node obtains knowledge from
+complex semantics, not to mention their inapplicability over its direct neighbouring nodes. Extensive methods have been
+relational characteristics. proposed in this category including the GCN [43], TAGCN [20],
+ To tackle this challenge, machine learning approaches are GAT [44], GraphSAGE [45], etc. Apart from these methods that
+investigated and developed [18], [19]. Early contributions such aggregate information from units of nodes, alternative message
+as the k-NN methods [20], although simple, are still proved updating techniques based on meta-graph aggregation [46] have
+efficient in classification tasks and scalable to large datasets. been demonstrated effective in dealing with semi-supervised
+Then, in order to discover high quality non-linear characteristics learning problems on attributed heterogeneous information netmore accurately, the Robust Deep Autoencoder (RDA) [21] and works. Furthermore, in order to improve the model’s ability in
+the DAGAN [22] are introduced. More recently, intrusion de- graph-level classification, hierarchical graph learning [47] and
+tection systems are created [6], [7], [23], [24] via Convolutional pooling approaches [48], [49] are developed. There are also
+Neural Networks, Long-Short Term Memory Networks or their trials in considering edge profiles in deriving comprehensive
+combinations. embeddings [50] for subsequent tasks.
+ Apart from the aforementioned schemes, applications of un- There is abundant work in the literature that highlights other
+supervised methods in anomaly detection are also prevailing. respects of a GNN process as well. For example, a decoding
+Relevant solutions include outlier detectors such as One-Class technique employing global-local integration (GLIN) [51] is
+SVM [25] [26] and Isolation Forest [27], [28], [29], clustering designed to incorporate both a node’s local identity and its
+methods including k-Means [30] and their variations, as well as global awareness in ICS anomaly detection. The FT-GCN [52] is
+neural network based models [31], [32], [33], [34]. For example, suggested as a multi-view trial in traffic adversary detection. The
+an efficient NN-based structure coupled with a PCA block [34] feasibility of decoupling node representation learning and state
+is developed for detecting anomalies by leveraging the data classification [53] in training is investigated. Preliminary studies
+streams’ time and frequency characteristics. show that decoupled training indeed tends to outperform joint
+ Last but not least, there are numerous other NN-based meth- training, but its performance may deteriorate provided that the
+ods developed via transfer learning [35] and federated learn- behavioural patterns and label semantics are highly inconsistent.
+ing [36]. A brief summary of current literature is displayed in Table I.
+ While these methods claim superior results, most of these ap- As suggested in Section I, device-wise anomaly detection
+proaches, to the best of our knowledge, are specifically designed is important for ICS process protection, as operators cannot
+for system-wise (graph-level) state inference rather than a more terminate the whole industrial process at the risk of huge fifine-grained device-wise (node-level) scenario. nancial loss. It would be extremely helpful if anomalies can
+ 2) Graph Neural Networks: To derive schemes capable of be located so that operators may take appropriate actions over
+manipulating irregular data, Graph Neural Networks have been specific nodes without interrupting the rest of the system. Thus,
+developed and applied to a great many domains of research and GNN-based schemes are adopted for anomaly detector design
+applications, including anomaly detection in Industrial Internet in this paper, as they naturally deal with fine-grained tasks and
+of Things (IIoT) [11]. Relevant work features multiple categories yield node-level outputs. Particularly, to create node embeddings
+including but not limited to graph topology learning, message that better reflect the supervisory semantics in specified ICS
+passing or aggregation, decoding mechanism and so forth, with scenarios, we introduce a meta-graph-based hierarchical mesrespect to different functioning components of a GNN model. sage passing fashion (HMA) that breaches the convention of
+ The main goal of graph topology learning is to create or neighbourhood message aggregation. Our proposed method is
+improve the quality of graphs used for subsequent representation designed to operate on ICS architectures in which the associalearning. To achieve this, unsupervised learning methods via tivity among homogeneous devices (such as all sensors) can
+adaptive graph learning (BAGE) and variational adaptive graph be completely unknown. Its conceptual distinctiveness as well
+learning (VBAGE) [37] are proposed, with which adjacency as advantages over existing meta-graph based or hierarchical
+matrices are updated dynamically via training instead of being learning approaches can be stated as follows:
+configured as a static input. The Graph Deviation Network Differentiated from current hierarchical learning methods, the
+(GDN) [38] and the Transformer-based framework (GTA) [39] HMA can be viewed as a path regulator defining how node
+adopt similar ideas in determining the correlational topology information flows in message aggregation without altering the
+used in model training to address adversary detection issues on original graph, while existing pooling approaches such as Diffthe graph level. In addition, the Fused Sparse Autoencoder and Pool [49] and HGP-SL [48] are graph feature condensers that
+Graph Net (FuSAGNet) [40] are designed to explicitly model integrate node features via graph streamlining. These pooling
+the relational patterns within the multivariate time series in order approaches are not applicable in device-wise anomaly detecto achieve system-wise anomaly detection. More recently, the tion, as they are designed to produce graph-level embeddings
+GSLCN [41] and TPGraph [42] are developed to respectively and do not generate representations for individual nodes in the
+investigate the effect of long(short)-term dependency and feature graph. Compared to current meta-graph-based mechanisms, the
+correlation mining on a graph’s contextual expression ability. HMA is a hierarchical feature extractor that operates on layers
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 1997
+
+ TABLE I
+ GNN-BASED WORK SUMMARY
+
+ control, data storage, etc. Its top layer are usually accessible via
+ public network for remote management.
+ One of the aspects differentiating the ICSs from regular
+ networks lies in the vulnerability of the underlying physical
+ processes. Anomalies in ICSs are not only triggered by the
+ wide range of cyber attacks on the network level, but may also
+ result from the sneaky attempts in breaching the regular system
+ operating convention, which potentially leads to chaotic states in
+ the physical processes. Specifically, based on [54], our assumed
+ threat model (resources, goals and capabilities) for ICSs can be
+ described as follows:
+ 1) Resources: An attacker may have access to specialized
+ tools to penetrate an ICS’s enterprise layer or supervisory layer
+ systems from external environment such as the Internet. He may
+ also be an employee or ex-employee (e.g. a system operator)
+ or be in connection with internal staff who have opportunities
+Fig. 2. ICS Architecture. to damage the target ICS systems. In addition, it is likely the
+ attacker is knowledgeable in relevant industrial fields and is
+ aware of an ICS’s potential vulnerability that can be exploited
+constructed from specified meta-graphs, while existing methods for hazardous purposes.
+such as meta-graph aggregation [46] are local information in- 2) Goals: The main goal of an attack to an ICS is to impair its
+tegrators that aggregate neighbouring features from randomly availability, which may lead to a) interruption or termination of
+produced sub-graphs. Current meta-graph aggregation method physical processes that causes huge economic loss and/or nationmay not be an optimal option for ICS anomaly detection, as they wise instability, b) damage to critical infrastructure that are hard
+fail to highlight the supervisory structural properties a typical or impossible to recover so as to impede industrial development,
+ICS network renders, for which the produced embeddings are c) severe casualty that gives rise to chaos in societies.
+not an accurate reflection of how a node exists in the context of 3) Capabilities: Attacks against an ICS physical process may
+a layered ICS architecture. exhibit the following capabilities: a) sensor data theft and/or
+ distortion, b) actuator command listening and/or modification, c)
+ III. PROBLEM STATEMENT AND MODEL DESIGN direct physical penetration and/or control corruption that causes
+ In this section, we formulate the problem to be addressed and abnormal changes in sensor readings or actuator mode sequences
+comprehensively introduce the concept and logic of the proposed (e.g. sensor measurement of liquid acidity or pump operational
+model. mode in water treatment process). Means of execution include
+ but are not limited to remote network infiltration, USB importation, on-site human operation, etc.
+A. Problem Statement
+ Apart from data theft and command listening, all other capa-
+ Typical ICS networks are generally stacks of explicitly- bilities of an attack targeting ICS processes presumably lead to
+differentiated functional layers, each of which has its own des- abnormal deviations in device readings. Therefore, discovering
+ignated role to play. The architecture of a regular ICS network such deviations is crucial in protecting the ICS processes and
+is illustrated in Fig. 2. It comprises a field layer with numerous circumventing potential infrastructure damage and economic
+(typically hundreds or thousands of) sensors and actuators that loss.
+directly interact with the core industrial processes, a process In this work, the term anomaly corresponds to an abnormal
+control layer incorporating the controlling devices supervising deviation in some device reading feature for a specified physical
+the sensors and actuators in the field layer, a supervisory control process, and the general Anomaly Detection problem is defined
+layer and an upper enterprise layer for process management, as below:
+1998 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ Fig. 4. Meta-Graph Definition.
+Fig. 3. Message Passing Scenarios.
+
+ Definition 1: Given an industrial field network the industrial control processes, these state-of-the-art models
+G(V, E, X(t), Y (t)), where V , E, X(t) and Y (t) correspond may not effectively capture the superior-subordinate semantics
+to sets of the network’s devices, connections, device reading over the context of the graph, due to the fact that the neighbourfeatures and ground-truth states at time t, respectively, find ing message passing fashion, as shown in scenario a) above,
+model M (V, E, X(t)) = Ŷ (t) such that for ∀t, Ŷ (t) = Y (t). does not distinguish the roles each node plays. Therefore, we
+Note that the term “state” can be an n-ary label representing strive to discover alternative embedding learning methods that
+the condition of a particular device, such as 0 for Normal and promote organized message aggregation in hierarchical graphs,
+1 for Anomaly given n = 2, or 0 for Normal and k ≥ 1 for as illustrated in scenario b).
+anomalies of different categories when n ≥ 2. Simply put, our We investigate a recursive hierarchical message passing
+goal is to create a model that maps all normal and anomalous scheme that leverages the properties of a layered structure and
+device reading patterns to the correct categories. construct message aggregation blocks within the GNN layers
+ via meta-graph data collection.
+ Definition 2: A meta-graph Gm of graph G(V, E, X(t),
+B. Model Design Principles Y (t)) comprises a set Vm ⊆ V of semantically linked nodes
+ This work proposes a hierarchical GNN approach to address and a set Em ⊆ E of edges on condition that (i) for ∀v ∈ Vm ,
+the aforementioned problem by applying a new message passing ∃ṽ ∈ Vm \{v}, (v, ṽ) ∈ Em and (ii) for ∀(v, ṽ) ∈ Em , v ∈ Vm
+mechanism to node embedding learning. Unlike the classic GNN and ṽ ∈ Vm .
+implementations that prescribe complete adjacency interaction In a typical industrial network, field devices are distributed
+over the graph regardless of the nodes’ diverse contextual se- into distinct controlling cycles over separate regions. We define a
+mantics, we concentrate on establishing an order that stipulates series of meta-graphs based on these functional and geographical
+message redirection based on the specific role assigned to each relations, as illustrated in Fig. 4. These meta-graphs are arranged
+node. We exemplify this concept with the following data collec- by their structural complexity in an ascending order. They’re
+tion scenarios. interpreted as components of the network on different scales.
+ Data collection occurs frequently in populated communities. The single-node meta-graphs in the black dashed blocks are the
+One member (or collector) initiates the process, receives and simplest patterns in the graph architecture. Hence they serve as
+analyzes the information obtained over the whole community a basis for construction of succeeding meta-graphs in the series.
+before generating a feedback broadcast. The approach employed They represent single devices in the network such as a sensor or
+for data collection tends to dramatically influence the process’s an actuator, etc. The triple-node meta-graphs in the blue-shaded
+legitimacy and efficiency. Two scenarios are presented as follows patches correspond to double-layered relationships such as an
+for demonstration (See Fig. 3). individual controlling cycle. They consist of a controller, a sena) Neighbouring Message Passing: Members are arbitrarily sor and an actuator measuring and regulating a specific physical
+mingled and exchange knowledge with their closest neighbours state. These cycles contribute to the more complex topology
+up till the point when info from each member has been suc- (the entire Fig. 4), which can represent a department at a certain
+cessfully delivered to the collector. In this case, all individuals location operating over multiple controllers.
+operate in the same manner despite their role difference. As illustrated in Fig. 4, each complex meta-graph consists of
+ b) Hierarchical Message Passing: Rather than being equally a supervisory node (the top node) and a number of meta-graphs
+treated, members are arranged into groups and sub-groups in whose order is precisely one less. The term order i denotes the
+ (i)
+which a supervisor is designated for collecting and transferring position of each meta-graph Gm in the list of all meta-graphs
+group info as well as receiving feedback from their supervisors [Gm ] sorted by structural complexity. Our proposed message
+in larger groups. This creates a well-organized hierarchical passing scheme is defined as an ordered sequence of 3 events:
+structure enabling multiple collecting processes to occur simul- message aggregation, message exchange and message feedback.
+taneously, allowing for a potential boost in terms of data com- In message aggregation, all meta-graphs except the largest one,
+pleteness as well as operation efficiency for large communities. propagates their messages to the supervisory node of the meta-
+ The ICSs are heterogeneous networks with a multi-layered graph with the next higher order. For example, in an ICS network
+topology, which can be abstracted into graphs that current where controllers are appointed the 2nd ordered supervisory
+convolutional models such as the GCN and GAT can easily nodes (the orange nodes), sensor and actuator nodes (the blue
+handle. Nevertheless, given the supervisory characteristics of and green nodes) swap messages directly with the controllers.
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 1999
+
+Then the controllers aggregate all the received messages, create
+condensed meta-graph representations and report them to the
+supervisory node (the yellow node at the top) of the 3rd ordered
+meta-graph, which might be a gateway, a supervisory machine,
+or simply a dummy node without any role, etc. Upon reaching the
+point where there are no higher order meta-graphs applicable, the
+message aggregation process is complete and the highest order
+supervisory nodes at the current state conduct message exchange
+and echo the resulting condensed messages back to the lower
+level meta-graphs along exactly the same paths used for message Fig. 5. HMA Architecture.
+aggregation. The latter process, denoted as message feedback, is
+identical to the message aggregation procedure, except it works before message feedback. Details of these matrices are discussed
+in the opposite direction. in Section IV-B.
+ In order to implement the aforementioned procedures, a layered structure is constructed in which the supervisory nodes of IV. MODEL STRUCTURE
+all the highest order meta-graphs are aligned in the top layer,
+ The HMA encapsulates 4 primary building blocks, namely
+and that all other nodes are assigned to their respective positions
+ the Preprocessor, the Adjacency Parser, the Encoder and the
+in the structure based on their distances to these highest order
+ Decoder. Its general architecture is illustrated in Fig. 5. Desupervisory nodes. Details of the layer alignment process are
+ signed to deal with heterogeneous data sequences and complex
+explained in Section IV-B. When the structure is ready, messages
+ relationships, the Preprocessor converts the sequential data input
+produced at the bottom structural layer are elevated to the top,
+ (series of sensor readings, actuator states, etc.) into vectors
+updated at the top and reverberated to the bottom. By the time all
+ (initial messages) containing temporal characteristics of the
+nodes on the bottom structural layer have received an echo from
+ original data at specific time ticks, and the Adjacency Parser
+the top, one round of message passing process comes to an end
+ parses the hierarchical relationships among all nodes of interest,
+and the resulting vectors are fed into the GNN’s U P DAT E(.)
+ producing the layered architecture on which subsequent tasks are
+operator. To further explain it using matrix representations,
+ performed. Their outputs are then passed to the Encoder, the core
+suppose A is the original graph adjacency matrix and H (l)
+ functioning component of the HMA which conducts meta-graph
+the updated node embeddings after the l-th round of message
+ message aggregation, exchange and feedback as introduced in
+passing. In conventional GNN frameworks, message passing is
+ Section III-B. Finally, the updated messages are mapped to their
+conducted as follows,
+ states of inference in the Decoder. The main idea behind this
+ H (l+1) ← ÃH (l) W. (1) design is to alter the amount of knowledge each node learns
+ through message passing. By applying the hierarchical message
+where Ã is the normalized adjacency matrix of A. In our aggregation scheme proposed in the Encoder on the layered
+approach, however, this is achieved via (2) and (3), with (2) architecture produced by the Adjacency Parser, compositions
+corresponding to message aggregation, and (3) the message of learnt node embeddings are much less biased to the nodes’
+exchange and feedback steps. locality and are hence more balanced and reliable as a represen-
+ 
+ n−1 tation of the sophisticated relational semantics between a node
+ H (temp) ← Ã(n−i)(n+1−i) H (l) . (2) and its surroundings.
+ i=1
+ n−1   A. Preprocessor
+ 
+ (l+1) (i)(i+1) (n) (temp)
+ H ← U P DAT E Ã Ã H . The input of the HMA is a stream Φ of M device readings
+ i=1 obtained within a time interval of length T , represented as a
+ (3) matrix of dimension T × M . For each individual stream ϕ(Φ’s
+where column) in Φ with respect to a particular device, the Preprocessor
+ transforms ϕ into a series of initial messages (vectors) of dimen-
+
+n−1
+ sion γ via temporal encoding, a process that extracts temporal
+ Ã(n−i)(n+1−i) ← Ã(n−1)(n) Ã(n−2)(n−1) . . . Ã(2)(3) Ã(1)(2) .
+ features within a time interval (window) of a preconfigured
+i=1
+ (4) size placed at a specific time tick. With n the length of the
+ window applied, each ϕ is converted into (T − n + 1) messages
+
+n−1
+ of length γ, and thus the final output of the Preprocessor (denoted
+ Ã(i)(i+1) ← Ã(1)(2) Ã(2)(3) . . . Ã(n−1)(n) . (5) X) is of dimension (T − n + 1) × γ × M .
+i=1
+ In order to extract the numeric features of a reading sequence
+In the equations above, n denotes the top structural layer, and at a given time tick t, temporal encoding is achieved via the
+the Ã(i)(i+1) ’s are normalized adjacency matrices channeling Grouped Exponential Weighted Average (GEWA) algorithm
+the i-th and the (i + 1)-th structural layers. Ã(n) symbolizes (see Algorithm 1 and Fig. 6). This algorithm compresses all
+the message exchange process that occurs within the top layer values within a window of length n into a new vector x(t) of
+2000 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ Fig. 7. Architecture Construction (Different Meta-graphs may correspond to
+ distinct stages of an industrial process, and may vary among different industrial
+ scenarios.).
+
+Fig. 6. The GEWA workflow (m set to n/2 as an example). procedure (See (8)).
+
+ e− n (i+ m )
+ a jn
+
+ w(i, j) =  .
+ m−1  m −1 − n
+ Algorithm 1: Grouped Exponential Weighted Average (8)
+ m)
+ (i+ jn
+ n a
+
+ (GEWA). j=0 i=0 e
+
+ Input: Reading streams of M devices Φ[T ×M ] where a is the coefficient that balances the distribution of all
+ Output: Preprocessed vectors X[(T −n+1)×γ×M ] weights in a specific window.
+ Ensure: Owing to the scaling distinctiveness of the original readings,
+ 1: X ← emptylist additional normalization is applied to ξ(t) after the averaging
+ 2: Initialize window size n and downsizing parameter m. process is complete, to circumvent potential training bias toward
+ 3: Compute exponential weights w (See (8)) the nodes with dominant magnitude. In our implementation, a
+ 4: for each device reading ϕ in Φ: simple arctangent normalization scheme is employed for the
+ 5: Vector list for current device Ξ ← emptylist convenience that no additional statistics is required during the
+ 6: for t ∈ [n, T ]: normalization process (See (9)).
+ 7: Fetch window at t:
+ ξnorm (t, j) = arctan(ξ(t, j)), 0 ≤ j < m. (9)
+ 8: Compute ξ(t) (See (6) & (7))
+ 9: Normalize ξ(t): ξnorm (t) ← arctan(ξ(t)) Finally, the normalized vectors ξnorm (t)’s are condensed to
+ 10: Ξ ← Ξ + ξnorm (t) x(t)’s of dimension γ via Principal Component Analysis (PCA)
+ 11: end for for its meliorating effect on the model’s performance (See (10)).
+ 12: X ← X + Ξ (Ξ is of size [(T − n + 1) × m])
+ x(t) ← P CA(ξnorm (t)). (10)
+ 13: end for
+ 14: Perform P CA over all m-dimensional vectors in X Given that the x(t) generated in (10) is associated with a
+ 15: return X particular device at a specific time tick t, the final output of
+ the Preprocessor X is defined as an aggregation of the x(t)’s
+ obtained at all t ∈ [n, T ] and for all ϕ’s in Φ.
+a downsized dimension γ, where n ≤ t ≤ T is the time tick at In summary, by performing temporal compression, we transwhich the window is captured. This x(t) contains the reading’s form the original reading sequences Φ into their respective
+temporal properties at time t and can hence act as a node’s graph node features at different time ticks, generating initial
+initial feature vector representation used for succeeding tasks representations X for subsequent training.
+of message passing and state inference (at time t).
+ In Algorithm 1, the window of size n is evenly divided into m B. Adjacency Parser
+segments within each of which weighted averaging is conducted.
+ In general, the Adjacency Parser determines the hierarchical
+This operation shrinks the n-dimensional window into a vector
+ architecture for subsequent message passing via meta-graph
+ξ(t) of length m (See (6) and (7)).
+ alignment and layer assignment. As defined in Section III-B,
+ ξ(t) = [ξ(t, 0), ξ(t, 1), . . . , ξ(t, m − 1)]T . (6) each meta-graph has a supervisory node that collects data from
+ other member nodes in the graph before transmitting it to its
+ 
+ n
+  
+ m
+ jn own supervisor in a higher-order meta-graph (See Fig. 7). For
+ ξ(t, j) = w(i, j) · ϕ t − i − (7) (2)
+ example, in a 2nd-ordered meta-graph Gm composed of a single
+ i=0
+ m
+ controller C and its subordinate sensors S’s and actuators A’s,
+ Note that in (7), t ≥ n, 0 ≤ j < m and w(i, j) regulates the the controller is the supervisory node dedicated to collecting
+ m ) to
+contribution of the original entry recorded at time (t − i − jn and aggregating information from its immediate subsidiaries
+ξ(t, j). Assuming that the importance of certain context decays (S’s and A’s) and reporting to its own supervisory node in a
+with time, the weighing factors w(i, j)’s in our implementation 3rd-ordered meta-graph, which can be a security gateway, or a
+is hence set to decrease as time backtracks. In particular, we em- switch, etc. Fig. 8 exemplifies a 6th-ordered meta-graph for a
+ploy a set of exponential weights in this step of our preprocessing secure water treatment process (SWaT) constructed with layers
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 2001
+
+ Algorithm 2: Adjacency Parser.
+ Input: Set V of M nodes of interest (controllers, field
+ devices, etc.)
+ Output: List of adjacency matrices A
+ Ensure:
+ 1: A ← emptylist, layers  ← emptylist
+ 2: Construct list Gm of meta-graphs using all nodes in V
+ (See Fig. 7)
+ 3: s ←{Supervisory nodes of all meta-graphs in Gm }
+Fig. 8. 6-Layer Structure for SWaT Process. 4:  ←  + s
+ 5: V ← V - {Nodes in s}
+ 6: while V = ∅:
+ 7: r ←{Nodes in V directly linked to nodes in s}
+ 8: s←r
+ 9: ←+s
+ 10: V ← V - {Nodes in s}
+ 11: end while
+ 12: Derive layer adjacency matrix A using layers in 
+ 13: for each neighbouring pair of layers (αi , αi+1 ) in :
+ 14: Construct A(i)(i+1) from A w.r.t.(αi , αi+1 ) via
+Fig. 9. Example of Structural Layer Dissolution. block masking.
+ 15: A ← A + A(i)(i+1)
+ 16: end for
+of multiple field devices, controllers and upper supervisory 17: return A
+nodes (denoted as dummy).
+ It is trivial to realize that every node in a graph can be
+treated as a supervisory node in a meta-graph of some order.
+Nonetheless, not all nodes are committed to both the tasks of the green blocks in the red dashed box denotes all existing links
+data aggregation and reporting. In a typical ICS layout, field between layer 1 and 2. Hence, A(1)(2) can be derived by applying
+devices such as sensors and actuators usually do not have any a mask to A that preserves only the green patches and sets the
+subordinate devices connected to them, and hence their only task rest to zero. Similarly, the green patches in the right matrix in
+is to report to their supervisors, namely the controllers. Some Fig. 9 renders the connection patterns between layer 2 and 3,
+other nodes, on the other hand, may not have any supervisors and thus, we are able to obtain A(2)(3) using the same masking
+by configuration. For instance, in scenarios where no devices principle.
+are taken into consideration other than the controllers and field To sum up, the workflow of the Adjacency Parser is presented
+devices, the controllers have no supervisors to report to. Thus, in Algorithm 2. This module stipulates the layered structure
+such nodes only receive messages during the data aggregation and parses all the adjacency information between neighbouring
+process, and they are aligned in the top layer of the hierarchical structural layers in an array of matrices [A(i)(i+1) ], which serves
+architecture. Once the top layer is generated, determining the rest as the 2nd part of input to the GNN-based Encoder.
+of the structure is recursive and straightforward. Specifically, the Note that one of the core properties of an ICS process is
+nodes directly reporting to the top layer are assigned to the layer long-term periodicity. It means that such a process is typically
+right below it (See Fig. 7). required to run for days, weeks or even months. To meet this
+ In order to develop the intended hierarchical message passing need, an ICS system is usually a fixed structure whose set of
+function, we store the connectivity information among nodes devices and connections remain stationary for a long period
+corresponding to all pairs of adjacent structural layers in an array of time. Thus in principle, the hierarchical architecture built
+of adjacency matrices [A(i)(i+1) ] as defined in Section III-B. above should exhibit little dynamic characteristics. However, in
+Each A(i)(i+1) only inherits the associativity between layer i and case of exceptions such as node addition or removal, changes
+i + 1 and does not convey any internal links within one exclusive occur in the constructed hierarchical architecture. In this case,
+end, as the HMA only prompts internal message exchange on the Algorithm 2 should be timely executed again to update the
+top layer. Consider the adjacency matrix A of a 3-layered struc- elements in the array A of adjacency matrices, and subsequent
+ture in Fig. 9, in which nodes that pertain to the same layer are training should be performed for the HMA model to adapt to
+grouped together so that the adjacency information between any this new architecture. Furthermore, if relations among devices
+pair of structural layers is conveniently decoupled into blocks are unavailable or irregular, one way to deal with this situation
+(sub-matrices). One can clearly observe that the three yellow is to equally treat all devices by randomly arranging them into
+patches preserve the internal links within the same layers, while groups and assigning an additional dummy node in each group
+the blue and green patches store all the connections between as its supervisory node. This creates hierarchical structures
+neighbouring layers. In the left matrix in Fig. 9, specifically, shown in Fig. 8, in which relations among the controllers are
+2002 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ Algorithm 3: Message Passing.
+ Input: Initial messages X[(T −n+1)×γ×M ] , List of
+ adjacency matrices A
+ Output: Updated message H[(T −n+1)×ψ×M ]
+ Ensure:
+ 1: H ← emptylist
+ 2: for A(i)(i+1) ∈ A:
+ 3: Add self −loop to A(i)(i+1)
+ 4: A(i)(i+1) ← LaplacianN ormalized(A(i)(i+1) )
+ 5: end for
+ 6: for t ∈ [n, T ]:
+ 7: Ĥ(t) ← Matrix containing all M γ-dimensional
+ vectors in X w.r.t time t
+ 8: for A(i)(i+1) ∈ reversed(A):
+ 9: Message aggregation Ĥ(t) ← A(i)(i+1) × Ĥ(t)
+ 10: end for
+ 11: Perform top layer message exchange.
+ 12: for A(i)(i+1) ∈ A:
+ 13: Message feedback Ĥ(t) ← A(i)(i+1) × Ĥ(t)
+ 14: end for
+ 15: H(t) ← Ĥ(t) × W
+ 16: H(t) ← ReLU (H(t))
+ 17: H ← H + H(t)
+ 18: end for
+ 19: return H
+Fig. 10. Encoding Process (Each round of message passing is completed by
+sequentially following steps 1 through 8).
+ Note that in our implementation, Laplacian normalization is
+unknown and all controllers are connected via upper layer yellow employed in each step of message passing due to its outstanding
+dummy nodes. The dummy nodes here act as virtual message runtime efficiency compared against other mechanisms such as
+aggregators rather than real entities, and they enable construction attention and sampling.
+of hierarchical architectures with no a priori information on
+devices’ supervisory relationships. D. Decoder
+ To determine the states of all nodes in every time tick of inter-
+C. Encoder est, the updated messages H are fed into a decoding block with
+ a Logarithm-Softmax layer and a category mapping function.
+ As the core function of the HMA, the Encoder enables hier-
+ The Logarithm-Softmax function converts each vector h in H,
+archical message passing via a cascade of message aggregation,
+ which is of length ψ, down to an N -dimensional vector of logits
+exchange and feedback, followed by an U P DAT E(.) operation
+ ŷ where N denotes the number of classes. Then it computes the
+for dimension shifting. The input to this module consists of the
+ logarithmic probability lp = [lp(1), lp(2), . . ., lp(N )] of all the
+initial messages X of size (T − n + 1) × γ × M produced by
+ N classes that a particular ŷ is associated with in the following
+the Preprocessor, as well as the array of adjacency matrices
+ manner (See (11)).
+[A(i)(i+1) ] manifesting the structure of the layered topology  
+defined in the Adjacency Parser. The output of the Encoder is eŷi
+the updated messages H of dimension (T − n + 1) × ψ × M , lp(i) ← log N , 1 ≤ i ≤ N. (11)
+ ŷj
+ j=1 e
+where ψ equals the length of every updated message vector.
+Details of this encoding process is presented in Algorithm 3 and where ŷi refers to the i-th entry in ŷ. Finally, all lp vec-
+Fig. 10. tors are transformed into one-hot representations showing the
+ In Algorithm 3, initial messages (X) recursively ascend to categories these vectors are mapped to. The eventual output
+the top via message aggregation, mingle at the peak level and Y of the Decoder and the entire HMA is therefore of size
+descend back down to the bottom of the layered architecture as (T − n + 1) × N × M , inferring the states of all M devices
+Ĥ. Each ascent or descent is achieved via a left multiplication of for all (T − n + 1) time ticks.
+a normalized adjacency matrix Ã(i)(i+1) , which acts as a bridge As a binary output is generated for each node, operators
+for the neighbouring layers i and i + 1 to transfer messages to may interpret the result based on the specific type of device
+each other. The Ĥ is subsequently updated to H by applying being examined. In case of sensor, a positive output indicates
+a linear weight matrix W and a ReLU (.) activation, and the a deviation in its measurement values from normal variational
+generated H has a new dimension of (T − n + 1) × ψ × M . patterns, while for an actuator, this means that the device’s
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 2003
+
+ TABLE II
+ DATASET CHARACTERISTICS
+
+operating states are not properly switching as configured. For a
+controller, however, interpretation of an anomalous flag relies
+on the variable under check, which could be an adversarial
+command or an invalid operand, etc.
+
+ V. EVALUATION
+ In this section, we discuss our evaluation process including
+the used datasets, baseline configurations, relevant results and
+analysis. All baseline methods are measured on a server running Fig. 11. Layered Structures.
+CentOS Linux system (version 7) and equipped with 32 proces- TABLE III
+sors of 800.000 MHz together with a Memory of 125.388 G. CORE HMA PARAMETERS
+All necessary coding is implemented using PyTorch version
+1.7.1+cu110. Popular metrics (F1 Score, AUROC and AUPRC)
+are adopted in the performance assessment process. As described
+in Section IV, the HMA’s input and output sizes are T × M
+and (T − n + 1) × N × M , respectively. With T , N and M the
+number of time ticks, classes and devices, the output contains
+the anomalous states of every individual device for all time ticks
+of interest. As we do not distinguish anomalies of disparate the HMA’s performance, we implement the architectures with 4,
+categories in this study, all final output states are binary (i.e., 5 and 6 structural layers as well. Relevant test results are shown in
+N = 2, output state equals 0 for normal and 1 otherwise). the following sections. Note that in the datasets above, there are
+ devices whose readings remain constant all along. These devices
+A. Datasets & Graphs are omitted in the graph assuming that they are not affected by the
+ physical processes (e.g. a shutdown pump whose state remains
+ We measure the HMA’s functionality over 5 popular datasets
+ zero).
+in security research: the Secure Water Treatment dataset
+(SWaT) [55], the Critical Infrastructure Security Showdown
+ B. Baselines
+dataset (CISS), the Water Distribution dataset (WADI: A water
+distribution testbed for research in the design of secure cyber The HMA’s implementation complies with the configurations
+physical systems), the Battle of Attack Detection Algorithms in Table III. Note that the M values are quantitative additions of
+dataset (BATADAL) [56] and the Car Hacking Dataset (CHD). controllers and field device readings (M = 6 + 35 stands for 6
+All datasets are ICS-based except the CHD, which is a car controllers plus 35 readings from the field devices). They do not
+hacking dataset recording a vehicle’s CAN traffic in 4 attack include any dummy nodes involved in architectures with deep
+scenarios. This dataset is used to evaluate the HMA’s generality structural layers.
+in domains other than ICS security. The key characteristics of Our set of baselines consists of several GNN-based benchall 5 datasets are summarized in Table II. Note that with the mark approaches including classic GNN variations (GAT,
+system-level operating states provided in the last column of TAGCN) and more advanced methods recently proposed for
+each data set, device-wise labels are generated from these states adversary detection (GLIN, AHGA, etc.), as well as several
+in order to perform fine-grained node-level anomaly detection. popular methods for outlier detection (GAAL, LOF, AE, etc.).
+Specifically, a snippet extracted from a device’s data stream is la- All benchmark methods and their implementation details are
+belled as anomalous if any state within the snippet is anomalous listed as follows:
+in the original dataset. 1) GAT [44]: A GNN framework with an attention mecha-
+ The ICS network topologies on which model evaluation is nism. Input layer size equals the length γ of preprocessed
+conducted are exemplified in Fig. 11. In both architectures, all vectors, and the output layer is of size 2. Between the
+field devices (sensors and actuators) are directly linked to their input and output layers, 1 hidden layer with 128 neurons
+respective controllers, while all controllers are inter-connected is configured.
+in a 2-layered architecture but associated with a dummy super- 2) TAGCN [20]: Compound GNN with a kernel that convisory node denoted as “Central Reference Point”(or “CRP”) in sists of multiple classic Graph Neural Network channels.
+a 3-layered instance. To examine the effect of structural depth on The number of neurons in the input layer matches the
+2004 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ TABLE IV
+ BASELINE TEST RESULTS
+
+ dimension γ of the preprocessed vectors. Quantity of matches the anomalous rate in the set of preprocessed
+ neurons in the output layer equals 2. Maximum of 3 samples with respect to each dataset.
+ hidden layers of size 128 are implemented. Note that the output vectors generated by the Preprocessor in
+ 3) GLIN [51]: A global pooling and integration approach Section IV-A serve as the input of all the baseline methods.
+ applied to the decoding block of a GNN framework. It
+ has an input layer with γ neurons, 2 hidden layers with
+ 128 neurons, and an output layer of size 2. Maximum C. Baseline Test Results
+ pooling and concatenation are applied. Comparative test set results are summarized in Table IV. For
+ 4) AHGA [57]: Features graph-learning using process- the proposed HMA method, metric values of the models trained
+ related properties. Implemented with an input layer of on hierarchical graphs with 2 and 3 structural layers are recorded
+ size γ, 3 hidden layers of size 128 and a binary output for comparison. Note that while the depth of the hierarchical
+ layer. architecture can be greater than 3, these scenarios are analyzed
+ 5) TPGraph [42]: Graph learning scheme using feature separately in Section V-D3.
+ correlation mining. Specifically developed with 2 graph As shown in Table IV, it is clear that the HMA’s detection perproducing blocks (one for Âr and one for Âc ) and 1 formance surpasses the benchmark methods in almost all metrics
+ graph fusion module. Anomaly detector is constructed for all the 5 datasets. Compared with its GNN counterparts,
+ as a GCN structure with 2 hidden layers of 64 neurons. it achieves average AUROC gains of 9.92%, 18.92%, 15.09%,
+ 6) GSLCN [41]: Graph learning approach based on long- 15.47% and 4.45% with respect to SWaT, WADI, BATADAL,
+ term or short-term dependency encoding. Coordinates CISS and CHD datasets. As all the baseline approaches follow
+ replaced by an ICS device’s position attributes and fea- the conventional neighbouring aggregation paradigm during the
+ tures computed as a vector with 64 entries, mapped from message passing process, it can be inferred that hierarchical
+ original numeric data streams. message aggregation may have a more extensive meliorating
+ 7) GAAL [58]: Features application of informative sample effect on the quality of generated node embeddings, with which
+ generation and boundary learning in anomaly detection. anomaly detection is conducted. With contribution of each node
+ MO-GAAL is developed with 2 generators, each of to a particular vector representation reshaped, the message comwhich composed of 3 layers, as well as 1 discriminator position pattern of every node embedding is a better reflection
+ equipped with 1 input layer of size γ, 1 hidden layer of of how a node is hierarchically associated with the rest of
+ size 128 and 1 output layer of size 2. the topology, such as whether specific nodes are positioned in
+ 8) LOF [59]: Density-based outlier detection scheme on the same layer of an ICS architecture, etc. The resulting node
+ assumption that regular nodes are clustered more closely embeddings are, therefore, semantically closer to the specified
+ than outliers. Its contamination rate equals the rate of ICS structure and serve as a more informative and reliable source
+ anomalies in each preprocessed dataset. for subsequent node-level anomaly detection.
+ 9) AE [60]: Anomaly detection method based upon embed- One may also claim from Table IV that the HMA outperforms
+ ding reconstruction. Implemented as a 3-layered archi- non-GNN-based methods including the GAAL, LOF, AE, etc.
+ tecture with 1 input layer of size γ, 1 encoding layer of In terms of node-level detection, the feature vectors used by
+ size 2k where k equals the largest integer that satisfies these methods do not contain information from other devices,
+ 2k ≤ γ, and 1 decoding layer of the same size as the and therefore cannot utilize the correlations among nodes to
+ input. enhance adversarial numeric patterns for anomaly detection. In
+ 10) OCSVM [61]: An unsupervised outlier detector based SWaT scenario, for example, the vector representing FIT-101
+ upon hyperplane training. Similar to the Isolation Forest, (measuring flows) incorporates features of sensor FIT-101 only,
+ the nu rate is set to the rate of anomalous samples in the but does not gather characteristics of its neighbours, say, sensor
+ preprocessed data corresponding to each dataset. LIT-101 (measuring liquid levels in tanks). As the containers
+ 11) Isolation Forest [62]: An unsupervised outlier detector (tanks or pipes) are connected in which LIT-101 and FIT-101
+ using feature point splitting. Its contamination rate are deployed, variation in one’s numeric streams presumably has
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 2005
+
+Fig. 12. Test results with and without PCA. Fig. 13. Test results with and without hierarchical dissolution.
+
+a direct influence on the other (Level changes in tanks lead to
+flow changes in pipes). With LIT-101’s information encoded, the
+FIT-101’s feature vector should gain a better perception of how
+its own measuring value changes, and become more sensitive
+to an anomaly at its occurrence. However, such neighbouring
+interactions do not exist in these methods, and as a consequence,
+the methods’ reliability in anomaly detection is undesirably
+limited. Fig. 14. Test results for different structural layer configurations.
+
+D. Ablation Study 3) Structural Layer Configuration: As is demonstrated in
+ Apart from the baseline test results provided above, a compre- Section V-C, results produced by the HMA implemented with a
+hensive ablation study is conducted in order to explore how each 2 or 3 layered hierarchical architecture appear rather decent.
+component of the HMA framework shapes the model’s perfor- This gives rise to the conjecture, though, as to whether the
+mance. Effects of core functions in all components are measured, HMA’s performance can be further optimized via introducing
+except for the Decoder whose structural configurations remain extra structural layers. To explore this, additional layers are
+consistent across all HMA variants. In particular, the following stacked above the controllers to deepen the structure. These
+items are examined: the PCA function in the Preprocessor, the layers contain dummy nodes which do not have any specific
+hierarchical dissolution function and structural layer configura- physical roles. In a 6-layer structure constructed for the SWaT
+tion in the Adjacency Parser, as well as the 3 primary hierarchical dataset (See Fig. 8), for instance, a layer of 4 nodes is placed
+message passing steps (message aggregation, top layer message above the controllers, among which 2 are each linked to 2
+exchange, message feedback) in the Encoder. controllers, while the other 2 are uniquely connected to the
+ 1) PCA Function: Comparative test results of the HMAs remaining 2 controllers. Then another layer of 3 nodes is built
+implemented with and without the PCA function in the Pre- upon the 4-node layer, and the mapping between these 2 layers
+processor are presented in Fig. 12. The noticeable numeric are established in a similar way.
+discrepancies between the 2 scenarios suggest that the HMA’s Assessment results on the HMA trained on graphs with 2
+performance can be rather susceptible to the quality of ini- to 6 structural layers are illustrated in Fig. 14. For all datasets
+tial input features. Core essences extracted from the original evaluated, performance is peaked on topologies with either 2 or
+data streams, redundant information that negatively impact the 3 layers. In addition, as observed from the SWaT, WADI and
+HMA’s learning process is mostly removed via PCA, leading BATADAL histograms, the HMA’s functionality generally falls
+to a boost in the quality of the model’s input features. The as more layers are involved. This possibly attributes to the overperformance of the HMA trained with these refined attributes smoothing effect caused by excessive message passing steps on
+tends to be greatly enhanced as a result. deep structural layers.
+ 2) Hierarchical Dissolution: The hierarchical dissolution 4) Hierarchical Message Passing: Finally, experiments are
+function dissects the ICS topology into layers, based on which conducted to explore how each step of the proposed hierardata transmission paths are built. In order to examine its ef- chical message passing scheme impacts the model’s detection
+fect on the HMA’s detection ability, the original HMA is functionality. With the original scheme sequentially composed
+constructed, together with the classic GCN trained with the of message aggregation, exchange and feedback, scenarios are
+same layered graph input but regular neighbouring aggrega- investigated in which parts of the steps are disabled. The examtion scheme. Results yielded by these two implementations, ined scenarios and the corresponding test results are displayed
+as exhibited in Fig. 13, are an immediate demonstration of in Table V. It can be easily discerned from the results that the
+the superiority of the hierarchical message passing paradigm metric values drop faster with more steps removed. The AUPRC
+over the classic neighbouring aggregation convention. With for the SWaT dataset, for instance, suffers from a 2.33%, 13.53%
+data transmission paths re-regulated across distinct levels, core and 24.24% decline when message feedback, exchange and
+layer-wise network semantics are better absorbed in the nodes’ aggregation are orderly blocked. On one hand, it is inferred that
+vector representations, improving the model’s adaptation to the as the initial step of the whole message passing scheme, message
+respective ICS systems and enhancing its anomaly detection aggregation plays a significant role in reshaping a node’s awareability. ness of its contextual correlations with the rest of the graph.
+2006 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ TABLE V
+ FUNCTIONAL IMPACT OF SPECIFIC HIERARCHICAL MESSAGE PASSING STEPS
+
+Fig. 15. Test results with noise.
+
+On the other hand, even though not as prominent, the message
+exchange step also has a rather large positive influence on the
+HMA, as it is the main step in which information from nodes Fig. 16. Test results with structural errors.
+in disparate industrial stages gets mingled and integrated. With
+this operation, further enhancement in the nodes’ perception of
+their surroundings is achieved, leading to a rather promising 2) Influence of Structural Errors: Apart from the environperformance gain in the HMA’s detection functionality. mental noise discussed above, structural errors are another factor
+ that leads to distortion in input graphs and hence may negatively
+ influence the HMA’s detection accuracy. To explore this correla-
+E. Robustness Study
+ tion, directed edges in the original graph are randomly dropped
+ In this section, the HMA’s resiliency is examined against before construction of the hierarchical architecture for message
+multiple external interfering factors, including varying ratio passing. Specifically, in a 2-layered scenario shown in Fig. 11,
+of anomalies, as well as graph input errors such as structural edges are grouped into 2 sub-pools, i.e., sub-pool 1 containing
+perturbation and environmental noise. Implementation details all internal edges in the top layer and sub-pool 2 incorporating
+and the respective test set results and discussions are given as all edges between the 2 layers. A specified number (e.g., 5%
+follows. of the total edge quantity) of edges are randomly selected and
+ 1) Influence of Noise Addition: To examine the effect of removed from designated pools for ten times and the respective
+noise in input graphs on the HMA’s detection performance, a AUROC values of the HMA models are displayed in the box
+uniformly distributed noise is applied to every non-zero ele- plots in Fig. 16 (Note that the full pool in Fig. 16 denotes the
+ment in the equivalent adjacency matrix Aeq used for forward entire edge set).
+propagation. In particular, this equivalent adjacency matrix can In general, the HMA’s AUROC values fall within a rather nar-
+ (i)(i+1)
+be expressed as ( n−1 i=1 Ã )Ã(n) ( n−1
+ i=1 Ã
+ (n−i)(n+1−i)
+ ) row interval that approximately peaks at the AUROC obtained
+ n−1 (n−i)(n+1−i) n−1 (i)(i+1)
+where i=1 Ã and i=1 Ã are respec- with the complete graph structure. This is the case for all 3
+tively defined in (4) and (5). With Amin eq the minima of Aeq , scenarios in which links are respectively deleted from sub-pool
+each noise value is randomly generated within the range of 1, sub-pool 2 and the entire edge set. It shows that disconnecting
+[− β2 Amin β min
+ eq , 2 Aeq ], where β is a non-negative coefficient rep- a limited number of node pairs does not lead to noticeable
+resenting the maximum magnitude ratio between the noise and information loss for the rest of the graph. This information loss is
+Amin
+ eq . To investigate how noise of different magnitudes impacts actually compensated via alternative connections in the original
+the HMA’s detection performance, multiple β values are selected graph. Hence, the HMA’s robustness in terms of structural loss
+for noise generation and the respective AUROC values of the is justified.
+HMA models are shown in Fig. 15. 3) Influence of Anomaly Ratios: As a key property of the
+ Intuitively, as the maximum magnitude ratio increases, noise input data, anomaly ratio also has a prospective influence on
+becomes stronger and tends to disturb the HMA more. However, the HMA’s functional reliability. To explore this connection,
+as shown in Fig. 15, no apparent discrepancies are spotted portions of anomalies are removed and the AUROC values of
+among the AUROC values yielded in different β configura- the HMA frameworks evaluated on the resulting datasets are
+tions for the majority of the datasets evaluated. This potentially presented in Fig. 17. Note that the horizontal indexes in Fig. 17
+attributes to the HMA’s ability to smooth out the effects of denote the ratio of removed anomalies to all anomalous samples
+noise via message aggregation. Therefore, the model’s robust- in the original dataset.
+ness is strengthened and its detection performance is hardly One may tell from Fig. 17 that the HMA’s detection perforaffected. mance remains stable around a particular level as the quantity
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 2007
+
+ TABLE VI
+ TEST SET AUROC RESULTS FOR MODELS EVALUATED OVER ALL DATASETS
+ (LEFTMOST COLUMN: TRAINING SETS, TOP ROW: TEST SETS)
+
+Fig. 17. Test results with different anomaly ratios.
+
+ applicable to non-ICS scenarios in which hierarchical properties
+of anomalous samples declines. It shows that the framework is are unclear.
+able to capture sufficient variational semantics from the input 2) Cross-Dataset Transferability: Despite its good generalstreams that help distinguish anomalous patterns from the nor- izability across non-ICS domains, whether the proposed framemal ones regardless of specific anomaly ratios. This contributes work trained in one system can be directly transferred to another
+to the overall robustness of the proposed approach in anomaly is a completely different story. In this section, the models trained
+detection. in one dataset are evaluated with the test samples in all other 4
+ datasets. All AUROC values are summarized in Table VI.
+F. Generalization Study The results in Table VI shows that the HMA framework
+ trained over one dataset does not fit the test samples in other
+ In this section, the HMA’s generalization ability across non- datasets very well. For instance, the AUROC of the model trained
+ICS domains and its transferability to different scenarios are over the SWaT dataset and tested on the CHD dataset is 0.2832
+analyzed. inferior than the one specifically trained for the CHD dataset. It
+ 1) Domain Generalization: With the model’s detection ac- is likely that this discrepancy attributes to the distinctiveness
+curacy evaluated on not only popular ICS datasets, but also a of both features and graphs in different domains. Therefore,
+car hacking dataset (CHD), it’s convincing that the HMA is in order to bridge the gap, the following strategies can be
+able to generalize in domains other than ICS security. Theoret- investigated in the future.
+ically, whether the HMA can be applied to non-ICS scenarios Feature Adaptation: The training and test datasets belong to
+depends on the feasibility of generating hierarchical structures different domains (e.g., trained on SWaT and tested on WADI),
+from current graph topologies. Unlike an ICS system whose and their input vector spaces may differ a lot from each other,
+architecture is naturally layered and hierarchical, a non-ICS leading to incompatibility of a framework trained over one
+graph structure can be arbitrary and irregular. However, it is domain with a different one. Therefore, feature adaptation can
+viable that these non-ICS graph structures get transformed into be investigated in the future to map the vector space of test
+layered topologies using either of the following two strategies. domain to the respective training domain (e.g., vector shifting
+ For heterogeneous graphs representing communities in which or matrix transformation can be adopted to transform the WADI
+roles of all nodes are explicitly designated, hierarchical relations input patterns to the SWaT ones at the start of the testing
+among nodes can be inferred from the specified roles. In a data process). In this fashion, the model’s adaptivity to different
+collection scenario described in Section III-B, for instance, with domains is enhanced and its transferability can potentially be
+the blue and green nodes referred to as regular members of the improved.
+community, and the orange ones supervisors collecting data from Graph Adaptation: Graph distinctiveness is another factor
+groups of regular members, hierarchical relations (see Fig. 3(b)) that adds to the model’s inapplicability to different applicacan be established among the orange nodes and the union of blue tion scenarios, as it leads to a difference in terms of how
+and green ones. Similarly, links between the orange nodes and information is aggregated. One potential solution that might
+the yellow nodes can be created in the same fashion. mitigate this undesirable effect is creating auxiliary topologies
+ For all other cases in which either roles are unavailable or su- that structurally bridge the test set graph to the training one
+pervisory relations among roles are unclear, nodes are intuitively (e.g., sub-graphs from test set graph that resemble part of
+indistinguishable. However, as most of a node’s interactions with the training graph). Using these auxiliary topologies, test set
+the rest of the graph can still be considered bounded within message passing is performed in a graph context similar to the
+a local distance, regions can be assumed and groups can be one producing the trained detector. This presumably leads to
+defined as sets of all nodes within the same region. In this case, a boost in the model’s transferability among distinctive graph
+communication among different regions requires construction of settings.
+inter-region highways (or channels). Such channels incorporate
+information from nodes in the same region and can be con-
+ G. Runtime and Memory Consumption Analysis
+sidered as supervisors of particular regions. Hierarchical links
+are hence produced among these channels and the respective To investigate the feasibility of the HMA’s application in
+regions. real-time anomaly detection, runtime comparison is conducted
+ With supervisory relations inferred and layered architecture with the classic GCN method as well as all baseline approaches
+created, the HMA can be generalized beyond ICS contexts and is in Section V-B. In addition, in order to measure the amount of
+2008 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+ TABLE VII TABLE VIII
+ TRAINING TIME (PER EPOCH) AND TEST TIME (PER TIMESTAMP) FOR THE BASELINE MEMORY CONSUMPTION OF GNN-BASED METHODS
+ HMA AND GCN
+
+ TABLE IX
+ BASELINE MEMORY CONSUMPTION OF NON-GNN-BASED METHODS
+
+ low level in contrast with some of the baseline approaches. With
+Fig. 18. Baseline Runtime Comparison. 0.0210 s, 0.0623 s, 0.0187 s, 0.0335 s and 0.0053 s the processing
+ time of all device-wise inputs for a particular sampling time
+spatial resource required for the operation of the HMA frame- with respect to SWaT, WADI, BATADAL, CISS and CHD
+work, its memory consumption is analyzed together with all the datasets, the method is suitable for real-time anomaly detection
+baselines. in these systems in which sampling interval is no less than 1 s.
+ 1) Runtime Comparison With Classic GCN: Adopted struc- Furthermore, as these processing time values are approximately
+tures and parameter configurations identical for both models, proportionate to the scale of the input architecture (i.e. number
+the training and test time of the HMA and GCN are presented of nodes in the input graph), one may estimate that the HMA is
+in Table VII. Note that the training time is measured for each capable of handling ICS systems (DCS, SCADA, etc.) with as
+epoch and the test time is recorded on the basis of timestamp, many as over one thousand devices. Nevertheless, compared to
+indicating how long detection results are produced for all devices over half of the GNN-based frameworks, this method’s runtime
+at a single sampling time. efficiency still has room for improvement owing to the extra
+ One can discern that the HMA scheme suffers from an complexity in its adjacency matrices.
+undesirable training and testing latency in contrast with the 3) Memory Consumption: The memory costs of all GNNclassic GCN method. This drawback arises from the increase based models are determined by the amount of space allocated
+of complexity in the adjacency matrices applied. Considering for storage of both tuples of sparse adjacency matrices and
+the SWaT topology with 3 structural layers, only 7,936 (0.11%) parameters in weight matrices. Suppose coordinates are encoded
+out of 7,225,344 entries are positive values in a GCN batch as unsigned integers and all values (in tuples) and parameters
+adjacency matrix incorporating 64 time ticks, while there are are defined as float numbers, each element takes up 4 bytes
+totally 112,896 non-zero entries (1.56%) in the respective HMA of memory. Therefore, the total amount nof memory consumed
+batch matrix. Similar findings are claimed in the 2-layered by each model can be estimated as 3 i=1 adj i
+ Ntup + nj=1 w
+ Nj,
+structures as well, with the number of existing edges 9,024 where nadj and nw are quantities of adjacency matrices and
+ i
+(0.13%) and 107,584 (1.56%) with respect to GCN and HMA. weight matrices, and Ntup and Nj are numbers of tuples in the
+In terms of operating time complexity, as the main message i-th adjacency matrix and values in the j-th weight matrix. The
+aggregation steps in both methods are developed via sparse space costs of the HMA and all the GNN baseline implementamatrix manipulation, the methods’ runtime consumptions are tions are shown in Table VIII.
+closely associated with the time complexity of the respective For non-GNN-based benchmark approaches, how space costs
+sparse matrix multiplication operations. Given 2 sparse matrices are computed varies a lot from one method to another. For neural
+of shape m × n and n × p, the time complexity of a regular network based frameworks (GAAL and AE), memory usage
+matrix multiplication equals O(mnp), but may drop down to as depends on the size of parameter matrices between layers, and
+low as O(mp) when sparse matrix operations are involved, in for outlier based methods (IForest, OCSVM and LOF), it is
+which case the specific time complexity varies proportionately directly shaped by the quantity and dimension of samples used
+with the ratio of non-zero elements in the adjacency matrices. for construction of detectors. The estimated space costs of non-
+As the HMA creates more non-zero values (existing edges) in GNN baseline implementations are shown in Table IX.
+its adjacency matrices, the level of matrix sparsity is lower and Compared to most baseline methods, the HMA requires more
+hence, the operating time complexity is relatively higher. memory for operation. However, in order to segregate the detec-
+ To alleviate this negative impact, the idea of reducing the tion operation from industrial processes, the platform on which
+number of nodes by clustering devices with similar reading the framework runs is typically deployed in a separate branch
+patterns can be studied in the future. However, one should further from an aggregation node (e.g., a gateway). In this fashion,
+investigate efficient ways to differentiate nodes in the same the HMA simply processes the data copied from this node on
+cluster to conduct node-level state inference. its local platform without consuming space resources of ICS
+ 2) Runtime Comparison With Baselines: Fig. 18 presents the devices. Typical configuration of such platforms differs a lot
+test time results for the HMA and all the baseline methods. It among systems and is customizable. Processors are usually of
+shows that the HMA’s test time consumption is generally on a 1.8 to 3.5 GHz and available memory can be 16 G, 32 G or higher.
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 2009
+
+Fig. 19. Embedding Composition (Each bar represents a device embedding
+whose portions of different colours manifest the level of contribution of other
+devices.
+
+For complex data processing tasks, superior configurations are
+also necessary. Fig. 20. Embedding composition for device #0.
+
+H. Embedding Composition and Interpretability nodes in the same industrial stage including device #2 (LIT-101),
+ device #3 (MV-101), etc. As the number of rounds increases,
+ The HMA establishes a new message passing scheme which
+ device #0 starts incorporating information from nodes in other
+enables the model to capture the vertical (hierarchical) relational
+ stages. From the composition patterns obtained after 4 rounds of
+semantics in typical ICS networks during the embedding learnmessage passing, it can be inferred that device #0 has gathered
+ing process. Compared with the regular GCN, which indiscriminformation from all other nodes in the graph, with nodes in the
+inately treats every node regardless of their role in the system,
+ same industrial stage its dominant information sources. Embedthe HMA intensifies a node’s specificity via reformulating its
+ ding composition patterns for the HMA scenario are computed
+embedding composition in a way that enhances its awareness
+ in the same manner.
+of the roles played by other nodes’ in the graph, as well as
+ Note that in both compositions presented in Fig. 19, the
+reducing any local discrimination through top-layer message
+ dummy node’s contribution, denoted as the top green segment
+exchange. It is apparent that different embedding compositions,
+ in every column, seems fairly prominent as well, even though
+which is determined by the disparate contribution patterns to
+ this node does not have any direct role to play in the physical
+a particular node from the rest of the graph, produce differprocesses. This results from the principle of the inherent message
+ent inference results. Hence, taking the SWaT dataset as an
+ passing mechanisms employed in the two models. For GCN,
+example, we present the composition patterns for parts of the
+ the further a node is, the less it contributes to the construction
+node embeddings produced by the HMA and GCN, as shown in
+ of embedding vectors. Similarly, in HMA, the significance of
+Fig. 19.
+ some node is diminished along the message aggregation and
+ One can observe from Fig. 19 that in both models, there are
+ feedback paths. Since the dummy node information is encoded at
+dominant contributions for each node embedding. Neverthethe end of the message aggregation step, its contribution is fairly
+less, the distribution patterns in the HMA is dramatically more
+ significant at this current point and only starts to shrink in the
+balanced than the GCN. Taking device #0 as an example (the
+ message feedback step. Therefore, at the end of message passing,
+leftmost column in each graph), its immediate neighbourhood
+ this node still has noticeable influence on the embeddings.
+(device #2, #3 and #4, the bottom 3 segments in the column)
+contributes approximately 50% to its representation produced
+ VI. CONCLUSION
+by an HMA model, while over 75% in the case of GCN. This
+indicates that an overall balanced message layout may have In this article, we investigate a hierarchical message passa positive effect on the model’s classification ability, on the ing scheme to generate effective embeddings for downstream
+premises that this layout is still far from being uniform, which anomaly detection tasks in the ICSs. We design and develop
+leads to over-smoothing. The underlying distribution principle the HMA, a new message passing approach that re-regulates
+still requires further research, though. the message transmission directions via meta-graph data aggre-
+ To further interpret how the ultimate embedding composi- gation. The HMA is composed of 4 functional blocks known
+tion for a specific node is generated, device #0 (FIT-101) is as the Preprocessor, the Adjacency Parser, the Encoder and the
+selected as an example whose composition patterns after 1,2 Decoder. It improves the anomaly detection accuracy by creating
+and 4 rounds of GCN message passing are shown in Fig. 20. more balanced and reliable node representations encapsulating
+Each bar in the figure profiles the scale of contribution of each the sophisticated supervisory semantics in the ICSs for state
+node to FIT-101’s embedding. It can be inferred that after the inference. The framework’s performance is assessed and com-
+1st round of message passing, FIT-101’s vector representation pared against various state-of-the-art machine and deep learning
+incorporates information from device #4 (the controller FIT-101 baselines over several popular evaluation metrics. Evaluation on
+is directly linked to) other than itself, as it is the only node multiple datasets certify the HMA’s validity and superiority in
+directly linked to FIT-101 in the graph. With the 2nd round ICS anomaly detection, with average AUROC gains of 9.92%,
+completed, node FIT-101 is semantically enriched with all other 18.92%, 15.09%, 15.47% and 4.45% with respect to SWaT,
+2010 IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 2, MARCH/APRIL 2026
+
+WADI, BATADAL, CISS and CHD datasets. Our future work [20] Z. Deng, X. Zhu, D. Cheng, M. Zong, and S. Zhang, “Efficient KNN classiincludes further investigation on enhancing the HMA’s runtime fication algorithm for Big Data,” Neurocomputing, vol. 195, pp. 143–148,
+ 2016.
+efficiency, as well as upgrading the current hierarchical message [21] C. Zhou and R. C. Paffenroth, “Anomaly detection with robust deep
+passing mechanism to generate embeddings incorporating more autoencoders,” in Proc. 23rd ACM SIGKDD Int. Conf. Knowl. Discov.
+comprehensive contextual semantics of an ICS network in order Data Mining, 2017, pp. 665–674.
+ [22] L. Chen, Y. Li, X. Deng, Z. Liu, M. Lv, and H. Zhang, “Dual auto-encoder
+to further improve the model’s anomaly detection performance. GAN-based anomaly detection for industrial control system,” Appl. Sci.,
+ vol. 12, no. 10, 2022, Art. no. 4986.
+ [23] A. Dey, “Deep IDS: A deep learning approach for intrusion detection
+ ACKNOWLEDGMENT based on IDS 2018,” in Proc. 2nd Int. Conf. Sustain. Technol. Ind. 4.0,
+ 2020, pp. 1–5.
+ Datasets are provided by iTrust, Centre for Research in Cyber [24] D. Nedeljkovic and Z. Jakovljevic, “CNN based method for the develop-
+Security, Singapore University of Technology and Design. ment of cyber-attacks detection algorithms in industrial control systems,”
+ Comput. Secur., vol. 114, 2022, Art. no. 102585.
+ [25] S. Amraee, A. Vafaei, K. Jamshidi, and P. Adibi, “Abnormal event detection
+ REFERENCES in crowded scenes using one-class SVM,” Signal, Image Video Process.,
+ vol. 12, no. 6, pp. 1115–1123, 2018.
+ [1] N. Goldenberg and A. Wool, “Accurate modeling of Modbus/TCP for [26] L. Abedalla, M. Badarna, W. Khalifa, and M. Yousef, “K–means based
+ intrusion detection in SCADA systems,” Int. J. Crit. Infrastructure Pro- one-class SVM classifier,” in Proc. Int. Conf. Database Expert Syst. Appl.,
+ tection, vol. 6, no. 2, pp. 63–75, 2013. 2019, pp. 45–53.
+ [2] C. Markman, A. Wool, and A. A. Cardenas, “A new burst-DFA model for [27] X. Tao, Y. Peng, F. Zhao, P. Zhao, and Y. Wang, “A parallel algorithm for
+ SCADA anomaly detection,” in Proc. Workshop Cyber- Phys. Syst. Secur. network traffic anomaly detection based on isolation forest,” Int. J. Distrib.
+ PrivaCy, 2017, pp. 1–12. Sensor Netw., vol. 14, no. 11, 2018, Art. no. 1550147718814471.
+ [3] A. Kleinmann and A. Wool, “Automatic construction of statechart-based [28] M. U. Togbe et al., “Anomaly detection for data streams based on isolation
+ anomaly detection models for multi-threaded SCADA via spectral analy- forest using scikit-multiflow,” in Proc. Int. Conf. Comput. Sci. Appl., 2020,
+ sis,” in Proc. 2nd ACM Workshop Cyber- Phys. Syst. Secur. Privacy, 2016, pp. 15–30.
+ pp. 1–12. [29] P. Karczmarek, A. Kiersztyn, and W. Pedrycz, “N-ary isolation forest: An
+ [4] A. Kleinmann and A. Wool, “Automatic construction of statechart-based experimental comparative analysis,” in Proc. Int. Conf. Artif. Intell. Soft
+ anomaly detection models for multi-threaded industrial control systems,” Comput., 2020, pp. 188–198.
+ ACM Trans. Intell. Syst. Technol., vol. 8, no. 4, pp. 1–21, 2017. [30] C. Yuan and H. Yang, “Research on K-value selection method
+ [5] G. Pang, C. Shen, L. Cao, and A. V. D. Hengel, “Deep learning for anomaly of K-means clustering algorithm,” J, vol. 2, no. 2, pp. 226–235,
+ detection: A review,” ACM Comput. Surv., vol. 54, no. 2, pp. 1–38, 2021. 2019.
+ [6] M. Abdallah, N. An Le Khac, H. Jahromi, and A. D. Jurcut, “A hybrid [31] G. Fortino, C. Greco, A. Guzzo, and M. Ianni, “Neural network
+ CNN-LSTM based approach for anomaly detection systems in SDNS,” in based temporal point processes for attack detection in industrial con-
+ Proc. 16th Int. Conf. Availability, Rel. Secur., 2021, pp. 1–7. trol systems,” in Proc. IEEE Int. Conf. Cyber Secur. Resilience, 2022,
+ [7] J. Sinha and M. Manollas, “Efficient deep CNN-BiLSTM model for pp. 221–226.
+ network intrusion detection,” in Proc. 3rd Int. Conf. Artif. Intell. Pattern [32] D. Fährmann, N. Damer, F. Kirchbuchner, and A. Kuijper, “Lightweight
+ Recognit., 2020, pp. 223–231. long short-term memory variational auto-encoder for multivariate time
+ [8] C. Hwang and T. Lee, “E-SFD: Explainable sensor fault detection in the series anomaly detection in industrial control systems,” Sensors, vol. 22,
+ ICS anomaly detection system,” IEEE Access, vol. 9, pp. 140470–140486, no. 8, 2022, Art. no. 2886.
+ 2021. [33] E. Aboah Boateng and J. Bruce, “Unsupervised machine learning tech-
+ [9] G. Cao, Y. Wu, D. Yu, and Z. Wang, “Attack detection and location using niques for detecting PLC process control anomalies,” J. Cybersecurity
+ state forecasting in multivariate time series of ICS,” IEEE Trans. Netw. Privacy, vol. 2, no. 2, pp. 220–244, 2022.
+ Sci. Eng., vol. 12, no. 4, pp. 2989–3001, Jul.–Aug. 2025. [34] M. Kravchik and A. Shabtai, “Efficient cyber attack detection in in-
+[10] P. S S, G. S. R. E. Selvan, and M. P. Ramkumar, “Anomaly-based intrusion dustrial control systems using lightweight neural networks and PCA,”
+ detection system for ICS,” in Proc. 14th Int. Conf. Comput. Commun. Netw. IEEE Trans. Dependable Secure Comput., vol. 19, no. 4, pp. 2179–2197,
+ Technol., 2023, pp. 1–4. Jul./Aug. 2022.
+[11] Y. Wu, H.-N. Dai, and H. Tang, “Graph neural networks for anomaly [35] W. Wang et al., “Abnormal detection technology of industrial control
+ detection in industrial Internet of Things,” IEEE Internet Things J., vol. 9, system based on transfer learning,” Appl. Math. Computation, vol. 412,
+ no. 12, pp. 9214–9231, Jun. 2022. 2022, Art. no. 126539.
+[12] R. R. R. Barbosa, R. Sadre, and A. Pras, “A first look into SCADA [36] H. T. Truong et al., “Light-weight federated learning-based anomaly
+ network traffic,” in Proc. IEEE Netw. Operations Manage. Symp., 2012, detection for time-series data in industrial control systems,” Comput. Ind.,
+ pp. 518–521. vol. 140, 2022, Art. no. 103692.
+[13] M. R. Asghar, Q. Hu, and S. Zeadally, “Cybersecurity in industrial control [37] R. Zhang, Y. Zhang, C. Lu, and X. Li, “Unsupervised graph embedding via
+ systems: Issues, technologies, and challenges,” Comput. Netw., vol. 165, adaptive graph learning,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45,
+ 2019, Art. no. 106946. no. 4, pp. 5329–5336, Apr. 2023.
+[14] M. AlMedires and M. AlMaiah, “Cybersecurity in industrial control [38] A. Deng and B. Hooi, “Graph neural network-based anomaly detection in
+ system (ICS),” in Proc. Int. Conf. Inf. Technol., 2021, pp. 640–647. multivariate time series,” in Proc. AAAI Conf. Artif. Intell., vol. 35, no. 5,
+[15] J. Zhang, S. Gan, X. Liu, and P. Zhu, “Intrusion detection in SCADA pp. 4027–4035, 2021.
+ systems by traffic periodicity and telemetry analysis,” in Proc. IEEE Symp. [39] Z. Chen, D. Chen, X. Zhang, Z. Yuan, and X. Cheng, “Learning graph
+ Comput. Commun., 2016, pp. 318–325. structures with transformer for multivariate time-series anomaly detec-
+[16] M. Caselli, E. Zambon, and F. Kargl, “Sequence-aware intrusion detection tion in IoT,” IEEE Internet Things J., vol. 9, no. 12, pp. 9179–9189,
+ in industrial control systems,” in Proc. 1st ACM Workshop Cyber-Phys. Jun. 2022.
+ Syst. Secur., 2015, pp. 13–24. [40] S. Han and S. S. Woo, “Learning sparse latent graph representations for
+[17] J. Yang, C. Zhou, Y.-C. Tian, and S.-H. Yang, “A software-defined security anomaly detection in multivariate time series,” in Proc. 28th ACM SIGKDD
+ approach for securing field zones in industrial control systems,” IEEE Conf. Knowl. Discov. Data Mining, 2022, pp. 2977–2986.
+ Access, vol. 7, pp. 87002–87016, 2019. [41] J. Liang, Z. Du, J. Liang, K. Yao, and F. Cao, “Long and short-range
+[18] M. A. Umer, K. N. Junejo, M. T. Jilani, and A. P. Mathur, “Machine dependency graph structure learning framework on point cloud,” IEEE
+ learning for intrusion detection in industrial control systems: Applications, Trans. Pattern Anal. Mach. Intell., vol. 45, no. 12, pp. 14975–14989,
+ challenges, and recommendations,” Int. J. Crit. Infrastructure Protection, Dec. 2023.
+ vol. 38, 2022, Art. no. 100516. [42] J. Ouyang, M. Yu, W. Yu, Z. Qin, A. C. Regan, and D. Wu, “TPGraph:
+[19] A. M. Koay, R. K. L. Ko, H. Hettema, and K. Radke, “Machine learning in A spatial-temporal graph learning framework for accurate traffic predicindustrial control system (ICS) security: Current landscape, opportunities tion on arterial roads,” IEEE Trans. Intell. Transp. Syst., vol. 25, no. 5,
+ and challenges,” J. Intell. Inf. Syst., vol. 60, pp. 1–29, 2022. pp. 3911–3926, May 2024.
+LYU et al.: HIERARCHICAL GNN MESSAGE PASSING FOR NODE-LEVEL ANOMALY DETECTION IN INDUSTRIAL CONTROL SYSTEMS 2011
+
+[43] T. N. Kipf and M. Welling, “Semi-supervised classification with graph Shuaiyi Lyu received the MSE degree in electrical
+ convolutional networks,” in Proc. Int. Conf. Learn. Representations, 2017, and electronic engineering from the University of
+ pp. 1–14. Pennsylvania, USA, and the PhD degree in cyber-
+[44] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Lio, and Y. Bengio, security from the Harbin Institute of Technology,
+ “Graph attention networks,” in Proc. Int. Conf. Learn. Representations, China. He has authored or coauthored papers in nu-
+ 2018, pp. 1–12. merous prestigious international journals including
+[45] W. Hamilton, Z. Ying, and J. Leskovec, “Inductive representation learning ACM TIST, IEEE Transactions on Network Science
+ on large graphs,” in Proc. Adv. Neural Inf. Process. Syst., 2017, vol. 30, and Engineering, and IEEE Internet of Things Jourpp. 1025–1035. nal. His research interests include anomaly detection
+[46] A. Sankar, X. Zhang, and K. C.-C. Chang, “Meta-GNN: Metagraph model design and optimization in industrial control
+ neural network for semi-supervised learning in attributed heterogeneous systems.
+ information networks,” in Proc. IEEE/ACM Int. Conf. Adv. Social Netw.
+ Anal. Mining, 2019, pp. 137–144.
+[47] J. Li, Y. Huang, H. Chang, and Y. Rong, “Semi-supervised hierarchical
+ graph classification,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 45,
+ no. 5, pp. 6265–6276, May 2023.
+[48] Z. Zhang et al., “Hierarchical graph pooling with structure learning,” IEEE Kai Wang (Member, IEEE) received the PhD degree
+ Trans. Knowl. Data Eng., vol. 35, no. 1, pp. 545–559, Jan. 2023. in communication and information systems from Bei-
+[49] Z. Ying, J. You, C. Morris, X. Ren, W. L. Hamilton, and J. Leskovec, jing Jiaotong University, China, in 2014. From 2017
+ “Hierarchical graph representation learning with differentiable pooling,” to 2019, he was a postdoc researcher of computer
+ in Proc. Adv. Neural Inf. Process. Syst. 31: Annu. Conf. Neural Inf. Process. science and technology with Tsinghua University,
+ Syst.2018, pp. 4805–4815. [Online]. Available: https://publications.rwth- China. He is currently a full professor with the School
+ aachen.de/record/999809 of Computer Science and Technology Faculty of
+[50] W. W. Lo, S. Layeghy, M. Sarhan, M. Gallagher, and M. Portmann, Computing, Harbin Institute of Technology, China.
+ “E-graphsage: A graph neural network based intrusion detection system for He has authored or coauthored more than 40 papers
+ iot,” in Proc. IEEE/IFIP Netw. Operations Manage. Symp., 2022, pp. 1–9. in prestigious international journals, including IEEE
+[51] L. Shuaiyi, K. Wang, L. Zhang, and B. Wang, “Global-local integration Transactions on Services Computing, IEEE Transacfor GNN-based anomalous device state detection in industrial control tions on Intelligent Transportation Systems, ACM TOIT, and ACM TIST. His
+ systems,” Expert Syst. Appl., vol. 209, 2022, Art. no. 118345. research interests include trustworthy AI and network intrusion detection. He is
+[52] X. Deng, J. Zhu, X. Pei, L. Zhang, Z. Ling, and K. Xue, “Flow a member of the ACM, and a senior member of the China Computer Federation.
+ topology-based graph convolutional network for intrusion detection in
+ label-limited IoT networks,” IEEE Trans. Netw. Service Manag., vol. 20,
+ no. 1, pp. 684–696, Mar. 2023.
+[53] Y. Wang, J. Zhang, S. Guo, H. Yin, C. Li, and H. Chen, “Decoupling representation learning and classification for GNN-based anomaly detection,”
+ in Proc. 44th Int. ACM SIGIR Conf. Res. Develop. Inf. Retrieval, 2021,
+ pp. 1239–1248.
+[54] Q. Do, B. Martini, and K.-K. R. Choo, “The role of the adversary model Yang Liu is currently an associate professor. He has
+ in applied security research,” Comput. Secur., vol. 81, pp. 156–181, authored or coauthored more than 20 academic papers
+ 2019. [Online]. Available: https://www.sciencedirect.com/science/article/ in journals and conferences both in China and abroad.
+ pii/S0167404818306369 His research interests include network information
+[55] J. Goh, S. Adepu, K. N. Junejo, and A. Mathur, “A dataset to support security technology and Internet of Things security
+ research in the design of secure water treatment systems,” in Proc. Int. technology. He has participated in many projects
+ Conf. Crit. Inf. Infrastructures Secur., 2016, pp. 88–99. of Ministry of National Information and Science
+[56] R. Taormina et al., “The battle of the attack detection algorithms: Disclos- Industry.
+ ing cyber attacks on water distribution networks,” J. Water Resour. Plan.
+ Manage., vol. 144, no. 8, Aug. 2018, Art. no. 04018048.
+[57] S. L(y)u, K. Wang, L. Zhang, and B. Wang, “Process-oriented heterogeneous graph learning in GNN-based ICS anomalous pattern recognition,”
+ Pattern Recognit., vol. 141, no. 109661, pp. 1–14, Sep. 2023.
+[58] Y. Liu et al., “Generative adversarial active learning for unsupervised
+ outlier detection,” IEEE Trans. Knowl. Data Eng., vol. 32, no. 8,
+ pp. 1517–1528, Aug. 2020. Bailing Wang received the PhD degree from the
+[59] O. Alghushairy, R. Alsini, T. Soule, and X. Ma, “A review of local outlier School of Computer Science and Technology, Harbin
+ factor algorithms for outlier detection in Big Data streams,” Big Data Institute of Technology, in 2006. He is currently a
+ Cogn. Comput., vol. 5, no. 1, 2020, Art. no. 1. professor with the Faculty of Computing, Harbin
+[60] M. Tschannen, O. Bachem, and M. Lucic, “Recent advances in Institute of Technology, China. He has authored or
+ autoencoder-based representation learning,” in Proc. NeurIPS 3rd work- coauthored more than 80 papers in prestigious intershop Bayesian Deep Learn., 2018, pp. 1–26. national journals and conferences. His main research
+[61] Y. Wang, J. Wong, and A. Miner, “Anomaly intrusion detection using one interests include information content security, indusclass SVM,” in Proc. 5th Annu. IEEE SMC Inf. Assurance Workshop, 2004, trial control network security, and V2X Security. He
+ pp. 358–364. has been selected for the China national talent plan.
+[62] F. T. Liu, K. M. Ting, and Z.-H. Zhou, “Isolation forest,” in Proc. 8th IEEE
+ Int. Conf. Data Mining, 2008, pp. 413–422.

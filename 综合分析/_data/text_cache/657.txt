@@ -1,0 +1,141 @@
+706                                                    IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+
+
+
+         Effective Sample Generation for Industrial
+         Control Systems: A GAN-Based Approach
+ Zhongyuan Qin , Yuxuan Liu, Tiantian Wang, Liquan Chen , Senior Member, IEEE, and Yubo Song
+
+
+   Abstract—In industrial control systems (ICSs), safe-                      center for monitoring and management. This comprehensive
+guarding system security is vital, and intrusion detection                   framework enables effective monitoring of industrial processes,
+is an effective protective measure. In real-world ICS envi-                  facilitating timely anomaly detection [1]. However, as ICS ad-
+ronments, however, the training data for intrusion-detection
+models are dominated by normal traffic, with very few ab-                    vances, malicious attacks on sensors or higher level machines
+normal samples. This scarcity prevents the model from                        are also on the rise. Consequently, real-time intrusion detection
+fully learning abnormal characteristics, thereby limiting                    for time-series traffic data has become a research priority, and
+anomaly-detection performance. ICS traffic is also noisy                     improving detection accuracy by leveraging the temporal nature
+and often captured incompletely, which is especially prob-                   of industrial traffic data remains a long-term challenge [2].
+lematic because it possesses strong temporal dependen-
+cies. Moreover, ICS operations tend to be highly regular                        At present, numerous remarkable research outcomes exist in
+and follow a strict logical order, causing data to clus-                     the realm of ICS intrusion detection, with machine learning and
+ter densely in certain regions while edge regions remain                     deep learning approaches being predominant. These techniques
+sparsely populated—an imbalance that easily leads to mis-                    analyze ICS traffic, compare key fields in normal traffic, extract
+classification. To tackle data imbalance, missing tempo-                     crucial semantic features from ICS traffic, and employ these
+ral features, and edge-sample scarcity, we propose the
+DualCGAN-AE approach. It employs two conditional gener-                      features for anomaly detection [3]. Thanks to their capacity
+ative adversarial networks to perform dynamic learning on                    for autonomous learning and enhancement, these methods have
+global and edge features and to enrich samples with tem-                     somewhat reduced the costs associated with feature selection.
+poral information; a multimodel discriminator is incorpo-                    As a result, recent research has predominantly focused on this
+rated to enhance training stability. We validated the method                 area.
+on two datasets, assessing both the quality of the gen-
+erated samples and their impact on intrusion detection                          However, as new attack types continue to emerge, legacy
+performance. Experimental results show that the samples                      models gradually lose their effectiveness and struggle to counter
+produced by DualCGAN-AE significantly boost detection                        these novel threats. Consequently, leveraging unsupervised
+accuracy.                                                                    learning for ICS intrusion detection is vital for defending against
+  Index Terms—Edge distribution, generative adversarial                      an increasingly diverse array of attacks [4]. Yet, because attack
+network (GAN), industrial control system (ICS), intrusion                    samples are scarce, the training data consist almost entirely
+detection.                                                                   of normal traffic, resulting in severe class imbalance. This
+                                                                             imbalance readily leads to overfitting during model training,
+                                                                             thereby degrading the model’s decision accuracy. Moreover, the
+                          I. INTRODUCTION
+                                                                             ICS environment is inherently noisy, often corrupting traffic
+        ITH the ongoing development of industrial control sys-
+W       tems (ICSs), their scale and complexity are continuously
+increasing, as seen in natural gas plants, power plants, and
+                                                                             data and even causing partial data loss—situations to which
+                                                                             the logic-driven operations of ICS are especially sensitive [5].
+                                                                             Therefore, completing missing traffic data and mitigating the
+water treatment facilities. Within these systems, devices, such              impact of heavy noise on model judgments are crucial for
+as sensors, follow instructions from upper level components,                 improving training precision, with data repair and augmentation
+such as programmable logic controllers (PLCs) and remote ter-                playing key roles in this process.
+minal units. They carry out periodic operations based on logical                To address the issues in industrial traffic sample generation,
+patterns and transmit control commands via network traffic to                this article proposes the DualCGAN-AE sample generation
+the supervisory control and data acquisition (SCADA) control                 approach, with specific contributions as follows.
+                                                                                 1) We propose an effective sample generation approach that
+  Received 29 May 2025; revised 8 July 2025; accepted 22 August                      employs two generative adversarial networks (GANs)
+2025. Date of publication 10 October 2025; date of current version                   in an interactive training scheme. The first GAN learns
+5 February 2026. This work was supported by the National Natural                     the overall data distribution; its low-scoring samples are
+Science Foundation of China under Grant U22B2026. Paper no. TII-25-
+3556. (Corresponding author: Zhongyuan Qin.)                                         passed to the second GAN as learning targets. This allows
+  The authors are with the School of Cyber Science and En-                           the second GAN to focus on the data’s edge-distribution
+gineering, Southeast University, Nanjing 211102, China (e-mail:                      characteristics and generate samples with those proper-
+zyqin@seu.edu.cn; 220224934@seu.edu.cn; 220235240@seu.edu.cn;
+lqchen@seu.edu.cn; songyubo@seu.edu.cn).                                             ties, thereby mitigating the long-tail distribution problem
+  Digital Object Identifier 10.1109/TII.2025.3609080                                 in the dataset.
+
+1941-0050 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+   Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html
+                                                                 for more information.
+QIN et al.: EFFECTIVE SAMPLE GENERATION FOR INDUSTRIAL CONTROL SYSTEMS: A GAN-BASED APPROACH                                         707
+
+
+
+    2) To enhance training stability and cope with potential tem-     with weights below a threshold, addressing class overlap and
+        poral data loss in industrial traffic samples, we introduce   centrality issues without increasing methodological complex-
+        a time interval matrix (TIM) to preserve the completeness     ity. Bao and Yang [8] proposed methods to tackle this issue.
+        of temporal features. In addition, we adopt a multimodel      They pointed out that the imbalanced classification problem is
+        discriminator: the single discriminator score is replaced     a significant challenge in neural networks and machine learn-
+        with the weighted average of multiple model scores,           ing. Although SMOTE is widely used to address this issue, it
+        which stabilizes the discriminator’s training process.        has a major limitation: noisy samples may be involved in the
+    3) To resolve the issue of label-containing sample generation     sample-synthesis process, reducing the rationality of newly syn-
+        and enable category-specific sample generation, modify        thesized samples and degrading network classification perfor-
+        the original GAN network to a conditional GAN (CGAN).         mance. Arafa et al. [9] presented RN-SMOTE. In data balancing
+        Introduce label condition information to achieve control-     research, random over-sampling (ROS), random under-sampling
+        lable and targeted data generation, while still meeting       (RUS), and SMOTE [10], [11], [12] remain primary methods.
+        the training requirements of unsupervised learning for        RN-SMOTE introduces noisy oversampling in the minority
+        labeled data.                                                 class, uses DBSCAN for noise detection and removal, combines
+    4) Experiment on two different datasets and meticulously          the processed instances with original data, and then applies
+        evaluate the generated samples. Assess our proposal in        SMOTE again before introducing the dataset to the underlying
+        terms of data quality and its impact on intrusion detection   classifier, thereby improving evaluation performance metrics.
+        performance.                                                     Combining SMOTE with various networks is an effective way
+   The rest of this article is organized as follows. Section II       to enhance its performance. For example, Liaw et al. [13] pro-
+reviews related work. Section III details our method. Section         posed the H-SMOTE-FAM model, which integrates histograms,
+IV presents results and discussion. Finally, Section V concludes      SMOTE, and fuzzy ARTMAP (FAM) networks. This model first
+this article.                                                         organizes minority-class samples into histogram bins, calculates
+                                                                      the target number of samples for each bin, and then generates
+                                                                      synthetic samples within each bin using SMOTE. This sys-
+                      II. RELATED WORKS                               tematic approach addresses SMOTE’s limitations in handling
+    In recent years, research on addressing sample data imbal-        intraclass imbalance and small disjunctive samples. The FAM
+ance has fallen into two categories: traditional artificial data      network then processes the increased data volume through
+generation techniques and GAN-based data augmentation meth-           incremental learning to improve classification performance.
+ods. Traditional artificial data generation techniques rebalance      Experimental results show that H-SMOTE-FAM outperforms
+datasets by increasing the number of minority class samples.          other SMOTE variants and GAN-based oversampling methods.
+Common approaches, such as random oversampling and the syn-           Similarly, Liu et al. [14] combined SMOTE with a deep twin
+thetic minority oversampling technique (SMOTE) algorithm,             multihead self-attention network to develop a feature-level data
+raise the minority class’s share by duplicating or synthetically      augmentation method. This method uses the network structure to
+creating samples. Oversampling, however, can introduce over-          map original data to a feature space with better class separability
+fitting, whereas undersampling risks discarding critical infor-       and then generates samples in this space using SMOTE. This
+mation. GAN-based data-augmentation methods use generative            approach has demonstrated good performance on multiple pub-
+models to create new minority-class samples from random noise,        lic datasets. In summary, by addressing SMOTE’s limitations
+producing more diverse data that better match the original            and improving data augmentation, combining it with different
+distribution. CGANs incorporate auxiliary information, such as        networks can enhance its performance, and these combined
+class labels during generation, yielding samples that are both        methods have shown promising results in various applications.
+more structured and more varied. These GAN-based approaches              In recent years, the advancements in GANs have been re-
+have proven highly effective for remedying sample imbalance,          markable, leading to significant achievements in fields, such as
+particularly with complex data types, such as images and text.        natural language processing and image generation. Using GANs
+    SMOTE is a common sample generation solution that allevi-         for data generation to enhance data quality and address data
+ates data imbalance to some extent. Dablain et al. [6] proposed       imbalance issues has also become one of the current research
+DeepSMOTE, a method specifically designed for deep learning           priorities. For example, Yuan et al. [15] proposed the B-GAN
+models. It preserves the attributes of original images during pro-    method for intrusion detection systems in ICS. This method
+cessing and generates high-quality artificial images. Composed        captures data features through long short-term memory (LSTM)
+of an encoder or decoder framework, SMOTE-based oversam-              networks and uses GANs to generate high-quality abnormal
+pling, and a penalty-enhanced loss function, DeepSMOTE has            samples, effectively tackling data imbalance. Chen et al. [16]
+the advantage of not requiring a discriminator, and the generated     introduced the DAGAN method, which constructs a dual GAN
+images are information-rich and suitable for visual inspection.       model to learn the underlying data distribution without abnormal
+Maldonado et al. [7] introduced a SMOTE-like method using             samples. By optimizing abnormal scores based on the learned
+weighted Minkowski distance to define the neighborhood of             normal and marginal distributions, this approach reduces the
+each minority-class sample. This approach better defines neigh-       misjudgment of marginal samples as outliers. In summary,
+borhoods by prioritizing features relevant to the classification      these GAN-based methods have demonstrated great potential
+task and performs feature selection by discarding attributes          in solving data imbalance problems, particularly in generating
+708                                                          IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 22, NO. 2, FEBRUARY 2026
+
+
+
+high-quality and diverse samples to enhance model performance                 to repeat and concentrate in specific regions, with sparse
+in tasks such as intrusion detection.                                         samples in marginal areas. This makes model training in
+   Meslet-Millet et al. [17] proposed NeCSTGen, a novel archi-                marginal regions error-prone, necessitating supplemen-
+tecture based on variational autoencoders (VAEs) and recurrent                tary data in these areas to improve accuracy.
+neural networks (RNNs) for generating diverse network traf-                3) Temporal Characteristics and Data Integrity: ICS traffic
+fic. This architectu

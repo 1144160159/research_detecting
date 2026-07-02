@@ -1,0 +1,126 @@
+                    This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+                                               content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3700672
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                                                      1
+
+
+
+
+       Adaptive Unsupervised Anomaly Detection for
+        Low-Quality Multivariate Time-Series Data
+                                   Jiayi Liu, Donghua Yang, Jinbao Wang, Hong Gao, Jianzhong Li
+
+
+
+
+   Abstract—How should we perform anomaly detection on multi-                                    detection of multivariate time series data are highlighted.
+variate time-series data with missing data, attribute misplacement                               However, traditional unsupervised methods, such as distance-
+and concept drift? The majority of existing anomaly detection                                    based methods [2], density-based [3], and tree-based methods
+methods overlook the fact that data are often of low quality.
+To address this challenge, we propose an adaptive unsupervised                                   [4], have some limitations in capturing the complex spatio-
+anomaly detection method for low-quality multivariate time series                                temporal dependencies within multivariate time series and in
+data. Our method introduces a self-attention mechanism that                                      handling large-scale data [5]. In recent years, neural networks
+integrates masked information and missing length information                                     have become a research hotspot for deep learning based
+to enhance the model’s capability in handling incomplete data.                                   multivariate time series anomaly detection methods due to
+Furthermore, we design a deep probabilistic adaptive mem-
+ory network to improve the model’s adaptability to attribute                                     their powerful feature learning and representation capabilities
+misplacement and concept drift. We also discuss the optimal                                      [6]. For instance, autoencoders, as a powerful unsupervised
+window size for effectively dealing with concept drift. Compar-                                  learning model, can effectively cope with the impact of noise
+ative experiments on multiple real-world datasets demonstrate                                    and identify anomalies by comparing the differences between
+that our method can effectively detect anomalies in low-quality                                  input and reconstructed output, thus being widely used.
+multivariate time series data. The experimental results further
+highlight the robustness of our model, proving its ability to                                       Deep learning-based unsupervised anomaly detection aims
+maintain high performance in the presence of data quality issues.                                to learn general patterns from normal data to enable accurate
+                                                                                                 anomaly detection. Although existing methods have achieved
+  Index Terms—Anomaly detection, Low-Quality, Multivariate                                       strong performances, most of them rely on well-structured
+Time-series data.                                                                                time series data while overlooking the pervasive data quality
+                                                                                                 issues in real-world scenarios. In practice, time series data
+                                                                                                 in real-world settings often suffer from missing data and
+                           I. I NTRODUCTION
+                                                                                                 attribute misplacement caused by errors in data transmission
+   Multivariate time series are widely exist in industries, fi-                                  or acquisition, as well as distribution drift due to dynamic
+nance, and the internet, among other fields. By conducting in-                                   data changes. These issues severely impair a model’s ability
+depth analysis of multivariate time series data, we can reveal                                   to learn and reason, thereby posing fundamental challenges to
+hidden abnormal patterns and behaviors within the data. For                                      building high-precision and robust anomaly detection systems.
+instance, in the industrial field, analyzing these data helps us                                 Specifically, existing methods still face significant challenges
+monitor equipment performance and prevent potential failures.                                    in the following three aspects.
+In the financial industry, in-depth analysis of this data can                                       Firstly, in the real world, missing data is a common issue.
+help us identify abnormal transactions and prevent fraudulent                                    Data can be lost during the collection process due to equipment
+behavior. In the field of cyber security, analyzing these data is                                failures, environmental factors such as sensors being affected
+crucial for uncovering attack patterns and ensuring the security                                 by weather or electromagnetic interference, transmission errors
+and stability of networks. Anomaly detection, as a key means                                     such as data transmission interruptions caused by system
+of identifying and warning of these potential risks, provides                                    maintenance or updates, and human errors such as medical
+strong support for risk management and decision-making [1].                                      testing equipment not being properly connected to patients
+Therefore, the development of accurate and robust anomaly                                        [7], [8]. However, missing values can disrupt the continuity
+detection for multivariate time series is particularly important.                                and integrity of the data, which may lead to inadequate model
+   Due to the lack of labels in the collected data and the                                       training and reduced detection quality. It can be seen that
+high cost of manual annotation on large-scale datasets, the                                      the existence of missing values fundamentally affects the per-
+advantages of unsupervised learning methods in anomaly                                           formance of anomaly detection algorithms [9], [10]. Existing
+                                                                                                 methods mainly focus on imputing missing data reasonably
+      This work was supported in part by the National Natural Science
+Foundation of China under Grants U22A2025.(Corresponding author: Hong                            [5], [10]. However, these methods may mask anomalies and in-
+Gao.)                                                                                            troduce errors. Additionally, they may increase computational
+      Jiayi Liu, Donghua Yang, Jinbao Wang and Jianzhong Li are with the                         complexity due to sophisticated imputation methods.
+Faculty of Computing, Harbin Institute of Technology, Harbin 150001, China
+(e-mail: jiayiliu@stu.hit.edu.cn; yang.dh@hit.edu.cn; wangjinbao@hit.edu.cn;                        Secondly, during the data collection process, misplaced
+lijzh@hit.edu.cn).                                                                               attribute values may occur, where a value of one attribute is
+      Hong Gao is with the Faculty of Computing, Harbin Institute of                             erroneously entered into another attribute, resulting in incor-
+Technology, Harbin 150001, China and is with the School of Computer
+Science and Technology, Zhejiang Normal University, Jinhua 321000, China                         rect swaps between attribute values. Misplaced attribute values
+(e-mail: honggao@zjnu.edu.cn).                                                                   are often observed in practice, such as in IoT environments
+
+
+                    © 2026 IEEE. All rights reserved, including rights for text and data mining and training of artificial intelligence and similar technologies. Personal use is permitted,
+                                       but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+                  This article has been accepted for publication in IEEE Transactions on Knowledge and Data Engineering. This is the author's version which has not been fully edited and
+                                             content may change prior to final publication. Citation information: DOI 10.1109/TKDE.2026.3700672
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021                                                                                                                                    2
+
+
+
+where workers might accidentally plug the sensor cables of a                                      The feature representations obtained from the two modules
+wind turbine in the wrong positions, causing a misplacement                                    are then fused into a final representation for reconstruction.
+in the recorded data for attributes like voltage and temperature                               The two modules work in concert, leveraging the feature ex-
+[11]. When integrating data from different sources, the process                                traction and memory augmentation mechanisms to effectively
+of information extraction and transformation can also easily                                   address anomaly detection in low-quality data.
+lead to misplaced attribute values [12]. Misplaced attribute                                      During the detection phase, the anomaly score is computed
+values are a type of error rather than an anomalies because                                    by combining the similarity between the input data and the
+the correct data is indeed existing in the dataset, just placed                                memory module with the reconstruction error. To adapt to
+in the wrong location [11]. Typically, anomalies are defined                                   changes in the data distribution, we dynamically update the
+as observations that deviate from the normal pattern [13],                                     memory information and threshold of the memory network
+[14]. Unfortunately, misplaced attribute values also exhibit                                   based on extreme value theory. This approach enhances the
+this behavior, leading to the possibility that existing anomaly                                accuracy and robustness of anomaly detection. Additionally,
+detection may misidentify them as anomalies, which can                                         we theoretically demonstrate the optimal window size for
+cause significant bias in data analysis and decision-making.                                   effectively handling concept drift.
+Therefore, the presence of misplaced attribute values in time                                     The contributions of this paper are highlighted as below.
+series significantly reduces the accuracy of anomaly detection.                                   1. To our knowledge, this paper is the first study to propose
+However, the issue of misplaced attribute has not yet been                                     anomaly detection for multivariate time series data in the
+addressed in existing research [11].                                                           presence of missing data, attribute misplacement, and concept
+   Thirdly, the dynamic nature and non-stationarity of real-                                   drift. To this end, we have designed an adaptive unsupervised
+world environments cause the data distribution to change                                       anomaly detection method to address the challenge of detect-
+over time, a phenomenon known as concept drift [15], [16].                                     ing anomalies in low-quality multivariate time-series data.
+The presence of concept drift can affect the accuracy of                                          2. This paper proposes a self-attention mechanism that
+anomaly detection [17], [18]. Since deep anomaly detection                                     combines masking and missing length information to enhance
+models are typically trained on historical data, when the data                                 the model’s ability to handle incomplete data.
+distribution changes during anomaly detection, the model may                                      3. This paper proposes a method that enhances the model’s
+not effectively adapt to the new data distribution, thereby                                    ability to handle misplaced attribute by re-integrating the en-
+affecting its performance to detect anomalies. To ensure the                                   coded features through fusion with similarity-weighted items
+accuracy of anomaly detection methods, it is necessary to                                      from the memory module.
+identify and adapt to changes in data distribution.                                               4. This paper proposes a method for dynamically updating
+   In recent years, several methods have been proposed for                                     the memory module, enabling the model to adapt to concept
+anomaly detection in time series with missing data, attribute                                  drift in time-series data. Moreover, we discuss the optimal
+misplacement or concept drift [5], [19], [20]. However, these                                  window size for effectively handling concept drift.
+researches have not consider the above three challenges at                                        5. Experimental results demonstrate that our method
+the same time. However, these methods can only address one                                     achieves high accuracy and robustness in the presence of low-
+specific challenge individually and are unable to tackle the                                   quality time-series data.
+three major issues in low-quality data: missing data, attribute
+misplacement, and concept drift at the same time.
+                                                                                                                               II. R ELATED W ORK
+   To address the aforementioned challenges, this paper pro-
+poses an Adaptive Unsupervised Anomaly Detection method                                           In recent years, deep learning-based anomaly detection
+(AUAD). It consists of two major networks: the Self-Attention                                  have been proposed and demonstrated well performance [21].
+and Convolutional Neural Network(SA-CNN) and the Deep                                          Compared to traditional anomaly detection algorithms, their
+Probabilistic Adaptive Memory Network.                                                         main advantage lies in their strong ability to learn nonlin-
+   In the SA-CNN network, we introduce a self-attention                                        ear features. Currently, unsupervised multivariate time series
+mech

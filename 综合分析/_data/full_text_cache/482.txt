@@ -1,0 +1,1277 @@
+2764 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+LUK: Empowering Log Understanding With Expert
+ Knowledge From Large Language Models
+ Lipeng Ma , Weidong Yang , Member, IEEE, Sihang Jiang , Ben Fei , Member, IEEE, Mingjie Zhou ,
+ Shuhao Li , Mingyu Zhao , Bo Xu , and Yanghua Xiao
+
+ Abstract—Logs play a critical role in providing essential I. INTRODUCTION
+information for system monitoring and troubleshooting. Recently,
+with the success of pre-trained language models (PLMs) and
+large language models (LLMs) in natural language processing
+(NLP), smaller PLMs (such as BERT) and LLMs (like GPT-4)
+ W ITH the increasing complexity and scale of IT systems,
+ the maintenance and operation of large-scale systems
+ become more challenging. Logs record the valuable runtime
+have become the current mainstream approaches for log analysis. status, they play a crucial role in troubleshooting and enable
+Despite the remarkable capabilities of LLMs, their higher cost
+and inefficient inference present significant challenges in lever- engineers to monitor system health effectively. However, the inaging the full potential of LLMs to analyze logs. In contrast, creasing volume of logs has made manual analysis a harder task
+smaller PLMs can be fine-tuned for specific tasks even with [1]. Consequently, numerous automated log analysis methods
+limited computational resources, making them more practical. utilizing machine learning (ML) or deep learning (DL) models
+However, these smaller PLMs face challenges in understanding have been proposed to automatically analyze logs, encompasslogs comprehensively due to their limited expert knowledge.
+To address the lack of expert knowledge and enhance log ing various tasks such as log parsing [2], [3], [4], [5], anomaly
+understanding for smaller PLMs, this paper introduces a novel detection [6], [7], [8], [9], [10], [11], [12], root cause analysis
+and practical knowledge enhancement framework, called LUK, [13], [14], [15], failure prediction [16], [17], [18], etc. In parwhich acquires expert knowledge from LLMs automatically and ticular, with the recent success of pre-trained language models
+then enhances the smaller PLM for log analysis with the expert (PLMs) in natural language processing (NLP), especially the
+knowledge. LUK can take full advantage of both types of models.
+Specifically, we design a multi-expert collaboration framework advent of large language models (LLMs) represented by Chatbased on LLMs with different roles to acquire expert knowledge. GPT and GPT-4 [19], language models (LMs) have garnered
+In addition, we propose two novel pre-training tasks to enhance significant attention in log understanding and these LM-based
+the log pre-training with expert knowledge. LUK achieves state- approaches [20], [21], [22], [23], [24], [25], [26], [27], [28],
+of-the-art results on different log analysis tasks, and extensive [29], [30] achieve tremendous achievements in automated log
+experiments demonstrate that expert knowledge from LLMs can
+be utilized more effectively to understand logs. Our source code analysis due to their outstanding performance.
+and detailed experimental data are available at https://github. As language models increase in scale and gain enhanced
+com/LeaperOvO/LUK. capabilities, two mainstream paradigms have emerged for uti-
+ Index Terms—Log understanding, large language model, pre- lizing LMs in log understanding. The first one is based on
+trained model, knowledge enhancement. PLMs, which follows the pre-train & fine-tune paradigm, such
+ as BERT [31], fine-tuning a PLM with task-specific data and
+ enabling it to specialize in the given task. Considering the need
+ for fine-tuning with limited computational resources and cost
+ savings, LMs in this paradigm are typically smaller in size,
+ such as BERT with 110M parameters. The second one is based
+ Received 14 May 2025; revised 21 July 2025; accepted 27 July 2025. Date on LLMs with vast scale and complexity1 , which can tackle a
+of publication 31 July 2025; date of current version 17 October 2025. This diverse array of tasks with remarkable proficiency. The LLMwork was supported in part by the Natural Science Foundation of Shanghai based methods follow the In-Context Learning (ICL) paradigm
+under Grant 24ZR1405000. Recommended for acceptance by Y. Wang.
+(Corresponding authors: Weidong Yang; Bo Xu.) [32], [33], learning from a few examples in the context without
+ Lipeng Ma, Weidong Yang, Sihang Jiang, Mingjie Zhou, Shuhao Li, updating the parameters.
+and Yanghua Xiao are with the School of Computer Science, Fu- Despite the powerful performance of LLMs, limited accesdan University, Shanghai 200433, China (e-mail: lpma21@m.fudan.edu.cn;
+wdyang@fudan.edu.cn; jiangsihang@fudan.edu.cn; mjzhou19@fudan.edu.cn; sibility and higher costs present significant challenges in levershli23@m.fudan.edu.cn; shawyh@fudan.edu.cn). aging the full potential of LLMs. These LLMs often come
+ Ben Fei is with the Department of Information Engineering, The Chinese with substantial usage fees and have restricted access to data
+University of Hong Kong, Hong Kong 999077 (e-mail: benfei@cuhk.edu.hk).
+ Mingyu Zhao is with the School of Artificial Intelligence, Optics and privacy and security. Even if the LLM is deployed locally, it
+Electronics (iOPEN), Northwestern Polytechnical University, Xi’an 710072, still may face resource constraints, making LLMs less attainable
+China (e-mail: myzhao@nwpu.edu.cn).
+ Bo Xu is with the School of Computer Science and Technology, Donghua
+University, Shanghai 201620, China (e-mail: xubo@dhu.edu.cn). 1 We use LLM to specifically refer to the large language models over 10B
+ Digital Object Identifier 10.1109/TSE.2025.3594046 parameters that utilize the ICL paradigm without fine-tuning the parameters.
+
+ 0098-5589 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2765
+
+ with domain-specific data [42], [43]. In addition, in the era of
+ LLMs, knowledge distillation (KD) [44] emerges as a pivotal
+ methodology for transferring advanced capabilities from LLMs
+ to smaller models. Compared to obtaining answers directly
+ from the teacher’s model, distillation towards the reasoning
+ process has proved to be a more effective method [44], [45].
+ However, current knowledge distillation methods, such as COTbased KD [46], [47], struggle to acquire expert knowledge,
+ instead imitating the teacher’s reasoning forms and ignoring the
+ premise that reasoning requires expert knowledge. These distil-
+Fig. 1. Example of prompting ChatGPT to help understand log, which lation methods, which emphasize the process of reasoning and
+can provide detailed background information, terminology explanations, and outcome, still hardly compensate for the lack of expert knowlsolutions. Without knowledge, the beginner fails to understand the RSSI value. edge. (2) Knowledge Enhancement: Since logs and expert
+ knowledge obtained from LLM are heterogeneous data, smaller
+ models with fewer parameters and limited learning capacity
+for individuals and smaller organizations. In addition, due to struggle to capture knowledge [48], [49]. Masked Language
+their complex autoregressive architectures and a large number Modeling (MLM) [31] is the widely used pre-training task for
+of parameters, LLM-based methods are computationally inef- most pre-trained models, where they can only perceive their
+ficient. Considering that modern software systems can produce own contextual information and cannot incorporate external
+several petabytes per day [34], [35], directly employing LLMs knowledge. In addition, KnowLog proposes an abbreviation
+for log analysis is impractical due to the significant overhead prediction task specialized for log understanding. However,
+of querying LLMs, such as inference time and network latency its ability to enhance the knowledge of abbreviations in the
+[29], [36]. In contrast, smaller PLMs with smaller parameters, logs is limited. It cannot adaptively perceive other important
+requiring limited resource costs, are more efficient than LLMs information from the knowledge to understand logs, such as the
+[37]. Hence, we argue that the smaller PLM is more practical parameter knowledge of logs.
+in extensive log analysis scenarios [23], [24], [25]. To overcome the above-mentioned challenges, we propose
+ However, the smaller PLM encounters a bottleneck in log a novel knowledge enhancement framework to empower log
+understanding due to the inadequacy of expert knowledge. Logs understanding on a smaller PLM, called LUK. Rather than
+inherently employ concise and highly specialized terminology, utilizing LLMs to solve specific tasks directly, LUK first acthe smaller PLM struggles to understand valuable information quires expert knowledge from LLMs, then enhances the log prefrom logs like experts [22]. This issue can be attributed to training with the corresponding expert knowledge, and finally,
+the lack of rich sources for knowledge acquisition. Although the knowledge-enhanced PLM for logs can be fine-tuned to
+KnowLog proposes to acquire expert knowledge from doc- solve downstream log analysis tasks efficiently. This framework
+umentation [22], most logs lack professional documentation can maximize the advantages of both LLM and smaller PLMs.
+(e.g., almost unable to find relevant documents for logs coming Specifically, to solve the first issue, we design a multi-expert
+from Loghub [38]), and the manual construction of knowledge collaboration framework to acquire expert knowledge from
+is costly and inefficient, which significantly hinders the avail- LLMs. Motivated by the waterfall model [50] in software enability of the model. gineering, we build a professional team consisting of Director,
+ Fortunately, LLMs with extensive knowledge can understand Executor, and Evaluator, and define the identity and responsilogs comprehensively, attributed to training on massive textual bility of the roles through prompt engineering, enabling LLMs
+data related to code [39] and logging [40], [41]. For example, as to think and handle tasks just like role play. Then the team codepicted in Fig. 1, ChatGPT can better assist in understanding operates and interacts to construct expert knowledge. To solve
+the Mac log. Consequently, LLMs such as GPT-4 compensate the second issue, we develop a novel hierarchical knowledgefor the lack of knowledge of the smaller PLM, which can enhanced pre-training framework that combines two compleanalyze logs more efficiently and professionally. mentary training objectives: 1) the word-level token predic-
+ To more effectively harness the knowledge embedded within tion task, focusing on granular knowledge perception, and 2)
+LLMs for log understanding, we argue that expert knowledge the sentence-level semantic alignment, enhancing contextual
+can be elicited from LLMs and subsequently utilized to em- understanding.
+power the smaller PLM, making the smaller model understand To evaluate the effectiveness of LUK, we conduct experilogs like experts. However, two main challenges exist in en- ments on the software system and network device logs, includhancing log understanding with expert knowledge from LLMs. ing six log analysis downstream tasks. The experiment results
+(1) Effective Knowledge Acquisition: Although LLMs have show that LUK can harness knowledge from LLMs more effecshown remarkable capabilities in various tasks, LLMs still have tively to improve log understanding and achieve state-of-the-art
+difficulty in acquiring complete and accurate knowledge due to results on different log analysis tasks. In addition, LUK exhibits
+hallucination, which may result in not covering all the depth of remarkable generalization and robustness in log analysis, with
+knowledge, and there may be misunderstandings when dealing notable advantages in low-resource scenarios.
+2766 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+ This work is an extension of our conference paper However, training solely on a general or log corpus struggles
+(KnowLog) published in ICSE 2024 [22]. We make several to further improve log understanding due to the lack of expert
+new contributions: knowledge. KnowLog [22] firstly proposes to enhance log un-
+ 1) LLM-Driven Knowledge Acquisition: This work designs derstanding by integrating expert knowledge during the prea multi-expert collaboration framework to distill expert training phase. Nevertheless, KnowLog’s usage scenarios are
+ knowledge from LLMs, which compensates for the ex- limited as it heavily relies on documentation created by human
+ pensive overhead of LLMs. In addition, this collabo- experts to acquire knowledge. In contrast, this work addresses
+ ration framework mitigates issues of hallucination and more generalized log analysis scenarios where logs are availincomplete knowledge by simulating the roles of Direc- able without accompanying domain knowledge. In addition,
+ tor, Executor, and Evaluator, enabling LLMs to construct these pre-trained models rely on the existing Masked Language
+ reliable and comprehensive domain-specific knowledge. Modeling (MLM) as the pre-training task, where they only
+ Compared to the limited usage scenario of KnowLog, perceive their own contextual information and are unable to inwhich relies on documentation created by human experts tegrate external knowledge. Although KnowLog also proposes
+ to acquire knowledge, this work focuses on more gen- the abbreviation prediction task, this method cannot adaptively
+ eralized log analysis scenarios where logs are available perceive other knowledge than the abbreviation. Considering
+ without accessible domain knowledge. the abundance of knowledge required for log understanding,
+ 2) Hierarchical Knowledge Enhancement: This work pro- hence, we also investigate making the PLM adaptive in perceivposes a hierarchical knowledge-enhanced pre-training ing useful information from the knowledge during pre-training.
+ framework, which incorporates two complementary training objectives: (1) word-level token prediction for granu-
+ B. Large Language Model for Log Analysis
+ lar knowledge perception and (2) sentence-level semantic
+ alignment for improved contextual understanding. This Large language models (LLMs), representing a remarkable
+ dual-objective approach enables smaller PLMs to more advancement in artificial intelligence, have been trained on
+ effectively utilize expert knowledge from heterogeneous diverse corpora, enabling them to generate human-like text and
+ data, addressing their inherent limitations. Compared to provide accurate responses to queries [59]. Notably, the recent
+ KnowLog’s inability to perceive fine-grained knowledge introduction of transformative models like ChatGPT and GPTbeyond abbreviation, this work enables a more compre- 4, characterized by their enormous scale and alignment with
+ hensive understanding of fine-grained knowledge from human feedback, presents a novel opportunity for enhancing
+ the provided information. software engineering tasks [23], [60], [61], [62]. LLMs can
+ 3) Extensive Evaluation: This work achieves state-of-the- learn from the prompt context without training the model, which
+ art results on different log understanding tasks, proving is called In-context Learning (ICL) [63]. Furthermore, research
+ the effectiveness of acquiring knowledge from LLMs to has shown that augmenting the size of LLMs significantly
+ enhance log understanding. Moreover, LUK extends its boosts their capacity for knowledge encoding and reasoning
+ applicability by focusing on challenging scenarios such as [48], [64]. Due to the outstanding abilities of LLMs, many reunstable log data and low-resource settings. Experiments cent studies [26], [27], [28], [29], [30] utilize the ICL paradigm
+ show that LUK consistently achieves superior perfor- of LLMs for different log analysis tasks without fine-tuning the
+ mance across these scenarios, demonstrating its robust- model and make tremendous achievements in log analysis tasks.
+ ness and adaptability. However, restricted accessibility, higher costs, and computational inefficiency limit the widespread use of LLM in real-
+ II. RELATED WORK AND MOTIVATION world scenarios. For example, the GPT-3 model with 175 billion
+ parameters requires 326GB of GPU memory to deploy [65].
+A. Pre-Trained Language Models for Log Analysis Given the enormous data volumes produced by modern soft-
+ Pre-training is the key to the success of the PLMs and LLMs, ware systems daily, the overhead of querying LLMs, including
+where a language model is first trained on an extensive corpus inference time and network latency, renders direct application
+with effective pre-training tasks to capture general knowledge of LLMs for log analysis impractical. In contrast, small PLMs
+and then adapted to solve different downstream tasks [51], [52]. with smaller parameters are more efficient compared to LLMs
+The emergence of BERT [31] heralds the success of the pre- [37]. We argue that the smaller PLM can make predictions
+train & fine-tune paradigm in natural language. Such language better in log analysis tasks given sufficient expert knowledge. In
+models improve the model’s ability on a specific task by fine- this paper, we guide LLMs as domain experts with prompts and
+tuning using task-specific objective functions after pre-training. explore how to effectively acquire and utilize expert knowledge
+Many studies [53], [54], [55] have demonstrated that pre- from LLMs to empower log understanding.
+training on domain corpus and fine-tuning with supervised data
+can improve performance on a specific task, even outperforming III. METHOD
+LLMs [56], [57]. In the field of log analysis, many studies,
+including pre-training on log corpus [20], [21], [22], [58] and A. Overview
+fine-tuning on log analysis tasks [24], [25] have demonstrated Fig. 2 shows the conceptual overview of LUK, which consists
+the effectiveness of the pre-trained model for log analysis. of three phases: knowledge acquisition, knowledge-enhanced
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2767
+
+ aligned with the assigned character identity. Moreover, the requirement outlines the anticipated outcome or characteristics
+ that the generated content must exhibit. These criteria may encompass aspects such as reasoning strategies, informativeness,
+ or other pertinent factors crucial to the task at hand. Lastly,
+ the inclusion of an input query or data serves to contextualize
+ the task for the LLM by presenting specific information or
+ scenarios that the model should engage with or respond to.
+ By integrating these components into the prompt design
+ framework, we can effectively guide the LLM in generating
+Fig. 2. Conceptual overview of LUK. responses that are tailored to specific roles, tasks, and desired
+ outcomes. These three different roles are assigned the following
+ tasks:
+pre-training, and fine-tuning with downstream tasks. Specifi- • Director. The Director’s primary objective is to establish
+cally, in the first stage, we collect various logs as input, and then a comprehensive high-level framework aimed at providing
+we design a multi-expert collaboration framework based on a strategic overview to drive the team’s efforts in under-
+LLMs to acquire expert knowledge of logs. In the second stage, standing logs. This role outlines the key points essential for
+we take the raw logs and the corresponding expert knowledge log understanding, thus ensuring that essential insights are
+as input. To effectively leverage expert knowledge to empower highlighted and comprehensively addressed.
+log understanding on a smaller model, we enhance the log pre- • Executor. As the central role of this team, the Executor
+training with knowledge based on BERT-base and propose two is tasked with the detailed execution of the log analysis
+pre-training tasks on the word level and sentence level. Finally, process. By receiving key points from the Director and
+a specific PLM for logs is obtained, which can be fine-tuned on feedback from the Evaluator, the Executor undertakes two
+downstream tasks to solve log analysis tasks. In the following critical responsibilities: content generation and refinement.
+sections, we describe the details of LUK. Specifically, the Executor first generates detailed content
+ aligned with the outlined key points. Then the Executor
+ refines and polishes the content based on feedback, improving the knowledge quality.
+B. Multi-Expert Collaboration Framework • Evaluator. The Evaluator assumes the crucial responsi-
+ Hallucination is an inherent flaw of LLMs, which may lead to bility of ensuring the quality and adherence of generincomplete or incorrect generation, ultimately failing to fulfill ated content to predefined requirements. We define three
+the intended requirements. To construct comprehensive and evaluation requirements for the Evaluator to check the
+accurate expert knowledge with LLM, motivated by cognitive Executor’s generation on three fundamental aspects: comsynergy [66] and teamwork theory [67], humans can leverage pleteness, consistency, and conciseness. By evaluating
+the power of collaboration and interaction to solve complex content against these criteria, the Evaluator validates the
+problems. As shown in Fig. 3, we design a multi-expert collab- accuracy and completeness of the generated knowledge.
+oration (MEC) framework, where we assign LLMs to different 2) Dehallucination With Self-Evaluation: Hallucinations
+roles, and these roles collaborate to generate effective expert seriously affect the accuracy and quality of outputs [70], [71].
+knowledge. Given the tendency of LLM-generated content to exhibit de-
+ 1) Role Design: Based on the classical waterfall model [50] ficiencies in comprehensiveness and informativeness, ensuring
+in software engineering, we design a similar waterfall model to the superior quality of generated knowledge poses a significant
+analyze logs consisting of three stages: analysis, execution, and challenge. To mitigate the hallucination of LLM and ensure the
+evaluation. Thus, we build a professional team based on LLMs quality of expert knowledge, we build the role of an Evaluator
+and define clear goals for each role, comprising a Director, in the MEC framework and define three evaluation aspects
+Executor, and Evaluator. to evaluate the quality of generated knowledge automatically,
+ It is widely acknowledged that one key capability of LLMs which encourages the LLM to actively seek more detailed
+is to follow input natural language instructions or prompts [68], suggestions from the self-evaluation before delivering a for-
+[69], hence they can customize the output to the specific needs mal response. However, the MEC framework runs under the
+of the user. As shown in Fig. 3, the prompt design methodology challenging reference-free setting, and the evaluation requireinvolves the pre-definition of role cards to allocate distinct roles ments cannot be directly quantified through metrics, where the
+and responsibilities to LLMs. These role cards encompass char- LLM tends to generate ambiguous and inconsistent evaluations
+acter identity, task objectives, requirements, and input queries. without fine-grained distinguishability, causing unsatisfactory
+Initially, the LLM is assigned a character identity to emulate evaluation performance [72], [73].
+a specific expert role. This step enables the model to adjust To address the evaluation weaknesses of the LLM, we
+its output to match the expertise and responsibilities associated provide evaluation examples as a reference in the Evaluawith the designated role. Subsequently, the task objective will tor prompt. By providing specific examples, the Evaluator
+instruct the LLM to perform the corresponding responsibilities uses them as the basis for evaluation, thus better guiding the
+2768 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+Fig. 3. Framework of multi-expert collaboration, which consists of three experts. First, the Director meticulously analyzes the input logs to discern key
+points. Subsequently, the Executor utilizes these key points to create detailed content. Finally, the Evaluator evaluates the quality of the generated content. In
+cases where the evaluation result is unsatisfactory and improvements are needed, the Evaluator provides feedback to the Executor for refinement.
+
+evaluation of LLMs towards our desired goals. Considering that
+the single type of example makes the LLM biased, motivated
+by contrastive learning techniques [74], [75], we construct contrastive examples consisting of positive and negative knowledge of the same log to Evaluator as reference examples, where
+the positive example showcases the desired knowledge, while
+the negative example highlights the unsatisfactory knowledge
+that should be avoided. By analyzing both types of examples before generating the evaluation, the Evaluator can reason about
+our evaluation requirements and understand how to evaluate
+them.
+ Specifically, we select one log L with high-quality knowledge Kpos as the positive example, which can be manually constructed by experts or generated from the LLM
+and manually confirmed. Considering that negative examples
+{Kneg }Cc=1 , C = 3 of the log L are unavailable directly, to
+construct the negative examples automatically, we prompt the
+LLM to modify the positive knowledge, making it unsatisfactory for evaluation. As shown in Fig. 4, we first give the Fig. 4. Prompt template of constructing negative samples, where the underbackground in the prompt and then clarify the task of modifying lined portion of the prompt supports user modification based on their own
+ data and intent.
+knowledge for the LLM, where we can specify which evaluation
+metrics are not fulfilled. Next, we provide the raw log, the raw
+positive knowledge, the key points, and the three evaluation characteristics we want to avoid, this can be manually checked,
+requirements in the prompt. Finally, we require the LLM to and feedback can be given to the LLM to re-generate negative
+give the reason for not fulfilling the evaluation requirements samples. To avoid the higher expense of the longer prompt, we
+while generating the modified content, which not only im- construct one positive knowledge and its corresponding three
+proves the reasoning ability of the Evaluator but also provides negative knowledge as reference examples to be provided to
+guidance for the revision of the content by Executor. In cases the Evaluator. The contrastive examples we constructed in our
+where the LLM-generated negative examples do not capture the experiments are shown in Fig. 6.
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2769
+
+ 3) Collaboration: After constructing evaluation examples Algorithm 1 Pseudocode of multi-expert collaboration.
+and assigning roles to LLMs, different roles start working to Require: Input Log log, LLM M, Example Knowledge Kpos
+collaborate according to the provided requirements. First, the Ensure: Output Expert Knowledge k
+Director carefully analyzes the input logs to recognize key # Construct Contrastive Examples
+points and formulates a plan for comprehending the logs effec- for c = 1 to C do
+tively. Subsequently, the Director shares these insights with the c
+ Kneg = M(P romptM odif y , Kpos )
+Executor to guide the content generation process. The Executor end for
+utilizes these key points to create detailed content that aligns Kexamples = Kpos ∪ {Kneg }C c=1
+with the requirements. Finally, the detailed content produced # Initial Roles
+by the Executor undergoes evaluation by the Evaluator. If the DIRECT OR = Init_Role(P romptDirctor , M)
+content meets the evaluation requirement, it is directly output EX ECU T OR = Init_Role(P romptExecutor , M)
+as expert knowledge. In cases where the evaluation result is P romptEvaluator = P romptEvaluator .join(Kexamples )
+unsatisfactory and improvements are needed, the Evaluator EVALU AT OR = Init_Role(P romptEvaluator , M)
+provides feedback to the Executor for refinement. To rigorously # Collaboration
+ensure the quality of the generated knowledge, this evaluation Init: epoch = 0, f eedback = F alse
+and refinement mechanism will be iterative until the content keypoint = DIRECT OR(log)
+generated by Executor meets the evaluation requirement or the content = EX ECU T OR(log, keypoint)
+maximum number of iterations is reached. We set up 3 iterations repeat
+to build expert knowledge in our experiments. The pseudocode epoch = epoch + 1
+of the multi-expert collaboration framework is outlined in Al- f eedback = EVALU AT OR(log, keypoint, content)
+gorithm 1. if f eedback == F alse then
+ This collaborative framework has two pivotal advantages: content = EX ECU T OR(content, f eedback)
+Firstly, leveraging multiple roles’ collective insights and skills end if
+enables a multi-perspective analysis of the input log, thereby until epoch == Epoch or f eedback == T rue
+mitigating the one-sidedness and bias inherent in a single k = content
+model’s response. Secondly, through the feedback loop mech- return k
+anism, the framework enables iterative refinement of content.
+This iterative process of evaluation, feedback incorporation,
+and content enhancement promotes continuous improvement, perceiving external knowledge. To perceive useful information
+thereby ensuring that the acquired expert knowledge is com- from the generated knowledge, we design a knowledge perprehensive and of high quality. ception module (KPM) based on the cross-attention mechanism, which fuses the heterogeneous representations of log and
+C. Pre-Training With Knowledge Enhancement knowledge to bridge the knowledge gap. The process of this
+ module can be described in three steps:
+ The overall pre-training framework is shown in Fig. 5, the Firstly, log encoder and knowledge encoder encode ls and ks,
+input of the pre-training framework is a batch of pairs consisting respectively, and get the corresponding token representations
+of logs and the corresponding expert knowledge, then these l = {l[CLS] , l0 , l1 , ..., ln } and k = {l[CLS] , k0 , k1 , ..., km }.
+pairs are fed into two encoders to obtain log representations and Secondly, since not all tokens in knowledge contribute
+knowledge representations through two encoders respectively, equally to the masked token prediction and to measure the
+where two encoders are initialized with the same pre-trained importance of each token in knowledge for the token semantic,
+model. Finally, based on the structural characteristics of the log, KPM calculates the semantic similarity between masked token
+we propose two pre-training tasks at word-level and sentence- li and knowledge k, and each token in knowledge is assigned
+level: (1) token prediction and (2) semantic alignment, to incor- a weight to represent its importance. Considering that the log
+porate expert knowledge for improving log understanding. representation and the knowledge representation come from
+ 1) Word-Level Token Prediction: To sufficiently understand two different encoders, we introduce the cross-attention mechdomain terminologies in the logs, we propose a Token Predic- anism to compute this weight, where queries come from the
+tion pre-training task (TP). Unlike existing word-level tasks of masked log token li , keys and values come from the knowledge
+traditional PLMs only utilizing local context to predict tokens, representations k:
+our proposed word-level task requires models to aggregate context and knowledge for predicting tokens, leading to a knowl- Q = WQ li , K = WK k, V = WV k, (1)
+edgeable pre-trained model. where, li from the log encoder and k from the knowledge en-
+ Specifically, given a log l and expert knowledge k gener- coder. Then assign a weight α for each token in the knowledge:
+ated from the LLM, we get the corresponding input token  
+ QK T 
+sequence ls = {l0 , l1 , ..., ln }, ks = {k0 , k1 , ..., lm } after tok- α = sof tmax √ , k = αV, (2)
+enization. The token prediction task randomly masks a certain dk
+percentage (15% in our experiments) of the log tokens li with where WQ , WK , and WV are learnable parameter matrices,
+a special [M ASK] token, and then tries to recover them by dk is the dimension of representation, α refers to the attention
+2770 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+Fig. 5. The overview of LUK pre-training framework. LUK includes a hierarchical knowledge-enhanced framework, including two complementary training
+objectives on word level and sentence level. The word-level object is designed from the perspective of domain token understanding, while the sentence-level
+objective is designed from overall semantic alignment.
+
+ 
+ 1 
+ N
+distribution, and k denotes the obtained information from the f (la , ka )
+knowledge based on the weights. LSA (θ) = −log N −1 , (6)
+  N a=1 f (la , ka ) + b=1 f (la , kb )
+ Thirdly, masked token li and obtained knowledge k are
+concatenated inside the dk -dimensional space to constitute a where τ is the temperature hyperparameter, which is set to 0.05
+ 
+fused representation [li ; k ], which is used to predict the orig- empirically in our experiments.
+inal token: At last, we sum the TP loss and the SA loss, and obtain the
+ overall training objective:
+ 
+ yˆi = sof tmax(Wf [li ; k ]), (3) min LT P (θ) + LSA (θ) (7)
+ θ
+where Wf is the weight parameter. This fused representation
+contains the key information for the token understanding, which D. Fine-Tuning With Downstream Tasks
+is adaptively acquired from knowledge. At last, the TP objective After pre-training, we fine-tune the log encoder on different
+is to predict the original tokens that are masked out, formulated downstream tasks. We group all downstream tasks into two
+as follows: categories based on the input type: log-single tasks and log-pair
+ tasks. We use the final hidden state of the first token (the [CLS]
+ LT P (θ) = −logp(li |ls\{li }), (4) token) as the sentence representation. For log-single tasks, we
+ input the output of the language model lCLS into a multi-layer
+where ls\{li } denotes the log tokens sequence ls with token li perception network function fH and obtain the prediction as
+being masked. fH (lCLS ). For log-pair tasks, we follow sentence-bert [76] and
+ 2) Sentence-Level Semantic Alignment: Since logs do not use the language model to encode two separate sentences u, v,
+conform to the grammatical structure of human language and then input uCLS , vCLS and element-wise difference |uCLS −
+are always concise, it is difficult to sufficiently capture the vCLS | into a multi-layer perception network function fH and
+semantics of logs. To enrich the semantic context of logs obtain the prediction as fH ([uCLS ; vCLS ; |uCLS − vCLS |]).
+and improve the robustness of log representations, following KnowLog [22], we construct a Semantic Alignment pre- IV. EXPERIMENTS
+training task (SA) at the sentence level that aligns the semantic
+ A. Data Preparation
+representations of logs with the expert knowledge with contrastive learning. In this paper, we collect logs from software systems and
+ Specifically, we first construct positive and negative exam- network devices to construct expert knowledge and the log preples from a batch T = {(l, k)} of input pairs with size N . trained model. Specifically, we collect software system logs
+(la , k a ) is the a-th pair in the batch. We obtain logs l and from Loghub [38], including operating system logs composed
+knowledge k from the same input pairs {(la , k b )a=b } as positive of Windows and BGL, as well as distributed system logs comexamples and different input pairs {(la , k b )a=b } as negative posed of HDFS and OpenStack. Given that these datasets conexamples. Then we use la , ka to indicate the representations tain a significant proportion of duplicated logs, we employ
+of the log and the knowledge, where the hidden state of the widely used Drain [77] to parse these logs and achieve log
+special symbol [CLS] as the sentence representation. To pull templates. Subsequently, we only sample one instance log as
+closer positive samples and push away negative samples, the input that corresponds to each unique template. In addition,
+training objective of SA is defined as follows: we also collect network device logs from the public documen-
+    tation of two vendors, Cisco2 and Huawei3 , including three
+ 
+ a b (la ) kb
+ f (l , k ) = exp τ , (5) 2 https://www.cisco.com/c/en/us/support/all-products.html
+ ||la || · ||kb || 3 https://support.huawei.com/enterprise/en/index.html
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2771
+
+ TABLE I The evaluation datasets in our experiments include two types:
+ STATISTICS OF THE DATASET USED FOR KNOWLEDGE datasets included in the pre-training corpus and those not in-
+ GENERATION AND PRE-TRAINING
+ cluded in the pre-training corpus. For most datasets, we collect
+ Datasets Category # of Log Templates the evaluation datasets from the same source as the pre-training
+ data. Moreover, apart from logs involved in pre-training, to
+ Distributed System 2,292
+ Software System verify the generalization capability of LUK, we also collect
+ Operating System 11,947
+ Cisco 16,591
+ logs that are not included in the pre-training for evaluation. In
+ Network Device Tables II and III we provide statistics for different tasks of their
+ Huawei 12,399
+ Total 43,229 datasets and make all publicly available datasets accessible in
+ our GitHub repository. Next, we give an introduction to each
+ task and its evaluation metrics.
+ 1) Downstream Tasks of Software System Logs:
+devices: Switches, Routers, and WLAN. The detailed statistics
+ • Anomaly Detection (AD). Anomaly detection is a widely
+are shown in Table I.
+ researched log analysis task to predict whether anomalies
+ exist within a short period of log messages, where the input
+B. Parameters Setting is a log sequence and the output is True or False. Following
+ • As for expert knowledge acquisition, we explore different Biglog [21], we concatenate each log in the sequence and
+ LLMs for experiments, including two proprietary LLMs: then input them to the encoder to obtain the representation
+ gpt-3.5-turbo (ChatGPT) and gpt-4o (GPT-4o), and one of the sequence.
+ open-source model: Llama-3.3-70B-Instruct (LLama3- Dataset and Metric. Following previous anomaly detec-
+ 70B) [78]. To increase the stability of LLM’s output, we tion studies [12], [82], we collect datasets from Loghub
+ set the temperature of LLMs to 0. [38]. Given the substantial size of anomaly detection
+ • For contrastive examples provided to the Evaluator, we datasets, such as Spirit and Thunderbird, which contain
+ show in Fig. 6. more than 200 million messages, full-scale analysis with
+ • For pre-training, we use bert-base-uncased with 110M LLMs incurs high overhead. Hence, we take 1,000,000 raw
+ parameters in our experiments. During pre-training, we set logs in chronological order with a window size of 20, then
+ the batch size as 32, epochs as 40 and the maximum length group logs into chronologically ordered datasets (30,000
+ of the input text as 512. Moreover, the optimizer we adopt / 10,000 / 10,000), preserving the natural characteristics
+ is Adam with a learning rate of 5e-5, a weight decay of of log patterns while preventing data leakage. To measure
+ 0.01, learning rate warmup for 2,000 steps and linear decay the effectiveness of different models in anomaly detection,
+ of the learning rate after. we report Precision, Recall, and F1 on the True (anomaly)
+ • For fine-tuning, we adopt the cross-entropy loss as the loss class as evaluation metrics.
+ function in downstream tasks, and we set epoch to 20 and • Failure Identification (FI). Failure identification aims to
+ 10 on log-single and log-pair tasks, respectively. further discern the type of failure present in the anomaly
+ • We spend 3 hours pre-training the LUK on 2 NVIDIA log. Given the log messages, the model is required to
+ A100 GPUs with PyTorch 2.4.0. determine what error emerges.
+ Dataset and Metric. This dataset comes from [18], which
+ is an OpenStack dataset including 396 failure tests and
+C. Downstream Tasks
+ 16 kinds of API errors, such as “network delete error”,
+ To explore the performance of LUK on different log analy- “openstack network create error”. Usually, engineers are
+sis domains, we conduct experiments on different downstream interested in whether top-K recommended results contain
+tasks, including software systems and network device logs. the correct error, hence, we report the Recall@K rate as
+ Following prior studies on software system logs [38], [79], the evaluation metric.
+we focus on two widely studied tasks, anomaly detection and 2) Downstream Tasks of Network Device Logs:
+failure identification. These tasks are representative of tradi- • Module Classification (MC). MC is a log-single task
+tional log analysis challenges and help validate the core effec- aiming at identifying which module the log originates
+tiveness of our approach. However, recognizing that existing from, which input is a log with the masked module name
+public datasets for these tasks often exhibit relatively simple and the output is the corresponding module name.
+and repetitive anomaly patterns [80], [81], we expand our focus Dataset and Metric. We collect the log from Table III
+to include knowledge-intensive log understanding tasks [22]. and replace the module name with [MASK] as input, the
+These tasks emphasize the understanding of log semantics and module name in the log as ground truth. Obviously, this is
+require deeper domain knowledge, making them ideal for eval- a multi-classification task and the model needs to underuating the capabilities of knowledge-enhanced models. Follow- stand the contextual information of the logs to accurately
+ing the task construction process on log understanding tasks identify their source. As an unbalanced multi-class clas-
+[22], we construct four different downstream tasks on network sification task and considering the importance of different
+device logs across three vendors, and these datasets have been classes, we report Accuracy and Weighted F1 as evaluation
+organized and made accessible through our GitHub repository. metrics.
+2772 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+Fig. 6. The contrastive samples constructed in our experiments, where Example 1 represents the positive example, and the remaining three examples are
+negative examples obtained from the modification of GPT-4o. Colour-marked text indicates that the evaluation requirements are unsatisfied.
+
+ TABLE II Dataset and Metric. We collect 602 real operational logs
+ STATISTICS OF DOWNSTREAM TASKS DATASETS ON SOFTWARE of Huawei switches from enterprise as the dataset, cover-
+ SYSTEM (TRAINING/VALIDATION/TESTING SIZE)
+ ing 43 failure categories, these logs are annotated by ex-
+ Tasks Dataset #Size
+ perts.Due to data privacy concerns, this dataset is currently
+ not publicly available. Unlike the multi-class classification
+ BGL 600,000 / 200,000 / 200,000
+ Anomaly
+ ThunderBird* 600,000 / 200,000 / 200,000 task, we report Average Accuracy of all samples [83] as
+ Detection the evaluation metric, where the accuracy for each sample
+ Spirit* 600,000 / 200,000 / 200,000
+ Failure is the number of correctly predicted labels.
+ Openstack 236 / 80 / 80
+ Identification • Log and Description Semantic Matching (LDSM).
+ LDSM is a log-pair task aimed at determining whether
+ * indicates logs not involved in the pre-training.
+ the semantics of a given log align with the corresponding
+ natural language description, where the input is a log and
+ TABLE III
+ STATISTICS OF DOWNSTREAM TASKS DATASETS ON NETWORK DEVICE
+ description pair, and the output is True or False.
+ (TRAINING/VALIDATION/TESTING SIZE) Dataset and Metric. We collect descriptions of logs from
+ the documentation, then we build (log, description) pair as
+Tasks Switches Routers Security* ground truth and randomly select one other description for
+Module
+ Cisco 13,495/4,498/4,498 7,265/2,422/2,421 - each log as a negative sample. This task requires the model
+ Huawei 3,439/1,146/1,146 2,539/846/845 -
+Classification to accurately understand the semantics of the logs and de-
+ H3C* 1,241/413/413 1,336/445/444 -
+Fault Phenomenon
+ Huawei 362/120/120 - -
+ scriptions. As a binary classification task, both positive and
+Identification
+ negative cases require attention, we report the Accuracy
+ Cisco 49,954/16,651/16,651 26,975/8,992/8,991 1,894/631/631
+Log and Description
+ Huawei 7,702/2,567/2,567 5,977/1,992/1,991 4,485/1,495/1,494
+ and Weighed F1 as evaluation metrics.
+Semantic Matching
+ H3C* 2,606/868/868 2,837/946/945 2,223/741/740 • Log and Possible Cause Ranking (LPCR). LPCR is
+Log and Possible
+ Huawei 3,851/1,283/1,283 3,097/1,032/1,032 2,361/787/787 a log-pair ranking task to find the most probable answer
+Cause Ranking
+ from a list of possible causes for a given log. Specifically,
+* indicates logs not involved in the pre-training. the input is a log and an answer candidate set, then the
+ model needs to find the most probable causes from the
+ • Fault Phenomenon Identification (FPI). FPI is also a set and rank the candidate set based on the priority as
+ log-single task to identify the fault category to which the the output.
+ log belongs. Different from the previous failure identifica- Dataset and Metric. We collect logs and the correspondtion task, FPI is a multi-label classification task due to a ing possible causes from the Huawei public documentation
+ log may appear in more than one fault category. and build (log, possible cause) pairs as ground truth. Then
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2773
+
+ we randomly select 15 possible causes of other logs the is the state-of-the-art log pre-trained model in log analysis,
+ ground truth as a candidate set. This task necessitates that not only due to pre-training on log corpus but also enhancing
+ the model understands the background information of the the pre-training with documentation knowledge. Referring to
+ log to accurately identify its potential causes. As a typi- KnowLog, we collect the descriptions of logs from the Huawei
+ cal ranking task, following [52], we report Precision@K and Cisco public documentation as background knowledge to
+ and Mean Reciprocal Rank (MRR) as evaluation metrics, enhance the log pre-training in the same way. For fairness,
+ where MRR is a statistic measure for evaluating search we reproduce Biglog and KnowLog with the same pre-training
+ algorithms. setting on our log corpus.
+ 4) Knowledge Distillation Methods: In the era of LLMs,
+D. Baselines the prevalent paradigm of data augmentation (DA) is to distill
+ knowledge from LLMs, where it prompts the LLM to generate
+ We categorize baselines for log understanding into five
+ more data tailored to train the student model in a targeted skill or
+groups according to technology type: classical machine
+ domain [44], [87]. This reasoning process-oriented distillation
+learning-based methods, traditional deep-learning methods,
+ method is more effective compared to obtaining labels directly
+pre-trained language models, knowledge distillation methods,
+ from the teacher model [45]. Considering the lack of research
+and large language models. In addition, to ensure a fair
+ on knowledge distillation in the field of log analysis, we select
+comparison, apart from LLMs, we reproduce all baselines
+ Chain-of-Thought (COT)-based knowledge distillation as the
+from their repositories, and the parameters of baseline models
+ baseline, which has proven to be an effective knowledge disare according to their original settings.
+ tillation method for the reasoning process in the field of NLP
+ 1) Classical Machine Learning Methods: K-nearest neigh-
+ [46], [47].
+bor (KNN) is one of the most fundamental and simple clas-
+ Specifically, we select T5 [88] (t5-base with 223M pasification methods [84]. In our implementation, we first store
+ rameters) as the student model, and GPT-4o as the teacher
+the token list (split from log messages) and the corresponding
+ model. Given the specific log analysis task, we provide the
+labels of the training log data. For inference, the prediction for a
+ inputs and labels from the training set to the teacher model, then
+given log is determined by assigning it the label most frequently
+ utilize COT prompting to extract rationales from the teacher
+found among the nearest k training samples to the query point.
+ model. Finally, the student model is trained with the inputs and
+Specifically, we obtain tokens list of the input log (excluding the
+ constructed rationales.
+header) by splitting the sequence based on spaces. Any token
+ 5) Large Language Models: LLM-based log analysis methcontaining numeric characters is removed during preprocessods follow the in-context learning paradigm, where LLMs make
+ing. For the sake of simplicity, following LightAD [81], we
+ predictions based on contexts augmented with a few examples
+utilize the Jaccard index (also known as the Jaccard similarity
+ without training. Following previous LLM-based log analysis
+coefficient) to find the nearest neighbors in the training set,
+ works [26], [27], [28], [29], we select top-5 similar examples
+defined as:
+ from the training set for each input log and use bge-large-
+ |A ∩ B| en-v1.5 as the embedding model to select examples, due to
+ Jaccard(A, B) = , (8)
+ |A ∪ B| its excellent performance among all open-source embedding
+where A and B are the token sets of two log sequences. The models. Considering the recency bias of LLMs [89], we arrange
+coefficient ranges from 0 to 1, where 0 indicates no overlap these examples in ascending order based on the cosine similarbetween the sets (completely dissimilar) and 1 denotes identical ity. We select two proprietary LLMs (ChatGPT and GPT-4o)
+sets (perfect similarity). And we set the number of neighbors and one powerful open-source LLM (LLama3-70B [78]) as
+k to 1 in our experiment. The performance of KNN on the baselines. We utilize HTTP requests to invoke the OpenAI APIs
+LPCR task is excluded since KNN cannot be adapted to the and interact with proprietary LLMs. For open-source LLM,
+ranking task. we deploy Llama-3.3-70B-Instruct in our environments to
+ 2) Traditional Deep-Learning Methods: Traditional deep- analyze logs.
+learning methods convert each log message into a vector with In addition, since COT prompting [64] is verified to improve
+the word embedding model and then input the vector to a deep the performance of LLMs significantly. To verify the effectiveneural network (CNN or BiLSTM) to analyze logs. Following ness of the MEC framework, we acquire knowledge with COT
+previous works [85], [86], we choose the most widely used and then train the model with the same pre-training tasks for
+BiLSTM and CNN for log analysis as deep neural network comparison. The specific prompt is: You are an engineer in
+models. the maintenance and operation domain, Please help me un-
+ 3) Pre-Trained Language Models: PLM-based log analysis derstand this log, including parameters, description, possible
+methods follow the pre-train and fine-tune paradigm, where causes and resolution procedures. Let’s think step by step.
+one pre-trained model serves as the backbone, and then is fine-
+ E. Evaluation
+tuned on different specific downstream tasks. We select one
+general pre-trained model (BERT [24], [82]) and two specific We evaluate LUK by answering the following research quespre-trained models for logs (Biglog [21] and KnowLog [22]) tions (RQs):
+as baselines. Biglog excels in capturing essential features due to • RQ1: How effective is LUK compared with the curits extensive training on the log corpus. In addition, KnowLog rent mainstream methods on downstream tasks?
+2774 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+ TABLE IV a notable challenge: the presence of domain-specific terminolo-
+ RESULTS ON AD AND FI (SOFTWARE SYSTEM LOGS) gies and the concise nature of logs act as barriers, and the lack
+ of external knowledge limits these models from making further
+ AD (Precision / Recall / F1) FI (Recall@1 / 2 / 3)
+ Methods
+ BGL OpenStack breakthroughs.
+ KNN 98.37 / 96.80 / 97.58 90.00 / 95.00 / 95.00
+ To verify the effectiveness of the expert knowledge obtained
+ from the LLM, we compare it with the KnowLog, whose
+ CNN 99.95 / 96.06 / 97.97 83.75 / 86.25 / 90.00
+ BiLSTM 99.95 / 97.25 / 98.58 87.50 / 92.50 / 96.25 knowledge is obtained from the documentation. Our experi-
+ BERT 99.70 / 98.48 / 99.09 87.50 / 92.50 / 98.75 mental findings demonstrate that MEC-based LUK outperforms
+ Biglog 99.87 / 99.63 / 99.75 90.00 / 95.00 / 98.75
+ KnowLog 99.58 / 98.69 / 99.13 82.50 / 92.50 / 96.25 KnowLog. More specifically, LUK (MEC-GPT4o) improves
+ T5-KD 99.87 / 99.56 / 99.91 86.25 / 92.50 / 98.75 the average Accuracy on the Cisco and Huawei datasets regard-
+ LLama3-70B 46.87 / 95.23 / 71.05 85.00 / 96.25 / 96.25
+ ing the MC and LDSM tasks by 2.38% and 1.15%, respectively.
+ ChatGPT 42.73 / 95.23 / 68.98 83.75 / 95.00 / 96.25 It is noteworthy that Huawei’s documentation provides more
+ GPT-4o 46.85 / 95. 23 / 70.54 87.50 / 96.25 / 96.25 detailed log descriptions compared to the relatively concise de-
+ LUK (COT-ChatGPT) 99.95 / 99.87 / 99.91 91.25 / 95.00 / 98.75 scriptions found in Cisco’s documentation. This gap highlights
+ LUK (COT-GPT4o) 99.67 / 100.0 / 99.83 91.25 / 95.00 / 98.75
+ the ability of LLM to generate expert knowledge of equal or bet-
+ LUK (MEC-LLama3) 99.87 / 100.0 / 99.93 92.50 / 95.00 / 98.75
+ LUK (MEC-ChatGPT) 99.95 / 99.91 / 99.93 92.50 / 95.00 / 98.75 ter quality than high-quality documentation. Given the scarcity
+ LUK (MEC-GPT4o) 99.87 / 100.0 / 99.93 92.50 / 96.25 / 96.25 of documented descriptions for most logs in practice, obtaining expert knowledge through KnowLog becomes impractical.
+ For instance, the challenge of sourcing relevant documents for
+ logs from Loghub [38] significantly hinders the effectiveness
+In this RQ, we conduct a comprehensive evaluation of LUK of KnowLog. Our approach, operating independently of docuin comparison to other state-of-the-art baselines on software mentation, consistently yields superior results and reduces the
+systems and network device logs. reliance on human experts for complex knowledge construction,
+ The experiment results are shown in Tables IV and VI. It offering a more feasible and practical alternative to traditional
+is clear that apart from the LLMs-based baselines, LUK out- documentation-based methods.
+performs all other baselines. In addition, LUK with smaller In comparison to the knowledge distillation-based method
+parameters outperforms the LLMs on all tasks except for the (T5-KD), the COT-based knowledge distillation approach ex-
+MC and LDSM tasks. In particular, compared to the best results hibits suboptimal performance in specific log analysis tasks.
+of baselines on the Failure Identification task of software system This gap can be attributed to the unique nature of log analysis,
+logs, LUK improves on Recall@1 by 2.5%. And on the Module which typically necessitates a deep understanding of domain-
+Classification task of network device logs, LUK’s accuracy specific knowledge. The chain-of-thought methodology, with
+improved by an average of 2.34%. This evidence underscores its sequential reasoning framework, may introduce noise or
+the superior performance of LUK in the domain of log anal- overlook critical expert knowledge, leading to diminished perysis. We observe that the KNN algorithm excels specifically formance in tasks where precise understanding is crucial. In
+in anomaly detection and failure identification tasks, achieving comparison, LUK prioritizes the construction of high-quality
+results comparable to those of PLMs. However, its performance expert knowledge explicitly before fine-tuning it for specific
+diminishes significantly in other knowledge-driven tasks. This tasks. By pre-building a solid foundation of domain-specific
+performance can be attributed to the relatively simple anomaly knowledge, LUK can better address the complex challenges in
+patterns in public anomaly detection datasets [80], [81], which log analysis tasks.
+often contain limited anomaly patterns and numerous repetitive In comparison to LLMs, our results show that apart from
+logs. The relatively simple anomaly patterns allow lexical pat- LDSM and LPCR tasks, three LLMs perform worse than the
+tern matching to suffice for basic detection tasks. Conversely, fine-tuned smaller PLMs. This difference can be attributed to
+tasks that require a deeper understanding of log semantics reveal the existence of a significant domain gap, which hampers the
+KNN’s limitations, as it struggles to understand the informa- ability of LLMs to effectively address specialized tasks directly.
+tion conveyed by log data. This inability to grasp semantic Consequently, this limitation restricts their potential to fully excontext restricts KNN’s generalizability, making it less effec- ploit the wealth of knowledge they encapsulate. Hence, extracttive in more complex log analysis scenarios. In contrast, LUK ing knowledge from LLMs before reasoning directly bridges
+not only excels in public anomaly detection datasets but also these critical gaps for task-specific analysis. Furthermore, our
+achieves state-of-the-art performance across a wider range of findings suggest that GPT4o-based enhancement outperforms
+tasks, highlighting its advanced capabilities not only in pattern the other two LLMs on most datasets, indicating the potential
+recognition typical of machine learning but also in the semantic of leveraging stronger LLMs to significantly enhance the perunderstanding of logs. Further, traditional DL models exhibit formance of smaller models in various tasks.
+relatively poor performance, primarily attributed to their limited Comparing MEC with COT, MEC emerges as the superior
+capacity to capture the semantics of logs. When compared performer. This superiority can be attributed to the collaboto BERT and Biglog, it becomes evident that pre-training on rative essence of MEC, where multiple experts collaborate to
+an extensive log corpus enhances the semantic understanding improve the accuracy and comprehensiveness of the knowledge
+abilities of PLMs. However, a more in-depth analysis uncovers extracted from the LLM, effectively mitigating the problem
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2775
+
+ TABLE V
+ RESULTS ON MODULE CLASSIFICATION (MC) AND LOG AND DESCRIPTION SEMANTIC MATCHING (LDSM) TASKS. (NETWORK DEVICE LOGS)
+
+ MC (Accuracy / Weighted F1) LDSM (Accuracy / Weighted F1)
+ Methods
+ Cisco Huawei Cisco Huawei
+ Switches Routers Switches Routers Switches Routers Switches Routers
+ KNN 42.77 / 42.86 46.75 / 46.41 67.71 / 66.64 62.84 / 60.90 53.00 / 52.65 51.45 / 50.83 50.33 / 49.73 47.56 / 46.88
+ CNN 56.89 / 56.85 57.46 / 54.92 74.52 / 73.95 72.78 / 72.23 84.04 / 84.04 80.99 / 80.99 86.05 / 86.05 82.37 / 82.30
+ BiLSTM 55.74 / 55.63 57.17 / 56.76 76.52 / 75.49 73.96 / 73.30 89.45 / 89.44 85.42 / 85.41 87.85 / 87.85 84.43 / 84.40
+ BERT 62.67 / 61.38 62.72 / 62.60 82.37 / 81.20 81.18 / 79.20 93.06 / 93.06 90.01 / 90.00 93.18 / 93.18 90.06 / 90.05
+ Biglog 62.69 / 62.76 63.15 / 61.17 83.24 / 83.25 82.36 / 81.19 93.32 / 93.32 91.46 / 91.46 94.19 / 94.19 93.62 / 93.61
+ KnowLog 63.33 / 63.35 63.65 / 63.12 84.11 / 83.65 83.55 / 82.41 95.05 / 95.05 92.78 / 92.78 97.15 / 97.15 96.43 / 96.43
+ T5-KD 62.96 / 62.36 63.86 / 61.01 83.60 / 83.23 83.55 / 82.82 95.29 / 95.28 93.20 / 93.20 95.25 / 95.25 93.97 / 93.97
+ LLama3-70B 61.61 / 60.95 62.99 / 60.55 82.98 / 82.83 81.66 / 80.34 84.48 / 84.31 88.32 / 88.24 95.49 / 95.49 95.57 / 95.57
+ ChatGPT 57.11 / 54.41 57.99 / 54.56 79.14 / 77.19 78.22 / 75.51 82.14 / 81.96 84.64 / 84.47 85.75 / 85.75 90.31 / 90.22
+ GPT-4o 62.12 / 61.62 63.86 / 61.01 83.25 / 82.80 81.30 / 79.87 89.04 / 88.99 93.12 / 93.11 97.23 / 97.23 97.79 / 97.79
+ LUK (COT-ChatGPT) 63.49 / 63.72 64.51 / 63.33 83.42 / 82.70 83.19 / 82.34 94.93 / 94.92 93.11 / 93.11 96.33 / 96.33 95.73 / 95.73
+ LUK (COT-GPT4o) 63.47 / 63.51 63.61 / 63.02 83.60 / 83.20 82.84 / 81.92 94.92 / 94.91 93.18 / 93.18 96.46 / 96.46 95.93 / 95.93
+ LUK (MEC-LLama3) 65.67 / 65.27 66.67 / 65.12 85.25 / 84.95 85.21 / 84.01 96.45 / 96.45 94.13 / 94.13 97.66 / 97.66 97.39 / 97.39
+ LUK (MEC-ChatGPT) 65.54 / 65.12 66.29 / 64.27 84.64 / 84.47 85.09 / 83.82 96.32 / 96.32 93.80 / 93.80 96.92 / 96.92 96.74 / 96.74
+ LUK (MEC-GPT4o) 66.16 / 66.02 67.20 / 65.41 85.51 / 85.26 85.33 / 84.73 96.63 / 96.63 94.32 / 94.32 97.66 / 97.66 97.34 / 97.34
+
+ TABLE VI • RQ2: How effective is LUK in generalization ability?
+ RESULTS ON LPCR AND FPI (NETWORK DEVICE LOGS). NOTE: THE As the system evolves, many previously unseen logs will be
+ RESULTS OF PROPRIETARY LLMS ON THE FPI TASK CANNOT BE
+ COMPARED DUE TO DATA PRIVACY ISSUES. THE RESULTS OF KNN ON collected [85], and it is unrealistic to collect all the real-world
+ THE LPCR TASK CANNOT BE COMPARED DUE TO KNN’S INABILITY TO logs for pre-training. In this RQ, to verify the generalization
+ ADAPT TO RANKING TASKS of LUK, we conduct experiments on downstream tasks where
+ LPCR (Precision@1 / 3 / MRR) FPI (Accuracy)
+ the logs in these datasets do not appear in the pre-training
+ Methods
+ Huawei Huawei
+ phase. Specifically, for software logs, we collect ThunderBird
+ Switches Routers Switches and Spirit from Loghub [38] as the datasets of the Anomaly De-
+ KNN - - 76.50 tection task. For network device logs, as shown in Table III, we
+ CNN 54.30 / 77.26 / 67.99 53.45 / 75.77 / 67.35 69.00 collect logs from other vendors (H3C) and devices (Security)
+ BiLSTM 59.27 / 78.04 / 71.22 51.45 / 69.56 / 63.76 74.83
+ BERT 76.18 / 91.54 / 84.70 72.57 / 91.59 / 82.61 88.75 as the datasets.
+ Biglog 83.33 / 94.02 / 89.38 82.98 / 95.59 / 89.49 89.58
+ KnowLog 87.50 / 93.01 / 91.84 89.68 / 96.59 / 93.99 94.17
+ The experimental results are shown in Table VII. It can be
+ T5-KD 86.11 / 93.56 / 91.41 84.48 / 92.59 / 90.33 - found that LUK still has superior performance on the pre-
+ LLama3-70B 95.61 / 98.04 / 97.27 97.48 / 99.49 / 98.52 88.83 training unseen logs, especially on the Module Classification
+ ChatGPT 90.95 / 95.11 / 93.88 97.20 / 98.34 / 98.19 - task, where LUK improves 3.38% on average Accuracy com-
+ GPT-4o 95.65 / 98.29 / 97.27 97.39 / 99.09 / 98.47 -
+ LUK (COT-ChatGPT) 85.18 / 95.03 / 90.55 84.58 / 95.99 / 90.64 90.42
+ pared to T5-KD. These results suggest that the expert knowl-
+ LUK (COT-GPT4o) 86.34 / 93.79 / 91.37 87.88 / 95.19 / 92.75 92.50 edge distilled from LLMs plays a key role in empowering
+ LUK (MEC-LLama3) 90.45 / 95.81 / 94.06 90.49 / 96.99 / 94.52 95.83 smaller PLMs to develop a deeper understanding of log. This
+ LUK (MEC-ChatGPT) 89.37 / 95.19 / 93.43 88.48 / 94.69 / 90.33 93.33
+ LUK (MEC-GPT4o) 90.92 / 96.04 / 94.46 90.69 / 96.09 / 94.39 96.67 proficiency ensures that the PLM is trained without the tendency
+ to overfit, which would prevent fine-tuned models from effectively analyzing unseen logs because they fail to grasp crucial
+ information essential for accurate log analysis.
+of inaccurate and incomplete knowledge due to hallucinations. In comparison to KnowLog, LUK still has a clear advantage
+Moreover, the MEC framework showcases its effectiveness in over KnowLog, which derives knowledge from documentation.
+generating comprehensive and accurate insights through the The expert knowledge derived from LLMs offers a deeper level
+iterative feedback and refinement mechanism. of comprehension and learning, enabling the PLM to general-
+ In conclusion, the superior performance of LUK in log anal- ize more effectively to new logs. Conversely, KnowLog, conysis tasks underscores its effectiveness across various datasets. strained by information within documentation, may not provide
+By leveraging expert knowledge extracted from LLMs, LUK profound insights to support robust generalization of the PLM
+demonstrates the advantage of enhancing smaller pre-trained to unseen logs.
+models with professional insights. This approach not only op- In essence, our findings affirm that LUK excels in its gentimizes the utilization of the rich knowledge within LLMs but eralization capabilities by analyzing unseen logs. The infusion
+also introduces a new paradigm in the realm of log analysis, of expert knowledge sourced from LLMs equips the smaller
+paving the way for more efficient and insightful methodologies. PLM with the ability to leverage crucial insights from expert
+In addition, LUK’s process of acquiring knowledge is auto- knowledge, thereby avoiding overfitting and improving its permated and independent of experts, making it more practical. formance in log analysis tasks. This underscores the pivotal role
+2776 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+ TABLE VII
+ RESULTS OF GENERALIZATION ABILITY EXPERIMENTS
+ (SOFTWARE SYSTEM LOGS)
+
+ Anomaly Detection (Precision / Recall / F1)
+ Methods
+ ThunderBird Spirit
+
+ KNN 99.08 / 99.89 / 98.98 96.86 / 99.55 / 98.18
+ CNN 94.36 / 99.97 / 97.09 97.55 / 97.11 / 97.33
+ BiLSTM 98.10 / 96.96 / 97.52 98.78 / 95.61 / 97.17
+ BERT 98.35 / 97.21 / 97.78 99.98 / 98.74 / 99.36
+ Biglog 97.04 / 96.33 / 96.68 99.56 / 99.07 / 99.31
+ KnowLog 99.56 / 94.46 / 96.95 99.38 / 99.20 / 99.29
+ T5-KD 99.35 / 95.08 / 97.17 98.91 / 99.63 / 99.27
+ LLama3-70B 55.05 / 93.96 / 69.42 78.16 / 97.49 / 86.76
+ ChatGPT 48.21 / 93.10 / 63.52 79.19 / 98.20 / 87.68
+ GPT-4o 49.89 / 100.0 / 66.57 75.44 / 90.32 / 82.21
+ LUK (COT-ChatGPT) 98.55 / 95.06 / 96.77 99.81 / 98.92 / 99.37
+ LUK (COT-GPT4o) 99.35 / 95.08 / 97.17 98.92 / 99.81 / 99.37
+ LUK (MEC-LLama3) 99.78 / 96.72 / 98.23 99.09 / 99.81 / 99.45
+ LUK (MEC-ChatGPT) 99.57 / 96.51 / 98.02 99.89 / 99.16 / 99.52
+ LUK (MEC-GPT4o) 99.57 / 96.92 / 98.23 99.27 / 99.81 / 99.54
+
+of expert knowledge from LLMs in improving the adaptability
+of LUK to navigate the complex log analysis.
+ • RQ3: How effective is LUK on unstable log data?
+Real-world systems logs are unstable, meaning that new but
+similar logs often appear, which is caused by the fact that
+ Fig. 7. Results on different synthetic datasets of unstable log.
+developers may frequently modify the logging statements in
+source code. According to the investigation [90], around 20% -
+45% of logging statements may change throughout the lifetime.
+In this RQ, to evaluate the effectiveness of LUK on unstable To ensure the robustness of our evaluation, we inject noise
+logs, we conduct experiments on two log analysis tasks with into the original logs by randomly applying these two strateunstable logs. Following previous experimental setups [85], gies at specific proportions. Importantly, these transformations
+we conduct experiments on two distinct log analysis tasks, preserve the semantic meaning of the logs, ensuring that the
+which are based on the BGL dataset of Anomaly Detection anomaly labels or semantic relationships in the datasets remain
+and Huawei-Switches dataset of Log and Description Semantic unaffected.
+Matching. Both tasks utilize synthetic datasets specifically con- The experimental results are shown in Fig. 7, it can be seen
+structed to simulate the unstable characteristics of real-world that LUK performs much better than other baselines. With the
+logs. The BGL dataset has a limited number of log templates, increasing injection ratio of unstable logs, the performance of
+and anomaly detection on this dataset can often achieve strong all methods has declined in different degrees. However, MECperformance using simple keyword-based matching techniques based LUK declines relatively smoothly and still maintains high
+[81]. At the same time, the LDSM task emphasizes a deeper performance even under a high injection ratio. Specifically,
+understanding of log semantics. To more deeply evaluate the as the injection ratio increased from 20% to 40%, LUK’s F1
+model’s ability to understand the semantics of logs, rather and Accuracy decreased by merely 0.54% and 0.78% on the
+than relying on specific patterns to analyze logs, we synthesize anomaly detection and LDSM tasks, respectively. It confirms
+datasets for both tasks by introducing controlled noise into the that LUK is robust enough to the unstable logs. The reason
+original logs. is that incorporating expert knowledge from LLMs into the
+ To simulate log instability, we apply two transformation rules smaller model assists in noise filtering, thereby enhancing the
+to the original logs while maintaining their semantic integrity. accuracy of log analysis for the smaller pre-trained model.
+These transformations are inspired by the common practices Compared with KNN, the results of anomaly detection demondevelopers follow when updating logging statements, such as strate that KNN’s performance degrades significantly as the
+modifying or removing certain words. As shown in Fig. 8, the noise ratio increases. On the LDSM task, KNN’s accuracy
+first strategy is to remove the stop words, where we randomly is consistently below 50%, indicating that KNN’s reliance on
+remove from the original log messages; the second strategy is lexical similarity prevents it from effectively understanding log
+to replace the synonyms, where we replace certain words in the semantics. KNN’s effectiveness in anomaly detection stems
+original log messages with their synonyms based on WordNet. from the high degree of repetition in the original dataset, where
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2777
+
+ TABLE VIII
+ RESULTS OF GENERALIZATION ABILITY EXPERIMENTS (NETWORK DEVICE LOGS)
+
+ Module Classifiction Log and Description Semantic Matching LPCR
+ Methods
+ H3C Cisco Huawei H3C Huawei
+ Switches Routers Security Security Switches Routers Security Security
+ KNN 61.74 / 59.07 64.86 / 62.36 50.55 / 50.19 50.06 / 49.10 61.05 / 60.70 53.75 / 53.64 57.02 / 56.62 -
+ CNN 69.49 / 67.55 70.72 / 69.71 70.36 / 70.36 81.73 / 81.73 83.29 / 83.19 83.60 / 83.59 82.30 / 82.30 56.05 / 79.07 / 69.95
+ BiLSTM 70.21 / 68.45 71.40 / 69.93 74.01 / 74.01 79.12 / 79.12 80.88 / 80.83 83.81 / 83.80 82.57 / 82.57 55.65 / 79.21 / 69.80
+ BERT 81.11 / 79.78 77.93 / 76.05 79.08 / 79.08 89.22 / 89.22 87.44 / 87.41 88.25 / 88.25 85.94 / 85.94 67.89 / 89.73 / 79.55
+ Biglog 81.59 / 79.53 79.50 / 77.80 82.73 / 82.69 94.19 / 94.19 89.40 / 89.37 91.11 / 91.11 92.02 / 92.02 75.78 / 92.23 / 84.59
+ KnowLog 81.60 / 80.27 79.50 / 79.22 84.94 / 84.93 96.45 / 96.45 93.78 / 93.78 91.85 / 91.85 93.65 / 93.65 83.94 / 91.71 / 89.77
+ T5-KD 82.32 / 81.26 80.41 / 80.15 84.63 / 84.63 95.31 / 95.31 92.86 / 92.86 94.50 / 94.49 93.78 / 93.78 84.86 / 91.57 / 90.19
+ LLama3-70B 79.90 / 78.35 79.28 / 78.22 89.42 / 89.42 96.98 / 96.98 94.58 / 94.57 96.08 / 96.08 95.67 / 95.67 96.97 / 98.94 / 98.11
+ ChatGPT 77.48 / 73.77 76.35 / 74.10 85.42 / 85.38 90.87 / 90.76 91.01 / 90.96 91.96 / 91.90 93.24 / 93.24 94.95 / 97.01 / 96.56
+ GPT-4o 79.90 / 78.35 79.95 / 79.20 93.43 / 93.42 98.49 / 98.49 96.43 / 96.43 97.56 / 97.56 96.49 / 96.49 96.44 / 98.28 / 97.76
+ LUK (COT-ChatGPT) 83.05 / 81.52 80.63 / 79.00 84.31 / 84.30 96.33 / 96.33 93.89 / 93.89 94.18 / 94.18 93.91 / 93.91 82.23 / 94.73 / 88.83
+ LUK (COT-GPT4o) 83.05 / 82.18 80.41 / 82.29 84.94 / 84.94 96.52 / 96.51 94.70 / 94.70 94.81 / 94.81 93.92 / 93.92 83.81 / 90.78 / 89.48
+ LUK (MEC-LLama3) 84.50 / 83.33 83.33 / 81.71 87.64 / 87.63 97.39 / 97.39 95.97 / 95.97 96.61 / 96.61 96.22 / 96.21 87.50 / 94.07 / 92.34
+ LUK (MEC-ChatGPT) 83.78 / 82.69 83.11 / 81.40 88.90 / 88.90 96.99 / 96.99 95.16 / 95.16 95.34 / 95.34 95.54 / 95.54 86.71 / 93.55 / 91.75
+ LUK (MEC-GPT4o) 85.47 / 84.57 84.01 / 82.29 89.06 / 89.06 97.52 / 97.52 96.54 / 96.54 96.93 / 96.93 96.89 / 96.89 87.36 / 94.47 / 92.22
+
+a large portion of logs are identical or nearly identical. In
+such cases, KNN can rely on simple character or word matching to identify patterns. However, when noise is introduced,
+such as through stopword removal or synonym substitution,
+the repetitive patterns are disrupted, and KNN fails to generalize. This highlights KNN’s inability to analyze semantic
+relationships, which becomes increasingly important in complex and diverse log data. To further investigate the characteristics of the anomaly detection datasets, we calculate the Fig. 8. Examples of synthesized logs.
+Jaccard index between logs in the training and testing sets. As
+shown in Fig. 9, the Jaccard index for these public datasets is
+concentrated around 1.0, indicating a high degree of overlap
+between the training and testing data. This overlap leads to data
+leakage, where KNN performs well simply by finding repetitive
+patterns in the dataset. However, as noise is injected, the Jaccard index drops to approximately 0.5, reducing the repetition
+in the dataset. Correspondingly, KNN’s performance declines
+significantly, demonstrating its reliance on repetitive logs. This
+phenomenon has also been observed in prior studies, where
+Yu et al. [81] reports that more than 50% of the BGL dataset
+consists of duplicate logs, with other public datasets such as
+Thunderbird and Spirit exhibiting even higher duplication rates,
+exceeding 99%. These findings confirm that KNN and similar
+classical methods are heavily dependent on the presence of Fig. 9. Jaccard index on the anomaly detection datasets.
+repetitive patterns. Considering that it is only effective when
+anomalies exhibit highly repetitive, template-aligned features,
+it lacks robustness and generalization capabilities when applied may lead to limitations in handling the evolving nature of log
+to more complex and diverse log data. data. MEC-based LUK, with its multi-expert collaboration, out-
+ Compared with CNN and BiLSTM, traditional methods per- performs KnowLog by providing deeper and adaptable expert
+form the worst on unstable logs, which suggests that the limited knowledge for robust log analysis tasks. When compared to the
+semantic understanding of traditional methods hinders their COT-based methods, including T5-KD and COT-based LUK,
+ability to analyze logs more robustly. Compared with BERT and MEC-based LUK showcases superior robustness on unstable
+Biglog, although pre-training on log corpus can further improve logs. The collaborative essence of MEC, by incorporating mullog understanding, models are still limited to understanding tiple expert perspectives and iterative feedback loops, ensures
+logs with professional knowledge. In contrast, KnowLog’s re- the refinement and validation of expert knowledge for log analliance on knowledge solely extracted from the documentation ysis tasks, enhancing robustness and accuracy.
+2778 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+Fig. 10. Results on different ratios of the training dataset.
+
+ Consequently, we can conclude that LUK showcases remark- limited resources, highlighting the significance of leveraging
+able robustness when confronted with unstable logs, demon- knowledge to mitigate the need for extensive annotation and
+strating that leveraging expert knowledge from LLMs equips enhance performance in data-scarce environments. KnowLog
+smaller PLMs with the necessary insights to understand the primarily relies on knowledge extracted from documentation,
+semantics of logs, thereby enhancing their resilience against which may be limited in scope and quality, especially in lownoise and instability. resource settings. In contrast, this proves that knowledge ac-
+ • RQ4: How effective is LUK with limited labeled logs? quired by the LLM has a wider scope and can provide a more
+In real-world applications, obtaining a substantial amount of comprehensive and diverse range of information, rather than
+annotated samples is challenging, as noted by prior studies being limited to some specific documentation. In comparison
+[12], [23]. This poses a significant barrier to the performance to KNN, we observe that the performance of KNN declines
+of automated log analysis models. To evaluate the effective- significantly as the proportion of the training dataset decreases.
+ness of LUK in low-resource scenarios, where annotations are This decline stems from KNN’s reliance on the number of
+scarce, we conduct experiments on Anomaly Detection, Log reference samples. With fewer labeled logs, KNN struggles to
+and Description Semantic Matching, and Fault Phenomenon make accurate predictions, particularly for new or unseen logs.
+Identification with different ratios of training datasets. Both AD This highlights a fundamental limitation of KNN: its lack of
+and LDSM tasks possess a relatively high volume of labeled understanding of the underlying semantics of logs. By relying
+data in these evaluation tasks. However, considering the high solely on fixed patterns, KNN demonstrates poor generalization
+cost of acquiring extensive annotations in real-world scenarios, capabilities in low-resource scenarios. Compared with utilizing
+it is critical to assess their performance under low-resource COT to acquire knowledge, on the FPI task with 30% of the
+scenarios. Additionally, the FPI task is derived from real-world training data, the Accuracy of MEC-based LUK is 17.2% higher
+data, where the availability of labeled samples is inherently than COT. This suggests that the MEC framework is more
+limited. Thus, evaluating FPI in low-resource settings aligns effective, which can be inferred that more rational and accurate
+closely with practical constraints. knowledge enables the model to gain an advantage in low-
+ The experimental results are shown in Fig. 10. Considering resource scenarios.
+that knowledge distillation based on fewer samples is difficult It is worth noting that the FPI task is a real scenario dataset,
+to train, we do not compare with T5-KD. We find that with which cannot be analyzed directly with LLMs due to privacy
+the reduction of training samples, the performance of various issues. By using log templates to obtain expert knowledge from
+models exhibits a decline, with BERT and Biglog demonstrat- LLMs, a task-specific model is constructed based on LUK,
+ing a particularly significant downward trend in the LDSM and which proves the effectiveness of LUK and improves the ef-
+FPI tasks, and KnowLog showing a significant decrease on the ficiency of task analysis.
+AD task. On the other hand, MEC-based LUK achieves optimal In summary, LUK achieves outstanding performance in lowresults by fine-tuning the models with different proportions of resource scenarios, which stems from its ability to leverage exannotated samples. Specifically, on the AD task, compared to pert knowledge acquired from LLMs, effectively compensating
+the full data, LUK drops only 1.03% in the F1-value with 1% for smaller PLMs when annotated data availability is limited.
+of the training data. And on the FPI task, LUK’s Accuracy By harnessing this expert knowledge properly, LUK enables the
+drops by only 13.2% with 30% of the training data, while BERT development of efficient and accurate models even in resourceand Biglog drop by 31.45% and 31.25%, respectively. This constrained environments.
+demonstrates that LUK gains expert knowledge from LLM, • RQ5: How efficient is LUK in inference compared
+which helps to compensate for the shortcomings of the smaller with LLMs?
+pre-trained model when less annotated data is available. Models Efficiency is a critical factor in log analysis for practical
+with restricted knowledge struggle to excel in scenarios with applications, given the immense volumes of logs generated in
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2779
+
+ TABLE IX
+ ABLATION STUDIES FOR LUK, WHERE TP AND SA REPRESENT THE
+ PRE-TRAINING TASKS TOKEN PREDICTION, AND SEMANTIC ALIGNMENT
+ FOR LUK, RESPECTIVELY. MLM REPRESENTS THE PRE-TRAINING TASK
+ MASKED LANGUAGE MODELING OF BERT, AND AP REPRESENTS THE
+ PRE-TRAINING TASK ABBREVIATION PREDICTION OF KNOWLOG
+
+ MC (Accuracy / Weighted-F1) LDSM (Accuracy / Weighted-F1)
+ Methods
+ Huawei Huawei
+ Switches Routers Switches Routers
+ BERT 82.37 / 81.20 81.18 / 79.20 93.18 / 93.18 90.06 / 90.05
+ LUK (MEC-GPT4o) 85.51 / 85.26 85.33 / 84.73 97.66 / 97.66 97.34 / 97.34
+  w/o Evaluator 83.77 / 83.26 82.30 / 81.08 96.57 / 96.57 95.53 / 95.53
+  w/o Evaluation Examples 84.38 / 84.17 82.13 / 81.06 96.64 / 96.64 95.63 / 95.63
+  w/o TP 83.25 / 82.65 81.66 / 79.92 95.95 / 95.95 95.68 / 95.68
+  w/o SA 83.77 / 83.19 84.14 / 82.92 95.25 / 95.25 94.68 / 94.68
+  only with MLM 83.24 / 83.25 82.36 / 81.19 94.19 / 94.19 93.62 / 93.61
+  only with AP 83.60 / 82.89 82.72 / 81.68 94.39 / 94.39 93.97 / 93.97
+
+ While KNN demonstrates certain efficiency advantages in
+ log analysis(e.g., achieving 1.4x faster inference than LUK in
+ the anomaly detection task), it lacks the robustness and general-
+Fig. 11. Time expense of different models during reasoning.
+ izability required for complex and diverse log analysis systems.
+ Efficiency alone is insufficient for building a comprehensive log
+ analysis framework. By distilling knowledge from LLMs into
+real-world systems [23]. In this RQ, we compare LUK’s de- smaller models, LUK strikes a balance between computational
+ployment and time costs with LLMs in inference. Specifically, efficiency and semantic understanding, allowing it to harness
+to cover log analysis tasks for different input types, we perform the advanced capabilities of LLMs while maintaining practiexperiments on Anomaly Detection, Log and Description Se- cal inference times. In the future, we will further explore enmantic Matching, and Log and Possible Cause Ranking three hancements on more lightweight pre-trained models to further
+tasks to calculate the inference time with all testing samples. improve the efficiency of LUK.
+For fairness, we deploy LLama3-70B and LUK on the same In conclusion, LLMs demand higher deployment resources
+hardware setup, consisting of 2 NVIDIA A100 GPUs, with a and exhibit slower inference speeds. On the other hand, the
+batch size of 1 for each model. It’s worth noting that deploying knowledge-enhanced LUK offers rapid responses to inputs with
+LUK requires about 2 GB of GPU memory, while deploying limited deployment resources, making it a highly recommended
+LLama3-70B requires 150 GB of GPU memory. For GPT-4o, choice for executing specific tasks in real-world scenarios.
+we utilize HTTP requests to invoke the APIs, then calculate the This advantage underscores the practicality and efficiency of
+response time. Additionally, we leverage vLLM4 to accelerate LUK in comparison to traditional LLMs, such as GPT-4o and
+the inference process on LLama3. For further comparison, we LLama3-70B.
+include a lightweight kNN baseline, which operates on CPUs
+without neural network computations by calculating the Jaccard
+ F. Ablation Studies
+index between tokenized inputs.
+ The results are shown in Fig. 11. We notice that LUK is To verify the effectiveness of the multi-expert collaboration
+significantly faster than GPT-4o and LLama3. Specifically, ex- framework and knowledge-enhanced pre-training tasks in LUK,
+cluding the fine-tuning time, the average inference speed of we perform ablation experiments on MC and LDSM, which
+LUK is 718x and 868x faster than GPT-4o and LLama3-70B, are two typical tasks of multi-class classification and semanrespectively. Even considering the fine-tuning time, the aver- tic matching. The results are shown in Table IX, where we
+age inference speed of LUK is still 9x and 11x faster than notice that: Overall, LUK achieves optimal performance with
+GPT-4o and LLama3-70B. In addition, the average response the complete modules. The absence of any module can lead
+time for each input is 4.13 and 4.69 seconds for GPT-4o and to performance degradation, which proves that MEC and pre-
+LLama3-70B, respectively, while LUK’s average response time training tasks contribute positively.
+is 0.0058 seconds. This swift response time positions LUK as Further, in our multi-expert collaborative framework, the
+a more practical solution for real-world log analysis scenarios. Evaluator plays a crucial role in evaluating the content gener-
+This efficiency can be attributed to the fact that LLMs possess ated by the Executor to ensure the completeness and accuracy
+extensive parameter sizes and generate outputs sequentially, of the output expert knowledge. We remove the Evaluator role
+necessitating more computational steps to deliver results. In and directly utilize the content generated by the Executor. The
+contrast, LUK, with its smaller parameter sizes and more pro- results indicated a performance decrease in the absence of the
+fessional log analysis capabilities, can swiftly address specific Evaluator, emphasizing the pivotal role of feedback from the
+tasks following knowledge enhancement and fine-tuning. Evaluator in producing high-quality knowledge and reducing
+ errors. In addition, to verify the effectiveness of the contrastive
+ 4 https://github.com/vllm-project/vllm examples for the Evaluator, we conduct an ablation analysis
+2780 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+Fig. 12. Figure (a) shows the proportion of unsatisfactory knowledge in each iteration. Figures (b) and (c) show the results of the refined knowledge based
+on the evaluation feedback each time.
+
+by removing the referenced examples for the Evaluator and effectively. Unlike MLM and Abbreviation Prediction tasks,
+requiring evaluations to be conducted in the reference-free set- our proposed pre-training task requires models to not only
+ting. The experimental results reveal a substantial decline in the predict tokens within the log itself but also dynamically capture
+performance of the LUK when lacking referenced examples, contextual insights from domain-specific knowledge with the
+even surpassing the negative impact observed when the Eval- knowledge perception module. This distinctive aspect sets our
+uator role was entirely removed. This outcome suggests that approach apart, as BERT solely relies on internal information
+the lack of referenced examples deprives the evaluation process and cannot leverage external knowledge. Conversely, KnowLog
+of essential guidance and benchmarks, increasing the quality is limited in its scope, focusing solely on abbreviations and
+evaluation challenges faced by the system. failing to comprehend other critical log elements such as pa-
+ To verify the performance of the iterative evaluation and rameters, conditions, and more, which are essential for a comrefinement mechanism, we first statistics the proportion of un- prehensive understanding of domain-specific terminology.
+satisfactory knowledge in each iteration, and then verify the
+performance of the refined knowledge based on the evaluation
+feedback each time on the MC and LDSM tasks, where we V. DISCUSSIONS
+set up 3 iterations in our experiment. As shown in Fig. 12, we
+can find a consistent decline in the proportion of unsatisfactory A. Qualitative Analysis
+knowledge with each successive iteration. Simultaneously, the To show the usefulness of LUK more intuitively, we select
+performance of the enhanced model exhibits steady improve- two representative cases for qualitative analysis. Specifically,
+ment, underscoring the positive impact of the iterative evalua- we employ a pre-trained model to obtain embedding represention and refinement mechanism within the framework. Notably, tations of the input log and natural language (NL) description,
+our observations indicate that a significant portion of knowledge then calculate cosine similarity as the score to demonstrate their
+refinement occurs following the initial feedback round, with capability of semantic understanding. As shown in Table X,
+subsequent iterations primarily focusing on refining a smaller to provide a challenge in this case, we deliberately select logs
+fraction of the knowledge. To save costs, we suggest that the with closer events and then compute their similarity to the
+framework can iterate once as a cost-effective strategy, effec- description, which is matched only with one log.
+tively balancing performance gains with resource optimization. From this case, we notice that, for the matched example,
+ For pre-training tasks, the performance of the model declines BERT demonstrates better performance, whereas Biglog’s perwithout either token prediction (TP) or semantic alignment formance is comparatively weaker when compared to BERT.
+(SA) pre-training task, which suggests that pre-training on logs This suggests that only pre-training on logs makes it chalwith knowledge enhancement helps the model capture knowl- lenging to capture log semantics adequately without external
+edge from external information and improves log understand- knowledge, and this may enlarge the semantic differences being. Specifically, without the TP task, the model drops more tween logs and natural language. In contrast, LUK achieves the
+significantly on the MC task, which implies that understanding highest similarity score on the matched example and the lowest
+domain tokens can enhance log understanding. And lacking the similarity score on the unmatched example, which suggests
+SA task, the model drops more remarkably on the LDSM task, that, benefiting from expert knowledge, LUK exhibits superior
+which implies that external knowledge can enrich the contextual proficiency in capturing log semantics for log understanding. It
+information of logs. To further verify our proposed word-level also verifies the effectiveness of knowledge acquisition from
+Token Prediction (TP) task, we also compare it with other word- LLMs. For the unmatched example, both BERT and Biglog
+level pre-training tasks, including BERT’s Masked Language exhibit significantly weaker performance compared to LUK,
+Modeling (MLM) task and KnowLog’s Abbreviation Predic- which implies that BERT and Biglog have limitations in rection (AP) task. The results demonstrate the superior capability ognizing log semantics. These results reveal the remarkable
+of our token prediction task in integrating expert knowledge performance of LUK in log understanding.
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2781
+
+ TABLE X
+ QUALITATIVE EXAMPLES OF LUK AND BASELINES. WE CALCULATE THE COSINE SIMILARITY AS THE SCORE FOR ANALYSIS
+
+ Label Index Examples Models Score
+ Log: OPSA/3/OPS_CLI_CLOSE_FAIL: Failed to stop the terminal using the script. BERT 0.671
+ 1 (Script=[script-name], event=[event-name], instance=[instance-id],terminal=[cli-id]) Biglog 0.624
+ NL Description: There was a failure in stopping the terminal using a specific script. LUK 0.740
+ Match
+ Log: SYSTEM/4/SYS_IMAGE_ERROR: The next startup image package is error. (imageIndex=[imageIndex], BERT 0.723
+ 2 curImageName=[curImageName], nextImageName=[nextImageName], errReason=[errReason]) Biglog 0.629
+ NL Description: An error occurred in the next startup image package. LUK 0.788
+ Log: OPSA/3/OPS_TERMINAL_WRITE_FAIL: Failed to display the string on the BERT 0.657
+ 1 terminal using the script. (Script=xx,event=xx, instance=xx, string=xxx, terminal=xx) Biglog 0.646
+ NL Description: There was a failure in stopping the terminal using a specific script. LUK 0.514
+ UnMatch
+ Log: TRILL/4/TRILL_RECV_ERR_PKT: TRILL-INFO: Drop error packet. (PktType=[PktType], BERT 0.671
+ 2 ProcessId=[ProcessId], ErrReason=[ErrReason], ErrCount=[ErrCount], InterfaceName=[InterfaceName]) Biglog 0.486
+ NL Description: An error occurred in the next startup image package. LUK 0.077
+
+B. Cost Analysis
+ To quantitatively evaluate the cost-effectiveness of leveraging
+LLMs for expert knowledge construction, we conduct a detailed
+cost analysis using GPT-4o5 to build the multi-expert collaboration framework. The average API cost for constructing expert
+knowledge per log entry is $0.07. Considering the high redundancy in log data (typically containing millions of entries), we
+recommend applying log parsing techniques to deduplicate logs
+by retaining only one instance per unique template. This significantly reduces the cost of domain knowledge construction.
+For instance, for a deduplicated dataset containing 10,000 logs,
+the total knowledge construction would cost only $700. This
+approach demonstrates significant cost advantages compared to
+conventional LLM-based log analysis. Analyzing each log entry
+directly with ICL-based GPT-4o would cost about $0.02 per
+entry, which becomes prohibitively expensive when scaling to
+millions of logs.
+ To explore the trade-off between the scale of expert knowledge and model performance, we conduct experiments using
+knowledge sampled from Huawei logs at different proportions.
+The enhanced models are evaluated on the MC and LDSM
+tasks, where the granularity of the domain knowledge they Fig. 13. Performance with different proportions of knowledge injection.
+need is more representative. As shown in Fig. 13, the performance of the models improves with increased knowledge injection ratio, plateauing beyond a 60% knowledge injection ratio. a specific case of expert knowledge construction as shown in
+This indicates that collecting a sufficient but not exhaustive Fig. 14, where this input log from the Huawei device6 .
+amount of domain knowledge is effective for enhancing the As can be seen from the case, the Director first analyzes the
+models, thereby further reducing the cost of knowledge con- input log to give key points, and then the Executor generates
+struction. These findings demonstrate that LUK effectively bal- detailed knowledge based on the guidance of these key points.
+ances performance and cost by minimizing the reliance on LLM Following evaluation criteria, the Evaluator evaluates the qual-
+APIs and optimizing the scale of domain knowledge used for ity of the generated knowledge and provides feedback to the
+pre-training. Executor for refinement. The evaluation feedback shows that
+ the content generated by the Executor does not fulfill complete-
+C. Case Analysis ness and consistency. Specifically, the generated knowledge
+ lacks an introduction to the procedure step, and the explana-
+ 1) Evaluation and Refinement Mechanism of the MEC
+ tion of the severity level is not rigorous. In addition, there is
+Framework: To intuitively understand the workflow of the
+ also an uninformative explanation in the generated knowledge,
+MEC framework and analyze the impact of the evaluation and
+refinement mechanism on knowledge generation, we provide
+ 6 https://support.huawei.com/enterprise/en/doc/EDOC1100332302/
+ 5 https://openai.com/api/pricing/ fb54bda3
+2782 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+Fig. 14. An complete workflow of the MEC framework to construct knowledge.
+
+ approach. As shown in Fig. 16, we collect a Cisco log7 as the
+ case and give the corresponding generated knowledge based on
+ the COT and MEC methods.
+ As can be seen from these cases, the knowledge provided by
+ the documentation is too simple, which provides a generic and
+ limited understanding of the log without delving into specific
+ details or potential causes. Although COT-based knowledge
+ offers a more detailed explanation of the log, compared to
+ MEC-based knowledge, there is still the problem of inadequate
+Fig. 15. Distributions of error categories in unsatisfactory knowledge. knowledge and lack of insight. In contrast, the knowledge derived from the MEC framework excels in its comprehensive
+ analysis and insights. By explicitly outlining the specifics of the
+which makes it more difficult for the smaller model to under- log error, including the MTS queue failure and the placeholders
+stand the expert knowledge. Finally, the Executor refines the for queue and error message, the MEC-based knowledge progenerated knowledge based on the evaluation feedback. From vides a deeper understanding of the issue at hand. Furthermore,
+the regenerated knowledge, we can find that the Executor not it goes beyond mere description to identify potential root causes
+only supplements the clear introduction of the procedure step such as network connectivity issues. The comparison highlights
+but also modifies the explanation of severity level to make it the clear advantage of the MEC framework in expert knowledge
+more reasonable. Overall, the regenerated knowledge is more generation. Its collaborative nature allows for the integration of
+comprehensive and rigorous, which is more conducive for the diverse expertise and perspectives, resulting in a more compresmaller model to learn expert knowledge. hensive analysis of complex logs.
+ To more deeply reveal the issues of knowledge generated To quantify the differences among the various forms of
+by LLMs. We count the distributions of different error cate- knowledge, we employ the evaluation criteria of the MEC
+gories in unsatisfactory knowledge according to Evaluator’s framework to evaluate the knowledge acquired by the docuresults for GPT-4o and LLama3-70B, respectively. As shown mentation and the knowledge constructed based on COT in
+in Fig. 15, it can be found that a significant portion of the inad- the network device logs. The evaluation results are shown in
+equacies stems from issues related to completeness. The preva- Fig. 17, revealing a notable contrast in quality between the
+lence of completeness-related errors underscores the challenge different sources of knowledge. It is apparent from the analysis
+faced by the single LLM in producing comprehensive knowl- that a significant proportion of knowledge sourced from docuedge autonomously. Moreover, alongside completeness issues, mentation falls short of meeting the evaluation requirements.
+a smaller yet notable proportion of unsatisfactory knowledge is This deficiency can be attributed to the inherent limitations
+attributed to deficiencies in conciseness and consistency. This of documentation-derived knowledge, which often lacks depth
+finding underscores the significance of collaborative frame- and detail, offering only the most straightforward description
+works that integrate diverse roles, each contributing unique of the logs. Combined with Fig. 12(a), this suggests that the
+perspectives and expertise to compensate for the capacity defi- knowledge acquired from MEC based on LLMs is comparable
+ciencies of the single LLM and improve the completeness and or even better than the documentation. Considering the lack
+accuracy of generated knowledge. of documentation support for most logs and the high cost of
+ 2) Comparison of Knowledge From Different Sources: To
+further intuitively analyze the quality of the expert knowledge 7 https://www.cisco.com/c/en/us/td/docs/switches/datacenter/
+constructed with the MEC framework, we compare it with the sw/routing_messages/reference/7k_rout_mess_ref_book/
+knowledge collected from documentation and the COT-based 7k_rout_mess_ref_2mess.html
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2783
+
+Fig. 16. Example of knowledge generated by GPT-4o and retrieved from documentation.
+
+ evaluation of LLMs toward our desired objectives. In cases
+ where issues are identified, the Executor within the framework
+ revises or refines the generated content based on the feedback
+ received. This iterative process helps improve the quality and
+ reliability of the generated knowledge. We also verify the importance of the Evaluator for acquiring high-quality knowledge
+ in ablation studies.
+ 2) Internal Validity: It is widely agreed that the performance
+Fig. 17. Proportion of unsatisfactory knowledge, where we employ the
+evaluation criteria of the MEC framework to evaluate the knowledge. of DL models is significantly affected by hyperparameters.
+ Due to the limited computation resources, we do not search
+ for the optimal hyperparameter settings and instead follow the
+manually constructing knowledge, this provides a feasible way empirical settings. We acknowledge that further fine-tuning of
+to gain a wealth of practical knowledge automatically. these hyperparameters may yield better results.
+ Despite the advantages of the MEC framework in knowledge 3) External Validity: From the perspective of enterprises,
+generation, domain-specific documentation continues to hold utilizing external LLMs to acquire expert knowledge may cause
+an indispensable role. LLMs remain struggling with knowledge leakage of user privacy and internal information in logs. To
+gaps, especially when dealing with customized modules and alleviate this issue, we suggest that enterprises can utilize log
+terminology, leading to misconceptions. In such cases, docu- parsing as a potential approach to mitigate privacy risks while
+mentation can bridge these gaps, providing essential context removing duplicate logs. Log parsing can be used to extract log
+and expertise to enhance the understanding of LLMs. This rela- templates, which help in removing sensitive information from
+tionship allows LLMs to enrich documentation content and, in logs. By using these sanitized templates, enterprises can safely
+turn, enables documentation to improve the professionalism and leverage proprietary LLMs to acquire expert knowledge without
+accuracy of LLMs. We will optimize the integration of domain exposing user privacy or internal information. On the other
+documentation and LLM to further enhance the knowledge hand, LUK is a general framework that can combine any LLMs,
+acquisition process in the future. and users can also employ their LLMs to acquire knowledge
+ to enhance a small model for solving a specific problem. For
+D. Threats to Validity example, apart from invoking the proprietary LLMs, we also
+ verify the effectiveness of LUK by deploying LLama3-70B in
+ 1) Construct Validity: Since LLMs are black box models, our experiments, which is an open-source LLM.
+LLMs pose a risk of generating output content that may be From the perspective of evaluation, in RQ3, we simulate
+unreasonable, potentially impacting the accurate interpretation log instability by injecting controlled noise into original logs
+of logs. First, to counteract the inherent randomness in the due to the lack of real-world evolving log datasets. However,
+inference process of LLMs, we set the model temperature to when the noise ratio increases to 40%, especially for short
+0. This step ensures that LLMs consistently produce results log messages with fewer tokens, the semantic meaning of the
+for the same inputs, mitigating variability in output. Second, original logs may be modified, deviating from the ground truth
+to mitigate hallucinations of LLMs, we propose a multi-expert and potentially impacting evaluation validity. Moreover, our
+collaboration framework, which can work better with the power synthetic approach cannot fully capture the diversity of realof cooperation and interaction. In particular, we design an Eval- world log changes. In future work, we will collect more realuator in this framework, which checks the generated knowledge world logs to explore other possible types of changes.
+by evaluating completeness, consistency, and conciseness. In
+addition, to address the issue of ambiguous and inconsistent
+ VI. CONCLUSION
+evaluations by LLMs under the reference-free setting, we construct contrastive examples consisting of positive and negative In conclusion, this paper introduces LUK, a novel knowlknowledge of the same log. By presenting these contrastive edge enhancement framework to improve log understanding
+examples to the Evaluator as reference examples, we steer the with expert knowledge from LLMs. Unlike existing LLM-based
+2784 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+log analysis studies that directly use the in-context learning of [15] J. Soldani and A. Brogi, “Anomaly detection and failure root cause
+LLMs, LUK first acquires expert knowledge from LLMs, then analysis in (micro) service-based cloud applications: A survey,” ACM
+ Comput. Surv. (CSUR), vol. 55, no. 3, pp. 1–39, 2022.
+enhances the log pre-training with the corresponding expert [16] S. Zhang et al., “PreFix: Switch failure prediction in datacenter netknowledge on a smaller pre-trained language model. Finally, the works,” Proc. ACM Meas. Anal. Comput. Syst., vol. 2, no. 1, pp. 1–29,
+enhanced smaller pre-trained model for logs can be fine-tuned 2018.
+ [17] J. Gao, H. Wang, and H. Shen, “Task failure prediction in cloud data
+to solve downstream log analysis tasks. Compared to existing centers using deep learning,” IEEE Trans. Services Comput., vol. 15,
+models, LUK achieves state-of-the-art performance on different no. 3, pp. 1411–1422, May/Jun. 2022.
+log analysis tasks, which proves that expert knowledge from [18] D. Cotroneo, L. De Simone, P. Liguori, R. Natella, and N. Bidokhti,
+LLMs can be used more effectively to understand logs. “How bad can a bug get? An empirical analysis of software failures
+ in the OpenStack cloud computing platform,” in Proc. 27th ACM Joint
+ Meeting Eur. Softw. Eng. Conf. Symp. Found. Softw. Eng., 2019, pp. 200–
+ DATA AVAILABILITY STATEMENT 211.
+ [19] J. Achiam et al., “GPT-4 technical report,” 2023, arXiv:2303.08774.
+ Our source code and detailed experimental data are available [20] Y. Zhu et al., “UniLog: Deploy one model and specialize it for all log
+at https://github.com/LeaperOvO/LUK. analysis tasks,” 2021, arXiv:2112.03159.
+ [21] S. Tao et al., “Biglog: Unsupervised large-scale pre-training for a unified
+ log representation,” in Proc. IEEE/ACM 31st Int. Symp. Qual. Service
+ ACKNOWLEDGMENT (IWQoS), Piscataway, NJ, USA: IEEE Press, 2023, pp. 1–11.
+ [22] L. Ma et al., “KnowLog: Knowledge enhanced pre-trained language
+ The computations in this research were performed using the model for log understanding,” in Proc. 46th IEEE/ACM Int. Conf. Softw.
+CFFF platform of Fudan University. We express our sincere Eng., 2024, pp. 1–13.
+ [23] V.-H. Le and H. Zhang, “Log parsing with prompt-based few-shot
+appreciation to all anonymous reviewers for their constructive learning,” in Proc. IEEE/ACM 45th Int. Conf. Softw. Eng. (ICSE),
+feedback. Piscataway, NJ, USA: IEEE Press, 2023, pp. 2438–2449.
+ [24] Y. Lee, J. Kim, and P. Kang, “LAnoBERT: System log anomaly detection
+ REFERENCES based on BERT masked language model,” Appl. Soft Comput., vol. 146,
+ Oct. 2023, Art. no. 110689.
+ [1] X. Zhang et al., “Onion: Identifying incident-indicating logs for cloud [25] C. Almodovar, F. Sabrina, S. Karimi, and S. Azad, “LogFiT: Log
+ systems,” in Proc. 29th ACM Joint Meeting Eur. Softw. Eng. Conf. Symp. anomaly detection using fine-tuned language models,” IEEE Trans. Netw.
+ Found.s Softw. Eng., 2021, pp. 1253–1263. Service Manag., vol. 21, no. 2, pp. 1715–1723, Apr. 2024.
+ [2] J. Zhu et al., “Tools and benchmarks for automated log parsing,” in Proc. [26] J. Xu, R. Yang, Y. Huo, C. Zhang, and P. He, “DivLog: Log parsing
+ IEEE/ACM 41st Int. Conf. Softw. Eng., Softw. Eng. Pract. (ICSE-SEIP), with prompt enhanced in-context learning,” in Proc. IEEE/ACM 46th
+ Piscataway, NJ, USA: IEEE Press, 2019, pp. 121–130. Int. Conf. Softw. Eng. (ICSE), Washington, DC, USA: IEEE Computer
+ [3] H. Dai, H. Li, C.-S. Chen, W. Shang, and T.-H. Chen, “Logram: Efficient Society, 2024, pp. 983–983.
+ log parsing using n n-gram dictionaries,” IEEE Trans. Softw. Eng., [27] J. Xu et al., “UniLog: Automatic logging via LLM and in-context
+ vol. 48, no. 3, pp. 879–892, Mar. 2022. learning,” in Proc. 46th IEEE/ACM Int. Conf. Softw. Eng., 2024, pp. 1–
+ [4] S. Nedelkoski, J. Bogatinovski, A. Acker, J. Cardoso, and O. Kao, 12.
+ “Self-supervised log parsing,” in Proc. Mach. Learn. Knowl. Discovery [28] Y. Liu et al., “LogPrompt: Prompt engineering towards zero-shot and
+ Databases, Appl. Data Sci. Track, Eur. Conf. (ECML PKDD), Ghent, interpretable log analysis,” 2023, arXiv:2308.07610.
+ Belgium. New York, NY, USA: Springer-Verlag, 2021, pp. 122–138. [29] Z. Jiang et al., “LLMParser: A LLM-based log parsing framework,”
+ [5] Y. Liu et al., “UniParser: A unified log parser for heterogeneous log 2023, arXiv:2310.01796.
+ data,” in Proc. ACM Web Conf., 2022, pp. 1893–1901. [30] H. Guo et al., “Lemur: Log parsing with entropy sampling and chain-
+ [6] M. Du, F. Li, G. Zheng, and V. Srikumar, “DeepLog: Anomaly detection of-thought merging,” 2024, arXiv:2402.18205.
+ and diagnosis from system logs through deep learning,” in Proc. ACM [31] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training
+ SIGSAC Conf. Comput. Commun. Secur., 2017, pp. 1285–1298. of deep bidirectional transformers for language understanding,” in Proc.
+ [7] W. Meng et al., “LogAnomaly: Unsupervised detection of sequential and Conf. North Amer. Chapter Assoc. Comput. Linguistics, Human Lang.
+ quantitative anomalies in unstructured logs,” in Proc. Int. Joint Conf. Technol. (Volume 1 Long and Short Papers), 2019, pp. 4171–4186.
+ Artif. Intell., 2019, vol. 19, no. 7, pp. 4739–4745. [32] Q. Dong et al., “A survey on in-context learning,” 2022,
+ [8] X. Li, P. Chen, L. Jing, Z. He, and G. Yu, “SwissLog: Robust and unified
+ arXiv:2301.00234.
+ deep learning based log anomaly detection for diverse faults,” in Proc.
+ [33] Y. Lu, M. Bartolo, A. Moore, S. Riedel, and P. Stenetorp, “Fantasti-
+ IEEE 31st Int. Symp. Softw. Rel. Eng. (ISSRE), Piscataway, NJ, USA:
+ cally ordered prompts and where to find them: Overcoming few-shot
+ IEEE Press, 2020, pp. 92–103.
+ prompt order sensitivity,” in Proc. 60th Annu. Meeting Assoc. Comput.
+ [9] S. Nedelkoski, J. Bogatinovski, A. Acker, J. Cardoso, and O. Kao, “Self-
+ Linguistics (Volume 1: Long Papers), 2022, pp. 8086–8098,
+ attentive classification-based anomaly detection in unstructured logs,” in
+ Proc. IEEE Int. Conf. Data Mining (ICDM), Piscataway, NJ, USA: IEEE [34] X. Wang et al., “Spine: A scalable log parser with feedback guidance,”
+ Press, 2020, pp. 1196–1201. in Proc. 30th ACM Joint Eur. Softw. Eng. Conf. Symp. Found. Softw.
+[10] S. Huang et al., “HitAnomaly: Hierarchical transformers for anomaly Eng., 2022, pp. 1198–1208.
+ detection in system log,” IEEE Trans. Netw. Service Manag., vol. 17, [35] X. Li, H. Zhang, V.-H. Le, and P. Chen, “LogShrink: Effective log
+ no. 4, pp. 2064–2076, Dec. 2020. compression by leveraging commonality and variability of log data,” in
+[11] X. Han and S. Yuan, “Unsupervised cross-system log anomaly detection Proc. 46th IEEE/ACM Int. Conf. Softw. Eng., 2024, pp. 1–12.
+ via domain adaptation,” in Proc. 30th ACM Int. Conf. Inf. Knowl. [36] Y. Wang, K. Chen, H. Tan, and K. Guo, “Tabi: An efficient multi-level
+ Manage., 2021, pp. 3068–3072. inference system for large language models,” in Proc. 18th Eur. Conf.
+[12] V.-H. Le and H. Zhang, “Log-based anomaly detection with deep Comput. Syst., 2023, pp. 233–248.
+ learning: How far are we?” in Proc. 44th Int. Conf. Softw. Eng., 2022, [37] Z. Ma, A. R. Chen, D. J. Kim, T.-H. Chen, and S. Wang, “LLMParser:
+ pp. 1356–1367. An exploratory study on using large language models for log parsing,”
+[13] S. Lu, B. Rao, X. Wei, B. Tak, L. Wang, and L. Wang, “Log-based in Proc. IEEE/ACM 46th Int. Conf. Softw. Eng., 2024, pp. 1–13.
+ abnormal task detection and root cause analysis for Spark,” in Proc. [38] J. Zhu, S. He, P. He, J. Liu, and M. R. Lyu, “Loghub: A large collection
+ IEEE Int. Conf. Web Services (ICWS), Piscataway, NJ, USA: IEEE Press, of system log datasets for ai-driven log analytics,” in Proc. IEEE 34th
+ 2017, pp. 389–396. Int. Symp. Softw. Rel. Eng. (ISSRE), Piscataway, NJ, USA: IEEE Press,
+[14] L. Wang, N. Zhao, J. Chen, P. Li, W. Zhang, and K. Sui, “Root-cause 2023, pp. 355–366.
+ metric location for microservice systems via log anomaly detection,” in [39] Y. Peng, C. Wang, W. Wang, C. Gao, and M. R. Lyu, “Generative type
+ Proc. IEEE Int. Conf. Web Services (ICWS), Piscataway, NJ, USA: IEEE inference for Python,” in Proc. 38th IEEE/ACM Int. Conf. Autom. Softw.
+ Press, 2020, pp. 142–150. Eng. (ASE), Piscataway, NJ, USA: IEEE Press, 2023, pp. 988–999.
+MA et al.: LUK: EMPOWERING LOG UNDERSTANDING WITH EXPERT KNOWLEDGE 2785
+
+[40] A. Mastropaolo, L. Pascarella, and G. Bavota, “Using deep learning to [66] B. Goertzel, “Cognitive synergy: A universal principle for feasible
+ generate complete log statements,” in Proc. 44th Int. Conf. Softw. Eng., general intelligence,” in Proc. 8th IEEE Int. Conf. Cogn. Inform.,
+ 2022, pp. 2279–2290. Piscataway, NJ, USA: IEEE Press, 2009, pp. 464–468.
+[41] Y. Li et al., “Exploring the effectiveness of LLMs in automated logging [67] J. R. Katzenbach and D. K. Smith, The Wisdom of Teams: Creating the
+ generation: An empirical study,” 2023, arXiv:2307.05950. High-Performance Organization. Harvard Business Review Press, 2015.
+[42] N. Mündler, J. He, S. Jenko, and M. Vechev, “Self-contradictory halluci- [68] J. Zhou et al., “Instruction-following evaluation for large language
+ nations of large language models: Evaluation, detection and mitigation,” models,” 2023, arXiv:2311.07911.
+ 2023. arXiv:2305.15852. [69] Z. Li, B. Peng, P. He, and X. Yan, “Evaluating the instruction-following
+[43] P. Manakul, A. Liusie, and M. Gales, “SelfCheckGPT: Zero-resource robustness of large language models to prompt injection,” in Proc. Conf.
+ black-box hallucination detection for generative large language mod- Empirical Methods Natural Lang. Process., 2024, pp. 557–568.
+ els,” in Proc. Conf. Empirical Methods Natural Lang. Process., 2023, [70] S. Dhuliawala et al., “Chain-of-verification reduces hallucination in large
+ pp. 9004–9017. language models,” 2023, arXiv:2309.11495.
+[44] X. Xu et al., “A survey on knowledge distillation of large language [71] L. Huang et al., “A survey on hallucination in large language models:
+ models,” 2024, arXiv:2402.13116. Principles, taxonomy, challenges, and open questions,” ACM Trans. Inf.
+[45] X. Zhu, J. Li, Y. Liu, C. Ma, and W. Wang, “Distilling mathematical rea- Syst., vol. 43, no. 2, pp. 42:1–42:55, 2025, doi:10.1145/3703155.
+ soning capabilities into small language models,” Neural Netw., vol. 179, [72] L. Zheng et al., “Judging LLM-as-a-judge with MT-bench and chatbot
+ Nov. 2024, Art. no. 106594. arena,” in Proc. Adv. Neural Inf. Process. Syst., 2023, vol. 36, pp. 46595–
+[46] C.-Y. Hsieh et al., “Distilling step-by-step! Outperforming larger lan- 46623.
+ guage models with less training data and smaller model sizes,” in Proc. [73] P. Ke et al., “CritiqueLLM: Towards an informative critique generation
+ Findings Assoc. Comput. Linguistics (ACL), 2023, pp. 8003–8017. model for evaluation of large language model generation,” in Proc. 62nd
+[47] K. Shridhar, A. Stolfo, and M. Sachan, “Distilling reasoning capabili- Annu. Meeting Assoc. Comput. Linguistics (Volume 1: Long Papers),
+ ties into smaller language models,” in Proc. Findings Assoc. Comput. 2024, pp. 13034–13054.
+ Linguistics (ACL), 2023, pp. 7059–7073. [74] X. Gao, Y. Zhang, M. Galley, C. Brockett, and W. B. Dolan, “Dialogue
+[48] J. Wei et al., “Emergent abilities of large language models,” 2022, response ranking training with large-scale human feedback data,” in
+ arXiv:2206.07682. Proc. Conf. Empirical Methods Natural Lang. Process. (EMNLP), 2020,
+[49] S. Lu, I. Bigoulaeva, R. Sachdeva, H. T. Madabushi, and I. Gurevych, pp. 386–395.
+ “Are emergent abilities in large language models just in-context learn- [75] A. Radford et al., “Learning transferable visual models from natural
+ ing?” 2023, arXiv:2309.01809. language supervision,” in Int. Conf. Mach. Learn., 2021, pp. 8748–8763.
+[50] K. Petersen, C. Wohlin, and D. Baca, “The waterfall model in large- [76] N. Reimers and I. Gurevych, “Sentence-BERT: Sentence embeddings
+ scale development,” in Proc. Product-Focused Softw. Process Improve- using Siamese BERT-networks,” in Proc. Conf. Empirical Methods
+ ment, 10th Int. Conf. (PROFES), Oulu, Finland. New York, NY, USA: Natural Lang. Process. 9th Int. Joint Conf. Natural Lang. Process.
+ Springer-Verlag, Jun. 15–17, 2009, pp. 386–400. (EMNLP-IJCNLP), 2019, pp. 3982–3992.
+[51] F. Bai, A. Ritter, and W. Xu, “Pre-train or annotate? Domain adaptation [77] P. He, J. Zhu, Z. Zheng, and M. R. Lyu, “Drain: An online log parsing
+ with a constrained budget,” in Proc. Conf. Empirical Methods Natural
+ approach with fixed depth tree,” in Proc. IEEE Int. Conf. Web Services
+ Lang. Process., 2021, pp. 5002–5015.
+ (ICWS), Piscataway, NJ, USA: IEEE Press, 2017, pp. 33–40.
+[52] C. Niu, C. Li, V. Ng, J. Ge, L. Huang, and B. Luo, “SPT-code: sequence-
+ [78] A. Dubey et al., “The Llama 3 herd of models,” 2024, arXiv:2407.21783.
+ to-sequence pre-training for learning source code representations,” in
+ [79] S. He, P. He, Z. Chen, T. Yang, Y. Su, and M. R. Lyu, “A survey on
+ Proc. 44th Int. Conf. Softw. Eng., 2022, pp. 2006–2018.
+ automated log analysis for reliability engineering,” ACM Comput. Surv.
+[53] Y. Gu et al., “Domain-specific language model pretraining for biomed-
+ (CSUR), vol. 54, no. 6, pp. 1–37, 2021.
+ ical natural language processing,” ACM Trans. Comput. Healthcare
+ [80] N. Zhao et al., “An empirical investigation of practical log anomaly
+ (HEALTH), vol. 3, no. 1, pp. 1–23, 2021.
+ detection for online service systems,” in Proc. 29th ACM Joint Meeting
+[54] I. Beltagy, K. Lo, and A. Cohan, “SciBERT: A pretrained language
+ model for scientific text,” 2019, arXiv:1903.10676. Eur. Softw. Eng. Conf. Symp. Found. Softw. Eng., 2021, pp. 1404–1415.
+[55] S. Gururangan et al., “Don’t stop pretraining: Adapt language models [81] B. Yu et al., “Deep learning or classical machine learning? An empirical
+ to domains and tasks,” in Proc. 58th Annu. Meeting Assoc. Comput. study on log-based anomaly detection,” in Proc. 46th IEEE/ACM Int.
+ Linguistics, 2020, pp. 8342–8360. Conf. Softw. Eng., 2024, pp. 1–13.
+[56] L. Yang et al., “Supervised knowledge makes large language models [82] V.-H. Le and H. Zhang, “Log-based anomaly detection without log
+ better in-context learners,” 2023, arXiv:2312.15918. parsing,” in Proc. 36th IEEE/ACM Int. Conf. Autom. Softw. Eng. (ASE),
+[57] G. Juneja, S. Dutta, S. Chakrabarti, S. Manchanda, and T. Chakraborty, Piscataway, NJ, USA: IEEE Press, 2021, pp. 492–504.
+ “Small language models fine-tuned to coordinate larger language models [83] M. S. Sorower, “A literature survey on algorithms for multi-label
+ improve complex reasoning,” in Proc. Conf. Empirical Methods Natural learning,” Oregon State Univ., Corvallis, vol. 18, no. 1, p. 25, 2010.
+ Lang. Process., 2023, pp. 3675–3691. [84] E. Fix and J. L. Hodges, “Discriminatory analysis: Nonparametric
+[58] H. Guo, S. Yuan, and X. Wu, “LogBERT: Log anomaly detection via discrimination, consistency properties,” Int. Stat. Rev.,, vol. 57, no. 3,
+ BERT,” in Proc. Int. Joint Conf. Neural Netw. (IJCNN), Piscataway, NJ, pp. 238–247, 1989.
+ USA: IEEE Press, 2021, pp. 1–8. [85] X. Zhang et al., “Robust log-based anomaly detection on unstable log
+[59] E. Kasneci et al., “Chatgpt for good? On opportunities and challenges data,” in Proc. 27th ACM Joint Meeting Eur. Softw. Eng. Conf. Symp.
+ of large language models for education,” Learn. Individual Differences, Found. Softw. Eng., 2019, pp. 807–817.
+ vol. 103, Apr. 2023, Art. no. 102274. [86] S. Lu, X. Wei, Y. Li, and L. Wang, “Detecting anomaly in big data
+[60] J. White et al., “A prompt pattern catalog to enhance prompt engineering system logs using convolutional neural network,” in Proc. IEEE 16th
+ with ChatGPT,” 2023, arXiv:2302.11382. Int. Conf. Dependable, Autonomic Secure Comput., 16th Int. Conf.
+[61] S. Feng and C. Chen, “Prompting is all you need: Automated Android Pervasive Intell. Comput., 4th Int. Conf. Big Data Intell. Comput.
+ bug replay with large language models,” in Proc. 46th IEEE/ACM Int. Cyber Sci. Technol. Congr. (DASC/PiCom/DataCom/CyberSciTech), Pis-
+ Conf. Softw. Eng., 2024, pp. 1–13. cataway, NJ, USA: IEEE Press, 2018, pp. 151–158,
+[62] J. Wang, Y. Huang, C. Chen, Z. Liu, S. Wang, and Q. Wang, “Software [87] R. Taori et al. “Stanford alpaca: An instruction-following Llama model.”
+ testing with large language models: Survey, landscape, and vision,” IEEE GitHub. [Online]. Available: https://Github.com/Tatsu-Lab/Stanford_
+ Trans. Softw. Eng., vol. 50, no. 4, pp. 911–936, Apr. 2024. Alpaca
+[63] T. Brown et al., “Language models are few-shot learners,” in Proc. Adv. [88] C. Raffel et al., “Exploring the limits of transfer learning with a unified
+ Neural Inf. Process. Syst., 2020, vol. 33, pp. 1877–1901. text-to-text transformer,” J. Mach. Learn. Res., vol. 21, no. 140, pp. 1–
+[64] J. Wei et al., “Chain-of-thought prompting elicits reasoning in large 67, 2020.
+ language models,” in Proc. Adv. Neural Inf. Process. Syst., 2022, vol. 35, [89] Z. Zhao, E. Wallace, S. Feng, D. Klein, and S. Singh, “Calibrate before
+ pp. 24824–24837. use: Improving few-shot performance of language models,” in Proc. Int.
+[65] E. Frantar, S. Ashkboos, T. Hoefler, and D. Alistarh, “OPTQ: Accurate Conf. Mach. Learn., 2021, pp. 12697–12706.
+ quantization for generative pre-trained transformers,” in Proc. 11th Int. [90] S. Kabinna, C.-P. Bezemer, W. Shang, M. D. Syer, and A. E. Hassan,
+ Conf. Learn. Representations, 2022. Available: https://openreview.net/ “Examining the stability of logging statements,” Empirical Softw. Eng.,
+ forum?id=tcbBPnfwxS vol. 23, pp. 290–333, Feb. 2018.
+2786 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 10, OCTOBER 2025
+
+ Lipeng Ma received the B.S. degree in informa- Shuhao Li received the master’s degree in comtion security from Nanjing University of Posts and puter technology from Guangzhou University,
+ Telecommunications (NUPT), Nanjing, China, in Guangzhou, China, in 2023. He is currently working
+ 2019. He is currently working toward the Ph.D. de- toward the Ph.D. degree with the School of Comgree in computer science with Fudan University. His puter Science, Fudan University, Shanghai, China.
+ research interests include knowledge graph applica- His research interests include spatio-temporal data
+ tion, large language models, software engineering, mining, anomaly detection, and large language
+ and AIOps. models.
+
+ Weidong Yang (Member, IEEE) received the Ph.D. Mingyu Zhao received the Ph.D. degree in comdegree in software engineering from Xidian Univer- puter science from Fudan University, China, in
+ sity, in 1999. From 1999 to 2001, he was a Post- 2024. He is currently an Assistant Professor with the
+ doctoral Researcher with the School of Computer Northwestern Polytechnical University, China. His
+ Science, Fudan University. He is a Professor with research interests include data mining and machine
+ the School of Computer Science, Fudan University, learning.
+ Shanghai, China. His research interests include big
+ data, knowledge engineering, database and data
+ mining, and software engineering.
+
+ Sihang Jiang received the B.Sc. degree in infor- Bo Xu is an Associate Professor with the School
+ mation security from Fudan University, in 2017, of Computer Science and Technology, Donghua
+ and the Ph.D. degree in software engineering from University. His research interests include knowledge
+ Fudan University, in 2024. He is currently a Post- graph, large language models, and intelligent operdoctoral Researcher with Fudan University. His ations and maintenance.
+ research interests include knowledge graph, large
+ language models, and AIOps.
+
+ Ben Fei (Member, IEEE) received the M.S. degree Yanghua Xiao received the Ph.D. degree in softfrom the Department of Materials Science, Fudan ware theory from Fudan University, Shanghai,
+ University, Shanghai, China, in 2021, and the Ph.D. China, in 2009. He is a Professor of computer
+ degree from the School of Computer Science, Fudan science with Fudan University. He is the Director
+ University, in 2024. He is currently a Postdoctoral of Knowledge Works Lab, Fudan University. His
+ with The Chinese University of Hong Kong. His research interests include big data management and
+ research interests include generative models, large mining, graph database, knowledge graph. He was
+ language models, 3-D computer vision, and AI for a Visiting Professor with the Human Genome Sescience. He is an IEEE Young Professional. quencing Center, Baylor College Medicine, and a
+ Visiting Researcher with Microsoft Research Asia.
+
+ Mingjie Zhou is currently working toward the
+ Ph.D. degree with Fudan University, Shanghai,
+ China. His research interests include AIOps and
+ knowledge graph. His work has been published in
+ data mining and software engineering international
+ conferences.

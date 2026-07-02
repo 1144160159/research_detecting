@@ -1,0 +1,157 @@
+4766                                                            IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+
+
+
+ MTRF: Multidomain Transformation Representation
+ for Network Flows in Network Intrusion Detection
+            Xinlei Wang , Mingshu He , Member, IEEE, Xiaojuan Wang , Member, IEEE, and Shize Guo
+
+
+   Abstract—In IoT device applications, due to privacy protection                     Intrusion Detection Systems (IDS) closer to IoT devices at the
+requirements, it is often impossible to obtain large-scale labeled                    network edge, fog computing mitigates latency issues inherent
+datasets for model training. A representation model that effec-                       in cloud-centric approaches [25]. However, due to the limited
+tively extracts flow features with limited labeled samples is there-
+fore critical. To meet this need, we propose a model combining                        resources of the fog equipment, a lightweight model with high
+temporal features (for trend changes/short-term fluctuations) and                     detection accuracy is required. In this study, we propose a novel
+frequency-domain features (for periodicity/stability patterns) in                     learning representation method for fog nodes, using a small set
+network flows. In order to fully tap the potential of these two                       of labeled samples to characterize encrypted network flows. This
+types of features, contrastive learning (CL) technology is used to                    representation supports the creation of lightweight IDS models,
+model them respectively. For temporal-domain features, we employ
+a momentum encoder-based training strategy to learn robust rep-                       including Extra Tree (ET), Random Forest (RF), Decision Tree
+resentations adaptable to network-induced noise. For frequency                        (DT), and eXtreme Gradient Boosting (XGBoost), tailored for
+domain features, we propose a new supervised CL loss function.                        IoT devices.
+It enhances inter-class separability while improving the represen-                       In recent years, significant efforts have been made in IDS,
+tation ability (i.e., the model’s capacity to extract discriminative                  with most research focusing on framing intrusion detection as a
+features) of minority classes. The experimental results demonstrate
+the universality of this approach, which is not limited to specific                   classification problem and developing end-to-end models. Tra-
+data sets or attack types. The most representative results were                       ditional machine learning (ML) algorithms offer fast inference
+obtained on the UNSW-NB15 dataset, with an accuracy of 0.9699                         speeds but rely on manual feature selection, limiting adaptabil-
+for the balanced training sets, surpassing the other best models’                     ity to emerging threats [19]. Although end-to-end DL models
+performance(0.6300).                                                                  are widely studied [1], [3], [11], [12], [14], [16], their joint
+   Index Terms—Contrastive learning, frequency domain trans-                          learning approach may overfit and capture spurious correlations
+formation, intrusion detection, sample representation.                                from noisy network flow data [5]. Emerging malware targeting
+                                                                                      compromised IoT devices demands models that learn broader
+                             I. INTRODUCTION                                          data representations. However, data collection and labeling dif-
+                                                                                      ficulties often yield imbalanced datasets with scarce labeled
+   NTERNET of Things (IoT) adoption escalates cyberattack
+I  risks in sensitive-data industries, compromising intelligent
+analysis and decision-making. While many intrusion detection
+                                                                                      examples. This highlights two critical challenges: capturing
+                                                                                      subtle behavioral differences in minority classes and improving
+                                                                                      generalization from limited data.
+models perform well, they are often deployed in the cloud,                               Representation learning captures intrinsic features of unla-
+leading to detection delays and privacy risks [26]. By deploying                      beled data, improving generalization to new data [20], [21], [22].
+                                                                                      Ceschin et al. [23] employed denoising autoencoders for unsu-
+   Received 12 January 2025; revised 24 July 2025; accepted 24 December               pervised pre-training. Optimizing the encoder’s representational
+2025. Date of publication 29 December 2025; date of current version 12                capacity by minimizing the loss function between input sam-
+May 2026. This work was supported in part by the National Natural Science
+Foundation of China under Grant 62402053 and Grant 62227805 and in part               ples and predicted outputs. [9] employs supervised contrastive
+by the Fundamental Research Funds for the Central Universities under Grant            learning (CL) for a binary representation model, but directly
+2025KYQD17 (BUPT). (Xinlei Wang and Mingshu He contributed equally to                 feeding features into the model without distinction may lead to
+this work.) (Corresponding author: Mingshu He.)
+   Xinlei Wang is with the School of Electronic Engineering, Beijing University       overfitting noise. [24] suggests separate representation learning
+of Posts and Telecommunications, Beijing 100876, China, and also with the             for categorical and numerical features, using a hard triplet loss
+The First Research Institute of the Ministry of Public Security of P.R.C, Beijing     for classes with limited labeled data. Based on this study, we
+100741, China (e-mail: ann96125@126.com).
+   Mingshu He is with the School of Cyberspace Security, Beijing University of        were inspired to use hard contrastive loss on the labeled dataset
+Posts and Telecommunications, Beijing 100876, China, and also with the Key            to enhance the representation learning of minority class samples.
+Laboratory of Trustworthy Distributed Computing and Service (BUPT), Min-              However, in our approach, we aim to separately learn different
+istry of Education, Beijing 100876, China (e-mail: hemingshu@bupt.edu.cn).
+   Xiaojuan Wang and Shize Guo are with the School of Cyberspace Security,            types of features to mitigate the interference of noisy features
+Beijing University of Posts and Telecommunications, Beijing 100876, China             on other types.
+(e-mail: wj2718@bupt.edu.cn; nsfgsz@126.com).                                            Complex network topologies, such as distributed systems,
+   We have released our source code to facilitate future studies on https://github.
+com/Ann96125/MTRF.                                                                    inevitably lead to network-induced phenomena, causing packet
+   Digital Object Identifier 10.1109/TDSC.2025.3649110                                loss, transmission delays, and other issues [1]. The delay or
+
+
+      1545-5971 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+WANG et al.: MTRF: MULTIDOMAIN TRANSFORMATION REPRESENTATION FOR NETWORK FLOWS IN NETWORK INTRUSION DETECTION                                  4767
+
+
+
+interruption of network data packet transmission is manifested
+in the time domain as a feature with transmission noise. Alter-
+natively, the frequency domain features of network traffic are
+less sensitive to interference and can better reflect the inherent
+properties of the data, such as periodic components. These stable
+features are less influenced by external disturbances, making
+them more reliable for analysis [6]. Separately learning both
+features ensures that interference in the temporal domain does
+not affect the representation learning of the frequency domain.
+   Under the assumption in [5], data X is generated by the
+error variable  and the error-free latent variable X ∗ . Here, as
+the error  varies, the latent variable X ∗ remains unchanged.
+Thus, learning the representation of X ∗ involves finding stable
+associations with the optimal X ∗ across various types of errors.
+Along these lines of thought, we propose a model called the
+                                                                        Fig. 1. Diagram illustrating fog nodes for data representation combined with
+Multi-domain Transformation Representation of Network Flows             rapid inference models on IoT devices.(The figure only shows the inference
+(MTRF). MTRF can simulate noise in different network envi-              stage.
+ronments and learn invariant representations of useful features.
+   The dataset was augmented eight times through network-
+                                                                                             II. PROPOSED FRAMEWORK
+induced perturbations, increasing the training samples eightfold.
+This augmentation with the MTRF method enhanced the stabil-                In this section, we present our fog based framework for
+ity of network flow representations despite the small sample size.      detecting intrusions in IoT traffic. The process diagram for
+In the temporal domain, self-supervised CL is used to construct         intrusion detection using fog and edge computing is illustrated in
+a feature space. This involves maximizing the feature similarity        Fig. 1. Fog nodes deployed near devices extend IoT capabilities,
+of positive samples and minimizing the similarity of negative           supporting low-latency intrusion detection. These nodes can use
+samples (i.e., noise interference). The result is disentangled          encrypted network traffic and perform inference through the
+representations of temporal domain features and noise, thereby          MTRF model, thereby avoiding the privacy leakage that occurs
+enhancing the robustness of network flows against environmen-           when IoT devices transmit data to fog nodes. The characterized
+tal interference.                                                       flows obtained from the MTRF model are transmitted back to
+   Furthermore, using relatively stable frequency-domain fea-           IoT devices for edge detection. Different IoT devices can flexibly
+tures increases the distance between negative samples. Inspired         choose detection models based on storage capacity, supporting
+by [24], we incorporate hard margin penalty into the learning of        lightweight ML detection models. With reduced sample dimen-
+frequency domain features. The core of hard margin penalty is to        sions after characterization by fog nodes, there are advantages
+enforce a strict constraint that mutually negative samples main-        such as suitability for lightweight device storage and detection,
+tain a clear separation in the feature space. In [24], hard margin is   reduced transmission latency, resistance to reverse engineering,
+incorporated into the contrastive loss, requiring negative samples      and enhanced privacy security.
+to be at least M (where M is the set threshold) farther away from          The cloud server conducts training on a small number of
+the anchor samples than positive samples. The aim is to bring           network flows. Due to the small amount of training data required
+the original data into a more precise representation space using a      by MTRF, it avoids the increase in network bandwidth resources
+hard margin penalty factor, while introducing relaxation factors        and transmission delay caused by uploading a large number of
+and regularization terms to mitigate the risk of overfitting in the     samples.
+representation. The contributions of our work are as follows:
+   1) We deploy the representation model on fog nodes. To                                        III. RELATED WORK
+       prevent interference, we extracted the temporal-domain
+       and frequency-domain features of network traffic sepa-           A. Deep Learning-Based IDS
+       rately. The represented test data is suitable for customized        We summarize the IDS using DL models, categorizing them
+       lightweight intrusion detection models in IoT devices.           broadly into two types: end-to-end models and non-end-to-end
+   2) MTRF uses original packet headers as input, avoiding              representational models. In end-to-end models, CNNs have long
+       feature selection and plaintext payloads for privacy protec-     been considered as good classification models. [3] treats network
+       tion. We apply a hard margin penalty factor for frequency-       flows as images and, using Convolutional Neural Networks
+       domain contrastive loss to enhance representations of            (CNNs) for classification, demonstrates that multi-layer bidi-
+       minority classes.                                                rectional network protocols are optimal. [16] preprocessed pcap
+   3) We devised five tasks varying in sample distribution dif-         files with IP masking and other methods before directly using
+       ficulty, covering balanced and imbalanced datasets of            autoencoders and CNNs for encrypted traffic classification. [14]
+       different sizes. Results showed MTRF excelling in both           used CNNs, transfer learning, ensemble learning, and hyper-
+       multi-class and binary classification, achieving the best F1     parameter optimization for complex network flow data, adding
+       score of 0.9802 on the imbalanced MQTT dataset.                  hyperparameter tuning beyond prior research. [11] addressed
+4768                                               IEEE TRANSACTIONS ON DEPENDABLE AND SECURE COMPUTING, VOL. 23, NO. 3, MAY/JUNE 2026
+
+
+
+concept drift in evolving malware samples by updating feature                                    TABLE I
+                                                                        THE KEY DIFFERENCES BETWEEN THE PROPOSED WORK AND EXISTING
+categories. This indicates that different feature representations                               APPROACHES
+of the same dataset can have a significant impact. Therefore, it
+is highly necessary to propose a unified representation model
+to enhance task adaptability. [12] adopt feature engineering
+for network flows and use stacked tree models to train the
+meta-learner. Low-confidence samples are input into the biased
+classifier for detection. [1] enhance the robustness of network
+flows by simulating network-induced phenomena (e.g., packet
+loss) via recurrent neural networks. These end-to-end methods
+offer quicker detection but demands more feature engineering
+for input data.
+   Non-end-to-end models primarily refer to representing net-
+work flows before feeding them into classifiers. We roughly
+                                                                      datasets, posing challenges for storage-constrained fog com-
+categorize the representation process into methods based on
+                                                                      puting nodes. MLCL [33] employs three fusion strategies to
+graphs, CL, and encoder-decoder approaches. [10] used topo-
+     

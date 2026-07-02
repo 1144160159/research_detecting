@@ -1,0 +1,1452 @@
+你是使用 GPT-5.5 的资深网络安全与异常检测论文精读助手。请真正阅读下面提供的论文正文包和代码包，理解后输出一篇中文深度解析 Markdown。
+
+重要要求：
+1. 不要用模板化空话，不要说“程序自动抽取显示”。你需要像研究员读完论文后写读书笔记一样表达。
+2. 必须围绕正文内容提炼：具体问题、创新点、科学问题、研究假设、科学方法、实验步骤、关键结论、局限与待解决问题。
+3. 如果代码包存在，请把论文方法与代码目录、关键文件、运行线索对应起来，指出哪些源码文件可能对应数据预处理、模型、训练和评估。
+4. 如果正文包被截断，必须在“局限性与待解决问题”中说明：本次理解基于提供的正文包，仍需回到 PDF 复核被截断部分。
+5. 不要长篇复制英文原文。可以短引极少量关键词，但主体必须是中文理解和分析。
+6. 输出必须是完整 Markdown，且必须包含下面 13 个二级标题，标题文字不得改名。
+7. “实验设计与实验步骤”要写成可复核流程：数据、预处理、模型/基线、训练、指标、消融/敏感性、结果核查。
+8. “本篇精华”要给出 5-8 条高密度要点，能直接服务综述或科研汇报。
+
+必须使用的文档结构：
+# [717] Large-Scale BGP Routing Anomaly Detection Based on Graph Attention Auto-Encoder
+## 1. 基本信息
+## 2. 中文翻译与核心摘要
+## 3. 论文解决的具体问题
+## 4. 创新点深度提炼
+## 5. 科学问题与研究假设
+## 6. 科学方法与技术路线
+## 7. 实验设计与实验步骤
+## 8. 关键结果、结论与证据
+## 9. 局限性与待解决问题
+## 10. 与本项目的关系
+## 11. 代码对照分析
+## 12. 本篇精华
+## 13. 建议精读路线
+
+元数据：
+编号：717
+题名：Large-Scale BGP Routing Anomaly Detection Based on Graph Attention Auto-Encoder
+年份：2025
+DOI：10.1109/tnsm.2025.3631527
+来源：IEEE Transactions on Network and Service Management
+PDF：paper/10.1109_TNSM.2025.3631527.pdf
+已有粗分类：其他AI安全与跨域异常检测
+二级关联：入侵检测与网络异常检测、图学习、知识图谱与威胁情报
+相关性：中相关，分数 6
+已有代码状态：未发现；无
+
+正文包信息：
+- 正文来源：综合分析\_data\full_text_cache_plain\717.txt
+- 原始字符数：65331
+- 本次发送字符数：65331
+- 是否截断：False
+
+代码包：
+未发现该论文对应的本地开源代码。
+
+论文正文包开始：
+<<<PAPER_TEXT
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+487
+
+Large-Scale BGP Routing Anomaly Detection
+Based on Graph Attention Auto-Encoder
+Zekang Wang , Fuxiang Yuan , Han Qiu , Yan Liu , and Xiangyang Luo
+
+Abstract—The Border Gateway Protocol (BGP) enables the
+exchange of routing information between Autonomous Systems
+(ASes). The lack of routing verification makes it susceptible
+to routing anomalies with major impact. Detecting large-scale
+routing anomalies is crucial for monitoring network operation
+status. However, existing methods are affected by interference
+from non-important ASes and insufficient labeled data, necessitating improvements in detection performance. In this paper,
+a large-scale BGP routing anomaly detection method based
+on a graph attention auto-encoder is proposed. First, normal
+BGP data is collected to construct AS-level topology graphs.
+Then, the graph attention auto-encoder model is pre-trained on
+topology graphs, where an attention mechanism is introduced
+to assign higher weights to important ASes. Next, the AS-level
+topology graph sequence is extracted from BGP data, and
+the pre-trained model is utilized to obtain AS embeddings.
+Finally, the AS embedding is classified to detect large-scale BGP
+routing anomalies based on multi-layer perceptron. The largescale BGP routing anomaly event dataset is constructed using
+4,577,384 routing announcements, and extensive experiments are
+conducted. The results show that the proposed method has
+significant advantages. Compared with typical methods BSVM,
+BLSTM, BMLP, BGNN, BGIN, and BGAE, the detection accuracy
+increased by 14.47%, 3.73%, 8.11%, 2.64%, 5.99%, and 1.04%,
+respectively.
+Index Terms—BGP routing anomaly detection, graph attention
+auto-encoder, autonomous system, graph representation learning.
+
+I. I NTRODUCTION
+HE INTERNET consists of over 80,000 Autonomous
+Systems (ASes), and ASes exchange routing information
+via the Border Gateway Protocol (BGP). However, BGP
+was not designed with a routing trusted verification
+
+T
+
+Received 16 January 2025; revised 25 August 2025; accepted 1 November
+2025. Date of current version 29 December 2025. This work was supported by the National Key Research and Development Program of China
+(No. 2022YFB3102900), the National Natural Science Foundation of China
+(No. U23A20305), the Key Research and Development Project of Henan
+Province (No. 221111321200), the Innovation Scientists and Technicians
+Troop Construction Projects of Henan Province (No. 254000510007), the
+Natural Science Foundation of Henan Province of China (No. 242300421415),
+and the Key Science and Technology Project of Henan Province of China
+(No. 252102211091). The associate editor coordinating the review of this article and approving it for publication was F. Valenza. (Corresponding author:
+Xiangyang Luo.)
+Zekang Wang, Fuxiang Yuan, Yan Liu, and Xiangyang Luo are with the
+State Key Laboratory of Mathematical Engineering and Advanced Computing,
+Zhengzhou 450000, China, and also with the Key Laboratory of Cyberspace
+Situation Awareness of Henan Province, Zhengzhou 450000, China (e-mail:
+wangzk_ieu@sina.com;
+rookieyfx@163.com;
+ms.liuyan@foxmail.com;
+luoxy_ieu@sina.com).
+Han Qiu is with the Information Engineering University, Zhengzhou
+450000, China (e-mail: qiuhan410@aliyun.com).
+Digital Object Identifier 10.1109/TNSM.2025.3631527
+
+mechanism [1], [2], which makes the Internet susceptible
+to routing anomalies such as network outages [3] caused
+by route leaks [4], prefix hijacking [5], and configuration
+errors [6]. According to the impact scope of anomalies,
+they can be categorized into small-scale and large-scale
+routing anomalies [7], in which large-scale routing anomalies seriously impact network reachability [8]. Large-scale
+routing anomaly detection is of great significance in monitoring Internet operation status and maintaining network
+stability [9].
+Machine learning has been widely applied in large-scale
+BGP routing anomaly detection for years, achieving many
+outstanding scientific achievements. Traditional methods based
+on machine learning extract anomaly detection features manually from routing information tables and UPDATE messages,
+including statistical features [10], [11] (e.g., the number of
+UPDATE messages, the average length of AS_PATH) and
+graph features [12], [13] (e.g., clustering coefficient, centrality). The machine learning model is trained to detect
+large-scale BGP routing anomalies. However, the process of
+manually extracting and selecting features relies on domain
+knowledge. With the development of deep learning, the emergence of automatic feature extraction methods is expected to
+solve such problems. In these methods, graph representation
+learning [14] can effectively encode high-dimensional sparse
+graph structure data into low-dimensional dense vectors [15],
+while preserving structural information in graphs, providing a
+new way for BGP routing anomaly detection. In recent years,
+some studies have attempted to apply graph representation
+learning to large-scale BGP routing anomaly detection tasks.
+Based on graph convolutional neural network [16], graph
+isomorphism network [17], and graph auto-encoder [18], the
+information of neighbor nodes is aggregated to update AS
+embeddings, and large-scale BGP routing anomaly is detected
+by classifying the AS embedding.
+Existing large-scale BGP routing anomaly detection methods based on graph representation learning have made initial
+progress but still have some problems. Significant differences
+exist in the possibility of large-scale BGP routing anomalies
+caused by different ASes [19]. However, existing typical
+detection methods aggregate features of neighbor ASes indiscriminately, either by averaging or summing, to update AS
+embeddings, resulting in anomaly detection facing interference
+from many non-important or even irrelevant ASes. In addition, existing methods typically train detection models in a
+supervised manner, which requires a large amount of labeled
+BGP data. However, BGP anomaly data is insufficient. These
+
+c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+1932-4537 
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+488
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+problems affect the effectiveness of large-scale BGP routing
+anomaly detection.
+To solve the above problems, we propose a novel method
+based on a graph attention auto-encoder for detecting largescale BGP routing anomalies. The attention mechanism is used
+to assign higher weights to important ASes when aggregating
+neighbor node information, minimizing the interference of
+non-important ASes on anomaly detection. The reliance on
+labeled data is reduced by pre-training the graph attention
+auto-encoder model. The main contributions of this paper are
+as follows.
+• A framework for detecting large-scale BGP routing
+anomalies using a method based on a graph attention
+auto-encoder is proposed. The proposed method learns
+graph representations of Internet AS-level topologies
+based on a graph attention auto-encoder and utilizes a
+multi-layer perceptron to classify the AS embedding,
+achieving anomaly detection. Our method also provides
+a list of possible anomaly origin ASes, narrowing down
+the scope of anomaly origin AS localization.
+• The attention mechanism is introduced into the graph
+auto-encoder for large-scale BGP routing anomaly detection. When aggregating node features of neighbor ASes,
+the attention mechanism evaluates the importance of
+ASes and assigns weights to them, paying more attention
+to important ASes that may cause large-scale BGP routing anomalies. This mechanism reduces interference from
+non-important ASes and improves detection accuracy.
+• Normal behavior of BGP routing is learned based on
+unsupervised learning. The graph attention auto-encoder
+model is pre-trained on normal BGP data to learn
+routing behavior patterns, reducing the dependence on
+labeled routing data. The model effectively captures the
+proximity and hierarchy properties of Internet AS-level
+topologies, which represent the AS routing roles.
+The remainder of this paper is organized as follows.
+Section II discusses the related work of large-scale BGP
+routing anomaly detection. Section III elaborates on the
+proposed method based on a graph attention auto-encoder,
+detailing the framework, model architecture, and effectiveness
+analysis of the method. Section IV validates the effectiveness
+of the proposed method and compares it with existing typical
+detection methods. Finally, the conclusion summarizes our
+findings and outlines future research directions.
+II. R ELATED W ORK
+We introduce the definition and classification of large-scale
+BGP routing anomalies, and analyze existing typical methods
+for detecting large-scale BGP routing anomalies.
+A. Large-Scale BGP Routing Anomaly
+BGP is the most widely used inter-domain routing protocol [20], but it has obvious security flaws in design [21], [22].
+This protocol lacks an effective inherent mechanism to verify
+the authenticity and validity of route announcements. As a
+result, the Internet becomes vulnerable to routing anomalies,
+such as network outages caused by configuration errors or
+
+Fig. 1. Illustration of large-scale BGP routing anomalies. (1) Route leaks:
+Routes from AS8 and AS9 are propagated to unintended ASes, including
+AS11 and AS12. (2) Prefix hijacking: AS1 owns the network prefix a.b.c.*/24,
+but the attacker AS5 illegitimately announces a route containing this network
+prefix. According to the BGP shortest path principle, the traffic is redirected
+to AS5.
+
+malicious attacks [23]. According to the scope of impact,
+these anomalies can be divided into small-scale and large-scale
+routing anomalies. Large-scale routing anomalies [8] usually
+cause a large number of IP address prefixes to be unreachable,
+and the anomalies can be observed by most routing collectors,
+posing a serious threat to inter-domain routing security.
+Common large-scale BGP routing anomalies include route
+leaks [24] and prefix hijacking [25], as shown in Fig. 1.
+Route leaks are typically caused by misconfigurations made
+by network operators [26], where legitimate routing paths
+are exposed to unintended ASes [27], putting critical Internet
+infrastructure at risk. Prefix hijacking refers to an attack where
+the attacker forges network reachability information and AS
+path information to announce that they own the victim’s IP
+address prefix [28], deceiving BGP routers to select incorrect
+paths and redirecting network traffic to other ASes [29],
+thereby stealing user sensitive data [30]. Detecting large-scale
+BGP routing anomalies is of great importance for protecting
+critical Internet infrastructure and ensuring the security of user
+data [31].
+B. Large-Scale BGP Routing Anomaly Detection Methods
+Anomaly detection is one of the important branches of data
+mining. Its goal is to identify abnormal data, which is widely
+used in different scenarios [32], [33], [34], [35], [36], [37],
+[38], [39]. Early large-scale BGP routing anomaly detection
+methods include time series analysis [40], statistical pattern
+recognition [41], and reachability test [42]. In recent years,
+machine learning has shown good performance in large-scale
+BGP routing anomaly detection [43]. Machine learning-based
+detection methods are currently the mainstream approach.
+These methods focus on how to extract features effectively.
+Currently, there are two approaches for feature extraction:
+manual extraction and automatic extraction based on graph
+representation learning.
+1) Methods Based on Manual Feature Extraction:
+Traditional methods detect large-scale BGP routing anomalies
+by manually extracting features. The extracted features can
+
+WANG et al.: LARGE-SCALE BGP ROUTING ANOMALY DETECTION
+
+be mainly categorized into two types: statistical features and
+graph features.
+When large-scale BGP routing anomalies occur, relevant features of UPDATE messages change significantly.
+Al-Rousan and Trajković [10] extracted 17 statistical features,
+including the number of UPDATE messages, the announcement interval time, and the average length of AS_PATH.
+These features were selected using fisher score and mRMR
+algorithms, and a support vector machine classifier was trained
+to detect large-scale BGP routing anomalies. Dong et al. [11]
+extracted 33 statistical features regarding AS prefixes, peers,
+and paths. A long short-term memory model combined with
+a self-attention mechanism was utilized to detect large-scale
+BGP routing anomalies, in order to reduce the impact of noise
+in BGP data.
+Graph features reflect overall structural changes in Internet
+AS-level topology when large-scale BGP routing anomalies
+occur. Sanchez et al. [12] compared large-scale BGP routing
+anomaly detection performance of graph features such as
+centrality, clustering coefficient, average degree of neighbor
+nodes, and maximum connected subgraph size using a multilayer perceptron. Huang et al. [13] extracted degree centrality
+and closeness centrality features of ASes, achieving real-time
+detection of large-scale BGP routing anomalies by analyzing
+changes in AS centrality.
+However, manual feature extraction and selection can easily
+lead to feature redundancy or the omission of important
+features. In addition, feature design is time-consuming and
+costly, which affects the accuracy of large-scale BGP routing
+anomaly detection.
+2) Methods Based on Graph Representation Learning for
+Feature Extraction: Graph representation learning [14] can
+represent a graph as a low-dimensional vector while retaining
+most network structure information. The features can be
+automatically extracted by inputting the graph and a small
+number of initial node features into a graph representation
+learning model. In recent years, some studies have made
+progress in large-scale BGP routing anomaly detection based
+on graph representation learning.
+Hoarau et al. [16] first designed a graph neural network
+model suitable for large-scale BGP routing anomaly detection.
+By aggregating the embeddings of neighbor ASes averagely,
+AS embeddings are iteratively updated without manual feature
+extraction. Then, AS embeddings are classified based on a
+multi-layer perceptron to achieve large-scale BGP routing
+anomaly detection. Latif et al. [17] utilized the number of
+UPDATE messages sent and received by ASes as the initial
+node features and applied a graph isomorphism network model
+to automatically extract deep features of AS-level topologies
+for large-scale BGP routing anomaly detection. This model
+employs a specialized information aggregation mechanism,
+which updates AS embeddings by summing the embeddings
+of neighbor ASes and the ASes themselves, allowing for a
+more accurate distinction between similar AS-level topologies.
+Hoarau et al. [18] utilized a graph auto-encoder to learn graph
+representations of AS-level topologies. The graph convolutional network is used as the encoder. The AS embeddings are
+updated by aggregating the information from neighbor ASes
+
+489
+
+averagely. During the training process, the error for all ASes
+is computed to update model parameters, capturing routing
+behavior patterns of different ASes.
+In summary, while large-scale BGP routing anomaly detection methods based on graph representation learning have
+made initial progress, they still have some problems. Existing
+typical detection methods assign equal weights to all neighbor ASes when aggregating their information to update AS
+embeddings, assuming that different ASes causing largescale BGP routing anomalies have the same possibility.
+However, ASes that trigger large-scale BGP routing anomalies
+are usually important nodes with larger network scales and
+significant network positions [19]. The existing method aggregates features of neighbor ASes by averaging or summing,
+which ignores the differences in importance between different
+ASes. As a result, anomaly detection faces interference from
+many non-important, even irrelevant ASes. Furthermore, BGP
+anomaly data samples are insufficient, and it is not guaranteed
+that all data can be accurately labeled. This makes it challenging to obtain a large amount of accurately labeled BGP
+anomaly data required for supervised learning. These problems
+affect the effectiveness of anomaly detection.
+III. P ROPOSED M ETHOD
+To solve the problems of interference from non-important
+ASes and the insufficiency of labeled BGP anomaly data, we
+propose a large-scale BGP routing anomaly detection method
+based on a graph attention auto-encoder.
+A. Overview
+Considering that large-scale BGP routing anomalies are primarily characterized by significant changes in the existence of
+AS links [8], we represent the Internet AS-level topology as an
+undirected graph G = (V,E,X). Here, V = {v1 , v2 , . . . , vN },
+where vi denotes an AS and N is the number of ASes. E =
+{e1 , e2 , . . . , eM }, ej indicates an edge between ASes, and M
+denotes the number of edges. X = {x1 , x2 , . . . , xN } represents
+the initial node features of ASes, and xk indicates the number
+of IP prefixes announced by an AS, reflecting its network size
+and connectivity capability. The notations used in the paper
+are summarized in Tab. I.
+The overview architecture of our proposed framework is
+shown in Fig. 2, which consists of two stages. In the graph
+attention auto-encoder model pre-training stage, the model is
+pre-trained in an unsupervised manner on AS-level topologies
+without anomalies to learn normal BGP routing behaviors.
+In the large-scale BGP routing anomaly detection based on
+multi-layer perceptron stage, the encoder from the pre-trained
+graph attention auto-encoder model is utilized to generate AS
+embeddings of the AS-level topology graph sequence. The AS
+embedding is classified using a multi-layer perceptron to detect
+large-scale BGP routing anomalies. For a specific AS, if an
+anomaly is detected, the result ŷ = 1 is output. Otherwise,
+ŷ = 0.
+B. Framework
+The main steps of the proposed framework are as follows.
+
+490
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 2. Overview of our proposed detection framework. The framework consists of two stages: graph attention auto-encoder model pre-training and large-scale
+BGP routing anomaly detection based on multi-layer perceptron.
+
+Stage 1: Graph attention auto-encoder model
+pre-training.
+Step 1: Construct Internet AS-level topology graphs.
+Routing information tables and UPDATE messages, which do
+not involve large-scale BGP routing anomalies, are collected,
+and AS paths are extracted. Considering path information
+may contain erroneous data, we clean it. Reserved ASes have
+special purposes and sometimes appear in AS paths, which
+are eliminated. There are many cases where the same ASes
+are added to AS paths. Duplicate ASes are removed. Internet
+Exchange Points (IXPs) are excluded because they do not
+participate in the routing decision process. Operation and
+maintenance personnel may have routing configuration errors,
+resulting in self-loops in AS paths, so we filter them out.
+On this basis, AS-level topology graphs in normal state are
+constructed.
+Step 2: Obtain graph representations of AS-level topologies.
+AS-level topology graphs are input into the encoder of the
+constructed graph attention auto-encoder model. Stacked graph
+attention layers encode AS-level topology graphs, mapping
+high-dimensional graph structure data to a low-dimensional
+representation space. The attention mechanism is introduced to
+dynamically adjust the weights of AS embeddings within AS
+neighbors, focusing on important ASes that may be involved
+in large-scale BGP routing anomalies. The AS embeddings
+are iteratively updated by aggregating node embeddings of
+neighbor ASes, outputting graph representations of AS-level
+topologies Z ∈ RS ×N .
+Step 3: Reconstruct adjacency matrices of AS-level
+topology graphs. The decoder of the constructed graph
+
+TABLE I
+L IST OF N OTATIONS
+
+attention auto-encoder model receives graph representations
+generated by the encoder, and maps them back to the original
+data space, reconstructing the adjacency matrix of the AS-level
+
+WANG et al.: LARGE-SCALE BGP ROUTING ANOMALY DETECTION
+
+topology graph. The model is trained by minimizing the
+error between the real and reconstructed adjacency matrices,
+updating the model weights to effectively learn graph representations of AS-level topologies under normal BGP routing
+behavior.
+Stage 2: Large-scale BGP routing anomaly detection
+based on multi-layer perceptron.
+Step 1: Construct a graph sequence of Internet AS-level
+topologies. Routing information tables and UPDATE messages
+within the detection period are collected from multiple vantage
+points deployed across the Internet. The AS paths are extracted
+and preprocessed to remove erroneous data, including reserved
+ASes, duplicate ASes, IXPs, and self-loops. At different
+timestamps, AS-level topology graphs are extracted from the
+preprocessed path information, forming a sequence of graphs
+Gseq = {G1 , G2 , . . . , GT }, where the number of topology
+graphs is T.
+Step 2: Obtain node embeddings of ASes in graph sequence
+of AS-level topologies. The graph sequence is input into
+the encoder of the pre-trained graph attention auto-encoder
+model. During pre-training, this model has learned normal
+BGP routing behavior patterns. Therefore, the weights of
+the encoder are kept unchanged. The attention mechanism is
+utilized to assign higher weights to important ASes, generating
+AS embeddings Zn = {zn1 , zn2 , . . . , znT } ∈ RS ×T of the ASlevel topology graph sequence Gseq , where zni is the node
+embedding of AS n in the AS-level topology graph Gi .
+Step 3: Detect large-scale BGP routing anomalies using a
+multi-layer perceptron. The AS embedding Zn is flattened into
+one-dimensional vector Ẑn . When large-scale BGP routing
+anomalies occur, ASes exhibit abnormal routing behavior,
+and the AS embeddings generated by the pre-trained graph
+attention auto-encoder model will significantly differ from
+the embeddings in normal state. Therefore, a multi-layer
+perceptron is employed to classify these embeddings. The AS
+embeddings are passed through the input, hidden, and output
+layers, learning complex mapping relationships between features. This enables the detection of large-scale BGP routing
+anomalies, with the output of final detection results ŷ.
+C. Graph Attention Auto-Encoder Model Pre-training
+The proposed method learns from a large amount of unlabeled BGP data without anomalies, capturing normal routing
+behavior patterns. The graph attention auto-encoder model
+consists of an encoder and a decoder. The architecture of the
+encoder and decoder, as well as the loss function, are described
+as follows.
+1) Encoder Architecture: The encoder comprises two
+graph attention layers, as shown in Fig. 3. The first graph
+attention layer transforms initial AS features into AS embeddings that contain network structure information. The second
+graph attention layer updates AS embeddings and learns more
+complex, deeper features. ReLU is used as the activation
+function between two neural network layers.
+The process of aggregating AS neighbors’ features based
+on the graph attention layer is shown in Fig. 4. First, since the
+dimension of initial node features is small, a learnable weight
+
+491
+
+Fig. 3. The architecture of the encoder. The encoder computes coefficients
+between ASes using an attention mechanism, and iteratively updates AS
+embeddings.
+
+Fig. 4. The process of aggregating AS neighbors’ features based on the
+graph attention layer. It consists of two parts: attention coefficient calculation
+and new feature calculation.
+
+matrix is used for feature enhancement. Then, the correlation
+coefficient is obtained by concatenating and mapping the
+features of AS itself and neighbor nodes. Next, the correlation
+coefficient is normalized to compute the attention coefficient.
+Finally, the features of neighboring ASes are weighted and
+summed according to the attention coefficients. The new AS
+embedding is obtained after being processed by a nonlinear
+activation function.
+The features of AS i and its neighbor AS j are concatenated
+and linearly transformed using a learnable weight matrix
+W(k ) . After performing the self-attention operation on ASes,
+(k )
+the correlation coefficient eij between the two ASes is
+obtained, as shown in Equation (1),
+
+
+
+T
+(k )
+(k −1)
+(k −1)
+(1)
+eij = LeakyReLU a(k ) W(k ) zi
+||W(k ) zj
+T
+
+where a(k ) is a learnable weight vector of the k th encoder
+(k −1)
+is the node embedding of AS i output from
+layer, and zi
+(0)
+th
+the (k − 1) encoder layer. zi = xi denotes the initial node
+feature.
+It is necessary to use the same scale when comparing the
+correlation coefficients between ASes. Therefore, the correlation coefficient is normalized using the Softmax function, as
+shown in Equation (2). The complete method for calculating
+attention coefficients is shown in Equation (3).
+
+
+
+(k )
+exp eij
+(k )
+(k )
+
+
+αij = Softmax eij
+= 
+(2)
+(k )
+l∈Ni exp eil
+
+
+
+
+T
+(k −1)
+(k −1)
+||W(k ) zj
+exp LeakyReLU a(k ) W(k ) zi
+(k )
+
+
+
+
+αij = 
+(k )T W(k ) z (k −1) ||W(k ) z (k −1)
+l∈Ni exp LeakyReLU a
+i
+l
+
+
+
+
+(3)
+
+492
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 6. The architecture of the multi-layer perceptron model. The model
+consists of input, hidden, and output layers, each layer fully connected to the
+next. The activation function of hidden layers is ReLU, while the activation
+function of the output layer is Softmax.
+Fig. 5.
+Illustration of the multi-head attention mechanism (H = 4).
+AS1 updates its node embedding within neighbor ASes using the multihead attention mechanism, where different colors represent different attention
+heads.
+
+difference between the real adjacency matrix and reconstructed
+adjacency matrix, as expressed in Equation (7),
+LGATE = −
+
+The new node embedding of AS i is computed using the
+learned attention coefficients. The AS embedding output by
+the k th graph attention layer in the encoder is shown in
+Equation (4). The graph representation of AS-level topology
+(k ) (k )
+(k )
+is denoted as Z (k ) = {z1 , z2 , . . . , zN },
+(k )
+
+zi
+
+=
+
+
+j ∈Ni
+
+
+
+(k )
+(k −1)
+αij σ W(k ) zj
+
+(4)
+
+where σ denotes a nonlinear activation function.
+The multi-head attention mechanism refers to the use of
+H groups of mutually independent attention heads, where the
+node embeddings output by each attention head are either
+concatenated or averaged to obtain final node embedding, as
+shown in Fig. 5. The multi-head attention mechanism enables
+the graph attention layer to capture richer network information
+and reduce random noise interference.
+The graph attention layer constructed in this paper computes
+multiple independent attention heads simultaneously, thereby
+enhancing the representational capacity of the model. The
+output AS embeddings are averaged, as shown in Equation (5).
+(k )
+
+zi
+
+=
+
+H
+1   (k ,h)  (k ,h) (k −1) 
+αij σ W
+zj
+H
+
+(5)
+
+h=1 j ∈Ni
+
+2) Decoder Architecture: Since the graph representation of
+AS-level topology already contains node attributes of ASes
+and network structural information, an inner product decoder
+is employed to reconstruct the adjacency matrix. This approach
+is simple and efficient, with the computation process given in
+Equation (6),
+
+
+Â = σ Z Z T
+(6)
+where, σ represents the Sigmoid activation function.
+3) Loss Function: The training objective of the graph
+attention auto-encoder model is to minimize the reconstruction
+error of the adjacency matrix. In this paper, binary crossentropy [18] is used as the loss function to measure the
+
+N N
+ 
+1 
+Aij log Âij
+Ep
+i=1 j =1
+
+−
+
+N N
+
+ 
+1  
+(7)
+1 − Aij log 1 − Âij
+En
+i=1 j =1
+
+where, Ep represents the number of positive edges in ASN
+N
+level topology, Ep =
+i=1
+j =1 Aij , and En represents
+the number of negative edges in AS-level topology, En =
+N
+N
+i=1
+j =1 (1 − Aij ).
+D. Large-Scale BGP Routing Anomaly Detection Based on
+Multi-Layer Perceptron
+The pre-trained graph attention auto-encoder model has
+learned graph representations of AS-level topologies without
+large-scale anomalies. The AS-level topology graph sequence
+is input into the encoder of the pre-trained model to generate
+AS embeddings. Since there is a significant difference between
+the embeddings of normal ASes and those with anomalies,
+a classifier is utilized to detect large-scale BGP routing
+anomalies. The multi-layer perceptron [16], [18] can better
+classify AS embeddings that contain nonlinear relationships
+through a multi-layer neural network structure. Therefore,
+the multi-layer perceptron is selected as the classifier. The
+architecture of the constructed multi-layer perceptron and the
+loss function are described as follows.
+1) Multi-Layer Perceptron Architecture: The architecture
+of the multi-layer perceptron model constructed in this paper
+is shown in Fig. 6. The AS embedding is flattened into a
+one-dimensional vector and passed through the input layer to
+hidden layers. Each neuron in hidden layers performs weight
+and bias operations, as shown in Equation (8), followed by
+a nonlinear transformation using an activation function. The
+output is passed to the next hidden layer or the output layer,
+which generates the prediction probabilities of the normal and
+abnormal classes. The class with the highest probability is
+selected as the final detection result, as shown in Equation (9),
+(l)
+
+hi
+
+=
+
+s
+
+(l−1) (l−1)
+(l−1)
+wij
+hj
++ bi
+
+(8)
+
+j =1
+
+ŷ = arg max ŷk
+k
+
+(9)
+
+WANG et al.: LARGE-SCALE BGP ROUTING ANOMALY DETECTION
+
+(l)
+
+where hi
+
+(l−1)
+
+represents the hidden layer output, wij
+
+493
+
+is the
+
+(l−1)
+
+weight connecting different neurons, and bi
+is the bias
+term.
+2) Loss Function: The binary cross-entropy is adopted as
+the loss function, as shown in Equation (10), to compute
+the error between the anomaly detection result and the true
+class. The error is backpropagated from the output layer to
+hidden layers to update model parameters, including weights
+and biases,
+
+TABLE II
+T HE D EGREE AND ASR ANK OF AS ES T HAT T RIGGER L ARGE -S CALE
+BGP ROUTING A NOMALIES
+
+1 
+[yi log(ŷi ) + (1 − yi ) log(1 − ŷi )] (10)
+LMLP = −
+N
+N
+
+i=1
+
+where N denotes the number of samples, yi represents the
+true class of the sample, and ŷi refers to the large-scale BGP
+routing anomaly detection result output by the multi-layer
+perceptron model.
+E. Effectiveness Analysis
+We evaluate the proposed method’s effectiveness from the
+following two aspects: the effectiveness of obtaining AS
+embeddings based on a graph attention auto-encoder and the
+effectiveness of learning normal BGP routing behavior in an
+unsupervised manner.
+1) Obtaining AS Embeddings Based on a Graph Attention
+Auto-Encoder: Existing large-scale BGP routing anomaly
+detection methods based on graph representation learning
+aggregate node embeddings of neighbor ASes using averaging
+or summing techniques. However, Comarela and Crovella [19]
+analyzed a large number of historical BGP data and found
+that ASes triggering large-scale BGP routing anomalies are
+typically those with larger network scales and significant
+positions in the network. We collect all routing information
+tables [44], [45], [46] from December 1, 2024, to extract AS
+paths. We preprocess the path information and then construct
+the Internet AS-level topology graph to calculate the degrees
+of ASes. The degree and ASRank1 (ranked by the number
+of direct and indirect customers) of the ASes that trigger
+large-scale BGP routing anomalies are shown in Tab. II.
+AS174, AS12389, and other ASes exhibit large degrees and
+rank highly in ASRank. In contrast, the average degree of
+the topology is 5.53. This suggests that existing methods,
+which aggregate AS neighbor information indiscriminately to
+obtain AS embeddings, involve many non-important or even
+irrelevant neighbor ASes, affecting the effectiveness of largescale BGP routing anomaly detection.
+We introduce an attention mechanism into graph autoencoder, learning AS embeddings using a graph attention
+auto-encoder. The proposed graph attention auto-encoder consists of an encoder and a decoder. The encoder computes
+attention coefficients α between each AS and its neighbor
+nodes based on the scale and network structure of ASes,
+assigning higher attention to important ASes that are more
+likely to cause large-scale BGP routing anomalies. The
+encoder outputs a low-dimensional graph representation of
+the AS-level topology. The decoder reconstructs the adjacency
+1 https://asrank.caida.org/
+
+matrix Â from the graph representation of AS-level topology. The graph attention auto-encoder model learns a graph
+representation that contains rich information by minimizing
+the error between the true and reconstructed adjacency matrices, thereby more accurately capturing the state of AS-level
+topology.
+Overall, it can be concluded that obtaining AS embeddings
+based on a graph attention auto-encoder is effective.
+2) Learning Normal BGP Routing Behavior in an
+Unsupervised Manner: Machine learning-based methods consider large-scale BGP routing anomaly detection as a binary
+classification problem. The detection result ŷ ∈ {0, 1}.
+Potential anomalies are detected by learning the differences
+between the AS embeddings under normal conditions and
+those during large-scale BGP routing anomalies. Existing
+methods typically rely on supervised learning to learn BGP
+routing behaviors, requiring labeled anomaly data. However,
+BGP anomaly data is insufficient, and the accuracy of labeled
+anomaly data cannot be guaranteed. Obtaining a large and
+accurate labeled dataset of BGP anomaly events is challenging,
+which impacts the effectiveness of large-scale BGP routing
+anomaly detection.
+We mine a large amount of unlabeled normal BGP data
+using a graph attention auto-encoder. The model is pre-trained
+in an unsupervised manner to learn normal BGP routing
+behaviors. When large-scale BGP routing anomalies occur
+in the Internet, ASes exhibit anomalous routing behaviors,
+with significant changes in their connection relationships with
+other ASes. The pre-trained graph attention auto-encoder
+model cannot accurately reconstruct such anomalous AS-level
+topologies, and the output AS embeddings show significant
+differences from the embeddings of normal AS-level topologies. As shown in Fig. 7, for different large-scale BGP routing
+anomaly events, the reconstruction error for normal AS-level
+topologies is small and remains stable, while the reconstruction
+error for abnormal AS-level topologies is large and fluctuates
+significantly.
+Overall, it can be concluded that learning normal BGP
+routing behavior in an unsupervised manner is effective.
+IV. E XPERIMENTAL R ESULTS AND A NALYSIS
+To verify the effectiveness of the proposed method, we
+conduct detection experiments on a dataset consisting of four
+
+494
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+TABLE III
+E XPERIMENTAL S ETTINGS
+
+Fig. 7. Comparison of reconstruction errors between AS-level topologies with and without anomalies. During anomalies, ASes exhibit abnormal routing
+behaviors. The pre-trained model fails to accurately learn such AS embeddings, and the reconstruction error of the AS-level topology increases rapidly and
+becomes unstable.
+
+large-scale BGP routing anomaly events. The experiments
+were executed on a workstation equipped with an Intel Xeon
+Gold 6248 CPU, 256 GB RAM, and NVIDIA RTX 4090.
+All methods were implemented with Pytorch geometric library
+and scikit-learn library. The proposed method is compared
+with existing typical detection methods, and its superiority is
+analyzed.
+
+TABLE IV
+L ARGE -S CALE BGP ROUTING A NOMALY E VENTS
+
+A. Experimental Settings
+The experimental settings in this paper are shown in
+Tab. III, including the dataset, parameter settings, comparative
+methods, and evaluation metrics.
+1) Dataset: We construct the dataset using large-scale BGP
+routing anomaly events (TTNet, IndoSat) adopted by existing
+typical detection studies [11], [12], [16], as well as recent
+large-scale BGP routing anomaly events (Rostelecom, India).
+The detailed information of anomaly events is shown in
+Tab. IV.
+Existing studies widely utilize publicly available BGP data
+to analyze anomaly events. The BGP data collection projects,
+including RouteViews2 and RIPE RIS,3 deploy route collectors
+around the world to obtain real-time BGP data. We utilize the
+BML tool [47] to automatically collect routing information
+tables and UPDATE messages about historical anomaly events,
+2 https://www.routeviews.org/routeviews/
+3 https://www.ripe.net/ris/
+
+containing 3,038,314 routing announcement records. The AS
+paths are extracted to construct AS-level topology graphs,
+which are used as positive samples. Routing information tables
+and UPDATE messages are collected one day before historical
+anomaly events, containing 1,539,070 routing announcement
+records. We manually check this routing data based on three
+authoritative sources, including Oracle blogs,4 BGPStream,5
+and BGPMon.6 During these periods, no large-scale BGP
+routing anomalies are reported. Therefore, we extract AS
+path information to construct AS-level topology graphs, which
+are used as negative samples. There are 8 samples, with a
+ratio of positive to negative samples of 1:1. For different
+samples, the total duration of BGP data collection is 1 hour.
+To balance the detection accuracy and inference time, we
+4 https://blogs.oracle.com/
+5 https://bgpstream.caida.org/
+6 https://www.bgpmon.net/
+
+WANG et al.: LARGE-SCALE BGP ROUTING ANOMALY DETECTION
+
+495
+
+TABLE V
+R ESULTS OF L ARGE -S CALE BGP ROUTING A NOMALY D ETECTION
+
+extract AS-level topology graphs with a two-minute interval.
+Each sample consists of 30 AS-level topology graphs, G =
+{G1 , G2 , . . . , G30 }.
+2) Parameter Settings: The model performance is evaluated using leave-one-out cross-validation. One anomaly event
+from the dataset is used as the test set, while the remaining
+anomaly events serve as the training set. This process is
+repeated, with each anomaly event used as the test set. The
+final performance evaluation is the average of experimental
+results across all test sets. To minimize the impact of randomness, we repeated the experiment 50 times. Grid search
+is employed to tune model hyperparameters. The optimal
+parameters for the Graph Attention Auto-Encoder (GATE)
+model are a learning rate of 0.001, batch size of 16, attention
+heads of 4, node embedding dimension of 16, and training
+epochs of 100. The optimal parameters for the Multi-layer
+Perceptron (MLP) model are a learning rate of 0.001, output
+feature dimensions of 64, 32, and 1 for the input, hidden, and
+output layers, respectively, and training epochs of 100.
+B. Comparison of Detection Performance
+To verify the effectiveness of the proposed method, we
+compare it with typical detection methods based on manual
+feature extraction, including BSVM [10], BLSTM [11], and
+BMLP [12], as well as typical detection methods based on
+graph representation learning for feature extraction, including
+BGNN [16], BGIN [17], and BGAE [18].
+
+The proposed method and existing typical detection methods are used to detect large-scale BGP routing anomaly
+events. The experimental results are shown in Tab. V. The
+best result for each evaluation metric is highlighted in
+bold and underlined. The confusion matrix is shown in
+Fig. 8. For different large-scale BGP routing anomaly events,
+the proposed method achieves average values of accuracy,
+precision, recall, F1 score, and FPR of 97.3%, 98.0%, 96.5%,
+97.2%, and 2.0%, respectively, outperforming all existing
+typical detection methods. The proposed method achieves
+the lowest FPR, indicating that it can effectively reduce
+false alarms while maintaining high detection accuracy. The
+experimental results show that the proposed method is effective. Utilizing a graph attention auto-encoder can generate
+AS embeddings with richer information, thereby enhancing the detection performance of large-scale BGP routing
+anomalies.
+However, existing typical methods perform poorly in detecting recent anomaly events, including Rostelecom and India.
+The proposed method also has misclassifications. This can
+be attributed to the continuous expansion of Internet ASlevel topology, with a significant increase in the number
+of nodes and edges. During the TTNet anomaly event on
+December 24, 2004, there were 18,780 ASes and 69,691
+edges. During the India anomaly event on April 16, 2021, the
+number of ASes increased to 71,387 and the number of edges
+increased to 322,593. As the network becomes increasingly
+complex, interference from non-important, even irrelevant
+
+496
+
+Fig. 8.
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Confusion matrix heatmap. The figure demonstrates the detection performance of different methods on multiple anomaly event datasets.
+
+ASes makes large-scale BGP routing anomaly detection more
+challenging.
+C. Attention Coefficient Analysis
+We present a statistical analysis of attention coefficients
+learned by the constructed graph attention auto-encoder model
+and compare them with the same weights assigned to neighbor
+ASes.
+The entropy of the attention coefficients is computed to
+quantify their distribution, as shown in Equation (11). A lower
+entropy value indicates a highly concentrated distribution of
+attention coefficients, with an entropy of 0 signifying that the
+attention is entirely focused on a single AS. A higher entropy
+value indicates a more dispersed distribution of attention
+coefficients, with the highest entropy log(Ni ) occurring in the
+case of a uniform distribution,
+
+
+
+ 
+(11)
+αij log αij
+H {αij }j ∈N (i) = −
+j ∈N (i)
+
+where Ni is the number of neighbor nodes of AS i.
+For different large-scale BGP routing anomaly events, the
+entropy distribution of attention coefficients is statistically analyzed to produce a Cumulative Distribution Function (CDF)
+curve, as shown in Fig. 9. The attention coefficient entropy
+values learned by the proposed graph attention auto-encoder
+model are predominantly concentrated between 0 and 0.5,
+significantly higher than those under a uniform distribution.
+The model exhibits a lower entropy distribution of attention
+coefficients, suggesting that it focuses more on certain important ASes, thereby improving the accuracy of large-scale BGP
+routing anomaly detection.
+
+Fig. 9. Comparison of AS attention coefficient entropy distributions. We
+compare the entropy of attention coefficients learned by the proposed method
+with a uniform distribution, where the same weights are assigned to all
+neighboring ASes.
+
+ASes, as shown in Equations (12) and (13). The set of
+adjacent ASes with different proportions of common neighbors
+|N (v )∩N (v )|
+is denoted as Eadj = {(vi , vj ) | |N (vi )∪N (vj )| ≥ τ }, and
+i
+j
+the set of non-adjacent ASes is denoted as Enon–adj =
+/ E }.
+{(vi , vj ) | vi = vj ∧ (vi , vj ) ∈
+
+
+dE zvi , zvj = zvi − zvj 2 =
+
+zvi ,k − zvj ,k
+
+2
+
+(12)
+
+k =1
+
+D. Representational Capacity Evaluation
+We evaluate the representational capacity of the proposed
+method from two perspectives: proximity and hierarchy.
+1) AS Proximity: We use the similarity metric s(vi , vj )
+based on Euclidean distance dE (zvi , zvj ) to evaluate the
+embedding differences between adjacent and non-adjacent
+
+d 
+
+
+s(u, v ) =
+
+1
+
+
+1 + dE z v i , z v j
+
+(13)
+
+The adjacent AS sets are constructed with common neighbor
+proportions more than 25%, 50%, and 75%, respectively. Five
+thousand non-adjacent ASes are randomly sampled to form the
+
+WANG et al.: LARGE-SCALE BGP ROUTING ANOMALY DETECTION
+
+497
+
+Fig. 12. Detection accuracy using different parameter combinations. The
+detection accuracy is highest when L = 2, S = 16.
+
+Fig. 10. CDF of node embedding similarity for adjacent and non-adjacent
+ASes. For adjacent ASes, the proportion of common neighbors is set to 0.25,
+0.5, and 0.75, respectively.
+
+including Tier 1 Internet service providers, whose degrees are
+significantly higher than other ASes. Conversely, stub ASes
+are located at the low tier of the Internet, accessing the Internet
+via core ASes or their downstream networks. To verify the
+representational capacity of AS hierarchy, we utilize the t-SNE
+method [48] to reduce the high-dimensional AS embedding to
+two dimensions for visual analysis.
+The results of t-SNE dimensionality reduction visualization
+for different anomaly events are shown in Fig. 11. Core
+ASes (the top 10 ASes by degree), stub ASes (ASes with
+a degree of 1), and other ASes are marked with different
+colors. It can be observed that the node embeddings of core
+ASes are relatively concentrated in distribution, exhibiting
+high similarity. In contrast, the node embeddings of stub ASes
+are widely dispersed, demonstrating significant heterogeneity.
+These results indicate that the proposed method effectively
+captures the hierarchical structure inherent in the Internet ASlevel topology.
+E. Parameter Sensitivity Analysis
+
+Fig. 11. The results of dimensionality reduction visualization for different
+anomaly events via t-SNE. There is a significant difference in the distribution
+of node embeddings between core ASes and stub ASes.
+
+non-adjacent set. The embedding similarity between AS pairs
+within the adjacent and non-adjacent AS sets is calculated, and
+the CDF of similarity is shown in Fig. 10. The experimental
+results indicate that the embedding similarity of adjacent
+ASes is significantly higher than that of non-adjacent ASes.
+Furthermore, as the proportion of common neighbors increases
+(i.e., the topological structure becomes more similar), the
+embedding similarity of adjacent ASes increases. These findings demonstrate that the proposed method effectively captures
+the proximity between ASes.
+2) AS Hierarchy: The Internet AS-level topology exhibits
+a hierarchical structure. Core ASes are located at the high tier
+of the Internet and form the backbone of global connectivity,
+
+We analyze the impact of key parameters of the graph
+attention auto-encoder on large-scale BGP routing anomaly
+detection performance.
+The key parameters of the graph attention auto-encoder
+include the depth of the encoder L and the dimension of the
+AS embedding S. The encoder takes the AS embedding as
+input and outputs the transformed embedding. The depth of
+the encoder determines the scope of information propagation.
+The AS embedding is a low-dimensional vector containing
+graph structural information, and its dimension influences the
+model’s representational capacity.
+We set L = {1, 2, 3, 4, 5} and S = {1, 4, 8, 16, 32}.
+Large-scale BGP routing anomaly detection experiments are
+conducted using different parameter combinations. The detection accuracy is shown in Fig. 12. L = 2, S = 16 is the optimal
+parameter combination, with a detection accuracy of 97.3%.
+The experimental results indicate that properly increasing the
+depth of the encoder can improve detection accuracy. But
+over-smoothing occurs when the depth of the encoder is too
+large, causing the node embeddings of different ASes to tend
+to be the same. Conversely, if it is too large, it may include
+
+498
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+TABLE VI
+A BLATION E XPERIMENT R ESULTS C OMPARISON
+
+noise and significantly increase computational resource
+consumption.
+F. Ablation Studies
+To evaluate the contribution of different components of
+the proposed method for large-scale BGP routing anomaly
+detection, we conduct ablation experiments on the attention mechanism, MLP model, and phased training strategy
+employed in the proposed method.
+Graph auto-encoder and graph attention auto-encoder are
+selected to obtain AS embeddings, and these embeddings
+are classified using Support Vector Machine (SVM), Fully
+Connected Layer (FC), and MLP models, respectively. The
+models are trained with joint training and phase-based training
+strategies, respectively. The average prediction performance on
+different anomaly events for the combinations of models and
+training strategies is shown in Tab. VI.
+In terms of embedding acquisition, the detection
+performance of the graph attention auto-encoder outperforms
+that of the graph auto-encoder. This indicates that by
+introducing the attention mechanism, the model can focus
+more on important ASes where large-scale BGP routing
+anomalies are likely to occur, thus improving the accuracy of
+anomaly detection. In terms of embedding classification, the
+MLP model performs significantly better than the SVM and
+FC models, capturing the complex nonlinear relationships in
+AS embeddings. In terms of training strategies, the detection
+accuracy is higher under the phase-based training strategy.
+The unsupervised loss aims to learn the features of the
+normal topology, while the supervised loss aims to distinguish
+anomalous states. There is some conflict between these two
+optimization objectives, and joint training in the second stage
+results in a decline in prediction performance.
+G. Anomaly Origin AS Localization
+Based on the differences between the AS embeddings during
+anomaly events and those in a normal network state, we
+provide a list of possible anomaly origin ASes.
+
+Fig. 13. Ranking of node embedding differences of anomaly origin ASes.
+The node embedding difference rankings of the anomaly origin ASes are all
+within the top 10 for different anomaly events.
+TABLE VII
+L IST OF P OTENTIAL A NOMALY O RIGIN AS ES
+
+We use Euclidean distance to evaluate the differences
+in node embeddings of all ASes after an anomaly event
+occurs. The ranking of the differences in node embeddings
+for anomaly origin ASes is shown in Fig. 13. For the TTNet
+anomaly event, the node embedding difference of the anomaly
+origin AS9121 consistently ranked first. For the IndoSat
+anomaly event, 8 minutes after the anomaly occurred, the node
+embedding difference of the anomaly origin AS4761 ranked
+first, indicating that the impact of the event spread gradually,
+
+WANG et al.: LARGE-SCALE BGP ROUTING ANOMALY DETECTION
+
+499
+
+TABLE VIII
+T HE I NFERENCE T IME OF D IFFERENT D ETECTION M ETHODS
+
+and the illegal routing went through a period of rerouting in
+the network. For the Rostelecom event, the node embedding
+difference of the anomaly origin AS12389 ranked within the
+top ten. Since the event lasted for a short time, the anomaly
+origin AS returned to normal after 10 minutes. For the India
+anomaly event, the node embedding difference of the anomaly
+origin AS55410 ranked within the top five.
+Although not all anomaly events exhibit the largest node
+embedding differences for the anomaly origin ASes, in practical applications, the list of potential anomaly origin ASes can
+be inferred based on the node embedding differences, as shown
+in Tab. VII. The actual anomaly origin ASes are highlighted
+in bold and underlined, and their node embedding difference
+rankings are all within the top 10. This suggests that inferring
+potential anomaly origin ASes based on node embedding differences helps significantly narrow down the scope of anomaly
+origin AS investigations, supporting anomaly traceability and
+localization.
+H. Analysis of Inference Times and Response Times
+We compare the inference times of the proposed method
+and existing typical detection methods for different large-scale
+BGP routing anomaly events, and we analyze the response
+time of the proposed method.
+1) Inference Times: Both the proposed method and existing
+typical methods consider large-scale BGP routing anomaly
+detection as a binary classification problem. They use machine
+learning to train detection models and deploy the trained
+models for anomaly detection, performing the inference process. Therefore, we compare the inference times for detecting
+anomalies on raw BGP data using the trained model in
+seconds, as shown in Tab. VIII. It can be seen that the
+proposed method does not provide the fastest inference time,
+but it is much faster than the BMLP method. This indicates
+that the proposed method sacrifices some time to improve
+detection accuracy. In the future, the lightweight large-scale
+BGP routing anomaly detection method will be the focus of
+our research.
+2) Response Times: Additionally, we analyze the response
+time of the proposed method, which is the time interval from
+the occurrence of the anomaly to its successful detection by
+the model [16]. For different anomaly events, we sequentially
+collect BGP data within the time window [t0 − 30, t0 + t],
+from 30 minutes before the anomaly event occurs to t minutes
+after its occurrence. t = {2, 4, 6, . . . , 30}. This data is used for
+
+Fig. 14.
+Comparison of detection performance at different times after
+anomaly events occur. The detection performance gradually improves and then
+tends to stabilize.
+
+model training and testing. The average detection performance
+under different time windows is shown in Fig. 14.
+The experimental results indicate that 4 minutes after the
+anomaly event occurs, the accuracy, precision, recall, F1 score,
+and FPR are 81.3%, 87.9%, 72.5%, 79.5%, and 10.0%, respectively, achieving preliminary anomaly detection. Subsequently,
+the detection performance gradually improves. Ten minutes
+after the anomaly event occurs, the accuracy, precision, recall,
+F1 score, and FPR are 96.8%, 97.5%, 96%, 96.7%, and
+2.5%, respectively, and the detection performance eventually
+stabilizes. This demonstrates that the proposed method is
+capable of detecting large-scale BGP anomalies in a short
+period. In the future, we will further investigate its real-time
+detection performance in practical deployment applications.
+V. C ONCLUSION
+To solve the problems of interference from non-important
+ASes and the insufficiency of labeled anomaly data in existing
+typical detection methods, we propose a large-scale BGP
+routing anomaly detection method based on a graph attention auto-encoder. The proposed method pre-trains the graph
+attention auto-encoder model to obtain AS embeddings and
+classifies them based on the multi-layer perceptron to achieve
+large-scale BGP routing anomaly detection. The experimental
+results on four large-scale BGP routing anomaly event datasets
+show that the proposed method achieves higher detection
+accuracy than existing typical methods. In future work, the
+
+500
+
+IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+lightweight anomaly detection method will be the focus of
+our research. And we will continue to evaluate our method by
+running it in a live deployment.
+R EFERENCES
+[1] R. S. Silva and L. F. M. de Moraes, “GonoGo—Assessing the confidence
+level of distribute intrusion detection systems alarms based on BGP,”
+IEEE Trans. Netw. Service Manag., vol. 22, no. 1, pp. 209–219, Feb.
+2025.
+[2] S. Murphy, “BGP security vulnerabilities analysis,” IETF, RFC 4272,
+2006.
+[3] C. Hu, K. Chen, Y. Chen, B. Liu, and A. V. Vasilakos, “A measurement
+study on potential inter-domain routing diversity,” IEEE Trans. Netw.
+Service Manag., vol. 9, no. 3, pp. 268–278, Sep. 2012.
+[4] J. Li et al., “RoLL +: Real-time and accurate route leak locating with
+AS triplet features at scale,” IEEE/ACM Trans. Netw., vol. 32, no. 6,
+pp. 1–16, Dec. 2024.
+[5] P. Sermpezis et al., “ARTEMIS: Neutralizing BGP hijacking within a
+minute,” IEEE/ACM Trans. Netw., vol. 26, no. 6, pp. 5263–5278, Dec.
+2018.
+[6] S. Deshpande, M. Thottan, and B. Sikdar, “An online scheme for the
+isolation of BGP misconfiguration errors,” IEEE Trans. Netw. Service
+Manag., vol. 5, no. 2, pp. 78–90, Jun. 2008.
+[7] K. Hoarau, P. U. Tournoux, and T. Razafindralambo, “Suitability of
+graph representation for BGP anomaly detection,” in Proc. IEEE 46th
+Conf. Local Comput. Netw., 2021, pp. 305–310.
+[8] M. Chen, M. Xu, Q. Li, and Y. Yang, “Measurement of large-scale BGP
+events: Definition, detection, and analysis,” Comput. Netw., vol. 110,
+pp. 31–45, Dec. 2016.
+[9] P. Francois, O. Bonaventure, B. Decraene, and P.-A. Coste, “Avoiding
+disruptions during maintenance operations on BGP sessions,” IEEE
+Trans. Netw. Service Manag., vol. 4, no. 3, pp. 1–11, Dec. 2007.
+[10] N. M. Al-Rousan and L. Trajković, “Machine learning models for
+classification of BGP anomalies,” in Proc. 13th Int. Conf. High Perform.
+Switching Routing, 2012, pp. 103–108.
+[11] Y. Dong, Q. Li, R. O. Sinnott, Y. Jiang, and S. Xia, “ISP self-operated
+BGP anomaly detection based on weakly supervised learning,” in Proc.
+IEEE 29th Int. Conf. Netw. Protocols, 2021, pp. 1–11.
+[12] O. Sanchez, S. Ferlin, C. Pelsser, and R. Bush, “Comparing machine
+learning algorithms for BGP anomaly detection using graph features,”
+in Proc. 3rd ACM CoNEXT Workshop on Big Data, Mach. Learn. Artif.
+Intell. Data Commun. Netw., 2019, pp. 35–41.
+[13] J. Huang, M. Odiathevar, A. Valera, J. Sahni, M. Frean, and W. K. Seah,
+“Realtime BGP anomaly detection using graph centrality features,” in
+Proc. Int. Conf. Adv. Inf. Netw. Appl., 2024, pp. 222–233.
+[14] S. Khoshraftar and A. An, “A survey on graph representation learning
+methods,” ACM Trans. Intell. Syst. Technol., vol. 15, no. 1, pp. 1–55,
+2024.
+[15] T. Shapira and Y. Shavitt, “BGP2Vec: Unveiling the latent characteristics
+of autonomous systems,” IEEE Trans. Netw. Service Manag., vol. 19,
+no. 4, pp. 4516–4530, Dec. 2022.
+[16] K. Hoarau, P. U. Tournoux, and T. Razafindralambo, “BGNN: Detection
+of BGP anomalies using graph neural networks,” in Proc. IEEE Symp.
+Comput. Commun., 2022, pp. 1–6.
+[17] H. Latif, J. Paillissé, J. Yang, A. Cabellos-Aparicio, and P. Barlet-Ros,
+“Unveiling the potential of graph neural networks for BGP anomaly
+detection,” in Proc. 1st Int. Workshop Graph Neural Netw., 2022,
+pp. 7–12.
+[18] K. Hoarau, T. Razafindralambo, and P. U. Tournoux, “Unsupervised
+representation learning for BGP anomaly detection using graph autoencoders,” ITU J. Future Evol. Technol., vol. 5, no. 1, pp. 120–133,
+2024.
+[19] G. Comarela and M. Crovella, “Identifying and analyzing high impact
+routing events with pathMiner,” in Proc. ACM Internet Meas. Conf.,
+2014, pp. 421–434.
+[20] J. Li, V. Giotsas, Y. Wang, and S. Zhou, “BGP-multipath routing
+in the Internet,” IEEE Trans. Netw. Service Manag., vol. 19, no. 3,
+pp. 2812–2826, Sep. 2022.
+[21] N. Rodday et al., “The resource public key infrastructure (RPKI):
+A survey on measurements and future prospects,” IEEE Trans. Netw.
+Service Manag., vol. 21, no. 2, pp. 2353–2373, Apr. 2024.
+[22] G. He, W. Su, S. Gao, J. Yue, and S. K. Das, “ROAchain: Securing route
+origin authorization with blockchain for inter-domain routing,” IEEE
+Trans. Netw. Service Manag., vol. 18, no. 2, pp. 1690–1705, Jun. 2021.
+
+[23] B. Al-Musawi, P. Branch, and G. Armitage, “BGP anomaly detection
+techniques: A survey,” IEEE Commun. Surveys Tuts., vol. 19, no. 1,
+pp. 377–396, 1st Quart., 2017.
+[24] Y. Xie, Z. Zhang, N. Li, and H. Gao, “LeakFocus: Catching the
+perpetrator in routing leak event,” Comput. Security, vol. 150, Mar. 2025,
+Art. no. 104300.
+[25] M. Kowalski and W. Mazurczyk, “Toward the mutual routing security
+in wide area networks: A scoping review of current threats and
+countermeasures,” Comput. Netw., vol. 230, Jul. 2023, Art. no. 109778.
+[26] J. C. Cardona, S. Vissicchio, P. Lucente, and P. Francois, “‘I can’t get
+no satisfaction’: Helping autonomous systems identify their unsatisfied
+interdomain interests,” IEEE Trans. Netw. Service Manag., vol. 13, no. 1,
+pp. 43–57, Mar. 2016.
+[27] M. Zeng, D. Li, P. Zhang, K. Xie, and X. Huang, “Federated route leak
+detection in inter-domain routing with privacy guarantee,” ACM Trans.
+Internet Technol., vol. 23, no. 1, pp. 1–22, 2023.
+[28] T. Holterbach, T. Alfroy, A. Phokeer, A. Dainotti, and C. Pelsser, “A
+system to detect forged-origin BGP hijacks,” in Proc. USENIX Symp.
+Netw. Syst. Design Implement., 2024, pp. 1751–1770.
+[29] N. Rodday, G. D. Rodosek, A. Pras, and R. van Rijswijk Deij,
+“Exploring the benefit of path plausibility algorithms in BGP,” in Proc.
+IEEE Netw. Oper. Manag. Symp., 2024, pp. 1–10.
+[30] M. Zeng, X. Huang, P. Zhang, and D. Li, “Understanding the impact of
+outsourcing mitigation against BGP prefix hijacking,” Comput. Netw.,
+vol. 202, Jan. 2022, Art. no. 108650.
+[31] B. A. Scott, M. N. Johnstone, and P. Szewczyk, “A survey of advanced
+border gateway protocol attack detection techniques,” Sensors, vol. 24,
+no. 19, p. 6414, 2024.
+[32] R. Zhao, B. Du, and L. Zhang, “A robust nonlinear hyperspectral
+anomaly detection approach,” IEEE J. Sel. Topics Appl. Earth Observ.
+Remote Sens., vol. 7, no. 4, pp. 1227–1234, Apr. 2014.
+[33] B. Du, R. Zhao, L. Zhang, and L. Zhang, “A spectral-spatial based local
+summation anomaly detection method for hyperspectral images,” Signal
+Process., vol. 124, pp. 115–131, Jul. 2016.
+[34] R. Zhao, B. Du, L. Zhang, and L. Zhang, “Beyond background feature
+extraction: An anomaly detection algorithm inspired by slowly varying
+signal analysis,” IEEE Trans. Geosci. Remote Sens., vol. 54, no. 3,
+pp. 1757–1774, Mar. 2016.
+[35] R. Zhao and L. Zhang, “GSEAD: Graphical scoring estimation for
+hyperspectral anomaly detection,” IEEE J. Sel. Topics Appl. Earth
+Observ. Remote Sens., vol. 10, no. 2, pp. 725–739, Feb. 2017.
+[36] R. Zhao, B. Du, L. Zhang, and L. Zhang, “A robust background regression based score estimation algorithm for hyperspectral
+anomaly detection,” ISPRS J. Photogrammetry Remote Sens., vol. 122,
+pp. 126–144, Dec. 2016.
+[37] R. Zhao, B. Du, and L. Zhang, “Hyperspectral anomaly detection via
+a sparsity score estimation framework,” IEEE Trans. Geosci. Remote
+Sens., vol. 55, no. 6, pp. 3208–3222, Jun. 2017.
+[38] Z. Yang et al., “A multi-scale mask convolution-based blind-spot
+network for hyperspectral anomaly detection,” Remote Sens., vol. 16,
+no. 16, p. 3036, 2024.
+[39] R. Zhao, Z. Yang, X. Meng, and F. Shao, “A novel fully convolutional
+auto-encoder based on dual clustering and latent feature adversarial
+consistency for hyperspectral anomaly detection,” Remote Sens., vol. 16,
+no. 4, p. 717, 2024.
+[40] C. Labovitz, G. R. Malan, and F. Jahanian, “Internet routing instability,”
+IEEE/ACM Trans. Netw., vol. 6, no. 5, pp. 515–528, Oct. 1998.
+[41] S. Deshpande, M. Thottan, T. K. Ho, and B. Sikdar, “An online
+mechanism for BGP instability detection and analysis,” IEEE Trans.
+Comput., vol. 58, no. 11, pp. 1470–1484, Nov. 2009.
+[42] C. Zheng, L. Ji, D. Pei, J. Wang, and P. Francis, “A light-weight
+distributed scheme for detecting IP prefix hijacks in real-time,” ACM
+SIGCOMM Comput. Commun. Rev., vol. 37, no. 4, pp. 277–288, 2007.
+[43] N. H. Hammood, B. Al-Musawi, and A. H. Alhilali, “A survey of BGP
+anomaly detection using machine learning techniques,” in Proc. Int.
+Conf. Appl. Techn. Inf. Security, 2021, pp. 109–120.
+[44] Z. Jin, X. Yin, X. Shi, Z. Wang, Y. Yang, and J. Wu, “TopoScope:
+Recover AS relationships from fragmentary observations,” in Proc. ACM
+Internet Meas. Conf., 2020, pp. 266–280.
+[45] K. G. Leyba, J. J. Daymude, J.-G. Young, M. E. J. Newman, J. Rexford,
+and S. Forrest, “Cutting through the noise to infer autonomous
+system topology,” in Proc. IEEE Conf. Comput. Commun., 2022,
+pp. 1609–1618.
+[46] Z. Wang, F. Yuan, R. Li, M. Zhang, and X. Luo, “Hidden AS link
+prediction based on random forest feature selection and GWO-XGBoost
+model,” Comput. Netw., vol. 262, May 2025, Art. no. 111164.
+
+WANG et al.: LARGE-SCALE BGP ROUTING ANOMALY DETECTION
+
+501
+
+[47] K. Hoarau, P. U. Tournoux, and T. Razafindralambo, “BML: An efficient
+and versatile tool for BGP dataset collection,” in Proc. IEEE Int. Conf.
+Commun. Workshops, 2021, pp. 1–6.
+[48] L. van der Maaten and G. Hinton, “Visualizing data using t-SNE,” J.
+Mach. Learn. Res., vol. 9, no. 11, pp. 2579–2605, 2008.
+
+Han Qiu received the Ph.D. degree from
+Information Engineering University, China, 2008,
+where she is a Professor. Her research focuses on
+inter-domain routing security and network security
+evaluation.
+
+Zekang Wang is currently pursuing the
+Ph.D. degree with the State Key Laboratory
+of Mathematical Engineering and Advanced
+Computing and also with the Key Laboratory
+of Cyberspace Situation Awareness of Henan
+Province. His main research interests include
+Internet measurement, network security, and network
+topology analysis.
+
+Yan Liu is a Professor with the State Key
+Laboratory of Mathematical Engineering and
+Advanced Computing and also with the Key
+Laboratory of Cyberspace Situation Awareness
+of Henan Province. Her research interests lie in
+cyberspace surveying and mapping.
+
+Fuxiang Yuan is a Lecturer with the State
+Key Laboratory of Mathematical Engineering and
+Advanced Computing and also with the Key
+Laboratory of Cyberspace Situation Awareness of
+Henan Province. His main research interests include
+cyberspace surveying and mapping, Internet measurement, and network security.
+
+Xiangyang Luo is a Professor with the State
+Key Laboratory of Mathematical Engineering and
+Advanced Computing and also with the Key
+Laboratory of Cyberspace Situation Awareness of
+Henan Province. He is the author or the co-author
+of more than 200 refereed international journals and
+conference papers. He has obtained the support of
+the National Natural Science Foundation of China
+and the National Key Research and Development
+Program of China. His main research interests lie in
+multimedia security and cyberspace surveying and
+mapping.
+PAPER_TEXT

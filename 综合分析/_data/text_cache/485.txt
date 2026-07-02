@@ -1,0 +1,153 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025                                                                             3522810
+
+
+
+
+ MFFTD: A Multiscale Feature Fusion Transformer
+      Detector for Electricity Theft Based
+         on Semi-Supervised Learning
+               Yufeng Wang , Senior Member, IEEE, Zhijie Wu , Jianhua Ma , Senior Member, IEEE,
+                                      and Qun Jin , Senior Member, IEEE
+
+    Abstract— The wide deployment of advanced metering infras-                 provides two-way communications between customers and
+tructure (AMI) in power systems allows utility companies to                    utility companies [1]. Through AMI, utility companies are
+automatically and accurately collect and process the time-series               able to gather sequentially temporal information about indi-
+load profiles of households, but meanwhile incurs the severe
+electricity theft (ET) that some illegal residential users may
+                                                                               vidual consumption, i.e., time series, and accordingly charge
+manipulate their electricity consumptions to reduce their billings.            customers. Wide deployment of AMI is a milestone that
+Although, due to the powerful ability of modeling long-range                   denotes traditional power systems are evolved into smart grids,
+dependencies in sequential data, transformer has been widely                   where pervasive control at all levels is a basic premise [2].
+used for time-series modeling including ET detection (ETD), the                Although many benefits have been brought by AMI, it also
+significant weakpoint lies in that it only considers the atten-                introduces a number of security vulnerabilities. For example,
+tion weights between either points or prepatched subsequences
+                                                                               adversaries can launch a variety of cyberphysical attacks
+(i.e., patches) of fixed size within the input sequence, which
+cannot fully characterize the relationships among multiscale                   against AMI devices and network components [3]. One of
+temporal patches and lead to suboptimal detection performance.                 the main purposes of these adversaries is to manipulate their
+To address the above issue, based on self-supervised feature                   electricity consumptions such that their billings can be lowered
+extraction and supervised fine-tuning, our work proposes a novel               down, so-called the behavior of electricity theft (ET) [4].
+multiscale feature fusion transformer encoder (TE)-based ETD
+framework, MFFTD. Specifically, our work’s contributions are
+following. First, in MFFTD, a hierarchical patching enhanced                   A. Research Motivation
+TE (HPTE) is explicitly designed, in which each layer patches
+the input sequence with variable patch size. Then, through                        Recently, based on the massive amount of data provided by
+hierarchically stacked multiple HPTE layers, the feature com-                  AMI, deep neural network (DNN)-based ET detection (ETD)
+bining multiscale patches can be effectively extracted. Second,                schemes have been widely developed [5], [6], [7], since
+considering the constraint that only a small percentage of labeled             DNNs can automatically extract features and have powerful
+theft samples are practically available, our work first pretrains              functional approximation ability, including convolutional neu-
+the structure parameters of MFFTD through a self-supervised                    ral networks (CNNs) and recurrent neural networks (RNNs).
+pretext task of forecasting the randomly masked segments in time
+series. Then, the small percentage of labeled anomalous samples                Technically, CNN-based detectors [8], [9] transform 1-D
+is used to fine-tune the MFFTD model. Extensive experiments                    temporal electricity consumption data into 2-D matrix to
+on multiple real datasets demonstrate our proposed MFFTD                       extract spatial feature. Different from CNN-based detectors,
+scheme outperforms the state-of-the-art (SOTA) transformer-                    long short-term memory (LSTM, a specific variant of RNN)-
+based supervised and semi-supervised ETD methods.                              based ET detectors accept time series sequentially as input
+   Index Terms— Electricity theft detection (ETD), multiscale                  and inherently learn the temporal dependencies of electricity
+feature fusion, self-supervised learning, semi-supervised learning,            consumption data [10], [11]. However, their weakpoint lies in
+transformer, variable patching.                                                that: LSTM cannot compute in parallel and cannot efficiently
+                                                                               learn a long-range temporal dependencies and CNN-based
+                   I. I NTRODUCTION                                            detectors mainly focus on extracting local features of the
+                                                                               electricity consumption data. Although there existed work in
+T    HE advanced metering infrastructure (AMI) has been
+     widely deployed into modern power systems, which                          literature that design two-level CNNs [12] or adopt ConvL-
+                                                                               STM block [13] to attempt to simultaneously capture the
+  Received 10 December 2024; revised 21 February 2025; accepted 7 March        long-range and local features, both the structures still have
+2025. Date of publication 19 March 2025; date of current version 1 April
+2025. The Associate Editor coordinating the review process was Dr. Lei Mao.    the problem of not sufficiently learning global information
+(Corresponding author: Yufeng Wang.)                                           of the input temporal sequence. Recently, transformer-based
+  Yufeng Wang and Zhijie Wu are with the School of Telecom-                    detectors [14], [15] have been proposed to solve the afore-
+munications and Information Engineering, Nanjing University of Posts
+and Telecommunications, Nanjing 210049, China (e-mail: wfwang1974@
+                                                                               mentioned issues. Transformer is built on multihead attention
+gmail.com).                                                                    mechanism and is regarded as suitable modeling time series
+  Jianhua Ma is with the Faculty of Computer and Information Sciences,         including ETD task: It concurrently represents each input
+Hosei University, Tokyo 102-8160, Japan (e-mail: jianhua@hosei.ac.jp).         sequence element by considering its context (future–past),
+  Qun Jin is with the Faculty of Human Sciences, Waseda University,
+Tokyo 169-8050, Japan (e-mail: jin@waseda.jp).                                 while multiple attention heads can incorporate different repre-
+  Digital Object Identifier 10.1109/TIM.2025.3552857                           sentation subspaces [16]. However, there are two limitations
+               1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+3522810                                                        IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+
+
+in the existing transformer-based ET detectors. The first is that
+patching with fixed size used in traditional transformer [17]
+cannot sufficiently capture multiscale feature. The multiscale
+feature fusion method, by combining information from differ-
+ent scales, can effectively improve the detection accuracy of
+ETD systems. In [12] and [18], CNNs are used to extract fea-
+tures at different time scales from electricity consumption data.
+However, the aforementioned CNN-based methods primarily
+focus on local features and are not effective at capturing global
+and temporal information in electricity consumption data.
+   The second is the so-called insufficiency of labeled
+anomalous samples. Since extensive data labeling is often
+prohibitively expensive or impractical: require the knowledge
+of domain expertise, therefore, it is imperative to achieve high    Fig. 1. Summary of DNN-based ET detectors categorized from learning
+detection performance using only a limited amount of labeled        paradigm.
+data or by leveraging the existing plethora of unlabeled data.
+Generally, pretraining and fine-tuning learning paradigm is               extract multiscale features of the input long temporal
+well-suited to address this issue. In this paradigm, the model            sequence.
+is first pretrained for a pretext task on a dataset containing         2) To accurately detect ET under the constraint of only
+large number of normal samples, and then fine-tuned with                  limited number of labeled data available, MFFTD is
+few anomalous samples for a specific downstream task, such                trained in a semi-supervised manner. Specifically, a self-
+as ETD. Following this paradigm, several TE-based architec-               supervised pretrained scheme is implemented to learn
+tures have been proposed, including time-series transformer               the structure parameters of MFFTD, in which the
+(TST) [19] and Patch TST (PatchTST) [17]. Specifically,                   self-supervised pretext task is intentionally designed to
+to extract the temporal relations in the time series, patching is         forecast the randomly masked segments in time series.
+usually used, in which the long temporal sequence is divided              Then, the penultimate of the pretrained model as the
+into several subsequences with a certain patch size, and the              feature extractor (FE) and the added output layer as
+obtained subsequences are called patches. It is shown [17] that           classifier are fine-tuned with a small percentage of
+patching can effectively retain local semantic information and            labeled samples in a supervised way. In brief, this
+quadratically reduce computation and memory usage of the                  hybrid approach can merge the advantages of supervised
+attention maps. However, such patching with fixed size has one            and unsupervised learning paradigms and improve ETD
+fatal flaw: Once the input sequence is patched, the following             performance and generalization.
+TE can only learn the attention weights between patches of a           3) Extensive experiments on multiple electricity consump-
+fixed size, which fully did not exploit the relationships between         tion datasets are conducted to compare our proposed
+multiscale patches at all, and may lead to a poor detection               MFFTD scheme with various state-of-the-art (SOTA)
+performance.                                                              methods. In terms of main performance metrics, the
+                                                                          effectiveness of the proposed ETD scheme MFFTD is
+B. Main Contributions of Our Work                                         verified.
+   To address the above issues, different from the exist-              The rest of this article is organized as follows. In Section II,
+ing works, this article proposes a novel multiscale feature         typical DNN (including transformer)-based ETD schemes are
+fusion TE-based ETD architecture MFFTD, based on semi-              summarized and their disadvantages are discussed. Section III
+supervised learning paradigm consisting of self-supervised          presents the proposed ETD framework MFFTD and describes
+feature extraction and supervised fine-tuning. This approach        its main modules in detail. Section IV provides the comprehen-
+leverages both unlabeled and labeled data, enhancing model          sive performance comparison between the proposed MFFTD
+performance even with limited labeled anomalous data.               framework and SOTA ETD methods. Finally, we briefly con-
+Especially, a novel multiscale feature fusion TE, named as          clude this article and point out future work.
+hierarchical patching enhanced transformer encoder (HPTE),
+is designed to intentionally extract and fuse multiscale fea-                           II. R ELATED W ORK
+tures. Since electricity consumption data typically contain            DNN-based time-series anomaly detection schemes can
+patterns at different time scales, HPTE can effectively capture     automatically extract temporal features from historical elec-
+these complex temporal dependencies, thereby improving the          tricity consumption data and then detect anomalies. Generally,
+identification of ET behaviors.                                     from the perspective of learning paradigm, the existing
+   In detail, the main contributions of this article can be         schemes can be classified into three categories, as shown
+summarized as follows.                                              in Fig. 1: supervised-learning-based, unsupervised-learning-
+   1) In MFFTD, the core component, the HPTE, is designed.          based, and semi-supervised-learning, which are correspond-
+       In detail, at each HPTE layer, the input temporal            ingly discussed in Sections II-A–II-C.
+       sequence is patched with variable patch size, and
+       then the multihead attentions are used to infer the          A. Supervised-Learning-Based Methods
+       correlation between any pair of patches. Then, hierar-          Supervised-learning-based methods focus on building pre-
+       chically stacked HPTE layers are used to automatically       dictive models from labeled data to detect ET. There are
+WANG et al.: MULTISCALE FEATURE FUSION TRANSFORMER DETECTOR FOR ET BASED ON SEMI-SUPERVISED LEARNING                         3522810
+
+
+
+two mainly used DNNs: CNN and LSTM. Wide and deep                   Unsupervised-learning-based methods usually aim to learn the
+CNNs (WDCNNs) [12] consist of a wide component and                  latent distribution of unlabeled data. The objective function of
+a deep component. The wide component extracts the global            the data reconstruction is designed for dimension reduction or
+features of 1-D electricity consumption data, and the deep          data compression, rather than anomaly detection.
+component captures the periodical and nonperiodical features           As a result, purely unsupervised paradigm did not assume
+from the transformed 2-D data matrix. Then the features             the existence of anomalous temporal samples. Its main goal is
+from two components are added together to predict anomaly           not specially designed for anomaly detection, but for generally
+probability. But the wide component (i.e., the fully connected      learning the normality of time series [24], which may lead to
+layer) cannot effectively learn temporal dependencies from          relatively poor ETD performance.
+customers’ electricity consumption data [6], and the simple
+adding operation cannot effectively fuse two types of features.     C. Semi-Supervised-Learning-Based Methods
+Hybrid-order representation learning network (HORLN) [20]              To integrate the benefits of supervised and unsupervised
+learns the hybrid-order representations of the transformed 2-D      paradigms under the constraint of insufficient labeled data,
+data matrix. The first-order representations contain inter-and-     semi-supervised-learnin

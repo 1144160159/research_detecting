@@ -1,0 +1,1012 @@
+1970 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ Toward Context-Aware Anomaly Detection for
+ AIOps in Microservices Using Dynamic
+ Knowledge Graphs
+ Pieter Moens , Bram Steenwinckel , Femke Ongenae , Bruno Volckaert , Senior Member, IEEE,
+ and Sofie Van Hoecke
+
+ Abstract—Microservice applications are omnipresent due to I. I NTRODUCTION
+their advantages, such as scalability, flexibility and consequen-
+ N THE digital landscape that has characterized the last
+tially resource cost efficiency. The loosely-coupled microservices
+can be easily added, replicated, updated and/or removed to
+address the changing workload. However, the distributed and
+ I decade, businesses ranging from e-commerce to finance up
+ to healthcare rely on software systems to deliver seamless
+dynamic nature of microservice architectures introduces a com- experiences to their end-users. For instance, an online retail
+plexity with regard to monitoring and observability, which is platform handles thousands, or even millions, of transacparamount to ensure reliability, especially in critical domains.
+Anomaly detection has become an important tool to automate
+ tions daily [1], while eHeatlh platforms are processing a
+microservice monitoring and detect system failures. Nevertheless, large amount of (temporal) data from a plethora of monstate-of-the-art solutions assume the topology of the monitored itoring equipment that requires rapid and accurate analysis
+application to remain static over time and fail to account for and interpretation [2]. To ensure smooth operations and
+the dynamic changes the application, and the infrastructure it is meet stakeholder demands, many companies have transitioned
+deployed on, undergoes. This paper tackles these shortcomings
+by introducing a context-aware anomaly detection methodology
+ from a traditional monolithic architecture to a Microservice
+using dynamic knowledge graphs to capture contextual features Architecture (MSA) [3]. Instead of one large, unwieldy appliwhich describe the evolving state of the monitored system. cation handling everything, e.g., from inventory management
+Our methodology leverages resource and network monitoring to payment processing in e-commerce or patient monitoring
+to capture dependencies between microservices, and the infras- and prescription handling in eHealth, the system is decoupled
+tructure they are running on. In addition to the methodology
+for anomaly detection, this paper presents an open-source
+ into smaller microservices. Each microservice focuses on a
+benchmark framework for context-aware anomaly detection that specific task, such as managing product listings, ingesting
+includes monitoring, fault injection and data collection. The patient monitoring data or processing payments, and comevaluation on this benchmark shows that our methodology municates over the network with other dependent services
+consistently outperforms the non-contextual baselines. These through well-defined Application Programming Interfaces
+results underscore the importance of contextual awareness for
+robust anomaly detection in complex, topology-driven systems.
+ (APIs). These loosely coupled, fine-grained microservices can
+Beyond these achieved improvements, our benchmark establishes be individually developed and deployed across distributed
+a reproducible and extensible foundation for future research, machines. This improves scalability and maintenance, but also
+facilitating the experimentation with broader ranges of mod- allows for more frequent and granular updates, introducing
+els and a continued advancement in context-aware anomaly new versions and features without disrupting the entire system.
+detection.
+ For example, during peak shopping seasons, the payment
+ Index Terms—Anomaly detection, microservices, knowledge processing microservice can be scaled independently to handle
+graph, dynamic graphs, knowledge graph embedding, AIOps, increased traffic without affecting other parts of the system.
+context.
+ Similarly, the microservices for ingestion and processing of
+ real-time monitoring data in an eHeatlh system can be scaled
+ individually depending on the number of hospital rooms
+ currently occupied. This avoids horizontal scaling of the entire
+ application, and thus minimizes the operational cost while
+ Received 23 September 2024; revised 1 April 2025, 10 October 2025, ensuring availability of the overall system.
+and 17 December 2025; accepted 4 January 2026. Date of publication However, these scalability and resource efficiency benefits
+12 January 2026; date of current version 16 January 2026. This research
+was funded by the FWO Junior Research project HEROI2C (G085920N) obtained through adoption of the MSA come at a cost
+that investigates hybrid machine learning for improved infection manage- of increased operational complexity in terms of monitoring
+ment in critically ill patients. The associate editor coordinating the review and observability [4]. As each microservice encapsulates a
+of this article and approving it for publication was D. G. Berbecaru.
+(Corresponding author: Bram Steenwinckel.) single business functionality, a request to the application often
+ The authors are with the IDLab, Ghent University–imec, 9052 traverses across multiple interconnected components before
+Gent, Belgium (e-mail: Pieter.Moens@ugent.be; Bram.Steenwinckel@ serving the end-user. A fault occurring in one component
+ugent.be; Femke.Ongenae@ugent.be; Bruno.Volckaert@ugent.be;
+Sofie.VanHoecke@ugent.be). can therefore propagate throughout the system. For example,
+ Digital Object Identifier 10.1109/TNSM.2026.3652304 the checkout microservice for a customer of an e-commerce
+ 
+ c 2026 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+ For more information, see https://creativecommons.org/licenses/by/4.0/
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1971
+
+platform or a patient being discharged in an eHealth platform paramount for detecting anomalies stemming from nodecould rely on the payment and e-mail microservices. A fault in level faults, e.g., node unavailability and resource shortage.
+one of these services, e.g., network latency, can affect in these Furthermore, integration of log-based and distributed tracing
+cases the response time of the checkout service, which in turn in MSA is intrusive and requires changes to the application
+could lead to a violation of timeouts toleration, resulting in an itself [12]. Developers are tasked with implementing descripinvalid request observed at the front-end of the application. tive and informative logging at critical points in the code.
+ System faults observed in microservice applications include, The resulting AD solutions are therefore strongly dependent
+but are not limited to, network latency, anomalous resource on the quality and uniformity of these logs. In addition to
+consumption and unavailability of system components [5]. this, a commonly observed shortcoming in related work is that
+These faults can cause inaccurate autoscaling of services, vio- the overall topology or dependency graph is considered to be
+lation of Service Level Agreements (SLAs) or even temporary static over time, meaning that the dependencies between comoutage of the application. This in turn can result in increased ponents remains the same throughout the entire dataset. The
+operational costs, costs associated with downtime, or even dynamicity of the monitored system can lead to temporal drift
+more drastic effects due to delayed patient care in eHealth and affect the performance of the deployed AD models over
+applications. time. Accurately capturing these types of dynamic changes in
+ Classic monitoring solutions, e.g., using Prometheus [6] benchmark datasets is paramount to evaluate the applicability
+and Grafana, or using the ElasticSearch, Logstash and Kibana of the proposed solutions to real-world scenarios.
+(ELK) stack [7], are capable of notifying IT and DevOps engi- We define concrete requirements for the AD solution
+neers in case of failures in the system through threshold-based proposed in this paper based on the these aforementioned open
+alerting. These solutions are based on fine-grained alerting challenges:
+and require multi-faceted thresholds for Key Performance R1 It should take into account both the application layer as
+Indicators (KPIs) in different layers of the application [8]. well as the infrastructure layer, and therefore be able to
+Determining and updating these thresholds, as well as deriving detect faults in both.
+the root cause of a fault that propagated through the system R2 It should be non-invasive and introduce no overhead for
+based on numerous alerts, is a complex and tedious task for the developers.
+IT and DevOps engineers. R3 It should be able to accurately detect system faults under
+ Artificial Intelligence for IT Operations (AIOps) [9] aims to dynamic conditions. Temporal changes in the topology
+move from monitoring towards observability and address this or state of the monitored system should have minimal
+issue through Machine Learning (ML). Instead of monitoring impact on the AD model.
+microservices using static thresholds, ML-based solutions, R4 It should be deployable for real-time detection of system
+such as Dynatrace [10], adopt Anomaly Detection (AD) faults.
+and Root Cause Analysis (RCA) techniques to automate the This work makes two main complementary contributions
+prediction and detection of faults. It thus allows engineers addressing the identified requirements. First, we introduce
+to respond promptly to potential failures by improving both a benchmark dataset that captures the multi-layer and nonfailure management as well as resource provisioning (e.g., invasive aspects of microservice environments (R1, R2).
+resource consolidation, service composition, and workload Second, we propose an anomaly detection approach leveraging
+estimation). heterogeneous knowledge graphs to model system dynamics
+ The biggest challenge that arises when applying state- and support real-time fault detection (R3, R4).
+of-the-art AD techniques to microservice-based applications, The presented research can be subdivided in four
+however, is their inherent dynamic behavior. To optimize (sub)contributions in chronological order of the paper:
+resource consumption and minimize operational costs while C1 An open, reproducible deployment bundle that integrates
+ensuring maximum reliability of the overall system when non-intrusive, production-grade monitoring and faulthandling varying workload, its components are continu- injection tooling to produce literal-enriched, multi-layer
+ously added, updated or removed through autoscaling and evaluations for microservice anomaly detection.
+rescheduling of resources. While AD for microservice-based C2 A schema or ontology to construct these Knowledge
+applications has received increased attention in literature over Graphs (KGs) and express the dependencies between
+recent years, this paper highlights shortcomings and open heterogeneous components in both the application and
+challenges when focusing on the temporal characteristics of infrastructure layers of a MSA.
+the monitored system. C3 A benchmark dataset for AD in microservices containing
+ Most related work infers the application topology. It does both data features and contextual features to capture the
+this by using Control Flow Graphs (CFG) extracted from dynamic state of the system over time.
+logs or distributed traces to capture how microservices depend C4 A novel methodology for real-time context-aware AD in
+on each other [11]. The relations that can be obtained from microservices based on KGs.
+these distributed traces are, however, often limited to the The remainder of this paper is structured as follows. First,
+dependencies between different microservices, and do not Section II summarizes related work in the domain of anomaly
+include their relation with the infrastructure they are running detection in microservices, and the benchmark datasets used
+on, for example, the specific hardware node the microservice for evaluation. It also highlights the contributions of this
+is deployed on. Taking into account these relations can be work with respect to this related work. Before diving into the
+1972 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+specifics of our methodology, we first describe the microser- from normal behavior data and detect anomalies based on
+vice environment (C1), the designed schema used to construct deviations from these patterns. In addition, they construct
+the KGs (C2) and the resulting benchmark dataset (C3) in CFGs from these system logs for diagnosis and RCA of the
+Sections III and IV respectively, which provide the neces- detected anomalies. DeepLog focuses on cybersecurity threats
+sary context for understanding our approach. Section V then and captures anomalies such as Denial of Service (DoS) and
+introduces the proposed methodology towards dynamic KG- detected port scans. The dataset considered stems from the
+based context-aware anomaly detection in microservices (C4). 2011 IEEE VAST Mini Challenge 2 [17] and contains log
+Section VI provides evaluation results of the proposed solution messages from a firewall and intrusion detection system.
+and a comparison with the state-of-the-art. Section VII reflects AutoLog [18] captures batches of logs from a given node,
+on the proposed solution and discusses its limitations and container or microservice and calculates a numerical entropy
+proposes directions for future work. Finally, Section VIII vector based on the frequency of the occurrence of certain
+concludes this paper and highlights the main insights of the terms in the batch of log messages. They then train a deep
+conducted research. learning model, i.e., an Auto Encoder (AE) model, to learn this
+ normal behavior and use this model to detect future anomalies.
+ II. R ELATED W ORK This unsupervised method does not require examples of
+ anomalies in the training data and is able to detect previously
+ This section provides a summary and discussion of related
+ unseen anomalies. AutoLog [18] captures its own log data
+literature in the domain of anomaly detection in microservices.
+ using five different scenarios, each representing a single
+We discuss methodologies proposed in recent years as well as
+ system fault. Similarly to DeepLog, the considered scenarios
+the benchmark datasets on which they have been evaluated,
+ are focused on cybersecurity and include the detection of DoS,
+focusing on the type of faults that are being considered and
+ bruteforce, tampering with data and/or logs.
+the conditions under which the dataset has been collected.
+ A second category of log-based solutions for anomaly detec-
+ Related work in the domain of microservice-based monitortion in microservice-based applications focuses on system call
+ing and anomaly detection can be roughly divided based on the
+ (syscall) log monitoring which captures and tracks low-level
+type of data used, i.e., log-based solutions, distributed tracingsystem interactions made by applications (e.g., file access,
+based solutions and resource metric-based solutions [5].
+ network connections, and process execution). In contrast to
+ application log-based solutions, syscall log monitoring is less
+A. Log-Based Solutions invasive to the application under inspection, making it more
+ In most nodes, containers and devices, logs are captured at suitable for monitoring third-party or legacy applications.
+critical points for debugging and root cause analysis purposes. Due to the nature of syscalls, related work in this field is
+These textual messages are often unstructured and require primarily focused on the detection of anomalous behavior and
+parsing strategies and systems [13]. When correctly parsed, container-based security threats, such as privilege escalation,
+logs provide valuable information about the current state of the unauthorized file modifications, or container breakouts.
+individual services, which has been showcased in the related Related work, such as ContainerGuard [19], addresses the
+work discussed in the following paragraphs. problem of imperfect resource isolation and shared kernel
+ Nandi et al. [11] introduce a technique to automatically between containers and uses a Variational AE trained on syscall
+mine different log message types, or templates, from unstruc- logs to detect meltdown and spectre attacks. Guo et al. [20]
+tured execution logs. They construct a CFG from the logs utilizes the information captured by syscall logs to detect zeroto capture the execution flow within a single machine. day data manipulation and DoS attacks, meaning that their
+LogSed [14] extends this method and introduces a temporal solution is able to detect previously unseen threats.
+dimension to the collected CFG by calculating the time Karn et al. [21], on the other hand, identified cryptocurrency
+between logs within a single flow, resulting in a time-weighted mining as one of the most serious malware threats in container-
+CFG. They used these time-weighted graphs to detect devia- based applications and proposed a solution using sycall log
+tions from normal application behavior by matching captured monitoring and eXplainable AI (XAI) to detect these malicious
+interval times with the previously established time weights cryptocurrency miners and prevent server resources from being
+in the learned normal CFGs. LogSed [14] uses a benchmark hijacked.
+microservice application, namely Acme Air [15]. They simu- All of these log-based solutions capture detailed information
+late a load of several hundreds of concurrent requests to several about events that occur in a single machine, or service.
+microservices in the application and inject artificial faults per- However, logs lack the full context of the transaction flow
+taining three types of anomalies, namely sequence anomalies, across system components, or microservices, making it difredundancy anomalies and latency anomalies. These anomalies ficult to link correlated events as faults propagate through
+directly relate to the CFGs they construct such as deviations the distributed system, and to derive the impact on the
+from known sequences, previously unseen logs that can not be overall system. Information about the dependencies between
+mapped on the known graph, and logs exceeding the expected different system components is essential to capture the state
+interval time. of the monitored system and detect anomalies that might be
+ DeepLog [16] uses a deep learning model, i.e., a Long considered normal in different contexts, e.g., the expected
+Short-Term Memory (LSTM) model, to model a system log resource usage of a hardware machine is directly correlated to
+as a natural language sequence. They then learn log patterns the number and type of microservices currently running on it.
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1973
+
+B. Distributed Tracing-Based Solutions capture a dataset using a custom lab environment. They mon-
+ Distributed tracing describes the execution process of a itor resource consumption within Virtual Machines (VMs),
+request across service instances, i.e., invocation chain, by such as CPU, memory, cache, network usage (i.e., bytes sent
+attaching a trace ID to the captured log messages, making it and received). They implemented a custom script to inject
+possible to easily capture dependencies between services. four targeted system faults, namely high CPU consumption,
+ Nedelkoski et al. [22] use these distributed traces for memory leak, network package loss and network latency
+anomaly detection and classification by training a deep learn- increase.
+ing model, namely a Variational AE in combination with a Nobre et al. [27] investigates a supervised deep learn-
+Recurrent Neural Network (RNN). They demonstrate their ing approach to anomaly detection in microservice-based
+model on a lab environment for four different injected anoma- systems. They collected and labeled network resource data
+lies: (i) increase in latency caused by the service, (ii) network (e.g., network latency and response status codes) through fault
+latency, (iii) network packet loss, and (iv) server process injection, and compared the performance of a Multi-Layer
+kill. They implemented their own microservice application Perceptron (MLP) classification model trained on the serviceconsisting of only three microservices for evaluation of their level monitoring data captured during the load test versus a
+proposed method. model trained on resource-level monitoring data (e.g., CPU
+ DeepTraLog [23] investigates a graph-based approach using and memory usage). Nobre et al. evaluate their approach using
+a Gated Graph Neural Network (GGNN) model for graph the SockShop benchmark application [28]. They injected two
+embedding of logging data of distributed traces. They then faults in two specific microservices, namely the orders and
+train a Support Vector Data Description (SVDD) classifier carts services. The anomalies are on the one hand a functional
+on these embeddings for supervised AD. BertHTLG [24] anomaly, which throws a runtime exception in the respective
+extends on this approach and improves the calculation of services, and on the other hand a performance anomaly, which
+embeddings from logging data using a heterogeneous graph pauses the execution of the program for 5 seconds.
+representation enhanced by Sentence-Bert before utilizing a ServiceAnomaly [29] uses a combination of distributed
+Graph Convolutional Network (GCN) and SVDD. Similarly tracing and network resource metrics to characterize the
+to DeepTraLog, they then train a SVDD model for supervised normal behavior of the microservice application. They model
+AD. DeepTraLog [23] and BertHTLG [24] both evaluate their the normal behavior of the application as a CFG by extracting
+approaches on the TrainTicket benchmark dataset [25], which inter-service dependencies from the collected traces. They then
+contains 14 different types of faults. These faults, however, annotate the edges of this CFG using network resource metrics.
+are limited to service-level anomalies, such as incorrect con- During prediction, they calculate the differences between
+figuration of SSL, JVM or Docker, incorrect calculation of collected graphs from the healthy state against the newly
+ticket prices, a wrong column name included in the constructed received graph. As the authors mention, their combination of
+SQL statement and incorrect synchronization of service states distributed traces with network resource metrics yields high
+among services. performance results, but their proposed approach is not capable
+ Distributed tracing-based solutions, just like logging-based of capturing dynamic changes in the application and suffers
+methods, require custom code within each deployed service. when the normal behavior changes over time. ServiceAnomaly
+The collected logs from distributed tracing solutions are evaluates its proposed solution on two benchmark datasets,
+thus limited to the application layer, making it difficult to namely Train Ticket [25] and TeaStore [30]. They injected
+capture the impact of an individual trace on the infrastructure two additional faults on these benchmark environment under
+the microservices are running on. Furthermore, monitoring varying load, namely a fixed service latency of 15 seconds for
+systems relying on logs and traces are considered invasive as 80% of the requests and a service hangup anomaly simulated
+the adoption of these systems affects the underlying software by temporarily downscaling the targeted microservice to zero
+application itself. The performance of these approaches is also replicas.
+heavily reliant on the quality of the available logs. Resource metric-based solutions are able to collect highlevel resource and network metrics at the application layer
+ and the infrastructure layer without altering the monitored
+C. Resource Metric-Based Solutions system. While these quantitative metrics are informative of
+ As resource metrics (e.g., CPU and memory) and network the health of the system components, they do not include
+metrics (e.g., throughput and latency) can be captured without any context information. ServiceAnomaly [29] tackles this by
+altering the application, resource metric-based solutions are combining distributed traces and resource metric monitoring
+less intrusive and do not require altering the underlying soft- data into a CFG. This method, however, is once again
+ware application itself, nor are they reliant on the qualitative intrusive. Furthermore, the constructed CFGs are limited to the
+log data. application layer dependencies and do not encompass metrics
+ Du et al. [26] leverage resource and network metrics for captured at the infrastructure layer.
+supervised classification of four types of anomalies, namely
+CPU hog, memory hog, network latency and network package
+loss. They evaluate four common classification techniques, D. Positioning
+i.e., k-Nearest Neighbors (k-NN), Random Forest (RF), Naive AD for microservice applications has become an active
+Bayes (NB) and Support Vector Machines (SVM). Du et al. research domain, and many solutions have been proposed and
+1974 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE I
+evaluated on a plethora of benchmark microservice appli- C OMPARISON OF P UBLIC B ENCHMARKS AND O UR DATASET. “+” =
+cations. This related work shows high performance when F ULLY S UPPORTED , “–” = N OT S UPPORTED , AND “±” = PARTIALLY
+detecting a variety of faults, such as spikes in resource and S UPPORTED
+network usage, and application failures. As explicitly pointed
+out by ServiceAnomaly [29], all related work in the domain
+evaluates their methodologies under varying user load, but the
+topology of the application is always assumed to be static.
+This poses a strong limitation on the applicability of the
+aforementioned state-of-the-art research solutions for real-life
+usage.
+ Distributed software applications, such as microservices, are
+characterized by their dynamic nature in order to enable scalability. This means that microservice instances can be added, Contrary to related work, this paper therefore approaches the
+rescheduled onto different hardware nodes, and removed to problem of AD for microservices from a different perspective
+optimize resource efficiency and robustness of the overall and emphasizes the impact and complexity of the inherent
+application. These dynamic changes to the application affect dynamic nature of microservice applications.
+the current state of the system and influence the normal To make the differences explicit, Table I summarizes a set of
+behavior seen in monitoring data. features that are relevant for microservice anomaly-detection
+ There is thus a need for methodologies capable of detecting research. Here, Static refers to whether the benchmark assumes
+anomalies as the topology of the application changes over a fixed service topology. Multi-layer indicates whether
+time. In order to achieve this, a more advanced benchmark both application- and infrastructure-level data are captured.
+dataset is required that captures these dynamic characteristics Numeric denotes the inclusion of time-aligned quantitative
+and includes contextual features about the monitored applica- monitoring metrics and Streaming expresses support for contion, and the infrastructure it is deployed on. tinuous, online data collection and evaluation. In contrast to the
+ While some state-of-the-art techniques have leveraged graph existing benchmarks, our approach and benchmark captures
+structures, such as CFGs to represent relations between all of these aspects, representing dynamic topologies, multidifferent services and components, they were limited to layer contextual features, rich numeric metrics and streaming
+the application layer and contain simple dependency graphs behaviour. Thereby enabling the proper evaluation of anomaly
+between microservices. In contrast to homogeneous CFGs, a detection approaches in conditions that more closely reflect
+KG is defined as a set of triples G = {(h, r , t)}. Each triple real-world microservice systems.
+is composed of a head entity h ∈ V, a tail entity t ∈ V, and a
+relationship between them r ∈ E. V denotes the set of vertices, III. B ENCHMARK E NVIRONMENT
+or nodes, in the graph and E denotes the set of edges, or
+ The benchmark dataset contains non-intrusive monitoring
+relationships. KGs are high dimensional data structures which
+ data from different sources which capture the relationships
+can be used to incorporate rich semantic metadata about the
+ between microservices. The infrastructure they are running
+heterogeneous entities and their relations.
+ on makes it possible to trace the dynamic changes the
+ As previously stated, none of the aforementioned techniques
+ microservice application undergoes throughout time. This sechave been applied to dynamic graphs. A dynamic graph can be
+ tion describes the architecture used to collect this dataset and
+defined as a set of static graphs Gt (Vt , Et ) where each graph
+ its most important components, such as load generation and
+Gti (Vti , Eti ) represents a snapshot of the dynamic graph at
+ fault injection, as well as the different measures taken to ensure
+timestamp ti . This graph format is closely related to the group
+ it is representative of real-world microservice applications.
+of temporal KGs and recent temporal KG-based anomaly-
+ The lab environment is deployed on our Fed4Fire
+detection efforts provide powerful tools to model and detect
+ testbed [34], which makes a large amount of hardware
+changes in these time-varying relational data [31], [32], [33].
+ resources available for research. Seven nodes are used to
+However, those works are typically developed for symbolic
+ deploy and configure a Kubernetes cluster. Each node has a
+temporal facts and evaluated on offline link prediction or
+ quad-core Intel Xeon E3-1220 v3 CPU (4 cores, 4 threads),
+KGs-quality tasks. They do not directly address the practical
+ 16 GB RAM and a 250 GB HDD. The node therefore exposes
+requirements of microservice monitoring, namely (i) native
+ 4 logical CPUs
+support for dense numeric monitoring literals (e.g., CPU,
+memory, latency), (ii) incremental/online updating for lowlatency, streaming detection, and (iii) combined application A. Architecture
+and infrastructure multi-layer semantics. Adapting these tem- The proposed architecture consists of two layers: (i) an
+poral KGs and KG-AD techniques to meet these constraints application layer, consisting solely of application microsertherefore requires nontrivial extensions. To the best of our vices required for the functioning of the monitored system, and
+knowledge, we are the first to consider the dynamic character (ii) a control layer, consisting of all components used to enable
+of microservices and exploit heterogeneous KGs to capture the monitoring, chaos engineering and data collection. To ensure
+contextual features about the changing topology in both the that there is no interference or residual monitoring data from
+application as well as the infrastructure layer. the control layer services, the hardware nodes are separated
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1975
+
+Fig. 1. Complete architecture of the proposed solution including the application layer (i.e., Online Boutique microservices demonstrator), the control layer
+consisting of monitoring/control components (e.g., Prometheus, Istio), the chaos engineering platform (i.e., Litmus) and custom components for load generation,
+data collection and fault injection. cAdvisor and Prometheus Node Exporter are deployed on the application nodes as local metric-collection agents and are
+shown within the control layer only as a logical abstraction for readability purposes. In the application layer, the gray boxes denote the Istio-injected sidecar
+proxy co-located with the corresponding microservice.
+
+between the two layers. A subset of four nodes is used to run in Fig. 1. For metric collection, the Prometheus Node Exporter
+the application components, while the other three nodes host and cAdvisor run on the application nodes they monitor but
+the control-layer services. The complete architecture is shown in Fig. 1 they are shown within the control layer as a logical
+1976 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+abstraction to highlight their role rather than their physical which is responsible for configuration management, distribuplacement. Both the application and control layer are discussed tion and processing. The Istio control plane deploys Envoy
+throughout this section with a detailed description of their most network proxies as sidecar proxies [39], which run in the same
+relevant components. Kubernetes Pod as the application container and therefore on
+ The monitoring and injection components of our architec- the same node/device. This way communication between the
+ture rely on widely adopted, production-grade tools and will proxy and the service is local and does not influence the
+be discussed more in depth in the following subsections. Using network. By deploying network proxies as sidecar proxies, the
+these established tools ensures fidelity to real deployments service mesh can be seamlessly applied to any cloud native
+and eases reproducibility. The end-to-end design choices that application without altering the underlying microservices.
+enable research on dynamic anomaly detection.
+ 1) Application Layer: To showcase the potential of the B. Load Generation
+proposed solution for microservice-based applications inde-
+ Locust [40] is an open-source load testing tool, designed and
+pendent of the use case domain, a representative benchmark
+ implemented for scalability, that supports running distributed
+for microservices is used as application layer. As mentioned
+ load tests over multiple machines. It enables developers and
+ind Section II, a number of benchmark microservice appli-
+ Site Reliability Engineering (SRE) engineers to define user
+cations have been used in literature, e.g., Train Ticket [25],
+ behaviour in Python code and swarm their system with
+Tea Store [30], and Sock Shop [28]. In this paper, the
+ millions of simultaneous users. While Locust is built towards
+Online Boutique [35] was chosen to build upon, which
+ load testing over a fixed period of time, its flexibility allows
+is a cloud-first microservices demo application which has
+ extension towards continuous load generation in order to
+been used by Google to demonstrate technologies, such as
+ collect realistic monitoring data under load.
+Kubernetes, Google Kubernetes Environment (GKE), Istio,
+ The Online Boutique benchmark microservice application
+Google Cloud Operations (Stackdriver), and gRPC. It repreships with a default load generation scenario. However, to
+sents an e-commerce platform and consists of 10 microservices
+ ensure the generalization of the proposed solution beyond
+written in Golang, Python, C#, Node.JS and Java.
+ the benchmark environment, additional measures are taken
+ 2) Control Layer: The control layer consists of a number
+ to create a more realistic situation. First, as seen in Fig. 1,
+of components used for monitoring and data collection, as well
+ the Load Generator is deployed on a second Kubernetes
+as chaos engineering and fault injection.
+ cluster to simulate user traffic from outside of the target cluster.
+ Node Exporter is a Prometheus component designed to
+ Second, different user scenarios are defined to represent a varimonitor the host system [6]. It is commonly used within
+ ety of users (e.g., browsing the catalogue, actively shopping).
+a Kubernetes environment to monitor the nodes within the
+ Third, six sequential steps were identified to describe a user’s
+cluster. It collects valuable metrics about the CPU, memory
+ journey throughout the system, affecting all microservices in
+and file system usage of each node. The resulting data is
+ the application. A Markov chain is created to describe these
+exposed on an HTTP endpoint, collected by Prometheus and
+ different stages and the probabilities between the steps. This
+persisted in a time-series database.
+ way, we introduce the randomness and complexity that can
+ Container Advisor (cAdvisor) is a component developed
+ be observed in real microservice applications. The complete
+by Google to monitor the resource usage and performance
+ chain is visualized in Fig. 2. Lastly, the temporal variation
+characteristics of Docker containers [36]. It collects, aggrein user load throughout the day is replicated using a custom
+gates, processes and exports information about these
+ distribution over 24 hours. The distribution of simultaneous
+containers at run-time, including their CPU and memory
+ users and the resulting throughput captured at the front-end of
+usage. While the Prometheus Node Exporter focuses on nodethe application is shown in Fig. 3.
+level metrics, cAdvisor solves the observability challenge at
+container-level.
+ Istio is an open-source service mesh technology based on C. Data Collection
+Kubernetes container orchestration [37]. A service mesh is As described in Section III-A2, three categories of monitora dedicated infrastructure layer that can be added to the ing are available in the proposed architecture: (i) node-level
+application to enable features, such as observability (e.g., metrics captured by the Prometheus Node Exporter including
+network tracing), traffic management (e.g., load balancing), resource usage of the different nodes in the Kubernetes cluster,
+and security [38]. It divides the application in two layers. The e.g., CPU, memory and file system usage, (ii) containerfirst layer, called the data plane, consists of the application level metrics captured by cAdvisor including resource usage
+specific microservices and a number of network proxies. of the different containers within the monitored application,
+These proxies guide and manage all service-to-service com- e.g., CPU and memory usage, and (iii) service-level metrics
+munication. The second layer, indicated as the control plane, provided through the Istio service mesh capturing monitoring
+consists of services dedicated to performing the service mesh data between microservices at the network layer, e.g., number
+specific tasks, such as managing and configuring the network of requests, and request duration. A complete overview of
+proxies. The Istio control plane consists of three services: the monitoring features captured in the dataset is provided in
+(i) the pilot, which communicates with the proxies to handle Table II.
+traffic management and routing, (ii) the citadel, which provides The Data Collector derives the topology graph by querying
+secure communication between services, and (iii) the galley, the Kubernetes API and obtaining service dependencies from
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1977
+
+ TABLE II
+ M ONITORING F EATURES C APTURED IN THE DATASET, I NCLUDING
+ R ESOURCE U SAGE M ETRICS F ROM P ROMETHEUS N ODE E XPORTER AND
+ C A DVISOR , AS W ELL AS N ETWORK L AYER M ONITORING F ROM I STIO
+
+Fig. 2. A Markov Chain that describes the realistic user scenario used for
+load testing, including six unique stages of the user journey starting from the
+moment the user visits the Web application (teal dot) until they close the page patterns, and tolerance for false positives versus detection
+(red dot). The outgoing edge weights are the probabilities of the next step
+being chosen during the random walk.
+ delay. The aggregation window is configurable in our pipeline
+ and can be adjusted for deployments requiring faster or more
+ conservative alerting.
+ The Data Collector component is implemented in Python,
+ using Celery [42] to enable distributed processing of (asynchronous) tasks through a task queue or message broker, such
+ as Redis or RabbitMQ. Every 15 seconds, i.e., the default
+ rate at which Prometheus scrapes new monitoring data from
+ its targets, a task is created to collect the data from the
+ Prometheus API and store it in a Persistent Volume (PV) on
+ the cluster. Using distributed processes allows the horizontal
+ scaling of worker instances and ensures that no window is
+ missed when the execution time of the data collection process
+ would exceed 15 seconds.
+
+ D. Fault Injection
+Fig. 3. Visualization of the load distribution shape (number of users) and Litmus Chaos is a chaos engineering platform for SRE that
+the resulting captured throughput (requests/s) at the front-end service. enables the identification of weaknesses in applications and
+ infrastructures [43]. Other chaos engineering solutions include
+ (i) managed services through cloud providers, such as Amazon
+the network monitoring data captured by Istio. It then collects Web Services (AWS) Fault Injection [44] and Azure Chaos
+the monitoring data for all nodes and containers in the Studio [45], (ii) commercial platforms, such as Gremlin [46],
+system from the Prometheus API using the Prometheus Query and (iii) open-source projects, such as Chaos Mesh [47]. We
+Language (PromQL), which enables querying of aggregated choose to employ Litmus Chaos as it is an open-source project
+data. For each of the aforementioned metrics, which can adopted by the Cloud Native Computing Foundation (CNCF)
+be queried as distributions, the following aggregations are and backed by a strong community. The Litmus Chaos Hub
+calculated over the last windows of five minutes: minimum, provides 50 community-created experiments out-of-the-box
+maximum, average, median (P50), P90, P95, deviation and for Kubernetes, AWS, Google Cloud Platform (GCP), Azure,
+variance. We aggregate monitoring metrics over five-minute VMWare and Spring Boot.
+windows to balance responsiveness with stability in highly Similarly to the Istio service mesh, Litmus Chaos consists
+dynamic microservice environments. This design choice is of a control plane and an execution or application plane.
+consistent with operational expectations that in production The control plane components include (i) the Chaos Center,
+microservice settings, anomalies typically need to be detected which is the front-end dashboard which can be used to create,
+within 2–5 minutes to prevent cascading failures and minimize manage and monitor workflows, (ii) the Authentication Server
+service impact [41]. Our five-minute aggregation therefore for authentication with the dashboard and back-end APIs, and
+targets this practical incident-response horizon while reducing (iii) the GraphQL Server, which is used by the Chaos
+short-lived volatility introduced by autoscaling and reschedul- Center for creating, updating and monitoring workflows. The
+ing. Shorter aggregation windows can increase sensitivity but GraphQL Server can also be directly accessed by an external
+may also amplify transient spikes and increase false positives, application to automate the chaos engineering process. The
+while longer windows risk delaying detection. In practice, execution plane includes components, such as (i) the Argo
+the ideal aggregation window is likely a tunable deployment Workflow Controller [48], an open-source container-native
+parameter that depends on the application domain, workload workflow engine for orchestrating parallel jobs on Kubernetes,
+1978 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE III
+L IST OF I MPLEMENTED FAULTS U SING L ITMUS C HAOS . S EVEN T YPES OF
+FAULTS H AVE B EEN U SED IN THE B ENCHMARK . T HREE OF T HESE FAULT
+ T YPES R ESULT IN Dynamic C HANGES TO THE S YSTEM AND I TS
+T OPOLOGY, D ENOTED AS FAULT T YPE D. T HE R EMAINING F OUR FAULT
+ T YPES A RE C ONSIDERED Static, D ENOTED AS FAULT T YPE S
+
+ Fig. 4. Box plot summary of the fault injection duration (in seconds) per fault
+ type, providing the time interval during which the fault is actively enforced
+ on the target.
+
+ in our setup. An overview of all resulting fault statistics is
+ shown in Fig. 4.
+(ii) the Subscriber, or Chaos Agent, which serves as a
+link between the execution plane and the control plane and IV. KG C ONSTRUCTION AND DATASET
+performs health checks, monitors events during execution of
+ The collected data described in Section III-C is heterogefaults and sends back the results to the control plane.
+ neous and originates from numerous data sources, i.e., Node
+ As summarized in Table III, a total of seven faults are
+ Exporter, cAdvisor and Istio. This data includes node-level
+injected using Litmus Chaos. These faults have been chosen
+ resource metrics (e.g., CPU, memory, filesystem), serviceto represent both static faults, which directly impact one
+ level resource metrics (e.g., CPU, memory) and service-level
+or more monitored metrics of a specific Node or Pod, and
+ network metrics (e.g., request count, duration and size). To
+dynamic faults, which result in temporal changes to the
+ link the different data sources together in a data format that
+topology of the monitored application. For example, draining
+ can be easily understood by both human and machine, we
+a specific node causes all pods running on that node to be
+ propose the use of an ontology. This ontology imposes a
+rescheduled to other available nodes in the system. While
+ uniform schema that expresses which type of data is generated
+this is common practice before conducting maintenance of a
+ by which type of sources and how they are interlinked. KGs
+node, it can also be caused by anomalous behavior, such as
+ are then created by applying ontologies (cf. Section IV-A) to
+the node becoming unavailable due to hardware issues or the
+ annotate the collected data (cf. Section IV).
+loss of network connectivity. Similarly, the pod autoscaler in
+Kubernetes automatically scales the number of replicas based
+on their resource consumption, resulting in the addition or A. Ontology
+deletion of pods in the system [49]. An ontology has been designed using the Web Ontology
+ The Fault Injector is deployed as a Kubernetes cronjob, Language (OWL) [50] to describe the key concepts within the
+which is executed every two hours. When triggered, it ran- Kubernetes ecosystem. It captures relations between different
+domly selects a fault to inject from the list in Table III, a resources, such as nodes, pods and containers, which are used
+corresponding target, i.e., specific node or pod, and executes to represent the state of the monitored microservice applicathe job with an optional delay of maximum one hour to tion. A visualization of the complete ontology is shown in
+maximize the randomness of the dataset. The Litmus GraphQL Fig. 5 and the most relevant concepts are discussed throughout
+API is used to automatically create workflows and collect this section.
+the experiment results after execution. Similarly to the load A Kubernetes Cluster consists of a set of worker machines,
+generation discussed in Section III-B, all parameters are fully named Nodes, used to run the containerized application,
+configurable and can be changed to support the creation of connected through the hasNode relation. When shipping
+additional data with more or less frequent faults. We report microservices, an Image of the application is provided. These
+the fault injection duration, defined as the time interval during images are lightweight, standalone, executable packages that
+which the experiment actively enforces the fault on the target include everything needed to run an application, including
+resource. For example, in pod-network-latency, an additional the code, runtime, libraries, environment variables, and connetwork latency is applied continuously for the configured figuration files. Each (micro-)service of the application runs
+duration with a varying range between 150 and 800 seconds within a Container, a lightweight virtualization layer to ensure
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1979
+
+Fig. 5. Ontology describing key concepts in a Kubernetes environment.
+
+the application runs on different host machines, regardless of In addition to the different concepts in the Kubernetes
+their specifications or operating system. Each container thus ecosystem, the collected numerical features are also described
+consists of an image making up the application, indicated in the ontology, and included as literals in the graph. These
+through the hasImage relation. Containers are encapsulated in features, as described in Section III-C, are aggregated over
+a Pod, which is the smallest deployable unit of computing a rolling window. To describe the distinct aggregation types,
+available within the Kubernetes ecosystem. Each pod can again each aggregation is represented as a unique property, e.g.,
+contain one or more containers, indicated through the has- “hasCPU_average”.
+Container relation, with shared storage and network resources. Kubernetes [51] is functionally the most complete and
+Best practice dictates that containers within the same pod adopted container orchestration system on the market [52],
+should be tightly coupled as they will always be co-located and however, the ontology proposed in this research can easily be
+co-scheduled, and are therefore not individually scalable. An extended towards other container-based architectures, such as
+example of a tightly coupled container is the sidecar container Docker Swarm [53] or Apache Mesos [54].
+used to proxy all network traffic to a specific container within
+a service mesh. Each pod runs on a particular node within the B. Dataset and KGs
+cluster, indicated through the hasPod relation between node The resulting dataset comprises of roughly five days of
+and pods. A Deployment is used for workload management monitoring data. As mentioned in Section III-C, the dataset
+and is thus responsible for keeping a set of pods running, has a temporal granularity of 15 seconds, resulting in 24,770
+indicated through the controls relation to the different pods total time steps. The KG at each step consists of on average
+under its management. Each pod controlled by a deployment 1402 ± 109 triples. As reference for the healthy state of
+is interchangeable and can be updated, added and removed the monitored system, roughly one day of monitoring data is
+if needed, e.g., in case of a pod failure or when scaling the captured before the start of the fault injection. Using the fault
+application. A Service is an abstraction within the Kubernetes injection configuration discussed in Section III-D, a total of 39
+ecosystem to expose a group of pods over a network. Pods are faults have been injected during data collection, resulting in
+ephemeral resources, meaning that they have a limited lifespan 1,018 anomalous graphs. A detailed statistical overview of the
+and should not be expected to be reliable and durable. Services average duration and frequency of the different faults is given
+are therefore used to keep track of which pods are available in Table III and Fig. 4 to highlight the randomness introduced
+and how to reach them. Additionally, services can also be used into the dataset to make it as representative of a real application
+for more complex traffic control, such as load balancing. as possible.
+1980 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 6. Anomaly detection pipeline of the proposed methodology. The dark blue and teal colors indicate the difference between embeddings generated from
+different starting nodes and their respective AD models.
+
+ In total, the dataset consists of 250 unique entities and 847 graph at timestamp ti , all the embeddings would have to be
+unique relations between them. When taking into account the recalculated on the entire dataset. This way, the embeddings
+monitoring data captured in the graphs, a total of 5,715,493 would have the same length, but the latent features can not
+triples are included. The size and complexity of the collected be compared, making it impossible to train an AD model on
+dataset is comparable to existing benchmark datasets for these embeddings.
+dynamic (knowledge) graphs [55], such as social network To overcome this issue, we propose the use of INK, a
+graphs commonly used for link prediction tasks. As the data neighborhood-based node embedding technique [59]. Starting
+is collected from a microservice application in a research from a set of graphs Gt (Vt , Et ), INK is applied to each graph
+environment, and the complete architecture can be easily Gti (Vti , Eti ) in the dataset. INK uses a random walk approach
+deployed, the dataset can easily be expanded upon, and starting from a node of interest n with a predefined depth d to
+additional faults can be introduced. capture contextual information about its neighborhood. This
+ means that starting from node n INK will follow a relation
+ V. C ONTEXT-AWARE A NOMALY D ETECTION in the graph to a neighboring node (depth 1) and will then
+ The captured dataset is particularly challenging due to the continue to follow the relationships from this node to subsedynamic character caused by the evolving state and topology quent nodes until the d relationships were crossed (depth d).
+of the monitored system. Anomaly detection models, such Based on the example visualized in Fig. 7 (timestamp t), the
+as AEs and Isolation Forests [56], often attempt to learn neighborhood at depth one starting from the cluster node
+the normal behavior from training data. When the new data includes features such as:
+changes too much due to temporal drift, or dynamic events → [k 8s : Cluster ]
+ is_a −
+in this case, the model will throw too many false positives
+and thus has to be retrained to deal with the context shift. hasNode − → [n1]
+To prevent frequent retraining of the model, and the need for → [n2]
+ hasNode −
+complex incremental learning strategies, we propose a contextaware anomaly detection method, which takes into account Relations at depths ≥ 2 are appended to the features set
+the contextual-features and how they evolve throughout time. by concatenating the steps taking during the random walk. A
+The contextual information about the current state of the simplified example for the second hop neighborhood is given
+system is represented in a KG using the ontology described by:
+in Section IV-A. hasNode(n1)is_a → [k 8s : Node]
+ The following sections discuss each component of our
+proposed solution and countermeasures taken to overcome hasNode(n1)hasMemory_P50 − → 0.173431
+the challenges with real-time AD based on dynamic graphs. → [frontend ]
+ hasNode(n1)hasPod −
+The complete context-aware anomaly detection pipeline is hasNode(n2)is_a → [k 8s : Node]
+visualized in Fig. 6. hasNode(n2)hasMemory_P50 − → 0.120647
+ hasNode(n2)hasPod −→ [cartservice]
+A. Node Embedding
+ Traditional embedding techniques, such as TransE [57] and To describe the neighborhood of the node of interest n,
+RDF2Vec [58], that reduce the dimensionality of the graph INK extracts binary features representing the relations in the
+into fixed-length embeddings in the latent feature space cannot KG, i.e., indicating whether this relation is present in the
+be applied efficiently to dynamic graphs for real-time or online neighborhood or not. As INK generates node embeddings
+prediction tasks. This is due to the fact, that for each new using explicit features, the features can be traced throughout
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1981
+
+Fig. 7. An example of generated INK embeddings starting from the cluster with depth 2, and the average z-score calculated at the last timestamp based on
+a sample window size. The example between timestamps t and t−1 show the addition of a Kubernetes node in the cluster which results in the running pods
+being rescheduled, causing relationships to be added and removed (dotted line) in the KG.
+
+time. New features are created and deleted as the relationships in the considered window. These graph similarity scores are
+in the graph are added or removed. This ensures that not all then used as input for the anomaly detector.
+embeddings have to be recalculated each time a new graph While there are a multitude of univariate time-series AD
+becomes available at timestamp ti+1 , solving the shortcoming models, three models are considered here, namely a percentileof other node embedding approaches. Furthermore, having based detector (QuantileAD), a threshold-based detector
+explicit features makes the INK embeddings interpretable and (ThresholdAD) and a local outlier detector (OutlierAD), which
+usable for root cause analysis [60]. is a density-based technique for outlier identification [61].
+ These detectors have been implemented using the Anomaly
+B. Anomaly Detection Detection Toolkit (ADTK), a Python package for unsupervised
+ and rule-based time series anomaly detection [62]. These
+ Contrary to the other node embeddings, generating INK
+ detectors were chosen intentionally as the baseline methembeddings for each graph at timestamp ti results in a set
+ ods for our proposed benchmark dataset rather than as a
+of node embeddings of variable length as here the feature
+ comprehensive survey of all AD families. They provide a
+set continuously expands over time. This makes it impossible
+ practical, reproducible reference point that operates directly
+to use INK embeddings directly as input for ML models,
+ on the aggregated Z-score representation derived from INK
+such as an AE or Isolation Forest (IF). To address this issue,
+ embeddings while being lightweight and suitable for online
+the features are aggregated over a rolling window. For each
+ streaming cases. The benchmark itself is designed in a generic,
+feature extracted from the graphs in the window, the Z-score
+ modular way so that additional detection methods can be
+is calculated per feature based on its value X at timestamp
+ evaluated against the same data and metrics, facilitating future
+ti , the mean μ and standard deviation σ of all values of the
+ extensions and comparisons.
+feature in the window as shown in Equation (1).
+ The hyper-parameters for the threshold-based detector and
+ X −μ local outlier detector are dynamically optimized with a grid-
+ Z =| | (1)
+ σ search approach, which uses the validation dataset containing
+ The Z-scores for all features in the window are then a mixture of healthy and unhealthy samples to determine
+aggregated, resulting in a fixed set of features for the new the best hyper-parameters. The percentile-based detector is an
+graph Gti , i.e., the last graph in the rolling window. This unsupervised model that simply uses a Gaussian distribution at
+process is visualized in Fig. 7. As these Z-scores are calculated prediction time to determine if the new data point at timestamp
+on INK embeddings including both relations in the graph as ti lies within the high-confidence interval. If this is the case,
+well as the raw monitoring metrics, it provides an indication the new graph is assumed to be normal, otherwise it is flagged
+of the similarity of the new graph in comparison to the graphs as anomalous.
+1982 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE IV
+C. Ensemble P ERFORMANCE E VALUATION OF T WO BASELINE M ODELS F ROM
+ Due to the complexity of the expanding feature set gen- L ITERATURE , I . E ., AN LSTM-AE M ODEL AND AN IF M ODEL , C OMPARED
+ TO O UR C ONTEXT-AWARE A PPROACHES AS P ROPOSED IN T HIS PAPER
+erated by using INK in a real-time detection setting, the
+high dimensional features are reduced to a single similarity
+score calculated at timestamp ti , e.g., the average of the
+rolling window-based Z-scores. This results in a reduction
+of ± 3200 features to a single feature when generating
+embeddings for the entire graph (d = 5). To do so while
+avoiding this amount of information loss, we propose generating embeddings from different starting nodes. From the
+ontology described in Section IV-A and expert knowledge
+about Kubernetes environments, it can be deduced that the
+instances of k8s:Cluster and k8s:Workload are ideal candidates
+to be considered as starting nodes. In contrast to nodes and
+pods, clusters and workloads remain mostly static, meaning
+that their instances are available in all graphs and can thus
+be traced through time. To capture all information from the
+graph while minimizing the information loss due to feature
+reduction, the embeddings are generated for a neighborhood are trained on two distinct feature sets. The first feature set
+depth of 3 (d = 3). Using this smaller neighborhood compared contains static features inspired by Nobre et al. [27] who
+to capturing the entire graph, an average of only 286 features trained a Multi-Layer Perceptron (MLP) model on aggregated
+are generated starting from an instance of k8s:Cluster. application-level and service-level metrics. These features
+ For our deployment composed of one Kubernetes cluster include the mean, 50th percentile and 95th percentile of the
+and ten microservices, we constructed an ensemble of eleven latency, and the amount of 2xx and of 4xx/5xx requests
+models: one ThresholdAD model per monitored entity and reported by the Locust during load generation as discussed
+the cluster anomaly voter. The use of ThresholdAD models in Section III-B. These features are aggregated over the
+across all microservices for this ensemble keeps the pipeline different endpoints accessed during the load test, resulting
+lightweight, explainable, and fully reproducible. Each model in five features. Since these features are measured at the
+operates on the aggregated Z-score features derived from the endpoint of the application, i.e., the front-end, the feature set
+INK embeddings within its own entity scope and applies a remains the same throughout the entire dataset. The second
+dynamically optimized threshold to flag abnormal behaviour feature set includes dynamic relations between entities in the
+as discussed before. The voter combines the ten model graph through features extracted through the INK embedding,
+outputs using a logical OR rule: as soon as one per-entity as described in Section V-A. The dynamic graphs therefore
+detector signals an anomaly, the ensemble flags the system as result in the addition or removal of features throughout time.
+anomalous. This aggregation prioritizes high recall and early To evaluate the importance of these dynamic features, the
+fault exposure, which is desirable in this production moni- two baseline AD techniques are also applied on these INK
+toring context where delayed detection is more costly than embeddings in an offline setting. In this offline setting, we can
+an occasional false positive. Moreover, the alarms originate train the models on the complete set of features by setting
+from per-entity models and each alert is directly tied to the them to 0 if they are not yet present or no longer present at
+corresponding service or cluster node in the KG, enabling timestamp t.
+straightforward root-cause inspection The resulting models on this second feature set,
+ INK-LSTM-AE and INK-IF, can however not be deployed
+ for online anomaly detection and are thus solely considered
+ VI. E VALUATION for performance evaluation purposes. We implemented the
+ The proposed solution is evaluated against two baseline AD INK-LSTM-AE model with a symmetric architecture. The
+techniques commonly used in related work (see Section II), encoder consists of two LSTM layers with 256 and 128 units,
+namely an LSTM-AE and an IF. For training, optimization and followed by a bottleneck layer or latent space of size 64.
+evaluation, the dataset has been split in a healthy training set, The decoder mirrors this structure with two LSTM layers of
+an unhealthy training set, and a test set including both healthy 128 and 256 units, reconstructing the input sequence. The
+and unhealthy test samples. The same 20-40-40 split is used model was trained using the Adam optimizer, a learning rate of
+for all considered models so that half of the injected faults 0.001 and a Mean Absolute Error (MAE) loss. We then train
+are present in the unhealthy training set and the other half are a Linear Support Vector Classifier (SVC) on the validation
+used during evaluation. The complete quantitative results for losses to derive the threshold. The hyperparameters of the
+each model are shown in Table IV and discussed throughout INK-IF model were achieved through GridSearchCV on the
+the remainder of this section. training and validation datasets.
+ Baseline. To highlight the impact of contextual awareness As already stated, a first evaluated baseline model is the
+when dealing with the dynamic nature of microservice appli- LSTM-AE approach which learns the normal state of the
+cations, the baseline AD techniques. i.e., LSTM-AE and IF, system based on the healthy training set. The quantitative
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1983
+
+Fig. 8. Calculated Z-scores for a rolling window of two hours (480 graphs) and the corresponding predictions of the INK-Z-ThresholdAD model with a
+threshold derived from grid search optimization on the validation dataset. The teal vertical lines are considered dynamic faults, the red lines indicate static
+faults.
+
+evaluation shows that the model is unable to generalize this on the baseline feature set, indicating the value of contextual
+healthy state of the system towards the rest of the dataset. features for anomaly detection, Fig. 9 shows that certain fea-
+Due to the dynamic faults, the topology of the system changes tures, such as minimum and P50, contribute little information,
+constantly as pods are added, updated and removed during while others, such as the maximum, are overly sensitive. The
+scaling or rescheduling. The impact of these events results limited informativeness and redundancy within this feature
+in a temporal shift in the state of the system, making it set reduce the model’s ability to effectively isolate anomalies,
+challenging for the AE model to match the newly observed as IF relies on recursive partitioning, which becomes less
+state with the learned normal behavior during training. In effective in low-dimensional spaces. This constraint is evident
+practice, this means that reconstruction-based models can from the model’s relatively low performance, suggesting that
+misinterpret legitimate topology shifts, such as rescheduling a more complex approach may not be justified for such a
+without user-visible degradation, as anomalies. This results restricted feature set.
+in missing faults whose primary signal manifests through As described in Section V-B, to further assess the impact
+changing infrastructure-to-service context rather than a strong of feature selection, a set of simpler anomaly detectors, i.e.,
+local metric deviation. As can be noted from the results, QuantileAD, ThresholdAD, and OutlierAD, were evaluated
+even with the dynamic features, the INK-LSTM-AE model using a single aggregated feature. Given the limitations of
+struggles to generalize the changes in context. training an IF on a restricted feature set, these simpler methods
+ Contrary, the INK-IF model shows a noteworthy improve- provide a more targeted approach to anomaly detection. After
+ment of 29.7% absolute increases in F1 compared to its quantitative evaluation of all the aggregation functions, the
+online counterpart IF model trained on solely static features. average emerged as the most effective feature, highlighting
+Especially in terms of recall, the INK-IF model detects 89.5% the potential for reduced model complexity.
+of the faults in the dataset while the baseline IF model only The QuantileAD model is representative of an unsupervised
+detects 26.3%. After investigation of the detected faults, it rule-based detection model that uses a confidence interval to
+becomes clear that the IF model is primarily capable of detect outliers. The choice of interval influences the obtained
+detecting a limited number of static faults related to network performance. Table IV shows the performance results for the
+latency, such as pod-network-latency while the context-aware 95% percentile (P95) and 90% percentile (P90) confidence
+version is able to detect nearly all faults in the dataset, intervals. As can be seen, both context-aware model configincluding dynamic faults. urations yield an identical F1-score. As expected, the higher
+ Context-Aware AD. Our proposed context-aware solutions the confidence interval, the higher the obtained precision due
+compute a rolling window-based Z-score on features extracted to a low report of false positives, but the lower the obtained
+using INK, which are then aggregated using various functions, recall due to the lack of detected anomalies, or true positives,
+as listed in Fig. 9. Initially, all aggregated features, including and vice versa.
+minimum, mean (P50), standard deviation, average, 90th per- In contrast to the QuantileAD, the ThresholdAD model
+centile (P90), 95th percentile (P95) and maximum, were used optimizes its hyper-parameters, i.e., threshold values, based
+as input for the IF model, resulting in the INK-Z-IF model on the validation set. The tuned INK-Z-ThresholdAD model
+achieving an F1-score of 0.345 after hyperparameter tuning. shows a high precision of 78.6% while reporting a recall of
+While this model outperforms its online counterpart based 57.9% which is an improvement of 31.6% over the online
+1984 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 9. Visualization of different aggregation features on the derived Z-scores for INK embedding depth d = 2 and Z-score window size w = 240, the best
+performing settings for the INK-Z-ThresholdAD model. For each figure, the faults in the dataset are highlighted in red.
+
+baseline IF model. Fig. 8 shows a graphical representation increase in recall, however, comes at a cost of the overall
+of the rolling window-based Z-scores on the dataset and the precision. In our AIOps setting, missing a false negative is
+obtained results for the proposed INK-Z-ThresholdAD model. therefore indicated to be more costly than raising an extra alert
+Investigation of the results shows that the detected anomalies (false positive). Operators can aggregate, de-prioritize or tune
+are mostly node-level faults (e.g., node-cpu-hog and node- away noisy alarms over time, but they might have difficulties
+drain) or pod-level faults that influence the state of a node to manually detect new ones. We acknowledge that this
+(e.g., pod-autoscaling). As discussed in Section V-C, these aggregation strategy lowers the precision when a single entityresults are to be expected as the INK-Z-ThresholdAD model level model is temporarily unstable. More sophisticated fusion
+is trained on features generated from INK embedding at a strategies could mitigate this effect, including (i) majority
+neighborhood depth of 2 (d = 2). The full impact of the INK voting across entity detectors, (ii) weighted voting based on
+embedding depth parameter d and Z-score window size w for per entity validation performance, or (iii) score-level fusion
+each of these models is visualized in Figure 10. At the best where the normalized anomaly scores are combined before
+performing settings (d = 2 and w = 240), not all pod features thresholding. We see these strategies as natural extensions of
+are taken into account. our modular pipeline and expect them to potentially further
+ Ensemble. In addition to these context-aware models, a improve the precision–recall balance in future work.
+logical OR ensemble is therefore also evaluated for the INK-
+Z-ThresholdAD technique. Inclusion of additional models
+trained on the neighborhood of specific workloads show an VII. D ISCUSSION AND F UTURE W ORK
+increase in recall, enabling detection of previously undis- Our whole evaluation has been conducted on the Online
+covered faults. The ensemble is thus capable of capturing Boutique microservices application, which serves here as a
+pod-level faults that the base model could not detect. This representative open-source reference for cloud-native systems.
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1985
+
+ approaches. The obtained results are applicable to this single
+ benchmark, which might limit the generalizability of the
+ quantitative results. However, our objective was to provide a
+ reproducible, fully instrumented framework and dataset that
+ others can readily extend to additional benchmarks or largerscale deployments. Our open-source release of the entire
+ pipeline ensures that future studies can build upon this foundation to perform broader comparative analyses. The evaluation
+ results highlight the complexity of this dataset, but also the
+ importance of contextual features. In contrast to the stateof-the-art that focuses on detecting static faults solely, this
+ paper has introduced a benchmark that also contains dynamic
+ faults, such as node-level anomalies, that force scaling and
+ rescheduling of the pods running on it. These faults do not
+ always translate into service-level changes, e.g., a noticeable
+ network delay or sudden spike in resource usage, and are
+ therefore difficult to detect.
+ Whereas state-of-the-art anomaly detection methods fail to
+ take into account the dynamic character of microservice architectures (included in our benchmark), our proposed solutions
+ score significantly higher than the models trained on purely
+ static features, or the AE-based model that attempts to learn
+ the healthy state of the system. Our baseline AD detector
+ family focuses on lightweight, unsupervised, and explainable
+ methods, providing a reproducible foundation for operational
+ root-cause workflows. Future research could extend our INK
+ features with ensemble and kernel methods (e.g., Isolation
+ Forest, One-Class SVM), deep reconstruction and probabilistic
+ models (AE, VAE), temporal sequence models (LSTM-AE),
+ and graph-aware detectors [63]. Hybrid pipelines combining
+ fast rule-based detection with higher-precision models and
+ explainability tools, such as feature-attribution mapped to
+ knowledge graph entities, could further improve detection
+ quality while preserving interpretability [64].
+ Despite room for improvement of our preliminary evaluation
+ results, they highlight the need for contextual awareness in
+ microservice AD. The presented solution and its evaluation
+ show an important trade-off between precision and recall.
+ The best performing model has an F1-score of 66.7%. This
+ model, however, is only capable of detecting 57.9% of the
+ faults in the dataset. These results reflect the high difficulty
+ of our benchmark, which contains many dynamic, topologydriven faults (node drains, rescheduling, autoscaling) that often
+ produce weak service-level signals. We intentionally tuned
+ our INK-Z-ThresholdAD model towards higher precision
+ (0.786) to reduce operational false alarms. This lowers,
+ however, the recall score (0.579) and thus the combined
+ F1. Additionally, these moderate absolute F1 scores stem
+ from online deployability constraints and not from a lack
+ of benefit from context-aware features. The detected faults,
+ as discussed in Section VI, are limited to node-level faults.
+Fig. 10. Performance of various models under varying INK embedding depth By introducing an ensemble of multiple small models for
+parameters d and Z-score window sizes w. which the node embeddings are extracted from different start
+ entities of interest in the KG, an increase in recall can be
+ achieved up to 89.5%, however, at a cost of precision. The
+This environment combines a realistic service topology, smaller models are less robust due to their training on a
+multiple programming languages, and standard observability limited number of specific faults relating to that entity. We
+tooling. This made it well suited for evaluating our AD emphasize that the absolute score of our best online model
+1986 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+(INK-Z-ThresholdAD) should be interpreted in the context While the online INK extraction itself is bounded by the
+of a challenging benchmark that includes topology-driven neighborhood depth and the number of start entities, a practical
+faults (e.g., node drain, rescheduling, autoscaling) which often overhead in our current prototype can be the construction of
+generate weak or delayed service-level symptoms. We stated rolling-window feature matrices. In particular, the aggregated
+here our approach as a context-aware monitoring layer that INK feature set per timestamp is sparse and partially timeprioritizes reliable, interpretable signals over purely maximiz- dependent. Some of the features are stable across time, while
+ing a single performance metric. To mitigate false positive others may only occur rarely and thus be unique to specific
+fatigue in real deployments, the proposed pipeline can be windows. As a consequence, naively constructing windowcombined with operational strategies such as (i) requiring level matrices by concatenating per-timestamp embeddings
+anomaly persistence across multiple consecutive windows (e.g., dataframe concatenation in a for loop) can introduce
+before triggering an alert, (ii) introducing per-entity cooldown avoidable overhead for large window sizes. This cost is not
+periods, and (iii) using confidence-tiered alerting where low- fundamental and can be reduced by maintaining incremental
+confidence anomalies are logged for investigation rather than window statistics and sparse feature representations, preimmediately escalated [6].1 These measures can be combined allocating consistent feature indices and updating window
+with our method and can be applied without altering the matrices through vectorized or streaming operations instead
+KG construction or the INK feature extraction. Future work of recomputing them step-by-step. We therefore expect that
+includes techniques to increase the precision of the whole a more optimized window-construction strategy will further
+proposed anomaly detection framework. reduce the runtime footprint of the online pipeline, especially
+ The architecture used for monitoring, fault injection and when scaling to larger deployments or longer windows. This
+data collection is described in detail. Since it consists of purely optimization, the analysis of the best performing model and a
+open-source technologies that can easily be deployed on a quantitative evaluation of the overhead will be considered in
+Kubernetes environment, it can be replicated and expanded future work.
+upon. Furthermore, this open-source solution has been made The proposed solution is currently designed to be minimally
+publicly available on GitHub2 and can be used to expand upon invasive and to be deployed out-of-the-box for any application
+the dataset. Due to its complexity, the dataset can serve as running on a Kubernetes cluster. However, state-of-the-art
+an interesting benchmark for future dynamic graph research, solutions have shown that monitoring data obtained from
+and the extension of existing Knowledge Graph Embedding distributed traces can positively impact the performance of
+(KGE) techniques. Since the proposed solution is based on the AD solution, especially in detecting service-level faults,
+KGs, it can be generalized in future research and applied to such as configuration errors and malicious queries. The
+other application domains beyond microservice monitoring. inclusion of traces, e.g., OpenTracing [12], in the dataset
+ A full evaluation of the overhead introduced by deploying could therefore lead to more fine-grained data which can
+each presented method for real-time anomaly detection has increase the performance, and even assist with root cause
+not been included. The scope of this paper is limited to analysis. This, however, will require additional code in each
+addressing the challenges that arise when applying traditional microservice of the targeted software application, contrary
+AD techniques to a highly dynamic environment. There are, to the proposed non-invasive solution which is completely
+however, different methodologies for optimizing real-time AD application agnostic.
+models and their deployment strategies with regard to resource While quantitative evaluation of explainability and RCA
+consumption and overhead on the monitored system [65]. has not been the focus of this work, the use of
+Our pipeline was, however, designed to be lightweight. Each INK as a node embedding technique inherently sup-
+KG snapshot contains ±1402 triples and the online INK step ports both [60]. Traditional embedding approaches such
+derives small, explicit neighborhood feature sets from nodes of as TransE or RDF2Vec project entities into a latent vecinterest (cluster and workloads). At depth 3, this yields ±286 tor space, making it difficult to interpret which relations
+features for the cluster entity and across the 10 workloads plus or features contribute to an anomaly. INK, in conthe cluster this corresponds to roughly 3.000 explicit features trast, constructs embeddings by explicitly enumerating and
+per timestamp. The calculated Z-score update and accom- weighting walk-based features that correspond to concrete
+panying ThresholdAD/QuantileAD/OutlierAD inference are graph relations, such as has_node(node1)has_cpu_average or
+linear in the feature count and they require no retraining. depends_on(serviceA,serviceB). During anomaly detection, the
+Consequently, the evaluated online boutique deployment, the Z-score calculated on these explicit features allows identifionline embedding and detection steps are expected to fit cation of which relations contributed most to the detected
+comfortably within the 15s monitoring. The primary runtime deviation. By ranking these features according to their indicost is thus dominated by data acquisition and aggregation of vidual Z-scores at anomaly time, the system can highlight
+the results from Prometheus. Our design intentionally avoids the dominant factors that led to the anomaly. Because these
+global graph recomputation or deep graph model training in features are directly linked to entities and dependencies in the
+the online path to become real-time applicable. knowledge graph, they can be traced backward through the
+ graph to reveal the likely source or propagation path of the
+ fault, thereby enabling explainable RCA. This mechanism
+ 1 https://prometheus.io/docs/alerting/latest/alertmanager/ has been successfully demonstrated for static knowledge
+ 2 https://github.com/predict-idlab/microservices-addkg graphs in earlier work [64]. Our benchmark can extend
+MOENS et al.: TOWARD CONTEXT-AWARE AD FOR AIOps IN MICROSERVICES 1987
+
+this interpretability principle to the dynamic graph setting, [7] A. Lahmadi and F. Beck, “Powering monitoring analytics with elk
+laying the groundwork for future explainable RCA research stack,” in Proc. 9th Int. Conf. Auton. Infrastruct., Manag. Security
+ (AIMS), 2015, pp. 1–28.
+on evolving microservice infrastructures. [8] L. Giamattei et al., “Monitoring tools for DevOps and microservices: A
+ While this has not been the focus of this paper, the systematic grey literature review,” J. Syst. Softw., vol. 208, Feb. 2024,
+use of INK as node embedding technique, instead of tra- Art. no. 111906.
+ [9] Y. Dang, Q. Lin, and P. Huang, “AIOps: Real-world challenges and
+ditional embedding techniques, enables explainability and research innovations,” in Proc. IEEE/ACM 41st Int. Conf. Softw. Eng.,
+RCA. Traditional node embedding techniques such as TransE Companion (ICSE-Companion), 2019, pp. 4–5.
+and RDF2Vec calculate embeddings in a latent embedding [10] “Dynatrace: Unified observability and security.” Accessed: Apr. 30,
+ 2024. [Online]. Available: https://www.dynatrace.com/
+space. INK, however, uses a walk-based approach to cap- [11] A. Nandi, A. Mandal, S. Atreja, G. B. Dasgupta, and S. Bhattacharya,
+ture the neighborhood of a node, or entity, of interest and “Anomaly detection using program control flow graph mining from
+generate explicit features. When calculating the Z-score on execution logs,” in Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discov.
+ Data Min., 2016, pp. 215–224.
+these explicit features, the features with the highest impact [12] A. Janes, X. Li, and V. Lenarduzzi, “Open tracing tools: Overview and
+on this score can be extracted to provide an explanation critical comparison,” J. Syst. Softw., vol. 204, Oct. 2023, Art. no. 111793.
+for the detected fault. Furthermore, due to these features [13] P. He, J. Zhu, Z. Zheng, and M. R. Lyu, “Drain: An online log parsing
+ approach with fixed depth tree,” in Proc. IEEE Int. Conf. Web Services
+being explicit, e.g., has_node(node1)has_cpu_average, these (ICWS), 2017, pp. 33–40.
+features and the relationships captured in the KG can be used [14] T. Jia, L. Yang, P. Chen, Y. Li, F. Meng, and J. Xu, “LogSed:
+to trace the anomaly to its root cause [60]. Anomaly diagnosis through mining time-weighted control flow graph in
+ logs,” in Proc. IEEE 10th Int. Conf. Cloud Comput. (CLOUD), 2017,
+ pp. 447–455.
+ [15] “Acme air sample and benchmark.” BLUEPERF. Accessed: May 6,
+ VIII. C ONCLUSION 2024. [Online]. Available: https://willemjiang.github.io/acmeair/
+ [16] M. Du, F. Li, G. Zheng, and V. Srikumar, “DeepLog: Anomaly detection
+ This paper introduces a dynamic KG-based approach to and diagnosis from system logs through deep learning,” in Proc. ACM
+AD for AIOps in microservices. It specifically highlights SIGSAC Conf. Comput. Commun. Secur., 2017, pp. 1285–1298.
+ [17] “IEEE vast challenge.” 2011. [Online]. Available: https://visualdata.
+the importance of contextual awareness and demonstrates the wustl.edu/varepository
+shortcomings of state-of-the-art solutions that consider the [18] M. Catillo, A. Pecchia, and U. Villano, “AutoLog: Anomaly detection
+topology of the monitored system to be static. Overcoming the by deep autoencoding of system logs,” Expert Syst. Appl., vol. 191,
+ Apr. 2022, Art. no. 116263.
+complexity stemming from the dynamic nature of microservice [19] Y. Wang et al., “ContainerGuard: A real-time attack detection system in
+applications, and research towards dynamic AD solutions container-based big data platform,” IEEE Trans. Ind. Informat., vol. 18,
+is paramount for its adoption in critical domains, such as no. 5, pp. 3327–3336, Dec. 2020.
+ [20] S. Guo et al., “A zero-day container attack detection based on ensemble
+e-commerce but also for example healthcare. Apart from the machine learning,” in Proc. IEEE 28th Int. Conf. Emerg. Technol.
+proposed solution, a complete architecture has been presented Factory Autom. (ETFA), 2023, pp. 1–8.
+consisting of open-source tools for monitoring, chaos engi- [21] R. R. Karn, P. Kudva, H. Huang, S. Suneja, and I. M. Elfadel,
+ “Cryptomining detection in container clouds using system calls and
+neering and data collection. It is non-intrusive and can easily explainable machine learning,” IEEE Trans. Parallel Distrib. Syst.,
+be integrated in any Kubernetes-based platform. vol. 32, no. 3, pp. 674–691, Mar. 2021.
+ The dataset collected during this research has the potential [22] S. Nedelkoski, J. Cardoso, and O. Kao, “Anomaly detection and
+ classification using distributed tracing and deep learning,” in Proc. 19th
+and complexity to serve as a benchmark for future research IEEE/ACM Int. Symp. Clust., Cloud Grid Comput. (CCGRID), 2019,
+towards anomaly detection in microservices, and can be used pp. 241–250.
+for dynamic graph research beyond microservice monitoring. [23] C. Zhang et al., “DeepTraLog: Trace-log combined microservice
+ anomaly detection through graph-based deep learning,” in Proc. 44th
+The presented architecture allows easy extension of this Int. Conf. Softw. Eng., 2022, pp. 623–634.
+dataset, both in amount of data collected and the addition of [24] L. Chen, Q. Dang, M. Chen, B. Sun, C. Du, and Z. Lu, “BertHTLG:
+fault types. Graph-based microservice anomaly detection through sentence-bert
+ enhancement,” in Proc. 20th Int. Conf. Web Inf. Syst. Appl., 2023,
+ pp. 427–439.
+ [25] X. Zhou et al., “Benchmarking microservice systems for software
+ R EFERENCES engineering research,” in Proc. 40th Int. Conf. Softw. Eng., Companion
+ (ICSE), 2018, pp. 323–324. [Online]. Available: https://doi.org/10.1145/
+ [1] W. Hasselbring and G. Steinacker, “Microservice architectures for 3183440.3194991
+ scalability, agility and reliability in e-commerce,” in Proc. IEEE Int. [26] Q. Du, T. Xie, and Y. He, “Anomaly detection and diagnosis for
+ Conf. Softw. Archit. Workshops (ICSAW), 2017, pp. 243–246. container-based microservices with performance monitoring,” in Proc.
+ [2] J. Zaki, S. R. Islam, N. S. Alghamdi, M. Abdullah-Al-Wadud, and 18th Int. Conf. Algorithms Archit. Parallel Process. (ICA3PP), 2018,
+ K.-S. Kwak, “Introducing cloud-assisted micro-service-based software pp. 560–572.
+ development framework for healthcare systems,” IEEE Access, vol. 10, [27] J. Nobre, E. S. Pires, and A. Reis, “Anomaly detection in microservicepp. 33332–33348, 2022. based systems,” Appl. Sci., vol. 13, no. 13, p. 7891, 2023.
+ [3] P. Jamshidi, C. Pahl, N. C. Mendonça, J. Lewis, and S. Tilkov, [28] “Sock shop: A microservice demo application.” WeaveWorks. Accessed:
+ “Microservices: The journey so far and challenges ahead,” IEEE Softw., Mar. 11, 2024. [Online]. Available: https://github.com/microservicesvol. 35, no. 3, pp. 24–35, May 2018. demo/microservices-demo
+ [4] M. Usman, S. Ferlin, A. Brunstrom, and J. Taheri, “A survey on observ- [29] M. Panahandeh, A. Hamou-Lhadj, M. Hamdaqa, and J. Miller,
+ ability of distributed edge & container-based microservices,” IEEE “Serviceanomaly: An anomaly detection approach in microservices
+ Access, vol. 10, pp. 86904–86919, 2022. using distributed traces and profiling metrics,” J. Syst. Softw., vol. 209,
+ [5] J. Soldani and A. Brogi, “Anomaly detection and failure root cause Mar. 2024, Art. no. 111917.
+ analysis in (micro) service-based cloud applications: A survey,” ACM [30] J. von Kistowski, S. Eismann, N. Schmitt, A. Bauer, J. Grohmann,
+ Comput. Surv., vol. 55, no. 3, pp. 1–39, 2022. and S. Kounev, “TeaStore: A micro-service reference application for
+ [6] B. Brazil, Prometheus: Up & Running: Infrastructure and Application benchmarking, modeling and resource management research,” in Proc.
+ Performance Monitoring. Santa Rosa, CA, USA: O’Reilly Media Inc., 26th IEEE Int. Symp. Model., Anal., Simul. Comput. Telecommun. Syst.,
+ 2018. 2018, pp. 223–236.
+1988 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+[31] R. Trivedi, H. Dai, Y. Wang, and L. Song, “Know-evolve: Deep temporal [49] M.-N. Tran, D.-D. Vu, and Y. Kim, “A survey of autoscaling in
+ reasoning for dynamic knowledge graphs,” in Proc. 34th Int. Conf. Mach. kubernetes,” in Proc. 13th Int. Conf. Ubiquitous Future Netw. (ICUFN),
+ Learn., 2017, pp. 3462–3471. [Online]. Available: https://proceedings. 2022, pp. 263–265.
+ mlr.press/v70/trivedi17a.html [50] G. Antoniou and F. V. Harmelen, “Web ontology language: Owl,” in
+[32] J. Wu, M. Cao, J. C. K. Cheung, and W. L. Hamilton, “TeMP: Temporal Handbook on Ontologies. Berlin, Germany: Springer, 2004, pp. 67–92.
+ message passing for temporal knowledge graph completion,” 2020, [51] B. Burns, J. Beda, K. Hightower, and L. Evenson, Kubernetes: Up and
+ arXiv:2010.03526. Running. Santa Rosa, CA, USA: O’Reilly Media, Inc., 2022.
+[33] A. Senaratne, P. Christen, P. Omran, and G. Williams, “Anomaly detec- [52] I. M. Al Jawarneh et al., “Container orchestration engines: A thorough
+ tion and classification in knowledge graphs,” 2024, arXiv:2412.04780. functional and performance comparison,” in Proc. IEEE Int. Conf.
+[34] P. Demeester, P. Van Daele, T. Wauters, and H. Hrasnica, “Fed4FIRE— Commun. (ICC), 2019, pp. 1–6.
+ The largest federation of testbeds in Europe,” in Building the Future [53] F. Soppelsa and C. Kaewkasi, Native Docker Clustering with Swarm.
+ Internet Through FIRE. Denmark, U.K.: River Publ., 2016, pp. 87–109. Birmingham, U.K.: Packt Publish. Ltd, 2016.
+[35] “Online boutique: Cloud-first microservices demo application.” Google. [54] M. Frampton and M. Frampton, “Apache mesos,” in Complete Guide
+ 2015. [Online]. Available: https://github.com/GoogleCloudPlatform/ to Open Source Big Data Stack. New York, NY, USA: APress, 2018,
+ microservices-demo pp. 97–137.
+[36] N. Tolaram, “Cadvisor,” in Software Development with Go: Cloud- [55] S. M. Kazemi et al., “Representation learning for dynamic graphs: A
+ Native Programming using Golang with Linux and Docker. Berkeley, survey,” J. Mach. Learn. Res., vol. 21, no. 1, pp. 2648–2720, 2020.
+ CA, USA: Apress, 2022, pp. 347–376. [56] M. Jin et al., “An anomaly detection algorithm for microservice archi-
+[37] L. Calcote and Z. Butcher, Istio: Up and Running: Using a Service tecture based on robust principal component analysis,” IEEE Access,
+ Mesh to Connect, Secure, Control, and Observe. Santa Rosa, CA, USA: vol. 8, pp. 226397–226408, 2020.
+ O’Reilly Media, 2019. [57] A. Bordes, N. Usunier, A. Garcia-Duran, J. Weston, and O. Yakhnenko,
+[38] W. Li, Y. Lemieux, J. Gao, Z. Zhao, and Y. Han, “Service mesh: “Translating embeddings for modeling multi-relational data,” in Proc.
+ Challenges, state of the art, and future research opportunities,” in Adv. Neural Inf. Process. Syst., 2013, pp. 1–9.
+ Proc. IEEE Int. Conf. Service-Orient. Syst. Eng. (SOSE), 2019, [58] P. Ristoski and H. Paulheim, “RDF2Vec: RDF graph embeddings for
+ pp. 122–1225. data mining,” in Proc. 15th Int. Semant. Web Conf. (ISWC), 2016,
+[39] O. Sheikh, S. Dikaleh, D. Mistry, D. Pape, and C. Felix, “Modernize pp. 498–514.
+ digital applications with microservices management using the istio [59] B. Steenwinckel, G. Vandewiele, M. Weyns, T. Agozzino, F. D. Turck,
+ service mesh,” in Proc. 28th Annu. Int. Conf. Comput. Sci. Softw. Eng., and F. Ongenae, “INK: knowledge graph embeddings for node clas-
+ 2018, pp. 359–360. sification,” Data Min. Knowl. Discov., vol. 36, no. 2, pp. 620–667,
+[40] J. Heyman. “Locust: Open-source performance and load testing.” 2022.
+ Accessed: Jan. 20, 2024. [Online]. Available: https://locust.io/ [60] B. Steenwinckel et al., “FLAGS: A methodology for adaptive anomaly
+[41] S. Xing, Y. Wang, and W. Liu, “Multi-dimensional anomaly detection detection and root cause analysis on sensor data streams by fusing
+ and fault localization in microservice architectures: A dual-channel deep expert knowledge with machine learning,” Future Gener. Comput. Syst.,
+ learning approach with causal inference for intelligent sensing,” Sensors, vol. 116, pp. 30–48, Mar. 2021.
+ vol. 25, no. 11, p. 3396, 2025. [61] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander, “LOF: identifying
+[42] F. Pierfederici, Distributed Computing with Python. Birmingham U.K.: density-based local outliers,” in Proc. ACM SIGMOD Int. Conf. Manag.
+ Packt Publ. Ltd, 2016. Data, 2000, pp. 93–104.
+[43] (Litmus, Cambridge, MA, USA). Litmuschaos: Open Source Chaos [62] A. Analytics. “A python toolkit for rule-based/unsupervised anomaly
+ Engineering Platform. Accessed: Jan. 20, 2024. [Online]. Available: detection in time series.” 2019. [Online]. Available: https://github.com/
+ https://litmuschaos.io/ arundo/adtk
+[44] (Amazon, Seattle, WA, USA).) AWS Fault Injection Service. (2021). [63] L. Akmeemana, C. Attanayake, H. Faiz, and S. Wickramanayake,
+ [Online]. Available: https://aws.amazon.com/fis/ “GAL-MAD: Towards explainable anomaly detection in microservice
+[45] (Microsoft, Redmond, WA, USA). Azure Chaos Studio. (2021). [Online]. applications using graph attention networks,” 2025, arXiv:2504.00058.
+ Available: https://learn.microsoft.com/en-us/azure/chaos-studio/ [64] M. Weyns, T. Blyau, B. Steenwinckel, F. D. Turck, S. V. Hoecke, and
+[46] T. Butow. “Chaos engineering: The history, principles, F. Ongenae, “Explainable knowledge graph embeddings for industrial
+ and practice.” Tutorial, Gremlin. 2021. [Online]. Available: process monitoring & control,” Inf. Fusion, vol. 123, Nov. 2025,
+ https://www.gremlin.com/community/tutorials/chaos-engineTutorial Art. no. 103242.
+[47] “Chaos mesh: Break your system constructively.” Accessed: May 6, [65] P. Moens, B. Andriessen, M. Sebrechts, B. Volckaert, and
+ 2024. [Online]. Available: https://chaos-mesh.org/ S. Van Hoecke, “Edge anomaly detection framework for AIOPs in
+[48] “Argo: Workflow engine for kubernetes.” GitHub. Accessed: Jan. 20, cloud and IoT,” in Proc. 13th Int. Conf. Cloud Comput. Services Sci.
+ 2024. [Online]. Available: https://github.com/argoproj/argo (CLOSER), 2023, pp. 204–211.

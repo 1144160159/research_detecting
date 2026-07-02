@@ -1,0 +1,923 @@
+350 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+The TES Framework: Joint Statistical Modeling and
+ Machine Learning for Network KPI Forecasting
+ Leonardo Lo Schiavo , Genoveva García , Marco Gramaglia , Marco Fiore , Senior Member, IEEE,
+ Albert Banchs , Senior Member, IEEE, and Xavier Costa-Perez
+
+ Abstract—The vision of intelligent networks capable of auto- Index Terms—Forecasting, prediction, mobile traffic, network
+matically configuring crucial parameters for tasks such as KPI, network management, neural networks, statistical modeling.
+resource provisioning, anomaly detection or load balancing
+largely hinges upon efficient AI-based algorithms. Time series
+forecasting is a fundamental building block for network-oriented
+AI and current trends lean towards the systematic adoption of I. I NTRODUCTION
+models based on deep learning approaches. In this paper, we pave VERY new generation of mobile networks invariably
+the way for a different strategy for the design of predictors for
+mobile network environments, and we propose the Thresholded
+Exponential Smoothing (TES) framework, a hybrid Statistical
+ E raises the bar for the performance, reliability, and security
+ of cellular communication systems. Adhering to such a trend,
+Modeling and Deep Learning tool that allows for improving 6G systems are expected to support diverse classes of services
+the performance of network Key Performance Indicator (KPI) and do so with near-zero latency, apparent infinite capacity,
+forecasting. We adapt our framework to two state-of-the-art deep and 100% availability, making de-facto the communication
+learning tools for time series forecasting, based on Recurrent
+Neural Networks and Transformer architectures. We experiment infrastructure fully transparent to applications [1] and turning
+with TES by showcasing its superior support for three practical 6G networks into general-purpose platforms providing smart
+network management use cases, i.e., (i) anticipatory allocation connectivity to a plethora of very heterogeneous terminals.
+of network resources, (ii) mobile traffic anomaly prediction, and While today’s mobile communication infrastructures are
+(iii) mobile traffic load balancing. Our results, derived from already extremely tangled architectures that entail significant
+traffic measurements collected in operational mobile networks,
+demonstrate that the TES framework can yield substantial challenges in terms of equipment management, traffic engiperformance gains over current state-of-the-art predictors in the neering, and capacity allocation [2], 6G systems will introduce
+applications considered. several layers of substantial additional complexity [3], [4].
+ Indeed, meeting the ambitious 6G performance targets will
+ Received 5 March 2025; revised 21 August 2025; accepted 26 October
+2025. Date of publication 4 November 2025; date of current version require instant orchestration of physical resources and Virtual
+29 December 2025. The ORIGAMI project has supported this work, which Network Functions (VNFs) across different network domains,
+has received funding from the Smart Networks and Services Joint Undertaking in concert with user demands and multi-tenancy requirements
+(SNS JU) under the European Union’s Horizon Europe research and innovation program under Grant Agreement No. 101139270. It is also co-funded by that rapidly shift in time.
+the European Union under Grant Agreement No. 101191936 (SUSTAIN-6G). Machine Learning (ML) and Artificial Intelligence (AI) are
+The views and opinions expressed are solely those of the author(s) and do not largely regarded as fundamental enablers to realize such a
+necessarily reflect those of the SUSTAIN-6G consortium parties, the European
+Union, or the SNS JU (granting authority). Neither the European Union nor vision. Integrating AI/ML solutions, supported by a native
+the granting authority can be held responsible for them. The work of IMDEA network architecture [5], will pave the road towards the
+Networks was supported by the 6G-IRONWARE project funded under efficient support of various use cases that dramatically enhance
+grant CNS2023-143870 by MICIU/AEI/10.13039/501100011033 and the EU
+NextGenerationEU/PRTR. Finally, the work of A. Banchs has been supported the performance of next-generation systems. Data-driven modby the Spanish Ministry of Economic Affairs and Digital Transformation els have been repeatedly shown to offer enhanced quality
+and the European Union-NextGenerationEU through the UNICO 5G I+D for key network management tasks such as anomaly detec-
+6G-CLARION project. The associate editor coordinating the review of this
+article and approving it for publication was V. Fodor. (Corresponding author: tion [6], traffic classification [7], resource orchestration [8],
+Leonardo Lo Schiavo.) radio access operation [9], and energy saving [10], just to name
+ Leonardo Lo Schiavo, Genoveva García, and Marco Gramaglia are with a few.
+the Telematic Engineering Department, University Carlos III de Madrid,
+28911 Madrid, Spain (e-mail: lloschia@pa.uc3m.es; genoveva@pa.uc3m.es; In many of those tasks, anticipatory decision-making is a
+mgramagl@it.uc3m.es). very desirable–if not mandatory–feature, making prediction an
+ Marco Fiore is with the Network Data Science Group, IMDEA Networks essential building block to AI/ML-driven network manage-
+Institute, 28918 Madrid, Spain (e-mail: marco.fiore@imdea.org).
+ Albert Banchs is with the Telematic Engineering Department, University ment [11]. In this context, a plethora of works have proposed
+Carlos III de Madrid, 28911 Madrid, Spain, and also with the Network Data ever more accurate forecasting models [12], [13] and recent
+Science Group, IMDEA Networks Institute, 28918 Madrid, Spain (e-mail: works have also shown how predictors can be tailored to
+albert.banchs@imdea.org).
+ Xavier Costa-Perez is with the 6G Network Group, NEC Laboratories the downstream network management task by steering their
+Europe GmbH, 69115 Heidelberg, Germany, also with the AI-Driven output [8], [14].
+Systems Group, I2CAT, 08034 Barcelona, Spain, and also with the In this work, we focus on forecasting network Key
+AI-Driven Systems Department, ICREA, 08010 Barcelona, Spain (email: xavier.costa@neclab.eu). Performance Indicators (KPIs), such as traffic demands or user
+ Digital Object Identifier 10.1109/TNSM.2025.3628788 throughput, as one of the cornerstones of future zero-touch
+ 1932-4537 
+ c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+ and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+SCHIAVO et al.: THE TES FRAMEWORK: JOINT STATISTICAL MODELING AND MACHINE LEARNING 351
+
+network management [15]. While traffic prediction was car- performance evaluation in Section VI, before concluding in
+ried out via statistical models until the first decade of the Section VII.
+century [16], [17], AI/ML solutions have nowadays taken a
+clear lead and dominate the literature [18], [19], [20], [21].
+We depart from the common practice to propose pure AI/ML- II. R ELATED W ORK
+based models and explore hybrid approaches where traditional Relying on a precise time-series forecasting algorithm is
+statistical modeling is combined with deep learning [22]. a fundamental building block for many autonomous network
+This hybrid strategy is known to yield resilience to noisy management and operation solutions [25]. Indeed, the quality
+data and wide excursions in time series of financial data or of the prediction plays a role in the overall performance of
+weather fluctuations [23], and we show that it can also help the autonomous network management algorithm: with a more
+achieve higher prediction accuracy in the presence of real- precise forecast, the decision taken can guarantee a better
+world mobile traffic data, thus benefiting network management outcome. In the following, we revise the state-of-the-art solutasks that build upon such forecasts. tions for autonomous and zero-touch network management,
+ By pioneering the adoption of hybrid predictors using with a focus on anticipatory networking. Finally, we explore
+statistical modeling and ML in the context of anticipatory the works in the field of joint statistical modeling and ML,
+network management, our work yields the following main which is the solution we adopt in this paper to improve the
+contributions. forecasting quality of pure DNN models.
+ • We introduce for the first time a hybrid model combining Network Intelligence for zero-touch management.
+ exponential smoothing (ES) with different deep learn- Handling the escalating complexity of Beyond 5G (B5G)
+ ing models based on Recurrent Neural Network (RNN) networks with traditional human-in-the-loop approaches will
+ and Transformer architectures, and demonstrate how it not be possible anymore. Instead, it is expected that current
+ improves quality of the downstream anticipatory network management models will be replaced by zero-touch network
+ management tasks, with improvements in the 4%-26%, and service management technologies, which fully automate
+ 20%-40% and 6%-16% range depending on the scenario. the network operation and are presently being standard-
+ • We update the operation of the state-of-the-art ES-RNN ized [26]. As a result of this transition, the success of B5G
+ architecture to cope with unique features of mobile traffic will vastly depend on the quality of the Network Intelligence
+ dynamics; the result is an original Thresholded ES-RNN (NI) that will run at schedulers, controllers, and orchestrators
+ (TES-RNN) model, i.e., a general-purpose network traffic across network domains, de-facto managing the zero-touch
+ forecasting technique that can be tailored to perform infrastructure.
+ predictions for different network management functions. Following a popular trend in many research and engi-
+ • We apply the same methodology to the Transformer neering domains, AI models relying on DNN architectures
+ neural network architecture, understanding the benefits are regarded as a promising approach for the design of NI
+ and trade-offs of the different approaches. solutions. Indeed, AI models have proven remarkably effective
+ • We apply the proposed models to three practical at solving complex network operation tasks, and they thrive
+ zero-touch management use cases, i.e., (i ) capacity allo- on the large amount of control and traffic data available within
+ cation, (ii ) anomaly detection, and (iii ) load balancing, network architectures [27].
+ for which we train the models with appropriate loss Forecasting for anticipatory networking. Many NI solufunctions. tions build upon anticipatory networking principles and aim
+ • We evaluate the performance of our solutions against at proactively optimizing network configurations with respect
+ recent works in the literature, demonstrating in all use to upcoming traffic conditions rather than to the current
+ cases above its superior performance with respect to state- state [11]. The prominence of anticipatory NI makes predicting
+ of-the-art Deep Neural Network (DNN) architectures. future network states a fundamental task for the effective
+ This provides a substantial update with respect to our operation of B5G systems. Forecasting is in fact a manprevious work in [24], as we discuss the usage of ifold problem in networking environments, where different
+Transformer models in this context (to our knowledge, applications require accurate future projections of diverse
+the first attempt to integrate statistical modeling with metrics, including computational resources [28], capacity
+this architecture), improve the threshold selection of the requirements [14], or sheer traffic volumes [12], possibly
+TES framework through an automatic and generalizable separated by mobile service [13].
+Reinforcement Learning (RL) algorithm, and add the load Similarly to what happens for other aspects of NI design,
+balancing use case to further showcase the adaptability of our DNN models have lately been established as the prevailing
+solution. approach to developing the predictors that will support proac-
+ The paper is structured as follows: we detail the context tive decisions by NI solutions. In the past few years, a fairly
+of the zero-touch network management and related work in large body of works has explored varied DNN architectures,
+time series forecasting for networks in Section II. We discuss which target diverse forecasting objectives, and are typically
+the application of hybrid strategies that combine ML and proven to yield improved accuracy over legacy statistical
+statistical modeling for forecasting in Section III and present models.
+our proposed TES framework in Section IV. Finally, we Joint statistical modeling and DNN. While current stateanalyze a set of relevant use cases in Section V and their of-the-art predictors in the networking domain invariably
+352 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+rely on deep learning, very recent results from the ML I and in the output interval [t+1, t+tO ] of size O are
+community suggest that hybrid engines that integrate statistical divided by lt . During training, the normalized input window
+modeling and DNN can, in fact, substantially outperform pure is fed to the RNN, whose (normalized) forecast is compared
+DNN approaches in time series forecasting tasks. The very with the normalized output window using a loss function. In
+first model of this kind comfortably won the renowned M4 testing, or when running the model in production systems,
+Competition, a challenge for data scientists to develop ever de-normalization is performed by multiplying the normalized
+more accurate time series predictors [23]. It did so by beating values forecasted in the prediction horizon O by the level lt .
+a variety of statistical and ML benchmarks, as well as 48 The major novelty of the ES-RNN model is that the smoothcompetitor solutions, across 100,000 experiments. ing parameter ω is treated as a system variable that is learned
+ The aforementioned engine combines a classical ES sta- together with the weights of the subsequent RNN architecture.
+tistical model with a RNN architecture, hence it is named In other words, the stochastic gradient descent (SGD) process,
+ES-RNN [22]. It is a true hybrid predictor since the parameters normally used to fit the RNN weights, backpropagates in
+of the ES model are optimized concurrently with the RNN this case before the neural network input layer, and into
+weights using unified gradient descent. Thanks to this joint the preceding ES model, where it updates ω. In this way, a
+training, the ES-RNN model represents a leap forward with single SGD allows for jointly optimizing the parameters of the
+respect to previous attempts at mixing different statistical statistical model and the neural network, adapting them all to
+and/or ML methods: unlike simple combination [29] or ensem- the characteristics of the target time series.
+ble [30] strategies used to date, this technique takes full The SGD optimization of ω operated by ES-RNN results
+advantage of the strengths of statistical and ML methods, while in a level lt that is dynamically adapted to the input data. In
+mitigating their respective limitations. turn, this enables a so-called local and adaptive normalization,
+ which (i) ensures that all portions of the time series are equally
+III. H YBRID N ETWORK KPI P REDICTION W ITH M ACHINE important to the ensuing neural network training process,
+ L EARNING AND S TATISTICAL M ODELING and (ii) suitably smooths the ML input so that the neural
+ network can concentrate on predicting actual trends, without
+ The hybrid prediction approach proposed in this paper
+ overfitting on spurious patterns [22]. Thus, this normalization
+builds upon the innovative design principles first introduced
+ helps forecast time series with severe fluctuations, like those
+by the recent ES-RNN engine [22], which is presented
+ observed in mobile networks. This is not the case with
+in Section III-A. The considered ES-RNN predictor has
+ traditional global normalization of all values to the same [0, 1]
+limitations when confronted with real-world mobile traffic
+ interval, which does not yield input smoothing and makes it
+dynamics, as discussed in Section III-B. Our proposed hybrid
+ hard for the RNN to learn to predict small values.
+methodology enhances the structure proposed in [22] and
+solves such issues by enhancing the original engine with
+an automatically learned threshold parameter, as detailed in B. Limitations of Hybrid Predictors With Network KPIs
+Section IV-B.
+ The ES-RNN model is intended to operate on a time
+ series with strictly positive values of comparable magnitude.
+A. ES-RNN and Joint SGD Optimization
+ However, this assumption is often violated in the mobile
+ ES-RNN is a truly hybrid forecasting model for time series networking context, where KPIs observed at the radio access
+that mixes statistical modeling, i.e., ES, and ML, i.e., RNN. and edge network elements are highly irregular and bursty,
+We consider the GPU implementation of ES-RNN [31] as the with continued inactivity periods that lead to a possibly
+basis for our study: this variant presents a first pre-processing significant presence of zero or near-zero values and severe
+layer for adaptive and local normalization of input time series underutilization of the network. This consideration holds
+using ES formulas, followed by a neural network architecture for both voice [34] and data [32] traffic, especially when
+that processes the normalized data and provides forecasts over predictions target demands generated by individual users or at
+a customizable time horizon. single base stations.
+ The original ES-RNN may adopt a variety of ES expres- These characteristics of mobile traffic dynamics determine
+sions, depending on the temporal features of the target data. levels lt computed with (1) that are at times equal to zero,
+In networking settings, 24-hour circadian rhythms are known or close to that value. In the case of zero-level values, ES
+to dominate the fluctuations of mobile data traffic [32], hence normalization is simply not possible, as it would involve
+we opted for a Holt linear non-seasonal ES formula [33], a division by zero. In the case of values close to zero,
+which is the recommended expression for time series with value discontinuities between the input and output windows
+daily periodicity [22]. At each time step t, the non-seasonal yield normalized outputs that are not numerically comparable
+ES updates a normalization coefficient lt (called level) as with (and in fact much higher than) the values predicted by
+ lt = ωyt + (1 − ω)lt−1 , (1) the neural network; the loss function returns then inflated
+ costs that hinder the quality of the learning process. Figure 1
+where ω ∈ [0, 1] is the exponential smoothing parameter, and illustrates the latter problem in a practical scenario. Plot
+yt represents the value of the input time series at time step t. (a) portrays the real-world demand generated by Instagram
+ The level lt is used for data normalization. At a given at one base station for several hours: the inconsistent nature
+time step t, all values in the input window [t−tI , t] of size of the traffic, with a long period of very low or no activity,
+SCHIAVO et al.: THE TES FRAMEWORK: JOINT STATISTICAL MODELING AND MACHINE LEARNING 353
+
+ This architecture consists of encoder and decoder layers,
+ which enable the model to focus on relevant parts of the
+ input sequence dynamically. The parallel processing capability
+ significantly accelerates training and inference times, making
+ Transformers suitable for large-scale time series datasets.
+ We corroborated this fact in a set of training experiments
+ that we executed for the experimental evaluation detailed in
+ Section VI, where we compare the time elapsed for training
+ and the retained loss on the same training data, for the RNN
+ and Transformer architectures. Pure transformer-based solutions could be trained generally one order of magnitude faster
+Fig. 1. Example of problematic prediction of real-world mobile traffic by
+ (less than 1s vs. tens of seconds) than RNN solutions. The
+ES-RNN. (a) Instagram demand at one BS. (b) The same demand is compared advantages in training time that the Transformer architecture
+to the prediction generated by ES-RNN trained with a Mean Squared Error has are beneficial for the automatic thresholding feature that
+(MSE) loss function, using an input window of size I = 6 and an output
+window of size O = 1.
+ we propose in this work. See Table IV for more details.
+
+ B. Improved Statistical Modeling
+is evident. Plot (b) shows how, when a traffic peak occurs As introduced in Section III-B, deep learning models suffer
+after such a sequence of low-traffic time steps, the network from noisy data with zeros. For these reasons, we introduce
+starts predicting amplified values largely above the real traffic a thresholded version of the two models discussed below,
+demand. following the framework in Figure 2.
+ 1) TES-RNN: To address the shortcomings of the original
+ IV. TES F RAMEWORK ES-RNN, we introduce the Thresholded ES-RNN (TES-RNN)
+ Motivated by the analysis performed in Section III, we pro- model. Our solution employs a threshold τ to bound the
+pose a hybrid methodology for the forecasting of time series minimum value of lt , which is then updated at each time step
+for network management purposes. The methodology is com- t as
+posed of (i) a module that introduces the statistical modeling lt = max{τ, ωyt + (1 − ω)lt−1 }. (2)
+part through ES, and (ii) a dynamic thresholding (T) module
+that counters the problem discussed in Section III-B, building The enhancement in (2) is simple yet effective in solving
+hence our TES framework. The overall framework is depicted the issues observed for ES-RNN. A representative example
+in Figure 2. is provided in Figure 1(b): TES-RNN does not suffer from
+ inflated predictions and correctly anticipates the growing
+ traffic.
+A. Neural Network Predictors
+ 2) ES-Transformer and TES-Transformer: To improve the
+ One of the goals of our work is to demonstrate the wide performance of the original Transformer model, we adopt
+applicability of the TES approach, independently of the model equation (1) to introduce the ES-Transformer model with an
+used for the actual forecasting of the time series. We consider unbounded adaptive normalization of the inputs. However,
+hence two models for time forecasting: the Recurrent Neural similar shortcomings observed for ES-RNN are also observed
+Network already used in [24] and a Transformer architec- for ES-Transformer. Therefore, we introduce a Thresholded
+ture [35], whose capabilities in time series forecasting have ES-Transformer (TES-Transformer) model to address those
+been recently studied. limitations. TES-Transformer adopts a conditional two-stage
+ 1) RNN: RNNs are a class of neural networks designed normalization scheme: in the first stage, a normalization
+for processing sequential data, making them particularly coefficient lt is computed as in equation (1) to normalize the
+well-suited for time series forecasting. Unlike traditional values in the input window [t−tI , t]. Then, a threshold τ
+feedforward neural networks, RNNs possess an internal state is used to scale the maximum value of the normalized input
+that allows them to retain information from previous inputs, window to get a second-stage normalization coefficient ltmax
+enabling the modeling of temporal dependencies. This ability as
+to maintain a memory of past observations makes RNNs
+effective in capturing patterns and trends over time, a very ltmax = τ · max λ(t). (3)
+ [t−tI ,t]
+good feature for accurate time series prediction.
+ 2) Transformer: Initially introduced for natural language In the second conditional stage, if ltmax is bigger than a
+processing tasks, the transformer architecture [36], [37] has guard value δ, then ltmax is used to further normalize the
+been used for time series forecasting [38], [39], [40] due to input window to avoid the training artifacts of the original
+its ability to handle long-range dependencies and parallelize Transformer and ES-Transformer models.
+computation. Unlike RNNs, Transformers do not rely on
+sequential data processing; instead, they employ self-attention C. Effect of ES and TES Normalization
+mechanisms to weigh the importance of different time steps, The effect of the normalization discussed in Section III-A,
+capturing complex patterns and relationships within the data. attained by applying equations (1), (2) and/or (3) depending
+354 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 2. The architecture. The traffic Λ observed over the past I time steps is input to the TES component for a local and adaptive normalization of
+non-negligible traffic above τ . The resulting traffic λ is fed to the model of choice, which outputs a forecast θ of traffic within a horizon of O time steps.
+During training, the loss computed from θ is used to learn the threshold hyperparameter τ of the TES block in an AutoML style via a Reinforcement Learning
+algorithm.
+
+ TABLE I
+ T RAINING T IME OVER 20 E POCHS AND N ORMALIZED MSE OF
+ F ORECASTING M ODELS P REDICTING FACEBOOK T IME S ERIES
+
+Fig. 3. Input values with different kinds of normalization.
+ pure Transformer [36], N-BEATS (Neural Basis Expansion
+ Analysis for Time Series) [42], and D-Linear [43]. As shown
+on the model, can be observed in Figure 3, which shows
+ in Table I, although Informer and Autoformer yielded a
+training inputs over two consecutive days. While the global
+ slightly lower normalized MSE, the Transformer offered a
+normalization scales all the input values to the same [0, 1]
+ much shorter training time, a critical parameter given the
+interval, the other normalizations yield better input smoothcomplexity introduced by the TES framework for, e.g., finding
+ing and ease the prediction task for small values, i.e., low
+ the best τ . Importantly, TES compensates for the modest
+overnight traffic values. The benefits of the latter normalization
+ accuracy gap of the pure Transformer, improving the final
+on the forecasting performance will be discussed in detail in
+ performance as will be shown later in Section VI.
+Section VI.
+ Another important aspect we take into account while
+ designing the internal model of the TES framework is the
+D. Comparative Analysis and Impact of Stationarity impact of the stationarity of the input time series, which
+ To select the best internal design for the TES frame- has been discussed in the literature [44], [45], [46] as an
+work, we conducted a preliminary comparison of recent important metric for assessing the complexity of forecasting
+forecasting models based on Transformer and linear problems. Following these works in the literature, we evaluated
+architectures, including Informer [35], Autoformer [41], the stationarity of the traffic time series using Augmented
+SCHIAVO et al.: THE TES FRAMEWORK: JOINT STATISTICAL MODELING AND MACHINE LEARNING 355
+
+Fig. 4. Distribution of Instagram time series over 2 individual days (leftmost plots) and 2 consecutive weeks (rightmost plots).
+
+ TABLE II
+Dickey-Fuller (ADF) tests and statistical moments (mean, vari- S YMMETRIC M EAN A BSOLUTE P ERCENTAGE E RROR (SMAPE)
+ance, skewness, and kurtosis). We found two different patterns: B ETWEEN S TATIONARY AND N ON -S TATIONARY T RAINING
+daily data showed non-stationarity, with varying statistics and
+ADF p-values above 0.05, while weekly aggregation revealed
+stationary behavior, as illustrated in Figure 4. To assess the
+robustness of our model, we trained the pure Transformer
+model over temporally ordered weekly data (stationary) and
+shuffled individual days (non-stationary). The performance
+analysis, summarized in Table II, yields comparable accuracy
+in both setups, showing that these models generalize well
+across time shifts even for the non-stationary case, showing
+how the model copes well with complex problems. The results
+of Tables I and II are obtained using the time series of popular
+services that will be introduced in Section VI, where we train
+our models in larger stationary scenarios.
+ The results we presented in this section show that the TES
+framework is general in nature, without any noticeable bias
+on the kind of input data (e.g., stationary or not), and can be
+applied to forecasting models beyond Transformers.
+
+E. Parametrization of the Hyperparameter τ
+ The result in Figure 1(b) is not obvious to achieve. In Fig. 5. Architecture of the soft actor-critic algorithm.
+particular, the threshold τ is challenging to configure, as
+it introduces an interesting trade-off. Generally, a threshold
+closer to the traffic peak ensures higher robustness to the Machine Learning (or AutoML) approach, since our goal is to
+problem of time series discontinuities highlighted above. automate the design of complex neural network models [47].
+However, it also triggers a global normalization to level τ more For this task, while in an earlier version of the frameoften, raising the issue of model insensitivity to low values work [24] we used a Golden-Section search algorithm based
+below the threshold that the local and adaptive normalization on convex loss functions [48], we now propose a more generaims at solving. Conversely, thresholds closer to the smallest alizable approach based on a RL algorithm that automatically
+possible level tend to preserve the desirable properties of selects the best τ value. We resort to a soft actor-critic deep
+the fine-tuned ES normalization but incur more often the RL algorithm to maximize an arbitrary reward function while
+issues related to discontinuous data. These problems, which exploring as randomly as possible the space of possible τ
+are independent of the actual deep learning model used for (action) values at training time through an entropy component.
+forecasting, require an automatic algorithm for the correct The critic neural network estimates the effect of selecting
+setting of the τ . a given τ value for a state s, which captures the nature of
+ There is no one-size-fits-all solution to the trade-off above, the traffic time series and is represented by its mean μ and
+and the best value of τ depends on the nature of the traffic time standard deviation σ. Such an effect is estimated using an
+series that is relevant to the target networking functionality. instantaneous reward function, which is the additive inverse
+Therefore, τ also needs to be adjusted to the settings of the of the prediction loss obtained by forecasting the time series
+considered task. Notably, τ is a hyperparameter for the TES with state s using the selected τ . Leveraging the estimates
+models, as it steers the overall system behavior. To ensure a of the critic for a given state s, the actor outputs the best τ
+smooth operation, it is highly desirable that the setting of τ from a discrete action space with 20 possible values in the
+does not require human intervention, but is fully automated range [0.05, 1] with step 0.05. The architecture of the soft
+and generalizable. The setup at hand calls for an Automated actor-critic algorithm is depicted in Figure 5.
+356 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ V. A PPLICATION U SE C ASES Therefore, the cost is proportional to the amount
+ As discussed in Section I, forecasting future network of (unnecessarily) provisioned capacity. Typically, the
+KPIs is a cornerstone task for many networking problems, expenditure is assumed to grow linearly with the overproincluding admission control [49], capacity allocation [14], visioned capacity, with a fixed rate γ of cost per surplus
+handovers [50] and power management [51], among others, capacity.
+which involve different operation time scales [8]. The TES The configuration of the two costs can be, in fact, controlled
+architecture described in Section IV-B is general-purpose and by a single parameter α = β/γ, which represents the amount
+agnostic to the specific networking application: it can be of overprovisioned capacity that the operator is willing to
+trained to support different NI instances, e.g., by combining deploy to avoid committing an SLA violation. Formally, for a
+it with a suitable loss function that allows optimizing the given prediction error x , the loss function that abides by the
+model for a given prediction task. Next, we present two specifications above is expressed as
+ ⎧
+practical anticipatory networking use cases where the TES ⎨ α − · x if x ≤ 0
+framework can be used as the forecasting model, which also L(x ) = α − 1 x if 0 < x ≤ α (4)
+sets the ground for the experimental evaluation conducted in ⎩
+ x− α if x > α,
+Section VI.
+ where steep slopes (implemented with a small positive )
+ ensure differentiability over the whole x domain [14].
+A. Use Case I: Capacity Allocation for Network Slicing The parameter α serves as a knob to steer the operational
+ A first use case of interest for forecasting in anticipatory point of the system towards higher expenses in deployed
+networking is that of capacity allocation, i.e., reserving the resources but reduced chances of SLA violations, or viceresources needed to meet the upcoming demand for a given versa. As a result, the loss function in (4) can be parametrized
+service. This functionality is especially relevant in network to the specifications of different network infrastructure locaslicing settings, where (sets of) services run in different slices, tions (e.g., reflecting the higher cost of deploying resources
+and the operator needs to dedicate sufficient resources to at the network edge than at the core), resource types (e.g.,
+each slice, in agreement with the load generated by the capturing the fact that radio resources are sensibly more
+corresponding service(s) [49]. expensive than CPU resources), and SLA strategies (e.g.,
+ The anticipatory NI in charge of capacity allocation to slices expressing the higher fees for violations affecting slices of
+must rely on so-called capacity forecasting, i.e., predicting the critical services).
+minimum capacity sufficient to accommodate the future slice
+traffic. We highlight that capacity forecasting is a fairly unique B. Use Case II: Anomaly Detection in Mobile Service Traffic
+problem, where sheer accuracy is not the most relevant metric. The second use case we study is an anticipatory anomaly
+Instead, the prediction must stay above the actual load with detection framework, where the NI must trigger an alarm when
+a very high probability, because underestimation determines an abnormal future traffic load is expected for a specific mobile
+the allocation of insufficient capacity to slices, hence service service. The anomaly detection problem is summarized in
+disruption on the user side. Underprovisioning also triggers Figure 6(a). The predictor module is in charge of producing
+violations of the Service Level Agreement (SLA) between a probability distribution of the traffic demand that the target
+the slice tenant and the network operator, which thus incurs service will generate in the next time slot. Such a probabilissubstantial economic penalties. Clearly, this must be avoided tic prediction is compared against a reference interval that
+without allocating exceedingly large amounts of unnecessary encompasses the expected range of normal traffic values in
+resources, which also has a cost for the operator. the following time slot. Then, if the probability of the antic-
+ The problem of capacity forecasting has recently received ipated traffic being outside the reference interval is beyond a
+attention, with the proposal of dedicated predictors [8], [14]. threshold, an alarm is raised. This allows the associated NI
+These models rely on a loss function that drives the learning to perform some preventive actions, such as those detailed in
+process to capture the actual cost of incurring SLA violations the 3GPP TS 23.288 [52] technical specification under the
+against that of overprovisioning the slice capacity. Specifically, “Abnormal behavior” analytics, which capture anomalies such
+the function handles negative and positive errors differently, as unexpected large rate flows generated by terminals.
+to reflect the different costs they entail in the context of We consider a simple yet practical implementation1 of the
+virtualized communication networks, as follows. approach above that is commonly adopted in many fields, also
+ • A constant penalty β is associated with each negative outside networking [53]. First, it is worth noting that the output
+ error, which causes an SLA violation during the pre- of the forecasting algorithm shall not be a scalar but a probadicted time interval. β can be customized to the desired bility distribution of the future traffic load. This type of output
+ behavior: for instance, higher values may be used when is implicit in certain types of models like Bayesian Neural
+ reliability is paramount (e.g., for slices serving ultra- Networks, which are, however, computationally expensive and
+ reliable low-latency communications or URLLC), and not suited for resource-constrained network environments.
+ lower penalties can be applied for slices with more
+ 1 Our goal is not to propose a novel anomaly detection algorithm, but to
+ relaxed requirements.
+ compare the effectiveness of different forecasting models in supporting such
+ • A monotonically increasing cost is attributed to positive a task. Therefore, we are not interested in developing a complex algorithm for
+ errors, which imply the allocation of excess resources. anomaly detection, and using a baseline solution is sufficient for our purpose.
+SCHIAVO et al.: THE TES FRAMEWORK: JOINT STATISTICAL MODELING AND MACHINE LEARNING 357
+
+ • Load balancing for network slicing. Under slicing
+ models, network entities must run dedicated, customized VNFs to serve the traffic associated with each
+ slice. Operators then have to map slices to network
+ nodes, ensuring that the upcoming VNF load is evenly
+ shared across the latter, to optimize the global system
+ performance.
+ • Load balancing at base stations. In the presence of
+ increasingly dense network deployments, users are offered
+ an increased choice of candidate base stations for
+Fig. 6. Anomaly forecasting use case. (left) Representation of the association. Forecasting allows operators to make informed
+anomaly forecasting problem. (right) Explanation of the operation of anomaly decisions on new user associations and equalize the charge
+detection.
+ across base stations to ensure service continuity.
+ Independent of the problem variant, anticipatory load bal-
+In order to generate a probabilistic forecast with a generic ancing requires a prediction of future traffic that is as accurate
+neural network, we resort to recent findings in uncertainty as possible. In this case, whether the prediction falls above
+modeling [54]: specifically, by activating dropout layers in the or below the actual load is irrelevant: any deviation of the
+predictor during the inference phase and performing a Monte prediction from the actual demand causes an imbalance in
+Carlo test, the neural network returns a set of values that have the resulting load that only depends on the error magnitude,
+been shown to closely approximate the probabilistic result of a hence a negative error is not more harmful than a positive
+deep Gaussian process implemented with a Bayesian network. one. For the purpose of evaluation, we focus on the third
+ The anomaly detection algorithm then operates on the problem above, i.e., load balancing at base stations. This
+empirical Probability Density Function (PDF) fp of the pre- type of task is run in modern networks, for instance, by the
+dicted traffic values for each decision interval, as illustrated Policy Control Function (PCF) through the User Equipment
+in Figure 6(b). First, the upper and lower limits that mark (UE) Route Selection Policy (RSP) [55]. The PCF assigns
+the boundaries between regular and anomalous values are an incoming UE to a Protocol Data Unit (PDU) session or
+computed as xl,h = R ± ΔA , where R is a configurable network slice, once the UE is activated. The availability of
+reference value. From these two values, the probability of an accurate prediction of future traffic at each base station
+ allows the NI deployed at the PCF to drive the assignment
+a future anomaly is empirically calculated  as PA = 1 − in a way that the ensuing load is leveled across the radio
+(Fp (xh ) − Fp (xl )), where Fp (x ) = k <x fp (k ) is the
+Cumulative Distribution Function (CDF) of the anticipated access infrastructure. As mentioned above, this type of load
+traffic. Finally, an alarm is triggered if PA > τA . The balancing requires a traditional mobile traffic forecasting
+parameters R, ΔA , and τA control the sensitivity of the model to operate in an anticipatory fashion. We thus rely
+algorithm. In our experiments, we set the reference values for on a conventional loss function that weights equally negative
+the estimated load in the next prediction step R as the average and positive errors, i.e., the MSE. Based on the traffic load
+of the last three load values, ΔA = 0.9 · R, and τA = 0.9. predicted with this loss function, a load balancer performs the
+In other words, we trigger an alert when the model forecasts corresponding mapping to equalize the (expected) load at the
+future traffic with a 90% probability to fall outside a range different entities. In the case of load balancing at base stations,
+±90% of the reference value. forecasting is naturally performed on traffic loads at the base
+ The correctness of the anticipatory anomaly detection can station level; then, the load balancing NI engine running at
+be determined by checking whether the actual traffic falls into the PCF manages each association request by assigning the
+the xl,h interval or not, and computing precision and recall soliciting UE to the base station with the lowest forecasted
+scores. Clearly, a higher accuracy in the probabilistic traffic load.
+forecast, denoted by a lower variance around a value closer to
+the true one, yields better performance: a MSE loss function VI. P ERFORMANCE E VALUATION
+is thus a sensible choice for this use case. We assess the performance of the proposed TES framework
+ in the two use cases set out in Section V, hinging on real-world
+C. Use Case III: Anticipatory Load Balancing mobile traffic measurement data collected in an operational
+ Load balancing aims at equally splitting the load among network. Specifically, we consider mobile data traffic time
+different entities and is another networking functionality for series recorded at more than 400 4G/LTE base stations that
+which forecasting is critical. Indeed, anticipatory load balanc- provide coverage to millions of subscribers in a metropolitan
+ing can be applied at different levels, including the following. area.2 The data was collected in the production infrastructure
+ • Load balancing at edge clouds. In edge cloud facilities, of a major operator during 11 continuous weeks, by passive
+ e.g., for Cloud Radio Access Network (C-RAN), it is probes tapping at interfaces of the Gateway GPRS Support
+ desirable to associate base stations with data centers in
+ 2 Due to confidentiality reasons, we cannot disclose the identity of the
+ such a way that the future traffic load channeled to each
+ operator, the target geographical region, or the absolute volumes of traffic
+ data center is balanced, and no data center will suffer captured in the data. We thus either normalize the traffic values or report them
+ congestion and reduced performance. without the scaling factor that would reveal their order of magnitude.
+358 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ TABLE III
+ S UMMARY OF E XPERIMENTAL S ETTINGS
+
+Node (GGSN) and Packet Data Network Gateway (PDNG) in
+configurable intervals ranging from 5 to 15 minutes.
+ The measurement probes leverage Deep Packet Inspection
+(DPI) to extract protocol information from packets in
+ Fig. 7. Additional capacity allocation cost caused by state-of-the-art models
+the GPRS Tunneling Protocol user plane (GTP-U). Such (INFOCOM19, RNN, Transformer, and ES-RNN, in blue), and the proposed
+information is then fed to proprietary classifiers developed in this paper (ES-Transformer and TES models, in red) prediction errors.
+by the operator to determine the service associated with each Results refer to three slices assigned to specific services at a network core
+ data center, with parameter α = 3.
+session. As a result, the time series we use in our evaluation
+describes the traffic generated by individual popular services.
+ All time series have the finest temporal granularity allowed To address this problem, we train the models used in
+by our dataset, which is 5 minutes. This temporal granularity is TES with the appropriate loss function in (4) and comcompatible with the requirements of the three target use cases, pare our hybrid solution against the following four relevant
+since (i ) the reconfiguration periodicity of slice resources benchmarks:
+allowed by modern Virtual Infrastructure Managers (VIM) is • INFOCOM19 [14] is the predictor designed by the study
+in the order of minutes [56], and (ii ) anticipating anomalies or that first introduced the problem of capacity forecasting
+(iii ) balancing load by several minutes is largely sufficient to and proposed the loss function in (4). It relies on a DNN
+plan and enact countermeasures. Therefore, a prediction of the architecture fed with a 3D tensor of the spatiotemporal
+traffic in the next 5-minute time step (i.e., a point forecast of mobile data traffic and uses convolutional layers to capthe time series) is aligned with the use cases, and we consider ture geographical correlations in the demands. This is the
+an output window size O = 1 in all our experiments. Also, we state-of-the-art forecasting model for capacity allocation.
+use an input window size of I = 6 time steps to feed the model • ES-RNN [22] is the GPU implementation of the original
+(corresponding to a history of 30 minutes), and we employ ES-RNN approach presented in Section III-A. For the
+8, 2, and 1 different weeks of traffic for training, validation, sake of fairness, ES-RNN is trained with the loss in (4).
+and testing, respectively. The guard value for TES-Transformer • RNN uses the same RNN architecture of ES-RNN, but
+second-stage normalization is δ = 0.001. All the experimental relies on a global normalization for the input data, thus
+settings are summarized in Table III: training, validation, and without any of the optimizations proposed in this work
+test sets include both on-peak and off-peak behavior, following and in [22]. This benchmark is useful for understanding
+a night-day, weekday-weekend pattern [57]. how statistical modeling favors prediction accuracy. We
+ As a final remark, we highlight that our study observes also train this benchmark with the loss function in (4).
+high privacy and ethical standards: (i ) the network operator • Transformer uses the model first introduced in [58],
+conducted the data collection abiding by applicable regulations which is also the basis of our ES-Transformer and TESat national and international levels; (ii ) the competent national Transformer models. For this baseline model, we use the
+privacy agency and the data protection officer of the operator loss function in (4) as well.
+authorized the data processing; and, (iii ) the time series we 1) Overall Capacity Forecasting Performance: We start by
+accessed for the purpose of this work solely describe traffic comparing the total costs incurred by the operator when
+aggregated at individual base stations over large sets of users, supporting capacity allocation with the different forecasting
+and do not contain personal subscriber information. models, in Figure 7. In order to make these values interpretable, all costs are normalized to the (unavoidable) cost
+ of the minimum resources needed to accommodate the exact
+A. Forecasting for Capacity Allocation demand for each service. In other words, costs are expressed
+ We set the capacity allocation use case presented in as the percent excess over a baseline given by an oracle that
+Section V-A in a network core Cloud scenario, where a makes a perfect prediction. In each case, the figure also tells
+data center runs VNFs for the traffic generated in the whole apart the fraction of the cost resulting from the two sources
+target region by three traffic-intensive mobile applications, of penalty, i.e., resource overprovisioning and SLA violations.
+i.e., Facebook, Instagram, and Snapchat. Each such service is We group results into state-of-the-art approaches (blue bars
+assigned a dedicated network slice, and the NI responsible for in Figure 7) and our three proposals: ES-Transformer, TEScapacity allocation at the data center must reserve in advance RNN, and TES-Transformer.
+enough resources to accommodate the future demand of single The key observation is that our approaches consistently
+slices. outperform the benchmarks, with gains over the second-best
+SCHIAVO et al.: THE TES FRAMEWORK: JOINT STATISTICAL MODELING AND MACHINE LEARNING 359
+
+ SLA violations. Transformer, in both the ES and TES configurations, improves the performance of the pure Transformer
+ counterpart for all the services, although TES-Transformer
+ incurs a higher SLA violation rate due to its aggressive
+ forecasting. INFOCOM19, RNN, and Transformer, when compared to TES, induce a substantially higher overprovisioning
+ that often helps limit SLA violations, at the expense of an
+ overall higher expenditure.
+ 2) In-Depth Analysis of One Prediction Instance: To gain
+ an additional understanding of the behaviors of the forecasting
+ models presented above, we detail a representative case of
+ capacity prediction in Figure 8. The plots show the time
+ series of the real traffic in the Facebook slice, as well as the
+ corresponding capacity allocation foreseen by each predictor.
+ Plot (a) portrays the traffic dynamics over a full week and
+ underscores how all models follow well the long-timescale
+ fluctuations of the demands, such as low overnight traffic
+ or different activity peaks during daylight. Plots (b) and
+ (c) present a close-in view of two specific 3-hour periods,
+ which are evidenced by vertical shades in plot (a). The zoom
+ magnifies how TES and ES-RNN help dimension a capacity
+ that is closer to the real demand than that anticipated by
+ INFOCOM19 and RNN, especially in low traffic conditions.
+ Plot (b) also exemplifies the reason for the poor performance
+ of ES-RNN in terms of high SLA violations: when used in
+ combination with the loss function in (4), the model has issues
+ in anticipating small variances in the traffic fluctuations, which
+ causes the capacity forecast to come too close to the future
+ demand. The result is frequent underprovisioning: for instance,
+ ES-RNN assigns insufficient resources to the Facebook slice
+ in multiple periods in the considered example, highlighted
+ by the red intervals on the abscissa in the figure. Instead,
+ ES-Transformer and TES models forecast a smoother capacity
+ curve that stays above minor fluctuations, and hence yield a
+ resource provisioning similar to ES-RNN but while avoiding
+ numerous SLA violations.
+ 3) Control of SLA Violations: The results presented before
+ are for one specific value of the parameter α that controls the
+ equilibrium of overprovisioning and SLA violation risk in the
+Fig. 8. Time series of the real traffic generated by the Facebook slice loss function in (4). By varying the parameter, the operator
+and of the relative capacity predictions of the different forecasting models. shall be able to steer the capacity forecast to favor one source
+(top) Weekly time series, with highlighted time intervals for close-in analysis. of cost over the other, as explained in Section V-A.
+(middle) Zoomed view of the 3:00-7:00 interval of Tuesday. (bottom) Zoomed
+view of the 12:00-16:00 interval of Friday. Whenever present, SLA violation Figure 9 illustrates the capability of each model to enforce
+periods are marked as red-shaded areas in the plots. the desired control above by trading off overprovisioning cost
+ with SLA violations cost. The plot shows, for the case of
+ the Facebook slice, the normalized cost determined by each
+solution that range between 4% and 26%. The different predictor, as α sweeps values from 1 (relatively low SLA
+TES approaches yield distinctive results. In general, the ES violation cost) to 5 (high SLA violation cost). We observe that
+approach, with or without the τ selection, improves the TES-Transformer and TES-RNN yield the best performance
+performance of the state-of-the-art algorithms. For instance, in all settings. Also, TES-RNN keeps the overall cost low by
+TES-RNN steadily guarantees very low SLA violation prob- progressively decreasing the occurrence of SLA violations as
+abilities, which is a desirable feature for the operator. And, α grows, which is exactly the desired behavior. INFOCOM19
+it does so by causing an overprovisioning that is lower than and RNN can also achieve this result, however, at a cost
+or comparable to that produced by the other predictors. These in terms of overprovisioning that is almost twice that of
+are very encouraging findings, as one of the benchmarks is TES-RNN. ES-RNN is instead unable to modulate the SLA
+the state-of-the-art model designed for capacity forecasting. violation cost, which in fact surprisingly grows with α.
+ Interestingly, ES-RNN yields an allocation of unnecessary The reason for the counter-intuitive ES-RNN performance
+resources close to that of TES but incurs much more frequent can be explained by the breakdown of the two cost sources,
+360 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+ benchmarks. ES-RNN allows staying at low overprovisioning
+ levels as well, but SLA violation rates cannot be controlled
+ even with very aggressive α settings, as discussed before. In
+ contrast, both INFOCOM19 and RNN can limit SLA violation
+ rates, but without a clear (and relatively high) bound on the
+ minimum overprovisioning costs achievable. As a result, the
+ proposed models bring the best of the other models: for any
+ possible operating point of INFOCOM19, ES-RNN, or RNN,
+ we can choose an α that improves cost on both dimensions.
+
+ B. Forecasting for Anomaly Detection
+ The second use case we consider is that of anomalous load
+Fig. 9. Additional capacity allocation and SLA costs of INFOCOM19, RNN, detection at base stations introduced in Section V-B. We set
+Transformer, ES-RNN, ES-Transformer, and TES models versus α and for this use case in a virtualized network environment running
+the Facebook slice.
+ an end-to-end network slicing model, where proactive load
+ anomaly detection is paramount for the timely identification
+ of undesired situations that could be amended by, e.g., new
+ network configurations. In such settings, the anomalous load
+ detection NI operates at the granularity of individual services.
+ Specifically, we run experiments for slices that each accommodate one of three different services, i.e., Facebook, Instagram,
+ and Snapchat. For each slice, we consider different base
+ stations and assess the performance of the anomaly detection
+ algorithm discussed in Section V-B that relies on forecasting
+ models of the slice traffic at each such base station.
+ To support the anomaly detection decision, the proposed
+ models (ES-Transformer, TES-Transformer, and TES-RNN)
+ are trained with an MSE loss function, according to the
+ discussion in Section V-B. With such a loss function, our
+Fig. 10. Limits in terms of SLA violations and overprovisioning costs that models operate as traditional mobile traffic forecasting models;
+can be attained by ES models, TES models, and the chosen benchmarks for
+the Facebook slice. this steers our choice of benchmark to the following models.
+ • Long Short-Term Memory (LSTM) is a simple NNbased model made of two fully-interconnected layers that
+in Figure 10. The plot illustrates, for each case in Figure 9: is not specifically designed for mobile network traffic
+(i ) on the ordinate, the overprovisioning, still expressed as the forecasting at base station level.
+added cost over that of the optimal oracle; and, (ii ) on the • INFOCOM17 [12] is a popular forecasting technique that
+abscissa, the SLA violations, measured as the percentage of is explicitly designed to predict mobile network traffic
+5-minute time steps during which the allocated resources are at the level of individual base stations. It leverages a
+insufficient to serve the slice demand. The trends are consistent DNN architecture where both global and local SAE layers
+across all models, and higher values of α always entail fewer are used to learn spatial features in the data, followed
+violations, as one would expect. However, while TES models, by LSTM layers that capture temporal correlations. This
+INFOCOM19, and RNN can rapidly bring underprovisioning benchmark represents the state of the art in point forecast
+cases down to zero when α surges, the ES-RNN model is at the base station level, i.e., the problem at hand; while
+much less sensitive to the parameter. Specifically, this predictor other, more recent predictors of mobile traffic volume
+reduces SLA violations at a slower pace than the rate at which have been proposed in the literature, they target different
+α increases: by looking at the extreme cases in the plot, objectives, such as forecasting over a very long time
+ES-RNN lowers violations by just one-third when α grows horizons [59], or forecasting for the radio access [60].
+20-fold. As α represents the cost of one SLA violation, the • ES-RNN, RNN, and Transformer, as discussed in
+cut in the number of occurrences is insufficient to compensate Section VI-A. In this case, the models are trained with
+for the higher penalty of each infraction, which explains the an MSE loss function.
+growing trend of the SLA violation cost under ES-RNN in 1) Mobile Traffic Prediction Accuracy: We start our assess-
+Figure 9. ment by comparing the sheer accuracy of the proposed models
+ More generally, Figure 10 gives a clear view of the oper- against the benchmarks in the task of point forecasting mobile
+ating points of each forecasting method. ES-Transformer and traffic at base stations. We also consider for comparison a
+TES models offer the best options to the operator, as their Naive model, which uses the current value of the timeseries to
+configurations simultaneously provide fewer SLA violations predict the value of the following timestep. Figure 11 shows
+and lower overprovisioning costs than the state-of-the-art the results for all models and services averaged over five
+SCHIAVO et al.: THE TES FRAMEWORK: JOINT STATISTICAL MODELING AND MACHINE LEARNING 361
+
+ Rate (FPR), for all the considered τA in the range between
+ 30% and 95%. TES-Transformer, instead, yields intermediate
+ performance when compared to the other benchmarks.
+
+ C. Forecasting for Load Balancing
+ The third use case we consider for the comparative evaluation is that of anticipatory load balancing at base stations
+ introduced in Section V-C. As in the use case of Section VI-B,
+ we also operate in a virtualized network environment running
+ an end-to-end network slicing model, where strong quality of
+ service guarantees are met by dedicating resources to different
+ slices already in the radio access. In such settings, the load-
+Fig. 11. Prediction accuracy in terms of MSE for Naive, LSTM, balancing NI operates at the granularity of individual services,
+INFOCOM17, RNN, Transformer, and TES forecast. and we consider three different slices, each accommodating
+ the three services of Facebook, Instagram, and Snapchat. For
+ each service, we consider different base stations and evaluate
+different base stations. We remark that results for the ES the performance of a load balancer that leverages forecasting
+models are not shown because, as extensively explained in models of the traffic at the slice for each such base station.
+Section IV-B, training such models with an MSE loss function To support the load balancing decision, the proposed models
+in the presence of mobile data traffic yields exceedingly high (TES-RNN and TES-Transformer) are trained with a suitable
+overestimation (see, e.g., Figure 1). Independent of the test MSE loss function, according to the discussion in Section V-C.
+configuration, TES-RNN yields the most accurate prediction: With such a loss function, also for this use case, we choose as
+the average MSE reduction across all base stations is in benchmarks the model LSTM and INFOCOM17 [12], as well
+the 20%-40% range, peaking at 55% for the Facebook case as the Naive model already presented in Section VI-B1. To
+when compared to INFOCOM17 and at 90% for the Snapchat investigate the performance of a load balancer, we consider the
+service in comparison to the Naive model. TES-Transformer case of UE association performance. We emulate a UE initial
+yields performance similar to that of TES-RNN. attachment or handover scenario in a dense deployment where
+ multiple base stations may offer similar radio channel quality.
+ 2) Anomaly Detection Performance: Having observed the
+ A prominent criterion for UE association is the expected load
+superior accuracy of TES-RNN mobile traffic prediction, we
+ that each base station will experience in the following minutes;
+investigate how this reflects on the actual performance of
+ in a sliced scenario, this becomes the demand generated by
+the anomaly detection. We emulate the situation in which
+ a specific service at each candidate base station. To balance
+the network analytics function of a mobile network gathers
+ the load across base stations, the soliciting UE should be
+data from the User Plane Function (UPF) [52] to monitor,
+ assigned to the base station with the lowest forecasted traffic
+e.g., the excessive usage of the network by a terminal, and
+ for the requested slice. As discussed in Section V-C, such
+has to generate an alarm if such an event is anticipated
+ functionality is part of the 5G standard, and would run in
+to happen in the near future. We consider for our test a
+ the load balancing NI engine at the PCF. We consider for
+scenario where different base stations are monitored with the
+ our tests a load balancer that, in the presence of a slice
+algorithm introduced in Section V-B. Figure 12(a) shows the
+ association request that can be possibly satisfied by two base
+performance of all the benchmarks in terms of F1 Score,
+ stations, selects the one with the lowest anticipated load for
+averaged over the five selected base stations, for the three
+ the requested slice in the following 5 minutes. The decision
+selected application types. TES-RNN always achieves the best
+ is thus driven by the per-service traffic forecast performed by
+performance, while competitors provide unbalanced results,
+ the evaluated models.
+highly depending on the considered application. In particular,
+ Figure 13 shows the accuracy of the load balancer, i.e., the
+the average F-Score gain of TES-RNN across all services is
+ fraction of UE association requests that are correctly directed
+in the 0.1-0.15 range, peaking at 0.31 for Snapchat when
+ to the base station with the lowest load on a specific slice
+compared to ES-Transformer. The baseline ES-RNN and
+ in the following timestep. Decisions based on TES-RNN and
+the proposed ES-Transformer and TES-Transformer almost
+ TES-Transformer predictions have an average accuracy close
+always trigger the anomalous load alarm, as the predicted
+ to 70%, which is a decent performance for the very high
+values are often well above the thresholds (and the real values).
+ variance of traffic at 5-minute timescales. This is also 6%-16%,
+ To further corroborate the quality of TES-RNN in this
+ 15%-27%, and 13%-24% higher than the accuracy granted
+kind of task, we also evaluate its effectiveness with variable
+ respectively by INFOCOM17, LSTM, and the Naive model.
+τA values in Figure 12(b), showing the ROC curve for the
+selected benchmarks and proposed models. ES models are
+not shown as their highly overestimated forecasts trigger a D. Complexity
+huge number of false positives, which explains the poor ES We conclude by analyzing the complexity of the proposed
+models performance in Figure 12(a). TES-RNN always yields solutions, in terms of average training time over the same
+the best pairing between the Recall and the False Positive number of epochs and memory usage for experiments running
+362 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+Fig. 12. Comparing LSTM, INFOCOM17, RNN, Transformer, ES, and TES models. (left) F1 Scores obtained with the algorithm discussed in Section V-B,
+and (right) Receiver Operating Characteristic (ROC) Curve for the Facebook service, for different τA thresholds. Subplots do not show results for the Naive
+model due to the deterministic nature of its forecasts.
+
+ all the models are trained with the same MSE loss function.
+ Overall, TES-RNN and TES-Transformer can be trained as
+ fast as the respective less optimized models (i.e., ES-RNN
+ and RNN for the recurrent neural network architecture, and
+ ES-Transformer and Transformer) while guaranteeing the
+ advantages in the forecasting performance. This is obtained
+ with no additional burden on the memory of the GPU in which
+ the models run. The results reported in Table V show that
+ all the considered models require around 1400MiB, which
+ represents only 3.4% of the total memory of the A100 GPU.
+
+ VII. C ONCLUSION
+Fig. 13. Load balancing accuracy. In this paper, we explored the potential of statistical
+ modeling for anticipatory traffic management using deep
+ TABLE IV learning. By avoiding high average-to-peak ratios in the input
+ T RAINING T IME OF THE B ENCHMARKS , IN M INUTES
+ training data ES allows a more efficient forecast of the traffic
+ time series. In this paper, we propose the TES framework,3
+ that effectively improves the normalization of bursty time
+ series through a factor τ and couple it to two different
+ neural network architectures based on RNNs and Transformer
+ TABLE V architectures, to prove the solution flexibility. We benchmarked
+ GPU M EMORY U SAGE OF THE B ENCHMARKS , IN M I B both TES-RNN and TES-Transformer on three relevant use
+ cases for network management: capacity allocation, anomaly
+ detection, and load balancing. In the three scenarios, our
+ solutions achieve performance gains with respect to state-ofthe-art benchmarks in the order of, respectively, 4%-26%,
+ 20%-40%, and 6%-16% range depending on the scenario. This
+ paper demonstrates the advantages of the TES framework in
+on an NVIDIA A100 GPU. The results for the first metric time series forecasting, showing how it outperforms state-ofare reported in Table IV: in the first use case, Transformer the-art baselines. Our results prove that a hybrid approach can
+models required on average lower training times than the enhance even advanced AI/ML solutions, paving the way for
+equivalent RNN models, while yielding similar performance future research that could extend the framework to models
+as observed at the beginning of Section VI. In particular, the beyond RNNs or Transformers. While we highlight these benhigh-performing TES-Transformer model required an average efits, the challenge of understanding the limited performance
+of 2.45 minutes per capacity allocation experiment, which is of forecasting techniques on network traffic remains a separate
+in the order of the average training time of the less-performing research effort beyond the scope of this work.
+RNN model (2.85 min) but faster than the equivalent TES-
+RNN model with a mean of 5.1 minutes per run. Similar 3 The code of the TES framework is publicly accessible at the following
+considerations apply to the second and third use cases, where link: https://doi.org/10.5281/zenodo.16045349.
+SCHIAVO et al.: THE TES FRAMEWORK: JOINT STATISTICAL MODELING AND MACHINE LEARNING 363
+
+ R EFERENCES [22] S. Smyl, “A hybrid method of exponential smoothing and recurrent
+ neural networks for time series forecasting,” Int. J. Forecast., vol. 36,
+ [1] M. Giordani, M. Polese, M. Mezzavilla, S. Rangan, and M. Zorzi, no. 1, pp. 75–85, 2020. [Online]. Available: http://www.sciencedirect.
+ “Toward 6G networks: Use cases and technologies,” IEEE Wireless com/science/article/pii/S0169207019301153
+ Commun. Mag., vol. 58, no. 3, pp. 55–61, Mar. 2020. [23] S. Makridakis, E. Spiliotis, and V. Assimakopoulos, “The M4
+ [2] R. Govindan, I. Minei, M. Kallahalla, B. Koley, and A. Vahdat, “Evolve Competition: 100,000 time series and 61 forecasting methods,” Int. J.
+ or Die: High-availability design principles drawn from Googles network Forecast., vol. 36, no. 1, pp. 54–74, 2020. [Online]. Available: http://
+ infrastructure,” in Proc. ACM SIGCOMM Conf., 2016, pp. 58–72. www.sciencedirect.com/science/article/pii/S0169207019301128
+ [Online]. Available: https://doi.org/10.1145/2934872.2934891 [24] L. Lo Schiavo, M. Fiore, M. Gramaglia, A. Banchs, and X. Costa-Perez,
+ [3] W. Wu et al., “AI-native network slicing for 6G networks,” IEEE “Forecasting for network management with joint statistical modelling
+ Wireless Commun., vol. 29, no. 1, pp. 96–103, Feb. 2022. and machine learning,” in Proc. IEEE 23rd Int. Symp. World Wireless,
+ [4] F. Rezazadeh, H. Chergui, L. Alonso, and C. Verikoukis, “SliceOps: Mobile Multimedia Netw. (WoWMoM), 2022, pp. 60–69.
+ Explainable MLOps for streamlined automation-native 6G networks,” [25] D. Bega, M. Gramaglia, R. Perez, M. Fiore, A. Banchs, and
+ IEEE Wireless Commun., vol. 31, no. 5, pp. 224–230, Oct. 2024. X. Costa-Pérez, “AI-based autonomous control, management, and
+ [5] L. E. Chatzieleftheriou et al., “Network intelligence in action: The orchestration in 5G: From standards to algorithms,” IEEE Netw., vol. 34,
+ DAEMON perspective,” in Proc. Eur. Conf. Netw. Commun. 6G Summit, no. 6, pp. 14–20, Nov. 2020.
+ Antwerp, Belgium, Jun. 2024, pp. 1–6. [26] “ZSM scenarios and key requirements,” Eur. Telecommun. Stand. Inst.
+ [6] M. Milani, D. Bega, M. Gramaglia, P. Serrano, and C. Mannweiler, (ETSI), Sophia Antipolis, France, document ETSI ISG ZSM 001,
+ “ATELIER: Service tailored and limited-trust network analytics Oct. 2018.
+ using cooperative learning,” IEEE Open J. Commun. Soc., vol. 5,
+ [27] C. Zhang, P. Patras, and H. Haddadi, “Deep learning in mobile and
+ pp. 3315–3330, 2024.
+ wireless networking: A survey,” IEEE Commun. Surveys Tuts., vol. 21,
+ [7] A. T.-J. Akem, M. Gucciardo, and M. Fiore, “Flowrest: Practical flowno. 3, pp. 2224–2287, 3rd Quart., 2019.
+ level inference in programmable switches with random forests,” in Proc.
+ [28] J. X. Salvat, L. Zanzi, A. Garcia-Saavedra, V. Sciancalepore, and
+ IEEE Conf. Comput. Commun., 2023, pp. 1–10.
+ X. Costa-Pérez, “Overbooking network slices through yield-driven end-
+ [8] D. Bega, M. Gramaglia, M. Fiore, A. Banchs, and X. Costa-Perez,
+ to-end orchestration,” in Proc. 14th Int. Conf. Emerg. Netw. Exp.
+ “AZTEC: Anticipatory capacity allocation for zero-touch network slic-
+ Technol. (ACM CoNEXT), Heraklion, Greece, Dec. 2018, pp. 353–365.
+ ing,” in Proc. IEEE Conf. Comput. Commun., 2020, pp. 794–803.
+ [29] R. T. Clemen, “Combining forecasts: A review and annotated
+ [9] L. L. Schiavo et al., “CloudRIC: Open radio access network (O-RAN)
+ bibliography,” Int. J. Forecast., vol. 5, no. 4, pp. 559–583,
+ virtualization with shared heterogeneous computing,” in Proc. 30th
+ 1989. [Online]. Available: http://www.sciencedirect.com/science/article/
+ Annu. Int. Conf. Mobile Comput. Netw., 2024, pp. 558–572. [Online].
+ pii/0169207089900125
+ Available: https://doi.org/10.1145/3636534.3649381
+ [30] O. Sagi and L. Rokach, “Ensemble learning: A survey,” WIREs Data
+[10] J. A. Ayala-Romero, A. Garcia-Saavedra, X. Costa-Perez, and
+ Min. Knowl. Disc., vol. 8, no. 4, 2018, Art. no. e1249. [Online].
+ G. Iosifidis, “EdgeBOL: Automating energy-savings for mobile edge
+ Available: https://onlinelibrary.wiley.com/doi/abs/10.1002/widm.1249
+ AI,” in Proc. 17th Int. Conf. Emerg. Netw. Exp. Technol., 2021,
+ pp. 397–410. [Online]. Available: https://doi.org/10.1145/3485983. [31] A. Redd, K. Khin, and A. Marini, “Fast ES-RNN: A GPU implemen-
+ 3494849 tation of the ES-RNN algorithm,” Jul. 2019, arXiv:1907.03329.
+[11] N. Bui, M. Cesana, S. A. Hosseini, Q. Liao, I. Malanchini, and [32] C. Marquez, M. Gramaglia, M. Fiore, A. Banchs, and Z. Smoreda,
+ J. Widmer, “A survey of anticipatory mobile networking: Context-based “Identifying common periodicities in mobile service demands with
+ classification, prediction methodologies, and optimization techniques,” spectral analysis,” in Proc. IEEE MedComNet, Arona, Italy, Jun. 2020,
+ IEEE Commun. Surveys Tuts., vol. 19, no. 3, pp. 1790–1821, 3rd Quart., pp. 1–8.
+ 2017. [33] R. Hyndman, A. Koehler, J. Ord, and R. Snyder, Forecasting With
+[12] J. Wang et al., “Spatiotemporal modeling and prediction in cellular Exponential Smoothing: The State Space Approach. Cham, Switzerland:
+ networks: A big data enabled deep learning approach,” in Proc. IEEE Springer, 2008.
+ Int. Conf. Comput. Commun. (IEEE INFOCOM), Atlanta, GA, USA, [34] B. Cici, E. Alimpertis, A. Ihler, and A. Markopoulou, “Cell-to-cell
+ May 2017, pp. 1–9. activity prediction for smart cities,” in Proc. IEEE Conf. Comput.
+[13] C. Zhang, M. Fiore, and P. Patras, “Multi-service mobile traffic fore- Commun. Workshops (INFOCOM WKSHPS), 2016, pp. 903–908.
+ casting via convolutional long short-term memories,” in Proc. IEEE Int. [35] H. Zhou et al., “Informer: Beyond efficient transformer for long
+ Symp. Meas. Netw. (IEEE M&N), Catania, Italy, Jun. 2019, pp. 1–6. sequence time-series forecasting,” in Proc. AAAI Conf. Artif. Intell.,
+[14] D. Bega, M. Gramaglia, M. Fiore, A. Banchs, and X. Costa-Perez, vol. 35, May 2021, pp. 11106–11115. [Online]. Available: https://ojs.
+ “DeepCog: Cognitive network management in sliced 5G networks with aaai.org/index.php/AAAI/article/view/17325
+ deep learning,” in Proc. IEEE INFOCOM, Paris, France, Apr. 2019, [36] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Int. Conf.
+ pp. 280–288. Neural Inf. Process. Syst., 2017, pp. 6000–6010.
+[15] E. Coronado et al., “Zero touch management: A survey of [37] R. E. Turner, “An introduction to transformers,” 2024,
+ network automation solutions for 5G and 6G networks,” IEEE IEEE arXiv:2304.10557.
+ Commun. Surveys Tuts., vol. 24, no. 4, pp. 2535–2578, 4th Quart., [38] Y. Hu, Y. Zhou, J. Song, L. Xu, and X. Zhou, “Citywide mobile
+ 2022. traffic forecasting using spatial-temporal downsampling transformer
+[16] Q. Y. Ding, X. F. Wang, X. Y. Zhang, and Z. Q. Sun, neural networks,” IEEE Trans. Netw. Service Manag., vol. 20, no. 1,
+ “Forecasting traffic volume with space-time ARIMA model,” in pp. 152–165, Mar. 2023.
+ Advanced Manufacturing Technology (Advanced Materials Research), [39] Q. Liu, J. Li, and Z. Lu, “ST-Tran: Spatial-temporal transformer for
+ vol. 156. Wollerau, Switzerland: Trans Tech Publications Ltd., 2011, cellular traffic prediction,” IEEE Commun. Lett., vol. 25, no. 10,
+ pp. 979–983. pp. 3325–3329, Oct. 2021.
+[17] D. Zhou, S. Chen, and S. Dong, “Network traffic prediction based on [40] B. Gu, J. Zhan, S. Gong, W. Liu, Z. Su, and M. Guizani, “A spatial-
+ ARFIMA model,” 2013, arXiv:1302.6324. temporal transformer network for city-level cellular traffic analysis
+[18] C. Zhang, H. Zhang, J. Qiao, D. Yuan, and M. Zhang, “Deep transfer and prediction,” IEEE Trans. Wireless Commun., vol. 22, no. 12,
+ learning for intelligent cellular traffic prediction based on cross-domain pp. 9412–9423, Dec. 2023.
+ big data,” IEEE J. Sel. Areas Commun., vol. 37, no. 6, pp. 1389–1401, [41] H. Wu, J. Xu, J. Wang, and M. Long, “AutoFormer: Decomposition
+ Jun. 2019. transformers with auto-correlation for long-term series forecasting,” in
+[19] L. Yu et al., “STEP: A spatio-temporal fine-granular user traffic Proc. Adv. Neural Inf. Process. Syst., vol. 34, 2021, pp. 22419–22430.
+ prediction system for cellular networks,” IEEE Trans. Mobile Comput., [42] B. N. Oreshkin, D. Carpov, N. Chapados, and Y. Bengio, “N-BEATS:
+ vol. 20, no. 12, pp. 3453–3466, Dec. 2021. Neural basis expansion analysis for interpretable time series forecasting,”
+[20] N. Zhao, A. Wu, Y. Pei, Y.-C. Liang, and D. Niyato, “Spatial-temporal 2020, arXiv:1905.10437.
+ aggregation graph convolution network for efficient mobile cellular [43] “DLinear model documentation—Darts: Time series made easy,” 2023.
+ traffic prediction,” IEEE Commun. Lett., vol. 26, no. 3, pp. 587–591, [Online]. Available: https://unit8co.github.io/darts/generated_api/darts.
+ Mar. 2022. models.forecasting.dlinear.html
+[21] Y. Yao, B. Gu, Z. Su, and M. Guizani, “MVSTGN: A multi-view spatial- [44] Y. Ge, Y. Zhang, K. Shi, and H. Li, “A moment cross predictor for
+ temporal graph network for cellular traffic prediction,” IEEE Trans. non-stationary mobile traffic forecasting,” in Proc. IEEE/CIC Int. Conf.
+ Mobile Comput., vol. 22, no. 5, pp. 2837–2849, May 2023. Communi. China (ICCC), 2024, pp. 2059–2064.
+364 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOLUME 23, 2026
+
+[45] M. Di Mauro, G. Galatro, F. Postiglione, W. Song, and A. Liotta, Genoveva García is a graduate in telecommuni-
+ “Multivariate time series characterization and forecasting of VoIP traffic cation technologies engineering from Universidad
+ in real mobile networks,” IEEE Trans. Netw. Service Manag., vol. 21, Carlos III de Madrid, where she is currently pursuing
+ no. 1, pp. 851–865, Feb. 2024. the master’s degree in artificial intelligence.
+[46] K. Wu, J. Lu, F. Lin, Y. Huang, C. Zhan, and L. Sun, “A realistic network
+ traffic forecasting method based on VMD and LSTM network,” in Proc.
+ IEEE Int. Symp. Circuits Syst. (ISCAS), 2023, pp. 1–5.
+[47] X. He, K. Zhao, and X. Chu, “AutoML: A survey of the state-ofthe-art,” Knowl.-Based Syst., vol. 212, Jan. 2021, Art. no. 106622.
+ [Online]. Available: https://www.sciencedirect.com/science/article/pii/
+ S0950705120307516
+[48] J. Kiefer, “Sequential minimax search for a maximum,” Proc. Amer. Marco Gramaglia received the Ph.D. degree in
+ Math. Soc., vol. 4, no. 3, pp. 502–506, 1953. telematics engineering from Universidad Carlos III
+[49] V. Sciancalepore, K. Samdanis, X. Costa-Perez, D. Bega, M. Gramaglia, de Madrid. He has contributed extensively to several
+ and A. Banchs, “Mobile traffic forecasting for maximizing 5G network research projects at both the European and national
+ slicing resource utilization,” in Proc. IEEE INFOCOM, May 2017, levels. He co-authored more than 100 articles and,
+ pp. 1–9. according to Google Scholar, his H-index is 35.
+[50] L. Chen, T. Nguyen, D. Yang, M. Nogueira, C. Wang, and D. Zhang, His research interests include network automation,
+ “Data-driven C-RAN optimization exploiting traffic and mobility privacy, and AI-driven resource management.
+ dynamics of mobile users,” IEEE Trans. Mobile Comput., vol. 20, no. 5,
+ pp. 1773–1788, May 2021.
+[51] P. Brand, J. Falk, J. Ah Sue, J. Brendel, R. Hasholzner, and J. Teich, Marco Fiore (Senior Member, IEEE) received the
+ “Adaptive predictive power management for mobile LTE devices,” IEEE M.Sc. degree from the University of Illinois at
+ Trans. Mobile Comput., vol. 20, no. 8, pp. 2518–2535, Aug. 2021. Chicago and Politecnico of Torino, the Ph.D. degree
+[52] “Architecture enhancements for 5G system (5GS) to support network from Politecnico di Torino, and the Habilitation à
+ data analytics services (Rel. 17),” 3GPP, Sophia Antipolis, France, Rep. Diriger des Recherches degree from Université de
+ TS 23.288, Version 17.4, May 2022. Lyon. He is a Research Professor with IMDEA
+[53] P. J. Rousseeuw and M. Hubert, “Anomaly detection by robust Networks Institute, where he leads the Networks
+ statistics,” WIREs Data Min. Knowl. Disc., vol. 8, no. 2, 2018, Data Science Group, and a Co-Founder and a CTO
+ Art. no. e1236. [Online]. Available: https://wires.onlinelibrary.wiley. with Net AI. He has held tenured positions with
+ com/doi/abs/10.1002/widm.1236 Institut National des Sciences Appliquées de Lyon
+[54] Y. Gal and Z. Ghahramani, “Dropout as a Bayesian approximation: and National Research Council of Italy, and has
+ Representing model uncertainty in deep learning,” in Proc. 33rd been a Visiting Researcher with Rice University, Universitat Politècnica de
+ Int. Conf. Mach. Learn. (ICML), New York, NY, USA, Jun. 2016, Catalunya, and University College London. His research is at the interface
+ pp. 1050–1059. of mobile networks and data science, and has received funding from the
+[55] “Policy and charging control framework for the 5G System (5GS); European Commission and national agencies in Spain, France, and Italy, as
+ Stage 2,” 3GPP, Sophia Antipolis, France, Rep. TS 23.503, Version 16, well as a number of recognitions that include two best paper awards at IEEE
+ Mar. 2019. INFOCOM. He is a Former Marie Curie Fellow and a Royal Society Visiting
+[56] J. G. Herrera and J. F. Botero, “Resource allocation in NFV: A Research Fellow and a Senior Member of ACM.
+ comprehensive survey,” IEEE Trans. Netw. Service Manag., vol. 13,
+ no. 3, pp. 518–532, Sep. 2016. Albert Banchs (Senior Member, IEEE) received
+[57] C. Marquez, M. Gramaglia, M. Fiore, A. Banchs, C. Ziemlicki, and the M.Sc. and Ph.D. degrees from the Polytechnic
+ Z. Smoreda, “Not all apps are created equal: Analysis of spatiotemporal University of Catalonia (UPC-BarcelonaTech) in
+ heterogeneity in nationwide mobile service usage,” in Proc. 13th 1997 and 2002, respectively. He is currently a Full
+ Int. Conf. Emerg. Netw. Exp. Technol., 2017, pp. 180–186. [Online]. Professor with the University Carlos III of Madrid
+ Available: https://doi.org/10.1145/3143361.3143369 (UC3M), and also the Director with the IMDEA
+[58] O. Guhr, “Transformer time series prediction.” 2024. [Online]. Available: Networks Institute. Before joining UC3M, he was
+ https://github.com/oliverguhr/transformer-time-series-prediction with ICSI Berkeley in 1997, Telefonica I+D in
+[59] C. Zhang and P. Patras, “Long-term mobile traffic forecasting using deep 1998, and NEC Europe Ltd., from 1998 to 2003.
+ spatio-temporal neural networks,” in Proc. 18th ACM Int. Symp. Mobile He was an Academic Guest with ETHZ in 2012,
+ Ad Hoc Netw. Comput., 2018, pp. 231–240. [Online]. Available: https:// a Visiting Professor with EPFL in 2015, 2013, and
+ doi.org/10.1145/3209582.3209606 2018, respectively, and a Fulbright Scholar with The University of Texas
+[60] X. Wang et al., “Spatio-temporal analysis and prediction of cellular at Austin in 2019. He is the author over 150 publications in international
+ traffic in metropolis,” IEEE Trans. Mobile Comput., vol. 18, no. 9, conferences and journals and is the co-inventor of several patents.
+ pp. 2190–2202, Sep. 2019. Xavier Costa-Perez received the M.Sc. and Ph.D.
+ degrees in telecommunications from the Polytechnic
+ University of Catalonia, Barcelona. He is a ICREA
+ Research Professor, a Scientific Director with the
+ i2cat Research Center and a Head of 6G R&D
+ at NEC Laboratories Europe. His team generates
+ research results that are regularly published at top
+ scientific venues, produces innovations that have
+ received several awards for successful technology transfers, and participates in major European
+ Commission Research and Development collaborative projects. He has held multiple leadership positions both in industry
+ and research organizations, such as a Deputy General Manager, a Chief
+ Leonardo Lo Schiavo received the Ph.D. degree in Researcher, a Technology Board member, and a Scientific Advisory Board
+ telematic engineering from Universidad Carlos III de Member. As a standards delegate, he contributed to multiple standardiza-
+ Madrid, in 2025, where he is currently a Postdoctoral tion bodies, such as IEEE 802.11, 802.16, WiFi Alliance, and 3GPP, and
+ Researcher. His research interests include virtualized was recognized in several standards as a Top Contributor. He was the
+ radio access networks, AI-driven network automa- recipient of a national award for the Ph.D. thesis. He has served on the
+ tion, and traffic forecasting. Organizing Committees of several conferences, including ACM MOBICOM,
+ IEEE INFOCOM, WCNC, and Greencom, published papers of high impact,
+ and holds about 100 granted patents. He has served as an Editor for
+ IEEE T RANSACTIONS ON M OBILE C OMPUTING, IEEE T RANSACTIONS ON
+ C OMMUNICATIONS, and Computer Communications Journals (Elsevier).

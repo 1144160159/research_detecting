@@ -1,0 +1,602 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024 2511313
+
+ Reconstruction-Based Supervised Contrastive
+ Learning for Unknown Device Identification
+ in Nonintrusive Load Monitoring
+ Yinghua Han , Haoqi Chen , Jingrun Wu , and Qiang Zhao
+
+ Abstract— Nonintrusive load monitoring (NILM) involves However, as the world’s population grows and industrialization
+deploying monitoring devices at the customer’s bus entrance to accelerates, the energy demand is increasing rapidly, which
+decompose the total power captured into individual operational raises a complex set of challenges, including energy security,
+data for each device. Existing NILM load identification algorithms primarily adopt closed-set identification, where the same sustainability, and environmental impacts. Smart grids, as a
+types of devices are used for both training and testing. However, necessary solution for innovative energy management systems,
+a more realistic scenario is open-set identification, where device are a key enabler for the future of smart energy consumptypes in the training and test sets differ, encompassing not tion [1], [2]. For example, in the United States (USA), where
+only devices from the training set but also unknown devices. primary energy and buildings consume more than 38% and
+To address this challenge, we propose a method leveraging
+reconstruction and supervised contrastive learning based on 76% of electricity, respectively, reductions of up to 15%–40%
+voltage–current (V –I) trajectories. Supervised contrastive learn- can be achieved using whole-building energy management
+ing improves the coherence of V –I trajectories within identical systems [3]. The continued deployment of smart meters and
+appliance classes, facilitating the model’s precise comprehen- different commercial devices makes it possible to perform
+sion and emulation of distinctive appliance behavioral patterns. load monitoring in buildings and homes based on a single
+By introducing an autoencoder (AE) into the model, associating
+each appliance class with its unique subset of features. Known measurement of current (and sometimes even voltage).
+V –I trajectories activate associated features, preserving the Load monitoring is categorized into intrusive load monitopological characteristics of the trajectory. In contrast, unknown toring (ILM) and nonintrusive load monitoring (NILM) [4],
+V –I trajectories lack reconstruction mappings, resulting in [5]. However, ILM methods usually require the installation of
+thoroughly mutated trajectories. Moreover, we innovate data specialized sensors or hardware, which may involve intrusive
+augmentation for contrastive learning by introducing a denoising
+AE (DAE). This approach introduces noise in V –I trajectories, modifications to existing systems. To address these issues,
+the model learns to remove noise while preserving real appliance NILM was developed to provide a more flexible, cost-effective,
+characteristics, generating more robust V –I trajectories. Exper- and nonintrusive way to monitor loads in real-time.
+imental results on two publicly available datasets demonstrate NILM was first proposed by Hart [5]. NILM contains
+the method’s outstanding performance. two main core tasks: decomposition and identification. The
+ Index Terms— Autoencoder (AE), nonintrusive load monitor- goal of the decomposition task is to separate the power
+ing (NILM), supervised contrastive learning, unknown devices consumption signal of each electrical device from the overall
+detection, voltage–current (V –I) trajectory.
+ aggregated signal. It has been widely developed in the last
+ decades due to advances in the field of machine learning
+ I. I NTRODUCTION and deep learning algorithms. Early NILM research was
+
+E NERGY is one of the driving forces of global development and life, underpinning every aspect of modern
+society, from infrastructure to production and everyday life.
+ mainly based on hidden Markov models (HMMs), which
+ are commonly used for probabilistic modeling of time series
+ data [6]. Kong et al. [7] proposed a hierarchical HMM
+ framework to model home appliances to obtain feature iden-
+ Manuscript received 23 October 2023; revised 25 December 2023;
+accepted 30 January 2024. Date of publication 7 March 2024; date of tifiers for multimode electrical devices to improve power
+current version 19 March 2024. This work was supported in part by the decomposition. Egarter et al. [8] proposed modeling household
+National Natural Science Foundation of China under Grant U21A20475 and consumption using a factorial HMM with particle filtering
+in part by the Fundamental Research Funds for the Central Universities under
+Grant N2223001. The Associate Editor coordinating the review process was to estimate device states. The development of deep learning
+Dr. Zhenbing Zhao. (Corresponding author: Haoqi Chen.) solutions introduced a neural network approach in the NILM
+ Yinghua Han is with the School of Computer and Communication Engineer- environment, which quickly became the basis for state-ofing, Northeastern University at Qinhuangdao, Qinhuangdao 066004, China,
+and also with the Hebei Key Laboratory of Marine Perception Network the-art implementations that outperformed previous research.
+and Data Processing, Northeastern University at Qinhuangdao, Qinhuangdao Chen et al. [9] proposed self-supervised learning, which does
+066004, China (e-mail: yhhan@neuq.edu.cn). not require labeled device-level data from the target dataset
+ Haoqi Chen and Jingrun Wu are with the School of Computer and Communication Engineering, Northeastern University at Qinhuangdao, Qinhuangdao or houses. The research presented in [10] had a significant
+066004, China (e-mail: 2272144@stu.neu.edu.cn; 2272178@stu.neu.edu.cn). impact on the NILM literature. The authors proposed a new
+ Qiang Zhao is with the School of Control Engineering, Northeastern sequence-to-point model that was trained to predict the mid-
+University at Qinhuangdao, Qinhuangdao 066004, China (e-mail:
+zhaoqiang@neuq.edu.cn). point of the output sequence rather than the entire sequence.
+ Digital Object Identifier 10.1109/TIM.2024.3374287 Xiong et al. [11] preprocessed the data using discrete wavelet
+ 1557-9662 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+2511313 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+transform. The processed data is transferred to an enhanced to the library. In [25], the potential presence of a new device
+sequence-to-point network for training. was considered if the model’s overall performance dropped
+ Identification tasks have traditionally been conceptualized as below a predetermined threshold. An innovative approach
+classification tasks, allowing for the exploration of algorithms proposed in [26] involved mapping V –I trajectories to a
+and models applicable to classification. Machine learning’s new feature space using a Siamese network, followed by
+success in image processing suggests that voltage–current the assignment of device samples to clusters or marking
+(V –I ) trajectory signatures could bridge the gap between them as unidentified using the DBSCAN clustering algorithm.
+computer vision and NILM [12]. Lam et al. [13] pioneered Han et al. [27] introduced a conditional generative adverthe concept of V –I trajectory features, derived from plotting sarial network that integrated a variational AE (VAE) and
+a device’s operating current against voltage. Load features, a capsule network. This network adeptly identified known
+such as area, symmetry, and cyclic direction, were then devices and demonstrated proficiency in detecting unknown
+extracted from the V –I trajectory. Liu et al. [14] introduced devices. Despite these advancements, these approaches often
+a transfer learning method leveraging V –I trajectory data to overlook the challenge of data imbalance in real-world sceaddress challenges associated with limited data label acquisi- narios, where appliances exhibit diverse usage patterns. For
+tion. de Paula Rodrigues and da Silveira [15] proposed two instance, a refrigerator may run continuously, while a washing
+steady-state features derived from the curvature scale space of machine might be used intermittently. Most deep learning
+the V –I trajectory, aiming to enhance the image representa- algorithms depend on large and balanced datasets, and their
+tion of V –I trajectories by incorporating structural elements training efficiency is constrained, potentially leading to overrelated to their general shape, along with features overlooked fitting and reduced accuracy [28]. Consequently, there is a
+during their generation. Han et al. [16] suggested the appli- compelling need for an algorithm capable of unknown device
+cation of a semi-supervised smoothed teacher graph learning detection while effectively addressing the data imbalance
+network for V –I trajectory recognition. Zhang et al. [17] problem.
+introduced a method involving empirical modal decom- For the unknown device detection problem, similar to
+position (EMD) to filter sampled data and applied deep the open-set identification and anomaly detection problems,
+learning for automatic feature extraction from constructed V –I the V –I trajectories of unknown devices can be considered
+trajectories. anomalous data [29]. The rise of contrastive learning in
+ While the aforementioned approaches for energy decom- recent years has also driven the development of open-set
+position and load identification exhibit commendable perfor- identification and anomaly detection. Yang et al. [30] proposed
+mance in closed-set scenarios, it is imperative to acknowledge a new open-set classifier that created a compact representation
+that NILM inherently poses a nonsmooth problem [18]. space to reduce false negatives using a supervised contrast
+The real-world scenario deviates from a consistent align- learning approach and proposed an integration-based outment of appliance types between training and testing [19], of-distribution detection module to reduce false positives at
+[20]. In practical terms, it is more realistic to encounter the pixel and semantic level. In [31], the effectiveness of
+incomplete appliance types during training and introduce supervised contrastive learning for open-set recognition with
+unknown appliances during testing, expecting the model to fewer parameters was demonstrated. A method was proposed
+adeptly identify them. Therefore, when faced with unknown to compute the anomaly scores for each feature separately and
+appliances, the model should demonstrate proficiency in their sum them up in a weighted manner instead of concatenating
+recognition [12]. Regrettably, the aforementioned methods them. Vaze et al. [32] first established a strong baseline by
+may erroneously categorize an unknown appliance as a known taking state-of-the-art algorithms from new category discovery
+one in such encounters. and adapting them for this task. Next, a visual converter with
+ To tackle the issue of unknown devices and enhance the supervised contrastive learning was used in an open-world
+applicability of NILM in real-world scenarios, researchers environment. Then, unlabeled data was automatically clustered
+have devised algorithms focused on the detection of unknown into visible and invisible classes using a semi-supervised
+devices. In the pursuit of anomaly detection using NILM, K -means approach. Methods utilizing reconstruction in
+as discussed in [21], an algorithm was proposed to identify open-set identification and anomaly detection were also widely
+abnormal behaviors in appliances like refrigerators and air used. Huang et al. [33] proposed a class-specific semantic
+conditioners. Another noteworthy algorithm, outlined in [22], reconstruction (CSSR) approach that integrated the power of
+not only discerned open devices and their power consumption AE and prototype learning. CSSR replaced prototype points
+levels but also effectively detected the presence of unlearned with manifolds represented by class-specific AEs, then modunknown devices. Zhao et al. [23] introduced a deep pairwise eled each known class on a single manifold, and measured
+supervised hashing method tailored for V –I trajectories. This class belongingness through AE’s reconstruction error. Oza
+method utilized distinct hash codes to differentiate known and Patel [34] proposed an open-set recognition algorithm
+devices, generating novel codes for unknown devices and for class conditional AE. The algorithm divided the trainsubsequently identifying them based on Hamming distance. ing process into two subtasks: closed-set classification and
+Yu et al. [24] leveraged a Siamese network to compute V –I open-set recognition. The encoder learned the first task by
+trajectory similarity, achieving load recognition by matching closed-set classification training, while the decoder learned
+signatures to a feature library. The identification of unknown the second task by reconstructing conditions on class identity.
+devices was facilitated by dynamically adding new features Kawachi et al. [35] proposed a supervised anomaly detection
+HAN et al.: RECONSTRUCTION-BASED SUPERVISED CONTRASTIVE LEARNING 2511313
+
+algorithm based on a VAE. The proposed method could detect 3) Improved the data augmentation method by DAE on the
+known anomalies and unknown anomalies in a better way V –I trajectory after adding random noise to obtain an
+compared to the traditional unsupervised VAE. image that is different from the original V –I trajectory,
+ Referring to these methods above, we apply supervised con- yet maximizes the preservation of appliance information.
+trastive learning and a reconstruction-based approach to NILM 4) We evaluated our detection methodology on two pubunknown appliance detection. In load recognition, similar licly accessible datasets, and the experimental findings
+V –I trajectories occur for different kinds of appliances, e.g., substantiate the effectiveness and superiority of our
+compact fluorescent lamps (CFLs) and laptops. Such similar proposed method within the academic context.
+V –I trajectories create a great deal of trouble for unknown In the subsequent sections of this article, we structure our
+appliance recognition. Contrastive learning is a combination content as follows. In Section II, we provide an elaborate
+of deep learning hierarchical learning features and custom account of both the problem statement and proposed approach.
+sample distances to handle data imbalance. Supervised con- Moving on to Section III, we focus on the experimental
+trastive learning maximizes the consistency between the V –I design and conduct a comprehensive discussion of the results
+trajectories of appliances of the same class while excluding obtained. Concluding our article in Section IV, we offer a
+other kinds of appliances in the batch, and it compresses the concise summary and outline potential directions for future
+V –I trajectories into potential spatial representations, enabling research.
+the model to learn various properties of the V –I trajectories to
+facilitate a better distinction between similar V –I trajectories. II. P ROBLEM S TATEMENT AND P ROPOSED A PPROACH
+When we train the model to maximize the vectors between In this section, we begin by outlining the process of extractsimilar V –I trajectories, the model learns the clustering of ing appliance V –I trajectories from time series voltage and
+similar data points in the latent space, which allows the model current data. We then introduce the challenge of detecting
+to distinguish between similar V –I trajectories. Although there unknown appliances. Finally, we provide a comprehensive
+are previous successful examples of supervised contrastive overview of our proposed model, covering key aspects such
+learning, such as open-set recognition [31] and intelligent fault as the supervised comparison loss and its derivation process.
+diagnosis [36], this study is the first to apply supervised contrastive learning to device detection. All of the above methods
+ A. V –I Trajectory Feature Extraction
+using reconstruction identify unknown categories by calculating the reconstruction error. Since the AE (or VAE) has learned NILM begins by acquiring the user’s voltage and current
+images of known categories during training, then images orig- measurements or total power consumption data, followed
+inating from unknown categories generate high reconstruction by the extraction of corresponding feature codes. Device
+errors. However, AE is not robust to noise and impairs the switching events are detected to gather device signatures
+performance of open and closed sets when the input image for training the NILM model. Utilizing V –I trajectory feacontains redundant information [33], [37], [38]. In the real tures, a classification algorithm effectively identifies these
+world, data collected by sensors may be affected by noise and switching events. To extract each device’s V –I trajectory,
+outliers [39], [40]. This can lead to instability in AE-based we assume a single device undergoes a state change at a spemethods. Therefore, instead of calculating the reconstruction cific time point. We collect total voltage and current values for
+error, we only seek to maximize the reduction of the known T complete cycles once the device stabilizes, denoted as Von ,
+V –I trajectories, while the unknown electrical V –I trajec- Voff , Ion , and Ioff , respectively. The appliance’s steady-state
+tories will have a large degree of variation. The difference voltage and current at the switching event can be computed
+between known and unknown can be expanded using this as (von + voff )/2 and Ioff − Ion . Using load voltage and current
+method [33]. We look at these two aspects to improve the data, we generate a 2-D V –I trajectory image. In this article,
+sensitivity of the algorithm to unknown appliances and ensure to increase the number of features in the V –I trajectory to
+that the known appliances can also be identified with a high improve the distinguishability of its V –I trajectories from
+degree of accuracy. different devices, Hue, saturation, value (HSV) color space
+ In this article, we introduce a novel algorithm for detecting is used to color-code the V –I trajectory to enhance the
+unknown devices, enhancing the NILM system’s ability to uniqueness of the load features, which is then used to train
+identify both known and unknown devices. Our approach’s the classifier to have identified the appliances [14].
+primary contributions can be summarized in four key aspects
+as follows. B. Unknown Devices Detection
+ 1) A new unknown device detection model is proposed, In a real-world NILM application scenario, the appliances
+ which combines supervised contrastive learning and an used by consumers are not static; one or more new appliances
+ AE to effectively detect unknown devices and classify are added according to their needs, and various malfunctioning
+ known devices. or inefficient appliances are eliminated. When an existing
+ 2) We pretrained AE with known V –I trajectories and appliance is removed, we can assume that it is turned off
+ inserted them when fine-tuning the classifier to recon- and does not negatively impact overall NILM. However,
+ struct the semantic representation of the V –I trajec- most of the existing methods do not take this into account
+ tories, increasing the discrepancy between known and and when new appliances appear, they may be incorrectly
+ unknown appliances. classified as one of the categories of known appliances,
+2511313 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+Fig. 1. Pipeline of the proposed model for unknown devices detection.
+
+which has an impact on the identification task in NILM.
+Therefore, the NILM algorithm needs to both identify known
+devices and be able to detect unknown devices. This is an
+N + 1 class classification problem, where N stands for
+N known devices and 1 stands for unknown devices. Appliances that are present during testing and do not have their
+corresponding V –I trajectory during training are uniformly
+classified as unknown devices.
+
+C. Proposed Model Architecture
+ As shown in Fig. 1, our model is a three-stage process
+that uses contrast learning to train and test the network.
+In the first stage of the supervised contrastive learning process, Fig. 2. Comparison of known and unknown V –I trajectory through the AE.
+we improve the data augmentation approach to better fit the
+unknown device detection problem in NILM. Instead of using a larger gap from the original image, so that they can be better
+the traditional methods of cropping, rotating, and brightness differentiated between the known devices and the unknown
+changing, a better feature extractor is obtained by denoising devices, and a visual explanation is provided in Fig. 2. In the
+the noise-added V –I trajectory to get an image that retains third stage, the V –I trajectories of the known and unknown
+more device information but is not the same as the original devices are fed into the model together, which is used to test
+V –I trajectory. The transformed V –I trajectory and the orig- the performance of the model. Next, we delve into the detailed
+inal V –I trajectory are fed into the supervised contrastive architecture of the model, breaking it down step by step.
+learning network to compute the supervised contrastive loss. 1) Data Augmentation Module, Aug(·): Our data augmenta-
+In the second stage, we freeze and transfer the pretrained tion module differs from the approach used in traditional
+feature extractors from the first stage and discard the projection data augmentation in that we use a DAE to recover the
+network. Then, a multilayer perceptron (MLP) is connected on V –I trajectory x after adding random noise to obtain x ′ .
+top of the frozen feature extractor and trained. Consider that Previous methods of data augmentation were achieved
+some device components may operate on the same or similar by rotation, cropping, and brightness and color changes.
+principles as other classes of devices, resulting in similarities However, these methods are not fully applicable to the
+in the V –I trajectories of different devices. To mitigate the V –I trajectory. For example, cropping will intercept
+resemblance between V –I trajectories of known and unknown a certain part of the image, but this may make the
+devices, we incorporate a pretrained AE initialized with V –I trajectory intercepted on different appliances
+V –I trajectories of known devices as an upper layer of the similar. It loses information about features such as
+feature extractor. When the V –I trajectories of known devices asymmetry, loop direction, and size of the enclosed
+pass through the AE, they can be well reproduced, and the region area contained in the shape. Color and brightness
+V –I trajectories of unknown devices pass through the AE with changes are also problematic. The V –I trajectories we
+HAN et al.: RECONSTRUCTION-BASED SUPERVISED CONTRASTIVE LEARNING 2511313
+
+ used are HSV color-coded. The color contains character- D. Supervised Contrastive Loss
+ istic information such as trajectory motion information, Supervised contrastive loss is a supervised extension of selfactive and reactive power ratios, and trajectory repeata- supervised loss [42] that is very effective in many downstream
+ bility. When the color and brightness are changed, the tasks. In NILM, V –I trajectory data can be used to learn
+ corresponding electrical features are also changed. Some feature representations by supervised contrastive loss to better
+ other data augmentation methods have similar problems. capture load behaviors and patterns. We first introduce the
+ Therefore, we propose to use DAE for data augmen- self-supervised contrastive loss in self-supervision and then,
+ tation [41]. This preserves the color-coded additional describe how it is extended to the fully supervised case.
+ appliance features without drastically changing the tra- In self-supervised contrastive learning, this is done by
+ jectory information of the V –I trajectory and reducing randomly sampling N sample pairs, each including an anchor
+ the discrimination. and a positive sample. These sample pairs are used to train
+ 2) Feature Extractor Network, Fea(·): V –I trajectories usu- the feature extractor network. In NILM, where the anchor and
+ ally contain much information in load identification, but the positive sample correspond to similar electrical devices,
+ valuable features must be extracted for analysis. The task these sample pairs can be represented as V –I trajectory data
+ of Fea(·) is to remove high-dimensional feature vectors h pairs. For N andomly sampled sample pairs, {xk , yk }k=1,...,N ,
+ from the raw V –I trajectory data x, which may contain the corresponding batch for training consists of 2N pairs,
+ information related to different devices or load patterns. {xℓ , yℓ }ℓ=1,...,2N , where x̃ 2k and x̃ 2k−1 are the pair of the
+ This feature extractor network consists of nine 32 × 32 positive sample corresponding to xk (k = 1, . . . , N ), and
+ convolutional layers with batch normalization and ỹ 2k−1 = ỹ 2k = ỹ k . The remaining (2N − 2) samples are called
+ LeakyReLU (0.2) between each layer. It maps x to the negative sample pairs. Then, the self-supervised contrastive
+ representation vector h = Fea(x) ∈ R D F . x and x ′ are learning loss is defined as follows:
+ fed to the feature extractor separately, resulting in a pair
+ exp z i · z j(i) τ
+ 
+ of representation vectors. h is normalized to the unit
+ X X
+ self self
+ L = Li = − log P (1)
+ hypersphere in R D F (D F = 2048 in this article). i∈I i∈I a∈A(i) exp(z i · z a )/τ
+ 3) Projection Network, Proj(·): The role of Proj(·) in load
+ identification includes feature dimensionality reduction, where z ℓ = Proj(Fea(x̃ ℓ )) ∈ R D P , the · symbol denotes the
+ feature space normalization, distance metric, and fea- inner (dot) product, and τ ∈ R + is the scalar temperature
+ ture representation enhancement, all of which help to parameter. i ∈ I = {1, . . . , 2N } is the index of the augmented
+ improve the performance and robustness of load identi- sample and A(i) ≡ I \ i. The index j (i) denotes a positive
+ fication models. We map h to the vector z = Proj(h) ∈ sample of the anchor i, and the (2N − 2) indices ({k ∈ A(i) \
+ R D P . Proj(·) is instantiated as an MLP with a single { j (i)}}) represent the negative samples.
+ hidden layer of size 2048 and an output vector of size For the fully-supervised scenario, the loss in (1) cannot
+ D P = 128. We again normalize the output of this make use of the label information. To utilize the label infornetwork to lie on the unit hypersphere, which enables mation, the following supervised contrastive loss is proposed:
+ exp z i · z p τ
+ 
+ the use of the inner product to measure distances in sup
+ X −1 X
+ the projected space. We discard Proj(·) at the end of L = log P (2)
+ i∈I
+ |P(i)| p∈P(i) a∈A(i) exp(z i · z a )/τ
+ contrastive training.
+ 4) MLP Classifier, MLP(·): In the second phase, we train where P(i) ≡ { p ∈ A(i): ỹ p = ỹ i } consists of all the
+ the MLP(·) for classification using features obtained positive indices of the anchor in a base called |P(i)|. As shown
+ using Fea(·) that have been trained in the first phase. in (2), for each anchor, all other samples with the same label
+ The vectors obtained in supervised contrastive learning are considered positive. Using supervised contrastive learning,
+ have a higher number of bits than the number of classes we can train the Fea(·) to learn compact embedding for
+ N ; therefore, the MLP(·) searches for the best mapping each class. We give graphical interpretations of self-supervised
+ between those vectors and the N -dimensional vectors. contrastive learning and supervised contrastive learning as
+ The task of MLP(·) is to map the feature vectors shown in Fig. 3.
+ obtained from Fea(·) to load types or device classes. Three types of devices, CFL, WM, and Fridge, are illus-
+ This step is critical to load identification as it will match trated in Fig. 3. The left half is self-supervised contrastive
+ features to known loads to determine which category the learning, which is based on the idea of closing the distance
+ observed load belongs to. between an anchor point and its positive samples and closing
+ 5) AutoEncoder, AE(·): AE(·) is trained with V –I trajec- the distance between the anchor point and the other negative
+ tories of known devices, placed before Fea(·). It can samples of that anchor point. Positive sample pairs are made
+ recover the V –I trajectories of the known devices, up of two subsamples obtained by data augmentation of one
+ while the V –I trajectories of the unknown devices will sample, one of which serves as the anchor point, the other
+ have a larger error from the original V –I trajectories is his positive sample, and the remaining samples are all
+ after the AE(·), making the difference between the considered negative samples. For the sake of esthetics and
+ V –I trajectories of the known and unknown devices to be able to see that the positive samples are obtained by
+ even larger to allow the model to better distinguish data augmentation, the V –I trajectories are not all pictures
+ between known and unknown appliances. after data augmentation but are replaced by the original
+2511313 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+ Python 3.6, Intel1 Xeon1 W-2133 CPU, 3.60 GHz, 64.00 GB
+ RAM, and NVIDIA Quadro P2000. To exclude appliances
+ from power system fluctuations and noise effects at different
+ times, we set T to 10 to avoid misclassification of the V –I
+ trajectory. The size of the V –I trajectory was set to 32 × 32.
+
+ A. Data Preparation and Metrics
+ To assess our proposed algorithm’s performance, we utilized two publicly accessible datasets featuring high-frequency
+ submetered current and voltage signals: PLAID, released in
+Fig. 3. Illustration of self-supervised contrastive learning and supervised
+ 2017 [43], and WHITED [44]. The PLAID dataset comprises
+contrastive learning. current and voltage measurements from various household
+ appliances in Pittsburgh, PA, USA. The 2017 release includes
+V –I trajectories. In the figure, a V –I trajectory of CFL is used data from 82 appliance instances across 11 appliance types in
+as an anchor point, its V –I trajectory after data enhancement nine households, totaling 1793 records sampled at 30 kHz.
+is used as its positive sample, and another V –I trajectory The WHITED dataset records the initial 5 s of voltage
+of CFL and V –I trajectories of WM and Fridge are used and current startup measurements for appliances sampled
+as negative samples. Whereas supervised contrastive learning at 44.1 kHz. WHITED contains 1339 records representing
+allows multiple positive samples for an anchor point, the 54 different appliances, offering single-phase measurements
+positive and negative correlation between the samples is shown for both domestic and industrial use. These records originate
+by labeling, i.e., all samples belonging to the same class as from locations in Germany, Austria, Indonesia, and Canada.
+the anchor point can be considered as positive samples, and Commonly used metrics for evaluating algorithm perforthe remaining ones are considered as negative samples. Thus, mance in identifying both unknown and known appliances
+it can be done to bring the distance between the same class include the F1-score, F-macro (the average F1-score across
+closer and the distance between different classes farther. So all all appliances) [14], and area under the ROC curve (AUROC)
+the V –I trajectories belonging to the same class as CFL in the [45]. The F1-score offers a practical measure of classification
+figure can be regarded as positive samples and the remaining accuracy by calculating a weighted average of precision and
+V –I trajectories as negative samples. recall. In open-set scenarios like unknown appliance detection,
+ achieving an F1-score typically involves adding a class to the
+ open set and searching for an appropriate threshold. AUROC,
+E. Inference
+ on the other hand, is a metric that does not require a calibration
+ We use the percentile thresholding (PT) method to com- process. It assesses the tradeoff between true positive and false
+pute thresholds to distinguish between known and unknown positive rates across various decision thresholds [46].
+appliances. PT is intended to separate known appliances To validate the proposed algorithm’s effectiveness in
+from unknown appliances when used in unknown appliance real-world appliance usage scenarios, we employ a two-step
+recognition scenarios. The thresholds are set by selecting validation process. Initially, we present the results involving
+the appropriate percentile when training the model. We extract the introduction of a single unknown device. Then, in the
+the logit before the softmax layer when training the MLP second step, the results of introducing multiple unknown
+on the training set, ensuring that 99% of the training V –I devices are presented and compared with the literature.
+trajectories are identified as known to obtain the threshold τ .
+The prediction results are adjusted during testing using the
+thresholds obtained. Initially, unknown devices were catego- B. Unknown Devices Detection Experiment Results
+rized into one of the categories of known devices, and then 1) Experimental Results on PLAID Dataset: For unknown
+compared to the thresholds for the corresponding categories appliance detection, we train the model using the V –I trajectobased on their maximum logit values, with those above the ries of N known appliances and then evaluate its performance
+thresholds being labeled as known and those below the thresh- on N + 1 appliance types. The performance of the method is
+olds being labeled as unknown. We refer to this method as first evaluated on the PLAID dataset in the presence of only
+threshold-based prediction filtering (TBPF), and this method one unknown appliance recognition task, and the performance
+can be used to increase the confidence of predictions. of the model is reflected based on the F-macro and AUROC
+ scores. The training set comprises V –I trajectories from ten
+ III. E XPERIMENTS AND R ESULTS appliances, while the test set includes data from 11 appliances.
+ In our experiments, we adopted cross-validation to designate
+ In this section, we first introduce the datasets and evaluation one appliance as the unknown appliance at a time. This process
+metrics used. Second, we conduct experiments on unknown of training and testing was repeated a total of 11 times.
+appliance detection and multiple unknown appliance detection To demonstrate the effectiveness of our proposed algorithm,
+on the PLAID and WHITED datasets and compare them with we compare its experimental results with the latest algorithms.
+existing algorithms; the results are discussed and analyzed.
+Our experiments were implemented using Pytorch 1.8 and 1 Registered trademark.
+HAN et al.: RECONSTRUCTION-BASED SUPERVISED CONTRASTIVE LEARNING 2511313
+
+ TABLE I
+ F1-S CORE AND AUROC S CORES FOR U NKNOWN D EVICE D ETECTION U SING D IFFERENT A LGORITHMS ON THE PLAID DATASET
+
+The experimental results are shown in Table I. The first
+column signifies appliances treated as unknown appliances.
+The corresponding rows display the F1-score for known and
+unknown appliances. The last two columns represent the Fmacro and AUROC scores. Cells highlighted in orange signify
+the detection results for unknown appliances. The F-macro
+and AUROC scores in Table I demonstrate that our proposed
+model achieves the best overall performance on the PLAID
+dataset, surpassing open-set recognition with supervised contrastive learning (ConOSR) [31], adversarial reciprocal points
+learning for open-set recognition (ARPL) [47], and spatial
+location constraint prototype loss for open-set recognition
+(SLCPL) [48]. Only ConOSR has the best performance on Fig. 4. Confusion matrix when leaving one device out cross-validation is
+the washing machine, on the other devices our model is the used on the PLAID dataset.
+highest on both F-macro and AUROC. It can be seen that the
+proposed algorithm achieves good results for both unknown
+device detection (orange cells) and known device detection Fig. 4 presents the count of labels per load type, indicating
+(row indexing). This is because the supervised contrastive accurate predictions and instances of confusion with other
+learning algorithm closes the distance between appliances of loads. The true label on the left signifies individual treatment
+the same kind and expands the distance between appliances of these loads as known, while the predicted label shows the
+of different kinds. We also add an AE to reconstruct the corresponding predictions, with each row corresponding to one
+V –I trajectories to further reduce the similarity between experiment. When considering the CFL as an unknown load,
+known and unknown V –I trajectories. the partial V –I trajectory of the CFL is more similar to the
+2511313 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+ TABLE II
+ F1-S CORE AND AUROC S CORES FOR U NKNOWN D EVICE D ETECTION U SING D IFFERENT A LGORITHMS ON THE WHITED DATASET
+
+partial V –I trajectory of the laptop. It is easy to confuse the the recognition performance more clearly, 12 loads were
+two in the unknown identification scenario. When a washing selected for the experiment. Replace the fixed 12 appliances
+machine is considered as an unknown load, it is easy to be with the following abbreviations: Charger (Ap1), Fan (Ap2),
+mistaken for a fridge and laptop. Both fridge and washing Game Console (Ap3), Hairdryer (Ap4), Kettle (Ap5), LEDmachine are type 5 loads with multiple operating states, and light (Ap6), LightBulb (Ap7), Microwave (Ap8), Mixer (Ap9),
+the key requirements of the washing machine damper are the PowerSupply (Ap10), Toaster (Ap11), and TV (Ap12) [27].
+same as those of the fridge damper, which both work by As in the previous experiments, one load was chosen as the
+motor drive. Consequently, their V –I trajectories can be easily unknown load at a time, and the remaining 11 loads were
+misinterpreted. By analyzing the last column of the confusion trained as the known loads as the training set; 12 loads were
+matrix, we can determine that the algorithm achieves an used in the test, and the experiment was repeated 12 times.
+average accuracy rate of 98.62% in identifying unknown loads. According to the last two columns of Table II, it can be seen
+ 2) Experimental Results on WHITED Dataset: To demon- that our proposed algorithm also outperforms the different
+strate that our model applies to more than just the PLAID algorithms, especially in items higher than other algorithms.
+dataset, the proposed model is further tested on the WHITED When comparing the results to those of the PLAID dataset, it’s
+dataset. The WHITED dataset consists of 54 devices. To show clear that the algorithm’s performance improvement is more
+HAN et al.: RECONSTRUCTION-BASED SUPERVISED CONTRASTIVE LEARNING 2511313
+
+ V –I trajectories with significant similarity. This similarity
+ poses a challenge for the algorithm to discern fine-grained
+ distinctions among them. In contrast, our proposed algorithm,
+ by reducing the similarity between known and unknown loads,
+ and by bringing the same loads closer to each other and
+ different loads closer to each other through the supervised
+ contrastive algorithm, enables the model to better learn the
+ fine-grained difference information between similar V –I trajectories, with a better recognition effect.
+
+ C. Multiple Unknown Devices Detection Experiment Results
+ To demonstrate the scalability of the algorithm and to
+ get closer to real-world application scenarios, we again
+Fig. 5. Confusion matrix when leaving one device out cross-validation is
+used on the WHITED dataset.
+ tested the performance of the algorithm when there were
+ multiple unknown devices present at the same time. Each
+ time, three devices from the PLAID and WHITED datasets
+pronounced due to the higher interclass diversity within the were selected as unknown devices and the rest as known
+WHITED dataset. In comparison, the PLAID dataset has a devices, and the experiment was repeated five times [27]. The
+greater intraclass diversity. So, the PLAID dataset is prone to results of the experiments are shown in Tables III and IV.
+devices being misidentified. In Tables III and IV, the F1-score for unknown and known
+ In the last column of Table II, AUROC scores, it can be seen loads are listed and the F-macro and AUROC scores for each
+that our algorithm is lower than ARPL on both Ap5 and Ap11 experiment are also given in the last two columns. From the
+but is higher than it. We plotted the confusion matrix, shown experimental results, it can be seen that the proposed algorithm
+in Fig. 5, to analyze which loads were misclassified, resulting still outperforms the state-of-the-art algorithms in terms of
+in the proposed algorithm not reaching the optimum AUROC detection of unknown devices and identification of known
+score on both Ap5 and Ap11 devices. From Fig. 5, it can be devices even in the presence of multiple unknown devices at
+seen that the proposed algorithm achieves 100% identification the same time, which proves the scalability and robustness of
+of unknown loads for all ten loads other than Ap5 and Ap11. the algorithm. This is because we added AE to the contrastive
+Analyzing the last column of the confusion matrix reveals that learning network and redesigned a data enhancement approach
+the algorithm achieves an average accuracy rate of 96.93% in for images like V –I trajectories, which makes the model more
+identifying unknown loads. This shows that our algorithm can sensitive to unknown loads.
+accurately identify unknown devices. When Ap5 is considered
+as an unknown load, some of them are misclassified as Ap3. D. Changes in Algorithm Performance When the Number of
+When Ap11 is considered as an unknown load, some of them Unknown Devices Increases
+are considered as Ap6. We check whether these two cases exist To elucidate the dynamic changes in F-macro with the
+through closed-set experiments, and according to the results introduction of unknown devices, we conducted a series
+of the closed-set experiments, this misclassification situation of experiments on the PLAID and WHITED datasets. The
+does not exist. The fact that this situation occurs in unknown datasets were systematically divided into three subsets, each
+device identification indicates that the thresholds we obtained corresponding to a different number of unknown devices:
+from the calculation in performing unknown identification are 1, 3, and 6. To ensure the robustness and accuracy of the
+not sufficient to distinguish them. However, the thresholds we experimental results, each set was subjected to multiple trials,
+set are not only for a certain type of appliances, but we are each of which was unique in terms of the composition of
+pursuing universality, and the average value of our F-macro unknown devices. The recognition performance was evaluated
+on WHITED is 0.9725, so this kind of recognition error is by calculating the average value of the F-macro. Fig. 6
+acceptable, and this is also the direction of our improvement illustrates the variation of the four algorithms on the PLAID
+in the future. dataset, where our method remains advantageous in the pres-
+ As with the PLAID dataset, the experimental results for ence of an increasing number of unknown devices. It is worth
+both the proposed and compared algorithms are presented in noting that our method consistently outperforms the other three
+Table II. It is worth noting that an F1-score of 0 occurs in algorithms, with two methods, ARPL and SLCPL, showing a
+SLCPL and ARPL. This is a combination of two things. One is significant and rapid drop in performance. When the number
+the reason for the threshold setting: the discrimination thresh- of unknown devices reaches 6, our method is the only one
+olds set by these two algorithms, which are not universal, may that exceeds 0.6. In contrast, all other methods fall below
+perform better on a few appliances or a certain dataset, but per- this threshold, with ARPL and SLCPL showing a particularly
+form poorly when tested on other unknown devices or datasets. pronounced drop below 0.4. Fig. 7 illustrates the variation of
+In contrast, our model achieves the best performance on both the four algorithms on the WHITED dataset, and it is clear
+datasets and most of the experiments. This indicates that our that our algorithm outperforms the other three algorithms. And
+proposed model generalizes well. In addition, some appli- when the number of unknown devices increases, our F-macro
+ances exhibit closely resembling operating states, resulting in is always higher than 0.8.
+2511313 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+ TABLE III
+ F1-S CORE AND AUROC S CORES FOR M ULTIPLE U NKNOWN D EVICES D ETECTION U SING D IFFERENT A LGORITHMS ON THE PLAID DATASET
+
+ TABLE IV
+ F1-S CORE AND AUROC S CORES FOR M ULTIPLE U NKNOWN D EVICES D ETECTION U SING D IFFERENT A LGORITHMS ON THE WHITED DATASET
+
+Fig. 6. Changes in algorithm performance as the number of unknown devices
+on the PLAID dataset increases. Fig. 7. Changes in algorithm performance as the number of unknown devices
+ on the WHITED dataset increases.
+ IV. A BLATION S TUDY
+ We conducted ablation experiments on the PLAID and traditional open-set supervised contrastive learning (ConOSR),
+WHITED datasets and tested them on four algorithms: open-set supervised contrastive learning with our improved
+HAN et al.: RECONSTRUCTION-BASED SUPERVISED CONTRASTIVE LEARNING 2511313
+
+ TABLE V
+ F -M ACRO S CORES FOR A BLATION E XPERIMENTS ON THE PLAID DATASET
+
+ TABLE VI
+ AUROC S CORES FOR A BLATION E XPERIMENTS ON THE PLAID DATASET
+
+ TABLE VII
+ F -M ACRO S CORES FOR A BLATION E XPERIMENTS ON THE WHITED DATASET
+
+ TABLE VIII
+ AUROC S CORES FOR A BLATION E XPERIMENTS ON THE WHITED DATASET
+
+data augmentation method added (Ours/AE), open-set super- NILM. We integrate supervised contrastive learning and AE
+vised contrastive learning with AE added (Ours/Aug) and our and improve the data augmentation approach. Using V –I
+proposed method using ConOSR as a baseline. trajectory-signed appliances as input, supervised contrastive
+A. Ablation Experiments on PLAID Dataset learning clusters together cluster points belonging to the same
+ class of appliances in the embedding space while separating
+ To reduce the contingency, we conducted 11 experiments appliances of different classes. We change the data enhancefor each algorithm, each of which contains only one unknown ment approach so that the V –I trajectory maximizes the
+appliance and will not be repeated, finally, the results of preservation of appliance information but is different from
+the 11 experiments are averaged. Tables V and VI show the the original V –I trajectory. We apply AE to the downstream
+F-macro and AUROC scores of the four algorithms. From the classification task to reconstruct the semantic representation of
+two tables, it can be seen that our proposed algorithm obtains the image so that the boundary between known and unknown
+the highest scores in both evaluation metrics, and the results of appliances is more obvious. This further improves the perforthe remaining two algorithms are also stronger than the base- mance of the model. We distinguish known from unknown
+line. It proves that the improvements we made are effective. appliances by assessing the distance between the feature
+ distributions of the test sample and the known appliance sam-
+B. Ablation Experiments on WHITED Dataset
+ ple. The algorithm shows excellent performance in unknown
+ To further demonstrate our proposed algorithm, ablation appliance detection. In future work, we aim to enhance our
+experiments were again done on the WHITED dataset. The algorithm by incorporating detected unknown appliances into
+experimental setup is basically the same as the PLAID dataset. the model. This approach will enable more efficient detection
+From Tables VII and VIII, it can be seen that our proposed of unknown appliances and expand the practical applications
+algorithm and the improvements made are basically better than of NILM.
+the baseline ones. Once again, the performance of our method
+is proven.
+ R EFERENCES
+ V. C ONCLUSION AND F UTURE W ORK
+ [1] D. Alahakoon and X. Yu, “Smart electricity meter data intelligence for
+ In this article, a reconfiguration-based supervised contrastive future energy systems: A survey,” IEEE Trans. Ind. Informat., vol. 12,
+learning is proposed for unknown device identification in no. 1, pp. 425–436, Feb. 2016.
+2511313 IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 73, 2024
+
+ [2] S. S. Hosseini, A. Badri, and M. Parvania, “A survey on mobile [24] M. Yu, B. Wang, L. Lu, Z. Bao, and D. Qi, “Non-intrusive adaptive
+ energy storage systems (MESS): Applications, challenges and solutions,” load identification based on Siamese network,” IEEE Access, vol. 10,
+ Renew. Sustain. Energy Rev., vol. 40, pp. 161–170, Dec. 2014. pp. 11564–11573, 2022.
+ [3] U. Doe, “An assessment of energy technologies and research opportuni- [25] J. Zhang, X. Chen, W. W. Ng, C. S. Lai, and L. L. Lai, “New appliance
+ ties,” in Quadrennial Technology Review. Washington, DC, USA: United detection for nonintrusive load monitoring,” IEEE Trans. Ind. Informat.,
+ States Department of Energy, 2015, pp. 12–19. vol. 15, no. 8, pp. 4819–4829, Aug. 2019.
+ [4] A. Ridi, C. Gisler, and J. Hennebert, “A survey on intrusive load [26] L. De Baets, C. Develder, T. Dhaene, and D. Deschrijver, “Detecmonitoring for appliance recognition,” in Proc. 22nd Int. Conf. Pattern tion of unidentified appliances in non-intrusive load monitoring using
+ Recognit., Aug. 2014, pp. 3702–3707. Siamese neural networks,” Int. J. Elect. Power Energy Syst., vol. 104,
+ [5] G. W. Hart, “Nonintrusive appliance load monitoring,” Proc. IEEE, pp. 645–653, Jan. 2019.
+ vol. 80, no. 12, pp. 1870–1891, Jun. 1992. [27] Y. Han, K. Li, C. Wang, F. Si, and Q. Zhao, “Unknown appliances
+ [6] O. Parson, S. Ghosh, M. Weal, and A. Rogers, “Non-intrusive load detection for non-intrusive load monitoring based on conditional genmonitoring using prior models of general appliance types,” in Proc. 26th erative adversarial networks,” IEEE Trans. Smart Grid, vol. 14, no. 6,
+ Conf. Artif. Intell. (AAAI), Jul. 2012, pp. 356–362. pp. 4553–4564, 2023.
+ [7] W. Kong, Z. Y. Dong, D. J. Hill, J. Ma, J. H. Zhao, and F. J. Luo, [28] A. Gao, F. Mei, J. Zheng, H. Sha, M. Guo, and Y. Xie, “Electricity
+ “A hierarchical hidden Markov model framework for home appliance theft detection based on contrastive learning and non-intrusive load
+ modeling,” IEEE Trans. Smart Grid, vol. 9, no. 4, pp. 3079–3090, monitoring,” IEEE Trans. Smart Grid, vol. 14, no. 6, pp. 4565–4580,
+ Jul. 2018. 2023.
+ [8] D. Egarter, V. P. Bhuvana, and W. Elmenreich, “PALDi: Online load dis- [29] W. J. Scheirer, A. de Rezende Rocha, A. Sapkota, and T. E. Boult,
+ aggregation via particle filtering,” IEEE Trans. Instrum. Meas., vol. 64, “Toward open set recognition,” IEEE Trans. Pattern Anal. Mach. Intell.,
+ no. 2, pp. 467–477, Feb. 2015. vol. 35, no. 7, pp. 1757–1772, Jul. 2013.
+ [9] S. Chen, B. Zhao, M. Zhong, W. Luan, and Y. Yu, “Nonintrusive load [30] Y. Yang, Y. Ge, B. Li, Q. Wang, Y. Lang, and K. Li, “Multiscenario openmonitoring based on self-supervised learning,” IEEE Trans. Instrum. set gait recognition based on radar micro-Doppler signatures,” IEEE
+ Meas., vol. 72, pp. 1–13, 2023. Trans. Instrum. Meas., vol. 71, pp. 1–13, 2022.
+[10] C. Zhang, M. Zhong, Z. Wang, N. Goddard, and C. Sutton, “Sequence- [31] Y. Kodama, Y. Wang, R. Kawakami, and T. Naemura, “Open-set
+ to-point learning with neural networks for non-intrusive load monitor- recognition with supervised contrastive learning,” in Proc. 17th Int. Conf.
+ ing,” in Proc. AAAI Conf. Artif. Intell., vol. 32, 2018, pp. 2604–2611. Mach. Vis. Appl. (MVA), Jul. 2021, pp. 1–5.
+[11] C. Xiong, Z. Cai, S. Liu, J. Luo, and G. Tu, “An improved sequence- [32] S. Vaze, K. Hant, A. Vedaldi, and A. Zisserman, “Generalized category
+ to-point learning for non-intrusive load monitoring based on discrete discovery,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+ wavelet transform,” IEEE Trans. Instrum. Meas., vol. 72, pp. 1–16, (CVPR), Jun. 2022, pp. 7482–7491.
+ 2023. [33] H. Huang, Y. Wang, Q. Hu, and M.-M. Cheng, “Class-specific semantic
+[12] J. Lu, R. Zhao, B. Liu, Z. Yu, J. Zhang, and Z. Xu, “An overview of non- reconstruction for open set recognition,” IEEE Trans. Pattern Anal.
+ intrusive load monitoring based on V-I trajectory signature,” Energies, Mach. Intell., vol. 45, no. 4, pp. 4214–4228, Apr. 2023.
+ vol. 16, no. 2, p. 939, Jan. 2023. [34] P. Oza and V. M. Patel, “C2AE: Class conditioned auto-encoder for
+[13] H. Lam, K. Ting, W. Lee, and G. Fung, “An analytical understanding open-set recognition,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+ on voltage-current curve of electrical load,” in Proc. Int. Conf. Electr. Recognit. (CVPR), Jun. 2019, pp. 2307–2316.
+ Eng. (ICEE), 2006, pp. 1–6. [35] Y. Kawachi, Y. Koizumi, and N. Harada, “Complementary set varia-
+[14] Y. Liu, X. Wang, and W. You, “Non-intrusive load monitoring by tional autoencoder for supervised anomaly detection,” in Proc. IEEE
+ voltage–current trajectory enabled transfer learning,” IEEE Trans. Smart Int. Conf. Acoust., Speech Signal Process. (ICASSP), Apr. 2018,
+ Grid, vol. 10, no. 5, pp. 5609–5619, Sep. 2019. pp. 2366–2370.
+[15] R. de Paula Rodrigues and P. M. da Silveira, “Curvature scale space- [36] P. Peng et al., “Imbalanced fault diagnosis by supervised contrastive
+ based signatures for electrical load classification in NILM,” Electr. Eng., learning,” in Proc. IEEE 25th Int. Conf. Comput. Supported Cooperat.
+ vol. 103, no. 2, pp. 1239–1252, Apr. 2021. Work Design (CSCWD), May 2022, pp. 689–692.
+[16] Y. Han, K. Li, H. Feng, and Q. Zhao, “Non-intrusive load moni- [37] Y. Zhang, L. Gao, X. Wen, and H. Wang, “Intelligent fault diagnosis of
+ toring based on semi-supervised smooth teacher graph learning with machine under noisy environment using ensemble orthogonal contractive
+ voltage–current trajectory,” Neural Comput. Appl., vol. 34, no. 21, auto-encoder,” Expert Syst. Appl., vol. 203, Oct. 2022, Art. no. 117408.
+ pp. 19147–19160, 2022.
+ [38] R. Wang et al., “Class-aware variational auto-encoder for open set recog-
+[17] P. Zhang, B. Gao, H. Chen, and Z. Yu, “Appliance recognition using nition,” in Proc. IEEE Int. Conf. Multimedia Expo (ICME), Jul. 2023,
+ V-I trajectories based on deep learning,” in Proc. IEEE 4th Int. Conf. pp. 264–269.
+ Power, Intell. Comput. Syst. (ICPICS), Jul. 2022, pp. 239–243.
+ [39] K. He, L. Stankovic, J. Liao, and V. Stankovic, “Non-intrusive load
+[18] D. H. Green, A. W. Langham, R. A. Agustin, D. W. Quinn, and disaggregation using graph signal processing,” IEEE Trans. Smart Grid,
+ S. B. Leeb, “Adaptation for automated drift detection in electrome- vol. 9, no. 3, pp. 1739–1747, May 2018.
+ chanical machine monitoring,” IEEE Trans. Neural Netw. Learn. Syst.,
+ [40] B. Zhao, K. He, L. Stankovic, and V. Stankovic, “Improving eventvol. 34, no. 10, pp. 6768–6782, 2023.
+ based non-intrusive load monitoring using graph signal processing,”
+[19] C. Dinesh, B. W. Nettasinghe, R. I. Godaliyadda, M. P. B. Ekanayake, IEEE Access, vol. 6, pp. 53944–53959, 2018.
+ J. Ekanayake, and J. V. Wijayakulasooriya, “Residential appliance identification based on spectral information of low frequency smart meter [41] J. Luo, Y. Zhang, Y. Wu, Y. Xu, X. Guo, and B. Shang, “A multimeasurements,” IEEE Trans. Smart Grid, vol. 7, no. 6, pp. 2781–2792, channel contrastive learning network based intrusion detection method,”
+ Nov. 2016. Electronics, vol. 12, no. 4, p. 949, Feb. 2023.
+[20] H. G. C. P. Dinesh, P. H. Perera, G. M. R. I. Godaliyadda, [42] P. Khosla et al., “Supervised contrastive learning,” in Proc. Adv. Neural
+ M. P. B. Ekanayake, and J. B. Ekanayake, “Residential appliance mon- Inf. Process. Syst., vol. 33, 2020, pp. 18661–18673.
+ itoring based on low frequency smart meter measurements,” in Proc. [43] L. De Baets, C. Develder, T. Dhaene, D. Deschrijver, J. Gao,
+ IEEE Int. Conf. Smart Grid Commun. (SmartGridComm), Nov. 2015, and M. Berges, “Handling imbalance in an extended plaid,” in
+ pp. 878–884. Proc. Sustain. Internet ICT Sustainability (SustainIT), Dec. 2017,
+[21] H. Rashid, P. Singh, V. Stankovic, and L. Stankovic, “Can pp. 1–5.
+ non-intrusive load monitoring be used for identifying an appli- [44] M. Kahl, A. U. Haq, T. Kriechbaumer, and H.-A. Jacobsen, “WHITED—
+ ance’s anomalous behaviour?” Appl. Energy, vol. 238, pp. 796–805, A worldwide household and industry transient energy data set,”
+ Mar. 2019. in Proc. 3rd Int. Workshop Non-Intrusive Load Monitor., 2016,
+[22] S. Welikala, C. Dinesh, R. I. Godaliyadda, M. P. B. Ekanayake, and pp. 1–4.
+ J. Ekanayake, “Robust non-intrusive load monitoring (NILM) with [45] C. Geng, S.-J. Huang, and S. Chen, “Recent advances in open set
+ unknown loads,” in Proc. IEEE Int. Conf. Inf. Autom. Sustainability recognition: A survey,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 43,
+ (ICIAfS), Dec. 2016, pp. 1–6. no. 10, pp. 3614–3631, Oct. 2021.
+[23] Q. Zhao, Y. Xu, Z. Wei, and Y. Han, “Non-intrusive load monitoring [46] W. Moon, J. Park, H. S. Seong, C.-H. Cho, and J.-P. Heo, “Difficultybased on deep pairwise-supervised hashing to detect unidentified appli- aware simulator for open set recognition,” in Proc. Eur. Conf. Comput.
+ ances,” Processes, vol. 9, no. 3, p. 505, 2021. Vis. Berlin, Germany: Springer-Verlag, 2022, pp. 365–381.
+HAN et al.: RECONSTRUCTION-BASED SUPERVISED CONTRASTIVE LEARNING 2511313
+
+[47] G. Chen, P. Peng, X. Wang, and Y. Tian, “Adversarial reciprocal points Jingrun Wu received the B.S. degree from the
+ learning for open set recognition,” IEEE Trans. Pattern Anal. Mach. School of Optoelectronics and Information Engi-
+ Intell., vol. 44, no. 11, pp. 8065–8081, Nov. 2022. neering, Fujian Normal University, Fuzhou, China,
+[48] Z. Xia, P. Wang, G. Dong, and H. Liu, “Spatial location constraint pro- in 2022. He is currently pursuing the M.S. degree
+ totype loss for open set recognition,” Comput. Vis. Image Understand., with the School of Computer and Communication
+ vol. 229, Mar. 2023, Art. no. 103651. Engineering, Northeastern University at Qinhuangdao, Qinhuangdao, China.
+ His research interests include demand response,
+ Yinghua Han received the B.S., M.S., and Ph.D. building energy management systems, and reinforcedegrees in navigation guidance and control from ment learning.
+ the College of Information Science and Engineering,
+ Northeastern University, Shenyang, China, in 2003,
+ 2005, and 2008, respectively.
+ She is currently a Professor of electronic and
+ information engineering with the School of Computer and Communication Engineering, Northeastern
+ University at Qinhuangdao, Qinhuangdao, China.
+ Her research interests include big data analysis in
+ power systems, fault monitoring of renewable energy
+generation systems, and optimal operation of smart grids.
+
+ Haoqi Chen received the B.S. degree in communi- Qiang Zhao received the Ph.D. degree in navication engineering from the School of Information gation guidance and control from the College of
+ Science and Technology, Qingdao University of Information Science and Engineering, Northeastern
+ Science and Technology, Qingdao, China, in 2022. University, Shenyang, China, in 2017.
+ He is currently pursuing the M.S. degree with He is currently a Lecturer of the measurement
+ the School of Computer and Communication Engi- and control technology and instrumentation program
+ neering, Northeastern University at Qinhuangdao, with the School of Control Engineering, North-
+ Qinhuangdao, China. eastern University at Qinhuangdao, Qinhuangdao,
+ His research interests include nonintrusive load China. His research interests include electricity theft
+ monitoring and energy disaggregation technology, detection, fault diagnosis of renewable energy genhousehold energy management systems, and deep eration systems, and optimal operation of smart
+ learning. grids.

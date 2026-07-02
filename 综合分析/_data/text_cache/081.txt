@@ -1,0 +1,141 @@
+ FARE: Enabling Fine-grained Attack Categorization
+         under Low-quality Labeled Data
+
+                Junjie Liang1 § , Wenbo Guo1 § , Tongbo Luo2 , Vasant Honavar1 , Gang Wang3 , Xinyu Xing1
+              1 The Pennsylvania State University 2 Robinhood, 3 University of Illinois at Urbana-Champaign
+
+               {jul672, wzg13, vhonavar, xxing}@ist.psu.edu, irobert0126@gmail.com, gangw@illinois.edu
+    Abstract—Supervised machine learning classifiers have been          the defender knows the attack exists and has collected labeled
+widely used for attack detection, but their training requires abun-     data for training.
+dant high-quality labels. Unfortunately, high-quality labels are
+difficult to obtain in practice due to the high cost of data labeling       Unfortunately, in practice, obtaining abundant high-quality
+and the constant evolution of attackers. Without such labels, it        labels is difficult. This is particularly true for security appli-
+is challenging to train and deploy targeted countermeasures.            cations, due to the high cost of data labeling and the evolving
+    In this paper, we propose FARE, a clustering method to enable
+                                                                        nature of attacks. Data labeling is expensive because it requires
+fine-grained attack categorization under low-quality labels. We         manual efforts. Unlike labeling images or text, investigating
+focus on two common issues in data labels: 1) missing labels            new attack samples (e.g., new malware families) requires
+for certain attack classes or families; and 2) only having coarse-      substantial expertise, and often takes a longer time. As such,
+grained labels available for different attack types. The core idea      only a small portion of data samples can be labeled manually.
+of FARE is to take full advantage of the limited labels while           Even for the labeled samples, the quality of the labels is often
+using the underlying data distribution to consolidate the low-          far from satisfying. There are two common issues faced by
+quality labels. We design an ensemble model to fuse the results of      different security applications:
+multiple unsupervised learning algorithms with the given labels
+to mitigate the negative impact of missing classes and coarse-              The first common issue is the missing classes in the la-
+grained labels. We then train an input transformation network           beled data. Take malware detection for example. The malware
+to map the input data into a low-dimensional latent space for           ecosystem is constantly evolving with new malware families
+fine-grained clustering. Using two security datasets (Android           appearing frequently over time [56]. As a result, the labeled
+malware and network intrusion traces), we show that FARE                dataset might miss certain malware families. Using a dataset
+significantly outperforms the state-of-the-art (semi-)supervised        with missing classes, the trained classifiers would have a hard
+learning methods in clustering quality/correctness. Further, we
+                                                                        time detecting related malware.
+perform an initial deployment of FARE by working with a large
+e-commerce service to detect fraudulent accounts. With real-                The second common issue is coarse-grained labels. Due
+world A/B tests and manual investigation, we demonstrate the            to the lack of time or expertise of the analysts, the provided
+effectiveness of FARE to catch previously-unseen frauds.                labels often lack specificity or contain errors. For example,
+                                                                        for malware attribution, malware of different families may
+                          I.   I NTRODUCTION                            be incorrectly labeled as the same family; For online abuse
+    Machine learning is widely used to build security appli-            classification, scrapers and trolls may be assigned to a generic
+cations. Many security tasks such as malware detection and              “abusive” label. In practice, coarse-grained labels pose a key
+abuse/fraud identification can be formulated as a supervised            challenge to deploying timely and targeted countermeasures.
+classification problem [31], [45], [64], [10], [36], [19], [17].        For example, different malware has different kill chains, and
+By collecting and labeling benign and malicious samples,                scrapers and trolls should be given different penalties.
+defenders can train supervised classifiers to distinguish attacks       Proposed Solution. In this paper, we aim to enable fine-
+from benign data (or distinguish different attack types).               grained attack categorization using low-quality labels. The
+    A key challenge faced by these supervised classifiers is            goal is to discover the clustering structures in the data to
+that their training requires abundant high-quality labels. Many         assist human analysts to derive high-quality labels. We propose
+supervised models, especially deep-learning models, are data-           FARE, a semi-supervised method to address the issues of
+hungry, requiring a large quantity of labeled data to achieve           both missing classes and coarse-grained labels in poorly-
+a decent training outcome. In addition, the labels need to              labeled datasets. At the high-level, FARE’s input is a dataset
+have good coverage of all the attack types of interest. A               where only a small portion of the data is labeled, and the
+classifier cannot reliably detect a certain type of attack unless       labels are of a low-quality. After running FARE, it outputs
+                                                                        the clustering assignment for all the data samples. The data
+  § Equal contribution.                                                 samples are expected to be either correctly clustered under the
+                                                                        known labels or form new groups to represent the new labels.
+                                                                        By correctly recovering the clustering structures in the input
+Network and Distributed Systems Security (NDSS) Symposium 2021          dataset, FARE provides the much-needed support for human
+21-25 February 2021, Virtual                                            analysts to generate high-quality labels.
+ISBN 1-891562-66-5
+https://dx.doi.org/10.14722/ndss.2021.24403                                The core idea of FARE is to take full advantage of the
+www.ndss-symposium.org                                                  limited labels while using the underlying data distribution to
+consolidate the low-quality labels. More specifically, we design          To facilitate future research, we release the code of FARE,
+an ensemble model to fuse the results of multiple unsupervised         and the malware and intrusion datasets used in this paper1 .
+learning algorithms with the given labels. This helps to miti-
+gate the negative impact of missing classes and coarse-grained                   II.    BACKGROUND AND P ROBLEM S COPE
+labels, and reduce the randomness of the learning outcome.
+Based on the fused labels, we design an input transformation              We start by describing the background of three key security
+network by extending the basic idea of metric learning [26].           applications and the problems caused by missing-classes or
+The network maps the input data into a low-dimensional latent          coarse-grained labels. Then, we discuss our problem scope and
+space, which makes it easier to identify fine-grained clusters.        assumptions.
+
+Experimental Evaluation. We evaluate FARE with two                     A. Security Applications
+popular security applications: malware categorization and net-
+work intrusion detection. We use existing datasets of 270,000          Malware Identification and Classification. Researchers have
+malware samples and 490,000 network events to perform                  used machine learning methods to identify malware from
+controlled experiments. More specifically, by omitting different       benign software (i.e., identification) and classifying malware
+classes or merging data labels, we simulate different scenarios        into specific families (i.e, attribution) [1], [81], [56], [82].
+where only limited low-quality labels are available. We com-           Most existing works focus on the supervised learning setting
+pare FARE with the state-of-the-art semi-supervised learning           (in which a fully and correctly labeled malware dataset is
+algorithms as well as unsupervised algorithms. Our results             available) and have demonstrated promising performance of
+show that FARE significantly outperforms existing methods              machine learning models. However, the problem becomes
+when there are missing classes or coarse-grained labels in the         more challenging in semi-supervised learning or unsupervised
+data, and maintains a comparable performance when the data             learning settings when labels are incomplete. Labels are in-
+labels are correct. We find that most existing methods have the        complete for two main reasons. First, malware evolution: one
+implicit assumption that the classes in the labels are complete,       malware family could evolve into hundreds or even thousands
+and thus perform poorly when this assumption is violated. In           of malware variants in a short period of time [73]. Second,
+addition, we show that FARE is less sensitive to the variations        labeling malware usually requires manual efforts from domain
+of datasets, and the ratio of available labels. This confirms          experts, which is a time-consuming process.
+the benefits of fusing unsupervised learning results with given        Network Intrusion Detection. Existing network intrusion
+labels to increase system stability. Finally, we show that the         detection systems can be categorized into rule-based system
+computational overhead of FARE is comparable to commonly-              and anomaly-based system [65], [47], [51], [15], [38]. Rule-
+used clustering algorithms.                                            based systems detect a known attack by matching the attack
+Testing on a Real-world Service. We work with an industrial            with the existing patterns stored in the knowledge base. These
+partner to test FARE in their production environment to detect         systems are usually accurate on well-studied intrusions but
+fraudulent accounts in a large e-commerce service. As the ini-         can fail to detect previously-unseen attacks. Anomaly-based
+tial testing, we apply FARE to a sample of 200,000 active user         systems rely on unsupervised machine learning to detect out-
+accounts. The dataset only has 0.5% of confirmed fraudulent            of-distribution samples. In practice, security platforms often
+account labels, and 0.1% of confirmed trusted account labels.          combine both systems for a better outcome. However, it is still
+Through an A/B test, we show that FARE helps to discover               plausible for attackers to adapt their behaviors to evade such
+previously-unseen fraudulent accounts. By initiating two-factor        detection systems. Identifying and characterizing such evasion
+re-authentication requests to the detected accounts, we find           attacks requires manual investigations from domain experts,
+0% of them can successfully re-authenticate themselves, con-           which again is a time-consuming process.
+firming a low false-positive rate. Further manual investigation        Fraudulent Account Detection. Online service providers face
+reveals new attack types such as accounts exploiting mistagged         serious threats from fraudulent accounts that are created for
+prices for bulk product purchasing.                                    malicious activities (e.g., spam, scam, illegal content scraping,
+   In summary, this paper makes three key contributions.               and opinion manipulation) [14], [13], [68], [75], [71], [23],
+                                                                       [33]. A recent report shows that fraudulent credit card accounts
+   •    We propose FARE to address the problem of low-                 affected more than 250,000 U.S. consumers [27]. Similarly,
+        quality data labels, a common challenge faced by               detecting fraudulent accounts has been a cat-mouse game. The
+        learning-based security applications. We introduce a           defenders are struggling with labeling new types of fraudulent
+        series of new designs to enable fine-grained attack cat-       accounts as they change their behaviors to evade detection.
+        egorization when the labeled data has missing classes
+        or coarse-grained labels.                                      B. Problem Scope and Assumptions
+   •    Through experiments, we demonstrate existing semi-                 A common challenge faced by these security applications
+        supervised and unsupervised methods are not capable            is data labeling. While the data labeling problem also exists
+        of handling such low-quality labels. We show that              in other application domains (e.g., image analysis and natural
+        FARE significantly outperforms existing methods in             language processing), we argue that two characteristics of
+        recovering the true clustering structure in the data.          security applications make the problem more concerning. First,
+                                                                       unlike labeling images, labeling security data requires domain
+   •    We tested FARE in a real-world online service system.          expertise to perform in-depth manual analysis (and thus more
+        We demonstrate the usefulness of FARE to analyze
+        and categorize fraudulent accounts.                              1 https://github.com/junjieliang672/FARE
+
+
+
+
+                                                                   2
+time consuming). Second, attacker behavior shift is a norm               human analysts to discover the previously missing classes and
+in the security domain, which puts higher pressure on labeling           fine-grained sub-classes.
+data in a timely fashion. In practice, security analysts can only
+label a small subset of samples among a large volume of data.                In this paper, we focus on recovering the true clustering
+Below, we discuss two critical issues:                                   structure. The human labeling part is out of the scope of this
+                                                                         paper (i.e., potential user studies are future works).
+Missing Classes. The first issue is that the labeling is often
+incomplete, which means not all the incoming data samples                Assumptions. We assume the given labels of the known
+have a label. Even for the labeled samples, it is difficult to           classes are correct (n − nc classes in the missing class setting,
+guarantee that the labels perfectly cover all the attack cate-           and n − ng + 1 classes in the coarse-grained label setting). In
+gories. Take malware for example, it is unrealistic to assume            other words, we assume a small number of samples for the
+that the security analysts are aware of all the malware families         well-known classes are labeled correctly in the input dataset.
+in the wild. As such, a common practice is to conservatively
+leave the previously unseen families as unlabeled data. With             C. Possible Solutions and Limitations
+unlabeled data and missing classes, the train

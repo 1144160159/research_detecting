@@ -1,0 +1,1737 @@
+Detecting Unknown Encrypted Malicious Traffic in
+ Real Time via Flow Interaction Graph Analysis
+ Chuanpu Fu∗ , Qi Li†‡ , Ke Xu∗‡
+ ∗ Department of Computer Science and Technology, Tsinghua University
+ † Institute for Network Sciences and Cyberspace, Tsinghua University ‡ Zhongguancun Lab
+
+ Abstract—Nowadays traffic on the Internet has been widely existing malicious traffic detection methods. Different from
+ encrypted to protect its confidentiality and privacy. However, plain-text malicious traffic, the encrypted traffic has similar
+ traffic encryption is always abused by attackers to conceal their features to benign flows and thus can evade existing machine
+ malicious behaviors. Since the encrypted malicious traffic has learning (ML) based detection systems as well [2], [3], [62].
+ similar features to benign flows, it can easily evade traditional Particularly, the existing encrypted traffic detection methods
+ detection methods. Particularly, the existing encrypted malicious
+arXiv:2301.13686v1 [cs.CR] 31 Jan 2023
+
+ traffic detection methods are supervised and they rely on the prior
+ are supervised, i.e., relying on the prior knowledge of known
+ knowledge of known attacks (e.g., labeled datasets). Detecting attacks, and can only detect attacks with known traffic patterns.
+ unknown encrypted malicious traffic in real time, which does not They extract features of specific known attacks and use labeled
+ require prior domain knowledge, is still an open problem. datasets of known malicious traffic for model training [2],
+ [3], [76]. Thus, they are unable to detect a broad spectrum
+ In this paper, we propose HyperVision, a realtime unsuperof attacks with encrypted traffic [39], [41], [64], [77], which
+ vised machine learning (ML) based malicious traffic detection
+ system. Particularly, HyperVision is able to detect unknown are constructed with unknown patterns [22]. Besides, these
+ patterns of encrypted malicious traffic by utilizing a compact in- methods are incapable of detecting both attacks constructed
+ memory graph built upon the traffic patterns. The graph captures with and without encrypted traffic and unable to achieve
+ flow interaction patterns represented by the graph structural generic detection because features of encrypted and nonfeatures, instead of the features of specific known attacks. We de- encrypted attack traffic are significantly different [2], [3].
+ velop an unsupervised graph learning method to detect abnormal
+ interaction patterns by analyzing the connectivity, sparsity, and In a nutshell, the existing methods cannot achieve unsuperstatistical features of the graph, which allows HyperVision to de- vised detection and they are unable to detect encrypted malitect various encrypted attack traffic without requiring any labeled cious traffic with unknown patterns. In particular, the encrypted
+ datasets of known attacks. Moreover, we establish an information malicious traffic has stealthy behaviors, which cannot be captheory model to demonstrate that the information preserved by tured by these methods [2], [76] that detect attacks according
+ the graph approaches the ideal theoretical bound. We show the to the patterns of a single flow. However, it is still feasible to
+ performance of HyperVision by real-world experiments with 92 detect such attack traffic because these attacks involve multiple
+ datasets including 48 attacks with encrypted malicious traffic. The attack steps with different flow interactions among attackers
+ experimental results illustrate that HyperVision achieves at least and victims, which are distinct from benign flow interactions
+ 0.92 AUC and 0.86 F1, which significantly outperform the stateof-the-art methods. In particular, more than 50% attacks in our
+ patterns [24], [26], [39], [46], [61]. For example, the encrypted
+ experiments can evade all these methods. Moreover, HyperVision flow interactions between spam bots and SMTP servers are
+ achieves at least 80.6 Gb/s detection throughput with the average significantly different from the legitimate communications [61]
+ detection latency of 0.83s. even if the single flow of the attack is similar to the benign one.
+ Thus, this paper explores utilizing interaction patterns among
+ I. I NTRODUCTION various flows for malicious traffic detection.
+ Traffic encryption has been widely adopted to protect the To the end, we propose HyperVision, a realtime detection
+ information delivered on the Internet. Over 80% websites system that aims to capture footprints of encrypted malicious
+ adopted HTTPS to prevent data breach in 2019 [16], [62]. traffic by analyzing interaction patterns among flows. In par-
+ However, the cipher-suite for such protection is double-edged. ticular, it can detect encrypted malicious flows with unknown
+ In particular, the encrypted traffic also allows attackers to con- footprints by identifying abnormal flow interactions, i.e., the
+ ceal their malicious behaviors, e.g., malware campaigns [2], interaction patterns that are distinct from benign ones. To
+ exploiting vulnerabilities [64], and data exfiltration [77]. The achieve this, we build a compact graph to capture various
+ ratio of encrypted malicious traffic on the Internet is growing flow interaction patterns so that HyperVision can perform
+ significantly [2], [3], [76] and exceeds 70% of the entire detection on various encrypted traffic according to the graph.
+ malicious traffic [16]. The graph allows us to detect attacks without accessing packet
+ payloads, while retaining the ability of detecting traditional
+ However, encrypted malicious traffic detection is not well
+ (known) attacks with plain-text traffic. Therefore, HyperVision
+ addressed due to the low-rate and diverse traffic patterns [2],
+ can detect the malicious traffic with unknown patterns by
+ [39], [77]. The traditional signature based methods that leverlearning the graph structural features. Meanwhile, by learning
+ age deep packet inspection (DPI) are invalid under the atthe graph structural features, it realizes unsupervised detection,
+ tacks with the encrypted payloads [34]. Table I compares the
+ which does not require model training with labeled datasets.
+ Network and Distributed System Security (NDSS) Symposium 2023 However, it is challenging to build the graph for realtime
+ 27 February - 3 March 2023, San Diego, CA, USA
+ ISBN 1-891562-83-5 detection. We cannot simply use IP addresses as vertices and
+ https://dx.doi.org/10.14722/ndss.2023.23080 traditional four-tuple of flows [19], [36] as edges to construct
+ www.ndss-symposium.org the graph because the resulting dense graph cannot maintain
+ TABLE I. T HE COMPARISON WITH THE EXISTING METHODS OF MALICIOUS TRAFFIC DETECTION .
+ Data for Detection Design Goals Detection Performance
+ Data Source
+ Data Sources Typical Methods Unlabeled Multi-Flow Generic Realtime Unknown Low High
+ Categories
+ Datasets Features Detection Detection Attacks Latency Throughput
+ TLS Extensions [16] × × × × × × X
+ Protocol Headers
+ HTTPS Headers [3] × × × × × × ×
+ Encrypted Traffic Time Series [76] × × × × × × ×
+ Related Flows TLS Handshakes [2] × × × × × × ×
+ Flow Statistics [90] X × × X × × X
+ Intrusion Events [20] X × × × X × ×
+ Network Logs
+ Sampled Connections [8] X X1 × X × × X
+ Plain-text and
+ Per-Packet Features [56] X × × × X X ×
+ Encrypted Traffic
+ Traffic Features Per-Flow Features [5] × × × X × X ×
+ Flow Interaction Graph X X X X X X X
+ 1
+ Existing multi-flow features can only represent the features of specific flows, which cannot be used to represent complicated interaction patterns among various flows.
+
+interaction patterns among various flows, e.g., incurring the We prototype HyperVision1 with Intel’s Data Plane Dedependence explosion problem [87]. Inspired by the study of velopment Kit (DPDK) [37]. To extensively evaluate the
+the flow size distribution [25], [84], i.e., most flows on the performance of the prototype, we replayed 92 attack datasets
+Internet are short while most packets are associated with long including 80 new datasets collected in our virtual private
+flows, we utilize two strategies to record different sizes of cloud (VPC) with more than 1,500 instances. In the VPC, we
+flows, and process the interaction patterns of short and long collected 48 typical encrypted malicious traffic, including (i)
+flows separately in the graph. Specifically, it aggregates the encrypted flooding traffic, e.g., flooding target links [41]; (ii)
+short flows based on the similarity of massive short flows web attacks, e.g., exploiting web vulnerabilities [64]; (iii) malon the Internet, which reduces the density of the graph, and ware campaigns, including connectivity testing, dependency
+performs distribution fitting for the long flows, which can update, and downloading. In the presence of the background
+effectively preserve flow interaction information. traffic by replaying the backbone network traffic [80], Hyper-
+ Vision achieves 13.9% ∼ 36.1% accuracy improvements over
+ We design a four-step lightweight unsupervised graph five state-of-the-art methods. It detects all encrypted malicious
+learning approach to detect encrypted malicious traffic by traffic in an unsupervised manner with more than 0.92 AUC,
+utilizing the rich flow interaction information maintained on 0.86 F1, where 44 of the real-world stealthy traffic cannot be
+the graph. First, we analyze the connectivity of the graph by identified by all the baselines, e.g., an advanced side-channel
+extracting the connected components and identify abnormal attack exploiting the CVE-2020-36516 [26] and many newly
+components by clustering the high-level statistical features. discovered cryptojacking attacks [7]. Moreover, HyperVision
+By excluding the benign components, we also significantly achieves on average more than 100 Gb/s detection throughput
+reduce the learning overhead. Second, we pre-cluster the edges with the average detection latency of 0.83s.
+according to the observed local adjacency in edge features.
+The pre-clustering operations significantly reduce the feature In summary, the contributions of our paper are five-fold:
+processing overhead and ensure realtime detection. Third, we
+extract critical vertices by solving a vertex cover problem using • We propose HyperVision, the first realtime unsupervised
+Z3 SMT solver [55] to minimize the number of clustering. Fi- detection for encrypted malicious traffic with unknown
+nally, we cluster each critical vertex according to its connected patterns by utilizing the flow interaction graph.
+edges, which are in the centers of the clusters produced by the • We develop several algorithms to build the in-memory
+pre-clustering, and thus obtain the abnormal edges indicating graph that allows us to accurately capture interaction
+encrypted malicious traffic. patterns among various flows.
+ • We design a lightweight unsupervised graph learning
+ Moreover, to quantify the benefits of the graph based flow method to detect encrypted traffic via graph features.
+recording of HyperVision over the existing approaches, we • We develop a theoretical analysis framework established
+develop a flow recording entropy model, an information theory by information theory to show that the graph captures
+based framework that theoretically analyzes the amount of near-optimal traffic interaction information.
+information retained by the existing data sources of malicious • We prototype HyperVision and use the extensive experitraffic detection systems. By using this framework, we show ments with various real-world encrypted malicious traffic
+that the existing sampling based and event based traffic data to validate its accuracy and efficiency.
+sources (e.g., NetFlow [19] and Zeek [86]) cannot retain highfidelity traffic information. Thus, they are unable to record
+ The rest of the paper is organized as follows: Section II inflow interaction information for the detection. But the graph
+ troduces the threat model of HyperVision. Section III presents
+in HyperVision captures near-optimal traffic information for
+ the high-level design of HyperVision. In section IV, V, and VI,
+the graph learning based detection and the amount of the
+ we describe the detailed designs. In Section VII, we conduct
+information maintained in the graph approaches the theoretical
+ the theoretical analysis. In Section VIII, we experimentally
+up-bound of the idealized data source with infinite storage
+ evaluate the performances. Section IX reviews related works
+according to the data processing inequality [85]. Also, the
+ and Section X concludes this paper. Finally, we present details
+analysis results demonstrate that the graph in HyperVision
+ in Appendix.
+achieves higher information density (i.e., amount of traffic
+information per unit of storage) than all existing data sources,
+which is the foundation of the accurate and efficient detection. 1 Source code and datasets: https://github.com/fuchuanpu/HyperVision.
+
+ 2
+ Attacker
+ 1. Graph Construction Short Flow Aggregation
+ Malicious Flow
+ Benign User Flow Interaction Graph
+ 
+
+ Short Flows
+ Long Flows
+
+ Threshold
+ 
+
+ Timeout
+ Benign Flow 
+ 
+  Short Flows Similar Short Flows
+ 
+  Packet Feature Distribution
+ 
+ 
+ 
+ 
+ Ongoing Raw Packet  Long Flows
+ Traffic Parser Flow Collection Flow Classification Long Flow Distribution Fitting
+
+  Malicious Traffic
+   Malicious
+     Attacker
+   
+ Benign 
+ Benign
+ Component
+ Statistical Features
+ Identified Cluster   Critical
+ Vertex Victims
+ Abnormal Interaction Pattern
+ Connected Components Edge Pre-Clustering Critical Vertex Detection Clustering Abnormal
+ Component Detection Component
+ 2. Graph Pre-Processing 3. Abnormal Interaction Detection
+
+Fig. 1. The overview of HyperVision.
+
+ II. T HREAT M ODEL A ND D ESIGN G OALS in particular, encrypted malicious traffic. Normally, patterns
+ of each flow in the encrypted malicious traffic, i.e., single-
+ We aim to develop a realtime system (i.e., HyperVision)
+ flow patterns, may be similar to benign flows, which allow
+to detect encrypted malicious traffic. It performs detection acthem to evade the existing detection. However, the malicious
+cording to the traffic replicated by routers through port mirrorbehaviors appearing in the interaction patterns between the
+ing [17], which ensures that the system will not interfere with
+ attackers and victims will be more distinct from the benign
+the traffic forwarding. After identifying encrypted malicious
+ ones. Thus, in HyperVision, we construct a compact graph
+traffic, it can cooperate with the existing on-path malicious
+ to maintain interaction patterns among various flows and
+traffic defenses [48], [49], [88] to throttle the detected traffic.
+ detect abnormal interaction patterns by learning the features of
+To perform detection on encrypted traffic, we cannot parse and
+ the graph. HyperVision analyzes the graph structural features
+analyze application layer headers and payloads.
+ representing the interaction patterns without prior knowledge
+ In this paper, we focus on detecting active attacks con- of known attack traffic and thus can achieve unsupervised
+structed with encrypted traffic. We do not consider passive detection against various attacks. It realizes generic detection
+attacks that do not generate traffic to victims, e.g., traffic by analyzing flows regardless of the traffic type and can detect
+eavesdropping [68] and passive traffic analysis [70]. According encrypted and non-encrypted malicious traffic. Figure 1 shows
+to the existing studies [10], [24], [29], [40], [46], [81], attack- three key parts of HyperVision, i.e., graph construction, graph
+ers utilize reconnaissance steps to probe the information of pre-processing, and abnormal interaction detection.
+victims, e.g., the password of a victim [39], the TCP sequence
+number of a TLS connection [26], [27], and the randomized Graph Construction. HyperVision collects network flows for
+memory layout of a web server [75], which cannot be accessed graph construction. Meanwhile, it classifies the flows into
+directly by attackers due to lack of prior knowledge. Note that, short and long ones and records their interaction patterns
+these attacks are normally constructed with many addresses separately for the purpose of reducing the density of the
+owned or faked by attackers. graph. In the graph, it uses different addresses as vertices
+ that connect the edges associated with short and long flows,
+ The design goals of HyperVision are as follows: First,
+ respectively. It aggregates the massive similar short flows
+it should be able to achieve generic detection, i.e., detect
+ to construct one edge for a group of short flows, and thus
+attacks constructed with encrypted or non-encrypted traffic,
+ reduces the overhead for maintaining flow interaction patterns.
+which ensures that the attacks cannot evade detection by traffic
+ Moreover, it fits the distributions of the packet features in the
+encryption [2], [77]. Second, it is able to achieve realtime
+ long flows to construct the edges associated with long flows,
+high-speed traffic processing, which means that it can identify
+ which ensures high-fidelity recorded flow interaction patterns,
+whether the passing through encrypted traffic is malicious,
+ while addressing the issue of coarse-grained flow features in
+while incurring low detection latency. Third, the performed
+ the traditional methods [36]. We will detail how HyperVision
+detection by HyperVision is unsupervised, which means that it
+ maintains the high-fidelity flow interaction patterns in the indoes not require any prior knowledge of encrypted malicious
+ memory graph in Section IV.
+traffic. That is, it should be able to deal with attacks with
+unknown patterns, i.e., zero-day attacks, which have not been Graph Pre-Processing. We pre-process the built interaction
+disclosed [30]. Thus, we do not use any labeled traffic datasets graph to reduce the overhead of processing the graph by
+for ML training. These issues cannot be well addressed by the extracting connected components and cluster the components
+existing detection methods [62]. using high-level statistics. In particular, the clustering can
+ detect the components with only benign interaction patterns
+ III. OVERVIEW OF H YPERV ISION
+ accurately and thus filters these benign components to reduce
+ In this section, we develop HyperVision that is an unsuper- the scale of the graph. Moreover, we perform a pre-clustering
+vised detection system to capture malicious traffic in real time, and use the generated cluster centers to represent the edges in
+
+ 3
+          $ Y J   1 X P         % X F N H W  1 X P   $ Y J   6 L ] H          % X F N H W  6 L ] H
+  $ O O  $ O O         
+      0 R V W  ) O R Z V  $ U H  / R Q J      0 R V W  3 D F N H W V  $ U H  / R Q J           + L J K  8 W L O L ] D W L R Q
+      6 K R U W  W H U P  6 K R U W    L Q  / R Q J  ) O R Z V  6 K R U W    
+        
+ 3 ' )
+
+  3 ' )
+         
+
+  3 ' )
+  3 ' )
+  & H Q W U D O L ] H G  ' L V W U L E X W L R Q
+                 
+            
+         
+                 
+                                                                                                                                                                 
+  ) O R Z  & R P S O H W L R Q  7 L P H  >log10   6 F D O H @  ) O R Z  / H Q J W K  >log10   6 F D O H @  1 X P E H U  R I  % X F N H W V  >    % \ W H V @  3 D F N H W  / H Q J W K  % X F N H W  6 L ] H  >log10   6 F D O H @
+ (a) FCT distribution. (b) Flow length distribution. (a) Number of packet length buckets. (b) Maximum bucket size.
+Fig. 2. The real-world flow features distribution of short and long flows. Fig. 4. The number and size of the buckets for feature distribution fitting.
+
+ can be extracted from both encrypted and plain-text traffic for
+ generic detection. We develop a flow classification algorithm to
+ classify the traffic (see Algorithm 1 in Appendix A). It maintains a timer TIME NOW, a hash table that uses H ASH ( SRC ,
+ DST, SRC PORT, DST PORT ) as key and the collected flows
+ indicated by the sequences of their per-packet features as
+ values. It traverses the hash table every JUDGE INTERVAL sec-
+ (a) Traditional flows as edges. (b) Short flow aggregation. ond according to TIME NOW and judges the flow completion
+Fig. 3. HyperVision aggregates short flows to reduce the dense graph. when the last packet arrived before PKT TIMEOUT second
+ of TIME NOW. When the flows are completed, we classify
+the identified clusters. We will detail the graph pre-processing them as long flows if the flows have more than FLOW LINE
+in Section V. packets. Otherwise, we classify them as short flows. As shown
+Malicious Traffic Detection Based on the Graph. We in Figure 2(b), we can accurately classify short and long
+achieve unsupervised encrypted malicious traffic detection by flows. The definitions of the hyper-parameters can be found in
+analyzing the graph features. We identify critical vertices in the Table VII (see Appendix A). Note that, we poll the state-less
+graph by solving a vertex cover problem, which ensures that per-packet information from data-plane, while not maintaining
+the clustering based graph learning processes all edges with the flow states (e.g., a state machine [89]) on the data-plane to
+minimum number of clustering. For each selected vertex, we prevent attackers manipulating the states, e.g., side-channel
+cluster all connected edges according to their flow features and attack [65] and evading detection [79].
+structural features that represent the flow interaction patterns.
+HyperVision can identify abnormal edges in real time by B. Short Flow Aggregation
+computing the loss function of the clustering. We will describe
+ We need to reduce the density of the graph for analysis.
+the details of graph learning based detection in Section VI.
+ As shown in Figure 3(a), the graph will be very dense for
+ analysis if we use traditional four-tuple flows as edges, which
+ IV. G RAPH C ONSTRUCTION is similar to the dependency explosion problem in provenance
+ In this section, we present the design details of constructing analysis [83], [87]. We observe that most short flows have
+the flow interaction graph that maintains interaction patterns almost the same per-packet feature sequences. For instance, the
+among various flows. In particular, we classify different flows, encrypted flows of repetitive SSH cracking attempts originated
+i.e., short and long flows, and aggregate short flows, and from specific attackers [39]. Thus, we perform the short flow
+perform the distribution fitting for long flows, respectively, for aggregation to represent similar flows using one edge after the
+efficient graph construction. In Section VII, we will show that classification.
+the graph retains the near-optimal information for detection.
+ We design an algorithm to aggregate short flows (see
+ Algorithm 2 in Appendix A). A set of flows can be aggregated
+A. Flow Classification when all the following requirements are satisfied: (i) the flows
+ In order to efficiently analyze flows captured on the In- have the same source and/or destination addresses, which
+ternet, we need to avoid the dependency explosion among implies similar behaviors generated from the addresses; (ii)
+flows during the graph construction. We classify the collected the flows have the same protocol type; (iii) the number of the
+flows into short and long flows, according to the flow size flows is large enough, i.e., when the number of the short flows
+distribution [25] (see Figure 2), and then reduce the density of reaches the threshold AGG LINE, which ensures that the flows
+the graph (shown in Figure 3). Figure 2 shows the distribution are repetitive enough. Next, we construct an edge for the short
+of flow completion time (FCT) and flow length of the MAWI flows, which preserves one feature sequence (i.e., protocols,
+Internet traffic dataset [80] in Jan. 2020. For simplicity, we use lengths, and arrival intervals) for all the flows, and their
+the first 13 × 106 packets to plot the figure. According to the four-tuples. As a result, four types of edges associated with
+figure, we observe that only 5.52% flows have FCT > 2.0s. short flows exist on the graph, i.e., source address aggregated,
+However, 93.70% packets in the dataset are long flows with destination address aggregated, both addresses aggregated, and
+only 2.36% proportion. Inspired by the observation, we apply without aggregation. Thus, a vertex connected to the edge can
+different flow collection strategies for the short and long flows. denote a group of addresses or a single address.
+ We poll the per-packet information from a data-plane high- Figure 3 compares the graph using traditional flows as
+speed packet parsing engine and obtain their source and des- edges and our aggregated graph by using the real-world backtination addresses, port numbers, and per-packet features, in- bone traffic dataset, which is same to that used in Figure 2. The
+cluding protocols, lengths, and arrival intervals. These features diameter of a vertex indicates the number of addresses denoted
+
+ 4
+      6 K R U W  ) O R Z  / R Q J  ) O R Z V        
+        
+            
+  6 P D O O  & R P S R Q H Q W V    
+        
+  3 ' )
+
+            
+        
+       2 X W O L H U  & R P S R Q H Q W V  $ G M D F H Q W  ( G J H V
+                 
+  ( G J H  ) H D W X U H V
+             
+                                                                                                                                         
+  1 X P E H U  R I  % \ W H V  >log10   6 F D O H @   3 & $  ' H F R P S R V H G  ) H D W X U H V   3 & $  ' H F R P S R V H G  / R Q J  ) O R Z  ) H D W X U H V  3 & $  ' H F R P S R V H G  6 K R U W  ) O R Z  ) H D W X U H V
+ (a) Component size distribution. (b) Scatter of the components. (a) Adjacent long flows. (b) Adjacent short flows.
+Fig. 5. The statistical features of the components. Fig. 6. The sparsity of edges in the graph feature space.
+
+by the vertex and the depth of the color indicates the repeated  Selected Degree = 6 Malicious
+ Selected 
+edges. In Figure 3(b), we observe that the algorithm reduces  Degree = 5
+93.94% vertices and 94.04% edges. The edge highlighted in  
+green indicates short flows (i.e., 2.38 Kpps, from PH) exploit- Benign
+   Selected
+ Benign
+ Degree = 3
+ing a vulnerability. Note that, the flow aggregation reduces
+ Flows in a Calculate the Cluster the edges Identify the edges
+the storage overhead, which makes it feasible to maintain the component subset of vertices for selected vertices denoting attacks
+in-memory graph for realtime detection. Fig. 7. Critical vertices identification via solving the vertex cover problem.
+
+C. Feature Distribution Fitting for Long Flows (DFS) and split the graph by the components. Figure 5(a)
+ Now we use histograms to represent the per-packet feature presents the size distribution of the identified components of
+distributions of a long flow which avoid preserving their long the MAWI traffic dataset [80] collected in Jan. 2020. We
+per-packet feature sequences, since the features in long flows observe that most components contain few edges with similar
+are centrally distributed. Specifically, we maintain a hash table interaction patterns. Thus, we perform a clustering on the highto construct the histogram for each per-packet feature sequence level statistics for the connected components to capture the
+in each long flow. According to our empirical study, we set abnormal components that have over one order of magnitude
+the buckets widths for packet-length and arrival interval as 10 clustering loss than normal components as clustering outliers.
+bytes and 1 ms, respectively, to trade off between the fitting Specifically, we extract five features to profile the components,
+accuracy and overhead. We calculate the hash code by dividing including: (i) the number of long flows; (ii) the number of
+the per-packet features by the bucket width and increase the short flows; (iii) the number of edges denoting short flows;
+counter indexed by the hash code. Finally, we record the hash (iv) the number of bytes in long flows; and (v) the number of
+codes and the associated counters as the histograms. Note that, bytes in short flows. We perform a min-max normalization
+the coarse-grained flow statistics, e.g., numbers of packets [36], and acquire the centers using the density based clustering,
+are insufficient for encrypted malicious traffic detection [76], i.e., DBSCAN [32]. For each component, we calculate the
+which also lose the flow interaction information [18]. Euclidean distance to its nearest center. We detect an abnormal
+ component when its distance is over the 99th percentile of all
+ Figure 4 shows the number of the used buckets and the distances based on our empirical study.
+the maximum bucket size for the long flows in the same
+dataset shown in Figure 2. We confirm the centralized feature Figure 5(b) shows an instance of the clustering, where the
+distribution, i.e., most packets in the long flows have similar diameters indicate the scale of the traffic on the components (in
+packet lengths and arrival intervals. Specifically, in Figure 4(a), the unit of bytes). We observe that most components are small,
+we fit the distribution of packet length using only 11 buckets on and a high ratio of huge components is classified as abnormal.
+average, and most of the buckets collect more than 200 packets All edges associated with the normal components are labeled
+(see Figure 4(b)), which demonstrate that the histogram based as benign traffic, and the edges associated with the abnormal
+fitting is effective with low storage overhead. Similarly, the components will be further processed by the following steps.
+fitting for arrival interval uses 121 buckets on average and
+realizes 71 packets per bucket high utilization. Besides, we use B. Edge Pre-Clustering
+the same method for protocol. We use the mask of protocols as
+the hash code and use smaller numbers of buckets to realize Now we further need to process and pre-cluster the graph
+more efficient fitting due to the limited number of protocol for efficient detection. As shown in Figure 5, the abnormal
+types. Note that, Flowlens [5] used a similar histogram to components in the graph have massive vertices and edges. In
+efficiently utilize hardware flow tables on P4 switches. Instead, particular, we cannot directly apply graph representation learnwe construct the histograms to accurately analyze long flows. ing, e.g., graph neural network (GNN), for realtime detection.
+ Figure 6 shows the edges from the components in the graph
+ V. G RAPH P RE -P ROCESSING structural feature space. We observe that the distribution of
+ the edges is sparse, i.e., most edges are adjacent to massive
+ In this section, we pre-process the flow interaction graph similar edges in the feature space. To utilize the sparsity, we
+to identify key components and pre-cluster the edges, which perform a pre-clustering using DBSCAN [32] that leverages
+can enable realtime graph learning based detection against KD-Tree for efficient local search and select the cluster centers
+encrypted malicious traffic with unknown patterns. of the identified clusters to represent all edges in each cluster
+ to reduce the overhead for graph processing.
+A. Connectivity Analysis
+ Specifically, we extract eight and four graph structural
+ To perform the connectivity analysis of the graph, we features (see Table V in Appendix A) for the edges associated
+obtain the connected components by using depth-first search with short and long flow, respectively, e.g., the in-degree of
+
+ 5
+the source vertex of an edge associated with a long flow.
+These degree features of malicious traffic are significantly where K is the number of obtained cluster centers, Ci is the
+distinct from the benign ones, e.g., the vertices denoting ith center, f (edge) is the feature vector, C(edge) contains all
+spam bots have higher out-degrees than benign clients due edges in the cluster of edge produced by pre-clustering, and
+to their frequent interactions with servers. Then, we perform TimeRange calculates the time range covered by the flows
+a min-max normalization for the features, and adopt a small denoted by the edges.
+search range  and a large minimum number of points for
+DBSCAN clustering (see Section VIII-A for the setting of According to Equation (4), the loss has three parts: (i)
+hyper-parameters) to avoid including irrelevant edges in the losscenter in (1) is the Euclidean distance to the cluster centers
+clusters, which may incur false positives. Moreover, some which indicates the difference from other edges connected to
+edges cannot be clustered and should be treated as outliers, the critical vertex; (ii) losscluster in (2) indicates the time range
+which will be processed as clusters with only one edge. covered by the cluster identified by the pre-clustering in Section V-B which implies long lasting interaction patterns tend to
+ be benign; (iii) losscount in (3) is the number of flows denoted
+ VI. M ALICIOUS T RAFFIC D ETECTION by the edges, which means a burst of massive flows implies
+ In this section, we detect encrypted malicious traffic by malicious behaviors. Moreover, we used weights: α, β, γ to
+identifying abnormal interaction patterns on the graph. In balance the loss terms. Finally, it detects the associated flows
+particular, we cluster edges connected to the same critical as malicious when the loss function of the edge is larger than
+vertex and detects outliers as malicious traffic (see Figure 7). a threshold.
+
+A. Identifying Critical Vertices VII. T HEORETICAL A NALYSIS
+
+ To efficiently learn the interaction patterns of the traffic, In this section, we develop a theoretical analysis framewe do not perform clustering for all edges directly but clus- work, i.e., flow recording entropy model, to analyze the inter edges connected to critical vertices. For each connected formation preserved in the graph of HyperVision for graph
+component, we select a subset of all vertices in the connected learning based detection. The detailed analysis can be found
+component as the critical vertices according to the following in Appendix C.
+conditions: (i) the source and/or destination vertices of each
+edge in the component are in the subset, which ensures that A. Information Entropy Based Analysis
+all the edges are connected to more than one critical vertices We develop the framework that aims to quantitatively evaland clustered at least once; and (ii) the number of selected uate the information retained by the exiting traffic recording
+vertices in the subset is minimized, which aims to minimize the modes, which decide the data representations for malicious
+number of clustering to reduce the overhead of graph learning. traffic detection, by using three metrics: (i) the amount of
+Finding such a subset of vertices is an optimization problem information, i.e., the average Shannon entropy obtained by
+and equivalent to the vertex cover problem [33], which was recording one packet; (ii) the scale of data, i.e., the space
+proved to be NP Complete (NPC). We select all edges and used to store the information; (iii) the density of information,
+all vertices on each component to solve the problem. And we i.e., the amount of information on a unit of storage. By using
+reformulate the problem to a Satisfiability Modulo Theories this framework, we model the graph based traffic recording
+(SMT) problem that can be effectively solved by using Z3 mode used by HyperVision as well as three typical types of
+SMT solver [55]. Since we pre-cluster the massive edges and flow recording modes, i.e., (i) idealized mode that records and
+reduce the scale of the problem (see Section V-B), the NPC stores the whole per-packet feature sequence; (ii) event based
+problem can be solved in real time. mode (e.g., Zeek) that records specific events [2], [20]; and
+ (iii) sampling based mode (e.g., NetFlow) that records coarse-
+B. Edge Feature Clustering for Detection grained flow information [8], [51].
+ Now we cluster the edges connected to each critical vertex We model a flow, i.e., a sequence of per-packet features,
+to identify abnormal interaction patterns. In this step, we use as a sequence of random variables represented by an apethe structural features in Section V-B, and the flow features riodic irreducible discrete-time Markov chain (DTMC). Let
+extracted from the per-packet feature sequences of short flows G = {V, E} denote the state diagram of the DTMC, where
+or the fitted feature distributions of long flows. All features are V is the set of states (i.e., the values of the variables) and
+shown in Table V (see Appendix A). We use the lightweight E denotes the edges. We define s = |V| as the number of
+K-Means algorithm to cluster the edges associated with short different states and use W = [wij ]s×s to denote the weight
+and long flows, respectively, and calculate the clustering loss matrix of G. All of the weights are equal and normalized:
+that indicates the degree of maliciousness for malicious flow
+detection. ∀ 1 ≤ i, j, m, n ≤ s, (wij =wmn ) ∨ (wij = 0 ∨ wmn = 0),
+ s s
+ losscenter (edge) = min ||Ci − f (edge)||2 , (1)
+ X X (5)
+ Ci ∈{C1 ,...,CK }
+ wi = wij , 1 = wi .
+ j=1 i=1
+ losscluster (edge) = TimeRange(C(edge)), (2)
+ losscount (edge) = log2 (Size(C(edge)) + 1), (3)
+ The state transition is performed based on the weights, i.e.,
+ loss(edge) =αlosscenter (edge) the transition probability matrix P = [Pij ], Pij = wij /wi .
+ (4)
+ −βlosscluster (edge) + γlosscount (edge), Therefore, the DTMC has a stationary distribution µ:
+
+ 6
+ (
+ µP = µ, 1 − (Kq + 1)(1 − q)K 1
+ ⇒ µj = w j , ∀ 1 ≤ j ≤ s. (6) HH.V. = H[G] + s(1 − q)K
+ 1 = sj=1 µj q 4 (12)
+ P
+ [(1 + s) lnps + 2 ln 2πe + 2q ln K − 2s(1 + p + γ)].
+
+ Assume that the stationary distribution is a binomial distribution with the parameter: 0.1 ≤ p ≤ 0.9 to approach Gaussian We can also obtain the expected data scale and the density:
+distribution with low skewness: 1 − (Kq + 1)(1 − q)K
+ LH.V. = s(1 − q)K + , (13)
+ App. Cq
+ µ ∼ B(s, p) −→ N (sp, sp(1 − p)). (7)
+ where C is the average number of flows denoted by an edge
+ associated with short flows.
+ Based on the distribution, we obtain the entropy rate of
+the DTMC which is the expected Shannon entropy increase HH.V.
+ DH.V. = . (14)
+for each step in the state transition, i.e., the expected Shannon LH.V.
+entropy of each random variable in the sequence, (using nat
+as unit, 1 nat ≈ 1.44 bit): Sampling Based Recording Mode. Similarly, the sampling
+ s s s X
+ s s based mode extracts and records flow statistics for the de-
+ X X 1 X X
+ tection. We analyze the accumulative statistics (e.g. the total
+H[G] = µi pij ln =− wij ln wij + wj ln wj
+ i=1 j=1
+ pij i=1 j=1 j=1 number of bytes) that are widely adopted [19], [36]. Let
+ 1 L i denote the sequence of random variables, and
+ hs1 , s2 , ..., sP
+ = ln |E| − ln 2πsep(1 − p). L
+ 2 XSamp. = i=1 si indicates the flow statistic to be recorded.
+ (8) We can obtain a tight lower bound as an estimation for the
+ amount of information and the other metrics as follows:
+ Moreover, for the real-world flow size distribution, we as-
+ 1 ln 2
+sume that the length of the sequence of random variables obeys HSamp. = H[XSamp. ] = ln 2πesp(1 − p) + q(1 − q). (15)
+ 2 2
+a geometric distribution with high skewness, i.e., L ∼ G(q)
+with a parameter: 0.5 ≤ q ≤ 0.9. H, L, and D denote the LSamp. = 1. (16)
+expectation of the metrics, i.e., the amount of information, the
+ DSamp. = HSamp. (17)
+scale of data, and the density, respectively.
+Idealized Recording Mode. The idealized recording mode has
+infinite storage and captures optimal fidelity traffic information Event Based Recording Mode. The event based recording
+by recording each random variable from the sequence without mode inspects each random variable in the sequence and
+any processing. Thus, the obtained information entropy of the records events with a small probability. Since the observation
+idealized mode grows at the entropy rate of the DTMC: that the event based methods do not generate repetitive events
+ 1 1
+ for a long flow with a larger s, for simplicity, we assume that
+ HIdeal = E[LH[G]] = ln |E| − ln 2πsep(1 − p). (9) the probability is ps ∝ 1/s. Then, we can obtain the concise
+ q 2q
+ closed-form solution of the amount of information, the scale of
+ According to data processing inequality [85], the infor- data, and the density of information for event based recording
+mation retained in the idealized recording mode reaches the mode as follows:
+optimal value. It implies that processing of the observed per-
+ HEve. = −2θ ln θ, (18)
+packet features denoted by the random variables may incur
+information loss. In the following sections, we will show that
+the other mode incurs information loss.
+ where θ = ηζ , ζ = q − qps , and η = q − ps (q − 1).
+ We can obtain the scale of data and the density of infor- ps
+mation for the idealized recording mode as follows: LEve. = − . (19)
+ η
+ 1 2ζ
+ LIdeal = E[L] = . (10) DEve. = ln θ. (20)
+ q ps
+ HIdeal
+ DIdeal = = H[G]. (11)
+ LIdeal
+ B. Analysis Results
+Graph Based Recording Mode of HyperVision. HyperVision We perform numerical studies to compare the flow recordapplies different strategies to process short and long flows for ing modes in real-world setting. We select three per-packet
+the graph construction. Let K denote the threshold for classi- features: protocol, length, and the arrival interval (in ms) as
+fying the flows. When L < K, it collects all random variables the instances of the DTMC, then we measure the parameters
+from the sequence for short flows. Otherwise, it collects the of the DTMC, i.e., |E| and |V| according to the first 106 packets
+histogram to fit the distribution for long flows. Then, we can in the MAWI dataset on Jan. 2020 [80]. We also measure K,
+obtain the lower bound to estimate the information entropy in C, and estimate the geometric distribution parameter q via the
+the graph of HyperVision: second moment. We have the following three key results.
+
+ 7
+  , G H D O  +  9   6 D P S   ( Y H   , G H D O  +  9   6 D P S   ( Y H   , G H D O  +  9   6 D P S   ( Y H 
+
+  ' H Q V L W \  , Q F U H D V H  > +  9     , G H D O @
+  ' H Q V L W \  > Q D W    U H F R U G @
+                
+
+  ' D W D  6 F D O H  > 1 X P  @
+        
+
+  ( Q W U R S \  > Q D W @
+                
+            
+            
+    
+                
+        
+                
+                                
+                
+      D U D P  p      D U D P  p      D U D P  p      D U D P  p
+  / H Q      / H Q      / H Q      / H Q    
+  J W K       J W K       J W K       J W K     
+  3 D U D      3 D U D      3 D U D      3 D U D    
+  P  q             7 0 &  3  P  q             7 0 &  3  P  q             7 0 &  3  P  q             7 0 &  3
+  '  '  '  '
+ (a) The entropy of the modes. (b) The data scale of the modes. (c) The density of the modes. (d) The density improvement.
+Fig. 8. The traffic information retained by different recording modes on the feasible region of the parameters.
+        
+    
+  + \ S H U 9 L V L R Q      + \ S H U 9 L V L R Q Figure 8(d). From Table II, we find that, for all kinds of per-
+  , G H D O  0 R G H  , G H D O  0 R G H
+  ( Q W U R S \  > Q D W @
+  ( Q W U R S \  > Q D W @
+
+         packet features, HyperVision can increase the density ranging
+     between 35.51% and 47.27% due to the different recording
+        
+        
+ strategies for short and long flows.
+                                                                                         In summary, the flow interaction graph provides high-
+  ' 7 0 &  3 D U D P  p  ) O R Z  / H Q J W K  3 D U D P  q fidelity and low-redundancy traffic information with obvious
+ (a) Fix q and leave p as variable. (b) Fix p and leave q as variable.
+ flow interaction patterns, which ensures that HyperVision
+Fig. 9. HyperVision approaches the idealized flow recording mode on achieves realtime and unsupervised detection, particularly,
+information entropy.
+ detecting encrypted malicious traffic with unknown patterns.
+TABLE II. T HE INTEGRAL OF THE DENSITY IN THE FEASIBLE REGION .
+ Per-Packet Features Packet Length Time Interval Protocol Type VIII. E XPERIMENTAL E VALUATION
+ RR
+ D (p, q)dpdq 1.011H32.10% 0.918H32.00% 0.795H32.51% A. Experiment Setup
+ RR F Ideal
+ F DSamp. (p, q)dpdq 0.965H35.17% 0.963H28.66% 0.800H32.08%
+ RR Implementation. We prototype HyperVision with more than
+ F DEve. (p, q)dpdq 0.588H60.51% 0.588H56.44% 0.588H50.08%
+ RR 8,000 Line of Code (LOC). The prototype is compiled by gcc
+ F DH.V. (p, q)dpdq 1.489N47.27% 1.350N35.51% 1.178N48.18% 9.3.0 and cmake 3.16.3. We use DPDK [37] version 19.11.9
+ encapsulated by libpcap++ [63] version 21.05 to implement
+(1) HyperVision maintains more information using the graph the high-speed data-plane module. The graph construction
+than the existing methods. Figure 8 shows the results on the module maintains the graph in memory for realtime detection.
+feasible region (F = {0.1 ≤ p ≤ 0.9, 0.5 ≤ q ≤ 0.9}). The graph learning module detects the encrypted malicious
+We observe that HyperVision maintains at least 2.37 and 1.34 traffic on the interaction graph. It uses DBSCAN and K-Means
+times information entropy than traditional flow sampling and in mlpack [57] (version 3.4.2) for clustering and Z3 SMT
+event based flow recording. Thus, the traditional detection Solver [55] (version 4.8) to identify the critical vertices.
+methods cannot retain high-fidelity flow interaction informa-
+ Testbed. We deploy HyperVision on a testbed built upon
+tion. Actually, they only analyze the features of a single
+ DELL servers (PowerEdge R410, produced in 2012) with two
+flow, which can be evaded by encrypted traffic. According
+ Intel Xeon E5645 CPUs (2 × 12 cores), Ubuntu 20.04.2 (Linux
+to Figure 8(b), HyperVision has 69.69% data scale of the
+ 5.11.0), Docker 20.10.7, 24GB memory, one Intel 82599ES 10
+sampling based mode. It implies that the data scale is the key
+ Gb/s NIC, and two Intel 850nm SFP+ laser ports for optical
+challenge for the existing methods to utilize flow interaction
+ fiber connections. We configure 6GB huge page memory for
+patterns. We well address this issue by using the compact graph
+ DPDK (3GB/NUMA Node) and bind 8 threads on 8 physical
+for maintaining the interactions among flows.
+ cores for 16 NIC RX queues to parse the per-packet features
+(2) HyperVision maintains near-optimal information using the from high-speed traffic. We use 8 cores for in-memory graph
+graph. According to Figure 8(a), we observe that the informa- construction, and 7 cores are used for graph learning, the rest
+tion maintained by the graph almost equals to the theoretical one core is used as DPDK master core.
+optimum, with the difference ranging from 4.6 × 10−9 to 2.6
+ Datasets. We use real-world backbone network traffic datasets
+nat. When the parameter of the geometric distribution of L
+ from the vantage-G of WIDE MAWI project [80] in AS2500,
+approaches 0.9, the flow information loss is larger because of
+ Tokyo Japan, Jan. ∼ Jun. 2020 as background traffic. The
+the increasing ratio of long flows that incur more information
+ vantage transits traffic from/to its BGP peers and providers
+loss. Figure 9 compares the information in HyperVision and
+ using 10 Gb/s fiber linked to its IXP (DIX-IE), and the traffic
+the idealized system when q = 0.59 and p = 0.8. We have
+ is collected using port mirroring, which is consistent with
+similar results. The gaps between the graph mode and the
+ our threat model and the physical testbed described above.
+optimal mode are only 0.056 and 0.021.
+ We remove the attack traffic with obvious patterns in the
+(3) HyperVision has higher information density than the ex- background traffic dataset according to the rules defined by the
+isting methods. Figure 8(c) shows that HyperVision realizes existing studies [22], [43], [66], e.g., traffic will be detected as
+1.46, 1.54, and 2.39 times information density than the existing scanning traffic if it has scanned over 10% IPv4 addresses [22].
+methods, respectively. Although the idealized system realizes We generate the malicious traffic by constructing real attacks
+the optimal amount of traffic information, the density is or replaying the existing traces in our testbed. Specifically, we
+only 78.55% of HyperVision in the worst case, as shown in collect malicious traffic in our virtual private cloud (VPC) with
+
+ 8
+more than 1,500 instances. We manipulate the instances to per- TABLE III. T HE AVERAGE ACCURACY ON THE GROUPS OF DATASETS .
+form attacks according to the real-world measurements [22], Method Metric
+ Traditional Flooding Enc. Web Malware
+ Overall
+[24], [40], [42], [43], [54], [66] and the same settings in the Attacks Enc. Traffic Attacks Traffic
+existing studies [11], [26], [41], [44]. We classify 80 new AUC 0.913H7% 0.782H19% N/A1 N/A 0.867H12%
+ Jaqen
+datasets used in our experiments (see Table VI for details) into F1 0.819H16% 0.495H46% N/A N/A 0.705H26%
+four groups, three of which are encrypted malicious traffic: FlowLens
+ AUC 0.939H4% 0.757H22% 0.685H30% 0.768H22% 0.752H36%
+ F1 0.799H18% 0.651H29% 0.384H59% 0.411H57% 0.451H41%
+• Traditional brute force attack. Although HyperVision fo- AUC 0.951H3% 0.932H4% 0.958H2% 0.648H34% 0.752H23%
+ cuses on encrypted traffic, we generate 28 kinds of tradi- Whisper
+ F1 0.705H27% 0.461H50% 0.546H42% 0.357H62% 0.407H57%
+ tional flooding attacks to verify its generic detection and Kitsune
+ AUC 0.748H24% -2 0.759H22% - 0.751H23%
+ the correctness of baselines including 18 high-rate and 10 F1 0.419H57% - 0.366H61% - 0.402H58%
+ low-rate attacks: (i) the brute scanning with the real packet AUC 0.716H27% 0.621H26% 0.767H22% 0.653H34% 0.666H32%
+ DeepLog
+ F1 0.513H47% 0.508H45% 0.572H40% 0.628H34% 0.597H37%
+ rates [22]; (ii) the source spoofing DDoS with various
+ rates [40]; (iii) the amplification attacks [43]; (iv) probing H.V.
+ AUC 0.988N8% 0.974N4% 0.985N2% 0.993N29% 0.988N13%
+ vulnerable applications [21], [22]. We collected the traffic F1 0.978N19% 0.927N42% 0.957N67% 0.970N54% 0.960N36%
+ in our VPC to avoid interference with real services. 1
+ The results are N/A because Jaqen is designed for detection of volumetric attacks.
+ 2
+• Encrypted flooding traffic. Different from the brute force - means that the average AUC is lower than 0.60, which is nearly the result of
+ random guessing.
+ flooding, the encrypted flooding is generated by repetitive
+ attack behaviors which target specific applications: (i) the
+ link flooding generates encrypted low-rate flows, e.g., the attacks, which aims to verify the long-run performances of
+ low-rate TCP attacks [44], [52] and the Crossfire attack [41], HyperVision (see Appendix B3). Moreover, we validate the
+ to congest links; (ii) injecting encrypted flows that exploits robustness of HyperVision against evasion attacks with obfusprotocol vulnerabilities by flooding attack traffic and inject cation techniques, which can be found in Appendix B4.
+ packets into the channel [11], [26], [28]; (iii) the password
+ Baselines. We use five state-of-the-art generic malicious traffic
+ cracking performs slow attempts to hijack the encrypted
+ detection methods as baselines:
+ communication protocols [39], [50]. We perform SSH cracking in the VPC with the scale of SSH servers in the ASes • Jaqen (sampling based recording and signature based dereachable to AS2500. tection). Jaqen [51] uses Sketches to obtain flow statistics
+• Encrypted web malicious traffic. Web malicious traffic is and applies the threshold based detection. We prototype
+ normally encrypted by HTTPS. We collect the traffic gener- Jaqen on the testbed, and adjust the signatures for each
+ ated by seven widely used web attacks including automatic statistic and each attack to obtain the best accuracy.
+ vulnerabilities discovery (including XSS, CSRF, various • FlowLens (sampling based recording and ML based deinjections) [64], SSL vulnerabilities detection [53], and tection). FlowLens [5] uses sampled flow distribution and
+ crawlers. We also collect the SMTP-over-TLS spam traffic supervised learning, i.e., random forest. We use the hyperthat lures victims to visit the phishing sites [61]. parameter setting with the best accuracy used in the paper
+• Malware generated encrypted traffic. The traffic of malware to retrain the ML model.
+ campaigns is low-rate and encrypted, e.g., malware compo- • Whisper (flow-level features and ML based detection).
+ nent update or delivery [9], command and control (C&C) Whisper [30], [31] extracts the frequency domain features
+ channel [8], and data exfiltration [77]. We use the malware of flows and uses clustering to learn the features. We deploy
+ infection statistics published in 2020 [42] and probed active Whisper on the physical testbed without modifications and
+ addresses from the adopted vantage [23], [59] to estimate then retrain the clustering model.
+ the number of visible victims. We use the same number • Kitsune (packet-level features and DL based detection).
+ of instances to replay public malware traffic datasets [13], Kitsune extracts per-packet features and uses autoencoders
+ [73] to mimic malware campaigns, which is similar to the to learn the features which is an unsupervised method [56].
+ existing study [58]. We use its default hyper-parameters and retrain the model.
+ • DeepLog (event based recording and DL based detection).
+ The malicious traffic is replayed with the background traffic DeepLog is a general log analyzer using LSTN RNN [20].
+datasets on the physical testbed simultaneously according to We use the logs of connections for detection and its original
+their original packet rates [80] which is the same as the existing hyper-parameter setting to achieve the best accuracy.
+studies [30], [47], [51]. Specifically, each dataset contains
+12∼15 million packets and the replay lasts 45s and the first Note that, in the baselines above, we do not include DPI-
+75% time does not contain malicious traffic for collecting flow based encrypted malicious traffic detection because they are
+interactions and training the baselines. Note that, the rates of unable to investigate encrypted payloads [34]. Also, we do not
+the encrypted attack flows in our datasets are only 0.01 ∼ compare the task-specific detection methods [3], [76] because
+8.79 Kpps which consume only 0.01% ∼ 0.72% bandwidth. they cannot achieve acceptable detection accuracy. Features in
+We will show that these stealthy attacks evade most baselines. FlowLens, Kitsune, and Whisper are similar to them, e.g., flow
+ features [3], packet header features [2], and time-series [76].
+ To eliminate the impact of the dataset bias, we also use 12
+existing datasets including the Kitsune datasets [56], the CIC- Metrics. We mainly use AUC and F1 score because they
+DDoS2019 datasets [14], and the CIC-IDS2017 datasets [15], are most widely used in the literature [8], [20], [30], [35],
+which are collected in the real-world. These detailed results [56], [75], [91]. Also, we use other six metrics to validate the
+can be found in Appendix B2. In particular, the traffic in improvements of HyperVision, including precision, recall, F2,
+two CIC datasets [14], [15] lasts 6∼8 hours under multiple ACC, FPR, and EER.
+
+ 9
+ TABLE IV. D ETECTION ACCURACY OF H YPERV ISION AND THE BASELINES ON TRADITIONAL BRUTE FORCE ATTACKS .
+ Brute Scanning Amplification Attack Source Spoofing DDoS
+ Method Metric
+ ICMP NTP SSH SQL DNS HTTP HTTPS NTP DNS CharG. SSDP RIPv1 Mem. CLDAP SYN RST UDP ICMP
+
+ AUC 0.9478 0.9989 0.9706 0.9851 0.9989 0.9774 0.9988 0.9822 0.9590 0.9860 0.9907 0.9011 0.9586 0.9537 0.9976 0.9985 0.9682 0.9995
+ Jaqen
+ F1 0.9710 0.9356 0.9835 0.9924 0.9965 0.9884 0.9299 0.9457 0.8816 0.7986 0.7054 0.6549 0.8500 0.7931 0.9614 0.9236 0.5603 0.9861
+ AUC 0.9906 0.9021 0.9961 0.9993 0.9985 0.9874 0.9226 0.9784 0.8001 0.9998 0.9907 0.9833 0.9786 0.9993 0.9912 0.9918 0.9999 0.6351
+FlowLens
+ F1 0.9181 0.6528 0.8899 0.9996 0.9992 0.9936 0.9572 0.9794 0.7127 0.9991 0.8918 0.9889 0.9691 0.9986 0.8638 0.8173 0.9990 0.2632
+ AUC 0.9499 0.9796 0.9562 0.9811 0.9832 0.9658 0.9827 0.9125 0.9645 0.8489 0.9662 0.9761 0.8954 0.9402 0.9563 0.9658 0.8956 0.9489
+ Whisper
+ F1 0.7004 0.7585 0.8869 0.7022 0.6748 0.7182 0.7489 0.8248 0.8435 0.4686 0.6195 0.6396 0.6956 0.8620 0.7587 0.8778 0.4857 0.4192
+ AUC 0.4522 0.7252 - 2 0.7439 0.7228 0.7380 0.9614 0.7340 0.9994 0.9998 0.9989 0.4343 0.3993 0.7592 0.6210 0.4086 0.8534 0.7913
+ Kitsune
+ F1 - 1 0.3459 - 0.5033 0.4923 0.4798 0.4878 0.4461 0.5031 0.4609 0.4360 - - 0.3838 0.3361 - 0.4539 0.4153
+ AUC 0.6717 0.8232 0.8377 0.6518 0.8261 0.6617 0.5545 0.7475 0.7428 0.7462 0.7458 0.7487 0.7480 0.7483 0.7564 0.2470 0.7012 0.7521
+DeepLog
+ F1 0.3566 0.4178 0.5266 0.2695 0.4050 0.2668 0.3653 0.5108 0.7201 0.5705 0.4313 0.3368 0.3321 0.3424 0.6074 - 0.4370 0.3428
+
+ AUC 0.9999 0.9999 0.9999 0.9999 0.9999 0.9999 0.9999 0.9999 0.9999 0.9998 0.9989 0.9998 0.9969 0.9999 0.9999 0.9999 0.9996 0.9928
+ H.V.
+ F1 0.9939 0.9928 0.9960 0.9932 0.9831 0.9808 0.9892 0.9998 0.9998 0.9992 0.9956 0.9984 0.9983 0.9996 0.9993 0.9571 0.9981 0.9295
+ 1
+ We highlight the best accuracy in • and the worst accuracy in •. We mark - for the F1 when the AUC is lower than 0.50, which is the accuracy of random guessing.
+ 2
+ Kitsune did not finish the detection within 90 min (i.e., meaningless for defenses). And H.V. is short for HyperVision.
+
+         HyperVision has 0.992 ∼ 0.999 AUC and 0.929 ∼ 0.999 F1,
+  7 U X H  3 R V L W L Y H  5 D W H
+
+  7 U X H  3 R V L W L Y H  5 D W H
+
+         which achieves at most 13.4% and 1.3% improvement of F1
+         and AUC over the best performance of the baselines. The ROC
+      - D T H Q  . L W V X Q H      - D T H Q  . L W V X Q H
+  ) O R Z / H Q V  ' H H S / R J  ) O R Z / H Q V  ' H H S / R J and PRC results are illustrated in Figure 10. According to
+      : K L V S H U  +  9       : K L V S H U  +  9  Figure 10(a) and 10(b), we observe that HyperVision has less
+         false positives while achieving similar accuracy. Figure 10(c)
+                    
+                            
+  ) D O V H  3 R V L W L Y H  5 D W H  ) D O V H  3 R V L W L Y H  5 D W H and Figure 10(d) show that the PRC of HyperVision is largely
+ (a) ROC of detecting NTP DDoS. (b) ROC of detecting HTTP scan.
+ better than the baselines, which means that it has a higher
+        
+  - D T H Q  - D T H Q precision when all methods reach the same recall.
+      ) O R Z / H Q V      ) O R Z / H Q V
+  5 H F D O O
+
+  5 H F D O O
+
+      : K L V S H U      : K L V S H U Second, by comparing HyperVision with Jaqen, we can see
+      . L W V X Q H      . L W V X Q H
+  ' H H S / R J  ' H H S / R J that HyperVision can realize higher accuracy (i.e., a 19.4% F1
+      +  9        +  9  improvement) than Jaqen with the best threshold set manually.
+        
+                                                                         That is, the unsupervised method allows reducing manual
+  3 U H F L V L R Q  3 U H F L V L R Q
+ (c) PRC of detecting NTP DDoS. (d) PRC of detecting SYN DDoS.
+ design efforts. Moreover, it has 56.3% AUC improvement
+ over the typical supervised ML based method (FlowLens).
+Fig. 10. ROC and PRC of HyperVision and all the baselines. Note that, we assume that HyperVision cannot acquire labeled
+ datasets for training, which is more realistic. Also, it outper-
+Hyper-parameter Selection. We conduct four-fold cross valforms Whisper with 11.6% AUC, which is an unsupervised
+idation to avoid overfitting and hyper-parameter bias. Specifdetection in high-speed network. We observe that Kitsune and
+ically, the datasets are equally partitioned into four subsets.
+ DeepLog have lower accuracy because they cannot afford high-
+Each subset is used once as a validation set to tune the
+ speed backbone traffic.
+hyper-parameters via the empirical study and the remaining
+three subsets are used as testing sets. Finally, four results are Third, we measure the detection accuracy of probing
+averaged to produce final results. Moreover, our ablation study vulnerable applications. As shown in Figure 11, we see that
+shows that the different threshold settings incur at most 5.2% HyperVision can detect the low-rate attacks with 0.920 ∼
+accuracy loss. Therefore, the hyper-parameter selection has 0.994 F1 and 0.916 ∼ 0.999 AUC under 6 ∼ 268 attackers
+limited impacts on the detection results. with 17.6 ∼ 97.9 Kpps total bandwidth. It also achieves
+ at most 46.8% F1 and 27.3% AUC improvements over the
+B. Accuracy Evaluation baselines that have a more significant accuracy decrease than
+ the high-rate attacks. For example, FlowLens only achieves
+ Table III summarizes the detection accuracy and the im- averagely 0.684 F1, which is only 77% under the high-rate
+provements of HyperVision over the existing methods. In gen- attacks. Although Jaqen can be deployed on programmable
+eral, HyperVision achieves average F1 ranging between 0.927 switches, its thresholds are invalided by the low-rate attacks.
+and 0.978 and average AUC ranging between 0.974 and 0.993 And Whisper is unable to detect the attacks with two datasets.
+on the 80 datasets, which are 35% and 13% improvements over Moreover, Kitsune and DeepLog cannot detect the attacks
+the best accuracy of the baselines. In 44 datasets, none of the because of the low rate of malicious packets (≤ 1.2%).
+baselines achieves F1 higher than 0.80, which means that they
+are not effective to detect the attacks. Due to the page limits, The reason why HyperVision can detect the slow probing
+we do not show the failed detection results of these baselines. while maintaining the similar accuracy to the high-rate attacks
+ is that the graph preserves flow interaction patterns. Although
+Traditional Brute Force Attacks. First, we measure the the flows from a single attacker are slow, e.g., at least 244 pps,
+performance of the baselines by using the flooding attacks with HyperVision can record and analyze their interaction patterns.
+short flows. Although HyperVision is designed for encrypted Specifically, each flow in the stealthy attack traffic can be
+malicious traffic detection, we find that it can also detect tra- represented by an edge in the graph, while the vertices in the
+ditional attacks accurately. The results are shown in Table IV. graph indicate the addresses generating the traffic. Thus, the
+
+ 10
+  6 0 7  1 H W % L R  7 H O Q  9 / &  6 1 0 3  5 ' 3  + 7 7 3  ' 1 6  , & 0 3  6 6 +
+  3  V  H W
+  ) O R Z O H Q V  : K L V S H U  +  9 
+  - D T H Q                                                                     
+  & U R V V I L U H  $ W W D F N  / R Z  U D W H  7 & 3  ' R 6  6 6 +   & R Q Q   , Q M H F W L R Q
+    
+
+  $ 8 &
+  ) O R Z / H Q V                                                                     
+    
+    
+  : K L V S H U                                                                
+  6 L ] H      6 L ] H      6 L ] H         V  % X U V W     V  % X U V W     V  % X U V W  $ & .  , Q M   , 3 , '  , Q M   , 3 , '  3 R U W
+  . L W V X Q H                                                            
+ (a) AUC of detecting encrypted link-flooding and encrypted channel injection.
+  ' H H S / R J                                                                      
+  +  9                                                                           
+  & U R V V I L U H  $ W W D F N  / R Z  U D W H  7 & 3  ' R 6  6 6 +  & R Q Q   , Q M H F W L R Q
+    
+ (a) AUC of detecting probing vulnerable application.
+
+  ) 
+    
+    
+    
+  - D T H Q                                                                     
+  6 L ] H      6 L ] H      6 L ] H         V  % X U V W     V  % X U V W     V  % X U V W  $ & .  , Q M   , 3 , '  , Q M   , 3 , '  3 R U W
+  ) O R Z / H Q V                                                                 
+ (b) F1 of detecting encrypted link-flooding and encrypted channel injection.
+  : K L V S H U                                                            
+    
+  6 6 +  7 H O Q H W      6 6 +  7 H O Q H W
+  . L W V X Q H                                                            
+    
+
+  $ 8 &
+    
+
+  ) 
+    
+  ' H H S / R J                                                                              
+        
+  +  9                                                                            Y       Y       Y      Y      Y      Y      Y       Y       Y      Y      Y      Y 
+  1 X P   9 L F W L P  1 X P   9 L F W L P
+ (b) F1 of detecting probing vulnerable application.
+ (c) F1 of password cracking. (d) AUC of password cracking.
+Fig. 11. Heatmap of accuracy for probing vulnerabilities.
+ Fig. 12. Detection accuracy of encrypted flooding traffic.
+  : K L V S H U  $ Y J   $ 8 &  +  9   $ Y J   $ 8 &  : K L V S H U  +  9 
+     
+traffic can be captured by identifying vertices with large out-     
+
+  $ 8 &
+degrees (i.e., a large number of edges). Moreover, the brute     
+     
+force attacks validate that our method is effective to capture     
+the DDoS traffic because it utilizes the short flow aggregation
+
+  3  F D Q  O 
+  D  J
+  Q L S  6 6
+
+  L [  M 
+
+  L [  M 
+
+  L  M 
+     
+
+      
+  > % R  6 5 )
+
+  U D S  O H U
+
+  % R  P
+   % R  D P
+
+  R W V  P
+      9 (
+
+      9 (
+  / 6   9 X
+  2 U  G G L Q
+
+  P P    , Q
+
+  P P  H  , Q
+
+  P P  W  , Q
+
+  >    6 S D
+
+    %  S D
+      &  
+  > 6 6  6 6 /  U @
+
+  > & R D U D P  @
+
+  O W @
+
+  >    6 S @
+  W V @
+
+  @
+  > ;  F O H
+
+  > & R & R G  @
+
+  > & R $ J H Q  @
+
+      & [ @
+
+  \ @
+  > 6 F  U D Z
+  V V V  ;
+
+  W
+  H
+
+  >    6
+  &
+to construct the edge associated with short flows and avoids
+  3 D
+
+  &
+inspecting each short spoofing flow. Besides, the experiment
+ (a) AUC of detecting encrypted web attack traffic.
+results also show that the critical vertices denote the addresses
+of major active flows, e.g., web servers, DNS servers, and  : K L V S H U  $ Y J   )   +  9   $ Y J   )   : K L V S H U  +  9 
+     
+scanners. Note that, we exclude the results of the baselines that     
+cannot detect encrypted traffic with lower rates in the following     
+  ) 
+
+     
+sections due to the page limits.     
+     
+Encrypted Flooding Traffic. Figure 12 shows the detection
+  3  F D Q  O 
+  D  J
+  Q L S  6 6
+
+  L [  M 
+
+  L [  M 
+
+  L  M 
+     
+
+      
+  > % R  6 5 )
+
+  U D S  O H U
+
+  % R  P
+   % R  D P
+
+  R W V  P
+      9 (
+
+      9 (
+  / 6   9 X
+  2 U  G G L Q
+
+  P P    , Q
+
+  P P  H  , Q
+
+  P P  W  , Q
+
+  >    6 S D
+
+    %  S D
+      &  
+  > 6 6  6 6 /  U @
+
+  > & R D U D P  @
+
+  O W @
+
+  >    6 S @
+  W V @
+
+  @
+  > ;  F O H
+
+  > & R & R G  @
+
+  > & R $ J H Q  @
+
+      & [ @
+
+  \ @
+  > 6 F  U D Z
+  V V V  ;
+
+  W
+  H
+
+  >    6
+  &
+  3 D
+
+accuracy under flooding attacks using encrypted traffic. Gen-
+
+  &
+erally, HyperVision achieves 0.856 ∼ 0.981 F1 and 0.917 (b) F1 of detecting encrypted web attack traffic.
+∼ 0.998 AUC, which are 58.7% and 25.3% accuracy improvements over the baselines that can detect such attacks. Fig. 13. Accuracy of encrypted web attack traffic detection.
+Specifically, as shown in Figure 12(a) and 12(b), we observe
+that HyperVision can accurately detect the link flooding traffic
+consists of various encrypted traffic with different parameters.
+For instance, it can detect the Crossfire attack using HTTPS
+web requests generated by different sizes of botnets [41]
+with at most 0.939 F1. The massive web traffic generated by
+bots, which is low-rate (≤ 4Kbps) and encrypted, evades the
+detection of Whisper and FlowLens (F1 ≤ 0.8). As shown in
+Figure 14(a), HyperVision can detect the attack efficiently by (a) Crossfire. (b) SSH cracking.
+splitting the botnet clusters into a single connected component
+to exclude the interference from the similar benign web traffic,
+where the inner layer denotes botnets and the outer denotes
+decoy servers.
+ Moreover, we find that HyperVision can detect low-rate
+TCP DoS attacks that use burst encrypted video traffic for
+at most 0.995 AUC and 0.938 F1. Although Whisper has
+slightly better AUC in some cases, we find that it cannot (c) XSS detection. (d) P2P botnet.
+achieve high accuracy on all scenarios. As a result, it has
+only 55.5% AUC in the worse case. Moreover, HyperVision Fig. 14. Subgraph with various encrypted malicious traffic.
+can aggregate the short flows in the SSH connection injection
+attacks and achieves more than 0.95 F1. The attacks exploiting with over 0.881 F1 and 0.917 AUC, which are 1.19 and 1.28
+protocol vulnerabilities realize low-rate packet injection and times improvements over FlowLens and Whisper. The reason is
+evade the detection of FlowLens (i.e., AUC ≤ 0.774, F1 ≤ that HyperVision maintains the interaction patterns of attackers
+0.513). Figure 12(c) and 12(d) illustrate that HyperVision can using the graph, e.g., the massive short flows for login attempts
+identify slow and persisted password attempts for the channels shown as red edges in Figure 14(b).
+
+ 11
+  $ 8 &  ) 
+  6 S \ Z D U H  $ G Z D U H  5 D Q V R P H Z D U H  0 L Q H U  % R W Z D U H
+       $ Y J   $ 8 &     
+          
+ $ 8 &
+
+  $ Y J   )      
+
+  ) 
+     
+          
+          
+          
+  L F  H U  Q  R  H  H U  R  K  G  S  U  J  R  U  [
+  . R O H 6 Y S H D Q Q V R P Q E Q D O R F N H ' U L G H  L W & R L Q 7 0 U R M D Q R 0 L Q 0 L Q H
+  U  R W  W H W  D Q  R W  L W \  R W
+  0 D J 7 U L F N V W 3 O D Q N W R 3 H Q H W K  = V R & Q & O H D Q  ) H L 0 Z R E L G D V  $ G O R D H E & R P  %  7 + %  ( P R  6 Q R M  7 U L F N E  6 D O 0 D ] D U E
+  :  5  : D  &
+Fig. 15. HyperVision can detect various encrypted malware traffic.
+
+                   
+
+  6 W R U D J H  8 V D J H  >10x   0 % @
+  0 H P R U \  8 V D J H  > * % @
+  $ Y J        * E  V  - D Q       2 Y H U D O O      - D Q        % H Q L J Q  - X Q        5 6 7  ' R 6
+       - D Q      
+       ) H E       * U D S K    
+            $ S U         
+    
+  3 ' )
+
+  3 ' )
+       - X Q     
+             
+             
+                  
+                  
+                              
+                                                     G  L   N    G  L   N
+  + H D  6 X U  = H H  +  9  + H D  6 X U  = H H  +  9
+  
+  7 K U R X J K S X W  > * E  V @  0 D [ L P X P  7 K U R X J K S X W  > * E  V @  7 L P H  > V @
+ (a) Runtime memory usages. (b) Graph storage usages.
+ (a) Graph construction throughput. (b) Max construction throughput.
+ Fig. 18. Hardware resource usages of HyperVision.
+          
+  - D Q 
+            ) H E 
+ 3 ' )  >×10 2  @
+
+       $ S U  encrypted malware traffic is hard to detect for the baselines
+  $ Y J       * E  V
+  3 ' )
+
+       - D Q           
+  - X Q  because it is slow and persistent. However, HyperVision ac-
+          
+ curately detects the malware campaigns with at least 0.964
+          
+ AUC and 0.891 F1. Specifically, it captures the C&C servers
+                                                         of spyware for exfiltration as abnormal critical vertices that
+  7 K U R X J K S X W  > * E  V @  6 W D E O H  7 K U R X J K S X W  > * E  V @
+ (c) Graph detection throughput. (d) Stable detection throughput. are connected by massive infected hosts in the graph. As
+Fig. 16. Throughput of graph construction and detection.
+ a result, it detects the encrypted malicious traffic of the
+ malware with at least 0.942 F1. For example, to detect Sality
+    
+ P2P botnet shown in Figure 14(d), HyperVision collects the
+    
+      - D Q            - D Q        - X Q       interactions among similar P2P bots, aggregates the encrypted
+  - X Q          
+         short flows as edges, and finally clusters the edges with higher
+  / D W H Q F \  > V @
+
+    
+  3 ' )
+
+        
+    
+ loss than benign interaction patterns. Similarly, it can capture
+         the static servers of adware, malware component delivery
+        
+    
+         servers, the infected miner pools as abnormal vertices. Note
+                                               ) O R Z  3 U R F   3 U R F   ) O R Z  3 U R F   3 U R F 
+  / D W H Q F \  > V @  & O D V V   / R Q J  6 K R U W  & O D V V   / R Q J  6 K R U W that, the low-rate malicious flows (at least 0.814 pps) are
+ (a) Graph construction latency. (b) Construct latency composition. represented as the edges associated with short flows connected
+         to critical vertices. Meanwhile, the massive long flows with
+      $ Y J        V     almost 100% encrypted packet proportion are represented as
+      - D Q          
+  / W H Q F \  >10x   V @
+
+         the edges associated with long flows to the vertices. Therefore,
+  3 ' )
+
+         a critical vertex connected with the edges indicates the malware
+     99th   3 H U F H Q W L O H    
+         campaign that is significantly different from benign vertices
+        
+         with large degrees, e.g., benign websites.
+                                  7 R W D O  & R P S   3 U H  & U L W L F D O  & O X V W H U 
+  / D W H Q F \  > V @  , G H Q W L I \  & O X V W H U   9 H U W H [
+ (c) Graph detection latency. (d) Detection latency composition.
+ C. Performance Results
+Fig. 17. Latency of graph construction and detection.
+ Throughput. We truncate the packets to the first 200 bytes
+ on the physical testbed and increase the sending rates until
+Encrypted Web Malicious Traffic. Figure 13 presents the the graph construction module reaches maximum throughput.
+detection accuracy of the encrypted traffic generated by various Figure 16 shows the throughput of the graph construction
+web vulnerabilities discovery. HyperVision achieves 0.985 and the detection. Figure 16(a) presents the distribution of
+average AUC and 0.957 average F1 (i.e., 2.8% and 75.2% average throughput within a 1.0s time window. We observe
+increase compared to Whisper). The flow based ML detection that HyperVision constructs the graph for 28.21 Gb traffic per
+cannot detect web encrypted malicious traffic because the traf- second. Figure 16(b) presents the maximum throughput in each
+fic has single-flow patterns that are almost same to benign web time window with all the backbone traffic datasets used in
+access flows. HyperVision can accurately detect the encrypted the experiments. HyperVision achieves 32.43 ∼ 39.71 peak
+web malicious traffic, because, as shown in Figure 14(c), it throughput on average. Moreover, we measure the throughput
+captures the traffic from the frequent interactions as the edges of the graph learning module, which inspects flow interactions.
+associated with long flows, and identifies the malicious traffic According to Figure 16(c), we observe that it can analyze
+(denoted by red edges) generated by the attacker (denoted 121.14 Gb traffic per second on average. Note that, the deby the green vertex) by clustering the edges associated with tection throughput is 4.2 times higher than the construction so
+benign web traffic that are connected to the same critical vertex that the detection can analyze the recorded traffic iteratively to
+(denoted by the red solid vertex). consider the past interaction information. We observe that the
+ average throughput exhibits a bimodal distribution. The peak
+Encrypted Malware Traffic. We show the detection accuracy of low throughput (around 75 Gb/s) is caused by lacking the
+of encrypted malware traffic in Figure 15. Note that, the information on the graph for analyzing during cold start stages.
+
+ 12
+Figure 16(d) illustrates the throughput when the performance achieves task-agnostic encrypted traffic detection. Note that,
+of the system is stable. We observe that it achieves 80.6 ∼ the provenance graph based attack forensic analysis [83], [87]
+148.9 Gb/s throughput. Note that, the throughput on Apr. and is orthogonal to our traffic detection.
+Jun. 2020 datasets is lower because of their low original traffic
+volume.
+ DTMC Based Anomaly Detection. Discrete-Time Markov
+Latency. We measure the latency caused by graph construction Chain (DTMC) has been used to model the behaviors of
+and detection. Figure 17(a) presents the PDF of the maximum users/devices [1], [71], [72]. These methods aim to predict
+latency for constructing each edge within a 1.0s window. We behaviors of users and devices by utilizing DTMC. For inobserve that HyperVision has 1.09s ∼ 1.04s average construc- stance, Peek-a-Boo predicted user activities [1], Aegis pretion latency with an upper bound of 1.93s. The distribution dicted user behaviors for abnormal event detection [72], and
+is a significant bimodal one because the receive side scaling 6thSense predicted sensor behaviors for detecting sensor-based
+(RSS) on the Intel NIC is unbalanced on the threads. The attacks [71]. Different to these methods, our work utilizes
+light-load threads have only 0.75s latency. We analyze the DTMC to quantify the benefits of building the compact graph
+composition of the latency in Figure 17(b) (where the error bar for detecting various unknown attacks.
+is 10th and 90th percentile) and find that the flow classification,
+short flow aggregation, and long flow distribution fitting share ML Based Malicious Traffic Detection. ML based detec-
+50.95%, 35.03%, and 14.0% latency, respectively. We measure tion can detect zero-day attacks [12] and achieve higher
+the average detection latency. Figure 17(c) shows that the accuracy than the traditional signature based methods [89].
+learning module has a 0.83s latency on average with a 99th For example, Fu et al. leveraged frequency domain features
+percentile of 4.48s. We also analyze the latency in each to realize realtime detection [30]. Barradas et al. developed
+step (see Figure 17(d)). We see that 75.8% of the latency Flowlens to extract flow distribution features on data-plane
+comes from pre-clustering (i.e., 0.66s on average). However, and detect attacks by applying random forest [5]. Stealthwatch
+the pre-clustering step reduces the processing overhead of detected attacks by analyzing flow features extracted from
+the subsequent processing, i.e., selecting critical vertex and NetFlow [16]. Mirsky et al. developed Kitsune to learn the
+clustering, for 5.5 × 10−3 s (0.64%) and 3.4 × 10−3 s (0.40%). per-packet features by adopting auto-encoders [56]. For task-
+Resource Consumption. Figure 18(a) presents the memory specific methods, Nelms et al. [60], Invernizzi et al. [38],
+usage of HyperVision. Note that, the DPDK huge pages require and Bilge et al. [8] detected traffic in the different stages of
+6GB memory and thus we measure the consumption when the malware campaigns by using statistical ML. Bartos et al. [6]
+usage reaches 6GB. We observe that the increasing rate of and Tang et al. [75] detect malformed HTTP request traffic.
+memory for maintaining the graph is only 13.1 MB/s. Finally, Holland et al. [35] developed an automatic pipeline for traffic
+HyperVision utilizes 1.78 GB memory to maintain the flow detection. All these methods cannot effectively detect attacks
+interaction patterns extracted from 2.82 TB ongoing traffic. based on encrypted traffic.
+HyperVision incurs low memory consumption because the feature distribution fitting for long flow and short flow aggregation Task-Specific Encrypted Traffic Detection. The existing
+make the in-memory graph compact which ensures low-latency encrypted traffic detection relies on domain knowledge for
+detection and long-term recording. Moreover, the memory short-term flow-level features [2], [16], [62]. For example,
+consumption of the learning algorithm is 1.452 ∼ 1.619 GB. Zheng et al. leveraged SDN to achieve crossfire attack de-
+HyperVision can export the graph to disk for forensic analysis. tection [90], and Xing et al. designed the primitives for the
+Figure 18(b) shows the storage used for recording the first programmable switch to detect link flooding attacks [82].
+45s traffic of the MAWI dataset by different methods, i.e., For encrypted malware traffic, Bilge et al. [8] leveraged
+HyperVision, event based network monitors (i.e., Suricata [74] the traffic history to detect C&C server, and Tegeler et al.
+and Zeek [86]), and raw packet headers. We observe that developed supervised learning using time-scale flow features
+HyperVision achieves 8.99%, 55.7%, 98.1% storage reduction extracted from malware binaries [76]. Anderson et al. studies
+over the baselines, respectively. Meanwhile, our analysis shows the feasibility of detecting malware encrypted communication
+that HyperVision retains more traffic information than the via malformed TLS headers [3]. To the best of our knowledge,
+existing tools (see Section VII). Thus, the graph based analysis our HyperVision is the first system that enables unsupervised
+is more efficient than these existing tools. detection for the encrypted traffic with unknown patterns.
+
+ IX. R ELATED W ORK
+ Encrypted Traffic Classification. HyperVision aims to iden-
+Graph Based Anomaly Detection. Graph based structures tify the malicious behaviors according to encrypted traffic. It
+have been used for task-specific traffic detection. These meth- is different from encrypted traffic classifications that decide if
+ods heavily rely on DPI and thus cannot be applied to detect the traffic is generated by certain applications or users [69].
+encrypted traffic [76]. Kwon et al. analyzed the download re- For instance, Rimmer et al. leveraged DL for web fingerprint,
+lationship graph to identify malware downloading [45], which which de-anonymizes Tor traffic by classifying encrypted web
+is similar to WebWitness [60]. Eshete et al. constructed HTTP traffic [67]. Siby et al. showed that classifying encrypted
+interaction graphs to detect malware static resources [24], DNS traffic can jeopardize the user privacy [70]. Similarly,
+and Invernizzi et al. used a graph constructed from plain- Bahramali et al. classified the encrypted traffic of instant mestext traffic to identify malware infrastructures [38]. Different saging applications [4]. Ede et al. designed semi-supervised
+from these works, HyperVision constructs the interaction graph learning for mobile applications fingerprinting [78]. All these
+without parsing specific application layer headers and thus classifications are orthogonal to HyperVision.
+
+ 13
+ X. C ONCLUSION [18] ——, “Network as a Security Sensor Threat Defense
+ with Full NetFlow,” https://www.cisco.com/c/en/us/solutions/
+ In this paper, we present HyperVision, an ML based collateral/enterprise-networks/enterprise-network-security/
+realtime detection system for encrypted malicious traffic with white-paper-c11-736595.pdf, Accessed May 2022.
+unknown patterns. HyperVision utilizes a compact in-memory [19] ——, “RFC 3954, Cisco Systems NetFlow Services Export Version 9,”
+ https://doi.org/10.17487/RFC3954, Accessed May 2022.
+graph to retain flow interaction patterns, while not requiring
+prior knowledge on the traffic. Specifically, HyperVision uses [20] M. Du et al., “Deeplog: Anomaly detection and diagnosis from system
+ logs through deep learning,” in CCS. ACM, 2017, pp. 1285–1298.
+two different strategies to represent the interaction patterns
+generated by short and long flows and aggregates the informa- [21] Z. Durumeric et al., “Zmap: Fast internet-wide scanning and its security
+ applications,” in Security. USENIX, 2013, pp. 605–620.
+tion of these flows. We develop an unsupervised graph learning
+ [22] ——, “An internet-wide view of internet-wide scanning,” in Security.
+method to detect the traffic by utilizing the connectivity, USENIX, 2014, pp. 65–78.
+sparsity, and statistical features in the graph. Moreover, we
+ [23] H. Electric, “Internet Backbone and Colocation Provider.” http://he.net/,
+establish an information theory based analysis framework to Accessed May 2022.
+demonstrate that HyperVision preserves near-optimal informa- [24] B. Eshete and V. N. Venkatakrishnan, “Dynaminer: Leveraging offline
+tion of flows for effective detection. The experiments with 92 infection analytics for on-the-wire malware detection,” in DSN. IEEE,
+real-world attack traffic datasets demonstrate that HyperVision 2017, pp. 463–474.
+achieves at least 0.86 F1 and 0.92 AUC with over 80.6 Gb/s [25] C. Estan and G. Varghese, “New directions in traffic measurement and
+detection throughput and average detection latency of 0.83s. accounting: Focusing on the elephants, ignoring the mice,” ACM Trans.
+In particular, 44 out of the attacks can evade all five state- Comput. Syst., vol. 21, no. 3, pp. 270–313, 2003.
+of-the-art methods, which demonstrate the effectiveness of [26] X. Feng et al., “Off-path TCP exploits of the mixed IPID assignment,”
+HyperVision. in CCS. ACM, 2020, pp. 1323–1335.
+ [27] ——, “Off-path network traffic manipulation via revitalized icmp redirect attacks,” in Security. USENIX, 2022.
+ [28] ——, “Off-path TCP hijacking attacks via the side channel of down-
+ R EFERENCES graded IPID,” IEEE/ACM Trans. Netw., vol. 30, no. 1, pp. 409–422,
+ 2022.
+ [1] A. Acar et al., “Peek-a-boo: i see your smart home activities, even
+ encrypted!” in WiSec. ACM, 2020, pp. 207–218. [29] ——, “Pmtud is not panacea: Revisiting ip fragmentation attacks against
+ [2] B. Anderson and D. A. McGrew, “Identifying encrypted malware traffic tcp,” in NDSS. ISOC, 2022.
+ with contextual flow data,” in AISec. ACM, 2016, pp. 35–46. [30] C. Fu et al., “Realtime robust malicious traffic detection via frequency
+ [3] ——, “Machine learning for encrypted malware traffic classification: domain analysis,” in CCS. ACM, 2021, pp. 3431–3446.
+ Accounting for noisy labels and non-stationarity,” in SIGKDD. ACM, [31] ——, “Frequency domain feature based robust malicious traffic detec-
+ 2017, pp. 1723–1732. tion,” IEEE/ACM Trans. Netw., to appear.
+ [4] A. Bahramali et al., “Practical traffic analysis attacks on secure mes- [32] J. Gan and Y. Tao, “DBSCAN revisited: Mis-claim, un-fixability, and
+ saging applications,” in NDSS. ISOC, 2020. approximation,” in SIGMOD. ACM, 2015, pp. 519–530.
+ [5] D. Barradas et al., “Flowlens: Enabling efficient flow classification for [33] M. R. Garey et al., “Some simplified np-complete problems,” in STOC.
+ ml-based network security applications,” in NDSS. ISOC, 2021. ACM, 1974, pp. 47–63.
+ [6] K. Bartos et al., “Optimized invariant representation of network traffic [34] G. Gu et al., “Botsniffer: Detecting botnet command and control
+ for detecting unseen malware variants,” in Security. USENIX, 2016, channels in network traffic,” in NDSS. ISOC, 2008.
+ pp. 807–822. [35] J. Holland et al., “New directions in automated traffic analysis,” in CCS.
+ [7] H. L. J. Bijmans et al., “Just the tip of the iceberg: Internet-scale ACM, 2021, pp. 3366–3383.
+ exploitation of routers for cryptojacking,” in CCS. ACM, 2019, pp. [36] IETF, “RFC 7011, Specification of the IP Flow Information Export (IP-
+ 449–464. FIX) Protocol,” https://www.rfc-editor.org/info/rfc7011, Accessed May
+ [8] L. Bilge et al., “Disclosure: detecting botnet command and control 2022.
+ servers through large-scale netflow analysis,” in ACSAC. ACM, 2012, [37] Intel, “Data Plane Development Kit,” https://www.dpdk.org/, Accessed
+ pp. 129–138. May 2022.
+ [9] J. Caballero et al., “Measuring pay-per-install: The commoditization of [38] L. Invernizzi et al., “Nazca: Detecting malware distribution in largemalware distribution,” in Security. USENIX, 2011. scale networks,” in NDSS. ISOC, 2014.
+[10] J. Cao et al., “The loft attack: Overflowing sdn flow tables at a low [39] M. Javed and V. Paxson, “Detecting stealthy, distributed SSH bruterate,” IEEE/ACM Trans. Netw., to appear. forcing,” in CCS. ACM, 2013, pp. 85–96.
+[11] Y. Cao et al., “Off-path TCP exploits: Global rate limit considered [40] M. Jonker et al., “Millions of targets under attack: a macroscopic
+ dangerous,” in Security. USENIX, 2016, pp. 209–225. characterization of the dos ecosystem,” in IMC. ACM, 2017, pp.
+[12] V. Chandola et al., “Anomaly detection: A survey,” ACM Comput. Surv., 100–113.
+ vol. 41, no. 3, Jul. 2009. [41] M. S. Kang et al., “The crossfire attack,” in SP. IEEE, 2013, pp.
+[13] CIC, “Canadian Institute for Cybersecurity Datasets.” https://www.unb. 127–141.
+ ca/cic/datasets/index.html, Accessed May 2022. [42] Kaspersky, “Kaspersky Security Bulletin 2020. Statistics,” https://
+[14] ——, “DDoS Evaluation Datasets (CIC-DDoS2019),” https://www.unb. go.kaspersky.com/rs/802-IJN-240/images/KSB statistics 2020 en.pdf,
+ ca/cic/datasets/ddos-2019.html, Accessed May 2022. Accessed May 2022.
+[15] ——, “Intrusion Detection Evaluation Datasets (CIC-IDS2017),” https: [43] D. Kopp et al., “Ddos hide & seek: On the effectiveness of a booter
+ //www.unb.ca/cic/datasets/ids-2017.html, Accessed May 2022. services takedown,” in IMC. ACM, 2019, pp. 65–72.
+[16] Cisco, “Cisco Encrypted Traffic Analytics,” https://www.cisco.com/ [44] A. Kuzmanovic and E. W. Knightly, “Low-rate tcp-targeted denial of
+ c/en/us/solutionsenterprise-networks/enterprise-network-security/eta. service attacks: the shrew vs. the mice and elephants,” in SIGCOMM.
+ html, Accessed May 2022. ACM, 2003, pp. 75–86.
+[17] ——, “Cisco SPAN.” https://www.cisco.com/c/en/us/support/docs/ [45] B. J. Kwon et al., “The dropper effect: Insights into malware distribution
+ swit-ches/catalyst-6500-series-switches/10570-41.html, Accessed May with downloader graph analytics,” in CCS. ACM, 2015, pp. 1118–
+ 2022. 1129.
+
+ 14
+[46] C. Lever et al., “A lustrum of malware network communication: [74] Suricata, “An Open Source Threat Detection Engine,” https://
+ Evolution and insights,” in SP. IEEE, 2017, pp. 788–804. suricata-ids.org/, Accessed May 2022.
+[47] G. Li et al., “Enabling performant, flexible and cost-efficient ddos [75] R. Tang et al., “Zerowall: Detecting zero-day web attacks through
+ defense with programmable switches,” IEEE/ACM Trans. Netw., vol. 29, encoder-decoder recurrent neural networks,” in INFOCOM. IEEE,
+ no. 4, pp. 1509–1526, 2021. 2020, pp. 2479–2488.
+[48] Q. Li et al., “Dynamic network function enforcement via joint flow [76] F. Tegeler et al., “Botfinder: finding bots in network traffic without deep
+ and function scheduling,” IEEE Trans. Inf. Forensics Secur., vol. 17, packet inspection,” in CoNEXT. ACM, 2012, pp. 349–360.
+ pp. 486–499, 2022. [77] K. Thomas et al., “Data breaches, phishing, or malware?: Understanding
+[49] ——, “Efficient forwarding anomaly detection in software-defined the risks of stolen credentials,” in CCS. ACM, 2017, pp. 1421–1434.
+ networks,” IEEE Trans. Parallel Distributed Syst., vol. 11, pp. 2676– [78] T. van Ede et al., “Flowprint: Semi-supervised mobile-app fingerprinting
+ 2690, 32. on encrypted network traffic,” in NDSS. ISOC, 2020.
+[50] E. Liu et al., “Reasoning analytically about password-cracking soft- [79] Z. Wang et al., “Symtcp: Eluding stateful deep packet inspection with
+ ware,” in SP. IEEE, 2019, pp. 380–397. automated discrepancy discovery,” in NDSS. ISOC, 2020.
+[51] Z. Liu et al., “Jaqen: A high-performance switch-native approach for [80] WIDE, “MAWI Working Group Traffic Archive,” http://mawi.wide.ad.
+ detecting and mitigating volumetric ddos attacks with programmable jp/mawi/, Accessed May 2022.
+ switches,” in Security. USENIX, 2021, pp. 3829–3846. [81] R. Xie et al., “Disrupting the sdn control channel via shared links:
+[52] X. Luo and R. K. C. Chang, “On a new class of pulsing denial-of- Attacks and countermeasures,” IEEE/ACM Trans. Netw., to appear.
+ service attacks and the defense,” in NDSS. ISOC, 2005. [82] J. Xing et al., “Ripple: A programmable, decentralized link-flooding
+[53] R. Merget et al., “Scalable scanning and automatic classification of defense against adaptive adversaries,” in Security. USENIX, 2021, pp.
+ TLS padding oracle vulnerabilities,” in Security. USENIX, 2019, pp. 3865–3880.
+ 1029–1046. [83] R. Yang et al., “Uiscope: Accurate, instrumentation-free, and visible
+[54] R. Miao et al., “The dark menace: Characterizing network-based attacks attack investigation for GUI applications,” in NDSS. ISOC, 2020.
+ in the cloud,” in IMC. ACM, 2015, pp. 169–182. [84] T. Yang et al., “Elastic sketch: adaptive and fast network-wide mea-
+[55] Microsoft, “A Theorem Prover from Microsoft Research.” https:// surements,” in SIGCOMM. ACM, 2018, pp. 561–575.
+ github.com/Z3Prover/z3, Accessed May 2022. [85] R. Zamir, “A proof of the fisher information inequality via a data
+ processing argument,” IEEE Trans. Inf. Theory, vol. 44, no. 3, pp. 1246–
+[56] Y. Mirsky et al., “Kitsune: An ensemble of autoencoders for online
+ 1250, 1998.
+ network intrusion detection,” in NDSS. ISOC, 2018.
+ [86] Zeek, “An Open Source Network Security Monitoring Tool,” https://
+[57] mlpack, “Mlpack: Open source machine learning library,” https://www. zeek.org/, Accessed May 2022.
+ mlpack.org/, accessed May 2022.
+ [87] J. Zeng et al., “WATSON: abstracting behaviors from audit logs via
+[58] A. Nappa et al., “Cyberprobe: Towards internet-scale active detection aggregation of contextual semantics,” in NDSS. ISOC, 2021.
+ of malicious servers,” in NDSS. ISOC, 2014.
+ [88] M. Zhang et al., “Poseidon: Mitigating volumetric ddos attacks with
+[59] R. NCC, “the RIPE NCC is building the largest Internet measurement programmable switches,” in NDSS. ISOC, 2020.
+ network ever made.” https://atlas.ripe.net/, Accessed May 2022.
+ [89] Z. Zhao et al., “Achieving 100gbps intrusion prevention on a single
+[60] T. Nelms et al., “Webwitness: Investigating, categorizing, and mitigating server,” in OSDI. USENIX, 2020, pp. 1083–1100.
+ malware download paths,” in Security. USENIX, 2015, pp. 1025–1040.
+ [90] J. Zheng et al., “Realtime ddos defense using cots sdn switches via
+[61] A. Oest et al., “Sunrise to sunset: Analyzing the end-to-end life cycle adaptive correlation analysis,” IEEE Trans. Inf. Forensics Secur., vol. 13,
+ and effectiveness of phishing attacks at scale,” in Security. USENIX, no. 7, pp. 1838–1853, 2018.
+ 2020, pp. 2039–2056. [91] S. Zhu et al., “You do (not) belong here: detecting DPI evasion attacks
+[62] E. Papadogiannaki and S. Ioannidis, “A survey on encrypted network with context learning,” in CoNEXT. ACM, 2020, pp. 183–197.
+ traffic analysis applications, techniques, and countermeasures,” ACM
+ Comput. Surv., vol. 54, no. 6, pp. 123:1–123:35, 2021.
+ A PPENDIX
+[63] PcapPlusPlus, “A C++ Library for Capturing, Parsing and Crafting of
+ Network Packets,” https://pcapplusplus.github.io/, Accessed May 2022. A. Details of Implementations
+[64] G. Pellegrino et al., “Deemon: Detecting CSRF with dynamic analysis
+ and property graphs,” in CCS. ACM, 2017, pp. 1757–1771. We present the details of the flow classification and short
+[65] Z. Qian and Z. M. Mao, “Off-path TCP sequence number inference flow aggregation algorithm in Algorithm 1 and 2, respectively.
+ attack - how firewall middleboxes reduce security,” in SP. IEEE, 2012, The features used for edge pre-clustering and clustering are
+ pp. 347–361. shown in Table V. And Table VII shows the hyper-parameters
+[66] P. Richter and A. W. Berger, “Scanning the scanners: Sensing the used in HyperVision and the recommended values.
+ internet from a massively distributed network telescope,” in IMC.
+ ACM, 2019, pp. 144–157.
+[67] V. Rimmer et al., “Automated website fingerprinting through deep
+ learning,” in NDSS. ISOC, 2018.
+[68] D. Rupprecht et al., “Call me maybe: Eavesdropping encrypted LTE
+ calls with revolte,” in Security. USENIX, 2020, pp. 73–88.
+[69] M. Shen et al., “Accurate decentralized application identification via
+ encrypted traffic analysis using graph neural networks,” IEEE Trans.
+ Inf. Forensics Secur., vol. 16, pp. 2367–2380, 2021.
+[70] S. Siby et al., “Encrypted DNS -> privacy? A traffic analysis perspective,” in NDSS. ISOC, 2020.
+[71] A. K. Sikder et al., “6thsense: A context-aware sensor-based attack
+ detector for smart devices,” in Security. USENIX, 2017, pp. 397–414.
+[72] ——, “Aegis: a context-aware security framework for smart home
+ systems,” in ACSAC. ACM, 2019, pp. 28–41.
+[73] Stratosphere, “Real Malware Traffic Captures.” https://www.
+ strato-sphereips.org/datasets-overview, Accessed May 2022.
+
+ 15
+ TABLE V. T HE FEATURES OF EDGES USED IN H YPERV ISION . TABLE VII. R ECOMMENDED HYPER - PARAMETER CONFIGURATION .
+ Edge Group Data Description Group Hyper-Parameter Description Value
+ bool Denoting short flows with the same source address. PKT TIMEOUT Flow completion time threshold. 10.0s
+ bool Denoting short flows with the same source port. Graph
+ Flow classification threshold. 15
+ Edge Denoting Short Flows
+
+ FLOW LINE
+ bool Denoting short flows with the same destination address. Construction
+ structural
+ AGG LINE Flow aggregation threshold. 20
+ bool Denoting show flows with the same destination port.
+ int The in-degree of the connected source vertex. Graph Pre-  DBSCAN hyper-parameters for 4 × 10−3
+ int The out-degree of the connected source vertex. Processing minPoint clustering components and edges. 40
+ int The in-degree of the connected destination vertex.
+ int The out-degree of the connected destination vertex. K K-means hyper-parameter. 10
+ int The number of flows denoted by the edge. T Loss threshold for malicious traffic. 10.0
+ Traffic
+ statistical
+
+ int The length of the feature sequence associated with the edge. α 0.1
+ Detection Balancing the terms in
+ int The sum of packet lengths in the feature sequence. β 0.5
+ the loss function.
+ int The mask of protocols in the feature sequence. γ 1.7
+ float The mean of arrival intervals in the feature sequence.
+ int The in-degree of the connected source vertex.
+ structural
+ Edge Denoting Long Flows
+
+ int The out-degree of the connected source vertex. Algorithm 1: Secure flow classification.
+ int The in-degree of the connected destination vertex. Input: Per-packet features: PktInfo, the hash table for flow collecting:
+ int The out-degree of the connected destination vertex. FlowHashTable.
+ float The flow completion time of the denoted long flow. Output: Classified flows: ShortFlow and LongFlow.
+ float The packet rate of the denoted long flow. 1 time now := PktInfo[0].time, last check := time now.
+ int The number of packets in the denoted long flow. for pkt in PktInfo do
+ statistical
+
+ 2
+ int The maximum bin size for fitting packet length distribution. // Aggregate packets into flows.
+ int The length associated with the maximum bin size. 3 if Hash(pkt) not in FlowHashTable then
+ int The maximum bin size for fitting protocol distribution. 4 FlowHashTable adds an entry for pkt.
+ int The protocol associated with the maximum bin size.
+ 5 FlowHashTable[Hash(pkt)] appends pkt.
+ TABLE VI. D ETAILS OF MALICIOUS TRAFFIC DATASETS . 6 if time now − last check > JUDGE INTERVAL then
+ 7 for flow in FlowHashTable do
+ Dataset Enc. // Judge the completion of flows.
+ Class Description Att.1 Vic. B.W.2
+ Label Ratio
+ 8 if time now − flow[−1].time > PKT TIMEOUT then
+ Magic. Magic Hound spyware. 2 479 0.34 0.13% // Classify the flow via the number of packets.
+ Trickster Encrypted C&C connections. 2 793 0.63 10.0% 9 if flow.size > FLOW LINE then
+ Spyware
+
+ Plankton Pulling components from CDN. 3 579 59.2 23.8% 10 ShortFlow adds flow.
+ Penetho Wifi cracking APK spyware. 1 516 3.57 100%
+ Zsone Multi-round encrypted uploads. 1 479 5.98 93.0% 11 else
+ CCleaner Unwanted software downloads. 4 466 28.1 4.09% 12 LongFlow adds flow.
+ Malware Related Encrypted Traffic
+
+ Feiwo Encrypted ad API calls. 3 1.00K 19.8 100% FlowHashTable clears the states of flow.
+ Adware
+
+ 13
+ Mobidash Periodical statistic ad updates. 3 624 6.08 100%
+ WebComp. WebCompanion click tricker. 3 281 8.38 55.2% 14 last check ← time now. // Record the time of checking.
+ Adload Static resources for PPI adware. 1 280 1.04 1.09%
+ Svpeng Periodical C&C interactions (10s). 2 403 1.21 1.26% 15 time now ← pkt.time. // Update the timer.
+ Ransom-
+
+ Koler Invalid TLS connections. 3 333 2.22 100%
+ ware
+
+ Ransombo Executable malware downloads. 5 369 58.6 42.7%
+ WannaL. Wannalocker delivers components. 2 275 7.49 30.3%
+ Dridex Victim locations uploading. 1 429 4.10 100% Algorithm 2: Short flow aggregation.
+ BitCoinM. Abnormal encrypted channels. 1 1.54K 0.79 100%
+ Miner
+
+ TrojanM. Long SSL connections to C&C. 3 1.37K 2.39 89.4% Input: Short flows: ShortFlow.
+ CoinM. Periodical connections to pool. 1 1.40K 0.21 100% Output: Constructed edges: ShortEdge.
+ THBot Getting C&C server addresses. 4 103 1.72 2.71% 1 Initialize ProtoHashTable as an empty table.
+ Emotet Communication to C&C servers. 6 1.17K 1.43 68.6% // Select candidate protocols for the aggregation.
+Botware
+
+ Snojan PPI malware downloading. 3 326 8.94 100% 2 for flow in ShortFlow do
+ Trickbot Connecting to alternative C&C. 4 347 0.57 100% // Calculate the protocol mask of a short flow.
+ Mazarbot Long C&C connections to cloud. 3 409 6.13 30.9% 3 flow proto := (flow[0].proto|...|...|flow[−1].proto).
+ Sality A P2P botware. 20 247 2.19 100% 4 if Hash(flow proto) not in ProtoHashTable then
+ CrossfireS. We use the botnet cluster sizes 100 313 197 100% 5 ProtoHashTable adds an entry for flow proto.
+ Link Flooding
+
+ CrossfireM. and the ratio of decony servers 200 313 278 100% 6 Append flow to ProtoHashTable[Hash(flow proto)].
+ CrossfireL. (HTTPS) in [41]. 500 313 503 100%
+ Encrypted Flooding Traffic
+
+ LrDoS 0.2 We use the traffic of an encrypted 1 1 5.57 100% // Perform the source aggregation.
+ LrDoS 0.5 video application and the settings 1 1 3.25 100% 7 for flows in ProtoHashTable with same protocols do
+ LrDoS 1.0 in WAN experiments [44] 1 1 1.90 100% 8 SrcAddrTable collects the flows with same sources in flows.
+ ACK Inj. SSH injection via ACK rate-limits. 1 2 1.78 - for sflow in SrcAddrTable do
+ Inject
+
+ 9
+ SSH
+
+ IPID Inj. SSH injection via IPID counters. 1 2 0.28 - // The flows can be aggregated and denoted by one edge.
+ IPID Port Requires of the SSH injection. 1 1 1.83 - 10 if sflow.size > AGG LINE then
+ Telnet S. Telnet servers in AS38635. 1 19 0.63 100% 11 edge.features := sflow[0].features.
+ Telnet M. Telnet servers in AS2501. 1 43 1.70 100%
+Password
+Cracking
+
+ 12 edge.source := sflow[0].source.
+ Telnet L. Telnet servers in AS2500. 1 83 2.76 100% 13 if an unique destination in sflow then
+ SSH S. SSH servers in AS9376. 1 35 1.39 100%
+ SSH M. SSH servers in AS2500. 1 257 2.49 100% // Source and destination aggregation.
+ SSH L. SSH servers in AS2501. 1 486 5.53 100% 14 edge.destination saves the unique destination.
+ 15 else
+ Oracle TLS padding Oracle. 1 1 3.99 100%
+ XSS Xsssniper XSS detection. 1 1 31.8 100% // Source aggregation only.
+ SSLScan SSL vulnerabilities detection. 1 1 15.0 100% 16 Record each destination in sflow.
+ Encrypted Web Traffic
+ Web Attacks
+
+ Param.Inj. Commix parameter injection. 1 1 17.1 100% 17 Add the constructed edge to ShortEdge.
+ Cookie.Inj. Commix cookie injection. 1 1 39.6 100% 18 SrcAddrTable evicts sflow.
+ Agent.Inj. Commix agent-based injection. 1 1 19.7 100%
+ WebCVE Exploiting CVE-2013-2028. 1 1 2.30 100% 19 DstAddrTable collects flows with same destinations.
+ WebShell Exploiting CVE-2014-6271. 1 1 11.2 100%
+ 20 Inspect the flows with the same destinations similarly.
+ CSRF Bolt CSRF detection. 1 1 7.73 100%
+ Crawl A crawler using scrapy. 1 1 29.7 100% // Process short flows which cannot be aggregated.
+ Spam1 Spam using SMTP-over-SSL. 1 1 36.2 100% 21 ShortEdge adds flows in SrcAddrTable and DstAddrTable.
+SMTP
+ SSL
+
+ Spam50 Encrypted spam with 50 bots. 50 1 61.7 100%
+ Spam100 Brute spam using 100 bots. 100 1 88.9 100%
+ ICMP 1 211K 5.61 -
+ Brute Scanning
+
+ We use the brute force scanning
+ NTP 1 99.3K 3.87 -
+ rates identified by darknet
+ SSH 1 205K 5.79 -
+ in [22]. We reproduce the
+ SQL 1 112K 3.04 -
+ scan using Zmap which targets
+ DNS 1 198K 6.61 - 16
+ the peers and customers
+ HTTP 1 93.7K 2.68 -
+ of AS 2500.
+ HTTPS 1 209K 4.89 -
+ SYN 6.50K 1 11.41 -
+ rce
+ oof
+
+ RST We use the protocol types and 32.5K 1 5.79 -
+ ck
+B. Details of Experiments
+ 1) Details of Datasets: We present the detailed properties We observe that ∂H[I∂qEve. ] ≈ 0 when q > 0.5. Thus, we use
+of the 80 newly collected datasets in Table VI, including the the second-order taylor series of q to approach HEve. :
+number of attackers and victims, the packet rates of attack
+flows, and the ratios of encrypted traffic. All the datasets s
+ −1)q
+ 2q(1 − ps ) ln[ ps(p(q−1)−q ]
+are collected and labeled using the same method as MAWI HEve. = = −2θ ln θ, (23)
+datasets [80] and CIC datasets [14], [15]. ps (q − 1) − q
+
+ 2) Detection Accuracy of Other Datasets: We use 12
+ where θ = ηζ , ζ = q − qps , and η = q − ps (q − 1). Similarly,
+existing datasets to eliminate the impact of dataset bias.
+ we obtain the expected data scale LEve. and the information
+Overall, HyperVision achieves 7.8%, 11.0%, 5.1% F1 imdensity DEve. :
+provements over the best accuracy of the baselines on Kitsune
+datasets [56], CIC-IDS2017 datasets [15], and CIC-DDoS2019
+ ps ps
+datasets [14], respectively. From the Kitsune datasets, we LEve. = P[IEve. = 1] = =− ,
+validate the correctness of the deployed baselines. ps (1 − q) + q η
+ (24)
+ HEve. 2ζ
+ 3) Long-run Performances: By using the CIC datasets [14], DEve. = = s · ln θ.
+ LEve. p
+[15], we validate the long-run performances of HyperVision.
+Specifically, the experiments show that HyperVision achieves
+ Here, we complete the analysis for the event based mode.
+over 0.95 F1 and 0.99 AUC in long-run detection (6∼8 hours).
+The results also verify that the accumulation of detection errors 2) Analysis of Sampling based Mode: We use XSamp.
+cannot interfere with HyperVision, and HyperVision can detect to denote the random variable to be recorded as the flow
+multiple attacks simultaneously even in the presence of attacks information in the sampling based mode which is the sum
+with changed addresses. Moreover, the memory consumption of the observed per-packet features denoted by the random
+of the compact graph is bounded by 15.6 GB. variable sequence. We can obtain the distribution of XSamp.
+ as follows:
+ 4) Robustness Against Obfuscation Techniques: We validate our method under evasion attacks with different obfusca-
+ L
+tion techniques according to a recent study [30], i.e., injecting X
+three kinds of benign traffic. The results demonstrate that the XSamp. = si , si ∼ B(s, p) ⇒ XSamp. ∼ B(Ls, p). (25)
+ i=1
+accuracy decrease incurred by the obfuscation is bounded by
+4.3% F1. Specifically, when benign TLS traffic, UDP video
+traffic, and normal ICMP traffic is injected into brute force The amount of the information recorded by the sampling
+attack traffic, the average F1 decreases by 1.7%, 0.9%, and based mode is the Shannon entropy of XSamp. . We decompose
+2.4%, respectively. the entropy as conditional entropy and mutual information:
+ The reason why the obfuscation techniques incur negligible HSamp. = H[XSamp. ]
+accuracy decrease is that they only manipulate patterns of a (26)
+ = H[XSamp. |L] + I(XSamp. ; L).
+single flow. HyperVision can still detect the evasion attacks by
+learning the interaction patterns among various flows.
+ We assume that the mutual information between the se-
+C. Details of Theoretical Analysis quence length L and the accumulative statistic XSamp. is close
+ to zero. It implies the impossibility of inferring the statistic
+ 1) Analysis of Event based Mode: Let random variable from the length of the packet sequence. Then we obtain a
+IEve. indicate if the event based mode records an event for a lower bound of the entropy as an estimation which is verified
+flow denoted by a random variable sequence, hs1 , s2 , . . . , sL i, to be a tight bound via numerical analysis:
+L ∼ G(q). And we assume that the mode can merge repetitive
+events. First, we obtain the probability distribution of the
+ ∞
+ 
+random variable IEve. : H P
+ Samp. = H[XSamp. |L] = P[L = l] · H[XSamp. |L = l]
+ l=1
+ P[IEve. = 1] = 1 − P[IEve. = 0], H[XSamp. |L = l] = 21 ln 2πelsp(1 − p),
+ 
+ ∞ ∞
+ 1 qX l−1
+ ⇒ HSamp. = ln 2πesp(1 − p) + (1 − q)
+ X
+ P[IEve. = 0] = P[L = l] · P[IEve. = 0|L = l] ln l. (27)
+ 2 2
+ l=1 l=1
+
+ X∞ (21)
+ = (1 − q)l−1 · q · (1 − ps )l We observed that the second-order taylor series can accul=1
+ s
+ rately approach the second term of the entropy:
+ q(1 − p )
+ = .
+ 1 − (1 − q)(1 − ps ) 1 ln 2
+ HSamp. = ln 2πesp(1 − p) + q(1 − q). (28)
+ 2 2
+ Then, we obtain the entropy of the random variable IEve. :
+ Finally, we obtain the expected data scale and the informa-
+ HEve. = H[IEve. ] = tion density similar to the analysis for the event based mode
+ (22)
+ −P[IEve. = 0] ln P[IEve. = 0] − P[IEve. = 1] ln P[IEve. = 1]. and complete the analysis for the sampling based mode.
+
+ 17
+ 3) Analysis of Graph based Mode in HyperVision: Hyper-
+Vision applies different recording strategies for short and long
+ Basing on the distribution of the collected counters, we
+flows, i.e., when L > K it extracts the histogram for long
+ obtain the entropy of the random set:
+flow feature distribution fitting, and when L ≤ K it records
+detailed per-packet features and aggregates short flows. Let  i −sp
+XH.V. denote the random set of the recorded information. For H[υi |L = l] = 1
+ 2
+ ln 2πel (sp) i!e
+ s (35)
+short flows, all the random variables are collected in XH.V. . L
+ H[XH.V. |L = l] =
+ P
+ H[υi |L = l],
+For long flows, XH.V. collects s counters of the histogram i=1
+for each state on the state diagram of the DTMC. First, we ∞
+ X
+ L L
+decompose the entropy of the graph based recording mode as H[XH.V. |L] = P[L = l] · H[XH.V. |L = l]
+the terms for short and long flows: l=K+1
+ ∞ s
+ X X 1 (sp)i e−sp
+ ∞ = q(1 − q)l−1 · ln 2πel
+ X 2 i!
+ HH.V. = H[XH.V. |L] = P[L = l] · H[XH.V. |L = l] l=K+1 i=1
+ l=1 (29) (1 − q) K
+ s(s + 1)
+ S L = [s ln 2πe + ln sp
+ = H[XH.V. |L] + H[XH.V. |L] 2 2
+ s ∞
+  X qs X
+ S
+ K
+ P − sp2 − ln i!] + [ (1 − q)l−1 ln l].
+ H[XH.V. |L] = P[L = l] · H[XH.V. |L = l]
+ 
+ 
+ i=1
+ 2
+ l=1 l=K+1
+ ∞
+ L P
+ H[XH.V. |L] = P[L = l] · H[XH.V. |L = l].
+ 
+ 
+ l=K+1 The assumption of q > 0.5 implies K th order taylor series
+ can accurately approach the last term in (35). Moreover,
+ Ps we
+Short Flow Information. HyperVision records detailed per- utilize the quadric term of s in the taylor series of i=1 ln i!
+packet feature sequences for short flows which is the same as to approach the entropy of long flows (γ is Euler–Mascheroni
+the brute recording in the idealized mode. Thus, the increasing constant):
+rate of information equals the entropy rate of the DTMC:
+ L 1
+ H[XH.V. |L] = s(1 − q)K [(1 + s) ln ps+
+ H[XH.V. |L = l] = l · H[G], (30) 4 (36)
+ 2 ln 2πe + 2q ln K − 2s(1 + p + γ)].
+ K
+ X
+ S
+ H[XH.V. |L] = P[L = l] · l · H[G]
+ l=1
+ Finally, we take (31) and (36) in (29) and complete the
+ K analysis for the entropy of the graph based recording mode.
+ (31)
+ X
+ = q · H[G] · (1 − q)l−1 · l Similarly, we obtain the expected data scale by analyzing the
+ l=1 conditions of short and long flows separately:
+ 1 − (Kq + 1)(1 − q)K
+ = · H[G].
+ q LH.V. = E[LSH.V. |L] + E[LL
+ H.V. |L]
+ K ∞
+ X L X
+Long Flow Information. When L > K, the random set = P[L = l] · + s · P[L = l]
+ C (37)
+ l=1 l=K+1
+collects the counters for distribution fitting. When the DTMC
+ K
+has s states, the histogram has s counters υ1 , υ2 , . . . , υs , i.e., 1 − (Kq + 1)(1 − q)
+ = s(1 − q)K + ,
+XH.V. = {υ1 , υ2 , . . . , υs }. We assume that the counters are Cq
+independent:
+ ( where C is the average number of flows denoted by an edge
+ L
+ X 1, if sj is the ith state associated with short flows. Also, we obtain the expected
+ υi = δj , δj = (32) information density by its definition: DH.V. = HH.V. /LH.V.
+ j=1
+ 0, else.
+ and complete the analysis for the graph based recording mode
+ used by HyperVision.
+ We observe that hυ1 , υ2 , . . . , υs i is a binomial process:
+
+ υi ∼ B(L, P[si = i])
+ (33)
+ ∼ B(L, Csi pi (1 − p)s−i ).
+
+ i −sp
+ To obtain the closed-form solution, we use (sp) i!e as an
+estimation of Csi pi (1 − p)s−i . Moreover, the length of the perpacket feature sequence of a long flow is relatively large which
+implies υi approaches a Poisson distribution:
+
+ υi ∼π(L · P[si = i])
+ (sp)i e−sp (34)
+ ∼π(λi ), λi = .
+ i!
+
+ 18

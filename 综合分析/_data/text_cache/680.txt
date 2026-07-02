@@ -1,0 +1,156 @@
+                     This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                                                                                                                 1
+
+
+
+
+ Federated and Quantized-Based Intrusion Detection
+   for Embedded On-Board Automotive Networks
+                Muhammad Adil , Danish Javeed , Member, IEEE, and Prabhat Kumar , Member, IEEE
+
+
+   Abstract—Intelligent vehicles rely on hybrid On-Board Auto-
+motive Networks (OANs), such as Time-Sensitive Networking
+(TSN) and Controller Area Networks (CAN), to support
+autonomous driving and ADAS. Securing these networks is chal-
+lenging due to resource constraints, heterogeneous protocols, and
+evolving attacks. We propose an embedded-optimized, privacy-
+preserving collaborative IDS for hybrid OANs. Leveraging Cloud
+Vehicle Functions (CVFs), the framework enables robust model
+training across vehicles without sharing raw data. To efficiently
+process multi-protocol traffic, we introduce the Network Traffic
+Temporal Encoder (NTTE), which transforms network packets
+into temporal traffic images for anomaly detection. These NTTE
+representations are analyzed by TCNnet, a lightweight neural
+network designed for efficient embedded deployment. To make
+TCNnet suitable for resource-constrained embedded systems,
+we propose post-training quantization, significantly reducing its
+computational and storage demands. Evaluated on real traffic, the
+quantized TCNnet maintains over 99% detection accuracy, while
+reducing model size by over 91% and memory footprint by 51%,
+enabling practical deployment on resource-constrained ECUs.
+To link IDS outputs to real-world transportation outcomes, we
+develop the Transportation Impact Modeling Module (TIMM),
+which maps network-level detection performance to vehicle-
+level safety metrics (collision likelihood and Safety Message
+Delivery Ratio, SMDR) and fleet-level traffic indicators (Vehicle
+Flow Efficiency, VFE). TIMM simulations across Urban, Sub-
+urban, and Highway scenarios show the IDS reduces expected
+collisions by up to 97.9%, while maintaining high traffic
+flow efficiency (VFE = 0.949–0.995) and message reliability
+(SMDR = 0.988–0.994). These results demonstrate that the
+                                                                                       Fig. 1. Illustrations of various attack scenarios in hybrid OANs.
+proposed IDS not only excels in network-level detection but
+also directly enhances vehicular safety and traffic performance,
+confirming its practical applicability in Intelligent Transportation                   of electronic control units (ECUs) supporting ADAS and
+Systems.                                                                               autonomous driving. This growth places higher demands on
+   Index Terms—Intrusion detection system, collaborative learn-                        on-board automotive networks (OANs), especially as high-
+ing, intra-vehicular network, cloud vehicle.                                           definition sensors strain the bandwidth limits of legacy IVN
+                                                                                       technologies such as MOST, CAN, and FlexRay [2]. Time-
+                      I. I NTRODUCTION                                                 Sensitive Networking (TSN) addresses these limitations by
+
+T     HE rise in automation levels (LoA) in intelligent vehicles,
+      as defined by SAE J3016 [1], has increased the number
+                                                                                       providing bounded latency, guaranteed bandwidth, and pre-
+                                                                                       cise time synchronization [3]. For instance, IEEE 1722–2016
+                                                                                       ensures reliable audio-video transport through AVTP [4], while
+   Received 1 March 2025; revised 30 July 2025 and 14 November
+2025; accepted 12 December 2025. This work was supported                               gPTP enables synchronized transmissions across TSN-based
+by the Research Council of Finland with CHIST-ERA through                              OANs. TSN thus represents a key advancement for modern
+the project AI4MultiGIS-AI integrated framework for intelligent                        OANs and is expected to coexist with established technolo-
+geospatial handling and robust operation in MultiGIS applications
+under Grant 368766. The Associate Editor for this article was                          gies like CAN [5]. However, integrating these technologies
+T. R. Gadekallu. (Corresponding author: Prabhat Kumar.)                                also introduces security risks. Both TSN and CAN lack
+   Muhammad Adil is with the School of Computer Science and Technology,                strong security mechanisms, making them vulnerable to cyber
+College of Intelligence and Computing, Tianjin University, Tianjin 300350,
+China (e-mail: 6122000014@tju.edu.cn).
+                                                                                       threats [7], as shown in Fig. 1, including unauthorized access
+   Danish Javeed is with the College of Artificial Intelligence, Dalian Maritime       and sensor data manipulation [8]. Such attacks can directly
+University, Dalian 116026, China.                                                      compromise vehicle safety: manipulated AVTP packets may
+   Prabhat Kumar is with the Department of Software Engineering, LUT                   misinform ADAS and trigger hazardous decisions. Fig. 2
+School of Engineering Science, LUT University, 53850 Lappeenranta, Finland
+(e-mail: prabhat.kumar@lut.fi).                                                        shows how an attacker can sniff and compromise AVTP
+   Digital Object Identifier 10.1109/TITS.2025.3645854                                 traffic at the talker, inject forged packets to the listener, and
+
+                               © 2025 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+                                          For more information, see https://creativecommons.org/licenses/by/4.0/
+                    This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+2                                                                                             IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS
+
+
+
+                                                                                         • We develop the TCNnet, a lightweight convolutional
+                                                                                           model designed for efficient intrusion detection in net-
+                                                                                           work traffic. TCNnet extracts spatial features using
+                                                                                           convolutional layers while leveraging post-training quan-
+                                                                                           tization to optimize memory usage and computational
+                                                                                           efficiency. This makes it particularly suitable for deploy-
+                                                                                           ment on resource-constrained edge devices.
+                                                                                         • We introduce the Network Traffic Temporal Encoder
+                                                                                           (NTTE), which processes packets from multiple protocols
+                                                                                           (e.g., AVTP, CAN, gPTP), generating network traffic
+                                                                                           images that capture temporal anomalies, enhancing the
+                                                                                           detection of cross-protocol attacks.
+                                                                                         • We design the TIMM to rigorously evaluate the real-
+                                                                                           world transportation impact of the proposed IDS.
+                                                                                           TIMM translates network-level detection performance
+Fig. 2. Illustrating the impact of malicious AVTP packets from a compromised               into vehicle-level safety metrics (e.g., collision likelihood)
+AVB talker on traffic safety communication, potentially causing ADAS to
+make incorrect decisions and leading to dangerous vehicle maneuvers in cross-              and fleet-level traffic efficiency indicators (e.g., Vehicle
+traffic and pedestrian scenarios [6].                                                      Flow Efficiency), thereby directly linking cybersecurity
+                                                                                           performance to ITS safety and operational goals.
+mislead ADAS into unsafe actions, such as misjudging traffic
+or failing to avoid collisions. Traditional security measures like                                         II. R ELATED W ORK
+encryption and authentication introduce overhead that conflicts                          The authors in [12] designed an approach to derive two
+with the strict timing requirements of OAN, making real-                              distinctive features of CAN bus communication: the time
+time security challenging. Intrusion Detection Systems (IDS)                          interval between successive frames (interframe space or IFS)
+provide an alternative by monitoring network behavior without                         and the counter-related values embedded in the data payload.
+modifying existing nodes [9]. Recently, ML-based IDS have                             These features form the basis of their decision tree-driven
+gained traction for detecting complex attacks in OANs [10].                           IDS. To assess their effectiveness, the authors conducted
+   Although ML-based IDS solutions show promise, they face                            evaluations using well-known ensemble learning algorithms,
+key challenges in intelligent vehicles. Resource constraints                          specifically Random Forest (RF) and XGBoost classifiers. In
+limit the deployment of computationally heavy models, while                           [13], the authors introduced CANShield, a DL–driven frame-
+rapidly evolving attacks demand adaptive detection. The het-                          work designed for signal-level monitoring of the CAN bus.
+erogeneity of OAN protocols (e.g., AVTP, CAN, gPTP) further                           Their proposed architecture comprises three core components:
+complicates feature extraction due to protocol-specific attack                        (a) a data preprocessing module that transforms the high-
+behaviors. A critical gap also persists in system evaluation:                         dimensional CAN signal stream into structured time-series
+despite high reported network-level accuracy, the real impact                         data suitable for DL; (b) a data analysis module employing
+on transportation safety and traffic flow is rarely quanti-                           multiple deep autoencoders, each operating at distinct temporal
+fied. Existing IDS frameworks lack a formal methodology                               resolutions to capture patterns across varying time scales; and
+to translate network metrics (e.g., TPR) into vehicle-level                           (c) an attack detection module that aggregates the outputs
+safety outcomes (e.g., collision probability) and fleet-level                         using an ensemble-based decision strategy to identify mali-
+efficiency, which are central to ITS. These challenges motivate                       cious activity. The authors in [14] proposed an ML-based
+a collaborative approach in which edge vehicles collectively                          IDS to detect attacks in intra-vehicle networks, especially in
+extract, learn, and share attack patterns in a privacy-preserving                     CAN. Their proposed IDS utilizes Recurrence Plot (RP) to
+manner, allowing them to pool computational resources and                             exploit the temporal properties of CAN messages as well
+adapt to emerging threats without overloading individual                              as intra- and inter-message dependencies to create high-level
+nodes. To link network security with transportation safety, we                        representations of CAN messages that are transmitted on the
+develop the Transportation Impact Modeling Module (TIMM),                             bus. These representations are then fed into a custom neural
+a framework that formally maps IDS performance metrics                                network that is trained to identify new intrusions. In [15],
+(detection latency, TPR, FPR) to ITS-level outcomes. TIMM                             the authors proposed a multi-stage IDS, where in the first
+integrates a discrete-time vehicle dynamics model, a proba-                           stage, the authors utilize an artificial neural network to detect
+bilistic attack–detection timing model, and aggregation rules                         known attacks, while the second stage comprises an LSTM
+to quantify how IDS behavior influences collision likelihood,                         autoencoder for new and unseen attack detection. Further, the
+safety-message reliability, and traffic-flow efficiency. The main                     authors used a hierarchical federated learning environment to
+contributions of our work are as follows:                                             preserve data privacy, analyze diverse driving behavior, and
+    • We propose a privacy-preserving collaborative learning                          update the model with the latest patterns of attacks.
+      framework with adaptive momentum-aware aggregation,                                Furthermore, the authors in [16] proposed a multi-stage
+      leveraging the Cloud Vehicle Function (CVF) [11] to                             IDS based on DL for the detection and classification of
+      enable vehicles to collaboratively learn attack patterns                        cyberattacks in Automotive Ethernet Networks (AENs). In
+      and improve model robustness under heterogeneous traffic                        the first stage, the authors employed RF for cyberattacks
+      conditions.                                                                     detection, while the authors utilized a Pruned CNN in the
+                 This article has been accepted for inclusion in a future issue of this journal. Content is final as presented, with the exception of pagination.
+
+
+ADIL et al.: FEDERATED AND QUANTIZED-BASED INTRUSION DETECTION                                                                                                        3
+
+
+
+second stage to minimize the false positive rate of their                          where each Ψ[k]i represents a payload byte of the traffic packet
+IDS during the classification of various attacks. Similarly,                       Ξ[k] and satisfies the condition Ψ[k]
+                                                                                                                     i ∈ N with 0 ≤ Ψi < 256.
+                                     

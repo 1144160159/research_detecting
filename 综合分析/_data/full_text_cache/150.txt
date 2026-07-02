@@ -1,0 +1,1095 @@
+Rosetta: Enabling Robust TLS Encrypted Traffic
+Classification in Diverse Network Environments
+ with TCP-Aware Traffic Augmentation
+ Renjie Xie and Jiahao Cao, Tsinghua University; Enhuan Dong and
+ Mingwei Xu, Tsinghua University and Quan Cheng Laboratory; Kun Sun,
+ George Mason University; Qi Li and Licheng Shen, Tsinghua University;
+ Menghao Zhang, Tsinghua University and Kuaishou Technology
+ https://www.usenix.org/conference/usenixsecurity23/presentation/xie
+
+ This paper is included in the Proceedings of the
+ 32nd USENIX Security Symposium.
+ August 9–11, 2023 • Anaheim, CA, USA
+ 978-1-939133-37-3
+
+ Open access to the Proceedings of the
+ 32nd USENIX Security Symposium
+ is sponsored by USENIX.
+Rosetta: Enabling Robust TLS Encrypted Traffic Classification in Diverse Network
+ Environments with TCP-Aware Traffic Augmentation
+ Renjie Xie1,3,∗, Jiahao Cao1,2,3,∗, Enhuan Dong1,3,5,∗, Mingwei Xu1,2,5 , Kun Sun4
+ Qi Li1 , Licheng Shen2 and Menghao Zhang2,6
+
+ 1 Institute for Network Sciences and Cyberspace, Tsinghua University
+ 2 Department of Computer Science and Technology, Tsinghua University
+ 3 Beijing National Research Center for Information Science and Technology, Tsinghua University
+ 4 Department of Information Sciences and Technology, George Mason University
+ 5 Quan Cheng Laboratory, 6 Kuaishou Technology
+
+ Abstract Recent advances [16, 33, 38, 49, 51, 52] are leveraging deep
+As the majority of Internet traffic is encrypted by the Trans- learning (DL) techniques to conduct generic traffic classiport Layer Security (TLS) protocol, recent advances lever- fication. Particularly, as the packet payloads are converted
+age Deep Learning (DL) models to conduct encrypted traffic into pseudorandom values after TLS encryption [36], a numclassification by automatically extracting complicated and ber of studies [7, 35, 46, 49–51] design various deep learning
+informative features from the packet length sequences of models to automatically extract complicated and high-level
+TLS flows. Though existing DL models have reported to features from packet length sequences, which possess rich and
+achieve excellent classification results on encrypted traffic, discriminating implicit information of the encrypted flows.
+we conduct a comprehensive study to show that they all have Besides, it is convenient and low-cost to measure and derive
+significant performance degradation in real diverse network packet length sequences in real-world large-scale networks,
+environments. After systematically studying the reasons, we even supporting real-time traffic classification tasks [5, 6].
+discover the packet length sequences of flows may change Though these DL models have been reported to achieve
+dramatically due to various TCP mechanisms for reliable excellent classification results on encrypted traffic [3,7,13,14,
+transmission in varying network environments. Thereafter, 41,49], e.g., 98% classification accuracy [49], the performance
+we propose Rosetta to enable robust TLS encrypted traffic of these models for various traffic classification tasks in the
+classification for existing DL models. It leverages TCP-aware real-world diverse network environments is still not clear. We
+traffic augmentation mechanisms and self-supervised learn- should note that when they are deployed in a real network
+ing to understand implict TCP semantics, and hence extracts for TLS traffic classification, they will face diverse network
+robust features of TLS flows. Extensive experiments show environments that are time-varying and unpredictable. For
+that Rosetta can significantly improve the classification per- example, the packet loss rate and network delay may suddenly
+formance of existing DL models on TLS traffic in diverse arise due to the burst of network traffic [48, 63]. Actually, the
+network environments. environment of one network can be changed complexly due to
+ the joint effect of multiple factors, such as traffic burst [48,63],
+ traffic engineering [22, 54], partial network failures [2, 64],
+1 Introduction and network updates [11, 45].
+ In this paper, we conduct a systematic study to check
+Network traffic classification aims to organize various trafif existing deep learning models can effectively classify
+fic into different categories, which is fundamental and vi-
+ TLS encrypted traffic in diverse network environments. We
+tal for network management and security. A number of netstudy six different DL models including Deep Fingerprinting
+work security tasks have been built on top of it, such as
+ (DF) [51], FS-Net [35], Transformer [57], SDAE [4, 7, 46, 51],
+application identification [53, 56, 65], website fingerprint-
+ CNN [7, 46, 49, 51, 59], and LSTM [7, 46, 51, 59] that rely
+ing [46, 49, 51, 52], malicious flow detection [33, 37, 38], and
+ on packet length sequences to classify encrypted traffic. We
+user profiling [16, 23]. With the fast-growing need of user
+ conduct experiments not only with the replayed traffic from
+privacy protection and the wide usage of the Transport Layer
+ two typical TLS traffic datasets [19, 39] in diverse network
+Security (TLS) protocol, a majority of the Internet traffic has
+ environments, but also with real TLS traffic that is generbeen encrypted [12]. Traditional rule-based methods that exated by visiting popular websites and running online network
+amines packet payloads are becoming increasingly ineffective
+ applications in diverse Internet environments. Our experiin classifying encrypted network traffic [6, 34].
+ ments confirm that all these DL models can achieve excellent
+ * These authors contributed equally to this work. results with the offline TLS traffic dataset for various clas-
+
+USENIX Association 32nd USENIX Security Symposium 625
+sification tasks, including website fingerprinting, malicious always maintain above 86%. Moreover, we compare our TCPflow identification, VPN traffic identification, and applica- aware traffic augmentation algorithms with classical data augtion fingerprinting. However, the performance of all models mentation methods, including Random Mask (RM) [17] and
+drops remarkably when they are tested in different network Random Swap (RS) [60] that have been widely used in the doenvironments, e.g., about 53% accuracy drop at worst. mains of Natural Language Processing (NLP) and Computer
+ We find that the remarkable performance degradation re- Version (CV). With RM and RS, the average F1-score is less
+sults from the dramatic change of packet length sequences of than 47% in six different network environments. With our
+the same flow in different network environments. For exam- TCP-aware traffic augmentation, the average F1-score is 87%.
+ple, a TLS encrypted flow with the packet length sequence The results demonstrate that TCP-aware traffic augmentation
+[q1 , q2 , q3 , q4 ] may change to [q3 , q2 , q1 , q4 ] due to high packet is more effective on extracting robust features of TLS flows
+loss in another network environment. However, existing DL in different network environments.
+models fail to understand that the two different packet length In summary, we make the following contributions:
+sequences in different network environments actually originate from the same flow. Furthermore, we notice that the • We conduct comprehensive experiments to show that
+changes of packet length sequences follow the TCP specifica- mainstream DL models cannot robustly classify TLS
+tions in different network environments, since TLS connec- encrypted traffic in different network environments.
+tions are built on the TCP protocol. Consequently, different • We propose Rosetta that can enable robust TLS en-
+TCP mechanisms ensuring reliable transmission in diverse crypted traffic classification for the DL models based
+network environments cause three major changes of packet on TCP-aware traffic augmentation mechanisms and
+length sequences, i.e., packet subsequence shift, packet subse- self-supervised learning.
+quence duplication, and packet size variation. Thus, if a model
+can be aware of these regular packet sequence changes with • We conduct extensive experiments to demonstrate the
+TCP semantics, robust TLS encrypted traffic classification in effectiveness of Rosetta on improving the encrypted trafdiverse network environments may be achieved. fic classification performance of existing DL models in
+ To this end, we develop Rosetta that is capable of enhanc- various network environments.
+ing robust TLS encrypted traffic classification for existing
+deep learning models. The main idea is to learn implicit TCP The rest of the paper is organized as follows. Section 2
+semantics from carefully crafted traffic and generate effective reviews related work. Section 3 evaluates the mainstream
+feature vectors that represent robust features of TLS flows in deep learning models in diverse network environments and
+diverse network environments. Hence, existing deep learning analyzes the performance degradation of the models. Secmodels can leverage these feature vectors to achieve robust tion 4 presents the design of Rosetta, including five TCP-
+TLS encrypted traffic classification. Rosetta consists of two aware traffic augmentation algorithms and the traffic inmodules: TCP-aware traffic augmentation and traffic invari- variant extractor. Section 5 evaluates the effectiveness of
+ant extractor. We develop TCP-aware traffic augmentation Rosetta. Section 6 discusses the limitations of Rosetta. Secalgorithms based on a thorough understanding of TCP mecha- tion 7 concludes the paper. For the research community
+nisms that may affect packet length sequences of flows. Hence, to utilize our tool, we release the source code in Github:
+we can generate massive flows that reflect how TLS flows https://github.com/sunskyXX/Rosetta.git.
+may change in various network environments. The traffic invariant extractor applies self-supervised learning to extract 2 Related Work
+robust features by projecting flow variants into a proper hidden space, reducing the distance among feature vectors of Encrypted Traffic Classification. Though there are studflow variants from the same flow. Consequently, flow variants ies [3, 13, 14, 20, 38, 41] relying on experts to extract
+coming from the same flow will have similar feature vectors. and select effective features of encrypted flows, recent ad-
+ We conduct extensive experiments to evaluate the effective- vances [16, 27, 33, 34, 36, 38, 49, 51, 52, 62] focuses more on
+ness of Rosetta. The results show that Rosetta significantly automatic feature extraction and encrypted traffic classificaimproves the performance of existing deep learning mod- tion through deep learning from raw traffic inputs. Particuels on traffic classification in diverse network environments larly, as packet length sequences of encrypted flows poss rich
+with both replayed and real TLS flows. We further evaluate and discriminating implicit information, various deep learnits classification robustness under different packet loss rates ing models are presented to classify encrypted traffic from
+and different delays. Without enabling Rosetta, the classifi- packet length sequences. Cao et al. [7] employ CNN, LSTM,
+cation accuracy of existing models drops remarkably when and SDAE to fingerprint applications of Software Defined
+packet loss rates and delays increase. For example, the ac- Networking (SDN) from packet length sequences of TLS encuracy drops from 99% to 55% when the delay is increased crypted control traffic. Shen et al. [50] accurately fingerprint
+from 0 to 50 ms. When Rosetta is enabled, the accuracy can decentralized applications using graph neural networks based
+
+626 32nd USENIX Security Symposium USENIX Association
+Table 1: Different Network Environments for Relayed Traffic encrypted traffic classification when being trained in one network environment and then deployed in different network
+ Network Type Env. ID Sender Loc. Receiver Loc. Access mode environments. We first conduct experiments with replayed
+ θ0 Local LAN Local LAN TLS flows from two typical traffic datasets that have been
+ θ1 China China
+ widely used for traffic classification based on deep learning.
+ Wired Ethernet We further conduct experiments with real TLS flows that are
+ θ2 Korea China
+ θ3 USA China
+ generated by visiting popular websites and running real applications. All experiments demonstrate the similar performance
+ θ4 China China Wi-Fi degradation of existing traffic classification methods when
+ Wireless θ5 China China 4G LTE training and deploying in different network environments. Fi-
+ θ6 China China 3G WCDMA nally, we analyze the reasons of the performance degradation.
+
+on packet length sequences of encrypted flows. Many studies [46, 49, 51] leverage deep learning to achieve automatic 3.1 Experiments with Relayed TLS Traffic
+website fingerprinting from packet length sequences of en-
+ 3.1.1 Experiment Setup
+crypted Tor traffic. Liu et al. [35] present Flow Sequence Networks (FS-Net) to learn representations from packet length Diverse Network Environment Construction. We leverage
+sequences and achieve accurate encrypted traffic classification. a sender host and a receiver host on the Internet to replay TLS
+They can achieve high accuracy on encrypted traffic classifi- encrypted flows between them. By changing the locations of
+cation with traffic datasets tested in an offline environment. the two hosts, the flows can experience real diverse network
+Cherubin et al. [10] further evaluate website fingerprinting environments. This is because the sender and the receiver
+in a real-word online network environment. However, it does are in different networks and the routing paths of the flows
+not systematically evaluate how the performance of website are also different. Therefore, we create four diverse wired
+fingerprinting changes in diverse network environments. In network environments by changing the sender location to four
+contrast, our work conducts the systematical study to evaluate different countries, which is shown in Table 1. Besides, we
+the performance of the existing models in diverse network create three different wireless access network environments
+environments with various TLS traffic classification tasks, by changing the access mode of the sender to Wi-Fi, 4G LTE,
+including website fingerprinting, malicious flow identifica- and 3G WCDMA. For simplicity, we name the above different
+tion, VPN traffic identification, and application fingerprinting. network environments as θ0 to θ6 , respectively.
+We also present Rosetta to enable robust encrypted traffic Replayed TLS Traffic Collection. Our experiments leverclassification in diverse network environments. age two typical TLS encrypted traffic datasets, i.e., CIRA-
+Data Augmentation Techniques. Data augmentation has CIC-DoHBrw-2020 [39] and ISCX-VPN [19]. They have
+been widely used in the domains of Computer Vision (CV) been widely used for traffic classification based on deep learnand Natural language processing (NLP), which can increase ing [8, 34, 36]. CIRA-CIC-DoHBrw-2020 has 249,750 malitraining data diversity without collecting more data. There are cious flows and 917,300 benign flows. ISCX-VPN has 16,007
+a number of image augmentation techniques in CV, including VPN-encapsulated flows and 22,716 non-VPN encapsulated
+geometric transformations [40], kernel filters [29], mixing flows. To better simulate application behaviors and make
+images [28], random erasing [66], and feature space augmen- flows experience diverse network environments, we extract
+tation [18]. Due to the unique features of languages, NLP the payloads and timestamps of each packet from encrypted
+applies predetermined transform rules [25, 60] to augment flows. As the dataset contains retransmitted packets, we redata, such as token-level random perturbations [60]. Besides, order the packet according to their timestamps and remove
+researchers [17, 21, 31, 47] train different models to augment the duplicate packets. Based on the timestamps, we send the
+NLP data according to downstream tasks. For example, Back- payloads via TCP sockets established in different network
+translation [47] generates data by translating a sequence into environments θ0 to θ6 , respectively. Here, we replace the origanother language and then back into the original language. inal source and destination IP addresses with the sender and
+Recent advances [15, 30, 42] apply Generative Adversarial receiver IP addresses in our experiments.
+Networks (GAN) to conduct data augmentations. Our work To replay the traffic in wireless network environments, we
+differs from them as we focus on how to augment TLS traffic use a WIFI router that connects to the Internet, and the sender
+with TCP semantics in diverse network environments. host further connects to the WIFI router. To replay the traffic
+ in the access mode of 4G LTE or 3G WCDMA in the wireless
+3 Measurement Study network environment, we mount a cellphone supporting 4G
+ LTE and 3G WCDMA to the sender host via USB, and we
+In this section, we perform a systematic study on the perfor- configure the cellphone to act as a network adapter for the
+mance of six representative deep learning models on TLS sender host. Thus, the host can access the Internet through the
+
+USENIX Association 32nd USENIX Security Symposium 627
+ Table 2: Results on Classifying Replayed TLS Flows from CIRA-CIC-DoHBrw-2020 in Different Network Environments.
+
+ Different Wired Network Environments Different Wireless Access Network Environments
+ Model θ0 θ1 θ2 θ3 θ4 θ5 θ6
+ AC F1 AC F1 AC F1 AC F1 AC F1 AC F1 AC F1
+ CNN 99.89% 99.84% 98.21% 98.20% 53.16% 34.91% 57.04% 36.32% 87.47% 87.03% 74.42% 71.52% 53.26% 34.96%
+ SDAE 95.47% 95.46% 91.47% 91.47% 56.21% 43.40% 55.75% 36.04% 88.11% 88.03% 82.11% 81.42% 55.16% 41.73%
+ LSTM 95.26% 95.25% 87.68% 87.47% 53.05% 35.07% 57.04% 36.57% 82.00% 81.19% 70.84% 67.34% 53.58% 36.08%
+ DF 99.89% 99.84% 98.42% 98.41% 53.26% 34.75% 58.03% 36.72% 88.00% 87.57% 74.95% 72.17% 53.37% 35.00%
+ FS-Net 92.11% 92.10% 90.74% 90.71% 61.16% 52.11% 58.10% 39.66% 88.84% 88.76% 83.68% 83.30% 56.84% 44.50%
+ Transformer 99.56% 99.36% 98.28% 96.00% 62.22% 54.12% 57.04% 42.00% 93.74% 91.35% 85.62% 83.12% 54.27% 47.57%
+ On Average 97.03% 96.98% 94.13% 93.71% 56.51% 42.39% 57.17% 37.89% 88.03% 87.32% 78.60% 76.48% 54.41% 39.97%
+
+cellular networks that the cellphone provides. In each network 1
+ DF
+ 1
+ DF
+environment, we capture the packet length sequences of the 0.8 SDAE 0.8 SDAE
+ CNN CNN
+replayed flows through the receiver host with tcpdump and 0.6 FS-Net 0.6 FS-Net
+ LSTM LSTM
+
+ CDF
+
+ CDF
+feed them into deep learning models for classification. 0.4
+ Transformer 0.4
+ Transformer
+Model Training and Testing. We consider six representa-
+ 0.2 0.2
+tive deep learning models in our experiments, i.e., Denoising
+ 0 0
+Autoencoder (SDAE) [58], Convolutional Neural Network 0 20 40 60 80 100 0 20 40 60 80 100
+ Similarity (%) Similarity (%)
+(CNN) [32], Long-Short Term Memory (LSTM) [26], Deep
+ (a) Similarity between θ0 and θ3 . (b) Similarity between θ0 and θ5 .
+Fingerprinting (DF) [51], FS-Net [35], and Transformer [57].
+The first three models achieve good results in website fin- Figure 1: CDF of the cosine similarity for all pairs of feature
+gerprinting based on encrypted traffic [46]. DF improves the vectors between two different network environments.
+performance of website fingerprinting in the situation where
+the traffic is mixed with artificially added noise. FS-Net learns learning models achieve more than 92% accuracy and F1-
+representative features from encrypted flows and enforces ac- Score for the replayed CIRA-CIC-DoHBrw-2020 flows in the
+curate traffic classification. Transformer has been one of the network environment θ0 . Note that all the models are trained
+state-of-the-art methods in various classification tasks. To in the network environment θ0 . However, when applying these
+explore the performance of the encrypted traffic classification well-trained models in other network environments (i.e., θ1 to
+models in diverse network environments, we first train and θ6 ), we observe a significant drop in their performance1 . For
+test them with packet length sequences of flows captured in example, the F1-Score of CNN drops from 99.84% in the netthe network environment θ0 . In the training network environ- work environment θ0 to 34.96% in the network environment
+ment θ0 , the ratio on the number of flows in the training set, θ6 . We can see that the average accuracy of all the models
+validation set, and testing set is 6:2:2. Next, we test all the decreases by 2.9% at least to 42.62% at most in the network
+trained models with packet length sequences of flows captured environments θ1 to θ6 , and the average F1-Score decreases by
+in the other network environments, i.e., θ1 to θ6 . Similarly, we 3.27% at least and 58.09% at most. The experimental results
+train the classification models in the network environments with the replayed flows from ISCX-VPN demonstrate similar
+θ1 to θ6 , respectively, and test against the other six different results. Please refer to Table 12 in Appendix C for detailed
+network environments. Here, following the general settings results. It is obvious that different network environments can
+of existing methods [51, 52], we fix the length of the input se- significantly affect the traffic classification results of existquence, i.e., any sequence longer than 100 will be truncated to ing deep models. The results demonstrate that existing deep
+100, and any sequence shorter than 100 is padded with zeros. learning models fail to enable robust TLS encrypted traffic
+Besides, as different flows are naturally unbalanced [34, 35], classification in diverse network environments.
+we use the original ratio of different flows to train and test the
+ Varying Feature Vectors in Different Network Environexisting models on TLS traffic classification in the real-world
+ ments. The layer before the last output layer of a deep learning
+network environment. This is also the typical way where most
+ model will generate a feature vector that contains the hidden
+of the existing studies apply [34, 35].
+ abstract features of the input sample. We extract the feature
+ vectors of the replayed flow in each of the seven different net-
+3.1.2 Experimental Results work environments to see if the existing deep learning models
+Degraded Classification Performance. We apply two met- 1 For simplicity, we only show the results using θ as the training network
+ 0
+rics, i.e., accuracy (AC) and F1-Score (F1), to evaluate the environment. The results are similar when using other environments as the
+traffic classification results. As shown in Table 2, all six deep training environment.
+
+628 32nd USENIX Security Symposium USENIX Association
+ 50 θ0 50 θ0 Table 3: Different Network Environments for Real Traffic
+ θ3 θ5
+ 30 30
+ Dimension 2
+
+ Dimension 2
+ Network Type Env. ID Client Loc. Access mode
+ 10 10
+
+ -10 -10 τ1 China
+ -30 -30
+ Wired τ2 Korea Ethernet
+ -50 -50
+ τ3 USA
+ -50 -30 -10 10 30 50 -50 -30 -10 10 30 50
+ Dimension 1 Dimension 1 τ4 China Wi-Fi
+ (a) Distribution between θ0 and θ3 . (b) Distribution between θ0 and θ5 . Wireless τ5 China 4G LTE
+ τ6 China 3G WCDMA
+Figure 2: Distribution of feature vectors between two different
+network environments.
+ Real TLS Traffic Collection. We collect about 1.8 million
+can extract robust hidden features. Specifically, we collect a website TLS flows by visiting popular websites for 14 days,
+pair of feature vectors for the replayed flows in two different including Alipay, Apple, Baidu, iCloud, JD, Kaipanla, NeCnetwork environments and calculate their cosine similarity. music, QQ, Sogou, Weibo, Youdao and Zhihu. To make the
+Figure 1 shows the Cumulative Distribution Function (CDF) flows experience diverse network environments, we leverage
+of the cosine similarity for all pairs of feature vectors between the clients in network environments τ1 to τ6 to generate traftwo different network environments. Figure 1a demonstrates fic by visiting the above websites. Furthermore, we collect
+that more than 30% pairs of feature vectors between the two 292,523 application TLS flows by running popular applicanetwork environments θ0 and θ3 have less than 70% cosine tions in the above six diverse network environments, includsimilarity for most models. There are a few pairs of feature ing TencentVideo, YoudaoNote, QQmusic, NeCmusic, Youku,
+vectors that have less than 10% cosine similarity for the FS- and BaiduNetdisk.
+Net model. It shows that the extracted features for a replayed Model Training and Testing. To explore the performance
+flow in different network environments are remarkably biased. of the encrypted traffic classification models for real website
+Figure 1b demonstrates similar results for the feature vectors TLS traffic and application TLS traffic in diverse network enbetween network environments θ0 and θ5 . vironments, we apply SDAE, CNN, LSTM, DF, FS-Net and
+ To better illustrate how the feature vectors change in differ- Transformer to classify the flows collected from τ1 to τ6 . The
+ent network environments, we apply the t-SNE [55] method classification task for the models is to classify real TLS flows
+to project high-dimensional feature vectors extracted by the that are generated by different websites/applications. Given
+DF model into 2D vectors. Hence, we can draw all the vectors a TLS flow, the models identify which website/application
+in 2D space, which is shown in Figure 2. From the results, generates it. We first train and test them with packet length
+we can see that the distribution of feature vectors changes sig- sequences of flows captured in the network environment τ1 .
+nificantly when the network environment is changed. These Next, we test all the trained models with packet length seresults show that existing deep learning models fail to extract quences of flows captured in the other network environments,
+a fixed set of robust hidden features for the flows replayed i.e., τ2 to τ6 .
+and collected in different network environments.
+ 3.2.2 Experimental Results
+3.2 Experiments with Real TLS Traffic Results with Real Website TLS traffic. As shown in Table 4,
+ the six deep learning models achieve more than 83% accuracy
+3.2.1 Experiment Setup
+ and F1-Score on average for the website TLS flows in the net-
+Diverse Network Environment Construction. We rent hosts work environment τ1 . Note that all the models are trained in
+in different countries as clients to visit popular websites with network environment τ1 . However, when applying these wellthe Selenium web driver [43] driving the Firefox browser. trained models in other network environments, we observe
+By changing the locations of the clients, the routing paths a significant performance drop. For example, the F1-Score
+between the clients and website servers are different. Thus, of DF drops from 91.15% in τ1 to 66.91% in τ5 . We see that
+there are three different wired network environments, which the average accuracy of all the models decreases by 8.57%
+is shown in Table 3. Besides, we make flows experience three at least to 19.09% at most in τ2 to τ6 . The average F1-Score
+different wireless access network environments by chang- decreases by 8.18% at least to 19.82% at most.
+ing the access mode of the client to Wi-Fi, 4G LTE, and 3G Results with Real Application TLS Traffic. As shown in
+WCDMA, respectively. For simplicity, we name the above Table 5, the six deep learning models achieve about 80% acdifferent network environments as τ1 to τ6 , respectively. Fur- curacy and 76% F1-Score for application TLS flows in τ1 on
+thermore, we run real applications on these clients in diverse average. Note that all the models are trained in τ1 . However,
+network environments to collect real application TLS traffic when applying these well-trained models to classify applicain a similar way where we collect the website TLS traffic. tion flows in the other network environments, we observe the
+
+USENIX Association 32nd USENIX Security Symposium 629
+ Table 4: Results on Classifying Real Website TLS Flows in Different Network Environments.
+
+ Different Wired Network Environments Different Wireless Access Network Environments
+ Model τ1 τ2 τ3 τ4 τ5 τ6
+ AC F1 AC F1 AC F1 AC F1 AC F1 AC F1
+ CNN 89.55% 89.28% 81.48% 80.88% 57.73% 52.29% 72.51% 68.51% 67.16% 60.15% 70.63% 68.73%
+ SDAE 82.37% 79.79% 78.13% 74.79% 70.04% 68.80% 68.04% 67.98% 64.57% 64.20% 69.94% 64.01%
+ LSTM 81.85% 77.39% 76.72% 74.08% 62.71% 57.26% 60.89% 60.04% 66.93% 63.60% 66.41% 61.67%
+ DF 91.27% 91.15% 83.95% 80.58% 83.59% 83.50% 79.90% 75.00% 70.67% 66.91% 73.03% 70.17%
+ FS-Net 85.81% 81.42% 73.02% 72.20% 64.42% 61.97% 70.14% 68.39% 64.84% 65.42% 67.65% 66.48%
+ Transformer 84.85% 82.13% 70.97% 69.57% 62.66% 58.46% 63.71% 62.14% 78.98% 75.38% 61.37% 59.74%
+ On Average 85.95% 83.53% 77.38% 75.35% 66.86% 63.71% 69.20% 67.01% 68.86% 65.94% 68.17% 65.13%
+
+ Table 5: Results on Classifying Real Application TLS Flows in Different Network Environments.
+
+ Different Wired Network Environments Different Wireless Access Network Environments
+ Model τ1 τ2 τ3 τ4 τ5 τ6
+ AC F1 AC F1 AC F1 AC F1 AC F1 AC F1
+ CNN 95.24% 95.07% 73.82% 71.39% 85.62% 85.14% 91.83% 91.53% 96.23% 95.91% 95.08% 94.57%
+ SDAE 81.67% 81.38% 53.36% 53.00% 58.75% 58.54% 76.52% 76.51% 72.71% 72.66% 59.19% 59.11%
+ LSTM 68.07% 57.13% 67.66% 41.58% 52.83% 38.42% 63.84% 55.35% 69.36% 57.58% 72.07% 61.04%
+ DF 98.11% 98.06% 83.47% 79.30% 69.95% 69.90% 92.96% 92.74% 98.69% 98.60% 98.99% 98.91%
+ FS-Net 69.62% 60.62% 70.79% 41.54% 56.36% 46.52% 59.63% 45.71% 68.25% 54.14% 71.06% 58.31%
+ Transformer 92.04% 91.35% 96.95% 96.46% 92.19% 92.11% 90.22% 90.03% 93.44% 92.46% 92.43% 92.33%
+ On Average 84.13% 80.60% 74.34% 63.88% 69.28% 65.11% 79.17% 75.31% 83.11% 78.56% 81.47% 77.38%
+
+average performance of the models drops. Particularly, the θ0: 1 190 2 126 3 485 4 484 5 485 6 26 7 54
+F1-Score of DF drops from 98.06% in τ1 to 69.90% in τ3 . θ5: 1 190 3 485 2 126 6 26 7 54 4 484 5 485
+The results show that existing deep learning models fail to (a) Packet Subsequence Shift.
+enable robust TLS encrypted traffic classification in diverse
+network environments. θ0: 1 517 2 51 3 163 4 38 5 46
+
+ θ1: 1 517 2 51 3 163 4 38 5 46 3 163 4 38
+
+3.3 Understanding Performance Degradation (b) Packet Subsequence Duplication.
+
+After comparing the packet length sequences of the flows θ0: 1 517 2 51 3 163 4 380 5 161 6 48 7 46
+collected in diverse network environments, we observe that θ3: 1 517 2 514 3 175
+the dramatic change on the packet length sequences exists (c) Packet Size Variation.
+in most flows when the network environment changes. The
+reason for the poor performance is that the models are not Figure 3: Three phenomenons that cause the changes of
+aware of dramatic change caused by network environments, packet length sequences in diverse network environments.
+even though the TLS flows in diverse network environments
+are from the same website or the same application. of packet size variation. The second element of the sequence
+ Our further investigation reveals that the changes of packet in θ3 is equal to the sum of the second, third, and fourth ellength sequences in different network environments are ements of the sequence in θ0 minus twice the header length.
+mainly due to three phenomenons, namely, packet subse- Also, the third element of sequence in θ3 is equal to the sum
+quence shift, packet subsequence duplication, and packet size of the fifth, sixth, and seventh elements of sequence in θ0
+variation. Figure 3 shows examples of the three phenomenons. minus twice the header length.
+The case of packet subsequence shift is shown in Figure 3a, As the TLS connections are established on the TCP prothe second, fourth, and fifth element of sequence in θ0 is tocol, TLS traffic follows the specification of TCP protocol.
+shifted into the third, sixth, and seventh position of sequence Therefore, we are able to explain the root causes of the three
+in θ5 . Figure 3b shows the case of packet subsequence du- phenomenons from the perspective of the TCP protocol. Due
+plication, where the the sixth, seventh, and eighth elements to space limitation, please refer to our additional technical
+of sequence in θ1 is the duplication of the second, third, and report [1] for our detailed analysis. We discover that differfourth elements of sequence in θ0 . Figure 3c shows the case ent TCP mechanisms ensuring reliable transmission in di-
+
+630 32nd USENIX Security Symposium USENIX Association
+ Phase I: Training TIE with TCP-Aware Traffic Augmentation
+ ① TCP-Aware Traffic Augmentation Rosetta ② Traffic Invariant Extractor (TIE)
+ TLS Flows in the Dataset
+ for Traffic Augmentation
+
+ Flow Variant Original TIE Well-trained TIE
+ Subsequence
+ x1 x2,x3 x4 Duplication
+ x1 x2,x3 x4 x1
+ Flow Variant
+ Subsequence
+ Packet x1 x2 x3 x4 x1 x2 x3 x4 x3
+ Length Duplication
+ Sequences Flow Variant Train
+ Subsequence
+ x1,x2 x3 x4 Shift
+ x1,x2 x4 x3
+
+ Phase II : Training Classifiers Phase III : Classifying TLS Flows in
+ with Well-trained TIE Diverse Network Environments
+ Packet Feature TLS Flows in Packet Feature
+ Length Length
+ TLS Flows in the Sequences Well-trained Vectors Diverse Network Sequences Well-trained Vectors
+ Well-trained
+ Training Dataset TIE Classifiers Environments TIE
+ Classifiers
+
+Figure 4: The workflow of Rosetta-augmented encrypted network traffic classification: (1) In Phase I, Rosetta leverages TCPaware traffic augmentation to generate massive flow variants for packet length sequences of the TLS flows from a traffic dataset.
+These flow variants are used to train TIE for robust feature extraction in a self-supervised manner; (2) In Phase II, the well-trained
+TIE extracts the robust feature vectors from packet length sequences of TLS flows in the training dataset. The feature vectors and
+their labels are used to train deep learning classifiers in a supervised manner; (3) In Phase III, the well-trained classifiers classify
+the TLS flows according to their feature vectors that are extracted by the well-trained TIE.
+
+verse network environments cause the three phenomenons. of existing deep learning models in the real-world diverse
+TCP retransmission timeout (RTO) and fast retransmit mech- network environments. We do not require Rosetta knowing the
+anisms can both cause packet subsequence shift and packet prior knowledge of the network and its network environments.
+subsequence duplication when there is packet loss in diverse Actually, it is almost impossible to know the time-varying
+network environments. The Nagle algorithm and the maxi- and unpredictable network environments. We do not require a
+mum transmission unit (MTU) impacts packet size of TLS substantial change for existing models to be compatible with
+flows when there are high delays or different MTUs in net- Rosetta. We require changing the dimension of the input layer
+work environments. However, we find that the changes of of existing models to the dimension of the robust features
+packet length sequences always follow the TCP specifications extracted by Rosetta.
+no matter how network environments change. If we can be
+aware of these regular packet sequence changes with TCP
+semantics, robust TLS traffic classification in diverse network 4.2 Overview
+environments may be achieved.
+ We propose Rosetta to extract robust features from packet
+ length sequences of TLS encrypted traffic. Rosetta consists
+4 System Design of Rosetta of two modules: TCP-aware traffic augmentation and traffic
+ invariant extractor (TIE). The first module generates a number
+4.1 Threat Model of variants for each flow with TCP-aware traffic augmentation
+ algorithms. Hence, we can get a number of new flows that
+We consider the scenario where there are various TLS traffic simulate how the original flows change in different network
+classification tasks. These deep learning models automati- environments. The second module extracts similar and robust
+cally extract complicated and high-level features from packet features from packet length sequences of flows. Hence, it can
+length sequences of TLS flows [7,35,46,49–51]. We consider understand the potential flow changes in different network
+that they are deployed in a real-world network for TLS traffic environments and whether the flow variants belong to the
+classification. As the network environment of the real-world same flow. To achieve this goal, it applies self-supervised
+network is time-varying and unpredictable, they face the di- learning to project flow variants into a proper hidden space
+verse network environments. Various factors can change the as different feature vectors. It reduces the distance among
+environment of one network, such as traffic burst [48, 63], feature vectors of flow variants coming from the same flow.
+traffic engineering [22, 54], partial network failure [2, 64], Rosetta aims to improve the performance of mainstream
+and network update [11, 45]. DL models on traffic classification in diverse network en-
+ Rosetta aims to improve the traffic classification robustness vironments. Figure 4 shows the workflow after integrating
+
+USENIX Association 32nd USENIX Security Symposium 631
+Rosetta with mainstream DL models. Rosetta does not require different MSS values and RTT distributions, the algorithm
+substantial changes for the network structures of the existing can generate massive TCP flow’s packet length sequences
+DL models. By changing the dimension of the input layer containing packet size variation for each original TCP flow’s
+to the dimension of the feature vector, existing DL models packet length sequence. Please refer to our additional techniare completely compatible with Rosetta. In the following sub- cal report [1] for details.
+sections, we will detail the two core modules of Rosetta, i.e.,
+TCP-aware traffic augmentation and traffic invariant extractor. 4.4 Traffic Invariant Extractor
+ Rosetta uses a classical self-supervised learning approach,
+4.3 TCP-Aware Traffic Augmentation BYOL [24], to extract similar and robust features from flow
+As we mentioned in Section 3.3, the changes of packet length variants that come from a flow. BYOL reduces the distance
+sequences of flows are mainly due to three phenomenons, i.e., between positive pairs and applies the skillfully-designed
+packet subsequence shift, packet subsequence duplication, momentum mechanism to prevent the hidden space from coland packet size variation. Based on the root causes of these lapsing without negative pairs [9, 24]. BYOL relies on the
+three phenomenons, we propose TCP-aware traffic augmenta- online and target neural networks. The online network is
+tion algorithms to generate potential flow variants. defined by a set of parameters α and consists of three com-
+Packet Subsequence Duplication Augmentation. The ponents: an encoder ϕα , a projector ψα , and a predictor pα .
+packet subsequence duplication is caused in the packet loss For more details of the network structures, please refer to
+scenario where TCP uses RTO and fast retransmit mecha- the study [24]. The target network is the same as the online
+nisms to handle packet loss. As their impact on the sequences network, except with a different set of parameters ζ. Given a
+of packet lengths is different, we design one traffic augmen- target decay rate γ ∈ [0, 1], BYOL performs ζ ← γζ + (1 − γ)α
+tation algorithm for each mechanism, respectively. The two after each training update. It learns an encoder ϕα that outputs
+algorithms incur packet subsequence duplication for each representations of input samples as kα .
+original TCP flow’s packet length sequence by simulating the We use BYOL to project the flow variants into a hidden
+RTO and fast retransmit mechanisms with a packet loss rate, space as feature vectors and update the hidden space to minrespectively. By setting different packet loss rates, the two imize the distance among feature vectors of flow variants
+algorithms can output massive TCP flow’s packet length se- coming from the same flow. Specifically, two different flow
+quences containing packet subsequence duplication for each variants are needed as the inputs of the online and target
+original TCP flow’s packet length sequence. Due to space lim- networks during the training phase. As TCP-aware traffic
+itation, we put the algorithm details in the technical report [1]. augmentation algorithms have configurable parameters, we
+Packet Subsequence Shift Augmentation. Similarly, the can obtain a set of flow variants V from the packet length
+RTO and fast retransmit mechanisms can also lead to packet sequence of each flow s with different parameters. Here, we
+subsequence shift. Hence, we design two packet subsequence use v and v′ to denote two flow variants in V . The online
+shift augmentation algorithms with the RTO and fast re- network outputs a representation kα = ϕα (v) and a projection
+transmit mechanisms, respectively. The two algorithms incur mα = ψα (k) for v. Meanwhile, the target network outputs a
+packet subsequence shift for each original TCP flow’s packet representation kζ′ = ϕζ (v′ ) and a target projection m′ζ = ψζ (k′ )
+length sequence by simulating the RTO and fast retransmit from v′ . Finally, the predictor pα outputs a prediction pα (mα )
+mechanisms with a packet loss rate, respectively. By setting of m′ζ . BYOL normalizes pα (mα ) and m′ζ , and applies their
+different packet loss rates, the two algorithms can output mas- mean squared error as the following loss function:
+sive TCP flow’s packet length sequences containing packet
+ < pα (mα ), m′ζ >
+subsequence shift for each original TCP flow’s packet length Lα,ζ =∥ pα (mα )−m′ζ ∥22 = 2−2· (1)
+sequence. Please refer to our additional technical report [1] ∥ pα (mα ) ∥2 · ∥ m′ζ ∥2
+for details.
+Packet Size Variation Augmentation. The delays between The loss Lα,ζ is symmetrized in Eq. 1 by separately inserting
+TCP endpoints and the MTU will lead to packet size variation v′ into the online network and v into the target network to
+ eα,ζ . In each training step, L Rosetta = Lα,ζ + L
+ calculate L eα,ζ is
+of TLS flows in different network environments. For a given α,ζ
+RTT and an MSS, all the data segments sent during the RTT minimized by optimizing α. After the training, we can use the
+will be buffered in the TCP stack until the sender receives an encoder of BYOL ϕα to extract traffic invariants from packet
+ACK packet from the receiver or the size of the TCP stack length sequences of flows.
+is more than the MSS. Consequently, several data segments
+will be merged to generate a large packet rather than generate 5 System Evaluation
+many small packets. Hence, we design a packet size variation
+augmentation algorithm by simulating a possible TCP trans- We evaluate the effectiveness of Rosetta on improving the
+mission with an MSS and an RTT distribution. By setting performance of the deep learning models for TLS encrypted
+
+632 32nd USENIX Security Symposium USENIX Association
+ Table 6: Results on Classifying Replayed TLS Flows from CIRA-CIC-DoHBrw-2020 in Different Network Environments.
+
+ Different Wired Network Environments
+ Model θ1 θ2 θ3
+ AC F1 AC F1 AC F1
+ CNN + Rosetta 93.05% (↓5.16%) 93.03%(↓5.17%) 82.00% (↑28.84%) 81.78%(↑46.87%) 83.72% (↑26.68%) 82.85%(↑46.53%)
+ SDAE + Rosetta 91.89% (↑0.42%) 91.77%(↑0.30%) 86.63% (↑30.42%) 86.63%(↑43.23%) 84.17% (↑28.42%) 83.69%(↑47.65%)
+ LSTM + Rosetta 86.63% (↓1.05%) 84.03%(↓3.44%) 79.89% (↑26.84%) 78.32%(↑43.25%) 82.00% (↑24.96%) 78.98%(↑42.41%)
+ DF + Rosetta 94.42% (↓4.00%) 94.39%(↓4.02%) 86.63% (↑33.37%) 86.63%(↑51.88%) 86.01% (↑27.98%) 85.83%(↑49.11%)
+ FS-Net + Rosetta 89.26% (↓1.48%) 89.12%(↓1.59%) 84.63% (↑23.47%) 84.47%(↑32.37%) 84.17% (↑26.07%) 83.50%(↑43.84%)
+ Transformer + Rosetta 94.11%(↓4.17%) 93.74%(↓2.26%) 84.11% (↑21.89%) 83.60%(↑29.48%) 83.37% (↑26.33%) 80.38%(↑38.38%)
+ On Average 91.56%(↓2.57%) 91.01%(↓2.70%) 83.98%(↑27.47%) 83.57%(↑41.18%) 83.91%(↑26.74%) 82.54%(↑44.65%)
+ Different Wireless Access Network Environments
+ Model θ4 θ5 θ6
+ AC F1 AC F1 AC F1
+ CNN + Rosetta 89.05% (↑1.58%) 88.93%(↑1.90%) 85.37% (↑10.95%) 85.08%(↑13.55%) 80.42% (↑27.16%) 80.37%(↑45.41%)
+ SDAE + Rosetta 89.89% (↑1.78%) 89.74%(↑1.71%) 83.47% (↑1.36%) 82.95%(↑1.52%) 81.89% (↑26.73%) 81.88%(↑40.15%)
+ LSTM + Rosetta 85.37% (↑3.37%) 82.34%(↑1.15%) 82.53% (↑11.69%) 78.22%(↑10.87%) 76.53% (↑22.95%) 73.42%(↑37.33%)
+ DF + Rosetta 86.84% (↓1.16%) 86.53%(↓1.05%) 82.11% (↑7.16%) 81.31%(↑9.14% 82.63% (↑29.26%) 82.57%(↑47.57%)
+ FS-Net + Rosetta 85.58% (↓3.26%) 85.16%(↓3.60%) 84.42% (↑0.74%) 83.89%(↑0.60%) 77.26% (↑20.42%) 76.97%(↑32.47%)
+ Transformer + Rosetta 90.74% (↓3.00%) 89.81%(↓1.54%) 89.16% (↑3.54%) 88.20%(↑5.08%) 81.47% (↑27.20%) 79.63%(↑32.06%)
+ On Average 87.91%(↓0.12%) 87.09%(↓0.24%) 84.51%(↑5.91%) 83.27%(↑6.79%) 80.03%(↑25.62%) 79.14%(↑39.17%)
+
+traffic classification in diverse network environments. on the flow. By repeating the augmentation process on the
+ same flow, we obtain about 120 augmented flows for each
+ flow. We train our TIE with the GeForce RTX 2080. It is
+5.1 Experimental Setup
+ trained with SGD for 60 epochs. We set the batch size of the
+We use the same experiment setup mentioned in Section 3.1.1. training steps as 1024. The weight decay rate is 0.0004 and
+Besides, we leverage our TCP-aware traffic augmentation the target decay rate is 0.996.
+algorithms to generate a number of flow variants from a thirdparty TLS traffic dataset 2 from a well-known security company. We leverage the generated flow variants to train the 5.2 Performance Improvement with Rosetta
+traffic invariant extractor (TIE) of Rosetta. Here, the dataset 5.2.1 Improvement with Replayed Traffic
+consists of 502,109 malicious TLS flows and 613,419 benign
+TLS flows. Actually, any traffic dataset containing massive Results with Replayed TLS encrypted flows. As Table 6
+flows could be used to train our traffic invariant extractor with shows, the performance of all the models significantly imour TCP-aware traffic augmentation algorithms. proves in the three network environments: θ2 , θ3 , and θ6 . Par-
+ As the dataset is disjoint with the previous two datasets ticularly, there is 44.65% F1-score improvement on average
+used for traffic classification in our experiments, i.e., CIRA- in θ3 . Besides, we can see that the accuracy and F1-score of
+CIC-DoHBrw-2020 and ISCX-VPN, we do not feed any the models drop slightly in θ1 and θ4 . This is reasonable since
+prior knowledge about the traffic classification dataset into Rosetta only extracts robust features and omits unstable fea-
+Rosetta. Here, to generate different flow variants, we set vari- tures. Nevertheless, we should note that the unstable features
+able ranges for each parameter in our algorithms: the packet may make DL alone have good performance in the environloss rate p ranges from 0% to 10%, Lmin ranges from 1 to 3, ments similar to the training environment. However, these
+Lmax ranges from 2 to 10, RT Tmin ranges from 0 to 100 ms, features significantly degrade the performance of DL alone in
+RT Tmax ranges from 10 to 200 ms, and MSS ranges from 500 different environments in most cases. However, DL+Rosetta
+to 1500 bytes. When augmenting a flow, we randomly apply can always achieve acceptable classification performance in
+one combination of our five TCP-aware traffic augmentation diverse environments by extracting robust features. On averalgorithms to simulate random network environment effects age, more than 80% accuracy can be achieved in all the six
+ 2 For the research community to know its details, we have released the pardifferent network environments. Rosetta improves about 30%
+tial dataset in Github: https://github.com/sunskyXX/Rosetta.git. To
+ accuracy at most on classifying TLS flows in diverse network
+download the full dataset, researchers can contact us via our email addresses environments. We also get similar results for TLS flows from
+and sign the agreement on preventing data misusing and privacy leakage. ISCX-VPN. Please refer to Table 13 in Appendix C.
+
+USENIX Association 32nd USENIX Security Symposium 633
+ Table 7: Results on Classifying Real Website TLS Flows in Different Network Environments.
+
+ Different Wired Network Environments
+ Model τ1 τ2 τ3
+ AC F1 AC F1 AC F1
+ CNN + Rosetta 86.63%(↓2.92%) 86.06%(↑4.19%) 84.83%(↑3.35%) 81.33%(↑0.45%) 91.04%(↑33.31%) 91.04%(↑38.75%)
+ SDAE + Rosetta 84.67%(↑2.30%) 81.54%(↑12.50%) 85.54%(↑7.41%) 84.49%(↑9.70%) 89.47%(↑19.43%) 85.87%(↑17.07%)
+ LSTM + Rosetta 84.17%(↑2.32%) 82.07%(↑5.48%) 76.01%(↓0.71%) 74.13%(↑0.05%) 88.52%(↑25.81%) 88.14%(↑30.89%)
+ DF + Rosetta 90.37%(↓0.90%) 90.10%(↑5.43%) 85.19%(↑1.24%) 81.00%(↑0.42%) 90.15%(↑6.56%) 90.14%(↑6.64%)
+ FS-Net + Rosetta 86.99%(↑1.18%) 86.47%(↑6.66%) 84.83%(↑11.81%) 76.24%(↑4.04%) 88.41%(↑23.99%) 88.40%(↑26.43%)
+ Transformer + Rosetta 90.02%(↑5.17%) 87.93%(↑1.74%) 85.36%(↑14.39%) 81.37%(↑11.80%) 89.70%(↑27.04%) 89.69%(↑31.23%)
+ On Average 87.14%(↑1.19%) 85.69%(↑2.17%) 83.63%(↑6.25%) 79.76%(↑4.41%) 89.55%(↑22.69%) 88.88%(↑25.17%)
+ Different Wireless Access Network Environments
+ Model τ4 τ5 τ6
+ AC F1 AC F1 AC F1
+ CNN + Rosetta 77.24%(↑4.73%) 75.02%(↑6.51%) 83.58%(↑16.42%) 82.38%(↑22.23%) 75.92%(↑5.29%) 70.66%(↑1.93%)
+ SDAE + Rosetta 79.10%(↑11.06%) 77.54%(↑9.56%) 74.31%(↑9.74%) 71.18%(↑6.98%) 71.95%(↑2.01%) 65.80%(↑1.79%)
+ LSTM + Rosetta 69.28%(↑8.39%) 79.53%(↑19.49%) 75.16%(↑8.23%) 74.37%(↑10.77%) 69.59%(↑3.18%) 62.84%(↑1.17%)
+ DF + Rosetta 84.13%(↑4.23%) 81.67%(↑6.67%) 84.19%(↑13.52%) 80.48%(↑13.56%) 77.58%(↑4.55%) 76.10%(↑5.93%)
+ FS-Net + Rosetta 77.95%(↑7.81%) 74.79%(↑6.40%) 75.95%(↑11.11%) 72.87%(↑7.45%) 72.83%(↑5.18%) 67.44%(↑0.96%)
+ Transformer + Rosetta 76.84%(↑13.13%) 74.80%(↑12.66%) 75.66%(↓3.32%) 72.60%(↓2.78%) 76.60%(↑15.23%) 70.23%(↑10.49%)
+ On Average 77.42%(↑8.23%) 77.22%(↑10.21%) 78.14%(↑9.28%) 75.64%(↑9.70%) 74.08%(↑5.91%) 68.85%(↑3.71%)
+
+5.2.2 Improvement with Real Traffic 100
+ DF
+ 100
+ DF
+ DF + Rosetta 90 DF + Rosetta
+ 90
+ Accuracy (%)
+
+ F1-Score (%)
+Results with Website TLS encrypted flows. As Table 7 80
+ 80
+shows, the average performance of the models effectively im- 70
+proves on classifying the website TLS flows in all the six net- 70
+ 60
+work environments. Particularly, there are 25.17% F1-Score
+ 60 50
+improvement on average in τ3 . Rosetta can improve 33.31% 0 2 4 6
+ Packet Loss (%)
+ 8 10 0 2 4 6
+ Packet Loss (%)
+ 8 10
+
+accuracy at most for a deep learning model on classifying (a) Accuracy. (b) F1-Score.
+website TLS flows in diverse network environments. 100 40
+ DF DF
+Results with Application TLS Flows. As Table 8 shows,
+ False Positive Rate (%)
+
+ 90 DF + Rosetta DF + Rosetta
+ 30
+ Recall Rate (%)
+
+the average performance of the models effectively improves
+ 80
+on classifying application TLS flows in all the six network 20
+ 70
+environments. Rosetta improve 45.07% F1-Score at most for
+ 10
+LSTM on classifying TLS flows in τ3 . The experiment results 60
+
+demonstrate that Rosetta is an effective approach to enhance 50
+ 0 2 4 6 8 10
+ 0
+ 0 2 4 6 8 10
+the robustness of DL models for TLS flow classification in Packet Loss (%) Packet Loss (%)
+
+diverse network environments. (c) Recall Rate. (d) False Positive Rate.
+
+ Figure 5: Robustness under different packet loss rates.
+
+ the DF model with/without Rosetta to classify these flows.3
+5.3 Classification Robustness
+ Under Different Packet Loss Rates. Figure 5 shows the DF
+ performance with and without Rosetta for different packet
+To quantitatively evaluate the classification robustness when
+ loss rates. As Figure 5a shows, although DF alone achieves
+applying Rosetta in different network environments, we levermore than 99% accuracy with a low packet loss rate, the
+age Traffic Control (TC) and ifconfig to set different
+ accuracy quickly decreases when the packet loss increases.
+packet loss rates, delays, and MTU in our sender hosts that
+replay flows. Hence, we can build controllable network envi- 3We also conduct experiments with other classification models and they
+ronments. We replay TLS flows from CIRA-CIC-DoHBrw- show similar results like DF. Hence, we only show the experimental results
+2020 in these controllable network environments and apply with DF for simplicity and clarity.
+
+634 32nd USENIX Security Symposium USENIX Association
+ Table 8: Results on Classifying Real Application TLS Flows in Different Network Environments.
+
+ Different Wired Network Environments
+ Model τ1 τ2 τ3
+ AC F1 AC F1 AC F1
+ CNN + Rosetta 90.62%(↓4.62%) 90.57%(↓4.50%) 80.97%(↑7.15%) 80.68%(↑9.29%) 81.24%(↓4.38%) 80.96%(↓4.17%)
+ SDAE + Rosetta 89.76%(↑8.09%) 89.40%(↑8.02%) 80.11%(↑26.75%) 76.28%(↑23.28%) 82.37%(↑23.62%) 82.30%(↑23.76%)
+ LSTM + Rosetta 92.58%(↑24.51%) 92.42%(↑35.29%) 79.74%(↑12.08%) 75.92%(↑34.34%) 83.58%(↑30.75%) 83.49%(↑45.07%)
+ DF + Rosetta 95.22%(↓2.89%) 95.06%(↓3.00%) 83.73%(↑0.26%) 79.76%(↑0.47%) 79.11%(↑9.16%) 79.04%(↑9.14%)
+ FS-Net + Rosetta 91.80%(↑22.18%) 91.55%(↑30.93%) 82.49%(↑11.70%) 78.53%(↑36.99%) 81.79%(↑25.43%) 81.64%(↑35.12%)
+ Transformer + Rosetta 96.98%(↑4.94%) 96.95%(↑5.60%) 84.12%(↓12.83%) 83.76%(↓12.70%) 84.56%(↓7.63%) 83.87%(↓8.24%)
+ On Average 92.83%(↑8.70%) 92.66%(↑12.06%) 81.86%(↑7.52%) 79.15%(↑15.28%) 82.11%(↑12.83%) 81.88%(↑16.78%)
+ Different Wireless Access Network Environments
+ Model τ4 τ5 τ6
+ AC F1 AC F1 AC F1
+ CNN + Rosetta 97.76%(↑5.93%) 97.72%(↑6.19%) 97.44%(↑1.21%) 97.24%(↑1.33%) 96.18%(↑1.10%) 95.81%(↑1.24%)
+ SDAE + Rosetta 98.46%(↑21.94%) 98.44%(↑21.93%) 98.92%(↑26.21%) 98.86%(↑26.19%) 96.24%(↑37.05%) 95.91%(↑36.80%)
+ LSTM + Rosetta 97.59%(↑33.75%) 97.57%(↑42.22%) 98.78%(↑29.42%) 98.71%(↑41.12%) 94.76%(↑22.69%) 94.45%(↑33.41%)
+ DF + Rosetta 94.34%(↑1.38%) 94.21%(↑1.47%) 95.76%(↓2.93%) 95.43%(↓3.17%) 93.01%(↓5.98%) 92.35%(↓6.56%)
+ FS-Net + Rosetta 98.11%(↑38.48%) 98.09%(↑52.38%) 99.10%(↑30.85%) 99.05%(↑44.90%) 96.31%(↑25.25%) 96.05%(↑37.73%)
+ Transformer + Rosetta 93.28%(↑3.06%) 93.22%(↑3.19%) 99.75%(↑6.31%) 99.74%(↑7.28%) 93.45%(↑1.02%) 92.75%(↑0.42%)
+ On Average 96.59%(↑17.42%) 96.54%(↑21.23%) 98.29%(↑15.18%) 98.17%(↑19.61%) 94.99%(↑13.52%) 94.55%(↑17.17%)
+
+When the packet loss is increased to 10%, DF only achieves 100 100
+
+78% accuracy. High packet loss rates significantly change 90
+ 80 DF
+ Accuracy (%)
+
+ F1-Score (%)
+the pattern of traffic traces and make the traffic hard to be 80 DF + Rosetta
+ DF
+ 60
+classified. However, the classification accuracy only slightly 70
+ DF + Rosetta
+drops with high packet loss rates when enabling the DF model 40
+ 60
+with Rosetta. The reason is that DF without Rosetta overfits
+ 50 20
+the training network environment. It extracts some unstable 0 10 20 30 40 50 0 10 20 30 40 50
+ Delay (ms) Delay (ms)
+features for better performance in environments similar to the
+ (a) Accuracy. (b) F1-Score.
+training environment, e.g., the good results in the first two
+ 100 50
+ticks in Figure 5a. However, these features significantly de- DF
+ False Positive Rate (%)
+
+ 90 40 DF + Rosetta
+grade the performance of DF alone in other environments. The
+ Recall Rate (%)
+
+experiments in a low delay environment and a high MTU en- 80
+ DF
+ 30
+ DF + Rosetta
+vironment show similar results. Figure 5b and Figure 5c show 70 20
+
+similar results for the F1-score and recall rate. As Figure 5d 60 10
+shows, although DF alone achieves less than 1% false posi- 50 0
+ 0 10 20 30 40 50 0 10 20 30 40 50
+tive rate with a low packet loss, the false positive rate quickly Delay (ms) Delay (ms)
+increases when packet loss increases. When the packet loss is (c) Recall Rate. (d) False Positive Rate.
+increased to 10%, DF achieves 37% false positive rate. However, the false positive rate only slightly increase with high Figure 6: Classification robustness under different delays.
+packet loss when enabling Rosetta. These results show that
+Rosetta enables deep learning models to achieve more robust ranging from 10ms to 50ms. Besides, Figure 6b shows the DF
+traffic classification for different packet loss rates. model with Rosetta can always reach more than 84% F1-score
+Under Different Delays. Figure 6 shows the DF performance for different delays. However, the F1-score remarkably drops
+with and without Rosetta for different delays. As Figure 6a with the increase of delays if Rosetta is not enabled. Figure 6c
+shows, the DF model can achieve more than 95% accuracy shows the similar results for recall rate. Figure 6d shows that
+when the delay is less than 5 ms. However, the accuracy DF with Rosetta keeps a low false positive rate for different
+significantly drops when the delay increases. Particularly, the delays. However, if Rosetta is disabled, the false positive rate
+accuracy drops to about 55% when the delay increases to 50 significantly increases with the delays. The results show that
+ms. However, when enabling the DF model with Rosetta, it Rosetta enables deep learning models to achieve more robust
+can always achieve more than 86% accuracy with the delay traffic classification for different delays.
+
+USENIX Association 32nd USENIX Security Symposium 635
+ 100 100 60
+ DF θ0 50 θ0
+ DF
+ DF + Rosetta 40 θ3 θ5
+ DF + Rosetta 90 30
+ Accuracy (%)
+
+ F1-Score (%)
+
+ Dimension 2
+
+ Dimension 2
+ 90 20
+ 10
+ 80 0
+
+ 80 -20 -10
+ 70
+ -40 -30
+
+ 70 60 -60 -50
+ 1500 1300 1100 900 700 1500 1300 1100 900 700 -50 -30 -10 10 30 50 70 -50 -30 -10 10 30 50 70
+ MTU (Bytes) MTU (Bytes) Dimension 1 Dimension 1
+
+ (a) Accuracy. (b) F1-Score. (a) Distribution between θ0 and θ3 . (b) Distribution between θ0 and θ5 .
+
+ 100 30 Figure 8: Feature Distribution between two environments.
+ DF DF
+ False Positive Rate (%)
+
+ 95 DF + Rosetta 25 DF + Rosetta
+Recall Rate (%)
+
+ 90 20
+ 50 50
+ 85 15
+ 30 30
+
+ Dimension 2
+
+ Dimension 2
+ 80 10
+ 10 10
+ 75 5
+
+ 70 0 -10 -10
+ 1500 1300 1100 900 700 1500 1300 1100 900 700
+ MTU (Bytes) MTU (Bytes) -30 -30
+ (c) Recall Rate. (d) False Positive Rate. -40 -20 0 20 40 -40 -20 0 20 40
+ Dimension 1 Dimension 1
+
+ Figure 7: Classification robustness under different MTUs. (a) DF (b) Rosetta
+
+ Figure 9: Feature vectors of eight flows. Each flow is replayed
+Under Different MTUs. Figure 7 shows the DF perforin three network environments, generating three points with
+mance with and without Rosetta for different MTUs. The
+ the same shape but different colors.
+performance of the DF model significantly decreases with the
+decrease of the MTU. Particularly, the F1-Score decreases
+from 99% to less than 70% when the MTU decreases from 5.5 Other Data Augmentation Methods
+1500 to 700 bytes. This is because a small MTU can cause We conduct experiments to compare our TCP-aware traffic
+packet size variation as we analyzed in Section 3.3, which augmentation method with two classical data augmentations:
+causes significant pattern changes of packet sequences of Random Mask (RM) [17] and Random Swap (RS) [60]. We reflows. However, if we enable the DF model with Rosetta, place our augmentation method with RM and RS in Rosetta to
+the accuracy and F1-score become more stable for different augment flows, respectively. Hence, we get three versions of
+MTUs. Even though the MTU drops to 700 bytes, we can Rosetta with different traffic augmentation methods. Based on
+still achieve more than 85% accuracy and 80% F1-score. The the feature vectors extracted by the three versions of Rosetta,
+results show that Rosetta enables deep learning models to we train three DF models to classify TLS flows from CIRAachieve more robust traffic classification for different MTUs. CIC-DoHBrw-2020 in different network environments, respectively. Table 9 shows the classification results with differ-
+5.4 Feature Vector Visualization ent data augmentations in diverse network environments. We
+ can only get 47.73% F1-score on average in θ0 -θ6 if RM is
+Rosetta generates a feature vector for each flow to denote applied to augment flows in Rosetta. Similarly, the average F1-
+the extracted abstract features in hidden features. Hence, we score with RS in θ0 -θ6 is still less than 50%. However, if we
+collect a pair of feature vectors for each flow that is replayed apply our TCP-aware traffic augmentation in Rosetta, we can
+in two different network environments. We apply the t-SNE achieve 87.49% F1-Score in θ0 -θ6 on average. These results
+method to project these high-dimensional feature vectors into demonstrate that simply applying data augmentation meth-
+2D vectors. Figure 8 draws all the feature vectors in two differ- ods without considering TCP semantics cannot help Rosetta
+ent environments. We can see that the distributions of feature extract robust features in different network environments.
+vectors are similar in different network environments. These
+results demonstrate that Rosetta extracts stable and robust
+features for flows. Figure 9 further demonstrates the results. 6 Discussion
+As shown in Figure 9b, Rosetta generates similar feature vectors for a flow in different network environments. Besides, Considerations on Reconstructing Packets before Trainfeature vectors of different flows are separated. Nevertheless, ing Classifiers. We may reconstruct out-of-order segments
+the DF model generates nearly overlapped feature vectors for packets and discard the duplicated packets by keeping track
+different flows, which is shown in Figure 9a. Feature vectors of the sequence numbers for each flow; however, it is difficult
+for a flow in different network environments are separated. to reconstruct reassembly packets due to the Nagle algorithm
+
+636 32nd USENIX Security Symposium USENIX Association
+ Table 9: Classification Results with Different Data Augmentations in Different Network Environments.
+
+ Different Wired Network Environments Different Wireless Access Network Environments
+ On Average
+ Data Aug. θ0 θ1 θ2 θ3 θ4 θ5 θ6
+ AC F1 AC F1 AC F1 AC F1 AC F1 AC F1 AC F1 AC F1
+ RM [17] 97.89% 97.80% 89.47% 88.12% 53.26% 11.56% 58.03% 16.47% 78.00% 71.72% 61.58% 34.00% 52.84% 14.44% 70.15% 47.73%
+ RS [60] 99.79% 99.77% 86.42% 83.09% 56.26% 16.16% 56.13% 21.84% 77.47% 68.53% 58.53% 20.88% 53.16% 16.74% 69.68% 46.72%
+ Ours 95.16% 95.14% 94.42% 94.39% 86.63% 86.63% 86.01% 85.83% 86.84% 86.53% 82.11% 81.31% 82.63% 82.57% 87.69% 87.49%
+
+or the fragmented packets due to the various MTUs in differ- some unstable features for better performance in the environent network environments. The Nagle algorithm (enabled by ments similar to the training environment. However, these
+default in major TCP implementations [61]) merges packet features significantly degrade the performance of DL alone
+payloads based on the network environments and applica- in most environments as we have shown in Section 3. Rosetta
+tion behaviors, which cannot be obtained from the packets. enables robust TLS flow classification in diverse network en-
+Similarly, how the original data are fragmented into different vironments at the cost of slight accuracy drop in a few cases.
+packets is based on MTUs and application behaviors, which Considering the varying real-world network environments,
+cannot be obtained from the packets and flows. Besides, recon- we believe that Rosetta makes an acceptable tradeoff between
+structing out-of-order packets or dropping duplicated packets classification robustness and accuracy.
+requires keeping track of the TCP state for each flow. It is Considerations on Timing Information. Rosetta does not
+resource-consuming and time-consuming when there are mas- extract features from timing information of TLS flows. Timsive TLS flows in real networks, especially for the real-time ing information may be useful for website fingerprinting [44].
+traffic classification tasks [5, 6]. Instead, Rosetta extracts ro- However, we focus on general TLS traffic classification in a
+bust flow features, enabling accurate traffic classification in real network with diverse network environments. Different
+diverse network environments without reconstructing packets. network environments can significantly change the timing
+Considerations on Periodically Re-training Classifiers. We information of flows. For example, timing in a high-delay
+may re-train a classifier in the target network periodically network environment is different from that in a low-delay netfor performance improvement with diverse network environ- work environment. Consequently, the timing information can
+ments. However, there may still be significant performance incur potential performance degradation for traffic classificadegradation for the classifier in the network environment that tion in diverse network environments. Hence, Rosetta does
+the classifier hasn’t met before, especially considering there not extract features from timing information to classify TLS
+are time-varying and infinite environmental states for a real flows. Actually, recent studies [46, 51, 52] have dropped the
+network. It is also almost impossible to train a classifier that timing information to achieve excellent performance for trafcovers all the possible network environments of the target net- fic classification.
+work. Besides, periodically re-training the classifier requires
+frequently collecting new flows in new network environments
+and labeling them with humans. The procedure is resource- 7 Conclusion
+consuming, time-consuming, and labor-intensive in practice.
+It is also hard to determine when to retrain the classifier. Thus, In this paper, we conduct a comprehensive measurement study
+it is necessary to achieve robust TLS traffic classification in to demonstrate that existing DL models fail to achieve robust
+diverse network environments without re-training the models. TLS traffic classification in diverse network environments.
+Robustness-Accuracy Tradeoff with Rosetta. Even though Through our systematic analysis, we point out the reason for
+our experiments show Rosetta can enable DL models to the remarkable performance degradation is that the packet
+achieve robust TLS encrypted traffic classification in diverse length sequences of flows dramatically change due to differnetwork environments, we observe that Rosetta may cause ent mechanisms of TCP for reliable transmission in diverse
+slight performance degradation for DL models in a few cases. network environments. To address the problem, we develop
+This is likely to happen when the network environment where Rosetta to learn robust features of TLS flows in diverse netwe classify TLS flows is similar to the network environments work environments based on TCP-aware traffic augmentations
+where we train our DL models. It is reasonable since Rosetta and self-supervised learning. Extensive experiments demonextracts robust features and omits unstable features. How- strate that Rosetta can enable robust TLS encrypted traffic
+ever, Rosetta can always enable DL models to achieve ac- classification in diverse network environments for existing
+ceptable classification performance in diverse environments DL models and significantly improve their classification perwith the robust features. Instead, DL models without Rosetta formance. We hope this work attracts more attention on TLS
+may overfit the training network environment. They extract traffic classification considering real network environments.
+
+USENIX Association 32nd USENIX Security Symposium 637
+Acknowledgments [8] Lionel F Gonzalez Casanova and Po-Chiang Lin. Generalized classification of dns over https traffic with deep
+We are grateful to all the anonymous reviewers for their learning. In 2021 Asia-Pacific Signal and Information
+insightful comments. The research is supported in part by Processing Association Annual Summit and Conference
+the National Natural Science Foundation of China (NSFC) (APSIPA ASC), pages 1903–1907. IEEE, 2021.
+under Grant 62132011, 62002192, 62202260, 62221003,
+and 61832013, the NSA under Grant H98230-22-1-0311, [9] Xinlei Chen and Kaiming He. Exploring simple
+the China Postdoctoral Science Foundation under Grant siamese representation learning. In Proceedings of the
+2022M721824 and 2022M720202, the Shuimu Tsinghua IEEE/CVF Conference on Computer Vision and Pattern
+Scholar Program, and the Beijing Postdoctoral Research Foun- Recognition, pages 15750–15758, 2021.
+dation under Grant 2022-ZZ-078. Jiahao Cao and Mingwei [10] Giovanni Cherubin, Rob Jansen, and Carmela Troncoso.
+Xu are the corresponding authors of the paper. Thanks for Online website fingerprinting: Evaluating website fin-
+Yixiao Wang’s contribution to the experiments. gerprinting attacks on tor in the real world. In 31st
+ USENIX Security Symposium (USENIX Security 22),
+References pages 753–770, 2022.
+ [11] Niels Christensen, Mark Glavind, Stefan Schmid, and
+ [1] Additional technical and experimental report for
+ Jiří Srba. Latte: improving the latency of transiently conrosetta. https://cloud.tsinghua.edu.cn/f/
+ sistent network update schedules. ACM SIGMETRICS
+ 7f250d2ffce8404b845e/?dl=1.
+ Performance Evaluation Review, 48(3):14–26, 2021.
+ [2] Mohammed Alfatafta, Basil Alkhatib, Ahmed Alquraan,
+ [12] Cisco. Cisco encrypted traffic analytics. Technical
+ and Samer Al-Kiswany. Toward a generic fault tolerreport, 2021.
+ ance technique for partial network partitioning. In 14th
+ USENIX Symposium on Operating Systems Design and [13] Mauro Conti, Luigi Vincenzo Mancini, Riccardo Spo-
+ Implementation (OSDI 20), pages 351–368, 2020. laor, and Nino Vincenzo Verde. Analyzing android encrypted network traffic to identify user actions. IEEE
+ [3] Blake Anderson and David McGrew. Machine learning
+ Transactions on Information Forensics and Security,
+ for encrypted malware traffic classification: accounting
+ 11(1):114–125, 2015.
+ for noisy labels and non-stationarity. In Proceedings
+ of the 23rd ACM SIGKDD International Conference [14] Scott E Coull and Kevin P Dyer. Traffic analysis of
+ on knowledge discovery and data mining, pages 1723– encrypted messaging services: Apple imessage and be-
+ 1732, 2017. yond. ACM SIGCOMM Computer Communication Review, 44(5):5–11, 2014.
+ [4] Ons Aouedi, Kandaraj Piamrat, and Dhruvjyoti
+ Bagadthey. A semi-supervised stacked autoencoder [15] Ekin D Cubuk, Barret Zoph, Dandelion Mane, Vijay
+ approach for network traffic classification. In 2020 Vasudevan, and Quoc V Le. Autoaugment: Learn-
+ IEEE 28th International Conference on Network ing augmentation policies from data. arXiv preprint
+ Protocols (ICNP), pages 1–6. IEEE, 2020. arXiv:1805.09501, 2018.
+ [5] Jiasong Bai, Menghao Zhang, Guanyu Li, Chang Liu, [16] Tianyu Cui, Gaopeng Gou, Gang Xiong, Zhen Li,
+ Mingwei Xu, and Hongxin Hu. Fastfe: Accelerating ml- Mingxin Cui, and Chang Liu. {SiamHAN}:{IPv6}
+ based traffic analysis with programmable switches. In address correlation attacks on {TLS} encrypted traffic
+ Proceedings of the Workshop on Secure Programmable via siamese heterogeneous graph attention network. In
+ Network Infrastructure, pages 1–7, 2020. 30th USENIX Security Symposium (USENIX Security
+ 21), pages 4329–4346, 2021.
+ [6] Diogo Barradas, Nuno Santos, Luıs Rodrigues, Salvatore Signorello, Fernando MV Ramos, and André [17] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and
+ Madeira. Flowlens: Enabling efficient flow classification Kristina Toutanova. Bert: Pre-training of deep bidifor ml-based network security applications. In Proceed- rectional transformers for language understanding. In
+ ings of the Network and Distributed Systems Security Proceedings of the 2019 Conference of the North Amer-
+ (NDSS) Symposium, 2021. ican Chapter of the Association for Computational Linguistics: Human Language Technologies, NAACL-HLT,
+ [7] Jiahao Cao, Zijie Yang, Kun Sun, Qi Li, Mingwei Xu,
+ 2019.
+ and Peiyi Han. Fingerprinting {SDN} applications via
+ encrypted control traffic. In 22nd International Sympo- [18] Terrance DeVries and Graham W Taylor. Dataset
+ sium on Research in Attacks, Intrusions and Defenses augmentation in feature space. arXiv preprint
+ (RAID 2019), pages 501–515, 2019. arXiv:1702.05538, 2017.
+
+638 32nd USENIX Security Symposium USENIX Association
+[19] Gerard Draper-Gil, Arash Habibi Lashkari, Mohammad [29] Guoliang Kang, Xuanyi Dong, Liang Zheng, and
+ Saiful Islam Mamun, and Ali A Ghorbani. Characteriza- Yi Yang. Patchshuffle regularization. arXiv preprint
+ tion of encrypted and vpn traffic using time-related. In arXiv:1707.07103, 2017.
+ Proceedings of the 2nd international conference on information systems security and privacy (ICISSP), pages [30] Tero Karras, Timo Aila, Samuli Laine, and Jaakko Lehti-
+ 407–414. sn, 2016. nen. Progressive growing of gans for improved quality,
+ stability, and variation. In 6th International Conference
+[20] Chuanpu Fu, Qi Li, Meng Shen, and Ke Xu. Realtime on Learning Representations, ICLR 2018, Vancouver,
+ robust malicious traffic detection via frequency domain BC, Canada, April 30 - May 3, 2018, Conference Track
+ analysis. In Proceedings of the 2021 ACM SIGSAC Proceedings, 2017.
+ Conference on Computer and Communications Security,
+ [31] Sosuke Kobayashi. Contextual augmentation: Data augpages 3431–3446, 2021.
+ mentation by words with paradigmatic relations. In
+[21] Fei Gao, Jinhua Zhu, Lijun Wu, Yingce Xia, Tao Qin, Proceedings of the 2018 Conference of the North Amer-
+ Xueqi Cheng, Wengang Zhou, and Tie-Yan Liu. Soft ican Chapter of the Association for Computational Lincontextual data augmentation for neural machine trans- guistics: Human Language Technologies, NAACL-HLT,
+ lation. In Proceedings of the 57th Annual Meeting of New Orleans, Louisiana, USA, June 1-6, 2018, Volume
+ the Association for Computational Linguistics, pages 2 (Short Papers), 2018.
+ 5539–5544, 2019. [32] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick
+[22] Nan Geng, Tian Lan, Vaneet Aggarwal, Yuan Yang, and Haffner. Gradient-based learning applied to document
+ Mingwei Xu. A multi-agent reinforcement learning recognition. Proceedings of the IEEE, 86(11):2278–
+ perspective on distributed traffic engineering. In 2020 2324, 1998.
+ IEEE 28th International Conference on Network Proto- [33] XuKui Li, Wei Chen, Qianru Zhang, and Lifa Wu. Buildcols (ICNP), pages 1–11. IEEE, 2020. ing auto-encoder intrusion detection system based on
+ random forest feature selection. Computers & Security,
+[23] Roberto Gonzalez, Claudio Soriente, and Nikolaos
+ 95:101851, 2020.
+ Laoutaris. User profiling in the time of https. In Proceedings of the 2016 Internet Measurement Conference, [34] Xinjie Lin, Gang Xiong, Gaopeng Gou, Zhen Li, Junpages 373–379, 2016. zheng Shi, and Jing Yu. Et-bert: A contextualized datagram representation with pre-training transformers for
+[24] Jean-Bastien Grill, Florian Strub, Florent Altché,
+ encrypted traffic classification. In Proceedings of the
+ Corentin Tallec, Pierre Richemond, Elena Buchatskaya,
+ ACM Web Conference 2022, pages 633–642, 2022.
+ Carl Doersch, Bernardo Avila Pires, Zhaohan Guo,
+ Mohammad Gheshlaghi Azar, et al. Bootstrap your [35] Chang Liu, Longtao He, Gang Xiong, Zigang Cao, and
+ own latent-a new approach to self-supervised learning. Zhen Li. Fs-net: A flow sequence network for encrypted
+ Advances in Neural Information Processing Systems, traffic classification. In IEEE INFOCOM 2019-IEEE
+ 33:21271–21284, 2020. Conference On Computer Communications, pages 1171–
+ 1179. IEEE, 2019.
+[25] Bharath Hariharan and Ross Girshick. Low-shot visual
+ recognition by shrinking and hallucinating features. In [36] Mohammad Lotfollahi, Mahdi Jafari Siavoshani, Ramin
+ Proceedings of the IEEE International Conference on Shirali Hossein Zade, and Mohammdsadegh Saberian.
+ Computer Vision, pages 3018–3027, 2017. Deep packet: A novel approach for encrypted traffic
+ classification using deep learning. Soft Computing,
+[26] Sepp Hochreiter and Jürgen Schmidhuber. Long short- 24(3):1999–2012, 2020.
+ term memory. Neural computation, 9(8):1735–1780,
+ 1997. [37] Yair Meidan, Michael Bohadana, Yael Mathov, Yisroel
+ Mirsky, Asaf Shabtai, Dominik Breitenbacher, and Yu-
+[27] Jordan Holland, Paul Schmitt, Nick Feamster, and Pra- val Elovici. N-baiot—network-based detection of iot
+ teek Mittal. New directions in automated traffic analysis. botnet attacks using deep autoencoders. IEEE Pervasive
+ In Proceedings of the 2021 ACM SIGSAC Conference on Computing, 17(3):12–22, 2018.
+ Computer and Communications Security, pages 3366–
+ 3383, 2021. [38] Yisroel Mirsky, Tomer Doitshman, Yuval Elovici, and
+ Asaf Shabtai. Kitsune: an ensemble of autoencoders
+[28] Hiroshi Inoue. Data augmentation by pairing for online network intrusion detection. Proceedings of
+ samples for images classification. arXiv preprint the Network and Distributed Systems Security (NDSS)
+ arXiv:1801.02929, 2018. Symposium, 2018.
+
+USENIX Association 32nd USENIX Security Symposium 639
+[39] Mohammadreza MontazeriShatoori, Logan Davidson, [49] Meng Shen, Yiting Liu, Liehuang Zhu, Xiaojiang Du,
+ Gurdip Kaur, and Arash Habibi Lashkari. De- and Jiankun Hu. Fine-grained webpage fingerprinting
+ tection of doh tunnels using time-series classifica- using only packet length information of encrypted traftion of encrypted traffic. In 2020 IEEE Intl Conf fic. IEEE Transactions on Information Forensics and
+ on Dependable, Autonomic and Secure Computing, Security, 16:2046–2059, 2020.
+ Intl Conf on Pervasive Intelligence and Computing,
+ Intl Conf on Cloud and Big Data Computing, Intl [50] Meng Shen, Jinpeng Zhang, Liehuang Zhu, Ke Xu, and
+ Conf on Cyber Science and Technology Congress Xiaojiang Du. Accurate decentralized application identi-
+ (DASC/PiCom/CBDCom/CyberSciTech), pages 63–70. fication via encrypted traffic analysis using graph neural
+ IEEE, 2020. networks. IEEE Transactions on Information Forensics
+ and Security, 16:2367–2380, 2021.
+[40] Francisco J Moreno-Barea, Fiammetta Strazzera, José M
+ Jerez, Daniel Urda, and Leonardo Franco. Forward noise [51] Payap Sirinam, Mohsen Imani, Marc Juarez, and
+ adjustment scheme for data augmentation. In 2018 IEEE Matthew Wright. Deep fingerprinting: Undermining
+ symposium series on computational intelligence (SSCI), website fingerprinting defenses with deep learning. In
+ pages 728–734. IEEE, 2018. Proceedings of the 2018 ACM SIGSAC Conference on
+ Computer and Communications Security, pages 1928–
+[41] Andriy Panchenko, Fabian Lanze, Jan Pennekamp, 1943, 2018.
+ Thomas Engel, Andreas Zinnen, Martin Henze, and
+ [52] Payap Sirinam, Nate Mathews, Mohammad Saidur Rah-
+ Klaus Wehrle. Website fingerprinting at internet scale.
+ man, and Matthew Wright. Triplet fingerprinting: More
+ In NDSS, 2016.
+ practical and portable website fingerprinting with n-shot
+[42] Luis Perez and Jason Wang. The effectiveness of data learning. In Proceedings of the 2019 ACM SIGSAC
+ augmentation in image classification using deep learn- Conference on Computer and Communications Security,
+ ing. arXiv preprint arXiv:1712.04621, 2017. pages 1131–1148, 2019.
+
+ [53] Vincent F Taylor, Riccardo Spolaor, Mauro Conti, and
+[43] Selenium Project. Selenium webdriver, 2022.
+ Ivan Martinovic. Robust smartphone app identification
+[44] Mohammad Saidur Rahman, Payap Sirinam, Nate Math- via encrypted network traffic analysis. IEEE Transacews, Kantha Girish Gangadhara, and Matthew Wright. tions on Information Forensics and Security, 13(1):63–
+ Tik-tok: The utility of packet timing in website fin- 78, 2017.
+ gerprinting attacks. arXiv preprint arXiv:1902.06421,
+ [54] Ying Tian, Zhiliang Wang, Xia Yin, Xingang Shi,
+ 2019.
+ Yingya Guo, Haijun Geng, and Jiahai Yang. Traffic engi-
+[45] Mark Reitblatt, Nate Foster, Jennifer Rexford, Cole neering in partially deployed segment routing over ipv6
+ Schlesinger, and David Walker. Abstractions for net- network with deep reinforcement learning. IEEE/ACM
+ work update. ACM SIGCOMM Computer Communica- Transactions on Networking, 28(4):1573–1586, 2020.
+ tion Review, 42(4):323–334, 2012. [55] Laurens Van der Maaten and Geoffrey Hinton. Visualizing data using t-sne. Journal of machine learning
+[46] Vera Rimmer, Davy Preuveneers, Marc Juarez, Tom
+ research, 9(11), 2008.
+ Van Goethem, and Wouter Joosen. Automated website
+ fingerprinting through deep learning. In Proceedings of [56] Thijs van Ede, Riccardo Bortolameotti, Andrea Conthe Network and Distributed Systems Security (NDSS) tinella, Jingjing Ren, Daniel J Dubois, Martina Lindor-
+ Symposium, 2018. fer, David Choffnes, Maarten van Steen, and Andreas
+ Peter. Flowprint: Semi-supervised mobile-app finger-
+[47] Rico Sennrich, Barry Haddow, and Alexandra Birch. Im- printing on encrypted network traffic. In Network and
+ proving neural machine translation models with mono- Distributed System Security Symposium (NDSS), vollingual data. In Proceedings of the 54th Annual Meeting ume 27, 2020.
+ of the Association for Computational Linguistics, ACL
+ 2016, August 7-12, 2016, Berlin, Germany, Volume 1: [57] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob
+ Long Papers, 2016. Uszkoreit, Llion Jones, Aidan N Gomez, Łukasz Kaiser,
+ and Illia Polosukhin. Attention is all you need. Advances
+[48] Danfeng Shan, Fengyuan Ren, Peng Cheng, Ran Shu, in neural information processing systems, 30, 2017.
+ and Chuanxiong Guo. Observing and mitigating microburst traffic in data center networks. IEEE/ACM Trans- [58] Pascal Vincent, Hugo Larochelle, Isabelle Lajoie,
+ actions on Networking, 28(1):98–111, 2019. Yoshua Bengio, Pierre-Antoine Manzagol, and Léon
+
+640 32nd USENIX Security Symposium USENIX Association
+ Bottou. Stacked denoising autoencoders: Learning use- Table 10: Hyperparameters of our Transformer.
+ ful representations in a deep network with a local denoising criterion. Journal of machine learning research, Hyperparameter Trasnformer
+ 11(12), 2010.
+ hidden dimension 16
+[59] Xin Wang, Shuhui Chen, and Jinshu Su. App-net: a layer 4
+ hybrid neural network for encrypted mobile traffic clasheads 4
+ sification. In IEEE INFOCOM 2020-IEEE Conference
+ on Computer Communications Workshops (INFOCOM dropout rate 0.1
+ WKSHPS), pages 424–429. IEEE, 2020. optimizer SGD
+[60] Jason Wei and Kai Zou. Eda: Easy data augmentation batch size 32
+ techniques for boosting performance on text classifi- training epoch 30
+ cation tasks. In Proceedings of the 2019 Conference learning rate 0.0003
+ on Empirical Methods in Natural Language Processing
+ and the 9th International Joint Conference on Natural Table 11: Ablation Study on Different Modules in Rosetta.
+ Language Processing EMNLP-IJCNLP, 2019.
+ Alg.1 Alg.2 Alg.3 Alg.4 Alg.5 TIE AC F1
+[61] Wikipedia. Nagle’s algorithm. https: × × × × × × 58.03% 36.72%
+ //en.wikipedia.org/wiki/Nagle’s_algorithm, × ✓ ✓ ✓ ✓ ✓ 83.03% 83.28%
+ Octorber 2022. ✓ × ✓ ✓ ✓ ✓ 82.57% 82.50%
+[62] Junchi Xing and Chunming Wu. Detecting anomalies in ✓ ✓ × ✓ ✓ ✓ 82.80% 82.21%
+ encrypted traffic via deep dictionary learning. In IEEE ✓ ✓ ✓ × ✓ ✓ 84.29% 84.09%
+ INFOCOM 2020-IEEE Conference on Computer Com- ✓ ✓ ✓ ✓ × ✓ 60.42% 41.32%
+ munications Workshops (INFOCOM WKSHPS), pages ✓ ✓ ✓ ✓ ✓ × 72.57% 78.41%
+ 734–739. IEEE, 2020. ✓ ✓ ✓ ✓ ✓ ✓ 86.01% 85.83%
+
+[63] Ao Yu, Hui Yang, Kim Khoa Nguyen, Jie Zhang, and
+ sequence as the token sequence for the input. Following
+ Mohamed Cheriet. Burst traffic scheduling for hybrid
+ the general settings of existing methods on traffic classifie/o switching dcn: An error feedback spiking neural
+ cation [51, 52], we fix the length of the input sequence to 100
+ network approach. IEEE Transactions on Network and
+ for the Transformer encoder, i.e., any sequence longer than
+ Service Management, 18(1):882–893, 2020.
+ 100 will be truncated to 100, and any sequence shorter than
+[64] Yinbo Yu, Xing Li, Xue Leng, Libin Song, Kai Bu, Yan 100 is padded with zeros. Thus, the encoder output will gener-
+ Chen, Jianfeng Yang, Liang Zhang, Kang Cheng, and ate embedding vectors with a fixed size. Next, we flatten the
+ Xin Xiao. Fault management in software-defined net- sequence of embedding vectors into a new embedding vector
+ working: A survey. IEEE Communications Surveys & as the input for MLP. We train Transformer with massive
+ Tutorials, 21(1):349–392, 2018. packet length sequences from TLS flows and we use SGD
+ to optimize its parameters. We optimize its hyperparameters
+[65] Wei Zhang, Yan Meng, Yugeng Liu, Xiaokuan Zhang, according to the classification results and our experience. The
+ Yinqian Zhang, and Haojin Zhu. Homonit: Monitoring hyperparameters of Transfomer are shown in Table 10.
+ smart home apps from encrypted traffic. In Proceedings
+ of the 2018 ACM SIGSAC Conference on Computer and
+ Communications Security, pages 1074–1088, 2018. B Ablation Study
+[66] Zhun Zhong, Liang Zheng, Guoliang Kang, Shaozi Li, We conduct ablation experiments for the five traffic augmenand Yi Yang. Random erasing data augmentation. In tation algorithms and the Traffic Invariant Extractor (TIE) in
+ Proceedings of the AAAI conference on artificial intelli- Rosetta. We train different versions of Rosetta by removing
+ gence, volume 34, pages 13001–13008, 2020. one of the six modules each time. We train different DF models with different versions of Rosetta to classify TLS flows
+ from CIRA-CIC-DoHBrw-2020 in diverse network environ-
+A Details for Transformer ments. Note that, the version of Rosetta without TIE indicates
+ that it only conducts TCP-aware traffic augmentation, and we
+We use a standard encoder and MLP in Transformer as a use augmented traffic to directly train classifiers without usclassifier in our experiments. As the input of the encoder in ing TIE to extract features. Table 11 shows the classification
+Transformer is a token sequence, we treat the packet length results for our ablation experiments. The classification accu-
+
+USENIX Association 32nd USENIX Security Symposium 641
+Table 12: Results on Classifying Replayed TLS Flows from ISCX-VPN in Different Network Environments (Without Rosetta).
+
+ Different Wired Network Environments Different Wireless Access Network Environments
+ Model θ0 θ1 θ2 θ3 θ4 θ5 θ6
+ AC F1 AC F1 AC F1 AC F1 AC F1 AC F1 AC F1
+ CNN 76.92% 76.83% 71.53% 72.65% 60.90% 60.43% 59.62% 56.62% 53.85% 52.53% 57.33% 56.96% 67.95% 67.86%
+ SDAE 77.56% 77.56% 66.23% 65.39% 59.62% 59.60% 56.41% 56.38% 52.56% 49.57% 54.67% 53.48% 61.54% 61.48%
+ LSTM 82.69% 82.43% 66.23% 65.53% 62.18% 57.24% 61.54% 55.85% 62.82% 60.97% 62.67% 59.15% 64.74% 60.14%
+ DF 81.41% 81.37% 72.73% 72.35% 64.10% 63.89% 64.74% 64.73% 61.54% 61.31% 59.33% 59.03% 58.97% 57.61%
+ FS-Net 78.85% 78.53% 68.18% 68.15% 51.92% 51.59% 47.44% 46.37% 51.28% 51.08% 60.00% 59.89% 54.49% 53.94%
+ Transformer 82.14% 84.85% 72.08% 71.54% 62.95% 61.77% 56.41% 58.46% 58.97% 61.31% 64.67% 61.55% 62.82% 63.15%
+ On Average 79.93% 80.26% 69.50% 69.29% 60.28% 59.09% 57.69% 56.40% 56.84% 56.13% 59.78% 58.34% 61.75% 60.70%
+
+ Table 13: Results on Classifying TLS Flows from ISCX-VPN in Different Network Environments (With Rosetta).
+
+ Different Wired Network Environments
+ Model θ1 θ2 θ3
+ AC F1 AC F1 AC F1
+ CNN + Rosetta 77.27%(↑5.74%) 76.84%(↑4.19%) 74.84%(↑13.94%) 74.43%(↑14.00%) 71.79%(↑12.17%) 70.21%(↑13.59%)
+ SDAE + Rosetta 78.57%(↑12.34%) 77.89%(↑12.50%) 76.28%(↑16.66%) 75.17%(↑15.57%) 75.64%(↑19.23%) 74.57%(↑18.19%)
+ LSTM + Rosetta 74.03%(↑7.80%) 71.01%(↑5.48%) 76.28%(↑14.10%) 70.87%(↑13.62%) 75.00%(↑13.46%) 71.11%(↑15.26%)
+ DF + Rosetta 78.57%(↑5.84%) 77.78%(↑5.43%) 75.64%(↑11.54%) 74.83%(↑10.94%) 77.56%(↑12.82%) 77.07%(↑12.34%)
+ FS-Net + Rosetta 75.32%(↑7.14%) 74.81%(↑6.66%) 75.00%(↑23.08%) 74.54%(↑22.95%) 76.92%(↑29.48%) 76.45%(↑30.09%)
+ Transformer + Rosetta 76.27%(↑4.19%) 73.28%(↑1.74%) 76.92%(↑13.97%) 73.13%(↑11.36%) 77.56%(↑21.15%) 75.18%(↑16.72%)
+ On Average 76.67%(↑6.15%) 75.27%(↑5.14%) 75.83%(↑13.33%) 73.83%(↑12.64%) 75.75%(↑15.47%) 74.10%(↑15.17%)
+ Different Wireless Access Network Environments
+ Model θ4 θ5 θ6
+ AC F1 AC F1 AC F1
+ CNN + Rosetta 75.00%(↑21.15%) 73.97%(↑21.44%) 74.33%(↑17.00%) 72.06%(↑15.10%) 74.36%(↑6.41%) 73.23%(↑5.37%)
+ SDAE + Rosetta 76.92%(↑24.36%) 76.15%(↑26.58%) 75.33%(↑20.66%) 74.51%(↑21.03%) 78.21%(↑16.67%) 77.58%(↑16.10%)
+ LSTM + Rosetta 75.64%(↑12.82%) 71.21%(↑10.25%) 74.00%(↑11.33%) 69.77%(↑10.62%) 78.85%(↑14.11%) 75.91%(↑15.77%)
+ DF + Rosetta 76.28%(↑14.74%) 76.00%(↑14.69%) 73.33%(↑14.00%) 72.85%(↑13.83%) 78.21%(↑19.24%) 77.84%(↑20.23%)
+ FS-Net + Rosetta 71.15%(↑19.87%) 70.81%(↑19.73%) 70.67%(↑10.67%) 70.48%(↑10.59%) 71.79%(↑17.30%) 71.79%(↑17.85%)
+ Transformer + Rosetta 77.56%(↑18.59%) 74.45%(↑13.14%) 75.33%(↑10.66%) 71.76%(↑10.21%) 73.08%(↑10.26%) 68.18%(↑5.03%)
+ On Average 75.43%(↑15.93%) 73.77%(↑15.12%) 73.83%(↑12.05%) 71.90%(↑11.62%) 75.75%(↑12.00%) 74.09%(↑11.48%)
+
+racy is ranging from 60.42% to 84.29% by removing one of C Results with TLS flows from ISCX-VPN
+the five traffic augmentation algorithms. We can see that any
+of the five algorithms is helpful to improve classification re- The experimental results with the replayed flows from ISCXsults in diverse network environments. However, the accuracy VPN in different network environments demonstrate similar
+is only 60.42% without Algorithm 5. Hence, Algorithm 5 results, which is shown in Table 12. When applying the modplays the most important role in improving the classification els trained in θ0 to conduct traffic classification in θ1 to θ6 ,
+performance of TLS flows in diverse network environments. the average accuracy of all the models decreases by about
+Besides, we can see that the accuracy is 72.57% without 10% at least and 23% at most, and the average F1-Score de-
+TIE, while the accuracy is 86.01% with TIE. Hence, applying creases by about 11% at least and 24% at most. Hence, it is
+TIE to extract robust features after TCP-aware traffic aug- obvious that different network environments can significantly
+mentation is necessary to further improve the classification affect the traffic classification results of existing deep models.
+performance. The results demonstrate that existing deep learning models
+ fail to enable robust TLS encrypted traffic classification in
+ diverse network environments. However, Rosetta can effectively improve the classification robustness of the DL models
+ in diverse network environments, which is shown in Table 13.
+
+642 32nd USENIX Security Symposium USENIX Association

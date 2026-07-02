@@ -1,0 +1,1279 @@
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+1511
+
+Noise Resistant Encrypted Malicious Traffic
+Detection Through Kernel-Enhanced
+Contrastive View Alignment
+Meihui Zhong , Ting Zhong , Member, IEEE, Yong Wang , Kai Chen , Senior Member, IEEE,
+and Fan Zhou , Member, IEEE
+Abstract—Encrypted Malicious Traffic Detection (EMTD) is
+challenging due to the limitations of inspecting encrypted content
+and the scarcity of labeled data. Graph Contrastive Learning
+(GCL) offers a promising direction by representing traffic as
+graphs, yet existing approaches struggle to capture global relationships and remain vulnerable to noise. To address these, we
+propose KerCL, a Kernel-Enhanced Contrastive Learning framework for robust EMTD. KerCL introduces kernel-based graph
+convolution to capture both local and global traffic dependencies,
+enhancing the ability to understand the long-range context of
+encrypted traffic. Furthermore, we propose a dependency-guided
+graph reconstruction strategy, which restructures adjacency
+matrices based on learned kernel similarities, ensuring structural
+integrity while improving diversity in augmented views. To reduce
+noise-induced semantic drift, we introduce a novel contrastive
+dependency alignment mechanism. It leverages the HilbertSchmidt independence criterion to enforce semantic consistency
+across augmented views while preserving stability of traffic
+representations. Experiments on several benchmarks show that
+KerCL surpasses previous methods in consistency, robustness,
+and noise tolerance. On the DoHBrw dataset with 50% noise
+and only 2,000 labels, KerCL improves the F1-score by over
+28% compared with the best baseline, showcasing its effectiveness
+under noisy, label-sparse network conditions.
+Index Terms—Encrypted malicious detection, Kernel-based
+graph convolution, Hilbert–Schmidt independence criterion,
+graph contrastive learning, self-supervised learning.
+
+I. I NTRODUCTION
+HE rapid proliferation of encryption protocols like TLS,
+QUIC, and HTTP/3 has significantly enhanced the privacy and security of online communications. While these
+
+T
+
+Received 4 March 2025; revised 28 August 2025; accepted 19 October
+2025; approved by IEEE T RANSACTIONS ON N ETWORKING Editor Y. Liu.
+Date of publication 28 October 2025; date of current version 5 January
+2026. This work was supported by the National Natural Science Foundation
+of China under Grant 62176043, Grant 62072077, and Grant U22A2097.
+(Corresponding author: Fan Zhou.)
+Meihui Zhong and Fan Zhou are with the School of Information and
+Software Engineering, University of Electronic Science and Technology of
+China, Chengdu, Sichuan 610054, China (e-mail: zhong99 cs@outlook.com;
+fan.zhou@uestc.edu.cn).
+Ting Zhong is with the School of Information and Software Engineering,
+University of Electronic Science and Technology of China, Chengdu, Sichuan
+610054, China, and also with the Department of Information Security, Kashi
+Institute of Electronics and Information Industry, Kashgar, Xinjiang 844000,
+China (e-mail: zhongting@uestc.edu.cn).
+Yong Wang is with The Hong Kong University of Science and Technology,
+Hong Kong, China (e-mail: wangyongjoy@ust.hk).
+Kai Chen is with the Computer Science and Engineering, The Hong Kong
+University of Science and Technology, Hong Kong, China (e-mail:
+kaichen@cse.ust.hk).
+Digital Object Identifier 10.1109/TON.2025.3625606
+
+advancements protect user data, they also present significant
+challenges for Encrypted Malicious Traffic Detection (EMTD)
+due to the limited visibility into encrypted traffic [1], [2].
+Traditional detection methods, such as Deep Packet Inspection
+(DPI) [3], rely on inspecting packet payloads, which are not
+accessible in encrypted traffic. This has made the detection of
+malicious activities concealed within encrypted traffic a critical
+issue in cybersecurity [4]. Consequently, there is an urgent
+need for detection methods that can detect malicious traffic
+without decryption, while maintaining both effective detection
+and privacy preservation [5].
+Recent advancements in Graph Neural Networks (GNNs)
+offer promising solutions for EMTD by representing network flows as traffic graphs [6], [7], [8], [9]. In these
+graphs, nodes represent network entities (e.g., IPs, sessions,
+or flows), and edges capture their interactions. GNNs excel
+at modeling structural patterns within traffic graphs, which
+are challenging to capture using sequence-based approaches.
+This capability makes GNN-based methods promising for
+detecting malicious encrypted behaviors. However, real-world
+detection tasks face a key obstacle: high-quality labeled data
+are scarce [10]. This scarcity has driven the development
+of Graph Contrastive Learning (GCL)-based methods [11],
+[12]. GCL is a powerful self-supervised approach, learns
+discriminative representations by contrasting augmented views
+of the same graph, reducing reliance on extensive labeled data
+[13].
+Despite significant progress, applying GCL directly to
+EMTD faces two key challenges – (1) Limited context. in
+traffic data. When modeled as graphs, traffic data within
+one-hop typically reflect only local interactions between entities. Existing GCL-based methods prioritize optimizing local
+embeddings, while overlooking global structural dependencies
+within traffic graphs [14], [15]. As a result, these approaches
+struggle to capture long-range relationships between network
+flows. (2) Susceptibility to noisy artifacts. Most GCL-based
+detection approaches rely on heuristic augmentations, such
+as random node/edge deletion and graph perturbations, to
+generate contrastive views. These unguided transformations
+are vulnerable to noise, disrupt semantic consistency, and
+inject distortions that mislead representation learning [16].
+We introduce noise equal in volume to the clean dataset
+(Figure 1(a)), markedly altering the flow-duration distribution
+and underscoring its impact on data integrity. Visualization of
+
+2998-4157 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+1512
+
+Fig. 1. (a) Adding noise data equivalent to the volume of clean data significantly alters the flow duration distribution, as evidenced by the noticeable
+shift. (b) FeCoGraph exhibits performance degradation with increasing noise
+levels, while KerCL demonstrates strong noise robustness, maintaining high
+F1-scores across the tested range.
+
+the embeddings in the DoHBrw dataset, shown in Figure 1(b),
+reveals that in an environment where half the data is noise, the
+FeCoGraph [17] – a label-aware federated GCL method that
+optimizes intra- and inter-class distances – remains highly sensitive, producing almost indistinguishable features. In contrast,
+our KerCL effectively mitigates the influence of noise, learning distinct and robust embeddings. It suggests that without
+proper regularization, contrastive learning can amplify these
+distortions, causing learned embeddings to deviate from their
+true distributions. This, in turn, increases errors in similarity
+evaluations and compromises the model’s ability to maintain
+stable traffic representations.
+To prevent errors or irrelevant information from obscuring semantic, we reconstruct the source graph’s adjacency.
+We draw inspiration from kernel method, which is a natural approach to capture and quantify semantic relationships
+between nodes more accurately [18]. This motivates us to
+focus on reconstructing the graph from a similarity-based
+kernel matrix. Pairwise similarities aggregate global information and filter minor perturbations, making the reconstructed
+graph less noise-sensitive [19]. Furthermore, in noisy network
+environments, augmented samples may include corrupted or
+adversarial artifacts. Guided by alignment regularization, we
+introduce a “consensus mechanism” based on dependencyguided alignment, to further reduce noise impact. By aligning
+the representations of augmented views, the model can emphasize shared, semantically relevant features over noise, as
+demonstrated in Figure 1(b). The regularization term thus mitigates noise interference, and maintain semantic consistency.
+To this end, we propose the Kernel-Enhanced Contrastive
+Learning framework (KerCL), a novel graph learning
+approach designed to enhance EMTD. Technically, this models
+global flow dependencies of through kernels, reconstructs the
+source graph to generate contrastive views, and introduces
+a guided alignment mechanism to mitigate noise interference, ultimately improving detection accuracy and robustness.
+Structurally, it comprises three key components: global dependency modeling, dependency-guided graph reconstruction, and
+semantic alignment.
+Specifically, global dependency modeling first learns a
+kernel matrix that reflects relations within the original flow
+graph. Relying on high-order feature propagation, it infers
+node relations from feature similarity rather than from a
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+predefined graph structure [18]. This design captures both local
+and global dependencies, which improves contextual understanding and helps expose subtle malicious patterns spread
+across sessions. Next, dependency-guided graph reconstruction
+then uses the kernel similarity matrix to rebuild the adjacency
+matrix and create augmented views that retain meaningful
+structural context. By preserving learned flow dependencies,
+the reconstructed graphs avoid distortions that could otherwise mislead representation learning. Finally, the semantic
+alignment employs the Hilbert-Schmidt Independence Criterion (HSIC) to implement the dependency-based alignment
+mechanism. By emphasizing the core features of the source
+data, this component suppresses irrelevant noise, bolstering the
+model’s robustness.
+The main contributions of this paper are as follows:
+• We propose KerCL, a novel Kernel-Enhanced Contrastive
+Learning framework for robust EMTD, which captures
+both local and global dependencies in traffic graphs and
+preserves key semantics. It enhances the detection of
+subtle malicious patterns under sparse labels and noise
+conditions.
+• We design three integral components to facilitate effective
+graph learning for EMTD: global dependency modeling,
+dependency-guided graph reconstruction, and contrastive
+dependency alignment. These integrate kernel-induced
+similarity, adjacency restructuring, and HSIC-based alignment, to enhance graph representations in an efficient
+manner.
+• Extensive experiments across three real-world benchmark
+datasets demonstrate the effectiveness of KerCL. Compared with eight competitive baselines, KerCL achieves
+average improvements of 5%, 15%, and 18% in accuracy,
+precision, and F1-score, respectively, on the TONIoT
+dataset, even under challenging conditions with 50%
+noise and limited labeled samples.
+Roadmap. The remainder of this paper is structured as
+follows: Section II reviews the related work on EMTD.
+Section III details the proposed KerCL framework. In
+Section IV, we reports extensive experiments, including overall effectiveness, robustness, ablation studies, and complexity
+analysis. Section V concludes the study and outlines future
+work.
+II. R ELATED W ORK
+A. Encrypted Malicious Traffic Detection
+EMTD has become central to network defense as encryption
+protocols proliferate. Existing approaches fall into three broad
+classes.
+(1) Rule-based Methods. These methods rely on constructing blacklists of IP addresses, certificates, or ports associated
+with known attackers [20], [21]. Although fast and easy
+to deploy, they are inherently static; adversaries can evade
+them by frequently changing observable features, and their
+effectiveness therefore decays in dynamic environments.
+(2) Statistics-based Methods. These approaches learn from
+flow-level statistics such as packet size, inter-arrival time, and
+session duration. For instance, XGBoost [22] uses sparse sensing and weighted quantile sketches to model high-dimensional
+
+ZHONG et al.: NOISE RESISTANT EMTD THROUGH KERNEL-ENHANCED CONTRASTIVE VIEW ALIGNMENT
+
+1513
+
+traffic features. Similarly, AppScanner [23] develops a framework for application fingerprinting, incorporating strategies to
+identify and mitigate ambiguous traffic effects. However, such
+methods are vulnerable to traffic variation and noise, which
+lead to elevated false-positive and false-negative rates when
+data are sparse or noisy.
+(3) Deep Learning-based Methods. These methods offer
+powerful alternatives by learning complex representations
+from raw network data [24], [25]. They can be further classified by feature extraction strategies: Packet-level models, such
+as Deep Fingerprinting [26] treats website trace as a sequence
+of packets, leveraging sequential learning method to classify
+traffic flows using raw packet data. FS-Net [27] similarly
+processes raw packet data, mining potential sequence features
+from streams, and incorporating the reconstruction mechanism
+to improve the features effectiveness. Graph-based methods,
+including GraphDApp [24], TrafficGCN [28], ST-Graph [29]
+and EC-GCN [30], transform sequences into graphs. They
+represent dependencies among entities (e.g., IPs, sessions, or
+flows) for effective representation learning. And image-based
+methods, such as TAM-CNN [31] and ATVITSC [25], treat
+traffic data as images, leveraging CNNs for EMTD.
+
+information in communication graphs, thereby identifying P2P
+botnet nodes. Although they capture global aspects, their
+modality-specific or task-specific focus limits comprehensive
+modeling of flow dependencies in noisy, encrypted traffic,
+falling short of addressing EMTD’s structural complexity.
+In contrast, our KerCL learn the nonlinear dependencies of augmented representations in high-dimensional space,
+employs dependency-guided reconstruction for consistent
+augmented views, and applies HSIC-based alignment for
+noise-resistant, uniform representations.
+
+B. Semi-Supervised Learning
+
+Encrypted network traffic comprises data packets exchanged
+between hosts within a network. This traffic can be analyzed
+at multiple granularities, from individual packets to aggregated
+entities such as flows, sessions, or channels. We adopt a
+flow-based setting: a flow is a sequence of packets sharing
+a common 4-tuple: source IP, destination IP, source port,
+destination port.
+We model encrypted network traffic as a graph G =
+(V, E, A, H). Nodes vi ∈ V represent hosts identified by
+IP addresses. Edges E are established using heuristics such
+as flows sharing the same destination IP address and port.
+The binary adjacency matrix A ∈ {0, 1}n×n encodes these
+connections, where Aij = 1 indicates an edge and Aij = 0
+otherwise. Each node is associated with a feature vector
+in the initial node-feature matrix constructed from raw perflow/session features H ∈ Rn×d , where each row contains
+a d-dimensional feature vector, and this matrix serves as the
+input to the propagation stage. Feature fields include common
+flow statistics such as packet counts, flow duration, and interpacket intervals. We consider a C-class classification problem
+with label set Y = {1, . . . , C}. For each labeled node vi ,
+yi ∈ Y denotes its class, and we use c ∈ Y to index classes.
+Building on prior graph-based approaches to EMTD [12],
+[37], we implement a semi-supervised transductive learning
+framework. Given G with nl labeled nodes, our goal is to
+learn f (·) to predict the label distribution ŷt for an unlabeled
+node vt by leveraging both labeled and unlabeled nodes.
+
+Semi-Supervised Learning (SSL) has gained traction as a
+means of extracting supervisory signals from unlabeled data,
+offering a promising direction for tasks like EMTD. SSL
+is particularly valuable in graph-based tasks, where large
+amounts of unlabeled data can be utilized to learn effective
+representations. Recent studies in EMTD have explored several SSL frameworks, categorized as follows:
+(1) Data-Level Augmentation. Models such as TrafCL
+[32] randomly drops packets to generate augmented views.
+MTC-MAE [33] constructs a unsupervised pretext task with
+a random masking strategy to get augmentation views. FeCoGraph [17], a label-aware federated GCL framework, enhances
+flow embedding discriminability by optimizing intra-class and
+inter-class distances; These methods effectively exploit data
+variability but risk semantic loss under noisy conditions due to
+unguided augmentations, limiting their robustness in EMTD’s
+label-scarce, noisy environments.
+(2) Representation-Level Augmentation. Some methods
+inject perturbations into inputs to regularize representation distributions, generating semantically diverse views. For instance,
+TCG-IDS [34] proposes three graph contrastive strategies:
+temporal contrasting to capture node evolution over time,
+asymmetric contrasting to model relationships between nodes,
+and random masking of node or edge features during training
+to force the model to learn from residual data; While boosting representation flexibility, these heuristic perturbations can
+amplify noise distortions, exacerbating semantic inconsistency
+in noisy encrypted traffic, as highlighted in our earlier analysis.
+(3) Local-Global Augmentations. CoMDet [35] introduces
+an inter-modal contrastive learning approach, enhancing feature representations by maximizing mutual information across
+modalities. PeerG [36] employs graph contrastive learning to
+optimize feature extraction for P2P botnet detection, using
+maximum mutual information to measure local and global
+
+III. M ETHODOLOGY
+This section elaborates on the framework of KerCL in detail.
+Fig. 2 provides an overview of KerCL, which integrates global
+dependency modeling, graph reconstruction, and semantic
+alignment. The model is designed to capture both local and
+global dependencies in traffic graphs while generating semantically consistent augmentations for robust graph learning. This
+combination ensures effective and generalizable detection of
+malicious traffic, even in noisy and label-scarce environments.
+A. Task Definition
+
+B. Kernel Enhanced Global Dependency Modeling
+In network traffic analysis, capturing both local and global
+dependencies is essential for detecting malicious behaviors
+hidden in encrypted flows. Local dependencies refer to direct
+communication between two IP addresses, such as traffic
+exchanged within a single session or flow. Global dependencies capture broader relationships across multiple, potentially
+
+1514
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Fig. 2. The architecture of KerCL. (i) Global Dependency Modeling, which captures both local and global dependencies in the traffic graph through various
+Kernel-based Graph Convolutions (KGCs); (ii) Dependency-Guided Graph Reconstruction, which generates semantically consistent augmented graphs using
+a learned kernel matrix; (iii) HSIC-based Semantic Alignment, which aligns original and augmented embeddings (Z and Ẑ) using the Hilbert-Schmidt
+Independence Criterion (HSIC) and contrastive learning. The final detection module objective combines cross-entropy and alignment losses.
+
+distant nodes, such as flows originating from a malicious IP
+over different sessions. Traditional GNNs model capture these
+relationships by aggregating information from neighboring
+nodes based on graph adjacency, a structure-only approach
+that relies solely on the graph’s topological connections
+without incorporating semantic similarities. This structureonly approach has two key limitations: (1) stacking multiple
+layers to capture long-range dependencies often lead models
+suffer from over-smoothing, causing node embeddings to lose
+distinctiveness, and (2) reliance on adjacency matrices alone
+overlooks semantic similarities between flows based on shared
+behavioral patterns, hindering detection of non-adjacent flows
+with similar features.
+(1) Kernel-based Graph Convolution.
+To overcome these limitations, we propose a kernelenhanced global dependency modeling method that integrates
+structural graph information with semantic dependencies
+through the Kernel-based Graph Convolution (KGC). This
+method implicitly encodes pairwise relationships by mapping
+node features into a high-dimensional space using kernel functions. And effectively balances the representation of local and
+global dependencies without requiring deeper architectures,
+ensuring scalability and resilience to noise.
+a) Kernel Mapping: A core component of our method is
+the kernel matrix K, which encodes pairwise relationships
+between nodes by implicitly mapping their features into a
+high-dimensional space. In network security, these relationships capture the behavioral similarity between hosts, a critical
+signal for detecting coordinated malicious activities which
+generate statistically similar traffic patterns. This projection
+is designed to improve class separability, that is, to what
+extent to which learned representations for different classes
+are distinct and easily distinguishable. By leveraging kernelinduced similarities, this mapping aims to increase the margins
+between classes while reducing the variance within each
+class, making the subsequent classification task more effective.
+
+Formally, the mapping is defined as:
+>
+
+MAPPING(H) := ψ(H) = [ψ (h1 ) , ψ (h2 ) , . . . , ψ (hn )] ,
+(1)
+where ψ : Rd → RD is a feature mapping and d ≤ D.
+Direct computation of explicitly designing the mapping
+function ψ(·), is computationally prohibitive, particularly for
+large or infinite D. Instead, we utilize a kernel function k(·, ·),
+which implicitly computes the inner product in the mapped
+space: k(h, h0 ) = hψ(h), ψ(h0 )i. Hence, the kernel matrix K
+for the node set H is constructed as:
+
+
+k(h1 , h1 ) · · · k(h1 , hn )
+
+
+..
+..
+..
+K=
+(2)
+,
+.
+.
+.
+k(hn , h1 ) · · · k(hn , hn )
+where each kernel corresponds to an implicit feature map.
+For instance, a polynomial kernel k(h, h0 ) = (h> h0 + c)d
+corresponds to a d-order polynomial feature map, while a
+Gaussian kernel k(h, h0 ) = exp(−kh − h0 k2 /(2σ 2 )) represents an infinite-dimensional mapping, with σ controlling
+sensitivity to feature differences.
+b) Kernel Propagation: Our KGC’s propagation mechanism updates node embeddings H(l) iteratively on the graph
+G = (V, E, A, H), where H = [h1 ; . . . ; hn ] ∈ Rn×d
+denotes the initial raw node-feature matrix constructed from
+the original per-flow/session statistics.
+This leverages high-dimensional feature mappings to encode
+nonlinear relationships, expressed as:
+H̄(l+1) = AGGREGATE(G, H(l) ) = Â q H(l) ,
+(l+1)
+
+H
+
+= ψ(l) (H̄
+
+(l+1)
+
+),
+
+(3)
+(4)
+
+where Â = D−1/2 AD−1/2 is the normalized adjacency
+matrix, q controls the propagation range and enables multihop aggregation, and l denotes the layer index. In particular,
+we define the initial kernel matrix K(0) = HH> , where H is
+the initial input feature matrix.
+
+ZHONG et al.: NOISE RESISTANT EMTD THROUGH KERNEL-ENHANCED CONTRASTIVE VIEW ALIGNMENT
+
+Obviously, it is easy to observe that the kernel matrix
+for the updated embeddings can be expressed as K(l+1) =
+>
+H(l+1) H(l+1) . However, directly computing H(l+1) is
+impractical due to its implicit nature. Instead, we aim to derive
+K(l+1) directly from K(l) , thereby bypassing the need to
+explicit embedding calculations. To achieve this, we establish
+a relationship between the kernel matrices. For a Gaussian
+kernel, the updated kernel matrix K(l+1) is defined as:
+!
+(l+1)
+∆ij
+(l+1)
+, (i, j) ∈ [n] × [n],
+(5)
+K
+= exp −
+2γ 2
+(l+1)
+
+(l+1)
+
+(l+1)
+
+where ∆ij
+= kh̄i
+− h¯j
+k2 is an element of the
+(l+1)
+squared distance matrix ∆
+for H̄(l+1) , and γ controls
+sensitivity to feature differences.
+Through a series of derivations, we have:
+q
+(l)
+q >
+∆(l+1) = (Âq )i K(l) (Âq )>
+i − 2(Â )i K (Â )j
+
++ (Âq )j K(l) (Âq )>
+j ,
+
+(6)
+
+where Âq is the normalized adjacency matrix raised to the
+q-th power, enabling multi-hop propagation. For convenience,
+this can be written in a more compact matrix form:
+>
+(l+1)
+∆(l+1) = dK̄(l+1) 1>
+,
+n + 1n dK̄(l+1) − 2K̄
+
+(7)
+
+where
+dK̄ = [K̄11 , K̄22 , . . . , K̄nn ]> ,
+(l+1)
+
+K̄
+
+q
+
+(l)
+
+q >
+
+= Â K (Â ) .
+
+(8)
+(9)
+
+This propagation step enriches the kernel matrix to include
+structural information from the graph while preserving nodeto-node similarity relationships. Consequently, the updated
+kernel matrix can be computed as:
+!
+>
+(l+1)
+dK̄(l+1) 1>
+n + 1n dK̄(l+1) − 2K̄
+(l+1)
+K
+= exp −
+.
+2
+2γ(l+1)
+(10)
+Note that now this formulation avoids the explicit representation from ψ(l) (H̄(l+1) ), but is directly obtained from K(l) .
+Our kernel-enhanced approach effectively addresses the oversmoothing problem of traditional GNNs by avoiding deep
+architectures, while learning rich semantic information from
+encrypted traffic graphs to capture both structural and behavioral patterns, enabling robust detection of subtle malicious
+behaviors in EMTD.
+C. Dependency-Guided Graph Reconstruction
+Existing augmentation techniques for graph contrastive
+learning, such as random node or edge removal and feature masking, are commonly used to enhance data diversity.
+However, these heuristic approaches often disrupt the intrinsic semantic structure of the graph, leading to suboptimal
+learning outcomes. To address these limitations, we propose
+a dependency-guided graph reconstruction mechanism, which
+leverages the kernel matrix K(L) (abbreviated as K hereafter)
+to generate an augmented adjacency matrix. This process generates an augmented graph that is structurally different from
+
+1515
+
+the original but preserves the behavioral relationships between
+nodes, which is crucial for effective contrastive learning.
+The reconstruction process begins with the kernel matrix K,
+and we construct the augmented adjacency matrix Ã as:
+(
+1, if j 6= i and Kij ≥ ci ,
+Ãij =
+(11)
+0, otherwise,
+where ci is the threshold corresponding to the k-th largest
+similarity score in each row i. This formulation ensures
+that only the top-k most semantically similar neighbors for
+each node are retained, preserving critical relationships while
+reducing noise-induced distortions.
+To further enhance diversity, we introduce Gaussian noise
+injection in the reconstructed graph. This introduces small
+perturbations to the edge weights in Ãij , simulating minor
+variations in data distribution without compromising the overall semantic consistency. Formally, the noise is applied as:
+
+Ãij ← Ãij + N 0, σ 2 ,
+(12)
+
+where N 0, σ 2 represents Gaussian noise with zero mean
+and variance σ 2 .
+Once the augmented adjacency matrix is constructed, we
+apply normalization and sparsification to ensure computational
+efficiency and numerical stability. Normalization is performed
+as:
+ˆ = D̃− 12 ÃD̃− 21 ,
+(13)
+Ã
+where D̃ is the degree matrix corresponding to Ã. This step
+preserves key semantic information while optimizing the graph
+for graph learning tasks.
+By leveraging the kernel matrix to guide graph reconstruction, our KerCL effectively balances semantic preservation
+with meaningful diversity. This dependency-guided mechanism mitigates the semantic disruption typically associated
+with random augmentation methods. As a result, the graph
+reconstruction mechanism generates high-quality augmented
+views that meet the requirements of contrastive learning and
+enhance model generalization.
+D. HSIC-Based Semantic Alignment
+While the kernel-based graph convolution provides
+embeddings with good initial separability, we introduce
+a self-supervised semantic alignment step to make these
+representations more robust to noise. This improved
+robustness, in turn, further enhances the final class separability.
+To achieve this, we design a graph contrastive learning method
+that incorporates semantic alignment through the HilbertSchmidt Independence Criterion (HSIC) [38]. This method
+ensures that the representations from the original graph and
+its augmented view remain consistent with the underlying
+semantics, addressing challenges such as semantic drift
+and representation collapse, which are often encountered in
+self-supervised learning on graphs.
+(1) Contrastive Learning with Instance-Level Alignment.
+At the core, our method begins with a contrastive loss
+term designed to promote instance-level consistency between
+embeddings of the original graph and its augmented counterpart. Let Z and Z̃ represent the node embeddings learned
+
+1516
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+from the original and augmented graphs, respectively. The
+contrastive loss is formulated as:
+1 X
+exp(sim(Z̃i , Z̃i )/τ )
+,
+(14)
+Lc = −
+log P
+|V|
+j∈V exp(sim(Zi , Z̃j )/τ )
+i∈V
+
+Algorithm 1 The training algorithm of KerCL.
+
+where sim(·, ·) denotes a similarity measure (e.g., cosine similarity), τ is the temperature parameter, Zi is the embedding
+of node i in the original graph, and Z̃i is the corresponding
+embedding in the augmented graph. This loss aligns individual
+node embeddings across views while ensuring separability
+between embeddings of different nodes.
+(2) Semantic Alignment via HSIC.
+While the contrastive loss ensures instance-level alignment,
+it does not enforce the global consistency across the graph’s
+semantic structure. To address this, we introduce a semantic
+alignment mechanism based on HSIC. HSIC could measures
+statistical dependency between kernel matrices K and K̃,
+which are derived from the embeddings Z and Z̃, respectively.
+Similarly, through KGC” we can calculate K̃ in the following
+matrix form:
+!
+˜
+∆
+(15)
+K̃ = exp − 2 .
+2γ
+˜ is the squared distance matrix of H̄(L+1) for the
+where ∆
+augmented graph, and γ matches the definition given in
+Eq. 5.
+HSIC quantifies the dependency between original and augmented representations, estimated as:
+\
+HSIC(Z,
+Z̃) = kE[KK̃> ] − E[K]E[K̃]> k2HS
+=
+
+tr(QKQK̃Q)
+,
+(n − 1)2
+
+(16)
+
+where Q = In − n1 1n 1>
+n is the centering matrix, and tr(·)
+denotes the matrix trace.
+In addition to enforcing embedding uniformity and stability,
+we incorporate regularization terms to penalize high-variance
+representations. Specifically, we include self-dependence terms
+\
+\ Z̃, Z̃), which minimize variance
+HSIC(Z,
+Z) and HSIC(
+within the original and augmented graph embeddings, respectively. To balance these objectives, we define the overall kernel
+dependence maximization loss as:
+\
+Ls = −HSIC(Z,
+Z̃)
+1
+\
+\ Z̃, Z̃)− 12 ,
++ ξ1 · HSIC(Z,
+Z)− 2 + ξ2 · HSIC(
+
+E. Training Objective
+Our downstream task is C-class node classification. Binary
+benign malicious classification corresponds to C = 2, while
+other datasets use C > 2. To perform this classification, we
+attach a lightweight classifier head to the final embeddings
+(Z and Z̃) from the original and augmented graphs. This
+classifier is an MLP that maps the embeddings to predicted
+ˆ respectively:
+label distributions Ŷ and Ỹ,
+Ŷ = MLP(Z),
+
+(19)
+
+ˆ ∈ RN ×C represent the predicted
+where Ŷ ∈ RN ×C and Ỹ
+probability distributions over C classes for the nodes in the
+original and augmented graphs, respectively.
+The training process leverages ground truth labels Y ∈
+RN ×C for a subset of nodes Vtrain ⊂ V. For the original graph
+embeddings, we calculate the cross-entropy loss LCE as:
+LCE = −
+
+(17)
+
+ˆ = MLP(Z̃),
+Ỹ
+
+1
+|Vtrain |
+
+C
+X X
+
+Yi,c log Ŷi,c ,
+
+(20)
+
+i∈Vtrain c=1
+
+where ξ1 and ξ2 control the importance of the regularization
+terms. These terms ensure that embeddings remain welldistributed and stable during training.
+(3) Integration with Contrastive Learning.
+To combine instance-level alignment with global semantic
+consistency, we integrate Ls with the contrastive loss Lc ,
+forming the final contrastive training objective:
+
+where Yi,c is the ground truth label for node i in class c, and
+Ŷi,c is the predicted probability of node i belonging to class c.
+Similarly, for the augmented graph embeddings, we compute
+the augmented cross-entropy loss LCE A .
+By jointly optimizing these loss, the model learns embeddings that are predictive of node labels and robust to structural
+and feature variations from graph augmentations. Finally, the
+joint loss function is defined as follows:
+
+LHSICSA = λc · Lc + λs · Ls ,
+
+L = LCE + λe · LCE A + LHSICSA ,
+
+(18)
+
+where λc and λs are hyperparameters controlling the contributions of the contrastive and kernel dependence terms,
+respectively. This integrated loss enhances KerCL’s robustness, mitigating semantic drift and noise-induced distortions.
+
+(21)
+
+where λe is a hyperparameter controlling the contribution of
+the augmented view’s classification loss. Algorithm 1 provides
+the pseudo algorithm of the whole process of our method.
+We compute the classification cross-entropy only on labeled
+
+ZHONG et al.: NOISE RESISTANT EMTD THROUGH KERNEL-ENHANCED CONTRASTIVE VIEW ALIGNMENT
+
+nodes, while both the contrastive objective and the HSIC viewalignment objective are computed on all nodes and require no
+labels.
+
+1517
+
+TABLE I
+DATASET S TATISTICS
+
+IV. E VALUATION
+We conduct experiments to address the following Research
+Questions (RQs):
+RQ1: How is the efficiency of KerCL (Section IV-B)?
+RQ2: How is the robustness of KerCL (Section IV-C)?
+RQ3: How is the usefulness of each component
+(Section IV-D)?
+RQ4: To what extent can changes in hyper-parameters affect
+the effectiveness of KerCL (Section IV-E)?
+A. Experimental Setup
+Datasets. We benchmark our proposed KerCL against the
+following approaches.
+(i) TONIoT [39]: This dataset represents a new generation
+of Internet of Things (IoT) and Industrial Internet of Things
+(IIoT) traffic. It comprises 796,380 normal and 21,542,641
+malicious instances with 10 distinct types, encompassing 39
+statistical features;
+(ii) DoHBrw [40]: This dataset is designed for the analysis,
+testing, and evaluation of DNS over HTTPS (DoH) encrypted
+traffic. This dataset offers 19,807 normal and 354,996 malicious instances, each characterized by 28 statistical features;
+(iii) CICIDS [41]: This dataset contains both normal communication patterns and 14 distinct attack scenarios, with
+931,873 normal instances and 18,028 malicious instances.
+Each sample is described by 70 features, extracted using the
+CICFlowMeter-V3 [42].
+Baselines. To benchmark our KerCL, we choose the following approaches for evaluation:
+(i) Supervised based EMTD, including
+MTSecurity [7]. It integrates raw byte-level features (via
+Transformers) and graph-based traffic interaction features (via
+GNNs) to enhance encrypted traffic representations, capturing
+sequence and network patterns despite payload invisibility.
+(ii) Unsupervised based EMTD, including
+Kitsune [2]. It detects anomalies using unsupervised learning on raw traffic, adapted here for supervised classification;
+ContraMTD [12]. It models both sequence and topological
+relationships in host interaction graphs using proposed SEC
+and DE-GAT mechanisms. It employs contrastive learning
+with vertical and horizontal views of traffic behavior. This
+enables comprehensive modeling of normal network behavior
+across different views.
+(iii) Pre-train based EMTD, including:
+ET-BERT [43]. It utilizes the raw traffic data of the first
+n packets of flow as their input. It transforms the datagram
+of bytes to a language-like token and uses BERT pre-training
+methods for learning the contextualized datagram presentation
+from large unlabeled datasets. After that, it uses fine-tuning as
+its tuning method to transfer the well-learned presentation to
+downstream tasks;
+Flow-MAE [44]. It improves upon ET-BERT framework by
+adopting an asymmetric encoder-decoder architecture, which
+is similar to masked autoencoder (MAE). This architecture
+
+generates representations based on byte streams and uses a
+lightweight decoder to reconstruct the masked bytes;
+YaTC [45]. It utilizes the raw traffic data of the first n packets of flow as their input. It also uses the MAE paradigm as its
+pre-training method by reconstructing the masked traffic. After
+that, it uses fine-tuning as its tuning method for downstream
+tasks as well;
+TrafCL [32]. It enhances session-level data by creating augmented, incomplete views of the sessions. These incomplete
+views are then input into a contrastive learning framework,
+enabling better representation learning from partial data;
+FeCoGraph [17]. It is a label-aware federated GCL framework optimizing intra-class and inter-class distances for flow
+embedding discriminability.
+Metrics. Our model aims to classify encrypted traffic into
+normal and various malicious types. Given the inherent class
+imbalance in malicious and normal traffic, we evaluate our
+KerCL and other using accuracy (AC), precision (PR), and
+F1-score (F1).
+Testbeds.. Our experiments are conducted on a platform
+with an Intel i5-14600KF 3.50 GHz CPU, an NVIDIA
+GeForce GTX 4060 Ti GPU, and 32GB of system memory.
+We implemented graph-based encoders for baselines models
+using the PyTorch Geometric (PyG) library. Additionally, since
+Kitsune cannot handle high-rate traffic, we evaluate it with
+offline experiments on the same testbed.
+Implementation Details. To further evaluate the robustness
+of KerCL, all experiments were conducted under a noise
+level of 0.3 to simulate real-world noisy environments. Unless
+otherwise specified, Gaussian noise was applied to the original
+data, and the number of training nodes was limited, with 1,000
+labeled samples per category used. The Adam optimizer is
+employed for model training. Early stopping was employed,
+halting training if no parameter improvement was observed for
+50 consecutive epochs.
+B. Overall Performance Evaluation (Q1)
+To validate the generalizability of the proposed KerCL, we
+conducted extensive evaluations on three benchmark datasets
+representing diverse traffic patterns and malicious behaviors.
+The results, shown in Table II, demonstrate that KerCL consistently achieves SOTA performance across key evaluation
+metrics. These highlight KerCL’s ability to effectively learn
+robust and discriminative representations of encrypted traffic,
+even in challenging conditions with limited labeled samples.
+
+1518
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+TABLE II
+P ERFORMANCE C OMPARISON OF K ER CL W ITH BASELINES U NDER A E NVIRONMENT OF E XPERIMENTAL S ETUP ACROSS T HREE DATASETS .
+T HE B EST AND RUNNER - UP R ESULTS A RE H IGHLIGHTED IN B OLD AND UNDERLINED , R ESPECTIVELY
+
+Supervised methods, such as MTSecurity, heavily rely
+on large amounts of labeled data for training, a limitation in real-world scenarios where annotated datasets are
+either scarce or expensive to obtain. While these methods
+perform well on datasets with abundant labels, their effectiveness diminishes significantly in label-scarce environments. In
+contrast, unsupervised models like ContraMTD and Kitsune
+achieve relatively satisfactory performance without requiring labeled data. KerCL takes this further by leveraging
+unlabeled datasets with kernel-enhanced global dependency
+modeling and a self-supervised mechanism. For instance,
+KerCL achieves an 14.62% higher F1-score than MTSecurity
+on the TONIoT dataset, capitalizing on its ability to capture both local and global traffic patterns. Kitsune, however,
+focuses exclusively on individual packets, neglecting interrelations, while ContraMTD’s graph-based approach models
+primarily pairwise host interactions, overlooking broader
+network-wide dependencies. KerCL addresses these limitations by employing global kernel dependency modeling to
+capture comprehensive traffic interactions across the graph,
+providing deeper insights into network behavior.
+Pretraining-based methods, indicating the promise of pretraining for EMTD. Among these, ET-BERT achieves competitive results by adopting transformer-based architectures
+for feature extraction. However, its reliance on complex
+architectures and large-scale models incurs high computational costs, limiting its versatility for more complex
+detection tasks. TrafCL, relying on heuristic augmentations,
+often disrupts the intrinsic semantic structure of traffic
+data, resulting in suboptimal representations. Flow-MAE and
+YaTC adopt MAE approaches to model traffic data, but
+both struggle to preserve semantic consistency and global
+dependencies, particularly under noisy or fragmented traffic scenarios. KerCL distinguishes itself by addressing these
+limitations through its dependency-guided graph reconstruction and dependency-aligned contrastive mechanism, ensuring
+semantically consistent augmented views and robust global
+representations.
+C. Robustness of the Model (Q2)
+To evaluate the robustness of the proposed KerCL framework, we conducted comprehensive experiments across
+
+various noise levels and label-scarce conditions. Robustness
+in EMTD is critical due to the inherent noise and incomplete
+session information present in real-world network environments. We designed experiments focusing on two key aspects:
+effectiveness under limited labeled data and resistance to noise
+perturbation.
+We first evaluated KerCL’s performance under label-scarce
+scenarios by varying the number of labeled samples per
+class during training process. As shown in Figure 3, KerCL
+achieves superior performance compared to other pretrainingbased models. With only 100 labeled samples per class,
+KerCL maintains high classification F1-score. This highlights
+KerCL’s ability to captured the key semantic information in
+the traffic graph through its kernel-enhanced global dependency modeling, and contrastive learning based on sematic
+alignment further utilized the data effectively.
+Next, we assessed KerCL’s resistance to noise by introducing synthetic noise (randomly corrupting node features
+and edge connections) at increasing rates. Figure 4 illustrates
+performance trends of KerCL and baselines under increasing
+noise levels on DoHBrw dataset. Notably, KerCL consistently outperforms state-of-the-art baselines, maintaining high
+accuracy and F1-scores even when subjected to substantial data corruption. Additionally, after 100 training runs,
+KerCL exhibits significantly lower variance compared to other
+methods.
+From a theoretical perspective, the robustness of KerCL
+arises from the following: 1) the HSIC-based alignment,
+which constrains the learned representations by maximizing
+mutual dependence between original and augmented views,
+preserving semantic consistency despite noisy augmentations;
+2) the kernel enhanced global dependency modeling module,
+which captures global dependencies while minimizing the
+impact of local feature noise, providing an implicit smoothing
+effect that avoids over-smoothing issues in traditional GNNs;
+3) and the combined contrastive and HSIC losses that reduce
+the generalization bound by ensuring diverse yet semantically
+aligned representations, thereby improving performance under
+both noise-free and noisy conditions.
+Moreover, our HSIC-based regularization not only aligns
+augmented representations with their originals but also
+enhances robustness to input noise and perturbations. By
+
+ZHONG et al.: NOISE RESISTANT EMTD THROUGH KERNEL-ENHANCED CONTRASTIVE VIEW ALIGNMENT
+
+1519
+
+Fig. 3. Comparison of hidden dimensions and k similarity impacts on F1-Score.
+TABLE III
+A BLATION S TUDY OF O UR K ER CL
+
+Fig. 4. Different noise level study w.r.t. F1-score within the DoHBrw dataset
+(higher is better).
+
+constraining kernel matrix variance, this regularization ensures
+embeddings are roughly uniformly distributed, retaining
+maximal data information while maintaining stability and
+uniformity in high-dimensional spaces [46].
+D. Ablation Study (Q3)
+In this section, we conduct a comprehensive ablation study
+to evaluate the contributions of each component in proposed
+KerCL, with results summarized in Table III. We structure our
+analysis around three key findings.
+Synergy of CL and HSIC Alignment. The core of our
+self-supervised framework relies on the interplay between
+the instance-level contrastive loss (Lc ) and the global HSIC
+
+alignment loss (Ls ). Removing either component leads to a
+significant performance drop. As shown in row (b), removing
+the contrastive loss causes the most severe degradation, with
+the F1-score on TONIoT plummeting by over 12% (from
+88.23% to 75.66%). This highlights the critical role of the
+contrastive objective in learning discriminative features. Furthermore, removing the HSIC term (row (a)) also notably
+harms performance, indicating that instance-level discrimination is not enough; the global semantic consistency enforced
+by HSIC is crucial for robustness. The superior performance
+of the KerCL demonstrates a clear synergy: CL provides
+instance-level discrimination, while HSIC provides the global
+semantic regularization needed for robust representations.
+Importance of the Supervised Signal. While KerCL is
+designed to learn effectively from unlabeled data, the supervised signal remains vital for achieving optimal performance.
+In row (c), we train the model without the cross-entropy loss
+(LCE ). The performance drop is substantial across all datasets,
+confirming that the self-supervised objectives, while powerful
+for representation learning, are best utilized when fine-tuned
+with even a small amount of labeled data to align the learned
+features with the final classification task.
+Effectiveness of Kernel-Based Graph Reconstruction.
+Finally, we validate our proposed dependency-guided graph
+reconstruction by comparing it against a standard kNN
+baseline (rows (d)-(g)). The full kNN-based variant (‘s-k’
+in row (d)) underperforms our KerCL by a large margin
+across all metrics. For instance, on the CICIDS dataset, our
+default model achieves an F1-score of 90.06%, whereas the
+
+1520
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Fig. 5. F1-Score w.r.t. different parameters across three datasets.
+
+TABLE IV
+C OMPLEXITY A NALYSIS OF THE P ROPOSED F RAMEWORK
+
+Fig. 6. Distribution density of traffic duration across three datasets
+(log-scaled).
+
+kNN-based model only reaches 86.58%. This performance gap
+underscores the necessity of the global semantic information
+captured by our kernel-based modeling, which is more effective than the simpler, feature-based similarity used by kNN.
+E. Parameter Sensitivity Analysis (Q4)
+To investigate the impact of hyper-parameters and traffic
+data scale on KerCL’s performance, we conduct experiments
+across the TONIoT, DoHBrw, and CICIDS datasets. Figure 6
+shows the flow duration density distribution on these datasets.
+Among them, we log the data to eliminate the difference
+between the maximum and minimum values. Furthermore, it
+can be seen that the three datasets represent the distribution
+of different traffic in the real network respectively.
+Impact of Network Dimensions. Figure 5(a) illustrates
+that increasing the dimensions of hidden units initially boosts
+performance. However, beyond a certain threshold, the performance stabilizes, yielding similar results across datasets.
+Impact of the Number of Neighboring Nodes (k).
+Figure 5(b) examines the sensitivity of performance to the
+number of neighboring nodes (k) used for augmented views.
+The results reveal that the model achieves optimal performance
+across all three datasets at k = 5. Using fewer than 5
+neighbors can result in information loss in the augmented
+views, whereas including more neighbors introduces noise
+and irrelevant information from unrelated nodes. Furthermore,
+larger k values reduce computational efficiency without significant performance gains, underscoring the importance of
+
+carefully selecting k to balance representation quality and
+computational cost.
+Impact of KGC Layer Number. Figure 5(c) investigates
+the effect of kernel propagation layer number on F1-score.
+It shows that deeper networks exhibit more stable performance compared to deep GCNs. As the layer number
+increases, KGC’s performance initially improves and then
+slightly decreases. Notably, KGC with a fixed number of layers
+performs better, showing less performance degradation and
+maintaining greater stability.
+Impact of the Importance Parameters ξ in Ls . We
+evaluated the performance of the KerCL under different combinations of importance parameters across 25 different view
+embeddings. Specifically, we adjusted the trade-off parameters
+ξ1 and ξ2 within the range of {0.001, 0.01, 0.1, 0.5, 1}. The
+results of the sensitivity analysis are shown in Figure 7. The
+figure shows performance fluctuations below 1.5%.
+On the whole, our method is insensitive to these parameters
+on different datasets, and the performance difference of model
+is not significant as long as they are within a reasonable range.
+F. Analysis of Scalability and Overhead
+Analysis of Scalability. We analyze the complexity of our
+KerCL in terms of both time complexity and space complexity,
+as summarized in Table IV. Here, n is the number of nodes,
+d is the feature dimension, l is the number of KGC layers,
+|E| denotes the number of edges. Let b denote the number
+of nodes in a batch, k is the number of neighboring nodes,
+and e represent the number of neighborhood nodes per node
+during the reconstruction process. The framework consists of
+
+ZHONG et al.: NOISE RESISTANT EMTD THROUGH KERNEL-ENHANCED CONTRASTIVE VIEW ALIGNMENT
+
+1521
+
+Fig. 7. Impact of importance parameters (ξ1 , ξ2 ) on F1-Score across three datasets.
+
+TABLE V
+H YPER -PARAMETER C ONFIGURATIONS FOR K ER CL
+
+three major steps, i) kernel-based graph convolutions, ii) graph
+reconstruction, and iii) sematic alignment. It is worth noting
+that the kernel matrix generation step (i.e., the first step) is
+executed only once and reused during the training process.
+Consequently, its quadratic time complexity (O(n2 d)) is computationally feasible for large graphs despite n.
+Analysis of Hyper-Parameter Configurations. We demonstrate the hyper-parameter configuration used in our experiment. Table V summarizes the key hyper-parameters, their
+descriptions, and values employed. These hyper-parameters
+are carefully selected to balance model performance, convergence stability, and computational efficiency.
+G. Case Study
+Figure 8 shows the confusion matrix for the CICIDS dataset
+and allows a fine-grained view of class-level performance.
+Most entries lie on the main diagonal, confirming the model’s
+high overall accuracy. Two security-critical findings stand out.
+First, false alarms are rare: only a handful of benign flows
+were tagged as attacks. Second, missed detections are equally
+limited: very few malicious flows slipped through as benign.
+The remaining errors arise mainly from confusions among
+related attack types, for example between different denial-ofservice or web-based attacks, rather than between benign and
+malicious traffic. These observations demonstrate that KerCL
+fulfils the primary requirement of reliably separating malicious
+activity from normal traffic.
+
+Fig. 8. The confusion matrix for the CICIDS dataset.
+
+To illustrate how the learned representations support this
+behaviour, we use t-SNE to visualize the embedding of benign
+samples and malicious samples across three datasets. Figure 9
+and Figure 10 provide insights into the capability of these
+methods to learn differentiated embedding.
+Figure 9 plots the embeddings produced by KerCL together
+with the decision regions of a linear SVM. Benign flows (blue)
+and malicious flows (gray) form well-separated clusters across
+TONIoT, DoHBrw, and CICIDS, yielding accuracies of 96.6%,
+97.5%, and 94.8%, respectively. These clear margins confirm
+that KerCL captures both local and global dependencies and
+remains robust under noise and label scarcity.
+In contrast, Figure 10 visualizes the embeddings and decision accuracy achieved by YaTC on the same datasets. While
+YaTC also achieves competitive accuracy (e.g., 95.2% on
+TONIoT and 95.2% on DoHBrw), there is more overlap
+between benign and malicious traffic clusters, particularly on
+CICIDS dataset. For instance, on CICIDS, YaTC achieves an
+accuracy of only 90.7%, which is significantly lower than
+KerCL’s 94.8%. This overlap indicates that YaTC struggles to
+learn the hidden, differentiated contextual information needed
+to separate traffic classes effectively, likely due to its limited
+
+1522
+
+IEEE TRANSACTIONS ON NETWORKING, VOL. 34, 2026
+
+Fig. 9. Embedding visualizations of KerCL on three datasets.
+
+Fig. 10. Embedding visualizations of YaTC on three datasets.
+
+ability to capture global dependencies and semantic consistency across augmented views.
+V. C ONCLUSION AND F UTURE W ORK
+In this work, we propose KerCL, a novel kernel-enhanced
+contrastive learning framework tailored for EMTD. By integrating global dependency modeling, kernel-based graph
+reconstruction, and HSIC-guided semantic alignment, KerCL
+effectively addresses challenges posed by limited labels,
+insufficient structural context, and noise sensitivity in graphbased learning. Experimental evaluations on three datasets
+demonstrate that KerCL outperforms state-of-the-art methods,
+particularly in noisy environments and scenarios with limited
+labeled data. Our future work will focus on reducing this
+complexity. Furthermore, we plan to validate our method’s
+robustness against more sophisticated adaptive threats and
+extend its applicability by incorporating temporal dynamics
+and protocol-agnostic modeling for emerging traffic patterns.
+R EFERENCES
+[1]
+[2]
+[3]
+
+[4]
+
+Y. Yue, X. Chen, Z. Han, X. Zeng, and Y. Zhu, “Contrastive learning
+enhanced intrusion detection,” IEEE Trans. Netw. Service Manage.,
+vol. 19, no. 4, pp. 4232–4247, Dec. 2022.
+Y. Mirsky, T. Doitshman, Y. Elovici, and A. Shabtai, “Kitsune: An
+ensemble of autoencoders for online network intrusion detection,” in
+Proc. Netw. Distrib. Syst. Secur. Symp., 2018.
+X. Zhang, W. Geng, Y. Song, H. Cheng, K. Xu, and Q. Li, “Privacypreserving and lightweight verification of deep packet inspection in
+clouds,” IEEE/ACM Trans. Netw., vol. 32, no. 1, pp. 159–174, Feb.
+2024.
+J. Fan, C. Guan, K. Ren, Y. Cui, and C. Qiao, “SPABox: Safeguarding
+privacy during deep packet inspection at a MiddleBox,” IEEE/ACM
+Trans. Netw., vol. 25, no. 6, pp. 3753–3766, Dec. 2017.
+
+[5]
+
+C. Fu, Q. Li, and K. Xu, “Flow interaction graph analysis: Unknown
+encrypted malicious traffic detection,” IEEE/ACM Trans. Netw., vol. 32,
+no. 4, pp. 2972–2987, Aug. 2024.
+[6] W. Li, X.-Y. Zhang, H. Bao, H. Shi, and Q. Wang, “ProGraph: Robust
+network traffic identification with graph propagation,” IEEE/ACM Trans.
+Netw., vol. 31, no. 3, pp. 1385–1399, Jun. 2023.
+[7] J. Yang, X. Jiang, Y. Lei, W. Liang, Z. Ma, and S. Li, “MTSecurity:
+Privacy-preserving malicious traffic classification using graph neural
+network and transformer,” IEEE Trans. Netw. Service Manage., vol. 21,
+no. 3, pp. 3583–3597, Jun. 2024.
+[8] Z. Cheng et al., “Information diffusion prediction via meta-knowledge
+learners,” Inf. Sci., vol. 707, Jul. 2025, Art. no. 122034.
+[9] Z. Cheng, Y. Liu, T. Zhong, K. Zhang, F. Zhou, and P. S. Yu,
+“Disentangling inter{-} and intra-cascades dynamics for information
+diffusion prediction,” IEEE Trans. Knowl. Data Eng., vol. 37, no. 8,
+pp. 4548–4563, Aug. 2025.
+[10] Q. Yuan, G. Gou, Y. Zhu, Y. Zhu, G. Xiong, and Y. Wang, “MCRe:
+A unified framework for handling malicious traffic with noise labels
+based on multidimensional constraint representation,” IEEE Trans. Inf.
+Forensics Security, vol. 19, pp. 133–147, 2024.
+[11] C. Liu, B. Li, J. Zhao, Z. Zhen, X. Liu, and Q. Zhang, “FewM-HGCL:
+Few-shot malware variants detection via heterogeneous graph contrastive
+learning,” IEEE Trans. Dependable Secure Comput., early access, Oct.
+25, 2022, doi: 10.1109/TDSC.2022.3216902.
+[12] X. Han et al., “ContraMTD: An unsupervised malicious network traffic
+detection method based on contrastive learning,” in Proc. Int. World
+Wide Web Conf. (WWW), pp. 1680–1689, 2024., 2024, pp. 1680–1689.
+[13] S. Suresh, P. Li, C. Hao, and J. Neville, “Adversarial graph augmentation
+to improve graph contrastive learning,” in Proc. Adv. Neural Inf. Process.
+Syst. (Neurips), 2021, pp. 15920–15933.
+[14] Y. Min, F. Wenkel, and G. Wolf, “Scattering GCN: Overcoming oversmoothness in graph convolutional networks,” in Proc. Adv. Neural Inf.
+Process. Syst. (Neurips), 2020, pp. 14498–14508.
+[15] R. Yang, W. Dai, C. Li, J. Zou, and H. Xiong, “Tackling over-smoothing
+in graph convolutional networks with EM-based joint topology optimization and node classification,” IEEE Trans. Signal Inf. Process. Over
+Netw., vol. 9, pp. 123–139, 2023.
+[16] M. Lin, T. Xiao, E. Dai, X. Zhang, and S. Wang, “Certifiably robust
+graph contrastive learning,” in Proc. Adv. Neural Inf. Process. Syst.,
+2023, pp. 17008–17037.
+
+ZHONG et al.: NOISE RESISTANT EMTD THROUGH KERNEL-ENHANCED CONTRASTIVE VIEW ALIGNMENT
+
+[17] Q. Mao et al., “FeCoGraph: Label-aware federated graph contrastive
+learning for few-shot network intrusion detection,” IEEE Trans. Inf.
+Forensics Security, vol. 20, pp. 2266–2280, 2025.
+[18] J. Wen, Z. Zhang, Y. Xu, and Z. Zhong, “Incomplete multi-view
+clustering via graph regularized matrix factorization,” in Proc. Eur. Conf.
+Comput. Vis. (ECCV), 2019, pp. 593–608.
+[19] X. Pu, S. L. Chau, X. Dong, and D. Sejdinovic, “Kernel-based graph
+learning from smooth signals: A functional viewpoint,” IEEE Trans.
+Signal Inf. Process. Over Netw., vol. 7, pp. 192–207, 2021.
+[20] X. Liu et al., “Mapping the unseen: Robust IP geolocation through the
+lens of uncertainty quantification,” Comput. Netw., vol. 269, Sep. 2025,
+Art. no. 111405.
+[21] W. Mayer and M. Schmiedecker, “TLScompare: Crowdsourcing rules
+for HTTPS everywhere,” in Proc. 25th Int. Conf. Companion World
+Wide Web - WWW Companion, 2016, pp. 471–476.
+[22] T. Chen and C. Guestrin, “XGBoost: A scalable tree boosting system,”
+in Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining,
+Aug. 2016, pp. 785–794.
+[23] V. F. Taylor, R. Spolaor, M. Conti, and I. Martinovic, “Robust smartphone app identification via encrypted network traffic analysis,” IEEE
+Trans. Inf. Forensics Security, vol. 13, no. 1, pp. 63–78, Jan. 2018.
+[24] M. Shen, J. Zhang, L. Zhu, K. Xu, and X. Du, “Accurate decentralized application identification via encrypted traffic analysis using
+graph neural networks,” IEEE Trans. Inf. Forensics Security, vol. 16,
+pp. 2367–2380, 2021.
+[25] Y. Liu, X. Wang, B. Qu, and F. Zhao, “ATVITSC: A novel encrypted
+traffic classification method based on deep learning,” IEEE Trans. Inf.
+Forensics Security, vol. 19, pp. 9374–9389, 2024.
+[26] P. Sirinam, M. Imani, M. Juarez, and M. Wright, “Deep fingerprinting:
+Undermining website fingerprinting defenses with deep learning,” in
+Proc. ACM SIGSAC Conf. Comput. Commun. Secur. (CCS), Toronto,
+ON, Canada, Oct. 2018, pp. 1928–1943.
+[27] C. Liu, L. He, G. Xiong, Z. Cao, and Z. Li, “FS-Net: A flow sequence
+network for encrypted traffic classification,” in Proc. IEEE Conf. Comput. Commun., Apr. 2019, pp. 1171–1179.
+[28] H. Xu, S. Li, Z. Cheng, R. Qin, J. Xie, and P. Sun, “TrafficGCN: Mobile
+application encrypted traffic classification based on GCN,” in Proc.
+IEEE Global Commun. Conf. (GLOBECOM), Dec. 2022, pp. 891–896.
+[29] Z. Fu et al., “Encrypted malware traffic detection via graph-based
+network analysis,” in Proc. Int. Symp. Res. Attacks, 2022, pp. 495–509.
+[30] Z. Diao et al., “EC-GCN: A encrypted traffic classification framework
+based on multi-scale graph convolution networks,” Comput. Netw.,
+vol. 224, Apr. 2023, Art. no. 109614.
+[31] L. Liu, T. Sun, L. Yang, and J. Bai, “TAM-CNN: An enhanced malicious encrypted traffic detection method with feature-threshold images,”
+in Proc. ACM Turing Award Celebration Conf. (ACM-TURC), 2024,
+pp. 171–176.
+[32] X. Yang, S. Ruan, J. Li, Y. Yue, and B. Sun, “TrafCL: Robust encrypted
+malicious traffic detection via contrastive learning,” in Proc. ACM Int.
+Conf. Inf. Knowl. Manage. (CIKM), 2024, pp. 2910–2919.
+[33] K. Xu et al., “Self-supervised learning malware traffic classification
+based on masked autoencoder,” IEEE Internet Things J., vol. 11, no. 10,
+pp. 17330–17340, May 2024.
+[34] C. Wu, J. Sun, J. Chen, M. Alazab, Y. Liu, and Y. Xiang, ““TCG–IDS:
+Robust network intrusion detection via temporal contrastive graph
+learning,” IEEE Trans. Inf. Forensics Security, vol. 20, pp. 1475–1486,
+2025.
+[35] J. Sun, X. Zhang, Y. Wang, and S. Jin, “CoMDet: A contrastive multimodal pre-training approach to encrypted malicious traffic detection,” in
+Proc. IEEE Annu. Comput., Softw., Appl. Conf. (COMPSAC), Jul. 2024,
+pp. 1118–1125.
+[36] G. Wu, X. Wang, and J. Zhang, “PeerG: A P2P botnet detection
+method based on representation learning and graph contrastive learning,”
+Comput. Secur., vol. 140, May 2024, Art. no. 103775.
+[37] X. Han, S. Liu, J. Liu, B. Jiang, Z. Lu, and B. Liu, “ECNet:
+Robust malicious network traffic detection with multi-view feature and
+confidence mechanism,” IEEE Trans. Inf. Forensics Security, vol. 19,
+pp. 6871–6885, 2024.
+[38] A. Gretton, O. Bousquet, A. Smola, and B. Schölkopf, “Measuring
+statistical dependence with Hilbert–Schmidt norms,” in Algorithmic
+Learning Theory (Lecture Notes in Computer Science), vol. 3734,
+S. Jain, H. U. Simon, and E. Tomita, Eds., Springer, 2005, pp. 63–77.
+[39] N. Moustafa, “A new distributed architecture for evaluating AI-based
+security systems at the edge: Network TON IoT datasets,” Sustain.
+Cities Soc., vol. 72, Sep. 2021, Art. no. 102994.
+
+1523
+
+[40] M. MontazeriShatoori, L. Davidson, G. Kaur, and A. Habibi
+Lashkari, “Detection of DoH tunnels using time-series classification
+of encrypted traffic,” in Proc. IEEE Int. Conf Dependable, Autonomic Secure Comput., Int. Conf Pervasive Intell. Comput., Int. Conf
+Cloud Big Data Comput., Int. Conf Cyber Sci. Technol. Congr.
+(DASC/PiCom/CBDCom/CyberSciTech), Aug. 2020, pp. 63–70.
+[41] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating
+a new intrusion detection dataset and intrusion traffic characterization,”
+in Proc. 4th Int. Conf. Inf. Syst. Secur. Privacy (ICISSP), 2018,
+pp. 108–116.
+[42] G. Draper-Gil, A. H. Lashkari, M. S. I. Mamun, and A. A. Ghorbani,
+“Characterization of encrypted and VPN traffic using time-related,”
+in Proc. 2nd Int. Conf. Inf. Syst. Security Privacy (ICISSP), 2016,
+pp. 407–414.
+[43] X. Lin, G. Xiong, G. Gou, Z. Li, J. Shi, and J. Yu, “ET-BERT: A
+contextualized datagram representation with pre-training transformers
+for encrypted traffic classification,” in Proc. Int. World Wide Web Conf.
+(WWW), pp. 633–642, 2022., 2022, pp. 633–642.
+[44] Z. Hang, Y. Lu, Y. Wang, and Y. Xie, “Flow-MAE: Leveraging
+masked AutoEncoder for accurate, efficient and robust malicious traffic classification,” in Proc. 26th Int. Symp. Res. Attacks, Intrusions
+Defenses, Oct. 2023, pp. 297–314.
+[45] R. Zhao et al., “A novel self-supervised framework based on masked
+autoencoder for traffic classification,” IEEE/ACM Trans. Netw., vol. 32,
+no. 3, pp. 2012–2025, Jun. 2024.
+[46] T. Wang and P. Isola, “Understanding contrastive representation learning
+through alignment and uniformity on the hypersphere,” in Proc. Int.
+Conf. Mach. Learn. (ICML), 2020, pp. 9929–9939.
+
+Meihui Zhong received the M.S. degree from the College of Computer and
+Cyber Security, Fujian Normal University, in 2024. She is currently pursuing
+the Ph.D. degree with the University of Electronic Science and Technology
+of China (UESTC). Her research interests include encrypted traffic analysis
+and trustworthy artificial intelligence.
+
+Ting Zhong (Member, IEEE) received the Ph.D. degree in information and
+communication engineering from the University of Electronic Science and
+Technology of China (UESTC) in 2009. She is currently a Full Professor
+with the School of Information and Software Engineering, UESTC. Her
+current research interests include deep learning, social networks, and cloud
+computing.
+
+Yong Wang is currently a Post-Doctoral Fellow at The Hong Kong University
+of Science and Technology (HKUST). His research interests include real-time
+IP address-based geolocation, internet measurement, and analysis. He is a
+member of China Computer Federation (CCF).
+
+Kai Chen (Senior Member, IEEE) received the Ph.D. degree in computer science from Northwestern University in 2012. He joined HKUST in July 2012,
+where he directs the Intelligent System and Networking (iSING) Laboratory
+and the WeChat-HKUST Joint Lab on Artificial Intelligence Technology
+(WHAT LAB). His research interests include AI-centric networking and
+machine learning systems.
+
+Fan Zhou (Member, IEEE) received the Ph.D. degree from the University of
+Electronic Science and Technology of China (UESTC) in 2011. He is currently
+a Full Professor with the School of Information and Software Engineering,
+UESTC. His research interests include machine learning and social network
+knowledge discovery.

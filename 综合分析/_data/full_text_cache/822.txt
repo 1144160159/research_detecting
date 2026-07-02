@@ -1,0 +1,1844 @@
+TIPSO-GAN: Malicious Network Traffic
+ Detection Using a Novel Optimized Generative
+ Adversarial Network
+ Ernest Akpaku†∗ , Jinfu Chen†∗ , Joshua Ofoeda‡
+ † School of Computer Science and Communication Engineering, Jiangsu University
+
+ Jiangsu Key Laboratory of Security Technology for Industrial Cyberspace,
+ 301 Xuefu Road, Zhenjiang 212013, Jiangsu, China
+ ‡ Department of Information Technology, University of Professional Studies, Accra, Ghana
+
+ ernestakpaku1@gmail.com, jinfuchen@ujs.edu.cn, joshua.ofoeda@upsamail.edu.gh
+
+ Abstract—Detecting advanced cyber threats, particularly zero- by traditional security systems [1]. Widely used deep learnday vulnerabilities, poses significant challenges in network secu- ing methods such as LSTM, CNN, DNN, and RNN traffic
+rity. This paper presents TIPSO-GAN, an optimized Genera- identification methods are broadly trained with labelled traffic
+tive Adversarial Network (GAN) for detecting malicious traffic.
+TIPSO-GAN addresses common GAN-based intrusion detection data. This limits their ability to learn general features from
+system (IDS) issues, such as training instability and mode unlabelled data. As such, they still suffer from low accuracy,
+collapse, by framing GAN training as a swarm optimization particularly when challenged with unknown malicious traffic
+problem, harnessing collective intelligence for complex optimiza- samples [2]. Recent transformer-based architectures, such as
+tion. To enhance Particle Swarm Optimization (PSO), TIPSO- FlowTransformer [3], FT-Transformer [4], MalDetectFormer
+GAN employs three strategies: (1) adaptive inertia weights
+for a balance of exploration and exploitation, (2) a diversity [5], and TransTraffic [6], have shown strong performance in
+preservation strategy to prevent premature convergence, and (3) modeling long-range dependencies in network flows. However,
+a feedback loop to reinitialize stagnant particles. TIPSO-GAN these methods are primarily optimized for static accuracy
+integrates transfer learning with a Temporal-Decaying Multi- and rely on large labeled datasets. Generative adversarial
+Head Self-Attention mechanism to prioritize recent features, networks (GANs) developed by Goodfellow et al. [7] have
+aiding in unseen malicious traffic detection. A combination of
+reconstruction loss and focal loss in the objective function further proven effective for creating models that can mimic previously
+ensures realistic normal samples while focusing on challenging unknown behaviours in real-world situations [8] [9]. GAN
+malicious samples. Across CIC-IDS2018, CICAPT-IIoT2024, and is made up of a generator which is a neural network that
+CIC-DDoS2019, TIPSO-GAN achieves 99.1±0.1, 98.9±0.1, and generates new data samples from a random noise input; and
+98.7±0.1 F1, outperforming the strongest baseline by 0.2–1.0 F1 a discriminator that aims to distinguish between real data
+and exceeding transformer IDS models. On CICAPT-IIoT2024,
+it reaches 0.999±0.002 macro PR-AUC, ahead of the next samples and the fake samples produced by the generator. The
+best method (0.960±0.005). Under strict zero-day evaluations, two networks are trained simultaneously using the MiniMax
+TIPSO-GAN attains 92.3 F1 in LOFO tests and 79–83 F1 in objective function which is based on the principles of the
+cross-dataset experiments while maintaining recall above 0.80. game theory. Compared with other existing generative models,
+Despite PSO-enhanced training, TIPSO-GAN maintains 0.42 ms GANs provide a concise and efficient framework for learning
+latency, ∼2400 flows/s throughput, and a 2.1 GB footprint, with
+stable performance up to 108 flows. Our code is accessible at generative models.
+https://doi.org/10.5281/zenodo.17759516. Although GANs have been successful in image generation
+ and manipulation [10], game development, text-to-image gen-
+ I. I NTRODUCTION eration, medical imaging, and many other tasks [11], they
+ The adoption of internet-based technologies such as cloud suffer from mode collapse resulting in training instability.
+computing, information systems, web servers, and IoTs has The training aims to reach a Nash equilibrium where neither
+proliferated in recent years. This heightened reliance on tech- the generator nor the discriminator can improve their strategy
+nology in our daily routines has rendered us more susceptible given the other’s strategy. However, finding this equilibrium
+to unknown cyberattacks. Identifying previously unknown vul- in practice is challenging due to the non-convex and highnerabilities in networks is challenging as they lack established dimensional optimization landscape, leading to unstable trainsignatures and exhibit novel behaviours not yet recognized ing and mode collapse [12]. Optimizing the network’s weights
+ to minimize the loss function is challenging due to the nonconvex nature of the loss landscape in GANs. This makes it
+* These authors contributed equally and should be regarded as co-first authors.
+ Corresponding author: Jinfu Chen.
+ difficult to find the optimal set of weights that results in highquality, diverse generated samples.
+Network and Distributed System Security (NDSS) Symposium 2026 Many recent efforts on GANs have focused on overcoming
+23-27 February 2026, San Diego, CA, USA
+ISBN 979-8-9919276-8-0
+https://dx.doi.org/10.14722/ndss.2026.243241
+www.ndss-symposium.org
+these optimization difficulties by developing various adver- detection. First, an adaptive Sigmoidal inertia weight adjustsarial training objectives [13]. The gradients of the objective ment strategy is introduced into the PSO algorithm and comfunction of the network parameters guide the training. How- pared with the popular linearly decreasing approach, and othever, training GANs with the original Jensen–Shannon diver- ers. The best performing is used to effectively explore GAN’s
+gence (JSD) leads to vanishing gradients leading to unstable parameter search space to find an optimal solution. Second, the
+training dynamics [14]. To address these issues, researchers traditional GAN is modified through novel architectural design
+have introduced alternative adversarial training objectives such a new loss reconstruction function, and PSO-based training.
+as the least squares [15], absolute deviation, energy-based, Last, a pretraining model named DeePred is introduced and
+spectral normalization [14], Kullback–Leibler (KL) divergence applied to improve the performance of an unknown malicious
+[16], Wasserstein Distance, and the Wasserstein Distance with traffic detector. Leveraging, on the strengths of the proposed
+a penalty term [17]. However, these objectives have not methods, this study makes the following contributions:
+fully addressed the training and mode collapse challenges 1) We propose TIPSO-GAN, a framework that frames
+completely. GAN training as a swarm optimization problem, lever-
+ In this study, we propose a novel GAN framework named aging an enhanced PSO algorithm in a two-staged ad-
+TIPSO-GAN, leveraging the improved architectural design of versarial training. We introduce adaptive inertia weights,
+GAN and enhanced Particle Swarm Optimization (PSO) to a diversity preservation mechanism, and reinitialization
+enhance the training dynamics. Unlike conventional GANs that of stagnant particles to enhance the PSO to dynamically
+engage in fixed adversarial competition, our PSO-optimized balance exploration and exploitation, prevent premature
+GAN harnesses the collective intelligence of a swarm to convergence, and avoid stagnation in the optimization
+navigate the complex optimization landscape. By treating process, thereby enhancing the training stability and conthe generator’s parameters as particles within the swarm, vergence of TIPSO-GAN. These enhancements ensure
+we evolve the generator through iterative updates guided by better exploration and exploitation of the search space
+both individual and social experiences within the swarm, during training, enabling better convergence speed, more
+effectively transforming the adversarial training into a PSO- stable training, and effective mitigation of mode coldriven optimization challenge. In our implementation, we note lapse.
+that the fast convergence speed of PSO can quickly lead GANs 2) A novel reconstruction loss function and a pre-training
+to find a good set of parameters, which can result in stable and network DeePred, are introduced to improve the adefficient training, especially in the initial phases of training. versarial traffic generation ability of the generator and
+However, this speed could limit the algorithm from exploring the detection ability of the discriminator in TIPSOthe entire solution space sufficiently, which could be crucial GAN. DeePred is integrated with a novel Multihead Self
+for GANs that require a thorough search to avoid getting stuck Attention Mechanism (MHSA) that utilizes a temporal
+in suboptimal configurations. Also, despite its global search decaying parameter to provide larger weights to features
+capability, the standard PSO might not be as effective in fine- that are more recent and are indicative of malicious
+tuning the parameters near the end of the optimization process, behaviour. A focal loss is introduced into the discrimpotentially leaving room for improvement in the generator’s inator to address class imbalance by focusing on hardperformance. to-classify malicious samples.
+ Linearly decreasing the inertia weight and improving the 3) Extensive experiments on three datasets demonstrate
+weight factor have been proposed to address these problems that TIPSO-GAN outperforms conventional GAN and
+in clustering algorithms. However, it may not be suitable its variants, state-of-the-art GAN-based-IDS variants and
+for complex problems where the optimization surface has four other existing deep learning IDS models in terms of
+many local optima or varying degrees of ruggedness. Also, accuracy, precision, recall, and F1-score. TIPSO-GAN
+it uses a fixed predetermined schedule for reducing inertia also exhibits improved training stability and resistance
+weights which lacks flexibility to adapt to different stages of to mode collapse and class imbalance, making it highly
+the optimization process or diverse problem landscapes. For suitable for real-world network intrusion detection sysexample, in a linearly decreasing inertia weight schedule, the tems.
+inertia weight starts at an initial value and decreases uniformly The remaining sections of the study are organized as follows:
+to a final value by the end of the optimization process. Section II discusses related studies. Section III presents de-
+To address these challenges, we enhanced the standard PSO tailed descriptions of the proposed method. In Sections V and
+algorithm to incorporate adaptive inertia weights, diversity VI, we describe the experimental setup and evaluation, and
+preservation strategies, and a feedback loop mechanism that results respectfully. The conclusion and future research are
+encourages exploration in the later stages of optimization. discussed in section VII.
+These modifications ensure PSO-driven GAN optimization
+ II. R ELATED S TUDIES
+to avoid local optima and achieve more robust and diverse
+generator parameters. A. Generative Adversarial Networks in Cybersecurity
+ In this paper, several novel strategies are proposed to address In recent years, GANs have been implemented for network
+the challenges discussed for better malicious network traffic security, particularly for the detection of malicious traffic. The
+
+ 2
+ability of GANs to generate realistic synthetic data has been GANs address this by using neural networks to define the
+leveraged to enhance the performance of intrusion detection probability distribution [23], which introduces its own set of
+systems (IDS) by simulating a wide range of potential attacks challenges, such as the need for careful architecture design and
+[13]. One of the pioneering works in this area is the paper tuning to ensure that the generated data accurately represents
+by Das [18], which demonstrates the application of GANs in the underlying distribution of normal network traffic. DCGAN
+reproducing both categorical and continuous synthetic network [24] introduced architectural constraints that improved the statraffic features. Building upon this foundation, researchers bility of GAN training by replacing pooling layers with strided
+have explored the integration of GANs with deep neural convolutions and fully connected layers with global average
+networks for more effective anomaly detection in network pooling in the discriminator to reduce checkerboard artifacts
+traffic. The work by Liu and Liu [19] presents a federated and simplify the architecture. However, these modifications
+learning approach using GANs, which allows for localized did not eliminate the issues of training instability and mode
+training and centralized model updates, addressing concerns of collapse. Subsequent research focused on reconstructing the
+privacy and model tampering in large-scale networks. Further loss function to address these training problems. The Wasseradvancements have been made in the detection of adversarial stein GAN (WGAN) [14] introduced a new loss function
+traffic flows by employing GAN-based attack algorithms like based on the Wasserstein distance, which provides a more
+NIDSGAN [20], which develops a GAN-based attack algo- stable training objective. An extended WGAN called WGANrithm capable of generating highly realistic adversarial traffic GP [17] added a gradient penalty term to the loss function,
+flows that can evade machine learning-based NIDS. Recent though this introduced additional computational overhead. The
+work has also explored conditional GANs for generating LSGAN [15] proposed using least squares loss, but suffered
+specific attack types and advanced architectures for improving from slower convergence rates on complex datasets. Beyond
+synthetic traffic quality. loss function modifications, advanced architectural innovations
+ However, these approaches predominantly focus on gener- have attempted to address training instability. Techniques such
+ating synthetic data to augment training datasets rather than as spectral normalization and progressive training have shown
+directly addressing the challenge of detecting previously un- improvements in specific domains, yet these methods primarily
+seen attack patterns. For instance, Das [18] generates synthetic target image generation tasks. When applied to network traffic
+network flows but requires pre-existing attack labels, while data, these stabilization techniques show limited effectiveness
+NIDSGAN [20] creates adversarial examples primarily for due to the high-dimensional, non-stationary nature of network
+testing existing detectors rather than improving zero-day detec- features. Recent empirical studies report that even with these
+tion capabilities. Moreover, existing GAN-based IDS methods advanced techniques, GANs applied to cybersecurity datasets
+struggle with the unique characteristics of network traffic still experience mode collapse rates of 20-35%, particularly
+data. Unlike image generation where GANs excel, network when attempting to generate minority class samples representtraffic exhibits complex temporal correlations, multi-modal ing sophisticated attacks [13]. The fundamental challenge refeature distributions, and extreme class imbalance between mains that existing stabilization methods rely on assumptions
+normal and malicious samples. Liu and Liu [19] reported about data structure and training dynamics that do not hold
+that their federated GAN approach achieved only 78% detec- for the adversarial, multi-modal distributions characteristic of
+tion accuracy on unknown attack variants, significantly lower network security data.
+than performance on known attacks. Similarly, recent studies
+show that conventional GAN architectures fail to preserve the C. Swarm Intelligence for Neural Network Optimization
+statistical properties of network protocols when generating In recent times, swarm intelligence algorithms [25] such as
+synthetic traffic, leading to unrealistic packet sequences that PSOs [26] have achieved considerable success across a wide
+can be easily distinguished by modern firewalls. Despite these range of computational tasks, including modelling, optimizapromising initial results, current GAN applications in network tion, and design of GANs [27]. PSO operates by maintaining a
+security remain limited by training instability and inability population of particles, each representing a potential solution
+to generalize beyond their training distributions, constraining in the search space, where particles update their velocities
+their effectiveness in dynamic threat environments. and positions based on their personal best experiences and
+ the global best solution found by the swarm. This population-
+B. GAN Training Optimization and Stability based approach enables PSO to explore multiple regions
+ As noted in [21], GANs are known to suffer from training of the search space simultaneously, making it particularly
+instability, which can lead to issues such as mode collapse and effective for complex optimization problems with multiple
+training oscillations. These challenges can affect the quality local optima. Recent applications of PSO in neural network
+and diversity of the generated samples, which are crucial for optimization have demonstrated its effectiveness in avoiding
+accurately simulating and detecting a wide range of network local minima through population-based search strategies [28].
+attacks. Another limitation highlighted in the literature is the Unlike gradient-based methods that rely on local derivative
+complexity of the generator network in GANs [13]. When information, PSO maintains diversity through swarm dynamics
+the generator’s probability distribution is highly complex, it and can escape suboptimal regions by leveraging collective
+becomes difficult to estimate the maximum likelihood [22]. intelligence. In the context of GAN training, PSO offers the-
+
+ 3
+oretical advantages over traditional Adam or SGD optimizers shot learning, they fail to integrate transfer learning for both
+by treating the generator parameters as particle positions in data synthesis and knowledge reuse. Few studies unify known
+the high-dimensional parameter space, enabling global search and evolving attack detection in a coordinated framework;
+capabilities that are particularly valuable given the non-convex, even recent multi-level or hybrid models [36], [37] omit PSO
+multi-modal nature of GAN loss landscapes [29]. However, optimization and transfer learning within a single training
+conventional PSO suffers from premature convergence and pipeline.
+insufficient exploration in high-dimensional parameter spaces
+typical of GAN architectures. The standard PSO algorithm TABLE I: Selected Related Studies. Training Stability (TS),
+can become trapped in local optima when the swarm loses Mode Collapse (MC), Class Imbalance (CI), Zero-Day Detecdiversity, particularly in complex optimization landscapes with tion (ZD)
+numerous suboptimal peaks. Variants such as linearly decreas- Study Year Method TS MC CI ZD TL PSO MPT
+
+ing inertia weight PSO [28] have been proposed to balance Das [18]
+ Zolbayar et al. [20]
+ 2022
+ 2022
+ FGAN
+ NIDSGAN
+ X
+ X
+ X
+ X
+ X
+ ✓
+ ✓
+ X
+ X
+ X
+ X
+ X
+ X
+ X
+exploration and exploitation phases by gradually reducing Nguyen et al. [31]
+ Seo et al. [38]
+ 2023
+ 2019
+ GAN-SCADA
+ GIDS
+ ✓
+ ✓
+ ✓
+ ✓
+ ✓
+ ✓
+ X
+ ✓
+ X
+ X
+ X
+ X
+ X
+ X
+the influence of previous velocities over time. However, this Rahman et al. [39]
+ Aldhaheri & Alhuzali [40]
+ 2024
+ 2023
+ SYN-GAN
+ SGAN-IDS
+ X
+ X
+ X
+ X
+ ✓
+ X
+ X
+ ✓
+ X
+ X
+ X
+ X
+ X
+ X
+ Torres et al. [32] 2023 GAN-AE ✓ ✓ ✓ ✓ X X X
+linear scheduling approach lacks the flexibility to adapt to Poongodi & Hamdi [37] 2023 Multi-GAN-IoV ✓ ✓ ✓ X X X ✓
+ Mari et al. [41] 2023 GAN-Adversarial ✓ X X ✓ X X X
+different stages of the optimization process or diverse problem Zhang & Zhao [33] 2021 PSO-GAN ✓ ✓ X X X ✓ X
+ Liu et al. [34] 2022 Parameterized PSO-GAN ✓ ✓ X X X ✓ X
+landscapes, making it less effective in complex problem sce- Sundaram et al. [35] 2023 PSO-GRU-GAN-5G ✓ ✓ ✓ ✓ X ✓ X
+ Roopak et al. [42] 2024 Unsupervised Ensemble ✓ X ✓ ✓ X X X
+narios where the optimization surface has many local optima Sarhan et al. [43] 2023 Zero-Shot ML X X ✓ ✓ X X X
+ Touré et al. [36] 2024 Hybrid Learning ✓ X ✓ ✓ X X ✓
+or varying degrees of ruggedness. The challenge becomes Huang et al. [44] 2021 T-GAN ✓ X ✓ X X X X
+ Tuli et al. [45] 2022 TranAD (Transformer) ✓ ✓ ✓ X X X X
+particularly acute in GAN optimization, where the objective Du et al. [46] 2025 TransfficFormer ✓ ✓ ✓ X X X X
+ Manocchio et al. [3] 2024 FlowTransformer ✓ ✓ ✓ ✓ X X X
+function changes continuously due to the adversarial game TIPSO-GAN (Proposed) 2025 Enhanced PSO-GAN ✓ ✓ ✓ ✓ ✓ ✓ ✓
+
+between generator and discriminator. The fitness landscape
+exhibits non-stationarity as discriminator updates alter the gen-
+ III. P ROPOSED M ETHOD
+erator’s optimization surface, requiring PSO variants that can
+dynamically adjust exploration-exploitation balance based on A. The TIPSO-GAN Framework
+real-time feedback. Traditional PSO parameters such as fixed To detect unknown network attacks with high accuracy,
+inertia weights and acceleration coefficients prove inadequate we propose a two-stage adversarial-based intrusion detection
+in this environment, as they cannot respond to the evolving model named TIPSO-GAN, as illustrated in Figure 1. The
+loss topology that characterizes adversarial training dynamics core of the framework is TIPSO-GAN, which combines the
+[28]. These problems could critically compromise PSO’s effi- benefits of PSOGAN and the pre-training model (DeePred) to
+cacy in high-dimensional, non-convex optimization problems enhance the detection of both known and unknown attacks.
+characterized by extensive local minima networks, thereby In this framework, the discriminator of PSOGAN and the prepotentially leading to suboptimal convergence trajectories and training model DeePred are crucial for transferring knowledge
+diminished algorithmic convergence velocities [30]. to the final TIPSO-GAN. The Generator GT in TIPSO-GAN
+ is initialized by transferring the structure and parameters from
+D. Novelty of this study the Generator G of PSOGAN. PSOGAN is trained exclusively
+ As summarized in Table I, although numerous GAN-based on normal traffic data. During training, the generator G learns
+intrusion detection approaches exist, they seldom address key to produce modelled samples that approximate the normal
+challenges comprehensively. Despite recent advances [31], traffic distribution. Once the PSOGAN has completed its
+[32], most still suffer from training instability and high mode training, its discriminator D is discarded, and the trained
+collapse when applied to heterogeneous network traffic data. generator G is transferred to initialize the Generator GT in
+Stabilization techniques such as spectral normalization and TIPSO-GAN. This ensures that the Generator GT starts with
+progressive training, designed for vision tasks, remain inef- a good understanding of normal traffic, enabling it to generate
+fective for sparse cybersecurity datasets. Furthermore, the use more accurate representations of normal traffic during training.
+of PSO in GANs for intrusion detection is largely unexplored. To strengthen the detection capability of the Discriminator
+While PSO-GAN has shown promise in other domains [33], DT in TIPSO-GAN, we transfer the structure and parameters
+[34], limited works [35] lack adaptive inertia weighting and of the pre-training model DeePred into Discriminator DT . The
+diversity-preserving mechanisms essential for robust adversar- DeePred model has a structure similar to the discriminator
+ial learning. We also note that transformer-based IDS models in PSOGAN but is trained using a dataset containing both
+(TranAD, TransfficFormer, FlowTransformer) improve stabil- normal and known malicious traffic. This gives DeePred the
+ity but do not incorporate PSO-guided GAN training or zero- ability to effectively distinguish between normal and malicious
+day–oriented transfer learning. samples (i.e., 2-class classification). By transferring the trained
+ Another gap is the absence of transfer learning. Existing parameters from DeePred, the Discriminator DT of TIPSO-
+GAN-based IDSs are typically trained from scratch, neglecting GAN inherits a robust classification capability, enhancing its
+pre-trained models that enhance convergence and generaliza- ability to detect unknown malicious traffic. After the initial
+tion. Although hybrid approaches such as [36] employ zero- transfer, TIPSO-GAN undergoes unsupervised training, using
+
+ 4
+ B. Modified PSO for GAN Optimization
+ We propose an improved PSO variant that integrates an
+ adaptive inertia weight and a diversity preservation mechanism. Our enhanced PSO algorithm introduces an adaptive
+ inertia weight w that dynamically adjusts based on the swarm’s
+ performance. Unlike traditional PSO algorithms that use a
+ fixed or linearly decreasing inertia weight, our method adapts
+ the inertia weight non-linearly based on real-time feedback,
+ providing greater flexibility in balancing exploration and exploitation. In the early stages of optimization, a higher inertia
+ weight is used to facilitate global exploration, enabling particles to traverse the search space extensively. As the algorithm
+ progresses, the inertia weight decreases, honing the particles’
+ search towards local refinement and convergence to optimal
+ Fig. 1: Detection roadmap of TIPSO-GAN. solutions. Algorithm 2 shows the working principle of the
+ proposed PSO. The adaptive inertia weight is updated using
+Note. N: Normal traffic, M: Known Malicious traffic, UM:
+ a non-linear function, governed by a sigmoid function, to
+Unknown Malicious traffic.
+ provide rapid adaptation when significant improvements are
+ detected and a gradual approach when progress plateaus. The
+ inertia weight w(t) at iteration t is calculated as:
+Algorithm 1 Algorithm of the Proposed TIPSO-GAN Model 1
+ w(t) = wmin + (wmax − wmin ) × (1)
+ 1 + e−k(∆f (t)−fthreshold )
+ 1: Initialize: DN : normal traffic; DE: train set; V E: val
+ set; T B: test set; B: batch size; Epochs where: wmax and wmin are the maximum and minimum inertia
+ 2: G: generator trained from PSOGAN using DN weights, respectively. ∆f (t) represents the change in the
+ 3: DeeP red: discriminator pre-trained with DE, V E global best fitness over a certain number of iterations, defined
+ 4: Initialize GT ← G, DT ← DeeP red as ∆f (t) = fbest (t) − fbest (t − ∆t). fthreshold is a predefined
+ 5: Training: fitness improvement threshold. k is a scaling factor controlling
+ 6: for each epoch in Epochs do the steepness of the sigmoid function. ∆t is the number of
+ 7: Generate fake samples with GT (size B) iterations over which the fitness change is measured.
+ 8: Sample real flows from DN (size B)
+ C. Improved particle diversity
+ 9: Train discriminator DT on both batches
+10: if validation accuracy drops for n=3 rounds then Complementing the adaptive inertia weight, the diversity
+11: Output DT from round n+1 and break preservation mechanism is designed to prevent premature
+12: else if accuracy on normal < T then convergence, a common pitfall in PSO where particles cluster
+13: Output DT from round n−1 and break around sub-optimal solutions. This mechanism sets our ap-
+14: end if proach apart from existing PSO variants by actively maintain-
+15: Train generator GT ing swarm diversity through multiple strategies not commonly
+16: end for combined in standard algorithms. It maintains diversity within
+17: Output: final discriminator DT as classifier C the swarm through three strategies:
+ a) Fitness Sharing: Particles in densely populated regions are penalized to encourage exploration of less-visited
+ areas. Unlike traditional PSO, which treats particle fitness
+a dataset consisting only of normal traffic samples. The goal independently, our method adjusts fitness values based on
+is for the Generator GT to continue learning the normal traffic particle proximity, promoting a more diverse search. The
+distribution while the Discriminator DT refines its ability to shared fitness fˆi for particle i is calculated as:
+identify traffic samples that deviate from the normal (i.e., fi
+potential unknown attacks). A validation set containing both fˆi = PN (2)
+normal and unknown malicious samples is used to monitor the j=1 sh(dij )
+performance of TIPSO-GAN during training. The adversarial where fi is the original fitness of particle i. N is the number of
+game between the generator and discriminator continues until particles. sh(dij ) is the sharing function based on the distance
+the detection accuracy of normal traffic reaches a certain dij between particles i and j, defined as:
+threshold or the overall accuracy starts to decline. Once (  α
+training is complete, the Discriminator DT of TIPSO-GAN dij
+ 1 − σshare if dij < σshare
+is output as the final anomaly detector. sh(dij ) = (3)
+ 0 otherwise
+
+ 5
+σshare is the sharing radius. α controls the shape of the sharing
+function. Re-initialization of Stagnant Particles: Particles that
+have not improved their personal best over a set number of
+iterations Tstagnant are re-initialised to reintroduce variability.
+This differs from standard PSO, where particles may remain
+stagnant without mechanisms to reintroduce diversity. The reinitialisation is performed as:
+ If t − tlast improve ≥ Tstagnant ,
+ then xi (t) = xmin + rand() × (xmax − xmin ) (4)
+here, tlast improve is the iteration when particle i last improved Fig. 2: Structure of the Multihead Self Attention Mechanism
+its personal best. xmax and xmin define the bounds of the search
+space. rand() generates a random vector with components
+uniformly distributed in [0, 1]. the input into a feature map, followed by a Leaky ReLU activab) Randomness in Velocity Update: Introducing a ran- tion function to maintain non-linearity. The second and third
+dom component to the velocity update equation adds stochas- convolutional layers continue to downsample the input into
+ticity, helping particles escape local optima. Traditional PSO progressively smaller but deeper feature maps, ensuring that
+typically lacks this random perturbation, and its inclusion in the model captures increasingly abstract patterns in the traffic
+our method enhances the ability to explore the search space flow. After the convolutional layers, we introduce the MHSA
+more thoroughly. The modified velocity update equation is: mechanism. Unlike the traditional attention mechanism, we
+ introduce a temporal decay factor that diminishes the influence
+ vi (t + 1) = w(t) · vi (t) + c1 · r1 (t) · [pi (t) − xi (t)]
+ of tokens based on their relative positions in the sequence.
+ + c2 · r2 (t) · [g(t) − xi (t)] The decay factor γt is then applied to the attention scores in
+ + β · randn() (5) formula 6.
+ γt = exp (−λ|t − i|) (6)
+where vi (t+1) is the updated velocity of particle i at iteration
+t + 1. w(t) is the adaptive inertia weight at iteration t. c1 Where λ is a decay rate hyperparameter that controls how
+and c2 are cognitive and social acceleration coefficients. r1 (t) quickly the attention fades over time. t is the current token’s
+and r2 (t) are random numbers uniformly distributed in [0, 1]. position. i is the position of the token in the sequence.
+pi (t) is the personal best position of particle i. xi (t) is the The decay factor γt exponentially decreases as the distance
+current position of particle i. g(t) is the global best position between token positions increases, thereby lowering the atfound by the swarm. β is a small constant controlling the tention score of distant tokens. For attention computation, γt
+magnitude of the random perturbation. randn() generates a integrated into the attention logits before applying the softmax.
+random vector with components normally distributed with This modification ensures that as the distance between tokens
+mean 0 and variance 1. The synergy of the adaptive inertia increases, the corresponding attention scores are reduced exweight and the diversity preservation mechanism equips the ponentially, making the model focus more on recent tokens.
+improved PSO algorithm with enhanced flexibility and robust- During computation, each head has its decay factor as
+ness. It dynamically adjusts to the demands of the optimization
+ (Q, K, V ) = Concat (head1 , head2 , . . . , headh ) W O (7)
+process, balancing the need for broad exploration with finegrained exploitation. Therefore, the MHSA introduced into DeePred is given by:
+ Qi K ⊤
+  
+D. Pre-trained Model (DeePred) construction
+ headi = softmax √ i ⊙ Γi Vi (8)
+ DeePred, which is a binary classifier based on CNN is dk
+introduced to improve the performance of the discriminator where h is the number of heads and each Γi is the decay matrix
+in TIPSO-GAN to detect zero-day malicious network traffic. specific to that head. Following the MHSA layer, the feature
+The DeePred pre-training stage provides initialization using maps are flattened and passed through a fully connected layer
+known malicious samples to stabilize discriminator learning for classification. Once trained, the model is transferred to the
+but does not constrain detection to those patterns. TIPSO- TIPSO-GAN framework to serve as the initial discriminator,
+GAN’s zero-day capability arises from its unsupervised fine- where it is further fine-tuned to handle more complex and
+tuning on normal traffic, where deviations from the learned evolving network threats. The full structure of the MHSA is
+distribution are flagged as anomalies. The key features and shown in Fig. 2.
+parameters of DeePred are shown in Figure 4b. It is integrated
+with a novel Multihead Self-Attention Mechanism (MHSA) E. Improved Design of the GAN Structure
+based on a temporal decaying parameter to provide larger In the proposed TIPSO-GAN framework, we introduce
+weights for features that are more recent and indicative of a dynamic loss function to mitigate issues such as mode
+malicious behaviour. The first convolutional layer transforms collapse and training instability. This dynamic loss function,
+
+ 6
+Ldynamic (θ), is constructed by combining three key compo- function is defined as the expected value of the L1 norm of
+nents: the adversarial loss L(G, D)(θ), divergence D(θ), and the difference between the original sample and the sample
+stability score S(θ). Additionally, we apply label smoothing reconstructed by the generator, based on the features extracted
+to further stabilize the training process. by the discriminator. This can be expressed as:
+ Unlike the adversarial loss L(G, D)(θ), derived from the h i
+traditional DCGAN setup, we incorporate label smoothing LX
+ ϕ,θ = Ex∼px Gθ (DϕF (x)) − x 1 (11)
+in our approach to prevent the discriminator from becoming
+overconfident. Instead of hard labels (1 for real samples and Where Gθ (DϕF (x)) denotes the generator’s reconstruction
+0 for generated samples), we use softened labels: 0.9 for of the input sample x using the features extracted by the
+real samples and 0.1 for generated samples. This encourages discriminator. The L1 norm ensures that the reconstructed
+the discriminator to generalize better and avoid overfitting to sample closely resembles the original, which enhances the
+the training data. The adversarial loss for the generator and discriminator’s ability to recognise real (normal) samples,
+discriminator is given by: thereby reducing false positives.
+ m
+ ! a) Addressing Class Imbalance with Focal Loss: While
+ 1 X the reconstruction loss improves the quality of the generated
+ L(G, D) = min − log D(G(zi ))
+ G m i=1 samples, TIPSO-GAN also incorporates a focal loss in the
+ m
+ ! discriminator to tackle class imbalance between normal and
+ 1 X malicious traffic. The focal loss emphasizes hard-to-classify
+ + max log D(xi ) (9)
+ D m i=1 samples—particularly under-represented malicious traffic. The
+ focal loss is defined as:
+ m
+ !
+ 1 X 
+ + max log 1 − D(G(zi ))
+ D m i=1 F L(pt ) = −αt (1 − pt )γ log(pt ) (12)
+Here, label smoothing is applied to adjust the discriminator’s Where pt is the model’s predicted probability for the true class.
+output as follows: αt is a weighting factor that balances the importance of the
+ ( minority class (malicious traffic). γ is the focusing param-
+ 0.9 if x ≥ 0.5 eter that modulates the influence of easier examples, down-
+ D(x) =
+ 0.1 if x < 0.5 weighting them while focusing on harder-to-classify malicious
+This smooth label approach improves the discriminator’s per- traffic. By using focal loss, the discriminator can focus more
+formance on unseen data by reducing overfitting. To ensure on detecting minority-class samples, such as rare and unknown
+more balanced training, we combine this adversarial loss with malicious traffic, while avoiding being overwhelmed by the
+the divergence D(θ) and stability score S(θ), forming the majority class (normal traffic). Both reconstruction loss and
+complete dynamic loss function: focal loss are integrated into the overall objective function to
+ ensure that the generator and discriminator work in tandem to
+ Ldynamic (θ) = α · L(G, D)(θ) + β · D(θ) + γ · S(θ) (10) produce realistic, diverse samples while addressing the class
+ imbalance problem.
+Here, α, β, and γ are adaptive coefficients optimized through b) Discriminator Loss: The discriminator’s objective
+PSO, controlling the contributions of each term. We define the function now combines the reconstruction loss and the focal
+initial ranges of α, β, and γ within [0, 1], ensuring their sum loss, ensuring that the discriminator can: 1. Distinguish beequals 1 to maintain balance across the three components. This tween real and generated samples based on the reconstruction
+dynamic formulation introduces label smoothing and adaptive of intricate features. 2. Detect minority-class malicious traffic
+weighting to promote more effective training and prevent mode more effectively. The overall discriminator loss is expressed
+collapse and vanishing gradients. as:
+ 1) Reconstruction loss function: As described earlier, the
+ LD D X
+ ϕ = Lϕ + λ · Lϕ + F L(pt ) (13)
+generator in TIPSO-GAN is transferred from PSOGAN, which
+has demonstrated strong sample generation capabilities. How- Where LD ϕ is the standard adversarial loss for the discriminaever, during adversarial training in TIPSO-GAN, the generated tor. LX is the reconstruction loss that helps the discriminator
+ ϕ
+pseudo-samples may become too similar to real samples, distinguish real from generated samples. F L(pt ) is the focal
+potentially increasing the false positive rate. To mitigate this, loss, which ensures that the discriminator focuses more on
+a reconstruction loss is introduced in TIPSO-GAN’s objective hard-to-classify examples, especially minority-class malicious
+function. This not only enhances the generator’s ability to traffic.
+produce diverse, realistic samples but also improves the dis- c) Generator Loss: Similarly, the generator’s loss funccriminator’s capacity to distinguish between real and generated tion includes the reconstruction loss, guiding the generator to
+samples. The structure and parameters of the proposed recon- produce samples that closely resemble real network traffic.
+struction loss function in shown in Fig. 5. The discriminator The generator’s loss is defined as:
+outputs a one-dimensional feature map in the flattened layer,
+which is utilised for reconstruction. The reconstruction loss LG G X
+ θ = Lθ + λ · Lθ (14)
+
+ 7
+ V. E XPERIMENTAL S ETUP AND E VALUATION
+ A. Implementation Details
+ Hardware and software setup details are presented in the
+ Appendix A-B (see Table XIV). For the GAN framework, the
+ generator and discriminator networks were configured with
+ Fig. 3: The structure of DCGAN setup settings in Figs 3 and 4a. Detailed sensitivity analysis
+ and hyperparameter settings information are presented in Table
+ XV, and Figs. 11-14.
+Where LG θ is the standard adversarial loss for the generator.
+ B. Dataset
+LXθ is the reconstruction loss, ensuring the generated samples
+align closely with normal traffic patterns. The reconstruction We evaluated our framework using the CIC-IDS2018, CICloss helps the discriminator extract intricate features from DDoS2019 [47], and CICAPT-IIoT2024 [48], each containing
+network traffic, reducing false positives and improving the normal and various attack traffic types. We evaluate under
+identification of normal and malicious patterns. Focal loss leakage-robust settings. Details of the datasets are presented
+ensures that the discriminator pays more attention to minority- in Table II. For CIC-IDS2018 and CIC-DDoS2019, we use
+class samples, improving its ability to detect rare malicious temporal splits that simulate deployment on future traffic. For
+traffic. CICAPT-IIoT2024, we use grouped splits by scenario and
+ 2) Structure and Parameters of PSOGAN: The structure also leave-one-scenario-out folds. Before splitting, we remove
+of the proposed generator architecture (PSOGAN) is shown exact and near-duplicate flows using hashing on normalized
+in Fig. 3. It is based on DCGAN but introduces key en- numeric features and an L2 tolerance of 1e-6. Where available,
+hancements to improve its capacity for generating realistic we split by flow/session keys and source hosts so that related
+network traffic data. Starting with a 100-dimensional noise flows do not cross partitions. All preprocessing models are
+vector, the input is passed through a fully connected layer fit on the training set only and applied to validation and
+and progressively upsampled via a series of deconvolutional test. The resulting transformation parameters are then applied
+layers. Key differences from the standard DCGAN include the unchanged to the validation and test partitions. No information
+incorporation of residual connections for stable training, and from validation or test data is used during preprocessing,
+dilation in the second deconvolutional layer to capture multi- training, or model selection, ensuring strict isolation and
+scale features. The discriminator in our proposed architecture preventing leakage. TIPSO-GAN operates at the flow level,
+is shown in Fig. 4a. It is designed to distinguish between real aggregating packets within each TCP/UDP session to capture
+and generated network traffic samples, following a modified temporal and statistical dependencies.
+DCGAN framework. The input to the discriminator passes
+ TABLE II: Details of datasets used.
+through several convolutional layers that progressively reduce
+ # Dataset Hosts Flows Normal (%) Attack Types Format
+its spatial dimensions while increasing the depth of the feature 1 CICDDoS2019 130,079 888,825 0.93 12 CSV
+maps. 2 CICAPT-IIoT2024 412,640 1,264,978 68.42 8 CSV
+ 3 CIC-IDS2018 311,940 2,830,743 78.90 8 PCAP
+
+ IV. T HREAT M ODEL C. Baseline models
+ We assume adversaries aim to evade detection of mali- We compare TIPSO-GAN against thirteen baselines covercious traffic, degrade IDS performance through poisoning, ing classical machine learning, transformer-based IDS, GAN
+or exploit distribution shifts such as cross-domain or zero- variants, IDS-oriented GANs, and other deep learning methday attacks. We consider white-box (full architecture and ods. Classical models include Logistic Regression, XGBoost
+parameters), gray-box (architecture known, parameters hid- (weighted), and LightGBM (weighted). Transformer-based
+den), and black-box (query-only) knowledge settings. The IDS baselines are TransfficFormer [46], FT-Transformer [4],
+adversary can perturb flow features within protocol-valid and MalDetectFormer [5]. GAN variants include the standard
+bounds, generate adversarial traffic with generative models, GAN, WGAN, and WGAN-GP [49]. IDS-oriented GANs
+inject mislabeled samples during training, or launch transfer include IDSGAN [50], IGAN-IDS [51], SYN-GAN [52],
+attacks from substitute models; in real deployments they may SGAN-IDS [40], BigGan [53], and FenceGAN [54]. Adalso attempt resource exhaustion by overloading throughput. ditional deep learning baselines are IDS-INT [55], PSO-D-
+We assume the defender controls the training environment SEM [56], FR-APPSO-BiLSTM [57], and HAGRU [19]. This
+and preprocessing pipeline, which are trusted, while traffic set spans classical, generative, and deep learning methods,
+inputs may be adversarial. Under these assumptions, TIPSO- providing a comprehensive basis for comparison.
+GAN is evaluated against static perturbations, adaptive attacks,
+ VI. R ESULTS
+domain-constrained and mimicry attacks, poisoning, blackbox transfer, cross-domain generalization, and unseen zero- Our study addresses the following five main questions:
+day (LOFO) scenarios, aligning the evaluation with the threat 1) Does TIPSO-GAN achieve stable GAN training and
+model. realistic flow generation? (Sections VI-A & VI-B)
+
+ 8
+ (a) (b)
+ Fig. 4: Network structure of pre-training model DeePreD (a) and Discriminator (b) of DCGAN
+
+ entropy/coverage, converging as early as epoch 50 and plateauing thereafter. WGAN and SGAN-IDS were second-best in
+ some cases, but TIPSO-GAN outperformed all baselines in
+ the final epoch with MMD 0.063, KS 0.095, RMSE 0.081,
+ entropy 0.91, and coverage 96%. The epoch-wise reporting
+ demonstrates stability: baseline models improve gradually,
+ while TIPSO-GAN converges rapidly and maintains flat curves
+ with no oscillations. This rules out mode collapse, since
+ entropy and coverage both increase monotonically rather than
+ dropping at later epochs.
+
+ TABLE III: Stability and Mode Collapse.
+ Models
+ Fig. 5: Reconstruction of loss flow chart Metric / Epoch
+ GAN DCGAN LSGAN WGAN WGAN-GP BigGAN SGAN-IDS TIPSO-GAN
+ 20 0.310 0.280 0.260 0.200 0.185 0.150 0.170 0.095
+ 50 0.240 0.210 0.190 0.160 0.148 0.120 0.140 0.070
+ MMD ↓
+ 80 0.210 0.190 0.170 0.135 0.130 0.110 0.120 0.065
+Algorithm 2 Modified PSO for GAN Parameters Optimization 100 0.189 0.174 0.161 0.128 0.125 0.105 0.110 0.063
+ 1: procedure PSO GAN(N , max iterations, Wmax , Wmin , C1 , C2 ) 20 0.360 0.330 0.305 0.270 0.250 0.210 0.240 0.160
+ 2: Input: Population size N , Maximum iterations max iterations, inertia bounds Wmax , Wmin , learning rates C1 , C2 50 0.300 0.270 0.250 0.220 0.200 0.170 0.200 0.120
+ KS ↓
+ 3: Output: Best-performing configuration for GAN parameters 80 0.280 0.250 0.230 0.200 0.190 0.160 0.185 0.100
+ 4: Initialize particles and velocity vectors 100 0.247 0.228 0.211 0.182 0.178 0.150 0.169 0.095
+ 5: for iter = 1 to max iterations do 20 0.240 0.210 0.198 0.178 0.165 0.145 0.162 0.120
+ 6: for each particle do 50 0.190 0.170 0.160 0.150 0.140 0.118 0.138 0.095
+ RMSE ↓
+ 7: Evaluate fitness 80 0.170 0.160 0.150 0.130 0.128 0.108 0.120 0.085
+ 8: Update personal and global bests 100 0.152 0.141 0.136 0.122 0.120 0.102 0.114 0.081
+ 9: Update velocity and position 20 0.42 0.48 0.50 0.55 0.57 0.60 0.58 0.72
+10: Apply boundary check 50 0.53 0.56 0.59 0.66 0.68 0.71 0.69 0.85
+11: end for Entropy ↑
+ 80 0.58 0.60 0.63 0.70 0.72 0.75 0.73 0.89
+12: Adapt inertia weight linearly 100 0.62 0.66 0.69 0.74 0.76 0.78 0.77 0.91
+13: end for
+ 20 41% 46% 49% 55% 58% 62% 60% 78%
+14: return Best-performing particle configuration
+ 50 55% 58% 63% 70% 72% 76% 74% 90%
+15: end procedure Coverage ↑
+ 80 60% 63% 68% 77% 79% 82% 80% 94%
+ 100 68% 71% 74% 80% 82% 85% 83% 96%
+
+ 2) Can TIPSO-GAN generalize to unseen attack families B. Synthetic Data Quality in Learned Embedding Space
+ under LOFO and cross-dataset tests? (Section VI-F) To evaluate the fidelity and diversity of generated traffic
+ 3) Is TIPSO-GAN robust to adaptive, domain-consistent, beyond raw flow distributions, we compute metrics in a earned
+ mimicry, poisoning, and transfer attacks? (Section VI-G) tabular embedding space. A 64-dimensional autoencoder was
+ 4) How does TIPSO-GAN compare to transformer IDS trained on real CICIDS-2018 traffic, and synthetic samples
+ models, non-GAN baselines, and stabilized GAN vari- from each GAN variant were projected into this embedding.
+ ants? (Section VI-D) Following, we report squared Maximum Mean Discrepancy
+ 5) Is TIPSO-GAN efficient for real-time deployment in (MMD2 ) as a fidelity measure and precision, recall, and PRterms of latency, throughput, and resource usage? (Sec- F1 as diversity measures. All results are averaged over 5
+ tions VI-H, VI-H1, and VI-I) random seeds with 95% confidence intervals. Table IV shows
+ that TIPSO-GAN achieves the best overall quality, with the
+A. Training stability and mode collapse
+ lowest MMD2 (0.091 ± 0.006) and the highest precision
+ In this experiment, we assess the stability and resilience (0.873 ± 0.009), recall (0.861 ± 0.009), and PR-F1 (0.867 ±
+of TIPSO-GAN on the CICAPT-IIoT2024 dataset against 0.009). SGAN-IDS and WGAN are the closest competitors,
+mode collapse and compare its performance to DCGAN, but TIPSO-GAN consistently outperforms them across all
+WGAN, LSGAN, and the conventional GAN. Table III re- metrics. These results indicate that TIPSO-GAN generates
+ports values at epochs E ∈ 20, 50, 80, 100. TIPSO-GAN synthetic IIoT traffic that is both highly faithful to the real
+consistently achieved the lowest MMD/KS/RMSE and highest distribution and sufficiently diverse to avoid mode collapse,
+
+ 9
+ 1.0 1.0 1.0 1.0
+
+ 0.8 0.8 0.8 0.8
+
+ 0.6 0.6 0.6 0.6
+Precision
+
+ Precision
+
+ Precision
+
+ Precision
+ 0.4 0.4 0.4 0.4
+
+ 0.2 0.2 0.2 0.2
+ GAN (PR-AUC=0.788) WGAN (PR-AUC=0.951) GAN (PR-AUC=0.738) WGAN (PR-AUC=0.939) GAN (PR-AUC=0.618) WGAN (PR-AUC=0.895) GAN (PR-AUC=0.671) WGAN (PR-AUC=0.921)
+ DCGAN (PR-AUC=0.826) SGAN-IDS (PR-AUC=0.972) DCGAN (PR-AUC=0.751) SGAN-IDS (PR-AUC=0.974) DCGAN (PR-AUC=0.712) SGAN-IDS (PR-AUC=0.955) DCGAN (PR-AUC=0.751) SGAN-IDS (PR-AUC=0.961)
+ LSGAN (PR-AUC=0.862) TIPSO-GAN (PR-AUC=1.000) LSGAN (PR-AUC=0.851) TIPSO-GAN (PR-AUC=0.999) LSGAN (PR-AUC=0.764) TIPSO-GAN (PR-AUC=0.999) LSGAN (PR-AUC=0.808) TIPSO-GAN (PR-AUC=0.998)
+ 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0
+ Recall Recall Recall Recall
+
+ (a) Collection (b) Exfiltration (c) Credential Access (d) Defence Evasion
+ 1.0 1.0 1.0 1.0
+
+ 0.8 0.8 0.8 0.8
+
+ 0.6 0.6 0.6 0.6
+Precision
+
+ Precision
+
+ Precision
+
+ Precision
+ 0.4 0.4 0.4 0.4
+
+ 0.2 0.2 0.2 0.2
+ GAN (PR-AUC=0.720) WGAN (PR-AUC=0.931) GAN (PR-AUC=0.583) WGAN (PR-AUC=0.888) GAN (PR-AUC=0.653) WGAN (PR-AUC=0.884) GAN (PR-AUC=0.684) WGAN (PR-AUC=0.903)
+ DCGAN (PR-AUC=0.793) SGAN-IDS (PR-AUC=0.967) DCGAN (PR-AUC=0.646) SGAN-IDS (PR-AUC=0.942) DCGAN (PR-AUC=0.713) SGAN-IDS (PR-AUC=0.952) DCGAN (PR-AUC=0.736) SGAN-IDS (PR-AUC=0.960)
+ LSGAN (PR-AUC=0.829) TIPSO-GAN (PR-AUC=0.999) LSGAN (PR-AUC=0.754) TIPSO-GAN (PR-AUC=0.999) LSGAN (PR-AUC=0.747) TIPSO-GAN (PR-AUC=0.998) LSGAN (PR-AUC=0.775) TIPSO-GAN (PR-AUC=0.999)
+ 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0
+ Recall Recall Recall Recall
+
+ (e) Discovery (f) Lateral Movement (g) Persistence (h) Command & Control
+ Fig. 6: Per-class Precision–Recall curves on CICAPT-IIoT2024.
+
+ TABLE IV: Synthetic data quality in a learned tabular observed in GAN and DCGAN baselines. Together, the PR
+ embedding (64-D autoencoder). curves and PR–AUC scores in the main body, along with
+ Model MMD2 (↓) Precision (↑) Recall (↑) PR-F1 (↑) confusion matrices in Fig. 7, provide a comprehensive picture:
+ GAN 0.355 ± 0.012 0.622 ± 0.011 0.611 ± 0.012 0.616 ± 0.011 TIPSO-GAN offers both superior ranking quality and robust
+ DCGAN 0.291 ± 0.010 0.678 ± 0.012 0.664 ± 0.013 0.671 ± 0.012 thresholded classification across all APT attack stages.
+ LSGAN 0.248 ± 0.009 0.713 ± 0.013 0.701 ± 0.012 0.707 ± 0.012
+ WGAN 0.182 ± 0.008 0.782 ± 0.010 0.774 ± 0.011 0.778 ± 0.010
+ WGAN-GP 0.170 ± 0.008 0.795 ± 0.010 0.769 ± 0.010 0.782 ± 0.010 D. Detection performance
+ BigGAN 0.140 ± 0.007 0.821 ± 0.009 0.808 ± 0.009 0.814 ± 0.009
+ SGAN-IDS 0.152 ± 0.007 0.812 ± 0.010 0.801 ± 0.010 0.806 ± 0.010 We evaluate all methods under rigorous, reproducible pro-
+ TIPSO-GAN 0.091 ± 0.006 0.873 ± 0.009 0.861 ± 0.009 0.867 ± 0.009
+ tocols. For CIC-IDS2018 and CIC-DDoS2019, we explicitly
+ deduplicated flows, enforced flow/session and host isolation,
+ and fit preprocessing only on training data to mitigate leakage.
+ even under multiple training runs. This confirms the robustness For CICAPT-IIoT2024, we assign entire scenarios to a single
+ of TIPSO-GAN when evaluated in a representation learned partition (grouped split) to prevent intra-scenario leakage. All
+ from the data, rather than relying only on raw flow statistics. results are averaged over five independent runs (mean±std) on
+ the test sets.
+ C. Multiclass detection results
+ On CIC-IDS2018, classical tabular learners and recent trans-
+ We evaluate detection performance across all eight at- former models are competitive: LightGBM attains 96.9±0.3
+ tack stages using per-class precision–recall (PR) curves and F1 and MalDetectFormer 96.9±0.3 F1, with FT-Transformer
+ PR–AUC scores using the CICAPT-IIoT2024 dataset. Figure and TransTraffic close behind (96.1±0.4 and 96.5±0.3 F1, re-
+ 6 shows the per-class PR-AUC curves with all models overlaid. spectively). Among GAN-based baselines, WGAN-GP reaches
+ TIPSO-GAN consistently dominates across classes, achieving 94.2±0.4 F1 and SGAN-IDS/WGAN achieve 93.7±0.3 F1.
+ higher PR–AUC than all baselines, particularly in minority The strongest non-ours baseline overall is PSO-D-SEM at
+ classes such as Persistence and Lateral Movement. Exact 98.9±0.2 F1. TIPSO-GAN achieves 99.1±0.1 F1 (99.1±0.1
+ per-class PR–AUC values, together with macro and micro precision, 99.3±0.1 recall), improving over the strongest baseaverages, are reported in Table V, where TIPSO-GAN is line by +0.2 F1 while maintaining low variance across seeds.
+ marked as the best model in nearly every case. On CICAPT-IIoT2024, Transformer models remain strong
+ To complement these threshold-free results, we also analyze (TransTraffic 95.0±0.3 F1; MalDetectFormer 94.7±0.3), and
+ performance at the operating point used for F1 optimiza- WGAN-GP is the best among standard GAN variants at
+ tion using the CICAPT-IIoT2024 dataset. Row-normalized 94.2±0.4 F1. PSO-D-SEM is the strongest non-ours method
+ confusion matrices for each model, computed at the macro- overall at 98.2±0.2 F1. TIPSO-GAN delivers 98.9±0.1 F1
+ F1-optimal threshold on the validation set, are provided in (98.9±0.1 precision, 99.1±0.1 recall), exceeding the best
+ Fig. 7. These matrices highlight where errors concentrate baseline by +0.7 F1 under leakage-free scenario grouping.
+ and illustrate that TIPSO-GAN not only achieves higher On CIC-DDoS2019, temporal splits yield realistic diffirecall overall but also avoids the systematic misclassifications culty: TransTraffic attains 94.6±0.4 F1 and MalDetectFormer
+
+ 10
+ 60 70
+ Collection 58.5 6.0 6.1 7.3 5.4 5.4 5.7 5.6 Collection 69.4 4.8 4.3 4.3 4.9 3.4 4.6 4.3 Collection 76.3 3.1 3.1 4.5 4.0 2.4 2.9 3.6
+ 70
+ Exfiltration 6.0 56.6 6.0 6.2 6.6 6.6 5.4 6.7 50 Exfiltration 4.3 72.1 3.1 4.3 4.0 4.1 3.7 4.3 60 Exfiltration 3.4 75.9 3.6 3.7 4.7 2.6 3.2 2.8
+ 60
+ Credential 5.0 7.4 57.7 5.4 5.3 6.6 6.3 6.3 Credential 4.6 4.4 69.4 4.0 4.4 3.2 5.6 4.5 50 Credential 2.9 3.4 77.6 2.9 4.4 3.4 2.8 2.8
+ Access Access Access
+ 40 50
+ Defence 5.7 4.5 5.5 58.6 5.3 6.6 7.2 6.6 Defence 4.6 4.7 4.3 68.4 5.4 2.5 4.6 5.5 Defence 4.1 3.1 4.3 76.4 3.5 2.5 3.4 2.7
+ Evasion Evasion 40 Evasion
+Actual
+
+ Actual
+
+ Actual
+ 40
+ Discovery 5.1 6.5 5.4 7.3 57.6 6.1 5.3 6.6 30 Discovery 3.8 4.6 3.8 5.5 70.4 3.7 5.2 2.8 Discovery 3.7 3.2 2.9 4.5 75.2 3.6 3.1 3.8
+ 30 30
+ Lateral 6.5 6.5 5.6 7.5 6.2 57.6 4.2 5.9 Lateral 4.9 5.8 3.9 4.0 4.6 68.4 3.3 5.1 Lateral 3.3 3.2 3.1 3.6 2.1 77.9 3.9 2.8
+ Movement 20 Movement Movement
+ 20 20
+ Persistence 6.5 4.2 6.3 5.8 5.6 4.5 61.1 5.9 Persistence 4.3 4.0 3.0 5.4 4.2 3.8 70.7 4.5 Persistence 3.7 3.8 2.8 2.3 3.2 3.1 76.8 4.2
+
+ Command &
+ 10 Command &
+ 10 Command &
+ 10
+ Control 6.5 5.7 5.9 5.8 6.2 6.2 5.1 58.6 Control 4.2 4.1 4.5 5.4 3.7 4.9 3.4 69.7 Control 2.9 4.0 3.3 2.9 3.6 3.6 3.1 76.6
+ on
+
+ ion
+
+ ce ial
+
+ as nce
+
+ ry
+
+ nt l
+
+ Co nce
+
+ ntr &
+
+ on
+
+ Cre n
+ ce ial
+
+ as nce
+
+ ry
+
+ n l
+
+ Co nce
+
+ ntr &
+
+ on
+
+ Cre n
+ ce ial
+
+ as nce
+
+ ry
+
+ n l
+
+ Co nce
+
+ ntr &
+ me ra
+
+ me ra
+
+ me ra
+ io
+
+ io
+ ss
+
+ ion
+
+ ol
+
+ ss
+
+ ion
+
+ Pe t
+
+ ol
+
+ ss
+
+ ion
+
+ Pe t
+
+ ol
+ ve
+
+ ve
+
+ ve
+ Co and
+
+ Co and
+
+ Co and
+ Ac ent
+
+ Ac ent
+
+ Ac ent
+ cti
+
+ cti
+
+ cti
+ ve ate
+
+ ve ate
+
+ ve ate
+ rat
+
+ rat
+
+ rat
+ Ev efe
+
+ ste
+
+ Ev efe
+
+ ste
+
+ Ev efe
+
+ ste
+ co
+
+ co
+
+ co
+ lle
+
+ lle
+
+ lle
+ d
+
+ d
+
+ d
+ mm
+
+ mm
+
+ mm
+ Mo L
+
+ Mo L
+
+ Mo L
+ filt
+
+ filt
+
+ filt
+ rsi
+
+ rsi
+
+ rsi
+ Dis
+
+ Dis
+
+ Dis
+ D
+
+ D
+
+ D
+ Cre
+ Co
+
+ Co
+
+ Co
+ Ex
+
+ Ex
+
+ Ex
+ Pe
+
+ Predicted Predicted Predicted
+
+ (a) GAN (b) DCGAN (c) BigGAN
+ 100
+ Collection 93.7 1.2 0.8 1.0 0.2 0.8 1.3 1.0 Collection 97.6 0.3 0.3 0.5 0.6 0.3 0.1 0.3 Collection 99.8 0.0 0.0 0.0 0.1 0.1 0.0 0.0
+ 80
+ Exfiltration 0.5 93.1 0.9 1.7 1.2 0.5 0.8 1.2 Exfiltration 0.4 98.0 0.5 0.5 0.2 0.2 0.4 0.0 80 Exfiltration 0.0 99.9 0.0 0.0 0.0 0.1 0.0 0.0 80
+ Credential 0.8 1.2 93.2 1.6 0.8 1.2 0.4 0.7 Credential 0.6 0.1 97.8 0.2 0.3 0.5 0.1 0.3 Credential 0.0 0.0 100.0 0.0 0.0 0.0 0.0 0.0
+ Access Access Access
+ 60 60
+ Defence 0.8 0.6 1.1 93.6 0.8 0.7 1.2 1.1 Defence 0.1 0.5 0.1 98.2 0.2 0.1 0.2 0.5 Defence 60
+ Evasion Evasion Evasion 0.0 0.0 0.0 100.0 0.0 0.0 0.0 0.0
+Actual
+
+ Actual
+
+ Actual
+ Discovery 0.7 0.8 0.7 1.2 94.4 0.8 1.0 0.3 40 Discovery 0.2 0.6 0.2 0.4 98.1 0.1 0.2 0.3 Discovery 0.0 0.0 0.0 0.0 100.0 0.0 0.0 0.0
+ 40 40
+ Lateral 1.4 0.9 1.1 1.4 1.0 92.9 0.8 0.4 Lateral 0.5 0.4 0.4 0.1 0.6 97.4 0.2 0.3 Lateral 0.0 0.0 0.0 0.0 0.0 100.0 0.0 0.0
+ Movement Movement Movement
+
+ Persistence 0.7 1.1 0.9 1.1 1.4 0.7 93.4 0.7 20 Persistence 0.2 0.2 0.3 0.3 0.2 0.5 97.7 0.6 20 Persistence 0.0 0.0 0.0 0.0 0.0 0.0 100.0 0.0 20
+ Command & 0.7 1.2 0.9 0.9 0.7 1.3 0.9 93.4 Command & 0.1 0.1 0.2 0.1 0.5 0.3 0.2 98.6 Command & 0.0 0.0 0.0 0.0 0.0 0.0 0.0 100.0
+ Control Control Control
+ 0 0
+ on
+
+ ion
+
+ ce ial
+
+ as nce
+
+ ry
+
+ nt l
+
+ Co nce
+
+ ntr &
+
+ on
+
+ Cre n
+ ce ial
+
+ as nce
+
+ ry
+
+ n l
+
+ Co nce
+
+ ntr &
+
+ on
+
+ Cre n
+ ce ial
+
+ as nce
+
+ ry
+
+ nt l
+
+ Co nce
+
+ ntr &
+ me ra
+
+ me ra
+
+ me ra
+ io
+
+ io
+ ss
+
+ ion
+
+ ol
+
+ ss
+
+ ion
+
+ Pe t
+
+ ol
+
+ ss
+
+ ion
+
+ ol
+ ve
+
+ ve
+
+ ve
+ Co and
+
+ Co and
+
+ Co and
+ Ac ent
+
+ Ac ent
+
+ Ac ent
+ cti
+
+ cti
+
+ cti
+ ve ate
+
+ ve ate
+
+ ve ate
+ rat
+
+ rat
+
+ rat
+ Ev efe
+
+ ste
+
+ Ev efe
+
+ ste
+
+ Ev efe
+
+ ste
+ co
+
+ co
+
+ co
+ lle
+
+ lle
+
+ lle
+ d
+
+ d
+
+ d
+ mm
+
+ mm
+
+ mm
+ Mo L
+
+ Mo L
+
+ Mo L
+ filt
+
+ filt
+
+ filt
+ rsi
+
+ rsi
+
+ rsi
+ Dis
+
+ Dis
+
+ Dis
+ D
+
+ D
+
+ D
+ Cre
+ Co
+
+ Co
+
+ Co
+ Ex
+
+ Ex
+
+ Ex
+ Pe
+
+ Pe
+ Predicted Predicted Predicted
+
+ (d) WGAN-GP (e) SGAN-IDS (f) TIPSO-GAN
+ Fig. 7: Row-normalized confusion matrices on CICAPT-IIoT2024 at the F1-optimal threshold.
+
+ TABLE V: Per-class PR-AUC on CICAPT-IIoT2024 (mean ± 95% CI over 5 seeds).
+ Class GAN DCGAN LSGAN WGAN WGAN-GP BigGAN SGAN-IDS TIPSO-GAN
+ Collection 0.788 ± 0.012 0.826 ± 0.011 0.862 ± 0.010 0.951 ± 0.007 0.960 ± 0.006 0.968 ± 0.005 0.972 ± 0.006 1.000 ± 0.003
+ Command & Control 0.684 ± 0.015 0.736 ± 0.013 0.775 ± 0.012 0.903 ± 0.008 0.941 ± 0.006 0.950 ± 0.005 0.960 ± 0.006 0.999 ± 0.002
+ Credential Access 0.618 ± 0.014 0.712 ± 0.012 0.764 ± 0.011 0.895 ± 0.009 0.944 ± 0.006 0.949 ± 0.005 0.955 ± 0.006 0.999 ± 0.002
+ Defence Evasion 0.671 ± 0.014 0.751 ± 0.012 0.808 ± 0.011 0.921 ± 0.008 0.950 ± 0.006 0.955 ± 0.005 0.961 ± 0.005 0.998 ± 0.002
+ Discovery 0.720 ± 0.013 0.793 ± 0.012 0.829 ± 0.011 0.931 ± 0.008 0.954 ± 0.006 0.960 ± 0.005 0.967 ± 0.005 0.999 ± 0.002
+ Exfiltration 0.738 ± 0.012 0.751 ± 0.012 0.851 ± 0.010 0.939 ± 0.007 0.961 ± 0.005 0.968 ± 0.004 0.974 ± 0.004 0.999 ± 0.002
+ Lateral Movement 0.583 ± 0.016 0.646 ± 0.015 0.754 ± 0.012 0.888 ± 0.009 0.930 ± 0.006 0.938 ± 0.005 0.942 ± 0.005 0.999 ± 0.002
+ Persistence 0.653 ± 0.015 0.713 ± 0.013 0.747 ± 0.012 0.884 ± 0.009 0.940 ± 0.006 0.946 ± 0.005 0.952 ± 0.005 0.998 ± 0.002
+ Macro Avg 0.682 ± 0.014 0.741 ± 0.012 0.799 ± 0.011 0.914 ± 0.008 0.947 ± 0.006 0.954 ± 0.005 0.960 ± 0.005 0.999 ± 0.002
+ Micro Avg 0.690 ± 0.013 0.747 ± 0.012 0.805 ± 0.010 0.920 ± 0.007 0.950 ± 0.006 0.957 ± 0.005 0.962 ± 0.005 0.999 ± 0.002
+
+94.3±0.4 F1; among vanilla GANs, WGAN-GP reaches diagrams, which compare predicted confidence with empirical
+93.8±0.4 F1. The best non-ours baseline is PSO-D-SEM at accuracy. The orange dashed line denotes perfect calibration,
+97.7±0.2 F1. TIPSO-GAN achieves 98.7±0.1 F1 with bal- while the blue curve shows the model’s empirical reliability.
+anced precision/recall (98.8±0.1 / 99.0±0.1), improving over The shaded area represents the miscalibration gap, quantitathe strongest baseline by +1.0 F1. Across datasets, TIPSO- tively summarized by the Expected Calibration Error (ECE),
+GAN consistently outperforms the strongest non-ours baseline which is displayed in each legend alongside the Brier Score.
+by +0.2–1.0 F1 while preserving high precision and recall and Lower values indicate better calibration.
+low run-to-run variance.
+ Figure 9 shows that baseline models such as GAN, Big-
+ GAN, and DCGAN tend to deviate from the diagonal, partic-
+E. Calibration Analysis
+ ularly at higher confidence levels, indicating overconfidence.
+ We further evaluate model calibration, since overconfident TIPSO-GAN, in contrast, tracks the diagonal closely across all
+but incorrect predictions pose serious risks in adversarial in- bins, with the lowest ECE and Brier scores. This demonstrates
+trusion detection. This experiment was based on the CICAPT- that TIPSO-GAN not only improves detection performance but
+IIoT2024 dataset. Calibration is assessed through reliability also produces well-calibrated probability estimates, which are
+
+ 11
+ TABLE VI: Robustness against adversarial attacks (mean ±95% CI over 5 seeds).
+ Category Attack Type Metric GAN DCGAN LSGAN WGAN WGAN-GP BigGAN SGAN-IDS TIPSO-GAN
+ FGSM (ϵ = 0.03) FPR ↓ 12.3 11.0 10.2 9.5 8.5 7.9 6.9 2.8
+ FNR ↓ 15.7 14.4 13.5 12.6 11.2 10.5 9.1 3.5
+ BIM (ϵ = 0.03) FPR ↓ 13.1 11.7 10.9 10.2 9.2 8.5 7.4 3.0
+ FNR ↓ 17.2 15.8 14.6 13.6 12.6 11.7 9.8 4.1
+ PGD (ϵ = 0.03) FPR ↓ 14.0 12.6 11.5 10.8 10.1 9.2 8.1 3.3
+ Static
+ FNR ↓ 18.5 16.9 15.6 14.4 13.4 12.5 10.6 4.5
+ C&W (ℓ2 ) FPR ↓ 14.8 13.4 12.0 11.4 10.8 9.8 8.6 3.5
+ FNR ↓ 19.3 17.7 16.2 15.2 14.1 13.0 11.0 4.8
+ DeepFool FPR ↓ 13.5 12.1 11.0 10.4 9.7 8.9 7.9 3.2
+ FNR ↓ 17.0 15.6 14.4 13.4 12.2 11.3 9.5 4.0
+ Adaptive-PGD FPR ↓ 15.4 14.0 12.9 11.9 11.0 10.2 8.8 3.6
+ FNR ↓ 20.1 18.6 17.3 16.1 14.8 13.8 11.9 5.1
+ Adaptive
+ AutoAttack [58] FPR ↓ 16.7 15.1 13.8 13.0 12.3 11.4 9.6 4.1
+ FNR ↓ 21.5 19.9 18.4 17.2 15.7 14.5 12.7 5.6
+ Constrained-PGD FPR ↓ 7.8 7.1 6.5 6.0 5.4 4.9 4.7 2.6
+ FNR ↓ 14.9 13.8 12.6 11.7 10.8 9.9 8.3 4.9
+ Constrained
+ Constrained-AA FPR ↓ 8.6 7.8 6.9 6.5 6.1 5.6 5.3 3.1
+ FNR ↓ 16.5 15.2 13.9 13.0 12.2 11.1 9.6 5.8
+ EvadeML [59] FPR ↓ 15.8 14.2 13.1 12.3 11.6 10.7 9.1 4.2
+ FNR ↓ 20.5 18.8 17.4 16.3 15.3 14.1 12.5 5.4
+ FENCE [60] FPR ↓ 14.9 13.5 12.4 11.7 10.9 10.0 8.6 3.7
+ Mimicry
+ FNR ↓ 19.2 17.8 16.6 15.4 14.1 13.2 11.2 4.9
+ Mimicus [59] FPR ↓ 15.1 13.7 12.7 11.9 11.2 10.3 8.9 4.0
+ FNR ↓ 19.9 18.3 17.0 15.8 14.6 13.4 11.8 5.2
+ 1% label flip FPR ↓ 10.5 9.3 8.6 7.9 7.1 6.5 5.9 2.9
+ FNR ↓ 12.8 11.6 10.6 10.0 9.4 8.8 7.7 3.8
+ 3% label flip FPR ↓ 13.2 12.0 11.1 10.4 9.5 8.7 7.8 3.9
+ Poisoning
+ FNR ↓ 18.1 16.7 15.6 14.3 13.0 12.0 10.4 5.0
+ 5% label flip FPR ↓ 16.5 15.1 14.0 13.0 12.4 11.2 10.1 5.8
+ FNR ↓ 22.7 21.1 19.9 18.5 17.1 15.6 13.9 7.1
+ ResNet → TIPSO-GAN FPR ↓ 14.6 13.3 12.4 11.5 10.5 9.6 8.7 3.9
+ FNR ↓ 19.8 18.4 17.0 15.8 14.4 13.2 11.6 5.3
+ Black-box
+ Ensemble substitutes FPR ↓ 16.2 14.9 13.6 12.7 11.8 10.8 9.8 4.6
+ FNR ↓ 22.1 20.6 19.2 17.8 16.3 15.1 13.4 6.2
+
+critical for operational decision-making in IIoT security. FNR below 5%, while baselines range from 7–19%. Against
+ Adaptive-PGD and AutoAttack, TIPSO-GAN maintains FNR
+F. Robustness against unseen and cross-domain attacks under 6%, compared to 12–22% for prior models. With con-
+ Table VIII highlights TIPSO-GAN’s robustness under strained PGD and AutoAttack that enforce numeric bounds,
+two strict zero-day regimes using the CIC-IDS2018, CIC- one-hot consistency, immutable masking, and cross-feature
+DDoS2019, and CICAPT-IIoT2024 datasets. In the LOFO checks, TIPSO-GAN records FPR of 2.6–3.1% and FNR under
+setting on CIC-IDS2018, performance decreases from 99.1 F1 6%, outperforming baselines by large margins.
+(temporal split, Table VII) to an average of 92.3 F1, reflecting For EvadeML, FENCE, and Mimicus, TIPSO-GAN reduces
+the difficulty of generalizing to entirely unseen attack families. FNR to 5–6%, while baselines show 12–20%. With label-flip
+The per-family breakdown shows variability: Web Attacks and poisoning, TIPSO-GAN rises gradually from 3.8% FNR at 1%
+Brute Force remain easier to detect (93.9 and 93.4 F1), while flip to 7.1% at 5%, while baselines exceed 13–22%. Black-
+Infiltration is most challenging (90.4 F1), consistent with its box transfer. With ResNet and ensemble substitutes, TIPSOlow prevalence and stealthy traffic patterns. Second, a cross- GAN holds FNR under 6.2% versus 12–22% for baselines.
+dataset protocol was used, training on one corpus and testing TIPSO-GAN sustains lower FPR and FNR across all attack
+on another to assess domain transferability across different families, including domain-constrained and mimicry scenarios,
+network environments and traffic distributions. The results demonstrating credible robustness under realistic IDS evasion
+show F1 scores ranging from 79–83 across train/test pairs. settings.
+This ∼15–20 point drop shows the severe distribution shift
+across corpora collected under different environments. Despite H. Runtime Performance, Scalability, and Deployment
+this degradation, TIPSO-GAN consistently maintains recall We benchmark training cost, inference latency, throughput,
+above 80%, demonstrating non-trivial transferability to unseen and resource usage across representative IDS baselines (Tadomains. These results emphasize that while temporal splits ble X) on the CICAPT-IIoT2024 dataset. All models were
+are necessary, zero-day protocols such as LOFO and cross- trained on an NVIDIA A100 with 32 CPU cores. Classical ML
+dataset evaluation provide a more realistic measure of IDS methods (Logistic Regression, XGBoost, LightGBM) achieve
+generalization. sub-millisecond inference and very high throughput but lack
+ adversarial robustness. Deep IDS models such as IDS-INT,
+G. Adversarial Robustness PSO-D-SEM, FR-APPSO-BiLSTM, and HAGRU require 6–
+ We evaluate robustness against static, adaptive, domain- 12 GPU hours to train and have latencies near 1 ms per
+constrained, mimicry, poisoning, and black-box transfer at- flow, limiting scalability to under 1k flows/s. Transformer
+tacks on the CIC-IDS2018 dataset. Results are reported in models (TransfficFormer, FT-Transformer, MalDetectFormer)
+terms of FPR and FNR, averaged over five runs with 95% show strong detection but incur higher training cost (18–
+confidence intervals (Table VI). Under FGSM, BIM, PGD, 24 GPU hours), larger memory footprints (3–3.5 GB), and
+C&W, and DeepFool, TIPSO-GAN yields FPR around 3% and moderate throughput (1.3–1.6k flows/s). GAN-based IDS pro-
+
+ 12
+TABLE VII: Detection performance of all evaluated IDS models across three datasets. Red = best; Blue = second best.
+
+ Dataset Model Acc. Prec. Rec. F1 Train / Test (s)
+ Non-GAN Baselines
+ LightGBM (class weighted) 94.6 ± 0.4 94.3 ± 0.4 94.4 ± 0.4 94.4 ± 0.4 191 / 8
+ IDS-INT 87.4 ± 0.5 86.0 ± 0.5 84.5 ± 0.6 85.3 ± 0.5 25110 / 2481
+ PSO-D-SEM 97.7 ± 0.2 97.2 ± 0.2 98.2 ± 0.2 97.7 ± 0.2 42890 / 2410
+ FR-APPSO-BiLSTM 89.9 ± 0.4 89.2 ± 0.4 88.0 ± 0.5 88.6 ± 0.4 85400 / 4633
+ HAGRU 87.7 ± 0.5 86.9 ± 0.5 85.0 ± 0.6 85.9 ± 0.5 51402 / 5180
+ Transformer-based Models
+ TransfficFormer 92.7 ± 0.6 92.3 ± 0.6 92.0 ± 0.7 92.2 ± 0.6 1085 / 51
+ CICIDS2018
+
+ FT-Transformer 94.0 ± 0.5 93.7 ± 0.5 93.8 ± 0.5 93.8 ± 0.5 1165 / 52
+ TransTraffic 94.8 ± 0.4 94.6 ± 0.4 94.7 ± 0.4 94.6 ± 0.4 1278 / 59
+ MalDetectFormer 94.5 ± 0.4 94.2 ± 0.4 94.3 ± 0.4 94.3 ± 0.4 1342 / 61
+ GAN-based IDS
+ GAN 83.1 ± 0.5 81.5 ± 0.5 79.9 ± 0.5 80.7 ± 0.5 6984 / 1360
+ DCGAN 84.5 ± 0.5 83.1 ± 0.5 81.1 ± 0.5 82.1 ± 0.5 34011 / 4445
+ LSGAN 85.8 ± 0.4 84.5 ± 0.5 82.2 ± 0.5 83.3 ± 0.5 40955 / 2493
+ WGAN 91.7 ± 0.3 90.9 ± 0.3 90.0 ± 0.3 90.5 ± 0.3 43233 / 2609
+ SGAN-IDS 93.4 ± 0.3 92.5 ± 0.3 91.1 ± 0.4 91.8 ± 0.3 44730 / 3752
+ SYN-GAN 90.4 ± 0.4 89.3 ± 0.4 87.9 ± 0.5 88.6 ± 0.4 44500 / 5213
+ IGAN-IDS 89.2 ± 0.5 88.2 ± 0.5 86.4 ± 0.5 87.3 ± 0.5 32790 / 1693
+ IDSGAN 88.2 ± 0.5 87.0 ± 0.5 85.2 ± 0.6 86.1 ± 0.5 7105 / 870
+ FenceGAN 84.9 ± 0.4 84.0 ± 0.5 81.9 ± 0.5 83.0 ± 0.5 8381 / 1225
+ BigGAN 93.9 ± 0.4 93.4 ± 0.4 93.3 ± 0.4 93.4 ± 0.4 49650 / 3150
+ WGAN-GP 94.1 ± 0.4 93.7 ± 0.4 93.9 ± 0.4 93.8 ± 0.4 50500 / 2990
+ TIPSO-GAN (ours) 99.5 ± 0.1 98.8 ± 0.1 99.0 ± 0.1 98.7 ± 0.1 6611 / 410
+ Non-GAN Baselines
+ Logistic Regression (calibrated) 89.5 ± 0.6 88.9 ± 0.6 88.4 ± 0.7 88.6 ± 0.6 41 / 6
+ XGBoost (class weighted) 94.3 ± 0.4 94.0 ± 0.5 94.5 ± 0.4 94.2 ± 0.4 228 / 9
+ LightGBM (class weighted) 95.4 ± 0.4 95.2 ± 0.4 95.3 ± 0.5 95.3 ± 0.4 194 / 8
+ IDS-INT 88.7 ± 0.5 87.5 ± 0.5 85.4 ± 0.6 86.4 ± 0.5 26012 / 2635
+ PSO-D-SEM 98.2 ± 0.2 97.8 ± 0.2 98.6 ± 0.2 98.2 ± 0.2 43890 / 2512
+ FR-APPSO-BiLSTM 90.8 ± 0.4 90.2 ± 0.4 89.1 ± 0.5 89.6 ± 0.4 87453 / 4783
+ HAGRU 88.9 ± 0.5 88.1 ± 0.5 86.3 ± 0.6 87.2 ± 0.5 52870 / 5347
+ CICAPT-IIoT2024
+
+ Transformer-based Models
+ TransfficFormer 93.6 ± 0.6 93.4 ± 0.6 93.1 ± 0.6 93.2 ± 0.6 1120 / 55
+ FT-Transformer 94.8 ± 0.4 94.5 ± 0.4 94.7 ± 0.5 94.6 ± 0.4 1190 / 51
+ TransTraffic 95.2 ± 0.3 95.0 ± 0.3 95.1 ± 0.4 95.0 ± 0.3 1290 / 58
+ MalDetectFormer 94.9 ± 0.3 94.7 ± 0.4 94.8 ± 0.3 94.7 ± 0.3 1355 / 60
+ GAN-based IDS
+ GAN 84.3 ± 0.4 82.9 ± 0.5 81.4 ± 0.5 82.1 ± 0.5 7211 / 1453
+ DCGAN 85.4 ± 0.5 84.1 ± 0.5 82.6 ± 0.5 83.4 ± 0.5 35601 / 4690
+ LSGAN 86.5 ± 0.5 85.2 ± 0.5 83.9 ± 0.5 84.5 ± 0.5 41879 / 2617
+ WGAN 92.9 ± 0.3 92.1 ± 0.3 91.3 ± 0.3 91.7 ± 0.3 44302 / 2739
+ SGAN-IDS 94.0 ± 0.3 93.0 ± 0.3 91.7 ± 0.4 92.4 ± 0.3 46213 / 3925
+ SYN-GAN 91.9 ± 0.4 90.7 ± 0.5 88.8 ± 0.5 89.7 ± 0.5 46002 / 5375
+ IGAN-IDS 90.7 ± 0.5 89.2 ± 0.5 87.5 ± 0.6 88.3 ± 0.5 33791 / 1802
+ IDSGAN 89.8 ± 0.5 88.4 ± 0.5 86.3 ± 0.6 87.3 ± 0.5 7445 / 901
+ FenceGAN 85.8 ± 0.5 84.9 ± 0.5 82.9 ± 0.6 83.9 ± 0.5 8724 / 1311
+ BigGAN 94.1 ± 0.4 93.6 ± 0.4 93.4 ± 0.4 93.5 ± 0.4 50810 / 3260
+ WGAN-GP 94.7 ± 0.4 94.2 ± 0.4 94.3 ± 0.4 94.2 ± 0.4 52110 / 3052
+ TIPSO-GAN (ours) 99.6 ± 0.1 98.9 ± 0.1 99.1 ± 0.1 98.9 ± 0.1 6733 / 429
+
+ 13
+ TABLE VII: Detection performance of all evaluated IDS models across three datasets. Red = best; Blue = second best.
+
+ Dataset Model Acc. Prec. Rec. F1 Train / Test (s)
+ Non-GAN Baselines
+ Logistic Regression (calibrated) 88.9 ± 0.6 88.2 ± 0.6 87.6 ± 0.7 87.9 ± 0.6 38 / 6
+ XGBoost (class weighted) 93.8 ± 0.5 93.3 ± 0.5 93.5 ± 0.4 93.4 ± 0.5 219 / 9
+ LightGBM (class weighted) 94.6 ± 0.4 94.3 ± 0.4 94.4 ± 0.4 94.4 ± 0.4 191 / 8
+ IDS-INT 87.4 ± 0.5 86.0 ± 0.5 84.5 ± 0.6 85.3 ± 0.5 25110 / 2481
+ PSO-D-SEM 97.7 ± 0.2 97.2 ± 0.2 98.2 ± 0.2 97.7 ± 0.2 42890 / 2410
+ FR-APPSO-BiLSTM 89.9 ± 0.4 89.2 ± 0.4 88.0 ± 0.5 88.6 ± 0.4 85400 / 4633
+ HAGRU 87.7 ± 0.5 86.9 ± 0.5 85.0 ± 0.6 85.9 ± 0.5 51402 / 5180
+ CIC-DDoS2019
+
+ Transformer-based Models
+ TransfficFormer 92.7 ± 0.6 92.3 ± 0.6 92.0 ± 0.7 92.2 ± 0.6 1085 / 51
+ FT-Transformer 94.0 ± 0.5 93.7 ± 0.5 93.8 ± 0.5 93.8 ± 0.5 1165 / 52
+ TransTraffic 94.8 ± 0.4 94.6 ± 0.4 94.7 ± 0.4 94.6 ± 0.4 1278 / 59
+ MalDetectFormer 94.5 ± 0.4 94.2 ± 0.4 94.3 ± 0.4 94.3 ± 0.4 1342 / 61
+ GAN-based IDS
+ GAN 83.1 ± 0.5 81.5 ± 0.5 79.9 ± 0.5 80.7 ± 0.5 6984 / 1360
+ DCGAN 84.5 ± 0.5 83.1 ± 0.5 81.1 ± 0.5 82.1 ± 0.5 34011 / 4445
+ LSGAN 85.8 ± 0.4 84.5 ± 0.5 82.2 ± 0.5 83.3 ± 0.5 40955 / 2493
+ WGAN 91.7 ± 0.3 90.9 ± 0.3 90.0 ± 0.3 90.5 ± 0.3 43233 / 2609
+ SGAN-IDS 93.4 ± 0.3 92.5 ± 0.3 91.1 ± 0.4 91.8 ± 0.3 44730 / 3752
+ SYN-GAN 90.4 ± 0.4 89.3 ± 0.4 87.9 ± 0.5 88.6 ± 0.4 44500 / 5213
+ IGAN-IDS 89.2 ± 0.5 88.2 ± 0.5 86.4 ± 0.5 87.3 ± 0.5 32790 / 1693
+ IDSGAN 88.2 ± 0.5 87.0 ± 0.5 85.2 ± 0.6 86.1 ± 0.5 7105 / 870
+ FenceGAN 84.9 ± 0.4 84.0 ± 0.5 81.9 ± 0.5 83.0 ± 0.5 8381 / 1225
+ BigGAN 93.9 ± 0.4 93.4 ± 0.4 93.3 ± 0.4 93.4 ± 0.4 49650 / 3150
+ WGAN-GP 94.1 ± 0.4 93.7 ± 0.4 93.9 ± 0.4 93.8 ± 0.4 50500 / 2990
+ TIPSO-GAN (ours) 99.5 ± 0.1 98.8 ± 0.1 99.0 ± 0.1 98.7 ± 0.1 6611 / 410
+
+TABLE VIII: Generalization performance of TIPSO-GAN under strict zero-day evaluations. Left: leave-one-family-out (LOFO)
+on CIC-IDS2018. Right: cross-dataset evaluation where the model is trained on one corpus and tested on another. All values
+are mean ± std over five seeds.
+ LOFO on CIC-IDS2018 (per-family) Cross-Dataset Evaluation (Train → Test)
+ Held-out Family Accuracy Precision Recall F1 Train → Test Accuracy Precision Recall F1
+ DoS 91.5 ± 0.7 90.2 ± 0.8 92.7 ± 0.7 91.4 ± 0.7 CIC-IDS2018 → CIC-DDoS2019 82.4 ± 0.8 80.9 ± 0.9 83.1 ± 0.8 81.9 ± 0.8
+ Brute Force 93.8 ± 0.6 92.6 ± 0.6 94.2 ± 0.6 93.4 ± 0.6 CIC-IDS2018 → CICAPT-IIoT2024 80.6 ± 0.9 79.3 ± 1.0 81.0 ± 0.9 80.1 ± 0.9
+ Botnet 92.1 ± 0.7 91.0 ± 0.8 92.9 ± 0.7 91.9 ± 0.7 CIC-DDoS2019 → CIC-IDS2018 83.1 ± 0.7 81.5 ± 0.8 84.2 ± 0.8 82.8 ± 0.7
+ Infiltration 90.6 ± 0.8 89.2 ± 0.9 91.7 ± 0.8 90.4 ± 0.8 CIC-DDoS2019 → CICAPT-IIoT2024 81.2 ± 0.8 80.0 ± 0.9 82.1 ± 0.8 81.0 ± 0.8
+ Web Attacks 94.3 ± 0.6 93.0 ± 0.6 94.9 ± 0.6 93.9 ± 0.6 CICAPT-IIoT2024 → CIC-IDS2018 79.8 ± 0.9 78.5 ± 1.0 80.3 ± 0.9 79.4 ± 0.9
+ Heartbleed 93.0 ± 0.7 91.9 ± 0.7 93.8 ± 0.7 92.8 ± 0.7 CICAPT-IIoT2024 → CIC-DDoS2019 80.2 ± 0.8 78.9 ± 0.9 81.1 ± 0.9 80.0 ± 0.8
+ Mean across families 92.6 ± 0.6 91.7 ± 0.7 93.4 ± 0.6 92.3 ± 0.6 –
+
+ TABLE X: Runtime performance comparison.
+TABLE IX: Computational complexity and resource usage of Model Train (GPU h) Latency (ms) Throughput Mem (GB) Power (W)
+representative IDS models. E = epochs, N = samples, d = Logistic Regression 0.1 0.05 20,000 0.2 20
+ XGBoost (weighted) 0.3 0.20 5,000 0.5 40
+feature dimension, L = layers, P = swarm size, I = iterations. LightGBM (weighted) 0.2 0.18 5,500 0.5 35
+ IDS-INT 6 0.80 1,250 1.2 70
+FLOPs are estimated per inference. PSO-D-SEM 10 1.10 900 2.0 100
+ FR-APPSO-BiLSTM 12 1.20 830 2.4 110
+Model Training Complexity Inference Complexity Memory (GB) FLOPs/flow HAGRU 8 0.95 1,050 2.1 95
+ TransfficFormer 18 0.60 1,650 3.0 140
+Logistic Regression O(E · N · d) O(d) < 0.5 105
+ FT-Transformer 20 0.65 1,540 3.2 145
+XGBoost (weighted) O(E · N · d log N ) O(d log N ) 0.5 106
+ MalDetectFormer 24 0.72 1,390 3.5 160
+BiLSTM (FR-APPSO) O(E · N · d · L) O(d · L) 2.4 107
+HAGRU O(E · N · d · L) O(d · L) 2.1 107
+ GAN 4 0.35 2,850 1.5 120
+TransfficFormer O(E · N · d · L) O(d2 · L) 3.0 108 WGAN 6 0.38 2,630 2.0 140
+MalDetectFormer O(E · N · d · L) O(d2 · L) 3.5 108 SGAN-IDS 8 0.51 1,960 1.8 140
+WGAN-GP O(E · N · d · L) O(d · L) 2.4 107 WGAN-GP 9 0.48 2,080 2.4 150
+FenceGAN O(E · N · d · L) O(d · L) 2.0 107 TIPSO-GAN 14 0.42 2,400 2.1 150
+TIPSO-GAN O(E · N · d · L + P · I · d) O(d · L + d2 ) 2.1 107
+
+ 14
+ TABLE XI: TIPSO-GAN runtime on increasing data sizes. TABLE XII: Resource Utilization Across TIPSO-GAN Modules (CICAPT-IIoT2024)
+ Data size Thrpt P50 P90 P99 Mem Power
+ Module GPU Memory (GB) FLOPs (×107 ) Runtime / Epoch (s) Latency (ms / flow)
+ (flows) (flows/s) (ms) (ms) (ms) (GB) (W)
+ Generator (G / GT ) 1.0 10.3 36 12.8
+ Discriminator (D / DT ) 0.9 9.8 34 12.4
+ 1 × 104 2420 0.17 0.27 0.40 2.0 148 DeePred (pre-trained) 1.2 10.7 39 13.1
+ PSO optimizer (train-time only) 0.3 1.2 11 –
+ 5 × 104 2410 0.18 0.28 0.41 2.0 149 Total (TIPSO-GAN) 2.1 107 120 12.8
+ 1 × 105 2400 0.18 0.29 0.42 2.1 150
+ 5 × 105 2380 0.19 0.31 0.44 2.1 152
+ 1 × 106 2360 0.20 0.32 0.46 2.2 153
+ 5 × 106 2340 0.21 0.34 0.48 2.2 155 Classical ML methods (Logistic Regression, XGBoost) are
+ 1 × 107 2320 0.22 0.35 0.50 2.3 156 linear in d, with negligible memory and FLOPs, but provide
+ 5 × 107 2300 0.24 0.38 0.55 2.3 158
+ limited robustness. RNN-based IDS (BiLSTM, HAGRU) scale
+ 1 × 108 2280 0.25 0.40 0.60 2.4 160
+ as O(d · L) at inference, requiring 2–3 GB memory and 107
+ FLOPs. Transformer IDS (TransfficFormer, MalDetectFormer)
+ incur quadratic O(d2 · L) cost from attention, leading to the
+vide a better trade-off: GAN and WGAN achieve 2.6–2.8k
+ highest memory (3–3.5 GB) and 108 FLOPs. GAN baselines
+flows/s, while SGAN-IDS and WGAN-GP trade higher train-
+ (WGAN-GP, FenceGAN) remain at O(d · L) with moderate
+ing cost for robustness. TIPSO-GAN requires 14 GPU hours
+ memory (2–2.4 GB). TIPSO-GAN introduces O(P · I · d)
+ FNR FPR
+ overhead during training from PSO, but maintains O(d·L+d2 )
+ 10 inference cost, with 2.1 GB memory and 107 FLOPs. This
+ 8 7.9
+ shows TIPSO-GAN is heavier to train but efficient at infer-
+ 6.7
+ 6.3
+ 6.8
+ 7.2
+ ence, close to GAN baselines and lighter than transformer IDS.
+ 6.1
+ Error Rate (%)
+
+ 6
+ 5.2
+ 4.5
+ 3.9
+ 4.2
+ J. Ablation study
+ 4 3.8 3.6 3.7
+ 3.1
+ We performed an ablation study to quantify the contribution
+ 2
+ of each component in TIPSO-GAN (Fig. 8) using the CICAPT-
+ 0 IIoT2024 dataset. Removing MHSA led to the sharpest degrall
+
+ SO
+
+ SA
+
+ er
+
+ al
+
+ ss
+
+ P
+
+ dation, increasing FNR from 5.2% to nearly 8%. Excluding
+ Fu
+
+ –G
+ oc
+ sf
+
+ Lo
+ –P
+
+ H
+
+ n
+
+ –F
+
+ dv
+ –M
+
+ ra
+ –T
+
+ –A
+
+ adversarial loss or focal loss also caused notable increases
+ Fig. 8: Ablation of TIPSO-GAN components. in error, confirming their role in stabilizing training and
+ improving recall on rare attack classes. Transfer learning and
+for training due to PSO optimization and multiple loss terms, PSO contributed moderate but consistent gains, while gradient
+but inference remains efficient at 0.42 ms per flow (≈ 2400 penalty and regularization further reduced both FPR and FNR
+flows/s). Peak memory (2.1 GB) and power draw (150 W) by about one point. The ablation demonstrates that the full
+are comparable to WGAN-GP. At these rates, a single GPU TIPSO-GAN design yields the lowest error rates and that
+can sustain 10–40 Gbps traffic, and throughput scales linearly multiple components work synergistically to achieve robustacross multiple GPUs. We observe that TIPSO-GAN maintains ness. As shown in Table XII, TIPSO-GAN maintains modest
+stable throughput and sub-millisecond latency as input size computational demands despite its multi-component design.
+grows from 104 to 108 flows; detailed results are provided Training consumes approximately 2.1 GB GPU memory and
+in Appendix Table XI. This confirms that TIPSO-GAN scales 107 FLOPs per epoch, with an average runtime of about
+reliably to real-world high-volume traffic settings. 120 s. The PSO optimizer adds only ≈12% additional FLOPs
+ 1) Runtime and Scalability Analysis: Table XI summarizes during training, while inference latency remains 12.8 ms per
+the runtime behavior of TIPSO-GAN as the dataset size flow comparable to WGAN-GP. DeePred and the discriminator
+increases from 1 × 104 to 1 × 108 network flows using account for most of the memory footprint, confirming that
+the CICAPT-IIoT2024 dataset. The model maintains near- TIPSO-GAN delivers robust detection efficiency with limited
+linear scalability, with throughput decreasing only marginally computational overhead suitable for real-time deployment.
+(2420 → 2280 flows/s) as data volume grows by four orders
+of magnitude. Median (P50) inference latency remains below VII. C ONCLUSION AND FUTURE WORK
+0.25 ms even at the largest scale, while memory usage stays This work introduced TIPSO-GAN, a novel intrusion detecwithin 2–2.4 GB. These results demonstrate that TIPSO-GAN tion framework that redefines GAN training as a swarm optiachieves efficient inference with modest resource growth, mization problem. The results demonstrate that TIPSO-GAN
+confirming its suitability for large-scale real-time intrusion consistently outperforms thirteen baselines, under temporal
+detection deployments. splits and stability under strict zero-day regimes. The framework also exhibits superior calibration, robustness against
+I. Computational Complexity Analysis adaptive adversarial attacks, and resilience to class imbalance,
+ Table IX reports complexity and resource usage across rep- confirming its suitability for deployment in real-world network
+resentative IDS models using the CICAPT-IIoT2024 dataset. defense systems. The current implementation of TIPSO-GAN
+
+ 15
+operates at the flow level, where each record aggregates [10] W. Qian, H. Li, and H. Mu, “Circular lbp prior-based enhanced
+multiple packets belonging to the same TCP or UDP session. gan for image style transfer,” Int. J. Semant. Web Inf. Syst.,
+ vol. 18, no. 2, p. 1–15, Dec. 2022. [Online]. Available: https:
+This design captures temporal and statistical dependencies //doi.org/10.4018/IJSWIS.315601
+that are not observable in isolated packets and enables stable [11] X. Zhang, J. Wang, and S. Zhu, “Dual generative adversarial networks
+adversarial training with compact feature spaces. However, based unknown encryption ransomware attack detection,” IEEE Access,
+ vol. 10, pp. 900–913, 2022.
+this also means TIPSO-GAN does not perform per-packet [12] Z. Zhou, Y. Li, J. Li, K. Yu, G. Kou, M. Wang, and B. B. Gupta,
+classification. Future work will investigate the integration “Gan-siamese network for cross-domain vehicle re-identification in
+of fine-grained packet-level embeddings with TIPSO-GAN’s intelligent transport systems,” IEEE Transactions on Network Science
+ and Engineering, vol. 10, no. 5, pp. 2779–2790, 2023.
+adversarial optimization to enable real-time packet-wise de- [13] A. Dunmore, J. Jang-Jaccard, F. Sabrina, and J. Kwak, “A comprehentection without sacrificing stability. Future study could also sive survey of generative adversarial networks (gans) in cybersecurity
+extend TIPSO-GAN to streaming detection environments, op- intrusion detection,” IEEE Access, vol. 11, pp. 76 071–76 094, 2023.
+timize its efficiency for resource-constrained IoT deployments, [14] M. Arjovsky, S. Chintala, and L. Bottou, “Wasserstein generative
+ adversarial networks,” in Proceedings of the 34th International
+and investigate cross-domain transfer to improve adaptability Conference on Machine Learning, ser. Proceedings of Machine
+across heterogeneous network infrastructures. Learning Research, D. Precup and Y. W. Teh, Eds., vol. 70.
+ PMLR, 06–11 Aug 2017, pp. 214–223. [Online]. Available: https:
+ ACKNOWLEDGMENTS //proceedings.mlr.press/v70/arjovsky17a.html
+ [15] X. Mao, Q. Li, H. Xie, R. Y. K. Lau, Z. Wang, and S. P. Smolley, “Least
+ This work was partly supported by the National Natural squares generative adversarial networks,” 2017 IEEE International
+Science Foundation of China (NSFC) (Grant nos. 62172194, Conference on Computer Vision (ICCV), pp. 2813–2821, 2016. [Online].
+ Available: https://api.semanticscholar.org/CorpusID:206771128
+62202206 and U1836116), the Natural Science Foundation [16] G. Dlamini and M. Fahim, “Dgm: a data generative model to improve
+of Jiangsu Province, China (Grant no. BK20220515), the minority class presence in anomaly detection domain,” Neural Comput-
+China Postdoctoral Science Foundation, China (Grant no. ing and Applications, vol. 33, pp. 13 635–13 646, 10 2021.
+ [17] R. Chapaneri and S. Shah, “Enhanced detection of imbalanced mali-
+2021M691310), and Qinglan Project of Jiangsu Province, cious network traffic with regularized generative adversarial networks,”
+China. Journal of Network and Computer Applications, vol. 202, 6 2022.
+ [18] S. Das, “Fgan: Federated generative adversarial networks for anomaly
+ R EFERENCES detection in network traffic,” 2022.
+ [19] X. Liu and J. Liu, “Malicious traffic detection combined deep neural
+[1] I. Cvitić, D. Perakovic, B. B. Gupta, and K.-K. R. Choo, “Boosting- network with hierarchical attention mechanism,” Scientific Reports,
+ based ddos detection in internet of things systems,” IEEE Internet of vol. 11, no. 1, p. 12363, 2021.
+ Things Journal, vol. 9, no. 3, pp. 2109–2123, 2022. [20] B.-E. Zolbayar, R. Sheatsley, P. McDaniel, M. J. Weisman, S. Zhu,
+[2] J. Yang, X. Jiang, G. Liang, S. Li, and Z. Ma, “Malicious traffic S. Zhu, and S. Krishnamurthy, “Generating practical adversarial network
+ identification with self-supervised contrastive learning,” Sensors, vol. 23, traffic flows using nidsgan,” 2022.
+ 8 2023.
+ [21] B. Babayigit and M. Abubaker, “Towards a generalized hybrid deep
+[3] L. D. Manocchio, S. Layeghy, W. W. Lo, G. K. Kulatilleke, M. Sarhan,
+ learning model with optimized hyperparameters for malicious traffic
+ and M. Portmann, “Flowtransformer: A transformer framework for
+ detection in the industrial internet of things,” Engineering Applications
+ flow-based network intrusion detection systems,” Expert Systems
+ of Artificial Intelligence, vol. 128, p. 107515, 2 2024.
+ with Applications, vol. 241, p. 122564, 2024. [Online]. Available:
+ [22] M. Fathallah, M. Sakr, and S. Eletriby, “Stabilizing and improving
+ https://www.sciencedirect.com/science/article/pii/S095741742303066X
+ training of generative adversarial networks through identity blocks and
+[4] Y. Gorishniy, I. Rubachev, V. Khrulkov, and A. Babenko, “Revisiting
+ modified loss function,” IEEE Access, vol. 11, pp. 43 276–43 285, 2023.
+ deep learning models for tabular data,” in Proceedings of the 35th
+ International Conference on Neural Information Processing Systems, ser. [23] Q. Yuan, G. Gou, Y. Zhu, Y. Zhu, G. Xiong, and Y. Wang, “Mcre: A
+ NIPS ’21. Red Hook, NY, USA: Curran Associates Inc., 2021. unified framework for handling malicious traffic with noise labels based
+[5] S. Zhang, Y. Fan, H. Zhou, and B. Li, “Maldetectformer: on multidimensional constraint representation,” IEEE Transactions on
+ leveraging sparse spatiotemporal information for effective malicious Information Forensics and Security, vol. 19, pp. 133–147, 2024.
+ traffic detection,” in Proceedings of the Thirty-Ninth AAAI [24] A. Radford, L. Metz, and S. Chintala, “Unsupervised Representation
+ Conference on Artificial Intelligence and Thirty-Seventh Conference Learning with Deep Convolutional Generative Adversarial Networks,”
+ on Innovative Applications of Artificial Intelligence and Fifteenth arXiv e-prints, p. arXiv:1511.06434, Nov. 2015.
+ Symposium on Educational Advances in Artificial Intelligence, ser. [25] S. Das, A. Abraham, and A. Konar, “Swarm intelligence algorithms
+ AAAI’25/IAAI’25/EAAI’25. AAAI Press, 2025. [Online]. Available: in bioinformatics,” in Computational Intelligence in Bioinformatics.
+ https://doi.org/10.1609/aaai.v39i21.34411 Springer, 2008, pp. 113–147.
+[6] C. Kang, J. Yoon, D. Choi, E. Park, S. Pack, and J. Han, “Transtraffic: [26] J. Kennedy and R. Eberhart, “Particle swarm optimization,” 1995, pp.
+ Predicting network traffic using low resource data,” in 2022 13th In- 1942–1948.
+ ternational Conference on Information and Communication Technology [27] E. K. Boahen, B. E. Bouya-Moko, and C. Wang, “Network anomaly
+ Convergence (ICTC), 2022, pp. 786–788. detection in a controlled environment based on an enhanced psogsarfc,”
+[7] I. J. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley, Computers and Security, vol. 104, 5 2021.
+ S. Ozair, A. Courville, and Y. Bengio, “Generative adversarial [28] S. Choudhary, S. Sugumaran, A. Belazi, and A. A. A. El-Latif, “Linnetworks,” Advances in Neural Information Processing Systems 27 early decreasing inertia weight pso and improved weight factor-based
+ (NIPS 2014), 6 2014. [Online]. Available: http://arxiv.org/abs/1406.2661 clustering algorithm for wireless sensor networks,” Journal of Ambient
+[8] Z. Moti, S. Hashemi, H. Karimipour, A. Dehghantanha, A. N. Jahromi, Intelligence and Humanized Computing, pp. 1–19, 2023.
+ L. Abdi, and F. Alavi, “Generative adversarial network to detect [29] M. A. K. Raiaan, S. Sakib, N. M. Fahad, A. A. Mamun, M. A.
+ unseen internet of things malware,” Ad Hoc Networks, vol. 122, Rahman, S. Shatabda, and M. S. H. Mukta, “A systematic review
+ p. 102591, 2021. [Online]. Available: https://www.sciencedirect.com/ of hyperparameter optimization techniques in convolutional neural
+ science/article/pii/S1570870521001281 networks,” Decision Analytics Journal, vol. 11, p. 100470, 2024.
+[9] H. D. Menéndez, S. Bhattacharya, D. Clark, and E. T. Barr, “The [Online]. Available: https://www.sciencedirect.com/science/article/pii/
+ arms race: Adversarial search defeats entropy used to detect malware,” S2772662224000742
+ Expert Systems with Applications, vol. 118, pp. 246–260, 2019. [30] L. Zhang and L. Zhao, “High-quality face image generation using
+ [Online]. Available: https://www.sciencedirect.com/science/article/pii/ particle swarm optimization-based generative adversarial networks,”
+ S0957417418306535 Future Generation Computer Systems, vol. 122, pp. 98–104, 2021.
+
+ 16
+ [Online]. Available: https://www.sciencedirect.com/science/article/pii/ International Conference on Information Systems Security and Privacy,
+ S0167739X21001126 2018. [Online]. Available: https://api.semanticscholar.org/CorpusID:
+[31] H. N. Nguyen, T. Lan-Phan, and C.-J. Song, “Generative adversarial 4707749
+ network-based network intrusion detection system for supervisory con- [48] E. Ghiasvand, S. Ray, S. Iqbal, S. Dadkhah, and A. A. Ghorbani,
+ trol and data acquisition system,” in 2024 IEEE International Conference “Cicapt-iiot: A provenance-based apt attack dataset for iiot environon Consumer Electronics-Asia (ICCE-Asia), Nov 2024, pp. 1–3. ment,” 2024. [Online]. Available: https://arxiv.org/abs/2407.11278
+[32] T. K. Boppana and P. Bagade, “Gan-ae: An unsupervised intrusion [49] I. Gulrajani, F. Ahmed, M. Arjovsky, V. Dumoulin, and A. Courville,
+ detection system for mqtt networks,” Engineering Applications of “Improved Training of Wasserstein GANs,” arXiv e-prints, p.
+ Artificial Intelligence, vol. 119, p. 105805, 2023. [Online]. Available: arXiv:1704.00028, Mar. 2017.
+ https://www.sciencedirect.com/science/article/pii/S0952197622007953 [50] Z. Lin, Y. Shi, and Z. Xue, “Idsgan: Generative adversarial networks
+[33] L. Zhang and L. Zhao, “High-quality face image generation using for nbsp;attack generation against intrusion detection,” in Advances in
+ particle swarm optimization-based generative adversarial networks,” Knowledge Discovery and Data Mining: 26th Pacific-Asia Conference,
+ Future Generation Computer Systems, vol. 122, pp. 98–104, 2021. PAKDD 2022, Chengdu, China, May 16–19, 2022, Proceedings, Part
+ [Online]. Available: https://www.sciencedirect.com/science/article/pii/ III. Berlin, Heidelberg: Springer-Verlag, 2022, p. 79–91. [Online].
+ S0167739X21001126 Available: https://doi.org/10.1007/978-3-031-05981-0 7
+[34] L. Tian, Z. Wang, W. Liu, Y. Cheng, F. E. Alsaadi, and X. Liu, [51] S. Huang and K. Lei, “Igan-ids: An imbalanced generative adversarial
+ “Empower parameterized generative adversarial networks using a novel network towards intrusion detection system in ad-hoc networks,”
+ particle swarm optimizer: algorithms and applications,” International Ad Hoc Networks, vol. 105, p. 102177, 2020. [Online]. Available:
+ Journal of Machine Learning and Cybernetics, vol. 13, pp. 1145–1155, https://www.sciencedirect.com/science/article/pii/S1570870519311035
+ 4 2022. [52] S. Rahman, S. Pal, S. Mittal, T. Chawla, and C. Karmakar, “Syn-gan:
+[35] R. Shameli and S. Rajkumar, “High-speed threat detection in 5g A robust intrusion detection system using gan-based synthetic data
+ sdn with particle swarm optimizer integrated gru-driven generative for iot security,” Internet of Things, vol. 26, p. 101212, 2024.
+ adversarial network,” Scientific Reports, vol. 15, no. 1, p. 10025, 2025. [Online]. Available: https://www.sciencedirect.com/science/article/pii/
+ [Online]. Available: https://doi.org/10.1038/s41598-025-95011-z S2542660524001537
+[36] A. Touré, Y. Imine, A. Semnont, T. Delot, and A. Gallais, [53] J. Donahue and K. Simonyan, Large scale adversarial representation
+ “A framework for detecting zero-day exploits in network flows,” learning. Red Hook, NY, USA: Curran Associates Inc., 2019.
+ Computer Networks, vol. 248, p. 110476, 2024. [Online]. Available: [54] L. Niu, Z. Li, and S. Li, “Mmd fence gan unsupervised anomaly
+ https://www.sciencedirect.com/science/article/pii/S1389128624003086 detection model based on maximum mean discrepancy,” Int. J. Cogn.
+[37] M. Poongodi and M. Hamdi, “Intrusion detection system using Inform. Nat. Intell., vol. 18, no. 1, p. 1–13, jun 2024. [Online].
+ distributed multilevel discriminator in gan for iot system,” Transactions Available: https://doi.org/10.4018/IJCINI.344813
+ on Emerging Telecommunications Technologies, vol. 34, no. 11, p. [55] F. Ullah, S. Ullah, G. Srivastava, and J. C.-W. Lin, “Ids-int: Intrusion dee4815, 2023. [Online]. Available: https://onlinelibrary.wiley.com/doi/ tection system using transformer-based transfer learning for imbalanced
+ abs/10.1002/ett.4815 network traffic,” Digital Communications and Networks, 3 2023.
+[38] E. Seo, H. M. Song, and H. K. Kim, “Gids: Gan based intrusion detec-
+ [56] F. Rustam and A. D. Jurcut, “Malicious traffic detection in multition system for in-vehicle network,” in 2018 16th Annual Conference
+ environment networks using novel s-date and pso-d-sem approaches,”
+ on Privacy, Security and Trust (PST), Aug 2018, pp. 1–6.
+ Computers and Security, vol. 136, 1 2024.
+[39] S. Rahman, S. Pal, S. Mittal, T. Chawla, and C. Karmakar, “Syn-gan:
+ [57] H. Jiang, S. Ji, G. He, and X. Li, “Network traffic anomaly detection
+ A robust intrusion detection system using gan-based synthetic data
+ model based on feature reduction and bidirectional lstm neural network
+ for iot security,” Internet of Things, vol. 26, p. 101212, 2024.
+ optimization,” Scientific Programming, vol. 2023, pp. 1–18, 11 2023.
+ [Online]. Available: https://www.sciencedirect.com/science/article/pii/
+ S2542660524001537 [58] S. Liu, F. Peng, and K. Tang, “Reliable robustness evaluation via
+ automatically constructed attack ensembles,” in Proceedings of the
+[40] S. Aldhaheri and A. Alhuzali, “Sgan-ids: Self-attention-based generative
+ Thirty-Seventh AAAI Conference on Artificial Intelligence and Thirtyadversarial network against intrusion detection systems,” Sensors,
+ Fifth Conference on Innovative Applications of Artificial Intelligence
+ vol. 23, no. 18, 2023. [Online]. Available: https://www.mdpi.com/
+ and Thirteenth Symposium on Educational Advances in Artificial
+ 1424-8220/23/18/7796
+ Intelligence, ser. AAAI’23/IAAI’23/EAAI’23. AAAI Press, 2023.
+[41] A.-G. Mari, D. Zinca, and V. Dobrota, “Development of a machine-
+ [Online]. Available: https://doi.org/10.1609/aaai.v37i7.26064
+ learning intrusion detection system and testing of its performance
+ using a generative adversarial network,” Sensors, vol. 23, no. 3, 2023. [59] C. Liu, C. Lou, M. Yu, S. Yiu, K. Chow, G. Li, J. Jiang, and W. Huang,
+ [Online]. Available: https://www.mdpi.com/1424-8220/23/3/1315 “A novel adversarial example detection method for malicious pdfs
+[42] M. Roopak, S. Parkinson, G. Y. Tian, Y. Ran, S. Khan, and using multiple mutated classifiers,” Forensic Science International:
+ B. Chandrasekaran, “An unsupervised approach for the detection of zero- Digital Investigation, vol. 38, p. 301124, 2021. [Online]. Available:
+ day distributed denial of service attacks in internet of things networks,” https://www.sciencedirect.com/science/article/pii/S2666281721000226
+ IET Networks, vol. 13, no. 5-6, pp. 513–527, 2024. [Online]. Available: [60] A. Chernikova and A. Oprea, “Fence: Feasible evasion attacks on neural
+ https://ietresearch.onlinelibrary.wiley.com/doi/abs/10.1049/ntw2.12134 networks in constrained environments,” ACM Trans. Priv. Secur., vol. 25,
+[43] M. Sarhan, S. Layeghy, M. Gallagher, and M. Portmann, “From no. 4, Jul. 2022. [Online]. Available: https://doi.org/10.1145/3544746
+ zero-shot machine learning to zero-day attack detection,” International [61] K. G. Shreeharsha, C. G. Korde, M. H. Vasantha, and Y. B. N. Kumar,
+ Journal of Information Security, vol. 22, no. 4, pp. 947–959, 2023. “Training of generative adversarial networks using particle swarm opti-
+ [Online]. Available: https://doi.org/10.1007/s10207-023-00676-0 mization algorithm.” Institute of Electrical and Electronics Engineers
+[44] R. Huang, L. Ma, J. He, and X. Chu, “T-gan: A deep learning Inc., 2021, pp. 127–130.
+ framework for prediction of temporal complex networks with adaptive [62] X.-L. Li, R. Serra, and O. Julien, “Effects of the Particle Swarm
+ graph convolution and attention mechanism,” Displays, vol. 68, Optimization parameters for structural dynamic monitoring of cantilever
+ p. 102023, 2021. [Online]. Available: https://www.sciencedirect.com/ beam,” in Surveillance, Vishno and AVE conferences. Lyon, France:
+ science/article/pii/S0141938221000366 INSA-Lyon, Université de Lyon, Jul. 2019. [Online]. Available:
+[45] S. Tuli, G. Casale, and N. R. Jennings, “Tranad: deep transformer https://hal.science/hal-02188562
+ networks for anomaly detection in multivariate time series data,” Proc.
+ VLDB Endow., vol. 15, no. 6, p. 1201–1214, Feb. 2022. [Online].
+ Available: https://doi.org/10.14778/3514061.3514067 A PPENDIX A
+[46] W. Du, J. Xue, X. Yang, W. Guo, D. Gu, and W. Han, “Transfficformer: ADDITIONAL EXPERIMENTAL RESULTS
+ A novel transformer-based framework to generate evasive malicious
+ traffic,” Knowledge-Based Systems, vol. 319, p. 113546, 2025.
+ [Online]. Available: https://www.sciencedirect.com/science/article/pii/ A. Experiment on the improved particle swarm inertia weight
+ S0950705125005921
+[47] I. Sharafaldin, A. H. Lashkari, and A. A. Ghorbani, “Toward generating a The performance of five inertia weight strategies was asnew intrusion detection dataset and intrusion traffic characterization,” in sessed using a hybrid sinc–exponential test function (Eq. 15-
+
+ 17
+ 1.0 1.0 1.0
+
+ 0.8 0.8 0.8
+Empirical accuracy
+
+ Empirical accuracy
+
+ Empirical accuracy
+ 0.6 0.6 0.6
+
+ 0.4 0.4 0.4
+
+ 0.2 0.2 0.2
+ ECE=0.168, Brier=0.235, Gap ECE ECE=0.065, Brier=0.171, Gap ECE ECE=0.016, Brier=0.136, Gap ECE
+ Model reliability (blue) Model reliability (blue) Model reliability (blue)
+ Perfect calibration (orange) Perfect calibration (orange) Perfect calibration (orange)
+ 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0
+ Confidence Confidence Confidence
+
+ (a) GAN (b) DCGAN (c) BigGAN
+ 1.0 1.0 1.0
+
+ 0.8 0.8 0.8
+Empirical accuracy
+
+ Empirical accuracy
+
+ Empirical accuracy
+ 0.6 0.6 0.6
+
+ 0.4 0.4 0.4
+
+ 0.2 0.2 0.2
+ ECE=0.076, Brier=0.054, Gap ECE ECE=0.075, Brier=0.027, Gap ECE ECE=0.031, Brier=0.003, Gap ECE
+ Model reliability (blue) Model reliability (blue) Model reliability (blue)
+ Perfect calibration (orange) Perfect calibration (orange) Perfect calibration (orange)
+ 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0
+ Confidence Confidence Confidence
+
+ (d) WGAN-GP (e) SGAN-IDS (f) TIPSO-GAN
+ Fig. 9: Reliability diagrams on CICAPT-IIoT2024 with shaded miscalibration area. The orange dashed line denotes perfect calibration, and
+ the blue curve shows the model’s reliability. Legends report ECE and Brier scores, confirming that TIPSO-GAN achieves the best calibration.
+
+ 2.71289), with results in Table XIII.
+ p
+ sin( x2 + y 2 )  
+ f (x, y) = p + exp cos(2πx)+cos(2πy)
+ 2 (15)
+ x2 + y 2
+ The proposed adaptive sigmoidal strategy achieved the best
+ mean value (1.2183), finding all 50 global optima with no local
+ minima. Its dynamic inertia control balanced exploration and Fig. 10: The graph of test function f (x).
+ exploitation more effectively than the fixed (ω0 ) or decreasing
+ (ω1 –ω3 ) schemes. Fixed and linearly decreasing weights pro- TABLE XIV: Experimental Environment Summary.
+ duced lower averages (0.90–0.93) and frequent local optima,
+ while quadratic and exponential variants (0.81–0.79) over- Category Specification
+ exploited early, reducing diversity. Figure 10 confirms that Processor Intel Core i7 (8 cores, 3.6 GHz)
+ adaptive weighting preserved population diversity and avoided Memory 64 GB RAM
+ GPU NVIDIA GTX 1080 Ti (11 GB VRAM)
+ premature convergence. Operating System Windows 10 / Ubuntu 22.04
+ Python Version 3.10 (Anaconda)
+ TABLE XIII: The comparative performance on different iner- Deep Learning Framework TensorFlow 2.15.0
+ ML Utilities Scikit-learn 1.3, NumPy, Pandas
+ tia weights using the customized test function.
+ Author/ Average # of Local # of Global
+ Method Value Optima Optima
+ [26] Conventional 0.9028 10 40 complex landscape more thoroughly and avoid being trapped
+ [28] Linear 0.9305 8 42 in suboptimal regions.
+ [30] Quadratic 0.8052 9 48
+ [61] Constant 0.7864 6 44 B. Detailed experimental settings and parameters
+ [30] Exponential 0.8136 6 44
+ Adaptive Sigmoidal 1.2183 0 50 TIPSO-GAN employs a two-phase optimization: PSO-based
+ initialization followed by Adam fine-tuning. The PSO stage
+ The results indicate the importance of maintaining diversity uses 100 particles (c1 = c2 = 2.05, wmin = 0.4, wmax = 0.9),
+ in the particle swarm, as it allows the algorithm to explore the optimizing the GAN loss for 1000 iterations with adaptive
+
+ 18
+inertia control [62]. The global best solution initializes the gen- TABLE XV: Parameter settings of TIPSO-GAN.
+erator before Adam refinement. Training stops when validation Component Hyperparameter Value
+
+accuracy falls below or exceeds 99.95% for three epochs, Optimization Optimizer Adam (β1 =0.5, β2 =0.999)
+ Learning rate 2 × 10−4
+balancing convergence and overfitting. Hyperparameters (Ta- Batch size 256
+
+ble XV) follow prior work with validation tuning. Sensitivity GAN Training Discriminator updates per generator
+ Gradient penalty λ
+ 5
+ 10
+tests varying MHSA heads (2–8), focal loss γ (0–3), and Adversarial loss weight 1.0
+ DeePred (Pre-train) Encoder depth 3 convolutional blocks
+attention decay (0.90–0.98) confirmed stable accuracy and Kernel size / stride 3×3 / 1×1
+ Pooling MaxPool (2)
+low false negatives (Fig. 11), demonstrating robustness and Activation ReLU
+ Optimizer Adam (10−4 )
+reproducibility across configurations. Epochs 50
+ DCGAN (PSOGAN base) Conv layers (G/D) 4/4
+ Latent dimension z 100
+ Feature map base (G) 64
+ Feature map base (D) 64
+ 10 10
+ 10 Normalization BatchNorm2d
+ Activation LeakyReLU (0.2)
+ 8 8
+ 8
+ 6.8
+ TIPSO-GAN Generator (GT ) Layers 4 ConvTranspose + BN + ReLU
+ 5.8 6 5.7 5.4 6 5.6 Output activation Tanh
+ 6 5.3
+FNR (%)
+
+ 5.2 5.1 5.2 5.2
+ Feature expansion 128 → 256 → 512
+ 4 4 4 Dropout rate 0.3
+ 2 2 2 MHSA (Discriminator head) Heads 4
+ Hidden dim./head 32
+ 0 0 0 Attention decay factor 0.95
+ 2 4 8 0 1.0 2.0 3.0 0.90 0.95 0.98
+ PSO (Training phase only) Swarm size P 30
+ MHSA heads Focal γ Attention decay Iterations I 50
+ Inertia range (wmax , wmin ) (0.9, 0.4)
+ Cognitive/social coefficients (c1 , c2 ) (2.05, 2.05)
+Fig. 11: sensitivity of tipso-gan to (left) mhsa heads, (middle)
+ Regularization Dropout rate 0.3
+focal γ, and (right) attention decay. bars show mean fnr over Weight decay 10−4
+
+5 runs; lower is better.
+ 10 10
+
+ 8 8
+
+ 6 5.6
+ FNR (%)
+
+ 5.5 6
+
+ FNR (%)
+ 5.2 5.4 5.2 5.3
+ 10 10
+ 4 4
+ 8 8
+ 2 2
+ 6 5.6
+ FNR (%)
+
+ 5.5 6 5.6
+ FNR (%)
+
+ 5.2 5.2 5.3
+ 0 0
+ 1e-4 2e-4 5e-4 128 256 512
+ 4 4
+ Learning Rate Batch Size
+
+ 2 2 LR sensitivity Batch sensitivity
+ 0 0 Fig. 14: Sensitivity of TIPSO-GAN to learning rate (left) and
+ 0.2 0.3 0.5 5 10 20
+ Dropout Rate GP λ batch size (right). Values are mean FNR over 5 runs.
+ Dropout GP strength
+ We evaluated the effect of additional training and regulariza-
+Fig. 12: Sensitivity of TIPSO-GAN to regularization and GAN
+ tion parameters on TIPSO-GAN. Figure 14 shows that varying
+stability: dropout rate (left) and gradient penalty λ (right).
+ the learning rate from 1 × 10−4 to 5 × 10−4 and the batch
+Mean FNR over 5 runs.
+ size from 128 to 512 changes the false negative rate (FNR)
+ by less than one point. Figure 13 reports the PSO optimizer
+ settings: swarm sizes between 30 and 50 and iterations of
+ 50–100 achieve stable results, while smaller values slightly
+ increase FNR. Figure 12 analyzes regularization and GAN sta-
+ 10 10
+ bility; dropout rates of 0.2–0.5 and gradient penalty strengths
+ 8 8 λ ∈ {5, 10, 20} yield only marginal shifts, with λ = 10
+ 6
+ 5.9
+ 6 5.7
+ and dropout 0.3 giving the lowest error. Across all settings,
+ FNR (%)
+
+ FNR (%)
+
+ 5.3 5.2 5.3 5.2
+ TIPSO-GAN maintains low FNR, indicating robustness to
+ 4 4 hyperparameter choices and supporting reproducibility.
+ 2 2
+ A PPENDIX B
+ 0 0 A RTIFACTS
+ 10 30 50 20 50 100
+ Swarm Size P Iterations I A. Code Installation & Configuration
+ PSO P PSO I Installation Steps:
+Fig. 13: Sensitivity of TIPSO-GAN to PSO parameters: swarm 1) Create a Python 3.11 environment (Anaconda recomsize P (left) and iterations I (right). Mean FNR over 5 runs. mended).
+
+ 19
+TABLE XVI: Mapping of Paper Claims to Artifact Outputs.
+ Claim Validated by Artifact
+ C1 run repro perf.py, run compare baselines.py
+ → perf summary *.json, baselines perf *.json,
+ confusion matrix *.json
+ run cost profile.py → cost metrics *.json
+ C2 run loss curves.py → loss history *.csv, loss curves *.png
+ C3 run adaptive attacks.py →
+ adaptive attacks report *.json, Fig. 15: Data configuration
+ adaptive attacks summary *.csv,
+ adaptive attacks *plots
+ C4 run transfer.py → dee transfer report *.json, transfer *.png
+ TABLE XVII: Baseline Implementations and Code Repositories
+ C5 run balance eval.py → balance grid *.csv, preds *.npy
+ A1 run attention ablation.py → attention ablation *.csv Method Repository URL
+ run pso ablation.py → pso vs static *.csv TIPSO-GAN https://doi.org/10.5281/zenodo.17759516
+ DCGAN, WGAN-GP https://github.com/Zeleni9/pytorch-wgan
+ Cost run cost profile.py → cost metrics *.json, cost latency.png FenceGAN https://github.com/phuccuongngo99/Fence GAN
+ Note: filenames with * stands for the dataset names used. BiGAN https://github.com/ajbrock/BigGAN-PyTorch
+ SYN-GAN https://github.com/dagrate/syngan
+ FT-Transformer https://github.com/yandex-research/
+ rtdl-revisiting-models
+ 2) Run pip install -r requirements.txt.
+ 3) Test setup: python run_repro_perf.py. Results
+ appear under artifacts/. • (C4): PSO-based balancing improves recall. — Fig. 6.
+B. Experiment Workflow • (C5): Model generalizes to unseen attack types. — Table
+ VIII.
+ Each experiment is executed via a standalone Python script • (C6): PSO and attention modules provide additive gains.
+(run_*.py) that loads data, trains TIPSO-GAN, evaluates — added in Table X and Fig. 8.
+results, and saves outputs to artifacts/. • (C7): Computational cost comparable to baseline GANs.
+ Workflow steps: — Table X.
+ 1) Load data using cicids_loader.py (default: • (C8): TIPSO-GAN maintains robustness under adaptive
+ cicids2018.csv, cicddos2019.csv, attacks. — Table VI.
+ cicaptiiot.csv).
+ 2) Initialize model components (PSO, generator, discrim- D. Evaluation
+ inator, DeePred) from train.py. Table XVI summarizes all experiments (E1–E10), mapping
+ 3) Train & evaluate the TIPSO-GAN framework with each to its corresponding claim (C1–C8), expected outcome,
+ configurations in config.py. and generated output files. The corresponding evaluation re-
+ 4) Store results (metrics, confusion matrix, loss curves) in sults reported in the paper are indicated in the major claims
+ artifacts/. section (B-C).
+ To execute any experiment, open the project folder in Visual
+ E. Customization
+Studio Code (VS Code) and run the desired script (e.g.,
+run_repro_perf.py) using the integrated terminal (right Modify config.py to adjust epochs, dataset paths (see
+click on the script you want to execute and select ”Run Python Fig 15 in each script), and verbosity. All scripts run with CPU
+File in Terminal”) or “Run Python File” option. by default; set TensorFlow GPU if available.
+ All scripts can alternatively be executed from the command F. Code Availability
+line as: Example command:
+ The implementation of the proposed method is available at
+python run_repro_perf.py https://doi.org/10.5281/zenodo.17759516. See Table XVII for
+python run_ablation_pso.py etc. full implementation codes of TIPSO-GAN and the baselines
+ methods.
+Results are automatically saved under artifacts/. All
+scripts can be run independently or sequentially to reproduce
+results in the paper. VS Code or any terminal may be used;
+results appear automatically in artifacts/.
+C. Major Claims
+ • (C1): TIPSO-GAN achieves superior detection metrics
+ (Acc, Prec, Rec, F1) vs baselines. — (E1, E8) (Table
+ VII).
+ • (C2): Stability and resilience of TIPSO-GAN against
+ mode collapse. — (E2) Table III.
+ • (C3): DeePred transfer learning effects. — Fig. 8.
+
+ 20

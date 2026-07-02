@@ -1,0 +1,154 @@
+                                                                  Computers & Security 132 (2023) 103371
+
+
+
+                                                              Contents lists available at ScienceDirect
+
+
+                                                               Computers & Security
+                                                        journal homepage: www.elsevier.com/locate/cose
+
+
+
+
+A framework for threat intelligence extraction and fusionR,RR
+Yongyan Guo, Zhengyu Liu, Cheng Huang∗, Nannan Wang, Hai Min, Wenbo Guo, Jiayong Liu
+School of Cyber Science and Engineering, Sichuan University, Chengdu 610065, China
+
+
+
+
+a r t i c l e         i n f o                          a b s t r a c t
+
+Article history:                                       Cyber-attacks, with various emerging attack techniques, are becoming increasingly sophisticated and dif-
+Received 24 January 2022                               ﬁcult to deal with, posing great threats to companies and every individual. Therefore, analyzing attack
+Revised 19 June 2023
+                                                       incidents and tracing the attack groups behind them becomes extremely important. Threat intelligence
+Accepted 26 June 2023
+                                                       provides a new technical solution for attack traceability by constructing Cybersecurity Knowledge Graph
+Available online 28 June 2023
+                                                       (CKG). In this paper, we propose a framework for threat intelligence extraction and fusion, which is
+Keywords:                                              able to extract, correlate and unify cybersecurity entity-relation triples from structured and unstructured
+Threat intelligence                                    data. However, the existing entity and relation extraction for cybersecurity concepts uses the traditional
+Knowledge graph                                        pipeline model that suffers from error propagation and ignores the connection between the two subtasks.
+Relation extraction                                    To solve the above problem, we propose a joint entity and relation extraction model for cybersecurity
+Joint model                                            concepts. We model the joint extraction problem as a multiple sequence labeling problem, generating
+Knowledge fusion
+                                                       separate label sequences for different relations, which contain information about the involved entities
+                                                       and the subject and object of that relation. Experimental results on Open Source Intelligence (OSINT)
+                                                       data show that the F1 value of the joint model is 81.37%, which is better than the previous pipeline
+                                                       model. For the knowledge fusion, we propose an improved Levenshtein distance to correlate the same
+                                                       entities extracted from different data sources to construct a preliminary CKG, which is demonstrated in
+                                                       the Experiments section.
+                                                                                                                         © 2023 Elsevier Ltd. All rights reserved.
+
+
+
+
+1. Introduction                                                                        tracking, and can even effectively deal with sophisticated cyber-
+                                                                                       attacks (e.g., zero-day attacks, advanced persistent threat).
+   Nowadays, the damage and impact caused by malicious behav-                              The key step in constructing CKG is cyber threat intelligence
+iors in cyberspace such as hacker attacks, frauds, and rumors have                     extraction, which involves subtasks such as entity recognition, re-
+become more serious. Therefore, how to effectively and accurately                      lation extraction, and event extraction. Currently, many research
+detect cyber attacks as early as possible, analyze attack incidents,                   groups have conducted research on the automated construction
+and trace the source of attackers and groups has become a severe                       and analysis of CKG (Gao et al., 2021; Husari et al., 2017; Jia et al.,
+problem for enterprises and countries.                                                 2018; Milajerdi et al., 2019; Piplai et al., 2020a; 2020b; Zhao et al.,
+   The concept of Cyber Threat Intelligence (CTI) was developed                        2020b). In terms of CTI information extraction, previous studies are
+supplying new theoretic support for cyber-attack source tracing,                       dedicated to extracting cybersecurity concepts (Liao et al., 2016;
+making it possible to trace the source of a wide range of attacks.                     Mittal et al., 2016; Zhu and Dumitras, 2018) and entities (Ghazi
+Therefore, many researchers extract and analyze different threat                       et al., 2018; Husari et al., 2018; Zhao et al., 2020a) from unstruc-
+intelligence to generate the Cybersecurity Knowledge Graph (CKG).                      tured data. This extraction leads to a rich repository of cyberse-
+The CKG has the characteristic of strong timeliness and high ac-                       curity entity-relation triples that precisely delineate the relations
+curacy, which can timely and easily detect, respond and defend                         within the cybersecurity realm. For instance, consider the triple
+against speciﬁc targets, providing a new measure for attack source                     (“sqlite3 in versionc 3.26.0”, “hasVulnerability”, “CVE-2019-5018”).
+                                                                                       Here, “sqlite3 in version 3.26.0” is the subject entity of type “soft-
+  R
+     This paper was presented in part at the Proceeding of the 23rd Interna-           ware”, “hasVulnerability” is the relation, and “CVE-2019-5018” is
+tional Conference on Information and Communications Security (ICICS 2021) (Guo         the object entity of type “vulnerability”. This triple clearly indicates
+et al.(2021)).                                                                         that the software “sqlite3” in version 3.26.0 has a speciﬁc vulnera-
+RR
+     This work was supported in part by National Key Research and Development
+                                                                                       bility referenced as “CVE-2019-5018”.
+Program of China (No. 2021YFB310 050 0), Sichuan Science and Technology Program
+(No. 2023YFG0162), and National Natural Science Foundation of China (61902265).            The construction of CKG is inseparable from a large number of
+   ∗
+     Corresponding author.                                                             cybersecurity entity-relation triples from different sources. Threat
+     E-mail address: codesec@scu.edu.cn (C. Huang).                                    intelligence comes from structured and unstructured data such as
+
+
+https://doi.org/10.1016/j.cose.2023.103371
+0167-4048/© 2023 Elsevier Ltd. All rights reserved.
+Y. Guo, Z. Liu, C. Huang et al.                                                                                     Computers & Security 132 (2023) 103371
+
+
+audit logs, network traﬃc, security alerts, vulnerability databases,          ple sources, links real-world entities or concepts, and provides
+security bulletins, hacker forums, and social media. These data               search services through semantic retrieval. In the ﬁeld of cyberse-
+have the characteristics of multisource, heterogeneous, polysemy,             curity, correlating and fusing threat intelligence data from different
+and highly dependent on domain knowledge. Therefore it is diﬃ-                sources to generate the CKG can provide new technical means for
+cult to effectively integrate data from different sources. More im-           situational awareness and attack traceability.
+portantly, extracting cybersecurity entity-relation triples from un-              In the area of automated construction and analysis of CKG, re-
+structured data is a great challenge, and is the key step to con-             searchers have also proposed several ideas and approaches in re-
+structing CKG. Existing research on cybersecurity entity and rela-            cent years (Gao et al., 2021; Husari et al., 2017; Jia et al., 2018; Mi-
+tion extraction (Jones et al., 2015; Pingle et al., 2019) uses the tra-       lajerdi et al., 2019; Piplai et al., 2020a; 2020b; Zhao et al., 2020b).
+ditional pipeline model, named entity recognition ﬁrst and then re-           Jia et al. (2018) introduced a cybersecurity knowledge base and de-
+lation extraction, which leads to error propagation and losses sight          duction rules based on a quintuple model. Gao et al. (2021) pro-
+of the relevance between entity recognition and relation extraction.          posed ThreatRaptor, a system that facilitates threat hunting in
+    To solve the above problem, we propose a framework for threat             computer systems using OSINT. The system uses an unsupervised,
+intelligence extraction and fusion which can extract and correlate            lightweight, and accurate NLP pipeline to extract structured threat
+cybersecurity entity-relation triples from structured and unstruc-            behaviors from unstructured OSINT text. Piplai et al. (2020b) de-
+tured data. For unstructured data, we propose a joint entity and re-          scribed a system that extracts information from After Action Re-
+lation extraction model for cybersecurity concepts, which extracts            ports (AARs) and represents the extracted information in a CKG.
+both cybersecurity entities and relations and generates cybersecu-            Zhao et al. (2020b) demonstrated a threat intelligence framework
+rity triples. Speciﬁcally, we use a tagging scheme to convert the             (HINTI). HINTI ﬁrst recognizes IOCs and models the interdependent
+joint extraction problem into a multiple sequence labeling prob-              relations between IOCs using heterogeneous information networks
+lem by generating separate label sequences for different relations            (HINs), and then proposes a threat intelligence computing frame-
+containing information about the related entities and the subject             work based on graph convolutional networks to explore complex
+and object of that relation. The joint extraction model applies the           security knowledge. Although these approaches have made initial
+pre-trained model, BERT, to generate word vectors. After extract-             attempts and achieved good results in CKG construction, further
+ing semantic features by BiGRU, the model assigns higher weights              research is needed in the key steps of knowledge graph construc-
+to relation-related words in the sentences by an attention mech-              tion.
+anism. Finally, BiGRU combined with CRF is used to decode and
+construct cybersecurity triples. Then, we fuse the entities extracted         2.2. Threat intelligence extraction
+from different data sources by an improved Levenstein distance to
+form a preliminary CKG.                                                           The construction of a knowledge graph can be divided into
+    In summary, the main contribution of this paper are as follows:           three steps, including information extraction, knowledge fusion,
+                                                                              and knowledge reasoning. Among them, information extraction
+  • We propose a framework for threat intelligence extraction and
+                                                                              plays a decisive role in the quality of the generated knowledge
+    fusion that can extract and fuse cybersecurity entity-relation
+                                                                              graph. Information extraction for threat intelligence is divided into
+    triples from large-scale structured and unstructured data. These
+                                                                              several subtasks, including entity recognition (Ghazi et al., 2018;
+    triples can be used to construct the CKG.
+                                                                              Husari et al., 2018; Liao et al., 2016; Mittal et al., 2016; Zhao et al.,
+  • We present a joint entity and relation extraction model for cy-
+                                                                              2020a; Zhu and Dumitras, 2018), relation extraction (Jones et al.,
+    bersecurity concepts. The model employs deep learning tech-
+                                                                              2015; Pingle et al., 2019) and event extraction (Satyapanich et al.,
+    niques to extract entities and relations in sentences simulta-
+                                                                              2020).
+    neously, avoiding the error propagation of traditional pipeline
+                                                                                  In terms of cybersecurity entity and concept recognition,
+    models. The experimental results show that the joint model
+                                                                              Mittal et al. (2016) proposed a framework for extracting threat in-
+    outperforms the traditional pipeline model with an F1 value of
+                                                                              telligence from Twitter, CyberTwitter, which automates the extrac-
+    81.37%.
+                                                                              tion of security vulnerability concepts. Liao et al. (2016) introduced
+  • We design a lightweight cybersecurity entity fusion method
+                                                                              iACE for automatically extracting IOCs and their context in the
+    that is optimized for the features of the cybersecurity corpus
+                                                                              sentences of technical articles. Zhu and Dumitras (2018) designed
+    by fusing entities from different sources based on an improved
+                                                                              Chainsmith, an IOC extraction system that collects IOCs from secu-
+    Levenshtein distance.
+                                                                              rity articles and classiﬁes them according to the stages of the Kill
+   The rest of the paper is organized as follows: Section 2 dis-              Chain. Ghazi et al. (2018) used natural language processing tech-
+cusses related work, and Section 3 presents our framework for                 niques to extract threat sources from unstructured web threat in-
+threat intelligence extraction and fusion. Section 4 provides the ex-         formation sources and provided comprehensive threat reports in
+periments and analysis related to this work. Section 5 summarizes             the STIX (2017) standard, which is used for the accurate and eﬃ-
+the conclusion and proposes future works.                                     cient exchange of cyber threat intelligence.
+                                                                                  Due to the lack of a well-labeled corpus for training, rela-
+2. Related work                                                               tively few studies have been conducted on cybersecurity relation
+                                                                              extraction and event extraction compared to entity recognition.
+   In this section, we 

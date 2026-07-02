@@ -1,0 +1,169 @@
+Article
+
+Toward a Hybrid Intrusion Detection Framework for IIoT Using
+a Large Language Model
+Musaad Algarni 1 , Mohamed Y. Dahab 1 , Abdulaziz A. Alsulami 2 , Badraddin Alturki 3                                 and Raed Alsini 2, *
+
+                                         1   Department of Computer Science, Faculty of Computing and Information Technology,
+                                             King Abdulaziz University, Jeddah 21589, Saudi Arabia; malqarni0476@stu.kau.edu.sa (M.A.);
+                                             mdahab@kau.edu.sa (M.Y.D.)
+                                         2   Department of Information Systems, Faculty of Computing and Information Technology,
+                                             King Abdulaziz University, Jeddah 21589, Saudi Arabia; aaalsulami10@kau.edu.sa
+                                         3   Department of Information Technology, Faculty of Computing and Information Technology,
+                                             King Abdulaziz University, Jeddah 21589, Saudi Arabia; baalturki@kau.edu.sa
+                                         *   Correspondence: ralsinie@kau.edu.sa
+
+
+                                         Abstract
+                                         The widespread connectivity of the Industrial Internet of Things (IIoT) improves the
+                                         efficiency and functionality of connected devices. However, it also raises serious concerns
+                                         about cybersecurity threats. Implementing an effective intrusion detection system (IDS) for
+                                         IIoT is challenging due to heterogeneous data, high feature dimensionality, class imbalance,
+                                         and the risk of data leakage during evaluation. This paper presents a leakage-safe hybrid
+                                         intrusion detection framework that combines text-based and numerical network flow
+                                         features in an IIoT environment. Each network flow is converted into a short text description
+                                         and encoded using a frozen Large Language Model (LLM) called the Bidirectional Encoder
+                                         Representations from Transformers (BERT) model to obtain fixed semantic embeddings,
+                                         while numerical traffic features are standardized in parallel. To improve class separation,
+                                         class prototypes are computed in Principal Component Analysis (PCA) space, and cosine
+                                         similarity scores for these prototypes are added to the feature set. Class imbalance is
+                                         handled only in the training data using the Synthetic Minority Over-sampling Technique
+                                         (SMOTE). A Random Forest (RF) is used to select the top features, followed by a Histogram-
+                                         based Gradient Boosting (HGB) classifier for final prediction. The proposed framework
+                                         is evaluated on the Edge-IIoTset and ToN_IoT datasets and achieves promising results.
+                                         Empirically, the framework attains 98.19% accuracy on Edge-IIoTset and 99.15% accuracy
+                                         on ToN_IoT, indicating robust, leakage-safe performance.
+
+                                         Keywords: Industrial Internet of Things (IIoT); intrusion detection system (IDS); Large
+                                         Language Model (LLM); classification (CLS); Principal Component Analysis (PCA)
+
+
+
+Academic Editor: Robin Chataut
+                                         1. Introduction
+Received: 26 December 2025
+Revised: 31 January 2026                      The Industrial Internet of Things (IIoT) is the foundation of modern cyber–physical
+Accepted: 11 February 2026               systems (CPSs) that drive the developments of Industry 4.0 in critical infrastructure, pro-
+Published: 13 February 2026              duction and intelligent environments [1,2]. The total IIoT sector is projected to reach
+Copyright: © 2026 by the authors.        $1.1 trillion by 2028 [3], and tens of billions of connected devices are projected by 2030 [4].
+Licensee MDPI, Basel, Switzerland.
+                                         This integration of continuous sensing, networking and management allows for higher per-
+This article is an open access article
+                                         formance effectiveness. However, this extensive connectivity exposes these vital networks
+distributed under the terms and
+conditions of the Creative Commons
+                                         to an evolving cyberattack environment [3,4]. The risks in IIoT security are particularly
+Attribution (CC BY) license.             high, as breaches can result in not only compromised data integrity and unauthorized
+
+
+Sensors 2026, 26, 1231                                                                                           https://doi.org/10.3390/s26041231
+Sensors 2026, 26, 1231                                                                                           2 of 22
+
+
+
+                         access, but also physical device compromises, production system interruption and major
+                         security challenges [5]. For example, more than 12,000 attacks on smart home systems
+                         were detected in a single week [6], which highlights the critical need for adequate security
+                         measures. Recent industry analysis indicates a growing integration of traditional SCADA
+                         architectures and IoT-enabled frameworks, which increases the relevance of intrusion detec-
+                         tion mechanisms for cyber–physical and IoT systems. This integration provides enhanced
+                         performance, but simultaneously introduces increased cybersecurity risks, necessitating
+                         the development of next-generation detection methods [7]. Furthermore, recent analysis of
+                         industrial datasets reveals that Denial-of-Service (DoS) and Distributed Denial-of-Service
+                         (DDoS) attacks are among the most prevalent threats, with DoS traffic accounting for 89.98%
+                         of recorded attack traffic in IIoT environments. This volume illustrates the high number
+                         of compromised devices being leveraged to disrupt the global network and potentially
+                         turn off production systems [5]. As a result, the design and implementation of robust
+                         intrusion detection systems (IDSs) are considered critical security techniques, especially
+                         in resource-constrained IIoT settings where real-time analysis and reduced computational
+                         cost are necessary [6,8].
+                              Recent studies highlight significant challenges in the use of Machine Learning (ML)
+                         and deep learning (DL) for IIoT/IoT IDS. Datasets generated by these networks often
+                         include heterogeneous data types (e.g., categorical traffic fields and unstructured raw
+                         payload data) and have a high dimensionality of features, which requires manual feature
+                         engineering and robust model training [6,8]. Additionally, real-world IIoT datasets often
+                         show a significant class imbalance, with considerably more benign traffic than malicious
+                         attack instances, which leads to incorrect models that choose the majority class and fail
+                         to detect unusual but critical attack patterns [7,9]. Furthermore, inadequate validation
+                         methods in previous work, such as not considering temporal limitations or performing
+                         preprocessing like scaling or oversampling on the entire dataset before splitting, can cause
+                         data leakage, which results in incorrect evaluation of model performance and compromised
+                         security in practical implementation [10].
+                              Moreover, data leakage occurs when information from the test set unintentionally
+                         influences the training process, leading to overly optimistic results that do not generalize
+                         in practice. In IIoT IDSs, leakage commonly arises when preprocessing steps—such as
+                         scaling, feature selection, or resampling—are applied to the entire dataset before the train
+                         and test split. In addition, it occurs when duplicate flows from the same traffic source or
+                         capture context appear across splits. This is particularly problematic under class imbalance,
+                         because oversampling can propagate test-set patterns into the training space and inflate
+                         performance metrics [10].
+                              To address these ongoing challenges, research has changed rapidly to advanced hybrid
+                         and deep learning frameworks. Specifically, Bidirectional Encoder Representations from
+                         Transformers (BERT) is categorized as a Large Language Model (LLM). Such models, which
+                         are deep neural networks typically based on the transformer architecture, have emerged as
+                         a promising method for encoding sequence and semantic patterns in raw network traffic,
+                         moving beyond concentrating on individually designed numerical features [4,6,8]. The de-
+                         velopment of efficient and lightweight hybrid models is now essential, which combines
+                         deep temporal feature extraction with resource-aware classification pipelines [6]. Previous
+                         work has demonstrated the efficacy of coupling dimensionality reduction techniques such
+                         as Principal Component Analysis (PCA) with oversampling strategies such as the Synthetic
+                         Minority Oversampling Technique (SMOTE) to manage high dimensionality and class
+                         imbalance before training ensemble models [7,8]. However, an integrated system that
+                         effectively integrates the contextual feature power of an LLM with the structural efficiency
+                         of feature engineering and the robustness of tree-based ensembles, which ensures leakage
+
+
+
+                                                                                       https://doi.org/10.3390/s26041231
+Sensors 2026, 26, 1231                                                                                            3 of 22
+
+
+
+                         safety across both heterogeneous modalities and complex threat landscapes, remains an
+                         active research area. In addition, our framework enforces split-specific processing: we
+                         first split the data, then fit all transformations on the training split only (scaling, PCA,
+                         prototype construction, and Random Forest (RF)-based Top-K selection), and apply the
+                         learned transforms to the held-out test split without re-fitting. Likewise, SMOTE is applied
+                         exclusively on the training split. This protocol yields a leakage-safe evaluation that better
+                         reflects real deployment behavior.
+                               In this work, we propose a hybrid network traffic intrusion detection framework
+                         designed particularly for a secure and effective IIoT environment. Our approach combines
+                         text-derived and numerical features and leverages a frozen encoder-only BERT architecture
+                         to generate semantic embeddings from network flow features. The main contributions of
+                         this paper are summarized as follows.
+                         •    We enhance the feature representation by computing cosine similarity scores between
+                              each sample and class prototypes in PCA space. These similarity scores are added to
+                              the feature vector and used as input to tree-based classifiers.
+                         •    We address class imbalance only in the training split using SMOTE, which ensures
+                              that there is no projected bias.
+                         •    We use an RF for efficient selection of top features, followed by a robust Histogram-
+                              based Gradient Boosting (HGB) classifier to produce final predictions.
+                         •    We evaluate the proposed framework on two publicly available IIoT datasets, namely
+                              Edge-IIoTset and ToN_IoT. The experiments show that the resulting detection pipeline
+                              shows high performance while maintaining leakage-safe validation strategies, which
+                              are important for reliable evaluation on the considered IIoT datasets.
+                              The rest of this paper is structured as follows: Section 2 discusses related work,
+                         the proposed methodology is explained in Section 3, experimental results are reported in
+                         Section 4, and conclusions are drawn in Section 5.
+
+                         2. Related Works
+                              In this section, we review recent related works in IDSs for the Internet of Things and
+                         Industrial Internet of Things networks, focusing on the models, techniques and datasets
+                         employed across several studies. The field is characterized by efforts to leverage the ML
+                         and DL paradigms and is often validated using heterogeneous and challenging datasets
+                         such as ToN_IoT and Edge-IIoTset. Table 1 is a summary of related work, which shows the
+                         authors, the year of publication, the methods or techniques used, the datasets used and the
+                         accuracy achieved.
+                              Dhirar and Hamad [11] conducted a comprehensive evaluation of a generated intru-
+                         sion detection system (IDS) dataset tailored for Software-Defined Networking (SDN)–IoT
+                         environments named SDN-IoT. Their study compared this dataset with three used datasets,
+                         namely BoT-IoT, ToN_IoT and InSDN, using four DL architectures, including Convolu-
+                         tional Neural Networks (CNNs), Long Short-Term Memory (LSTM), Recurrent Neural
+                         Networks (RNNs) and deep neural networks (DNNs). The SDN-IoT dataset was gener-
+                         ated using Mininet-WiFi, Ryu, HOIC, LOIC, Hping3 and CICFlowMeter. They achieved
+                         98.48% accuracy using DNNs on the SDN-IoT dataset, 86.94% accuracy using LSTM on
+                         InSDN and 75.00% accuracy using LSTM on ToN_IoT. Maseno et al. [12] proposed a hybrid
+                         feature reduction technique that integrates CNNs, LSTM and attention to improve feature
+                         selection for IoT intrusion detection. After feature reduction, they applied Support Vector
+                         Machine (SVM) and RF classifiers with SMOTETomek used for data balancing. Using
+                         the ToN_IoT dataset, their approach achieved 98% accuracy with Random Fore

@@ -1,0 +1,140 @@
+IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025                                                                               5044613
+
+
+
+
+            FC2P: Feature Cross-Channel Projection for
+              Unsupervised Anomaly Segmentation
+                        Yichi Chen , Weizhi Xian , Junjie Wang , Graduate Student Member, IEEE,
+                                    Xian Tao , Senior Member, IEEE, and Bin Chen
+
+
+   Abstract—Unsupervised anomaly segmentation plays a critical                  challenging and complex visual tasks, including medical diag-
+role in real-world industrial product quality inspection. While                 nosis [1], [2], industrial defect detection [3], and autonomous
+feature reconstruction-based methods have shown promising                       driving [4], necessitate anomaly detection. In practical appli-
+performance by detecting anomalies through differences between
+pretrained features and their reconstructions, existing approaches              cations, abnormal samples are extremely scarce, while the
+often suffer from shortcut learning, and leading to reconstruction              abnormal categories are often unpredictable. To this end,
+failures and inaccurate anomaly representation across multi-                    many researchers from both industry and academia [5], [6],
+stage features. To address these limitations, we propose feature                [7] conduct anomaly segmentation in an unsupervised set-
+cross-channel projection (FC2 P), a novel approach for anomaly                  ting, where only normal samples are available for training.
+segmentation. FC2 P divides features into two subsets based
+on neighboring channels and employs two autoencoders for                        The mainstream approaches to tackle this problem encom-
+closed-loop prediction, effectively mitigating shortcut effects while           pass embedding-based methods [8], [9] [10], knowledge
+capturing semantic relationships for efficient reconstruction. In               distillation-based methods [11], [12] [13], and reconstruction-
+addition, we introduce an anomaly exposure network (AExNet),                    based methods [14], [15] [16], [17].
+which progressively amplifies anomalies across multistage feature                  The proposed approach in this study falls under the category
+residuals, generating precise anomaly score maps for accu-
+rate segmentation. Extensive experiments on MVTec AD and                        of reconstruction-based methods, which dominate unsuper-
+Visa benchmark datasets demonstrate that the proposed FC2 P                     vised anomaly segmentation. Reconstruction-based methods
+achieves state-of-the-art (SOTA) performance, with average pre-                 implicitly learn the latent distribution of normal data, using
+cision (AP) scores of 79.8% and 44.8%, respectively. Moreover,                  autoencoders [17], [18], generative adversarial networks [14],
+visualization results on real industrial data further show the                  [19], and denoising diffusion probabilistic models [20], [21],
+practicality of our proposed method. The code will be made
+publicly available at https://github.com/Karma1628/work-2 to                    through the minimization of reconstruction loss during train-
+ensure reproducibility and facilitate further research.                         ing. At inference time, these methods assume that the latent
+                                                                                manifold learned exclusively from normal samples cannot
+   Index Terms—Anomaly detection, anomaly segmentation, fea-
+ture cross-channel projection (FC2 P), feature reconstruction,                  effectively reconstruct abnormal regions. Therefore, the recon-
+self-supervised learning.                                                       struction residual, calculated as pixelwise differences between
+                                                                                the reconstructed result and the original input, serves to
+                          I. I NTRODUCTION                                      represent the pixel anomaly scores.
+                                                                                   A promising subbranch of reconstruction-based methods
+
+A      NOMALY segmentation aims at detecting pixels that
+       deviate from normal behavior within an image. Many
+                                                                                involves reconstructing multistage features [7], [23], [24]
+                                                                                extracted from normal images using a pretrained network.
+                                                                                Previous reconstruction-based methods primarily operate in
+   Received 4 June 2025; accepted 26 August 2025. Date of publication
+10 September 2025; date of current version 18 September 2025. This work was     image space, where slight reconstructive perturbations of pix-
+supported in part by the National Natural Science Foundation of China under     els produce reconstruction errors comparable to those induced
+Grant 62373350; in part by the Youth Innovation Promotion Association,          by real anomalies, failing to meet the basic assumption. As
+Chinese Academy of Sciences (CAS), under Grant 2023145; in part by the
+Natural Science Foundation of Chongqing under Grant CSTB2023NSCQ-               shown in the first row and third column of Fig. 1, for
+MSX0070; in part by the Science and Technology Project of Shenzhen under        the image reconstruction method DRAEM [6], the failure
+Grant GXWD-20220811170603002; and in part by the Beijing Nova Program           to accurately reconstruct the texture details of the carpet
+under Grant 20240484687. The Associate Editor coordinating the review
+process was Dr. Xianqiang Yang. (Corresponding author: Xian Tao.)               produces numerous false positives (red circles) near actual
+   Yichi Chen is with Chengdu Institute of Computer Application, Chinese        cutting anomalies. In contrast, pretrained features are inher-
+Academy of Sciences, Chengdu 610041, China (e-mail: chenyichi21@                ently more informative and discriminative, which increases
+mails.ucas.ac.cn).
+   Weizhi Xian is with Chongqing Research Institute, Harbin Institute of        the representational distance between normal and abnormal
+Technology, Chongqing 401151, China (e-mail: wasxxwz@163.com).                  regions, thereby mitigating the aforementioned interference.
+   Junjie Wang and Bin Chen are with the International Research Institute       As illustrated in the first row and fourth column of Fig. 1,
+for Artificial Intelligence, Harbin Institute of Technology, Shenzhen 518000,
+China (e-mail: jjwanghz@stu.hit.edu.cn; chenbin2020@hit.edu.cn).                feature reconstruction method DFR [7] produces almost no
+   Xian Tao is with the Institute of Automation, Chinese Academy of Sciences,   false positives near the anomaly in the carpet.
+Beijing 100190, China, and also with the School of Artificial Intelligence,        However, feature reconstruction-based methods still face
+University of Chinese Academy of Sciences, Beijing 100049, China (e-mail:
+taoxian2013@ia.ac.cn).                                                          two primary challenges in practical applications. One is
+   Digital Object Identifier 10.1109/TIM.2025.3608319                           common in reconstruction schemes, where the reconstructive
+             1557-9662 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                       similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+5044613                                                                   IEEE TRANSACTIONS ON INSTRUMENTATION AND MEASUREMENT, VOL. 74, 2025
+
+
+
+
+                                                                                Fig. 2. Different feature reconstruction frameworks. (a) Conventional identical
+                                                                                feature reconstruction, where the reconstructive target treats the input data and
+Fig. 1. Qualitative results of image reconstruction-based method DRAEM          the target as identical, allowing the autoencoder to take shortcuts and merely
+[6], feature reconstruction-based method DFR [7] and the proposed FC2 P on      replicate the input. (b) Our proposed FC2 P uses the similarity of neighborhood
+the MVTec AD [22] dataset for anomaly segmentation. The categories are          channel feature maps, enabling the autoencoder to perform two nonidentical
+carpet, transistor, and cable (top to bottom). The interior regions of green    proxy tasks: inpainting the pseudo-anomaly and predicting the neighborhood
+boundaries in the second column denote abnormal areas from actual binary        channel feature maps, thereby mitigating the aforementioned issue.
+segmentation masks. Compared with previous methods, our proposed method
+not only significantly enhances the saliency of anomaly segmentation but also
+effectively suppresses false alarms in normal backgrounds.                      motivates the use of deep autoencoders to learn this map-
+                                                                                ping, as an additional normal attribute to fully leverage the
+network sometimes overgeneralizes, resulting in anomalies in                    structural characteristics of the pretrained network. Fig. 2(a)
+features also being well reconstructed. This occurs because                     and (b) illustrates the framework differences between con-
+the reconstruction network’s output is identical to the input                   ventional identical feature reconstruction and our proposed
+during training, leading to shortcuts where the network merely                  FC2 P, respectively. Previous methods aggregate multichannel
+replicates the original input. The second row of Fig. 1 illus-                  feature maps into a unified representation, focusing on scale
+trates the issue of false negatives caused by overgeneralizing,                 differences [25], [26] or improving network architecture [27],
+as previous reconstruction-based methods, both in image and                     [28] [29] to enhance reconstruction quality. However, they
+feature space, reconstruct the background instead of the miss-                  often suffer from shortcut issues due to the reconstruction
+ing transistor. Another challenge is that anomalies can be                      target being identical to the input. In contrast, our method uses
+overwhelmed in multistage features, thus preventing effective                   deep autoencoders to simultaneously perform two nonidentical
+segmentation and leading to missed detections. Each feature                     prediction tasks, effectively mitigating this problem. Specifi-
+stage contains information at different scales and semantic                     cally, normal images are superimposed with synthetic patterns
+levels, leading to varying emphasis on different anomalies.                     to simulate pseudo-anomalies, so the extracted features are
+Intuitively, summing the feature reconstruction residuals over                  actually corroded according to certain rules. The features
+channels to represent the anomaly score for each spatial                        are then split into two nonoverlapping feature subsets based
+location is inadequate. In DFR [7], four stages of features                     on neighborhood channels. Due to the intrinsic correlation
+suffice for detecting pixel-level anomalies in the texture-based                between neighborhood channel feature maps, autoencoders
+tile, but as deeper features are introduced, the performance                    can be employed for closed-loop prediction from one feature
+deteriorates. In addition, this issue also manifests in situations              subset to another to ensure the integrity of the features. In
+where anomalies are suppressed by other anomalies. As shown                     addition, the autoencoder must not only predict neighborhood
+in the third row and fourth column of Fig. 1, the missing                       channel relationships but also complete the pseudo-anomaly
+anomaly of the cable is severely suppressed by the color                        inpainting task. Inpainting anomalies in features helps to
+change anomaly (red circle) in DFR [7]. This is because the                     reduce the impact of noise and redundant information, while
+latter anomaly accounts for a low proportion in the feature                     also allowing anomalies to vary in scale and shape, thus
+reconstruction residuals, which cannot be revealed in the                       enhancing the robustness of reconstruction.
+anomaly score map by traditional summation methods.                                Furthermore, considering that anomalies can be over-
+   To address the aforementioned challenges, we propose fea-                    whelmed in the multistage representation space of features, we
+ture cross-channel projection along with an anomaly exposure                    design an AExNet to adaptively estimate the anomaly score
+network (AExNet), called FC2 P, a novel feature reconstruc-                     map from neighborhood feature reconstruction residuals. The
+tion framework for anomaly segmentation and detection. It                       network is trained under the popular self-supervised frame-
+is observed that the feature map of each stage is derived                       work [6], [30], guided by pseudo-abnormal binary masks,
+from the abstraction and nonlinear combination of all feature                   and has been shown to generalize well for detecting real
+maps from the previous stage. Therefore, the intuition behind                   anomalies. Specifically, the key component is the Siamese
+our method is that there is a potential mapping relationship                    anomaly propagator (SAP), which leverages the similarity
+between the feature maps of the neighborhood channels,                          between neighborhood subsets to obtain enhanced common
+governed by the structure of the pretrained network. This                       representations of anomalies and propagates them across
+CHEN et al.: FC2 P: FEATURE CROSS-CHANNEL PROJECTION FOR UNSUPERVISED ANOMALY SEGMENTATION                                  5044613
+
+
+
+stages. Notably, the feature reconstruction residuals are divided   coverage compared with GANs, AnoDDPM [21] proposes a
+into aggregated and multiscale morphologies, which are              multiscale simplex noise diffusion process that controls the
+decoded using the U-Net structure. This design, inspired            target size of pseudo-noises to detect larger anomalies.
+by the divide-and-conquer approach, not only balances the              However, deep autoencoders tend to “generalize” so well
+representation of anomalies across the entire feature space but     that they directly replicate abnormal areas in their recon-
+also gradually enhances anomalies across hierarchical stages.       struction, resulting in misdetections of anomalies. To address
+   Extensive experiments conducted on various benchmark             this issue, MemAE [15] introduces an updatable memory
+datasets demonstrate the effectiveness of our approach.             module with an attention mechanism to enhance the latent
+Notably, the proposed method achieves the state-of-the-art          space, encouraging reconstruction to approach the normal
+(SOTA) anomaly segmentation performance
